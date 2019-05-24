@@ -2,43 +2,69 @@ package h2d;
 import hxd.Math;
 
 /**
-	Scaling mode of the 2D Scene.
+	Viewport alignment when scaling mode supports it.
 **/
-enum ScaleMode
-{
+enum ScaleModeAlign {
+	/** Anchor Scene viewport horizontally to left side of the window. When passed to verticalAlign it will be treated as Center. **/
+	Left;
+	/** Anchor Scene viewport horizontally to right side of the window. When passed to verticalAlign it will be treated as Center. **/
+	Right;
+	/** Anchor to the center of window. **/
+	Center;
+	/** Anchor Scene viewport vertically to the top of a window. When passed to horizontalAlign it will be treated as Center. **/
+	Top;
+	/** Anchor Scene viewport vertically to the bottom of a window. When passed to horizontalAlign it will be treated as Center. **/
+	Bottom;
+}
+
+/**
+	Scaling mode of the 2D Scene.  
+	See `ScaleMode2D` sample for showcase.
+**/
+enum ScaleMode {
+
 	/**
-		Fills entire screen. `width` and `height` of Scene will match window size. Default scaling mode.
+		Matches scene size to window size. `width` and `height` of Scene will match window size. Default scaling mode.
 	**/
-	Fill;
+	Resize;
+
 	/**
-		Stretches the Scene to fill entire screen. This behavior is same as old `setFixedSize` method.
+		Sets constant Scene size and stretches it to cover entire window. This behavior is same as old `setFixedSize` method.
 	**/
 	Stretch(width : Int, height : Int);
+
 	/**
-		Preserves aspect-ratio when scaling the Scene.  
-		If `centerViewport` is `true` - Scene will be centered relative to window size.
+		Sets constant scene size and upscales it with preserving aspect-ratio to fit the window.  
+		If `integerScale` is `true` - scaling will be performed  with only integer increments (1x, 2x, 3x, ...). Default: `false`  
+		`horizontalAlign` controls viewport anchoring horizontally. Accepted values are `Left`, `Center` and `Right`. Default: `Center`  
+		`verticalAlign` controls viewport anchoring vertically. Accepted values are `Top`, `Center` and `Bottom`. Default: `Center`  
+		With `800x600` window, `LetterBox(320, 260)` will result in center-aligned Scene of size `320x260` upscaled to fit into screen.
 	**/
-	KeepAspect(width : Int, height : Int, centerViewport : Bool);
+	LetterBox(width : Int, height : Int, ?integerScale : Bool, ?horizontalAlign : ScaleModeAlign, ?verticalAlign : ScaleModeAlign);
+
 	/**
-		Same as KeepAspect, but using integer scaling.
+		Sets constant Scene size, scale and alignment. Does not perform any adaptation to the screen apart from alignment.
+		`horizontalAlign` controls viewport anchoring horizontally. Accepted values are `Left`, `Center` and `Right`. Default: `Center`  
+		`verticalAlign` controls viewport anchoring vertically. Accepted values are `Top`, `Center` and `Bottom`. Default: `Center`  
+		With `800x600` window, `Fixed(200, 150, 2, Left, Center)` will result in Scene size of `200x150`, and visually upscaled to `400x300`, and aligned to middle-left of the window.
 	**/
-	KeepPixelSize(width : Int, height : Int, centerViewport : Bool);
+	Fixed(width : Int, height: Int, zoom : Float, ?horizontalAlign : ScaleModeAlign, ?verticalAlign : ScaleModeAlign);
+
 	/**
-		Forces exact dimensions disregarding size of the window.
-	**/
-	Exact(width : Int, height : Int, zoom : Float, centerViewport : Bool);
-	/**
-		Same as Fill, but scales Scene according to `level`. This mode resizes Engine in some cases.
+		Upscales/downscales Scene according to `level` and matches Scene size to `ceil(window size / level)`.  
+		With `800x600` window, `Zoom(2)` will result in `400x300` Scene size upscaled to fill entire window.
 	**/
 	Zoom(level : Float);
+
 	/**
-		Same as KeepAspect, but instead of fixed `width`/`height` it will be adjusted to fill entire screen. This mode resizes Engine in some cases.
+		Ensures that Scene size will be of minimum specified size.  
+		Automatically calculates zoom level based on provided size according to `min(window width / min width, window height / min height)`, then applies same scaling as `Zoom(level)`.
+		Behavior is similiar to LetterBox, however instead of letterboxing effect, Scene size will change to cover the letterboxed parts.  
+		`minWidth` or `minHeight` can be set to `0` in order to force scaling adjustment account only for either horizontal of vertical window size.  
+		If `integerScale` is `true` - scaling will be performed  with only integer increments (1x, 2x, 3x, ...). Default: `false`  
+		With `800x600` window, `AutoZoom(320, 260, false)` will result in Scene size of `347x260`. `AutoZoom(320, 260, true)` will result in size of `400x300`.
 	**/
-	EnsureArea(width : Int, height : Int);
-	/**
-		Same as EnsureArea, but using integer scaling. This mode resizes Engine in some cases.
-	**/
-	EnsurePixelArea(width : Int, height : Int);
+	AutoZoom(minWidth : Int, minHeight : Int, ?integerScaling : Bool);
 }
 
 /**
@@ -105,11 +131,11 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 
 	/**
 		Scene scaling mode. ( default : Fill )
-		Important thing to keep in mind - Scene does not restrict rendering to it's scaled size and
+		Important thing to keep in mind - Scene does not clip rendering to it's scaled size and
 		graphics can render outside of it. However `drawTile` does check for those bounds and 
 		will clip out tiles that are outside of the scene bounds.
 	**/
-	public var scaleMode(default, set) : ScaleMode = Fill;
+	public var scaleMode(default, set) : ScaleMode = Resize;
 
 	/**
 		Set the default value for `h2d.Drawable.smooth` (default: false)
@@ -191,24 +217,48 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	@:dox(hide) @:noCompletion
 	public function checkResize() {
 		var engine = h3d.Engine.getCurrent();
+
+		inline function setSceneSize( w : Int, h : Int ) {
+			if ( w != this.width || h != this.height ) {
+				width = w;
+				height = h;
+				posChanged = true;
+			}
+		}
+
 		inline function calcRatio( scale : Float ) {
 			ratioX = (width * scale) / engine.width;
 			ratioY = (height * scale) / engine.height;
 		}
 
-		inline function calcViewport( center : Bool, zoom : Float ) {
-			if ( center ) {
-				offsetX = 0;
-				offsetY = 0;
-				viewportX = (engine.width - width * zoom) / (2 * zoom);
-				viewportY = (engine.height - height * zoom) / (2 * zoom);
-			} else {
-				offsetX = (engine.width - width * zoom) / (2 * zoom);
-				offsetY = (engine.height - height * zoom) / (2 * zoom);
-				viewportX = 0;
-				viewportY = 0;
+		inline function calcViewport( horizontal : ScaleModeAlign, vertical : ScaleModeAlign, zoom : Float ) {
+			if ( horizontal == null ) horizontal = Center;
+			switch ( horizontal ) {
+				case Left:
+					offsetX = (engine.width - width * zoom) / (2 * zoom);
+					viewportX = 0;
+				case Right:
+					offsetX = -((engine.width - width * zoom) / (2 * zoom));
+					viewportX = (engine.width - width * zoom) / zoom;
+				default:
+					offsetX = 0;
+					viewportX = (engine.width - width * zoom) / (2 * zoom);
+			}
+
+			if ( vertical == null ) vertical = Center;
+			switch ( vertical ) {
+				case Top:
+					offsetY = (engine.height - height * zoom) / (2 * zoom);
+					viewportY = 0;
+				case Bottom:
+					offsetY = -((engine.height - height * zoom) / (2 * zoom));
+					viewportY = (engine.height - height * zoom) / zoom;
+				default:
+					offsetY = 0;
+					viewportY = (engine.height - height * zoom) / (2 * zoom);
 			}
 		}
+
 		inline function zeroViewport() {
 			offsetX = 0;
 			offsetY = 0;
@@ -217,71 +267,43 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		}
 
 		switch ( scaleMode ) {
-			case Fill:
-				width = engine.width;
-				height = engine.height;
+			case Resize:
+				setSceneSize(engine.width, engine.height);
 				ratioX = 1;
 				ratioY = 1;
 				zeroViewport();
 			case Stretch(_width, _height):
-				width = _width;
-				height = _height;
+				setSceneSize(_width, _height);
 				ratioX = 1;
 				ratioY = 1;
 				zeroViewport();
-			case KeepAspect(_width, _height, centerViewport):
-				width = _width;
-				height = _height;
+			case LetterBox(_width, _height, integerScale, horizontalAlign, verticalAlign):
+				setSceneSize(_width, _height);
 				var zoom = Math.min(engine.width / _width, engine.height / _height);
-				calcRatio(zoom);
-				calcViewport(centerViewport, zoom);
-			case KeepPixelSize(_width, _height, centerViewport):
-				width = _width;
-				height = _height;
-				var zoom = Std.int(Math.min(engine.width / _width, engine.height / _height));
-				if (zoom == 0) zoom = 1;
-				calcRatio(zoom);
-				calcViewport(centerViewport, zoom);
-			case Exact(_width, _height, zoom, centerViewport):
-				width = _width;
-				height = _height;
-				calcRatio(zoom);
-				calcViewport(centerViewport, zoom);
-			case Zoom(level):
-				width = Math.ceil(engine.width / level);
-				height = Math.ceil(engine.height / level);
-				var bufWidth = Math.ceil(width * level);
-				var bufHeight = Math.ceil(height * level);
-				if (engine.width != bufWidth || engine.height != bufHeight) {
-					engine.resize(bufWidth, bufHeight);
+				if ( integerScale ) {
+					zoom = Std.int(zoom);
+					if (zoom == 0) zoom = 1;
 				}
+				calcRatio(zoom);
+				calcViewport(horizontalAlign, verticalAlign, zoom);
+			case Fixed(_width, _height, zoom, horizontalAlign, verticalAlign):
+				setSceneSize(_width, _height);
+				calcRatio(zoom);
+				calcViewport(horizontalAlign, verticalAlign, zoom);
+			case Zoom(level):
+				setSceneSize(Math.ceil(engine.width / level), Math.ceil(engine.height / level));
 				calcRatio(level);
 				zeroViewport();
-			case EnsureArea(_width, _height):
-				var zoom = Math.min(engine.width / _width, engine.height / _height);
-				width = Math.ceil(engine.width / zoom);
-				height = Math.ceil(engine.height / zoom);
-				var bufWidth = Math.ceil(width * zoom);
-				var bufHeight = Math.ceil(height * zoom);
-				if (engine.width != bufWidth || engine.height != bufHeight) {
-					engine.resize(bufWidth, bufHeight);
+			case AutoZoom(minWidth, minHeight, integerScaling):
+				var zoom = Math.min(engine.width / minWidth, engine.height / minHeight);
+				if ( integerScaling ) {
+					zoom = Std.int(zoom);
+					if ( zoom == 0 ) zoom = 1;
 				}
-				calcRatio(zoom);
-				zeroViewport();
-			case EnsurePixelArea(_width, _height):
-				var zoom = Std.int(Math.min(engine.width / _width, engine.height / _height));
-				if (zoom == 0) zoom = 1;
-				width = Math.ceil(engine.width / zoom);
-				height = Math.ceil(engine.height / zoom);
-				var bufWidth = Math.ceil(width * zoom);
-				var bufHeight = Math.ceil(height * zoom);
-				if (engine.width != bufWidth || engine.height != bufHeight) {
-					engine.resize(bufWidth, bufHeight);
-				}
+				setSceneSize(Math.ceil(engine.width / zoom), Math.ceil(engine.height / zoom));
 				calcRatio(zoom);
 				zeroViewport();
 		}
-		posChanged = true;
 	}
 
 	inline function screenXToLocal(mx:Float) {
