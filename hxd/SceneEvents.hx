@@ -188,20 +188,19 @@ class SceneEvents {
 							event.propagate = oldPropagate;
 							event.cancel = false;
 						} else {
-							var o = overList[idx];
 							if ( idx < overIndex ) {
 								do {
 									overList[idx] = overList[idx + 1];
 									idx++;
 								} while ( idx < overIndex );
-								overList[overIndex] = o;
+								overList[overIndex] = i;
 								updateCursor = true;
 							} else if ( idx > overIndex ) {
 								do {
 									overList[idx] = overList[idx - 1];
 									idx--;
 								} while ( idx > overIndex );
-								overList[overIndex] = o;
+								overList[overIndex] = i;
 								updateCursor = true;
 							}
 							fillOver = i.propagateEvents;

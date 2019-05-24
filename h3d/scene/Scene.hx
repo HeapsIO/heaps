@@ -219,8 +219,9 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 				continue;
 			}
 
-			if( !event.propagate )
-				hitInteractives = [];
+			if( !event.propagate ) {
+				while( hitInteractives.length > 0 ) hitInteractives.pop();
+			}
 
 			return i;
 		}
@@ -252,13 +253,16 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 
 	@:allow(h3d)
 	function addEventTarget(i:Interactive) {
+		if( interactives.indexOf(i) >= 0 ) throw "assert";
 		interactives.push(i);
 	}
 
 	@:allow(h3d)
 	function removeEventTarget(i:Interactive) {
-		if( interactives.remove(i) && events != null )
-			@:privateAccess events.onRemove(i);
+		if( interactives.remove(i) ) {
+			if( events != null ) @:privateAccess events.onRemove(i);
+			hitInteractives.remove(i);
+		}
 	}
 
 	/**
