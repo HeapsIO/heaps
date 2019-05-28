@@ -268,7 +268,10 @@ class FileSystem implements hxd.fs.FileSystem {
 	}
 
 	public function dir( path : String ) : Array<FileEntry> {
-		throw "Not Supported";
+		var f = dict.get(path);
+		if( f == null ) throw new hxd.res.NotFound(path);
+		if( !f.isDirectory ) throw path+" is not a directory";
+		return [for( s in f.subs ) s];
 	}
 
 }
