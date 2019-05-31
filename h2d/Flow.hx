@@ -565,7 +565,7 @@ class Flow extends Object {
 				addChildAt(interactive,0);
 				this.interactive = interactive;
 				interactive.cursor = Default;
-				properties[properties.length - 1].isAbsolute = true;
+				getProperties(interactive).isAbsolute = true;
 				if( !needReflow ) {
 					interactive.width = calculatedWidth;
 					interactive.height = calculatedHeight;
@@ -587,7 +587,7 @@ class Flow extends Object {
 			if( background == null ) {
 				var background = new h2d.ScaleGrid(t, borderWidth, borderHeight);
 				addChildAt(background, 0);
-				properties[0].isAbsolute = true;
+				getProperties(background).isAbsolute = true;
 				this.background = background;
 				if( !needReflow ) {
 					background.width = Math.ceil(calculatedWidth);
