@@ -148,7 +148,7 @@ class App implements h3d.IDrawable {
 		                method when loading is complete
 	**/
 	@:dox(show)
-	function loadAssets( onLoaded ) {
+	function loadAssets( onLoaded : Void->Void ) {
 		onLoaded();
 	}
 
