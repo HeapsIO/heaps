@@ -156,7 +156,7 @@ class Animation implements hxd.impl.Serializable {
 				objects.remove(a);
 				continue;
 			}
-			var joint = Std.instance(obj, h3d.scene.Skin.Joint);
+			var joint = hxd.impl.Api.downcast(obj, h3d.scene.Skin.Joint);
 			if( joint != null ) {
 				currentSkin = cast joint.parent;
 				a.targetSkin = currentSkin;

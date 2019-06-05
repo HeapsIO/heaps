@@ -113,7 +113,7 @@ class Library extends BaseLibrary {
 			if( o.parent.isJoint )
 				o.obj.follow = scene.getObjectByName(o.parent.joint.name);
 
-			var skin = Std.instance(o.obj, h3d.scene.Skin);
+			var skin = hxd.impl.Api.downcast(o.obj, h3d.scene.Skin);
 			if( skin == null ) continue;
 			var rootJoints = [];
 			for( j in o.childs )
@@ -126,7 +126,7 @@ class Library extends BaseLibrary {
 				var m = o2.obj.toMesh();
 				if( m.primitive != skinData.primitive ) continue;
 
-				var mt = Std.instance(m, h3d.scene.MultiMaterial);
+				var mt = hxd.impl.Api.downcast(m, h3d.scene.MultiMaterial);
 				skin.materials = mt == null ? [m.material] : mt.materials;
 				skin.material = skin.materials[0];
 				m.remove();
@@ -135,7 +135,7 @@ class Library extends BaseLibrary {
 			}
 			// set skin after materials
 			if( skinData.boundJoints.length > maxBonesPerSkin ) {
-				var model = Std.instance(skinData.primitive, h3d.prim.FBXModel);
+				var model = hxd.impl.Api.downcast(skinData.primitive, h3d.prim.FBXModel);
 				var idx = model.geom.getIndexes();
 				skinData.split(maxBonesPerSkin, [for( i in idx.idx) idx.vidx[i]], model.multiMaterial ? model.geom.getMaterialByTriangle() : null);
 			}

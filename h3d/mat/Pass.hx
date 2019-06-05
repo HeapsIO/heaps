@@ -233,7 +233,7 @@ class Pass implements hxd.impl.Serializable {
 	public function getShader< T:hxsl.Shader >(t:Class<T>) : T {
 		var s = shaders;
 		while( s != parentShaders ) {
-			var sh = Std.instance(s.s, t);
+			var sh = hxd.impl.Api.downcast(s.s, t);
 			if( sh != null )
 				return sh;
 			s = s.next;

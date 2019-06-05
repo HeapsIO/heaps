@@ -18,7 +18,7 @@ enum ScaleModeAlign {
 }
 
 /**
-	Scaling mode of the 2D Scene.  
+	Scaling mode of the 2D Scene.
 	See `ScaleMode2D` sample for showcase.
 **/
 enum ScaleMode {
@@ -34,34 +34,34 @@ enum ScaleMode {
 	Stretch(width : Int, height : Int);
 
 	/**
-		Sets constant scene size and upscales it with preserving aspect-ratio to fit the window.  
-		If `integerScale` is `true` - scaling will be performed  with only integer increments (1x, 2x, 3x, ...). Default: `false`  
-		`horizontalAlign` controls viewport anchoring horizontally. Accepted values are `Left`, `Center` and `Right`. Default: `Center`  
-		`verticalAlign` controls viewport anchoring vertically. Accepted values are `Top`, `Center` and `Bottom`. Default: `Center`  
+		Sets constant scene size and upscales it with preserving aspect-ratio to fit the window.
+		If `integerScale` is `true` - scaling will be performed  with only integer increments (1x, 2x, 3x, ...). Default: `false`
+		`horizontalAlign` controls viewport anchoring horizontally. Accepted values are `Left`, `Center` and `Right`. Default: `Center`
+		`verticalAlign` controls viewport anchoring vertically. Accepted values are `Top`, `Center` and `Bottom`. Default: `Center`
 		With `800x600` window, `LetterBox(320, 260)` will result in center-aligned Scene of size `320x260` upscaled to fit into screen.
 	**/
 	LetterBox(width : Int, height : Int, ?integerScale : Bool, ?horizontalAlign : ScaleModeAlign, ?verticalAlign : ScaleModeAlign);
 
 	/**
 		Sets constant Scene size, scale and alignment. Does not perform any adaptation to the screen apart from alignment.
-		`horizontalAlign` controls viewport anchoring horizontally. Accepted values are `Left`, `Center` and `Right`. Default: `Center`  
-		`verticalAlign` controls viewport anchoring vertically. Accepted values are `Top`, `Center` and `Bottom`. Default: `Center`  
+		`horizontalAlign` controls viewport anchoring horizontally. Accepted values are `Left`, `Center` and `Right`. Default: `Center`
+		`verticalAlign` controls viewport anchoring vertically. Accepted values are `Top`, `Center` and `Bottom`. Default: `Center`
 		With `800x600` window, `Fixed(200, 150, 2, Left, Center)` will result in Scene size of `200x150`, and visually upscaled to `400x300`, and aligned to middle-left of the window.
 	**/
 	Fixed(width : Int, height: Int, zoom : Float, ?horizontalAlign : ScaleModeAlign, ?verticalAlign : ScaleModeAlign);
 
 	/**
-		Upscales/downscales Scene according to `level` and matches Scene size to `ceil(window size / level)`.  
+		Upscales/downscales Scene according to `level` and matches Scene size to `ceil(window size / level)`.
 		With `800x600` window, `Zoom(2)` will result in `400x300` Scene size upscaled to fill entire window.
 	**/
 	Zoom(level : Float);
 
 	/**
-		Ensures that Scene size will be of minimum specified size.  
+		Ensures that Scene size will be of minimum specified size.
 		Automatically calculates zoom level based on provided size according to `min(window width / min width, window height / min height)`, then applies same scaling as `Zoom(level)`.
-		Behavior is similiar to LetterBox, however instead of letterboxing effect, Scene size will change to cover the letterboxed parts.  
-		`minWidth` or `minHeight` can be set to `0` in order to force scaling adjustment account only for either horizontal of vertical window size.  
-		If `integerScale` is `true` - scaling will be performed  with only integer increments (1x, 2x, 3x, ...). Default: `false`  
+		Behavior is similiar to LetterBox, however instead of letterboxing effect, Scene size will change to cover the letterboxed parts.
+		`minWidth` or `minHeight` can be set to `0` in order to force scaling adjustment account only for either horizontal of vertical window size.
+		If `integerScale` is `true` - scaling will be performed  with only integer increments (1x, 2x, 3x, ...). Default: `false`
 		With `800x600` window, `AutoZoom(320, 260, false)` will result in Scene size of `347x260`. `AutoZoom(320, 260, true)` will result in size of `400x300`.
 	**/
 	AutoZoom(minWidth : Int, minHeight : Int, ?integerScaling : Bool);
@@ -83,22 +83,22 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	public var height(default, null) : Int;
 
 	/**
-		Horizontal viewport offset relative to top-left corner of the window. Can change if the screen gets resized or `scaleMode` changes.  
+		Horizontal viewport offset relative to top-left corner of the window. Can change if the screen gets resized or `scaleMode` changes.
 		Offset is in internal Scene resolution pixels.
 	**/
 	public var viewportX(default, null) : Float;
 	/**
-		Vertical viewport offset relative to top-left corner of the window. Can change if the screen gets resized or `scaleMode` changes.  
+		Vertical viewport offset relative to top-left corner of the window. Can change if the screen gets resized or `scaleMode` changes.
 		Offset is in internal Scene resolution pixels.
 	**/
 	public var viewportY(default, null) : Float;
 	/**
-		Physical vertical viewport offset relative to the center of the window. Assigned if the screen gets resized or `scaleMode` changes.  
+		Physical vertical viewport offset relative to the center of the window. Assigned if the screen gets resized or `scaleMode` changes.
 		Offset is in internal Scene resolution pixels.
 	**/
 	public var offsetX : Float;
 	/**
-		Physical horizontal viewport offset relative to the center of the window. Assigned if the screen gets resized or `scaleMode` changes.  
+		Physical horizontal viewport offset relative to the center of the window. Assigned if the screen gets resized or `scaleMode` changes.
 		Offset is in internal Scene resolution pixels.
 	**/
 	public var offsetY : Float;
@@ -132,7 +132,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	/**
 		Scene scaling mode. ( default : Fill )
 		Important thing to keep in mind - Scene does not clip rendering to it's scaled size and
-		graphics can render outside of it. However `drawTile` does check for those bounds and 
+		graphics can render outside of it. However `drawTile` does check for those bounds and
 		will clip out tiles that are outside of the scene bounds.
 	**/
 	public var scaleMode(default, set) : ScaleMode = Resize;
@@ -561,7 +561,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		var f = events.getFocus();
 		if( f == null )
 			return null;
-		var i = Std.instance(f, h2d.Interactive);
+		var i = hxd.impl.Api.downcast(f, h2d.Interactive);
 		if( i == null )
 			return null;
 		return interactive[interactive.indexOf(i)];

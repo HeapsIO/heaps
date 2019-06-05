@@ -97,7 +97,7 @@ class KeyFrames extends Mask {
 
 	public function set_smooth( v : Bool ) : Bool {
 		for( l in layers ){
-			var bmp = Std.instance(l.spr, h2d.Bitmap);
+			var bmp = hxd.impl.Api.downcast(l.spr, h2d.Bitmap);
 			if( bmp != null )
 				bmp.smooth = v;
 		}
@@ -201,7 +201,7 @@ class KeyFrames extends Mask {
 
 		switch( f.property ) {
 		case AnchorPoint:
-			var bmp = Std.instance(l.spr, h2d.Bitmap);
+			var bmp = hxd.impl.Api.downcast(l.spr, h2d.Bitmap);
 			if( bmp != null ) {
 				bmp.tile.dx = -calcValue(0);
 				bmp.tile.dy = -calcValue(1);

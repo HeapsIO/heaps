@@ -532,7 +532,7 @@ class World extends Object {
 					c.buffers.set(g.m.bits, b);
 					initMaterial(b, g.m);
 				}
-				var p = Std.instance(b.primitive, h3d.prim.BigPrimitive);
+				var p = hxd.impl.Api.downcast(b.primitive, h3d.prim.BigPrimitive);
 
 				if(e.optimized) {
 					var m = e.transform;

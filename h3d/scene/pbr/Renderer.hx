@@ -206,7 +206,7 @@ class Renderer extends h3d.scene.Renderer {
 		if( !shadows )
 			passes.clear();
 		while( light != null ) {
-			var plight = Std.instance(light, h3d.scene.pbr.Light);
+			var plight = hxd.impl.Api.downcast(light, h3d.scene.pbr.Light);
 			if( plight != null ) ls.drawLight(plight, passes);
 			light = light.next;
 		}
@@ -222,7 +222,7 @@ class Renderer extends h3d.scene.Renderer {
 		var light = @:privateAccess ctx.lights;
 		var passes = get("shadow");
 		while( light != null ) {
-			var plight = Std.instance(light, h3d.scene.pbr.Light);
+			var plight = hxd.impl.Api.downcast(light, h3d.scene.pbr.Light);
 			if( plight != null ) {
 				plight.shadows.setContext(ctx);
 				plight.shadows.computeStatic(passes);
@@ -246,7 +246,7 @@ class Renderer extends h3d.scene.Renderer {
 		ctx.setGlobal("occlusionMap",{ texture : pbr, channel : hxsl.Channel.B });
 		ctx.setGlobal("bloom",null);
 
-		var ls = Std.instance(getLightSystem(), LightSystem);
+		var ls = hxd.impl.Api.downcast(getLightSystem(), LightSystem);
 		var count = ctx.engine.drawCalls;
 		if( ls != null ) drawShadows(ls);
 		if( ctx.lightSystem != null ) ctx.lightSystem.drawPasses = ctx.engine.drawCalls - count;
