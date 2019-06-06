@@ -180,15 +180,15 @@ class Renderer extends h3d.scene.Renderer {
 		passes.reset();
 	}
 
-	function renderPass(p:h3d.pass.Base, passes) {
+	function renderPass(p:h3d.pass.Base, passes, ?sort) {
 		cullPasses(passes, function(col) return col.inFrustum(ctx.camera.frustum));
-		p.draw(passes);
+		p.draw(passes, sort);
 		passes.reset();
 	}
 
 	function mainDraw() {
-		renderPass(output, getSort("default", true));
-		renderPass(output, getSort("alpha"));
+		renderPass(output, get("default"), frontToBack);
+		renderPass(output, get("alpha"), backToFront);
 		renderPass(output, get("additive"));
 	}
 
