@@ -266,9 +266,6 @@ class Renderer extends h3d.scene.Renderer {
 		setTargets([albedo,normal,pbr]);
 		renderPass(decalsOutput, get("decal"));
 
-		setTarget(albedo);
-		draw("albedo");
-
 		if(renderMode == Default){
 			if( displayMode == Env )
 				clear(0xFF404040);
