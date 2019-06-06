@@ -28,7 +28,7 @@ class Renderer extends hxd.impl.AnyProps {
 	var hasSetTarget = false;
 
 	public var effects : Array<h3d.impl.RendererFX> = [];
-	
+
 	public var renderMode : RenderMode = Default;
 
 	public function new() {
@@ -90,9 +90,9 @@ class Renderer extends hxd.impl.AnyProps {
 			p.depth = z / w;
 		}
 		if( frontToBack )
-			passes.sort(function(p1, p2) return p1.depth > p2.depth ? 1 : -1);
+			passes.sort(function(p1, p2) return p1.layer == p2.layer ? (p1.depth > p2.depth ? 1 : -1) : p1.layer - p2.layer);
 		else
-			passes.sort(function(p1, p2) return p1.depth > p2.depth ? -1 : 1);
+			passes.sort(function(p1, p2) return p1.layer == p2.layer ? (p1.depth > p2.depth ? -1 : 1) : p1.layer - p2.layer);
 	}
 
 	inline function clear( ?color, ?depth, ?stencil ) {
