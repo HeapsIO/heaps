@@ -247,8 +247,10 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 			hardwarePass = null;
 		}
 		ctx.dispose();
-		renderer.dispose();
-		renderer = new Renderer();
+		if(renderer != null) {
+			renderer.dispose();
+			renderer = new Renderer();
+		}
 	}
 
 	@:allow(h3d)
