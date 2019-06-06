@@ -364,7 +364,7 @@ class Object implements hxd.impl.Serializable {
 	**/
 	public function getMeshes( ?out : Array<Mesh> ) {
 		if( out == null ) out = [];
-		var m = Std.instance(this, Mesh);
+		var m = hxd.impl.Api.downcast(this, Mesh);
 		if( m != null ) out.push(m);
 		for( c in children )
 			c.getMeshes(out);
@@ -375,7 +375,7 @@ class Object implements hxd.impl.Serializable {
 		Search for an mesh recursively by name, return null if not found.
 	**/
 	public function getMeshByName( name : String) {
-		return Std.instance(getObjectByName(name), Mesh);
+		return hxd.impl.Api.downcast(getObjectByName(name), Mesh);
 	}
 
 	/**
@@ -466,7 +466,7 @@ class Object implements hxd.impl.Serializable {
 		if( !visible || (culled && inheritCulled) )
 			return;
 		if( !culled ) {
-			var m = Std.instance(this, Mesh);
+			var m = hxd.impl.Api.downcast(this, Mesh);
 			if( m != null ) callb(m);
 		}
 		for( o in children )
@@ -525,7 +525,7 @@ class Object implements hxd.impl.Serializable {
 	public function getScene() {
 		var p = this;
 		while( p.parent != null ) p = p.parent;
-		return Std.instance(p, Scene);
+		return hxd.impl.Api.downcast(p, Scene);
 	}
 
 	/**
@@ -540,14 +540,14 @@ class Object implements hxd.impl.Serializable {
 		Tell if the object is a Mesh.
 	**/
 	public inline function isMesh() {
-		return Std.instance(this, Mesh) != null;
+		return hxd.impl.Api.downcast(this, Mesh) != null;
 	}
 
 	/**
 		If the object is a Mesh, return the corresponding Mesh. If not, throw an exception.
 	**/
 	public function toMesh() : Mesh {
-		var m = Std.instance(this, Mesh);
+		var m = hxd.impl.Api.downcast(this, Mesh);
 		if( m != null )
 			return m;
 		throw this + " is not a Mesh";
@@ -567,7 +567,7 @@ class Object implements hxd.impl.Serializable {
 		for( obj in children ) {
 			var c = obj.getCollider();
 			if( c == null ) continue;
-			var cgrp = Std.instance(c, h3d.col.Collider.GroupCollider);
+			var cgrp = hxd.impl.Api.downcast(c, h3d.col.Collider.GroupCollider);
 			if( cgrp != null ) {
 				for( c in cgrp.colliders )
 					colliders.push(c);

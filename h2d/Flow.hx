@@ -452,6 +452,7 @@ class Flow extends Object {
 
 	override function addChildAt( s, pos ) {
 		if( background != null ) pos++;
+		if( interactive != null ) pos++;
 		var fp = getProperties(s);
 		super.addChildAt(s, pos);
 		if( fp == null ) fp = new FlowProperties(s) else properties.remove(fp);
@@ -560,9 +561,11 @@ class Flow extends Object {
 			return b;
 		if( b ) {
 			if( interactive == null ) {
-				interactive = new h2d.Interactive(0, 0, this);
+				var interactive = new h2d.Interactive(0, 0);
+				addChildAt(interactive,0);
+				this.interactive = interactive;
 				interactive.cursor = Default;
-				properties[properties.length - 1].isAbsolute = true;
+				getProperties(interactive).isAbsolute = true;
 				if( !needReflow ) {
 					interactive.width = calculatedWidth;
 					interactive.height = calculatedHeight;
@@ -584,7 +587,7 @@ class Flow extends Object {
 			if( background == null ) {
 				var background = new h2d.ScaleGrid(t, borderWidth, borderHeight);
 				addChildAt(background, 0);
-				properties[0].isAbsolute = true;
+				getProperties(background).isAbsolute = true;
 				this.background = background;
 				if( !needReflow ) {
 					background.width = Math.ceil(calculatedWidth);

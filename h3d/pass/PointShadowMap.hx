@@ -138,7 +138,7 @@ class PointShadowMap extends Shadows {
 		return tex;
 	}
 
-	override function draw( passes ) {
+	override function draw( passes, ?sort ) {
 		if( !filterPasses(passes) )
 			return;
 
@@ -177,7 +177,7 @@ class PointShadowMap extends Shadows {
 
 			var save = passes.save();
 			cullPasses(passes, function(col) return col.inFrustum(lightCamera.frustum));
-			super.draw(passes);
+			super.draw(passes,sort);
 			passes.load(save);
 			ctx.engine.popTarget();
 		}

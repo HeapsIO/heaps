@@ -81,7 +81,7 @@ class SceneProps {
 
 			var ls = scene.lightSystem;
 			var props = [];
-			var fls = Std.instance(ls, h3d.scene.fwd.LightSystem);
+			var fls = hxd.impl.Api.downcast(ls, h3d.scene.fwd.LightSystem);
 			if( fls != null )
 				props.push(PGroup("LightSystem",[
 					PRange("maxLightsPerObject", 0, 10, function() return fls.maxLightsPerObject, function(s) fls.maxLightsPerObject = Std.int(s), 1),
@@ -249,13 +249,13 @@ class SceneProps {
 		props.push(PColor("color", false, function() return l.color, function(c) l.color.load(c)));
 		props.push(PRange("priority", 0, 10, function() return l.priority, function(p) l.priority = Std.int(p),1));
 		props.push(PBool("enableSpecular", function() return l.enableSpecular, function(b) l.enableSpecular = b));
-		var dl = Std.instance(l, h3d.scene.fwd.DirLight);
+		var dl = hxd.impl.Api.downcast(l, h3d.scene.fwd.DirLight);
 		if( dl != null )
 			props.push(PFloats("direction", function() {
 				var dir = dl.getDirection();
 				return [dl.x, dl.y, dl.z];
 			}, function(fl) dl.setDirection(new h3d.Vector(fl[0], fl[1], fl[2]))));
-		var pl = Std.instance(l, h3d.scene.fwd.PointLight);
+		var pl = hxd.impl.Api.downcast(l, h3d.scene.fwd.PointLight);
 		if( pl != null )
 			props.push(PFloats("params", function() return [pl.params.x, pl.params.y, pl.params.z], function(fl) pl.params.set(fl[0], fl[1], fl[2], fl[3])));
 		return PGroup("Light", props);
@@ -269,17 +269,17 @@ class SceneProps {
 		props.push(PBool("visible", function() return o.visible, function(v) o.visible = v));
 
 		if( o.isMesh() ) {
-			var multi = Std.instance(o, h3d.scene.MultiMaterial);
+			var multi = hxd.impl.Api.downcast(o, h3d.scene.MultiMaterial);
 			if( multi != null && multi.materials.length > 1 ) {
 				for( m in multi.materials )
 					props.push(getMaterialProps(m));
 			} else
 				props.push(getMaterialProps(o.toMesh().material));
 		} else {
-			var c = Std.instance(o, h3d.scene.CustomObject);
+			var c = hxd.impl.Api.downcast(o, h3d.scene.CustomObject);
 			if( c != null )
 				props.push(getMaterialProps(c.material));
-			var l = Std.instance(o, h3d.scene.Light);
+			var l = hxd.impl.Api.downcast(o, h3d.scene.Light);
 			if( l != null )
 				props.push(getLightProps(l));
 		}
@@ -292,13 +292,13 @@ class SceneProps {
 			addDynamicProps(props, v);
 			return props;
 		}
-		var s = Std.instance(v, hxsl.Shader);
+		var s = hxd.impl.Api.downcast(v, hxsl.Shader);
 		if( s != null )
 			return [getShaderProps(s)];
-		var o = Std.instance(v, h3d.scene.Object);
+		var o = hxd.impl.Api.downcast(v, h3d.scene.Object);
 		if( o != null )
 			return getObjectProps(o);
-		var s = Std.instance(v, hxsl.Shader);
+		var s = hxd.impl.Api.downcast(v, hxsl.Shader);
 		if( s != null )
 			return [getShaderProps(s)];
 		return null;
@@ -366,7 +366,7 @@ class SceneProps {
 
 	function getPassProps( p : h3d.pass.Base ) {
 		var props = [];
-		var def = Std.instance(p, h3d.pass.Default);
+		var def = hxd.impl.Api.downcast(p, h3d.pass.Default);
 		if( def == null ) return props;
 
 		addDynamicProps(props, p);

@@ -185,7 +185,7 @@ class DirShadowMap extends Shadows {
 		return true;
 	}
 
-	override function draw( passes ) {
+	override function draw( passes, ?sort ) {
 		if( !filterPasses(passes) )
 			return;
 
@@ -215,7 +215,7 @@ class DirShadowMap extends Shadows {
 
 		ctx.engine.pushTarget(texture);
 		ctx.engine.clear(0xFFFFFF, 1);
-		super.draw(passes);
+		super.draw(passes, sort);
 		if( border != null ) border.render();
 		ctx.engine.popTarget();
 

@@ -46,7 +46,7 @@ class Loader {
 			currentInstance = old;
 			cache.set(path, res);
 		} else {
-			if( Std.instance(res,c) == null )
+			if( hxd.impl.Api.downcast(res,c) == null )
 				throw path+" has been reintrepreted from "+Type.getClass(res)+" to "+c;
 		}
 		return res;

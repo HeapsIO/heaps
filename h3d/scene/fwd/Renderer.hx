@@ -16,11 +16,11 @@ class DepthPass extends h3d.pass.Default {
 		return [PackFloat(Value("output.depth"))];
 	}
 
-	override function draw( passes ) {
+	override function draw( passes, ?sort ) {
 		var texture = ctx.textures.allocTarget("depthMap", ctx.engine.width, ctx.engine.height, true);
 		ctx.engine.pushTarget(texture);
 		ctx.engine.clear(enableSky ? 0 : 0xFF0000, 1);
-		super.draw(passes);
+		super.draw(passes, sort);
 		ctx.engine.popTarget();
 		ctx.setGlobalID(depthMapId, { texture : texture });
 	}
@@ -40,11 +40,11 @@ class NormalPass extends h3d.pass.Default {
 		return [PackNormal(Value("output.normal"))];
 	}
 
-	override function draw( passes ) {
+	override function draw( passes, ?sort ) {
 		var texture = ctx.textures.allocTarget("normalMap", ctx.engine.width, ctx.engine.height);
 		ctx.engine.pushTarget(texture);
 		ctx.engine.clear(0x808080, 1);
-		super.draw(passes);
+		super.draw(passes, sort);
 		ctx.engine.popTarget();
 		ctx.setGlobalID(normalMapId, texture);
 	}
@@ -67,8 +67,8 @@ class Renderer extends h3d.scene.Renderer {
 	inline function get_def() return defaultPass;
 
 	// can be overriden for benchmark purposes
-	function renderPass(p:h3d.pass.Base, passes) {
-		p.draw(passes);
+	function renderPass(p:h3d.pass.Base, passes, ?sort) {
+		p.draw(passes, sort);
 	}
 
 	override function render() {
@@ -81,8 +81,8 @@ class Renderer extends h3d.scene.Renderer {
 		if( has("normal") )
 			renderPass(normal,get("normal"));
 
-		renderPass(defaultPass, getSort("default", true) );
-		renderPass(defaultPass, getSort("alpha") );
+		renderPass(defaultPass, get("default") );
+		renderPass(defaultPass, get("alpha"), backToFront );
 		renderPass(defaultPass, get("additive") );
 	}
 

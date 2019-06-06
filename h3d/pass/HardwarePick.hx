@@ -63,7 +63,7 @@ class HardwarePick extends Default {
 		fixedColor.colorID.setColor(0xFF000000 | (++colorID));
 	}
 
-	override function draw(passes:h3d.pass.PassList) {
+	override function draw(passes:h3d.pass.PassList,?sort) {
 
 		for( cur in passes ) @:privateAccess {
 			// force all materials to use opaque blend
@@ -78,7 +78,7 @@ class HardwarePick extends Default {
 		ctx.engine.pushTarget(texOut);
 		ctx.engine.clear(0xFF000000, 1);
 		ctx.extraShaders = ctx.allocShaderList(fixedColor);
-		super.draw(passes);
+		super.draw(passes,sort);
 		ctx.extraShaders = null;
 		ctx.engine.popTarget();
 

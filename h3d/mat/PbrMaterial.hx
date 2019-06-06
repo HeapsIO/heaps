@@ -2,7 +2,6 @@ package h3d.mat;
 
 @:enum abstract PbrMode(String) {
 	var PBR = "PBR";
-	var Albedo = "Albedo";
 	var Overlay = "Overlay";
 	var Decal = "Decal";
 	var BeforeTonemapping = "BeforeTonemapping";
@@ -29,15 +28,49 @@ package h3d.mat;
 	var NotEqual= "NotEqual";
 }
 
+@:enum abstract PbrStencilOp(String) {
+	var Keep = "Keep";
+	var Zero = "Zero";
+	var Replace = "Replace";
+	var Increment = "Increment";
+	var IncrementWrap = "IncrementWrap";
+	var Decrement = "Decrement";
+	var DecrementWrap = "DecrementWrap";
+	var Invert = "Invert";
+}
+
+@:enum abstract PbrStencilCompare(String) {
+	var Always = "Always";
+	var Never = "Never";
+	var Equal = "Equal";
+	var NotEqual = "NotEqual";
+	var Greater = "Greater";
+	var GreaterEqual = "GreaterEqual";
+	var Less = "Less";
+	var LessEqual = "LessEqual";
+}
+
 typedef PbrProps = {
 	var mode : PbrMode;
 	var blend : PbrBlend;
 	var shadows : Bool;
 	var culling : Bool;
 	var depthTest : PbrDepthTest;
+	var colorMask : Int;
 	@:optional var alphaKill : Bool;
 	@:optional var emissive : Float;
 	@:optional var parallax : Float;
+	
+	var enableStencil : Bool;
+	@:optional var stencilCompare : PbrStencilCompare;
+	@:optional var stencilPassOp : PbrStencilOp;
+	@:optional var stencilFailOp : PbrStencilOp;
+	@:optional var depthFailOp : PbrStencilOp;
+	@:optional var stencilValue : Int;
+	@:optional var stencilWriteMask : Int;
+	@:optional var stencilReadMask : Int;
+
+	@:optional var drawOrder : Int;
 }
 
 class PbrMaterial extends Material {
@@ -65,6 +98,8 @@ class PbrMaterial extends Material {
 				shadows : false,
 				culling : false,
 				depthTest : Less,
+				colorMask : 1 << 0 | 1 << 1 | 1 << 2 | 1 << 3,
+				enableStencil : false,
 			};
 		case "ui":
 			props = {
@@ -74,6 +109,8 @@ class PbrMaterial extends Material {
 				culling : false,
 				alphaKill : true,
 				depthTest : Less,
+				colorMask : 1 << 0 | 1 << 1 | 1 << 2 | 1 << 3,
+				enableStencil : false,
 			};
 		case "decal":
 			props = {
@@ -82,6 +119,8 @@ class PbrMaterial extends Material {
 				shadows : false,
 				culling : true,
 				depthTest : Less,
+				colorMask : 1 << 0 | 1 << 1 | 1 << 2 | 1 << 3,
+				enableStencil : false,
 			};
 		default:
 			props = {
@@ -90,6 +129,8 @@ class PbrMaterial extends Material {
 				shadows : true,
 				culling : true,
 				depthTest : Less,
+				colorMask : 1 << 0 | 1 << 1 | 1 << 2 | 1 << 3,
+				enableStencil : false,
 			};
 		}
 		return props;
@@ -102,6 +143,7 @@ class PbrMaterial extends Material {
 			case Alpha: Alpha;
 			case Add: Add;
 			case Multiply: Multiply;
+			case AlphaMultiply: AlphaMultiply;
 			default: throw "Unsupported Model blendMode "+blendMode;
 		}
 		props.depthTest = switch (mainPass.depthTest) {
@@ -118,22 +160,38 @@ class PbrMaterial extends Material {
 	}
 
 	function resetProps() {
+		var props : PbrProps = props;
 		// Remove superfluous shader
 		mainPass.removeShader(mainPass.getShader(h3d.shader.VolumeDecal));
 		mainPass.removeShader(mainPass.getShader(h3d.shader.pbr.StrengthValues));
 		mainPass.removeShader(mainPass.getShader(h3d.shader.pbr.AlphaMultiply));
 		mainPass.removeShader(mainPass.getShader(h3d.shader.Parallax));
+		// Backward compatibility
 		if( !Reflect.hasField(props, "depthTest") ) Reflect.setField(props, "depthTest", Less);
+		if( !Reflect.hasField(props, "colorMask") ) Reflect.setField(props, "colorMask", 1 << 0 | 1 << 1 | 1 << 2 | 1 << 3);
+		if( !Reflect.hasField(props, "enableStencil") ) Reflect.setField(props, "enableStencil", false);
+		// Remove unused fields
+		if( props.emissive == 0 )
+			Reflect.deleteField(props,"emissive");
+		if( !props.enableStencil ) {
+			Reflect.deleteField(props, "stencilWriteMask");
+			Reflect.deleteField(props, "stencilReadMask");
+			Reflect.deleteField(props, "stencilValue");
+			Reflect.deleteField(props, "stencilFailOp");
+			Reflect.deleteField(props, "depthFailOp");
+			Reflect.deleteField(props, "stencilPassOp");
+			Reflect.deleteField(props, "stencilCompare");
+		} 
 	}
 
 	override function refreshProps() {
 		resetProps();
 		var props : PbrProps = props;
+
+		// Preset
 		switch( props.mode ) {
 		case PBR:
 			mainPass.setPassName("default");
-		case Albedo:
-			mainPass.setPassName("albedo");
 		case BeforeTonemapping:
 			mainPass.setPassName("beforeTonemapping");
 			var e = mainPass.getShader(h3d.shader.Emissive);
@@ -158,6 +216,8 @@ class PbrMaterial extends Material {
 				mainPass.addShader(sv);
 			}
 		}
+
+		// Blend modes
 		switch( props.blend ) {
 		case None:
 			mainPass.setBlendMode(None);
@@ -183,12 +243,16 @@ class PbrMaterial extends Material {
 			mainPass.setBlendMode(AlphaMultiply);
 			mainPass.depthWrite = false;
 		}
+
+		// Enable/Disable AlphaKill
 		var tshader = textureShader;
 		if( tshader != null ) {
 			tshader.killAlpha = props.alphaKill;
 			tshader.killAlphaThreshold = 0.5;
 		}
+
 		mainPass.culling = props.culling ? Back : None;
+
 		shadows = props.shadows;
 		if( shadows ) getPass("shadow").culling = mainPass.culling;
 
@@ -204,7 +268,7 @@ class PbrMaterial extends Material {
 			default: Less;
 		}
 
-		// get values from specular texture
+		// Get values from specular texture
 		var emit = props.emissive == null ? 0 : props.emissive;
 		var tex = mainPass.getShader(h3d.shader.pbr.PropsTexture);
 		var def = mainPass.getShader(h3d.shader.pbr.PropsValues);
@@ -215,7 +279,7 @@ class PbrMaterial extends Material {
 		if( tex != null ) tex.emissive = emit;
 		if( def != null ) def.emissive = emit;
 
-		// parallax
+		// Parallax
 		var ps = mainPass.getShader(h3d.shader.Parallax);
 		if( props.parallax > 0 ) {
 			if( ps == null ) {
@@ -228,6 +292,67 @@ class PbrMaterial extends Material {
 		} else if( ps != null )
 			mainPass.removeShader(ps);
 
+		setColorMask();
+
+		setStencil();
+
+		mainPass.layer = props.drawOrder == null ? 0 : props.drawOrder;
+	}
+
+	function setColorMask() {
+		var props : PbrProps = props;
+		mainPass.setColorMask(	props.colorMask & (1<<0) > 0 ? true : false, 
+								props.colorMask & (1<<1) > 0 ? true : false, 
+								props.colorMask & (1<<2) > 0 ? true : false, 
+								props.colorMask & (1<<3) > 0 ? true : false);
+	}
+
+	function setStencil() {
+		var props : PbrProps = props;
+		if( props.enableStencil ) {
+
+			if( !Reflect.hasField(props, "stencilFailOp") ) 	Reflect.setField(props, "stencilFailOp", Keep);
+			if( !Reflect.hasField(props, "depthFailOp") ) 		Reflect.setField(props, "depthFailOp", Keep);
+			if( !Reflect.hasField(props, "stencilPassOp") ) 	Reflect.setField(props, "stencilPassOp", Replace);
+			if( !Reflect.hasField(props, "stencilCompare") ) 	Reflect.setField(props, "stencilCompare", Always);
+			if( !Reflect.hasField(props, "stencilValue") ) 		Reflect.setField(props, "stencilValue", 0);
+			if( !Reflect.hasField(props, "stencilReadMask") ) 	Reflect.setField(props, "stencilReadMask", 0);
+			if( !Reflect.hasField(props, "stencilWriteMask") ) 	Reflect.setField(props, "stencilWriteMask", 0);
+
+			inline function getStencilOp( op : PbrStencilOp ) : Data.StencilOp {
+				return switch op {
+					case Keep:Keep;
+					case Zero:Zero;
+					case Replace:Replace;
+					case Increment:Increment;
+					case IncrementWrap:IncrementWrap;
+					case Decrement:Decrement;
+					case DecrementWrap:DecrementWrap;
+					case Invert:Invert;
+				}
+			}
+
+			inline function getStencilCompare( op : PbrStencilCompare ) : Data.Compare {
+				return switch op {
+					case Always:Always;
+					case Never:Never;
+					case Equal:Equal;
+					case NotEqual:NotEqual;
+					case Greater:Greater;
+					case GreaterEqual:GreaterEqual;
+					case Less:Less;
+					case LessEqual:LessEqual;
+				}
+			}
+
+			var s = new Stencil();
+			s.setFunc(getStencilCompare(props.stencilCompare), props.stencilValue, props.stencilReadMask, props.stencilWriteMask);
+			s.setOp(getStencilOp(props.stencilFailOp), getStencilOp(props.depthFailOp), getStencilOp(props.stencilPassOp));
+			mainPass.stencil = s;
+		}
+		else {
+			mainPass.stencil = null;
+		}
 	}
 
 	override function get_specularTexture() {
@@ -283,7 +408,6 @@ class PbrMaterial extends Material {
 	#if editor
 	override function editProps() {
 		var props : PbrProps = props;
-		if( props.emissive == 0 ) Reflect.deleteField(props,"emissive");
 		return new js.jquery.JQuery('
 			<dl>
 				<dt>Mode</dt>

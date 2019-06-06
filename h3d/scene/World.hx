@@ -199,6 +199,7 @@ class World extends Object {
 	var allChunks : Array<WorldChunk>;
 	var bigTextures : Array<{ diffuse : h3d.mat.BigTexture, spec : h3d.mat.BigTexture, normal : h3d.mat.BigTexture }>;
 	var textures : Map<String, WorldMaterial>;
+	var autoCollect : Bool;
 
 	public function new( chunkSize : Int, worldSize : Int, ?parent, ?autoCollect = true ) {
 		super(parent);
@@ -209,6 +210,7 @@ class World extends Object {
 		this.chunkSize = chunkSize;
 		this.worldSize = worldSize;
 		this.worldStride = Math.ceil(worldSize / chunkSize);
+		this.autoCollect = autoCollect;
 		if( autoCollect )
 			h3d.Engine.getCurrent().mem.garbage = garbage;
 	}
@@ -530,7 +532,7 @@ class World extends Object {
 					c.buffers.set(g.m.bits, b);
 					initMaterial(b, g.m);
 				}
-				var p = Std.instance(b.primitive, h3d.prim.BigPrimitive);
+				var p = hxd.impl.Api.downcast(b.primitive, h3d.prim.BigPrimitive);
 
 				if(e.optimized) {
 					var m = e.transform;
@@ -606,7 +608,11 @@ class World extends Object {
 		}
 		bigTextures = [];
 		textures = new Map();
+		if( autoCollect )
+			h3d.Engine.getCurrent().mem.garbage = noGarbage;
 	}
+
+	static function noGarbage() {}
 
 	public function onContextLost() {
 		for( c in allChunks )

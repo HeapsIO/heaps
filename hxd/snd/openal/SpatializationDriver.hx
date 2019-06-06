@@ -17,7 +17,7 @@ class SpatializationDriver extends EffectDriver<Spatialization> {
 	}
 
 	override function apply(e : Spatialization, s : SourceHandle) : Void {
-		var e = Std.instance(e, hxd.snd.effect.Spatialization);
+		var e = hxd.impl.Api.downcast(e, hxd.snd.effect.Spatialization);
 
 		AL.source3f(s.inst, AL.POSITION,  -e.position.x,  e.position.y,  e.position.z);
 		AL.source3f(s.inst, AL.VELOCITY,  -e.velocity.x,  e.velocity.y,  e.velocity.z);

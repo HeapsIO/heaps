@@ -21,7 +21,7 @@ class Base {
 	public function dispose() {
 	}
 
-	public function draw( passes : PassList ) {
+	public function draw( passes : PassList, ?sort : h3d.pass.PassList -> Void ) {
 	}
 
 }

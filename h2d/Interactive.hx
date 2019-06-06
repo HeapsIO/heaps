@@ -87,7 +87,7 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 		parentMask = null;
 		var p = parent;
 		while( p != null ) {
-			var m = Std.instance(p, Mask);
+			var m = hxd.impl.Api.downcast(p, Mask);
 			if( m != null ) {
 				parentMask = m;
 				break;
