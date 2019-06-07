@@ -274,7 +274,7 @@ class CacheFile extends Cache {
 				//log("Recompile "+[for( s in shaderList ) shaderName(s)]);
 				var rt = link(shaderList, batchMode); // will compile + update linkMap
 				if( rt.spec.signature != r.specSign ) {
-					var signParts = [for( i in rt.spec.instances ) i.shader.data.name+"_" + i.bits + "_" + i.index];					
+					var signParts = [for( i in rt.spec.instances ) i.shader.data.name+"_" + i.bits + "_" + i.index];
 					throw "assert";
 				}
 				runtimeShaders.push(rt);
@@ -517,6 +517,7 @@ class CacheFile extends Cache {
 		separator();
 		writeString(null);
 
+		try sys.FileSystem.createDirectory(new haxe.io.Path(file).dir) catch( e : Dynamic ) {};
 		sys.io.File.saveBytes(file, out.getBytes());
 
 		out = new haxe.io.BytesOutput();
