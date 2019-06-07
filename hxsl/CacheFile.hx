@@ -273,8 +273,10 @@ class CacheFile extends Cache {
 				if( r == null ) continue;
 				//log("Recompile "+[for( s in shaderList ) shaderName(s)]);
 				var rt = link(shaderList, batchMode); // will compile + update linkMap
-				if( rt.spec.signature != r.specSign )
+				if( rt.spec.signature != r.specSign ) {
+					var signParts = [for( i in rt.spec.instances ) i.shader.data.name+"_" + i.bits + "_" + i.index];					
 					throw "assert";
+				}
 				runtimeShaders.push(rt);
 				rttMap.set(r.specSign, rt);
 			}
