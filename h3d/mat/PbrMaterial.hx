@@ -450,6 +450,7 @@ class PbrMaterial extends Material {
 				<dt>Shadows</dt><dd><input type="checkbox" field="shadows"/></dd>
 				<dt>Culled</dt><dd><input type="checkbox" field="culling"/></dd>
 				<dt>AlphaKill</dt><dd><input type="checkbox" field="alphaKill"/></dd>
+				<dt>Draw Order</dt><dd><input type="range" min="0" max="10" step="1" field="drawOrder"/></dd>
 			</dl>
 		');
 	}
