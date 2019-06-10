@@ -288,6 +288,7 @@ class System {
 	static function get_lang() : String {
 		if( _lang == null ) {
 			var str = @:privateAccess Sys.makePath(getLocale());
+			if( str == null ) str = "en";
 			_lang = ~/[.@_-]/g.split(str)[0];
 		}
 		return _lang;
