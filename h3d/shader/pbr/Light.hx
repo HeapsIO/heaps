@@ -6,11 +6,12 @@ class Light extends hxsl.Shader {
 
 		var pbrLightDirection : Vec3;
 		var pbrLightColor : Vec3;
+		var pbrOcclusionFactor : Float;
 		var transformedPosition : Vec3;
 		var occlusion : Float;
 
 		@param var lightColor = vec3(0.5, 0.5, 0.5);
-
+		@param var occlusionFactor = 0.0;
 	};
 }
 
@@ -30,6 +31,7 @@ class SpotLight extends Light {
 		@param var cookieTex : Sampler2D;
 
 		function fragment() {
+			pbrOcclusionFactor = occlusionFactor;
 			pbrLightDirection = normalize(lightPos - transformedPosition);
 
 			var delta = lightPos - transformedPosition;
@@ -75,6 +77,7 @@ class PointLight extends Light {
 		@param var pointSize : Float;
 
 		function fragment() {
+			pbrOcclusionFactor = occlusionFactor;
 			var delta = lightPos - transformedPosition;
 			pbrLightDirection = delta.normalize();
 			/*
@@ -103,6 +106,7 @@ class DirLight extends Light {
 		function fragment() {
 			pbrLightDirection = lightDir;
 			pbrLightColor = lightColor;
+			pbrOcclusionFactor = occlusionFactor;
 		}
 	};
 }

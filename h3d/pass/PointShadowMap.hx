@@ -53,6 +53,7 @@ class PointShadowMap extends Shadows {
 	override function dispose() {
 		super.dispose();
 		if( customDepth && depth != null ) depth.dispose();
+		if( tmpTex != null) tmpTex.dispose();
 	}
 
 	override function isUsingWorldDist(){
@@ -130,22 +131,34 @@ class PointShadowMap extends Shadows {
 		return true;
 	}
 
+	static var tmpTex : h3d.mat.Texture;
 	override function createDefaultShadowMap() {
-		var tex = new h3d.mat.Texture(1,1, [Target,Cube], format);
-		tex.name = "defaultCubeShadowMap";
+		if( tmpTex != null) return tmpTex;
+		tmpTex = new h3d.mat.Texture(1,1, [Target,Cube], format);
+		tmpTex.name = "defaultCubeShadowMap";
 		for(i in 0 ... 6)
-			tex.clear(0xFFFFFF, i);
-		return tex;
+			tmpTex.clear(0xFFFFFF, i);
+		return tmpTex;
 	}
 
 	override function draw( passes, ?sort ) {
 		if( !filterPasses(passes) )
 			return;
 
+		if( passes.isEmpty() ) {
+			syncShader(staticTexture == null ? createDefaultShadowMap() : staticTexture);
+			return;
+		}
+
 		var pointLight = cast(light, h3d.scene.pbr.PointLight);
 		var absPos = light.getAbsPos();
 		var sp = new h3d.col.Sphere(absPos.tx, absPos.ty, absPos.tz, pointLight.range);
 		cullPasses(passes,function(col) return col.inSphere(sp));
+
+		if( passes.isEmpty() ) {
+			syncShader(staticTexture == null ? createDefaultShadowMap() : staticTexture);
+			return;
+		}
 
 		var texture = ctx.textures.allocTarget("pointShadowMap", size, size, false, format, true);
 		if(depth == null || depth.width != size || depth.height != size || depth.isDisposed() ) {
@@ -154,51 +167,65 @@ class PointShadowMap extends Shadows {
 		}
 		texture.depthBuffer = depth;
 
-		var validBakedTexture = (staticTexture != null && staticTexture.width == texture.width);
-		var merge : h3d.mat.Texture = null;
-		if( mode == Mixed && !ctx.computingStatic && validBakedTexture)
-			merge = ctx.textures.allocTarget("mergedPointShadowMap", size, size, false, format, true);
-
 		lightCamera.pos.set(absPos.tx, absPos.ty, absPos.tz);
 		lightCamera.zFar = pointLight.range;
 		lightCamera.zNear = pointLight.zNear;
 
 		for( i in 0...6 ) {
+
+			// Shadows on the current face is disabled
+			if( !faceMask.has(CubeFaceFlag.createByIndex(i)) ) {
+				texture.clear(0xFFFFFF, 0, i);
+				continue;
+			}
+
 			lightCamera.setCubeMap(i);
 			lightCamera.update();
+
+			var save = passes.save();
+			cullPasses(passes, function(col) return col.inFrustum(lightCamera.frustum));
+			if( passes.isEmpty() ) {
+				passes.load(save);
+				texture.clear(0xFFFFFF, 0, i);
+				continue;
+			}
 
 			ctx.engine.pushTarget(texture, i);
 			ctx.engine.clear(0xFFFFFF, 1);
 
-			if( !faceMask.has(CubeFaceFlag.createByIndex(i)) ) {
-				ctx.engine.popTarget();
-				continue;
-			}
-
-			var save = passes.save();
-			cullPasses(passes, function(col) return col.inFrustum(lightCamera.frustum));
 			super.draw(passes,sort);
 			passes.load(save);
 			ctx.engine.popTarget();
 		}
 
+		// Blur is applied even if there's no shadows - TO DO : remove the useless blur pass
 		if( blur.radius > 0 )
 			blur.apply(ctx, texture);
+
+		if( mode == Mixed && !ctx.computingStatic )
+			syncShader(merge(texture));
+		else
+			syncShader(texture);
+	}
+
+	function merge( dynamicTex : h3d.mat.Texture ) : h3d.mat.Texture{
+		var validBakedTexture = (staticTexture != null && staticTexture.width == dynamicTex.width);
+		var merge : h3d.mat.Texture = null;
+		if( mode == Mixed && !ctx.computingStatic && validBakedTexture)
+			merge = ctx.textures.allocTarget("mergedPointShadowMap", size, size, false, format, true);
 
 		if( mode == Mixed && !ctx.computingStatic && merge != null ) {
 			for( i in 0 ... 6 ) {
 				if( !faceMask.has(CubeFaceFlag.createByIndex(i)) ) continue;
-				mergePass.shader.texA = texture;
+				mergePass.shader.texA = dynamicTex;
 				mergePass.shader.texB = staticTexture;
 				mergePass.shader.mat = cubeDir[i];
 				ctx.engine.pushTarget(merge, i);
 				mergePass.render();
 				ctx.engine.popTarget();
 			}
-			texture = merge;
 		}
-
-		syncShader(texture);
+		return merge;
 	}
 
 	function updateCamera(){

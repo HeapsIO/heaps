@@ -116,6 +116,7 @@ class SpotLight extends Light {
 		pbr.fallOff = hxd.Math.cos(hxd.Math.degToRad(hxd.Math.min(angle/2.0, fallOff)));
 		pbr.range = hxd.Math.min(range, maxRange);
 		pbr.invLightRange4 = 1 / (maxRange * maxRange * maxRange * maxRange);
+		pbr.occlusionFactor = occlusionFactor;
 
 		if(cookie != null){
 			pbr.useCookie = true;
