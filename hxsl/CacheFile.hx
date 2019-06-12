@@ -277,6 +277,8 @@ class CacheFile extends Cache {
 					var signParts = [for( i in rt.spec.instances ) i.shader.data.name+"_" + i.bits + "_" + i.index];
 					throw "assert";
 				}
+				var rt2 = rttMap.get(r.specSign);
+				if( rt2 != null ) throw "assert";
 				runtimeShaders.push(rt);
 				rttMap.set(r.specSign, rt);
 			}
@@ -552,6 +554,7 @@ class CacheFile extends Cache {
 	**/
 	function cleanRuntime( r : RuntimeShader ) {
 		var rc = new RuntimeShader();
+		@:privateAccess RuntimeShader.UID--; // unalloc id
 		rc.id = 0;
 		rc.signature = r.spec.signature; // store by spec, not by sign (dups)
 		rc.vertex = cleanRuntimeData(r.vertex);
