@@ -151,6 +151,24 @@ class Manager {
 			channels.stop();
 	}
 
+	public function stopAllNotLooping() {
+		var c = channels;
+		while( c != null ) {
+			var n = c.next;
+			if( !c.loop ) c.stop();
+			c = n;
+		}
+	}
+
+	public function stopByName( name : String ) {
+		var c = channels;
+		while( c != null ) {
+			var n = c.next;
+			if( c.soundGroup != null && c.soundGroup.name == name ) c.stop();
+			c = n;
+		}
+	}
+
 	/**
 		Returns iterator with all active instances of a Sound at the call time.
 	**/

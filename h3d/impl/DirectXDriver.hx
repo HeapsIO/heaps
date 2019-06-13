@@ -280,7 +280,7 @@ class DirectXDriver extends h3d.impl.Driver {
 		if( old ) hxd.System.allowTimeout = true;
 
 		if( hasDeviceError ) {
-			//trace("OnContextLost");
+			Sys.println("----------- OnContextLost ----------");
 			hasDeviceError = false;
 			dispose();
 			reset();

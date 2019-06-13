@@ -66,6 +66,7 @@ class Direct extends PropsDefinition {
 
 		var pbrLightDirection : Vec3;
 		var pbrLightColor : Vec3;
+		var pbrOcclusionFactor : Float;
 		@const var doDiscard : Bool = true;
 
 		function fragment() {
@@ -113,7 +114,7 @@ class Direct extends PropsDefinition {
 				var specular = (D * F * G_Att).max(0.);
 
 				var direct = (diffuse * (1 - metalness) * (1 - F) + specular) * pbrLightColor * NdL;
-				pixelColor.rgb += direct * shadow;
+				pixelColor.rgb += direct * shadow * mix(1, occlusion, pbrOcclusionFactor);
 			} else if( doDiscard )
 				discard;
 		}
