@@ -749,8 +749,10 @@ class CacheFile extends Cache {
 				if( engine == null ) engine = @:privateAccess new h3d.Engine();
 				engine.driver.selectShader(s);
 			}
+			// same shader id is shared between multiple runtime shaders because they have the same signature
+			// hopefully, the other shader will make it through addSource just a bit after
 			if( s.vertex.code == null || s.fragment.code == null )
-				throw "Missing shader code";
+				return;
 			compiledSources.set(s.signature, { vertex : allocSource(s.vertex.code), fragment : allocSource(s.fragment.code) });
 		}
 	}
