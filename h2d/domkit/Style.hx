@@ -74,7 +74,7 @@ class Style extends domkit.CssStyle {
 				if( currentObjects.length == 0 ) return;
 				var scene = getDocument(currentObjects[0]).root.obj.getScene();
 				var fl = new h2d.Flow();
-				scene.addChild(fl,100);
+				scene.addChildAt(fl,100);
 				fl.backgroundTile = h2d.Tile.fromColor(0x400000,0.9);
 				fl.padding = 10;
 				errorsText = new h2d.Text(hxd.res.DefaultFont.get(), fl);
