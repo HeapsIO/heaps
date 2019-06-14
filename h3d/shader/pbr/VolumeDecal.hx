@@ -70,7 +70,7 @@ class DecalOverlay extends hxsl.Shader {
 				discard;
 
 			var color = colorTexture.get(calculatedUV);
-			pixelColor.rgb = color.rgb + color.rgb * emissive;
+			pixelColor.rgb *= color.rgb + color.rgb * emissive;
 			pixelColor.a = max(max(pixelColor.r, pixelColor.g), pixelColor.b) * fadeFactor;
 		}
 	}
