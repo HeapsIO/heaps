@@ -50,6 +50,7 @@ class WorldMaterial {
 	public var blend : h3d.mat.BlendMode;
 	public var killAlpha : Null<Float>;
 	public var emissive : Null<Float>;
+	public var stencil : Null<Int>;
 	public var lights : Bool;
 	public var shadows : Bool;
 	public var shaders : Array<hxsl.Shader>;
@@ -60,8 +61,30 @@ class WorldMaterial {
 		shadows = true;
 		shaders = [];
 	}
+
+	public function clone() : WorldMaterial {
+		var wm = new WorldMaterial();
+		wm.t = this.t;
+		wm.spec = this.spec;
+		wm.normal = this.normal;
+		wm.normal = this.normal;
+		wm.mat = this.mat;
+		wm.culling = this.culling;
+		wm.blend = this.blend;
+		wm.killAlpha = this.killAlpha;
+		wm.emissive = this.emissive;
+		wm.stencil = this.stencil;
+		wm.lights = this.lights;
+		wm.shadows = this.shadows;
+		wm.shaders = this.shaders.copy();
+		wm.name = this.name;
+		return wm;
+	}
+
+
 	public function updateBits() {
-		bits = (t.t == null ? 0 : t.t.id    << 10)
+		bits = ((stencil == null ? 0 : 1)    << 11)
+			| (t.t == null ? 0 : t.t.id    	<< 10)
 			| ((normal == null ? 0 : 1)     << 9)
 			| (blend.getIndex()             << 6)
 			| ((killAlpha == null ? 0 : 1)  << 5)
@@ -275,7 +298,7 @@ class World extends Object {
 		}
 	}
 
-	function loadMaterialTexture( r : hxd.res.Model, mat : hxd.fmt.hmd.Data.Material ) : WorldMaterial {
+	function loadMaterialTexture( r : hxd.res.Model, mat : hxd.fmt.hmd.Data.Material, modelName : String ) : WorldMaterial {
 		var texturePath = resolveTexturePath(r, mat);
 		var m = textures.get(texturePath);
 		if( m != null )
@@ -347,6 +370,7 @@ class World extends Object {
 		m.emissive = null;
 		m.mat = mat;
 		m.culling = true;
+		m.stencil = null;
 		m.updateBits();
 		textures.set(texturePath, m);
 		return m;
