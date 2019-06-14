@@ -417,7 +417,7 @@ class World extends Object {
 			for( mid in 0...m.materials.length ) {
 				var mat = lib.header.materials[m.materials[mid]];
 				if(mat == null || mat.diffuseTexture == null) continue;
-				var wmat = loadMaterialTexture(r, mat);
+				var wmat = loadMaterialTexture(r, mat, m.name);
 				if( wmat == null ) continue;
 				var data = lib.getBuffers(geom, format.fmt, format.defaults, mid);
 
