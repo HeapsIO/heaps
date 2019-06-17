@@ -64,9 +64,9 @@ class WorldMaterial {
 
 	public function clone() : WorldMaterial {
 		var wm = new WorldMaterial();
+		wm.bits = this.bits;
 		wm.t = this.t;
 		wm.spec = this.spec;
-		wm.normal = this.normal;
 		wm.normal = this.normal;
 		wm.mat = this.mat;
 		wm.culling = this.culling;
@@ -83,15 +83,15 @@ class WorldMaterial {
 
 
 	public function updateBits() {
-		bits = ((stencil == null ? 0 : 1)    << 11)
-			| (t.t == null ? 0 : t.t.id    	<< 10)
-			| ((normal == null ? 0 : 1)     << 9)
-			| (blend.getIndex()             << 6)
-			| ((killAlpha == null ? 0 : 1)  << 5)
-			| ((emissive == null ? 0 : 1)   << 4)
-			| ((lights ? 1 : 0)             << 3)
-			| ((shadows ? 1 : 0)            << 2)
-			| ((spec == null ? 0 : 1)       << 1)
+		bits = (t.t == null ? 0 : t.t.id   		<< 18)
+			| ((stencil == null ? 0 : stencil)  << 10)
+			| ((normal == null ? 0 : 1)     	<< 9)
+			| (blend.getIndex()             	<< 6)
+			| ((killAlpha == null ? 0 : 1)  	<< 5)
+			| ((emissive == null ? 0 : 1)   	<< 4)
+			| ((lights ? 1 : 0)             	<< 3)
+			| ((shadows ? 1 : 0)            	<< 2)
+			| ((spec == null ? 0 : 1)       	<< 1)
 			| (culling ? 1 : 0);
 	}
 }
