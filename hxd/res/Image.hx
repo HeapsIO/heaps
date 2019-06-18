@@ -61,7 +61,7 @@ class Image extends Resource {
 			f.bigEndian = true;
 			while( true ) {
 				switch( f.readUInt16() ) {
-				case 0xFFC2, 0xFFC0:
+				case 0xFFC2, 0xFFC1, 0xFFC0:
 					var len = f.readUInt16();
 					var prec = f.readByte();
 					height = f.readUInt16();
