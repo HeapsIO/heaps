@@ -20,6 +20,8 @@ class Camera extends h2d.Object {
 	/** Vertical anchor position inside ratio boundaries used for anchoring and resize compensation. ( default : 0.5 ) **/
 	public var anchorY(default, set) : Float;
 
+	public var zoom(get, set) : Float;
+
 	var ratioChanged : Bool;
 	var sceneWidth : Int;
 	var sceneHeight : Int;
@@ -46,12 +48,12 @@ class Camera extends h2d.Object {
 	inline function get_viewY() { return -this.y + anchorHeight; }
 
 	inline function set_viewX( v : Float ) {
-		this.x = -v - anchorWidth;
-		return -v;
+		this.x = anchorWidth - v;
+		return v;
 	}
 	inline function set_viewY( v : Float ) {
-		this.y = -v - anchorHeight;
-		return -v;
+		this.y = anchorHeight - v;
+		return v;
 	}
 
 	inline function set_horizontalRatio( v ) {
@@ -76,6 +78,16 @@ class Camera extends h2d.Object {
 		return anchorY;
 	}
 
+	inline function get_zoom() { return scaleX; }
+
+	inline function set_zoom( v : Float ) {
+		var d = v / zoom;
+		setScale(v);
+		viewX *= d;
+		viewY *= d;
+		return v;
+	}
+
 	override private function onAdd()
 	{
 		initScene();
@@ -91,16 +103,16 @@ class Camera extends h2d.Object {
 	override private function sync( ctx : RenderContext )
 	{
 		if ( scene != null && (ratioChanged || scene.width != sceneWidth || scene.height != sceneHeight) ) {
-			var oldX = -this.x + anchorWidth;
-			var oldY = -this.y + anchorHeight;
+			var oldX = viewX;
+			var oldY = viewY;
 			this.sceneWidth = scene.width;
 			this.sceneHeight = scene.height;
 			this.width = Math.round(scene.width * horizontalRatio);
 			this.height = Math.round(scene.height * verticalRatio);
 			this.anchorWidth = width * anchorX;
 			this.anchorHeight = height * anchorY;
-			this.x = oldX - anchorWidth;
-			this.y = oldY - anchorHeight;
+			this.viewX = oldX;
+			this.viewY = oldY;
 			this.ratioChanged = false;
 		}
 		super.sync(ctx);
