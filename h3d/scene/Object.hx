@@ -777,8 +777,9 @@ class Object implements hxd.impl.Serializable {
 		this.scaleX = s.x;
 		this.scaleY = s.y;
 		this.scaleZ = s.z;
-		mat.prependScale(1.0 / s.x, 1.0 / s.y, 1.0 / s.z);
-		qRot.initRotateMatrix(mat);
+		var mTmp = mat.clone();
+		mTmp.prependScale(1.0 / s.x, 1.0 / s.y, 1.0 / s.z);
+		qRot.initRotateMatrix(mTmp);
 		posChanged = true;
 	}
 
