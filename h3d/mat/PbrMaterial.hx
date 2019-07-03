@@ -5,6 +5,7 @@ package h3d.mat;
 	var Overlay = "Overlay";
 	var Decal = "Decal";
 	var BeforeTonemapping = "BeforeTonemapping";
+	var AfterTonemapping = "AfterTonemapping";
 	var Distortion = "Distortion";
 }
 
@@ -197,6 +198,8 @@ class PbrMaterial extends Material {
 			mainPass.setPassName("beforeTonemapping");
 			if( props.emissive > 0 ) 
 				mainPass.addShader(new h3d.shader.Emissive(props.emissive));
+		case AfterTonemapping:
+			mainPass.setPassName("afterTonemapping");
 		case Distortion:
 			mainPass.setPassName("distortion");
 			mainPass.depthWrite = false;
@@ -415,7 +418,7 @@ class PbrMaterial extends Material {
 					<select field="mode">
 						<option value="PBR">PBR</option>
 						<option value="BeforeTonemapping">Before Tonemapping</option>
-						<option value="Albedo">Albedo</option>
+						<option value="AfterTonemapping">After Tonemapping</option>
 						<option value="Overlay">Overlay</option>
 						<option value="Distortion">Distortion</option>
 						<option value="Decal">Decal</option>

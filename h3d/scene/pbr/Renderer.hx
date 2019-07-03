@@ -236,15 +236,15 @@ class Renderer extends h3d.scene.Renderer {
 		var props : RenderProps = props;
 
 		var albedo = allocTarget("albedo", true, 1.);
-		var normal = allocTarget("normal",false,1.,RGBA16F);
-		var pbr = allocTarget("pbr",false,1.);
-		var other = allocTarget("other",false,1.,RGBA32F);
+		var normal = allocTarget("normal", false, 1., RGBA16F);
+		var pbr = allocTarget("pbr", false, 1.);
+		var other = allocTarget("other", false, 1., RGBA32F);
 
-		ctx.setGlobal("albedoMap",{ texture : albedo, channel : hxsl.Channel.R });
-		ctx.setGlobal("depthMap",{ texture : other, channel : hxsl.Channel.G });
-		ctx.setGlobal("normalMap",{ texture : normal, channel : hxsl.Channel.R });
-		ctx.setGlobal("occlusionMap",{ texture : pbr, channel : hxsl.Channel.B });
-		ctx.setGlobal("bloom",null);
+		ctx.setGlobal("albedoMap", { texture : albedo, channel : hxsl.Channel.R });
+		ctx.setGlobal("depthMap", { texture : other, channel : hxsl.Channel.G });
+		ctx.setGlobal("normalMap", { texture : normal, channel : hxsl.Channel.R });
+		ctx.setGlobal("occlusionMap", { texture : pbr, channel : hxsl.Channel.B });
+		ctx.setGlobal("bloom", null);
 
 		var ls = hxd.impl.Api.downcast(getLightSystem(), LightSystem);
 		var count = ctx.engine.drawCalls;
@@ -255,6 +255,7 @@ class Renderer extends h3d.scene.Renderer {
 		clear(0, 1, 0);
 		mainDraw();
 
+		// Depth Copy 
 		var depth = allocTarget("depth",false,1.,R32F);
 		var depthMap = ctx.getGlobal("depthMap");
 		depthCopy.shader.depthTexture = depthMap.texture;
@@ -266,7 +267,7 @@ class Renderer extends h3d.scene.Renderer {
 		setTargets([albedo,normal,pbr]);
 		renderPass(decalsOutput, get("decal"));
 
-		if(renderMode == Default){
+		if(renderMode == Default) {
 			if( displayMode == Env )
 				clear(0xFF404040);
 
@@ -298,9 +299,9 @@ class Renderer extends h3d.scene.Renderer {
 		pbrIndirect.irrDiffuse = env.diffuse;
 		pbrIndirect.irrSpecular = env.specular;
 		pbrIndirect.irrSpecularLevels = env.specLevels;
+		pbrIndirect.cameraInvViewProj.load(ctx.camera.getInverseViewProj());
 
 		pbrDirect.doDiscard = false;
-		pbrIndirect.cameraInvViewProj.load(ctx.camera.getInverseViewProj());
 		switch( renderMode ) {
 		case Default:
 			pbrIndirect.drawIndirectDiffuse = true;
@@ -323,7 +324,6 @@ class Renderer extends h3d.scene.Renderer {
 			pbrIndirect.skyColor = false;
 			pbrIndirect.skyMap = env.env;
 		}
-
 		pbrDirect.doDiscard = true;
 
 		var lpass = screenLightPass;
@@ -335,7 +335,7 @@ class Renderer extends h3d.scene.Renderer {
 			screenLightPass = lpass;
 		}
 
-		// Draw DirLight, screenShader
+		// Direct Lighting - FullScreen
 		pbrProps.isScreen = true;
 		if( ls != null ) {
 			var count = ctx.engine.drawCalls;
@@ -343,7 +343,7 @@ class Renderer extends h3d.scene.Renderer {
 			ctx.lightSystem.drawPasses += ctx.engine.drawCalls - count;
 		}
 
-		// Draw others lights with their primitive
+		// Direct Lighting - With Primitive
 		pbrProps.isScreen = false;
 		draw(pbrLightPass.name);
 
@@ -357,14 +357,16 @@ class Renderer extends h3d.scene.Renderer {
 			return;
 		}
 
+		// Indirect Lighting - Diffuse with volumetricLightmap
+		pbrProps.isScreen = false;
 		pbrIndirect.drawIndirectDiffuse = false;
 		pbrIndirect.drawIndirectSpecular = true;
 		ctx.extraShaders = new hxsl.ShaderList(pbrProps, new hxsl.ShaderList(pbrIndirect, null));
 		draw("volumetricLightmap");
 		ctx.extraShaders = null;
-
+		
+		// Indirect Lighting - Diffuse and Specular
 		pbrProps.isScreen = true;
-
 		pbrIndirect.drawIndirectDiffuse = true;
 		pbrIndirect.drawIndirectSpecular = true;
 		pbrOut.render();
@@ -375,16 +377,16 @@ class Renderer extends h3d.scene.Renderer {
 		apply(BeforeTonemapping);
 
 		var distortion = allocTarget("distortion", true, 1.0, RG16F);
-		distortion.clear(0x000000);
 		setTarget(distortion);
+		clear(0);
 		draw("distortion");
 
 		var ldr = allocTarget("ldrOutput");
 		setTarget(ldr);
 		ctx.setGlobal("ldr", ldr);
-		var bloom = ctx.getGlobal("bloom");
 
 		// Bloom Params
+		var bloom = ctx.getGlobal("bloom");
 		tonemap.shader.bloom = bloom;
 		tonemap.shader.hasBloom = bloom != null;
 
@@ -408,6 +410,8 @@ class Renderer extends h3d.scene.Renderer {
 		tonemap.shader.hdrTexture = hdr;
 		tonemap.render();
 
+		draw("afterTonemappingDecal");
+		draw("afterTonemapping");
 		apply(AfterTonemapping);
 
 		postDraw();
