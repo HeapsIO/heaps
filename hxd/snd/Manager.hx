@@ -361,15 +361,15 @@ class Manager {
 		}
 
 		// --------------------------------------------------------------------
-		// calc audible gain & virtualize inaudible channels
+		// calc audible volume & virtualize inaudible channels
 		// --------------------------------------------------------------------
 
 		var c = channels;
 		while (c != null) {
-			c.calcAudibleGain(now);
+			c.calcAudibleVolume(now);
 			if( c.isLoading && !c.sound.getData().isLoading() )
 				c.isLoading = false;
-			c.isVirtual = c.pause || c.mute || c.channelGroup.mute || (c.allowVirtual && c.audibleGain < VIRTUAL_VOLUME_THRESHOLD) || c.isLoading;
+			c.isVirtual = c.pause || c.mute || c.channelGroup.mute || (c.allowVirtual && c.audibleVolume < VIRTUAL_VOLUME_THRESHOLD) || c.isLoading;
 			c = c.next;
 		}
 
@@ -444,12 +444,12 @@ class Manager {
 		// --------------------------------------------------------------------
 
 		var usedEffects : Effect = null;
-		var gain = hasMasterVolume ? 1. : masterVolume;
+		var volume = hasMasterVolume ? 1. : masterVolume;
 		for (s in sources) {
 			var c = s.channel;
 			if (c == null) continue;
 
-			var v = c.currentVolume * gain;
+			var v = c.currentVolume * volume;
 			if (s.volume != v) {
 				s.volume = v;
 				driver.setSourceVolume(s.handle, v);
@@ -759,8 +759,8 @@ class Manager {
 		if (a.priority != b.priority)
 			return a.priority < b.priority ? 1 : -1;
 
-		if (a.audibleGain != b.audibleGain)
-			return a.audibleGain < b.audibleGain ? 1 : -1;
+		if (a.audibleVolume != b.audibleVolume)
+			return a.audibleVolume < b.audibleVolume ? 1 : -1;
 
 		return a.id < b.id ? 1 : -1;
 	}
