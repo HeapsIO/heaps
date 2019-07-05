@@ -383,19 +383,19 @@ class Manager {
 		// virtualize sounds that puts the put the audible count over the maximum number of sources
 		// --------------------------------------------------------------------
 
-		var sgroupRefs = new Map<SoundGroup, Int>();
 		var audibleCount = 0;
 		var c = channels;
 		while (c != null && !c.isVirtual) {
 			if (++audibleCount > sources.length) c.isVirtual = true;
 			else if (c.soundGroup.maxAudible >= 0) {
-				var sgRefs = sgroupRefs.get(c.soundGroup);
-				if (sgRefs == null) sgRefs = 0;
-				if (++sgRefs > c.soundGroup.maxAudible) {
+				if(c.soundGroup.lastUpdate != now) {
+					c.soundGroup.lastUpdate = now;
+					c.soundGroup.numAudible = 0;
+				}
+				if (++c.soundGroup.numAudible > c.soundGroup.maxAudible) {
 					c.isVirtual = true;
 					--audibleCount;
 				}
-				sgroupRefs.set(c.soundGroup, sgRefs);
 			}
 			c = c.next;
 		}
