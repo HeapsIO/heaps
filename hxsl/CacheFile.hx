@@ -109,12 +109,16 @@ class CacheFile extends Cache {
 		if( wait.length > 0 ) {
 			waitCount += wait.length;
 			#if hlmulti
-			for( r in wait )
+			for( r in wait ) {
 				addNewShader(r);
+				hxd.System.timeoutTick();
+			}
 			#else
 			haxe.Timer.delay(function() {
-				for( r in wait )
+				for( r in wait ) {
 					addNewShader(r);
+					hxd.System.timeoutTick();
+				}
 			},1000); // wait until engine correctly initialized
 			#end
 		}
