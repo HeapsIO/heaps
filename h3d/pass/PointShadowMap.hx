@@ -21,7 +21,7 @@ class PointShadowMap extends Shadows {
 					h3d.Matrix.L([0,0,1,0, 0,-1,0,0, -1,0,0,0]),
 	 				h3d.Matrix.L([1,0,0,0, 0,0,1,0, 0,1,0,0]),
 	 				h3d.Matrix.L([1,0,0,0, 0,0,-1,0, 0,-1,0,0]),
-				 	h3d.Matrix.L([1,0,0,0, 0,-1,0,0, 0,1,0,0]),
+				 	h3d.Matrix.L([1,0,0,0, 0,-1,0,0, 0,0,1,0]),
 				 	h3d.Matrix.L([-1,0,0,0, 0,-1,0,0, 0,0,-1,0]) ];
 
 	public function new( light : h3d.scene.Light, useWorldDist : Bool ) {
@@ -109,7 +109,7 @@ class PointShadowMap extends Shadows {
 	}
 
 	override function loadStaticData( bytes : haxe.io.Bytes ) {
-		if( (mode != Mixed && mode != Static) || bytes == null )
+		if( (mode != Mixed && mode != Static) || bytes == null || bytes.length == 0 )
 			return false;
 		var buffer = new haxe.io.BytesInput(bytes);
 		var size = buffer.readInt32();
@@ -226,12 +226,6 @@ class PointShadowMap extends Shadows {
 			}
 		}
 		return merge;
-	}
-
-	function updateCamera(){
-		var absPos = light.getAbsPos();
-		lightCamera.pos.set(absPos.tx, absPos.ty, absPos.tz);
-		lightCamera.update();
 	}
 
 	override function computeStatic( passes : h3d.pass.PassList ) {
