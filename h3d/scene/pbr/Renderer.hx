@@ -131,7 +131,7 @@ class Renderer extends h3d.scene.Renderer {
 
 	override function getPassByName(name:String):h3d.pass.Base {
 		switch( name ) {
-		case "overlay", "beforeTonemapping", "albedo", "distortion":
+		case "overlay", "beforeTonemapping", "albedo", "distortion", "afterTonemapping":
 			return defaultPass;
 		case "alpha", "additive":
 			return output;
