@@ -33,7 +33,7 @@ class MeshBatch extends Mesh {
 	var modelViewInverseID = hxsl.Globals.allocID("global.modelViewInverse");
 	var colorSave = new h3d.Vector();
 	var colorMult : h3d.shader.ColorMult;
-	
+
 	/**
 		Tells if we can use material.color as a global multiply over each instance color (default: true)
 	**/
@@ -66,9 +66,11 @@ class MeshBatch extends Mesh {
 	}
 
 	function cleanPasses() {
+		var alloc = hxd.impl.Allocator.get();
 		while( dataPasses != null ) {
 			dataPasses.pass.removeShader(dataPasses.shader);
-			dataPasses.buffer.dispose();
+			alloc.disposeBuffer(dataPasses.buffer);
+			alloc.disposeFloats(dataPasses.data);
 			dataPasses = dataPasses.next;
 		}
 		instanced.commands.dispose();
@@ -115,8 +117,9 @@ class MeshBatch extends Mesh {
 			b.shader = shader;
 			b.pass = p;
 			b.shaders = [null/*link shader*/];
-			b.buffer = new h3d.Buffer(tot,4,[UniformBuffer,Dynamic]);
-			b.data = new hxd.FloatBuffer(tot * 4);
+			var alloc = hxd.impl.Allocator.get();
+			b.buffer = alloc.allocBuffer(tot,4,UniformDynamic);
+			b.data = alloc.allocFloats(tot * 4);
 			b.next = dataPasses;
 			dataPasses = b;
 
