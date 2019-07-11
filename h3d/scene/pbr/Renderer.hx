@@ -192,8 +192,14 @@ class Renderer extends h3d.scene.Renderer {
 		renderPass(output, get("additive"));
 	}
 
-	function drawHDR() {
+	function drawBeforeTonemapping() {
+		draw("beforeTonemappingDecal");
+		draw("beforeTonemapping");
+	}
 
+	function drawAfterTonemapping() {
+		draw("afterTonemappingDecal");
+		draw("afterTonemapping");
 	}
 
 	function postDraw() {
@@ -255,7 +261,7 @@ class Renderer extends h3d.scene.Renderer {
 		clear(0, 1, 0);
 		mainDraw();
 
-		// Depth Copy 
+		// Depth Copy
 		var depth = allocTarget("depth",false,1.,R32F);
 		var depthMap = ctx.getGlobal("depthMap");
 		depthCopy.shader.depthTexture = depthMap.texture;
@@ -364,16 +370,14 @@ class Renderer extends h3d.scene.Renderer {
 		ctx.extraShaders = new hxsl.ShaderList(pbrProps, new hxsl.ShaderList(pbrIndirect, null));
 		draw("volumetricLightmap");
 		ctx.extraShaders = null;
-		
+
 		// Indirect Lighting - Diffuse and Specular
 		pbrProps.isScreen = true;
 		pbrIndirect.drawIndirectDiffuse = true;
 		pbrIndirect.drawIndirectSpecular = true;
 		pbrOut.render();
 
-		drawHDR();
-		draw("beforeTonemappingDecal");
-		draw("beforeTonemapping");
+		drawBeforeTonemapping();
 		apply(BeforeTonemapping);
 
 		var distortion = allocTarget("distortion", true, 1.0, RG16F);
@@ -410,8 +414,7 @@ class Renderer extends h3d.scene.Renderer {
 		tonemap.shader.hdrTexture = hdr;
 		tonemap.render();
 
-		draw("afterTonemappingDecal");
-		draw("afterTonemapping");
+		drawAfterTonemapping();
 		apply(AfterTonemapping);
 
 		postDraw();
