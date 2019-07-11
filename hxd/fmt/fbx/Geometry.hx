@@ -203,7 +203,10 @@ class Geometry {
 
 	public function getColors() {
 		var color = root.get("LayerElementColor",true);
-		return color == null ? null : { values : color.get("Colors").getFloats(), index : color.get("ColorIndex").getInts() };
+		if( color == null ) return null;
+		var index = color.get("ColorIndex", true);
+		if( index == null ) return null;
+		return { values : color.get("Colors").getFloats(), index : index.getInts() };
 	}
 
 	public function getUVs() {
