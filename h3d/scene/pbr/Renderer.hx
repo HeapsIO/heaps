@@ -188,6 +188,7 @@ class Renderer extends h3d.scene.Renderer {
 
 	function mainDraw() {
 		renderPass(output, get("default"), frontToBack);
+		renderPass(output, get("terrain"));
 		renderPass(output, get("alpha"), backToFront);
 		renderPass(output, get("additive"));
 	}
