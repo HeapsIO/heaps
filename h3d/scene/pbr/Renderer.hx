@@ -187,6 +187,7 @@ class Renderer extends h3d.scene.Renderer {
 	}
 
 	function mainDraw() {
+		mark("MainDraw");
 		renderPass(output, get("default"), frontToBack);
 		renderPass(output, get("terrain"));
 		renderPass(output, get("alpha"), backToFront);
@@ -194,16 +195,19 @@ class Renderer extends h3d.scene.Renderer {
 	}
 
 	function drawBeforeTonemapping() {
+		mark("BeforeTonemapping");
 		draw("beforeTonemappingDecal");
 		draw("beforeTonemapping");
 	}
 
 	function drawAfterTonemapping() {
+		mark("AfterTonemapping");
 		draw("afterTonemappingDecal");
 		draw("afterTonemapping");
 	}
 
 	function postDraw() {
+		mark("PostDraw");
 		draw("overlay");
 	}
 
@@ -342,6 +346,7 @@ class Renderer extends h3d.scene.Renderer {
 			screenLightPass = lpass;
 		}
 
+		mark("DirectLighting");
 		// Direct Lighting - FullScreen
 		pbrProps.isScreen = true;
 		if( ls != null ) {
@@ -349,7 +354,6 @@ class Renderer extends h3d.scene.Renderer {
 			ls.drawScreenLights(this, lpass);
 			ctx.lightSystem.drawPasses += ctx.engine.drawCalls - count;
 		}
-
 		// Direct Lighting - With Primitive
 		pbrProps.isScreen = false;
 		draw(pbrLightPass.name);
@@ -365,6 +369,7 @@ class Renderer extends h3d.scene.Renderer {
 		}
 
 		// Indirect Lighting - Diffuse with volumetricLightmap
+		mark("VolumetricLightmap");
 		pbrProps.isScreen = false;
 		pbrIndirect.drawIndirectDiffuse = false;
 		pbrIndirect.drawIndirectSpecular = true;
@@ -373,6 +378,7 @@ class Renderer extends h3d.scene.Renderer {
 		ctx.extraShaders = null;
 
 		// Indirect Lighting - Diffuse and Specular
+		mark("Indirect Lighting");
 		pbrProps.isScreen = true;
 		pbrIndirect.drawIndirectDiffuse = true;
 		pbrIndirect.drawIndirectSpecular = true;
@@ -381,6 +387,7 @@ class Renderer extends h3d.scene.Renderer {
 		drawBeforeTonemapping();
 		apply(BeforeTonemapping);
 
+		mark("Distortion");
 		var distortion = allocTarget("distortion", true, 1.0, RG16F);
 		setTarget(distortion);
 		clear(0);
@@ -390,15 +397,15 @@ class Renderer extends h3d.scene.Renderer {
 		setTarget(ldr);
 		ctx.setGlobal("ldr", ldr);
 
+
+		mark("ToneMapping");
 		// Bloom Params
 		var bloom = ctx.getGlobal("bloom");
 		tonemap.shader.bloom = bloom;
 		tonemap.shader.hasBloom = bloom != null;
-
 		// Distortion Params
 		tonemap.shader.distortion = distortion;
 		tonemap.shader.hasDistortion = distortion != null;
-
 		// Color Grading Params
 		tonemap.shader.pixelSize = new Vector(1.0/ctx.engine.width, 1.0/ctx.engine.height);
 		tonemap.shader.hasColorGrading = enableColorGrading && colorGradingLUT != null;
@@ -406,7 +413,6 @@ class Renderer extends h3d.scene.Renderer {
 			tonemap.shader.colorGradingLUT = colorGradingLUT;
 			tonemap.shader.lutSize = colorGradingLUTSize;
 		}
-
 		tonemap.shader.mode =	switch( toneMode ) {
 									case Linear: 0;
 									case Reinhard: 1;
@@ -427,6 +433,7 @@ class Renderer extends h3d.scene.Renderer {
 		switch( displayMode ) {
 
 		case Pbr, Env, MatCap:
+			mark("FXAA");
 			fxaa.apply(ldr);
 
 		case Distortion:
