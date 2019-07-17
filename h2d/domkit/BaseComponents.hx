@@ -227,7 +227,7 @@ class ObjectComp implements h2d.domkit.Object implements domkit.Component.Compon
 	}
 
 	static function getFlowProps( o : h2d.Object ) {
-		var p = Std.instance(o.parent, h2d.Flow);
+		var p = hxd.impl.Api.downcast(o.parent, h2d.Flow);
 		return p == null ? null : p.getProperties(o);
 	}
 
@@ -317,9 +317,9 @@ class ObjectComp implements h2d.domkit.Object implements domkit.Component.Compon
 	}
 
 	@:keep static var init = {
-		domkit.Element.addElement = function(e, parent) { 
+		domkit.Element.addElement = function(e, parent) {
 			(e.obj : h2d.Object).name = e.id;
-			(parent.obj : h2d.Object).addChild(e.obj); 
+			(parent.obj : h2d.Object).addChild(e.obj);
 		}
 		domkit.Element.removeElement = function(e) (e.obj : h2d.Object).remove();
 		domkit.Element.getParent = function(e:h2d.Object) return e.parent;

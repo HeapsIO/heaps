@@ -79,7 +79,7 @@ class Style extends domkit.CssStyle {
 				fl.padding = 10;
 				errorsText = new h2d.Text(hxd.res.DefaultFont.get(), fl);
 			}
-			var fl = Std.instance(errorsText.parent, h2d.Flow);
+			var fl = hxd.impl.Api.downcast(errorsText.parent, h2d.Flow);
 			var sc = fl.getScene();
 			fl.maxWidth = sc.width;
 			errorsText.text = errors.join("\n");

@@ -16,7 +16,7 @@ class InitComponents {
 
 	static function addOnRemove(fields : Array<haxe.macro.Expr.Field>) : Array<haxe.macro.Expr.Field> {
 		var removeExpr = macro {
-			var style = Std.instance(document.style, h2d.domkit.Style);
+			var style = hxd.impl.Api.downcast(document.style, h2d.domkit.Style);
 			if( style != null ) @:privateAccess style.remove(this);
 			// make sure it's also removed from document
 			var elt = document.get(this);
