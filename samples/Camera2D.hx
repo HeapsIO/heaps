@@ -60,7 +60,7 @@ class Camera2D extends SampleApp {
 	private function setSliderAndTextInputValue(slider : h2d.Slider, value : Float)
 	{
 		slider.value = value; 
-		var  tf : h2d.TextInput = Std.downcast(slider.parent.getChildAt(2),h2d.TextInput);		
+		var  tf : h2d.TextInput = hxd.impl.Api.downcast(slider.parent.getChildAt(2),h2d.TextInput);		
 		if(tf!=null) tf.text = "" + hxd.Math.fmt(value);	
 	}
 
