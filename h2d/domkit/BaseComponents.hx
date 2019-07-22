@@ -176,6 +176,18 @@ class CustomParser extends CssValue.ValueParser {
 			{ tile : parseTile(value), borderW : 0, borderH : 0 };
 		}
 	}
+
+	public function parseCursor(value) : hxd.Cursor {
+		return switch( value ) {
+		case VIdent("default"): Default;
+		case VIdent("button"): Button;
+		case VIdent("move"): Move;
+		case VIdent("textinput") | VIdent("input"): TextInput;
+		case VIdent("hide"): Hide;
+		default: invalidProp();
+		}
+	}
+
 }
 
 #if !macro
@@ -435,6 +447,7 @@ class FlowComp extends ObjectComp implements domkit.Component.ComponentDecl<h2d.
 	@:p(align) var contentAlign : { h : h2d.Flow.FlowAlign, v : h2d.Flow.FlowAlign };
 	@:p(vAlign) var contentValign : h2d.Flow.FlowAlign;
 	@:p(hAlign) var contentHalign : h2d.Flow.FlowAlign;
+	@:p(cursor) var cursor : hxd.Cursor;
 
 	static function set_minWidth( o : h2d.Flow, v ) {
 		o.minWidth = v;
@@ -502,6 +515,10 @@ class FlowComp extends ObjectComp implements domkit.Component.ComponentDecl<h2d.
 			bg.color.set(1,1,1,1);
 		else
 			bg.color.load(v);
+	}
+
+	static function set_cursor( o : h2d.Flow, c ) {
+		o.interactive.cursor = c;
 	}
 
 	static function set_padding( o : h2d.Flow, v ) {
