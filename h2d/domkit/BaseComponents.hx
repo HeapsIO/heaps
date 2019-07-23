@@ -64,6 +64,12 @@ class CustomParser extends CssValue.ValueParser {
 				var w = parseInt(w);
 				var h = parseInt(h);
 				return #if macro true #else h2d.Tile.fromColor(c,w,h,(c>>>24)/255) #end;
+			case VCall("tile",[VString(url),VInt(vsplit)]):
+				var p = loadResource(url);
+				return #if macro p #else { var t = p.toTile(); t.sub(0,0,t.iwidth,Std.int(t.iheight/vsplit)); } #end;
+			case VCall("tile",[VString(url),VInt(vsplit),VInt(hsplit)]):
+				var p = loadResource(url);
+				return #if macro p #else { var t = p.toTile(); t.sub(0,0,Std.int(t.iwidth/hsplit),Std.int(t.iheight/vsplit)); } #end;
 			default:
 				var c = parseColor(v);
 				return #if macro true #else h2d.Tile.fromColor(c,1,1,(c>>>24)/255) #end;
@@ -174,6 +180,14 @@ class CustomParser extends CssValue.ValueParser {
 			{ tile : parseTile(tile), borderW : x, borderH : y };
 		default:
 			{ tile : parseTile(value), borderW : 0, borderH : 0 };
+		}
+	}
+
+	public function parseTilePos(value) : { y : Int, ?x : Int } {
+		return switch( value ) {
+		case VInt(y): { y : y, x : null };
+		case VGroup([VInt(y),VInt(x)]): { y : y, x : x };
+		default: invalidProp();
 		}
 	}
 
@@ -423,6 +437,8 @@ class FlowComp extends ObjectComp implements domkit.Component.ComponentDecl<h2d.
 	@:p var maxWidth : Null<Int>;
 	@:p var maxHeight : Null<Int>;
 	@:p(flowBackground) var background : { tile : h2d.Tile, borderW : Int, borderH : Int };
+	@:p(tile) var backgroundTile : h2d.Tile;
+	@:p(tilePos) var backgroundTilePos : { y : Int, ?x : Int };
 	@:p var backgroundAlpha : Float;
 	@:p var backgroundSmooth : Bool;
 	@:p(colorF) var backgroundColor : h3d.Vector;
@@ -493,6 +509,19 @@ class FlowComp extends ObjectComp implements domkit.Component.ComponentDecl<h2d.
 		}
 	}
 
+	static function set_backgroundTile( o : h2d.Flow, t ) {
+		o.backgroundTile = t;
+	}
+
+	static function set_backgroundTilePos( o : h2d.Flow, p : { ?x : Int, y : Int } ) {
+		var t = o.backgroundTile;
+		if( t != null ) {
+			t = t.clone();
+			if( p == null ) t.setPosition(0,0) else t.setPosition(p.x == null ? t.x : p.x * t.width, p.y * t.height);
+			o.backgroundTile = t;
+		}
+	}
+
 	static function set_backgroundAlpha( o : h2d.Flow, v ) {
 		var bg = @:privateAccess o.background;
 		if(bg == null)
@@ -518,6 +547,7 @@ class FlowComp extends ObjectComp implements domkit.Component.ComponentDecl<h2d.
 	}
 
 	static function set_cursor( o : h2d.Flow, c ) {
+		if( o.interactive == null ) o.enableInteractive = true;
 		o.interactive.cursor = c;
 	}
 
@@ -577,6 +607,41 @@ class FlowComp extends ObjectComp implements domkit.Component.ComponentDecl<h2d.
 	static function set_overflow( o : h2d.Flow, v ) {
 		o.overflow = v;
 	}
+}
+
+@:uiComp("input")
+class InputComp extends TextComp implements domkit.Component.ComponentDecl<h2d.TextInput> {
+
+	@:p(auto) var width : Null<Int>;
+	@:p(tile) var cursor : h2d.Tile;
+	@:p(tile) var selection : h2d.Tile;
+	@:p var edit : Bool;
+	@:p(color) var backgroundColor : Null<Int>;
+
+	static function create( parent : h2d.Object ) {
+		return new h2d.TextInput(hxd.res.DefaultFont.get(),parent);
+	}
+
+	static function set_width( o : h2d.TextInput, v ) {
+		o.inputWidth = v;
+	}
+
+	static function set_cursor( o : h2d.TextInput, t ) {
+		o.cursorTile = t;
+	}
+
+	static function set_selection( o : h2d.TextInput, t ) {
+		o.selectionTile = t;
+	}
+
+	static function set_edit( o : h2d.TextInput, b ) {
+		o.canEdit = b;
+	}
+
+	static function set_backgroundColor( o : h2d.TextInput, col ) {
+		o.backgroundColor = col;
+	}
+
 }
 
 #end
