@@ -12,7 +12,11 @@ class Style extends domkit.CssStyle {
 	}
 
 	public function load( r : hxd.res.Resource ) {
-		r.watch(function() onChange());
+		r.watch(function() {
+			var fs = hxd.impl.Api.downcast(hxd.res.Loader.currentInstance.fs, hxd.fs.LocalFileSystem);
+			if( fs != null ) fs.clearCache();
+			onChange();
+		});
 		resources.push(r);
 		add(new domkit.CssParser().parseSheet(r.entry.getText()));
 		for( o in currentObjects )
