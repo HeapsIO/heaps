@@ -342,16 +342,6 @@ class ObjectComp implements h2d.domkit.Object implements domkit.Component.Compon
 		if( p != null ) p.minHeight = v;
 	}
 
-	@:keep static var init = {
-		domkit.Element.addElement = function(e, parent) {
-			(e.obj : h2d.Object).name = e.id;
-			(parent.obj : h2d.Object).addChild(e.obj);
-		}
-		domkit.Element.removeElement = function(e) (e.obj : h2d.Object).remove();
-		domkit.Element.getParent = function(e:h2d.Object) return e.parent;
-		true;
-	}
-
 }
 
 @:uiComp("drawable")
