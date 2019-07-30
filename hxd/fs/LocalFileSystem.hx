@@ -192,7 +192,7 @@ class LocalFileSystem implements FileSystem {
 	var fileCache = new Map<String,{r:LocalEntry}>();
 	public var baseDir(default,null) : String;
 	public var convert(default,null) : FileConverter;
-    static var isWindows = Sys.systemName() == "Windows";
+	static var isWindows = Sys.systemName() == "Windows";
 
 	public function new( dir : String, configuration : String ) {
 		baseDir = dir;
