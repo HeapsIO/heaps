@@ -44,7 +44,7 @@ class Domkit extends hxd.App {
 
 		var style = new h2d.domkit.Style();
 		style.load(hxd.Res.style);
-		style.applyTo(view);
+		view.dom.applyStyle(style);
 	}
 
 	override function onResize() {

@@ -13,8 +13,10 @@ class Style extends domkit.CssStyle {
 
 	public function load( r : hxd.res.Resource ) {
 		r.watch(function() {
+			#if (sys || nodejs)
 			var fs = hxd.impl.Api.downcast(hxd.res.Loader.currentInstance.fs, hxd.fs.LocalFileSystem);
 			if( fs != null ) fs.clearCache();
+			#end
 			onChange();
 		});
 		resources.push(r);
