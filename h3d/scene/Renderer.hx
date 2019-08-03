@@ -50,6 +50,9 @@ class Renderer extends hxd.impl.AnyProps {
 		passObjects = new SMap();
 	}
 
+	function mark(id: String) {
+	}
+
 	public function getPass<T:h3d.pass.Base>( c : Class<T> ) : T {
 		for( p in allPasses )
 			if( Std.is(p, c) )

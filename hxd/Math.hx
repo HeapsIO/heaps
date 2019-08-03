@@ -145,6 +145,20 @@ class Math {
 		return (((v + (v >> 4)) & 0x0F0F0F0F) * 0x01010101) >> 24;
 	}
 
+	public static inline function isPOT(v : Int) : Bool {
+		return (v & (v - 1)) == 0;
+	}
+
+	public static inline function nextPOT(v : Int) : Int {
+		--v;
+		v |= v >> 1;
+		v |= v >> 2;
+		v |= v >> 4;
+		v |= v >> 8;
+		v |= v >> 16;
+		return ++v;
+	}
+
 	public static inline function distanceSq( dx : Float, dy : Float, dz = 0. ) {
 		return dx * dx + dy * dy + dz * dz;
 	}

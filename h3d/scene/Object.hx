@@ -769,6 +769,7 @@ class Object implements hxd.impl.Serializable {
 	/**
 		Set the position, scale and rotation of the object relative to its parent based on the specified transform matrix.
 	**/
+	static var tmpMat = new h3d.Matrix();
 	public function setTransform( mat : h3d.Matrix ) {
 		var s = mat.getScale();
 		this.x = mat.tx;
@@ -777,8 +778,9 @@ class Object implements hxd.impl.Serializable {
 		this.scaleX = s.x;
 		this.scaleY = s.y;
 		this.scaleZ = s.z;
-		mat.prependScale(1.0 / s.x, 1.0 / s.y, 1.0 / s.z);
-		qRot.initRotateMatrix(mat);
+		tmpMat.load(mat);
+		tmpMat.prependScale(1.0 / s.x, 1.0 / s.y, 1.0 / s.z);
+		qRot.initRotateMatrix(tmpMat);
 		posChanged = true;
 	}
 

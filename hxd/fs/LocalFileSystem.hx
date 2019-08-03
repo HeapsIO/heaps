@@ -192,6 +192,7 @@ class LocalFileSystem implements FileSystem {
 	var fileCache = new Map<String,{r:LocalEntry}>();
 	public var baseDir(default,null) : String;
 	public var convert(default,null) : FileConverter;
+	static var isWindows = Sys.systemName() == "Windows";
 
 	public function new( dir : String, configuration : String ) {
 		baseDir = dir;
@@ -263,12 +264,19 @@ class LocalFileSystem implements FileSystem {
 		if( f == null )
 			return null;
 		f = f.split("\\").join("/");
-		if( !check || (f == baseDir + path && sys.FileSystem.exists(f) && checkPath(f)) ) {
+		if( !check || ((!isWindows || (isWindows && f == baseDir + path)) && sys.FileSystem.exists(f) && checkPath(f)) ) {
 			e = new LocalEntry(this, path.split("/").pop(), path, f);
 			convert.run(e);
 		}
 		fileCache.set(path, {r:e});
 		return e;
+	}
+
+	public function clearCache() {
+		for( path in fileCache.keys() ) {
+			var r = fileCache.get(path);
+			if( r.r == null ) fileCache.remove(path);
+		}
 	}
 
 	public function exists( path : String ) {

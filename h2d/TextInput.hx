@@ -336,6 +336,10 @@ class TextInput extends Text {
 
 	public function focus() {
 		interactive.focus();
+		if( cursorIndex < 0 ) {
+			cursorIndex = 0;
+			if( text != "" ) selectionRange = { start : 0, length : text.length };
+		}
 	}
 
 	public function hasFocus() {
