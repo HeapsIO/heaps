@@ -26,6 +26,9 @@ class Window {
 	var curH : Int;
 
 	var focused : Bool;
+
+	var keyDownCharCode : Int = -1;
+	var keyDownRepeatTimer : haxe.Timer = null;
 	
 	/**
 		When enabled, the browser zoom does not affect the canvas.
@@ -64,7 +67,7 @@ class Window {
 		element.addEventListener("touchend", onTouchEnd);
 		element.addEventListener("keydown", onKeyDown);
 		element.addEventListener("keyup", onKeyUp);
-		element.addEventListener("keypress", onKeyPress);
+		//element.addEventListener("keypress", onKeyPress);
 		element.addEventListener("blur", onFocus.bind(false));
 		element.addEventListener("focus", onFocus.bind(true));
 		canvas.oncontextmenu = function(e){
@@ -108,6 +111,13 @@ class Window {
 
 	public function dispose() {
 		timer.stop();
+
+		
+		if(keyDownRepeatTimer!=null)
+		{
+			keyDownRepeatTimer.stop();
+			keyDownRepeatTimer=null;
+		}
 	}
 
 	public dynamic function onClose() : Bool {
@@ -281,6 +291,17 @@ class Window {
 			e.preventDefault();
 			e.stopPropagation();
 		}
+
+		//workaround for keypress no longer working
+		if(e.key.length==1 && e.key.charCodeAt(0)==keyDownCharCode)
+		{
+			keyDownCharCode=-1;
+			if(keyDownRepeatTimer!=null)
+			{
+				keyDownRepeatTimer.stop();
+				keyDownRepeatTimer=null;
+			}
+		}	
 	}
 
 	function onKeyDown(e:js.html.KeyboardEvent) {
@@ -291,17 +312,49 @@ class Window {
 			e.preventDefault();
 			e.stopPropagation();
 		}
-	}
 
-	function onKeyPress(e:js.html.KeyboardEvent) {
-		var ev = new Event(ETextInput, mouseX, mouseY);
-		ev.charCode = e.charCode;
-		event(ev);
-		if( !propagateKeyEvents ) {
-			e.preventDefault();
-			e.stopPropagation();
+		//workaround for keypress no longer working
+		if(e.key.length==1)
+		{
+			keyDownCharCode=e.key.charCodeAt(0);
+			if(keyDownRepeatTimer!=null) keyDownRepeatTimer.stop();
+			keyDownRepeatTimer=new haxe.Timer(500);//default delay, in sdl
+			keyDownRepeatTimer.run=repeatDownKey;
+			onKeyPress(keyDownCharCode);
 		}
 	}
+
+	function repeatDownKey()
+	{
+		//workaround for keypress no longer working
+		if(keyDownRepeatTimer!=null)
+		{
+			keyDownRepeatTimer.stop();
+			keyDownRepeatTimer=null;
+		}
+		if(keyDownCharCode!=-1)
+		{
+			keyDownRepeatTimer=new haxe.Timer(30);//default repeat interval, in sdl
+			keyDownRepeatTimer.run=repeatDownKey;
+			onKeyPress(keyDownCharCode);
+		}
+	}
+
+	function onKeyPress(charCode : Int) {
+		var ev = new Event(ETextInput, mouseX, mouseY);
+		ev.charCode = charCode;
+		event(ev);
+	}
+
+	// function onKeyPress(e:js.html.KeyboardEvent) {
+	// 	var ev = new Event(ETextInput, mouseX, mouseY);
+	// 	ev.charCode = e.charCode;
+	// 	event(ev);
+	// 	if( !propagateKeyEvents ) {
+	// 		e.preventDefault();
+	// 		e.stopPropagation();
+	// 	}
+	// }
 
 	function onFocus(b: Bool) {
 		event(new Event(b ? EFocus : EFocusLost));
