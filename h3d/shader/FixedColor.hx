@@ -7,8 +7,10 @@ class FixedColor extends hxsl.Shader {
 		@const @param var USE_ALPHA : Bool;
 		var output : { color : Vec4 };
 		function fragment() {
-			output.color.rgb = color.rgb;
-			if( USE_ALPHA ) output.color.a = color.a;
+			if( USE_ALPHA ) 
+				output.color = color;
+			else
+				output.color.rgb = color.rgb;
 		}
 	}
 
