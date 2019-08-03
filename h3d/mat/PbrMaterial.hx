@@ -5,6 +5,7 @@ package h3d.mat;
 	var Overlay = "Overlay";
 	var Decal = "Decal";
 	var BeforeTonemapping = "BeforeTonemapping";
+	var AfterTonemapping = "AfterTonemapping";
 	var Distortion = "Distortion";
 }
 
@@ -166,6 +167,7 @@ class PbrMaterial extends Material {
 		mainPass.removeShader(mainPass.getShader(h3d.shader.pbr.StrengthValues));
 		mainPass.removeShader(mainPass.getShader(h3d.shader.pbr.AlphaMultiply));
 		mainPass.removeShader(mainPass.getShader(h3d.shader.Parallax));
+		mainPass.removeShader(mainPass.getShader(h3d.shader.Emissive));
 		// Backward compatibility
 		if( !Reflect.hasField(props, "depthTest") ) Reflect.setField(props, "depthTest", Less);
 		if( !Reflect.hasField(props, "colorMask") ) Reflect.setField(props, "colorMask", 1 << 0 | 1 << 1 | 1 << 2 | 1 << 3);
@@ -194,9 +196,10 @@ class PbrMaterial extends Material {
 			mainPass.setPassName("default");
 		case BeforeTonemapping:
 			mainPass.setPassName("beforeTonemapping");
-			var e = mainPass.getShader(h3d.shader.Emissive);
-			if( e == null ) e = mainPass.addShader(new h3d.shader.Emissive(props.emissive));
-			e.emissive = props.emissive;
+			if( props.emissive > 0 ) 
+				mainPass.addShader(new h3d.shader.Emissive(props.emissive));
+		case AfterTonemapping:
+			mainPass.setPassName("afterTonemapping");
 		case Distortion:
 			mainPass.setPassName("distortion");
 			mainPass.depthWrite = false;
@@ -415,7 +418,7 @@ class PbrMaterial extends Material {
 					<select field="mode">
 						<option value="PBR">PBR</option>
 						<option value="BeforeTonemapping">Before Tonemapping</option>
-						<option value="Albedo">Albedo</option>
+						<option value="AfterTonemapping">After Tonemapping</option>
 						<option value="Overlay">Overlay</option>
 						<option value="Distortion">Distortion</option>
 						<option value="Decal">Decal</option>

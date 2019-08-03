@@ -2,7 +2,7 @@ package h2d.domkit;
 
 class Style extends domkit.CssStyle {
 
-	var currentObjects : Array<h2d.domkit.Object> = [];
+	var currentObjects : Array<h2d.Object> = [];
 	var resources : Array<hxd.res.Resource> = [];
 	var errors : Array<String>;
 	var errorsText : h2d.Text;
@@ -12,24 +12,40 @@ class Style extends domkit.CssStyle {
 	}
 
 	public function load( r : hxd.res.Resource ) {
-		r.watch(function() onChange());
+		r.watch(function() {
+			#if (sys || nodejs)
+			var fs = hxd.impl.Api.downcast(hxd.res.Loader.currentInstance.fs, hxd.fs.LocalFileSystem);
+			if( fs != null ) fs.clearCache();
+			#end
+			onChange();
+		});
 		resources.push(r);
 		add(new domkit.CssParser().parseSheet(r.entry.getText()));
 		for( o in currentObjects )
-			getDocument(o).setStyle(this);
+			o.dom.applyStyle(this);
 	}
 
-	public function applyTo( obj ) {
+	public function addObject( obj ) {
 		currentObjects.remove(obj);
 		currentObjects.push(obj);
-		getDocument(obj).setStyle(this);
+		obj.dom.applyStyle(this);
 	}
 
-	function remove(obj) {
+	public function removeObject(obj) {
 		currentObjects.remove(obj);
 	}
 
-	override function onInvalidProperty(e:domkit.Element<Dynamic>, s:domkit.CssStyle.RuleStyle, msg:String) {
+	/**
+		Returns number of dom elements that were updated
+	**/
+	public function sync() {
+		var T0 = domkit.CssStyle.TAG;
+		for( o in currentObjects )
+			o.dom.applyStyle(this, true);
+		return domkit.CssStyle.TAG - T0;
+	}
+
+	override function onInvalidProperty(e:domkit.Properties<Dynamic>, s:domkit.CssStyle.RuleStyle, msg:String) {
 		if( errors != null ) {
 			var path = s.p.name;
 			var ee = e;
@@ -37,7 +53,6 @@ class Style extends domkit.CssStyle {
 				path = (ee.id != null ? "#" + ee.id : ee.component.name) + "." + path;
 				ee = ee.parent;
 			}
-
 			if( msg == null ) msg = "Invalid property value '"+(domkit.CssParser.valueStr(s.value))+"'";
 			errors.push(msg+" for " + path);
 		}
@@ -63,7 +78,7 @@ class Style extends domkit.CssStyle {
 		 	}
 		}
 		for( o in currentObjects )
-			getDocument(o).setStyle(this);
+			o.dom.applyStyle(this);
 		if( errors.length == 0 ) {
 			if( errorsText != null ) {
 				errorsText.parent.remove();
@@ -72,24 +87,20 @@ class Style extends domkit.CssStyle {
 		} else {
 			if( errorsText == null ) {
 				if( currentObjects.length == 0 ) return;
-				var scene = getDocument(currentObjects[0]).root.obj.getScene();
+				var scene = currentObjects[0].getScene();
 				var fl = new h2d.Flow();
 				scene.addChildAt(fl,100);
 				fl.backgroundTile = h2d.Tile.fromColor(0x400000,0.9);
 				fl.padding = 10;
 				errorsText = new h2d.Text(hxd.res.DefaultFont.get(), fl);
 			}
-			var fl = Std.instance(errorsText.parent, h2d.Flow);
+			var fl = hxd.impl.Api.downcast(errorsText.parent, h2d.Flow);
 			var sc = fl.getScene();
 			fl.maxWidth = sc.width;
 			errorsText.text = errors.join("\n");
 			var b = fl.getBounds();
 			fl.y = sc.height - Std.int(b.height);
 		}
-	}
-
-	function getDocument( o : h2d.domkit.Object ) : domkit.Document<h2d.Object> {
-		return (o : Dynamic).document;
 	}
 
 }

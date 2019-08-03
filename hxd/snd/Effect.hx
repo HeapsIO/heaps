@@ -24,8 +24,8 @@ class Effect {
 		}
 	}
 
-	// used to evaluate gain midification for virtualization sorting
-	public function applyAudibleGainModifier(v : Float) : Float {
+	// used to evaluate volume modification for virtualization sorting
+	public function applyAudibleVolumeModifier(v : Float) : Float {
 		return v;
 	}
 
