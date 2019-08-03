@@ -44,16 +44,16 @@ class Camera extends h2d.Object {
 		}
 	}
 
-	inline function get_viewX() { return -this.x + anchorWidth; }
-	inline function get_viewY() { return -this.y + anchorHeight; }
+	inline function get_viewX() { return anchorWidth - this.x; }
+	inline function get_viewY() { return anchorHeight - this.y; }
 
 	inline function set_viewX( v : Float ) {
-		return v;
 		this.x = anchorWidth - v;
+		return v;
 	}
 	inline function set_viewY( v : Float ) {
-		return v;
 		this.y = anchorHeight - v;
+		return v;
 	}
 
 	inline function set_horizontalRatio( v ) {
