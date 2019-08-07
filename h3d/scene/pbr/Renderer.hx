@@ -266,16 +266,6 @@ class Renderer extends h3d.scene.Renderer {
 		clear(0, 1, 0);
 		mainDraw();
 
-		// Depth Copy
-		mark("DepthCopy");
-		var depth = allocTarget("depth",false,1.,R32F);
-		var depthMap = ctx.getGlobal("depthMap");
-		depthCopy.shader.depthTexture = depthMap.texture;
-		depthCopy.shader.depthTextureChannel = depthMap.channel;
-		setTargets([depth]);
-		depthCopy.render();
-		ctx.setGlobal("depthMap",{ texture : depth, channel : hxsl.Channel.R });
-
 		mark("Decal");
 		setTargets([albedo,normal,pbr]);
 		renderPass(decalsOutput, get("decal"));
