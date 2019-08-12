@@ -342,6 +342,12 @@ class ObjectComp implements h2d.domkit.Object implements domkit.Component.Compon
 		if( p != null ) p.minHeight = v;
 	}
 
+	static function updateComponentId(p:domkit.Properties<Dynamic>) {
+		cast(p.obj,h2d.Object).name = p.id;
+	}
+
+	@:keep static var _ = { @:privateAccess domkit.Properties.updateComponentId = updateComponentId; true; }
+
 }
 
 @:uiComp("drawable")
