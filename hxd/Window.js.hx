@@ -26,7 +26,7 @@ class Window {
 	var curH : Int;
 
 	var focused : Bool;
-	
+
 	/**
 		When enabled, the browser zoom does not affect the canvas.
 		(default : true)
@@ -167,7 +167,7 @@ class Window {
 	function getPixelRatio() {
 		return useScreenPixels ? js.Browser.window.devicePixelRatio : 1;
 	}
-	
+
 	function get_width() {
 		return Math.round(canvasPos.width * getPixelRatio());
 	}
@@ -288,7 +288,7 @@ class Window {
 		ev.keyCode = e.keyCode;
 		event(ev);
 		if( !propagateKeyEvents ) {
-			e.preventDefault();
+			//e.preventDefault() -- required to trigger onKeyPress
 			e.stopPropagation();
 		}
 	}
