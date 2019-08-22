@@ -279,7 +279,7 @@ class Engine {
 	}
 
 	public function begin(preventClear = true) {
-		if (driver.isDisposed())
+		if( driver.isDisposed() )
 			return false;
 		drawTriangles = 0;
 		shaderSwitches = 0;
@@ -290,7 +290,7 @@ class Engine {
 		haxe.System.beginFrame();
 		#end
 		driver.begin(hxd.Timer.frameCount);
-		if (backgroundColor != null && !preventClear)
+		if( backgroundColor != null && !preventClear )
 			clear(backgroundColor, 1, 0);
 		return true;
 	}
