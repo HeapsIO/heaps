@@ -278,7 +278,7 @@ class Engine {
 		if( !driver.isDisposed() ) driver.resize(width, height);
 	}
 
-	public function begin(preventClear = false) {
+	public function begin( preventClear = false ) {
 		if( driver.isDisposed() )
 			return false;
 		drawTriangles = 0;
