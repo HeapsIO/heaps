@@ -644,8 +644,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	}
 
 	function drawImplTo( s : Object, t : h3d.mat.Texture ) {
-		if( !t.flags.has(Target) )
-			throw "Can only draw to texture created with Target flag";
+		if( !t.flags.has(Target) ) throw "Can only draw to texture created with Target flag";
 		var needClear = !t.flags.has(WasCleared);
 		ctx.engine = h3d.Engine.getCurrent();
 		ctx.engine.begin(true);
