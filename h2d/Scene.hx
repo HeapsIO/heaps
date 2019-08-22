@@ -643,7 +643,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		ctx.elapsedTime = v;
 	}
 
-	function drawImplTo(s:Object, t:h3d.mat.Texture) {
+	function drawImplTo( s : Object, t : h3d.mat.Texture ) {
 		if( !t.flags.has(Target) )
 			throw "Can only draw to texture created with Target flag";
 		var needClear = !t.flags.has(WasCleared);
