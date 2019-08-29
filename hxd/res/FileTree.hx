@@ -341,7 +341,8 @@ class FileTree {
 		dict.set("loader", "reserved identifier");
 		buildFieldsRec(d, ofields, dict);
 
-		var name = "_" + makeIdent(d.relPath);
+		var name = makeIdent(d.relPath);
+		name = "_" + name.charAt(0).toUpperCase() + name.substr(1);
 		for( f in ofields )
 			f.access.remove(AStatic);
 		var def = macro class {
