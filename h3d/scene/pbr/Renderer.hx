@@ -72,6 +72,7 @@ class Renderer extends h3d.scene.Renderer {
 	var pbrDirect = new h3d.shader.pbr.Lighting.Direct();
 	var pbrProps = new h3d.shader.pbr.PropsImport();
 	var hasDebugEvent = false;
+	var enableFXAA = true;
 
 	public var skyMode : SkyMode = Hide;
 	public var toneMode : TonemapMap = Reinhard;
@@ -425,8 +426,13 @@ class Renderer extends h3d.scene.Renderer {
 		switch( displayMode ) {
 
 		case Pbr, Env, MatCap:
-			mark("FXAA");
-			fxaa.apply(ldr);
+			if( enableFXAA ) {
+				mark("FXAA");
+				fxaa.apply(ldr);
+			}
+			else {
+				copy(ldr, null);
+			}
 
 		case Distortion:
 			resetTarget();
