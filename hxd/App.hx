@@ -85,6 +85,21 @@ class App implements h3d.IDrawable {
 			this.s3d = new3D;
 	}
 
+	/**
+	 * When using multiple hxd.App, this will set the current App (the one on which update etc. will be called)
+	**/
+	public function setCurrent() {
+		engine = h3d.Engine.getCurrent(); // if was changed
+		isDisposed = false;
+		engine.onReady = staticHandler; // in case we have another pending app
+		engine.onResized = function() {
+			if( s2d == null ) return; // if disposed
+			s2d.checkResize();
+			onResize();
+		};
+		hxd.System.setLoop(mainLoop);
+	}
+
 	function setScene2D( s2d : h2d.Scene, disposePrevious = true ) {
 		sevents.removeScene(this.s2d);
 		sevents.addScene(s2d,0);
