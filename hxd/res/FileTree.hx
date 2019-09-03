@@ -325,7 +325,7 @@ class FileTree {
 		for( f in tree.files ) {
 			// handle duplicates
 			if( fident.get(f.ident) != f.relPath )
-				f.ident += "_" + f.ext;
+				f.ident += "_" + makeIdent(f.ext);
 			var ftype = extensions.get(f.ext);
 			if( ftype == null ) ftype = defaultExt;
 			var epath = { expr : EConst(CString(f.relPath)), pos : pos };
