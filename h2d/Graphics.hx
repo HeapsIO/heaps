@@ -537,6 +537,31 @@ class Graphics extends Drawable {
 		lineTo(cx, cy);
 		flush();
 	}
+	
+	public function drawRectanglePie( cx : Float, cy : Float, width : Float, height : Float, angleStart:Float, angleLength:Float, nsegments = 0 ) {
+		if(Math.abs(angleLength) >= Math.PI*2) {
+			return drawRect(cx-(width/2), cy-(height/2), width, height);
+		}
+		flush();
+		lineTo(cx, cy);
+		if( nsegments == 0 )
+			nsegments = Math.ceil(Math.abs(width * angleLength / 4));
+		if( nsegments < 3 ) nsegments = 3;
+		var angle = angleLength / (nsegments - 1);
+		for( i in 0...nsegments ) {
+			var a = i * angle + angleStart;
+
+			var _width = Math.cos(a) * (width/2+1) * 1.42;
+			var _height = Math.sin(a) * (height/2+1) * 1.42;
+
+			_width = Math.abs(_width) >= width/2 ? (Math.cos(a) < 0 ? width/2*-1 : width/2) : _width;
+			_height = Math.abs(_height) >= height/2 ? (Math.sin(a) < 0 ? height/2*-1 : height/2) : _height;
+
+			lineTo(cx + _width, cy + _height);
+		}
+		lineTo(cx, cy);
+		flush();
+	}
 
 	public inline function lineTo( x : Float, y : Float ) {
 		addVertex(x, y, curR, curG, curB, curA, x * ma + y * mc + mx, x * mb + y * md + my);
