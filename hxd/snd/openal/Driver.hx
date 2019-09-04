@@ -147,8 +147,9 @@ class Driver implements hxd.snd.Driver {
 		bytes.setInt32(0, buffer.inst.toInt());
 		AL.sourceQueueBuffers(source.inst, 1, bytes);
 
-		if (AL.getError() != AL.NO_ERROR)
-			throw "Failed to queue buffers: " + StringTools.hex(AL.getError());
+		var err = AL.getError();
+		if (err != AL.NO_ERROR)
+			throw "Failed to queue buffers: " + StringTools.hex(err)+" ("+buffer.inst.toInt()+")";
 
 		if (AL.getSourcei(source.inst, AL.SOURCE_STATE) == AL.STOPPED) {
 			if (sampleStart > 0) {
