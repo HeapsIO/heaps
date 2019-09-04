@@ -452,6 +452,7 @@ class Manager {
 			var v = c.currentVolume * volume;
 			if (s.volume != v) {
 				s.volume = v;
+				if (s.volume < 0) s.volume = 0;
 				driver.setSourceVolume(s.handle, v);
 				#if hlopenal
 				if( v > 1 ) Sys.println("Could not set volume " + v + " on " + c.sound);
