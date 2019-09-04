@@ -202,6 +202,13 @@ class CustomParser extends CssValue.ValueParser {
 		}
 	}
 
+	public function parseFilter(value) : #if macro Bool #else h2d.filter.Filter #end {
+		return switch( value ) {
+		case VIdent("grayed"): #if macro true #else h2d.filter.ColorMatrix.grayed() #end;
+		default: invalidProp();
+		}
+	}
+
 }
 
 #if !macro
@@ -217,6 +224,7 @@ class ObjectComp implements h2d.domkit.Object implements domkit.Component.Compon
 	@:p var scaleX : Float;
 	@:p var scaleY : Float;
 	@:p var blend : h2d.BlendMode = Alpha;
+	@:p(filter) var filter : h2d.filter.Filter;
 
 	// flow properties
 	@:p(box) var margin : { left : Int, top : Int, right : Int, bottom : Int };
@@ -246,6 +254,10 @@ class ObjectComp implements h2d.domkit.Object implements domkit.Component.Compon
 		else {
 			o.setScale(1);
 		}
+	}
+
+	static function set_filter(o:h2d.Object, f:h2d.filter.Filter) {
+		o.filter = f;
 	}
 
 	static function set_blend(o:h2d.Object, b:h2d.BlendMode) {
