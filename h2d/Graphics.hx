@@ -545,14 +545,15 @@ class Graphics extends Drawable {
 		flush();
 		lineTo(cx, cy);
 		if( nsegments == 0 )
-			nsegments = Math.ceil(Math.abs(width * angleLength / 4));
+			nsegments = Math.ceil(Math.abs(Math.max(width, height) * angleLength / 4));
 		if( nsegments < 3 ) nsegments = 3;
 		var angle = angleLength / (nsegments - 1);
+		var square2 = Math.sqrt(2);
 		for( i in 0...nsegments ) {
 			var a = i * angle + angleStart;
 
-			var _width = Math.cos(a) * (width/2+1) * 1.42;
-			var _height = Math.sin(a) * (height/2+1) * 1.42;
+			var _width = Math.cos(a) * (width/2+1) * square2;
+			var _height = Math.sin(a) * (height/2+1) * square2;
 
 			_width = Math.abs(_width) >= width/2 ? (Math.cos(a) < 0 ? width/2*-1 : width/2) : _width;
 			_height = Math.abs(_height) >= height/2 ? (Math.sin(a) < 0 ? height/2*-1 : height/2) : _height;
