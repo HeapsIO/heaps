@@ -165,7 +165,11 @@ class MacroParser {
 					qualifiers : [],
 				}
 			}]);
+		#if haxe4
+		case EFunction(FNamed(name,_),f) if( f.expr != null ):
+		#else
 		case EFunction(name, f) if( name != null && f.expr != null ):
+		#end
 			EFunction({
 				name : name,
 				ret : f.ret == null ? null : (switch( f.ret ) {
