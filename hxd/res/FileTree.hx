@@ -75,10 +75,15 @@ class FileTree {
 	}
 
 	static var invalidChars = ~/[^A-Za-z0-9_]/g;
+	static var KEYWORDS = [for( k in ["break","case","cast","catch","class","continue","default","do","dynamic",
+									"else","extends","extern","false","for","function","if","implementes","import",
+									"interface","never","null","override","package","private","public","return",
+									"static","super","switch","this","throw","trace","true","typedef","untyped",
+									"using","var","while"] ) k => true];
 
 	function makeIdent( s : String ) {
 		var ident = invalidChars.replace(s, "_");
-		if( ident == "" || (ident.charCodeAt(0) >= "0".code && ident.charCodeAt(0) <= "9".code) )
+		if( ident == "" || (ident.charCodeAt(0) >= "0".code && ident.charCodeAt(0) <= "9".code) || KEYWORDS.exists(ident) )
 			ident = "_" + ident;
 		return ident;
 	}
