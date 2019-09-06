@@ -168,6 +168,7 @@ class PbrMaterial extends Material {
 		mainPass.removeShader(mainPass.getShader(h3d.shader.pbr.AlphaMultiply));
 		mainPass.removeShader(mainPass.getShader(h3d.shader.Parallax));
 		mainPass.removeShader(mainPass.getShader(h3d.shader.Emissive));
+		mainPass.removeShader(mainPass.getShader(h3d.shader.pbr.GammaCorrect));
 		// Backward compatibility
 		if( !Reflect.hasField(props, "depthTest") ) Reflect.setField(props, "depthTest", Less);
 		if( !Reflect.hasField(props, "colorMask") ) Reflect.setField(props, "colorMask", 1 << 0 | 1 << 1 | 1 << 2 | 1 << 3);
@@ -183,7 +184,7 @@ class PbrMaterial extends Material {
 			Reflect.deleteField(props, "depthFailOp");
 			Reflect.deleteField(props, "stencilPassOp");
 			Reflect.deleteField(props, "stencilCompare");
-		} 
+		}
 	}
 
 	override function refreshProps() {
@@ -196,8 +197,14 @@ class PbrMaterial extends Material {
 			mainPass.setPassName("default");
 		case BeforeTonemapping:
 			mainPass.setPassName("beforeTonemapping");
-			if( props.emissive > 0 ) 
+			if( props.emissive > 0 )
 				mainPass.addShader(new h3d.shader.Emissive(props.emissive));
+			var gc = mainPass.getShader(h3d.shader.pbr.GammaCorrect);
+			if( gc == null ) {
+				gc = new h3d.shader.pbr.GammaCorrect();
+				gc.setPriority(-1);
+				mainPass.addShader(gc);
+			}
 		case AfterTonemapping:
 			mainPass.setPassName("afterTonemapping");
 		case Distortion:

@@ -72,6 +72,7 @@ class Renderer extends h3d.scene.Renderer {
 	var pbrDirect = new h3d.shader.pbr.Lighting.Direct();
 	var pbrProps = new h3d.shader.pbr.PropsImport();
 	var hasDebugEvent = false;
+	var enableFXAA = true;
 
 	public var skyMode : SkyMode = Hide;
 	public var toneMode : TonemapMap = Reinhard;
@@ -266,16 +267,6 @@ class Renderer extends h3d.scene.Renderer {
 		clear(0, 1, 0);
 		mainDraw();
 
-		// Depth Copy
-		mark("DepthCopy");
-		var depth = allocTarget("depth",false,1.,R32F);
-		var depthMap = ctx.getGlobal("depthMap");
-		depthCopy.shader.depthTexture = depthMap.texture;
-		depthCopy.shader.depthTextureChannel = depthMap.channel;
-		setTargets([depth]);
-		depthCopy.render();
-		ctx.setGlobal("depthMap",{ texture : depth, channel : hxsl.Channel.R });
-
 		mark("Decal");
 		setTargets([albedo,normal,pbr]);
 		renderPass(decalsOutput, get("decal"));
@@ -435,8 +426,13 @@ class Renderer extends h3d.scene.Renderer {
 		switch( displayMode ) {
 
 		case Pbr, Env, MatCap:
-			mark("FXAA");
-			fxaa.apply(ldr);
+			if( enableFXAA ) {
+				mark("FXAA");
+				fxaa.apply(ldr);
+			}
+			else {
+				copy(ldr, null);
+			}
 
 		case Distortion:
 			resetTarget();

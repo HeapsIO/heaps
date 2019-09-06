@@ -592,7 +592,7 @@ class World extends Object {
 		mesh.material.textureShader.killAlphaThreshold = mat.killAlpha;
 		mesh.material.mainPass.enableLights = mat.lights;
 		mesh.material.shadows = mat.shadows;
-		mesh.material.mainPass.culling = Back;
+		mesh.material.mainPass.culling = mat.culling ? Back : None;
 		mesh.material.mainPass.depthWrite = true;
 		mesh.material.mainPass.depthTest = Less;
 

@@ -24,7 +24,8 @@ class SpatializationDriver extends EffectDriver<Spatialization> {
 		AL.source3f(s.inst, AL.DIRECTION, -e.direction.x, e.direction.y, e.direction.z);
 		AL.sourcef(s.inst, AL.REFERENCE_DISTANCE, e.referenceDistance);
 		AL.sourcef(s.inst, AL.ROLLOFF_FACTOR, e.rollOffFactor);
-		AL.sourcef(s.inst, AL.MAX_DISTANCE, e.maxDistance == null ? 3.40282347e38 : (e.maxDistance:Float) );
+		var maxDist : Float = e.maxDistance == null ? 3.40282347e38 : e.maxDistance;
+		AL.sourcef(s.inst, AL.MAX_DISTANCE, maxDist );
 	}
 
 	override function unbind(e : Spatialization, s : SourceHandle) : Void {

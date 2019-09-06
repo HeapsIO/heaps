@@ -202,6 +202,40 @@ class CustomParser extends CssValue.ValueParser {
 		}
 	}
 
+	public function parseFilter(value) : #if macro Bool #else h2d.filter.Filter #end {
+		return switch( value ) {
+		case VIdent("none"): #if macro true #else null #end;
+		case VIdent("grayed"): #if macro true #else h2d.filter.ColorMatrix.grayed() #end;
+		case VCall("saturate",[v]):
+			var v = parseFloat(v);
+			#if macro
+				true;
+			#else
+				var f = new h2d.filter.ColorMatrix();
+				f.matrix.colorSaturate(v);
+				f;
+			#end
+		case VCall("outline",[s, c]):
+			var s = parseFloat(s);
+			var c = parseInt(c);
+			#if macro
+				true;
+			#else
+				new h2d.filter.Outline(s, c);
+			#end
+		case VCall("brightness",[v]):
+			var v = parseFloat(v);
+			#if macro
+				true;
+			#else
+				var f = new h2d.filter.ColorMatrix();
+				f.matrix.colorLightness(v);
+				f;
+			#end
+		default: invalidProp();
+		}
+	}
+
 }
 
 #if !macro
@@ -217,6 +251,7 @@ class ObjectComp implements h2d.domkit.Object implements domkit.Component.Compon
 	@:p var scaleX : Float;
 	@:p var scaleY : Float;
 	@:p var blend : h2d.BlendMode = Alpha;
+	@:p(filter) var filter : h2d.filter.Filter;
 
 	// flow properties
 	@:p(box) var margin : { left : Int, top : Int, right : Int, bottom : Int };
@@ -246,6 +281,10 @@ class ObjectComp implements h2d.domkit.Object implements domkit.Component.Compon
 		else {
 			o.setScale(1);
 		}
+	}
+
+	static function set_filter(o:h2d.Object, f:h2d.filter.Filter) {
+		o.filter = f;
 	}
 
 	static function set_blend(o:h2d.Object, b:h2d.BlendMode) {
@@ -341,6 +380,12 @@ class ObjectComp implements h2d.domkit.Object implements domkit.Component.Compon
 		var p = getFlowProps(o);
 		if( p != null ) p.minHeight = v;
 	}
+
+	static function updateComponentId(p:domkit.Properties<Dynamic>) {
+		cast(p.obj,h2d.Object).name = p.id;
+	}
+
+	@:keep static var _ = { @:privateAccess domkit.Properties.updateComponentId = updateComponentId; true; }
 
 }
 
