@@ -488,6 +488,10 @@ class Flow extends Object {
 	}
 
 	override function sync(ctx:RenderContext) {
+		if( !isConstraint && (fillWidth || fillHeight) ) {
+			var scene = ctx.scene;
+			if( scene.width != constraintWidth || scene.height != constraintHeight ) needReflow = true;
+		}
 		if( needReflow ) reflow();
 		super.sync(ctx);
 	}
