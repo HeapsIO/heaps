@@ -166,6 +166,8 @@ class CustomParser extends CssValue.ValueParser {
 
 	public function parseTextShadow( value : CssValue ) {
 		return switch( value ) {
+		case VIdent("none"):
+			return null;
 		case VGroup(vl):
 			return { dx : parseFloat(vl[0]), dy : parseFloat(vl[1]), color : vl.length >= 3 ? parseColor(vl[2]) : 0, alpha : vl.length >= 4 ? parseFloat(vl[3]) : 1 };
 		default:
