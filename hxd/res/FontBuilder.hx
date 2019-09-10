@@ -2,7 +2,7 @@ package hxd.res;
 
 typedef FontBuildOptions = {
 	?antiAliasing : Bool,
-	?chars : hxd.UString,
+	?chars : String,
 	?kerning : Bool,
 };
 

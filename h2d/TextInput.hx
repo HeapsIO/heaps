@@ -245,7 +245,7 @@ class TextInput extends Text {
 		return selectionRange == null ? null : text.substr(selectionRange.start, selectionRange.length);
 	}
 
-	override function set_text(t:hxd.UString) {
+	override function set_text(t:String) {
 		super.set_text(t);
 		if( cursorIndex > t.length ) cursorIndex = t.length;
 		return t;
@@ -259,7 +259,7 @@ class TextInput extends Text {
 		return f;
 	}
 
-	override function initGlyphs(text:hxd.UString, rebuild = true, handleAlign = true, lines:Array<Int> = null):Void {
+	override function initGlyphs(text:String, rebuild = true, handleAlign = true, lines:Array<Int> = null):Void {
 		super.initGlyphs(text, rebuild, handleAlign, lines);
 		if( rebuild ) {
 			this.calcWidth += cursorTile.width; // cursor end pos

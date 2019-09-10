@@ -159,7 +159,7 @@ class HtmlText extends Text {
 	}
 
 	static var REG_SPACES = ~/[\r\n\t ]+/g;
-	function htmlToText( t : hxd.UString )  {
+	function htmlToText( t : String )  {
 		if (condenseWhite)
 			t = REG_SPACES.replace(t, " ");
 		return t;

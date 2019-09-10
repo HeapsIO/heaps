@@ -11,7 +11,7 @@ enum Align {
 class Text extends Drawable {
 
 	public var font(default, set) : Font;
-	public var text(default, set) : hxd.UString;
+	public var text(default, set) : String;
 	public var textColor(default, set) : Int;
 	public var maxWidth(default, set) : Null<Float>;
 	public var dropShadow : { dx : Float, dy : Float, color : Int, alpha : Float };
@@ -138,7 +138,7 @@ class Text extends Drawable {
 		glyphs.drawWith(ctx,this);
 	}
 
-	function set_text(t : hxd.UString) {
+	function set_text(t : String) {
 		var t = t == null ? "null" : t;
 		if( t == this.text ) return t;
 		this.text = t;
@@ -152,7 +152,7 @@ class Text extends Drawable {
 		onContentChanged();
 	}
 
-	public function calcTextWidth( text : hxd.UString ) {
+	public function calcTextWidth( text : String ) {
 		if( calcDone ) {
 			var ow = calcWidth, oh = calcHeight, osh = calcSizeHeight, ox = calcXMin, oy = calcYMin;
 			initGlyphs(text, false);
@@ -170,7 +170,7 @@ class Text extends Drawable {
 		}
 	}
 
-	public function splitText( text : hxd.UString, leftMargin = 0., afterData = 0. ) {
+	public function splitText( text : String, leftMargin = 0., afterData = 0. ) {
 		if( realMaxWidth < 0 )
 			return text;
 		var lines = [], rest = text, restPos = 0;
@@ -227,7 +227,7 @@ class Text extends Drawable {
 		return lines.join("\n");
 	}
 
-	function initGlyphs( text : hxd.UString, rebuild = true, handleAlign = true, lines : Array<Int> = null ) : Void {
+	function initGlyphs( text : String, rebuild = true, handleAlign = true, lines : Array<Int> = null ) : Void {
 		if( rebuild ) glyphs.clear();
 		var x = 0., y = 0., xMax = 0., xMin = 0., prevChar = -1;
 		var align = handleAlign ? textAlign : Left;
