@@ -23,6 +23,11 @@ class DirShadowMap extends Shadows {
 		return mode = m;
 	}
 
+	override function set_enabled(b:Bool) {
+		dshader.enable = b && mode != None;
+		return enabled = b;
+	}
+
 	override function set_size(s) {
 		if( border != null && size != s ) {
 			border.dispose();
@@ -186,6 +191,9 @@ class DirShadowMap extends Shadows {
 	}
 
 	override function draw( passes, ?sort ) {
+		if( !enabled )
+			return;
+
 		if( !filterPasses(passes) )
 			return;
 

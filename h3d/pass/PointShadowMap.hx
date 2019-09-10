@@ -42,8 +42,13 @@ class PointShadowMap extends Shadows {
 	}
 
 	override function set_mode(m:Shadows.RenderMode) {
-		pshader.enable = m != None;
+		pshader.enable = m != None && enabled;
 		return mode = m;
+	}
+
+	override function set_enabled(b:Bool) {
+		pshader.enable = b && mode != None;
+		return enabled = b;
 	}
 
 	override function set_size(s) {
@@ -142,6 +147,9 @@ class PointShadowMap extends Shadows {
 	}
 
 	override function draw( passes, ?sort ) {
+		if( !enabled )
+			return;
+
 		if( !filterPasses(passes) )
 			return;
 

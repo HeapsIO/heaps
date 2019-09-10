@@ -19,6 +19,7 @@ class Shadows extends Default {
 	var format : hxd.PixelFormat;
 	var staticTexture : h3d.mat.Texture;
 	var light : h3d.scene.Light;
+	public var enabled(default,set) : Bool = true;
 	public var mode(default,set) : RenderMode = None;
 	public var size(default,set) : Int = 1024;
 	public var shader(default,null) : hxsl.Shader;
@@ -43,6 +44,10 @@ class Shadows extends Default {
 	function set_mode(m:RenderMode) {
 		if( m != None ) throw "Shadow mode "+m+" not supported for "+light;
 		return mode = m;
+	}
+
+	function set_enabled(b:Bool) {
+		return enabled = b;
 	}
 
 	function set_size(s) {
