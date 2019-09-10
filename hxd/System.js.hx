@@ -99,7 +99,10 @@ class System {
 	}
 
 	public static function getValue( s : SystemValue ) : Bool {
-		return false;
+		return switch( s ) {
+		case IsWindowed: true;
+		default: false;
+		}
 	}
 
 	public static function exit() : Void {

@@ -152,6 +152,14 @@ class Window {
 	}
 
 	public function setFullScreen( v : Bool ) : Void {
+		var doc = js.Browser.document;
+		var elt : Dynamic = doc.documentElement;
+		if( (doc.fullscreenElement == elt) == v )
+			return;
+		if( v )
+			elt.requestFullscreen();
+		else
+			doc.exitFullscreen();
 	}
 
 	public function setCurrent() {
