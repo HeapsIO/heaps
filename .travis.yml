@@ -5,7 +5,8 @@ dist: trusty
 
 haxe:
   - development
-  - "4.0.0-preview.5"
+  - "3.4.7"
+  - "4.0.0-rc.4"
 
 matrix:
   allow_failures:
