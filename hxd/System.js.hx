@@ -61,7 +61,7 @@ class System {
 	}
 
 	public static function setNativeCursor( c : Cursor ) : Void {
-		if( c.equals(currentNativeCursor) )
+		if( currentNativeCursor != null && c.equals(currentNativeCursor) )
 			return;
 		currentNativeCursor = c;
 		currentCustomCursor = null;
