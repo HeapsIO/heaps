@@ -252,6 +252,10 @@ class Trail extends Mesh {
 			idx[out++] = p + 1;
 		}
 
+		var reservePoints = Math.ceil(duration * hxd.Timer.wantedFPS);
+		dprim.minVSize = hxd.Math.nextPOT(reservePoints * 2);
+		dprim.minISize = hxd.Math.nextPOT(reservePoints * 6);
+
 		dprim.flush();
 	}
 
