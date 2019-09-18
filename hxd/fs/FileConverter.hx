@@ -16,10 +16,10 @@ enum ConvertPattern {
 }
 
 typedef ConvertCommand = {
-	var conv : Array<Convert>;
-	var ?params : Dynamic;
-	var ?paramsStr : String;
-	var ?then : ConvertCommand;
+	conv : Array<Convert>,
+	?params : Dynamic,
+	?paramsStr : String,
+	?then : ConvertCommand
 }
 
 class FileConverter {
