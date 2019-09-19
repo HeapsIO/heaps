@@ -248,9 +248,9 @@ class Renderer extends h3d.scene.Renderer {
 		var props : RenderProps = props;
 
 		var albedo = allocTarget("albedo", true, 1.);
-		var normal = allocTarget("normal", false, 1., RGBA16F);
-		var pbr = allocTarget("pbr", false, 1.);
-		var other = allocTarget("other", false, 1., RGBA32F);
+		var normal = allocTarget("normal", true, 1., RGBA16F);
+		var pbr = allocTarget("pbr", true, 1.);
+		var other = allocTarget("other", true, 1., RGBA32F);
 
 		ctx.setGlobal("albedoMap", { texture : albedo, channel : hxsl.Channel.R });
 		ctx.setGlobal("depthMap", { texture : other, channel : hxsl.Channel.G });
