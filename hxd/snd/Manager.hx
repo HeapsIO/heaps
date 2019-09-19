@@ -77,6 +77,7 @@ class Manager {
 	public var masterSoundGroup   (default, null) : SoundGroup;
 	public var masterChannelGroup (default, null) : ChannelGroup;
 	public var listener : Listener;
+	public var timeOffset : Float = 0.;
 
 	var updateEvent   : MainEvent;
 
@@ -268,7 +269,7 @@ class Manager {
 	}
 
 	public function update() {
-		now = haxe.Timer.stamp();
+		now = haxe.Timer.stamp() + timeOffset;
 
 		if (driver == null) {
 			updateVirtualChannels(now);
