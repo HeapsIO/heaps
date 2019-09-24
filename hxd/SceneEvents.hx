@@ -331,16 +331,13 @@ class SceneEvents {
 				}
 
 				if( currentDrag != null && (currentDrag.ref == null || currentDrag.ref == e.touchId) ) {
-					e.propagate = false;
+					e.propagate = true;
 					e.cancel = false;
 					currentDrag.f(e);
 					e.relX = ox;
 					e.relY = oy;
-					if( e.cancel || e.propagate ) {
-						e.cancel = false;
-						e.propagate = false;
+					if( !e.propagate )
 						continue;
-					}
 				}
 
 				emitEvent(e);
