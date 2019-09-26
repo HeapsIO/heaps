@@ -30,6 +30,11 @@ class Interactive extends Object implements hxd.SceneEvents.Interactive {
 	**/
 	@:s public var bestMatch : Bool;
 
+	/**
+		Interactives won't be checked for EMove and ECheck events (default = false, slower).
+	**/
+	@:s public var ignoreMoveEvents : Bool = false;
+
 	var scene : Scene;
 	var mouseDownButton : Int = -1;
 

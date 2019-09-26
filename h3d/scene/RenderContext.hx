@@ -28,9 +28,9 @@ class RenderContext extends h3d.impl.RenderContext {
 	var cachedShaderList : Array<hxsl.ShaderList>;
 	var cachedPassObjects : Array<Renderer.PassObjects>;
 	var cachedPos : Int;
-	var passes : h3d.pass.PassObject;
 	var lights : Light;
 	var currentManager : h3d.pass.ShaderManager;
+	var passesHeads : Map<Int,{ h : h3d.pass.PassObject, q : h3d.pass.PassObject }>;
 
 	public function new() {
 		super();
@@ -51,10 +51,10 @@ class RenderContext extends h3d.impl.RenderContext {
 		sharedGlobals = [];
 		lights = null;
 		drawPass = null;
-		passes = null;
 		lights = null;
 		cachedPos = 0;
 		visibleFlag = true;
+		passesHeads = new Map();
 		time += elapsedTime;
 		frame++;
 	}
@@ -95,8 +95,15 @@ class RenderContext extends h3d.impl.RenderContext {
 			allocPool = o.nextAlloc;
 		o.pass = pass;
 		o.obj = obj;
-		o.next = passes;
-		passes = o;
+		o.next = null;
+		var pl = passesHeads.get(pass.passId);
+		if( pl != null ) {
+			pl.q.next = o;
+			pl.q = o;
+		} else {
+			pl = { h : o, q : o };
+			passesHeads.set(pass.passId,pl);
+		}
 		return o;
 	}
 
@@ -144,7 +151,6 @@ class RenderContext extends h3d.impl.RenderContext {
 			c.s = null;
 			c.next = null;
 		}
-		passes = null;
 		lights = null;
 	}
 
