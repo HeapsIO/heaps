@@ -4,8 +4,7 @@ class ObjectCollider implements Collider implements hxd.impl.Serializable {
 
 	@:s public var obj : h3d.scene.Object;
 	@:s public var collider : Collider;
-	static var TMP_RAY = new Ray();
-	static var TMP_MAT = new Matrix();
+	var tmpRay = new Ray();
 
 	public function new(obj, collider) {
 		this.obj = obj;
@@ -13,20 +12,16 @@ class ObjectCollider implements Collider implements hxd.impl.Serializable {
 	}
 
 	public function rayIntersection( r : Ray, bestMatch : Bool ) : Float {
-		var tmpRay = TMP_RAY;
-		TMP_RAY = null;
 		tmpRay.load(r);
 		r.transform(obj.getInvPos());
 		var hit = collider.rayIntersection(r, bestMatch);
 		if( hit < 0 ) {
 			r.load(tmpRay);
-			TMP_RAY = tmpRay;
 			return hit;
 		}
 		var pt = r.getPoint(hit);
 		pt.transform(@:privateAccess obj.absPos);
 		r.load(tmpRay);
-		TMP_RAY = tmpRay;
 		return hxd.Math.distance(pt.x - r.px, pt.y - r.py, pt.z - r.pz);
 	}
 
@@ -39,11 +34,9 @@ class ObjectCollider implements Collider implements hxd.impl.Serializable {
 	}
 
 	public function inFrustum( f : Frustum, ?m : h3d.Matrix ) {
-		if( m == null )
-			return collider.inFrustum(f, obj.getAbsPos());
-		var mat = TMP_MAT;
-		mat.multiply3x4inline(m, obj.getAbsPos());
-		return collider.inFrustum(f, mat);
+		if( m != null )
+			throw "Not implemented";
+		return collider.inFrustum(f, obj.getAbsPos());
 	}
 
 	public function inSphere( s : Sphere ) {

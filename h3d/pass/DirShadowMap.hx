@@ -7,7 +7,6 @@ class DirShadowMap extends Shadows {
 	var dshader : h3d.shader.DirShadow;
 	var border : Border;
 	var mergePass = new h3d.pass.ScreenFx(new h3d.shader.MinMaxShader());
-	public var maxCameraZFar : Float = 10;
 
 	public function new( light : h3d.scene.Light ) {
 		super(light);
@@ -95,10 +94,7 @@ class DirShadowMap extends Shadows {
 		if( mode == Dynamic ) {
 			// intersect with frustum bounds
 			var cameraBounds = new h3d.col.Bounds();
-			var zMax = 1.;
-			//if( ctx.camera.zFar > maxCameraZFar)
-			//	zMax = ((maxCameraZFar * ctx.camera.zFar - ctx.camera.zNear * ctx.camera.zFar) / (ctx.camera.zFar - ctx.camera.zNear)) / maxCameraZFar;
-			for( pt in ctx.camera.getFrustumCorners(zMax) ) {
+			for( pt in ctx.camera.getFrustumCorners() ) {
 				pt.transform(camera.mcam);
 				cameraBounds.addPos(pt.x, pt.y, pt.z);
 			}
@@ -225,17 +221,11 @@ class DirShadowMap extends Shadows {
 			lightCamera.update();
 		}
 
-		var save = passes.save();
-		if( mode == Dynamic ) {
-			// cullPasses(passes,function(col) return col.inFrustum(lightCamera.frustum, lightCamera.mcam));
-		}
-
 		ctx.engine.pushTarget(texture);
 		ctx.engine.clear(0xFFFFFF, 1);
 		super.draw(passes, sort);
 		if( border != null ) border.render();
 		ctx.engine.popTarget();
-		passes.load(save);
 
 		if( mode == Mixed && !ctx.computingStatic ) {
 			var merge = ctx.textures.allocTarget("mergedDirShadowMap", size, size, false, format);

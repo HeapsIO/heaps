@@ -127,13 +127,10 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 			var r = h3d.col.Ray.fromPoints(p0.toPoint(), p1.toPoint());
 			var saveR = r.clone();
 			var priority = 0x80000000;
-			var isMoveEvent = event.kind.match(EMove | ECheck);
 
 			for( i in interactives ) {
 
-				if( i.priority < priority
-				|| isMoveEvent && i.ignoreMoveEvents )
-					continue;
+				if( i.priority < priority ) continue;
 
 				var p : h3d.scene.Object = i;
 				while( p != null && p.visible )
@@ -310,8 +307,7 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 		ctx.lightSystem = null;
 
 		var found = null;
-		throw "todo";
-		/*var passes = new h3d.pass.PassList(@:privateAccess ctx.passes);
+		var passes = new h3d.pass.PassList(@:privateAccess ctx.passes);
 
 		if( !passes.isEmpty() ) {
 			var p = hardwarePass;
@@ -328,7 +324,7 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 						found = po.obj;
 						break;
 					}
-		}*/
+		}
 
 		ctx.done();
 		ctx.camera = null;
@@ -399,20 +395,32 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 
 		syncRec(ctx);
 		emitRec(ctx);
+		// sort by pass id
+		ctx.passes = haxe.ds.ListSort.sortSingleLinked(ctx.passes, function(p1, p2) {
+			return p1.pass.passId - p2.pass.passId;
+		});
 
 		// group by pass implementation
+		var curPass = ctx.passes;
 		var passes = [];
 		var passIndex = -1;
-		for( pl in ctx.passesHeads ) {
-			var p = pl.h;
+		while( curPass != null ) {
+			var passId = curPass.pass.passId;
+			var p = curPass, prev = null;
+			while( p != null && p.pass.passId == passId ) {
+				prev = p;
+				p = p.next;
+			}
+			prev.next = null;
 			var pobjs = ctx.cachedPassObjects[++passIndex];
 			if( pobjs == null ) {
 				pobjs = new Renderer.PassObjects();
 				ctx.cachedPassObjects[passIndex] = pobjs;
 			}
-			pobjs.name = p.pass.name;
-			pobjs.passes.init(p);
+			pobjs.name = curPass.pass.name;
+			pobjs.passes.init(curPass);
 			passes.push(pobjs);
+			curPass = p;
 		}
 
 		// send to rendered

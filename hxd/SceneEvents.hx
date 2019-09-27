@@ -162,11 +162,13 @@ class SceneEvents {
 			var last = null;
 			while( true ) {
 				var i = s.handleEvent(event, last);
+
 				if( i == null ) {
 					event.relX = oldX;
 					event.relY = oldY;
 					break;
 				}
+
 				if( checkOver ) {
 					if ( fillOver ) {
 						var idx = overList.indexOf(i);
@@ -215,12 +217,15 @@ class SceneEvents {
 					if( cancelFocus && i == currentFocus )
 						cancelFocus = false;
 				}
+
 				event.relX = oldX;
 				event.relY = oldY;
+
 				if( !event.propagate ) {
 					handled = true;
 					break;
 				}
+
 				last = i;
 				event.propagate = false;
 			}
