@@ -95,6 +95,8 @@ class Manager {
 	var effectGC          : Array<Effect>;
 	var hasMasterVolume   : Bool;
 
+	public var suspended : Bool = false;
+
 	private function new() {
 		try {
 			#if usesys
@@ -269,6 +271,9 @@ class Manager {
 	}
 
 	public function update() {
+
+		if( suspended ) return;
+
 		now = haxe.Timer.stamp() + timeOffset;
 
 		if (driver == null) {
