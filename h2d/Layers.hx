@@ -1,5 +1,10 @@
 package h2d;
 
+/**
+ * h2d.Layers allows to hierarchically organize objects on different layers and supports Y-sorting.
+ * Note: 
+ * 	 If you need a class that supports different scale modes and alignments see h2d.Scene.
+ */
 class Layers extends Object {
 
 	// the per-layer insert position
@@ -12,14 +17,25 @@ class Layers extends Object {
 		layerCount = 0;
 	}
 
+	/**
+		Adds a child object at the bottom layer (layer 0).
+	**/
 	override function addChild(s) {
 		addChildAt(s, 0);
 	}
 
+	/**
+	 * Shorthand for `addChildAt`, see `h2d.Layers.addChildAt`.
+	 */
 	public inline function add(s, layer) {
 		return addChildAt(s, layer);
 	}
 
+	/**
+	 * Adds a child `h2d.Object` at `layer:Int`.
+	 * @param s `h2d.Object` child to be added.
+	 * @param layer `Int` index of the layer, 0 is the bottom layer.
+	 */
 	override function addChildAt( s : Object, layer : Int ) {
 		if( s.parent == this ) {
 			var old = s.allocated;
@@ -35,6 +51,10 @@ class Layers extends Object {
 			layersIndexes[i]++;
 	}
 
+	/**
+	 * Removes a child `h2d.Object`.
+	 * @param s `h2d.Object` to be removed.
+	 */
 	override function removeChild( s : Object ) {
 		for( i in 0...children.length ) {
 			if( children[i] == s ) {
