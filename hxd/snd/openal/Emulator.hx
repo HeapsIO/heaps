@@ -13,7 +13,7 @@ private class Channel extends NativeChannel {
 		this.source = source;
 		super(samples);
 		#if js
-		gain.gain.setValueAtTime(source.volume, 0);
+		gain.gain.value = source.volume;
 		#end
 	}
 
@@ -254,7 +254,7 @@ class Emulator {
 		#if js
 		switch (param) {
 			case GAIN:
-				hxd.snd.NativeChannel.masterGain.gain.setValueAtTime(value, hxd.snd.NativeChannel.ctx.currentTime);
+				hxd.snd.NativeChannel.masterGain.gain.value = value;
 		}
 		#end
 	}
@@ -312,7 +312,7 @@ class Emulator {
 		case GAIN:
 			source.volume = value;
 			#if js
-			if (source.chan != null) source.chan.gain.gain.setValueAtTime(value, 0);
+			if (source.chan != null) source.chan.gain.gain.value = value;
 			#end
 		case REFERENCE_DISTANCE, ROLLOFF_FACTOR, MAX_DISTANCE:
 			// nothing (spatialization)
