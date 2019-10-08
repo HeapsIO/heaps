@@ -12,6 +12,9 @@ private class Channel extends NativeChannel {
 	public function new(source, samples) {
 		this.source = source;
 		super(samples);
+		#if js
+		gain.gain.setValueAtTime(source.volume, 0);
+		#end
 	}
 
 	@:noDebug
@@ -19,7 +22,7 @@ private class Channel extends NativeChannel {
 		var pos = 0;
 		var count = out.length >> 1;
 		if( source.duration > 0 ) {
-			var volume = source.volume;
+			var volume = #if js 1.0 #else source.volume #end;
 			var bufferIndex = 0;
 			var baseSample = 0;
 			var curSample = source.currentSample;
@@ -308,6 +311,9 @@ class Emulator {
 			}
 		case GAIN:
 			source.volume = value;
+			#if js
+			if (source.chan != null) source.chan.gain.gain.setValueAtTime(value, 0);
+			#end
 		case REFERENCE_DISTANCE, ROLLOFF_FACTOR, MAX_DISTANCE:
 			// nothing (spatialization)
 		case PITCH:
