@@ -191,7 +191,9 @@ class NativeChannel {
 	var snd : flash.media.Sound;
 	var channel : flash.media.SoundChannel;
 	#elseif js
-	static var ctx : js.html.audio.AudioContext;
+	public static var ctx : js.html.audio.AudioContext;
+	public static var destination : js.html.audio.AudioNode;
+	public static var masterGain : js.html.audio.GainNode;
 	static function getContext() : js.html.audio.AudioContext {
 		if( ctx == null ) {
 			try {
@@ -208,6 +210,10 @@ class NativeChannel {
 			if( ctx != null ) {
 				if( ctx.state == SUSPENDED ) waitForPageInput();
 				ctx.addEventListener("statechange", function(_) if( ctx.state == SUSPENDED ) waitForPageInput());
+				masterGain = ctx.createGain();
+				masterGain.connect(ctx.destination);
+
+				destination = masterGain;
 			}
 		}
 		return ctx;
@@ -252,11 +258,11 @@ class NativeChannel {
 		current = ctx.createBufferSource();
 		current.buffer = front;
 		current.addEventListener("ended", swap);
-		current.connect(ctx.destination);
+		current.connect(destination);
 		queued = ctx.createBufferSource();
 		queued.buffer = back;
 		queued.addEventListener("ended", swap);
-		queued.connect(ctx.destination);
+		queued.connect(destination);
 		
 		var currTime : Float = ctx.currentTime;
 		current.start(currTime);
@@ -317,7 +323,7 @@ class NativeChannel {
 		queued = ctx.createBufferSource();
 		queued.buffer = tmp;
 		queued.addEventListener("ended", swap);
-		queued.connect(ctx.destination);
+		queued.connect(destination);
 		
 		time += front.duration;
 		queued.start(time);

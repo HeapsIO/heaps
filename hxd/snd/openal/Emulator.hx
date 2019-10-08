@@ -246,7 +246,15 @@ class Emulator {
 	//public static function getProcAddress(fname   : Bytes) : Void*;
 
 	// Set Listener parameters
-	public static function listenerf(param : Int, value  : F32) {}
+	public static function listenerf(param : Int, value  : F32)
+	{
+		#if js
+		switch (param) {
+			case GAIN:
+				hxd.snd.NativeChannel.masterGain.gain.setValueAtTime(value, hxd.snd.NativeChannel.ctx.currentTime);
+		}
+		#end
+	}
 	public static function listener3f(param : Int, value1 : F32, value2 : F32, value3 : F32) {}
 	public static function listenerfv(param : Int, values : Bytes) {}
 	public static function listeneri(param : Int, value  : Int) {}
