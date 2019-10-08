@@ -116,8 +116,9 @@ class HtmlText extends Text {
 		var baseLines = [0.];
 		prevChar = -1;
 		newLine = true;
+		var splitNode : SplitNode = { node: null, pos: 0, width: 0, font: font, prevChar: -1 };
 		for( e in doc )
-			buildSizes(e, font, sizes, heights, baseLines);
+			buildSizes(e, font, sizes, heights, baseLines, splitNode);
 
 		var max = 0.;
 		for ( lw in sizes ) {
@@ -142,7 +143,26 @@ class HtmlText extends Text {
 		calcDone = true;
 	}
 
-	function buildSizes( e : Xml, font : Font, lines : Array<Float>, heights : Array<Float>, baseLines : Array<Float> ) {
+	function buildSizes( e : Xml, font : Font, lines : Array<Float>, heights : Array<Float>, baseLines : Array<Float>, splitNode:SplitNode ) {
+		inline function wordSplit() {
+			var fnt = splitNode.font;
+			var str = splitNode.node.nodeValue;
+			var w = lines[lines.length - 1];
+			var cc = str.charCodeAt(splitNode.pos);
+			lines[lines.length - 1] = splitNode.width;
+			if (fnt.charset.isSpace(cc)) {
+				// Space characters are converted to \n
+				var char = fnt.getChar(cc);
+				w -= (splitNode.width + letterSpacing + char.width + char.getKerningOffset(splitNode.prevChar));
+				splitNode.node.nodeValue = str.substr(0, splitNode.pos) + "\n" + str.substr(splitNode.pos + 1);
+			} else {
+				w -= splitNode.width;
+				splitNode.node.nodeValue = str.substr(0, splitNode.pos) + str.substr(splitNode.pos);
+			}
+			splitNode.node = null;
+			return w;
+		}
+
 		if( e.nodeType == Xml.Element ) {
 
 			inline function makeLineBreak() {
@@ -150,6 +170,7 @@ class HtmlText extends Text {
 				lines.push(0);
 				heights.push(fontInfo.lineHeight);
 				baseLines.push(fontInfo.baseLine);
+				splitNode.node = null;
 				newLine = true;
 				prevChar = -1;
 			}
@@ -177,17 +198,21 @@ class HtmlText extends Text {
 
 				var size = lines[lines.length - 1] + i.width + letterSpacing;
 				if (realMaxWidth >= 0 && size > realMaxWidth && lines[lines.length - 1] > 0) {
-					lines.push(i.width);
-					switch ( lineHeightMode ) {
-						case Accurate:
-							heights.push(i.height);
-							baseLines.push(i.height);
-						case TextOnly:
-							heights.push(font.lineHeight);
-							baseLines.push(font.baseLine);
-						case Constant:
-							heights.push(this.font.lineHeight);
-							baseLines.push(this.font.baseLine);
+					if ( splitNode.node != null ) {
+						size = wordSplit() + i.width + letterSpacing;
+						lines.push(size);
+						// Bug: height/baseLine may be innacurate in case of sizeA sizeB<split>sizeA where sizeB is larger.
+						var height = heights[heights.length - 1];
+						var base = baseLines[baseLines.length - 1];
+						switch ( lineHeightMode ) {
+							case Accurate:
+								// todo: Proper grow
+								heights.push(Math.max(height, i.height));
+								baseLines.push(Math.max(base, i.height));
+							default:
+								heights.push(height);
+								baseLines.push(height);
+						}
 					}
 				} else {
 					lines[lines.length - 1] = size;
@@ -216,7 +241,7 @@ class HtmlText extends Text {
 			default:
 			}
 			for( child in e )
-				buildSizes(child, font, lines, heights, baseLines);
+				buildSizes(child, font, lines, heights, baseLines, splitNode);
 			switch( nodeName ) {
 			case "p":
 				if ( !newLine ) {
@@ -226,11 +251,80 @@ class HtmlText extends Text {
 			}
 		} else {
 			newLine = false;
-			var text = splitText(htmlToText(e.nodeValue), lines.length == 0 ? 0 : lines.pop(), 0, font, lines, prevChar);
-			if ( text.length > 0 ) {
-				var lastChar = text.charCodeAt(text.length - 1);
-				prevChar = lastChar == "\n".code ? -1 : lastChar;
+			var text = htmlToText(e.nodeValue);
+			var leftMargin = lines.length == 0 ? 0 : lines.pop();
+			var maxWidth = realMaxWidth < 0 ? Math.POSITIVE_INFINITY : realMaxWidth;
+			var textSplit = [], restPos = 0;
+			var x = leftMargin;
+			for ( i in 0...text.length ) {
+				var cc = text.charCodeAt(i);
+				var g = font.getChar(cc);
+				var newline = cc == '\n'.code;
+				var esize = g.width + g.getKerningOffset(prevChar);
+				if ( font.charset.isBreakChar(cc) ) {
+					if (x > maxWidth && textSplit.length == 0) {
+						if ( splitNode.node != null ) {
+							lines.push(x);
+							heights.push(heights[heights.length - 1]);
+							baseLines.push(heights[heights.length - 1]);
+							x = wordSplit();
+						} else {
+							x -= leftMargin;
+							textSplit.push("");
+							lines.push(leftMargin);
+						}
+					}
+
+					var size = x + esize + letterSpacing;
+					var k = i + 1, max = text.length;
+					var prevChar = prevChar;
+					var breakFound = false;
+					while ( size <= maxWidth && k < max ) {
+						var cc = text.charCodeAt(k++);
+						if ( font.charset.isSpace(cc) || cc == '\n'.code ) {
+							breakFound = true;
+							break;
+						}
+						var e = font.getChar(cc);
+						size += e.width + letterSpacing + e.getKerningOffset(prevChar);
+						prevChar = cc;
+						if ( font.charset.isBreakChar(cc) ) break;
+					}
+					if ( size > maxWidth || (!breakFound && size > maxWidth) ) {
+						newline = true;
+						if ( font.charset.isSpace(cc) ) {
+							textSplit.push(text.substr(restPos, i - restPos));
+							g = null;
+						} else {
+							textSplit.push(text.substr(restPos, i + 1 - restPos));
+						}
+						splitNode.node = null;
+						restPos = i + 1;
+					} else {
+						splitNode.node = e;
+						splitNode.pos = i;
+						splitNode.prevChar = this.prevChar;
+						splitNode.width = x;
+						splitNode.font = font;
+					}
+				}
+				if ( g != null && cc != '\n'.code )
+					x += esize + letterSpacing;
+				if ( newline ) {
+					lines.push(x);
+					x = 0;
+					prevChar = -1;
+				} else {
+					prevChar = cc;
+				}
 			}
+			if ( restPos < text.length ) {
+				textSplit.push(text.substr(restPos));
+				lines.push(x);
+			}
+			// Save node value
+			e.nodeValue = textSplit.join("\n");
+
 			if ( lineHeightMode == Constant ) {
 				while ( heights.length < lines.length ) {
 					heights.push( this.font.lineHeight );
@@ -248,9 +342,6 @@ class HtmlText extends Text {
 					baseLines.push(font.baseLine);
 				}
 			}
-				
-			// Save node value
-			e.nodeValue = text;
 		}
 	}
 
@@ -356,9 +447,6 @@ class HtmlText extends Text {
 				prevChar = -1;
 			case "img":
 				var i : Tile = imageCache.get(e.get("src"));
-				if( realMaxWidth >= 0 && xPos + i.width + letterSpacing > realMaxWidth && xPos > 0 ) {
-					makeLineBreak();
-				}
 				var py = yPos + baseLines[sizePos] - i.height;
 				if( py + i.dy < calcYMin )
 					calcYMin = py + i.dy;
@@ -452,4 +540,12 @@ class HtmlText extends Text {
 				i.visible = true;
 	}
 
+}
+
+private typedef SplitNode = {
+	var node : Xml;
+	var prevChar : Int;
+	var pos : Int;
+	var width : Float;
+	var font : h2d.Font;
 }
