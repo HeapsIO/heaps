@@ -28,6 +28,7 @@ class DecalOverlay extends hxsl.Shader {
 		};
 
 		@const var CENTERED : Bool;
+		@const var GAMMA_CORRECT : Bool;
 
 		@global var depthMap : Channel;
 
@@ -70,8 +71,10 @@ class DecalOverlay extends hxsl.Shader {
 				discard;
 
 			var color = colorTexture.get(calculatedUV);
-			pixelColor.rgb = color.rgb + color.rgb * emissive;
-			pixelColor.a = max(max(pixelColor.r, pixelColor.g), pixelColor.b) * fadeFactor;
+			pixelColor.rgb *= color.rgb;
+			if( GAMMA_CORRECT ) pixelColor.rgb *= pixelColor.rgb;
+			pixelColor.rgb += pixelColor.rgb * emissive;
+			pixelColor.a = clamp(max(max(pixelColor.r, pixelColor.g), pixelColor.b), 0, 1) * fadeFactor;
 		}
 	}
 
@@ -198,9 +201,10 @@ class DecalPBR extends hxsl.Shader {
 
 			if( USE_ALBEDO ) {
 				var albedo = albedoTexture.get(calculatedUV);
-				pixelColor = albedo;
 				strength.r = albedoStrength * albedo.a;
 				alpha = albedo.a;
+				albedo *= albedo; // gamma correct
+				pixelColor = albedo;
 			}
 
 			if( USE_NORMAL ) {

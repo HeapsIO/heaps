@@ -47,8 +47,26 @@ class Sphere implements Collider {
 		return 1 - t;
 	}
 
-	public inline function inFrustum( f : Frustum ) {
+	public inline function inFrustum( f : Frustum, ?m : h3d.Matrix ) {
+		if( m != null ) return inFrustumMatrix(f,m);
 		return f.hasSphere(this);
+	}
+
+	function inFrustumMatrix( f : Frustum, m : h3d.Matrix ) {
+		var oldX = x, oldY = y, oldZ = z, oldR = r;
+		var v = getCenter();
+		v.transform(m);
+		x = v.x;
+		y = v.y;
+		z = v.z;
+		var scale = m.getScale();
+		r *= Math.max(Math.max(scale.x, scale.y), scale.z);
+		var res = f.hasSphere(this);
+		x = oldX;
+		y = oldY;
+		z = oldZ;
+		r = oldR;
+		return res;
 	}
 
 	public inline function inSphere( s : Sphere ) {

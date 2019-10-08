@@ -242,6 +242,13 @@ class Pad {
 		return !buttons[button] && prevButtons[button];
 	}
 
+	public function reset() {
+		xAxis = yAxis = 0;
+		for( i in 0...buttons.length ) buttons[i] = false;
+		for( i in 0...buttons.length ) prevButtons[i] = false;
+		for( i in 0...values.length ) values[i] = 0;
+	}
+
 	public function rumble( strength : Float, time_s : Float ){
 		#if hlsdl
 		d.rumble( strength, Std.int(time_s*1000.) );
@@ -539,7 +546,7 @@ class Pad {
 
 	static function syncPads() {
 		var freshPads : Array<js.html.Gamepad> = [];
-		try freshPads = js.Browser.navigator.getGamepads() catch( e : Dynamic ) {}; 
+		try freshPads = js.Browser.navigator.getGamepads() catch( e : Dynamic ) {};
 		if ( freshPads.length > 0 ) {
 			for ( i in 0...freshPads.length ) {
 				if ( pads[i] != null ) {

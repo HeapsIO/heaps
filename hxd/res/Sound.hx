@@ -12,6 +12,8 @@ class Sound extends Resource {
 
 	var data : hxd.snd.Data;
 	var channel : hxd.snd.Channel;
+	public var sampleStartLoop : Int = 0;
+	public var sampleStopLoop : Int = 0;
 	public var lastPlay(default, null) = 0.;
 
 	public static function supportedFormat( fmt : SoundFormat ) {

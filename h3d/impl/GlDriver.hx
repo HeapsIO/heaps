@@ -131,6 +131,7 @@ private class CompiledProgram {
 	public var stride : Int;
 	public var inputs : InputNames;
 	public var attribs : Array<CompiledAttribute>;
+	public var hasAttribIndex : Array<Bool>;
 	public function new() {
 	}
 }
@@ -154,7 +155,8 @@ class GlDriver extends Driver {
 	#end
 
 	var commonFB : Framebuffer;
-	var curAttribs : Int = 0;
+	var curAttribs : Array<Bool> = new Array<Bool>();
+	var maxIdxCurAttribs : Int = 0;
 	var curShader : CompiledProgram;
 	var curBuffer : h3d.Buffer;
 	var curIndexBuffer : IndexBuffer;
@@ -188,7 +190,7 @@ class GlDriver extends Driver {
 	var maxCompressedTexturesSupport = 0;
 
 	var drawMode : Int;
-	
+
 	/**
 		Perform OUT_OF_MEMORY checks when allocating textures/buffers.
 		Default true, except in WebGL (false)
@@ -282,7 +284,8 @@ class GlDriver extends Driver {
 		this.frame = frame;
 		resetStream();
 		#if cpp
-		curAttribs = 0;
+		curAttribs = new Array<Bool>();
+		maxIdxCurAttribs = 0;
 		curMatBits = -1;
 		#end
 		gl.useProgram(null);
@@ -421,6 +424,7 @@ class GlDriver extends Driver {
 			initShader(p, p.fragment, shader.fragment);
 			var attribNames = [];
 			p.attribs = [];
+			p.hasAttribIndex = [];
 			p.stride = 0;
 			for( v in shader.vertex.data.vars )
 				switch( v.kind ) {
@@ -451,6 +455,7 @@ class GlDriver extends Driver {
 							}
 					}
 					p.attribs.push(a);
+					p.hasAttribIndex[a.index] = true;
 					attribNames.push(v.name);
 					p.stride += size;
 				default:
@@ -461,12 +466,27 @@ class GlDriver extends Driver {
 		if( curShader == p ) return false;
 
 		gl.useProgram(p.p);
-		for( i in curAttribs...p.attribs.length ) {
-			gl.enableVertexAttribArray(i);
-			curAttribs++;
+
+		for( a in p.attribs )
+			if( !curAttribs[a.index] ) {
+				gl.enableVertexAttribArray(a.index);
+				curAttribs[a.index] = true;
+				if (maxIdxCurAttribs < a.index) {
+					maxIdxCurAttribs = a.index;
+				}
+			}
+
+		var lastIdxCurAttribTrue = 0;
+		for( i in 0...maxIdxCurAttribs+1 ) {
+			if( curAttribs[i] && !p.hasAttribIndex[i]) {
+				gl.disableVertexAttribArray(i);
+				curAttribs[i] = false;
+			} else if (curAttribs[i]) {
+				lastIdxCurAttribTrue = i;
+			}
 		}
-		while( curAttribs > p.attribs.length )
-			gl.disableVertexAttribArray(--curAttribs);
+		maxIdxCurAttribs = lastIdxCurAttribTrue;
+
 		curShader = p;
 		curBuffer = null;
 		for( i in 0...boundTextures.length )
@@ -864,6 +884,8 @@ class GlDriver extends Driver {
 			tt.internalFmt = GL2.R11F_G11F_B10F;
 			tt.pixelFmt = GL2.UNSIGNED_INT_10F_11F_11F_REV;
 		case S3TC(n) if( n <= maxCompressedTexturesSupport ):
+			if( t.width&3 != 0 || t.height&3 != 0 )
+				throw "Compressed texture "+t+" has size "+t.width+"x"+t.height+" - must be a multiple of 4";
 			switch( n ) {
 			case 1: tt.internalFmt = 0x83F1; // COMPRESSED_RGBA_S3TC_DXT1_EXT
 			case 2:	tt.internalFmt = 0x83F2; // COMPRESSED_RGBA_S3TC_DXT3_EXT
@@ -1050,16 +1072,6 @@ class GlDriver extends Driver {
 	#end
 	}
 
-	#if !hl
-	inline static function bytesToUint8Array( b : haxe.io.Bytes, offset = 0 ) : Uint8Array {
-		#if (lime && !js)
-		return new Uint8Array(b,offset);
-		#else
-		return new Uint8Array(b.getData(),offset);
-		#end
-	}
-	#end
-
 	/*
 		GL async model create crashes if the GC free the memory that we send it.
 		Instead, we will copy the data into a temp location before uploading.
@@ -1137,14 +1149,13 @@ class GlDriver extends Driver {
 			#end
 		} else
 			gl.texImage2D(face, mipLevel, t.t.internalFmt, pixels.width, pixels.height, 0, getChannels(t.t), t.t.pixelFmt, stream);
-		#elseif lime
-		gl.texImage2D(face, mipLevel, t.t.internalFmt, pixels.width, pixels.height, 0, getChannels(t.t), t.t.pixelFmt, bytesToUint8Array(pixels.bytes));
 		#elseif js
-		var buffer = switch( t.format ) {
-		case RGBA32F, R32F, RG32F, RGB32F: new Float32Array(@:privateAccess pixels.bytes.b.buffer, pixels.offset);
-		case RGBA16F, R16F, RG16F, RGB16F: new Uint16Array(@:privateAccess pixels.bytes.b.buffer, pixels.offset);
-		case RGB10A2, RG11B10UF: new Uint32Array(@:privateAccess pixels.bytes.b.buffer, pixels.offset);
-		default: bytesToUint8Array(pixels.bytes,pixels.offset);
+		var bufLen = pixels.stride * pixels.height;
+		var buffer : ArrayBufferView = switch( t.format ) {
+		case RGBA32F, R32F, RG32F, RGB32F: new Float32Array(@:privateAccess pixels.bytes.b.buffer, pixels.offset, bufLen>>2);
+		case RGBA16F, R16F, RG16F, RGB16F: new Uint16Array(@:privateAccess pixels.bytes.b.buffer, pixels.offset, bufLen>>1);
+		case RGB10A2, RG11B10UF: new Uint32Array(@:privateAccess pixels.bytes.b.buffer, pixels.offset, bufLen>>2);
+		default: new Uint8Array(@:privateAccess pixels.bytes.b.buffer, pixels.offset, bufLen);
 		}
 		if( t.format.match(S3TC(_)) )
 			gl.compressedTexImage2D(face, mipLevel, t.t.internalFmt, pixels.width, pixels.height, 0, buffer);
@@ -1153,6 +1164,7 @@ class GlDriver extends Driver {
 		#else
 		throw "Not implemented";
 		#end
+		t.flags.set(WasCleared);
 		restoreBind();
 	}
 
@@ -1176,8 +1188,7 @@ class GlDriver extends Driver {
 		#if hl
 		gl.bufferSubData(GL.ARRAY_BUFFER, startVertex * stride * 4, streamData(buf.getData(),bufPos * 4,vertexCount * stride * 4), bufPos * 4 * STREAM_POS, vertexCount * stride * 4);
 		#else
-		var buf = bytesToUint8Array(buf);
-		var sub = new Uint8Array(buf.buffer, bufPos * 4, vertexCount * stride * 4);
+		var sub = new Uint8Array(buf.getData(), bufPos * 4, vertexCount * stride * 4);
 		gl.bufferSubData(GL.ARRAY_BUFFER, startVertex * stride * 4, sub);
 		#end
 		gl.bindBuffer(GL.ARRAY_BUFFER, null);
@@ -1204,8 +1215,7 @@ class GlDriver extends Driver {
 		#if hl
 		gl.bufferSubData(GL.ELEMENT_ARRAY_BUFFER, startIndice << bits, streamData(buf.getData(),bufPos << bits, indiceCount << bits), (bufPos << bits) * STREAM_POS, indiceCount << bits);
 		#else
-		var buf = bytesToUint8Array(buf);
-		var sub = new Uint8Array(buf.buffer, bufPos << bits, indiceCount << bits);
+		var sub = new Uint8Array(buf.getData(), bufPos << bits, indiceCount << bits);
 		gl.bufferSubData(GL.ELEMENT_ARRAY_BUFFER, startIndice << bits, sub);
 		#end
 		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, null);

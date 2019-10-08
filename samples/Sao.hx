@@ -25,9 +25,9 @@ class CustomRenderer extends h3d.scene.fwd.Renderer {
 		allPasses.push(mrt);
 	}
 
-	override function renderPass(p:h3d.pass.Base, passes) {
+	override function renderPass(p:h3d.pass.Base, passes, ?sort) {
 		bench.measure(p.name);
-		return super.renderPass(p, passes);
+		return super.renderPass(p, passes, sort);
 	}
 
 	override function render() {

@@ -37,6 +37,8 @@ class CacheFile extends Cache {
 	var compiledSources : Map<String,{ vertex : String, fragment : String }> = new Map();
 	var allSources : Map<String,String> = new Map();
 
+	public var allowSave = #if usesys false #else true #end;
+
 	public function new( allowCompile, recompileRT = false ) {
 		super();
 		this.allowCompile = allowCompile;
@@ -107,12 +109,16 @@ class CacheFile extends Cache {
 		if( wait.length > 0 ) {
 			waitCount += wait.length;
 			#if hlmulti
-			for( r in wait )
+			for( r in wait ) {
 				addNewShader(r);
+				hxd.System.timeoutTick();
+			}
 			#else
 			haxe.Timer.delay(function() {
-				for( r in wait )
+				for( r in wait ) {
 					addNewShader(r);
+					hxd.System.timeoutTick();
+				}
 			},1000); // wait until engine correctly initialized
 			#end
 		}
@@ -271,8 +277,12 @@ class CacheFile extends Cache {
 				if( r == null ) continue;
 				//log("Recompile "+[for( s in shaderList ) shaderName(s)]);
 				var rt = link(shaderList, batchMode); // will compile + update linkMap
-				if( rt.spec.signature != r.specSign )
+				if( rt.spec.signature != r.specSign ) {
+					var signParts = [for( i in rt.spec.instances ) i.shader.data.name+"_" + i.bits + "_" + i.index];
 					throw "assert";
+				}
+				var rt2 = rttMap.get(r.specSign);
+				if( rt2 != null ) throw "assert";
 				runtimeShaders.push(rt);
 				rttMap.set(r.specSign, rt);
 			}
@@ -409,6 +419,8 @@ class CacheFile extends Cache {
 	}
 
 	function save() {
+		if( !allowSave ) return;
+
 		var out = new haxe.io.BytesOutput();
 		out.writeInt32(1); // version
 
@@ -511,6 +523,7 @@ class CacheFile extends Cache {
 		separator();
 		writeString(null);
 
+		try sys.FileSystem.createDirectory(new haxe.io.Path(file).dir) catch( e : Dynamic ) {};
 		sys.io.File.saveBytes(file, out.getBytes());
 
 		out = new haxe.io.BytesOutput();
@@ -537,7 +550,6 @@ class CacheFile extends Cache {
 		writeString(null);
 
 		sys.io.File.saveBytes(sourceFile, out.getBytes());
-
 	}
 
 	/**
@@ -546,6 +558,7 @@ class CacheFile extends Cache {
 	**/
 	function cleanRuntime( r : RuntimeShader ) {
 		var rc = new RuntimeShader();
+		@:privateAccess RuntimeShader.UID--; // unalloc id
 		rc.id = 0;
 		rc.signature = r.spec.signature; // store by spec, not by sign (dups)
 		rc.vertex = cleanRuntimeData(r.vertex);
@@ -703,7 +716,7 @@ class CacheFile extends Cache {
 	function addNewShader( s : RuntimeShader ) {
 		if( runtimeShaders.indexOf(s) < 0 )
 			runtimeShaders.push(s);
-		addSource(s);
+		if( allowSave ) addSource(s);
 		for( i in s.spec.instances ) {
 			var inst = shaders.get(i.shader.data.name);
 			if( inst == null ) {
@@ -737,11 +750,13 @@ class CacheFile extends Cache {
 			// shader was selected by not compiled by driver, let's force-compile it by hand!
 			if( s.vertex.code == null || s.fragment.code == null ) {
 				var engine = h3d.Engine.getCurrent();
-				if( engine == null ) engine = new h3d.Engine();
+				if( engine == null ) engine = @:privateAccess new h3d.Engine();
 				engine.driver.selectShader(s);
 			}
+			// same shader id is shared between multiple runtime shaders because they have the same signature
+			// hopefully, the other shader will make it through addSource just a bit after
 			if( s.vertex.code == null || s.fragment.code == null )
-				throw "Missing shader code";
+				return;
 			compiledSources.set(s.signature, { vertex : allocSource(s.vertex.code), fragment : allocSource(s.fragment.code) });
 		}
 	}

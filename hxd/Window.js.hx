@@ -27,6 +27,12 @@ class Window {
 
 	var focused : Bool;
 
+	/**
+		When enabled, the browser zoom does not affect the canvas.
+		(default : true)
+	**/
+	public var useScreenPixels : Bool = true;
+
 	public function new( ?canvas : js.html.CanvasElement, ?globalEvents ) : Void {
 		var customCanvas = canvas != null;
 		eventTargets = new List();
@@ -146,6 +152,14 @@ class Window {
 	}
 
 	public function setFullScreen( v : Bool ) : Void {
+		var doc = js.Browser.document;
+		var elt : Dynamic = doc.documentElement;
+		if( (doc.fullscreenElement == elt) == v )
+			return;
+		if( v )
+			elt.requestFullscreen();
+		else
+			doc.exitFullscreen();
 	}
 
 	public function setCurrent() {
@@ -158,20 +172,24 @@ class Window {
 		return inst;
 	}
 
+	function getPixelRatio() {
+		return useScreenPixels ? js.Browser.window.devicePixelRatio : 1;
+	}
+
 	function get_width() {
-		return Math.round(canvasPos.width * js.Browser.window.devicePixelRatio);
+		return Math.round(canvasPos.width * getPixelRatio());
 	}
 
 	function get_height() {
-		return Math.round(canvasPos.height * js.Browser.window.devicePixelRatio);
+		return Math.round(canvasPos.height * getPixelRatio());
 	}
 
 	function get_mouseX() {
-		return Math.round((curMouseX - canvasPos.left) * js.Browser.window.devicePixelRatio);
+		return Math.round((curMouseX - canvasPos.left) * getPixelRatio());
 	}
 
 	function get_mouseY() {
-		return Math.round((curMouseY - canvasPos.top) * js.Browser.window.devicePixelRatio);
+		return Math.round((curMouseY - canvasPos.top) * getPixelRatio());
 	}
 
 	function get_mouseLock() : Bool {
@@ -231,8 +249,8 @@ class Window {
 		e.preventDefault();
 		var x, y, ev;
 		for (touch in e.changedTouches) {
-			x = Math.round((touch.clientX - canvasPos.left) * js.Browser.window.devicePixelRatio);
-			y = Math.round((touch.clientY - canvasPos.top) * js.Browser.window.devicePixelRatio);
+			x = Math.round((touch.clientX - canvasPos.left) * getPixelRatio());
+			y = Math.round((touch.clientY - canvasPos.top) * getPixelRatio());
 			ev = new Event(EPush, x, y);
 			ev.touchId = touch.identifier;
 			event(ev);
@@ -243,8 +261,8 @@ class Window {
 		e.preventDefault();
 		var x, y, ev;
 		for (touch in e.changedTouches) {
-			x = Math.round((touch.clientX - canvasPos.left) * js.Browser.window.devicePixelRatio);
-			y = Math.round((touch.clientY - canvasPos.top) * js.Browser.window.devicePixelRatio);
+			x = Math.round((touch.clientX - canvasPos.left) * getPixelRatio());
+			y = Math.round((touch.clientY - canvasPos.top) * getPixelRatio());
 			ev = new Event(EMove, x, y);
 			ev.touchId = touch.identifier;
 			event(ev);
@@ -255,8 +273,8 @@ class Window {
 		e.preventDefault();
 		var x, y, ev;
 		for (touch in e.changedTouches) {
-			x = Math.round((touch.clientX - canvasPos.left) * js.Browser.window.devicePixelRatio);
-			y = Math.round((touch.clientY - canvasPos.top) * js.Browser.window.devicePixelRatio);
+			x = Math.round((touch.clientX - canvasPos.left) * getPixelRatio());
+			y = Math.round((touch.clientY - canvasPos.top) * getPixelRatio());
 			ev = new Event(ERelease, x, y);
 			ev.touchId = touch.identifier;
 			event(ev);
@@ -278,7 +296,7 @@ class Window {
 		ev.keyCode = e.keyCode;
 		event(ev);
 		if( !propagateKeyEvents ) {
-			e.preventDefault();
+			//e.preventDefault() -- required to trigger onKeyPress
 			e.stopPropagation();
 		}
 	}

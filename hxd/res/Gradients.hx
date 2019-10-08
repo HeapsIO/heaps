@@ -35,10 +35,10 @@ class Gradients extends Resource {
 	}
 
 	static function createTexture(grads : Array<Gradient>, twid : Int) {
-		if (!isPOT(twid)) throw "gradient resolution should be a power of two";
+		if (!hxd.Math.isPOT(twid)) throw "gradient resolution should be a power of two";
 
 		var ghei = grads.length > 1 ? 3 : 1;
-		var thei = nextPOT(ghei * grads.length);
+		var thei = hxd.Math.nextPOT(ghei * grads.length);
 		var tex  = new h3d.mat.Texture(twid, thei);
 
 		function uploadPixels() {
@@ -55,20 +55,6 @@ class Gradients extends Resource {
 		uploadPixels();
 		tex.realloc = uploadPixels;
 		return tex;
-	}
-
-	static inline function isPOT(v : Int) : Bool {
-		return (v & (v - 1)) == 0;
-	}
-
-	static inline function nextPOT(v : Int) : Int {
-		--v;
-		v |= v >> 1;
-		v |= v >> 2;
-		v |= v >> 4;
-		v |= v >> 8;
-		v |= v >> 16;
-		return ++v;
 	}
 
 	static function appendPixels(pixels : hxd.Pixels, dat : Gradient, wid : Int, hei : Int, yoff : Int) {

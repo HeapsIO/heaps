@@ -427,7 +427,7 @@ class Cache {
 
 	function createBatchShader( rt : RuntimeShader ) {
 		var s = new hxsl.SharedShader("");
-		var id = rt.signature.substr(0, 8);
+		var id = rt.spec.signature.substr(0, 8);
 
 		function declVar( name, t, kind ) : TVar {
 			return {

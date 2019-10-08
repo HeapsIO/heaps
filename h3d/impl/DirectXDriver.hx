@@ -280,7 +280,7 @@ class DirectXDriver extends h3d.impl.Driver {
 		if( old ) hxd.System.allowTimeout = true;
 
 		if( hasDeviceError ) {
-			//trace("OnContextLost");
+			Sys.println("----------- OnContextLost ----------");
 			hasDeviceError = false;
 			dispose();
 			reset();
@@ -390,6 +390,10 @@ class DirectXDriver extends h3d.impl.Driver {
 		desc.width = t.width;
 		desc.height = t.height;
 		desc.format = getTextureFormat(t);
+
+		if( t.format.match(S3TC(_)) && (t.width & 3 != 0 || t.height & 3 != 0) )
+			throw t+" is compressed "+t.width+"x"+t.height+" but should be a 4x4 multiple";
+
 		desc.usage = Default;
 		desc.bind = ShaderResource;
 		desc.mipLevels = mips;
@@ -580,6 +584,7 @@ class DirectXDriver extends h3d.impl.Driver {
 		}
 		t.t.res.updateSubresource(mipLevel + side * t.t.mips, null, (pixels.bytes:hl.Bytes).offset(pixels.offset), stride, 0);
 		updateResCount++;
+		t.flags.set(WasCleared);
 	}
 
 	static inline var SCISSOR_BIT = Pass.reserved_mask;

@@ -11,7 +11,7 @@ enum Align {
 class Text extends Drawable {
 
 	public var font(default, set) : Font;
-	public var text(default, set) : hxd.UString;
+	public var text(default, set) : String;
 	public var textColor(default, set) : Int;
 	public var maxWidth(default, set) : Null<Float>;
 	public var dropShadow : { dx : Float, dy : Float, color : Int, alpha : Float };
@@ -138,7 +138,7 @@ class Text extends Drawable {
 		glyphs.drawWith(ctx,this);
 	}
 
-	function set_text(t : hxd.UString) {
+	function set_text(t : String) {
 		var t = t == null ? "null" : t;
 		if( t == this.text ) return t;
 		this.text = t;
@@ -152,7 +152,7 @@ class Text extends Drawable {
 		onContentChanged();
 	}
 
-	public function calcTextWidth( text : hxd.UString ) {
+	public function calcTextWidth( text : String ) {
 		if( calcDone ) {
 			var ow = calcWidth, oh = calcHeight, osh = calcSizeHeight, ox = calcXMin, oy = calcYMin;
 			initGlyphs(text, false);
@@ -179,7 +179,7 @@ class Text extends Drawable {
 		@param sizes Optional line width array. Will be populated with sizes of split lines if present. Sizes will include both `leftMargin` in it's first line entry.
 		@param prevChar Optional character code for concatenation purposes (proper kernings).
 	**/
-	public function splitText( text : hxd.UString, leftMargin = 0., afterData = 0., ?font : Font, ?sizes:Array<Float>, ?prevChar:Int = -1 ) {
+	public function splitText( text : String, leftMargin = 0., afterData = 0., ?font : Font, ?sizes:Array<Float>, ?prevChar:Int = -1 ) {
 		var maxWidth = realMaxWidth;
 		if( maxWidth < 0 ) {
 			if ( sizes == null ) 
@@ -248,7 +248,7 @@ class Text extends Drawable {
 		return lines.join("\n");
 	}
 
-	function initGlyphs( text : hxd.UString, rebuild = true ) : Void {
+	function initGlyphs( text : String, rebuild = true ) : Void {
 		if( rebuild ) glyphs.clear();
 		var x = 0., y = 0., xMax = 0., xMin = 0., yMin = 0., prevChar = -1, linei = 0;
 		var align = textAlign;
@@ -362,9 +362,9 @@ class Text extends Drawable {
 			w = calcWidth;
 			h = calcSizeHeight;
 		} else {
-			x = realMaxWidth >= 0 ? 0 : calcXMin;
+			x = calcXMin;
 			y = calcYMin;
-			w = realMaxWidth >= 0 ? realMaxWidth : calcWidth;
+			w = calcWidth;
 			h = calcHeight - calcYMin;
 		}
 		addBounds(relativeTo, out, x, y, w, h);

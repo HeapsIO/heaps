@@ -279,6 +279,8 @@ class FontParser {
 		var fallback = glyphs.get(0xFFFD); // <?>
 		if( fallback == null )
 			fallback = glyphs.get(0x25A1); // square
+		if( fallback == null )
+			fallback = glyphs.get("?".code);
 		if( fallback != null )
 			font.defaultChar = fallback;
 

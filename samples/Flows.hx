@@ -16,9 +16,11 @@ class Flows extends hxd.App {
 	var hAlignChildFlow : Array<Flow> = [];
 
 	// for screens
-	var idxFctDisplayed = 7; // also the first screen displayed
+	var idxFctDisplayed = 9; // also the first screen displayed
 	var fctGenerationScreen : Array<Void -> Void> = []; // list of functions generating screen
 	var currentFlows : Array<Flow> = []; // removed when switching screen
+
+	var event = new hxd.WaitEvent();
 
 	override function init() {
 
@@ -78,12 +80,12 @@ class Flows extends hxd.App {
 			flow.minWidth = size;
 
 			flow.backgroundTile = Tile.fromColor(0x888888);
-		
+
 			createText(flow, color, text);
 
 			return flow;
 		}
-		
+
 		function createFlowWithText(parent:Object, size : Int, vAlign: FlowAlign, hAlign : FlowAlign, text : String) {
 			var flow = new Flow(parent);
 			flow.debug = true;
@@ -96,7 +98,7 @@ class Flows extends hxd.App {
 			flow.minWidth = size;
 
 			flow.backgroundTile = Tile.fromColor(0x888888);
-		
+
 			var tf = new h2d.Text(font, flow);
 			tf.textColor = 0x000000;
 			tf.textAlign = Align.Left;
@@ -125,10 +127,10 @@ class Flows extends hxd.App {
 			createFlow(flow, 7, "BotLeft", FlowAlign.Bottom, FlowAlign.Left);
 			createFlow(flow, 8, "BotMiddle", FlowAlign.Bottom, FlowAlign.Middle);
 			createFlow(flow, 9, "BotRight", FlowAlign.Bottom, FlowAlign.Right);
-			
+
 			currentFlows.push(flow);
 		}
-		
+
 		function screen1() : Void {
 			var title = createTitle("1°) 3 flows with text inline in 3 flows inline");
 			var yoffset = title.getBounds().height + spaceY;
@@ -153,7 +155,7 @@ class Flows extends hxd.App {
 			createFlow(subFlow, 1, "BotLeft", FlowAlign.Bottom, FlowAlign.Left);
 			createFlow(subFlow, 2, "BotMiddle", FlowAlign.Bottom, FlowAlign.Middle);
 			createFlow(subFlow, 3, "BotRight", FlowAlign.Bottom, FlowAlign.Right);
-			
+
 			currentFlows.push(flow);
 		}
 
@@ -175,7 +177,7 @@ class Flows extends hxd.App {
 			subFlow.verticalAlign = FlowAlign.Top;
 			subFlow.horizontalAlign = FlowAlign.Left;
 			movingFlow = createFlow(subFlow, 1, "Text", FlowAlign.Top, FlowAlign.Left);
-			
+
 			currentFlows.push(flow);
 		}
 
@@ -204,7 +206,7 @@ class Flows extends hxd.App {
 			createFlow(subFlow, 7, "BotLeft", FlowAlign.Bottom, FlowAlign.Left);
 			createFlow(subFlow, 8, "BotMiddle", FlowAlign.Bottom, FlowAlign.Middle);
 			createFlow(subFlow, 9, "BotRight", FlowAlign.Bottom, FlowAlign.Right);
-			
+
 			currentFlows.push(flow);
 		}
 
@@ -212,9 +214,9 @@ class Flows extends hxd.App {
 			var title = createTitle("4°) Reversing");
 			var yoffset = title.getBounds().height + spaceY;
 			var xoffset = spaceX;
-			
+
 			var flow;
-			
+
 			function generateFlowsWithThreeFlowsWithThreeChilds(vAlign : FlowAlign, layout) {
 
 				function generateFlowThreeChilds(hAlign: FlowAlign) : Flow {
@@ -231,7 +233,7 @@ class Flows extends hxd.App {
 					return flow;
 				}
 				while (reversedFlow.pop() != null) {};
-				
+
 				var flow = generateFlowThreeChilds(FlowAlign.Left);
 				reversedFlow.push(flow);
 				currentFlows.push(flow);
@@ -245,16 +247,16 @@ class Flows extends hxd.App {
 				flow = generateFlowThreeChilds(FlowAlign.Right);
 				reversedFlow.push(flow);
 				currentFlows.push(flow);
-				
+
 				return flow;
 			}
 
 			// Are Not Vertical
 			flow = generateFlowsWithThreeFlowsWithThreeChilds(Top, Horizontal);
-			
+
 			yoffset += flow.getBounds().height + spaceY;
 			flow = generateFlowsWithThreeFlowsWithThreeChilds(Middle, Horizontal);
-			
+
 			yoffset += flow.getBounds().height + spaceY;
 			flow = generateFlowsWithThreeFlowsWithThreeChilds(Bottom, Horizontal);
 
@@ -262,10 +264,10 @@ class Flows extends hxd.App {
 			yoffset += flow.getBounds().height + spaceY;
 			xoffset = spaceX;
 			flow = generateFlowsWithThreeFlowsWithThreeChilds(Top, Vertical);
-			
+
 			yoffset += flow.getBounds().height + spaceY;
 			flow = generateFlowsWithThreeFlowsWithThreeChilds(Middle, Vertical);
-			
+
 			yoffset += flow.getBounds().height + spaceY;
 			flow = generateFlowsWithThreeFlowsWithThreeChilds(Bottom, Vertical);
 		}
@@ -287,7 +289,7 @@ class Flows extends hxd.App {
 			createFlow(flow, 6, "F", FlowAlign.Middle, FlowAlign.Middle);
 			createFlow(flow, 7, "G", FlowAlign.Middle, FlowAlign.Middle);
 			createFlow(flow, 8, "H", FlowAlign.Middle, FlowAlign.Middle);
-			
+
 			currentFlows.push(flow);
 
 			xoffset += flow.getSize().width + spaceX;
@@ -305,7 +307,7 @@ class Flows extends hxd.App {
 			createFlow(flow, 6, "F", FlowAlign.Middle, FlowAlign.Middle);
 			createFlow(flow, 7, "G", FlowAlign.Middle, FlowAlign.Middle);
 			createFlow(flow, 8, "H", FlowAlign.Middle, FlowAlign.Middle);
-			
+
 			currentFlows.push(flow);
 		}
 
@@ -347,24 +349,25 @@ class Flows extends hxd.App {
 		}
 
 		function screen7() : Void {
-			var title = createTitle("7°) Points of the compass (Doesn't work !)");
+			var title = createTitle("7°) Stack layout");
 			var yoffset = title.getBounds().height + spaceY;
 			var xoffset = spaceX;
 
 			var flow = createFlowSimple(s2d, xoffset, yoffset);
 			flow.minHeight = 350;
 			flow.minWidth = 350;
+			flow.layout = Stack;
 			currentFlows.push(flow);
 
 			var subFlow;
-			
+
 			subFlow = createFlowWithText(flow, 1, FlowAlign.Middle, null, "S");
 			flow.getProperties(subFlow).verticalAlign = FlowAlign.Bottom;
 			flow.getProperties(subFlow).horizontalAlign = FlowAlign.Middle;
 
 			subFlow = createFlowWithText(flow, 1, FlowAlign.Middle, null, "SE");
 			flow.getProperties(subFlow).verticalAlign = FlowAlign.Bottom;
-			flow.getProperties(subFlow).horizontalAlign = FlowAlign.Middle;
+			flow.getProperties(subFlow).horizontalAlign = FlowAlign.Right;
 
 			subFlow = createFlowWithText(flow, 1, FlowAlign.Middle, null, "NO");
 			flow.getProperties(subFlow).verticalAlign = FlowAlign.Top;
@@ -373,28 +376,93 @@ class Flows extends hxd.App {
 			subFlow = createFlowWithText(flow, 1, FlowAlign.Middle, null, "N");
 			flow.getProperties(subFlow).verticalAlign = FlowAlign.Top;
 			flow.getProperties(subFlow).horizontalAlign = FlowAlign.Middle;
-			
+
 			subFlow = createFlowWithText(flow, 1, FlowAlign.Middle, null, "NE");
 			flow.getProperties(subFlow).verticalAlign = FlowAlign.Top;
 			flow.getProperties(subFlow).horizontalAlign = FlowAlign.Right;
-			
+
 			subFlow = createFlowWithText(flow, 1, FlowAlign.Middle, null, "O");
 			flow.getProperties(subFlow).verticalAlign = FlowAlign.Middle;
 			flow.getProperties(subFlow).horizontalAlign = FlowAlign.Left;
-			
+
 			subFlow = createFlowWithText(flow, 1, FlowAlign.Middle, null, "x");
 			flow.getProperties(subFlow).verticalAlign = FlowAlign.Middle;
 			flow.getProperties(subFlow).horizontalAlign = FlowAlign.Middle;
-			
+
 			subFlow = createFlowWithText(flow, 1, FlowAlign.Middle, null, "E");
 			flow.getProperties(subFlow).verticalAlign = FlowAlign.Middle;
 			flow.getProperties(subFlow).horizontalAlign = FlowAlign.Right;
-			
+
 			subFlow = createFlowWithText(flow, 1, FlowAlign.Middle, null, "SO");
 			flow.getProperties(subFlow).verticalAlign = FlowAlign.Bottom;
 			flow.getProperties(subFlow).horizontalAlign = FlowAlign.Left;
 
 		}
+
+		function screen8() : Void {
+			var title = createTitle("8°) Flow + text resize");
+			var yoffset = title.getBounds().height + spaceY;
+			var xoffset = spaceX;
+
+			var flow = createFlowSimple(s2d, xoffset, yoffset);
+			flow.minHeight = 350;
+			flow.minWidth = 350;
+			flow.layout = Stack;
+			currentFlows.push(flow);
+
+			var sub = new h2d.Flow(flow);
+			sub.layout = Stack;
+			sub.fillWidth = true;
+			sub.fillHeight = true;
+			sub.debug = true;
+
+			var tf = new h2d.Text(font, sub);
+			tf.textColor = 0x000000;
+			tf.text = "Example text";
+			sub.getProperties(tf).align(Top, Middle);
+
+			event.waitUntil(function (dt) {
+				flow.minWidth = flow.maxWidth = 140 + Math.floor(Math.sin(hxd.Timer.lastTimeStamp) * 130);
+				return idxFctDisplayed != 8;
+			});
+		}
+
+		function screen9() : Void {
+			var title = createTitle("9°) Overflow");
+			var yoffset = title.getBounds().height + spaceY;
+			var xoffset = spaceX;
+
+			var flow = createFlowSimple(s2d, xoffset, yoffset);
+			flow.maxWidth = 350;
+			flow.minHeight = flow.maxHeight = 350;
+			flow.layout = Stack;
+			flow.overflow = true;
+			currentFlows.push(flow);
+
+			var sub = new h2d.Flow(flow);
+			flow.getProperties(sub).align(Top, Left);
+			sub.minHeight = 500;
+			sub.minWidth = 10;
+			sub.backgroundTile = Tile.fromColor(0x00ff00);
+
+			var sub = new h2d.Flow(flow);
+			flow.getProperties(sub).align(Bottom, Right);
+			sub.minHeight = 10;
+			sub.minWidth = 10;
+			sub.backgroundTile = Tile.fromColor(0xff0000);
+
+			// var tf = new h2d.Text(font, sub);
+			// tf.textColor = 0x000000;
+			// tf.textAlign = Center;
+			// tf.text = "Long long long long long long overflowing text";
+			// sub.getProperties(tf).align(Top, Middle);
+
+			event.waitUntil(function (dt) {
+				flow.minWidth = flow.maxWidth = 180 + Math.floor(Math.sin(hxd.Timer.lastTimeStamp) * 130);
+				return idxFctDisplayed != 9;
+			});
+		}
+
 
 		fctGenerationScreen.push(screen0);
 		fctGenerationScreen.push(screen1);
@@ -404,6 +472,8 @@ class Flows extends hxd.App {
 		fctGenerationScreen.push(screen5);
 		fctGenerationScreen.push(screen6);
 		fctGenerationScreen.push(screen7);
+		fctGenerationScreen.push(screen8);
+		fctGenerationScreen.push(screen9);
 
 		fctGenerationScreen[idxFctDisplayed]();
 
@@ -412,6 +482,8 @@ class Flows extends hxd.App {
 
 	var lastUpdate = 0.5;
 	override function update(dt:Float) {
+
+		event.update(dt);
 
 		var screenSwitched = false;
 		if (Key.isPressed(Key.LEFT)) {
@@ -443,16 +515,16 @@ class Flows extends hxd.App {
 					movingFlow.horizontalAlign = hAligns[(hAligns.indexOf(movingFlow.horizontalAlign)+1)%3];
 					if (movingFlow.horizontalAlign == hAligns[0]) {
 						movingFlow.verticalAlign = vAligns[(vAligns.indexOf(movingFlow.verticalAlign)+1)%3];
-						
+
 						if (movingFlow.verticalAlign == vAligns[0]) {
 							var parent = Std.instance(movingFlow.parent, Flow);
 
 							parent.horizontalAlign = hAligns[(hAligns.indexOf(parent.horizontalAlign)+1)%3];
 							if (parent.horizontalAlign == hAligns[0]) {
 								parent.verticalAlign = vAligns[(vAligns.indexOf(parent.verticalAlign)+1)%3];
-								
+
 								if (parent.verticalAlign == vAligns[0]) {
-									
+
 									var parent = Std.instance(parent.parent, Flow);
 
 									parent.horizontalAlign = hAligns[(hAligns.indexOf(parent.horizontalAlign)+1)%3];
@@ -472,7 +544,7 @@ class Flows extends hxd.App {
 						f.reverse = !f.reverse;
 					}
 				}
-			case 6 : 
+			case 6 :
 				if (lastUpdate < 0) {
 					lastUpdate = 0.5;
 					for (f in vAlignChildFlow) {
@@ -484,7 +556,7 @@ class Flows extends hxd.App {
 						prop.horizontalAlign = hAligns[(hAligns.indexOf(prop.horizontalAlign)+1)%3];
 					}
 				}
-			default: 
+			default:
 		}
 	}
 

@@ -1,7 +1,6 @@
 -lib heaps
 -lib castle
 -lib hxbit
--lib stb_ogg_sound
 --macro include('h3d')
 --macro include('h2d',true,['h2d.domkit'])
 --macro include('hxsl',true,['hxsl.Macros','hxsl.CacheFile','hxsl.CacheFileBuilder','hxsl.Checker'])

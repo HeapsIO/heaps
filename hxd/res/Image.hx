@@ -61,7 +61,7 @@ class Image extends Resource {
 			f.bigEndian = true;
 			while( true ) {
 				switch( f.readUInt16() ) {
-				case 0xFFC2, 0xFFC0:
+				case 0xFFC2, 0xFFC1, 0xFFC0:
 					var len = f.readUInt16();
 					var prec = f.readByte();
 					height = f.readUInt16();
@@ -93,8 +93,8 @@ class Image extends Resource {
 		case 0x4444: // DDS
 			format = Dds;
 			f.skip(10);
-			width = f.readInt32();
 			height = f.readInt32();
+			width = f.readInt32();
 			f.skip(16*4);
 			var fourCC = f.readInt32();
 			switch( fourCC & 0xFFFFFF ) {

@@ -32,7 +32,7 @@ class HeightMap implements Collider {
 		return getZ(pt.x, pt.y) > pt.z;
 	}
 
-	public function inFrustum( f : Frustum ) : Bool {
+	public function inFrustum( f : Frustum, ?m : h3d.Matrix) : Bool {
 		throw "Not implemented : is infinite";
 	}
 

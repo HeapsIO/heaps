@@ -61,7 +61,7 @@ class System {
 	}
 
 	public static function setNativeCursor( c : Cursor ) : Void {
-		if( c.equals(currentNativeCursor) )
+		if( currentNativeCursor != null && c.equals(currentNativeCursor) )
 			return;
 		currentNativeCursor = c;
 		currentCustomCursor = null;
@@ -99,7 +99,10 @@ class System {
 	}
 
 	public static function getValue( s : SystemValue ) : Bool {
-		return false;
+		return switch( s ) {
+		case IsWindowed: true;
+		default: false;
+		}
 	}
 
 	public static function exit() : Void {

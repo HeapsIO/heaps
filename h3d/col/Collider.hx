@@ -8,7 +8,7 @@ interface Collider extends hxd.impl.Serializable.StructSerializable {
 	**/
 	public function rayIntersection( r : Ray, bestMatch : Bool ) : Float;
 	public function contains( p : Point ) : Bool;
-	public function inFrustum( f : Frustum ) : Bool;
+	public function inFrustum( f : Frustum, ?localMatrix : h3d.Matrix ) : Bool;
 	public function inSphere( s : Sphere ) : Bool;
 }
 
@@ -33,8 +33,8 @@ class OptimizedCollider implements hxd.impl.Serializable implements Collider {
 		return a.contains(p) && b.contains(p);
 	}
 
-	public function inFrustum( f : Frustum ) {
-		return a.inFrustum(f) && b.inFrustum(f);
+	public function inFrustum( f : Frustum, ?m : h3d.Matrix ) {
+		return a.inFrustum(f, m) && b.inFrustum(f, m);
 	}
 
 	public function inSphere( s : Sphere ) {
@@ -77,9 +77,9 @@ class GroupCollider implements Collider {
 		return false;
 	}
 
-	public function inFrustum( f : Frustum ) {
+	public function inFrustum( f : Frustum, ?m : h3d.Matrix) {
 		for( c in colliders )
-			if( c.inFrustum(f) )
+			if( c.inFrustum(f, m) )
 				return true;
 		return false;
 	}

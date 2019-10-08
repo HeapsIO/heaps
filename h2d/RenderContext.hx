@@ -93,7 +93,7 @@ class RenderContext extends h3d.impl.RenderContext {
 		// todo : we might prefer to auto-detect this by running a test and capturing its output
 		baseShader.pixelAlign = #if flash true #else false #end;
 		baseShader.halfPixelInverse.set(0.5 / engine.width, 0.5 / engine.height);
-		baseShader.viewport.set( -scene.width * 0.5, -scene.height * 0.5, 2 / scene.width, -2 * baseFlipY / scene.height);
+		baseShader.viewport.set( -scene.width * 0.5 - scene.offsetX, -scene.height * 0.5 - scene.offsetY, 2 / scene.width * scene.ratioX, -2 * baseFlipY / scene.height * scene.ratioY);
 		baseShader.filterMatrixA.set(1, 0, 0);
 		baseShader.filterMatrixB.set(0, 1, 0);
 		baseShaderList.next = null;
@@ -190,14 +190,33 @@ class RenderContext extends h3d.impl.RenderContext {
 
 		if( restore ) {
 			var tinf = targetsStack[targetsStackIndex - 1];
-			var t = tinf == null ? null : tinf.t;
-			var startX = tinf == null ? 0 : tinf.x;
-			var startY = tinf == null ? 0 : tinf.y;
-			var width = tinf == null ? scene.width : tinf.w;
-			var height = tinf == null ? scene.height : tinf.h;
+			var t : h3d.mat.Texture;
+			var startX : Int, startY : Int, width : Int, height : Int;
+			var ratioX : Float, ratioY : Float, offsetX : Float, offsetY : Float;
+			if ( tinf == null ) {
+				t = null;
+				startX = 0;
+				startY = 0;
+				width = scene.width;
+				height = scene.height;
+				ratioX = scene.ratioX;
+				ratioY = scene.ratioY;
+				offsetX = scene.offsetX;
+				offsetY = scene.offsetY;
+			} else {
+				t = tinf.t;
+				startX = tinf.x;
+				startY = tinf.y;
+				width = tinf.w;
+				height = tinf.h;
+				ratioX = 1;
+				ratioY = 1;
+				offsetX = 0;
+				offsetY = 0;
+			}
 			initShaders(baseShaderList);
 			baseShader.halfPixelInverse.set(0.5 / (t == null ? engine.width : t.width), 0.5 / (t == null ? engine.height : t.height));
-			baseShader.viewport.set( -width * 0.5 - startX, -height * 0.5 - startY, 2 / width, -2 * (t == null ? baseFlipY : targetFlipY) / height);
+			baseShader.viewport.set( -width * 0.5 - startX - offsetX, -height * 0.5 - startY - offsetY, 2 / width * ratioX, -2 * (t == null ? baseFlipY : targetFlipY) / height * ratioY);
 			curX = startX;
 			curY = startY;
 			curWidth = width;
@@ -213,8 +232,8 @@ class RenderContext extends h3d.impl.RenderContext {
 		renderY = y;
 		renderW = w;
 		renderH = h;
-		var scaleX = engine.width / scene.width;
-		var scaleY = engine.height / scene.height;
+		var scaleX = engine.width * scene.ratioX / scene.width;
+		var scaleY = engine.height * scene.ratioY / scene.height;
 		if( inFilter != null ) {
 			var fa = baseShader.filterMatrixA;
 			var fb = baseShader.filterMatrixB;
@@ -228,7 +247,7 @@ class RenderContext extends h3d.impl.RenderContext {
 			w = rx2 - rx1;
 			h = ry2 - ry1;
 		}
-		engine.setRenderZone(Std.int((x - curX) * scaleX + 1e-10), Std.int((y - curY) * scaleY + 1e-10), Std.int(w * scaleX + 1e-10), Std.int(h * scaleY + 1e-10));
+		engine.setRenderZone(Std.int((x - curX + scene.viewportX) * scaleX + 1e-10), Std.int((y - curY + scene.viewportY) * scaleY + 1e-10), Std.int(w * scaleX + 1e-10), Std.int(h * scaleY + 1e-10));
 	}
 
 	public inline function clearRenderZone() {

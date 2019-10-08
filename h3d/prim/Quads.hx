@@ -41,6 +41,14 @@ class Quads extends Primitive {
 			}
 	}
 
+	public function translate( dx : Float, dy : Float, dz : Float ) {
+		for( p in pts ) {
+			p.x += dx;
+			p.y += dy;
+			p.z += dz;
+		}
+	}
+
 	public function scale( x : Float, y : Float, z : Float ) {
 		for( p in pts ) {
 			p.x *= x;

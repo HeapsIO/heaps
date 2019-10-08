@@ -19,7 +19,7 @@ class Point {
 		z *= v;
 	}
 
-	public inline function inFrustum( f : Frustum ) {
+	public inline function inFrustum( f : Frustum, ?m : h3d.Matrix ) {
 		return f.hasPoint(this);
 	}
 
@@ -75,13 +75,13 @@ class Point {
 		return distanceSq(p).sqrt();
 	}
 
-
 	public function normalize() {
 		var k = x * x + y * y + z * z;
 		if( k < hxd.Math.EPSILON ) k = 0 else k = k.invSqrt();
 		x *= k;
 		y *= k;
 		z *= k;
+		return this;
 	}
 
 	public inline function normalizeFast() {
@@ -90,6 +90,7 @@ class Point {
 		x *= k;
 		y *= k;
 		z *= k;
+		return this;
 	}
 
 	public inline function transform( m : Matrix ) {

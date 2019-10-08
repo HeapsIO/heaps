@@ -30,7 +30,15 @@ class ObjectFollower extends Object {
 		var p = scene.camera.project(absPos._41 + offsetX, absPos._42 + offsetY, absPos._43 + offsetZ, width, height, pixelSnap);
 		x = p.x;
 		y = p.y;
-		visible = p.z > 0 && (follow.visible || !followVisibility);
+		visible = p.z > 0;
+
+		if(followVisibility) {
+			var parent = follow;
+			while(parent != null) {
+				visible = visible && parent.visible;
+				parent = parent.parent;
+			}
+		}
 	}
 
 	override function calcAbsPos() {

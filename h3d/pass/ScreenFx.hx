@@ -55,7 +55,7 @@ class ScreenFx<T:h3d.shader.ScreenShader> {
 
 	public function getShader<T:hxsl.Shader>(cl:Class<T>) : T {
 		for( s in shaders ) {
-			var si = Std.instance(s, cl);
+			var si = hxd.impl.Api.downcast(s, cl);
 			if( si != null ) return si;
 		}
 		return null;

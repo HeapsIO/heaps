@@ -64,6 +64,12 @@ class CustomParser extends CssValue.ValueParser {
 				var w = parseInt(w);
 				var h = parseInt(h);
 				return #if macro true #else h2d.Tile.fromColor(c,w,h,(c>>>24)/255) #end;
+			case VCall("tile",[VString(url),VInt(vsplit)]):
+				var p = loadResource(url);
+				return #if macro p #else { var t = p.toTile(); t.sub(0,0,t.iwidth,Std.int(t.iheight/vsplit)); } #end;
+			case VCall("tile",[VString(url),VInt(vsplit),VInt(hsplit)]):
+				var p = loadResource(url);
+				return #if macro p #else { var t = p.toTile(); t.sub(0,0,Std.int(t.iwidth/hsplit),Std.int(t.iheight/vsplit)); } #end;
 			default:
 				var c = parseColor(v);
 				return #if macro true #else h2d.Tile.fromColor(c,1,1,(c>>>24)/255) #end;
@@ -160,6 +166,8 @@ class CustomParser extends CssValue.ValueParser {
 
 	public function parseTextShadow( value : CssValue ) {
 		return switch( value ) {
+		case VIdent("none"):
+			return null;
 		case VGroup(vl):
 			return { dx : parseFloat(vl[0]), dy : parseFloat(vl[1]), color : vl.length >= 3 ? parseColor(vl[2]) : 0, alpha : vl.length >= 4 ? parseFloat(vl[3]) : 1 };
 		default:
@@ -176,6 +184,60 @@ class CustomParser extends CssValue.ValueParser {
 			{ tile : parseTile(value), borderW : 0, borderH : 0 };
 		}
 	}
+
+	public function parseTilePos(value) : { y : Int, ?x : Int } {
+		return switch( value ) {
+		case VInt(y): { y : y, x : null };
+		case VGroup([VInt(y),VInt(x)]): { y : y, x : x };
+		default: invalidProp();
+		}
+	}
+
+	public function parseCursor(value) : hxd.Cursor {
+		return switch( value ) {
+		case VIdent("default"): Default;
+		case VIdent("button"): Button;
+		case VIdent("move"): Move;
+		case VIdent("textinput") | VIdent("input"): TextInput;
+		case VIdent("hide"): Hide;
+		default: invalidProp();
+		}
+	}
+
+	public function parseFilter(value) : #if macro Bool #else h2d.filter.Filter #end {
+		return switch( value ) {
+		case VIdent("none"): #if macro true #else null #end;
+		case VIdent("grayed"): #if macro true #else h2d.filter.ColorMatrix.grayed() #end;
+		case VCall("saturate",[v]):
+			var v = parseFloat(v);
+			#if macro
+				true;
+			#else
+				var f = new h2d.filter.ColorMatrix();
+				f.matrix.colorSaturate(v);
+				f;
+			#end
+		case VCall("outline",[s, c]):
+			var s = parseFloat(s);
+			var c = parseInt(c);
+			#if macro
+				true;
+			#else
+				new h2d.filter.Outline(s, c);
+			#end
+		case VCall("brightness",[v]):
+			var v = parseFloat(v);
+			#if macro
+				true;
+			#else
+				var f = new h2d.filter.ColorMatrix();
+				f.matrix.colorLightness(v);
+				f;
+			#end
+		default: invalidProp();
+		}
+	}
+
 }
 
 #if !macro
@@ -191,6 +253,7 @@ class ObjectComp implements h2d.domkit.Object implements domkit.Component.Compon
 	@:p var scaleX : Float;
 	@:p var scaleY : Float;
 	@:p var blend : h2d.BlendMode = Alpha;
+	@:p(filter) var filter : h2d.filter.Filter;
 
 	// flow properties
 	@:p(box) var margin : { left : Int, top : Int, right : Int, bottom : Int };
@@ -222,12 +285,16 @@ class ObjectComp implements h2d.domkit.Object implements domkit.Component.Compon
 		}
 	}
 
+	static function set_filter(o:h2d.Object, f:h2d.filter.Filter) {
+		o.filter = f;
+	}
+
 	static function set_blend(o:h2d.Object, b:h2d.BlendMode) {
 		o.blendMode = b;
 	}
 
 	static function getFlowProps( o : h2d.Object ) {
-		var p = Std.instance(o.parent, h2d.Flow);
+		var p = hxd.impl.Api.downcast(o.parent, h2d.Flow);
 		return p == null ? null : p.getProperties(o);
 	}
 
@@ -316,12 +383,11 @@ class ObjectComp implements h2d.domkit.Object implements domkit.Component.Compon
 		if( p != null ) p.minHeight = v;
 	}
 
-	@:keep static var init = {
-		domkit.Element.addElement = function(e, parent) (parent.obj : h2d.Object).addChild(e.obj);
-		domkit.Element.removeElement = function(e) (e.obj : h2d.Object).remove();
-		domkit.Element.getParent = function(e:h2d.Object) return e.parent;
-		true;
+	static function updateComponentId(p:domkit.Properties<Dynamic>) {
+		cast(p.obj,h2d.Object).name = p.id;
 	}
+
+	@:keep static var _ = { @:privateAccess domkit.Properties.updateComponentId = updateComponentId; true; }
 
 }
 
@@ -388,7 +454,15 @@ class TextComp extends DrawableComp implements domkit.Component.ComponentDecl<h2
 	static function set_textShadow( t : h2d.Text, v ) {
 		t.dropShadow = v;
 	}
+}
 
+@:uiComp("html-text")
+class HtmlTextComp extends TextComp implements domkit.Component.ComponentDecl<h2d.HtmlText> {
+	@:p var condenseWhite : Bool;
+
+	static function create( parent : h2d.Object ) {
+		return new h2d.HtmlText(hxd.res.DefaultFont.get(),parent);
+	}
 }
 
 
@@ -400,6 +474,8 @@ class FlowComp extends ObjectComp implements domkit.Component.ComponentDecl<h2d.
 	@:p var maxWidth : Null<Int>;
 	@:p var maxHeight : Null<Int>;
 	@:p(flowBackground) var background : { tile : h2d.Tile, borderW : Int, borderH : Int };
+	@:p(tile) var backgroundTile : h2d.Tile;
+	@:p(tilePos) var backgroundTilePos : { y : Int, ?x : Int };
 	@:p var backgroundAlpha : Float;
 	@:p var backgroundSmooth : Bool;
 	@:p(colorF) var backgroundColor : h3d.Vector;
@@ -419,10 +495,12 @@ class FlowComp extends ObjectComp implements domkit.Component.ComponentDecl<h2d.
 	@:p(dimension) var spacing : { x: Float, y: Float };
 	@:p var fillWidth: Bool;
 	@:p var fillHeight: Bool;
+	@:p var overflow: Bool;
 
 	@:p(align) var contentAlign : { h : h2d.Flow.FlowAlign, v : h2d.Flow.FlowAlign };
 	@:p(vAlign) var contentValign : h2d.Flow.FlowAlign;
 	@:p(hAlign) var contentHalign : h2d.Flow.FlowAlign;
+	@:p(cursor) var cursor : hxd.Cursor;
 
 	static function set_minWidth( o : h2d.Flow, v ) {
 		o.minWidth = v;
@@ -468,6 +546,19 @@ class FlowComp extends ObjectComp implements domkit.Component.ComponentDecl<h2d.
 		}
 	}
 
+	static function set_backgroundTile( o : h2d.Flow, t ) {
+		o.backgroundTile = t;
+	}
+
+	static function set_backgroundTilePos( o : h2d.Flow, p : { ?x : Int, y : Int } ) {
+		var t = o.backgroundTile;
+		if( t != null ) {
+			t = t.clone();
+			if( p == null ) t.setPosition(0,0) else t.setPosition(p.x == null ? t.x : p.x * t.width, p.y * t.height);
+			o.backgroundTile = t;
+		}
+	}
+
 	static function set_backgroundAlpha( o : h2d.Flow, v ) {
 		var bg = @:privateAccess o.background;
 		if(bg == null)
@@ -486,7 +577,15 @@ class FlowComp extends ObjectComp implements domkit.Component.ComponentDecl<h2d.
 		var bg = @:privateAccess o.background;
 		if(bg == null)
 			return;
-		bg.color.load(v);
+		if(v == null)
+			bg.color.set(1,1,1,1);
+		else
+			bg.color.load(v);
+	}
+
+	static function set_cursor( o : h2d.Flow, c ) {
+		if( o.interactive == null ) o.enableInteractive = true;
+		o.interactive.cursor = c;
 	}
 
 	static function set_padding( o : h2d.Flow, v ) {
@@ -541,6 +640,45 @@ class FlowComp extends ObjectComp implements domkit.Component.ComponentDecl<h2d.
 	static function set_fillHeight( o : h2d.Flow, v ) {
 		o.fillHeight = v;
 	}
+
+	static function set_overflow( o : h2d.Flow, v ) {
+		o.overflow = v;
+	}
+}
+
+@:uiComp("input")
+class InputComp extends TextComp implements domkit.Component.ComponentDecl<h2d.TextInput> {
+
+	@:p(auto) var width : Null<Int>;
+	@:p(tile) var cursor : h2d.Tile;
+	@:p(tile) var selection : h2d.Tile;
+	@:p var edit : Bool;
+	@:p(color) var backgroundColor : Null<Int>;
+
+	static function create( parent : h2d.Object ) {
+		return new h2d.TextInput(hxd.res.DefaultFont.get(),parent);
+	}
+
+	static function set_width( o : h2d.TextInput, v ) {
+		o.inputWidth = v;
+	}
+
+	static function set_cursor( o : h2d.TextInput, t ) {
+		o.cursorTile = t;
+	}
+
+	static function set_selection( o : h2d.TextInput, t ) {
+		o.selectionTile = t;
+	}
+
+	static function set_edit( o : h2d.TextInput, b ) {
+		o.canEdit = b;
+	}
+
+	static function set_backgroundColor( o : h2d.TextInput, col ) {
+		o.backgroundColor = col;
+	}
+
 }
 
 #end

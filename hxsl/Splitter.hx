@@ -41,6 +41,16 @@ class Splitter {
 			default:
 				throw "assert";
 			}
+
+		// perform a first mapVars before we map fragment shader vars		
+		vfun = {
+			ret : vfun.ret,
+			ref : vfun.ref,
+			kind : vfun.kind,
+			args : vfun.args,
+			expr : mapVars(vfun.expr),
+		};
+
 		for( inf in Lambda.array(vvars) ) {
 			var v = inf.v;
 			switch( v.kind ) {

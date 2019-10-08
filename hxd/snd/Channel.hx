@@ -19,7 +19,7 @@ class Channel extends ChannelBase {
 	public var loop = false;
 	public var allowVirtual = true;
 
-	var audibleGain = 1.0;
+	var audibleVolume = 1.0;
 	var lastStamp = 0.0;
 	var isVirtual = false;
 	var isLoading = false;
@@ -69,13 +69,13 @@ class Channel extends ChannelBase {
 		}
 	}
 
-	public function calcAudibleGain( now : Float ) {
+	public function calcAudibleVolume( now : Float ) {
 		updateCurrentVolume(now);
-		audibleGain = currentVolume;
+		audibleVolume = currentVolume;
 
 		if (manager != null) { // fader may have stopped the sound
-			for (e in channelGroup.effects) audibleGain = e.applyAudibleGainModifier(audibleGain);
-			for (e in effects) audibleGain = e.applyAudibleGainModifier(audibleGain);
+			for (e in channelGroup.effects) audibleVolume = e.applyAudibleVolumeModifier(audibleVolume);
+			for (e in effects) audibleVolume = e.applyAudibleVolumeModifier(audibleVolume);
 		}
 	}
 

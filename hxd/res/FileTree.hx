@@ -75,10 +75,15 @@ class FileTree {
 	}
 
 	static var invalidChars = ~/[^A-Za-z0-9_]/g;
+	static var KEYWORDS = [for( k in ["break","case","cast","catch","class","continue","default","do","dynamic",
+									"else","extends","extern","false","for","function","if","implementes","import",
+									"interface","never","null","override","package","private","public","return",
+									"static","super","switch","this","throw","trace","true","typedef","untyped",
+									"using","var","while"] ) k => true];
 
 	function makeIdent( s : String ) {
 		var ident = invalidChars.replace(s, "_");
-		if( ident == "" || (ident.charCodeAt(0) >= "0".code && ident.charCodeAt(0) <= "9".code) )
+		if( ident == "" || (ident.charCodeAt(0) >= "0".code && ident.charCodeAt(0) <= "9".code) || KEYWORDS.exists(ident) )
 			ident = "_" + ident;
 		return ident;
 	}
@@ -128,24 +133,14 @@ class FileTree {
 
 	public function embed(options:EmbedOptions) {
 		if( options == null ) options = { };
-		var setTmp = options.tmpDir == null;
-		// if the OGG library is detected, compress as OGG by default, unless compressAsMp3 is set
-		if( options.compressAsMp3 == null ) options.compressAsMp3 = options.compressSounds && !(Context.defined("stb_ogg_sound") || Config.platform == HL);
 		checkTmp = false;
 		this.options = options;
 		embedTypes = [];
 
 		var tree = scan();
 		for( path in paths ) {
-			if( setTmp )
-				options.tmpDir = path + "/.tmp/";
-			var fs = new hxd.fs.LocalFileSystem(path);
-			if( options.compressAsMp3 )
-				fs.addConvert(new hxd.fs.Convert.ConvertWAV2MP3());
-			else if( options.compressSounds )
-				fs.addConvert(new hxd.fs.Convert.ConvertWAV2OGG());
-			fs.tmpDir = options.tmpDir;
-			fs.onConvert = function(f) Sys.println("Converting " + f.path);
+			var fs = new hxd.fs.LocalFileSystem(path,options.configuration);
+			fs.convert.onConvert = function(c) Sys.println("Converting " + c.srcPath);
 			embedRec(tree, path, fs);
 		}
 		return { tree : tree, types : embedTypes };
@@ -335,7 +330,7 @@ class FileTree {
 		for( f in tree.files ) {
 			// handle duplicates
 			if( fident.get(f.ident) != f.relPath )
-				f.ident += "_" + f.ext;
+				f.ident += "_" + makeIdent(f.ext);
 			var ftype = extensions.get(f.ext);
 			if( ftype == null ) ftype = defaultExt;
 			var epath = { expr : EConst(CString(f.relPath)), pos : pos };
@@ -351,7 +346,8 @@ class FileTree {
 		dict.set("loader", "reserved identifier");
 		buildFieldsRec(d, ofields, dict);
 
-		var name = "_" + makeIdent(d.relPath);
+		var name = makeIdent(d.relPath);
+		name = "_" + name.charAt(0).toUpperCase() + name.substr(1);
 		for( f in ofields )
 			f.access.remove(AStatic);
 		var def = macro class {

@@ -15,24 +15,6 @@ class InitComponents {
 	}
 
 	public static function build() {
-		var fields = domkit.Macros.buildObject();
-		for( f in fields )
-			if( f.name == "document" ) {
-				fields = fields.concat((macro class {
-					override function onRemove() {
-						super.onRemove();
-						var style = Std.instance(document.style, h2d.domkit.Style);
-						if( style != null ) @:privateAccess style.remove(this);
-						// make sure it's also removed from document
-						var elt = document.get(this);
-						if( elt != null && elt.parent != null ) {
-							elt.parent.children.remove(elt);
-							@:privateAccess elt.parent = null;
-						}
-					}
-				}).fields);
-				break;
-			}
-		return fields;
+		return domkit.Macros.buildObject();
 	}
 }

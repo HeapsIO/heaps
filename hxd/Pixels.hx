@@ -323,6 +323,19 @@ class Pixels {
 		case [S3TC(a),S3TC(b)] if( a == b ):
 			// nothing
 
+		#if (hl && hl_ver >= "1.10")
+		case [S3TC(ver),_]:
+			if( (width|height)&3 != 0 ) throw "Texture size should be 4x4 multiple";
+			var out = haxe.io.Bytes.alloc(width * height * 4);
+			if( !hl.Format.decodeDXT((this.bytes:hl.Bytes).offset(this.offset), out, width, height, ver) )
+				throw "Failed to decode DDS";
+			offset = 0;
+			this.bytes = out;
+			innerFormat = RGBA;
+			convert(target);
+			return;
+		#end
+
 		default:
 			throw "Cannot convert from " + format + " to " + target;
 		}

@@ -47,7 +47,6 @@ class Pbr extends SampleApp {
 		fui.layout = Vertical;
 
 		var envMap = new h3d.mat.Texture(512, 512, [Cube]);
-		envMap.name = "envMap";
 		inline function set(face:Int, res:hxd.res.Image) {
 			var pix = res.getPixels();
 			envMap.uploadPixels(pix, 0, face);
@@ -85,7 +84,7 @@ class Pbr extends SampleApp {
 		light.range = 100;
 		light.power = 2;
 
-		var pbrValues = new h3d.shader.pbr.PropsValues(0.2,0.5,0);
+		var pbrValues = new h3d.shader.pbr.PropsValues(0.2,0.5);
 		hue = 0;
 		saturation = 0;
 		brightness = 0.2;

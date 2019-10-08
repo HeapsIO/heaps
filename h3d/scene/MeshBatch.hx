@@ -31,6 +31,13 @@ class MeshBatch extends Mesh {
 	var indexCount : Int;
 	var modelViewID = hxsl.Globals.allocID("global.modelView");
 	var modelViewInverseID = hxsl.Globals.allocID("global.modelViewInverse");
+	var colorSave = new h3d.Vector();
+	var colorMult : h3d.shader.ColorMult;
+
+	/**
+		Tells if we can use material.color as a global multiply over each instance color (default: true)
+	**/
+	public var allowGlobalMaterialColor : Bool = true;
 
 	/**
 	 * 	If set, use this position in emitInstance() instead MeshBatch absolute position
@@ -59,9 +66,11 @@ class MeshBatch extends Mesh {
 	}
 
 	function cleanPasses() {
+		var alloc = hxd.impl.Allocator.get();
 		while( dataPasses != null ) {
 			dataPasses.pass.removeShader(dataPasses.shader);
-			dataPasses.buffer.dispose();
+			alloc.disposeBuffer(dataPasses.buffer);
+			alloc.disposeFloats(dataPasses.data);
 			dataPasses = dataPasses.next;
 		}
 		instanced.commands.dispose();
@@ -108,8 +117,9 @@ class MeshBatch extends Mesh {
 			b.shader = shader;
 			b.pass = p;
 			b.shaders = [null/*link shader*/];
-			b.buffer = new h3d.Buffer(tot,4,[UniformBuffer,Dynamic]);
-			b.data = new hxd.FloatBuffer(tot * 4);
+			var alloc = hxd.impl.Allocator.get();
+			b.buffer = alloc.allocBuffer(tot,4,UniformDynamic);
+			b.data = alloc.allocFloats(tot * 4);
 			b.next = dataPasses;
 			dataPasses = b;
 
@@ -135,11 +145,27 @@ class MeshBatch extends Mesh {
 	public function begin( maxCount : Int ) {
 		if( maxCount > shaderInstances )
 			shadersChanged = true;
+		colorSave.load(material.color);
 		curInstances = 0;
 		maxInstances = maxCount;
 		if( shadersChanged ) {
+			if( colorMult != null ) {
+				material.mainPass.removeShader(colorMult);
+				colorMult = null;
+			}
 			initShadersMapping();
 			shadersChanged = false;
+			if( allowGlobalMaterialColor ) {
+				if( colorMult == null ) {
+					colorMult = new h3d.shader.ColorMult();
+					material.mainPass.addShader(colorMult);
+				}
+			} else {
+				if( colorMult != null ) {
+					material.mainPass.removeShader(colorMult);
+					colorMult = null;
+				}
+			}
 		}
 	}
 
@@ -226,6 +252,7 @@ class MeshBatch extends Mesh {
 			syncData(p);
 			p = p.next;
 		}
+		if( allowGlobalMaterialColor ) material.color.load(colorSave);
 		curInstances++;
 	}
 
@@ -238,6 +265,7 @@ class MeshBatch extends Mesh {
 			p = p.next;
 		}
 		instanced.commands.setCommand(curInstances,indexCount);
+		if( colorMult != null ) colorMult.color.load(material.color);
 	}
 
 	override function emit(ctx:RenderContext) {

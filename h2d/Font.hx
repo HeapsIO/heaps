@@ -137,6 +137,7 @@ class Font {
 		f.tile = tile.clone();
 		f.charset = charset;
 		f.defaultChar = defaultChar.clone();
+		f.type = type;
 		for( g in glyphs.keys() ) {
 			var c = glyphs.get(g);
 			var c2 = c.clone();

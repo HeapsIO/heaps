@@ -45,7 +45,8 @@ class ToneMapping extends ScreenShader {
 			}
 
 			// gamma correct
-			if( !isSRBG ) color.rgb = color.rgb.sqrt();
+			if( !isSRBG )
+				color.rgb = color.rgb.sqrt();
 
 			if( hasColorGrading ) {
 				var uv = min(color.rgb, vec3(1,1,1));

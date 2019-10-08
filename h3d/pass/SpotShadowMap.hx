@@ -25,6 +25,11 @@ class SpotShadowMap extends Shadows {
 		return mode = m;
 	}
 
+	override function set_enabled(b:Bool) {
+		sshader.enable = b && mode != None;
+		return enabled = b;
+	}
+
 	override function set_size(s) {
 		if( border != null && size != s ) {
 			border.dispose();
@@ -102,7 +107,10 @@ class SpotShadowMap extends Shadows {
 		return true;
 	}
 
-	override function draw( passes ) {
+	override function draw( passes, ?sort ) {
+		if( !enabled )
+			return;
+
 		if( !filterPasses(passes) )
 			return;
 
@@ -118,7 +126,7 @@ class SpotShadowMap extends Shadows {
 
 		ctx.engine.pushTarget(texture);
 		ctx.engine.clear(0xFFFFFF, 1);
-		super.draw(passes);
+		super.draw(passes, sort);
 		if( border != null ) border.render();
 		ctx.engine.popTarget();
 
