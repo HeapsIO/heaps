@@ -746,7 +746,7 @@ class Manager {
 		}
 
 		if (!checkTargetFormat(data, grp.mono)) {
-			size = samples * targetChannels * Data.formatBytes(targetFormat);
+			size = Math.ceil(samples * (targetRate / data.samplingRate)) * targetChannels * Data.formatBytes(targetFormat);
 			var resampleBytes = getResampleBytes(size);
 			data.resampleBuffer(resampleBytes, 0, bytes, 0, targetRate, targetFormat, targetChannels, samples);
 			bytes = resampleBytes;
