@@ -98,6 +98,7 @@ class Driver implements hxd.snd.Driver {
 	public function stopSource(source : SourceHandle) : Void {
 		AL.sourceStop(source.inst);
 		source.playing = false;
+		source.sampleOffset = 0;
 	}
 
 	public function setSourceVolume(source : SourceHandle, value : Float) : Void {
