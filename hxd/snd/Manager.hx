@@ -644,6 +644,7 @@ class Manager {
 		}
 
 		while(s.buffers.length > 0) unqueueBuffer(s);
+		s.handle.sampleOffset = 0;
 	}
 
 	var targetRate     : Int;
