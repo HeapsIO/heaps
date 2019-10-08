@@ -67,8 +67,9 @@ class Sound extends SampleApp {
 			tf.textAlign = Right;
 			f.addChild(slider);
 			f.addChild(musicPosition);
-
+			#if hlopenal
 			addSlider("Pitch val", function() { return pitch.value; }, function(v) { pitch.value = v; }, 0, 2);
+			#end
 		}
 	}
 
