@@ -23,7 +23,7 @@ class Embed {
 		var m = Context.getLocalClass().get().module;
 		Context.registerModuleDependency(m, file);
 
-		if( Context.defined("flash") || Context.defined("openfl") ) {
+		if( Context.defined("flash") ) {
 			if( chars == null ) // convert char list to char range
 				chars = Charset.DEFAULT_CHARS.split("-").join("\\-");
 			var pos = Context.currentPos();

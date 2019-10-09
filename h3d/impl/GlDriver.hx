@@ -52,24 +52,6 @@ private typedef Uniform = js.html.webgl.UniformLocation;
 private typedef Program = js.html.webgl.Program;
 private typedef GLShader = js.html.webgl.Shader;
 private typedef Framebuffer = js.html.webgl.Framebuffer;
-#elseif lime
-import lime.graphics.opengl.GL;
-private typedef Uniform = Dynamic;
-private typedef Program = lime.graphics.opengl.GLProgram;
-private typedef GLShader = lime.graphics.opengl.GLShader;
-private typedef Framebuffer = lime.graphics.opengl.GLFramebuffer;
-private typedef Uint16Array = lime.utils.UInt16Array;
-private typedef Uint8Array = lime.utils.UInt8Array;
-private typedef Float32Array = lime.utils.Float32Array;
-#elseif nme
-import nme.gl.GL;
-private typedef Uniform = Dynamic;
-private typedef Program = nme.gl.GLProgram;
-private typedef GLShader = nme.gl.GLShader;
-private typedef Framebuffer = nme.gl.Framebuffer;
-private typedef Uint16Array = nme.utils.Int16Array;
-private typedef Uint8Array = nme.utils.UInt8Array;
-private typedef Float32Array = nme.utils.Float32Array;
 #elseif hlsdl
 import sdl.GL;
 private typedef Uniform = sdl.GL.Uniform;
@@ -673,12 +655,7 @@ class GlDriver extends Driver {
 			var cop = Pass.getBlendOp(bits);
 			var aop = Pass.getBlendAlphaOp(bits);
 			if( cop == aop ) {
-				#if (nme || openfl)
-				if( OP[cop] != GL.FUNC_ADD )
-					throw "blendEquation() disable atm (crash)";
-				#else
 				gl.blendEquation(OP[cop]);
-				#end
 			}
 			else
 				gl.blendEquationSeparate(OP[cop], OP[aop]);
@@ -1371,11 +1348,7 @@ class GlDriver extends Driver {
 	}
 
 	override function isDisposed() {
-		#if (nme || openfl) //lime ??
-		return false;
-		#else
 		return gl.isContextLost();
-		#end
 	}
 
 	override function setRenderZone( x : Int, y : Int, width : Int, height : Int ) {
