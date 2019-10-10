@@ -101,6 +101,8 @@ class Manager {
 		try {
 			#if usesys
 			driver = new haxe.AudioTypes.SoundDriver();
+			#elseif (js && !useal)
+			driver = new hxd.snd.webaudio.Driver();
 			#else
 			driver = new hxd.snd.openal.Driver();
 			#end
@@ -662,8 +664,9 @@ class Manager {
 	var targetChannels : Int;
 
 	function checkTargetFormat(dat : hxd.snd.Data, forceMono = false) {
+		
 		targetRate = dat.samplingRate;
-		#if (!usesys && !hlopenal)
+		#if (!usesys && !hlopenal && (!js || useal))
 		// perform resampling to nativechannel frequency
 		targetRate = hxd.snd.openal.Emulator.NATIVE_FREQ;
 		#end
