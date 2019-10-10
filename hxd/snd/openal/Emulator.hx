@@ -181,7 +181,7 @@ class Emulator {
 	static var CACHED_FREQ : Null<Int>;
 	static function get_NATIVE_FREQ() {
 		if( CACHED_FREQ == null )
-			CACHED_FREQ = #if js @:privateAccess Std.int(NativeChannel.getContext() == null ? 44100 : NativeChannel.getContext().sampleRate) #else 44100 #end;
+			CACHED_FREQ = #if js Std.int(hxd.snd.webaudio.Context.get().sampleRate) #else 44100 #end;
 		return CACHED_FREQ;
 	}
 
@@ -254,7 +254,7 @@ class Emulator {
 		#if js
 		switch (param) {
 			case GAIN:
-				hxd.snd.NativeChannel.masterGain.gain.value = value;
+				hxd.snd.webaudio.Context.masterGain.gain.value = value;
 		}
 		#end
 	}

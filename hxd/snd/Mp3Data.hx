@@ -64,7 +64,7 @@ class Mp3Data extends Data {
 
 		#elseif js
 
-		var ctx = @:privateAccess NativeChannel.getContext();
+		var ctx = hxd.snd.webaudio.Context.get();
 		if( ctx == null ) return;
 		ctx.decodeAudioData(bytes.getData(), processBuffer);
 
