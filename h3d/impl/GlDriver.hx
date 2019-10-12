@@ -4,7 +4,7 @@ import h3d.mat.Pass;
 import h3d.mat.Stencil;
 import h3d.mat.Data;
 
-#if (js||cpp||hlsdl||usegl)
+#if (js||hlsdl||usegl)
 
 #if js
 import hxd.impl.TypedArray;
@@ -52,24 +52,6 @@ private typedef Uniform = js.html.webgl.UniformLocation;
 private typedef Program = js.html.webgl.Program;
 private typedef GLShader = js.html.webgl.Shader;
 private typedef Framebuffer = js.html.webgl.Framebuffer;
-#elseif lime
-import lime.graphics.opengl.GL;
-private typedef Uniform = Dynamic;
-private typedef Program = lime.graphics.opengl.GLProgram;
-private typedef GLShader = lime.graphics.opengl.GLShader;
-private typedef Framebuffer = lime.graphics.opengl.GLFramebuffer;
-private typedef Uint16Array = lime.utils.UInt16Array;
-private typedef Uint8Array = lime.utils.UInt8Array;
-private typedef Float32Array = lime.utils.Float32Array;
-#elseif nme
-import nme.gl.GL;
-private typedef Uniform = Dynamic;
-private typedef Program = nme.gl.GLProgram;
-private typedef GLShader = nme.gl.GLShader;
-private typedef Framebuffer = nme.gl.Framebuffer;
-private typedef Uint16Array = nme.utils.Int16Array;
-private typedef Uint8Array = nme.utils.UInt8Array;
-private typedef Float32Array = nme.utils.Float32Array;
 #elseif hlsdl
 import sdl.GL;
 private typedef Uniform = sdl.GL.Uniform;
@@ -79,9 +61,6 @@ private typedef Framebuffer = sdl.GL.Framebuffer;
 private typedef Texture = h3d.impl.Driver.Texture;
 private typedef Query = h3d.impl.Driver.Query;
 private typedef VertexArray = sdl.GL.VertexArray;
-#if cpp
-private typedef Float32Array = Array<cpp.Float32>;
-#end
 #elseif usegl
 import haxe.GLTypes;
 private typedef Uniform = haxe.GLTypes.Uniform;
@@ -137,7 +116,7 @@ private class CompiledProgram {
 }
 
 @:access(h3d.impl.Shader)
-#if (cpp||hlsdl||usegl)
+#if (hlsdl||usegl)
 @:build(h3d.impl.MacroHelper.replaceGL())
 #end
 class GlDriver extends Driver {
@@ -283,11 +262,6 @@ class GlDriver extends Driver {
 	override function begin(frame) {
 		this.frame = frame;
 		resetStream();
-		#if cpp
-		curAttribs = new Array<Bool>();
-		maxIdxCurAttribs = 0;
-		curMatBits = -1;
-		#end
 		gl.useProgram(null);
 		curShader = null;
 		curBuffer = null;
@@ -673,12 +647,7 @@ class GlDriver extends Driver {
 			var cop = Pass.getBlendOp(bits);
 			var aop = Pass.getBlendAlphaOp(bits);
 			if( cop == aop ) {
-				#if (nme || openfl)
-				if( OP[cop] != GL.FUNC_ADD )
-					throw "blendEquation() disable atm (crash)";
-				#else
 				gl.blendEquation(OP[cop]);
-				#end
 			}
 			else
 				gl.blendEquationSeparate(OP[cop], OP[aop]);
@@ -784,8 +753,6 @@ class GlDriver extends Driver {
 		}
 		canvas.width = width;
 		canvas.height = height;
-		#elseif cpp
-		// resize window
 		#end
 		bufferWidth = width;
 		bufferHeight = height;
@@ -1054,7 +1021,7 @@ class GlDriver extends Driver {
 	}
 
 	override function uploadTextureBitmap( t : h3d.mat.Texture, bmp : hxd.BitmapData, mipLevel : Int, side : Int ) {
-	#if (hxcpp || hl)
+	#if hl
 		var pixels = bmp.getPixels();
 		uploadTexturePixels(t, pixels, mipLevel, side);
 		pixels.dispose();
@@ -1371,11 +1338,7 @@ class GlDriver extends Driver {
 	}
 
 	override function isDisposed() {
-		#if (nme || openfl) //lime ??
-		return false;
-		#else
 		return gl.isContextLost();
-		#end
 	}
 
 	override function setRenderZone( x : Int, y : Int, width : Int, height : Int ) {

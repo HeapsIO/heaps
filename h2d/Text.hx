@@ -33,9 +33,6 @@ class Text extends Drawable {
 	var constraintWidth:Float = -1;
 	var realMaxWidth:Float = -1;
 
-	#if lime
-	var waShader : h3d.shader.WhiteAlpha;
-	#end
 	var sdfShader : h3d.shader.SignedDistanceField;
 
 	public function new( font : Font, ?parent : h2d.Object ) {
@@ -52,13 +49,6 @@ class Text extends Drawable {
 		if( this.font == font ) return font;
 		this.font = font;
 		if ( font != null ) {
-			#if lime
-			if( font.tile.getTexture().format == ALPHA ){
-				if( waShader == null ) addShader( waShader = new h3d.shader.WhiteAlpha() );
-			}else{
-				if( waShader != null ) removeShader( waShader );
-			}
-			#end
 			switch( font.type ) {
 				case BitmapFont:
 					if ( sdfShader != null ) {
