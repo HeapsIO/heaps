@@ -7,7 +7,7 @@ import hxd.Math;
 	so the various transforms are inherited to its children.
 **/
 @:allow(h2d.Tools)
-class Object #if domkit implements domkit.Model<h2d.Object> #end {
+class Object #if (domkit && !domkit_heaps) implements domkit.Model<h2d.Object> #end {
 
 	static var nullDrawable : h2d.Drawable;
 
