@@ -271,9 +271,6 @@ class Manager {
 	}
 
 	public function update() {
-
-		if( suspended ) return;
-
 		now = haxe.Timer.stamp() + timeOffset;
 
 		if (driver == null) {
@@ -375,7 +372,7 @@ class Manager {
 			c.calcAudibleVolume(now);
 			if( c.isLoading && !c.sound.getData().isLoading() )
 				c.isLoading = false;
-			c.isVirtual = c.pause || c.mute || c.channelGroup.mute || (c.allowVirtual && c.audibleVolume < VIRTUAL_VOLUME_THRESHOLD) || c.isLoading;
+			c.isVirtual = suspended || c.pause || c.mute || c.channelGroup.mute || (c.allowVirtual && c.audibleVolume < VIRTUAL_VOLUME_THRESHOLD) || c.isLoading;
 			c = c.next;
 		}
 
