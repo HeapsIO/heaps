@@ -292,6 +292,8 @@ class Key {
 		case MOUSE_LEFT: "MouseLeft";
 		case MOUSE_MIDDLE: "MouseMiddle";
 		case MOUSE_RIGHT: "MouseRight";
+		case MOUSE_BACK: "Mouse3";
+		case MOUSE_FORWARD: "Mouse4";
 		default:
 			if( c >= NUMBER_0 && c <= NUMBER_9 )
 				""+(c - NUMBER_0);
