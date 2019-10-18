@@ -1,7 +1,7 @@
 package hxd;
 
 /**
-	Save provides simple interface to save and load serizlied user data.  
+	Save provides simple interface to save and load serialized user data.  
 	Data is serialized to String with `haxe.Serializer` and then stored in text form.
 **/
 class Save {
