@@ -150,11 +150,7 @@ class Image extends Resource {
 		case Png:
 			var bytes = entry.getBytes(); // using getTmpBytes cause bug in E2
 
-			#if (lime && (cpp || neko || nodejs))
-			// native PNG loader is faster
-			var i = lime.graphics.Image.fromBytes( bytes );
-			pixels = new Pixels(inf.width, inf.height, i.data.toBytes(), RGBA );
-			#elseif hl
+			#if hl
 			if( fmt == null ) fmt = BGRA;
 			pixels = decodePNG(bytes, inf.width, inf.height, fmt, flipY);
 			if( pixels == null ) throw "Failed to decode PNG " + entry.path;

@@ -102,89 +102,6 @@ private class ALChannel {
 }
 
 #end
-
-#if lime_openal
-import lime.media.openal.AL;
-import lime.media.openal.ALBuffer;
-import lime.media.openal.ALSource;
-
-private class ALChannel {
-	var native : NativeChannel;
-	var samples : Int;
-
-	var buffers : Array<ALBuffer>;
-	var src : ALSource;
-
-	var fbuf : haxe.io.Bytes;
-	var ibuf : haxe.io.Bytes;
-	var iview : lime.utils.ArrayBufferView;
-
-	public function new(samples, native){
-		this.native = native;
-		this.samples = samples;
-		buffers = AL.genBuffers(2);
-		src = AL.genSource();
-		AL.sourcef(src,AL.PITCH,1.0);
-		AL.sourcef(src,AL.GAIN,1.0);
-		fbuf = haxe.io.Bytes.alloc( samples<<3 );
-		ibuf = haxe.io.Bytes.alloc( samples<<2 );
-		iview = new lime.utils.Int16Array(ibuf);
-
-		for ( b in buffers )
-			onSample(b);
-		forcePlay();
-		lime.app.Application.current.onUpdate.add( onUpdate );
-	}
-
-	public function stop() {
-		if ( src != null ){
-			lime.app.Application.current.onUpdate.remove( onUpdate );
-
-			AL.sourceStop(src);
-			AL.deleteSource(src);
-			AL.deleteBuffers(buffers);
-			src = null;
-			buffers = null;
-		}
-	}
-
-	@:noDebug function onSample( buf : ALBuffer ) {
-		@:privateAccess native.onSample(haxe.io.Float32Array.fromBytes(fbuf));
-
-		// Convert Float32 to Int16
-		#if cpp
-		var fb = fbuf.getData();
-		var ib = ibuf.getData();
-		for( i in 0...samples<<1 )
-			untyped __global__.__hxcpp_memory_set_i16( ib, i<<1, __global__.__int__(__global__.__hxcpp_memory_get_float( fb, i<<2 ) * 0x7FFF) );
-		#else
-		for ( i in 0...samples << 1 ) {
-			var v = Std.int(fbuf.getFloat(i << 2) * 0x7FFF);
-			ibuf.set( i<<1, v );
-			ibuf.set( (i<<1) + 1, v>>>8 );
-		}
-		#end
-
-		AL.bufferData(buf, AL.FORMAT_STEREO16, iview, ibuf.length, 44100);
-		AL.sourceQueueBuffers(src, 1, [buf]);
-	}
-
-	inline function forcePlay() {
-		if( AL.getSourcei(src,AL.SOURCE_STATE) != AL.PLAYING )
-			AL.sourcePlay(src);
-	}
-
-	function onUpdate( i : Int ){
-		var r = AL.getSourcei(src,AL.BUFFERS_PROCESSED);
-		if( r > 0 ){
-			for( b in AL.sourceUnqueueBuffers(src,r) )
-				onSample(b);
-			forcePlay();
-		}
-	}
-}
-#end
-
 class NativeChannel {
 
 	#if flash
@@ -223,7 +140,7 @@ class NativeChannel {
 	var queued : js.html.audio.AudioBufferSourceNode;
 	var time : Float; // Mandatory for proper buffer sync, otherwise produces gaps in playback due to innacurate timings.
 	var tmpBuffer : haxe.io.Float32Array;
-	#elseif (hlopenal || lime_openal)
+	#elseif hlopenal
 	var channel : ALChannel;
 	#end
 	public var bufferSamples(default, null) : Int;
@@ -263,7 +180,7 @@ class NativeChannel {
 		time = currTime + front.duration;
 		queued.start(time);
 		
-		#elseif (hlopenal || lime_openal)
+		#elseif hlopenal
 		channel = new ALChannel(bufferSamples, this);
 		#end
 	}
@@ -366,7 +283,7 @@ class NativeChannel {
 			bufferPool.push(tmpBuffer);
 			tmpBuffer = null;
 		}
-		#elseif (hlopenal || lime_openal)
+		#elseif hlopenal
 		if( channel != null ) {
 			channel.stop();
 			channel = null;

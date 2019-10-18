@@ -271,9 +271,6 @@ class Manager {
 	}
 
 	public function update() {
-
-		if( suspended ) return;
-
 		now = haxe.Timer.stamp() + timeOffset;
 
 		if (driver == null) {
@@ -300,6 +297,7 @@ class Manager {
 			var count = driver.getProcessedBuffers(s.handle);
 			for (i in 0...count) {
 				var b = unqueueBuffer(s);
+				if( b == null ) continue;
 				lastBuffer = b;
 				if (b.isEnd) {
 					c.sound           = b.sound;
@@ -375,7 +373,7 @@ class Manager {
 			c.calcAudibleVolume(now);
 			if( c.isLoading && !c.sound.getData().isLoading() )
 				c.isLoading = false;
-			c.isVirtual = c.pause || c.mute || c.channelGroup.mute || (c.allowVirtual && c.audibleVolume < VIRTUAL_VOLUME_THRESHOLD) || c.isLoading;
+			c.isVirtual = suspended || c.pause || c.mute || c.channelGroup.mute || (c.allowVirtual && c.audibleVolume < VIRTUAL_VOLUME_THRESHOLD) || c.isLoading;
 			c = c.next;
 		}
 
@@ -597,6 +595,7 @@ class Manager {
 
 	function unqueueBuffer(s : Source) {
 		var b = s.buffers.shift();
+		if( b == null ) return null; // some drivers (xbo) might wrongly report ended buffer after source stop, let's ignore
 		driver.unqueueBuffer(s.handle, b.handle);
 		if (b.isStream) freeStreamBuffers.unshift(b);
 		else if (--b.refs == 0) b.lastStop = haxe.Timer.stamp();

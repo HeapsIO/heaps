@@ -8,9 +8,7 @@ package hxd.res;
 class Font extends Resource {
 
 	public function build( size : Int, ?options ) : h2d.Font {
-		#if lime
-		return FontBuilder.getFont(name, size, options);
-		#elseif flash
+		#if flash
 		var fontClass : Class<flash.text.Font> = cast Type.resolveClass("_R_" + ~/[^A-Za-z0-9_]/g.replace(entry.path, "_"));
 		if( fontClass == null ) throw "Embeded font not found " + entry.path;
 		var font = Type.createInstance(fontClass, []);
