@@ -23,7 +23,7 @@ class SceneEvents {
 	var overList : Array<Interactive>;
 	// Indexes and rel position in overList of Interactives that received EOver this frame.
 	// This array is never cleared apart from nulling Interactive, because internal counter is used, so those values are meaningless on practice.
-	var overCandidates : Array<{ i : Interactive, x : Float, y : Float, z : Float }>;
+	var overCandidates : Array<{ i : Interactive, s : InteractiveScene, x : Float, y : Float, z : Float }>;
 	var overIndex : Int = -1;
 	var outIndex : Int = -1;
 	var currentFocus : Interactive;
@@ -181,6 +181,7 @@ class SceneEvents {
 							if ( overCandidates.length == overCandidateCount ) {
 								overCandidates[overCandidateCount] = {
 									i : i,
+									s : s,
 									x : event.relX,
 									y : event.relY,
 									z : event.relZ
@@ -188,6 +189,7 @@ class SceneEvents {
 							} else {
 								var info = overCandidates[overCandidateCount];
 								info.i = i;
+								info.s = s;
 								info.x = event.relX;
 								info.y = event.relY;
 								info.z = event.relZ;
@@ -260,8 +262,10 @@ class SceneEvents {
 					ev.relX = info.x;
 					ev.relY = info.y;
 					ev.relZ = info.z;
-					info.i.handleEvent(ev);
+					if( info.s.isInteractiveVisible(info.i) )
+						info.i.handleEvent(ev);
 					info.i = null;
+					info.s = null;
 				} while ( i < overCandidateCount );
 			}
 		}
@@ -337,8 +341,7 @@ class SceneEvents {
 						while ( i >= 0 ) {
 							onOut.cancel = false;
 							overList[i].handleEvent(onOut);
-							if ( !onOut.cancel )
-								overList.remove(overList[i]);
+							overList.remove(overList[i]);
 							i--;
 						}
 						selectCursor();
