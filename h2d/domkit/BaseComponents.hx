@@ -275,6 +275,10 @@ class ObjectComp implements h2d.domkit.Object implements domkit.Component.Compon
 		o.rotation = v * Math.PI / 180;
 	}
 
+	static function set_visible(o:h2d.Object, ?v = true) {
+		o.visible = v;
+	}
+
 	static function set_scale(o:h2d.Object,v) {
 		if(v != null) {
 			o.scaleX = v.x;
