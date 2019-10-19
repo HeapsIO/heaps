@@ -172,8 +172,10 @@ class Driver implements hxd.snd.Driver {
 		var bps     = AL.getBufferi(buffer.inst, AL.BITS) * AL.getBufferi(buffer.inst, AL.CHANNELS) / 8;
 		var samples = Std.int(size / bps);
 
-		if (buffer.isEnd) source.sampleOffset = 0;
-		else source.sampleOffset += samples;
+		if ( source.playing ) {
+			if (buffer.isEnd) source.sampleOffset = 0;
+			else source.sampleOffset += samples;
+		}
 	}
 
 	public function update() : Void {
