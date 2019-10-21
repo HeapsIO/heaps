@@ -116,6 +116,45 @@ class File {
 				},
 			};
 			onSelect(b);
+		#elseif js
+			var input = js.Browser.document.createElement("input");
+			input.setAttribute("type","file");
+			if( options.fileTypes!=null ) {
+				var extensions = [];
+				for(ft in options.fileTypes)
+					for(e in ft.extensions)
+						extensions.push("."+e);
+				input.setAttribute("accept",extensions.join(","));
+			}
+			input.onchange = function(e) {
+				var file : js.html.File = e.target.files[0];
+				var b : BrowseSelect = {
+					fileName: file.name,
+					load : function(onReady) {
+						var reader = new js.html.FileReader();
+						reader.readAsDataURL(file);
+						reader.onload = function(re) {
+							var raw : String = re.target.result;
+							var header = raw.substr(0, raw.indexOf(","));
+							var data = raw.substr(raw.indexOf(",")+1);
+
+							if( raw.indexOf(";")>=0 ) {
+								// Encoding is specified
+								onReady( switch( header.split(";")[1] ) {
+									case "base64" : haxe.crypto.Base64.decode(data);
+									case _ : throw "Unsupported encoding: "+header.split(";")[1];
+								});
+							}
+							else {
+								// Plain text
+								onReady( haxe.io.Bytes.ofString(data) );
+							}
+						}
+					}
+				}
+				onSelect(b);
+			}
+			input.click();
 		#else
 			throw "Not supported";
 		#end
