@@ -104,6 +104,11 @@ class Text extends Drawable {
 		rebuild();
 	}
 
+	override function sync(ctx:RenderContext) {
+		super.sync(ctx);
+		if ( glyphsInvalid && text != null && font != null ) initGlyphs(text);
+	}
+
 	override function draw(ctx:RenderContext) {
 		if( glyphs == null ) {
 			emitTile(ctx, h2d.Tile.fromColor(0xFF00FF, 16, 16));
