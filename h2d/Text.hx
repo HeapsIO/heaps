@@ -23,6 +23,7 @@ class Text extends Drawable {
 	public var lineSpacing(default,set) : Float;
 
 	var glyphs : TileGroup;
+	var glyphsInvalid : Bool;
 
 	var calcDone:Bool;
 	var calcXMin:Float;
@@ -108,7 +109,7 @@ class Text extends Drawable {
 			emitTile(ctx, h2d.Tile.fromColor(0xFF00FF, 16, 16));
 			return;
 		}
-		if ( !calcDone && text != null && font != null ) initGlyphs(text);
+		if ( glyphsInvalid && text != null && font != null ) initGlyphs(text);
 
 		if( dropShadow != null ) {
 			var oldX = absX, oldY = absY;
@@ -138,7 +139,7 @@ class Text extends Drawable {
 
 	function rebuild() {
 		calcDone = false;
-		if( allocated && text != null && font != null ) initGlyphs(text);
+		glyphsInvalid = true;
 		onContentChanged();
 	}
 
@@ -274,6 +275,7 @@ class Text extends Drawable {
 		calcHeight = y + font.lineHeight;
 		calcSizeHeight = y + (font.baseLine > 0 ? font.baseLine : font.lineHeight);
 		calcDone = true;
+		if ( rebuild ) glyphsInvalid = false;
 	}
 
 	inline function updateSize() {
