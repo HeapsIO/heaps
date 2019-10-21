@@ -942,18 +942,21 @@ class Flow extends Object {
 				var c = childAt(i);
 				if( !c.visible ) continue;
 				var p = propAt(i);
-				if( p.isAbsolute ) continue;
+				var isAbs = p.isAbsolute;
+				if( isAbs && p.verticalAlign == null && p.horizontalAlign == null ) continue;
 
-				c.constraintSize(
-					isConstraintWidth && p.constraint ? maxInWidth / Math.abs(c.scaleX) : -1,
-					isConstraintHeight && p.constraint ? maxInHeight / Math.abs(c.scaleY) : -1
-				);
+				if( !isAbs )
+					c.constraintSize(
+						isConstraintWidth && p.constraint ? maxInWidth / Math.abs(c.scaleX) : -1,
+						isConstraintHeight && p.constraint ? maxInHeight / Math.abs(c.scaleY) : -1
+					);
 
 				var b = c.getSize(tmpBounds);
 				p.calculatedWidth = Math.ceil(b.xMax) + p.paddingLeft + p.paddingRight;
 				p.calculatedHeight = Math.ceil(b.yMax) + p.paddingTop + p.paddingBottom;
 				if( p.minWidth != null && p.calculatedWidth < p.minWidth ) p.calculatedWidth = p.minWidth;
 				if( p.minHeight != null && p.calculatedHeight < p.minHeight ) p.calculatedHeight = p.minHeight;
+				if( isAbs ) continue;
 				if( p.calculatedWidth > maxChildW ) maxChildW = p.calculatedWidth;
 				if( p.calculatedHeight > maxChildH ) maxChildH = p.calculatedHeight;
 			}
@@ -971,7 +974,8 @@ class Flow extends Object {
 				var c = childAt(i);
 				if( !c.visible ) continue;
 				var p = propAt(i);
-				if( p.isAbsolute ) continue;
+				var isAbs = p.isAbsolute;
+				if( isAbs && p.verticalAlign == null && p.horizontalAlign == null ) continue;
 
 				var valign = p.verticalAlign == null ? valign : p.verticalAlign;
 				var halign = p.horizontalAlign == null ? halign : p.horizontalAlign;
@@ -994,8 +998,10 @@ class Flow extends Object {
 					ymin;
 				}
 
-				c.x = px + p.offsetX + p.paddingLeft;
-				c.y = py + p.offsetY + p.paddingTop;
+				if( !isAbs || p.horizontalAlign != null )
+					c.x = px + p.offsetX + p.paddingLeft;
+				if( !isAbs || p.verticalAlign != null )
+					c.y = py + p.offsetY + p.paddingTop;
 			}
 		}
 
