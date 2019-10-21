@@ -203,6 +203,11 @@ class GlDriver extends Driver {
 		maxCompressedTexturesSupport = 3;
 		#end
 
+		#if hlmesa
+		hasMultiIndirect = true;
+		maxCompressedTexturesSupport = 3;
+		#end
+
 		var v : String = gl.getParameter(GL.VERSION);
 		var reg = ~/ES ([0-9]+\.[0-9]+)/;
 		if( reg.match(v) )
