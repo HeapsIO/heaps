@@ -295,8 +295,8 @@ class MemoryManager {
 	}
 
 	public function dispose() {
-		triIndexes.dispose();
-		quadIndexes.dispose();
+		if( triIndexes != null ) triIndexes.dispose();
+		if( quadIndexes != null ) quadIndexes.dispose();
 		triIndexes = null;
 		quadIndexes = null;
 		for( t in textures.copy() )
