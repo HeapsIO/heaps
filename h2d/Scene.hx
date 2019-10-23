@@ -82,6 +82,8 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	**/
 	public var height(default, null) : Int;
 
+	public var viewportA(default, null) : Float;
+	public var viewportD(default, null) : Float;
 	/**
 		Horizontal viewport offset relative to top-left corner of the window. Can change if the screen gets resized or `scaleMode` changes.
 		Offset is in internal Scene resolution pixels.
@@ -164,12 +166,12 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		ctx = new RenderContext(this);
 		width = e.width;
 		height = e.height;
-		offsetX = 0;
-		offsetY = 0;
+		viewportA = 1;
+		viewportD = 1;
+		viewportX = 2 / -e.width;
+		viewportY = 2 / -e.height;
 		ratioX = 1;
 		ratioY = 1;
-		viewportX = 0;
-		viewportY = 0;
 		interactive = new Array();
 		eventListeners = new Array();
 		shapePoint = new h2d.col.Point();
@@ -232,38 +234,35 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		}
 
 		inline function calcViewport( horizontal : ScaleModeAlign, vertical : ScaleModeAlign, zoom : Float ) {
+			viewportA = (zoom * 2) / engine.width;
+			viewportD = (zoom * 2) / engine.height;
 			if ( horizontal == null ) horizontal = Center;
 			switch ( horizontal ) {
 				case Left:
-					offsetX = (engine.width - width * zoom) / (2 * zoom);
-					viewportX = 0;
+					viewportX = -1;
 				case Right:
-					offsetX = -((engine.width - width * zoom) / (2 * zoom));
-					viewportX = (engine.width - width * zoom) / zoom;
+					viewportX = 1 - (width * viewportA);
 				default:
-					offsetX = 0;
-					viewportX = (engine.width - width * zoom) / (2 * zoom);
+					viewportX = width * viewportA * -0.5;
 			}
 
 			if ( vertical == null ) vertical = Center;
 			switch ( vertical ) {
 				case Top:
-					offsetY = (engine.height - height * zoom) / (2 * zoom);
-					viewportY = 0;
+					viewportY = -1;
 				case Bottom:
-					offsetY = -((engine.height - height * zoom) / (2 * zoom));
-					viewportY = (engine.height - height * zoom) / zoom;
+					viewportY = 1 - (height * viewportD);
 				default:
-					offsetY = 0;
-					viewportY = (engine.height - height * zoom) / (2 * zoom);
+					viewportY = height * viewportD * -0.5;
 			}
+			// TODO: Fixhalf-pixel issues on bottom/right/center aligns
 		}
 
 		inline function zeroViewport() {
-			offsetX = 0;
-			offsetY = 0;
-			viewportX = 0;
-			viewportY = 0;
+			viewportA = 1 / width;
+			viewportD = 1 / height;
+			viewportX = -1;
+			viewportY = -1;
 		}
 
 		switch ( scaleMode ) {

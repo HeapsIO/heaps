@@ -39,6 +39,12 @@ class RenderContext extends h3d.impl.RenderContext {
 	var curY : Int;
 	var curWidth : Int;
 	var curHeight : Int;
+	var viewA : Float;
+	var viewB : Float;
+	var viewC : Float;
+	var viewD : Float;
+	var viewX : Float;
+	var viewY : Float;
 
 	var hasRenderZone : Bool;
 	var renderX : Float;
@@ -82,6 +88,13 @@ class RenderContext extends h3d.impl.RenderContext {
 		currentObj = null;
 		bufPos = 0;
 		stride = 0;
+		viewA = scene.viewportA;
+		viewB = 0;
+		viewC = 0;
+		viewD = scene.viewportD;
+		viewX = scene.viewportX;
+		viewY = scene.viewportY;
+
 		curX = 0;
 		curY = 0;
 		targetFlipY = engine.driver.hasFeature(BottomLeftCoords) ? -1 : 1;
@@ -93,7 +106,11 @@ class RenderContext extends h3d.impl.RenderContext {
 		// todo : we might prefer to auto-detect this by running a test and capturing its output
 		baseShader.pixelAlign = #if flash true #else false #end;
 		baseShader.halfPixelInverse.set(0.5 / engine.width, 0.5 / engine.height);
-		baseShader.viewport.set( -scene.width * 0.5 - scene.offsetX, -scene.height * 0.5 - scene.offsetY, 2 / scene.width * scene.ratioX, -2 * baseFlipY / scene.height * scene.ratioY);
+		baseShader.viewportA.set(scene.viewportA, 0, scene.viewportX);
+		baseShader.viewportB.set(0, scene.viewportD * -baseFlipY, scene.viewportY * -baseFlipY);
+		// baseShader.viewport.set(
+		// 	-scene.width * 0.5 - scene.offsetX, -scene.height * 0.5 - scene.offsetY,
+		// 	2 / scene.width * scene.ratioX, -2 * baseFlipY / scene.height * scene.ratioY);
 		baseShader.filterMatrixA.set(1, 0, 0);
 		baseShader.filterMatrixB.set(0, 1, 0);
 		baseShaderList.next = null;
@@ -132,6 +149,35 @@ class RenderContext extends h3d.impl.RenderContext {
 		if( targetsStackIndex != 0 ) throw "Missing popTarget()";
 	}
 
+	@:access(h2d.Camera)
+	public function setCamera( cam : h2d.Camera ) {
+		var tmpA = viewA;
+		var tmpB = viewB;
+		var tmpC = viewC;
+		var tmpD = viewD;
+		viewA = cam.matA * tmpA + cam.matB * tmpC;
+		viewB = cam.matA * tmpB + cam.matB * tmpD;
+		viewC = cam.matC * tmpA + cam.matD * tmpC;
+		viewD = cam.matC * tmpB + cam.matD * tmpD;
+		viewX = cam.absX * tmpA + cam.absY * tmpC + viewX;
+		viewY = cam.absX * tmpB + cam.absY * tmpD + viewY;
+		// TODO: Store prev?
+		baseShader.viewportA.set(viewA, viewC, viewX);
+		baseShader.viewportB.set(viewB, viewD * -targetFlipY, viewY * -targetFlipY);
+	}
+
+	public function resetCamera() {
+		viewA = scene.viewportA;
+		viewB = 0;
+		viewC = 0;
+		viewD = scene.viewportD;
+		viewX = scene.viewportX;
+		viewY = scene.viewportY;
+		baseShader.viewportA.set(viewA, viewC, viewX);
+		baseShader.viewportB.set(viewB, viewD, viewY);
+		// TODO: Restore render target view
+	}
+
 	public function pushFilter( spr : h2d.Object ) {
 		if( filterStack.length == 0 && onEnterFilter != null )
 			if( !onEnterFilter(spr) ) return false;
@@ -157,7 +203,9 @@ class RenderContext extends h3d.impl.RenderContext {
 		if( width < 0 ) width = t == null ? scene.width : t.width;
 		if( height < 0 ) height = t == null ? scene.height : t.height;
 		baseShader.halfPixelInverse.set(0.5 / (t == null ? engine.width : t.width), 0.5 / (t == null ? engine.height : t.height));
-		baseShader.viewport.set( -width * 0.5 - startX, -height * 0.5 - startY, 2 / width, -2 * targetFlipY / height);
+		baseShader.viewportA.set( -width * 0.5 - startX, 0, 2 / width);
+		baseShader.viewportB.set(0, -height * 0.5 - startY, -2 * targetFlipY / height);
+		// baseShader.viewport.set( -width * 0.5 - startX, -height * 0.5 - startY, 2 / width, -2 * targetFlipY / height);
 		targetsStackIndex++;
 		if( targetsStackIndex > targetsStack.length ){
 			targetsStack.push( { t : t, x : startX, y : startY, w : width, h : height, hasRZ: hasRenderZone, rzX: renderX, rzY:renderY, rzW:renderW, rzH:renderH } );
@@ -216,11 +264,14 @@ class RenderContext extends h3d.impl.RenderContext {
 			}
 			initShaders(baseShaderList);
 			baseShader.halfPixelInverse.set(0.5 / (t == null ? engine.width : t.width), 0.5 / (t == null ? engine.height : t.height));
-			baseShader.viewport.set( -width * 0.5 - startX - offsetX, -height * 0.5 - startY - offsetY, 2 / width * ratioX, -2 * (t == null ? baseFlipY : targetFlipY) / height * ratioY);
+			baseShader.viewportA.set(-width * 0.5 - startX - offsetX, 0, 2 / width * ratioX);
+			baseShader.viewportB.set(0, -height * 0.5 - startY - offsetY, -2 * (t == null ? baseFlipY : targetFlipY) / height * ratioY);
+			// baseShader.viewport.set( -width * 0.5 - startX - offsetX, -height * 0.5 - startY - offsetY, 2 / width * ratioX, -2 * (t == null ? baseFlipY : targetFlipY) / height * ratioY);
 			curX = startX;
 			curY = startY;
 			curWidth = width;
 			curHeight = height;
+			// TODO: Proper viewport restore; also account for camera
 		}
 
 		if( pinf.hasRZ ) setRenderZone(pinf.rzX, pinf.rzY, pinf.rzW, pinf.rzH);
