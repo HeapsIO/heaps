@@ -33,15 +33,20 @@ class Window {
 
 	static var CODEMAP = [for( i in 0...2048 ) i];
 
-	function new(title:String, width:Int, height:Int) {
+	function new(title:String, width:Int, height:Int, ?resizable:Bool = true) {
 		this.windowWidth = width;
 		this.windowHeight = height;
 		eventTargets = new List();
 		resizeEvents = new List();
 		#if hlsdl
-		window = new sdl.Window(title, width, height);
+		var windowFlags = sdl.Window.SDL_WINDOW_SHOWN;
+		if (resizable) {
+			windowFlags |= sdl.Window.SDL_WINDOW_RESIZABLE;
+		}
+		window = new sdl.Window(title, width, height, sdl.Window.SDL_WINDOWPOS_CENTERED, sdl.Window.SDL_WINDOWPOS_CENTERED, windowFlags);
 		#elseif hldx
-		window = new dx.Window(title, width, height);
+		var windowFlags = resizable ? dx.Window.RESIZABLE : dx.Window.CW_USEDEFAULT;
+		window = new dx.Window(title, width, height, dx.Window.CW_USEDEFAULT, dx.Window.CW_USEDEFAULT, windowFlags);
 		#end
 	}
 

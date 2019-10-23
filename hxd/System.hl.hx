@@ -87,6 +87,13 @@ class System {
 		var height = 600;
 		var size = haxe.macro.Compiler.getDefine("windowSize");
 		var title = haxe.macro.Compiler.getDefine("windowTitle");
+		var disableResize = haxe.macro.Compiler.getDefine("windowDisableResize");
+
+		var resizable = true;
+		if (disableResize != null && disableResize != "false") {
+			resizable = false;
+		}
+
 		if( title == null )
 			title = "";
 		if( size != null ) {
@@ -98,10 +105,10 @@ class System {
 		#if hlsdl
 			sdl.Sdl.init();
 			@:privateAccess Window.initChars();
-			@:privateAccess Window.inst = new Window(title, width, height);
+			@:privateAccess Window.inst = new Window(title, width, height, resizable);
 			init();
 		#elseif hldx
-			@:privateAccess Window.inst = new Window(title, width, height);
+			@:privateAccess Window.inst = new Window(title, width, height, resizable);
 			init();
 		#else
 			@:privateAccess Window.inst = new Window(title, width, height);
