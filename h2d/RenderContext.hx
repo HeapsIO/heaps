@@ -393,29 +393,35 @@ class RenderContext extends h3d.impl.RenderContext {
 		if( inFilter != null ) {
 			var f1 = baseShader.filterMatrixA;
 			var f2 = baseShader.filterMatrixB;
-			matA = obj.matA * f1.x + obj.matB * f1.y;
-			matB = obj.matA * f2.x + obj.matB * f2.y;
-			matC = obj.matC * f1.x + obj.matD * f1.y;
-			matD = obj.matC * f2.x + obj.matD * f2.y;
-			absX = obj.absX * f1.x + obj.absY * f1.y + f1.z;
-			absY = obj.absX * f2.x + obj.absY * f2.y + f2.z;
+			var tmpA = obj.matA * f1.x + obj.matB * f1.y;
+			var tmpB = obj.matA * f2.x + obj.matB * f2.y;
+			var tmpC = obj.matC * f1.x + obj.matD * f1.y;
+			var tmpD = obj.matC * f2.x + obj.matD * f2.y;
+			var tmpX = obj.absX * f1.x + obj.absY * f1.y + f1.z;
+			var tmpY = obj.absX * f2.x + obj.absY * f2.y + f2.z;
+			matA = tmpA * viewA + tmpB * viewC;
+			matB = tmpA * viewB + tmpB * viewD;
+			matC = tmpC * viewA + tmpD * viewC;
+			matD = tmpC * viewB + tmpD * viewD;
+			absX = tmpX * viewA + tmpY * viewC + viewX;
+			absY = tmpX * viewB + tmpY * viewD + viewY;
 		} else {
-			matA = obj.matA;
-			matB = obj.matB;
-			matC = obj.matC;
-			matD = obj.matD;
-			absX = obj.absX;
-			absY = obj.absY;
+			matA = obj.matA * viewA + obj.matB * viewC;
+			matB = obj.matA * viewB + obj.matB * viewD;
+			matC = obj.matC * viewA + obj.matD * viewC;
+			matD = obj.matC * viewB + obj.matD * viewD;
+			absX = obj.absX * viewA + obj.absY * viewC + viewX;
+			absY = obj.absX * viewB + obj.absY * viewD + viewY;
 		}
 
 		// check if our tile is outside of the viewport
 		if( matB == 0 && matC == 0 ) {
 			var tx = tile.dx + tile.width * 0.5;
 			var ty = tile.dy + tile.height * 0.5;
-			var tr = (tile.width > tile.height ? tile.width : tile.height) * 1.5 * hxd.Math.max(hxd.Math.abs(obj.matA),hxd.Math.abs(obj.matD));
-			var cx = absX + tx * matA - curX;
-			var cy = absY + ty * matD - curY;
-			if( cx < -tr || cy < -tr || cx - tr > curWidth || cy - tr > curHeight ) return false;
+			var tr = (tile.width > tile.height ? tile.width : tile.height) * 1.5 * hxd.Math.max(hxd.Math.abs(matA),hxd.Math.abs(matD));
+			var cx = absX + tx * matA;
+			var cy = absY + ty * matD;
+			if ( cx + tr < -1 || cx - tr > 1 || cy + tr < -1 || cy - tr > 1) return false;
 		} else {
 			var xMin = 1e20, yMin = 1e20, xMax = -1e20, yMax = -1e20;
 			inline function calc(x:Float, y:Float) {
@@ -432,9 +438,7 @@ class RenderContext extends h3d.impl.RenderContext {
 			calc(tile.width, 0);
 			calc(0, tile.height);
 			calc(tile.width, tile.height);
-			var cx = absX - curX;
-			var cy = absY - curY;
-			if( cx + xMax < 0 || cy + yMax < 0 || cx + xMin > curWidth || cy + yMin > curHeight )
+			if (absX + xMax < -1 || absY + yMax < -1 || absX + xMin > 1 || absY + yMin > 1)
 				return false;
 		}
 

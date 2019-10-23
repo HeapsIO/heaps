@@ -77,12 +77,63 @@ class Camera {
 	public function enter( ctx : RenderContext ) {
 		// Improvement: Handle camera-in-camera rendering
 		ctx.setCamera(this);
-		@:privateAccess trace(ctx.viewX,ctx.viewY);
 	}
 
 	public function exit( ctx : RenderContext ) {
 		// Improvement: Restore previous camera
 		ctx.resetCamera();
+	}
+
+	public function sync( ctx : RenderContext )
+	{
+		if ( posChanged ) {
+			var scene = ctx.scene;
+			if ( rotation == 0 ) {
+				matA = scaleX;
+				matB = 0;
+				matC = 0;
+				matD = scaleY;
+			} else {
+				var cr = Math.cos(rotation);
+				var sr = Math.sin(rotation);
+				matA = scaleX * cr;
+				matB = scaleX * sr;
+				matC = scaleY * -sr;
+				matD = scaleY * cr;
+			}
+			var ox = scene.width * -anchorX;
+			var oy = scene.height * -anchorY;
+			absX = (ox - x) * matA + (oy - y) * matC;
+			absY = (ox - x) * matB + (oy - y) * matD;
+			// TODO: Viewport
+			// TODO: Optimize?
+			posChanged = false;
+		}
+		// TODO: Somehow mark posChanged when scene gets resized.
+	}
+
+	public inline function setScale(x : Float, y : Float) {
+		this.scaleX = x;
+		this.scaleY = y;
+	}
+
+	public inline function scale(x : Float, y : Float) {
+		this.scaleX *= x;
+		this.scaleY *= y;
+	}
+
+	public inline function setPosition(x : Float, y : Float) {
+		this.x = x;
+		this.y = y;
+	}
+
+	public inline function move( dx : Float, dy : Float ) {
+		this.x += dx;
+		this.y += dy;
+	}
+
+	public inline function rotate( v : Float ) {
+		this.rotation += v;
 	}
 
 	// Setters
@@ -135,34 +186,6 @@ class Camera {
 		anchorY = hxd.Math.clamp(v, 0, 1);
 		anchorHeight = sceneHeight * anchorY;
 		return anchorY;
-	}
-
-	public function sync( ctx : RenderContext )
-	{
-		if ( posChanged ) {
-			var scene = ctx.scene;
-			if ( rotation == 0 ) {
-				matA = scaleX;
-				matB = 0;
-				matC = 0;
-				matD = scaleY;
-			} else {
-				var cr = Math.cos(rotation);
-				var sr = Math.sin(rotation);
-				matA = scaleX * cr;
-				matB = scaleX * sr;
-				matC = scaleY * -sr;
-				matD = scaleY * cr;
-			}
-			var ox = scene.width * -anchorX;
-			var oy = scene.height * -anchorY;
-			absX = (ox - x) * matA + (oy - y) * matC;
-			absY = (ox - x) * matB + (oy - y) * matD;
-			// TODO: Viewport
-			// TODO: Optimize?
-			posChanged = false;
-		}
-		// TODO: Somehow mark posChanged when scene gets resized.
 	}
 
 }
