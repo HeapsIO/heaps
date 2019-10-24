@@ -243,7 +243,8 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 				case Right:
 					viewportX = 1 - (width * viewportA);
 				default:
-					viewportX = width * viewportA * -0.5;
+					// Simple `width * viewportA - 0.5` causes gaps between tiles
+					viewportX = Math.floor((engine.width - width * zoom) / (zoom * 2)) * viewportA - 1.;
 			}
 
 			if ( vertical == null ) vertical = Center;
@@ -253,9 +254,8 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 				case Bottom:
 					viewportY = 1 - (height * viewportD);
 				default:
-					viewportY = height * viewportD * -0.5;
+					viewportY = Math.floor((engine.height - height * zoom) / (zoom * 2)) * viewportD - 1.;
 			}
-			// TODO: Fixhalf-pixel issues on bottom/right/center aligns
 		}
 
 		inline function zeroViewport() {
