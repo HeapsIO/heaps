@@ -3,11 +3,11 @@ package h2d;
 class Camera {
 
 	/**
-		X position of the camera top-left corner in world space.
+		X position of the camera in world space based on anchorX.
 	**/
 	public var x(default, set) : Float;
 	/**
-		Y position of the camera top-left corner in world space.
+		Y position of the camera in world space based on anchorY.
 	**/
 	public var y(default, set) : Float;
 
@@ -31,6 +31,11 @@ class Camera {
 	public var viewY(get, set) : Float;
 
 	// TODO: viewport (clip/size manipulation)
+	public var viewportX(default, set) : Float;
+	public var viewportY(default, set) : Float;
+	public var viewportWidth(default, set) : Float;
+	public var viewportHeight(default, set) : Float;
+	public var clipViewport : Bool;
 
 	/** Horizontal anchor position inside viewport boundaries used for anchoring and resize compensation. ( default : 0.5 ) **/
 	public var anchorX(default, set) : Float;
@@ -61,6 +66,10 @@ class Camera {
 		this.rotation = 0;
 		this.anchorX = anchorX;
 		this.anchorY = anchorY;
+		this.viewportX = 0;
+		this.viewportY = 0;
+		this.viewportWidth = 1;
+		this.viewportHeight = 1;
 		this.anchorWidth = 0; this.anchorHeight = 0;
 		this.sceneWidth = 0; this.sceneHeight = 0;
 		this.visible = true;
@@ -77,10 +86,14 @@ class Camera {
 	public function enter( ctx : RenderContext ) {
 		// Improvement: Handle camera-in-camera rendering
 		ctx.setCamera(this);
+		if ( clipViewport )
+			ctx.setRenderZone(viewportX * ctx.scene.width, viewportY * ctx.scene.height, viewportWidth * ctx.scene.width, viewportHeight * ctx.scene.height);
 	}
 
 	public function exit( ctx : RenderContext ) {
 		// Improvement: Restore previous camera
+		if ( clipViewport )
+			ctx.clearRenderZone();
 		ctx.resetCamera();
 	}
 
@@ -88,23 +101,21 @@ class Camera {
 	{
 		if ( posChanged ) {
 			var scene = ctx.scene;
-			var cr, sr;
 			if ( rotation == 0 ) {
-				cr = 1.; sr = 0.;
 				matA = scaleX;
 				matB = 0;
 				matC = 0;
 				matD = scaleY;
 			} else {
-				cr = Math.cos(rotation);
-				sr = Math.sin(rotation);
+				var cr = Math.cos(rotation);
+				var sr = Math.sin(rotation);
 				matA = scaleX * cr;
 				matB = scaleX * sr;
 				matC = scaleY * -sr;
 				matD = scaleY * cr;
 			}
-			absX = -(x * cr - y * sr) + scene.width * anchorX;
-			absY = -(x * sr + y * cr) + scene.height * anchorY;
+			absX = -(x * matA + y * matC) + (scene.width * anchorX * viewportHeight) + scene.width * viewportX;
+			absY = -(x * matB + y * matD) + (scene.height * anchorY * viewportHeight) + scene.height * viewportY;
 			// TODO: Viewport
 			// TODO: Optimize?
 			posChanged = false;
@@ -169,6 +180,27 @@ class Camera {
 	}
 
 	// TODO view/anchor
+
+	inline function set_viewportX( v ) {
+		posChanged = true;
+		return this.viewportX = hxd.Math.clamp(v, 0, 1);
+	}
+
+	inline function set_viewportY( v ) {
+		posChanged = true;
+		return this.viewportY = hxd.Math.clamp(v, 0, 1);
+	}
+
+	inline function set_viewportWidth( v ) {
+		posChanged = true;
+		return this.viewportWidth = hxd.Math.clamp(v, 0, 1);
+	}
+
+	inline function set_viewportHeight( v ) {
+		posChanged = true;
+		return this.viewportHeight = hxd.Math.clamp(v, 0, 1);
+	}
+
 	inline function get_viewX() { return this.x; }
 	inline function get_viewY() { return this.y; }
 

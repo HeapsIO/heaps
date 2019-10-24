@@ -271,8 +271,8 @@ class RenderContext extends h3d.impl.RenderContext {
 		renderY = y;
 		renderW = w;
 		renderH = h;
-		var scaleX = engine.width * scene.ratioX / scene.width;
-		var scaleY = engine.height * scene.ratioY / scene.height;
+		var scaleX = scene.viewportA * engine.width / 2;
+		var scaleY = scene.viewportD * engine.height / 2;
 		if( inFilter != null ) {
 			var fa = baseShader.filterMatrixA;
 			var fb = baseShader.filterMatrixB;
@@ -286,8 +286,13 @@ class RenderContext extends h3d.impl.RenderContext {
 			w = rx2 - rx1;
 			h = ry2 - ry1;
 		}
-		// TODO: Calc renderZone
-		// engine.setRenderZone(Std.int((x - curX + scene.viewportX) * scaleX + 1e-10), Std.int((y - curY + scene.viewportY) * scaleY + 1e-10), Std.int(w * scaleX + 1e-10), Std.int(h * scaleY + 1e-10));
+		
+		engine.setRenderZone(
+			Std.int(x * scaleX + (scene.viewportX+1) * (engine.width / 2) + 1e-10),
+			Std.int(y * scaleY + (scene.viewportY+1) * (engine.height / 2) + 1e-10),
+			Std.int(w * scaleX + 1e-10),
+			Std.int(h * scaleY + 1e-10)
+		);
 	}
 
 	public inline function clearRenderZone() {
