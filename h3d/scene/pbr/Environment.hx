@@ -53,6 +53,9 @@ class IrradShader extends IrradBase {
 		@param var cubeSize : Float;
 		@param var cubeScaleFactor : Float;
 
+		@param var threshold : Float;
+		@param var scale : Float;
+
 		function cosineWeightedSampling( p : Vec2, n : Vec3 ) : Vec3 {
 			var sq = sqrt(1 - p.x);
 			var alpha = 2 * PI * p.y;
@@ -95,7 +98,9 @@ class IrradShader extends IrradBase {
 				}
 				var amount = n.dot(l).saturate();
 				if( amount > 0 ) {
-					color += gammaCorrect(envMap.get(l).rgb) * amount;
+					var envMapColor = envMap.get(l).rgb;
+					envMapColor *= mix(1.0, scale, (max( max(envMapColor.r, max(envMapColor.g, envMapColor.b)) - threshold, 0) / max(0.001, (1.0 - threshold))));
+					color += gammaCorrect(envMapColor) * amount;
 					totalWeight += amount;
 				}
 			}
@@ -187,6 +192,9 @@ class Environment  {
 	public var specular : h3d.mat.Texture;
 
 	public var power : Float = 1.;
+	public var rot : Float = 0.;
+	public var threshold : Float;
+	public var scale : Float;
 
 	/*
 		Source can be cube map already prepared or a 2D equirectangular map that
@@ -213,7 +221,7 @@ class Environment  {
 			}
 		}
 		diffSize = 64;
-		specSize = 256;
+		specSize = 512;
 		sampleBits = 12;
 	}
 
@@ -228,9 +236,9 @@ class Environment  {
 
 		lut = new h3d.mat.Texture(128, 128, [Target], RGBA16F);
 		lut.setName("irradLut");
-		diffuse = new h3d.mat.Texture(diffSize, diffSize, [Cube, Target]);
+		diffuse = new h3d.mat.Texture(diffSize, diffSize, [Cube, Target], RGBA16F);
 		diffuse.setName("irradDiffuse");
-		specular = new h3d.mat.Texture(specSize, specSize, [Cube, Target, MipMapped, ManualMipMapGen]);
+		specular = new h3d.mat.Texture(specSize, specSize, [Cube, Target, MipMapped, ManualMipMapGen], RGBA16F);
 		specular.setName("irradSpecular");
 		specular.mipMap = Linear;
 
@@ -278,6 +286,8 @@ class Environment  {
 		screen.shader.samplesBits = sampleBits;
 		screen.shader.envMap = env;
 		screen.shader.isSRGB = env.isSRGB();
+		screen.shader.threshold = threshold;
+		screen.shader.scale = scale;
 
 		var engine = h3d.Engine.getCurrent();
 

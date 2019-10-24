@@ -10,6 +10,8 @@ class Indirect extends PropsDefinition {
 		@param var irrSpecularLevels : Float;
 		@param var irrPower : Float;
 
+		@param var rot : Float;
+
 		@const var showSky : Bool;
 		@const var skyColor : Bool;
 		@param var skyColorValue : Vec3;
@@ -22,6 +24,9 @@ class Indirect extends PropsDefinition {
 		var calculatedUV : Vec2;
 
 		function fragment() {
+			var s = sin(rot);
+			var c = cos(rot);
+	
 			var isSky = normal.dot(normal) <= 0;
 			if( isSky ) {
 				if( showSky ) {
@@ -30,7 +35,8 @@ class Indirect extends PropsDefinition {
 						color = skyColorValue;
 					else {
 						normal = (vec3( uvToScreen(calculatedUV) * 5. /*?*/ , 1. ) * cameraInvViewProj.mat3x4()).normalize();
-						color = skyMap.get(normal).rgb;
+						var rotatedNormal = vec3(normal.x * c - normal.y * s, normal.x * s + normal.y * c, normal.z);
+						color = skyMap.get(rotatedNormal).rgb;
 					}
 					pixelColor.rgb += (color * color) * irrPower;
 				} else
@@ -42,12 +48,16 @@ class Indirect extends PropsDefinition {
 
 				var F0 = pbrSpecularColor;
 				var F = F0 + (max(vec3(1 - roughness), F0) - F0) * exp2( ( -5.55473 * NdV - 6.98316) * NdV );
+				
+				var rotatedNormal = vec3(normal.x * c - normal.y * s, normal.x * s + normal.y * c, normal.z);
 
-				if( drawIndirectDiffuse ){
-					diffuse = irrDiffuse.get(normal).rgb * albedo;
+				if( drawIndirectDiffuse ) {
+					diffuse = irrDiffuse.get(rotatedNormal).rgb * albedo;
 				}
 				if( drawIndirectSpecular ) {
-					var envSpec = textureLod(irrSpecular, reflect(-view,normal), roughness * irrSpecularLevels).rgb;
+					var reflectVec = reflect(-view, normal);
+					var roatetdReflecVec = vec3(reflectVec.x * c - reflectVec.y * s, reflectVec.x * s + reflectVec.y * c, reflectVec.z);
+					var envSpec = textureLod(irrSpecular, roatetdReflecVec, roughness * irrSpecularLevels).rgb;
 					var envBRDF = irrLut.get(vec2(roughness, NdV));
 					specular = envSpec * (F * envBRDF.x + envBRDF.y);
 				}
@@ -57,7 +67,6 @@ class Indirect extends PropsDefinition {
 			}
 		}
 	};
-
 }
 
 class Direct extends PropsDefinition {
