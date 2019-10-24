@@ -88,23 +88,23 @@ class Camera {
 	{
 		if ( posChanged ) {
 			var scene = ctx.scene;
+			var cr, sr;
 			if ( rotation == 0 ) {
+				cr = 1.; sr = 0.;
 				matA = scaleX;
 				matB = 0;
 				matC = 0;
 				matD = scaleY;
 			} else {
-				var cr = Math.cos(rotation);
-				var sr = Math.sin(rotation);
+				cr = Math.cos(rotation);
+				sr = Math.sin(rotation);
 				matA = scaleX * cr;
 				matB = scaleX * sr;
 				matC = scaleY * -sr;
 				matD = scaleY * cr;
 			}
-			var ox = scene.width * -anchorX;
-			var oy = scene.height * -anchorY;
-			absX = (ox - x) * matA + (oy - y) * matC;
-			absY = (ox - x) * matB + (oy - y) * matD;
+			absX = -(x * cr - y * sr) + scene.width * anchorX;
+			absY = -(x * sr + y * cr) + scene.height * anchorY;
 			// TODO: Viewport
 			// TODO: Optimize?
 			posChanged = false;
@@ -136,6 +136,11 @@ class Camera {
 		this.rotation += v;
 	}
 
+	public inline function setAnchor( x : Float, y : Float ) {
+		this.anchorX = x;
+		this.anchorY = y;
+	}
+
 	// Setters
 
 	inline function set_x( v ) {
@@ -163,7 +168,7 @@ class Camera {
 		return this.rotation = v;
 	}
 
-	// TODO
+	// TODO view/anchor
 	inline function get_viewX() { return this.x; }
 	inline function get_viewY() { return this.y; }
 
@@ -179,12 +184,14 @@ class Camera {
 	inline function set_anchorX( v ) {
 		anchorX = hxd.Math.clamp(v, 0, 1);
 		anchorWidth = sceneWidth * anchorX;
+		posChanged = true;
 		return anchorX;
 	}
 
 	inline function set_anchorY( v ) {
 		anchorY = hxd.Math.clamp(v, 0, 1);
 		anchorHeight = sceneHeight * anchorY;
+		posChanged = true;
 		return anchorY;
 	}
 

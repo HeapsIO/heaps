@@ -130,7 +130,7 @@ class Layers extends Object {
 					cam.enter(ctx);
 					while ( l < layerCount ) {
 						var top = layersIndexes[l++];
-						if ( cam.layerVisible(l) ) {
+						if ( cam.layerVisible(l - 1) ) {
 							while ( i < top ) {
 								children[i++].drawRec(ctx);
 							}

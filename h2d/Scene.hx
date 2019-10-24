@@ -259,8 +259,8 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		}
 
 		inline function zeroViewport() {
-			viewportA = 1 / width;
-			viewportD = 1 / height;
+			viewportA = 2 / width;
+			viewportD = 2 / height;
 			viewportX = -1;
 			viewportY = -1;
 		}
@@ -718,26 +718,21 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 
 		var tex = target.getTexture();
 		engine.pushTarget(tex);
-		var ow = width, oh = height, ox = offsetX, oy = offsetY;
-		var ovx = viewportX, ovy = viewportY, orx = ratioX, ory = ratioY;
+		var ow = width, oh = height, ova = viewportA, ovd = viewportD, ovx = viewportX, ovy = viewportY;
 		width = tex.width;
 		height = tex.height;
-		ratioX = 1;
-		ratioY = 1;
-		offsetX = 0;
-		offsetY = 0;
-		viewportX = 0;
-		viewportY = 0;
+		viewportA = 2 / width;
+		viewportD = 2 / height;
+		viewportX = -1;
+		viewportY = -1;
 		posChanged = true;
 		render(engine);
 		engine.popTarget();
 
 		width = ow;
 		height = oh;
-		ratioX = orx;
-		ratioY = ory;
-		offsetX = ox;
-		offsetY = oy;
+		viewportA = ova;
+		viewportD = ovd;
 		viewportX = ovx;
 		viewportY = ovy;
 		posChanged = true;

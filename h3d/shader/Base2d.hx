@@ -59,15 +59,13 @@ class Base2d extends hxsl.Shader {
 		function vertex() {
 			// transform from global to render texture coordinates
 			var tmp = vec3(absolutePosition.xy, 1);
+			tmp = vec3(tmp.dot(filterMatrixA), tmp.dot(filterMatrixB), 1);
+			// transform to viewport
 			outputPosition = vec4(
-				tmp.dot(filterMatrixA),
-				tmp.dot(filterMatrixB),
+				tmp.dot(viewportA),
+				tmp.dot(viewportB),
 				absolutePosition.zw
 			);
-			// transform to viewport
-			tmp = vec3(outputPosition.xy, 1);
-			outputPosition.x = tmp.dot(viewportA);
-			outputPosition.y = tmp.dot(viewportB);
 			// http://msdn.microsoft.com/en-us/library/windows/desktop/bb219690(v=vs.85).aspx
 			if( pixelAlign ) outputPosition.xy -= halfPixelInverse;
 			output.position = outputPosition;
