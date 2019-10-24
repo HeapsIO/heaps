@@ -423,9 +423,8 @@ class Console #if !macro extends h2d.Object #end {
 		var scene = ctx.scene;
 		if( scene != null ) {
 			x = 0;
-			y = scene.height - height;
-			width = scene.width;
-			tf.maxWidth = width;
+			y = (scene.height / scene.matD) - height * scaleY;
+			width = Math.ceil(scene.width / scene.matA); 
 			bg.tile.scaleToSize(width, height);
 		}
 		var log = logTxt;
