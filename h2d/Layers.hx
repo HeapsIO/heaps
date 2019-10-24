@@ -82,9 +82,10 @@ class Layers extends Object {
 
 	override function sync(ctx:RenderContext)
 	{
+		var forceCamSync = posChanged;
 		super.sync(ctx);
 		for ( cam in cameras ) {
-			cam.sync(ctx);
+			cam.sync(ctx, forceCamSync);
 		}
 	}
 

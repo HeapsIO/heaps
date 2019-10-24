@@ -97,9 +97,9 @@ class Camera {
 		ctx.resetCamera();
 	}
 
-	public function sync( ctx : RenderContext )
+	public function sync( ctx : RenderContext, force : Bool = false )
 	{
-		if ( posChanged ) {
+		if ( posChanged || force ) {
 			var scene = ctx.scene;
 			if ( rotation == 0 ) {
 				matA = scaleX;
