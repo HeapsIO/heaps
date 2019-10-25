@@ -160,7 +160,11 @@ class Text extends Drawable {
 		}
 	}
 
-	public function splitText( text : String, leftMargin = 0., afterData = 0. ) {
+	public function splitText( text : String ) {
+		return splitRawText(text,0,0);
+	}
+
+	function splitRawText( text : String, leftMargin : Float, afterData : Float ) {
 		if( realMaxWidth < 0 )
 			return text;
 		var lines = [], rest = text, restPos = 0;
@@ -215,6 +219,11 @@ class Text extends Drawable {
 			lines.push(text.substr(restPos, text.length - restPos));
 		}
 		return lines.join("\n");
+	}
+
+	public function getTextProgress( text : String, progress : Float ) {
+		if( progress >= text.length ) return text;
+		return text.substr(0, Std.int(progress));
 	}
 
 	function initGlyphs( text : String, rebuild = true, handleAlign = true, lines : Array<Int> = null ) : Void {
