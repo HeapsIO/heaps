@@ -140,6 +140,16 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	public var scaleMode(default, set) : ScaleMode = Resize;
 
 	/**
+		List of all cameras attached to Layers instance. Should contain at least one camera to render and one created by default.
+		Override `h2d.Camera.layerVisible` method to filter out specific layers from camera rendering.
+	**/
+	public var cameras : Array<Camera>;
+	/**
+		Alias to first camera in the list: `cameras[0]`
+	**/
+	public var camera(get, set) : Camera;
+
+	/**
 		Set the default value for `h2d.Drawable.smooth` (default: false)
 	**/
 	public var defaultSmooth(get, set) : Bool;
@@ -164,6 +174,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		super(null);
 		var e = h3d.Engine.getCurrent();
 		ctx = new RenderContext(this);
+		cameras = [new Camera()];
 		width = e.width;
 		height = e.height;
 		viewportA = 1;
@@ -208,6 +219,9 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	function get_renderer() return ctx;
 	function set_renderer(v) { ctx = v; return v; }
 
+
+	inline function get_camera() return cameras[0];
+	inline function set_camera(c) return cameras[0] = c;
 	/**
 		Set the fixed size for the scene, will prevent automatic scene resizing when screen size changes.
 	**/
@@ -688,7 +702,65 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	override function sync( ctx : RenderContext ) {
 		if( !allocated )
 			onAdd();
+		for ( cam in cameras ) cam.sync(ctx, posChanged);
 		super.sync(ctx);
+	}
+
+	override function drawRec(ctx:RenderContext)
+	{
+		if( !visible ) return;
+		if( posChanged ) {
+			calcAbsPos();
+			for( c in children )
+				c.posChanged = true;
+			posChanged = false;
+		}
+		if( filter != null && filter.enable ) {
+			drawFilters(ctx);
+		} else {
+			var old = ctx.globalAlpha;
+			ctx.globalAlpha *= alpha;
+			if( ctx.front2back ) {
+				for ( cam in cameras ) {
+					if ( !cam.visible ) continue;
+					var i = children.length;
+					var l = layerCount;
+					cam.enter(ctx);
+					while ( l-- > 0 ) {
+						var top = l == 0 ? 0 : layersIndexes[l - 1];
+						if ( cam.layerVisible(l) ) {
+							while ( i >= top ) {
+								children[i--].drawRec(ctx);
+							}
+						} else {
+							i = top - 1;
+						}
+					}
+					cam.exit(ctx);
+				}
+				draw(ctx);
+			} else {
+				draw(ctx);
+				for ( cam in cameras ) {
+					if ( !cam.visible ) continue;
+					var i = 0;
+					var l = 0;
+					cam.enter(ctx);
+					while ( l < layerCount ) {
+						var top = layersIndexes[l++];
+						if ( cam.layerVisible(l - 1) ) {
+							while ( i < top ) {
+								children[i++].drawRec(ctx);
+							}
+						} else {
+							i = top;
+						}
+					}
+					cam.exit(ctx);
+				}
+			}
+			ctx.globalAlpha = old;
+		}
 	}
 
 	override function onAdd()

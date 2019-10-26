@@ -8,21 +8,10 @@ class Layers extends Object {
 	// the per-layer insert position
 	var layersIndexes : Array<Int>;
 	var layerCount : Int;
-	/**
-		List of all cameras attached to Layers instance. Should contain at least one camera to render and one created by default.
-		Override `h2d.Camera.layerVisible` method to filter out specific layers from camera rendering.
-		Using nested cameras leads leads to undefined behavior.
-	**/
-	public var cameras : Array<Camera>;
-	/**
-		Alias to first camera in the list: `cameras[0]`
-	**/
-	public var camera(get, set) : Camera;
 
 	public function new(?parent) {
 		super(parent);
 		layersIndexes = [];
-		cameras = [new Camera()];
 		layerCount = 0;
 	}
 
@@ -79,72 +68,6 @@ class Layers extends Object {
 	// {
 	// 	super.drawFilters(ctx);
 	// }
-
-	override function sync(ctx:RenderContext)
-	{
-		var forceCamSync = posChanged;
-		super.sync(ctx);
-		for ( cam in cameras ) {
-			cam.sync(ctx, forceCamSync);
-		}
-	}
-
-	override function drawRec(ctx:RenderContext)
-	{
-		if( !visible ) return;
-		if( posChanged ) {
-			calcAbsPos();
-			for( c in children )
-				c.posChanged = true;
-			posChanged = false;
-		}
-		if( filter != null && filter.enable ) {
-			drawFilters(ctx);
-		} else {
-			var old = ctx.globalAlpha;
-			ctx.globalAlpha *= alpha;
-			if( ctx.front2back ) {
-				for ( cam in cameras ) {
-					if ( !cam.visible ) continue;
-					var i = children.length;
-					var l = layerCount;
-					cam.enter(ctx);
-					while ( l-- > 0 ) {
-						var top = l == 0 ? 0 : layersIndexes[l - 1];
-						if ( cam.layerVisible(l) ) {
-							while ( i >= top ) {
-								children[i--].drawRec(ctx);
-							}
-						} else {
-							i = top - 1;
-						}
-					}
-					cam.exit(ctx);
-				}
-				draw(ctx);
-			} else {
-				draw(ctx);
-				for ( cam in cameras ) {
-					if ( !cam.visible ) continue;
-					var i = 0;
-					var l = 0;
-					cam.enter(ctx);
-					while ( l < layerCount ) {
-						var top = layersIndexes[l++];
-						if ( cam.layerVisible(l - 1) ) {
-							while ( i < top ) {
-								children[i++].drawRec(ctx);
-							}
-						} else {
-							i = top;
-						}
-					}
-					cam.exit(ctx);
-				}
-			}
-			ctx.globalAlpha = old;
-		}
-	}
 
 	/**
 	 * Moves an `h2d.Object` to the bottom of its layer (rendered first, behind the other Objects in layer).
@@ -270,14 +193,6 @@ class Layers extends Object {
 				ymax = c.y;
 			pos++;
 		}
-	}
-
-	inline function get_camera() {
-		return cameras[0];
-	}
-
-	inline function set_camera(c) {
-		return cameras[0] = c;
 	}
 
 }
