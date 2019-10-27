@@ -36,7 +36,7 @@ class Console #if !macro extends h2d.Object #end {
 	var curCmd:String;
 
 	public var shortKeyChar : Int = "/".code;
-	public var autocomplete : Bool = true;
+	public var autoComplete : Bool = true;
 
 	public function new(font:h2d.Font,?parent) {
 		super(parent);
@@ -220,7 +220,7 @@ class Console #if !macro extends h2d.Object #end {
 			tf.text = "";
 
 			hintTxt.text = "";
-			if (autocomplete) {
+			if (autoComplete) {
 				var suggestion = getCommandSuggestion(cmd);
 				if (suggestion != "") {
 					cmd = suggestion;
@@ -232,7 +232,7 @@ class Console #if !macro extends h2d.Object #end {
 			e.cancel = true;
 			return;
 		case Key.TAB:
-			if (autocomplete) {
+			if (autoComplete) {
 				if (hintTxt.text != "") {
 					tf.text = hintTxt.text + " ";
 					tf.cursorIndex = tf.text.length;
@@ -264,8 +264,8 @@ class Console #if !macro extends h2d.Object #end {
 	}
 
 	function handleCmdChange() {
-		hintTxt.visible = autocomplete;
-		if (autocomplete) {
+		hintTxt.visible = autoComplete;
+		if (autoComplete) {
 			hintTxt.text = getCommandSuggestion(tf.text);
 		} else {
 			hintTxt.text = "";
