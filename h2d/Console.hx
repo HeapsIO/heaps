@@ -265,7 +265,11 @@ class Console #if !macro extends h2d.Object #end {
 
 	function handleCmdChange() {
 		hintTxt.visible = autocomplete;
-		hintTxt.text = getCommandSuggestion(tf.text);
+		if (autocomplete) {
+			hintTxt.text = getCommandSuggestion(tf.text);
+		} else {
+			hintTxt.text = "";
+		}
 	}
 
 	function handleCommand( command : String ) {
