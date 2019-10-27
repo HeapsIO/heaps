@@ -25,32 +25,38 @@ class Camera {
 	**/
 	public var rotation(default, set) : Float;
 
-	/** X position of the camera anchor point based on `anchorX`. **/
-	public var viewX(get, set) : Float;
-	/** Y position of the camera anchor point based on `anchorY`. **/
-	public var viewY(get, set) : Float;
-
-	// TODO: viewport (clip/size manipulation)
-	public var viewportX(default, set) : Float;
-	public var viewportY(default, set) : Float;
-	public var viewportWidth(default, set) : Float;
-	public var viewportHeight(default, set) : Float;
+	/**
+		Enables viewport clipping. Allow to restrict rendering area of the camera.
+	**/
 	public var clipViewport : Bool;
+	/**
+		Horizontal viewport offset of the camera relative to the Scene. Set in 0..1 range percentile. ( default : 0 )
+	**/
+	public var viewportX(default, set) : Float;
+	/**
+		Vertical viewport offset of the camera relative to the Scene. Set in 0..1 range percentile. ( default : 0 )
+	**/
+	public var viewportY(default, set) : Float;
+	/**
+		Camera viewport width relative to the Scene size.
+	**/
+	public var viewportWidth(default, set) : Float;
+	/**
+		Camera viewport height relative to the Scene size.
+	**/
+	public var viewportHeight(default, set) : Float;
 
-	/** Horizontal anchor position inside viewport boundaries used for anchoring and resize compensation. ( default : 0.5 ) **/
+	/** Horizontal anchor position inside viewport boundaries used for anchoring and resize compensation. ( default : 0 ) **/
 	public var anchorX(default, set) : Float;
-	/** Vertical anchor position inside viewport boundaries used for anchoring and resize compensation. ( default : 0.5 ) **/
+	/** Vertical anchor position inside viewport boundaries used for anchoring and resize compensation. ( default : 0 ) **/
 	public var anchorY(default, set) : Float;
 
+	/** Camera visibility. Does not affect event handling for interactive camera. **/
 	public var visible : Bool;
 
-	var ratioChanged : Bool;
-	var sceneWidth : Int;
-	var sceneHeight : Int;
-	var anchorWidth : Float;
-	var anchorHeight : Float;
-	var scene : Scene;
-	
+	/** Set to enable primitive position sync between camera and target Object. **/
+	public var follow : h2d.Object;
+
 	var posChanged : Bool;
 
 	var matA : Float;
@@ -71,35 +77,36 @@ class Camera {
 		this.viewportY = 0;
 		this.viewportWidth = 1;
 		this.viewportHeight = 1;
-		this.anchorWidth = 0; this.anchorHeight = 0;
-		this.sceneWidth = 0; this.sceneHeight = 0;
 		this.visible = true;
-		ratioChanged = true;
 	}
 
 	/**
-		Override this method to set visibility only to specific layers
+		Override this method to set visibility only to specific layers. Renders all layers by default.
+		Layer visibility is not checked during Interactive event handling.
 	**/
 	public dynamic function layerVisible( layer : Int ) : Bool {
 		return true;
 	}
 
-	public function enter( ctx : RenderContext ) {
-		// Improvement: Handle camera-in-camera rendering
+	@:noCompletion public function enter( ctx : RenderContext ) {
 		ctx.setCamera(this);
 		if ( clipViewport )
 			ctx.setRenderZone(viewportX * ctx.scene.width, viewportY * ctx.scene.height, viewportWidth * ctx.scene.width, viewportHeight * ctx.scene.height);
 	}
 
-	public function exit( ctx : RenderContext ) {
-		// Improvement: Restore previous camera
+	@:noCompletion public function exit( ctx : RenderContext ) {
 		if ( clipViewport )
 			ctx.clearRenderZone();
 		ctx.resetCamera();
 	}
 
+	@:access(h2d.Object)
 	public function sync( ctx : RenderContext, force : Bool = false )
 	{
+		if ( follow != null ) {
+			this.x = follow.absX;
+			this.y = follow.absY;
+		}
 		if ( posChanged || force ) {
 			var scene = ctx.scene;
 			if ( rotation == 0 ) {
@@ -118,11 +125,8 @@ class Camera {
 			absX = -(x * matA + y * matC) + (scene.width * anchorX * viewportHeight) + scene.width * viewportX;
 			absY = -(x * matB + y * matD) + (scene.height * anchorY * viewportHeight) + scene.height * viewportY;
 			invDet = 1 / (matA * matD - matB * matC);
-			// TODO: Viewport
-			// TODO: Optimize?
 			posChanged = false;
 		}
-		// TODO: Somehow mark posChanged when scene gets resized.
 	}
 
 	public inline function setScale(x : Float, y : Float) {
@@ -171,10 +175,18 @@ class Camera {
 		return globalYToCamera((mx - scene.offsetX) / scene.viewportScaleX, (my - scene.offsetY) / scene.viewportScaleY);
 	}
 
+	/**
+		Convert local camera position to absolute screen position.
+		Requires Scene as a reference to viewport of `scaleMode`.
+	**/
 	public function cameraXToScreen( mx : Float, my : Float, scene : Scene ) : Float {
 		return inline cameraXToGlobal(mx, my) * scene.viewportScaleX + scene.offsetX;
 	}
 
+	/**
+		Convert local camera position to absolute screen position.
+		Requires Scene as a reference to viewport of `scaleMode`.
+	**/
 	public function cameraYToScreen( mx : Float, my : Float, scene : Scene ) : Float {
 		return inline cameraYToGlobal(mx, my) * scene.viewportScaleY + scene.offsetY;
 	}
@@ -214,13 +226,17 @@ class Camera {
 
 	// Point/event
 
-	public function eventToCamera( e : hxd.Event, scene : Scene ) {
+	@:noCompletion public function eventToCamera( e : hxd.Event, scene : Scene ) {
 		var x = (e.relX - scene.offsetX) / scene.viewportScaleX - absX;
 		var y = (e.relY - scene.offsetY) / scene.viewportScaleY - absY;
 		e.relX = (x * matD - y * matC) * invDet;
 		e.relY = (-x * matB + y * matA) * invDet;
 	}
 
+	/**
+		Convert screen position into a local camera position.
+		Requires Scene as a reference to viewport of `scaleMode`.
+	**/
 	public function screenToCamera( pt : h2d.col.Point, scene : Scene ) {
 		var x = (pt.x - scene.offsetX) / scene.viewportScaleX - absX;
 		var y = (pt.y - scene.offsetY) / scene.viewportScaleY - absY;
@@ -228,6 +244,10 @@ class Camera {
 		pt.y = (-x * matB + y * matA) * invDet;
 	}
 
+	/**
+		Convert local camera position to absolute screen position.
+		Requires Scene as a reference to viewport of `scaleMode`.
+	**/
 	public function cameraToScreen( pt : h2d.col.Point, scene : Scene ) {
 		var x = pt.x;
 		var y = pt.y;
@@ -235,13 +255,21 @@ class Camera {
 		pt.y = inline cameraYToScreen(x, y, scene);
 	}
 
-	public function galobalToCamera( pt : h2d.col.Point ) {
+	/**
+		Convert an absolute scene position into a local camera position.
+		Does not represent screen position, see `screenToCamera` to convert position with accounting of `scaleMode`.
+	**/
+	public function globalToCamera( pt : h2d.col.Point ) {
 		var x = pt.x - absX;
 		var y = pt.y - absY;
 		pt.x = (x * matD - y * matC) * invDet;
 		pt.y = (-x * matB + y * matA) * invDet;
 	}
 
+	/**
+		Convert local camera position into absolute scene position.
+		Does not represent screen position, see `cameraToScreen` to convert position with accounting of `scaleMode`.
+	**/
 	public function cameraToGlobal( pt : h2d.col.Point ) {
 		var x = pt.x;
 		var y = pt.y;
@@ -280,48 +308,32 @@ class Camera {
 
 	inline function set_viewportX( v ) {
 		posChanged = true;
-		return this.viewportX = hxd.Math.clamp(v, 0, 1);
+		return this.viewportX = v;
 	}
 
 	inline function set_viewportY( v ) {
 		posChanged = true;
-		return this.viewportY = hxd.Math.clamp(v, 0, 1);
+		return this.viewportY = v;
 	}
 
 	inline function set_viewportWidth( v ) {
 		posChanged = true;
-		return this.viewportWidth = hxd.Math.clamp(v, 0, 1);
+		return this.viewportWidth = v;
 	}
 
 	inline function set_viewportHeight( v ) {
 		posChanged = true;
-		return this.viewportHeight = hxd.Math.clamp(v, 0, 1);
-	}
-
-	inline function get_viewX() { return this.x; }
-	inline function get_viewY() { return this.y; }
-
-	inline function set_viewX( v : Float ) {
-		this.x = v;
-		return v;
-	}
-	inline function set_viewY( v : Float ) {
-		this.y = v;
-		return v;
+		return this.viewportHeight = v;
 	}
 
 	inline function set_anchorX( v ) {
-		anchorX = hxd.Math.clamp(v, 0, 1);
-		anchorWidth = sceneWidth * anchorX;
 		posChanged = true;
-		return anchorX;
+		return anchorX = hxd.Math.clamp(v, 0, 1);
 	}
 
 	inline function set_anchorY( v ) {
-		anchorY = hxd.Math.clamp(v, 0, 1);
-		anchorHeight = sceneHeight * anchorY;
 		posChanged = true;
-		return anchorY;
+		return anchorY = hxd.Math.clamp(v, 0, 1);
 	}
 
 }
