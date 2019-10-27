@@ -92,6 +92,7 @@ class Driver implements hxd.snd.Driver {
 
 	public function playSource(source : SourceHandle) : Void {
 		AL.sourcePlay(source.inst);
+		source.sampleOffset = 0;
 		source.playing = true;
 	}
 
