@@ -25,6 +25,7 @@ class Console #if !macro extends h2d.Object #end {
 	var height : Int;
 	var bg : h2d.Bitmap;
 	var tf : h2d.TextInput;
+	var hintTxt: h2d.Text;
 	var logTxt : h2d.HtmlText;
 	var lastLogTime : Float;
 	var commands : Map < String, { help : String, args : Array<ConsoleArgDesc>, callb : Dynamic } > ;
@@ -35,6 +36,7 @@ class Console #if !macro extends h2d.Object #end {
 	var curCmd:String;
 
 	public var shortKeyChar : Int = "/".code;
+	public var autocomplete : Bool = true;
 
 	public function new(font:h2d.Font,?parent) {
 		super(parent);
@@ -47,12 +49,21 @@ class Console #if !macro extends h2d.Object #end {
 		logIndex = -1;
 		bg = new h2d.Bitmap(h2d.Tile.fromColor(0,1,1,0.5), this);
 		bg.visible = false;
+
+		hintTxt = new h2d.Text(font, bg);
+		hintTxt.x = 2;
+		hintTxt.y = 1;
+		hintTxt.textColor = 0xFFFFFFFF;
+		hintTxt.alpha = 0.5;
+
 		tf = new h2d.TextInput(font, bg);
 		tf.onKeyDown = handleKey;
+		tf.onChange = handleCmdChange;
 		tf.onFocusLost = function(_) hide();
 		tf.x = 2;
 		tf.y = 1;
 		tf.textColor = 0xFFFFFFFF;
+
 		commands = new Map();
 		aliases = new Map();
 		addCommand("help", "Show help", [ { name : "command", t : AString, opt : true } ], showHelp);
@@ -185,6 +196,21 @@ class Console #if !macro extends h2d.Object #end {
 		logIndex = -1;
 	}
 
+	function getCommandSuggestion(cmd : String) {
+		if (cmd == "") {
+			return "";
+		}
+
+		var commandNames = commands.keys();
+		for (command in commandNames) {
+			if (command.indexOf(cmd) == 0) {
+				return command;
+			}
+		}
+
+		return "";
+	}
+
 	function handleKey( e : hxd.Event ) {
 		if( !bg.visible )
 			return;
@@ -192,10 +218,26 @@ class Console #if !macro extends h2d.Object #end {
 		case Key.ENTER, Key.NUMPAD_ENTER:
 			var cmd = tf.text;
 			tf.text = "";
+
+			hintTxt.text = "";
+			if (autocomplete) {
+				var suggestion = getCommandSuggestion(cmd);
+				if (suggestion != "") {
+					cmd = suggestion;
+				}
+			}
+
 			handleCommand(cmd);
 			if( !logTxt.visible ) bg.visible = false;
 			e.cancel = true;
 			return;
+		case Key.TAB:
+			if (autocomplete) {
+				if (hintTxt.text != "") {
+					tf.text = hintTxt.text + " ";
+					tf.cursorIndex = tf.text.length;
+				}
+			}
 		case Key.ESCAPE:
 			hide();
 		case Key.UP:
@@ -219,6 +261,11 @@ class Console #if !macro extends h2d.Object #end {
 			tf.text = logs[logIndex];
 			tf.cursorIndex = tf.text.length;
 		}
+	}
+
+	function handleCmdChange() {
+		hintTxt.visible = autocomplete;
+		hintTxt.text = getCommandSuggestion(tf.text);
 	}
 
 	function handleCommand( command : String ) {
