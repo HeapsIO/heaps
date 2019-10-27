@@ -1,5 +1,12 @@
 package h2d;
 
+typedef CameraStackEntry = {
+	va : Float, vb : Float, vc : Float, vd : Float, vx : Float, vy : Float
+};
+typedef TargetStackEntry = CameraStackEntry & {
+	t : h3d.mat.Texture, hasRZ : Bool, rzX:Float, rzY:Float, rzW:Float, rzH:Float
+};
+
 class RenderContext extends h3d.impl.RenderContext {
 
 	static inline var BUFFERING = false;
@@ -28,8 +35,10 @@ class RenderContext extends h3d.impl.RenderContext {
 	var baseShaderList : hxsl.ShaderList;
 	var currentObj : Drawable;
 	var stride : Int;
-	var targetsStack : Array<{ t : h3d.mat.Texture, va : Float, vb : Float, vc : Float, vd : Float, vx : Float, vy : Float, hasRZ : Bool, rzX:Float, rzY:Float, rzW:Float, rzH:Float }>;
+	var targetsStack : Array<TargetStackEntry>;
 	var targetsStackIndex : Int;
+	var cameraStack : Array<CameraStackEntry>;
+	var cameraStackIndex : Int;
 	var curTarget : h3d.mat.Texture;
 	var hasUVPos : Bool;
 	var filterStack : Array<h2d.Object>;
@@ -68,6 +77,8 @@ class RenderContext extends h3d.impl.RenderContext {
 		baseShaderList = new hxsl.ShaderList(baseShader);
 		targetsStack = [];
 		targetsStackIndex = 0;
+		cameraStack = [];
+		cameraStackIndex = 0;
 		filterStack = [];
 	}
 
@@ -101,9 +112,6 @@ class RenderContext extends h3d.impl.RenderContext {
 		baseShader.halfPixelInverse.set(0.5 / engine.width, 0.5 / engine.height);
 		baseShader.viewportA.set(scene.viewportA, 0, scene.viewportX);
 		baseShader.viewportB.set(0, scene.viewportD * -baseFlipY, scene.viewportY * -baseFlipY);
-		// baseShader.viewport.set(
-		// 	-scene.width * 0.5 - scene.offsetX, -scene.height * 0.5 - scene.offsetY,
-		// 	2 / scene.width * scene.ratioX, -2 * baseFlipY / scene.height * scene.ratioY);
 		baseShader.filterMatrixA.set(1, 0, 0);
 		baseShader.filterMatrixB.set(0, 1, 0);
 		baseShaderList.next = null;
@@ -144,6 +152,22 @@ class RenderContext extends h3d.impl.RenderContext {
 
 	@:access(h2d.Camera)
 	public function setCamera( cam : h2d.Camera ) {
+		if (cameraStackIndex == cameraStack.length) {
+			cameraStack.push({
+				va: viewA, vb: viewB,
+				vc: viewC, vd: viewD,
+				vx: viewX, vy: viewY
+			});
+		} else {
+			var inf = cameraStack[cameraStackIndex];
+			inf.va = viewA;
+			inf.vb = viewB;
+			inf.vc = viewC;
+			inf.vd = viewD;
+			inf.vx = viewX;
+			inf.vy = viewY;
+		}
+		cameraStackIndex++;
 		var tmpA = viewA;
 		var tmpB = viewB;
 		var tmpC = viewC;
@@ -160,16 +184,17 @@ class RenderContext extends h3d.impl.RenderContext {
 	}
 
 	public function resetCamera() {
-		viewA = scene.viewportA;
-		viewB = 0;
-		viewC = 0;
-		viewD = scene.viewportD;
-		viewX = scene.viewportX;
-		viewY = scene.viewportY;
+		if (cameraStackIndex == 0) throw "Too many resetCamera()";
+		var inf = cameraStack[--cameraStackIndex];
+		viewA = inf.va;
+		viewB = inf.vb;
+		viewC = inf.vc;
+		viewD = inf.vd;
+		viewX = inf.vx;
+		viewY = inf.vy;
 		var flipY = curTarget != null ? -targetFlipY : -baseFlipY;
 		baseShader.viewportA.set(viewA, viewC, viewX);
 		baseShader.viewportB.set(viewB * flipY, viewD * flipY, viewY * flipY);
-		// TODO: Restore render target view
 	}
 
 	public function pushFilter( spr : h2d.Object ) {
@@ -261,8 +286,6 @@ class RenderContext extends h3d.impl.RenderContext {
 		baseShader.viewportB.set(viewB * flipY, viewD * flipY, viewY * flipY);
 
 		if ( tinf.hasRZ ) setRenderZone(tinf.rzX, tinf.rzY, tinf.rzW, tinf.rzH);
-		
-		// TODO: Proper viewport restore; also account for camera
 	}
 
 	public function setRenderZone( x : Float, y : Float, w : Float, h : Float ) {

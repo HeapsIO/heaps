@@ -82,7 +82,13 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	**/
 	public var height(default, null) : Int;
 
+	/**
+		Viewport horizontal scale transform value. Converts from scene space to screen space of [0, 2] range.
+	**/
 	public var viewportA(default, null) : Float;
+	/**
+		Viewport vertical scale transform value. Converts from scene space to screen space of [0, 2] range.
+	**/
 	public var viewportD(default, null) : Float;
 	/**
 		Horizontal viewport offset relative to top-left corner of the window. Can change if the screen gets resized or `scaleMode` changes.
@@ -107,12 +113,12 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	public var offsetY(default, null) : Float;
 
 	/**
-		Horizontal ratio of the window used by the Scene (including scaling).
+		Horizontal scale of a scene when rendering to screen.
 		Can change if the screen gets resized or `scaleMode` changes.
 	**/
 	public var viewportScaleX(default, null) : Float;
 	/**
-		Vertical ratio of the window used by the Scene (including scaling).
+		Vertical scale of a scene when rendering to screen.
 		Can change if the screen gets resized or `scaleMode` changes.
 	**/
 	public var viewportScaleY(default, null) : Float;
@@ -143,7 +149,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	public var scaleMode(default, set) : ScaleMode = Resize;
 
 	/**
-		List of all cameras attached to Layers instance. Should contain at least one camera to render and one created by default.
+		List of all cameras attached to the Scene. Should contain at least one camera to render and one created by default.
 		Override `h2d.Camera.layerVisible` method to filter out specific layers from camera rendering.
 	**/
 	public var cameras : Array<Camera>;
@@ -233,9 +239,9 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	function get_renderer() return ctx;
 	function set_renderer(v) { ctx = v; return v; }
 
-
 	inline function get_camera() return cameras[0];
 	inline function set_camera(c) return cameras[0] = c;
+
 	/**
 		Set the fixed size for the scene, will prevent automatic scene resizing when screen size changes.
 	**/
@@ -711,8 +717,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		for ( cam in cameras ) cam.sync(ctx, forceCamSync);
 	}
 
-	override function drawRec(ctx:RenderContext)
-	{
+	override function drawRec( ctx : RenderContext ) {
 		if( !visible ) return;
 		if( posChanged ) {
 			calcAbsPos();
@@ -768,15 +773,13 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		}
 	}
 
-	override function onAdd()
-	{
+	override function onAdd() {
 		checkResize();
 		super.onAdd();
 		window.addResizeEvent(checkResize);
 	}
 
-	override function onRemove()
-	{
+	override function onRemove() {
 		super.onRemove();
 		window.removeResizeEvent(checkResize);
 	}

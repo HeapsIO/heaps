@@ -1,5 +1,13 @@
 package h2d;
 
+/**
+	2D camera instance. Allows for positioning, scaling and rotation of 2D objects on the scene.
+	Per-layer visibility can be configured by overriding `layerVisible` method.
+	Camera can clip out contents outside of it's viewport by setting `clipViewport` to `true`.
+	Due to Heaps event handling structure, only one camera can handle scene events, and can be set with `h2d.Scene.interactiveCamera`.
+	When handling events, assigned camera isn't checked for it's nor layers visibiilty.
+	Camera system is circumvented if Scene would get any filter assigned to it.
+**/
 class Camera {
 
 	/**
@@ -129,17 +137,17 @@ class Camera {
 		}
 	}
 
-	public inline function setScale(x : Float, y : Float) {
+	public inline function setScale( x : Float, y : Float ) {
 		this.scaleX = x;
 		this.scaleY = y;
 	}
 
-	public inline function scale(x : Float, y : Float) {
+	public inline function scale( x : Float, y : Float ) {
 		this.scaleX *= x;
 		this.scaleY *= y;
 	}
 
-	public inline function setPosition(x : Float, y : Float) {
+	public inline function setPosition( x : Float, y : Float ) {
 		this.x = x;
 		this.y = y;
 	}
@@ -304,8 +312,6 @@ class Camera {
 		return this.rotation = v;
 	}
 
-	// TODO view/anchor
-
 	inline function set_viewportX( v ) {
 		posChanged = true;
 		return this.viewportX = v;
@@ -328,12 +334,12 @@ class Camera {
 
 	inline function set_anchorX( v ) {
 		posChanged = true;
-		return anchorX = hxd.Math.clamp(v, 0, 1);
+		return anchorX = v;
 	}
 
 	inline function set_anchorY( v ) {
 		posChanged = true;
-		return anchorY = hxd.Math.clamp(v, 0, 1);
+		return anchorY = v;
 	}
 
 }

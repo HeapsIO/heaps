@@ -63,12 +63,6 @@ class Layers extends Object {
 		}
 	}
 
-	// TODO
-	// override function drawFilters(ctx:RenderContext)
-	// {
-	// 	super.drawFilters(ctx);
-	// }
-
 	/**
 	 * Moves an `h2d.Object` to the bottom of its layer (rendered first, behind the other Objects in layer).
 	 * @param s `h2d.Object` to be moved.
