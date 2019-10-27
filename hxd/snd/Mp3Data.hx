@@ -16,12 +16,13 @@ class Mp3Data extends Data {
 	#elseif hl
 	var bytes : haxe.io.Bytes;
 	var frameOffsets:Array<Int>;
-	var frameSamples:Array<Int>; // Sample offset of a frame.
+	// Sample count in one frame. After some searching, I couldn't find any mp3 files that contained frames with different Layers (hence - different samples/frame).
+	// Simplifies seeking quite a bit if we assume that we won't find any mp3 files with different sampling per frame.
+	var samplesPerFrame:Int;
 	var reader : Mp3File;
 	var frame : haxe.io.Bytes;
 	var currentFrame : Int;
 	var currentSample : Int;
-	var frameEnd : Int;
 	#end
 
 	public function new( bytes : haxe.io.Bytes ) {
@@ -76,19 +77,19 @@ class Mp3Data extends Data {
 		this.bytes = bytes;
 		// Re-reading MP3 to find offsets to each frame in file for seeking.
 		frameOffsets = new Array();
-		frameSamples = new Array();
+		samplesPerFrame = format.mp3.Tools.getSampleCountHdr(header);
 		var byteInput = new haxe.io.BytesInput(bytes);
 		var reader = new format.mp3.Reader(byteInput);
 		var ft;
 		var totalSamples : Int = 0;
 		while ( (ft = reader.seekFrame()) == FT_MP3 ) {
+			var headerPos = byteInput.position - 2; // 0xfff sync
 			var header = reader.readFrameHeader();
 			if ( header != null && !format.mp3.Tools.isInvalidFrameHeader(header) ) {
 				// TODO: Layer I support. Layer I frames contain only 384 frames.
 				var len = format.mp3.Tools.getSampleDataSizeHdr(header);
 				if ( byteInput.length - byteInput.position >= len ) {
-					frameOffsets.push(byteInput.position - 4);
-					frameSamples.push(totalSamples);
+					frameOffsets.push(headerPos);
 					totalSamples += format.mp3.Tools.getSampleCountHdr(header);
 					byteInput.position += len;
 				}
@@ -97,7 +98,6 @@ class Mp3Data extends Data {
 
 		this.frame = haxe.io.Bytes.alloc(1152*channels*4); // 2 channels, F32.
 		this.currentSample = -1;
-		this.frameEnd = -1;
 		this.currentFrame = -1;
 		this.reader = mp3_open(bytes, bytes.length);
 
@@ -166,31 +166,41 @@ class Mp3Data extends Data {
 		}
 		#elseif hl
 		if ( currentSample != sampleStart ) {
-			var i = frameSamples.length - 1;
-			while ( i >= 0 ) {
-				if ( frameSamples[i] <= sampleStart ) {
-					if ( this.currentFrame != i ) {
-						seekFrame(i);
-						this.currentSample = sampleStart;
-					}
-					break;
-				}
-				i--;
+			var targetFrame = Math.floor(sampleStart / samplesPerFrame);
+			if ( targetFrame != currentFrame ) {
+				seekFrame(Math.floor(sampleStart / samplesPerFrame));
 			}
+			this.currentSample = sampleStart;
 		}
-		var targetSample = sampleStart + sampleCount;
-		while (frameEnd <= targetSample) {
-			var frameStart = frameSamples[currentFrame];
-			var offset = (frameEnd - currentSample) * 4 * channels;
-			out.blit(outPos, frame, (currentSample - frameStart) * 4 * channels, offset);
-			currentSample = frameEnd;
-			outPos += offset;
+		var frameStart = currentFrame * samplesPerFrame;
+		var writeSamples:Int, offset:Int;
+		// Fill out remaining of the frame.
+		if ( currentSample != frameStart ) {
+			writeSamples = samplesPerFrame - (currentSample - frameStart);
+			offset = (currentSample - frameStart) * 4 * channels;
+			out.blit(outPos, frame, offset, frame.length - offset);
+			outPos += frame.length - offset;
+			
+			sampleCount -= writeSamples;
+			currentSample += writeSamples;
 			seekFrame(currentFrame + 1);
 		}
-		if ( currentSample < targetSample ) {
-			var frameStart = frameSamples[currentFrame];
-			out.blit(outPos, frame, (currentSample - frameStart) * 4 * channels, (targetSample - currentSample) * channels * 4);
-			currentSample = targetSample;
+		writeSamples = samplesPerFrame;
+		offset = samplesPerFrame * 4 * channels;
+		// Fill out frames that fit inside buffer
+		while ( sampleCount > writeSamples ) {
+			out.blit(outPos, frame, 0, frame.length);
+			outPos += offset;
+
+			sampleCount -= writeSamples;
+			currentSample += writeSamples;
+			seekFrame(currentFrame + 1);
+		}
+		// Fill beginning of the frame to the remainder of the buffer.
+		if ( sampleCount > 0 ) {
+			writeSamples = sampleCount;
+			out.blit(outPos, frame, 0, sampleCount * 4 * channels);
+			currentSample += sampleCount;
 		}
 		#else
 		throw "MP3 decoding is not available for this platform";
@@ -199,10 +209,9 @@ class Mp3Data extends Data {
 
 	#if hl
 
-	function seekFrame(to:Int) {
+	inline function seekFrame( to : Int ) {
 		currentFrame = to;
-		var samples : Int = mp3_decode_frame(reader, bytes, bytes.length, frameOffsets[to], frame, frame.length, 0);
-		frameEnd = frameSamples[to] + samples;
+		mp3_decode_frame(reader, bytes, bytes.length, frameOffsets[to], frame, frame.length, 0);
 	}
 	
 	@:hlNative("fmt", "mp3_open") static function mp3_open( bytes : hl.Bytes, size : Int ) : Mp3File {
