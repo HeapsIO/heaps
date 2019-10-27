@@ -86,33 +86,36 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	public var viewportD(default, null) : Float;
 	/**
 		Horizontal viewport offset relative to top-left corner of the window. Can change if the screen gets resized or `scaleMode` changes.
-		Offset is in internal Scene resolution pixels.
+		Offset is in screen-space coordinates: [-1, 1] where 0 is center of the window.
 	**/
 	public var viewportX(default, null) : Float;
 	/**
 		Vertical viewport offset relative to top-left corner of the window. Can change if the screen gets resized or `scaleMode` changes.
-		Offset is in internal Scene resolution pixels.
+		Offset is in screen-space coordinates: [-1, 1] where 0 is center of the window.
 	**/
 	public var viewportY(default, null) : Float;
-	/**
-		Physical vertical viewport offset relative to the center of the window. Assigned if the screen gets resized or `scaleMode` changes.
-		Offset is in internal Scene resolution pixels.
-	**/
-	public var offsetX : Float;
-	/**
-		Physical horizontal viewport offset relative to the center of the window. Assigned if the screen gets resized or `scaleMode` changes.
-		Offset is in internal Scene resolution pixels.
-	**/
-	public var offsetY : Float;
 
 	/**
-		Horizontal ratio of the window used by the Scene (including scaling). Can change if the screen gets resized or `scaleMode` changes.
+		Horizontal viewport offset relative to top-left corner of the window in pixels.
+		Assigned if the screen gets resized or `scaleMode` changes.
 	**/
-	public var ratioX(default, null) : Float;
+	public var offsetX(default, null) : Float;
 	/**
-		Vertical ratio of the window used by the Scene (including scaling). Can change if the screen gets resized or `scaleMode` changes.
+		Vertical viewport offset relative to top-left corner of the window in pixels.
+		Assigned if the screen gets resized or `scaleMode` changes.
 	**/
-	public var ratioY(default, null) : Float;
+	public var offsetY(default, null) : Float;
+
+	/**
+		Horizontal ratio of the window used by the Scene (including scaling).
+		Can change if the screen gets resized or `scaleMode` changes.
+	**/
+	public var viewportScaleX(default, null) : Float;
+	/**
+		Vertical ratio of the window used by the Scene (including scaling).
+		Can change if the screen gets resized or `scaleMode` changes.
+	**/
+	public var viewportScaleY(default, null) : Float;
 
 	/**
 		The current mouse X coordinates (in pixel) relative to the scene.
@@ -150,6 +153,14 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	public var camera(get, set) : Camera;
 
 	/**
+		Camera instance that handles scene events.
+		Due to Heaps structure, only one Camera can work with the Interactives.
+		Contrary to rendering, event handling does not check if layer is visible for camera or not.
+		Should never be null.
+	**/
+	public var interactiveCamera : Camera;
+
+	/**
 		Set the default value for `h2d.Drawable.smooth` (default: false)
 	**/
 	public var defaultSmooth(get, set) : Bool;
@@ -175,14 +186,17 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		var e = h3d.Engine.getCurrent();
 		ctx = new RenderContext(this);
 		cameras = [new Camera()];
+		interactiveCamera = camera;
 		width = e.width;
 		height = e.height;
-		viewportA = 1;
-		viewportD = 1;
-		viewportX = 2 / -e.width;
-		viewportY = 2 / -e.height;
-		ratioX = 1;
-		ratioY = 1;
+		viewportA = 2 / e.width;
+		viewportD = 2 / e.height;
+		viewportX = -1;
+		viewportY = -1;
+		viewportScaleX = 1;
+		viewportScaleY = 1;
+		offsetX = 0;
+		offsetY = 0;
 		interactive = new Array();
 		eventListeners = new Array();
 		shapePoint = new h2d.col.Point();
@@ -242,33 +256,40 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 			}
 		}
 
-		inline function calcRatio( scale : Float ) {
-			ratioX = (width * scale) / engine.width;
-			ratioY = (height * scale) / engine.height;
+		inline function setScale( sx : Float, sy : Float ) {
+			viewportScaleX = sx;
+			viewportScaleY = sy;
 		}
 
 		inline function calcViewport( horizontal : ScaleModeAlign, vertical : ScaleModeAlign, zoom : Float ) {
 			viewportA = (zoom * 2) / engine.width;
 			viewportD = (zoom * 2) / engine.height;
+			setScale(zoom, zoom);
 			if ( horizontal == null ) horizontal = Center;
 			switch ( horizontal ) {
 				case Left:
 					viewportX = -1;
+					offsetX = 0;
 				case Right:
 					viewportX = 1 - (width * viewportA);
+					offsetX = engine.width - width * zoom;
 				default:
 					// Simple `width * viewportA - 0.5` causes gaps between tiles
 					viewportX = Math.floor((engine.width - width * zoom) / (zoom * 2)) * viewportA - 1.;
+					offsetX = Math.floor((engine.width - width * zoom) / 2);
 			}
 
 			if ( vertical == null ) vertical = Center;
 			switch ( vertical ) {
 				case Top:
 					viewportY = -1;
+					offsetY = 0;
 				case Bottom:
 					viewportY = 1 - (height * viewportD);
+					offsetY = engine.height - height * zoom;
 				default:
 					viewportY = Math.floor((engine.height - height * zoom) / (zoom * 2)) * viewportD - 1.;
+					offsetY = Math.floor((engine.height - height * zoom) / 2);
 			}
 		}
 
@@ -282,13 +303,11 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		switch ( scaleMode ) {
 			case Resize:
 				setSceneSize(engine.width, engine.height);
-				ratioX = 1;
-				ratioY = 1;
+				setScale(1, 1);
 				zeroViewport();
 			case Stretch(_width, _height):
 				setSceneSize(_width, _height);
-				ratioX = 1;
-				ratioY = 1;
+				setScale(engine.width / _width, engine.height / _height);
 				zeroViewport();
 			case LetterBox(_width, _height, integerScale, horizontalAlign, verticalAlign):
 				setSceneSize(_width, _height);
@@ -297,15 +316,13 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 					zoom = Std.int(zoom);
 					if (zoom == 0) zoom = 1;
 				}
-				calcRatio(zoom);
 				calcViewport(horizontalAlign, verticalAlign, zoom);
 			case Fixed(_width, _height, zoom, horizontalAlign, verticalAlign):
 				setSceneSize(_width, _height);
-				calcRatio(zoom);
 				calcViewport(horizontalAlign, verticalAlign, zoom);
 			case Zoom(level):
 				setSceneSize(Math.ceil(engine.width / level), Math.ceil(engine.height / level));
-				calcRatio(level);
+				setScale(level, level);
 				zeroViewport();
 			case AutoZoom(minWidth, minHeight, integerScaling):
 				var zoom = Math.min(engine.width / minWidth, engine.height / minHeight);
@@ -314,25 +331,17 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 					if ( zoom == 0 ) zoom = 1;
 				}
 				setSceneSize(Math.ceil(engine.width / zoom), Math.ceil(engine.height / zoom));
-				calcRatio(zoom);
+				setScale(zoom, zoom);
 				zeroViewport();
 		}
 	}
 
-	inline function screenXToLocal(mx:Float) {
-		return mx * width / (window.width * ratioX * scaleX) - x - viewportX;
-	}
-
-	inline function screenYToLocal(my:Float) {
-		return my * height / (window.height * ratioY * scaleY) - y - viewportY;
-	}
-
 	function get_mouseX() {
-		return screenXToLocal(window.mouseX);
+		return interactiveCamera.screenXToCamera(window.mouseX, window.mouseY, this);
 	}
 
 	function get_mouseY() {
-		return screenYToLocal(window.mouseY);
+		return interactiveCamera.screenYToCamera(window.mouseX, window.mouseY, this);
 	}
 
 	@:dox(hide) @:noCompletion
@@ -411,12 +420,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	}
 
 	function screenToLocal( e : hxd.Event ) {
-		var x = screenXToLocal(e.relX);
-		var y = screenYToLocal(e.relY);
-		var rx = x * matA + y * matB + absX;
-		var ry = x * matC + y * matD + absY;
-		e.relX = rx;
-		e.relY = ry;
+		interactiveCamera.eventToCamera(e, this);
 	}
 
 	@:dox(hide) @:noCompletion
@@ -700,10 +704,11 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	}
 
 	override function sync( ctx : RenderContext ) {
+		var forceCamSync = posChanged;
 		if( !allocated )
 			onAdd();
-		for ( cam in cameras ) cam.sync(ctx, posChanged);
 		super.sync(ctx);
+		for ( cam in cameras ) cam.sync(ctx, forceCamSync);
 	}
 
 	override function drawRec(ctx:RenderContext)

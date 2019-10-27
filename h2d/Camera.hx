@@ -59,6 +59,7 @@ class Camera {
 	var matD : Float;
 	var absX : Float;
 	var absY : Float;
+	var invDet : Float;
 
 	public function new( anchorX : Float = 0, anchorY : Float = 0 ) {
 		this.x = 0; this.y = 0;
@@ -116,6 +117,7 @@ class Camera {
 			}
 			absX = -(x * matA + y * matC) + (scene.width * anchorX * viewportHeight) + scene.width * viewportX;
 			absY = -(x * matB + y * matD) + (scene.height * anchorY * viewportHeight) + scene.height * viewportY;
+			invDet = 1 / (matA * matD - matB * matC);
 			// TODO: Viewport
 			// TODO: Optimize?
 			posChanged = false;
@@ -150,6 +152,101 @@ class Camera {
 	public inline function setAnchor( x : Float, y : Float ) {
 		this.anchorX = x;
 		this.anchorY = y;
+	}
+
+	// Scren <-> Camera
+	/**
+		Convert screen position into a local camera position.
+		Requires Scene as a reference to viewport of `scaleMode`.
+	**/
+	public function screenXToCamera( mx : Float, my : Float, scene : Scene ) : Float {
+		return globalXToCamera((mx - scene.offsetX) / scene.viewportScaleX, (my - scene.offsetY) / scene.viewportScaleY);
+	}
+
+	/**
+		Convert screen position into a local camera position.
+		Requires Scene as a reference to viewport of `scaleMode`.
+	**/
+	public function screenYToCamera( mx : Float, my : Float, scene : Scene ) : Float {
+		return globalYToCamera((mx - scene.offsetX) / scene.viewportScaleX, (my - scene.offsetY) / scene.viewportScaleY);
+	}
+
+	public function cameraXToScreen( mx : Float, my : Float, scene : Scene ) : Float {
+		return inline cameraXToGlobal(mx, my) * scene.viewportScaleX + scene.offsetX;
+	}
+
+	public function cameraYToScreen( mx : Float, my : Float, scene : Scene ) : Float {
+		return inline cameraYToGlobal(mx, my) * scene.viewportScaleY + scene.offsetY;
+	}
+
+	// Scene <-> Camera
+	/**
+		Convert an absolute scene position into a local camera position.
+		Does not represent screen position, see `screenXToCamera` to convert position with accounting of `scaleMode`.
+	**/
+	public function globalXToCamera( mx : Float, my : Float ) : Float {
+		return ((mx - absX) * matD - (my - absY) * matC) * invDet;
+	}
+
+	/**
+		Convert an absolute scene position into a local camera position.
+		Does not represent screen position, see `screenYToCamera` to convert position with accounting of `scaleMode`.
+	**/
+	public function globalYToCamera( mx : Float, my : Float ) : Float {
+		return (-(mx - absX) * matB + (my - absY) * matA) * invDet;
+	}
+
+	/**
+		Convert local camera position into absolute scene position.
+		Does not represent screen position, see `cameraXToScreen` to convert position with accounting of `scaleMode`.
+	**/
+	public function cameraXToGlobal( mx : Float, my : Float ) : Float {
+		return mx * matA + my * matC + absX;
+	}
+
+	/**
+		Convert local camera position into absolute scene position.
+		Does not represent screen position, see `cameraYToScreen` to convert position with accounting of `scaleMode`.
+	**/
+	public function cameraYToGlobal( mx : Float, my : Float ) : Float {
+		return mx * matB + my * matD + absY;
+	}
+
+	// Point/event
+
+	public function eventToCamera( e : hxd.Event, scene : Scene ) {
+		var x = (e.relX - scene.offsetX) / scene.viewportScaleX - absX;
+		var y = (e.relY - scene.offsetY) / scene.viewportScaleY - absY;
+		e.relX = (x * matD - y * matC) * invDet;
+		e.relY = (-x * matB + y * matA) * invDet;
+	}
+
+	public function screenToCamera( pt : h2d.col.Point, scene : Scene ) {
+		var x = (pt.x - scene.offsetX) / scene.viewportScaleX - absX;
+		var y = (pt.y - scene.offsetY) / scene.viewportScaleY - absY;
+		pt.x = (x * matD - y * matC) * invDet;
+		pt.y = (-x * matB + y * matA) * invDet;
+	}
+
+	public function cameraToScreen( pt : h2d.col.Point, scene : Scene ) {
+		var x = pt.x;
+		var y = pt.y;
+		pt.x = inline cameraXToScreen(x, y, scene);
+		pt.y = inline cameraYToScreen(x, y, scene);
+	}
+
+	public function galobalToCamera( pt : h2d.col.Point ) {
+		var x = pt.x - absX;
+		var y = pt.y - absY;
+		pt.x = (x * matD - y * matC) * invDet;
+		pt.y = (-x * matB + y * matA) * invDet;
+	}
+
+	public function cameraToGlobal( pt : h2d.col.Point ) {
+		var x = pt.x;
+		var y = pt.y;
+		pt.x = inline cameraXToGlobal(x, y);
+		pt.y = inline cameraYToGlobal(x, y);
 	}
 
 	// Setters
