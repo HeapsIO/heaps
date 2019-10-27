@@ -38,6 +38,7 @@ class Slider extends h2d.Interactive {
 		super.getBoundsRec(relativeTo, out, forSize);
 		if( forSize ) addBounds(relativeTo, out, 0, 0, width, height);
 		if( tile != null ) addBounds(relativeTo, out, tile.dx, tile.dy, tile.width, tile.height);
+		if( cursorTile != null ) addBounds(relativeTo, out, cursorTile.dx, cursorTile.dy, cursorTile.width, cursorTile.height);
 	}
 
 	override function draw(ctx:RenderContext) {
