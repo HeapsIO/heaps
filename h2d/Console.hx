@@ -186,6 +186,7 @@ class Console #if !macro extends h2d.Object #end {
 	public function hide() {
 		bg.visible = false;
 		tf.text = "";
+		hintTxt.text = "";
 		tf.cursorIndex = -1;
 	}
 
