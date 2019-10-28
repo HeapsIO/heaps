@@ -197,19 +197,22 @@ class Console #if !macro extends h2d.Object #end {
 		logIndex = -1;
 	}
 
-	function getCommandSuggestion(cmd : String) {
+	function getCommandSuggestion(cmd : String) : String {
 		if (cmd == "") {
 			return "";
 		}
 
+		var closestCommand = "";
 		var commandNames = commands.keys();
 		for (command in commandNames) {
 			if (command.indexOf(cmd) == 0) {
-				return command;
+				if (closestCommand == "" || closestCommand.length > command.length) {
+					closestCommand = command;
+				}
 			}
 		}
 
-		return "";
+		return closestCommand;
 	}
 
 	function handleKey( e : hxd.Event ) {
