@@ -54,6 +54,7 @@ class Buffer {
 
 	public function dispose() {
 		Manager.get().driver.destroyBuffer(handle);
+		handle = null;
 	}
 }
 
