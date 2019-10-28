@@ -234,14 +234,20 @@ class Environment  {
 
 	public function compute() {
 
-		lut = new h3d.mat.Texture(128, 128, [Target], RGBA16F);
-		lut.setName("irradLut");
-		diffuse = new h3d.mat.Texture(diffSize, diffSize, [Cube, Target], RGBA16F);
-		diffuse.setName("irradDiffuse");
-		specular = new h3d.mat.Texture(specSize, specSize, [Cube, Target, MipMapped, ManualMipMapGen], RGBA16F);
-		specular.setName("irradSpecular");
-		specular.mipMap = Linear;
-
+		if( lut == null ) {
+			lut = new h3d.mat.Texture(128, 128, [Target], RGBA16F);
+			lut.setName("irradLut");
+		}
+		if( diffuse == null ) {
+			diffuse = new h3d.mat.Texture(diffSize, diffSize, [Cube, Target], RGBA16F);
+			diffuse.setName("irradDiffuse");
+		}
+		if( specular == null ) {
+			specular = new h3d.mat.Texture(specSize, specSize, [Cube, Target, MipMapped, ManualMipMapGen], RGBA16F);
+			specular.setName("irradSpecular");
+			specular.mipMap = Linear;
+		}
+		
 		computeIrradLut();
 		computeIrradiance();
 	}

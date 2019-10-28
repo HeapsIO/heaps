@@ -696,7 +696,8 @@ class Object implements hxd.impl.Serializable {
 	}
 
 	function emitRec( ctx : RenderContext ) {
-		if( !visible || (culled && inheritCulled) )
+
+		if( !visible || (culled && inheritCulled && !ctx.computingStatic) )
 			return;
 
 		// fallback in case the object was added during a sync() event and we somehow didn't update it
@@ -708,8 +709,9 @@ class Object implements hxd.impl.Serializable {
 			for( c in children )
 				c.posChanged = true;
 		}
-		if( !culled )
+		if( !culled || ctx.computingStatic )
 			emit(ctx);
+
 		for( c in children )
 			c.emitRec(ctx);
 	}
