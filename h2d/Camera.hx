@@ -64,6 +64,8 @@ class Camera {
 
 	/** Set to enable primitive position sync between camera and target Object. **/
 	public var follow : h2d.Object;
+	/** Syncs camera rotation to follow object rotation. **/
+	public var followRotation : Bool;
 
 	var posChanged : Bool;
 
@@ -114,6 +116,7 @@ class Camera {
 		if ( follow != null ) {
 			this.x = follow.absX;
 			this.y = follow.absY;
+			if ( followRotation ) this.rotation = -follow.rotation;
 		}
 		if ( posChanged || force ) {
 			var scene = ctx.scene;
@@ -164,6 +167,13 @@ class Camera {
 	public inline function setAnchor( x : Float, y : Float ) {
 		this.anchorX = x;
 		this.anchorY = y;
+	}
+
+	public inline function setViewport( x : Float = 0, y : Float = 0, w : Float = 1, h : Float = 1 ) {
+		this.viewportX = x;
+		this.viewportY = y;
+		this.viewportWidth = w;
+		this.viewportHeight = h;
 	}
 
 	// Scren <-> Camera
