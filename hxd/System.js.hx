@@ -102,6 +102,7 @@ class System {
 		return switch( s ) {
 		case IsWindowed: true;
 		case IsTouch: platform==Android || platform==IOS;
+		case IsMobile: platform==Android || platform==IOS;
 		default: false;
 		}
 	}
