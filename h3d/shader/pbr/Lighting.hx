@@ -19,6 +19,9 @@ class Indirect extends PropsDefinition {
 		@const var drawIndirectDiffuse : Bool;
 		@const var drawIndirectSpecular : Bool;
 		@param var skyMap : SamplerCube;
+		@param var skyThreshold : Float;
+		@param var skyScale : Float;
+		@const var gammaCorrect : Bool;
 		@param var cameraInvViewProj : Mat4;
 		@param var emissivePower : Float;
 		var calculatedUV : Vec2;
@@ -37,8 +40,11 @@ class Indirect extends PropsDefinition {
 						normal = (vec3( uvToScreen(calculatedUV) * 5. /*?*/ , 1. ) * cameraInvViewProj.mat3x4()).normalize();
 						var rotatedNormal = vec3(normal.x * c - normal.y * s, normal.x * s + normal.y * c, normal.z);
 						color = skyMap.get(rotatedNormal).rgb;
+						color.rgb *= mix(1.0, skyScale, (max( max(color.r, max(color.g, color.b)) - skyThreshold, 0) / max(0.001, (1.0 - skyThreshold))));
 					}
-					pixelColor.rgb += (color * color) * irrPower;
+					if( gammaCorrect )
+						color *= color;
+					pixelColor.rgb += color * irrPower;
 				} else
 					discard;
 			} else {

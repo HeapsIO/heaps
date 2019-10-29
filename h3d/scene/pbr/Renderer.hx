@@ -26,6 +26,7 @@ package h3d.scene.pbr;
 @:enum abstract SkyMode(String) {
 	var Hide = "Hide";
 	var Env = "Env";
+	var Specular = "Specular";
 	var Irrad = "Irrad";
 	var Background = "Background";
 }
@@ -318,11 +319,23 @@ class Renderer extends h3d.scene.Renderer {
 			pbrIndirect.skyColor = false;
 			pbrIndirect.skyMap = switch( skyMode ) {
 			case Hide: null;
-			case Env: env.env;
-			case Irrad: env.diffuse;
+			case Env: 
+				pbrIndirect.skyScale = env.scale;
+				pbrIndirect.skyThreshold = env.threshold;
+				pbrIndirect.gammaCorrect = true;
+				env.env;
+			case Specular: 
+				pbrIndirect.skyScale = 1.0;
+				pbrIndirect.gammaCorrect = false;
+				env.specular;
+			case Irrad: 
+				pbrIndirect.skyScale = 1.0;
+				pbrIndirect.gammaCorrect = false;
+				env.diffuse;
 			case Background:
 				pbrIndirect.skyColor = true;
 				pbrIndirect.skyColorValue.setColor(ctx.engine.backgroundColor);
+				pbrIndirect.gammaCorrect = true;
 				null;
 			};
 		case LightProbe:
@@ -577,6 +590,7 @@ class Renderer extends h3d.scene.Renderer {
 							<select field="sky" style="width:20px">
 								<option value="Hide">Hide</option>
 								<option value="Env">Show</option>
+								<option value="Specular">Show Specular</option>
 								<option value="Irrad">Show Irrad</option>
 								<option value="Background">Background Color</option>
 							</select>
