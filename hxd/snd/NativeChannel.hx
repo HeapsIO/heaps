@@ -108,9 +108,9 @@ class NativeChannel {
 	var snd : flash.media.Sound;
 	var channel : flash.media.SoundChannel;
 	#elseif js
-	public static var ctx : js.html.audio.AudioContext;
-	public static var destination : js.html.audio.AudioNode;
-	public static var masterGain : js.html.audio.GainNode;
+	static var ctx : js.html.audio.AudioContext;
+	static var destination : js.html.audio.AudioNode;
+	static var masterGain : js.html.audio.GainNode;
 	static function getContext() : js.html.audio.AudioContext {
 		if( ctx == null ) {
 			try {
@@ -147,7 +147,7 @@ class NativeChannel {
 	var queued : js.html.audio.AudioBufferSourceNode;
 	var time : Float; // Mandatory for proper buffer sync, otherwise produces gaps in playback due to innacurate timings.
 	var tmpBuffer : haxe.io.Float32Array;
-	public var gain : js.html.audio.GainNode;
+	var gain : js.html.audio.GainNode;
 	#elseif hlopenal
 	var channel : ALChannel;
 	#end
