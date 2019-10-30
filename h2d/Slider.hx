@@ -15,7 +15,6 @@ class Slider extends h2d.Interactive {
 		tile.dy = (height - 4) >> 1;
 
 		cursorTile = h2d.Tile.fromColor(0xCCCCCC, 5, height);
-		cursorTile.dx = -2;
 	}
 
 	function set_minValue(v) {
@@ -46,18 +45,31 @@ class Slider extends h2d.Interactive {
 		if( tile.width != Std.int(width) )
 			tile.setSize(Std.int(width), tile.height);
 		emitTile(ctx, tile);
-		var px = Math.round( (value - minValue) * (width - cursorTile.width) / (maxValue - minValue) ) - cursorTile.dx;
-		cursorTile.dx += px;
+		var px = Math.round( (value - minValue) * (width - cursorTile.width) / (maxValue - minValue) );
+		cursorTile.dx = px;
 		emitTile(ctx, cursorTile);
-		cursorTile.dx -= px;
 	}
+
+    var handleDX = 0.0;
+    inline function getValue(cursorX : Float) : Float {
+        return ((cursorX - handleDX) / (width - cursorTile.width)) * (maxValue - minValue) + minValue;
+    }
 
 	override function handleEvent(e:hxd.Event) {
 		super.handleEvent(e);
 		if( e.cancel ) return;
 		switch( e.kind ) {
 		case EPush:
-			value = (e.relX / width) * (maxValue - minValue) + minValue;
+            handleDX = e.relX - cursorTile.dx;
+
+            // If clicking the slider outside the handle, drag the handle
+            // by the center of it.
+            if (handleDX < 0 || handleDX > cursorTile.width) {
+              handleDX = cursorTile.width * 0.5;
+            }
+
+			value = getValue(e.relX);
+
 			onChange();
 			var scene = scene;
 			startDrag(function(e) {
@@ -65,7 +77,7 @@ class Slider extends h2d.Interactive {
 					scene.stopDrag();
 					return;
 				}
-				value = (e.relX / width) * (maxValue - minValue) + minValue;
+				value = getValue(e.relX);
 				onChange();
 			});
 		default:
