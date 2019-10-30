@@ -757,7 +757,7 @@ class Flow extends Object {
 			if( realMinWidth >= 0 && cw < realMinWidth ) cw = realMinWidth;
 			var endX = cw - (paddingRight + borderWidth);
 			var xmin = startX, xmax = endX;
-			var midSpace = 0;
+			var midSpace = 0, curAlign = null;
 			for( i in 0...children.length ) {
 				var p = propAt(i);
 				if( (p.isAbsolute && p.horizontalAlign == null) || !childAt(i).visible ) continue;
@@ -768,6 +768,10 @@ class Flow extends Object {
 				}
 				var px;
 				var align = p.horizontalAlign == null ? halign : p.horizontalAlign;
+				if( curAlign != align ) {
+					curAlign = align;
+					midSpace = 0;
+				}
 				switch( align ) {
 				case Right:
 					if( midSpace == 0 ) {
@@ -786,10 +790,6 @@ class Flow extends Object {
 					px = xmin;
 					xmin += p.calculatedWidth + horizontalSpacing;
 				default:
-					if( midSpace != 0 ) {
-						xmin += midSpace;
-						midSpace = 0;
-					}
 					px = xmin;
 					xmin += p.calculatedWidth + horizontalSpacing;
 				}
@@ -892,7 +892,7 @@ class Flow extends Object {
 			if( realMinHeight >= 0 && ch < realMinHeight ) ch = realMinHeight;
 			var endY : Int = ch - (paddingBottom + borderHeight);
 			var ymin = startY, ymax = endY;
-			var midSpace = 0;
+			var midSpace = 0, curAlign = null;
 			for( i in 0...children.length ) {
 				var p = propAt(i);
 				if( (p.isAbsolute && p.verticalAlign == null) || !childAt(i).visible ) continue;
@@ -903,6 +903,10 @@ class Flow extends Object {
 				}
 				var py;
 				var align = p.verticalAlign == null ? valign : p.verticalAlign;
+				if( curAlign != align ) {
+					curAlign = align;
+					midSpace = 0;
+				}
 				switch( align ) {
 				case Bottom:
 					if( midSpace == 0 ) {
@@ -921,10 +925,6 @@ class Flow extends Object {
 					py = ymin;
 					ymin += p.calculatedHeight + verticalSpacing;
 				default:
-					if( midSpace != 0 ) {
-						ymin += midSpace;
-						midSpace = 0;
-					}
 					py = ymin;
 					ymin += p.calculatedHeight + verticalSpacing;
 				}

@@ -494,13 +494,18 @@ class GlslOut {
 			addValue(index, tabs);
 			add("]");
 		case TArrayDecl(el):
-			add("[");
+			switch( e.t ) {
+			case TArray(t,_): addType(t);
+			default: throw "assert";
+			}
+			add("["+el.length+"]");
+			add("(");
 			var first = true;
 			for( e in el ) {
 				if( first ) first = false else add(", ");
 				addValue(e,tabs);
 			}
-			add("]");
+			add(")");
 		case TMeta(_, _, e):
 			addExpr(e, tabs);
 		}

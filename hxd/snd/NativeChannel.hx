@@ -109,6 +109,8 @@ class NativeChannel {
 	var channel : flash.media.SoundChannel;
 	#elseif js
 	static var ctx : js.html.audio.AudioContext;
+	static var destination : js.html.audio.AudioNode;
+	static var masterGain : js.html.audio.GainNode;
 	static function getContext() : js.html.audio.AudioContext {
 		if( ctx == null ) {
 			try {
@@ -125,6 +127,10 @@ class NativeChannel {
 			if( ctx != null ) {
 				if( ctx.state == SUSPENDED ) waitForPageInput();
 				ctx.addEventListener("statechange", function(_) if( ctx.state == SUSPENDED ) waitForPageInput());
+				masterGain = ctx.createGain();
+				masterGain.connect(ctx.destination);
+
+				destination = masterGain;
 			}
 		}
 		return ctx;
@@ -133,6 +139,7 @@ class NativeChannel {
 	// bufferSamples is constant and never change at runtime, so it's safe to use general pool.
 	static var pool : Array<js.html.audio.AudioBuffer> = new Array();
 	static var bufferPool : Array<haxe.io.Float32Array> = new Array();
+	static var gainPool : Array<js.html.audio.GainNode> = new Array();
 	
 	var front : js.html.audio.AudioBuffer;
 	var back : js.html.audio.AudioBuffer;
@@ -140,6 +147,7 @@ class NativeChannel {
 	var queued : js.html.audio.AudioBufferSourceNode;
 	var time : Float; // Mandatory for proper buffer sync, otherwise produces gaps in playback due to innacurate timings.
 	var tmpBuffer : haxe.io.Float32Array;
+	var gain : js.html.audio.GainNode;
 	#elseif hlopenal
 	var channel : ALChannel;
 	#end
@@ -163,17 +171,21 @@ class NativeChannel {
 		if ( bufferPool.length > 0 ) tmpBuffer = bufferPool.pop();
 		else tmpBuffer = new haxe.io.Float32Array(bufferSamples * 2);
 		
+		if ( gainPool.length != 0 ) gain = gainPool.pop();
+		else gain = ctx.createGain();
+		gain.connect(destination);
+
 		fill(front);
 		fill(back);
 		
 		current = ctx.createBufferSource();
 		current.buffer = front;
 		current.addEventListener("ended", swap);
-		current.connect(ctx.destination);
+		current.connect(gain);
 		queued = ctx.createBufferSource();
 		queued.buffer = back;
 		queued.addEventListener("ended", swap);
-		queued.connect(ctx.destination);
+		queued.connect(gain);
 		
 		var currTime : Float = ctx.currentTime;
 		current.start(currTime);
@@ -234,7 +246,7 @@ class NativeChannel {
 		queued = ctx.createBufferSource();
 		queued.buffer = tmp;
 		queued.addEventListener("ended", swap);
-		queued.connect(ctx.destination);
+		queued.connect(gain);
 		
 		time += front.duration;
 		queued.start(time);
@@ -268,13 +280,18 @@ class NativeChannel {
 		if ( front != null ) {
 			current.disconnect();
 			current.removeEventListener("ended", swap);
+			current.stop();
 			current = null;
 			
 			queued.removeEventListener("ended", swap);
 			queued.disconnect();
 			queued.stop();
 			queued = null;
-			
+
+			gainPool.push(gain);
+			gain.disconnect();
+			gain = null;
+
 			pool.push(front);
 			front = null;
 			pool.push(back);

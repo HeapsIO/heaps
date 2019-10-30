@@ -535,6 +535,9 @@ class DirectXDriver extends h3d.impl.Driver {
 		desc.access = CpuRead | CpuWrite;
 		desc.usage = Staging;
 		desc.format = getTextureFormat(tex);
+		
+		if( hasDeviceError ) throw "Can't capture if device disposed";
+		
 		var tmp = dx.Driver.createTexture2d(desc);
 		if( tmp == null )
 			throw "Capture failed: can't create tmp texture";
@@ -554,6 +557,9 @@ class DirectXDriver extends h3d.impl.Driver {
 		var pitch = 0;
 		var bpp = hxd.Pixels.calcStride(1, tex.format);
 		var ptr = tmp.map(0, Read, true, pitch);
+		
+		if( hasDeviceError ) throw "Device was disposed during capturePixels";
+		
 		if( pitch == desc.width * bpp )
 			@:privateAccess pixels.bytes.b.blit(0, ptr, 0, desc.width * desc.height * bpp);
 		else {
