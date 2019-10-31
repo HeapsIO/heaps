@@ -50,23 +50,23 @@ class Slider extends h2d.Interactive {
 		emitTile(ctx, cursorTile);
 	}
 
-    var handleDX = 0.0;
-    inline function getValue(cursorX : Float) : Float {
-        return ((cursorX - handleDX) / (width - cursorTile.width)) * (maxValue - minValue) + minValue;
-    }
+	var handleDX = 0.0;
+	inline function getValue(cursorX : Float) : Float {
+		return ((cursorX - handleDX) / (width - cursorTile.width)) * (maxValue - minValue) + minValue;
+	}
 
 	override function handleEvent(e:hxd.Event) {
 		super.handleEvent(e);
 		if( e.cancel ) return;
 		switch( e.kind ) {
 		case EPush:
-            handleDX = e.relX - cursorTile.dx;
+		   handleDX = e.relX - cursorTile.dx;
 
-            // If clicking the slider outside the handle, drag the handle
-            // by the center of it.
-            if (handleDX < 0 || handleDX > cursorTile.width) {
-              handleDX = cursorTile.width * 0.5;
-            }
+			// If clicking the slider outside the handle, drag the handle
+			// by the center of it.
+			if (handleDX < 0 || handleDX > cursorTile.width) {
+			  handleDX = cursorTile.width * 0.5;
+			}
 
 			value = getValue(e.relX);
 
