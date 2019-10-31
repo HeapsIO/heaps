@@ -1,5 +1,5 @@
 package hxd.res;
-
+#if js
 import hxd.PixelFormat;
 import js.html.ImageData;
 import h3d.mat.Texture;
@@ -400,3 +400,4 @@ class BasisWorker {
     }";
 }
 
+#end
