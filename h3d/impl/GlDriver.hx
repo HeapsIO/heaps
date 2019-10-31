@@ -799,7 +799,7 @@ class GlDriver extends Driver {
 		case SRGB, SRGB_ALPHA: hasFeature(SRGBTextures);
 		case R8, RG8, RGB8, R16F, RG16F, RGB16F, R32F, RG32F, RGB32F, RG11B10UF, RGB10A2: #if js glES >= 3 #else true #end;
 		case S3TC(n): n <= maxCompressedTexturesSupport;
-		case ASTC(_), ETC(_), S3TC(_), PVRTC(_): #if js true #else false #end;
+		case ASTC(_), ETC(_), PVRTC(_): #if js true #else false #end;
 		default: false;
 		}
 	}
