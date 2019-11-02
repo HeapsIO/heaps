@@ -16,6 +16,7 @@ class SourceHandle {
 
 	public var driver : Driver;
 	public var lowPass : BiquadFilterNode;
+	public var panner : PannerNode;
 	public var gain : GainNode;
 	public var destination : AudioNode;
 	public var buffers : Array<BufferPlayback>;
@@ -30,16 +31,19 @@ class SourceHandle {
 	}
 
 	public function updateDestination() {
-		if (lowPass != null) {
+		destination = gain;
+		if ( lowPass != null ) {
+			lowPass.connect(destination);
 			destination = lowPass;
-			lowPass.connect(gain);
-		} else {
-			destination = gain;
+		}
+		if ( panner != null ) {
+			panner.connect(destination);
+			destination = panner;
 		}
 		gain.connect(driver.destination);
 		for (b in buffers) {
 			if ( b.node != null ) {
-				b.node.connect(destination);
+				b.restart(this);
 			}
 		}
 	}
@@ -58,7 +62,7 @@ class BufferPlayback {
 
 	public var buffer : BufferHandle;
 	public var node : AudioBufferSourceNode;
-	public var offset : Float;
+	public var offset : Float; // Buffer offset. Modified when applying effects.
 	public var dirty : Bool; // Playback was started - node no longer usable.
 	public var consumed : Bool; // Node was played completely (ended event fired)
 	public var starts : Float;
@@ -68,6 +72,9 @@ class BufferPlayback {
 	
 	static inline var FADE_SAMPLES = 10; // Click prevent at the start.
 
+	var lastSamples:Int;
+	var lastTime:Float;
+
 	public function new()
 	{
 
@@ -75,8 +82,10 @@ class BufferPlayback {
 
 	function get_currentSample ( ):Int {
 		if ( consumed ) return buffer.samples;
-		if ( node == null || !dirty ) return 0;
-		return Math.floor((node.context.currentTime - starts) / ((buffer.inst.duration - offset) / node.playbackRate.value) * buffer.samples);
+		if ( node == null || !dirty || node.context.currentTime < lastTime ) return 0;
+		lastSamples += Math.floor((node.context.currentTime - lastTime) * buffer.inst.sampleRate * node.playbackRate.value);
+		lastTime = node.context.currentTime;
+		return lastSamples;
 	}
 
 	public function set(buf : BufferHandle, grainOffset : Float) {
@@ -115,21 +124,37 @@ class BufferPlayback {
 		node.connect(source.destination);
 		node.playbackRate.value = source.pitch;
 		node.start(time, offset);
+		lastSamples = 0;
+		lastTime = time;
 		starts = time;
 		return ends = time + (buffer.inst.duration - offset) / source.pitch;
 	}
 
 	public function readjust( time : Float, source : SourceHandle ) {
 		if (consumed || node == null) return ends;
-		node.playbackRate.value = source.pitch;
-		if (dirty) {
-			var elapsed = node.context.currentTime - starts;
-			return ends = starts + elapsed + (buffer.inst.duration - offset - elapsed) / source.pitch;
+		var ctx = source.driver.ctx;
+		var shiftTime = ctx.currentTime;// + 16 / buffer.inst.sampleRate;
+		
+		node.playbackRate.setValueAtTime(source.pitch, shiftTime);
+		var elapsed = shiftTime - starts;
+		if ( elapsed < 0 ) {
+			// Queued node that haven't started yet: Requeue.
+			return start(ctx, source, time == 0 ? shiftTime : time);
 		}
-		starts = time == 0 ? node.context.currentTime : time;
-		if (source.playing)
-			node.start(starts, offset);
+		// Stretch start position relative to new pitch.
+		starts = shiftTime - (elapsed / source.pitch);
 		return ends = starts + (buffer.inst.duration - offset) / source.pitch;
+	}
+
+	public function restart( source : SourceHandle ) {
+		if ( consumed || node == null ) return;
+		var ctx = hxd.snd.webaudio.Context.get();
+		if ( ctx.currentTime > starts ) {
+			offset += (ctx.currentTime - starts) * source.pitch;
+			start(ctx, source, ctx.currentTime);
+		} else {
+			start(ctx, source, starts);
+		}
 	}
 
 	public function stop( immediate : Bool = true ) {
