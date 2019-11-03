@@ -47,6 +47,12 @@ class Window {
 
 		this.canvas = canvas;
 		this.propagateKeyEvents = globalEvents;
+
+		var propagate = canvas.getAttribute("propagateKeyEvents");
+		if (propagate != null) {
+			this.propagateKeyEvents = propagate != "0" && propagate != "false";
+		}
+
 		focused = globalEvents;
 		element = globalEvents ? js.Browser.window : canvas;
 		canvasPos = canvas.getBoundingClientRect();
@@ -301,6 +307,7 @@ class Window {
 					33, 34, // Page up/down
 					35, 36, // Home/end
 					8, // Backspace
+					9, // Tab
 					16, // Shift
 					17 : // Ctrl
 						e.preventDefault();
