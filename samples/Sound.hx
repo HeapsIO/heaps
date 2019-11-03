@@ -27,6 +27,7 @@ class Sound extends SampleApp {
 
 		var res = if( hxd.res.Sound.supportedFormat(Mp3) || hxd.res.Sound.supportedFormat(OggVorbis) ) hxd.Res.music_loop else null;
 		var pitch = new hxd.snd.effect.Pitch();
+		var lowpass = new hxd.snd.effect.LowPass();
 		if( res != null ) {
 			trace("Playing "+res);
 			music = res.play(true);
@@ -34,6 +35,9 @@ class Sound extends SampleApp {
 			music.onEnd = function() trace("LOOP");
 			// Use effect processing on the channel
 			music.addEffect(pitch);
+			#if hlopenal
+			music.addEffect(lowpass);
+			#end
 		}
 
 		slider = new h2d.Slider(300, 10);
@@ -67,8 +71,9 @@ class Sound extends SampleApp {
 			tf.textAlign = Right;
 			f.addChild(slider);
 			f.addChild(musicPosition);
-			#if hlopenal
 			addSlider("Pitch val", function() { return pitch.value; }, function(v) { pitch.value = v; }, 0, 2);
+			#if hlopenal
+			addSlider("Lowpass gain", function() { return lowpass.gainHF; }, function(v) { lowpass.gainHF = v; }, 0, 1);
 			#end
 		}
 	}
