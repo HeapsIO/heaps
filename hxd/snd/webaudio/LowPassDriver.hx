@@ -26,11 +26,13 @@ class LowPassDriver extends EffectDriver<LowPass> {
 		return node;
 	}
 
+	override public function bind(e:LowPass, source: SourceHandle) : Void {
+		source.lowPass = get(source.driver.ctx);
+		source.updateDestination();
+		apply(e, source);
+	}
+
 	override function apply(e : LowPass, source : SourceHandle) : Void {
-		if ( source.lowPass == null ) {
-			source.lowPass = get(source.driver.ctx);
-			source.updateDestination();
-		}
 		var min = 40;
 		var max = source.driver.ctx.sampleRate / 2;
 		var octaves = js.lib.Math.log(max / min) / js.lib.Math.LN2;

@@ -57,7 +57,9 @@ class Driver implements hxd.snd.Driver {
 	}
 
 	public function setListenerParams (position : h3d.Vector, direction : h3d.Vector, up : h3d.Vector, ?velocity : h3d.Vector) : Void {
-		// Not supported
+		ctx.listener.setPosition(-position.x, position.y, position.z);
+		ctx.listener.setOrientation(-direction.x, direction.y, direction.z, -up.x, up.y, up.z);
+		// TODO: Velocity
 	}
 
 	public function createSource () : SourceHandle {
@@ -193,7 +195,7 @@ class Driver implements hxd.snd.Driver {
 		if ( source.playing ) {
 			if ( source.buffers.length != 1 ) {
 				var t = source.buffers[source.buffers.length - 2].ends;
-				buf.start(ctx, source, (js.Syntax.code("isFinite({0})", t):Bool) ? t : ctx.currentTime);
+				buf.start(ctx, source, (js.Syntax.code("isFinite({0})", t):Bool) ? hxd.Math.max(t, ctx.currentTime) : ctx.currentTime);
 			} else {
 				buf.start(ctx, source, ctx.currentTime);
 			}
@@ -245,7 +247,7 @@ class Driver implements hxd.snd.Driver {
 	public function getEffectDriver(type : String) : hxd.snd.Driver.EffectDriver<Dynamic> {
 		return switch(type) {
 			case "pitch"          : new PitchDriver();
-			// case "spatialization" : new SpatializationDriver(this);
+			case "spatialization" : new SpatializationDriver();
 			case "lowpass"        : new LowPassDriver();
 			// case "reverb"         : new ReverbDriver(this);
 			default               : new hxd.snd.Driver.EffectDriver<Dynamic>();
