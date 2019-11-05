@@ -21,19 +21,26 @@ class Sound extends SampleApp {
 	var music : hxd.snd.Channel;
 	var musicPosition : h2d.Text;
 	var beeper:Bool = true;
+	var pitchFilter : hxd.snd.effect.Pitch;
+	var pitchShift:Bool = false;
+	var pitchSlider : h2d.Slider;
 
 	override function init() {
 		super.init();
 
 		var res = if( hxd.res.Sound.supportedFormat(Mp3) || hxd.res.Sound.supportedFormat(OggVorbis) ) hxd.Res.music_loop else null;
-		var pitch = new hxd.snd.effect.Pitch();
+		pitchFilter = new hxd.snd.effect.Pitch();
+		var lowpass = new hxd.snd.effect.LowPass();
+		var spatial = new hxd.snd.effect.Spatialization();
 		if( res != null ) {
 			trace("Playing "+res);
 			music = res.play(true);
 			//music.queueSound(...);
 			music.onEnd = function() trace("LOOP");
 			// Use effect processing on the channel
-			music.addEffect(pitch);
+			music.addEffect(pitchFilter);
+			music.addEffect(lowpass);
+			music.addEffect(spatial);
 		}
 
 		slider = new h2d.Slider(300, 10);
@@ -67,9 +74,18 @@ class Sound extends SampleApp {
 			tf.textAlign = Right;
 			f.addChild(slider);
 			f.addChild(musicPosition);
-			#if hlopenal
-			addSlider("Pitch val", function() { return pitch.value; }, function(v) { pitch.value = v; }, 0, 2);
-			#end
+			pitchSlider = addSlider("Pitch val", function() { return pitchFilter.value; }, function(v) { pitchFilter.value = v; }, 0, 2);
+			addCheck("Pitch shift", function() { return pitchShift; }, function (v) { pitchShift = v; });
+			addSlider("Lowpass gain", function() { return lowpass.gainHF; }, function(v) { lowpass.gainHF = v; }, 0, 1);
+			addText("Spatialization");
+			addSlider("X", function() { return spatial.position.x; }, function(v) { spatial.position.x = v; }, -10, 10);
+			addSlider("Y", function() { return spatial.position.y; }, function(v) { spatial.position.y = v; }, -10, 10);
+			addSlider("Z", function() { return spatial.position.z; }, function(v) { spatial.position.z = v; }, -10, 10);
+			addText("Spatialization Listener");
+			var listener = hxd.snd.Manager.get().listener;
+			addSlider("X", function() { return listener.position.x; }, function (v) { listener.position.x = v; }, -10, 10);
+			addSlider("Y", function() { return listener.position.y; }, function (v) { listener.position.y = v; }, -10, 10);
+			addSlider("Z", function() { return listener.position.z; }, function (v) { listener.position.z = v; }, -10, 10);
 		}
 	}
 
@@ -82,6 +98,12 @@ class Sound extends SampleApp {
 				engine.backgroundColor = 0xFFFF0000;
 			} else
 				engine.backgroundColor = 0;
+		}
+
+		if ( pitchShift ) {
+			pitchFilter.value = Math.max(Math.cos(hxd.Timer.lastTimeStamp / 4) + 1, 0.1);
+			pitchSlider.value = pitchFilter.value;
+			pitchSlider.onChange();
 		}
 
 		if( music != null ) {
