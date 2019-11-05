@@ -37,7 +37,7 @@ class Slider extends h2d.Interactive {
 		super.getBoundsRec(relativeTo, out, forSize);
 		if( forSize ) addBounds(relativeTo, out, 0, 0, width, height);
 		if( tile != null ) addBounds(relativeTo, out, tile.dx, tile.dy, tile.width, tile.height);
-		if( cursorTile != null ) addBounds(relativeTo, out, cursorTile.dx, cursorTile.dy, cursorTile.width, cursorTile.height);
+		if( cursorTile != null ) addBounds(relativeTo, out, getDx(), cursorTile.dy, cursorTile.width, cursorTile.height);
 	}
 
 	override function draw(ctx:RenderContext) {
@@ -45,12 +45,17 @@ class Slider extends h2d.Interactive {
 		if( tile.width != Std.int(width) )
 			tile.setSize(Std.int(width), tile.height);
 		emitTile(ctx, tile);
-		var px = Math.round( (value - minValue) * (width - cursorTile.width) / (maxValue - minValue) );
-		cursorTile.dx = px;
+		var px = getDx();
+		cursorTile.dx += px;
 		emitTile(ctx, cursorTile);
+		cursorTile.dx -= px;
 	}
 
 	var handleDX = 0.0;
+	inline function getDx() {
+		return Math.round( (value - minValue) * (width - cursorTile.width) / (maxValue - minValue) );
+	}
+
 	inline function getValue(cursorX : Float) : Float {
 		return ((cursorX - handleDX) / (width - cursorTile.width)) * (maxValue - minValue) + minValue;
 	}
@@ -60,7 +65,8 @@ class Slider extends h2d.Interactive {
 		if( e.cancel ) return;
 		switch( e.kind ) {
 		case EPush:
-		   handleDX = e.relX - cursorTile.dx;
+			var dx = getDx();
+		   	handleDX = e.relX - dx;
 
 			// If clicking the slider outside the handle, drag the handle
 			// by the center of it.
