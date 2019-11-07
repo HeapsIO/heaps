@@ -61,6 +61,7 @@ class Object #if (domkit && !domkit_heaps) implements domkit.Model<h2d.Object> #
 
 	/**
 		The amount of transparency of the Object (default 1.0)
+		If there is a filter active, dictates filter transparency as well.
 	**/
 	public var alpha : Float = 1.;
 
