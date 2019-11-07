@@ -99,7 +99,7 @@ class HtmlText extends Text {
 		calcHeight = y + font.lineHeight;
 		calcSizeHeight = y + (font.baseLine > 0 ? font.baseLine : font.lineHeight);
 		calcDone = true;
-		if ( rebuild ) glyphsInvalid = false;
+		if ( rebuild ) needsRebuild = false;
 	}
 
 	function buildSizes( e : Xml, font : Font, sizes : Array<Float> ) {

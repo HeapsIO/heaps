@@ -23,7 +23,9 @@ class Text extends Drawable {
 	public var lineSpacing(default,set) : Float;
 
 	var glyphs : TileGroup;
-	var glyphsInvalid : Bool;
+	var needsRebuild : Bool;
+	var currentText : String;
+	var textChanged : Bool;
 
 	var calcDone:Bool;
 	var calcXMin:Float;
@@ -43,6 +45,7 @@ class Text extends Drawable {
 		letterSpacing = 1;
 		lineSpacing = 0;
 		text = "";
+		currentText = "";
 		textColor = 0xFFFFFF;
 	}
 
@@ -104,9 +107,19 @@ class Text extends Drawable {
 		rebuild();
 	}
 
+	inline function checkText() {
+		if ( textChanged && text != currentText ) {
+			textChanged = false;
+			currentText = text;
+			calcDone = false;
+			needsRebuild = true;
+		}
+	}
+
 	override function sync(ctx:RenderContext) {
 		super.sync(ctx);
-		if ( glyphsInvalid && text != null && font != null ) initGlyphs(text);
+		checkText();
+		if ( needsRebuild ) initGlyphs(currentText);
 	}
 
 	override function draw(ctx:RenderContext) {
@@ -114,7 +127,8 @@ class Text extends Drawable {
 			emitTile(ctx, h2d.Tile.fromColor(0xFF00FF, 16, 16));
 			return;
 		}
-		if ( glyphsInvalid && text != null && font != null ) initGlyphs(text);
+		checkText();
+		if ( needsRebuild ) initGlyphs(currentText);
 
 		if( dropShadow != null ) {
 			var oldX = absX, oldY = absY;
@@ -138,13 +152,14 @@ class Text extends Drawable {
 		var t = t == null ? "null" : t;
 		if( t == this.text ) return t;
 		this.text = t;
-		rebuild();
+		textChanged = true;
+		onContentChanged();
 		return t;
 	}
 
 	function rebuild() {
 		calcDone = false;
-		glyphsInvalid = true;
+		needsRebuild = true;
 		onContentChanged();
 	}
 
@@ -280,11 +295,12 @@ class Text extends Drawable {
 		calcHeight = y + font.lineHeight;
 		calcSizeHeight = y + (font.baseLine > 0 ? font.baseLine : font.lineHeight);
 		calcDone = true;
-		if ( rebuild ) glyphsInvalid = false;
+		if ( rebuild ) needsRebuild = false;
 	}
 
 	inline function updateSize() {
-		if( !calcDone ) initGlyphs(text, false);
+		checkText();
+		if ( !calcDone ) rebuild();
 	}
 
 	function get_textHeight() {
