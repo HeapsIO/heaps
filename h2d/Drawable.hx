@@ -8,7 +8,6 @@ class Drawable extends Object {
 
 	/**
 		The color multiplier for the object. Can be used to adjust individually each of the four channels R,G,B,A (default [1,1,1,1])
-		Alpha channel can be used to manipulate object transparency but leave transparency of active filter intact.
 	**/
 	public var color(default,default) : h3d.Vector;
 

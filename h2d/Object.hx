@@ -61,12 +61,12 @@ class Object #if (domkit && !domkit_heaps) implements domkit.Model<h2d.Object> #
 
 	/**
 		The amount of transparency of the Object (default 1.0)
-		If there is a filter active, dictates filter transparency as well.
 	**/
 	public var alpha : Float = 1.;
 
 	/**
 		The post process filter for this object.
+		When set, `alpha` value affects both filter and object transparency (use `Drawable.color.a` to set transparency only for the object).
 	**/
 	public var filter(default,set) : h2d.filter.Filter;
 
