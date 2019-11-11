@@ -37,7 +37,7 @@ class Slider extends h2d.Interactive {
 		super.getBoundsRec(relativeTo, out, forSize);
 		if( forSize ) addBounds(relativeTo, out, 0, 0, width, height);
 		if( tile != null ) addBounds(relativeTo, out, tile.dx, tile.dy, tile.width, tile.height);
-		if( cursorTile != null ) addBounds(relativeTo, out, getDx(), cursorTile.dy, cursorTile.width, cursorTile.height);
+		if( cursorTile != null ) addBounds(relativeTo, out, cursorTile.dx + getDx(), cursorTile.dy, cursorTile.width, cursorTile.height);
 	}
 
 	override function draw(ctx:RenderContext) {
@@ -70,7 +70,7 @@ class Slider extends h2d.Interactive {
 
 			// If clicking the slider outside the handle, drag the handle
 			// by the center of it.
-			if (handleDX < 0 || handleDX > cursorTile.width) {
+			if (handleDX - cursorTile.dx < 0 || handleDX - cursorTile.dx > cursorTile.width) {
 			  handleDX = cursorTile.width * 0.5;
 			}
 
