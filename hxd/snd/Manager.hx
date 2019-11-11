@@ -91,6 +91,7 @@ class Manager {
 
 	var soundBufferCount  : Int;
 	var soundBufferMap    : Map<String, Buffer>;
+	var soundBufferKeys	  : Array<String>;
 	var freeStreamBuffers : Array<Buffer>;
 	var effectGC          : Array<Effect>;
 	var hasMasterVolume   : Bool;
@@ -101,6 +102,8 @@ class Manager {
 		try {
 			#if usesys
 			driver = new haxe.AudioTypes.SoundDriver();
+			#elseif (js && !useal)
+			driver = new hxd.snd.webaudio.Driver();
 			#else
 			driver = new hxd.snd.openal.Driver();
 			#end
@@ -114,6 +117,7 @@ class Manager {
 		masterChannelGroup = new ChannelGroup("master");
 		listener           = new Listener();
 		soundBufferMap     = new Map();
+		soundBufferKeys	   = [];
 		freeStreamBuffers  = [];
 		effectGC           = [];
 		soundBufferCount   = 0;
@@ -187,10 +191,15 @@ class Manager {
 	}
 
 	public function cleanCache() {
-		for (k in soundBufferMap.keys()) {
+		var i = 0;
+		while (i < soundBufferKeys.length) {
+			var k = soundBufferKeys[i];
 			var b = soundBufferMap.get(k);
+			i++;
 			if (b.refs > 0) continue;
 			soundBufferMap.remove(k);
+			soundBufferKeys.remove(k);
+			i--;
 			b.dispose();
 			--soundBufferCount;
 		}
@@ -209,6 +218,7 @@ class Manager {
 
 		sources           = null;
 		soundBufferMap    = null;
+		soundBufferKeys   = null;
 		freeStreamBuffers = null;
 		effectGC          = null;
 
@@ -541,13 +551,17 @@ class Manager {
 		// sound buffer cache GC
 		// --------------------------------------------------------------------
 
-		// TODO : avoid alloc from map.keys()
 		if (soundBufferCount >= SOUND_BUFFER_CACHE_SIZE) {
 			var now = haxe.Timer.stamp();
-			for (k in soundBufferMap.keys()) {
+			var i = 0;
+			while (i < soundBufferKeys.length) {
+				var k = soundBufferKeys[i];
 				var b = soundBufferMap.get(k);
+				i++;
 				if (b.refs > 0 || b.lastStop + 60.0 > now) continue;
 				soundBufferMap.remove(k);
+				soundBufferKeys.remove(k);
+				i--;
 				b.dispose();
 				--soundBufferCount;
 			}
@@ -662,8 +676,9 @@ class Manager {
 	var targetChannels : Int;
 
 	function checkTargetFormat(dat : hxd.snd.Data, forceMono = false) {
+		
 		targetRate = dat.samplingRate;
-		#if (!usesys && !hlopenal)
+		#if (!usesys && !hlopenal && (!js || useal))
 		// perform resampling to nativechannel frequency
 		targetRate = hxd.snd.openal.Emulator.NATIVE_FREQ;
 		#end
@@ -688,6 +703,7 @@ class Manager {
 		if (mono && data.channels != 1) key += "mono";
 		var b = soundBufferMap.get(key);
 		if (b == null || b.start != start || b.end != end) {
+			if (b == null) soundBufferKeys.push(key);
 			b = new Buffer(driver);
 			b.isStream = false;
 			b.isEnd = true;
