@@ -147,7 +147,7 @@ class Texture {
 		Calling this will make this texture not considered for auto disposal.
 	**/
 	public function preventAutoDispose() {
-		lastFrame = 0x7FFFFFFF;
+		lastFrame = PREVENT_AUTO_DISPOSE;
 	}
 
 	/**
