@@ -760,7 +760,21 @@ class Flow extends Object {
 			var midSpace = 0, curAlign = null;
 			for( i in 0...children.length ) {
 				var p = propAt(i);
-				if( (p.isAbsolute && p.horizontalAlign == null) || !childAt(i).visible ) continue;
+				var c = childAt(i);
+				if( !c.visible ) continue;
+				if( p.isAbsolute ) {
+					switch( p.horizontalAlign ) {
+					case null:
+					case Right:
+						c.x = endX - p.calculatedWidth + p.offsetX;
+					case Left:
+						c.x = startX + p.offsetX;
+					case Middle:
+						c.x = startX + Std.int((startX - endX - p.calculatedWidth) * 0.5) + p.offsetX;
+					default:
+					}
+					continue;
+				}
 				if( p.isBreak ) {
 					xmin = startX;
 					xmax = endX;
@@ -793,7 +807,7 @@ class Flow extends Object {
 					px = xmin;
 					xmin += p.calculatedWidth + horizontalSpacing;
 				}
-				childAt(i).x = px + p.offsetX + p.paddingLeft;
+				c.x = px + p.offsetX + p.paddingLeft;
 				if( p.isAbsolute ) xmin = px;
 			}
 
@@ -895,7 +909,22 @@ class Flow extends Object {
 			var midSpace = 0, curAlign = null;
 			for( i in 0...children.length ) {
 				var p = propAt(i);
-				if( (p.isAbsolute && p.verticalAlign == null) || !childAt(i).visible ) continue;
+				var c = childAt(i);
+				if( !c.visible )
+					continue;
+				if( p.isAbsolute ) {
+					switch( p.verticalAlign ) {
+					case null:
+					case Bottom:
+						c.y = endY - p.calculatedHeight + p.offsetY;
+					case Top:
+						c.y = startY + p.offsetY;
+					case Middle:
+						c.y = startY + Std.int((startY - endY - p.calculatedHeight) * 0.5) + p.offsetY;
+					default:
+					}
+					continue;
+				}
 				if( p.isBreak ) {
 					ymin = startY;
 					ymax = endY;
@@ -928,8 +957,7 @@ class Flow extends Object {
 					py = ymin;
 					ymin += p.calculatedHeight + verticalSpacing;
 				}
-				childAt(i).y = py + p.offsetY + p.paddingTop;
-				if( p.isAbsolute ) ymin = py;
+				c.y = py + p.offsetY + p.paddingTop;
 			}
 		case Stack:
 			var halign = horizontalAlign == null ? Left : horizontalAlign;
