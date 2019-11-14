@@ -929,7 +929,7 @@ class Flow extends Object {
 					ymin += p.calculatedHeight + verticalSpacing;
 				}
 				childAt(i).y = py + p.offsetY + p.paddingTop;
-				if( p.isAbsolute ) py = ymin;
+				if( p.isAbsolute ) ymin = py;
 			}
 		case Stack:
 			var halign = horizontalAlign == null ? Left : horizontalAlign;
