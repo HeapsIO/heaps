@@ -159,7 +159,7 @@ class MacroParser {
 					qualifiers : [],
 				}
 			}]);
-		case EFunction(name, f) if( name != null && f.expr != null ):
+		case EFunction(FNamed(name), f) if( name != null && f.expr != null ):
 			EFunction({
 				name : name,
 				ret : f.ret == null ? null : (switch( f.ret ) {
