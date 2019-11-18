@@ -907,7 +907,7 @@ class GlDriver extends Driver {
 
 		if( t.flags.has(Cube) ) {
 			for( i in 0...6 ) {
-				gl.texImage2D(CUBE_FACES[i], 0, tt.internalFmt, tt.width, tt.height, 0, getChannels(tt), tt.pixelFmt, null);
+					gl.texImage2D(CUBE_FACES[i], 0, tt.internalFmt, tt.width, tt.height, 0, getChannels(tt), tt.pixelFmt, null);				
 				if( checkError() ) break;
 			}
 		} else if( t.flags.has(IsArray) ) {
@@ -915,7 +915,7 @@ class GlDriver extends Driver {
 			checkError();
 		} else {
 			#if js
-			if( !t.format.match(S3TC(_)) )
+			if( !t.format.match(S3TC(_)) && !t.format.match(ETC(_)) && !t.format.match(ASTC(_)) && !t.format.match(PVRTC(_))) 
 			#end
 			gl.texImage2D(bind, 0, tt.internalFmt, tt.width, tt.height, 0, getChannels(tt), tt.pixelFmt, null);
 			checkError();
@@ -1555,7 +1555,7 @@ class GlDriver extends Driver {
 	}
 
 	#if js
-	function checkTextureSupport():hxd.PixelFormat {
+	public function checkTextureSupport():hxd.PixelFormat {
 		var astcSupported = gl.getExtension('WEBGL_compressed_texture_astc') != null;
 		var dxtSupported = gl.getExtension('WEBGL_compressed_texture_s3tc') != null;
 		var pvrtcSupported = gl.getExtension('WEBGL_compressed_texture_pvrtc') != null

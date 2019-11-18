@@ -38,7 +38,7 @@ class BasisTextureLoader {
 		final extETC1 = context.getExtension('WEBGL_compressed_texture_etc1');
 		final extDXT = context.getExtension('WEBGL_compressed_texture_s3tc');
 		final extPVRTC = context.getExtension('WEBGL_compressed_texture_pvrtc') != null ? context.getExtension('WEBGL_compressed_texture_pvrtc') : context.getExtension('WEBKIT_WEBGL_compressed_texture_pvrtc');
-		
+
 		_workerConfig.astcSupported = extASTC != null;
 		_workerConfig.etc1Supported = extETC1 != null;
 		_workerConfig.dxtSupported = extDXT != null;
@@ -281,7 +281,6 @@ class BasisWorker {
                                 buffers.push( mipmaps[ i ].data.buffer );
 
                             }
-                            console.log('transcode', buffers.length);
                             self.postMessage( { type: 'transcode', id: message.id, width, height, hasAlpha, mipmaps, format }, buffers );
 
                         } catch ( error ) {
@@ -399,5 +398,4 @@ class BasisWorker {
 
     }";
 }
-
 #end

@@ -321,6 +321,9 @@ class Pixels {
 			}
 
 		case [S3TC(a),S3TC(b)] if( a == b ):
+		case [ASTC(a),ASTC(b)] if( a == b ):
+		case [ETC(a),ETC(b)] if( a == b ):
+		case [PVRTC(a),PVRTC(b)] if( a == b ):
 			// nothing
 
 		#if (hl && hl_ver >= "1.10")
