@@ -218,6 +218,7 @@ class Image extends Resource {
 			var bytes = entry.getBytes();
 			pixels = new hxd.Pixels(inf.width, inf.height, bytes, S3TC(inf.bc), 128 + (inf.bc >= 6 ? 20 : 0));
 		case Basis:
+			#if js
 			var bytes = entry.getBytes();
 			var driver:h3d.impl.GlDriver = cast h3d.Engine.getCurrent().driver;
 			var f = switch(driver.checkTextureSupport()) {
@@ -228,6 +229,9 @@ class Image extends Resource {
 				default: throw 'Unsupported basis texture';
 			}
 			pixels = new hxd.Pixels(inf.width, inf.height, bytes, f);
+			#else
+			throw 'Basis only supported on js target';
+			#end
 		}
 
 		if( fmt != null ) pixels.convert(fmt);
