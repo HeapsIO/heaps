@@ -883,6 +883,7 @@ class GlDriver extends Driver {
 		case PVRTC(n):
 			checkMult4(t);
 			switch(n) {
+			case 8: tt.internalFmt = hxd.PixelFormat.PVRTC_FORMAT.RGB_4BPPV1;
 			case 9: tt.internalFmt = hxd.PixelFormat.PVRTC_FORMAT.RGBA_4BPPV1;
 			default: throw "Unsupported texture format "+t.format;
 			}
