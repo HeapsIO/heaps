@@ -131,16 +131,9 @@ class Image extends Resource {
 				throw entry.path+" has unsupported 4CC "+String.fromCharCode(fourCC&0xFF)+String.fromCharCode((fourCC>>8)&0xFF)+String.fromCharCode((fourCC>>16)&0xFF)+String.fromCharCode(fourCC>>>24);
 		case 0x4273:
 			format = Basis;
-			f.skip(12);
-			var slices = f.readUInt24();
-			var images = f.readUInt24();
-			var bFormat = f.readInt8();
-			f.skip(44);
+			f.skip(63);
 			var slicesPos = f.readInt32();
-			f.skip(slicesPos-48);
-			var imageIndex = f.readUInt24();
-			var levelIndex = f.readInt8();
-			var flags = f.readInt8();
+			f.skip(slicesPos-42);
 			width = f.readUInt16();
 			height = f.readUInt16();
 		case _ if( entry.extension == "tga" ):
