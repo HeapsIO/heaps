@@ -32,29 +32,14 @@ class BasisTextureLoader {
 
 	static function detectSupport() {
 		final driver:GlDriver = cast h3d.Engine.getCurrent().driver;
-		final context = driver.gl;
-
-		final extASTC = context.getExtension('WEBGL_compressed_texture_astc');
-		final extETC1 = context.getExtension('WEBGL_compressed_texture_etc1');
-		final extDXT = context.getExtension('WEBGL_compressed_texture_s3tc');
-		final extPVRTC = context.getExtension('WEBGL_compressed_texture_pvrtc') != null ? context.getExtension('WEBGL_compressed_texture_pvrtc') : context.getExtension('WEBKIT_WEBGL_compressed_texture_pvrtc');
-
-		_workerConfig.astcSupported = extASTC != null;
-		_workerConfig.etc1Supported = extETC1 != null;
-		_workerConfig.dxtSupported = extDXT != null;
-		_workerConfig.pvrtcSupported = extPVRTC != null;
-
-		if (_workerConfig.etc1Supported) {
-			_workerConfig.format = BASIS_FORMAT.cTFETC1;
-		} else if (_workerConfig.astcSupported) {
-			_workerConfig.format = BASIS_FORMAT.cTFASTC_4x4;
-		} else if (_workerConfig.dxtSupported) {
-			_workerConfig.format = BASIS_FORMAT.cTFBC3;
-		} else if (_workerConfig.pvrtcSupported) {
-			_workerConfig.format = BASIS_FORMAT.cTFPVRTC1_4_RGBA;
-		} else {
-			throw 'No suitable compressed texture format found.';
-		};
+		final fmt = driver.textureSupport;
+		_workerConfig.format = switch(fmt) {
+			case ETC(_): BASIS_FORMAT.cTFETC1;
+			case ASTC(_): BASIS_FORMAT.cTFASTC_4x4;
+			case S3TC(_): BASIS_FORMAT.cTFBC3;
+			case PVRTC(_): BASIS_FORMAT.cTFPVRTC1_4_RGBA;
+			default: throw 'No suitable compressed texture format found.';
+		}
 	}
 
 	static function createTexture(buffer:haxe.io.BytesData):js.lib.Promise<h3d.mat.Texture> {
@@ -83,7 +68,8 @@ class BasisTextureLoader {
 					final texture = new h3d.mat.Texture(w, h, null, fmt);
 					var level = 0;
 					for (mipmap in mipmaps) {
-						final pixels = new hxd.Pixels(mipmap.width, mipmap.height, haxe.io.Bytes.ofData(cast mipmap.data), fmt);
+						final bytes = haxe.io.Bytes.ofData(cast mipmap.data);
+						final pixels = new hxd.Pixels(mipmap.width, mipmap.height, bytes, fmt);
 						texture.uploadPixels(pixels, level);
 						level++;
 					}
