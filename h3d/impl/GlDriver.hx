@@ -1,5 +1,4 @@
 package h3d.impl;
-import js.lib.Uint8ClampedArray;
 import h3d.impl.Driver;
 import h3d.mat.Pass;
 import h3d.mat.Stencil;
