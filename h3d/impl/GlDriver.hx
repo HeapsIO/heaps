@@ -1,4 +1,5 @@
 package h3d.impl;
+import js.lib.Uint8ClampedArray;
 import h3d.impl.Driver;
 import h3d.mat.Pass;
 import h3d.mat.Stencil;
@@ -1154,6 +1155,7 @@ class GlDriver extends Driver {
 		case RGBA32F, R32F, RG32F, RGB32F: new Float32Array(@:privateAccess pixels.bytes.b.buffer, pixels.offset, bufLen>>2);
 		case RGBA16F, R16F, RG16F, RGB16F: new Uint16Array(@:privateAccess pixels.bytes.b.buffer, pixels.offset, bufLen>>1);
 		case RGB10A2, RG11B10UF: new Uint32Array(@:privateAccess pixels.bytes.b.buffer, pixels.offset, bufLen>>2);
+		case ETC(_), PVRTC(_): new Uint8Array(@:privateAccess pixels.bytes.b.buffer, pixels.offset);
 		default: new Uint8Array(@:privateAccess pixels.bytes.b.buffer, pixels.offset, bufLen);
 		}
 		switch (t.format) {
@@ -1561,15 +1563,14 @@ class GlDriver extends Driver {
 		var pvrtcSupported = gl.getExtension('WEBGL_compressed_texture_pvrtc') != null
 			|| gl.getExtension('WEBKIT_WEBGL_compressed_texture_pvrtc') != null;
 		var etcSupported = gl.getExtension('WEBGL_compressed_texture_etc1') != null;
-
 		return if(astcSupported) {
 			hxd.PixelFormat.ASTC();
 		} else if(dxtSupported){
 			hxd.PixelFormat.S3TC();
+		} else  if(pvrtcSupported){
+			hxd.PixelFormat.PVRTC();
 		} else if(etcSupported){
 			hxd.PixelFormat.ETC();
-		} else if(pvrtcSupported){
-			hxd.PixelFormat.PVRTC();
 		} else {
 			null;
 		}
