@@ -274,7 +274,7 @@ class Skin extends MultiMaterial {
 	#if (hxbit && !macro && heaps_enable_serialize)
 	override function customUnserialize(ctx:hxbit.Serializer) {
 		super.customUnserialize(ctx);
-		var prim = Std.instance(primitive, h3d.prim.HMDModel);
+		var prim = hxd.impl.Api.downcast(primitive, h3d.prim.HMDModel);
 		if( prim == null ) throw "Cannot load skin primitive " + prim;
 		jointsUpdated = true;
 		skinShader = material.mainPass.getShader(h3d.shader.Skin);
