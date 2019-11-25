@@ -26,8 +26,14 @@ class Window {
 	var window : dx.Window;
 	var fullScreenMode : dx.Window.DisplayMode = Borderless;
 	#end
+
 	var windowWidth = 800;
 	var windowHeight = 600;
+
+	var fixedWindowSize = false;
+	var windowedHeight = 800;
+	var windowedWidth = 800;
+
 	var curMouseX = 0;
 	var curMouseY = 0;
 
@@ -36,6 +42,11 @@ class Window {
 	function new(title:String, width:Int, height:Int, fixed:Bool = false) {
 		this.windowWidth = width;
 		this.windowHeight = height;
+
+		this.fixedWindowSize = fixed;
+		this.windowedWidth = width;
+		this.windowedHeight = height;
+
 		eventTargets = new List();
 		resizeEvents = new List();
 		#if hlsdl
@@ -91,12 +102,19 @@ class Window {
 		#end
 		windowWidth = width;
 		windowHeight = height;
+
+		windowedWidth = width;
+		windowedHeight = height;
+
 		for( f in resizeEvents ) f();
 	}
 
 	public function setFullScreen( v : Bool ) : Void {
 		#if (hldx || hlsdl)
 		window.displayMode = v ? fullScreenMode : Windowed;
+		if (!v && fixedWindowSize) {
+			this.window.resize(windowedWidth, windowedHeight);
+		}
 		#end
 	}
 
