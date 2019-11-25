@@ -50,7 +50,7 @@ class Bounds extends hxd.App {
 		for( i in 1...2 ) {
 			var prev = boxes[i - 1];
 			var b = boxes[i].getBounds(prev);
-			var g = Std.instance(prev.getChildAt(2), h2d.Graphics);
+			var g = hxd.impl.Api.downcast(prev.getChildAt(2), h2d.Graphics);
 			g.clear();
 			g.beginFill(0xFFFFFF, 0.5);
 			g.drawRect(b.x, b.y, b.width, b.height);

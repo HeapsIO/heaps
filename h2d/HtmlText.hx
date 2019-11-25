@@ -131,6 +131,10 @@ class HtmlText extends Text {
 					default:
 					}
 				}
+			case "b", "bold":
+				font = loadFont("bold");
+			case "i", "italic":
+				font = loadFont("italic");
 			default:
 			}
 			sizes.push(len);
@@ -308,6 +312,26 @@ class HtmlText extends Text {
 				newLine = true;
 			}
 			var nodeName = e.nodeName.toLowerCase();
+			inline function setFont( v : String ) {
+				font = loadFont(v);
+				if( prevGlyphs == null ) prevGlyphs = glyphs;
+				var prev = glyphs;
+				glyphs = new TileGroup(font == null ? null : font.tile, this);
+				if ( font != null ) {
+					switch( font.type ) {
+						case SignedDistanceField(channel, alphaCutoff, smoothing):
+							var shader = new h3d.shader.SignedDistanceField();
+							shader.channel = channel;
+							shader.alphaCutoff = alphaCutoff;
+							shader.smoothing = smoothing;
+							glyphs.smooth = true;
+							glyphs.addShader(shader);
+						default:
+					}
+				}
+				@:privateAccess glyphs.curColor.load(prev.curColor);
+				elements.push(glyphs);
+			}
 			switch( nodeName ) {
 			case "font":
 				for( a in e.attributes() ) {
@@ -322,24 +346,7 @@ class HtmlText extends Text {
 						if( prevColor == null ) prevColor = @:privateAccess glyphs.curColor.clone();
 						@:privateAccess glyphs.curColor.a *= Std.parseFloat(v);
 					case "face":
-						font = loadFont(v);
-						if( prevGlyphs == null ) prevGlyphs = glyphs;
-						var prev = glyphs;
-						glyphs = new TileGroup(font == null ? null : font.tile, this);
-						if ( font != null ) {
-							switch( font.type ) {
-								case SignedDistanceField(channel, alphaCutoff, smoothing):
-									var shader = new h3d.shader.SignedDistanceField();
-									shader.channel = channel;
-									shader.alphaCutoff = alphaCutoff;
-									shader.smoothing = smoothing;
-									glyphs.smooth = true;
-									glyphs.addShader(shader);
-								default:
-							}
-						}
-						@:privateAccess glyphs.curColor.load(prev.curColor);
-						elements.push(glyphs);
+						setFont(v);
 					default:
 					}
 				}
@@ -367,6 +374,10 @@ class HtmlText extends Text {
 			*/
 				if ( !newLine )
 					makeLineBreak();
+			case "b","bold":
+				setFont("bold");
+			case "i","italic":
+				setFont("italic");
 			case "br":
 				makeLineBreak();
 			case "img":

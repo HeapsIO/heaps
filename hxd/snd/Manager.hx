@@ -676,7 +676,7 @@ class Manager {
 	var targetChannels : Int;
 
 	function checkTargetFormat(dat : hxd.snd.Data, forceMono = false) {
-		
+
 		targetRate = dat.samplingRate;
 		#if (!usesys && !hlopenal && (!js || useal))
 		// perform resampling to nativechannel frequency
@@ -710,8 +710,8 @@ class Manager {
 			b.sound = snd;
 			b.start = start;
 			b.end = end;
-			soundBufferMap.set(key, b);
 			data.load(function() fillSoundBuffer(b, data, mono, start, end));
+			soundBufferMap.set(key, b);
 			++soundBufferCount;
 		}
 
