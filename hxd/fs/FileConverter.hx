@@ -30,7 +30,7 @@ class FileConverter {
 	var tmpDir : String;
 	var configs : Map<String,ConvertConfig> = new Map();
 	var defaultConfig : ConvertConfig;
-	var cache : Map<String,Array<{ out : String, time : Int, hash : String  }>>;
+	var cache : Map<String,Array<{ out : String, time : Int, hash : String, ver : Null<Int> }>>;
 
 	public function new(baseDir,configuration) {
 		this.baseDir = baseDir;
@@ -218,6 +218,7 @@ class FileConverter {
 		for( e in entry ) {
 			if( e.out == outFile ) {
 				match = e;
+				if (match.ver == null) match.ver = 0;
 				break;
 			}
 		}
@@ -226,6 +227,7 @@ class FileConverter {
 				out : outFile,
 				time : 0,
 				hash : "",
+				ver: conv.version,
 			};
 			entry.push(match);
 		}
@@ -235,14 +237,14 @@ class FileConverter {
 		if( !sys.FileSystem.exists(fullPath) ) throw "Missing "+fullPath;
 
 		var time = std.Math.floor(getFileTime(fullPath) / 1000);
-		var alreadyGen = sys.FileSystem.exists(fullOutPath);
+		var alreadyGen = sys.FileSystem.exists(fullOutPath) && match.ver == conv.version #if disable_res_cache && false #end;
 
-		if( match.time == time && alreadyGen )
+		if( alreadyGen && match.time == time )
 			return; // not changed (time stamp)
 
 		var content = hxd.File.getBytes(fullPath);
 		var hash = haxe.crypto.Sha1.make(content).toHex();
-		if( match.hash == hash && alreadyGen ) {
+		if( alreadyGen && match.hash == hash ) {
 			match.time = time;
 			saveCache();
 			return; // not changed (hash)
