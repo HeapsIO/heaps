@@ -9,7 +9,7 @@ class AlphaMap extends hxsl.Shader {
 		@param var uvScale : Vec2;
 		@param var uvDelta : Vec2;
 		function fragment() {
-			pixelColor.a *= texture.get(calculatedUV * uvScale + uvDelta).b;
+			pixelColor.a *= texture.get(calculatedUV * uvScale + uvDelta).a;
 		}
 	}
 
