@@ -123,7 +123,8 @@ class Renderer extends h3d.scene.Renderer {
 
 	override function dispose() {
 		super.dispose();
-		env.dispose();
+		if( env != null )
+			env.dispose();
 	}
 
 	inline function get_exposure() return tonemap.shader.exposure;
