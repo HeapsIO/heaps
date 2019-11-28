@@ -744,11 +744,11 @@ class Object #if (domkit && !domkit_heaps) implements domkit.Model<h2d.Object> #
 
 		ctx.popTarget();
 		ctx.popFilter();
+		ctx.globalAlpha = oldAlpha;
 
 		if( finalTile == null )
 			return;
 
-		ctx.globalAlpha = oldAlpha;
 		drawFiltered(ctx, finalTile);
 	}
 
