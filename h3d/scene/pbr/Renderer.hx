@@ -103,7 +103,7 @@ class Renderer extends h3d.scene.Renderer {
 	]);
 
 
-	public function new(env) {
+	public function new(?env) {
 		super();
 		this.env = env;
 		defaultPass = new h3d.pass.Default("color");
@@ -300,52 +300,55 @@ class Renderer extends h3d.scene.Renderer {
 		pbrProps.occlusionPower = props.occlusion * props.occlusion;
 
 		pbrDirect.cameraPosition.load(ctx.camera.pos);
-		pbrIndirect.cameraPosition.load(ctx.camera.pos);
-		pbrIndirect.emissivePower = props.emissive * props.emissive;
-		pbrIndirect.rot = hxd.Math.degToRad(props.envRot);
-		pbrIndirect.irrPower = env.power * env.power;
-		pbrIndirect.irrLut = env.lut;
-		pbrIndirect.irrDiffuse = env.diffuse;
-		pbrIndirect.irrSpecular = env.specular;
-		pbrIndirect.irrSpecularLevels = env.specLevels;
-		pbrIndirect.cameraInvViewProj.load(ctx.camera.getInverseViewProj());
 
-		pbrDirect.doDiscard = false;
-		switch( renderMode ) {
-		case Default:
-			pbrIndirect.drawIndirectDiffuse = true;
-			pbrIndirect.drawIndirectSpecular= true;
-			pbrIndirect.showSky = skyMode != Hide;
-			pbrIndirect.skyColor = false;
-			pbrIndirect.skyMap = switch( skyMode ) {
-			case Hide: null;
-			case Env: 
-				pbrIndirect.skyScale = env.scale;
-				pbrIndirect.skyThreshold = env.threshold;
-				pbrIndirect.gammaCorrect = true;
-				env.env;
-			case Specular: 
-				pbrIndirect.skyScale = 1.0;
-				pbrIndirect.gammaCorrect = false;
-				env.specular;
-			case Irrad: 
-				pbrIndirect.skyScale = 1.0;
-				pbrIndirect.gammaCorrect = false;
-				env.diffuse;
-			case Background:
-				pbrIndirect.skyColor = true;
-				pbrIndirect.skyColorValue.setColor(ctx.engine.backgroundColor);
-				pbrIndirect.gammaCorrect = true;
-				null;
-			};
-		case LightProbe:
-			pbrIndirect.drawIndirectDiffuse = false;
-			pbrIndirect.drawIndirectSpecular = false;
-			pbrIndirect.showSky = true;
-			pbrIndirect.skyColor = false;
-			pbrIndirect.skyMap = env.env;
+		if( env != null ) {
+			pbrIndirect.cameraPosition.load(ctx.camera.pos);
+			pbrIndirect.emissivePower = props.emissive * props.emissive;
+			pbrIndirect.rot = hxd.Math.degToRad(props.envRot);
+			pbrIndirect.irrPower = env.power * env.power;
+			pbrIndirect.irrLut = env.lut;
+			pbrIndirect.irrDiffuse = env.diffuse;
+			pbrIndirect.irrSpecular = env.specular;
+			pbrIndirect.irrSpecularLevels = env.specLevels;
+			pbrIndirect.cameraInvViewProj.load(ctx.camera.getInverseViewProj());
+
+			pbrDirect.doDiscard = false;
+			switch( renderMode ) {
+			case Default:
+				pbrIndirect.drawIndirectDiffuse = true;
+				pbrIndirect.drawIndirectSpecular= true;
+				pbrIndirect.showSky = skyMode != Hide;
+				pbrIndirect.skyColor = false;
+				pbrIndirect.skyMap = switch( skyMode ) {
+				case Hide: null;
+				case Env:
+					pbrIndirect.skyScale = env.scale;
+					pbrIndirect.skyThreshold = env.threshold;
+					pbrIndirect.gammaCorrect = true;
+					env.env;
+				case Specular:
+					pbrIndirect.skyScale = 1.0;
+					pbrIndirect.gammaCorrect = false;
+					env.specular;
+				case Irrad:
+					pbrIndirect.skyScale = 1.0;
+					pbrIndirect.gammaCorrect = false;
+					env.diffuse;
+				case Background:
+					pbrIndirect.skyColor = true;
+					pbrIndirect.skyColorValue.setColor(ctx.engine.backgroundColor);
+					pbrIndirect.gammaCorrect = true;
+					null;
+				};
+			case LightProbe:
+				pbrIndirect.drawIndirectDiffuse = false;
+				pbrIndirect.drawIndirectSpecular = false;
+				pbrIndirect.showSky = true;
+				pbrIndirect.skyColor = false;
+				pbrIndirect.skyMap = env.env;
+			}
+			pbrDirect.doDiscard = true;
 		}
-		pbrDirect.doDiscard = true;
 
 		var lpass = screenLightPass;
 		if( lpass == null ) {
@@ -382,17 +385,19 @@ class Renderer extends h3d.scene.Renderer {
 		mark("VolumetricLightmap");
 		pbrProps.isScreen = false;
 		pbrIndirect.drawIndirectDiffuse = false;
-		pbrIndirect.drawIndirectSpecular = true;
+		pbrIndirect.drawIndirectSpecular = env != null ? true : false;
 		ctx.extraShaders = new hxsl.ShaderList(pbrProps, new hxsl.ShaderList(pbrIndirect, null));
 		draw("volumetricLightmap");
 		ctx.extraShaders = null;
 
 		// Indirect Lighting - Diffuse and Specular
-		mark("Indirect Lighting");
-		pbrProps.isScreen = true;
-		pbrIndirect.drawIndirectDiffuse = true;
-		pbrIndirect.drawIndirectSpecular = true;
-		pbrOut.render();
+ 		if( env != null ) {
+			mark("Indirect Lighting");
+			pbrProps.isScreen = true;
+			pbrIndirect.drawIndirectDiffuse = true;
+			pbrIndirect.drawIndirectSpecular = true;
+			pbrOut.render();
+		}
 
 		drawBeforeTonemapping();
 		apply(BeforeTonemapping);
@@ -517,12 +522,11 @@ class Renderer extends h3d.scene.Renderer {
 	}
 
 	override function refreshProps() {
-		if( env == null )
-			return;
+
 		var props : RenderProps = props;
 
 		// New env map
-		if( props.env != null && props.env != env.source.name ) {
+		if( props.env != null && (env == null || props.env != env.source.name) ) {
 			var t = hxd.res.Loader.currentInstance.load(props.env).toTexture();
 			var prev = env;
 			var env = new h3d.scene.pbr.Environment(t);
@@ -530,17 +534,20 @@ class Renderer extends h3d.scene.Renderer {
 			env.threshold = props.envThreshold;
 			env.compute();
 			this.env = env;
-			prev.dispose();
+			if( prev != null )
+				prev.dispose();
 		}
-		
+
 		displayMode = props.mode;
 		skyMode = props.sky;
 		toneMode = props.tone;
 		exposure = props.exposure;
-		env.power = props.envPower;
+
+		if( env != null )
+			env.power = props.envPower;
 
 		// New env params
-		if( props.envScale != env.scale || props.envThreshold != env.threshold ) {
+		if( env != null && (props.envScale != env.scale || props.envThreshold != env.threshold) ) {
 			env.scale = props.envScale;
 			env.threshold = props.envThreshold;
 			env.compute();
