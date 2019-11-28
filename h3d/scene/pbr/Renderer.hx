@@ -520,25 +520,32 @@ class Renderer extends h3d.scene.Renderer {
 		if( env == null )
 			return;
 		var props : RenderProps = props;
+
+		// New env map
 		if( props.env != null && props.env != env.source.name ) {
 			var t = hxd.res.Loader.currentInstance.load(props.env).toTexture();
 			var prev = env;
 			var env = new h3d.scene.pbr.Environment(t);
+			env.scale = props.envScale;
+			env.threshold = props.envThreshold;
 			env.compute();
 			this.env = env;
 			prev.dispose();
 		}
+		
 		displayMode = props.mode;
 		skyMode = props.sky;
 		toneMode = props.tone;
 		exposure = props.exposure;
 		env.power = props.envPower;
 
+		// New env params
 		if( props.envScale != env.scale || props.envThreshold != env.threshold ) {
 			env.scale = props.envScale;
 			env.threshold = props.envThreshold;
 			env.compute();
 		}
+
 		shadows = props.shadows;
 
 		if( props.colorGradingLUT != null )
