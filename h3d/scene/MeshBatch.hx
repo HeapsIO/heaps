@@ -261,6 +261,10 @@ class MeshBatch extends Mesh {
 		if( curInstances == 0 ) return;
 		var p = dataPasses;
 		while( p != null ) {
+			if( p.buffer.isDisposed() ) {
+				p.buffer = hxd.impl.Allocator.get().allocBuffer(p.count * shaderInstances,4,UniformDynamic);
+				p.shader.Batch_Buffer = p.buffer;
+			}
 			p.buffer.uploadVector(p.data,0,curInstances * p.count);
 			p = p.next;
 		}
