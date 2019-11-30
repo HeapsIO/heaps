@@ -376,7 +376,7 @@ class System {
 		haxe.MainLoop.add(timeoutTick, -1) #if (haxe_ver >= 4) .isBlocking = false #end;
 		#end
 		#if (hlsdl || hldx)
-		haxe.MainLoop.add(updateCursor, -1);
+		haxe.MainLoop.add(updateCursor, -1) #if (haxe_ver >= 4) .isBlocking = false #end;
 		#end
 	}
 
