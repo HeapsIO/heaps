@@ -6,6 +6,11 @@ class Convert {
 	public var sourceExt(default,null) : String;
 	public var destExt(default,null) : String;
 
+	/**
+		Major version of the Convert.
+		When incremented, all files processed by this Convert would be rebuilt. **/
+	public var version(default, null) : Int;
+
 	public var params : Dynamic;
 
 	public var srcPath : String;
@@ -16,6 +21,7 @@ class Convert {
 	public function new( sourceExt, destExt ) {
 		this.sourceExt = sourceExt;
 		this.destExt = destExt;
+		this.version = 0;
 	}
 
 	public function convert() {
