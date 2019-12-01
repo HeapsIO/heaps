@@ -266,9 +266,9 @@ class HtmlText extends Text {
 						if ( splitNode.node != null ) {
 							lines.push(x);
 							heights.push(heights[heights.length - 1]);
-							baseLines.push(heights[heights.length - 1]);
+							baseLines.push(baseLines[baseLines.length - 1]);
 							x = wordSplit();
-						} else {
+						} else if (leftMargin != 0) { // Don't insert empty line when it's first word in the line.
 							x -= leftMargin;
 							textSplit.push("");
 							lines.push(leftMargin);
@@ -314,21 +314,35 @@ class HtmlText extends Text {
 					lines.push(x);
 					x = 0;
 					prevChar = -1;
+					newLine = true;
 				} else {
 					prevChar = cc;
+					newLine = false;
 				}
 			}
 			if ( restPos < text.length ) {
+				if (x > maxWidth) {
+					if ( splitNode.node != null && splitNode.node != e ) {
+						lines.push(x);
+						heights.push(heights[heights.length - 1]);
+						baseLines.push(baseLines[baseLines.length - 1]);
+						x = wordSplit();
+					}
+				}
 				textSplit.push(text.substr(restPos));
 				lines.push(x);
 			}
-			// Save node value
-			e.nodeValue = textSplit.join("\n");
 
 			if ( lineHeightMode == Constant ) {
 				while ( heights.length < lines.length ) {
 					heights.push( this.font.lineHeight );
 					baseLines.push( this.font.lineHeight );
+				}
+				if (newLine) {
+					lines.push(0);
+					heights.push(this.font.lineHeight);
+					baseLines.push(this.font.baseLine);
+					textSplit.push("");
 				}
 			} else {
 				// TODO: Should adjust lineHeight in offset to bottom of baseLine.
@@ -341,7 +355,15 @@ class HtmlText extends Text {
 					heights.push(font.lineHeight);
 					baseLines.push(font.baseLine);
 				}
+				if (newLine) {
+					lines.push(0);
+					heights.push(font.lineHeight);
+					baseLines.push(font.baseLine);
+					textSplit.push("");
+				}
 			}
+			// Save node value
+			e.nodeValue = textSplit.join("\n");
 		}
 	}
 
