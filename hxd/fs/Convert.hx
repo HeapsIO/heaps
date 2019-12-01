@@ -187,6 +187,7 @@ class ConvertFNT2BFNT extends Convert {
 		// Fake tile create subs before discarding the font.
 		emptyTile = @:privateAccess new h2d.Tile(null, 0, 0, 0, 0, 0, 0);
 		super("fnt", "bfnt");
+		version = 1;
 	}
 
 	override public function convert()
