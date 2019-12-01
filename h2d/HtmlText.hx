@@ -5,6 +5,10 @@ import h2d.Text;
 class HtmlText extends Text {
 
 	public var condenseWhite(default,set) : Bool = true;
+	/**
+		Spacing after <img> tags in pixels.
+	**/
+	public var imageSpacing(default,set):Float = 1;
 
 	var elements : Array<Object> = [];
 	var xPos : Float;
@@ -121,7 +125,7 @@ class HtmlText extends Text {
 				newLine = true;
 			case "img":
 				var i = loadImage(e.get("src"));
-				len = (i == null ? 8 : i.width) + letterSpacing;
+				len = (i == null ? 8 : i.width) + imageSpacing;
 				newLine = false;
 			case "font":
 				for( a in e.attributes() ) {
@@ -384,7 +388,7 @@ class HtmlText extends Text {
 				newLine = false;
 				var i = loadImage(e.get("src"));
 				if( i == null ) i = Tile.fromColor(0xFF00FF, 8, 8);
-				if( realMaxWidth >= 0 && xPos + i.width + letterSpacing + remainingSize(sizes) > realMaxWidth && xPos > 0 ) {
+				if( realMaxWidth >= 0 && xPos + i.width + imageSpacing + remainingSize(sizes) > realMaxWidth && xPos > 0 ) {
 					if( xPos > xMax ) xMax = xPos;
 					xPos = 0;
 					yPos += font.lineHeight + lineSpacing;
@@ -398,7 +402,7 @@ class HtmlText extends Text {
 					b.y = py;
 					elements.push(b);
 				}
-				xPos += i.width + letterSpacing;
+				xPos += i.width + imageSpacing;
 			default:
 			}
 			for( child in e )
@@ -445,6 +449,13 @@ class HtmlText extends Text {
 				}
 			}
 		}
+	}
+
+	function set_imageSpacing(s) {
+		if (imageSpacing == s) return s;
+		imageSpacing = s;
+		rebuild();
+		return s;
 	}
 
 	override function set_textColor(c) {
