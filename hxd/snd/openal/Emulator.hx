@@ -12,6 +12,9 @@ private class Channel extends NativeChannel {
 	public function new(source, samples) {
 		this.source = source;
 		super(samples);
+		#if js
+		gain.gain.value = source.volume;
+		#end
 	}
 
 	@:noDebug
@@ -19,7 +22,7 @@ private class Channel extends NativeChannel {
 		var pos = 0;
 		var count = out.length >> 1;
 		if( source.duration > 0 ) {
-			var volume = source.volume;
+			var volume = #if js 1.0 #else source.volume #end;
 			var bufferIndex = 0;
 			var baseSample = 0;
 			var curSample = source.currentSample;
@@ -178,7 +181,7 @@ class Emulator {
 	static var CACHED_FREQ : Null<Int>;
 	static function get_NATIVE_FREQ() {
 		if( CACHED_FREQ == null )
-			CACHED_FREQ = #if js @:privateAccess Std.int(NativeChannel.getContext() == null ? 44100 : NativeChannel.getContext().sampleRate) #else 44100 #end;
+			CACHED_FREQ = #if js Std.int(hxd.snd.webaudio.Context.get().sampleRate) #else 44100 #end;
 		return CACHED_FREQ;
 	}
 
@@ -246,7 +249,15 @@ class Emulator {
 	//public static function getProcAddress(fname   : Bytes) : Void*;
 
 	// Set Listener parameters
-	public static function listenerf(param : Int, value  : F32) {}
+	public static function listenerf(param : Int, value  : F32)
+	{
+		#if js
+		switch (param) {
+			case GAIN:
+				hxd.snd.webaudio.Context.masterGain.gain.value = value;
+		}
+		#end
+	}
 	public static function listener3f(param : Int, value1 : F32, value2 : F32, value3 : F32) {}
 	public static function listenerfv(param : Int, values : Bytes) {}
 	public static function listeneri(param : Int, value  : Int) {}
@@ -300,6 +311,9 @@ class Emulator {
 			}
 		case GAIN:
 			source.volume = value;
+			#if js
+			if (source.chan != null) @:privateAccess source.chan.gain.gain.value = value;
+			#end
 		case REFERENCE_DISTANCE, ROLLOFF_FACTOR, MAX_DISTANCE:
 			// nothing (spatialization)
 		case PITCH:

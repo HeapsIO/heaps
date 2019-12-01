@@ -26,6 +26,7 @@ package h3d.scene.pbr;
 @:enum abstract SkyMode(String) {
 	var Hide = "Hide";
 	var Env = "Env";
+	var Specular = "Specular";
 	var Irrad = "Irrad";
 	var Background = "Background";
 }
@@ -42,6 +43,9 @@ typedef RenderProps = {
 	var colorGradingLUTSize : Int;
 	var enableColorGrading : Bool;
 	var envPower : Float;
+	var envRot : Float;
+	var envThreshold : Float;
+	var envScale : Float;
 	var exposure : Float;
 	var sky : SkyMode;
 	var tone : TonemapMap;
@@ -298,6 +302,7 @@ class Renderer extends h3d.scene.Renderer {
 		pbrDirect.cameraPosition.load(ctx.camera.pos);
 		pbrIndirect.cameraPosition.load(ctx.camera.pos);
 		pbrIndirect.emissivePower = props.emissive * props.emissive;
+		pbrIndirect.rot = hxd.Math.degToRad(props.envRot);
 		pbrIndirect.irrPower = env.power * env.power;
 		pbrIndirect.irrLut = env.lut;
 		pbrIndirect.irrDiffuse = env.diffuse;
@@ -314,11 +319,23 @@ class Renderer extends h3d.scene.Renderer {
 			pbrIndirect.skyColor = false;
 			pbrIndirect.skyMap = switch( skyMode ) {
 			case Hide: null;
-			case Env: env.env;
-			case Irrad: env.diffuse;
+			case Env: 
+				pbrIndirect.skyScale = env.scale;
+				pbrIndirect.skyThreshold = env.threshold;
+				pbrIndirect.gammaCorrect = true;
+				env.env;
+			case Specular: 
+				pbrIndirect.skyScale = 1.0;
+				pbrIndirect.gammaCorrect = false;
+				env.specular;
+			case Irrad: 
+				pbrIndirect.skyScale = 1.0;
+				pbrIndirect.gammaCorrect = false;
+				env.diffuse;
 			case Background:
 				pbrIndirect.skyColor = true;
 				pbrIndirect.skyColorValue.setColor(ctx.engine.backgroundColor);
+				pbrIndirect.gammaCorrect = true;
 				null;
 			};
 		case LightProbe:
@@ -486,6 +503,9 @@ class Renderer extends h3d.scene.Renderer {
 			colorGradingLUTSize : 1,
 			enableColorGrading: true,
 			envPower : 1.,
+			envRot : 0.,
+			envThreshold : 1.,
+			envScale : 1.,
 			emissive : 1.,
 			exposure : 0.,
 			sky : Irrad,
@@ -513,6 +533,12 @@ class Renderer extends h3d.scene.Renderer {
 		toneMode = props.tone;
 		exposure = props.exposure;
 		env.power = props.envPower;
+
+		if( props.envScale != env.scale || props.envThreshold != env.threshold ) {
+			env.scale = props.envScale;
+			env.threshold = props.envThreshold;
+			env.compute();
+		}
 		shadows = props.shadows;
 
 		if( props.colorGradingLUT != null )
@@ -564,12 +590,16 @@ class Renderer extends h3d.scene.Renderer {
 							<select field="sky" style="width:20px">
 								<option value="Hide">Hide</option>
 								<option value="Env">Show</option>
+								<option value="Specular">Show Specular</option>
 								<option value="Irrad">Show Irrad</option>
 								<option value="Background">Background Color</option>
 							</select>
 							<br/>
 							<input type="range" min="0" max="2" field="envPower"/>
 						</dd>
+					<dt>Rotation</dt><dd><input type="range" min="0" max="360" field="envRot"/></dd>
+					<dt>Threshold</dt><dd><input type="range" min="0" max="1" field="envThreshold"/></dd>
+					<dt>Scale</dt><dd><input type="range" min="0" max="20" field="envScale"/></dd>
 				</div>
 
 				<div class="group" name="Params">

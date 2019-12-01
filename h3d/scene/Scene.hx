@@ -105,8 +105,8 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 	@:dox(hide) @:noCompletion
 	public function isInteractiveVisible( i : hxd.SceneEvents.Interactive ) {
 		var o : Object = cast i;
-		while( o != null ) {
-			if( !o.visible ) return false;
+		while( o != this ) {
+			if( o == null || !o.visible ) return false;
 			o = o.parent;
 		}
 		return true;

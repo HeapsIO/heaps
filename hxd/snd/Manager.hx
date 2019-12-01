@@ -91,6 +91,7 @@ class Manager {
 
 	var soundBufferCount  : Int;
 	var soundBufferMap    : Map<String, Buffer>;
+	var soundBufferKeys	  : Array<String>;
 	var freeStreamBuffers : Array<Buffer>;
 	var effectGC          : Array<Effect>;
 	var hasMasterVolume   : Bool;
@@ -101,6 +102,8 @@ class Manager {
 		try {
 			#if usesys
 			driver = new haxe.AudioTypes.SoundDriver();
+			#elseif (js && !useal)
+			driver = new hxd.snd.webaudio.Driver();
 			#else
 			driver = new hxd.snd.openal.Driver();
 			#end
@@ -114,6 +117,7 @@ class Manager {
 		masterChannelGroup = new ChannelGroup("master");
 		listener           = new Listener();
 		soundBufferMap     = new Map();
+		soundBufferKeys	   = [];
 		freeStreamBuffers  = [];
 		effectGC           = [];
 		soundBufferCount   = 0;
@@ -187,10 +191,15 @@ class Manager {
 	}
 
 	public function cleanCache() {
-		for (k in soundBufferMap.keys()) {
+		var i = 0;
+		while (i < soundBufferKeys.length) {
+			var k = soundBufferKeys[i];
 			var b = soundBufferMap.get(k);
+			i++;
 			if (b.refs > 0) continue;
 			soundBufferMap.remove(k);
+			soundBufferKeys.remove(k);
+			i--;
 			b.dispose();
 			--soundBufferCount;
 		}
@@ -209,6 +218,7 @@ class Manager {
 
 		sources           = null;
 		soundBufferMap    = null;
+		soundBufferKeys   = null;
 		freeStreamBuffers = null;
 		effectGC          = null;
 
@@ -271,10 +281,19 @@ class Manager {
 	}
 
 	public function update() {
-
-		if( suspended ) return;
-
-		now = haxe.Timer.stamp() + timeOffset;
+		if( timeOffset != 0 ) {
+			var c = channels;
+			while( c != null ) {
+				c.lastStamp += timeOffset;
+				if( c.currentFade != null ) c.currentFade.start += timeOffset;
+				c = c.next;
+			}
+			for( s in sources )
+				for( b in s.buffers )
+					b.lastStop += timeOffset;
+			timeOffset = 0;
+		}
+		now = haxe.Timer.stamp();
 
 		if (driver == null) {
 			updateVirtualChannels(now);
@@ -300,6 +319,7 @@ class Manager {
 			var count = driver.getProcessedBuffers(s.handle);
 			for (i in 0...count) {
 				var b = unqueueBuffer(s);
+				if( b == null ) continue;
 				lastBuffer = b;
 				if (b.isEnd) {
 					c.sound           = b.sound;
@@ -375,7 +395,7 @@ class Manager {
 			c.calcAudibleVolume(now);
 			if( c.isLoading && !c.sound.getData().isLoading() )
 				c.isLoading = false;
-			c.isVirtual = c.pause || c.mute || c.channelGroup.mute || (c.allowVirtual && c.audibleVolume < VIRTUAL_VOLUME_THRESHOLD) || c.isLoading;
+			c.isVirtual = suspended || c.pause || c.mute || c.channelGroup.mute || (c.allowVirtual && c.audibleVolume < VIRTUAL_VOLUME_THRESHOLD) || c.isLoading;
 			c = c.next;
 		}
 
@@ -531,13 +551,17 @@ class Manager {
 		// sound buffer cache GC
 		// --------------------------------------------------------------------
 
-		// TODO : avoid alloc from map.keys()
 		if (soundBufferCount >= SOUND_BUFFER_CACHE_SIZE) {
 			var now = haxe.Timer.stamp();
-			for (k in soundBufferMap.keys()) {
+			var i = 0;
+			while (i < soundBufferKeys.length) {
+				var k = soundBufferKeys[i];
 				var b = soundBufferMap.get(k);
+				i++;
 				if (b.refs > 0 || b.lastStop + 60.0 > now) continue;
 				soundBufferMap.remove(k);
+				soundBufferKeys.remove(k);
+				i--;
 				b.dispose();
 				--soundBufferCount;
 			}
@@ -597,6 +621,7 @@ class Manager {
 
 	function unqueueBuffer(s : Source) {
 		var b = s.buffers.shift();
+		if( b == null ) return null; // some drivers (xbo) might wrongly report ended buffer after source stop, let's ignore
 		driver.unqueueBuffer(s.handle, b.handle);
 		if (b.isStream) freeStreamBuffers.unshift(b);
 		else if (--b.refs == 0) b.lastStop = haxe.Timer.stamp();
@@ -651,8 +676,9 @@ class Manager {
 	var targetChannels : Int;
 
 	function checkTargetFormat(dat : hxd.snd.Data, forceMono = false) {
+
 		targetRate = dat.samplingRate;
-		#if (!usesys && !hlopenal)
+		#if (!usesys && !hlopenal && (!js || useal))
 		// perform resampling to nativechannel frequency
 		targetRate = hxd.snd.openal.Emulator.NATIVE_FREQ;
 		#end
@@ -677,14 +703,15 @@ class Manager {
 		if (mono && data.channels != 1) key += "mono";
 		var b = soundBufferMap.get(key);
 		if (b == null || b.start != start || b.end != end) {
+			if (b == null) soundBufferKeys.push(key);
 			b = new Buffer(driver);
 			b.isStream = false;
 			b.isEnd = true;
 			b.sound = snd;
 			b.start = start;
 			b.end = end;
-			soundBufferMap.set(key, b);
 			data.load(function() fillSoundBuffer(b, data, mono, start, end));
+			soundBufferMap.set(key, b);
 			++soundBufferCount;
 		}
 
@@ -745,7 +772,7 @@ class Manager {
 		}
 
 		if (!checkTargetFormat(data, grp.mono)) {
-			size = samples * targetChannels * Data.formatBytes(targetFormat);
+			size = Math.ceil(samples * (targetRate / data.samplingRate)) * targetChannels * Data.formatBytes(targetFormat);
 			var resampleBytes = getResampleBytes(size);
 			data.resampleBuffer(resampleBytes, 0, bytes, 0, targetRate, targetFormat, targetChannels, samples);
 			bytes = resampleBytes;

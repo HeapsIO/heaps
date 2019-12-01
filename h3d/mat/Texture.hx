@@ -5,6 +5,7 @@ import h3d.mat.Data;
 class Texture {
 
 	static var UID = 0;
+	static final PREVENT_AUTO_DISPOSE = 0x7FFFFFFF;
 
 	/**
 		The default texture color format
@@ -30,7 +31,7 @@ class Texture {
 	public var flags(default, null) : haxe.EnumFlags<TextureFlags>;
 	public var format(default, null) : TextureFormat;
 
-	var lastFrame : Int;
+	var lastFrame(get,set) : Int;
 	var bits : Int;
 	var waitLoads : Array<Void -> Void>;
 	public var mipMap(default,set) : MipMap;
@@ -49,6 +50,21 @@ class Texture {
 		If set to null, depth testing is disabled.
 	**/
 	public var depthBuffer : DepthBuffer;
+	
+	var _lastFrame:Int;
+	
+	function set_lastFrame(lf:Int) {
+		// Make sure we do not override lastFrame of textures set to prevent auto dispose
+		if(_lastFrame != PREVENT_AUTO_DISPOSE) {
+			_lastFrame = lf;
+		}
+		return _lastFrame;
+	}
+
+	function get_lastFrame()
+	{
+		return _lastFrame;
+	}
 
 	public function new(w, h, ?flags : Array<TextureFlags>, ?format : TextureFormat, ?allocPos : h3d.impl.AllocPos ) {
 		#if !noEngine
@@ -131,7 +147,7 @@ class Texture {
 		Calling this will make this texture not considered for auto disposal.
 	**/
 	public function preventAutoDispose() {
-		lastFrame = 0x7FFFFFFF;
+		lastFrame = PREVENT_AUTO_DISPOSE;
 	}
 
 	/**

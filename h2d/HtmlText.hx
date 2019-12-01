@@ -94,6 +94,10 @@ class HtmlText extends Text {
 		return defaultLoadFont(name);
 	}
 
+	function parseText( text : String ) {
+		return try Xml.parse(text) catch( e : Dynamic ) throw "Could not parse " + text + " (" + e +")";
+	}
+
 	override function initGlyphs( text : String, rebuild = true ) {
 		if( rebuild ) {
 			glyphs.clear();
@@ -102,7 +106,7 @@ class HtmlText extends Text {
 		}
 		glyphs.setDefaultColor(textColor);
 
-		var doc = try Xml.parse(text) catch( e : Dynamic ) throw "Could not parse " + text + " (" + e +")";
+		var doc = parseText(text);
 		imageCache = new Map();
 
 		yPos = 0;
@@ -238,6 +242,10 @@ class HtmlText extends Text {
 					default:
 					}
 				}
+			case "b", "bold":
+				font = loadFont("bold");
+			case "i", "italic":
+				font = loadFont("italic");
 			default:
 			}
 			for( child in e )
@@ -388,6 +396,84 @@ class HtmlText extends Text {
 		}
 	}
 
+	override function splitText(text:String):String {
+		if( realMaxWidth < 0 )
+			return text;
+		yPos = 0;
+		xMax = 0;
+		sizePos = 0;
+		calcYMin = 0;
+
+		var doc = parseText(text);
+
+		/*
+			This might require a global refactoring at some point.
+			We would need a way to somehow build an AST from the XML representation
+			with all sizes and word breaks so analysis is much more easy.
+		*/
+
+		var splitNode : SplitNode = { node: null, font: font, width: 0, pos: 0, prevChar: -1 };
+		var sizes = new Array<Float>();
+		prevChar = -1;
+		newLine = true;
+
+		for( e in doc )
+			buildSizes(e, font, sizes, [], [], splitNode);
+		xMax = 0;
+		function addBreaks( e : Xml ) {
+			if( e.nodeType == Xml.Element ) {
+				for( x in e )
+					addBreaks(x);
+			} else {
+				var text = e.nodeValue;
+				var startI = 0;
+				var index = Lambda.indexOf(e.parent, e);
+				for (i in 0...text.length) {
+					if (text.charCodeAt(i) == '\n'.code) {
+						var pre = text.substring(startI, i - 1);
+						if (pre != "") e.parent.insertChild(Xml.createPCData(pre), index++);
+						e.parent.insertChild(Xml.createElement("br"),index++);
+						startI = i+1;
+					}
+				}
+				if (startI < text.length) {
+					e.nodeValue = text.substr(startI);
+				} else {
+					e.parent.removeChild(e);
+				}
+			}
+		}
+		for( d in doc )
+			addBreaks(d);
+		return doc.toString();
+	}
+
+	override function getTextProgress(text:String, progress:Float):String {
+		if( progress >= text.length )
+			return text;
+		var doc = parseText(text);
+		function progressRec(e:Xml) {
+			if( progress <= 0 ) {
+				e.parent.removeChild(e);
+				return;
+			}
+			if( e.nodeType == Xml.Element ) {
+				for( x in [for( x in e ) x] )
+					progressRec(x);
+			} else {
+				var text = htmlToText(e.nodeValue);
+				if( text.length > progress ) {
+					text = text.substr(0, Std.int(progress));
+					e.nodeValue = text;
+				}
+				progress -= text.length;
+			}
+		}
+		for( x in [for( x in doc ) x] )
+			progressRec(x);
+		return doc.toString();
+	}
+
 	function addNode( e : Xml, font : Font, align : Align, rebuild : Bool, sizes : Array<Float>, heights : Array<Float>, baseLines : Array<Float> ) {
 		inline function makeLineBreak()
 		{
@@ -399,6 +485,26 @@ class HtmlText extends Text {
 			var prevColor = null, prevGlyphs = null;
 			var oldAlign = align;
 			var nodeName = e.nodeName.toLowerCase();
+			inline function setFont( v : String ) {
+				font = loadFont(v);
+				if( prevGlyphs == null ) prevGlyphs = glyphs;
+				var prev = glyphs;
+				glyphs = new TileGroup(font == null ? null : font.tile, this);
+				if ( font != null ) {
+					switch( font.type ) {
+						case SignedDistanceField(channel, alphaCutoff, smoothing):
+							var shader = new h3d.shader.SignedDistanceField();
+							shader.channel = channel;
+							shader.alphaCutoff = alphaCutoff;
+							shader.smoothing = smoothing;
+							glyphs.smooth = true;
+							glyphs.addShader(shader);
+						default:
+					}
+				}
+				@:privateAccess glyphs.curColor.load(prev.curColor);
+				elements.push(glyphs);
+			}
 			switch( nodeName ) {
 			case "font":
 				for( a in e.attributes() ) {
@@ -413,24 +519,7 @@ class HtmlText extends Text {
 						if( prevColor == null ) prevColor = @:privateAccess glyphs.curColor.clone();
 						@:privateAccess glyphs.curColor.a *= Std.parseFloat(v);
 					case "face":
-						font = loadFont(v);
-						if ( font != null ) {
-							if( prevGlyphs == null ) prevGlyphs = glyphs;
-							var prev = glyphs;
-							glyphs = new TileGroup(font.tile, this);
-							switch( font.type ) {
-								case SignedDistanceField(channel, alphaCutoff, smoothing):
-									var shader = new h3d.shader.SignedDistanceField();
-									shader.channel = channel;
-									shader.alphaCutoff = alphaCutoff;
-									shader.smoothing = smoothing;
-									glyphs.smooth = true;
-									glyphs.addShader(shader);
-								default:
-							}
-							@:privateAccess glyphs.curColor.load(prev.curColor);
-							elements.push(glyphs);
-						}
+						setFont(v);
 					default:
 					}
 				}
@@ -463,6 +552,10 @@ class HtmlText extends Text {
 				} else {
 					nextLine(align, sizes[sizePos]);
 				}
+			case "b","bold":
+				setFont("bold");
+			case "i","italic":
+				setFont("italic");
 			case "br":
 				makeLineBreak();
 				newLine = true;

@@ -33,9 +33,6 @@ class Text extends Drawable {
 	var constraintWidth:Float = -1;
 	var realMaxWidth:Float = -1;
 
-	#if lime
-	var waShader : h3d.shader.WhiteAlpha;
-	#end
 	var sdfShader : h3d.shader.SignedDistanceField;
 
 	public function new( font : Font, ?parent : h2d.Object ) {
@@ -52,13 +49,6 @@ class Text extends Drawable {
 		if( this.font == font ) return font;
 		this.font = font;
 		if ( font != null ) {
-			#if lime
-			if( font.tile.getTexture().format == ALPHA ){
-				if( waShader == null ) addShader( waShader = new h3d.shader.WhiteAlpha() );
-			}else{
-				if( waShader != null ) removeShader( waShader );
-			}
-			#end
 			switch( font.type ) {
 				case BitmapFont:
 					if ( sdfShader != null ) {
@@ -170,6 +160,10 @@ class Text extends Drawable {
 		}
 	}
 
+	public function splitText( text : String ) {
+		return splitRawText(text,0,0);
+	}
+
 	/**
 		Word-wrap the text based on this Text settings.  
 		@param text String to word-wrap.
@@ -179,7 +173,7 @@ class Text extends Drawable {
 		@param sizes Optional line width array. Will be populated with sizes of split lines if present. Sizes will include both `leftMargin` in it's first line entry.
 		@param prevChar Optional character code for concatenation purposes (proper kernings).
 	**/
-	public function splitText( text : String, leftMargin = 0., afterData = 0., ?font : Font, ?sizes:Array<Float>, ?prevChar:Int = -1 ) {
+	public function splitRawText( text : String, leftMargin = 0., afterData = 0., ?font : Font, ?sizes:Array<Float>, ?prevChar:Int = -1 ) {
 		var maxWidth = realMaxWidth;
 		if( maxWidth < 0 ) {
 			if ( sizes == null ) 
@@ -248,13 +242,18 @@ class Text extends Drawable {
 		return lines.join("\n");
 	}
 
+	public function getTextProgress( text : String, progress : Float ) {
+		if( progress >= text.length ) return text;
+		return text.substr(0, Std.int(progress));
+	}
+
 	function initGlyphs( text : String, rebuild = true ) : Void {
 		if( rebuild ) glyphs.clear();
 		var x = 0., y = 0., xMax = 0., xMin = 0., yMin = 0., prevChar = -1, linei = 0;
 		var align = textAlign;
 		var lines = new Array<Float>();
 		var dl = font.lineHeight + lineSpacing;
-		var t = splitText(text, 0, 0, lines);
+		var t = splitRawText(text, 0, 0, lines);
 
 		for ( lw in lines ) {
 			if ( lw > x ) x = lw;

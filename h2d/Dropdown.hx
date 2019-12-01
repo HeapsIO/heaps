@@ -46,6 +46,8 @@ class Dropdown extends Flow {
 	public var selectedItem(default, set) : Int = -1;
 	public var highlightedItem(default, null) : Int = -1;
 
+	public var rollUp : Bool = false;
+
 	public function new(?parent) {
 		super(parent);
 
@@ -88,7 +90,7 @@ class Dropdown extends Flow {
 				close();
 			} else if( canEdit ) {
 				var bds = this.getBounds();
-				dropdownList.y = bds.yMax;
+				dropdownList.y = rollUp ? bds.yMin - dropdownList.getSize().height : bds.yMax;
 				dropdownList.x = bds.xMin;
 				dropdownList.minWidth = this.minWidth;
 				open();

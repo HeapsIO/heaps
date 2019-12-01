@@ -1,5 +1,9 @@
 package hxd;
 
+/**
+	Save provides simple interface to save and load serialized user data.  
+	Data is serialized to String with `haxe.Serializer` and then stored in text form.
+**/
 class Save {
 
 	static var cur = new Map<String,String>();
@@ -36,6 +40,12 @@ class Save {
 		return checkSum ? data + "#" + makeCRC(data) : data;
 	}
 
+	/**
+		Loads save with specified name. Returns `defValue` if save does not exists or could not be unserialized.
+		@param defValue Fallback default save value
+		@param name Name of the save
+		@param checkSum Set to true if data expected to have crc checksum prepending the data. Should be set for entries saved with `checkSum = true`.
+	**/
 	public static function load<T>( ?defValue : T, ?name = "save", checkSum = false ) : T {
 		#if flash
 		try {
@@ -50,6 +60,12 @@ class Save {
 		#end
 	}
 
+	/**
+		Override this method to provide custom save lookup.  
+		By default it uses `name + ".sav"` for system targets and `localStorage.getItem(name)` on JS.  
+		Have no effect on flash (shared object is used).  
+		**Note:** This method is an utility method, to load data use `hxd.Save.load`
+	**/
 	@:noCompletion public static dynamic function readSaveData( name : String ) : String {
 		#if sys
 		return sys.io.File.getContent(name+".sav");
@@ -61,6 +77,12 @@ class Save {
 		#end
 	}
 
+	/**
+		Override this method to provide custom save storage.
+		By default it stores saves in `name + ".sav"` file in current working directory on system targets and `localStorage.setItem(name)` on JS.
+		Have no effect on flash (shared object is used)
+		**Note:** This method is an utility method, to save data use `hxd.Save.save`
+	**/
 	@:noCompletion public static dynamic function writeSaveData( name : String, data : String ) {
 		#if sys
 		sys.io.File.saveContent(name+".sav", data);
@@ -71,6 +93,11 @@ class Save {
 		#end
 	}
 
+	/**
+		Deletes save with specified name.
+		Override this method when using custom save lookup.
+		Does not work on flash.
+	**/
 	public dynamic static function delete( name = "save" ) {
 		#if flash
 		throw "TODO";
@@ -81,6 +108,10 @@ class Save {
 		#end
 	}
 
+	/**
+		Saves `val` under the specified name.
+		@param checkSum When set, save data is prepended by salted crc checksum for data validation. When save is loaded, `checkSum` flag should be set accordingly.
+	**/
 	public static function save( val : Dynamic, ?name = "save", checkSum = false ) {
 		#if flash
 		var data = saveData(val, checkSum);

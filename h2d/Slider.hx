@@ -15,7 +15,6 @@ class Slider extends h2d.Interactive {
 		tile.dy = (height - 4) >> 1;
 
 		cursorTile = h2d.Tile.fromColor(0xCCCCCC, 5, height);
-		cursorTile.dx = -2;
 	}
 
 	function set_minValue(v) {
@@ -38,6 +37,7 @@ class Slider extends h2d.Interactive {
 		super.getBoundsRec(relativeTo, out, forSize);
 		if( forSize ) addBounds(relativeTo, out, 0, 0, width, height);
 		if( tile != null ) addBounds(relativeTo, out, tile.dx, tile.dy, tile.width, tile.height);
+		if( cursorTile != null ) addBounds(relativeTo, out, cursorTile.dx + getDx(), cursorTile.dy, cursorTile.width, cursorTile.height);
 	}
 
 	override function draw(ctx:RenderContext) {
@@ -45,10 +45,19 @@ class Slider extends h2d.Interactive {
 		if( tile.width != Std.int(width) )
 			tile.setSize(Std.int(width), tile.height);
 		emitTile(ctx, tile);
-		var px = Math.round( (value - minValue) * (width - cursorTile.width) / (maxValue - minValue) ) - cursorTile.dx;
+		var px = getDx();
 		cursorTile.dx += px;
 		emitTile(ctx, cursorTile);
 		cursorTile.dx -= px;
+	}
+
+	var handleDX = 0.0;
+	inline function getDx() {
+		return Math.round( (value - minValue) * (width - cursorTile.width) / (maxValue - minValue) );
+	}
+
+	inline function getValue(cursorX : Float) : Float {
+		return ((cursorX - handleDX) / (width - cursorTile.width)) * (maxValue - minValue) + minValue;
 	}
 
 	override function handleEvent(e:hxd.Event) {
@@ -56,7 +65,17 @@ class Slider extends h2d.Interactive {
 		if( e.cancel ) return;
 		switch( e.kind ) {
 		case EPush:
-			value = (e.relX / width) * (maxValue - minValue) + minValue;
+			var dx = getDx();
+		   	handleDX = e.relX - dx;
+
+			// If clicking the slider outside the handle, drag the handle
+			// by the center of it.
+			if (handleDX - cursorTile.dx < 0 || handleDX - cursorTile.dx > cursorTile.width) {
+			  handleDX = cursorTile.width * 0.5;
+			}
+
+			value = getValue(e.relX);
+
 			onChange();
 			var scene = scene;
 			startDrag(function(e) {
@@ -64,7 +83,7 @@ class Slider extends h2d.Interactive {
 					scene.stopDrag();
 					return;
 				}
-				value = (e.relX / width) * (maxValue - minValue) + minValue;
+				value = getValue(e.relX);
 				onChange();
 			});
 		default:

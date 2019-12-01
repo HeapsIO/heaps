@@ -5,6 +5,8 @@ import h2d.Graphics;
 import h2d.Object;
 import h2d.Text.Align;
 
+// Use both text_res and res folders.
+//PARAM=-D resourcesPath=../../text_res;../../res
 class HtmlTextWidget extends Object
 {
 	public var align: Align;

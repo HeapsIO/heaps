@@ -33,15 +33,17 @@ class Window {
 
 	static var CODEMAP = [for( i in 0...2048 ) i];
 
-	function new(title:String, width:Int, height:Int) {
+	function new(title:String, width:Int, height:Int, fixed:Bool = false) {
 		this.windowWidth = width;
 		this.windowHeight = height;
 		eventTargets = new List();
 		resizeEvents = new List();
 		#if hlsdl
-		window = new sdl.Window(title, width, height);
+		final sdlFlags = if (!fixed) sdl.Window.SDL_WINDOW_SHOWN | sdl.Window.SDL_WINDOW_RESIZABLE else sdl.Window.SDL_WINDOW_SHOWN;
+		window = new sdl.Window(title, width, height, sdl.Window.SDL_WINDOWPOS_CENTERED, sdl.Window.SDL_WINDOWPOS_CENTERED, sdlFlags);
 		#elseif hldx
-		window = new dx.Window(title, width, height);
+		final dxFlags = if (!fixed) dx.Window.RESIZABLE else 0;
+		window = new dx.Window(title, width, height, dx.Window.CW_USEDEFAULT, dx.Window.CW_USEDEFAULT, dxFlags);
 		#end
 	}
 
@@ -342,6 +344,7 @@ class Window {
 			92 => K.QWERTY_BACKSLASH,
 			93 => K.QWERTY_BRACKET_RIGHT,
 			96 => K.QWERTY_TILDE,
+			167 => K.QWERTY_BACKSLASH,
 			1101 => K.CONTEXT_MENU,
 			1057 => K.CAPS_LOCK,
 			1071 => K.SCROLL_LOCK,

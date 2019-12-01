@@ -3,7 +3,6 @@ package hxd.res;
 enum Platform {
 	Flash;
 	HL;
-	Cpp;
 	JS;
 	Unknown;
 }
@@ -65,7 +64,6 @@ class Config {
 		var pf =
 			if( defined("flash") ) Flash else
 			if( defined("js") ) JS else
-			if( defined("cpp") ) Cpp else
 			if( defined("hl") ) HL else
 			Unknown;
 		switch( pf ) {

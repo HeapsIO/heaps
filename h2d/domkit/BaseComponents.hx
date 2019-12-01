@@ -248,7 +248,7 @@ class ObjectComp implements h2d.domkit.Object implements domkit.Component.Compon
 	@:p var y : Float;
 	@:p var alpha : Float = 1;
 	@:p var rotation : Float;
-	@:p var visible : Bool;
+	@:p var visible : Bool = true;
 	@:p(scale) var scale : { x : Float, y : Float };
 	@:p var scaleX : Float;
 	@:p var scaleY : Float;
@@ -273,6 +273,10 @@ class ObjectComp implements h2d.domkit.Object implements domkit.Component.Compon
 
 	static function set_rotation(o:h2d.Object, v:Float) {
 		o.rotation = v * Math.PI / 180;
+	}
+
+	static function set_visible(o:h2d.Object, v:Bool) {
+		o.visible = v;
 	}
 
 	static function set_scale(o:h2d.Object,v) {

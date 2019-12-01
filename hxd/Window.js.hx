@@ -47,6 +47,12 @@ class Window {
 
 		this.canvas = canvas;
 		this.propagateKeyEvents = globalEvents;
+
+		var propagate = canvas.getAttribute("propagateKeyEvents");
+		if (propagate != null) {
+			this.propagateKeyEvents = propagate != "0" && propagate != "false";
+		}
+
 		focused = globalEvents;
 		element = globalEvents ? js.Browser.window : canvas;
 		canvasPos = canvas.getBoundingClientRect();
@@ -296,7 +302,17 @@ class Window {
 		ev.keyCode = e.keyCode;
 		event(ev);
 		if( !propagateKeyEvents ) {
-			//e.preventDefault() -- required to trigger onKeyPress
+			switch ev.keyCode {
+				case 37, 38, 39, 40, // Arrows
+					33, 34, // Page up/down
+					35, 36, // Home/end
+					8, // Backspace
+					9, // Tab
+					16, // Shift
+					17 : // Ctrl
+						e.preventDefault();
+				case _ :
+			}
 			e.stopPropagation();
 		}
 	}

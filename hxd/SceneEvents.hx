@@ -21,6 +21,9 @@ class SceneEvents {
 	var scenes : Array<InteractiveScene>;
 
 	var overList : Array<Interactive>;
+	// Indexes and rel position in overList of Interactives that received EOver this frame.
+	// This array is never cleared apart from nulling Interactive, because internal counter is used, so those values are meaningless on practice.
+	var overCandidates : Array<{ i : Interactive, s : InteractiveScene, x : Float, y : Float, z : Float }>;
 	var overIndex : Int = -1;
 	var outIndex : Int = -1;
 	var currentFocus : Interactive;
@@ -35,6 +38,7 @@ class SceneEvents {
 	var focusLost = new hxd.Event(EFocusLost);
 	var checkPos = new hxd.Event(ECheck);
 	var onOut = new hxd.Event(EOut);
+	var onOver = new hxd.Event(EOver);
 	var isOut = false;
 
 	/**
@@ -57,6 +61,7 @@ class SceneEvents {
 		pendingEvents = [];
 		pushList = [];
 		overList = [];
+		overCandidates = [];
 		if( window == null ) window = hxd.Window.getInstance();
 		this.window = window;
 		window.addEventTarget(onEvent);
@@ -136,7 +141,7 @@ class SceneEvents {
 	}
 
 	function emitEvent( event : hxd.Event ) {
-		var oldX = event.relX, oldY = event.relY;
+		var oldX = event.relX, oldY = event.relY, overCandidateCount = 0;
 		var handled = false;
 		var checkOver = false, fillOver = false, checkPush = false, cancelFocus = false, updateCursor = false;
 		overIndex = 0;
@@ -173,20 +178,25 @@ class SceneEvents {
 					if ( fillOver ) {
 						var idx = overList.indexOf(i);
 						if ( idx == -1 ) {
-							var oldPropagate = event.propagate;
-							var oldKind = event.kind;
-							event.kind = EOver;
-							event.cancel = false;
-							i.handleEvent(event);
-							if ( !event.cancel ) {
-								overList.insert(overIndex, i);
-								overIndex++;
-								fillOver = event.propagate;
-								updateCursor = true;
+							if ( overCandidates.length == overCandidateCount ) {
+								overCandidates[overCandidateCount] = {
+									i : i,
+									s : s,
+									x : event.relX,
+									y : event.relY,
+									z : event.relZ
+								};
+							} else {
+								var info = overCandidates[overCandidateCount];
+								info.i = i;
+								info.s = s;
+								info.x = event.relX;
+								info.y = event.relY;
+								info.z = event.relZ;
 							}
-							event.kind = oldKind;
-							event.propagate = oldPropagate;
-							event.cancel = false;
+							overCandidateCount++;
+							overList.insert(overIndex++, i);
+							updateCursor = true;
 						} else {
 							if ( idx < overIndex ) {
 								do {
@@ -203,9 +213,9 @@ class SceneEvents {
 								overList[overIndex] = i;
 								updateCursor = true;
 							}
-							fillOver = i.propagateEvents;
 							overIndex++;
 						}
+						fillOver = event.propagate;
 					}
 				} else {
 					if( checkPush ) {
@@ -236,17 +246,28 @@ class SceneEvents {
 		if( cancelFocus && currentFocus != null )
 			blur();
 
-		if( checkOver && overIndex < overList.length ) {
-			outIndex = overList.length - 1;
-			do {
-				onOut.cancel = false;
-				overList[outIndex].handleEvent(onOut);
-				if ( !onOut.cancel ) {
+		if ( checkOver ) {
+			if ( overIndex < overList.length ) {
+				outIndex = overList.length - 1;
+				do {
+					overList[outIndex].handleEvent(onOut);
 					overList.remove(overList[outIndex]);
-					continue;
-				}
-			} while ( --outIndex >= overIndex );
-			updateCursor = true;
+				} while ( --outIndex >= overIndex );
+				updateCursor = true;
+			}
+			if ( overCandidateCount != 0 ) {
+				var i = 0, ev = onOver;
+				do {
+					var info = overCandidates[i++];
+					ev.relX = info.x;
+					ev.relY = info.y;
+					ev.relZ = info.z;
+					if( info.s.isInteractiveVisible(info.i) )
+						info.i.handleEvent(ev);
+					info.i = null;
+					info.s = null;
+				} while ( i < overCandidateCount );
+			}
 		}
 		overIndex = -1;
 
@@ -320,8 +341,7 @@ class SceneEvents {
 						while ( i >= 0 ) {
 							onOut.cancel = false;
 							overList[i].handleEvent(onOut);
-							if ( !onOut.cancel )
-								overList.remove(overList[i]);
+							overList.remove(overList[i]);
 							i--;
 						}
 						selectCursor();

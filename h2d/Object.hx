@@ -7,7 +7,7 @@ import hxd.Math;
 	so the various transforms are inherited to its children.
 **/
 @:allow(h2d.Tools)
-class Object #if domkit implements domkit.Model<h2d.Object> #end {
+class Object #if (domkit && !domkit_heaps) implements domkit.Model<h2d.Object> #end {
 
 	static var nullDrawable : h2d.Drawable;
 
@@ -66,6 +66,7 @@ class Object #if domkit implements domkit.Model<h2d.Object> #end {
 
 	/**
 		The post process filter for this object.
+		When set, `alpha` value affects both filter and object transparency (use `Drawable.color.a` to set transparency only for the object).
 	**/
 	public var filter(default,set) : h2d.filter.Filter;
 
