@@ -216,6 +216,24 @@ class Texture {
 			alloc();
 	}
 
+	public function clearF( r : Float = 0., g : Float = 0., b : Float = 0., a : Float = 0., layer = -1 ) {
+		alloc();
+		if( !flags.has(Target) ) throw "Texture should be target";
+		var engine = h3d.Engine.getCurrent();
+		var color = new h3d.Vector(r,g,b,a);
+		if( layer < 0 ) {
+			for( i in 0...layerCount ) {
+				engine.pushTarget(this, i);
+				engine.clearF(color);
+				engine.popTarget();
+			}
+		} else {
+			engine.pushTarget(this, layer);
+			engine.clearF(color);
+			engine.popTarget();
+		}
+	}
+
 	public function clear( color : Int, alpha = 1., ?layer = -1 ) {
 		alloc();
 		if( #if (usegl || hlsdl || js) true #else flags.has(Target) #end && (width != 1 || height != 1) ) {

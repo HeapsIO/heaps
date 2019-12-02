@@ -141,8 +141,10 @@ class PointShadowMap extends Shadows {
 		if( tmpTex != null) return tmpTex;
 		tmpTex = new h3d.mat.Texture(1,1, [Target,Cube], format);
 		tmpTex.name = "defaultCubeShadowMap";
-		for(i in 0 ... 6)
-			tmpTex.clear(0xFFFFFF, i);
+		if( format == RGBA )
+			tmpTex.clear(0xFFFFFF);
+		else
+			tmpTex.clearF(1);
 		return tmpTex;
 	}
 
