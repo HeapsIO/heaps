@@ -247,6 +247,8 @@ class PointShadowMap extends Shadows {
 		staticTexture = texture.clone();
 		if( old != null ) old.dispose();
 		staticTexture.name = "StaticPointShadowMap";
+		staticTexture.realloc = null;
+		staticTexture.preventAutoDispose();
 		pshader.shadowMap = staticTexture;
 	}
 }

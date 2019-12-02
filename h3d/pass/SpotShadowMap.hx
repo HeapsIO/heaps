@@ -166,6 +166,9 @@ class SpotShadowMap extends Shadows {
 		var old = staticTexture;
 		staticTexture = texture.clone();
 		if( old != null ) old.dispose();
+		staticTexture.name = "StaticSpotShadowMap";
+		staticTexture.realloc = null;
+		staticTexture.preventAutoDispose();
 		sshader.shadowMap = staticTexture;
 	}
 }

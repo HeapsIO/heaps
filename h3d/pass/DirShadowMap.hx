@@ -248,8 +248,12 @@ class DirShadowMap extends Shadows {
 			return;
 		draw(passes);
 		var texture = dshader.shadowMap;
-		if( staticTexture != null ) staticTexture.dispose();
+		var old = staticTexture;
 		staticTexture = texture.clone();
+		if( old != null ) old.dispose();
+		staticTexture.name = "StaticDirShadowMap";
+		staticTexture.realloc = null;
+		staticTexture.preventAutoDispose();
 		dshader.shadowMap = staticTexture;
 	}
 
