@@ -1,5 +1,11 @@
 package hxd;
 
+enum DisplayMode {
+	Windowed;
+	Borderless;
+	Fullscreen;
+}
+
 class Window {
 
 	var resizeEvents : List<Void -> Void>;
@@ -12,6 +18,9 @@ class Window {
 	public var mouseLock(get, set) : Bool;
 	public var vsync(get, set) : Bool;
 	public var isFocused(get, never) : Bool;
+
+	public var title(get, set) : String;
+	public var displayMode(get, set) : DisplayMode;
 
 	// FLASH
 	var stage : flash.display.Stage;
@@ -105,6 +114,8 @@ class Window {
 	public function resize( width : Int, height : Int ) : Void {
 	}
 
+
+	@:deprecated("Use the displayMode property instead")
 	public function setFullScreen( v : Bool ) : Void {
 		var isAir = isAir();
 		var state = v ? (isAir ? flash.display.StageDisplayState.FULL_SCREEN_INTERACTIVE : flash.display.StageDisplayState.FULL_SCREEN) : flash.display.StageDisplayState.NORMAL;
@@ -294,5 +305,38 @@ class Window {
 
 	function get_isFocused() : Bool return false;
 
+	function get_displayMode() : DisplayMode {
+		if (stage.displayMode == flash.display.StageDisplayState.NORMAL) {
+			return Windowed;
+		}
+
+		return Borderless;
+	}
+
+	function set_displayMode( m : DisplayMode ) : DisplayMode {
+		var fullscreen = m != Windowed;
+		var isAir = isAir();
+		var state = fullscreen ? (isAir ? flash.display.StageDisplayState.FULL_SCREEN_INTERACTIVE : flash.display.StageDisplayState.FULL_SCREEN) : flash.display.StageDisplayState.NORMAL;
+		if( stage.displayState != state ) {
+			var t = flash.Lib.getTimer();
+			// delay first fullsrceen toggle on OSX/Air to prevent the command window to spawn over
+			if( fullscreen && isAir && t < 5000 && !fsDelayed && flash.system.Capabilities.os.indexOf("Mac") != -1 ) {
+				fsDelayed = true;
+				haxe.Timer.delay(function() this.displayMode = m, 1000);
+				return;
+			}
+			stage.displayState = state;
+		}
+	}
+
+	function get_title() : String {
+		// !TODO implement
+		return "";
+	}
+
+	function set_title( t : String ) : String {
+		// !TODO implement
+		return r;
+	}
 }
 
