@@ -197,6 +197,8 @@ class DirShadowMap extends Shadows {
 		if( !filterPasses(passes) )
 			return;
 
+		cullPasses(passes,function(col) return col.inFrustum(lightCamera.frustum));
+
 		var texture = ctx.textures.allocTarget("dirShadowMap", size, size, false, format);
 		if( customDepth && (depth == null || depth.width != size || depth.height != size || depth.isDisposed()) ) {
 			if( depth != null ) depth.dispose();
