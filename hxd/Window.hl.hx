@@ -5,6 +5,12 @@ import hxd.Key in K;
 #error "You shouldn't use both -lib hlsdl and -lib hldx"
 #end
 
+enum DisplayMode {
+	Windowed;
+	Borderless;
+	Fullscreen;
+}
+
 //@:coreApi
 class Window {
 
@@ -19,12 +25,19 @@ class Window {
 	public var vsync(get, set) : Bool;
 	public var isFocused(get, never) : Bool;
 
+	public var title(get, set) : String;
+	public var displayMode(get, set) : DisplayMode;
+
 	#if hlsdl
 	var window : sdl.Window;
-	var fullScreenMode : sdl.Window.DisplayMode = Borderless;
+	var windowedMode : sdl.Window.DisplayMode = Windowed;
+	var borderlessMode : sdl.Window.DisplayMode = Borderless;
+	var fullScreenMode : sdl.Window.DisplayMode = Fullscreen;
 	#elseif hldx
 	var window : dx.Window;
-	var fullScreenMode : dx.Window.DisplayMode = Borderless;
+	var windowedMode : dx.Window.DisplayMode = Windowed;
+	var borderlessMode : dx.Window.DisplayMode = Borderless;
+	var fullScreenMode : dx.Window.DisplayMode = Fullscreen;
 	#end
 	var windowWidth = 800;
 	var windowHeight = 600;
@@ -94,6 +107,7 @@ class Window {
 		for( f in resizeEvents ) f();
 	}
 
+	@:deprecated("Use the displayMode property instead")
 	public function setFullScreen( v : Bool ) : Void {
 		#if (hldx || hlsdl)
 		window.displayMode = v ? fullScreenMode : Windowed;
@@ -379,6 +393,34 @@ class Window {
 	function get_isFocused() : Bool return false;
 
 	#end
+
+	function get_displayMode() : DisplayMode {
+		var mode = window.displayMode;
+
+		if ( mode == windowedMode) return Windowed;
+		if ( mode == borderlessMode) return Borderless;
+		if ( mode == fullScreenMode) return Fullscreen;
+
+		return Windowed;
+	}
+
+	function set_displayMode( m : DisplayMode ) : DisplayMode {
+		#if (hldx || hlsdl)
+		switch(m) {
+			case Windowed: window.displayMode = windowedMode;
+			case Borderless: window.displayMode = borderlessMode;
+			case Fullscreen: window.displayMode = fullScreenMode;
+		}
+		#end
+		return displayMode;
+	}
+
+	function get_title() : String {
+		return window.title;
+	}
+	function set_title( t : String ) : String {
+		return window.title = t;
+	}
 
 	static var inst : Window = null;
 	public static function getInstance() : Window {

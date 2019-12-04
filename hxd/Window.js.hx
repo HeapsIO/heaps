@@ -1,5 +1,11 @@
 package hxd;
 
+enum DisplayMode {
+	Windowed;
+	Borderless;
+	Fullscreen;
+}
+
 class Window {
 
 	var resizeEvents : List<Void -> Void>;
@@ -13,6 +19,9 @@ class Window {
 	public var vsync(get, set) : Bool;
 	public var isFocused(get, never) : Bool;
 	public var propagateKeyEvents : Bool;
+
+	public var title(get, set) : String;
+	public var displayMode(get, set) : DisplayMode;
 
 	var curMouseX : Float = 0.;
 	var curMouseY : Float = 0.;
@@ -157,6 +166,7 @@ class Window {
 	public function resize( width : Int, height : Int ) : Void {
 	}
 
+	@:deprecated("Use the displayMode property instead")
 	public function setFullScreen( v : Bool ) : Void {
 		var doc = js.Browser.document;
 		var elt : Dynamic = doc.documentElement;
@@ -333,4 +343,34 @@ class Window {
 	}
 
 	function get_isFocused() : Bool return focused;
+
+	function get_displayMode() : DisplayMode {
+		var doc = js.Browser.document;
+		if ( doc.fullscreenElement != null) {
+			return Borderless;
+		}
+
+		return Windowed;
+	}
+
+	function set_displayMode( m : DisplayMode ) : DisplayMode {
+		var doc = js.Browser.document;
+		var elt : Dynamic = doc.documentElement;
+		var fullscreen = m != Windowed;
+		if( (doc.fullscreenElement == elt) == fullscreen )
+			return Windowed;
+		if( m != Windowed )
+			elt.requestFullscreen();
+		else
+			doc.exitFullscreen();
+
+		return m;
+	}
+
+	function get_title() : String {
+		return js.Browser.document.title;
+	}
+	function set_title( t : String ) : String {
+		return js.Browser.document.title = t;
+	}
 }
