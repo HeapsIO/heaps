@@ -315,7 +315,6 @@ class Window {
 				haxe.Timer.delay(function() { this.displayMode = m; }, 1000);
 				return m;
 			}
-			trace(m);
 			stage.displayState = state;
 		}
 
