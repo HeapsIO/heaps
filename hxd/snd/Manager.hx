@@ -327,11 +327,7 @@ class Manager {
 					c.position        = c.duration;
 					c.positionChanged = false;
 					c.onEnd();
-					if (c.loop) {
-						s.start = b.sound.sampleStartLoop;
-					} else {
-						s.start = 0;
-					}
+					s.start = 0;
 				}
 			}
 
@@ -346,7 +342,7 @@ class Manager {
 					c.position = 0;
 					releaseSource(s);
 				} else if (c.loop) {
-					c.position = c.sound.sampleStartLoop / c.sound.getData().samplingRate;
+					c.position = 0;
 					releaseSource(s);
 				} else {
 					releaseChannel(c);
@@ -381,7 +377,7 @@ class Manager {
 						c.queue.shift();
 				} else if (c.loop) {
 					// requeue last played sound
-					queueBuffer(s, b.sound, b.sound.sampleStartLoop);
+					queueBuffer(s, b.sound, 0);
 				}
 			}
 		}
@@ -603,8 +599,8 @@ class Manager {
 		var b : Buffer = null;
 		if (data.duration <= STREAM_DURATION) {
 			// queue sound buffer
-			b = getSoundBuffer(snd, sgroup, start, (s.channel.loop) ? snd.sampleStopLoop : 0);
-			driver.queueBuffer(s.handle, b.handle, 0, true);
+			b = getSoundBuffer(snd, sgroup);
+			driver.queueBuffer(s.handle, b.handle, start, true);
 		} else {
 
 			// wait until fully decoded
@@ -695,23 +691,21 @@ class Manager {
 		return targetChannels == dat.channels && targetFormat == dat.sampleFormat && targetRate == dat.samplingRate;
 	}
 
-	function getSoundBuffer(snd : hxd.res.Sound, grp : SoundGroup, start : Int = 0, end : Int = 0) : Buffer {
+	function getSoundBuffer(snd : hxd.res.Sound, grp : SoundGroup) : Buffer {
 		var data = snd.getData();
 		var mono = grp.mono;
 		var key  = snd.entry.path;
 
 		if (mono && data.channels != 1) key += "mono";
 		var b = soundBufferMap.get(key);
-		if (b == null || b.start != start || b.end != end) {
-			if (b == null) soundBufferKeys.push(key);
+		if (b == null) {
 			b = new Buffer(driver);
 			b.isStream = false;
 			b.isEnd = true;
 			b.sound = snd;
-			b.start = start;
-			b.end = end;
-			data.load(function() fillSoundBuffer(b, data, mono, start, end));
+			data.load(function() fillSoundBuffer(b, data, mono));
 			soundBufferMap.set(key, b);
+			soundBufferKeys.push(key);
 			++soundBufferCount;
 		}
 
@@ -719,20 +713,16 @@ class Manager {
 		return b;
 	}
 
-	function fillSoundBuffer(buf : Buffer, dat : hxd.snd.Data, forceMono = false, start : Int, end : Int = 0) {
+	function fillSoundBuffer(buf : Buffer, dat : hxd.snd.Data, forceMono = false) {
 		if (!checkTargetFormat(dat, forceMono))
 			dat = dat.resample(targetRate, targetFormat, targetChannels);
 
-		var sampleCount = dat.samples - start;
-		if (end > 0 && start <= end && start + dat.samples >= end) {
-			sampleCount = end - start;
-		}
-		var length = sampleCount * dat.getBytesPerSample();
+		var length = dat.samples * dat.getBytesPerSample();
 		var bytes  = getTmpBytes(length);
-		dat.decode(bytes, 0, start, sampleCount);
+		dat.decode(bytes, 0, 0, dat.samples);
 		driver.setBufferData(buf.handle, bytes, length, targetFormat, targetChannels, targetRate);
 		buf.sampleRate = targetRate;
-		buf.samples    = sampleCount;
+		buf.samples    = dat.samples;
 	}
 
 	function getStreamBuffer( src : Source, snd : hxd.res.Sound, grp : SoundGroup, start : Int) : Buffer {
@@ -750,10 +740,6 @@ class Manager {
 			b.isEnd = true;
 		} else {
 			b.isEnd = false;
-		}
-		if (src.channel.loop && snd.sampleStopLoop > 0 && start <= snd.sampleStopLoop && start + samples >= snd.sampleStopLoop) {
-			samples = snd.sampleStopLoop - start;
-			b.isEnd = true;
 		}
 
 		b.sound   = snd;
