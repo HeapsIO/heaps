@@ -5,11 +5,11 @@ import hxd.Key in K;
 #error "You shouldn't use both -lib hlsdl and -lib hldx"
 #end
 
-enum DisplayMode {
-	Windowed;
-	Borderless;
-	Fullscreen;
-}
+#if hlsdl
+typedef DisplayMode = sdl.Window.DisplayMode;
+#elseif hldx
+typedef DisplayMode = dx.Window.DisplayMode;
+#end
 
 //@:coreApi
 class Window {
@@ -30,14 +30,8 @@ class Window {
 
 	#if hlsdl
 	var window : sdl.Window;
-	var windowedMode : sdl.Window.DisplayMode = Windowed;
-	var borderlessMode : sdl.Window.DisplayMode = Borderless;
-	var fullScreenMode : sdl.Window.DisplayMode = Fullscreen;
 	#elseif hldx
 	var window : dx.Window;
-	var windowedMode : dx.Window.DisplayMode = Windowed;
-	var borderlessMode : dx.Window.DisplayMode = Borderless;
-	var fullScreenMode : dx.Window.DisplayMode = Fullscreen;
 	#end
 	var windowWidth = 800;
 	var windowHeight = 600;
@@ -110,7 +104,7 @@ class Window {
 	@:deprecated("Use the displayMode property instead")
 	public function setFullScreen( v : Bool ) : Void {
 		#if (hldx || hlsdl)
-		window.displayMode = v ? fullScreenMode : Windowed;
+		window.displayMode = v ? Borderless : Windowed;
 		#end
 	}
 
@@ -395,22 +389,15 @@ class Window {
 	#end
 
 	function get_displayMode() : DisplayMode {
-		var mode = window.displayMode;
-
-		if ( mode == windowedMode) return Windowed;
-		if ( mode == borderlessMode) return Borderless;
-		if ( mode == fullScreenMode) return Fullscreen;
-
+		#if (hldx || hlsdl)
+		return window.displayMode;
+		#end
 		return Windowed;
 	}
 
 	function set_displayMode( m : DisplayMode ) : DisplayMode {
 		#if (hldx || hlsdl)
-		switch(m) {
-			case Windowed: window.displayMode = windowedMode;
-			case Borderless: window.displayMode = borderlessMode;
-			case Fullscreen: window.displayMode = fullScreenMode;
-		}
+		window.displayMode = m;
 		#end
 		return displayMode;
 	}
