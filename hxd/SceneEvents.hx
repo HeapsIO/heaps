@@ -25,7 +25,6 @@ class SceneEvents {
 	// This array is never cleared apart from nulling Interactive, because internal counter is used, so those values are meaningless on practice.
 	var overCandidates : Array<{ i : Interactive, s : InteractiveScene, x : Float, y : Float, z : Float }>;
 	var overIndex : Int = -1;
-	var outIndex : Int = -1;
 	var currentFocus : Interactive;
 
 	var pendingEvents : Array<hxd.Event>;
@@ -80,7 +79,7 @@ class SceneEvents {
 			if( index >= 0 ) {
 				// onRemove is triggered which we are dispatching events
 				// let's carefully update indexes
-				outIndex--;
+				overList.remove(i);
 				if( index < overIndex ) overIndex--;
 			}
 		} else {
@@ -248,11 +247,10 @@ class SceneEvents {
 
 		if ( checkOver ) {
 			if ( overIndex < overList.length ) {
-				outIndex = overList.length - 1;
-				do {
-					overList[outIndex].handleEvent(onOut);
-					overList.remove(overList[outIndex]);
-				} while ( --outIndex >= overIndex );
+				while( overIndex < overList.length ) {
+					var e = overList.pop();
+					e.handleEvent(onOut);
+				}
 				updateCursor = true;
 			}
 			if ( overCandidateCount != 0 ) {
@@ -264,6 +262,8 @@ class SceneEvents {
 					ev.relZ = info.z;
 					if( info.s.isInteractiveVisible(info.i) )
 						info.i.handleEvent(ev);
+					else
+						overList.remove(info.i);
 					info.i = null;
 					info.s = null;
 				} while ( i < overCandidateCount );
