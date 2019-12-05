@@ -9,6 +9,13 @@ import hxd.Key in K;
 typedef DisplayMode = sdl.Window.DisplayMode;
 #elseif hldx
 typedef DisplayMode = dx.Window.DisplayMode;
+#else
+enum DisplayMode {
+	Windowed;
+	Borderless;
+	Fullscreen;
+	FullscreenResize;
+}
 #end
 
 //@:coreApi

@@ -4,6 +4,7 @@ enum DisplayMode {
 	Windowed;
 	Borderless;
 	Fullscreen;
+	FullscreenResize;
 }
 
 class Window {
