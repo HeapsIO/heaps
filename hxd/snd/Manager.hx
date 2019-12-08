@@ -20,6 +20,12 @@ class Source {
 	public var streamBuffer : haxe.io.Bytes;
 	public var streamStart : Int;
 	public var streamPos : Int;
+	#if (!snd_sync && target.threaded)
+	// 0 = Not decoded OR was decoded and processed by main thread
+	// 1 = Decode in progress
+	// 2 = Decoding is complete by decoder thread but wasn't processed by main thread.
+	public var streamDecoded : Int;
+	#end
 
 	public function new(driver : Driver) {
 		id      = ID++;
@@ -96,6 +102,11 @@ class Manager {
 	var effectGC          : Array<Effect>;
 	var hasMasterVolume   : Bool;
 
+	#if (!snd_sync && target.threaded)
+	var decoderThreadInst:sys.thread.Thread;
+	// var decoderQueue
+	#end
+
 	public var suspended : Bool = false;
 
 	private function new() {
@@ -130,6 +141,9 @@ class Manager {
 
 		cachedBytes   = haxe.io.Bytes.alloc(4 * 3 * 2);
 		resampleBytes = haxe.io.Bytes.alloc(STREAM_BUFFER_SAMPLE_COUNT * 2);
+		#if (!snd_sync && target.threaded)
+		decoderThreadInst = sys.thread.Thread.create(decoderThread);
+		#end
 	}
 
 	function getTmpBytes(size) {
@@ -568,25 +582,52 @@ class Manager {
 	// internals
 	// ------------------------------------------------------------------------
 
+	#if (!snd_sync && target.threaded)
+	function decoderThread() {
+		while (instance != null) {
+			var request:{ s : Source, snd : hxd.res.Sound, start : Int } = sys.thread.Thread.readMessage(true);
+			decodeStreamBuffer(request.s, request.snd, request.start, STREAM_BUFFER_SAMPLE_COUNT);
+			request.s.streamDecoded = 2;
+		}
+		decoderThreadInst = null;
+	}
+
 	function progressiveDecodeBuffer( s : Source, snd : hxd.res.Sound, start : Int ) {
-		var data = snd.getData();
-		var samples = Math.ceil(STREAM_BUFFER_SAMPLE_COUNT / BUFFER_STREAM_SPLIT);
-		if( s.streamStart != start || s.streamSound != snd ) {
+		if (s.streamDecoded == 0) {
+			if ( s.streamStart == start && s.streamSound == snd &&
+				s.streamPos == s.streamStart + STREAM_BUFFER_SAMPLE_COUNT ) return true; // Already decoded
+			s.streamDecoded = 1;
+			decoderThreadInst.sendMessage({ s: s, snd: snd, start: start });
+		} else if (s.streamDecoded == 2) {
+			s.streamDecoded = 0;
+			return true;
+		}
+		return false;
+	}
+
+	#else
+	inline function progressiveDecodeBuffer( s : Source, snd : hxd.res.Sound, start : Int ) {
+		decodeStreamBuffer(s, snd, start, Math.ceil(STREAM_BUFFER_SAMPLE_COUNT / BUFFER_STREAM_SPLIT));
+	}
+	#end
+
+	function decodeStreamBuffer( s : Source, snd : hxd.res.Sound, start : Int, samples : Int ) {
+		if ( s.streamStart != start || s.streamSound != snd ) {
 			s.streamSound = snd;
 			s.streamStart = start;
 			s.streamPos = start;
 		}
 		var end = start + STREAM_BUFFER_SAMPLE_COUNT;
-		if( s.streamPos == end )
-			return true; // already done
+		if (s.streamPos == end) return true; // Already decoded
+		var data = snd.getData();
 		var bpp = data.getBytesPerSample();
 		var reqSize = STREAM_BUFFER_SAMPLE_COUNT * bpp;
-		if( s.streamBuffer == null || s.streamBuffer.length < reqSize ) {
+		if ( s.streamBuffer == null || s.streamBuffer.length < reqSize ) {
 			s.streamBuffer = haxe.io.Bytes.alloc(reqSize);
 			s.streamPos = start;
 		}
 		var remain = end - s.streamPos;
-		if( remain > samples ) remain = samples;
+		if ( remain > samples ) remain = samples;
 		data.decode(s.streamBuffer, (s.streamPos - start) * bpp, s.streamPos, remain);
 		s.streamPos += remain;
 		return s.streamPos == end;
