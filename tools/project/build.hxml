@@ -1,0 +1,25 @@
+-lib heaps
+-cp src
+-main Main
+
+# Integrated libraries
+#-lib castle
+#-lib domkit
+
+# Window configuration
+#-D windowTitle=MyGameTitle
+#-D windowSize=1280x720
+
+# Enable MP3 listing in Res when targeting Hashlink
+#-D heaps_enable_hp_mp3
+# Enable OGG support in JS
+#-lib stb_ogg_sound
+
+# JS output
+#-js ::name::.js
+
+# HL output
+-lib hlsdl
+#-lib hldx
+-hl {{project.name}}.hl
+#-hl bin/hlc/::name::.c
