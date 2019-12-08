@@ -607,7 +607,7 @@ class Manager {
 
 	#else
 	inline function progressiveDecodeBuffer( s : Source, snd : hxd.res.Sound, start : Int ) {
-		decodeStreamBuffer(s, snd, start, Math.ceil(STREAM_BUFFER_SAMPLE_COUNT / BUFFER_STREAM_SPLIT));
+		return decodeStreamBuffer(s, snd, start, Math.ceil(STREAM_BUFFER_SAMPLE_COUNT / BUFFER_STREAM_SPLIT));
 	}
 	#end
 
