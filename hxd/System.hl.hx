@@ -216,6 +216,9 @@ class System {
 					var pixels = frame.getPixels();
 					pixels.convert(BGRA);
 					#if hlsdl
+					if (c.offsetX < 0 || c.offsetX >= pixels.width || c.offsetY < 0 || c.offsetY >= pixels.height) {
+						throw "SDL2 does not allow creation of cursors with offset outside of cursor image bounds.";
+					}
 					var surf = sdl.Surface.fromBGRA(pixels.bytes, pixels.width, pixels.height);
 					c.alloc.push(sdl.Cursor.create(surf, c.offsetX, c.offsetY));
 					surf.free();

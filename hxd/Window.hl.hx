@@ -171,8 +171,10 @@ class Window {
 				#end
 			case Enter:
 				#if hldx
-				// reset cursor to default
-				dx.Cursor.createSystem(Arrow).set();
+				// Restore cursor
+				var cur = @:privateAccess hxd.System.currentNativeCursor;
+				@:privateAccess hxd.System.currentNativeCursor = null;
+				hxd.System.setNativeCursor(cur);
 				#end
 				event(new Event(EOver));
 			case Leave:
