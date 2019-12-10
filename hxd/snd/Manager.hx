@@ -21,10 +21,7 @@ class Source {
 	public var streamStart : Int;
 	public var streamPos : Int;
 	#if (!snd_sync && target.threaded)
-	// 0 = Not decoded OR was decoded and processed by main thread
-	// 1 = Decode in progress
-	// 2 = Decoding is complete by decoder thread but wasn't processed by main thread.
-	public var streamDecoded : Int;
+	public var streamDecoding : Bool;
 	#end
 
 	public function new(driver : Driver) {
@@ -587,20 +584,17 @@ class Manager {
 		while (instance != null) {
 			var request:{ s : Source, snd : hxd.res.Sound, start : Int } = sys.thread.Thread.readMessage(true);
 			decodeStreamBuffer(request.s, request.snd, request.start, STREAM_BUFFER_SAMPLE_COUNT);
-			request.s.streamDecoded = 2;
+			request.s.streamDecoding = false;
 		}
 		decoderThreadInst = null;
 	}
 
 	function progressiveDecodeBuffer( s : Source, snd : hxd.res.Sound, start : Int ) {
-		if (s.streamDecoded == 0) {
+		if ( !s.streamDecoding ) {
 			if ( s.streamStart == start && s.streamSound == snd &&
 				s.streamPos == s.streamStart + STREAM_BUFFER_SAMPLE_COUNT ) return true; // Already decoded
-			s.streamDecoded = 1;
+			s.streamDecoding = true;
 			decoderThreadInst.sendMessage({ s: s, snd: snd, start: start });
-		} else if (s.streamDecoded == 2) {
-			s.streamDecoded = 0;
-			return true;
 		}
 		return false;
 	}
