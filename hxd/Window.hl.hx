@@ -410,10 +410,16 @@ class Window {
 	}
 
 	function get_title() : String {
+		#if (hldx || hlsdl)
 		return window.title;
+		#end
+		return "";
 	}
 	function set_title( t : String ) : String {
+		#if (hldx || hlsdl)
 		return window.title = t;
+		#end
+		return "";
 	}
 
 	static var inst : Window = null;
