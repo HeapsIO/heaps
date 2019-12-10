@@ -5,6 +5,19 @@ import hxd.Key in K;
 #error "You shouldn't use both -lib hlsdl and -lib hldx"
 #end
 
+#if hlsdl
+typedef DisplayMode = sdl.Window.DisplayMode;
+#elseif hldx
+typedef DisplayMode = dx.Window.DisplayMode;
+#else
+enum DisplayMode {
+	Windowed;
+	Borderless;
+	Fullscreen;
+	FullscreenResize;
+}
+#end
+
 //@:coreApi
 class Window {
 
@@ -19,12 +32,13 @@ class Window {
 	public var vsync(get, set) : Bool;
 	public var isFocused(get, never) : Bool;
 
+	public var title(get, set) : String;
+	public var displayMode(get, set) : DisplayMode;
+
 	#if hlsdl
 	var window : sdl.Window;
-	var fullScreenMode : sdl.Window.DisplayMode = Borderless;
 	#elseif hldx
 	var window : dx.Window;
-	var fullScreenMode : dx.Window.DisplayMode = Borderless;
 	#end
 	var windowWidth = 800;
 	var windowHeight = 600;
@@ -94,9 +108,10 @@ class Window {
 		for( f in resizeEvents ) f();
 	}
 
+	@:deprecated("Use the displayMode property instead")
 	public function setFullScreen( v : Bool ) : Void {
 		#if (hldx || hlsdl)
-		window.displayMode = v ? fullScreenMode : Windowed;
+		window.displayMode = v ? Borderless : Windowed;
 		#end
 	}
 
@@ -381,6 +396,33 @@ class Window {
 	function get_isFocused() : Bool return false;
 
 	#end
+
+	function get_displayMode() : DisplayMode {
+		#if (hldx || hlsdl)
+		return window.displayMode;
+		#end
+		return Windowed;
+	}
+
+	function set_displayMode( m : DisplayMode ) : DisplayMode {
+		#if (hldx || hlsdl)
+		window.displayMode = m;
+		#end
+		return displayMode;
+	}
+
+	function get_title() : String {
+		#if (hldx || hlsdl)
+		return window.title;
+		#end
+		return "";
+	}
+	function set_title( t : String ) : String {
+		#if (hldx || hlsdl)
+		return window.title = t;
+		#end
+		return "";
+	}
 
 	static var inst : Window = null;
 	public static function getInstance() : Window {
