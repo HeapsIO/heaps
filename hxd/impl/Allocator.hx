@@ -32,6 +32,9 @@ class Allocator {
 		i.dispose();
 	}
 
+	public function onContextLost() {
+	}
+
 	// CPU
 
 	public function allocFloats( count : Int, ?pos : AllocPos ) : hxd.FloatBuffer {

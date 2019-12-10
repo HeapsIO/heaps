@@ -227,9 +227,10 @@ class Engine {
 			width = window.width;
 			height = window.height;
 		}
-		if( disposed )
+		if( disposed ) {
+			hxd.impl.Allocator.get().onContextLost();
 			mem.onContextLost();
-		else {
+		} else {
 			mem = new h3d.impl.MemoryManager(driver);
 			mem.init();
 		}

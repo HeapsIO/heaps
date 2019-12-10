@@ -59,6 +59,10 @@ class CacheAllocator extends Allocator {
 		checkGC();
 	}
 
+	override function onContextLost() {
+		buffers = new Map();
+	}
+
 	public function checkGC() {
 		var t = haxe.Timer.stamp();
 		if( t - lastGC > maxKeepTime * 0.1 ) gc();
