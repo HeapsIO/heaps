@@ -522,6 +522,10 @@ class Renderer extends h3d.scene.Renderer {
 		return props;
 	}
 
+	function createEnv( t : h3d.mat.Texture ) {
+		return new h3d.scene.pbr.Environment(t);
+	}
+
 	override function refreshProps() {
 
 		var props : RenderProps = props;
@@ -530,7 +534,7 @@ class Renderer extends h3d.scene.Renderer {
 		if( props.env != null && (env == null || props.env != env.source.name) ) {
 			var t = hxd.res.Loader.currentInstance.load(props.env).toTexture();
 			var prev = env;
-			var env = new h3d.scene.pbr.Environment(t);
+			var env = createEnv(t);
 			env.scale = props.envScale;
 			env.threshold = props.envThreshold;
 			env.compute();
