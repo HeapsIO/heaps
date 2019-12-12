@@ -200,12 +200,12 @@ class Environment  {
 		Source can be cube map already prepared or a 2D equirectangular map that
 		will be turned into a cube map.
 	*/
-	public function new( src : h3d.mat.Texture ) {
+	public function new( src : h3d.mat.Texture, ?diffSize = 64, ?specSize = 512, ?sampleBits = 12 ) {
 		this.source = src;
 		equiToCube();
-		diffSize = 64;
-		specSize = 512;
-		sampleBits = 12;
+		this.diffSize = diffSize;
+		this.specSize = specSize;
+		this.sampleBits = sampleBits;
 	}
 
 	function equiToCube() {
