@@ -200,29 +200,38 @@ class Environment  {
 		Source can be cube map already prepared or a 2D equirectangular map that
 		will be turned into a cube map.
 	*/
-	public function new(src:h3d.mat.Texture) {
+	public function new( src : h3d.mat.Texture ) {
 		this.source = src;
-		if( src.flags.has(Loading) )
+		equiToCube();
+		diffSize = 64;
+		specSize = 512;
+		sampleBits = 12;
+	}
+
+	function equiToCube() {
+		if( source.flags.has(Loading) )
 			throw "Source is not ready";
-		if( src.flags.has(Cube) ) {
-			this.env = src;
+		if( source.flags.has(Cube) ) {
+			this.env = source;
 		} else {
-			if( src.width != src.height*2 )
+			if( source.width != source.height * 2 )
 				throw "Unrecognized environment map format";
-			env = new h3d.mat.Texture(src.height, src.height, [Cube, Target]);
+			env = new h3d.mat.Texture(source.height, source.height, [Cube, Target]);
 			var pass = new h3d.pass.ScreenFx(new IrradEquiProj());
 			var engine = h3d.Engine.getCurrent();
-			pass.shader.texture = src;
+			pass.shader.texture = source;
 			for( i in 0...6 ) {
 				engine.pushTarget(env,i);
 				pass.shader.faceMatrix = getCubeMatrix(i);
 				pass.render();
 				engine.popTarget();
 			}
+
+			env.realloc = function() {
+				equiToCube();
+				compute();
+			}
 		}
-		diffSize = 64;
-		specSize = 512;
-		sampleBits = 12;
 	}
 
 	public function dispose() {
@@ -247,7 +256,7 @@ class Environment  {
 			specular.setName("irradSpecular");
 			specular.mipMap = Linear;
 		}
-		
+
 		computeIrradLut();
 		computeIrradiance();
 	}
