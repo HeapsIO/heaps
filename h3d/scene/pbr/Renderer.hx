@@ -38,14 +38,9 @@ package h3d.scene.pbr;
 
 typedef RenderProps = {
 	var mode : DisplayMode;
-	var env : String;
 	var colorGradingLUT : String;
 	var colorGradingLUTSize : Int;
 	var enableColorGrading : Bool;
-	var envPower : Float;
-	var envRot : Float;
-	var envThreshold : Float;
-	var envScale : Float;
 	var exposure : Float;
 	var sky : SkyMode;
 	var tone : TonemapMap;
@@ -123,8 +118,6 @@ class Renderer extends h3d.scene.Renderer {
 
 	override function dispose() {
 		super.dispose();
-		if( env != null )
-			env.dispose();
 	}
 
 	inline function get_exposure() return tonemap.shader.exposure;
@@ -305,7 +298,7 @@ class Renderer extends h3d.scene.Renderer {
 		if( env != null ) {
 			pbrIndirect.cameraPosition.load(ctx.camera.pos);
 			pbrIndirect.emissivePower = props.emissive * props.emissive;
-			pbrIndirect.rot = hxd.Math.degToRad(props.envRot);
+			pbrIndirect.rot = hxd.Math.degToRad(env.rot);
 			pbrIndirect.irrPower = env.power * env.power;
 			pbrIndirect.irrLut = env.lut;
 			pbrIndirect.irrDiffuse = env.diffuse;
@@ -504,14 +497,9 @@ class Renderer extends h3d.scene.Renderer {
 	override function getDefaultProps( ?kind : String ):Any {
 		var props : RenderProps = {
 			mode : Pbr,
-			env : null,
 			colorGradingLUT : null,
 			colorGradingLUTSize : 1,
 			enableColorGrading: true,
-			envPower : 1.,
-			envRot : 0.,
-			envThreshold : 1.,
-			envScale : 1.,
 			emissive : 1.,
 			exposure : 0.,
 			sky : Irrad,
@@ -530,34 +518,10 @@ class Renderer extends h3d.scene.Renderer {
 
 		var props : RenderProps = props;
 
-		// New env map
-		if( props.env != null && (env == null || props.env != env.source.name) ) {
-			var t = hxd.res.Loader.currentInstance.load(props.env).toTexture();
-			var prev = env;
-			var env = createEnv(t);
-			env.scale = props.envScale;
-			env.threshold = props.envThreshold;
-			env.compute();
-			this.env = env;
-			if( prev != null )
-				prev.dispose();
-		}
-
 		displayMode = props.mode;
 		skyMode = props.sky;
 		toneMode = props.tone;
 		exposure = props.exposure;
-
-		if( env != null )
-			env.power = props.envPower;
-
-		// New env params
-		if( env != null && (props.envScale != env.scale || props.envThreshold != env.threshold) ) {
-			env.scale = props.envScale;
-			env.threshold = props.envThreshold;
-			env.compute();
-		}
-
 		shadows = props.shadows;
 
 		if( props.colorGradingLUT != null )
@@ -605,20 +569,14 @@ class Renderer extends h3d.scene.Renderer {
 				<div class="group" name="Environment">
 					<dt>Env</dt>
 						<dd>
-							<input type="texturepath" field="env" style="width:165px"/>
-							<select field="sky" style="width:20px">
+							<select field="sky">
 								<option value="Hide">Hide</option>
 								<option value="Env">Show</option>
 								<option value="Specular">Show Specular</option>
 								<option value="Irrad">Show Irrad</option>
 								<option value="Background">Background Color</option>
 							</select>
-							<br/>
-							<input type="range" min="0" max="2" field="envPower"/>
 						</dd>
-					<dt>Rotation</dt><dd><input type="range" min="0" max="360" field="envRot"/></dd>
-					<dt>Threshold</dt><dd><input type="range" min="0" max="1" field="envThreshold"/></dd>
-					<dt>Scale</dt><dd><input type="range" min="0" max="20" field="envScale"/></dd>
 				</div>
 
 				<div class="group" name="Params">

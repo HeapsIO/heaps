@@ -208,6 +208,7 @@ class Environment  {
 		this.sampleBits = sampleBits;
 	}
 
+
 	function equiToCube() {
 		if( source.flags.has(Loading) )
 			throw "Source is not ready";
@@ -235,28 +236,30 @@ class Environment  {
 	}
 
 	public function dispose() {
-		env.dispose();
-		lut.dispose();
-		diffuse.dispose();
-		specular.dispose();
+		if( env != null ) env.dispose();
+		if( lut != null ) lut.dispose();
+		if( diffuse != null ) diffuse.dispose();
+		if( specular != null ) specular.dispose();
 	}
 
-	public function compute() {
-
+	function createTextures() {
 		if( lut == null ) {
-			lut = new h3d.mat.Texture(128, 128, [Target], RGBA16F);
+			lut = new h3d.mat.Texture(128, 128, [Target], RGBA32F);
 			lut.setName("irradLut");
 		}
 		if( diffuse == null ) {
-			diffuse = new h3d.mat.Texture(diffSize, diffSize, [Cube, Target], RGBA16F);
+			diffuse = new h3d.mat.Texture(diffSize, diffSize, [Cube, Target], RGBA32F);
 			diffuse.setName("irradDiffuse");
 		}
 		if( specular == null ) {
-			specular = new h3d.mat.Texture(specSize, specSize, [Cube, Target, MipMapped, ManualMipMapGen], RGBA16F);
+			specular = new h3d.mat.Texture(specSize, specSize, [Cube, Target, MipMapped, ManualMipMapGen], RGBA32F);
 			specular.setName("irradSpecular");
 			specular.mipMap = Linear;
 		}
+	}
 
+	public function compute() {
+		createTextures();
 		computeIrradLut();
 		computeIrradiance();
 	}
@@ -295,6 +298,13 @@ class Environment  {
 		screen.dispose();
 	}
 
+	function getMipLevels() : Int {
+		var mipLevels = 1;
+		while( specular.width > 1 << (mipLevels - 1) )
+			mipLevels++;
+		return mipLevels;
+	}
+
 	function computeIrradiance() {
 
 		var screen = new h3d.pass.ScreenFx(new IrradShader());
@@ -315,15 +325,12 @@ class Environment  {
 
 		screen.shader.isSpecular = true;
 
-		var mipLevels = 1;
-		while( specular.width > 1 << (mipLevels - 1) )
-			mipLevels++;
-
+		var mipLevels = getMipLevels();
 		specLevels = mipLevels - ignoredSpecLevels;
 
 		for( i in 0...6 ) {
 			screen.shader.faceMatrix = getCubeMatrix(i);
-			for( j in 0...mipLevels ) {
+			for( j in 0... mipLevels ) {
 				var size = specular.width >> j;
 				screen.shader.cubeSize = size;
 				screen.shader.cubeScaleFactor = size == 1 ? 0 : (size * size) / Math.pow(size - 1, 3);
