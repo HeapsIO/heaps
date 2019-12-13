@@ -136,7 +136,7 @@ class PointShadowMap extends Shadows {
 		return true;
 	}
 
-	static var tmpTex : h3d.mat.Texture;
+	var tmpTex : h3d.mat.Texture;
 	override function createDefaultShadowMap() {
 		if( tmpTex != null) return tmpTex;
 		tmpTex = new h3d.mat.Texture(1,1, [Target,Cube], format);
