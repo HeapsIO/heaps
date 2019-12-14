@@ -648,6 +648,8 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		if( !t.flags.has(Target) ) throw "Can only draw to texture created with Target flag";
 		var needClear = !t.flags.has(WasCleared);
 		ctx.engine = h3d.Engine.getCurrent();
+		var oldBG = ctx.engine.backgroundColor;
+		ctx.engine.backgroundColor = null; // prevent clear bg
 		ctx.engine.begin();
 		ctx.globalAlpha = alpha;
 		ctx.begin();
@@ -656,6 +658,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 			ctx.engine.clear(0);
 		s.drawRec(ctx);
 		ctx.popTarget();
+		ctx.engine.backgroundColor = oldBG;
 	}
 
 	/**
