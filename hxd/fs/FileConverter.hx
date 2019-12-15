@@ -184,12 +184,18 @@ class FileConverter {
 			outFile += "."+cmd.paramsStr;
 		var conv = null;
 		for( c in cmd.conv )
-			if( c.sourceExt == ext ) {
+			if( c.sourceExts == null || c.sourceExts.indexOf(ext) >= 0 ) {
 				conv = c;
 				break;
 			}
 		if( conv == null )
 			throw "No converter is registered that can convert "+e.path+" to "+cmd.conv[0].destExt;
+		if( conv.destExt == "dummy" ) {
+			e.file = baseDir + tmpDir + ".dummy";
+			if( !sys.FileSystem.exists(e.file) )
+				sys.io.File.saveContent(e.file,"");
+			return;
+		}
 		outFile += "."+conv.destExt;
 		convertAndCache(e, outFile, conv, cmd.params);
 		if( cmd.then != null ) {
