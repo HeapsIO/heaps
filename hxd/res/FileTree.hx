@@ -153,7 +153,7 @@ class FileTree {
 			if( !StringTools.startsWith(file.fullPath, basePath) )
 				continue;
 			var name = "R_" + invalidChars.replace(file.relPath, "_");
-			var f = fs.get(file.relPath); // convert
+			var f = try fs.get(file.relPath) catch( e : hxd.res.NotFound ) continue; // convert and filter
 			var fullPath = fs.getAbsolutePath(f);
 
 			switch( file.ext ) {

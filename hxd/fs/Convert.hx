@@ -220,6 +220,9 @@ class DummyConvert extends Convert {
 		save(haxe.io.Bytes.alloc(0));
 	}
 
-	static var _ = Convert.register(new DummyConvert(null,"dummy"));
+	static var _ = [
+		Convert.register(new DummyConvert(null,"dummy")),
+		Convert.register(new DummyConvert(null,"remove"))
+	];
 
 }

@@ -13,6 +13,8 @@ enum ConvertPattern {
 	Filename( name : String );
 	Regexp( r : EReg );
 	Ext( e : String );
+	Exts( e : Array<String> );
+	Wildcard;
 }
 
 typedef ConvertCommand = {
@@ -39,8 +41,8 @@ class FileConverter {
 		// this is the default converts config, it can be override in per-directory props.json
 		defaultConfig = makeConfig({
 			"fs.convert" : {
-				"fbx" : "hmd",
-				"fnt" : "bfnt",
+				"fbx" : { "convert" : "hmd", "priority" : -1 },
+				"fnt" : { "convert" : "bfnt", "priority" : -1 }
 			}
 		});
 	}
@@ -58,7 +60,15 @@ class FileConverter {
 		var merge = mergeRec(def, conf);
 		for( f in Reflect.fields(merge) ) {
 			var cmd = makeCommmand(Reflect.field(merge,f));
-			var pt = if( f.charCodeAt(0) == "^".code ) Regexp(new EReg(f,"")) else if( ~/^[a-zA-Z0-9]+$/.match(f) ) Ext(f.toLowerCase()) else Filename(f);
+			var pt = if( f.charCodeAt(0) == "^".code )
+				Regexp(new EReg(f,""));
+			else if( ~/^[a-zA-Z0-9,]+$/.match(f) ) {
+				var el = f.toLowerCase().split(",");
+				el.length == 1 ? Ext(el[0]) : Exts(el);
+			} else if( f == "*" )
+				Wildcard;
+			else
+				Filename(f);
 			cfg.rules.push({ pt : pt, cmd : cmd.cmd, priority : cmd.priority });
 		}
 		cfg.rules.sort(sortByRulePiority);
@@ -157,6 +167,8 @@ class FileConverter {
 			case Filename(f): if( name == f ) return r;
 			case Regexp(reg): if( reg.match(name) || reg.match(path) ) return r;
 			case Ext(e): if( ext == e ) return r;
+			case Exts(el): if( el.indexOf(ext) >= 0 ) return r;
+			case Wildcard: return r;
 			}
 		return null;
 	}
@@ -194,6 +206,10 @@ class FileConverter {
 			e.file = baseDir + tmpDir + ".dummy";
 			if( !sys.FileSystem.exists(e.file) )
 				sys.io.File.saveContent(e.file,"");
+			return;
+		}
+		if( conv.destExt == "remove" ) {
+			e.file = null;
 			return;
 		}
 		outFile += "."+conv.destExt;
