@@ -164,7 +164,7 @@ class FileConverter {
 		var ext = name.split(".").pop().toLowerCase();
 		for( r in cfg.rules )
 			switch( r.pt ) {
-			case Filename(f): if( name == f ) return r;
+			case Filename(f): if( name == f || path == f ) return r;
 			case Regexp(reg): if( reg.match(name) || reg.match(path) ) return r;
 			case Ext(e): if( ext == e ) return r;
 			case Exts(el): if( el.indexOf(ext) >= 0 ) return r;
