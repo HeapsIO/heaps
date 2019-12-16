@@ -246,15 +246,18 @@ class Environment  {
 		if( lut == null ) {
 			lut = new h3d.mat.Texture(128, 128, [Target], RGBA32F);
 			lut.setName("irradLut");
+			lut.preventAutoDispose();
 		}
 		if( diffuse == null ) {
 			diffuse = new h3d.mat.Texture(diffSize, diffSize, [Cube, Target], RGBA32F);
 			diffuse.setName("irradDiffuse");
+			diffuse.preventAutoDispose();
 		}
 		if( specular == null ) {
 			specular = new h3d.mat.Texture(specSize, specSize, [Cube, Target, MipMapped, ManualMipMapGen], RGBA32F);
 			specular.setName("irradSpecular");
 			specular.mipMap = Linear;
+			specular.preventAutoDispose();
 		}
 	}
 
