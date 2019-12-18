@@ -424,6 +424,8 @@ class MaskComp extends ObjectComp implements domkit.Component.ComponentDecl<h2d.
 class BitmapComp extends DrawableComp implements domkit.Component.ComponentDecl<h2d.Bitmap> {
 
 	@:p(tile) var src : h2d.Tile;
+	@:p(auto) var width : Null<Float>;
+	@:p(auto) var height : Null<Float>;
 
 	static function create( parent : h2d.Object ) {
 		return new h2d.Bitmap(h2d.Tile.fromColor(0xFF00FF,32,32,0.9),parent);
@@ -431,6 +433,14 @@ class BitmapComp extends DrawableComp implements domkit.Component.ComponentDecl<
 
 	static function set_src( o : h2d.Bitmap, t ) {
 		o.tile = t == null ? h2d.Tile.fromColor(0xFF00FF,32,32,0.9) : t;
+	}
+
+	static function set_width( o : h2d.Bitmap, v : Null<Float> ) {
+		o.width = v;
+	}
+
+	static function set_height( o : h2d.Bitmap, v : Null<Float> ) {
+		o.height = v;
 	}
 
 }
