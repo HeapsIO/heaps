@@ -193,8 +193,8 @@ class Environment  {
 
 	public var power : Float = 1.;
 	public var rot : Float = 0.;
-	public var threshold : Float;
-	public var scale : Float;
+	public var threshold : Float = 0.;
+	public var scale : Float = 1.;
 
 	/*
 		Source can be cube map already prepared or a 2D equirectangular map that
