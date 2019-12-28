@@ -91,7 +91,9 @@ class HtmlText extends Text {
 		@returns Method should return loaded font instance or `null`. If `null` is returned - currently active font is used.
 	**/
 	public dynamic function loadFont( name : String ) : Font {
-		return defaultLoadFont(name);
+		var f = defaultLoadFont(name);
+		if (f == null) return this.font;
+		else return f;
 	}
 
 	function parseText( text : String ) {
