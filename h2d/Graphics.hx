@@ -569,8 +569,8 @@ class Graphics extends Drawable {
 	 * IvanK Lib port ( http://lib.ivank.net )
 	 */
 	public function curveTo( bx : Float, by : Float, cx : Float, cy : Float) {
-		var ax = tmpPoints[ tmpPoints.length - 1 ].x;
-		var ay = tmpPoints[ tmpPoints.length - 1 ].y;
+		var ax = tmpPoints.length == 0 ? 0 :tmpPoints[ tmpPoints.length - 1 ].x;
+		var ay = tmpPoints.length == 0 ? 0 :tmpPoints[ tmpPoints.length - 1 ].y;
 		var t = 2 / 3;
 		cubicCurveTo(ax + t * (bx - ax), ay + t * (by - ay), cx + t * (bx - cx), cy + t * (by - cy), cx, cy);
 	}
@@ -587,8 +587,8 @@ class Graphics extends Drawable {
 	 * @param nsegments = 40 
 	 */
 	public function cubicCurveTo( bx : Float, by : Float, cx : Float, cy : Float, dx : Float, dy : Float, nsegments = 40) {
-		var ax = tmpPoints[tmpPoints.length - 1].x;
-		var ay = tmpPoints[tmpPoints.length - 1].y;
+		var ax = tmpPoints.length == 0 ? 0 : tmpPoints[tmpPoints.length - 1].x;
+		var ay = tmpPoints.length == 0 ? 0 : tmpPoints[tmpPoints.length - 1].y;
 		var tobx = bx - ax, toby = by - ay;
 		var tocx = cx - bx, tocy = cy - by;
 		var todx = dx - cx, tody = dy - cy;
