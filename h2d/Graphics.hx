@@ -588,7 +588,7 @@ class Graphics extends Drawable {
 	 */
 	public function cubicCurveTo( bx : Float, by : Float, cx : Float, cy : Float, dx : Float, dy : Float, nsegments = 40) {
 		var ax = tmpPoints[tmpPoints.length - 1].x;
-		var	ay = tmpPoints[tmpPoints.length - 1].y;
+		var ay = tmpPoints[tmpPoints.length - 1].y;
 		var tobx = bx - ax, toby = by - ay;
 		var tocx = cx - bx, tocy = cy - by;
 		var todx = dx - cx, tody = dy - cy;
