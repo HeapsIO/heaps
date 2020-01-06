@@ -241,7 +241,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 					offsetX = -((engine.width - width * zoom) / (2 * zoom));
 					viewportX = (engine.width - width * zoom) / zoom;
 				default:
-					offsetX = 0;
+					offsetX = -(((engine.width - width * zoom) / 2) % 1.)*.5;
 					viewportX = (engine.width - width * zoom) / (2 * zoom);
 			}
 
@@ -254,7 +254,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 					offsetY = -((engine.height - height * zoom) / (2 * zoom));
 					viewportY = (engine.height - height * zoom) / zoom;
 				default:
-					offsetY = 0;
+					offsetY = -(((engine.height - height * zoom) / 2) % 1.)*.5;
 					viewportY = (engine.height - height * zoom) / (2 * zoom);
 			}
 		}
