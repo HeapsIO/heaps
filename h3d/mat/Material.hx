@@ -295,6 +295,7 @@ class Material extends BaseMaterial {
 						<option value="AlphaKill">AlphaKill</option>
 						<option value="Add">Add</option>
 						<option value="SoftAdd">SoftAdd</option>
+						<option value="Hidden">Hidden</option>
 					</select>
 				</dd>
 				<dt>Shadows</dt><dd><input type="checkbox" field="shadows"/></dd>
