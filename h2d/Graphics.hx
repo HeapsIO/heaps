@@ -565,6 +565,22 @@ class Graphics extends Drawable {
 	}
 
 	/**
+          * Similar to curveTo drawing a quadratic Bezier but allows bx, by to be a point on the curve.
+	 * @param bx mid point X on curve
+	 * @param by mid point Y on curve
+	 * @param cx end X
+	 * @param cy end Y          
+         */ 
+	public function curveThru( bx: Float, by: Float, cx: Float, cy: Float ): Void {
+		var ax = tmpPoints.length == 0 ? 0 :tmpPoints[ tmpPoints.length - 1 ].x;
+		var ay = tmpPoints.length == 0 ? 0 :tmpPoints[ tmpPoints.length - 1 ].y;
+		bx = 2*bx - 0.5*( ax + cx );
+        	by = 2*by - 0.5*( ay + cy );
+        	var t = 2 / 3;
+		cubicCurveTo(ax + t * (bx - ax), ay + t * (by - ay), cx + t * (bx - cx), cy + t * (by - cy), cx, cy);
+    	}
+	
+	/**
 	 * Draws a quadratic Bezier curve using the current line style from the current drawing position to (cx, cy) and using the control point that (bx, by) specifies.
 	 * IvanK Lib port ( http://lib.ivank.net )
 	 */
