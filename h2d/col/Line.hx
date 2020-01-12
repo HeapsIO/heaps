@@ -8,7 +8,7 @@ class Line {
 	private var dx:Float;
 	private var dy:Float;
 
-	public inline function new(p1,p2) {
+	public inline function new( p1 : Point, p2 : Point ) {
 		this.p1 = p1;
 		this.p2 = p2;
 		this.dx = p2.x - p1.x;
@@ -59,11 +59,11 @@ class Line {
 	 * The angle between a line and the x-axis
 	 */
 	public inline function angle() {
-		return Math.atan2(dy, dx);
+		return hxd.Math.atan2(dy, dx);
 	}
 
 	public inline function lenght():Float {
-		return Math.sqrt(Math.pow(dx, 2) + Math.pow(dy, 2));
+		return hxd.Math.sqrt(hxd.Math.pow(dx, 2) + hxd.Math.pow(dy, 2));
 	}
 
 }
