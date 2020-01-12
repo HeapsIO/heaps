@@ -26,19 +26,19 @@ class Line {
 
 	public inline function intersect( l : Line ) {
 		var d = (p1.x - p2.x) * (l.p1.y - l.p2.y) - (p1.y - p2.y) * (l.p1.x - l.p2.x);
-		if( hxd.Math.abs(d) < hxd.Math.EPSILON )
+		if (hxd.Math.abs(d) < hxd.Math.EPSILON)
 			return null;
-		var a = p1.x*p2.y - p1.y * p2.x;
-		var b = l.p1.x*l.p2.y - l.p1.y*l.p2.x;
-		return new Point( (a * (l.p1.x - l.p2.x) - (p1.x - p2.x) * b) / d, (a * (l.p1.y - l.p2.y) - (p1.y - p2.y) * b) / d );
+		var a = p1.x * p2.y - p1.y * p2.x;
+		var b = l.p1.x * l.p2.y - l.p1.y * l.p2.x;
+		return new Point((a * (l.p1.x - l.p2.x) - (p1.x - p2.x) * b) / d, (a * (l.p1.y - l.p2.y) - (p1.y - p2.y) * b) / d);
 	}
 
 	public inline function intersectWith( l : Line, pt : Point ) {
 		var d = (p1.x - p2.x) * (l.p1.y - l.p2.y) - (p1.y - p2.y) * (l.p1.x - l.p2.x);
-		if( hxd.Math.abs(d) < hxd.Math.EPSILON )
+		if (hxd.Math.abs(d) < hxd.Math.EPSILON)
 			return false;
-		var a = p1.x*p2.y - p1.y * p2.x;
-		var b = l.p1.x*l.p2.y - l.p1.y*l.p2.x;
+		var a = p1.x * p2.y - p1.y * p2.x;
+		var b = l.p1.x * l.p2.y - l.p1.y * l.p2.x;
 		pt.x = (a * (l.p1.x - l.p2.x) - (p1.x - p2.x) * b) / d;
 		pt.y = (a * (l.p1.y - l.p2.y) - (p1.y - p2.y) * b) / d;
 		return true;
