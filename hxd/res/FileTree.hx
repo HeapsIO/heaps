@@ -79,7 +79,7 @@ class FileTree {
 									"else","extends","extern","false","for","function","if","implementes","import",
 									"interface","never","null","override","package","private","public","return",
 									"static","super","switch","this","throw","trace","true","typedef","untyped",
-									"using","var","while"] ) k => true];
+									"using","var","final","while"] ) k => true];
 
 	function makeIdent( s : String ) {
 		var ident = invalidChars.replace(s, "_");

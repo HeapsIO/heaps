@@ -205,6 +205,33 @@ class Renderer extends h3d.scene.Renderer {
 		draw("afterTonemapping");
 	}
 
+	function applyTonemapping() {
+		mark("ToneMapping");
+		// Bloom Params
+		var bloom = ctx.getGlobal("bloom");
+		tonemap.shader.bloom = bloom;
+		tonemap.shader.hasBloom = bloom != null;
+		// Distortion Params
+		var distortion = ctx.getGlobal("distortion");
+		tonemap.shader.distortion = distortion;
+		tonemap.shader.hasDistortion = distortion != null;
+		// Color Grading Params
+		tonemap.shader.pixelSize = new Vector(1.0/ctx.engine.width, 1.0/ctx.engine.height);
+		tonemap.shader.hasColorGrading = enableColorGrading && colorGradingLUT != null;
+		if( colorGradingLUT != null ) {
+			tonemap.shader.colorGradingLUT = colorGradingLUT;
+			tonemap.shader.lutSize = colorGradingLUTSize;
+		}
+		tonemap.shader.mode =	switch( toneMode ) {
+									case Linear: 0;
+									case Reinhard: 1;
+									default: 0;
+								};
+		var hdr = ctx.getGlobal("hdr");
+		tonemap.shader.hdrTexture = hdr;
+		tonemap.render();
+	}
+
 	function postDraw() {
 		mark("PostDraw");
 		draw("overlay");
@@ -398,6 +425,7 @@ class Renderer extends h3d.scene.Renderer {
 
 		mark("Distortion");
 		var distortion = allocTarget("distortion", true, 1.0, RG16F);
+		ctx.setGlobal("distortion", distortion);
 		setTarget(distortion);
 		clear(0);
 		draw("distortion");
@@ -406,29 +434,7 @@ class Renderer extends h3d.scene.Renderer {
 		setTarget(ldr);
 		ctx.setGlobal("ldr", ldr);
 
-
-		mark("ToneMapping");
-		// Bloom Params
-		var bloom = ctx.getGlobal("bloom");
-		tonemap.shader.bloom = bloom;
-		tonemap.shader.hasBloom = bloom != null;
-		// Distortion Params
-		tonemap.shader.distortion = distortion;
-		tonemap.shader.hasDistortion = distortion != null;
-		// Color Grading Params
-		tonemap.shader.pixelSize = new Vector(1.0/ctx.engine.width, 1.0/ctx.engine.height);
-		tonemap.shader.hasColorGrading = enableColorGrading && colorGradingLUT != null;
-		if( colorGradingLUT != null ) {
-			tonemap.shader.colorGradingLUT = colorGradingLUT;
-			tonemap.shader.lutSize = colorGradingLUTSize;
-		}
-		tonemap.shader.mode =	switch( toneMode ) {
-									case Linear: 0;
-									case Reinhard: 1;
-									default: 0;
-								};
-		tonemap.shader.hdrTexture = hdr;
-		tonemap.render();
+		applyTonemapping();
 
 		drawAfterTonemapping();
 		apply(AfterTonemapping);
