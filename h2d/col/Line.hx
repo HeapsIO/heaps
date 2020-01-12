@@ -55,6 +55,9 @@ class Line {
 		return hxd.Math.sqrt(distanceSq(p));
 	}
 
+	/**
+	 * The angle between a line and the x-axis
+	 */
 	public inline function angle() {
 		return Math.atan2(dy, dx);
 	}
