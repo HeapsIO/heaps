@@ -231,12 +231,12 @@ class Pad {
 	var rawYAxis : Float = 0.;
 
 	function get_xAxis() {
-		if( Math.abs(rawXAxis) < axisDeadZone ) return 0.;
+		if( rawXAxis*rawXAxis + rawYAxis*rawYAxis < axisDeadZone*axisDeadZone ) return 0.;
 		return rawXAxis;
 	}
 
 	function get_yAxis() {
-		if( Math.abs(rawYAxis) < axisDeadZone ) return 0.;
+		if( rawXAxis*rawXAxis + rawYAxis*rawYAxis < axisDeadZone*axisDeadZone ) return 0.;
 		return rawYAxis;
 	}
 
