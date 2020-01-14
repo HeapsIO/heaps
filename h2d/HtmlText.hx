@@ -100,6 +100,10 @@ class HtmlText extends Text {
 		return try Xml.parse(text) catch( e : Dynamic ) throw "Could not parse " + text + " (" + e +")";
 	}
 
+	inline function makeLineInfo( width : Float, height : Float, baseLine : Float ) : LineInfo {
+		return { width: width, height: height, baseLine: baseLine };
+	}
+
 	override function initGlyphs( text : String, rebuild = true ) {
 		if( rebuild ) {
 			glyphs.clear();
@@ -117,26 +121,27 @@ class HtmlText extends Text {
 		sizePos = 0;
 		calcYMin = 0;
 
-		var sizes = new Array<Float>();
-		var heights = [0.];
-		var baseLines = [0.];
+		var metrics : Array<LineInfo> = [ makeLineInfo(0, font.lineHeight, font.baseLine) ];
 		prevChar = -1;
 		newLine = true;
-		var splitNode : SplitNode = { node: null, pos: 0, width: 0, font: font, prevChar: -1 };
+		var splitNode : SplitNode = { 
+			node: null, pos: 0, font: font, prevChar: -1,
+			width: 0, height: 0, baseLine: 0
+		};
 		for( e in doc )
-			buildSizes(e, font, sizes, heights, baseLines, splitNode);
+			buildSizes(e, font, metrics, splitNode);
 
 		var max = 0.;
-		for ( lw in sizes ) {
-			if ( lw > max ) max = lw;
+		for ( info in metrics ) {
+			if ( info.width > max ) max = info.width;
 		}
 		calcWidth = max;
 
 		prevChar = -1;
 		newLine = true;
-		nextLine(textAlign, sizes[0]);
+		nextLine(textAlign, metrics[0].width);
 		for ( e in doc )
-			addNode(e, font, textAlign, rebuild, sizes, heights, baseLines);
+			addNode(e, font, textAlign, rebuild, metrics);
 		
 		if( xPos > xMax ) xMax = xPos;
 
@@ -144,38 +149,43 @@ class HtmlText extends Text {
 		var y = yPos;
 		calcXMin = xMin;
 		calcWidth = xMax - xMin;
-		calcHeight = y + heights[sizePos];
-		calcSizeHeight = y + baseLines[sizePos];//(font.baseLine > 0 ? font.baseLine : font.lineHeight);
+		calcHeight = y + metrics[sizePos].height;
+		calcSizeHeight = y + metrics[sizePos].baseLine;//(font.baseLine > 0 ? font.baseLine : font.lineHeight);
 		calcDone = true;
 	}
 
-	function buildSizes( e : Xml, font : Font, lines : Array<Float>, heights : Array<Float>, baseLines : Array<Float>, splitNode:SplitNode ) {
-		inline function wordSplit() {
+	function buildSizes( e : Xml, font : Font, metrics : Array<LineInfo>, splitNode:SplitNode ) {
+		function wordSplit() {
 			var fnt = splitNode.font;
 			var str = splitNode.node.nodeValue;
-			var w = lines[lines.length - 1];
+			var info = metrics[metrics.length - 1];
+			var w = info.width;
 			var cc = str.charCodeAt(splitNode.pos);
-			lines[lines.length - 1] = splitNode.width;
+			// Restore line metrics to ones before split.
+			// Potential bug: `Text<split> [Image] text<split>text` - third line will use metrics as if image is present in the line.
+			info.width = splitNode.width;
+			info.height = splitNode.height;
+			info.baseLine = splitNode.baseLine;
+ 			var char = fnt.getChar(cc);
 			if (fnt.charset.isSpace(cc)) {
 				// Space characters are converted to \n
-				var char = fnt.getChar(cc);
 				w -= (splitNode.width + letterSpacing + char.width + char.getKerningOffset(splitNode.prevChar));
 				splitNode.node.nodeValue = str.substr(0, splitNode.pos) + "\n" + str.substr(splitNode.pos + 1);
 			} else {
-				w -= splitNode.width;
-				splitNode.node.nodeValue = str.substr(0, splitNode.pos) + str.substr(splitNode.pos);
+				w -= (splitNode.width + letterSpacing + char.getKerningOffset(splitNode.prevChar));
+				splitNode.node.nodeValue = str.substr(0, splitNode.pos+1) + "\n" + str.substr(splitNode.pos+1);
 			}
 			splitNode.node = null;
 			return w;
 		}
-
+		inline function lineFont() {
+			return lineHeightMode == Constant ? this.font : font;
+		}
 		if( e.nodeType == Xml.Element ) {
 
 			inline function makeLineBreak() {
-				var fontInfo = lineHeightMode == Constant ? this.font : font;
-				lines.push(0);
-				heights.push(fontInfo.lineHeight);
-				baseLines.push(fontInfo.baseLine);
+				var fontInfo = lineFont();
+				metrics.push(makeLineInfo(0, fontInfo.lineHeight, fontInfo.baseLine));
 				splitNode.node = null;
 				newLine = true;
 				prevChar = -1;
@@ -200,43 +210,43 @@ class HtmlText extends Text {
 					if( i == null ) i = Tile.fromColor(0xFF00FF, 8, 8);
 					imageCache.set(src, i);
 				}
-				if ( lines.length == 0 ) lines.push(0);
 
-				var size = lines[lines.length - 1] + i.width + letterSpacing;
-				if (realMaxWidth >= 0 && size > realMaxWidth && lines[lines.length - 1] > 0) {
+				var size = metrics[metrics.length - 1].width + i.width + letterSpacing;
+				if (realMaxWidth >= 0 && size > realMaxWidth && metrics[metrics.length - 1].width > 0) {
 					if ( splitNode.node != null ) {
 						size = wordSplit() + i.width + letterSpacing;
-						lines.push(size);
+						var info = metrics[metrics.length - 1];
 						// Bug: height/baseLine may be innacurate in case of sizeA sizeB<split>sizeA where sizeB is larger.
-						var height = heights[heights.length - 1];
-						var base = baseLines[baseLines.length - 1];
 						switch ( lineHeightMode ) {
 							case Accurate:
-								// todo: Proper grow
-								heights.push(Math.max(height, i.height));
-								baseLines.push(Math.max(base, i.height));
+								var grow = i.height - i.dy - info.baseLine;
+								var h = info.height;
+								var bl = info.baseLine;
+								if (grow > 0) {
+									h += grow;
+									bl += grow;
+								}
+								metrics.push(makeLineInfo(size, Math.max(h, bl + i.dy), bl));
 							default:
-								heights.push(height);
-								baseLines.push(height);
+								metrics.push(makeLineInfo(size, info.height, info.baseLine));
 						}
 					}
 				} else {
-					lines[lines.length - 1] = size;
+					var info = metrics[metrics.length - 1];
+					info.width = size;
 					if ( lineHeightMode == Accurate ) {
-						var idx = heights.length - 1;
-						var grow = i.height - i.dy - baseLines[idx];
+						var grow = i.height - i.dy - info.baseLine;
 						if ( grow > 0 ) {
-							baseLines[idx] += grow;
-							heights[idx] += grow;
+							info.baseLine += grow;
+							info.height += grow;
 						}
-						grow = baseLines[idx] + i.dy;
-						if ( heights[idx] < grow ) heights[idx] = grow;
+						grow = info.baseLine + i.dy;
+						if ( info.height < grow ) info.height = grow;
 					}
 				}
 				newLine = false;
 				prevChar = -1;
 			case "font":
-				var size : Null<Int> = null;
 				for( a in e.attributes() ) {
 					var v = e.get(a);
 					switch( a.toLowerCase() ) {
@@ -251,7 +261,7 @@ class HtmlText extends Text {
 			default:
 			}
 			for( child in e )
-				buildSizes(child, font, lines, heights, baseLines, splitNode);
+				buildSizes(child, font, metrics, splitNode);
 			switch( nodeName ) {
 			case "p":
 				if ( !newLine ) {
@@ -262,66 +272,65 @@ class HtmlText extends Text {
 		} else {
 			newLine = false;
 			var text = htmlToText(e.nodeValue);
-			var leftMargin = lines.length == 0 ? 0 : lines.pop();
+			var fontInfo = lineFont();
+			var info : LineInfo = metrics.pop();
+			var leftMargin = info.width;
 			var maxWidth = realMaxWidth < 0 ? Math.POSITIVE_INFINITY : realMaxWidth;
 			var textSplit = [], restPos = 0;
 			var x = leftMargin;
+			var breakChars = 0;
 			for ( i in 0...text.length ) {
 				var cc = text.charCodeAt(i);
 				var g = font.getChar(cc);
 				var newline = cc == '\n'.code;
 				var esize = g.width + g.getKerningOffset(prevChar);
 				if ( font.charset.isBreakChar(cc) ) {
-					if (x > maxWidth && textSplit.length == 0) {
-						if ( splitNode.node != null ) {
-							lines.push(x);
-							heights.push(heights[heights.length - 1]);
-							baseLines.push(baseLines[baseLines.length - 1]);
-							x = wordSplit();
-						} else if (leftMargin != 0) { // Don't insert empty line when it's first word in the line.
-							x -= leftMargin;
-							textSplit.push("");
-							lines.push(leftMargin);
-						}
+					// Case: Very first word in text makes the line too long hence we want to start it off on a new line.
+					if (x > maxWidth && textSplit.length == 0 && splitNode.node != null) {
+						metrics.push(makeLineInfo(x, info.height, info.baseLine));
+						x = wordSplit();
 					}
 
 					var size = x + esize + letterSpacing;
 					var k = i + 1, max = text.length;
 					var prevChar = prevChar;
-					var breakFound = false;
 					while ( size <= maxWidth && k < max ) {
 						var cc = text.charCodeAt(k++);
-						if ( font.charset.isSpace(cc) || cc == '\n'.code ) {
-							breakFound = true;
-							break;
-						}
+						if ( font.charset.isSpace(cc) || cc == '\n'.code ) break;
 						var e = font.getChar(cc);
 						size += e.width + letterSpacing + e.getKerningOffset(prevChar);
 						prevChar = cc;
 						if ( font.charset.isBreakChar(cc) ) break;
 					}
-					if ( size > maxWidth || (!breakFound && size > maxWidth) ) {
+					// Avoid empty line when last char causes line-break while being CJK
+					if ( size > maxWidth && i != max - 1 ) {
+						// Next word will reach maxWidth
 						newline = true;
 						if ( font.charset.isSpace(cc) ) {
 							textSplit.push(text.substr(restPos, i - restPos));
 							g = null;
 						} else {
 							textSplit.push(text.substr(restPos, i + 1 - restPos));
+							breakChars++;
 						}
 						splitNode.node = null;
 						restPos = i + 1;
 					} else {
 						splitNode.node = e;
-						splitNode.pos = i;
+						splitNode.pos = i + breakChars;
 						splitNode.prevChar = this.prevChar;
 						splitNode.width = x;
+						splitNode.height = info.height;
+						splitNode.baseLine = info.baseLine;
 						splitNode.font = font;
 					}
 				}
 				if ( g != null && cc != '\n'.code )
 					x += esize + letterSpacing;
 				if ( newline ) {
-					lines.push(x);
+					metrics.push(makeLineInfo(x, info.height, info.baseLine));
+					info.height = fontInfo.lineHeight;
+					info.baseLine = fontInfo.baseLine;
 					x = 0;
 					prevChar = -1;
 					newLine = true;
@@ -330,47 +339,21 @@ class HtmlText extends Text {
 					newLine = false;
 				}
 			}
+			
 			if ( restPos < text.length ) {
 				if (x > maxWidth) {
 					if ( splitNode.node != null && splitNode.node != e ) {
-						lines.push(x);
-						heights.push(heights[heights.length - 1]);
-						baseLines.push(baseLines[baseLines.length - 1]);
+						metrics.push(makeLineInfo(x, info.height, info.baseLine));
 						x = wordSplit();
 					}
 				}
 				textSplit.push(text.substr(restPos));
-				lines.push(x);
+				metrics.push(makeLineInfo(x, info.height, info.baseLine));
 			}
 
-			if ( lineHeightMode == Constant ) {
-				while ( heights.length < lines.length ) {
-					heights.push( this.font.lineHeight );
-					baseLines.push( this.font.lineHeight );
-				}
-				if (newLine) {
-					lines.push(0);
-					heights.push(this.font.lineHeight);
-					baseLines.push(this.font.baseLine);
-					textSplit.push("");
-				}
-			} else {
-				// TODO: Should adjust lineHeight in offset to bottom of baseLine.
-				var idx = heights.length - 1;
-				if ( heights[idx] < font.lineHeight )
-					heights[idx] = font.lineHeight;
-				if ( baseLines[idx] < font.baseLine )
-					baseLines[idx] = font.baseLine;
-				while ( heights.length < lines.length ) {
-					heights.push(font.lineHeight);
-					baseLines.push(font.baseLine);
-				}
-				if (newLine) {
-					lines.push(0);
-					heights.push(font.lineHeight);
-					baseLines.push(font.baseLine);
-					textSplit.push("");
-				}
+			if (newLine || metrics.length == 0) {
+				metrics.push(makeLineInfo(0, fontInfo.lineHeight, fontInfo.baseLine));
+				textSplit.push("");
 			}
 			// Save node value
 			e.nodeValue = textSplit.join("\n");
@@ -414,13 +397,13 @@ class HtmlText extends Text {
 			with all sizes and word breaks so analysis is much more easy.
 		*/
 
-		var splitNode : SplitNode = { node: null, font: font, width: 0, pos: 0, prevChar: -1 };
-		var sizes = new Array<Float>();
+		var splitNode : SplitNode = { node: null, font: font, width: 0, height: 0, baseLine: 0, pos: 0, prevChar: -1 };
+		var metrics = new Array<LineInfo>();
 		prevChar = -1;
 		newLine = true;
 
 		for( e in doc )
-			buildSizes(e, font, sizes, [], [], splitNode);
+			buildSizes(e, font, metrics, splitNode);
 		xMax = 0;
 		function addBreaks( e : Xml ) {
 			if( e.nodeType == Xml.Element ) {
@@ -476,12 +459,12 @@ class HtmlText extends Text {
 		return doc.toString();
 	}
 
-	function addNode( e : Xml, font : Font, align : Align, rebuild : Bool, sizes : Array<Float>, heights : Array<Float>, baseLines : Array<Float> ) {
+	function addNode( e : Xml, font : Font, align : Align, rebuild : Bool, metrics : Array<LineInfo> ) {
 		inline function makeLineBreak()
 		{
 			if( xPos > xMax ) xMax = xPos;
-			yPos += heights[sizePos] + lineSpacing;
-			nextLine(align, sizes[++sizePos]);
+			yPos += metrics[sizePos].height + lineSpacing;
+			nextLine(align, metrics[++sizePos].width);
 		}
 		if( e.nodeType == Xml.Element ) {
 			var prevColor = null, prevGlyphs = null;
@@ -552,7 +535,7 @@ class HtmlText extends Text {
 					newLine = true;
 					prevChar = -1;
 				} else {
-					nextLine(align, sizes[sizePos]);
+					nextLine(align, metrics[sizePos].width);
 				}
 			case "b","bold":
 				setFont("bold");
@@ -564,7 +547,7 @@ class HtmlText extends Text {
 				prevChar = -1;
 			case "img":
 				var i : Tile = imageCache.get(e.get("src"));
-				var py = yPos + baseLines[sizePos] - i.height;
+				var py = yPos + metrics[sizePos].baseLine - i.height;
 				if( py + i.dy < calcYMin )
 					calcYMin = py + i.dy;
 				if( rebuild ) {
@@ -579,13 +562,13 @@ class HtmlText extends Text {
 			default:
 			}
 			for( child in e )
-				addNode(child, font, align, rebuild, sizes, heights, baseLines);
+				addNode(child, font, align, rebuild, metrics);
 			align = oldAlign;
 			switch( nodeName ) {
 			case "p":
 				if ( newLine ) {
-					nextLine(align, sizes[sizePos]);
-				} else if ( sizePos < sizes.length - 2 || sizes[sizePos + 1] != 0 ) {
+					nextLine(align, metrics[sizePos].width);
+				} else if ( sizePos < metrics.length - 2 || metrics[sizePos + 1].width != 0 ) {
 					// Condition avoid extra empty line if <p> was the last tag.
 					makeLineBreak();
 					newLine = true;
@@ -600,12 +583,12 @@ class HtmlText extends Text {
 		} else {
 			newLine = false;
 			var t = e.nodeValue;
-			var dy = baseLines[sizePos] - font.baseLine;
+			var dy = metrics[sizePos].baseLine - font.baseLine;
 			for( i in 0...t.length ) {
 				var cc = t.charCodeAt(i);
 				if( cc == "\n".code ) {
 					makeLineBreak();
-					dy = baseLines[sizePos] - font.baseLine;
+					dy = metrics[sizePos].baseLine - font.baseLine;
 					prevChar = -1;
 					continue;
 				}
@@ -659,10 +642,18 @@ class HtmlText extends Text {
 
 }
 
+private typedef LineInfo = {
+	var width : Float;
+	var height : Float;
+	var baseLine : Float;
+}
+
 private typedef SplitNode = {
 	var node : Xml;
 	var prevChar : Int;
 	var pos : Int;
 	var width : Float;
+	var height : Float;
+	var baseLine : Float;
 	var font : h2d.Font;
 }
