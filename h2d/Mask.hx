@@ -7,6 +7,10 @@ class Mask extends Object {
 	static var renderZoneStack:Array<RenderZoneStack> = [];
 	static var renderZoneCaret:Int = 0;
 
+	/**
+		Masks render zone based off object position and given dimensions.
+		Should call `Mask.unmask()` afterwards.
+	**/
 	@:access(h2d.RenderContext)
 	public static function maskWith( ctx : RenderContext, object : Object, width : Int, height : Int, scrollX : Float = 0, scrollY : Float = 0) {
 
@@ -48,6 +52,9 @@ class Mask extends Object {
 		ctx.setRenderZone(x1, y1, x2-x1, y2-y1);
 	}
 
+	/**
+		Unmasks prviously masked area from `Mask.maskWith`.
+	**/
 	public static function unmask( ctx : RenderContext ) {
 		if (renderZoneCaret == 0) throw "Too many unmask()";
 		var inf = renderZoneStack[--renderZoneCaret];

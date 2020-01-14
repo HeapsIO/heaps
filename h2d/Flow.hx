@@ -14,6 +14,25 @@ enum FlowLayout {
 	Stack;
 }
 
+enum FlowOverflow {
+	/**
+		Children larger than `maxWidth`/`maxHeight` will expand the flow size.
+	**/
+	Expand;
+	/**
+		Limits the bounds reported by the flow using `maxWidth` or `maxHeight`, if set.
+		This is means children larger than max size will draw outside of their parent bounds.
+	**/
+	Limit;
+	/**
+		Limits the bounds reported by the flow using `maxWidth` or `maxHeight`, if set.
+		Compared to `Limit` - Flow will mask out children that are outside of Flow bounds.
+	**/
+	Hidden;
+	// TODO: Scroll overflow, see #606
+	//Scroll;
+}
+
 @:allow(h2d.Flow)
 class FlowProperties {
 
@@ -98,7 +117,7 @@ class Flow extends Object {
 	/**
 		Enabling overflow will treat maxWidth/maxHeight and lineHeight/colWidth constraints as absolute : bigger elements will overflow instead of expanding the limit.
 	**/
-	public var overflow(default, set) : Bool = false;
+	public var overflow(default, set) : FlowOverflow = Expand;
 
 	/**
 		Will set all padding values at the same time.
@@ -499,6 +518,23 @@ class Flow extends Object {
 		super.sync(ctx);
 	}
 
+	override function drawRec(ctx:RenderContext)
+	{
+		if ( overflow == Hidden ) {
+			if ( posChanged ) {
+				calcAbsPos();
+				for ( c in children )
+					c.posChanged = true;
+				posChanged = false;
+			}
+			Mask.maskWith(ctx, this, hxd.Math.imax(outerWidth, maxWidth), hxd.Math.imax(outerHeight, maxHeight), 0, 0);
+			super.drawRec(ctx);
+			Mask.unmask(ctx);
+		} else {
+			super.drawRec(ctx);
+		}
+	}
+
 	function set_maxWidth(w) {
 		if( maxWidth == w )
 			return w;
@@ -681,7 +717,7 @@ class Flow extends Object {
 			inline function alignLine( maxIndex ) {
 				if( maxLineHeight < minLineHeight )
 					maxLineHeight = minLineHeight;
-				else if( overflow && minLineHeight != 0 )
+				else if( overflow != Expand && minLineHeight != 0 )
 					maxLineHeight = minLineHeight;
 				for( i in lastIndex...maxIndex ) {
 					var p = propAt(i);
@@ -826,7 +862,7 @@ class Flow extends Object {
 			inline function alignLine( maxIndex ) {
 				if( maxColWidth < minColWidth )
 					maxColWidth = minColWidth;
-				else if( overflow && minColWidth != 0 )
+				else if( overflow != Expand && minColWidth != 0 )
 					maxColWidth = minColWidth;
 				for( i in lastIndex...maxIndex ) {
 					var p = propAt(i);
@@ -991,9 +1027,9 @@ class Flow extends Object {
 
 			var xmin = paddingLeft + borderWidth;
 			var ymin = paddingTop + borderHeight;
-			var xmax = if(realMaxWidth > 0 && overflow) Math.floor(realMaxWidth - (paddingRight + borderWidth))
+			var xmax = if(realMaxWidth > 0 && overflow != Expand) Math.floor(realMaxWidth - (paddingRight + borderWidth))
 				else hxd.Math.imax(xmin + maxChildW, realMinWidth - (paddingRight + borderWidth));
-			var ymax = if(realMaxWidth > 0 && overflow) Math.floor(realMaxHeight - (paddingBottom + borderHeight))
+			var ymax = if(realMaxWidth > 0 && overflow != Expand) Math.floor(realMaxHeight - (paddingBottom + borderHeight))
 				else hxd.Math.imax(ymin + maxChildH, realMinHeight - (paddingBottom + borderHeight));
 			cw = xmax + paddingRight + borderWidth;
 			ch = ymax + paddingBottom + borderHeight;
@@ -1035,7 +1071,7 @@ class Flow extends Object {
 
 		if( realMinWidth >= 0 && cw < realMinWidth ) cw = realMinWidth;
 		if( realMinHeight >= 0 && ch < realMinHeight ) ch = realMinHeight;
-		if( overflow ) {
+		if( overflow != Expand ) {
 			if( isConstraintWidth && cw > maxTotWidth ) cw = maxTotWidth;
 			if( isConstraintHeight && ch > maxTotHeight ) ch = maxTotHeight;
 		}
