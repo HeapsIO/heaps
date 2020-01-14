@@ -1,6 +1,63 @@
 package h2d;
 
+private typedef RenderZoneStack = { hasRZ:Bool, x:Float, y:Float, w:Float, h:Float };
+
 class Mask extends Object {
+
+	static var renderZoneStack:Array<RenderZoneStack> = [];
+	static var renderZoneCaret:Int = 0;
+
+	@:access(h2d.RenderContext)
+	public static function maskWith( ctx : RenderContext, object : Object, width : Int, height : Int, scrollX : Float = 0, scrollY : Float = 0) {
+
+		var x1 = object.absX + scrollX;
+		var y1 = object.absY + scrollY;
+
+		var x2 = width * object.matA + height * object.matC + x1;
+		var y2 = width * object.matB + height * object.matD + y1;
+
+		var tmp;
+		if (x1 > x2) {
+			tmp = x1;
+			x1 = x2;
+			x2 = tmp;
+		}
+
+		if (y1 > y2) {
+			tmp = y1;
+			y1 = y2;
+			y2 = tmp;
+		}
+
+		var inf = renderZoneStack[renderZoneCaret++];
+		if ( inf == null ) {
+			inf = { hasRZ: ctx.hasRenderZone, x: ctx.renderX, y: ctx.renderY, w: ctx.renderW, h: ctx.renderH };
+			renderZoneStack[renderZoneCaret - 1] = inf;
+		}
+		else if ( ctx.hasRenderZone ) {
+			inf.hasRZ = true;
+			inf.x = ctx.renderX;
+			inf.y = ctx.renderY;
+			inf.w = ctx.renderW;
+			inf.h = ctx.renderH;
+		} else {
+			inf.hasRZ = false;
+		}
+
+		ctx.flush();
+		ctx.setRenderZone(x1, y1, x2-x1, y2-y1);
+	}
+
+	public static function unmask( ctx : RenderContext ) {
+		if (renderZoneCaret == 0) throw "Too many unmask()";
+		var inf = renderZoneStack[--renderZoneCaret];
+		ctx.flush();
+		if (inf.hasRZ) {
+			ctx.setRenderZone(inf.x, inf.y, inf.w, inf.h);
+		} else {
+			ctx.clearRenderZone();
+		}
+	}
 
 	public var width : Int;
 	public var height : Int;
@@ -95,7 +152,7 @@ class Mask extends Object {
 				c.posChanged = true;
 			posChanged = false;
 		}
-		addBounds(relativeTo, out, 0, 0, width, height);
+		addBounds(relativeTo, out, scrollX, scrollY, width, height);
 		var bxMin = out.xMin, byMin = out.yMin, bxMax = out.xMax, byMax = out.yMax;
 		out.xMin = xMin;
 		out.xMax = xMax;
@@ -109,38 +166,9 @@ class Mask extends Object {
 	}
 
 	override function drawRec( ctx : h2d.RenderContext ) @:privateAccess {
-		var x1 = absX + scrollX;
-		var y1 = absY + scrollY;
-
-		var x2 = width * matA + height * matC + x1;
-		var y2 = width * matB + height * matD + y1;
-
-		var tmp;
-		if (x1 > x2) {
-			tmp = x1;
-			x1 = x2;
-			x2 = tmp;
-		}
-
-		if (y1 > y2) {
-			tmp = y1;
-			y1 = y2;
-			y2 = tmp;
-		}
-
-		ctx.flush();
-		if( ctx.hasRenderZone ) {
-			var oldX = ctx.renderX, oldY = ctx.renderY, oldW = ctx.renderW, oldH = ctx.renderH;
-			ctx.setRenderZone(x1, y1, x2-x1, y2-y1);
-			super.drawRec(ctx);
-			ctx.flush();
-			ctx.setRenderZone(oldX, oldY, oldW, oldH);
-		} else {
-			ctx.setRenderZone(x1, y1, x2-x1, y2-y1);
-			super.drawRec(ctx);
-			ctx.flush();
-			ctx.clearRenderZone();
-		}
+		maskWith(ctx, this, width, height, scrollX, scrollY);
+		super.drawRec(ctx);
+		unmask(ctx);
 	}
 
 }
