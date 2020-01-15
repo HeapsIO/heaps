@@ -160,6 +160,9 @@ class Text extends Drawable {
 		}
 	}
 
+	/**
+		Word-wrap the text based on this Text settings.		
+	**/
 	public function splitText( text : String ) {
 		return splitRawText(text,0,0);
 	}
@@ -173,7 +176,7 @@ class Text extends Drawable {
 		@param sizes Optional line width array. Will be populated with sizes of split lines if present. Sizes will include both `leftMargin` in it's first line entry.
 		@param prevChar Optional character code for concatenation purposes (proper kernings).
 	**/
-	public function splitRawText( text : String, leftMargin = 0., afterData = 0., ?font : Font, ?sizes:Array<Float>, ?prevChar:Int = -1 ) {
+	function splitRawText( text : String, leftMargin = 0., afterData = 0., ?font : Font, ?sizes:Array<Float>, ?prevChar:Int = -1 ) {
 		var maxWidth = realMaxWidth;
 		if( maxWidth < 0 ) {
 			if ( sizes == null ) 
