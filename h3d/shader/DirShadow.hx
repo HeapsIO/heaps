@@ -21,6 +21,7 @@ class DirShadow extends hxsl.Shader {
 
 		var transformedPosition : Vec3;
 		var shadow : Float;
+		var dirShadow : Float;
 
 		@param var poissonDiskLow : Array<Vec4,4>;
 		@param var poissonDiskHigh : Array<Vec4,12>;
@@ -85,8 +86,8 @@ class DirShadow extends hxsl.Shader {
 					shadow = shadowPos.z - shadowBias > depth ? 0 : 1;
 				}
 			}
+			dirShadow = shadow;
 		}
-
 	}
 
 	public function new() {

@@ -193,6 +193,63 @@ class Renderer extends h3d.scene.Renderer {
 		renderPass(output, get("additive"));
 	}
 
+	function lighting() {
+
+		var ls = hxd.impl.Api.downcast(getLightSystem(), LightSystem);
+		var count = ctx.engine.drawCalls;
+		if( ls != null ) drawShadows(ls);
+		if( ctx.lightSystem != null ) ctx.lightSystem.drawPasses = ctx.engine.drawCalls - count;
+
+		var lpass = screenLightPass;
+		if( lpass == null ) {
+			lpass = new h3d.pass.ScreenFx(new h3d.shader.ScreenShader());
+			lpass.addShader(pbrProps);
+			lpass.addShader(pbrDirect);
+			lpass.pass.setBlendMode(Add);
+			screenLightPass = lpass;
+		}
+
+		mark("DirectLighting");
+		// Direct Lighting - FullScreen
+		pbrProps.isScreen = true;
+		if( ls != null ) {
+			var count = ctx.engine.drawCalls;
+			ls.drawScreenLights(this, lpass);
+			ctx.lightSystem.drawPasses += ctx.engine.drawCalls - count;
+		}
+		// Direct Lighting - With Primitive
+		pbrProps.isScreen = false;
+		draw(pbrLightPass.name);
+
+		if( renderMode == LightProbe ) {
+			pbrProps.isScreen = true;
+			pbrOut.render();
+			resetTarget();
+			copy(ctx.getGlobal("hdr"), null);
+			// no warnings
+			for( p in passObjects ) if( p != null ) p.rendered = true;
+			return;
+		}
+
+		// Indirect Lighting - Diffuse with volumetricLightmap
+		mark("VolumetricLightmap");
+		pbrProps.isScreen = false;
+		pbrIndirect.drawIndirectDiffuse = false;
+		pbrIndirect.drawIndirectSpecular = env != null ? true : false;
+		ctx.extraShaders = new hxsl.ShaderList(pbrProps, new hxsl.ShaderList(pbrIndirect, null));
+		draw("volumetricLightmap");
+		ctx.extraShaders = null;
+
+		// Indirect Lighting - Diffuse and Specular
+ 		if( env != null ) {
+			mark("Indirect Lighting");
+			pbrProps.isScreen = true;
+			pbrIndirect.drawIndirectDiffuse = true;
+			pbrIndirect.drawIndirectSpecular = true;
+			pbrOut.render();
+		}
+	}
+
 	function drawBeforeTonemapping() {
 		mark("BeforeTonemapping");
 		draw("beforeTonemappingDecal");
@@ -283,11 +340,6 @@ class Renderer extends h3d.scene.Renderer {
 		ctx.setGlobal("occlusionMap", { texture : pbr, channel : hxsl.Channel.B });
 		ctx.setGlobal("bloom", null);
 
-		var ls = hxd.impl.Api.downcast(getLightSystem(), LightSystem);
-		var count = ctx.engine.drawCalls;
-		if( ls != null ) drawShadows(ls);
-		if( ctx.lightSystem != null ) ctx.lightSystem.drawPasses = ctx.engine.drawCalls - count;
-
 		setTargets([albedo,normal,pbr,other]);
 		clear(0, 1, 0);
 		mainDraw();
@@ -371,54 +423,7 @@ class Renderer extends h3d.scene.Renderer {
 			pbrDirect.doDiscard = true;
 		}
 
-		var lpass = screenLightPass;
-		if( lpass == null ) {
-			lpass = new h3d.pass.ScreenFx(new h3d.shader.ScreenShader());
-			lpass.addShader(pbrProps);
-			lpass.addShader(pbrDirect);
-			lpass.pass.setBlendMode(Add);
-			screenLightPass = lpass;
-		}
-
-		mark("DirectLighting");
-		// Direct Lighting - FullScreen
-		pbrProps.isScreen = true;
-		if( ls != null ) {
-			var count = ctx.engine.drawCalls;
-			ls.drawScreenLights(this, lpass);
-			ctx.lightSystem.drawPasses += ctx.engine.drawCalls - count;
-		}
-		// Direct Lighting - With Primitive
-		pbrProps.isScreen = false;
-		draw(pbrLightPass.name);
-
-		if( renderMode == LightProbe ) {
-			pbrProps.isScreen = true;
-			pbrOut.render();
-			resetTarget();
-			copy(hdr, null);
-			// no warnings
-			for( p in passObjects ) if( p != null ) p.rendered = true;
-			return;
-		}
-
-		// Indirect Lighting - Diffuse with volumetricLightmap
-		mark("VolumetricLightmap");
-		pbrProps.isScreen = false;
-		pbrIndirect.drawIndirectDiffuse = false;
-		pbrIndirect.drawIndirectSpecular = env != null ? true : false;
-		ctx.extraShaders = new hxsl.ShaderList(pbrProps, new hxsl.ShaderList(pbrIndirect, null));
-		draw("volumetricLightmap");
-		ctx.extraShaders = null;
-
-		// Indirect Lighting - Diffuse and Specular
- 		if( env != null ) {
-			mark("Indirect Lighting");
-			pbrProps.isScreen = true;
-			pbrIndirect.drawIndirectDiffuse = true;
-			pbrIndirect.drawIndirectSpecular = true;
-			pbrOut.render();
-		}
+		lighting();
 
 		drawBeforeTonemapping();
 		apply(BeforeTonemapping);
