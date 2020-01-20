@@ -57,7 +57,7 @@ class Line {
 	/**
 	 * The angle between a line and the x-axis
 	 */
-	public inline function angle() {
+	public inline function angle():Float {
 		var dx = p2.x - p1.x;
 		var dy = p2.y - p1.y;
 		return hxd.Math.atan2(dy, dx);
