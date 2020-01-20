@@ -63,10 +63,10 @@ class Line {
 		return hxd.Math.atan2(dy, dx);
 	}
 
-	public inline function lenght():Float {
+	public inline function length():Float {
 		var dx = p2.x - p1.x;
 		var dy = p2.y - p1.y;
-		return hxd.Math.sqrt(hxd.Math.pow(dx, 2) + hxd.Math.pow(dy, 2));
+		hxd.Math.distance(dx, dy);
 	}
 
 }
