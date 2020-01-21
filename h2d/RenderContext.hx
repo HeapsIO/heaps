@@ -1,9 +1,9 @@
 package h2d;
 
-typedef CameraStackEntry = {
+private typedef CameraStackEntry = {
 	va : Float, vb : Float, vc : Float, vd : Float, vx : Float, vy : Float
 };
-typedef TargetStackEntry = CameraStackEntry & {
+private typedef TargetStackEntry = CameraStackEntry & {
 	t : h3d.mat.Texture, hasRZ : Bool, rzX:Float, rzY:Float, rzW:Float, rzH:Float
 };
 
@@ -147,31 +147,29 @@ class RenderContext extends h3d.impl.RenderContext {
 		texture = null;
 		currentObj = null;
 		baseShaderList.next = null;
-		if( targetsStackIndex != 0 ) throw "Missing popTarget()";
+		if ( targetsStackIndex != 0 ) throw "Missing popTarget()";
+		if ( cameraStackIndex != 0 ) throw "Missing popCamera()";
 	}
 
 	@:access(h2d.Camera)
-	public function setCamera( cam : h2d.Camera ) {
-		if (cameraStackIndex == cameraStack.length) {
-			cameraStack.push({
-				va: viewA, vb: viewB,
-				vc: viewC, vd: viewD,
-				vx: viewX, vy: viewY
-			});
-		} else {
-			var inf = cameraStack[cameraStackIndex];
-			inf.va = viewA;
-			inf.vb = viewB;
-			inf.vc = viewC;
-			inf.vd = viewD;
-			inf.vx = viewX;
-			inf.vy = viewY;
+	public function pushCamera( cam : h2d.Camera ) {
+		var entry = cameraStack[cameraStackIndex++];
+		if ( entry == null ) {
+			entry = { va: 0, vb: 0, vc: 0, vd: 0, vx: 0, vy: 0 };
+			cameraStack.push(entry);
 		}
-		cameraStackIndex++;
 		var tmpA = viewA;
 		var tmpB = viewB;
 		var tmpC = viewC;
 		var tmpD = viewD;
+
+		entry.va = tmpA;
+		entry.vb = tmpB;
+		entry.vc = tmpC;
+		entry.vd = tmpD;
+		entry.vx = viewX;
+		entry.vy = viewY;
+		
 		viewA = cam.matA * tmpA + cam.matB * tmpC;
 		viewB = cam.matA * tmpB + cam.matB * tmpD;
 		viewC = cam.matC * tmpA + cam.matD * tmpC;
@@ -183,8 +181,8 @@ class RenderContext extends h3d.impl.RenderContext {
 		baseShader.viewportB.set(viewB * flipY, viewD * flipY, viewY * flipY);
 	}
 
-	public function resetCamera() {
-		if (cameraStackIndex == 0) throw "Too many resetCamera()";
+	public function popCamera() {
+		if (cameraStackIndex == 0) throw "Too many popCamera()";
 		var inf = cameraStack[--cameraStackIndex];
 		viewA = inf.va;
 		viewB = inf.vb;
@@ -219,33 +217,24 @@ class RenderContext extends h3d.impl.RenderContext {
 		flush();
 		engine.pushTarget(t);
 		initShaders(baseShaderList);
-
-		targetsStackIndex++;
-		if ( targetsStackIndex > targetsStack.length ) {
-			targetsStack.push( {
-				t: curTarget,
-				va: viewA, vb: viewB,
-				vc: viewC, vd: viewD,
-				vx: viewX, vy: viewY,
-				hasRZ: hasRenderZone,
-				rzX: renderX, rzY: renderY,
-				rzW: renderW, rzH: renderH
-			} );
-		} else {
-			var o = targetsStack[targetsStackIndex - 1];
-			o.t = curTarget;
-			o.va = viewA;
-			o.vb = viewB;
-			o.vc = viewC;
-			o.vd = viewD;
-			o.vx = viewX;
-			o.vy = viewY;
-			o.hasRZ = hasRenderZone;
-			o.rzX = renderX;
-			o.rzY = renderY;
-			o.rzW = renderW;
-			o.rzH = renderH;
+		
+		var entry = targetsStack[targetsStackIndex++];
+		if ( entry == null ) {
+			entry = { t: null, va: 0, vb: 0, vc: 0, vd: 0, vx: 0, vy: 0, hasRZ: false, rzX: 0, rzY: 0, rzW: 0, rzH: 0 };
+			targetsStack.push(entry);
 		}
+		entry.t = curTarget;
+		entry.va = viewA;
+		entry.vb = viewB;
+		entry.vc = viewC;
+		entry.vd = viewD;
+		entry.vx = viewX;
+		entry.vy = viewY;
+		entry.hasRZ = hasRenderZone;
+		entry.rzX = renderX;
+		entry.rzY = renderY;
+		entry.rzW = renderW;
+		entry.rzH = renderH;
 
 		if( width < 0 ) width = t == null ? scene.width : t.width;
 		if( height < 0 ) height = t == null ? scene.height : t.height;

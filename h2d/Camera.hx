@@ -99,7 +99,7 @@ class Camera {
 	}
 
 	@:noCompletion public function enter( ctx : RenderContext ) {
-		ctx.setCamera(this);
+		ctx.pushCamera(this);
 		if ( clipViewport )
 			ctx.setRenderZone(viewportX * ctx.scene.width, viewportY * ctx.scene.height, viewportWidth * ctx.scene.width, viewportHeight * ctx.scene.height);
 	}
@@ -107,7 +107,7 @@ class Camera {
 	@:noCompletion public function exit( ctx : RenderContext ) {
 		if ( clipViewport )
 			ctx.clearRenderZone();
-		ctx.resetCamera();
+		ctx.popCamera();
 	}
 
 	@:access(h2d.Object)
