@@ -471,6 +471,7 @@ class Renderer extends h3d.scene.Renderer {
 				shadowMap = h3d.mat.Texture.fromColor(0);
 			slides.shader.shadowMap = shadowMap;
 			slides.shader.shadowMapChannel = R;
+			pbrProps.isScreen = true;
 			slides.render();
 
 			if( !hasDebugEvent ) {
