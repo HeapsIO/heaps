@@ -85,32 +85,32 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	/**
 		Viewport horizontal scale transform value. Converts from scene space to screen space of [0, 2] range.
 	**/
-	public var viewportA(default, null) : Float;
+	var viewportA(default, null) : Float;
 	/**
 		Viewport vertical scale transform value. Converts from scene space to screen space of [0, 2] range.
 	**/
-	public var viewportD(default, null) : Float;
+	var viewportD(default, null) : Float;
 	/**
 		Horizontal viewport offset relative to top-left corner of the window. Can change if the screen gets resized or `scaleMode` changes.
 		Offset is in screen-space coordinates: [-1, 1] where 0 is center of the window.
 	**/
-	public var viewportX(default, null) : Float;
+	var viewportX(default, null) : Float;
 	/**
 		Vertical viewport offset relative to top-left corner of the window. Can change if the screen gets resized or `scaleMode` changes.
 		Offset is in screen-space coordinates: [-1, 1] where 0 is center of the window.
 	**/
-	public var viewportY(default, null) : Float;
+	var viewportY(default, null) : Float;
 
 	/**
 		Horizontal viewport offset relative to top-left corner of the window in pixels.
 		Assigned if the screen gets resized or `scaleMode` changes.
 	**/
-	public var offsetX(default, null) : Float;
+	var offsetX(default, null) : Float;
 	/**
 		Vertical viewport offset relative to top-left corner of the window in pixels.
 		Assigned if the screen gets resized or `scaleMode` changes.
 	**/
-	public var offsetY(default, null) : Float;
+	var offsetY(default, null) : Float;
 
 	/**
 		Horizontal scale of a scene when rendering to screen.

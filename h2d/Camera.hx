@@ -8,6 +8,7 @@ package h2d;
 	When handling events, assigned camera isn't checked for it's nor layers visibiilty.
 	Camera system is circumvented if Scene would get any filter assigned to it.
 **/
+@:access(h2d.Scene)
 class Camera {
 
 	/**
@@ -20,11 +21,11 @@ class Camera {
 	public var y(default, set) : Float;
 
 	/**
-		Horizontal scale factor of the camera. Scaling applied relative to anchored position.
+		Horizontal scale factor of the camera. Scaling applied, using anchored position as pivot.
 	**/
 	public var scaleX(default, set) : Float;
 	/**
-		Vertical scale factor of the camera. Scalid applied relative to anchored position.
+		Vertical scale factor of the camera. Scaling applied, using anchored position as pivot.
 	**/
 	public var scaleY(default, set) : Float;
 
@@ -181,7 +182,7 @@ class Camera {
 		Convert screen position into a local camera position.
 		Requires Scene as a reference to viewport of `scaleMode`.
 	**/
-	public function screenXToCamera( mx : Float, my : Float, scene : Scene ) : Float {
+	inline function screenXToCamera( mx : Float, my : Float, scene : Scene ) : Float {
 		return globalXToCamera((mx - scene.offsetX) / scene.viewportScaleX, (my - scene.offsetY) / scene.viewportScaleY);
 	}
 
@@ -189,7 +190,7 @@ class Camera {
 		Convert screen position into a local camera position.
 		Requires Scene as a reference to viewport of `scaleMode`.
 	**/
-	public function screenYToCamera( mx : Float, my : Float, scene : Scene ) : Float {
+	inline function screenYToCamera( mx : Float, my : Float, scene : Scene ) : Float {
 		return globalYToCamera((mx - scene.offsetX) / scene.viewportScaleX, (my - scene.offsetY) / scene.viewportScaleY);
 	}
 
@@ -197,16 +198,16 @@ class Camera {
 		Convert local camera position to absolute screen position.
 		Requires Scene as a reference to viewport of `scaleMode`.
 	**/
-	public function cameraXToScreen( mx : Float, my : Float, scene : Scene ) : Float {
-		return inline cameraXToGlobal(mx, my) * scene.viewportScaleX + scene.offsetX;
+	inline function cameraXToScreen( mx : Float, my : Float, scene : Scene ) : Float {
+		return cameraXToGlobal(mx, my) * scene.viewportScaleX + scene.offsetX;
 	}
 
 	/**
 		Convert local camera position to absolute screen position.
 		Requires Scene as a reference to viewport of `scaleMode`.
 	**/
-	public function cameraYToScreen( mx : Float, my : Float, scene : Scene ) : Float {
-		return inline cameraYToGlobal(mx, my) * scene.viewportScaleY + scene.offsetY;
+	inline function cameraYToScreen( mx : Float, my : Float, scene : Scene ) : Float {
+		return cameraYToGlobal(mx, my) * scene.viewportScaleY + scene.offsetY;
 	}
 
 	// Scene <-> Camera
@@ -214,7 +215,7 @@ class Camera {
 		Convert an absolute scene position into a local camera position.
 		Does not represent screen position, see `screenXToCamera` to convert position with accounting of `scaleMode`.
 	**/
-	public function globalXToCamera( mx : Float, my : Float ) : Float {
+	inline function globalXToCamera( mx : Float, my : Float ) : Float {
 		return ((mx - absX) * matD - (my - absY) * matC) * invDet;
 	}
 
@@ -222,7 +223,7 @@ class Camera {
 		Convert an absolute scene position into a local camera position.
 		Does not represent screen position, see `screenYToCamera` to convert position with accounting of `scaleMode`.
 	**/
-	public function globalYToCamera( mx : Float, my : Float ) : Float {
+	inline function globalYToCamera( mx : Float, my : Float ) : Float {
 		return (-(mx - absX) * matB + (my - absY) * matA) * invDet;
 	}
 
@@ -230,7 +231,7 @@ class Camera {
 		Convert local camera position into absolute scene position.
 		Does not represent screen position, see `cameraXToScreen` to convert position with accounting of `scaleMode`.
 	**/
-	public function cameraXToGlobal( mx : Float, my : Float ) : Float {
+	inline function cameraXToGlobal( mx : Float, my : Float ) : Float {
 		return mx * matA + my * matC + absX;
 	}
 
@@ -238,7 +239,7 @@ class Camera {
 		Convert local camera position into absolute scene position.
 		Does not represent screen position, see `cameraYToScreen` to convert position with accounting of `scaleMode`.
 	**/
-	public function cameraYToGlobal( mx : Float, my : Float ) : Float {
+	inline function cameraYToGlobal( mx : Float, my : Float ) : Float {
 		return mx * matB + my * matD + absY;
 	}
 
@@ -269,8 +270,8 @@ class Camera {
 	public function cameraToScreen( pt : h2d.col.Point, scene : Scene ) {
 		var x = pt.x;
 		var y = pt.y;
-		pt.x = inline cameraXToScreen(x, y, scene);
-		pt.y = inline cameraYToScreen(x, y, scene);
+		pt.x = cameraXToScreen(x, y, scene);
+		pt.y = cameraYToScreen(x, y, scene);
 	}
 
 	/**
@@ -291,8 +292,8 @@ class Camera {
 	public function cameraToGlobal( pt : h2d.col.Point ) {
 		var x = pt.x;
 		var y = pt.y;
-		pt.x = inline cameraXToGlobal(x, y);
-		pt.y = inline cameraYToGlobal(x, y);
+		pt.x = cameraXToGlobal(x, y);
+		pt.y = cameraYToGlobal(x, y);
 	}
 
 	// Setters
