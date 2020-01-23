@@ -53,7 +53,7 @@ class SceneEvents {
 	/**
 	 * Default cursor when there is no Interactive present under cursor.
 	 */
-	public var defaultCursor : Cursor = Default;
+	public var defaultCursor(default,set) : Cursor = Default;
 
 	public function new( ?window ) {
 		scenes = [];
@@ -395,6 +395,14 @@ class SceneEvents {
 
 	public function updateCursor( i : Interactive ) {
 		if ( overList.indexOf(i) != -1 ) selectCursor();
+	}
+
+	function set_defaultCursor(c) {
+		if( Type.enumEq(c,defaultCursor) )
+			return c;
+		defaultCursor = c;
+		selectCursor();
+		return c;
 	}
 
 	function selectCursor() {
