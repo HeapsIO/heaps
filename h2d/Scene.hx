@@ -149,10 +149,12 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	public var scaleMode(default, set) : ScaleMode = Resize;
 
 	/**
-		List of all cameras attached to the Scene. Should contain at least one camera to render and one created by default.
+		List of all cameras attached to the Scene. Should contain at least one camera to render (created by default).
 		Override `h2d.Camera.layerVisible` method to filter out specific layers from camera rendering.
+		To add or remove cameras use `addCamera` and `removeCamera` methods.
 	**/
-	public var cameras : Array<Camera>;
+	public var cameras(get, never) : haxe.ds.ReadOnlyArray<Camera>;
+	var _cameras : Array<Camera>;
 	/**
 		Alias to first camera in the list: `cameras[0]`
 	**/
@@ -191,7 +193,8 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		super(null);
 		var e = h3d.Engine.getCurrent();
 		ctx = new RenderContext(this);
-		cameras = [new Camera()];
+		_cameras = [new Camera()];
+		_cameras[0].scene = this;
 		interactiveCamera = camera;
 		width = e.width;
 		height = e.height;
@@ -239,8 +242,37 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	function get_renderer() return ctx;
 	function set_renderer(v) { ctx = v; return v; }
 
-	inline function get_camera() return cameras[0];
-	inline function set_camera(c) return cameras[0] = c;
+	inline function get_camera() return _cameras[0];
+	function set_camera( cam : Camera ) {
+		if (cam.scene != this) {
+			if ( cam.scene != null )
+				cam.scene.removeCamera(cam);
+			cam.scene = this;
+			cam.posChanged = true;
+		} else if (_cameras[0] != cam) {
+			// Reinsert camera to 0 index
+			_cameras.remove(cam);
+			_cameras.unshift(cam);
+		}
+		return cam;
+	}
+
+	inline function get_cameras() return _cameras;
+
+	public function addCamera( cam : Camera, ?pos : Int ) {
+		if ( cam.scene != null )
+			cam.scene.removeCamera(cam);
+		cam.scene = this;
+		cam.posChanged = true;
+		if ( pos != null ) _cameras.insert(pos, cam);
+		else _cameras.push(cam);
+	}
+
+	public function removeCamera( cam : Camera ) {
+		if (_cameras.remove(cam)) {
+			cam.scene = null;
+		}
+	}
 
 	/**
 		Set the fixed size for the scene, will prevent automatic scene resizing when screen size changes.
@@ -343,11 +375,11 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	}
 
 	function get_mouseX() {
-		return interactiveCamera.screenXToCamera(window.mouseX, window.mouseY, this);
+		return @:privateAccess interactiveCamera.screenXToCamera(window.mouseX, window.mouseY);
 	}
 
 	function get_mouseY() {
-		return interactiveCamera.screenYToCamera(window.mouseX, window.mouseY, this);
+		return @:privateAccess interactiveCamera.screenYToCamera(window.mouseX, window.mouseY);
 	}
 
 	@:dox(hide) @:noCompletion
@@ -426,7 +458,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	}
 
 	function screenToLocal( e : hxd.Event ) {
-		interactiveCamera.eventToCamera(e, this);
+		interactiveCamera.eventToCamera(e);
 	}
 
 	@:dox(hide) @:noCompletion

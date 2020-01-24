@@ -9,6 +9,7 @@ package h2d;
 	Camera system is circumvented if Scene would get any filter assigned to it.
 **/
 @:access(h2d.Scene)
+@:allow(h2d.Scene)
 class Camera {
 
 	/**
@@ -78,6 +79,8 @@ class Camera {
 	var absY : Float;
 	var invDet : Float;
 
+	var scene : Scene;
+
 	public function new( anchorX : Float = 0, anchorY : Float = 0 ) {
 		this.x = 0; this.y = 0;
 		this.scaleX = 1; this.scaleY = 1;
@@ -102,7 +105,7 @@ class Camera {
 	@:noCompletion public function enter( ctx : RenderContext ) {
 		ctx.pushCamera(this);
 		if ( clipViewport )
-			ctx.setRenderZone(viewportX * ctx.scene.width, viewportY * ctx.scene.height, viewportWidth * ctx.scene.width, viewportHeight * ctx.scene.height);
+			ctx.setRenderZone(viewportX * scene.width, viewportY * scene.height, viewportWidth * scene.width, viewportHeight * scene.height);
 	}
 
 	@:noCompletion public function exit( ctx : RenderContext ) {
@@ -120,7 +123,6 @@ class Camera {
 			if ( followRotation ) this.rotation = -follow.rotation;
 		}
 		if ( posChanged || force ) {
-			var scene = ctx.scene;
 			if ( rotation == 0 ) {
 				matA = scaleX;
 				matB = 0;
@@ -182,7 +184,7 @@ class Camera {
 		Convert screen position into a local camera position.
 		Requires Scene as a reference to viewport of `scaleMode`.
 	**/
-	inline function screenXToCamera( mx : Float, my : Float, scene : Scene ) : Float {
+	inline function screenXToCamera( mx : Float, my : Float ) : Float {
 		return globalXToCamera((mx - scene.offsetX) / scene.viewportScaleX, (my - scene.offsetY) / scene.viewportScaleY);
 	}
 
@@ -190,7 +192,7 @@ class Camera {
 		Convert screen position into a local camera position.
 		Requires Scene as a reference to viewport of `scaleMode`.
 	**/
-	inline function screenYToCamera( mx : Float, my : Float, scene : Scene ) : Float {
+	inline function screenYToCamera( mx : Float, my : Float ) : Float {
 		return globalYToCamera((mx - scene.offsetX) / scene.viewportScaleX, (my - scene.offsetY) / scene.viewportScaleY);
 	}
 
@@ -198,7 +200,7 @@ class Camera {
 		Convert local camera position to absolute screen position.
 		Requires Scene as a reference to viewport of `scaleMode`.
 	**/
-	inline function cameraXToScreen( mx : Float, my : Float, scene : Scene ) : Float {
+	inline function cameraXToScreen( mx : Float, my : Float ) : Float {
 		return cameraXToGlobal(mx, my) * scene.viewportScaleX + scene.offsetX;
 	}
 
@@ -206,7 +208,7 @@ class Camera {
 		Convert local camera position to absolute screen position.
 		Requires Scene as a reference to viewport of `scaleMode`.
 	**/
-	inline function cameraYToScreen( mx : Float, my : Float, scene : Scene ) : Float {
+	inline function cameraYToScreen( mx : Float, my : Float ) : Float {
 		return cameraYToGlobal(mx, my) * scene.viewportScaleY + scene.offsetY;
 	}
 
@@ -245,7 +247,7 @@ class Camera {
 
 	// Point/event
 
-	@:noCompletion public function eventToCamera( e : hxd.Event, scene : Scene ) {
+	@:noCompletion public function eventToCamera( e : hxd.Event ) {
 		var x = (e.relX - scene.offsetX) / scene.viewportScaleX - absX;
 		var y = (e.relY - scene.offsetY) / scene.viewportScaleY - absY;
 		e.relX = (x * matD - y * matC) * invDet;
@@ -256,7 +258,7 @@ class Camera {
 		Convert screen position into a local camera position.
 		Requires Scene as a reference to viewport of `scaleMode`.
 	**/
-	public function screenToCamera( pt : h2d.col.Point, scene : Scene ) {
+	public function screenToCamera( pt : h2d.col.Point ) {
 		var x = (pt.x - scene.offsetX) / scene.viewportScaleX - absX;
 		var y = (pt.y - scene.offsetY) / scene.viewportScaleY - absY;
 		pt.x = (x * matD - y * matC) * invDet;
@@ -267,11 +269,11 @@ class Camera {
 		Convert local camera position to absolute screen position.
 		Requires Scene as a reference to viewport of `scaleMode`.
 	**/
-	public function cameraToScreen( pt : h2d.col.Point, scene : Scene ) {
+	public function cameraToScreen( pt : h2d.col.Point ) {
 		var x = pt.x;
 		var y = pt.y;
-		pt.x = cameraXToScreen(x, y, scene);
-		pt.y = cameraYToScreen(x, y, scene);
+		pt.x = cameraXToScreen(x, y);
+		pt.y = cameraYToScreen(x, y);
 	}
 
 	/**

@@ -7,6 +7,7 @@ private typedef TargetStackEntry = CameraStackEntry & {
 	t : h3d.mat.Texture, hasRZ : Bool, rzX:Float, rzY:Float, rzW:Float, rzH:Float
 };
 
+@:access(h2d.Scene)
 class RenderContext extends h3d.impl.RenderContext {
 
 	static inline var BUFFERING = false;

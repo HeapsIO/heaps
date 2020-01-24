@@ -74,7 +74,8 @@ class Camera2D extends SampleApp {
 		// Only one camera can handle user input events.
 		s2d.interactiveCamera = uiCamera;
 		// Add UI camera to scene. Note that order of cameras in array matters, as they are rendered in-order.
-		s2d.cameras.push(uiCamera);
+		s2d.addCamera(uiCamera);
+		s2d.scaleMode = LetterBox(700, 500, true);
 
 		// See Tiled sample
 		var followX = s2d.width * .5;
@@ -118,7 +119,7 @@ class Camera2D extends SampleApp {
 		followCamera.layerVisible = (idx) -> idx != 2; // skip UI layer
 		followCamera.follow = followPoint;
 		followCamera.followRotation = true;
-		s2d.cameras.push(followCamera);
+		s2d.addCamera(followCamera);
 
 		camera = s2d.camera;
 		camera.setAnchor(0.5, 0.5);
