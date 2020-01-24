@@ -47,7 +47,7 @@ class PointShadow extends hxsl.Shader {
 							for( j in -sampleCount ... sampleCount + 1 ) {
 								for( k in -sampleCount ... sampleCount + 1 ) {
 									var offset = vec3(i, j, k) * pcfScale;
-									var depth = shadowMap.get(dir + offset).r * zFar;
+									var depth = shadowMap.getLod(dir + offset, 0).r * zFar;
 									if( zMax - shadowBias > depth )
 										shadow -= sampleStrength;
 								}
@@ -58,7 +58,7 @@ class PointShadow extends hxsl.Shader {
 				else if ( USE_ESM ) {
 					var posToLight = transformedPosition.xyz - lightPos;
 					var dir = normalize(posToLight.xyz);
-					var depth = shadowMap.get(dir).r * zFar;
+					var depth = shadowMap.getLod(dir, 0).r * zFar;
 					var zMax = length(posToLight);
 					var delta = (depth + shadowBias).min(zMax) - zMax;
 					shadow = exp(shadowPower * delta).saturate();
@@ -66,7 +66,7 @@ class PointShadow extends hxsl.Shader {
 				else {
 					var posToLight = transformedPosition.xyz - lightPos;
 					var dir = normalize(posToLight.xyz);
-					var depth = shadowMap.get(dir).r * zFar;
+					var depth = shadowMap.getLod(dir, 0).r * zFar;
 					var zMax = length(posToLight);
 					shadow = zMax - shadowBias > depth ? 0 : 1;
 				}
