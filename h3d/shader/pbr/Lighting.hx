@@ -29,7 +29,7 @@ class Indirect extends PropsDefinition {
 		function fragment() {
 			var s = sin(rot);
 			var c = cos(rot);
-	
+
 			var isSky = normal.dot(normal) <= 0;
 			if( isSky ) {
 				if( showSky ) {
@@ -54,7 +54,7 @@ class Indirect extends PropsDefinition {
 
 				var F0 = pbrSpecularColor;
 				var F = F0 + (max(vec3(1 - roughness), F0) - F0) * exp2( ( -5.55473 * NdV - 6.98316) * NdV );
-				
+
 				var rotatedNormal = vec3(normal.x * c - normal.y * s, normal.x * s + normal.y * c, normal.z);
 
 				if( drawIndirectDiffuse ) {
@@ -62,8 +62,8 @@ class Indirect extends PropsDefinition {
 				}
 				if( drawIndirectSpecular ) {
 					var reflectVec = reflect(-view, normal);
-					var roatetdReflecVec = vec3(reflectVec.x * c - reflectVec.y * s, reflectVec.x * s + reflectVec.y * c, reflectVec.z);
-					var envSpec = textureLod(irrSpecular, roatetdReflecVec, roughness * irrSpecularLevels).rgb;
+					var rotatedReflecVec = vec3(reflectVec.x * c - reflectVec.y * s, reflectVec.x * s + reflectVec.y * c, reflectVec.z);
+					var envSpec = textureLod(irrSpecular, rotatedReflecVec, roughness * irrSpecularLevels).rgb;
 					var envBRDF = irrLut.get(vec2(roughness, NdV));
 					specular = envSpec * (F * envBRDF.x + envBRDF.y);
 				}
