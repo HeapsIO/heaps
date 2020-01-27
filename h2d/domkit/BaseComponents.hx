@@ -219,7 +219,7 @@ class CustomParser extends CssValue.ValueParser {
 			#end
 		case VCall("outline",[s, c]):
 			var s = parseFloat(s);
-			var c = parseInt(c);
+			var c = parseColor(c);
 			#if macro
 				true;
 			#else
