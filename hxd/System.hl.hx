@@ -295,6 +295,16 @@ class System {
 		}
 	}
 
+	public static function openURL( url : String ) : Void {
+		switch Sys.systemName() {
+			case 'Windows': Sys.command('start ${url}');
+			case 'Linux': Sys.command('xdg-open ${url}');
+			case 'Mac': Sys.command('open ${url}');
+			case 'Android' | 'iOS' | 'tvOS': 
+			default:
+		}
+	}
+
 	@:hlNative("std","sys_locale") static function sys_locale() : hl.Bytes { return null; }
 
 	static var _lang : String;
