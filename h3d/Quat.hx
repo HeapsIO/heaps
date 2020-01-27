@@ -288,6 +288,37 @@ class Quat {
 		return m;
 	}
 
+	public static function lookAt(direction : Vector, ?up : Vector, ?q : Quat) {
+		if (up == null) {
+			up = new Vector(0, 0, 1);
+		}
+		if (q == null) {
+			q = new Quat();
+		}
+
+		var dir = direction.getNormalized();
+
+		var dot = up.dot3(dir);
+
+		if (Math.abs(dot + 1.) < Math.EPSILON) {
+			q.set(up.x, up.y, up.z, Math.PI);
+			return q;
+		}
+
+		if (Math.abs(dot - 1.0) < Math.EPSILON) {
+			q.identity();
+			return q;
+		}
+
+		var rotAngle = Math.acos(dot);
+		dir = up.cross(dir);
+		dir.normalize();
+
+		q.initRotateAxis(dir.x, dir.y, dir.z, rotAngle);
+
+		return q;
+	}
+
 	public function toString() {
 		return '{${x.fmt()},${y.fmt()},${z.fmt()},${w.fmt()}}';
 	}
