@@ -510,6 +510,7 @@ class FlowComp extends ObjectComp implements domkit.Component.ComponentDecl<h2d.
 	@:p var fillWidth: Bool;
 	@:p var fillHeight: Bool;
 	@:p var overflow: Bool;
+	@:p var reverse : Bool;
 
 	@:p(align) var contentAlign : { h : h2d.Flow.FlowAlign, v : h2d.Flow.FlowAlign };
 	@:p(vAlign) var contentValign : h2d.Flow.FlowAlign;
@@ -658,6 +659,11 @@ class FlowComp extends ObjectComp implements domkit.Component.ComponentDecl<h2d.
 	static function set_overflow( o : h2d.Flow, v ) {
 		o.overflow = v;
 	}
+
+	static function set_reverse( o : h2d.Flow, v ) {
+		o.reverse = v;
+	}
+
 }
 
 @:uiComp("input")
