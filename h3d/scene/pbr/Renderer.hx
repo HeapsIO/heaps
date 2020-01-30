@@ -425,6 +425,7 @@ class Renderer extends h3d.scene.Renderer {
 
 		lighting();
 
+		apply(BeforeTonemappingFX);
 		drawBeforeTonemapping();
 		apply(BeforeTonemapping);
 
