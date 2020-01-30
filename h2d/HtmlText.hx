@@ -36,7 +36,7 @@ class HtmlText extends Text {
 	public var condenseWhite(default,set) : Bool = true;
 
 	/**
-		Line height calculation mode controls how much space lines take up vertically. ( default : Accurate )  
+		Line height calculation mode controls how much space lines take up vertically. ( default : Accurate )
 		Changing mode to `Constant` restores legacy behavior of HtmlText.
 	**/
 	public var lineHeightMode(default,set) : LineHeightMode = Accurate;
@@ -76,7 +76,7 @@ class HtmlText extends Text {
 	}
 
 	/**
-		Method that should return `h2d.Tile` instance for `<img>` tags. By default calls `HtmlText.defaultLoadImage` method.  
+		Method that should return `h2d.Tile` instance for `<img>` tags. By default calls `HtmlText.defaultLoadImage` method.
 		Loaded Tiles are temporary cached internally and if text contains multiple same images - this method will be called only once. Cache is invalidated whenever text changes.
 		@param url A value contained in `src` attribute.
 	**/
@@ -85,7 +85,7 @@ class HtmlText extends Text {
 	}
 
 	/**
-		Method that should return `h2d.Font` instance for `<font>` tags with `face` attribute. By default calls `HtmlText.defaultLoadFont` method.  
+		Method that should return `h2d.Font` instance for `<font>` tags with `face` attribute. By default calls `HtmlText.defaultLoadFont` method.
 		HtmlText does not cache font instances and it's recommended to perform said caching from outside.
 		@param name A value contained in `face` attribute.
 		@returns Method should return loaded font instance or `null`. If `null` is returned - currently active font is used.
@@ -124,7 +124,7 @@ class HtmlText extends Text {
 		var metrics : Array<LineInfo> = [ makeLineInfo(0, font.lineHeight, font.baseLine) ];
 		prevChar = -1;
 		newLine = true;
-		var splitNode : SplitNode = { 
+		var splitNode : SplitNode = {
 			node: null, pos: 0, font: font, prevChar: -1,
 			width: 0, height: 0, baseLine: 0
 		};
@@ -142,7 +142,7 @@ class HtmlText extends Text {
 		nextLine(textAlign, metrics[0].width);
 		for ( e in doc )
 			addNode(e, font, textAlign, rebuild, metrics);
-		
+
 		if( xPos > xMax ) xMax = xPos;
 
 		imageCache = null;
@@ -339,7 +339,7 @@ class HtmlText extends Text {
 					newLine = false;
 				}
 			}
-			
+
 			if ( restPos < text.length ) {
 				if (x > maxWidth) {
 					if ( splitNode.node != null && splitNode.node != e ) {
@@ -398,7 +398,7 @@ class HtmlText extends Text {
 		*/
 
 		var splitNode : SplitNode = { node: null, font: font, width: 0, height: 0, baseLine: 0, pos: 0, prevChar: -1 };
-		var metrics = new Array<LineInfo>();
+		var metrics = [makeLineInfo(0, font.lineHeight, font.baseLine)];
 		prevChar = -1;
 		newLine = true;
 
@@ -415,7 +415,7 @@ class HtmlText extends Text {
 				var index = Lambda.indexOf(e.parent, e);
 				for (i in 0...text.length) {
 					if (text.charCodeAt(i) == '\n'.code) {
-						var pre = text.substring(startI, i - 1);
+						var pre = text.substring(startI, i);
 						if (pre != "") e.parent.insertChild(Xml.createPCData(pre), index++);
 						e.parent.insertChild(Xml.createElement("br"),index++);
 						startI = i+1;
