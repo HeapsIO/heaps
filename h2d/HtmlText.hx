@@ -269,7 +269,7 @@ class HtmlText extends Text {
 				}
 			default:
 			}
-		} else {
+		} else if (e.nodeValue.length != 0) {
 			newLine = false;
 			var text = htmlToText(e.nodeValue);
 			var fontInfo = lineFont();
@@ -447,11 +447,12 @@ class HtmlText extends Text {
 					progressRec(x);
 			} else {
 				var text = htmlToText(e.nodeValue);
-				if( text.length > progress ) {
+				var len = text.length;
+				if( len > progress ) {
 					text = text.substr(0, Std.int(progress));
 					e.nodeValue = text;
 				}
-				progress -= text.length;
+				progress -= len;
 			}
 		}
 		for( x in [for( x in doc ) x] )
@@ -580,7 +581,7 @@ class HtmlText extends Text {
 				glyphs = prevGlyphs;
 			if( prevColor != null )
 				@:privateAccess glyphs.curColor.load(prevColor);
-		} else {
+		} else if (e.nodeValue.length != 0) {
 			newLine = false;
 			var t = e.nodeValue;
 			var dy = metrics[sizePos].baseLine - font.baseLine;
