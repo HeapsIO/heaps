@@ -46,7 +46,9 @@ class HtmlText extends Text {
 	var yPos : Float;
 	var xMax : Float;
 	var xMin : Float;
+	var textXml : Xml;
 	var imageCache : Map<String, Tile>;
+	var fontCache : Map<String, Font>;
 	var sizePos : Int;
 	var dropMatrix : h3d.shader.ColorMatrix;
 	var prevChar : Int;
@@ -104,6 +106,56 @@ class HtmlText extends Text {
 		return { width: width, height: height, baseLine: baseLine };
 	}
 
+	override function validateText()
+	{
+		imageCache = new Map();
+		fontCache = new Map();
+		textXml = parseText(text);
+		buildCache(textXml);
+	}
+
+	function getCachedImage( src : String ) : Tile {
+		var i = imageCache.get(src);
+		if ( i == null ) {
+			i = loadImage(src);
+			if( i == null ) i = Tile.fromColor(0xFF00FF, 8, 8);
+			imageCache.set(src, i);
+		}
+		return i;
+	}
+
+	function getCachedFont( face : String ) : Font {
+		var font = fontCache.get(face);
+		if ( font == null ) {
+			font = loadFont(face);
+			if ( font == null ) font = this.font;
+			fontCache.set(face, font);
+		}
+		return font;
+	}
+
+	function buildCache( xml : Xml ) {
+		if ( xml.nodeType == Element ) {
+
+			var nodeName = xml.nodeName.toLowerCase();
+			switch ( nodeName ) {
+				case "img":
+					getCachedImage(xml.get("src"));
+				case "font":
+					if (xml.exists("face")) {
+						getCachedFont(xml.get("face"));
+					}
+				case "b", "bold":
+					getCachedFont("bold");
+				case "i", "italic":
+					getCachedFont("italic");
+			}
+
+			for ( child in xml )
+				buildCache(xml);
+		}
+	}
+
 	override function initGlyphs( text : String, rebuild = true ) {
 		if( rebuild ) {
 			glyphs.clear();
@@ -112,8 +164,7 @@ class HtmlText extends Text {
 		}
 		glyphs.setDefaultColor(textColor);
 
-		var doc = parseText(text);
-		imageCache = new Map();
+		var doc = textXml;
 
 		yPos = 0;
 		xMax = 0;
@@ -145,7 +196,6 @@ class HtmlText extends Text {
 
 		if( xPos > xMax ) xMax = xPos;
 
-		imageCache = null;
 		var y = yPos;
 		calcXMin = xMin;
 		calcWidth = xMax - xMin;
@@ -204,13 +254,7 @@ class HtmlText extends Text {
 				// TODO: Support width/height attributes
 				// Support max-width/max-height attributes (downscale)
 				// Support min-width/min-height attributes (upscale)
-				var src = e.get("src");
-				var i : Tile = imageCache.get(src);
-				if ( i == null ) {
-					i = loadImage(src);
-					if( i == null ) i = Tile.fromColor(0xFF00FF, 8, 8);
-					imageCache.set(src, i);
-				}
+				var i : Tile = getCachedImage(e.get("src"));
 
 				var size = metrics[metrics.length - 1].width + i.width + letterSpacing;
 				if (realMaxWidth >= 0 && size > realMaxWidth && metrics[metrics.length - 1].width > 0) {
@@ -251,14 +295,14 @@ class HtmlText extends Text {
 				for( a in e.attributes() ) {
 					var v = e.get(a);
 					switch( a.toLowerCase() ) {
-					case "face": font = loadFont(v);
+					case "face": font = getCachedFont(v);
 					default:
 					}
 				}
 			case "b", "bold":
-				font = loadFont("bold");
+				font = getCachedFont("bold");
 			case "i", "italic":
-				font = loadFont("italic");
+				font = getCachedFont("italic");
 			default:
 			}
 			for( child in e )
@@ -473,7 +517,7 @@ class HtmlText extends Text {
 			var oldAlign = align;
 			var nodeName = e.nodeName.toLowerCase();
 			inline function setFont( v : String ) {
-				font = loadFont(v);
+				font = fontCache.get(v);
 				if( prevGlyphs == null ) prevGlyphs = glyphs;
 				var prev = glyphs;
 				glyphs = new TileGroup(font == null ? null : font.tile, this);

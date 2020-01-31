@@ -153,8 +153,12 @@ class Text extends Drawable {
 		if( t == this.text ) return t;
 		this.text = t;
 		textChanged = true;
+		validateText();
 		onContentChanged();
 		return t;
+	}
+
+	function validateText() {
 	}
 
 	function rebuild() {
