@@ -164,7 +164,14 @@ class HtmlText extends Text {
 		}
 		glyphs.setDefaultColor(textColor);
 
-		var doc = textXml;
+		var doc : Xml;
+		if (textXml == null) {
+			imageCache = new Map();
+			fontCache = new Map();
+			doc = parseText(text);
+		} else {
+			doc = textXml;
+		}
 
 		yPos = 0;
 		xMax = 0;
@@ -195,6 +202,10 @@ class HtmlText extends Text {
 			addNode(e, font, textAlign, rebuild, metrics);
 
 		if( xPos > xMax ) xMax = xPos;
+
+		textXml = null;
+		imageCache = null;
+		fontCache = null;
 
 		var y = yPos;
 		calcXMin = xMin;
