@@ -6,6 +6,7 @@ package h3d.mat;
 	var AlphaKill = "AlphaKill";
 	var Add = "Add";
 	var SoftAdd = "SoftAdd";
+	var Hidden = "Hidden";
 }
 
 private typedef DefaultProps = {
@@ -265,7 +266,7 @@ class Material extends BaseMaterial {
 		if( props == null || mainPass == null ) return;
 		var props : DefaultProps = props;
 		switch( props.kind ) {
-		case Opaque, AlphaKill: blendMode = None;
+		case Opaque, AlphaKill, Hidden: blendMode = None;
 		case Alpha: blendMode = Alpha;
 		case Add: blendMode = Add;
 		case SoftAdd: blendMode = SoftAdd;
@@ -275,7 +276,7 @@ class Material extends BaseMaterial {
 			tshader.killAlpha = props.kind == AlphaKill;
 			tshader.killAlphaThreshold = 0.5;
 		}
-		mainPass.culling = props.culling ? Back : None;
+		mainPass.culling = props.kind == Hidden ? Both : props.culling ? Back : None;
 		mainPass.enableLights = props.light;
 		shadows = props.shadows;
 		if( shadows )
@@ -294,6 +295,7 @@ class Material extends BaseMaterial {
 						<option value="AlphaKill">AlphaKill</option>
 						<option value="Add">Add</option>
 						<option value="SoftAdd">SoftAdd</option>
+						<option value="Hidden">Hidden</option>
 					</select>
 				</dd>
 				<dt>Shadows</dt><dd><input type="checkbox" field="shadows"/></dd>

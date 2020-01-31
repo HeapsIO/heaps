@@ -6,10 +6,41 @@ class Mask extends Object {
 	public var height : Int;
 	var parentMask : Mask;
 
+	/**
+		Horizontal scroll offset of the Mask content in pixels. Can be clamped by `scrollBounds`.
+	**/
+	public var scrollX(default, set) : Float = 0;
+	/**
+		Vertical scroll offset of the Mask content in pixels. Can be clamped by `scrollBounds`.
+
+	**/
+	public var scrollY(default, set) : Float = 0;
+
+	/**
+		Optional scroll boundaries that prevent content from overscroll.
+	**/
+	public var scrollBounds : h2d.col.Bounds;
+
 	public function new(width, height, ?parent) {
 		super(parent);
 		this.width = width;
 		this.height = height;
+	}
+
+	/**
+		Scroll Mask content to specified offset.
+	**/
+	public function scrollTo( x : Float, y : Float ) {
+		scrollX = x;
+		scrollY = y;
+	}
+
+	/**
+		Scroll Mask content by specified offset relative to current scroll offset.
+	**/
+	public function scrollBy( x : Float, y : Float ) {
+		scrollX += x;
+		scrollY += y;
 	}
 
 	override private function onHierarchyMoved(parentChanged:Bool) {
@@ -36,6 +67,25 @@ class Mask extends Object {
 		}
 	}
 
+	function set_scrollX( v : Float ) : Float {
+		if ( scrollBounds != null ) v = hxd.Math.clamp(v, scrollBounds.xMin, scrollBounds.xMax - width);
+		posChanged = true;
+		return scrollX = v;
+	}
+
+	function set_scrollY( v : Float ) : Float {
+		if ( scrollBounds != null ) v = hxd.Math.clamp(v, scrollBounds.yMin, scrollBounds.yMax - height);
+		posChanged = true;
+		return scrollY = v;
+	}
+
+	override function calcAbsPos()
+	{
+		super.calcAbsPos();
+		absX -= scrollX;
+		absY -= scrollY;
+	}
+
 	override function getBoundsRec( relativeTo, out:h2d.col.Bounds, forSize ) {
 		var xMin = out.xMin, yMin = out.yMin, xMax = out.xMax, yMax = out.yMax;
 		out.empty();
@@ -59,11 +109,11 @@ class Mask extends Object {
 	}
 
 	override function drawRec( ctx : h2d.RenderContext ) @:privateAccess {
-		var x1 = absX;
-		var y1 = absY;
+		var x1 = absX + scrollX;
+		var y1 = absY + scrollY;
 
-		var x2 = width * matA + height * matC + absX;
-		var y2 = width * matB + height * matD + absY;
+		var x2 = width * matA + height * matC + x1;
+		var y2 = width * matB + height * matD + y1;
 
 		var tmp;
 		if (x1 > x2) {

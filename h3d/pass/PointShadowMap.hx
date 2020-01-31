@@ -136,13 +136,15 @@ class PointShadowMap extends Shadows {
 		return true;
 	}
 
-	static var tmpTex : h3d.mat.Texture;
+	var tmpTex : h3d.mat.Texture;
 	override function createDefaultShadowMap() {
 		if( tmpTex != null) return tmpTex;
 		tmpTex = new h3d.mat.Texture(1,1, [Target,Cube], format);
 		tmpTex.name = "defaultCubeShadowMap";
-		for(i in 0 ... 6)
-			tmpTex.clear(0xFFFFFF, i);
+		if( format == RGBA )
+			tmpTex.clear(0xFFFFFF);
+		else
+			tmpTex.clearF(1);
 		return tmpTex;
 	}
 
@@ -241,9 +243,12 @@ class PointShadowMap extends Shadows {
 			return;
 		draw(passes);
 		var texture = pshader.shadowMap;
-		if( staticTexture != null ) staticTexture.dispose();
+		var old = staticTexture;
 		staticTexture = texture.clone();
+		if( old != null ) old.dispose();
 		staticTexture.name = "StaticPointShadowMap";
+		staticTexture.realloc = null;
+		staticTexture.preventAutoDispose();
 		pshader.shadowMap = staticTexture;
 	}
 }

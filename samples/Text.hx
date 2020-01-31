@@ -5,6 +5,8 @@ import h2d.Graphics;
 import h2d.Object;
 import h2d.Text.Align;
 
+// Use both text_res and res folders.
+//PARAM=-D resourcesPath=../../text_res;../../res
 class TextWidget extends Object
 {
 	public var align: Align;
@@ -214,6 +216,21 @@ class Text extends hxd.App {
 			sdfText = createText(flow, "Signed Distance Field texture", Align.Left, hxd.Res.sdf_font.toSdfFont(null, 3));
 			sdfText.smooth = true; // Smoothing is mandatory when scaling SDF textures.
 			sdfText.maxWidth = 400;
+		}
+
+		yoffset += flow.getBounds().height + 35;
+
+		{
+			var flow = createFlow(s2d);
+			flow.y = yoffset;
+			flow.horizontalAlign = FlowAlign.Left;
+			flow.horizontalSpacing = 15;
+			flow.layout = Horizontal;
+			createText(flow, "LEFT: It is a text with a new line added after THAT\nto test the alignment", Align.Left);
+			createText(flow, "CENTER: It is a text with a new line added after THAT\nto test the alignment", Align.Center);
+			createText(flow, "RIGHT: It is a text with a new line added after THAT\nto test the alignment", Align.Right);
+			createText(flow, "MULTICENTER: It is a text with a new line added after THAT\nto test the alignment", Align.MultilineCenter);
+			createText(flow, "MULTIRIGHT: It is a text with a new line added after THAT\nto test the alignment", Align.MultilineRight);
 		}
 
 		onResize();

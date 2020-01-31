@@ -91,15 +91,13 @@ class FbxTools {
 		return false;
 	}
 
-	static inline function idToInt( f : Float ) {
-		#if (neko || hl)
-		// ids are unsigned
+	static function idToInt( f : Float ) {
+		// ids are unsigned and can be out of int range
 		f %= 4294967296.;
 		if( f >= 2147483648. )
 			f -= 4294967296.;
 		else if( f < -2147483648. )
 			f += 4294967296.;
-		#end
 		return Std.int(f);
 	}
 

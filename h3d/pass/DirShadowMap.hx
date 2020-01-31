@@ -197,6 +197,8 @@ class DirShadowMap extends Shadows {
 		if( !filterPasses(passes) )
 			return;
 
+		cullPasses(passes,function(col) return col.inFrustum(lightCamera.frustum));
+
 		var texture = ctx.textures.allocTarget("dirShadowMap", size, size, false, format);
 		if( customDepth && (depth == null || depth.width != size || depth.height != size || depth.isDisposed()) ) {
 			if( depth != null ) depth.dispose();
@@ -248,8 +250,12 @@ class DirShadowMap extends Shadows {
 			return;
 		draw(passes);
 		var texture = dshader.shadowMap;
-		if( staticTexture != null ) staticTexture.dispose();
+		var old = staticTexture;
 		staticTexture = texture.clone();
+		if( old != null ) old.dispose();
+		staticTexture.name = "StaticDirShadowMap";
+		staticTexture.realloc = null;
+		staticTexture.preventAutoDispose();
 		dshader.shadowMap = staticTexture;
 	}
 

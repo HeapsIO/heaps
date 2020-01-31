@@ -232,7 +232,7 @@ class MemoryManager {
 	public function cleanTextures( force = true ) {
 		textures.sort(sortByLRU);
 		for( t in textures ) {
-			if( t.realloc == null ) continue;
+			if( t.realloc == null || t.isDisposed() ) continue;
 			if( force || t.lastFrame < hxd.Timer.frameCount - 3600 ) {
 				t.dispose();
 				return true;
@@ -295,8 +295,8 @@ class MemoryManager {
 	}
 
 	public function dispose() {
-		triIndexes.dispose();
-		quadIndexes.dispose();
+		if( triIndexes != null ) triIndexes.dispose();
+		if( quadIndexes != null ) quadIndexes.dispose();
 		triIndexes = null;
 		quadIndexes = null;
 		for( t in textures.copy() )

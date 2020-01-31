@@ -528,21 +528,22 @@ class GlDriver extends Driver {
 				if( pt.u == null ) continue;
 
 				var idx = s.vertex ? i : curShader.vertex.textures.length + i;
-				if( boundTextures[idx] == t.t ) continue;
-				boundTextures[idx] = t.t;
+				if( boundTextures[idx] != t.t ) {
+					boundTextures[idx] = t.t;
 
-				#if multidriver
-				if( t.t.driver != this )
-					throw "Invalid texture context";
-				#end
+					#if multidriver
+					if( t.t.driver != this )
+						throw "Invalid texture context";
+					#end
 
-				var mode = getBindType(t);
-				if( mode != pt.mode )
-					throw "Texture format mismatch: "+t+" should be "+pt.t;
-				gl.activeTexture(GL.TEXTURE0 + idx);
-				gl.uniform1i(pt.u, idx);
-				gl.bindTexture(mode, t.t.t);
-				lastActiveIndex = idx;
+					var mode = getBindType(t);
+					if( mode != pt.mode )
+						throw "Texture format mismatch: "+t+" should be "+pt.t;
+					gl.activeTexture(GL.TEXTURE0 + idx);
+					gl.uniform1i(pt.u, idx);
+					gl.bindTexture(mode, t.t.t);
+					lastActiveIndex = idx;
+				}
 
 				var mip = Type.enumIndex(t.mipMap);
 				var filter = Type.enumIndex(t.filter);
@@ -551,6 +552,7 @@ class GlDriver extends Driver {
 				if( bits != t.t.bits ) {
 					t.t.bits = bits;
 					var flags = TFILTERS[mip][filter];
+					var mode = pt.mode;
 					gl.texParameteri(mode, GL.TEXTURE_MAG_FILTER, flags[0]);
 					gl.texParameteri(mode, GL.TEXTURE_MIN_FILTER, flags[1]);
 					var w = TWRAP[wrap];

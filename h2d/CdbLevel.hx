@@ -31,6 +31,7 @@ class LevelTileset {
 	public var tiles : Array<h2d.Tile>;
 	public var objects : Array<LevelObject>;
 	public var groups : Map<String, LevelGroup>;
+	public var groupsById : Array<LevelGroup>;
 	public var tilesProps(get, never) : Array<Dynamic>;
 	var props :	cdb.Data.TilesetProps;
 	var tileBuilder : cdb.TileBuilder;
@@ -69,6 +70,7 @@ class LevelObject {
 class LevelGroup {
 	public var tileset : LevelTileset;
 	public var name : String;
+	public var id : Int;
 	public var x : Int;
 	public var y : Int;
 	public var width : Int;
@@ -80,6 +82,7 @@ class LevelGroup {
 		this.tileset = tset;
 		this.x = x;
 		this.y = y;
+		id = x + y * tileset.stride;
 		this.name = name;
 		width = w;
 		height = h;
@@ -393,6 +396,7 @@ class CdbLevel extends Layers {
 		t.tile = t.res.toTile();
 		t.tiles = t.tile.gridFlatten(t.size);
 		t.objects = [];
+		t.groupsById = [];
 		t.groups = new Map<String, LevelGroup>();
 		var tprops = Reflect.field(levelsProps.tileSets, ldat.file);
 		@:privateAccess t.props = tprops;
@@ -405,10 +409,9 @@ class CdbLevel extends Layers {
 					t.objects[o.id] = o;
 				case Group:
 					var name = s.opts.name;
-					if (name != null) {
-						var g = new LevelGroup(name, t, s.x, s.y, s.w, s.h, s.opts.value);
-						t.groups.set(name, g);
-					}
+					var g = new LevelGroup(name, t, s.x, s.y, s.w, s.h, s.opts.value);
+					if (name != null) t.groups.set(name, g);
+					t.groupsById[g.id] = g;
 				case Ground, Border, Tile:
 					// nothing
 				}

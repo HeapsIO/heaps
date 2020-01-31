@@ -351,6 +351,32 @@ class HlslOut {
 			}
 			add(tabs);
 			add("}");
+		case TVarDecl(v, { e : TArrayDecl(el) }):
+			locals.set(v.id, v);
+			for( i in 0...el.length ) {
+				ident(v);
+				add("[");
+				add(i);
+				add("] = ");
+				addExpr(el[i], tabs);
+				newLine(el[i]);
+			}
+		case TBinop(OpAssign,evar = { e : TVar(_) },{ e : TArrayDecl(el) }):
+			for( i in 0...el.length ) {
+				addExpr(evar, tabs);
+				add("[");
+				add(i);
+				add("] = ");
+				addExpr(el[i], tabs);
+			}
+		case TArrayDecl(el):
+			add("{");
+			var first = true;
+			for( e in el ) {
+				if( first ) first = false else add(", ");
+				addValue(e,tabs);
+			}
+			add("}");
 		case TBinop(op, e1, e2):
 			switch( [op, e1.t, e2.t] ) {
 			case [OpAssignOp(OpMod) | OpMod, _, _]:
@@ -492,14 +518,6 @@ class HlslOut {
 			addValue(e, tabs);
 			add("[");
 			addValue(index, tabs);
-			add("]");
-		case TArrayDecl(el):
-			add("[");
-			var first = true;
-			for( e in el ) {
-				if( first ) first = false else add(", ");
-				addValue(e,tabs);
-			}
 			add("]");
 		case TMeta(_, _, e):
 			addExpr(e, tabs);

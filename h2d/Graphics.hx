@@ -564,6 +564,52 @@ class Graphics extends Drawable {
 		flush();
 	}
 
+	/**
+	 * Draws a quadratic Bezier curve using the current line style from the current drawing position to (cx, cy) and using the control point that (bx, by) specifies.
+	 * IvanK Lib port ( http://lib.ivank.net )
+	 */
+	public function curveTo( bx : Float, by : Float, cx : Float, cy : Float) {
+		var ax = tmpPoints.length == 0 ? 0 :tmpPoints[ tmpPoints.length - 1 ].x;
+		var ay = tmpPoints.length == 0 ? 0 :tmpPoints[ tmpPoints.length - 1 ].y;
+		var t = 2 / 3;
+		cubicCurveTo(ax + t * (bx - ax), ay + t * (by - ay), cx + t * (bx - cx), cy + t * (by - cy), cx, cy);
+	}
+
+	/**
+	 * Draws a cubic Bezier curve from the current drawing position to the specified anchor point.
+	 * IvanK Lib port ( http://lib.ivank.net )
+	 * @param bx control X for start point
+	 * @param by control Y for start point
+	 * @param cx control X for end point
+	 * @param cy control Y for end point
+	 * @param dx end X
+	 * @param dy end Y
+	 * @param nsegments = 40 
+	 */
+	public function cubicCurveTo( bx : Float, by : Float, cx : Float, cy : Float, dx : Float, dy : Float, nsegments = 40) {
+		var ax = tmpPoints.length == 0 ? 0 : tmpPoints[tmpPoints.length - 1].x;
+		var ay = tmpPoints.length == 0 ? 0 : tmpPoints[tmpPoints.length - 1].y;
+		var tobx = bx - ax, toby = by - ay;
+		var tocx = cx - bx, tocy = cy - by;
+		var todx = dx - cx, tody = dy - cy;
+		var step = 1 / nsegments;
+
+		for (i in 1...nsegments) {
+			var d = i * step;
+			var px = ax + d * tobx, py = ay + d * toby;
+			var qx = bx + d * tocx, qy = by + d * tocy;
+			var rx = cx + d * todx, ry = cy + d * tody;
+			var toqx = qx - px, toqy = qy - py;
+			var torx = rx - qx, tory = ry - qy;
+
+			var sx = px + d * toqx, sy = py + d * toqy;
+			var tx = qx + d * torx, ty = qy + d * tory;
+			var totx = tx - sx, toty = ty - sy;
+			lineTo(sx + d * totx, sy + d * toty);
+		}
+		lineTo(dx, dy);
+	}
+
 	public inline function lineTo( x : Float, y : Float ) {
 		addVertex(x, y, curR, curG, curB, curA, x * ma + y * mc + mx, x * mb + y * md + my);
 	}

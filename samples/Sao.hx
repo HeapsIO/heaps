@@ -135,7 +135,7 @@ class Sao extends SampleApp {
 		if(K.isPressed(K.BACKSPACE))
 			reset();
 
-		var r = Std.instance(s3d.renderer, CustomRenderer);
+		var r = hxd.impl.Api.downcast(s3d.renderer, CustomRenderer);
 		if(K.isPressed(K.NUMBER_1))
 			r.mode = 0;
 		if(K.isPressed(K.NUMBER_2))

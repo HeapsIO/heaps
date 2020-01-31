@@ -66,6 +66,7 @@ class Object #if (domkit && !domkit_heaps) implements domkit.Model<h2d.Object> #
 
 	/**
 		The post process filter for this object.
+		When set, `alpha` value affects both filter and object transparency (use `Drawable.color.a` to set transparency only for the object).
 	**/
 	public var filter(default,set) : h2d.filter.Filter;
 
@@ -697,7 +698,10 @@ class Object #if (domkit && !domkit_heaps) implements domkit.Model<h2d.Object> #
 		var width = Math.ceil(total.xMax - xMin - 1e-10);
 		var height = Math.ceil(total.yMax - yMin - 1e-10);
 
-		if( width <= 0 || height <= 0 || total.xMax < total.xMin ) return;
+		if( width <= 0 || height <= 0 || total.xMax < total.xMin ) {
+			ctx.popFilter();
+			return;
+		}
 
 		var t = ctx.textures.allocTarget("filterTemp", width, height, false);
 		ctx.pushTarget(t, xMin, yMin, width, height);
@@ -743,11 +747,11 @@ class Object #if (domkit && !domkit_heaps) implements domkit.Model<h2d.Object> #
 
 		ctx.popTarget();
 		ctx.popFilter();
+		ctx.globalAlpha = oldAlpha;
 
 		if( finalTile == null )
 			return;
 
-		ctx.globalAlpha = oldAlpha;
 		drawFiltered(ctx, finalTile);
 	}
 

@@ -90,10 +90,10 @@ class Dropdown extends Flow {
 				close();
 			} else if( canEdit ) {
 				var bds = this.getBounds();
-				dropdownList.y = rollUp ? bds.yMin - dropdownList.getSize().height : bds.yMax;
 				dropdownList.x = bds.xMin;
 				dropdownList.minWidth = this.minWidth;
 				open();
+				dropdownList.y = rollUp ? bds.yMin - dropdownList.getSize().height : bds.yMax;
 			}
 		}
 
