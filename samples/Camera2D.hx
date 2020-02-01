@@ -71,11 +71,11 @@ class Camera2D extends SampleApp {
 		// layerVisible allows to filter out layers that camera should not render.
 		uiCamera.layerVisible = (idx) -> idx == 2;
 		s2d.add(fui, 2);
-		// Only one camera can handle user input events.
-		s2d.interactiveCamera = uiCamera;
 		// Add UI camera to scene. Note that order of cameras in array matters, as they are rendered in-order.
 		s2d.addCamera(uiCamera);
-		s2d.scaleMode = LetterBox(700, 500, true);
+		// Only one camera can handle user input events.
+		// When assigning newly-created camera as interactiveCamera - adding it to Scene can be omitted, as it will be added automatically.
+		s2d.interactiveCamera = uiCamera;
 
 		// See Tiled sample
 		var followX = s2d.width * .5;
@@ -111,7 +111,8 @@ class Camera2D extends SampleApp {
 
 		// Anchor allows to adjust the position of camera target relative to it's top-left corner in scene viewport ratio.
 		// 0.5 would ensure that whatever position camera points at would at the center of it's viewport.
-		followCamera = new Camera(0.5, 0.5);
+		// Apart from instancing camera beforehand, it's possible to use `createCamera` method as a shortcut to create and add Camera to the Scene
+		followCamera = s2d.createCamera(0.5, 0.5);
 		// Set viewport to take up bottom-left quarter of the screen and clip out contents outside of it.
 		followCamera.setViewport(0.5, 0.5, 0.5, 0.5);
 		followCamera.setScale(2, 2);
@@ -119,8 +120,8 @@ class Camera2D extends SampleApp {
 		followCamera.layerVisible = (idx) -> idx != 2; // skip UI layer
 		followCamera.follow = followPoint;
 		followCamera.followRotation = true;
-		s2d.addCamera(followCamera);
 
+		// Scene.camera proeprty provides an alias to `Scene.cameras[0]`.
 		camera = s2d.camera;
 		camera.setAnchor(0.5, 0.5);
 		camera.setPosition(s2d.width * .5, s2d.height * .5);

@@ -1,4 +1,5 @@
 package h2d;
+import h2d.filter.Filter;
 import hxd.Math;
 
 /**
@@ -158,15 +159,15 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	/**
 		Alias to first camera in the list: `cameras[0]`
 	**/
-	public var camera(get, set) : Camera;
+	public var camera(get, never) : Camera;
 
 	/**
 		Camera instance that handles scene events.
 		Due to Heaps structure, only one Camera can work with the Interactives.
 		Contrary to rendering, event handling does not check if layer is visible for camera or not.
-		Should never be null.
+		Should never be null. If Camera does not belong to the Scene, it will be added with `Scene.addCamera`.
 	**/
-	public var interactiveCamera : Camera;
+	public var interactiveCamera(default, set) : Camera;
 
 	/**
 		Set the default value for `h2d.Drawable.smooth` (default: false)
@@ -243,22 +244,16 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	function set_renderer(v) { ctx = v; return v; }
 
 	inline function get_camera() return _cameras[0];
-	function set_camera( cam : Camera ) {
-		if (cam.scene != this) {
-			if ( cam.scene != null )
-				cam.scene.removeCamera(cam);
-			cam.scene = this;
-			cam.posChanged = true;
-		} else if (_cameras[0] != cam) {
-			// Reinsert camera to 0 index
-			_cameras.remove(cam);
-			_cameras.unshift(cam);
-		}
-		return cam;
-	}
 
 	inline function get_cameras() return _cameras;
 
+	function set_interactiveCamera( cam : Camera ) {
+		if ( cam == null ) throw "Interactive cammera cannot be null!";
+		if ( cam.scene != this ) this.addCamera(cam);
+		return interactiveCamera = cam;
+	}
+
+	/** Adds Camera to Scene camera list with optional index at which it is added. **/
 	public function addCamera( cam : Camera, ?pos : Int ) {
 		if ( cam.scene != null )
 			cam.scene.removeCamera(cam);
@@ -268,10 +263,19 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		else _cameras.push(cam);
 	}
 
+	/** Removes Camera from Scene camera list. Current `interactiveCamera` cannot be removed. **/
 	public function removeCamera( cam : Camera ) {
+		if ( cam == interactiveCamera ) throw "Current interactive Camera cannot be removed from camera list!";
 		if (_cameras.remove(cam)) {
 			cam.scene = null;
 		}
+	}
+
+	/** Creates and returns a new Camera instance which is inserted to specified position or at the end of the camera list. **/
+	public function createCamera( anchorX : Float = 0., anchorY : Float = 0., ?pos : Int ) : h2d.Camera {
+		var camera = new Camera(anchorX, anchorY);
+		addCamera(camera, pos);
+		return camera;
 	}
 
 	/**
@@ -749,59 +753,56 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		for ( cam in cameras ) cam.sync(ctx, forceCamSync);
 	}
 
-	override function drawRec( ctx : RenderContext ) {
-		if( !visible ) return;
-		if( posChanged ) {
-			calcAbsPos();
-			for( c in children )
-				c.posChanged = true;
-			posChanged = false;
+	override function clipBounds(ctx:RenderContext, bounds:h2d.col.Bounds)
+	{
+		// Scene always uses whole window surface as a filter bounds as to not clip out cameras.
+		bounds.empty();
+		if ( rotation == 0 ) {
+			bounds.addPos(-absX, -absY);
+			bounds.addPos(window.width / matA, window.height / matD);
 		}
-		if( filter != null && filter.enable ) {
-			drawFilters(ctx);
-		} else {
-			var old = ctx.globalAlpha;
-			ctx.globalAlpha *= alpha;
-			if( ctx.front2back ) {
-				for ( cam in cameras ) {
-					if ( !cam.visible ) continue;
-					var i = children.length;
-					var l = layerCount;
-					cam.enter(ctx);
-					while ( l-- > 0 ) {
-						var top = l == 0 ? 0 : layersIndexes[l - 1];
-						if ( cam.layerVisible(l) ) {
-							while ( i >= top ) {
-								children[i--].drawRec(ctx);
-							}
-						} else {
-							i = top - 1;
+	}
+
+	override function drawContents(ctx:RenderContext, front2back:Bool)
+	{
+		if( front2back ) {
+			for ( cam in cameras ) {
+				if ( !cam.visible ) continue;
+				var i = children.length;
+				var l = layerCount;
+				cam.enter(ctx);
+				while ( l-- > 0 ) {
+					var top = l == 0 ? 0 : layersIndexes[l - 1];
+					if ( cam.layerVisible(l) ) {
+						while ( i >= top ) {
+							children[i--].drawRec(ctx);
 						}
+					} else {
+						i = top - 1;
 					}
-					cam.exit(ctx);
 				}
-				draw(ctx);
-			} else {
-				draw(ctx);
-				for ( cam in cameras ) {
-					if ( !cam.visible ) continue;
-					var i = 0;
-					var l = 0;
-					cam.enter(ctx);
-					while ( l < layerCount ) {
-						var top = layersIndexes[l++];
-						if ( cam.layerVisible(l - 1) ) {
-							while ( i < top ) {
-								children[i++].drawRec(ctx);
-							}
-						} else {
-							i = top;
-						}
-					}
-					cam.exit(ctx);
-				}
+				cam.exit(ctx);
 			}
-			ctx.globalAlpha = old;
+			draw(ctx);
+		} else {
+			draw(ctx);
+			for ( cam in cameras ) {
+				if ( !cam.visible ) continue;
+				var i = 0;
+				var l = 0;
+				cam.enter(ctx);
+				while ( l < layerCount ) {
+					var top = layersIndexes[l++];
+					if ( cam.layerVisible(l - 1) ) {
+						while ( i < top ) {
+							children[i++].drawRec(ctx);
+						}
+					} else {
+						i = top;
+					}
+				}
+				cam.exit(ctx);
+			}
 		}
 	}
 
