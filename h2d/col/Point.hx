@@ -67,6 +67,7 @@ class Point {
 		if( k < Math.EPSILON ) k = 0 else k = Math.invSqrt(k);
 		x *= k;
 		y *= k;
+		return this;
 	}
 
 	public inline function normalizeFast() {
@@ -74,6 +75,7 @@ class Point {
 		k = Math.invSqrt(k);
 		x *= k;
 		y *= k;
+		return this;
 	}
 
 	public inline function set(x,y) {
