@@ -107,6 +107,11 @@ class HtmlText extends Text {
 		return defaultFormatText(text);
 	}
 
+	override function set_text(t : String) {
+		super.set_text(formatText(t));
+		return t;
+	}
+
 	function parseText( text : String ) {
 		return try Xml.parse(text) catch( e : Dynamic ) throw "Could not parse " + text + " (" + e +")";
 	}
