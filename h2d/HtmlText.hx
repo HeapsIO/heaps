@@ -37,7 +37,7 @@ class HtmlText extends Text {
 		A default method HtmlText uses to format assigned text.
 	**/
 	public static dynamic function defaultFormatText( text : String ) : String {
-		return null;
+		return text;
 	}
 
 	public var condenseWhite(default,set) : Bool = true;
