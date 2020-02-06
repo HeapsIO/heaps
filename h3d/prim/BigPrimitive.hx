@@ -17,8 +17,8 @@ class BigPrimitive extends Primitive {
 	var idxPos : Int = 0;
 	var startIndex : Int = 0;
 	var flushing : Bool;
-	#if debug
-	var allocPos : h3d.impl.AllocPos;
+	#if track_alloc
+	var allocPos : hxd.impl.AllocPos;
 	#end
 
 	public var hasTangents = false;
@@ -27,15 +27,15 @@ class BigPrimitive extends Primitive {
 	static var PREV_BUFFER : hxd.FloatBuffer;
 	static var PREV_INDEX : hxd.IndexBuffer;
 
-	public function new(stride, isRaw=false, ?pos : h3d.impl.AllocPos ) {
+	public function new(stride, isRaw=false ) {
 		this.isRaw = isRaw;
 		buffers = [];
 		allIndexes = [];
 		bounds = new h3d.col.Bounds();
 		this.stride = stride;
 		if( stride < 3 ) throw "Minimum stride = 3";
-		#if debug
-		allocPos = pos;
+		#if track_alloc
+		allocPos = new hxd.impl.AllocPos();
 		#end
 	}
 
@@ -121,11 +121,16 @@ class BigPrimitive extends Primitive {
 		if( tmpBuf != null ) {
 			if( bufPos > 0 && idxPos > 0 ) {
 				flushing = true;
-				var b = h3d.Buffer.ofSubFloats(tmpBuf, stride, Std.int(bufPos / stride) #if debug , null, allocPos #end);
+				var b = h3d.Buffer.ofSubFloats(tmpBuf, stride, Std.int(bufPos / stride));
 				if( isRaw ) b.flags.set(RawFormat);
 				buffers.push(b);
-				allIndexes.push(h3d.Indexes.alloc(tmpIdx, 0, idxPos));
+				var idx = h3d.Indexes.alloc(tmpIdx, 0, idxPos);
+				allIndexes.push(idx);
 				flushing = false;
+				#if track_alloc
+				@:privateAccess b.allocPos = allocPos;
+				@:privateAccess idx.allocPos = allocPos;
+				#end
 			}
 			if( PREV_BUFFER == null || PREV_BUFFER.length < tmpBuf.length )
 				PREV_BUFFER = tmpBuf;

@@ -1241,15 +1241,15 @@ class GlDriver extends Driver {
 				case "position":
 					pos = 0;
 				case "normal":
-					if( m.stride < 6 ) throw "Buffer is missing NORMAL data, set it to RAW format ?" #if debug + @:privateAccess v.allocPos #end;
+					if( m.stride < 6 ) throw "Buffer is missing NORMAL data, set it to RAW format ?" #if track_alloc + @:privateAccess v.allocPos #end;
 					pos = 3;
 				case "uv":
-					if( m.stride < 8 ) throw "Buffer is missing UV data, set it to RAW format ?" #if debug + @:privateAccess v.allocPos #end;
+					if( m.stride < 8 ) throw "Buffer is missing UV data, set it to RAW format ?" #if track_alloc + @:privateAccess v.allocPos #end;
 					pos = 6;
 				case s:
 					pos = offset;
 					offset += a.size;
-					if( offset > m.stride ) throw "Buffer is missing '"+s+"' data, set it to RAW format ?" #if debug + @:privateAccess v.allocPos #end;
+					if( offset > m.stride ) throw "Buffer is missing '"+s+"' data, set it to RAW format ?" #if track_alloc + @:privateAccess v.allocPos #end;
 				}
 				gl.vertexAttribPointer(a.index, a.size, a.type, false, m.stride * 4, pos * 4);
 				updateDivisor(a);

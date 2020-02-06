@@ -69,7 +69,7 @@ class StatsPanel extends Panel {
 		var id = button.find("span").getAttr("id");
 		button.parent().parent().find(".detail_" + id).remove();
 
-		#if !debug
+		#if !track_alloc
 			if(!button.hasClass("hidden")) {
 				var newElement = j.query("<tr>");
 				newElement.addClass("detail_" + id);
@@ -88,7 +88,7 @@ class StatsPanel extends Panel {
 								var buf = b.allocHead;
 								while( buf != null ) {
 									var mem = buf.buffer.stride * buf.vertices * 4;
-									var name = buf.allocPos.className + ":" + buf.allocPos.lineNumber;
+									var name = buf.allocPos.position;
 									var p = m.get(name);
 									if( p == null ) {
 										p = { count : 0, mem : 0, name : name };
@@ -104,7 +104,7 @@ class StatsPanel extends Panel {
 					case "texMemTitle":
 						for( t in engine.mem.textures ) {
 							var mem = t.width * t.height * 4;
-							var name = t.allocPos.fileName + ":" + t.allocPos.lineNumber;
+							var name = t.allocPos.position;
 							var p = m.get(name);
 							if( p == null ) {
 								p = { count : 0, mem : 0, name : name };
