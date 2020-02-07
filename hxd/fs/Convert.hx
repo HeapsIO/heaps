@@ -28,6 +28,11 @@ class Convert {
 		throw "Not implemented";
 	}
 
+	function hasParam( name : String ) {
+		var f : Dynamic = Reflect.field(params, name);
+		return f != null && f != false;
+	}
+
 	function getParam( name : String ) {
 		var f = Reflect.field(params, name);
 		if( f == null ) throw "Missing required parameter '"+name+"' for converting "+srcPath+" to "+dstPath;
@@ -128,7 +133,15 @@ class ConvertWAV2OGG extends Convert {
 		#if (sys || nodejs)
 		if( Sys.systemName() == "Windows" ) cmd = "oggenc2";
 		#end
-		command(cmd, ["--resample", "44100", "-Q", srcPath, "-o", dstPath]);
+		var args = ["--resample", "44100", "-Q", srcPath, "-o", dstPath];
+		if( hasParam("mono") ) {
+			var f = sys.io.File.read(srcPath);
+			var wav = new format.wav.Reader(f).read();
+			f.close();
+			if( wav.header.channels >= 2 )
+				args.push("--downmix");
+		}
+		command(cmd, args);
 	}
 
 	static var _ = Convert.register(new ConvertWAV2OGG());
