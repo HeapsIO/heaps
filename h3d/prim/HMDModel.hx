@@ -97,39 +97,39 @@ class HMDModel extends MeshPrimitive {
 		if( name == null ) name = "normal";
 
 		var pos = lib.getBuffers(data, [new hxd.fmt.hmd.Data.GeometryFormat("position", DVec3)]);
-		var ids = new Array();
+		var idx = new hxd.IndexBuffer();
 		var pts : Array<h3d.col.Point> = [];
 
 		for( i in 0...data.vertexCount ) {
 			var added = false;
-			var pt = new h3d.col.Point(pos.vertexes[i * 3], pos.vertexes[i * 3 + 1], pos.vertexes[i * 3 + 2]);
+			var px = pos.vertexes[i * 3];
+			var py = pos.vertexes[i * 3 + 1];
+			var pz = pos.vertexes[i * 3 + 2];
 			for(i in 0...pts.length) {
 				var p = pts[i];
-				if(p.x == pt.x && p.y == pt.y && p.z == pt.z) {
-					ids.push(i);
+				if(p.x == px && p.y == py && p.z == pz) {
+					idx.push(i);
 					added = true;
 					break;
 				}
 			}
 			if( !added ) {
-				ids.push(pts.length);
-				pts.push(pt);
+				idx.push(pts.length);
+				pts.push(new h3d.col.Point(px,py,pz));
 			}
 		}
-
-		var idx = new hxd.IndexBuffer();
-		for( i in pos.indexes )
-			idx.push(ids[i]);
 
 		var pol = new Polygon(pts, idx);
 		pol.addNormals();
 
 		var v = new hxd.FloatBuffer();
+		v.grow(data.vertexCount*3);
+		var k = 0;
 		for( i in 0...data.vertexCount ) {
-			var n = pol.normals[ids[i]];
-			v.push(n.x);
-			v.push(n.y);
-			v.push(n.z);
+			var n = pol.normals[idx[i]];
+			v[k++] = n.x;
+			v[k++] = n.y;
+			v[k++] = n.z;
 		}
 		var buf = h3d.Buffer.ofFloats(v, 3);
 		addBuffer(name, buf, 0);

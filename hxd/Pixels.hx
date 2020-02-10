@@ -139,8 +139,8 @@ class Pixels {
 	public function clear( color : Int, preserveMask = 0 ) {
 		var mask = preserveMask;
 		willChange();
-		if( color == 0 && mask == 0 ) {
-			bytes.fill(offset, width * height * bytesPerPixel, 0);
+		if( (color&0xFF) == ((color>>8)&0xFF) && (color & 0xFFFF) == (color >>> 16) && mask == 0 ) {
+			bytes.fill(offset, width * height * bytesPerPixel, color&0xFF);
 			return;
 		}
 		switch( format ) {
@@ -156,15 +156,31 @@ class Pixels {
 		}
 		var p = offset;
 		if( mask == 0 ) {
+			#if hl
+			var bytes = @:privateAccess bytes.b;
+			for( i in 0...width * height ) {
+				bytes.setI32(p, color);
+				p += 4;
+			}
+			#else
 			for( i in 0...width * height ) {
 				bytes.setInt32(p, color);
 				p += 4;
 			}
+			#end
 		} else {
+			#if hl
+			var bytes = @:privateAccess bytes.b;
+			for( i in 0...width * height ) {
+				bytes.setI32(p, color | (bytes.getI32(p) & mask));
+				p += 4;
+			}
+			#else
 			for( i in 0...width * height ) {
 				bytes.setInt32(p, color | (bytes.getInt32(p) & mask));
 				p += 4;
 			}
+			#end
 		}
 	}
 
