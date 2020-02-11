@@ -97,7 +97,7 @@ class HMDModel extends MeshPrimitive {
 		if( name == null ) name = "normal";
 
 		var pos = lib.getBuffers(data, [new hxd.fmt.hmd.Data.GeometryFormat("position", DVec3)]);
-		var idx = new hxd.IndexBuffer();
+		var ids = new Array();
 		var pts : Array<h3d.col.Point> = [];
 
 		for( i in 0...data.vertexCount ) {
@@ -108,16 +108,20 @@ class HMDModel extends MeshPrimitive {
 			for(i in 0...pts.length) {
 				var p = pts[i];
 				if(p.x == px && p.y == py && p.z == pz) {
-					idx.push(i);
+					ids.push(i);
 					added = true;
 					break;
 				}
 			}
 			if( !added ) {
-				idx.push(pts.length);
+				ids.push(pts.length);
 				pts.push(new h3d.col.Point(px,py,pz));
 			}
 		}
+
+		var idx = new hxd.IndexBuffer();
+		for( i in pos.indexes )
+			idx.push(ids[i]);
 
 		var pol = new Polygon(pts, idx);
 		pol.addNormals();
@@ -126,7 +130,7 @@ class HMDModel extends MeshPrimitive {
 		v.grow(data.vertexCount*3);
 		var k = 0;
 		for( i in 0...data.vertexCount ) {
-			var n = pol.normals[idx[i]];
+			var n = pol.normals[ids[i]];
 			v[k++] = n.x;
 			v[k++] = n.y;
 			v[k++] = n.z;
