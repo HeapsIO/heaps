@@ -12,8 +12,8 @@ private typedef GL = js.html.webgl.GL;
 private extern class GL2 extends js.html.webgl.GL {
 	// webgl2
 	function drawBuffers( buffers : Array<Int> ) : Void;
-	dynamic function vertexAttribDivisor( index : Int, divisor : Int ) : Void;
-	dynamic function drawElementsInstanced( mode : Int, count : Int, type : Int, offset : Int, instanceCount : Int) : Void;
+	function vertexAttribDivisor( index : Int, divisor : Int ) : Void;
+	function drawElementsInstanced( mode : Int, count : Int, type : Int, offset : Int, instanceCount : Int) : Void;
 	function getUniformBlockIndex( p : Program, name : String ) : Int;
 	function bindBufferBase( target : Int, index : Int, buffer : js.html.webgl.Buffer ) : Void;
 	function uniformBlockBinding( p : Program, blockIndex : Int, blockBinding : Int ) : Void;
@@ -238,8 +238,8 @@ class GlDriver extends Driver {
 		// We need to get instanced rendering by it's ANGLE extension if we are using webgl1
 		if(hasFeature(InstancedRendering) && glES < 3) {
 			final extension:js.html.webgl.extension.ANGLEInstancedArrays =  cast gl.getExtension("ANGLE_instanced_arrays");
-			gl.vertexAttribDivisor = extension.vertexAttribDivisorANGLE;
-			gl.drawElementsInstanced = extension.drawElementsInstancedANGLE;
+			Reflect.setField(gl,"vertexAttribDivisor",extension.vertexAttribDivisorANGLE);
+			Reflect.setField(gl,"drawElementsInstanced",extension.drawElementsInstancedANGLE);
 		}
 
 		// setup shader optim
