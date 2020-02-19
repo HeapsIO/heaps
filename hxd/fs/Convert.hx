@@ -130,10 +130,9 @@ class ConvertWAV2OGG extends Convert {
 
 	override function convert() {
 		var cmd = "oggenc";
+		var args = ["--resample", "44100", "-Q", srcPath, "-o", dstPath];
 		#if (sys || nodejs)
 		if( Sys.systemName() == "Windows" ) cmd = "oggenc2";
-		#end
-		var args = ["--resample", "44100", "-Q", srcPath, "-o", dstPath];
 		if( hasParam("mono") ) {
 			var f = sys.io.File.read(srcPath);
 			var wav = new format.wav.Reader(f).read();
@@ -141,6 +140,7 @@ class ConvertWAV2OGG extends Convert {
 			if( wav.header.channels >= 2 )
 				args.push("--downmix");
 		}
+		#end
 		command(cmd, args);
 	}
 
