@@ -19,26 +19,18 @@ class Point {
 		z *= v;
 	}
 
-	public function inFrustum( mvp : Matrix ) {
-		if( !Plane.frustumLeft(mvp).side(this) )
-			return false;
-		if( !Plane.frustumRight(mvp).side(this) )
-			return false;
-		if( !Plane.frustumBottom(mvp).side(this) )
-			return false;
-		if( !Plane.frustumTop(mvp).side(this) )
-			return false;
-		if( !Plane.frustumNear(mvp).side(this) )
-			return false;
-		if( !Plane.frustumFar(mvp).side(this) )
-			return false;
-		return true;
+	public inline function inFrustum( f : Frustum, ?m : h3d.Matrix ) {
+		return f.hasPoint(this);
 	}
 
 	public inline function set(x, y, z) {
 		this.x = x;
 		this.y = y;
 		this.z = z;
+	}
+
+	public inline function multiply( f : Float ) {
+		return new Point(x * f, y * f, z * f);
 	}
 
 	public inline function sub( p : Point ) {
@@ -51,6 +43,10 @@ class Point {
 
 	public inline function cross( p : Point ) {
 		return new Point(y * p.z - z * p.y, z * p.x - x * p.z,  x * p.y - y * p.x);
+	}
+
+	public inline function equals( other : Point ) : Bool {
+		return x == other.x && y == other.y && z == other.z;
 	}
 
 	public inline function lengthSq() {
@@ -83,13 +79,13 @@ class Point {
 		return distanceSq(p).sqrt();
 	}
 
-
 	public function normalize() {
 		var k = x * x + y * y + z * z;
 		if( k < hxd.Math.EPSILON ) k = 0 else k = k.invSqrt();
 		x *= k;
 		y *= k;
 		z *= k;
+		return this;
 	}
 
 	public inline function normalizeFast() {
@@ -98,6 +94,7 @@ class Point {
 		x *= k;
 		y *= k;
 		z *= k;
+		return this;
 	}
 
 	public inline function transform( m : Matrix ) {

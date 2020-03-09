@@ -5,20 +5,20 @@
 	"version": "0.2.0",
 	"configurations": [
 		{
-			"type": "chrome",
-			"request": "launch",
-			"name": "Chrome WebGL",
-			"url": "file://${workspaceFolder}/index.html",
-			"webRoot": "${workspaceFolder}",
-			"preLaunchTask": "HeapsJS"
-		},
-		{
 			"name": "HashLink",
 			"request": "launch",
 			"type": "hl",
 			"hxml": "::name::_hl.hxml",
 			"cwd": "${workspaceRoot}",
 			"preLaunchTask": "HeapsHL"
+		},
+		{
+			"type": "chrome",
+			"request": "launch",
+			"name": "Chrome WebGL",
+			"url": "file://${workspaceFolder}/index.html",
+			"webRoot": "${workspaceFolder}",
+			"preLaunchTask": "HeapsJS"
 		},
 		{
             "name": "Flash",

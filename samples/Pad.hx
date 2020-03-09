@@ -8,7 +8,7 @@ class Pad extends hxd.App {
 		l = [];
 		flow = new h2d.Flow(s2d);
 		flow.padding = 20;
-		flow.isVertical = true;
+		flow.layout = Vertical;
 
 		tf = new h2d.Text(hxd.res.DefaultFont.get(), flow);
 		tf.text = "Waiting for pad...";
@@ -112,7 +112,7 @@ class PadUI extends h2d.Object {
 
 		buttons = new Map();
 
-		var x = 0;
+		var x = 0.;
 		for( n in ["A","B","X","Y","LB","RB","LT","RT","back","start","dpadUp","dpadDown","dpadLeft","dpadRight"] ){
 			var t = new h2d.Text(fnt,this);
 			x += 20;
@@ -120,7 +120,7 @@ class PadUI extends h2d.Object {
 			t.y = 140;
 			t.text = n;
 			t.alpha = 0.1;
-			var bg = new h2d.Bitmap(h2d.Tile.fromColor(0xFFFFFF, t.textWidth, 8), t);
+			var bg = new h2d.Bitmap(h2d.Tile.fromColor(0xFFFFFF, hxd.Math.ceil(t.textWidth), 8), t);
 			bg.y = 10;
 			bg.alpha = 0;
 			buttons.set(n, { tf : t, bg : bg });
@@ -131,7 +131,7 @@ class PadUI extends h2d.Object {
 
 	var wasPressed = false;
 	public function update(){
-		var conf = hxd.Pad.DEFAULT_CONFIG;
+		var conf = pad.config;
 		main.x = 20 + 50 + pad.xAxis * 50;
 		main.y = 20 + 50 + pad.yAxis * 50;
 

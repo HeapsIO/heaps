@@ -24,6 +24,7 @@ class LinearFrame {
 }
 
 class LinearObject extends AnimatedObject {
+	public var hasPosition : Bool = true;
 	public var hasRotation : Bool;
 	public var hasScale : Bool;
 	public var frames : haxe.ds.Vector<LinearFrame>;
@@ -35,6 +36,7 @@ class LinearObject extends AnimatedObject {
 	public var propCurrentValue : Float;
 	override function clone() : AnimatedObject {
 		var o = new LinearObject(objectName);
+		o.hasPosition = hasPosition;
 		o.hasRotation = hasRotation;
 		o.hasScale = hasScale;
 		o.frames = frames;
@@ -48,7 +50,6 @@ class LinearObject extends AnimatedObject {
 
 class LinearAnimation extends Animation {
 
-	@:s public var resPath : String;
 	var syncFrame : Float;
 
 	public function new(name,frame,sampling) {
@@ -56,9 +57,10 @@ class LinearAnimation extends Animation {
 		syncFrame = -1;
 	}
 
-	public function addCurve( objName, frames, hasRot, hasScale ) {
+	public function addCurve( objName, frames, hasPos, hasRot, hasScale ) {
 		var f = new LinearObject(objName);
 		f.frames = frames;
+		f.hasPosition = hasPos;
 		f.hasRotation = hasRot;
 		f.hasScale = hasScale;
 		objects.push(f);
@@ -98,8 +100,6 @@ class LinearAnimation extends Animation {
 		if( a == null )
 			a = new LinearAnimation(name, frameCount, sampling);
 		super.clone(a);
-		var la = Std.instance(a, LinearAnimation);
-		la.resPath = resPath;
 		return a;
 	}
 
@@ -285,19 +285,6 @@ class LinearAnimation extends Animation {
 				o.targetObject.defaultTransform = o.matrix;
 		}
 		if( !decompose ) isSync = true;
-	}
-	#end
-
-
-	#if (hxbit && !macro)
-	function customSerialize(ctx:hxbit.Serializer) {
-	}
-
-	function customUnserialize(ctx:hxbit.Serializer) {
-		var l = cast(ctx, hxd.fmt.hsd.Serializer).loadAnimation(resPath);
-		var objects = [for( a in l.objects ) a.clone()];
-		l.clone(this);
-		this.objects = objects;
 	}
 	#end
 

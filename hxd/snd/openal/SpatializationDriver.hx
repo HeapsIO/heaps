@@ -17,14 +17,15 @@ class SpatializationDriver extends EffectDriver<Spatialization> {
 	}
 
 	override function apply(e : Spatialization, s : SourceHandle) : Void {
-		var e = Std.instance(e, hxd.snd.effect.Spatialization);
+		var e = hxd.impl.Api.downcast(e, hxd.snd.effect.Spatialization);
 
 		AL.source3f(s.inst, AL.POSITION,  -e.position.x,  e.position.y,  e.position.z);
 		AL.source3f(s.inst, AL.VELOCITY,  -e.velocity.x,  e.velocity.y,  e.velocity.z);
 		AL.source3f(s.inst, AL.DIRECTION, -e.direction.x, e.direction.y, e.direction.z);
 		AL.sourcef(s.inst, AL.REFERENCE_DISTANCE, e.referenceDistance);
 		AL.sourcef(s.inst, AL.ROLLOFF_FACTOR, e.rollOffFactor);
-		AL.sourcef(s.inst, AL.MAX_DISTANCE, e.maxDistance == null ? 3.40282347e38 : (e.maxDistance:Float) );
+		var maxDist : Float = e.maxDistance == null ? 3.40282347e38 : e.maxDistance;
+		AL.sourcef(s.inst, AL.MAX_DISTANCE, maxDist );
 	}
 
 	override function unbind(e : Spatialization, s : SourceHandle) : Void {

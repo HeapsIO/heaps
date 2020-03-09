@@ -30,8 +30,8 @@ class Writer {
 		writeString(font.name);
 		out.writeInt16(font.size);
 		writeString(font.tilePath);
-		out.writeInt16(font.lineHeight);
-		out.writeInt16(font.baseLine);
+		out.writeInt16(Std.int(font.lineHeight));
+		out.writeInt16(Std.int(font.baseLine));
 		if (font.defaultChar != font.nullChar) {
 			var found = false;
 			for ( k in font.glyphs.keys() ) {
@@ -53,18 +53,18 @@ class Writer {
 			var glyph = font.glyphs.get(id);
 			var t = glyph.t;
 			out.writeInt32(id);
-			out.writeUInt16(t.x);
-			out.writeUInt16(t.y);
-			out.writeUInt16(t.width);
-			out.writeUInt16(t.height);
-			out.writeInt16(t.dx);
-			out.writeInt16(t.dy);
-			out.writeInt16(glyph.width);
+			out.writeUInt16(Std.int(t.x));
+			out.writeUInt16(Std.int(t.y));
+			out.writeUInt16(Std.int(t.width));
+			out.writeUInt16(Std.int(t.height));
+			out.writeInt16(Std.int(t.dx));
+			out.writeInt16(Std.int(t.dy));
+			out.writeInt16(Std.int(glyph.width));
 			var kern = @:privateAccess glyph.kerning;
 			while ( kern != null ) {
 				if (kern.prevChar != 0) {
 					out.writeInt32(kern.prevChar);
-					out.writeInt16(kern.offset);
+					out.writeInt16(Std.int(kern.offset));
 				}
 				kern = kern.next;
 			}

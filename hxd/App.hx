@@ -43,7 +43,7 @@ class App implements h3d.IDrawable {
 			haxe.Timer.delay(setup, 0);
 		} else {
 			hxd.System.start(function() {
-				this.engine = engine = new h3d.Engine();
+				this.engine = engine = @:privateAccess new h3d.Engine();
 				engine.onReady = setup;
 				engine.init();
 			});
@@ -64,8 +64,8 @@ class App implements h3d.IDrawable {
 		If you call disposePrevious, it will call dispose() on the previous scene.
 	**/
 	public function setScene( scene : hxd.SceneEvents.InteractiveScene, disposePrevious = true ) {
-		var new2D = Std.instance(scene, h2d.Scene);
-		var new3D = Std.instance(scene, h3d.scene.Scene);
+		var new2D = hxd.impl.Api.downcast(scene, h2d.Scene);
+		var new3D = hxd.impl.Api.downcast(scene, h3d.scene.Scene);
 		if( new2D != null )
 			sevents.removeScene(s2d);
 		if( new3D != null )
@@ -85,12 +85,35 @@ class App implements h3d.IDrawable {
 			this.s3d = new3D;
 	}
 
+	/**
+	 * When using multiple hxd.App, this will set the current App (the one on which update etc. will be called)
+	**/
+	public function setCurrent() {
+		engine = h3d.Engine.getCurrent(); // if was changed
+		isDisposed = false;
+		engine.onReady = staticHandler; // in case we have another pending app
+		engine.onResized = function() {
+			if( s2d == null ) return; // if disposed
+			s2d.checkResize();
+			onResize();
+		};
+		hxd.System.setLoop(mainLoop);
+	}
+
 	function setScene2D( s2d : h2d.Scene, disposePrevious = true ) {
 		sevents.removeScene(this.s2d);
 		sevents.addScene(s2d,0);
 		if( disposePrevious )
 			this.s2d.dispose();
 		this.s2d = s2d;
+	}
+
+	function setScene3D( s3d : h3d.scene.Scene, disposePrevious = true ) {
+		sevents.removeScene(this.s3d);
+		sevents.addScene(s3d);
+		if ( disposePrevious )
+			this.s3d.dispose();
+		this.s3d = s3d;
 	}
 
 	public function render(e:h3d.Engine) {
@@ -140,7 +163,7 @@ class App implements h3d.IDrawable {
 		                method when loading is complete
 	**/
 	@:dox(show)
-	function loadAssets( onLoaded ) {
+	function loadAssets( onLoaded : Void->Void ) {
 		onLoaded();
 	}
 

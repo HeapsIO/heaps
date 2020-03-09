@@ -232,7 +232,7 @@ class MemoryManager {
 	public function cleanTextures( force = true ) {
 		textures.sort(sortByLRU);
 		for( t in textures ) {
-			if( t.realloc == null ) continue;
+			if( t.realloc == null || t.isDisposed() ) continue;
 			if( force || t.lastFrame < hxd.Timer.frameCount - 3600 ) {
 				t.dispose();
 				return true;
@@ -295,8 +295,8 @@ class MemoryManager {
 	}
 
 	public function dispose() {
-		triIndexes.dispose();
-		quadIndexes.dispose();
+		if( triIndexes != null ) triIndexes.dispose();
+		if( quadIndexes != null ) quadIndexes.dispose();
 		triIndexes = null;
 		quadIndexes = null;
 		for( t in textures.copy() )
@@ -386,10 +386,10 @@ class MemoryManager {
 			while( buf != null ) {
 				var b = buf.allocHead;
 				while( b != null ) {
-					var key = b.allocPos.fileName + ":" + b.allocPos.lineNumber;
+					var key = b.allocPos == null ? "null" : b.allocPos.fileName + ":" + b.allocPos.lineNumber;
 					var inf = h.get(key);
 					if( inf == null ) {
-						inf = { file : b.allocPos.fileName, line : b.allocPos.lineNumber, count : 0, size : 0, tex : false };
+						inf = { file : b.allocPos != null ? b.allocPos.fileName : "", line : b.allocPos != null ? b.allocPos.lineNumber : 0, count : 0, size : 0, tex : false };
 						h.set(key, inf);
 						all.push(inf);
 					}

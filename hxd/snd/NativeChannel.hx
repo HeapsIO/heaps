@@ -1,87 +1,107 @@
 package hxd.snd;
 
-#if lime_openal
-import lime.media.openal.AL;
-import lime.media.openal.ALBuffer;
-import lime.media.openal.ALSource;
+#if hlopenal
 
+import openal.AL;
+import hxd.snd.Manager;
+import hxd.snd.Driver;
+
+@:access(hxd.snd.Manager)
 private class ALChannel {
+
+	static var nativeUpdate : haxe.MainLoop.MainEvent;
+	static var nativeChannels : Array<ALChannel>;
+	
+	static function updateChannels() {
+		var i = 0;
+		// Should ensure ordering if it was removed during update?
+		for ( chn in nativeChannels ) chn.onUpdate();
+	}
+
+	var manager : Manager;
+	var update : haxe.MainLoop.MainEvent;
 	var native : NativeChannel;
 	var samples : Int;
 
-	var buffers : Array<ALBuffer>;
-	var src : ALSource;
+	var driver : Driver;
+	var buffers : Array<BufferHandle>;
+	var bufPos : Int;
+	var src : SourceHandle;
 
 	var fbuf : haxe.io.Bytes;
 	var ibuf : haxe.io.Bytes;
-	var iview : lime.utils.ArrayBufferView;
 
-	public function new(samples, native){
+	public function new(samples, native) {
+		if ( nativeUpdate == null ) {
+			nativeUpdate = haxe.MainLoop.add(updateChannels);
+			#if (haxe_ver >= 4) nativeUpdate.isBlocking = false; #end
+			nativeChannels = [];
+		}
 		this.native = native;
 		this.samples = samples;
-		buffers = AL.genBuffers(2);
-		src = AL.genSource();
-		AL.sourcef(src,AL.PITCH,1.0);
-		AL.sourcef(src,AL.GAIN,1.0);
+
+		this.manager = Manager.get();
+		this.driver = manager.driver;
+
+		buffers = [driver.createBuffer(), driver.createBuffer()];
+		src = driver.createSource();
+		bufPos = 0;
+		
+		// AL.sourcef(src,AL.PITCH,1.0);
+		// AL.sourcef(src,AL.GAIN,1.0);
 		fbuf = haxe.io.Bytes.alloc( samples<<3 );
 		ibuf = haxe.io.Bytes.alloc( samples<<2 );
-		iview = new lime.utils.Int16Array(ibuf);
 
 		for ( b in buffers )
 			onSample(b);
 		forcePlay();
-		lime.app.Application.current.onUpdate.add( onUpdate );
+		nativeChannels.push(this);
 	}
 
 	public function stop() {
-		if ( src != null ){
-			lime.app.Application.current.onUpdate.remove( onUpdate );
-
-			AL.sourceStop(src);
-			AL.deleteSource(src);
-			AL.deleteBuffers(buffers);
+		if ( src != null ) {
+			nativeChannels.remove(this);
+			driver.stopSource(src);
+			driver.destroySource(src);
+			for (buf in buffers)
+				driver.destroyBuffer(buf);
 			src = null;
 			buffers = null;
 		}
 	}
 
-	@:noDebug function onSample( buf : ALBuffer ) {
+	@:noDebug function onSample( buf : BufferHandle ) {
 		@:privateAccess native.onSample(haxe.io.Float32Array.fromBytes(fbuf));
 
 		// Convert Float32 to Int16
-		#if cpp
-		var fb = fbuf.getData();
-		var ib = ibuf.getData();
-		for( i in 0...samples<<1 )
-			untyped __global__.__hxcpp_memory_set_i16( ib, i<<1, __global__.__int__(__global__.__hxcpp_memory_get_float( fb, i<<2 ) * 0x7FFF) );
-		#else
 		for ( i in 0...samples << 1 ) {
 			var v = Std.int(fbuf.getFloat(i << 2) * 0x7FFF);
 			ibuf.set( i<<1, v );
 			ibuf.set( (i<<1) + 1, v>>>8 );
 		}
-		#end
-
-		AL.bufferData(buf, AL.FORMAT_STEREO16, iview, ibuf.length, 44100);
-		AL.sourceQueueBuffers(src, 1, [buf]);
+		driver.setBufferData(buf, ibuf, ibuf.length, I16, 2, Manager.STREAM_BUFFER_SAMPLE_COUNT);
+		driver.queueBuffer(src, buf, 0, false);
 	}
 
 	inline function forcePlay() {
-		if( AL.getSourcei(src,AL.SOURCE_STATE) != AL.PLAYING )
-			AL.sourcePlay(src);
+		if (!src.playing) driver.playSource(src);
 	}
 
-	function onUpdate( i : Int ){
-		var r = AL.getSourcei(src,AL.BUFFERS_PROCESSED);
-		if( r > 0 ){
-			for( b in AL.sourceUnqueueBuffers(src,r) )
-				onSample(b);
+	function onUpdate(){
+		var cnt = driver.getProcessedBuffers(src);
+		while (cnt > 0)
+		{
+			cnt--;
+			var buf = buffers[bufPos];
+			driver.unqueueBuffer(src, buf);
+			onSample(buf);
 			forcePlay();
+			if (++bufPos == buffers.length) bufPos = 0;
 		}
 	}
 }
-#end
 
+#end
 class NativeChannel {
 
 	#if flash
@@ -89,6 +109,8 @@ class NativeChannel {
 	var channel : flash.media.SoundChannel;
 	#elseif js
 	static var ctx : js.html.audio.AudioContext;
+	static var destination : js.html.audio.AudioNode;
+	static var masterGain : js.html.audio.GainNode;
 	static function getContext() : js.html.audio.AudioContext {
 		if( ctx == null ) {
 			try {
@@ -105,6 +127,10 @@ class NativeChannel {
 			if( ctx != null ) {
 				if( ctx.state == SUSPENDED ) waitForPageInput();
 				ctx.addEventListener("statechange", function(_) if( ctx.state == SUSPENDED ) waitForPageInput());
+				masterGain = ctx.createGain();
+				masterGain.connect(ctx.destination);
+
+				destination = masterGain;
 			}
 		}
 		return ctx;
@@ -113,6 +139,7 @@ class NativeChannel {
 	// bufferSamples is constant and never change at runtime, so it's safe to use general pool.
 	static var pool : Array<js.html.audio.AudioBuffer> = new Array();
 	static var bufferPool : Array<haxe.io.Float32Array> = new Array();
+	static var gainPool : Array<js.html.audio.GainNode> = new Array();
 	
 	var front : js.html.audio.AudioBuffer;
 	var back : js.html.audio.AudioBuffer;
@@ -120,7 +147,8 @@ class NativeChannel {
 	var queued : js.html.audio.AudioBufferSourceNode;
 	var time : Float; // Mandatory for proper buffer sync, otherwise produces gaps in playback due to innacurate timings.
 	var tmpBuffer : haxe.io.Float32Array;
-	#elseif lime_openal
+	var gain : js.html.audio.GainNode;
+	#elseif hlopenal
 	var channel : ALChannel;
 	#end
 	public var bufferSamples(default, null) : Int;
@@ -143,24 +171,28 @@ class NativeChannel {
 		if ( bufferPool.length > 0 ) tmpBuffer = bufferPool.pop();
 		else tmpBuffer = new haxe.io.Float32Array(bufferSamples * 2);
 		
+		if ( gainPool.length != 0 ) gain = gainPool.pop();
+		else gain = ctx.createGain();
+		gain.connect(destination);
+
 		fill(front);
 		fill(back);
 		
 		current = ctx.createBufferSource();
 		current.buffer = front;
 		current.addEventListener("ended", swap);
-		current.connect(ctx.destination);
+		current.connect(gain);
 		queued = ctx.createBufferSource();
 		queued.buffer = back;
 		queued.addEventListener("ended", swap);
-		queued.connect(ctx.destination);
+		queued.connect(gain);
 		
 		var currTime : Float = ctx.currentTime;
 		current.start(currTime);
 		time = currTime + front.duration;
 		queued.start(time);
 		
-		#elseif lime_openal
+		#elseif hlopenal
 		channel = new ALChannel(bufferSamples, this);
 		#end
 	}
@@ -214,7 +246,7 @@ class NativeChannel {
 		queued = ctx.createBufferSource();
 		queued.buffer = tmp;
 		queued.addEventListener("ended", swap);
-		queued.connect(ctx.destination);
+		queued.connect(gain);
 		
 		time += front.duration;
 		queued.start(time);
@@ -248,13 +280,18 @@ class NativeChannel {
 		if ( front != null ) {
 			current.disconnect();
 			current.removeEventListener("ended", swap);
+			current.stop();
 			current = null;
 			
 			queued.removeEventListener("ended", swap);
 			queued.disconnect();
 			queued.stop();
 			queued = null;
-			
+
+			gainPool.push(gain);
+			gain.disconnect();
+			gain = null;
+
 			pool.push(front);
 			front = null;
 			pool.push(back);
@@ -263,7 +300,7 @@ class NativeChannel {
 			bufferPool.push(tmpBuffer);
 			tmpBuffer = null;
 		}
-		#elseif lime_openal
+		#elseif hlopenal
 		if( channel != null ) {
 			channel.stop();
 			channel = null;

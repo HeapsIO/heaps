@@ -139,7 +139,7 @@ private class CustomSceneProps extends SceneProps {
 							if( g.m.bits == mid ) {
 								var inf = emap.get(g);
 								if( inf == null ) {
-									inf = { count : 0, pass : Lambda.count({ iterator : buf.material.getPasses }), tri : 0, name : e.model.r.name, e : e, g : g };
+									inf = { count : 0, pass : buf.material.getPasses().length, tri : 0, name : e.model.r.name, e : e, g : g };
 									all.push(inf);
 									emap.set(g, inf);
 								}
@@ -153,7 +153,7 @@ private class CustomSceneProps extends SceneProps {
 				if( r.name != null && !meshes.remove(r) && r.isMesh() && ((o == null && (panel.showHidden || (r.visible && !r.culled))) || chunk.root == o) ) {
 					var m = r.toMesh();
 					var inf = extraMap.get(r.name);
-					var npass = Lambda.count({ iterator : m.material.getPasses });
+					var npass = m.material.getPasses().length;
 					if( inf == null ) {
 						inf = { count : 0, pass : npass, tri : 0, name : r.name, e : null, g : null };
 						all.push(inf);
@@ -200,15 +200,15 @@ private class CustomSceneProps extends SceneProps {
 
 	override function getObjectProps( o : h3d.scene.Object ) {
 		var props = super.getObjectProps(o);
-		var world = Std.instance(o, h3d.scene.World);
+		var world = hxd.impl.Api.downcast(o, h3d.scene.World);
 		var worldObject = world == null ? o : null;
 		if( world == null ) {
-			world = Std.instance(o.parent, h3d.scene.World);
+			world = hxd.impl.Api.downcast(o.parent, h3d.scene.World);
 			if( world != null && !Lambda.exists(@:privateAccess world.allChunks, function(c) return c.root == o) )
 				world = null;
 		}
 		if( world == null && o.parent != null ) {
-			world = Std.instance(o.parent.parent, h3d.scene.World);
+			world = hxd.impl.Api.downcast(o.parent.parent, h3d.scene.World);
 			if( world != null && !Lambda.exists(@:privateAccess world.allChunks, function(c) return c.root == o.parent) )
 				world = null;
 		}

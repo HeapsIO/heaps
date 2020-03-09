@@ -1,5 +1,8 @@
 package h2d;
 
+/**
+ * `h2d.Layers` allows to hierarchically organize objects on different layers and supports Y-sorting.
+ */
 class Layers extends Object {
 
 	// the per-layer insert position
@@ -16,6 +19,12 @@ class Layers extends Object {
 		addChildAt(s, 0);
 	}
 
+	/**
+	 * Adds a child `h2d.Object` at `layer:Int`. 
+	 * `h2d.Layers.addChildAt` can be used as an alternative.
+	 * @param s `h2d.Object` child to be added.
+	 * @param layer `Int` index of the layer, 0 is the bottom layer.
+	 */
 	public inline function add(s, layer) {
 		return addChildAt(s, layer);
 	}
@@ -55,8 +64,9 @@ class Layers extends Object {
 	}
 
 	/**
-		Moves Object to the bottom of its layer (rendered first, behind the other Objects in layer).
-	**/
+	 * Moves an `h2d.Object` to the bottom of its layer (rendered first, behind the other Objects in layer).
+	 * @param s `h2d.Object` to be moved.
+	 */
 	public function under( s : Object ) {
 		for( i in 0...children.length )
 			if( children[i] == s ) {
@@ -80,8 +90,9 @@ class Layers extends Object {
 	}
 
 	/**
-		Moves Object to the top of its layer (rendered last, in front of other Objects in layer).
-	**/
+	 * Moves an `h2d.Object` to the top of its layer (rendered last, in front of other Objects in layer).
+	 * @param s `h2d.Object` to be moved.
+	 */
 	public function over( s : Object ) {
 		for( i in 0...children.length )
 			if( children[i] == s ) {
@@ -100,10 +111,12 @@ class Layers extends Object {
 	}
 
 	/**
-		Returns Iterator of objects contained in specified layer.  
-		Returns empty iterator if layer does not exists.  
-		Objects added or removed from Layers during iteration are not added/removed from the Iterator.
-	**/
+	 * Returns an `Iterator<h2d.Object>` contained in specified layer.  
+	 * Returns empty iterator if layer does not exists.  
+	 * Objects added or removed from Layers during iteration are not added/removed from the `Iterator`.
+	 * @param layer `Int` index of the desired layer.
+	 * @return `Iterator<Object>`
+	 */
 	public function getLayer( layer : Int ) : Iterator<Object> {
 		var a;
 		if( layer >= layerCount )
@@ -117,9 +130,10 @@ class Layers extends Object {
 	}
 
 	/**
-		Finds the layer on which child object resides.  
-		Always returns -1 if provided Object is not a child of Layers.
-	**/
+	 * Returns the layer on which the child `h2d.Object` resides.  
+	 * @param s `h2d.Object` 
+	 * @return `Int` index of the layer where `s:h2d.Object` resides or -1 if it's not a child.
+	 */
 	public function getChildLayer( s : Object ) : Int {
 		if ( s.parent != this ) return -1;
 
@@ -145,8 +159,9 @@ class Layers extends Object {
 	}
 
 	/**
-		Sorts specified layer based on Y value of it's Objects.
-	**/
+	 * Sorts specified layer based on Y value of it's children.
+	 * @param layer `Int` index of the layer.
+	 */
 	public function ysort( layer : Int ) {
 		if( layer >= layerCount ) return;
 		var start = layer == 0 ? 0 : layersIndexes[layer - 1];

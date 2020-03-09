@@ -1,6 +1,6 @@
 package hxd.impl;
 
-private typedef InnerData = #if hl hl.Bytes #elseif js js.html.Uint8Array #else haxe.io.BytesData #end
+private typedef InnerData = #if hl hl.Bytes #elseif js TypedArray.Uint8Array #else haxe.io.BytesData #end
 
 abstract UncheckedBytes(InnerData) {
 

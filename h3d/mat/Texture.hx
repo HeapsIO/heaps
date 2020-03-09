@@ -342,7 +342,7 @@ class Texture {
 		e.driver.captureRenderBuffer(alpha);
 		var alphaPos = hxd.Pixels.getChannelOffset(alpha.format, A);
 		var redPos = hxd.Pixels.getChannelOffset(alpha.format, R);
-		var bpp = alpha.bytesPerPixel;
+		var bpp = @:privateAccess alpha.bytesPerPixel;
 		for( y in 0...height ) {
 			var p = y * width * bpp;
 			for( x in 0...width ) {

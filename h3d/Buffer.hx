@@ -152,7 +152,11 @@ class Buffer {
 }
 
 class BufferOffset {
+	#if flash
+	static var UID = 0;
 	public var id : Int;
+	#end
+
 	public var buffer : Buffer;
 	public var offset : Int;
 
@@ -161,13 +165,22 @@ class BufferOffset {
 	*/
 	public var next : BufferOffset;
 
-	static var UID = 0;
-
 	public function new(buffer, offset) {
+		#if flash
 		this.id = UID++;
+		#end
 		this.buffer = buffer;
 		this.offset = offset;
 	}
+
+	public inline function clone() {
+		var b = new BufferOffset(buffer,offset);
+		#if flash
+		b.id = id;
+		#end
+		return b;
+	}
+
 	public function dispose() {
 		if( buffer != null ) {
 			buffer.dispose();

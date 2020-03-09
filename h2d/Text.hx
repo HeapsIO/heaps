@@ -11,31 +11,28 @@ enum Align {
 class Text extends Drawable {
 
 	public var font(default, set) : Font;
-	public var text(default, set) : hxd.UString;
+	public var text(default, set) : String;
 	public var textColor(default, set) : Int;
 	public var maxWidth(default, set) : Null<Float>;
 	public var dropShadow : { dx : Float, dy : Float, color : Int, alpha : Float };
 
-	public var textWidth(get, null) : Int;
-	public var textHeight(get, null) : Int;
+	public var textWidth(get, null) : Float;
+	public var textHeight(get, null) : Float;
 	public var textAlign(default, set) : Align;
-	public var letterSpacing(default, set) : Int;
-	public var lineSpacing(default,set) : Int;
+	public var letterSpacing(default, set) : Float;
+	public var lineSpacing(default,set) : Float;
 
 	var glyphs : TileGroup;
 
 	var calcDone:Bool;
-	var calcXMin:Int;
-	var calcYMin:Int;
-	var calcWidth:Int;
-	var calcHeight:Int;
-	var calcSizeHeight:Int;
+	var calcXMin:Float;
+	var calcYMin:Float;
+	var calcWidth:Float;
+	var calcHeight:Float;
+	var calcSizeHeight:Float;
 	var constraintWidth:Float = -1;
 	var realMaxWidth:Float = -1;
 
-	#if lime
-	var waShader : h3d.shader.WhiteAlpha;
-	#end
 	var sdfShader : h3d.shader.SignedDistanceField;
 
 	public function new( font : Font, ?parent : h2d.Object ) {
@@ -43,7 +40,7 @@ class Text extends Drawable {
 		this.font = font;
 		textAlign = Left;
 		letterSpacing = 1;
-        lineSpacing = 0;
+		lineSpacing = 0;
 		text = "";
 		textColor = 0xFFFFFF;
 	}
@@ -52,13 +49,6 @@ class Text extends Drawable {
 		if( this.font == font ) return font;
 		this.font = font;
 		if ( font != null ) {
-			#if lime
-			if( font.tile.getTexture().format == ALPHA ){
-				if( waShader == null ) addShader( waShader = new h3d.shader.WhiteAlpha() );
-			}else{
-				if( waShader != null ) removeShader( waShader );
-			}
-			#end
 			switch( font.type ) {
 				case BitmapFont:
 					if ( sdfShader != null ) {
@@ -138,7 +128,7 @@ class Text extends Drawable {
 		glyphs.drawWith(ctx,this);
 	}
 
-	function set_text(t : hxd.UString) {
+	function set_text(t : String) {
 		var t = t == null ? "null" : t;
 		if( t == this.text ) return t;
 		this.text = t;
@@ -152,7 +142,7 @@ class Text extends Drawable {
 		onContentChanged();
 	}
 
-	public function calcTextWidth( text : hxd.UString ) {
+	public function calcTextWidth( text : String ) {
 		if( calcDone ) {
 			var ow = calcWidth, oh = calcHeight, osh = calcSizeHeight, ox = calcXMin, oy = calcYMin;
 			initGlyphs(text, false);
@@ -170,7 +160,11 @@ class Text extends Drawable {
 		}
 	}
 
-	public function splitText( text : hxd.UString, leftMargin = 0, afterData = 0 ) {
+	public function splitText( text : String ) {
+		return splitRawText(text,0,0);
+	}
+
+	function splitRawText( text : String, leftMargin : Float, afterData : Float ) {
 		if( realMaxWidth < 0 )
 			return text;
 		var lines = [], rest = text, restPos = 0;
@@ -227,15 +221,20 @@ class Text extends Drawable {
 		return lines.join("\n");
 	}
 
-	function initGlyphs( text : hxd.UString, rebuild = true, handleAlign = true, lines : Array<Int> = null ) : Void {
+	public function getTextProgress( text : String, progress : Float ) {
+		if( progress >= text.length ) return text;
+		return text.substr(0, Std.int(progress));
+	}
+
+	function initGlyphs( text : String, rebuild = true, handleAlign = true, lines : Array<Int> = null ) : Void {
 		if( rebuild ) glyphs.clear();
-		var x = 0, y = 0, xMax = 0, xMin = 0, prevChar = -1;
+		var x = 0., y = 0., xMax = 0., xMin = 0., prevChar = -1;
 		var align = handleAlign ? textAlign : Left;
 		switch( align ) {
 		case Center, Right, MultilineCenter, MultilineRight:
 			lines = [];
 			initGlyphs(text, false, false, lines);
-			var max = if( align == MultilineCenter || align == MultilineRight ) calcWidth else realMaxWidth < 0 ? 0 : Std.int(realMaxWidth);
+			var max = if( align == MultilineCenter || align == MultilineRight ) hxd.Math.ceil(calcWidth) else realMaxWidth < 0 ? 0 : hxd.Math.ceil(realMaxWidth);
 			var k = align == Center || align == MultilineCenter ? 1 : 0;
 			for( i in 0...lines.length )
 				lines[i] = (max - lines[i]) >> k;
@@ -245,7 +244,7 @@ class Text extends Drawable {
 		}
 		var dl = font.lineHeight + lineSpacing;
 		var calcLines = !handleAlign && !rebuild && lines != null;
-		var yMin = 0;
+		var yMin = 0.;
 		var t = splitText(text);
 		for( i in 0...t.length ) {
 			var cc = t.charCodeAt(i);
@@ -256,7 +255,7 @@ class Text extends Drawable {
 
 			if( cc == '\n'.code ) {
 				if( x > xMax ) xMax = x;
-				if( calcLines ) lines.push(x);
+				if( calcLines ) lines.push(Math.ceil(x));
 				switch( align ) {
 				case Left:
 					x = 0;
@@ -275,7 +274,7 @@ class Text extends Drawable {
 				prevChar = cc;
 			}
 		}
-		if( calcLines ) lines.push(x);
+		if( calcLines ) lines.push(Math.ceil(x));
 		if( x > xMax ) xMax = x;
 
 		calcXMin = xMin;
@@ -334,13 +333,13 @@ class Text extends Drawable {
 		var x, y, w : Float, h;
 		if ( forSize ) {
 			x = calcXMin;  // TODO: Should be 0 as well for consistency, but currently causes problems with Flows
-			y = 0;
+			y = 0.;
 			w = calcWidth;
 			h = calcSizeHeight;
 		} else {
-			x = realMaxWidth >= 0 ? 0 : calcXMin;
+			x = calcXMin;
 			y = calcYMin;
-			w = realMaxWidth >= 0 ? realMaxWidth : calcWidth;
+			w = calcWidth;
 			h = calcHeight - calcYMin;
 		}
 		addBounds(relativeTo, out, x, y, w, h);

@@ -6,7 +6,7 @@ class Light extends Object {
 	var objectDistance : Float; // used internaly
 	@:noCompletion public var next : Light; // used internaly (public to allow sorting)
 
-	@:s var cullingDistance : Float = 1e10;
+	@:s var cullingDistance : Float = -1;
 	@:s public var priority : Int = 0;
 	public var color(get, set) : h3d.Vector;
 	public var enableSpecular(get, set) : Bool;

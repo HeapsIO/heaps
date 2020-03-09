@@ -4,7 +4,7 @@ class Shadows extends SampleApp {
 
 	var time : Float = 0.;
 	var spheres : Array<h3d.scene.Object>;
-	var dir : h3d.scene.DirLight;
+	var dir : h3d.scene.fwd.DirLight;
 	var shadow : h3d.pass.DefaultShadowMap;
 
 	override function init() {
@@ -34,7 +34,7 @@ class Shadows extends SampleApp {
 		s3d.camera.zFar = 30;
 		s3d.lightSystem.ambientLight.set(0.5, 0.5, 0.5);
 
-		dir = new h3d.scene.DirLight(new h3d.Vector(-0.3, -0.2, -1), s3d);
+		dir = new h3d.scene.fwd.DirLight(new h3d.Vector(-0.3, -0.2, -1), s3d);
 		dir.enableSpecular = true;
 
 		shadow = s3d.renderer.getPass(h3d.pass.DefaultShadowMap);

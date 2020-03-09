@@ -7,10 +7,10 @@ class HtmlText extends Text {
 	public var condenseWhite(default,set) : Bool = true;
 
 	var elements : Array<Object> = [];
-	var xPos : Int;
-	var yPos : Int;
-	var xMax : Int;
-	var xMin : Int;
+	var xPos : Float;
+	var yPos : Float;
+	var xMax : Float;
+	var xMin : Float;
 	var sizePos : Int;
 	var dropMatrix : h3d.shader.ColorMatrix;
 	var prevChar : Int;
@@ -47,6 +47,10 @@ class HtmlText extends Text {
 		return font;
 	}
 
+	function parseText( text : String ) {
+		return try Xml.parse(text) catch( e : Dynamic ) throw "Could not parse " + text + " (" + e +")";
+	}
+
 	override function initGlyphs( text : String, rebuild = true, handleAlign = true, ?lines : Array<Int> ) {
 		if( rebuild ) {
 			glyphs.clear();
@@ -63,7 +67,7 @@ class HtmlText extends Text {
 			case Center, Right, MultilineCenter, MultilineRight:
 				lines = [];
 				initGlyphs(text, false, false, lines);
-				var max = if( align == MultilineCenter || align == MultilineRight ) calcWidth else realMaxWidth < 0 ? 0 : Std.int(realMaxWidth);
+				var max = if( align == MultilineCenter || align == MultilineRight ) hxd.Math.ceil(calcWidth) else realMaxWidth < 0 ? 0 : hxd.Math.ceil(realMaxWidth);
 				var k = align == Center || align == MultilineCenter ? 1 : 0;
 				for( i in 0...lines.length )
 					lines[i] = (max - lines[i]) >> k;
@@ -77,20 +81,20 @@ class HtmlText extends Text {
 		sizePos = 0;
 		calcYMin = 0;
 
-		var doc = try Xml.parse(text) catch( e : Dynamic ) throw "Could not parse " + text + " (" + e +")";
+		var doc = parseText(text);
 
-		var sizes = [];
+		var sizes = new Array<Float>();
 		prevChar = -1;
 		newLine = true;
 		for( e in doc )
-			buildSizes(e, font, sizes);
+			buildSizes(e, font, sizes, false);
 
 		prevChar = -1;
 		newLine = true;
 		for( e in doc )
 			addNode(e, font, rebuild, handleAlign, sizes, lines);
 
-		if (!handleAlign && !rebuild && lines != null) lines.push(xPos);
+		if (!handleAlign && !rebuild && lines != null) lines.push(hxd.Math.ceil(xPos));
 		if( xPos > xMax ) xMax = xPos;
 
 		var y = yPos;
@@ -101,9 +105,9 @@ class HtmlText extends Text {
 		calcDone = true;
 	}
 
-	function buildSizes( e : Xml, font : Font, sizes : Array<Int> ) {
+	function buildSizes( e : Xml, font : Font, sizes : Array<Float>, forSplit ) {
 		if( e.nodeType == Xml.Element ) {
-			var len = 0;
+			var len = 0.;
 			var nodeName = e.nodeName.toLowerCase();
 			switch( nodeName ) {
 			case "p":
@@ -131,7 +135,7 @@ class HtmlText extends Text {
 			}
 			sizes.push(len);
 			for( child in e )
-				buildSizes(child, font, sizes);
+				buildSizes(child, font, sizes, forSplit);
 			switch( nodeName ) {
 			case "p":
 				sizes.push( -1);// break
@@ -141,7 +145,7 @@ class HtmlText extends Text {
 		} else {
 			newLine = false;
 			var text = htmlToText(e.nodeValue);
-			var xp = 0;
+			var xp = 0.;
 			for( i in 0...text.length ) {
 				var cc = text.charCodeAt(i);
 				var fc = font.getChar(cc);
@@ -149,8 +153,15 @@ class HtmlText extends Text {
 				if( cc == "\n".code || font.charset.isBreakChar(cc) ) {
 					if( cc != "\n".code && !font.charset.isSpace(cc) )
 						xp += sz;
-					sizes.push( -(xp + 1));
-					return;
+					if( !forSplit ) {
+						sizes.push( -(xp + 1));
+						return;
+					}
+					sizes.push(xp);
+					if( font.charset.isSpace(cc) )
+						sizes.push(sz);
+					xp = 0;
+					continue;
 				}
 				xp += sz + letterSpacing;
 			}
@@ -159,14 +170,14 @@ class HtmlText extends Text {
 	}
 
 	static var REG_SPACES = ~/[\r\n\t ]+/g;
-	function htmlToText( t : hxd.UString )  {
+	function htmlToText( t : String )  {
 		if (condenseWhite)
 			t = REG_SPACES.replace(t, " ");
 		return t;
 	}
 
-	function remainingSize( sizes : Array<Int> ) {
-		var size = 0;
+	function remainingSize( sizes : Array<Float> ) {
+		var size = 0.;
 		for( i in sizePos...sizes.length ) {
 			var s = sizes[i];
 			if( s < 0 ) {
@@ -178,7 +189,104 @@ class HtmlText extends Text {
 		return size;
 	}
 
-	function addNode( e : Xml, font : Font, rebuild : Bool, handleAlign:Bool, sizes : Array<Int>, ?lines : Array<Int> = null ) {
+	override function splitText(text:String):String {
+		if( realMaxWidth < 0 )
+			return text;
+		yPos = 0;
+		xMax = 0;
+		sizePos = 0;
+		calcYMin = 0;
+
+		var doc = parseText(text);
+
+		/*
+			This might require a global refactoring at some point.
+			We would need a way to somehow build an AST from the XML representation
+			with all sizes and word breaks so analysis is much more easy.
+		*/
+
+		var sizes = new Array<Float>();
+		prevChar = -1;
+		newLine = true;
+		for( e in doc )
+			buildSizes(e, font, sizes, true);
+		xMax = 0;
+		function addBreaks( e : Xml ) {
+			if( e.nodeType == Xml.Element ) {
+				var sz = sizes[sizePos++];
+				if( sz < 0 )
+					xMax = 0;
+				else
+					xMax += sz;
+				for( x in e )
+					addBreaks(x);
+				if( e.nodeName == "p" ) {
+					sizePos++;
+					xMax = 0;
+				}
+			} else {
+				var text = htmlToText(e.nodeValue);
+				var startI = 0, prevI = 0;
+				for( i in 0...text.length ) {
+					var cc = text.charCodeAt(i);
+					if( cc == "\n".code || font.charset.isBreakChar(cc) ) {
+						var sz = sizes[sizePos++];
+						var sp = font.charset.isSpace(cc) ? sizes[sizePos++] : 0;
+						xMax += sz;
+						if( xMax > realMaxWidth ) {
+							var index = Lambda.indexOf(e.parent,e);
+							var pre = text.substr(startI,prevI - startI);
+							if( pre != "" )
+								e.parent.insertChild(Xml.createPCData(pre),index++);
+							e.parent.insertChild(Xml.createElement("br"),index);
+							e.nodeValue = text.substr(prevI+1);
+							startI = prevI+1;
+							xMax = sz;
+						}
+						xMax += sp + letterSpacing;
+						prevI = i;
+					}
+				}
+				var sz = sizes[sizePos++];
+				xMax += sz;
+				if( xMax > realMaxWidth ) {
+					e.parent.insertChild(Xml.createElement("br"),Lambda.indexOf(e.parent,e));
+					xMax = sz;
+				}
+			}
+		}
+		for( d in doc )
+			addBreaks(d);
+		return doc.toString();
+	}
+
+	override function getTextProgress(text:String, progress:Float):String {
+		if( progress >= text.length )
+			return text;
+		var doc = parseText(text);
+		function progressRec(e:Xml) {
+			if( progress <= 0 ) {
+				e.parent.removeChild(e);
+				return;
+			}
+			if( e.nodeType == Xml.Element ) {
+				for( x in [for( x in e ) x] )
+					progressRec(x);
+			} else {
+				var text = htmlToText(e.nodeValue);
+				if( text.length > progress ) {
+					text = text.substr(0, Std.int(progress));
+					e.nodeValue = text;
+				}
+				progress -= text.length;
+			}
+		}
+		for( x in [for( x in doc ) x] )
+			progressRec(x);
+		return doc.toString();
+	}
+
+	function addNode( e : Xml, font : Font, rebuild : Bool, handleAlign:Bool, sizes : Array<Float>, ?lines : Array<Int> = null ) {
 		sizePos++;
 		var calcLines = !handleAlign && !rebuild && lines != null;
 		var align = handleAlign ? textAlign : Left;
@@ -187,7 +295,7 @@ class HtmlText extends Text {
 			function makeLineBreak()
 			{
 				if( xPos > xMax ) xMax = xPos;
-				if( calcLines ) lines.push(xPos);
+				if( calcLines ) lines.push(hxd.Math.ceil(xPos));
 				switch( align ) {
 					case Left:
 						xPos = 0;
@@ -286,6 +394,7 @@ class HtmlText extends Text {
 				addNode(child, font, rebuild, handleAlign, sizes, lines);
 			switch( nodeName ) {
 			case "p":
+				sizePos++;
 				makeLineBreak();
 			default:
 			}
@@ -295,13 +404,13 @@ class HtmlText extends Text {
 				@:privateAccess glyphs.curColor.load(prevColor);
 		} else {
 			newLine = false;
-			var t = splitText(htmlToText(e.nodeValue), xPos, remainingSize(sizes));
+			var t = splitRawText(htmlToText(e.nodeValue), xPos, remainingSize(sizes));
 			var dy = this.font.baseLine - font.baseLine;
 			for( i in 0...t.length ) {
 				var cc = t.charCodeAt(i);
 				if( cc == "\n".code ) {
 					if( xPos > xMax ) xMax = xPos;
-					if( calcLines ) lines.push(xPos);
+					if( calcLines ) lines.push(hxd.Math.ceil(xPos));
 					switch( align ) {
 						case Left:
 							xPos = 0;

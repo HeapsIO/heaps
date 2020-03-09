@@ -34,7 +34,7 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 	/**
 		Create a new scene. A default 3D scene is already available in `hxd.App.s3d`
 	**/
-	public function new() {
+	public function new( ?createRenderer = true, ?createLightSystem = true ) {
 		super(null);
 		window = hxd.Window.getInstance();
 		eventListeners = [];
@@ -46,8 +46,8 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 		if( engine != null )
 			camera.screenRatio = engine.width / engine.height;
 		ctx = new RenderContext();
-		renderer = h3d.mat.MaterialSetup.current.createRenderer();
-		lightSystem = h3d.mat.MaterialSetup.current.createLightSystem();
+		if( createRenderer ) renderer = h3d.mat.MaterialSetup.current.createRenderer();
+		if( createLightSystem ) lightSystem = h3d.mat.MaterialSetup.current.createLightSystem();
 	}
 
 	@:noCompletion @:dox(hide) public function setEvents(events) {
@@ -105,8 +105,8 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 	@:dox(hide) @:noCompletion
 	public function isInteractiveVisible( i : hxd.SceneEvents.Interactive ) {
 		var o : Object = cast i;
-		while( o != null ) {
-			if( !o.visible ) return false;
+		while( o != this ) {
+			if( o == null || !o.visible ) return false;
 			o = o.parent;
 		}
 		return true;
@@ -219,8 +219,9 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 				continue;
 			}
 
-			if( !event.propagate )
-				hitInteractives = [];
+			if( !event.propagate ) {
+				while( hitInteractives.length > 0 ) hitInteractives.pop();
+			}
 
 			return i;
 		}
@@ -235,25 +236,35 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 		return s;
 	}
 
-	override function dispose() {
-		super.dispose();
+	/**
+		Free the GPU memory for this Scene and its children
+	**/
+	public function dispose() {
+		if ( allocated )
+			onRemove();
 		if( hardwarePass != null ) {
 			hardwarePass.dispose();
 			hardwarePass = null;
 		}
-		renderer.dispose();
-		renderer = new Renderer();
+		ctx.dispose();
+		if(renderer != null) {
+			renderer.dispose();
+			renderer = new Renderer();
+		}
 	}
 
 	@:allow(h3d)
 	function addEventTarget(i:Interactive) {
+		if( interactives.indexOf(i) >= 0 ) throw "assert";
 		interactives.push(i);
 	}
 
 	@:allow(h3d)
 	function removeEventTarget(i:Interactive) {
-		if( interactives.remove(i) && events != null )
-			@:privateAccess events.onRemove(i);
+		if( interactives.remove(i) ) {
+			if( events != null ) @:privateAccess events.onRemove(i);
+			hitInteractives.remove(i);
+		}
 	}
 
 	/**
@@ -296,9 +307,9 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 		ctx.lightSystem = null;
 
 		var found = null;
-		var passes = @:privateAccess ctx.passes;
+		var passes = new h3d.pass.PassList(@:privateAccess ctx.passes);
 
-		if( passes != null ) {
+		if( !passes.isEmpty() ) {
 			var p = hardwarePass;
 			if( p == null )
 				hardwarePass = p = new h3d.pass.HardwarePick();
@@ -306,14 +317,13 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 			p.pickX = pixelX;
 			p.pickY = pixelY;
 			p.setContext(ctx);
-			@:privateAccess ctx.passes = passes = p.draw(passes);
-			if( p.pickedIndex >= 0 ) {
-				while( p.pickedIndex > 0 ) {
-					p.pickedIndex--;
-					passes = passes.next;
-				}
-				found = passes.obj;
-			}
+			p.draw(passes);
+			if( p.pickedIndex >= 0 )
+				for( po in passes )
+					if( p.pickedIndex-- == 0 ) {
+						found = po.obj;
+						break;
+					}
 		}
 
 		ctx.done();
@@ -393,6 +403,7 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 		// group by pass implementation
 		var curPass = ctx.passes;
 		var passes = [];
+		var passIndex = -1;
 		while( curPass != null ) {
 			var passId = curPass.pass.passId;
 			var p = curPass, prev = null;
@@ -401,28 +412,30 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 				p = p.next;
 			}
 			prev.next = null;
-			passes.push(new Renderer.PassObjects(curPass.pass.name,curPass));
+			var pobjs = ctx.cachedPassObjects[++passIndex];
+			if( pobjs == null ) {
+				pobjs = new Renderer.PassObjects();
+				ctx.cachedPassObjects[passIndex] = pobjs;
+			}
+			pobjs.name = curPass.pass.name;
+			pobjs.passes.init(curPass);
+			passes.push(pobjs);
 			curPass = p;
 		}
 
 		// send to rendered
-		ctx.lightSystem = lightSystem;
-		lightSystem.initLights(ctx);
+		if( lightSystem != null ) {
+			ctx.lightSystem = lightSystem;
+			lightSystem.initLights(ctx);
+		}
 		renderer.process(passes);
 
 		// check that passes have been rendered
 		#if debug
 		if( !ctx.computingStatic && checkPasses)
-			for( p in passes ) {
-				if( !p.rendered ) {
+			for( p in passes )
+				if( !p.rendered )
 					trace("Pass " + p.name+" has not been rendered : don't know how to handle.");
-					var o = p.passes;
-					while( o != null ) {
-						trace(" used by " + o.obj.name == null ? "" + o.obj : o.obj.name);
-						o = o.next;
-					}
-				}
-			}
 		#end
 
 		if( camera.rightHanded )
@@ -432,6 +445,11 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 		ctx.scene = null;
 		ctx.camera = null;
 		ctx.engine = null;
+		for( i in 0...passIndex ) {
+			var p = ctx.cachedPassObjects[i];
+			p.name = null;
+			p.passes.init(null);
+		}
 	}
 
 	/**

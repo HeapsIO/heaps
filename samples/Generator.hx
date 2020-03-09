@@ -4,6 +4,16 @@ class Generator {
 		var errored = [];
 		Sys.setCwd("build");
 		var cwd = Sys.getCwd();
+		var installedLibs = new Map<String,Bool>();
+		
+		function hasLib( l ) {
+			if( installedLibs.exists(l) )
+				return installedLibs.get(l);
+			var ok = new sys.io.Process("haxelib",["path",l]).exitCode() == 0;
+			installedLibs.set(l,ok);
+			return ok;
+		}
+		
 		for( f in sys.FileSystem.readDirectory(".") ) {
 			if( !sys.FileSystem.isDirectory(f) )
 				continue;
@@ -15,6 +25,21 @@ class Generator {
 				if( f != name ) name = f+"/"+name;
 				var pass = false;
 				Sys.println(name);
+				
+				var hxml = sys.io.File.getContent(d);
+				var r_libs = ~/\-lib ([A-Za-z0-9_]+)/;
+				var skip = false;
+				while( r_libs.match(hxml) ) {
+					var lib = r_libs.matched(1);
+					if( !hasLib(lib) ) {
+						skip = true;
+						Sys.println(lib+" not found, skip");
+						break;
+					}
+					hxml = r_libs.matchedRight();
+				}
+				if( skip ) continue;
+				
 				if( StringTools.endsWith(name,"_hl") )
 					d = "-lib hlsdl "+d;
 				try {

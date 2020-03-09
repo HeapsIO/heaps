@@ -39,13 +39,12 @@ private class CompiledShader {
 	public var s : hxsl.RuntimeShader;
 	public var stride : Int;
 	public var bufferFormat : Int;
-	public var inputNames : Array<String>;
+	public var inputs : InputNames;
 	public var usedTextures : Array<Bool>;
 	public function new(s) {
 		this.s = s;
 		stride = 0;
 		bufferFormat = 0;
-		inputNames = [];
 		usedTextures = [];
 	}
 }
@@ -579,6 +578,7 @@ class Stage3dDriver extends Driver {
 		fdata.endian = flash.utils.Endian.LITTLE_ENDIAN;
 
 		var pos = 0;
+		var inputNames = [];
 		for( v in shader.vertex.data.vars )
 			if( v.kind == Input ) {
 				var size;
@@ -593,11 +593,11 @@ class Stage3dDriver extends Driver {
 				var idx = FORMAT.indexOf(fmt);
 				if( idx < 0 ) throw "assert " + fmt;
 				p.bufferFormat |= idx << (pos * 3);
-				p.inputNames.push(v.name);
+				inputNames.push(v.name);
 				p.stride += size;
 				pos++;
 			}
-
+		p.inputs = InputNames.get(inputNames);
 		p.p.upload(vdata, fdata);
 		return p;
 	}
@@ -711,7 +711,7 @@ class Stage3dDriver extends Driver {
 			}
 		} else {
 			offset = 8; // custom data starts after [position, normal, uv]
-			for( s in curShader.inputNames ) {
+			for( s in curShader.inputs.names ) {
 				switch( s ) {
 				case "position":
 					ctx.setVertexBufferAt(pos++, m.vbuf, 0, FORMAT[3]);
@@ -736,7 +736,7 @@ class Stage3dDriver extends Driver {
 	}
 
 	override function getShaderInputNames() {
-		return curShader.inputNames;
+		return curShader.inputs;
 	}
 
 	override function selectMultiBuffers( buffers : Buffer.BufferOffset ) {

@@ -7,7 +7,7 @@ package h3d.shader;
 	public var Buffers = 3;
 }
 
-typedef ShaderBufferData = #if js js.html.Float32Array #else haxe.ds.Vector<hxd.impl.Float32> #end;
+typedef ShaderBufferData = hxd.impl.TypedArray.Float32Array;
 
 class ShaderBuffers {
 

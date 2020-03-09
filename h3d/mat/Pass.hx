@@ -8,6 +8,7 @@ import h3d.mat.Data;
 class Pass implements hxd.impl.Serializable {
 
 	@:s public var name(default, null) : String;
+	var flags : Int;
 	var passId : Int;
 	@:s var bits : Int = 0;
 	@:s var parentPass : Pass;
@@ -15,18 +16,20 @@ class Pass implements hxd.impl.Serializable {
 	var shaders : hxsl.ShaderList;
 	@:s var nextPass : Pass;
 
-	@:s public var enableLights : Bool;
+	@:bits(flags) public var enableLights : Bool;
 	/**
 		Inform the pass system that the parameters will be modified in object draw() command,
 		so they will be manually uploaded by calling RenderContext.uploadParams.
 	**/
-	@:s public var dynamicParameters : Bool;
+	@:bits(flags) public var dynamicParameters : Bool;
 
 	/**
 		Mark the pass as static, this will allow some renderers or shadows to filter it
 		when rendering static/dynamic parts.
 	**/
-	@:s public var isStatic : Bool;
+	@:bits(flags) public var isStatic : Bool;
+
+	@:bits(flags) var batchMode : Bool; // for MeshBatch
 
 	@:bits(bits) public var culling : Face;
 	@:bits(bits) public var depthWrite : Bool;
@@ -39,6 +42,7 @@ class Pass implements hxd.impl.Serializable {
 	@:bits(bits) public var blendAlphaOp : Operation;
 	@:bits(bits) public var wireframe : Bool;
 	public var colorMask : Int;
+	public var layer : Int = 0;
 
 	@:s public var stencil : Stencil;
 
@@ -114,6 +118,10 @@ class Pass implements hxd.impl.Serializable {
 			blendAlphaOp = Add;
 		case Multiply: // Out = Dst * Src + 0 * Dst
 			blend(DstColor, Zero);
+			blendOp = Add;
+			blendAlphaOp = Add;
+		case AlphaMultiply: // Out = Dst * Src + (1 - SrcA) * Dst
+			blend(DstColor, OneMinusSrcAlpha);
 			blendOp = Add;
 			blendAlphaOp = Add;
 		case Erase: // Out = 0 * Src + (1 - Srb) * Dst
@@ -226,7 +234,7 @@ class Pass implements hxd.impl.Serializable {
 	public function getShader< T:hxsl.Shader >(t:Class<T>) : T {
 		var s = shaders;
 		while( s != parentShaders ) {
-			var sh = Std.instance(s.s, t);
+			var sh = hxd.impl.Api.downcast(s.s, t);
 			if( sh != null )
 				return sh;
 			s = s.next;
@@ -283,7 +291,7 @@ class Pass implements hxd.impl.Serializable {
 			return h3d.Engine.getCurrent().driver.getNativeShaderCode(shader);
 		}
 	}
-	
+
 	#if hxbit
 
 	public function customSerialize( ctx : hxbit.Serializer ) {

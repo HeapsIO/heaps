@@ -141,18 +141,13 @@ class ShaderAdvanced extends hxd.App {
 		var cube = h3d.prim.Cube.defaultUnitCube();
 
 		var prim = new h3d.prim.Instanced();
-		var bytes = new haxe.io.BytesOutput();
-		var icount = cube.triCount() * 3;
-		bytes.writeInt32(icount);
-		bytes.writeInt32(16);
-		bytes.writeInt32(0);
-		bytes.writeInt32(0);
-		bytes.writeInt32(0);
 
 		prim.setMesh(cube);
-		prim.commands = new h3d.impl.InstanceBuffer(1, bytes.getBytes());
+		prim.commands = new h3d.impl.InstanceBuffer();
+		var icount = cube.triCount() * 3;
+		prim.commands.setCommand(16, icount);
 
-		new h3d.scene.DirLight(new h3d.Vector(-1,-2,-5),s3d);
+		new h3d.scene.fwd.DirLight(new h3d.Vector(-1,-2,-5),s3d);
 		new h3d.scene.CameraController(s3d).loadFromCamera();
 
 		var buf = new hxd.FloatBuffer();

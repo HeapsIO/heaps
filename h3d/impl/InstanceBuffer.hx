@@ -5,8 +5,18 @@ class InstanceBuffer {
 
 	var data : Dynamic;
 	var driver : h3d.impl.Driver;
+	public var indexCount(default,null) : Int = 0;
 	public var triCount(default,null) : Int = 0;
 	public var commandCount(default, null) : Int;
+
+	public function new() {
+	}
+
+	public function setCommand( commandCount : Int, indexCount : Int ) {
+		this.commandCount = commandCount;
+		this.indexCount = indexCount;
+		this.triCount = Std.int((commandCount * indexCount) / 3);
+	}
 
 	/**
 		Bytes are structures of 5 i32 with the following values:
@@ -16,7 +26,8 @@ class InstanceBuffer {
 		- baseVertexLocation : offset in buffer
 		- startInstanceLocation : offset in per instance buffer
 	**/
-	public function new( commandCount : Int, bytes : haxe.io.Bytes ) {
+	public function setBuffer( commandCount : Int, bytes : haxe.io.Bytes ) {
+		dispose();
 
 		for( i in 0...commandCount ) {
 			var idxCount = bytes.getInt32(i * 20);
@@ -26,6 +37,7 @@ class InstanceBuffer {
 		}
 
 		this.commandCount = commandCount;
+		this.indexCount = 0;
 		driver = h3d.Engine.getCurrent().driver;
 		driver.allocInstanceBuffer(this, bytes);
 	}

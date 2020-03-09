@@ -22,15 +22,26 @@ class Checker {
 	static var vec2 = TVec(2, VFloat);
 	static var vec3 = TVec(3, VFloat);
 	static var vec4 = TVec(4, VFloat);
+	static var ivec2 = TVec(2, VInt);
+	static var ivec3 = TVec(3, VInt);
+	static var ivec4 = TVec(4, VInt);
 
 	var vars : Map<String,TVar>;
 	var globals : Map<String,{ g : TGlobal, t : Type }>;
 	var curFun : TFunction;
 	var inLoop : Bool;
+	var inWhile : Bool;
 	public var inits : Array<{ v : TVar, e : TExpr }>;
 
 	public function new() {
-		globals = new Map();
+		globals = initGlobals();
+	}
+
+	static var GLOBALS = null;
+	static function initGlobals() {
+		var globals = GLOBALS;
+		if( GLOBALS != null ) return GLOBALS;
+		var globals = new Map();
 		var genType = [TFloat, vec2, vec3, vec4];
 		var baseType = [TFloat, TBool, TInt];
 		var genFloat = [for( t in genType ) { args : [ { name : "value", type : t } ], ret : t } ];
@@ -65,6 +76,16 @@ class Checker {
 					{ args : [ { name : "tex", type : TSampler2D }, { name : "uv", type : vec2 }, { name : "lod", type : TFloat } ], ret : vec4 },
 					{ args : [ { name : "tex", type : TSamplerCube }, { name : "normal", type : vec3 }, { name : "lod", type : TFloat } ], ret : vec4 },
 					{ args : [ { name : "tex", type : TSampler2DArray }, { name : "uv", type : vec3 }, { name : "lod", type : TFloat } ], ret : vec4 },
+				];
+			case Texel:
+				[
+					{ args : [ { name: "tex", type: TSampler2D }, { name: "pos", type: ivec2 } ], ret: vec4 },
+					{ args : [ { name: "tex", type: TSampler2DArray }, { name: "pos", type: ivec3 } ], ret: vec4 }
+				];
+			case TexelLod:
+				[
+					{ args : [ { name: "tex", type: TSampler2D }, { name: "pos", type: ivec2 }, { name: "lod", type: TInt } ], ret: vec4 },
+					{ args : [ { name: "tex", type: TSampler2DArray }, { name: "pos", type: ivec3 }, { name: "lod", type: TInt } ], ret: vec4 }
 				];
 			case ToInt:
 				[for( t in baseType ) { args : [ { name : "value", type : t } ], ret : TInt } ];
@@ -128,6 +149,20 @@ class Checker {
 					{ args : [ { name : "channel", type : TChannel(3) }, { name : "uv", type : vec2 }, { name : "lod", type : TFloat } ], ret : vec3 },
 					{ args : [ { name : "channel", type : TChannel(4) }, { name : "uv", type : vec2 }, { name : "lod", type : TFloat } ], ret : vec4 },
 				];
+			case ChannelFetch:
+				[
+					{ args : [ { name : "channel", type : TChannel(1) }, { name : "pos", type : ivec2 } ], ret : TFloat },
+					{ args : [ { name : "channel", type : TChannel(2) }, { name : "pos", type : ivec2 } ], ret : vec2 },
+					{ args : [ { name : "channel", type : TChannel(3) }, { name : "pos", type : ivec2 } ], ret : vec3 },
+					{ args : [ { name : "channel", type : TChannel(4) }, { name : "pos", type : ivec2 } ], ret : vec4 },
+				];
+			case ChannelFetchLod:
+				[
+					{ args : [ { name : "channel", type : TChannel(1) }, { name : "pos", type : ivec2 }, { name : "lod", type : TInt } ], ret : TFloat },
+					{ args : [ { name : "channel", type : TChannel(2) }, { name : "pos", type : ivec2 }, { name : "lod", type : TInt } ], ret : vec2 },
+					{ args : [ { name : "channel", type : TChannel(3) }, { name : "pos", type : ivec2 }, { name : "lod", type : TInt } ], ret : vec3 },
+					{ args : [ { name : "channel", type : TChannel(4) }, { name : "pos", type : ivec2 }, { name : "lod", type : TInt } ], ret : vec4 },
+				];
 			case ScreenToUv:
 				[{ args : [{ name : "screenPos", type : vec2 }], ret : vec2 }];
 			case UvToScreen:
@@ -145,9 +180,15 @@ class Checker {
 		globals.set("int", globals.get("toInt"));
 		globals.set("float", globals.get("toFloat"));
 		globals.set("reflect", globals.get("lReflect"));
+		for( i in 2...5 ) {
+			globals.set("ivec"+i, globals.get("iVec"+i));
+			globals.remove("iVec"+i);
+		}
 		globals.remove("lReflect");
 		globals.remove("toInt");
 		globals.remove("toFloat");
+		GLOBALS = globals;
+		return globals;
 	}
 
 	function error( msg : String, pos : Position ) : Dynamic {
@@ -163,6 +204,7 @@ class Checker {
 		vars = new Map();
 		inits = [];
 		inLoop = false;
+		inWhile = false;
 
 		var funs = [];
 		checkExpr(shader, funs, false, false);
@@ -237,6 +279,13 @@ class Checker {
 		switch( [t1, t2] ) {
 		case [TVec(s1, t1), TVec(s2, t2)] if( s1 == s2 && t1 == t2 ):
 			return true;
+		case [TArray(t1, size1), TArray(t2, size2)]:
+			switch( [size1,size2] ) {
+			case [SConst(a),SConst(b)] if( a == b ):
+			case [SVar(v1),SVar(v2)] if( v1 == v2 ):
+			default: return false;
+			}
+			return tryUnify(t1,t2);
 		case [TChannel(n1), TChannel(n2)] if( n1 == n2 ):
 			return true;
 		default:
@@ -530,10 +579,12 @@ class Checker {
 		case EWhile(cond, loop, normalWhile):
 			type = TVoid;
 			var cond = typeWith(cond, TBool);
-			var oldL = inLoop;
+			var oldL = inLoop, oldW = inWhile;
 			inLoop = true;
+			inWhile = true;
 			var loop = typeExpr(loop, NoValue);
 			inLoop = oldL;
+			inWhile = oldW;
 			TWhile(cond, loop, normalWhile);
 		case EContinue:
 			if( !inLoop ) error("Continue outside loop", e.pos);
@@ -547,7 +598,7 @@ class Checker {
 			var e1 = typeExpr(e1, Value);
 			var e2 = typeExpr(e2, With(TInt));
 			switch( e2.t ) {
-			case TInt, TFloat:
+			case TInt:
 			default: unify(e2.t, TInt, e2.p);
 			}
 			switch( e1.t ) {
@@ -675,7 +726,7 @@ class Checker {
 		switch( e.e ) {
 		case TConst(_):
 		case TParenthesis(e): checkConst(e);
-		case TCall({ e : TGlobal(Vec2 | Vec3 | Vec4) }, args):
+		case TCall({ e : TGlobal(Vec2 | Vec3 | Vec4 | IVec2 | IVec3 | IVec4) }, args):
 			for( a in args ) checkConst(a);
 		default:
 			error("This expression should be constant", e.p);
@@ -834,10 +885,16 @@ class Checker {
 			case ["get", TChannel(_)]: ChannelRead;
 			case ["getLod", TSampler2D|TSampler2DArray|TSamplerCube]: TextureLod;
 			case ["getLod", TChannel(_)]: ChannelReadLod;
+			case ["fetch", TSampler2D|TSampler2DArray]: Texel;
+			case ["fetch", TChannel(_)]: ChannelFetch;
+			case ["fetchLod", TSampler2D|TSampler2DArray]: TexelLod;
+			case ["fetchLod", TChannel(_)]: ChannelFetchLod;
 			default: null;
 			}
-			if( gl != null )
+			if( gl != null ) {
+				if( f == "get" && inWhile ) error("Cannot use .get() in while loop, use .getLod instead", pos);
 				g = globals.get(gl.toString());
+			}
 		}
 		if( g != null ) {
 			switch( g.t ) {
@@ -911,15 +968,24 @@ class Checker {
 		case Vec4:
 			checkLength(4,TFloat);
 			type = TVec(4,VFloat);
-		case IVec2:
-			checkLength(2,TInt);
-			type = TVec(2,VInt);
-		case IVec3:
-			checkLength(3,TInt);
-			type = TVec(3,VInt);
-		case IVec4:
-			checkLength(4,TInt);
-			type = TVec(4,VInt);
+		case IVec2, IVec3, IVec4:
+			var k = switch(g) {
+			case IVec2: 2;
+			case IVec3: 3;
+			case IVec4: 4;
+			default: throw "assert";
+			}
+			if( args.length == 1 ) {
+				switch( args[0].t ) {
+				case TInt, TFloat:
+				case TVec(n,VFloat):
+					if( n != 3 ) error("Invalid input vector length: "+n+" should be "+k, pos);
+				default:
+					checkLength(k,TInt);
+				}
+			} else
+				checkLength(k,TInt);
+			type = TVec(k,VInt);
 		case BVec2:
 			checkLength(2,TBool);
 			type = TVec(2,VBool);
@@ -1041,11 +1107,11 @@ class Checker {
 		case OpAssign, OpAssignOp(_): throw "assert";
 		case OpMult, OpAdd, OpSub, OpDiv, OpMod:
 			switch( [op, e1.t, e2.t] ) {
-			case [OpMult,TVec(4,VFloat), TMat4], [OpMult,TMat4, TVec(4,VFloat)]:
+			case [OpMult,TVec(4,VFloat), TMat4]:
 				vec4;
 			case [OpMult,TVec(3,VFloat), TMat3x4]:
 				vec3;
-			case [OpMult,TMat3, TVec(3,VFloat)], [OpMult, TVec(3,VFloat), TMat3]:
+			case [OpMult, TVec(3,VFloat), TMat3]:
 				vec3;
 			case [_, TInt, TInt]: TInt;
 			case [_, TFloat, TFloat]: TFloat;

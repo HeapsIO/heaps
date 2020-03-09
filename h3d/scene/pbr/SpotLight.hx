@@ -14,11 +14,13 @@ class SpotLight extends Light {
 	public function new(?parent) {
 		pbr = new h3d.shader.pbr.Light.SpotLight();
 		shadows = new h3d.pass.SpotShadowMap(this);
+		primitive = spotLightPrim();
 		super(pbr,parent);
-		range = 10;
-		generatePrim();
 		lightProj = new h3d.Camera();
 		lightProj.screenRatio = 1.0;
+		range = 10;
+		maxRange = 10;
+		angle = 45;
 	}
 
 	public override function clone( ?o : h3d.scene.Object ) : h3d.scene.Object {
@@ -50,9 +52,13 @@ class SpotLight extends Light {
 		return angle = v;
 	}
 
-	function generatePrim(){
-		var points = new Array<h3d.col.Point>();
+	public static function spotLightPrim() {
+		var engine = h3d.Engine.getCurrent();
+		var p : h3d.prim.Polygon = @:privateAccess engine.resCache.get(SpotLight);
+		if( p != null )
+			return p;
 
+		var points = new Array<h3d.col.Point>();
 		// Left
 		points.push(new h3d.col.Point(0,0,0));
 		points.push(new h3d.col.Point(1,-1,-1));
@@ -76,10 +82,11 @@ class SpotLight extends Light {
 		points.push(new h3d.col.Point(1,1,1));
 		points.push(new h3d.col.Point(1,-1,1));
 		points.push(new h3d.col.Point(1,-1,-1));
+		p = new h3d.prim.Polygon(points);
+		p.addNormals();
 
-		var prim = new h3d.prim.Polygon(points);
-		prim.addNormals();
-		primitive = prim;
+		@:privateAccess engine.resCache.set(SpotLight, p);
+		return p;
 	}
 
 	function generateLightProj(){
@@ -93,7 +100,7 @@ class SpotLight extends Light {
 		return absPos.front();
 	}
 
-	override function draw(ctx) {
+	override function draw(ctx:RenderContext) {
 		primitive.render(ctx.engine);
 	}
 
@@ -109,6 +116,7 @@ class SpotLight extends Light {
 		pbr.fallOff = hxd.Math.cos(hxd.Math.degToRad(hxd.Math.min(angle/2.0, fallOff)));
 		pbr.range = hxd.Math.min(range, maxRange);
 		pbr.invLightRange4 = 1 / (maxRange * maxRange * maxRange * maxRange);
+		pbr.occlusionFactor = occlusionFactor;
 
 		if(cookie != null){
 			pbr.useCookie = true;
@@ -120,9 +128,26 @@ class SpotLight extends Light {
 		}
 	}
 
+	var s = new h3d.col.Sphere();
+	var d = new h3d.Vector();
 	override function emit(ctx:RenderContext) {
+		if( ctx.computingStatic ) {
+			super.emit(ctx);
+			return;
+		}
+
 		if( ctx.pbrLightPass == null )
 			throw "Rendering a pbr light require a PBR compatible scene renderer";
+
+		d.load(absPos.front());
+		d.scale3(maxRange / 2.0);
+		s.x = absPos.tx + d.x;
+		s.y = absPos.ty + d.y;
+		s.z = absPos.tz + d.z;
+		s.r = maxRange / 2.0;
+
+		if( !ctx.camera.frustum.hasSphere(s) )
+			return;
 
 		super.emit(ctx);
 		ctx.emitPass(ctx.pbrLightPass, this);

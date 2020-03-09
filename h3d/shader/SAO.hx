@@ -9,7 +9,7 @@ class SAO extends ScreenShader {
 	static var SRC = {
 
 		@range(4,30) @const var numSamples : Int;
-		@range(1,10) @const var numSpiralTurns : Int;
+		@range(1,10) @const(16) var numSpiralTurns : Int;
 		@const var useWorldUV : Bool;
 
 		@ignore @param var depthTexture : Channel;
@@ -25,6 +25,9 @@ class SAO extends ScreenShader {
 
 		@ignore @param var screenRatio : Vec2;
 		@ignore @param var fovTan : Float;
+
+		@ignore @param var microOcclusion : Channel;
+		@param var microOcclusionIntensity : Float;
 
 		function sampleAO(uv : Vec2, position : Vec3, normal : Vec3, radiusSS : Float, tapIndex : Int, rotationAngle : Float) : Float {
 			// returns a unit vector and a screen-space radius for the tap on a unit disk
@@ -63,8 +66,12 @@ class SAO extends ScreenShader {
 			var normal = normalTexture.get(vUV);
 
 			var noiseUv : Vec2;
-			noiseUv = useWorldUV ? origin.xy + origin.z : vUV / screenRatio;
-			var sampleNoise = noiseTexture.get(noiseUv * noiseScale).x;
+			if( useWorldUV )
+				noiseUv = (origin.xy + origin.z) * noiseScale;
+			else
+				noiseUv = vUV / screenRatio * noiseScale;
+
+			var sampleNoise = noiseTexture.get(noiseUv).x;
 			var randomPatternRotationAngle = 2.0 * PI * sampleNoise;
 
 			// change from WS to DepthUV space
@@ -75,6 +82,8 @@ class SAO extends ScreenShader {
 
 			occlusion = 1.0 - occlusion / float(numSamples);
 			occlusion = pow(occlusion, 1.0 + intensity).saturate();
+
+			occlusion *= mix(1, microOcclusion.get(vUV).r, microOcclusionIntensity);
 
 			output.color = vec4(occlusion.xxx, 1.);
 		}

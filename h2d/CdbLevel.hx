@@ -357,7 +357,7 @@ class CdbLevel extends Layers {
 				var curY = -1;
 				var content = null;
 				for( o in objects ) {
-					var baseY = o.y + o.obj.tile.height;
+					var baseY = o.y + Std.int(o.obj.tile.height);
 					if( baseY != curY ) {
 						curY = baseY;
 						content = byY[baseY];
@@ -430,6 +430,8 @@ class CdbLevel extends Layers {
 	}
 
 	function loadLayer( ldat : LayerSpec ) : LevelLayer {
+		if( ldat.data == null )
+			return null;
 		var t = resolveTileset(ldat.data);
 		if( t == null )
 			return null;

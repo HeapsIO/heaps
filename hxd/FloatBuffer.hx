@@ -1,20 +1,21 @@
 package hxd;
+import hxd.impl.TypedArray;
 
 private typedef InnerData = #if flash flash.Vector<Float> #elseif js Float32Expand #else Array<hxd.impl.Float32> #end
 
 #if js
-private abstract Float32Expand({ pos : Int, array : js.html.Float32Array }) {
+private abstract Float32Expand({ pos : Int, array : hxd.impl.TypedArray.Float32Array }) {
 
 	public var length(get, set) : Int;
 
 	public function new(length) {
-		this = { pos : 0, array : new js.html.Float32Array(new js.html.ArrayBuffer(length<<2)) };
+		this = { pos : 0, array : new Float32Array(new ArrayBuffer(length<<2)) };
 	}
 
 	inline function get_length() return this.pos;
 	inline function set_length(v:Int) {
 		if( length != v ) {
-			var newArray = new js.html.Float32Array(v);
+			var newArray = new Float32Array(v);
 			newArray.set(this.array);
 			this.array = newArray;
 		}
@@ -26,7 +27,7 @@ private abstract Float32Expand({ pos : Int, array : js.html.Float32Array }) {
 		if( this.pos == this.array.length ) {
 			var newSize = this.array.length << 1;
 			if( newSize < 128 ) newSize = 128;
-			var newArray = new js.html.Float32Array(newSize);
+			var newArray = new Float32Array(newSize);
 			newArray.set(this.array);
 			this.array = newArray;
 		}

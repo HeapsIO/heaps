@@ -25,6 +25,7 @@ class SourceHandle {
 	var effectToAuxiliarySend : Map<Effect, Int>;
 
 	public function new() {
+		sampleOffset = 0;
 		nextAuxiliarySend = 0;
 		freeAuxiliarySends = [];
 		effectToAuxiliarySend = new Map();

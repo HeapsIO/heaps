@@ -130,9 +130,17 @@ class System {
 			#if hxtelemetry
 			hxt.advance_frame();
 			#end
+			#if hot_reload
+			check_reload();
+			#end
 		}
 		Sys.exit(0);
 	}
+
+	#if hot_reload
+	@:hlNative("std","sys_check_reload")
+	static function check_reload() return false;
+	#end
 
 	public dynamic static function reportError( e : Dynamic ) {
 		var stack = haxe.CallStack.toString(haxe.CallStack.exceptionStack());
@@ -189,7 +197,7 @@ class System {
 			cur = Cursor.createSystem(SizeALL);
 		case TextInput:
 			cur = Cursor.createSystem(IBeam);
-		case Hide:
+		case Callback(_), Hide:
 			throw "assert";
 		case Custom(c):
 			if( c.alloc == null ) {
@@ -274,15 +282,28 @@ class System {
 		}
 	}
 
-	@:hlNative("std","sys_locale") static function getLocale() : hl.Bytes { return null; }
+	@:hlNative("std","sys_locale") static function sys_locale() : hl.Bytes { return null; }
 
 	static var _lang : String;
 	static function get_lang() : String {
 		if( _lang == null ) {
-			var str = @:privateAccess String.fromUCS2(getLocale());
-			_lang = ~/[.@_-]/g.split(str)[0];
+			var str = getLocale();
+			_lang = str.split("-").shift();
 		}
 		return _lang;
+	}
+
+	/**
+	 * Returns the locale including region code ()
+	**/
+	static var _loc : String;
+	public static function getLocale() {
+		if( _loc == null ) {
+			var str = @:privateAccess Sys.makePath(sys_locale());
+			if( str == null ) str = "en";
+			_loc = ~/[.@_]/g.split(str)[0];
+		}
+		return _loc;
 	}
 
 	// getters

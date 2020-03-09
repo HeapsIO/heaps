@@ -10,14 +10,26 @@ class Tile {
 	var u2 : Float;
 	var v2 : Float;
 
-	public var dx : Int;
-	public var dy : Int;
-	public var x(default,null) : Int;
-	public var y(default,null) : Int;
-	public var width(default,null) : Int;
-	public var height(default,null) : Int;
+	public var dx : Float;
+	public var dy : Float;
+	public var x(default,null) : Float;
+	public var y(default,null) : Float;
+	public var width(default,null) : Float;
+	public var height(default,null) : Float;
 
-	function new(tex : h3d.mat.Texture, x : Int, y : Int, w : Int, h : Int, dx=0, dy=0) {
+	public var ix(get,never) : Int;
+	inline function get_ix() return Math.floor(x);
+
+	public var iy(get,never) : Int;
+	inline function get_iy() return Math.floor(y);
+
+	public var iwidth(get,never) : Int;
+	inline function get_iwidth() return Math.ceil(width + x) - ix;
+
+	public var iheight(get,never) : Int;
+	inline function get_iheight() return Math.ceil(height + y) - iy;
+
+	function new(tex : h3d.mat.Texture, x : Float, y : Float, w : Float, h : Float, dx : Float=0, dy : Float=0) {
 		this.innerTex = tex;
 		this.x = x;
 		this.y = y;
@@ -50,17 +62,17 @@ class Tile {
 		setTexture(t.innerTex);
 	}
 
-	public function sub( x : Int, y : Int, w : Int, h : Int, dx = 0, dy = 0 ) : Tile {
+	public function sub( x : Float, y : Float, w : Float, h : Float, dx = 0., dy = 0. ) : Tile {
 		return new Tile(innerTex, this.x + x, this.y + y, w, h, dx, dy);
 	}
 
 	public function center():Tile {
-		return sub(0, 0, width, height, -(width>>1), -(height>>1));
+		return sub(0, 0, width, height, -(width * .5), -(height * .5));
 	}
 
 	public inline function setCenterRatio(?px:Float=0.5, ?py:Float=0.5) : Void {
-		dx = -Std.int(px*width);
-		dy = -Std.int(py*height);
+		dx = -(px*width);
+		dy = -(py*height);
 	}
 
 	public function flipX() : Void {
@@ -73,7 +85,7 @@ class Tile {
 		dy = -dy - height;
 	}
 
-	public function setPosition(x : Int, y : Int) : Void {
+	public function setPosition(x : Float, y : Float) : Void {
 		this.x = x;
 		this.y = y;
 		var tex = innerTex;
@@ -85,7 +97,7 @@ class Tile {
 		}
 	}
 
-	public function setSize(w : Int, h : Int) : Void {
+	public function setSize(w : Float, h : Float) : Void {
 		this.width = w;
 		this.height = h;
 		var tex = innerTex;
@@ -95,7 +107,7 @@ class Tile {
 		}
 	}
 
-	public function scaleToSize( w : Int, h : Int ) : Void {
+	public function scaleToSize( w : Float, h : Float ) : Void {
 		this.width = w;
 		this.height = h;
 	}
@@ -106,8 +118,8 @@ class Tile {
 		v -= dy / tex.height;
 		u2 += dx / tex.width;
 		v2 -= dy / tex.height;
-		x = Std.int(u * tex.width);
-		y = Std.int(v * tex.height);
+		x = u * tex.width;
+		y = v * tex.height;
 	}
 
 	public function dispose() : Void {
@@ -128,18 +140,18 @@ class Tile {
 	/**
 		Split horizontaly or verticaly the number of given frames
 	**/
-	public function split( frames : Int = 0, vertical = false ) : Array<Tile> {
+	public function split( frames : Int = 0, vertical = false, subpixel = false ) : Array<Tile> {
 		var tl = [];
 		if( vertical ) {
 			if( frames == 0 )
 				frames = Std.int(height / width);
-			var stride = Std.int(height / frames);
+			var stride = subpixel ? height / frames : Std.int(height / frames);
 			for( i in 0...frames )
 				tl.push(sub(0, i * stride, width, stride));
 		} else {
 			if( frames == 0 )
 				frames = Std.int(width / height);
-			var stride = Std.int(width / frames);
+			var stride = subpixel ? width / frames : Std.int(width / frames);
 			for( i in 0...frames )
 				tl.push(sub(i * stride, 0, stride, height));
 		}
@@ -150,14 +162,14 @@ class Tile {
 		Split the tile into a list of tiles of Size x Size pixels.
 		Unlike grid which is X/Y ordered, gridFlatten returns a single dimensional array ordered in Y/X.
 	**/
-	public function gridFlatten( size : Int, dx = 0, dy = 0 ) : Array<Tile> {
+	public function gridFlatten( size : Float, dx = 0., dy = 0. ) : Array<Tile> {
 		return [for( y in 0...Std.int(height / size) ) for( x in 0...Std.int(width / size) ) sub(x * size, y * size, size, size, dx, dy)];
 	}
 
 	/**
 		Split the tile into a list of tiles of Size x Size pixels.
 	**/
-	public function grid( size : Int, dx = 0, dy = 0 ) : Array<Array<Tile>> {
+	public function grid( size : Float, dx = 0., dy = 0. ) : Array<Array<Tile>> {
 		return [for( x in 0...Std.int(width / size) ) [for( y in 0...Std.int(height / size) ) sub(x * size, y * size, size, size, dx, dy)]];
 	}
 

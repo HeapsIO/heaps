@@ -9,6 +9,8 @@ interface InteractiveScene {
 }
 
 interface Interactive {
+	public var propagateEvents : Bool;
+	public var cursor(default, set) : hxd.Cursor;
 	public function handleEvent( e : Event ) : Void;
 	public function getInteractiveScene() : InteractiveScene;
 }
@@ -18,7 +20,12 @@ class SceneEvents {
 	var window : hxd.Window;
 	var scenes : Array<InteractiveScene>;
 
-	var currentOver : Interactive;
+	var overList : Array<Interactive>;
+	// Indexes and rel position in overList of Interactives that received EOver this frame.
+	// This array is never cleared apart from nulling Interactive, because internal counter is used, so those values are meaningless on practice.
+	var overCandidates : Array<{ i : Interactive, s : InteractiveScene, x : Float, y : Float, z : Float }>;
+	var overIndex : Int = -1;
+	var outIndex : Int = -1;
 	var currentFocus : Interactive;
 
 	var pendingEvents : Array<hxd.Event>;
@@ -31,6 +38,7 @@ class SceneEvents {
 	var focusLost = new hxd.Event(EFocusLost);
 	var checkPos = new hxd.Event(ECheck);
 	var onOut = new hxd.Event(EOut);
+	var onOver = new hxd.Event(EOver);
 	var isOut = false;
 
 	/**
@@ -43,10 +51,17 @@ class SceneEvents {
 	 */
 	public var mouseCheckMove = true;
 
+	/**
+	 * Default cursor when there is no Interactive present under cursor.
+	 */
+	public var defaultCursor : Cursor = Default;
+
 	public function new( ?window ) {
 		scenes = [];
 		pendingEvents = [];
 		pushList = [];
+		overList = [];
+		overCandidates = [];
 		if( window == null ) window = hxd.Window.getInstance();
 		this.window = window;
 		window.addEventTarget(onEvent);
@@ -60,9 +75,17 @@ class SceneEvents {
 	function onRemove(i) {
 		if( i == currentFocus )
 			currentFocus = null;
-		if( i == currentOver ) {
-			currentOver = null;
-			hxd.System.setCursor(Default);
+		if( overIndex >= 0 ) {
+			var index = overList.indexOf(i);
+			if( index >= 0 ) {
+				// onRemove is triggered which we are dispatching events
+				// let's carefully update indexes
+				outIndex--;
+				if( index < overIndex ) overIndex--;
+			}
+		} else {
+			overList.remove(i);
+			selectCursor();
 		}
 		pushList.remove(i);
 	}
@@ -118,11 +141,14 @@ class SceneEvents {
 	}
 
 	function emitEvent( event : hxd.Event ) {
-		var oldX = event.relX, oldY = event.relY;
+		var oldX = event.relX, oldY = event.relY, overCandidateCount = 0;
 		var handled = false;
-		var checkOver = false, checkPush = false, cancelFocus = false;
+		var checkOver = false, fillOver = false, checkPush = false, cancelFocus = false, updateCursor = false;
+		overIndex = 0;
 		switch( event.kind ) {
-		case EMove, ECheck: checkOver = true;
+		case EMove, ECheck:
+			checkOver = true;
+			fillOver = true;
 		case EPush: cancelFocus = true; checkPush = true;
 		case ERelease: checkPush = true;
 		case EKeyUp, EKeyDown, ETextInput, EWheel:
@@ -149,28 +175,48 @@ class SceneEvents {
 				}
 
 				if( checkOver ) {
-					if( currentOver != i ) {
-						onOut.cancel = false;
-						if( currentOver != null )
-							currentOver.handleEvent(onOut);
-						if( !onOut.cancel ) {
-							var old = event.propagate;
-							var oldKind = event.kind;
-							event.kind = EOver;
-							event.cancel = false;
-							i.handleEvent(event);
-							if( event.cancel )
-								currentOver = null;
-							else {
-								currentOver = i;
-								checkOver = false;
+					if ( fillOver ) {
+						var idx = overList.indexOf(i);
+						if ( idx == -1 ) {
+							if ( overCandidates.length == overCandidateCount ) {
+								overCandidates[overCandidateCount] = {
+									i : i,
+									s : s,
+									x : event.relX,
+									y : event.relY,
+									z : event.relZ
+								};
+							} else {
+								var info = overCandidates[overCandidateCount];
+								info.i = i;
+								info.s = s;
+								info.x = event.relX;
+								info.y = event.relY;
+								info.z = event.relZ;
 							}
-							event.kind = oldKind;
-							event.cancel = false;
-							event.propagate = old;
+							overCandidateCount++;
+							overList.insert(overIndex++, i);
+							updateCursor = true;
+						} else {
+							if ( idx < overIndex ) {
+								do {
+									overList[idx] = overList[idx + 1];
+									idx++;
+								} while ( idx < overIndex );
+								overList[overIndex] = i;
+								updateCursor = true;
+							} else if ( idx > overIndex ) {
+								do {
+									overList[idx] = overList[idx - 1];
+									idx--;
+								} while ( idx > overIndex );
+								overList[overIndex] = i;
+								updateCursor = true;
+							}
+							overIndex++;
 						}
-					} else
-						checkOver = false;
+						fillOver = event.propagate;
+					}
 				} else {
 					if( checkPush ) {
 						if( event.kind == EPush )
@@ -200,12 +246,33 @@ class SceneEvents {
 		if( cancelFocus && currentFocus != null )
 			blur();
 
-		if( checkOver && currentOver != null ) {
-			onOut.cancel = false;
-			currentOver.handleEvent(onOut);
-			if( !onOut.cancel )
-				currentOver = null;
+		if ( checkOver ) {
+			if ( overIndex < overList.length ) {
+				outIndex = overList.length - 1;
+				do {
+					overList[outIndex].handleEvent(onOut);
+					overList.remove(overList[outIndex]);
+				} while ( --outIndex >= overIndex );
+				updateCursor = true;
+			}
+			if ( overCandidateCount != 0 ) {
+				var i = 0, ev = onOver;
+				do {
+					var info = overCandidates[i++];
+					ev.relX = info.x;
+					ev.relY = info.y;
+					ev.relZ = info.z;
+					if( info.s.isInteractiveVisible(info.i) )
+						info.i.handleEvent(ev);
+					info.i = null;
+					info.s = null;
+				} while ( i < overCandidateCount );
+			}
 		}
+		overIndex = -1;
+
+		if ( updateCursor )
+			selectCursor();
 
 		if( !handled && event != checkPos ) {
 			if( event.kind == EPush )
@@ -264,31 +331,33 @@ class SceneEvents {
 					}
 				case EOver:
 					isOut = false;
+					selectCursor();
 					continue;
 				case EOut:
 					// leave window
 					isOut = true;
-					if( currentOver != null ) {
-						onOut.cancel = false;
-						currentOver.handleEvent(onOut);
-						if( !onOut.cancel )
-							currentOver = null;
+					if ( overList.length > 0 ) {
+						var i = overList.length - 1;
+						while ( i >= 0 ) {
+							onOut.cancel = false;
+							overList[i].handleEvent(onOut);
+							overList.remove(overList[i]);
+							i--;
+						}
+						selectCursor();
 					}
 					continue;
 				default:
 				}
 
 				if( currentDrag != null && (currentDrag.ref == null || currentDrag.ref == e.touchId) ) {
-					e.propagate = false;
+					e.propagate = true;
 					e.cancel = false;
 					currentDrag.f(e);
 					e.relX = ox;
 					e.relY = oy;
-					if( e.cancel || e.propagate ) {
-						e.cancel = false;
-						e.propagate = false;
+					if( !e.propagate )
 						continue;
-					}
 				}
 
 				emitEvent(e);
@@ -322,6 +391,24 @@ class SceneEvents {
 
 	public function getFocus() {
 		return currentFocus;
+	}
+
+	public function updateCursor( i : Interactive ) {
+		if ( overList.indexOf(i) != -1 ) selectCursor();
+	}
+
+	function selectCursor() {
+		var cur : hxd.Cursor = defaultCursor;
+		for ( o in overList ) {
+			if ( o.cursor != null ) {
+				cur = o.cursor;
+				break;
+			}
+		}
+		switch( cur ) {
+		case Callback(f): f();
+		default: hxd.System.setCursor(cur);
+		}
 	}
 
 	function onEvent( e : hxd.Event ) {

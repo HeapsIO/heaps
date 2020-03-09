@@ -27,6 +27,12 @@ class GlslOut {
 		m.set(Mat3x4, "_mat3x4");
 		m.set(VertexID, "gl_VertexID");
 		m.set(InstanceID, "gl_InstanceID");
+		m.set(IVec2, "ivec2");
+		m.set(IVec3, "ivec3");
+		m.set(IVec4, "ivec4");
+		m.set(BVec2, "bvec2");
+		m.set(BVec3, "bvec3");
+		m.set(BVec4, "bvec4");
 		for( g in m )
 			KWDS.set(g, true);
 		m;
@@ -214,6 +220,10 @@ class GlslOut {
 		switch( g ) {
 		case Mat3x4:
 			decl(MAT34);
+			if( args.length == 1 ) {
+				decl("_mat3x4 mat_to_34( mat4 m ) { return _mat3x4(m[0],m[1],m[2]); }");
+				return "mat_to_34";
+			}
 		case DFdx, DFdy, Fwidth:
 			decl("#extension GL_OES_standard_derivatives:enable");
 		case Pack:
@@ -242,6 +252,12 @@ class GlslOut {
 				return "textureCubeLodEXT";
 			default:
 			}
+		case Texel, TexelLod:
+			// if ( isES2 )
+			// 	decl("vec4 _texelFetch(sampler2d tex, ivec2 pos, int lod) ...")
+			// 	return "_texelFetch";
+			// else
+				return "texelFetch";
 		case Mod if( rt == TInt && isES ):
 			decl("int _imod( int x, int y ) { return int(mod(float(x),float(y))); }");
 			return "_imod";
@@ -362,6 +378,14 @@ class GlslOut {
 			add("clamp(");
 			addValue(e, tabs);
 			add(", 0., 1.)");
+		case TCall({ e : TGlobal(g = Texel) }, args):
+			add(getFunName(g,args,e.t));
+			add("(");
+			for( e in args ) {
+				addValue(e, tabs);
+				add(", ");
+			}
+			add("0)");
 		case TCall(v, args):
 			switch( v.e ) {
 			case TGlobal(g):
@@ -470,13 +494,18 @@ class GlslOut {
 			addValue(index, tabs);
 			add("]");
 		case TArrayDecl(el):
-			add("[");
+			switch( e.t ) {
+			case TArray(t,_): addType(t);
+			default: throw "assert";
+			}
+			add("["+el.length+"]");
+			add("(");
 			var first = true;
 			for( e in el ) {
 				if( first ) first = false else add(", ");
 				addValue(e,tabs);
 			}
-			add("]");
+			add(")");
 		case TMeta(_, _, e):
 			addExpr(e, tabs);
 		}
@@ -570,7 +599,7 @@ class GlslOut {
 		outIndex = 0;
 		uniformBuffer = 0;
 		outIndexes = new Map();
-		for( v in s.vars ) 
+		for( v in s.vars )
 			initVar(v);
 		add("\n");
 

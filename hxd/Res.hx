@@ -15,16 +15,11 @@ class Res {
 		return macro hxd.Res.loader = new hxd.res.Loader(hxd.fs.EmbedFileSystem.create(null,$options));
 	}
 
-	#if lime
-	public static macro function initLime() {
-		return macro hxd.Res.loader = new hxd.res.Loader(new hxd.fs.LimeFileSystem());
-	}
-	#end
-
-	public static macro function initLocal() {
+	public static macro function initLocal( ?configuration : String ) {
 		var dir = haxe.macro.Context.definedValue("resourcesPath");
 		if( dir == null ) dir = "res";
-		return macro hxd.Res.loader = new hxd.res.Loader(new hxd.fs.LocalFileSystem($v{dir}));
+		dir = haxe.macro.Context.resolvePath(dir);
+		return macro hxd.Res.loader = new hxd.res.Loader(new hxd.fs.LocalFileSystem($v{dir},$v{configuration}));
 	}
 
 	public static macro function initPak( ?file : String ) {
@@ -34,9 +29,6 @@ class Res {
 			file = "res";
 		return macro {
 			var file = $v{file};
-			#if usesys
-			file = haxe.System.dataPathPrefix + file;
-			#end
 			var pak = new hxd.fmt.pak.FileSystem();
 			pak.loadPak(file + ".pak");
 			var i = 1;

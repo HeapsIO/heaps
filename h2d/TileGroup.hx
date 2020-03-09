@@ -30,11 +30,11 @@ private class TileLayerContent extends h3d.prim.Primitive {
 		return if( buffer == null ) tmp.length >> 4 else buffer.totalVertices() >> 1;
 	}
 
-	public inline function addColor( x : Int, y : Int, color : h3d.Vector, t : Tile ) {
+	public inline function addColor( x : Float, y : Float, color : h3d.Vector, t : Tile ) {
 		add(x, y, color.r, color.g, color.b, color.a, t);
 	}
 
-	public function add( x : Int, y : Int, r : Float, g : Float, b : Float, a : Float, t : Tile ) {
+	public function add( x : Float, y : Float, r : Float, g : Float, b : Float, a : Float, t : Tile ) {
 		var sx = x + t.dx;
 		var sy = y + t.dy;
 		tmp.push(sx);
@@ -79,7 +79,7 @@ private class TileLayerContent extends h3d.prim.Primitive {
 		if( y > yMax ) yMax = y;
 	}
 
-	public function addTransform( x : Int, y : Int, sx : Float, sy : Float, r : Float, c : h3d.Vector, t : Tile ) {
+	public function addTransform( x : Float, y : Float, sx : Float, sy : Float, r : Float, c : h3d.Vector, t : Tile ) {
 
 		var ca = Math.cos(r), sa = Math.sin(r);
 		var hx = t.width, hy = t.height;
@@ -437,19 +437,19 @@ class TileGroup extends Drawable {
 		curColor.w = alpha;
 	}
 
-	public inline function add(x : Int, y : Int, t : h2d.Tile) {
+	public inline function add(x : Float, y : Float, t : h2d.Tile) {
 		content.add(x, y, curColor.x, curColor.y, curColor.z, curColor.w, t);
 	}
 
-	public inline function addColor( x : Int, y : Int, r : Float, g : Float, b : Float, a : Float, t : Tile) {
+	public inline function addColor( x : Float, y : Float, r : Float, g : Float, b : Float, a : Float, t : Tile) {
 		content.add(x, y, r, g, b, a, t);
 	}
 
-	public inline function addAlpha(x : Int, y : Int, a : Float, t : h2d.Tile) {
+	public inline function addAlpha(x : Float, y : Float, a : Float, t : h2d.Tile) {
 		content.add(x, y, curColor.x, curColor.y, curColor.z, a, t);
 	}
 
-	public inline function addTransform(x : Int, y : Int, sx : Float, sy : Float, r : Float, t : Tile) {
+	public inline function addTransform(x : Float, y : Float, sx : Float, sy : Float, r : Float, t : Tile) {
 		content.addTransform(x, y, sx, sy, r, curColor, t);
 	}
 

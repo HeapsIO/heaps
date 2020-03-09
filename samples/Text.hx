@@ -155,7 +155,7 @@ class Text extends hxd.App {
 		flow.y = yoffset;
 		flow.horizontalAlign = FlowAlign.Middle;
 		flow.maxWidth = 150;
-		flow.isVertical = true;
+		flow.layout = Vertical;
 		createText(flow, singleText, Align.Left);
 		createText(flow, multilineText, Align.Right);
 
@@ -167,7 +167,6 @@ class Text extends hxd.App {
 			flow.horizontalAlign = FlowAlign.Left;
 			flow.maxWidth = 360;
 			flow.horizontalSpacing = 8;
-			flow.isVertical = false;
 			var f = createText(flow, "short text", Align.Right);
 			createText(flow, singleText, Align.Left);
 			yoffset += flow.getBounds().height + 10;
@@ -178,7 +177,7 @@ class Text extends hxd.App {
 		flow.y = yoffset;
 		flow.x = 100;
 		flow.horizontalAlign = FlowAlign.Middle;
-		flow.isVertical = true;
+		flow.layout = Vertical;
 		{
 			var f1 = createFlow(flow);
 			createText(f1, multilineText, Align.Left);
@@ -194,7 +193,7 @@ class Text extends hxd.App {
 		flow.y = yoffset;
 		flow.x = 10;
 		flow.horizontalAlign = FlowAlign.Left;
-		flow.isVertical = true;
+		flow.layout = Vertical;
 		{
 			var tf = createText(flow, "BMFont XML format (Littera export)", Align.Left, hxd.Res.littera_xml.toFont());
 			tf.maxWidth = 400;

@@ -7,7 +7,7 @@ import hxd.Math;
 	so the various transforms are inherited to its children.
 **/
 @:allow(h2d.Tools)
-class Object {
+class Object #if (domkit && !domkit_heaps) implements domkit.Model<h2d.Object> #end {
 
 	static var nullDrawable : h2d.Drawable;
 
@@ -75,6 +75,11 @@ class Object {
 		If there is a filter active, tells how the filter is blended with background.
 	**/
 	public var blendMode : BlendMode;
+
+	#if domkit
+	public var dom : domkit.Properties<h2d.Object>;
+	@:noCompletion public inline function getChildren() return children;
+	#end
 
 	var matA : Float;
 	var matB : Float;
@@ -300,7 +305,7 @@ class Object {
 	public function getScene() : Scene {
 		var p = this;
 		while( p.parent != null ) p = p.parent;
-		return Std.instance(p, Scene);
+		return hxd.impl.Api.downcast(p, Scene);
 	}
 
 	function set_visible(b) {
@@ -350,6 +355,9 @@ class Object {
 				s.onHierarchyMoved(true);
 		}
 		onContentChanged();
+		#if domkit
+		if( s.dom != null ) s.dom.onParentChanged();
+		#end
 	}
 
 	inline function onContentChanged() {
@@ -398,6 +406,9 @@ class Object {
 			s.parent = null;
 			if( s.parentContainer != null ) s.setParentContainer(null);
 			s.posChanged = true;
+			#if domkit
+			if( s.dom != null ) s.dom.onParentChanged();
+			#end
 			onContentChanged();
 		}
 	}
@@ -432,7 +443,10 @@ class Object {
 		var needDispose = s == null;
 		if( s == null ) s = new h2d.Scene();
 		@:privateAccess s.drawImplTo(this, t);
-		if( needDispose ) s.dispose();
+		if( needDispose ) {
+			s.dispose();
+			onRemove();
+		}
 	}
 
 	function draw( ctx : RenderContext ) {

@@ -3,14 +3,18 @@ import hxd.Math;
 
 private typedef GraphicsPoint = hxd.poly2tri.Point;
 
-private class GPoint {
+class GPoint {
 	public var x : Float;
 	public var y : Float;
 	public var r : Float;
 	public var g : Float;
 	public var b : Float;
 	public var a : Float;
-	public function new(x, y, r, g, b, a) {
+
+	public function new() {
+	}
+
+	public function load(x, y, r, g, b, a ){
 		this.x = x;
 		this.y = y;
 		this.r = r;
@@ -26,13 +30,18 @@ private class GraphicsContent extends h3d.prim.Primitive {
 	var index : hxd.IndexBuffer;
 
 	var buffers : Array<{ buf : hxd.FloatBuffer, vbuf : h3d.Buffer, idx : hxd.IndexBuffer, ibuf : h3d.Indexes }>;
+	var bufferDirty : Bool;
+	var indexDirty : Bool;
+	var allocPos : h3d.impl.AllocPos;
 
-	public function new() {
+	public function new(allocPos) {
 		buffers = [];
+		this.allocPos = allocPos;
 	}
 
 	public inline function addIndex(i) {
 		index.push(i);
+		indexDirty = true;
 	}
 
 	public inline function add( x : Float, y : Float, u : Float, v : Float, r : Float, g : Float, b : Float, a : Float ) {
@@ -44,6 +53,7 @@ private class GraphicsContent extends h3d.prim.Primitive {
 		tmp.push(g);
 		tmp.push(b);
 		tmp.push(a);
+		bufferDirty = true;
 	}
 
 	public function next() {
@@ -59,12 +69,14 @@ private class GraphicsContent extends h3d.prim.Primitive {
 
 	override function alloc( engine : h3d.Engine ) {
 		if (index.length <= 0) return ;
-		buffer = h3d.Buffer.ofFloats(tmp, 8, [RawFormat]);
+		buffer = h3d.Buffer.ofFloats(tmp, 8, [RawFormat], allocPos);
 		indexes = h3d.Indexes.alloc(index);
 		for( b in buffers ) {
 			if( b.vbuf == null || b.vbuf.isDisposed() ) b.vbuf = h3d.Buffer.ofFloats(b.buf, 8, [RawFormat]);
 			if( b.ibuf == null || b.ibuf.isDisposed() ) b.ibuf = h3d.Indexes.alloc(b.idx);
 		}
+		bufferDirty = false;
+		indexDirty = false;
 	}
 
 	override function render( engine : h3d.Engine ) {
@@ -76,7 +88,20 @@ private class GraphicsContent extends h3d.prim.Primitive {
 	}
 
 	public inline function flush() {
-		if( buffer == null || buffer.isDisposed() ) alloc(h3d.Engine.getCurrent());
+		if( buffer == null || buffer.isDisposed() ) {
+			alloc(h3d.Engine.getCurrent());
+		} else {
+			if ( bufferDirty ) {
+				buffer.dispose();
+				buffer = h3d.Buffer.ofFloats(tmp, 8, [RawFormat]);
+				bufferDirty = false;
+			}
+			if ( indexDirty ) {
+				indexes.dispose();
+				indexes = h3d.Indexes.alloc(index);
+				indexDirty = false;
+			}
+		}
 	}
 
 	override function dispose() {
@@ -130,9 +155,9 @@ class Graphics extends Drawable {
 	public var tile : h2d.Tile;
 	public var bevel = 0.25; //0 = not beveled, 1 = always beveled
 
-	public function new(?parent) {
+	public function new(?parent,?allocPos:h3d.impl.AllocPos) {
 		super(parent);
-		content = new GraphicsContent();
+		content = new GraphicsContent(allocPos);
 		tile = h2d.Tile.fromColor(0xFFFFFF);
 		clear();
 	}
@@ -185,10 +210,14 @@ class Graphics extends Drawable {
 		if( !closed ) {
 			var prevLast = pts[last - 1];
 			if( prevLast == null ) prevLast = p;
-			pts.push(new GPoint(prev.x * 2 - prevLast.x, prev.y * 2 - prevLast.y, 0, 0, 0, 0));
+			var gp = new GPoint();
+			gp.load(prev.x * 2 - prevLast.x, prev.y * 2 - prevLast.y, 0, 0, 0, 0);
+			pts.push(gp);
 			var pNext = pts[1];
 			if( pNext == null ) pNext = p;
-			prev = new GPoint(p.x * 2 - pNext.x, p.y * 2 - pNext.y, 0, 0, 0, 0);
+			var gp = new GPoint();
+			gp.load(p.x * 2 - pNext.x, p.y * 2 - pNext.y, 0, 0, 0, 0);
+			prev = gp;
 		} else if( p != prev ) {
 			count--;
 			last--;
@@ -474,7 +503,7 @@ class Graphics extends Drawable {
 		}
 		flush();
 	}
-	
+
 	public function drawEllipse( cx : Float, cy : Float, radiusX : Float, radiusY : Float, rotationAngle : Float = 0, nsegments = 0 ) {
 		flush();
 		if( nsegments == 0 )
@@ -508,6 +537,32 @@ class Graphics extends Drawable {
 		lineTo(cx, cy);
 		flush();
 	}
+	
+	public function drawRectanglePie( cx : Float, cy : Float, width : Float, height : Float, angleStart:Float, angleLength:Float, nsegments = 0 ) {
+		if(Math.abs(angleLength) >= Math.PI*2) {
+			return drawRect(cx-(width/2), cy-(height/2), width, height);
+		}
+		flush();
+		lineTo(cx, cy);
+		if( nsegments == 0 )
+			nsegments = Math.ceil(Math.abs(Math.max(width, height) * angleLength / 4));
+		if( nsegments < 3 ) nsegments = 3;
+		var angle = angleLength / (nsegments - 1);
+		var square2 = Math.sqrt(2);
+		for( i in 0...nsegments ) {
+			var a = i * angle + angleStart;
+
+			var _width = Math.cos(a) * (width/2+1) * square2;
+			var _height = Math.sin(a) * (height/2+1) * square2;
+
+			_width = Math.abs(_width) >= width/2 ? (Math.cos(a) < 0 ? width/2*-1 : width/2) : _width;
+			_height = Math.abs(_height) >= height/2 ? (Math.sin(a) < 0 ? height/2*-1 : height/2) : _height;
+
+			lineTo(cx + _width, cy + _height);
+		}
+		lineTo(cx, cy);
+		flush();
+	}
 
 	public inline function lineTo( x : Float, y : Float ) {
 		addVertex(x, y, curR, curG, curB, curA, x * ma + y * mc + mx, x * mb + y * md + my);
@@ -520,7 +575,9 @@ class Graphics extends Drawable {
 		if( y > yMax ) yMax = y;
 		if( doFill )
 			content.add(x, y, u, v, r, g, b, a);
-		tmpPoints.push(new GPoint(x, y, lineR, lineG, lineB, lineA));
+		var gp = new GPoint();
+		gp.load(x, y, lineR, lineG, lineB, lineA);
+		tmpPoints.push(gp);
 	}
 
 	override function draw(ctx:RenderContext) {

@@ -1,45 +1,16 @@
 package hxd.fs;
 
+@:keep @:keepSub
 class Convert {
-
-	/**
-		Custom list of converts that should be used in FileSystem.
-		Should be added in hxml `--macro` to ensure proper function.
-		Example of adding a Convert:
-		```haxe
-		static function initCustomConverts() {
-			hxd.fs.Convert.converts.push("path.to.my.Convert");
-			hxd.fs.Convert.converts.push("path.to.my.OtherConvert");
-		}
-		```
-		Adn in hxml:
-		`--macro path.to.my.MacroScript.initCustomConverts()`
-	**/
-	public static var converts:Array<String> = new Array();
-
-	static macro function getConverts() : haxe.macro.Expr {
-		var exprs:Array<haxe.macro.Expr> = new Array();
-		var pos = haxe.macro.Context.currentPos();
-		
-		for ( p in converts ) {
-			var t = haxe.macro.Context.getType(p);
-			var ct = haxe.macro.TypeTools.toComplexType(t);
-			switch (ct) {
-				case TPath(t):
-					var newExpr : haxe.macro.Expr = { expr: ENew(t, []), pos: pos };
-					exprs.push(macro addConvert($newExpr));
-				default:
-			}
-		}
-		return macro $b{exprs}
-	}
 
 	public var sourceExt(default,null) : String;
 	public var destExt(default,null) : String;
 
+	public var params : Dynamic;
+
 	public var srcPath : String;
 	public var dstPath : String;
-	public var srcFilename : String;
+	public var originalFilename : String;
 	public var srcBytes : haxe.io.Bytes;
 
 	public function new( sourceExt, destExt ) {
@@ -51,6 +22,12 @@ class Convert {
 		throw "Not implemented";
 	}
 
+	function getParam( name : String ) {
+		var f = Reflect.field(params, name);
+		if( f == null ) throw "Missing required parameter '"+name+"' for converting "+srcPath+" to "+dstPath;
+		return f;
+	}
+
 	function save( bytes : haxe.io.Bytes ) {
 		hxd.File.saveBytes(dstPath, bytes);
 	}
@@ -58,7 +35,7 @@ class Convert {
 	function command( cmd : String, args : Array<String> ) {
 		#if flash
 		trace("TODO");
-		#elseif sys
+		#elseif (sys || nodejs)
 		var code = Sys.command(cmd, args);
 		if( code != 0 )
 			throw "Command '" + cmd + (args.length == 0 ? "" : " " + args.join(" ")) + "' failed with exit code " + code;
@@ -66,6 +43,23 @@ class Convert {
 		throw "Don't know how to run command on this platform";
 		#end
 	}
+
+	static var converts = new Map<String,Array<Convert>>();
+	public static function register( ?c : Convert, ?arr : Array<Convert> ) : Int {
+		if( c != null ) {
+			var dest = converts.get(c.destExt);
+			if( dest == null ) {
+				dest = [];
+				converts.set(c.destExt, dest);
+			}
+			dest.unshift(c); // latest registered get priority ! (allow override defaults)
+		}
+		if( arr != null )
+			for( c in arr )
+				register(c);
+		return 0;
+	}
+
 
 }
 
@@ -79,12 +73,14 @@ class ConvertFBX2HMD extends Convert {
 		var fbx = try hxd.fmt.fbx.Parser.parse(srcBytes) catch( e : Dynamic ) throw Std.string(e) + " in " + srcPath;
 		var hmdout = new hxd.fmt.fbx.HMDOut(srcPath);
 		hmdout.load(fbx);
-		var isAnim = StringTools.startsWith(srcFilename, "Anim_") || srcFilename.toLowerCase().indexOf("_anim_") > 0;
+		var isAnim = StringTools.startsWith(originalFilename, "Anim_") || originalFilename.toLowerCase().indexOf("_anim_") > 0;
 		var hmd = hmdout.toHMD(null, !isAnim);
 		var out = new haxe.io.BytesOutput();
 		new hxd.fmt.hmd.Writer(out).write(hmd);
 		save(out.getBytes());
 	}
+
+	static var _ = Convert.register(new ConvertFBX2HMD());
 
 }
 
@@ -116,6 +112,8 @@ class ConvertWAV2MP3 extends Convert {
 		command("lame", ["--resample", "44100", "--silent", "-h", srcPath, dstPath]);
 	}
 
+	static var _ = Convert.register(new ConvertWAV2MP3());
+
 }
 
 class ConvertWAV2OGG extends Convert {
@@ -131,6 +129,8 @@ class ConvertWAV2OGG extends Convert {
 		#end
 		command(cmd, ["--resample", "44100", "-Q", srcPath, "-o", dstPath]);
 	}
+
+	static var _ = Convert.register(new ConvertWAV2OGG());
 
 }
 
@@ -169,18 +169,20 @@ class ConvertTGA2PNG extends Convert {
 		#end
 	}
 
+	static var _ = Convert.register(new ConvertTGA2PNG());
+
 }
 
 class ConvertFNT2BFNT extends Convert {
-	
+
 	var emptyTile : h2d.Tile;
-	
+
 	public function new() {
 		// Fake tile create subs before discarding the font.
 		emptyTile = @:privateAccess new h2d.Tile(null, 0, 0, 0, 0, 0, 0);
 		super("fnt", "bfnt");
 	}
-	
+
 	override public function convert()
 	{
 		var font = hxd.fmt.bfnt.FontParser.parse(srcBytes, srcPath, resolveTile);
@@ -188,11 +190,30 @@ class ConvertFNT2BFNT extends Convert {
 		new hxd.fmt.bfnt.Writer(out).write(font);
 		save(out.getBytes());
 	}
-	
+
 	function resolveTile( path : String ) : h2d.Tile {
 		#if sys
 		if (!sys.FileSystem.exists(path)) throw "Could not resolve BitmapFont texture reference at path: " + path;
 		#end
 		return emptyTile;
 	}
+
+	static var _ = Convert.register(new ConvertFNT2BFNT());
+
+}
+
+
+class CompressIMG extends Convert {
+
+	override function convert() {
+		command("CompressonatorCLI", ["-silent","-fd",getParam("format"),srcPath,dstPath]);
+	}
+
+	static var _ = Convert.register([
+		new CompressIMG("png","dds"),
+		new CompressIMG("tga","dds"),
+		new CompressIMG("jpg","dds"),
+		new CompressIMG("jpeg","dds")
+	]);
+
 }

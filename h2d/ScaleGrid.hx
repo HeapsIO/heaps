@@ -6,10 +6,12 @@ class ScaleGrid extends h2d.TileGroup {
 	public var borderWidth(default,set) : Int;
 	public var borderHeight(default,set) : Int;
 
-	public var width(default,set) : Int;
-	public var height(default,set) : Int;
+	public var width(default,set) : Float;
+	public var height(default,set) : Float;
 
 	public var tileBorders(default, set) : Bool;
+
+	var contentTile : h2d.Tile;
 
 	public function new( tile, borderW, borderH, ?parent ) {
 		super(tile,parent);
@@ -20,38 +22,51 @@ class ScaleGrid extends h2d.TileGroup {
 	}
 
 	function set_tileBorders(b) {
+		if( tileBorders == b ) return b;
 		this.tileBorders = b;
 		clear();
 		return b;
 	}
 
 	function set_width(w) {
+		if( width == w ) return w;
 		this.width = w;
 		clear();
 		return w;
 	}
 
 	function set_height(h) {
+		if( height == h ) return h;
 		this.height = h;
 		clear();
 		return h;
 	}
 
 	function set_borderWidth(w) {
+		if( borderWidth == w ) return w;
 		this.borderWidth = w;
 		clear();
 		return w;
 	}
 
 	function set_borderHeight(h) {
+		if( borderHeight == h ) return h;
 		this.borderHeight = h;
 		clear();
 		return h;
 	}
 
 	override function getBoundsRec(relativeTo, out, forSize) {
-		if( content.isEmpty() ) updateContent();
+		checkUpdate();
 		super.getBoundsRec(relativeTo, out, forSize);
+	}
+
+	function checkUpdate() {
+		if( content.isEmpty() || tile != contentTile ) {
+			clear();
+			contentTile = tile;
+			updateContent();
+		}
 	}
 
 	function updateContent() {
@@ -118,10 +133,7 @@ class ScaleGrid extends h2d.TileGroup {
 	}
 
 	override function sync( ctx : RenderContext ) {
-		if( content.isEmpty() ) {
-			content.dispose();
-			updateContent();
-		}
+		checkUpdate();
 		super.sync(ctx);
 	}
 

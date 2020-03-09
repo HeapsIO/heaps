@@ -18,7 +18,7 @@ class CubeCopy extends ScreenFx<CubeCopyShader> {
 					h3d.Matrix.L([0,0,1,0, 0,-1,0,0, -1,0,0,0]),
 	 				h3d.Matrix.L([1,0,0,0, 0,0,1,0, 0,1,0,0]),
 	 				h3d.Matrix.L([1,0,0,0, 0,0,-1,0, 0,-1,0,0]),
-				 	h3d.Matrix.L([1,0,0,0, 0,-1,0,0, 0,1,0,0]),
+				 	h3d.Matrix.L([1,0,0,0, 0,-1,0,0, 0,0,1,0]),
 				 	h3d.Matrix.L([-1,0,0,0, 0,-1,0,0, 0,0,-1,0]) ];
 
 	public function new() {

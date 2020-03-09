@@ -18,7 +18,7 @@ class Outline extends ScreenFx<h3d.shader.Outline2D> {
 	public function apply(ctx : h3d.impl.RenderContext, src : h3d.mat.Texture, ?output : h3d.mat.Texture) {
 		if (output == null)
 			output = src;
-		var tmp = ctx.textures.allocTarget(src.name + "OutlineTmp", src.width, src.height, false, src.format, [Target]);
+		var tmp = ctx.textures.allocTarget(src.name + "OutlineTmp", src.width, src.height, false, src.format);
 		shader.color.setColor(color);
 		shader.size.set(size / src.width, size / src.height);
 		shader.samples = Std.int(Math.max(quality * 100, 1));

@@ -6,8 +6,9 @@ class SoundGroup {
 	public var volume               : Float;
 	public var maxAudible           : Int;
 	public var mono					: Bool;
-	
-	var numAudible : Int; // only used when maxAudible >= 0
+
+	var numAudible : Int;
+	var lastUpdate : Float;
 
 	public function new(name : String) {
 		this.name  = name;

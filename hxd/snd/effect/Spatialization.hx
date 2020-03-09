@@ -25,17 +25,17 @@ class Spatialization extends hxd.snd.Effect {
 		var dist = Manager.get().listener.position.distance(position);
 		if (maxDistance != null) dist -= maxDistance;
 		else dist -= referenceDistance;
-		var gain = 1 - dist / fadeDistance;
-		if (gain > 1) gain = 1;
-		if (gain < 0) gain = 0;
-		return gain;
+		var volume = 1 - dist / fadeDistance;
+		if (volume > 1) volume = 1;
+		if (volume < 0) volume = 0;
+		return volume;
 	}
 
-	override function applyAudibleGainModifier(v : Float) {
+	override function applyAudibleVolumeModifier(v : Float) {
 		var dist = Manager.get().listener.position.distance(position);
 		dist = Math.max(dist, referenceDistance);
 		if (maxDistance != null) dist = Math.min(dist, maxDistance);
-		var gain = referenceDistance/(referenceDistance + rollOffFactor * (dist - referenceDistance));
-		return v * gain;
+		var volume = referenceDistance/(referenceDistance + rollOffFactor * (dist - referenceDistance));
+		return v * volume;
 	}
 }

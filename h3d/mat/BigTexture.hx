@@ -166,6 +166,10 @@ class BigTexture {
 	public function add( t : hxd.res.Image ) {
 		var tsize = t.getSize();
 		var q = allocPos(tsize.width,tsize.height);
+		#if !hl
+		if( t.getFormat() == Dds )
+			throw "BigTexture does not support DDS on this platform for "+t.entry.path;
+		#end
 		if( q == null )
 			return null;
 		var e = new BigTextureElement(this, q, q.x / size, q.y / size, tsize.width / size, tsize.height / size);
@@ -182,11 +186,11 @@ class BigTexture {
 	}
 
 	function uploadPixels( pixels : hxd.Pixels, x : Int, y : Int, alphaChannel ) {
-		var bpp = allPixels.bytesPerPixel;
+		var bpp = @:privateAccess allPixels.bytesPerPixel;
 		if( alphaChannel ) {
 			var alphaPos = hxd.Pixels.getChannelOffset(allPixels.format, A);
 			var srcRedPos = hxd.Pixels.getChannelOffset(pixels.format, R);
-			var srcBpp = pixels.bytesPerPixel;
+			var srcBpp = @:privateAccess pixels.bytesPerPixel;
 			for( dy in 0...pixels.height ) {
 				var w = (x + (y + dy) * size) * bpp + alphaPos;
 				var r = dy * pixels.width * srcBpp + srcRedPos;

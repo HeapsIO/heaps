@@ -78,6 +78,7 @@ class System {
 				flash.ui.Mouse.registerCursor(cursor.name, cursor.alloc);
 			}
 			cursor.name;
+		case Callback(_): throw "assert";
 		}
 		if( c == Hide ) flash.ui.Mouse.hide() else flash.ui.Mouse.show();
 	}

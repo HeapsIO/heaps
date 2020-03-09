@@ -4,7 +4,7 @@ class SampleApp extends hxd.App {
 
 	override function init() {
 		fui = new h2d.Flow(s2d);
-		fui.isVertical = true;
+		fui.layout = Vertical;
 		fui.verticalSpacing = 5;
 		fui.padding = 10;
 	}
@@ -101,7 +101,7 @@ class SampleApp extends hxd.App {
 		return i;
 	}
 
-	function addChoice( text, choices, callb, value = 0 ) {
+	function addChoice( text, choices, callb : Int -> Void, value = 0 ) {
 		var font = getFont();
 		var i = new h2d.Interactive(110, font.lineHeight, fui);
 		i.backgroundColor = 0xFF808080;

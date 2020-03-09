@@ -1,75 +1,169 @@
 import hxd.Math;
 
-class Lights extends hxd.App {
+class Lights extends SampleApp {
 
-	var time : Float = 0.;
-	var lights : Array<h3d.scene.PointLight>;
-	var dir : h3d.scene.DirLight;
+	var lights : Array<h3d.scene.pbr.Light>;
+	var movingObjects : Array<{ m : h3d.scene.Mesh, cx : Float, cy : Float, pos : Float, ray : Float, speed : Float }> = [];
+	var curLight : Int = 0;
+	var bitmap : h2d.Bitmap;
+	var inf : h2d.Text;
+	var dynCullingEnable = true;
 
-	override function init() {
-		var prim = new h3d.prim.Cube();
-		prim.translate( -0.5, -0.5, -0.5);
-		prim.addNormals();
-		for( i in 0...100 ) {
-			var b = new h3d.scene.Mesh(prim, s3d);
-			b.x = Math.srand() * 3;
-			b.y = Math.srand() * 3;
-			b.z = Math.srand() * 2 - 0.5;
-			b.scaleX = b.scaleY = Math.random() * 0.5 + 0.2;
-			var k = 1.;
-			b.material.color.setColor(0xFFFFFF);
-			b.material.shadows = false;
+	function addCullingCollider() {
+		dynCullingEnable = true;
+		for( o in s3d ) {
+			if( o.cullingCollider != null ) continue;
+			var absPos = o.getAbsPos();
+			o.cullingCollider = new h3d.col.Sphere(absPos.tx, absPos.ty, absPos.tz, hxd.Math.max(o.scaleZ, hxd.Math.max(o.scaleX, o.scaleY)));
 		}
-
-		var sphere = new h3d.prim.GeoSphere(4);
-
-		lights = [];
-		var colors = [0xFFFFFF, 0xFF0000, 0x00FF00, 0x0000FF, 0xFF00FF, 0xFFFF00, 0x00FFFF];
-		for( c in colors ) {
-			for( i in 0...3 ) {
-				var l = new h3d.scene.PointLight(s3d);
-				l.x = Math.srand() * 3;
-				l.y = Math.srand() * 3;
-				l.z = Math.srand() * 2 - 0.5;
-				l.color.setColor(c);
-				l.params.y = 3;
-				lights.push(l);
-				var p = new h3d.scene.Mesh(sphere, l);
-				p.scale(0.03);
-				p.material.shadows = false;
-				p.material.mainPass.enableLights = false;
-				p.material.color.setColor(0xFF000000 | c);
-			}
-		}
-		s3d.camera.zNear = 2;
-
-
-		dir = new h3d.scene.DirLight(new h3d.Vector(0.2, 0.3, -1), s3d);
-		dir.color.set(0.1, 0.1, 0.1);
-
-		s3d.lightSystem.ambientLight.set(0, 0, 0);
-
-		s3d.camera.pos.set(5, 1, 3);
-		new h3d.scene.CameraController(s3d).loadFromCamera();
 	}
 
-	override function update( dt : Float ) {
-		time += 0.12 * dt;
+	function removeCullingCollider() {
+		dynCullingEnable = false;
+		for( o in s3d ) {
+			o.cullingCollider = null;
+		}
+	}
 
-		var a = [0.4, 0.2, 0.5, 0.8, 1.2, 0.5, 0.7];
-		for( i in 0...lights.length ) {
-			var l = lights[i];
-			var t = time * 5 + i;
-			l.x = Math.cos(t * a[i%a.length]) * 3;
-			l.y = Math.sin(t * a[(i + 3) % a.length]) * 3;
-			l.z = Math.cos(t * a[(i + 4) % a.length]) * Math.sin(t * a[(i + 6) % a.length]) * 2 - 0.5;
+	override function init() {
+		super.init();
+
+		s3d.camera.pos.set(100, 20, 80);
+		new h3d.scene.CameraController(s3d).loadFromCamera();
+
+		var prim = new h3d.prim.Grid(100,100,1,1);
+		prim.addNormals();
+		prim.addUVs();
+
+		var floor = new h3d.scene.Mesh(prim, s3d);
+		floor.material.castShadows = false;
+		floor.x = -50;
+		floor.y = -50;
+
+		var box = new h3d.prim.Cube(1,1,1,true);
+		box.unindex();
+		box.addNormals();
+		for( i in 0...50 ) {
+			var m = new h3d.scene.Mesh(box, s3d);
+			m.material.color.set(Math.random(), Math.random(), Math.random());
+			m.material.color.normalize();
+			m.scale(1 + Math.random() * 10);
+			m.z = m.scaleX * 0.5;
+			m.setRotation(0,0,Math.random() * Math.PI * 2);
+			do {
+				m.x = Std.random(80) - 40;
+				m.y = Std.random(80) - 40;
+			} while( m.x * m.x + m.y * m.y < 25 + m.scaleX * m.scaleX );
+			m.material.getPass("shadow").isStatic = true;
+
+			var absPos = m.getAbsPos();
+			m.cullingCollider = new h3d.col.Sphere(absPos.tx, absPos.ty, absPos.tz, hxd.Math.max(m.scaleZ, hxd.Math.max(m.scaleX, m.scaleY)));
 		}
 
-		dir.setDirection(new h3d.Vector(Math.cos(time * 0.3) * 0.2, Math.sin(time * 0.35) * 0.3 + 0.3, -1));
+		var sp = new h3d.prim.Sphere(1,16,16);
+		sp.addNormals();
+		for( i in 0...20 ) {
+			var m = new h3d.scene.Mesh(sp, s3d);
+			m.material.color.set(Math.random(), Math.random(), Math.random());
+			m.material.color.normalize();
+			m.scale(0.5 + Math.random() * 4);
+			m.z = 2 + Math.random() * 5;
+			var cx = (Math.random() - 0.5) * 20;
+			var cy = (Math.random() - 0.5) * 20;
 
+			var absPos = m.getAbsPos();
+			m.cullingCollider = new h3d.col.Sphere(absPos.tx, absPos.ty, absPos.tz, hxd.Math.max(m.scaleZ, hxd.Math.max(m.scaleX, m.scaleY)));
+
+			movingObjects.push({ m : m, pos : Math.random() * Math.PI * 2, cx : cx, cy : cy, ray : 8 + Math.random() * 50, speed : (0.5 + Math.random()) * 0.2 });
+		}
+
+		var pt = new h3d.scene.pbr.PointLight(s3d);
+		pt.setPosition(0,0,15);
+		pt.range = 40;
+		pt.color.scale3(20);
+
+		var sp = new h3d.scene.pbr.SpotLight(s3d);
+		sp.setPosition(-30,-30,30);
+		sp.setDirection(new h3d.Vector(1,2,-5));
+		sp.range = 70;
+		sp.maxRange = 70;
+		sp.angle = 70;
+		sp.color.scale3(10);
+
+		lights = [
+			new h3d.scene.pbr.DirLight(new h3d.Vector(1,2,-5), s3d),
+			pt,
+			sp,
+		];
+
+		for( l in lights )
+			l.shadows.mode = Static;
+		s3d.computeStatic();
+		for( l in lights )
+			l.shadows.mode = Dynamic;
+
+		for( l in lights )
+			l.visible = false;
+		lights[curLight].visible = true;
+
+		addChoice("Style",["Directional","Point","Spot", "All"],function(index) {
+			for( l in lights )
+				l.visible = false;
+			curLight = index;
+			if( curLight == lights.length ) {
+				for( l in lights )
+					l.visible = true;
+			} else
+				lights[curLight].visible = true;
+		},curLight);
+
+		var modes = ([Dynamic,Static,Mixed,None] : Array<h3d.pass.Shadows.RenderMode>);
+		addChoice("Shadows",[for( m in modes ) m.getName()],function(sh) {
+			for( l in lights )
+				l.shadows.mode = modes[sh];
+		});
+
+		var baseLS = s3d.lightSystem;
+		addCheck("DynCulling", function() return dynCullingEnable, function(b) {
+			dynCullingEnable = !dynCullingEnable;
+			dynCullingEnable ? addCullingCollider() : removeCullingCollider();
+		});
+
+		bitmap = new h2d.Bitmap(null, s2d);
+		bitmap.scale(192 / 1024);
+		bitmap.filter = h2d.filter.ColorMatrix.grayed();
+
+		inf = addText();
+	}
+
+	override function update(dt:Float) {
+		for( m in movingObjects ) {
+			m.pos += m.speed / m.ray;
+			m.m.x = m.cx + Math.cos(m.pos) * m.ray;
+			m.m.y = m.cy + Math.sin(m.pos) * m.ray;
+
+			var cc = Std.instance(m.m.cullingCollider, h3d.col.Sphere);
+			if( cc != null ) {
+				var absPos = m.m.getAbsPos();
+				cc.x = absPos.tx;
+				cc.y = absPos.ty;
+				cc.z = absPos.tz;
+				cc.r = hxd.Math.max(m.m.scaleZ, hxd.Math.max(m.m.scaleX, m.m.scaleY));
+			}
+		}
+		var light = lights[curLight];
+		var tex = light == null ? null : light.shadows.getShadowTex();
+		bitmap.tile = tex == null || tex.flags.has(Cube) ? null : h2d.Tile.fromTexture(tex);
+		bitmap.x = s2d.width - (bitmap.tile == null ? 0 : bitmap.tile.width) * bitmap.scaleX;
+		inf.text = "Shadows Draw calls: "+ s3d.lightSystem.drawPasses;
+
+		for( o in s3d ) {
+			o.culled = false;
+		}
 	}
 
 	static function main() {
+		h3d.mat.MaterialSetup.current = new h3d.mat.PbrMaterialSetup();
 		new Lights();
 	}
 

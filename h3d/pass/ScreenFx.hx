@@ -15,7 +15,7 @@ class ScreenFx<T:h3d.shader.ScreenShader> {
 		this.shader = shader;
 		shaders = new hxsl.ShaderList(shader);
 		manager = new ShaderManager(output);
-		pass = new h3d.mat.Pass(Std.string(this), new hxsl.ShaderList(shader));
+		pass = new h3d.mat.Pass("screenfx", new hxsl.ShaderList(shader));
 		pass.culling = None;
 		pass.depth(false, Always);
 	}
@@ -55,7 +55,7 @@ class ScreenFx<T:h3d.shader.ScreenShader> {
 
 	public function getShader<T:hxsl.Shader>(cl:Class<T>) : T {
 		for( s in shaders ) {
-			var si = Std.instance(s, cl);
+			var si = hxd.impl.Api.downcast(s, cl);
 			if( si != null ) return si;
 		}
 		return null;
@@ -64,8 +64,8 @@ class ScreenFx<T:h3d.shader.ScreenShader> {
 	public function render() {
 		if( primitive == null )
 			primitive = h3d.prim.Plane2D.get();
-		var rts = manager.compileShaders(shaders);
 		shader.flipY = engine.driver.hasFeature(BottomLeftCoords) && engine.getCurrentTarget() != null ? -1 : 1;
+		var rts = manager.compileShaders(shaders);
 		engine.selectMaterial(pass);
 		engine.selectShader(rts);
 		if( buffers == null )

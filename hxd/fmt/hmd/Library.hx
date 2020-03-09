@@ -1,10 +1,6 @@
 package hxd.fmt.hmd;
 import hxd.fmt.hmd.Data;
 
-typedef HideData = {
-	var animations : haxe.DynamicAccess<{ events : Array<{ frame : Int, data : String }> }>;
-}
-
 private class FormatMap {
 	public var size : Int;
 	public var offset : Int;
@@ -33,7 +29,6 @@ class Library {
 	var cachedAnimations : Map<String, h3d.anim.Animation>;
 	var cachedSkin : Map<String, h3d.anim.Skin>;
 	var tmp = haxe.io.Bytes.alloc(4);
-	public var hideData : HideData;
 
 	public function new(res,  header) {
 		this.resource = res;
@@ -259,6 +254,7 @@ class Library {
 		var p = cachedPrimitives[id];
 		if( p != null ) return p;
 		p = new h3d.prim.HMDModel(header.geometries[id], header.dataPosition, this);
+		p.incref(); // Prevent from auto-disposing
 		cachedPrimitives[id] = p;
 		return p;
 	}
@@ -388,27 +384,101 @@ class Library {
 				throw 'Animation $name not found !';
 		}
 
-		var l = makeAnimation(a);
-		l.resPath = resource.entry.path;
+		var l = header.version <= 2 ? makeLinearAnimation(a) : makeAnimation(a);
+		l.speed = a.speed;
+		l.loop = a.loop;
+		if( a.events != null ) l.setEvents(a.events);
+		l.resourcePath = resource.entry.path;
 		cachedAnimations.set(a.name, l);
 		if( name == null ) cachedAnimations.set("", l);
 		return l;
 	}
 
-
 	function makeAnimation( a : Animation ) {
+		var b = new h3d.anim.BufferAnimation(a.name, a.frames, a.sampling);
 
-		var l = new h3d.anim.LinearAnimation(a.name, a.frames, a.sampling);
-		l.speed = a.speed;
-		l.loop = a.loop;
-		if( a.events != null ) l.setEvents(a.events);
-
-		if( hideData != null ) {
-			var name = resource.entry.name.split(".")[0];
-			if( StringTools.startsWith(name,"Anim_") ) name = name.substr(5);
-			if(hideData.animations.exists(name))
-				l.setEvents(hideData.animations.get(name).events);
+		var stride = 0;
+		var singleFrames = [];
+		var otherFrames = [];
+		for( o in a.objects ) {
+			var c = b.addObject(o.name, 0);
+			var sm = 1;
+			if( o.flags.has(SingleFrame) ) {
+				c.layout.set(SingleFrame);
+				singleFrames.push(c);
+				sm = 0;
+			} else
+				otherFrames.push(c);
+			if( o.flags.has(HasPosition) ) {
+				c.layout.set(Position);
+				stride += 3 * sm;
+			}
+			if( o.flags.has(HasRotation) ) {
+				c.layout.set(Rotation);
+				stride += 3 * sm;
+			}
+			if( o.flags.has(HasScale) ) {
+				c.layout.set(Scale);
+				stride += 3 * sm;
+			}
+			if( o.flags.has(HasUV) ) {
+				c.layout.set(UV);
+				stride += 2 * sm;
+			}
+			if( o.flags.has(HasAlpha) ) {
+				c.layout.set(Alpha);
+				stride += sm;
+			}
+			if( o.flags.has(HasProps) ) {
+				for( i in 0...o.props.length ) {
+					var c = c;
+					if( i > 0 ) {
+						c = b.addObject(o.name, 0);
+						if( sm == 0 ) singleFrames.push(c) else otherFrames.push(c);
+					}
+					c.layout.set(Property);
+					c.propName = o.props[i];
+					stride += sm;
+				}
+			}
 		}
+
+		// assign data offsets
+		var pos = 0;
+		for( b in singleFrames ) {
+			b.dataOffset = pos;
+			pos += b.getStride();
+		}
+		var singleStride = pos;
+		for( b in otherFrames ) {
+			b.dataOffset = pos;
+			pos += b.getStride();
+		}
+
+		var entry = resource.entry;
+		entry.open();
+		entry.skip(header.dataPosition + a.dataPosition);
+		var count = stride * a.frames + singleStride;
+		var data = haxe.io.Bytes.alloc(count * 4);
+		entry.read(data,0,data.length);
+		entry.close();
+
+		#if hl
+		b.setData(data, stride);
+		#elseif js
+		b.setData(new hxd.impl.TypedArray.Float32Array(@:privateAccess data.b.buffer), stride);
+		#else
+		var v = new hxd.impl.TypedArray.Float32Array(count);
+		for( i in 0...count )
+			v[i] = data.getFloat(i << 2);
+		b.setData(v, stride);
+		#end
+
+		return b;
+	}
+
+	function makeLinearAnimation( a : Animation ) {
+		var l = new h3d.anim.LinearAnimation(a.name, a.frames, a.sampling);
 
 		var entry = resource.entry;
 		entry.open();
@@ -418,7 +488,7 @@ class Library {
 			var pos = o.flags.has(HasPosition), rot = o.flags.has(HasRotation), scale = o.flags.has(HasScale);
 			if( pos || rot || scale ) {
 				var frameCount = a.frames;
-				if( o.flags.has(SinglePosition) )
+				if( o.flags.has(SingleFrame) )
 					frameCount = 1;
 				var fl = new haxe.ds.Vector<h3d.anim.LinearAnimation.LinearFrame>(frameCount);
 				var size = ((pos ? 3 : 0) + (rot ? 3 : 0) + (scale?3:0)) * 4 * frameCount;
@@ -459,7 +529,7 @@ class Library {
 					}
 					fl[i] = f;
 				}
-				l.addCurve(o.name, fl, rot, scale);
+				l.addCurve(o.name, fl, true, rot, scale);
 			}
 			if( o.flags.has(HasUV) ) {
 				var fl = new haxe.ds.Vector(a.frames*2);

@@ -260,10 +260,10 @@ class FontParser {
 		font.tile = tile;
 
 		if ( font.baseLine == 0 ) {
-			var padding = 0;
+			var padding : Float = 0;
 			var space = glyphs.get(" ".code);
 			if( space != null )
-				padding = (space.t.height >> 1);
+				padding = (space.t.height * .5);
 
 			var a = glyphs.get("A".code);
 			if( a == null )
@@ -279,6 +279,8 @@ class FontParser {
 		var fallback = glyphs.get(0xFFFD); // <?>
 		if( fallback == null )
 			fallback = glyphs.get(0x25A1); // square
+		if( fallback == null )
+			fallback = glyphs.get("?".code);
 		if( fallback != null )
 			font.defaultChar = fallback;
 

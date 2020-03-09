@@ -247,7 +247,7 @@ class LogDriver extends Driver {
 		return inf;
 	}
 
-	override function getShaderInputNames() : Array<String> {
+	override function getShaderInputNames() {
 		return d.getShaderInputNames();
 	}
 

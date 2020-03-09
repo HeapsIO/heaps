@@ -1,4 +1,5 @@
 import h3d.scene.*;
+import h3d.scene.fwd.*;
 
 class Skin extends SampleApp {
 

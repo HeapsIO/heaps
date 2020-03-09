@@ -46,6 +46,8 @@ class Dropdown extends Flow {
 	public var selectedItem(default, set) : Int = -1;
 	public var highlightedItem(default, null) : Int = -1;
 
+	public var rollUp : Bool = false;
+
 	public function new(?parent) {
 		super(parent);
 
@@ -53,6 +55,7 @@ class Dropdown extends Flow {
 		minHeight = maxHeight = 21;
 		paddingLeft = 5;
 		verticalAlign = Middle;
+		reverse = true;
 
 		tileOverItem = h2d.Tile.fromColor(0x303030, 1, 1);
 		tileArrow = tileArrowOpen = h2d.Tile.fromColor(0x404040, maxHeight - 2, maxHeight - 2);
@@ -61,7 +64,7 @@ class Dropdown extends Flow {
 		borderHeight = borderWidth = 1;
 
 		dropdownList = new Flow(this);
-		dropdownList.isVertical = true;
+		dropdownList.layout = Vertical;
 		dropdownList.borderHeight = dropdownList.borderWidth = 1;
 		dropdownList.paddingLeft = paddingLeft;
 		dropdownList.visible = false;
@@ -87,7 +90,7 @@ class Dropdown extends Flow {
 				close();
 			} else if( canEdit ) {
 				var bds = this.getBounds();
-				dropdownList.y = bds.yMax;
+				dropdownList.y = rollUp ? bds.yMin - dropdownList.getSize().height : bds.yMax;
 				dropdownList.x = bds.xMin;
 				dropdownList.minWidth = this.minWidth;
 				open();

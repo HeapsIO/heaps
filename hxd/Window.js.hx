@@ -12,6 +12,7 @@ class Window {
 	public var mouseLock(get, set) : Bool;
 	public var vsync(get, set) : Bool;
 	public var isFocused(get, never) : Bool;
+	public var propagateKeyEvents : Bool;
 
 	var curMouseX : Float = 0.;
 	var curMouseY : Float = 0.;
@@ -24,23 +25,38 @@ class Window {
 	var curW : Int;
 	var curH : Int;
 
-	var focused = true;
+	var focused : Bool;
+
+	/**
+		When enabled, the browser zoom does not affect the canvas.
+		(default : true)
+	**/
+	public var useScreenPixels : Bool = true;
 
 	public function new( ?canvas : js.html.CanvasElement, ?globalEvents ) : Void {
+		var customCanvas = canvas != null;
 		eventTargets = new List();
 		resizeEvents = new List();
 
-		element = canvas == null || globalEvents ? js.Browser.window : canvas;
 		if( canvas == null ) {
 			canvas = cast js.Browser.document.getElementById("webgl");
 			if( canvas == null ) throw "Missing canvas #webgl";
-			if( canvas.getAttribute("globalEvents") == "0" )
-				element = canvas;
+			if( canvas.getAttribute("globalEvents") == "1" )
+				globalEvents = true;
 		}
+
 		this.canvas = canvas;
+		this.propagateKeyEvents = globalEvents;
+		focused = globalEvents;
+		element = globalEvents ? js.Browser.window : canvas;
 		canvasPos = canvas.getBoundingClientRect();
+		// add mousemove on window (track mouse even when outside of component)
+		// unless we're having a custom canvas (prevent leaking the listener)
+		if( customCanvas )
+			canvas.addEventListener("mousemove", onMouseMove);
+		else
+			js.Browser.window.addEventListener("mousemove", onMouseMove);
 		element.addEventListener("mousedown", onMouseDown);
-		element.addEventListener("mousemove", onMouseMove);
 		element.addEventListener("mouseup", onMouseUp);
 		element.addEventListener("wheel", onMouseWheel);
 		element.addEventListener("touchstart", onTouchStart);
@@ -51,25 +67,28 @@ class Window {
 		element.addEventListener("keypress", onKeyPress);
 		element.addEventListener("blur", onFocus.bind(false));
 		element.addEventListener("focus", onFocus.bind(true));
-		if( element == canvas ) {
-			canvas.setAttribute("tabindex","1"); // allow focus
-			canvas.style.outline = 'none';
-		} else {
+		canvas.oncontextmenu = function(e){
+			e.stopPropagation();
+			e.preventDefault();
+			return false;
+		};
+		if( globalEvents ) {
+			// make first mousedown on canvas trigger event
 			canvas.addEventListener("mousedown", function(e) {
 				onMouseDown(e);
 				e.stopPropagation();
 				e.preventDefault();
 			});
-			canvas.oncontextmenu = function(e){
-				e.stopPropagation();
-				e.preventDefault();
-				return false;
-			};
 			element.addEventListener("contextmenu",function(e) {
 				e.stopPropagation();
 				e.preventDefault();
 				return false;
 			});
+		} else {
+			// allow focus
+			if( canvas.getAttribute("tabindex") == null )
+				canvas.setAttribute("tabindex","1");
+			canvas.style.outline = 'none';
 		}
 		curW = this.width;
 		curH = this.height;
@@ -133,6 +152,14 @@ class Window {
 	}
 
 	public function setFullScreen( v : Bool ) : Void {
+		var doc = js.Browser.document;
+		var elt : Dynamic = doc.documentElement;
+		if( (doc.fullscreenElement == elt) == v )
+			return;
+		if( v )
+			elt.requestFullscreen();
+		else
+			doc.exitFullscreen();
 	}
 
 	public function setCurrent() {
@@ -145,20 +172,24 @@ class Window {
 		return inst;
 	}
 
+	function getPixelRatio() {
+		return useScreenPixels ? js.Browser.window.devicePixelRatio : 1;
+	}
+
 	function get_width() {
-		return Math.round(canvasPos.width * js.Browser.window.devicePixelRatio);
+		return Math.round(canvasPos.width * getPixelRatio());
 	}
 
 	function get_height() {
-		return Math.round(canvasPos.height * js.Browser.window.devicePixelRatio);
+		return Math.round(canvasPos.height * getPixelRatio());
 	}
 
 	function get_mouseX() {
-		return Math.round((curMouseX - canvasPos.left) * js.Browser.window.devicePixelRatio);
+		return Math.round((curMouseX - canvasPos.left) * getPixelRatio());
 	}
 
 	function get_mouseY() {
-		return Math.round((curMouseY - canvasPos.top) * js.Browser.window.devicePixelRatio);
+		return Math.round((curMouseY - canvasPos.top) * getPixelRatio());
 	}
 
 	function get_mouseLock() : Bool {
@@ -218,8 +249,8 @@ class Window {
 		e.preventDefault();
 		var x, y, ev;
 		for (touch in e.changedTouches) {
-			x = Math.round((touch.clientX - canvasPos.left) * js.Browser.window.devicePixelRatio);
-			y = Math.round((touch.clientY - canvasPos.top) * js.Browser.window.devicePixelRatio);
+			x = Math.round((touch.clientX - canvasPos.left) * getPixelRatio());
+			y = Math.round((touch.clientY - canvasPos.top) * getPixelRatio());
 			ev = new Event(EPush, x, y);
 			ev.touchId = touch.identifier;
 			event(ev);
@@ -230,8 +261,8 @@ class Window {
 		e.preventDefault();
 		var x, y, ev;
 		for (touch in e.changedTouches) {
-			x = Math.round((touch.clientX - canvasPos.left) * js.Browser.window.devicePixelRatio);
-			y = Math.round((touch.clientY - canvasPos.top) * js.Browser.window.devicePixelRatio);
+			x = Math.round((touch.clientX - canvasPos.left) * getPixelRatio());
+			y = Math.round((touch.clientY - canvasPos.top) * getPixelRatio());
 			ev = new Event(EMove, x, y);
 			ev.touchId = touch.identifier;
 			event(ev);
@@ -242,8 +273,8 @@ class Window {
 		e.preventDefault();
 		var x, y, ev;
 		for (touch in e.changedTouches) {
-			x = Math.round((touch.clientX - canvasPos.left) * js.Browser.window.devicePixelRatio);
-			y = Math.round((touch.clientY - canvasPos.top) * js.Browser.window.devicePixelRatio);
+			x = Math.round((touch.clientX - canvasPos.left) * getPixelRatio());
+			y = Math.round((touch.clientY - canvasPos.top) * getPixelRatio());
 			ev = new Event(ERelease, x, y);
 			ev.touchId = touch.identifier;
 			event(ev);
@@ -254,18 +285,39 @@ class Window {
 		var ev = new Event(EKeyUp, mouseX, mouseY);
 		ev.keyCode = e.keyCode;
 		event(ev);
+		if( !propagateKeyEvents ) {
+			e.preventDefault();
+			e.stopPropagation();
+		}
 	}
 
 	function onKeyDown(e:js.html.KeyboardEvent) {
 		var ev = new Event(EKeyDown, mouseX, mouseY);
 		ev.keyCode = e.keyCode;
 		event(ev);
+		if( !propagateKeyEvents ) {
+			switch ev.keyCode {
+				case 37, 38, 39, 40, // Arrows
+					33, 34, // Page up/down
+					35, 36, // Home/end
+					8, // Backspace
+					16, // Shift
+					17 : // Ctrl
+						e.preventDefault();
+				case _ :
+			}
+			e.stopPropagation();
+		}
 	}
 
 	function onKeyPress(e:js.html.KeyboardEvent) {
 		var ev = new Event(ETextInput, mouseX, mouseY);
 		ev.charCode = e.charCode;
 		event(ev);
+		if( !propagateKeyEvents ) {
+			e.preventDefault();
+			e.stopPropagation();
+		}
 	}
 
 	function onFocus(b: Bool) {

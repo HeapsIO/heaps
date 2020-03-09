@@ -18,18 +18,6 @@ typedef VertexBuffer = { b : js.html.webgl.Buffer, stride : Int #if multidriver,
 typedef Texture = { t : js.html.webgl.Texture, width : Int, height : Int, internalFmt : Int, pixelFmt : Int, bits : Int, bind : Int #if multidriver, driver : Driver #end };
 typedef DepthBuffer = { r : js.html.webgl.Renderbuffer #if multidriver, driver : Driver #end };
 typedef Query = {};
-#elseif nme
-typedef IndexBuffer = nme.gl.GLBuffer;
-typedef VertexBuffer = { b : nme.gl.GLBuffer, stride : Int };
-typedef Texture = { t : nme.gl.GLTexture, width : Int, height : Int, internalFmt : Int, pixelFmt : Int, bits : Int, bind : Int };
-typedef DepthBuffer = { r : nme.gl.Renderbuffer };
-typedef Query = {};
-#elseif lime
-typedef IndexBuffer = lime.graphics.opengl.GLBuffer;
-typedef VertexBuffer = { b : lime.graphics.opengl.GLBuffer, stride : Int };
-typedef Texture = { t : lime.graphics.opengl.GLTexture, width : Int, height : Int, internalFmt : Int, pixelFmt : Int, bits : Int, bind : Int };
-typedef DepthBuffer = { r : lime.graphics.opengl.GLRenderbuffer };
-typedef Query = {};
 #elseif hlsdl
 typedef IndexBuffer = { b : sdl.GL.Buffer, is32 : Bool };
 typedef VertexBuffer = { b : sdl.GL.Buffer, stride : Int };
@@ -125,6 +113,26 @@ enum RenderFlag {
 	CameraHandness;
 }
 
+class InputNames {
+	public var id(default,null) : Int;
+	public var names(default,null) : Array<String>;
+	function new(names) {
+		this.id = UID++;
+		this.names = names;
+	}
+	static var UID = 0;
+	static var CACHE = new Map<String,InputNames>();
+	public static function get( names : Array<String> ) {
+		var key = names.join("|");
+		var i = CACHE.get(key);
+		if( i == null ) {
+			i = new InputNames(names.copy());
+			CACHE.set(key,i);
+		}
+		return i;
+	}
+}
+
 class Driver {
 
 	public var logEnable : Bool;
@@ -198,7 +206,7 @@ class Driver {
 	public function uploadShaderBuffers( buffers : h3d.shader.Buffers, which : h3d.shader.Buffers.BufferKind ) {
 	}
 
-	public function getShaderInputNames() : Array<String> {
+	public function getShaderInputNames() : InputNames {
 		return null;
 	}
 

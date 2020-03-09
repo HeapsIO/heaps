@@ -45,6 +45,13 @@ class Matrix {
 	inline function set_ty(v) return _42 = v;
 	inline function set_tz(v) return _43 = v;
 
+	public function equal( other : Matrix ) {
+		return	_11 == other._11 && _12 == other._12 && _13 == other._13 && _14 == other._14
+			&& 	_21 == other._21 && _22 == other._22 && _23 == other._23 && _24 == other._24
+			&& 	_31 == other._31 && _32 == other._32 && _33 == other._33 && _34 == other._34
+			&& 	_41 == other._41 && _42 == other._42 && _43 == other._43 && _44 == other._44;
+	}
+
 	public function zero() {
 		_11 = 0.0; _12 = 0.0; _13 = 0.0; _14 = 0.0;
 		_21 = 0.0; _22 = 0.0; _23 = 0.0; _24 = 0.0;
@@ -218,8 +225,9 @@ class Matrix {
 		_44 = vw;
 	}
 
-	public inline function getScale() {
-		var v = new Vector();
+	public inline function getScale(?v: h3d.Vector) {
+		if(v == null)
+			v = new Vector();
 		v.x = Math.sqrt(_11 * _11 + _12 * _12 + _13 * _13);
 		v.y = Math.sqrt(_21 * _21 + _22 * _22 + _23 * _23);
 		v.z = Math.sqrt(_31 * _31 + _32 * _32 + _33 * _33);

@@ -94,13 +94,8 @@ class Interactive extends Object implements hxd.SceneEvents.Interactive {
 			mouseDownButton = -1;
 		case EOver:
 			onOver(e);
-			if( !e.cancel && cursor != null )
-				hxd.System.setCursor(cursor);
 		case EOut:
-			mouseDownButton = -1;
 			onOut(e);
-			if( !e.cancel )
-				hxd.System.setCursor(Default);
 		case EWheel:
 			onWheel(e);
 		case EFocusLost:
@@ -120,8 +115,8 @@ class Interactive extends Object implements hxd.SceneEvents.Interactive {
 
 	function set_cursor(c) {
 		this.cursor = c;
-		if( isOver() && cursor != null )
-			hxd.System.setCursor(cursor);
+		if ( scene != null && scene.events != null )
+			scene.events.updateCursor(this);
 		return c;
 	}
 
@@ -136,18 +131,24 @@ class Interactive extends Object implements hxd.SceneEvents.Interactive {
 	}
 
 	public function isOver() {
-		return scene != null && scene.events != null && @:privateAccess scene.events.currentOver == this;
+		return scene != null && scene.events != null && @:privateAccess scene.events.overList.indexOf(this) != -1;
 	}
 
 	public function hasFocus() {
 		return scene != null && scene.events != null && @:privateAccess scene.events.currentFocus == this;
 	}
 
-	/** Sent when mouse enters Interactive hitbox area. **/
+	/**
+		Sent when mouse enters Interactive hitbox area.
+		`event.propagate` and `event.cancel` are ignored during `onOver`.
+		Propagation can be set with `onMove` event, as well as cancelling `onMove` will prevent `onOver`.
+	**/
 	public dynamic function onOver( e : hxd.Event ) {
 	}
 
-	/** Sent when mouse exits Interactive hitbox area. **/
+	/** Sent when mouse exits Interactive hitbox area.
+		`event.propagate` and `event.cancel` are ignored during `onOut`.
+	**/
 	public dynamic function onOut( e : hxd.Event ) {
 	}
 

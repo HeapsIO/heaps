@@ -23,6 +23,11 @@ class DirShadowMap extends Shadows {
 		return mode = m;
 	}
 
+	override function set_enabled(b:Bool) {
+		dshader.enable = b && mode != None;
+		return enabled = b;
+	}
+
 	override function set_size(s) {
 		if( border != null && size != s ) {
 			border.dispose();
@@ -34,6 +39,7 @@ class DirShadowMap extends Shadows {
 	override function dispose() {
 		super.dispose();
 		if( customDepth && depth != null ) depth.dispose();
+		border.dispose();
 	}
 
 	public override function getShadowTex() {
@@ -109,12 +115,22 @@ class DirShadowMap extends Shadows {
 		cameraViewProj = getShadowProj();
 	}
 
-	function syncShader(texture) {
+	override function syncShader(texture) {
 		dshader.shadowMap = texture;
 		dshader.shadowMapChannel = format == h3d.mat.Texture.nativeFormat ? PackedFloat : R;
 		dshader.shadowBias = bias;
 		dshader.shadowPower = power;
 		dshader.shadowProj = getShadowProj();
+
+		//ESM
+		dshader.USE_ESM = samplingKind == ESM;
+		dshader.shadowPower = power;
+
+		// PCF
+		dshader.USE_PCF = samplingKind == PCF;
+		dshader.shadowRes.set(texture.width,texture.height);
+		dshader.pcfScale = pcfScale;
+		dshader.pcfQuality = pcfQuality;
 	}
 
 	override function saveStaticData() {
@@ -167,32 +183,19 @@ class DirShadowMap extends Shadows {
 		if( staticTexture != null ) staticTexture.dispose();
 		staticTexture = new h3d.mat.Texture(size, size, [Target], format);
 		staticTexture.uploadPixels(pixels);
-		staticTexture.name = "defaultDirShadowMap";
+		staticTexture.name = "staticTexture";
+		staticTexture.realloc = null;
+		staticTexture.preventAutoDispose();
 		syncShader(staticTexture);
 		return true;
 	}
 
-	override function draw( passes ) {
+	override function draw( passes, ?sort ) {
+		if( !enabled )
+			return;
 
-		if( !ctx.computingStatic ){
-			switch( mode ) {
-			case None, Mixed:
-				return passes;
-			case Dynamic:
-				// nothing
-			case Static:
-				if( staticTexture == null || staticTexture.isDisposed() ){
-					staticTexture = h3d.mat.Texture.fromColor(0xFFFFFF);
-					staticTexture.name = "defaultDirShadowMap";
-				}
-				if( mode == Static ) {
-					syncShader(staticTexture);
-					return passes;
-				}
-			}
-		}
-
-		var passes = filterPasses(passes);
+		if( !filterPasses(passes) )
+			return;
 
 		var texture = ctx.textures.allocTarget("dirShadowMap", size, size, false, format);
 		if( customDepth && (depth == null || depth.width != size || depth.height != size || depth.isDisposed()) ) {
@@ -220,7 +223,7 @@ class DirShadowMap extends Shadows {
 
 		ctx.engine.pushTarget(texture);
 		ctx.engine.clear(0xFFFFFF, 1);
-		passes = super.draw(passes);
+		super.draw(passes, sort);
 		if( border != null ) border.render();
 		ctx.engine.popTarget();
 
@@ -238,10 +241,9 @@ class DirShadowMap extends Shadows {
 			blur.apply(ctx, texture);
 
 		syncShader(texture);
-		return passes;
 	}
 
-	override function computeStatic( passes : h3d.pass.Object ) {
+	override function computeStatic( passes : h3d.pass.PassList ) {
 		if( mode != Static && mode != Mixed )
 			return;
 		draw(passes);

@@ -230,7 +230,7 @@ class PropManager extends vdom.Client {
 	public function getResPath() {
 		if( cachedResPath != null )
 			return cachedResPath;
-		var lfs = Std.instance(hxd.res.Loader.currentInstance.fs, hxd.fs.LocalFileSystem);
+		var lfs = hxd.impl.Api.downcast(hxd.res.Loader.currentInstance.fs, hxd.fs.LocalFileSystem);
 		if( lfs != null )
 			cachedResPath = lfs.baseDir;
 		else {
@@ -520,7 +520,7 @@ class PropManager extends vdom.Client {
 			var delay = false;
 			jprop.click(function(_) {
 				if( delay ) return;
-				jprop.special("colorPick", [get().toColor(), alpha], function(c) {
+				jprop.special("colorPick", [get().toColor(), alpha], function(c:Dynamic) {
 					if( jprop.get() == null || jprop.get().id < 0 )
 						return true;
 					delay = true;

@@ -9,10 +9,11 @@ class SpotShadowMap extends Shadows {
 	var mergePass = new h3d.pass.ScreenFx(new h3d.shader.MinMaxShader());
 
 	public function new( light : h3d.scene.Light ) {
+		format = R32F;
 		super(light);
 		lightCamera = new h3d.Camera();
 		lightCamera.screenRatio = 1.0;
-		lightCamera.zNear = 3.0;
+		lightCamera.zNear = 0.01;
 		shader = sshader = new h3d.shader.SpotShadow();
 		border = new Border(size, size);
 		customDepth = h3d.Engine.getCurrent().driver.hasFeature(AllocDepthBuffer);
@@ -22,6 +23,11 @@ class SpotShadowMap extends Shadows {
 	override function set_mode(m:Shadows.RenderMode) {
 		sshader.enable = m != None;
 		return mode = m;
+	}
+
+	override function set_enabled(b:Bool) {
+		sshader.enable = b && mode != None;
+		return enabled = b;
 	}
 
 	override function set_size(s) {
@@ -39,6 +45,7 @@ class SpotShadowMap extends Shadows {
 	override function dispose() {
 		super.dispose();
 		if( customDepth && depth != null ) depth.dispose();
+		border.dispose();
 	}
 
 	public override function getShadowTex() {
@@ -50,12 +57,21 @@ class SpotShadowMap extends Shadows {
 		cameraViewProj = getShadowProj();
 	}
 
-	function syncShader(texture) {
+	override function syncShader(texture) {
 		sshader.shadowMap = texture;
 		sshader.shadowMapChannel = format == h3d.mat.Texture.nativeFormat ? PackedFloat : R;
 		sshader.shadowBias = bias;
-		sshader.shadowPower = power;
 		sshader.shadowProj = getShadowProj();
+
+		//ESM
+		sshader.USE_ESM = samplingKind == ESM;
+		sshader.shadowPower = power;
+
+		// PCF
+		sshader.USE_PCF = samplingKind == PCF;
+		sshader.shadowRes.set(texture.width,texture.height);
+		sshader.pcfScale = pcfScale;
+		sshader.pcfQuality = pcfQuality;
 	}
 
 	override function saveStaticData() {
@@ -83,32 +99,23 @@ class SpotShadowMap extends Shadows {
 		var pixels = new hxd.Pixels(size, size, haxe.zip.Uncompress.run(buffer.read(len)), format);
 		if( staticTexture != null ) staticTexture.dispose();
 		staticTexture = new h3d.mat.Texture(size, size, [Target], format);
+		staticTexture.name = "staticTexture";
+		staticTexture.realloc = null;
+		staticTexture.preventAutoDispose();
 		staticTexture.uploadPixels(pixels);
 		syncShader(staticTexture);
 		return true;
 	}
 
-	override function draw( passes ) {
+	override function draw( passes, ?sort ) {
+		if( !enabled )
+			return;
 
-		if( !ctx.computingStatic )
-			switch( mode ) {
-			case None:
-				return passes;
-			case Dynamic:
-				// nothing
-			case Mixed:
-				if( staticTexture == null || staticTexture.isDisposed() )
-					staticTexture = h3d.mat.Texture.fromColor(0xFFFFFF);
-			case Static:
-				if( staticTexture == null || staticTexture.isDisposed() )
-					staticTexture = h3d.mat.Texture.fromColor(0xFFFFFF);
-				updateCamera();
-				syncShader(staticTexture);
-				return passes;
-			}
+		if( !filterPasses(passes) )
+			return;
 
-		passes = filterPasses(passes);
 		updateCamera();
+		cullPasses(passes, function(col) return col.inFrustum(lightCamera.frustum));
 
 		var texture = ctx.textures.allocTarget("shadowMap", size, size, false, format);
 		if( customDepth && (depth == null || depth.width != size || depth.height != size || depth.isDisposed()) ) {
@@ -119,7 +126,7 @@ class SpotShadowMap extends Shadows {
 
 		ctx.engine.pushTarget(texture);
 		ctx.engine.clear(0xFFFFFF, 1);
-		passes = super.draw(passes);
+		super.draw(passes, sort);
 		if( border != null ) border.render();
 		ctx.engine.popTarget();
 
@@ -138,7 +145,6 @@ class SpotShadowMap extends Shadows {
 		}
 
 		syncShader(texture);
-		return passes;
 	}
 
 	function updateCamera(){
@@ -152,13 +158,14 @@ class SpotShadowMap extends Shadows {
 		lightCamera.update();
 	}
 
-	override function computeStatic( passes : h3d.pass.Object ) {
+	override function computeStatic( passes : h3d.pass.PassList ) {
 		if( mode != Static && mode != Mixed )
 			return;
 		draw(passes);
 		var texture = sshader.shadowMap;
-		if( staticTexture != null ) staticTexture.dispose();
+		var old = staticTexture;
 		staticTexture = texture.clone();
+		if( old != null ) old.dispose();
 		sshader.shadowMap = staticTexture;
 	}
 }

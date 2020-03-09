@@ -24,14 +24,13 @@ class DefaultShadowMap extends DirShadowMap {
 		shadowBiasId = hxsl.Globals.allocID("shadow.bias");
 	}
 
-	override function draw( passes ) {
-		super.draw(passes);
+	override function draw( passes, ?sort ) {
+		super.draw(passes, sort);
 		ctx.setGlobalID(shadowMapId, { texture : dshader.shadowMap, channel : format == h3d.mat.Texture.nativeFormat ? hxsl.Channel.PackedFloat : hxsl.Channel.R });
 		ctx.setGlobalID(shadowProjId, getShadowProj());
 		ctx.setGlobalID(shadowColorId, color);
 		ctx.setGlobalID(shadowPowerId, power);
 		ctx.setGlobalID(shadowBiasId, bias);
-		return passes;
 	}
 
 }

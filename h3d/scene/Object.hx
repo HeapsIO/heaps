@@ -13,8 +13,8 @@ package h3d.scene;
 	public var FIgnoreBounds = 0x200;
 	public var FIgnoreCollide = 0x400;
 	public var FIgnoreParentTransform = 0x800;
-	public inline function new() {
-		this = 0;
+	public inline function new(value) {
+		this = value;
 	}
 	public inline function toInt() return this;
 	public inline function has(f:ObjectFlags) return this & f.toInt() != 0;
@@ -147,6 +147,9 @@ class Object implements hxd.impl.Serializable {
 	**/
 	public var lightCameraCenter(get, set) : Bool;
 
+
+	public var cullingCollider : h3d.col.Collider;
+
 	var absPos : h3d.Matrix;
 	var invPos : h3d.Matrix;
 	var qRot : h3d.Quat;
@@ -157,7 +160,7 @@ class Object implements hxd.impl.Serializable {
 		Create a new empty object, and adds it to the parent object if not null.
 	**/
 	public function new( ?parent : Object ) {
-		flags = new ObjectFlags();
+		flags = new ObjectFlags(0);
 		absPos = new h3d.Matrix();
 		absPos.identity();
 		x = 0; y = 0; z = 0; scaleX = 1; scaleY = 1; scaleZ = 1;
@@ -361,7 +364,7 @@ class Object implements hxd.impl.Serializable {
 	**/
 	public function getMeshes( ?out : Array<Mesh> ) {
 		if( out == null ) out = [];
-		var m = Std.instance(this, Mesh);
+		var m = hxd.impl.Api.downcast(this, Mesh);
 		if( m != null ) out.push(m);
 		for( c in children )
 			c.getMeshes(out);
@@ -372,7 +375,7 @@ class Object implements hxd.impl.Serializable {
 		Search for an mesh recursively by name, return null if not found.
 	**/
 	public function getMeshByName( name : String) {
-		return Std.instance(getObjectByName(name), Mesh);
+		return hxd.impl.Api.downcast(getObjectByName(name), Mesh);
 	}
 
 	/**
@@ -463,7 +466,7 @@ class Object implements hxd.impl.Serializable {
 		if( !visible || (culled && inheritCulled) )
 			return;
 		if( !culled ) {
-			var m = Std.instance(this, Mesh);
+			var m = hxd.impl.Api.downcast(this, Mesh);
 			if( m != null ) callb(m);
 		}
 		for( o in children )
@@ -522,7 +525,7 @@ class Object implements hxd.impl.Serializable {
 	public function getScene() {
 		var p = this;
 		while( p.parent != null ) p = p.parent;
-		return Std.instance(p, Scene);
+		return hxd.impl.Api.downcast(p, Scene);
 	}
 
 	/**
@@ -537,14 +540,14 @@ class Object implements hxd.impl.Serializable {
 		Tell if the object is a Mesh.
 	**/
 	public inline function isMesh() {
-		return Std.instance(this, Mesh) != null;
+		return hxd.impl.Api.downcast(this, Mesh) != null;
 	}
 
 	/**
 		If the object is a Mesh, return the corresponding Mesh. If not, throw an exception.
 	**/
 	public function toMesh() : Mesh {
-		var m = Std.instance(this, Mesh);
+		var m = hxd.impl.Api.downcast(this, Mesh);
 		if( m != null )
 			return m;
 		throw this + " is not a Mesh";
@@ -564,7 +567,7 @@ class Object implements hxd.impl.Serializable {
 		for( obj in children ) {
 			var c = obj.getCollider();
 			if( c == null ) continue;
-			var cgrp = Std.instance(c, h3d.col.Collider.GroupCollider);
+			var cgrp = hxd.impl.Api.downcast(c, h3d.col.Collider.GroupCollider);
 			if( cgrp != null ) {
 				for( c in cgrp.colliders )
 					colliders.push(c);
@@ -622,9 +625,10 @@ class Object implements hxd.impl.Serializable {
 		if( follow != null ) {
 			follow.syncPos();
 			if( followPositionOnly ) {
-				absPos.tx += follow.absPos.tx;
-				absPos.ty += follow.absPos.ty;
-				absPos.tz += follow.absPos.tz;
+				absPos.multiply3x4inline(absPos, parent.absPos);
+				absPos.tx = x + follow.absPos.tx;
+				absPos.ty = y + follow.absPos.ty;
+				absPos.tz = z + follow.absPos.tz;
 			} else
 				absPos.multiply3x4(absPos, follow.absPos);
 		} else if( parent != null && !ignoreParentTransform )
@@ -692,7 +696,8 @@ class Object implements hxd.impl.Serializable {
 	}
 
 	function emitRec( ctx : RenderContext ) {
-		if( !visible || (culled && inheritCulled) )
+
+		if( !visible || (culled && inheritCulled && !ctx.computingStatic) )
 			return;
 
 		// fallback in case the object was added during a sync() event and we somehow didn't update it
@@ -704,8 +709,9 @@ class Object implements hxd.impl.Serializable {
 			for( c in children )
 				c.posChanged = true;
 		}
-		if( !culled )
+		if( !culled || ctx.computingStatic )
 			emit(ctx);
+
 		for( c in children )
 			c.emitRec(ctx);
 	}
@@ -765,16 +771,19 @@ class Object implements hxd.impl.Serializable {
 	/**
 		Set the position, scale and rotation of the object relative to its parent based on the specified transform matrix.
 	**/
+	static var tmpMat = new h3d.Matrix();
+	static var tmpVec = new h3d.Vector();
 	public function setTransform( mat : h3d.Matrix ) {
-		var s = mat.getScale();
+		var s = mat.getScale(tmpVec);
 		this.x = mat.tx;
 		this.y = mat.ty;
 		this.z = mat.tz;
 		this.scaleX = s.x;
 		this.scaleY = s.y;
 		this.scaleZ = s.z;
-		mat.prependScale(1.0 / s.x, 1.0 / s.y, 1.0 / s.z);
-		qRot.initRotateMatrix(mat);
+		tmpMat.load(mat);
+		tmpMat.prependScale(1.0 / s.x, 1.0 / s.y, 1.0 / s.z);
+		qRot.initRotateMatrix(tmpMat);
 		posChanged = true;
 	}
 
@@ -889,14 +898,6 @@ class Object implements hxd.impl.Serializable {
 	**/
 	public inline function iterator() : hxd.impl.ArrayIterator<Object> {
 		return new hxd.impl.ArrayIterator(children);
-	}
-
-	/**
-		Free the GPU memory for this object and its children
-	**/
-	public function dispose() {
-		for( c in children )
-			c.dispose();
 	}
 
 	#if (hxbit && !macro && heaps_enable_serialize)

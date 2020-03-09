@@ -48,9 +48,12 @@ class Linker {
 	var varIdMap : Map<Int,Int>;
 	var locals : Map<Int,Bool>;
 	var curInstance : Int;
+	var batchMode : Bool;
+	var isBatchShader : Bool;
 	var debugDepth = 0;
 
-	public function new() {
+	public function new(batchMode=false) {
+		this.batchMode = batchMode;
 	}
 
 	inline function debug( msg : String, ?pos : haxe.PosInfos ) {
@@ -120,7 +123,7 @@ class Linker {
 				if( vm == v )
 					return v2;
 			inline function isUnique( v : TVar ) {
-				return (v.kind == Param && !v.hasQualifier(Shared)) || v.kind == Function || (v.kind == Var && v.hasQualifier(Private));
+				return (v.kind == Param && !v.hasQualifier(Shared) && !isBatchShader) || v.kind == Function || (v.kind == Var && v.hasQualifier(Private));
 			}
 			if( isUnique(v) || isUnique(v2.v) || (v.kind == Param && v2.v.kind == Param) /* two shared : one takes priority */ ) {
 				// allocate a new unique name in the shader if already in use
@@ -351,8 +354,11 @@ class Linker {
 		curInstance = 0;
 		var outVars = [];
 		for( s in shadersData ) {
+			isBatchShader = batchMode && StringTools.startsWith(s.name,"batchShader_");
 			for( v in s.vars ) {
-				allocVar(v, null);
+				var v2 = allocVar(v, null);
+				if( isBatchShader && v2.v.kind == Param && !StringTools.startsWith(v2.path,"Batch_") )
+					v2.v.kind = Local;
 				if( v.kind == Output ) outVars.push(v);
 			}
 			for( f in s.funs ) {

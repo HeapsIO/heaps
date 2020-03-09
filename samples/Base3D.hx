@@ -46,7 +46,7 @@ class Base3D extends SampleApp {
 		obj2.scale(0.6);
 
 		// adds a directional light to the scene
-		var light = new h3d.scene.DirLight(new h3d.Vector(0.5, 0.5, -0.5), s3d);
+		var light = new h3d.scene.fwd.DirLight(new h3d.Vector(0.5, 0.5, -0.5), s3d);
 		light.enableSpecular = true;
 
 		// set the ambient light to 30%
@@ -55,7 +55,7 @@ class Base3D extends SampleApp {
 		// disable shadows
 		obj1.material.shadows = false;
 		obj2.material.shadows = false;
-		
+
 		if (engine.driver.hasFeature(Wireframe)) {
 			addCheck("Wireframe", function() { return obj2.material.mainPass.wireframe; }, function(v) { obj2.material.mainPass.wireframe = v; });
 		}
