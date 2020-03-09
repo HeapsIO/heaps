@@ -162,6 +162,7 @@ class File {
 					}
 				}
 				onSelect(b);
+				input.remove();
 			}
 			input.click();
 		#else
