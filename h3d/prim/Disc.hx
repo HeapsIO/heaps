@@ -2,7 +2,7 @@ package h3d.prim;
 
 import h3d.col.Point;
 
-class Circle extends Polygon {
+class Disc extends Polygon {
 
 	public var radius(default,null) : Float;
 	public var segments(default,null) : Int;
