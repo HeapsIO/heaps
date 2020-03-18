@@ -87,6 +87,21 @@ class SpotShadowMap extends Shadows {
 		return buffer.getBytes();
 	}
 
+	function createStaticTexture() : h3d.mat.Texture {
+		if( staticTexture != null )
+			staticTexture.dispose();
+		staticTexture = new h3d.mat.Texture(size, size, [Target], format);
+		staticTexture.name = "staticTexture";
+		staticTexture.preventAutoDispose();
+		staticTexture.realloc = function () {
+			if( pixelsForRealloc != null ) {
+				staticTexture.uploadPixels(pixelsForRealloc); 
+			}
+		}
+		return staticTexture;
+	}
+
+	var pixelsForRealloc : hxd.Pixels = null;
 	override function loadStaticData( bytes : haxe.io.Bytes ) {
 		if( (mode != Mixed && mode != Static) || bytes == null )
 			return false;
@@ -95,14 +110,12 @@ class SpotShadowMap extends Shadows {
 		if( size != this.size )
 			return false;
 
+		createStaticTexture();
+
 		var len = buffer.readInt32();
 		var pixels = new hxd.Pixels(size, size, haxe.zip.Uncompress.run(buffer.read(len)), format);
-		if( staticTexture != null ) staticTexture.dispose();
-		staticTexture = new h3d.mat.Texture(size, size, [Target], format);
-		staticTexture.name = "staticTexture";
-		staticTexture.realloc = null;
-		staticTexture.preventAutoDispose();
-		staticTexture.uploadPixels(pixels);
+		pixelsForRealloc = pixels;
+
 		syncShader(staticTexture);
 		return true;
 	}
@@ -117,7 +130,7 @@ class SpotShadowMap extends Shadows {
 		updateCamera();
 		cullPasses(passes, function(col) return col.inFrustum(lightCamera.frustum));
 
-		var texture = ctx.textures.allocTarget("shadowMap", size, size, false, format);
+		var texture = ctx.textures.allocTarget("spotShadowMap", size, size, false, format);
 		if( customDepth && (depth == null || depth.width != size || depth.height != size || depth.isDisposed()) ) {
 			if( depth != null ) depth.dispose();
 			depth = new h3d.mat.DepthBuffer(size, size);
@@ -135,7 +148,7 @@ class SpotShadowMap extends Shadows {
 
 		var validBakedTexture = (staticTexture != null && staticTexture.width == texture.width);
 		if( mode == Mixed && !ctx.computingStatic && validBakedTexture ) {
-			var merge = ctx.textures.allocTarget("shadowMap", size, size, false, format);
+			var merge = ctx.textures.allocTarget("mergedSpotShadowMap", size, size, false, format);
 			mergePass.shader.texA = texture;
 			mergePass.shader.texB = staticTexture;
 			ctx.engine.pushTarget(merge);
@@ -162,13 +175,9 @@ class SpotShadowMap extends Shadows {
 		if( mode != Static && mode != Mixed )
 			return;
 		draw(passes);
-		var texture = sshader.shadowMap;
-		var old = staticTexture;
-		staticTexture = texture.clone();
-		if( old != null ) old.dispose();
-		staticTexture.name = "StaticSpotShadowMap";
-		staticTexture.realloc = null;
-		staticTexture.preventAutoDispose();
+		if( staticTexture == null )
+			createStaticTexture();
+		Copy.run(sshader.shadowMap, staticTexture);
 		sshader.shadowMap = staticTexture;
 	}
 }

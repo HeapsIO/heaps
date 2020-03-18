@@ -32,11 +32,15 @@ private class GraphicsContent extends h3d.prim.Primitive {
 	var buffers : Array<{ buf : hxd.FloatBuffer, vbuf : h3d.Buffer, idx : hxd.IndexBuffer, ibuf : h3d.Indexes }>;
 	var bufferDirty : Bool;
 	var indexDirty : Bool;
-	var allocPos : h3d.impl.AllocPos;
+	#if track_alloc
+	var allocPos : hxd.impl.AllocPos;
+	#end
 
-	public function new(allocPos) {
+	public function new() {
 		buffers = [];
-		this.allocPos = allocPos;
+		#if track_alloc
+		this.allocPos = new hxd.impl.AllocPos();
+		#end
 	}
 
 	public inline function addIndex(i) {
@@ -69,7 +73,10 @@ private class GraphicsContent extends h3d.prim.Primitive {
 
 	override function alloc( engine : h3d.Engine ) {
 		if (index.length <= 0) return ;
-		buffer = h3d.Buffer.ofFloats(tmp, 8, [RawFormat], allocPos);
+		buffer = h3d.Buffer.ofFloats(tmp, 8, [RawFormat]);
+		#if track_alloc
+		@:privateAccess buffer.allocPos = allocPos;
+		#end
 		indexes = h3d.Indexes.alloc(index);
 		for( b in buffers ) {
 			if( b.vbuf == null || b.vbuf.isDisposed() ) b.vbuf = h3d.Buffer.ofFloats(b.buf, 8, [RawFormat]);
@@ -155,9 +162,9 @@ class Graphics extends Drawable {
 	public var tile : h2d.Tile;
 	public var bevel = 0.25; //0 = not beveled, 1 = always beveled
 
-	public function new(?parent,?allocPos:h3d.impl.AllocPos) {
+	public function new(?parent) {
 		super(parent);
-		content = new GraphicsContent(allocPos);
+		content = new GraphicsContent();
 		tile = h2d.Tile.fromColor(0xFFFFFF);
 		clear();
 	}
@@ -537,7 +544,7 @@ class Graphics extends Drawable {
 		lineTo(cx, cy);
 		flush();
 	}
-	
+
 	public function drawRectanglePie( cx : Float, cy : Float, width : Float, height : Float, angleStart:Float, angleLength:Float, nsegments = 0 ) {
 		if(Math.abs(angleLength) >= Math.PI*2) {
 			return drawRect(cx-(width/2), cy-(height/2), width, height);
@@ -584,7 +591,7 @@ class Graphics extends Drawable {
 	 * @param cy control Y for end point
 	 * @param dx end X
 	 * @param dy end Y
-	 * @param nsegments = 40 
+	 * @param nsegments = 40
 	 */
 	public function cubicCurveTo( bx : Float, by : Float, cx : Float, cy : Float, dx : Float, dy : Float, nsegments = 40) {
 		var ax = tmpPoints.length == 0 ? 0 : tmpPoints[tmpPoints.length - 1].x;

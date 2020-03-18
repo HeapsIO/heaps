@@ -238,7 +238,7 @@ class DynamicText {
 		return function(vars) {
 			var str = str;
 			for( f in Reflect.fields(vars) )
-				str = str.split("::" + f + "::").join(Reflect.field(vars, f));
+				str = str.split("::" + f + "::").join(""+Reflect.field(vars, f));
 			return str;
 		};
 	}

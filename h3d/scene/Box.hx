@@ -4,6 +4,7 @@ class Box extends Graphics {
 
 	public var color : Int;
 	public var bounds : h3d.col.Bounds;
+	public var thickness = 1.0;
 	var prevXMin = 1e9;
 	var prevYMin = 1e9;
 	var prevZMin = 1e9;
@@ -56,7 +57,7 @@ class Box extends Graphics {
 			prevZMax = bounds.zMax;
 		}
 		clear();
-		lineStyle(1, color);
+		lineStyle(thickness, color);
 		moveTo(prevXMin, prevYMin, prevZMin);
 		lineTo(prevXMax, prevYMin, prevZMin);
 		lineTo(prevXMax, prevYMax, prevZMin);

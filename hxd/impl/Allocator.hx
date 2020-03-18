@@ -1,5 +1,4 @@
 package hxd.impl;
-import h3d.impl.AllocPos;
 
 @:enum abstract BufferFlags(Int) {
 	public var Dynamic = 0;
@@ -16,8 +15,8 @@ class Allocator {
 
 	// GPU
 
-	public function allocBuffer( vertices : Int, stride : Int, flags : BufferFlags, ?pos : AllocPos ) : h3d.Buffer {
-		return new h3d.Buffer(vertices, stride, switch( flags ) { case Dynamic: [Dynamic]; case UniformDynamic: [UniformBuffer,Dynamic]; }, pos);
+	public function allocBuffer( vertices : Int, stride : Int, flags : BufferFlags ) : h3d.Buffer {
+		return new h3d.Buffer(vertices, stride, switch( flags ) { case Dynamic: [Dynamic]; case UniformDynamic: [UniformBuffer,Dynamic]; });
 	}
 
 	public function disposeBuffer( b : h3d.Buffer ) {
@@ -37,7 +36,7 @@ class Allocator {
 
 	// CPU
 
-	public function allocFloats( count : Int, ?pos : AllocPos ) : hxd.FloatBuffer {
+	public function allocFloats( count : Int ) : hxd.FloatBuffer {
 		return new hxd.FloatBuffer(count);
 	}
 

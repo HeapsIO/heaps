@@ -33,6 +33,13 @@ class HtmlText extends Text {
 		return null;
 	}
 
+	/**
+		A default method HtmlText uses to format assigned text.
+	**/
+	public static dynamic function defaultFormatText( text : String ) : String {
+		return text;
+	}
+
 	public var condenseWhite(default,set) : Bool = true;
 
 	/**
@@ -96,6 +103,15 @@ class HtmlText extends Text {
 		var f = defaultLoadFont(name);
 		if (f == null) return this.font;
 		else return f;
+	}
+
+	public dynamic function formatText( text : String ) : String {
+		return defaultFormatText(text);
+	}
+
+	override function set_text(t : String) {
+		super.set_text(formatText(t));
+		return t;
 	}
 
 	function parseText( text : String ) {

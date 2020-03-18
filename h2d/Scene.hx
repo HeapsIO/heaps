@@ -643,20 +643,22 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		ctx.elapsedTime = v;
 	}
 
-	function drawImplTo( s : Object, t : h3d.mat.Texture ) {
-
-		if( !t.flags.has(Target) ) throw "Can only draw to texture created with Target flag";
-		var needClear = !t.flags.has(WasCleared);
+	function drawImplTo( s : Object, texs : Array<h3d.mat.Texture>, ?outputs : Array<hxsl.Output> ) {
+		for( t in texs )
+			if( !t.flags.has(Target) )
+				throw "Can only draw to texture created with Target flag";
 		ctx.engine = h3d.Engine.getCurrent();
 		var oldBG = ctx.engine.backgroundColor;
 		ctx.engine.backgroundColor = null; // prevent clear bg
 		ctx.engine.begin();
 		ctx.globalAlpha = alpha;
 		ctx.begin();
-		ctx.pushTarget(t);
-		if( needClear )
+		ctx.pushTargets(texs);
+		if( outputs != null ) @:privateAccess ctx.manager.setOutput(outputs);
+		if( texs.length == 1 && !texs[0].flags.has(WasCleared) )
 			ctx.engine.clear(0);
 		s.drawRec(ctx);
+		if( outputs != null ) @:privateAccess ctx.manager.setOutput();
 		ctx.popTarget();
 		ctx.engine.backgroundColor = oldBG;
 	}
