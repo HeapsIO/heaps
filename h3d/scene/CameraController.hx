@@ -160,7 +160,7 @@ class CameraController extends h3d.scene.Object {
 			if( pushing == e.button ) {
 				pushing = -1;
 				@:privateAccess scene.events.stopDrag();
-				if( haxe.Timer.stamp() - pushTime < 0.2 && hxd.Math.distance(e.relX - pushStartX,e.relY - pushStartY) < 5 )
+				if( e.kind == ERelease && haxe.Timer.stamp() - pushTime < 0.2 && hxd.Math.distance(e.relX - pushStartX,e.relY - pushStartY) < 5 )
 					onClick(e);
 			}
 		case EMove:
