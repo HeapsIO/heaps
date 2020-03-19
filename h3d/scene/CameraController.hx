@@ -36,7 +36,8 @@ class CameraController extends h3d.scene.Object {
 		name = "CameraController";
 		set(distance);
 		flags.set(FNoSerialize,true);
-		toTarget();
+		curPos.load(targetPos);
+		curOffset.load(targetOffset);
 	}
 
 	inline function get_distance() return curPos.x / curOffset.w;
@@ -111,6 +112,7 @@ class CameraController extends h3d.scene.Object {
 	public function toTarget() {
 		curPos.load(targetPos);
 		curOffset.load(targetOffset);
+		syncCamera();
 	}
 
 	override function onAdd() {
@@ -214,6 +216,7 @@ class CameraController extends h3d.scene.Object {
 
 	function syncCamera() {
 		var cam = getScene().camera;
+		var distance = distance;
 		cam.target.load(curOffset);
 		cam.target.w = 1;
 		cam.pos.set( distance * Math.cos(theta) * Math.sin(phi) + cam.target.x, distance * Math.sin(theta) * Math.sin(phi) + cam.target.y, distance * Math.cos(phi) + cam.target.z );
