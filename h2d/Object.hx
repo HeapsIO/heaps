@@ -146,6 +146,22 @@ class Object #if (domkit && !domkit_heaps) implements domkit.Model<h2d.Object> #
 		return out;
 	}
 
+
+	/**
+		Returns the updated absolute position matrix.
+	**/
+	public function getAbsPos() {
+		syncPos();
+		var m = new h2d.col.Matrix();
+		m.a = matA;
+		m.b = matB;
+		m.c = matC;
+		m.d = matD;
+		m.x = absX;
+		m.y = absY;
+		return m;
+	}
+
 	/**
 		Find a single object in the tree by calling `f` on each and returning the first not-null value returned, or null if not found.
 	**/
