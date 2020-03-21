@@ -130,7 +130,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	public var zoom(get, set) : Int;
 
 	/**
-		Scene scaling mode. ( default : Fill )
+		Scene scaling mode. ( default : Resize )
 		Important thing to keep in mind - Scene does not clip rendering to it's scaled size and
 		graphics can render outside of it. However `drawTile` does check for those bounds and
 		will clip out tiles that are outside of the scene bounds.
@@ -306,25 +306,31 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		}
 	}
 
-	inline function screenXToLocal(mx:Float) {
-		return mx * width / (window.width * ratioX * scaleX) - x - viewportX;
+	inline function screenXToViewport(mx:Float) {
+		return mx * width / (window.width * ratioX) - viewportX;
 	}
 
-	inline function screenYToLocal(my:Float) {
-		return my * height / (window.height * ratioY * scaleY) - y - viewportY;
+	inline function screenYToViewport(my:Float) {
+		return my * height / (window.height * ratioY) - viewportY;
 	}
 
 	function get_mouseX() {
-		return screenXToLocal(window.mouseX);
+		var dx = screenXToViewport(window.mouseX) - x;
+		if( matC == 0 ) return dx / matA;
+		var dy = screenXToViewport(window.mouseY) - y;
+		return (dx * matD - dy * matC) / (matA * matD - matB * matC);
 	}
 
 	function get_mouseY() {
-		return screenYToLocal(window.mouseY);
+		var dy = screenYToViewport(window.mouseY) - y;
+		if( matB == 0 ) return dy / matD;
+		var dx = screenXToViewport(window.mouseX) - x;
+		return (dy * matA - dx * matB) / (matA * matD - matB * matC);
 	}
 
 	@:dox(hide) @:noCompletion
 	public function dispatchListeners( event : hxd.Event ) {
-		screenToLocal(event);
+		screenToViewport(event);
 		for( l in eventListeners ) {
 			l(event);
 			if( !event.propagate ) break;
@@ -345,35 +351,21 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		Return the topmost visible Interactive at the specific coordinates
 	**/
 	public function getInteractive( x : Float, y : Float ) : Interactive {
-		var rx = x * matA + y * matB + absX;
-		var ry = x * matC + y * matD + absY;
 		var pt = shapePoint;
 		for( i in interactive ) {
 
-			var dx = rx - i.absX;
-			var dy = ry - i.absY;
+			var dx = x - i.absX;
+			var dy = y - i.absY;
+			var rx = (dx * i.matD - dy * i.matC) * i.invDet;
+			var ry = (dy * i.matA - dx * i.matB) * i.invDet;
 
-			var w1 = i.width * i.matA;
-			var h1 = i.width * i.matC;
-			var ky = h1 * dx + w1 * dy;
-
-			// up line
-			if( ky < 0 )
-				continue;
-
-			var w2 = i.height * i.matB;
-			var h2 = i.height * i.matD;
-			var kx = w2 * dy + h2 * dx;
-
-			// left line
-			if( kx < 0 )
-				continue;
-
-			var max = w1 * h2 - h1 * w2;
-
-			// bottom/right
-			if( ky >= max || kx >= max )
-				continue;
+			if (i.shape != null) {
+				pt.set(rx + i.shapeX, ry + i.shapeY);
+				if ( !i.shape.contains(pt) ) continue;
+			} else {
+				if( ry < 0 || rx < 0 || rx >= i.width || ry >= i.height )
+					continue;
+			}
 
 			// check visibility
 			var visible = true;
@@ -386,104 +378,54 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 				p = p.parent;
 			}
 			if( !visible ) continue;
-
-			if (i.shape != null) {
-				pt.set((kx / max) * i.width + i.shapeX, (ky / max) * i.height + i.shapeY);
-				if ( !i.shape.contains(pt) ) continue;
-			}
 
 			return i;
 		}
 		return null;
 	}
 
-	function screenToLocal( e : hxd.Event ) {
-		var x = screenXToLocal(e.relX);
-		var y = screenYToLocal(e.relY);
-		var rx = x * matA + y * matB + absX;
-		var ry = x * matC + y * matD + absY;
-		e.relX = rx;
-		e.relY = ry;
+	function screenToViewport( e : hxd.Event ) {
+		e.relX = screenXToViewport(e.relX);
+		e.relY = screenYToViewport(e.relY);
 	}
 
 	@:dox(hide) @:noCompletion
 	public function dispatchEvent( event : hxd.Event, to : hxd.SceneEvents.Interactive ) {
 		var i : Interactive = cast to;
-		screenToLocal(event);
-
-		var rx = event.relX;
-		var ry = event.relY;
-
-		var dx = rx - i.absX;
-		var dy = ry - i.absY;
-
-		var w1 = i.width * i.matA;
-		var h1 = i.width * i.matC;
-		var ky = h1 * dx + w1 * dy;
-
-		var w2 = i.height * i.matB;
-		var h2 = i.height * i.matD;
-		var kx = w2 * dy + h2 * dx;
-
-		var max = w1 * h2 - h1 * w2;
-
-		event.relX = (kx / max) * i.width;
-		event.relY = (ky / max) * i.height;
-
+		screenToViewport(event);
+		var dx = event.relX - i.absX;
+		var dy = event.relY - i.absY;
+		var rx = (dx * i.matD - dy * i.matC) * i.invDet;
+		var ry = (dy * i.matA - dx * i.matB) * i.invDet;
+		event.relX = rx;
+		event.relY = ry;
 		i.handleEvent(event);
 	}
 
 	@:dox(hide) @:noCompletion
 	public function handleEvent( event : hxd.Event, last : hxd.SceneEvents.Interactive ) : hxd.SceneEvents.Interactive {
-		screenToLocal(event);
-		var rx = event.relX;
-		var ry = event.relY;
+		screenToViewport(event);
+		var ex = event.relX;
+		var ey = event.relY;
 		var index = last == null ? 0 : interactive.indexOf(cast last) + 1;
 		var pt = shapePoint;
 		for( idx in index...interactive.length ) {
 			var i = interactive[idx];
 			if( i == null ) break;
 
-			var dx = rx - i.absX;
-			var dy = ry - i.absY;
+			var dx = ex - i.absX;
+			var dy = ey - i.absY;
+			var rx = (dx * i.matD - dy * i.matC) * i.invDet;
+			var ry = (dy * i.matA - dx * i.matB) * i.invDet;
 
 			if ( i.shape != null ) {
 				// Check collision for Shape Interactive.
-
-				pt.set(( dx * i.matD - dy * i.matC) * i.invDet + i.shapeX,
-				       (-dx * i.matB + dy * i.matA) * i.invDet + i.shapeY);
+				pt.set(rx + i.shapeX,ry + i.shapeY);
 				if ( !i.shape.contains(pt) ) continue;
-
-				dx = pt.x - i.shapeX;
-				dy = pt.y - i.shapeY;
-
 			} else {
 				// Check AABB for width/height Interactive.
-
-				var w1 = i.width * i.matA;
-				var h1 = i.width * i.matC;
-				var ky = h1 * dx + w1 * dy;
-
-				// up line
-				if( ky < 0 )
+				if( ry < 0 || rx < 0 || rx >= i.width || ry >= i.height )
 					continue;
-
-				var w2 = i.height * i.matB;
-				var h2 = i.height * i.matD;
-				var kx = w2 * dy + h2 * dx;
-
-				// left line
-				if( kx < 0 )
-					continue;
-
-				var max = w1 * h2 - h1 * w2;
-
-				// bottom/right
-				if( ky >= max || kx >= max )
-					continue;
-
-				dx = (kx / max) * i.width;
-				dy = (ky / max) * i.height;
 			}
 
 			// check visibility
@@ -498,8 +440,8 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 			}
 			if( !visible ) continue;
 
-			event.relX = dx;
-			event.relY = dy;
+			event.relX = rx;
+			event.relY = ry;
 
 			i.handleEvent(event);
 
@@ -540,7 +482,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	**/
 	public function startDrag( onEvent : hxd.Event -> Void, ?onCancel : Void -> Void, ?refEvent : hxd.Event ) {
 		events.startDrag(function(e) {
-			screenToLocal(e);
+			screenToViewport(e);
 			onEvent(e);
 		},onCancel, refEvent);
 	}
