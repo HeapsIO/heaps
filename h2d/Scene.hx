@@ -315,16 +315,18 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	}
 
 	function get_mouseX() {
-		var dx = screenXToViewport(window.mouseX) - x;
+		syncPos();
+		var dx = screenXToViewport(window.mouseX) - absX;
 		if( matC == 0 ) return dx / matA;
-		var dy = screenXToViewport(window.mouseY) - y;
+		var dy = screenYToViewport(window.mouseY) - absY;
 		return (dx * matD - dy * matC) / (matA * matD - matB * matC);
 	}
 
 	function get_mouseY() {
-		var dy = screenYToViewport(window.mouseY) - y;
+		syncPos();
+		var dy = screenYToViewport(window.mouseY) - absY;
 		if( matB == 0 ) return dy / matD;
-		var dx = screenXToViewport(window.mouseX) - x;
+		var dx = screenXToViewport(window.mouseX) - absX;
 		return (dy * matA - dx * matB) / (matA * matD - matB * matC);
 	}
 
