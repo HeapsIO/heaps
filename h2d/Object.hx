@@ -146,6 +146,22 @@ class Object #if (domkit && !domkit_heaps) implements domkit.Model<h2d.Object> #
 		return out;
 	}
 
+
+	/**
+		Returns the updated absolute position matrix.
+	**/
+	public function getAbsPos() {
+		syncPos();
+		var m = new h2d.col.Matrix();
+		m.a = matA;
+		m.b = matB;
+		m.c = matC;
+		m.d = matD;
+		m.x = absX;
+		m.y = absY;
+		return m;
+	}
+
 	/**
 		Find a single object in the tree by calling `f` on each and returning the first not-null value returned, or null if not found.
 	**/
@@ -443,7 +459,21 @@ class Object #if (domkit && !domkit_heaps) implements domkit.Model<h2d.Object> #
 		var s = getScene();
 		var needDispose = s == null;
 		if( s == null ) s = new h2d.Scene();
-		@:privateAccess s.drawImplTo(this, t);
+		@:privateAccess s.drawImplTo(this, [t]);
+		if( needDispose ) {
+			s.dispose();
+			onRemove();
+		}
+	}
+
+	/**
+		Draw the object and all its children into the given Textures
+	**/
+	public function drawToTextures( texs : Array<h3d.mat.Texture>, outputs : Array<hxsl.Output> ) {
+		var s = getScene();
+		var needDispose = s == null;
+		if( s == null ) s = new h2d.Scene();
+		@:privateAccess s.drawImplTo(this, texs, outputs);
 		if( needDispose ) {
 			s.dispose();
 			onRemove();

@@ -93,6 +93,10 @@ enum Feature {
 		Supports rendering in wireframe mode.
 	*/
 	Wireframe;
+	/*
+		Supports instanced rendering
+	*/
+	InstancedRendering;
 }
 
 enum QueryKind {

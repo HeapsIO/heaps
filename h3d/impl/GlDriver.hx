@@ -234,6 +234,14 @@ class GlDriver extends Driver {
 		#if js
 		// make sure to enable extensions
 		makeFeatures();
+
+		// We need to get instanced rendering by it's ANGLE extension if we are using webgl1
+		if(hasFeature(InstancedRendering) && glES < 3) {
+			var extension:js.html.webgl.extension.ANGLEInstancedArrays =  cast gl.getExtension("ANGLE_instanced_arrays");
+			Reflect.setField(gl,"vertexAttribDivisor",extension.vertexAttribDivisorANGLE);
+			Reflect.setField(gl,"drawElementsInstanced",extension.drawElementsInstancedANGLE);
+		}
+
 		// setup shader optim
 		hxsl.SharedShader.UNROLL_LOOPS = !hasFeature(ShaderModel3);
 		#else
@@ -1562,6 +1570,9 @@ class GlDriver extends Driver {
 
 		case MultipleRenderTargets:
 			mrtExt != null || (mrtExt = gl.getExtension('WEBGL_draw_buffers')) != null;
+			
+		case InstancedRendering:
+			return (glES >= 3) ? true : gl.getExtension("ANGLE_instanced_arrays") != null;
 
 		default:
 			false;

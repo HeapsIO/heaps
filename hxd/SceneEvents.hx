@@ -288,9 +288,11 @@ class SceneEvents {
 		*/
 		if( event.kind == ERelease && pushList.length > 0 ) {
 			for( i in pushList ) {
-				if( i == null )
+				if( i == null ) {
+					event.kind = EReleaseOutside;
 					dispatchListeners(event);
-				else {
+					event.kind = ERelease;
+				} else {
 					var s = i.getInteractiveScene();
 					if( s == null ) continue;
 					event.kind = EReleaseOutside;

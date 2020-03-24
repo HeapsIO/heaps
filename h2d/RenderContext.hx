@@ -182,6 +182,14 @@ class RenderContext extends h3d.impl.RenderContext {
 		if( hasRenderZone ) clearRenderZone();
 	}
 
+	public function pushTargets( texs : Array<h3d.mat.Texture> ) {
+		pushTarget(texs[0]);
+		if( texs.length > 1 ) {
+			engine.popTarget();
+			engine.pushTargets(texs);
+		}
+	}
+
 	public function popTarget( restore = true ) {
 		flush();
 		if( targetsStackIndex <= 0 ) throw "Too many popTarget()";
