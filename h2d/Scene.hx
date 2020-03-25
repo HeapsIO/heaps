@@ -1,6 +1,5 @@
 package h2d;
 import hxd.Math;
-
 /**
 	Viewport alignment when scaling mode supports it.
 **/
@@ -594,7 +593,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		ctx.engine = h3d.Engine.getCurrent();
 		var oldBG = ctx.engine.backgroundColor;
 		ctx.engine.backgroundColor = null; // prevent clear bg
-		ctx.engine.begin();
+		ctx.engine.begin(true);
 		ctx.globalAlpha = alpha;
 		ctx.begin();
 		ctx.pushTargets(texs);
