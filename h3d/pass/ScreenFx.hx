@@ -83,4 +83,11 @@ class ScreenFx<T:h3d.shader.ScreenShader> {
 	public function dispose() {
 	}
 
+	public static function run( shader : h3d.shader.ScreenShader, output : h3d.mat.Texture, ?layer : Int ) {
+		var engine = h3d.Engine.getCurrent();
+		engine.pushTarget(output,layer);
+		new ScreenFx(shader).render();
+		engine.popTarget();
+	}
+
 }

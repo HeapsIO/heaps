@@ -40,8 +40,10 @@ class Mask extends AbstractMask {
 
 	override function draw( ctx : RenderContext, t : h2d.Tile ) {
 		var mask = getMaskTexture(t);
-		if( mask == null )
-			throw "Mask should be rendered before masked object";
+		if( mask == null ) {
+			if( this.mask == null ) throw "Mask filter has no mask object";
+			return null;
+		}
 		var out = ctx.textures.allocTileTarget("maskTmp", t);
 		ctx.engine.pushTarget(out);
 		pass.shader.texture = t.getTexture();

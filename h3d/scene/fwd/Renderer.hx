@@ -71,6 +71,12 @@ class Renderer extends h3d.scene.Renderer {
 		p.draw(passes, sort);
 	}
 
+	override function getPassByName(name:String):h3d.pass.Base {
+		if( name == "alpha" || name == "additive" )
+			return defaultPass;
+		return super.getPassByName(name);
+	}
+
 	override function render() {
 		if( has("shadow") )
 			renderPass(shadow,get("shadow"));

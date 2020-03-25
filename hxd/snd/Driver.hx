@@ -3,6 +3,9 @@ package hxd.snd;
 #if usesys
 typedef SourceHandle = haxe.AudioTypes.SourceHandle;
 typedef BufferHandle = haxe.AudioTypes.BufferHandle;
+#elseif (js && !useal)
+typedef SourceHandle = hxd.snd.webaudio.AudioTypes.SourceHandle;
+typedef BufferHandle = hxd.snd.webaudio.AudioTypes.BufferHandle;
 #else
 typedef SourceHandle = hxd.snd.openal.AudioTypes.SourceHandle;
 typedef BufferHandle = hxd.snd.openal.AudioTypes.BufferHandle;

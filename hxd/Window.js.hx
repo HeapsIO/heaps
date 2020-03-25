@@ -1,5 +1,12 @@
 package hxd;
 
+enum DisplayMode {
+	Windowed;
+	Borderless;
+	Fullscreen;
+	FullscreenResize;
+}
+
 class Window {
 
 	var resizeEvents : List<Void -> Void>;
@@ -13,6 +20,9 @@ class Window {
 	public var vsync(get, set) : Bool;
 	public var isFocused(get, never) : Bool;
 	public var propagateKeyEvents : Bool;
+
+	public var title(get, set) : String;
+	public var displayMode(get, set) : DisplayMode;
 
 	var curMouseX : Float = 0.;
 	var curMouseY : Float = 0.;
@@ -47,6 +57,12 @@ class Window {
 
 		this.canvas = canvas;
 		this.propagateKeyEvents = globalEvents;
+
+		var propagate = canvas.getAttribute("propagateKeyEvents");
+		if (propagate != null) {
+			this.propagateKeyEvents = propagate != "0" && propagate != "false";
+		}
+
 		focused = globalEvents;
 		element = globalEvents ? js.Browser.window : canvas;
 		canvasPos = canvas.getBoundingClientRect();
@@ -151,6 +167,7 @@ class Window {
 	public function resize( width : Int, height : Int ) : Void {
 	}
 
+	@:deprecated("Use the displayMode property instead")
 	public function setFullScreen( v : Bool ) : Void {
 		var doc = js.Browser.document;
 		var elt : Dynamic = doc.documentElement;
@@ -301,6 +318,7 @@ class Window {
 					33, 34, // Page up/down
 					35, 36, // Home/end
 					8, // Backspace
+					9, // Tab
 					16, // Shift
 					17 : // Ctrl
 						e.preventDefault();
@@ -326,4 +344,34 @@ class Window {
 	}
 
 	function get_isFocused() : Bool return focused;
+
+	function get_displayMode() : DisplayMode {
+		var doc = js.Browser.document;
+		if ( doc.fullscreenElement != null) {
+			return Borderless;
+		}
+
+		return Windowed;
+	}
+
+	function set_displayMode( m : DisplayMode ) : DisplayMode {
+		var doc = js.Browser.document;
+		var elt : Dynamic = doc.documentElement;
+		var fullscreen = m != Windowed;
+		if( (doc.fullscreenElement == elt) == fullscreen )
+			return Windowed;
+		if( m != Windowed )
+			elt.requestFullscreen();
+		else
+			doc.exitFullscreen();
+
+		return m;
+	}
+
+	function get_title() : String {
+		return js.Browser.document.title;
+	}
+	function set_title( t : String ) : String {
+		return js.Browser.document.title = t;
+	}
 }

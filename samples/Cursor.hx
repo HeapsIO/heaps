@@ -36,6 +36,7 @@ class Cursor extends SampleApp {
 			var i = new h2d.Interactive(120, 20, s2d);
 			var tf = new h2d.Text(hxd.res.DefaultFont.get(), i);
 			tf.text = c.getName();
+			tf.dropShadow = { dx: 1, dy: 1, color: 0, alpha: 1 };
 			tf.x = 5;
 			i.x = 0;
 			i.y = pos++ * 20;
@@ -62,6 +63,9 @@ class Cursor extends SampleApp {
 		// It's possible to override default cursors by custom ones by setting
 		// `hxd.System.setCursor` function.
 		// Useful when game utilizes stylized cursors for everything.
+
+		// HLSDL note: Cursor offsetX and offsetY should remain inside frame bounds.
+		// This is a limitation of SDL (most likely for portability reasons).
 
 		var doOverride = false;
 		var defOverride = new hxd.BitmapData(10, 10);

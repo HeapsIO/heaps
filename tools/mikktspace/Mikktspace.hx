@@ -22,6 +22,9 @@ class Mikktspace {
 		m.indexes = input.read(m.indices * 4);
 
 		var tangents = haxe.io.Bytes.alloc(4 * 4 * vertCount);
+		tangents.fill(0,tangents.length,0);
+		for( i in 0...vertCount )
+			tangents.setFloat(i * 16, 1);
 		m.tangents = tangents;
 		m.tangentStride = 4;
 		m.tangentPos = 0;

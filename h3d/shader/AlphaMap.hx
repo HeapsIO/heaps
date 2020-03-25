@@ -8,14 +8,19 @@ class AlphaMap extends hxsl.Shader {
 		@param var texture : Sampler2D;
 		@param var uvScale : Vec2;
 		@param var uvDelta : Vec2;
+		@const var useAlphaChannel : Bool;
 		function fragment() {
-			pixelColor.a *= texture.get(calculatedUV * uvScale + uvDelta).b;
+			if( useAlphaChannel )
+				pixelColor.a *= texture.get(calculatedUV * uvScale + uvDelta).a;
+			else
+				pixelColor.a *= texture.get(calculatedUV * uvScale + uvDelta).b;
 		}
 	}
 
-	public function new(texture) {
+	public function new(texture, useAlphaChannel=false) {
 		super();
 		uvScale.set(1, 1);
+		this.useAlphaChannel = useAlphaChannel;
 		this.texture = texture;
 	}
 

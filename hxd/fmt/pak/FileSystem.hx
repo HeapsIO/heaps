@@ -2,7 +2,7 @@ package hxd.fmt.pak;
 import hxd.fs.FileEntry;
 #if air3
 import hxd.impl.Air3File;
-#elseif sys
+#elseif (sys || nodejs)
 import sys.io.File;
 import sys.io.FileInput;
 #else
@@ -181,7 +181,7 @@ class FileSystem implements hxd.fs.FileSystem {
 	}
 
 	public function loadPak( file : String ) {
-		#if (air3 || sys)
+		#if (air3 || sys || nodejs)
 		addPak(File.read(file));
 		#else
 		throw "TODO";

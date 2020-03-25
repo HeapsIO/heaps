@@ -140,6 +140,10 @@ class System {
 			flash.system.System.exit(0);
 	}
 
+	public static function openURL( url : String ) : Void {
+		throw 'Not implemented';
+	}
+
 	// getters
 
 	static function get_width() {

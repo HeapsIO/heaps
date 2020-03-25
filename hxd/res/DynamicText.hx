@@ -126,7 +126,7 @@ class DynamicText {
 			if( ref != null ) {
 				refIds = new Map();
 				for( x in ref.elements ) {
-					var id = x.att.id;
+					var id = x.x.get("id");
 					if( id != null ) refIds.set(id, x);
 				}
 			}
@@ -238,7 +238,7 @@ class DynamicText {
 		return function(vars) {
 			var str = str;
 			for( f in Reflect.fields(vars) )
-				str = str.split("::" + f + "::").join(Reflect.field(vars, f));
+				str = str.split("::" + f + "::").join(""+Reflect.field(vars, f));
 			return str;
 		};
 	}

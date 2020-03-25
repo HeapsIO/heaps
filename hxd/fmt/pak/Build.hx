@@ -41,11 +41,14 @@ class Build {
 				var s = buildRec(fpath);
 				if( s != null ) f.content.push(s);
 			}
+			if( f.content.length == 0 && path != "" )
+				return null;
 		} else {
 			var ext = path.split("/").pop().split(".").pop().toLowerCase();
 			if( excludedExt.indexOf(ext) >= 0 )
 				return null;
-			var filePath = fs.getAbsolutePath(fs.get(path));
+			var entry = try fs.get(path) catch( e : hxd.res.NotFound ) return null;
+			var filePath = fs.getAbsolutePath(entry);
 			var data = sys.io.File.getBytes(filePath);
 
 			switch( ext ) {

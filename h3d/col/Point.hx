@@ -97,6 +97,15 @@ class Point {
 		return this;
 	}
 
+	public inline function lerp( p1 : Point, p2 : Point, k : Float ) {
+		var x = Math.lerp(p1.x, p2.x, k);
+		var y = Math.lerp(p1.y, p2.y, k);
+		var z = Math.lerp(p1.z, p2.z, k);
+		this.x = x;
+		this.y = y;
+		this.z = z;
+	}
+
 	public inline function transform( m : Matrix ) {
 		var px = x * m._11 + y * m._21 + z * m._31 + m._41;
 		var py = x * m._12 + y * m._22 + z * m._32 + m._42;
