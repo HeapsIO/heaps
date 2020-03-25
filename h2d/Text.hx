@@ -340,7 +340,7 @@ class Text extends Drawable {
 
 	inline function updateSize() {
 		checkText();
-		if ( !calcDone ) rebuild();
+		if ( !calcDone ) initGlyphs(text, needsRebuild);
 	}
 
 	function get_textHeight() {
