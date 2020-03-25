@@ -158,7 +158,7 @@ class System {
 		#if usesys
 		haxe.System.reportError(err + stack);
 		#else
-		Sys.println(err + stack);
+		Sys.stderr().writeString(err + stack + "\n");
 
 		if ( Sys.systemName() != 'Windows' )
 			return;
