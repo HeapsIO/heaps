@@ -54,8 +54,6 @@ class HtmlText extends Text {
 	var xMax : Float;
 	var xMin : Float;
 	var textXml : Xml;
-	var imageCache : Map<String, Tile>;
-	var fontCache : Map<String, Font>;
 	var sizePos : Int;
 	var dropMatrix : h3d.shader.ColorMatrix;
 	var prevChar : Int;
@@ -86,7 +84,8 @@ class HtmlText extends Text {
 
 	/**
 		Method that should return `h2d.Tile` instance for `<img>` tags. By default calls `HtmlText.defaultLoadImage` method.
-		Loaded Tiles are temporary cached internally and if text contains multiple same images - this method will be called only once. Cache is invalidated whenever text changes.
+		HtmlText does not cache tile instances.
+		Due to internal structure, method should be determenistic and always return same Tile on consequent calls with same `url` input.
 		@param url A value contained in `src` attribute.
 	**/
 	public dynamic function loadImage( url : String ) : Tile {
@@ -96,6 +95,7 @@ class HtmlText extends Text {
 	/**
 		Method that should return `h2d.Font` instance for `<font>` tags with `face` attribute. By default calls `HtmlText.defaultLoadFont` method.
 		HtmlText does not cache font instances and it's recommended to perform said caching from outside.
+		Due to internal structure, method should be determenistic and always return same Font instance on consequent calls with same `name` input.
 		@param name A value contained in `face` attribute.
 		@returns Method should return loaded font instance or `null`. If `null` is returned - currently active font is used.
 	**/
@@ -124,51 +124,29 @@ class HtmlText extends Text {
 
 	override function validateText()
 	{
-		imageCache = new Map();
-		fontCache = new Map();
 		textXml = parseText(text);
-		buildCache(textXml);
+		validateNodes(textXml);
 	}
 
-	function getCachedImage( src : String ) : Tile {
-		var i = imageCache.get(src);
-		if ( i == null ) {
-			i = loadImage(src);
-			if( i == null ) i = Tile.fromColor(0xFF00FF, 8, 8);
-			imageCache.set(src, i);
-		}
-		return i;
-	}
-
-	function getCachedFont( face : String ) : Font {
-		var font = fontCache.get(face);
-		if ( font == null ) {
-			font = loadFont(face);
-			if ( font == null ) font = this.font;
-			fontCache.set(face, font);
-		}
-		return font;
-	}
-
-	function buildCache( xml : Xml ) {
+	function validateNodes( xml : Xml ) {
 		if ( xml.nodeType == Element ) {
 
 			var nodeName = xml.nodeName.toLowerCase();
 			switch ( nodeName ) {
 				case "img":
-					getCachedImage(xml.get("src"));
+					loadImage(xml.get("src"));
 				case "font":
 					if (xml.exists("face")) {
-						getCachedFont(xml.get("face"));
+						loadFont(xml.get("face"));
 					}
 				case "b", "bold":
-					getCachedFont("bold");
+					loadFont("bold");
 				case "i", "italic":
-					getCachedFont("italic");
+					loadFont("italic");
 			}
 
 			for ( child in xml )
-				buildCache(xml);
+				validateNodes(xml);
 		}
 	}
 
@@ -182,8 +160,6 @@ class HtmlText extends Text {
 
 		var doc : Xml;
 		if (textXml == null) {
-			imageCache = new Map();
-			fontCache = new Map();
 			doc = parseText(text);
 		} else {
 			doc = textXml;
@@ -220,8 +196,6 @@ class HtmlText extends Text {
 		if( xPos > xMax ) xMax = xPos;
 
 		textXml = null;
-		imageCache = null;
-		fontCache = null;
 
 		var y = yPos;
 		calcXMin = xMin;
@@ -281,7 +255,8 @@ class HtmlText extends Text {
 				// TODO: Support width/height attributes
 				// Support max-width/max-height attributes (downscale)
 				// Support min-width/min-height attributes (upscale)
-				var i : Tile = getCachedImage(e.get("src"));
+				var i : Tile = loadImage(e.get("src"));
+				if ( i == null ) i = Tile.fromColor(0xFF00FF, 8, 8);
 
 				var size = metrics[metrics.length - 1].width + i.width + letterSpacing;
 				if (realMaxWidth >= 0 && size > realMaxWidth && metrics[metrics.length - 1].width > 0) {
@@ -322,14 +297,14 @@ class HtmlText extends Text {
 				for( a in e.attributes() ) {
 					var v = e.get(a);
 					switch( a.toLowerCase() ) {
-					case "face": font = getCachedFont(v);
+					case "face": font = loadFont(v);
 					default:
 					}
 				}
 			case "b", "bold":
-				font = getCachedFont("bold");
+				font = loadFont("bold");
 			case "i", "italic":
-				font = getCachedFont("italic");
+				font = loadFont("italic");
 			default:
 			}
 			for( child in e )
@@ -544,7 +519,7 @@ class HtmlText extends Text {
 			var oldAlign = align;
 			var nodeName = e.nodeName.toLowerCase();
 			inline function setFont( v : String ) {
-				font = fontCache.get(v);
+				font = loadFont(v);
 				if( prevGlyphs == null ) prevGlyphs = glyphs;
 				var prev = glyphs;
 				glyphs = new TileGroup(font == null ? null : font.tile, this);
@@ -619,7 +594,8 @@ class HtmlText extends Text {
 				newLine = true;
 				prevChar = -1;
 			case "img":
-				var i : Tile = imageCache.get(e.get("src"));
+				var i : Tile = loadImage(e.get("src"));
+				if ( i == null ) i = Tile.fromColor(0xFF00FF, 8, 8);
 				var py = yPos + metrics[sizePos].baseLine - i.height;
 				if( py + i.dy < calcYMin )
 					calcYMin = py + i.dy;
