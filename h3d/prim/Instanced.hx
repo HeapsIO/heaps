@@ -67,6 +67,8 @@ class Instanced extends MeshPrimitive {
 	}
 
 	override function render( engine : h3d.Engine ) {
+		if( buffer.isDisposed() )
+			setMesh(primitive);
 		engine.renderInstanced(getBuffers(engine),indexes,commands);
 	}
 

@@ -75,6 +75,8 @@ class System {
 	public static function exit() : Void {
 	}
 
+	public static function openURL( url : String ) : Void {}
+
 	// getters
 
 	static function get_width() : Int return 0;

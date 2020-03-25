@@ -235,6 +235,14 @@ class GlDriver extends Driver {
 		#if js
 		// make sure to enable extensions
 		makeFeatures();
+
+		// We need to get instanced rendering by it's ANGLE extension if we are using webgl1
+		if(hasFeature(InstancedRendering) && glES < 3) {
+			var extension:js.html.webgl.extension.ANGLEInstancedArrays =  cast gl.getExtension("ANGLE_instanced_arrays");
+			Reflect.setField(gl,"vertexAttribDivisor",extension.vertexAttribDivisorANGLE);
+			Reflect.setField(gl,"drawElementsInstanced",extension.drawElementsInstancedANGLE);
+		}
+
 		// setup shader optim
 		hxsl.SharedShader.UNROLL_LOOPS = !hasFeature(ShaderModel3);
 		#else
@@ -529,21 +537,22 @@ class GlDriver extends Driver {
 				if( pt.u == null ) continue;
 
 				var idx = s.vertex ? i : curShader.vertex.textures.length + i;
-				if( boundTextures[idx] == t.t ) continue;
-				boundTextures[idx] = t.t;
+				if( boundTextures[idx] != t.t ) {
+					boundTextures[idx] = t.t;
 
-				#if multidriver
-				if( t.t.driver != this )
-					throw "Invalid texture context";
-				#end
+					#if multidriver
+					if( t.t.driver != this )
+						throw "Invalid texture context";
+					#end
 
-				var mode = getBindType(t);
-				if( mode != pt.mode )
-					throw "Texture format mismatch: "+t+" should be "+pt.t;
-				gl.activeTexture(GL.TEXTURE0 + idx);
-				gl.uniform1i(pt.u, idx);
-				gl.bindTexture(mode, t.t.t);
-				lastActiveIndex = idx;
+					var mode = getBindType(t);
+					if( mode != pt.mode )
+						throw "Texture format mismatch: "+t+" should be "+pt.t;
+					gl.activeTexture(GL.TEXTURE0 + idx);
+					gl.uniform1i(pt.u, idx);
+					gl.bindTexture(mode, t.t.t);
+					lastActiveIndex = idx;
+				}
 
 				var mip = Type.enumIndex(t.mipMap);
 				var filter = Type.enumIndex(t.filter);
@@ -552,6 +561,7 @@ class GlDriver extends Driver {
 				if( bits != t.t.bits ) {
 					t.t.bits = bits;
 					var flags = TFILTERS[mip][filter];
+					var mode = pt.mode;
 					gl.texParameteri(mode, GL.TEXTURE_MAG_FILTER, flags[0]);
 					gl.texParameteri(mode, GL.TEXTURE_MIN_FILTER, flags[1]);
 					var w = TWRAP[wrap];
@@ -1270,15 +1280,15 @@ class GlDriver extends Driver {
 				case "position":
 					pos = 0;
 				case "normal":
-					if( m.stride < 6 ) throw "Buffer is missing NORMAL data, set it to RAW format ?" #if debug + @:privateAccess v.allocPos #end;
+					if( m.stride < 6 ) throw "Buffer is missing NORMAL data, set it to RAW format ?" #if track_alloc + @:privateAccess v.allocPos #end;
 					pos = 3;
 				case "uv":
-					if( m.stride < 8 ) throw "Buffer is missing UV data, set it to RAW format ?" #if debug + @:privateAccess v.allocPos #end;
+					if( m.stride < 8 ) throw "Buffer is missing UV data, set it to RAW format ?" #if track_alloc + @:privateAccess v.allocPos #end;
 					pos = 6;
 				case s:
 					pos = offset;
 					offset += a.size;
-					if( offset > m.stride ) throw "Buffer is missing '"+s+"' data, set it to RAW format ?" #if debug + @:privateAccess v.allocPos #end;
+					if( offset > m.stride ) throw "Buffer is missing '"+s+"' data, set it to RAW format ?" #if track_alloc + @:privateAccess v.allocPos #end;
 				}
 				gl.vertexAttribPointer(a.index, a.size, a.type, false, m.stride * 4, pos * 4);
 				updateDivisor(a);
@@ -1612,6 +1622,9 @@ class GlDriver extends Driver {
 
 		case MultipleRenderTargets:
 			mrtExt != null || (mrtExt = gl.getExtension('WEBGL_draw_buffers')) != null;
+			
+		case InstancedRendering:
+			return (glES >= 3) ? true : gl.getExtension("ANGLE_instanced_arrays") != null;
 
 		default:
 			false;

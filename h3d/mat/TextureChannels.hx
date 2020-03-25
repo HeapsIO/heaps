@@ -7,10 +7,10 @@ class TextureChannels extends Texture {
 	var channels : Array<{ r : hxd.res.Image, c : hxd.Pixels.Channel }> = [];
 	public var allowAsync : Bool = true;
 
-	public function new(w, h, ?flags : Array<TextureFlags>, ?format : TextureFormat, ?allocPos : h3d.impl.AllocPos ) {
+	public function new(w, h, ?flags : Array<TextureFlags>, ?format : TextureFormat ) {
 		if( flags == null ) flags = [];
 		flags.push(NoAlloc);
-		super(w, h, flags, format, allocPos);
+		super(w, h, flags, format);
 		pixels = new hxd.Pixels(w, h, haxe.io.Bytes.alloc(w * h * 4), Texture.nativeFormat);
 		realloc = restore;
 	}

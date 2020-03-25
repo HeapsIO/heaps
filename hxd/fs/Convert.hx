@@ -3,8 +3,13 @@ package hxd.fs;
 @:keep @:keepSub
 class Convert {
 
-	public var sourceExt(default,null) : String;
+	public var sourceExts(default,null) : Array<String>;
 	public var destExt(default,null) : String;
+
+	/**
+		Major version of the Convert.
+		When incremented, all files processed by this Convert would be rebuilt. **/
+	public var version(default, null) : Int;
 
 	public var params : Dynamic;
 
@@ -13,13 +18,19 @@ class Convert {
 	public var originalFilename : String;
 	public var srcBytes : haxe.io.Bytes;
 
-	public function new( sourceExt, destExt ) {
-		this.sourceExt = sourceExt;
+	public function new( sourceExts, destExt ) {
+		this.sourceExts = sourceExts == null ? null : sourceExts.split(",");
 		this.destExt = destExt;
+		this.version = 0;
 	}
 
 	public function convert() {
 		throw "Not implemented";
+	}
+
+	function hasParam( name : String ) {
+		var f : Dynamic = Reflect.field(params, name);
+		return f != null && f != false;
 	}
 
 	function getParam( name : String ) {
@@ -45,18 +56,13 @@ class Convert {
 	}
 
 	static var converts = new Map<String,Array<Convert>>();
-	public static function register( ?c : Convert, ?arr : Array<Convert> ) : Int {
-		if( c != null ) {
-			var dest = converts.get(c.destExt);
-			if( dest == null ) {
-				dest = [];
-				converts.set(c.destExt, dest);
-			}
-			dest.unshift(c); // latest registered get priority ! (allow override defaults)
+	public static function register( c : Convert ) : Int {
+		var dest = converts.get(c.destExt);
+		if( dest == null ) {
+			dest = [];
+			converts.set(c.destExt, dest);
 		}
-		if( arr != null )
-			for( c in arr )
-				register(c);
+		dest.unshift(c); // latest registered get priority ! (allow override defaults)
 		return 0;
 	}
 
@@ -124,10 +130,18 @@ class ConvertWAV2OGG extends Convert {
 
 	override function convert() {
 		var cmd = "oggenc";
+		var args = ["--resample", "44100", "-Q", srcPath, "-o", dstPath];
 		#if (sys || nodejs)
 		if( Sys.systemName() == "Windows" ) cmd = "oggenc2";
+		if( hasParam("mono") ) {
+			var f = sys.io.File.read(srcPath);
+			var wav = new format.wav.Reader(f).read();
+			f.close();
+			if( wav.header.channels >= 2 )
+				args.push("--downmix");
+		}
 		#end
-		command(cmd, ["--resample", "44100", "-Q", srcPath, "-o", dstPath]);
+		command(cmd, args);
 	}
 
 	static var _ = Convert.register(new ConvertWAV2OGG());
@@ -209,11 +223,19 @@ class CompressIMG extends Convert {
 		command("CompressonatorCLI", ["-silent","-fd",getParam("format"),srcPath,dstPath]);
 	}
 
-	static var _ = Convert.register([
-		new CompressIMG("png","dds"),
-		new CompressIMG("tga","dds"),
-		new CompressIMG("jpg","dds"),
-		new CompressIMG("jpeg","dds")
-	]);
+	static var _ = Convert.register(new CompressIMG("png,tga,jpg,jpeg","dds"));
+
+}
+
+class DummyConvert extends Convert {
+
+	override function convert() {
+		save(haxe.io.Bytes.alloc(0));
+	}
+
+	static var _ = [
+		Convert.register(new DummyConvert(null,"dummy")),
+		Convert.register(new DummyConvert(null,"remove"))
+	];
 
 }

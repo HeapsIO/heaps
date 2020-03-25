@@ -1,6 +1,5 @@
 package hxd.impl;
 import hxd.impl.Allocator;
-import h3d.impl.AllocPos;
 
 private class Cache<T> {
 	public var content : Array<T> = [];
@@ -35,7 +34,7 @@ class CacheAllocator extends Allocator {
 	**/
 	public var maxKeepTime = 60.;
 
-	override function allocBuffer(vertices:Int, stride:Int, flags:BufferFlags, ?pos:AllocPos):h3d.Buffer {
+	override function allocBuffer(vertices:Int, stride:Int, flags:BufferFlags):h3d.Buffer {
 		if( vertices >= 65536 ) throw "assert";
 		var id = flags.toInt() | (stride << 3) | (vertices << 16);
 		var c = buffers.get(id);
@@ -44,7 +43,7 @@ class CacheAllocator extends Allocator {
 			if( b != null ) return b;
 		}
 		checkGC();
-		return super.allocBuffer(vertices,stride,flags,pos);
+		return super.allocBuffer(vertices,stride,flags);
 	}
 
 	override function disposeBuffer(b:h3d.Buffer) {
@@ -57,6 +56,10 @@ class CacheAllocator extends Allocator {
 		}
 		c.put(b);
 		checkGC();
+	}
+
+	override function onContextLost() {
+		buffers = new Map();
 	}
 
 	public function checkGC() {

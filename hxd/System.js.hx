@@ -110,6 +110,10 @@ class System {
 	public static function exit() : Void {
 	}
 
+	public static function openURL( url : String ) : Void {
+		js.Browser.window.open(url, '_blank');
+	}
+
 	static function updateCursor() : Void {
 		if ( currentCustomCursor != null ) {
 			var change = currentCustomCursor.update(hxd.Timer.elapsedTime);

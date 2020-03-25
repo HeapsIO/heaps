@@ -77,12 +77,12 @@ class BigTexture {
 	var lastEvent : Float;
 	var bgColor : Int;
 
-	public function new(id, size, bgColor = 0xFF8080FF, ?allocPos : h3d.impl.AllocPos ) {
+	public function new(id, size, bgColor = 0xFF8080FF ) {
 		this.id = id;
 		this.size = size;
 		this.bgColor = bgColor;
 		space = new QuadTree(0,0,size,size);
-		tex = new h3d.mat.Texture(1, 1, allocPos);
+		tex = new h3d.mat.Texture(1, 1);
 		tex.preventAutoDispose();
 		tex.flags.set(Serialize);
 		tex.clear(bgColor);

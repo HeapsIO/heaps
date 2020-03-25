@@ -108,38 +108,9 @@ class NativeChannel {
 	var snd : flash.media.Sound;
 	var channel : flash.media.SoundChannel;
 	#elseif js
-	static var ctx : js.html.audio.AudioContext;
-	static var destination : js.html.audio.AudioNode;
-	static var masterGain : js.html.audio.GainNode;
-	static function getContext() : js.html.audio.AudioContext {
-		if( ctx == null ) {
-			try {
-				ctx = new js.html.audio.AudioContext();
-			} catch( e : Dynamic ) try {
-				#if (haxe_ver >= 4)
-				ctx = js.Syntax.code('new window.webkitAudioContext()');
-				#else
-				ctx = untyped __js__('new window.webkitAudioContext()');
-				#end
-			} catch( e : Dynamic ) {
-				ctx = null;
-			}
-			if( ctx != null ) {
-				if( ctx.state == SUSPENDED ) waitForPageInput();
-				ctx.addEventListener("statechange", function(_) if( ctx.state == SUSPENDED ) waitForPageInput());
-				masterGain = ctx.createGain();
-				masterGain.connect(ctx.destination);
-
-				destination = masterGain;
-			}
-		}
-		return ctx;
-	}
 	// Avoid excessive buffer allocation when playing many sounds.
 	// bufferSamples is constant and never change at runtime, so it's safe to use general pool.
-	static var pool : Array<js.html.audio.AudioBuffer> = new Array();
 	static var bufferPool : Array<haxe.io.Float32Array> = new Array();
-	static var gainPool : Array<js.html.audio.GainNode> = new Array();
 	
 	var front : js.html.audio.AudioBuffer;
 	var back : js.html.audio.AudioBuffer;
@@ -160,21 +131,18 @@ class NativeChannel {
 		snd.addEventListener(flash.events.SampleDataEvent.SAMPLE_DATA, onFlashSample);
 		channel = snd.play(0, 0x7FFFFFFF);
 		#elseif js
-		var ctx = getContext();
-		if( ctx == null ) return;
-		
-		if ( pool.length > 0 ) front = pool.pop();
-		else front = ctx.createBuffer(2, bufferSamples, ctx.sampleRate);
-		if ( pool.length > 0 ) back = pool.pop();
-		else back = ctx.createBuffer(2, bufferSamples, ctx.sampleRate);
+		var ctx = hxd.snd.webaudio.Context.get();
+
+		var rate = Std.int(ctx.sampleRate);
+		front = hxd.snd.webaudio.Context.getBuffer(2, bufferSamples, rate);
+		back = hxd.snd.webaudio.Context.getBuffer(2, bufferSamples, rate);
 		
 		if ( bufferPool.length > 0 ) tmpBuffer = bufferPool.pop();
 		else tmpBuffer = new haxe.io.Float32Array(bufferSamples * 2);
-		
-		if ( gainPool.length != 0 ) gain = gainPool.pop();
-		else gain = ctx.createGain();
-		gain.connect(destination);
 
+		gain = hxd.snd.webaudio.Context.getGain();
+		gain.connect(hxd.snd.webaudio.Context.destination);
+		
 		fill(front);
 		fill(back);
 		
@@ -209,30 +177,6 @@ class NativeChannel {
 
 	#if js
 
-	static var waitDiv = null;
-	static function waitForPageInput() {
-		if( waitDiv != null ) waitDiv.remove();
-		// insert invisible div on top of the page to capture events
-		// see https://developers.google.com/web/updates/2017/09/autoplay-policy-changes#webaudio
-		var div = js.Browser.document.createDivElement();
-		div.setAttribute("style","width:100%;height:100%;background:transparent;z-index:9999;position:fixed;left:0;top:0");
-		div.onclick = stopInput;
-		div.onkeydown = stopInput;
-		js.Browser.document.body.addEventListener("keydown",stopInput);
-		js.Browser.document.body.addEventListener("touchend",stopInput);
-		js.Browser.document.body.appendChild(div);
-		waitDiv = div;
-	}
-
-	static function stopInput(_) {
-		if( waitDiv == null ) return;
-		waitDiv.remove();
-		waitDiv = null;
-		js.Browser.document.body.removeEventListener("keydown",stopInput);
-		js.Browser.document.body.removeEventListener("touchend",stopInput);
-		if( ctx != null ) ctx.resume();
-	}
-	
 	function swap( event : js.html.Event ) {
 		var tmp = front;
 		front = back;
@@ -242,7 +186,7 @@ class NativeChannel {
 		current.removeEventListener("ended", swap);
 		// current.disconnect(); // Should not be required as it's a one-shot object by design.
 		current = queued;
-		var ctx = getContext();
+		var ctx = hxd.snd.webaudio.Context.get();
 		queued = ctx.createBufferSource();
 		queued.buffer = tmp;
 		queued.addEventListener("ended", swap);
@@ -264,7 +208,7 @@ class NativeChannel {
 			right[i] = tmpBuffer[r++];
 		}
 	}
-	
+
 	#end
 
 	function onSample( out : haxe.io.Float32Array ) {
@@ -278,24 +222,22 @@ class NativeChannel {
 		}
 		#elseif js
 		if ( front != null ) {
-			current.disconnect();
 			current.removeEventListener("ended", swap);
 			current.stop();
+			current.disconnect();
 			current = null;
-			
+
 			queued.removeEventListener("ended", swap);
 			queued.disconnect();
 			queued.stop();
 			queued = null;
 
-			gainPool.push(gain);
 			gain.disconnect();
+			hxd.snd.webaudio.Context.putGain(gain);
 			gain = null;
 
-			pool.push(front);
-			front = null;
-			pool.push(back);
-			back = null;
+			hxd.snd.webaudio.Context.putBuffer(front);
+			hxd.snd.webaudio.Context.putBuffer(back);
 			
 			bufferPool.push(tmpBuffer);
 			tmpBuffer = null;

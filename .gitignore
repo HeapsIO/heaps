@@ -12,3 +12,4 @@ bin
 .vscode
 /tools/mikktspace/out
 *.exe
+.history

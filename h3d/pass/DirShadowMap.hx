@@ -184,7 +184,6 @@ class DirShadowMap extends Shadows {
 		staticTexture = new h3d.mat.Texture(size, size, [Target], format);
 		staticTexture.uploadPixels(pixels);
 		staticTexture.name = "staticTexture";
-		staticTexture.realloc = null;
 		staticTexture.preventAutoDispose();
 		syncShader(staticTexture);
 		return true;
@@ -196,6 +195,8 @@ class DirShadowMap extends Shadows {
 
 		if( !filterPasses(passes) )
 			return;
+
+		cullPasses(passes,function(col) return col.inFrustum(lightCamera.frustum));
 
 		var texture = ctx.textures.allocTarget("dirShadowMap", size, size, false, format);
 		if( customDepth && (depth == null || depth.width != size || depth.height != size || depth.isDisposed()) ) {
@@ -248,10 +249,12 @@ class DirShadowMap extends Shadows {
 			return;
 		draw(passes);
 		var texture = dshader.shadowMap;
-		if( staticTexture != null ) staticTexture.dispose();
+		var old = staticTexture;
 		staticTexture = texture.clone();
+		staticTexture.name = "StaticDirShadowMap";
+		staticTexture.preventAutoDispose();
 		dshader.shadowMap = staticTexture;
+		if( old != null )
+			old.dispose();
 	}
-
-
 }

@@ -8,12 +8,18 @@ class Indexes {
 	var ibuf : h3d.impl.Driver.IndexBuffer;
 	public var is32(default,null) : Bool;
 	public var count(default,null) : Int;
+	#if track_alloc
+	var allocPos : hxd.impl.AllocPos;
+	#end
 
 	public function new(count,is32=false) {
 		this.mem = h3d.Engine.getCurrent().mem;
 		this.count = count;
 		this.is32 = is32;
 		mem.allocIndexes(this);
+		#if track_alloc
+		allocPos = new hxd.impl.AllocPos();
+		#end
 	}
 
 	public function isDisposed() {
