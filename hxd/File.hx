@@ -117,14 +117,23 @@ class File {
 			};
 			onSelect(b);
 		#elseif js
-			var input = js.Browser.document.createElement("input");
+			var input : js.html.InputElement = cast js.Browser.document.getElementById("heapsBrowserInput");
+			if( input==null ) {
+				input = cast js.Browser.document.createElement("input");
+				input.setAttribute("id","heapsBrowserInput");
+				js.Browser.document.body.appendChild(input);
+			}
 			input.setAttribute("type","file");
+			input.style.display = "none";
 			if( options.fileTypes!=null ) {
 				var extensions = [];
 				for(ft in options.fileTypes)
 					for(e in ft.extensions)
 						extensions.push("."+e);
 				input.setAttribute("accept",extensions.join(","));
+			}
+			input.onclick = function(e) {
+				input.value = null;
 			}
 			input.onchange = function(e) {
 				var file : js.html.File = e.target.files[0];
@@ -153,6 +162,7 @@ class File {
 					}
 				}
 				onSelect(b);
+				input.remove();
 			}
 			input.click();
 		#else
