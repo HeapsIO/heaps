@@ -53,7 +53,7 @@ class HtmlText extends Text {
 	var yPos : Float;
 	var xMax : Float;
 	var xMin : Float;
-	var imageCache : Map<String, Tile>;
+	var textXml : Xml;
 	var sizePos : Int;
 	var dropMatrix : h3d.shader.ColorMatrix;
 	var prevChar : Int;
@@ -84,7 +84,8 @@ class HtmlText extends Text {
 
 	/**
 		Method that should return `h2d.Tile` instance for `<img>` tags. By default calls `HtmlText.defaultLoadImage` method.
-		Loaded Tiles are temporary cached internally and if text contains multiple same images - this method will be called only once. Cache is invalidated whenever text changes.
+		HtmlText does not cache tile instances.
+		Due to internal structure, method should be determenistic and always return same Tile on consequent calls with same `url` input.
 		@param url A value contained in `src` attribute.
 	**/
 	public dynamic function loadImage( url : String ) : Tile {
@@ -94,6 +95,7 @@ class HtmlText extends Text {
 	/**
 		Method that should return `h2d.Font` instance for `<font>` tags with `face` attribute. By default calls `HtmlText.defaultLoadFont` method.
 		HtmlText does not cache font instances and it's recommended to perform said caching from outside.
+		Due to internal structure, method should be determenistic and always return same Font instance on consequent calls with same `name` input.
 		@param name A value contained in `face` attribute.
 		@returns Method should return loaded font instance or `null`. If `null` is returned - currently active font is used.
 	**/
@@ -120,6 +122,34 @@ class HtmlText extends Text {
 		return { width: width, height: height, baseLine: baseLine };
 	}
 
+	override function validateText()
+	{
+		textXml = parseText(text);
+		validateNodes(textXml);
+	}
+
+	function validateNodes( xml : Xml ) {
+		if ( xml.nodeType == Element ) {
+
+			var nodeName = xml.nodeName.toLowerCase();
+			switch ( nodeName ) {
+				case "img":
+					loadImage(xml.get("src"));
+				case "font":
+					if (xml.exists("face")) {
+						loadFont(xml.get("face"));
+					}
+				case "b", "bold":
+					loadFont("bold");
+				case "i", "italic":
+					loadFont("italic");
+			}
+
+			for ( child in xml )
+				validateNodes(xml);
+		}
+	}
+
 	override function initGlyphs( text : String, rebuild = true ) {
 		if( rebuild ) {
 			glyphs.clear();
@@ -128,8 +158,12 @@ class HtmlText extends Text {
 		}
 		glyphs.setDefaultColor(textColor);
 
-		var doc = parseText(text);
-		imageCache = new Map();
+		var doc : Xml;
+		if (textXml == null) {
+			doc = parseText(text);
+		} else {
+			doc = textXml;
+		}
 
 		yPos = 0;
 		xMax = 0;
@@ -161,13 +195,15 @@ class HtmlText extends Text {
 
 		if( xPos > xMax ) xMax = xPos;
 
-		imageCache = null;
+		textXml = null;
+
 		var y = yPos;
 		calcXMin = xMin;
 		calcWidth = xMax - xMin;
 		calcHeight = y + metrics[sizePos].height;
 		calcSizeHeight = y + metrics[sizePos].baseLine;//(font.baseLine > 0 ? font.baseLine : font.lineHeight);
 		calcDone = true;
+		if ( rebuild ) needsRebuild = false;
 	}
 
 	function buildSizes( e : Xml, font : Font, metrics : Array<LineInfo>, splitNode:SplitNode ) {
@@ -219,13 +255,8 @@ class HtmlText extends Text {
 				// TODO: Support width/height attributes
 				// Support max-width/max-height attributes (downscale)
 				// Support min-width/min-height attributes (upscale)
-				var src = e.get("src");
-				var i : Tile = imageCache.get(src);
-				if ( i == null ) {
-					i = loadImage(src);
-					if( i == null ) i = Tile.fromColor(0xFF00FF, 8, 8);
-					imageCache.set(src, i);
-				}
+				var i : Tile = loadImage(e.get("src"));
+				if ( i == null ) i = Tile.fromColor(0xFF00FF, 8, 8);
 
 				var size = metrics[metrics.length - 1].width + i.width + letterSpacing;
 				if (realMaxWidth >= 0 && size > realMaxWidth && metrics[metrics.length - 1].width > 0) {
@@ -563,7 +594,8 @@ class HtmlText extends Text {
 				newLine = true;
 				prevChar = -1;
 			case "img":
-				var i : Tile = imageCache.get(e.get("src"));
+				var i : Tile = loadImage(e.get("src"));
+				if ( i == null ) i = Tile.fromColor(0xFF00FF, 8, 8);
 				var py = yPos + metrics[sizePos].baseLine - i.height;
 				if( py + i.dy < calcYMin )
 					calcYMin = py + i.dy;
