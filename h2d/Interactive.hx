@@ -14,7 +14,7 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 	/**
 		Cursor used when Interactive is under mouse cursor ( default : Button )
 	**/
-	public var cursor(default,set) : hxd.Cursor;
+	public var cursor(default,set) : Null<hxd.Cursor>;
 	/**
 		Should object collision be in rectangle or ellipse form? Ignored if `shape` is set.
 	**/
