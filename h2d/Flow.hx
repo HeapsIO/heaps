@@ -38,6 +38,7 @@ class FlowProperties {
 	public var calculatedHeight(default,null) : Int = 0;
 
 	public var isBreak(default,null) : Bool;
+	public var lineBreak = false;
 
 	/**
 		If our flow have a maximum size, it will constraint the children by using .constraintSize()
@@ -736,7 +737,7 @@ class Flow extends Object {
 
 				if( isAbs ) continue;
 
-				if( multiline && x - startX + p.calculatedWidth > maxInWidth && x - startX > 0 ) {
+				if( ((multiline && x - startX + p.calculatedWidth > maxInWidth) || p.lineBreak) && x - startX > 0 ) {
 					br = true;
 					alignLine(i);
 					y += maxLineHeight + verticalSpacing;
@@ -883,7 +884,7 @@ class Flow extends Object {
 
 				if( isAbs ) continue;
 
-				if( multiline && y - startY + p.calculatedHeight > maxInHeight && y - startY > 0 ) {
+				if( ((multiline && y - startY + p.calculatedHeight > maxInHeight) || p.lineBreak) && y - startY > 0 ) {
 					br = true;
 					alignLine(i);
 					x += maxColWidth + horizontalSpacing;
