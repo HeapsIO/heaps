@@ -355,6 +355,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	public function getInteractive( x : Float, y : Float ) : Interactive {
 		var pt = shapePoint;
 		for( i in interactive ) {
+			if( i.posChanged ) i.syncPos();
 
 			var dx = x - i.absX;
 			var dy = y - i.absY;
