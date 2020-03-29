@@ -33,6 +33,7 @@ class HlslOut {
 		m.set(BVec2, "bool2");
 		m.set(BVec3, "bool3");
 		m.set(BVec4, "bool4");
+		m.set(FragCoord,"_in.__pos__");
 		for( g in m )
 			KWDS.set(g, true);
 		m;
