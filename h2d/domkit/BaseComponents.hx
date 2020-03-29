@@ -250,7 +250,7 @@ class CustomParser extends CssValue.ValueParser {
 }
 
 #if !macro
-@:uiComp("object") @:parser(h2d.domkit.BaseComponents.CustomParser)
+@:uiComp("object") @:parser(h2d.domkit.BaseComponents.CustomParser) @:domkitDecl
 class ObjectComp implements h2d.domkit.Object implements domkit.Component.ComponentDecl<h2d.Object> {
 
 	@:p var x : Float;
@@ -410,7 +410,7 @@ class ObjectComp implements h2d.domkit.Object implements domkit.Component.Compon
 
 }
 
-@:uiComp("drawable")
+@:uiComp("drawable") @:domkitDecl
 class DrawableComp extends ObjectComp implements domkit.Component.ComponentDecl<h2d.Drawable> {
 
 	@:p(colorF) var color : h3d.Vector;
@@ -425,7 +425,7 @@ class DrawableComp extends ObjectComp implements domkit.Component.ComponentDecl<
 	}
 }
 
-@:uiComp("mask")
+@:uiComp("mask") @:domkitDecl
 class MaskComp extends ObjectComp implements domkit.Component.ComponentDecl<h2d.Mask> {
 	@:p var width : Int;
 	@:p var height : Int;
@@ -435,7 +435,7 @@ class MaskComp extends ObjectComp implements domkit.Component.ComponentDecl<h2d.
 	}
 }
 
-@:uiComp("bitmap")
+@:uiComp("bitmap") @:domkitDecl
 class BitmapComp extends DrawableComp implements domkit.Component.ComponentDecl<h2d.Bitmap> {
 
 	@:p(tile) var src : h2d.Tile;
@@ -460,7 +460,7 @@ class BitmapComp extends DrawableComp implements domkit.Component.ComponentDecl<
 
 }
 
-@:uiComp("text")
+@:uiComp("text") @:domkitDecl
 class TextComp extends DrawableComp implements domkit.Component.ComponentDecl<h2d.Text> {
 
 	@:p var text : String = "";
@@ -485,7 +485,7 @@ class TextComp extends DrawableComp implements domkit.Component.ComponentDecl<h2
 	}
 }
 
-@:uiComp("html-text")
+@:uiComp("html-text") @:domkitDecl
 class HtmlTextComp extends TextComp implements domkit.Component.ComponentDecl<h2d.HtmlText> {
 	@:p var condenseWhite : Bool;
 
@@ -495,7 +495,7 @@ class HtmlTextComp extends TextComp implements domkit.Component.ComponentDecl<h2
 }
 
 
-@:uiComp("flow")
+@:uiComp("flow") @:domkitDecl
 class FlowComp extends ObjectComp implements domkit.Component.ComponentDecl<h2d.Flow> {
 
 	@:p(auto) var width : Null<Int>;
@@ -688,7 +688,7 @@ class FlowComp extends ObjectComp implements domkit.Component.ComponentDecl<h2d.
 
 }
 
-@:uiComp("input")
+@:uiComp("input") @:domkitDecl
 class InputComp extends TextComp implements domkit.Component.ComponentDecl<h2d.TextInput> {
 
 	@:p(auto) var width : Null<Int>;
