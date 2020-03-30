@@ -203,14 +203,18 @@ class Style extends domkit.CssStyle {
 	}
 
 	function lookupRec( obj : h2d.Object, e : hxd.Event ) {
-		for( s in obj ) {
-			if( lookupRec(s, e) )
+		var ch = @:privateAccess obj.children;
+		for( i in 0...ch.length ) {
+			if( lookupRec(ch[ch.length-1-i], e) )
 				return true;
 		}
 		if( obj.dom == null )
 			return false;
 		var b = obj.getBounds();
 		if( !b.contains(new h2d.col.Point(e.relX,e.relY)) )
+			return false;
+		var fl = Std.downcast(obj, h2d.Flow);
+		if( fl != null && fl.backgroundTile == null && fl.interactive == null )
 			return false;
 		setPreview(obj);
 		return true;
