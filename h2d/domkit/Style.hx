@@ -261,9 +261,14 @@ class Style extends domkit.CssStyle {
 		}
 		if( dom.id != null )
 			nameParts.push("#"+dom.id);
-		nameParts.push(' <font color="#808080">${Math.ceil(b.width)}x${Math.ceil(b.height)}</font>');
+		var sz = obj.getSize();
+		nameParts.push(' <font color="#808080">${Math.ceil(sz.width)}x${Math.ceil(sz.height)}</font>');
 		lines.push(nameParts.join(""));
 		lines.push("");
+		for( s in dom.style ) {
+			if( s.p.name == "text" || Std.is(s.value,h2d.Tile) ) continue;
+			lines.push(' <font color="#D0D0D0"> ${s.p.name}</font> <font color="#808080">${s.value}</font><font color="#606060"> (style)</font>');
+		}
 		for( i in 0...dom.currentSet.length ) {
 			var p = dom.currentSet[i];
 			if( p.name == "text" ) continue;
