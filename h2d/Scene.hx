@@ -416,6 +416,12 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 			var i = interactive[idx];
 			if( i == null ) break;
 
+			if( i.invDet == 0 ) {
+				// some interactives might have not been yet updated
+				// make sure they won't match the collider
+				continue;
+			}
+
 			var dx = ex - i.absX;
 			var dy = ey - i.absY;
 			var rx = (dx * i.matD - dy * i.matC) * i.invDet;
