@@ -88,6 +88,8 @@ class SpotShadowMap extends Shadows {
 	}
 
 	function createStaticTexture() : h3d.mat.Texture {
+		if( staticTexture != null && staticTexture.width == size && staticTexture.width == size && staticTexture.format == format )
+			return staticTexture;
 		if( staticTexture != null )
 			staticTexture.dispose();
 		staticTexture = new h3d.mat.Texture(size, size, [Target], format);
@@ -120,7 +122,7 @@ class SpotShadowMap extends Shadows {
 		return true;
 	}
 
-	override function draw( passes, ?sort ) {
+	override function draw( passes : h3d.pass.PassList, ?sort ) {
 		if( !enabled )
 			return;
 
@@ -130,7 +132,7 @@ class SpotShadowMap extends Shadows {
 		updateCamera();
 		cullPasses(passes, function(col) return col.inFrustum(lightCamera.frustum));
 
-		var texture = ctx.textures.allocTarget("spotShadowMap", size, size, false, format);
+		var texture = ctx.computingStatic ? createStaticTexture() : ctx.textures.allocTarget("spotShadowMap", size, size, false, format);
 		if( customDepth && (depth == null || depth.width != size || depth.height != size || depth.isDisposed()) ) {
 			if( depth != null ) depth.dispose();
 			depth = new h3d.mat.DepthBuffer(size, size);
@@ -175,9 +177,5 @@ class SpotShadowMap extends Shadows {
 		if( mode != Static && mode != Mixed )
 			return;
 		draw(passes);
-		if( staticTexture == null )
-			createStaticTexture();
-		Copy.run(sshader.shadowMap, staticTexture);
-		sshader.shadowMap = staticTexture;
 	}
 }

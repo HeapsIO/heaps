@@ -108,36 +108,37 @@ class Shadows extends Default {
 	}
 
 	function filterPasses( passes : h3d.pass.PassList ) {
-		if( !ctx.computingStatic ){
+		if( !ctx.computingStatic ) {
 			switch( mode ) {
-			case None:
-				return false;
-			case Dynamic:
-				// nothing
-			case Mixed:
-				if( staticTexture == null || staticTexture.isDisposed() )
-					staticTexture = createDefaultShadowMap();
-			case Static:
-				if( staticTexture == null || staticTexture.isDisposed() )
-					staticTexture = createDefaultShadowMap();
-				syncShader(staticTexture);
-				return false;
+				case None:
+					return false;
+				case Dynamic:
+					return true;
+				case Mixed:
+					if( staticTexture == null || staticTexture.isDisposed() )
+						staticTexture = createDefaultShadowMap();
+					return true;
+				case Static:
+					if( staticTexture == null || staticTexture.isDisposed() )
+						staticTexture = createDefaultShadowMap();
+					syncShader(staticTexture);
+					return false;
 			}
 		}
-		switch( mode ) {
-		case None:
-			passes.clear();
-		case Dynamic:
-			if( ctx.computingStatic ) passes.clear();
-		case Mixed:
-			passes.filter(function(p) return p.pass.isStatic == ctx.computingStatic);
-		case Static:
-			if( ctx.computingStatic )
-				passes.filter(function(p) return p.pass.isStatic == true);
-			else
-				passes.clear();
+		else {
+			switch( mode ) {
+				case None:
+					return false;
+				case Dynamic:
+					return false;
+				case Mixed:
+					passes.filter(function(p) return p.pass.isStatic == true);
+					return true;
+				case Static:
+					passes.filter(function(p) return p.pass.isStatic == true);
+					return true;
+			}
 		}
-		return true;
 	}
 
 	inline function cullPasses( passes : h3d.pass.PassList, f : h3d.col.Collider -> Bool ) {
