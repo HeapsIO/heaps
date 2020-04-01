@@ -213,6 +213,8 @@ class Style extends domkit.CssStyle {
 		var b = obj.getBounds();
 		if( !b.contains(new h2d.col.Point(e.relX,e.relY)) )
 			return false;
+		if( Type.getClass(obj) == h2d.Object ) // objects containing transparent flow?
+			return false;
 		var fl = Std.downcast(obj, h2d.Flow);
 		if( fl != null && fl.backgroundTile == null && fl.interactive == null )
 			return false;
