@@ -39,10 +39,16 @@ class CustomParser extends CssValue.ValueParser {
 
 
 	function parseColorF( v : CssValue ) : h3d.Vector {
-		var c = parseColor(v);
-		var v = new h3d.Vector();
-		v.setColor(c);
-		return v;
+		var f = new h3d.Vector();
+		switch( v ) {
+		case VInt(i):
+			f.r = f.g = f.b = i;
+		case VFloat(k):
+			f.r = f.g = f.b = k;
+		default:
+			f.setColor(parseColor(v));
+		}
+		return f;
 	}
 
 	function loadResource( path : String ) {
@@ -180,6 +186,14 @@ class CustomParser extends CssValue.ValueParser {
 		case VIdent("transparent"): null;
 		case VGroup([tile,VInt(x),VInt(y)]):
 			{ tile : parseTile(tile), borderW : x, borderH : y };
+		case VGroup([color,alpha]):
+			var c = parseColor(color);
+			var a = parseFloat(alpha);
+			return { tile : #if macro true #else h2d.Tile.fromColor(c,a) #end, borderW : 0, borderH : 0 };
+		case VCall("disc",args) if( args.length == 1 || args.length == 2 ):
+			var c = parseColor(args[0]);
+			var a = args[1] == null ? 1. : parseFloat(args[1]);
+			return { tile : #if macro true #else h2d.Tile.fromTexture(h3d.mat.Texture.genDisc(256,c,a)) #end, borderW : 0, borderH : 0 };
 		default:
 			{ tile : parseTile(value), borderW : 0, borderH : 0 };
 		}
