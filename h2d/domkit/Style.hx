@@ -228,6 +228,7 @@ class Style extends domkit.CssStyle {
 		if( b.xMin < 0 ) b.xMin = 0;
 		if( b.yMin < 0 ) b.yMin = 0;
 		var scene = obj.getScene();
+		if( scene == null ) return;
 		var p = new h2d.Bitmap(h2d.Tile.fromColor(0xFF0000, Math.round(b.width), Math.round(b.height), 0.1));
 		p.x = Math.round(b.xMin);
 		p.y = Math.round(b.yMin);
