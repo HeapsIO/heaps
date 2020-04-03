@@ -52,7 +52,6 @@ class RenderContext extends h3d.impl.RenderContext {
 	var baseFlipY : Float;
 	var targetFlipY : Float;
 
-
 	public function new(scene) {
 		super();
 		this.scene = scene;
@@ -70,7 +69,6 @@ class RenderContext extends h3d.impl.RenderContext {
 		targetsStack = [];
 		targetsStackIndex = 0;
 		filterStack = [];
-
 	}
 
 	override function dispose() {
