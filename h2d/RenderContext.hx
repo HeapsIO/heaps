@@ -17,6 +17,9 @@ class RenderContext extends h3d.impl.RenderContext {
 	public var onLeaveFilter : h2d.Object->Void;
 
 	public var tmpBounds = new h2d.col.Bounds();
+
+	public static var separateAlphaSrc = [BlendMode.Alpha => h3d.mat.Data.Blend.One, BlendMode.Add => h3d.mat.Data.Blend.One];
+
 	var texture : h3d.mat.Texture;
 	var baseShader : h3d.shader.Base2d;
 	var manager : h3d.pass.ShaderManager;
@@ -49,6 +52,7 @@ class RenderContext extends h3d.impl.RenderContext {
 	var baseFlipY : Float;
 	var targetFlipY : Float;
 
+
 	public function new(scene) {
 		super();
 		this.scene = scene;
@@ -66,6 +70,7 @@ class RenderContext extends h3d.impl.RenderContext {
 		targetsStack = [];
 		targetsStackIndex = 0;
 		filterStack = [];
+
 	}
 
 	override function dispose() {
@@ -303,11 +308,12 @@ class RenderContext extends h3d.impl.RenderContext {
 			// this will get us good color but wrong alpha
 			#else
 			// accummulate correctly alpha values
-			if( blend == Alpha || blend == Add ) {
-				pass.blendAlphaSrc = One;
+			if(separateAlphaSrc.exists(blend)) {
+				var separateSrc = separateAlphaSrc.get(blend);
+				pass.blendAlphaSrc = separateSrc;
 				// when merging
 				if( inFilterBlend != null )
-					pass.blendSrc = One;
+					pass.blendSrc = separateSrc;
 			}
 			#end
 		}
