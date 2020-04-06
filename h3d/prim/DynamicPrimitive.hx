@@ -68,8 +68,11 @@ class DynamicPrimitive extends Primitive {
 	}
 
 	override function dispose() {
-		super.dispose();
 		var alloc = hxd.impl.Allocator.get();
+		if( buffer != null ) {
+			alloc.disposeBuffer(buffer);
+			buffer = null;
+		}
 		if( vbuf != null ) {
 			alloc.disposeFloats(vbuf);
 			vbuf = null;
@@ -78,6 +81,7 @@ class DynamicPrimitive extends Primitive {
 			alloc.disposeIndexes(ibuf);
 			ibuf = null;
 		}
+		super.dispose();
 	}
 
 	override function triCount() {

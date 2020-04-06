@@ -22,6 +22,7 @@ class MeshPrimitive extends Primitive {
 		var old = bufferCache.get(id);
 		if( old != null ) old.dispose();
 		bufferCache.set(id, new h3d.Buffer.BufferOffset(buf, offset));
+		layouts = null;
 	}
 
 	override public function dispose() {

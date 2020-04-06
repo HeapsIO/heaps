@@ -667,7 +667,7 @@ class World extends Object {
 		super.syncRec(ctx);
 		// don't do in sync() since animations in our world might affect our chunks
 		for( c in allChunks ) {
-			c.root.visible = c.bounds.inFrustum(ctx.camera.frustum);
+			c.root.visible = ctx.computingStatic || c.bounds.inFrustum(ctx.camera.frustum);
 			if( c.root.visible ) {
 				c.lastFrame = ctx.frame;
 				initChunk(c);

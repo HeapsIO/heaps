@@ -107,4 +107,12 @@ class CustomCursor {
 		}
 	}
 
+	#if js
+	public static function getNativeCursor( name : String ) {
+		var c = new CustomCursor([],0,0,0);
+		c.alloc = [name];
+		return Custom(c);
+	}
+	#end
+
 }

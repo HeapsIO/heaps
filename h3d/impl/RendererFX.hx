@@ -2,6 +2,7 @@ package h3d.impl;
 
 enum Step {
 	BeforeLighting;
+	BeforeTonemappingFX;
 	BeforeTonemapping;
 	AfterTonemapping;
 	AfterUI;

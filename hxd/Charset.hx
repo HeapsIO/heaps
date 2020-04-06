@@ -109,7 +109,25 @@ class Charset {
 	}
 
 	public function isCJK(code) {
-		 return code >= 0x4E00 && code <= 0x9FFF;
+		// ID class line-break characters based off Unicode specification.
+		// Ref: https://www.unicode.org/reports/tr14/tr14-34.html#ID
+		#if accurate_cjk_detection
+		return (code >= 0x2E80 && code <= 0x2FFF) || // CJK, Kangxi Radicals, Ideographic Description Symbols
+					 (code >= 0x3040 && code <= 0x309F) || // Hiragana (except small characters)
+					 (code >= 0x30A0 && code <= 0x30FF) || // Katakana (except small characters)
+					 (code >= 0x3400 && code <= 0x4DBF) || // CJK Unified Ideographs Extension A
+					 (code >= 0x4E00 && code <= 0x9FFF) || // CJK Unified Ideographs
+					 (code >= 0xF900 && code <= 0xFAFF) || // CJK Compatibility Ideographs
+					 (code >= 0xA000 && code <= 0xA48F) || // Yi Syllables
+					 (code >= 0xA490 && code <= 0xA4CF) || // Yi Radicals
+					 (code >= 0xFE64 && code <= 0xFE66) || // SMALL PLUS SIGN..SMALL EQUALS SIGN
+					 (code >= 0xFF01 && code <= 0xFF5A) || // Fullwidth Latin letters and digits
+					 (code >= 0x20000 && code <= 0x3FFFD) || // CJK Unified Ideographs Extension B-E, CJK Compatibility Ideographs Supplement, SIP (Plane 2) and TIP (Plane 3)
+		#else
+		// Simpler and less accurate SJK detection, but faster due to less compares.
+		return (code >= 0x2E80 && code <= 0xA4CF) || (code >= 0xF900 && code <= 0xFAFF) || (code >= 0x20000 && code <= 0x3FFFD);
+		#end
+
 	}
 
 	public function isSpace(code) {

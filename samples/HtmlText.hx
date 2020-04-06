@@ -5,6 +5,8 @@ import h2d.Graphics;
 import h2d.Object;
 import h2d.Text.Align;
 
+// Use both text_res and res folders.
+//PARAM=-D resourcesPath=../../text_res;../../res
 class HtmlTextWidget extends Object
 {
 	public var align: Align;
@@ -57,12 +59,29 @@ class HtmlText extends hxd.App {
 	var resizeWidgets: Array<HtmlTextWidget> = [];
 
 	override function init() {
-		
+
 		// Enable global scaling
 		// s2d.scale(1.25);
 
 		var font = hxd.res.DefaultFont.get();
 		// var font = hxd.Res.customFont.toFont();
+
+		h2d.HtmlText.defaultLoadFont = function( face : String ) : h2d.Font {
+			if ( face == 'myFontFace' ) {
+				var font = hxd.res.DefaultFont.get().clone();
+				font.resizeTo(font.size * 2);
+				return font;
+			}
+			return null;
+		}
+		h2d.HtmlText.defaultLoadImage = function( src : String ) : h2d.Tile {
+			if ( src == "logo" ) {
+				var t = hxd.Res.hxlogo.toTile();
+				t.scaleToSize(16, 16);
+				return t;
+			}
+			return null;
+		}
 
 		var multilineText = "This is a multiline <font color=\"#FF00FF\">text.<br/>Lorem</font> ipsum dolor";
 		var singleText = "Hello simple text";
@@ -96,15 +115,14 @@ class HtmlText extends hxd.App {
 		// Resized widgets
 		xpos += 200;
 		yoffset = 10;
-		var longText = "Lorem ipsum dolor sit amet, fabulas repudiare accommodare nec ut.<br />Ut nec facete maiestatis, <font color=\"#FF00FF\">partem debitis eos id</font>, perfecto ocurreret repudiandae cum no.";
-		//var longText = "Lorem ipsum dolor sit amet, fabulas repudiare accommodare nec ut.Ut nec facete maiestatis, <font color=\"#FF00FF\">partem debitis eos id</font>, perfecto ocurreret repudiandae cum no.";
+		var longText = "Long text long text. Icons like this one <img src='logo'/> are flowed separately, but they should <font color=\"#FF00FF\">stick</font> to the text when they appear <img src='logo'/>before or after<img src='logo'/>. We support different <font face='myFontFace'>font faces</font>";
 		for (a in [Align.Left, Align.Center, Align.Right, Align.MultilineCenter, Align.MultilineRight]) {
 			var w = createWidget(longText, a);
 			w.setMaxWidth(200);
 			resizeWidgets.push(w);
-			yoffset += 100;
+			yoffset += 160;
 		}
-		
+
 		// Flows
 		function createText(parent:Object, str : String, align:Align) {
 			var tf = new h2d.HtmlText(font, parent);
@@ -185,6 +203,18 @@ class HtmlText extends hxd.App {
 			var f2 = createFlow(flow);
 			createText(f2, multilineText, Align.Left);
 		}
+		yoffset += flow.getBounds().height + 10;
+
+		var tagShowcase = "HtmlText supports next tags:" +
+		"<p>&lt;p&gt; tag:<p align='center'>Forces line breaks before and after.</p><p align='right'>It also supports `align` property.</p></p>" +
+		"<p>&lt;br/&gt; tag: Makes a<br/>line break</p>" +
+		"<p>&lt;font&gt; tag: Allows to control <font color='#ff00ff'>color</font>, <font opacity='0.8'>op</font><font opacity='0.6'>ac</font><font opacity='0.4'>it</font><font opacity='0.2'>y</font> and <font face='myFontFace'>face</font> properties.</p>" +
+		"<p>&lt;img src='...'/&gt; tag: Allows to insert a Tile <img src='logo'/> into html text</p>";
+		var flow = createFlow(s2d);
+		flow.y = yoffset;
+		flow.maxWidth = 360;
+		var text = createText(flow, tagShowcase, Align.Left);
+		text.maxWidth = 360;
 
 		onResize();
 	}
@@ -192,7 +222,7 @@ class HtmlText extends hxd.App {
 
 	override function update(dt:Float) {
 		for (w in resizeWidgets) {
-			w.setMaxWidth(Std.int(300 + Math.sin(haxe.Timer.stamp() * 0.5) * 100.0));
+			w.setMaxWidth(Std.int(300 + Math.sin(haxe.Timer.stamp() * 0.2) * 100.0));
 		}
 	}
 

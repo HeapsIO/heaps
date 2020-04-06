@@ -92,6 +92,19 @@ class Matrix {
 		this.y = ax * bb + ay * bd + by;
 	}
 
+	public inline function getScale(?p: h2d.col.Point) {
+		if(p == null)
+			p = new h2d.col.Point();
+		p.x = Math.sqrt(a * a + b * b);
+		p.y = Math.sqrt(c * c + d * d);
+		if( getDeterminant() < 0 ) {
+			p.x *= -1;
+			p.y *= -1;
+		}
+		return p;
+	}
+
+
 	public inline function scale( sx : Float, sy : Float ) {
 		a *= sx;
 		c *= sx;
@@ -104,6 +117,23 @@ class Matrix {
 	public function rotate(angle: Float) {
 		tmp.initRotate(angle);
 		multiply(this, tmp);
+	}
+
+	public function clone() {
+		var m = new Matrix();
+		m.a = a;
+		m.b = b;
+		m.c = c;
+		m.d = d;
+		m.x = x;
+		m.y = y;
+		return m;
+	}
+
+	public inline function getPosition( ?p : h2d.col.Point ) {
+		if( p == null ) p = new h2d.col.Point();
+		p.set(x,y);
+		return p;
 	}
 
 	public function toString() {

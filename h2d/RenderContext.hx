@@ -255,6 +255,14 @@ class RenderContext extends h3d.impl.RenderContext {
 		if( hasRenderZone ) clearRenderZone();
 	}
 
+	public function pushTargets( texs : Array<h3d.mat.Texture> ) {
+		pushTarget(texs[0]);
+		if( texs.length > 1 ) {
+			engine.popTarget();
+			engine.pushTargets(texs);
+		}
+	}
+
 	public function popTarget() {
 		flush();
 		if( targetsStackIndex <= 0 ) throw "Too many popTarget()";
@@ -369,12 +377,11 @@ class RenderContext extends h3d.impl.RenderContext {
 	}
 
 	inline function setupColor( obj : h2d.Drawable ) {
-		if( inFilter == obj )
-			baseShader.color.set(1,1,1,1);
+		if( inFilter == obj ) {
+			baseShader.color.set(obj.color.r,obj.color.g,obj.color.b,obj.color.a);
+		}
 		else if( inFilterBlend != null ) {
-			// alpha premult
-			var alpha = obj.color.a * globalAlpha;
-			baseShader.color.set(obj.color.r * alpha, obj.color.g * alpha, obj.color.b * alpha, alpha);
+			baseShader.color.set(globalAlpha,globalAlpha,globalAlpha,globalAlpha);
 		} else
 			baseShader.color.set(obj.color.r, obj.color.g, obj.color.b, obj.color.a * globalAlpha);
 	}

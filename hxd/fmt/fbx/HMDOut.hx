@@ -52,6 +52,7 @@ class HMDOut extends BaseLibrary {
 		m.indices = index.vidx.length;
 
 		m.tangents = new hl.Bytes(4 * 4 * index.vidx.length);
+		(m.tangents:hl.Bytes).fill(0,4 * 4 * index.vidx.length,0);
 		m.tangentStride = 4;
 		m.tangentPos = 0;
 
@@ -69,6 +70,8 @@ class HMDOut extends BaseLibrary {
 
 			m.buffer[out++] = uvs[0].values[uidx*2];
 			m.buffer[out++] = uvs[0].values[uidx*2+1];
+
+			m.tangents[i<<2] = 1;
 
 			m.indexes[i] = i;
 		}

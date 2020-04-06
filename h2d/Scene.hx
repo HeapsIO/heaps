@@ -142,7 +142,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	public var zoom(get, set) : Int;
 
 	/**
-		Scene scaling mode. ( default : Fill )
+		Scene scaling mode. ( default : Resize )
 		Important thing to keep in mind - Scene does not clip rendering to it's scaled size and
 		graphics can render outside of it. However `drawTile` does check for those bounds and
 		will clip out tiles that are outside of the scene bounds.
@@ -375,17 +375,33 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		}
 	}
 
-	function get_mouseX() {
+	inline function screenXToViewport(mx:Float) {
 		return @:privateAccess interactiveCamera.screenXToCamera(window.mouseX, window.mouseY);
 	}
 
-	function get_mouseY() {
+	inline function screenYToViewport(my:Float) {
 		return @:privateAccess interactiveCamera.screenYToCamera(window.mouseX, window.mouseY);
+	}
+
+	function get_mouseX() {
+		syncPos();
+		var dx = screenXToViewport(window.mouseX) - absX;
+		if( matC == 0 ) return dx / matA;
+		var dy = screenYToViewport(window.mouseY) - absY;
+		return (dx * matD - dy * matC) / (matA * matD - matB * matC);
+	}
+
+	function get_mouseY() {
+		syncPos();
+		var dy = screenYToViewport(window.mouseY) - absY;
+		if( matB == 0 ) return dy / matD;
+		var dx = screenXToViewport(window.mouseX) - absX;
+		return (dy * matA - dx * matB) / (matA * matD - matB * matC);
 	}
 
 	@:dox(hide) @:noCompletion
 	public function dispatchListeners( event : hxd.Event ) {
-		screenToLocal(event);
+		screenToViewport(event);
 		for( l in eventListeners ) {
 			l(event);
 			if( !event.propagate ) break;
@@ -406,35 +422,22 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		Return the topmost visible Interactive at the specific coordinates
 	**/
 	public function getInteractive( x : Float, y : Float ) : Interactive {
-		var rx = x * matA + y * matB + absX;
-		var ry = x * matC + y * matD + absY;
 		var pt = shapePoint;
 		for( i in interactive ) {
+			if( i.posChanged ) i.syncPos();
 
-			var dx = rx - i.absX;
-			var dy = ry - i.absY;
+			var dx = x - i.absX;
+			var dy = y - i.absY;
+			var rx = (dx * i.matD - dy * i.matC) * i.invDet;
+			var ry = (dy * i.matA - dx * i.matB) * i.invDet;
 
-			var w1 = i.width * i.matA;
-			var h1 = i.width * i.matC;
-			var ky = h1 * dx + w1 * dy;
-
-			// up line
-			if( ky < 0 )
-				continue;
-
-			var w2 = i.height * i.matB;
-			var h2 = i.height * i.matD;
-			var kx = w2 * dy + h2 * dx;
-
-			// left line
-			if( kx < 0 )
-				continue;
-
-			var max = w1 * h2 - h1 * w2;
-
-			// bottom/right
-			if( ky >= max || kx >= max )
-				continue;
+			if (i.shape != null) {
+				pt.set(rx + i.shapeX, ry + i.shapeY);
+				if ( !i.shape.contains(pt) ) continue;
+			} else {
+				if( ry < 0 || rx < 0 || rx >= i.width || ry >= i.height )
+					continue;
+			}
 
 			// check visibility
 			var visible = true;
@@ -447,99 +450,59 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 				p = p.parent;
 			}
 			if( !visible ) continue;
-
-			if (i.shape != null) {
-				pt.set((kx / max) * i.width + i.shapeX, (ky / max) * i.height + i.shapeY);
-				if ( !i.shape.contains(pt) ) continue;
-			}
 
 			return i;
 		}
 		return null;
 	}
 
-	function screenToLocal( e : hxd.Event ) {
+	function screenToViewport( e : hxd.Event ) {
 		interactiveCamera.eventToCamera(e);
 	}
 
 	@:dox(hide) @:noCompletion
 	public function dispatchEvent( event : hxd.Event, to : hxd.SceneEvents.Interactive ) {
 		var i : Interactive = cast to;
-		screenToLocal(event);
-
-		var rx = event.relX;
-		var ry = event.relY;
-
-		var dx = rx - i.absX;
-		var dy = ry - i.absY;
-
-		var w1 = i.width * i.matA;
-		var h1 = i.width * i.matC;
-		var ky = h1 * dx + w1 * dy;
-
-		var w2 = i.height * i.matB;
-		var h2 = i.height * i.matD;
-		var kx = w2 * dy + h2 * dx;
-
-		var max = w1 * h2 - h1 * w2;
-
-		event.relX = (kx / max) * i.width;
-		event.relY = (ky / max) * i.height;
-
+		screenToViewport(event);
+		var dx = event.relX - i.absX;
+		var dy = event.relY - i.absY;
+		var rx = (dx * i.matD - dy * i.matC) * i.invDet;
+		var ry = (dy * i.matA - dx * i.matB) * i.invDet;
+		event.relX = rx;
+		event.relY = ry;
 		i.handleEvent(event);
 	}
 
 	@:dox(hide) @:noCompletion
 	public function handleEvent( event : hxd.Event, last : hxd.SceneEvents.Interactive ) : hxd.SceneEvents.Interactive {
-		screenToLocal(event);
-		var rx = event.relX;
-		var ry = event.relY;
+		screenToViewport(event);
+		var ex = event.relX;
+		var ey = event.relY;
 		var index = last == null ? 0 : interactive.indexOf(cast last) + 1;
 		var pt = shapePoint;
 		for( idx in index...interactive.length ) {
 			var i = interactive[idx];
 			if( i == null ) break;
 
-			var dx = rx - i.absX;
-			var dy = ry - i.absY;
+			if( i.invDet == 0 ) {
+				// some interactives might have not been yet updated
+				// make sure they won't match the collider
+				continue;
+			}
+
+			var dx = ex - i.absX;
+			var dy = ey - i.absY;
+			var rx = (dx * i.matD - dy * i.matC) * i.invDet;
+			var ry = (dy * i.matA - dx * i.matB) * i.invDet;
 
 			if ( i.shape != null ) {
 				// Check collision for Shape Interactive.
-
-				pt.set(( dx * i.matD - dy * i.matC) * i.invDet + i.shapeX,
-				       (-dx * i.matB + dy * i.matA) * i.invDet + i.shapeY);
+				pt.set(rx + i.shapeX,ry + i.shapeY);
 				if ( !i.shape.contains(pt) ) continue;
-
-				dx = pt.x - i.shapeX;
-				dy = pt.y - i.shapeY;
-
 			} else {
 				// Check AABB for width/height Interactive.
-
-				var w1 = i.width * i.matA;
-				var h1 = i.width * i.matC;
-				var ky = h1 * dx + w1 * dy;
-
-				// up line
-				if( ky < 0 )
+				if( ry < 0 || rx < 0 || rx >= i.width || ry >= i.height )
 					continue;
-
-				var w2 = i.height * i.matB;
-				var h2 = i.height * i.matD;
-				var kx = w2 * dy + h2 * dx;
-
-				// left line
-				if( kx < 0 )
-					continue;
-
-				var max = w1 * h2 - h1 * w2;
-
-				// bottom/right
-				if( ky >= max || kx >= max )
-					continue;
-
-				dx = (kx / max) * i.width;
-				dy = (ky / max) * i.height;
 			}
 
 			// check visibility
@@ -554,8 +517,8 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 			}
 			if( !visible ) continue;
 
-			event.relX = dx;
-			event.relY = dy;
+			event.relX = rx;
+			event.relY = ry;
 
 			i.handleEvent(event);
 
@@ -596,7 +559,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	**/
 	public function startDrag( onEvent : hxd.Event -> Void, ?onCancel : Void -> Void, ?refEvent : hxd.Event ) {
 		events.startDrag(function(e) {
-			screenToLocal(e);
+			screenToViewport(e);
 			onEvent(e);
 		},onCancel, refEvent);
 	}
@@ -699,19 +662,24 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		ctx.elapsedTime = v;
 	}
 
-	function drawImplTo( s : Object, t : h3d.mat.Texture ) {
-
-		if( !t.flags.has(Target) ) throw "Can only draw to texture created with Target flag";
-		var needClear = !t.flags.has(WasCleared);
+	function drawImplTo( s : Object, texs : Array<h3d.mat.Texture>, ?outputs : Array<hxsl.Output> ) {
+		for( t in texs )
+			if( !t.flags.has(Target) )
+				throw "Can only draw to texture created with Target flag";
 		ctx.engine = h3d.Engine.getCurrent();
+		var oldBG = ctx.engine.backgroundColor;
+		ctx.engine.backgroundColor = null; // prevent clear bg
 		ctx.engine.begin();
 		ctx.globalAlpha = alpha;
 		ctx.begin();
-		ctx.pushTarget(t);
-		if( needClear )
+		ctx.pushTargets(texs);
+		if( outputs != null ) @:privateAccess ctx.manager.setOutput(outputs);
+		if( texs.length == 1 && !texs[0].flags.has(WasCleared) )
 			ctx.engine.clear(0);
 		s.drawRec(ctx);
+		if( outputs != null ) @:privateAccess ctx.manager.setOutput();
 		ctx.popTarget();
+		ctx.engine.backgroundColor = oldBG;
 	}
 
 	/**

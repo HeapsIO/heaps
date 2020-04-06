@@ -125,7 +125,9 @@ class Gradients extends Resource {
 
 	function getData() : Data {
 		if (data != null) return data;
-		data = new hxd.fmt.grd.Reader(new hxd.fs.FileInput(entry)).read();
+		var fs = new hxd.fs.FileInput(entry);
+		data = new hxd.fmt.grd.Reader(fs).read();
+		fs.close();
 		return data;
 	}
 }

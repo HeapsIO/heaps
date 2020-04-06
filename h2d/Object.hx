@@ -66,6 +66,7 @@ class Object #if (domkit && !domkit_heaps) implements domkit.Model<h2d.Object> #
 
 	/**
 		The post process filter for this object.
+		When set, `alpha` value affects both filter and object transparency (use `Drawable.color.a` to set transparency only for the object).
 	**/
 	public var filter(default,set) : h2d.filter.Filter;
 
@@ -143,6 +144,22 @@ class Object #if (domkit && !domkit_heaps) implements domkit.Model<h2d.Object> #
 		}
 		out.offset( -x, -y);
 		return out;
+	}
+
+
+	/**
+		Returns the updated absolute position matrix.
+	**/
+	public function getAbsPos() {
+		syncPos();
+		var m = new h2d.col.Matrix();
+		m.a = matA;
+		m.b = matB;
+		m.c = matC;
+		m.d = matD;
+		m.x = absX;
+		m.y = absY;
+		return m;
 	}
 
 	/**
@@ -442,7 +459,21 @@ class Object #if (domkit && !domkit_heaps) implements domkit.Model<h2d.Object> #
 		var s = getScene();
 		var needDispose = s == null;
 		if( s == null ) s = new h2d.Scene();
-		@:privateAccess s.drawImplTo(this, t);
+		@:privateAccess s.drawImplTo(this, [t]);
+		if( needDispose ) {
+			s.dispose();
+			onRemove();
+		}
+	}
+
+	/**
+		Draw the object and all its children into the given Textures
+	**/
+	public function drawToTextures( texs : Array<h3d.mat.Texture>, outputs : Array<hxsl.Output> ) {
+		var s = getScene();
+		var needDispose = s == null;
+		if( s == null ) s = new h2d.Scene();
+		@:privateAccess s.drawImplTo(this, texs, outputs);
 		if( needDispose ) {
 			s.dispose();
 			onRemove();
@@ -703,7 +734,10 @@ class Object #if (domkit && !domkit_heaps) implements domkit.Model<h2d.Object> #
 		var width = Math.ceil(total.xMax - xMin - 1e-10);
 		var height = Math.ceil(total.yMax - yMin - 1e-10);
 
-		if( width <= 0 || height <= 0 || total.xMax < total.xMin ) return;
+		if( width <= 0 || height <= 0 || total.xMax < total.xMin ) {
+			ctx.popFilter();
+			return;
+		}
 
 		var t = ctx.textures.allocTarget("filterTemp", width, height, false);
 		ctx.pushTarget(t, xMin, yMin, width, height);
@@ -747,11 +781,11 @@ class Object #if (domkit && !domkit_heaps) implements domkit.Model<h2d.Object> #
 
 		ctx.popTarget();
 		ctx.popFilter();
+		ctx.globalAlpha = oldAlpha;
 
 		if( finalTile == null )
 			return;
 
-		ctx.globalAlpha = oldAlpha;
 		drawFiltered(ctx, finalTile);
 	}
 

@@ -267,6 +267,7 @@ class LocalFileSystem implements FileSystem {
 		if( !check || ((!isWindows || (isWindows && f == baseDir + path)) && sys.FileSystem.exists(f) && checkPath(f)) ) {
 			e = new LocalEntry(this, path.split("/").pop(), path, f);
 			convert.run(e);
+			if( e.file == null ) e = null;
 		}
 		fileCache.set(path, {r:e});
 		return e;

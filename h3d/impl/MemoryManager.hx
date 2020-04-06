@@ -232,7 +232,7 @@ class MemoryManager {
 	public function cleanTextures( force = true ) {
 		textures.sort(sortByLRU);
 		for( t in textures ) {
-			if( t.realloc == null ) continue;
+			if( t.realloc == null || t.isDisposed() ) continue;
 			if( force || t.lastFrame < hxd.Timer.frameCount - 3600 ) {
 				t.dispose();
 				return true;
@@ -295,8 +295,8 @@ class MemoryManager {
 	}
 
 	public function dispose() {
-		triIndexes.dispose();
-		quadIndexes.dispose();
+		if( triIndexes != null ) triIndexes.dispose();
+		if( quadIndexes != null ) quadIndexes.dispose();
 		triIndexes = null;
 		quadIndexes = null;
 		for( t in textures.copy() )
@@ -363,44 +363,62 @@ class MemoryManager {
 		};
 	}
 
+	/**
+	 * Return statistics for currently allocated buffers and textures. Requires -D track-alloc compilation flag
+	 */
 	@:access(h3d.Buffer)
-	public function allocStats() : Array<{ file : String, line : Int, count : Int, tex : Bool, size : Int }> {
-		#if !debug
+	public function allocStats() : Array<{ position : String, count : Int, tex : Bool, size : Int, stacks : Array<{ stack : String, count : Int, size : Int }> }> {
+		#if !track_alloc
 		return [];
 		#else
 		var h = new Map();
 		var all = [];
+		inline function addStack( a : hxd.impl.AllocPos, stacks : Array<{ stack : String, count : Int, size : Int }>, size : Int ) {
+			var stackStr = a.stack.join("\n");
+			for( s in stacks )
+				if( s.stack == stackStr ) {
+					s.size += size;
+					s.count++;
+					stackStr = null;
+				}
+			if( stackStr != null )
+				stacks.push({ stack : stackStr, count : 1, size : size });
+		}
 		for( t in textures ) {
-			var key = "$"+t.allocPos.fileName + ":" + t.allocPos.lineNumber;
+			var key = "$"+t.allocPos.position;
 			var inf = h.get(key);
 			if( inf == null ) {
-				inf = { file : t.allocPos.fileName, line : t.allocPos.lineNumber, count : 0, size : 0, tex : true };
+				inf = { position : t.allocPos.position, count : 0, size : 0, tex : true, stacks : [] };
 				h.set(key, inf);
 				all.push(inf);
 			}
 			inf.count++;
-			inf.size += t.width * t.height * bpp(t);
+			var size = t.width * t.height * bpp(t);
+			inf.size += size;
+			addStack(t.allocPos, inf.stacks, size);
 		}
 		for( buf in buffers ) {
 			var buf = buf;
 			while( buf != null ) {
 				var b = buf.allocHead;
 				while( b != null ) {
-					var key = b.allocPos == null ? "null" : b.allocPos.fileName + ":" + b.allocPos.lineNumber;
+					var key = b.allocPos == null ? "null" : b.allocPos.position;
 					var inf = h.get(key);
 					if( inf == null ) {
-						inf = { file : b.allocPos != null ? b.allocPos.fileName : "", line : b.allocPos != null ? b.allocPos.lineNumber : 0, count : 0, size : 0, tex : false };
+						inf = { position : key, count : 0, size : 0, tex : false, stacks : [] };
 						h.set(key, inf);
 						all.push(inf);
 					}
 					inf.count++;
-					inf.size += b.vertices * b.buffer.stride * 4;
+					var size = b.vertices * b.buffer.stride * 4;
+					inf.size += size;
+					addStack(b.allocPos, inf.stacks, size);
 					b = b.allocNext;
 				}
 				buf = buf.next;
 			}
 		}
-		all.sort(function(a, b) return a.size == b.size ? a.line - b.line : b.size - a.size);
+		all.sort(function(a, b) return b.size - a.size);
 		return all;
 		#end
 	}

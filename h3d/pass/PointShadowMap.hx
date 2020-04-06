@@ -113,6 +113,26 @@ class PointShadowMap extends Shadows {
 		return buffer.getBytes();
 	}
 
+	function createStaticTexture() : h3d.mat.Texture {
+		if( staticTexture != null && staticTexture.width == size && staticTexture.width == size && staticTexture.format == format )
+			return staticTexture;
+		if( staticTexture != null )
+			staticTexture.dispose();
+		staticTexture = new h3d.mat.Texture(size, size, [Target, Cube], format);
+		staticTexture.name = "staticTexture";
+		staticTexture.preventAutoDispose();
+		staticTexture.realloc = function () {
+			if( pixelsForRealloc != null && pixelsForRealloc.length == 6 ) {
+				for( i in 0 ... 6 ) {
+					var pixels = pixelsForRealloc[i];
+					staticTexture.uploadPixels(pixels, 0, i);
+				}
+			}
+		}
+		return staticTexture;
+	}
+
+	var pixelsForRealloc : Array<hxd.Pixels> = null;
 	override function loadStaticData( bytes : haxe.io.Bytes ) {
 		if( (mode != Mixed && mode != Static) || bytes == null || bytes.length == 0 )
 			return false;
@@ -121,32 +141,33 @@ class PointShadowMap extends Shadows {
 		if( size != this.size )
 			return false;
 
-		if( staticTexture != null ) staticTexture.dispose();
-		staticTexture = new h3d.mat.Texture(size, size, [Target, Cube], format);
-		staticTexture.name = "staticTexture";
-		staticTexture.realloc = null;
-		staticTexture.preventAutoDispose();
+		createStaticTexture();
 
-		for(i in 0 ... 6){
+		pixelsForRealloc = [];
+		for( i in 0 ... 6 ) {
 			var len = buffer.readInt32();
 			var pixels = new hxd.Pixels(size, size, haxe.zip.Uncompress.run(buffer.read(len)), format);
+			pixelsForRealloc.push(pixels);
 			staticTexture.uploadPixels(pixels, 0, i);
 		}
 		syncShader(staticTexture);
+
 		return true;
 	}
 
-	static var tmpTex : h3d.mat.Texture;
+	var tmpTex : h3d.mat.Texture;
 	override function createDefaultShadowMap() {
 		if( tmpTex != null) return tmpTex;
 		tmpTex = new h3d.mat.Texture(1,1, [Target,Cube], format);
 		tmpTex.name = "defaultCubeShadowMap";
-		for(i in 0 ... 6)
-			tmpTex.clear(0xFFFFFF, i);
+		if( format == RGBA )
+			tmpTex.clear(0xFFFFFF);
+		else
+			tmpTex.clearF(1);
 		return tmpTex;
 	}
 
-	override function draw( passes, ?sort ) {
+	override function draw( passes : h3d.pass.PassList, ?sort ) {
 		if( !enabled )
 			return;
 
@@ -168,8 +189,8 @@ class PointShadowMap extends Shadows {
 			return;
 		}
 
-		var texture = ctx.textures.allocTarget("pointShadowMap", size, size, false, format, true);
-		if(depth == null || depth.width != size || depth.height != size || depth.isDisposed() ) {
+		var texture = ctx.computingStatic ? createStaticTexture() : ctx.textures.allocTarget("pointShadowMap", size, size, false, format, true);
+		if( depth == null || depth.width != size || depth.height != size || depth.isDisposed() ) {
 			if( depth != null ) depth.dispose();
 			depth = new h3d.mat.DepthBuffer(size, size);
 		}
@@ -240,10 +261,5 @@ class PointShadowMap extends Shadows {
 		if( mode != Static && mode != Mixed )
 			return;
 		draw(passes);
-		var texture = pshader.shadowMap;
-		if( staticTexture != null ) staticTexture.dispose();
-		staticTexture = texture.clone();
-		staticTexture.name = "StaticPointShadowMap";
-		pshader.shadowMap = staticTexture;
 	}
 }

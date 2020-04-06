@@ -169,7 +169,7 @@ class Checker {
 				[{ args : [{ name : "uv", type : vec2 }], ret : vec2 }];
 			case Trace:
 				[];
-			case VertexID, InstanceID:
+			case VertexID, InstanceID, FragCoord:
 				null;
 			}
 			if( def != null )
@@ -177,9 +177,14 @@ class Checker {
 		}
 		globals.set("vertexID", { t : TInt, g : VertexID });
 		globals.set("instanceID", { t : TInt, g : InstanceID });
+		globals.set("_FragCoord", { t : vec4, g : FragCoord });
 		globals.set("int", globals.get("toInt"));
 		globals.set("float", globals.get("toFloat"));
 		globals.set("reflect", globals.get("lReflect"));
+		for( i in 2...5 ) {
+			globals.set("ivec"+i, globals.get("iVec"+i));
+			globals.remove("iVec"+i);
+		}
 		globals.remove("lReflect");
 		globals.remove("toInt");
 		globals.remove("toFloat");
@@ -275,6 +280,13 @@ class Checker {
 		switch( [t1, t2] ) {
 		case [TVec(s1, t1), TVec(s2, t2)] if( s1 == s2 && t1 == t2 ):
 			return true;
+		case [TArray(t1, size1), TArray(t2, size2)]:
+			switch( [size1,size2] ) {
+			case [SConst(a),SConst(b)] if( a == b ):
+			case [SVar(v1),SVar(v2)] if( v1 == v2 ):
+			default: return false;
+			}
+			return tryUnify(t1,t2);
 		case [TChannel(n1), TChannel(n2)] if( n1 == n2 ):
 			return true;
 		default:
@@ -587,7 +599,7 @@ class Checker {
 			var e1 = typeExpr(e1, Value);
 			var e2 = typeExpr(e2, With(TInt));
 			switch( e2.t ) {
-			case TInt, TFloat:
+			case TInt:
 			default: unify(e2.t, TInt, e2.p);
 			}
 			switch( e1.t ) {
@@ -957,15 +969,24 @@ class Checker {
 		case Vec4:
 			checkLength(4,TFloat);
 			type = TVec(4,VFloat);
-		case IVec2:
-			checkLength(2,TInt);
-			type = TVec(2,VInt);
-		case IVec3:
-			checkLength(3,TInt);
-			type = TVec(3,VInt);
-		case IVec4:
-			checkLength(4,TInt);
-			type = TVec(4,VInt);
+		case IVec2, IVec3, IVec4:
+			var k = switch(g) {
+			case IVec2: 2;
+			case IVec3: 3;
+			case IVec4: 4;
+			default: throw "assert";
+			}
+			if( args.length == 1 ) {
+				switch( args[0].t ) {
+				case TInt, TFloat:
+				case TVec(n,VFloat):
+					if( n != 3 ) error("Invalid input vector length: "+n+" should be "+k, pos);
+				default:
+					checkLength(k,TInt);
+				}
+			} else
+				checkLength(k,TInt);
+			type = TVec(k,VInt);
 		case BVec2:
 			checkLength(2,TBool);
 			type = TVec(2,VBool);

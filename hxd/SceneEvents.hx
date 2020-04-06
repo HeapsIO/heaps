@@ -25,7 +25,6 @@ class SceneEvents {
 	// This array is never cleared apart from nulling Interactive, because internal counter is used, so those values are meaningless on practice.
 	var overCandidates : Array<{ i : Interactive, s : InteractiveScene, x : Float, y : Float, z : Float }>;
 	var overIndex : Int = -1;
-	var outIndex : Int = -1;
 	var currentFocus : Interactive;
 
 	var pendingEvents : Array<hxd.Event>;
@@ -54,7 +53,7 @@ class SceneEvents {
 	/**
 	 * Default cursor when there is no Interactive present under cursor.
 	 */
-	public var defaultCursor : Cursor = Default;
+	public var defaultCursor(default,set) : Cursor = Default;
 
 	public function new( ?window ) {
 		scenes = [];
@@ -80,7 +79,7 @@ class SceneEvents {
 			if( index >= 0 ) {
 				// onRemove is triggered which we are dispatching events
 				// let's carefully update indexes
-				outIndex--;
+				overList.remove(i);
 				if( index < overIndex ) overIndex--;
 			}
 		} else {
@@ -248,11 +247,10 @@ class SceneEvents {
 
 		if ( checkOver ) {
 			if ( overIndex < overList.length ) {
-				outIndex = overList.length - 1;
-				do {
-					overList[outIndex].handleEvent(onOut);
-					overList.remove(overList[outIndex]);
-				} while ( --outIndex >= overIndex );
+				while( overIndex < overList.length ) {
+					var e = overList.pop();
+					e.handleEvent(onOut);
+				}
 				updateCursor = true;
 			}
 			if ( overCandidateCount != 0 ) {
@@ -264,6 +262,8 @@ class SceneEvents {
 					ev.relZ = info.z;
 					if( info.s.isInteractiveVisible(info.i) )
 						info.i.handleEvent(ev);
+					else
+						overList.remove(info.i);
 					info.i = null;
 					info.s = null;
 				} while ( i < overCandidateCount );
@@ -288,9 +288,11 @@ class SceneEvents {
 		*/
 		if( event.kind == ERelease && pushList.length > 0 ) {
 			for( i in pushList ) {
-				if( i == null )
+				if( i == null ) {
+					event.kind = EReleaseOutside;
 					dispatchListeners(event);
-				else {
+					event.kind = ERelease;
+				} else {
 					var s = i.getInteractiveScene();
 					if( s == null ) continue;
 					event.kind = EReleaseOutside;
@@ -395,6 +397,14 @@ class SceneEvents {
 
 	public function updateCursor( i : Interactive ) {
 		if ( overList.indexOf(i) != -1 ) selectCursor();
+	}
+
+	function set_defaultCursor(c) {
+		if( Type.enumEq(c,defaultCursor) )
+			return c;
+		defaultCursor = c;
+		selectCursor();
+		return c;
 	}
 
 	function selectCursor() {

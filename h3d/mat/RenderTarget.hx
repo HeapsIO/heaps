@@ -5,8 +5,8 @@ class RenderTarget extends Texture {
 
 	public var scale(default, set) : Float;
 
-	public function new(scale = 1., ?format : TextureFormat, ?allocPos : h3d.impl.AllocPos ) {
-		super(0, 0, [NoAlloc, Target], format, allocPos);
+	public function new(scale = 1., ?format : TextureFormat ) {
+		super(0, 0, [NoAlloc, Target], format);
 		this.scale = scale;
 	}
 

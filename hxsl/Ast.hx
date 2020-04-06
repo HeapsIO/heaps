@@ -243,6 +243,8 @@ enum TGlobal {
 	// instancing
 	VertexID;
 	InstanceID;
+	// gl globals
+	FragCoord;
 }
 
 enum Component {

@@ -74,4 +74,11 @@ class Rand {
 		return int() & 0x3FFFFFFF;
 	}
 
+	/**
+		Create a randomized hxd.Rand (using a Std.random number as seed)
+	**/
+	public static function create() {
+		return new hxd.Rand(Std.random(0x7FFFFFFF));
+	}
+
 }

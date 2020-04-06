@@ -33,6 +33,7 @@ class GlslOut {
 		m.set(BVec2, "bvec2");
 		m.set(BVec3, "bvec3");
 		m.set(BVec4, "bvec4");
+		m.set(FragCoord, "gl_FragCoord");
 		for( g in m )
 			KWDS.set(g, true);
 		m;
@@ -494,13 +495,18 @@ class GlslOut {
 			addValue(index, tabs);
 			add("]");
 		case TArrayDecl(el):
-			add("[");
+			switch( e.t ) {
+			case TArray(t,_): addType(t);
+			default: throw "assert";
+			}
+			add("["+el.length+"]");
+			add("(");
 			var first = true;
 			for( e in el ) {
 				if( first ) first = false else add(", ");
 				addValue(e,tabs);
 			}
-			add("]");
+			add(")");
 		case TMeta(_, _, e):
 			addExpr(e, tabs);
 		}

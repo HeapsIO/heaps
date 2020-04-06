@@ -13,6 +13,7 @@ package h3d.scene;
 	public var FIgnoreBounds = 0x200;
 	public var FIgnoreCollide = 0x400;
 	public var FIgnoreParentTransform = 0x800;
+	public var FCullingColliderInherited = 0x1000;
 	public inline function new(value) {
 		this = value;
 	}
@@ -117,7 +118,7 @@ class Object implements hxd.impl.Serializable {
 	public var alwaysSync(get, set) : Bool;
 
 	/**
-		When enabled, the culled flag is inherited by children objects.
+		When enabled, the culled flag and culling collider is inherited by children objects.
 	**/
 	public var inheritCulled(get, set) : Bool;
 
@@ -147,8 +148,21 @@ class Object implements hxd.impl.Serializable {
 	**/
 	public var lightCameraCenter(get, set) : Bool;
 
+	/**
+		When set, collider shape will be used for automatic frustum culling.
+		If `inheritCulled` is true, collider will be inherited to children unless they have their own collider set.
+	**/
+	public var cullingCollider(default, set) : h3d.col.Collider;
+	function set_cullingCollider(c) {
+		this.cullingCollider = c;
+		this.cullingColliderInherited = false;
+		return c;
+	}
 
-	public var cullingCollider : h3d.col.Collider;
+	/**
+		Indicates that current cullingCollider is currently inherited from a parent object
+	**/
+	var cullingColliderInherited(get, set) : Bool;
 
 	var absPos : h3d.Matrix;
 	var invPos : h3d.Matrix;
@@ -184,6 +198,7 @@ class Object implements hxd.impl.Serializable {
 	inline function get_ignoreCollide() return flags.has(FIgnoreCollide);
 	inline function get_allowSerialize() return !flags.has(FNoSerialize);
 	inline function get_ignoreParentTransform() return flags.has(FIgnoreParentTransform);
+	inline function get_cullingColliderInherited() return flags.has(FCullingColliderInherited);
 	inline function set_posChanged(b) return flags.set(FPosChanged, b || follow != null);
 	inline function set_culled(b) return flags.set(FCulled, b);
 	inline function set_visible(b) return flags.set(FVisible,b);
@@ -196,6 +211,7 @@ class Object implements hxd.impl.Serializable {
 	inline function set_ignoreCollide(b) return flags.set(FIgnoreCollide, b);
 	inline function set_allowSerialize(b) return !flags.set(FNoSerialize, !b);
 	inline function set_ignoreParentTransform(b) return flags.set(FIgnoreParentTransform, b);
+	inline function set_cullingColliderInherited(b) return flags.set(FCullingColliderInherited, b);
 
 	/**
 		Create an animation instance bound to the object, set it as currentAnimation and play it.
@@ -657,6 +673,18 @@ class Object implements hxd.impl.Serializable {
 		var old = ctx.visibleFlag;
 		if( !visible || (culled && inheritCulled) )
 			ctx.visibleFlag = false;
+
+		if(ctx.cullingCollider != null && (cullingCollider == null || cullingColliderInherited)) {
+			cullingCollider = ctx.cullingCollider;
+			cullingColliderInherited = true;
+		}
+		else if(cullingColliderInherited)
+			cullingCollider = null;
+
+		var prevCollider = ctx.cullingCollider;
+		if(inheritCulled)
+			ctx.cullingCollider = cullingCollider;
+
 		var changed = posChanged;
 		if( changed ) calcAbsPos();
 		sync(ctx);
@@ -680,6 +708,7 @@ class Object implements hxd.impl.Serializable {
 				p++;
 		}
 		ctx.visibleFlag = old;
+		ctx.cullingCollider = prevCollider;
 	}
 
 	function syncPos() {
@@ -696,7 +725,8 @@ class Object implements hxd.impl.Serializable {
 	}
 
 	function emitRec( ctx : RenderContext ) {
-		if( !visible || (culled && inheritCulled) )
+
+		if( !visible || (culled && inheritCulled && !ctx.computingStatic) )
 			return;
 
 		// fallback in case the object was added during a sync() event and we somehow didn't update it
@@ -708,8 +738,9 @@ class Object implements hxd.impl.Serializable {
 			for( c in children )
 				c.posChanged = true;
 		}
-		if( !culled )
+		if( !culled || ctx.computingStatic )
 			emit(ctx);
+
 		for( c in children )
 			c.emitRec(ctx);
 	}

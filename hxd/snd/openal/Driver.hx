@@ -38,7 +38,7 @@ class Driver implements hxd.snd.Driver {
 
 	public function hasFeature( f : DriverFeature ) {
 		return switch( f ) {
-		case MasterVolume: true;
+		case MasterVolume: #if (hl || js) true #else false #end ;
 		}
 	}
 
@@ -92,6 +92,7 @@ class Driver implements hxd.snd.Driver {
 
 	public function playSource(source : SourceHandle) : Void {
 		AL.sourcePlay(source.inst);
+		source.sampleOffset = 0;
 		source.playing = true;
 	}
 
