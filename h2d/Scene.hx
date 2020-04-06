@@ -194,8 +194,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		super(null);
 		var e = h3d.Engine.getCurrent();
 		ctx = new RenderContext(this);
-		_cameras = [new Camera()];
-		_cameras[0].scene = this;
+		_cameras = [new Camera(this)];
 		interactiveCamera = camera;
 		width = e.width;
 		height = e.height;
@@ -266,14 +265,12 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	/** Removes Camera from Scene camera list. Current `interactiveCamera` cannot be removed. **/
 	public function removeCamera( cam : Camera ) {
 		if ( cam == interactiveCamera ) throw "Current interactive Camera cannot be removed from camera list!";
-		if (_cameras.remove(cam)) {
-			cam.scene = null;
-		}
+		_cameras.remove(cam);
 	}
 
 	/** Creates and returns a new Camera instance which is inserted to specified position or at the end of the camera list. **/
 	public function createCamera( anchorX : Float = 0., anchorY : Float = 0., ?pos : Int ) : h2d.Camera {
-		var camera = new Camera(anchorX, anchorY);
+		var camera = new Camera(this, anchorX, anchorY);
 		addCamera(camera, pos);
 		return camera;
 	}

@@ -67,7 +67,7 @@ class Camera2D extends SampleApp {
 		super.init();
 		
 		// Second camera for sample controls
-		var uiCamera = new Camera();
+		var uiCamera = new Camera(s2d);
 		// layerVisible allows to filter out layers that camera should not render.
 		uiCamera.layerVisible = (idx) -> idx == 2;
 		s2d.add(fui, 2);
@@ -114,7 +114,7 @@ class Camera2D extends SampleApp {
 		// Apart from instancing camera beforehand, it's possible to use `createCamera` method as a shortcut to create and add Camera to the Scene
 		followCamera = s2d.createCamera(0.5, 0.5);
 		// Set viewport to take up bottom-left quarter of the screen and clip out contents outside of it.
-		followCamera.setViewport(0.5, 0.5, 0.5, 0.5);
+		followCamera.setViewport(s2d.width * .5, s2d.height * .5, s2d.width * .5, s2d.height * .5);
 		followCamera.setScale(2, 2);
 		followCamera.clipViewport = true;
 		followCamera.layerVisible = (idx) -> idx != 2; // skip UI layer
@@ -170,6 +170,10 @@ class Camera2D extends SampleApp {
 		if (Key.isDown(Key.DOWN)) {
 			followPoint.x -= Math.cos(forward) * 60 * dt;
 			followPoint.y -= Math.sin(forward) * 60 * dt;
+		}
+		if (Key.isReleased(Key.SPACE)) {
+			followPoint.setPosition(s2d.width * .5, s2d.height * .5);
+			followPoint.rotation = 0;
 		}
 	}
 

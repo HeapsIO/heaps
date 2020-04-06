@@ -40,25 +40,35 @@ class Camera {
 	**/
 	public var clipViewport : Bool;
 	/**
-		Horizontal viewport offset of the camera relative to the Scene. Set in 0..1 range percentile. ( default : 0 )
+		Horizontal viewport offset of the camera relative to internal scene viewport (see h2d.Scene.scaleMode) in scene coordinates. ( default : 0 )  
+		Internally stored as 0..1 percentile and automatically adapts on scene resize.
 	**/
-	public var viewportX(default, set) : Float;
+	public var viewportX(get, set) : Float;
 	/**
-		Vertical viewport offset of the camera relative to the Scene. Set in 0..1 range percentile. ( default : 0 )
+		Vertical viewport offset of the camera relative to internal scene viewport (see h2d.Scene.scaleMode) in scene coordinates. ( default : 0 )  
+		Internally stored as 0..1 percentile and automatically adapts on scene resize.
 	**/
-	public var viewportY(default, set) : Float;
+	public var viewportY(get, set) : Float;
 	/**
-		Camera viewport width relative to the Scene size.
+		Camera viewport width in scene coordinates. ( default : scene.width )  
+		Internally stored as 0..1 percentile and automatically adapts on scene resize.
 	**/
-	public var viewportWidth(default, set) : Float;
+	public var viewportWidth(get, set) : Float;
 	/**
-		Camera viewport height relative to the Scene size.
+		Camera viewport height in scene coordinates. ( default: scene.height )  
+		Internally stored as 0..1 percentile and automatically adapts on scene resize.
 	**/
-	public var viewportHeight(default, set) : Float;
+	public var viewportHeight(get, set) : Float;
 
-	/** Horizontal anchor position inside viewport boundaries used for anchoring and resize compensation. ( default : 0 ) **/
+	/**
+		Horizontal anchor position inside viewport boundaries used for anchoring and resize compensation. ( default : 0 )  
+		Value is a percentile (0..1) from left viewport edge to right viewport edge with 0.5 being center.
+	**/
 	public var anchorX(default, set) : Float;
-	/** Vertical anchor position inside viewport boundaries used for anchoring and resize compensation. ( default : 0 ) **/
+	/**
+		Vertical anchor position inside viewport boundaries used for anchoring and resize compensation. ( default : 0 )  
+		Value is apercentile (0..1) from top viewport edge to bottom viewport edge with 0.5 being center.
+	**/
 	public var anchorY(default, set) : Float;
 
 	/** Camera visibility. Does not affect event handling for interactive camera. **/
@@ -71,6 +81,11 @@ class Camera {
 
 	var posChanged : Bool;
 
+	var viewX : Float;
+	var viewY : Float;
+	var viewW : Float;
+	var viewH : Float;
+
 	var matA : Float;
 	var matB : Float;
 	var matC : Float;
@@ -81,16 +96,15 @@ class Camera {
 
 	var scene : Scene;
 
-	public function new( anchorX : Float = 0, anchorY : Float = 0 ) {
+	public function new( scene : Scene, anchorX : Float = 0, anchorY : Float = 0 ) {
+		this.scene = scene;
 		this.x = 0; this.y = 0;
 		this.scaleX = 1; this.scaleY = 1;
 		this.rotation = 0;
 		this.anchorX = anchorX;
 		this.anchorY = anchorY;
-		this.viewportX = 0;
-		this.viewportY = 0;
-		this.viewportWidth = 1;
-		this.viewportHeight = 1;
+		this.viewX = 0; this.viewY = 0;
+		this.viewW = 1; this.viewH = 1;
 		this.visible = true;
 	}
 
@@ -105,7 +119,7 @@ class Camera {
 	@:noCompletion public function enter( ctx : RenderContext ) {
 		ctx.pushCamera(this);
 		if ( clipViewport )
-			ctx.setRenderZone(viewportX * scene.width, viewportY * scene.height, viewportWidth * scene.width, viewportHeight * scene.height);
+			ctx.setRenderZone(viewX * scene.width, viewY * scene.height, viewW * scene.width, viewH * scene.height);
 	}
 
 	@:noCompletion public function exit( ctx : RenderContext ) {
@@ -136,8 +150,8 @@ class Camera {
 				matC = scaleY * -sr;
 				matD = scaleY * cr;
 			}
-			absX = -(x * matA + y * matC) + (scene.width * anchorX * viewportHeight) + scene.width * viewportX;
-			absY = -(x * matB + y * matD) + (scene.height * anchorY * viewportHeight) + scene.height * viewportY;
+			absX = Math.round(-(x * matA + y * matC) + (scene.width * anchorX * viewW) + scene.width * viewX);
+			absY = Math.round(-(x * matB + y * matD) + (scene.height * anchorY * viewH) + scene.height * viewY);
 			invDet = 1 / (matA * matD - matB * matC);
 			posChanged = false;
 		}
@@ -172,11 +186,25 @@ class Camera {
 		this.anchorY = y;
 	}
 
-	public inline function setViewport( x : Float = 0, y : Float = 0, w : Float = 1, h : Float = 1 ) {
+	/**
+		Sets camera viewport dimensions. If `w` or `h` arguments are 0 - scene size is used (width or height respectively).
+	**/
+	public inline function setViewport( x : Float = 0, y : Float = 0, w : Float = 0, h : Float = 0 ) {
 		this.viewportX = x;
 		this.viewportY = y;
-		this.viewportWidth = w;
-		this.viewportHeight = h;
+		this.viewportWidth = w == 0 ? scene.width : w;
+		this.viewportHeight = h == 0 ? scene.height : h;
+	}
+
+	/**
+		Sets camera viewport dimensions in raw format of 0..1 percentiles.
+	**/
+	public inline function setRawViewport( x : Float = 0, y : Float = 0, w : Float = 1, h : Float = 1 ) {
+		this.viewX = x;
+		this.viewY = y;
+		this.viewW = w;
+		this.viewH = h;
+		posChanged = true;
 	}
 
 	// Scren <-> Camera
@@ -325,24 +353,32 @@ class Camera {
 		return this.rotation = v;
 	}
 
+	inline function get_viewportX() { return viewX * scene.width; }
 	inline function set_viewportX( v ) {
 		posChanged = true;
-		return this.viewportX = v;
+		this.viewX = Math.floor(v) / scene.width;
+		return v;
 	}
 
+	inline function get_viewportY() { return viewY * scene.height; }
 	inline function set_viewportY( v ) {
 		posChanged = true;
-		return this.viewportY = v;
+		this.viewY = Math.floor(v) / scene.height;
+		return v;
 	}
 
+	inline function get_viewportWidth() { return viewW * scene.width; }
 	inline function set_viewportWidth( v ) {
 		posChanged = true;
-		return this.viewportWidth = v;
+		this.viewW = Math.ceil(v) / scene.width;
+		return v;
 	}
 
+	inline function get_viewportHeight() { return viewH * scene.height; }
 	inline function set_viewportHeight( v ) {
 		posChanged = true;
-		return this.viewportHeight = v;
+		this.viewH = Math.ceil(v) / scene.height;
+		return v;
 	}
 
 	inline function set_anchorX( v ) {
