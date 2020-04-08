@@ -1,3 +1,26 @@
+## 1.8.0 (April 7, 2020)
+
+2D:
+* DomKit 0.3 support, more domkit properties
+* added DomKit inspector (h2d.domkit.Style.allowInspect)
+* fixed Graphics.drawRect with lines (#776)
+* delayed Text rebuild and HtmlText refactor (@Yanrishatum)
+* added HtmlText.defaultFormatText
+* Flow : allow absolute+align for components
+* fixed interactive handling wrt not uniform scaling + rotation
+
+3D:
+* allow inheritance of culling collider
+* added h3d.prim.Disc (@tong)
+* fixes for single channel textures
+
+Other:
+* JS : new WebAudio Driver (@Yanrishatum)
+* added _FragCoord in HxSL
+* alloc position now capture full stack (-D track-alloc)
+* added hxd.Pad.axisDeadZone
+* ... and many many other fixes
+
 ## 1.7.0 (September 9, 2019)
 
 2D:
