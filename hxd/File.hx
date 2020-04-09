@@ -217,11 +217,14 @@ class File {
 			var defaultFile = options.defaultPath;
 			f.save(dataContent.getData(), defaultFile);
 		#elseif (hl && (haxe_ver >= 4))
+			var old = hxd.System.allowTimeout;
+			hxd.System.allowTimeout = false;
 			var path = hl.UI.saveFile({
 				fileName : options.defaultPath,
 				title : options.title,
 				filters : options.fileTypes == null ? null : [for( e in options.fileTypes ) { name : e.name, exts : e.extensions }],
 			});
+			hxd.System.allowTimeout = old;
 			if( path == null )
 				return;
 			if( options.relativePath ) {
