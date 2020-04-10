@@ -203,6 +203,8 @@ class Style extends domkit.CssStyle {
 	}
 
 	function lookupRec( obj : h2d.Object, e : hxd.Event ) {
+		if( !obj.visible || obj.alpha <= 0 )
+			return false;
 		var ch = @:privateAccess obj.children;
 		for( i in 0...ch.length ) {
 			if( lookupRec(ch[ch.length-1-i], e) )
