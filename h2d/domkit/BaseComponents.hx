@@ -261,6 +261,37 @@ class CustomParser extends CssValue.ValueParser {
 		}
 	}
 
+	public function parseColorAdjust(value:CssValue) : h3d.Matrix.ColorAdjust {
+		if( value.match(VIdent("none")) )
+			return null;
+		var adj : h3d.Matrix.ColorAdjust = {};
+		switch( value ) {
+		case VGroup(vl):
+			var i = 0;
+			while( i < vl.length ) {
+				if( vl.length - i < 2 ) invalidProp();
+				switch( vl[i++] ) {
+				case VIdent("hue"):
+					adj.hue = parseFloat(vl[i++]) * Math.PI / 180;
+				case VIdent("contrast"):
+					adj.contrast = parseFloat(vl[i++]);
+				case VIdent("gain"):
+					if( vl.length - i < 2 ) invalidProp();
+					adj.gain = { color : parseColor(vl[i++]), alpha : parseFloat(vl[i++]) };
+				case VIdent("lightness"):
+					adj.lightness = parseFloat(vl[i++]);
+				case VIdent("saturation"):
+					adj.saturation = parseFloat(vl[i++]);
+				default:
+					invalidProp();
+				}
+			}
+		default:
+			invalidProp();
+		}
+		return adj;
+	}
+
 }
 
 #if !macro
@@ -429,6 +460,7 @@ class DrawableComp extends ObjectComp implements domkit.Component.ComponentDecl<
 
 	@:p(colorF) var color : h3d.Vector;
 	@:p(auto) var smooth : Null<Bool>;
+	@:p(colorAdjust) var colorAdjust : Null<h3d.Matrix.ColorAdjust>;
 	@:p var tileWrap : Bool;
 
 	static function set_color( o : h2d.Drawable, v ) {
@@ -436,6 +468,10 @@ class DrawableComp extends ObjectComp implements domkit.Component.ComponentDecl<
 			o.color.load(v);
 		else
 			o.color.set(1,1,1);
+	}
+
+	static function set_colorAdjust( o : h2d.Drawable, v ) {
+		o.adjustColor(v);
 	}
 }
 
