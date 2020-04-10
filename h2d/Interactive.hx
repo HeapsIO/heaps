@@ -77,7 +77,9 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 		super.onHierarchyMoved(parentChanged);
 		if( scene != null ) {
 			scene.removeEventTarget(this);
-			scene.addEventTarget(this);
+			scene = getScene();
+			if( scene != null )
+				scene.addEventTarget(this);
 		}
 		if ( parentChanged )
 			updateMask();
