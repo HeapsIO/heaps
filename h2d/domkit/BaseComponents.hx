@@ -713,7 +713,7 @@ class FlowComp extends ObjectComp implements domkit.Component.ComponentDecl<h2d.
 				bg.dom.initAttributes({ id : id });
 		} else {
 			if( id != null )
-				bg.dom = domkit.Properties.create("bitmap",bg,{ id : id });
+				bg.dom = domkit.Properties.create("drawable",bg,{ id : id });
 		}
 	}
 
