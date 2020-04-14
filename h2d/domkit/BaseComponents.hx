@@ -597,7 +597,7 @@ class FlowComp extends ObjectComp implements domkit.Component.ComponentDecl<h2d.
 	@:p(auto) var height : Null<Int>;
 	@:p var maxWidth : Null<Int>;
 	@:p var maxHeight : Null<Int>;
-	@:p var backgroundId : Null<String>;
+	@:p var backgroundId : Bool;
 	@:p(flowBackground) var background : { tile : h2d.Tile, borderW : Int, borderH : Int };
 	@:p(tile) var backgroundTile : h2d.Tile;
 	@:p(tilePos) var backgroundTilePos : { p : Int, y : Int };
@@ -702,19 +702,14 @@ class FlowComp extends ObjectComp implements domkit.Component.ComponentDecl<h2d.
 		o.backgroundTile = t;
 	}
 
-	static function set_backgroundId( o : h2d.Flow, id : String ) {
+	static function set_backgroundId( o : h2d.Flow, id : Bool ) {
 		if( o.backgroundTile == null ) {
-			if( id == null ) return;
-			o.backgroundTile = h2d.Tile.fromColor(0,1,1,0);
+			if( !id ) return;
+			o.backgroundTile = h2d.Tile.fromColor(0xFFFFFF,1,1,0);
 		}
 		var bg = @:privateAccess o.background;
-		if( bg.dom != null ) {
-			if( bg.dom.id != id )
-				bg.dom.initAttributes({ id : id });
-		} else {
-			if( id != null )
-				bg.dom = domkit.Properties.create("drawable",bg,{ id : id });
-		}
+		if( (bg.dom != null) != id )
+			bg.dom = id ? domkit.Properties.create("drawable",bg,{ id : "background" }) : null;
 	}
 
 	static function set_backgroundAlpha( o : h2d.Flow, v ) {
