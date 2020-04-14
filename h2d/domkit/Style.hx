@@ -191,7 +191,7 @@ class Style extends domkit.CssStyle {
 		var ox = e.relX, oy = e.relY;
 		for( o in currentObjects ) {
 			var scene = o.getScene();
-			if( checkedScenes.indexOf(scene) >= 0 ) continue;
+			if( scene == null || checkedScenes.indexOf(scene) >= 0 ) continue;
 			checkedScenes.push(scene);
 			e.relX = scene.mouseX;
 			e.relY = scene.mouseY;
