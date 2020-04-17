@@ -428,7 +428,7 @@ class ObjectComp implements h2d.domkit.Object implements domkit.Component.Compon
 		var p = getFlowProps(o);
 		if( p != null ) {
 			p.offsetX = v == null ? 0 : Std.int(v.x);
-			p.offsetX = v == null ? 0 : Std.int(v.y);
+			p.offsetY = v == null ? 0 : Std.int(v.y);
 		}
 	}
 
