@@ -32,4 +32,21 @@ class Disc extends Polygon {
 		uvs.push( new UV( 0.5, 0.5 ) );
 	}
 
+	/**
+	 * Get a default unit Disc with 
+	 * radius = 0.5, segments = 8, thetaStart = 0.0, thetaLength = Math.PI * 2
+	 * and add UVs to it. If it has not be cached, it is cached and subsequent
+	 * calls to this method will return Disc from cache.
+	 */
+	public static function defaultUnitDisc() {
+		var engine = h3d.Engine.getCurrent();
+		var d : Disc = @:privateAccess engine.resCache.get(Disc);
+		if( d != null )
+			return d;
+		d = new h3d.prim.Disc();
+		d.addUVs();
+		@:privateAccess engine.resCache.set(Disc, d);
+		return d;
+	}
+
 }
