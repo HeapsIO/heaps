@@ -194,20 +194,20 @@ class Tile {
 	}
 
 
-	public static function fromColor( color : Int, ?width = 1, ?height = 1, ?alpha = 1., ?allocPos : h3d.impl.AllocPos ) : Tile {
-		var t = new Tile(h3d.mat.Texture.fromColor(color,alpha,allocPos),0,0,1,1);
+	public static function fromColor( color : Int, ?width = 1, ?height = 1, ?alpha = 1. ) : Tile {
+		var t = new Tile(h3d.mat.Texture.fromColor(color,alpha),0,0,1,1);
 		// scale to size
 		t.width = width;
 		t.height = height;
 		return t;
 	}
 
-	public static function fromBitmap( bmp : hxd.BitmapData, ?allocPos : h3d.impl.AllocPos ) : Tile {
-		var tex = h3d.mat.Texture.fromBitmap(bmp, allocPos);
+	public static function fromBitmap( bmp : hxd.BitmapData ) : Tile {
+		var tex = h3d.mat.Texture.fromBitmap(bmp);
 		return new Tile(tex, 0, 0, bmp.width, bmp.height);
 	}
 
-	public static function autoCut( bmp : hxd.BitmapData, width : Int, ?height : Int, ?allocPos : h3d.impl.AllocPos ) {
+	public static function autoCut( bmp : hxd.BitmapData, width : Int, ?height : Int ) {
 		#if js
 		bmp.lock();
 		#end
@@ -219,7 +219,7 @@ class Tile {
 			w <<= 1;
 		while( h < bmp.height )
 			h <<= 1;
-		var tex = new h3d.mat.Texture(w, h, allocPos);
+		var tex = new h3d.mat.Texture(w, h);
 		for( y in 0...Std.int(bmp.height / height) ) {
 			var a = [];
 			tl[y] = a;
@@ -242,7 +242,7 @@ class Tile {
 		return new Tile(t, 0, 0, t.width, t.height);
 	}
 
-	public static function fromPixels( pixels : hxd.Pixels, ?allocPos : h3d.impl.AllocPos ) : Tile {
+	public static function fromPixels( pixels : hxd.Pixels ) : Tile {
 		var pix2 = pixels.makeSquare(true);
 		var t = h3d.mat.Texture.fromPixels(pix2);
 		if( pix2 != pixels ) pix2.dispose();

@@ -15,18 +15,6 @@ class InitComponents {
 	}
 
 	public static function build() {
-		var fields = domkit.Macros.buildObject();
-		for( f in fields )
-			if( f.name == "document" ) {
-				fields = fields.concat((macro class {
-					override function onRemove() {
-						super.onRemove();
-						var style = Std.instance(document.style, h2d.domkit.Style);
-						if( style != null ) @:privateAccess style.remove(this);
-					}
-				}).fields);
-				break;
-			}
-		return fields;
+		return domkit.Macros.buildObject();
 	}
 }

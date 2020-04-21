@@ -1,10 +1,6 @@
 package hxd.fmt.hmd;
 import hxd.fmt.hmd.Data;
 
-typedef HideData = {
-	var animations : haxe.DynamicAccess<{ events : Array<{ frame : Int, data : String }> }>;
-}
-
 private class FormatMap {
 	public var size : Int;
 	public var offset : Int;
@@ -33,7 +29,6 @@ class Library {
 	var cachedAnimations : Map<String, h3d.anim.Animation>;
 	var cachedSkin : Map<String, h3d.anim.Skin>;
 	var tmp = haxe.io.Bytes.alloc(4);
-	public var hideData : HideData;
 
 	public function new(res,  header) {
 		this.resource = res;
@@ -259,6 +254,7 @@ class Library {
 		var p = cachedPrimitives[id];
 		if( p != null ) return p;
 		p = new h3d.prim.HMDModel(header.geometries[id], header.dataPosition, this);
+		p.incref(); // Prevent from auto-disposing
 		cachedPrimitives[id] = p;
 		return p;
 	}
@@ -392,12 +388,6 @@ class Library {
 		l.speed = a.speed;
 		l.loop = a.loop;
 		if( a.events != null ) l.setEvents(a.events);
-		if( hideData != null ) {
-			var name = resource.entry.name.split(".")[0];
-			if( StringTools.startsWith(name,"Anim_") ) name = name.substr(5);
-			if(hideData.animations.exists(name))
-				l.setEvents(hideData.animations.get(name).events);
-		}
 		l.resourcePath = resource.entry.path;
 		cachedAnimations.set(a.name, l);
 		if( name == null ) cachedAnimations.set("", l);

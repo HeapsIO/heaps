@@ -21,6 +21,10 @@ class SceneEvents {
 	var scenes : Array<InteractiveScene>;
 
 	var overList : Array<Interactive>;
+	// Indexes and rel position in overList of Interactives that received EOver this frame.
+	// This array is never cleared apart from nulling Interactive, because internal counter is used, so those values are meaningless on practice.
+	var overCandidates : Array<{ i : Interactive, s : InteractiveScene, x : Float, y : Float, z : Float }>;
+	var overIndex : Int = -1;
 	var currentFocus : Interactive;
 
 	var pendingEvents : Array<hxd.Event>;
@@ -33,6 +37,7 @@ class SceneEvents {
 	var focusLost = new hxd.Event(EFocusLost);
 	var checkPos = new hxd.Event(ECheck);
 	var onOut = new hxd.Event(EOut);
+	var onOver = new hxd.Event(EOver);
 	var isOut = false;
 
 	/**
@@ -45,11 +50,17 @@ class SceneEvents {
 	 */
 	public var mouseCheckMove = true;
 
+	/**
+	 * Default cursor when there is no Interactive present under cursor.
+	 */
+	public var defaultCursor(default,set) : Cursor = Default;
+
 	public function new( ?window ) {
 		scenes = [];
 		pendingEvents = [];
 		pushList = [];
 		overList = [];
+		overCandidates = [];
 		if( window == null ) window = hxd.Window.getInstance();
 		this.window = window;
 		window.addEventTarget(onEvent);
@@ -63,8 +74,18 @@ class SceneEvents {
 	function onRemove(i) {
 		if( i == currentFocus )
 			currentFocus = null;
-		if ( overList.remove(i) )
+		if( overIndex >= 0 ) {
+			var index = overList.indexOf(i);
+			if( index >= 0 ) {
+				// onRemove is triggered which we are dispatching events
+				// let's carefully update indexes
+				overList.remove(i);
+				if( index < overIndex ) overIndex--;
+			}
+		} else {
+			overList.remove(i);
 			selectCursor();
+		}
 		pushList.remove(i);
 	}
 
@@ -119,10 +140,10 @@ class SceneEvents {
 	}
 
 	function emitEvent( event : hxd.Event ) {
-		var oldX = event.relX, oldY = event.relY;
+		var oldX = event.relX, oldY = event.relY, overCandidateCount = 0;
 		var handled = false;
 		var checkOver = false, fillOver = false, checkPush = false, cancelFocus = false, updateCursor = false;
-		var overIndex : Int = 0;
+		overIndex = 0;
 		switch( event.kind ) {
 		case EMove, ECheck:
 			checkOver = true;
@@ -156,40 +177,44 @@ class SceneEvents {
 					if ( fillOver ) {
 						var idx = overList.indexOf(i);
 						if ( idx == -1 ) {
-							var oldPropagate = event.propagate;
-							var oldKind = event.kind;
-							event.kind = EOver;
-							event.cancel = false;
-							i.handleEvent(event);
-							if ( !event.cancel ) {
-								overList.insert(overIndex, i);
-								overIndex++;
-								fillOver = event.propagate;
-								updateCursor = true;
+							if ( overCandidates.length == overCandidateCount ) {
+								overCandidates[overCandidateCount] = {
+									i : i,
+									s : s,
+									x : event.relX,
+									y : event.relY,
+									z : event.relZ
+								};
+							} else {
+								var info = overCandidates[overCandidateCount];
+								info.i = i;
+								info.s = s;
+								info.x = event.relX;
+								info.y = event.relY;
+								info.z = event.relZ;
 							}
-							event.kind = oldKind;
-							event.propagate = oldPropagate;
-							event.cancel = false;
+							overCandidateCount++;
+							overList.insert(overIndex++, i);
+							updateCursor = true;
 						} else {
-							var o = overList[idx];
 							if ( idx < overIndex ) {
 								do {
 									overList[idx] = overList[idx + 1];
 									idx++;
 								} while ( idx < overIndex );
-								overList[overIndex] = o;
+								overList[overIndex] = i;
 								updateCursor = true;
 							} else if ( idx > overIndex ) {
 								do {
 									overList[idx] = overList[idx - 1];
 									idx--;
 								} while ( idx > overIndex );
-								overList[overIndex] = o;
+								overList[overIndex] = i;
 								updateCursor = true;
 							}
-							fillOver = i.propagateEvents;
 							overIndex++;
 						}
+						fillOver = event.propagate;
 					}
 				} else {
 					if( checkPush ) {
@@ -220,18 +245,32 @@ class SceneEvents {
 		if( cancelFocus && currentFocus != null )
 			blur();
 
-		if( checkOver && overIndex < overList.length ) {
-			var idx = overList.length - 1;
-			do {
-				onOut.cancel = false;
-				overList[idx].handleEvent(onOut);
-				if ( !onOut.cancel ) {
-					overList.remove(overList[idx]);
-					continue;
+		if ( checkOver ) {
+			if ( overIndex < overList.length ) {
+				while( overIndex < overList.length ) {
+					var e = overList.pop();
+					e.handleEvent(onOut);
 				}
-			} while ( --idx >= overIndex );
-			updateCursor = true;
+				updateCursor = true;
+			}
+			if ( overCandidateCount != 0 ) {
+				var i = 0, ev = onOver;
+				do {
+					var info = overCandidates[i++];
+					ev.relX = info.x;
+					ev.relY = info.y;
+					ev.relZ = info.z;
+					if( info.s.isInteractiveVisible(info.i) )
+						info.i.handleEvent(ev);
+					else
+						overList.remove(info.i);
+					info.i = null;
+					info.s = null;
+				} while ( i < overCandidateCount );
+			}
 		}
+		overIndex = -1;
+
 		if ( updateCursor )
 			selectCursor();
 
@@ -249,9 +288,11 @@ class SceneEvents {
 		*/
 		if( event.kind == ERelease && pushList.length > 0 ) {
 			for( i in pushList ) {
-				if( i == null )
+				if( i == null ) {
+					event.kind = EReleaseOutside;
 					dispatchListeners(event);
-				else {
+					event.kind = ERelease;
+				} else {
 					var s = i.getInteractiveScene();
 					if( s == null ) continue;
 					event.kind = EReleaseOutside;
@@ -302,8 +343,7 @@ class SceneEvents {
 						while ( i >= 0 ) {
 							onOut.cancel = false;
 							overList[i].handleEvent(onOut);
-							if ( !onOut.cancel )
-								overList.remove(overList[i]);
+							overList.remove(overList[i]);
 							i--;
 						}
 						selectCursor();
@@ -313,16 +353,13 @@ class SceneEvents {
 				}
 
 				if( currentDrag != null && (currentDrag.ref == null || currentDrag.ref == e.touchId) ) {
-					e.propagate = false;
+					e.propagate = true;
 					e.cancel = false;
 					currentDrag.f(e);
 					e.relX = ox;
 					e.relY = oy;
-					if( e.cancel || e.propagate ) {
-						e.cancel = false;
-						e.propagate = false;
+					if( !e.propagate )
 						continue;
-					}
 				}
 
 				emitEvent(e);
@@ -362,8 +399,16 @@ class SceneEvents {
 		if ( overList.indexOf(i) != -1 ) selectCursor();
 	}
 
+	function set_defaultCursor(c) {
+		if( Type.enumEq(c,defaultCursor) )
+			return c;
+		defaultCursor = c;
+		selectCursor();
+		return c;
+	}
+
 	function selectCursor() {
-		var cur : hxd.Cursor = Default;
+		var cur : hxd.Cursor = defaultCursor;
 		for ( o in overList ) {
 			if ( o.cursor != null ) {
 				cur = o.cursor;

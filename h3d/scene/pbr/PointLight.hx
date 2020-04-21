@@ -50,6 +50,7 @@ class PointLight extends Light {
 		pbr.lightPos.set(absPos.tx, absPos.ty, absPos.tz);
 		pbr.invLightRange4 = 1 / (range * range * range * range);
 		pbr.pointSize = size;
+		pbr.occlusionFactor = occlusionFactor;
 	}
 
 	var s = new h3d.col.Sphere();

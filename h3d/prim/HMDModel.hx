@@ -102,10 +102,12 @@ class HMDModel extends MeshPrimitive {
 
 		for( i in 0...data.vertexCount ) {
 			var added = false;
-			var pt = new h3d.col.Point(pos.vertexes[i * 3], pos.vertexes[i * 3 + 1], pos.vertexes[i * 3 + 2]);
+			var px = pos.vertexes[i * 3];
+			var py = pos.vertexes[i * 3 + 1];
+			var pz = pos.vertexes[i * 3 + 2];
 			for(i in 0...pts.length) {
 				var p = pts[i];
-				if(p.x == pt.x && p.y == pt.y && p.z == pt.z) {
+				if(p.x == px && p.y == py && p.z == pz) {
 					ids.push(i);
 					added = true;
 					break;
@@ -113,7 +115,7 @@ class HMDModel extends MeshPrimitive {
 			}
 			if( !added ) {
 				ids.push(pts.length);
-				pts.push(pt);
+				pts.push(new h3d.col.Point(px,py,pz));
 			}
 		}
 
@@ -125,11 +127,13 @@ class HMDModel extends MeshPrimitive {
 		pol.addNormals();
 
 		var v = new hxd.FloatBuffer();
+		v.grow(data.vertexCount*3);
+		var k = 0;
 		for( i in 0...data.vertexCount ) {
 			var n = pol.normals[ids[i]];
-			v.push(n.x);
-			v.push(n.y);
-			v.push(n.z);
+			v[k++] = n.x;
+			v[k++] = n.y;
+			v[k++] = n.z;
 		}
 		var buf = h3d.Buffer.ofFloats(v, 3);
 		addBuffer(name, buf, 0);

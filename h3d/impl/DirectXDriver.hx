@@ -125,9 +125,7 @@ class DirectXDriver extends h3d.impl.Driver {
 
 	public function new() {
 		window = @:privateAccess dx.Window.windows[0];
-		#if (hldx >= "1.6.0")
 		Driver.setErrorHandler(onDXError);
-		#end
 		reset();
 	}
 
@@ -182,9 +180,7 @@ class DirectXDriver extends h3d.impl.Driver {
 	}
 
 	override function dispose() {
-		#if (hldx >= "1.6.0")
 		Driver.disposeDriver(driver);
-		#end
 		driver = null;
 	}
 
@@ -284,7 +280,7 @@ class DirectXDriver extends h3d.impl.Driver {
 		if( old ) hxd.System.allowTimeout = true;
 
 		if( hasDeviceError ) {
-			//trace("OnContextLost");
+			Sys.println("----------- OnContextLost ----------");
 			hasDeviceError = false;
 			dispose();
 			reset();
@@ -394,6 +390,10 @@ class DirectXDriver extends h3d.impl.Driver {
 		desc.width = t.width;
 		desc.height = t.height;
 		desc.format = getTextureFormat(t);
+
+		if( t.format.match(S3TC(_)) && (t.width & 3 != 0 || t.height & 3 != 0) )
+			throw t+" is compressed "+t.width+"x"+t.height+" but should be a 4x4 multiple";
+
 		desc.usage = Default;
 		desc.bind = ShaderResource;
 		desc.mipLevels = mips;
@@ -535,6 +535,9 @@ class DirectXDriver extends h3d.impl.Driver {
 		desc.access = CpuRead | CpuWrite;
 		desc.usage = Staging;
 		desc.format = getTextureFormat(tex);
+		
+		if( hasDeviceError ) throw "Can't capture if device disposed";
+		
 		var tmp = dx.Driver.createTexture2d(desc);
 		if( tmp == null )
 			throw "Capture failed: can't create tmp texture";
@@ -554,6 +557,9 @@ class DirectXDriver extends h3d.impl.Driver {
 		var pitch = 0;
 		var bpp = hxd.Pixels.calcStride(1, tex.format);
 		var ptr = tmp.map(0, Read, true, pitch);
+		
+		if( hasDeviceError ) throw "Device was disposed during capturePixels";
+		
 		if( pitch == desc.width * bpp )
 			@:privateAccess pixels.bytes.b.blit(0, ptr, 0, desc.width * desc.height * bpp);
 		else {
@@ -584,6 +590,7 @@ class DirectXDriver extends h3d.impl.Driver {
 		}
 		t.t.res.updateSubresource(mipLevel + side * t.t.mips, null, (pixels.bytes:hl.Bytes).offset(pixels.offset), stride, 0);
 		updateResCount++;
+		t.flags.set(WasCleared);
 	}
 
 	static inline var SCISSOR_BIT = Pass.reserved_mask;
@@ -653,12 +660,7 @@ class DirectXDriver extends h3d.impl.Driver {
 			var ref = st == null ? 0 : st.reference;
 			currentDepthState = depth;
 			currentStencilRef = ref;
-			#if (hldx < "1.7")
-			if( ref != 0 ) throw "DirectX Stencil support requires HL 1.7+";
-			Driver.omSetDepthStencilState(depth);
-			#else
 			Driver.omSetDepthStencilState(depth, ref);
-			#end
 		}
 
 		var rasterBits = bits & (Pass.culling_mask | SCISSOR_BIT | Pass.wireframe_mask);
@@ -1163,11 +1165,14 @@ class DirectXDriver extends h3d.impl.Driver {
 			currentIndex = ibuf;
 			dx.Driver.iaSetIndexBuffer(ibuf.res,ibuf.bits == 2,0);
 		}
-		#if (hldx >= "1.7")
-		dx.Driver.drawIndexedInstancedIndirect(commands.data, 0);
-		#else
-		throw "drawInstanced requires HL 1.7+";
-		#end
+		if( commands.data == null ) {
+			#if( (hldx == "1.8.0") || (hldx == "1.9.0") )
+			throw "Requires HLDX 1.10+";
+			#else
+			dx.Driver.drawIndexedInstanced(commands.indexCount, commands.commandCount, 0, 0, 0);
+			#end
+		} else
+			dx.Driver.drawIndexedInstancedIndirect(commands.data, 0);
 	}
 
 	static var COMPARE : Array<ComparisonFunc> = [
@@ -1195,7 +1200,7 @@ class DirectXDriver extends h3d.impl.Driver {
 		IncrSat,
 		Incr,
 		DecrSat,
-		#if (hldx < "1.7.0") Desc #else Decr #end,
+		Decr,
 		Invert,
 	];
 

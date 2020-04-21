@@ -23,7 +23,7 @@ class ManagedBuffer {
 	var vbuf : Driver.VertexBuffer;
 	var freeList : FreeCell;
 	var next : ManagedBuffer;
-	#if debug
+	#if track_alloc
 	var allocHead : Buffer;
 	#end
 
@@ -62,7 +62,7 @@ class ManagedBuffer {
 			b.position = p;
 			b.buffer = this;
 		};
-		#if debug
+		#if track_alloc
 		@:privateAccess b.allocNext = allocHead;
 		allocHead = b;
 		#end
@@ -112,7 +112,7 @@ class ManagedBuffer {
 			b.position = p;
 			b.buffer = this;
 		};
-		#if debug
+		#if track_alloc
 		@:privateAccess b.allocNext = allocHead;
 		allocHead = b;
 		#end
@@ -151,7 +151,7 @@ class ManagedBuffer {
 		}
 		if( nvert != 0 )
 			throw "assert";
-		#if debug
+		#if track_alloc
 		@:privateAccess {
 			var cur = allocHead, prev : Buffer = null;
 			while( cur != null ) {

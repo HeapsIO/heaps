@@ -15,6 +15,7 @@ class PbrMaterialSetup extends MaterialSetup {
 			envMap.uploadPixels(pix,0,i);
 		}
 		var env = new h3d.scene.pbr.Environment(envMap);
+		env.sampleBits = 3; // faster shader compilation!
 		env.compute();
 		return env;
 	}

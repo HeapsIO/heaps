@@ -34,8 +34,8 @@ enum BufferFlag {
 class Buffer {
 	public static var GUID = 0;
 	public var id : Int;
-	#if debug
-	var allocPos : h3d.impl.AllocPos;
+	#if track_alloc
+	var allocPos : hxd.impl.AllocPos;
 	var allocNext : Buffer;
 	#end
 
@@ -45,12 +45,12 @@ class Buffer {
 	public var next(default,null) : Buffer;
 	public var flags(default, null) : haxe.EnumFlags<BufferFlag>;
 
-	public function new(vertices, stride, ?flags : Array<BufferFlag>, ?allocPos : h3d.impl.AllocPos ) {
+	public function new(vertices, stride, ?flags : Array<BufferFlag> ) {
 		id = GUID++;
 		this.vertices = vertices;
 		this.flags = new haxe.EnumFlags();
-		#if debug
-		this.allocPos = allocPos;
+		#if track_alloc
+		this.allocPos = new hxd.impl.AllocPos();
 		#end
 		if( flags != null )
 			for( f in flags )
@@ -136,15 +136,15 @@ class Buffer {
 		}
 	}
 
-	public static function ofFloats( v : hxd.FloatBuffer, stride : Int, ?flags, ?allocPos ) {
+	public static function ofFloats( v : hxd.FloatBuffer, stride : Int, ?flags ) {
 		var nvert = Std.int(v.length / stride);
-		var b = new Buffer(nvert, stride, flags, allocPos);
+		var b = new Buffer(nvert, stride, flags);
 		b.uploadVector(v, 0, nvert);
 		return b;
 	}
 
-	public static function ofSubFloats( v : hxd.FloatBuffer, stride : Int, vertices : Int, ?flags, ?allocPos ) {
-		var b = new Buffer(vertices, stride, flags, allocPos);
+	public static function ofSubFloats( v : hxd.FloatBuffer, stride : Int, vertices : Int, ?flags ) {
+		var b = new Buffer(vertices, stride, flags);
 		b.uploadVector(v, 0, vertices);
 		return b;
 	}

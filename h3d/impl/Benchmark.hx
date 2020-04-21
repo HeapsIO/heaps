@@ -157,7 +157,7 @@ class Benchmark extends h2d.Graphics {
 		var tx = s.xPos + ((s.xSize - tw) * .5);
 		if( tx + tw > curWidth ) tx = curWidth - tw;
 		if( tx < 0 ) tx = 0;
-		if( hxd.Math.abs(tip.x - tx) > 5 ) tip.x = tx;
+		if( hxd.Math.abs(tip.x - tx) > 5 ) tip.x = Std.int(tx);
 	}
 
 	public function begin() {
@@ -294,7 +294,7 @@ class Benchmark extends h2d.Graphics {
 				l.visible = true;
 				l.textColor = textColor;
 				l.text = s.name;
-				l.x = xPos + ((xSize - l.textWidth) * .5);
+				l.x = xPos + Std.int((xSize - l.textWidth) * .5);
 			}
 
 			s.xPos = xPos;

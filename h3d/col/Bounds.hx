@@ -18,7 +18,9 @@ class Bounds implements Collider {
 		empty();
 	}
 
-	public inline function inFrustum( f : Frustum ) {
+	public inline function inFrustum( f : Frustum, ?m: h3d.Matrix ) {
+		if( m != null )
+			throw "Not implemented";
 		return f.hasBounds(this);
 	}
 

@@ -44,7 +44,8 @@ class Camera {
 	public var frustum(default, null) : h3d.col.Frustum;
 
 	var minv : Matrix;
-	var miview : Matrix;
+	var mcamInv : Matrix;
+	var mprojInv : Matrix;
 	var needInv : Bool;
 
 	public function new( fovY = 25., zoom = 1., screenRatio = 1.333333, zNear = 0.02, zFar = 4000., rightHanded = false ) {
@@ -104,16 +105,29 @@ class Camera {
 	}
 
 	/**
+		Returns the inverse of the camera matrix projection. Cache the result until the next update().
+	**/
+	public function getInverseProj() {
+		if( mprojInv == null ) {
+			mprojInv = new h3d.Matrix();
+			mprojInv._44 = 0;
+		}
+		if( mprojInv._44 == 0 )
+			mprojInv.initInverse(mproj);
+		return mprojInv;
+	}
+
+	/**
 		Returns the inverse of the camera matrix view only. Cache the result until the next update().
 	**/
 	public function getInverseView() {
-		if( miview == null ) {
-			miview = new h3d.Matrix();
-			miview._44 = 0;
+		if( mcamInv == null ) {
+			mcamInv = new h3d.Matrix();
+			mcamInv._44 = 0;
 		}
-		if( miview._44 == 0 )
-			miview.initInverse(mcam);
-		return miview;
+		if( mcamInv._44 == 0 )
+			mcamInv.initInverse(mcam);
+		return mcamInv;
 	}
 
 	/**
@@ -181,15 +195,16 @@ class Camera {
 		m.multiply(mcam, mproj);
 
 		needInv = true;
-		if( miview != null ) miview._44 = 0;
+		if( mcamInv != null ) mcamInv._44 = 0;
+		if( mprojInv != null ) mprojInv._44 = 0;
 
 		frustum.loadMatrix(m);
 	}
 
-	public function getFrustumCorners() : Array<h3d.Vector> {
+	public function getFrustumCorners(zMax=1.) : Array<h3d.Vector> {
 		return [
 			unproject(-1, 1, 0), unproject(1, 1, 0), unproject(1, -1, 0), unproject(-1, -1, 0),
-			unproject(-1, 1, 1), unproject(1, 1, 1), unproject(1, -1, 1), unproject(-1, -1, 1)
+			unproject(-1, 1, zMax), unproject(1, 1, zMax), unproject(1, -1, zMax), unproject(-1, -1, zMax)
 		];
 	}
 

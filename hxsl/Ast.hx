@@ -202,6 +202,8 @@ enum TGlobal {
 	//All;
 	Texture;
 	TextureLod;
+	Texel;
+	TexelLod;
 	// ...other texture* operations
 	// constructors
 	ToInt;
@@ -235,10 +237,14 @@ enum TGlobal {
 	// debug / internal
 	ChannelRead;
 	ChannelReadLod;
+	ChannelFetch;
+	ChannelFetchLod;
 	Trace;
 	// instancing
 	VertexID;
 	InstanceID;
+	// gl globals
+	FragCoord;
 }
 
 enum Component {

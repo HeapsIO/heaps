@@ -1,5 +1,12 @@
 package hxd;
 
+enum DisplayMode {
+	Windowed;
+	Borderless;
+	Fullscreen;
+	FullscreenResize;
+}
+
 class Window {
 
 	var resizeEvents : List<Void -> Void>;
@@ -14,6 +21,9 @@ class Window {
 	public var isFocused(get, never) : Bool;
 	public var propagateKeyEvents : Bool;
 
+	public var title(get, set) : String;
+	public var displayMode(get, set) : DisplayMode;
+
 	var curMouseX : Float = 0.;
 	var curMouseY : Float = 0.;
 
@@ -26,6 +36,12 @@ class Window {
 	var curH : Int;
 
 	var focused : Bool;
+
+	/**
+		When enabled, the browser zoom does not affect the canvas.
+		(default : true)
+	**/
+	public var useScreenPixels : Bool = true;
 
 	public function new( ?canvas : js.html.CanvasElement, ?globalEvents ) : Void {
 		var customCanvas = canvas != null;
@@ -41,6 +57,12 @@ class Window {
 
 		this.canvas = canvas;
 		this.propagateKeyEvents = globalEvents;
+
+		var propagate = canvas.getAttribute("propagateKeyEvents");
+		if (propagate != null) {
+			this.propagateKeyEvents = propagate != "0" && propagate != "false";
+		}
+
 		focused = globalEvents;
 		element = globalEvents ? js.Browser.window : canvas;
 		canvasPos = canvas.getBoundingClientRect();
@@ -145,7 +167,16 @@ class Window {
 	public function resize( width : Int, height : Int ) : Void {
 	}
 
+	@:deprecated("Use the displayMode property instead")
 	public function setFullScreen( v : Bool ) : Void {
+		var doc = js.Browser.document;
+		var elt : Dynamic = doc.documentElement;
+		if( (doc.fullscreenElement == elt) == v )
+			return;
+		if( v )
+			elt.requestFullscreen();
+		else
+			doc.exitFullscreen();
 	}
 
 	public function setCurrent() {
@@ -158,20 +189,24 @@ class Window {
 		return inst;
 	}
 
+	function getPixelRatio() {
+		return useScreenPixels ? js.Browser.window.devicePixelRatio : 1;
+	}
+
 	function get_width() {
-		return Math.round(canvasPos.width * js.Browser.window.devicePixelRatio);
+		return Math.round(canvasPos.width * getPixelRatio());
 	}
 
 	function get_height() {
-		return Math.round(canvasPos.height * js.Browser.window.devicePixelRatio);
+		return Math.round(canvasPos.height * getPixelRatio());
 	}
 
 	function get_mouseX() {
-		return Math.round((curMouseX - canvasPos.left) * js.Browser.window.devicePixelRatio);
+		return Math.round((curMouseX - canvasPos.left) * getPixelRatio());
 	}
 
 	function get_mouseY() {
-		return Math.round((curMouseY - canvasPos.top) * js.Browser.window.devicePixelRatio);
+		return Math.round((curMouseY - canvasPos.top) * getPixelRatio());
 	}
 
 	function get_mouseLock() : Bool {
@@ -231,8 +266,8 @@ class Window {
 		e.preventDefault();
 		var x, y, ev;
 		for (touch in e.changedTouches) {
-			x = Math.round((touch.clientX - canvasPos.left) * js.Browser.window.devicePixelRatio);
-			y = Math.round((touch.clientY - canvasPos.top) * js.Browser.window.devicePixelRatio);
+			x = Math.round((touch.clientX - canvasPos.left) * getPixelRatio());
+			y = Math.round((touch.clientY - canvasPos.top) * getPixelRatio());
 			ev = new Event(EPush, x, y);
 			ev.touchId = touch.identifier;
 			event(ev);
@@ -243,8 +278,8 @@ class Window {
 		e.preventDefault();
 		var x, y, ev;
 		for (touch in e.changedTouches) {
-			x = Math.round((touch.clientX - canvasPos.left) * js.Browser.window.devicePixelRatio);
-			y = Math.round((touch.clientY - canvasPos.top) * js.Browser.window.devicePixelRatio);
+			x = Math.round((touch.clientX - canvasPos.left) * getPixelRatio());
+			y = Math.round((touch.clientY - canvasPos.top) * getPixelRatio());
 			ev = new Event(EMove, x, y);
 			ev.touchId = touch.identifier;
 			event(ev);
@@ -255,8 +290,8 @@ class Window {
 		e.preventDefault();
 		var x, y, ev;
 		for (touch in e.changedTouches) {
-			x = Math.round((touch.clientX - canvasPos.left) * js.Browser.window.devicePixelRatio);
-			y = Math.round((touch.clientY - canvasPos.top) * js.Browser.window.devicePixelRatio);
+			x = Math.round((touch.clientX - canvasPos.left) * getPixelRatio());
+			y = Math.round((touch.clientY - canvasPos.top) * getPixelRatio());
 			ev = new Event(ERelease, x, y);
 			ev.touchId = touch.identifier;
 			event(ev);
@@ -278,7 +313,17 @@ class Window {
 		ev.keyCode = e.keyCode;
 		event(ev);
 		if( !propagateKeyEvents ) {
-			e.preventDefault();
+			switch ev.keyCode {
+				case 37, 38, 39, 40, // Arrows
+					33, 34, // Page up/down
+					35, 36, // Home/end
+					8, // Backspace
+					9, // Tab
+					16, // Shift
+					17 : // Ctrl
+						e.preventDefault();
+				case _ :
+			}
 			e.stopPropagation();
 		}
 	}
@@ -299,4 +344,34 @@ class Window {
 	}
 
 	function get_isFocused() : Bool return focused;
+
+	function get_displayMode() : DisplayMode {
+		var doc = js.Browser.document;
+		if ( doc.fullscreenElement != null) {
+			return Borderless;
+		}
+
+		return Windowed;
+	}
+
+	function set_displayMode( m : DisplayMode ) : DisplayMode {
+		var doc = js.Browser.document;
+		var elt : Dynamic = doc.documentElement;
+		var fullscreen = m != Windowed;
+		if( (doc.fullscreenElement == elt) == fullscreen )
+			return Windowed;
+		if( m != Windowed )
+			elt.requestFullscreen();
+		else
+			doc.exitFullscreen();
+
+		return m;
+	}
+
+	function get_title() : String {
+		return js.Browser.document.title;
+	}
+	function set_title( t : String ) : String {
+		return js.Browser.document.title = t;
+	}
 }

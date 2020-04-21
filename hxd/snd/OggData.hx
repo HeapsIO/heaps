@@ -80,8 +80,7 @@ class OggData extends Data {
 
 }
 
-
-#else
+#elseif stb_ogg_sound
 
 private class BytesOutput extends haxe.io.Output {
 
@@ -181,6 +180,19 @@ class OggData extends Data {
 		out.blit(outPos, decoded, (sampleStart - decodedFirst) * bpp, sampleCount * bpp);
 	}
 
+
+}
+
+#else
+
+class OggData extends Data {
+
+	public function new( bytes : haxe.io.Bytes ) {
+	}
+
+	override function decodeBuffer(out:haxe.io.Bytes, outPos:Int, sampleStart:Int, sampleCount:Int) {
+		throw "Ogg support requires -lib stb_ogg_sound";
+	}
 
 }
 

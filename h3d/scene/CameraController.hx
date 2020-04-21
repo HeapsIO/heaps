@@ -21,8 +21,11 @@ class CameraController extends h3d.scene.Object {
 	var pushing = -1;
 	var pushX = 0.;
 	var pushY = 0.;
+	var pushStartX = 0.;
+	var pushStartY = 0.;
 	var moveX = 0.;
 	var moveY = 0.;
+	var pushTime : Float;
 	var curPos = new h3d.Vector();
 	var curOffset = new h3d.Vector();
 	var targetPos = new h3d.Vector(10. / 25., Math.PI / 4, Math.PI * 5 / 13);
@@ -33,7 +36,8 @@ class CameraController extends h3d.scene.Object {
 		name = "CameraController";
 		set(distance);
 		flags.set(FNoSerialize,true);
-		toTarget();
+		curPos.load(targetPos);
+		curOffset.load(targetOffset);
 	}
 
 	inline function get_distance() return curPos.x / curOffset.w;
@@ -108,6 +112,7 @@ class CameraController extends h3d.scene.Object {
 	public function toTarget() {
 		curPos.load(targetPos);
 		curOffset.load(targetOffset);
+		syncCamera();
 	}
 
 	override function onAdd() {
@@ -125,6 +130,9 @@ class CameraController extends h3d.scene.Object {
 		super.onRemove();
 		scene.removeEventListener(onEvent);
 		scene = null;
+	}
+
+	public dynamic function onClick( e : hxd.Event ) {
 	}
 
 	function onEvent( e : hxd.Event ) {
@@ -147,12 +155,15 @@ class CameraController extends h3d.scene.Object {
 		case EPush:
 			@:privateAccess scene.events.startDrag(onEvent, function() pushing = -1, e);
 			pushing = e.button;
-			pushX = e.relX;
-			pushY = e.relY;
+			pushTime = haxe.Timer.stamp();
+			pushStartX = pushX = e.relX;
+			pushStartY = pushY = e.relY;
 		case ERelease, EReleaseOutside:
 			if( pushing == e.button ) {
 				pushing = -1;
 				@:privateAccess scene.events.stopDrag();
+				if( e.kind == ERelease && haxe.Timer.stamp() - pushTime < 0.2 && hxd.Math.distance(e.relX - pushStartX,e.relY - pushStartY) < 5 )
+					onClick(e);
 			}
 		case EMove:
 			switch( pushing ) {
@@ -205,6 +216,7 @@ class CameraController extends h3d.scene.Object {
 
 	function syncCamera() {
 		var cam = getScene().camera;
+		var distance = distance;
 		cam.target.load(curOffset);
 		cam.target.w = 1;
 		cam.pos.set( distance * Math.cos(theta) * Math.sin(phi) + cam.target.x, distance * Math.sin(theta) * Math.sin(phi) + cam.target.y, distance * Math.cos(phi) + cam.target.z );

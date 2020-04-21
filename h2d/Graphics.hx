@@ -3,14 +3,18 @@ import hxd.Math;
 
 private typedef GraphicsPoint = hxd.poly2tri.Point;
 
-private class GPoint {
+class GPoint {
 	public var x : Float;
 	public var y : Float;
 	public var r : Float;
 	public var g : Float;
 	public var b : Float;
 	public var a : Float;
-	public function new(x, y, r, g, b, a) {
+
+	public function new() {
+	}
+
+	public function load(x, y, r, g, b, a ){
 		this.x = x;
 		this.y = y;
 		this.r = r;
@@ -28,11 +32,15 @@ private class GraphicsContent extends h3d.prim.Primitive {
 	var buffers : Array<{ buf : hxd.FloatBuffer, vbuf : h3d.Buffer, idx : hxd.IndexBuffer, ibuf : h3d.Indexes }>;
 	var bufferDirty : Bool;
 	var indexDirty : Bool;
-	var allocPos : h3d.impl.AllocPos;
+	#if track_alloc
+	var allocPos : hxd.impl.AllocPos;
+	#end
 
-	public function new(allocPos) {
+	public function new() {
 		buffers = [];
-		this.allocPos = allocPos;
+		#if track_alloc
+		this.allocPos = new hxd.impl.AllocPos();
+		#end
 	}
 
 	public inline function addIndex(i) {
@@ -65,7 +73,10 @@ private class GraphicsContent extends h3d.prim.Primitive {
 
 	override function alloc( engine : h3d.Engine ) {
 		if (index.length <= 0) return ;
-		buffer = h3d.Buffer.ofFloats(tmp, 8, [RawFormat], allocPos);
+		buffer = h3d.Buffer.ofFloats(tmp, 8, [RawFormat]);
+		#if track_alloc
+		@:privateAccess buffer.allocPos = allocPos;
+		#end
 		indexes = h3d.Indexes.alloc(index);
 		for( b in buffers ) {
 			if( b.vbuf == null || b.vbuf.isDisposed() ) b.vbuf = h3d.Buffer.ofFloats(b.buf, 8, [RawFormat]);
@@ -151,9 +162,9 @@ class Graphics extends Drawable {
 	public var tile : h2d.Tile;
 	public var bevel = 0.25; //0 = not beveled, 1 = always beveled
 
-	public function new(?parent,?allocPos) {
+	public function new(?parent) {
 		super(parent);
-		content = new GraphicsContent(allocPos);
+		content = new GraphicsContent();
 		tile = h2d.Tile.fromColor(0xFFFFFF);
 		clear();
 	}
@@ -206,10 +217,14 @@ class Graphics extends Drawable {
 		if( !closed ) {
 			var prevLast = pts[last - 1];
 			if( prevLast == null ) prevLast = p;
-			pts.push(new GPoint(prev.x * 2 - prevLast.x, prev.y * 2 - prevLast.y, 0, 0, 0, 0));
+			var gp = new GPoint();
+			gp.load(prev.x * 2 - prevLast.x, prev.y * 2 - prevLast.y, 0, 0, 0, 0);
+			pts.push(gp);
 			var pNext = pts[1];
 			if( pNext == null ) pNext = p;
-			prev = new GPoint(p.x * 2 - pNext.x, p.y * 2 - pNext.y, 0, 0, 0, 0);
+			var gp = new GPoint();
+			gp.load(p.x * 2 - pNext.x, p.y * 2 - pNext.y, 0, 0, 0, 0);
+			prev = gp;
 		} else if( p != prev ) {
 			count--;
 			last--;
@@ -449,6 +464,13 @@ class Graphics extends Drawable {
 		lineTo(x + w, y + h);
 		lineTo(x, y + h);
 		lineTo(x, y);
+		var e = 0.01; // see #776
+		tmpPoints[0].x += e;
+		tmpPoints[0].y += e;
+		tmpPoints[1].y += e;
+		tmpPoints[3].x += e;
+		tmpPoints[4].x += e;
+		tmpPoints[4].y += e;
 		flush();
 	}
 
@@ -495,7 +517,7 @@ class Graphics extends Drawable {
 		}
 		flush();
 	}
-	
+
 	public function drawEllipse( cx : Float, cy : Float, radiusX : Float, radiusY : Float, rotationAngle : Float = 0, nsegments = 0 ) {
 		flush();
 		if( nsegments == 0 )
@@ -530,6 +552,78 @@ class Graphics extends Drawable {
 		flush();
 	}
 
+	public function drawRectanglePie( cx : Float, cy : Float, width : Float, height : Float, angleStart:Float, angleLength:Float, nsegments = 0 ) {
+		if(Math.abs(angleLength) >= Math.PI*2) {
+			return drawRect(cx-(width/2), cy-(height/2), width, height);
+		}
+		flush();
+		lineTo(cx, cy);
+		if( nsegments == 0 )
+			nsegments = Math.ceil(Math.abs(Math.max(width, height) * angleLength / 4));
+		if( nsegments < 3 ) nsegments = 3;
+		var angle = angleLength / (nsegments - 1);
+		var square2 = Math.sqrt(2);
+		for( i in 0...nsegments ) {
+			var a = i * angle + angleStart;
+
+			var _width = Math.cos(a) * (width/2+1) * square2;
+			var _height = Math.sin(a) * (height/2+1) * square2;
+
+			_width = Math.abs(_width) >= width/2 ? (Math.cos(a) < 0 ? width/2*-1 : width/2) : _width;
+			_height = Math.abs(_height) >= height/2 ? (Math.sin(a) < 0 ? height/2*-1 : height/2) : _height;
+
+			lineTo(cx + _width, cy + _height);
+		}
+		lineTo(cx, cy);
+		flush();
+	}
+
+	/**
+	 * Draws a quadratic Bezier curve using the current line style from the current drawing position to (cx, cy) and using the control point that (bx, by) specifies.
+	 * IvanK Lib port ( http://lib.ivank.net )
+	 */
+	public function curveTo( bx : Float, by : Float, cx : Float, cy : Float) {
+		var ax = tmpPoints.length == 0 ? 0 :tmpPoints[ tmpPoints.length - 1 ].x;
+		var ay = tmpPoints.length == 0 ? 0 :tmpPoints[ tmpPoints.length - 1 ].y;
+		var t = 2 / 3;
+		cubicCurveTo(ax + t * (bx - ax), ay + t * (by - ay), cx + t * (bx - cx), cy + t * (by - cy), cx, cy);
+	}
+
+	/**
+	 * Draws a cubic Bezier curve from the current drawing position to the specified anchor point.
+	 * IvanK Lib port ( http://lib.ivank.net )
+	 * @param bx control X for start point
+	 * @param by control Y for start point
+	 * @param cx control X for end point
+	 * @param cy control Y for end point
+	 * @param dx end X
+	 * @param dy end Y
+	 * @param nsegments = 40
+	 */
+	public function cubicCurveTo( bx : Float, by : Float, cx : Float, cy : Float, dx : Float, dy : Float, nsegments = 40) {
+		var ax = tmpPoints.length == 0 ? 0 : tmpPoints[tmpPoints.length - 1].x;
+		var ay = tmpPoints.length == 0 ? 0 : tmpPoints[tmpPoints.length - 1].y;
+		var tobx = bx - ax, toby = by - ay;
+		var tocx = cx - bx, tocy = cy - by;
+		var todx = dx - cx, tody = dy - cy;
+		var step = 1 / nsegments;
+
+		for (i in 1...nsegments) {
+			var d = i * step;
+			var px = ax + d * tobx, py = ay + d * toby;
+			var qx = bx + d * tocx, qy = by + d * tocy;
+			var rx = cx + d * todx, ry = cy + d * tody;
+			var toqx = qx - px, toqy = qy - py;
+			var torx = rx - qx, tory = ry - qy;
+
+			var sx = px + d * toqx, sy = py + d * toqy;
+			var tx = qx + d * torx, ty = qy + d * tory;
+			var totx = tx - sx, toty = ty - sy;
+			lineTo(sx + d * totx, sy + d * toty);
+		}
+		lineTo(dx, dy);
+	}
+
 	public inline function lineTo( x : Float, y : Float ) {
 		addVertex(x, y, curR, curG, curB, curA, x * ma + y * mc + mx, x * mb + y * md + my);
 	}
@@ -541,7 +635,9 @@ class Graphics extends Drawable {
 		if( y > yMax ) yMax = y;
 		if( doFill )
 			content.add(x, y, u, v, r, g, b, a);
-		tmpPoints.push(new GPoint(x, y, lineR, lineG, lineB, lineA));
+		var gp = new GPoint();
+		gp.load(x, y, lineR, lineG, lineB, lineA);
+		tmpPoints.push(gp);
 	}
 
 	override function draw(ctx:RenderContext) {

@@ -55,7 +55,7 @@ class ScreenFx<T:h3d.shader.ScreenShader> {
 
 	public function getShader<T:hxsl.Shader>(cl:Class<T>) : T {
 		for( s in shaders ) {
-			var si = Std.instance(s, cl);
+			var si = hxd.impl.Api.downcast(s, cl);
 			if( si != null ) return si;
 		}
 		return null;
@@ -81,6 +81,13 @@ class ScreenFx<T:h3d.shader.ScreenShader> {
 	}
 
 	public function dispose() {
+	}
+
+	public static function run( shader : h3d.shader.ScreenShader, output : h3d.mat.Texture, ?layer : Int ) {
+		var engine = h3d.Engine.getCurrent();
+		engine.pushTarget(output,layer);
+		new ScreenFx(shader).render();
+		engine.popTarget();
 	}
 
 }

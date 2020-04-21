@@ -37,7 +37,6 @@ class WorldChunk {
 
 	public function dispose() {
 		root.remove();
-		root.dispose();
 	}
 }
 
@@ -51,6 +50,7 @@ class WorldMaterial {
 	public var blend : h3d.mat.BlendMode;
 	public var killAlpha : Null<Float>;
 	public var emissive : Null<Float>;
+	public var stencil : Null<Int>;
 	public var lights : Bool;
 	public var shadows : Bool;
 	public var shaders : Array<hxsl.Shader>;
@@ -61,15 +61,37 @@ class WorldMaterial {
 		shadows = true;
 		shaders = [];
 	}
+
+	public function clone() : WorldMaterial {
+		var wm = new WorldMaterial();
+		wm.bits = this.bits;
+		wm.t = this.t;
+		wm.spec = this.spec;
+		wm.normal = this.normal;
+		wm.mat = this.mat;
+		wm.culling = this.culling;
+		wm.blend = this.blend;
+		wm.killAlpha = this.killAlpha;
+		wm.emissive = this.emissive;
+		wm.stencil = this.stencil;
+		wm.lights = this.lights;
+		wm.shadows = this.shadows;
+		wm.shaders = this.shaders.copy();
+		wm.name = this.name;
+		return wm;
+	}
+
+
 	public function updateBits() {
-		bits = (t.t == null ? 0 : t.t.id    << 10)
-			| ((normal == null ? 0 : 1)     << 9)
-			| (blend.getIndex()             << 6)
-			| ((killAlpha == null ? 0 : 1)  << 5)
-			| ((emissive == null ? 0 : 1)   << 4)
-			| ((lights ? 1 : 0)             << 3)
-			| ((shadows ? 1 : 0)            << 2)
-			| ((spec == null ? 0 : 1)       << 1)
+		bits = (t.t == null ? 0 : t.t.id   		<< 18)
+			| ((stencil == null ? 0 : stencil)  << 10)
+			| ((normal == null ? 0 : 1)     	<< 9)
+			| (blend.getIndex()             	<< 6)
+			| ((killAlpha == null ? 0 : 1)  	<< 5)
+			| ((emissive == null ? 0 : 1)   	<< 4)
+			| ((lights ? 1 : 0)             	<< 3)
+			| ((shadows ? 1 : 0)            	<< 2)
+			| ((spec == null ? 0 : 1)       	<< 1)
 			| (culling ? 1 : 0);
 	}
 }
@@ -83,6 +105,14 @@ class WorldModelGeometry {
 	public function new(m) {
 		this.m = m;
 	}
+}
+
+enum OptAlgorithm {
+	None;
+	/**
+		Sort triangles by Z descending
+	**/
+	TopDown;
 }
 
 class WorldModel {
@@ -99,6 +129,66 @@ class WorldModel {
 		this.geometries = [];
 		bounds = new h3d.col.Bounds();
 	}
+
+	public function optimize( algo : OptAlgorithm ) {
+		switch( algo ) {
+		case None:
+		case TopDown:
+			var vertexCount = Std.int(buf.length/stride);
+			var vertexRemap = new haxe.ds.Vector(vertexCount);
+			var indexRemap = new hxd.IndexBuffer(idx.length);
+			var vidx = 0;
+			var iidx = 0;
+			for( i in 0...vertexCount )
+				vertexRemap[i] = -1;
+			for( g in geometries ) {
+				var triCount = Std.int(g.indexCount/3);
+				var triZ = new Array<Float>();
+				var triIndexes = new Array<Int>();
+				if( g.startIndex != iidx ) throw "assert";
+				triZ[triCount-1] = 0;
+				triIndexes[triCount-1] = 0;
+				for( i in 0...triCount ) {
+					var base = g.startIndex + i*3;
+					var z1 = buf[idx[base++] * stride + 2];
+					var z2 = buf[idx[base++] * stride + 2];
+					var z3 = buf[idx[base++] * stride + 2];
+					var zmin = z1;
+					if( z2 < zmin ) zmin = z2;
+					if( z3 < zmin ) zmin = z3;
+					triIndexes[i] = i;
+					triZ[i] = zmin;
+				}
+				haxe.ds.ArraySort.sort(triIndexes, function(i1,i2) {
+					return triZ[i1] < triZ[i2] ? 1 : -1;
+				});
+				for( i in 0...triCount ) {
+					var i2 = triIndexes[i];
+					var base = g.startIndex + i2 * 3;
+					for( j in 0...3 ) {
+						var v = idx[base++];
+						var nv = vertexRemap[v];
+						if( nv < 0 ) {
+							nv = vidx++;
+							vertexRemap[v] = nv;
+						}
+						indexRemap[iidx++] = nv;
+					}
+				}
+			}
+			var bufRemap = new hxd.FloatBuffer(vertexCount*stride);
+			for( v in 0...vertexCount ) {
+				var nv = vertexRemap[v];
+				var readPos = v * stride;
+				var writePos = nv * stride;
+				for( i in 0...stride )
+					bufRemap[writePos++] = buf[readPos++];
+			}
+			this.idx = indexRemap;
+			this.buf = bufRemap;
+		}
+	}
+
 }
 
 class World extends Object {
@@ -132,6 +222,7 @@ class World extends Object {
 	var allChunks : Array<WorldChunk>;
 	var bigTextures : Array<{ diffuse : h3d.mat.BigTexture, spec : h3d.mat.BigTexture, normal : h3d.mat.BigTexture }>;
 	var textures : Map<String, WorldMaterial>;
+	var autoCollect : Bool;
 
 	public function new( chunkSize : Int, worldSize : Int, ?parent, ?autoCollect = true ) {
 		super(parent);
@@ -142,6 +233,7 @@ class World extends Object {
 		this.chunkSize = chunkSize;
 		this.worldSize = worldSize;
 		this.worldStride = Math.ceil(worldSize / chunkSize);
+		this.autoCollect = autoCollect;
 		if( autoCollect )
 			h3d.Engine.getCurrent().mem.garbage = garbage;
 	}
@@ -206,7 +298,7 @@ class World extends Object {
 		}
 	}
 
-	function loadMaterialTexture( r : hxd.res.Model, mat : hxd.fmt.hmd.Data.Material ) : WorldMaterial {
+	function loadMaterialTexture( r : hxd.res.Model, mat : hxd.fmt.hmd.Data.Material, modelName : String ) : WorldMaterial {
 		var texturePath = resolveTexturePath(r, mat);
 		var m = textures.get(texturePath);
 		if( m != null )
@@ -278,6 +370,7 @@ class World extends Object {
 		m.emissive = null;
 		m.mat = mat;
 		m.culling = true;
+		m.stencil = null;
 		m.updateBits();
 		textures.set(texturePath, m);
 		return m;
@@ -294,7 +387,7 @@ class World extends Object {
 	}
 
 	@:noDebug
-	public function loadModel( r : hxd.res.Model ) : WorldModel {
+	public function loadModel( r : hxd.res.Model, ?filter : hxd.fmt.hmd.Data.Model -> Bool) : WorldModel {
 		var lib = r.toHmd();
 		var models = lib.header.models;
 		var format = buildFormat();
@@ -306,6 +399,12 @@ class World extends Object {
 
 		var startVertex = 0, startIndex = 0;
 		for( m in models ) {
+
+			// Name filtering
+			if( filter != null && !filter(m) ) {
+				continue;
+			}
+
 			var geom = lib.header.geometries[m.geometry];
 			if( geom == null ) continue;
 			var pos = m.position.toMatrix();
@@ -318,7 +417,7 @@ class World extends Object {
 			for( mid in 0...m.materials.length ) {
 				var mat = lib.header.materials[m.materials[mid]];
 				if(mat == null || mat.diffuseTexture == null) continue;
-				var wmat = loadMaterialTexture(r, mat);
+				var wmat = loadMaterialTexture(r, mat, m.name);
 				if( wmat == null ) continue;
 				var data = lib.getBuffers(geom, format.fmt, format.defaults, mid);
 
@@ -457,7 +556,7 @@ class World extends Object {
 					c.buffers.set(g.m.bits, b);
 					initMaterial(b, g.m);
 				}
-				var p = Std.instance(b.primitive, h3d.prim.BigPrimitive);
+				var p = hxd.impl.Api.downcast(b.primitive, h3d.prim.BigPrimitive);
 
 				if(e.optimized) {
 					var m = e.transform;
@@ -475,7 +574,6 @@ class World extends Object {
 		if( !c.initialized ) return;
 		c.initialized = false;
 		for( b in c.buffers ) {
-			b.dispose();
 			b.remove();
 		}
 		c.buffers = new Map();
@@ -494,7 +592,7 @@ class World extends Object {
 		mesh.material.textureShader.killAlphaThreshold = mat.killAlpha;
 		mesh.material.mainPass.enableLights = mat.lights;
 		mesh.material.shadows = mat.shadows;
-		mesh.material.mainPass.culling = Back;
+		mesh.material.mainPass.culling = mat.culling ? Back : None;
 		mesh.material.mainPass.depthWrite = true;
 		mesh.material.mainPass.depthTest = Less;
 
@@ -516,8 +614,11 @@ class World extends Object {
 
 	}
 
-	override function dispose() {
-		super.dispose();
+	/**
+		Dispose the World instance.
+		Note: Only chunked world objects will be disposed. Any objects added to World object will be disposed when World is removed from scene or scene is disposed.
+	**/
+	public function dispose() {
 		for( c in allChunks )
 			c.dispose();
 		allChunks = [];
@@ -531,7 +632,11 @@ class World extends Object {
 		}
 		bigTextures = [];
 		textures = new Map();
+		if( autoCollect )
+			h3d.Engine.getCurrent().mem.garbage = noGarbage;
 	}
+
+	static function noGarbage() {}
 
 	public function onContextLost() {
 		for( c in allChunks )
@@ -562,7 +667,7 @@ class World extends Object {
 		super.syncRec(ctx);
 		// don't do in sync() since animations in our world might affect our chunks
 		for( c in allChunks ) {
-			c.root.visible = c.bounds.inFrustum(ctx.camera.frustum);
+			c.root.visible = ctx.computingStatic || c.bounds.inFrustum(ctx.camera.frustum);
 			if( c.root.visible ) {
 				c.lastFrame = ctx.frame;
 				initChunk(c);

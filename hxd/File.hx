@@ -97,11 +97,14 @@ class File {
 			});
 			f.browse(filters);
 		#elseif (hl && (haxe_ver >= 4))
+			var old = hxd.System.allowTimeout;
+			hxd.System.allowTimeout = false;
 			var path = hl.UI.loadFile({
 				fileName : options.defaultPath,
 				filters : options.fileTypes == null ? null : [for( e in options.fileTypes ) { name : e.name, exts : e.extensions }],
 				title : options.title,
 			});
+			hxd.System.allowTimeout = old;
 			if( path == null ) return;
 			if( options.relativePath ) {
 				var cwd = Sys.getCwd();
@@ -116,6 +119,55 @@ class File {
 				},
 			};
 			onSelect(b);
+		#elseif js
+			var input : js.html.InputElement = cast js.Browser.document.getElementById("heapsBrowserInput");
+			if( input==null ) {
+				input = cast js.Browser.document.createElement("input");
+				input.setAttribute("id","heapsBrowserInput");
+				js.Browser.document.body.appendChild(input);
+			}
+			input.setAttribute("type","file");
+			input.style.display = "none";
+			if( options.fileTypes!=null ) {
+				var extensions = [];
+				for(ft in options.fileTypes)
+					for(e in ft.extensions)
+						extensions.push("."+e);
+				input.setAttribute("accept",extensions.join(","));
+			}
+			input.onclick = function(e) {
+				input.value = null;
+			}
+			input.onchange = function(e) {
+				var file : js.html.File = e.target.files[0];
+				var b : BrowseSelect = {
+					fileName: file.name,
+					load : function(onReady) {
+						var reader = new js.html.FileReader();
+						reader.readAsDataURL(file);
+						reader.onload = function(re) {
+							var raw : String = re.target.result;
+							var header = raw.substr(0, raw.indexOf(","));
+							var data = raw.substr(raw.indexOf(",")+1);
+
+							if( raw.indexOf(";")>=0 ) {
+								// Encoding is specified
+								onReady( switch( header.split(";")[1] ) {
+									case "base64" : haxe.crypto.Base64.decode(data);
+									case _ : throw "Unsupported encoding: "+header.split(";")[1];
+								});
+							}
+							else {
+								// Plain text
+								onReady( haxe.io.Bytes.ofString(data) );
+							}
+						}
+					}
+				}
+				onSelect(b);
+				input.remove();
+			}
+			input.click();
 		#else
 			throw "Not supported";
 		#end
@@ -165,11 +217,14 @@ class File {
 			var defaultFile = options.defaultPath;
 			f.save(dataContent.getData(), defaultFile);
 		#elseif (hl && (haxe_ver >= 4))
+			var old = hxd.System.allowTimeout;
+			hxd.System.allowTimeout = false;
 			var path = hl.UI.saveFile({
 				fileName : options.defaultPath,
 				title : options.title,
 				filters : options.fileTypes == null ? null : [for( e in options.fileTypes ) { name : e.name, exts : e.extensions }],
 			});
+			hxd.System.allowTimeout = old;
 			if( path == null )
 				return;
 			if( options.relativePath ) {

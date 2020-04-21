@@ -16,8 +16,9 @@ class ChannelBase {
 	}
 
 	public function getEffect<T:Effect>( etype : Class<T> ) : T {
+		if(effects == null) return null;  // Already released
 		for (e in effects) {
-			var e = Std.instance(e, etype);
+			var e = hxd.impl.Api.downcast(e, etype);
 			if (e != null) return e;
 		}
 		return null;

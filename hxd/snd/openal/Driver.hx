@@ -38,7 +38,7 @@ class Driver implements hxd.snd.Driver {
 
 	public function hasFeature( f : DriverFeature ) {
 		return switch( f ) {
-		case MasterVolume: true;
+		case MasterVolume: #if (hl || js) true #else false #end ;
 		}
 	}
 
@@ -92,6 +92,7 @@ class Driver implements hxd.snd.Driver {
 
 	public function playSource(source : SourceHandle) : Void {
 		AL.sourcePlay(source.inst);
+		source.sampleOffset = 0;
 		source.playing = true;
 	}
 
@@ -147,15 +148,15 @@ class Driver implements hxd.snd.Driver {
 		bytes.setInt32(0, buffer.inst.toInt());
 		AL.sourceQueueBuffers(source.inst, 1, bytes);
 
-		if (AL.getError() != AL.NO_ERROR)
-			throw "Failed to queue buffers: " + StringTools.hex(AL.getError());
+		var err = AL.getError();
+		if (err != AL.NO_ERROR)
+			throw "Failed to queue buffers: " + StringTools.hex(err)+" ("+buffer.inst.toInt()+")";
 
 		if (AL.getSourcei(source.inst, AL.SOURCE_STATE) == AL.STOPPED) {
 			if (sampleStart > 0) {
 				AL.sourcei(source.inst, AL.SAMPLE_OFFSET, sampleStart);
-				source.sampleOffset = -sampleStart;
 			} else {
-				source.sampleOffset = 0;
+				AL.sourcei(source.inst, AL.SAMPLE_OFFSET, 0);
 			}
 			if (source.playing)
 				AL.sourcePlay(source.inst);

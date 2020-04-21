@@ -135,8 +135,7 @@ abstract Polygon(Array<Point>) from Array<Point> to Array<Point> {
 	}
 
 	public function isConvex() {
-		if(points.length < 3) return true;
-
+		if(points.length < 4) return true;
 		var p1 = points[points.length - 2];
 		var p2 = points[points.length - 1];
 		var p3 = points[0];
@@ -264,6 +263,68 @@ abstract Polygon(Array<Point>) from Array<Point> to Array<Point> {
 		}
 
 		return pt;
+	}
+	
+	// find orientation of ordered triplet (p, q, r). 
+	// 0 --> p, q and r are colinear 
+	// 1 --> Clockwise 
+	// 2 --> Counterclockwise 
+	inline function orientation(p : h2d.col.Point, q : h2d.col.Point, r : h2d.col.Point) { 
+		var v = side(p, q, r);	
+		if (v == 0)	return 0;  		// colinear 
+		return v > 0 ? 1 : -1; 	// clock or counterclock wise 
+	}
+
+	/**
+		p, q, r : must be colinear points!
+		checks if 'r' lies on segment 'pq' 
+	**/
+	inline function onSegment(p : h2d.col.Point, q : h2d.col.Point, r : h2d.col.Point) { 
+		if(r.x > Math.max(p.x, q.x)) return false;
+		if(r.x < Math.min(p.x, q.x)) return false;
+		if(r.y > Math.max(p.y, q.y)) return false;
+		if(r.y < Math.min(p.y, q.y)) return false;
+		return true;
+	} 
+
+	/**
+		check if segment 'p1q1' and 'p2q2' intersect. 
+	**/
+	function intersect(p1 : h2d.col.Point, q1 : h2d.col.Point, p2 : h2d.col.Point, q2 : h2d.col.Point) { 
+		var s1 = orientation(p1, q1, p2); 
+		var s2 = orientation(p1, q1, q2); 
+		var s3 = orientation(p2, q2, p1); 
+		var s4 = orientation(p2, q2, q1); 
+		
+		if (s1 != s2 && s3 != s4) return true; 
+
+		if((s1 == 0 && onSegment(p1, q1, p2))
+		|| (s2 == 0 && onSegment(p1, q1, q2))
+		|| (s3 == 0 && onSegment(p2, q2, p1))
+		|| (s4 == 0 && onSegment(p2, q2, q1)))
+			return true; 
+	
+		return false;
+	} 
+
+	/**
+		check if polygon self-insterset
+	**/
+	public function selfIntersecting() {
+		if(points.length < 4) return false;
+
+		for(i in 0...points.length - 2) {
+			var p1 = points[i];
+			var q1 = points[i+1];
+			for(j in i+2...points.length) {
+				var p2 = points[j];
+				var q2 = points[(j+1) % points.length];
+				if(q2 != p1 && intersect(p1, q1, p2, q2)) 
+					return true;
+			}
+		}
+
+		return false;
 	}
 
 	/**

@@ -2,7 +2,7 @@ package hxd.fmt.pak;
 import hxd.fs.FileEntry;
 #if air3
 import hxd.impl.Air3File;
-#elseif sys
+#elseif (sys || nodejs)
 import sys.io.File;
 import sys.io.FileInput;
 #else
@@ -60,8 +60,25 @@ private class PakEntry extends FileEntry {
 		return file.isDirectory;
 	}
 
+	#if (hl && hl_ver >= version("1.12.0"))
+	@:hlNative("std","file_seek2") static function seek2( f : sys.io.File.FileHandle, pos : Float, cur : Int ) : Bool { return false; }
+	#end
+
+	function setPos() {
+		if( file.dataPosition > 0x7FFFFFFF ) {
+			#if (hl && hl_ver >= version("1.12.0"))
+			if( !seek2(@:privateAccess pak.__f,file.dataPosition,0) )
+				throw haxe.io.Error.Custom("seek() failure");
+			#else
+			throw "PAK file is too large: max 2GB or compile with -D hl_ver=1.12.0";
+			#end
+			return;
+		}
+		pak.seek(Std.int(file.dataPosition), SeekBegin);
+	}
+
 	override function getSign() {
-		pak.seek(file.dataPosition, SeekBegin);
+		setPos();
 		fs.totalReadBytes += 4;
 		fs.totalReadCount++;
 		return pak.readInt32();
@@ -70,7 +87,7 @@ private class PakEntry extends FileEntry {
 	override function getBytes() {
 		if( cachedBytes != null )
 			return cachedBytes;
-		pak.seek(file.dataPosition, SeekBegin);
+		setPos();
 		fs.totalReadBytes += file.dataSize;
 		fs.totalReadCount++;
 		return pak.read(file.dataSize);
@@ -83,7 +100,7 @@ private class PakEntry extends FileEntry {
 			fs.totalReadBytes += file.dataSize;
 			fs.totalReadCount++;
 			openedBytes = haxe.io.Bytes.alloc(file.dataSize);
-			pak.seek(file.dataPosition, SeekBegin);
+			setPos();
 			pak.readBytes(openedBytes, 0, file.dataSize);
 		}
 		bytesPosition = 0;
@@ -181,7 +198,7 @@ class FileSystem implements hxd.fs.FileSystem {
 	}
 
 	public function loadPak( file : String ) {
-		#if (air3 || sys)
+		#if (air3 || sys || nodejs)
 		addPak(File.read(file));
 		#else
 		throw "TODO";
@@ -268,7 +285,10 @@ class FileSystem implements hxd.fs.FileSystem {
 	}
 
 	public function dir( path : String ) : Array<FileEntry> {
-		throw "Not Supported";
+		var f = dict.get(path);
+		if( f == null ) throw new hxd.res.NotFound(path);
+		if( !f.isDirectory ) throw path+" is not a directory";
+		return [for( s in f.subs ) s];
 	}
 
 }

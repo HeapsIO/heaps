@@ -19,7 +19,7 @@ class Point {
 		z *= v;
 	}
 
-	public inline function inFrustum( f : Frustum ) {
+	public inline function inFrustum( f : Frustum, ?m : h3d.Matrix ) {
 		return f.hasPoint(this);
 	}
 
@@ -27,6 +27,10 @@ class Point {
 		this.x = x;
 		this.y = y;
 		this.z = z;
+	}
+
+	public inline function multiply( f : Float ) {
+		return new Point(x * f, y * f, z * f);
 	}
 
 	public inline function sub( p : Point ) {
@@ -39,6 +43,10 @@ class Point {
 
 	public inline function cross( p : Point ) {
 		return new Point(y * p.z - z * p.y, z * p.x - x * p.z,  x * p.y - y * p.x);
+	}
+
+	public inline function equals( other : Point ) : Bool {
+		return x == other.x && y == other.y && z == other.z;
 	}
 
 	public inline function lengthSq() {
@@ -71,13 +79,13 @@ class Point {
 		return distanceSq(p).sqrt();
 	}
 
-
 	public function normalize() {
 		var k = x * x + y * y + z * z;
 		if( k < hxd.Math.EPSILON ) k = 0 else k = k.invSqrt();
 		x *= k;
 		y *= k;
 		z *= k;
+		return this;
 	}
 
 	public inline function normalizeFast() {
@@ -86,6 +94,16 @@ class Point {
 		x *= k;
 		y *= k;
 		z *= k;
+		return this;
+	}
+
+	public inline function lerp( p1 : Point, p2 : Point, k : Float ) {
+		var x = Math.lerp(p1.x, p2.x, k);
+		var y = Math.lerp(p1.y, p2.y, k);
+		var z = Math.lerp(p1.z, p2.z, k);
+		this.x = x;
+		this.y = y;
+		this.z = z;
 	}
 
 	public inline function transform( m : Matrix ) {

@@ -4,15 +4,13 @@ import hxd.fmt.pak.Data;
 class Build {
 
 	var fs : hxd.fs.LocalFileSystem;
-	var out : { bytes : Array<haxe.io.Bytes>, size : Int };
-	
-	
-	public var converts : Array<hxd.fs.Convert> = [];
+	var out : { bytes : Array<haxe.io.Bytes>, size : Float };
+	var configuration : String;
+
 	public var excludedExt : Array<String> = [];
 	public var resPath : String = "res";
-	public var outPrefix : String = "res";
+	public var outPrefix : String;
 	public var pakDiff = false;
-	public var soundFormat = "ogg";
 	public var checkJPG = false;
 	public var checkOGG = false;
 
@@ -38,25 +36,22 @@ class Build {
 			f.content = [];
 			for( name in sys.FileSystem.readDirectory(dir) ) {
 				var fpath = path == "" ? name : path+"/"+name;
-				if( name.charCodeAt(0) == ".".code || (name.charCodeAt(0) == "_".code && sys.FileSystem.isDirectory(resPath + "/"+fpath)) )
+				if( name.charCodeAt(0) == ".".code )
 					continue;
 				var s = buildRec(fpath);
 				if( s != null ) f.content.push(s);
 			}
+			if( f.content.length == 0 && path != "" )
+				return null;
 		} else {
 			var ext = path.split("/").pop().split(".").pop().toLowerCase();
 			if( excludedExt.indexOf(ext) >= 0 )
 				return null;
-			var filePath = fs.getAbsolutePath(fs.get(path));
+			var entry = try fs.get(path) catch( e : hxd.res.NotFound ) return null;
+			var filePath = fs.getAbsolutePath(entry);
 			var data = sys.io.File.getBytes(filePath);
 
 			switch( ext ) {
-			case "jpg", "jpeg" if( checkJPG ):
-				try hxd.res.NanoJpeg.decode(data) catch( e : Dynamic ) {
-					Sys.println("\tConverting " + path);
-					command("jpegtran", ["-optimize", "-copy","all", filePath, filePath]);
-					data = sys.io.File.getBytes(filePath);
-				}
 			case "wav", "ogg" if( checkOGG ):
 				var snd = new hxd.snd.OggData(sys.io.File.getBytes(filePath));
 				if( snd.samples == 0 )
@@ -107,13 +102,13 @@ class Build {
 		}
 		calcRec(pak.root);
 		var out = [];
-		var pos = 0;
+		var pos = 0.;
 		function writeRec(f:File) {
 			if( f.isDirectory ) {
 				for( c in f.content )
 					writeRec(c);
 			} else {
-				out.push(bytes[f.dataPosition]);
+				out.push(bytes[Std.int(f.dataPosition)]);
 				f.dataPosition = pos;
 				pos += f.dataSize;
 			}
@@ -127,20 +122,8 @@ class Build {
 		if( !sys.FileSystem.exists(resPath) )
 			throw "'" + resPath + "' resource directory was not found";
 
-		fs = new hxd.fs.LocalFileSystem(resPath);
-		for( c in converts )
-			fs.addConvert(c);
-		switch( soundFormat ) {
-		case "wav":
-			// no convert
-		case "mp3":
-			fs.addConvert(new hxd.fs.Convert.ConvertWAV2MP3());
-		case "ogg":
-			fs.addConvert(new hxd.fs.Convert.ConvertWAV2OGG());
-		default:
-			throw "Unknown sound format " + soundFormat;
-		}
-		fs.onConvert = function(f) Sys.println("\tConverting " + f.path);
+		fs = new hxd.fs.LocalFileSystem(resPath, configuration);
+		fs.convert.onConvert = function(c) Sys.println("\tConverting " + c.srcPath);
 
 		var pak = new Data();
 		out = { bytes : [], size : 0 };
@@ -194,9 +177,9 @@ class Build {
 			switch( f ) {
 			case "-x" if( args.length > 0 ):
 				var pakFile = args.shift();
-				var bytes = sys.io.File.getBytes(pakFile);
-				var pak = new hxd.fmt.pak.Reader(new haxe.io.BytesInput(bytes)).readHeader();
-				var baseDir = pakFile.substr(0,-4);				
+				var fs = sys.io.File.read(pakFile);
+				var pak = new hxd.fmt.pak.Reader(fs).readHeader();
+				var baseDir = pakFile.substr(0,-4);
 				function extractRec(f:hxd.fmt.pak.Data.File, dir) {
 					if( f.isDirectory ) {
 						var dir = f.name == "" ? dir : dir+"/"+f.name;
@@ -204,13 +187,13 @@ class Build {
 						for( c in f.content )
 							extractRec(c,dir);
 					} else {
-						sys.io.File.saveBytes(dir+"/"+f.name,bytes.sub(pak.headerSize + f.dataPosition,f.dataSize));
+						// todo : seek large
+						fs.seek(Std.int(f.dataPosition+pak.headerSize), SeekBegin);
+						sys.io.File.saveBytes(dir+"/"+f.name,fs.read(f.dataSize));
 					}
 				}
 				extractRec(pak.root, baseDir);
 				Sys.exit(0);
-			case "-mp3", "-wav", "-ogg":
-				b.soundFormat = f.substr(1);
 			case "-diff":
 				b.pakDiff = true;
 			case "-res" if( args.length > 0 ):
@@ -220,15 +203,17 @@ class Build {
 			case "-exclude" if( args.length > 0 ):
 				for( ext in args.shift().split(",") )
 					b.excludedExt.push(ext);
-			case "-check-jpg":
-				b.checkJPG = true;
 			case "-check-ogg":
 				b.checkOGG = true;
-			case "-pngcrush":
-				b.converts.push(new hxd.fs.Convert.Command("png","crush.png","pngcrush",["-s","%SRC","%DST"]));
+			case "-config" if( args.length > 0 ):
+				b.configuration = args.shift();
 			default:
 				throw "Unknown parameter " + f;
 			}
+		}
+		if( b.outPrefix == null ) {
+			b.outPrefix = "res";
+			if( b.configuration != "default" && b.configuration != null ) b.outPrefix += "."+b.configuration;
 		}
 		b.makePak();
 	}

@@ -16,7 +16,7 @@ class Loader extends h2d.Object {
 		this.onDone = onDone;
 		if( hxd.res.Loader.currentInstance == null )
 			hxd.res.Loader.currentInstance = new hxd.res.Loader(new FileSystem());
-		fs = Std.instance(hxd.res.Loader.currentInstance.fs, FileSystem);
+		fs = hxd.impl.Api.downcast(hxd.res.Loader.currentInstance.fs, FileSystem);
 		if( fs == null )
 			throw "Can only use loader with PAK file system";
 		hxd.System.setLoop(render);

@@ -23,6 +23,10 @@ class IPoint {
 		this.z = z;
 	}
 
+	public inline function equals( other : IPoint ) : Bool {
+		return x == other.x && y == other.y && z == other.z;
+	}
+
 	public inline function load( p : IPoint ) {
 		this.x = p.x;
 		this.y = p.y;

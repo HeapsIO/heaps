@@ -26,6 +26,12 @@ class Capsule implements Collider {
 		var RD = r.getDir();
 
 		var ABdotAB = AB.dot(AB);
+
+		if (ABdotAB == 0) {
+			tmpSphere.load(this.a.x, this.a.y, this.a.z, this.r);
+			return tmpSphere.rayIntersection(r, bestMatch);
+		}
+
 		var m = AB.dot(RD) / ABdotAB;
 		var n = AB.dot(AO) / ABdotAB;
 
@@ -83,7 +89,9 @@ class Capsule implements Collider {
 		return -1;
 	}
 
-	public function inFrustum( f : Frustum ) {
+	public function inFrustum( f : Frustum, ?m : h3d.Matrix ) {
+		if( m != null )
+			throw "Not implemented";
 		tmpSphere.load(a.x + (b.x-a.x), a.y + (b.y-a.y), a.z + (b.z-a.z), (b.distance(a)/2 + r));
 		return tmpSphere.inFrustum(f);
 	}

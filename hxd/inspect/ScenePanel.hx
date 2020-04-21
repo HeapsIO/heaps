@@ -200,15 +200,15 @@ private class CustomSceneProps extends SceneProps {
 
 	override function getObjectProps( o : h3d.scene.Object ) {
 		var props = super.getObjectProps(o);
-		var world = Std.instance(o, h3d.scene.World);
+		var world = hxd.impl.Api.downcast(o, h3d.scene.World);
 		var worldObject = world == null ? o : null;
 		if( world == null ) {
-			world = Std.instance(o.parent, h3d.scene.World);
+			world = hxd.impl.Api.downcast(o.parent, h3d.scene.World);
 			if( world != null && !Lambda.exists(@:privateAccess world.allChunks, function(c) return c.root == o) )
 				world = null;
 		}
 		if( world == null && o.parent != null ) {
-			world = Std.instance(o.parent.parent, h3d.scene.World);
+			world = hxd.impl.Api.downcast(o.parent.parent, h3d.scene.World);
 			if( world != null && !Lambda.exists(@:privateAccess world.allChunks, function(c) return c.root == o.parent) )
 				world = null;
 		}

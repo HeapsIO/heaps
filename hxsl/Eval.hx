@@ -213,6 +213,12 @@ class Eval {
 		return [for( c in constants.keys() ) c + " => " + Printer.toString({ e : constants.get(c), t : TVoid, p : null }, true)].toString();
 	}
 
+	function ifBlock( e : TExpr ) {
+		if( e == null || !e.e.match(TIf(_)) )
+			return e;
+		return { e : TBlock([e]), t : e.t, p : e.p };
+	}
+
 	function evalExpr( e : TExpr, isVal = true ) : TExpr {
 		var d : TExprDef = switch( e.e ) {
 		case TGlobal(_), TConst(_): e.e;
@@ -419,6 +425,8 @@ class Eval {
 						eelse = evalExpr(eelse,isVal);
 						if( eelse.e.match(TConst(CNull)) ) eelse = null;
 					}
+					eif = ifBlock(eif);
+					eelse = ifBlock(eelse);
 					TIf(econd, eif, eelse);
 				}
 			}
@@ -441,14 +449,14 @@ class Eval {
 				constants.remove(v.id);
 				TBlock(out);
 			default:
-				TFor(v2, it, evalExpr(loop,false));
+				TFor(v2, it, ifBlock(evalExpr(loop,false)));
 			}
 			varMap.remove(v);
 			e;
 		case TWhile(cond, loop, normalWhile):
 			var cond = evalExpr(cond);
 			var loop = evalExpr(loop, false);
-			TWhile(cond, loop, normalWhile);
+			TWhile(cond, ifBlock(loop), normalWhile);
 		case TSwitch(e, cases, def):
 			var e = evalExpr(e);
 			var cases = [for( c in cases ) { values : [for( v in c.values ) evalExpr(v)], expr : evalExpr(c.expr, isVal) }];

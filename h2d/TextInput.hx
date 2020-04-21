@@ -245,7 +245,7 @@ class TextInput extends Text {
 		return selectionRange == null ? null : text.substr(selectionRange.start, selectionRange.length);
 	}
 
-	override function set_text(t:hxd.UString) {
+	override function set_text(t:String) {
 		super.set_text(t);
 		if( cursorIndex > t.length ) cursorIndex = t.length;
 		return t;
@@ -259,8 +259,8 @@ class TextInput extends Text {
 		return f;
 	}
 
-	override function initGlyphs(text:hxd.UString, rebuild = true, handleAlign = true, lines:Array<Int> = null):Void {
-		super.initGlyphs(text, rebuild, handleAlign, lines);
+	override function initGlyphs(text:String, rebuild = true):Void {
+		super.initGlyphs(text, rebuild);
 		if( rebuild ) {
 			this.calcWidth += cursorTile.width; // cursor end pos
 			if( inputWidth != null && this.calcWidth > inputWidth ) this.calcWidth = inputWidth;
@@ -336,6 +336,10 @@ class TextInput extends Text {
 
 	public function focus() {
 		interactive.focus();
+		if( cursorIndex < 0 ) {
+			cursorIndex = 0;
+			if( text != "" ) selectionRange = { start : 0, length : text.length };
+		}
 	}
 
 	public function hasFocus() {

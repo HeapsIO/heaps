@@ -132,7 +132,21 @@ class Key {
 	public static inline var MOUSE_MIDDLE = 2;
 	public static inline var MOUSE_BACK = 3;
 	public static inline var MOUSE_FORWARD = 4;
+	/**
+	 * Mouse wheel does not have an off signal, and should be checked only trough `isPressed` method.
+	 * Note that there may be multiple wheel scrolls between 2 frames, and to receive more accurate
+	 * results, it is recommended to directly listen to wheel events which also provide OS-generated wheel delta value.
+	 * See `Interactive.onWheel` for per-interactive events. For scene-based see `Scene.addEventListener`
+	 * when event is `EWheel`. For global hook use `Window.addEventTarget` method.
+	 */
 	public static inline var MOUSE_WHEEL_UP = 5;
+	/**
+	 * Mouse wheel does not have an off signal, and should be checked only trough `isPressed` method.
+	 * Note that there may be multiple wheel scrolls between 2 frames, and to receive more accurate
+	 * results, it is recommended to directly listen to wheel events which also provide OS-generated wheel delta value.
+	 * See `Interactive.onWheel` for per-interactive events. For scene-based see `Scene.addEventListener`
+	 * when event is `EWheel`. For global hook use `Window.addEventTarget` method.
+	 */
 	public static inline var MOUSE_WHEEL_DOWN = 6;
 
 	/** a bit that is set for left keys **/
@@ -278,6 +292,8 @@ class Key {
 		case MOUSE_LEFT: "MouseLeft";
 		case MOUSE_MIDDLE: "MouseMiddle";
 		case MOUSE_RIGHT: "MouseRight";
+		case MOUSE_BACK: "Mouse3";
+		case MOUSE_FORWARD: "Mouse4";
 		default:
 			if( c >= NUMBER_0 && c <= NUMBER_9 )
 				""+(c - NUMBER_0);

@@ -14,13 +14,18 @@ class Writer {
 		o.writeString(f.name);
 		var flags = 0;
 		if( f.isDirectory ) flags |= 1;
+		var p = Std.int(f.dataPosition);
+		if( p != f.dataPosition ) flags |= 2;
 		o.writeByte(flags);
 		if( f.isDirectory ) {
 			o.writeInt32(f.content.length);
 			for( f in f.content )
 				writeFile(f);
 		} else {
-			o.writeInt32(f.dataPosition);
+			if( p == f.dataPosition )
+				o.writeInt32(p);
+			else
+				o.writeDouble(f.dataPosition);
 			o.writeInt32(f.dataSize);
 			o.writeInt32(f.checksum);
 		}

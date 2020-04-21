@@ -165,7 +165,11 @@ class MacroParser {
 					qualifiers : [],
 				}
 			}]);
+		#if haxe4
+		case EFunction(FNamed(name,_),f) if( f.expr != null ):
+		#else
 		case EFunction(name, f) if( name != null && f.expr != null ):
+		#end
 			EFunction({
 				name : name,
 				ret : f.ret == null ? null : (switch( f.ret ) {
@@ -238,6 +242,8 @@ class MacroParser {
 			ESwitch(parseExpr(e), [for( c in cases ) { expr : c.expr == null ? { expr : EBlock([]), pos : c.values[0].pos } : parseExpr(c.expr), values : [for( v in c.values ) parseExpr(v)] }], def == null ? null : parseExpr(def));
 		case EWhile(cond, e, normalWhile):
 			EWhile(parseExpr(cond), parseExpr(e), normalWhile);
+		case EObjectDecl([]):
+			EBlock([]);
 		default:
 			null;
 		};

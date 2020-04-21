@@ -37,6 +37,10 @@ class IPoint {
 		return new Point(x + p.x, y + p.y);
 	}
 
+	public inline function equals( other : IPoint ) : Bool {
+		return x == other.x && y == other.y;
+	}
+
 	public inline function dot( p : IPoint ) {
 		return x * p.x + y * p.y;
 	}
