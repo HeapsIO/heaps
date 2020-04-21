@@ -56,6 +56,7 @@ class GlslOut {
 	public var varNames : Map<Int,String>;
 	public var glES : Null<Float>;
 	public var version : Null<Int>;
+	public var precision : String = 'mediump';
 
 	public function new() {
 		varNames = new Map();
@@ -629,7 +630,7 @@ class GlslOut {
 		intelDriverFix = true;
 		#end
 
-		decl("precision mediump float;");
+		decl('precision $precision float;');
 
 		if( s.funs.length != 1 ) throw "assert";
 		var f = s.funs[0];
