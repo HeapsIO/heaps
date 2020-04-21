@@ -90,6 +90,7 @@ class RenderContext extends h3d.impl.RenderContext {
 		curWidth = scene.width;
 		curHeight = scene.height;
 		manager.globals.set("time", time);
+		manager.globals.set("global.time", time);
 		// todo : we might prefer to auto-detect this by running a test and capturing its output
 		baseShader.pixelAlign = #if flash true #else false #end;
 		baseShader.halfPixelInverse.set(0.5 / engine.width, 0.5 / engine.height);
