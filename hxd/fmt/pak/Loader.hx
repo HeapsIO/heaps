@@ -55,7 +55,6 @@ class Loader extends h2d.Object {
 			}
 			fs.addPak(f);
 			resCount++;
-			f.close();
 			#else
 			cur = new hxd.net.BinaryLoader(name);
 			cur.onLoaded = function(bytes) {
