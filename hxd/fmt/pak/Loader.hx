@@ -5,6 +5,7 @@ class Loader extends h2d.Object {
 	var onDone : Void -> Void;
 	var cur : hxd.net.BinaryLoader;
 	var resCount : Int = 0;
+	var maxResCount : Int;
 	var fs : FileSystem;
 	var s2d : h2d.Scene;
 	var bg : h2d.Graphics;
@@ -20,6 +21,7 @@ class Loader extends h2d.Object {
 		if( fs == null )
 			throw "Can only use loader with PAK file system";
 		hxd.System.setLoop(render);
+		this.maxResCount = this.getMaxResCount();
 	}
 
 	function render() {
@@ -40,7 +42,7 @@ class Loader extends h2d.Object {
 
 			bg.x = (s2d.width - 100) >> 1;
 			bg.y = (s2d.height - 10) >> 1;
-			updateBG(0);
+			updateBG(resCount / this.maxResCount);
 
 			var name = "res" + (resCount == 0 ? "" : "" + resCount) + ".pak";
 			#if sys
@@ -49,6 +51,7 @@ class Loader extends h2d.Object {
 					trace(e);
 				else {
 					remove();
+					updateBG(1);
 					onDone();
 				}
 				return;
@@ -82,5 +85,18 @@ class Loader extends h2d.Object {
 		}
 	}
 
+	function getMaxResCount( count : Int = 0 ) : Int {
+		var exists = false;
+		var name = "res" + (count == 0 ? "" : "" + count) + ".pak";
 
+		#if sys
+		if ( sys.FileSystem.exists(name) ) {
+			return getMaxResCount(++count);
+		} else {
+			return count;
+		}
+		#else
+		return 0;
+		#end
+	}
 }
