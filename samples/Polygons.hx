@@ -1,12 +1,43 @@
-import h3d.prim.Grid;
-import h3d.prim.GeoSphere;
-import h3d.prim.Disc;
-import h3d.prim.Sphere;
-import h3d.prim.Cylinder;
 import h3d.prim.Cube;
+import h3d.prim.Cylinder;
+import h3d.prim.Disc;
+import h3d.prim.GeoSphere;
+import h3d.prim.Grid;
+import h3d.prim.Sphere;
+import h3d.scene.CameraController;
+import h3d.scene.Mesh;
 import h3d.Vector;
 import hxd.Key;
-import h3d.scene.Mesh;
+
+/**
+ * Third person camera controller (top view) with arrow keys mapping
+ */
+class ThirdPersonCameraController extends CameraController {
+	override function onEvent( e : hxd.Event ) {
+		super.onEvent(e);
+
+		// Third person camera arrow keys mapping
+		if (e.keyCode == Key.UP) {
+			var radian = Math.atan2((curPos.y - target.y), (curPos.x - target.x));
+			pan(Math.sin(radian), Math.cos(radian));
+		}
+		if (e.keyCode == Key.LEFT) {
+			var radian = Math.atan2((curPos.y - target.y), (curPos.x - target.x));
+			radian = radian - Math.PI / 2.0;
+			pan(Math.sin(radian), Math.cos(radian));
+		}
+		if (e.keyCode == Key.DOWN) {
+			var radian = Math.atan2((curPos.y - target.y), (curPos.x - target.x));
+			radian = radian + Math.PI;
+			pan(Math.sin(radian), Math.cos(radian));
+		}
+		if (e.keyCode == Key.RIGHT) {
+			var radian = Math.atan2((curPos.y - target.y), (curPos.x - target.x));
+			radian = radian + Math.PI / 2.0;
+			pan(Math.sin(radian), Math.cos(radian));
+		}
+	}
+}
 
 class Polygons extends hxd.App {
 
@@ -83,9 +114,6 @@ class Polygons extends hxd.App {
 		var light = new h3d.scene.fwd.DirLight(new h3d.Vector( 0.3, -0.4, -0.9), s3d);
 		s3d.lightSystem.ambientLight.setColor(0x909090);
 
-		s3d.camera.target.set(32, 32, 0);
-		s3d.camera.pos.set(80, 80, 48);
-
 		shadow = s3d.renderer.getPass(h3d.pass.DefaultShadowMap);
 		shadow.size = 2048;
 		shadow.power = 200;
@@ -97,43 +125,10 @@ class Polygons extends hxd.App {
 		new hxd.inspect.Inspector(s3d);
 		#end
 
-		s3d.camera.zNear = 1;
-		s3d.camera.zFar = 100;
-		cameraCtrl = new h3d.scene.CameraController(s3d);
+		s3d.camera.target.set(32, 32, 0);
+		s3d.camera.pos.set(80, 80, 48);
+		cameraCtrl = new ThirdPersonCameraController(s3d);
 		cameraCtrl.loadFromCamera();
-
-		hxd.Window.getInstance().addEventTarget(onEvent);
-	}
-
-	function onEvent(event : hxd.Event) {
-		// Third person camera
-		if (Key.isDown(Key.UP)) {
-			var r = Math.atan2((s3d.camera.target.y - s3d.camera.pos.y), (s3d.camera.target.x - s3d.camera.pos.x));
-			s3d.camera.pos.set(s3d.camera.pos.x + Math.cos(r), s3d.camera.pos.y + Math.sin(r), s3d.camera.pos.z);
-			s3d.camera.target.set(s3d.camera.target.x + Math.cos(r), s3d.camera.target.y + Math.sin(r), s3d.camera.target.z);
-			cameraCtrl.loadFromCamera();
-		}
-		if (Key.isDown(Key.LEFT)) {
-			var r = Math.atan2((s3d.camera.target.y - s3d.camera.pos.y), (s3d.camera.target.x - s3d.camera.pos.x));
-			r = r - Math.PI / 2;
-			s3d.camera.pos.set(s3d.camera.pos.x + Math.cos(r), s3d.camera.pos.y + Math.sin(r), s3d.camera.pos.z);
-			s3d.camera.target.set(s3d.camera.target.x + Math.cos(r), s3d.camera.target.y + Math.sin(r), s3d.camera.target.z);
-			cameraCtrl.loadFromCamera();
-		}
-		if (Key.isDown(Key.DOWN)) {
-			var r = Math.atan2((s3d.camera.target.y - s3d.camera.pos.y), (s3d.camera.target.x - s3d.camera.pos.x));
-			r = r + Math.PI;
-			s3d.camera.pos.set(s3d.camera.pos.x + Math.cos(r), s3d.camera.pos.y + Math.sin(r), s3d.camera.pos.z);
-			s3d.camera.target.set(s3d.camera.target.x + Math.cos(r), s3d.camera.target.y + Math.sin(r), s3d.camera.target.z);
-			cameraCtrl.loadFromCamera();
-		}
-		if (Key.isDown(Key.RIGHT)) {
-			var r = Math.atan2((s3d.camera.target.y - s3d.camera.pos.y), (s3d.camera.target.x - s3d.camera.pos.x));
-			r = r + Math.PI / 2;
-			s3d.camera.pos.set(s3d.camera.pos.x + Math.cos(r), s3d.camera.pos.y + Math.sin(r), s3d.camera.pos.z);
-			s3d.camera.target.set(s3d.camera.target.x + Math.cos(r), s3d.camera.target.y + Math.sin(r), s3d.camera.target.z);
-			cameraCtrl.loadFromCamera();
-		}
 	}
 
 	static function main() {
