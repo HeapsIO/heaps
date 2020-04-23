@@ -217,7 +217,8 @@ class Environment  {
 		} else {
 			if( source.width != source.height * 2 )
 				throw "Unrecognized environment map format";
-			env = new h3d.mat.Texture(source.height, source.height, [Cube, Target]);
+			if(env == null)
+				env = new h3d.mat.Texture(source.height, source.height, [Cube, Target]);
 			var pass = new h3d.pass.ScreenFx(new IrradEquiProj());
 			var engine = h3d.Engine.getCurrent();
 			pass.shader.texture = source;
