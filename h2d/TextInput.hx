@@ -287,7 +287,7 @@ class TextInput extends Text {
 	override function draw(ctx:RenderContext) {
 		if( inputWidth != null ) {
 			var h = localToGlobal(new h2d.col.Point(inputWidth, font.lineHeight));
-			ctx.setRenderZone(absX, absY, h.x - absX, h.y - absY);
+			ctx.pushRenderZone(absX, absY, h.x - absX, h.y - absY);
 		}
 
 		if( cursorIndex >= 0 && (text != cursorText || cursorIndex != cursorXIndex) ) {
@@ -331,7 +331,7 @@ class TextInput extends Text {
 		}
 
 		if( inputWidth != null )
-			ctx.clearRenderZone();
+			ctx.popRenderZone();
 	}
 
 	public function focus() {
