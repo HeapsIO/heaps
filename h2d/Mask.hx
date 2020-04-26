@@ -1,11 +1,7 @@
 package h2d;
 
-private typedef RenderZoneStack = { hasRZ:Bool, x:Float, y:Float, w:Float, h:Float };
 
 class Mask extends Object {
-
-	static var renderZoneStack:Array<RenderZoneStack> = [];
-	static var renderZoneCaret:Int = 0;
 
 	/**
 		Masks render zone based off object position and given dimensions.
@@ -33,37 +29,16 @@ class Mask extends Object {
 			y2 = tmp;
 		}
 
-		var inf = renderZoneStack[renderZoneCaret++];
-		if ( inf == null ) {
-			inf = { hasRZ: ctx.hasRenderZone, x: ctx.renderX, y: ctx.renderY, w: ctx.renderW, h: ctx.renderH };
-			renderZoneStack[renderZoneCaret - 1] = inf;
-		}
-		else if ( ctx.hasRenderZone ) {
-			inf.hasRZ = true;
-			inf.x = ctx.renderX;
-			inf.y = ctx.renderY;
-			inf.w = ctx.renderW;
-			inf.h = ctx.renderH;
-		} else {
-			inf.hasRZ = false;
-		}
-
 		ctx.flush();
-		ctx.setRenderZone(x1, y1, x2-x1, y2-y1);
+		ctx.pushRenderZone(x1, y1, x2-x1, y2-y1);
 	}
 
 	/**
 		Unmasks prviously masked area from `Mask.maskWith`.
 	**/
 	public static function unmask( ctx : RenderContext ) {
-		if (renderZoneCaret == 0) throw "Too many unmask()";
-		var inf = renderZoneStack[--renderZoneCaret];
 		ctx.flush();
-		if (inf.hasRZ) {
-			ctx.setRenderZone(inf.x, inf.y, inf.w, inf.h);
-		} else {
-			ctx.clearRenderZone();
-		}
+		ctx.popRenderZone();
 	}
 
 	public var width : Int;

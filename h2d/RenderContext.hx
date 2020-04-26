@@ -1,5 +1,7 @@
 package h2d;
 
+private typedef RenderZoneStack = { hasRZ:Bool, x:Float, y:Float, w:Float, h:Float };
+
 class RenderContext extends h3d.impl.RenderContext {
 
 	static inline var BUFFERING = false;
@@ -30,6 +32,8 @@ class RenderContext extends h3d.impl.RenderContext {
 	var stride : Int;
 	var targetsStack : Array<{ t : h3d.mat.Texture, x : Int, y : Int, w : Int, h : Int, hasRZ : Bool, rzX:Float, rzY:Float, rzW:Float, rzH:Float }>;
 	var targetsStackIndex : Int;
+	var renderZoneStack:Array<RenderZoneStack> = [];
+	var renderZoneIndex:Int = 0;
 	var hasUVPos : Bool;
 	var filterStack : Array<h2d.Object>;
 	var inFilter : Object;
@@ -179,7 +183,7 @@ class RenderContext extends h3d.impl.RenderContext {
 		curWidth = width;
 		curHeight = height;
 		currentBlend = null;
-		if( hasRenderZone ) clearRenderZone();
+		if( hasRenderZone ) clearRZ();
 	}
 
 	public function popTarget( restore = true ) {
@@ -223,10 +227,38 @@ class RenderContext extends h3d.impl.RenderContext {
 			curHeight = height;
 		}
 
-		if( pinf.hasRZ ) setRenderZone(pinf.rzX, pinf.rzY, pinf.rzW, pinf.rzH);
+		if( pinf.hasRZ ) setRZ(pinf.rzX, pinf.rzY, pinf.rzW, pinf.rzH);
 	}
 
-	public function setRenderZone( x : Float, y : Float, w : Float, h : Float ) {
+	public function pushRenderZone( x : Float, y : Float, w : Float, h : Float ) {
+		var inf = renderZoneStack[renderZoneIndex++];
+		if ( inf == null ) {
+			inf = { hasRZ: hasRenderZone, x: renderX, y: renderY, w: renderW, h: renderH };
+			renderZoneStack[renderZoneIndex - 1] = inf;
+		} else if ( hasRenderZone ) {
+			inf.hasRZ = true;
+			inf.x = renderX;
+			inf.y = renderY;
+			inf.w = renderW;
+			inf.h = renderH;
+		} else {
+			inf.hasRZ = false;
+		}
+
+		setRZ(x, y, w, h);
+	}
+
+	public function popRenderZone() {
+		if (renderZoneIndex == 0) throw "Too many popRenderZone()";
+		var inf = renderZoneStack[--renderZoneIndex];
+		if (inf.hasRZ) {
+			setRZ(inf.x, inf.y, inf.w, inf.h);
+		} else {
+			clearRZ();
+		}
+	}
+
+	function setRZ( x : Float, y : Float, w : Float, h : Float ) {
 		hasRenderZone = true;
 		renderX = x;
 		renderY = y;
@@ -249,10 +281,20 @@ class RenderContext extends h3d.impl.RenderContext {
 		}
 		engine.setRenderZone(Std.int((x - curX + scene.viewportX) * scaleX + 1e-10), Std.int((y - curY + scene.viewportY) * scaleY + 1e-10), Std.int(w * scaleX + 1e-10), Std.int(h * scaleY + 1e-10));
 	}
-
-	public inline function clearRenderZone() {
+	
+	inline function clearRZ() {
 		hasRenderZone = false;
 		engine.setRenderZone();
+	}
+
+	@:deprecated("Use pushRenderZone")
+	public inline function setRenderZone( x : Float, y : Float, w : Float, h : Float ) {
+		pushRenderZone(x, y, w, h);
+	}
+
+	@:deprecated("Use popRenderZone")
+	public inline function clearRenderZone() {
+		popRenderZone();
 	}
 
 	function drawLayer( layer : Int ) {
