@@ -121,10 +121,6 @@ class Polygons extends hxd.App {
 		shadow.bias *= 0.1;
 		shadow.color.set(0.7, 0.7, 0.7);
 
-		#if castle
-		new hxd.inspect.Inspector(s3d);
-		#end
-
 		s3d.camera.target.set(32, 32, 0);
 		s3d.camera.pos.set(80, 80, 48);
 		cameraCtrl = new ThirdPersonCameraController(s3d);
