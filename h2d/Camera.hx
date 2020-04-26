@@ -213,7 +213,7 @@ class Camera {
 		Requires Scene as a reference to viewport of `scaleMode`.
 	**/
 	inline function screenXToCamera( mx : Float, my : Float ) : Float {
-		return globalXToCamera((mx - scene.offsetX) / scene.viewportScaleX, (my - scene.offsetY) / scene.viewportScaleY);
+		return sceneXToCamera((mx - scene.offsetX) / scene.viewportScaleX, (my - scene.offsetY) / scene.viewportScaleY);
 	}
 
 	/**
@@ -221,7 +221,7 @@ class Camera {
 		Requires Scene as a reference to viewport of `scaleMode`.
 	**/
 	inline function screenYToCamera( mx : Float, my : Float ) : Float {
-		return globalYToCamera((mx - scene.offsetX) / scene.viewportScaleX, (my - scene.offsetY) / scene.viewportScaleY);
+		return sceneYToCamera((mx - scene.offsetX) / scene.viewportScaleX, (my - scene.offsetY) / scene.viewportScaleY);
 	}
 
 	/**
@@ -229,7 +229,7 @@ class Camera {
 		Requires Scene as a reference to viewport of `scaleMode`.
 	**/
 	inline function cameraXToScreen( mx : Float, my : Float ) : Float {
-		return cameraXToGlobal(mx, my) * scene.viewportScaleX + scene.offsetX;
+		return cameraXToScene(mx, my) * scene.viewportScaleX + scene.offsetX;
 	}
 
 	/**
@@ -237,7 +237,7 @@ class Camera {
 		Requires Scene as a reference to viewport of `scaleMode`.
 	**/
 	inline function cameraYToScreen( mx : Float, my : Float ) : Float {
-		return cameraYToGlobal(mx, my) * scene.viewportScaleY + scene.offsetY;
+		return cameraYToScene(mx, my) * scene.viewportScaleY + scene.offsetY;
 	}
 
 	// Scene <-> Camera
@@ -245,7 +245,7 @@ class Camera {
 		Convert an absolute scene position into a local camera position.
 		Does not represent screen position, see `screenXToCamera` to convert position with accounting of `scaleMode`.
 	**/
-	inline function globalXToCamera( mx : Float, my : Float ) : Float {
+	inline function sceneXToCamera( mx : Float, my : Float ) : Float {
 		return ((mx - absX) * matD - (my - absY) * matC) * invDet;
 	}
 
@@ -253,7 +253,7 @@ class Camera {
 		Convert an absolute scene position into a local camera position.
 		Does not represent screen position, see `screenYToCamera` to convert position with accounting of `scaleMode`.
 	**/
-	inline function globalYToCamera( mx : Float, my : Float ) : Float {
+	inline function sceneYToCamera( mx : Float, my : Float ) : Float {
 		return (-(mx - absX) * matB + (my - absY) * matA) * invDet;
 	}
 
@@ -261,7 +261,7 @@ class Camera {
 		Convert local camera position into absolute scene position.
 		Does not represent screen position, see `cameraXToScreen` to convert position with accounting of `scaleMode`.
 	**/
-	inline function cameraXToGlobal( mx : Float, my : Float ) : Float {
+	inline function cameraXToScene( mx : Float, my : Float ) : Float {
 		return mx * matA + my * matC + absX;
 	}
 
@@ -269,7 +269,7 @@ class Camera {
 		Convert local camera position into absolute scene position.
 		Does not represent screen position, see `cameraYToScreen` to convert position with accounting of `scaleMode`.
 	**/
-	inline function cameraYToGlobal( mx : Float, my : Float ) : Float {
+	inline function cameraYToScene( mx : Float, my : Float ) : Float {
 		return mx * matB + my * matD + absY;
 	}
 
@@ -308,7 +308,7 @@ class Camera {
 		Convert an absolute scene position into a local camera position.
 		Does not represent screen position, see `screenToCamera` to convert position with accounting of `scaleMode`.
 	**/
-	public function globalToCamera( pt : h2d.col.Point ) {
+	public function sceneToCamera( pt : h2d.col.Point ) {
 		var x = pt.x - absX;
 		var y = pt.y - absY;
 		pt.x = (x * matD - y * matC) * invDet;
@@ -319,11 +319,11 @@ class Camera {
 		Convert local camera position into absolute scene position.
 		Does not represent screen position, see `cameraToScreen` to convert position with accounting of `scaleMode`.
 	**/
-	public function cameraToGlobal( pt : h2d.col.Point ) {
+	public function cameraToScene( pt : h2d.col.Point ) {
 		var x = pt.x;
 		var y = pt.y;
-		pt.x = cameraXToGlobal(x, y);
-		pt.y = cameraYToGlobal(x, y);
+		pt.x = cameraXToScene(x, y);
+		pt.y = cameraYToScene(x, y);
 	}
 
 	// Setters
