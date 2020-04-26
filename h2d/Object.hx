@@ -762,7 +762,7 @@ class Object #if (domkit && !domkit_heaps) implements domkit.Model<h2d.Object> #
 		shader.filterMatrixA.set(invA, invC, invX);
 		shader.filterMatrixB.set(invB, invD, invY);
 		ctx.globalAlpha = 1;
-		drawContents(ctx, false);
+		drawContent(ctx);
 		ctx.flush();
 
 		var finalTile = h2d.Tile.fromTexture(t);
@@ -819,13 +819,13 @@ class Object #if (domkit && !domkit_heaps) implements domkit.Model<h2d.Object> #
 		} else {
 			var old = ctx.globalAlpha;
 			ctx.globalAlpha *= alpha;
-			drawContents(ctx, ctx.front2back);
+			drawContent(ctx);
 			ctx.globalAlpha = old;
 		}
 	}
 
-	function drawContents( ctx : RenderContext, front2back : Bool ) {
-		if ( front2back ) {
+	function drawContent( ctx : RenderContext ) {
+		if ( ctx.front2back ) {
 			var i = children.length;
 			while ( i-- > 0 ) children[i].drawRec(ctx);
 			draw(ctx);
