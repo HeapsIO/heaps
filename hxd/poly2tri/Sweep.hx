@@ -55,7 +55,7 @@ class Sweep
 		var new_node = null;
 		try	new_node = newFrontTriangle(point, node)
 		catch(e: Dynamic) { }
-		
+
 		if(new_node == null) {
 			#if release
 			new_node = node;
@@ -620,7 +620,7 @@ class Sweep
 		}
 		else
 		{
-			throw "Sweep:: [Unsupported] Sweep.NextFlipPoint: opposing point on constrained edge!";
+			throw 'Sweep:: [Unsupported] Sweep.NextFlipPoint: opposing point on constrained edge (${op.x}, ${op.y})';
 		}
 	}
 

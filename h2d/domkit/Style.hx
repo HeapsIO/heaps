@@ -191,7 +191,7 @@ class Style extends domkit.CssStyle {
 		var ox = e.relX, oy = e.relY;
 		for( o in currentObjects ) {
 			var scene = o.getScene();
-			if( checkedScenes.indexOf(scene) >= 0 ) continue;
+			if( scene == null || checkedScenes.indexOf(scene) >= 0 ) continue;
 			checkedScenes.push(scene);
 			e.relX = scene.mouseX;
 			e.relY = scene.mouseY;
@@ -203,6 +203,8 @@ class Style extends domkit.CssStyle {
 	}
 
 	function lookupRec( obj : h2d.Object, e : hxd.Event ) {
+		if( !obj.visible || obj.alpha <= 0 )
+			return false;
 		var ch = @:privateAccess obj.children;
 		for( i in 0...ch.length ) {
 			if( lookupRec(ch[ch.length-1-i], e) )

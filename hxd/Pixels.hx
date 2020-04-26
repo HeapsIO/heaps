@@ -31,7 +31,7 @@ abstract PixelsFloat(Pixels) to Pixels {
 	public inline function getPixelF(x, y) {
 		switch(this.format) {
 			case R32F:
-				var pix = ((x + y * this.width) << 1) + this.offset;
+				var pix = ((x + y * this.width) << 2) + this.offset;
 				return new h3d.Vector(this.bytes.getFloat(pix));
 			case RGBA32F:
 				var pix = ((x + y * this.width) << 4) + this.offset;
@@ -45,7 +45,7 @@ abstract PixelsFloat(Pixels) to Pixels {
 	public inline function setPixelF(x, y, v:h3d.Vector) {
 		switch(this.format) {
 			case R32F:
-				var pix = ((x + y * this.width) << 1) + this.offset;
+				var pix = ((x + y * this.width) << 2) + this.offset;
 				this.bytes.setFloat(pix, v.x);
 			case RGBA32F:
 				var pix = ((x + y * this.width) << 4) + this.offset;

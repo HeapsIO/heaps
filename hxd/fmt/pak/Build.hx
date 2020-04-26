@@ -4,7 +4,7 @@ import hxd.fmt.pak.Data;
 class Build {
 
 	var fs : hxd.fs.LocalFileSystem;
-	var out : { bytes : Array<haxe.io.Bytes>, size : Int };
+	var out : { bytes : Array<haxe.io.Bytes>, size : Float };
 	var configuration : String;
 
 	public var excludedExt : Array<String> = [];
@@ -102,13 +102,13 @@ class Build {
 		}
 		calcRec(pak.root);
 		var out = [];
-		var pos = 0;
+		var pos = 0.;
 		function writeRec(f:File) {
 			if( f.isDirectory ) {
 				for( c in f.content )
 					writeRec(c);
 			} else {
-				out.push(bytes[f.dataPosition]);
+				out.push(bytes[Std.int(f.dataPosition)]);
 				f.dataPosition = pos;
 				pos += f.dataSize;
 			}
@@ -177,8 +177,8 @@ class Build {
 			switch( f ) {
 			case "-x" if( args.length > 0 ):
 				var pakFile = args.shift();
-				var bytes = sys.io.File.getBytes(pakFile);
-				var pak = new hxd.fmt.pak.Reader(new haxe.io.BytesInput(bytes)).readHeader();
+				var fs = sys.io.File.read(pakFile);
+				var pak = new hxd.fmt.pak.Reader(fs).readHeader();
 				var baseDir = pakFile.substr(0,-4);
 				function extractRec(f:hxd.fmt.pak.Data.File, dir) {
 					if( f.isDirectory ) {
@@ -187,7 +187,9 @@ class Build {
 						for( c in f.content )
 							extractRec(c,dir);
 					} else {
-						sys.io.File.saveBytes(dir+"/"+f.name,bytes.sub(pak.headerSize + f.dataPosition,f.dataSize));
+						// todo : seek large
+						fs.seek(Std.int(f.dataPosition+pak.headerSize), SeekBegin);
+						sys.io.File.saveBytes(dir+"/"+f.name,fs.read(f.dataSize));
 					}
 				}
 				extractRec(pak.root, baseDir);
@@ -211,7 +213,7 @@ class Build {
 		}
 		if( b.outPrefix == null ) {
 			b.outPrefix = "res";
-			if( b.configuration != "default" ) b.outPrefix += "."+b.configuration;
+			if( b.configuration != "default" && b.configuration != null ) b.outPrefix += "."+b.configuration;
 		}
 		b.makePak();
 	}

@@ -7,6 +7,8 @@ private typedef TargetStackEntry = CameraStackEntry & {
 	t : h3d.mat.Texture, hasRZ : Bool, rzX:Float, rzY:Float, rzW:Float, rzH:Float
 };
 
+private typedef RenderZoneStack = { hasRZ:Bool, x:Float, y:Float, w:Float, h:Float };
+
 @:access(h2d.Scene)
 class RenderContext extends h3d.impl.RenderContext {
 
@@ -41,6 +43,8 @@ class RenderContext extends h3d.impl.RenderContext {
 	var cameraStack : Array<CameraStackEntry>;
 	var cameraStackIndex : Int;
 	var curTarget : h3d.mat.Texture;
+	var renderZoneStack:Array<RenderZoneStack> = [];
+	var renderZoneIndex:Int = 0;
 	var hasUVPos : Bool;
 	var filterStack : Array<h2d.Object>;
 	var inFilter : Object;
@@ -108,6 +112,7 @@ class RenderContext extends h3d.impl.RenderContext {
 		baseFlipY = engine.getCurrentTarget() != null ? targetFlipY : 1;
 		inFilter = null;
 		manager.globals.set("time", time);
+		manager.globals.set("global.time", time);
 		// todo : we might prefer to auto-detect this by running a test and capturing its output
 		baseShader.pixelAlign = #if flash true #else false #end;
 		baseShader.halfPixelInverse.set(0.5 / engine.width, 0.5 / engine.height);
@@ -252,7 +257,7 @@ class RenderContext extends h3d.impl.RenderContext {
 		baseShader.viewportB.set(viewB * -targetFlipY, viewD * -targetFlipY, viewY * -targetFlipY);
 		curTarget = t;
 		currentBlend = null;
-		if( hasRenderZone ) clearRenderZone();
+		if( hasRenderZone ) clearRZ();
 	}
 
 	public function pushTargets( texs : Array<h3d.mat.Texture> ) {
@@ -283,10 +288,38 @@ class RenderContext extends h3d.impl.RenderContext {
 		baseShader.viewportA.set(viewA, viewC, viewX);
 		baseShader.viewportB.set(viewB * flipY, viewD * flipY, viewY * flipY);
 
-		if ( tinf.hasRZ ) setRenderZone(tinf.rzX, tinf.rzY, tinf.rzW, tinf.rzH);
+		if ( tinf.hasRZ ) setRZ(tinf.rzX, tinf.rzY, tinf.rzW, tinf.rzH);
 	}
 
-	public function setRenderZone( x : Float, y : Float, w : Float, h : Float ) {
+	public function pushRenderZone( x : Float, y : Float, w : Float, h : Float ) {
+		var inf = renderZoneStack[renderZoneIndex++];
+		if ( inf == null ) {
+			inf = { hasRZ: hasRenderZone, x: renderX, y: renderY, w: renderW, h: renderH };
+			renderZoneStack[renderZoneIndex - 1] = inf;
+		} else if ( hasRenderZone ) {
+			inf.hasRZ = true;
+			inf.x = renderX;
+			inf.y = renderY;
+			inf.w = renderW;
+			inf.h = renderH;
+		} else {
+			inf.hasRZ = false;
+		}
+
+		setRZ(x, y, w, h);
+	}
+
+	public function popRenderZone() {
+		if (renderZoneIndex == 0) throw "Too many popRenderZone()";
+		var inf = renderZoneStack[--renderZoneIndex];
+		if (inf.hasRZ) {
+			setRZ(inf.x, inf.y, inf.w, inf.h);
+		} else {
+			clearRZ();
+		}
+	}
+
+	function setRZ( x : Float, y : Float, w : Float, h : Float ) {
 		hasRenderZone = true;
 		renderX = x;
 		renderY = y;
@@ -315,10 +348,20 @@ class RenderContext extends h3d.impl.RenderContext {
 			Std.int(h * scaleY + 1e-10)
 		);
 	}
-
-	public inline function clearRenderZone() {
+	
+	inline function clearRZ() {
 		hasRenderZone = false;
 		engine.setRenderZone();
+	}
+
+	@:deprecated("Use pushRenderZone")
+	public inline function setRenderZone( x : Float, y : Float, w : Float, h : Float ) {
+		pushRenderZone(x, y, w, h);
+	}
+
+	@:deprecated("Use popRenderZone")
+	public inline function clearRenderZone() {
+		popRenderZone();
 	}
 
 	function drawLayer( layer : Int ) {

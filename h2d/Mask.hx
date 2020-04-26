@@ -1,6 +1,45 @@
 package h2d;
 
+
 class Mask extends Object {
+
+	/**
+		Masks render zone based off object position and given dimensions.
+		Should call `Mask.unmask()` afterwards.
+	**/
+	@:access(h2d.RenderContext)
+	public static function maskWith( ctx : RenderContext, object : Object, width : Int, height : Int, scrollX : Float = 0, scrollY : Float = 0) {
+
+		var x1 = object.absX + scrollX;
+		var y1 = object.absY + scrollY;
+
+		var x2 = width * object.matA + height * object.matC + x1;
+		var y2 = width * object.matB + height * object.matD + y1;
+
+		var tmp;
+		if (x1 > x2) {
+			tmp = x1;
+			x1 = x2;
+			x2 = tmp;
+		}
+
+		if (y1 > y2) {
+			tmp = y1;
+			y1 = y2;
+			y2 = tmp;
+		}
+
+		ctx.flush();
+		ctx.pushRenderZone(x1, y1, x2-x1, y2-y1);
+	}
+
+	/**
+		Unmasks prviously masked area from `Mask.maskWith`.
+	**/
+	public static function unmask( ctx : RenderContext ) {
+		ctx.flush();
+		ctx.popRenderZone();
+	}
 
 	public var width : Int;
 	public var height : Int;
@@ -95,7 +134,7 @@ class Mask extends Object {
 				c.posChanged = true;
 			posChanged = false;
 		}
-		addBounds(relativeTo, out, 0, 0, width, height);
+		addBounds(relativeTo, out, scrollX, scrollY, width, height);
 		var bxMin = out.xMin, byMin = out.yMin, bxMax = out.xMax, byMax = out.yMax;
 		out.xMin = xMin;
 		out.xMax = xMax;
@@ -109,38 +148,9 @@ class Mask extends Object {
 	}
 
 	override function drawRec( ctx : h2d.RenderContext ) @:privateAccess {
-		var x1 = absX + scrollX;
-		var y1 = absY + scrollY;
-
-		var x2 = width * matA + height * matC + x1;
-		var y2 = width * matB + height * matD + y1;
-
-		var tmp;
-		if (x1 > x2) {
-			tmp = x1;
-			x1 = x2;
-			x2 = tmp;
-		}
-
-		if (y1 > y2) {
-			tmp = y1;
-			y1 = y2;
-			y2 = tmp;
-		}
-
-		ctx.flush();
-		if( ctx.hasRenderZone ) {
-			var oldX = ctx.renderX, oldY = ctx.renderY, oldW = ctx.renderW, oldH = ctx.renderH;
-			ctx.setRenderZone(x1, y1, x2-x1, y2-y1);
-			super.drawRec(ctx);
-			ctx.flush();
-			ctx.setRenderZone(oldX, oldY, oldW, oldH);
-		} else {
-			ctx.setRenderZone(x1, y1, x2-x1, y2-y1);
-			super.drawRec(ctx);
-			ctx.flush();
-			ctx.clearRenderZone();
-		}
+		maskWith(ctx, this, width, height, scrollX, scrollY);
+		super.drawRec(ctx);
+		unmask(ctx);
 	}
 
 }
