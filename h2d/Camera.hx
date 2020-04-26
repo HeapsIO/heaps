@@ -41,32 +41,32 @@ class Camera {
 	public var clipViewport : Bool;
 	/**
 		Horizontal viewport offset of the camera relative to internal scene viewport (see h2d.Scene.scaleMode) in scene coordinates. ( default : 0 )  
-		Internally stored as 0..1 percentile and automatically adapts on scene resize.
+		Automatically scales on scene resize.
 	**/
 	public var viewportX(get, set) : Float;
 	/**
 		Vertical viewport offset of the camera relative to internal scene viewport (see h2d.Scene.scaleMode) in scene coordinates. ( default : 0 )  
-		Internally stored as 0..1 percentile and automatically adapts on scene resize.
+		Automatically scales on scene resize.
 	**/
 	public var viewportY(get, set) : Float;
 	/**
 		Camera viewport width in scene coordinates. ( default : scene.width )  
-		Internally stored as 0..1 percentile and automatically adapts on scene resize.
+		Automatically scales on scene resize.
 	**/
 	public var viewportWidth(get, set) : Float;
 	/**
 		Camera viewport height in scene coordinates. ( default: scene.height )  
-		Internally stored as 0..1 percentile and automatically adapts on scene resize.
+		Automatically scales on scene resize.
 	**/
 	public var viewportHeight(get, set) : Float;
 
 	/**
-		Horizontal anchor position inside viewport boundaries used for anchoring and resize compensation. ( default : 0 )  
+		Horizontal anchor position inside viewport boundaries used for positioning and resize compensation. ( default : 0 )  
 		Value is a percentile (0..1) from left viewport edge to right viewport edge with 0.5 being center.
 	**/
 	public var anchorX(default, set) : Float;
 	/**
-		Vertical anchor position inside viewport boundaries used for anchoring and resize compensation. ( default : 0 )  
+		Vertical anchor position inside viewport boundaries used for positioning and resize compensation. ( default : 0 )  
 		Value is apercentile (0..1) from top viewport edge to bottom viewport edge with 0.5 being center.
 	**/
 	public var anchorY(default, set) : Float;
@@ -96,13 +96,13 @@ class Camera {
 
 	var scene : Scene;
 
-	public function new( scene : Scene, anchorX : Float = 0, anchorY : Float = 0 ) {
+	public function new( scene : Scene ) {
 		this.scene = scene;
 		this.x = 0; this.y = 0;
 		this.scaleX = 1; this.scaleY = 1;
 		this.rotation = 0;
-		this.anchorX = anchorX;
-		this.anchorY = anchorY;
+		this.anchorX = 0;
+		this.anchorY = 0;
 		this.viewX = 0; this.viewY = 0;
 		this.viewW = 1; this.viewH = 1;
 		this.visible = true;
