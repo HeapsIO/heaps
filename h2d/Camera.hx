@@ -96,8 +96,7 @@ class Camera {
 
 	var scene : Scene;
 
-	public function new( scene : Scene ) {
-		this.scene = scene;
+	public function new( ?scene : Scene ) {
 		this.x = 0; this.y = 0;
 		this.scaleX = 1; this.scaleY = 1;
 		this.rotation = 0;
@@ -106,6 +105,11 @@ class Camera {
 		this.viewX = 0; this.viewY = 0;
 		this.viewW = 1; this.viewH = 1;
 		this.visible = true;
+		if (scene != null) scene.addCamera(this);
+	}
+
+	public inline function remove() {
+		if (scene != null) scene.removeCamera(this);
 	}
 
 	/**
@@ -131,6 +135,8 @@ class Camera {
 	@:access(h2d.Object)
 	public function sync( ctx : RenderContext, force : Bool = false )
 	{
+		if (scene == null) return;
+
 		if ( follow != null ) {
 			this.x = follow.absX;
 			this.y = follow.absY;
@@ -190,6 +196,7 @@ class Camera {
 		Sets camera viewport dimensions. If `w` or `h` arguments are 0 - scene size is used (width or height respectively).
 	**/
 	public inline function setViewport( x : Float = 0, y : Float = 0, w : Float = 0, h : Float = 0 ) {
+		checkScene();
 		this.viewportX = x;
 		this.viewportY = y;
 		this.viewportWidth = w == 0 ? scene.width : w;
@@ -287,6 +294,7 @@ class Camera {
 		Requires Scene as a reference to viewport of `scaleMode`.
 	**/
 	public function screenToCamera( pt : h2d.col.Point ) {
+		checkScene();
 		var x = (pt.x - scene.offsetX) / scene.viewportScaleX - absX;
 		var y = (pt.y - scene.offsetY) / scene.viewportScaleY - absY;
 		pt.x = (x * matD - y * matC) * invDet;
@@ -298,6 +306,7 @@ class Camera {
 		Requires Scene as a reference to viewport of `scaleMode`.
 	**/
 	public function cameraToScreen( pt : h2d.col.Point ) {
+		checkScene();
 		var x = pt.x;
 		var y = pt.y;
 		pt.x = cameraXToScreen(x, y);
@@ -309,6 +318,7 @@ class Camera {
 		Does not represent screen position, see `screenToCamera` to convert position with accounting of `scaleMode`.
 	**/
 	public function sceneToCamera( pt : h2d.col.Point ) {
+		checkScene();
 		var x = pt.x - absX;
 		var y = pt.y - absY;
 		pt.x = (x * matD - y * matC) * invDet;
@@ -320,10 +330,15 @@ class Camera {
 		Does not represent screen position, see `cameraToScreen` to convert position with accounting of `scaleMode`.
 	**/
 	public function cameraToScene( pt : h2d.col.Point ) {
+		checkScene();
 		var x = pt.x;
 		var y = pt.y;
 		pt.x = cameraXToScene(x, y);
 		pt.y = cameraYToScene(x, y);
+	}
+
+	inline function checkScene() {
+		if (scene == null) throw "This method requires Camera to be added to the Scene";
 	}
 
 	// Setters
@@ -353,29 +368,33 @@ class Camera {
 		return this.rotation = v;
 	}
 
-	inline function get_viewportX() { return viewX * scene.width; }
+	inline function get_viewportX() { checkScene(); return viewX * scene.width; }
 	inline function set_viewportX( v ) {
+		checkScene();
 		posChanged = true;
 		this.viewX = Math.floor(v) / scene.width;
 		return v;
 	}
 
-	inline function get_viewportY() { return viewY * scene.height; }
+	inline function get_viewportY() { checkScene(); return viewY * scene.height; }
 	inline function set_viewportY( v ) {
+		checkScene();
 		posChanged = true;
 		this.viewY = Math.floor(v) / scene.height;
 		return v;
 	}
 
-	inline function get_viewportWidth() { return viewW * scene.width; }
+	inline function get_viewportWidth() { checkScene(); return viewW * scene.width; }
 	inline function set_viewportWidth( v ) {
+		checkScene();
 		posChanged = true;
 		this.viewW = Math.ceil(v) / scene.width;
 		return v;
 	}
 
-	inline function get_viewportHeight() { return viewH * scene.height; }
+	inline function get_viewportHeight() { checkScene(); return viewH * scene.height; }
 	inline function set_viewportHeight( v ) {
+		checkScene();
 		posChanged = true;
 		this.viewH = Math.ceil(v) / scene.height;
 		return v;

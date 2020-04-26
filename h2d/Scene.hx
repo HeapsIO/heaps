@@ -265,14 +265,8 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	/** Removes Camera from Scene camera list. Current `interactiveCamera` cannot be removed. **/
 	public function removeCamera( cam : Camera ) {
 		if ( cam == interactiveCamera ) throw "Current interactive Camera cannot be removed from camera list!";
+		cam.scene = null;
 		_cameras.remove(cam);
-	}
-
-	/** Creates and returns a new Camera instance which is inserted to specified position or at the end of the camera list. **/
-	public function createCamera( anchorX : Float = 0., anchorY : Float = 0., ?pos : Int ) : h2d.Camera {
-		var camera = new Camera(this);
-		addCamera(camera, pos);
-		return camera;
 	}
 
 	/**
