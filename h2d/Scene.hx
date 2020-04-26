@@ -295,7 +295,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 			}
 		}
 
-		inline function setScale( sx : Float, sy : Float ) {
+		inline function setViewportScale( sx : Float, sy : Float ) {
 			viewportScaleX = sx;
 			viewportScaleY = sy;
 		}
@@ -303,7 +303,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		inline function calcViewport( horizontal : ScaleModeAlign, vertical : ScaleModeAlign, zoom : Float ) {
 			viewportA = (zoom * 2) / engine.width;
 			viewportD = (zoom * 2) / engine.height;
-			setScale(zoom, zoom);
+			setViewportScale(zoom, zoom);
 			if ( horizontal == null ) horizontal = Center;
 			switch ( horizontal ) {
 				case Left:
@@ -342,11 +342,11 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		switch ( scaleMode ) {
 			case Resize:
 				setSceneSize(engine.width, engine.height);
-				setScale(1, 1);
+				setViewportScale(1, 1);
 				zeroViewport();
 			case Stretch(_width, _height):
 				setSceneSize(_width, _height);
-				setScale(engine.width / _width, engine.height / _height);
+				setViewportScale(engine.width / _width, engine.height / _height);
 				zeroViewport();
 			case LetterBox(_width, _height, integerScale, horizontalAlign, verticalAlign):
 				setSceneSize(_width, _height);
@@ -361,7 +361,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 				calcViewport(horizontalAlign, verticalAlign, zoom);
 			case Zoom(level):
 				setSceneSize(Math.ceil(engine.width / level), Math.ceil(engine.height / level));
-				setScale(level, level);
+				setViewportScale(level, level);
 				zeroViewport();
 			case AutoZoom(minWidth, minHeight, integerScaling):
 				var zoom = Math.min(engine.width / minWidth, engine.height / minHeight);
@@ -370,7 +370,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 					if ( zoom == 0 ) zoom = 1;
 				}
 				setSceneSize(Math.ceil(engine.width / zoom), Math.ceil(engine.height / zoom));
-				setScale(zoom, zoom);
+				setViewportScale(zoom, zoom);
 				zeroViewport();
 		}
 	}
@@ -728,9 +728,9 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		}
 	}
 
-	override function drawContents(ctx:RenderContext, front2back:Bool)
+	override function drawContent(ctx:RenderContext)
 	{
-		if( front2back ) {
+		if( ctx.front2back ) {
 			for ( cam in cameras ) {
 				if ( !cam.visible ) continue;
 				var i = children.length;
