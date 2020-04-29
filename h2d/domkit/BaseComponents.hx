@@ -542,7 +542,7 @@ class BitmapComp extends DrawableComp implements domkit.Component.ComponentDecl<
 
 	static function setTilePosY( t : h2d.Tile, y : Int ) {
 		if( t == null ) return;
-		t.setPosition(t.iy, y * t.iheight);
+		t.setPosition(t.ix, y * t.iheight);
 	}
 
 	static function set_width( o : h2d.Bitmap, v : Null<Float> ) {
