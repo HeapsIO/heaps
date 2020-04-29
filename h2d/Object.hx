@@ -748,7 +748,6 @@ class Object #if (domkit && !domkit_heaps) implements domkit.Model<h2d.Object> #
 		var shader = @:privateAccess ctx.baseShader;
 		var oldA = shader.filterMatrixA.clone();
 		var oldB = shader.filterMatrixB.clone();
-		var oldF = @:privateAccess ctx.inFilter;
 
 		// 2x3 inverse matrix
 		var invDet = 1 / (matA * matD - matB * matC);

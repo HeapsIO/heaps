@@ -1,5 +1,4 @@
 package h2d;
-import h2d.filter.Filter;
 import hxd.Math;
 
 /**
@@ -194,7 +193,8 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		super(null);
 		var e = h3d.Engine.getCurrent();
 		ctx = new RenderContext(this);
-		_cameras = [new Camera(this)];
+		_cameras = [];
+		new Camera(this);
 		interactiveCamera = camera;
 		width = e.width;
 		height = e.height;
@@ -715,11 +715,21 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	override function clipBounds(ctx:RenderContext, bounds:h2d.col.Bounds)
 	{
 		// Scene always uses whole window surface as a filter bounds as to not clip out cameras.
-		bounds.empty();
 		if ( rotation == 0 ) {
 			bounds.addPos(-absX, -absY);
-			bounds.addPos(window.width / matA, window.height / matD);
+			bounds.addPos(window.width / matA - absX, window.height / matD - absY);
+		} else {
+			inline function calc(x:Float, y:Float) {
+				bounds.addPos(x * matA + y * matC, x * matB + y * matD);
+			}
+			var ww = window.width / matA - absX;
+			var wh = window.height / matD - absY;
+			calc(-absX, -absY);
+			calc(ww - absX, -absY);
+			calc(-absX, wh - absY);
+			calc(ww - absX, wh - absY);
 		}
+		super.clipBounds(ctx, bounds);
 	}
 
 	override function drawContent(ctx:RenderContext)

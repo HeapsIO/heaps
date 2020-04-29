@@ -8,6 +8,7 @@ package h2d;
 	When handling events, assigned camera isn't checked for it's nor layers visibiilty.
 	Camera system is circumvented if Scene would get any filter assigned to it.
 **/
+@:access(h2d.RenderContext)
 @:access(h2d.Scene)
 @:allow(h2d.Scene)
 class Camera {
@@ -122,13 +123,21 @@ class Camera {
 
 	@:noCompletion public function enter( ctx : RenderContext ) {
 		ctx.pushCamera(this);
-		if ( clipViewport )
-			ctx.setRenderZone(viewX * scene.width, viewY * scene.height, viewW * scene.width, viewH * scene.height);
+		if ( clipViewport ) {
+			var old = ctx.inFilter;
+			ctx.inFilter = null;
+			ctx.pushRenderZone(viewX * scene.width, viewY * scene.height, viewW * scene.width, viewH * scene.height);
+			ctx.inFilter = old;
+		}
 	}
 
 	@:noCompletion public function exit( ctx : RenderContext ) {
-		if ( clipViewport )
-			ctx.clearRenderZone();
+		if ( clipViewport ) {
+			var old = ctx.inFilter;
+			ctx.inFilter = null;
+			ctx.popRenderZone();
+			ctx.inFilter = old;
+		}
 		ctx.popCamera();
 	}
 
