@@ -1003,6 +1003,14 @@ class Checker {
 			default:
 				error("Cannot apply " + g.toString() + " to these parameters", pos);
 			}
+		case Mat2:
+			switch( ([for( a in args ) a.t]) ) {
+			case [TMat2]: type = TMat2;
+			case [TVec(2, VFloat), TVec(2, VFloat)]: type = TMat2;
+			case [TFloat, TFloat, TFloat, TFloat]: type = TMat2;
+			default:
+				error("Cannot apply " + g.toString() + " to these parameters", pos);
+			}
 		case Mat3:
 			switch( ([for( a in args ) a.t]) ) {
 			case [TMat3x4 | TMat4]: type = TMat3;
@@ -1114,6 +1122,10 @@ class Checker {
 				vec3;
 			case [OpMult, TVec(3,VFloat), TMat3]:
 				vec3;
+			case [OpMult, TVec(2,VFloat), TMat2]:
+				vec2;
+			case [OpMult, TMat2, TVec(2,VFloat)]:
+				vec2;
 			case [_, TInt, TInt]: TInt;
 			case [_, TFloat, TFloat]: TFloat;
 			case [_, TInt, TFloat]: toFloat(e1); TFloat;

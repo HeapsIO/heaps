@@ -94,7 +94,7 @@ class Serializer {
 			}
 		case TChannel(size):
 			out.addByte(size);
-		case TVoid, TInt, TBool, TFloat, TString, TMat3, TMat4, TMat3x4, TSampler2D, TSampler2DArray, TSamplerCube:
+		case TVoid, TInt, TBool, TFloat, TString, TMat2, TMat3, TMat4, TMat3x4, TSampler2D, TSampler2DArray, TSamplerCube:
 		}
 	}
 
@@ -115,31 +115,32 @@ class Serializer {
 				TVECS.set(bits, v);
 			}
 			v;
-		case 6: TMat3;
-		case 7: TMat4;
-		case 8: TMat3x4;
-		case 9: TBytes(input.readInt32());
-		case 10: TSampler2D;
-		case 11: TSampler2DArray;
-		case 12: TSamplerCube;
-		case 13:
+		case 6: TMat2;
+		case 7: TMat3;
+		case 8: TMat4;
+		case 9: TMat3x4;
+		case 10: TBytes(input.readInt32());
+		case 11: TSampler2D;
+		case 12: TSampler2DArray;
+		case 13: TSamplerCube;
+		case 14:
 			var id = readVarInt();
 			var t = types[id];
 			if( t != null ) return t;
 			t = TStruct(readArr(readVar));
 			types[id] = t;
 			t;
-		case 14:
-			TFun(null);
 		case 15:
-			var t = readType();
-			var v = readVar();
-			TArray(t, v == null ? SConst(readVarInt()) : SVar(v));
+			TFun(null);
 		case 16:
 			var t = readType();
 			var v = readVar();
-			TBuffer(t, v == null ? SConst(readVarInt()) : SVar(v));
+			TArray(t, v == null ? SConst(readVarInt()) : SVar(v));
 		case 17:
+			var t = readType();
+			var v = readVar();
+			TBuffer(t, v == null ? SConst(readVarInt()) : SVar(v));
+		case 18:
 			TChannel(input.readByte());
 		default:
 			throw "assert";

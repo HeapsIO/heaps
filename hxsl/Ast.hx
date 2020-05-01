@@ -7,6 +7,7 @@ enum Type {
 	TFloat;
 	TString;
 	TVec( size : Int, t : VecType );
+	TMat2;
 	TMat3;
 	TMat4;
 	TMat3x4;
@@ -500,6 +501,7 @@ class Tools {
 			var s = 0;
 			for( v in vl ) s += size(v.type);
 			return s;
+		case TMat2: 4;
 		case TMat3: 9;
 		case TMat4: 16;
 		case TMat3x4: 12;
