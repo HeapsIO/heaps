@@ -402,7 +402,7 @@ class HlslOut {
 				add(",1.),");
 				addValue(e2, tabs);
 				add(")");
-			case [OpMult, TVec(_), TMat3 | TMat4] | [OpMult, TMat3 | TMat4, TVec(_)]:
+				case [OpMult, TVec(_), TMat3 | TMat4]:
 				add("mul(");
 				addValue(e1, tabs);
 				add(",");
