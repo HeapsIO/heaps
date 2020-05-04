@@ -7,7 +7,6 @@ enum Type {
 	TFloat;
 	TString;
 	TVec( size : Int, t : VecType );
-	TMat2;
 	TMat3;
 	TMat4;
 	TMat3x4;
@@ -20,6 +19,7 @@ enum Type {
 	TArray( t : Type, size : SizeDecl );
 	TBuffer( t : Type, size : SizeDecl );
 	TChannel( size : Int );
+	TMat2;
 }
 
 enum VecType {

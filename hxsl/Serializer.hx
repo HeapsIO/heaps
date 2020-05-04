@@ -115,33 +115,33 @@ class Serializer {
 				TVECS.set(bits, v);
 			}
 			v;
-		case 6: TMat2;
-		case 7: TMat3;
-		case 8: TMat4;
-		case 9: TMat3x4;
-		case 10: TBytes(input.readInt32());
-		case 11: TSampler2D;
-		case 12: TSampler2DArray;
-		case 13: TSamplerCube;
-		case 14:
+		case 6: TMat3;
+		case 7: TMat4;
+		case 8: TMat3x4;
+		case 9: TBytes(input.readInt32());
+		case 10: TSampler2D;
+		case 11: TSampler2DArray;
+		case 12: TSamplerCube;
+		case 13:
 			var id = readVarInt();
 			var t = types[id];
 			if( t != null ) return t;
 			t = TStruct(readArr(readVar));
 			types[id] = t;
 			t;
-		case 15:
+		case 14:
 			TFun(null);
-		case 16:
+		case 15:
 			var t = readType();
 			var v = readVar();
 			TArray(t, v == null ? SConst(readVarInt()) : SVar(v));
-		case 17:
+		case 16:
 			var t = readType();
 			var v = readVar();
 			TBuffer(t, v == null ? SConst(readVarInt()) : SVar(v));
-		case 18:
+		case 17:
 			TChannel(input.readByte());
+		case 18: TMat2;
 		default:
 			throw "assert";
 		}
