@@ -323,7 +323,7 @@ class HlslOut {
 				decl("float2x2 mat2( float4x3 m ) { return (float2x2)m; }");
 				decl("float2x2 mat2( float3x3 m ) { return (float2x2)m; }");
 				decl("float2x2 mat2( float2 a, float2 b ) { float2x2 m; m._m00_m10 = a; m._m01_m11 = b; return m; }");
-				decl("float2x2 mat2( float c00, float c01, float c10, float c11 ) { float2x2 m = { c00, c01, c10, c11 }; return m; }");
+				decl("float2x2 mat2( float c00, float c01, float c10, float c11 ) { float2x2 m = { c00, c10, c01, c11 }; return m; }");
 			case Mod:
 				declMods();
 			case Pow:
