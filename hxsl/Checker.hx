@@ -1124,8 +1124,6 @@ class Checker {
 				vec3;
 			case [OpMult, TVec(2,VFloat), TMat2]:
 				vec2;
-			case [OpMult, TMat2, TVec(2,VFloat)]:
-				vec2;
 			case [_, TInt, TInt]: TInt;
 			case [_, TFloat, TFloat]: TFloat;
 			case [_, TInt, TFloat]: toFloat(e1); TFloat;
