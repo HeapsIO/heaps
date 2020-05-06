@@ -19,6 +19,7 @@ enum Type {
 	TArray( t : Type, size : SizeDecl );
 	TBuffer( t : Type, size : SizeDecl );
 	TChannel( size : Int );
+	TMat2;
 }
 
 enum VecType {
@@ -500,6 +501,7 @@ class Tools {
 			var s = 0;
 			for( v in vl ) s += size(v.type);
 			return s;
+		case TMat2: 4;
 		case TMat3: 9;
 		case TMat4: 16;
 		case TMat3x4: 12;

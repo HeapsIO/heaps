@@ -105,6 +105,8 @@ class GlslOut {
 			}
 			add("vec");
 			add(size);
+		case TMat2:
+			add("mat2");
 		case TMat3:
 			add("mat3");
 		case TMat4:
