@@ -32,7 +32,7 @@ class Macros {
 			macro : hxsl.Types.Sampler2DArray;
 		case TSamplerCube:
 			macro : hxsl.Types.SamplerCube;
-		case TMat3, TMat3x4, TMat4:
+		case TMat2, TMat3, TMat3x4, TMat4:
 			macro : hxsl.Types.Matrix;
 		case TString:
 			macro : String;

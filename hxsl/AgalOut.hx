@@ -827,6 +827,7 @@ class AgalOut {
 	function regSize( t : Type ) {
 		return switch( t ) {
 		case TInt, TFloat, TVec(_), TBytes(_), TBool: 1;
+		case TMat2: throw "Mat2 is not supported in AGAL";
 		case TMat3, TMat3x4: 3;
 		case TMat4: 4;
 		case TArray(t, SConst(size)), TBuffer(t, SConst(size)): (Tools.size(t) * size + 3) >> 2;
