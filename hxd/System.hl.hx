@@ -97,6 +97,7 @@ class System {
 		var size = haxe.macro.Compiler.getDefine("windowSize");
 		var title = haxe.macro.Compiler.getDefine("windowTitle");
 		var fixed = haxe.macro.Compiler.getDefine("windowFixed") == "1";
+		var savePath = haxe.macro.Compiler.getDefine("savePath");
 		if( title == null )
 			title = "";
 		if( size != null ) {
@@ -104,6 +105,7 @@ class System {
 			width = Std.parseInt(p[0]);
 			height = Std.parseInt(p[1]);
 		}
+		if (savePath != null) hxd.Save.savePath = savePath;
 		timeoutTick();
 		#if hlsdl
 			sdl.Sdl.init();

@@ -6,6 +6,12 @@ package hxd;
 **/
 class Save {
 
+	/**
+		Save path location for sys targets. Defaults to current working directory.  
+		Use `-D savePath=path/to/save/directory` to set this variable on Heaps boot.
+	**/
+	public static var savePath:String = "";
+
 	static var cur = new Map<String,String>();
 	#if flash
 	static var saveObj : flash.net.SharedObject;
@@ -18,6 +24,19 @@ class Save {
 		return saveObj;
 	}
 	#end
+
+	static function makeSavePath(name:String) {
+		var path = 
+			if ( haxe.io.Path.isAbsolute(name) || savePath == null || savePath == "" )
+				name + ".sav";
+			else
+				haxe.io.Path.normalize(savePath + "/" + name + ".sav");
+		#if sys
+		// Ensure directory path exists.
+		sys.FileSystem.createDirectory(haxe.io.Path.directory(path));
+		#end
+		return path;
+	}
 
 	static function makeCRC( data : String ) {
 		return haxe.crypto.Sha1.encode(data + haxe.crypto.Sha1.encode(data + "s*al!t")).substr(4, 32);
@@ -68,7 +87,7 @@ class Save {
 	**/
 	@:noCompletion public static dynamic function readSaveData( name : String ) : String {
 		#if sys
-		return sys.io.File.getContent(name+".sav");
+		return sys.io.File.getContent(makeSavePath(name));
 		#elseif js
 		return js.Browser.window.localStorage.getItem(name);
 		#else
@@ -85,7 +104,7 @@ class Save {
 	**/
 	@:noCompletion public static dynamic function writeSaveData( name : String, data : String ) {
 		#if sys
-		sys.io.File.saveContent(name+".sav", data);
+		sys.io.File.saveContent(makeSavePath(name), data);
 		#elseif js
 		js.Browser.window.localStorage.setItem(name, data);
 		#else
@@ -102,7 +121,7 @@ class Save {
 		#if flash
 		throw "TODO";
 		#elseif sys
-		try sys.FileSystem.deleteFile(name+".sav") catch( e : Dynamic ) {}
+		try sys.FileSystem.deleteFile(makeSavePath(name)) catch( e : Dynamic ) {}
 		#elseif js
 		try js.Browser.window.localStorage.removeItem(name) catch( e : Dynamic ) {}
 		#end
