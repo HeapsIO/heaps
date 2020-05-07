@@ -33,7 +33,9 @@ class Save {
 				haxe.io.Path.normalize(savePath + "/" + name + ".sav");
 		#if sys
 		// Ensure directory path exists.
-		sys.FileSystem.createDirectory(haxe.io.Path.directory(path));
+		var dir = haxe.io.Path.directory(path);
+		if (!sys.FileSystem.exists(dir))
+			sys.FileSystem.createDirectory(dir);
 		#end
 		return path;
 	}
