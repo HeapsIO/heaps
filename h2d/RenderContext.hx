@@ -267,6 +267,26 @@ class RenderContext extends h3d.impl.RenderContext {
 		}
 	}
 
+	/**
+	 * Same as pushRenderZone, but clips news zone to existing one before pushing it. Used so that
+	 * any call to clipRenderZone respects the already set zone ,and can't render outside it.
+	 */
+	 public function clipRenderZone( x : Float, y : Float, w : Float, h : Float ) {
+		if (!hasRenderZone) {
+			pushRenderZone( x, y, w, h );
+			return;
+		}
+
+		x = Math.max( x, renderX );
+		y = Math.max( y, renderY );
+		var x2 = Math.min( x + w, renderX + renderW );
+		var y2 = Math.min( y + h, renderY + renderH );
+		if (x2 < x) x2 = x;
+		if (y2 < y) y2 = y;
+
+		pushRenderZone( x, y, x2 - x, y2 - y );
+	}
+
 	function setRZ( x : Float, y : Float, w : Float, h : Float ) {
 		hasRenderZone = true;
 		renderX = x;
