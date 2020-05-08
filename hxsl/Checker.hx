@@ -1015,6 +1015,7 @@ class Checker {
 			switch( ([for( a in args ) a.t]) ) {
 			case [TMat3x4 | TMat4]: type = TMat3;
 			case [TVec(3, VFloat), TVec(3, VFloat), TVec(3, VFloat)]: type = TMat3;
+			case [TFloat, TFloat, TFloat, TFloat, TFloat, TFloat, TFloat, TFloat, TFloat]: type = TMat3;
 			default:
 				error("Cannot apply " + g.toString() + " to these parameters", pos);
 			}

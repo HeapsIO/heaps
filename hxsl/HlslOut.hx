@@ -318,6 +318,7 @@ class HlslOut {
 				decl("float3x3 mat3( float4x4 m ) { return (float3x3)m; }");
 				decl("float3x3 mat3( float4x3 m ) { return (float3x3)m; }");
 				decl("float3x3 mat3( float3 a, float3 b, float3 c ) { float3x3 m; m._m00_m10_m20 = a; m._m01_m11_m21 = b; m._m02_m12_m22 = c; return m; }");
+				decl("float3x3 mat3( float c00, float c01, float c02, float c10, float c11, float c12, float c20, float c21, float c22 ) { float3x3 m = { c00, c10, c20, c01, c11, c21, c02, c12, c22 }; return m; }");
 			case Mat2:
 				decl("float2x2 mat2( float4x4 m ) { return (float2x2)m; }");
 				decl("float2x2 mat2( float4x3 m ) { return (float2x2)m; }");
