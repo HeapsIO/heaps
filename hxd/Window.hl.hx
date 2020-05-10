@@ -255,12 +255,24 @@ class Window {
 			else
 				((c & 0x0F) << 18) | (((e.keyCode >> 8) & 0x7F) << 12) | (((e.keyCode >> 16) & 0x7F) << 6) | ((e.keyCode >> 24) & 0x7F);
 		case TouchDown if (hxd.System.getValue(IsTouch)):
+			#if hlsdl
+				e.mouseX = Std.int(windowWidth * e.mouseX / 100);
+				e.mouseY = Std.int(windowHeight * e.mouseY / 100);
+			#end
 			eh = new Event(EPush, e.mouseX, e.mouseY);
 			eh.touchId = e.fingerId;
 		case TouchMove if (hxd.System.getValue(IsTouch)):
+			#if hlsdl
+				e.mouseX = Std.int(windowWidth * e.mouseX / 100);
+				e.mouseY = Std.int(windowHeight * e.mouseY / 100);
+			#end
 			eh = new Event(EMove, e.mouseX, e.mouseY);
 			eh.touchId = e.fingerId;
 		case TouchUp if (hxd.System.getValue(IsTouch)):
+			#if hlsdl
+				e.mouseX = Std.int(windowWidth * e.mouseX / 100);
+				e.mouseY = Std.int(windowHeight * e.mouseY / 100);
+			#end
 			eh = new Event(ERelease, e.mouseX, e.mouseY);
 			eh.touchId = e.fingerId;
 		#elseif hldx
