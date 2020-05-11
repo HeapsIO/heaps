@@ -138,7 +138,7 @@ class LocalEntry extends FileEntry {
 		var t = try w.getModifTime() catch( e : Dynamic ) -1.;
 		if( t == w.watchTime ) return;
 
-		#if sys
+		#if (sys || nodejs)
 		if( tmpDir == null ) {
 			tmpDir = Sys.getEnv("TEMP");
 			if( tmpDir == null ) tmpDir = Sys.getEnv("TMPDIR");
@@ -148,8 +148,14 @@ class LocalEntry extends FileEntry {
 		if( sys.FileSystem.exists(lockFile) ) return;
 		if( !w.isDirectory )
 		try {
+			#if nodejs
+			var fid = js.node.Fs.openSync(w.file,AppendReadCreate);
+			if( fid < 0 ) return;
+			js.node.Fs.closeSync(fid);
+			#else
 			var fp = sys.io.File.append(w.file);
 			fp.close();
+			#end
 		}catch( e : Dynamic ) return;
 		#end
 
