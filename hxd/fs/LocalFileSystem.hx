@@ -129,6 +129,10 @@ class LocalEntry extends FileEntry {
 		return sys.FileSystem.stat(originalFile != null ? originalFile : file).mtime.getTime();
 	}
 
+	#if hl
+	#if (hl_ver >= version("1.12.0")) @:hlNative("std","file_is_locked") #end static function fileIsLocked( b : hl.Bytes ) { return false; }
+	#end
+
 	static function checkFiles() {
 		var w = WATCH_LIST[WATCH_INDEX++];
 		if( w == null ) {
@@ -149,12 +153,12 @@ class LocalEntry extends FileEntry {
 		if( !w.isDirectory )
 		try {
 			#if nodejs
-			var fid = js.node.Fs.openSync(w.file,AppendReadCreate);
-			if( fid < 0 ) return;
+			var cst = js.node.Fs.constants;
+			var fid = js.node.Fs.openSync(w.file, cast (cst.O_RDONLY | cst.O_EXCL | 0x10000000));
 			js.node.Fs.closeSync(fid);
-			#else
-			var fp = sys.io.File.append(w.file);
-			fp.close();
+			#elseif hl
+			if( fileIsLocked(@:privateAccess Sys.getPath(w.file)) )
+				return;
 			#end
 		}catch( e : Dynamic ) return;
 		#end
