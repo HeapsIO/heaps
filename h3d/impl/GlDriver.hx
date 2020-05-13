@@ -1414,6 +1414,9 @@ class GlDriver extends Driver {
 			y = 0;
 		}
 
+		if( pixels.width == 0 || pixels.height == 0 )
+			return pixels;
+
 		var old = curTarget;
 		var oldCount = numTargets;
 		var oldLayer = curTargetLayer;
@@ -1578,7 +1581,7 @@ class GlDriver extends Driver {
 
 		case MultipleRenderTargets:
 			mrtExt != null || (mrtExt = gl.getExtension('WEBGL_draw_buffers')) != null;
-			
+
 		case InstancedRendering:
 			return (glES >= 3) ? true : gl.getExtension("ANGLE_instanced_arrays") != null;
 

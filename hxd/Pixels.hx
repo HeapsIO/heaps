@@ -354,6 +354,12 @@ class Pixels {
 				bytes[p+1] = bytes[p];
 				bytes[p] = a;
 			}
+		case [RGBA, R8]:
+			var nbytes = haxe.io.Bytes.alloc(width * height);
+			var out : hxd.impl.UncheckedBytes = nbytes;
+			for( i in 0...width*height )
+				out[i] = bytes[i << 2];
+			this.bytes = nbytes;
 
 		case [S3TC(a),S3TC(b)] if( a == b ):
 			// nothing
