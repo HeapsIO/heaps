@@ -3,6 +3,7 @@ package h2d;
 /**
 	Allows a 2D object position to follow a 3D object using the current camera.
 **/
+@:uiNoComponent
 class ObjectFollower extends Object {
 
 	public var follow : h3d.scene.Object;
