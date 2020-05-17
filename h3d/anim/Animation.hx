@@ -118,6 +118,7 @@ class Animation implements hxd.impl.Serializable {
 		a.pause = pause;
 		a.events = events;
 		a.resourcePath = resourcePath;
+		a.isInstance = isInstance;
 		return a;
 	}
 
