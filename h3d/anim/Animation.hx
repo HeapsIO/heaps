@@ -111,6 +111,7 @@ class Animation implements hxd.impl.Serializable {
 		a.loop = loop;
 		a.pause = pause;
 		a.events = events;
+		a.isInstance = isInstance;
 		return a;
 	}
 
