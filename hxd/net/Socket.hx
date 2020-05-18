@@ -1,5 +1,9 @@
 package hxd.net;
 
+#if js
+import js.html.WebSocket;
+#end
+
 private class SocketOutput extends haxe.io.Output {
 
 	public function new() {
@@ -41,6 +45,9 @@ class Socket {
 	#end
 	#if hl
 	var s : #if (haxe_ver >= 4) hl.uv.Stream #else Dynamic #end;
+	#end
+	#if js
+	var s : js.html.WebSocket;
 	#end
 	public var out(default, null) : SocketOutput;
 	public var input(default, null) : SocketInput;
@@ -88,6 +95,15 @@ class Socket {
 			input = new HLSocketInput(this);
 			onConnect();
 		});
+		#elseif js
+		s = new WebSocket('ws://' + host + ':' + port);
+		s.addEventListener('open', function(event) {
+			out = new JsSocketOutput(s);
+			input = new JsSocketInput(s, this);
+			onConnect();
+		});
+		// TODO
+		s.onerror = e -> trace(e);
 		#else
 		throw "Not implemented";
 		#end
@@ -352,6 +368,107 @@ class HLSocketInput extends SocketInput {
 		return max;
 	}
 
+}
+
+#elseif js
+
+class JsSocketOutput extends SocketOutput {
+	var s:js.html.WebSocket;
+	var tmpBuf:haxe.io.Bytes;
+
+	public function new(s:js.html.WebSocket) {
+		super();
+		this.s = s;
+	}
+
+	override function writeByte(c:Int) {
+		if (tmpBuf == null) tmpBuf = haxe.io.Bytes.alloc(1);
+		tmpBuf.set(0, c);
+		s.send(@:privateAccess tmpBuf.b);
+	}
+
+	override function writeBytes(buf:haxe.io.Bytes, pos:Int, len:Int):Int {
+		s.send(@:privateAccess buf.sub(pos, len).b);
+		return len;
+	}
+}
+
+class JsSocketInput extends SocketInput {
+	var onData:Void->Void;
+	var s:js.html.WebSocket;
+	var sock:Socket;
+	var len:Int = 0;
+	var pos:Int = 0;
+	var size:Int = 0;
+	var data:haxe.io.Bytes;
+
+	public function new(s:js.html.WebSocket, sock:Socket) {
+		this.s = s;
+		this.sock = sock;
+		s.onmessage = onMessage;
+	}
+
+	override function get_available() {
+		return len;
+	}
+
+	override function readByte():Int {
+		if (len == 0) throw new haxe.io.Eof();
+		var ret = data.get(pos++);
+		len--;
+		return ret;
+	}
+
+	override function readBytes(s:haxe.io.Bytes, pos:Int, len:Int):Int {
+		if (pos < 0 || len < 0  || pos + len > s.length) throw haxe.io.Error.OutsideBounds;
+		var max = len < this.len ? len : this.len;
+		if (data == null) data = haxe.io.Bytes.alloc(1);
+		@:privateAccess s.blit(pos, data, this.pos, max);
+		this.pos += max;
+		this.len -= max;
+		return max;
+	}
+
+	function onMessage(event) {
+		(event.data.arrayBuffer():js.lib.Promise<js.lib.ArrayBuffer>)
+			.then(function(data:js.lib.ArrayBuffer) {
+				_onData(@:privateAccess new haxe.io.Bytes(data), data.byteLength);
+			})
+			.catchError(function(e) {
+				// TODO
+				js.Browser.console.error(e);
+				trace(haxe.CallStack.toString(haxe.CallStack.callStack()));
+				trace(haxe.CallStack.toString(haxe.CallStack.exceptionStack()));
+			});
+	}
+
+	function _onData(recvData:haxe.io.Bytes, recv:Int) {
+		if( recv < 0 ) {
+			sock.close();
+			sock.onError("Connection closed");
+			return;
+		}
+		var req = pos + len + recv;
+		if( req > size && pos >= (size >> 1) ) {
+			if (data == null) data = haxe.io.Bytes.alloc(len);
+			data.blit(0, data, pos, len);
+			pos = 0;
+			req -= pos;
+		}
+		if( req > size ) {
+			var nsize = size == 0 ? 1024 : size;
+			while( nsize < req ) nsize = (nsize * 3) >> 1;
+			var ndata = haxe.io.Bytes.alloc(nsize);
+			ndata.blit(0, data, pos, len);
+			data = ndata;
+			size = nsize;
+			pos = 0;
+		}
+		if (data == null) data = haxe.io.Bytes.alloc(recv);
+		data.blit(pos + len, recvData, 0, recv);
+		len += recv;
+		sock.onData();
+	}
 }
 
 #end
