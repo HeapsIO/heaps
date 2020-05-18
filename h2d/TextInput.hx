@@ -165,6 +165,12 @@ class TextInput extends Text {
 				setState(redo.pop());
 			}
 			return;
+		case K.A if (K.isDown(K.CTRL)):
+			if (text != "") {
+				cursorIndex = text.length;
+				selectionRange = {start: 0, length: text.length};
+			}
+			return;
 		default:
 			if( e.kind == EKeyDown )
 				return;
