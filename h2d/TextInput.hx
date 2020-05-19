@@ -149,7 +149,7 @@ class TextInput extends Text {
 				text = text.substr(0, cursorIndex) + text.substr(cursorIndex + 1);
 				onChange();
 			}
-		case K.ENTER, K.NUMPAD_ENTER:
+		case K.ESCAPE, K.ENTER, K.NUMPAD_ENTER:
 			cursorIndex = -1;
 			interactive.blur();
 			return;
