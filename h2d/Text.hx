@@ -42,7 +42,7 @@ class Text extends Drawable {
 		super(parent);
 		this.font = font;
 		textAlign = Left;
-		letterSpacing = 1;
+		letterSpacing = 0;
 		lineSpacing = 0;
 		text = "";
 		currentText = "";

@@ -560,7 +560,7 @@ class TextComp extends DrawableComp implements domkit.Component.ComponentDecl<h2
 
 	@:p var text : String = "";
 	@:p(font) var font : h2d.Font;
-	@:p var letterSpacing = 1;
+	@:p var letterSpacing = 0;
 	@:p var lineSpacing = 0;
 	@:p(none) var maxWidth : Null<Int>;
 	@:p var textAlign : h2d.Text.Align = Left;

@@ -41,6 +41,10 @@ class HtmlText extends Text {
 	}
 
 	public var condenseWhite(default,set) : Bool = true;
+	/**
+		Spacing after <img> tags in pixels.
+	**/
+	public var imageSpacing(default,set):Float = 1;
 
 	/**
 		Line height calculation mode controls how much space lines take up vertically. ( default : Accurate )
@@ -258,10 +262,10 @@ class HtmlText extends Text {
 				var i : Tile = loadImage(e.get("src"));
 				if ( i == null ) i = Tile.fromColor(0xFF00FF, 8, 8);
 
-				var size = metrics[metrics.length - 1].width + i.width + letterSpacing;
+				var size = metrics[metrics.length - 1].width + i.width + imageSpacing;
 				if (realMaxWidth >= 0 && size > realMaxWidth && metrics[metrics.length - 1].width > 0) {
 					if ( splitNode.node != null ) {
-						size = wordSplit() + i.width + letterSpacing;
+						size = wordSplit() + i.width + imageSpacing;
 						var info = metrics[metrics.length - 1];
 						// Bug: height/baseLine may be innacurate in case of sizeA sizeB<split>sizeA where sizeB is larger.
 						switch ( lineHeightMode ) {
@@ -607,7 +611,7 @@ class HtmlText extends Text {
 				}
 				newLine = false;
 				prevChar = -1;
-				xPos += i.width + letterSpacing;
+				xPos += i.width + imageSpacing;
 			default:
 			}
 			for( child in e )
@@ -653,6 +657,13 @@ class HtmlText extends Text {
 				}
 			}
 		}
+	}
+
+	function set_imageSpacing(s) {
+		if (imageSpacing == s) return s;
+		imageSpacing = s;
+		rebuild();
+		return s;
 	}
 
 	override function set_textColor(c) {
