@@ -169,6 +169,7 @@ class TextInput extends Text {
 			if (text != "") {
 				cursorIndex = text.length;
 				selectionRange = {start: 0, length: text.length};
+				selectionSize = 0;
 			}
 			return;
 		default:
