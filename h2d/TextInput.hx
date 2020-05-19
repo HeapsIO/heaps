@@ -123,8 +123,9 @@ class TextInput extends Text {
 		switch( e.keyCode ) {
 		case K.LEFT if (K.isDown(K.CTRL)):
 			if (cursorIndex > 0) {
-				while (cursorIndex > 0 && hxd.Charset.getDefault().isSpace(StringTools.fastCodeAt(text, cursorIndex - 1))) cursorIndex--;
-				while (cursorIndex > 0 && !hxd.Charset.getDefault().isSpace(StringTools.fastCodeAt(text, cursorIndex - 1))) cursorIndex--;
+				var charset = hxd.Charset.getDefault();
+				while (cursorIndex > 0 && charset.isSpace(StringTools.fastCodeAt(text, cursorIndex - 1))) cursorIndex--;
+				while (cursorIndex > 0 && !charset.isSpace(StringTools.fastCodeAt(text, cursorIndex - 1))) cursorIndex--;
 			}
 		case K.LEFT:
 			if( cursorIndex > 0 )
@@ -132,8 +133,9 @@ class TextInput extends Text {
 		case K.RIGHT if (K.isDown(K.CTRL)):
 			var len = text.length;
 			if (cursorIndex < text.length) {
-				while (cursorIndex < len && hxd.Charset.getDefault().isSpace(StringTools.fastCodeAt(text, cursorIndex))) cursorIndex++;
-				while (cursorIndex < len && !hxd.Charset.getDefault().isSpace(StringTools.fastCodeAt(text, cursorIndex))) cursorIndex++;
+				var charset = hxd.Charset.getDefault();
+				while (cursorIndex < len && charset.isSpace(StringTools.fastCodeAt(text, cursorIndex))) cursorIndex++;
+				while (cursorIndex < len && !charset.isSpace(StringTools.fastCodeAt(text, cursorIndex))) cursorIndex++;
 			}
 		case K.RIGHT:
 			if( cursorIndex < text.length )
