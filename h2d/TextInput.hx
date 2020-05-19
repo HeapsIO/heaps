@@ -124,10 +124,7 @@ class TextInput extends Text {
 		case K.LEFT if (K.isDown(K.CTRL)):
 			if (cursorIndex > 0) {
 				while (cursorIndex > 0 && hxd.Charset.getDefault().isSpace(StringTools.fastCodeAt(text, cursorIndex - 1))) cursorIndex--;
-
-				var prevSpace = text.lastIndexOf(" ", cursorIndex - 1);
-				if (prevSpace > -1) cursorIndex = prevSpace + 1;
-				else cursorIndex = 0;
+				while (cursorIndex > 0 && !hxd.Charset.getDefault().isSpace(StringTools.fastCodeAt(text, cursorIndex - 1))) cursorIndex--;
 			}
 		case K.LEFT:
 			if( cursorIndex > 0 )
@@ -136,10 +133,7 @@ class TextInput extends Text {
 			var len = text.length;
 			if (cursorIndex < text.length) {
 				while (cursorIndex < len && hxd.Charset.getDefault().isSpace(StringTools.fastCodeAt(text, cursorIndex))) cursorIndex++;
-
-				var nextSpace = text.indexOf(" ", cursorIndex);
-				if (nextSpace != -1 && nextSpace < text.length - 1) cursorIndex = nextSpace;
-				else cursorIndex = text.length;
+				while (cursorIndex < len && !hxd.Charset.getDefault().isSpace(StringTools.fastCodeAt(text, cursorIndex))) cursorIndex++;
 			}
 		case K.RIGHT:
 			if( cursorIndex < text.length )
