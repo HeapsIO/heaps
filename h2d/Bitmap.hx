@@ -29,11 +29,13 @@ class Bitmap extends Drawable {
 		this.tile = tile;
 	}
 
+	#if flash
 	override function set_tileWrap(b) {
 		if( b && tile != null && tile.getTexture().flags.has(IsNPOT) )
 			throw "Cannot set tileWrap on a non power-of-two texture";
 		return tileWrap = b;
 	}
+	#end
 
 	override function getBoundsRec( relativeTo : Object, out : h2d.col.Bounds, forSize : Bool ) {
 		super.getBoundsRec(relativeTo, out, forSize);
