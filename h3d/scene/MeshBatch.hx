@@ -256,6 +256,10 @@ class MeshBatch extends Mesh {
 		curInstances++;
 	}
 
+	public inline function canEmitInstance() {
+		return curInstances < maxInstances;
+	}
+
 	override function sync(ctx:RenderContext) {
 		super.sync(ctx);
 		if( curInstances == 0 ) return;
