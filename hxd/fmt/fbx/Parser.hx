@@ -183,16 +183,14 @@ class Parser {
 	}
 	
 	static final ZERO_BYTE = String.fromCharCode(0);
-	function readBinaryString(length : Int) : String {
-		if (length == 0) return "";
+	function readBinaryString( length : Int ) : String {
+		if  (length == 0 ) return "";
 		var str = bytes.getString(pos, length);
 		pos += length;
 		// Blender inserts extra data to strings following `\0\1` byte sequence
 		// expecting them to be stripped away due to 0 byte being terminator.
 		var zeroPos = str.indexOf(ZERO_BYTE);
-		if (zeroPos != -1) {
-			str = str.substr(0, zeroPos);
-		}
+		if ( zeroPos != -1 ) str = str.substr(0, zeroPos);
 		return str;
 	}
 	
