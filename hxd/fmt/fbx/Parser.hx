@@ -182,13 +182,25 @@ class Parser {
 		}
 	}
 	
+	static final ZERO_BYTE = String.fromCharCode(0);
+	function readBinaryString(length : Int) : String {
+		if (length == 0) return "";
+		var str = bytes.getString(pos, length);
+		pos += length;
+		// Blender inserts extra data to strings following `\0\1` byte sequence
+		// expecting them to be stripped away due to 0 byte being terminator.
+		var zeroPos = str.indexOf(ZERO_BYTE);
+		if (zeroPos != -1) {
+			str = str.substr(0, zeroPos);
+		}
+		return str;
+	}
+	
 	function parseBinaryNode( nextRecord : Int ) : FbxNode {
 		
 		var numProperties : Int = getVersionedInt32();
 		var propertyListLength : UInt = getVersionedInt32();
-		var nameLen : Int = getByte();
-		var name : String = (nameLen == 0 ? "" : bytes.getString(pos, nameLen));
-		pos += nameLen;
+		var name : String = readBinaryString(getByte());
 		
 		var props : Array<FbxProp> = new Array();
 		var childs : Array<FbxNode> = new Array();
@@ -301,10 +313,7 @@ class Parser {
 				}
 				return PInts(bools);
 			case 'S'.code:
-				var len:Int = getInt32();
-				var s:String = bytes.getString(pos, len);
-				pos += len;
-				return PString(s);
+				return PString(readBinaryString(getInt32()));
 			case 'R'.code:
 				var len:Int = getInt32();
 				var data = Bytes.alloc(len);
