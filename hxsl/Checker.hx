@@ -196,6 +196,9 @@ class Checker {
 		return Ast.Error.t(msg,pos);
 	}
 
+	public dynamic function warning( msg : String, pos : Position ) {
+	}
+
 	public dynamic function loadShader( path : String ) : Expr {
 		throw "Not implemented";
 		return null;
@@ -380,7 +383,9 @@ class Checker {
 				case EVars(_): InBlock;
 				default: if( el.length == 0 ) with else NoValue;
 				}
-				tl.push(typeExpr(e, ew));
+				var et = typeExpr(e, ew);
+				if( el.length != 0 && !et.hasSideEffect() ) warning("This expression has no side effect", e.pos);
+				tl.push(et);
 			}
 			vars = old;
 			type = with == NoValue ? TVoid : tl[tl.length - 1].t;

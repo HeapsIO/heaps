@@ -426,7 +426,14 @@ class Tools {
 			return hasSideEffect(e) || hasSideEffect(index);
 		case TConst(_), TVar(_), TGlobal(_):
 			return false;
-		case TVarDecl(_), TCall(_), TDiscard, TContinue, TBreak, TReturn(_):
+		case TCall(e, pl):
+			if( !e.e.match(TGlobal(_)) )
+				return true;
+			for( p in pl )
+				if( hasSideEffect(p) )
+					return true;
+			return false;
+		case TVarDecl(_), TDiscard, TContinue, TBreak, TReturn(_):
 			return true;
 		case TSwitch(e, cases, def):
 			for( c in cases ) {

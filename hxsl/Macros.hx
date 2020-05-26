@@ -387,6 +387,9 @@ class Macros {
 						var name = Std.string(c);
 						var check = new Checker();
 						check.loadShader = loadShader;
+						check.warning = function(msg,pos) {
+							haxe.macro.Context.warning(msg, pos);
+						};
 						var shader = check.check(name, shader);
 						//Printer.check(shader);
 						var str = Context.defined("display") ? "" : Serializer.run(shader);
