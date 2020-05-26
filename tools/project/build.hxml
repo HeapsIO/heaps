@@ -5,10 +5,13 @@
 # Integrated libraries
 #-lib castle
 #-lib domkit
+#-lib hide
 
 # Window configuration
 #-D windowTitle=MyGameTitle
 #-D windowSize=1280x720
+# Disallow window resize
+#-D windowFixed
 
 # Enable MP3 listing in Res when targeting Hashlink
 #-D heaps_enable_hp_mp3

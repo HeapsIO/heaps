@@ -1,3 +1,4 @@
+import haxe.io.Bytes;
 import sys.io.File;
 import haxe.Json;
 import sys.io.Process;
@@ -121,7 +122,9 @@ class Run {
 				verbose("Note that tools won't be available to Heaps unless tools/bin folder are in the PATH.");
 			}
 		}
-		Sys.println(format("&REval as of 4.0.3 does not support SSL: Cannot auto-update tools.&0"));
+		var haxeVer = runProcess("haxe.exe", ["--version"]).split(".");
+		if (Std.parseInt(haxeVer[0] + haxeVer[1]) < 41 ) fatal("Heaps Tools require Haxe 4.1.0 or higher!");
+
 		var versions:Map<String, String> = [];
 		var versionPath = Path.join([binDir, ".versions"]);
 		if (FileSystem.exists(versionPath)) versions = haxe.Unserializer.run(File.getContent(versionPath));
@@ -137,10 +140,8 @@ class Run {
 				verbose("Skipping " + tool.name + ": Windows only tool");
 				continue;
 			}
-			verbose("Visit https://github.com/" + tool.github + "/releases to check for latest release");
-			continue;
 			verbose("Fetching latest release info from &U" + tool.github + "&0");
-			var json:GithubJson = Json.parse(haxe.Http.requestUrl("https://api.github.com/repos/" + tool.github + "/releases/latest"));
+			var json:GithubJson = Json.parse(httpGetS("https://api.github.com/repos/" + tool.github + "/releases/latest"));
 			// versions.exists(name) && versions[name] == json.name
 			if (!versions.exists(tool.github) || versions[tool.github] != json.name) {
 				if (ask(outdatedMessage("Yanrishatum/fontgen", "Fontgen tool", json), true)) {
@@ -151,15 +152,12 @@ class Run {
 						for (asset in json.assets) {
 							if (asset.name == name) {
 								Sys.println("Loading file: " + name);
-								var http = new haxe.Http(asset.browser_download_url);
-								http.onBytes = function(b) {
-									var zip = new haxe.zip.Reader(new haxe.io.BytesInput(b)).read();
-									for (file in zip) {
-										verbose("Saving file: " + file.fileName);
-										File.saveBytes(file.fileName, file.data);
-									}
+								var zipBytes = httpGet(asset.browser_download_url);
+								var zip = new haxe.zip.Reader(new haxe.io.BytesInput(zipBytes)).read();
+								for (file in zip) {
+									verbose("Saving file: " + file.fileName);
+									if (!dryRun) File.saveBytes(file.fileName, file.data);
 								}
-								http.request();
 							}
 						}
 					}
@@ -288,6 +286,13 @@ class Run {
 		return true;
 	}
 
+	public static inline function warn(str:String) {
+		Sys.println(format("&YWarning: &0" + str));
+	}
+	public static inline function fatal(str:String) {
+		Sys.println(format("&RFatal: &0" + str));
+		Sys.exit(1);
+	}
 	public static inline function verbose(str:String) {
 		if (verboseMode) Sys.println(format(str));
 	}
@@ -319,6 +324,31 @@ class Run {
 		}
 		Sys.println(isYes ? "Y" : "N");
 		return isYes;
+	}
+
+
+	static function httpGet(url:String) {
+		var req = new sys.Http(url);
+		var data:Bytes = null;
+		req.onBytes = (b) -> data = b;
+		req.onError = (err) -> fatal("Http error: " + err + "\nURL: " + url);
+		req.setHeader("User-Agent", "curl/7.27.0"); // workaround for haxe 4.1.1
+		req.request(false);
+		return data;
+	}
+	static function httpGetS(url:String) {
+		var req = new sys.Http(url);
+		var data:String = null;
+		req.onData = (b) -> data = b;
+		req.onError = (err) -> fatal("Http error: " + err + "\nURL: " + url);
+		req.setHeader("User-Agent", ""); // workaround for haxe 4.1.1
+		req.request(false);
+		return data;
+	}
+	static function runProcess( cmd:String, args:Array<String> ) : String {
+		var proc = new Process(cmd, args);
+		proc.exitCode();
+		return proc.stdout.readAll().toString();
 	}
 
 	static function tryToRun( cmd : Command, args : Array<String> ) {
