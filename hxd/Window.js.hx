@@ -186,8 +186,10 @@ class Window {
 	}
 
 	public function unlockPointer() : Void {
-		if (js.Browser.document.pointerLockElement == canvas)
+		if (js.Browser.document.pointerLockElement == canvas) {
+			lockCallback = null;
 			js.Browser.document.exitPointerLock();
+		}
 	}
 
 	public function setCurrent() {
@@ -265,8 +267,10 @@ class Window {
 	function onMouseMove(e:js.html.MouseEvent) {
 		curMouseX = e.clientX;
 		curMouseY = e.clientY;
-		if ( lockCallback != null )
-			lockCallback(e.movementX * js.Browser.window.devicePixelRatio, e.movementY * js.Browser.window.devicePixelRatio);
+		if ( lockCallback != null ) {
+			var ratio = getPixelRatio();
+			lockCallback(e.movementX * ratio, e.movementY * ratio);
+		}
 		else
 			event(new Event(EMove, mouseX, mouseY));
 	}
