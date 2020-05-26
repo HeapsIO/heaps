@@ -53,6 +53,9 @@ class IrradShader extends IrradBase {
 		@param var cubeSize : Float;
 		@param var cubeScaleFactor : Float;
 
+		@param var threshold : Float;
+		@param var scale : Float;
+
 		function cosineWeightedSampling( p : Vec2, n : Vec3 ) : Vec3 {
 			var sq = sqrt(1 - p.x);
 			var alpha = 2 * PI * p.y;
@@ -95,7 +98,9 @@ class IrradShader extends IrradBase {
 				}
 				var amount = n.dot(l).saturate();
 				if( amount > 0 ) {
-					color += gammaCorrect(envMap.get(l).rgb) * amount;
+					var envMapColor = envMap.get(l).rgb;
+					envMapColor *= mix(1.0, scale, (max( max(envMapColor.r, max(envMapColor.g, envMapColor.b)) - threshold, 0) / max(0.001, (1.0 - threshold))));
+					color += gammaCorrect(envMapColor) * amount;
 					totalWeight += amount;
 				}
 			}
@@ -187,53 +192,78 @@ class Environment  {
 	public var specular : h3d.mat.Texture;
 
 	public var power : Float = 1.;
+	public var rot : Float = 0.;
+	public var threshold : Float = 0.;
+	public var scale : Float = 1.;
 
 	/*
 		Source can be cube map already prepared or a 2D equirectangular map that
 		will be turned into a cube map.
 	*/
-	public function new(src:h3d.mat.Texture) {
+	public function new( src : h3d.mat.Texture, ?diffSize = 64, ?specSize = 512, ?sampleBits = 12 ) {
 		this.source = src;
-		if( src.flags.has(Loading) )
+		equiToCube();
+		this.diffSize = diffSize;
+		this.specSize = specSize;
+		this.sampleBits = sampleBits;
+	}
+
+
+	function equiToCube() {
+		if( source.flags.has(Loading) )
 			throw "Source is not ready";
-		if( src.flags.has(Cube) ) {
-			this.env = src;
+		if( source.flags.has(Cube) ) {
+			this.env = source;
 		} else {
-			if( src.width != src.height*2 )
+			if( source.width != source.height * 2 )
 				throw "Unrecognized environment map format";
-			env = new h3d.mat.Texture(src.height, src.height, [Cube, Target]);
+			if(env == null)
+				env = new h3d.mat.Texture(source.height, source.height, [Cube, Target]);
 			var pass = new h3d.pass.ScreenFx(new IrradEquiProj());
 			var engine = h3d.Engine.getCurrent();
-			pass.shader.texture = src;
+			pass.shader.texture = source;
 			for( i in 0...6 ) {
 				engine.pushTarget(env,i);
 				pass.shader.faceMatrix = getCubeMatrix(i);
 				pass.render();
 				engine.popTarget();
 			}
+
+			env.realloc = function() {
+				equiToCube();
+				compute();
+			}
 		}
-		diffSize = 64;
-		specSize = 256;
-		sampleBits = 12;
 	}
 
 	public function dispose() {
-		env.dispose();
-		lut.dispose();
-		diffuse.dispose();
-		specular.dispose();
+		if( env != null ) env.dispose();
+		if( lut != null ) lut.dispose();
+		if( diffuse != null ) diffuse.dispose();
+		if( specular != null ) specular.dispose();
+	}
+
+	function createTextures() {
+		if( lut == null ) {
+			lut = new h3d.mat.Texture(128, 128, [Target], RGBA32F);
+			lut.setName("irradLut");
+			lut.preventAutoDispose();
+		}
+		if( diffuse == null ) {
+			diffuse = new h3d.mat.Texture(diffSize, diffSize, [Cube, Target], RGBA32F);
+			diffuse.setName("irradDiffuse");
+			diffuse.preventAutoDispose();
+		}
+		if( specular == null ) {
+			specular = new h3d.mat.Texture(specSize, specSize, [Cube, Target, MipMapped, ManualMipMapGen], RGBA32F);
+			specular.setName("irradSpecular");
+			specular.mipMap = Linear;
+			specular.preventAutoDispose();
+		}
 	}
 
 	public function compute() {
-
-		lut = new h3d.mat.Texture(128, 128, [Target], RGBA16F);
-		lut.setName("irradLut");
-		diffuse = new h3d.mat.Texture(diffSize, diffSize, [Cube, Target]);
-		diffuse.setName("irradDiffuse");
-		specular = new h3d.mat.Texture(specSize, specSize, [Cube, Target, MipMapped, ManualMipMapGen]);
-		specular.setName("irradSpecular");
-		specular.mipMap = Linear;
-
+		createTextures();
 		computeIrradLut();
 		computeIrradiance();
 	}
@@ -272,12 +302,21 @@ class Environment  {
 		screen.dispose();
 	}
 
+	function getMipLevels() : Int {
+		var mipLevels = 1;
+		while( specular.width > 1 << (mipLevels - 1) )
+			mipLevels++;
+		return mipLevels;
+	}
+
 	function computeIrradiance() {
 
 		var screen = new h3d.pass.ScreenFx(new IrradShader());
 		screen.shader.samplesBits = sampleBits;
 		screen.shader.envMap = env;
 		screen.shader.isSRGB = env.isSRGB();
+		screen.shader.threshold = threshold;
+		screen.shader.scale = scale;
 
 		var engine = h3d.Engine.getCurrent();
 
@@ -290,15 +329,12 @@ class Environment  {
 
 		screen.shader.isSpecular = true;
 
-		var mipLevels = 1;
-		while( specular.width > 1 << (mipLevels - 1) )
-			mipLevels++;
-
+		var mipLevels = getMipLevels();
 		specLevels = mipLevels - ignoredSpecLevels;
 
 		for( i in 0...6 ) {
 			screen.shader.faceMatrix = getCubeMatrix(i);
-			for( j in 0...mipLevels ) {
+			for( j in 0... mipLevels ) {
 				var size = specular.width >> j;
 				screen.shader.cubeSize = size;
 				screen.shader.cubeScaleFactor = size == 1 ? 0 : (size * size) / Math.pow(size - 1, 3);

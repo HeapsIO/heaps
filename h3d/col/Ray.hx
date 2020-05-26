@@ -11,7 +11,7 @@ class Ray {
 	public var ly : Float;
 	public var lz : Float;
 
-	inline function new() {
+	public inline function new() {
 	}
 
 	public inline function clone() {

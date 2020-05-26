@@ -40,6 +40,22 @@ class Reader {
 		if( b == 0xFF ) return null;
 		return i.readString(b);
 	}
+	
+	
+	static var HMD_STRINGS : Map<String,String>;
+	
+	// make sure some strings are reused between models
+	// in order to prevent many similar String to be kept into memory
+	function readCachedName() {
+		var name = readName();
+		if( name == null ) return null;
+		if( HMD_STRINGS == null )
+			HMD_STRINGS = new Map<String,String>();
+		var n = HMD_STRINGS.get(name);
+		if( n != null ) return n;
+		HMD_STRINGS.set(name,name);
+		return name;	
+	}
 
 	function readPosition(hasScale=true) {
 		var p = new Position();
@@ -73,7 +89,7 @@ class Reader {
 	}
 
 	function readSkin() {
-		var name = readName();
+		var name = readCachedName();
 		if( name == null )
 			return null;
 		var s = new Skin();
@@ -83,7 +99,7 @@ class Reader {
 		for( k in 0...i.readUInt16() ) {
 			var j = new SkinJoint();
 			j.props = readProps();
-			j.name = readName();
+			j.name = readCachedName();
 			var pid = i.readUInt16();
 			var hasScale = pid & 0x8000 != 0;
 			if( hasScale ) pid &= 0x7FFF;
@@ -127,7 +143,7 @@ class Reader {
 			g.props = readProps();
 			g.vertexCount = i.readInt32();
 			g.vertexStride = i.readByte();
-			g.vertexFormat = [for( k in 0...i.readByte() ) new GeometryFormat(readName(), GeometryDataFormat.fromInt(i.readByte()))];
+			g.vertexFormat = [for( k in 0...i.readByte() ) new GeometryFormat(readCachedName(), GeometryDataFormat.fromInt(i.readByte()))];
 			g.vertexPosition = i.readInt32();
 			g.indexCounts = [for( k in 0...i.readByte() ) i.readInt32()];
 			g.indexPosition = i.readInt32();
@@ -155,9 +171,9 @@ class Reader {
 		for( k in 0...i.readInt32() ) {
 			var m = new Model();
 			m.props = readProps();
-			m.name = readName();
+			m.name = readCachedName();
 			m.parent = i.readInt32() - 1;
-			m.follow = readName();
+			m.follow = readCachedName();
 			m.position = readPosition();
 			m.geometry = i.readInt32() - 1;
 			d.models.push(m);
@@ -182,7 +198,7 @@ class Reader {
 			a.objects = [];
 			for( k in 0...i.readInt32() ) {
 				var o = new AnimationObject();
-				o.name = readName();
+				o.name = readCachedName();
 				o.flags = haxe.EnumFlags.ofInt(i.readByte());
 				a.objects.push(o);
 				if( o.flags.has(HasProps) )
@@ -193,7 +209,7 @@ class Reader {
 				for( k in 0...i.readInt32() ) {
 					var e = new AnimationEvent();
 					e.frame = i.readInt32();
-					e.data = readName();
+					e.data = readCachedName();
 					a.events.push(e);
 				}
 			}

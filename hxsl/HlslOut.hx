@@ -27,6 +27,13 @@ class HlslOut {
 		m.set(Inversesqrt, "rsqrt");
 		m.set(VertexID,"_in.vertexID");
 		m.set(InstanceID,"_in.instanceID");
+		m.set(IVec2, "int2");
+		m.set(IVec3, "int3");
+		m.set(IVec4, "int3");
+		m.set(BVec2, "bool2");
+		m.set(BVec3, "bool3");
+		m.set(BVec4, "bool4");
+		m.set(FragCoord,"_in.__pos__");
 		for( g in m )
 			KWDS.set(g, true);
 		m;
@@ -44,6 +51,7 @@ class HlslOut {
 	var decls : Array<String>;
 	var isVertex : Bool;
 	var allNames : Map<String, Int>;
+	var samplers : Map<Int, Int>;
 	public var varNames : Map<Int,String>;
 
 	var varAccess : Map<Int,String>;
@@ -91,14 +99,20 @@ class HlslOut {
 			case VBool: add("bool");
 			}
 			add(size);
+		case TMat2:
+			add("float2x2");
 		case TMat3:
 			add("float3x3");
 		case TMat4:
 			add("float4x4");
 		case TMat3x4:
 			add("float4x3");
-		case TSampler2D, TSamplerCube, TSampler2DArray:
-			add("SamplerState");
+		case TSampler2D:
+			add("Texture2D");
+		case TSamplerCube:
+			add("TextureCube");
+		case TSampler2DArray:
+			add("Texture2DArray");
 		case TStruct(vl):
 			add("struct { ");
 			for( v in vl ) {
@@ -144,8 +158,6 @@ class HlslOut {
 			addType(v.type);
 			add(" ");
 			ident(v);
-			if( v.type.isSampler() )
-				add("SS");
 		}
 	}
 
@@ -234,21 +246,45 @@ class HlslOut {
 			default:
 				throw "assert";
 			}
-			switch( args[0].e ) {
-			case TArray(e,index):
-				addValue(e, tabs);
-				add("SS[");
-				addValue(index, tabs);
-				add("]");
-			default:
-				addValue(args[0], tabs);
-				add("SS");
+			var offset = 0;
+			var expr = switch( args[0].e ) {
+			case TArray(e,{ e : TConst(CInt(i)) }): offset = i; e;
+			default: args[0];
+			}
+			switch( expr.e ) {
+			case TVar(v):
+				var samplerIndex = samplers.get(v.id);
+				if( samplerIndex == null ) throw "assert";
+				add('__Samplers[${samplerIndex+offset}]');
+			default: throw "assert";
 			}
 			for( i in 1...args.length ) {
 				add(",");
 				addValue(args[i],tabs);
 			}
 			add(")");
+		case TCall({ e : TGlobal(g = (Texel | TexelLod)) }, args):
+			addValue(args[0], tabs);
+			add(".Load(");
+			switch ( args[1].t ) {
+				case TSampler2D:
+					add("int3(");
+				case TSampler2DArray:
+					add("int4(");
+				default:
+					throw "assert";
+			}
+			addValue(args[1],tabs);
+			switch( g ) {
+				case Texel:
+					add(", 0");
+				case TexelLod:
+					add(", ");
+					addValue(args[2],tabs);
+				default:
+					throw "assert";
+			}
+			add("))");
 		case TCall(e = { e : TGlobal(g) }, args):
 			switch( [g,args.length] ) {
 			case [Vec2, 1] if( args[0].t == TFloat ):
@@ -282,6 +318,13 @@ class HlslOut {
 				decl("float3x3 mat3( float4x4 m ) { return (float3x3)m; }");
 				decl("float3x3 mat3( float4x3 m ) { return (float3x3)m; }");
 				decl("float3x3 mat3( float3 a, float3 b, float3 c ) { float3x3 m; m._m00_m10_m20 = a; m._m01_m11_m21 = b; m._m02_m12_m22 = c; return m; }");
+				decl("float3x3 mat3( float c00, float c01, float c02, float c10, float c11, float c12, float c20, float c21, float c22 ) { float3x3 m = { c00, c10, c20, c01, c11, c21, c02, c12, c22 }; return m; }");
+			case Mat2:
+				decl("float2x2 mat2( float4x4 m ) { return (float2x2)m; }");
+				decl("float2x2 mat2( float4x3 m ) { return (float2x2)m; }");
+				decl("float2x2 mat2( float3x3 m ) { return (float2x2)m; }");
+				decl("float2x2 mat2( float2 a, float2 b ) { float2x2 m; m._m00_m10 = a; m._m01_m11 = b; return m; }");
+				decl("float2x2 mat2( float c00, float c01, float c10, float c11 ) { float2x2 m = { c00, c10, c01, c11 }; return m; }");
 			case Mod:
 				declMods();
 			case Pow:
@@ -318,6 +361,32 @@ class HlslOut {
 			}
 			add(tabs);
 			add("}");
+		case TVarDecl(v, { e : TArrayDecl(el) }):
+			locals.set(v.id, v);
+			for( i in 0...el.length ) {
+				ident(v);
+				add("[");
+				add(i);
+				add("] = ");
+				addExpr(el[i], tabs);
+				newLine(el[i]);
+			}
+		case TBinop(OpAssign,evar = { e : TVar(_) },{ e : TArrayDecl(el) }):
+			for( i in 0...el.length ) {
+				addExpr(evar, tabs);
+				add("[");
+				add(i);
+				add("] = ");
+				addExpr(el[i], tabs);
+			}
+		case TArrayDecl(el):
+			add("{");
+			var first = true;
+			for( e in el ) {
+				if( first ) first = false else add(", ");
+				addValue(e,tabs);
+			}
+			add("}");
 		case TBinop(op, e1, e2):
 			switch( [op, e1.t, e2.t] ) {
 			case [OpAssignOp(OpMod) | OpMod, _, _]:
@@ -341,7 +410,7 @@ class HlslOut {
 				add(",1.),");
 				addValue(e2, tabs);
 				add(")");
-			case [OpMult, TVec(_), TMat3 | TMat4]:
+			case [OpMult, TVec(_), TMat2 | TMat3 | TMat4]:
 				add("mul(");
 				addValue(e1, tabs);
 				add(",");
@@ -460,14 +529,6 @@ class HlslOut {
 			add("[");
 			addValue(index, tabs);
 			add("]");
-		case TArrayDecl(el):
-			add("[");
-			var first = true;
-			for( e in el ) {
-				if( first ) first = false else add(", ");
-				addValue(e,tabs);
-			}
-			add("]");
 		case TMeta(_, _, e):
 			addExpr(e, tabs);
 		}
@@ -578,11 +639,11 @@ class HlslOut {
 				switch( v.type ) {
 				case TArray(t, _) if( t.isSampler() ):
 					textures.push(v);
-					continue;
 				case TBuffer(_):
 					buffers.push(v);
 					continue;
 				default:
+					if( v.type.isSampler() ) textures.push(v);
 				}
 				add("\t");
 				addVar(v);
@@ -599,27 +660,22 @@ class HlslOut {
 		}
 		if( bufCount > 0 ) add("\n");
 
+
+		var samplerCount = 0;
 		for( v in textures ) {
+			samplers.set(v.id, samplerCount);
 			switch( v.type ) {
 			case TArray(t, size):
-				switch( t ) {
-				case TSampler2D:
-					add("Texture2D ");
-				case TSamplerCube:
-					add("TextureCube ");
-				case TSampler2DArray:
-					add("Texture2DArray ");
-				default:
-					throw "Unsupported sampler " + t;
-				}
-				add(v.name);
-				addArraySize(size);
-				add(";\n");
-				addVar(v);
-				add(";\n");
+				samplerCount += switch( size ) {
+				case SConst(i): i;
+				default: throw "assert";
+				};
 			default:
+				samplerCount++;
 			}
 		}
+		if( samplerCount > 0 )
+			add('SamplerState __Samplers[$samplerCount];\n');
 	}
 
 	function initStatics( s : ShaderData ) {
@@ -680,6 +736,7 @@ class HlslOut {
 		isVertex = f.kind == Vertex;
 
 		varAccess = new Map();
+		samplers = new Map();
 		initVars(s);
 		initGlobals(s);
 		initParams(s);

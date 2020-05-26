@@ -14,7 +14,7 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 	/**
 		Cursor used when Interactive is under mouse cursor ( default : Button )
 	**/
-	public var cursor(default,set) : hxd.Cursor;
+	public var cursor(default,set) : Null<hxd.Cursor>;
 	/**
 		Should object collision be in rectangle or ellipse form? Ignored if `shape` is set.
 	**/
@@ -77,7 +77,9 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 		super.onHierarchyMoved(parentChanged);
 		if( scene != null ) {
 			scene.removeEventTarget(this);
-			scene.addEventTarget(this);
+			scene = getScene();
+			if( scene != null )
+				scene.addEventTarget(this);
 		}
 		if ( parentChanged )
 			updateMask();
@@ -87,7 +89,7 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 		parentMask = null;
 		var p = parent;
 		while( p != null ) {
-			var m = Std.instance(p, Mask);
+			var m = hxd.impl.Api.downcast(p, Mask);
 			if( m != null ) {
 				parentMask = m;
 				break;
@@ -249,11 +251,17 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 		return scene != null && scene.events != null && @:privateAccess scene.events.currentFocus == this;
 	}
 
-	/** Sent when mouse enters Interactive hitbox area. **/
+	/**
+		Sent when mouse enters Interactive hitbox area.
+		`event.propagate` and `event.cancel` are ignored during `onOver`.
+		Propagation can be set with `onMove` event, as well as cancelling `onMove` will prevent `onOver`.
+	**/
 	public dynamic function onOver( e : hxd.Event ) {
 	}
 
-	/** Sent when mouse exits Interactive hitbox area. **/
+	/** Sent when mouse exits Interactive hitbox area.
+		`event.propagate` and `event.cancel` are ignored during `onOut`.
+	**/
 	public dynamic function onOut( e : hxd.Event ) {
 	}
 

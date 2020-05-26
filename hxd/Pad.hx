@@ -221,11 +221,24 @@ class Pad {
 	public var name(get, never) : String;
 	public var index : Int = -1;
 	public var config : PadConfig = DEFAULT_CONFIG;
-	public var xAxis : Float = 0.;
-	public var yAxis : Float = 0.;
+	public var xAxis(get,never) : Float;
+	public var yAxis(get,never) : Float;
+	public var axisDeadZone : Float = 0.1;
 	public var buttons : Array<Bool> = [];
 	public var values : Array<Float> = [];
 	var prevButtons : Array<Bool> = [];
+	var rawXAxis : Float = 0.;
+	var rawYAxis : Float = 0.;
+
+	function get_xAxis() {
+		if( rawXAxis*rawXAxis + rawYAxis*rawYAxis < axisDeadZone*axisDeadZone ) return 0.;
+		return rawXAxis;
+	}
+
+	function get_yAxis() {
+		if( rawXAxis*rawXAxis + rawYAxis*rawYAxis < axisDeadZone*axisDeadZone ) return 0.;
+		return rawYAxis;
+	}
 
 	public dynamic function onDisconnect(){
 	}
@@ -240,6 +253,13 @@ class Pad {
 
 	public function isReleased( button : Int ) {
 		return !buttons[button] && prevButtons[button];
+	}
+
+	public function reset() {
+		rawXAxis = rawYAxis = 0;
+		for( i in 0...buttons.length ) buttons[i] = false;
+		for( i in 0...buttons.length ) prevButtons[i] = false;
+		for( i in 0...values.length ) values[i] = 0;
 	}
 
 	public function rumble( strength : Float, time_s : Float ){
@@ -321,9 +341,9 @@ class Pad {
 							//if( Math.abs(p.values[valID] - v) > 0.1 ) trace(valID, v);
 							p.values[valID] = v;
 							if( axisID == axisX )
-								p.xAxis = v;
+								p.rawXAxis = v;
 							else if( axisID == axisY )
-								p.yAxis = -v;
+								p.rawYAxis = -v;
 						});
 					} else if( StringTools.startsWith(c.id, "BUTTON_") ) {
 						c.addEventListener(flash.events.Event.CHANGE, function(_) {
@@ -431,9 +451,9 @@ class Pad {
 			values[ axisId ] = v;
 
 		if( axisId == 0 )
-			xAxis = v;
+			rawXAxis = v;
 		else if( axisId == 1 )
-			yAxis = v;
+			rawYAxis = v;
 	}
 
 	static function initPad( index ){
@@ -509,9 +529,9 @@ class Pad {
 				p._detectAnalogButton(ii, v);
 				p.values[ii] = v;
 				if( ii == GameController.CONFIG.analogX )
-					p.xAxis = v;
+					p.rawXAxis = v;
 				else if( ii == GameController.CONFIG.analogY )
-					p.yAxis = -v;
+					p.rawYAxis = -v;
 			}
 		}
 	}
@@ -538,7 +558,15 @@ class Pad {
 	#elseif js
 
 	static function syncPads() {
-		try js.Browser.navigator.getGamepads() catch( e : Dynamic ) {};
+		var freshPads : Array<js.html.Gamepad> = [];
+		try freshPads = js.Browser.navigator.getGamepads() catch( e : Dynamic ) {};
+		if ( freshPads.length > 0 ) {
+			for ( i in 0...freshPads.length ) {
+				if ( pads[i] != null ) {
+					pads[i].d = freshPads[i];
+				}
+			}
+		}
 		for( p in pads ) {
 			for( i in 0...p.d.buttons.length ) {
 				p.prevButtons[i] = p.buttons[i];
@@ -551,8 +579,8 @@ class Pad {
 				p.values[(i << 1) + p.d.buttons.length] = x;
 				p.values[(i << 1) + p.d.buttons.length + 1] = -y;
 				if( i == 0 ) {
-					p.xAxis = x;
-					p.yAxis = y;
+					p.rawXAxis = x;
+					p.rawYAxis = y;
 				}
 			}
 		}

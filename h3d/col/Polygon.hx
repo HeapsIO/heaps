@@ -1,5 +1,6 @@
 package h3d.col;
 
+@:allow(h3d.col.Polygon)
 class TriPlane implements Collider {
 
 	public var next : TriPlane = null;
@@ -99,7 +100,7 @@ class TriPlane implements Collider {
 		return nx * p.x + ny * p.y + nz * p.z - d >= 0;
 	}
 
-	public function inFrustum( f : Frustum ) {
+	public function inFrustum( f : Frustum, ?m : h3d.Matrix ) {
 		throw "Not implemented";
 		return false;
 	}
@@ -212,6 +213,19 @@ class Polygon implements Collider {
 		return ret;
 	}
 
+	public function getBounds(?bnds: h3d.col.Bounds) : h3d.col.Bounds {
+		if(bnds == null) bnds = new h3d.col.Bounds();
+		bnds.empty();
+		var t = triPlanes;
+		while( t != null ) {
+			bnds.addPos(t.p0x, t.p0y, t.p0z);
+			bnds.addPos(t.d1x + t.p0x, t.d1y + t.p0y, t.d1z + t.p0z);
+			bnds.addPos(t.d2x + t.p0x, t.d2y + t.p0y, t.d2z + t.p0z);
+			t = t.next;
+		}
+		return bnds;
+	}
+
 	public function contains( p : Point ) {
 		if( !isConvex() )
 			throw "Not implemented for concave polygon";
@@ -238,7 +252,7 @@ class Polygon implements Collider {
 		return best;
 	}
 
-	public function inFrustum( f : Frustum ) {
+	public function inFrustum( f : Frustum, ?m : h3d.Matrix ) {
 		throw "Not implemented";
 		return false;
 	}

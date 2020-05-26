@@ -1,5 +1,7 @@
 package h2d;
 
+private typedef RenderZoneStack = { hasRZ:Bool, x:Float, y:Float, w:Float, h:Float };
+
 class RenderContext extends h3d.impl.RenderContext {
 
 	static inline var BUFFERING = false;
@@ -30,6 +32,8 @@ class RenderContext extends h3d.impl.RenderContext {
 	var stride : Int;
 	var targetsStack : Array<{ t : h3d.mat.Texture, x : Int, y : Int, w : Int, h : Int, hasRZ : Bool, rzX:Float, rzY:Float, rzW:Float, rzH:Float }>;
 	var targetsStackIndex : Int;
+	var renderZoneStack:Array<RenderZoneStack> = [];
+	var renderZoneIndex:Int = 0;
 	var hasUVPos : Bool;
 	var filterStack : Array<h2d.Object>;
 	var inFilter : Object;
@@ -68,8 +72,8 @@ class RenderContext extends h3d.impl.RenderContext {
 		filterStack = [];
 	}
 
-	public function dispose() {
-		textures.dispose();
+	override function dispose() {
+		super.dispose();
 		if( fixedBuffer != null ) fixedBuffer.dispose();
 	}
 
@@ -90,10 +94,11 @@ class RenderContext extends h3d.impl.RenderContext {
 		curWidth = scene.width;
 		curHeight = scene.height;
 		manager.globals.set("time", time);
+		manager.globals.set("global.time", time);
 		// todo : we might prefer to auto-detect this by running a test and capturing its output
 		baseShader.pixelAlign = #if flash true #else false #end;
 		baseShader.halfPixelInverse.set(0.5 / engine.width, 0.5 / engine.height);
-		baseShader.viewport.set( -scene.width * 0.5, -scene.height * 0.5, 2 / scene.width, -2 * baseFlipY / scene.height);
+		baseShader.viewport.set( -scene.width * 0.5 - scene.offsetX, -scene.height * 0.5 - scene.offsetY, 2 / scene.width * scene.ratioX, -2 * baseFlipY / scene.height * scene.ratioY);
 		baseShader.filterMatrixA.set(1, 0, 0);
 		baseShader.filterMatrixB.set(0, 1, 0);
 		baseShaderList.next = null;
@@ -179,7 +184,15 @@ class RenderContext extends h3d.impl.RenderContext {
 		curWidth = width;
 		curHeight = height;
 		currentBlend = null;
-		if( hasRenderZone ) clearRenderZone();
+		if( hasRenderZone ) clearRZ();
+	}
+
+	public function pushTargets( texs : Array<h3d.mat.Texture> ) {
+		pushTarget(texs[0]);
+		if( texs.length > 1 ) {
+			engine.popTarget();
+			engine.pushTargets(texs);
+		}
 	}
 
 	public function popTarget( restore = true ) {
@@ -190,31 +203,78 @@ class RenderContext extends h3d.impl.RenderContext {
 
 		if( restore ) {
 			var tinf = targetsStack[targetsStackIndex - 1];
-			var t = tinf == null ? null : tinf.t;
-			var startX = tinf == null ? 0 : tinf.x;
-			var startY = tinf == null ? 0 : tinf.y;
-			var width = tinf == null ? scene.width : tinf.w;
-			var height = tinf == null ? scene.height : tinf.h;
+			var t : h3d.mat.Texture;
+			var startX : Int, startY : Int, width : Int, height : Int;
+			var ratioX : Float, ratioY : Float, offsetX : Float, offsetY : Float;
+			if ( tinf == null ) {
+				t = null;
+				startX = 0;
+				startY = 0;
+				width = scene.width;
+				height = scene.height;
+				ratioX = scene.ratioX;
+				ratioY = scene.ratioY;
+				offsetX = scene.offsetX;
+				offsetY = scene.offsetY;
+			} else {
+				t = tinf.t;
+				startX = tinf.x;
+				startY = tinf.y;
+				width = tinf.w;
+				height = tinf.h;
+				ratioX = 1;
+				ratioY = 1;
+				offsetX = 0;
+				offsetY = 0;
+			}
 			initShaders(baseShaderList);
 			baseShader.halfPixelInverse.set(0.5 / (t == null ? engine.width : t.width), 0.5 / (t == null ? engine.height : t.height));
-			baseShader.viewport.set( -width * 0.5 - startX, -height * 0.5 - startY, 2 / width, -2 * (t == null ? baseFlipY : targetFlipY) / height);
+			baseShader.viewport.set( -width * 0.5 - startX - offsetX, -height * 0.5 - startY - offsetY, 2 / width * ratioX, -2 * (t == null ? baseFlipY : targetFlipY) / height * ratioY);
 			curX = startX;
 			curY = startY;
 			curWidth = width;
 			curHeight = height;
 		}
 
-		if( pinf.hasRZ ) setRenderZone(pinf.rzX, pinf.rzY, pinf.rzW, pinf.rzH);
+		if( pinf.hasRZ ) setRZ(pinf.rzX, pinf.rzY, pinf.rzW, pinf.rzH);
 	}
 
-	public function setRenderZone( x : Float, y : Float, w : Float, h : Float ) {
+	public function pushRenderZone( x : Float, y : Float, w : Float, h : Float ) {
+		var inf = renderZoneStack[renderZoneIndex++];
+		if ( inf == null ) {
+			inf = { hasRZ: hasRenderZone, x: renderX, y: renderY, w: renderW, h: renderH };
+			renderZoneStack[renderZoneIndex - 1] = inf;
+		} else if ( hasRenderZone ) {
+			inf.hasRZ = true;
+			inf.x = renderX;
+			inf.y = renderY;
+			inf.w = renderW;
+			inf.h = renderH;
+		} else {
+			inf.hasRZ = false;
+		}
+
+		setRZ(x, y, w, h);
+	}
+
+	public function popRenderZone() {
+		if (renderZoneIndex == 0) throw "Too many popRenderZone()";
+		var inf = renderZoneStack[--renderZoneIndex];
+		if (inf.hasRZ) {
+			setRZ(inf.x, inf.y, inf.w, inf.h);
+		} else {
+			clearRZ();
+		}
+	}
+
+	function setRZ( x : Float, y : Float, w : Float, h : Float ) {
 		hasRenderZone = true;
 		renderX = x;
 		renderY = y;
 		renderW = w;
 		renderH = h;
-		var scaleX = engine.width / scene.width;
-		var scaleY = engine.height / scene.height;
+		var scaleX = engine.width * scene.ratioX / scene.width;
+		var scaleY = engine.height * scene.ratioY / scene.height;
 		if( inFilter != null ) {
 			var fa = baseShader.filterMatrixA;
 			var fb = baseShader.filterMatrixB;
@@ -228,12 +288,22 @@ class RenderContext extends h3d.impl.RenderContext {
 			w = rx2 - rx1;
 			h = ry2 - ry1;
 		}
-		engine.setRenderZone(Std.int((x - curX) * scaleX + 1e-10), Std.int((y - curY) * scaleY + 1e-10), Std.int(w * scaleX + 1e-10), Std.int(h * scaleY + 1e-10));
+		engine.setRenderZone(Std.int((x - curX + scene.viewportX) * scaleX + 1e-10), Std.int((y - curY + scene.viewportY) * scaleY + 1e-10), Std.int(w * scaleX + 1e-10), Std.int(h * scaleY + 1e-10));
 	}
-
-	public inline function clearRenderZone() {
+	
+	inline function clearRZ() {
 		hasRenderZone = false;
 		engine.setRenderZone();
+	}
+
+	@:deprecated("Use pushRenderZone")
+	public inline function setRenderZone( x : Float, y : Float, w : Float, h : Float ) {
+		pushRenderZone(x, y, w, h);
+	}
+
+	@:deprecated("Use popRenderZone")
+	public inline function clearRenderZone() {
+		popRenderZone();
 	}
 
 	function drawLayer( layer : Int ) {
@@ -292,12 +362,11 @@ class RenderContext extends h3d.impl.RenderContext {
 	}
 
 	inline function setupColor( obj : h2d.Drawable ) {
-		if( inFilter == obj )
-			baseShader.color.set(1,1,1,1);
+		if( inFilter == obj ) {
+			baseShader.color.set(obj.color.r,obj.color.g,obj.color.b,obj.color.a);
+		}
 		else if( inFilterBlend != null ) {
-			// alpha premult
-			var alpha = obj.color.a * globalAlpha;
-			baseShader.color.set(obj.color.r * alpha, obj.color.g * alpha, obj.color.b * alpha, alpha);
+			baseShader.color.set(globalAlpha,globalAlpha,globalAlpha,globalAlpha);
 		} else
 			baseShader.color.set(obj.color.r, obj.color.g, obj.color.b, obj.color.a * globalAlpha);
 	}

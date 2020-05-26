@@ -71,7 +71,16 @@ class System {
 
 		// present
 		var cur = h3d.Engine.getCurrent();
-		if( cur != null && cur.ready ) cur.driver.present();
+		if( cur != null && cur.ready ) {
+			#if hl_profile
+			hl.Profile.event(-1); // pause
+			#end
+			cur.driver.present();
+			#if hl_profile
+			hl.Profile.event(0); // next frame
+			hl.Profile.event(-2); // resume
+			#end
+		}
 		return true;
 	}
 
@@ -87,6 +96,7 @@ class System {
 		var height = 600;
 		var size = haxe.macro.Compiler.getDefine("windowSize");
 		var title = haxe.macro.Compiler.getDefine("windowTitle");
+		var fixed = haxe.macro.Compiler.getDefine("windowFixed") == "1";
 		if( title == null )
 			title = "";
 		if( size != null ) {
@@ -98,10 +108,10 @@ class System {
 		#if hlsdl
 			sdl.Sdl.init();
 			@:privateAccess Window.initChars();
-			@:privateAccess Window.inst = new Window(title, width, height);
+			@:privateAccess Window.inst = new Window(title, width, height, fixed);
 			init();
 		#elseif hldx
-			@:privateAccess Window.inst = new Window(title, width, height);
+			@:privateAccess Window.inst = new Window(title, width, height, fixed);
 			init();
 		#else
 			@:privateAccess Window.inst = new Window(title, width, height);
@@ -148,7 +158,11 @@ class System {
 		#if usesys
 		haxe.System.reportError(err + stack);
 		#else
-		Sys.println(err + stack);
+		Sys.stderr().writeString(err + stack + "\n");
+
+		if ( Sys.systemName() != 'Windows' )
+			return;
+
 		if( dismissErrors )
 			return;
 
@@ -206,6 +220,9 @@ class System {
 					var pixels = frame.getPixels();
 					pixels.convert(BGRA);
 					#if hlsdl
+					if (c.offsetX < 0 || c.offsetX >= pixels.width || c.offsetY < 0 || c.offsetY >= pixels.height) {
+						throw "SDL2 does not allow creation of cursors with offset outside of cursor image bounds.";
+					}
 					var surf = sdl.Surface.fromBGRA(pixels.bytes, pixels.width, pixels.height);
 					c.alloc.push(sdl.Cursor.create(surf, c.offsetX, c.offsetY));
 					surf.free();
@@ -282,15 +299,38 @@ class System {
 		}
 	}
 
-	@:hlNative("std","sys_locale") static function getLocale() : hl.Bytes { return null; }
+	public static function openURL( url : String ) : Void {
+		switch Sys.systemName() {
+			case 'Windows': Sys.command('start ${url}');
+			case 'Linux': Sys.command('xdg-open ${url}');
+			case 'Mac': Sys.command('open ${url}');
+			case 'Android' | 'iOS' | 'tvOS': 
+			default:
+		}
+	}
+
+	@:hlNative("std","sys_locale") static function sys_locale() : hl.Bytes { return null; }
 
 	static var _lang : String;
 	static function get_lang() : String {
 		if( _lang == null ) {
-			var str = @:privateAccess String.fromUCS2(getLocale());
-			_lang = ~/[.@_-]/g.split(str)[0];
+			var str = getLocale();
+			_lang = str.split("-").shift();
 		}
 		return _lang;
+	}
+
+	/**
+	 * Returns the locale including region code ()
+	**/
+	static var _loc : String;
+	public static function getLocale() {
+		if( _loc == null ) {
+			var str = @:privateAccess Sys.makePath(sys_locale());
+			if( str == null ) str = "en";
+			_loc = ~/[.@_]/g.split(str)[0];
+		}
+		return _loc;
 	}
 
 	// getters
@@ -353,7 +393,7 @@ class System {
 		haxe.MainLoop.add(timeoutTick, -1) #if (haxe_ver >= 4) .isBlocking = false #end;
 		#end
 		#if (hlsdl || hldx)
-		haxe.MainLoop.add(updateCursor, -1);
+		haxe.MainLoop.add(updateCursor, -1) #if (haxe_ver >= 4) .isBlocking = false #end;
 		#end
 	}
 

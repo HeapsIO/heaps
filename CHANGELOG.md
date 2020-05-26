@@ -1,4 +1,52 @@
-## 1.6.0 (March XX, 2019)
+## 1.8.0 (April 7, 2020)
+
+2D:
+* DomKit 0.3 support, more domkit properties
+* added DomKit inspector (h2d.domkit.Style.allowInspect)
+* fixed Graphics.drawRect with lines (#776)
+* delayed Text rebuild and HtmlText refactor (@Yanrishatum)
+* added HtmlText.defaultFormatText
+* Flow : allow absolute+align for components
+* fixed interactive handling wrt not uniform scaling + rotation
+
+3D:
+* allow inheritance of culling collider
+* added h3d.prim.Disc (@tong)
+* fixes for single channel textures
+
+Other:
+* JS : new WebAudio Driver (@Yanrishatum)
+* added _FragCoord in HxSL
+* alloc position now capture full stack (-D track-alloc)
+* added hxd.Pad.axisDeadZone
+* ... and many many other fixes
+
+## 1.7.0 (September 9, 2019)
+
+2D:
+* DomKit v2 support (direct h2d.Object.dom property with -lib domkit)
+* added h2d.Scene.scaleMode (Pavel Alexandrov)
+* added hxd.App.setCurrent to switch current App
+* fixed JS fullscreen support
+
+3D:
+* HMDv3 - more compact animation data
+* reference counting on h3d.prim.Primitive (Pavel Alexandrov)
+* PCF shadows
+* completed support for DXT textures
+* changed pass sorting API
+
+Other:
+* compatibility with Haxe 4.0-RC4+
+* fixed GL with unused inputs (was causing some issue with recent Chrome)
+* faster serializer for hxsl data
+* added HXSL texelFetch (Pavel Alexandrov)
+* improved shader cache file, support mesh batch
+* move prefabs handling from Heaps to Hide
+* added resource baking capabilities
+* ... and many many other fixes
+
+## 1.6.0 (March 9, 2019)
 
 2D:
 * added DomKit support

@@ -27,6 +27,7 @@ class DirLight extends Light {
 		pbr.lightDir.load(absPos.front());
 		pbr.lightDir.scale3(-1);
 		pbr.lightDir.normalize();
+		pbr.occlusionFactor = occlusionFactor;
 		super.emit(ctx);
 	}
 

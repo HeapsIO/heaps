@@ -5,21 +5,21 @@ class TextureArray extends Texture {
 
 	var layers : Int;
 
-	public function new(w, h, layers, ?flags : Array<TextureFlags>, ?format : TextureFormat, ?allocPos : h3d.impl.AllocPos ) {
+	public function new(w, h, layers, ?flags : Array<TextureFlags>, ?format : TextureFormat ) {
 		this.layers = layers;
 		if( flags == null ) flags = [];
 		flags.push(IsArray);
-		super(w,h,flags,format,allocPos);
+		super(w,h,flags,format);
 	}
 
 	override function get_layerCount() {
 		return layers;
 	}
 
-	override function clone( ?allocPos : h3d.impl.AllocPos ) {
+	override function clone() {
 		var old = lastFrame;
 		preventAutoDispose();
-		var t = new TextureArray(width, height, layers, null, format, allocPos);
+		var t = new TextureArray(width, height, layers, null, format);
 		h3d.pass.Copy.run(this, t);
 		lastFrame = old;
 		return t;

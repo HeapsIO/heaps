@@ -23,6 +23,11 @@ class DirShadowMap extends Shadows {
 		return mode = m;
 	}
 
+	override function set_enabled(b:Bool) {
+		dshader.enable = b && mode != None;
+		return enabled = b;
+	}
+
 	override function set_size(s) {
 		if( border != null && size != s ) {
 			border.dispose();
@@ -34,6 +39,7 @@ class DirShadowMap extends Shadows {
 	override function dispose() {
 		super.dispose();
 		if( customDepth && depth != null ) depth.dispose();
+		border.dispose();
 	}
 
 	public override function getShadowTex() {
@@ -115,9 +121,16 @@ class DirShadowMap extends Shadows {
 		dshader.shadowBias = bias;
 		dshader.shadowPower = power;
 		dshader.shadowProj = getShadowProj();
+
+		//ESM
+		dshader.USE_ESM = samplingKind == ESM;
+		dshader.shadowPower = power;
+
+		// PCF
+		dshader.USE_PCF = samplingKind == PCF;
 		dshader.shadowRes.set(texture.width,texture.height);
 		dshader.pcfScale = pcfScale;
-		dshader.PCF = pcf;
+		dshader.pcfQuality = pcfQuality;
 	}
 
 	override function saveStaticData() {
@@ -171,15 +184,19 @@ class DirShadowMap extends Shadows {
 		staticTexture = new h3d.mat.Texture(size, size, [Target], format);
 		staticTexture.uploadPixels(pixels);
 		staticTexture.name = "staticTexture";
-		staticTexture.realloc = null;
 		staticTexture.preventAutoDispose();
 		syncShader(staticTexture);
 		return true;
 	}
 
-	override function draw( passes ) {
+	override function draw( passes, ?sort ) {
+		if( !enabled )
+			return;
+
 		if( !filterPasses(passes) )
 			return;
+
+		cullPasses(passes,function(col) return col.inFrustum(lightCamera.frustum));
 
 		var texture = ctx.textures.allocTarget("dirShadowMap", size, size, false, format);
 		if( customDepth && (depth == null || depth.width != size || depth.height != size || depth.isDisposed()) ) {
@@ -207,7 +224,7 @@ class DirShadowMap extends Shadows {
 
 		ctx.engine.pushTarget(texture);
 		ctx.engine.clear(0xFFFFFF, 1);
-		super.draw(passes);
+		super.draw(passes, sort);
 		if( border != null ) border.render();
 		ctx.engine.popTarget();
 
@@ -232,10 +249,12 @@ class DirShadowMap extends Shadows {
 			return;
 		draw(passes);
 		var texture = dshader.shadowMap;
-		if( staticTexture != null ) staticTexture.dispose();
+		var old = staticTexture;
 		staticTexture = texture.clone();
+		staticTexture.name = "StaticDirShadowMap";
+		staticTexture.preventAutoDispose();
 		dshader.shadowMap = staticTexture;
+		if( old != null )
+			old.dispose();
 	}
-
-
 }

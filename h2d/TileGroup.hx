@@ -1,6 +1,6 @@
 package h2d;
 
-private class TileLayerContent extends h3d.prim.Primitive {
+class TileLayerContent extends h3d.prim.Primitive {
 
 	var tmp : hxd.FloatBuffer;
 	public var xMin : Float;

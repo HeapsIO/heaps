@@ -10,8 +10,8 @@ class Grid extends Polygon {
 	public function new( width : Int, height : Int, cellWidth = 1., cellHeight = 1. ) {
 		this.width = width;
 		this.height = height;
-		this.cellWidth = width;
-		this.cellHeight = height;
+		this.cellWidth = cellWidth;
+		this.cellHeight = cellHeight;
 
 		var idx = new hxd.IndexBuffer();
 		for( y in 0...height )

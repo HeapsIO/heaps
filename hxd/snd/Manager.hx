@@ -42,6 +42,7 @@ class Buffer {
 	public var lastStop : Float;
 
 	public var start      : Int;
+	public var end        : Int = 0;
 	public var samples    : Int;
 	public var sampleRate : Int;
 
@@ -63,6 +64,7 @@ class Manager {
 	public static var BUFFER_QUEUE_LENGTH        = 2;
 	public static var MAX_SOURCES                = 16;
 	public static var SOUND_BUFFER_CACHE_SIZE    = 256;
+	public static var VIRTUAL_VOLUME_THRESHOLD   = 1e-5;
 
 	/**
 		Allows to decode big streaming buffers over X split frames. 0 to disable
@@ -75,6 +77,7 @@ class Manager {
 	public var masterSoundGroup   (default, null) : SoundGroup;
 	public var masterChannelGroup (default, null) : ChannelGroup;
 	public var listener : Listener;
+	public var timeOffset : Float = 0.;
 
 	var updateEvent   : MainEvent;
 
@@ -88,14 +91,19 @@ class Manager {
 
 	var soundBufferCount  : Int;
 	var soundBufferMap    : Map<String, Buffer>;
+	var soundBufferKeys	  : Array<String>;
 	var freeStreamBuffers : Array<Buffer>;
 	var effectGC          : Array<Effect>;
 	var hasMasterVolume   : Bool;
+
+	public var suspended : Bool = false;
 
 	private function new() {
 		try {
 			#if usesys
 			driver = new haxe.AudioTypes.SoundDriver();
+			#elseif (js && !useal)
+			driver = new hxd.snd.webaudio.Driver();
 			#else
 			driver = new hxd.snd.openal.Driver();
 			#end
@@ -109,6 +117,7 @@ class Manager {
 		masterChannelGroup = new ChannelGroup("master");
 		listener           = new Listener();
 		soundBufferMap     = new Map();
+		soundBufferKeys	   = [];
 		freeStreamBuffers  = [];
 		effectGC           = [];
 		soundBufferCount   = 0;
@@ -149,6 +158,24 @@ class Manager {
 			channels.stop();
 	}
 
+	public function stopAllNotLooping() {
+		var c = channels;
+		while( c != null ) {
+			var n = c.next;
+			if( !c.loop ) c.stop();
+			c = n;
+		}
+	}
+
+	public function stopByName( name : String ) {
+		var c = channels;
+		while( c != null ) {
+			var n = c.next;
+			if( c.soundGroup != null && c.soundGroup.name == name ) c.stop();
+			c = n;
+		}
+	}
+
 	/**
 		Returns iterator with all active instances of a Sound at the call time.
 	**/
@@ -164,10 +191,15 @@ class Manager {
 	}
 
 	public function cleanCache() {
-		for (k in soundBufferMap.keys()) {
+		var i = 0;
+		while (i < soundBufferKeys.length) {
+			var k = soundBufferKeys[i];
 			var b = soundBufferMap.get(k);
+			i++;
 			if (b.refs > 0) continue;
 			soundBufferMap.remove(k);
+			soundBufferKeys.remove(k);
+			i--;
 			b.dispose();
 			--soundBufferCount;
 		}
@@ -186,6 +218,7 @@ class Manager {
 
 		sources           = null;
 		soundBufferMap    = null;
+		soundBufferKeys   = null;
 		freeStreamBuffers = null;
 		effectGC          = null;
 
@@ -248,6 +281,18 @@ class Manager {
 	}
 
 	public function update() {
+		if( timeOffset != 0 ) {
+			var c = channels;
+			while( c != null ) {
+				c.lastStamp += timeOffset;
+				if( c.currentFade != null ) c.currentFade.start += timeOffset;
+				c = c.next;
+			}
+			for( s in sources )
+				for( b in s.buffers )
+					b.lastStop += timeOffset;
+			timeOffset = 0;
+		}
 		now = haxe.Timer.stamp();
 
 		if (driver == null) {
@@ -274,6 +319,7 @@ class Manager {
 			var count = driver.getProcessedBuffers(s.handle);
 			for (i in 0...count) {
 				var b = unqueueBuffer(s);
+				if( b == null ) continue;
 				lastBuffer = b;
 				if (b.isEnd) {
 					c.sound           = b.sound;
@@ -337,15 +383,15 @@ class Manager {
 		}
 
 		// --------------------------------------------------------------------
-		// calc audible gain & virtualize inaudible channels
+		// calc audible volume & virtualize inaudible channels
 		// --------------------------------------------------------------------
 
 		var c = channels;
 		while (c != null) {
-			c.calcAudibleGain(now);
+			c.calcAudibleVolume(now);
 			if( c.isLoading && !c.sound.getData().isLoading() )
 				c.isLoading = false;
-			c.isVirtual = c.pause || c.mute || c.channelGroup.mute || c.audibleGain < 1e-5 || c.isLoading;
+			c.isVirtual = suspended || c.pause || c.mute || c.channelGroup.mute || (c.allowVirtual && c.audibleVolume < VIRTUAL_VOLUME_THRESHOLD) || c.isLoading;
 			c = c.next;
 		}
 
@@ -359,19 +405,19 @@ class Manager {
 		// virtualize sounds that puts the put the audible count over the maximum number of sources
 		// --------------------------------------------------------------------
 
-		var sgroupRefs = new Map<SoundGroup, Int>();
 		var audibleCount = 0;
 		var c = channels;
 		while (c != null && !c.isVirtual) {
 			if (++audibleCount > sources.length) c.isVirtual = true;
 			else if (c.soundGroup.maxAudible >= 0) {
-				var sgRefs = sgroupRefs.get(c.soundGroup);
-				if (sgRefs == null) sgRefs = 0;
-				if (++sgRefs > c.soundGroup.maxAudible) {
+				if(c.soundGroup.lastUpdate != now) {
+					c.soundGroup.lastUpdate = now;
+					c.soundGroup.numAudible = 0;
+				}
+				if (++c.soundGroup.numAudible > c.soundGroup.maxAudible) {
 					c.isVirtual = true;
 					--audibleCount;
 				}
-				sgroupRefs.set(c.soundGroup, sgRefs);
 			}
 			c = c.next;
 		}
@@ -420,13 +466,14 @@ class Manager {
 		// --------------------------------------------------------------------
 
 		var usedEffects : Effect = null;
-		var gain = hasMasterVolume ? 1. : masterVolume;
+		var volume = hasMasterVolume ? 1. : masterVolume;
 		for (s in sources) {
 			var c = s.channel;
 			if (c == null) continue;
 
-			var v = c.currentVolume * gain;
+			var v = c.currentVolume * volume;
 			if (s.volume != v) {
+				if (v < 0) v = 0;
 				s.volume = v;
 				driver.setSourceVolume(s.handle, v);
 				#if hlopenal
@@ -500,13 +547,17 @@ class Manager {
 		// sound buffer cache GC
 		// --------------------------------------------------------------------
 
-		// TODO : avoid alloc from map.keys()
 		if (soundBufferCount >= SOUND_BUFFER_CACHE_SIZE) {
 			var now = haxe.Timer.stamp();
-			for (k in soundBufferMap.keys()) {
+			var i = 0;
+			while (i < soundBufferKeys.length) {
+				var k = soundBufferKeys[i];
 				var b = soundBufferMap.get(k);
+				i++;
 				if (b.refs > 0 || b.lastStop + 60.0 > now) continue;
 				soundBufferMap.remove(k);
+				soundBufferKeys.remove(k);
+				i--;
 				b.dispose();
 				--soundBufferCount;
 			}
@@ -566,6 +617,7 @@ class Manager {
 
 	function unqueueBuffer(s : Source) {
 		var b = s.buffers.shift();
+		if( b == null ) return null; // some drivers (xbo) might wrongly report ended buffer after source stop, let's ignore
 		driver.unqueueBuffer(s.handle, b.handle);
 		if (b.isStream) freeStreamBuffers.unshift(b);
 		else if (--b.refs == 0) b.lastStop = haxe.Timer.stamp();
@@ -620,8 +672,9 @@ class Manager {
 	var targetChannels : Int;
 
 	function checkTargetFormat(dat : hxd.snd.Data, forceMono = false) {
+
 		targetRate = dat.samplingRate;
-		#if (!usesys && !hlopenal)
+		#if (!usesys && !hlopenal && (!js || useal))
 		// perform resampling to nativechannel frequency
 		targetRate = hxd.snd.openal.Emulator.NATIVE_FREQ;
 		#end
@@ -650,8 +703,9 @@ class Manager {
 			b.isStream = false;
 			b.isEnd = true;
 			b.sound = snd;
-			soundBufferMap.set(key, b);
 			data.load(function() fillSoundBuffer(b, data, mono));
+			soundBufferMap.set(key, b);
+			soundBufferKeys.push(key);
 			++soundBufferCount;
 		}
 
@@ -704,7 +758,7 @@ class Manager {
 		}
 
 		if (!checkTargetFormat(data, grp.mono)) {
-			size = samples * targetChannels * Data.formatBytes(targetFormat);
+			size = Math.ceil(samples * (targetRate / data.samplingRate)) * targetChannels * Data.formatBytes(targetFormat);
 			var resampleBytes = getResampleBytes(size);
 			data.resampleBuffer(resampleBytes, 0, bytes, 0, targetRate, targetFormat, targetChannels, samples);
 			bytes = resampleBytes;
@@ -725,8 +779,8 @@ class Manager {
 		if (a.priority != b.priority)
 			return a.priority < b.priority ? 1 : -1;
 
-		if (a.audibleGain != b.audibleGain)
-			return a.audibleGain < b.audibleGain ? 1 : -1;
+		if (a.audibleVolume != b.audibleVolume)
+			return a.audibleVolume < b.audibleVolume ? 1 : -1;
 
 		return a.id < b.id ? 1 : -1;
 	}

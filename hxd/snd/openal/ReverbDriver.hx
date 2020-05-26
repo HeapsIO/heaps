@@ -17,7 +17,7 @@ class ReverbDriver extends hxd.snd.Driver.EffectDriver<Reverb> {
 		this.driver = driver;
 		this.dryFilter = new LowPass();
 	}
-	
+
 	override function acquire() : Void {
 		// create effect
 		var bytes = driver.getTmpBytes(4);
@@ -70,7 +70,7 @@ class ReverbDriver extends hxd.snd.Driver.EffectDriver<Reverb> {
 		EFX.auxiliaryEffectSloti(slot, EFX.EFFECTSLOT_EFFECT, inst.toInt());
 		EFX.auxiliaryEffectSlotf(slot, EFX.EFFECTSLOT_GAIN, e.wetDryMix / 100.0);
 
-		@:privateAccess 
+		@:privateAccess
 		e.retainTime = e.decayTime + e.reflectionsDelay + e.reverbDelay;
 	}
 
@@ -80,7 +80,7 @@ class ReverbDriver extends hxd.snd.Driver.EffectDriver<Reverb> {
 	}
 
 	override function apply(e : Reverb, s : SourceHandle) : Void {
-		var e = Std.instance(e, hxd.snd.effect.Reverb);
+		var e = hxd.impl.Api.downcast(e, hxd.snd.effect.Reverb);
 		var send = s.getAuxiliarySend(e);
 		AL.source3i(s.inst, EFX.AUXILIARY_SEND_FILTER, slot.toInt(), send, EFX.FILTER_NULL);
 	}

@@ -6,11 +6,7 @@ class Default extends Base {
 
 	var manager : ShaderManager;
 	var globals(get, never) : hxsl.Globals;
-	var shaderCount : Int = 1;
-	var textureCount : Int = 1;
-	var shaderIdMap : Array<Int>;
-	var textureIdMap : Array<Int>;
-	var sortPasses = true;
+	var defaultSort = new SortByMaterial().sort;
 
 	inline function get_globals() return manager.globals;
 
@@ -31,8 +27,6 @@ class Default extends Base {
 	public function new(name) {
 		super(name);
 		manager = new ShaderManager(getOutputs());
-		shaderIdMap = [];
-		textureIdMap = [];
 		initGlobals();
 	}
 
@@ -92,27 +86,17 @@ class Default extends Base {
 	}
 
 	@:access(h3d.scene)
-	override function draw( passes : h3d.pass.PassList ) {
+	override function draw( passes : h3d.pass.PassList, ?sort : h3d.pass.PassList -> Void ) {
 		if( passes.isEmpty() )
 			return;
 		for( g in ctx.sharedGlobals )
 			globals.fastSet(g.gid, g.value);
 		setGlobals();
 		setupShaders(passes);
-		if( sortPasses ) {
-			var shaderStart = shaderCount, textureStart = textureCount;
-			for( p in passes ) {
-				if( shaderIdMap[p.shader.id] < shaderStart #if js || shaderIdMap[p.shader.id] == null #end )
-					shaderIdMap[p.shader.id] = shaderCount++;
-				if( textureIdMap[p.texture] < textureStart #if js || textureIdMap[p.shader.id] == null #end )
-					textureIdMap[p.texture] = textureCount++;
-			}
-			passes.sort(function(o1, o2) {
-				var d = shaderIdMap[o1.shader.id] - shaderIdMap[o2.shader.id];
-				if( d != 0 ) return d;
-				return textureIdMap[o1.texture] - textureIdMap[o2.texture];
-			});
-		}
+		if( sort == null )
+			defaultSort(passes);
+		else
+			sort(passes);
 		ctx.currentManager = manager;
 		var buf = ctx.shaderBuffers, prevShader = null;
 		for( p in passes ) {

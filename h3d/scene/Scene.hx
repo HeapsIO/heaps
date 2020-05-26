@@ -105,8 +105,8 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 	@:dox(hide) @:noCompletion
 	public function isInteractiveVisible( i : hxd.SceneEvents.Interactive ) {
 		var o : Object = cast i;
-		while( o != null ) {
-			if( !o.visible ) return false;
+		while( o != this ) {
+			if( o == null || !o.visible ) return false;
 			o = o.parent;
 		}
 		return true;
@@ -219,8 +219,9 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 				continue;
 			}
 
-			if( !event.propagate )
-				hitInteractives = [];
+			if( !event.propagate ) {
+				while( hitInteractives.length > 0 ) hitInteractives.pop();
+			}
 
 			return i;
 		}
@@ -245,19 +246,25 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 			hardwarePass.dispose();
 			hardwarePass = null;
 		}
-		renderer.dispose();
-		renderer = new Renderer();
+		ctx.dispose();
+		if(renderer != null) {
+			renderer.dispose();
+			renderer = new Renderer();
+		}
 	}
 
 	@:allow(h3d)
 	function addEventTarget(i:Interactive) {
+		if( interactives.indexOf(i) >= 0 ) throw "assert";
 		interactives.push(i);
 	}
 
 	@:allow(h3d)
 	function removeEventTarget(i:Interactive) {
-		if( interactives.remove(i) && events != null )
-			@:privateAccess events.onRemove(i);
+		if( interactives.remove(i) ) {
+			if( events != null ) @:privateAccess events.onRemove(i);
+			hitInteractives.remove(i);
+		}
 	}
 
 	/**

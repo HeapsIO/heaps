@@ -3,7 +3,6 @@ package hxd.res;
 enum Platform {
 	Flash;
 	HL;
-	Cpp;
 	JS;
 	Unknown;
 }
@@ -26,7 +25,9 @@ class Config {
 		"tmx" => "hxd.res.TiledMap",
 		"atlas" => "hxd.res.Atlas",
 		"grd" => "hxd.res.Gradients",
+		#if hide
 		"prefab,fx,l3d" => "hxd.res.Prefab"
+		#end
 	];
 
 	/**
@@ -63,7 +64,6 @@ class Config {
 		var pf =
 			if( defined("flash") ) Flash else
 			if( defined("js") ) JS else
-			if( defined("cpp") ) Cpp else
 			if( defined("hl") ) HL else
 			Unknown;
 		switch( pf ) {

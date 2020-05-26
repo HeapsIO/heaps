@@ -1,12 +1,29 @@
 package hxsl;
 
+@:enum private abstract AccessKind(Int) {
+	var Dynamic = 0;
+	var Float = 1;
+	var Structure = 2;
+}
+
+private class Access {
+	public var kind : AccessKind;
+	public var index : Int;
+	public var fields : Array<String>;
+	public function new(kind,index,fields) {
+		this.kind = kind;
+		this.index = index;
+		this.fields = fields;
+	}
+}
+
 class DynamicShader extends Shader {
 
 	var values = new Array<Dynamic>();
-	var accesses = new Array<{ index : Int, fields : Array<String> }>();
+	var floats = new Array<Float>();
+	var accesses = new Array<Access>();
 	var varIndexes = new Map<Int,Int>();
 	var varNames = new Map<String,Int>();
-	var varIndex = 0;
 
 	public function new( s : SharedShader ) {
 		this.shader = s;
@@ -15,18 +32,19 @@ class DynamicShader extends Shader {
 			addVarIndex(v);
 	}
 
-	function addVarIndex(v:hxsl.Ast.TVar, ?access : { index : Int, fields : Array<String> }, ?defObj : Dynamic ) {
+	function addVarIndex(v:hxsl.Ast.TVar, ?access : Access, ?defObj : Dynamic ) {
 		if( v.kind != Param )
 			return;
-		var vid = values.length;
+		var isFloat = v.type == TFloat && access == null;
+		var vid = isFloat ? floats.length : values.length;
 		if( access != null )
-			access = { index : access.index, fields : access.fields.copy() };
+			access = new Access(Structure, access.index, access.fields.copy());
 		switch(v.type){
 		case TStruct(vl):
 			var vobj = {};
 			if( access == null ) {
 				values.push(vobj);
-				access = { index : vid, fields : [] };
+				access = new Access(Structure,vid,[]);
 				varNames.set(v.name, vid);
 			} else {
 				Reflect.setField(defObj, v.name, vobj);
@@ -54,40 +72,67 @@ class DynamicShader extends Shader {
 		default:
 		}
 		if( access == null ) {
-			varNames.set(v.name, vid);
-			values.push(value);
+			if( isFloat ) {
+				varNames.set(v.name, -vid-1);
+				floats.push(0);
+			} else {
+				varNames.set(v.name, vid);
+				values.push(value);
+			}
 		} else
 			Reflect.setField(defObj, v.name, value);
 
 		var vidx = accesses.length;
 		varIndexes.set(v.id, vidx);
-		accesses.push(access == null ? { index : vid, fields : null } : access);
+		accesses.push(access == null ? new Access(isFloat?Float:Dynamic,vid,null) : access);
 	}
 
 	override function getParamValue(index:Int) : Dynamic {
 		var a = accesses[index];
-		var v = values[a.index];
-		if( a.fields != null )
+		switch( a.kind ) {
+		case Dynamic:
+			return values[a.index];
+		case Float:
+			return floats[a.index];
+		case Structure:
+			var v : Dynamic = values[a.index];
 			for( f in a.fields )
 				v = Reflect.field(v, f);
-		return v;
+			return v;
+		}
 	}
 
 	override function getParamFloatValue(index:Int):Float {
-		return getParamValue(index);
+		var a = accesses[index];
+		if( a.kind != Float )
+			return getParamValue(index);
+		return floats[a.index];
 	}
 
 	public function setParamValue( p : hxsl.Ast.TVar, value : Dynamic ) {
 		var vidx = varIndexes.get(p.id);
 		var a = accesses[vidx];
-		if( a.fields == null )
+		switch( a.kind ) {
+		case Dynamic:
 			values[a.index] = value;
-		else {
+		case Float:
+			floats[a.index] = value;
+		case Structure:
 			var obj = values[a.index];
 			for( i in 0...a.fields.length - 1 )
 				obj = Reflect.field(obj, a.fields[i]);
 			Reflect.setField(obj, a.fields[a.fields.length - 1], value);
 		}
+	}
+
+	public function setParamFloatValue( p : hxsl.Ast.TVar, value : Float ) {
+		var vidx = varIndexes.get(p.id);
+		var a = accesses[vidx];
+		if( a.kind != Float ) {
+			setParamValue(p, value);
+			return;
+		}
+		floats[a.index] = value;
 	}
 
 	override function updateConstants( globals : Globals ) {
@@ -118,10 +163,12 @@ class DynamicShader extends Shader {
 
 
 	#if hscript
-	@:keep public function hscriptGet( field : String ) {
+	@:keep public function hscriptGet( field : String ) : Dynamic {
 		var vid = varNames.get(field);
 		if( vid == null )
 			return Reflect.getProperty(this, field);
+		if( vid < 0 )
+			return floats[-vid-1];
 		return values[vid];
 	}
 
@@ -131,7 +178,11 @@ class DynamicShader extends Shader {
 			Reflect.setProperty(this, field, value);
 			return value;
 		}
-		return values[vid] = value;
+		if( vid < 0 )
+			floats[-vid-1] = value;
+		else
+			values[vid] = value;
+		return value;
 	}
 	#end
 

@@ -7,41 +7,20 @@ import haxe.io.Bytes;
  */
 class ByteConversions{
 
-#if (flash || openfl)
+#if flash
 
-	public static function byteArrayToBytes( v: flash.utils.ByteArray ) : haxe.io.Bytes {
-		return
-		#if flash
-		Bytes.ofData( v );
-		#elseif (js&&openfl)
-		{
-			var b :Bytes = Bytes.alloc(v.length);
-			for ( i in 0...v.length )
-				b.set(i,v[i]);
-			b;
-		};
-		#elseif (openfl)
-		v;
-		#else
-		throw "unsupported on this platform";
-		#end
+	public static inline function byteArrayToBytes( v: flash.utils.ByteArray ) : haxe.io.Bytes {
+		return Bytes.ofData( v );
 	}
 
-	public static function bytesToByteArray( v: haxe.io.Bytes ) :  flash.utils.ByteArray {
-		#if flash
+	public static inline function bytesToByteArray( v: haxe.io.Bytes ) :  flash.utils.ByteArray {
 		return v.getData();
-		#elseif openfl
-		return flash.utils.ByteArray.fromBytes(v);
-		#else
-		throw "unsupported on this platform";
-		#end
 	}
+#elseif js
 
-	#if js
-	public static function arrayBufferToBytes( v : js.html.ArrayBuffer ) : haxe.io.Bytes{
-		return byteArrayToBytes(flash.utils.ByteArray.nmeOfBuffer(v));
+	public static inline function arrayBufferToBytes( v : hxd.impl.TypedArray.ArrayBuffer ) : haxe.io.Bytes{
+		return haxe.io.Bytes.ofData(v);
 	}
-	#end
 
 #end
 

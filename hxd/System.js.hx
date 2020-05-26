@@ -61,7 +61,7 @@ class System {
 	}
 
 	public static function setNativeCursor( c : Cursor ) : Void {
-		if( c.equals(currentNativeCursor) )
+		if( currentNativeCursor != null && c.equals(currentNativeCursor) )
 			return;
 		currentNativeCursor = c;
 		currentCustomCursor = null;
@@ -99,10 +99,19 @@ class System {
 	}
 
 	public static function getValue( s : SystemValue ) : Bool {
-		return false;
+		return switch( s ) {
+		case IsWindowed: true;
+		case IsTouch: platform==Android || platform==IOS;
+		case IsMobile: platform==Android || platform==IOS;
+		default: false;
+		}
 	}
 
 	public static function exit() : Void {
+	}
+
+	public static function openURL( url : String ) : Void {
+		js.Browser.window.open(url, '_blank');
 	}
 
 	static function updateCursor() : Void {
@@ -122,7 +131,15 @@ class System {
 	static function get_width() : Int return Math.round(js.Browser.document.body.clientWidth * js.Browser.window.devicePixelRatio);
 	static function get_height() : Int return Math.round(js.Browser.document.body.clientHeight  * js.Browser.window.devicePixelRatio);
 	static function get_lang() : String return "en";
-	static function get_platform() : Platform return PC;
+	static function get_platform() : Platform {
+		var ua = js.Browser.navigator.userAgent.toLowerCase();
+		if( ua.indexOf("android")>=0 )
+			return Android;
+		else if( ua.indexOf("ipad")>=0 || ua.indexOf("iphone")>=0 || ua.indexOf("ipod")>=0 )
+			return IOS;
+		else
+			return PC;
+	}
 	static function get_screenDPI() : Int return 72;
 	static function get_allowTimeout() return false;
 	static function set_allowTimeout(b) return false;

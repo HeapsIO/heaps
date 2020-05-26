@@ -7,20 +7,28 @@ enum RenderMode {
 	Mixed;
 }
 
+enum ShadowSamplingKind {
+		None;
+		PCF;
+		ESM;
+	}
+
 class Shadows extends Default {
 
 	var lightCamera : h3d.Camera;
 	var format : hxd.PixelFormat;
 	var staticTexture : h3d.mat.Texture;
 	var light : h3d.scene.Light;
+	public var enabled(default,set) : Bool = true;
 	public var mode(default,set) : RenderMode = None;
 	public var size(default,set) : Int = 1024;
 	public var shader(default,null) : hxsl.Shader;
 	public var blur : Blur;
 
+	public var samplingKind : ShadowSamplingKind = None;
 	public var power = 30.0;
 	public var bias = 0.01;
-	public var pcf = 0;
+	public var pcfQuality = 1;
 	public var pcfScale = 1.0;
 
 	public function new(light) {
@@ -36,6 +44,10 @@ class Shadows extends Default {
 	function set_mode(m:RenderMode) {
 		if( m != None ) throw "Shadow mode "+m+" not supported for "+light;
 		return mode = m;
+	}
+
+	function set_enabled(b:Bool) {
+		return enabled = b;
 	}
 
 	function set_size(s) {
@@ -96,36 +108,37 @@ class Shadows extends Default {
 	}
 
 	function filterPasses( passes : h3d.pass.PassList ) {
-		if( !ctx.computingStatic ){
+		if( !ctx.computingStatic ) {
 			switch( mode ) {
-			case None:
-				return false;
-			case Dynamic:
-				// nothing
-			case Mixed:
-				if( staticTexture == null || staticTexture.isDisposed() )
-					staticTexture = createDefaultShadowMap();
-			case Static:
-				if( staticTexture == null || staticTexture.isDisposed() )
-					staticTexture = createDefaultShadowMap();
-				syncShader(staticTexture);
-				return false;
+				case None:
+					return false;
+				case Dynamic:
+					return true;
+				case Mixed:
+					if( staticTexture == null || staticTexture.isDisposed() )
+						staticTexture = createDefaultShadowMap();
+					return true;
+				case Static:
+					if( staticTexture == null || staticTexture.isDisposed() )
+						staticTexture = createDefaultShadowMap();
+					syncShader(staticTexture);
+					return false;
 			}
 		}
-		switch( mode ) {
-		case None:
-			passes.clear();
-		case Dynamic:
-			if( ctx.computingStatic ) passes.clear();
-		case Mixed:
-			passes.filter(function(p) return p.pass.isStatic == ctx.computingStatic);
-		case Static:
-			if( ctx.computingStatic )
-				passes.filter(function(p) return p.pass.isStatic == true);
-			else
-				passes.clear();
+		else {
+			switch( mode ) {
+				case None:
+					return false;
+				case Dynamic:
+					return false;
+				case Mixed:
+					passes.filter(function(p) return p.pass.isStatic == true);
+					return true;
+				case Static:
+					passes.filter(function(p) return p.pass.isStatic == true);
+					return true;
+			}
 		}
-		return true;
 	}
 
 	inline function cullPasses( passes : h3d.pass.PassList, f : h3d.col.Collider -> Bool ) {

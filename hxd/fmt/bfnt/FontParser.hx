@@ -93,7 +93,7 @@ class FontParser {
 					var r = c.att.rect.split(" ");
 					var o = c.att.offset.split(" ");
 					var t = tile.sub(Std.parseInt(r[0]), Std.parseInt(r[1]), Std.parseInt(r[2]), Std.parseInt(r[3]), Std.parseInt(o[0]), Std.parseInt(o[1]));
-					var fc = new h2d.Font.FontChar(t, Std.parseInt(c.att.width) - 1);
+					var fc = new h2d.Font.FontChar(t, Std.parseInt(c.att.width));
 					var code = parseCode(c.att.code);
 					for( k in c.elements ){
 						var next = parseCode(k.att.id);
@@ -279,6 +279,8 @@ class FontParser {
 		var fallback = glyphs.get(0xFFFD); // <?>
 		if( fallback == null )
 			fallback = glyphs.get(0x25A1); // square
+		if( fallback == null )
+			fallback = glyphs.get("?".code);
 		if( fallback != null )
 			font.defaultChar = fallback;
 

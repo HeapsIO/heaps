@@ -7,11 +7,17 @@ class Light extends h3d.scene.Light {
 	@:s public var power : Float = 1.;
 	public var shadows : h3d.pass.Shadows;
 	public var isMainLight = false;
+	public var occlusionFactor : Float;
 
 	function new(shader,?parent) {
 		super(shader,parent);
 		_color = new h3d.Vector(1,1,1,1);
 		if( shadows == null ) shadows = new h3d.pass.Shadows(this);
+	}
+
+	override function onRemove() {
+		super.onRemove();
+		if( shadows != null ) shadows.dispose();
 	}
 
 	override function sync(ctx) {

@@ -46,11 +46,11 @@ class Camera extends h2d.Object {
 	inline function get_viewY() { return -this.y + anchorHeight; }
 
 	inline function set_viewX( v : Float ) {
-		this.x = -v - anchorWidth;
+		this.x = -v + anchorWidth;
 		return -v;
 	}
 	inline function set_viewY( v : Float ) {
-		this.y = -v - anchorHeight;
+		this.y = -v + anchorHeight;
 		return -v;
 	}
 
@@ -99,8 +99,8 @@ class Camera extends h2d.Object {
 			this.height = Math.round(scene.height * verticalRatio);
 			this.anchorWidth = width * anchorX;
 			this.anchorHeight = height * anchorY;
-			this.x = oldX - anchorWidth;
-			this.y = oldY - anchorHeight;
+			this.x = -oldX + anchorWidth;
+			this.y = -oldY + anchorHeight;
 			this.ratioChanged = false;
 		}
 		super.sync(ctx);

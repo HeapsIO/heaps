@@ -67,7 +67,7 @@ class VisiblePolygon
 	}
 
 
-	#if (nme || flash)
+	#if flash
 	public function drawShape(g:flash.display.Graphics)
 	{
 		var t:Triangle;

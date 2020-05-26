@@ -19,6 +19,7 @@ enum Type {
 	TArray( t : Type, size : SizeDecl );
 	TBuffer( t : Type, size : SizeDecl );
 	TChannel( size : Int );
+	TMat2;
 }
 
 enum VecType {
@@ -202,6 +203,8 @@ enum TGlobal {
 	//All;
 	Texture;
 	TextureLod;
+	Texel;
+	TexelLod;
 	// ...other texture* operations
 	// constructors
 	ToInt;
@@ -235,10 +238,14 @@ enum TGlobal {
 	// debug / internal
 	ChannelRead;
 	ChannelReadLod;
+	ChannelFetch;
+	ChannelFetchLod;
 	Trace;
 	// instancing
 	VertexID;
 	InstanceID;
+	// gl globals
+	FragCoord;
 }
 
 enum Component {
@@ -494,6 +501,7 @@ class Tools {
 			var s = 0;
 			for( v in vl ) s += size(v.type);
 			return s;
+		case TMat2: 4;
 		case TMat3: 9;
 		case TMat4: 16;
 		case TMat3x4: 12;
