@@ -46,6 +46,17 @@ class Matrix {
 		y = 0;
 	}
 
+	public inline function initSkew(sx, sy) {
+		var tanX = Math.tan(sx);
+		var tanY = Math.tan(sy);
+		a = 1;
+		b = tanY;
+		c = tanX;
+		d = 1;
+		x = 0;
+		y = 0;
+	}
+
 	public function invert() {
 		inverse(this);
 	}
@@ -76,9 +87,25 @@ class Matrix {
 		this.y += y;
 	}
 
+	public inline function translateX( x : Float ) {
+		this.x += x;
+	}
+
+	public inline function translateY( y : Float ) {
+		this.y += y;
+	}
+
 	public inline function prependTranslate( x : Float, y : Float ) {
 		this.x += a * x + c * y;
 		this.y += b * x + d * y;
+	}
+
+	public inline function prependTranslateX( x : Float ) {
+		this.x += a * x;
+	}
+
+	public inline function prependTranslateY( y : Float ) {
+		this.y += d * y;
 	}
 
 	public function multiply( a : Matrix, b : Matrix ) {
@@ -114,9 +141,53 @@ class Matrix {
 		y *= sy;
 	}
 
+	public inline function scaleX( sx : Float ) {
+		a *= sx;
+		c *= sx;
+		x *= sx;
+	}
+
+	public inline function scaleY( sy : Float ) {
+		b *= sy;
+		d *= sy;
+		y *= sy;
+	}
+
 	public function rotate(angle: Float) {
 		tmp.initRotate(angle);
 		multiply(this, tmp);
+	}
+
+	public function skew( sx : Float, sy : Float ) {
+		var aa = this.a, ab = this.b, ac = this.c, ad = this.d, ax = this.x, ay = this.y;
+		// [1, tan(sx), 0]
+		// [tan(sy), 1, 0]
+		var bb = Math.tan(sy);
+		var bc = Math.tan(sx);
+		this.a = aa + ab * bc;
+		this.b = aa * bb + ab;
+		this.c = ac + ad * bc;
+		this.d = ac * bb + ad;
+		this.x = ax + ay * bc;
+		this.y = ax * bb + ay;
+	}
+
+	public function skewX( sx : Float ) {
+		// [1, tan(sx), 0]
+		// [0, 1      , 0]
+		var bc = Math.tan(sx);
+		this.a = a + b * bc;
+		this.c = c + d * bc;
+		this.x = x + y * bc;
+	}
+
+	public function skewY( sy : Float ) {
+		// [1, tan(sx), 0]
+		// [tan(sy), 1, 0]
+		var bb = Math.tan(sy);
+		this.b = a * bb + b;
+		this.d = c * bb + d;
+		this.y = x * bb + y;
 	}
 
 	public function clone() {
