@@ -222,14 +222,17 @@ class Console #if !macro extends h2d.Object #end {
 			if (currentArg != null) {
 				var currentArgName = cmdParts.pop();
 				if (currentArgName != null) {
+					commandNames = null;
 					if (currentArg.resolveOptions != null) {
 						commandNames = currentArg.resolveOptions(currentArgName);
 					} else if (currentArg.availableOptions != null) {
 						commandNames = currentArg.availableOptions;
 					}
 
-					commandBase = cmd.substr(0, cmd.length - currentArgName.length);
-					cmd = currentArgName;
+					if (commandNames != null) {
+						commandBase = cmd.substr(0, cmd.length - currentArgName.length);
+						cmd = currentArgName;
+					}
 				}
 				if (cmd == null) {
 					cmd = "";
@@ -238,7 +241,8 @@ class Console #if !macro extends h2d.Object #end {
 		} 
 
 		if (commandNames == null) {
-			return commandBase;
+			trace(cmd);
+			return cmd;
 		}
 		
 		var closestCommand = "";
