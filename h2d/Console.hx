@@ -241,7 +241,6 @@ class Console #if !macro extends h2d.Object #end {
 		} 
 
 		if (commandNames == null) {
-			trace(cmd);
 			return cmd;
 		}
 		
