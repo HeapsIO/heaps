@@ -14,6 +14,8 @@ typedef ConsoleArgDesc = {
 	name : String,
 	t : ConsoleArg,
 	?opt : Bool,
+	?availableOptions : Array<String>,
+	?resolveOptions : String -> Array<String>,
 }
 
 class Console #if !macro extends h2d.Object #end {
@@ -202,17 +204,55 @@ class Console #if !macro extends h2d.Object #end {
 			return "";
 		}
 
+		var commandNames = [];
+		var commandBase = "";
+		for (command in commands.keys()) {
+			commandNames.push(command);
+		}
+
+		// Check if entered existing command, and if args with autocomplete exist
+		var cmdParts = cmd.split(" ");
+		var commandName = cmdParts.shift();
+
+		var existingCommand = commands.get(commandName);
+		if (existingCommand != null) {
+			var argIndex = cmdParts.length == 0 ? 0 : cmdParts.length - 1;
+			var currentArg = existingCommand.args[argIndex];
+
+			if (currentArg != null) {
+				var currentArgName = cmdParts.pop();
+				if (currentArgName != null) {
+					if (currentArg.resolveOptions != null) {
+						commandNames = currentArg.resolveOptions(currentArgName);
+					} else if (currentArg.availableOptions != null) {
+						commandNames = currentArg.availableOptions;
+					}
+
+					commandBase = cmd.substr(0, cmd.length - currentArgName.length);
+					cmd = currentArgName;
+				}
+				if (cmd == null) {
+					cmd = "";
+				}
+			}
+		} 
+
+		if (commandNames == null) {
+			return commandBase;
+		}
+		
 		var closestCommand = "";
-		var commandNames = commands.keys();
-		for (command in commandNames) {
-			if (command.indexOf(cmd) == 0) {
-				if (closestCommand == "" || closestCommand.length > command.length) {
-					closestCommand = command;
+		if (cmd != "") {
+			for (command in commandNames) {
+				if (command.indexOf(cmd) == 0) {
+					if (closestCommand == "" || closestCommand.length > command.length) {
+						closestCommand = command;
+					}
 				}
 			}
 		}
 
-		return closestCommand;
+		return commandBase + closestCommand;
 	}
 
 	function handleKey( e : hxd.Event ) {
