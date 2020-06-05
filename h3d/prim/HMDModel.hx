@@ -43,6 +43,11 @@ class HMDModel extends MeshPrimitive {
 	}
 
 	public function addAlias( name : String, realName : String, offset = 0 ) {
+		var old = bufferAliases.get(name);
+		if( old != null ) {
+			if( old.realName != realName || old.offset != offset ) throw "Conflicting alias "+name;
+			return;
+		}
 		bufferAliases.set(name, {realName : realName, offset : offset });
 		// already allocated !
 		if( bufferCache != null ) allocAlias(name);
