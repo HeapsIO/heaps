@@ -134,6 +134,8 @@ class Renderer extends h3d.scene.Renderer {
 			return defaultPass;
 		case "alpha", "additive":
 			return output;
+		case "decal":
+			return decalsOutput;
 		}
 		return super.getPassByName(name);
 	}
@@ -346,6 +348,7 @@ class Renderer extends h3d.scene.Renderer {
 
 		mark("Decal");
 		setTargets([albedo,normal,pbr]);
+		renderPass(decalsOutput, get("terrainBlend"));
 		renderPass(decalsOutput, get("decal"));
 
 		if(renderMode == Default) {
