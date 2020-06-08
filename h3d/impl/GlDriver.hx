@@ -170,6 +170,8 @@ class GlDriver extends Driver {
 
 	var drawMode : Int;
 
+	static var BLACK = new h3d.Vector();
+
 	/**
 		Perform OUT_OF_MEMORY checks when allocating textures/buffers.
 		Default true, except in WebGL (false)
@@ -1464,7 +1466,6 @@ class GlDriver extends Driver {
 			restoreBind();
 		}
 
-		tex.flags.set(WasCleared); // once we draw to, do not clear again
 		tex.lastFrame = frame;
 		curTargetLayer = layer;
 		curTargetMip = mipLevel;
@@ -1489,6 +1490,11 @@ class GlDriver extends Driver {
 		for( i in 0...boundTextures.length )
 			boundTextures[i] = null;
 
+		if( !tex.flags.has(WasCleared) ) {
+			tex.flags.set(WasCleared); // once we draw to, do not clear again
+			clear(BLACK);
+		}
+
 		#if js
 		if( glDebug ) {
 			var code = gl.checkFramebufferStatus(GL.FRAMEBUFFER);
@@ -1504,6 +1510,7 @@ class GlDriver extends Driver {
 		if( textures.length < 2 )
 			return;
 		numTargets = textures.length;
+		var needClear = false;
 		for( i in 1...textures.length ) {
 			var tex = textures[i];
 			if( tex.t == null )
@@ -1515,9 +1522,13 @@ class GlDriver extends Driver {
 			gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0 + i, GL.TEXTURE_2D, tex.t.t, 0);
 			curTargets[i] = tex;
 			tex.lastFrame = frame;
-			tex.flags.set(WasCleared); // once we draw to, do not clear again
+			if( !tex.flags.has(WasCleared) ) {
+				tex.flags.set(WasCleared); // once we draw to, do not clear again
+				needClear = true;
+			}
 		}
 		setDrawBuffers(textures.length);
+		if( needClear ) clear(BLACK);
 	}
 
 	override function init( onCreate : Bool -> Void, forceSoftware = false ) {

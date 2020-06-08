@@ -606,8 +606,6 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		ctx.begin();
 		ctx.pushTargets(texs);
 		if( outputs != null ) @:privateAccess ctx.manager.setOutput(outputs);
-		if( texs.length == 1 && !texs[0].flags.has(WasCleared) )
-			ctx.engine.clear(0);
 		s.drawRec(ctx);
 		if( outputs != null ) @:privateAccess ctx.manager.setOutput();
 		ctx.popTarget();
