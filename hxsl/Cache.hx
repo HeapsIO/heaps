@@ -210,6 +210,26 @@ class Cache {
 			throw e;
 		}
 
+		if( batchMode ) {
+			function checkRec( v : TVar ) {
+				if( v.qualifiers != null && v.qualifiers.indexOf(PerObject) >= 0 ) {
+					if( v.qualifiers.length == 1 ) v.qualifiers = null else {
+						v.qualifiers = v.qualifiers.copy();
+						v.qualifiers.remove(PerObject);
+					}
+					if( v.kind != Var ) v.kind = Local;
+				}
+				switch( v.type ) {
+				case TStruct(vl):
+					for( v in vl )
+						checkRec(v);
+				default:
+				}
+			}
+			for( v in s.vars )
+				checkRec(v);
+		}
+
 		#if debug
 		Printer.check(s,[for( s in shaderDatas ) s.inst.shader]);
 		#end
@@ -235,12 +255,6 @@ class Cache {
 
 		var prev = s;
 		var s = try new hxsl.Splitter().split(s) catch( e : Error ) { e.msg += "\n\nin\n\n"+Printer.shaderToString(s); throw e; };
-
-		if( batchMode ) {
-			for( v in s.vertex.vars )
-				if( v.qualifiers != null && v.qualifiers.indexOf(PerObject) >= 0 )
-					v.kind = Local;
-		}
 
 		#if debug
 		Printer.check(s.vertex,[prev]);
