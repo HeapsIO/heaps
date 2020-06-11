@@ -181,6 +181,9 @@ class Build {
 				var pak = new hxd.fmt.pak.Reader(fs).readHeader();
 				var baseDir = pakFile.substr(0,-4);
 				function extractRec(f:hxd.fmt.pak.Data.File, dir) {
+					#if !dataOnly
+					hxd.System.timeoutTick();
+					#end
 					if( f.isDirectory ) {
 						var dir = f.name == "" ? dir : dir+"/"+f.name;
 						try sys.FileSystem.createDirectory(dir) catch( e : Dynamic ) {};
