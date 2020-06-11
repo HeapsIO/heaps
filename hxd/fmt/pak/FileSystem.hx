@@ -25,6 +25,22 @@ class FileInput extends haxe.io.BytesInput {
 }
 #end
 
+class FileSeek {
+	#if (hl && hl_ver >= version("1.12.0"))
+	@:hlNative("std","file_seek2") static function seek2( f : sys.io.File.FileHandle, pos : Float, cur : Int ) : Bool { return false; }
+	#end
+	
+	public static function seek( f : sys.io.FileInput, pos : Float, mode : sys.io.FileSeek ) {
+		#if (hl && hl_ver >= version("1.12.0"))
+		if( !seek2(@:privateAccess f.__f,pos,mode.getIndex()) )
+			throw haxe.io.Error.Custom("seek2 failure()");
+		#else
+		if( pos > 0x7FFFFFFF ) throw haxe.io.Error.Custom("seek out of bounds");
+		f.seek(Std.int(pos),mode);
+		#end
+	}
+}
+
 @:allow(hxd.fmt.pak.FileSystem)
 @:access(hxd.fmt.pak.FileSystem)
 private class PakEntry extends FileEntry {
@@ -60,21 +76,8 @@ private class PakEntry extends FileEntry {
 		return file.isDirectory;
 	}
 
-	#if (hl && hl_ver >= version("1.12.0"))
-	@:hlNative("std","file_seek2") static function seek2( f : sys.io.File.FileHandle, pos : Float, cur : Int ) : Bool { return false; }
-	#end
-
 	function setPos() {
-		if( file.dataPosition > 0x7FFFFFFF ) {
-			#if (hl && hl_ver >= version("1.12.0"))
-			if( !seek2(@:privateAccess pak.__f,file.dataPosition,0) )
-				throw haxe.io.Error.Custom("seek() failure");
-			#else
-			throw "PAK file is too large: max 2GB or compile with -D hl_ver=1.12.0";
-			#end
-			return;
-		}
-		pak.seek(Std.int(file.dataPosition), SeekBegin);
+		FileSeek.seek(pak,file.dataPosition, SeekBegin);
 	}
 
 	override function getSign() {

@@ -190,8 +190,7 @@ class Build {
 						for( c in f.content )
 							extractRec(c,dir);
 					} else {
-						// todo : seek large
-						fs.seek(Std.int(f.dataPosition+pak.headerSize), SeekBegin);
+						hxd.fmt.pak.FileSystem.FileSeek.seek(fs,f.dataPosition+pak.headerSize,SeekBegin);
 						sys.io.File.saveBytes(dir+"/"+f.name,fs.read(f.dataSize));
 					}
 				}
