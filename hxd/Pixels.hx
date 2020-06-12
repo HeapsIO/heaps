@@ -421,6 +421,8 @@ class Pixels {
 		var p = ((x + yflip(y) * width) * bytesPerPixel) + offset;
 		willChange();
 		switch(format) {
+		case R8:
+			bytes.set(p, color);
 		case BGRA:
 			bytes.setInt32(p, color);
 		case RGBA:
