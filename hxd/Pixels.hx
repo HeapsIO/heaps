@@ -380,6 +380,9 @@ class Pixels {
 			this.bytes = nbytes;
 
 		case [S3TC(a),S3TC(b)] if( a == b ):
+		case [ASTC(a),ASTC(b)] if( a == b ):
+		case [ETC(a),ETC(b)] if( a == b ):
+		case [PVRTC(a),PVRTC(b)] if( a == b ):
 			// nothing
 
 		#if (hl && hl_ver >= "1.10")
@@ -481,6 +484,7 @@ class Pixels {
 		case RGB32F: 12;
 		case RGB10A2: 4;
 		case RG11B10UF: 4;
+		case ASTC(n), ETC(n), PVRTC(n): 1;
 		case S3TC(n):
 			if( n == 1 || n == 4 )
 				return width >> 1;
@@ -516,7 +520,7 @@ class Pixels {
 			channel.toInt() * 4;
 		case RGB10A2, RG11B10UF:
 			throw "Bit packed format";
-		case S3TC(_):
+		case S3TC(_), ASTC(_), ETC(_), PVRTC(_):
 			throw "Not supported";
 		}
 	}

@@ -127,6 +127,7 @@ class GlDriver extends Driver {
 	static var UID = 0;
 	public var gl : GL2;
 	public static var ALLOW_WEBGL2 = true;
+	public var textureSupport:hxd.PixelFormat;
 	#end
 
 	#if (hlsdl||usegl)
@@ -795,7 +796,10 @@ class GlDriver extends Driver {
 		case GL2.RED, GL2.R8, GL2.R16F, GL2.R32F: GL2.RED;
 		case GL2.RG, GL2.RG8, GL2.RG16F, GL2.RG32F: GL2.RG;
 		case GL2.RGB16F, GL2.RGB32F: GL.RGB;
-		case 0x83F1, 0x83F2, 0x83F3: GL.RGBA;
+		case hxd.PixelFormat.DXT_FORMAT.RGBA_DXT1,hxd.PixelFormat.DXT_FORMAT.RGBA_DXT3,
+			hxd.PixelFormat.DXT_FORMAT.RGBA_DXT5,hxd.PixelFormat.ASTC_FORMAT.RGBA_4x4,
+			hxd.PixelFormat.PVRTC_FORMAT.RGBA_4BPPV1: GL.RGBA;
+		case hxd.PixelFormat.PVRTC_FORMAT.RGB_4BPPV1, hxd.PixelFormat.ETC_FORMAT.RGB_ETC1: GL.RGB;
 		default: throw "Invalid format " + t.internalFmt;
 		}
 	}
@@ -807,6 +811,7 @@ class GlDriver extends Driver {
 		case SRGB, SRGB_ALPHA: hasFeature(SRGBTextures);
 		case R8, RG8, RGB8, R16F, RG16F, RGB16F, R32F, RG32F, RGB32F, RG11B10UF, RGB10A2: #if js glES >= 3 #else true #end;
 		case S3TC(n): n <= maxCompressedTexturesSupport;
+		case ASTC(_), ETC(_), PVRTC(_): #if js true #else false #end;
 		default: false;
 		}
 	}
@@ -868,12 +873,30 @@ class GlDriver extends Driver {
 			tt.internalFmt = GL2.R11F_G11F_B10F;
 			tt.pixelFmt = GL2.UNSIGNED_INT_10F_11F_11F_REV;
 		case S3TC(n) if( n <= maxCompressedTexturesSupport ):
-			if( t.width&3 != 0 || t.height&3 != 0 )
-				throw "Compressed texture "+t+" has size "+t.width+"x"+t.height+" - must be a multiple of 4";
+			checkMult4(t);
 			switch( n ) {
-			case 1: tt.internalFmt = 0x83F1; // COMPRESSED_RGBA_S3TC_DXT1_EXT
-			case 2:	tt.internalFmt = 0x83F2; // COMPRESSED_RGBA_S3TC_DXT3_EXT
-			case 3: tt.internalFmt = 0x83F3; // COMPRESSED_RGBA_S3TC_DXT5_EXT
+			case 1: tt.internalFmt = hxd.PixelFormat.DXT_FORMAT.RGBA_DXT1;
+			case 2:	tt.internalFmt = hxd.PixelFormat.DXT_FORMAT.RGBA_DXT3;
+			case 3: tt.internalFmt = hxd.PixelFormat.DXT_FORMAT.RGBA_DXT5;
+			default: throw "Unsupported texture format "+t.format;
+			}
+		case ASTC(n):
+			checkMult4(t);
+			switch( n ) {
+			case 10: tt.internalFmt = hxd.PixelFormat.ASTC_FORMAT.RGBA_4x4;
+			default: throw "Unsupported texture format "+t.format;
+			}
+		case ETC(n):
+			checkMult4(t);
+			switch( n ) {
+			case 0: tt.internalFmt = hxd.PixelFormat.ETC_FORMAT.RGB_ETC1;
+			default: throw "Unsupported texture format "+t.format;
+			}
+		case PVRTC(n):
+			checkMult4(t);
+			switch(n) {
+			case 8: tt.internalFmt = hxd.PixelFormat.PVRTC_FORMAT.RGB_4BPPV1;
+			case 9: tt.internalFmt = hxd.PixelFormat.PVRTC_FORMAT.RGBA_4BPPV1;
 			default: throw "Unsupported texture format "+t.format;
 			}
 		default:
@@ -897,7 +920,7 @@ class GlDriver extends Driver {
 
 		if( t.flags.has(Cube) ) {
 			for( i in 0...6 ) {
-				gl.texImage2D(CUBE_FACES[i], 0, tt.internalFmt, tt.width, tt.height, 0, getChannels(tt), tt.pixelFmt, null);
+					gl.texImage2D(CUBE_FACES[i], 0, tt.internalFmt, tt.width, tt.height, 0, getChannels(tt), tt.pixelFmt, null);				
 				if( checkError() ) break;
 			}
 		} else if( t.flags.has(IsArray) ) {
@@ -905,7 +928,7 @@ class GlDriver extends Driver {
 			checkError();
 		} else {
 			#if js
-			if( !t.format.match(S3TC(_)) )
+			if( !t.format.match(S3TC(_)) && !t.format.match(ETC(_)) && !t.format.match(ASTC(_)) && !t.format.match(PVRTC(_))) 
 			#end
 			gl.texImage2D(bind, 0, tt.internalFmt, tt.width, tt.height, 0, getChannels(tt), tt.pixelFmt, null);
 			checkError();
@@ -918,6 +941,11 @@ class GlDriver extends Driver {
 		}
 
 		return tt;
+	}
+
+	inline function checkMult4(t) {
+		if( t.width&3 != 0 || t.height&3 != 0 )
+			throw "Compressed texture "+t+" has size "+t.width+"x"+t.height+" - must be a multiple of 4";
 	}
 
 	function restoreBind() {
@@ -1147,12 +1175,15 @@ class GlDriver extends Driver {
 		case RGBA32F, R32F, RG32F, RGB32F: new Float32Array(@:privateAccess pixels.bytes.b.buffer, pixels.offset, bufLen>>2);
 		case RGBA16F, R16F, RG16F, RGB16F: new Uint16Array(@:privateAccess pixels.bytes.b.buffer, pixels.offset, bufLen>>1);
 		case RGB10A2, RG11B10UF: new Uint32Array(@:privateAccess pixels.bytes.b.buffer, pixels.offset, bufLen>>2);
+		case ETC(_), PVRTC(_): new Uint8Array(@:privateAccess pixels.bytes.b.buffer, pixels.offset);
 		default: new Uint8Array(@:privateAccess pixels.bytes.b.buffer, pixels.offset, bufLen);
 		}
-		if( t.format.match(S3TC(_)) )
-			gl.compressedTexImage2D(face, mipLevel, t.t.internalFmt, pixels.width, pixels.height, 0, buffer);
-		else
-			gl.texImage2D(face, mipLevel, t.t.internalFmt, pixels.width, pixels.height, 0, getChannels(t.t), t.t.pixelFmt, buffer);
+		switch (t.format) {
+			case S3TC(_), ASTC(_), PVRTC(_), ETC(_):
+				gl.compressedTexImage2D(face, mipLevel, t.t.internalFmt, pixels.width, pixels.height, 0, buffer);
+			default: 
+				gl.texImage2D(face, mipLevel, t.t.internalFmt, pixels.width, pixels.height, 0, getChannels(t.t), t.t.pixelFmt, buffer);
+		}
 		#else
 		throw "Not implemented";
 		#end
@@ -1558,12 +1589,33 @@ class GlDriver extends Driver {
 	}
 
 	#if js
+	public function checkTextureSupport():hxd.PixelFormat {
+		var astcSupported = gl.getExtension('WEBGL_compressed_texture_astc') != null;
+		var dxtSupported = gl.getExtension('WEBGL_compressed_texture_s3tc') != null;
+		var pvrtcSupported = gl.getExtension('WEBGL_compressed_texture_pvrtc') != null
+			|| gl.getExtension('WEBKIT_WEBGL_compressed_texture_pvrtc') != null;
+		var etcSupported = gl.getExtension('WEBGL_compressed_texture_etc1') != null;
+		return if(astcSupported) {
+			hxd.PixelFormat.ASTC();
+		} else if(dxtSupported){
+			hxd.PixelFormat.S3TC();
+		} else  if(pvrtcSupported){
+			hxd.PixelFormat.PVRTC();
+		} else if(etcSupported){
+			hxd.PixelFormat.ETC();
+		} else {
+			null;
+		}
+	}
 	var features : Map<Feature,Bool> = new Map();
 	function makeFeatures() {
 		for( f in Type.allEnums(Feature) )
 			features.set(f,checkFeature(f));
-		if( gl.getExtension("WEBGL_compressed_texture_s3tc") != null )
-			maxCompressedTexturesSupport = 3;
+		textureSupport = checkTextureSupport();
+		maxCompressedTexturesSupport = switch (textureSupport) {
+			case hxd.PixelFormat.S3TC(_), hxd.PixelFormat.ASTC(_), hxd.PixelFormat.ETC(_), hxd.PixelFormat.PVRTC(_): 3;
+			default: 0;
+		}
 	}
 	function checkFeature( f : Feature ) {
 		return switch( f ) {

@@ -7,6 +7,7 @@ package hxd.res;
 	var Gif = 2;
 	var Tga = 3;
 	var Dds = 4;
+	var Basis = 5;
 
 	/*
 		Tells if we might not be able to directly decode the image without going through a loadBitmap async call.
@@ -128,7 +129,13 @@ class Image extends Resource {
 
 			if( bc == 0 )
 				throw entry.path+" has unsupported 4CC "+String.fromCharCode(fourCC&0xFF)+String.fromCharCode((fourCC>>8)&0xFF)+String.fromCharCode((fourCC>>16)&0xFF)+String.fromCharCode(fourCC>>>24);
-
+		case 0x4273:
+			format = Basis;
+			f.skip(63);
+			var slicesPos = f.readInt32();
+			f.skip(slicesPos-42);
+			width = f.readUInt16();
+			height = f.readUInt16();
 		case _ if( entry.extension == "tga" ):
 			format = Tga;
 			f.skip(10);
@@ -203,7 +210,23 @@ class Image extends Resource {
 		case Dds:
 			var bytes = entry.getBytes();
 			pixels = new hxd.Pixels(inf.width, inf.height, bytes, S3TC(inf.bc), 128 + (inf.bc >= 6 ? 20 : 0));
+		case Basis:
+			#if js
+			var bytes = entry.getBytes();
+			var driver:h3d.impl.GlDriver = cast h3d.Engine.getCurrent().driver;
+			var f = switch(driver.checkTextureSupport()) {
+				case hxd.PixelFormat.S3TC(_): hxd.PixelFormat.S3TC(inf.bc);
+				case hxd.PixelFormat.ETC(_): hxd.PixelFormat.ETC(0);
+				case hxd.PixelFormat.ASTC(_): hxd.PixelFormat.ASTC(10);
+				case hxd.PixelFormat.PVRTC(_): hxd.PixelFormat.PVRTC(9);
+				default: throw 'Unsupported basis texture';
+			}
+			pixels = new hxd.Pixels(inf.width, inf.height, bytes, f);
+			#else
+			throw 'Basis only supported on js target';
+			#end
 		}
+
 		if( fmt != null ) pixels.convert(fmt);
 		if( flipY != null ) pixels.setFlip(flipY);
 		return pixels;

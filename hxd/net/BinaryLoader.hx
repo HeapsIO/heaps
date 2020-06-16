@@ -21,7 +21,7 @@ class BinaryLoader {
 		throw msg;
 	}
 
-	public function load() {
+	public function load(raw = false) {
 		#if flash
 
 		loader = new flash.net.URLLoader();
@@ -44,7 +44,7 @@ class BinaryLoader {
 				onError(xhr.statusText);
 				return;
 			}
-			onLoaded(haxe.io.Bytes.ofData(xhr.response));
+			onLoaded(raw ? xhr.response : haxe.io.Bytes.ofData(xhr.response));
 		}
 
 		xhr.onprogress = function(e) {
