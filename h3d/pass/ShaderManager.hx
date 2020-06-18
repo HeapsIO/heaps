@@ -243,7 +243,14 @@ class ShaderManager {
 			var tid = 0;
 			var p = s.textures;
 			while( p != null ) {
-				buf.tex[tid++] = getParamValue(p, shaders, !STRICT);
+				var t : Dynamic = getParamValue(p, shaders, !STRICT);
+				if( p.pos < 0 ) {
+					// is array !
+					var arr : Array<h3d.mat.Texture> = t;
+					for( i in 0...-p.pos )
+						buf.tex[tid++] = arr[i];
+				} else
+					buf.tex[tid++] = t;
 				p = p.next;
 			}
 			var p = s.buffers;

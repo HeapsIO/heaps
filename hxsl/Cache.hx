@@ -369,6 +369,7 @@ class Cache {
 			switch( g.kind ) {
 			case Param:
 				var out = [];
+				var count = 0;
 				for( a in alloc ) {
 					if( a.v == null ) continue; // padding
 					var p = params.get(a.v.id);
@@ -376,16 +377,26 @@ class Cache {
 						var ap = new AllocParam(a.v.name, a.pos, -1, -1, a.v.type);
 						ap.perObjectGlobal = new AllocGlobal( -1, getPath(a.v), a.v.type);
 						out.push(ap);
+						count++;
 						continue;
 					}
-					out.push(new AllocParam(a.v.name, a.pos, p.instance, p.index, a.v.type));
+					var ap = new AllocParam(a.v.name, a.pos, p.instance, p.index, a.v.type);
+					switch( a.v.type ) {
+					case TArray(t,_) if( t.isSampler() ):
+						// hack to mark array of texture, see ShaderManager.fillParams
+						ap.pos = -a.size;
+						count += a.size;
+					default:
+						count++;
+					}
+					out.push(ap);
 				}
 				for( i in 0...out.length - 1 )
 					out[i].next = out[i + 1];
 				switch( g.type ) {
 				case TArray(t, _) if( t.isSampler() ):
 					textures.push({ t : t, all : out });
-					c.texturesCount += out.length;
+					c.texturesCount += count;
 				case TArray(TVec(4, VFloat), SConst(size)):
 					c.params = out[0];
 					c.paramsSize = size;
