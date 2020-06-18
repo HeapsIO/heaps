@@ -129,6 +129,17 @@ class DirectXDriver extends h3d.impl.Driver {
 		reset();
 	}
 
+	public dynamic function getDriverFlags() : dx.Driver.DriverInitFlags {
+		var options : dx.Driver.DriverInitFlags = None;
+		#if debug
+		options |= DebugLayer;
+		#end
+		#if (hl_ver >= version("1.12.0"))
+		options |= DisableGpuTimeout;
+		#end
+		return options;
+	}
+
 	function reset() {
 		allowDraw = false;
 		targetsCount = 1;
@@ -154,13 +165,8 @@ class DirectXDriver extends h3d.impl.Driver {
 		vertexShader = new PipelineState(Vertex);
 		pixelShader = new PipelineState(Pixel);
 
-		var options : dx.Driver.DriverInitFlags = None;
-		#if debug
-		options |= DebugLayer;
-		#end
-
 		try
-			driver = Driver.create(window, backBufferFormat, options)
+			driver = Driver.create(window, backBufferFormat, getDriverFlags())
 		catch( e : Dynamic )
 			throw "Failed to initialize DirectX driver (" + e + ")";
 
