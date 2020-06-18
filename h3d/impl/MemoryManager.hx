@@ -131,7 +131,7 @@ class MemoryManager {
 	function allocBuffer( b : Buffer, stride : Int ) {
 		// split big buffers
 		var max = b.flags.has(Quads) ? 65532 : b.flags.has(Triangles) ? 65533 : 65534;
-		if( b.vertices > max && !b.flags.has(UniformBuffer) ) {
+		if( b.vertices > max && !b.flags.has(UniformBuffer) && !b.flags.has(LargeBuffer) ) {
 			if( max == 65534 )
 				throw "Cannot split buffer with "+b.vertices+" vertices if it's not Quads/Triangles";
 			var rem = b.vertices - max;
