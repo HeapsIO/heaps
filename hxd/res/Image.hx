@@ -7,6 +7,7 @@ package hxd.res;
 	var Gif = 2;
 	var Tga = 3;
 	var Dds = 4;
+	var Raw32 = 5;
 
 	/*
 		Tells if we might not be able to directly decode the image without going through a loadBitmap async call.
@@ -135,6 +136,12 @@ class Image extends Resource {
 			width = f.readUInt16();
 			height = f.readUInt16();
 
+		case _ if( entry.extension == "raw" ):
+			format = Raw32;
+			var size = Std.int(Math.sqrt(entry.size>>2));
+			if( entry.size != size * size * 4 ) throw "RAW format does not match 32 bit per components on "+size+"x"+size;
+			width = height = size;
+
 		default:
 			throw "Unsupported texture format " + entry.path;
 		}
@@ -203,6 +210,9 @@ class Image extends Resource {
 		case Dds:
 			var bytes = entry.getBytes();
 			pixels = new hxd.Pixels(inf.width, inf.height, bytes, S3TC(inf.bc), 128 + (inf.bc >= 6 ? 20 : 0));
+		case Raw32:
+			var bytes = entry.getBytes();
+			pixels = new hxd.Pixels(inf.width, inf.height, bytes, R32F);
 		}
 		if( fmt != null ) pixels.convert(fmt);
 		if( flipY != null ) pixels.setFlip(flipY);
@@ -325,8 +335,13 @@ class Image extends Resource {
 			height = th;
 		}
 		var format = h3d.mat.Texture.nativeFormat;
-		if( inf.format == Dds )
+		switch( inf.format ) {
+		case Dds:
 			format = S3TC(inf.bc);
+		case Raw32:
+			format = R32F;
+		default:
+		}
 		tex = new h3d.mat.Texture(width, height, [NoAlloc], format);
 		if( DEFAULT_FILTER != Linear ) tex.filter = DEFAULT_FILTER;
 		tex.setName(entry.path);
