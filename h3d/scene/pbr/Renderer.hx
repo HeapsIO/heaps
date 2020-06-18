@@ -352,10 +352,13 @@ class Renderer extends h3d.scene.Renderer {
 		renderPass(decalsOutput, get("decal"));
 
 		if(renderMode == Default) {
-			if( displayMode == Env )
+			if( displayMode == Env ) {
+				setTarget(albedo);
 				clear(0xFF404040);
+			}
 
 			if( displayMode == MatCap ) {
+				setTarget(albedo);
 				clear(0xFF808080);
 				setTarget(pbr);
 				clear(0x00FF80FF);
