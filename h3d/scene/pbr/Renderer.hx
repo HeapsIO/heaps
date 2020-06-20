@@ -493,8 +493,12 @@ class Renderer extends h3d.scene.Renderer {
 		}
 	}
 
+	var debugPushPos : { x : Float, y : Float }
+
 	function onEvent(e:hxd.Event) {
-		if( e.kind == EPush && e.button == 2 ) {
+		if( e.kind == EPush && e.button == 2 )
+			debugPushPos = { x : e.relX, y : e.relY };
+		if( e.kind == ERelease && e.button == 2 && hxd.Math.distance(e.relX-debugPushPos.x,e.relY-debugPushPos.y) < 10 ) {
 			var win = hxd.Window.getInstance();
 			var x = Std.int((e.relX / win.width) * 4);
 			var y = Std.int((e.relY / win.height) * 4);
