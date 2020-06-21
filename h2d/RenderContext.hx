@@ -2,6 +2,39 @@ package h2d;
 
 private typedef RenderZoneStack = { hasRZ:Bool, x:Float, y:Float, w:Float, h:Float };
 
+class BatchDrawState {
+
+	static var pool:Array<BatchDrawState> = [];
+
+	public static function get( texture : h3d.mat.Texture, offset : Int ) : BatchDrawState {
+		if ( pool.length == 0 ) return new BatchDrawState(texture, offset);
+		return pool.pop().set(texture, offset);
+	}
+
+	public var texture : h3d.mat.Texture;
+	public var offset : Int;
+	public var count : Int;
+
+	function new( texture : h3d.mat.Texture, offset : Int ) {
+		this.texture = texture;
+		this.offset = offset;
+		this.count = 0;
+	}
+
+	public function set( texture : h3d.mat.Texture, offset : Int ) : BatchDrawState {
+		this.texture = texture;
+		this.offset = offset;
+		this.count = 0;
+		return this;
+	}
+
+	public function put() {
+		this.texture = null;
+		pool.push(this);
+	}
+
+}
+
 class RenderContext extends h3d.impl.RenderContext {
 
 	static inline var BUFFERING = false;
@@ -389,6 +422,28 @@ class RenderContext extends h3d.impl.RenderContext {
 			baseShader.color.set(globalAlpha,globalAlpha,globalAlpha,globalAlpha);
 		} else
 			baseShader.color.set(obj.color.r, obj.color.g, obj.color.b, obj.color.a * globalAlpha);
+	}
+
+	// BatchState render
+	/**
+		Prepares rendering with BatchState.
+		Each state draw should be preceded with `swapTexture` call.
+	**/
+	@:access(h2d.Drawable)
+	public function beginDrawBatchState( obj : h2d.Drawable ) {
+		if ( !beginDraw(obj, null, true) ) return false;
+		setupColor(obj);
+		baseShader.absoluteMatrixA.set(obj.matA, obj.matC, obj.absX);
+		baseShader.absoluteMatrixB.set(obj.matB, obj.matD, obj.absY);
+		return true;
+	}
+
+	/**
+		Swap current active texture and prepares for next drawcall.
+	**/
+	public inline function swapTexture( texture : h3d.mat.Texture ) {
+		this.texture = texture;
+		beforeDraw();
 	}
 
 	@:access(h2d.Drawable)
