@@ -2,22 +2,66 @@ package h2d;
 
 private typedef RenderZoneStack = { hasRZ:Bool, x:Float, y:Float, w:Float, h:Float };
 
+/**
+	`h2d.RenderContext` provides 2D scene rendering capabilities.
+**/
 class RenderContext extends h3d.impl.RenderContext {
 
 	static inline var BUFFERING = false;
 
+	/**
+		Current transparency value used for rendering objects. 
+		Automatically managed by `Object`.
+	**/
 	public var globalAlpha = 1.;
+	/**
+		Temporary vertex buffer used to emit Tiles when BUFFERING is on.  
+		Otherwise it's `null`. Internal usage only.
+	**/
+	@:dox(hide)
 	public var buffer : hxd.FloatBuffer;
+	/**
+		Current temporary buffer position. Internal usage only.
+	**/
+	@:dox(hide)
 	public var bufPos : Int;
+	/**
+		The 2D scene attached to this RenderContext instance.
+	**/
 	public var scene : h2d.Scene;
+	/**
+		Determines texture filtering method (Linear or Nearest).
+		Not recommended to use. Assign `Scene.defaultSmooth`.
+	**/
 	public var defaultSmooth : Bool = false;
+	/**
+		When enabled, pixels with alpha value below 0.001 will be discarded.
+	**/
 	public var killAlpha : Bool;
+	/**
+		When enabled, renders objects in reverse order.
+	**/
 	public var front2back : Bool;
 
-	public var onBeginDraw : h2d.Drawable->Bool; // return false to cancel drawing
+	/**
+		Sent before Drawable is rendered.
+		Drawable won't be rendered if callback returns `false`.
+	**/
+	public var onBeginDraw : h2d.Drawable->Bool;
+	/**
+		Sent before filter begins rendering.
+		Filter (and it's object tree) won't be rendered if callback returns `false`.
+	**/
 	public var onEnterFilter : h2d.Object->Bool;
+	/**
+		Send after filter has been rendered.
+	**/
 	public var onLeaveFilter : h2d.Object->Void;
 
+	/**
+		Internal usage. Used to calculate filter rendering bounds.
+	**/
+	@:dox(hide)
 	public var tmpBounds = new h2d.col.Bounds();
 	var texture : h3d.mat.Texture;
 	var baseShader : h3d.shader.Base2d;
@@ -77,10 +121,17 @@ class RenderContext extends h3d.impl.RenderContext {
 		if( fixedBuffer != null ) fixedBuffer.dispose();
 	}
 
+	/**
+		Tells if tile buffering is enabled.
+	**/
+	@:dox(hide)
 	public inline function hasBuffering() {
 		return BUFFERING;
 	}
 
+	/**
+		Internal usage. Prepares RenderContext to begin rendering new frame.
+	**/
 	public function begin() {
 		texture = null;
 		currentObj = null;
@@ -107,12 +158,19 @@ class RenderContext extends h3d.impl.RenderContext {
 		textures.begin();
 	}
 
+	/**
+		Allocated a cached render target Texture with specified name, filter mode and scene dimensions.
+		@returns Either precached Texture under same name or newly allocated one.
+	**/
 	public function allocTarget(name, filter = false) {
 		var t = textures.allocTarget(name, scene.width, scene.height, false);
 		t.filter = filter ? Linear : Nearest;
 		return t;
 	}
 
+	/**
+		Clears current render target.
+	**/
 	public function clear(color) {
 		engine.clear(color);
 	}
@@ -129,6 +187,9 @@ class RenderContext extends h3d.impl.RenderContext {
 		engine.uploadShaderBuffers(buffers, Globals);
 	}
 
+	/**
+		Internal usage. Performers cleanup after frame is rendered.
+	**/
 	public function end() {
 		flush();
 		texture = null;
@@ -137,6 +198,10 @@ class RenderContext extends h3d.impl.RenderContext {
 		if( targetsStackIndex != 0 ) throw "Missing popTarget()";
 	}
 
+	/**
+		Internal usage. Prepares to render Filter and pushes provided Object onto filter stack.
+		@returns true if filter is allowed to render, false otherwise (see `onEnterFilter`)
+	**/
 	public function pushFilter( spr : h2d.Object ) {
 		if( filterStack.length == 0 && onEnterFilter != null )
 			if( !onEnterFilter(spr) ) return false;
@@ -145,6 +210,9 @@ class RenderContext extends h3d.impl.RenderContext {
 		return true;
 	}
 
+	/**
+		Internal usage. Finalized Filter rendering and removes top-most Object from filter stack.
+	**/
 	public function popFilter() {
 		var spr = filterStack.pop();
 		if( filterStack.length > 0 ) {
@@ -155,6 +223,15 @@ class RenderContext extends h3d.impl.RenderContext {
 		}
 	}
 
+	/**
+		Sets provided texture as render target and pushes it onto target stack.
+		If only part of Texture should be rendered onto, method should be used with `pushRenderZone()` to avoid rendering outside specified texture area.
+		@param t Texture to which RenderContext will render to. Texture should have Target flag.
+		@param startX X offset of rendering area on the Texture.
+		@param startY Y offset of rendering area on the Texture.
+		@param width Width of the clipping area on the Texture. If equals to `-1`, will use texture width.
+		@param height Height of the clipping area on the Texture. If equals to `-1` will use texture height.
+	**/
 	public function pushTarget( t : h3d.mat.Texture, startX = 0, startY = 0, width = -1, height = -1 ) {
 		flush();
 		engine.pushTarget(t);
@@ -187,6 +264,9 @@ class RenderContext extends h3d.impl.RenderContext {
 		if( hasRenderZone ) clearRZ();
 	}
 
+	/**
+		Pushes an array of targets onto target stack.
+	**/
 	public function pushTargets( texs : Array<h3d.mat.Texture> ) {
 		pushTarget(texs[0]);
 		if( texs.length > 1 ) {
@@ -195,6 +275,10 @@ class RenderContext extends h3d.impl.RenderContext {
 		}
 	}
 
+	/**
+		Pops current render target from target stack.
+		If last texture was removed from stack, will restore primary render buffer as render target.
+	**/
 	public function popTarget( restore = true ) {
 		flush();
 		if( targetsStackIndex <= 0 ) throw "Too many popTarget()";
@@ -239,6 +323,11 @@ class RenderContext extends h3d.impl.RenderContext {
 		if( pinf.hasRZ ) setRZ(pinf.rzX, pinf.rzY, pinf.rzW, pinf.rzH);
 	}
 
+	/**
+		Sets rectangular render zone area, saving previous render zone settings.
+		`popRenderZone()` should be called afterwards to clear render zone stack.
+		To respect previous render zone area, use `clipRenderZone()` method.
+	**/
 	public function pushRenderZone( x : Float, y : Float, w : Float, h : Float ) {
 		var inf = renderZoneStack[renderZoneIndex++];
 		if ( inf == null ) {
@@ -257,6 +346,9 @@ class RenderContext extends h3d.impl.RenderContext {
 		setRZ(x, y, w, h);
 	}
 
+	/**
+		Restores previous render zone settings.
+	**/
 	public function popRenderZone() {
 		if (renderZoneIndex == 0) throw "Too many popRenderZone()";
 		var inf = renderZoneStack[--renderZoneIndex];
@@ -268,9 +360,10 @@ class RenderContext extends h3d.impl.RenderContext {
 	}
 
 	/**
-	 * Same as pushRenderZone, but clips news zone to existing one before pushing it. Used so that
-	 * any call to clipRenderZone respects the already set zone ,and can't render outside it.
-	 */
+		Pushes new render zone with respect to old render zone settings by clipping new and old render zones,
+		pushing intersection area result.
+		Used so that any call to clipRenderZone respects the already set zone, and can't render outside of it.
+	**/
 	 public function clipRenderZone( x : Float, y : Float, w : Float, h : Float ) {
 		if (!hasRenderZone) {
 			pushRenderZone( x, y, w, h );
@@ -316,12 +409,12 @@ class RenderContext extends h3d.impl.RenderContext {
 		engine.setRenderZone();
 	}
 
-	@:deprecated("Use pushRenderZone")
+	@:dox(hide) @:noCompletion @:deprecated("Use pushRenderZone")
 	public inline function setRenderZone( x : Float, y : Float, w : Float, h : Float ) {
 		pushRenderZone(x, y, w, h);
 	}
 
-	@:deprecated("Use popRenderZone")
+	@:dox(hide) @:noCompletion @:deprecated("Use popRenderZone")
 	public inline function clearRenderZone() {
 		popRenderZone();
 	}
@@ -330,10 +423,17 @@ class RenderContext extends h3d.impl.RenderContext {
 		@:privateAccess scene.drawLayer(this, layer);
 	}
 
+	/**
+		Renders assigned Scene. Same as `s2d.drawRec(s2d.renderer)`.
+	**/
 	public function drawScene() {
 		@:privateAccess scene.drawRec(this);
 	}
 
+	/**
+		Flushes buffered tile data if one present.
+	**/
+	@:dox(hide)
 	public inline function flush() {
 		if( hasBuffering() ) _flush();
 	}
@@ -350,6 +450,10 @@ class RenderContext extends h3d.impl.RenderContext {
 		texture = null;
 	}
 
+	/**
+		Internal usage.
+		Should be called before performing draw call in order to sync shader data and other parameters.
+	**/
 	public function beforeDraw() {
 		if( texture == null ) texture = h3d.mat.Texture.fromColor(0xFF00FF);
 		baseShader.texture = texture;
@@ -391,6 +495,10 @@ class RenderContext extends h3d.impl.RenderContext {
 			baseShader.color.set(obj.color.r, obj.color.g, obj.color.b, obj.color.a * globalAlpha);
 	}
 
+	/**
+		Prepares rendering of the Drawable object with specified texture.
+		@returns true if rendering is prepared, false otherwise (see `onBeginDraw`)
+	**/
 	@:access(h2d.Drawable)
 	public function beginDrawObject( obj : h2d.Drawable, texture : h3d.mat.Texture ) {
 		if ( !beginDraw(obj, texture, true) ) return false;
@@ -401,11 +509,21 @@ class RenderContext extends h3d.impl.RenderContext {
 		return true;
 	}
 
+	/**
+		Begins buffered Tile render of the Drawable object.
+		@returns true if rendering is prepared, false otherwise (see `onBeginDraw`)
+	**/
+	@:dox(hide)
 	@:access(h2d.Drawable)
 	public function beginDrawBatch( obj : h2d.Drawable, texture : h3d.mat.Texture ) {
 		return beginDraw(obj, texture, false);
 	}
 
+	/**
+		Renders a Tile with transform of given Drawable.
+		@returns true if tile was drawn, false otherwise.
+		Tile is not drawn if either it's outside of rendering area or it was cancelled by `onBeginDraw`.
+	**/
 	@:access(h2d.Drawable)
 	public function drawTile( obj : h2d.Drawable, tile : h2d.Tile ) {
 		var matA, matB, matC, matD, absX, absY;

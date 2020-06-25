@@ -1,25 +1,113 @@
 package h2d;
 
+/**
+	Text alignment rules.
+**/
 enum Align {
+	/**
+		Aligns to the left edge of the Text instance.
+	**/
 	Left;
+	/**
+		If `maxWidth` is set - positions text at the `maxWidth` value.
+		Otherwise text is aligned over the 0 coordinate of text Text instance.
+
+		Text is aligned as follows:
+		```
+		With maxWidth set:
+		0 . . . . . . . . . . . . . . . maxWidth
+		|              This is sample text |
+		|     Spanning over multiple lines |
+		Without maxWidth set:
+		. . . . . . . . . . . . . . . . . .0
+		|              This is sample text |
+		|     Spanning over multiple lines |
+		```
+	**/
 	Right;
+	/**
+		If `maxWidth` is set - centers text within `0...maxWidth` range.
+		Otherwise text centered around 0 coordinate of the Text instance.
+		```
+		With maxWidth set:
+		0 . . . . . . . . . . . . . . . maxWidth
+		|        This is sample text       |
+		|   Spanning over multiple lines   |
+		Without maxWidth set:
+		. . . . . . . . . 0 . . . . . . . .
+		|       This is sample text        |
+		|   Spanning over multiple lines   |
+		```
+	**/
 	Center;
+	/**
+		With respect to `maxWidth` word-wrap, aligns text to the right at the longest line width.
+		```
+		0 . . . . . . . . . . . . . . . maxWidth
+		|          This is sample text     |
+		| Spanning over multiple lines     |
+		```
+	**/
 	MultilineRight;
+	/**
+		Width respect to `maxWidth` word-wrap, align text centered within the longest line width.
+		```
+		0 . . . . . . . . . . . . . . . maxWidth
+		|     This is sample text          |
+		| Spanning over multiple lines     |
+		```
+	**/
 	MultilineCenter;
 }
 
+/**
+	`h2d.Text` is basic text renderer with multiline support.
+	See Text section of the manual for more details.
+**/
 class Text extends Drawable {
-
+	/**
+		The font used to render Text.
+	**/
 	public var font(default, set) : Font;
+	/**
+		Current rendered text.
+	**/
 	public var text(default, set) : String;
+	/**
+		Text RGB color. Alpha value is ignored.
+	**/
 	public var textColor(default, set) : Int;
+	/**
+		When set, limits maximum line width and causes word-wrap.
+		Affects positioning of the text depending on `textAlign` value.
+	**/
 	public var maxWidth(default, set) : Null<Float>;
+	/**
+		Adds simple drop shadow to the Text with specified offset, color and alpha.
+		Causes text to be rendered twice (first drop shadow and then text itself)
+	**/
 	public var dropShadow : { dx : Float, dy : Float, color : Int, alpha : Float };
 
+	/**
+		Calculated text width. Can exceed maxWidth in certain cases.
+	**/
 	public var textWidth(get, null) : Float;
+	/**
+		Calculated text height. Not a completely precise text metric and increases in font line heights.
+	**/
 	public var textHeight(get, null) : Float;
+	/**
+		Text align rules dictate how the text lines are positionined.
+		See `h2d.Text.Align` for specific details for each alignment mode.
+	**/
 	public var textAlign(default, set) : Align;
+	/**
+		Extra letter spacing in pixels ( default : 0 )
+	**/
 	public var letterSpacing(default, set) : Float;
+	/**
+		Extra line spacing in pixels ( default : 0 )
+	**/
 	public var lineSpacing(default,set) : Float;
 
 	var glyphs : TileGroup;
@@ -38,6 +126,9 @@ class Text extends Drawable {
 
 	var sdfShader : h3d.shader.SignedDistanceField;
 
+	/**
+		Creates new Text instance with specified font and parent.
+	**/
 	public function new( font : Font, ?parent : h2d.Object ) {
 		super(parent);
 		this.font = font;
@@ -158,6 +249,9 @@ class Text extends Drawable {
 		return t;
 	}
 
+	/**
+		Extra validation of the `text` variable when it's changed. Override to add custom validation.
+	**/
 	function validateText() {
 	}
 
@@ -167,6 +261,9 @@ class Text extends Drawable {
 		onContentChanged();
 	}
 
+	/**
+		Calculates and returns width of the provided `text` with settings this Text instance.
+	**/
 	public function calcTextWidth( text : String ) {
 		if( calcDone ) {
 			var ow = calcWidth, oh = calcHeight, osh = calcSizeHeight, ox = calcXMin, oy = calcYMin;
@@ -186,7 +283,7 @@ class Text extends Drawable {
 	}
 
 	/**
-		Word-wrap the text based on this Text settings.		
+		Word-wrap the text based on this Text settings.
 	**/
 	public function splitText( text : String ) {
 		return splitRawText(text,0,0);
@@ -270,6 +367,10 @@ class Text extends Drawable {
 		return lines.join("\n");
 	}
 
+	/**
+		Returns cut `text` based on `progress` percentile.
+		Can be used to gradually show appearing text. (Especially useful when using `HtmlText`)
+	**/
 	public function getTextProgress( text : String, progress : Float ) {
 		if( progress >= text.length ) return text;
 		return text.substr(0, Std.int(progress));

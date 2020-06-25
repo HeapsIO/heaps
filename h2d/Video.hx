@@ -23,6 +23,11 @@ private abstract VideoImpl(hl.Abstract<"hl_video">) {
 }
 #end
 
+/**
+	`h2d.Video` allows playback of video files, however each target platform have it's own limitations.
+	For hashlink it depends on `video` library (at the time of HL 1.11 it's not bundled and have to be [compiled manually](https://github.com/HaxeFoundation/hashlink/tree/master/libs/video) with FFMPEG)
+	For JS it will use HTML Video element and will be restricted by content-security policy and browser decoder capabilities.
+**/
 class Video extends Drawable {
 
 	#if hl
@@ -42,10 +47,25 @@ class Video extends Drawable {
 	var frameReady : Bool;
 	var loopVideo : Bool;
 
+	/**
+		Video width. Value is undefined until video is ready to play.
+	**/
 	public var videoWidth(default, null) : Int;
+	/**
+		Video height. Value is undefined until video is ready to play.
+	**/
 	public var videoHeight(default, null) : Int;
+	/**
+		Tells if video currently playing.
+	**/
 	public var playing(default, null) : Bool;
+	/**
+		Tells current timestamp of the video.
+	**/
 	public var time(get, null) : Float;
+	/**
+		When enabled, video will loop indefinitely.
+	**/
 	public var loop(get, set) : Bool;
 
 	public function new(?parent) {
@@ -54,9 +74,15 @@ class Video extends Drawable {
 		smooth = true;
 	}
 
+	/**
+		`onError` is called when decoder encounts an error.
+	**/
 	public dynamic function onError( msg : String ) {
 	}
 
+	/**
+		`onEnd` is called when video finishes playback.
+	**/
 	public dynamic function onEnd() {
 	}
 
@@ -107,6 +133,10 @@ class Video extends Drawable {
 		frameReady = false;
 	}
 
+	/**
+		Loads the video by specified `path` and calls `onReady` when playback becomes possible.
+		On JS video cannot be played until `onReady` is called.
+	**/
 	public function load( path : String, ?onReady : Void -> Void ) {
 		dispose();
 

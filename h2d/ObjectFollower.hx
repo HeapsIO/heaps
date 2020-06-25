@@ -6,14 +6,38 @@ package h2d;
 @:uiNoComponent
 class ObjectFollower extends Object {
 
+	/**
+		Reference to target 3D object to follow.
+	**/
 	public var follow : h3d.scene.Object;
+	/**
+		Rounds the resulting 2d position of follower aligning it to s2d pixel grid.
+	**/
 	public var pixelSnap = true;
+	/**
+		If enabled, follower will mirror visibility of target object.
+	**/
 	public var followVisibility = false;
+	/**
+		Extra camera projection offset along X-axis to which follower will attach to.
+	**/
 	public var offsetX = 0.;
+	/**
+		Extra camera projection offset along Y-axis to which follower will attach to.
+	**/
 	public var offsetY = 0.;
+	/**
+		Extra camera projection offset along Z-axis to which follower will attach to.
+	**/
 	public var offsetZ = 0.;
 
+	/**
+		Horizontal object alignment relative to anchoring point.
+	**/
 	public var horizontalAlign : h2d.Flow.FlowAlign = Left;
+	/**
+		Vertical object alignment relative to anchoring point.
+	**/
 	public var verticalAlign : h2d.Flow.FlowAlign = Top;
 
 	public function new( obj, ?parent ) {

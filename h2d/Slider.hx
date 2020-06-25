@@ -1,13 +1,24 @@
 package h2d;
 
+/**
+	`h2d.Silder` is a simple interactive horizontal numerical slider.
+**/
 class Slider extends h2d.Interactive {
-
+	/**
+		The slider background tile.
+	**/
 	public var tile : h2d.Tile;
+	/**
+		Tile of the slider current position.
+	**/
 	public var cursorTile : h2d.Tile;
 	public var minValue(default, set) : Float = 0;
 	public var maxValue(default, set) : Float = 1;
 	public var value(default, set) : Float = 0;
 
+	/**
+		Create new Slider width specified dimensions and parent.
+	**/
 	public function new(?width:Int = 50, ?height:Int = 10, ?parent) {
 		super(width, height, parent);
 
@@ -90,6 +101,9 @@ class Slider extends h2d.Interactive {
 		}
 	}
 
+	/**
+		Sent when slider value is changed by user.
+	**/
 	public dynamic function onChange() {
 	}
 

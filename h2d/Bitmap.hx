@@ -1,7 +1,7 @@
 package h2d;
 
 /**
-	h2d.Bitmap is used to display a single bitmap Tile on the screen.
+	`h2d.Bitmap` is used to display a single bitmap Tile on the screen.
 **/
 class Bitmap extends Drawable {
 
@@ -12,12 +12,16 @@ class Bitmap extends Drawable {
 	public var tile(default,set) : Tile;
 
 	/**
-	 * 	If set, rescale the tile to match the given width, keeping the aspect ratio unless height is also set.
+		If set, rescale the tile to match the given width, keeping the aspect ratio unless height is also set.  
+		Note that both `width` and `height` are `null` by default and in order to retrieve bitmap dimensions with
+		scaling accurately, call `getSize` method or address `tile.width/height` to get unscaled dimensions.
 	**/
 	public var width(default,set) : Null<Float>;
 
 	/**
-	 * 	If set, rescale the tile to match the given height, keeping the aspect ratio unless width is also set.
+	 * If set, rescale the tile to match the given height, keeping the aspect ratio unless width is also set.  
+		Note that both `width` and `height` are `null` by default and in order to retrieve bitmap dimensions with
+		scaling accurately, call `getSize` method or address `tile.width/height` to get unscaled dimensions.
 	**/
 	public var height(default,set) : Null<Float>;
 

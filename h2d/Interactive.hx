@@ -1,5 +1,9 @@
 package h2d;
 
+/**
+	`h2d.Interactive` is used to handle user inputs.  
+	Hitbox area can be a rectangle, an ellipse or arbitrary shape (`h2d.col.Collider`).
+**/
 @:allow(h2d.Scene)
 class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 
@@ -27,7 +31,15 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 		Set the default `propagate` mode (see `hxd.Event`), default to false.
 	**/
 	public var propagateEvents : Bool = false;
+	/**
+		If set, Interactive will draw a Tile with `[width, height]` dimensions of specified color (including alpha).
+	**/
 	public var backgroundColor : Null<Int>;
+	/**
+		When enabled, interacting with secondary mouse buttons (right button/wheel) will cause `onPush`, `onClick`, `onRelease` and `onReleaseOutside` callbacks.
+		Otherwise those callback will be triggered only with primary mouse button (left button).
+		Defaults to false.
+	**/
 	public var enableRightButton : Bool;
 	var scene : Scene;
 	var mouseDownButton : Int = -1;
@@ -48,6 +60,9 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 	**/
 	public var shapeY : Float = 0;
 
+	/**
+		Create a new Interactive with specified `width`, `height` and `parent` with optional detailed `shape`.
+	**/
 	public function new(width, height, ?parent, ?shape) {
 		super(parent);
 		this.width = width;
@@ -120,10 +135,12 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 		mouseDownButton = -1;
 	}
 
+	@:dox(hide)
 	@:noCompletion public function getInteractiveScene() : hxd.SceneEvents.InteractiveScene {
 		return scene;
 	}
 
+	@:dox(hide)
 	@:noCompletion public function handleEvent( e : hxd.Event ) {
 		if( parentMask != null && checkBounds(e) ) {
 			var p = parentMask;
@@ -219,7 +236,15 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 		e.relY = (-dx * i.matB + dy * i.matA) * i.invDet;
 	}
 
-	public function startDrag(callb,?onCancel) {
+	/**
+		Starts input events capture and redirects them to `callb` method.
+		Starting event capture trough `Interactive.startDrag` will convert `Event.relX` and `relY` to local coordinates
+		of the Interactive and will restore them afterwar invoking `callb`.
+		@param callb A callback method that receives `hxd.Event` when input event happens. 
+		Unless `callb` sets `Event.propagate` to `true`, even won't be sent to other Interactives.
+		@param onCancel An optional callback that is invoked when `stopDrag()` is called.
+	**/
+	public function startDrag( callb : hxd.Event -> Void,?onCancel : Void -> Void ) {
 		scene.startDrag(function(event) {
 			var x = event.relX, y = event.relY;
 			eventToLocal(event);
@@ -229,24 +254,44 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 		},onCancel);
 	}
 
+	/**
+		Stops current input event capture.
+	**/
 	public function stopDrag() {
 		scene.stopDrag();
 	}
 
+	/**
+		Sets focus on this `Interactive`.
+		If Interactive receieves focus `onFocus` will be called.
+		Event won't be called if Interactive is already focused.
+		Interactive won't become focused if during `onFocus` call it will set `Event.cancel` to `true`.
+	**/
 	public function focus() {
 		if( scene == null || scene.events == null )
 			return;
 		scene.events.focus(this);
 	}
 
+	/**
+		Removes focus from interactive if it's focused.
+		If Interactive is currently focused, `onFocusLost` event will be called.
+		Interactive won't lose focus if during `onFocusLost` call it will set `Event.cancel` to `true`.
+	**/
 	public function blur() {
 		if( hasFocus() ) scene.events.blur();
 	}
 
+	/**
+		Checks if Interactive is currently hovered by mouse.
+	**/
 	public function isOver() {
 		return scene != null && scene.events != null && @:privateAccess scene.events.overList.indexOf(this) != -1;
 	}
 
+	/**
+		Checks if Interactive is currently focused.
+	**/
 	public function hasFocus() {
 		return scene != null && scene.events != null && @:privateAccess scene.events.currentFocus == this;
 	}
@@ -259,7 +304,8 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 	public dynamic function onOver( e : hxd.Event ) {
 	}
 
-	/** Sent when mouse exits Interactive hitbox area.
+	/**
+		Sent when mouse exits Interactive hitbox area.
 		`event.propagate` and `event.cancel` are ignored during `onOut`.
 	**/
 	public dynamic function onOut( e : hxd.Event ) {
@@ -294,27 +340,51 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 	public dynamic function onClick( e : hxd.Event ) {
 	}
 
+	/**
+		Sent when user moves above the Interactive.
+	**/
 	public dynamic function onMove( e : hxd.Event ) {
 	}
-
+	
+	/**
+		Sent when user scrolls mouse wheel above the Interactive. Wheel delta can be obtained trough `Event.wheelDelta`
+	**/
 	public dynamic function onWheel( e : hxd.Event ) {
 	}
 
+	/**
+		Sent when Interactive recieves focus during `focus()` call.
+	**/
 	public dynamic function onFocus( e : hxd.Event ) {
 	}
 
+	/**
+		Sent when Interactive lost focus either via `blur()` call or when user clicks on another Interactive/outside this Interactive.
+	**/
 	public dynamic function onFocusLost( e : hxd.Event ) {
 	}
 
+	/**
+		Sent when user unpressed a keyboard key. Unpressed key can be accessed trough `Event.keyCode`.
+	**/
 	public dynamic function onKeyUp( e : hxd.Event ) {
 	}
 
+	/**
+		Sent when user pressed a keyboard key. Pressed key can be accessed trough `Event.keyCode`.
+	**/
 	public dynamic function onKeyDown( e : hxd.Event ) {
 	}
 
+	/**
+		Sent every frame when user hovers an Interactive but does not move the mouse.
+	**/
 	public dynamic function onCheck( e : hxd.Event ) {
 	}
 
+	/**
+		Sent when user inputs text. Character added can be accessed trough `Event.charCode`.
+	**/
 	public dynamic function onTextInput( e : hxd.Event ) {
 	}
 

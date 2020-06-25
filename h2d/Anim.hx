@@ -1,7 +1,7 @@
 package h2d;
 
 /**
-	h2d.Anim is used to display an animated sequence of bitmap tiles on the screen.
+	`h2d.Anim` is used to display an animated sequence of bitmap tiles on the screen.
 **/
 class Anim extends Drawable {
 
@@ -22,7 +22,7 @@ class Anim extends Drawable {
 	public var speed : Float;
 
 	/**
-		Setting pause will pause the animation, preventing any automatic change to currentFrame.
+		Setting pause will suspend the animation, preventing any automatic change to currentFrame.
 	**/
 	public var pause : Bool = false;
 
@@ -32,7 +32,7 @@ class Anim extends Drawable {
 	public var loop : Bool = true;
 
 	/**
-		When enable, fading will draw two consecutive frames with alpha transition between
+		When enabled, fading will draw two consecutive frames with alpha transition between
 		them instead of directly switching from one to another when it reaches the next frame.
 		This can be used to have smoother animation on some effects.
 	**/
@@ -64,9 +64,12 @@ class Anim extends Drawable {
 	}
 
 	/**
-		onAnimEnd is automatically called each time the animation will reach past the last frame.
-		If loop is true, it is called everytime the animation loops.
-		If loop is false, it is called once when the animation reachs `currentFrame == frames.length`
+		onAnimEnd is automatically called each time the animation will reach past the last frame.  
+		If loop is true, it is called everytime the animation loops.  
+		If loop is false, it is called once when the animation reachs `currentFrame == frames.length`  
+		When method is called on looping animation, `currentFrame` will already be wrapped around and
+		represent new frame position.
+		When loop is disabled, `currentFrame` will always be equal to `frames.length`.
 	**/
 	public dynamic function onAnimEnd() {
 	}

@@ -1,5 +1,4 @@
 package h2d;
-import haxe.ds.Vector;
 
 @:access(h2d.RenderContext)
 private class State {
@@ -35,6 +34,7 @@ private class DepthEntry {
 	public function new() { }
 }
 
+@:dox(hide)
 class DepthMap {
 	var map      : Map<Object, DepthEntry>;
 	var curIndex : Int;
@@ -116,6 +116,16 @@ class DepthMap {
 	}
 }
 
+/**
+	`h2d.ZGroup` is an advanced rendering class that utilized double-pass rendering in order to utilize z-culling on opaque objects.
+
+	In order to utilize ZGroup optimizations, all opaque objects should have `blendMode` set to `None`.
+
+	Rendering is done in two passes: Opaque and transparent pass. First pass only renders objects with `blendeMode = None`, while
+	second pass draws objects with any other blendMode. That allows to perform z-cull depth test on objects and reduce gpu strain.
+
+	Additionally, ZGroup places a limitation on filter usage. They are not drawn in opaque pass, which can lead to unexpected results.
+**/
 @:access(h2d.RenderContext)
 class ZGroup extends Layers
 {

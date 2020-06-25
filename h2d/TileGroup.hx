@@ -1,17 +1,34 @@
 package h2d;
-
+/**
+	TileGroup internal class for batched quad geometry rendering.
+**/
 class TileLayerContent extends h3d.prim.Primitive {
 
 	var tmp : hxd.FloatBuffer;
+	/**
+		Content bounds left edge.
+	**/
 	public var xMin : Float;
+	/**
+		Content bounds top edge.
+	**/
 	public var yMin : Float;
+	/**
+		Content bounds right edge.
+	**/
 	public var xMax : Float;
+	/**
+		Content bounds bottom edge.
+	**/
 	public var yMax : Float;
 
 	public function new() {
 		clear();
 	}
 
+	/**
+		Remove all data from Content instance.
+	**/
 	public function clear() {
 		tmp = new hxd.FloatBuffer();
 		if( buffer != null ) buffer.dispose();
@@ -30,10 +47,27 @@ class TileLayerContent extends h3d.prim.Primitive {
 		return if( buffer == null ) tmp.length >> 4 else buffer.totalVertices() >> 1;
 	}
 
+	/**
+		Adds tinted Tile at specified position.
+		@param x X position of the tile relative to drawn Object.
+		@param y Y position of the tile relative to drawn Object.
+		@param color An RGBA vector used for tinting.
+		@param t The Tile to draw.
+	**/
 	public inline function addColor( x : Float, y : Float, color : h3d.Vector, t : Tile ) {
 		add(x, y, color.r, color.g, color.b, color.a, t);
 	}
 
+	/**
+		Adds tinted Tile at specified position.
+		@param x X position of the tile relative to drawn Object.
+		@param y Y position of the tile relative to drawn Object.
+		@param r Red tint value (0...1 range)
+		@param g Green tint value (0...1 range)
+		@param b Blue tint value (0...1 range)
+		@param a Alpha of the drawn Tile
+		@param t The Tile to draw.
+	**/
 	public function add( x : Float, y : Float, r : Float, g : Float, b : Float, a : Float, t : Tile ) {
 		var sx = x + t.dx;
 		var sy = y + t.dy;
@@ -79,6 +113,16 @@ class TileLayerContent extends h3d.prim.Primitive {
 		if( y > yMax ) yMax = y;
 	}
 
+	/**
+		Adds tinted Tile at specified position with provided transform.
+		@param x X position of the tile relative to drawn Object.
+		@param y Y position of the tile relative to drawn Object.
+		@param sx X-axis scaling factor of the Tile.
+		@param sy Y-axis scaling factor of the Tile.
+		@param r Rotation (in radians) of the Tile.
+		@param c An RGBA vector used for tinting.
+		@param t The Tile to draw.
+	**/
 	public function addTransform( x : Float, y : Float, sx : Float, sy : Float, r : Float, c : h3d.Vector, t : Tile ) {
 
 		var ca = Math.cos(r), sa = Math.sin(r);
@@ -148,6 +192,10 @@ class TileLayerContent extends h3d.prim.Primitive {
 		updateBounds(px, py);
 	}
 
+	/**
+		Intended for internal usage. Adds single vertex to the buffer with no 0 uv.  
+		Should be used in groups of 4 to form single quad.
+	**/
 	public function addPoint( x : Float, y : Float, color : Int ) {
 		tmp.push(x);
 		tmp.push(y);
@@ -167,6 +215,14 @@ class TileLayerContent extends h3d.prim.Primitive {
 		tmp.push((c >>> 24) / 255.);
 	}
 
+	/**
+		Adds simple tinted rectangle at specified position. UV covers entire bound texture.
+		@param x X position of the rectangle relative to drawn Object.
+		@param y Y position of the rectangle relative to drawn Object.
+		@param w Width of the rectangle in pixels.
+		@param h Height of the rectangle in pixels.
+		@param color An ARGB color integer used for tinting.
+	**/
 	public inline function rectColor( x : Float, y : Float, w : Float, h : Float, color : Int ) {
 		tmp.push(x);
 		tmp.push(y);
@@ -197,6 +253,17 @@ class TileLayerContent extends h3d.prim.Primitive {
 		if( y > yMax ) yMax = y;
 	}
 
+	/**
+		Adds simple rectangular gradient at specified position. UV covers entire bound texture.
+		@param x X position of the rectangle relative to drawn Object.
+		@param y Y position of the rectangle relative to drawn Object.
+		@param w Width of the rectangle in pixels.
+		@param h Height of the rectangle in pixels.
+		@param ctl Tint color of the top-left corner.
+		@param ctr Tint color of the top-right corner.
+		@param cbl Tint color of the bottom-left corner.
+		@param cbr Tint color of the bottom-right corner.
+	**/
 	public inline function rectGradient( x : Float, y : Float, w : Float, h : Float, ctl : Int, ctr : Int, cbl : Int, cbr : Int ) {
 		tmp.push(x);
 		tmp.push(y);
@@ -216,7 +283,7 @@ class TileLayerContent extends h3d.prim.Primitive {
 		tmp.push(x + w);
 		tmp.push(y + h);
 		tmp.push(1);
-		tmp.push(0);
+		tmp.push(1);
 		insertColor(cbr);
 
 		if( x < xMin ) xMin = x;
@@ -227,6 +294,15 @@ class TileLayerContent extends h3d.prim.Primitive {
 		if( y > yMax ) yMax = y;
 	}
 
+	/**
+		Adds a filled arc at specified position.
+		@param x X position of the arc center.
+		@param y Y position of the arc center.
+		@param ray Radius of the arc.
+		@param c ARGB color of the arc.
+		@param start Starting angle (in radians) of the arc.
+		@param end Enging angle (in radians) of the arc.
+	**/
 	public inline function fillArc( x : Float, y : Float, ray : Float, c : Int, start: Float, end: Float) {
 		if (end <= start) return;
 		var arcLength = end - start;
@@ -261,6 +337,13 @@ class TileLayerContent extends h3d.prim.Primitive {
 		addPoint(prevX, prevY, c);
 	}
 
+	/**
+		Adds a filled circle at specified position.
+		@param x X position of the circle center.
+		@param y Y position of the circle center.
+		@param radius Radius of the circle.
+		@param c ARGB color of the circle.
+	**/
 	public inline function fillCircle( x : Float, y : Float, radius : Float, c : Int) {
 		var nsegments = Math.ceil(radius * 3.14 * 2 / 2);
 		if( nsegments < 3 ) nsegments = 3;
@@ -293,6 +376,14 @@ class TileLayerContent extends h3d.prim.Primitive {
 		addPoint(x, y, c);
 	}
 
+	/**
+		Adds a circle at specified position.
+		@param x X position of the circle center.
+		@param y Y position of the circle center.
+		@param ray Radius of the circle outer edge.
+		@param size Radius of the circle inner edge.
+		@param c ARGB color of the arc.
+	**/
 	public inline function circle( x : Float, y : Float, ray : Float, size: Float, c : Int) {
 		if (size > ray) return;
 		var nsegments = Math.ceil(ray * 3.14 * 2 / 2);
@@ -322,6 +413,16 @@ class TileLayerContent extends h3d.prim.Primitive {
 		}
 	}
 
+	/**
+		Adds a arc at specified position.
+		@param x X position of the arc center.
+		@param y Y position of the arc center.
+		@param ray Radius of the arc outer edge.
+		@param size Radius of the arc inner edge.
+		@param start Starting angle (in radians) of the arc.
+		@param end Enging angle (in radians) of the arc.
+		@param c ARGB color of the arc.
+	**/
 	public inline function arc( x : Float, y : Float, ray : Float, size: Float, start: Float, end: Float, c : Int) {
 		if (size > ray) return;
 		if (end <= start) return;
@@ -372,10 +473,19 @@ class TileLayerContent extends h3d.prim.Primitive {
 			buffer = h3d.Buffer.ofFloats(tmp, 8, [Quads, RawFormat]);
 	}
 
+	/**
+		Flushes added quads to the rendering buffer.
+		Only flushes if rendering buffer is disposed, and to ensure new data is added, call `dispose()` first.
+	**/
 	public inline function flush() {
 		if( buffer == null || buffer.isDisposed() ) alloc(h3d.Engine.getCurrent());
 	}
 
+	/**
+		Renders the Content quads.
+		@param min Initial triangle offset of buffer to draw.
+		@param len Amount of triangle to draw. (`-1` to render until the end of buffer)
+	**/
 	public function doRender(engine:h3d.Engine, min, len) {
 		flush();
 		if( buffer != null )
@@ -384,15 +494,37 @@ class TileLayerContent extends h3d.prim.Primitive {
 
 }
 
+/**
+	`h2d.TileGroup` is a static Tile batch renderer.
+	It's limited to one unique texture, but allows to render all Tiles in single drawcall.
+
+	TileGroup follows upload-once policy and does not allow modification of the already added geometry.
+	To add new geometry it's mandatory to call `invalidate()` or in case existing geometry has to be modified
+	entire group have to be cleared with `clear()` and repopulated.
+**/
 class TileGroup extends Drawable {
 
 	var content : TileLayerContent;
 	var curColor : h3d.Vector;
 
+	/**
+		The reference tile used as a Texture source to draw.
+	**/
 	public var tile : Tile;
+	/**
+		If set, only tiles indexed above or equal to `rangeMin` will be drawn.
+	**/
 	public var rangeMin : Int;
+	/**
+		If set, only tiles indexed below `rangeMax` will be drawn.
+	**/
 	public var rangeMax : Int;
 
+	/**
+		Create new TileGroup instance using Texture based on provided Tile.
+		@param t The Tile which is used as a source for a Texture to be rendered.
+		@param parent Optional parent Object in which TileGroup will add itself.
+	**/
 	public function new(t : Tile, ?parent : h2d.Object) {
 		super(parent);
 		tile = t;
@@ -406,6 +538,9 @@ class TileGroup extends Drawable {
 		addBounds(relativeTo, out, content.xMin, content.yMin, content.xMax - content.xMin, content.yMax - content.yMin);
 	}
 
+	/**
+		Clears all TileGroup contents and disposes allocated GPU memory.
+	**/
 	public function clear() : Void {
 		content.clear();
 	}
@@ -430,6 +565,9 @@ class TileGroup extends Drawable {
 		super.onRemove();
 	}
 
+	/**
+		Sets default tinting color when adding Tiles.
+	**/
 	public function setDefaultColor( rgb : Int, alpha = 1.0 ) {
 		curColor.x = ((rgb >> 16) & 0xFF) / 255;
 		curColor.y = ((rgb >> 8) & 0xFF) / 255;
@@ -437,18 +575,50 @@ class TileGroup extends Drawable {
 		curColor.w = alpha;
 	}
 
+	/**
+		Adds tinted Tile at specified position. Current default color is used as tint.
+		@param x X position of the tile relative to drawn Object.
+		@param y Y position of the tile relative to drawn Object.
+		@param t The Tile to draw.
+	**/
 	public inline function add(x : Float, y : Float, t : h2d.Tile) {
 		content.add(x, y, curColor.x, curColor.y, curColor.z, curColor.w, t);
 	}
 
+	/**
+		Adds tinted Tile at specified position.
+		@param x X position of the tile relative to drawn Object.
+		@param y Y position of the tile relative to drawn Object.
+		@param r Red tint value (0...1 range)
+		@param g Green tint value (0...1 range)
+		@param b Blue tint value (0...1 range)
+		@param a Alpha of the drawn Tile
+		@param t The Tile to draw.
+	**/
 	public inline function addColor( x : Float, y : Float, r : Float, g : Float, b : Float, a : Float, t : Tile) {
 		content.add(x, y, r, g, b, a, t);
 	}
 
+	/**
+		Adds tinted Tile at specified position. Current default RGB color and provided alpha is used as tint.
+		@param x X position of the tile relative to drawn Object.
+		@param y Y position of the tile relative to drawn Object.
+		@param a Alpha of the drawn Tile
+		@param t The Tile to draw.
+	**/
 	public inline function addAlpha(x : Float, y : Float, a : Float, t : h2d.Tile) {
 		content.add(x, y, curColor.x, curColor.y, curColor.z, a, t);
 	}
 
+	/**
+		Adds tinted Tile at specified position with provided transform. Current default color user as tint.
+		@param x X position of the tile relative to drawn Object.
+		@param y Y position of the tile relative to drawn Object.
+		@param sx X-axis scaling factor of the Tile.
+		@param sy Y-axis scaling factor of the Tile.
+		@param r Rotation (in radians) of the Tile.
+		@param t The Tile to draw.
+	**/
 	public inline function addTransform(x : Float, y : Float, sx : Float, sy : Float, r : Float, t : Tile) {
 		content.addTransform(x, y, sx, sy, r, curColor, t);
 	}

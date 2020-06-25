@@ -1,9 +1,20 @@
 package h2d;
 
+/**
+	`h2d.CheckBox` is a simple UI toggle component.
+**/
 class CheckBox extends h2d.Flow {
-
+	/**
+		When disabled, user would not be able to toggle checkbox state by interacting with it.
+	**/
 	public var enable(default,set) : Bool = true;
+	/**
+		Current toggle state of the checkbox.
+	**/
 	public var selected(default,set) : Bool = false;
+	/**
+		Optional text label that will be shown to the right of the checkbox.
+	**/
 	public var text(default,set) : String = "";
 
 	var tf : h2d.Text;
@@ -69,6 +80,9 @@ class CheckBox extends h2d.Flow {
 		return selected;
 	}
 
+	/**
+		`onChange` is called when user or software changes the toggle state.
+	**/
 	public dynamic function onChange() {
 	}
 }

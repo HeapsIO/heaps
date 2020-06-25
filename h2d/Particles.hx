@@ -17,15 +17,15 @@ enum PartEmitMode {
 	**/
 	Point;
 	/**
-		A cone, parametrized with emitAngle and emitDistance
+		A cone, parametrized with `emitAngle` and `emitDistance`
 	**/
 	Cone;
 	/**
-		A box, parametrized with emitDist and emitDistY
+		A box, parametrized with `emitDist` and `emitDistY`
 	**/
 	Box;
 	/**
-		A box, parametrized with emitAngle and emitDistance
+		A box, parametrized with `emitAngle` and `emitDistance`
 	**/
 	Direction;
 }
@@ -129,6 +129,9 @@ private class Particle extends h2d.SpriteBatch.BatchElement {
 
 }
 
+/**
+	`h2d.Particles.ParticleGroup` provides particle simulation in Particles system.
+**/
 @:access(h2d.SpriteBatch)
 @:access(h2d.Object)
 class ParticleGroup {
@@ -152,56 +155,181 @@ class ParticleGroup {
 	var needRebuild = true;
 	var tiles : Array<h2d.Tile>;
 
+	/**
+		The group name.
+	**/
 	public var name : String;
+	/**
+		Disabling the group immediately removes it from rendering and resets it's state.
+	**/
 	public var enable(default, set) : Bool = true;
+	/**
+		Does nothing.
+	**/
 	public var sortMode(default, set) : PartSortMode = None;
+	/**
+		Configures blending mode for this group.
+	**/
 	public var blendMode(default, set) : BlendMode = Alpha;
 
+	/**
+		Maximum number of particles alive at a time.
+	**/
 	public var nparts(default, set) : Int 		= 100;
+	/**
+		Initial particle X offset
+	**/
 	public var dx(default, set) : Int 			= 0;
+	/**
+		Initial particle Y offset
+	**/
 	public var dy(default, set) : Int 			= 0;
 
+	/**
+		If enabled, group will emit new particles indefinitely maintaining number of particles at `nparts`.
+	**/
 	public var emitLoop(default, set) : Bool 	= true;
+	/**
+		The pattern in which particles are emitted. See individual `PartEmitMode` values for more details.
+	**/
 	public var emitMode(default, set):PartEmitMode = Point;
+	/**
+		Initial particle position distance from emission point.
+	**/
 	public var emitStartDist(default, set) : Float = 0.;
+	/**
+		Additional random particle position distance from emission point.
+	**/
 	public var emitDist(default, set) : Float	= 50.;
+	/**
+		Secondary random position distance modifier (used by `Box` emitMode)
+	**/
 	public var emitDistY(default, set) : Float	= 50.;
+	/**
+		Normalized particle emission direction angle.
+	**/
 	public var emitAngle(default, set) : Float 	= -0.5;
+	/**
+		When enabled, particle rotation will point in the emission direction angle.
+	**/
 	public var emitDirectionAsAngle(default, set) : Bool = false;
+	/**
+		Randomized synchronization delay before particle appears after being emitted.
+		Usage note for non-relative mode: Particle will use configuration that was happened at time of emission, not when delay timer runs out.
+	**/
 	public var emitSync(default, set) : Float	= 0;
+	/**
+		Fixed delay before particle appears after being emitted.
+		Usage note for non-relative mode: Particle will use configuration that was happened at time of emission, not when delay timer runs out.
+	**/
 	public var emitDelay(default, set) : Float	= 0;
 
+	/**
+		Initial particle size.
+	**/
 	public var size(default, set) : Float		= 1;
+	/**
+		If set, particle will change it's size with time.
+	**/
 	public var sizeIncr(default, set) : Float	= 0;
+	/**
+		If enabled, particle will increase on X-axis with `sizeIncr`.
+	**/
 	public var incrX(default, set) : Bool		= true;
+	/**
+		If enabled, particle will increase on Y-axis with `sizeIncr`.
+	**/
 	public var incrY(default, set) : Bool		= true;
+	/**
+		Additional random size increase when particle is created.
+	**/
 	public var sizeRand(default, set) : Float	= 0;
 
+	/**
+		Initial particle lifetime.
+	**/
 	public var life(default, set) : Float		= 1;
+	/**
+		Additional random lifetime increase when particle is created.
+	**/
 	public var lifeRand(default, set) : Float	= 0;
 
+	/**
+		Initial particle velocity.
+	**/
 	public var speed(default, set) : Float			= 50.;
+	/**
+		Additional random velocity increase when particle is created.
+	**/
 	public var speedRand(default, set) : Float		= 0;
+	/**
+		If set, particle velocity will change over time.
+	**/
 	public var speedIncr(default, set) : Float		= 0;
+	/**
+		Gravity applied to the particle.
+	**/
 	public var gravity(default, set) : Float		= 0;
+	/**
+		The gravity angle. `0` points down.
+	**/
 	public var gravityAngle(default, set) : Float 	= 0;
-	public var cosGravityAngle : Float;
-	public var sinGravityAngle : Float;
+	@:noCompletion @:dox(hide) public var cosGravityAngle : Float;
+	@:noCompletion @:dox(hide) public var sinGravityAngle : Float;
 
+	/**
+		Initial particle rotation.
+	**/
 	public var rotInit(default, set) : Float	= 0;
+	/**
+		Initial rotation speed of the particle.
+	**/
 	public var rotSpeed(default, set) : Float	= 0;
+	/**
+		Additional random rotation speed when particle is created.
+	**/
 	public var rotSpeedRand(default, set):Float = 0;
+	/**
+		If enabled, particles will be automatically rotated in the direction of particle velocity.
+	**/
 	public var rotAuto							= false;
 
+	/**
+		The time in seconds during which particle alpha fades in after being emitted.
+	**/
 	public var fadeIn : Float					= 0.2;
+	/**
+		The time in seconds at which particle will start to fade out before dying. Fade out time can be calculated with `lifetime - fadeOut`.
+	**/
 	public var fadeOut : Float					= 0.8;
 	public var fadePower : Float				= 1;
 
+	/**
+		Total count of frames used by the group.
+		When 0, amount of frames in a group calculated by `frameDivisionX * frameDivisionY`
+		Otherwise it's `min(frameDivisionX * frameDivisionY, frameCount)`.
+	**/
 	public var frameCount(default,set) : Int		= 0;
+	/**
+		Horizontal frame divisor.
+	**/
 	public var frameDivisionX(default,set) : Int	= 1;
+	/**
+		Vertical frame divisor.
+	**/
 	public var frameDivisionY(default,set) : Int	= 1;
+	/**
+		The amoung of times animations will loop during lifetime.
+		Settings it to 0 will stop animation playback and each particle will have random frame assigned.
+	**/
 	public var animationRepeat(default,set) : Float	= 1;
+	/**
+		The texture used to render particles.
+	**/
 	public var texture(default,set) : h3d.mat.Texture;
+	/**
+		Optional color gradient texture for tinting.
+	**/
 	public var colorGradient(default,set) : h3d.mat.Texture;
 	
 	/** Should partcles follow the emitter or stay in place? **/
@@ -291,6 +419,9 @@ class ParticleGroup {
 		needRebuild = true;
 	}
 
+	/**
+		Reset current state of particle group and re-emit all particles.
+	**/
 	public function rebuild() {
 		needRebuild = false;
 		batch.clear();
@@ -410,6 +541,7 @@ class ParticleGroup {
 
 	}
 
+	@:dox(hide)
 	public function save() {
 		var o : Dynamic = {};
 		for( f in getFields(this) )
@@ -422,6 +554,7 @@ class ParticleGroup {
 		return o;
 	}
 
+	@:dox(hide)
 	public function load( version : Int, o : Dynamic ) {
 		for( f in getFields(this) )
 			if( Reflect.hasField(o,f) )
@@ -435,6 +568,18 @@ class ParticleGroup {
 
 }
 
+/**
+	`h2d.Particles` provide a 2D particle system with wide range of customizability.
+
+	Particles instance can contain multiple ParticleGroup instances each of which works independently from one another.
+
+	To simplify designing of particles HIDE contains dedicated 2D particle editor and stores particle data in JSON format,
+	which then can be loaded with the `load` method:
+	```haxe
+	var part = new h2d.Particles();
+	part.load(haxe.Json.parse(hxd.Res.path.to.parts.entry.getText()), hxd.Res.path.to.parts.entry.path);
+	```
+**/
 @:access(h2d.ParticleGroup)
 class Particles extends Drawable {
 
@@ -456,17 +601,28 @@ class Particles extends Drawable {
 		return hxd.res.Loader.currentInstance.load(path).toTexture();
 	}
 
+	/**
+		Sent when all particle groups stopped playback.
+		By default restarts all groups.
+	**/
 	public dynamic function onEnd() {
 		for( g in groups )
 			g.needRebuild = true;
 	}
 
+	/**
+		Saves Particles settings and returns an object that can be saved into a file and then loaded with `load` method.
+	**/
 	public function save() : Dynamic {
 		var obj : Dynamic = { type : "particles2D", version : VERSION, groups : [for( g in groups ) g.save()] };
 		if( hideProps != null ) obj.hide = hideProps;
 		return obj;
 	}
 
+	/**
+		Loads previously saved Particles settings.
+		@param o The saved Particles settings.
+	**/
 	public function load( o : Dynamic, ?resourcePath : String ) {
 		this.resourcePath = resourcePath;
 		if( o.version == 0 || o.version > VERSION ) throw "Unsupported version " + o.version;
@@ -475,6 +631,12 @@ class Particles extends Drawable {
 		hideProps = o.hide;
 	}
 
+	/**
+		Add new particle group to the Particles.
+		@param g Particle group to add. If null, will create an empty ParticleGroup.
+		@param index Optional insertion index at which the group should be inserted.
+		@returns Added ParticleGroup instance.
+	**/
 	public function addGroup( ?g : ParticleGroup, ?index ) {
 		if( g == null )
 			g = new ParticleGroup(this);
@@ -486,12 +648,18 @@ class Particles extends Drawable {
 		return g;
 	}
 
+	/**
+		Removes the group from the Particles.
+	**/
 	public function removeGroup( g : ParticleGroup ) {
 		var idx = groups.indexOf(g);
 		if( idx < 0 ) return;
 		groups.splice(idx,1);
 	}
 
+	/**
+		Returns a group with a specified name or `null` if none found.
+	**/
 	public function getGroup( name : String ) {
 		for( g in groups )
 			if( g.name == name )
@@ -548,6 +716,9 @@ class Particles extends Drawable {
 		blendMode = old;
 	}
 
+	/**
+		Returns an Iterator of particle groups within Particles.
+	**/
 	public inline function getGroups() {
 		return groups.iterator();
 	}

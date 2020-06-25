@@ -2,23 +2,41 @@ package h2d;
 
 import hxd.Key;
 
+/**
+	Console argument type.
+**/
 enum ConsoleArg {
 	AInt;
 	AFloat;
 	AString;
 	ABool;
+	/**
+		`AEnum` type acts as `AString` but restricts allowed values to provided list of strings.
+	**/
 	AEnum( values : Array<String> );
 }
 
+@:dox(hide)
 typedef ConsoleArgDesc = {
 	name : String,
 	t : ConsoleArg,
 	?opt : Bool,
 }
 
+/**
+	`h2d.Console` provides simple debug console integration.
+
+	By default comes with 2 commands: `help` and `cls`, which print help message
+	describing all command and clear the screen respectively
+
+	To add custom commands, use `Console.add` and `Console.addCommand` methods.
+**/
 class Console #if !macro extends h2d.Object #end {
 
 	#if !macro
+	/**
+		The timeout in seconds before log will automatically hide after last message. ( default : 3 )
+	**/
 	public static var HIDE_LOG_TIMEOUT = 3.;
 
 	var width : Int;
@@ -35,9 +53,18 @@ class Console #if !macro extends h2d.Object #end {
 	var logIndex:Int;
 	var curCmd:String;
 
+	/**
+		The text character which should be pressed in order to automatically show console input.
+	**/
 	public var shortKeyChar : Int = "/".code;
+	/**
+		Provide an auto-complete on Enter/Tab key and command completion hints.
+	**/
 	public var autoComplete : Bool = true;
 
+	/**
+		Create new Console instance using provided font and parent.
+	**/
 	public function new(font:h2d.Font,?parent) {
 		super(parent);
 		height = Math.ceil(font.lineHeight) + 2;
@@ -74,12 +101,26 @@ class Console #if !macro extends h2d.Object #end {
 		addAlias("?", "help");
 	}
 
-	public function addCommand( name, ?help, args, callb : Dynamic ) {
+	/**
+		Add new command to console.
+		@param name Command name
+		@param help Optional command description text.
+		@param args An array of command arguments. 
+		@param callb The callback method taking the arguments listed in `args`.
+	**/
+	public function addCommand( name, ?help, args : Array<ConsoleArgDesc>, callb : Dynamic ) {
 		commands.set(name, { help : help == null ? "" : help, args:args, callb:callb } );
 	}
 
 	#end
-
+	
+	/**
+		Add new command to console via macro.
+		Only following callback parameters are supported: `Int`, `Float`, `String` and `Bool`.
+		@param ethis An expression that points at console instance.
+		@param name A String expression of the command name
+		@param callb An expression that points at the callback method.
+	**/
 	public macro function add( ethis, name, callb ) {
 		var args = [];
 		var et = haxe.macro.Context.typeExpr(callb);
@@ -106,10 +147,18 @@ class Console #if !macro extends h2d.Object #end {
 
 	#if !macro
 
+	/**
+		Add an alias to the existing command.
+		@param name Command alias
+		@param command Full command name to alias.
+	**/
 	public function addAlias( name, command ) {
 		aliases.set(name, command);
 	}
 
+	/**
+		Executes the String in same way the user would execute it.
+	**/
 	public function runCommand( commandLine : String ) {
 		handleCommand(commandLine);
 	}
@@ -179,10 +228,16 @@ class Console #if !macro extends h2d.Object #end {
 		}
 	}
 
+	/**
+		Checks if Console is currently shown.
+	**/
 	public function isActive() {
 		return bg.visible;
 	}
 
+	/**
+		Hides the Console.
+	**/
 	public function hide() {
 		bg.visible = false;
 		tf.text = "";
@@ -190,6 +245,9 @@ class Console #if !macro extends h2d.Object #end {
 		tf.cursorIndex = -1;
 	}
 
+	/**
+		Hides the shows and focuses the Console.
+	**/
 	public function show() {
 		bg.visible = true;
 		tf.focus();
@@ -409,6 +467,11 @@ class Console #if !macro extends h2d.Object #end {
 		}
 	}
 
+	/**
+		Print to console.
+		@param text The text to show in the log message.
+		@param color Optional custom text color.
+	**/
 	public function log( text : String, ?color ) {
 		if( color == null ) color = tf.textColor;
 		var oldH = logTxt.textHeight;

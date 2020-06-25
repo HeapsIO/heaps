@@ -319,6 +319,9 @@ class Object #if (domkit && !domkit_heaps) implements domkit.Model<h2d.Object> #
 		return pt;
 	}
 
+	/**
+		Returns `h2d.Scene` down the hierarchy tree or `null` if object is not added to Scene.
+	**/
 	public function getScene() : Scene {
 		var p = this;
 		while( p.parent != null ) p = p.parent;
@@ -381,13 +384,19 @@ class Object #if (domkit && !domkit_heaps) implements domkit.Model<h2d.Object> #
 		if( parentContainer != null ) parentContainer.contentChanged(this);
 	}
 
-	// called when we're allocated already but moved in hierarchy
+	/**
+		Sent when object was already allocated and moved within scene object tree hierarchy.
+		Do not remove the super call when overriding.
+	**/
 	function onHierarchyMoved( parentChanged : Bool ) {
 		for ( c in children )
 			c.onHierarchyMoved(parentChanged);
 	}
 
-	// kept for internal init
+	/**
+		Sent when object is being allocated added to scene.
+		Do not remove the super call when overriding.
+	**/
 	function onAdd() {
 		allocated = true;
 		if( filter != null )
@@ -396,7 +405,11 @@ class Object #if (domkit && !domkit_heaps) implements domkit.Model<h2d.Object> #
 			c.onAdd();
 	}
 
-	// kept for internal cleanup
+
+	/**
+		Sent when object is removed from scene.
+		Do not remove the super call when overriding.
+	**/
 	function onRemove() {
 		allocated = false;
 		if( filter != null )
@@ -405,6 +418,9 @@ class Object #if (domkit && !domkit_heaps) implements domkit.Model<h2d.Object> #
 			c.onRemove();
 	}
 
+	/**
+		Populates Matrix with current object transform values.
+	**/
 	function getMatrix( m : h2d.col.Matrix ) {
 		m.a = matA;
 		m.b = matB;
@@ -480,9 +496,16 @@ class Object #if (domkit && !domkit_heaps) implements domkit.Model<h2d.Object> #
 		}
 	}
 
+	/**
+		Called during rendering, and expected to draw Object graphics.
+	**/
 	function draw( ctx : RenderContext ) {
 	}
 
+	/**
+		Used to sync data for rendering.
+		Do not remove the super call when overriding.
+	**/
 	function sync( ctx : RenderContext ) {
 		var changed = posChanged;
 		if( changed ) {
@@ -510,6 +533,9 @@ class Object #if (domkit && !domkit_heaps) implements domkit.Model<h2d.Object> #
 		}
 	}
 
+	/**
+		Ensures that object has an up-to-date transform.
+	**/
 	function syncPos() {
 		if( parent != null ) parent.syncPos();
 		if( posChanged ) {
@@ -564,6 +590,9 @@ class Object #if (domkit && !domkit_heaps) implements domkit.Model<h2d.Object> #
 		}
 	}
 
+	/**
+		Draws single Tile instance with this Object transform.
+	**/
 	function emitTile( ctx : RenderContext, tile : h2d.Tile ) {
 		if( nullDrawable == null )
 			nullDrawable = @:privateAccess new h2d.Drawable(null);

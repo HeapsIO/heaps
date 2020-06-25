@@ -1,8 +1,20 @@
 package h2d;
 
+/**
+	A character kerning information as well as linked list of kernings.
+**/
 class Kerning {
+	/**
+		A character that should precede current character in order to apply this kerning.
+	**/
 	public var prevChar : Int;
+	/**
+		Kerning offset in pixels.
+	**/
 	public var offset : Float;
+	/**
+		Next kerning reference.
+	**/
 	public var next : Null<Kerning>;
 	public function new(c, o) {
 		this.prevChar = c;
@@ -11,9 +23,17 @@ class Kerning {
 }
 
 class FontChar {
-
+	/**
+		A Tile representing position of a character on the texture.
+	**/
 	public var t : h2d.Tile;
+	/**
+		Horizontal advance value of the character.
+	**/
 	public var width : Float;
+	/**
+		Linked list of kerning values.
+	**/
 	var kerning : Null<Kerning>;
 
 	public function new(t,w) {
@@ -21,12 +41,19 @@ class FontChar {
 		this.width = w;
 	}
 
+	/**
+		Adds a new kerning to the character with specified `prevChar` and `offset`.
+	**/
 	public function addKerning( prevChar : Int, offset : Int ) {
 		var k = new Kerning(prevChar, offset);
 		k.next = kerning;
 		kerning = k;
 	}
 
+	/**
+		Returns kerning offset for a pair `[prevChar, currentChar]`.
+		Returns 0 if there was no paired kerning value.
+	**/
 	public function getKerningOffset( prevChar : Int ) {
 		var k = kerning;
 		while( k != null ) {
@@ -37,6 +64,9 @@ class FontChar {
 		return 0;
 	}
 
+	/**
+		Clones the character instance.
+	**/
 	public function clone() {
 		var c = new FontChar(t.clone(), width);
 		// Clone entire kerning tree in case Font got resized.
@@ -77,14 +107,33 @@ enum FontType {
 }
 
 class Font {
-
 	public var name(default, null) : String;
+	/**
+		Current font size. Font can be resized with `resizeTo`.
+	**/
 	public var size(default, null) : Int;
+	/**
+		The baseline value of the font represent the base on which characters will sit.
+		Used primarily with HtmlText to sit multiple fonts and images at the same lin.
+	**/
 	public var baseLine(default, null) : Float;
+	/**
+		Font line height provides vertical offset for each new line of the text.
+	**/
 	public var lineHeight(default, null) : Float;
+	/**
+		Reference to the source Tile containing all glyphs of the Font.
+	**/
 	public var tile(default,null) : h2d.Tile;
 	public var tilePath(default,null) : String;
+	/**
+		The font type. BitmapFonts rendered as-is, but SDF fonts will use extra shader to produce scalable smooth fonts.
+	**/
 	public var type : FontType;
+	/**
+		Font charset allows to resolve specific char codes that are not directly present in glyph map as well as detect spaces.
+		Defaults to `hxd.Charset.getDefault()`
+	**/
 	public var charset : hxd.Charset;
 	var glyphs : Map<Int,FontChar>;
 	var nullChar : FontChar;
@@ -93,6 +142,9 @@ class Font {
 	var offsetX:Float = 0;
 	var offsetY:Float = 0;
 
+	/**
+		Creates an empty font instance with specified `name`, `size` and `type`.
+	**/
 	function new(name : String, size : Int, ?type : FontType) {
 		this.name = name;
 		this.size = size;
@@ -108,6 +160,11 @@ class Font {
 			this.type = type;
 	}
 
+	/**
+		Returns a `FontChar` instance corresponding to the `code`.
+		If font char is not present in glyph list, `charset.resolveChar` is called.
+		Returns `null` if glyph under specified charcode does not exist.
+	**/
 	public inline function getChar( code : Int ) {
 		var c = glyphs.get(code);
 		if( c == null ) {
@@ -118,6 +175,10 @@ class Font {
 		return c;
 	}
 
+	/**
+		Offsets all glyphs by specified amount specified with `x` and `y`.
+		Affects glyph `Tile.dx` and `Tile.dy`.
+	**/
 	public function setOffset( x : Float, y :Float ) {
 		var dx = x - offsetX;
 		var dy = y - offsetY;
@@ -130,6 +191,9 @@ class Font {
 		this.offsetY += dy;
 	}
 
+	/**
+		Creates a copy of the font instance.
+	**/
 	public function clone() {
 		var f = new Font(name, size);
 		f.baseLine = baseLine;
@@ -169,6 +233,10 @@ class Font {
 		this.size = size;
 	}
 
+	/**
+		Checks if character is present in glyph list.
+		Compared to `getChar` does not check if it exists in charset.
+	**/
 	public function hasChar( code : Int ) {
 		return glyphs.get(code) != null;
 	}

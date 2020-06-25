@@ -210,10 +210,14 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		Set the fixed size for the scene, will prevent automatic scene resizing when screen size changes.
 	**/
 	@:deprecated("setFixedSize is deprecated, use scaleMode = Stretch(w, h) instead")
+	@:dox(hide) @:noCompletion
 	public function setFixedSize( w : Int, h : Int ) {
 		scaleMode = Stretch(w, h);
 	}
 
+	/**
+		Recalculates scene viewport parameters based on `scaleMode`.
+	**/
 	@:dox(hide) @:noCompletion
 	public function checkResize() {
 		var engine = h3d.Engine.getCurrent();
@@ -517,6 +521,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 			return null;
 		return interactive[interactive.indexOf(i)];
 	}
+
 
 	@:allow(h2d)
 	function addEventTarget(i:Interactive) {

@@ -1,18 +1,33 @@
 package h2d;
 
+/**
+	`h2d.ScaleGrid` provides simple 9-slice bitmap renderer.
+**/
 class ScaleGrid extends h2d.TileGroup {
-
 
 	public var borderWidth(default,set) : Int;
 	public var borderHeight(default,set) : Int;
 
+	/**
+		The width of the bitmap. Setting to values less than `borderWidth * 2` leads to undefined results.
+	**/
 	public var width(default,set) : Float;
+	/**
+		The height of the bitmap. Setting to values less than `borderHeight * 2` leads to undefined results.
+	**/
 	public var height(default,set) : Float;
-
+	/**
+		When enabled, borders are rendered in a tiled manner.
+		When disabled, borders are stretched to match the desired dimensions.
+		Center tile is always stretched.
+	**/
 	public var tileBorders(default, set) : Bool;
 
 	var contentTile : h2d.Tile;
 
+	/**
+		Create a new ScaleGrid with specified Tile, border dimensions and parent.
+	**/
 	public function new( tile, borderW, borderH, ?parent ) {
 		super(tile,parent);
 		borderWidth = borderW;

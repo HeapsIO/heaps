@@ -83,6 +83,9 @@ class FlowProperties {
 
 }
 
+/**
+	`h2d.Flow` provides an automatic layout system.
+**/
 class Flow extends Object {
 
 	var tmpBounds = new h2d.col.Bounds();
@@ -117,6 +120,7 @@ class Flow extends Object {
 
 	/**
 		Enabling overflow will treat maxWidth/maxHeight and lineHeight/colWidth constraints as absolute : bigger elements will overflow instead of expanding the limit.
+		See respective `FlowOverflow` values for more details.
 	**/
 	public var overflow(default, set) : FlowOverflow = Expand;
 
@@ -187,6 +191,7 @@ class Flow extends Object {
 	public var layout(default, set) : FlowLayout = Horizontal;
 
 	@:deprecated("isVertical is replaced by layout=Vertical")
+	@:dox(hide)
 	public var isVertical(get, set) : Bool;
 
 	/**

@@ -30,22 +30,54 @@ private class Fake extends Object {
 	}
 }
 
+/**
+	`h2d.Dropdown` is a simple UI component that creates an interactive drop-down list.
+	Dropdown will add an `h2d.Flow` to `Scene` when opening in order to be visible above other objects. See `dropdownLayer`.  
+	Note that when dropdownList opens and closes, item objects will recieve the `onHierarchyChanged` callback.
+**/
 class Dropdown extends Flow {
 	var items : Array<h2d.Object>;
 	var fake : Fake;
 	var cursor : h2d.Bitmap;
 	var arrow : h2d.Bitmap;
 
+	/**
+		A background Tile that is shown when user hover over an item in the dropdown list.
+	**/
 	public var tileOverItem(default, set) : h2d.Tile;
+	/**
+		A Tile used to visualize an arrow of the dropdown when list is closed.
+	**/
 	public var tileArrow(default, set) : h2d.Tile;
+	/**
+		A Tile used to visualize and arrow of the dropdown when list is open.
+	**/
 	public var tileArrowOpen : h2d.Tile;
-
+	
+	/**
+		When disabled, user would not be able to change selected item. ( default : true )
+	**/
 	public var canEdit(default,set) : Bool = true;
+	/**
+		A reference to `h2d.Flow` that will contain items.
+		Adding objects to this Flow will not automatically add them to item list, see `addItem`.
+	**/
 	public var dropdownList : Flow;
+	/**
+		A Scene layer to which dropdownList will be added when opening dropdown. ( default : 0 )
+	**/
 	public var dropdownLayer : Int = 0;
+	/**
+		Currently selected item index. To deselect an item, set it to `-1`.
+	**/
 	public var selectedItem(default, set) : Int = -1;
+	/**
+		Currently highlighted item index.
+	**/
 	public var highlightedItem(default, null) : Int = -1;
-
+	/**
+		When enabled, dropdown list will appear above the dropdown.
+	**/
 	public var rollUp : Bool = false;
 
 	public function new(?parent) {
@@ -157,6 +189,9 @@ class Dropdown extends Flow {
 		return tileOverItem = t;
 	}
 
+	/**
+		Adds an Object to the dropdown list. Object is not restricted to be same type across all items.
+	**/
 	public function addItem(s : Object) {
 		items.push(s);
 		dropdownList.addChild(s);
@@ -183,6 +218,9 @@ class Dropdown extends Flow {
 		return selectedItem = s;
 	}
 
+	/**
+		Programmatically opens the dropdown, showing the dropdown list.
+	**/
 	public function open() {
 		if( dropdownList.parent == this ) {
 			getScene().add(dropdownList, dropdownLayer);
@@ -192,6 +230,9 @@ class Dropdown extends Flow {
 		}
 	}
 
+	/**
+		Programmatically closes the dropdown, hiding the dropdown list.
+	**/
 	public function close() {
 		if( dropdownList.parent != this ) {
 			addChild(dropdownList);
@@ -207,15 +248,27 @@ class Dropdown extends Flow {
 			dropdownList.remove();
 	}
 
+	/**
+		`onOpen` callback is called when dropdown is being opened.
+	**/
 	public dynamic function onOpen() {
 	}
 
+	/**
+		`onClose` callback is called when dropdown is being closed.
+	**/
 	public dynamic function onClose() {
 	}
 
+	/**
+		`onOverItem` is being called when user hover over an `item` in the dropdown list.
+	**/
 	public dynamic function onOverItem(item : Object) {
 	}
 
+	/**
+		`onOutItem` is being called when user moves mouse away from an `item` in the dropdown list.
+	**/
 	public dynamic function onOutItem(item : Object) {
 	}
 }

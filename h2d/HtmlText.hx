@@ -17,6 +17,10 @@ enum LineHeightMode {
 	Constant;
 }
 
+/**
+	`h2d.HtmlText` is a simple HTML text renderer.
+	See Text section of the manual for more details and list of supported HTML tags.
+**/
 class HtmlText extends Text {
 
 	/**
@@ -40,9 +44,13 @@ class HtmlText extends Text {
 		return text;
 	}
 
+	/**
+		When enabled, condenses extra spaces (carriage-return, line-feed, tabulation and space character) to one space. ( default : true )
+		If not set, uncondensed whitespace is left as is, as well as line-breaks.
+	**/
 	public var condenseWhite(default,set) : Bool = true;
 	/**
-		Spacing after <img> tags in pixels.
+		Spacing after `<img>` tags in pixels.
 	**/
 	public var imageSpacing(default,set):Float = 1;
 
@@ -109,6 +117,9 @@ class HtmlText extends Text {
 		else return f;
 	}
 
+	/**
+		Called when text is assignet, allowing to process arbitrary text to valid XHTML.
+	**/
 	public dynamic function formatText( text : String ) : String {
 		return defaultFormatText(text);
 	}
