@@ -33,7 +33,7 @@ private class Fake extends Object {
 /**
 	`h2d.Dropdown` is a simple UI component that creates an interactive drop-down list.
 	Dropdown will add an `h2d.Flow` to `Scene` when opening in order to be visible above other objects. See `dropdownLayer`.  
-	Note that when dropdownList opens and closes, item objects will recieve the `onHierarchyChanged` callback.
+	Note that when `dropdownList` opens and closes, item objects will receive the `onHierarchyChanged` callback.
 **/
 class Dropdown extends Flow {
 	var items : Array<h2d.Object>;
@@ -64,7 +64,7 @@ class Dropdown extends Flow {
 	**/
 	public var dropdownList : Flow;
 	/**
-		A Scene layer to which dropdownList will be added when opening dropdown. ( default : 0 )
+		A Scene layer to which `dropdownList` will be added when opening dropdown. ( default : 0 )
 	**/
 	public var dropdownLayer : Int = 0;
 	/**
@@ -190,7 +190,7 @@ class Dropdown extends Flow {
 	}
 
 	/**
-		Adds an Object to the dropdown list. Object is not restricted to be same type across all items.
+		Adds the Object `s` to the dropdown list. `s` is not restricted to be the same type across all items.
 	**/
 	public function addItem(s : Object) {
 		items.push(s);

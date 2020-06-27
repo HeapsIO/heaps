@@ -127,12 +127,12 @@ class Font {
 	public var tile(default,null) : h2d.Tile;
 	public var tilePath(default,null) : String;
 	/**
-		The font type. BitmapFonts rendered as-is, but SDF fonts will use extra shader to produce scalable smooth fonts.
+		The font type. BitmapFonts rendered as-is, but SDF fonts will use an extra shader to produce scalable smooth fonts.
 	**/
 	public var type : FontType;
 	/**
 		Font charset allows to resolve specific char codes that are not directly present in glyph map as well as detect spaces.
-		Defaults to `hxd.Charset.getDefault()`
+		Defaults to `hxd.Charset.getDefault()`.
 	**/
 	public var charset : hxd.Charset;
 	var glyphs : Map<Int,FontChar>;

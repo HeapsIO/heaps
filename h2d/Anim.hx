@@ -64,12 +64,12 @@ class Anim extends Drawable {
 	}
 
 	/**
-		onAnimEnd is automatically called each time the animation will reach past the last frame.  
-		If loop is true, it is called everytime the animation loops.  
-		If loop is false, it is called once when the animation reachs `currentFrame == frames.length`  
-		When method is called on looping animation, `currentFrame` will already be wrapped around and
-		represent new frame position.
-		When loop is disabled, `currentFrame` will always be equal to `frames.length`.
+		`onAnimEnd` is automatically called each time the animation reaches past the last frame.  
+		If `loop` is true, it is called everytime the animation loops.  
+		If `loop` is false, it is called once when the animation reaches `currentFrame == frames.length`.
+		When the method is called on looping animation, `currentFrame` will already be wrapped around and
+		represent a new frame position.
+		When `loop` is disabled, `currentFrame` will always be equal to `frames.length`.
 	**/
 	public dynamic function onAnimEnd() {
 	}
