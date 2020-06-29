@@ -10,8 +10,8 @@ class TileLayerContent extends h3d.prim.Primitive {
 	public var xMax : Float;
 	public var yMax : Float;
 
-	var states : Array<BatchDrawState>;
-	var lastState:BatchDrawState;
+	var firstState : BatchDrawState;
+	var lastState : BatchDrawState;
 
 	public function new() {
 		clear();
@@ -25,8 +25,8 @@ class TileLayerContent extends h3d.prim.Primitive {
 		yMin = hxd.Math.POSITIVE_INFINITY;
 		xMax = hxd.Math.NEGATIVE_INFINITY;
 		yMax = hxd.Math.NEGATIVE_INFINITY;
-		if ( states != null ) for (state in states) state.put();
-		states = null;
+		if ( firstState != null ) firstState.put();
+		firstState = null;
 		lastState = null;
 	}
 
@@ -37,13 +37,12 @@ class TileLayerContent extends h3d.prim.Primitive {
 		}
 		var tex = t.getTexture();
 		if ( lastState == null ) {
-			lastState = BatchDrawState.get(tex, 0);
+			firstState = lastState = BatchDrawState.get(tex, 0);
 			lastState.count = tmp.length >> 4;
-			states = [lastState];
 		} else {
 			if ( lastState.texture != tex ) {
-				lastState = BatchDrawState.get(tex, lastState.offset + lastState.count);
-				states.push(lastState);
+				lastState.next = BatchDrawState.get(tex, lastState.offset + lastState.count);
+				lastState = lastState.next;
 			}
 			lastState.count += count;
 		}
@@ -436,25 +435,29 @@ class TileLayerContent extends h3d.prim.Primitive {
 		} else if (min == 0 && len == -1) {
 			// Skip extra logic when not restraining rendering
 			var engine = ctx.engine;
-			for ( state in states ) {
+			var state = firstState;
+			do {
 				ctx.swapTexture(state.texture);
 				engine.renderQuadBuffer(buffer, state.offset, state.count);
-			}
+				state = state.next;
+			} while ( state != null );
 		} else {
 			if (len == -1) len = lastState.count + lastState.offset - min;
 			var engine = ctx.engine;
-			for ( state in states ) {
+			var state = firstState;
+			do {
 				// Filter out states that are outside render boundaries.
-				if (state.offset + state.count < min) continue;
-
-				// Calc buffer offset
-				var rmin = min >= state.offset ? min : state.offset;
-				var rlen = len > state.count ? state.count : len;
-				ctx.swapTexture(state.texture);
-				engine.renderQuadBuffer(buffer, rmin, rlen);
-				len -= rlen;
-				if (len == 0) break;
-			}
+				if ( state.offset + state.count >= min ) {
+					// Calc buffer offset
+					var rmin = min >= state.offset ? min : state.offset;
+					var rlen = len > state.count ? state.count : len;
+					ctx.swapTexture(state.texture);
+					engine.renderQuadBuffer(buffer, rmin, rlen);
+					len -= rlen;
+					if (len == 0) break;
+				}
+				state = state.next;
+			} while ( state != null );
 		}
 	}
 

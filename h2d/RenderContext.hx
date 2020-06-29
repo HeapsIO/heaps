@@ -4,11 +4,13 @@ private typedef RenderZoneStack = { hasRZ:Bool, x:Float, y:Float, w:Float, h:Flo
 
 class BatchDrawState {
 
-	static var pool:Array<BatchDrawState> = [];
+	static var pool:BatchDrawState;
 
 	public static function get( texture : h3d.mat.Texture, offset : Int ) : BatchDrawState {
-		if ( pool.length == 0 ) return new BatchDrawState(texture, offset);
-		return pool.pop().set(texture, offset);
+		if ( pool == null ) return new BatchDrawState(texture, offset);
+		var state = pool;
+		pool = state.next;
+		return state.set(texture, offset);
 	}
 
 	/**
@@ -36,6 +38,8 @@ class BatchDrawState {
 		See `calcOffsetTris` and `calcOffsetQuads`.
 	**/
 	public var elCount : Int;
+
+	public var next : BatchDrawState;
 
 	function new( texture : h3d.mat.Texture, offset : Int ) {
 		this.texture = texture;
@@ -72,9 +76,19 @@ class BatchDrawState {
 		this.elCount = this.count >> 2;
 	}
 
+	/**
+		Put state chain to pool.
+	**/
 	public function put() {
-		this.texture = null;
-		pool.push(this);
+		var n = this;
+		do {
+			var cur = n;
+			n = n.next;
+
+			cur.texture = null;
+			cur.next = pool;
+			pool = cur;
+		} while ( n != null );
 	}
 
 }
