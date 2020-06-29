@@ -8,7 +8,6 @@ class DrawingTiles extends SampleApp {
 
 		var hbox = new h2d.Flow(fui);
 		hbox.horizontalSpacing = 10;
-		@:privateAccess hxd.Window.getInstance().window.setPosition(-1000, 200);
 
 		// Bitmap renders a singular Tile
 		new h2d.Bitmap(hxd.Res.hxlogo.toTile(), hbox);
