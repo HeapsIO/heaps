@@ -11,21 +11,65 @@ class BatchDrawState {
 		return pool.pop().set(texture, offset);
 	}
 
+	/**
+		Texture associated with draw state instance.
+	**/
 	public var texture : h3d.mat.Texture;
+	/**
+		An offset from the beginning of the render buffer representing batch range start.
+		Not always represents vertice or element offset.
+	**/
 	public var offset : Int;
+	/**
+		A size of batch state.
+		Not always represents vertices or elements.
+	**/
 	public var count : Int;
+	
+	/**
+		Manually managed buffer offset in elements.
+		See `calcOffsetTris` and `calcOffsetQuads`.
+	**/
+	public var elOffset : Int;
+	/**
+		Manually managed state size in elements.
+		See `calcOffsetTris` and `calcOffsetQuads`.
+	**/
+	public var elCount : Int;
 
 	function new( texture : h3d.mat.Texture, offset : Int ) {
 		this.texture = texture;
 		this.offset = offset;
 		this.count = 0;
+		this.elOffset = 0;
+		this.elCount = 0;
 	}
 
 	public function set( texture : h3d.mat.Texture, offset : Int ) : BatchDrawState {
 		this.texture = texture;
 		this.offset = offset;
 		this.count = 0;
+		this.elOffset = 0;
+		this.elCount = 0;
 		return this;
+	}
+
+	/**
+		Fills `elOffset` and `elCount` with amount of triangles batch state contains.
+		Expects `offset` and `count` being a vertex offset/count in multiple of 3 per triangle.
+	**/
+	public inline function calcOffsetTris() {
+		this.elOffset = Std.int(this.offset / 3);
+		this.elCount = Std.int(this.count / 3);
+	}
+
+	/**
+		Fills `elOffset` and `elCount` with amount of quads batch state contains.
+		Expects `offset` and `count` being a vertex offset/count in multiple of 4 per quad.
+	**/
+	public inline function calcOffsetQuads() {
+		this.elOffset = this.offset >> 2;
+		this.elCount = this.count >> 2;
 	}
 
 	public function put() {
