@@ -134,9 +134,6 @@ class DirectXDriver extends h3d.impl.Driver {
 		#if debug
 		options |= DebugLayer;
 		#end
-		#if (hl_ver >= version("1.12.0"))
-		options |= DisableGpuTimeout;
-		#end
 		return options;
 	}
 
