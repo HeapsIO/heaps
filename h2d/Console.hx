@@ -11,7 +11,7 @@ enum ConsoleArg {
 	AString;
 	ABool;
 	/**
-		`AEnum` type acts as `AString` but restricts allowed values to provided list of strings.
+		`AEnum` type acts as `AString` but restricts allowed values to the provided list of strings.
 	**/
 	AEnum( values : Array<String> );
 }
@@ -27,7 +27,7 @@ typedef ConsoleArgDesc = {
 	`h2d.Console` provides simple debug console integration.
 
 	By default comes with 2 commands: `help` and `cls`, which print help message
-	describing all command and clear the screen respectively
+	describing all command and clear the screen respectively.
 
 	To add custom commands, use `Console.add` and `Console.addCommand` methods.
 **/
@@ -35,7 +35,7 @@ class Console #if !macro extends h2d.Object #end {
 
 	#if !macro
 	/**
-		The timeout in seconds before log will automatically hide after last message. ( default : 3 )
+		The timeout in seconds before log will automatically hide after the last message. ( default : 3 )
 	**/
 	public static var HIDE_LOG_TIMEOUT = 3.;
 
@@ -63,7 +63,7 @@ class Console #if !macro extends h2d.Object #end {
 	public var autoComplete : Bool = true;
 
 	/**
-		Create new Console instance using provided font and parent.
+		Create a new Console instance using the provided font and parent.
 	**/
 	public function new(font:h2d.Font,?parent) {
 		super(parent);
@@ -103,7 +103,7 @@ class Console #if !macro extends h2d.Object #end {
 
 	/**
 		Add new command to console.
-		@param name Command name
+		@param name Command name.
 		@param help Optional command description text.
 		@param args An array of command arguments. 
 		@param callb The callback method taking the arguments listed in `args`.
@@ -116,9 +116,9 @@ class Console #if !macro extends h2d.Object #end {
 	
 	/**
 		Add new command to console via macro.
-		Only following callback parameters are supported: `Int`, `Float`, `String` and `Bool`.
+		Only the following callback parameters are supported: `Int`, `Float`, `String` and `Bool`.
 		@param ethis An expression that points at console instance.
-		@param name A String expression of the command name
+		@param name A String expression of the command name.
 		@param callb An expression that points at the callback method.
 	**/
 	public macro function add( ethis, name, callb ) {
@@ -149,7 +149,7 @@ class Console #if !macro extends h2d.Object #end {
 
 	/**
 		Add an alias to the existing command.
-		@param name Command alias
+		@param name Command alias.
 		@param command Full command name to alias.
 	**/
 	public function addAlias( name, command ) {
@@ -157,7 +157,7 @@ class Console #if !macro extends h2d.Object #end {
 	}
 
 	/**
-		Executes the String in same way the user would execute it.
+		Executes `commandLine` the same way the user would execute it.
 	**/
 	public function runCommand( commandLine : String ) {
 		handleCommand(commandLine);
@@ -229,7 +229,7 @@ class Console #if !macro extends h2d.Object #end {
 	}
 
 	/**
-		Checks if Console is currently shown.
+		Checks if the Console is currently shown.
 	**/
 	public function isActive() {
 		return bg.visible;
@@ -246,7 +246,7 @@ class Console #if !macro extends h2d.Object #end {
 	}
 
 	/**
-		Hides the shows and focuses the Console.
+		Shows and focuses the Console.
 	**/
 	public function show() {
 		bg.visible = true;

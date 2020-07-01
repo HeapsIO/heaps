@@ -33,7 +33,7 @@ private class Fake extends Object {
 /**
 	`h2d.Dropdown` is a simple UI component that creates an interactive drop-down list.
 	Dropdown will add an `h2d.Flow` to `Scene` when opening in order to be visible above other objects. See `dropdownLayer`.  
-	Note that when dropdownList opens and closes, item objects will recieve the `onHierarchyChanged` callback.
+	Note that when `dropdownList` opens and closes, item objects will receive the `onHierarchyChanged` callback.
 **/
 class Dropdown extends Flow {
 	var items : Array<h2d.Object>;
@@ -46,25 +46,25 @@ class Dropdown extends Flow {
 	**/
 	public var tileOverItem(default, set) : h2d.Tile;
 	/**
-		A Tile used to visualize an arrow of the dropdown when list is closed.
+		A Tile used to visualize an arrow of the dropdown when the list is closed.
 	**/
 	public var tileArrow(default, set) : h2d.Tile;
 	/**
-		A Tile used to visualize and arrow of the dropdown when list is open.
+		A Tile used to visualize and arrow of the dropdown when the list is open.
 	**/
 	public var tileArrowOpen : h2d.Tile;
 	
 	/**
-		When disabled, user would not be able to change selected item. ( default : true )
+		When disabled, the user would not be able to change the selected item. ( default : true )
 	**/
 	public var canEdit(default,set) : Bool = true;
 	/**
 		A reference to `h2d.Flow` that will contain items.
-		Adding objects to this Flow will not automatically add them to item list, see `addItem`.
+		Adding objects to this Flow will not automatically add them to the item list, see `addItem`.
 	**/
 	public var dropdownList : Flow;
 	/**
-		A Scene layer to which dropdownList will be added when opening dropdown. ( default : 0 )
+		A Scene layer to which `dropdownList` will be added when opening dropdown. ( default : 0 )
 	**/
 	public var dropdownLayer : Int = 0;
 	/**
@@ -76,7 +76,7 @@ class Dropdown extends Flow {
 	**/
 	public var highlightedItem(default, null) : Int = -1;
 	/**
-		When enabled, dropdown list will appear above the dropdown.
+		When enabled, the dropdown list will appear above the dropdown.
 	**/
 	public var rollUp : Bool = false;
 
@@ -190,7 +190,7 @@ class Dropdown extends Flow {
 	}
 
 	/**
-		Adds an Object to the dropdown list. Object is not restricted to be same type across all items.
+		Adds the Object `s` to the dropdown list. `s` is not restricted to be the same type across all items.
 	**/
 	public function addItem(s : Object) {
 		items.push(s);

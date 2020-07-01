@@ -19,7 +19,7 @@ class Bitmap extends Drawable {
 	public var width(default,set) : Null<Float>;
 
 	/**
-	 * If set, rescale the tile to match the given height, keeping the aspect ratio unless width is also set.  
+	 * If set, rescale the tile to match the given height, keeping the aspect ratio unless `width` is also set.
 		Note that both `width` and `height` are `null` by default and in order to retrieve bitmap dimensions with
 		scaling accurately, call `getSize` method or address `tile.width/height` to get unscaled dimensions.
 	**/

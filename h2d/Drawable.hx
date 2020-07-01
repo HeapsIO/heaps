@@ -12,15 +12,15 @@ class Drawable extends Object {
 	public var color(default,default) : h3d.Vector;
 
 	/**
-		By enabling smoothing, scaling the object up or down will use hardware bilinear filtering resulting in less crisp aspect.
+		By enabling smoothing, scaling the object up or down will use hardware bilinear filtering resulting in a less crisp aspect.
 		By default smooth is `null` in which case `Scene.defaultSmooth` value is used.
 	**/
 	public var smooth : Null<Bool>;
 
 	/**
 		By enabling tile wrapping, you can have tiles which size exceed the texture size and will repeat instead of displaying clamped pixels.  
-		tileWrap does not wrap within `Tile` bounds but withing underlying `Texture` and due to that, rendering a region of a texture with
-		tileWrap enabled won't cause that region to be tiled, but will extend into out-of-tile-bounds areas.
+		`tileWrap` does not wrap within `Tile` bounds but withing underlying `Texture` and due to that, rendering a region of a texture with
+		`tileWrap` enabled won't cause that region to be tiled, but will extend into out-of-tile-bounds areas.
 	**/
 	public var tileWrap(default, set) : Bool;
 
@@ -94,7 +94,7 @@ class Drawable extends Object {
 
 	/**
 		Set the `colorMatrix` value by specifying which effects to apply.
-		Calling `adjustColor()` without arguments will reset the colorMatrix to `null`
+		Calling `adjustColor()` without arguments will reset the colorMatrix to `null`.
 	**/
 	public function adjustColor( ?col : h3d.Matrix.ColorAdjust ) : Void {
 		if( col == null )
@@ -167,7 +167,7 @@ class Drawable extends Object {
 	}
 
 	/**
-		Add a shader to the object shaders  
+		Add a shader to the object shaders.
 		Keep in mind, that as stated before, object children do not inherit Drawable properties, which includes shaders.
 	**/
 	public function addShader<T:hxsl.Shader>( s : T ) : T {
