@@ -53,6 +53,12 @@ class Renderer extends hxd.impl.AnyProps {
 	function mark(id: String) {
 	}
 
+	/**
+		Inject a post process shader for the current frame. Shaders are reset after each render.
+	**/
+	public function addShader( s : hxsl.Shader ) {
+	}
+
 	public function getPass<T:h3d.pass.Base>( c : Class<T> ) : T {
 		for( p in allPasses )
 			if( Std.is(p, c) )

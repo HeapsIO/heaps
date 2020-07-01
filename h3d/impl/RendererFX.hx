@@ -1,15 +1,17 @@
 package h3d.impl;
 
 enum Step {
-	BeforeLighting;
-	BeforeTonemappingFX;
+	MainDraw;
+	Decals;
+	Lighting;
 	BeforeTonemapping;
 	AfterTonemapping;
-	AfterUI;
+	Overlay;
 }
 
 interface RendererFX {
 	public var enabled : Bool;
-	public function apply( r : h3d.scene.Renderer, step : Step ) : Void;
+	public function begin( r : h3d.scene.Renderer, step : Step ) : Void;
+	public function end( r : h3d.scene.Renderer, step : Step ) : Void;
 	public function dispose() : Void;
 }
