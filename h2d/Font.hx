@@ -113,7 +113,7 @@ class Font {
 	**/
 	public var size(default, null) : Int;
 	/**
-		The baseline value of the font represent the base on which characters will sit.
+		The baseline value of the font represents the base on which characters will sit.
 		Used primarily with HtmlText to sit multiple fonts and images at the same lin.
 	**/
 	public var baseLine(default, null) : Float;

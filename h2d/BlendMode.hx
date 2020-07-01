@@ -45,13 +45,13 @@ enum BlendMode {
 	**/
 	Sub;
 	/**
-		The output color is max of the source and dest colors.  
+		The output color is the max of the source and dest colors.  
 		The blend parameters Src and Dst are ignored for this equation.  
 		`Out = MAX( Src, Dst )`
 	**/
 	Max;
 	/**
-		The output color is min of the source and dest colors.  
+		The output color is the min of the source and dest colors.  
 		The blend parameters Src and Dst are ignored for this equation.  
 		`Out = MAX( Src, Dst )`
 	**/

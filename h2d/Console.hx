@@ -35,7 +35,7 @@ class Console #if !macro extends h2d.Object #end {
 
 	#if !macro
 	/**
-		The timeout in seconds before log will automatically hide after last message. ( default : 3 )
+		The timeout in seconds before log will automatically hide after the last message. ( default : 3 )
 	**/
 	public static var HIDE_LOG_TIMEOUT = 3.;
 
@@ -63,7 +63,7 @@ class Console #if !macro extends h2d.Object #end {
 	public var autoComplete : Bool = true;
 
 	/**
-		Create new Console instance using provided font and parent.
+		Create a new Console instance using the provided font and parent.
 	**/
 	public function new(font:h2d.Font,?parent) {
 		super(parent);
@@ -116,7 +116,7 @@ class Console #if !macro extends h2d.Object #end {
 	
 	/**
 		Add new command to console via macro.
-		Only following callback parameters are supported: `Int`, `Float`, `String` and `Bool`.
+		Only the following callback parameters are supported: `Int`, `Float`, `String` and `Bool`.
 		@param ethis An expression that points at console instance.
 		@param name A String expression of the command name.
 		@param callb An expression that points at the callback method.
@@ -229,7 +229,7 @@ class Console #if !macro extends h2d.Object #end {
 	}
 
 	/**
-		Checks if Console is currently shown.
+		Checks if the Console is currently shown.
 	**/
 	public function isActive() {
 		return bg.visible;

@@ -5,7 +5,7 @@ package h2d;
 **/
 class CheckBox extends h2d.Flow {
 	/**
-		When disabled, user would not be able to toggle checkbox state by interacting with it.
+		When disabled, the user would not be able to toggle the checkbox state by interacting with it.
 	**/
 	public var enable(default,set) : Bool = true;
 	/**
@@ -81,7 +81,7 @@ class CheckBox extends h2d.Flow {
 	}
 
 	/**
-		`onChange` is called when user or software changes the toggle state.
+		`onChange` is called when the user or software changes the toggle state.
 	**/
 	public dynamic function onChange() {
 	}
