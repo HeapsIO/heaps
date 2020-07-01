@@ -1,8 +1,22 @@
 package h2d.filter;
 
+/**
+	Provies a solid color outline to the filtered object by utilizing `h3d.pass.Outline` render pass.
+**/
 class Outline extends Filter {
+	/**
+		Width of the outline. See [h3d.pass.Outline.size].
+	**/
 	public var size(get, set) : Float;
+	/**
+		Color of the outline, excluding alpha. See [h3d.pass.Outline.color].
+	**/
 	public var color(get, set) : Int;
+	/**
+		Represents sample count with quality/speed tradeoff.
+		Larger value leads to more samples and more accurate outline in exchange to calculation speed.
+		See [h3d.pass.Outline.quality]
+	**/
 	public var quality(get, set) : Float;
 	public var multiplyAlpha(get, set) : Bool;
 

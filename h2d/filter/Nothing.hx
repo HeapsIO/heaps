@@ -1,5 +1,8 @@
 package h2d.filter;
 
+/**
+	A filter that renders nothing.
+**/
 class Nothing extends Filter {
 
 	public function new() {

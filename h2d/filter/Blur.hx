@@ -1,5 +1,8 @@
 package h2d.filter;
 
+/**
+	Blue filter utilizes `h3d.pass.Blur` render pass to perform a blurring operation on filtered object.
+**/
 class Blur extends Filter {
 
 	/**
@@ -24,6 +27,13 @@ class Blur extends Filter {
 
 	var pass : h3d.pass.Blur;
 
+	/**
+		Create new Blur filter.
+		@param radius The blur distance in pixels.
+		@param gain The color gain when blurring.
+		@param quality The sample count on each pixel as a tradeoff of speed/quality.
+		@param linear Linear blur power. Set to 0 for gaussian blur.
+	**/
 	public function new( radius = 1., gain = 1., quality = 1., linear = 0. ) {
 		super();
 		smooth = true;

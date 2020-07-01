@@ -1,5 +1,17 @@
 package h2d.filter;
 
+/**
+	Filter Group allows to use multiple Filters on a single Object with several limitations.
+
+	If all filters in Group are disabled `enable` will report `false` even if Group itself is enabled.  
+	`boundsExtend` and `autoBounds` are automatically managed by Group instance.
+	`boundsExtend` is a sum of all filter extends and `autoBounds` enabled only when all filters have it enabled.
+
+	When `autoBounds` is disabled, bounds are a result of calling `getBounds` on children filters, but most likely
+	will contain only the bounds filled by last filter, because `Object.getBounds` clears the `Bounds` instance.
+
+	Ensure that all relevant filters are added to Group prior binding it to any Object. Behavior is undefined otherwise.
+**/
 class Group extends Filter {
 
 	var filters : Array<Filter>;
@@ -15,10 +27,18 @@ class Group extends Filter {
 		return false;
 	}
 	
+	/**
+		Adds new Filter `f` to the Group.  
+		Due to implementation specifics, if Group was already bound, new filters won't receive a `bind` call.
+	**/
 	public function add( f : Filter ) {
 		filters.push(f);
 	}
 
+	/**
+		Removes the Filter `f` from the Group.
+		Due to implementation specifics, removed filter won't receive an `unbind` call even if it was bound previously.
+	**/
 	public function remove( f : Filter ) {
 		return filters.remove(f);
 	}
