@@ -192,11 +192,14 @@ class Renderer extends h3d.scene.Renderer {
 
 	function lighting() {
 
+		begin(Shadows);
 		var ls = hxd.impl.Api.downcast(getLightSystem(), LightSystem);
 		var count = ctx.engine.drawCalls;
 		if( ls != null ) drawShadows(ls);
 		if( ctx.lightSystem != null ) ctx.lightSystem.drawPasses = ctx.engine.drawCalls - count;
+		end();
 
+		begin(Lighting);
 		var lpass = screenLightPass;
 		if( lpass == null ) {
 			lpass = new h3d.pass.ScreenFx(new h3d.shader.ScreenShader());
@@ -225,6 +228,7 @@ class Renderer extends h3d.scene.Renderer {
 			copy(textures.hdr, null);
 			// no warnings
 			for( p in passObjects ) if( p != null ) p.rendered = true;
+			end();
 			return;
 		}
 
@@ -236,6 +240,7 @@ class Renderer extends h3d.scene.Renderer {
 			pbrIndirect.drawIndirectSpecular = true;
 			pbrOut.render();
 		}
+		end();
 	}
 
 	function drawShadows( ls : LightSystem ) {
@@ -245,7 +250,7 @@ class Renderer extends h3d.scene.Renderer {
 			passes.clear();
 		while( light != null ) {
 			var plight = hxd.impl.Api.downcast(light, h3d.scene.pbr.Light);
-			if( plight != null ) ls.drawLight(plight, passes);
+			if( plight != null ) ls.drawShadows(plight, passes);
 			light = light.next;
 		}
 	}
@@ -416,9 +421,7 @@ class Renderer extends h3d.scene.Renderer {
 
 		setTarget(textures.hdr);
 		clear(0);
-		begin(Lighting);
 		lighting();
-		end();
 		if( renderMode == LightProbe ) return;
 
 		begin(BeforeTonemapping);

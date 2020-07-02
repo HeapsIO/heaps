@@ -3,6 +3,7 @@ package h3d.impl;
 enum Step {
 	MainDraw;
 	Decals;
+	Shadows;
 	Lighting;
 	BeforeTonemapping;
 	AfterTonemapping;
