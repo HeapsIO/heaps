@@ -303,12 +303,18 @@ class Renderer extends h3d.scene.Renderer {
 		textures.other = allocTarget("other", true, 1., RGBA32F);
 		textures.hdr = allocTarget("hdrOutput", true, 1, RGBA16F);
 		textures.ldr = allocTarget("ldrOutput");
+	}
+
+	function initGlobals() {
 		ctx.setGlobal("albedoMap", { texture : textures.albedo, channel : hxsl.Channel.R });
 		ctx.setGlobal("depthMap", { texture : textures.other, channel : hxsl.Channel.G });
 		ctx.setGlobal("normalMap", { texture : textures.normal, channel : hxsl.Channel.R });
 		ctx.setGlobal("occlusionMap", { texture : textures.pbr, channel : hxsl.Channel.B });
 		ctx.setGlobal("hdrMap", textures.hdr);
 		ctx.setGlobal("ldrMap", textures.ldr);
+		ctx.setGlobal("global.time", ctx.time);
+		ctx.setGlobal("camera.position", ctx.camera.pos);
+		ctx.setGlobal("camera.inverseViewProj", ctx.camera.getInverseViewProj());
 	}
 
 	function beginPbr() {
@@ -322,6 +328,7 @@ class Renderer extends h3d.scene.Renderer {
 		}
 
 		initTextures();
+		initGlobals();
 
 		pbrProps.albedoTex = textures.albedo;
 		pbrProps.normalTex = textures.normal;
@@ -446,7 +453,7 @@ class Renderer extends h3d.scene.Renderer {
 				copy(textures.ldr, null);
 			}
 		case Debug:
-			var shadowMap = ctx.textures.getNamed("shadowMap");
+			var shadowMap = ctx.getGlobal("mainLightShadowMap");
 			if( shadowMap == null )
 				shadowMap = h3d.mat.Texture.fromColor(0);
 			slides.shader.shadowMap = shadowMap;
