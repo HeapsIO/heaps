@@ -1,6 +1,7 @@
 package h2d;
 
 import h2d.RenderContext;
+import h2d.impl.BatchDrawState;
 
 class TileLayerContent extends h3d.prim.Primitive {
 
@@ -10,10 +11,10 @@ class TileLayerContent extends h3d.prim.Primitive {
 	public var xMax : Float;
 	public var yMax : Float;
 
-	var firstState : BatchDrawState;
-	var lastState : BatchDrawState;
+	var state : BatchDrawState;
 
 	public function new() {
+		state = new BatchDrawState(true);
 		clear();
 	}
 
@@ -25,27 +26,7 @@ class TileLayerContent extends h3d.prim.Primitive {
 		yMin = hxd.Math.POSITIVE_INFINITY;
 		xMax = hxd.Math.NEGATIVE_INFINITY;
 		yMax = hxd.Math.NEGATIVE_INFINITY;
-		if ( firstState != null ) firstState.put();
-		firstState = null;
-		lastState = null;
-	}
-
-	public function updateState( t : Tile, count : Int ) {
-		if (t == null) {
-			if (lastState != null) lastState.count += count;
-			return;
-		}
-		var tex = t.getTexture();
-		if ( lastState == null ) {
-			firstState = lastState = BatchDrawState.get(tex, 0);
-			lastState.count = tmp.length >> 4;
-		} else {
-			if ( lastState.texture != tex ) {
-				lastState.next = BatchDrawState.get(tex, lastState.offset + lastState.count);
-				lastState = lastState.next;
-			}
-			lastState.count += count;
-		}
+		state.clear();
 	}
 
 	public function isEmpty() {
@@ -104,7 +85,7 @@ class TileLayerContent extends h3d.prim.Primitive {
 		if( x > xMax ) xMax = x;
 		if( y > yMax ) yMax = y;
 
-		updateState(t, 2);
+		state.nextTile(t, 4);
 	}
 
 	public function addTransform( x : Float, y : Float, sx : Float, sy : Float, r : Float, c : h3d.Vector, t : Tile ) {
@@ -175,7 +156,7 @@ class TileLayerContent extends h3d.prim.Primitive {
 		tmp.push(c.a);
 		updateBounds(px, py);
 
-		updateState(t, 2);
+		state.nextTile(t, 4);
 	}
 
 	/**
@@ -230,7 +211,7 @@ class TileLayerContent extends h3d.prim.Primitive {
 		if( x > xMax ) xMax = x;
 		if( y > yMax ) yMax = y;
 
-		if (lastState != null) lastState.count += 2;
+		state.add(4);
 	}
 
 	public inline function rectGradient( x : Float, y : Float, w : Float, h : Float, ctl : Int, ctr : Int, cbl : Int, cbr : Int ) {
@@ -262,7 +243,7 @@ class TileLayerContent extends h3d.prim.Primitive {
 		if( x > xMax ) xMax = x;
 		if( y > yMax ) yMax = y;
 		
-		if (lastState != null) lastState.count += 2;
+		state.add(4);
 	}
 
 	public inline function fillArc( x : Float, y : Float, ray : Float, c : Int, start: Float, end: Float) {
@@ -286,7 +267,7 @@ class TileLayerContent extends h3d.prim.Primitive {
 				addPoint(_x, _y, c);
 				addPoint(prevX, prevY, c);
 				addPoint(prevX, prevY, c);
-				count += 2;
+				count += 4;
 			}
 			prevX = _x;
 			prevY = _y;
@@ -299,7 +280,7 @@ class TileLayerContent extends h3d.prim.Primitive {
 		addPoint(_x, _y, c);
 		addPoint(prevX, prevY, c);
 		addPoint(prevX, prevY, c);
-		if (lastState != null) lastState.count += count + 2;
+		state.add(count + 4);
 	}
 
 	public inline function fillCircle( x : Float, y : Float, radius : Float, c : Int) {
@@ -321,7 +302,7 @@ class TileLayerContent extends h3d.prim.Primitive {
 				addPoint(curX, curY, c);
 				addPoint(prevX, prevY, c);
 				addPoint(x, y, c);
-				count += 2;
+				count += 4;
 			}
 			if (firstX == Math.NEGATIVE_INFINITY) {
 				firstX = curX;
@@ -334,7 +315,7 @@ class TileLayerContent extends h3d.prim.Primitive {
 		addPoint(curX, curY, c);
 		addPoint(firstX, firstY, c);
 		addPoint(x, y, c);
-		if (lastState != null) lastState.count += count + 2;
+		state.add(count + 4);
 	}
 
 	public inline function circle( x : Float, y : Float, ray : Float, size: Float, c : Int) {
@@ -359,14 +340,14 @@ class TileLayerContent extends h3d.prim.Primitive {
 				addPoint(prevX, prevY, c);
 				addPoint(_x1, _y1, c);
 				addPoint(prevX1, prevY1, c);
-				count += 2;
+				count += 4;
 			}
 			prevX = _x;
 			prevY = _y;
 			prevX1 = _x1;
 			prevY1 = _y1;
 		}
-		if (lastState != null) lastState.count += count;
+		state.add(count);
 	}
 
 	public inline function arc( x : Float, y : Float, ray : Float, size: Float, start: Float, end: Float, c : Int) {
@@ -397,7 +378,7 @@ class TileLayerContent extends h3d.prim.Primitive {
 				addPoint(prevX, prevY, c);
 				addPoint(_x1, _y1, c);
 				addPoint(prevX1, prevY1, c);
-				count += 2;
+				count += 4;
 			}
 			prevX = _x;
 			prevY = _y;
@@ -413,7 +394,7 @@ class TileLayerContent extends h3d.prim.Primitive {
 		addPoint(prevX, prevY, c);
 		addPoint(_x1, _y1, c);
 		addPoint(prevX1, prevY1, c);
-		if (lastState != null) lastState.count += count + 2;
+		state.add(count + 4);
 	}
 
 	override public function alloc(engine:h3d.Engine) {
@@ -427,38 +408,9 @@ class TileLayerContent extends h3d.prim.Primitive {
 		if( buffer == null || buffer.isDisposed() ) alloc(h3d.Engine.getCurrent());
 	}
 
-	public function doRender(ctx : RenderContext, min, len) {
+	public inline function doRender(ctx : RenderContext, min, len) {
 		flush();
-		if ( lastState == null ) {
-			ctx.swapTexture(null);
-			ctx.engine.renderQuadBuffer(buffer, min, len);
-		} else if (min == 0 && len == -1) {
-			// Skip extra logic when not restraining rendering
-			var engine = ctx.engine;
-			var state = firstState;
-			do {
-				ctx.swapTexture(state.texture);
-				engine.renderQuadBuffer(buffer, state.offset, state.count);
-				state = state.next;
-			} while ( state != null );
-		} else {
-			if (len == -1) len = lastState.count + lastState.offset - min;
-			var engine = ctx.engine;
-			var state = firstState;
-			do {
-				// Filter out states that are outside render boundaries.
-				if ( state.offset + state.count >= min ) {
-					// Calc buffer offset
-					var rmin = min >= state.offset ? min : state.offset;
-					var rlen = len > state.count ? state.count : len;
-					ctx.swapTexture(state.texture);
-					engine.renderQuadBuffer(buffer, rmin, rlen);
-					len -= rlen;
-					if (len == 0) break;
-				}
-				state = state.next;
-			} while ( state != null );
-		}
+		state.drawQuads(ctx, buffer, min, len);
 	}
 
 }

@@ -1,6 +1,7 @@
 package h2d;
 
 import h2d.RenderContext;
+import h2d.impl.BatchDrawState;
 
 private class ElementsIterator {
 	var e : BatchElement;
@@ -97,13 +98,13 @@ class SpriteBatch extends Drawable {
 	var last : BatchElement;
 	var tmpBuf : hxd.FloatBuffer;
 	var buffer : h3d.Buffer;
-	var firstState : BatchDrawState;
-	var stateCount : Int;
+	var state : BatchDrawState;
+	var empty : Bool;
 
 	public function new(t,?parent) {
 		super(parent);
 		tile = t;
-		firstState = BatchDrawState.get(null, 0);
+		state = new BatchDrawState(true);
 	}
 
 	public function add(e:BatchElement,before=false) {
@@ -198,7 +199,6 @@ class SpriteBatch extends Drawable {
 	}
 
 	function flush() {
-		stateCount = 0;
 		if( first == null ) {
 			return;
 		}
@@ -206,10 +206,8 @@ class SpriteBatch extends Drawable {
 		var pos = 0;
 		var e = first;
 		var tmp = tmpBuf;
-		var state = firstState;
-		state.set(null, 0);
-
 		var bufferVertices = 0;
+		state.clear();
 
 		while( e != null ) {
 			if( !e.visible ) {
@@ -218,16 +216,7 @@ class SpriteBatch extends Drawable {
 			}
 
 			var t = e.t;
-			if (state.texture != t.getTexture()) {
-				if (state.texture == null) state.texture = t.getTexture();
-				else {
-					if (state.next == null) state.next = BatchDrawState.get(t.getTexture(), state.offset + state.count);
-					else state.next.set(t.getTexture(), state.offset + state.count);
-					state = state.next;
-				}
-				stateCount++;
-			}
-			state.count += 2;
+			state.nextTile(t, 4);
 
 			tmp.grow(pos + 8 * 4);
 
@@ -317,10 +306,9 @@ class SpriteBatch extends Drawable {
 			buffer.dispose();
 			buffer = null;
 		}
+		empty = bufferVertices == 0;
 		if( bufferVertices > 0 )
 			buffer = h3d.Buffer.ofSubFloats(tmpBuf, 8, bufferVertices, [Dynamic, Quads, RawFormat]);
-		else
-			stateCount = 0;
 	}
 
 	override function draw( ctx : RenderContext ) {
@@ -329,15 +317,10 @@ class SpriteBatch extends Drawable {
 
 	@:allow(h2d)
 	function drawWith( ctx:RenderContext, obj : Drawable ) {
-		if( first == null || buffer == null || buffer.isDisposed() || stateCount == 0 ) return;
+		if( first == null || buffer == null || buffer.isDisposed() || empty ) return;
 		if( !ctx.beginDrawBatchState(obj) ) return;
 		var engine = ctx.engine;
-		var state = firstState;
-		for ( i in 0...stateCount ) {
-			ctx.swapTexture(state.texture);
-			engine.renderQuadBuffer(buffer, state.offset, state.count);
-			state = state.next;
-		}
+		state.drawQuads(ctx, buffer);
 	}
 
 	public inline function isEmpty() {
@@ -354,10 +337,6 @@ class SpriteBatch extends Drawable {
 			buffer.dispose();
 			buffer = null;
 		}
-		if (firstState.next != null) {
-			firstState.next.put();
-			firstState.next = null;
-		}
-		firstState.texture = null;
+		state.clear(true);
 	}
 }

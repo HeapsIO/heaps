@@ -1,5 +1,6 @@
 package h2d;
 import h2d.RenderContext;
+import h2d.impl.BatchDrawState;
 import hxd.Math;
 
 private typedef GraphicsPoint = hxd.poly2tri.Point;
@@ -29,8 +30,7 @@ private class GraphicsContent extends h3d.prim.Primitive {
 
 	var tmp : hxd.FloatBuffer;
 	var index : hxd.IndexBuffer;
-	var firstState : BatchDrawState;
-	var lastState : BatchDrawState;
+	var state : BatchDrawState;
 
 	var buffers : Array<{ buf : hxd.FloatBuffer, vbuf : h3d.Buffer, idx : hxd.IndexBuffer, ibuf : h3d.Indexes, state : BatchDrawState }>;
 	var bufferDirty : Bool;
@@ -41,7 +41,7 @@ private class GraphicsContent extends h3d.prim.Primitive {
 
 	public function new() {
 		buffers = [];
-		firstState = BatchDrawState.get(null, 0);
+		state = new BatchDrawState(false);
 		#if track_alloc
 		this.allocPos = new hxd.impl.AllocPos();
 		#end
@@ -49,7 +49,7 @@ private class GraphicsContent extends h3d.prim.Primitive {
 
 	public inline function addIndex(i) {
 		index.push(i);
-		lastState.count++;
+		state.add(1);
 		indexDirty = true;
 	}
 
@@ -66,13 +66,7 @@ private class GraphicsContent extends h3d.prim.Primitive {
 	}
 
 	public function setTile( tile : h2d.Tile ) {
-		var tex = tile.getTexture();
-		if ( lastState.texture == null ) lastState.texture = tex;
-		else if (lastState.texture != tex ) {
-			lastState.calcOffsetTris();
-			lastState.next = BatchDrawState.get(tex, index.length);
-			lastState = lastState.next;
-		}
+		state.nextTile(tile, 0);
 	}
 
 	public function next() {
@@ -80,11 +74,11 @@ private class GraphicsContent extends h3d.prim.Primitive {
 		if( nvect < 1 << 15 ) {
 			return false;
 		}
-		lastState.calcOffsetTris();
-		buffers.push( { buf : tmp, idx : index, vbuf : null, ibuf : null, state: firstState } );
+		buffers.push( { buf : tmp, idx : index, vbuf : null, ibuf : null, state: state } );
+		
 		tmp = new hxd.FloatBuffer();
 		index = new hxd.IndexBuffer();
-		firstState = lastState = BatchDrawState.get(lastState.texture, 0);
+		state = new BatchDrawState(false, state.currentTexture);
 		super.dispose();
 		return true;
 	}
@@ -100,7 +94,6 @@ private class GraphicsContent extends h3d.prim.Primitive {
 			if( b.vbuf == null || b.vbuf.isDisposed() ) b.vbuf = h3d.Buffer.ofFloats(b.buf, 8, [RawFormat]);
 			if( b.ibuf == null || b.ibuf.isDisposed() ) b.ibuf = h3d.Indexes.alloc(b.idx);
 		}
-		lastState.calcOffsetTris();
 		bufferDirty = false;
 		indexDirty = false;
 	}
@@ -108,22 +101,8 @@ private class GraphicsContent extends h3d.prim.Primitive {
 	public function doRender( ctx : h2d.RenderContext ) {
 		if (index.length <= 0) return;
 		flush();
-		var engine = ctx.engine;
-		var s;
-		for ( b in buffers ) {
-			s = b.state;
-			do {
-				ctx.swapTexture(s.texture);
-				engine.renderIndexed(b.vbuf, b.ibuf, s.elOffset, s.elCount);
-				s = s.next;
-			} while ( s != null );
-		}
-		s = firstState;
-		do {
-			ctx.swapTexture(s.texture);
-			engine.renderIndexed(buffer, indexes, s.elOffset, s.elCount);
-			s = s.next;
-		} while ( s != null );
+		for ( b in buffers ) b.state.drawIndexed(ctx, b.vbuf, b.ibuf);
+		state.drawIndexed(ctx, buffer, indexes);
 	}
 
 	public inline function flush() {
@@ -136,7 +115,6 @@ private class GraphicsContent extends h3d.prim.Primitive {
 				bufferDirty = false;
 			}
 			if ( indexDirty ) {
-				lastState.calcOffsetTris();
 				indexes.dispose();
 				indexes = h3d.Indexes.alloc(index);
 				indexDirty = false;
@@ -148,11 +126,11 @@ private class GraphicsContent extends h3d.prim.Primitive {
 		for( b in buffers ) {
 			if( b.vbuf != null ) b.vbuf.dispose();
 			if( b.ibuf != null ) b.ibuf.dispose();
-			b.state.put();
+			b.state.clear(true);
 			b.vbuf = null;
 			b.ibuf = null;
 		}
-		firstState.put();
+		state.clear(true);
 		super.dispose();
 	}
 
@@ -162,7 +140,6 @@ private class GraphicsContent extends h3d.prim.Primitive {
 		tmp = new hxd.FloatBuffer();
 		index = new hxd.IndexBuffer();
 		buffers = [];
-		firstState = lastState = BatchDrawState.get(null, 0);
 	}
 
 }

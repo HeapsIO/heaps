@@ -60,6 +60,21 @@ class DrawingTiles extends SampleApp {
 				}
 			}
 		}
+
+		// h2d.Graphics can render tiles along with other types of graphics.
+		var g = new h2d.Graphics(fui);
+		g.drawTile(0, 0, logo);
+		// Make drawn textures to wrap UV around.
+		// In this tile fill, it starts at 0-0, and drawn outside texture boundaries,
+		// if tileWrap is off, it will cause it to render borders of the logo.
+		g.tileWrap = true;
+		g.beginTileFill(0, 0, 1, 1, logo);
+		var ow = logo.width;
+		for (pt in [[65, 41], [97, 41], [128, 57], [159, 41], [191, 41], [191, 73], [175, 104], [191, 136], [191, 168],
+								[159, 168], [128, 152], [97, 168], [65, 168], [65, 168], [65, 136], [81, 104], [65, 73]]) {
+			g.lineTo(ow + pt[0], pt[1]);
+		}
+		g.drawRect(ow + 64, 183, 129, 34);
 	}
 
 	static function main() {
