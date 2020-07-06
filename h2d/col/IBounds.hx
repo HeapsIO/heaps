@@ -83,8 +83,8 @@ class IBounds {
 		yMax = Math.imax(yMax, b.yMax);
 	}
 
-	public function intersection( b : IBounds ) {
-		var i = new Bounds();
+	public function intersection( b : IBounds ) : IBounds {
+		var i = new IBounds();
 		i.xMin = Math.imax(xMin, b.xMin);
 		i.yMin = Math.imax(yMin, b.yMin);
 		i.xMax = Math.imin(xMax, b.xMax);
@@ -94,8 +94,8 @@ class IBounds {
 		return i;
 	}
 
-	public function union( b : IBounds ) {
-		var i = new Bounds();
+	public function union( b : IBounds ) : IBounds {
+		var i = new IBounds();
 		i.xMin = Math.imin(xMin, b.xMin);
 		i.yMin = Math.imin(yMin, b.yMin);
 		i.xMax = Math.imax(xMax, b.xMax);
