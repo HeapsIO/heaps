@@ -209,24 +209,38 @@ class BaseLibrary {
 		}
 	}
 
+	function toFloats( n : FbxNode ) {
+		return switch( n.props[0] ) {
+		case PInts(vl):
+			var vl = [for( v in vl ) (v:Float)];
+			n.props[0] = PFloats(vl);
+			vl;
+		case PFloats(vl):
+			vl;
+		default:
+			throw n.props[0]+" should be floats ";
+		}
+	}
+
 	function updateModelScale() {
 		var unitScale = 1;
 		var originScale = 1;
 		var upAxis = 1;
-		var originAxis = 2;
+		var originalUpAxis = 2;
 		for( p in root.getAll("GlobalSettings.Properties70.P") ) {
 			switch( p.props[0].toString() ) {
 			case "UnitScaleFactor": unitScale = p.props[4].toInt();
 			case "OriginalUnitScaleFactor": originScale = p.props[4].toInt();
 			case "UpAxis": upAxis = p.props[4].toInt();
-			case "OriginalUpAxis": originAxis = p.props[4].toInt();
+			case "OriginalUpAxis": originalUpAxis = p.props[4].toInt();
 			default:
 			}
 		}
 		var scaleFactor : Float = unitScale == 100 && originScale == 1 ? 100 : 1;
-		var axisFlip = upAxis == 2 && originAxis == 1;
 		var geometryScaleFactor = scaleFactor;
-		// TODO : axisFlip
+
+		if( upAxis == 1 ) // Y-up
+			convertYupToZup(originalUpAxis);
 
 		var app = "";
 		for( p in root.getAll("FBXHeaderExtension.SceneInfo.Properties70.P") )
@@ -239,19 +253,6 @@ class BaseLibrary {
 
 		if( scaleFactor == 1 && geometryScaleFactor == 1 )
 			return;
-
-		function toFloats( n : FbxNode ) {
-			return switch( n.props[0] ) {
-			case PInts(vl):
-				var vl = [for( v in vl ) (v:Float)];
-				n.props[0] = PFloats(vl);
-				vl;
-			case PFloats(vl):
-				vl;
-			default:
-				throw n.props[0]+" should be floats ";
-			}
-		}
 
 		// scale on geometry
 		if( geometryScaleFactor != 1 ) {
@@ -313,6 +314,47 @@ class BaseLibrary {
 				default:
 				}
 			}
+		}
+	}
+
+	function convertYupToZup( originalUpAxis : Int ) {
+		switch( originalUpAxis ) {
+			case 2: // Original Axis Z - Maya & 3DS Max 
+				var rootObject = root.get("Objects.Model.Properties70");
+				for( c in rootObject.childs ) {
+					if( c.props[0].toString() == "PreRotation" && c.props[4].toFloat() == -90 && c.props[5].toFloat()== 0 && c.props[6].toFloat() == 0 ) {
+						rootObject.childs.remove(c);
+						break;
+					}
+				}
+			case -1, 1: // Original Axis -Y or Y - Blender & Maya
+				var connections = root.get("Connections");
+				var rootId = 0;
+				for( c in connections.childs ) {
+					if( c.props[2].toInt() == 0 ) {
+						rootId = c.props[1].toInt();
+						break;
+					}
+				}
+				var rootObject = root.get("Objects.Model");
+				for( m in this.root.getAll("Objects.Model") ) {
+					if( m.props[0].toInt() == rootId ) {
+						var needPreRot = true;
+						for( c in root.getAll("GlobalSettings.Properties70.P") ) {
+							if( c.props[0].toString() == "PreRotation" && c.props[4].toFloat() == 90 && c.props[5].toFloat()== 0 && c.props[6].toFloat() == 0 ) {
+								needPreRot = false;
+								break;
+							}
+						}
+						if( needPreRot ) {
+							var preRotProp : FbxNode = {name : "P", props : [PString("PreRotation"), PString("Vector3D"), PString("Vector"), PString(""), PFloat(90),PFloat(0),PFloat(0)], childs : []};
+							m.get("Properties70").childs.insert(0, preRotProp);
+						}
+						break;
+					}
+				}
+			default:
+				throw "From Y-up to Z-up with orginalUpAxis = " + originalUpAxis + " not implemented.";
 		}
 	}
 
