@@ -248,8 +248,8 @@ class BaseLibrary {
 			case "LastSaved|ApplicationName": app = p.props[4].toString();
 			default:
 			}
-		if( app.indexOf("Blender") >= 0 && unitScale == 1 && originScale == 1 )
-			scaleFactor *= 0.01; // Blender in meters exports FBX to centimeter
+		if( app.indexOf("Blender") >= 0 && unitScale == originScale )
+			scaleFactor = unitScale / 100; // Adjust blender output scaling
 
 		if( scaleFactor == 1 && geometryScaleFactor == 1 )
 			return;
