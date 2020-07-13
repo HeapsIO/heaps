@@ -1,5 +1,7 @@
 package h2d.col;
-
+/**
+	A simple triangle collider.
+**/
 class Triangle implements Collider {
 
 	static inline var UNDEF = 1.1315e-17;
@@ -17,10 +19,17 @@ class Triangle implements Collider {
 		area = UNDEF;
 	}
 
+	/**
+		Returns a centroid of the Triangle.
+	**/
 	public inline function getCenter() {
 		return new Point((a.x + b.x + c.x) / 3, (a.y + b.y + c.y) / 3);
 	}
 
+	/**
+		Calculates and returns a triangle area.
+		Result is cached between `getArea` and `getInvArea` on first call and altering `a`, `b`, or `c` afterwards will lead to incorrect value.
+	**/
 	public inline function getArea() {
 		if( area == UNDEF ) {
 			area = ((a.y * b.x - a.x * b.y) + (b.y * c.x - b.x * c.y) + (c.y * a.x - c.x * a.y)) * -0.5;
@@ -29,6 +38,10 @@ class Triangle implements Collider {
 		return area;
 	}
 
+	/**
+		Calculates and returns a triangle area inverse.
+		Result is cached between `getArea` and `getInvArea` on first call and altering `a`, `b`, or `c` afterwards will lead to incorrect value.
+	**/
 	public inline function getInvArea() {
 		getArea();
 		return invArea;
@@ -44,6 +57,9 @@ class Triangle implements Collider {
 		return new h3d.col.Point(1 - s - t, s, t);
 	}
 
+	/**
+		Tests if Point `p` is inside this Triangle.
+	**/
 	public function contains( p : Point ) {
 		var area = getInvArea() * 0.5;
 		var s = area * (a.y * c.x - a.x * c.y + (c.y - a.y) * p.x + (a.x - c.x) * p.y);

@@ -7,6 +7,9 @@ enum OffsetKind {
 	Round( arc : Float );
 }
 
+/**
+	`h2d.col.IPolygon` is an abstract around Array of IPoints, allowing to perform collision test against defined shape.
+**/
 @:forward(push,remove)
 abstract IPolygon(Array<IPoint>) from Array<IPoint> to Array<IPoint> {
 
@@ -19,21 +22,33 @@ abstract IPolygon(Array<IPoint>) from Array<IPoint> to Array<IPoint> {
 		this = points == null ? [] : points;
 	}
 
+	@:dox(hide)
 	public inline function iterator() {
 		return new hxd.impl.ArrayIterator(this);
 	}
 
+	/**
+		Converts this IPolygon into a Float-based Polygon.
+	**/
 	public function toPolygon( scale = 1. ) {
 		return [for( p in points ) p.toPoint(scale)];
 	}
 
-	public function getBounds( ?b : IBounds ) {
+	/**
+		Returns bounding box of the IPolygon.
+	**/
+	public function getBounds( ?b : IBounds ) : IBounds {
 		if( b == null ) b = new IBounds();
 		for( p in points )
 			b.addPoint(p);
 		return b;
 	}
 
+	/**
+		Combines this IPolygon and given IPolygon `p` and returns resulting IPolygons.
+		@param p The IPolygon to union with.
+		@param withHoles When enabled, keeps the holes in resulting polygons as a separate IPolygon.
+	**/
 	public function union( p : IPolygon, withHoles = true ) : IPolygons {
 		var c = new hxd.clipper.Clipper();
 		if( !withHoles ) c.resultKind = NoHoles;
@@ -42,14 +57,30 @@ abstract IPolygon(Array<IPoint>) from Array<IPoint> to Array<IPoint> {
 		return c.execute(Union, NonZero, NonZero);
 	}
 
+	/**
+		Calculates an intersection areas between this IPolygon and given IPolygon `p` and returns resulting IPolygons.
+		@param p The IPolygon to intersect with.
+		@param withHoles When enabled, keeps the holes in resulting polygons as a separate IPolygon. 
+	**/
 	public inline function intersection( p : IPolygon, withHoles = true ) : IPolygons {
 		return clipperOp(p, Intersection, withHoles);
 	}
 
+	/**
+		Subtracts the area of given IPolygon `p` from this IPolygon and returns resulting IPolygons.
+		@param p The IPolygon to subtract with.
+		@param withHoles When enabled, keeps the holes in resulting polygons as a separate IPolygon. 
+	**/
 	public inline function subtraction( p : IPolygon, withHoles = true ) : IPolygons {
 		return clipperOp(p, Difference, withHoles);
 	}
 
+	/**
+		Offsets polygon edges by specified amount and returns resulting IPolygons.
+		@param delta The offset amount.
+		@param kind The corner rounding method.
+		@param withHoles When enabled, keeps the holes in resulting polygons as a separate IPolygon. 
+	**/
 	public function offset( delta : Float, kind : OffsetKind, withHoles = true ) : IPolygons {
 		var c = new hxd.clipper.Clipper.ClipperOffset();
 		switch( kind ) {
@@ -73,6 +104,10 @@ abstract IPolygon(Array<IPoint>) from Array<IPoint> to Array<IPoint> {
 		return c.execute(op, NonZero, NonZero);
 	}
 
+	/**
+		Returns a new IPolygon containing a convex hull of this IPolygon.
+		See Monotone chain algorithm for more details.
+	**/
 	public function convexHull() {
 		var len = points.length;
 		if( len < 3 )
@@ -103,6 +138,9 @@ abstract IPolygon(Array<IPoint>) from Array<IPoint> to Array<IPoint> {
 		return hull;
 	}
 
+	/**
+		Tests if polygon points are in the clockwise order.
+	**/
 	public function isClockwise() {
 		var sum = 0.;
 		var p1 = points[points.length - 1];
@@ -113,6 +151,9 @@ abstract IPolygon(Array<IPoint>) from Array<IPoint> to Array<IPoint> {
 		return sum < 0; // Y axis is negative compared to classic maths
 	}
 
+	/**
+		Calculates total area of the IPolygon.
+	**/
 	public function area() {
 		var sum = 0.;
 		var p1 = points[points.length - 1];
@@ -127,6 +168,9 @@ abstract IPolygon(Array<IPoint>) from Array<IPoint> to Array<IPoint> {
 		return (p2.x - p1.x) * (t.y - p1.y) - (p2.y - p1.y) * (t.x - p1.x);
 	}
 
+	/**
+		Tests if polygon is convex or concave.
+	**/
 	public function isConvex() {
 		var p1 = points[points.length - 2];
 		var p2 = points[points.length - 1];
@@ -142,10 +186,18 @@ abstract IPolygon(Array<IPoint>) from Array<IPoint> to Array<IPoint> {
 		return true;
 	}
 
+	/**
+		Reverses the IPolygon points ordering. Can be used to change polygon from anti-clockwise to clockwise.
+	**/
 	public function reverse() : Void {
 		this.reverse();
 	}
 
+	/**
+		Tests if Point `p` is inside this IPolygon.
+		@param p The point to test against.
+		@param isConvex Use simplified collision test suited for convex polygons. Results are undefined if polygon is concave.
+	**/
 	public function contains( p : Point, isConvex = false ) {
 		if( isConvex ) {
 			var p1 = points[points.length - 1];

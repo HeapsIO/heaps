@@ -1,6 +1,9 @@
 package h2d.col;
 import hxd.Math;
 
+/**
+	`h2d.col.IPoint` is an `Int`-based version of `h2d.col.Point`.
+**/
 class IPoint {
 
 	public var x : Int;
@@ -11,54 +14,88 @@ class IPoint {
 		this.y = y;
 	}
 
-	public inline function toPoint( scale = 1. ) {
+	/**
+		Converts this IPoint to `Float` point scaled by provided scalar `scale`.
+	**/
+	public inline function toPoint( scale = 1. ) : Point {
 		return new Point(x * scale, y * scale);
 	}
 
-	public inline function distanceSq( p : IPoint ) {
+	/**
+		Returns squared distance between this IPoint and given IPoint `p`.
+	**/
+	public inline function distanceSq( p : IPoint ) : Int {
 		var dx = x - p.x;
 		var dy = y - p.y;
 		return dx * dx + dy * dy;
 	}
 
-	public inline function distance( p : IPoint ) {
+	/**
+		Returns a distance between this IPoint and given IPoint `p`.
+	**/
+	public inline function distance( p : IPoint ) : Float {
 		return Math.sqrt(distanceSq(p));
 	}
 
-	public function toString() {
+	@:dox(hide)
+	public function toString() : String {
 		return "{" + x + "," + y + "}";
 	}
 
-	public inline function sub( p : IPoint ) {
+	/**
+		Subtracts IPoint `p` from this IPoint and returns new Point with the result.
+	**/
+	public inline function sub( p : IPoint ) : Point {
 		return new Point(x - p.x, y - p.y);
 	}
 
-	public inline function add( p : IPoint ) {
+	/**
+		Adds IPoint `p` to this IPoint and returns new Point with the result.
+	**/
+	public inline function add( p : IPoint ) : Point {
 		return new Point(x + p.x, y + p.y);
 	}
 
+	/**
+		Tests if this IPoint position equals to `other` IPoint position.
+	**/
 	public inline function equals( other : IPoint ) : Bool {
 		return x == other.x && y == other.y;
 	}
 
-	public inline function dot( p : IPoint ) {
+	/**
+		Returns a dot product between this IPoint and given IPoint `p`.
+	**/
+	public inline function dot( p : IPoint ) : Int {
 		return x * p.x + y * p.y;
 	}
 
-	public inline function lengthSq() {
+	/**
+		Returns squared length of this IPoint.
+	**/
+	public inline function lengthSq() : Int {
 		return x * x + y * y;
 	}
 
-	public inline function length() {
+	/**
+		Returns length (distance to `0,0`) of this IPoint.
+	**/
+	public inline function length() : Float {
 		return Math.sqrt(lengthSq());
 	}
 
-	public inline function set(x,y) {
+	/**
+		Sets the IPoint `x,y` with given values.
+	**/
+	public inline function set( x : Int, y : Int ) {
 		this.x = x;
 		this.y = y;
 	}
 
-	public inline function clone() {
+	/**
+		Returns a copy of this Point.
+	**/
+	public inline function clone() : IPoint {
 		return new IPoint(x, y);
 	}
 

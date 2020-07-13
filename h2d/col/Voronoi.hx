@@ -37,7 +37,7 @@ private class RBNode<T:RBNode<T>> {
 
 	public function new() {
 		this.root = null;
-    }
+	}
 
 	public function rbInsertSuccessor(node : T, successor : T) {
 		var parent;
@@ -129,7 +129,7 @@ private class RBNode<T:RBNode<T>> {
 			parent = node.rbParent;
 			}
 		this.root.rbRed = false;
-    }
+	}
 
 	public function rbRemoveNode(node:T) {
 		// >>> rhill 2011-05-27: Performance: cache previous/next nodes
@@ -256,7 +256,7 @@ private class RBNode<T:RBNode<T>> {
 			parent = parent.rbParent;
 		} while (!node.rbRed);
 		if (node != null) {node.rbRed = false;}
-    }
+	}
 
 	function rbRotateLeft(node:T) {
 		var p = node,
@@ -280,7 +280,7 @@ private class RBNode<T:RBNode<T>> {
 			p.rbRight.rbParent = p;
 			}
 		q.rbLeft = p;
-    }
+	}
 
 	function rbRotateRight(node:T) {
 		var p = node,
@@ -304,19 +304,19 @@ private class RBNode<T:RBNode<T>> {
 			p.rbLeft.rbParent = p;
 			}
 		q.rbRight = p;
-    }
+	}
 
 	public function getFirst(node:T) {
 		while(node.rbLeft != null)
 			node = node.rbLeft;
 		return node;
-    }
+	}
 
 	public function getLast(node:T) {
 		while( node.rbRight != null )
 			node = node.rbRight;
 		return node;
-    }
+	}
 }
 
 class Cell {
@@ -331,7 +331,7 @@ class Cell {
 		this.point = point;
 		this.halfedges = [];
 		this.closeMe = false;
-    }
+	}
 
 	public function getCircle() {
 		// still not the best enclosing circle
@@ -394,7 +394,7 @@ class Cell {
 				}
 			}
 		return neighbors;
-    }
+	}
 
 	// Return a list of the neighbor Indexes
 	public function getNeighborIndexes() {
@@ -412,7 +412,7 @@ class Cell {
 				}
 			}
 		return neighbors;
-    }
+	}
 
 	public function getBbox() {
 		var halfedges = this.halfedges,
@@ -438,7 +438,7 @@ class Cell {
 			width: xmax-xmin,
 			height: ymax-ymin
 		};
-    }
+	}
 
 	// Return whether a point is inside, on, or outside the cell:
 	//   -1: point is outside the perimeter of the cell
@@ -492,7 +492,7 @@ class Edge {
 		this.lPoint = lPoint;
 		this.rPoint = rPoint;
 		this.va = this.vb = null;
-    }
+	}
 }
 
 
@@ -527,11 +527,11 @@ class Halfedge {
 
 	public inline function getStartpoint() {
 		return this.edge.lPoint == this.point ? this.edge.va : this.edge.vb;
-    }
+	}
 
 	public inline function getEndpoint() {
 		return this.edge.lPoint == this.point ? this.edge.vb : this.edge.va;
-    }
+	}
 
 	public inline function getTarget() {
 		return this.edge.lCell != null && this.edge.lCell.point != point ? this.edge.lCell : this.edge.rCell;
@@ -566,6 +566,10 @@ private class CircleEvent extends RBNode<CircleEvent> {
 	}
 }
 
+/**
+	`h2d.col.Voronoi` allows to Steven Fortune's algorithm to compute Voronoi diagram from given set of Points and bounding box.
+	The implementation is a port from JS library: https://github.com/gorhill/Javascript-Voronoi
+**/
 class Voronoi {
 
 	var epsilon : Float;
@@ -586,7 +590,7 @@ class Voronoi {
 		this.cells = null;
 		this.beachsectionJunkyard = [];
 		this.circleEventJunkyard = [];
-    }
+	}
 
 	public function reset() {
 		if( this.beachline == null )
@@ -621,7 +625,7 @@ class Voronoi {
 		var v = new Point(x, y);
 		this.vertices.push(v);
 		return v;
-    }
+	}
 
 	// this create and add an edge to internal collection, and also create
 	// two halfedges which are added to each point's counterclockwise array
@@ -647,7 +651,7 @@ class Voronoi {
 		edge.vb = vb;
 		this.edges.push(edge);
 		return edge;
-    }
+	}
 
 	function setEdgeStartpoint(edge:Edge, lPoint, rPoint, vertex) {
 		if (edge.va == null && edge.vb == null) {
@@ -661,11 +665,11 @@ class Voronoi {
 		else {
 			edge.va = vertex;
 			}
-    }
+	}
 
 	function setEdgeEndpoint(edge, lPoint, rPoint, vertex) {
 		this.setEdgeStartpoint(edge, rPoint, lPoint, vertex);
-    }
+	}
 
 
 	// rhill 2011-06-02: A lot of Beachsection instanciations
@@ -750,7 +754,7 @@ class Voronoi {
 			}
 		// both parabolas have same distance to directrix, thus break point is midway
 		return (rfocx+lfocx)/2;
-    }
+	}
 
 	// calculate the right break point of a particular beach section,
 	// given a particular directrix
@@ -761,13 +765,13 @@ class Voronoi {
 			}
 		var point = arc.point;
 		return point.y == directrix ? point.x : Math.POSITIVE_INFINITY;
-    }
+	}
 
 	function detachBeachsection(beachsection) {
 		this.detachCircleEvent(beachsection); // detach potentially attached circle event
 		this.beachline.rbRemoveNode(beachsection); // remove from RB-tree
 		this.beachsectionJunkyard.push(beachsection); // mark for reuse
-    }
+	}
 
 	function removeBeachsection(beachsection:Beachsection) {
 		var circle = beachsection.circleEvent,
@@ -842,7 +846,7 @@ class Voronoi {
 		// adjacent to collapsed sections
 		this.attachCircleEvent(lArc);
 		this.attachCircleEvent(rArc);
-    }
+	}
 
 	function addBeachsection(point:Point) {
 		var x = point.x,
@@ -1015,7 +1019,7 @@ class Voronoi {
 			this.attachCircleEvent(rArc);
 			return;
 		}
-    }
+	}
 
 	function attachCircleEvent(arc:Beachsection) {
 		var lArc = arc.rbPrevious,
@@ -1104,7 +1108,7 @@ class Voronoi {
 		if (predecessor == null) {
 			this.firstCircleEvent = circleEvent;
 			}
-    }
+	}
 
 	function detachCircleEvent(arc:Beachsection) {
 		var circle = arc.circleEvent;
@@ -1116,7 +1120,7 @@ class Voronoi {
 			this.circleEventJunkyard.push(circle);
 			arc.circleEvent = null;
 		}
-    }
+	}
 
 	// ---------------------------------------------------------------------------
 	// Diagram completion methods
@@ -1397,7 +1401,7 @@ class Voronoi {
 			iLeft = 0;
 			while (iLeft < nHalfedges) {
 				va = halfedges[iLeft].getEndpoint();
-            	vz = halfedges[(iLeft+1) % nHalfedges].getStartpoint();
+				vz = halfedges[(iLeft+1) % nHalfedges].getStartpoint();
 				// if end point is not equal to start point, we need to add the missing
 				// halfedge(s) to close the cell
 				if (abs(va.x-vz.x)>=epsilon || abs(va.y-vz.y)>=epsilon) {
