@@ -104,7 +104,7 @@ class Embed {
 
 	#if js
 	static function __init__() untyped {
-		__js__("var hx__registerFont");
+		js.Syntax.code("var hx__registerFont");
 		untyped hx__registerFont = function(name, data) {
 			var s = js.Browser.document.createStyleElement();
 			s.type = "text/css";
