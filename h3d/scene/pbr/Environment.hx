@@ -202,7 +202,6 @@ class Environment  {
 	*/
 	public function new( src : h3d.mat.Texture, ?diffSize = 64, ?specSize = 512, ?sampleBits = 12 ) {
 		this.source = src;
-		equiToCube();
 		this.diffSize = diffSize;
 		this.specSize = specSize;
 		this.sampleBits = sampleBits;
@@ -310,6 +309,9 @@ class Environment  {
 	}
 
 	function computeIrradiance() {
+
+		if( env == null )
+			equiToCube();
 
 		var screen = new h3d.pass.ScreenFx(new IrradShader());
 		screen.shader.samplesBits = sampleBits;

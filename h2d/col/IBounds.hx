@@ -146,8 +146,8 @@ class IBounds {
 	/**
 		Returns new Bounds instance containing intersection results of this IBounds and given IBounds `b`.
 	**/
-	public function intersection( b : IBounds ) : Bounds {
-		var i = new Bounds();
+	public function intersection( b : IBounds ) : IBounds {
+		var i = new IBounds();
 		i.xMin = Math.imax(xMin, b.xMin);
 		i.yMin = Math.imax(yMin, b.yMin);
 		i.xMax = Math.imin(xMax, b.xMax);
@@ -160,8 +160,8 @@ class IBounds {
 	/**
 		Returns new Bounds instance containing union of this IBounds and given IBounds `b`.
 	**/
-	public function union( b : IBounds ) : Bounds {
-		var i = new Bounds();
+	public function union( b : IBounds ) : IBounds {
+		var i = new IBounds();
 		i.xMin = Math.imin(xMin, b.xMin);
 		i.yMin = Math.imin(yMin, b.yMin);
 		i.xMax = Math.imax(xMax, b.xMax);

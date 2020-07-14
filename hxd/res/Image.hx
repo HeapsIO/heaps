@@ -269,7 +269,7 @@ class Image extends Resource {
 		inf = null;
 		var s = getSize();
 		if( w != s.width || h != s.height )
-			tex.resize(w, h);
+			tex.resize(s.width, s.height);
 		tex.realloc = null;
 		loadTexture();
 	}

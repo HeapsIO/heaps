@@ -5,14 +5,15 @@ import hxd.impl.Air3File;
 #elseif (sys || nodejs)
 import sys.io.File;
 import sys.io.FileInput;
+typedef FileSeekMode = sys.io.FileSeek;
 #else
-enum FileSeek {
+enum FileSeekMode {
 	SeekBegin;
 	SeekEnd;
 	SeedCurrent;
 }
 class FileInput extends haxe.io.BytesInput {
-	public function seek( pos : Int, seekMode : FileSeek ) {
+	public function seek( pos : Int, seekMode : FileSeekMode ) {
 		switch( seekMode ) {
 		case SeekBegin:
 			this.position = pos;
@@ -30,7 +31,7 @@ class FileSeek {
 	@:hlNative("std","file_seek2") static function seek2( f : sys.io.File.FileHandle, pos : Float, cur : Int ) : Bool { return false; }
 	#end
 	
-	public static function seek( f : sys.io.FileInput, pos : Float, mode : sys.io.FileSeek ) {
+	public static function seek( f : FileInput, pos : Float, mode : FileSeekMode ) {
 		#if (hl && hl_ver >= version("1.12.0"))
 		if( !seek2(@:privateAccess f.__f,pos,mode.getIndex()) )
 			throw haxe.io.Error.Custom("seek2 failure()");

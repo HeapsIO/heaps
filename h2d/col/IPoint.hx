@@ -45,15 +45,15 @@ class IPoint {
 	/**
 		Subtracts IPoint `p` from this IPoint and returns new Point with the result.
 	**/
-	public inline function sub( p : IPoint ) : Point {
-		return new Point(x - p.x, y - p.y);
+	public inline function sub( p : IPoint ) : IPoint {
+		return new IPoint(x - p.x, y - p.y);
 	}
 
 	/**
 		Adds IPoint `p` to this IPoint and returns new Point with the result.
 	**/
-	public inline function add( p : IPoint ) : Point {
-		return new Point(x + p.x, y + p.y);
+	public inline function add( p : IPoint ) : IPoint {
+		return new IPoint(x + p.x, y + p.y);
 	}
 
 	/**

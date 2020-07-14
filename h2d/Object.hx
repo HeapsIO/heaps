@@ -672,19 +672,25 @@ class Object #if (domkit && !domkit_heaps) implements domkit.Model<h2d.Object> #
 		@:privateAccess if( ctx.inFilter != null ) {
 			var f1 = ctx.baseShader.filterMatrixA;
 			var f2 = ctx.baseShader.filterMatrixB;
-			matA = this.matA * f1.x + this.matB * f1.y;
-			matB = this.matA * f2.x + this.matB * f2.y;
-			matC = this.matC * f1.x + this.matD * f1.y;
-			matD = this.matC * f2.x + this.matD * f2.y;
-			absX = this.absX * f1.x + this.absY * f1.y + f1.z;
-			absY = this.absX * f2.x + this.absY * f2.y + f2.z;
+			var tmpA = this.matA * f1.x + this.matB * f1.y;
+			var tmpB = this.matA * f2.x + this.matB * f2.y;
+			var tmpC = this.matC * f1.x + this.matD * f1.y;
+			var tmpD = this.matC * f2.x + this.matD * f2.y;
+			var tmpX = this.absX * f1.x + this.absY * f1.y + f1.z;
+			var tmpY = this.absX * f2.x + this.absY * f2.y + f2.z;
+			matA = tmpA * ctx.viewA + tmpB * ctx.viewC;
+			matB = tmpA * ctx.viewB + tmpB * ctx.viewD;
+			matC = tmpC * ctx.viewA + tmpD * ctx.viewC;
+			matD = tmpC * ctx.viewB + tmpD * ctx.viewD;
+			absX = tmpX * ctx.viewA + tmpY * ctx.viewC + ctx.viewX;
+			absY = tmpX * ctx.viewB + tmpY * ctx.viewD + ctx.viewY;
 		} else {
-			matA = this.matA;
-			matB = this.matB;
-			matC = this.matC;
-			matD = this.matD;
-			absX = this.absX;
-			absY = this.absY;
+			matA = this.matA * ctx.viewA + this.matB * ctx.viewC;
+			matB = this.matA * ctx.viewB + this.matB * ctx.viewD;
+			matC = this.matC * ctx.viewA + this.matD * ctx.viewC;
+			matD = this.matC * ctx.viewB + this.matD * ctx.viewD;
+			absX = this.absX * ctx.viewA + this.absY * ctx.viewC + ctx.viewX;
+			absY = this.absX * ctx.viewB + this.absY * ctx.viewD + ctx.viewY;
 		}
 
 		// intersect our transformed local view with our viewport in global space
@@ -699,10 +705,10 @@ class Object #if (domkit && !domkit_heaps) implements domkit.Model<h2d.Object> #
 
 		// clip with our scene
 		@:privateAccess {
-			if( view.xMin < ctx.curX ) view.xMin = ctx.curX;
-			if( view.yMin < ctx.curY ) view.yMin = ctx.curY;
-			if( view.xMax > ctx.curX + ctx.curWidth ) view.xMax = ctx.curX + ctx.curWidth;
-			if( view.yMax > ctx.curY + ctx.curHeight ) view.yMax = ctx.curY + ctx.curHeight;
+			if( view.xMin < -1 ) view.xMin = -1;
+			if( view.yMin < -1 ) view.yMin = -1;
+			if( view.xMax > 1 ) view.xMax = 1;
+			if( view.yMax > 1 ) view.yMax = 1;
 		}
 
 		// inverse our matrix
@@ -771,7 +777,6 @@ class Object #if (domkit && !domkit_heaps) implements domkit.Model<h2d.Object> #
 		var shader = @:privateAccess ctx.baseShader;
 		var oldA = shader.filterMatrixA.clone();
 		var oldB = shader.filterMatrixB.clone();
-		var oldF = @:privateAccess ctx.inFilter;
 
 		// 2x3 inverse matrix
 		var invDet = 1 / (matA * matD - matB * matC);
@@ -785,9 +790,7 @@ class Object #if (domkit && !domkit_heaps) implements domkit.Model<h2d.Object> #
 		shader.filterMatrixA.set(invA, invC, invX);
 		shader.filterMatrixB.set(invB, invD, invY);
 		ctx.globalAlpha = 1;
-		draw(ctx);
-		for( c in children )
-			c.drawRec(ctx);
+		drawContent(ctx);
 		ctx.flush();
 
 		var finalTile = h2d.Tile.fromTexture(t);
@@ -844,15 +847,19 @@ class Object #if (domkit && !domkit_heaps) implements domkit.Model<h2d.Object> #
 		} else {
 			var old = ctx.globalAlpha;
 			ctx.globalAlpha *= alpha;
-			if( ctx.front2back ) {
-				var nchilds = children.length;
-				for (i in 0...nchilds) children[nchilds - 1 - i].drawRec(ctx);
-				draw(ctx);
-			} else {
-				draw(ctx);
-				for( c in children ) c.drawRec(ctx);
-			}
+			drawContent(ctx);
 			ctx.globalAlpha = old;
+		}
+	}
+
+	function drawContent( ctx : RenderContext ) {
+		if ( ctx.front2back ) {
+			var i = children.length;
+			while ( i-- > 0 ) children[i].drawRec(ctx);
+			draw(ctx);
+		} else {
+			draw(ctx);
+			for ( c in children ) c.drawRec(ctx);
 		}
 	}
 
