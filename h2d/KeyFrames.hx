@@ -128,6 +128,7 @@ class KeyFrames extends Mask {
 				xVal = (curFrame - cur.start_frame) / yVal;
 			} else {
 				next = cur;
+				yVal = 1;
 				xVal = 0.;
 			}
 		} else {
