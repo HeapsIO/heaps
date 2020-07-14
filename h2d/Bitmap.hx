@@ -1,25 +1,30 @@
 package h2d;
 
 /**
-	`h2d.Bitmap` is used to display a single bitmap Tile on the screen.
+	Displays a single bitmap Tile on the screen.
+
+	It is a most primitive Drawable and easiest to use, but vastly inferior to others in terms of performance when used for rendering of many tiles.
+	When dealing with many images at once, it is recommended to use batched renderers, like `h2d.SpriteBatch` or `h2d.TileGroup`.
 **/
 class Bitmap extends Drawable {
 
 	/**
-		The tile to display see `h2d.Tile` documentation for details.
-		If the tile is null, a pink 5x5 bitmap will be displayed instead. Use remove() or visible=false to hide a h2d.Bitmap
+		The tile to display. See `h2d.Tile` documentation for details.
+		If the tile is null, a pink 5x5 bitmap will be displayed instead.
 	**/
 	public var tile(default,set) : Tile;
 
 	/**
-		If set, rescale the tile to match the given width, keeping the aspect ratio unless height is also set.  
+		If set, rescale the tile to match the given width, keeping the aspect ratio unless `height` is also set.
+		
 		Note that both `width` and `height` are `null` by default and in order to retrieve bitmap dimensions with
 		scaling accurately, call `getSize` method or address `tile.width/height` to get unscaled dimensions.
 	**/
 	public var width(default,set) : Null<Float>;
 
 	/**
-	 * If set, rescale the tile to match the given height, keeping the aspect ratio unless `width` is also set.
+		If set, rescale the tile to match the given height, keeping the aspect ratio unless `width` is also set.
+
 		Note that both `width` and `height` are `null` by default and in order to retrieve bitmap dimensions with
 		scaling accurately, call `getSize` method or address `tile.width/height` to get unscaled dimensions.
 	**/
@@ -27,6 +32,8 @@ class Bitmap extends Drawable {
 
 	/**
 		Create a Bitmap with specified tile and parent object.
+		@param tile A Tile that should be rendered by this Bitmap.
+		@param parent An optional parent `h2d.Object` instance to which Bitmap adds itself if set.
 	**/
 	public function new( ?tile : Tile, ?parent : h2d.Object ) {
 		super(parent);

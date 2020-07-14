@@ -117,12 +117,12 @@ class DepthMap {
 }
 
 /**
-	`h2d.ZGroup` is an advanced rendering class that utilized double-pass rendering in order to utilize z-culling on opaque objects.
+	`h2d.ZGroup` is an advanced rendering class that utilizes double-pass rendering in order to utilize z-culling on opaque objects.
 
 	In order to utilize ZGroup optimizations, all opaque objects should have `blendMode` set to `None`.
 
-	Rendering is done in two passes: Opaque and transparent pass. First pass only renders objects with `blendeMode = None`, while
-	second pass draws objects with any other blendMode. That allows to perform z-cull depth test on objects and reduce gpu strain.
+	Rendering is done in two passes: an opaque and transparent pass. First pass only renders objects with `blendeMode = None`, while
+	second pass draws objects with any other blendMode. That allows to perform z-cull depth test on the objects and reduce the gpu strain.
 
 	Additionally, ZGroup places a limitation on filter usage. They are not drawn in opaque pass, which can lead to unexpected results.
 **/
