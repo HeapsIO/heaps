@@ -1,7 +1,15 @@
 package h2d;
 
+private typedef CameraStackEntry = {
+	va : Float, vb : Float, vc : Float, vd : Float, vx : Float, vy : Float
+};
+private typedef TargetStackEntry = CameraStackEntry & {
+	t : h3d.mat.Texture, hasRZ : Bool, rzX:Float, rzY:Float, rzW:Float, rzH:Float
+};
+
 private typedef RenderZoneStack = { hasRZ:Bool, x:Float, y:Float, w:Float, h:Float };
 
+@:access(h2d.Scene)
 class RenderContext extends h3d.impl.RenderContext {
 
 	static inline var BUFFERING = false;
@@ -30,8 +38,11 @@ class RenderContext extends h3d.impl.RenderContext {
 	var baseShaderList : hxsl.ShaderList;
 	var currentObj : Drawable;
 	var stride : Int;
-	var targetsStack : Array<{ t : h3d.mat.Texture, x : Int, y : Int, w : Int, h : Int, hasRZ : Bool, rzX:Float, rzY:Float, rzW:Float, rzH:Float }>;
+	var targetsStack : Array<TargetStackEntry>;
 	var targetsStackIndex : Int;
+	var cameraStack : Array<CameraStackEntry>;
+	var cameraStackIndex : Int;
+	var curTarget : h3d.mat.Texture;
 	var renderZoneStack:Array<RenderZoneStack> = [];
 	var renderZoneIndex:Int = 0;
 	var hasUVPos : Bool;
@@ -39,10 +50,12 @@ class RenderContext extends h3d.impl.RenderContext {
 	var inFilter : Object;
 	var inFilterBlend : BlendMode;
 
-	var curX : Int;
-	var curY : Int;
-	var curWidth : Int;
-	var curHeight : Int;
+	var viewA : Float;
+	var viewB : Float;
+	var viewC : Float;
+	var viewD : Float;
+	var viewX : Float;
+	var viewY : Float;
 
 	var hasRenderZone : Bool;
 	var renderX : Float;
@@ -69,6 +82,8 @@ class RenderContext extends h3d.impl.RenderContext {
 		baseShaderList = new hxsl.ShaderList(baseShader);
 		targetsStack = [];
 		targetsStackIndex = 0;
+		cameraStack = [];
+		cameraStackIndex = 0;
 		filterStack = [];
 	}
 
@@ -86,19 +101,23 @@ class RenderContext extends h3d.impl.RenderContext {
 		currentObj = null;
 		bufPos = 0;
 		stride = 0;
-		curX = 0;
-		curY = 0;
+		viewA = scene.viewportA;
+		viewB = 0;
+		viewC = 0;
+		viewD = scene.viewportD;
+		viewX = scene.viewportX;
+		viewY = scene.viewportY;
+
 		targetFlipY = engine.driver.hasFeature(BottomLeftCoords) ? -1 : 1;
 		baseFlipY = engine.getCurrentTarget() != null ? targetFlipY : 1;
 		inFilter = null;
-		curWidth = scene.width;
-		curHeight = scene.height;
 		manager.globals.set("time", time);
 		manager.globals.set("global.time", time);
 		// todo : we might prefer to auto-detect this by running a test and capturing its output
 		baseShader.pixelAlign = #if flash true #else false #end;
 		baseShader.halfPixelInverse.set(0.5 / engine.width, 0.5 / engine.height);
-		baseShader.viewport.set( -scene.width * 0.5 - scene.offsetX, -scene.height * 0.5 - scene.offsetY, 2 / scene.width * scene.ratioX, -2 * baseFlipY / scene.height * scene.ratioY);
+		baseShader.viewportA.set(scene.viewportA, 0, scene.viewportX);
+		baseShader.viewportB.set(0, scene.viewportD * -baseFlipY, scene.viewportY * -baseFlipY);
 		baseShader.filterMatrixA.set(1, 0, 0);
 		baseShader.filterMatrixB.set(0, 1, 0);
 		baseShaderList.next = null;
@@ -134,7 +153,52 @@ class RenderContext extends h3d.impl.RenderContext {
 		texture = null;
 		currentObj = null;
 		baseShaderList.next = null;
-		if( targetsStackIndex != 0 ) throw "Missing popTarget()";
+		if ( targetsStackIndex != 0 ) throw "Missing popTarget()";
+		if ( cameraStackIndex != 0 ) throw "Missing popCamera()";
+	}
+
+	@:access(h2d.Camera)
+	public function pushCamera( cam : h2d.Camera ) {
+		var entry = cameraStack[cameraStackIndex++];
+		if ( entry == null ) {
+			entry = { va: 0, vb: 0, vc: 0, vd: 0, vx: 0, vy: 0 };
+			cameraStack.push(entry);
+		}
+		var tmpA = viewA;
+		var tmpB = viewB;
+		var tmpC = viewC;
+		var tmpD = viewD;
+
+		entry.va = tmpA;
+		entry.vb = tmpB;
+		entry.vc = tmpC;
+		entry.vd = tmpD;
+		entry.vx = viewX;
+		entry.vy = viewY;
+		
+		viewA = cam.matA * tmpA + cam.matB * tmpC;
+		viewB = cam.matA * tmpB + cam.matB * tmpD;
+		viewC = cam.matC * tmpA + cam.matD * tmpC;
+		viewD = cam.matC * tmpB + cam.matD * tmpD;
+		viewX = cam.absX * tmpA + cam.absY * tmpC + viewX;
+		viewY = cam.absX * tmpB + cam.absY * tmpD + viewY;
+		var flipY = curTarget != null ? -targetFlipY : -baseFlipY;
+		baseShader.viewportA.set(viewA, viewC, viewX);
+		baseShader.viewportB.set(viewB * flipY, viewD * flipY, viewY * flipY);
+	}
+
+	public function popCamera() {
+		if (cameraStackIndex == 0) throw "Too many popCamera()";
+		var inf = cameraStack[--cameraStackIndex];
+		viewA = inf.va;
+		viewB = inf.vb;
+		viewC = inf.vc;
+		viewD = inf.vd;
+		viewX = inf.vx;
+		viewY = inf.vy;
+		var flipY = curTarget != null ? -targetFlipY : -baseFlipY;
+		baseShader.viewportA.set(viewA, viewC, viewX);
+		baseShader.viewportB.set(viewB * flipY, viewD * flipY, viewY * flipY);
 	}
 
 	public function pushFilter( spr : h2d.Object ) {
@@ -159,30 +223,39 @@ class RenderContext extends h3d.impl.RenderContext {
 		flush();
 		engine.pushTarget(t);
 		initShaders(baseShaderList);
+		
+		var entry = targetsStack[targetsStackIndex++];
+		if ( entry == null ) {
+			entry = { t: null, va: 0, vb: 0, vc: 0, vd: 0, vx: 0, vy: 0, hasRZ: false, rzX: 0, rzY: 0, rzW: 0, rzH: 0 };
+			targetsStack.push(entry);
+		}
+		entry.t = curTarget;
+		entry.va = viewA;
+		entry.vb = viewB;
+		entry.vc = viewC;
+		entry.vd = viewD;
+		entry.vx = viewX;
+		entry.vy = viewY;
+		entry.hasRZ = hasRenderZone;
+		entry.rzX = renderX;
+		entry.rzY = renderY;
+		entry.rzW = renderW;
+		entry.rzH = renderH;
+
 		if( width < 0 ) width = t == null ? scene.width : t.width;
 		if( height < 0 ) height = t == null ? scene.height : t.height;
+
+		viewA = 2 / width;
+		viewB = 0;
+		viewC = 0;
+		viewD = 2 / height;
+		viewX = -1 - startX * viewA;
+		viewY = -1 - startY * viewD;
+
 		baseShader.halfPixelInverse.set(0.5 / (t == null ? engine.width : t.width), 0.5 / (t == null ? engine.height : t.height));
-		baseShader.viewport.set( -width * 0.5 - startX, -height * 0.5 - startY, 2 / width, -2 * targetFlipY / height);
-		targetsStackIndex++;
-		if( targetsStackIndex > targetsStack.length ){
-			targetsStack.push( { t : t, x : startX, y : startY, w : width, h : height, hasRZ: hasRenderZone, rzX: renderX, rzY:renderY, rzW:renderW, rzH:renderH } );
-		}else{
-			var o = targetsStack[targetsStackIndex-1];
-			o.t = t;
-			o.x = startX;
-			o.y = startY;
-			o.w = width;
-			o.h = height;
-			o.hasRZ = hasRenderZone;
-			o.rzX = renderX;
-			o.rzY = renderY;
-			o.rzW = renderW;
-			o.rzH = renderH;
-		}
-		curX = startX;
-		curY = startY;
-		curWidth = width;
-		curHeight = height;
+		baseShader.viewportA.set(viewA, viewC, viewX);
+		baseShader.viewportB.set(viewB * -targetFlipY, viewD * -targetFlipY, viewY * -targetFlipY);
+		curTarget = t;
 		currentBlend = null;
 		if( hasRenderZone ) clearRZ();
 	}
@@ -195,48 +268,27 @@ class RenderContext extends h3d.impl.RenderContext {
 		}
 	}
 
-	public function popTarget( restore = true ) {
+	public function popTarget() {
 		flush();
 		if( targetsStackIndex <= 0 ) throw "Too many popTarget()";
-		var pinf = targetsStack[--targetsStackIndex];
 		engine.popTarget();
 
-		if( restore ) {
-			var tinf = targetsStack[targetsStackIndex - 1];
-			var t : h3d.mat.Texture;
-			var startX : Int, startY : Int, width : Int, height : Int;
-			var ratioX : Float, ratioY : Float, offsetX : Float, offsetY : Float;
-			if ( tinf == null ) {
-				t = null;
-				startX = 0;
-				startY = 0;
-				width = scene.width;
-				height = scene.height;
-				ratioX = scene.ratioX;
-				ratioY = scene.ratioY;
-				offsetX = scene.offsetX;
-				offsetY = scene.offsetY;
-			} else {
-				t = tinf.t;
-				startX = tinf.x;
-				startY = tinf.y;
-				width = tinf.w;
-				height = tinf.h;
-				ratioX = 1;
-				ratioY = 1;
-				offsetX = 0;
-				offsetY = 0;
-			}
-			initShaders(baseShaderList);
-			baseShader.halfPixelInverse.set(0.5 / (t == null ? engine.width : t.width), 0.5 / (t == null ? engine.height : t.height));
-			baseShader.viewport.set( -width * 0.5 - startX - offsetX, -height * 0.5 - startY - offsetY, 2 / width * ratioX, -2 * (t == null ? baseFlipY : targetFlipY) / height * ratioY);
-			curX = startX;
-			curY = startY;
-			curWidth = width;
-			curHeight = height;
-		}
+		var tinf = targetsStack[--targetsStackIndex];
+		var t : h3d.mat.Texture = curTarget = tinf.t;
+		viewA = tinf.va;
+		viewB = tinf.vb;
+		viewC = tinf.vc;
+		viewD = tinf.vd;
+		viewX = tinf.vx;
+		viewY = tinf.vy;
+		var flipY = t == null ? -baseFlipY : -targetFlipY;
 
-		if( pinf.hasRZ ) setRZ(pinf.rzX, pinf.rzY, pinf.rzW, pinf.rzH);
+		initShaders(baseShaderList);
+		baseShader.halfPixelInverse.set(0.5 / (t == null ? engine.width : t.width), 0.5 / (t == null ? engine.height : t.height));
+		baseShader.viewportA.set(viewA, viewC, viewX);
+		baseShader.viewportB.set(viewB * flipY, viewD * flipY, viewY * flipY);
+
+		if ( tinf.hasRZ ) setRZ(tinf.rzX, tinf.rzY, tinf.rzW, tinf.rzH);
 	}
 
 	public function pushRenderZone( x : Float, y : Float, w : Float, h : Float ) {
@@ -293,8 +345,8 @@ class RenderContext extends h3d.impl.RenderContext {
 		renderY = y;
 		renderW = w;
 		renderH = h;
-		var scaleX = engine.width * scene.ratioX / scene.width;
-		var scaleY = engine.height * scene.ratioY / scene.height;
+		var scaleX = scene.viewportA * engine.width / 2;
+		var scaleY = scene.viewportD * engine.height / 2;
 		if( inFilter != null ) {
 			var fa = baseShader.filterMatrixA;
 			var fb = baseShader.filterMatrixB;
@@ -308,7 +360,13 @@ class RenderContext extends h3d.impl.RenderContext {
 			w = rx2 - rx1;
 			h = ry2 - ry1;
 		}
-		engine.setRenderZone(Std.int((x - curX + scene.viewportX) * scaleX + 1e-10), Std.int((y - curY + scene.viewportY) * scaleY + 1e-10), Std.int(w * scaleX + 1e-10), Std.int(h * scaleY + 1e-10));
+		
+		engine.setRenderZone(
+			Std.int(x * scaleX + (scene.viewportX+1) * (engine.width / 2) + 1e-10),
+			Std.int(y * scaleY + (scene.viewportY+1) * (engine.height / 2) + 1e-10),
+			Std.int(w * scaleX + 1e-10),
+			Std.int(h * scaleY + 1e-10)
+		);
 	}
 	
 	inline function clearRZ() {
@@ -412,29 +470,35 @@ class RenderContext extends h3d.impl.RenderContext {
 		if( inFilter != null ) {
 			var f1 = baseShader.filterMatrixA;
 			var f2 = baseShader.filterMatrixB;
-			matA = obj.matA * f1.x + obj.matB * f1.y;
-			matB = obj.matA * f2.x + obj.matB * f2.y;
-			matC = obj.matC * f1.x + obj.matD * f1.y;
-			matD = obj.matC * f2.x + obj.matD * f2.y;
-			absX = obj.absX * f1.x + obj.absY * f1.y + f1.z;
-			absY = obj.absX * f2.x + obj.absY * f2.y + f2.z;
+			var tmpA = obj.matA * f1.x + obj.matB * f1.y;
+			var tmpB = obj.matA * f2.x + obj.matB * f2.y;
+			var tmpC = obj.matC * f1.x + obj.matD * f1.y;
+			var tmpD = obj.matC * f2.x + obj.matD * f2.y;
+			var tmpX = obj.absX * f1.x + obj.absY * f1.y + f1.z;
+			var tmpY = obj.absX * f2.x + obj.absY * f2.y + f2.z;
+			matA = tmpA * viewA + tmpB * viewC;
+			matB = tmpA * viewB + tmpB * viewD;
+			matC = tmpC * viewA + tmpD * viewC;
+			matD = tmpC * viewB + tmpD * viewD;
+			absX = tmpX * viewA + tmpY * viewC + viewX;
+			absY = tmpX * viewB + tmpY * viewD + viewY;
 		} else {
-			matA = obj.matA;
-			matB = obj.matB;
-			matC = obj.matC;
-			matD = obj.matD;
-			absX = obj.absX;
-			absY = obj.absY;
+			matA = obj.matA * viewA + obj.matB * viewC;
+			matB = obj.matA * viewB + obj.matB * viewD;
+			matC = obj.matC * viewA + obj.matD * viewC;
+			matD = obj.matC * viewB + obj.matD * viewD;
+			absX = obj.absX * viewA + obj.absY * viewC + viewX;
+			absY = obj.absX * viewB + obj.absY * viewD + viewY;
 		}
 
 		// check if our tile is outside of the viewport
 		if( matB == 0 && matC == 0 ) {
 			var tx = tile.dx + tile.width * 0.5;
 			var ty = tile.dy + tile.height * 0.5;
-			var tr = (tile.width > tile.height ? tile.width : tile.height) * 1.5 * hxd.Math.max(hxd.Math.abs(obj.matA),hxd.Math.abs(obj.matD));
-			var cx = absX + tx * matA - curX;
-			var cy = absY + ty * matD - curY;
-			if( cx < -tr || cy < -tr || cx - tr > curWidth || cy - tr > curHeight ) return false;
+			var tr = (tile.width > tile.height ? tile.width : tile.height) * 1.5 * hxd.Math.max(hxd.Math.abs(matA),hxd.Math.abs(matD));
+			var cx = absX + tx * matA;
+			var cy = absY + ty * matD;
+			if ( cx + tr < -1 || cx - tr > 1 || cy + tr < -1 || cy - tr > 1) return false;
 		} else {
 			var xMin = 1e20, yMin = 1e20, xMax = -1e20, yMax = -1e20;
 			inline function calc(x:Float, y:Float) {
@@ -451,9 +515,7 @@ class RenderContext extends h3d.impl.RenderContext {
 			calc(tile.width, 0);
 			calc(0, tile.height);
 			calc(tile.width, tile.height);
-			var cx = absX - curX;
-			var cy = absY - curY;
-			if( cx + xMax < 0 || cy + yMax < 0 || cx + xMin > curWidth || cy + yMin > curHeight )
+			if (absX + xMax < -1 || absY + yMax < -1 || absX + xMin > 1 || absY + yMin > 1)
 				return false;
 		}
 
