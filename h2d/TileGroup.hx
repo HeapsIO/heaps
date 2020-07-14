@@ -14,7 +14,7 @@ class TileLayerContent extends h3d.prim.Primitive {
 	var state : BatchDrawState;
 
 	public function new() {
-		state = new BatchDrawState(true);
+		state = new BatchDrawState();
 		clear();
 	}
 
@@ -85,7 +85,8 @@ class TileLayerContent extends h3d.prim.Primitive {
 		if( x > xMax ) xMax = x;
 		if( y > yMax ) yMax = y;
 
-		state.nextTile(t, 4);
+		state.setTile(t);
+		state.add(4);
 	}
 
 	public function addTransform( x : Float, y : Float, sx : Float, sy : Float, r : Float, c : h3d.Vector, t : Tile ) {
@@ -156,7 +157,8 @@ class TileLayerContent extends h3d.prim.Primitive {
 		tmp.push(c.a);
 		updateBounds(px, py);
 
-		state.nextTile(t, 4);
+		state.setTile(t);
+		state.add(4);
 	}
 
 	/**

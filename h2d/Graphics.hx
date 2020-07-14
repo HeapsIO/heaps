@@ -41,7 +41,7 @@ private class GraphicsContent extends h3d.prim.Primitive {
 
 	public function new() {
 		buffers = [];
-		state = new BatchDrawState(false);
+		state = new BatchDrawState();
 		#if track_alloc
 		this.allocPos = new hxd.impl.AllocPos();
 		#end
@@ -66,7 +66,7 @@ private class GraphicsContent extends h3d.prim.Primitive {
 	}
 
 	public function setTile( tile : h2d.Tile ) {
-		state.nextTile(tile, 0);
+		state.setTile(tile);
 	}
 
 	public function next() {
@@ -78,7 +78,9 @@ private class GraphicsContent extends h3d.prim.Primitive {
 		
 		tmp = new hxd.FloatBuffer();
 		index = new hxd.IndexBuffer();
-		state = new BatchDrawState(false, state.currentTexture);
+		var tex = state.currentTexture;
+		state = new BatchDrawState();
+		state.setTexture(tex);
 		super.dispose();
 		return true;
 	}
@@ -126,11 +128,11 @@ private class GraphicsContent extends h3d.prim.Primitive {
 		for( b in buffers ) {
 			if( b.vbuf != null ) b.vbuf.dispose();
 			if( b.ibuf != null ) b.ibuf.dispose();
-			b.state.clear(true);
+			b.state.clear();
 			b.vbuf = null;
 			b.ibuf = null;
 		}
-		state.clear(true);
+		state.clear();
 		super.dispose();
 	}
 

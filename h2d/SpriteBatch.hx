@@ -104,7 +104,7 @@ class SpriteBatch extends Drawable {
 	public function new(t,?parent) {
 		super(parent);
 		tile = t;
-		state = new BatchDrawState(true);
+		state = new BatchDrawState();
 	}
 
 	public function add(e:BatchElement,before=false) {
@@ -216,7 +216,8 @@ class SpriteBatch extends Drawable {
 			}
 
 			var t = e.t;
-			state.nextTile(t, 4);
+			state.setTile(t);
+			state.add(4);
 
 			tmp.grow(pos + 8 * 4);
 
@@ -337,6 +338,6 @@ class SpriteBatch extends Drawable {
 			buffer.dispose();
 			buffer = null;
 		}
-		state.clear(true);
+		state.clear();
 	}
 }
