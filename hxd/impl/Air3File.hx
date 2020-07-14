@@ -1,6 +1,6 @@
 package hxd.impl;
 
-enum FileSeek {
+enum SeekType {
 	SeekBegin;
 	SeekCur;
 	SeekEnd;
@@ -29,7 +29,7 @@ class FileInput extends haxe.io.Input {
 		}
 	}
 
-	public function seek( p : Int, pos : FileSeek ) {
+	public function seek( p : Int, pos : SeekType ) {
 		switch( pos ) {
 		case SeekBegin:
 			if( p < 0 ) p = 0;
