@@ -446,14 +446,15 @@ class Renderer extends h3d.scene.Renderer {
 
 	function endPbr() {
 		resetTarget();
+		var ldr = ctx.getGlobal("ldrMap");
 		switch( displayMode ) {
 		case Pbr, Env, MatCap:
 			if( enableFXAA ) {
 				mark("FXAA");
-				fxaa.apply(textures.ldr);
+				fxaa.apply(ldr);
 			}
 			else {
-				copy(textures.ldr, null);
+				copy(ldr, null);
 			}
 		case Debug:
 			var shadowMap = ctx.getGlobal("mainLightShadowMap");
