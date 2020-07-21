@@ -383,6 +383,10 @@ class Renderer extends h3d.scene.Renderer {
 					pbrIndirect.gammaCorrect = true;
 					null;
 				};
+
+				if( pbrIndirect.skyMap == null && pbrIndirect.showSky && !pbrIndirect.skyColor )
+					pbrIndirect.showSky = false;
+
 			case LightProbe:
 				pbrIndirect.drawIndirectDiffuse = false;
 				pbrIndirect.drawIndirectSpecular = false;
