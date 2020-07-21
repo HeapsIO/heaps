@@ -170,7 +170,7 @@ class GlDriver extends Driver {
 
 	var drawMode : Int;
 
-	static var BLACK = new h3d.Vector();
+	static var BLACK = new h3d.Vector(0,0,0,0);
 
 	/**
 		Perform OUT_OF_MEMORY checks when allocating textures/buffers.
