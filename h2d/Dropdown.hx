@@ -31,8 +31,12 @@ private class Fake extends Object {
 }
 
 /**
-	`h2d.Dropdown` is a simple UI component that creates an interactive drop-down list.
-	Dropdown will add an `h2d.Flow` to `Scene` when opening in order to be visible above other objects. See `dropdownLayer`.  
+	A simple UI component that creates an interactive drop-down list.
+	
+	Dropdown will add an `h2d.Flow` to the `Scene` when opening in order to be visible above other objects. See `Dropdown.dropdownLayer` for more details.
+
+	There is no handling of user input on items, and implementation of selection and other actions is up to the user.
+
 	Note that when `dropdownList` opens and closes, item objects will receive the `onHierarchyChanged` callback.
 **/
 class Dropdown extends Flow {
@@ -43,6 +47,8 @@ class Dropdown extends Flow {
 
 	/**
 		A background Tile that is shown when user hover over an item in the dropdown list.
+
+		The tile will be stretched to cover full row width and item height during rendering.
 	**/
 	public var tileOverItem(default, set) : h2d.Tile;
 	/**
@@ -55,16 +61,17 @@ class Dropdown extends Flow {
 	public var tileArrowOpen : h2d.Tile;
 	
 	/**
-		When disabled, the user would not be able to change the selected item. ( default : true )
+		When disabled, the user would not be able to change the selected item.
 	**/
 	public var canEdit(default,set) : Bool = true;
 	/**
-		A reference to `h2d.Flow` that will contain items.
-		Adding objects to this Flow will not automatically add them to the item list, see `addItem`.
+		A reference to the Flow that will contain the items.
+
+		Adding objects to this Flow will not automatically add them to the item list, use `Dropdown.addItem` instead.
 	**/
 	public var dropdownList : Flow;
 	/**
-		A Scene layer to which `dropdownList` will be added when opening dropdown. ( default : 0 )
+		A Scene layer to which `dropdownList` will be added when opening dropdown.
 	**/
 	public var dropdownLayer : Int = 0;
 	/**
@@ -80,6 +87,10 @@ class Dropdown extends Flow {
 	**/
 	public var rollUp : Bool = false;
 
+	/**
+		Create a new Dropdown with given parent.
+		@param parent An optional parent `h2d.Object` instance to which Dropdown adds itself if set.
+	**/
 	public function new(?parent) {
 		super(parent);
 
@@ -249,25 +260,27 @@ class Dropdown extends Flow {
 	}
 
 	/**
-		`onOpen` callback is called when dropdown is being opened.
+		Sent when dropdown is being opened. Triggered both by user input and programmatic action via `Dropdown.open`.
 	**/
 	public dynamic function onOpen() {
 	}
 
 	/**
-		`onClose` callback is called when dropdown is being closed.
+		Sent when dropdown is being closed. Triggered both by user input and programmatic action via `Dropdown.close`.
 	**/
 	public dynamic function onClose() {
 	}
 
 	/**
-		`onOverItem` is being called when user hover over an `item` in the dropdown list.
+		Sent when user hovers over an item in the dropdown list.
+		@param item An object that was hovered.
 	**/
 	public dynamic function onOverItem(item : Object) {
 	}
 
 	/**
-		`onOutItem` is being called when user moves mouse away from an `item` in the dropdown list.
+		Sent when user moves mouse away from an item in the dropdown list.
+		@param item An item that was hovered previously.
 	**/
 	public dynamic function onOutItem(item : Object) {
 	}

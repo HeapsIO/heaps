@@ -243,7 +243,7 @@ class LevelLayer {
 }
 
 /**
-	CdbLevel will decode and display a level created with the CastleDB level editor.
+	A decoder and renderer for levels created with the CastleDB 2D level editor.
 	See http://castledb.org for more details.
 **/
 class CdbLevel extends Layers {

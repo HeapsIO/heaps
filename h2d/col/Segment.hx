@@ -74,7 +74,7 @@ class Segment {
 	}
 
 	/**
-		Projects Point `p` onto Segment. Returns position of intersection between Segment and line perpendicular to it going trough Point `p`.
+		Projects Point `p` onto Segment. Returns position of intersection between Segment and line perpendicular to it going through Point `p`.
 	**/
 	public inline function project( p : Point ) : Point {
 		var px = p.x - x;

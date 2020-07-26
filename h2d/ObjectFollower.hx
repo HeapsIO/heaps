@@ -1,7 +1,7 @@
 package h2d;
 
 /**
-	Allows a 2D object position to follow a 3D object using the current camera.
+	Follows the 3D object position in current 3D camera, synchronizing the follower position to projected 2D position of the followed object.
 **/
 @:uiNoComponent
 class ObjectFollower extends Object {
@@ -40,6 +40,11 @@ class ObjectFollower extends Object {
 	**/
 	public var verticalAlign : h2d.Flow.FlowAlign = Top;
 
+	/**
+		Create a new ObjectFollower instance.
+		@param obj The 3D object to follow.
+		@param parent An optional parent `h2d.Object` instance to which ObjectFollower adds itself if set.
+	**/
 	public function new( obj, ?parent ) {
 		super(parent);
 		this.follow = obj;

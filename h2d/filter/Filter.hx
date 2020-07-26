@@ -18,7 +18,7 @@ class Filter {
 
 	/**
 		When enabled, rendering bounds of the filter will be expanded by `boundsExtend` in all directions.
-		Otherwise filter should provide custom bounds trough `getBounds()` call.  
+		Otherwise filter should provide custom bounds through `getBounds()` call.  
 		Default : true.
 	**/
 	public var autoBounds = true;

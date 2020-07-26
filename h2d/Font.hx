@@ -1,7 +1,7 @@
 package h2d;
 
 /**
-	A character kerning information as well as linked list of kernings.
+	A `FontChar` kerning information as well as linked list of kernings. See `FontChar.kerning`.
 **/
 class Kerning {
 	/**
@@ -9,19 +9,28 @@ class Kerning {
 	**/
 	public var prevChar : Int;
 	/**
-		Kerning offset in pixels.
+		A kerning offset in pixels.
 	**/
 	public var offset : Float;
 	/**
-		Next kerning reference.
+		The next kerning reference.
 	**/
 	public var next : Null<Kerning>;
+
+	/**
+		Create a new kerning instance.
+		@param c The preceding character.
+		@param o The kerning offset.
+	**/
 	public function new(c, o) {
 		this.prevChar = c;
 		this.offset = o;
 	}
 }
 
+/**
+	A single `Font` character.
+**/
 class FontChar {
 	/**
 		A Tile representing position of a character on the texture.
@@ -36,6 +45,11 @@ class FontChar {
 	**/
 	var kerning : Null<Kerning>;
 
+	/**
+		Create a new font character.
+		@param t The character Tile.
+		@param width The horizontal advanced of the character.
+	**/
 	public function new(t,w) {
 		this.t = t;
 		this.width = w;
@@ -86,7 +100,9 @@ class FontChar {
 
 }
 
-/** Channel reading method for SDF. **/
+/**
+	Channel reading method for SDF `FontType`.
+**/
 @:enum abstract SDFChannel(Int) from Int to Int {
 	/** Use red channel of a texture to determine distance. **/
 	var Red = 0;
@@ -100,13 +116,36 @@ class FontChar {
 	var MultiChannel = 4;
 }
 
+/**
+	The rendering type of the of the `Font` instance.
+**/
 enum FontType {
+	/**
+		A simple raster bitmap font.
+	**/
 	BitmapFont;
-	/** Signed Distance Field font. Channel indexes are in RGBA order. See here for info: https://github.com/libgdx/libgdx/wiki/Distance-field-fonts **/
+	/**
+		A Signed Distance Field font data. Each glyph pixel contains the distance to the closest glyph edge instead of actual color.
+
+		To render an SDF font, `Text` utilizes `h3d.shader.SignedDistanceField` shader to produce smoothed and scalable text.
+		Because shader expects texture to use bilinear filtering, Text automatically enables `Drawable.smooth` on itself.
+
+		See [Text](https://github.com/HeapsIO/heaps/wiki/Text) manual and [libgdx wiki](https://github.com/libgdx/libgdx/wiki/Distance-field-fonts) for more details.
+
+		@param channel The channel that serves as distance data source.
+		@param alphaCutoff The distance value that is considered to be the edge. Usually should be 0.5.
+		@param smoothing The smoothing of edge. Lower value lead to sharper edges.
+	**/
 	SignedDistanceField(channel : SDFChannel, alphaCutoff : Float, smoothing : Float);
 }
 
+/**
+	An instance of a text font.
+**/
 class Font {
+	/**
+		The font name. Assigned on font creation and can be used to identify font instances.
+	**/
 	public var name(default, null) : String;
 	/**
 		Current font size. Font can be resized with `resizeTo`.
@@ -114,7 +153,8 @@ class Font {
 	public var size(default, null) : Int;
 	/**
 		The baseline value of the font represents the base on which characters will sit.
-		Used primarily with HtmlText to sit multiple fonts and images at the same lin.
+
+		Used primarily with `HtmlText` to sit multiple fonts and images at the same line.
 	**/
 	public var baseLine(default, null) : Float;
 	/**
@@ -125,9 +165,13 @@ class Font {
 		Reference to the source Tile containing all glyphs of the Font.
 	**/
 	public var tile(default,null) : h2d.Tile;
+	/**
+		The resource path of the source Tile. Either relative to .fnt or to resources root.
+	**/
 	public var tilePath(default,null) : String;
 	/**
 		The font type. BitmapFonts rendered as-is, but SDF fonts will use an extra shader to produce scalable smooth fonts.
+		See `FontType.SignedDistanceField` for more details.
 	**/
 	public var type : FontType;
 	/**
@@ -143,7 +187,10 @@ class Font {
 	var offsetY:Float = 0;
 
 	/**
-		Creates an empty font instance with specified `name`, `size` and `type`.
+		Creates an empty font instance with specified parameters.
+		@param name The name of the font.
+		@param size Initial size of the font.
+		@param type The font type.
 	**/
 	function new(name : String, size : Int, ?type : FontType) {
 		this.name = name;
@@ -164,6 +211,7 @@ class Font {
 		Returns a `FontChar` instance corresponding to the `code`.
 		If font char is not present in glyph list, `charset.resolveChar` is called.
 		Returns `null` if glyph under specified charcode does not exist.
+		@param code The charcode to search for.
 	**/
 	public inline function getChar( code : Int ) {
 		var c = glyphs.get(code);
@@ -176,8 +224,10 @@ class Font {
 	}
 
 	/**
-		Offsets all glyphs by specified amount specified with `x` and `y`.
-		Affects glyph `Tile.dx` and `Tile.dy`.
+		Offsets all glyphs by specified amount.
+		Affects each glyph `Tile.dx` and `Tile.dy`.
+		@param x The X offset of the glyphs.
+		@param y The Y offset of the glyphs.
 	**/
 	public function setOffset( x : Float, y :Float ) {
 		var dx = x - offsetX;
@@ -213,7 +263,12 @@ class Font {
 	}
 
 	/**
-		This is meant to create smoother fonts by creating them with double size while still keeping the original glyph size.
+		Resizes the Font instance to specified size.
+
+		For BitmapFonts it can be used to create smoother fonts by rasterizing them with double size while still keeping the original glyph size by downscaling the font.
+		And SDF fonts can be resized to arbitrary sizes to produce scalable fonts of any size.
+
+		@param size The new font size.
 	**/
 	public function resizeTo( size : Int ) {
 		var ratio = size / initSize;
@@ -235,12 +290,16 @@ class Font {
 
 	/**
 		Checks if character is present in glyph list.
-		Compared to `getChar` does not check if it exists in charset.
+		Compared to `getChar` does not check if it exists through `Font.charset`.
+		@param code The charcode to look up.
 	**/
-	public function hasChar( code : Int ) {
+	public function hasChar( code : Int ) : Bool {
 		return glyphs.get(code) != null;
 	}
 
+	/**
+		Disposes of the Font instance. Equivalent to `Tile.dispose`.
+	**/
 	public function dispose() {
 		tile.dispose();
 	}

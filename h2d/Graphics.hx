@@ -133,11 +133,11 @@ private class GraphicsContent extends h3d.prim.Primitive {
 }
 
 /**
-	`h2d.Graphics` provide simple interface to draw arbitrary geometry.
+	A simple interface to draw arbitrary 2D geometry.
 
 	Usage notes:
 	* When rendering Tiles, there is a limitation of only one unique Texture per Graphics instance.
-	* Due to how Graphics operate, removing them from Scene will cause loss of all data.
+	* Due to how Graphics operate, removing them from the active `h2d.Scene` will cause a loss of all data.
 **/
 class Graphics extends Drawable {
 
@@ -173,9 +173,16 @@ class Graphics extends Drawable {
 	public var tile : h2d.Tile;
 	/**
 		Adds bevel cut-off at line corners.
+
+		The value is a percentile in range of 0...1, dictating at which point edges get beveled based on their angle.
+		Value of 0 being not beveled and 1 being always beveled.
 	**/
 	public var bevel = 0.25; //0 = not beveled, 1 = always beveled
 
+	/**
+		Create a new Graphics instance.
+		@param parent An optional parent `h2d.Object` instance to which Graphics adds itself if set.
+	**/
 	public function new(?parent) {
 		super(parent);
 		content = new GraphicsContent();
@@ -401,6 +408,11 @@ class Graphics extends Drawable {
 
 	/**
 		Begins a solid color fill.
+
+		Beginning new fill will finish previous fill operation without need to call `Graphics.endFill`.
+
+		@param color An RGB color with which to fill the drawn shapes.
+		@param alpha A transparency of the fill color.
 	**/
 	public function beginFill( color : Int = 0, alpha = 1.  ) {
 		flush();
@@ -411,6 +423,19 @@ class Graphics extends Drawable {
 	/**
 		Position a virtual tile at the given position and scale. Every draw will display a part of this tile relative
 		to these coordinates.
+
+		Note that in by default, Tile is not wrapped, and in order to render tiling texture, `Drawable.tileWrap` have to be set.
+		Additionally, both `Tile.dx` and `Tile.dy` are ignored (use `dx`/`dy` arguments instead)
+		as well as tile defined size of the tile through `Tile.width` and `Tile.height` (use `scaleX`/`scaleY` relative to texture size).
+
+		Beginning new fill will finish previous fill operation without need to call `Graphics.endFill`.
+
+		@param dx An X offset of the Tile relative to Graphics.
+		@param dy An Y offset of the Tile relative to Graphics.
+		@param scaleX A horizontal scale factor applied to the Tile texture.
+		@param scaleY A vertical scale factor applied to the Tile texture.
+		@param tile The tile to fill with. If null, uses previously used Tile with `beginTileFill` or throws an error.
+		Previous tile is remembered across `Graphics.clear` calls.
 	**/
 	public function beginTileFill( ?dx : Float, ?dy : Float, ?scaleX : Float, ?scaleY : Float, ?tile : h2d.Tile ) {
 		beginFill(0xFFFFFF);
@@ -447,6 +472,12 @@ class Graphics extends Drawable {
 
 	/**
 		Draws a Tile at given position.
+		See `Graphics.beginTileFill` for limitations.
+
+		This methods ends current fill operation.
+		@param x The X position of the tile.
+		@param y The Y position of the tile.
+		@param tile The tile to draw.
 	**/
 	public function drawTile( x : Float, y : Float, tile : h2d.Tile ) {
 		beginTileFill(x, y, tile);
@@ -455,10 +486,11 @@ class Graphics extends Drawable {
 	}
 
 	/**
-		Sets an outline style.
-		@param size Width of the outline.
-		@param color Outline color
-		@param alpha Outline transparency.
+		Sets an outline style. Changing the line style ends the currently drawn line.
+
+		@param size Width of the outline. Setting size to 0 will remove the outline.
+		@param color An outline RGB color.
+		@param alpha An outline transparency.
 	**/
 	public function lineStyle( size : Float = 0, color = 0, alpha = 1. ) {
 		flush();
@@ -470,7 +502,7 @@ class Graphics extends Drawable {
 	}
 
 	/**
-		Ends current line and starts new one at given position.
+		Ends the current line and starts new one at given position.
 	**/
 	public inline function moveTo(x,y) {
 		flush();
@@ -478,7 +510,7 @@ class Graphics extends Drawable {
 	}
 
 	/**
-		Ends the fill operation.
+		Ends the current fill operation.
 	**/
 	public function endFill() {
 		flush();
@@ -487,7 +519,10 @@ class Graphics extends Drawable {
 
 	/**
 		Changes current fill color.
-		Does not alter the current fill operation state.
+		Does not interrupt current fill operation and can be utilized to customize color per vertex.
+		During tile fill operation, color serves as a tile color multiplier.
+		@param color The new fill color.
+		@param alpha The new fill transparency.
 	**/
 	public inline function setColor( color : Int, alpha : Float = 1. ) {
 		curA = alpha;
@@ -498,6 +533,10 @@ class Graphics extends Drawable {
 
 	/**
 		Draws a rectangle with given parameters.
+		@param x The rectangle top-left corner X position.
+		@param y The rectangle top-left corner Y position.
+		@param w The rectangle width.
+		@param h The rectangle height.
 	**/
 	public function drawRect( x : Float, y : Float, w : Float, h : Float ) {
 		flush();
@@ -518,6 +557,10 @@ class Graphics extends Drawable {
 
 	/**
 		Draws a rounded rectangle with given parameters.
+		@param x The rectangle top-left corner X position.
+		@param y The rectangle top-left corner Y position.
+		@param w The rectangle width.
+		@param h The rectangle height.
 		@param radius Radius of the rectangle corners.
 		@param nsegments Amount of segments used for corners. When `0` segment count calculated automatically.
 	**/
@@ -707,14 +750,14 @@ class Graphics extends Drawable {
 	}
 
 	/**
-		Draws a straight line from the current drawing position to given position.
+		Draws a straight line from the current drawing position to the given position.
 	**/
 	public inline function lineTo( x : Float, y : Float ) {
 		addVertex(x, y, curR, curG, curB, curA, x * ma + y * mc + mx, x * mb + y * md + my);
 	}
 
 	/**
-		Advanced usage. Adds new vertex to current polygon with given parameters and current line style.
+		Advanced usage. Adds new vertex to the current polygon with given parameters and current line style.
 		@param x Vertex X position
 		@param y Vertex Y position
 		@param r Red tint value of the vertex when performing fill operation.

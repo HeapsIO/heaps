@@ -1,32 +1,85 @@
 package h2d;
 
+/**
+	`Flow` content alignment rules.
+**/
 enum FlowAlign {
+	/**
+		Aligns children to the top edge of the `Flow`.
+
+		Only applicable to the `Flow.verticalAlign`.
+	**/
 	Top;
+	/**
+		Aligns children to the left edge of the `Flow`.
+
+		Only applicable to the `Flow.horizontalAlign`.
+	**/
 	Left;
+	/**
+		Aligns children to the right edge of the `Flow`.
+
+		Only applicable to the `Flow.horizontalAlign`.
+	**/
 	Right;
+	/**
+		Aligns children to the center of the `Flow`.
+	**/
 	Middle;
+	/**
+		Aligns children to the bottom edge of the `Flow`.
+
+		Only applicable to the `Flow.verticalAlign`.
+	**/
 	Bottom;
 }
 
+/**
+	The `Flow.layout` type.
+**/
 enum FlowLayout {
+	/**
+		Children are aligned horizontally from left to right (or right to left when `Flow.reverse` is enabled).
+		
+		If `Flow.multiline` is enabled - children can overflow to the next row if there is not enough space available within the Flow size constraints.
+
+		`Flow.lineHeight` can be used to set a fixed row height when `Flow.overflow` is set to `Limit` or `Hidden`.
+		Objects with height that exceed the limitation will be aligned according to `Flow.verticalAlign` value vertically with `null` being treated as `Bottom`.
+	**/
 	Horizontal;
+	/**
+		Children are aligned vertically from top to bottom (or bottom to top when `Flow.reverse` is enabled).
+
+		If `Flow.multiline` is enabled - children can overflow to the next column if there is not enough space available within the Flow size constraints.
+
+		`Flow.colWidth` can be used to set a fixed column width when `Flow.overflow` is set to `Limit` or `Hidden`.
+		Objects with height that exceed the limitation will be aligned according to `Flow.horizontalAlign` value horizontally with `null` being treated as `Left`.
+	**/
 	Vertical;
+	/**
+		Children are aligned independently (`Flow.reverse` has no effect).
+	**/
 	Stack;
 }
 
+/**
+	The `Flow.overflow` rules.
+**/
 enum FlowOverflow {
 	/**
-		Children larger than `maxWidth`/`maxHeight` will expand the flow size.
+		Children larger than `Flow.maxWidth` / `Flow.maxHeight` will expand the flow size.
 	**/
 	Expand;
 	/**
-		Limits the bounds reported by the flow using `maxWidth` or `maxHeight`, if set.
-		This is means children larger than max size will draw outside of their parent bounds.
+		Limits the bounds reported by the flow using `Flow.maxWidth` or `Flow.maxHeight`, if set.
+
+		Children larger than max size will draw outside of the Flow bounds or overflow if `Flow.multiline` is enabled.
 	**/
 	Limit;
 	/**
 		Limits the bounds reported by the flow using `maxWidth` or `maxHeight`, if set.
-		Compared to `Limit` - Flow will mask out children that are outside of Flow bounds.
+
+		Compared to `Limit` - Flow will mask out the content that is outside of Flow bounds.
 	**/
 	Hidden;
 	// TODO: Scroll overflow, see #606
@@ -84,7 +137,7 @@ class FlowProperties {
 }
 
 /**
-	`h2d.Flow` provides an automatic layout system.
+	An automatic layout system.
 **/
 class Flow extends Object {
 
@@ -92,30 +145,52 @@ class Flow extends Object {
 
 	/**
 		If some sub element gets resized, you need to set reflow to true in order to force
-		the reflow of elements. You can also directly call reflow() which will immediately
+		the reflow of elements. You can also directly call `Flow.reflow` which will immediately
 		update all elements positions.
 
-		If a reflow is needed, reflow() will be called before rendering the flow.
+		If a reflow is needed, `Flow.reflow` will be called before rendering the flow.
 		Each change in one of the flow properties or addition/removal of elements will set needReflow to true.
 	**/
 	public var needReflow(default, set) : Bool = true;
 
 	/**
 		Horizontal alignment of elements inside the flow.
+		See `FlowAlign` for more details.
 	**/
 	public var horizontalAlign(default, set) : Null<FlowAlign>;
 
 	/**
 		Vertical alignment of elements inside the flow.
+		See `FlowAlign` for more details.
 	**/
 	public var verticalAlign(default,set) : Null<FlowAlign>;
 
+	/**
+		Ensures that Flow is at least the specified outer width at all times when not null.
+	**/
 	public var minWidth(default, set) : Null<Int>;
+	/**
+		Ensures that Flow is at least the specified outer height at all times when not null.
+	**/
 	public var minHeight(default, set) : Null<Int>;
+	/**
+		Attempts to limit the Flow outer width to the specified width.
+		Used as a baseline for overflow when `Flow.multiline` is enabled and `Flow.layout` is `Horizontal`.
+	**/
 	public var maxWidth(default, set) : Null<Int>;
+	/**
+		Attempts to limit the Flow outer height to the specified height.
+		Used as a baseline for overflow when `Flow.multiline` is enabled and `Flow.layout` is `Vertical`.
+	**/
 	public var maxHeight(default, set) : Null<Int>;
 
+	/**
+		Sets the minimum row height when `Flow.layout` is `Horizontal`.
+	**/
 	public var lineHeight(default, set) : Null<Int>;
+	/**
+		Sets the minimum colum width when `Flow.layout` is `Vertical`.
+	**/
 	public var colWidth(default, set) : Null<Int>;
 
 	/**
@@ -128,65 +203,99 @@ class Flow extends Object {
 		Will set all padding values at the same time.
 	**/
 	public var padding(never, set) : Int;
+	/**
+		Will set `Flow.paddingLeft` and `Flow.paddingRight` to the given value.
+	**/
 	public var paddingHorizontal(never, set) : Int;
+	/**
+		Will set `Flow.paddingTop` and `Flow.paddingBottom` to the given value.
+	**/
 	public var paddingVertical(never, set) : Int;
+	/**
+		Sets the extra padding along the left edge of the Flow.
+
+		Note that padding is applied inside the flow boundaries and included in the size constraint, shrinking available space for Flow children.
+	**/
 	public var paddingLeft(default, set) : Int = 0;
+	/**
+		Sets the extra padding along the right edge of the Flow.
+
+		Note that padding is applied inside the flow boundaries and included in the size constraint, shrinking available space for Flow children.
+	**/
 	public var paddingRight(default, set) : Int = 0;
+	/**
+		Sets the extra padding along the top edge of the Flow.
+
+		Note that padding is applied inside the flow boundaries and included in the size constraint, shrinking available space for Flow children.
+	**/
 	public var paddingTop(default, set) : Int = 0;
+	/**
+		Sets the extra padding along the bottom edge of the Flow.
+
+		Note that padding is applied inside the flow boundaries and included in the size constraint, shrinking available space for Flow children.
+	**/
 	public var paddingBottom(default, set) : Int = 0;
 
 	/**
-		The horizontal space between two flowed elements.
+		The horizontal separation spacing between two flowed elements.
 	**/
 	public var horizontalSpacing(default, set) : Int = 0;
 
 	/**
-		The vertical space between two flowed elements.
+		The vertical separation spacing between two flowed elements.
 	**/
 	public var verticalSpacing(default, set) : Int = 0;
 
 	/**
-		Set enableInteractive to true to create an h2d.Interactive accessible through
-		the interactive field which will automatically cover the whole Flow area.
+		Adds an `h2d.Interactive` to the Flow that is accessible through `Flow.interactive` field.
+		This Interactive is automatically resized to cover the whole Flow area.
+
+		Flow is added as bottom most (after the `Flow.backgroundTile`) child as to not impede flow elements with Interactives.
 	**/
 	public var enableInteractive(default, set) : Bool;
 
 	/**
-		See enableInteractive.
+		See `Flow.enableInteractive`.
 	**/
 	public var interactive(default, null) : h2d.Interactive;
 
 	/**
-		Setting a background tile will create a ScaleGrid background which uses the borderWidth/Height values for its borders.
+		Setting a background tile will create an `h2d.ScaleGrid` background which uses the `Flow.borderWidth`/`Flow.borderHeigh` values for its borders.
 		It will automatically resize when the reflow is done to cover the whole Flow area.
 	**/
 	public var backgroundTile(default, set) : h2d.Tile;
+	/**
+		Adds extra padding on left and right edge of the Flow.
+		Uses same constraint limitations as padding. Used for ScaleGrid configuration, see `Flow.backgroundTile`.
+	**/
 	public var borderWidth(default, set) : Int = 0;
+	/**
+		Adds extra padding on top and bottom edge of the Flow.
+		Uses same constraint limitations as padding. Used for ScaleGrid configuration, see `Flow.backgroundTile`.
+	**/
 	public var borderHeight(default, set) : Int = 0;
 
 	/**
-		Calculate the client width, which is the innner size of the flow without the borders and padding.
+		Calculate the client width, which is the inner size of the flow without the borders and padding.
 	**/
 	public var innerWidth(get, never) : Int;
 	/**
-		Calculate the client height, which is the innner size of the flow without the borders and padding.
+		Calculate the client height, which is the inner size of the flow without the borders and padding.
 	**/
 	public var innerHeight(get, never) : Int;
 
 	/**
-		Flow total width (inlcudes borders and paddings)
+		Flow total width (includes borders and paddings)
 	**/
 	public var outerWidth(get, never) : Int;
 	/**
-		Flow total height (inlcudes borders and paddings)
+		Flow total height (includes borders and paddings)
 	**/
 	public var outerHeight(get, never) : Int;
 
 	/**
-		When set to `Horizontal` (default), children are aligned horizontally from left to right (right to left using `reverse`).
-		When set to `Vertical`, children are aligned vertically from tom to bottom (bottom to top using `reverse`).
-		When set to `Stack`, children are aligned independently (`reverse` has no effect).
-		Both `Horizontal` and `Vertical` alignments can overflow to the next row/column if the available space is constrained.
+		The Flow item layout rules.
+		See `FlowLayout` for specific details on each mode.
 	**/
 	public var layout(default, set) : FlowLayout = Horizontal;
 
@@ -196,7 +305,7 @@ class Flow extends Object {
 
 	/**
 		When isInline is set to false, the flow size will be reported based on its bounds instead of its calculated size.
-		See getSize() documentation.
+		See `Object.getSize` documentation.
 	**/
 	public var isInline = true;
 
@@ -477,7 +586,7 @@ class Flow extends Object {
 
 	override function setParentContainer(c) {
 		parentContainer = c;
-		// break propogation
+		// break propagation
 	}
 
 	override function addChildAt( s, pos ) {
@@ -673,7 +782,7 @@ class Flow extends Object {
 
 	/**
 		Call to force all flowed elements position to be updated.
-		See needReflow for more informations.
+		See needReflow for more information.
 	**/
 	public function reflow() {
 
@@ -689,7 +798,7 @@ class Flow extends Object {
 
 		var isConstraintWidth = realMaxWidth >= 0;
 		var isConstraintHeight = realMaxHeight >= 0;
-		// outter size
+		// outer size
 		var maxTotWidth = realMaxWidth < 0 ? 100000000 : Math.floor(realMaxWidth);
 		var maxTotHeight = realMaxHeight < 0 ? 100000000 : Math.floor(realMaxHeight);
 		// inner size
@@ -1120,13 +1229,13 @@ class Flow extends Object {
 	}
 
 	/**
-		Called before each reflow() is done.
+		Sent at the start of the `reflow()`.
 	**/
 	public dynamic function onBeforeReflow() {
 	}
 
 	/**
-		Called after each time a reflow() was done.
+		Sent after the `reflow()` was finished.
 	**/
 	public dynamic function onAfterReflow() {
 	}

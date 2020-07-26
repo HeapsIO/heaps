@@ -1,46 +1,54 @@
 package h2d;
 
 /**
-	`h2d.Interactive` is used to handle user inputs.  
-	Hitbox area can be a rectangle, an ellipse or arbitrary shape (`h2d.col.Collider`).
+	A user input handler.
+
+	Hitbox area can be a rectangle, an ellipse or an arbitrary shape (`h2d.col.Collider`).
+
+	Note that Interactive does not reports its hitbox bounds in `Object.getBounds`
+	unless `Interactive.backgroundColor` is set, in which case `width` and `height` are reported.
+
+	By default, Interactive only reacts to primary (left) mouse button for actions, see `Interactive.enableRightButton` for details.
 **/
 @:allow(h2d.Scene)
 class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 
 	/**
-		Width of the Interactive. Ignored if `shape` is set.
+		Width of the Interactive. Ignored if `Interactive.shape` is set.
 	**/
 	public var width : Float;
 	/**
-		Height of the Interactive. Ignored if `shape` is set.
+		Height of the Interactive. Ignored if `Interactive.shape` is set.
 	**/
 	public var height : Float;
 	/**
-		Cursor used when Interactive is under mouse cursor ( default : Button )
+		Cursor used when Interactive is under mouse cursor.
 	**/
-	public var cursor(default,set) : Null<hxd.Cursor>;
+	public var cursor(default,set) : Null<hxd.Cursor> = Button;
 	/**
-		Should object collision be in rectangle or ellipse form? Ignored if `shape` is set.
+		Performs an elliptic hit-test instead of rectangular one based on `Interactive.width` and `height`. Ignored if `Interactive.shape` is set.
 	**/
 	public var isEllipse : Bool;
 	/**
-		Set the default `cancel` mode (see `hxd.Event`), default to false.
+		Set the default `hxd.Event.cancel` mode.
 	**/
 	public var cancelEvents : Bool = false;
 	/**
-		Set the default `propagate` mode (see `hxd.Event`), default to false.
+		Set the default `hxd.Event.propagate` mode.
 	**/
 	public var propagateEvents : Bool = false;
 	/**
-		If set, Interactive will draw a Tile with `[width, height]` dimensions of specified color (including alpha).
+		If set, Interactive will draw a `Tile` with `[width, height]` dimensions of specified color (including alpha).
 	**/
 	public var backgroundColor : Null<Int>;
 	/**
 		When enabled, interacting with secondary mouse buttons (right button/wheel) will cause `onPush`, `onClick`, `onRelease` and `onReleaseOutside` callbacks.
-		Otherwise those callback will be triggered only with primary mouse button (left button).
-		Defaults to false.
+		Otherwise those callbacks will only be triggered with primary mouse button (left button).
+
+		Note that Interactive remembers only the last pressed button when pressing on it, hence pressing Interactive with the left button and then the right button
+		would not cause `onClick` on either when releasing left button first, as pressed state is reset internally.
 	**/
-	public var enableRightButton : Bool;
+	public var enableRightButton : Bool = false;
 	var scene : Scene;
 	var mouseDownButton : Int = -1;
 	var parentMask : Mask;
@@ -61,14 +69,17 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 	public var shapeY : Float = 0;
 
 	/**
-		Create a new Interactive with specified `width`, `height` and `parent` with optional detailed `shape`.
+		Create a new Interactive with specified parameters. `width`, `height` and `parent` with optional detailed `shape`.
+		@param width The width of the Interactive hitbox.
+		@param height The height of the Interactive hitbox.
+		@param parent An optional parent `h2d.Object` instance to which Interactive adds itself if set.
+		@param shape An optional detailed Interactive hitbox.
 	**/
-	public function new(width, height, ?parent, ?shape) {
+	public function new( width, height, ?parent, ?shape ) {
 		super(parent);
 		this.width = width;
 		this.height = height;
 		this.shape = shape;
-		cursor = Button;
 	}
 
 	override function onAdd() {
@@ -129,7 +140,7 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 	}
 
 	/**
-		This can be called during or after a push event in order to prevent the release from triggering a click.
+		Reset current pressed state of the Interactive, preventing the `onClick` or `onReleaseOutside` being triggered when user releases mouse button.
 	**/
 	public function preventClick() {
 		mouseDownButton = -1;
@@ -238,11 +249,13 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 
 	/**
 		Starts input events capture and redirects them to `callb` method.
-		Starting event capture trough `Interactive.startDrag` will convert `Event.relX` and `relY` to local coordinates
-		of the Interactive and will restore them afterwar invoking `callb`.
-		@param callb A callback method that receives `hxd.Event` when input event happens. 
-		Unless `callb` sets `Event.propagate` to `true`, even won't be sent to other Interactives.
-		@param onCancel An optional callback that is invoked when `stopDrag()` is called.
+
+		Starting event capture through `Interactive.startDrag` will convert `Event.relX` and `relY` to local coordinates
+		of the Interactive and will restore them after invoking `callb`.
+		In order to receive coordinates in scene coordinate space use `Scene.startDrag`.
+		@param callb A callback method that receives `hxd.Event` when input event happens.
+		Unless `callb` sets `Event.propagate` to `true`, event won't be sent to other Interactives.
+		@param onCancel An optional callback that is invoked when `Interactive.stopDrag` is called.
 	**/
 	public function startDrag( callb : hxd.Event -> Void,?onCancel : Void -> Void ) {
 		scene.startDrag(function(event) {
@@ -263,8 +276,7 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 
 	/**
 		Sets focus on this `Interactive`.
-		If Interactive receieves focus `onFocus` will be called.
-		Event won't be called if Interactive is already focused.
+		If Interactive was not already focused and it receives focus - `onFocus` event is sent.
 		Interactive won't become focused if during `onFocus` call it will set `Event.cancel` to `true`.
 	**/
 	public function focus() {
@@ -275,7 +287,7 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 
 	/**
 		Removes focus from interactive if it's focused.
-		If Interactive is currently focused, `onFocusLost` event will be called.
+		If Interactive is currently focused - `onFocusLost` event will be sent.
 		Interactive won't lose focus if during `onFocusLost` call it will set `Event.cancel` to `true`.
 	**/
 	public function blur() {
@@ -283,7 +295,7 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 	}
 
 	/**
-		Checks if Interactive is currently hovered by mouse.
+		Checks if Interactive is currently hovered by the mouse.
 	**/
 	public function isOver() {
 		return scene != null && scene.events != null && @:privateAccess scene.events.overList.indexOf(this) != -1;
@@ -298,7 +310,8 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 
 	/**
 		Sent when mouse enters Interactive hitbox area.
-		`event.propagate` and `event.cancel` are ignored during `onOver`.
+
+		`Event.propagate` and `Event.cancel` are ignored during `onOver`.
 		Propagation can be set with `onMove` event, as well as cancelling `onMove` will prevent `onOver`.
 	**/
 	public dynamic function onOver( e : hxd.Event ) {
@@ -306,84 +319,111 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 
 	/**
 		Sent when mouse exits Interactive hitbox area.
-		`event.propagate` and `event.cancel` are ignored during `onOut`.
+		`Event.propagate` and `Event.cancel` are ignored during `onOut`.
 	**/
 	public dynamic function onOut( e : hxd.Event ) {
 	}
 
-	/** Sent when Interactive is pressed by user. **/
+	/**
+		Sent when Interactive is pressed by the user.
+	**/
 	public dynamic function onPush( e : hxd.Event ) {
 	}
 
 	/**
-		Sent on multiple conditions.
-		A. Always sent if user releases mouse while it is inside Interactive hitbox area.
-			This happends regardless if that Interactive was pressed prior or not.
-		B. Sent before `onReleaseOutside` if this Interactive was pressed, but released outside it's bounds.
-		For first case `event.kind` will be `ERelease`, for second case - `EReleaseOutside`.
-		See `onClick` and `onReleaseOutside` functions for separate events that trigger only when user interacts with this particular Interactive.
+		Sent when Interactive is unpressed under multiple circumstances.
+		* Always sent if user releases mouse while it is inside Interactive hitbox area.
+			This happens regardless if that Interactive was pressed prior or not,
+			and due to that it's not guaranteed that `Interactive.onPush` would precede this event.  
+			`Event.kind` is set to `ERelease` during this event.
+		* Sent before `Interactive.onReleaseOutside` if this Interactive was pressed, but released outside its hitbox area.  
+			`Event.kind` is set to `EReleaseOutside` during this event.
+
+		See `Interactive.onClick` and `Interactive.onReleaseOutside` methods for separate events that trigger only when user interacts with this particular Interactive.
 	**/
 	public dynamic function onRelease( e : hxd.Event ) {
 	}
 
 	/**
-		Sent when user presses Interactive, moves mouse outside and releases it.
-		This event fired only on Interactive that user pressed, but released mouse after moving it outside of Interactive hitbox area.
+		Sent when user presses the Interactive, moves the mouse outside its hitbox area and releases the mouse button.
+
+		Can be prevented to fire by calling `Interactive.preventClick` during or after `Interactive.onPush` event.
+
+		`Interactive.onRelease` is sent with `Event.kind` being `EReleaseOutside` just before this event.
 	**/
 	public dynamic function onReleaseOutside( e : hxd.Event ) {
 	}
 
 	/**
-		Sent when Interactive is clicked by user.
-		This event fired only on Interactive that user pressed and released when mouse is inside Interactive hitbox area.
+		Sent when the Interactive is clicked by the user.
+
+		Can be prevented to fire by calling `Interactive.preventClick` during or after `Interactive.onPush` event.
+
+		`Interactive.onRelease` is sent with `Event.kind` being `ERelease` just before this event.
 	**/
 	public dynamic function onClick( e : hxd.Event ) {
 	}
 
 	/**
-		Sent when user moves above the Interactive.
+		Sent when user moves within the Interactive hitbox area.
+		See `Interactive.onCheck` for event when user does not move the mouse.
+
+		Cancelling the `Event` will prevent interactive from becoming overed,
+		causing `Interactive.onOut` if it was overed previously.
+		Interactive would be treated as not overed as long as event is cancelled even if mouse is within the hitbox area.
 	**/
 	public dynamic function onMove( e : hxd.Event ) {
 	}
 	
 	/**
-		Sent when user scrolls mouse wheel above the Interactive. Wheel delta can be obtained trough `Event.wheelDelta`
+		Sent when user scrolls mouse wheel above the Interactive. Wheel delta can be obtained through the `Event.wheelDelta`.
 	**/
 	public dynamic function onWheel( e : hxd.Event ) {
 	}
 
 	/**
-		Sent when Interactive recieves focus during `focus()` call.
+		Sent when Interactive receives focus during `Interactive.focus` call.
+
+		Cancelling the `Event` will prevent the Interactive from becoming focused.
 	**/
 	public dynamic function onFocus( e : hxd.Event ) {
 	}
 
 	/**
-		Sent when Interactive lost focus either via `blur()` call or when user clicks on another Interactive/outside this Interactive.
+		Sent when Interactive lost focus either via `Interactive.blur` call or when user clicks on another Interactive/outside this Interactive hitbox area.
+
+		Cancelling the `Event` will prevent the Interactive from losing focus.
 	**/
 	public dynamic function onFocusLost( e : hxd.Event ) {
 	}
 
 	/**
-		Sent when user unpressed a keyboard key. Unpressed key can be accessed trough `Event.keyCode`.
+		Sent when this Interactive is focused and user unpressed a keyboard key.
+		Unpressed key can be accessed through `Event.keyCode`.
 	**/
 	public dynamic function onKeyUp( e : hxd.Event ) {
 	}
 
 	/**
-		Sent when user pressed a keyboard key. Pressed key can be accessed trough `Event.keyCode`.
+		Sent when this Interactive is focused and user pressed a keyboard key.
+		Pressed key can be accessed through `Event.keyCode`.
 	**/
 	public dynamic function onKeyDown( e : hxd.Event ) {
 	}
 
 	/**
 		Sent every frame when user hovers an Interactive but does not move the mouse.
+		See `Interactive.onMove` for event when user moves the mouse.
+
+		Cancelling the `Event` will prevent interactive from becoming overed,
+		causing `Interactive.onOut` if it was overed previously.
+		Interactive would be treated as not overed as long as event is cancelled even if mouse is within the hitbox area.
 	**/
 	public dynamic function onCheck( e : hxd.Event ) {
 	}
 
 	/**
-		Sent when user inputs text. Character added can be accessed trough `Event.charCode`.
+		Sent when this Interactive is focused and user inputs text. Character added can be accessed through `Event.charCode`.
 	**/
 	public dynamic function onTextInput( e : hxd.Event ) {
 	}

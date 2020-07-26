@@ -38,7 +38,7 @@ typedef ConsoleArgDesc = {
 /**
 	A simple debug console integration.
 
-	Console can be focused manually trough `Console.show` and `Console.hide` methods
+	Console can be focused manually through `Console.show` and `Console.hide` methods
 	as well as by pressing the key defined by `Console.shortKeyChar`.
 
 	It's possible to log messages to console via `Console.log` method.
@@ -134,7 +134,7 @@ class Console #if !macro extends h2d.Object #end {
 	#end
 	
 	/**
-		A macro method to add a new command to console.
+		Add a new command to console. <span class="label">Macro method</span>
 
 		The `callb` method arguments are used to determine console argument type and names. Due to that, 
 		only the following callback argument types are supported: `Int`, `Float`, `String` and `Bool`.

@@ -2,6 +2,9 @@ package h2d;
 
 import h2d.Text;
 
+/**
+	The `HtmlText` line height calculation rules.
+**/
 enum LineHeightMode {
 	/**
 		Accurate line height calculations. Each line will adjust it's height according to it's contents.
@@ -12,14 +15,15 @@ enum LineHeightMode {
 	**/
 	TextOnly;
 	/**
-		Legacy line height mode. When used, line heights are remain constant based on `HtmlText.font` variable.
+		Legacy line height mode. When used, line heights remain constant based on `HtmlText.font` variable.
 	**/
 	Constant;
 }
 
 /**
-	`h2d.HtmlText` is a simple HTML text renderer.
-	See Text section of the manual for more details and list of supported HTML tags.
+	A simple HTML text renderer.
+
+	See the [Text](https://github.com/HeapsIO/heaps/wiki/Text) section of the manual for more details and a list of the supported HTML tags.
 **/
 class HtmlText extends Text {
 
@@ -38,24 +42,24 @@ class HtmlText extends Text {
 	}
 
 	/**
-		A default method HtmlText uses to format assigned text.
+		A default method HtmlText uses to format assigned text. See `HtmlText.formatText` for details.
 	**/
 	public static dynamic function defaultFormatText( text : String ) : String {
 		return text;
 	}
 
 	/**
-		When enabled, condenses extra spaces (carriage-return, line-feed, tabulation and space character) to one space. ( default : true )
+		When enabled, condenses extra spaces (carriage-return, line-feed, tabulation and space character) to one space.
 		If not set, uncondensed whitespace is left as is, as well as line-breaks.
 	**/
 	public var condenseWhite(default,set) : Bool = true;
 	/**
-		Spacing after `<img>` tags in pixels.
+		The spacing after `<img>` tags in pixels.
 	**/
 	public var imageSpacing(default,set):Float = 1;
 
 	/**
-		Line height calculation mode controls how much space lines take up vertically. ( default : Accurate )
+		Line height calculation mode controls how much space lines take up vertically.
 		Changing mode to `Constant` restores legacy behavior of HtmlText.
 	**/
 	public var lineHeightMode(default,set) : LineHeightMode = Accurate;
@@ -95,9 +99,10 @@ class HtmlText extends Text {
 	}
 
 	/**
-		Method that should return `h2d.Tile` instance for `<img>` tags. By default calls `HtmlText.defaultLoadImage` method.
+		Method that should return an `h2d.Tile` instance for `<img>` tags. By default calls `HtmlText.defaultLoadImage` method.
+
 		HtmlText does not cache tile instances.
-		Due to internal structure, method should be determenistic and always return same Tile on consequent calls with same `url` input.
+		Due to internal structure, method should be deterministic and always return same Tile on consequent calls with same `url` input.
 		@param url A value contained in `src` attribute.
 	**/
 	public dynamic function loadImage( url : String ) : Tile {
@@ -105,9 +110,10 @@ class HtmlText extends Text {
 	}
 
 	/**
-		Method that should return `h2d.Font` instance for `<font>` tags with `face` attribute. By default calls `HtmlText.defaultLoadFont` method.
+		Method that should return an `h2d.Font` instance for `<font>` tags with `face` attribute. By default calls `HtmlText.defaultLoadFont` method.
+
 		HtmlText does not cache font instances and it's recommended to perform said caching from outside.
-		Due to internal structure, method should be determenistic and always return same Font instance on consequent calls with same `name` input.
+		Due to internal structure, method should be deterministic and always return same Font instance on consequent calls with same `name` input.
 		@param name A value contained in `face` attribute.
 		@returns Method should return loaded font instance or `null`. If `null` is returned - currently active font is used.
 	**/
@@ -118,7 +124,7 @@ class HtmlText extends Text {
 	}
 
 	/**
-		Called when text is assignet, allowing to process arbitrary text to valid XHTML.
+		Called when text is assigned, allowing to process arbitrary text to a valid XHTML.
 	**/
 	public dynamic function formatText( text : String ) : String {
 		return defaultFormatText(text);

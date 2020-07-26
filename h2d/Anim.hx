@@ -5,7 +5,7 @@ package h2d;
 	
 	Anim does not provide animation sequence management and it's up to user on how to implement it.
 	Another limitation is framerate. Anim runs at a fixed framerate dictated by `Anim.speed`.
-	Switching animations can be done trough `Anim.play` method.
+	Switching animations can be done through `Anim.play` method.
 
 	Note that animation playback happens regardless of Anim visibility and only can be paused by `Anim.pause` flag. 
 	Anim should be added to an active `h2d.Scene` in order to function.
