@@ -267,6 +267,17 @@ class CustomParser extends CssValue.ValueParser {
 				f.matrix.colorLightness(v);
 				f;
 			#end
+		case VCall("glow",[c, a, r, g, q]):
+			var c = parseColor(c);
+			var a = parseFloat(a);
+			var r = parseFloat(r);
+			var g = parseFloat(g);
+			var q = parseFloat(q);
+			#if macro
+				true;
+			#else
+				new h2d.filter.Glow(c, a, r, g, q);
+			#end
 		default: invalidProp();
 		}
 	}
