@@ -32,8 +32,6 @@ class ObjectFollower extends Object {
 		var height = s2d == null ? h3d.Engine.getCurrent().height : s2d.height;
 		var absPos = follow.getAbsPos();
 		var p = scene.camera.project(absPos._41 + offsetX, absPos._42 + offsetY, absPos._43 + offsetZ, width, height);
-		x = p.x;
-		y = p.y;
 		visible = p.z > 0;
 
 		if( horizontalAlign != Left || verticalAlign != Top ) {
@@ -44,21 +42,24 @@ class ObjectFollower extends Object {
 
 			var w = b.width, h = b.height;
 			switch( horizontalAlign ) {
-			case Middle: x -= w * 0.5;
-			case Right: x -= w;
+			case Middle: p.x -= w * 0.5;
+			case Right: p.x -= w;
 			default:
 			}
 			switch( verticalAlign ) {
-			case Middle: y -= h * 0.5;
-			case Bottom: y -= h;
+			case Middle: p.y -= h * 0.5;
+			case Bottom: p.y -= h;
 			default:
 			}
 		}
 
 		if( pixelSnap ) {
-			x = Math.round(x);
-			y = Math.round(y);
+			p.x = Math.round(p.x);
+			p.y = Math.round(p.y);
 		}
+
+		x = p.x;
+		y = p.y;
 
 		if(followVisibility) {
 			var parent = follow;
