@@ -901,7 +901,7 @@ class Object #if (domkit && !domkit_heaps) implements domkit.Model<h2d.Object> #
 	/**
 		Return the `n`th element among our immediate children list, or null if there is no.
 	**/
-	public inline function getChildAt( n ) {
+	public function getChildAt( n ) {
 		return children[n];
 	}
 

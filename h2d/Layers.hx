@@ -9,14 +9,17 @@ class Layers extends Object {
 	var layersIndexes : Array<Int>;
 	var layerCount : Int;
 
+	/**
+		The default layer to which new objects are added.
+
+		`Layers.getChildAt`, `Layers.addChild` and `Layers.addChildAt` will use that layer index when adding children.
+	**/
+	public var defaultLayer : Int = 0;
+
 	public function new(?parent) {
 		super(parent);
 		layersIndexes = [];
 		layerCount = 0;
-	}
-
-	override function addChild(s) {
-		addChildAt(s, 0);
 	}
 
 	/**
@@ -25,23 +28,37 @@ class Layers extends Object {
 	 * @param s `h2d.Object` child to be added.
 	 * @param layer `Int` index of the layer, 0 is the bottom layer.
 	 */
-	public inline function add(s, layer) {
-		return addChildAt(s, layer);
-	}
-
-	override function addChildAt( s : Object, layer : Int ) {
-		if( s.parent == this ) {
+	public function add( s : Object, layer : Int = -1, index : Int = 0) {
+		if ( s.parent == this ) {
 			var old = s.allocated;
-			s.allocated = false;
 			removeChild(s);
 			s.allocated = old;
 		}
-		// new layer
-		while( layer >= layerCount )
+
+		if ( layer == -1 ) layer = defaultLayer;
+
+		// Populate layer list
+		while ( layer >= layerCount )
 			layersIndexes[layerCount++] = children.length;
-		super.addChildAt(s,layersIndexes[layer]);
-		for( i in layer...layerCount )
+		
+		// Prevent inserting out of layer bounds.
+		if ( layer == 0 )
+			super.addChildAt(s, hxd.Math.imin(layersIndexes[0], index));
+		else
+			super.addChildAt(s, hxd.Math.imin(layersIndexes[layer - 1] + index, layersIndexes[layer]));
+		
+		for ( i in layer...layerCount )
 			layersIndexes[i]++;
+		
+	}
+
+	/**
+		Adds a child object `s` at specified `index` in the `Layers.defaultLayer`.
+		@param s The object to be added.
+		@param index The position of the object in the layer.
+	**/
+	override function addChildAt( s : Object, index : Int ) {
+		add(s, -1, index);
 	}
 
 	override function removeChild( s : Object ) {
@@ -130,6 +147,24 @@ class Layers extends Object {
 	}
 
 	/**
+		Return the `n`th element among the immediate children list on the `Layers.defaultLayer`, or null if there is no.
+	**/
+	override public function getChildAt(n:Int):Object
+	{
+		return getChildAtLayer(n);
+	}
+
+	/**
+		Return the `n`th element among the immediate children list on the `layer`, or null if there is no.
+	**/
+	public function getChildAtLayer( n : Int, layer : Int = -1 ) : Object {
+		if ( layer == -1 ) layer = defaultLayer;
+		if ( layer >= layerCount || n < 0 || n >= layersIndexes[layer] ) return null;
+		if ( layer == 0 ) return children[n];
+		return children[layersIndexes[layer - 1] + n];
+	}
+
+	/**
 	 * Returns the layer on which the child `h2d.Object` resides.  
 	 * @param s `h2d.Object` 
 	 * @return `Int` index of the layer where `s:h2d.Object` resides or -1 if it's not a child.
@@ -140,6 +175,22 @@ class Layers extends Object {
 		var index = children.indexOf(s);
 		for ( i in 0...layerCount )
 			if ( layersIndexes[i] > index ) return i;
+		return -1;
+	}
+
+	/**
+		Return the index of the child within its respective layer.
+		@param o The child to look up index of.
+		@returns `-1` if object is not a child of Layers, index of the child within its current layer otherwise.
+	**/
+	override public function getChildIndex( o : Object ):Int
+	{
+		if ( o.parent != this ) return -1;
+
+		var index = children.indexOf(o);
+		if ( index < layersIndexes[0] ) return index;
+		for ( i in 1...layerCount )
+			if ( layersIndexes[i] > index ) return index - layersIndexes[i - 1];
 		return -1;
 	}
 
