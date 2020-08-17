@@ -169,7 +169,7 @@ class Checker {
 				[{ args : [{ name : "uv", type : vec2 }], ret : vec2 }];
 			case Trace:
 				[];
-			case VertexID, InstanceID:
+			case VertexID, InstanceID, FragCoord:
 				null;
 			}
 			if( def != null )
@@ -177,6 +177,7 @@ class Checker {
 		}
 		globals.set("vertexID", { t : TInt, g : VertexID });
 		globals.set("instanceID", { t : TInt, g : InstanceID });
+		globals.set("_FragCoord", { t : vec4, g : FragCoord });
 		globals.set("int", globals.get("toInt"));
 		globals.set("float", globals.get("toFloat"));
 		globals.set("reflect", globals.get("lReflect"));
@@ -193,6 +194,9 @@ class Checker {
 
 	function error( msg : String, pos : Position ) : Dynamic {
 		return Ast.Error.t(msg,pos);
+	}
+
+	public dynamic function warning( msg : String, pos : Position ) {
 	}
 
 	public dynamic function loadShader( path : String ) : Expr {
@@ -379,7 +383,9 @@ class Checker {
 				case EVars(_): InBlock;
 				default: if( el.length == 0 ) with else NoValue;
 				}
-				tl.push(typeExpr(e, ew));
+				var et = typeExpr(e, ew);
+				if( el.length != 0 && !et.hasSideEffect() ) warning("This expression has no side effect", e.pos);
+				tl.push(et);
 			}
 			vars = old;
 			type = with == NoValue ? TVoid : tl[tl.length - 1].t;
@@ -814,8 +820,6 @@ class Checker {
 			case TStruct(_):
 				error("Array of structures are not allowed", pos);
 			default:
-				if( t.isSampler() )
-					error("Array of textures are not allowed, use Sampler2DArray instead", pos);
 			}
 			var s = switch( size ) {
 			case SConst(_): size;
@@ -1002,10 +1006,19 @@ class Checker {
 			default:
 				error("Cannot apply " + g.toString() + " to these parameters", pos);
 			}
+		case Mat2:
+			switch( ([for( a in args ) a.t]) ) {
+			case [TMat2]: type = TMat2;
+			case [TVec(2, VFloat), TVec(2, VFloat)]: type = TMat2;
+			case [TFloat, TFloat, TFloat, TFloat]: type = TMat2;
+			default:
+				error("Cannot apply " + g.toString() + " to these parameters", pos);
+			}
 		case Mat3:
 			switch( ([for( a in args ) a.t]) ) {
 			case [TMat3x4 | TMat4]: type = TMat3;
 			case [TVec(3, VFloat), TVec(3, VFloat), TVec(3, VFloat)]: type = TMat3;
+			case [TFloat, TFloat, TFloat, TFloat, TFloat, TFloat, TFloat, TFloat, TFloat]: type = TMat3;
 			default:
 				error("Cannot apply " + g.toString() + " to these parameters", pos);
 			}
@@ -1113,6 +1126,8 @@ class Checker {
 				vec3;
 			case [OpMult, TVec(3,VFloat), TMat3]:
 				vec3;
+			case [OpMult, TVec(2,VFloat), TMat2]:
+				vec2;
 			case [_, TInt, TInt]: TInt;
 			case [_, TFloat, TFloat]: TFloat;
 			case [_, TInt, TFloat]: toFloat(e1); TFloat;

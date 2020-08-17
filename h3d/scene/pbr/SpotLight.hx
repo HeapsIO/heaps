@@ -4,8 +4,7 @@ class SpotLight extends Light {
 
 	var pbr : h3d.shader.pbr.Light.SpotLight;
 
-	public var range : Float;
-	public var maxRange(get,set) : Float;
+	public var range(get,set) : Float;
 	public var angle(default,set) : Float;
 	public var fallOff : Float;
 	public var cookie : h3d.mat.Texture;
@@ -19,7 +18,6 @@ class SpotLight extends Light {
 		lightProj = new h3d.Camera();
 		lightProj.screenRatio = 1.0;
 		range = 10;
-		maxRange = 10;
 		angle = 45;
 	}
 
@@ -27,7 +25,6 @@ class SpotLight extends Light {
 		var sl = o == null ? new SpotLight(null) : cast o;
 		super.clone(sl);
 		sl.range = range;
-		sl.maxRange = maxRange;
 		sl.angle = angle;
 		sl.fallOff = fallOff;
 		sl.cookie = cookie;
@@ -35,18 +32,18 @@ class SpotLight extends Light {
 		return sl;
 	}
 
-	function get_maxRange() {
+	function get_range() {
 		return cullingDistance;
 	}
 
-	function set_maxRange(v:Float) {
+	function set_range(v:Float) {
 		scaleX = v;
 		lightProj.zFar = v;
 		return cullingDistance = v;
 	}
 
 	function set_angle(v:Float) {
-		scaleY = hxd.Math.tan(hxd.Math.degToRad(v/2.0)) * maxRange;
+		scaleY = hxd.Math.tan(hxd.Math.degToRad(v/2.0)) * range;
 		scaleZ = scaleY;
 		lightProj.fovY = v;
 		return angle = v;
@@ -114,8 +111,8 @@ class SpotLight extends Light {
 		pbr.spotDir.load(absPos.front());
 		pbr.angle = hxd.Math.cos(hxd.Math.degToRad(angle/2.0));
 		pbr.fallOff = hxd.Math.cos(hxd.Math.degToRad(hxd.Math.min(angle/2.0, fallOff)));
-		pbr.range = hxd.Math.min(range, maxRange);
-		pbr.invLightRange4 = 1 / (maxRange * maxRange * maxRange * maxRange);
+		pbr.range = range;
+		pbr.invLightRange4 = 1 / (range * range * range * range);
 		pbr.occlusionFactor = occlusionFactor;
 
 		if(cookie != null){
@@ -140,11 +137,11 @@ class SpotLight extends Light {
 			throw "Rendering a pbr light require a PBR compatible scene renderer";
 
 		d.load(absPos.front());
-		d.scale3(maxRange / 2.0);
+		d.scale3(range / 2.0);
 		s.x = absPos.tx + d.x;
 		s.y = absPos.ty + d.y;
 		s.z = absPos.tz + d.z;
-		s.r = maxRange / 2.0;
+		s.r = range / 2.0;
 
 		if( !ctx.camera.frustum.hasSphere(s) )
 			return;

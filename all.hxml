@@ -13,12 +13,6 @@
 
 --next
 
--swf heaps.swf
--swf-version 15
--xml heaps_swf.xml
-
---next
-
 -hl heaps.hl
 -lib hlsdl
 -lib hlopenal

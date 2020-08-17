@@ -214,17 +214,24 @@ class Camera {
 		return Math.abs(p2.dot3(up)) > 0.999;
 	}
 
+	public function getViewDirection( dx : Float, dy : Float, dz = 0. ) {
+		var a = new h3d.col.Point(dx,dy,dz);
+		a.transform3x3(mcam);
+		a.normalize();
+		return a;
+	}
+
 	public function movePosAxis( dx : Float, dy : Float, dz = 0. ) {
-		var p = new Vector(dx, dy, dz);
-		p.project(mcam);
+		var p = new h3d.col.Point(dx, dy, dz);
+		p.transform3x3(mcam);
 		pos.x += p.x;
 		pos.y += p.y;
 		pos.z += p.z;
 	}
 
 	public function moveTargetAxis( dx : Float, dy : Float, dz = 0. ) {
-		var p = new Vector(dx, dy, dz);
-		p.project(mcam);
+		var p = new h3d.col.Point(dx, dy, dz);
+		p.transform3x3(mcam);
 		target.x += p.x;
 		target.y += p.y;
 		target.z += p.z;

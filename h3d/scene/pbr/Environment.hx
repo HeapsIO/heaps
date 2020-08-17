@@ -202,7 +202,6 @@ class Environment  {
 	*/
 	public function new( src : h3d.mat.Texture, ?diffSize = 64, ?specSize = 512, ?sampleBits = 12 ) {
 		this.source = src;
-		equiToCube();
 		this.diffSize = diffSize;
 		this.specSize = specSize;
 		this.sampleBits = sampleBits;
@@ -217,7 +216,8 @@ class Environment  {
 		} else {
 			if( source.width != source.height * 2 )
 				throw "Unrecognized environment map format";
-			env = new h3d.mat.Texture(source.height, source.height, [Cube, Target]);
+			if(env == null)
+				env = new h3d.mat.Texture(source.height, source.height, [Cube, Target]);
 			var pass = new h3d.pass.ScreenFx(new IrradEquiProj());
 			var engine = h3d.Engine.getCurrent();
 			pass.shader.texture = source;
@@ -309,6 +309,9 @@ class Environment  {
 	}
 
 	function computeIrradiance() {
+
+		if( env == null )
+			equiToCube();
 
 		var screen = new h3d.pass.ScreenFx(new IrradShader());
 		screen.shader.samplesBits = sampleBits;

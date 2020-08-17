@@ -23,6 +23,9 @@ class Text extends Drawable {
 	public var lineSpacing(default,set) : Float;
 
 	var glyphs : TileGroup;
+	var needsRebuild : Bool;
+	var currentText : String;
+	var textChanged : Bool;
 
 	var calcDone:Bool;
 	var calcXMin:Float;
@@ -39,9 +42,10 @@ class Text extends Drawable {
 		super(parent);
 		this.font = font;
 		textAlign = Left;
-		letterSpacing = 1;
+		letterSpacing = 0;
 		lineSpacing = 0;
 		text = "";
+		currentText = "";
 		textColor = 0xFFFFFF;
 	}
 
@@ -103,12 +107,28 @@ class Text extends Drawable {
 		rebuild();
 	}
 
+	inline function checkText() {
+		if ( textChanged && text != currentText ) {
+			textChanged = false;
+			currentText = text;
+			calcDone = false;
+			needsRebuild = true;
+		}
+	}
+
+	override function sync(ctx:RenderContext) {
+		super.sync(ctx);
+		checkText();
+		if ( needsRebuild ) initGlyphs(currentText);
+	}
+
 	override function draw(ctx:RenderContext) {
 		if( glyphs == null ) {
 			emitTile(ctx, h2d.Tile.fromColor(0xFF00FF, 16, 16));
 			return;
 		}
-		if ( !calcDone && text != null && font != null ) initGlyphs(text);
+		checkText();
+		if ( needsRebuild ) initGlyphs(currentText);
 
 		if( dropShadow != null ) {
 			var oldX = absX, oldY = absY;
@@ -132,13 +152,18 @@ class Text extends Drawable {
 		var t = t == null ? "null" : t;
 		if( t == this.text ) return t;
 		this.text = t;
-		rebuild();
+		textChanged = true;
+		validateText();
+		onContentChanged();
 		return t;
+	}
+
+	function validateText() {
 	}
 
 	function rebuild() {
 		calcDone = false;
-		if( allocated && text != null && font != null ) initGlyphs(text);
+		needsRebuild = true;
 		onContentChanged();
 	}
 
@@ -310,10 +335,12 @@ class Text extends Drawable {
 		calcHeight = y + font.lineHeight;
 		calcSizeHeight = y + (font.baseLine > 0 ? font.baseLine : font.lineHeight);
 		calcDone = true;
+		if ( rebuild ) needsRebuild = false;
 	}
 
 	inline function updateSize() {
-		if( !calcDone ) initGlyphs(text, false);
+		checkText();
+		if ( !calcDone ) initGlyphs(text, needsRebuild);
 	}
 
 	function get_textHeight() {

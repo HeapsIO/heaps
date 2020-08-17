@@ -49,6 +49,10 @@ class Trail extends Mesh {
 		return p;
 	}
 
+	public function clear() {
+		if( points.length > 0 ) points = [];
+	}
+
 	public function save() : Dynamic {
 		return {
 			duration : duration,
@@ -88,7 +92,7 @@ class Trail extends Mesh {
 
 	override function sync(ctx) {
 		super.sync(ctx);
-		if(ctx.elapsedTime == 0)
+		if( ctx.elapsedTime == 0 || (!ctx.visibleFlag && !alwaysSync) )
 			return;
 
 		var curX = absPos._41;

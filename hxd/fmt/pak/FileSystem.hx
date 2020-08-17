@@ -5,14 +5,15 @@ import hxd.impl.Air3File;
 #elseif (sys || nodejs)
 import sys.io.File;
 import sys.io.FileInput;
+typedef FileSeekMode = sys.io.FileSeek;
 #else
-enum FileSeek {
+enum FileSeekMode {
 	SeekBegin;
 	SeekEnd;
 	SeedCurrent;
 }
 class FileInput extends haxe.io.BytesInput {
-	public function seek( pos : Int, seekMode : FileSeek ) {
+	public function seek( pos : Int, seekMode : FileSeekMode ) {
 		switch( seekMode ) {
 		case SeekBegin:
 			this.position = pos;
@@ -24,6 +25,22 @@ class FileInput extends haxe.io.BytesInput {
 	}
 }
 #end
+
+class FileSeek {
+	#if (hl && hl_ver >= version("1.12.0"))
+	@:hlNative("std","file_seek2") static function seek2( f : sys.io.File.FileHandle, pos : Float, cur : Int ) : Bool { return false; }
+	#end
+	
+	public static function seek( f : FileInput, pos : Float, mode : FileSeekMode ) {
+		#if (hl && hl_ver >= version("1.12.0"))
+		if( !seek2(@:privateAccess f.__f,pos,mode.getIndex()) )
+			throw haxe.io.Error.Custom("seek2 failure()");
+		#else
+		if( pos > 0x7FFFFFFF ) throw haxe.io.Error.Custom("seek out of bounds");
+		f.seek(Std.int(pos),mode);
+		#end
+	}
+}
 
 @:allow(hxd.fmt.pak.FileSystem)
 @:access(hxd.fmt.pak.FileSystem)
@@ -60,8 +77,12 @@ private class PakEntry extends FileEntry {
 		return file.isDirectory;
 	}
 
+	function setPos() {
+		FileSeek.seek(pak,file.dataPosition, SeekBegin);
+	}
+
 	override function getSign() {
-		pak.seek(file.dataPosition, SeekBegin);
+		setPos();
 		fs.totalReadBytes += 4;
 		fs.totalReadCount++;
 		return pak.readInt32();
@@ -70,7 +91,7 @@ private class PakEntry extends FileEntry {
 	override function getBytes() {
 		if( cachedBytes != null )
 			return cachedBytes;
-		pak.seek(file.dataPosition, SeekBegin);
+		setPos();
 		fs.totalReadBytes += file.dataSize;
 		fs.totalReadCount++;
 		return pak.read(file.dataSize);
@@ -83,7 +104,7 @@ private class PakEntry extends FileEntry {
 			fs.totalReadBytes += file.dataSize;
 			fs.totalReadCount++;
 			openedBytes = haxe.io.Bytes.alloc(file.dataSize);
-			pak.seek(file.dataPosition, SeekBegin);
+			setPos();
 			pak.readBytes(openedBytes, 0, file.dataSize);
 		}
 		bytesPosition = 0;

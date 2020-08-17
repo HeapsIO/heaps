@@ -19,6 +19,7 @@ enum Type {
 	TArray( t : Type, size : SizeDecl );
 	TBuffer( t : Type, size : SizeDecl );
 	TChannel( size : Int );
+	TMat2;
 }
 
 enum VecType {
@@ -243,6 +244,8 @@ enum TGlobal {
 	// instancing
 	VertexID;
 	InstanceID;
+	// gl globals
+	FragCoord;
 }
 
 enum Component {
@@ -423,7 +426,14 @@ class Tools {
 			return hasSideEffect(e) || hasSideEffect(index);
 		case TConst(_), TVar(_), TGlobal(_):
 			return false;
-		case TVarDecl(_), TCall(_), TDiscard, TContinue, TBreak, TReturn(_):
+		case TCall(e, pl):
+			if( !e.e.match(TGlobal(_)) )
+				return true;
+			for( p in pl )
+				if( hasSideEffect(p) )
+					return true;
+			return false;
+		case TVarDecl(_), TDiscard, TContinue, TBreak, TReturn(_):
 			return true;
 		case TSwitch(e, cases, def):
 			for( c in cases ) {
@@ -498,6 +508,7 @@ class Tools {
 			var s = 0;
 			for( v in vl ) s += size(v.type);
 			return s;
+		case TMat2: 4;
 		case TMat3: 9;
 		case TMat4: 16;
 		case TMat3x4: 12;

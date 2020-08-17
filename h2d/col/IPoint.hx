@@ -29,12 +29,12 @@ class IPoint {
 		return "{" + x + "," + y + "}";
 	}
 
-	public inline function sub( p : IPoint ) {
-		return new Point(x - p.x, y - p.y);
+	public inline function sub( p : IPoint ) : IPoint {
+		return new IPoint(x - p.x, y - p.y);
 	}
 
-	public inline function add( p : IPoint ) {
-		return new Point(x + p.x, y + p.y);
+	public inline function add( p : IPoint ) : IPoint {
+		return new IPoint(x + p.x, y + p.y);
 	}
 
 	public inline function equals( other : IPoint ) : Bool {

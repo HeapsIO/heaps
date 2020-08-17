@@ -236,6 +236,7 @@ class Texture {
 
 	public function clear( color : Int, alpha = 1., ?layer = -1 ) {
 		alloc();
+		if( width == 0 || height == 0 ) return;
 		if( #if (usegl || hlsdl || js) true #else flags.has(Target) #end && (width != 1 || height != 1) ) {
 			var engine = h3d.Engine.getCurrent();
 			color |= Std.int(hxd.Math.clamp(alpha)*255) << 24;
@@ -424,6 +425,45 @@ class Texture {
 		return t;
 	}
 
+	#if !macro
+
+	public static function genDisc( size : Int, color : Int, ?alpha = 1. ) {
+		return genTexture(0,size,color,alpha);
+	}
+
+	static function genTexture( mode : Int, size : Int, color : Int, alpha : Float ) {
+		var engine = h3d.Engine.getCurrent();
+		var aval = Std.int(alpha * 255);
+		if( aval < 0 ) aval = 0 else if( aval > 255 ) aval = 255;
+		color = (color&0xFFFFFF)|(aval<<24);
+		var key = ((size << 16) | mode) + "," + color;
+		var k = genTextureKeys.get(key);
+		var t : Texture = k == null ? null : @:privateAccess engine.resCache.get(k);
+		if( t != null )
+			return t;
+		if( k == null ) {
+			k = {};
+			genTextureKeys.set(key, k);
+		}
+		t = new Texture(size,size,[Target]);
+		t.realloc = function() drawGenTexture(t,color,mode);
+		drawGenTexture(t,color,mode);
+		@:privateAccess engine.resCache.set(k, t);
+		return t;
+	}
+
+	static function drawGenTexture( t : h3d.mat.Texture, color : Int, mode : Int ) {
+		var s = new h3d.pass.ScreenFx(new h3d.shader.GenTexture());
+		var engine = h3d.Engine.getCurrent();
+		s.shader.mode = mode;
+		s.shader.color.setColor(color);
+		engine.pushTarget(t);
+		s.render();
+		engine.popTarget();
+	}
+
+	#end
+
 	/**
 		Returns a default dummy 1x1 black cube texture
 	**/
@@ -460,6 +500,7 @@ class Texture {
 
 	static var checkerTextureKeys = new Map<Int,{}>();
 	static var noiseTextureKeys = new Map<Int,{}>();
+	static var genTextureKeys= new Map<String,{}>();
 
 	public static function genNoise(size) {
 		var engine = h3d.Engine.getCurrent();

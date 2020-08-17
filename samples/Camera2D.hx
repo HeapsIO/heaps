@@ -1,90 +1,59 @@
 import h3d.Engine;
 import h2d.TextInput;
-import h2d.Interactive;
-import h2d.Bitmap;
-import h2d.Object;
 import h2d.Camera;
-import hxd.Timer;
-import h3d.mat.Texture;
-import h2d.Tile;
+import h2d.Graphics;
+import h2d.TileGroup;
+import hxd.Key;
+import hxd.Res;
 
-
+//PARAM=-D resourcesPath=../../tiled_res
 class Camera2D extends SampleApp {
 
 	var camera : Camera;
 
-	var bg : Bitmap;
-	var inter : Interactive;
+	var followCamera : Camera;
+	var followPoint : Graphics;
 
 	var sliderAnchorX : h2d.Slider;
 	var sliderCamAnchorX : h2d.Slider;
 	var sliderCamAnchorY : h2d.Slider;
-	var sliderCamViewX : h2d.Slider;
-	var sliderCamViewY : h2d.Slider;
 	var sliderCamX : h2d.Slider;
 	var sliderCamY : h2d.Slider;
 	var sliderCamScaleX : h2d.Slider;
-	var sliderCamScaleY : h2d.Slider;	
+	var sliderCamScaleY : h2d.Slider;
 
-	var anchorMarkerScreenSpace : h2d.Graphics;
-	var anchorMarkerSceneSpaceA : h2d.Bitmap;
-	var anchorMarkerSceneSpaceB : h2d.Bitmap;
+	var cameraPositionMarker : h2d.Graphics;
 
 	var reportCameraParameterChangedAfterSync : Bool = false;
 
-	static inline var scaleContentRelativeToScene : Bool = false;
-
-	override function onResize()  {
+	override function onResize() {
 		super.onResize();
 
-		//change slide min max values according to screen size
-		sliderCamViewX.minValue = -s2d.width*2; sliderCamViewX.maxValue = s2d.width*2;
-		sliderCamViewY.minValue = -s2d.height*2; sliderCamViewY.maxValue = s2d.height*2;
-		
-		sliderCamX.minValue = -s2d.width; sliderCamX.maxValue = s2d.width; 
-		sliderCamY.minValue = -s2d.height; sliderCamY.maxValue = s2d.height; 
-
-		//scale content relative to scene
-		if(scaleContentRelativeToScene)
-		{
-			bg.tile.scaleToSize(s2d.width,s2d.height);
-
-			inter.x = s2d.width * .5 - 50;
-			inter.y = s2d.height * .5 - 80;
-		}
+		// Change slider min max values according to screen size
+		sliderCamX.minValue = -s2d.width; sliderCamX.maxValue = s2d.width;
+		sliderCamY.minValue = -s2d.height; sliderCamY.maxValue = s2d.height;
 
 		onCameraParameterChanged();
 		reportCameraParameterChangedAfterSync=true;
 	}
 
-	private function setSliderAndTextInputValue(slider : h2d.Slider, value : Float)
-	{
-		slider.value = value; 
-		var  tf : h2d.TextInput = hxd.impl.Api.downcast(slider.parent.getChildAt(2),h2d.TextInput);		
-		if(tf!=null) tf.text = "" + hxd.Math.fmt(value);	
+	private function setSliderAndTextInputValue( slider : h2d.Slider, value : Float ) {
+		slider.value = value;
+		var tf : h2d.TextInput = hxd.impl.Api.downcast(slider.parent.getChildAt(2),h2d.TextInput);
+		if(tf!=null) tf.text = "" + hxd.Math.fmt(value);
 	}
 
-	private function onCameraParameterChanged()
-	{
+	private function onCameraParameterChanged() {
 		updateCamSliderValues();
 
-		anchorMarkerScreenSpace.x=camera.anchorX*s2d.width;
-		anchorMarkerScreenSpace.y=camera.anchorY*s2d.height;
-
-		anchorMarkerSceneSpaceA.x=camera.viewX/camera.scaleX-20;
-		anchorMarkerSceneSpaceA.y=camera.viewY/camera.scaleY-2;
-
-		anchorMarkerSceneSpaceB.x=camera.viewX/camera.scaleX-2;
-		anchorMarkerSceneSpaceB.y=camera.viewY/camera.scaleY-20;
+		cameraPositionMarker.x = camera.x;
+		cameraPositionMarker.y = camera.y;
 	}
 
 	private function updateCamSliderValues() {
 
 		setSliderAndTextInputValue(sliderCamAnchorX, camera.anchorX);
 		setSliderAndTextInputValue(sliderCamAnchorY, camera.anchorY);
-
-		setSliderAndTextInputValue(sliderCamViewX, camera.viewX);
-		setSliderAndTextInputValue(sliderCamViewY, camera.viewY);
 
 		setSliderAndTextInputValue(sliderCamScaleX, camera.scaleX);
 		setSliderAndTextInputValue(sliderCamScaleY, camera.scaleY);
@@ -94,51 +63,87 @@ class Camera2D extends SampleApp {
 
 	}
 
-	override private function init()
-	{
+	override private function init() {
 		super.init();
+		
+		// Second camera for sample controls
+		var uiCamera = new Camera();
+		// layerVisible allows to filter out layers that camera should not render.
+		uiCamera.layerVisible = (idx) -> idx == 2;
+		s2d.add(fui, 2);
+		// Add UI camera to scene. Note that order of cameras in array matters, as they are rendered in-order.
+		s2d.addCamera(uiCamera);
+		// Only one camera can handle user input events.
+		// When assigning newly-created camera as interactiveCamera - adding it to Scene can be omitted, as it will be added automatically.
+		s2d.interactiveCamera = uiCamera;
 
-		// Initialize camera.
-		camera = new Camera(s2d);
+		// See Tiled sample
+		var followX = s2d.width * .5;
+		var followY = s2d.height * .5;
+		var tileSize = 16;
+		var tmx = Res.tileMap.toMap();
 
-		// Backdrop to show the camera frame.
-		bg = new h2d.Bitmap(h2d.Tile.fromColor(0xffffff, s2d.width, s2d.height, 0.2), camera);
+		var tset = Res.tiles.toTile();
+		var tiles = tset.gridFlatten(tileSize, 0, 0);
+		for ( l in tmx.layers ) {
+			var group : TileGroup = new TileGroup(tset);
+			// Props layer won't be visible on main camera, but will be visible in the follower camera.
+			s2d.add(group, l.name == "Props" ? 1 : 0);
+			group.x = followX - tmx.width * (tileSize / 2);
+			group.y = followY - tmx.height * (tileSize / 2);
+			var y = 0, x = 0;
+			for (gid in l.data) {
+				if (gid != 0) group.add(x * tileSize, y * tileSize, tiles[gid-1]);
+				if (++x == tmx.width) {
+					x = 0;
+					y++;
+				}
+			}
+		}
 
-		// Interactive inside camera
-		inter = new h2d.Interactive(100, 40, camera);
-		inter.backgroundColor = 0xff0000ff;
-		inter.x = s2d.width * .5 - 50;
-		inter.y = s2d.height * .5 - 80;
-		var interText = new h2d.Text(getFont(), inter);
-		interText.textAlign = Center;
-		interText.maxWidth = 100;
-		interText.text = "In-camera Interactive";
+		addText("User arrow keys to move the green arrow");
+		followPoint = new Graphics(s2d);
+		followPoint.beginFill(0xff00);
+		followPoint.moveTo(0, -5);
+		followPoint.lineTo(5, 5);
+		followPoint.lineTo(-5, 5);
+		followPoint.setPosition(followX, followY);
 
-		//anchor marker in screen space
-		anchorMarkerScreenSpace = new h2d.Graphics(s2d);
-		anchorMarkerScreenSpace.x=camera.anchorX*s2d.width;
-		anchorMarkerScreenSpace.y=camera.anchorY*s2d.height;
-		anchorMarkerScreenSpace.beginFill(0xff0000,0.5);
-		anchorMarkerScreenSpace.drawRect(-10, -1, 20, 2);
-		anchorMarkerScreenSpace.drawRect(-1, -10, 2, 20);
-		anchorMarkerScreenSpace.endFill();
+		// Anchor allows to adjust the position of camera target relative to it's top-left corner in scene viewport ratio.
+		// 0.5 would ensure that whatever position camera points at would at the center of it's viewport.
+		// Providing Scene instance to camera constructor automatically adds it to the Scene camera list.
+		followCamera = new Camera(s2d);
+		// Set viewport to take up bottom-left quarter of the screen and clip out contents outside of it.
+		followCamera.setAnchor(0.5, 0.5);
+		followCamera.setViewport(s2d.width * .5, s2d.height * .5, s2d.width * .5, s2d.height * .5);
+		followCamera.setScale(2, 2);
+		followCamera.clipViewport = true;
+		followCamera.layerVisible = (idx) -> idx != 2; // skip UI layer
+		followCamera.follow = followPoint;
+		followCamera.followRotation = true;
 
-		//anchor marker in screen space
-		anchorMarkerSceneSpaceA = new h2d.Bitmap(h2d.Tile.fromColor(0xfffffff, 40,4, 0.5), camera);
-		anchorMarkerSceneSpaceA.x=camera.viewX/camera.scaleX-20;
-		anchorMarkerSceneSpaceA.y=camera.viewY/camera.scaleY-2;
-		anchorMarkerSceneSpaceB = new h2d.Bitmap(h2d.Tile.fromColor(0xfffffff, 4,40, 0.5), camera);
-		anchorMarkerSceneSpaceB.x=camera.viewX/camera.scaleX-2;
-		anchorMarkerSceneSpaceB.y=camera.viewY/camera.scaleY-20;
+		// Scene.camera proeprty provides an alias to `Scene.cameras[0]`.
+		camera = s2d.camera;
+		camera.setAnchor(0.5, 0.5);
+		camera.setPosition(s2d.width * .5, s2d.height * .5);
+		camera.layerVisible = (idx) -> idx == 0;
 
-		addText("Camera");
+		// Marker for primary camera position
+		cameraPositionMarker = new h2d.Graphics(s2d);
+		cameraPositionMarker.x= camera.x;
+		cameraPositionMarker.y= camera.y;
+		cameraPositionMarker.beginFill(0xff0000,0.5);
+		cameraPositionMarker.drawRect(-10, -1, 20, 2);
+		cameraPositionMarker.drawRect(-1, -10, 2, 20);
+		cameraPositionMarker.endFill();
+
+		addText("Camera controls");
 		sliderCamAnchorX=addSlider("Anchor X", function() { return camera.anchorX; }, function(v) { camera.anchorX = v; onCameraParameterChanged();}, 0, 1);
 		sliderCamAnchorY=addSlider("Anchor Y", function() { return camera.anchorY; }, function(v) { camera.anchorY = v; onCameraParameterChanged();}, 0, 1);
-		sliderCamViewX=addSlider("View X", function() { return camera.viewX; }, function(v) { camera.viewX = v; onCameraParameterChanged();}, -s2d.width*2, s2d.width*2);
-		sliderCamViewY=addSlider("View Y", function() { return camera.viewY; }, function(v) { camera.viewY = v; onCameraParameterChanged();}, -s2d.height*2, s2d.height*2);
 		sliderCamX=addSlider("X", function() { return camera.x; }, function(v) { camera.x = v; onCameraParameterChanged();}, -s2d.width, s2d.width);
 		sliderCamY=addSlider("Y", function() { return camera.y; }, function(v) { camera.y = v; onCameraParameterChanged();}, -s2d.height, s2d.height);
-		// addSlider("Rotation", function() { return hxd.Math.radToDeg(camera.rotation); }, function(v) { camera.rotation = hxd.Math.degToRad(v); onCameraParameterChanged(); }, 0, 360);
+		// Scale and rotation happens around anchored position, so in case of anchor [0.5, 0.5] it would scale and rotate around center of the camera viewport.
+		addSlider("Rotation", function() { return hxd.Math.radToDeg(camera.rotation); }, function(v) { camera.rotation = hxd.Math.degToRad(v); onCameraParameterChanged(); }, 0, 360);
 		sliderCamScaleX=addSlider("Scale X", function() { return camera.scaleX; }, function(v) { camera.scaleX = v; onCameraParameterChanged();}, 0, 5);
 		sliderCamScaleY=addSlider("Scale Y", function() { return camera.scaleY; }, function(v) { camera.scaleY = v; onCameraParameterChanged();}, 0, 5);
 
@@ -155,6 +160,22 @@ class Camera2D extends SampleApp {
 
 	override function update(dt:Float) {
 		super.update(dt);
+		if (Key.isDown(Key.SHIFT)) dt *= 3;
+		if (Key.isDown(Key.LEFT)) followPoint.rotation -= dt;
+		if (Key.isDown(Key.RIGHT)) followPoint.rotation += dt;
+		var forward = followPoint.rotation - Math.PI * .5;
+		if (Key.isDown(Key.UP)) {
+			followPoint.x += Math.cos(forward) * 60 * dt;
+			followPoint.y += Math.sin(forward) * 60 * dt;
+		}
+		if (Key.isDown(Key.DOWN)) {
+			followPoint.x -= Math.cos(forward) * 60 * dt;
+			followPoint.y -= Math.sin(forward) * 60 * dt;
+		}
+		if (Key.isReleased(Key.SPACE)) {
+			followPoint.setPosition(s2d.width * .5, s2d.height * .5);
+			followPoint.rotation = 0;
+		}
 	}
 
 	static function main() {

@@ -33,6 +33,7 @@ class GlslOut {
 		m.set(BVec2, "bvec2");
 		m.set(BVec3, "bvec3");
 		m.set(BVec4, "bvec4");
+		m.set(FragCoord, "gl_FragCoord");
 		for( g in m )
 			KWDS.set(g, true);
 		m;
@@ -105,6 +106,8 @@ class GlslOut {
 			}
 			add("vec");
 			add(size);
+		case TMat2:
+			add("mat2");
 		case TMat3:
 			add("mat3");
 		case TMat4:

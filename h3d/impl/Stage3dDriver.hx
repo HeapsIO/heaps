@@ -716,16 +716,16 @@ class Stage3dDriver extends Driver {
 				case "position":
 					ctx.setVertexBufferAt(pos++, m.vbuf, 0, FORMAT[3]);
 				case "normal":
-					if( m.b.stride < 6 ) throw "Buffer is missing NORMAL data, set it to RAW format ?" #if debug + @:privateAccess v.allocPos #end;
+					if( m.b.stride < 6 ) throw "Buffer is missing NORMAL data, set it to RAW format ?" #if track_alloc + @:privateAccess v.allocPos #end;
 					ctx.setVertexBufferAt(pos++, m.vbuf, 3, FORMAT[3]);
 				case "uv":
-					if( m.b.stride < 8 ) throw "Buffer is missing UV data, set it to RAW format ?" #if debug + @:privateAccess v.allocPos #end;
+					if( m.b.stride < 8 ) throw "Buffer is missing UV data, set it to RAW format ?" #if track_alloc + @:privateAccess v.allocPos #end;
 					ctx.setVertexBufferAt(pos++, m.vbuf, 6, FORMAT[2]);
 				default:
 					var size = bits & 7;
 					ctx.setVertexBufferAt(pos++, m.vbuf, offset, FORMAT[size]);
 					offset += size == 0 ? 1 : size;
-					if( offset > m.b.stride ) throw "Buffer is missing '"+s+"' data, set it to RAW format ?" #if debug + @:privateAccess v.allocPos #end;
+					if( offset > m.b.stride ) throw "Buffer is missing '"+s+"' data, set it to RAW format ?" #if track_alloc + @:privateAccess v.allocPos #end;
 				}
 				bits >>= 3;
 			}
