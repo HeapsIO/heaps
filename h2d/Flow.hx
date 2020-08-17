@@ -14,6 +14,25 @@ enum FlowLayout {
 	Stack;
 }
 
+enum FlowOverflow {
+	/**
+		Children larger than `maxWidth`/`maxHeight` will expand the flow size.
+	**/
+	Expand;
+	/**
+		Limits the bounds reported by the flow using `maxWidth` or `maxHeight`, if set.
+		This is means children larger than max size will draw outside of their parent bounds.
+	**/
+	Limit;
+	/**
+		Limits the bounds reported by the flow using `maxWidth` or `maxHeight`, if set.
+		Compared to `Limit` - Flow will mask out children that are outside of Flow bounds.
+	**/
+	Hidden;
+	// TODO: Scroll overflow, see #606
+	//Scroll;
+}
+
 @:allow(h2d.Flow)
 class FlowProperties {
 
@@ -38,6 +57,7 @@ class FlowProperties {
 	public var calculatedHeight(default,null) : Int = 0;
 
 	public var isBreak(default,null) : Bool;
+	public var lineBreak = false;
 
 	/**
 		If our flow have a maximum size, it will constraint the children by using .constraintSize()
@@ -98,7 +118,7 @@ class Flow extends Object {
 	/**
 		Enabling overflow will treat maxWidth/maxHeight and lineHeight/colWidth constraints as absolute : bigger elements will overflow instead of expanding the limit.
 	**/
-	public var overflow(default, set) : Bool = false;
+	public var overflow(default, set) : FlowOverflow = Expand;
 
 	/**
 		Will set all padding values at the same time.
@@ -499,6 +519,23 @@ class Flow extends Object {
 		super.sync(ctx);
 	}
 
+	override function drawRec(ctx:RenderContext)
+	{
+		if ( overflow == Hidden ) {
+			if ( posChanged ) {
+				calcAbsPos();
+				for ( c in children )
+					c.posChanged = true;
+				posChanged = false;
+			}
+			Mask.maskWith(ctx, this, hxd.Math.imax(outerWidth, maxWidth), hxd.Math.imax(outerHeight, maxHeight), 0, 0);
+			super.drawRec(ctx);
+			Mask.unmask(ctx);
+		} else {
+			super.drawRec(ctx);
+		}
+	}
+
 	function set_maxWidth(w) {
 		if( maxWidth == w )
 			return w;
@@ -681,7 +718,7 @@ class Flow extends Object {
 			inline function alignLine( maxIndex ) {
 				if( maxLineHeight < minLineHeight )
 					maxLineHeight = minLineHeight;
-				else if( overflow && minLineHeight != 0 )
+				else if( overflow != Expand && minLineHeight != 0 )
 					maxLineHeight = minLineHeight;
 				for( i in lastIndex...maxIndex ) {
 					var p = propAt(i);
@@ -736,7 +773,7 @@ class Flow extends Object {
 
 				if( isAbs ) continue;
 
-				if( multiline && x - startX + p.calculatedWidth > maxInWidth && x - startX > 0 ) {
+				if( ((multiline && x - startX + p.calculatedWidth > maxInWidth) || p.lineBreak) && x - startX > 0 ) {
 					br = true;
 					alignLine(i);
 					y += maxLineHeight + verticalSpacing;
@@ -770,7 +807,7 @@ class Flow extends Object {
 					case Left:
 						c.x = startX + p.offsetX;
 					case Middle:
-						c.x = startX + Std.int((startX - endX - p.calculatedWidth) * 0.5) + p.offsetX;
+						c.x = startX + Std.int((endX - startX - p.calculatedWidth) * 0.5) + p.offsetX + startX;
 					default:
 					}
 					continue;
@@ -826,7 +863,7 @@ class Flow extends Object {
 			inline function alignLine( maxIndex ) {
 				if( maxColWidth < minColWidth )
 					maxColWidth = minColWidth;
-				else if( overflow && minColWidth != 0 )
+				else if( overflow != Expand && minColWidth != 0 )
 					maxColWidth = minColWidth;
 				for( i in lastIndex...maxIndex ) {
 					var p = propAt(i);
@@ -883,7 +920,7 @@ class Flow extends Object {
 
 				if( isAbs ) continue;
 
-				if( multiline && y - startY + p.calculatedHeight > maxInHeight && y - startY > 0 ) {
+				if( ((multiline && y - startY + p.calculatedHeight > maxInHeight) || p.lineBreak) && y - startY > 0 ) {
 					br = true;
 					alignLine(i);
 					x += maxColWidth + horizontalSpacing;
@@ -920,7 +957,7 @@ class Flow extends Object {
 					case Top:
 						c.y = startY + p.offsetY;
 					case Middle:
-						c.y = startY + Std.int((startY - endY - p.calculatedHeight) * 0.5) + p.offsetY;
+						c.y = startY + Std.int((endY - startY - p.calculatedHeight) * 0.5) + p.offsetY + startY;
 					default:
 					}
 					continue;
@@ -991,9 +1028,9 @@ class Flow extends Object {
 
 			var xmin = paddingLeft + borderWidth;
 			var ymin = paddingTop + borderHeight;
-			var xmax = if(realMaxWidth > 0 && overflow) Math.floor(realMaxWidth - (paddingRight + borderWidth))
+			var xmax = if(realMaxWidth > 0 && overflow != Expand) Math.floor(realMaxWidth - (paddingRight + borderWidth))
 				else hxd.Math.imax(xmin + maxChildW, realMinWidth - (paddingRight + borderWidth));
-			var ymax = if(realMaxWidth > 0 && overflow) Math.floor(realMaxHeight - (paddingBottom + borderHeight))
+			var ymax = if(realMaxWidth > 0 && overflow != Expand) Math.floor(realMaxHeight - (paddingBottom + borderHeight))
 				else hxd.Math.imax(ymin + maxChildH, realMinHeight - (paddingBottom + borderHeight));
 			cw = xmax + paddingRight + borderWidth;
 			ch = ymax + paddingBottom + borderHeight;
@@ -1035,7 +1072,7 @@ class Flow extends Object {
 
 		if( realMinWidth >= 0 && cw < realMinWidth ) cw = realMinWidth;
 		if( realMinHeight >= 0 && ch < realMinHeight ) ch = realMinHeight;
-		if( overflow ) {
+		if( overflow != Expand ) {
 			if( isConstraintWidth && cw > maxTotWidth ) cw = maxTotWidth;
 			if( isConstraintHeight && ch > maxTotHeight ) ch = maxTotHeight;
 		}

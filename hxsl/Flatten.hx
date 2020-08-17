@@ -84,8 +84,6 @@ class Flatten {
 			.concat(packTextures(prefix+"TexturesArray", allVars, TSampler2DArray));
 		packBuffers(allVars);
 		var funs = [for( f in s.funs ) mapFun(f, mapExpr)];
-		for( t in textures )
-			t.pos >>= 2;
 		return {
 			name : s.name,
 			vars : outVars,
@@ -117,6 +115,10 @@ class Flatten {
 				e
 			else {
 				switch( v.type ) {
+				case TArray(t, _) if( t.isSampler() ):
+					eindex = mapExpr(eindex);
+					var toInt = { e : TCall( { e : TGlobal(ToInt), t : TFun([]), p : vp }, [eindex]), t : TInt, p : vp };
+					access(a, t, vp, AOffset(a,1,toInt));
 				case TArray(t, _):
 					var stride = varSize(t, a.t);
 					if( stride == 0 || stride & 3 != 0 ) throw new Error("Dynamic access to an Array which size is not 4 components-aligned is not allowed", e.p);
@@ -252,11 +254,12 @@ class Flatten {
 	}
 
 	inline function readIndex( a : Alloc, index : Int, pos ) : TExpr {
-		return { e : TArray({ e : TVar(a.g), t : a.g.type, p : pos },mkInt((a.pos>>2)+index,pos)), t : TVec(4,a.t), p : pos }
+		var offs = a.t == null ? a.pos : a.pos >> 2;
+		return { e : TArray({ e : TVar(a.g), t : a.g.type, p : pos },mkInt(offs+index,pos)), t : TVec(4,a.t), p : pos }
 	}
 
 	inline function readOffset( a : Alloc, stride : Int, delta : TExpr, index : Int, pos ) : TExpr {
-		var index = (a.pos >> 2) + index;
+		var index = (a.t == null ? a.pos : a.pos >> 2) + index;
 		var offset : TExpr = index == 0 ? delta : { e : TBinop(OpAdd, delta, mkInt(index, pos)), t : TInt, p : pos };
 		return { e : TArray({ e : TVar(a.g), t : a.g.type, p : pos }, offset), t : TVec(4,a.t), p:pos };
 	}
@@ -353,20 +356,25 @@ class Flatten {
 			type : t,
 			kind : Param,
 		};
+		var pos = 0;
 		for( v in vars ) {
+			var count = 1;
 			if( v.type != t ) {
-				if( t == TSampler2D && v.type.match(TChannel(_)) ) {
-					// ok
-				} else
+				switch( v.type ) {
+				case TChannel(_) if( t == TSampler2D ):
+				case TArray(t2,SConst(n)) if( t2 == t ):
+					count = n;
+				default:
 					continue;
+				}
 			}
-			// use << 2 for readAccess purposes, then we will fix it before returning
-			var a = new Alloc(g, null, alloc.length << 2, 1);
+			var a = new Alloc(g, null, pos, count);
 			a.v = v;
 			varMap.set(v, a);
 			alloc.push(a);
+			pos += count;
 		}
-		g.type = TArray(t, SConst(alloc.length));
+		g.type = TArray(t, SConst(pos));
 		if( alloc.length > 0 ) {
 			outVars.push(g);
 			allocData.set(g, alloc);
@@ -404,6 +412,10 @@ class Flatten {
 		for( v in vars ) {
 			if( v.type.isSampler() || v.type.match(TBuffer(_)) )
 				continue;
+			switch( v.type ) {
+			case TArray(t,_) if( t.isSampler() ): continue;
+			default:
+			}
 			var size = varSize(v.type, t);
 			var best : Alloc = null;
 			for( a in alloc )

@@ -34,17 +34,46 @@ class FileConverter {
 	var defaultConfig : ConvertConfig;
 	var cache : Map<String,Array<{ out : String, time : Int, hash : String, ver : Null<Int> }>>;
 
+	static var extraConfigs:Array<Dynamic> = [];
+
+	/**
+		Add extra convert configuration. Should be props.json-compatible structure.  
+		Can be used to add or override converts that are enabled by default.  
+		Sample code of Convert registration and enabling it by default:
+		```haxe
+		// Register Convert
+		static var _ = hxd.fs.Convert.register(new MyFancyConvert());
+		// Enable it
+		static var __ = hxd.fs.FileConverter.addConfig({
+			"fs.convert": {
+				// Converts are identified by output extension of Convert.
+				"origext": { convert: "fancyext", priority: 0 },
+				// Shorter declaration with default priority 0:
+				"otherext": "fancyext"
+			}
+		});
+		```
+	**/
+	public static function addConfig(conf:Dynamic) {
+		extraConfigs.push(conf);
+		return conf;
+	}
+
 	public function new(baseDir,configuration) {
 		this.baseDir = baseDir;
 		this.configuration = configuration;
 		tmpDir = ".tmp/";
 		// this is the default converts config, it can be override in per-directory props.json
-		defaultConfig = makeConfig({
+		var defaultCfg : Dynamic = {
 			"fs.convert" : {
 				"fbx" : { "convert" : "hmd", "priority" : -1 },
 				"fnt" : { "convert" : "bfnt", "priority" : -1 }
 			}
-		});
+		};
+		for ( conf in extraConfigs ) {
+			defaultCfg = mergeRec(defaultCfg, conf);
+		}
+		defaultConfig = makeConfig(defaultCfg);
 	}
 
 	public dynamic function onConvert( c : Convert ) {

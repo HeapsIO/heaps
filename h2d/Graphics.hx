@@ -464,6 +464,13 @@ class Graphics extends Drawable {
 		lineTo(x + w, y + h);
 		lineTo(x, y + h);
 		lineTo(x, y);
+		var e = 0.01; // see #776
+		tmpPoints[0].x += e;
+		tmpPoints[0].y += e;
+		tmpPoints[1].y += e;
+		tmpPoints[3].x += e;
+		tmpPoints[4].x += e;
+		tmpPoints[4].y += e;
 		flush();
 	}
 

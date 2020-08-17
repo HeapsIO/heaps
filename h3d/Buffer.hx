@@ -29,6 +29,10 @@ enum BufferFlag {
 		Used for shader input buffer
 	**/
 	UniformBuffer;
+	/**
+		Use to allow to alloc buffers with >64K vertices (requires 32 bit indexes)
+	**/
+	LargeBuffer;
 }
 
 class Buffer {

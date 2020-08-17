@@ -43,7 +43,14 @@ class HMDModel extends MeshPrimitive {
 	}
 
 	public function addAlias( name : String, realName : String, offset = 0 ) {
+		var old = bufferAliases.get(name);
+		if( old != null ) {
+			if( old.realName != realName || old.offset != offset ) throw "Conflicting alias "+name;
+			return;
+		}
 		bufferAliases.set(name, {realName : realName, offset : offset });
+		// already allocated !
+		if( bufferCache != null ) allocAlias(name);
 	}
 
 	override function alloc(engine:h3d.Engine) {
@@ -83,13 +90,16 @@ class HMDModel extends MeshPrimitive {
 		if( normalsRecomputed != null )
 			recomputeNormals(normalsRecomputed);
 
-		for( name in bufferAliases.keys() ) {
-			var alias = bufferAliases.get(name);
-			var buffer = bufferCache.get(hxsl.Globals.allocID(alias.realName));
-			if( buffer == null ) throw "Buffer " + alias.realName+" not found for alias " + name;
-			if( buffer.offset + alias.offset > buffer.buffer.buffer.stride ) throw "Alias " + name+" for buffer " + alias.realName+" outside stride";
-			addBuffer(name, buffer.buffer, buffer.offset + alias.offset);
-		}
+		for( name in bufferAliases.keys() )
+			allocAlias(name);
+	}
+
+	function allocAlias( name : String ) {
+		var alias = bufferAliases.get(name);
+		var buffer = bufferCache.get(hxsl.Globals.allocID(alias.realName));
+		if( buffer == null ) throw "Buffer " + alias.realName+" not found for alias " + name;
+		if( buffer.offset + alias.offset > buffer.buffer.buffer.stride ) throw "Alias " + name+" for buffer " + alias.realName+" outside stride";
+		addBuffer(name, buffer.buffer, buffer.offset + alias.offset);
 	}
 
 	public function recomputeNormals( ?name : String ) {

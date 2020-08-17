@@ -4,23 +4,13 @@ class DecalOverlay extends hxsl.Shader {
 	static var SRC = {
 
 		@global var global : {
-			var time : Float;
 			var pixelSize : Vec2;
 			@perObject var modelView : Mat4;
 			@perObject var modelViewInverse : Mat4;
 		};
 
 		@global var camera : {
-			var view : Mat4;
-			var proj : Mat4;
-			var position : Vec3;
-			var projFlip : Float;
-			var projDiag : Vec3;
-			var viewProj : Mat4;
 			var inverseViewProj : Mat4;
-			var zNear : Float;
-			var zFar : Float;
-			@var var dir : Vec3;
 		};
 
 		var output : {
@@ -29,10 +19,10 @@ class DecalOverlay extends hxsl.Shader {
 
 		@const var CENTERED : Bool;
 		@const var GAMMA_CORRECT : Bool;
+		@const var AUTO_ALPHA : Bool = true;
 
 		@global var depthMap : Channel;
 
-		@param var maxAngle : Float;
 		@param var fadePower : Float;
 		@param var fadeStart : Float;
 		@param var fadeEnd : Float;
@@ -74,7 +64,10 @@ class DecalOverlay extends hxsl.Shader {
 			pixelColor.rgb *= color.rgb;
 			if( GAMMA_CORRECT ) pixelColor.rgb *= pixelColor.rgb;
 			pixelColor.rgb += pixelColor.rgb * emissive;
-			pixelColor.a = clamp(max(max(pixelColor.r, pixelColor.g), pixelColor.b), 0, 1) * fadeFactor;
+			if( AUTO_ALPHA )
+				pixelColor.a = clamp(max(max(pixelColor.r, pixelColor.g), pixelColor.b), 0, 1) * fadeFactor;
+			else
+				pixelColor.a = color.a * fadeFactor;
 		}
 	}
 
@@ -88,23 +81,13 @@ class DecalPBR extends hxsl.Shader {
 	static var SRC = {
 
 		@global var global : {
-			var time : Float;
 			var pixelSize : Vec2;
 			@perObject var modelView : Mat4;
 			@perObject var modelViewInverse : Mat4;
 		};
 
 		@global var camera : {
-			var view : Mat4;
-			var proj : Mat4;
-			var position : Vec3;
-			var projFlip : Float;
-			var projDiag : Vec3;
-			var viewProj : Mat4;
 			var inverseViewProj : Mat4;
-			var zNear : Float;
-			var zFar : Float;
-			@var var dir : Vec3;
 		};
 
 		var output : {
@@ -132,9 +115,6 @@ class DecalPBR extends hxsl.Shader {
 		@param var normal : Vec3;
 		@param var tangent : Vec3;
 
-		@param var minBound : Vec3;
-		@param var maxBound : Vec3;
-		@param var maxAngle : Float;
 		@param var fadePower : Float;
 		@param var fadeStart : Float;
 		@param var fadeEnd : Float;
@@ -149,10 +129,7 @@ class DecalPBR extends hxsl.Shader {
 		var pixelTransformedPosition : Vec3;
 		var projectedPosition : Vec4;
 		var pixelColor : Vec4;
-		var prbValues : Vec4;
-		var strength : Vec4;
-		var localPos : Vec3;
-		var alpha : Float;
+
 
 		function __init__vertex() {
 			transformedNormal = (normal * global.modelView.mat3()).normalize();
@@ -171,7 +148,7 @@ class DecalPBR extends hxsl.Shader {
 			return result;
 		}
 
-		function outsideBounds() : Bool {
+		function outsideBounds( localPos : Vec3 ) : Bool {
 			return ( localPos.x > 0.5 || localPos.x < -0.5 || localPos.y > 0.5 || localPos.y < -0.5 || localPos.z > 0.5 || localPos.z < -0.5 );
 		}
 
@@ -182,22 +159,20 @@ class DecalPBR extends hxsl.Shader {
 			var depth = depthMap.get(screenToUv(screenPos));
 			var ruv = vec4( screenPos, depth, 1 );
 			var wpos = ruv * matrix;
-			var ppos = ruv * camera.inverseViewProj;
-			alpha = 1.0;
+			var alpha = 1.0;
 
-			pixelTransformedPosition = ppos.xyz / ppos.w;
-			localPos = (wpos.xyz / wpos.w);
+			var localPos = (wpos.xyz / wpos.w);
 			calculatedUV = localPos.xy;
 			var fadeFactor = 1 - clamp( pow( max( 0.0, abs(localPos.z * 2) - fadeStart) / (fadeEnd - fadeStart), fadePower), 0, 1);
 
 			if( CENTERED )
 				calculatedUV += 0.5;
 
-			if(	outsideBounds() )
+			if(	outsideBounds(localPos) )
 				discard;
 
-			strength = vec4(0,0,0,0);
-			prbValues = vec4(0,0,0,0);
+			var strength = vec4(0,0,0,0);
+			var prbValues = vec4(0,0,0,0);
 
 			if( USE_ALBEDO ) {
 				var albedo = albedoTexture.get(calculatedUV);

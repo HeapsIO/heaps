@@ -17,7 +17,7 @@ class Printer {
 	public function shaderString( s : ShaderData ) {
 		buffer = new StringBuf();
 		for( v in s.vars ) {
-			addVar(v, Var);
+			addVar(v, null);
 			add(";\n");
 		}
 		if( s.vars.length > 0 )
@@ -70,7 +70,7 @@ class Printer {
 			case Global:
 				add("@global ");
 			case Var:
-				add("@var ");
+				add("@varying ");
 			case Param:
 				add("@param ");
 			case Input:

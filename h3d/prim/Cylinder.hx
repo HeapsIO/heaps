@@ -44,4 +44,22 @@ class Cylinder extends Quads {
 		}
 	}
 
+	/**
+	 * Get a default unit Cylinder with 
+	 * segs = 16, ray = 0.5, height = 1.0, centered = false
+	 * and add UVs to it. If it has not be cached, it is cached and subsequent
+	 * calls to this method will return Cylinder from cache.
+	 * @param segs Optional number of segments of the cylinder, default 16
+	 */
+	public static function defaultUnitCylinder(segs : Int = 16) {
+		var engine = h3d.Engine.getCurrent();
+		var c : Cylinder = @:privateAccess engine.resCache.get(Cylinder);
+		if( c != null )
+			return c;
+		c = new h3d.prim.Cylinder(segs, 0.5);
+		c.addUVs();
+		@:privateAccess engine.resCache.set(Cylinder, c);
+		return c;
+	}
+
 }

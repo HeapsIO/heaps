@@ -3,6 +3,10 @@ package hxd;
 class Perlin {
 
 	public var repeat : Int;
+
+	/** Keep result in the [-1, 1] range **/
+	public var normalize : Bool;
+
 	#if flash
 	var buf : flash.utils.ByteArray;
 	#else
@@ -154,23 +158,31 @@ class Perlin {
 	public function perlin( seed : Int, x : Float, y : Float, octaves : Int, persist : Float = 0.5, lacunarity = 2.0 ) {
 		var v = 0.;
 		var k = 1.;
+		var sum = 0.;
 		for( i in 0...octaves ) {
 			v += inlineGradient(seed + i, x, y) * k;
+			sum += k;
 			k *= persist;
 			x *= lacunarity;
 			y *= lacunarity;
 		}
+		if(normalize)
+			v /= sum;
 		return v;
 	}
 
 	public function perlin1D( seed : Int, x : Float, octaves : Int, persist : Float = 0.5, lacunarity = 2.0 ) {
 		var v = 0.;
 		var k = 1.;
+		var sum = 0.;
 		for( i in 0...octaves ) {
 			v += gradient1D(seed + i, x) * k;
+			sum += k;
 			k *= persist;
 			x *= lacunarity;
 		}
+		if(normalize)
+			v /= sum;
 		return v;
 	}
 

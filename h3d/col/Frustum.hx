@@ -21,6 +21,18 @@ class Frustum {
 			loadMatrix(mvp);
 	}
 
+	public function clone() {
+		var f = new Frustum();
+		f.pleft.load(pleft);
+		f.pright.load(pright);
+		f.ptop.load(ptop);
+		f.pbottom.load(pbottom);
+		f.pnear.load(pnear);
+		f.pfar.load(pfar);
+		f.checkNearFar = checkNearFar;
+		return f;
+	}
+
 	public function loadMatrix( mvp : h3d.Matrix ) {
 		pleft.load(Plane.frustumLeft(mvp));
 		pright.load(Plane.frustumRight(mvp));

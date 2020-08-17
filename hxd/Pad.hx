@@ -416,7 +416,9 @@ class Pad {
 				pad.connected = false;
 				pad.onDisconnect();
 			});
+			#if !manual_sync_pad
 			haxe.MainLoop.add(syncPads);
+			#end
 		}
 		#end
 	}

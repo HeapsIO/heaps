@@ -187,6 +187,22 @@ class Cache {
 		for( s in shaderDatas ) Printer.check(s.inst.shader);
 		#end
 
+		#if shader_debug_while
+		for( s in shaders ) {
+			function checkRec( e : TExpr ) {
+				switch( e.e ) {
+				case TWhile(cond,_,_):
+					var name = @:privateAccess s.shader.data.name;
+					haxe.Log.trace("FOUND SHADER while( "+Printer.toString(cond)+")", { fileName : name, methodName : "", lineNumber : 0, className : name });
+				default:
+				}
+				e.iter(checkRec);
+			}
+			for( f in @:privateAccess s.instance.shader.funs )
+				checkRec(f.expr);
+		}
+		#end
+
 		#if shader_debug_dump
 		var shaderId = @:privateAccess RuntimeShader.UID;
 		if( shaderId == 0 ) try sys.FileSystem.createDirectory("shaders") catch( e : Dynamic ) {};
@@ -208,6 +224,26 @@ class Cache {
 			var shaders = [for( s in shaderDatas ) Printer.shaderToString(s.inst.shader)];
 			e.msg += "\n\nin\n\n" + shaders.join("\n-----\n");
 			throw e;
+		}
+
+		if( batchMode ) {
+			function checkRec( v : TVar ) {
+				if( v.qualifiers != null && v.qualifiers.indexOf(PerObject) >= 0 ) {
+					if( v.qualifiers.length == 1 ) v.qualifiers = null else {
+						v.qualifiers = v.qualifiers.copy();
+						v.qualifiers.remove(PerObject);
+					}
+					if( v.kind != Var ) v.kind = Local;
+				}
+				switch( v.type ) {
+				case TStruct(vl):
+					for( v in vl )
+						checkRec(v);
+				default:
+				}
+			}
+			for( v in s.vars )
+				checkRec(v);
 		}
 
 		#if debug
@@ -235,12 +271,6 @@ class Cache {
 
 		var prev = s;
 		var s = try new hxsl.Splitter().split(s) catch( e : Error ) { e.msg += "\n\nin\n\n"+Printer.shaderToString(s); throw e; };
-
-		if( batchMode ) {
-			for( v in s.vertex.vars )
-				if( v.qualifiers != null && v.qualifiers.indexOf(PerObject) >= 0 )
-					v.kind = Local;
-		}
 
 		#if debug
 		Printer.check(s.vertex,[prev]);
@@ -355,6 +385,7 @@ class Cache {
 			switch( g.kind ) {
 			case Param:
 				var out = [];
+				var count = 0;
 				for( a in alloc ) {
 					if( a.v == null ) continue; // padding
 					var p = params.get(a.v.id);
@@ -362,16 +393,26 @@ class Cache {
 						var ap = new AllocParam(a.v.name, a.pos, -1, -1, a.v.type);
 						ap.perObjectGlobal = new AllocGlobal( -1, getPath(a.v), a.v.type);
 						out.push(ap);
+						count++;
 						continue;
 					}
-					out.push(new AllocParam(a.v.name, a.pos, p.instance, p.index, a.v.type));
+					var ap = new AllocParam(a.v.name, a.pos, p.instance, p.index, a.v.type);
+					switch( a.v.type ) {
+					case TArray(t,_) if( t.isSampler() ):
+						// hack to mark array of texture, see ShaderManager.fillParams
+						ap.pos = -a.size;
+						count += a.size;
+					default:
+						count++;
+					}
+					out.push(ap);
 				}
 				for( i in 0...out.length - 1 )
 					out[i].next = out[i + 1];
 				switch( g.type ) {
 				case TArray(t, _) if( t.isSampler() ):
 					textures.push({ t : t, all : out });
-					c.texturesCount += out.length;
+					c.texturesCount += count;
 				case TArray(TVec(4, VFloat), SConst(size)):
 					c.params = out[0];
 					c.paramsSize = size;
