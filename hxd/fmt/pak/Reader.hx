@@ -34,7 +34,7 @@ class Reader {
 			for( i in 0...i.readInt32() )
 				f.content.push(readFile());
 		} else {
-			f.dataPosition = i.readInt32();
+			f.dataPosition = flags & 2 != 0 ? i.readDouble() : i.readInt32();
 			f.dataSize = i.readInt32();
 			f.checksum = i.readInt32();
 		}

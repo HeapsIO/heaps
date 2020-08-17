@@ -602,10 +602,10 @@ class Matrix {
 
 	public function colorSaturate( sat : Float ) {
 		sat += 1;
-		var is = 1 - sat;
-		var r = is * lumR;
-		var g = is * lumG;
-		var b = is * lumB;
+		var ins = 1 - sat;
+		var r = ins * lumR;
+		var g = ins * lumG;
+		var b = ins * lumB;
 		var tmp = tmp;
 		tmp._11 = r + sat;
 		tmp._12 = r;

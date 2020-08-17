@@ -129,6 +129,10 @@ class LocalEntry extends FileEntry {
 		return sys.FileSystem.stat(originalFile != null ? originalFile : file).mtime.getTime();
 	}
 
+	#if hl
+	#if (hl_ver >= version("1.12.0")) @:hlNative("std","file_is_locked") #end static function fileIsLocked( b : hl.Bytes ) { return false; }
+	#end
+
 	static function checkFiles() {
 		var w = WATCH_LIST[WATCH_INDEX++];
 		if( w == null ) {
@@ -138,7 +142,7 @@ class LocalEntry extends FileEntry {
 		var t = try w.getModifTime() catch( e : Dynamic ) -1.;
 		if( t == w.watchTime ) return;
 
-		#if sys
+		#if (sys || nodejs)
 		if( tmpDir == null ) {
 			tmpDir = Sys.getEnv("TEMP");
 			if( tmpDir == null ) tmpDir = Sys.getEnv("TMPDIR");
@@ -148,8 +152,14 @@ class LocalEntry extends FileEntry {
 		if( sys.FileSystem.exists(lockFile) ) return;
 		if( !w.isDirectory )
 		try {
-			var fp = sys.io.File.append(w.file);
-			fp.close();
+			#if nodejs
+			var cst = js.node.Fs.constants;
+			var fid = js.node.Fs.openSync(w.file, cast (cst.O_RDONLY | cst.O_EXCL | 0x10000000));
+			js.node.Fs.closeSync(fid);
+			#elseif hl
+			if( fileIsLocked(@:privateAccess Sys.getPath(w.file)) )
+				return;
+			#end
 		}catch( e : Dynamic ) return;
 		#end
 

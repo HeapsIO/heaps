@@ -33,6 +33,7 @@ class MeshBatch extends Mesh {
 	var modelViewInverseID = hxsl.Globals.allocID("global.modelViewInverse");
 	var colorSave = new h3d.Vector();
 	var colorMult : h3d.shader.ColorMult;
+	var needUpload = false;
 
 	/**
 		Tells if we can use material.color as a global multiply over each instance color (default: true)
@@ -242,6 +243,7 @@ class MeshBatch extends Mesh {
 			}
 			p = p.next;
 		}
+		needUpload = true;
 	}
 
 	public function emitInstance() {
@@ -256,18 +258,26 @@ class MeshBatch extends Mesh {
 		curInstances++;
 	}
 
+	public inline function canEmitInstance() {
+		return curInstances < maxInstances;
+	}
+
 	override function sync(ctx:RenderContext) {
 		super.sync(ctx);
 		if( curInstances == 0 ) return;
 		var p = dataPasses;
 		while( p != null ) {
+			var upload = needUpload;
 			if( p.buffer.isDisposed() ) {
 				p.buffer = hxd.impl.Allocator.get().allocBuffer(p.count * shaderInstances,4,UniformDynamic);
 				p.shader.Batch_Buffer = p.buffer;
+				upload = true;
 			}
-			p.buffer.uploadVector(p.data,0,curInstances * p.count);
+			if( upload )
+				p.buffer.uploadVector(p.data,0,curInstances * p.count);
 			p = p.next;
 		}
+		needUpload = false;
 		instanced.commands.setCommand(curInstances,indexCount);
 		if( colorMult != null ) colorMult.color.load(material.color);
 	}

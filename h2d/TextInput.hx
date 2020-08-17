@@ -121,9 +121,22 @@ class TextInput extends Text {
 		var oldText = text;
 
 		switch( e.keyCode ) {
+		case K.LEFT if (K.isDown(K.CTRL)):
+			if (cursorIndex > 0) {
+				var charset = hxd.Charset.getDefault();
+				while (cursorIndex > 0 && charset.isSpace(StringTools.fastCodeAt(text, cursorIndex - 1))) cursorIndex--;
+				while (cursorIndex > 0 && !charset.isSpace(StringTools.fastCodeAt(text, cursorIndex - 1))) cursorIndex--;
+			}
 		case K.LEFT:
 			if( cursorIndex > 0 )
 				cursorIndex--;
+		case K.RIGHT if (K.isDown(K.CTRL)):
+			var len = text.length;
+			if (cursorIndex < text.length) {
+				var charset = hxd.Charset.getDefault();
+				while (cursorIndex < len && charset.isSpace(StringTools.fastCodeAt(text, cursorIndex))) cursorIndex++;
+				while (cursorIndex < len && !charset.isSpace(StringTools.fastCodeAt(text, cursorIndex))) cursorIndex++;
+			}
 		case K.RIGHT:
 			if( cursorIndex < text.length )
 				cursorIndex++;
@@ -149,7 +162,7 @@ class TextInput extends Text {
 				text = text.substr(0, cursorIndex) + text.substr(cursorIndex + 1);
 				onChange();
 			}
-		case K.ENTER, K.NUMPAD_ENTER:
+		case K.ESCAPE, K.ENTER, K.NUMPAD_ENTER:
 			cursorIndex = -1;
 			interactive.blur();
 			return;
@@ -163,6 +176,13 @@ class TextInput extends Text {
 			if( redo.length > 0 && canEdit ) {
 				undo.push(curHistoryState());
 				setState(redo.pop());
+			}
+			return;
+		case K.A if (K.isDown(K.CTRL)):
+			if (text != "") {
+				cursorIndex = text.length;
+				selectionRange = {start: 0, length: text.length};
+				selectionSize = 0;
 			}
 			return;
 		default:
@@ -287,7 +307,7 @@ class TextInput extends Text {
 	override function draw(ctx:RenderContext) {
 		if( inputWidth != null ) {
 			var h = localToGlobal(new h2d.col.Point(inputWidth, font.lineHeight));
-			ctx.setRenderZone(absX, absY, h.x - absX, h.y - absY);
+			ctx.pushRenderZone(absX, absY, h.x - absX, h.y - absY);
 		}
 
 		if( cursorIndex >= 0 && (text != cursorText || cursorIndex != cursorXIndex) ) {
@@ -331,7 +351,7 @@ class TextInput extends Text {
 		}
 
 		if( inputWidth != null )
-			ctx.clearRenderZone();
+			ctx.popRenderZone();
 	}
 
 	public function focus() {

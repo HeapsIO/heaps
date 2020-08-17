@@ -189,5 +189,4 @@ class Layers extends Object {
 		}
 	}
 
-
 }

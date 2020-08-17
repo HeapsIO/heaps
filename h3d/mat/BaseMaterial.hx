@@ -72,6 +72,7 @@ class BaseMaterial extends hxd.impl.AnyProps implements hxd.impl.Serializable {
 		var p = getPass(name);
 		if( p != null ) return p;
 		var p = new Pass(name, null, inheritMain ? mainPass : null);
+		if( inheritMain && mainPass != null ) p.batchMode = mainPass.batchMode;
 		addPass(p);
 		return p;
 	}

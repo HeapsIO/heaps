@@ -114,6 +114,8 @@ class PointShadowMap extends Shadows {
 	}
 
 	function createStaticTexture() : h3d.mat.Texture {
+		if( staticTexture != null && staticTexture.width == size && staticTexture.width == size && staticTexture.format == format )
+			return staticTexture;
 		if( staticTexture != null )
 			staticTexture.dispose();
 		staticTexture = new h3d.mat.Texture(size, size, [Target, Cube], format);
@@ -165,7 +167,7 @@ class PointShadowMap extends Shadows {
 		return tmpTex;
 	}
 
-	override function draw( passes, ?sort ) {
+	override function draw( passes : h3d.pass.PassList, ?sort ) {
 		if( !enabled )
 			return;
 
@@ -187,8 +189,8 @@ class PointShadowMap extends Shadows {
 			return;
 		}
 
-		var texture = ctx.textures.allocTarget("pointShadowMap", size, size, false, format, true);
-		if(depth == null || depth.width != size || depth.height != size || depth.isDisposed() ) {
+		var texture = ctx.computingStatic ? createStaticTexture() : ctx.textures.allocTarget("pointShadowMap", size, size, false, format, true);
+		if( depth == null || depth.width != size || depth.height != size || depth.isDisposed() ) {
 			if( depth != null ) depth.dispose();
 			depth = new h3d.mat.DepthBuffer(size, size);
 		}
@@ -259,9 +261,5 @@ class PointShadowMap extends Shadows {
 		if( mode != Static && mode != Mixed )
 			return;
 		draw(passes);
-		if( staticTexture == null )
-			createStaticTexture();
-		CubeCopy.run(pshader.shadowMap, staticTexture);
-		pshader.shadowMap = staticTexture;
 	}
 }

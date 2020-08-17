@@ -52,7 +52,17 @@ class Sweep
 	{
 		// trace(point);
 		var node = this.context.locateNode(point);
-		var new_node = newFrontTriangle(point, node);
+		var new_node = null;
+		try	new_node = newFrontTriangle(point, node)
+		catch(e: Dynamic) { }
+
+		if(new_node == null) {
+			#if release
+			new_node = node;
+			#else
+			throw 'Failed to add point (${point.x}, ${point.y})';
+			#end
+		}
 
 		// Only need to check +epsilon since point never have smaller
 		// x value than node due to how we fetch nodes from the front
@@ -610,7 +620,7 @@ class Sweep
 		}
 		else
 		{
-			throw "Sweep:: [Unsupported] Sweep.NextFlipPoint: opposing point on constrained edge!";
+			throw 'Sweep:: [Unsupported] Sweep.NextFlipPoint: opposing point on constrained edge (${op.x}, ${op.y})';
 		}
 	}
 

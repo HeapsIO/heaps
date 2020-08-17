@@ -436,7 +436,7 @@ class Flows extends hxd.App {
 			flow.maxWidth = 350;
 			flow.minHeight = flow.maxHeight = 350;
 			flow.layout = Stack;
-			flow.overflow = true;
+			flow.overflow = Limit;
 			currentFlows.push(flow);
 
 			var sub = new h2d.Flow(flow);

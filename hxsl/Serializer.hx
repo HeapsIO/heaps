@@ -94,7 +94,7 @@ class Serializer {
 			}
 		case TChannel(size):
 			out.addByte(size);
-		case TVoid, TInt, TBool, TFloat, TString, TMat3, TMat4, TMat3x4, TSampler2D, TSampler2DArray, TSamplerCube:
+		case TVoid, TInt, TBool, TFloat, TString, TMat2, TMat3, TMat4, TMat3x4, TSampler2D, TSampler2DArray, TSamplerCube:
 		}
 	}
 
@@ -141,6 +141,7 @@ class Serializer {
 			TBuffer(t, v == null ? SConst(readVarInt()) : SVar(v));
 		case 17:
 			TChannel(input.readByte());
+		case 18: TMat2;
 		default:
 			throw "assert";
 		}

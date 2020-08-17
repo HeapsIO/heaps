@@ -25,19 +25,20 @@ abstract PixelsARGB(Pixels) to Pixels {
 	}
 }
 
-@:forward(bytes, format, width, height, offset, flags, clear, dispose, toPNG, clone, toVector, sub, blit)
+@:forward(bytes, format, width, height, offset, flags, clear, dispose, toPNG, clone, toVector, sub, blit, invalidFormat, willChange)
+@:access(hxd.Pixels)
 abstract PixelsFloat(Pixels) to Pixels {
 
 	public inline function getPixelF(x, y) {
 		switch(this.format) {
 			case R32F:
-				var pix = ((x + y * this.width) << 1) + this.offset;
+				var pix = ((x + y * this.width) << 2) + this.offset;
 				return new h3d.Vector(this.bytes.getFloat(pix));
 			case RGBA32F:
 				var pix = ((x + y * this.width) << 4) + this.offset;
 				return new h3d.Vector(this.bytes.getFloat(pix),this.bytes.getFloat(pix+4),this.bytes.getFloat(pix+8),this.bytes.getFloat(pix+12));
 			default:
-				invalidFormat();
+				this.invalidFormat();
 				return null;
 		}
 	}
@@ -45,7 +46,7 @@ abstract PixelsFloat(Pixels) to Pixels {
 	public inline function setPixelF(x, y, v:h3d.Vector) {
 		switch(this.format) {
 			case R32F:
-				var pix = ((x + y * this.width) << 1) + this.offset;
+				var pix = ((x + y * this.width) << 2) + this.offset;
 				this.bytes.setFloat(pix, v.x);
 			case RGBA32F:
 				var pix = ((x + y * this.width) << 4) + this.offset;
@@ -54,7 +55,7 @@ abstract PixelsFloat(Pixels) to Pixels {
 				this.bytes.setFloat(pix + 8, v.z);
 				this.bytes.setFloat(pix + 12, v.w);
 			default:
-				invalidFormat();
+				this.invalidFormat();
 		}
 	}
 
@@ -63,8 +64,25 @@ abstract PixelsFloat(Pixels) to Pixels {
 		return cast p;
 	}
 
-	function invalidFormat() {
-		throw "Unsupported format for this operation : " + this.format;
+	public function convert( target : PixelFormat ) {
+		if( this.format == target )
+			return;
+		this.willChange();
+		var bytes : hxd.impl.UncheckedBytes = this.bytes;
+		switch( [this.format, target] ) {
+	
+		case [RGBA32F, R32F]:
+			var nbytes = haxe.io.Bytes.alloc(this.height * this.width * 4);
+			var out : hxd.impl.UncheckedBytes = nbytes;
+			for( i in 0 ... this.width * this.height ) 
+				nbytes.setFloat(i << 2, this.bytes.getFloat(i << 4));
+			this.bytes = nbytes;
+
+		default:
+			throw "Cannot convert from " + this.format + " to " + target;
+		}
+
+		this.innerFormat = target;
 	}
 }
 
@@ -354,6 +372,12 @@ class Pixels {
 				bytes[p+1] = bytes[p];
 				bytes[p] = a;
 			}
+		case [RGBA, R8]:
+			var nbytes = haxe.io.Bytes.alloc(width * height);
+			var out : hxd.impl.UncheckedBytes = nbytes;
+			for( i in 0...width*height )
+				out[i] = bytes[i << 2];
+			this.bytes = nbytes;
 
 		case [S3TC(a),S3TC(b)] if( a == b ):
 		case [ASTC(a),ASTC(b)] if( a == b ):
@@ -400,6 +424,8 @@ class Pixels {
 		var p = ((x + yflip(y) * width) * bytesPerPixel) + offset;
 		willChange();
 		switch(format) {
+		case R8:
+			bytes.set(p, color);
 		case BGRA:
 			bytes.setInt32(p, color);
 		case RGBA:

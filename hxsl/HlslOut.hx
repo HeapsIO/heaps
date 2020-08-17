@@ -33,6 +33,7 @@ class HlslOut {
 		m.set(BVec2, "bool2");
 		m.set(BVec3, "bool3");
 		m.set(BVec4, "bool4");
+		m.set(FragCoord,"_in.__pos__");
 		for( g in m )
 			KWDS.set(g, true);
 		m;
@@ -98,6 +99,8 @@ class HlslOut {
 			case VBool: add("bool");
 			}
 			add(size);
+		case TMat2:
+			add("float2x2");
 		case TMat3:
 			add("float3x3");
 		case TMat4:
@@ -315,6 +318,13 @@ class HlslOut {
 				decl("float3x3 mat3( float4x4 m ) { return (float3x3)m; }");
 				decl("float3x3 mat3( float4x3 m ) { return (float3x3)m; }");
 				decl("float3x3 mat3( float3 a, float3 b, float3 c ) { float3x3 m; m._m00_m10_m20 = a; m._m01_m11_m21 = b; m._m02_m12_m22 = c; return m; }");
+				decl("float3x3 mat3( float c00, float c01, float c02, float c10, float c11, float c12, float c20, float c21, float c22 ) { float3x3 m = { c00, c10, c20, c01, c11, c21, c02, c12, c22 }; return m; }");
+			case Mat2:
+				decl("float2x2 mat2( float4x4 m ) { return (float2x2)m; }");
+				decl("float2x2 mat2( float4x3 m ) { return (float2x2)m; }");
+				decl("float2x2 mat2( float3x3 m ) { return (float2x2)m; }");
+				decl("float2x2 mat2( float2 a, float2 b ) { float2x2 m; m._m00_m10 = a; m._m01_m11 = b; return m; }");
+				decl("float2x2 mat2( float c00, float c01, float c10, float c11 ) { float2x2 m = { c00, c10, c01, c11 }; return m; }");
 			case Mod:
 				declMods();
 			case Pow:
@@ -400,7 +410,7 @@ class HlslOut {
 				add(",1.),");
 				addValue(e2, tabs);
 				add(")");
-			case [OpMult, TVec(_), TMat3 | TMat4]:
+			case [OpMult, TVec(_), TMat2 | TMat3 | TMat4]:
 				add("mul(");
 				addValue(e1, tabs);
 				add(",");
