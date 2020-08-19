@@ -70,11 +70,11 @@ abstract PixelsFloat(Pixels) to Pixels {
 		this.willChange();
 		var bytes : hxd.impl.UncheckedBytes = this.bytes;
 		switch( [this.format, target] ) {
-	
+
 		case [RGBA32F, R32F]:
 			var nbytes = haxe.io.Bytes.alloc(this.height * this.width * 4);
 			var out : hxd.impl.UncheckedBytes = nbytes;
-			for( i in 0 ... this.width * this.height ) 
+			for( i in 0 ... this.width * this.height )
 				nbytes.setFloat(i << 2, this.bytes.getFloat(i << 4));
 			this.bytes = nbytes;
 
@@ -379,6 +379,17 @@ class Pixels {
 				out[i] = bytes[i << 2];
 			this.bytes = nbytes;
 
+		case [R32F, RGBA|BGRA]:
+			var fbytes = this.bytes;
+			var p = 0;
+			for( i in 0...width*height ) {
+				var v = Std.int(fbytes.getFloat(p)*255);
+				if( v < 0 ) v = 0 else if( v > 255 ) v = 255;
+				bytes[p++] = v;
+				bytes[p++] = v;
+				bytes[p++] = v;
+				bytes[p++] = 0xFF;
+			}
 		case [S3TC(a),S3TC(b)] if( a == b ):
 			// nothing
 
