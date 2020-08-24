@@ -21,6 +21,7 @@ enum abstract TifTag(Int) {
 	public inline function new(v) {
 		this = v;
 	}
+	public inline function toInt() return this;
 }
 
 enum abstract TifType(Int) {
@@ -39,6 +40,19 @@ enum abstract TifType(Int) {
 	public inline function new(v) {
 		this = v;
 	}
+	public inline function toInt() return this;
+
+
+	public function getSize() {
+		return switch( new TifType(this) ) {
+		case Byte, Ascii, SByte, UndefByte: 1;
+		case Short, SShort: 2;
+		case Long, SLong, Float: 4;
+		case Rational, SRational, Double: 8;
+		default: throw "assert";
+		}
+	}
+
 }
 
 enum TifValue {
@@ -49,7 +63,7 @@ enum TifValue {
 }
 
 typedef TifFile = {
-	var tags : Array<{ tag : TifTag, value : TifValue }>;
+	var tags : Array<{ tag : TifTag, type : TifType, value : TifValue }>;
 	var data : Array<haxe.io.Bytes>;
 }
 

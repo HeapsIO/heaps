@@ -9,16 +9,6 @@ class Reader {
 		this.f = f;
 	}
 
-	static function getTypeSize(t : TifType) {
-		return switch( t ) {
-		case Byte, Ascii, SByte, UndefByte: 1;
-		case Short, SShort: 2;
-		case Long, SLong, Float: 4;
-		case Rational, SRational, Double: 8;
-		default: 0;
-		}
-	}
-
 	public function read() {
 		var order = f.readString(2);
 		f.bigEndian = order == "MM";
@@ -29,18 +19,19 @@ class Reader {
 		var tags = [];
 		while( offset != 0 ) {
 			f.seek(offset, SeekBegin);
-			for( i in 0...f.readUInt16() ) {
+			var count = f.readUInt16();
+			for( i in 0...count ) {
 				var tag = new TifTag(f.readUInt16());
 				var type = new TifType(f.readUInt16());
 				var count = f.readInt32();
 				var next = f.tell();
-				if( count * getTypeSize(type) > 4 ) {
+				if( count * type.getSize() > 4 ) {
 					var offset = f.readInt32();
 					f.seek(offset, SeekBegin);
 				}
 				var value = if( count == 1 || type == Ascii ) readValue(type) else VArray([for( i in 0...count ) readValue(type)]);
 				f.seek(next + 4, SeekBegin);
-				tags.push({ tag : tag, value : value });
+				tags.push({ tag : tag, type : type, value : value });
 			}
 			offset = f.readInt32();
 		}
@@ -53,6 +44,11 @@ class Reader {
 		var offsets = Utils.get(tif, StripOffsets);
 		var bytes = Utils.get(tif, StripByteCounts);
 		if( offsets == null || bytes == null ) throw "Missing image data";
+
+		for( t in tags.copy() )
+			if( t.tag == StripOffsets || t.tag == StripByteCounts )
+				tags.remove(t);
+
 		switch( [offsets,bytes] ) {
 		case [VArray(offsets), VArray(bytes)] if( offsets.length == bytes.length ):
 			for( i in 0...offsets.length )
