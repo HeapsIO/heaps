@@ -27,6 +27,7 @@ class Writer {
 			f.write(d);
 		tags.push({ tag : StripOffsets, type : Long, value : VArray([for( o in offsets ) VInt(o)]) });
 		tags.push({ tag : StripByteCounts, type : Long, value : VArray([for( o in lengths ) VInt(o)]) });
+		tags.sort((t1,t2) -> t1.tag.toInt() - t2.tag.toInt());
 
 		f.writeUInt16(tags.length);
 		pos += 2;
