@@ -12,15 +12,14 @@ class Writer {
 	public function write( tif : TifFile ) {
 		f.writeString("II");
 		f.writeUInt16(42);
-		var pos = 4;
+		var pos = 8;
 		var offsets = [], lengths = [];
 		for( d in tif.data ) {
 			offsets.push(pos);
 			lengths.push(d.length);
 			pos += d.length;
 		}
-		f.writeInt32(pos + 4);
-		pos += 4;
+		f.writeInt32(pos);
 
 		var tags = tif.tags.copy();
 		for( d in tif.data )
