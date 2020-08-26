@@ -71,7 +71,6 @@ class Rand {
 	/**
 		Return a random number >= 0.0 and < 1.0.
 	**/
-	@:dox(show)
 	public inline function rand() {
 		// we can't use a divider > 16807 or else two consecutive seeds
 		// might generate a similar float
