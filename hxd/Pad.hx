@@ -41,6 +41,7 @@ typedef PadConfig = {
 	LT : Int,
 	RT : Int,
 	back : Int,
+	home : Int,
 	start : Int,
 	analogClick : Int,
 	ranalogClick : Int,
@@ -97,6 +98,7 @@ class Pad {
 		LT : 4,
 		RT : 5,
 		back : 10,
+		home : 11,
 		start : 12,
 		analogClick : 13,
 		ranalogClick : 14,
@@ -104,7 +106,7 @@ class Pad {
 		dpadDown : 18,
 		dpadLeft : 19,
 		dpadRight : 20,
-		names : ["LX","LY","RX","RY","LT","RT","A","B","X","Y","Back",null,"Start","LCLK","RCLK","LB","RB","DUp","DDown","DLeft","DRight"],
+		names : ["LX","LY","RX","RY","LT","RT","A","B","X","Y","Back","Home","Start","LCLK","RCLK","LB","RB","DUp","DDown","DLeft","DRight"],
 	};
 	#end
 
