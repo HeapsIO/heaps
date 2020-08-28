@@ -29,14 +29,18 @@ abstract PixelsARGB(Pixels) to Pixels {
 @:access(hxd.Pixels)
 abstract PixelsFloat(Pixels) to Pixels {
 
-	public inline function getPixelF(x, y) {
+	public inline function getPixelF(x, y, ?v:h3d.Vector) {
+		if( v == null )
+			v = new h3d.Vector();
 		switch(this.format) {
 			case R32F:
 				var pix = ((x + y * this.width) << 2) + this.offset;
-				return new h3d.Vector(this.bytes.getFloat(pix));
+				v.set(this.bytes.getFloat(pix),0,0,0);
+				return v;
 			case RGBA32F:
 				var pix = ((x + y * this.width) << 4) + this.offset;
-				return new h3d.Vector(this.bytes.getFloat(pix),this.bytes.getFloat(pix+4),this.bytes.getFloat(pix+8),this.bytes.getFloat(pix+12));
+				v.set(this.bytes.getFloat(pix), this.bytes.getFloat(pix+4), this.bytes.getFloat(pix+8), this.bytes.getFloat(pix+12));
+				return v;
 			default:
 				this.invalidFormat();
 				return null;
