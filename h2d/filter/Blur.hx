@@ -28,7 +28,7 @@ class Blur extends Filter {
 	var pass : h3d.pass.Blur;
 
 	/**
-		Create new Blur filter.
+		Create a new Blur filter.
 		@param radius The blur distance in pixels.
 		@param gain The color gain when blurring.
 		@param quality The sample count on each pixel as a tradeoff of speed/quality.

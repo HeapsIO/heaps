@@ -29,8 +29,8 @@ class Filter {
 	**/
 	public var boundsExtend : Float = 0.;
 	/**
-		When enabled, some filters will use billinear filtering on temporary textures.  
-		Does not affect majority of filters. (See `h2d.filter.AbstractMask`)
+		When enabled, some filters will use bilinear filtering on temporary textures.  
+		Does not affect the majority of filters. (See `h2d.filter.AbstractMask`)
 	**/
 	public var smooth = false;
 	/**

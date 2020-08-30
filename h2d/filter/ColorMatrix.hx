@@ -1,7 +1,7 @@
 package h2d.filter;
 
 /**
-	Applies color correction filter based on provided matrix.
+	Applies color correction filter based on the provided matrix.
 
 	Matrix values are as following:
 	```

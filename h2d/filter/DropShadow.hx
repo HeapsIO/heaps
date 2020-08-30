@@ -11,15 +11,15 @@ class DropShadow extends Glow {
 	**/
 	public var distance : Float;
 	/**
-		Shadow offset direction agnle.
+		Shadow offset direction angle.
 	**/
 	public var angle : Float;
 	var alphaPass = new h3d.mat.Pass("");
 
 	/**
-		Create new Shadow filter.
+		Create a new Shadow filter.
 		@param distance The offset of the shadow in the `angle` direction.
-		@param angle Shadow offset direction agnle.
+		@param angle Shadow offset direction angle.
 		@param color The color of the shadow.
 		@param alpha Transparency value of the shadow.
 		@param radius The shadow glow distance in pixels.

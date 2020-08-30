@@ -2,9 +2,9 @@ package h2d.filter;
 import hxd.Math;
 
 /**
-	Displacement filter allows to apply a normal map to the filtered Object in order to displace pixels.
+	Displacement filter allows applying a normal map to the filtered Object in order to displace pixels.
 
-	Uses red and green channels to displaces horizontal and vertical axes acoordingly.
+	Uses red and green channels to displaces horizontal and vertical axes accordingly.
 **/
 class Displacement extends Filter {
 
@@ -21,7 +21,7 @@ class Displacement extends Filter {
 	**/
 	public var dispY : Float;
 	/**
-		When enabled, displacement map will wrap around when lookup reaches it's edges.
+		When enabled, the displacement map will wrap around when lookup reaches its edges.
 		Otherwise out-of-bounds values are clamped to the border.
 	**/
 	public var wrap(default, set) : Bool;
@@ -32,7 +32,7 @@ class Displacement extends Filter {
 		@param normalMap The normal map used for displacement lookup.
 		@param dispX Horizontal displacement distance in pixels.
 		@param dispY Vertical displacement distance in pixels.
-		@param wrap Wrap normal map around when lookup uv goes out of bounds.
+		@param wrap Wrap normal map around when lookup UV goes out of bounds.
 	**/
 	public function new( normalMap : h2d.Tile, dispX : Float = 5., dispY = 5., wrap = true ) {
 		super();

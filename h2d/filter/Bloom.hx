@@ -8,17 +8,17 @@ class Bloom extends Blur {
 
 	var bloom : h3d.pass.ScreenFx<h3d.shader.Bloom>;
 	/**
-		The bloom luminocity multiplier.
+		The bloom luminosity multiplier.
 	**/
 	public var amount(get, set) : Float;
 	/**
-		The bloom luminocity power.
+		The bloom luminosity power.
 	**/
 	public var power(get, set) : Float;
 
 	/**
-		@param power The bloom luminocity power.
-		@param amount The bloom luminocity multiplier.
+		@param power The bloom luminosity power.
+		@param amount The bloom luminosity multiplier.
 		@param radius The bloom glow distance in pixels.
 		@param gain The bloom color intensity.
 		@param quality The sample count on each pixel as a tradeoff of speed/quality.
