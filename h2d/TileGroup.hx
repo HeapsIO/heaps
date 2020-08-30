@@ -537,7 +537,7 @@ class TileLayerContent extends h3d.prim.Primitive {
 	entire group have to be cleared with `TileGroup.clear` and repopulated from ground up.
 
 	Usage note: While TileGroup allows for multiple unique textures, each texture swap causes a new drawcall,
-	and due to that it's recommended to minimize the amount of used textures per TileGroup,
+	and due to that it's recommended to minimize the amount of used textures per TileGroup instance,
 	ideally limiting to only one texture.
 **/
 class TileGroup extends Drawable {

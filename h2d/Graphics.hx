@@ -151,7 +151,9 @@ private class GraphicsContent extends h3d.prim.Primitive {
 	A simple interface to draw arbitrary 2D geometry.
 
 	Usage notes:
-	* When rendering Tiles, there is a limitation of only one unique Texture per Graphics instance.
+	* While Graphics allows for multiple unique textures, each texture swap causes a new drawcall,
+	and due to that it's recommended to minimize the amount of used textures per Graphics instance,
+	ideally limiting to only one texture.
 	* Due to how Graphics operate, removing them from the active `h2d.Scene` will cause a loss of all data.
 **/
 class Graphics extends Drawable {
