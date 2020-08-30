@@ -1,4 +1,6 @@
 package h2d;
+import h2d.RenderContext;
+import h2d.impl.BatchDrawState;
 import hxd.Math;
 
 private typedef GraphicsPoint = hxd.poly2tri.Point;
@@ -28,8 +30,9 @@ private class GraphicsContent extends h3d.prim.Primitive {
 
 	var tmp : hxd.FloatBuffer;
 	var index : hxd.IndexBuffer;
+	var state : BatchDrawState;
 
-	var buffers : Array<{ buf : hxd.FloatBuffer, vbuf : h3d.Buffer, idx : hxd.IndexBuffer, ibuf : h3d.Indexes }>;
+	var buffers : Array<{ buf : hxd.FloatBuffer, vbuf : h3d.Buffer, idx : hxd.IndexBuffer, ibuf : h3d.Indexes, state : BatchDrawState }>;
 	var bufferDirty : Bool;
 	var indexDirty : Bool;
 	#if track_alloc
@@ -38,6 +41,7 @@ private class GraphicsContent extends h3d.prim.Primitive {
 
 	public function new() {
 		buffers = [];
+		state = new BatchDrawState();
 		#if track_alloc
 		this.allocPos = new hxd.impl.AllocPos();
 		#end
@@ -45,6 +49,7 @@ private class GraphicsContent extends h3d.prim.Primitive {
 
 	public inline function addIndex(i) {
 		index.push(i);
+		state.add(1);
 		indexDirty = true;
 	}
 
@@ -60,13 +65,22 @@ private class GraphicsContent extends h3d.prim.Primitive {
 		bufferDirty = true;
 	}
 
+	public function setTile( tile : h2d.Tile ) {
+		state.setTile(tile);
+	}
+
 	public function next() {
 		var nvect = tmp.length >> 3;
-		if( nvect < 1 << 15 )
+		if( nvect < 1 << 15 ) {
 			return false;
-		buffers.push( { buf : tmp, idx : index, vbuf : null, ibuf : null } );
+		}
+		buffers.push( { buf : tmp, idx : index, vbuf : null, ibuf : null, state: state } );
+		
 		tmp = new hxd.FloatBuffer();
 		index = new hxd.IndexBuffer();
+		var tex = state.currentTexture;
+		state = new BatchDrawState();
+		state.setTexture(tex);
 		super.dispose();
 		return true;
 	}
@@ -86,12 +100,11 @@ private class GraphicsContent extends h3d.prim.Primitive {
 		indexDirty = false;
 	}
 
-	override function render( engine : h3d.Engine ) {
-		if (index.length <= 0) return ;
+	public function doRender( ctx : h2d.RenderContext ) {
+		if (index.length <= 0) return;
 		flush();
-		for( b in buffers )
-			engine.renderIndexed(b.vbuf, b.ibuf);
-		super.render(engine);
+		for ( b in buffers ) b.state.drawIndexed(ctx, b.vbuf, b.ibuf);
+		state.drawIndexed(ctx, buffer, indexes);
 	}
 
 	public inline function flush() {
@@ -115,9 +128,11 @@ private class GraphicsContent extends h3d.prim.Primitive {
 		for( b in buffers ) {
 			if( b.vbuf != null ) b.vbuf.dispose();
 			if( b.ibuf != null ) b.ibuf.dispose();
+			b.state.clear();
 			b.vbuf = null;
 			b.ibuf = null;
 		}
+		state.clear();
 		super.dispose();
 	}
 
@@ -393,22 +408,13 @@ class Graphics extends Drawable {
 		to these coordinates.
 	**/
 	public function beginTileFill( ?dx : Float, ?dy : Float, ?scaleX : Float, ?scaleY : Float, ?tile : h2d.Tile ) {
-		beginFill(0xFFFFFF);
-		if( dx == null ) dx = 0;
-		if( dy == null ) dy = 0;
-		if( tile != null ) {
-			if( this.tile != null && tile.getTexture() != this.tile.getTexture() ) {
-				var tex = this.tile.getTexture();
-				if( tex.width != 1 || tex.height != 1 )
-					throw "All tiles must be of the same texture";
-				this.tile = tile;
-			}
-			if( this.tile == null  )
-				this.tile = tile;
-		} else
-			tile = this.tile;
 		if( tile == null )
 			throw "Tile not specified";
+		this.tile = tile;
+		beginFill(0xFFFFFF);
+		content.setTile(tile);
+		if( dx == null ) dx = 0;
+		if( dy == null ) dy = 0;
 		if( scaleX == null ) scaleX = 1;
 		if( scaleY == null ) scaleY = 1;
 		dx -= tile.x;
@@ -641,8 +647,8 @@ class Graphics extends Drawable {
 	}
 
 	override function draw(ctx:RenderContext) {
-		if( !ctx.beginDrawObject(this, tile.getTexture()) ) return;
-		content.render(ctx.engine);
+		if( !ctx.beginDrawBatchState(this) ) return;
+		content.doRender(ctx);
 	}
 
 	override function sync(ctx:RenderContext) {
