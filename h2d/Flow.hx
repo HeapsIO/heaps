@@ -479,12 +479,12 @@ class Flow extends Object {
 
 	function get_innerWidth() {
 		if( needReflow ) reflow();
-		return Math.ceil(calculatedWidth) - (paddingLeft + paddingRight + borderWidth * 2);
+		return Math.ceil(calculatedWidth) - (paddingLeft + paddingRight #if flow_border + borderWidth * 2 #end);
 	}
 
 	function get_innerHeight() {
 		if( needReflow ) reflow();
-		return Math.ceil(calculatedHeight) - (paddingTop + paddingBottom + borderHeight * 2);
+		return Math.ceil(calculatedHeight) - (paddingTop + paddingBottom #if flow_border + borderHeight * 2 #end);
 	}
 
 	function set_paddingLeft(v) {
@@ -768,7 +768,7 @@ class Flow extends Object {
 		if( borderWidth == v )
 			return v;
 		if( background != null ) background.borderWidth = v;
-		needReflow = true;
+		#if flow_border needReflow = true; #end
 		return borderWidth = v;
 	}
 
@@ -776,7 +776,7 @@ class Flow extends Object {
 		if( borderHeight == v )
 			return v;
 		if( background != null ) background.borderHeight = v;
-		needReflow = true;
+		#if flow_border needReflow = true; #end
 		return borderHeight = v;
 	}
 
@@ -795,6 +795,8 @@ class Flow extends Object {
 				isConstraint = false;
 			}
 		}
+		var borderWidth = #if flow_border borderWidth #else 0 #end;
+		var borderHeight = #if flow_border borderHeight #else 0 #end;
 
 		var isConstraintWidth = realMaxWidth >= 0;
 		var isConstraintHeight = realMaxHeight >= 0;

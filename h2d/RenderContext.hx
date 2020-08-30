@@ -560,7 +560,7 @@ class RenderContext extends h3d.impl.RenderContext {
 			// flash does not allow blend separate operations
 			// this will get us good color but wrong alpha
 			#else
-			// accummulate correctly alpha values
+			// accumulate correctly alpha values
 			if( blend == Alpha || blend == Add ) {
 				pass.blendAlphaSrc = One;
 				// when merging
@@ -584,6 +584,28 @@ class RenderContext extends h3d.impl.RenderContext {
 			baseShader.color.set(globalAlpha,globalAlpha,globalAlpha,globalAlpha);
 		} else
 			baseShader.color.set(obj.color.r, obj.color.g, obj.color.b, obj.color.a * globalAlpha);
+	}
+
+	// BatchState render
+	/**
+		Prepares rendering with BatchState.
+		Each state draw should be preceded with `swapTexture` call.
+	**/
+	@:access(h2d.Drawable)
+	public function beginDrawBatchState( obj : h2d.Drawable ) {
+		if ( !beginDraw(obj, null, true) ) return false;
+		setupColor(obj);
+		baseShader.absoluteMatrixA.set(obj.matA, obj.matC, obj.absX);
+		baseShader.absoluteMatrixB.set(obj.matB, obj.matD, obj.absY);
+		return true;
+	}
+
+	/**
+		Swap current active texture and prepares for next drawcall.
+	**/
+	public inline function swapTexture( texture : h3d.mat.Texture ) {
+		this.texture = texture;
+		beforeDraw();
 	}
 
 	/**

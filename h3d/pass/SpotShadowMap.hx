@@ -169,7 +169,7 @@ class SpotShadowMap extends Shadows {
 		lightCamera.pos.set(absPos.tx, absPos.ty, absPos.tz);
 		lightCamera.target.set(absPos.tx + ldir.x, absPos.ty + ldir.y, absPos.tz + ldir.z);
 		lightCamera.fovY = spotLight.angle;
-		lightCamera.zFar = spotLight.maxRange;
+		lightCamera.zFar = spotLight.range;
 		lightCamera.update();
 	}
 

@@ -1,5 +1,8 @@
 package h2d;
 
+import h2d.RenderContext;
+import h2d.impl.BatchDrawState;
+
 private class ElementsIterator {
 	var e : BatchElement;
 	public inline function new(e) {
@@ -203,7 +206,8 @@ class SpriteBatch extends Drawable {
 	var last : BatchElement;
 	var tmpBuf : hxd.FloatBuffer;
 	var buffer : h3d.Buffer;
-	var bufferVertices : Int;
+	var state : BatchDrawState;
+	var empty : Bool;
 
 	/**
 		Create new SpriteBatch instance.
@@ -213,6 +217,7 @@ class SpriteBatch extends Drawable {
 	public function new(t,?parent) {
 		super(parent);
 		tile = t;
+		state = new BatchDrawState();
 	}
 
 	/**
@@ -321,14 +326,16 @@ class SpriteBatch extends Drawable {
 	}
 
 	function flush() {
-		if( first == null ){
-			bufferVertices = 0;
+		if( first == null ) {
 			return;
 		}
 		if( tmpBuf == null ) tmpBuf = new hxd.FloatBuffer();
 		var pos = 0;
 		var e = first;
 		var tmp = tmpBuf;
+		var bufferVertices = 0;
+		state.clear();
+
 		while( e != null ) {
 			if( !e.visible ) {
 				e = e.next;
@@ -336,6 +343,8 @@ class SpriteBatch extends Drawable {
 			}
 
 			var t = e.t;
+			state.setTile(t);
+			state.add(4);
 
 			tmp.grow(pos + 8 * 4);
 
@@ -425,6 +434,7 @@ class SpriteBatch extends Drawable {
 			buffer.dispose();
 			buffer = null;
 		}
+		empty = bufferVertices == 0;
 		if( bufferVertices > 0 )
 			buffer = h3d.Buffer.ofSubFloats(tmpBuf, 8, bufferVertices, [Dynamic, Quads, RawFormat]);
 	}
@@ -435,9 +445,10 @@ class SpriteBatch extends Drawable {
 
 	@:allow(h2d)
 	function drawWith( ctx:RenderContext, obj : Drawable ) {
-		if( first == null || buffer == null || buffer.isDisposed() || bufferVertices == 0 ) return;
-		if( !ctx.beginDrawObject(obj, tile.getTexture()) ) return;
-		ctx.engine.renderQuadBuffer(buffer, 0, bufferVertices>>1);
+		if( first == null || buffer == null || buffer.isDisposed() || empty ) return;
+		if( !ctx.beginDrawBatchState(obj) ) return;
+		var engine = ctx.engine;
+		state.drawQuads(ctx, buffer);
 	}
 
 	/**
@@ -462,5 +473,6 @@ class SpriteBatch extends Drawable {
 			buffer.dispose();
 			buffer = null;
 		}
+		state.clear();
 	}
 }

@@ -1,4 +1,8 @@
 package h2d;
+
+import h2d.RenderContext;
+import h2d.impl.BatchDrawState;
+
 /**
 	TileGroup internal class for batched quad geometry rendering.
 **/
@@ -23,7 +27,10 @@ class TileLayerContent extends h3d.prim.Primitive {
 	**/
 	public var yMax : Float;
 
+	var state : BatchDrawState;
+
 	public function new() {
+		state = new BatchDrawState();
 		clear();
 	}
 
@@ -38,6 +45,7 @@ class TileLayerContent extends h3d.prim.Primitive {
 		yMin = hxd.Math.POSITIVE_INFINITY;
 		xMax = hxd.Math.NEGATIVE_INFINITY;
 		yMax = hxd.Math.NEGATIVE_INFINITY;
+		state.clear();
 	}
 
 	public function isEmpty() {
@@ -112,6 +120,9 @@ class TileLayerContent extends h3d.prim.Primitive {
 		y += t.height;
 		if( x > xMax ) xMax = x;
 		if( y > yMax ) yMax = y;
+
+		state.setTile(t);
+		state.add(4);
 	}
 
 	/**
@@ -191,11 +202,18 @@ class TileLayerContent extends h3d.prim.Primitive {
 		tmp.push(c.b);
 		tmp.push(c.a);
 		updateBounds(px, py);
+
+		state.setTile(t);
+		state.add(4);
 	}
 
 	/**
-		Intended for internal usage. Adds single vertex to the buffer with no 0 uv.  
-		Should be used in groups of 4 to form single quad.
+		Intended for internal usage. Adds single vertex to the buffer with no 0 uv.
+
+		Usage warning: When adding geometry trough addPoint, they should be added in groups of 4 that form a quad,
+		and then `updateState(null, quads * 2)` should be called to ensure proper batch rendering.
+
+		Points are added in the following order: top-left, top-right, bottom-left, bottom-right.
 	**/
 	public function addPoint( x : Float, y : Float, color : Int ) {
 		tmp.push(x);
@@ -252,6 +270,8 @@ class TileLayerContent extends h3d.prim.Primitive {
 		y += h;
 		if( x > xMax ) xMax = x;
 		if( y > yMax ) yMax = y;
+
+		state.add(4);
 	}
 
 	/**
@@ -293,6 +313,8 @@ class TileLayerContent extends h3d.prim.Primitive {
 		y += h;
 		if( x > xMax ) xMax = x;
 		if( y > yMax ) yMax = y;
+		
+		state.add(4);
 	}
 
 	/**
@@ -302,7 +324,7 @@ class TileLayerContent extends h3d.prim.Primitive {
 		@param ray Radius of the arc.
 		@param c ARGB color of the arc.
 		@param start Starting angle (in radians) of the arc.
-		@param end Enging angle (in radians) of the arc.
+		@param end Ending angle (in radians) of the arc.
 	**/
 	public inline function fillArc( x : Float, y : Float, ray : Float, c : Int, start: Float, end: Float) {
 		if (end <= start) return;
@@ -315,6 +337,7 @@ class TileLayerContent extends h3d.prim.Primitive {
 		var _x = 0.;
 		var _y = 0.;
 		var i = 0;
+		var count = 0;
 		while ( i < nsegments ) {
 			var a = start + i * angle;
 			_x = x + Math.cos(a) * ray;
@@ -324,6 +347,7 @@ class TileLayerContent extends h3d.prim.Primitive {
 				addPoint(_x, _y, c);
 				addPoint(prevX, prevY, c);
 				addPoint(prevX, prevY, c);
+				count += 4;
 			}
 			prevX = _x;
 			prevY = _y;
@@ -336,6 +360,7 @@ class TileLayerContent extends h3d.prim.Primitive {
 		addPoint(_x, _y, c);
 		addPoint(prevX, prevY, c);
 		addPoint(prevX, prevY, c);
+		state.add(count + 4);
 	}
 
 	/**
@@ -354,6 +379,7 @@ class TileLayerContent extends h3d.prim.Primitive {
 		var firstX = Math.NEGATIVE_INFINITY;
 		var firstY = Math.NEGATIVE_INFINITY;
 		var curX = 0., curY = 0.;
+		var count = 0;
 		for( i in 0...nsegments) {
 			var a = i * angle;
 			curX = x + Math.cos(a) * radius;
@@ -363,9 +389,10 @@ class TileLayerContent extends h3d.prim.Primitive {
 				addPoint(curX, curY, c);
 				addPoint(prevX, prevY, c);
 				addPoint(x, y, c);
+				count += 4;
 			}
 			if (firstX == Math.NEGATIVE_INFINITY) {
-			firstX = curX;
+				firstX = curX;
 				firstY = curY;
 			}
 			prevX = curX;
@@ -375,6 +402,7 @@ class TileLayerContent extends h3d.prim.Primitive {
 		addPoint(curX, curY, c);
 		addPoint(firstX, firstY, c);
 		addPoint(x, y, c);
+		state.add(count + 4);
 	}
 
 	/**
@@ -395,6 +423,7 @@ class TileLayerContent extends h3d.prim.Primitive {
 		var prevY = Math.NEGATIVE_INFINITY;
 		var prevX1 = Math.NEGATIVE_INFINITY;
 		var prevY1 = Math.NEGATIVE_INFINITY;
+		var count = 0;
 		for( i in 0...nsegments ) {
 			var a = i * angle;
 			var _x = x + Math.cos(a) * ray;
@@ -406,12 +435,14 @@ class TileLayerContent extends h3d.prim.Primitive {
 				addPoint(prevX, prevY, c);
 				addPoint(_x1, _y1, c);
 				addPoint(prevX1, prevY1, c);
+				count += 4;
 			}
 			prevX = _x;
 			prevY = _y;
 			prevX1 = _x1;
 			prevY1 = _y1;
 		}
+		state.add(count);
 	}
 
 	/**
@@ -421,7 +452,7 @@ class TileLayerContent extends h3d.prim.Primitive {
 		@param ray Radius of the arc outer edge.
 		@param size Radius of the arc inner edge.
 		@param start Starting angle (in radians) of the arc.
-		@param end Enging angle (in radians) of the arc.
+		@param end Ending angle (in radians) of the arc.
 		@param c ARGB color of the arc.
 	**/
 	public inline function arc( x : Float, y : Float, ray : Float, size: Float, start: Float, end: Float, c : Int) {
@@ -440,6 +471,7 @@ class TileLayerContent extends h3d.prim.Primitive {
 		var _y = 0.;
 		var _x1 = 0.;
 		var _y1 = 0.;
+		var count = 0;
 		for( i in 0...nsegments ) {
 			var a = start + i * angle;
 			_x = x + Math.cos(a) * ray;
@@ -451,6 +483,7 @@ class TileLayerContent extends h3d.prim.Primitive {
 				addPoint(prevX, prevY, c);
 				addPoint(_x1, _y1, c);
 				addPoint(prevX1, prevY1, c);
+				count += 4;
 			}
 			prevX = _x;
 			prevY = _y;
@@ -466,12 +499,14 @@ class TileLayerContent extends h3d.prim.Primitive {
 		addPoint(prevX, prevY, c);
 		addPoint(_x1, _y1, c);
 		addPoint(prevX1, prevY1, c);
+		state.add(count + 4);
 	}
 
 	override public function alloc(engine:h3d.Engine) {
 		if( tmp == null ) clear();
-		if( tmp.length > 0 )
+		if( tmp.length > 0 ) {
 			buffer = h3d.Buffer.ofFloats(tmp, 8, [Quads, RawFormat]);
+		}
 	}
 
 	/**
@@ -487,10 +522,9 @@ class TileLayerContent extends h3d.prim.Primitive {
 		@param min Initial triangle offset of buffer to draw.
 		@param len Amount of triangle to draw. (`-1` to render until the end of buffer)
 	**/
-	public function doRender(engine:h3d.Engine, min, len) {
+	public inline function doRender(ctx : RenderContext, min, len) {
 		flush();
-		if( buffer != null )
-			engine.renderQuadBuffer(buffer, min, len);
+		state.drawQuads(ctx, buffer, min, len);
 	}
 
 }
@@ -502,7 +536,9 @@ class TileLayerContent extends h3d.prim.Primitive {
 	To add new geometry it's mandatory to call `TileGroup.invalidate`. In case existing geometry has to be modified -
 	entire group have to be cleared with `TileGroup.clear` and repopulated from ground up.
 
-	It's limited to one unique texture, but allows to render all Tiles in single drawcall.
+	Usage note: While TileGroup allows for multiple unique textures, each texture swap causes a new drawcall,
+	and due to that it's recommended to minimize the amount of used textures per TileGroup,
+	ideally limiting to only one texture.
 **/
 class TileGroup extends Drawable {
 
@@ -527,7 +563,7 @@ class TileGroup extends Drawable {
 		@param t The Tile which is used as a source for a Texture to be rendered.
 		@param parent An optional parent `h2d.Object` instance to which TileGroup adds itself if set.
 	**/
-	public function new(t : Tile, ?parent : h2d.Object) {
+	public function new(?t : Tile, ?parent : h2d.Object) {
 		super(parent);
 		tile = t;
 		rangeMin = rangeMax = -1;
@@ -653,10 +689,10 @@ class TileGroup extends Drawable {
 		var max = content.triCount();
 		if( max == 0 )
 			return;
-		if( !ctx.beginDrawObject(obj, tile.getTexture()) ) return;
+		if( !ctx.beginDrawBatchState(obj) ) return;
 		var min = rangeMin < 0 ? 0 : rangeMin * 2;
 		if( rangeMax > 0 && rangeMax < max * 2 ) max = rangeMax * 2;
-		content.doRender(ctx.engine, min, max - min);
+		content.doRender(ctx, min, max - min);
 	}
 
 }

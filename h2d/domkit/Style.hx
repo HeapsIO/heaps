@@ -14,8 +14,8 @@ class Style extends domkit.CssStyle {
 		super();
 	}
 
-	public function load( r : hxd.res.Resource ) {
-		r.watch(function() {
+	public function load( r : hxd.res.Resource, watchChanges = true ) {
+		if( watchChanges ) r.watch(function() {
 			#if (sys || nodejs)
 			var fs = hxd.impl.Api.downcast(hxd.res.Loader.currentInstance.fs, hxd.fs.LocalFileSystem);
 			if( fs != null ) fs.clearCache();

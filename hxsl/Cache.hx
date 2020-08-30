@@ -187,6 +187,22 @@ class Cache {
 		for( s in shaderDatas ) Printer.check(s.inst.shader);
 		#end
 
+		#if shader_debug_while
+		for( s in shaders ) {
+			function checkRec( e : TExpr ) {
+				switch( e.e ) {
+				case TWhile(cond,_,_):
+					var name = @:privateAccess s.shader.data.name;
+					haxe.Log.trace("FOUND SHADER while( "+Printer.toString(cond)+")", { fileName : name, methodName : "", lineNumber : 0, className : name });
+				default:
+				}
+				e.iter(checkRec);
+			}
+			for( f in @:privateAccess s.instance.shader.funs )
+				checkRec(f.expr);
+		}
+		#end
+
 		#if shader_debug_dump
 		var shaderId = @:privateAccess RuntimeShader.UID;
 		if( shaderId == 0 ) try sys.FileSystem.createDirectory("shaders") catch( e : Dynamic ) {};

@@ -22,6 +22,7 @@ class ToneMapping extends ScreenShader {
 			switch( mode ) {
 			case 0:
 				// linear
+				color.rgb = color.rgb.saturate();
 			case 1:
 				// reinhard
 				color.rgb = color.rgb / (color.rgb + vec3(1.));
