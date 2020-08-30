@@ -140,10 +140,8 @@ class Camera {
 
 		Does not affect the user input when Camera is set as interactive camera.
 
-		@param layer The rendered layer index in `h2d.Scene`.
-		@returns `true` if layer can be rendered, `false` otherwise.
-
 		Usage example:
+		
 		```haxe
 		final LAYER_SHARED = 0;
 		final LAYER_PLAYER_1 = 2;
@@ -158,6 +156,10 @@ class Camera {
 		// Set last camera to only render UI layer.
 		ui.layerVisible = (layer) -> layer == LAYER_UI;
 		```
+
+		@param layer The rendered layer index in `h2d.Scene`.
+		@returns `true` if layer can be rendered, `false` otherwise.
+
 	**/
 	public dynamic function layerVisible( layer : Int ) : Bool {
 		return true;
