@@ -1,5 +1,9 @@
 package h2d;
 
+/**
+	See `ParticleGroup.sortMode` - not used anywhere.
+**/
+@:dox(hide)
 enum PartSortMode {
 	/**
 		Particles are not sorted.
@@ -11,21 +15,24 @@ enum PartSortMode {
 	Dynamic;
 }
 
+/**
+	The particle emission pattern modes. See `ParticleGroup.emitMode`.
+**/
 enum PartEmitMode {
 	/**
-		A single Point, emit in all directions
+		A single Point, that emits in all directions.
 	**/
 	Point;
 	/**
-		A cone, parametrized with `emitAngle` and `emitDistance`
+		A cone, parametrized with `emitAngle` and `emitDistance`.
 	**/
 	Cone;
 	/**
-		A box, parametrized with `emitDist` and `emitDistY`
+		A box, parametrized with `emitDist` and `emitDistY`.
 	**/
 	Box;
 	/**
-		A box, parametrized with `emitAngle` and `emitDistance`
+		A box, parametrized with `emitAngle` and `emitDistance`.
 	**/
 	Direction;
 }
@@ -130,7 +137,7 @@ private class Particle extends h2d.SpriteBatch.BatchElement {
 }
 
 /**
-	`h2d.Particles.ParticleGroup` provides particle simulation in Particles system.
+	An emitter of a single particle group. Part of `Particles` simulation system.
 **/
 @:access(h2d.SpriteBatch)
 @:access(h2d.Object)
@@ -177,16 +184,16 @@ class ParticleGroup {
 	**/
 	public var nparts(default, set) : Int 		= 100;
 	/**
-		Initial particle X offset
+		Initial particle X offset.
 	**/
 	public var dx(default, set) : Int 			= 0;
 	/**
-		Initial particle Y offset
+		Initial particle Y offset.
 	**/
 	public var dy(default, set) : Int 			= 0;
 
 	/**
-		If enabled, group will emit new particles indefinitely maintaining number of particles at `nparts`.
+		If enabled, group will emit new particles indefinitely maintaining number of particles at `ParticleGroup.nparts`.
 	**/
 	public var emitLoop(default, set) : Bool 	= true;
 	/**
@@ -210,16 +217,18 @@ class ParticleGroup {
 	**/
 	public var emitAngle(default, set) : Float 	= -0.5;
 	/**
-		When enabled, particle rotation will point in the emission direction angle.
+		When enabled, particle rotation will match the particle movement direction angle.
 	**/
 	public var emitDirectionAsAngle(default, set) : Bool = false;
 	/**
 		Randomized synchronization delay before particle appears after being emitted.
+
 		Usage note for non-relative mode: Particle will use configuration that was happened at time of emission, not when delay timer runs out.
 	**/
 	public var emitSync(default, set) : Float	= 0;
 	/**
 		Fixed delay before particle appears after being emitted.
+
 		Usage note for non-relative mode: Particle will use configuration that was happened at time of emission, not when delay timer runs out.
 	**/
 	public var emitDelay(default, set) : Float	= 0;
@@ -271,7 +280,7 @@ class ParticleGroup {
 	**/
 	public var gravity(default, set) : Float		= 0;
 	/**
-		The gravity angle. `0` points down.
+		The gravity angle in radians. `0` points down.
 	**/
 	public var gravityAngle(default, set) : Float 	= 0;
 	@:noCompletion @:dox(hide) public var cosGravityAngle : Float;
@@ -306,7 +315,9 @@ class ParticleGroup {
 
 	/**
 		Total count of frames used by the group.
-		When 0, amount of frames in a group calculated by `frameDivisionX * frameDivisionY`
+
+		When 0, amount of frames in a group calculated by `frameDivisionX * frameDivisionY`.
+
 		Otherwise it's `min(frameDivisionX * frameDivisionY, frameCount)`.
 	**/
 	public var frameCount(default,set) : Int		= 0;
@@ -319,8 +330,8 @@ class ParticleGroup {
 	**/
 	public var frameDivisionY(default,set) : Int	= 1;
 	/**
-		The amoung of times animations will loop during lifetime.
-		Settings it to 0 will stop animation playback and each particle will have random frame assigned.
+		The amount of times the animations will loop during lifetime.
+		Settings it to 0 will stop the animation playback and each particle will have a random frame assigned at emission time.
 	**/
 	public var animationRepeat(default,set) : Float	= 1;
 	/**
@@ -332,16 +343,27 @@ class ParticleGroup {
 	**/
 	public var colorGradient(default,set) : h3d.mat.Texture;
 	
-	/** Should partcles follow the emitter or stay in place? **/
+	/**
+		When enabled, causes particles to always render relative to the emitter position, moving along with it.
+		Otherwise, once emitted, particles won't follow the emitter, and will render relative to the scene origin.
+
+		Non-relative mode is useful for simulating something like a smoke coming from a moving object,
+		while relative mode things like jet flame that have to stick to its emission source.
+	**/
 	public var isRelative(default, set) : Bool = true;
-	/** Should group rebuild on parameters change.
-		Note that some parameters take immediate effect on the existing particles, and some would force rebuild reagrdless.
+	/**
+		Should group rebuild on parameters change.
+
+		Note that some parameters take immediate effect on the existing particles, and some would force rebuild regardless of this setting.
+
 		Parameters that take immediate effect:
-		speedIncr, gravity, gravityAngle, fadeIn, fadeOut, fadePower, rotAuto, rotInit, incrX, incrY, emitLoop, blendMode
+		`speedIncr`, `gravity`, `gravityAngle`, `fadeIn`, `fadeOut`, `fadePower`, `rotAuto`, `rotInit`, `incrX`, `incrY`, `emitLoop` and `blendMode`
+
 		Parameters that will always force rebuild:
-		enable, sortMode, isRelative, texture, frameCount, frameDivisionX, frameDivisionY, nparts
+		`enable`, `sortMode`, `isRelative`, `texture`, `frameCount`, `frameDivisionX`, `frameDivisionY` and `nparts`
+
 		Parameters that newer cause rebuild:
-		blendMode, colorGradient, animationRepeat
+		`blendMode`, `colorGradient` and `animationRepeat`
 	**/
 	public var rebuildOnChange : Bool = true;
 
@@ -389,6 +411,10 @@ class ParticleGroup {
 	inline function set_animationRepeat(v) return animationRepeat = v;
 	inline function set_isRelative(v) { needRebuild = true; return isRelative = v; }
 	
+	/**
+		Create a new particle group instance.
+		@param p The parent Particles instance. Group does not automatically adds itself to the Particles.
+	**/
 	public function new(p) {
 		this.parts = p;
 		batch = new SpriteBatch(null, p);
@@ -541,7 +567,9 @@ class ParticleGroup {
 
 	}
 
-	@:dox(hide)
+	/**
+		Saves the particle group configuration into a `Dynamic` object.
+	**/
 	public function save() {
 		var o : Dynamic = {};
 		for( f in getFields(this) )
@@ -554,7 +582,12 @@ class ParticleGroup {
 		return o;
 	}
 
-	@:dox(hide)
+	/**
+		Loads the particle group configuration from a given object.
+
+		@param version The version of Particles that were used to save the configuration.
+		@param o The previously saved configuration data to load.
+	**/
 	public function load( version : Int, o : Dynamic ) {
 		for( f in getFields(this) )
 			if( Reflect.hasField(o,f) )
@@ -569,15 +602,15 @@ class ParticleGroup {
 }
 
 /**
-	`h2d.Particles` provide a 2D particle system with wide range of customizability.
+	A 2D particle system with wide range of customizability.
 
-	Particles instance can contain multiple ParticleGroup instances each of which works independently from one another.
+	The Particles instance can contain multiple `ParticleGroup` instances - each of which works independently from one another.
 
-	To simplify designing of particles HIDE contains dedicated 2D particle editor and stores particle data in JSON format,
-	which then can be loaded with the `load` method:
+	To simplify designing of the particles [HIDE](https://github.com/HeapsIO/hide/) contains a dedicated 2D particle editor and
+	stores the particle data in a JSON format, which then can be loaded with the `Particles.load` method:
 	```haxe
 	var part = new h2d.Particles();
-	part.load(haxe.Json.parse(hxd.Res.path.to.parts.entry.getText()), hxd.Res.path.to.parts.entry.path);
+	part.load(haxe.Json.parse(hxd.Res.my_parts_file.entry.getText()), hxd.Res.my_parts_file.entry.path);
 	```
 **/
 @:access(h2d.ParticleGroup)
@@ -590,6 +623,10 @@ class Particles extends Drawable {
 	var hideProps : Dynamic;
 	var pshader : ParticleShader;
 
+	/**
+		Create a new Particles instance.
+		@param parent An optional parent `h2d.Object` instance to which Particles adds itself if set.
+	**/
 	public function new( ?parent ) {
 		super(parent);
 		groups = [];
@@ -603,7 +640,7 @@ class Particles extends Drawable {
 
 	/**
 		Sent when all particle groups stopped playback.
-		By default restarts all groups.
+		Restarts all groups by default.
 	**/
 	public dynamic function onEnd() {
 		for( g in groups )
@@ -611,7 +648,7 @@ class Particles extends Drawable {
 	}
 
 	/**
-		Saves Particles settings and returns an object that can be saved into a file and then loaded with `load` method.
+		Saves Particles settings and returns an object that can be saved into a file and then loaded with a `Particles.load` method.
 	**/
 	public function save() : Dynamic {
 		var obj : Dynamic = { type : "particles2D", version : VERSION, groups : [for( g in groups ) g.save()] };
@@ -622,6 +659,7 @@ class Particles extends Drawable {
 	/**
 		Loads previously saved Particles settings.
 		@param o The saved Particles settings.
+		@param resourcePath An optional path of the configuration file. May be safely omitted.
 	**/
 	public function load( o : Dynamic, ?resourcePath : String ) {
 		this.resourcePath = resourcePath;
@@ -634,6 +672,8 @@ class Particles extends Drawable {
 	/**
 		Add new particle group to the Particles.
 		@param g Particle group to add. If null, will create an empty ParticleGroup.
+		Note that when passing existing group, it should be created with this Particles instanceas the constructor argument,
+		otherwise it may lead to undefined behavior.
 		@param index Optional insertion index at which the group should be inserted.
 		@returns Added ParticleGroup instance.
 	**/

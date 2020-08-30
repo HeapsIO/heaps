@@ -1,72 +1,65 @@
 package h2d;
 
 /**
-	Text alignment rules.
+	`Text` alignment rules.
 **/
 enum Align {
 	/**
-		Aligns to the left edge of the Text instance.
+		Aligns the text to the left edge.
 	**/
 	Left;
 	/**
-		If `maxWidth` is set - positions text at the `maxWidth` value.
-		Otherwise text is aligned over the 0 coordinate of text Text instance.
+		Aligns the text to the right edge.
 
-		Text is aligned as follows:
-		```
-		With maxWidth set:
-		0 . . . . . . . . . . . . . . . maxWidth
-		|              This is sample text |
-		|     Spanning over multiple lines |
-		Without maxWidth set:
-		. . . . . . . . . . . . . . . . . .0
-		|              This is sample text |
-		|     Spanning over multiple lines |
-		```
+		When `Text.maxWidth` is set and/or Text size is constrained (see `Object.constraintSize`), right edge is considered the smallest of the two.
+
+		Otherwise edge is at the `0` coordinate of the Text instance.
+		
+		See Text sample for showcase.
 	**/
 	Right;
 	/**
-		If `maxWidth` is set - centers text within `0...maxWidth` range.
-		Otherwise text centered around 0 coordinate of the Text instance.
-		```
-		With maxWidth set:
-		0 . . . . . . . . . . . . . . . maxWidth
-		|        This is sample text       |
-		|   Spanning over multiple lines   |
-		Without maxWidth set:
-		. . . . . . . . . 0 . . . . . . . .
-		|       This is sample text        |
-		|   Spanning over multiple lines   |
-		```
+		Centers the text alignment.
+		
+		When `Text.maxWidth` is set and/or Text size is constrained (see `Object.constraintSize`), center is calculated from 0 to the smallest of the two.
+
+		Otherwise text is centered around `0` coordinate of the Text instance.
+
+		See Text sample for showcase.
 	**/
 	Center;
 	/**
-		With respect to `maxWidth` word-wrap, aligns text to the right at the longest line width.
-		```
-		0 . . . . . . . . . . . . . . . maxWidth
-		|          This is sample text     |
-		| Spanning over multiple lines     |
-		```
+		With respect to Text constraints, aligns the text to the right edge of the longest line width.
+
+		When `Text.maxWidth` is set and/or Text size is constrained (see `Object.constraintSize`),
+		right edge is calculated as the smallest value of the `maxWidth`, constrained width and longest line width (after word-wrap from constraints).
+
+		Otherwise uses longest line width as the right edge.
+
+		See Text sample for showcase.
 	**/
 	MultilineRight;
 	/**
-		Width respect to `maxWidth` word-wrap, align text centered within the longest line width.
-		```
-		0 . . . . . . . . . . . . . . . maxWidth
-		|     This is sample text          |
-		| Spanning over multiple lines     |
-		```
+		Centers the text with respect to Text constraints with the longest line width.
+
+		When `Text.maxWidth` is set and/or Text size is constrained (see `Object.constraintSize`),
+		center is calculated from the to the smallest value of the `maxWidth`, constrained width and longest line width (after word-wrap from constraints).
+
+		Otherwise calculates center from 0 to the longest line width.
+
+		See Text sample for showcase.
 	**/
 	MultilineCenter;
 }
 
 /**
-	`h2d.Text` is basic text renderer with multiline support.
-	See Text section of the manual for more details.
+	A basic text renderer with multiline support.
+
+	See [Text](https://github.com/HeapsIO/heaps/wiki/Text) section of the manual for more details.
 **/
 class Text extends Drawable {
 	/**
-		The font used to render Text.
+		The font used to render text.
 	**/
 	public var font(default, set) : Font;
 	/**
@@ -80,11 +73,13 @@ class Text extends Drawable {
 	/**
 		When set, limits maximum line width and causes word-wrap.
 		Affects positioning of the text depending on `textAlign` value.
+
+		When Text is affected by size constraints (see `Object.constraintSize`), smallest of the two is used for word-wrap.
 	**/
 	public var maxWidth(default, set) : Null<Float>;
 	/**
 		Adds simple drop shadow to the Text with specified offset, color and alpha.
-		Causes text to be rendered twice (first drop shadow and then text itself)
+		Causes text to be rendered twice (first drop shadow and then the text itself).
 	**/
 	public var dropShadow : { dx : Float, dy : Float, color : Int, alpha : Float };
 
@@ -93,22 +88,25 @@ class Text extends Drawable {
 	**/
 	public var textWidth(get, null) : Float;
 	/**
-		Calculated text height. Not a completely precise text metric and increases in font line heights.
+		Calculated text height.
+		
+		Not a completely precise text metric and increments in the `Font.lineHeight` steps.
+		In `HtmlText`, can be increased by various values depending on the active line font and `HtmlText.lineHeightMode` value.
 	**/
 	public var textHeight(get, null) : Float;
 	/**
-		Text align rules dictate how the text lines are positionined.
-		See `h2d.Text.Align` for specific details for each alignment mode.
+		Text align rules dictate how the text lines are positioned.
+		See `Align` for specific details on each alignment mode.
 	**/
 	public var textAlign(default, set) : Align;
 	/**
-		Extra letter spacing in pixels ( default : 0 )
+		Extra letter spacing in pixels.
 	**/
-	public var letterSpacing(default, set) : Float;
+	public var letterSpacing(default, set) : Float = 0;
 	/**
-		Extra line spacing in pixels ( default : 0 )
+		Extra line spacing in pixels.
 	**/
-	public var lineSpacing(default,set) : Float;
+	public var lineSpacing(default,set) : Float = 0;
 
 	var glyphs : TileGroup;
 	var needsRebuild : Bool;
@@ -127,14 +125,14 @@ class Text extends Drawable {
 	var sdfShader : h3d.shader.SignedDistanceField;
 
 	/**
-		Creates new Text instance with specified font and parent.
+		Creates a new Text instance.
+		@param font The font used to render the Text.
+		@param parent An optional parent `h2d.Object` instance to which Text adds itself if set.
 	**/
 	public function new( font : Font, ?parent : h2d.Object ) {
 		super(parent);
 		this.font = font;
 		textAlign = Left;
-		letterSpacing = 0;
-		lineSpacing = 0;
 		text = "";
 		currentText = "";
 		textColor = 0xFFFFFF;
@@ -251,7 +249,10 @@ class Text extends Drawable {
 
 	/**
 		Extra validation of the `text` variable when it's changed. Override to add custom validation.
+
+		Only validation of the text is allowed, and attempting to change the text value will lead to undefined behavior.
 	**/
+	@:dox(show)
 	function validateText() {
 	}
 
@@ -283,14 +284,15 @@ class Text extends Drawable {
 	}
 
 	/**
-		Word-wrap the text based on this Text settings.
+		Perform a word-wrap of the `text` based on this Text settings.
 	**/
 	public function splitText( text : String ) {
 		return splitRawText(text,0,0);
 	}
 
 	/**
-		Word-wrap the text based on this Text settings.  
+		<span class="label">Advanced usage</span>  
+		Perform a word-wrap of the text based on this Text settings.
 		@param text String to word-wrap.
 		@param leftMargin Starting x offset of the first line.
 		@param afterData Minimum remaining space required at the end of the line.
@@ -298,6 +300,7 @@ class Text extends Drawable {
 		@param sizes Optional line width array. Will be populated with sizes of split lines if present. Sizes will include both `leftMargin` in it's first line entry.
 		@param prevChar Optional character code for concatenation purposes (proper kernings).
 	**/
+	@:dox(show)
 	function splitRawText( text : String, leftMargin = 0., afterData = 0., ?font : Font, ?sizes:Array<Float>, ?prevChar:Int = -1 ) {
 		var maxWidth = realMaxWidth;
 		if( maxWidth < 0 ) {

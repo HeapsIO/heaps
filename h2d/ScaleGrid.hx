@@ -1,11 +1,20 @@
 package h2d;
 
 /**
-	`h2d.ScaleGrid` provides simple 9-slice bitmap renderer.
+	A simple 9-slice bitmap renderer.
+
+	Enables rendering of the Tile as a stretchable surface with unscaled corners, stretched center and either stretched or tiled borders.
+	Set `ScaleGrid.width` and `ScaleGrid.height` to resize the ScaleGrid.
 **/
 class ScaleGrid extends h2d.TileGroup {
 
+	/**
+		The width of the left and right borders in pixels.
+	**/
 	public var borderWidth(default,set) : Int;
+	/**
+		The height of the top and bottom borders in pixels.
+	**/
 	public var borderHeight(default,set) : Int;
 
 	/**
@@ -17,8 +26,8 @@ class ScaleGrid extends h2d.TileGroup {
 	**/
 	public var height(default,set) : Float;
 	/**
-		When enabled, borders are rendered in a tiled manner.
-		When disabled, borders are stretched to match the desired dimensions.
+		When enabled, borders will be tiled along the edges instead of stretching to match the desired dimensions.
+		
 		Center tile is always stretched.
 	**/
 	public var tileBorders(default, set) : Bool;
@@ -26,7 +35,11 @@ class ScaleGrid extends h2d.TileGroup {
 	var contentTile : h2d.Tile;
 
 	/**
-		Create a new ScaleGrid with specified Tile, border dimensions and parent.
+		Create a new ScaleGrid with specified parameters.
+		@param tile The source tile which will be sliced.
+		@param borderW The width of the left and right borders in pixels.
+		@param borderH The height of the top and bottom borders in pixels.
+		@param parent An optional parent `h2d.Object` instance to which ScaleGrid adds itself if set.
 	**/
 	public function new( tile, borderW, borderH, ?parent ) {
 		super(tile,parent);

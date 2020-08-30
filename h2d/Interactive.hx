@@ -248,11 +248,14 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 	}
 
 	/**
-		Starts input events capture and redirects them to `callb` method.
+		Starts input events capture and redirects them to `callb` method until `Interactive.stopDrag` is called.
+		While the method name may imply that only mouse events would be captured: This is not the case,
+		as it will also capture all other input events, including keyboard events.
 
 		Starting event capture through `Interactive.startDrag` will convert `Event.relX` and `relY` to local coordinates
 		of the Interactive and will restore them after invoking `callb`.
 		In order to receive coordinates in scene coordinate space use `Scene.startDrag`.
+
 		@param callb A callback method that receives `hxd.Event` when input event happens.
 		Unless `callb` sets `Event.propagate` to `true`, event won't be sent to other Interactives.
 		@param onCancel An optional callback that is invoked when `Interactive.stopDrag` is called.

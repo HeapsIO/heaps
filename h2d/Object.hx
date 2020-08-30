@@ -1062,9 +1062,9 @@ class Object #if (domkit && !domkit_heaps) implements domkit.Model<h2d.Object> #
 	// ---- additional methods for containers (h2d.Flow)
 
 	/**
-		<span class="label">Advanced usage</span>
+		<span class="label">Advanced usage</span>  
 		Called by the children of a container object if they have `parentContainer` defined in them.
-		Primary use-case is when the child size got changed, requiring content to reevaluate positioning such as `h2d.Flow` layouts,
+		Primary use-case is when the child size got changed, requiring content to reevaluate positioning such as `Flow` layouts,
 		but also can be used for other purposes. 
 	**/
 	@:dox(show)
@@ -1072,11 +1072,13 @@ class Object #if (domkit && !domkit_heaps) implements domkit.Model<h2d.Object> #
 	}
 
 	/**
-		<span class="label">Advanced usage</span>
+		<span class="label">Advanced usage</span>  
 		This can be called by a parent container to constraint the size of its children.
 		Negative value mean that constraint is to be disabled.
 
-		For example, `h2d.Text` constraints it's maximum width, causing word-wrap to occur within constrained area.
+		For example, `Text` constraints it's maximum width, causing word-wrap to occur within constrained area.
+
+		@see `FlowProperties.constraint`
 	**/
 	@:dox(show)
 	function constraintSize( maxWidth : Float, maxHeight : Float ) {

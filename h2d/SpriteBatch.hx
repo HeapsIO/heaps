@@ -16,68 +16,76 @@ private class ElementsIterator {
 }
 
 /**
-	`h2d.SpriteBatch.BatchElement` is a base class for SpriteBatch elements which can be extended with custom logic.
-	See `h2d.SpriteBatch.BasicElement` as an example.
+	A base class for `SpriteBatch` elements which can be extended with custom logic.
+
+	See `BasicElement` as an example of custom element logic.
 **/
 @:allow(h2d.SpriteBatch)
 class BatchElement {
 	/**
 		Element X position.
 	**/
-	public var x : Float;
+	public var x : Float = 0;
 	/**
 		Element Y position.
 	**/
-	public var y : Float;
+	public var y : Float = 0;
 	/**
-		Shortcut to set both `scaleX` and `scaleY` at the same time.
+		Shortcut to set both `BatchElement.scaleX` and `BatchElement.scaleY` at the same time.
+
 		Equivalent to `el.scaleX = el.scaleY = scale`.
 	**/
 	public var scale(never,set) : Float;
 	/**
 		X-axis scaling factor of the element.
+
 		This variable is used only if `SpriteBatch.hasRotationScale` is set to `true`.
 	**/
-	public var scaleX : Float;
+	public var scaleX : Float = 1;
 	/**
 		Y-axis scaling factor of the element.
+
 		This variable is used only if `SpriteBatch.hasRotationScale` is set to `true`.
 	**/
-	public var scaleY : Float;
+	public var scaleY : Float = 1;
 	/**
 		Element rotation in radians.
+
 		This variable is used only if `SpriteBatch.hasRotationScale` is set to `true`.
 	**/
-	public var rotation : Float;
+	public var rotation : Float = 0;
 	/**
-		Red tint value (0...1 range) of the element. ( default : 1 )
+		Red tint value (0...1 range) of the element.
 	**/
-	public var r : Float;
+	public var r : Float = 1;
 	/**
-		Green tint value (0...1 range) of the element. ( default : 1 )
+		Green tint value (0...1 range) of the element.
 	**/
-	public var g : Float;
+	public var g : Float = 1;
 	/**
-		Blue tint value (0...1 range) of the element. ( default : 1 )
+		Blue tint value (0...1 range) of the element.
 	**/
-	public var b : Float;
+	public var b : Float = 1;
 	/**
-		Alpha value of the element. ( default : 1 )
+		Alpha value of the element.
 	**/
-	public var a : Float;
+	public var a : Float = 1;
 	/**
 		The Tile this element renders.
+
+		Due to implementation specifics, this Tile instance is used only to provide rendering area, not the Texture itself,
+		as `SpriteBatch.tile` used as a source of rendered texture.
 	**/
 	public var t : Tile;
 	/**
-		Alpha value of the element. ( default : 1 )
-		Alias `element.a`.
+		Alpha value of the element.
+		Alias of `BatchElement.a`.
 	**/
 	public var alpha(get,set) : Float;
 	/**
 		If set to `false`, element will not be rendered.
 	**/
-	public var visible : Bool;
+	public var visible : Bool = true;
 	/**
 		Reference to parent SpriteBatch instance.
 	**/
@@ -87,12 +95,10 @@ class BatchElement {
 	var next : BatchElement;
 
 	/**
-		Create new BatchElement instance with provided Tile.
+		Create a new BatchElement instance with provided Tile.
+		@param t The tile used to render this BatchElement.
 	**/
 	public function new( t : Tile ) {
-		x = 0; y = 0; r = 1; g = 1; b = 1; a = 1;
-		rotation = 0; scaleX = scaleY = 1;
-		visible = true;
 		this.t = t;
 	}
 
@@ -109,9 +115,10 @@ class BatchElement {
 	}
 
 	/**
-		Update method is called only if `SpriteBatch.hasUpdate` is set to `true`.
+		Override this method to perform custom logic per batch element.
+		Update method called only if `SpriteBatch.hasUpdate` is set to `true`.
 		@param dt The elapsed time in seconds since last update from `RenderContext.elapsedTime`.
-		@returns If method returns `false`, element will be removed from SpriteBatch.
+		@returns If method returns `false`, element will be removed from the SpriteBatch.
 	**/
 	@:dox(show)
 	function update(et:Float) {
@@ -119,7 +126,7 @@ class BatchElement {
 	}
 
 	/**
-		Remove this BatchElement from parent SpriteBatch instance.
+		Remove this BatchElement from the parent SpriteBatch instance.
 	**/
 	public function remove() {
 		if( batch != null )
@@ -129,8 +136,9 @@ class BatchElement {
 }
 
 /**
-	`h2d.SpriteBatch.BasicElement` is a BatchElement that provides simple simulation of velocity, friction and gravity.
-	Parent BatchElement should have `hasUpdate` set to true in order for element to work properly.
+	A simple `BatchElement` that provides primitive simulation of velocity, friction and gravity.
+
+	Parent `SpriteBatch` should have `SpriteBatch.hasUpdate` set to `true` in order for BasicElement to work properly.
 **/
 class BasicElement extends BatchElement {
 
@@ -148,7 +156,7 @@ class BasicElement extends BatchElement {
 	**/
 	public var friction : Float = 1.;
 	/**
-		The gravity applied to vertical velocity.
+		The gravity applied to vertical velocity in pixels per second.
 	**/
 	public var gravity : Float = 0.;
 
@@ -167,11 +175,13 @@ class BasicElement extends BatchElement {
 }
 
 /**
-  `h2d.SpriteBatch` is an active batched renderer.
-	It's limited to one unique Texture, but provides benefit of rendering everything in a single drawcall.
-
-	SpriteBatch uploads GPU buffer each frame by collecting data from added BatchElement instances.
+	An active batched tile renderer.
+	
+	Compared to `TileGroup` which is expected to be used as a static geometry,
+	SpriteBatch uploads GPU buffer each frame by collecting data from added `BatchElement` instance.
 	Due to that, dynamically removing and adding new geometry is fairly simple.
+
+	It's limited to one unique Texture, but provides benefit of rendering everything in a single drawcall.
 **/
 class SpriteBatch extends Drawable {
 
@@ -181,12 +191,14 @@ class SpriteBatch extends Drawable {
 	public var tile : Tile;
 	/**
 		Enables usage of rotation and scaling of SpriteBatch elements at the cost of extra calculus.
+
+		Makes use of `BatchElement.scaleX`, `BatchElement.scaleY` and `BatchElement.rotation`.
 	**/
-	public var hasRotationScale : Bool;
+	public var hasRotationScale : Bool = false;
 	/**
 		Enables usage of `update` method in SpriteBatch elements.
 	**/
-	public var hasUpdate : Bool;
+	public var hasUpdate : Bool = false;
 	var first : BatchElement;
 	var last : BatchElement;
 	var tmpBuf : hxd.FloatBuffer;
@@ -194,7 +206,9 @@ class SpriteBatch extends Drawable {
 	var bufferVertices : Int;
 
 	/**
-		Create new SpriteBatch instance with provided base Tile and parent.
+		Create new SpriteBatch instance.
+		@param t The Tile used as a base Texture to draw contents with.
+		@param parent An optional parent `h2d.Object` instance to which SpriteBatch adds itself if set.
 	**/
 	public function new(t,?parent) {
 		super(parent);
@@ -202,9 +216,9 @@ class SpriteBatch extends Drawable {
 	}
 
 	/**
-		Adds new BatchElement to the SpriteBatch.
+		Adds a new BatchElement to the SpriteBatch.
 		@param e The element to add.
-		@param before When set, element will be added to the beginning of element chain (rendered first).
+		@param before When set, element will be added to the beginning of the element chain (rendered first).
 	**/
 	public function add(e:BatchElement,before=false) {
 		e.batch = this;
@@ -226,8 +240,9 @@ class SpriteBatch extends Drawable {
 	}
 
 	/**
-		Removes all elements from SpriteBatch.
-		Usage note: Does not clear `BatchElement.batch` variables on child elements.
+		Removes all elements from the SpriteBatch.
+
+		Usage note: Does not clear the `BatchElement.batch` nor `next`/`prev` variables on the child elements.
 	**/
 	public function clear() {
 		first = last = null;
@@ -235,7 +250,7 @@ class SpriteBatch extends Drawable {
 	}
 
 	/**
-		Creates new BatchElement and returns it. Shortcut to `add(new BatchElement(t))`
+		Creates a new BatchElement and returns it. Shortcut to `add(new BatchElement(t))`
 		@param t The Tile element will render.
 	**/
 	public function alloc( t : Tile ) : BatchElement {
@@ -433,13 +448,15 @@ class SpriteBatch extends Drawable {
 	}
 
 	/**
-		Returns an Iterator of SpriteBatch elements.
+		Returns an Iterator of all SpriteBatch elements.
+
+		Adding or removing the elements will affect the Iterator results.
 	**/
 	public inline function getElements() {
 		return new ElementsIterator(first);
 	}
 
-	override function onRemove()  {
+	override function onRemove() {
 		super.onRemove();
 		if( buffer != null ) {
 			buffer.dispose();

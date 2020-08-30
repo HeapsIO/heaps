@@ -1,6 +1,9 @@
 package h2d;
 import hxd.fmt.kframes.Data;
 
+/**
+	[Keyframes](https://github.com/heapsio/keyframes/) integration; A `KeyFrames` animation layer.
+**/
 typedef KeyframesLayer = {
 	var id : Int;
 	var name : String;

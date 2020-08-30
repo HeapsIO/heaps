@@ -4,7 +4,9 @@ import hxd.Key in K;
 private typedef TextHistoryElement = { t : String, c : Int, sel : { start : Int, length : Int } };
 
 /**
-	`h2d.TextInput` is a skinnable text input handler.
+	A skinnable text input handler.
+
+	Supports text selection, keyboard cursor navigation, as well as basic hotkeys: `Ctrl + Z`, `Ctrl + Y` for undo and redo and `Ctrl + A` to select all text.
 **/
 class TextInput extends Text {
 
@@ -14,21 +16,21 @@ class TextInput extends Text {
 	**/
 	public var cursorIndex : Int = -1;
 	/**
-		The Tile used to render input cursor.
+		The Tile used to render the input cursor.
 	**/
 	public var cursorTile : h2d.Tile;
 	/**
-		The Tile used to render background for selected text.
+		The Tile used to render the background for selected text.
 		When rendering, this Tile is stretched horizontally to fill entire selection area.
 	**/
 	public var selectionTile : h2d.Tile;
 	/**
-		The blinking interval of the cursor.
+		The blinking interval of the cursor in seconds.
 	**/
 	public var cursorBlinkTime = 0.5;
 	/**
 		Maximum input width.
-		Contrary to `maxWidth` does not cause word-wrap, but also masks out contents that are outside the max width.
+		Contrary to `Text.maxWidth` does not cause a word-wrap, but also masks out contents that are outside the max width.
 	**/
 	public var inputWidth : Null<Int>;
 	/**
@@ -36,7 +38,7 @@ class TextInput extends Text {
 	**/
 	public var selectionRange : { start : Int, length : Int };
 	/**
-		When disabled, user would not be able to input new text (selection is still available).
+		When disabled, user would not be able to edit the input text (selection is still available).
 	**/
 	public var canEdit = true;
 
@@ -61,7 +63,9 @@ class TextInput extends Text {
 	var maxHistorySize = 100;
 
 	/**
-		Create new TextInput instance using provided font and parent.
+		Create a new TextInput instance.
+		@param font The font used to render the text.
+		@param parent An optional parent `h2d.Object` instance to which TextInput adds itself if set.
 	**/
 	public function new(font, ?parent) {
 		super(font, parent);
@@ -295,7 +299,7 @@ class TextInput extends Text {
 	}
 
 	/**
-		Returns a String representing selected text area or `null` if no text is selected.
+		Returns a String representing currently selected text area or `null` if no text is selected.
 	**/
 	public function getSelectedText() : String {
 		return selectionRange == null ? null : text.substr(selectionRange.start, selectionRange.length);

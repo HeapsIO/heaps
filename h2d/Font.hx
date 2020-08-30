@@ -9,7 +9,7 @@ class Kerning {
 	**/
 	public var prevChar : Int;
 	/**
-		A kerning offset in pixels.
+		A kerning offset between the character pair in pixels.
 	**/
 	public var offset : Float;
 	/**
@@ -29,7 +29,7 @@ class Kerning {
 }
 
 /**
-	A single `Font` character.
+	A single `Font` character descriptor.
 **/
 class FontChar {
 	/**
@@ -38,17 +38,22 @@ class FontChar {
 	public var t : h2d.Tile;
 	/**
 		Horizontal advance value of the character.
+
+		On top of advance, letter spacing is affected by `FontChar.kerning` matches and `Text.letterSpacing`.
 	**/
 	public var width : Float;
 	/**
 		Linked list of kerning values.
+
+		In order to add new kerning values use `FontChar.addKerning` and `FontChar.getKerningOffset` to retrieve kerning offsets.
 	**/
+	@:dox(show)
 	var kerning : Null<Kerning>;
 
 	/**
 		Create a new font character.
 		@param t The character Tile.
-		@param width The horizontal advanced of the character.
+		@param width The horizontal advance of the character.
 	**/
 	public function new(t,w) {
 		this.t = t;
@@ -65,8 +70,7 @@ class FontChar {
 	}
 
 	/**
-		Returns kerning offset for a pair `[prevChar, currentChar]`.
-		Returns 0 if there was no paired kerning value.
+		Returns kerning offset for a pair `[prevChar, currentChar]` or `0` if there was no paired kerning value.
 	**/
 	public function getKerningOffset( prevChar : Int ) {
 		var k = kerning;
@@ -101,7 +105,7 @@ class FontChar {
 }
 
 /**
-	Channel reading method for SDF `FontType`.
+	Channel reading method for `FontType.SignedDistanceField`.
 **/
 @:enum abstract SDFChannel(Int) from Int to Int {
 	/** Use red channel of a texture to determine distance. **/
@@ -141,6 +145,8 @@ enum FontType {
 
 /**
 	An instance of a text font.
+
+	Heaps comes with a default Font that covers basic ASCII characters, and can be retrieved via `hxd.res.DefaultFont.get()`.
 **/
 class Font {
 	/**

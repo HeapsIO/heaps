@@ -15,7 +15,7 @@ enum LineHeightMode {
 	**/
 	TextOnly;
 	/**
-		Legacy line height mode. When used, line heights remain constant based on `HtmlText.font` variable.
+		Legacy line height mode. When used, line heights remain constant based on `Text.font` variable.
 	**/
 	Constant;
 }
@@ -60,7 +60,7 @@ class HtmlText extends Text {
 
 	/**
 		Line height calculation mode controls how much space lines take up vertically.
-		Changing mode to `Constant` restores legacy behavior of HtmlText.
+		Changing mode to `Constant` restores the legacy behavior of HtmlText.
 	**/
 	public var lineHeightMode(default,set) : LineHeightMode = Accurate;
 

@@ -2,6 +2,7 @@ package h2d;
 /**
 	TileGroup internal class for batched quad geometry rendering.
 **/
+@:dox(hide)
 class TileLayerContent extends h3d.prim.Primitive {
 
 	var tmp : hxd.FloatBuffer;
@@ -495,12 +496,13 @@ class TileLayerContent extends h3d.prim.Primitive {
 }
 
 /**
-	`h2d.TileGroup` is a static Tile batch renderer.
-	It's limited to one unique texture, but allows to render all Tiles in single drawcall.
+	A static Tile batch renderer.
 
-	TileGroup follows upload-once policy and does not allow modification of the already added geometry.
-	To add new geometry it's mandatory to call `invalidate()` or in case existing geometry has to be modified
-	entire group have to be cleared with `clear()` and repopulated.
+	TileGroup follows an upload-once policy and does not allow modification of the already added geometry.
+	To add new geometry it's mandatory to call `TileGroup.invalidate`. In case existing geometry has to be modified -
+	entire group have to be cleared with `TileGroup.clear` and repopulated from ground up.
+
+	It's limited to one unique texture, but allows to render all Tiles in single drawcall.
 **/
 class TileGroup extends Drawable {
 
@@ -523,7 +525,7 @@ class TileGroup extends Drawable {
 	/**
 		Create new TileGroup instance using Texture based on provided Tile.
 		@param t The Tile which is used as a source for a Texture to be rendered.
-		@param parent Optional parent Object in which TileGroup will add itself.
+		@param parent An optional parent `h2d.Object` instance to which TileGroup adds itself if set.
 	**/
 	public function new(t : Tile, ?parent : h2d.Object) {
 		super(parent);
@@ -546,15 +548,16 @@ class TileGroup extends Drawable {
 	}
 
 	/**
-		If you want to add tiles after the GPU memory has been allocated (when the tilegroup with sync/displayed),
-		make sure to call invalidate() first to force a refresh of your data.
+		When new data is added, it's not automatically flushed to the GPU memory if it was already allocated
+		(when TileGroup is either rendered or received `Object.sync` call),
+		in which case call `invalidate()` to force a refresh of the GPU data.
 	**/
 	public function invalidate() : Void {
 		content.dispose();
 	}
 
 	/**
-		Returns the number of tiles added to the group
+		Returns the number of tiles added to the group.
 	**/
 	public function count() : Int {
 		return content.triCount() >> 1;
@@ -566,7 +569,7 @@ class TileGroup extends Drawable {
 	}
 
 	/**
-		Sets default tinting color when adding Tiles.
+		Sets the default tinting color when adding new Tiles.
 	**/
 	public function setDefaultColor( rgb : Int, alpha = 1.0 ) {
 		curColor.x = ((rgb >> 16) & 0xFF) / 255;
@@ -576,9 +579,9 @@ class TileGroup extends Drawable {
 	}
 
 	/**
-		Adds tinted Tile at specified position. Current default color is used as tint.
-		@param x X position of the tile relative to drawn Object.
-		@param y Y position of the tile relative to drawn Object.
+		Adds a Tile at specified position. Tile is tinted by the current default color.
+		@param x X position of the tile relative to the TileGroup.
+		@param y Y position of the tile relative to the TileGroup.
 		@param t The Tile to draw.
 	**/
 	public inline function add(x : Float, y : Float, t : h2d.Tile) {
@@ -586,13 +589,13 @@ class TileGroup extends Drawable {
 	}
 
 	/**
-		Adds tinted Tile at specified position.
-		@param x X position of the tile relative to drawn Object.
-		@param y Y position of the tile relative to drawn Object.
-		@param r Red tint value (0...1 range)
-		@param g Green tint value (0...1 range)
-		@param b Blue tint value (0...1 range)
-		@param a Alpha of the drawn Tile
+		Adds a tinted Tile at specified position.
+		@param x X position of the tile relative to the TileGroup.
+		@param y Y position of the tile relative to the TileGroup.
+		@param r Red tint value (0...1 range).
+		@param g Green tint value (0...1 range).
+		@param b Blue tint value (0...1 range).
+		@param a Alpha of the drawn Tile.
 		@param t The Tile to draw.
 	**/
 	public inline function addColor( x : Float, y : Float, r : Float, g : Float, b : Float, a : Float, t : Tile) {
@@ -600,10 +603,10 @@ class TileGroup extends Drawable {
 	}
 
 	/**
-		Adds tinted Tile at specified position. Current default RGB color and provided alpha is used as tint.
-		@param x X position of the tile relative to drawn Object.
-		@param y Y position of the tile relative to drawn Object.
-		@param a Alpha of the drawn Tile
+		Adds a Tile at specified position. Tile is tinted by the current default color RGB value and provided alpha.
+		@param x X position of the tile relative to the TileGroup.
+		@param y Y position of the tile relative to the TileGroup.
+		@param a Alpha of the drawn Tile.
 		@param t The Tile to draw.
 	**/
 	public inline function addAlpha(x : Float, y : Float, a : Float, t : h2d.Tile) {
@@ -611,9 +614,9 @@ class TileGroup extends Drawable {
 	}
 
 	/**
-		Adds tinted Tile at specified position with provided transform. Current default color user as tint.
-		@param x X position of the tile relative to drawn Object.
-		@param y Y position of the tile relative to drawn Object.
+		Adds a Tile at specified position with provided transform. Tile is tinted by the current default color.
+		@param x X position of the tile relative to the TileGroup.
+		@param y Y position of the tile relative to the TileGroup.
 		@param sx X-axis scaling factor of the Tile.
 		@param sy Y-axis scaling factor of the Tile.
 		@param r Rotation (in radians) of the Tile.
@@ -627,7 +630,6 @@ class TileGroup extends Drawable {
 		drawWith(ctx,this);
 	}
 
-
 	override function sync( ctx : RenderContext ) {
 		super.sync(ctx);
 		// On some mobile GPU, uploading while rendering does create a lot of stall.
@@ -636,7 +638,17 @@ class TileGroup extends Drawable {
 		content.flush();
 	}
 
+	/**
+		Render the TileGroup contents using the referenced Drawable position, shaders and other parameters.
+
+		An advanced rendering approach, that allows to render TileGroup contents relative to another object
+		and used primarily by `Text` and `HtmlText`.
+
+		@param ctx The render context with which to render the TileGroup.
+		@param obj The Drawable which will be used as a source of the rendering parameters.
+	**/
 	@:allow(h2d)
+	@:dox(show)
 	function drawWith( ctx:RenderContext, obj : Drawable ) {
 		var max = content.triCount();
 		if( max == 0 )
