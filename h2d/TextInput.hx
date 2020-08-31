@@ -51,7 +51,7 @@ class TextInput extends Text {
 
 				var pt = new h2d.col.Point();
 				var scene = getScene();
-				scene.startDrag(function(e) {
+				scene.startCapture(function(e) {
 					pt.x = e.relX;
 					pt.y = e.relY;
 					globalToLocal(pt);
@@ -65,7 +65,7 @@ class TextInput extends Text {
 					selectionSize = 0;
 					cursorIndex = index;
 					if( e.kind == ERelease || getScene() != scene )
-						scene.stopDrag();
+						scene.stopCapture();
 				});
 			}
 		};

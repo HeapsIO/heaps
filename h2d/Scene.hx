@@ -546,23 +546,33 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		return false;
 	}
 
-	/**
-		Start a drag and drop operation, sending all events to `onEvent` instead of the scene until `stopDrag()` is called.
-		@param	onCancel	If defined, will be called when stopDrag is called
-		@param	refEvent	For touch events, only capture events that matches the reference event touchId
-	**/
-	public function startDrag( onEvent : hxd.Event -> Void, ?onCancel : Void -> Void, ?refEvent : hxd.Event ) {
-		events.startDrag(function(e) {
+	public function startCapture( onEvent : hxd.Event -> Void, ?onCancel : Void -> Void, ?refEvent : hxd.Event ) {
+		events.startCapture(function(e) {
 			screenToViewport(e);
 			onEvent(e);
 		},onCancel, refEvent);
 	}
 
+	public function stopCapture() {
+		events.stopCapture();
+	}
+
+	/**
+		Start a drag and drop operation, sending all events to `onEvent` instead of the scene until `stopDrag()` is called.
+		@param	onCancel	If defined, will be called when stopDrag is called
+		@param	refEvent	For touch events, only capture events that matches the reference event touchId
+	**/
+	@:deprecated("Renamed to startCapture") @:dox(hide)
+	public inline function startDrag( onEvent : hxd.Event -> Void, ?onCancel : Void -> Void, ?refEvent : hxd.Event ) {
+		startCapture(onEvent, onCancel, refEvent);
+	}
+
 	/**
 		Stop the current drag and drop operation
 	**/
-	public function stopDrag() {
-		events.stopDrag();
+	@:deprecated("Renamed to stopCapture") @:dox(hide)
+	public inline function stopDrag() {
+		stopCapture();
 	}
 
 	/**

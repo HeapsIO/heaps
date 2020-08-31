@@ -219,18 +219,28 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 		e.relY = (-dx * i.matB + dy * i.matA) * i.invDet;
 	}
 
-	public function startDrag(callb,?onCancel) {
-		scene.startDrag(function(event) {
+	public function startCapture(callb : hxd.Event -> Void, ?onCancel : Void -> Void, ?refEvent : hxd.Event) {
+		scene.startCapture(function(event) {
 			var x = event.relX, y = event.relY;
 			eventToLocal(event);
 			callb(event);
 			event.relX = x;
 			event.relY = y;
-		},onCancel);
+		}, onCancel, refEvent);
 	}
 
-	public function stopDrag() {
-		scene.stopDrag();
+	public function stopCapture() {
+		scene.stopCapture();
+	}
+
+	@:deprecated("Renamed to startCapture") @:dox(hide)
+	public inline function startDrag(callb,?onCancel) {
+		startCapture(callb, onCancel);
+	}
+
+	@:deprecated("Renamed to stopCapture") @:dox(hide)
+	public inline function stopDrag() {
+		stopCapture();
 	}
 
 	public function focus() {
