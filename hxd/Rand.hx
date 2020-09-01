@@ -1,7 +1,7 @@
 package hxd;
 
 /**
-	`hxd.Rand` is a class for a Heaps random generator.
+	`hxd.Rand` is a seeded random number generator, that allows to get always the same results starting from a given seed.
 **/
 class Rand {
 
@@ -9,7 +9,7 @@ class Rand {
 	var seed2 : Int;
 
 	/**
-		Create a random generator.
+		Create a random generator with a seed.
 	**/
 	public function new( seed : Int ) {
 		init(seed);
@@ -48,7 +48,7 @@ class Rand {
 	}
 
 	/**
-		Return an integer random number between 0 and n-1 included.
+		Return a random integer between 0 and n (excluded).
 	**/
 	public inline function random( n ) {
 		return uint() % n;
@@ -69,7 +69,7 @@ class Rand {
 	}
 
 	/**
-		Return a random number >= 0.0 and < 1.0.
+		Return a random float between 0.0 and 1.0 (excluded)
 	**/
 	public inline function rand() {
 		// we can't use a divider > 16807 or else two consecutive seeds
@@ -78,7 +78,7 @@ class Rand {
 	}
 
 	/**
-		Return a random number >= 0.0 and < 1.0 multiplied by the scale parameter.
+		Return a random float between -scale and +scale (excluded)
 	**/
 	public inline function srand(scale=1.0) {
 		return ((int() % 10007) / 10007.0) * scale;
