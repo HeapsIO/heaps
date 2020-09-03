@@ -513,7 +513,9 @@ class Flow extends Object {
 	override function sync(ctx:RenderContext) {
 		if( !isConstraint && (fillWidth || fillHeight) ) {
 			var scene = ctx.scene;
-			if( scene.width != constraintWidth || scene.height != constraintHeight ) needReflow = true;
+			var cw = fillWidth ? scene.width : -1;
+			var ch = fillHeight ? scene.height : -1;
+			if( cw != constraintWidth || ch != constraintHeight ) needReflow = true;
 		}
 		if( needReflow ) reflow();
 		super.sync(ctx);
@@ -676,8 +678,10 @@ class Flow extends Object {
 
 		if( !isConstraint && (fillWidth || fillHeight) ) {
 			var scene = getScene();
-			if( scene.width != constraintWidth || scene.height != constraintHeight ) {
-				constraintSize(fillWidth ? scene.width : -1, fillHeight ? scene.height : -1);
+			var cw = fillWidth ? scene.width : -1;
+			var ch = fillHeight ? scene.height : -1;
+			if( cw != constraintWidth || ch != constraintHeight ) {
+				constraintSize(cw, ch);
 				isConstraint = false;
 			}
 		}
@@ -1012,15 +1016,17 @@ class Flow extends Object {
 				var isAbs = p.isAbsolute;
 				if( isAbs && p.verticalAlign == null && p.horizontalAlign == null ) continue;
 
+				var pw = p.paddingLeft + p.paddingRight;
+				var ph = p.paddingTop + p.paddingBottom;
 				if( !isAbs )
 					c.constraintSize(
-						isConstraintWidth && p.constraint ? maxInWidth / Math.abs(c.scaleX) : -1,
-						isConstraintHeight && p.constraint ? maxInHeight / Math.abs(c.scaleY) : -1
+						isConstraintWidth && p.constraint ? (maxInWidth - pw) / Math.abs(c.scaleX) : -1,
+						isConstraintHeight && p.constraint ? (maxInHeight - ph) / Math.abs(c.scaleY) : -1
 					);
 
 				var b = c.getSize(tmpBounds);
-				p.calculatedWidth = Math.ceil(b.xMax) + p.paddingLeft + p.paddingRight;
-				p.calculatedHeight = Math.ceil(b.yMax) + p.paddingTop + p.paddingBottom;
+				p.calculatedWidth = Math.ceil(b.xMax) + pw;
+				p.calculatedHeight = Math.ceil(b.yMax) + ph;
 				if( p.minWidth != null && p.calculatedWidth < p.minWidth ) p.calculatedWidth = p.minWidth;
 				if( p.minHeight != null && p.calculatedHeight < p.minHeight ) p.calculatedHeight = p.minHeight;
 				if( isAbs ) continue;
