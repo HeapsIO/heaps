@@ -153,7 +153,7 @@ class CameraController extends h3d.scene.Object {
 			else
 				zoom(e.wheelDelta);
 		case EPush:
-			@:privateAccess scene.events.startCapture(onEvent, function() pushing = -1, e);
+			@:privateAccess scene.events.startCapture(onEvent, function() pushing = -1, e.touchId);
 			pushing = e.button;
 			pushTime = haxe.Timer.stamp();
 			pushStartX = pushX = e.relX;

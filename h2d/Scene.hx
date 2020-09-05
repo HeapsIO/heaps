@@ -546,11 +546,11 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		return false;
 	}
 
-	public function startCapture( onEvent : hxd.Event -> Void, ?onCancel : Void -> Void, ?refEvent : hxd.Event ) {
+	public function startCapture( onEvent : hxd.Event -> Void, ?onCancel : Void -> Void, ?touchId : Int ) {
 		events.startCapture(function(e) {
 			screenToViewport(e);
 			onEvent(e);
-		},onCancel, refEvent);
+		},onCancel, touchId);
 	}
 
 	public function stopCapture() {
@@ -564,7 +564,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	**/
 	@:deprecated("Renamed to startCapture") @:dox(hide)
 	public inline function startDrag( onEvent : hxd.Event -> Void, ?onCancel : Void -> Void, ?refEvent : hxd.Event ) {
-		startCapture(onEvent, onCancel, refEvent);
+		startCapture(onEvent, onCancel, refEvent != null ? refEvent.touchId : null);
 	}
 
 	/**

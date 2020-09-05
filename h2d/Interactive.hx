@@ -219,14 +219,14 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 		e.relY = (-dx * i.matB + dy * i.matA) * i.invDet;
 	}
 
-	public function startCapture(callb : hxd.Event -> Void, ?onCancel : Void -> Void, ?refEvent : hxd.Event) {
+	public function startCapture(callb : hxd.Event -> Void, ?onCancel : Void -> Void, ?touchId : Int) {
 		scene.startCapture(function(event) {
 			var x = event.relX, y = event.relY;
 			eventToLocal(event);
 			callb(event);
 			event.relX = x;
 			event.relY = y;
-		}, onCancel, refEvent);
+		}, onCancel, touchId);
 	}
 
 	public function stopCapture() {
