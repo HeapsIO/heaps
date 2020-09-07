@@ -555,7 +555,7 @@ class LocalFileSystem implements FileSystem {
 		#if flash
 		throw "Not Supported";
 		return null;
-		#end
+		#else
 		if( !sys.FileSystem.exists(baseDir + path) || !sys.FileSystem.isDirectory(baseDir + path) )
 			throw new NotFound(baseDir + path);
 		var files = sys.FileSystem.readDirectory(baseDir + path);
@@ -563,6 +563,7 @@ class LocalFileSystem implements FileSystem {
 		for(f in files)
 			r.push(new LocalEntry(this, f, path + "/" + f, baseDir + path + "/" + f));
 		return r;
+		#end
 	}
 
 }

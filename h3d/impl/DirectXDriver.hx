@@ -617,12 +617,7 @@ class DirectXDriver extends h3d.impl.Driver {
 			var ref = st == null ? 0 : st.reference;
 			currentDepthState = depth;
 			currentStencilRef = ref;
-			#if (hldx < "1.7")
-			if( ref != 0 ) throw "DirectX Stencil support requires HL 1.7+";
-			Driver.omSetDepthStencilState(depth);
-			#else
 			Driver.omSetDepthStencilState(depth, ref);
-			#end
 		}
 
 		var rasterBits = bits & (Pass.culling_mask | SCISSOR_BIT | Pass.wireframe_mask);
@@ -1158,7 +1153,7 @@ class DirectXDriver extends h3d.impl.Driver {
 		IncrSat,
 		Incr,
 		DecrSat,
-		#if (hldx < "1.7.0") Desc #else Decr #end,
+		Decr,
 		Invert,
 	];
 
