@@ -394,6 +394,16 @@ class Pixels {
 				bytes[p++] = v;
 				bytes[p++] = 0xFF;
 			}
+
+		case [R16U, R32F]:
+			var nbytes = haxe.io.Bytes.alloc(width * height * 4);
+			var fbytes = this.bytes;
+			for( i in 0...width*height ) {
+				var nv = fbytes.getUInt16(i << 1);
+				nbytes.setFloat(i << 2, nv / 65535.0);
+			}
+			this.bytes = nbytes;
+
 		case [S3TC(a),S3TC(b)] if( a == b ):
 			// nothing
 
