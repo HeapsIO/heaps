@@ -98,7 +98,7 @@ private class GraphicsContent extends h3d.prim.Primitive {
 	}
 
 	public function doRender( ctx : h2d.RenderContext ) {
-		if ( index.length < 0 ) return;
+		if ( index.length == 0 ) return;
 		flush();
 		for ( b in buffers ) b.state.drawIndexed(ctx, b.vbuf, b.ibuf);
 		state.drawIndexed(ctx, buffer, indexes);
