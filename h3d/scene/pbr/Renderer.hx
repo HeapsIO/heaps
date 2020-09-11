@@ -477,6 +477,7 @@ class Renderer extends h3d.scene.Renderer {
 			hasDebugEvent = false;
 			hxd.Window.getInstance().removeEventTarget(onEvent);
 		}
+		mark("vsync");
 	}
 
 	var debugPushPos : { x : Float, y : Float }
