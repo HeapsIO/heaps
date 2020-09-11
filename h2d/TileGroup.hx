@@ -20,7 +20,7 @@ class TileLayerContent extends h3d.prim.Primitive {
 
 	public function clear() {
 		tmp = new hxd.FloatBuffer();
-		if( buffer != null ) buffer.dispose();
+		if( buffer != null ) hxd.impl.Allocator.get().disposeBuffer(buffer);
 		buffer = null;
 		xMin = hxd.Math.POSITIVE_INFINITY;
 		yMin = hxd.Math.POSITIVE_INFINITY;
@@ -244,7 +244,7 @@ class TileLayerContent extends h3d.prim.Primitive {
 		y += h;
 		if( x > xMax ) xMax = x;
 		if( y > yMax ) yMax = y;
-		
+
 		state.add(4);
 	}
 
@@ -402,8 +402,16 @@ class TileLayerContent extends h3d.prim.Primitive {
 	override public function alloc(engine:h3d.Engine) {
 		if( tmp == null ) clear();
 		if( tmp.length > 0 ) {
-			buffer = h3d.Buffer.ofFloats(tmp, 8, [Quads, RawFormat]);
+			buffer = hxd.impl.Allocator.get().ofFloats(tmp, 8, RawQuads);
 		}
+	}
+
+	override function dispose() {
+		if( buffer != null ) {
+			hxd.impl.Allocator.get().disposeBuffer(buffer);
+			buffer = null;
+		}
+		super.dispose();
 	}
 
 	public inline function flush() {
