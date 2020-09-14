@@ -37,13 +37,14 @@ class FileEntry {
 	function get_path() : String { throw "path() not implemented"; return null; };
 
 	function get_directory() {
-		var p = path.split("/");
-		p.pop();
-		return p.join("/");
+		var idx = path.lastIndexOf("/");
+		if (idx < 0) return "";
+		return path.substr(0, idx);
 	}
 
 	function get_extension() {
-		var np = name.split(".");
-		return np.length == 1 ? "" : np.pop().toLowerCase();
+		var idx = name.lastIndexOf(".");
+		if (idx < 0) return "";
+		return name.substr(idx+1).toLowerCase();
 	}
 }
