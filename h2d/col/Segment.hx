@@ -67,7 +67,7 @@ class Segment {
 		if( r.side(new Point(x, y)) * r.side(new Point(x + dx, y + dy)) > 0 )
 			return null;
 
-		var u = ( r.dx * (y - r.y) - r.dy * (x - r.x) ) / ( r.dy * dx - r.dx * dy );
+		var u = ( r.lx * (y - r.py) - r.ly * (x - r.px) ) / ( r.ly * dx - r.lx * dy );
 		if( u < 0 || u > 1 ) return null;
 
 		if( pt == null ) pt = new Point();
