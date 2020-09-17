@@ -254,13 +254,13 @@ abstract Polygon(Array<Point>) from Array<Point> to Array<Point> {
 			var d = Math.distanceSq(x - r.px, y - r.py);
 
 			if(d < dmin || dmin < 0) {
+				if( !bestMatch ) return Math.sqrt(d);
 				dmin = d;
-				if( !bestMatch ) return dmin;
 			}
 			p0 = p;
 		}
 
-		return dmin;
+		return dmin < 0 ? dmin : Math.sqrt(dmin);
 	}
 
 	// find orientation of ordered triplet (p, q, r).
