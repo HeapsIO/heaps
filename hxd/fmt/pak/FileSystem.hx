@@ -23,6 +23,10 @@ class FileInput extends haxe.io.BytesInput {
 			this.position += pos;
 		}
 	}
+
+	public function tell() {
+		return this.position;
+	}
 }
 #end
 

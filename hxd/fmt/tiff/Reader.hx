@@ -1,11 +1,18 @@
 package hxd.fmt.tiff;
+
 import hxd.fmt.tiff.Data;
+#if sys
+import sys.io.FileInput;
+#else
+import hxd.fmt.pak.FileSystem.FileInput;
+#end
+
 
 class Reader {
 
-	var f : sys.io.FileInput;
+	var f : FileInput;
 
-	public function new(f:sys.io.FileInput) {
+	public function new(f:FileInput) {
 		this.f = f;
 	}
 

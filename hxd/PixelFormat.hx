@@ -19,5 +19,8 @@ enum PixelFormat {
 	SRGB_ALPHA;
 	RGB10A2;
 	RG11B10UF; // unsigned float
+	R16U;
+	RGB16U;
+	RGBA16U;
 	S3TC( v : Int );
 }

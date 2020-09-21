@@ -81,6 +81,7 @@ class Image extends Resource {
 				if( f.readInt32() == ('I'.code << 24) | ('H'.code << 16) | ('D'.code << 8) | 'R'.code ) {
 					width = f.readInt32();
 					height = f.readInt32();
+					bc = f.readByte(); // colbits
 					break;
 				}
 				f.skip(dataLen + 4); // CRC
@@ -158,7 +159,13 @@ class Image extends Resource {
 			var bytes = entry.getBytes(); // using getTmpBytes cause bug in E2
 
 			#if hl
-			if( fmt == null ) fmt = BGRA;
+			if( fmt == null )
+				fmt = switch( inf.bc ) {
+				case 16: R16U;
+				case 48: RGB16U;
+				case 64: RGBA16U;
+				default: BGRA;
+				}
 			pixels = decodePNG(bytes, inf.width, inf.height, fmt, flipY);
 			if( pixels == null ) throw "Failed to decode PNG " + entry.path;
 			#else
@@ -242,12 +249,29 @@ class Image extends Resource {
 		case RGBA: RGBA;
 		case BGRA: BGRA;
 		case ARGB: ARGB;
+		case R16U: cast 12;
+		case RGB16U: cast 13;
+		case RGBA16U: cast 14;
 		default:
 			fmt = BGRA;
 			BGRA;
 		};
-		var dst = haxe.io.Bytes.alloc(width * height * 4);
-		if( !hl.Format.decodePNG(src.getData(), src.length, dst.getData(), width, height, width * 4, ifmt, (flipY?1:0)) )
+		var stride = 4; // row_stride is the step, in png_byte or png_uint_16 units	as appropriate, between adjacent rows
+		var pxsize = 4;
+		switch( fmt ) {
+			case R16U:
+				stride = 1;
+				pxsize = 2;
+			case RGB16U:
+				stride = 3;
+				pxsize = 6;
+			case RGBA16U:
+				stride = 4;
+				pxsize = 8;
+			default:
+		}
+		var dst = haxe.io.Bytes.alloc(width * height * pxsize);
+		if( !hl.Format.decodePNG(src.getData(), src.length, dst.getData(), width, height, width * stride, ifmt, (flipY?1:0)) )
 			return null;
 		var pix = new hxd.Pixels(width, height, dst, fmt);
 		if( flipY ) pix.flags.set(FlipY);

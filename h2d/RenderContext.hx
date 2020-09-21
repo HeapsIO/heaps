@@ -17,7 +17,7 @@ private typedef RenderZoneStack = { hasRZ:Bool, x:Float, y:Float, w:Float, h:Flo
 @:access(h2d.Scene)
 class RenderContext extends h3d.impl.RenderContext {
 
-	static inline var BUFFERING = false;
+	static inline var BUFFERING = #if heaps_emit_tile_buffering true #else false #end;
 
 	/**
 		Current transparency value used for rendering objects. 

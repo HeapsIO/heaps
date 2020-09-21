@@ -405,6 +405,14 @@ class Renderer extends h3d.scene.Renderer {
 		tonemap.shader.hdrTexture = textures.hdr;
 	}
 
+	function drawPbrDecals( passName : String ) {
+		var passes = get(passName);
+		if( passes.isEmpty() ) return;
+		ctx.engine.pushTargets([textures.albedo,textures.normal,textures.pbr]);
+		renderPass(decalsOutput, passes);
+		ctx.engine.popTarget();
+	}
+
 	override function render() {
 		beginPbr();
 
@@ -414,13 +422,13 @@ class Renderer extends h3d.scene.Renderer {
 		begin(MainDraw);
 		renderPass(output, get("default"), frontToBack);
 		renderPass(output, get("terrain"));
+		drawPbrDecals("terrainDecal");
 		renderPass(output, get("alpha"), backToFront);
 		renderPass(output, get("additive"));
 		end();
 
-		setTargets([textures.albedo,textures.normal,textures.pbr]);
 		begin(Decals);
-		renderPass(decalsOutput, get("decal"));
+		drawPbrDecals("decal");
 		end();
 
 		setTarget(textures.hdr);
@@ -477,6 +485,7 @@ class Renderer extends h3d.scene.Renderer {
 			hasDebugEvent = false;
 			hxd.Window.getInstance().removeEventTarget(onEvent);
 		}
+		mark("vsync");
 	}
 
 	var debugPushPos : { x : Float, y : Float }
