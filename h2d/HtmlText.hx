@@ -17,6 +17,12 @@ enum LineHeightMode {
 	Constant;
 }
 
+enum ImageVerticalAlign {
+	Top;
+	Bottom;
+	Middle;
+}
+
 class HtmlText extends Text {
 
 	/**
@@ -51,6 +57,11 @@ class HtmlText extends Text {
 		Changing mode to `Constant` restores legacy behavior of HtmlText.
 	**/
 	public var lineHeightMode(default,set) : LineHeightMode = Accurate;
+
+	/**
+		Vertical alignement of the image related to the text
+	**/
+	public var imageVerticalAlign(default,set) : ImageVerticalAlign = Bottom;
 
 	var elements : Array<Object> = [];
 	var xPos : Float;
@@ -287,9 +298,17 @@ class HtmlText extends Text {
 					info.width = size;
 					if ( lineHeightMode == Accurate ) {
 						var grow = i.height - i.dy - info.baseLine;
-						if ( grow > 0 ) {
-							info.baseLine += grow;
-							info.height += grow;
+						if(grow > 0) {
+							switch(imageVerticalAlign) {
+								case Top:
+									info.height += grow;
+								case Bottom:
+									info.baseLine += grow;
+									info.height += grow;
+								case Middle:
+									info.height += grow;
+									info.baseLine += Std.int(grow/2);
+							}
 						}
 						grow = info.baseLine + i.dy;
 						if ( info.height < grow ) info.height = grow;
@@ -600,7 +619,14 @@ class HtmlText extends Text {
 			case "img":
 				var i : Tile = loadImage(e.get("src"));
 				if ( i == null ) i = Tile.fromColor(0xFF00FF, 8, 8);
-				var py = yPos + metrics[sizePos].baseLine - i.height;
+				var py = yPos;
+				switch(imageVerticalAlign) {
+					case Bottom:
+						py += metrics[sizePos].baseLine - i.height;
+					case Middle:
+						py += metrics[sizePos].baseLine - i.height/2;
+					case Top:
+				}
 				if( py + i.dy < calcYMin )
 					calcYMin = py + i.dy;
 				if( rebuild ) {
@@ -679,6 +705,14 @@ class HtmlText extends Text {
 			rebuild();
 		}
 		return value;
+	}
+
+	function set_imageVerticalAlign(align) {
+		if ( this.imageVerticalAlign != align ) {
+			this.imageVerticalAlign = align;
+			rebuild();
+		}
+		return align;
 	}
 
 	function set_lineHeightMode(v) {
