@@ -138,6 +138,15 @@ class Charset {
 		return isSpace(code) || isCJK(code);
 	}
 
+	static var complementChars : Map<Int,Bool> = {
+		var str = "ヽヾーァィゥェォッャュョヮヵヶぁぃぅぇぉっゃゅょゎゕゖㇰㇱㇲㇳㇴㇵㇶㇷㇸㇹㇺㇻㇼㇽㇾㇿ々〻";
+		[for( i in 0...str.length ) str.charCodeAt(i) => true];
+	}
+
+	public function isComplementChar(code) {
+		return complementChars.exists(code);
+	}
+
 	static var inst : Charset;
 	public static function getDefault() {
 		if( inst == null ) inst = new Charset();
