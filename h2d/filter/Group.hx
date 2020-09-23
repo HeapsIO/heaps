@@ -1,13 +1,13 @@
 package h2d.filter;
 
 /**
-	Filter Group allows to use multiple Filters on a single Object with several limitations.
+	Applies an array of Filters to a single Object with several limitations.
 
-	If all filters in Group are disabled `enable` will report `false` even if Group itself is enabled.  
-	`boundsExtend` and `autoBounds` are automatically managed by Group instance.
-	`boundsExtend` is a sum of all filter extends and `autoBounds` enabled only when all filters have it enabled.
+	* If all filters in the Group are disabled - `Filter.enable` will report `false` even if Group itself is enabled.  
+	* `Filter.boundsExtend` and `Filter.autoBounds` are automatically managed by Group instance.
+	* `boundsExtend` is a sum of all filter extends and `autoBounds` enabled only when all filters have it enabled.
 
-	When `autoBounds` is disabled, bounds are a result of calling `getBounds` on children filters, but most likely
+	When `autoBounds` is disabled, bounds are a result of calling `Filter.getBounds` on children filters, but most likely
 	will contain only the bounds filled by last filter, because `Object.getBounds` clears the `Bounds` instance.
 
 	Ensure that all relevant filters are added to Group prior binding it to any Object. Behavior is undefined otherwise.
@@ -16,6 +16,10 @@ class Group extends Filter {
 
 	var filters : Array<Filter>;
 
+	/**
+		Create a new filter Group.
+		@param filters Optional list of the Filters bound to the group.
+	**/
 	public function new( ?filters : Array<Filter> ) {
 		super();
 		this.filters = filters == null ? [] : filters;

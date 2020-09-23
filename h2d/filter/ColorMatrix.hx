@@ -1,7 +1,7 @@
 package h2d.filter;
 
 /**
-	Applies color correction filter based on the provided matrix.
+	Applies a color correction filter based on the provided matrix.
 
 	Matrix values are as following:
 	```
@@ -11,7 +11,7 @@ package h2d.filter;
 	[  blueMult,  blueMult,  blueMult,  blueMult ]
 	[ alphaMult, alphaMult, alphaMult, alphaMult ]
 	```
-	An identity matrix will result in unmodified colors:
+	An identity matrix will result in an unmodified colors:
 	```
 	[1, 0, 0, 0]
 	[0, 1, 0, 0]
@@ -19,6 +19,7 @@ package h2d.filter;
 	[0, 0, 0, 1]
 	```
 	
+	@see `Ambient`
 **/
 class ColorMatrix extends Filter {
 
@@ -29,6 +30,11 @@ class ColorMatrix extends Filter {
 
 	var pass : h3d.pass.ColorMatrix;
 
+	/**
+		Create a new ColorMatrix filter.
+
+		@param m The matrix used to modify the resulting colors.
+	**/
 	public function new( ?m : h3d.Matrix ) {
 		super();
 		pass = new h3d.pass.ColorMatrix(m);
@@ -45,7 +51,7 @@ class ColorMatrix extends Filter {
 	}
 
 	/**
-		Returns a ColorMatrix filter which results in grayscale image (0 saturation).
+		Returns a ColorMatrix filter which results in a grayscale image (0 saturation).
 	**/
 	public static function grayed() {
 		var m = new h3d.Matrix();

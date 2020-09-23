@@ -7,11 +7,11 @@ import hxd.Math;
 class DropShadow extends Glow {
 
 	/**
-		The offset of the shadow in the `angle` direction.
+		The offset distance of the shadow in the direction of `DropShadow.angle`.
 	**/
 	public var distance : Float;
 	/**
-		Shadow offset direction angle.
+		The shadow offset direction angle.
 	**/
 	public var angle : Float;
 	var alphaPass = new h3d.mat.Pass("");

@@ -1,7 +1,7 @@
 package h2d.filter;
 
 /**
-	Applies bloom effect to the filtered Object.
+	Applies a bloom effect to the filtered Object.
 	Produces feathers to light areas in the objects.
 **/
 class Bloom extends Blur {
@@ -12,12 +12,12 @@ class Bloom extends Blur {
 	**/
 	public var amount(get, set) : Float;
 	/**
-		The bloom luminosity power.
+		The bloom luminosity exponent.
 	**/
 	public var power(get, set) : Float;
 
 	/**
-		@param power The bloom luminosity power.
+		@param power The bloom luminosity exponent.
 		@param amount The bloom luminosity multiplier.
 		@param radius The bloom glow distance in pixels.
 		@param gain The bloom color intensity.

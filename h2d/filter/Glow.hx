@@ -1,7 +1,7 @@
 package h2d.filter;
 
 /**
-	Adds glow backdrop to the filtered Object.
+	Adds a glow backdrop to the filtered Object.
 **/
 class Glow extends Blur {
 
@@ -14,7 +14,7 @@ class Glow extends Blur {
 	**/
 	public var alpha : Float;
 	/**
-		Substracts the original image from the glow output when enabled.
+		Subtracts the original image from the glow output when enabled.
 	**/
 	public var knockout : Bool;
 	/**

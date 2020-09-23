@@ -23,7 +23,9 @@ private class MaskShader extends h3d.shader.ScreenShader {
 }
 
 /**
-	Allows to perform arbitrary shape masking of the filtered Object.
+	Performs an arbitrary shape masking of the filtered Object.
+
+	@see `AbstractMask`
 **/
 class Mask extends AbstractMask {
 
@@ -35,7 +37,7 @@ class Mask extends AbstractMask {
 
 	/**
 		Create new Mask filter.
-		@param mask An `Object` that will be used for masking See [h2d.filter.AbstractMask.mask] for limitations.
+		@param mask An `Object` that will be used for masking. See `AbstractMask.mask` for limitations.
 		@param maskVisible When enabled, masking `Object` will be visible. Hidden otherwise.
 		@param smoothAlpha Enables masking Object alpha merging. Otherwise causes unsmoothed masking of non-zero alpha areas.
 	**/

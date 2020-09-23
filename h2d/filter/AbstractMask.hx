@@ -21,8 +21,11 @@ class Hide extends Filter {
 }
 
 /**
-	AbstractMask is a base class for filters that utilize separate Objects as a masking object.
+	A base class for filters that utilize separate Objects as a masking object.
+	
 	Not intended to be used directly.
+
+	Masking objects have a number of restrictions on them, see `AbstractMask.mask` for details.
 **/
 class AbstractMask extends Filter {
 
@@ -37,6 +40,7 @@ class AbstractMask extends Filter {
 		Masking Objects have following limitations:
 		* It cannot be a parent of the filtered Object.
 		* It should not contain any filters.
+		* It should be present in the object tree and precede the Object it masks in the rendering order (rendered before it).
 		* Same masking Object cannot be used by multiple mask filters.
 	**/
 	public var mask(default, set) : h2d.Object;

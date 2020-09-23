@@ -1,27 +1,27 @@
 package h2d.filter;
 
 /**
-	Blue filter utilizes `h3d.pass.Blur` render pass to perform a blurring operation on filtered object.
+	Utilizes the `h3d.pass.Blur` render pass to perform a blurring operation on the filtered object.
 **/
 class Blur extends Filter {
 
 	/**
-		See [h3d.pass.Blur.radius]
+		@see `h3d.pass.Blur.radius`
 	**/
 	public var radius(get, set) : Float;
 
 	/**
-		See [h3d.pass.Blur.linear]
+		@see `h3d.pass.Blur.linear`
 	**/
 	public var linear(get, set) : Float;
 
 	/**
-		See [h3d.pass.Blur.gain]
+		@see `h3d.pass.Blur.gain`
 	**/
 	public var gain(get, set) : Float;
 
 	/**
-		See [h3d.pass.Blur.quality]
+		@see `h3d.pass.Blur.quality`
 	**/
 	public var quality(get, set) : Float;
 

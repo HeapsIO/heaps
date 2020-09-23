@@ -2,7 +2,7 @@ package h2d.filter;
 import hxd.Math;
 
 /**
-	Displacement filter allows applying a normal map to the filtered Object in order to displace pixels.
+	Applies a normal map to the filtered Object in order to displace pixels.
 
 	Uses red and green channels to displaces horizontal and vertical axes accordingly.
 **/

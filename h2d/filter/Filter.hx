@@ -9,7 +9,7 @@ package h2d.filter;
 	Another thing to be aware of, is that `Scene.scaleMode` does not affect filter resolution either,
 	and upscaling contents with `scaleMode` would not upscale the resolution of filtered content.
 
-	Filters limit their render area dictated by bound object boundaries, `autoBounds` and `boundsExtend` variables and `getBounds()` method.
+	Filters limit their render area dictated by bound object boundaries, `Filter.autoBounds` and `Filter.boundsExtend` variables and `Filter.getBounds` method.
 	See their respective docs for details.
 
 	For optimization purposes, rendering boundaries are clipped by scene viewport and nothing will be rendered offscreen.
@@ -17,20 +17,21 @@ package h2d.filter;
 class Filter {
 
 	/**
-		When enabled, rendering bounds of the filter will be expanded by `boundsExtend` in all directions.
-		Otherwise filter should provide custom bounds through `getBounds()` call.  
+		When enabled, rendering bounds of the filter will be expanded by `Filter.boundsExtend` in all directions.
+		Otherwise filter should provide custom bounds through `Filter.getBounds` call.  
 		Default : true.
 	**/
 	public var autoBounds = true;
 	/**
-		Rendering texture boundaries extent. Increases the rendering area by twice the `boundsExtend` value.  
-		Automatically applied to object bounds when `autoBounds = true` or `getBounds()` is not overriden.  
+		Rendering texture boundaries extent. Increases the rendering area by twice the `Filter.boundsExtend` value.  
+		Automatically applied to object bounds when `autoBounds = true` or `Filter.getBounds` is not overridden.  
 		Does not affect boundaries when `autoBounds = true` and `boundsExtend` is less than 0.
 	**/
 	public var boundsExtend : Float = 0.;
 	/**
 		When enabled, some filters will use bilinear filtering on temporary textures.  
-		Does not affect the majority of filters. (See `h2d.filter.AbstractMask`)
+		Does not affect the majority of filters.
+		@see `AbstractMask`
 	**/
 	public var smooth = false;
 	/**
@@ -67,8 +68,8 @@ class Filter {
 	/**
 		Method should populate `bounds` with rendering boundaries of the Filter for Object `s`.
 		Initial `bounds` contents are undefined and it's recommended to either clear them or call `s.getBounds(s, bounds)`.
-		Only used when `autoBounds` is `false`.
-		By default uses given Object bounds and extends them with `boundsExtend`.
+		Only used when `Filter.autoBounds` is `false`.
+		By default uses given Object bounds and extends them with `Filter.boundsExtend`.
 		Compared to `autoBounds = true`, negative `boundsExtend` is still applied, causing rendering area to shrink.
 	**/
 	public function getBounds( s : Object, bounds : h2d.col.Bounds ) {

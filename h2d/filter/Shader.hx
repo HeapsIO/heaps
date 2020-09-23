@@ -1,7 +1,9 @@
 package h2d.filter;
 
 /**
-	Shader filter allows to easily implement custom filters without need to fiddle with render passes.
+	The base class for simple filters that don't need specialized render passes and rely completely on the shaders.
+
+	Provides an easy interface to implement custom filters without going too deep into filter rendering process with render passes.
 
 	Compatible shaders should extend from `h3d.shader.ScreenShader` and contain an input texture uniform, as well as assign `pixelColor` in fragment shader.
 
@@ -47,7 +49,7 @@ class Shader< T:h3d.shader.ScreenShader > extends Filter {
 	/**
 		Create new shader filter.
 		@param shader The shader instance that will be used for rendering.
-		@param textureParam The name of Sampler2D in the shader to which input texture will be assigned. Should be present in the shader.
+		@param textureParam The name of `Sampler2D` in the shader to which input texture will be assigned. Should be present in the shader.
 	**/
 	public function new( shader : T, textureParam = "texture" ) {
 		super();
