@@ -62,6 +62,8 @@ class HtmlText extends Text {
 	var dropMatrix : h3d.shader.ColorMatrix;
 	var prevChar : Int;
 	var newLine : Bool;
+	var aHrefs : Array<String>;
+	var aInteractive : Interactive;
 
 	override function draw(ctx:RenderContext) {
 		if( dropShadow != null ) {
@@ -107,6 +109,12 @@ class HtmlText extends Text {
 		var f = defaultLoadFont(name);
 		if (f == null) return this.font;
 		else return f;
+	}
+
+	/**
+		Called on a <a> tag click
+	**/
+	public dynamic function onHyperlink(url:String) : Void {
 	}
 
 	public dynamic function formatText( text : String ) : String {
@@ -512,11 +520,33 @@ class HtmlText extends Text {
 	}
 
 	function addNode( e : Xml, font : Font, align : Align, rebuild : Bool, metrics : Array<LineInfo> ) {
+		inline function createInteractive() {
+			if(aHrefs == null || aHrefs.length == 0)
+				return;
+			aInteractive = new Interactive(0, metrics[sizePos].height, this);
+			var href = aHrefs[aHrefs.length-1];
+			aInteractive.onClick = function(event) {
+				onHyperlink(href);
+			}
+			aInteractive.x = xPos;
+			aInteractive.y = yPos;
+			elements.push(aInteractive);
+		}
+
+		inline function finalizeInteractive() {
+			if(aInteractive != null) {
+				aInteractive.width = xPos - aInteractive.x;
+				aInteractive = null;
+			}
+		}
+
 		inline function makeLineBreak()
 		{
+			finalizeInteractive();
 			if( xPos > xMax ) xMax = xPos;
 			yPos += metrics[sizePos].height + lineSpacing;
 			nextLine(align, metrics[++sizePos].width);
+			createInteractive();
 		}
 		if( e.nodeType == Xml.Element ) {
 			var prevColor = null, prevGlyphs = null;
@@ -612,6 +642,14 @@ class HtmlText extends Text {
 				newLine = false;
 				prevChar = -1;
 				xPos += i.width + imageSpacing;
+			case "a":
+				if( e.exists("href") ) {
+					finalizeInteractive();
+					if( aHrefs == null )
+						aHrefs = [];
+					aHrefs.push(e.get("href"));
+					createInteractive();
+				}
 			default:
 			}
 			for( child in e )
@@ -626,6 +664,12 @@ class HtmlText extends Text {
 					makeLineBreak();
 					newLine = true;
 					prevChar = -1;
+				}
+			case "a":
+				if( aHrefs.length > 0 ) {
+					finalizeInteractive();
+					aHrefs.pop();
+					createInteractive();
 				}
 			default:
 			}
