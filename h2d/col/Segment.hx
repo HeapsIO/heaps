@@ -2,21 +2,46 @@ package h2d.col;
 import hxd.Math;
 
 /**
-	`h2d.col.Segment` is a 2D line segment.
+	A 2D line segment.
+	@see `h2d.Segments`
 **/
 class Segment {
 
-	/** X starting position of the Segment. **/
+	/**
+		X starting position of the Segment.
+
+		Please use `Segment.setPoints` to modify this value.
+	**/
 	public var x : Float;
-	/** Y starting position of the Segment. **/
+	/**
+		Y starting position of the Segment.
+
+		Please use `Segment.setPoints` to modify this value.
+	**/
 	public var y : Float;
-	/** The delta-value of X end position of the Segment relative to starting position. **/
+	/**
+		The delta-value of X end position of the Segment relative to starting position.
+
+		Please use `Segment.setPoints` to modify this value.
+	**/
 	public var dx : Float;
-	/** The delta-value of Y end position of the Segment relative to starting position. **/
+	/**
+		The delta-value of Y end position of the Segment relative to starting position.
+
+		Please use `Segment.setPoints` to modify this value.
+	**/
 	public var dy : Float;
-	/** Squared length of the segment. **/
+	/**
+		Squared length of the segment.
+
+		Please use `Segment.setPoints` to modify this value.
+	**/
 	public var lenSq : Float;
-	/** Inverse of the Segments squared length. **/
+	/**
+		Inverse of the Segments squared length.
+
+		Please use `Segment.setPoints` to modify this value.
+	**/
 	public var invLenSq : Float;
 
 	/**

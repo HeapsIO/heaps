@@ -2,16 +2,27 @@ package h2d.col;
 import hxd.Math;
 
 /**
-	`h2d.col.Polygon` is an abstract around Array of Points, allowing to perform collision test against defined shape.
+	An abstract around an Array of `Point`s that define a polygonal shape that can be collision-tested against.
+	@see `h2d.col.IPolygon`
 **/
 @:forward(push,remove,insert,copy)
 abstract Polygon(Array<Point>) from Array<Point> to Array<Point> {
-
+	
+	/**
+		The underlying Array of vertices.
+	**/
 	public var points(get, never) : Array<Point>;
+	/**
+		The amount of vertices in the polygon.
+	**/
 	public var length(get, never) : Int;
 	inline function get_length() return this.length;
 	inline function get_points() return this;
 
+	/**
+		Create a new Polygon shape.
+		@param points An optional array of vertices the polygon should use.
+	**/
 	public inline function new( ?points ) {
 		this = points == null ? [] : points;
 	}

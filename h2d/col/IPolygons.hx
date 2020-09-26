@@ -2,17 +2,27 @@ package h2d.col;
 import hxd.Math;
 
 /**
-	`h2d.col.IPolygons` is an abstract over an Array of IPolygon instances that allows to perform mass operations on those polygons.
+	An abstract over an Array of `IPolygon` instances that define multiple polygonal shapes that can be collision-tested against.
+	@see `h2d.Polygons`
 **/
 @:forward(push,remove)
 abstract IPolygons(Array<IPolygon>) from Array<IPolygon> to Array<IPolygon> {
-
+	/**
+		An underlying IPolygon array.
+	**/
 	public var polygons(get, never) : Array<IPolygon>;
+	/**
+		The amount of polygons in the IPolygons instance.
+	**/
 	public var length(get, never) : Int;
 	inline function get_length() return this.length;
 
 	inline function get_polygons() return this;
 
+	/**
+		Create a new IPolygons instance.
+		@param polygons An optional list of polygons to use.
+	**/
 	public inline function new( ?polygons ) {
 		this = polygons == null ? [] : polygons;
 	}
@@ -23,7 +33,7 @@ abstract IPolygons(Array<IPolygon>) from Array<IPolygon> to Array<IPolygon> {
 	}
 
 	/**
-		Converts IPolygons instance to Float-based Polygons.
+		Converts the IPolygons instance to the floating point-based Polygons.
 	**/
 	public function toPolygons( scale = 1. ) : Polygons {
 		return [for( p in polygons ) p.toPolygon(scale)];
@@ -115,7 +125,7 @@ abstract IPolygons(Array<IPolygon>) from Array<IPolygon> to Array<IPolygon> {
 	}
 
 	/**
-		Creates a set of new optimized polygons by eliminating almost colinear edges according to epsilon distance.
+		Creates a set of new optimized polygons by eliminating almost colinear edges according to the epsilon distance.
 	**/
 	public function optimize( epsilon : Float ) : IPolygons {
 		return [for( p in polygons ) p.optimize(epsilon)];

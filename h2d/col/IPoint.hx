@@ -2,20 +2,32 @@ package h2d.col;
 import hxd.Math;
 
 /**
-	`h2d.col.IPoint` is an `Int`-based version of `h2d.col.Point`.
+	An integer-based point.
+	@see `h2d.col.Point`
 **/
 class IPoint {
 
+	/**
+		Horizontal position of the point.
+	**/
 	public var x : Int;
+	/**
+		Vertical position of the point.
+	**/
 	public var y : Int;
 
+	/**
+		Create a new integer Point instance.
+		@param x Horizontal position of the point.
+		@param y Vertical position of the point.
+	**/
 	public inline function new(x = 0, y = 0) {
 		this.x = x;
 		this.y = y;
 	}
 
 	/**
-		Converts this IPoint to `Float` point scaled by provided scalar `scale`.
+		Converts this IPoint to floating point-based `Point` scaled by provided scalar `scale`.
 	**/
 	public inline function toPoint( scale = 1. ) : Point {
 		return new Point(x * scale, y * scale);
@@ -85,7 +97,7 @@ class IPoint {
 	}
 
 	/**
-		Sets the IPoint `x,y` with given values.
+		Sets the IPoint `x, y` with given values.
 	**/
 	public inline function set( x : Int, y : Int ) {
 		this.x = x;
@@ -93,7 +105,7 @@ class IPoint {
 	}
 
 	/**
-		Returns a copy of this Point.
+		Returns a copy of this IPoint.
 	**/
 	public inline function clone() : IPoint {
 		return new IPoint(x, y);

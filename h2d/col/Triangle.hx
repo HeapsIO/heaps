@@ -6,8 +6,17 @@ class Triangle implements Collider {
 
 	static inline var UNDEF = 1.1315e-17;
 
+	/**
+		The triangle first corner.
+	**/
 	public var a : Point;
+	/**
+		The triangle second corner.
+	**/
 	public var b : Point;
+	/**
+		The triangle third corner.
+	**/
 	public var c : Point;
 	var area : Float;
 	var invArea : Float;
@@ -27,7 +36,8 @@ class Triangle implements Collider {
 	}
 
 	/**
-		Calculates and returns a triangle area.
+		Calculates and returns the triangle area.
+
 		Result is cached between `getArea` and `getInvArea` on first call and altering `a`, `b`, or `c` afterwards will lead to incorrect value.
 	**/
 	public inline function getArea() {
@@ -39,7 +49,8 @@ class Triangle implements Collider {
 	}
 
 	/**
-		Calculates and returns a triangle area inverse.
+		Calculates and returns the triangle area inverse.
+
 		Result is cached between `getArea` and `getInvArea` on first call and altering `a`, `b`, or `c` afterwards will lead to incorrect value.
 	**/
 	public inline function getInvArea() {
@@ -48,7 +59,7 @@ class Triangle implements Collider {
 	}
 
 	/**
-		Calculate barycentric coordinates for the point p
+		Calculate barycentric coordinates for the point `p`
 	**/
 	public inline function barycentric( p : Point ) {
 		var area = getInvArea() * 0.5;

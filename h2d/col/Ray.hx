@@ -2,7 +2,7 @@ package h2d.col;
 import hxd.Math;
 
 /**
-	`h2d.col.Ray` represents a raycast from given position in a specified direction.
+	A raycast from the given position in a specified direction.
 **/
 class Ray {
 

@@ -1,7 +1,7 @@
 package h2d.col;
 
 /**
-	`PolygonCollider` is a wrapper around `Polygons`, allowing its usage as a collision shape.
+	A `Collider` wrapper around `Polygons` to enable using those for hit-testing testing.
 **/
 class PolygonCollider implements Collider {
 	/**

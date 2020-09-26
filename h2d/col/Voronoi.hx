@@ -319,13 +319,26 @@ private class RBNode<T:RBNode<T>> {
 	}
 }
 
+/**
+	The resulting cell inside the Voronoi diagram.
+**/
 class Cell {
 
+	/**
+		The unique ID/Index of the cell.
+	**/
 	public var id : Int;
+	/**
+		The source seed point of the cell.
+	**/
 	public var point : Point;
+	/**
+		The list of the edges of the cell.
+	**/
 	public var halfedges : Array<Halfedge>;
 	public var closeMe : Bool;
 
+	@:dox(hide) @:noCompletion
 	public function new(id, point) {
 		this.id = id;
 		this.point = point;
@@ -333,6 +346,11 @@ class Cell {
 		this.closeMe = false;
 	}
 
+	/**
+		Returns an enclosing circle collider of the Cell.
+
+		_Implementation note_: Not the best possible solution and may produce artifacts.
+	**/
 	public function getCircle() {
 		// still not the best enclosing circle
 		// would require implementing http://www.personal.kent.edu/~rmuhamma/Compgeometry/MyCG/CG-Applets/Center/centercli.htm for complete solution
@@ -353,6 +371,7 @@ class Cell {
 		return new Circle(p.x, p.y, Math.sqrt(r));
 	}
 
+	@:dox(hide) @:noCompletion
 	public function prepare() {
 		var halfedges = this.halfedges, iHalfedge = halfedges.length, edge;
 		// get rid of unused halfedges
@@ -378,7 +397,9 @@ class Cell {
 		return b.angle > a.angle ? 1 : (b.angle < a.angle ? -1 : 0);
 	}
 	
-	// Return a list of the neighbors
+	/**
+		Returns a list of the neighboring cells.
+	**/
 	public function getNeighbors() {
 		var neighbors = [],
 			iHalfedge = this.halfedges.length,
@@ -396,7 +417,9 @@ class Cell {
 		return neighbors;
 	}
 
-	// Return a list of the neighbor Indexes
+	/**
+		Returns a list of the neighbor Cell indexes.
+	**/
 	public function getNeighborIndexes() {
 		var neighbors = [],
 			iHalfedge = this.halfedges.length,
@@ -414,6 +437,9 @@ class Cell {
 		return neighbors;
 	}
 
+	/**
+		Returns a bounding box of the Cell.
+	**/
 	public function getBbox() {
 		var halfedges = this.halfedges,
 			iHalfedge = halfedges.length,
@@ -440,11 +466,13 @@ class Cell {
 		};
 	}
 
-	// Return whether a point is inside, on, or outside the cell:
-	//   -1: point is outside the perimeter of the cell
-	//    0: point is on the perimeter of the cell
-	//    1: point is inside the perimeter of the cell
-	//
+	/**
+		Tests if given position is inside, on, or outside of the cell.
+		@returns
+		* -1: point is outside the perimeter of the cell
+		* 0: point is on the perimeter of the cell
+		* 1: point is inside the perimeter of the cell
+	**/
 	public function pointIntersection(x:Float, y:Float) {
 		// Check if point in polygon. Since all polygons of a Voronoi
 		// diagram are convex, then:
@@ -478,16 +506,34 @@ class Cell {
 
 }
 
+/**
+	The resulting edge inside the Voronoi diagram.
+**/
 class Edge {
-
+	/**
+		The unique ID/Index of the edge.
+	**/
 	public var id : Int;
+	/**
+		The left-hand seed point.
+	**/
 	public var lPoint : Point;
+	/**
+		The right-hand seed point.
+	**/
 	public var rPoint : Point;
+	/**
+		The left-hand cell along the edge.
+	**/
 	public var lCell : Null<Cell>;
+	/**
+		The right-hand cell along the edge.
+	**/
 	public var rCell : Null<Cell>;
 	public var va : Null<Point>;
 	public var vb : Null<Point>;
 
+	@:dox(hide) @:noCompletion
 	public function new(lPoint, rPoint) {
 		this.lPoint = lPoint;
 		this.rPoint = rPoint;
@@ -539,11 +585,28 @@ class Halfedge {
 
 }
 
+/**
+	The resulting diagram of the `Voronoi.compute`.
+**/
 class Diagram {
+	/**
+		The list of the generated cells.
+	**/
 	public var cells : Array<Cell>;
+	/**
+		The list of the diagram seed points.
+	**/
 	public var points : Array<Point>;
+	/**
+		The list of edges between diagram cells.
+	**/
 	public var edges : Array<Edge>;
+	/**
+		The duration it took to compute this diagram.
+	**/
 	public var execTime : Float;
+
+	@:dox(hide) @:noCompletion
 	public function new() {
 	}
 }
@@ -567,7 +630,8 @@ private class CircleEvent extends RBNode<CircleEvent> {
 }
 
 /**
-	`h2d.col.Voronoi` allows to Steven Fortune's algorithm to compute Voronoi diagram from given set of Points and bounding box.
+	A Steven Fortune's algorithm to compute Voronoi diagram from given set of Points and a bounding box.
+
 	The implementation is a port from JS library: https://github.com/gorhill/Javascript-Voronoi
 **/
 class Voronoi {
@@ -583,6 +647,9 @@ class Voronoi {
 	var firstCircleEvent : CircleEvent;
 	var pointCell : Map<Point,Cell>;
 
+	/**
+		Create a new Voronoi algorithm calculator.
+	**/
 	public function new( epsilon = 1e-9 ) {
 		this.epsilon = epsilon;
 		this.vertices = null;
@@ -592,6 +659,11 @@ class Voronoi {
 		this.circleEventJunkyard = [];
 	}
 
+	/**
+		Clean up the calculator from previous operation, and prepare for a new one.
+
+		Not required to be called manually, as it's invoked by `Voronoi.compute`.
+	**/
 	public function reset() {
 		if( this.beachline == null )
 			this.beachline = new RBTree<Beachsection>();
@@ -1513,6 +1585,9 @@ class Voronoi {
 	//   Voronoi points are kept client-side now, to allow
 	//   user to freely modify content. At compute time,
 	//   *references* to points are copied locally.
+	/**
+		Compute the Voronoi diagram based on given list of points and bounding box.
+	**/
 	public function compute(points:Array<Point>, bbox:Bounds) {
 		// to measure execution time
 		var startTime = haxe.Timer.stamp();

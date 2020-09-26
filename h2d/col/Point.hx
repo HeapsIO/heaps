@@ -2,13 +2,24 @@ package h2d.col;
 import hxd.Math;
 
 /**
-	`h2d.col.Point` is simple 2D position container.
+	A simple 2D position/vector container.
+	@see `h2d.col.IPoint`
 **/
 class Point {
-
+	/**
+		The horizontal position of the point.
+	**/
 	public var x : Float;
+	/**
+		The vertical position of the point.
+	**/
 	public var y : Float;
 
+	/**
+		Create a new Point instance.
+		@param x The horizontal position of the point.
+		@param y The vertical position of the point.
+	**/
 	public inline function new(x = 0., y = 0.) {
 		this.x = x;
 		this.y = y;

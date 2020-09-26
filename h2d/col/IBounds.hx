@@ -2,7 +2,8 @@ package h2d.col;
 import hxd.Math;
 
 /**
-	`h2d.col.IBounds` is an `Int`-based version of `h2d.col.Bounds`.
+	An integer-based bounding box.
+	@see `h2d.col.Bounds`
 **/
 class IBounds {
 

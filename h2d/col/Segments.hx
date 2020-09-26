@@ -2,16 +2,27 @@ package h2d.col;
 import hxd.Math;
 
 /**
-	Another way to represent a Polygon. Segments must be connected.
-	This allows efficient distance calculus.
+	An abstract over the list of `Segment`s. Alternative representation of a polygon.
+	
+	Segments must be connected to form a complete polygonal shape.
+	Provides a more efficient distance calculus.
+
+	@see `h2d.Polygon`
 **/
 abstract Segments(Array<Segment>) from Array<Segment> to Array<Segment> {
 
+	/**
+		The underlying Array of segments.
+	**/
 	public var segments(get, never) : Array<Segment>;
 	inline function get_segments() return this;
+	/**
+		The amount of segments in the polygon.
+	**/
 	public var length(get, never) : Int;
 	inline function get_length() return this.length;
 
+	@:dox(hide)
 	public inline function iterator() {
 		return new hxd.impl.ArrayIterator(this);
 	}
@@ -20,7 +31,8 @@ abstract Segments(Array<Segment>) from Array<Segment> to Array<Segment> {
 		Tests if Point `p` is inside this Segments.
 		@param p The Point to test against.
 		@param isConvex Use simplified collision test suited for convex polygons. Results are undefined if polygon is concave.
-		Currently only convex check is implemented and using non-convex test results in an exception.
+
+		**Note**: Currently only convex check is implemented and using non-convex test results in an exception.
 	**/
 	public function containsPoint( p : Point, isConvex : Bool ) {
 		if( isConvex ) {
@@ -34,7 +46,7 @@ abstract Segments(Array<Segment>) from Array<Segment> to Array<Segment> {
 	}
 
 	/**
-		Converts this Segments to a `Polygon`.
+		Converts this Segments to a Polygon.
 	**/
 	public function toPolygon() : Polygon {
 		return [for( s in segments ) new h2d.col.Point(s.x, s.y)];

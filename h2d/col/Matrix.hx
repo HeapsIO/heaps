@@ -2,7 +2,7 @@ package h2d.col;
 import hxd.Math;
 
 /**
-	Affine 2D 2x3 matrix.
+	An affine 2D 2x3 matrix.
 	Matrix properties are as following:
 	```
 	[a, c, x]
@@ -28,7 +28,7 @@ class Matrix {
 	}
 
 	/**
-		Sets matrix values to ones that would perform no transformation.
+		Sets the matrix values to ones that would perform no transformation.
 		```
 		[1, 0, 0]
 		[0, 1, 0]
@@ -40,7 +40,7 @@ class Matrix {
 	}
 
 	/**
-		Sets matrix values to ones that would only move the transformed positions by given `x` and `y`.
+		Sets the matrix values to ones that would only move the transformed positions by given `x` and `y`.
 		```
 		[1, 0, x]
 		[0, 1, y]
@@ -53,7 +53,7 @@ class Matrix {
 	}
 
 	/**
-		Sets matrix values to ones that would only scale the transformed positions by given `sx` and `sy`.
+		Sets the matrix values to ones that would only scale the transformed positions by given `sx` and `sy`.
 		```
 		[sx, 0, 0]
 		[0, sy, 0]
@@ -65,7 +65,7 @@ class Matrix {
 	}
 
 	/**
-		Sets matrix values to ones that would only rotate the transformed position by given `angle`.
+		Sets the matrix values to ones that would only rotate the transformed position by given `angle`.
 		```
 		[cos(angle), -sin(angle), 0]
 		[sin(angle),  cos(angle), 0]
@@ -83,7 +83,7 @@ class Matrix {
 	}
 
 	/**
-		Sets matrix values to ones that would only skew the transformed position by given `sx` and `sy`.
+		Sets the matrix values to ones that would only skew the transformed position by given `sx` and `sy`.
 		```
 		[1, tan(sx), 0]
 		[tan(sy), 1, 0]
@@ -102,13 +102,14 @@ class Matrix {
 
 	/**
 		Inverts the matrix to perform the opposite transformation. Can be used to undo the previously applied transformation.
+		@see `Matrix.inverse`
 	**/
 	public function invert() {
 		inverse(this);
 	}
 
 	/**
-		Returns the determinant of Matrix `a`, `b`, `c` and `d` values.
+		Returns the determinant of the Matrix `a`, `b`, `c` and `d` values.
 	**/
 	public inline function getDeterminant() {
 		return a * d - b * c;

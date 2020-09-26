@@ -1,6 +1,9 @@
 package h2d.col;
 import hxd.Math;
 
+/**
+	The type of the edges when offsetting polygon with `IPolygon.offset`.
+**/
 enum OffsetKind {
 	Square;
 	Miter;
@@ -8,16 +11,26 @@ enum OffsetKind {
 }
 
 /**
-	`h2d.col.IPolygon` is an abstract around Array of IPoints, allowing to perform collision test against defined shape.
+	An abstract around an Array of `IPoint`s that define a polygonal shape that can be collision-tested against.
+	@see `h2d.col.Polygon`
 **/
 @:forward(push,remove)
 abstract IPolygon(Array<IPoint>) from Array<IPoint> to Array<IPoint> {
-
+	/**
+		The underlying Array of vertices.
+	**/
 	public var points(get, never) : Array<IPoint>;
+	/**
+		The amount of vertices in the polygon.
+	**/
 	public var length(get, never) : Int;
 	inline function get_length() return this.length;
 	inline function get_points() return this;
 
+	/**
+		Create a new Polygon shape.
+		@param points An optional array of vertices the polygon should use.
+	**/
 	public inline function new( ?points ) {
 		this = points == null ? [] : points;
 	}
@@ -28,14 +41,14 @@ abstract IPolygon(Array<IPoint>) from Array<IPoint> to Array<IPoint> {
 	}
 
 	/**
-		Converts this IPolygon into a Float-based Polygon.
+		Converts this IPolygon into a floating point-based Polygon.
 	**/
-	public function toPolygon( scale = 1. ) {
+	public function toPolygon( scale = 1. ) : Polygon {
 		return [for( p in points ) p.toPoint(scale)];
 	}
 
 	/**
-		Returns bounding box of the IPolygon.
+		Returns the bounding box of the IPolygon.
 	**/
 	public function getBounds( ?b : IBounds ) : IBounds {
 		if( b == null ) b = new IBounds();
@@ -45,7 +58,7 @@ abstract IPolygon(Array<IPoint>) from Array<IPoint> to Array<IPoint> {
 	}
 
 	/**
-		Combines this IPolygon and given IPolygon `p` and returns resulting IPolygons.
+		Combines this IPolygon and a given IPolygon `p` and returns the resulting IPolygons.
 		@param p The IPolygon to union with.
 		@param withHoles When enabled, keeps the holes in resulting polygons as a separate IPolygon.
 	**/
@@ -58,7 +71,7 @@ abstract IPolygon(Array<IPoint>) from Array<IPoint> to Array<IPoint> {
 	}
 
 	/**
-		Calculates an intersection areas between this IPolygon and given IPolygon `p` and returns resulting IPolygons.
+		Calculates an intersection areas between this IPolygon and a given IPolygon `p` and returns the resulting IPolygons.
 		@param p The IPolygon to intersect with.
 		@param withHoles When enabled, keeps the holes in resulting polygons as a separate IPolygon. 
 	**/
@@ -67,7 +80,7 @@ abstract IPolygon(Array<IPoint>) from Array<IPoint> to Array<IPoint> {
 	}
 
 	/**
-		Subtracts the area of given IPolygon `p` from this IPolygon and returns resulting IPolygons.
+		Subtracts the area of a given IPolygon `p` from this IPolygon and returns the resulting IPolygons.
 		@param p The IPolygon to subtract with.
 		@param withHoles When enabled, keeps the holes in resulting polygons as a separate IPolygon. 
 	**/
@@ -76,7 +89,7 @@ abstract IPolygon(Array<IPoint>) from Array<IPoint> to Array<IPoint> {
 	}
 
 	/**
-		Offsets polygon edges by specified amount and returns resulting IPolygons.
+		Offsets the polygon edges by specified amount and returns the resulting IPolygons.
 		@param delta The offset amount.
 		@param kind The corner rounding method.
 		@param withHoles When enabled, keeps the holes in resulting polygons as a separate IPolygon. 
@@ -169,7 +182,7 @@ abstract IPolygon(Array<IPoint>) from Array<IPoint> to Array<IPoint> {
 	}
 
 	/**
-		Tests if polygon is convex or concave.
+		Tests if the polygon is convex or concave.
 	**/
 	public function isConvex() {
 		var p1 = points[points.length - 2];
@@ -225,7 +238,7 @@ abstract IPolygon(Array<IPoint>) from Array<IPoint> to Array<IPoint> {
 
 
 	/**
-		Creates a new optimized polygon by eliminating almost colinear edges according to epsilon distance.
+		Creates a new optimized polygon by eliminating almost colinear edges according to the epsilon distance.
 	**/
 	public function optimize( epsilon : Float ) : IPolygon {
 		var out = [];

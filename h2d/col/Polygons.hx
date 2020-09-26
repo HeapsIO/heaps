@@ -2,16 +2,27 @@ package h2d.col;
 import hxd.Math;
 
 /**
-	`h2d.col.Polygons` is an abstract over an Array of Polygon instances that allows to perform mass operations on those polygons.
+	An abstract over an Array of `Polygon` instances that define multiple polygonal shapes that can be collision-tested against.
+	@see `h2d.IPolygons`
 **/
 @:forward(push,remove)
 abstract Polygons(Array<Polygon>) from Array<Polygon> to Array<Polygon> {
 	
+	/**
+		An underlying Polygon array.
+	**/
 	public var polygons(get, never) : Array<Polygon>;
+	/**
+		The amount of polygons in the Polygons instance.
+	**/
 	public var length(get, never) : Int;
 	inline function get_length() return this.length;
 	inline function get_polygons() return this;
 
+	/**
+		Create a new Polygons instance.
+		@param polygons An optional list of polygons to use.
+	**/
 	public inline function new( ?polygons ) {
 		this = polygons == null ? [] : polygons;
 	}

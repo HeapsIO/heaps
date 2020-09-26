@@ -1,13 +1,23 @@
 package h2d.col;
 
 /**
-	`h2d.col.Line` represents a line segment between two Points. 
+	An infinite 2D line going through two specified Points.
 **/
 class Line {
-
+	/**
+		The first line point.
+	**/
 	public var p1 : Point;
+	/**
+		The second line point.
+	**/
 	public var p2 : Point;
 
+	/**
+		Create a new Line instance.
+		@param p1 The first line point.
+		@param p2 The second line point.
+	**/
 	public inline function new(p1,p2) {
 		this.p1 = p1;
 		this.p2 = p2;

@@ -2,16 +2,16 @@ package h2d.col;
 import hxd.Math;
 
 /**
-	`h2d.col.Circle` provides an implementation for `Collider` interfaces with circular hitbox.
+	The circular hitbox implementation of a 2D Collider.
 **/
 class Circle implements Collider {
 
 	/**
-		X position of the Circle center.
+		Horizontal position of the Circle center.
 	**/
 	public var x : Float;
 	/**
-		Y position of the Circle center.
+		Vertical position of the Circle center.
 	**/
 	public var y : Float;
 	/**
@@ -32,7 +32,7 @@ class Circle implements Collider {
 	}
 
 	/**
-		Returns squared distance between Circle center and given Point `p`.
+		Returns a squared distance between the Circle center and the given Point `p`.
 	**/
 	public inline function distanceSq( p : Point ) : Float {
 		var dx = p.x - x;
@@ -42,7 +42,7 @@ class Circle implements Collider {
 	}
 
 	/**
-		Returns squared distance between Circle border and given Point `p`.
+		Returns a squared distance between the Circle border and the given Point `p`.
 	**/
 	public inline function side( p : Point ) : Float {
 		var dx = p.x - x;
@@ -51,7 +51,7 @@ class Circle implements Collider {
 	}
 
 	/**
-		Tests if this Circle collides with given Circle `c`.
+		Tests if this Circle collides with the given Circle `c`.
 	**/
 	public inline function collideCircle( c : Circle ) : Bool {
 		var dx = x - c.x;
@@ -60,7 +60,7 @@ class Circle implements Collider {
 	}
 
 	/**
-		Test if this Circle collides with given Bounds `b`.
+		Test if this Circle collides with the given Bounds `b`.
 	**/
 	public inline function collideBounds( b : Bounds ) : Bool {
 		if( x < b.xMin - ray ) return false;

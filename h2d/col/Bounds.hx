@@ -1,9 +1,11 @@
 package h2d.col;
 import hxd.Math;
 /**
-	`h2d.col.Bounds` represent a 2D bounding box often used for determining Object bounding area.
+	A 2D bounding box often used for determining Object bounding area.
 
 	Bounds holds min/max coordinates of bounding box instead of it's position and size.
+	@see `Object.getBounds`
+	@see `Object.getSize`
 **/
 class Bounds {
 
@@ -12,17 +14,17 @@ class Bounds {
 	/** Y-axis top-most bounding box point. **/
 	public var yMin : Float;
 	
-	/** X-axis right-most bounds box point. **/
+	/** X-axis right-most bounding box point. **/
 	public var xMax : Float;
 	/** Y-axis bottom-most bounding box point. **/
 	public var yMax : Float;
 
 	/**
-		X-axis position of the bounding-box top-left corner. Modifying it alters both `xMin` and `xMax`.
+		X-axis position of the bounding box top-left corner. Modifying it alters both `Bounds.xMin` and `Bounds.xMax`.
 	**/
 	public var x(get, set) : Float;
 	/**
-		Y-axis position of the bounding-box top-left corner. Modifying it alters both `xMin` and `xMax`.
+		Y-axis position of the bounding box top-left corner. Modifying it alters both `Bounds.yMin` and `Bounds.yMax`.
 	**/
 	public var y(get, set) : Float;
 	/**
@@ -51,14 +53,14 @@ class Bounds {
 	}
 
 	/**
-		Tests if this Bounds instances intersects given `b` Bounds.
+		Tests if this Bounds instance intersects with given `b` Bounds.
 	**/
 	public inline function intersects( b : Bounds ) : Bool {
 		return !(xMin > b.xMax || yMin > b.yMax || xMax < b.xMin || yMax < b.yMin);
 	}
 
 	/**
-		Tests if Point `p` is inside the Bounds.
+		Tests if the Point `p` is inside the bounding box.
 	**/
 	public inline function contains( p : Point ) : Bool {
 		return p.x >= xMin && p.x < xMax && p.y >= yMin && p.y < yMax;
@@ -75,7 +77,7 @@ class Bounds {
 	}
 
 	/**
-		Adds Point `p` to the Bounds, expanding min/max when necessary.
+		Adds the Point `p` to the bounding box, expanding min/max when necessary.
 	**/
 	public inline function addPoint( p : Point ) {
 		if( p.x < xMin ) xMin = p.x;
@@ -85,7 +87,7 @@ class Bounds {
 	}
 
 	/**
-		Adds position `x` and `y` to the Bounds, expanding min/max when necessary.
+		Adds the `x` and `y` position to the bounding box, expanding min/max when necessary.
 	**/
 	public inline function addPos( x : Float, y : Float ) {
 		if( x < xMin ) xMin = x;
@@ -95,9 +97,9 @@ class Bounds {
 	}
 
 	/**
-		Sets bounds from given rectangle.
-		@param x Rectangle horizontal position.
-		@param y Rectangle vertical position.
+		Sets the bounding box from the given rectangle.
+		@param x Rectangle top-left corner horizontal position.
+		@param y Rectangle top-left corner vertical position.
 		@param width Rectangle width.
 		@param height Rectangle height.
 	**/
@@ -109,7 +111,7 @@ class Bounds {
 	}
 
 	/**
-		Sets `xMin` and `yMin` to values in given Point `p`.
+		Sets the `Bounds.xMin` and `Bounds.yMin` to values in the given Point `p`.
 	**/
 	public inline function setMin( p : Point ) {
 		xMin = p.x;
@@ -117,7 +119,7 @@ class Bounds {
 	}
 
 	/**
-		Sets `xMax` and `yMax` to values in given Point `p`.
+		Sets the `Bounds.xMax` and `Bounds.yMax` to values in the given Point `p`.
 	**/
 	public inline function setMax( p : Point ) {
 		xMax = p.x;
@@ -125,8 +127,9 @@ class Bounds {
 	}
 
 	/**
-		Sets this Bounds min/max values to a result of intersection between this Bounds and given Bounds `b`.
-		See `intersection` to get new instance of Bounds as intersection result.
+		Sets the bounding box min/max values to a result of the intersection between this Bounds and the given Bounds `b`.
+
+		See `Bounds.intersection` to get new instance of Bounds as intersection result.
 	**/
 	public inline function doIntersect( b : Bounds ) {
 		xMin = Math.max(xMin, b.xMin);
@@ -136,7 +139,9 @@ class Bounds {
 	}
 
 	/**
-		Sets this Bounds min/max values to a result of combining this Bounds and given Bounds `b`. Equivalent of `addBounds`.
+		Sets this bounding box min/max values to a result of combining this Bounds and the given Bounds `b`.
+		
+		Equivalent of `Bounds.addBounds`.
 	**/
 	public inline function doUnion( b : Bounds ) {
 		xMin = Math.min(xMin, b.xMin);
@@ -146,7 +151,7 @@ class Bounds {
 	}
 
 	/**
-		Returns new Bounds instance containing intersection results of this Bounds and given Bounds `b`.
+		Returns a new Bounds instance containing intersection results of this Bounds and the given Bounds `b`.
 	**/
 	public function intersection( b : Bounds ) : Bounds {
 		var i = new Bounds();
@@ -160,7 +165,7 @@ class Bounds {
 	}
 
 	/**
-		Returns new Bounds instance containing union of this Bounds and given Bounds `b`.
+		Returns a new Bounds instance containing union of this Bounds and the given Bounds `b`.
 	**/
 	public function union( b : Bounds ) : Bounds {
 		var i = new Bounds();
@@ -172,7 +177,7 @@ class Bounds {
 	}
 
 	/**
-		Copies min/max values from given Bounds `b` to this Bounds.
+		Copies the min/max values from the given Bounds `b` to this Bounds.
 	**/
 	public function load( b : Bounds ) {
 		xMin = b.xMin;
@@ -182,7 +187,7 @@ class Bounds {
 	}
 
 	/**
-		Scales min/max values relative to `0,0` coordinate.
+		Scales the min/max values relative to `0,0` coordinate.
 	**/
 	public inline function scalePivot( v : Float ) {
 		xMin *= v;
@@ -192,7 +197,7 @@ class Bounds {
 	}
 
 	/**
-		Scales min/max values relative this Bounds center point.
+		Scales the min/max values relative the current bounding box center point.
 	**/
 	public function scaleCenter( v : Float ) {
 		var dx = (xMax - xMin) * 0.5 * v;
@@ -206,7 +211,7 @@ class Bounds {
 	}
 
 	/**
-		Rotates this Bounds around `0,0` point by given `angle` and sets min/max to new rotated boundaries.
+		Rotates the bounding box around `0,0` point by given `angle` and sets min/max to the new rotated boundaries.
 	**/
 	public function rotate( angle : Float ) {
 		var cos = Math.cos(angle);
@@ -220,7 +225,7 @@ class Bounds {
 	}
 
 	/**
-		Moves entire bounding box by `dx,dy`.
+		Moves entire bounding box by `dx, dy`.
 	**/
 	public inline function offset( dx : Float, dy : Float ) {
 		xMin += dx;
@@ -230,28 +235,28 @@ class Bounds {
 	}
 
 	/**
-		Returns a new Point containing `xMin` and `yMin`.
+		Returns a new Point containing `Bounds.xMin` and `Bounds.yMin`.
 	**/
 	public inline function getMin() : Point {
 		return new Point(xMin, yMin);
 	}
 
 	/**
-		Returns a new Point containing center coordinate of the Bounds.
+		Returns a new Point containing the center coordinate of the bounding box.
 	**/
 	public inline function getCenter() : Point {
 		return new Point((xMin + xMax) * 0.5, (yMin + yMax) * 0.5);
 	}
 
 	/**
-		Returns a new Point containing size of the Bounds.
+		Returns a new Point containing size of the bounding box.
 	**/
 	public inline function getSize() : Point {
 		return new Point(xMax - xMin, yMax - yMin);
 	}
 
 	/**
-		Returns a new Point containing `xMax` and `yMax`.
+		Returns a new Point containing `Bounds.xMax` and `Bounds.yMax`.
 	**/
 	public inline function getMax() : Point {
 		return new Point(xMax, yMax);
@@ -259,14 +264,14 @@ class Bounds {
 
 	/**
 		Tests if bounding box is empty.
-		Bounds are considered empty when either `xMax` is less than or equals to `xMin` or `yMax` is less than or equals to `yMin`.
+		Bounds are considered empty when either `Bounds.xMax` is less than or equals to `Bounds.xMin` or `Bounds.yMax` is less than or equals to `Bounds.yMin`.
 	**/
 	public inline function isEmpty() : Bool {
 		return xMax <= xMin || yMax <= yMin;
 	}
 
 	/**
-		Clears Bounds into an empty state.
+		Clears bounding box into an empty state.
 	**/
 	public inline function empty() {
 		xMin = 1e20;
@@ -276,7 +281,7 @@ class Bounds {
 	}
 
 	/**
-		Sets bounds to cover maximum area (`-1e20...1e20`).
+		Sets the bounding box to cover maximum area (`-1e20...1e20`).
 	**/
 	public inline function all() {
 		xMin = -1e20;
@@ -355,7 +360,7 @@ class Bounds {
 	}
 
 	/**
-		Returns a new Bounds instance from given min/max Points.
+		Returns a new Bounds instance from given `min`/`max` Points.
 	**/
 	public static inline function fromPoints( min : Point, max : Point ) : Bounds {
 		var b = new Bounds();
