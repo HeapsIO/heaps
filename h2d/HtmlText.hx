@@ -21,6 +21,24 @@ enum LineHeightMode {
 }
 
 /**
+	`HtmlText` img tag vertical alignment rules.
+**/
+enum ImageVerticalAlign {
+	/**
+		Align images along the top of the text line.
+	**/
+	Top;
+	/**
+		Align images to sit on the base line of the text.
+	**/
+	Bottom;
+	/**
+		Align images to the middle between the top of the text line its base line.
+	**/
+	Middle;
+}
+
+/**
 	A simple HTML text renderer.
 
 	See the [Text](https://github.com/HeapsIO/heaps/wiki/Text) section of the manual for more details and a list of the supported HTML tags.
@@ -64,6 +82,11 @@ class HtmlText extends Text {
 	**/
 	public var lineHeightMode(default,set) : LineHeightMode = Accurate;
 
+	/**
+		Vertical alignment of the images in `<img>` tag relative to the text.
+	**/
+	public var imageVerticalAlign(default,set) : ImageVerticalAlign = Bottom;
+
 	var elements : Array<Object> = [];
 	var xPos : Float;
 	var yPos : Float;
@@ -74,6 +97,8 @@ class HtmlText extends Text {
 	var dropMatrix : h3d.shader.ColorMatrix;
 	var prevChar : Int;
 	var newLine : Bool;
+	var aHrefs : Array<String>;
+	var aInteractive : Interactive;
 
 	override function draw(ctx:RenderContext) {
 		if( dropShadow != null ) {
@@ -121,6 +146,12 @@ class HtmlText extends Text {
 		var f = defaultLoadFont(name);
 		if (f == null) return this.font;
 		else return f;
+	}
+
+	/**
+		Called on a <a> tag click
+	**/
+	public dynamic function onHyperlink(url:String) : Void {
 	}
 
 	/**
@@ -304,9 +335,17 @@ class HtmlText extends Text {
 					info.width = size;
 					if ( lineHeightMode == Accurate ) {
 						var grow = i.height - i.dy - info.baseLine;
-						if ( grow > 0 ) {
-							info.baseLine += grow;
-							info.height += grow;
+						if(grow > 0) {
+							switch(imageVerticalAlign) {
+								case Top:
+									info.height += grow;
+								case Bottom:
+									info.baseLine += grow;
+									info.height += grow;
+								case Middle:
+									info.height += grow;
+									info.baseLine += Std.int(grow/2);
+							}
 						}
 						grow = info.baseLine + i.dy;
 						if ( info.height < grow ) info.height = grow;
@@ -529,11 +568,33 @@ class HtmlText extends Text {
 	}
 
 	function addNode( e : Xml, font : Font, align : Align, rebuild : Bool, metrics : Array<LineInfo> ) {
+		inline function createInteractive() {
+			if(aHrefs == null || aHrefs.length == 0)
+				return;
+			aInteractive = new Interactive(0, metrics[sizePos].height, this);
+			var href = aHrefs[aHrefs.length-1];
+			aInteractive.onClick = function(event) {
+				onHyperlink(href);
+			}
+			aInteractive.x = xPos;
+			aInteractive.y = yPos;
+			elements.push(aInteractive);
+		}
+
+		inline function finalizeInteractive() {
+			if(aInteractive != null) {
+				aInteractive.width = xPos - aInteractive.x;
+				aInteractive = null;
+			}
+		}
+
 		inline function makeLineBreak()
 		{
+			finalizeInteractive();
 			if( xPos > xMax ) xMax = xPos;
 			yPos += metrics[sizePos].height + lineSpacing;
 			nextLine(align, metrics[++sizePos].width);
+			createInteractive();
 		}
 		if( e.nodeType == Xml.Element ) {
 			var prevColor = null, prevGlyphs = null;
@@ -617,7 +678,14 @@ class HtmlText extends Text {
 			case "img":
 				var i : Tile = loadImage(e.get("src"));
 				if ( i == null ) i = Tile.fromColor(0xFF00FF, 8, 8);
-				var py = yPos + metrics[sizePos].baseLine - i.height;
+				var py = yPos;
+				switch(imageVerticalAlign) {
+					case Bottom:
+						py += metrics[sizePos].baseLine - i.height;
+					case Middle:
+						py += metrics[sizePos].baseLine - i.height/2;
+					case Top:
+				}
 				if( py + i.dy < calcYMin )
 					calcYMin = py + i.dy;
 				if( rebuild ) {
@@ -629,6 +697,14 @@ class HtmlText extends Text {
 				newLine = false;
 				prevChar = -1;
 				xPos += i.width + imageSpacing;
+			case "a":
+				if( e.exists("href") ) {
+					finalizeInteractive();
+					if( aHrefs == null )
+						aHrefs = [];
+					aHrefs.push(e.get("href"));
+					createInteractive();
+				}
 			default:
 			}
 			for( child in e )
@@ -643,6 +719,12 @@ class HtmlText extends Text {
 					makeLineBreak();
 					newLine = true;
 					prevChar = -1;
+				}
+			case "a":
+				if( aHrefs.length > 0 ) {
+					finalizeInteractive();
+					aHrefs.pop();
+					createInteractive();
 				}
 			default:
 			}
@@ -696,6 +778,14 @@ class HtmlText extends Text {
 			rebuild();
 		}
 		return value;
+	}
+
+	function set_imageVerticalAlign(align) {
+		if ( this.imageVerticalAlign != align ) {
+			this.imageVerticalAlign = align;
+			rebuild();
+		}
+		return align;
 	}
 
 	function set_lineHeightMode(v) {
