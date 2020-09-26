@@ -77,7 +77,7 @@ enum FlowOverflow {
 	**/
 	Limit;
 	/**
-		Limits the bounds reported by the flow using `maxWidth` or `maxHeight`, if set.
+		Limits the bounds reported by the flow using `Flow.maxWidth` or `Flow.maxHeight`, if set.
 
 		Compared to `Limit` - Flow will mask out the content that is outside of Flow bounds.
 	**/
@@ -86,41 +86,111 @@ enum FlowOverflow {
 	//Scroll;
 }
 
+/**
+	An individual `Flow` element properties.
+
+	Can be obtained after adding the element to the Flow and calling `Flow.getProperties`.
+	Contains configuration unique of each Flow element.
+**/
 @:allow(h2d.Flow)
 class FlowProperties {
 
 	var elt : Object;
-
+	
+	/**
+		An extra padding to the left of the flow element.
+	**/
 	public var paddingLeft = 0;
+	/**
+		An extra padding to the top of the flow element.
+	**/
 	public var paddingTop = 0;
+	/**
+		An extra padding to the right of the flow element.
+	**/
 	public var paddingRight = 0;
+	/**
+		An extra padding to the bottom of the flow element.
+	**/
 	public var paddingBottom = 0;
 
+	/**
+		When enabled, element won't be automatically positioned during `Flow.reflow` and
+		instead treated as an absolute element relative to the Flow.
+	**/
 	public var isAbsolute(default,set) = false;
+	/**
+		The `Flow.horizontalAlign` override.
+
+		If `FlowProperties.isAbsolute` is enabled - aligns the element within the Flow boundaries.
+		Otherwise affects the element alignment within the Flow. Does not affect the alignment if `Flow.layout` is `Horizontal`.
+	**/
 	public var horizontalAlign : Null<FlowAlign>;
+	/**
+		The `Flow.verticalAlign` override.
+
+		If `FlowProperties.isAbsolute` is enabled - aligns the element within the Flow boundaries.
+		Otherwise affects the element alignment within the Flow. Does not affect the alignment if `Flow.layout` is `Vertical`.
+	**/
 	public var verticalAlign : Null<FlowAlign>;
 
+	/**
+		A visual offset of the element along the X axis.
+		
+		Offset does not affect the occupied space by the element, and can lead to overlapping with other elements.
+	**/
 	public var offsetX = 0;
+	/**
+		A visual offset of the element along the Y axis.
+		
+		Offset does not affect the occupied space by the element, and can lead to overlapping with other elements.
+	**/
 	public var offsetY = 0;
 
+	/**
+		The minimum occupied width of the element within the flow.
+	**/
 	public var minWidth : Null<Int>;
+	/**
+		The minimum occupied height of the element within the flow.
+	**/
 	public var minHeight : Null<Int>;
 
+	/**
+		The calculated element width since last element reflow.
+	**/
 	public var calculatedWidth(default,null) : Int = 0;
+	/**
+		The calculated element height since last element reflow.
+	**/
 	public var calculatedHeight(default,null) : Int = 0;
 
+	/**
+		Whether this element is the last on its current row/column, and the next flow element being on the next row/column after overflow.
+	**/
 	public var isBreak(default,null) : Bool;
+	/**
+		Forces this element to break the line and flow onto the next row/column.
+		`Flow.multiline` is not required to be enabled.
+	**/
 	public var lineBreak = false;
 
 	/**
-		If our flow have a maximum size, it will constraint the children by using .constraintSize()
+		Will constraint the element size through `Object.constraintSize` if the Flow have a set maximum size.
+
+		@see `Flow.maxWidth`
+		@see `Flow.maxHeight`
 	**/
 	public var constraint = true;
 
+	@:dox(hide)
 	public function new(elt) {
 		this.elt = elt;
 	}
 
+	/**
+		Shortcut to set both `FlowProperties.verticalAlign` and `FlowProperties.horizontalAlign`.
+	**/
 	public inline function align(vertical, horizontal) {
 		this.verticalAlign = vertical;
 		this.horizontalAlign = horizontal;
@@ -250,28 +320,35 @@ class Flow extends Object {
 		Adds an `h2d.Interactive` to the Flow that is accessible through `Flow.interactive` field.
 		This Interactive is automatically resized to cover the whole Flow area.
 
-		Flow is added as bottom most (after the `Flow.backgroundTile`) child as to not impede flow elements with Interactives.
+		Flow is added as a bottom-most (after the `Flow.backgroundTile`) child as to not impede flow elements with Interactives.
 	**/
 	public var enableInteractive(default, set) : Bool;
 
 	/**
-		See `Flow.enableInteractive`.
+		@see `Flow.enableInteractive`.
 	**/
 	public var interactive(default, null) : h2d.Interactive;
 
 	/**
 		Setting a background tile will create an `h2d.ScaleGrid` background which uses the `Flow.borderWidth`/`Flow.borderHeigh` values for its borders.
+
 		It will automatically resize when the reflow is done to cover the whole Flow area.
 	**/
 	public var backgroundTile(default, set) : h2d.Tile;
 	/**
 		Adds extra padding on left and right edge of the Flow.
+		
 		Uses same constraint limitations as padding. Used for ScaleGrid configuration, see `Flow.backgroundTile`.
+
+		@see `h2d.ScaleGrid.borderWidth`
 	**/
 	public var borderWidth(default, set) : Int = 0;
 	/**
 		Adds extra padding on top and bottom edge of the Flow.
+
 		Uses same constraint limitations as padding. Used for ScaleGrid configuration, see `Flow.backgroundTile`.
+		
+		@see `h2d.ScaleGrid.borderHeight`
 	**/
 	public var borderHeight(default, set) : Int = 0;
 
@@ -305,12 +382,15 @@ class Flow extends Object {
 
 	/**
 		When isInline is set to false, the flow size will be reported based on its bounds instead of its calculated size.
-		See `Object.getSize` documentation.
+		@see `Object.getSize`
 	**/
 	public var isInline = true;
 
 	/**
-		When set to true, the debug will display red box around the flow, green box for the client space and blue boxes for each element.
+		When set to true, the Flow will display a debug overlay.
+		* Red box around the flow
+		* Green box for the client space.
+		* Blue boxes for each element.
 	**/
 	public var debug(default, set) : Bool;
 
@@ -320,17 +400,18 @@ class Flow extends Object {
 	public var multiline(default,set) : Bool = false;
 
 	/**
-		When set to true, children are aligned in reverse order
+		When set to true, children are aligned in reverse order.
+
+		Note that it does not affect render ordering, and may cause overlap of elements due to them positioned in reverse order.
 	**/
 	public var reverse(default,set) : Bool = false;
 
 	/**
-		When set to true, if a width constraint is present and `minWidth` is null, will expand to fill all the available horizontal space
+		When set to true, if a width constraint is present and `minWidth` is null - Flow will expand to fill all the available horizontal space
 	**/
-
 	public var fillWidth(default,set) : Bool = false;
 	/**
-		When set to true, if a height constraint is present and `minHeight` is null, will expand to fill all the available vertical space
+		When set to true, if a height constraint is present and `minHeight` is null - Flow will expand to fill all the available vertical space
 	**/
 	public var fillHeight(default,set) : Bool = false;
 
@@ -348,12 +429,18 @@ class Flow extends Object {
 	var realMinHeight : Int = -1;
 	var isConstraint : Bool;
 
+	/**
+		Create a new Flow instance.
+		@param parent An optional parent `h2d.Object` instance to which Flow adds itself if set.
+	**/
 	public function new(?parent) {
 		super(parent);
 	}
 
 	/**
-		Get the per-element properties. Returns null if the element is not currently part of the flow.
+		Get the per-element properties. Returns null if the element is not currently part of the Flow.
+
+		Requesting the properties will cause a reflow regardless if properties values were changed or not.
 	**/
 	public function getProperties( e : h2d.Object ) {
 		needReflow = true; // properties might be changed
@@ -543,8 +630,10 @@ class Flow extends Object {
 
 	/**
 		Adds some spacing by either increasing the padding of the latest
-		non absolute element or the padding of the flow if no element was found.
-		The padding affected depends on the isVertical property.
+		non-absolute element or the padding of the flow if there are no elements in it.
+
+		The padding affected depends on the `Flow.layout` mode.
+		It's impossible to add spacing with a `Stack` Flow layout.
 	**/
 	public function addSpacing( v : Int ) {
 		var last = properties.length - 1;
@@ -784,7 +873,7 @@ class Flow extends Object {
 
 	/**
 		Call to force all flowed elements position to be updated.
-		See needReflow for more information.
+		See `Flow.needReflow` for more information.
 	**/
 	public function reflow() {
 
@@ -1237,13 +1326,13 @@ class Flow extends Object {
 	}
 
 	/**
-		Sent at the start of the `reflow()`.
+		Sent at the start of the `Flow.reflow`.
 	**/
 	public dynamic function onBeforeReflow() {
 	}
 
 	/**
-		Sent after the `reflow()` was finished.
+		Sent after the `Flow.reflow` was finished.
 	**/
 	public dynamic function onAfterReflow() {
 	}

@@ -6,12 +6,24 @@ import hxd.Key;
 	The console argument type.
 **/
 enum ConsoleArg {
+	/**
+		An integer parameter.
+	**/
 	AInt;
+	/**
+		A floating-point parameter.
+	**/
 	AFloat;
+	/**
+		A text string parameter.
+	**/
 	AString;
+	/**
+		A boolean parameter. Can be `true`, `false`, `1` or `0`.
+	**/
 	ABool;
 	/**
-		`AEnum` type acts as an `AString` but restricts allowed values to the provided list of strings.
+		A text string parameter with limitation to only accept the specified list values.
 	**/
 	AEnum( values : Array<String> );
 }

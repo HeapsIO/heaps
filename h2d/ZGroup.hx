@@ -141,8 +141,12 @@ class ZGroup extends Layers
 	var onEnterFilterCached : Object -> Bool;
 	var onLeaveFilterCached : Object -> Void;
 
-	public function new(?p) {
-		super(p);
+	/**
+		Create a new ZGroup instance/
+		@param parent An optional parent `h2d.Object` instance to which ZGroup adds itself if set.
+	**/
+	public function new(?parent) {
+		super(parent);
 
 		depthMap = new DepthMap();
 

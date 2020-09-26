@@ -311,6 +311,9 @@ class ParticleGroup {
 		The time in seconds at which particle will start to fade out before dying. Fade out time can be calculated with `lifetime - fadeOut`.
 	**/
 	public var fadeOut : Float					= 0.8;
+	/**
+		The exponent of the alpha transition speed on fade in and fade out.
+	**/
 	public var fadePower : Float				= 1;
 
 	/**
