@@ -32,9 +32,9 @@ class Camera {
 	public var mcam : Matrix;
 	public var m : Matrix;
 
-	public var pos : Vector;
-	public var up : Vector;
-	public var target : Vector;
+	public var pos : h3d.col.Point;
+	public var up : h3d.col.Point;
+	public var target : h3d.col.Point;
 
 	public var viewX : Float = 0.;
 	public var viewY : Float = 0.;
@@ -55,9 +55,9 @@ class Camera {
 		this.zNear = zNear;
 		this.zFar = zFar;
 		this.rightHanded = rightHanded;
-		pos = new Vector(2, 3, 4);
-		up = new Vector(0, 0, 1);
-		target = new Vector(0, 0, 0);
+		pos = new h3d.col.Point(2, 3, 4);
+		up = new h3d.col.Point(0, 0, 1);
+		target = new h3d.col.Point(0, 0, 0);
 		m = new Matrix();
 		mcam = new Matrix();
 		mproj = new Matrix();
@@ -133,7 +133,7 @@ class Camera {
 	/**
 		Setup camera for cubemap rendering on the given face.
 	**/
-	public function setCubeMap( face : Int, ?position : h3d.Vector ) {
+	public function setCubeMap( face : Int, ?position : h3d.col.Point ) {
 		var dx = 0, dy = 0, dz = 0;
 		switch( face ) {
 		case 0: dx = 1; up.set(0,1,0);
@@ -156,7 +156,7 @@ class Camera {
 		For instance the 3D ray between unproject(0,0,0) and unproject(0,0,1) is the center axis of the 3D frustum.
 	**/
 	public function unproject( screenX : Float, screenY : Float, camZ ) {
-		var p = new h3d.Vector(screenX, screenY, camZ);
+		var p = new h3d.col.Point(screenX, screenY, camZ);
 		p.project(getInverseViewProj());
 		return p;
 	}
@@ -165,7 +165,7 @@ class Camera {
 		var engine = h3d.Engine.getCurrent();
 		var rx = (pixelX / engine.width - 0.5) * 2;
 		var ry = (0.5 - pixelY / engine.height) * 2;
-		return h3d.col.Ray.fromPoints(unproject(rx, ry, 0).toPoint(), unproject(rx, ry, 1).toPoint());
+		return h3d.col.Ray.fromPoints(unproject(rx, ry, 0), unproject(rx, ry, 1));
 	}
 
 	public function update() {
@@ -201,7 +201,7 @@ class Camera {
 		frustum.loadMatrix(m);
 	}
 
-	public function getFrustumCorners(zMax=1.) : Array<h3d.Vector> {
+	public function getFrustumCorners(zMax=1.) : Array<h3d.col.Point> {
 		return [
 			unproject(-1, 1, 0), unproject(1, 1, 0), unproject(1, -1, 0), unproject(-1, -1, 0),
 			unproject(-1, 1, zMax), unproject(1, 1, zMax), unproject(1, -1, zMax), unproject(-1, -1, zMax)
@@ -347,7 +347,7 @@ class Camera {
 		Project a 3D point into the 2D screen. Make sure to update() the camera if it's been moved before using that.
 	**/
 	public function project( x : Float, y : Float, z : Float, screenWidth : Float, screenHeight : Float, snapToPixel = true ) {
-		var p = new h3d.Vector(x, y, z);
+		var p = new h3d.col.Point(x, y, z);
 		p.project(m);
 		p.x = (p.x + 1) * 0.5 * screenWidth;
 		p.y = (-p.y + 1) * 0.5 * screenHeight;

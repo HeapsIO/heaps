@@ -15,10 +15,10 @@ class Listener {
 	}
 
 	public function syncCamera( cam : h3d.Camera ) {
-		position.load(cam.pos);
+		position.loadPoint(cam.pos);
 		direction.set(cam.target.x - cam.pos.x, cam.target.y - cam.pos.y, cam.target.z - cam.pos.z);
 		direction.normalize();
-		up.load(cam.up);
+		up.loadPoint(cam.up);
 	}
 
 }

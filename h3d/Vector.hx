@@ -191,6 +191,13 @@ class Vector #if apicheck implements h2d.impl.PointApi<Vector,Matrix> #end {
 		w = 1;
 	}
 
+	public inline function loadPoint( p : h3d.col.Point ) {
+		x = p.x;
+		y = p.y;
+		z = p.z;
+		w = 1;
+	}
+
 	/// ----- COLOR FUNCTIONS
 
 	public var r(get, set) : Float;

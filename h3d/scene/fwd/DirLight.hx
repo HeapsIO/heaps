@@ -4,7 +4,7 @@ class DirLight extends Light {
 
 	var dshader : h3d.shader.DirLight;
 
-	public function new(?dir: h3d.Vector, ?parent) {
+	public function new(?dir: h3d.col.Point, ?parent) {
 		dshader = new h3d.shader.DirLight();
 		super(dshader, parent);
 		priority = 100;
@@ -27,12 +27,12 @@ class DirLight extends Light {
 		return dshader.enableSpecular = b;
 	}
 
-	override function getShadowDirection() : h3d.Vector {
+	override function getShadowDirection() : h3d.col.Point {
 		return absPos.front();
 	}
 
 	override function emit(ctx) {
-		dshader.direction.load(absPos.front());
+		dshader.direction.loadPoint(absPos.front());
 		dshader.direction.normalize();
 		super.emit(ctx);
 	}

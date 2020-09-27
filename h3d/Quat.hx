@@ -47,7 +47,7 @@ class Quat {
 		return new Quat(x, y, z, w);
 	}
 
-	public function initMoveTo( from : Vector, to : Vector ) {
+	public function initMoveTo( from : h3d.col.Point, to : h3d.col.Point ) {
 		//		H = Normalize(From + To)
 		//		Q = (From ^ H, From . H)
 		//
@@ -63,10 +63,10 @@ class Quat {
 		normalize();
 	}
 
-	public function initDirection( dir : Vector ) {
+	public function initDirection( dir : h3d.col.Point ) {
 		// inlined version of initRotationMatrix(Matrix.lookAtX(dir))
 		var ax = dir.clone().normalized();
-		var ay = new Vector(-ax.y, ax.x, 0).normalized();
+		var ay = new h3d.col.Point(-ax.y, ax.x, 0).normalized();
 		if( ay.lengthSq() < Math.EPSILON ) {
 			ay.x = ax.y;
 			ay.y = ax.z;
@@ -252,7 +252,7 @@ class Quat {
 	}
 
 	public inline function getDirection() {
-		return new h3d.Vector(1 - 2 * ( y * y + z * z ), 2 * ( x * y - z * w ), 2 * ( x * z + y * w ));
+		return new h3d.col.Point(1 - 2 * ( y * y + z * z ), 2 * ( x * y - z * w ), 2 * ( x * z + y * w ));
 	}
 
 	/**

@@ -26,9 +26,9 @@ class CameraController extends h3d.scene.Object {
 	var moveX = 0.;
 	var moveY = 0.;
 	var pushTime : Float;
-	var curPos = new h3d.Vector();
+	var curPos = new h3d.col.Point();
 	var curOffset = new h3d.Vector();
-	var targetPos = new h3d.Vector(10. / 25., Math.PI / 4, Math.PI * 5 / 13);
+	var targetPos = new h3d.col.Point(10. / 25., Math.PI / 4, Math.PI * 5 / 13);
 	var targetOffset = new h3d.Vector(0, 0, 0, 0);
 
 	public function new(?distance,?parent) {
@@ -72,7 +72,7 @@ class CameraController extends h3d.scene.Object {
 	public function loadFromCamera( animate = false ) {
 		var scene = if( scene == null ) getScene() else scene;
 		if( scene == null ) throw "Not in scene";
-		targetOffset.load(scene.camera.target);
+		targetOffset.loadPoint(scene.camera.target);
 		targetOffset.w = scene.camera.fovY;
 
 		var pos = scene.camera.pos.sub(scene.camera.target);
@@ -96,12 +96,12 @@ class CameraController extends h3d.scene.Object {
 		if( scene == null ) throw "Not in scene";
 		var bounds = scene.getBounds();
 		var center = bounds.getCenter();
-		scene.camera.target.load(center.toVector());
+		scene.camera.target.load(center);
 		var d = bounds.getMax().sub(center);
 		d.scale(5);
 		d.z *= 0.5;
 		d = d.add(center);
-		scene.camera.pos.load(d.toVector());
+		scene.camera.pos.load(d);
 		loadFromCamera();
 	}
 
@@ -207,9 +207,10 @@ class CameraController extends h3d.scene.Object {
 	}
 
 	function pan(dx, dy) {
-		var v = new h3d.Vector(dx, dy);
+		var v = new h3d.col.Point(dx, dy);
 		scene.camera.update();
 		v.transform3x3(scene.camera.getInverseView());
+		var v = v.toVector();
 		v.w = 0;
 		targetOffset = targetOffset.add(v);
 	}
@@ -217,8 +218,7 @@ class CameraController extends h3d.scene.Object {
 	function syncCamera() {
 		var cam = getScene().camera;
 		var distance = distance;
-		cam.target.load(curOffset);
-		cam.target.w = 1;
+		cam.target.set(curOffset.x, curOffset.y, curOffset.z);
 		cam.pos.set( distance * Math.cos(theta) * Math.sin(phi) + cam.target.x, distance * Math.sin(theta) * Math.sin(phi) + cam.target.y, distance * Math.cos(phi) + cam.target.z );
 		if( !lockZPlanes ) {
 			cam.zNear = distance * 0.01;

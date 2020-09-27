@@ -323,18 +323,18 @@ class Object implements hxd.impl.Serializable {
 	/**
 		Convert a local position (or [0,0] if pt is null) relative to the object origin into an absolute global position, applying all the inherited transforms.
 	**/
-	public function localToGlobal( ?pt : h3d.Vector ) {
+	public function localToGlobal( ?pt : h3d.col.Point ) {
 		syncPos();
-		if( pt == null ) pt = new h3d.Vector();
-		pt.transform3x4(absPos);
+		if( pt == null ) pt = new h3d.col.Point();
+		pt.transform(absPos);
 		return pt;
 	}
 
 	/**
 		Convert an absolute global position into a local position relative to the object origin, applying all the inherited transforms.
 	**/
-	public function globalToLocal( pt : h3d.Vector ) {
-		pt.transform3x4(getInvPos());
+	public function globalToLocal( pt : h3d.col.Point ) {
+		pt.transform(getInvPos());
 		return pt;
 	}
 
@@ -801,9 +801,9 @@ class Object implements hxd.impl.Serializable {
 		Set the position, scale and rotation of the object relative to its parent based on the specified transform matrix.
 	**/
 	static var tmpMat = new h3d.Matrix();
-	static var tmpVec = new h3d.Vector();
+	static var tmpPoint = new h3d.col.Point();
 	public function setTransform( mat : h3d.Matrix ) {
-		var s = mat.getScale(tmpVec);
+		var s = mat.getScale(tmpPoint);
 		this.x = mat.tx;
 		this.y = mat.ty;
 		this.z = mat.tz;
@@ -845,7 +845,7 @@ class Object implements hxd.impl.Serializable {
 	/**
 		Set the rotation using the specified look at direction
 	**/
-	public function setDirection( v : h3d.Vector ) {
+	public function setDirection( v : h3d.col.Point ) {
 		qRot.initDirection(v);
 		posChanged = true;
 	}

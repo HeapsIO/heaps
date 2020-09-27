@@ -107,7 +107,7 @@ class Matrix {
 		_41 = 0.0; _42 = 0.0; _43 = 0.0; _44 = 1.0;
 	}
 
-	public function initRotationAxis( axis : Vector, angle : Float ) {
+	public function initRotationAxis( axis : h3d.col.Point, angle : Float ) {
 		var cos = Math.cos(angle), sin = Math.sin(angle);
 		var cos1 = 1 - cos;
 		var x = -axis.x, y = -axis.y, z = -axis.z;
@@ -201,17 +201,16 @@ class Matrix {
 		multiply(this, tmp);
 	}
 
-	public inline function getPosition( ?v : Vector ) {
-		if( v == null ) v = new Vector();
-		v.set(_41,_42,_43,_44);
+	public inline function getPosition( ?v : h3d.col.Point ) {
+		if( v == null ) v = new h3d.col.Point();
+		v.set(_41,_42,_43);
 		return v;
 	}
 
-	public inline function setPosition( v : Vector ) {
+	public inline function setPosition( v : h3d.col.Point ) {
 		_41 = v.x;
 		_42 = v.y;
 		_43 = v.z;
-		_44 = v.w;
 	}
 
 	public function prependTranslation( x = 0., y = 0., z = 0. ) {
@@ -225,9 +224,9 @@ class Matrix {
 		_44 = vw;
 	}
 
-	public inline function getScale(?v: h3d.Vector) {
+	public inline function getScale(?v: h3d.col.Point) {
 		if(v == null)
-			v = new Vector();
+			v = new h3d.col.Point();
 		v.x = Math.sqrt(_11 * _11 + _12 * _12 + _13 * _13);
 		v.y = Math.sqrt(_21 * _21 + _22 * _22 + _23 * _23);
 		v.z = Math.sqrt(_31 * _31 + _32 * _32 + _33 * _33);
@@ -475,19 +474,19 @@ class Matrix {
 	}
 
 	public inline function front() {
-        var v = new h3d.Vector(_11, _12, _13);
+        var v = new h3d.col.Point(_11, _12, _13);
         v.normalize();
         return v;
     }
 
     public inline function right() {
-        var v = new h3d.Vector(_21, _22, _23);
+        var v = new h3d.col.Point(_21, _22, _23);
         v.normalize();
         return v;
     }
 
     public inline function up() {
-        var v = new h3d.Vector(_31, _32, _33);
+        var v = new h3d.col.Point(_31, _32, _33);
         v.normalize();
         return v;
     }
@@ -538,12 +537,12 @@ class Matrix {
 		m.prependScale(1.0 / s.x, 1.0 / s.y, 1.0 / s.z);
 		var cy = hxd.Math.sqrt(m._11 * m._11 + m._12 * m._12);
 		if(cy > 0.01) {
-			var v1 = new h3d.Vector(
+			var v1 = new h3d.col.Point(
 				hxd.Math.atan2(m._23, m._33),
 				hxd.Math.atan2(-m._13, cy),
 				hxd.Math.atan2(m._12, m._11));
 
-			var v2 = new h3d.Vector(
+			var v2 = new h3d.col.Point(
 				hxd.Math.atan2(-m._23, -m._33),
 				hxd.Math.atan2(-m._13, -cy),
 				hxd.Math.atan2(-m._12, -m._11));
@@ -551,7 +550,7 @@ class Matrix {
 			return v1.lengthSq() < v2.lengthSq() ? v1 : v2;
 		}
 		else {
-			return new h3d.Vector(
+			return new h3d.col.Point(
 				hxd.Math.atan2(-m._32, m._22),
 				hxd.Math.atan2(-m._13, cy),
 				0.0);
@@ -767,8 +766,8 @@ class Matrix {
 	/**
 		Build a rotation Matrix so the X axis will look at the given direction, and the Z axis will be the Up vector ([0,0,1] by default)
 	**/
-	public static function lookAtX( dir : Vector, ?up : Vector, ?m : Matrix ) {
-		if( up == null ) up = new Vector(0, 0, 1);
+	public static function lookAtX( dir : h3d.col.Point, ?up : h3d.col.Point, ?m : Matrix ) {
+		if( up == null ) up = new h3d.col.Point(0, 0, 1);
 		if( m == null ) m = new Matrix();
 		var ax = dir.normalized();
 		var ay = up.cross(ax).normalized();

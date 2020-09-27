@@ -149,5 +149,14 @@ class Point #if apicheck implements h2d.impl.PointApi<Point,Matrix> #end {
 		return new Vector(x, y, z);
 	}
 
+	public inline function project( m : Matrix ) {
+		var px = x * m._11 + y * m._21 + z * m._31 + m._41;
+		var py = x * m._12 + y * m._22 + z * m._32 + m._42;
+		var pz = x * m._13 + y * m._23 + z * m._33 + m._43;
+		var iw = 1 / (x * m._14 + y * m._24 + z * m._34 + m._44);
+		x = px * iw;
+		y = py * iw;
+		z = pz * iw;
+	}
 
 }

@@ -73,7 +73,7 @@ class PointShadowMap extends Shadows {
 		super.setGlobals();
 		cameraViewProj = getShadowProj();
 		cameraFar = lightCamera.zFar;
-		cameraPos = lightCamera.pos;
+		cameraPos.loadPoint(lightCamera.pos);
 	}
 
 	override function syncShader(texture) {
@@ -82,7 +82,7 @@ class PointShadowMap extends Shadows {
 		pshader.shadowMap = texture;
 		pshader.shadowBias = bias;
 		pshader.shadowPower = power;
-		pshader.lightPos = new h3d.Vector(absPos.tx, absPos.ty, absPos.tz);
+		pshader.lightPos.set(absPos.tx, absPos.ty, absPos.tz);
 		pshader.zFar = pointLight.range;
 
 		// ESM

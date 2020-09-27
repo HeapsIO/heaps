@@ -124,7 +124,7 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 			var screenY = -(event.relY / window.height - 0.5) * 2;
 			var p0 = camera.unproject(screenX, screenY, 0);
 			var p1 = camera.unproject(screenX, screenY, 1);
-			var r = h3d.col.Ray.fromPoints(p0.toPoint(), p1.toPoint());
+			var r = h3d.col.Ray.fromPoints(p0, p1);
 			var saveR = r.clone();
 			var priority = 0x80000000;
 

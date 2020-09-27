@@ -93,7 +93,7 @@ class SpotLight extends Light {
 		lightProj.update();
 	}
 
-	override function getShadowDirection() : h3d.Vector {
+	override function getShadowDirection() : h3d.col.Point {
 		return absPos.front();
 	}
 
@@ -108,7 +108,7 @@ class SpotLight extends Light {
 		var power = power;
 		pbr.lightColor.scale(power * power);
 		pbr.lightPos.set(absPos.tx, absPos.ty, absPos.tz);
-		pbr.spotDir.load(absPos.front());
+		pbr.spotDir.loadPoint(absPos.front());
 		pbr.angle = hxd.Math.cos(hxd.Math.degToRad(angle/2.0));
 		pbr.fallOff = hxd.Math.cos(hxd.Math.degToRad(hxd.Math.min(angle/2.0, fallOff)));
 		pbr.range = range;
@@ -126,7 +126,7 @@ class SpotLight extends Light {
 	}
 
 	var s = new h3d.col.Sphere();
-	var d = new h3d.Vector();
+	var d = new h3d.col.Point();
 	override function emit(ctx:RenderContext) {
 		if( ctx.computingStatic ) {
 			super.emit(ctx);

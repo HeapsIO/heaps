@@ -461,15 +461,15 @@ class World extends Object {
 					var v = vl[p++];
 
 					// position
-					var pt = new h3d.Vector(x,y,z);
-					pt.transform3x4(pos);
+					var pt = new h3d.col.Point(x,y,z);
+					pt.transform(pos);
 					model.buf.push(pt.x);
 					model.buf.push(pt.y);
 					model.buf.push(pt.z);
 					model.bounds.addPos(pt.x, pt.y, pt.z);
 
 					// normal
-					var n = new h3d.Vector(nx, ny, nz);
+					var n = new h3d.col.Point(nx, ny, nz);
 					n.transform3x3(pos);
 					var len = hxd.Math.invSqrt(n.lengthSq());
 					model.buf.push(n.x * len);

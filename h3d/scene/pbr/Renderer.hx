@@ -342,10 +342,10 @@ class Renderer extends h3d.scene.Renderer {
 		pbrProps.cameraInverseViewProj = ctx.camera.getInverseViewProj();
 		pbrProps.occlusionPower = props.occlusion * props.occlusion;
 
-		pbrDirect.cameraPosition.load(ctx.camera.pos);
+		pbrDirect.cameraPosition.loadPoint(ctx.camera.pos);
 
 		if( env != null ) {
-			pbrIndirect.cameraPosition.load(ctx.camera.pos);
+			pbrIndirect.cameraPosition.loadPoint(ctx.camera.pos);
 			pbrIndirect.emissivePower = props.emissive * props.emissive;
 			pbrIndirect.rot = hxd.Math.degToRad(env.rot);
 			pbrIndirect.irrPower = env.power * env.power;

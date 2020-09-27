@@ -236,7 +236,7 @@ class Particles extends h3d.scene.Mesh {
 				dx *= d;
 				dy *= d;
 				dz *= d;
-				var dir = new h3d.Vector(Math.sin(p.rotation), 0, Math.cos(p.rotation)).cross(new h3d.Vector(dx, dy, dz));
+				var dir = new h3d.col.Point(Math.sin(p.rotation), 0, Math.cos(p.rotation)).cross(new h3d.col.Point(dx, dy, dz));
 
 				prevX1 = p.x + dir.x * p.size;
 				prevY1 = p.y + dir.y * p.size;

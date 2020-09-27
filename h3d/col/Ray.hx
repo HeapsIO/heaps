@@ -44,12 +44,12 @@ class Ray {
 	}
 
 	public inline function transform( m : h3d.Matrix ) {
-		var p = new h3d.Vector(px, py, pz);
-		p.transform3x4(m);
+		var p = new Point(px, py, pz);
+		p.transform(m);
 		px = p.x;
 		py = p.y;
 		pz = p.z;
-		var l = new h3d.Vector(lx, ly, lz);
+		var l = new Point(lx, ly, lz);
 		l.transform3x3(m);
 		lx = l.x;
 		ly = l.y;
@@ -87,9 +87,9 @@ class Ray {
 
 	public inline function collideFrustum( mvp : Matrix ) {
 		// transform the two ray points into the normalized frustum box
-		var a = new h3d.Vector(px, py, pz);
+		var a = new Point(px, py, pz);
 		a.project(mvp);
-		var b = new h3d.Vector(px + lx, py + ly, pz + lz);
+		var b = new Point(px + lx, py + ly, pz + lz);
 		b.project(mvp);
 		// use collide on the frustum [-1,1] bounds
 		var lx = b.x - a.x;

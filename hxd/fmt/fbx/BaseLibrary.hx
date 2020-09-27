@@ -961,7 +961,7 @@ class BaseLibrary {
 					q2.initRotation(c.def.preRot.x, c.def.preRot.y, c.def.preRot.z);
 					q.initRotation(c.def.rotate.x, c.def.rotate.y, c.def.rotate.z);
 					q.multiply(q2,q);
-					q.toEuler().toPoint();
+					q.toEuler();
 				}
 			case "S":
 				if( c.def.scale == null ) P1 else c.def.scale;
