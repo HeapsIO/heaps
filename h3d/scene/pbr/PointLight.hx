@@ -46,7 +46,7 @@ class PointLight extends Light {
 		var range = hxd.Math.max(range, 1e-10);
 		var size = hxd.Math.min(size, range);
 		var power = power * 10; // base scale
-		pbr.lightColor.scale3(power * power);
+		pbr.lightColor.scale(power * power);
 		pbr.lightPos.set(absPos.tx, absPos.ty, absPos.tz);
 		pbr.invLightRange4 = 1 / (range * range * range * range);
 		pbr.pointSize = size;

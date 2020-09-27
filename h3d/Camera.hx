@@ -211,7 +211,7 @@ class Camera {
 	public function lostUp() {
 		var p2 = pos.clone();
 		p2.normalize();
-		return Math.abs(p2.dot3(up)) > 0.999;
+		return Math.abs(p2.dot(up)) > 0.999;
 	}
 
 	public function getViewDirection( dx : Float, dy : Float, dz = 0. ) {
@@ -260,10 +260,10 @@ class Camera {
 		// this way we make sure that our [ax,ay,-az] matrix follow the same handness as our world
 		// We build a transposed version of Matrix.lookAt
 		var az = target.sub(pos);
-		if( rightHanded ) az.scale3(-1);
-		az.normalizeFast();
+		if( rightHanded ) az.scale(-1);
+		az.normalize();
 		var ax = up.cross(az);
-		ax.normalizeFast();
+		ax.normalize();
 		if( ax.length() == 0 ) {
 			ax.x = az.y;
 			ax.y = az.z;
@@ -282,9 +282,9 @@ class Camera {
 		m._32 = ay.z;
 		m._33 = az.z;
 		m._34 = 0;
-		m._41 = -ax.dot3(pos);
-		m._42 = -ay.dot3(pos);
-		m._43 = -az.dot3(pos);
+		m._41 = -ax.dot(pos);
+		m._42 = -ay.dot(pos);
+		m._43 = -az.dot(pos);
 		m._44 = 1;
 	}
 
