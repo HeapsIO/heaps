@@ -109,7 +109,7 @@ class Point #if apicheck implements h2d.impl.PointApi<Point,Matrix> #end {
 	}
 
 	/**
-		Returns a new Point with a normalized values of this Point.
+		Returns a new Point with the normalized values of this Point.
 	**/
 	public inline function normalized() {
 		var k = lengthSq();
@@ -148,15 +148,24 @@ class Point #if apicheck implements h2d.impl.PointApi<Point,Matrix> #end {
 		return new Point(x, y);
 	}
 
+	/**
+		Returns a cross product between this Point and a given Point `p`.
+	**/
 	public inline function cross( p : Point ) {
 		return x * p.y - y * p.x;
 	}
 
+	/**
+		Sets this Point position to a result of linear interpolation between Points `p1` and `p2` at the interpolant position `k`.
+	**/
 	public inline function lerp( a : Point, b : Point, k : Float ) {
 		x = hxd.Math.lerp(a.x, b.x, k);
 		y = hxd.Math.lerp(a.y, a.y, k);
 	}
 
+	/**
+		Applies a given Matrix `m` transformation to this Point position.
+	**/
 	public inline function transform( m : Matrix ) {
 		var mx = m.a * x + m.c * y + m.c;
 		var my = m.b * x + m.d * y + m.d;
@@ -164,12 +173,18 @@ class Point #if apicheck implements h2d.impl.PointApi<Point,Matrix> #end {
 		this.y = my;
 	}
 
+	/**
+		Returns a new Point with a result of applying a Matrix `m` to this Point position.
+	**/
 	public inline function transformed( m : Matrix ) {
 		var mx = m.a * x + m.c * y + m.c;
 		var my = m.b * x + m.d * y + m.d;
 		return new Point(mx,my);
 	}
 
+	/**
+		Applies a given 2x2 Matrix `m` transformation to this Point position.
+	**/
 	public inline function transform2x2( m : Matrix ) {
 		var mx = m.a * x + m.c * y;
 		var my = m.b * x + m.d * y;
@@ -177,6 +192,9 @@ class Point #if apicheck implements h2d.impl.PointApi<Point,Matrix> #end {
 		this.y = my;
 	}
 
+	/**
+		Returns a new Point with a result of applying a 2x2 Matrix `m` to this Point position.
+	**/
 	public inline function transformed2x2( m : Matrix ) {
 		var mx = m.a * x + m.c * y;
 		var my = m.b * x + m.d * y;

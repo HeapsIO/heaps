@@ -55,7 +55,15 @@ class Tile {
 	**/
 	public var height(default,null) : Float;
 	
+	/**
+		The flip state of the Tile.
+		@see `Tile.flipX`
+	**/
 	public var xFlip(get,set) : Bool;
+	/**
+		The flip state of the Tile.
+		@see `Tile.flipY`
+	**/
 	public var yFlip(get,set) : Bool;
 
 	/**

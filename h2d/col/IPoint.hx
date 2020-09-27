@@ -129,6 +129,9 @@ class IPoint #if apicheck implements h2d.impl.PointApi.IPointApi<IPoint> #end {
 		return new IPoint(x, y);
 	}
 
+	/**
+		Returns a cross product between this IPoint and a given IPoint `p`.
+	**/
 	public inline function cross( p : IPoint ) {
 		return x * p.y - y * p.x;
 	}
