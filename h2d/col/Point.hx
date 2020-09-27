@@ -97,15 +97,15 @@ class Point #if apicheck implements h2d.impl.PointApi<Point,Matrix> #end {
 	}
 
 	public inline function transform( m : Matrix ) {
-		var mx = m.a * x + m.c * y + m.c;
-		var my = m.b * x + m.d * y + m.d;
+		var mx = m.a * x + m.c * y + m.x;
+		var my = m.b * x + m.d * y + m.y;
 		this.x = mx;
 		this.y = my;
 	}
 
 	public inline function transformed( m : Matrix ) {
-		var mx = m.a * x + m.c * y + m.c;
-		var my = m.b * x + m.d * y + m.d;
+		var mx = m.a * x + m.c * y + m.x;
+		var my = m.b * x + m.d * y + m.y;
 		return new Point(mx,my);
 	}
 
