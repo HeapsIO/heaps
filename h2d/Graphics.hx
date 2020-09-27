@@ -1,6 +1,7 @@
 package h2d;
 import h2d.impl.BatchDrawState;
 import hxd.Math;
+import hxd.impl.Allocator;
 
 private typedef GraphicsPoint = hxd.poly2tri.Point;
 
@@ -84,14 +85,15 @@ private class GraphicsContent extends h3d.prim.Primitive {
 
 	override function alloc( engine : h3d.Engine ) {
 		if (index.length <= 0) return ;
-		buffer = h3d.Buffer.ofFloats(tmp, 8, [RawFormat]);
+		var alloc = Allocator.get();
+		buffer = alloc.ofFloats(tmp, 8, RawFormat);
 		#if track_alloc
 		@:privateAccess buffer.allocPos = allocPos;
 		#end
-		indexes = h3d.Indexes.alloc(index);
+		indexes = alloc.ofIndexes(index);
 		for( b in buffers ) {
-			if( b.vbuf == null || b.vbuf.isDisposed() ) b.vbuf = h3d.Buffer.ofFloats(b.buf, 8, [RawFormat]);
-			if( b.ibuf == null || b.ibuf.isDisposed() ) b.ibuf = h3d.Indexes.alloc(b.idx);
+			if( b.vbuf == null || b.vbuf.isDisposed() ) b.vbuf = alloc.ofFloats(b.buf, 8, RawFormat);
+			if( b.ibuf == null || b.ibuf.isDisposed() ) b.ibuf = alloc.ofIndexes(b.idx);
 		}
 		bufferDirty = false;
 		indexDirty = false;
@@ -104,18 +106,19 @@ private class GraphicsContent extends h3d.prim.Primitive {
 		state.drawIndexed(ctx, buffer, indexes);
 	}
 
-	public inline function flush() {
+	public function flush() {
 		if( buffer == null || buffer.isDisposed() ) {
 			alloc(h3d.Engine.getCurrent());
 		} else {
+			var allocator = Allocator.get();
 			if ( bufferDirty ) {
-				buffer.dispose();
-				buffer = h3d.Buffer.ofFloats(tmp, 8, [RawFormat]);
+				allocator.disposeBuffer(buffer);
+				buffer = allocator.ofFloats(tmp, 8, RawFormat);
 				bufferDirty = false;
 			}
 			if ( indexDirty ) {
-				indexes.dispose();
-				indexes = h3d.Indexes.alloc(index);
+				allocator.disposeIndexBuffer(indexes);
+				indexes = allocator.ofIndexes(index);
 				indexDirty = false;
 			}
 		}
@@ -123,13 +126,23 @@ private class GraphicsContent extends h3d.prim.Primitive {
 
 	override function dispose() {
 		for( b in buffers ) {
-			if( b.vbuf != null ) b.vbuf.dispose();
-			if( b.ibuf != null ) b.ibuf.dispose();
-			b.state.clear();
+			if( b.vbuf != null ) Allocator.get().disposeBuffer(b.vbuf);
+			if( b.ibuf != null ) Allocator.get().disposeIndexBuffer(b.ibuf);
 			b.vbuf = null;
 			b.ibuf = null;
+			b.state.clear();
+		}
+
+		if( buffer != null ) {
+			Allocator.get().disposeBuffer(buffer);
+			buffer = null;
+		}
+		if( indexes != null ) {
+			Allocator.get().disposeIndexBuffer(indexes);
+			indexes = null;
 		}
 		state.clear();
+		
 		super.dispose();
 	}
 

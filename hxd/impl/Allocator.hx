@@ -3,6 +3,8 @@ package hxd.impl;
 @:enum abstract BufferFlags(Int) {
 	public var Dynamic = 0;
 	public var UniformDynamic = 1;
+	public var RawFormat = 2;
+	public var RawQuads = 3;
 	public inline function toInt() : Int {
 		return this;
 	}
@@ -16,7 +18,20 @@ class Allocator {
 	// GPU
 
 	public function allocBuffer( vertices : Int, stride : Int, flags : BufferFlags ) : h3d.Buffer {
-		return new h3d.Buffer(vertices, stride, switch( flags ) { case Dynamic: [Dynamic]; case UniformDynamic: [UniformBuffer,Dynamic]; });
+		return new h3d.Buffer(vertices, stride,
+			switch( flags ) {
+				case Dynamic: [Dynamic];
+				case UniformDynamic: [UniformBuffer,Dynamic];
+				case RawFormat: [RawFormat];
+				case RawQuads: [Quads, RawFormat];
+			});
+	}
+
+	public function ofFloats( v : hxd.FloatBuffer, stride : Int, flags : BufferFlags ) {
+		var nvert = Std.int(v.length / stride);
+		var b = allocBuffer(nvert, stride, flags);
+		b.uploadVector(v, 0, nvert);
+		return b;
 	}
 
 	public function disposeBuffer( b : h3d.Buffer ) {
@@ -25,6 +40,13 @@ class Allocator {
 
 	public function allocIndexBuffer( count : Int ) {
 		return new h3d.Indexes(count);
+	}
+
+	public function ofIndexes( ib: hxd.IndexBuffer, length = -1) {
+		if( length < 0 && ib != null ) length = ib.length;
+		var idx = allocIndexBuffer( length );
+		idx.upload(ib, 0, length);
+		return idx;
 	}
 
 	public function disposeIndexBuffer( i : h3d.Indexes ) {

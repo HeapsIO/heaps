@@ -240,7 +240,7 @@ class HlslOut {
 			addValue(args[0], tabs);
 			switch( g ) {
 			case Texture:
-				add(".Sample(");
+				add(isVertex ? ".SampleLevel(" : ".Sample(");
 			case TextureLod:
 				add(".SampleLevel(");
 			default:
@@ -262,6 +262,8 @@ class HlslOut {
 				add(",");
 				addValue(args[i],tabs);
 			}
+			if( g == Texture && isVertex )
+				add(",0");
 			add(")");
 		case TCall({ e : TGlobal(g = (Texel | TexelLod)) }, args):
 			addValue(args[0], tabs);

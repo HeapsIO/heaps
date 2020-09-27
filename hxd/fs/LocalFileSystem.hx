@@ -134,6 +134,14 @@ class LocalEntry extends FileEntry {
 	#end
 
 	static function checkFiles() {
+		var filesToCheck = Math.ceil(WATCH_LIST.length / 60);
+		if( filesToCheck > LocalFileSystem.FILES_CHECK_MAX )
+			filesToCheck = LocalFileSystem.FILES_CHECK_MAX;
+		for( i in 0...filesToCheck )
+			checkNext();
+	}
+
+	static function checkNext() {
 		var w = WATCH_LIST[WATCH_INDEX++];
 		if( w == null ) {
 			WATCH_INDEX = 0;
@@ -203,6 +211,7 @@ class LocalFileSystem implements FileSystem {
 	public var baseDir(default,null) : String;
 	public var convert(default,null) : FileConverter;
 	static var isWindows = Sys.systemName() == "Windows";
+	public static var FILES_CHECK_MAX = 5;
 
 	public function new( dir : String, configuration : String ) {
 		baseDir = dir;

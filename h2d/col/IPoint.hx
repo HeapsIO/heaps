@@ -1,18 +1,30 @@
 package h2d.col;
 import hxd.Math;
 
-class IPoint {
+class IPoint #if apicheck implements h2d.impl.PointApi.IPointApi<IPoint> #end {
 
 	public var x : Int;
 	public var y : Int;
+
+	// -- gen api
 
 	public inline function new(x = 0, y = 0) {
 		this.x = x;
 		this.y = y;
 	}
 
-	public inline function toPoint( scale = 1. ) {
-		return new Point(x * scale, y * scale);
+	public inline function load( p : IPoint ) {
+		this.x = p.x;
+		this.y = p.y;
+	}
+
+	public inline function scale( v : Int ) {
+		x *= v;
+		y *= v;
+	}
+
+	public inline function multiply( v : Int ) {
+		return new IPoint(x * v, y * v);
 	}
 
 	public inline function distanceSq( p : IPoint ) {
@@ -53,13 +65,23 @@ class IPoint {
 		return Math.sqrt(lengthSq());
 	}
 
-	public inline function set(x,y) {
+	public inline function set(x=0,y=0) {
 		this.x = x;
 		this.y = y;
 	}
 
 	public inline function clone() {
 		return new IPoint(x, y);
+	}
+
+	public inline function cross( p : IPoint ) {
+		return x * p.y - y * p.x;
+	}
+
+	// -- end gen api
+
+	public inline function toPoint( scale = 1. ) {
+		return new Point(x * scale, y * scale);
 	}
 
 }
