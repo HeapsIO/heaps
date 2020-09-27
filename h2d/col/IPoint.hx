@@ -5,7 +5,7 @@ import hxd.Math;
 	An integer-based point.
 	@see `h2d.col.Point`
 **/
-class IPoint {
+class IPoint #if apicheck implements h2d.impl.PointApi.IPointApi<IPoint> #end {
 
 	/**
 		Horizontal position of the point.
@@ -15,6 +15,8 @@ class IPoint {
 		Vertical position of the point.
 	**/
 	public var y : Int;
+
+	// -- gen api
 
 	/**
 		Create a new integer Point instance.
@@ -27,10 +29,26 @@ class IPoint {
 	}
 
 	/**
-		Converts this IPoint to floating point-based `Point` scaled by provided scalar `scale`.
+		Copy the position from the give point `p` into this IPoint.
 	**/
-	public inline function toPoint( scale = 1. ) : Point {
-		return new Point(x * scale, y * scale);
+	public inline function load( p : IPoint ) {
+		this.x = p.x;
+		this.y = p.y;
+	}
+
+	/**
+		Multiplies the position of this IPoint by a given scalar `v`. Modifies this instance.
+	**/
+	public inline function scale( v : Int ) {
+		x *= v;
+		y *= v;
+	}
+
+	/**
+		Returns a new IPoint with the position of this IPoint multiplied by a given scalar `v`.
+	**/
+	public inline function multiply( v : Int ) {
+		return new IPoint(x * v, y * v);
 	}
 
 	/**
@@ -99,7 +117,7 @@ class IPoint {
 	/**
 		Sets the IPoint `x, y` with given values.
 	**/
-	public inline function set( x : Int, y : Int ) {
+	public inline function set(x=0,y=0) {
 		this.x = x;
 		this.y = y;
 	}
@@ -109,6 +127,19 @@ class IPoint {
 	**/
 	public inline function clone() : IPoint {
 		return new IPoint(x, y);
+	}
+
+	public inline function cross( p : IPoint ) {
+		return x * p.y - y * p.x;
+	}
+
+	// -- end gen api
+
+	/**
+		Converts this IPoint to floating point-based `Point` scaled by provided scalar `scale`.
+	**/
+	public inline function toPoint( scale = 1. ) {
+		return new Point(x * scale, y * scale);
 	}
 
 }

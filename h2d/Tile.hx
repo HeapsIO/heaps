@@ -54,6 +54,9 @@ class Tile {
 		Cannot be modified directly, use `Tile.setSize` instead.
 	**/
 	public var height(default,null) : Float;
+	
+	public var xFlip(get,set) : Bool;
+	public var yFlip(get,set) : Bool;
 
 	/**
 		An integer horizontal position of the Tile on the Texture.
@@ -253,6 +256,17 @@ class Tile {
 		t.v = v;
 		t.v2 = v2;
 		return t;
+	}
+	
+	function get_xFlip() return u2 < u;
+	function get_yFlip() return v2 < v;
+	function set_xFlip(v) {
+		if( v != xFlip ) flipX();
+		return v;
+	}
+	function set_yFlip(v) {
+		if( v != yFlip ) flipY();
+		return v;
 	}
 
 	/**

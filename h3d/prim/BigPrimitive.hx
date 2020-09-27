@@ -241,7 +241,7 @@ class BigPrimitive extends Primitive {
 				if(mat != null) {
 					var pt = new h3d.col.Point(nx, ny, nz);
 					pt.transform3x3(mat);
-					pt.normalizeFast();
+					pt.normalize();
 					add(pt.x);
 					add(pt.y);
 					add(pt.z);
@@ -265,7 +265,7 @@ class BigPrimitive extends Primitive {
 					var pt = new h3d.col.Point(tx, ty, tz);
 					var len = pt.lengthSq();
 					pt.transform3x3(mat);
-					pt.normalizeFast();
+					pt.normalize();
 					if( len < 0.5 ) pt.scale(0.5);
 					add(pt.x);
 					add(pt.y);

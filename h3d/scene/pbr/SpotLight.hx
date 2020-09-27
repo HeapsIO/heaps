@@ -106,7 +106,7 @@ class SpotLight extends Light {
 
 		pbr.lightColor.load(_color);
 		var power = power;
-		pbr.lightColor.scale3(power * power);
+		pbr.lightColor.scale(power * power);
 		pbr.lightPos.set(absPos.tx, absPos.ty, absPos.tz);
 		pbr.spotDir.load(absPos.front());
 		pbr.angle = hxd.Math.cos(hxd.Math.degToRad(angle/2.0));
@@ -137,7 +137,7 @@ class SpotLight extends Light {
 			throw "Rendering a pbr light require a PBR compatible scene renderer";
 
 		d.load(absPos.front());
-		d.scale3(range / 2.0);
+		d.scale(range / 2.0);
 		s.x = absPos.tx + d.x;
 		s.y = absPos.ty + d.y;
 		s.z = absPos.tz + d.z;

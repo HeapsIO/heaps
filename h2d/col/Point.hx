@@ -5,7 +5,8 @@ import hxd.Math;
 	A simple 2D position/vector container.
 	@see `h2d.col.IPoint`
 **/
-class Point {
+class Point #if apicheck implements h2d.impl.PointApi<Point,Matrix> #end {
+
 	/**
 		The horizontal position of the point.
 	**/
@@ -14,6 +15,8 @@ class Point {
 		The vertical position of the point.
 	**/
 	public var y : Float;
+
+	// -- gen api
 
 	/**
 		Create a new Point instance.
@@ -26,16 +29,9 @@ class Point {
 	}
 
 	/**
-		Converts this point to integer point scaled by provided scalar `scale` (rounded).
-	**/
-	public inline function toIPoint( scale = 1. ) : IPoint {
-		return new IPoint(Math.round(x * scale), Math.round(y * scale));
-	}
-
-	/**
 		Returns squared distance between this Point and given Point `p`.
 	**/
-	public inline function distanceSq( p : Point ) : Float {
+	public inline function distanceSq( p : Point ) {
 		var dx = x - p.x;
 		var dy = y - p.y;
 		return dx * dx + dy * dy;
@@ -68,6 +64,13 @@ class Point {
 	}
 
 	/**
+		Returns a new Point with the position of this Point multiplied by a given scalar `v`.
+	**/
+	public inline function multiply( v : Float ) {
+		return new Point(x * v, y * v);
+	}
+
+	/**
 		Tests if this Point position equals to `other` Point position.
 	**/
 	public inline function equals( other : Point ) : Bool {
@@ -82,21 +85,9 @@ class Point {
 	}
 
 	/**
-		Rotates this Point around `0,0` by given `angle`.
-	**/
-	public inline function rotate( angle : Float ) {
-		var c = Math.cos(angle);
-		var s = Math.sin(angle);
-		var x2 = x * c - y * s;
-		var y2 = x * s + y * c;
-		x = x2;
-		y = y2;
-	}
-
-	/**
 		Returns squared length of this Point.
 	**/
-	public inline function lengthSq() : Float {
+	public inline function lengthSq() {
 		return x * x + y * y;
 	}
 
@@ -110,7 +101,7 @@ class Point {
 	/**
 		Normalizes the Point.
 	**/
-	public function normalize() {
+	public inline function normalize() {
 		var k = lengthSq();
 		if( k < Math.EPSILON ) k = 0 else k = Math.invSqrt(k);
 		x *= k;
@@ -118,20 +109,18 @@ class Point {
 	}
 
 	/**
-		Normalizes the Point.
-		Compared to `normalize` does not account for extremely small Point length edge case.
+		Returns a new Point with a normalized values of this Point.
 	**/
-	public inline function normalizeFast() {
+	public inline function normalized() {
 		var k = lengthSq();
-		k = Math.invSqrt(k);
-		x *= k;
-		y *= k;
+		if( k < Math.EPSILON ) k = 0 else k = Math.invSqrt(k);
+		return new h2d.col.Point(x*k,y*k);
 	}
 
 	/**
 		Sets the Point `x,y` with given values.
 	**/
-	public inline function set( x : Float, y : Float ) {
+	public inline function set(x=0.,y=0.) {
 		this.x = x;
 		this.y = y;
 	}
@@ -147,10 +136,9 @@ class Point {
 	/**
 		Multiplies `x,y` by scalar `f` and returns this Point.
 	**/
-	public inline function scale( f : Float ) : Point {
+	public inline function scale( f : Float ) {
 		x *= f;
 		y *= f;
-		return this;
 	}
 
 	/**
@@ -158,6 +146,63 @@ class Point {
 	**/
 	public inline function clone() : Point {
 		return new Point(x, y);
+	}
+
+	public inline function cross( p : Point ) {
+		return x * p.y - y * p.x;
+	}
+
+	public inline function lerp( a : Point, b : Point, k : Float ) {
+		x = hxd.Math.lerp(a.x, b.x, k);
+		y = hxd.Math.lerp(a.y, a.y, k);
+	}
+
+	public inline function transform( m : Matrix ) {
+		var mx = m.a * x + m.c * y + m.c;
+		var my = m.b * x + m.d * y + m.d;
+		this.x = mx;
+		this.y = my;
+	}
+
+	public inline function transformed( m : Matrix ) {
+		var mx = m.a * x + m.c * y + m.c;
+		var my = m.b * x + m.d * y + m.d;
+		return new Point(mx,my);
+	}
+
+	public inline function transform2x2( m : Matrix ) {
+		var mx = m.a * x + m.c * y;
+		var my = m.b * x + m.d * y;
+		this.x = mx;
+		this.y = my;
+	}
+
+	public inline function transformed2x2( m : Matrix ) {
+		var mx = m.a * x + m.c * y;
+		var my = m.b * x + m.d * y;
+		return new Point(mx,my);
+	}
+
+
+	// -- end
+
+	/**
+		Converts this point to integer point scaled by provided scalar `scale` (rounded).
+	**/
+	public inline function toIPoint( scale = 1. ) {
+		return new IPoint(Math.round(x * scale), Math.round(y * scale));
+	}
+
+	/**
+		Rotates this Point around `0,0` by a given `angle`.
+	**/
+	public inline function rotate( angle : Float ) {
+		var c = Math.cos(angle);
+		var s = Math.sin(angle);
+		var x2 = x * c - y * s;
+		var y2 = x * s + y * c;
+		x = x2;
+		y = y2;
 	}
 
 }

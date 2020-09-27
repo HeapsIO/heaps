@@ -476,19 +476,19 @@ class Matrix {
 
 	public inline function front() {
         var v = new h3d.Vector(_11, _12, _13);
-        v.normalizeFast();
+        v.normalize();
         return v;
     }
 
     public inline function right() {
         var v = new h3d.Vector(_21, _22, _23);
-        v.normalizeFast();
+        v.normalize();
         return v;
     }
 
     public inline function up() {
         var v = new h3d.Vector(_31, _32, _33);
-        v.normalizeFast();
+        v.normalize();
         return v;
     }
 
@@ -770,8 +770,8 @@ class Matrix {
 	public static function lookAtX( dir : Vector, ?up : Vector, ?m : Matrix ) {
 		if( up == null ) up = new Vector(0, 0, 1);
 		if( m == null ) m = new Matrix();
-		var ax = dir.getNormalized();
-		var ay = up.cross(ax).getNormalized();
+		var ax = dir.normalized();
+		var ay = up.cross(ax).normalized();
 		if( ay.lengthSq() < Math.EPSILON ) {
 			ay.x = ax.y;
 			ay.y = ax.z;
