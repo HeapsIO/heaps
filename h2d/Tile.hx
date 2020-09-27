@@ -16,6 +16,9 @@ class Tile {
 	public var y(default,null) : Float;
 	public var width(default,null) : Float;
 	public var height(default,null) : Float;
+	
+	public var xFlip(get,set) : Bool;
+	public var yFlip(get,set) : Bool;
 
 	public var ix(get,never) : Int;
 	inline function get_ix() return Math.floor(x);
@@ -135,6 +138,17 @@ class Tile {
 		t.v = v;
 		t.v2 = v2;
 		return t;
+	}
+	
+	function get_xFlip() return u2 < u;
+	function get_yFlip() return v2 < v;
+	function set_xFlip(v) {
+		if( v != xFlip ) flipX();
+		return v;
+	}
+	function set_yFlip(v) {
+		if( v != yFlip ) flipY();
+		return v;
 	}
 
 	/**
