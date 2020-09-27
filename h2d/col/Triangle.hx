@@ -21,6 +21,12 @@ class Triangle implements Collider {
 	var area : Float;
 	var invArea : Float;
 
+	/**
+		Create a new Triangle collider.
+		@param a The first triangle corner.
+		@param b The second triangle corner.
+		@param c The third triangle corner.
+	**/
 	public inline function new( a : Point, b : Point, c : Point ) {
 		this.a = a;
 		this.b = b;

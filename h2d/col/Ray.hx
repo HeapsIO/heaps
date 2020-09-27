@@ -57,6 +57,9 @@ class Ray {
 		ly *= l;
 	}
 
+	/**
+		Returns a new Ray starting at Point `p1` and pointing at Point `p2`.
+	**/
 	public static inline function fromPoints( p1 : Point, p2 : Point ) {
 		var r = new Ray();
 		r.px = p1.x;
@@ -67,6 +70,9 @@ class Ray {
 		return r;
 	}
 
+	/**
+		Returns a new Ray at given position and direction.
+	**/
 	public static inline function fromValues( x, y, dx, dy ) {
 		var r = new Ray();
 		r.px = x;

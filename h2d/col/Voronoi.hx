@@ -530,7 +530,13 @@ class Edge {
 		The right-hand cell along the edge.
 	**/
 	public var rCell : Null<Cell>;
+	/**
+		The first position of the edge segment.
+	**/
 	public var va : Null<Point>;
+	/**
+		The second position of the edge segment.
+	**/
 	public var vb : Null<Point>;
 
 	@:dox(hide) @:noCompletion
@@ -541,13 +547,25 @@ class Edge {
 	}
 }
 
-
+/**
+	The edge attached to a Voronoi `Cell`.
+**/
 class Halfedge {
 
+	/**
+		The seed Point of the Cell this edge is attached to.
+	**/
 	public var point : Point;
+	/**
+		The Edge this half-edge is attached to.
+	**/
 	public var edge : Edge;
+	/**
+		The perpendicular angle to the edge segment pointing in the direction of either neighboring Cell of the border.
+	**/
 	public var angle : Float;
 
+	@:dox(hide) @:noCompletion
 	public function new(edge, lPoint:Point, rPoint:Point) {
 		this.point = lPoint;
 		this.edge = edge;
@@ -571,14 +589,23 @@ class Halfedge {
 		}
 	}
 
+	/**
+		Returns the starting point of the edge segment.
+	**/
 	public inline function getStartpoint() {
 		return this.edge.lPoint == this.point ? this.edge.va : this.edge.vb;
 	}
 
+	/**
+		Returns the end point of the edge segment.
+	**/
 	public inline function getEndpoint() {
 		return this.edge.lPoint == this.point ? this.edge.vb : this.edge.va;
 	}
 
+	/**
+		Returns the neighboring Cell of this half-edge or null if it's a border edge.
+	**/
 	public inline function getTarget() {
 		return this.edge.lCell != null && this.edge.lCell.point != point ? this.edge.lCell : this.edge.rCell;
 	}
