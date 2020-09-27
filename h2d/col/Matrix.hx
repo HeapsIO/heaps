@@ -3,7 +3,8 @@ import hxd.Math;
 
 /**
 	An affine 2D 2x3 matrix.
-	Matrix properties are as following:
+
+	Matrix properties are as follows:
 	```
 	[a, c, x]
 	[b, d, y]
