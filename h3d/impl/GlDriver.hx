@@ -47,6 +47,7 @@ private extern class GL2 extends js.html.webgl.GL {
 	static inline var UNSIGNED_INT_10F_11F_11F_REV = 0x8C3B;
 	static inline var FUNC_MIN = 0x8007;
 	static inline var FUNC_MAX = 0x8008;
+	static inline var TEXTURE_LOD_BIAS : Int = 0x84FD;
 }
 private typedef Uniform = js.html.webgl.UniformLocation;
 private typedef Program = js.html.webgl.Program;
@@ -832,7 +833,7 @@ class GlDriver extends Driver {
 		discardError();
 		var tt = gl.createTexture();
 		var bind = getBindType(t);
-		var tt : Texture = { t : tt, width : t.width, height : t.height, internalFmt : GL.RGBA, pixelFmt : GL.UNSIGNED_BYTE, bits : -1, bind : bind, bias : 0, #if multidriver, driver : this #end };
+		var tt : Texture = { t : tt, width : t.width, height : t.height, internalFmt : GL.RGBA, pixelFmt : GL.UNSIGNED_BYTE, bits : -1, bind : bind, bias : 0 #if multidriver, driver : this #end };
 		switch( t.format ) {
 		case RGBA:
 			// default
