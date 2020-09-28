@@ -38,6 +38,7 @@ class Texture {
 	public var filter(default,set) : Filter;
 	public var wrap(default, set) : Wrap;
 	public var layerCount(get, never) : Int;
+	public var lodBias : Float = 0.;
 
 	/**
 		If this callback is set, the texture can be re-allocated when the 3D context has been lost or when

@@ -1116,6 +1116,8 @@ class DirectXDriver extends h3d.impl.Driver {
 				}
 
 				var bits = @:privateAccess t.bits;
+				if( t.lodBias != 0 )
+					bits |= Std.int((t.lodBias + 32)*32) << 10;
 				if( bits != state.samplerBits[i] ) {
 					var ss = samplerStates.get(bits);
 					if( ss == null ) {
@@ -1126,6 +1128,7 @@ class DirectXDriver extends h3d.impl.Driver {
 						// only the first sampler maxLod seems to be taken into account :'(
 						desc.minLod = 0;
 						desc.maxLod = 1e30;
+						desc.mipLodBias = t.lodBias;
 						ss = Driver.createSamplerState(desc);
 						samplerStates.set(bits, ss);
 					}
