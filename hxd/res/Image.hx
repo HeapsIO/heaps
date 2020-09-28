@@ -366,9 +366,11 @@ class Image extends Resource {
 			format = R32F;
 		default:
 		}
-		tex = new h3d.mat.Texture(width, height, [NoAlloc], format);
+		var flags : Array<h3d.mat.Data.TextureFlags> = [NoAlloc];
+		tex = new h3d.mat.Texture(width, height, flags, format);
 		if( DEFAULT_FILTER != Linear ) tex.filter = DEFAULT_FILTER;
 		tex.setName(entry.path);
+		setupTextureFlags(tex);
 		loadTexture();
 		return tex;
 	}
@@ -376,6 +378,9 @@ class Image extends Resource {
 	public function toTile() : h2d.Tile {
 		var size = getSize();
 		return h2d.Tile.fromTexture(toTexture()).sub(0, 0, size.width, size.height);
+	}
+
+	public static dynamic function setupTextureFlags( tex : h3d.mat.Texture ) {
 	}
 
 }
