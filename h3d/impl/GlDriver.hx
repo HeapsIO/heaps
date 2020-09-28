@@ -579,7 +579,7 @@ class GlDriver extends Driver {
 				}
 				if( t.lodBias != t.t.bias ) {
 					t.t.bias = t.lodBias;
-					gl.texParameterf(pt.mode, GL.TEXTURE_LOD_BIAS, t.lodBias);
+					gl.texParameterf(pt.mode, GL2.TEXTURE_LOD_BIAS, t.lodBias);
 				}
 			}
 		}
