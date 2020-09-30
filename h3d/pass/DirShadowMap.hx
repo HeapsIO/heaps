@@ -9,7 +9,7 @@ class DirShadowMap extends Shadows {
 	var mergePass = new h3d.pass.ScreenFx(new h3d.shader.MinMaxShader());
 
 	// Shrink the frustum of the light to the bounds containing all visible objects
-	public var autoShrink = false;
+	public var autoShrink = true;
 	// Clamp the zFar of the frustum of the camera for bounds calculation
 	public var maxDist = -1.0;
 	// Clamp the zNear of the frustum of the camera for bounds calculation
