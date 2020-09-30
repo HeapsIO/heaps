@@ -271,14 +271,27 @@ class Flow extends Object {
 
 	/**
 		Will set all padding values at the same time.
+
+		Note that padding is applied inside the flow boundaries and included in the size constraint, shrinking available space for Flow children.
+
+		@see `Flow.paddingLeft`
+		@see `Flow.paddingRight`
+		@see `Flow.paddingTop`
+		@see `Flow.paddingBottom`
+		@see `Flow.paddingHorizontal`
+		@see `Flow.paddingVertical`
 	**/
 	public var padding(never, set) : Int;
 	/**
 		Will set `Flow.paddingLeft` and `Flow.paddingRight` to the given value.
+
+		Note that padding is applied inside the flow boundaries and included in the size constraint, shrinking available space for Flow children.
 	**/
 	public var paddingHorizontal(never, set) : Int;
 	/**
 		Will set `Flow.paddingTop` and `Flow.paddingBottom` to the given value.
+
+		Note that padding is applied inside the flow boundaries and included in the size constraint, shrinking available space for Flow children.
 	**/
 	public var paddingVertical(never, set) : Int;
 	/**
@@ -336,37 +349,55 @@ class Flow extends Object {
 	**/
 	public var backgroundTile(default, set) : h2d.Tile;
 	/**
-		Adds extra padding on left and right edge of the Flow.
-		
-		Uses same constraint limitations as padding. Used for ScaleGrid configuration, see `Flow.backgroundTile`.
+		Horizontal border width of the `Flow.backgroundTile`.
 
+		Does not affect padding by default, which can be enabled with `-D flow_border` compilation flag.
+		If border padding is enabled, `Flow.outerWidth` will be affected accordingly even if background tile is not set
+		and will follow the same constraint limitation as padding.
+		
+		@see `Flow.paddingLeft`
+		@see `Flow.paddingRight`
+		@see `Flow.paddingHorizontal`
 		@see `h2d.ScaleGrid.borderWidth`
 	**/
 	public var borderWidth(default, set) : Int = 0;
 	/**
-		Adds extra padding on top and bottom edge of the Flow.
+		Vertical border width of the `Flow.backgroundTile`.
 
-		Uses same constraint limitations as padding. Used for ScaleGrid configuration, see `Flow.backgroundTile`.
-		
+		Does not affect padding by default, which can be enabled with `-D flow_border` compilation flag.
+		If border padding is enabled, `Flow.outerHeight` will be affected accordingly even if background tile is not set
+		and will follow the same constraint limitation as padding.
+
+		@see `Flow.paddingTop`
+		@see `Flow.paddingBottom`
+		@see `Flow.paddingVertical`
 		@see `h2d.ScaleGrid.borderHeight`
 	**/
 	public var borderHeight(default, set) : Int = 0;
 
 	/**
 		Calculate the client width, which is the inner size of the flow without the borders and padding.
+
+		@see `Flow.padding`
 	**/
 	public var innerWidth(get, never) : Int;
 	/**
 		Calculate the client height, which is the inner size of the flow without the borders and padding.
+
+		@see `Flow.padding`
 	**/
 	public var innerHeight(get, never) : Int;
 
 	/**
-		Flow total width (includes borders and paddings)
+		Flow total width. Compared to `Flow.innerWidth`, it also includes paddings and, if enabled, borders (see `Flow.borderWidth`).
+
+		@see `Flow.padding`
 	**/
 	public var outerWidth(get, never) : Int;
 	/**
-		Flow total height (includes borders and paddings)
+		Flow total height Compared to `Flow.innerHeight`, it also includes paddings and, if enabled, borders (see `Flow.borderHeight`).
+
+		@see `Flow.padding`
 	**/
 	public var outerHeight(get, never) : Int;
 
