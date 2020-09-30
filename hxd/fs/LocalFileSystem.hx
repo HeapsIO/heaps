@@ -147,7 +147,7 @@ class LocalEntry extends FileEntry {
 			WATCH_INDEX = 0;
 			return;
 		}
-		var t = try w.getModifTime() catch( e : Dynamic ) -1.;
+		var t = try w.getModifTime() catch( e : Dynamic ) return;
 		if( t == w.watchTime ) return;
 
 		#if (sys || nodejs)
