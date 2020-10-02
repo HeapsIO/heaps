@@ -853,7 +853,7 @@ class Object implements hxd.impl.Serializable {
 	/**
 		Return the direction in which the object rotation is currently oriented to
 	**/
-	public function getDirection() {
+	public function getLocalDirection() {
 		return qRot.getDirection();
 	}
 
