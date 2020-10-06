@@ -236,6 +236,7 @@ class Checker {
 				name : f.name,
 				kind : Function,
 				type : TFun([{ args : [for( a in args ) { type : a.type, name : a.name }], ret : f.ret == null ? TVoid : f.ret }]),
+				doc: null,
 			};
 			var f : TFunction = {
 				kind : kind,
@@ -745,6 +746,7 @@ class Checker {
 			name : v.name,
 			kind : v.kind,
 			type : v.type,
+			doc: v.doc,
 		};
 		if( parent != null )
 			tv.parent = parent;
@@ -810,7 +812,7 @@ class Checker {
 			parent.type = TStruct(vl);
 			for( i in 0...vl.length ) {
 				var v = vl[i];
-				vl[i] = makeVar( { type : v.type, qualifiers : v.qualifiers, name : v.name, kind : v.kind, expr : null }, pos, parent);
+				vl[i] = makeVar( { type : v.type, qualifiers : v.qualifiers, name : v.name, kind : v.kind, expr : null, doc: v.doc }, pos, parent);
 			}
 			return parent.type;
 		case TArray(t, size), TBuffer(t,size):

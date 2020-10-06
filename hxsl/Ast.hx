@@ -97,6 +97,7 @@ typedef VarDecl = {
 	var kind : Null<VarKind>;
 	var qualifiers : Array<VarQualifier>;
 	var expr : Null<Expr>;
+	var doc : Null<String>;
 }
 
 typedef FunDecl = {
@@ -145,6 +146,7 @@ typedef TVar = {
 	var kind : VarKind;
 	@:optional var parent : TVar;
 	@:optional var qualifiers : Null<Array<VarQualifier>>;
+	@:optional var doc : Null<String>;
 }
 
 typedef TFunction = {

@@ -26,6 +26,9 @@ class MacroParser {
 		case [ { expr : EConst(CInt(a)) } ] if( m.name == "perInstance" ):
 			v.qualifiers.push(PerInstance(Std.parseInt(a)));
 			return;
+		case [ { expr: EConst(CString(c)), pos: pos } ] if (m.name == "doc"):
+			v.doc = c;
+			return;
 		default:
 			error("Invalid meta parameter for "+m.name, m.pos);
 		}
@@ -121,6 +124,7 @@ class MacroParser {
 						qualifiers : [],
 						kind : null,
 						expr : null,
+						doc: null
 					};
 					for( m in f.meta )
 						applyMeta(m,v);
@@ -164,6 +168,7 @@ class MacroParser {
 					type : v.type == null ? null : parseType(v.type, e.pos),
 					kind : null,
 					qualifiers : [],
+					doc : null,
 				}
 			}]);
 		#if haxe4
@@ -184,6 +189,7 @@ class MacroParser {
 						kind : Local,
 						qualifiers : [],
 						expr : a.value == null ? (a.opt ? { expr : EConst(CNull), pos : e.pos } : null) : parseExpr(a.value),
+						doc: null,
 					}
 				}],
 				expr : parseExpr(f.expr),

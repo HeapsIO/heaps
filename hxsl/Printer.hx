@@ -48,6 +48,8 @@ class Printer {
 	}
 
 	function addVar( v : TVar, defKind : VarKind, tabs = "", ?parent ) {
+		if (v.doc != null)
+			add("@doc(" + StringTools.replace(v.doc, '"', '\\"') + ") ");
 		if( v.qualifiers != null ) {
 			for( q in v.qualifiers )
 				add("@" + (switch( q ) {

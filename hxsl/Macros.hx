@@ -151,6 +151,7 @@ class Macros {
 					pos : pos,
 					kind : FProp("get","set", t),
 					access : [APublic],
+					doc: v.doc,
 				};
 				var name = v.name + "__";
 				var initVal = null;
