@@ -256,7 +256,9 @@ class CustomParser extends CssValue.ValueParser {
 			#if macro
 				true;
 			#else
-				new h2d.filter.Outline(s, c);
+				var f = new h2d.filter.Outline(s, c);
+				f.alpha = (c >>> 24) / 255;
+				f;
 			#end
 		case VCall("brightness",[v]):
 			var v = parseFloatPercent(v);

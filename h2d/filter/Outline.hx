@@ -5,14 +5,18 @@ class Outline extends Filter {
 	public var color(get, set) : Int;
 	public var quality(get, set) : Float;
 	public var multiplyAlpha(get, set) : Bool;
+	public var alpha(get, set) : Float;
 
 	var pass : h3d.pass.Outline;
 
-	public function new(size = 4.0, color = 0xFF000000, quality = 0.3, multiplyAlpha = true) {
+	public function new(size = 4.0, color = 0x000000, quality = 0.3, multiplyAlpha = true) {
 		super();
 		smooth = true;
 		pass = new h3d.pass.Outline(size, color, quality, multiplyAlpha);
 	}
+
+	inline function get_alpha() return pass.alpha;
+	inline function set_alpha(v) return pass.alpha = v;
 
 	inline function get_size() return pass.size;
 
