@@ -25,17 +25,27 @@ private abstract Float32Expand({ pos : Int, array : hxd.impl.TypedArray.Float32A
 
 	public inline function push(v:Float) {
 		if( this.pos == this.array.length ) {
-			var newSize = this.array.length << 1;
-			if( newSize < 128 ) newSize = 128;
-			var newArray = new Float32Array(newSize);
-			newArray.set(this.array);
-			this.array = newArray;
+			expand(this.array.length);
 		}
 		this.array[this.pos++] = v;
 	}
 
+	inline function expand(length: Int) {
+		var newSize = length << 1;
+		if( newSize < 128 ) newSize = 128;
+		var newArray = new Float32Array(newSize);
+		newArray.set(this.array);
+		this.array = newArray;
+	}
+
 	@:arrayAccess inline function get(index) return this.array[index];
-	@:arrayAccess inline function set(index,v:Float) return this.array[index] = v;
+	@:arrayAccess inline function set(index,v:Float) {
+		if( this.pos <= index ) {
+			expand( index );
+			this.pos = index + 1;
+		}
+		return this.array[index] = v;
+	}
 
 	@:to inline function toF32Array() return this.array;
 	@:to inline function toArray() return [for( i in 0...this.pos ) this.array[i]];
