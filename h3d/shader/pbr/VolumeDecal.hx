@@ -176,9 +176,9 @@ class DecalPBR extends hxsl.Shader {
 
 			if( USE_ALBEDO ) {
 				var albedo = albedoTexture.get(calculatedUV);
-				strength.r = albedoStrength * albedo.a;
-				alpha = albedo.a;
-				pixelColor = albedo;
+				pixelColor *= albedo;
+				alpha = pixelColor.a;
+				strength.r = albedoStrength * alpha;
 			}
 
 			if( USE_NORMAL ) {
