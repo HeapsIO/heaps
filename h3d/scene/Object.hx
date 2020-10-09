@@ -817,6 +817,20 @@ class Object implements hxd.impl.Serializable {
 	}
 
 	/**
+		Returns the local position, scale and rotation of the object relative to its parent.
+	**/
+	public function getTransform( ?mat : h3d.Matrix ) : h3d.Matrix {
+		if( mat == null ) mat = new h3d.Matrix();
+		mat.initScale(scaleX, scaleY, scaleZ);
+		qRot.toMatrix(tmpMat);
+		mat.multiply3x4(mat, tmpMat);
+		mat.tx = x;
+		mat.ty = y;
+		mat.tz = z;
+		return mat;
+	}
+
+	/**
 		Rotate around the current rotation axis by the specified angles (in radian).
 	**/
 	public function rotate( rx : Float, ry : Float, rz : Float ) {
