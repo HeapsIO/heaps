@@ -538,8 +538,10 @@ class GlDriver extends Driver {
 					}
 				}
 				if( t != null && t.t == null && t.realloc != null ) {
+					var s = curShader;
 					t.alloc();
 					t.realloc();
+					if( curShader != s ) throw "Shader has changed after realloc "+t;
 				}
 				t.lastFrame = frame;
 
