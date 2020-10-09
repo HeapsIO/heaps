@@ -15,7 +15,8 @@ private class FXAAShader extends h3d.shader.ScreenShader {
 			var ne = texture.get(tuv + vec2(1, -1) * delta).rgb;
 			var sw = texture.get(tuv + vec2(-1, 1) * delta).rgb;
 			var se = texture.get(tuv + vec2(1, 1) * delta).rgb;
-			var mid = texture.get(tuv).rgb;
+			var origin = texture.get(tuv);
+			var mid = origin.rgb;
 			var lumA = vec3(0.299, 0.587, 0.114);
 			var lumNW = nw.dot(lumA);
 			var lumNE = ne.dot(lumA);
@@ -37,7 +38,7 @@ private class FXAAShader extends h3d.shader.ScreenShader {
 			var color : Vec4;
 			var cmp = vec2(lumB, -lumB) > vec2(lumMin, -lumMax);
 			color.xyz = mix(rgbA, rgbB, cmp.x * cmp.y);
-			color.a = 1.;
+			color.a = origin.a;
 			output.color = color;
 		}
 	}
