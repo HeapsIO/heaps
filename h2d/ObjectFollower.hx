@@ -37,7 +37,7 @@ class ObjectFollower extends Object {
 		if( horizontalAlign != Left || verticalAlign != Top ) {
 			var prev = follow;
 			follow = null;
-			var b = getBounds(this); // prevent recursive
+			var b = getSize(); // prevent recursive
 			follow = prev;
 
 			var w = b.width, h = b.height;
