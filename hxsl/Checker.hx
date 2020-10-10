@@ -235,8 +235,7 @@ class Checker {
 				id : Tools.allocVarId(),
 				name : f.name,
 				kind : Function,
-				type : TFun([{ args : [for( a in args ) { type : a.type, name : a.name }], ret : f.ret == null ? TVoid : f.ret }]),
-				doc: null,
+				type : TFun([{ args : [for( a in args ) { type : a.type, name : a.name }], ret : f.ret == null ? TVoid : f.ret }])
 			};
 			var f : TFunction = {
 				kind : kind,
@@ -745,8 +744,7 @@ class Checker {
 			id : Tools.allocVarId(),
 			name : v.name,
 			kind : v.kind,
-			type : v.type,
-			doc: v.doc,
+			type : v.type
 		};
 		if( parent != null )
 			tv.parent = parent;
@@ -796,7 +794,7 @@ class Checker {
 					default:
 						error("Precision qualifier not supported on " + v.type, pos);
 					}
-				case Ignore:
+				case Ignore, Doc(_):
 				}
 		}
 		if( tv.type != null )
@@ -812,7 +810,7 @@ class Checker {
 			parent.type = TStruct(vl);
 			for( i in 0...vl.length ) {
 				var v = vl[i];
-				vl[i] = makeVar( { type : v.type, qualifiers : v.qualifiers, name : v.name, kind : v.kind, expr : null, doc: v.doc }, pos, parent);
+				vl[i] = makeVar( { type : v.type, qualifiers : v.qualifiers, name : v.name, kind : v.kind, expr : null }, pos, parent);
 			}
 			return parent.type;
 		case TArray(t, size), TBuffer(t,size):

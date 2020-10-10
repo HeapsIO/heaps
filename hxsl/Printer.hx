@@ -48,8 +48,6 @@ class Printer {
 	}
 
 	function addVar( v : TVar, defKind : VarKind, tabs = "", ?parent ) {
-		if (v.doc != null)
-			add("@doc(" + StringTools.replace(v.doc, '"', '\\"') + ") ");
 		if( v.qualifiers != null ) {
 			for( q in v.qualifiers )
 				add("@" + (switch( q ) {
@@ -63,6 +61,7 @@ class Printer {
 				case Range(min, max): "range(" + min + "," + max + ")";
 				case Ignore: "ignore";
 				case PerInstance(n): "perInstance("+n+")";
+				case Doc(s): "doc(\"" + StringTools.replace(s, '"', '\\"') + "\")";
 				}) + " ");
 		}
 		if( v.kind != defKind )

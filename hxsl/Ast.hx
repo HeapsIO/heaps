@@ -83,6 +83,7 @@ enum VarQualifier {
 	Range( min : Float, max : Float );
 	Ignore; // the variable is ignored in reflection (inspector)
 	PerInstance( v : Int );
+	Doc( s : String );
 }
 
 enum Prec {
@@ -97,7 +98,6 @@ typedef VarDecl = {
 	var kind : Null<VarKind>;
 	var qualifiers : Array<VarQualifier>;
 	var expr : Null<Expr>;
-	var doc : Null<String>;
 }
 
 typedef FunDecl = {
@@ -146,7 +146,6 @@ typedef TVar = {
 	var kind : VarKind;
 	@:optional var parent : TVar;
 	@:optional var qualifiers : Null<Array<VarQualifier>>;
-	@:optional var doc : Null<String>;
 }
 
 typedef TFunction = {
@@ -315,6 +314,17 @@ class Tools {
 			default:
 			}
 		return v.name;
+	}
+
+	public static function getDoc( v : TVar ) {
+		if ( v.qualifiers == null )
+			return null;
+		for ( q in v.qualifiers )
+			switch ( q ) {
+			case Doc(s): return s;
+			default:
+			}
+		return null;
 	}
 
 	public static function getConstBits( v : TVar ) {

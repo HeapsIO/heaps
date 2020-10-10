@@ -4,7 +4,7 @@ import haxe.macro.Expr;
 using hxsl.Ast;
 
 class Macros {
-
+	#if macro
 	static function makeType( t : Type ) : ComplexType {
 		return switch( t ) {
 		case TVoid: macro : Void;
@@ -151,7 +151,7 @@ class Macros {
 					pos : pos,
 					kind : FProp("get","set", t),
 					access : [APublic],
-					doc: v.doc,
+					doc: v.getDoc(),
 				};
 				var name = v.name + "__";
 				var initVal = null;
@@ -478,5 +478,5 @@ class Macros {
 		});
 		return fields;
 	}
-
+	#end
 }
