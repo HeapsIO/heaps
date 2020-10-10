@@ -683,6 +683,43 @@ class Graphics extends Drawable {
 	}
 
 	/**
+		Draws a double-edged pie centered at given position.
+		@param cx X center position of the pie.
+		@param cy Y center position of the pie.
+		@param radius The outer radius of the pie.
+		@param innerRadius The inner radius of the pie.
+		@param angleStart Starting angle of the pie in radians.
+		@param angleLength The pie size in clockwise direction with `2*PI` being full circle.
+		@param nsegments Amount of segments used to draw the pie. When `0`, amount of segments calculated automatically.
+	**/
+	public function drawPieInner( cx : Float, cy : Float, radius : Float, innerRadius : Float, angleStart:Float, angleLength:Float, nsegments = 0 ) {
+		flush();
+		if( Math.abs(angleLength) >= Math.PI * 2 + 1e-3 ) angleLength = Math.PI*2+1e-3;
+
+		var cs = Math.cos(angleStart);
+		var ss = Math.sin(angleStart);
+		var ce = Math.cos(angleStart + angleLength);
+		var se = Math.sin(angleStart + angleLength);
+
+		lineTo(cx + cs * innerRadius, cy + ss * innerRadius);
+
+		if( nsegments == 0 )
+			nsegments = Math.ceil(Math.abs(radius * angleLength / 4));
+		if( nsegments < 3 ) nsegments = 3;
+		var angle = angleLength / (nsegments - 1);
+		for( i in 0...nsegments ) {
+			var a = i * angle + angleStart;
+			lineTo(cx + Math.cos(a) * radius, cy + Math.sin(a) * radius);
+		}
+		lineTo(cx + ce * innerRadius, cy + se * innerRadius);
+		for( i in 0...nsegments ) {
+			var a = (nsegments - 1 - i) * angle + angleStart;
+			lineTo(cx + Math.cos(a) * innerRadius, cy + Math.sin(a) * innerRadius);
+		}
+		flush();
+	}
+
+	/**
 		Draws a rectangular pie centered at given position.
 		@param cx X center position of the pie.
 		@param cy Y center position of the pie.

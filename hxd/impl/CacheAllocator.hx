@@ -84,6 +84,7 @@ class CacheAllocator extends Allocator {
 
 	override function onContextLost() {
 		buffers = new Map();
+		indexBuffers = new Map();
 	}
 
 	public function checkGC() {

@@ -252,7 +252,7 @@ class Quat {
 	}
 
 	public inline function getDirection() {
-		return new h3d.Vector(1 - 2 * ( y * y + z * z ), 2 * ( x * y - z * w ), 2 * ( x * z + y * w ));
+		return new h3d.Vector(1 - 2 * ( y * y + z * z ), 2 * ( x * y + z * w ), 2 * ( x * z - y * w ));
 	}
 
 	/**

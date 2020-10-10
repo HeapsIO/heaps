@@ -256,7 +256,9 @@ class CustomParser extends CssValue.ValueParser {
 			#if macro
 				true;
 			#else
-				new h2d.filter.Outline(s, c);
+				var f = new h2d.filter.Outline(s, c);
+				f.alpha = (c >>> 24) / 255;
+				f;
 			#end
 		case VCall("brightness",[v]):
 			var v = parseFloatPercent(v);
@@ -278,6 +280,20 @@ class CustomParser extends CssValue.ValueParser {
 				true;
 			#else
 				new h2d.filter.Glow(c, a, r, g, q, b);
+			#end
+		case VCall("blur",[r]):
+			var r = parseFloat(r);
+			#if macro
+				true;
+			#else
+				new h2d.filter.Blur(r);
+			#end
+		case VGroup(vl):
+			var fl = [for( v in vl ) parseFilter(v)];
+			#if macro
+				true;
+			#else
+				new h2d.filter.Group(fl);
 			#end
 		default: invalidProp();
 		}

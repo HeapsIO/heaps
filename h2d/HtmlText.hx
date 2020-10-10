@@ -391,7 +391,8 @@ class HtmlText extends Text {
 				var g = font.getChar(cc);
 				var newline = cc == '\n'.code;
 				var esize = g.width + g.getKerningOffset(prevChar);
-				if ( font.charset.isBreakChar(cc) ) {
+				var nc = text.charCodeAt(i+1);
+				if ( font.charset.isBreakChar(cc) && (nc == null || !font.charset.isComplementChar(nc) )) {
 					// Case: Very first word in text makes the line too long hence we want to start it off on a new line.
 					if (x > maxWidth && textSplit.length == 0 && splitNode.node != null) {
 						metrics.push(makeLineInfo(x, info.height, info.baseLine));
@@ -407,7 +408,8 @@ class HtmlText extends Text {
 						var e = font.getChar(cc);
 						size += e.width + letterSpacing + e.getKerningOffset(prevChar);
 						prevChar = cc;
-						if ( font.charset.isBreakChar(cc) ) break;
+						var nc = text.charCodeAt(k+1);
+						if ( font.charset.isBreakChar(cc) && (nc == null || !font.charset.isComplementChar(nc)) ) break;
 					}
 					// Avoid empty line when last char causes line-break while being CJK
 					if ( size > maxWidth && i != max - 1 ) {

@@ -317,7 +317,8 @@ class Text extends Drawable {
 			var e = font.getChar(cc);
 			var newline = cc == '\n'.code;
 			var esize = e.width + e.getKerningOffset(prevChar);
-			if( font.charset.isBreakChar(cc) ) {
+			var nc = text.charCodeAt(i+1);
+			if( font.charset.isBreakChar(cc) && (nc == null || !font.charset.isComplementChar(nc)) ) {
 				if( lines.length == 0 && leftMargin > 0 && x > maxWidth ) {
 					lines.push("");
 					if ( sizes != null ) sizes.push(leftMargin);
@@ -336,7 +337,8 @@ class Text extends Drawable {
 					var e = font.getChar(cc);
 					size += e.width + letterSpacing + e.getKerningOffset(prevChar);
 					prevChar = cc;
-					if( font.charset.isBreakChar(cc) ) break;
+					var nc = text.charCodeAt(k+1);
+					if( font.charset.isBreakChar(cc) && (nc == null || !font.charset.isComplementChar(nc)) ) break;
 				}
 				if( size > maxWidth || (!breakFound && size + afterData > maxWidth) ) {
 					newline = true;

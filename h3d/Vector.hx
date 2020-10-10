@@ -122,7 +122,7 @@ class Vector #if apicheck implements h2d.impl.PointApi<Vector,Matrix> #end {
 		var py = x * m._12 + y * m._22 + z * m._32 + w * m._42;
 		var pz = x * m._13 + y * m._23 + z * m._33 + w * m._43;
 		var pw = x * m._14 + y * m._24 + z * m._34 + w * m._44;
-		return new Vector(x,y,z,w);
+		return new Vector(px,py,pz,pw);
 	}
 
 	public inline function transform3x4( m : Matrix ) {

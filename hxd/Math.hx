@@ -139,6 +139,10 @@ class Math {
 		return a + k * (b - a);
 	}
 
+	public inline static function lerpTime(a:Float, b:Float, k:Float, dt:Float) {
+		return lerp(a, b, 1 - Math.pow(1 - k,dt*60));
+	}
+
 	public inline static function bitCount(v:Int) {
 		v = v - ((v >> 1) & 0x55555555);
 		v = (v & 0x33333333) + ((v >> 2) & 0x33333333);

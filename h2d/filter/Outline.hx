@@ -25,6 +25,10 @@ class Outline extends Filter {
 		@see `h2d.pass.Outline.multiplyAlpha`
 	**/
 	public var multiplyAlpha(get, set) : Bool;
+	/**
+		The transparency of the outline.
+	**/
+	public var alpha(get, set) : Float;
 
 	var pass : h3d.pass.Outline;
 
@@ -35,11 +39,14 @@ class Outline extends Filter {
 		@param quality The sample count with quality/speed tradeoff.
 		@param multiplyAlpha Enable alpha premultiplying of the resulting color.
 	**/
-	public function new(size = 4.0, color = 0xFF000000, quality = 0.3, multiplyAlpha = true) {
+	public function new(size = 4.0, color = 0x000000, quality = 0.3, multiplyAlpha = true) {
 		super();
 		smooth = true;
 		pass = new h3d.pass.Outline(size, color, quality, multiplyAlpha);
 	}
+
+	inline function get_alpha() return pass.alpha;
+	inline function set_alpha(v) return pass.alpha = v;
 
 	inline function get_size() return pass.size;
 

@@ -201,9 +201,9 @@ class Camera {
 		frustum.loadMatrix(m);
 	}
 
-	public function getFrustumCorners(zMax=1.) : Array<h3d.Vector> {
+	public function getFrustumCorners(zMax=1., zMin=0.) : Array<h3d.Vector> {
 		return [
-			unproject(-1, 1, 0), unproject(1, 1, 0), unproject(1, -1, 0), unproject(-1, -1, 0),
+			unproject(-1, 1, zMin), unproject(1, 1, zMin), unproject(1, -1, zMin), unproject(-1, -1, zMin),
 			unproject(-1, 1, zMax), unproject(1, 1, zMax), unproject(1, -1, zMax), unproject(-1, -1, zMax)
 		];
 	}

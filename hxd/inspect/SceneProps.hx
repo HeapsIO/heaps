@@ -252,7 +252,7 @@ class SceneProps {
 		var dl = hxd.impl.Api.downcast(l, h3d.scene.fwd.DirLight);
 		if( dl != null )
 			props.push(PFloats("direction", function() {
-				var dir = dl.getDirection();
+				var dir = dl.getLocalDirection();
 				return [dl.x, dl.y, dl.z];
 			}, function(fl) dl.setDirection(new h3d.Vector(fl[0], fl[1], fl[2]))));
 		var pl = hxd.impl.Api.downcast(l, h3d.scene.fwd.PointLight);
