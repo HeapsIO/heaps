@@ -1,12 +1,16 @@
 package h2d;
 
 /**
-	2D camera instance. Allows for positioning, scaling and rotation of 2D objects on the scene.
-	Per-layer visibility can be configured by overriding `layerVisible` method.
-	Camera can clip out contents outside of it's viewport by setting `clipViewport` to `true`.
-	Due to Heaps event handling structure, only one camera can handle scene events, and can be set with `h2d.Scene.interactiveCamera`.
-	When handling events, assigned camera isn't checked for it's nor layers visibiilty.
-	Camera system is circumvented if Scene would get any filter assigned to it.
+	A 2D camera representation attached to `h2d.Scene`.
+
+	Enables ability to move, scale and rotate the scene viewport.
+	
+	Scene supports usage of multiple Camera instances.
+	To configure which layers each Camera renders - `Camera.layerVisible` method should be overridden.
+	By default, camera does not clip out the contents that are outside camera bounding box, which can be enabled through `Camera.clipViewport`.
+	
+	Due to Heaps event handling structure, only one Camera instance can handle the mouse/touch input, and can be set through `h2d.Scene.interactiveCamera` variable.
+	Note that during even handing, interactive camera does not check if the Camera itself is visible nor the layers filters as well as `clipViewport` is not applied.
 **/
 @:access(h2d.RenderContext)
 @:access(h2d.Scene)
@@ -37,16 +41,18 @@ class Camera {
 	public var rotation(default, set) : Float;
 
 	/**
-		Enables viewport clipping. Allow to restrict rendering area of the camera.
+		Enables viewport clipping. Allow to restrict rendering area of the camera to the viewport boundaries.
+
+		Does not affect the user input when Camera is set as interactive camera.
 	**/
 	public var clipViewport : Bool;
 	/**
-		Horizontal viewport offset of the camera relative to internal scene viewport (see h2d.Scene.scaleMode) in scene coordinates. ( default : 0 )  
+		Horizontal viewport offset of the camera relative to internal scene viewport (see `h2d.Scene.scaleMode`) in scene coordinates. ( default : 0 )  
 		Automatically scales on scene resize.
 	**/
 	public var viewportX(get, set) : Float;
 	/**
-		Vertical viewport offset of the camera relative to internal scene viewport (see h2d.Scene.scaleMode) in scene coordinates. ( default : 0 )  
+		Vertical viewport offset of the camera relative to internal scene viewport (see `h2d.Scene.scaleMode`) in scene coordinates. ( default : 0 )  
 		Automatically scales on scene resize.
 	**/
 	public var viewportY(get, set) : Float;
@@ -68,17 +74,25 @@ class Camera {
 	public var anchorX(default, set) : Float;
 	/**
 		Vertical anchor position inside viewport boundaries used for positioning and resize compensation. ( default : 0 )  
-		Value is apercentile (0..1) from top viewport edge to bottom viewport edge with 0.5 being center.
+		Value is a percentile (0..1) from top viewport edge to bottom viewport edge with 0.5 being center.
 	**/
 	public var anchorY(default, set) : Float;
 
-	/** Camera visibility. Does not affect event handling for interactive camera. **/
+	/**
+		Camera visibility.
+		
+		Does not affect the user input when Camera is set as interactive camera.
+	**/
 	public var visible : Bool;
 
-	/** Set to enable primitive position sync between camera and target Object. **/
+	/**
+		Makes camera to follow the referenced Object position.
+	**/
 	public var follow : h2d.Object;
-	/** Syncs camera rotation to follow object rotation. **/
-	public var followRotation : Bool;
+	/**
+		Enables `h2d.Object.rotation` sync between `Camera.follow` object and Camera.
+	**/
+	public var followRotation : Bool = false;
 
 	var posChanged : Bool;
 
@@ -97,6 +111,11 @@ class Camera {
 
 	var scene : Scene;
 
+	/**
+		Create a new Camera instance and attach to the given `scene`.
+		@param scene Optional owner Scene to which camera auto-attaches to.
+		Note that when Camera is not attached to the Scene, a number of methods would lead to an error if called.
+	**/
 	public function new( ?scene : Scene ) {
 		this.x = 0; this.y = 0;
 		this.scaleX = 1; this.scaleY = 1;
@@ -109,19 +128,49 @@ class Camera {
 		if (scene != null) scene.addCamera(this);
 	}
 
+	/**
+		Detaches Camera from the Scene it currently attached to.
+	**/
 	public inline function remove() {
 		if (scene != null) scene.removeCamera(this);
 	}
 
 	/**
 		Override this method to set visibility only to specific layers. Renders all layers by default.
-		Layer visibility is not checked during Interactive event handling.
+
+		Does not affect the user input when Camera is set as interactive camera.
+
+		Usage example:
+		
+		```haxe
+		final LAYER_SHARED = 0;
+		final LAYER_PLAYER_1 = 2;
+		final LAYER_PLAYER_2 = 3;
+		final LAYER_UI = 4;
+		// Set first camera to only render shared layer and one that only visible to player 1.
+		s2d.camera.layerVisible = (layer) -> layer == LAYER_SHARED || layer == LAYER_PLAYER_1;
+		var player2 = new h2d.Camera(s2d);
+		// Set second camera to only render shared layer and one that only visible to player 2.
+		player2.layerVisible = (layer) -> layer == LAYER_SHARED || layer == LAYER_PLAYER_2;
+		var ui = new h2d.Camera(s2d);
+		// Set last camera to only render UI layer.
+		ui.layerVisible = (layer) -> layer == LAYER_UI;
+		```
+
+		@param layer The rendered layer index in `h2d.Scene`.
+		@returns `true` if layer can be rendered, `false` otherwise.
+
 	**/
 	public dynamic function layerVisible( layer : Int ) : Bool {
 		return true;
 	}
+	
+	/**
+		<span class="label">Internal usage</span>
 
-	@:noCompletion public function enter( ctx : RenderContext ) {
+		Prepares RenderContext to render the camera contents and clips viewport if necessary. Should call `Camera.exit` afterwards.
+	**/
+	@:dox(hide) @:noCompletion public function enter( ctx : RenderContext ) {
 		ctx.pushCamera(this);
 		if ( clipViewport ) {
 			var old = ctx.inFilter;
@@ -131,7 +180,12 @@ class Camera {
 		}
 	}
 
-	@:noCompletion public function exit( ctx : RenderContext ) {
+	/**
+		<span class="label">Internal usage</span>
+
+		Causes RenderContext to restore the state prior to camera rendering. Should be called after `Camera.enter` when rendering is finished.
+	**/
+	@:dox(hide) @:noCompletion public function exit( ctx : RenderContext ) {
 		if ( clipViewport ) {
 			var old = ctx.inFilter;
 			ctx.inFilter = null;
@@ -141,7 +195,12 @@ class Camera {
 		ctx.popCamera();
 	}
 
-	@:access(h2d.Object)
+	/**
+		<span class="label">Internal usage</span>
+
+		Synchronizes the camera transform matrix.
+	**/
+	@:access(h2d.Object) @:dox(hide) @:noCompletion
 	public function sync( ctx : RenderContext, force : Bool = false )
 	{
 		if (scene == null) return;
@@ -172,30 +231,48 @@ class Camera {
 		}
 	}
 
+	/**
+		Sets the `Camera.scaleX` and `Camera.scaleY` to given `x` and `y`.
+	**/
 	public inline function setScale( x : Float, y : Float ) {
 		this.scaleX = x;
 		this.scaleY = y;
 	}
 
+	/**
+		Multiplies the `Camera.scaleX` by `x` and `Camera.scaleY` by `y`.
+	**/
 	public inline function scale( x : Float, y : Float ) {
 		this.scaleX *= x;
 		this.scaleY *= y;
 	}
 
+	/**
+		Sets the camera position to given `x` and `y`.
+	**/
 	public inline function setPosition( x : Float, y : Float ) {
 		this.x = x;
 		this.y = y;
 	}
 
+	/**
+		Moves the camera position by given `dx` and `dy`.
+	**/
 	public inline function move( dx : Float, dy : Float ) {
 		this.x += dx;
 		this.y += dy;
 	}
 
-	public inline function rotate( v : Float ) {
-		this.rotation += v;
+	/**
+		Rotates the camera relative to current rotation by given `angle` in radians.
+	**/
+	public inline function rotate( angle : Float ) {
+		this.rotation += angle;
 	}
 
+	/**
+		Sets the `Camera.anchorX` and `Camera.anchorY` to given `x` and `y`.
+	**/
 	public inline function setAnchor( x : Float, y : Float ) {
 		this.anchorX = x;
 		this.anchorY = y;
@@ -203,6 +280,8 @@ class Camera {
 
 	/**
 		Sets camera viewport dimensions. If `w` or `h` arguments are 0 - scene size is used (width or height respectively).
+
+		Requires Camera being attached to a Scene.
 	**/
 	public inline function setViewport( x : Float = 0, y : Float = 0, w : Float = 0, h : Float = 0 ) {
 		checkScene();
@@ -223,10 +302,11 @@ class Camera {
 		posChanged = true;
 	}
 
-	// Scren <-> Camera
+	// Screen <-> Camera
 	/**
 		Convert screen position into a local camera position.
-		Requires Scene as a reference to viewport of `scaleMode`.
+		
+		Requires Camera being attached to a Scene.
 	**/
 	inline function screenXToCamera( mx : Float, my : Float ) : Float {
 		return sceneXToCamera((mx - scene.offsetX) / scene.viewportScaleX, (my - scene.offsetY) / scene.viewportScaleY);
@@ -234,7 +314,8 @@ class Camera {
 
 	/**
 		Convert screen position into a local camera position.
-		Requires Scene as a reference to viewport of `scaleMode`.
+		
+		Requires Camera being attached to a Scene.
 	**/
 	inline function screenYToCamera( mx : Float, my : Float ) : Float {
 		return sceneYToCamera((mx - scene.offsetX) / scene.viewportScaleX, (my - scene.offsetY) / scene.viewportScaleY);
@@ -242,7 +323,8 @@ class Camera {
 
 	/**
 		Convert local camera position to absolute screen position.
-		Requires Scene as a reference to viewport of `scaleMode`.
+		
+		Requires Camera being attached to a Scene.
 	**/
 	inline function cameraXToScreen( mx : Float, my : Float ) : Float {
 		return cameraXToScene(mx, my) * scene.viewportScaleX + scene.offsetX;
@@ -250,7 +332,8 @@ class Camera {
 
 	/**
 		Convert local camera position to absolute screen position.
-		Requires Scene as a reference to viewport of `scaleMode`.
+		
+		Requires Camera being attached to a Scene.
 	**/
 	inline function cameraYToScreen( mx : Float, my : Float ) : Float {
 		return cameraYToScene(mx, my) * scene.viewportScaleY + scene.offsetY;
@@ -259,7 +342,7 @@ class Camera {
 	// Scene <-> Camera
 	/**
 		Convert an absolute scene position into a local camera position.
-		Does not represent screen position, see `screenXToCamera` to convert position with accounting of `scaleMode`.
+		Does not represent screen position, see `Camera.screenXToCamera` to convert position with accounting of `scaleMode`.
 	**/
 	inline function sceneXToCamera( mx : Float, my : Float ) : Float {
 		return ((mx - absX) * matD - (my - absY) * matC) * invDet;
@@ -267,7 +350,7 @@ class Camera {
 
 	/**
 		Convert an absolute scene position into a local camera position.
-		Does not represent screen position, see `screenYToCamera` to convert position with accounting of `scaleMode`.
+		Does not represent screen position, see `Camera.screenYToCamera` to convert position with accounting of `scaleMode`.
 	**/
 	inline function sceneYToCamera( mx : Float, my : Float ) : Float {
 		return (-(mx - absX) * matB + (my - absY) * matA) * invDet;
@@ -275,7 +358,7 @@ class Camera {
 
 	/**
 		Convert local camera position into absolute scene position.
-		Does not represent screen position, see `cameraXToScreen` to convert position with accounting of `scaleMode`.
+		Does not represent screen position, see `Camera.cameraXToScreen` to convert position with accounting of `scaleMode`.
 	**/
 	inline function cameraXToScene( mx : Float, my : Float ) : Float {
 		return mx * matA + my * matC + absX;
@@ -283,15 +366,18 @@ class Camera {
 
 	/**
 		Convert local camera position into absolute scene position.
-		Does not represent screen position, see `cameraYToScreen` to convert position with accounting of `scaleMode`.
+		Does not represent screen position, see `Camera.cameraYToScreen` to convert position with accounting of `scaleMode`.
 	**/
 	inline function cameraYToScene( mx : Float, my : Float ) : Float {
 		return mx * matB + my * matD + absY;
 	}
 
 	// Point/event
-
-	@:noCompletion public function eventToCamera( e : hxd.Event ) {
+	/**
+		<span class="label">Internal usage</span>
+		Convert `Event.relX` and `Event.relY` to local camera position.
+	**/
+	@:dox(hide) @:noCompletion public function eventToCamera( e : hxd.Event ) {
 		var x = (e.relX - scene.offsetX) / scene.viewportScaleX - absX;
 		var y = (e.relY - scene.offsetY) / scene.viewportScaleY - absY;
 		e.relX = (x * matD - y * matC) * invDet;
@@ -300,7 +386,8 @@ class Camera {
 
 	/**
 		Convert screen position into a local camera position.
-		Requires Scene as a reference to viewport of `scaleMode`.
+
+		Requires Camera being attached to a Scene.
 	**/
 	public function screenToCamera( pt : h2d.col.Point ) {
 		checkScene();
@@ -312,7 +399,8 @@ class Camera {
 
 	/**
 		Convert local camera position to absolute screen position.
-		Requires Scene as a reference to viewport of `scaleMode`.
+
+		Requires Camera being attached to a Scene.
 	**/
 	public function cameraToScreen( pt : h2d.col.Point ) {
 		checkScene();
@@ -324,7 +412,9 @@ class Camera {
 
 	/**
 		Convert an absolute scene position into a local camera position.
-		Does not represent screen position, see `screenToCamera` to convert position with accounting of `scaleMode`.
+		Does not represent screen position, see `Camera.screenToCamera` to convert position with accounting of `scaleMode`.
+
+		Requires Camera being attached to a Scene.
 	**/
 	public function sceneToCamera( pt : h2d.col.Point ) {
 		checkScene();
@@ -336,7 +426,9 @@ class Camera {
 
 	/**
 		Convert local camera position into absolute scene position.
-		Does not represent screen position, see `cameraToScreen` to convert position with accounting of `scaleMode`.
+		Does not represent screen position, see `Camera.cameraToScreen` to convert position with accounting of `scaleMode`.
+		
+		Requires Camera being attached to a Scene.
 	**/
 	public function cameraToScene( pt : h2d.col.Point ) {
 		checkScene();

@@ -1,8 +1,16 @@
 package h2d.col;
 
+/**
+	A Collider representing the rectangle with the rounded edges, forming a 2D capsule.
+**/
 class RoundRect implements Collider {
-
+	/**
+		The horizontal position of the rectangle center.
+	**/
 	public var x : Float;
+	/**
+		The vertical position of the rectangle center.
+	**/
 	public var y : Float;
 	var ray : Float;
 	var dx : Float;
@@ -10,6 +18,14 @@ class RoundRect implements Collider {
 	var lenSq : Float;
 	var invLenSq : Float;
 
+	/**
+		Create a new RoundRect instance.
+		@param x The horizontal position of the rectangle center.
+		@param y The vertical position of the rectangle center.
+		@param w The width of the rectangle.
+		@param h The height of the rectangle.
+		@param rotation The rotation of the rectangle.
+	**/
 	public inline function new(x:Float,y:Float,w:Float,h:Float,rotation:Float) {
 		if( w < h ) {
 			var tmp = w;
@@ -30,6 +46,9 @@ class RoundRect implements Collider {
 	}
 
 	// distance segment
+	/**
+		Returns the squared distance of the Point `p` to the central segment of the capsule
+	**/
 	public inline function distanceCenterSq( p : Point ) {
 		var px = p.x - x;
 		var py = p.y - y;
@@ -48,14 +67,25 @@ class RoundRect implements Collider {
 		}
 	}
 
+	/**
+		Tests is given Point `p` is inside the capsule area.
+	**/
 	public inline function inside( p : Point ) {
 		return distanceCenterSq(p) - ray * ray < 0;
 	}
 
+	/**
+		Returns the distance of the Point `p` to the edge of the capsule.
+	**/
 	public inline function distance( p : Point ) {
 		return Math.sqrt(distanceCenterSq(p)) - ray;
 	}
 
+	/**
+		Returns an outwards normal of of the capsule edge in the direction of the Point `p`.
+
+		Normal points outwards regardless of the Point being inside or outside of the capsule.
+	**/
 	public inline function getNormalAt( p : Point ) {
 		var px = p.x - x;
 		var py = p.y - y;
@@ -73,6 +103,9 @@ class RoundRect implements Collider {
 		return new Point(px, py);
 	}
 
+	/**
+		Tests is given Point `p` is inside the capsule area.
+	**/
 	public function contains( p : Point ) {
 		return inside(p);
 	}
