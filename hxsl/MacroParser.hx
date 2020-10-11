@@ -123,7 +123,7 @@ class MacroParser {
 						type : t == null ? null : parseType(t, f.pos),
 						qualifiers : [],
 						kind : null,
-						expr : null
+						expr : null,
 					};
 					for( m in f.meta )
 						applyMeta(m,v);
@@ -166,7 +166,7 @@ class MacroParser {
 					expr : v.expr == null ? null : parseExpr(v.expr),
 					type : v.type == null ? null : parseType(v.type, e.pos),
 					kind : null,
-					qualifiers : []
+					qualifiers : [],
 				}
 			}]);
 		#if haxe4
@@ -186,7 +186,7 @@ class MacroParser {
 						type : a.type == null ? null : parseType(a.type, e.pos),
 						kind : Local,
 						qualifiers : [],
-						expr : a.value == null ? (a.opt ? { expr : EConst(CNull), pos : e.pos } : null) : parseExpr(a.value)
+						expr : a.value == null ? (a.opt ? { expr : EConst(CNull), pos : e.pos } : null) : parseExpr(a.value),
 					}
 				}],
 				expr : parseExpr(f.expr),

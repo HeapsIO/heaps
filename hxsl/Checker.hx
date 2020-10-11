@@ -235,7 +235,7 @@ class Checker {
 				id : Tools.allocVarId(),
 				name : f.name,
 				kind : Function,
-				type : TFun([{ args : [for( a in args ) { type : a.type, name : a.name }], ret : f.ret == null ? TVoid : f.ret }])
+				type : TFun([{ args : [for( a in args ) { type : a.type, name : a.name }], ret : f.ret == null ? TVoid : f.ret }]),
 			};
 			var f : TFunction = {
 				kind : kind,
@@ -744,7 +744,7 @@ class Checker {
 			id : Tools.allocVarId(),
 			name : v.name,
 			kind : v.kind,
-			type : v.type
+			type : v.type,
 		};
 		if( parent != null )
 			tv.parent = parent;
