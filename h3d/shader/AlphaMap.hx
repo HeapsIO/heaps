@@ -5,6 +5,8 @@ class AlphaMap extends hxsl.Shader {
 	static var SRC = {
 		var calculatedUV : Vec2;
 		var pixelColor : Vec4;
+		@input var input : { uv : Vec2 };
+		
 		@param var texture : Sampler2D;
 		@param var uvScale : Vec2;
 		@param var uvDelta : Vec2;
