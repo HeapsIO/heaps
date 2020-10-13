@@ -971,11 +971,15 @@ class DirectXDriver extends h3d.impl.Driver {
 		}
 		if( s == currentShader )
 			return false;
+		setShader(s);
+		return true;
+	}
+
+	function setShader( s : CompiledShader ) {
 		currentShader = s;
 		dx.Driver.vsSetShader(s.vertex.shader);
 		dx.Driver.psSetShader(s.fragment.shader);
 		dx.Driver.iaSetInputLayout(s.layout);
-		return true;
 	}
 
 	override function getShaderInputNames() : InputNames {
@@ -1021,8 +1025,8 @@ class DirectXDriver extends h3d.impl.Driver {
 
 	override function uploadShaderBuffers(buffers:h3d.shader.Buffers, which:h3d.shader.Buffers.BufferKind) {
 		if( hasDeviceError ) return;
-		uploadBuffers(vertexShader, currentShader.vertex, buffers.vertex, which);
-		uploadBuffers(pixelShader, currentShader.fragment, buffers.fragment, which);
+		uploadBuffers(buffers, vertexShader, currentShader.vertex, buffers.vertex, which);
+		uploadBuffers(buffers, pixelShader, currentShader.fragment, buffers.fragment, which);
 	}
 
 	function uploadShaderBuffer( sbuffer : dx.Resource, buffer : haxe.ds.Vector<hxd.impl.Float32>, size : Int, prevContent : hl.Bytes ) {
@@ -1041,7 +1045,7 @@ class DirectXDriver extends h3d.impl.Driver {
 		sbuffer.unmap(0);
 	}
 
-	function uploadBuffers( state : PipelineState, shader : ShaderContext, buffers : h3d.shader.Buffers.ShaderBuffers, which : h3d.shader.Buffers.BufferKind ) {
+	function uploadBuffers( buf : h3d.shader.Buffers, state : PipelineState, shader : ShaderContext, buffers : h3d.shader.Buffers.ShaderBuffers, which : h3d.shader.Buffers.BufferKind ) {
 		switch( which ) {
 		case Globals:
 			if( shader.globalsSize > 0 ) {
@@ -1102,9 +1106,19 @@ class DirectXDriver extends h3d.impl.Driver {
 					}
 				}
 				if( t != null && t.t == null && t.realloc != null ) {
+					var s = currentShader;
 					t.alloc();
 					t.realloc();
 					if( hasDeviceError ) return;
+					if( s != currentShader ) {
+						// realloc triggered a shader change !
+						// we need to reset the original shader and reupload everything
+						setShader(s);
+						uploadShaderBuffers(buf,Globals);
+						uploadShaderBuffers(buf,Params);
+						uploadShaderBuffers(buf,Textures);
+						return;
+					}
 				}
 				t.lastFrame = frame;
 

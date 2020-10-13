@@ -461,7 +461,11 @@ class GlDriver extends Driver {
 			programs.set(shader.id, p);
 		}
 		if( curShader == p ) return false;
+		setProgram(p);
+		return true;
+	}
 
+	function setProgram( p : CompiledProgram ) {
 		gl.useProgram(p.p);
 
 		for( a in p.attribs )
@@ -488,15 +492,14 @@ class GlDriver extends Driver {
 		curBuffer = null;
 		for( i in 0...boundTextures.length )
 			boundTextures[i] = null;
-		return true;
 	}
 
 	override function uploadShaderBuffers( buf : h3d.shader.Buffers, which : h3d.shader.Buffers.BufferKind ) {
-		uploadBuffer(curShader.vertex, buf.vertex, which);
-		uploadBuffer(curShader.fragment, buf.fragment, which);
+		uploadBuffer(buf, curShader.vertex, buf.vertex, which);
+		uploadBuffer(buf, curShader.fragment, buf.fragment, which);
 	}
 
-	function uploadBuffer( s : CompiledShader, buf : h3d.shader.Buffers.ShaderBuffers, which : h3d.shader.Buffers.BufferKind ) {
+	function uploadBuffer( buffer : h3d.shader.Buffers, s : CompiledShader, buf : h3d.shader.Buffers.ShaderBuffers, which : h3d.shader.Buffers.BufferKind ) {
 		switch( which ) {
 		case Globals:
 			if( s.globals != null ) {
@@ -541,7 +544,15 @@ class GlDriver extends Driver {
 					var s = curShader;
 					t.alloc();
 					t.realloc();
-					if( curShader != s ) throw "Shader has changed after realloc "+t;
+					if( curShader != s ) {
+						// realloc triggered a shader change !
+						// we need to reset the original shader and reupload everything
+						setProgram(s);
+						uploadShaderBuffers(buffer,Globals);
+						uploadShaderBuffers(buffer,Params);
+						uploadShaderBuffers(buffer,Textures);
+						return;
+					}
 				}
 				t.lastFrame = frame;
 
