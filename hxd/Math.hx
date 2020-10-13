@@ -64,10 +64,6 @@ class Math {
 		return std.Math.pow(v,p);
 	}
 
-	public static inline function scaleTime( v : Float, et : Float ) {
-		return std.Math.pow(v,et * hxd.Timer.wantedFPS);
-	}
-
 	public static inline function cos( f : Float ) {
 		return std.Math.cos(f);
 	}
@@ -139,8 +135,11 @@ class Math {
 		return a + k * (b - a);
 	}
 
+	/**
+		Same as lerp but is scaled based on current FPS, using current elapsed time in seconds.
+	**/
 	public inline static function lerpTime(a:Float, b:Float, k:Float, dt:Float) {
-		return lerp(a, b, 1 - Math.pow(1 - k,dt*60));
+		return lerp(a, b, 1 - Math.pow(1 - k, dt * hxd.Timer.wantedFPS));
 	}
 
 	public inline static function bitCount(v:Int) {
