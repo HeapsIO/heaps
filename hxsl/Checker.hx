@@ -794,7 +794,7 @@ class Checker {
 					default:
 						error("Precision qualifier not supported on " + v.type, pos);
 					}
-				case Ignore:
+				case Ignore, Doc(_):
 				}
 		}
 		if( tv.type != null )

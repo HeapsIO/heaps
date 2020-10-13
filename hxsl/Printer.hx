@@ -61,6 +61,7 @@ class Printer {
 				case Range(min, max): "range(" + min + "," + max + ")";
 				case Ignore: "ignore";
 				case PerInstance(n): "perInstance("+n+")";
+				case Doc(s): "doc(\"" + StringTools.replace(s, '"', '\\"') + "\")";
 				}) + " ");
 		}
 		if( v.kind != defKind )

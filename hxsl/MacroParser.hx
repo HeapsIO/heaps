@@ -26,6 +26,9 @@ class MacroParser {
 		case [ { expr : EConst(CInt(a)) } ] if( m.name == "perInstance" ):
 			v.qualifiers.push(PerInstance(Std.parseInt(a)));
 			return;
+		case [ { expr: EConst(CString(s)), pos: pos } ] if (m.name == "doc"):
+			v.qualifiers.push(Doc(s));
+			return;
 		default:
 			error("Invalid meta parameter for "+m.name, m.pos);
 		}
