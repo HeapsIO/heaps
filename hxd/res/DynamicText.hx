@@ -245,7 +245,7 @@ class DynamicText {
 
 	#if macro
 
-	static function findPos( pos : { file : String, content : String }, str : String ) {
+	static function findPos( pos : { file : String, content : String, pos : Position }, str : String ) {
 		// this might lead to false positive in case the same id is used several times
 		// but until we have a Xml parser with original position info that's the best we have
 		var index = pos.content.indexOf(str);
@@ -342,7 +342,7 @@ class DynamicText {
 				meta : [],
 				kind : FProp("get", "never", t),
 				access : [APublic, AStatic],
-				pos : pos,
+				pos : findPos(fpos, 'id="${id.toLowerCase()}"'),
 			});
 			fields.push( {
 				name : "get_"+id,
