@@ -125,7 +125,7 @@ private class Particle extends h2d.SpriteBatch.BatchElement {
 			this.t = group.tiles[Std.int(t * group.tiles.length * group.animationRepeat) % group.tiles.length];
 
 		if( t > 1 ) {
-			if( group.emitLoop ) {
+			if( group.emitLoop && (group.emitLimit == 0 || group.emitted < group.emitLimit) ) {
 				@:privateAccess group.init(this);
 				delay = 0;
 			} else
@@ -148,7 +148,7 @@ class ParticleGroup {
 		if( FIELDS != null )
 			return FIELDS;
 		FIELDS = Type.getInstanceFields(ParticleGroup);
-		for( f in ["parts", "pshader", "batch", "needRebuild", "emitMode", "sortMode", "blendMode", "texture", "colorGradient", "tiles"] )
+		for( f in ["parts", "pshader", "batch", "needRebuild", "emitMode", "sortMode", "blendMode", "texture", "colorGradient", "tiles", "emitted"] )
 			FIELDS.remove(f);
 		for( f in FIELDS.copy() )
 			if( Reflect.isFunction(Reflect.field(inst, f)) )
@@ -161,6 +161,13 @@ class ParticleGroup {
 	var batch : SpriteBatch;
 	var needRebuild = true;
 	var tiles : Array<h2d.Tile>;
+
+	/**
+		An amount of particles this group has emitted.
+
+		@see `ParticleGroup.emitLimit`
+	**/
+	public var emitted(default, null) : Int;
 
 	/**
 		The group name.
@@ -232,6 +239,13 @@ class ParticleGroup {
 		Usage note for non-relative mode: Particle will use configuration that was happened at time of emission, not when delay timer runs out.
 	**/
 	public var emitDelay(default, set) : Float	= 0;
+	/**
+		A limit on how many particles group can emit. Set to 0 to disable the limiter.
+
+		Compared to `ParticleGroup.emitLoop` - continues to emit particles until limit is reached, instead of firing all particles at once.
+		Does not work together with disabled `emitLoop` due to default `Particles.onEnd` causing a rebuild with an emitted counter reset enabled.
+	**/
+	public var emitLimit(default, set) : Int = 0;
 
 	/**
 		Initial particle size.
@@ -403,6 +417,7 @@ class ParticleGroup {
 	inline function set_emitDirectionAsAngle(v) { if (rebuildOnChange) needRebuild = true; return emitDirectionAsAngle = v; }
 	inline function set_emitSync(v) { if (rebuildOnChange) needRebuild = true; return emitSync = v; }
 	inline function set_emitDelay(v) { if (rebuildOnChange) needRebuild = true; return emitDelay = v; }
+	inline function set_emitLimit(v) { if (rebuildOnChange) needRebuild = true; return emitLimit = v; }
 	inline function set_rotInit(v) { if (rebuildOnChange) needRebuild = true; return rotInit = v; }
 	inline function set_rotSpeed(v) { if (rebuildOnChange) needRebuild = true; return rotSpeed = v; }
 	inline function set_rotSpeedRand(v) { if (rebuildOnChange) needRebuild = true; return rotSpeedRand = v; }
@@ -450,11 +465,15 @@ class ParticleGroup {
 
 	/**
 		Reset current state of particle group and re-emit all particles.
+
+		@param resetCounter Whether to reset the emitted particle counter or not.
 	**/
-	public function rebuild() {
+	public function rebuild( resetCounter = true ) {
 		needRebuild = false;
 		batch.clear();
-		for( i in 0...nparts ) {
+		if ( resetCounter ) emitted = 0;
+		var max = emitLimit != 0 && emitLimit - emitted < nparts ? (emitLimit - emitted) : nparts;
+		for( i in 0...max ) {
 			var p = new Particle(this);
 			batch.add(p);
 			init(p);
@@ -469,6 +488,8 @@ class ParticleGroup {
 			if (a < 0) newAngle += Math.PI;
 			return newAngle;
 		};
+
+		emitted++;
 
 		var g = this;
 		var size = g.size * (1 + srand() * g.sizeRand);
