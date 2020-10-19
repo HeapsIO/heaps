@@ -9,6 +9,7 @@ class Style extends domkit.CssStyle {
 
 	public var allowInspect(default, set) = false;
 	public var inspectKeyCode : Int = 0;
+	public var inspectDetailsKeyCode : Int = hxd.Key.CTRL;
 
 	public function new() {
 		super();
@@ -109,6 +110,8 @@ class Style extends domkit.CssStyle {
 	// ------ inspector -----
 
 	var inspectModeActive = false;
+	var inspectModeDetails = false;
+	var inspectModeDetailsRight = -1;
 	var inspectPreview : h2d.Object;
 	var inspectPreviewObjects : Array<h2d.Object>;
 
@@ -140,7 +143,17 @@ class Style extends domkit.CssStyle {
 		switch( e.kind ) {
 		case EPush if( inspectKeyCode == 0 || hxd.Key.isDown(inspectKeyCode) ):
 			if( e.button == hxd.Key.MOUSE_MIDDLE ) {
-				inspectModeActive = !inspectModeActive;
+				if(hxd.Key.isDown(inspectDetailsKeyCode)) {
+					inspectModeActive = true;
+					inspectModeDetails = true;
+					inspectModeDetailsRight = -1;
+				}
+				else {
+					inspectModeActive = !inspectModeActive;
+					inspectModeDetails = false;
+					inspectModeDetailsRight = -1;
+				}
+
 				if( inspectModeActive )
 					updatePreview(e);
 				else {
@@ -149,7 +162,7 @@ class Style extends domkit.CssStyle {
 				}
 			}
 		case EMove:
-			if( inspectModeActive ) updatePreview(e);
+			if( inspectModeActive && !inspectModeDetails) updatePreview(e);
 		case EWheel if( inspectKeyCode == 0 || hxd.Key.isDown(inspectKeyCode) ):
 			if( inspectPreviewObjects != null ) {
 				if( e.wheelDelta > 0 ) {
@@ -225,16 +238,102 @@ class Style extends domkit.CssStyle {
 	}
 
 	@:access(domkit.Properties)
-	function setPreview( obj : h2d.Object ) {
+	static function getDisplayInfo(obj: h2d.Object) : String {
+		var dom = obj.dom;
+		var nameParts = [];
+		if(dom != null) {
+			nameParts.push(dom.component.name);
+			if( dom.classes != null ) {
+				for( c in dom.classes )
+					nameParts.push("."+c);
+			}
+			if( dom.id != null )
+				nameParts.push("#"+dom.id);
+		}
+		else
+			nameParts.push('<font color="#aaaaaa">' + Type.getClassName(Type.getClass(obj)).split(".").pop() + '</font>');
+		var sz = obj.getSize();
+		nameParts.push(' <font color="#808080">${Math.ceil(sz.width)}x${Math.ceil(sz.height)}</font>');
+		return nameParts.join("");
+	}
+
+	@:access(domkit.Properties)
+	function setPreview( obj : h2d.Object, ?details=false) {
 		var b = obj.getBounds();
 		if( b.xMin < 0 ) b.xMin = 0;
 		if( b.yMin < 0 ) b.yMin = 0;
 		var scene = obj.getScene();
 		if( scene == null ) return;
-		var p = new h2d.Bitmap(h2d.Tile.fromColor(0xFF0000, Math.round(b.width), Math.round(b.height), 0.1));
+
+		inspectPreview = new h2d.Object();
+		scene.add(inspectPreview, @:privateAccess scene.layerCount - 1);
+		inspectPreviewObjects = [obj];
+
+		if(inspectModeDetails) {
+			var treeRoot = new h2d.Flow(inspectPreview);
+			treeRoot.layout = Vertical;
+			treeRoot.backgroundTile = h2d.Tile.fromColor(0x101010,1.0);
+			treeRoot.padding = 6;
+			var parents : Array<h2d.Object> = [];
+			{
+				var o = obj;
+				for(i in 0...20) {
+					o = o.parent;
+					if(o == null) break;
+					parents.push(o);
+				}
+			}
+			function addBtn(o : h2d.Object, indent: Int, open: Bool) {
+				var btn = new Flow(treeRoot);
+				var txt = new HtmlText(hxd.res.DefaultFont.get(), btn);
+				var text = getDisplayInfo(o);
+				if(o.numChildren > 0 && !open)
+					text = '<font color="#808080">[+] </font>' + text;
+				txt.text = text;
+				btn.paddingLeft = 10 * indent;
+				btn.paddingTop = btn.paddingBottom = 2;
+				btn.paddingRight = 10;
+				btn.enableInteractive = true;
+				if(o == obj)
+					btn.backgroundTile = Tile.fromColor(0x50aaff, 1, 1, 0.5);
+				else {
+					btn.interactive.onOver = function(_) btn.backgroundTile = Tile.fromColor(0x202020, 1, 1, 1.0);
+					btn.interactive.onOut = function(_) btn.backgroundTile = null;
+				}
+				btn.interactive.onPush = function(e) {
+					clearPreview();
+					setPreview(o, true);
+				}
+			}
+
+			for(i in 0...parents.length)
+				addBtn(parents[parents.length-1 - i], i, true);
+
+			var thisIndent = parents.length;
+			var childCount = 0;
+			final maxDepth = 3;
+			function addChildRec(o : h2d.Object, depth : Int) {
+				if(childCount > 50) return;
+				addBtn(o, thisIndent + depth, depth < maxDepth);
+				++childCount;
+				if(depth < maxDepth) {
+					for(i in 0...o.numChildren)
+						addChildRec(o.getChildAt(i), depth+1);
+				}
+			}
+			addChildRec(obj, 0);
+
+			if(inspectModeDetailsRight < 0)
+				inspectModeDetailsRight = (scene.mouseX > scene.width / 2) ? 0 : 1;
+
+			if(inspectModeDetailsRight > 0)
+				treeRoot.x = scene.width - treeRoot.getBounds().width;
+		}
+
+
+		var p = new h2d.Bitmap(h2d.Tile.fromColor(0xFF0000, Math.round(b.width), Math.round(b.height), 0.1), inspectPreview);
 		p.x = Math.round(b.xMin);
 		p.y = Math.round(b.yMin);
-		scene.add(p, @:privateAccess scene.layerCount - 1);
 		var flow = Std.downcast(obj, h2d.Flow);
 		if( flow != null )
 			flow.debug = true;
@@ -248,40 +347,31 @@ class Style extends domkit.CssStyle {
 			new h2d.Bitmap(horiz, p).y = h - 1;
 			new h2d.Bitmap(vert, p).x = w - 1;
 		}
-		inspectPreview = p;
-		inspectPreviewObjects = [obj];
 
 		var prevFlow = new h2d.Flow(p);
 		prevFlow.backgroundTile = h2d.Tile.fromColor(0,0.8);
 		prevFlow.padding = 7;
 		prevFlow.paddingTop = 4;
 
-		var dom = obj.dom;
 		var previewText = new h2d.HtmlText(hxd.res.DefaultFont.get(), prevFlow);
 		var lines = [];
-		var nameParts = [dom.component.name];
-		if( dom.classes != null ) {
-			for( c in dom.classes )
-				nameParts.push("."+c);
-		}
-		if( dom.id != null )
-			nameParts.push("#"+dom.id);
-		var sz = obj.getSize();
-		nameParts.push(' <font color="#808080">${Math.ceil(sz.width)}x${Math.ceil(sz.height)}</font>');
-		lines.push(nameParts.join(""));
+		lines.push(getDisplayInfo(obj));
 		lines.push("");
-		for( s in dom.style ) {
-			if( s.p.name == "text" || Std.is(s.value,h2d.Tile) ) continue;
-			lines.push(' <font color="#D0D0D0"> ${s.p.name}</font> <font color="#808080">${s.value}</font><font color="#606060"> (style)</font>');
+		var dom = obj.dom;
+		if(dom != null) {
+			for( s in dom.style ) {
+				if( s.p.name == "text" || Std.is(s.value,h2d.Tile) ) continue;
+				lines.push(' <font color="#D0D0D0"> ${s.p.name}</font> <font color="#808080">${s.value}</font><font color="#606060"> (style)</font>');
+			}
+			for( i in 0...dom.currentSet.length ) {
+				var p = dom.currentSet[i];
+				if( p.name == "text" ) continue;
+				var v = dom.currentValues == null ? null : dom.currentValues[i];
+				var vstr = v == null ? "???" : StringTools.htmlEscape(domkit.CssParser.valueStr(v));
+				lines.push(' <font color="#D0D0D0"> ${p.name}</font> <font color="#808080">$vstr</font>');
+			}
+			previewText.text = lines.join("<br/>");
 		}
-		for( i in 0...dom.currentSet.length ) {
-			var p = dom.currentSet[i];
-			if( p.name == "text" ) continue;
-			var v = dom.currentValues == null ? null : dom.currentValues[i];
-			var vstr = v == null ? "???" : StringTools.htmlEscape(domkit.CssParser.valueStr(v));
-			lines.push(' <font color="#D0D0D0"> ${p.name}</font> <font color="#808080">$vstr</font>');
-		}
-		previewText.text = lines.join("<br/>");
 
 		var size = prevFlow.getBounds();
 		if( b.xMax + size.width < scene.width )
