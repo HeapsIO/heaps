@@ -8,6 +8,7 @@ package hxd.res;
 	var Tga = 3;
 	var Dds = 4;
 	var Raw32 = 5;
+	var Hrw = 6;
 
 	/*
 		Tells if we might not be able to directly decode the image without going through a loadBitmap async call.
@@ -131,6 +132,15 @@ class Image extends Resource {
 			if( bc == 0 )
 				throw entry.path+" has unsupported 4CC "+String.fromCharCode(fourCC&0xFF)+String.fromCharCode((fourCC>>8)&0xFF)+String.fromCharCode((fourCC>>16)&0xFF)+String.fromCharCode(fourCC>>>24);
 
+		case 0x5248 : // HRW
+			format = Hrw;
+			f.skip(2); // "W0"
+			width = f.readInt16();
+			height = f.readInt16();
+			var fmtName = StringTools.trim(f.readString(12));
+			var fmt = PixelFormat.createByName(fmtName);
+			bc = fmt.getIndex();
+
 		case _ if( entry.extension == "tga" ):
 			format = Tga;
 			f.skip(10);
@@ -220,6 +230,9 @@ class Image extends Resource {
 		case Raw32:
 			var bytes = entry.getBytes();
 			pixels = new hxd.Pixels(inf.width, inf.height, bytes, R32F);
+		case Hrw:
+			var bytes = entry.getBytes();
+			pixels = new hxd.Pixels(inf.width, inf.height, bytes, PixelFormat.createByIndex(inf.bc), 4 + 2+2 + 12);
 		}
 		if( fmt != null ) pixels.convert(fmt);
 		if( flipY != null ) pixels.setFlip(flipY);
@@ -364,6 +377,8 @@ class Image extends Resource {
 			format = S3TC(inf.bc);
 		case Raw32:
 			format = R32F;
+		case Hrw:
+			format = PixelFormat.createByIndex(inf.bc);
 		default:
 		}
 		var flags : Array<h3d.mat.Data.TextureFlags> = [NoAlloc];
