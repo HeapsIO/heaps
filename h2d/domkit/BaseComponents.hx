@@ -303,27 +303,30 @@ class CustomParser extends CssValue.ValueParser {
 		if( value.match(VIdent("none")) )
 			return null;
 		var adj : h3d.Matrix.ColorAdjust = {};
-		switch( value ) {
-		case VGroup(vl):
-			var i = 0;
-			while( i < vl.length ) {
-				if( vl.length - i < 2 ) invalidProp();
-				switch( vl[i++] ) {
-				case VIdent("hue"):
-					adj.hue = parseFloat(vl[i++]) * Math.PI / 180;
-				case VIdent("contrast"):
-					adj.contrast = parseFloat(vl[i++]);
-				case VIdent("gain"):
-					if( vl.length - i < 2 ) invalidProp();
-					adj.gain = { color : parseColor(vl[i++]), alpha : parseFloat(vl[i++]) };
-				case VIdent("lightness"):
-					adj.lightness = parseFloat(vl[i++]);
-				case VIdent("saturation"):
-					adj.saturation = parseFloat(vl[i++]);
+
+		inline function parseVal(vcall: CssValue) {
+			switch(vcall) {
+				case VCall("hue-rotate", [v]):
+					adj.hue = parseFloat(v) * Math.PI / 180;
+				case VCall("contrast", [v]):
+					adj.contrast = parseFloat(v);
+				case VCall("gain", [c, a]):
+					adj.gain = { color : parseColor(c), alpha : parseFloat(a) };
+				case VCall("brightness",[v]):
+					adj.lightness = parseFloat(v);
+				case VCall("saturate",[v]):
+					adj.saturation = parseFloat(v);
 				default:
 					invalidProp();
-				}
 			}
+		}
+
+		switch( value ) {
+		case VGroup(vcalls):
+			for(vcall in vcalls)
+				parseVal(vcall);
+		case VCall(_):
+			parseVal(value);
 		default:
 			invalidProp();
 		}
