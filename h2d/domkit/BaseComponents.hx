@@ -545,35 +545,41 @@ class BitmapComp extends DrawableComp implements domkit.Component.ComponentDecl<
 	}
 
 	static function set_srcPos( o : h2d.Bitmap, pos ) {
-		setTilePos(o.tile,pos);
+		o.tile = setTilePos(o.tile, pos);
 	}
 
 	static function set_srcPosX( o : h2d.Bitmap, x : Int ) {
-		setTilePosX(o.tile, x);
+		o.tile = setTilePosX(o.tile, x);
 	}
 
 	static function set_srcPosY( o : h2d.Bitmap, y: Int ) {
-		setTilePosY(o.tile, y);
+		o.tile = setTilePosY(o.tile, y);
 	}
 
 	static function setTilePos( t : h2d.Tile, pos : Null<{ p : Int, ?y : Int }> ) {
-		if( t == null ) return;
+		if( t == null ) return null;
 		if( pos == null ) pos = {p:0};
 		var tex = t.getTexture();
+		t = t.clone();
 		if( pos.y == null && t.iwidth == tex.width )
 			t.setPosition(0, pos.p * t.iheight);
 		else
 			t.setPosition(pos.p * t.iwidth, pos.y * t.iheight);
+		return t;
 	}
 
 	static function setTilePosX( t : h2d.Tile, x : Int ) {
-		if( t == null ) return;
+		if( t == null ) return null;
+		t = t.clone();
 		t.setPosition(x * t.iwidth, t.iy);
+		return t;
 	}
 
 	static function setTilePosY( t : h2d.Tile, y : Int ) {
-		if( t == null ) return;
+		if( t == null ) return null;
+		t = t.clone();
 		t.setPosition(t.ix, y * t.iheight);
+		return t;
 	}
 
 	static function set_width( o : h2d.Bitmap, v : Null<Float> ) {
@@ -710,27 +716,15 @@ class FlowComp extends ObjectComp implements domkit.Component.ComponentDecl<h2d.
 	}
 
 	static function set_backgroundTilePos( o : h2d.Flow, pos ) {
-		var t = o.backgroundTile;
-		if( t == null ) return;
-		t = t.clone();
-		@:privateAccess BitmapComp.setTilePos(t, pos);
-		o.backgroundTile = t;
+		o.backgroundTile = @:privateAccess BitmapComp.setTilePos(o.backgroundTile, pos);
 	}
 
 	static function set_backgroundTilePosX( o : h2d.Flow, x ) {
-		var t = o.backgroundTile;
-		if( t == null ) return;
-		t = t.clone();
-		@:privateAccess BitmapComp.setTilePosX(t, x);
-		o.backgroundTile = t;
+		o.backgroundTile = @:privateAccess BitmapComp.setTilePosX(o.backgroundTile, x);
 	}
 
 	static function set_backgroundTilePosY( o : h2d.Flow, y ) {
-		var t = o.backgroundTile;
-		if( t == null ) return;
-		t = t.clone();
-		@:privateAccess BitmapComp.setTilePosY(t, y);
-		o.backgroundTile = t;
+		o.backgroundTile = @:privateAccess BitmapComp.setTilePosY(o.backgroundTile, y);
 	}
 
 	static function set_backgroundId( o : h2d.Flow, id : Bool ) {
