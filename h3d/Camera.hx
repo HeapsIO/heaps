@@ -170,10 +170,10 @@ class Camera {
 
 	public function update() {
 		if( follow != null ) {
-			pos.set(0, 0, 0);
-			target.set(0, 0, 0);
-			follow.pos.localToGlobal(pos);
-			follow.target.localToGlobal(target);
+			var fpos = follow.pos.localToGlobal();
+			var ftarget = follow.target.localToGlobal();
+			pos.set(fpos.x, fpos.y, fpos.z);
+			target.set(ftarget.x, ftarget.y, ftarget.z);
 			// Animate FOV
 			if( follow.pos.name != null ) {
 				var p = follow.pos;
