@@ -347,6 +347,12 @@ class Matrix {
 		initInverse(this);
 	}
 
+	public function getInverse( ?m : h3d.Matrix ) {
+		if( m == null ) m = new h3d.Matrix();
+		m.initInverse(this);
+		return m;
+	}
+
 	public inline function getDeterminant() {
 		return _11 * (_22*_33 - _23*_32) + _12 * (_23*_31 - _21*_33) + _13 * (_21*_32 - _22*_31);
 	}
