@@ -738,6 +738,17 @@ class Matrix {
 		if( col.gain != null ) colorGain(col.gain.color, col.gain.alpha);
 	}
 
+	public inline function toMatrix2D( ?m : h2d.col.Matrix ) {
+		if( m == null ) m = new h2d.col.Matrix();
+		m.a = _11;
+		m.b = _12;
+		m.c = _21;
+		m.d = _22;
+		m.x = tx;
+		m.y = ty;
+		return m;
+	}
+
 	// STATICS
 
 	public static function I() {
