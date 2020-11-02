@@ -747,11 +747,11 @@ class Object #if (domkit && !domkit_heaps) implements domkit.Model<h2d.Object> #
 
 	/**
 		<span class="label">Internal usage</span>
-		Clip a local bounds with our global viewport.
+		Clip the local bounds with our global viewport.
 		Used during filter rendering in order to clip out areas that are off-screen and should not be rendered.
 	**/
 	@:dox(show)
-	function clipBounds( ctx : RenderContext, bounds : h2d.col.Bounds ) {
+	function clipBounds( ctx : RenderContext, bounds : h2d.col.Bounds, scaleX = 1., scaleY = 1. ) {
 		var view = ctx.tmpBounds;
 		var matA, matB, matC, matD, absX, absY;
 		@:privateAccess if( ctx.inFilter != null ) {
@@ -763,19 +763,19 @@ class Object #if (domkit && !domkit_heaps) implements domkit.Model<h2d.Object> #
 			var tmpD = this.matC * f2.x + this.matD * f2.y;
 			var tmpX = this.absX * f1.x + this.absY * f1.y + f1.z;
 			var tmpY = this.absX * f2.x + this.absY * f2.y + f2.z;
-			matA = tmpA * ctx.viewA + tmpB * ctx.viewC;
-			matB = tmpA * ctx.viewB + tmpB * ctx.viewD;
-			matC = tmpC * ctx.viewA + tmpD * ctx.viewC;
-			matD = tmpC * ctx.viewB + tmpD * ctx.viewD;
-			absX = tmpX * ctx.viewA + tmpY * ctx.viewC + ctx.viewX;
-			absY = tmpX * ctx.viewB + tmpY * ctx.viewD + ctx.viewY;
+			matA = (tmpA * ctx.viewA + tmpB * ctx.viewC) / scaleX;
+			matB = (tmpA * ctx.viewB + tmpB * ctx.viewD) / scaleY;
+			matC = (tmpC * ctx.viewA + tmpD * ctx.viewC) / scaleX;
+			matD = (tmpC * ctx.viewB + tmpD * ctx.viewD) / scaleY;
+			absX = (tmpX * ctx.viewA + tmpY * ctx.viewC + ctx.viewX) / scaleX;
+			absY = (tmpX * ctx.viewB + tmpY * ctx.viewD + ctx.viewY) / scaleY;
 		} else {
-			matA = this.matA * ctx.viewA + this.matB * ctx.viewC;
-			matB = this.matA * ctx.viewB + this.matB * ctx.viewD;
-			matC = this.matC * ctx.viewA + this.matD * ctx.viewC;
-			matD = this.matC * ctx.viewB + this.matD * ctx.viewD;
-			absX = this.absX * ctx.viewA + this.absY * ctx.viewC + ctx.viewX;
-			absY = this.absX * ctx.viewB + this.absY * ctx.viewD + ctx.viewY;
+			matA = (this.matA * ctx.viewA + this.matB * ctx.viewC) / scaleX;
+			matB = (this.matA * ctx.viewB + this.matB * ctx.viewD) / scaleY;
+			matC = (this.matC * ctx.viewA + this.matD * ctx.viewC) / scaleX;
+			matD = (this.matC * ctx.viewB + this.matD * ctx.viewD) / scaleY;
+			absX = (this.absX * ctx.viewA + this.absY * ctx.viewC + ctx.viewX) / scaleX;
+			absY = (this.absX * ctx.viewB + this.absY * ctx.viewD + ctx.viewY) / scaleY;
 		}
 
 		// intersect our transformed local view with our viewport in global space
@@ -824,24 +824,38 @@ class Object #if (domkit && !domkit_heaps) implements domkit.Model<h2d.Object> #
 
 		var bounds = ctx.tmpBounds;
 		var total = new h2d.col.Bounds();
-		var maxExtent = -1.;
 		filter.sync(ctx, this);
-		if( filter.autoBounds ) {
-			maxExtent = filter.boundsExtend;
+
+		var scaleX, scaleY;
+		if ( filter.useScreenResolution ) {
+			var s = ctx.scene;
+			scaleX = s.viewportScaleX * filter.resolutionScale;
+			scaleY = s.viewportScaleY * filter.resolutionScale;
 		} else {
-			filter.getBounds(this, bounds);
-			total.addBounds(bounds);
-		}
-		if( maxExtent >= 0 ) {
-			getBounds(this, bounds);
-			bounds.xMin -= maxExtent;
-			bounds.yMin -= maxExtent;
-			bounds.xMax += maxExtent;
-			bounds.yMax += maxExtent;
-			total.addBounds(bounds);
+			scaleX = filter.resolutionScale;
+			scaleY = filter.resolutionScale;
 		}
 
-		clipBounds(ctx, total);
+		if( filter.autoBounds ) {
+			var maxExtent = filter.boundsExtend;
+			if (maxExtent >= 0) {
+				getBounds(this, bounds);
+				bounds.xMin = bounds.xMin * scaleX - maxExtent;
+				bounds.yMin = bounds.yMin * scaleY - maxExtent;
+				bounds.xMax = bounds.xMax * scaleX + maxExtent;
+				bounds.yMax = bounds.yMax * scaleY + maxExtent;
+				total.addBounds(bounds);
+			}
+		} else {
+			var scale = ctx.tmpPoint;
+			scale.set(scaleX, scaleY);
+			filter.getBounds(this, bounds, scale);
+			total.addBounds(bounds);
+			scaleX = scale.x;
+			scaleY = scale.y;
+		}
+
+		clipBounds(ctx, total, scaleX, scaleY);
 
 		var xMin = Math.floor(total.xMin + 1e-10);
 		var yMin = Math.floor(total.yMin + 1e-10);
@@ -865,10 +879,10 @@ class Object #if (domkit && !domkit_heaps) implements domkit.Model<h2d.Object> #
 
 		// 2x3 inverse matrix
 		var invDet = 1 / (matA * matD - matB * matC);
-		var invA = matD * invDet;
-		var invB = -matB * invDet;
-		var invC = -matC * invDet;
-		var invD = matA * invDet;
+		var invA = matD * invDet * scaleX;
+		var invB = -matB * invDet * scaleY;
+		var invC = -matC * invDet * scaleX;
+		var invD = matA * invDet * scaleY;
 		var invX = -(absX * invA + absY * invC);
 		var invY = -(absX * invB + absY * invD);
 
@@ -879,14 +893,16 @@ class Object #if (domkit && !domkit_heaps) implements domkit.Model<h2d.Object> #
 		ctx.flush();
 
 		var finalTile = h2d.Tile.fromTexture(t);
-		finalTile.dx = xMin;
-		finalTile.dy = yMin;
+		finalTile.dx = Math.floor(xMin / scaleX);
+		finalTile.dy = Math.floor(yMin / scaleY);
+		finalTile.width = Math.ceil(finalTile.width / scaleX);
+		finalTile.height = Math.ceil(finalTile.height / scaleY);
 
 		var prev = finalTile;
 		finalTile = filter.draw(ctx, finalTile);
 		if( finalTile != prev && finalTile != null ) {
-			finalTile.dx += xMin;
-			finalTile.dy += yMin;
+			finalTile.dx += Math.floor(xMin / scaleX);
+			finalTile.dy += Math.floor(yMin / scaleY);
 		}
 
 		shader.filterMatrixA.load(oldA);

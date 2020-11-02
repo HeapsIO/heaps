@@ -77,6 +77,13 @@ class RenderContext extends h3d.impl.RenderContext {
 	**/
 	@:dox(hide)
 	public var tmpBounds = new h2d.col.Bounds();
+	/**
+		<span class="label">Internal usage</span>
+		
+		Used to calculate filter rendering resolution.
+	**/
+	@:dox(hide)
+	public var tmpPoint = new h2d.col.Point();
 	var texture : h3d.mat.Texture;
 	var baseShader : h3d.shader.Base2d;
 	var manager : h3d.pass.ShaderManager;

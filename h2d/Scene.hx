@@ -775,15 +775,15 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		for ( cam in cameras ) cam.sync(ctx, forceCamSync);
 	}
 
-	override function clipBounds(ctx:RenderContext, bounds:h2d.col.Bounds)
+	override function clipBounds(ctx:RenderContext, bounds:h2d.col.Bounds, scaleX = 1., scaleY = 1.)
 	{
 		// Scene always uses whole window surface as a filter bounds as to not clip out cameras.
 		if ( rotation == 0 ) {
-			bounds.addPos(-absX, -absY);
-			bounds.addPos(window.width / matA - absX, window.height / matD - absY);
+			bounds.addPos(-absX * scaleX, -absY * scaleY);
+			bounds.addPos((window.width / matA - absX) * scaleX, (window.height / matD - absY) * scaleY);
 		} else {
 			inline function calc(x:Float, y:Float) {
-				bounds.addPos(x * matA + y * matC, x * matB + y * matD);
+				bounds.addPos((x * matA + y * matC) * scaleX, (x * matB + y * matD) * scaleY);
 			}
 			var ww = window.width / matA - absX;
 			var wh = window.height / matD - absY;
@@ -792,7 +792,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 			calc(-absX, wh - absY);
 			calc(ww - absX, wh - absY);
 		}
-		super.clipBounds(ctx, bounds);
+		super.clipBounds(ctx, bounds, scaleX, scaleY);
 	}
 
 	override function drawContent(ctx:RenderContext)
