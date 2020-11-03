@@ -1,11 +1,12 @@
 package hxd.inspect;
+import hxd.impl.Api;
 
 class PropTools {
 
 	public static function setPropValue( p : Property, v : Dynamic, lerp = 1. ) {
 		switch( p ) {
 		case PInt(_, get, set):
-			if( !Std.is(v, Int) ) throw "Invalid int value " + v;
+			if( !Api.is(v, Int) ) throw "Invalid int value " + v;
 			var v : Int = v;
 			if( lerp == 1 )
 				set(v);
@@ -15,29 +16,29 @@ class PropTools {
 				set( prev < v ? Math.ceil(u) : Math.floor(u) );
 			}
 		case PFloat(_, get, set):
-			if( !Std.is(v, Float) ) throw "Invalid float value " + v;
+			if( !Api.is(v, Float) ) throw "Invalid float value " + v;
 			if( lerp == 1 )
 				set(v);
 			else
 				set(hxd.Math.lerp(get(), v, lerp));
 		case PRange(_, _, _, get, set):
-			if( !Std.is(v, Float) ) throw "Invalid float value " + v;
+			if( !Api.is(v, Float) ) throw "Invalid float value " + v;
 			if( lerp == 1 )
 				set(v);
 			else
 				set(hxd.Math.lerp(get(), v, lerp));
 		case PBool(_, _, set):
-			if( !Std.is(v, Bool) ) throw "Invalid bool value " + v;
+			if( !Api.is(v, Bool) ) throw "Invalid bool value " + v;
 			set(v);
 		case PString(_, _, set):
-			if( v != null && !Std.is(v, String) ) throw "Invalid string value " + v;
+			if( v != null && !Api.is(v, String) ) throw "Invalid string value " + v;
 			set(v);
 		case PEnum(_, en, _, set):
 			var e = en.createAll()[v];
-			if( e == null || !Std.is(v, Int) ) throw "Invalid enum " + en.getName() + " value " + v;
+			if( e == null || !Api.is(v, Int) ) throw "Invalid enum " + en.getName() + " value " + v;
 			set(e);
 		case PColor(_, _, get, set):
-			if( !Std.is(v, String) ) throw "Invalid color value " + v;
+			if( !Api.is(v, String) ) throw "Invalid color value " + v;
 			var v : String = v;
 			var newV = h3d.Vector.fromColor(Std.parseInt("0x" + v.substr(1)));
 			if( lerp == 1 )
@@ -51,7 +52,7 @@ class PropTools {
 				set(newV);
 			}
 		case PFloats(_, get, set):
-			if( !Std.is(v, Array) ) throw "Invalid floats value " + v;
+			if( !Api.is(v, Array) ) throw "Invalid floats value " + v;
 			var a : Array<Float> = v;
 			var prev = get();
 			var need = prev.length;
@@ -65,7 +66,7 @@ class PropTools {
 				set(newA);
 			}
 		case PTexture(_, _, set):
-			if( !Std.is(v, String) ) throw "Invalid texture value " + v;
+			if( !Api.is(v, String) ) throw "Invalid texture value " + v;
 			var path : String = v;
 			if( path.charCodeAt(0) != '/'.code && path.charCodeAt(1) != ':'.code ) {
 				set(hxd.res.Loader.currentInstance.load(path).toTexture());
