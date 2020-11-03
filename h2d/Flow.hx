@@ -40,7 +40,7 @@ enum FlowAlign {
 enum FlowLayout {
 	/**
 		Children are aligned horizontally from left to right (or right to left when `Flow.reverse` is enabled).
-		
+
 		If `Flow.multiline` is enabled - children can overflow to the next row if there is not enough space available within the Flow size constraints.
 
 		`Flow.lineHeight` can be used to set a fixed row height when `Flow.overflow` is set to `Limit` or `Hidden`.
@@ -96,7 +96,7 @@ enum FlowOverflow {
 class FlowProperties {
 
 	var elt : Object;
-	
+
 	/**
 		An extra padding to the left of the flow element.
 	**/
@@ -136,13 +136,13 @@ class FlowProperties {
 
 	/**
 		A visual offset of the element along the X axis.
-		
+
 		Offset does not affect the occupied space by the element, and can lead to overlapping with other elements.
 	**/
 	public var offsetX = 0;
 	/**
 		A visual offset of the element along the Y axis.
-		
+
 		Offset does not affect the occupied space by the element, and can lead to overlapping with other elements.
 	**/
 	public var offsetY = 0;
@@ -354,7 +354,7 @@ class Flow extends Object {
 		Does not affect padding by default, which can be enabled with `-D flow_border` compilation flag.
 		If border padding is enabled, `Flow.outerWidth` will be affected accordingly even if background tile is not set
 		and will follow the same constraint limitation as padding.
-		
+
 		@see `Flow.paddingLeft`
 		@see `Flow.paddingRight`
 		@see `Flow.paddingHorizontal`
@@ -1338,16 +1338,16 @@ class Flow extends Object {
 				addChild(debugGraphics); // always on-top
 				needReflow = false;
 			}
-			if( paddingLeft != 0 || paddingRight != 0 || paddingTop != 0 || paddingBottom != 0 || borderWidth != 0 || borderHeight != 0 ) {
+			if( paddingLeft != 0 || paddingRight != 0 || paddingTop != 0 || paddingBottom != 0 ) {
 				debugGraphics.lineStyle(1, 0x00FF00);
-				debugGraphics.drawRect(paddingLeft + borderWidth, paddingTop + borderHeight, innerWidth, innerHeight);
+				debugGraphics.drawRect(paddingLeft, paddingTop, innerWidth, innerHeight);
 			}
 			debugGraphics.lineStyle(1, 0x0080FF);
 			for( i in 0...children.length ) {
 				var p = propAt(i);
 				var c = childAt(i);
 				if( p.isAbsolute || !c.visible ) continue;
-				debugGraphics.drawRect(c.x, c.y, p.calculatedWidth, p.calculatedHeight);
+				debugGraphics.drawRect(c.x - p.offsetX - p.paddingLeft, c.y - p.offsetY - p.paddingTop, p.calculatedWidth, p.calculatedHeight);
 			}
 			debugGraphics.lineStyle(1, 0xFF0000);
 			debugGraphics.drawRect(0, 0, cw, ch);
