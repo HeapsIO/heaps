@@ -289,33 +289,43 @@ class Skin {
 			for( p in permuts )
 				if( p.joints.indexOf(j) >= 0 )
 					pl.push(p);
-			jointsPermuts.push( { j : j, pl : pl } );
+			jointsPermuts.push( { j : j, pl : pl, priority : 0 } );
 		}
-		jointsPermuts.sort(function(j1, j2) return j2.pl.length - j1.pl.length);
 
-		for( p in permuts )
-			p.indexedJoints = [];
+		while( true ) {
+			jointsPermuts.sort(function(j1, j2) return (j2.pl.length + j2.priority*100) - (j1.pl.length + j1.priority*100));
 
-		for( j in jointsPermuts ) {
-			j.j.splitIndex = -1;
-			for( id in 0...maxBones ) {
-				var ok = true;
-				for( p in j.pl )
-					if( p.indexedJoints[id] != null ) {
-						ok = false;
+			for( p in permuts )
+				p.indexedJoints = [];
+
+			var fail = false;
+			for( j in jointsPermuts ) {
+				j.j.splitIndex = -1;
+				for( id in 0...maxBones ) {
+					var ok = true;
+					for( p in j.pl )
+						if( p.indexedJoints[id] != null ) {
+							ok = false;
+							break;
+						}
+					if( ok ) {
+						j.j.splitIndex = id;
+						for( p in j.pl )
+							p.indexedJoints[id] = j.j;
 						break;
 					}
-				if( ok ) {
-					j.j.splitIndex = id;
-					for( p in j.pl )
-						p.indexedJoints[id] = j.j;
+				}
+				// this means we have to track the number of free joints
+				// in our heuristic to prevent them from reaching such case
+				if( j.j.splitIndex < 0 ) {
+					j.priority++;
+					if( j.priority > 10 )
+						throw "Failed to assign index while spliting skin";
+					fail = true;
 					break;
 				}
 			}
-			// this means we have to track the number of free joints
-			// in our heuristic to prevent them from reaching such case
-			if( j.j.splitIndex < 0 )
-				throw "Failed to assign index while spliting skin";
+			if( !fail ) break;
 		}
 
 		// rebuild joints list (and fill holes)
