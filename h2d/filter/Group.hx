@@ -49,18 +49,21 @@ class Group extends Filter {
 
 	override function bind(s:Object) {
 		for( f in filters )
-			f.bind(s);
+			if( f.enable )
+				f.bind(s);
 	}
 
 	override function unbind(s:Object) {
 		for( f in filters )
-			f.unbind(s);
+			if( f.enable )
+				f.unbind(s);
 	}
 
 	override function sync( ctx:RenderContext, s : Object ) {
 		this.autoBounds = true;
 		this.boundsExtend = 0;
 		for( f in filters ) {
+			if (!f.enable) continue;
 			f.sync(ctx, s);
 			if(f.boundsExtend > 0) {
 				boundsExtend += f.boundsExtend;
@@ -71,7 +74,7 @@ class Group extends Filter {
 
 	override function getBounds(s:Object, bounds:h2d.col.Bounds) {
 		for( f in filters )
-			if( !f.autoBounds )
+			if( f.enable && !f.autoBounds )
 				f.getBounds(s, bounds);
 	}
 
@@ -80,6 +83,7 @@ class Group extends Filter {
 		var yMin = input.dy;
 		var start = input;
 		for( f in filters ) {
+			if (!f.enable) continue;
 			var prev = input;
 			input = f.draw(ctx, input);
 			if( input == null )
