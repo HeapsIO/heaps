@@ -8,6 +8,7 @@ import haxe.xml.Fast in Access;
 #else
 import haxe.xml.Access;
 #end
+import hxd.impl.Api;
 
 typedef DynamicTextMeta = Map<String,DynamicTextMetaContent>;
 typedef DynamicTextMetaContent = { skip : Bool, sub : DynamicTextMeta };
@@ -83,7 +84,7 @@ class DynamicText {
 			onMissing(path, "is missing");
 			return null;
 		}
-		if( Std.is(old,Array) ) {
+		if( Api.is(old,Array) ) {
 			onMissing(path,"should be a group");
 			return null;
 		}
@@ -154,23 +155,23 @@ class DynamicText {
 						path.pop();
 						continue;
 					}
-					if( Std.is(sub,String) ) {
+					if( Api.is(sub,String) ) {
 						onMissing(path,"should be a text and not a group");
 						path.pop();
 						continue;
 					}
 					// build structure
 					var ref = ref == null ? null : refIds.get(id);
-					if( Std.is(sub,Array) ) {
+					if( Api.is(sub,Array) ) {
 						var elements : Array<Dynamic> = sub;
 						var data = [for( e in x.elements ) e];
 						var dataRef = ref == null ? null : [for( e in ref.elements ) e];
 						for( i in 0...elements.length ) {
 							var e = elements[i];
 							path.push("[" + i + "]");
-							if( Std.is(e, Array) ) {
+							if( Api.is(e, Array) ) {
 								trace("TODO");
-							} else if( Std.is(e, String) ) {
+							} else if( Api.is(e, String) ) {
 								var enew = applyText(path, e, data[i], dataRef == null ? null : dataRef[i], onMissing);
 								if( enew != null )
 									elements[i] = enew;
@@ -210,12 +211,12 @@ class DynamicText {
 				for( e in x.elements ) {
 					var v : Dynamic = parseXmlData(e);
 					if( isArray ) {
-						if( !Std.is(v, Array) ) v = [v];
+						if( !Api.is(v, Array) ) v = [v];
 					} else {
-						if( Std.is(v, Array) ) {
+						if( Api.is(v, Array) ) {
 							for( i in 0...a.length ) {
 								var v = a[i];
-								if( !Std.is(v, Array) )
+								if( !Api.is(v, Array) )
 									a[i] = [v];
 							}
 							isArray = true;
