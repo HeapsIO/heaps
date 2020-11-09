@@ -153,7 +153,13 @@ class System {
 	#end
 
 	public dynamic static function reportError( e : Dynamic ) {
+		#if (haxe_ver >= 4.1)
+		var exc = Std.downcast(e, haxe.Exception);
+		var stack = haxe.CallStack.toString(exc != null ? exc.stack : haxe.CallStack.exceptionStack());
+		#else
 		var stack = haxe.CallStack.toString(haxe.CallStack.exceptionStack());
+		#end
+
 		var err = try Std.string(e) catch( _ : Dynamic ) "????";
 		#if usesys
 		haxe.System.reportError(err + stack);
@@ -304,7 +310,7 @@ class System {
 			case 'Windows': Sys.command('start ${url}');
 			case 'Linux': Sys.command('xdg-open ${url}');
 			case 'Mac': Sys.command('open ${url}');
-			case 'Android' | 'iOS' | 'tvOS': 
+			case 'Android' | 'iOS' | 'tvOS':
 			default:
 		}
 	}
