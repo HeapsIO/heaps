@@ -124,7 +124,11 @@ class System {
 	}
 
 	static function runMainLoop() {
+		#if (haxe_ver >= 4.1)
+		var reportError = function(e:Dynamic) reportError(Std.isOfType(e,haxe.Exception)?e:new haxe.Exception(Std.string(e),null,e));
+		#else
 		var reportError = function(e) reportError(e);
+		#end
 		#if hxtelemetry
 		var hxt = new hxtelemetry.HxTelemetry();
 		#end
