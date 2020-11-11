@@ -726,7 +726,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		ctx.engine = h3d.Engine.getCurrent();
 		var oldBG = ctx.engine.backgroundColor;
 		ctx.engine.backgroundColor = null; // prevent clear bg
-		ctx.engine.begin();
+		if( @:privateAccess !ctx.engine.inRender ) ctx.begin(); // don't reset current tex stack
 		ctx.globalAlpha = alpha;
 		ctx.begin();
 		ctx.pushTargets(texs);

@@ -50,6 +50,7 @@ class Engine {
 	var needFlushTarget : Bool;
 	var nullTexture : h3d.mat.Texture;
 	var textureColorCache = new Map<Int,h3d.mat.Texture>();
+	var inRender = false;
 	public var ready(default,null) = false;
 	@:allow(hxd.res) var resCache = new Map<{},Dynamic>();
 
@@ -286,6 +287,7 @@ class Engine {
 		if( driver.isDisposed() )
 			return false;
 		// init
+		inRender = true;
 		drawTriangles = 0;
 		shaderSwitches = 0;
 		drawCalls = 0;
@@ -304,6 +306,7 @@ class Engine {
 	}
 
 	public function end() {
+		inRender = false;
 		driver.end();
 	}
 
