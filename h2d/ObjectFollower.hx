@@ -41,6 +41,18 @@ class ObjectFollower extends Object {
 	public var verticalAlign : h2d.Flow.FlowAlign = Top;
 
 	/**
+		Mask with current depth buffer
+	**/
+	public var depthMask : Bool = false;
+
+	/**
+		Calculate the depth for masking with the given bias in 3D position units, relative to current camera.
+	**/
+	public var depthBias : Float = 0.;
+
+	var zValue : Float = 0.;
+
+	/**
 		Create a new ObjectFollower instance.
 		@param obj The 3D object to follow.
 		@param parent An optional parent `h2d.Object` instance to which ObjectFollower adds itself if set.
@@ -60,8 +72,9 @@ class ObjectFollower extends Object {
 		var width = s2d == null ? h3d.Engine.getCurrent().width : s2d.width;
 		var height = s2d == null ? h3d.Engine.getCurrent().height : s2d.height;
 		var absPos = follow.getAbsPos();
-		var p = scene.camera.project(absPos._41 + offsetX, absPos._42 + offsetY, absPos._43 + offsetZ, width, height);
-		visible = p.z > 0;
+		var pos = new h3d.Vector(absPos._41 + offsetX, absPos._42 + offsetY, absPos._43 + offsetZ);
+		var p = scene.camera.project(pos.x, pos.y, pos.z, width, height);
+		zValue = p.z;
 
 		if( horizontalAlign != Left || verticalAlign != Top ) {
 			var prev = follow;
@@ -90,12 +103,13 @@ class ObjectFollower extends Object {
 		x = p.x;
 		y = p.y;
 
-		if(followVisibility) {
-			var parent = follow;
-			while(parent != null) {
-				visible = visible && parent.visible;
-				parent = parent.parent;
-			}
+		if( depthBias != 0 ) {
+			var move = scene.camera.pos.sub(pos).normalized();
+			pos.x += move.x * depthBias;
+			pos.y += move.y * depthBias;
+			pos.z += move.z * depthBias;
+			var p2 = scene.camera.project(pos.x, pos.y, pos.z, width, height);
+			zValue = p2.z;
 		}
 	}
 
@@ -113,6 +127,41 @@ class ObjectFollower extends Object {
 	override function sync(ctx) {
 		followObject();
 		super.sync(ctx);
+	}
+
+	override function drawRec(ctx:RenderContext) {
+
+		if( !visible || zValue < 0 )
+			return;
+		if( followVisibility ) {
+			var parent = follow;
+			while(parent != null) {
+				if( !parent.visible )
+					return;
+				parent = parent.parent;
+			}
+		}
+
+		if( !depthMask ) {
+			super.drawRec(ctx);
+			return;
+		}
+
+		@:privateAccess {
+			var prev = ctx.baseShader.zValue;
+			var prevMode = ctx.pass.depthTest, prevWrite = ctx.pass.depthWrite;
+			if( prevMode != LessEqual ) {
+				ctx.pass.depth(true, LessEqual);
+				ctx.engine.selectMaterial(ctx.pass);
+			}
+			ctx.baseShader.zValue = zValue;
+			super.drawRec(ctx);
+			ctx.baseShader.zValue = prev;
+			if( prevMode != LessEqual ) {
+				ctx.pass.depth(prevWrite, prevMode);
+				ctx.engine.selectMaterial(ctx.pass);
+			}
+		}
 	}
 
 }
