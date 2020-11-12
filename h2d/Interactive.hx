@@ -377,7 +377,7 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 	**/
 	public dynamic function onMove( e : hxd.Event ) {
 	}
-	
+
 	/**
 		Sent when user scrolls mouse wheel above the Interactive. Wheel delta can be obtained through the `Event.wheelDelta`.
 	**/

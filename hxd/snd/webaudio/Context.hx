@@ -10,7 +10,7 @@ import js.html.audio.AudioContext;
 	Common part between webaudio and OpenAL emulator - AudioContext and masterGain.
 **/
 class Context {
-	
+
 	static var ctx : AudioContext;
 	static var suspended : Bool;
 	static var bufferPool : Array<BufferPool>;
@@ -40,7 +40,7 @@ class Context {
 			// see https://developers.google.com/web/updates/2017/09/autoplay-policy-changes#webaudio
 			if ( ctx.state == SUSPENDED ) waitForPageInput();
 			ctx.addEventListener("statechange", function(_) if ( ctx.state == SUSPENDED ) waitForPageInput() );
-			
+
 			bufferPool = [];
 			gainPool = [];
 
@@ -50,7 +50,7 @@ class Context {
 		}
 		return ctx;
 	}
-	
+
 	public static inline function getGain():GainNode
 	{
 		return gainPool.length != 0 ? gainPool.pop() : ctx.createGain();
@@ -63,7 +63,7 @@ class Context {
 
 	static function waitForPageInput() {
 		if ( !suspended ) {
-			
+
 			js.Browser.document.addEventListener("click", resumeContext);
 			js.Browser.document.addEventListener("keydown", resumeContext);
 			js.Browser.document.body.addEventListener("keydown", resumeContext);

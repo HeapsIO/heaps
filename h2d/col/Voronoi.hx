@@ -396,7 +396,7 @@ class Cell {
 	static function sortByAngle(a:Halfedge, b:Halfedge) {
 		return b.angle > a.angle ? 1 : (b.angle < a.angle ? -1 : 0);
 	}
-	
+
 	/**
 		Returns a list of the neighboring cells.
 	**/
@@ -1523,7 +1523,7 @@ class Voronoi {
 							va = vb;
 							// fall through
 						} 
-						
+
 						if (this.equalWithepsilon(va.y,yb) && this.lessThanWithepsilon(va.x,xr)) {
 							lastBorderSegment = this.equalWithepsilon(vz.y,yb);
 							vb = this.createVertex(lastBorderSegment ? vz.x : xr, yb);
@@ -1535,7 +1535,7 @@ class Voronoi {
 							va = vb;
 							// fall through
 						} 
-						
+
 						if (this.equalWithepsilon(va.x,xr) && this.greaterThanWithepsilon(va.y,yt)) {
 							lastBorderSegment = this.equalWithepsilon(vz.x,xr);
 							vb = this.createVertex(xr, lastBorderSegment ? vz.y : yt);
@@ -1547,7 +1547,7 @@ class Voronoi {
 							va = vb;
 							// fall through
 						} 
-						
+
 						if (this.equalWithepsilon(va.y,yt) && this.greaterThanWithepsilon(va.x,xl)) {
 							lastBorderSegment = this.equalWithepsilon(vz.y,yt);
 							vb = this.createVertex(lastBorderSegment ? vz.x : xl, yt);

@@ -54,7 +54,7 @@ enum ScaleMode {
 		While enabled, the Scene won't be downscaled when internal viewport is larger than the window size and will remain at 1x zoom. Default: `false`.
 		@param horizontalAlign The horizontal viewport anchoring rule. Accepted values are `Left`, `Center` and `Right`. Default: `Center`.
 		@param verticalAlign The vertical viewport anchoring rule. Accepted values are `Top`, `Center` and `Bottom`. Default: `Center`.
-		
+
 	**/
 	LetterBox(width : Int, height : Int, ?integerScale : Bool, ?horizontalAlign : ScaleModeAlign, ?verticalAlign : ScaleModeAlign);
 
@@ -68,7 +68,7 @@ enum ScaleMode {
 		@param zoom The scaling multiplier of internal viewport when rendering onto the screen.
 		@param horizontalAlign The horizontal viewport anchoring rule. Accepted values are `Left`, `Center` and `Right`. Default: `Center`.
 		@param verticalAlign The vertical viewport anchoring rule. Accepted values are `Top`, `Center` and `Bottom`. Default: `Center`.
-		
+
 	**/
 	Fixed(width : Int, height: Int, zoom : Float, ?horizontalAlign : ScaleModeAlign, ?verticalAlign : ScaleModeAlign);
 
@@ -89,12 +89,12 @@ enum ScaleMode {
 		If both are `0`, results are undefined.
 
 		With `800x600` window, `AutoZoom(320, 260, false)` will result in the Scene size of `347x260`. `AutoZoom(320, 260, true)` will result in the size of `400x300`.
-		
+
 		@param minWidth The minimum width of the internal Scene viewport.
 		@param minHeight The minimum height of the internal Scene viewport.
 		@param integerScale When enabled, upscaling is performed only with integer increments (1x, 2x, 3x, etc) and can be used to achieve pixel-perfect scaling.
 		While enabled, the Scene won't be downscaled when internal viewport is larger than the window size and will remain at 1x zoom. Default: `false`.
-		
+
 	**/
 	AutoZoom(minWidth : Int, minHeight : Int, ?integerScaling : Bool);
 }
@@ -600,7 +600,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 
 	/**
 		Starts input events capture and redirects them to `onEvent` method until `Scene.stopDrag` is called.
-		
+
 		While the method name may imply that only mouse events would be captured: This is not the case,
 		as it will also capture all other input events, including keyboard events.
 
@@ -851,7 +851,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 
 	/**
 		Capture the scene into a texture and returns the resulting `h2d.Bitmap`.
-		
+
 		@param target Optional Tile to render onto. If not set, new Texture with interval Scene viewport dimensions is allocated,
 		otherwise Tile boundaries and Texture are used.
 	**/

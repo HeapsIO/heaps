@@ -2,7 +2,7 @@ package h2d;
 
 /**
 	Displays an animated sequence of bitmap Tiles on the screen.
-	
+
 	Anim does not provide animation sequence management and it's up to user on how to implement it.
 	Another limitation is framerate. Anim runs at a fixed framerate dictated by `Anim.speed`.
 	Switching animations can be done through `Anim.play` method.

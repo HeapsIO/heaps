@@ -12,7 +12,7 @@ package h2d.filter;
 	class InvertColorShader extends h3d.shader.ScreenShader {
 		static var SRC = {
 			@param var texture : Sampler2D;
-			
+
 			function fragment() {
 				var pixel : Vec4 = texture.get(calculatedUV);
 				// Premultiply alpha to ensure correct transparency.

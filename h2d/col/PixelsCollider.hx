@@ -2,7 +2,7 @@ package h2d.col;
 
 /**
 	An `hxd.Pixels`-based collider. Checks for pixel color value under point to be above the cutoff value.
-	
+
 	Note that it checks as `channel > cutoff`, not `channel >= cutoff`, hence cutoff value of 255 would never pass the test.
 **/
 class PixelsCollider implements Collider {

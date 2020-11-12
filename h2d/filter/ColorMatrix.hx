@@ -18,7 +18,7 @@ package h2d.filter;
 	[0, 0, 1, 0]
 	[0, 0, 0, 1]
 	```
-	
+
 	@see `Ambient`
 **/
 class ColorMatrix extends Filter {

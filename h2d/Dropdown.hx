@@ -32,7 +32,7 @@ private class Fake extends Object {
 
 /**
 	A simple UI component that creates an interactive drop-down list.
-	
+
 	Dropdown will add an `h2d.Flow` to the `Scene` when opening in order to be visible above other objects. See `Dropdown.dropdownLayer` for more details.
 
 	There is no handling of user input on items, and implementation of selection and other actions is up to the user.
@@ -59,7 +59,7 @@ class Dropdown extends Flow {
 		A Tile used to visualize and arrow of the dropdown when the list is open.
 	**/
 	public var tileArrowOpen : h2d.Tile;
-	
+
 	/**
 		When disabled, the user would not be able to change the selected item.
 	**/

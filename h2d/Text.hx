@@ -14,13 +14,13 @@ enum Align {
 		When `Text.maxWidth` is set and/or Text size is constrained (see `Object.constraintSize`), right edge is considered the smallest of the two.
 
 		Otherwise edge is at the `0` coordinate of the Text instance.
-		
+
 		See Text sample for showcase.
 	**/
 	Right;
 	/**
 		Centers the text alignment.
-		
+
 		When `Text.maxWidth` is set and/or Text size is constrained (see `Object.constraintSize`), center is calculated from 0 to the smallest of the two.
 
 		Otherwise text is centered around `0` coordinate of the Text instance.
@@ -89,7 +89,7 @@ class Text extends Drawable {
 	public var textWidth(get, null) : Float;
 	/**
 		Calculated text height.
-		
+
 		Not a completely precise text metric and increments in the `Font.lineHeight` steps.
 		In `HtmlText`, can be increased by various values depending on the active line font and `HtmlText.lineHeightMode` value.
 	**/
@@ -405,7 +405,7 @@ class Text extends Drawable {
 		case Left:
 			x = 0;
 		}
-		
+
 		for( i in 0...t.length ) {
 			var cc = t.charCodeAt(i);
 			var e = font.getChar(cc);

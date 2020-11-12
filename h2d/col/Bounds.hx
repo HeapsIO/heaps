@@ -13,7 +13,7 @@ class Bounds {
 	public var xMin : Float;
 	/** Y-axis top-most bounding box point. **/
 	public var yMin : Float;
-	
+
 	/** X-axis right-most bounding box point. **/
 	public var xMax : Float;
 	/** Y-axis bottom-most bounding box point. **/
@@ -140,7 +140,7 @@ class Bounds {
 
 	/**
 		Sets this bounding box min/max values to a result of combining this Bounds and the given Bounds `b`.
-		
+
 		Equivalent of `Bounds.addBounds`.
 	**/
 	public inline function doUnion( b : Bounds ) {
@@ -342,7 +342,7 @@ class Bounds {
 	public function toString() : String {
 		return "{" + getMin() + "," + getSize() + "}";
 	}
-	
+
 	/**
 		Returns the bounding circle which includes all the bounds.
 	**/

@@ -10,18 +10,18 @@ class FontParser {
 
 	@:access(h2d.Font)
 	public static function parse(bytes : haxe.io.Bytes, path : String, resolveTile: String -> h2d.Tile ) : h2d.Font {
-		
+
 		// TODO: Support multiple textures per font.
-		
+
 		var tile : h2d.Tile = null;
 		var font : h2d.Font = new h2d.Font(null, 0);
 		var glyphs = font.glyphs;
-		
+
 		inline function resolveTileSameName() {
 			font.tilePath = new haxe.io.Path(path).file + ".png";
 			tile = resolveTile(haxe.io.Path.withExtension(path, "png"));
 		}
-		
+
 		inline function resolveTileWithFallback( tilePath : String ) {
 			try {
 				font.tilePath = tilePath;
@@ -31,7 +31,7 @@ class FontParser {
 				resolveTileSameName();
 			}
 		}
-		
+
 		// Supported formats:
 		// Littera formats: XML and Text
 		// http://kvazars.com/littera/
@@ -41,9 +41,9 @@ class FontParser {
 		// https://github.com/andryblack/fontbuilder/downloads
 		// Hiero from LibGDX is BMF Text format and supported as well.
 		// https://github.com/libgdx/libgdx
-		
+
 		font.baseLine = 0;
-		
+
 		switch( bytes.getInt32(0) ) {
 		case 0x544E4642: // Internal BFNT
 			return hxd.fmt.bfnt.Reader.parse(bytes, function( tp : String ) { resolveTileWithFallback(tp); return tile; });
@@ -58,7 +58,7 @@ class FontParser {
 				font.size = font.initSize = Std.parseInt(xml.node.info.att.size);
 				font.lineHeight = Std.parseInt(xml.node.common.att.lineHeight);
 				font.baseLine = Std.parseInt(xml.node.common.att.base);
-				
+
 				for ( p in xml.node.pages.elements ) {
 					if ( p.att.id == "0" ) {
 						resolveTileWithFallback(p.att.file);
@@ -66,7 +66,7 @@ class FontParser {
 						trace("Warning: BMF format only supports one page at the moment.");
 					}
 				}
-				
+
 				var chars = xml.node.chars.elements;
 				for( c in chars) {
 					var t = tile.sub(Std.parseInt(c.att.x), Std.parseInt(c.att.y), Std.parseInt(c.att.width), Std.parseInt(c.att.height), Std.parseInt(c.att.xoffset), Std.parseInt(c.att.yoffset));
@@ -81,7 +81,7 @@ class FontParser {
 			} else {
 				// support for the FontBuilder/Divo format
 				resolveTileSameName();
-				
+
 				font.name = xml.att.family;
 				font.size = font.initSize = Std.parseInt(xml.att.size);
 				font.lineHeight = Std.parseInt(xml.att.height);
@@ -115,11 +115,11 @@ class FontParser {
 			// BFont text format, version 3 (starts with info ...)
 			// Can be produced by Littera Text format as well
 			var lines = bytes.toString().split("\n");
-			
+
 			// BMFont pads values with spaces, littera doesn't.
 			var reg = ~/ *?([0-9a-zA-Z]+)=("[^"]+"|.+?)(?:[ \r]|$)/;
 			var idx : Int;
-			
+
 			inline function next() : Void {
 				var pos = reg.matchedPos();
 				idx = pos.pos + pos.len;
@@ -132,9 +132,9 @@ class FontParser {
 			inline function extractInt() : Int {
 				return Std.parseInt(processValue());
 			}
-			
+
 			var pageCount = 0;
-			
+
 			for ( line in lines ) {
 				idx = line.indexOf(" ");
 				switch(line.substr(0, idx))
@@ -203,12 +203,12 @@ class FontParser {
 			var bytes = new haxe.io.BytesInput(bytes);
 			bytes.position += 4; // Signature
 			var pageCount : Int = 0;
-			
+
 			while ( bytes.position < bytes.length ) {
 				var id = bytes.readByte();
 				var length = bytes.readInt32();
 				var pos = bytes.position;
-				
+
 				switch (id) {
 					case 1: // info
 						font.size = font.initSize = bytes.readInt16();
@@ -248,7 +248,7 @@ class FontParser {
 							count--;
 						}
 				}
-				
+
 				bytes.position = pos + length;
 			}
 		case sign:
@@ -286,5 +286,5 @@ class FontParser {
 
 		return font;
 	}
-	
+
 }

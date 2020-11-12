@@ -21,7 +21,7 @@ class Drawable extends Object {
 
 	/**
 		Enables texture uv wrap for this Drawable, causing tiles with uv exceeding the texture size to repeat instead of clamping on edges.
-		
+
 		Note that `tileWrap` does not use the `Tile` region as a wrapping area but instead uses underlying `h3d.mat.Texture` size.
 		This is due to implementation specifics, as it just sets the `Texture.wrap` to either `Repeat` or `Clamp`.
 		Because of that, proper Tile tiling can be expected only when the tile covers an entire Texture area.

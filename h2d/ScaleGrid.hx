@@ -27,7 +27,7 @@ class ScaleGrid extends h2d.TileGroup {
 	public var height(default,set) : Float;
 	/**
 		When enabled, borders will be tiled along the edges instead of stretching to match the desired dimensions.
-		
+
 		Center tile is always stretched.
 	**/
 	public var tileBorders(default, set) : Bool;

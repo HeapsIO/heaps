@@ -41,7 +41,7 @@ class Ray {
 	public inline function getPos() {
 		return new Point(px, py);
 	}
-	
+
 	/**
 		Returns new Point containing Ray direction.
 	**/

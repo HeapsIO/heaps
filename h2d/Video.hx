@@ -100,12 +100,12 @@ class Video extends Drawable {
 		return playing ? haxe.Timer.stamp() - playTime : 0;
 		#end
 	}
-	
+
 	@:dox(hide) @:noCompletion
 	public inline function get_loop() {
 		return loopVideo;
 	}
-	
+
 	@:dox(hide) @:noCompletion
 	public function set_loop(value : Bool) : Bool {
 		#if js
@@ -177,11 +177,11 @@ class Video extends Drawable {
 		v.autoplay = true;
 		v.muted = true;
 		v.loop = loopVideo;
-		
+
 		videoPlaying = false;
 		videoTimeupdate = false;
 		this.onReady = onReady;
-		
+
 		v.addEventListener("playing", checkReady, true);
 		v.addEventListener("timeupdate", checkReady, true);
 		v.addEventListener("ended", endHandler, true);
@@ -192,9 +192,9 @@ class Video extends Drawable {
 		onError("Video not supported on this platform");
 		#end
 	}
-	
+
 	#if js
-	
+
 	function errorHandler(e : js.html.Event) {
 		#if (haxe_ver >= 4)
 		onError(v.error.code + ": " + v.error.message);
@@ -202,11 +202,11 @@ class Video extends Drawable {
 		onError(Std.string(v.error.code));
 		#end
 	}
-	
+
 	function endHandler(e : js.html.Event) {
 		onEnd();
 	}
-	
+
 	function checkReady(e : js.html.Event) {
 		if (e.type == "playing") {
 			videoPlaying = true;
@@ -215,7 +215,7 @@ class Video extends Drawable {
 			videoTimeupdate = true;
 			v.removeEventListener("timeupdate", checkReady, true);
 		}
-		
+
 		if (videoPlaying && videoTimeupdate) {
 			frameReady = true;
 			videoWidth = v.videoWidth;

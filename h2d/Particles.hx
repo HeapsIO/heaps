@@ -345,7 +345,7 @@ class ParticleGroup {
 		Optional color gradient texture for tinting.
 	**/
 	public var colorGradient(default,set) : h3d.mat.Texture;
-	
+
 	/**
 		When enabled, causes particles to always render relative to the emitter position, moving along with it.
 		Otherwise, once emitted, particles won't follow the emitter, and will render relative to the scene origin.
@@ -413,7 +413,7 @@ class ParticleGroup {
 	inline function set_frameDivisionY(v) { frameDivisionY = v; makeTiles(); return v; }
 	inline function set_animationRepeat(v) return animationRepeat = v;
 	inline function set_isRelative(v) { needRebuild = true; return isRelative = v; }
-	
+
 	/**
 		Create a new particle group instance.
 		@param p The parent Particles instance. Group does not automatically adds itself to the Particles.
@@ -525,7 +525,7 @@ class ParticleGroup {
 				speed = Math.abs(speed);
 				p.vx = Math.cos(g.emitAngle);
 				p.vy = Math.sin(g.emitAngle);
-				
+
 				var r = g.emitStartDist + g.emitDist * rand();
 				p.x += r * Math.cos(g.emitAngle - Math.PI / 2);
 				p.y += r * Math.sin(g.emitAngle - Math.PI / 2);
@@ -559,7 +559,7 @@ class ParticleGroup {
 			p.scaleY = Math.sqrt((parts.matB * parts.matB) + (parts.matD * parts.matD)) * size;
 			var rot = Math.atan2(parts.matB / p.scaleY, parts.matA / p.scaleX);
 			p.rotation += rot;
-			
+
 			// Also rotate velocity.
 			var cos = Math.cos(rot);
 			var sin = Math.sin(rot);

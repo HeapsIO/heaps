@@ -24,13 +24,13 @@ class Group extends Filter {
 		super();
 		this.filters = filters == null ? [] : filters;
 	}
-	
+
 	override function get_enable() {
 		if( !enable ) return false;
 		for( f in filters ) if( enable ) return true;
 		return false;
 	}
-	
+
 	/**
 		Adds new Filter `f` to the Group.  
 		Due to implementation specifics, if Group was already bound, new filters won't receive a `bind` call.

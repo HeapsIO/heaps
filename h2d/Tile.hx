@@ -54,7 +54,7 @@ class Tile {
 		Cannot be modified directly, use `Tile.setSize` instead.
 	**/
 	public var height(default,null) : Float;
-	
+
 	/**
 		The flip state of the Tile.
 		@see `Tile.flipX`
@@ -265,7 +265,7 @@ class Tile {
 		t.v2 = v2;
 		return t;
 	}
-	
+
 	function get_xFlip() return u2 < u;
 	function get_yFlip() return v2 < v;
 	function set_xFlip(v) {
@@ -303,7 +303,7 @@ class Tile {
 
 	/**
 		Split the tile into a list of tiles of Size x Size pixels.
-		
+
 		@param size The width and height of the new Tiles.
 		@param dx Optional visual offset of the new Tiles along the X axis.
 		@param dy Optional visual offset of the new Tiles along the Y axis.

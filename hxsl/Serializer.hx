@@ -418,7 +418,7 @@ class Serializer {
 			expr : readExpr(),
 		};
 	}
-	
+
 	static var SIGN = 0x8B741D; // will be encoded to HXSL
 
 	public function unserialize( data : String ) : ShaderData {

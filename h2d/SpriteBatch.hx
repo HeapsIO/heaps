@@ -179,7 +179,7 @@ class BasicElement extends BatchElement {
 
 /**
 	An active batched tile renderer.
-	
+
 	Compared to `TileGroup` which is expected to be used as a static geometry,
 	SpriteBatch uploads GPU buffer each frame by collecting data from added `BatchElement` instance.
 	Due to that, dynamically removing and adding new geometry is fairly simple.

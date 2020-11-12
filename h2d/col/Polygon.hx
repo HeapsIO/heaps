@@ -7,7 +7,7 @@ import hxd.Math;
 **/
 @:forward(push,remove,insert,copy)
 abstract Polygon(Array<Point>) from Array<Point> to Array<Point> {
-	
+
 	/**
 		The underlying Array of vertices.
 	**/

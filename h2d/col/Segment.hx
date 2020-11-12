@@ -62,7 +62,7 @@ class Segment {
 		lenSq = dx * dx + dy * dy;
 		invLenSq = 1 / lenSq;
 	}
-	
+
 	/**
 		Returns a positive value if Point `p` is on the right side of the Segment axis and negative if it's on the left.
 	**/

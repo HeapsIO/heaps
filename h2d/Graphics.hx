@@ -131,7 +131,7 @@ private class GraphicsContent extends h3d.prim.Primitive {
 			Allocator.get().disposeIndexBuffer(indexes);
 			indexes = null;
 		}
-		
+
 		super.dispose();
 	}
 

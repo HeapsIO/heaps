@@ -41,7 +41,7 @@ class Filter {
 
 	function new() {
 	}
-	
+
 	function get_enable() return enable;
 	function set_enable(v) return enable = v;
 
