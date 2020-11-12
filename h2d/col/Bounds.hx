@@ -342,6 +342,15 @@ class Bounds {
 	public function toString() : String {
 		return "{" + getMin() + "," + getSize() + "}";
 	}
+	
+	/**
+		Returns the bounding circle which includes all the bounds.
+	**/
+	public inline function toCircle() {
+		var dx = xMax - xMin;
+		var dy = yMax - yMin;
+		return new Circle((xMin + xMax) * 0.5, (yMin + yMax) * 0.5, Math.sqrt(dx * dx + dy * dy) * 0.5);
+	}
 
 	/**
 		Returns a new Bounds instance from given rectangle.
