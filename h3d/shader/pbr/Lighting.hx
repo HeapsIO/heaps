@@ -40,7 +40,7 @@ class Indirect extends PropsDefinition {
 		}
 
 		function getEnvDiffuse( normal : Vec3 ) : Vec3 {
-			return irrDiffuse.textureLod( rotateNormal(normal), roughness * irrSpecularLevels).rgb;
+			return irrDiffuse.get( rotateNormal(normal) ).rgb;
 		}
 
 		function fragment() {
