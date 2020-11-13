@@ -378,6 +378,8 @@ class Macros {
 							var tsup = csup.t.get();
 							for( f in tsup.fields.get() )
 								supFields.set(f.name, true);
+							if( tsup.module != sup )
+								sup = tsup.module+"."+tsup.name;
 							shader = { expr : EBlock([ { expr : ECall( { expr : EIdent("extends"), pos : pos }, [ { expr : EConst(CString(sup)), pos : pos } ]), pos : pos }, shader]), pos : pos };
 							supFields.remove("updateConstants");
 							supFields.remove("getParamValue");
