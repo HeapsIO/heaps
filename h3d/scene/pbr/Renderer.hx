@@ -385,12 +385,12 @@ class Renderer extends h3d.scene.Renderer {
 			pbrIndirect.irrSpecularLevels = env.specLevels;
 			pbrIndirect.cameraInvViewProj.load(ctx.camera.getInverseViewProj());
 			pbrIndirect.skyScale = 1.0;
+			pbrIndirect.drawIndirectDiffuse = true;
+			pbrIndirect.drawIndirectSpecular = true;
 
 			pbrDirect.doDiscard = false;
 			switch( renderMode ) {
 			case Default:
-				pbrIndirect.drawIndirectDiffuse = true;
-				pbrIndirect.drawIndirectSpecular = true;
 				pbrIndirect.showSky = skyMode != Hide;
 				pbrIndirect.skyColor = false;
 				pbrIndirect.skyMap = switch( skyMode ) {
@@ -413,11 +413,9 @@ class Renderer extends h3d.scene.Renderer {
 					null;
 				};
 			case LightProbe:
-				pbrIndirect.drawIndirectDiffuse = false;
-				pbrIndirect.drawIndirectSpecular = false;
 				pbrIndirect.showSky = true;
 				pbrIndirect.skyMap = env.env;
-				pbrIndirect.gammaCorrect = false;			
+				pbrIndirect.gammaCorrect = false;
 			}
 
 			if( pbrIndirect.skyMap == null && pbrIndirect.showSky && !pbrIndirect.skyColor )
