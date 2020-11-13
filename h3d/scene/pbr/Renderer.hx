@@ -193,7 +193,7 @@ class Renderer extends h3d.scene.Renderer {
 	function lighting() {
 
 		begin(Shadows);
-		var ls = hxd.impl.Api.downcast(getLightSystem(), LightSystem);
+		var ls = hxd.impl.Api.downcast(getLightSystem(), h3d.scene.pbr.LightSystem);
 		var count = ctx.engine.drawCalls;
 		if( ls != null ) drawShadows(ls);
 		if( ctx.lightSystem != null ) ctx.lightSystem.drawPasses = ctx.engine.drawCalls - count;
@@ -221,9 +221,15 @@ class Renderer extends h3d.scene.Renderer {
 		pbrProps.isScreen = false;
 		draw(pbrLightPass.name);
 
-		if( renderMode == LightProbe ) {
+		if( !renderLightProbes() && env != null ) {
+			mark("Indirect Lighting");
 			pbrProps.isScreen = true;
+			pbrIndirect.drawIndirectDiffuse = true;
+			pbrIndirect.drawIndirectSpecular = true;
 			pbrOut.render();
+		}
+
+		if( renderMode == LightProbe ) {
 			resetTarget();
 			copy(textures.hdr, null);
 			// no warnings
@@ -232,15 +238,39 @@ class Renderer extends h3d.scene.Renderer {
 			return;
 		}
 
-		// Indirect Lighting - Diffuse and Specular
- 		if( env != null ) {
+		end();
+	}
+
+	function renderLightProbes() {
+		var probePass = get("lightProbe");
+		if( probePass.isEmpty() )
+			return false;
+		function probeSort( passes : h3d.pass.PassList ) {
+			// Priority of the probe stored in _44 of AbsPos
+			passes.sort( (po1, po2) -> return Std.int(po1.obj.getAbsPos()._44 - po2.obj.getAbsPos()._44) );
+		}
+
+		// Probe Rendering & Blending
+		var probeOutput = allocTarget("probeOutput", true, 1.0, RGBA16F);
+		ctx.engine.pushTarget(probeOutput);
+		clear(0);
+
+		// Default Env & SkyBox
+		if( env != null ) {
 			mark("Indirect Lighting");
 			pbrProps.isScreen = true;
 			pbrIndirect.drawIndirectDiffuse = true;
 			pbrIndirect.drawIndirectSpecular = true;
 			pbrOut.render();
 		}
-		end();
+
+		// Light Probe with Alpha Blend
+		pbrProps.isScreen = false;
+		renderPass(defaultPass, get("lightProbe"), probeSort);
+		ctx.engine.popTarget();
+
+		h3d.pass.Copy.run(probeOutput, textures.hdr, Add);
+		return true;
 	}
 
 	function drawShadows( ls : LightSystem ) {
@@ -354,12 +384,13 @@ class Renderer extends h3d.scene.Renderer {
 			pbrIndirect.irrSpecular = env.specular;
 			pbrIndirect.irrSpecularLevels = env.specLevels;
 			pbrIndirect.cameraInvViewProj.load(ctx.camera.getInverseViewProj());
+			pbrIndirect.skyScale = 1.0;
 
 			pbrDirect.doDiscard = false;
 			switch( renderMode ) {
 			case Default:
 				pbrIndirect.drawIndirectDiffuse = true;
-				pbrIndirect.drawIndirectSpecular= true;
+				pbrIndirect.drawIndirectSpecular = true;
 				pbrIndirect.showSky = skyMode != Hide;
 				pbrIndirect.skyColor = false;
 				pbrIndirect.skyMap = switch( skyMode ) {
@@ -370,11 +401,9 @@ class Renderer extends h3d.scene.Renderer {
 					pbrIndirect.gammaCorrect = true;
 					env.env;
 				case Specular:
-					pbrIndirect.skyScale = 1.0;
 					pbrIndirect.gammaCorrect = false;
 					env.specular;
 				case Irrad:
-					pbrIndirect.skyScale = 1.0;
 					pbrIndirect.gammaCorrect = false;
 					env.diffuse;
 				case Background:
@@ -383,18 +412,21 @@ class Renderer extends h3d.scene.Renderer {
 					pbrIndirect.gammaCorrect = true;
 					null;
 				};
-
-				if( pbrIndirect.skyMap == null && pbrIndirect.showSky && !pbrIndirect.skyColor )
-					pbrIndirect.showSky = false;
-
 			case LightProbe:
 				pbrIndirect.drawIndirectDiffuse = false;
 				pbrIndirect.drawIndirectSpecular = false;
 				pbrIndirect.showSky = true;
-				pbrIndirect.skyColor = false;
 				pbrIndirect.skyMap = env.env;
+				pbrIndirect.gammaCorrect = false;			
 			}
-			pbrDirect.doDiscard = true;
+
+			if( pbrIndirect.skyMap == null && pbrIndirect.showSky && !pbrIndirect.skyColor )
+				pbrIndirect.showSky = false;
+
+		}
+		else {
+			pbrIndirect.drawIndirectDiffuse = false;
+			pbrIndirect.drawIndirectSpecular = false;
 		}
 
 		tonemap.shader.mode = switch( toneMode ) {

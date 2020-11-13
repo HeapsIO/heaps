@@ -4,26 +4,31 @@ class Indirect extends PropsDefinition {
 
 	static var SRC = {
 
+		// Flags
+		@const var drawIndirectDiffuse : Bool;
+		@const var drawIndirectSpecular : Bool;
+		@const var showSky : Bool;
+		@const var skyColor : Bool;
+
+		// Indirect Params
 		@param var irrLut : Sampler2D;
 		@param var irrDiffuse : SamplerCube;
 		@param var irrSpecular : SamplerCube;
 		@param var irrSpecularLevels : Float;
 		@param var irrPower : Float;
-
 		@param var rot : Float;
 
-		@const var showSky : Bool;
-		@const var skyColor : Bool;
-		@param var skyColorValue : Vec3;
-
-		@const var drawIndirectDiffuse : Bool;
-		@const var drawIndirectSpecular : Bool;
+		// Sky Params
 		@param var skyMap : SamplerCube;
 		@param var skyThreshold : Float;
 		@param var skyScale : Float;
 		@const var gammaCorrect : Bool;
 		@param var cameraInvViewProj : Mat4;
+		@param var skyColorValue : Vec3;
+
+		// Emissive Blend
 		@param var emissivePower : Float;
+
 		var calculatedUV : Vec2;
 
 		function fragment() {
@@ -37,7 +42,7 @@ class Indirect extends PropsDefinition {
 					if( skyColor )
 						color = skyColorValue;
 					else {
-						normal = (vec3( uvToScreen(calculatedUV) * 5. /*?*/ , 1. ) * cameraInvViewProj.mat3x4()).normalize();
+						normal = (vec3( uvToScreen(calculatedUV), 1. ) * cameraInvViewProj.mat3x4()).normalize();
 						var rotatedNormal = vec3(normal.x * c - normal.y * s, normal.x * s + normal.y * c, normal.z);
 						color = skyMap.get(rotatedNormal).rgb;
 						color.rgb *= mix(1.0, skyScale, (max( max(color.r, max(color.g, color.b)) - skyThreshold, 0) / max(0.001, (1.0 - skyThreshold))));
