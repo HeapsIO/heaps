@@ -377,7 +377,8 @@ class Renderer extends h3d.scene.Renderer {
 		if( env != null ) {
 			pbrIndirect.cameraPosition.load(ctx.camera.pos);
 			pbrIndirect.emissivePower = props.emissive * props.emissive;
-			pbrIndirect.rot = hxd.Math.degToRad(env.rot);
+			var rot = hxd.Math.degToRad(env.rot);
+			pbrIndirect.irrRotation.set(Math.cos(rot), Math.sin(rot));
 			pbrIndirect.irrPower = env.power * env.power;
 			pbrIndirect.irrLut = env.lut;
 			pbrIndirect.irrDiffuse = env.diffuse;

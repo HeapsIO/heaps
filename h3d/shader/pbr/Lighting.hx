@@ -16,7 +16,7 @@ class Indirect extends PropsDefinition {
 		@param var irrSpecular : SamplerCube;
 		@param var irrSpecularLevels : Float;
 		@param var irrPower : Float;
-		@param var rot : Float;
+		@param var irrRotation : Vec2;
 
 		// Sky Params
 		@param var skyMap : SamplerCube;
@@ -31,10 +31,19 @@ class Indirect extends PropsDefinition {
 
 		var calculatedUV : Vec2;
 
-		function fragment() {
-			var s = sin(rot);
-			var c = cos(rot);
+		function rotateNormal( n : Vec3 ) : Vec3 {
+			return vec3(n.x * irrRotation.x - n.y * irrRotation.y, n.x * irrRotation.y + n.y * irrRotation.x, n.z);
+		}
 
+		function getEnvSpecular( normal : Vec3, roughness : Float ) : Vec3 {
+			return irrSpecular.textureLod( rotateNormal(normal), roughness * irrSpecularLevels).rgb;
+		}
+
+		function getEnvDiffuse( normal : Vec3 ) : Vec3 {
+			return irrDiffuse.textureLod( rotateNormal(normal), roughness * irrSpecularLevels).rgb;
+		}
+
+		function fragment() {
 			var isSky = normal.dot(normal) <= 0;
 			if( isSky ) {
 				if( showSky ) {
@@ -43,8 +52,7 @@ class Indirect extends PropsDefinition {
 						color = skyColorValue;
 					else {
 						normal = (vec3( uvToScreen(calculatedUV), 1. ) * cameraInvViewProj.mat3x4()).normalize();
-						var rotatedNormal = vec3(normal.x * c - normal.y * s, normal.x * s + normal.y * c, normal.z);
-						color = skyMap.get(rotatedNormal).rgb;
+						color = skyMap.get(rotateNormal(normal)).rgb;
 						color.rgb *= mix(1.0, skyScale, (max( max(color.r, max(color.g, color.b)) - skyThreshold, 0) / max(0.001, (1.0 - skyThreshold))));
 					}
 					if( gammaCorrect )
@@ -60,15 +68,12 @@ class Indirect extends PropsDefinition {
 				var F0 = pbrSpecularColor;
 				var F = F0 + (max(vec3(1 - roughness), F0) - F0) * exp2( ( -5.55473 * NdV - 6.98316) * NdV );
 
-				var rotatedNormal = vec3(normal.x * c - normal.y * s, normal.x * s + normal.y * c, normal.z);
-
 				if( drawIndirectDiffuse ) {
-					diffuse = irrDiffuse.get(rotatedNormal).rgb * albedo;
+					diffuse = getEnvDiffuse(normal) * albedo;
 				}
 				if( drawIndirectSpecular ) {
 					var reflectVec = reflect(-view, normal);
-					var rotatedReflecVec = vec3(reflectVec.x * c - reflectVec.y * s, reflectVec.x * s + reflectVec.y * c, reflectVec.z);
-					var envSpec = textureLod(irrSpecular, rotatedReflecVec, roughness * irrSpecularLevels).rgb;
+					var envSpec = getEnvSpecular(reflectVec, roughness);
 					var envBRDF = irrLut.get(vec2(roughness, NdV));
 					specular = envSpec * (F * envBRDF.x + envBRDF.y);
 				}
