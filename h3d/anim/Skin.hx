@@ -10,6 +10,10 @@ class Joint {
 	public var transPos : h3d.Matrix; // inverse pose matrix
 	public var parent : Joint;
 	public var subs : Array<Joint>;
+
+	public var offsets : h3d.col.Bounds;
+	public var offsetRay : Float;
+
 	/**
 		When animated, we will use the default bind pose translation instead of the animated translation,
 		enabling retargeting on a skeleton with different proportions

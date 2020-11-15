@@ -28,7 +28,6 @@ class Library {
 	var cachedPrimitives : Array<h3d.prim.HMDModel>;
 	var cachedAnimations : Map<String, h3d.anim.Animation>;
 	var cachedSkin : Map<String, h3d.anim.Skin>;
-	var tmp = haxe.io.Bytes.alloc(4);
 
 	public function new(res,  header) {
 		this.resource = res;
@@ -567,30 +566,146 @@ class Library {
 	}
 
 	@:allow(h3d.anim.Skin)
-	public function loadSkin( geom : Geometry, skin : h3d.anim.Skin ) {
+	public function loadSkin( geom : Geometry, skin : h3d.anim.Skin, optimize = true ) {
 		if( skin.vertexWeights != null )
 			return;
+
+		if( skin.bonesPerVertex != 3 )
+			throw "assert";
+
 		@:privateAccess skin.vertexCount = geom.vertexCount;
-		var w = getBuffers(geom, [new hxd.fmt.hmd.Data.GeometryFormat("weights", DVec3)]).vertexes;
+		var data = getBuffers(geom, [new hxd.fmt.hmd.Data.GeometryFormat("position",DVec3),new hxd.fmt.hmd.Data.GeometryFormat("weights",DVec3),new hxd.fmt.hmd.Data.GeometryFormat("indexes",DBytes4)]);
 		skin.vertexWeights = new haxe.ds.Vector(skin.vertexCount * skin.bonesPerVertex);
 		skin.vertexJoints = new haxe.ds.Vector(skin.vertexCount * skin.bonesPerVertex);
-		for( i in 0...skin.vertexWeights.length )
-			skin.vertexWeights[i] = w[i];
-		var vidx = getBuffers(geom, [new hxd.fmt.hmd.Data.GeometryFormat("indexes", DBytes4)]).vertexes;
-		var j = 0;
-		for( i in 0...skin.vertexCount ) {
-			var v = ftoint32(vidx[i]);
-			skin.vertexJoints[j++] = v & 0xFF;
-			skin.vertexJoints[j++] = (v >> 8) & 0xFF;
-			skin.vertexJoints[j++] = (v >> 16) & 0xFF;
+
+		for( j in skin.boundJoints )
+			j.offsets = new h3d.col.Bounds();
+
+		var vbuf = data.vertexes;
+		var idx = 0;
+		var bounds = new h3d.col.Bounds();
+		var out = Math.NaN;
+		var ranges;
+		if( skin.splitJoints == null ) {
+			var jointsByBind = [];
+			for( j in skin.boundJoints )
+				jointsByBind[j.bindIndex] = j;
+			ranges = [{ index : 0, pos : 0, count : data.indexes.length, joints : jointsByBind }];
+		} else {
+			var idx = 0;
+			var triPos = [], pos = 0;
+			for( n in geom.indexCounts ) {
+				triPos.push(pos);
+				pos += n;
+			}
+			ranges = [for( j in skin.splitJoints ) @:privateAccess {
+				index : idx,
+				pos : triPos[idx],
+				count : geom.indexCounts[idx++],
+				joints : j.joints,
+			}];
+		}
+
+
+		// for each joint, calculate the bounds of vertexes skinned to this joint, in absolute position
+		for( r in ranges ) {
+			for( idx in r.pos...r.pos+r.count ) {
+				var vidx = data.indexes[idx];
+				var p = vidx * 7;
+				var x = vbuf[p];
+				if( x != x ) {
+					// already processed
+					continue;
+				}
+				vbuf[p++] = out;
+				var y = vbuf[p++];
+				var z = vbuf[p++];
+				var w1 = vbuf[p++];
+				var w2 = vbuf[p++];
+				var w3 = vbuf[p++];
+
+				var vout = vidx * 3;
+				skin.vertexWeights[vout] = w1;
+				skin.vertexWeights[vout+1] = w2;
+				skin.vertexWeights[vout+2] = w3;
+
+				var w = (w1 == 0 ? 1 : 0) | (w2 == 0 ? 2 : 0) | (w3 == 0 ? 4 : 0);
+				var idx = haxe.io.FPHelper.floatToI32(vbuf[p++]);
+				bounds.addPos(x,y,z);
+				for( i in 0...3 ) {
+					if( w & (1<<i) != 0 ) {
+						skin.vertexJoints[vout++] = -1;
+						continue;
+					}
+					var idx = (idx >> (i<<3)) & 0xFF;
+					var j = r.joints[idx];
+					j.offsets.addPos(x,y,z);
+					skin.vertexJoints[vout++] = j.bindIndex;
+				}
+			}
+		}
+
+		if( optimize ) {
+			var idx = skin.allJoints.length - 1;
+			var optOut = 0;
+			var refVolume = bounds.getVolume();
+			while( idx >= 0 ) {
+				var j = skin.allJoints[idx--];
+				if( j.offsets == null || j.parent == null || j.parent.offsets == null ) continue;
+				var poff = j.parent.offsets;
+
+				// assume our joints will only rotate
+				var sp = j.offsets.toSphere();
+				if( poff.containsSphere(sp) ) {
+					j.offsets = null;
+					optOut++;
+					continue;
+				}
+
+				var pext = poff.clone();
+				pext.addSphere(sp);
+
+				// heuristic to allow children bounds to be merged within parent
+				// this allow to calculate less joints when getting skin bounds
+				var ratio = Math.sqrt((refVolume * 1.5) / pext.getVolume());
+				var k = pext.getVolume() / poff.getVolume();
+
+				if( k < ratio ) {
+					j.parent.offsets = pext;
+					j.offsets = null;
+					optOut++;
+					continue;
+				}
+			}
+		}
+
+		// transform bounds into two spheres aligned on largest
+		// size. this allows Skin.getBounds to perform two transforms
+		// insteas of height for each bounds corners
+		for( j in skin.allJoints ) {
+			if( j.offsets == null ) {
+				j.offsetRay = -1;
+				continue;
+			}
+			var b = j.offsets;
+			var pt1, pt2, off = b.getCenter(), r;
+			if( b.xSize > b.ySize && b.xSize > b.zSize ) {
+				r = Math.max(b.ySize, b.zSize) * 0.5;
+				pt1 = new h3d.col.Point(b.xMin + r, off.y, off.z);
+				pt2 = new h3d.col.Point(b.xMax - r, off.y, off.z);
+			} else if( b.ySize > b.zSize ) {
+				r = Math.max(b.xSize, b.zSize) * 0.5;
+				pt1 = new h3d.col.Point(off.x, b.yMin + r, off.z);
+				pt2 = new h3d.col.Point(off.x, b.yMax - r, off.z);
+			} else {
+				r = Math.max(b.xSize, b.ySize) * 0.5;
+				pt1 = new h3d.col.Point(off.x, off.y, b.zMin + r);
+				pt2 = new h3d.col.Point(off.x, off.y, b.zMax - r);
+			}
+			b.setMin(pt1);
+			b.setMax(pt2);
+			j.offsetRay = r;
 		}
 	}
-
-	function ftoint32( v : hxd.impl.Float32 ) : Int {
-		tmp.setFloat(0, v);
-		return tmp.getInt32(0);
-	}
-
-
 
 }

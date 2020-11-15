@@ -94,23 +94,37 @@ class Skin extends MultiMaterial {
 	}
 
 	override function getBoundsRec( b : h3d.col.Bounds ) {
+		// ignore primitive bounds !
+		var old = primitive;
+		primitive = null;
 		b = super.getBoundsRec(b);
-		var tmp = primitive.getBounds().clone();
-		var b0 = skinData.allJoints[0];
-		// not sure if that's the good joint
-		if( b0 != null && b0.parent == null ) {
-			var mtmp = absPos.clone();
-			var r = currentRelPose[b0.index];
-			if( r != null )
-				mtmp.multiply3x4(r, mtmp);
-			else
-				mtmp.multiply3x4(b0.defMat, mtmp);
-			if( b0.transPos != null )
-				mtmp.multiply3x4(b0.transPos, mtmp);
-			tmp.transform(mtmp);
-		} else
-			tmp.transform(absPos);
-		b.add(tmp);
+		primitive = old;
+		if( flags.has(FIgnoreBounds) )
+			return b;
+		syncJoints();
+		if( skinData.vertexWeights == null )
+			cast(primitive, h3d.prim.HMDModel).loadSkin(skinData);
+		for( j in skinData.allJoints ) {
+			if( j.offsetRay < 0 ) continue;
+			var m = currentPalette[j.bindIndex];
+			var pt = j.offsets.getMin();
+			pt.transform(m);
+			b.addSpherePos(pt.x, pt.y, pt.z, j.offsetRay);
+			var pt = j.offsets.getMax();
+			pt.transform(m);
+			b.addSpherePos(pt.x, pt.y, pt.z, j.offsetRay);
+		}
+		return b;
+	}
+
+	public function getCurrentSkeletonBounds() {
+		syncJoints();
+		var b = new h3d.col.Bounds();
+		for( j in skinData.allJoints ) {
+			if( j.bindIndex < 0 ) continue;
+			var r = currentAbsPose[j.index];
+			b.addSpherePos(r.tx, r.ty, r.tz, 0);
+		}
 		return b;
 	}
 
