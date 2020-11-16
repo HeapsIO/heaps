@@ -51,7 +51,7 @@ class Indirect extends PropsDefinition {
 					if( skyColor )
 						color = skyColorValue;
 					else {
-						normal = (vec3( uvToScreen(calculatedUV), 1. ) * cameraInvViewProj.mat3x4()).normalize();
+						var normal = (vec3( uvToScreen(calculatedUV), 1. ) * cameraInvViewProj.mat3x4()).normalize();
 						color = skyMap.get(rotateNormal(normal)).rgb;
 						color.rgb *= mix(1.0, skyScale, (max( max(color.r, max(color.g, color.b)) - skyThreshold, 0) / max(0.001, (1.0 - skyThreshold))));
 					}
