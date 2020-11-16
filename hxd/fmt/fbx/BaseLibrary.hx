@@ -98,7 +98,7 @@ class BaseLibrary {
 	var namedConnect : Map<Int,Map<String,Int>>;
 	var invConnect : Map<Int,Array<Int>>;
 	var leftHand : Bool;
-	var defaultModelMatrixes : Map<String,DefaultMatrixes>;
+	var defaultModelMatrixes : Map<Int,DefaultMatrixes>;
 	var uvAnims : Map<String, Array<{ t : Float, u : Float, v : Float }>>;
 	var animationEvents : Array<{ frame : Int, data : String }>;
 	var isMaya : Bool;
@@ -503,12 +503,12 @@ class BaseLibrary {
 		return root;
 	}
 
-	public function ignoreMissingObject( name : String ) {
-		var def = defaultModelMatrixes.get(name);
+	function ignoreMissingObject( id : Int ) {
+		var def = defaultModelMatrixes.get(id);
 		if( def == null ) {
 			def = new DefaultMatrixes();
 			def.wasRemoved = -2;
-			defaultModelMatrixes.set(name, def);
+			defaultModelMatrixes.set(id, def);
 		}
 	}
 
@@ -1307,7 +1307,7 @@ class BaseLibrary {
 		for( j in iterJoints ) {
 			var jModel = ids.get(j.index);
 			var subDef = getParent(jModel, "Deformer", true);
-			var defMat = defaultModelMatrixes.get(jModel.getName());
+			var defMat = defaultModelMatrixes.get(jModel.getId());
 			j.defMat = defMat.toMatrix(leftHand);
 
 			if( subDef == null ) {
@@ -1443,8 +1443,8 @@ class BaseLibrary {
 	}
 
 	function getDefaultMatrixes( model : FbxNode ) {
-		var name = model.getName();
-		var d = defaultModelMatrixes.get(name);
+		var id = model.getId();
+		var d = defaultModelMatrixes.get(id);
 		if( d != null )
 			return d;
 		d = new DefaultMatrixes();
@@ -1474,7 +1474,7 @@ class BaseLibrary {
 		if( model.getType() == "LimbNode" )
 			updateDefaultMatrix(model, d);
 
-		defaultModelMatrixes.set(name, d);
+		defaultModelMatrixes.set(id, d);
 		return d;
 	}
 
