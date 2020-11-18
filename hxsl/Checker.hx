@@ -80,12 +80,9 @@ class Checker {
 			case Texel:
 				[
 					{ args : [ { name: "tex", type: TSampler2D }, { name: "pos", type: ivec2 } ], ret: vec4 },
-					{ args : [ { name: "tex", type: TSampler2DArray }, { name: "pos", type: ivec3 } ], ret: vec4 }
-				];
-			case TexelLod:
-				[
+					{ args : [ { name: "tex", type: TSampler2DArray }, { name: "pos", type: ivec3 } ], ret: vec4 },
 					{ args : [ { name: "tex", type: TSampler2D }, { name: "pos", type: ivec2 }, { name: "lod", type: TInt } ], ret: vec4 },
-					{ args : [ { name: "tex", type: TSampler2DArray }, { name: "pos", type: ivec3 }, { name: "lod", type: TInt } ], ret: vec4 }
+					{ args : [ { name: "tex", type: TSampler2DArray }, { name: "pos", type: ivec3 }, { name: "lod", type: TInt } ], ret: vec4 },
 				];
 			case TextureSize:
 				[
@@ -164,9 +161,6 @@ class Checker {
 					{ args : [ { name : "channel", type : TChannel(2) }, { name : "pos", type : ivec2 } ], ret : vec2 },
 					{ args : [ { name : "channel", type : TChannel(3) }, { name : "pos", type : ivec2 } ], ret : vec3 },
 					{ args : [ { name : "channel", type : TChannel(4) }, { name : "pos", type : ivec2 } ], ret : vec4 },
-				];
-			case ChannelFetchLod:
-				[
 					{ args : [ { name : "channel", type : TChannel(1) }, { name : "pos", type : ivec2 }, { name : "lod", type : TInt } ], ret : TFloat },
 					{ args : [ { name : "channel", type : TChannel(2) }, { name : "pos", type : ivec2 }, { name : "lod", type : TInt } ], ret : vec2 },
 					{ args : [ { name : "channel", type : TChannel(3) }, { name : "pos", type : ivec2 }, { name : "lod", type : TInt } ], ret : vec3 },
@@ -909,10 +903,8 @@ class Checker {
 			case ["get", TChannel(_)]: ChannelRead;
 			case ["getLod", TSampler2D|TSampler2DArray|TSamplerCube]: TextureLod;
 			case ["getLod", TChannel(_)]: ChannelReadLod;
-			case ["fetch", TSampler2D|TSampler2DArray]: Texel;
-			case ["fetch", TChannel(_)]: ChannelFetch;
-			case ["fetchLod", TSampler2D|TSampler2DArray]: TexelLod;
-			case ["fetchLod", TChannel(_)]: ChannelFetchLod;
+			case ["fetch"|"fetchLod", TSampler2D|TSampler2DArray]: Texel;
+			case ["fetch"|"fetchLod", TChannel(_)]: ChannelFetch;
 			case ["size", TSampler2D|TSampler2DArray|TSamplerCube]: TextureSize;
 			case ["size", TChannel(_)]: ChannelTextureSize;
 			default: null;

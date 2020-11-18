@@ -255,7 +255,7 @@ class GlslOut {
 				return "textureCubeLodEXT";
 			default:
 			}
-		case Texel, TexelLod:
+		case Texel:
 			// if ( isES2 )
 			// 	decl("vec4 _texelFetch(sampler2d tex, ivec2 pos, int lod) ...")
 			// 	return "_texelFetch";
@@ -389,11 +389,17 @@ class GlslOut {
 		case TCall({ e : TGlobal(g = Texel) }, args):
 			add(getFunName(g,args,e.t));
 			add("(");
-			for( e in args ) {
-				addValue(e, tabs);
+			addValue(args[0], tabs); // sampler
+			add(", ");
+			addValue(args[1], tabs); // uv
+			if ( args.length != 2 ) {
+				// with LOD argument
 				add(", ");
+				addValue(args[2], tabs);
+				add(")");
+			} else {
+				add(", 0)");
 			}
-			add("0)");
 		case TCall({ e : TGlobal(g = TextureSize) }, args):
 			add(getFunName(g,args,e.t));
 			add("(");

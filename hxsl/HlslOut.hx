@@ -265,7 +265,7 @@ class HlslOut {
 			if( g == Texture && isVertex )
 				add(",0");
 			add(")");
-		case TCall({ e : TGlobal(g = (Texel | TexelLod)) }, args):
+		case TCall({ e : TGlobal(g = (Texel)) }, args):
 			addValue(args[0], tabs);
 			add(".Load(");
 			switch ( args[1].t ) {
@@ -277,14 +277,12 @@ class HlslOut {
 					throw "assert";
 			}
 			addValue(args[1],tabs);
-			switch( g ) {
-				case Texel:
-					add(", 0");
-				case TexelLod:
-					add(", ");
-					addValue(args[2],tabs);
-				default:
-					throw "assert";
+			if ( args.length != 2 ) {
+				// with LOD argument
+				add(", ");
+				addValue(args[2], tabs);
+			} else {
+				add(", 0");
 			}
 			add("))");
 		case TCall({ e : TGlobal(g = (TextureSize)) }, args):

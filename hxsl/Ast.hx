@@ -205,7 +205,6 @@ enum TGlobal {
 	Texture;
 	TextureLod;
 	Texel;
-	TexelLod;
 	TextureSize;
 	// ...other texture* operations
 	// constructors
@@ -241,7 +240,6 @@ enum TGlobal {
 	ChannelRead;
 	ChannelReadLod;
 	ChannelFetch;
-	ChannelFetchLod;
 	ChannelTextureSize;
 	Trace;
 	// instancing
