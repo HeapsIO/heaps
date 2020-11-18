@@ -71,7 +71,7 @@ class Parser {
 					childs: nodes
 				};
 			}
-			else 
+			else
 			{
 				return firstNode;
 			}
@@ -242,7 +242,16 @@ class Parser {
 					pos += arrayLen * entrySize;
 				case 1:
 					arrayBytesPos = 0;
-					arrayBytes = haxe.zip.Uncompress.run(bytes.sub(pos, arrayCompressedLen));
+					var buf = bytes.sub(pos, arrayCompressedLen);
+					#if hxnodejs
+					try {
+						arrayBytes = haxe.zip.Uncompress.run(buf);
+					} catch( e : Dynamic ) {
+						arrayBytes = haxe.zip.InflateImpl.run(new haxe.io.BytesInput(buf));
+					}
+					#else
+					arrayBytes = haxe.zip.Uncompress.run(buf);
+					#end
 					pos += arrayCompressedLen;
 				default:
 					error("Unsupported array encoding: " + arrayEncoding);
@@ -406,7 +415,7 @@ class Parser {
 	}
 
 	inline function i64ToFloat( i64 : haxe.Int64 ) : Float {
-		return (i64.high * 4294967296) + 
+		return (i64.high * 4294967296) +
 						( (i64.low & 0x80000000) != 0 ? ((i64.low & 0x7fffffff) + 2147483648) : i64.low );
 	}
 
