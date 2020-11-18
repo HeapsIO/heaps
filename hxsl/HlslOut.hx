@@ -287,32 +287,18 @@ class HlslOut {
 					throw "assert";
 			}
 			add("))");
-		case TCall({ e : TGlobal(g = (TextureSize | TextureSizeLod)) }, args):
-			decl("float2 textureSize(Texture2D tex) { float w; float h; tex.GetDimensions(tex, out w, out h); return float2(w, h); }");
-			decl("float3 textureSize(Texture2DArray tex) { float w; float h; float els; tex.GetDimensions(tex, out w, out h, out els); return float3(w, h, els); }");
-			decl("float2 textureSize(TextureCube tex) { float w; float h; tex.GetDimensions(tex, out w, out h); return float2(w, h); }");
+		case TCall({ e : TGlobal(g = (TextureSize)) }, args):
 			decl("float2 textureSize(Texture2D tex, int lod) { float w; float h; tex.GetDimensions(tex, (uint)lod, out w, out h); return float2(w, h); }");
 			decl("float3 textureSize(Texture2DArray tex, int lod) { float w; float h; float els; tex.GetDimensions(tex, (uint)lod, out w, out h, out els); return float3(w, h, els); }");
 			decl("float2 textureSize(TextureCube tex, int lod) { float w; float h; tex.GetDimensions(tex, (uint)lod, out w, out h); return float2(w, h); }");
 			add("textureSize(");
 			addValue(args[0], tabs);
-			if ( g == TextureSizeLod || g == ITextureSizeLod) {
+			if (args.length != 1) {
+				// With LOD argument
 				add(", ");
 				addValue(args[1],tabs);
-			}
-			add(")");
-		case TCall({ e : TGlobal(g = (ITextureSize | ITextureSizeLod)) }, args):
-			decl("int2 textureSize(Texture2D tex) { uint w; uint h; tex.GetDimensions(tex, out w, out h); return int2((int)w, (int)h); }");
-			decl("int3 textureSize(Texture2DArray tex) { uint w; uint h; uint els; tex.GetDimensions(tex, out w, out h, out els); return int3((int)w, (int)h, (int)els); }");
-			decl("int2 textureSize(TextureCube tex) { uint w; uint h; tex.GetDimensions(tex, out w, out h); return int2((int)w, (int)h); }");
-			decl("int2 textureSize(Texture2D tex, int lod) { uint w; uint h; tex.GetDimensions(tex, (uint)lod, out w, out h); return int2((int)w, (int)h); }");
-			decl("int3 textureSize(Texture2DArray tex, int lod) { uint w; uint h; uint els; tex.GetDimensions(tex, (uint) lod, out w, out h, out els); return int3((int)w, (int)h, (int)els); }");
-			decl("int2 textureSize(TextureCube tex, int lod) { uint w; uint h; tex.GetDimensions(tex, (uint)lod, out w, out h); return int2((int)w, (int)h); }");
-			add("textureSize(");
-			addValue(args[0], tabs);
-			if ( g == TextureSizeLod || g == ITextureSizeLod) {
-				add(", ");
-				addValue(args[1],tabs);
+			} else {
+				add(", 0");
 			}
 			add(")");
 		case TCall(e = { e : TGlobal(g) }, args):

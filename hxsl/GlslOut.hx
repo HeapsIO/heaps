@@ -261,16 +261,11 @@ class GlslOut {
 			// 	return "_texelFetch";
 			// else
 				return "texelFetch";
-		case TextureSize, TextureSizeLod:
+		case TextureSize:
 			decl("vec2 _textureSize(sampler2D sampler, int lod) { return vec2(textureSize(sampler, lod)); }");
 			decl("vec3 _textureSize(sampler2DArray sampler, int lod) { return vec3(textureSize(sampler, lod)); }");
 			decl("vec2 _textureSize(samplerCube sampler, int lod) { return vec2(textureSize(sampler, lod)); }");
 			return "_textureSize";
-		case ITextureSize, ITextureSizeLod:
-			// if ( isES2 )
-			// 	decl...
-			// else
-				return "textureSize";
 		case Mod if( rt == TInt && isES ):
 			decl("int _imod( int x, int y ) { return int(mod(float(x),float(y))); }");
 			return "_imod";
@@ -391,7 +386,7 @@ class GlslOut {
 			add("clamp(");
 			addValue(e, tabs);
 			add(", 0., 1.)");
-		case TCall({ e : TGlobal(g = Texel | TextureSize | ITextureSize) }, args):
+		case TCall({ e : TGlobal(g = Texel) }, args):
 			add(getFunName(g,args,e.t));
 			add("(");
 			for( e in args ) {
@@ -399,6 +394,18 @@ class GlslOut {
 				add(", ");
 			}
 			add("0)");
+		case TCall({ e : TGlobal(g = TextureSize) }, args):
+			add(getFunName(g,args,e.t));
+			add("(");
+			addValue(args[0], tabs);
+			if ( args.length != 1 ) {
+				// with LOD argument
+				add(", ");
+				addValue(args[1], tabs);
+				add(")");
+			} else {
+				add(", 0)");
+			}
 		case TCall(v, args):
 			switch( v.e ) {
 			case TGlobal(g):

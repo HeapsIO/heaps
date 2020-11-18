@@ -92,24 +92,9 @@ class Checker {
 					{ args : [ { name: "tex", type: TSampler2D } ], ret: vec2 },
 					{ args : [ { name: "tex", type: TSampler2DArray } ], ret: vec3 },
 					{ args : [ { name: "tex", type: TSamplerCube } ], ret: vec2 },
-				];
-			case TextureSizeLod:
-				[
 					{ args : [ { name: "tex", type: TSampler2D }, { name: "lod", type: TInt } ], ret: vec2 },
 					{ args : [ { name: "tex", type: TSampler2DArray }, { name: "lod", type: TInt } ], ret: vec3 },
 					{ args : [ { name: "tex", type: TSamplerCube }, { name: "lod", type: TInt } ], ret: vec2 },
-				];
-			case ITextureSize:
-				[
-					{ args : [ { name: "tex", type: TSampler2D } ], ret: ivec2 },
-					{ args : [ { name: "tex", type: TSampler2DArray } ], ret: ivec3 },
-					{ args : [ { name: "tex", type: TSamplerCube } ], ret: ivec2 },
-				];
-			case ITextureSizeLod:
-				[
-					{ args : [ { name: "tex", type: TSampler2D }, { name: "lod", type: TInt } ], ret: ivec2 },
-					{ args : [ { name: "tex", type: TSampler2DArray }, { name: "lod", type: TInt } ], ret: ivec3 },
-					{ args : [ { name: "tex", type: TSamplerCube }, { name: "lod", type: TInt } ], ret: ivec2 },
 				];
 			case ToInt:
 				[for( t in baseType ) { args : [ { name : "value", type : t } ], ret : TInt } ];
@@ -193,27 +178,10 @@ class Checker {
 					{ args : [ { name: "channel", type: TChannel(2) } ], ret: vec2 },
 					{ args : [ { name: "channel", type: TChannel(3) } ], ret: vec2 },
 					{ args : [ { name: "channel", type: TChannel(4) } ], ret: vec2 },
-				];
-			case ChannelTextureSizeLod:
-				[
 					{ args : [ { name: "channel", type: TChannel(1) }, { name : "lod", type : TInt } ], ret: vec2 },
 					{ args : [ { name: "channel", type: TChannel(2) }, { name : "lod", type : TInt } ], ret: vec2 },
 					{ args : [ { name: "channel", type: TChannel(3) }, { name : "lod", type : TInt } ], ret: vec2 },
 					{ args : [ { name: "channel", type: TChannel(4) }, { name : "lod", type : TInt } ], ret: vec2 },
-				];
-			case IChannelTextureSize:
-				[
-					{ args : [ { name: "channel", type: TChannel(1) } ], ret: ivec2 },
-					{ args : [ { name: "channel", type: TChannel(2) } ], ret: ivec2 },
-					{ args : [ { name: "channel", type: TChannel(3) } ], ret: ivec2 },
-					{ args : [ { name: "channel", type: TChannel(4) } ], ret: ivec2 },
-				];
-			case IChannelTextureSizeLod:
-				[
-					{ args : [ { name: "channel", type: TChannel(1) }, { name : "lod", type : TInt } ], ret: ivec2 },
-					{ args : [ { name: "channel", type: TChannel(2) }, { name : "lod", type : TInt } ], ret: ivec2 },
-					{ args : [ { name: "channel", type: TChannel(3) }, { name : "lod", type : TInt } ], ret: ivec2 },
-					{ args : [ { name: "channel", type: TChannel(4) }, { name : "lod", type : TInt } ], ret: ivec2 },
 				];
 			case ScreenToUv:
 				[{ args : [{ name : "screenPos", type : vec2 }], ret : vec2 }];
@@ -947,12 +915,6 @@ class Checker {
 			case ["fetchLod", TChannel(_)]: ChannelFetchLod;
 			case ["size", TSampler2D|TSampler2DArray|TSamplerCube]: TextureSize;
 			case ["size", TChannel(_)]: ChannelTextureSize;
-			case ["sizeLod", TSampler2D|TSampler2DArray|TSamplerCube]: TextureSizeLod;
-			case ["sizeLod", TChannel(_)]: ChannelTextureSizeLod;
-			case ["isize", TSampler2D|TSampler2DArray|TSamplerCube]: ITextureSize;
-			case ["isize", TChannel(_)]: IChannelTextureSize;
-			case ["isizeLod", TSampler2D|TSampler2DArray|TSamplerCube]: ITextureSizeLod;
-			case ["isizeLod", TChannel(_)]: IChannelTextureSizeLod;
 			default: null;
 			}
 			if( gl != null ) {
