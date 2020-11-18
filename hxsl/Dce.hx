@@ -238,6 +238,18 @@ class Dce {
 		case TCall({ e : TGlobal(ChannelFetchLod) }, [_, pos, lod, { e : TConst(CInt(cid)) }]):
 			var c = channelVars[cid];
 			return { e : TCall({ e : TGlobal(Texel), p : e.p, t : TVoid }, [{ e : TVar(c), t : c.type, p : e.p }, mapExpr(pos,true), mapExpr(lod,true)]), t : TVoid, p : e.p };
+		case TCall({ e : TGlobal(ChannelTextureSize) }, [_, { e : TConst(CInt(cid)) }]):
+			var c = channelVars[cid];
+			return { e : TCall({ e : TGlobal(TextureSize), p : e.p, t : TVoid }, [{ e : TVar(c), t : c.type, p : e.p }]), t : TVoid, p : e.p };
+		case TCall({ e : TGlobal(ChannelTextureSizeLod) }, [_, lod, { e : TConst(CInt(cid)) }]):
+			var c = channelVars[cid];
+			return { e : TCall({ e : TGlobal(TextureSizeLod), p : e.p, t : TVoid }, [{ e : TVar(c), t : c.type, p : e.p }, mapExpr(lod,true)]), t : TVoid, p : e.p };
+		case TCall({ e : TGlobal(IChannelTextureSize) }, [_, { e : TConst(CInt(cid)) }]):
+			var c = channelVars[cid];
+			return { e : TCall({ e : TGlobal(ITextureSize), p : e.p, t : TVoid }, [{ e : TVar(c), t : c.type, p : e.p }]), t : TVoid, p : e.p };
+		case TCall({ e : TGlobal(IChannelTextureSizeLod) }, [_, lod, { e : TConst(CInt(cid)) }]):
+			var c = channelVars[cid];
+			return { e : TCall({ e : TGlobal(ITextureSizeLod), p : e.p, t : TVoid }, [{ e : TVar(c), t : c.type, p : e.p }, mapExpr(lod,true)]), t : TVoid, p : e.p };
 		case TIf(e, econd, eelse):
 			var e = mapExpr(e, true);
 			var econd = mapExpr(econd, isVar);
