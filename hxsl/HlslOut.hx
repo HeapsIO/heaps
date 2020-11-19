@@ -34,6 +34,7 @@ class HlslOut {
 		m.set(BVec3, "bool3");
 		m.set(BVec4, "bool4");
 		m.set(FragCoord,"_in.__pos__");
+		m.set(FrontFacing, "_in.isFrontFace");
 		for( g in m )
 			KWDS.set(g, true);
 		m;
@@ -43,6 +44,7 @@ class HlslOut {
 	var SV_TARGET = "SV_TARGET";
 	var SV_VertexID = "SV_VertexID";
 	var SV_InstanceID = "SV_InstanceID";
+	var SV_IsFrontFace = "SV_IsFrontFace";
 	var STATIC = "static ";
 	var buf : StringBuf;
 	var exprIds = 0;
@@ -609,6 +611,8 @@ class HlslOut {
 			add("\tuint vertexID : "+SV_VertexID+";\n");
 		if( foundGlobals.exists(InstanceID) )
 			add("\tuint instanceID : "+SV_InstanceID+";\n");
+		if( foundGlobals.exists(FrontFacing) )
+			add("\tbool isFrontFace : "+SV_IsFrontFace+";\n");
 		add("};\n\n");
 
 		add("struct s_output {\n");

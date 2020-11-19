@@ -34,6 +34,7 @@ class GlslOut {
 		m.set(BVec3, "bvec3");
 		m.set(BVec4, "bvec4");
 		m.set(FragCoord, "gl_FragCoord");
+		m.set(FrontFacing, "gl_FrontFacing");
 		for( g in m )
 			KWDS.set(g, true);
 		m;

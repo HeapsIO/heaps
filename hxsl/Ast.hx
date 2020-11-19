@@ -247,6 +247,7 @@ enum TGlobal {
 	InstanceID;
 	// gl globals
 	FragCoord;
+	FrontFacing;
 }
 
 enum Component {

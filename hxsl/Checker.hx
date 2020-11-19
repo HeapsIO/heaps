@@ -169,7 +169,7 @@ class Checker {
 				[{ args : [{ name : "uv", type : vec2 }], ret : vec2 }];
 			case Trace:
 				[];
-			case VertexID, InstanceID, FragCoord:
+			case VertexID, InstanceID, FragCoord, FrontFacing:
 				null;
 			}
 			if( def != null )
@@ -177,7 +177,8 @@ class Checker {
 		}
 		globals.set("vertexID", { t : TInt, g : VertexID });
 		globals.set("instanceID", { t : TInt, g : InstanceID });
-		globals.set("_FragCoord", { t : vec4, g : FragCoord });
+		globals.set("fragCoord", { t : vec4, g : FragCoord });
+		globals.set("frontFacing", { t : TBool, g : FrontFacing });
 		globals.set("int", globals.get("toInt"));
 		globals.set("float", globals.get("toFloat"));
 		globals.set("reflect", globals.get("lReflect"));
