@@ -33,8 +33,8 @@ class Convert {
 		return f != null && f != false;
 	}
 
-	function getParam( name : String ) {
-		var f = Reflect.field(params, name);
+	function getParam( name : String ) : Dynamic {
+		var f : Dynamic = Reflect.field(params, name);
 		if( f == null ) throw "Missing required parameter '"+name+"' for converting "+srcPath+" to "+dstPath;
 		return f;
 	}
@@ -221,7 +221,12 @@ class ConvertFNT2BFNT extends Convert {
 class CompressIMG extends Convert {
 
 	override function convert() {
-		command("CompressonatorCLI", ["-silent","-fd",getParam("format"),srcPath,dstPath]);
+		var format = getParam("format");
+		var args = ["-silent"];
+		if( hasParam("alpha") && format == "BC1" )
+			args = args.concat(["-DXT1UseAlpha","1","-AlphaThreshold",""+getParam("alpha")]);
+		args = args.concat(["-fd",""+getParam("format"),srcPath,dstPath]);
+		command("CompressonatorCLI", args);
 	}
 
 	static var _ = Convert.register(new CompressIMG("png,tga,jpg,jpeg","dds"));
