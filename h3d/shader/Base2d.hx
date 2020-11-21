@@ -26,7 +26,7 @@ class Base2d extends hxsl.Shader {
 		@var var calculatedUV : Vec2;
 
 		@const var isRelative : Bool;
-		@param var color : Vec4;
+		@shared @param var color : Vec4;
 		@param var absoluteMatrixA : Vec3;
 		@param var absoluteMatrixB : Vec3;
 		@param var filterMatrixA : Vec3;
