@@ -148,15 +148,18 @@ class Library {
 
 		entry.skip(geom.indexPosition - (geom.vertexPosition + vsize));
 
+		var isSmall = geom.vertexCount < 65534;
+		var imult = isSmall ? 4 : 2;
+
 		var isize;
 		if( material == null )
-			isize = geom.indexCount * 2;
+			isize = geom.indexCount * imult;
 		else {
 			var ipos = 0;
 			for( i in 0...material )
 				ipos += geom.indexCounts[i];
-			entry.skip(ipos * 2);
-			isize = geom.indexCounts[material] * 2;
+			entry.skip(ipos * imult);
+			isize = geom.indexCounts[material] * imult;
 		}
 		var ibuf = haxe.io.Bytes.alloc(isize);
 		entry.read(ibuf, 0, isize);
@@ -194,9 +197,14 @@ class Library {
 					m = m.next;
 				}
 			}
-			var r = 0;
-			for( i in 0...buf.indexes.length )
-				buf.indexes[i] = ibuf.get(r++) | (ibuf.get(r++) << 8);
+			if( isSmall ) {
+				var r = 0;
+				for( i in 0...buf.indexes.length )
+					buf.indexes[i] = ibuf.get(r++) | (ibuf.get(r++) << 8);
+			} else {
+				for( i in 0...buf.indexes.length )
+					buf.indexes[i] = ibuf.getInt32(i << 2);
+			}
 		} else {
 			var icount = geom.indexCounts[material];
 			var vmap = new haxe.ds.Vector(geom.vertexCount);
@@ -204,7 +212,7 @@ class Library {
 			buf.indexes = new haxe.ds.Vector(icount);
 			var r = 0, vcount = 0;
 			for( i in 0...buf.indexes.length ) {
-				var vid = ibuf.get(r++) | (ibuf.get(r++) << 8);
+				var vid = isSmall ? (ibuf.get(r++) | (ibuf.get(r++) << 8)) : ibuf.getInt32(i<<2);
 				var rid = vmap[vid];
 				if( rid == 0 ) {
 					rid = ++vcount;

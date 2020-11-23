@@ -179,10 +179,17 @@ class HMDOut extends BaseLibrary {
 		// build geometry
 		var gm = geom.getGeomMatrix();
 		var vbuf = new hxd.FloatBuffer();
-		var ibufs = [];
+		var ibufs = null, lbufs = null;
+		var isSmall = verts.length > 65534 * 3;
+		if( isSmall ) ibufs = [] else lbufs = [];
 
-		if( skin != null && skin.isSplit() )
-			for( _ in skin.splitJoints ) ibufs.push(new hxd.IndexBuffer());
+		if( skin != null && skin.isSplit() ) {
+			for( _ in skin.splitJoints )
+				if( isSmall )
+					ibufs.push(new hxd.IndexBuffer());
+				else
+					lbufs.push([]);
+		}
 
 		g.bounds = new h3d.col.Bounds();
 		var tmpBuf = new hxd.impl.TypedArray.Float32Array(stride);
@@ -302,11 +309,20 @@ class HMDOut extends BaseLibrary {
 
 			// by-skin-group index
 			if( skin != null && skin.isSplit() ) {
-				for( n in 0...count - 2 ) {
-					var idx = ibufs[skin.triangleGroups[stri++]];
-					idx.push(vertexRemap[start + n]);
-					idx.push(vertexRemap[start + count - 1]);
-					idx.push(vertexRemap[start + n + 1]);
+				if( isSmall ) {
+					for( n in 0...count - 2 ) {
+						var idx = ibufs[skin.triangleGroups[stri++]];
+						idx.push(vertexRemap[start + n]);
+						idx.push(vertexRemap[start + count - 1]);
+						idx.push(vertexRemap[start + n + 1]);
+					}
+				} else {
+					for( n in 0...count - 2 ) {
+						var idx = lbufs[skin.triangleGroups[stri++]];
+						idx.push(vertexRemap[start + n]);
+						idx.push(vertexRemap[start + count - 1]);
+						idx.push(vertexRemap[start + n + 1]);
+					}
 				}
 			}
 			// by-material index
@@ -318,15 +334,28 @@ class HMDOut extends BaseLibrary {
 					mid = mats[matPos];
 					if( mats.length > 1 ) matPos++;
 				}
-				var idx = ibufs[mid];
-				if( idx == null ) {
-					idx = new hxd.IndexBuffer();
-					ibufs[mid] = idx;
-				}
-				for( n in 0...count - 2 ) {
-					idx.push(vertexRemap[start + n]);
-					idx.push(vertexRemap[start + count - 1]);
-					idx.push(vertexRemap[start + n + 1]);
+				if( isSmall ) {
+					var idx = ibufs[mid];
+					if( idx == null ) {
+						idx = new hxd.IndexBuffer();
+						ibufs[mid] = idx;
+					}
+					for( n in 0...count - 2 ) {
+						idx.push(vertexRemap[start + n]);
+						idx.push(vertexRemap[start + count - 1]);
+						idx.push(vertexRemap[start + n + 1]);
+					}
+				} else {
+					var idx = lbufs[mid];
+					if( idx == null ) {
+						idx = [];
+						lbufs[mid] = idx;
+					}
+					for( n in 0...count - 2 ) {
+						idx.push(vertexRemap[start + n]);
+						idx.push(vertexRemap[start + count - 1]);
+						idx.push(vertexRemap[start + n + 1]);
+					}
 				}
 			}
 
@@ -342,15 +371,29 @@ class HMDOut extends BaseLibrary {
 		g.indexCounts = [];
 
 		var matMap = [], matCount = 0;
-		for( idx in ibufs ) {
-			if( idx == null ) {
-				matCount++;
-				continue;
+
+		if( isSmall ) {
+			for( idx in ibufs ) {
+				if( idx == null ) {
+					matCount++;
+					continue;
+				}
+				matMap.push(matCount++);
+				g.indexCounts.push(idx.length);
+				for( i in idx )
+					dataOut.writeUInt16(i);
 			}
-			matMap.push(matCount++);
-			g.indexCounts.push(idx.length);
-			for( i in idx )
-				dataOut.writeUInt16(i);
+		} else {
+			for( idx in lbufs ) {
+				if( idx == null ) {
+					matCount++;
+					continue;
+				}
+				matMap.push(matCount++);
+				g.indexCounts.push(idx.length);
+				for( i in idx )
+					dataOut.writeInt32(i);
+			}
 		}
 
 		if( skin != null && skin.isSplit() )

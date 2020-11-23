@@ -55,7 +55,8 @@ class HMDModel extends MeshPrimitive {
 
 	override function alloc(engine:h3d.Engine) {
 		dispose();
-		buffer = new h3d.Buffer(data.vertexCount, data.vertexStride);
+		var is32 = data.vertexCount >= 65534;
+		buffer = new h3d.Buffer(data.vertexCount, data.vertexStride, is32 ? [LargeBuffer] : null);
 
 		var entry = lib.resource.entry;
 		entry.open();
@@ -72,11 +73,12 @@ class HMDModel extends MeshPrimitive {
 			indexesTriPos.push(Std.int(indexCount/3));
 			indexCount += n;
 		}
-		indexes = new h3d.Indexes(indexCount);
+		indexes = new h3d.Indexes(indexCount, is32);
 
 		entry.skip(data.indexPosition - (data.vertexPosition + size));
-		var bytes = haxe.io.Bytes.alloc(indexCount * 2);
-		entry.read(bytes, 0, indexCount * 2);
+		var imult = is32 ? 4 : 2;
+		var bytes = haxe.io.Bytes.alloc(indexCount * imult);
+		entry.read(bytes, 0, indexCount * imult);
 		indexes.uploadBytes(bytes, 0, indexCount);
 
 		entry.close();
