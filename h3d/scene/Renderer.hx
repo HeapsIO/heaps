@@ -92,9 +92,6 @@ class Renderer extends hxd.impl.AnyProps {
 		return ctx.scene.lightSystem;
 	}
 
-	function time( name : String ) {
-	}
-
 	@:access(h3d.scene.Object)
 	function depthSort( frontToBack, passes : h3d.pass.PassList ) {
 		var cam = ctx.camera.m;
