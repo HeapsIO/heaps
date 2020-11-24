@@ -55,8 +55,7 @@ class HMDModel extends MeshPrimitive {
 
 	override function alloc(engine:h3d.Engine) {
 		dispose();
-		var is32 = data.vertexCount >= 65534;
-		buffer = new h3d.Buffer(data.vertexCount, data.vertexStride, is32 ? [LargeBuffer] : null);
+		buffer = new h3d.Buffer(data.vertexCount, data.vertexStride, [LargeBuffer]);
 
 		var entry = lib.resource.entry;
 		entry.open();
@@ -73,6 +72,7 @@ class HMDModel extends MeshPrimitive {
 			indexesTriPos.push(Std.int(indexCount/3));
 			indexCount += n;
 		}
+		var is32 = data.vertexCount > 0x10000;
 		indexes = new h3d.Indexes(indexCount, is32);
 
 		entry.skip(data.indexPosition - (data.vertexPosition + size));

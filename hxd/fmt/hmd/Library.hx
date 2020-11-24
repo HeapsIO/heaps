@@ -148,8 +148,8 @@ class Library {
 
 		entry.skip(geom.indexPosition - (geom.vertexPosition + vsize));
 
-		var isSmall = geom.vertexCount < 65534;
-		var imult = isSmall ? 4 : 2;
+		var isSmall = geom.vertexCount <= 0x10000;
+		var imult = isSmall ? 2 : 4;
 
 		var isize;
 		if( material == null )
