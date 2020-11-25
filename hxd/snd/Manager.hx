@@ -337,7 +337,7 @@ class Manager {
 					c.position = (lastBuffer.start + lastBuffer.samples) / lastBuffer.sampleRate;
 					releaseSource(s);
 				} else if (c.queue.length > 0) {
-					c.sound    = c.queue[0];
+					c.sound    = c.queue.shift();
 					c.duration = c.sound.getData().duration;
 					c.position = 0;
 					releaseSource(s);
