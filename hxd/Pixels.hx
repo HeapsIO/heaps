@@ -105,9 +105,11 @@ class Pixels {
 	public var format(get,never) : PixelFormat;
 	public var width(default,null) : Int;
 	public var height(default,null) : Int;
-	public var stride(default,null) : Int;
+	public var dataSize(default,null) : Int;
 	public var offset : Int;
 	public var flags: haxe.EnumFlags<Flags>;
+
+	var stride : Int;
 	var bytesPerPixel : Int;
 	var innerFormat(default, set) : PixelFormat;
 
@@ -133,6 +135,7 @@ class Pixels {
 	function set_innerFormat(fmt) {
 		this.innerFormat = fmt;
 		stride = calcStride(width,fmt);
+		dataSize = calcDataSize(width, height, fmt);
 		bytesPerPixel = calcStride(1,fmt);
 		return fmt;
 	}
@@ -299,8 +302,8 @@ class Pixels {
 
 	function copyInner() {
 		var old = bytes;
-		bytes = haxe.io.Bytes.alloc(height * stride);
-		bytes.blit(0, old, offset, height * stride);
+		bytes = haxe.io.Bytes.alloc(dataSize);
+		bytes.blit(0, old, offset, dataSize);
 		offset = 0;
 		flags.unset(ReadOnly);
 	}
@@ -463,6 +466,10 @@ class Pixels {
 		bytes = null;
 	}
 
+	public function toString() {
+		return 'Pixels(${width}x${height} ${format})';
+	}
+
 	public function toPNG( ?level = 9 ) {
 		var png;
 		setFlip(false);
@@ -483,11 +490,19 @@ class Pixels {
 		p.flags = flags;
 		p.flags.unset(ReadOnly);
 		if( bytes != null ) {
-			var size = height * stride;
-			p.bytes = haxe.io.Bytes.alloc(size);
-			p.bytes.blit(0, bytes, offset, size);
+			p.bytes = haxe.io.Bytes.alloc(dataSize);
+			p.bytes.blit(0, bytes, offset, dataSize);
 		}
 		return p;
+	}
+
+	public static function calcDataSize( width : Int, height : Int, format : PixelFormat ) {
+		return switch( format ) {
+		case S3TC(_):
+			(((height + 3) >> 2) << 2) * calcStride(width, format);
+		default:
+			height * calcStride(width, format);
+		}
 	}
 
 	public static function calcStride( width : Int, format : PixelFormat ) {
@@ -507,13 +522,12 @@ class Pixels {
 		case RGB10A2: 4;
 		case RG11B10UF: 4;
 		case S3TC(n):
+			var blocks = (width + 3) >> 2;
 			if( n == 1 || n == 4 )
-				return width >> 1;
-			1;
+				return blocks << 1;
+			return blocks << 2;
 		}
 	}
-
-	static var S3TC_SIZES = [0,-1,1,1,-1,1,1,1];
 
 	/**
 		Returns the byte offset for the requested channel (0=R,1=G,2=B,3=A)
@@ -547,7 +561,7 @@ class Pixels {
 	}
 
 	public static function alloc( width, height, format : PixelFormat ) {
-		return new Pixels(width, height, haxe.io.Bytes.alloc(height * calcStride(width, format)), format);
+		return new Pixels(width, height, haxe.io.Bytes.alloc(calcDataSize(width, height, format)), format);
 	}
 
 }

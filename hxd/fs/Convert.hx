@@ -233,33 +233,6 @@ class CompressIMG extends Convert {
 
 }
 
-class ConvertPNG2HRW extends Convert {
-	public function new() {
-		super("png", "hrw");
-	}
-
-	override function convert() {
-		var img = new hxd.res.Image(new hxd.fs.BytesFileSystem.BytesFileEntry(srcPath, srcBytes));
-		img.getFormat();
-		var inf = @:privateAccess img.inf;
-		var pix = img.getPixels();
-		if(inf.bc == 16)
-			pix.convert(R32F);  // Only grayscale 16 bits supported for now
-
-		var out = new haxe.io.BytesOutput();
-		out.writeString("HRW0");
-		out.writeInt16(pix.width);
-		out.writeInt16(pix.height);
-		var fmtName = pix.format.getName();
-		if(fmtName.length > 12) throw "Invalid name" + fmtName;
-		out.writeString(StringTools.rpad(fmtName, " ", 12));
-		out.writeFullBytes(pix.bytes, 0, pix.bytes.length);
-		save(out.getBytes());
-	}
-
-	static var _ = Convert.register(new ConvertPNG2HRW());
-}
-
 class DummyConvert extends Convert {
 
 	override function convert() {
