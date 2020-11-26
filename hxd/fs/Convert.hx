@@ -220,8 +220,32 @@ class ConvertFNT2BFNT extends Convert {
 
 class CompressIMG extends Convert {
 
+	static var TEXCONV_FMT = [
+		"R16F" => "R16_FLOAT",
+		"R32F" => "R32_FLOAT",
+		"RG16F" => "R16G16_FLOAT",
+		"RG32F" => "R32G32_FLOAT",
+		"RGB16F" => "R16G16B16_FLOAT",
+		"RGB32F" => "R32G32B32_FLOAT",
+		"RGBA16F" => "R16G16B16A16_FLOAT",
+		"RGBA32F" => "R32G32B32A32_FLOAT",
+	];
+
 	override function convert() {
 		var format = getParam("format");
+		var tcFmt = TEXCONV_FMT.get(format);
+		if( tcFmt != null ) {
+			// texconv can only handle output dir, and it prepended to srcPath :'(
+			var tmpPath = new haxe.io.Path(dstPath);
+			tmpPath.ext = "tmp."+new haxe.io.Path(srcPath).ext;
+			var tmpFile = tmpPath.toString();
+			sys.io.File.copy(srcPath, tmpFile);
+			command("texconv", ["-f", tcFmt, "-m", "1", "-y", "-nologo", tmpFile]);
+			sys.FileSystem.deleteFile(tmpFile);
+			tmpPath.ext = "tmp.DDS";
+			sys.FileSystem.rename(tmpPath.toString(), dstPath);
+			return;
+		}
 		var args = ["-silent"];
 		if( hasParam("alpha") && format == "BC1" )
 			args = args.concat(["-DXT1UseAlpha","1","-AlphaThreshold",""+getParam("alpha")]);
