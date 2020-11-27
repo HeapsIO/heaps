@@ -239,6 +239,8 @@ class CompressIMG extends Convert {
 			var tmpPath = new haxe.io.Path(dstPath);
 			tmpPath.ext = "tmp."+new haxe.io.Path(srcPath).ext;
 			var tmpFile = tmpPath.toString();
+			try sys.FileSystem.deleteFile(tmpFile) catch( e : Dynamic ) {};
+			try sys.FileSystem.deleteFile(dstPath) catch( e : Dynamic ) {};
 			sys.io.File.copy(srcPath, tmpFile);
 			command("texconv", ["-f", tcFmt, "-m", "1", "-y", "-nologo", tmpFile]);
 			sys.FileSystem.deleteFile(tmpFile);
