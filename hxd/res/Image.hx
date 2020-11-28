@@ -8,6 +8,7 @@ package hxd.res;
 	var Tga = 3;
 	var Dds = 4;
 	var Raw = 5;
+	var Hdr = 6;
 
 	/*
 		Tells if we might not be able to directly decode the image without going through a loadBitmap async call.
@@ -205,6 +206,15 @@ class Image extends Resource {
 				throw entry.path+" has unsupported 4CC "+fid;
 			}
 
+		case 0x3F23: // HDR RADIANCE
+
+			inf.dataFormat = Hdr;
+			while( f.readLine() != "" ) {}
+			var parts = f.readLine().split(" ");
+			inf.pixelFormat = RGBA32F;
+			inf.height = Std.parseInt(parts[1]);
+			inf.width = Std.parseInt(parts[3]);
+
 		case _ if( entry.extension == "tga" ):
 			inf.dataFormat = Tga;
 			inf.pixelFormat = ARGB;
@@ -327,6 +337,9 @@ class Image extends Resource {
 		case Raw:
 			var bytes = entry.getBytes();
 			pixels = new hxd.Pixels(inf.width, inf.height, bytes, inf.pixelFormat);
+		case Hdr:
+			var data = hxd.fmt.hdr.Reader.decode(entry.getBytes(), false);
+			pixels = new hxd.Pixels(data.width, data.height, data.bytes, inf.pixelFormat);
 		}
 		if( fmt != null ) pixels.convert(fmt);
 		if( flipY != null ) pixels.setFlip(flipY);
