@@ -564,4 +564,110 @@ class Pixels {
 		return new Pixels(width, height, haxe.io.Bytes.alloc(calcDataSize(width, height, format)), format);
 	}
 
+	/**
+		Build DDS texture bytes from an array of pixels :
+		- can contain a single image
+		- can contain multiple layers (set isCubeMap = true if it's a cubemap)
+		- can contain single or multiple layers with mipmaps (auto detected with diffences in size)
+	**/
+	public static function toDDS( pixels : Array<Pixels>, isCubeMap = false ) {
+		if( pixels.length == 0 )
+			throw "Must contain at least one image";
+		var ref = pixels[0];
+		var fmt = ref.format;
+		var levels : Array<Array<Pixels>> = [];
+		var outSize = 0;
+		for( p in pixels ) {
+			if( p.format != fmt ) throw "All images must be of the same pixel format";
+			outSize += p.dataSize;
+			var found = false;
+			for( sz in levels ) {
+				if( sz[0].width == p.width && sz[0].height == p.height ) {
+					sz.push(p);
+					found = true;
+					break;
+				}
+			}
+			if( !found )
+				levels.push([p]);
+		}
+		levels.sort(function(a1,a2) return a2[0].width * a2[0].height - a1[0].width*a1[0].height);
+		var layerCount = levels[0].length;
+		var width = levels[0][0].width;
+		var height = levels[0][0].height;
+		for( i in 1...levels.length ) {
+			var level = levels[i];
+			if( level.length != layerCount ) throw 'Invalid number of mipmaps at level $i: ${level.length} should be $layerCount';
+			var w = width >> i; if( w == 0 ) w = 1;
+			var h = height >> i; if( h == 0 ) h = 1;
+			var lw = level[0].width;
+			var lh = level[0].height;
+			if( lw != w || lh != h ) throw 'Invalid mip level size $i: ${lw}x${lh} should be ${w}x${h}';
+		}
+
+		outSize += 128; // header
+		var ddsOut = haxe.io.Bytes.alloc(outSize);
+		var outPos = 0;
+		inline function write(v) { ddsOut.setInt32(outPos,v); outPos += 4; }
+		write(0x20534444); // 'DDS '
+		write(124);
+		write(0x1 | 0x2 | 0x4 | 0x8 | 0x1000 | 0x20000);
+		write(width);
+		write(height);
+		write(ref.stride);
+		write(1);
+		write(levels.length);
+		for( i in 0...11 ) write(0);
+		// pixel format
+		write(32);
+
+		switch( fmt ) {
+		case ARGB, BGRA, RGBA:
+			write( 0x1 | 0x40 );
+			write(0); // FOURCC
+			write(32);
+			inline function writeMask(c) {
+				var byte = getChannelOffset(fmt,c);
+				write(0xFF << (byte*8));
+			}
+			writeMask(R);
+			writeMask(G);
+			writeMask(B);
+			writeMask(A);
+		default:
+			var alpha = getChannelOffset(fmt, A) >= 0;
+			write( 0x4 );
+			write(switch( fmt ) {
+			case R16F: 111;
+			case RG16F: 112;
+			case RGBA16F: 113;
+			case R32F: 114;
+			case RG32F: 115;
+			case RGBA32F: 116;
+			default: throw "Unsupported format "+fmt;
+			});
+			write(0);
+			write(0);
+			write(0);
+			write(0);
+			write(0);
+		}
+
+		//
+		write((pixels.length == 1 ? 0 : 0x8) | 0x1000 | (levels.length == 1 ? 0 : 0x400000));
+		var cubebits = 0x200 | 0x400 | (layerCount > 1 ? 0x800 : 0) | (layerCount > 2 ? 0x1000 : 0) | (layerCount > 3 ? 0x2000 : 0) | (layerCount > 4 ? 0x4000 : 0) | (layerCount > 5 ? 0x8000 : 0);
+		write( isCubeMap ? cubebits : 0 );
+		write(0);
+		write(0);
+		write(0);
+		// add image data
+		for( i in 0...layerCount )
+			for( l in 0...levels.length ) {
+				var p = levels[l][i];
+				ddsOut.blit(outPos, p.bytes, p.offset, p.dataSize);
+				outPos += p.dataSize;
+			}
+		return ddsOut;
+	}
+
 }
