@@ -244,7 +244,7 @@ class Environment {
 
 	public static function getDefaultLUT() {
 		var engine = h3d.Engine.getCurrent();
-		var t : h3d.mat.Texture = @:privateAccess engine.resCache.get(Environment);
+		var t : h3d.mat.Texture = @:privateAccess engine.resCache.get(IrradLut);
 		if( t != null )
 			return t;
 		t = new h3d.mat.Texture(128, 128, [Target], RGBA32F);
@@ -253,7 +253,7 @@ class Environment {
 			LUT_PIXELS = t.capturePixels();
 		} else
 			t.uploadPixels(LUT_PIXELS);
-		@:privateAccess engine.resCache.set(Environment, t);
+		@:privateAccess engine.resCache.set(IrradLut, t);
 		t.realloc = function() {
 			t.uploadPixels(LUT_PIXELS);
 		}
@@ -285,9 +285,7 @@ class Environment {
 		if( env != null ) env.dispose();
 		if( diffuse != null ) diffuse.dispose();
 		if( specular != null ) specular.dispose();
-		env = null;
-		diffuse = null;
-		specular = null;
+		// do not set to null as their might be candidate for realloc
 	}
 
 	function createTextures() {
@@ -385,6 +383,26 @@ class Environment {
 				engine.popTarget();
 			}
 		}
+	}
+
+	public static function getDefault() {
+		var engine = h3d.Engine.getCurrent();
+		var e : Environment = @:privateAccess engine.resCache.get(Environment);
+		if( e != null ) return e;
+
+		var SRC = hxd.res.Embed.getResource("h3d/scene/pbr/envDefault.dds");
+		var DIF = hxd.res.Embed.getResource("h3d/scene/pbr/envDefault.envd.dds");
+		var SPEC = hxd.res.Embed.getResource("h3d/scene/pbr/envDefault.envs.dds");
+
+		e = new Environment(SRC.toImage().toTexture());
+		e.diffuse = DIF.toImage().toTexture();
+		e.specular = SPEC.toImage().toTexture();
+		e.diffSize = e.diffuse.width;
+		e.specSize = e.specular.width;
+		e.specLevels = e.getMipLevels() - e.ignoredSpecLevels;
+		e.sampleBits = 5;
+		@:privateAccess engine.resCache.set(Environment,e);
+		return e;
 	}
 
 }
