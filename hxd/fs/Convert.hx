@@ -239,6 +239,7 @@ class CompressIMG extends Convert {
 			var tmpPath = new haxe.io.Path(dstPath);
 			tmpPath.ext = "tmp."+new haxe.io.Path(srcPath).ext;
 			var tmpFile = tmpPath.toString();
+			#if sys
 			try sys.FileSystem.deleteFile(tmpFile) catch( e : Dynamic ) {};
 			try sys.FileSystem.deleteFile(dstPath) catch( e : Dynamic ) {};
 			sys.io.File.copy(srcPath, tmpFile);
@@ -246,6 +247,9 @@ class CompressIMG extends Convert {
 			sys.FileSystem.deleteFile(tmpFile);
 			tmpPath.ext = "tmp.DDS";
 			sys.FileSystem.rename(tmpPath.toString(), dstPath);
+			#else
+			throw "Require sys";
+			#end
 			return;
 		}
 		var args = ["-silent"];
