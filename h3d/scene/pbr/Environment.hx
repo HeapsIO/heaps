@@ -214,7 +214,7 @@ class Environment {
 	// Cube Texture - Source converted
 	public var env : h3d.mat.Texture;
 
-	public var lut : h3d.mat.Texture;
+	public var lut(get,never) : h3d.mat.Texture;
 	public var diffuse : h3d.mat.Texture;
 	public var specular : h3d.mat.Texture;
 
@@ -232,8 +232,11 @@ class Environment {
 		this.diffSize = diffSize;
 		this.specSize = specSize;
 		this.sampleBits = sampleBits;
-		this.lut = getDefaultLUT();
 	}
+
+	function get_lut() return getDefaultLUT();
+
+	static var LUT_PIXELS = null;
 
 	public static function getDefaultLUT() {
 		var engine = h3d.Engine.getCurrent();
@@ -241,15 +244,15 @@ class Environment {
 		if( t != null )
 			return t;
 		t = new h3d.mat.Texture(128, 128, [Target], RGBA32F);
-		computeIrradLut(t);
-		@:privateAccess engine.resCache.set(Environment, t);
-
-		function computeLut() {
-			t = new h3d.mat.Texture(128, 128, [Target], RGBA32F);
+		if( LUT_PIXELS == null ) {
 			computeIrradLut(t);
+			LUT_PIXELS = t.capturePixels();
+		} else
+			t.uploadPixels(LUT_PIXELS);
+		@:privateAccess engine.resCache.set(Environment, t);
+		t.realloc = function() {
+			t.uploadPixels(LUT_PIXELS);
 		}
-		t.realloc = computeLut;
-
 		return t;
 	}
 
