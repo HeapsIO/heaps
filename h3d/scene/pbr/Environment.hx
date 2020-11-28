@@ -212,8 +212,7 @@ class Environment {
 	public var source : h3d.mat.Texture;
 
 	// Cube Texture - Source converted
-	public var env : h3d.mat.Texture;
-
+	public var env(get,null) : h3d.mat.Texture;
 	public var lut(get,never) : h3d.mat.Texture;
 	public var diffuse : h3d.mat.Texture;
 	public var specular : h3d.mat.Texture;
@@ -236,6 +235,11 @@ class Environment {
 
 	function get_lut() return getDefaultLUT();
 
+	function get_env() {
+		if( env == null || env.isDisposed() ) env = equiToCube(source);
+		return env;
+	}
+
 	static var LUT_PIXELS = null;
 
 	public static function getDefaultLUT() {
@@ -256,37 +260,34 @@ class Environment {
 		return t;
 	}
 
-	function equiToCube() {
+	public static function equiToCube( source : h3d.mat.Texture ) {
 		if( source.flags.has(Loading) )
 			throw "Source is not ready";
-		if( source.flags.has(Cube) ) {
-			this.env = source;
-		} else {
-			if( source.width != source.height * 2 )
-				throw "Unrecognized environment map format";
-			if(env == null)
-				env = new h3d.mat.Texture(source.height, source.height, [Cube, Target]);
-			var pass = new h3d.pass.ScreenFx(new PanoramaToCube());
-			var engine = h3d.Engine.getCurrent();
-			pass.shader.texture = source;
-			for( i in 0...6 ) {
-				engine.pushTarget(env,i);
-				pass.shader.faceMatrix = getCubeMatrix(i);
-				pass.render();
-				engine.popTarget();
-			}
+		if( source.flags.has(Cube) )
+			return source;
 
-			env.realloc = function() {
-				equiToCube();
-				compute();
-			}
+		if( source.width != source.height * 2 )
+			throw "Unrecognized environment map format";
+		var env = new h3d.mat.Texture(source.height, source.height, [Cube, Target]);
+		var pass = new h3d.pass.ScreenFx(new PanoramaToCube());
+		var engine = h3d.Engine.getCurrent();
+		pass.shader.texture = source;
+		for( i in 0...6 ) {
+			engine.pushTarget(env,i);
+			pass.shader.faceMatrix = getCubeMatrix(i);
+			pass.render();
+			engine.popTarget();
 		}
+		return env;
 	}
 
 	public function dispose() {
 		if( env != null ) env.dispose();
 		if( diffuse != null ) diffuse.dispose();
 		if( specular != null ) specular.dispose();
+		env = null;
+		diffuse = null;
+		specular = null;
 	}
 
 	function createTextures() {
@@ -308,7 +309,7 @@ class Environment {
 		computeIrradiance();
 	}
 
-	function getCubeMatrix( face : Int ) {
+	static function getCubeMatrix( face : Int ) {
 		return h3d.Matrix.L(switch( face ) {
 			case 0: [0,0,-1,0,
 					 0,-1,0,0,
@@ -350,9 +351,6 @@ class Environment {
 	}
 
 	function computeIrradiance() {
-
-		if( env == null )
-			equiToCube();
 
 		var screen = new h3d.pass.ScreenFx(new IrradShader());
 		screen.shader.samplesBits = sampleBits;
