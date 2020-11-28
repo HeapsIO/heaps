@@ -132,11 +132,17 @@ class Image extends Resource {
 			inf.width = f.readInt32();
 			f.skip(8);
 			inf.mipLevels = f.readInt32();
-			f.skip(13*4);
+			f.skip(12*4);
+			var caps = f.readInt32();
 			var fourCC = f.readInt32();
-			f.skip(6 * 4);
+			var bpp = f.readInt32();
+			var rMask = f.readInt32();
+			var gMask = f.readInt32();
+			var bMask = f.readInt32();
+			var aMask = f.readInt32();
 			var caps2 = f.readInt32();
-			if( caps2 & 0xFE00 == 0xFE00 ) // all 6 surfaces required
+			var cubes = f.readInt32();
+			if( cubes & 0xFE00 == 0xFE00 ) // all 6 surfaces required
 				inf.flags.set(IsCube);
 			switch( fourCC & 0xFFFFFF ) {
 			case 0x545844: /* DXT */
@@ -178,6 +184,18 @@ class Image extends Resource {
 				inf.pixelFormat = RG32F;
 			case 116: // D3DFMT_A32B32G32R32F
 				inf.pixelFormat = RGBA32F;
+			case 0:
+				// RGB
+				if( caps & 0x40 != 0 ) {
+					switch( [bpp, rMask, gMask, bMask, aMask] ) {
+					case [32, 0xFF0000, 0xFF00, 0xFF, 0xFF000000]:
+						inf.pixelFormat = BGRA;
+					case [32, 0xFF, 0xFF00, 0xFF0000, 0xFF000000]:
+						inf.pixelFormat = RGBA;
+					default:
+						throw "Unsupported RGB DDS "+bpp+"bits "+StringTools.hex(rMask)+"/"+StringTools.hex(gMask)+"/"+StringTools.hex(bMask)+"/"+StringTools.hex(aMask);
+					}
+				}
 			default:
 			}
 
