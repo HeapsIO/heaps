@@ -272,6 +272,7 @@ class Environment {
 		var pass = new h3d.pass.ScreenFx(new PanoramaToCube());
 		var engine = h3d.Engine.getCurrent();
 		pass.shader.texture = source;
+		env.realloc = null;
 		for( i in 0...6 ) {
 			engine.pushTarget(env,i);
 			pass.shader.faceMatrix = getCubeMatrix(i);
@@ -282,7 +283,7 @@ class Environment {
 	}
 
 	public function dispose() {
-		if( env != null ) env.dispose();
+		if( @:bypassAccessor env != null ) env.dispose();
 		if( diffuse != null ) diffuse.dispose();
 		if( specular != null ) specular.dispose();
 		// do not set to null as their might be candidate for realloc
