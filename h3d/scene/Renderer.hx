@@ -42,6 +42,14 @@ class Renderer extends hxd.impl.AnyProps {
 		backToFront = depthSort.bind(false);
 	}
 
+	public function getEffect<T:h3d.impl.RendererFX>( cl : Class<T> ) : T {
+		for( f in effects ) {
+			var f = Std.downcast(f, cl);
+			if( f != null ) return f;
+		}
+		return null;
+	}
+
 	public function dispose() {
 		for( p in allPasses )
 			p.dispose();
