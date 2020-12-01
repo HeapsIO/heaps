@@ -1425,23 +1425,28 @@ class GlDriver extends Driver {
 	override function capturePixels(tex:h3d.mat.Texture, layer:Int, mipLevel:Int, ?region:h2d.col.IBounds) {
 
 		var pixels : hxd.Pixels;
-		var x : Int, y : Int;
+		var x : Int, y : Int, w : Int, h : Int;
 		if (region != null) {
 			if (region.xMax > tex.width) region.xMax = tex.width;
 			if (region.yMax > tex.height) region.yMax = tex.height;
 			if (region.xMin < 0) region.xMin = 0;
 			if (region.yMin < 0) region.yMin = 0;
-			pixels = hxd.Pixels.alloc(region.width >> mipLevel, region.height >> mipLevel, tex.format);
+			w = region.width;
+			h = region.height;
 			x = region.xMin;
 			y = region.yMin;
 		} else {
-			pixels = hxd.Pixels.alloc(tex.width >> mipLevel, tex.height >> mipLevel, tex.format);
+			w = tex.width;
+			h = tex.height;
 			x = 0;
 			y = 0;
 		}
 
-		if( pixels.width == 0 || pixels.height == 0 )
-			return pixels;
+		w >>= mipLevel;
+		h >>= mipLevel;
+		if( w == 0 ) w = 1;
+		if( h == 0 ) h = 1;
+		pixels = hxd.Pixels.alloc(w, h, tex.format);
 
 		var old = curTarget;
 		var oldCount = numTargets;
@@ -1519,7 +1524,9 @@ class GlDriver extends Driver {
 			gl.framebufferRenderbuffer(GL.FRAMEBUFFER, GL.STENCIL_ATTACHMENT, GL.RENDERBUFFER, null);
 		}
 
-		gl.viewport(0, 0, tex.width >> mipLevel, tex.height >> mipLevel);
+		var w = tex.width >> mipLevel; if( w == 0 ) w = 1;
+		var h = tex.height >> mipLevel; if( h == 0 ) h = 1;
+		gl.viewport(0, 0, w, h);
 		for( i in 0...boundTextures.length )
 			boundTextures[i] = null;
 

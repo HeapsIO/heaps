@@ -381,9 +381,8 @@ class DirectXDriver extends h3d.impl.Driver {
 	override function allocTexture(t:h3d.mat.Texture):Texture {
 
 		var mips = 1;
-		if( t.flags.has(MipMapped) ) {
-			while( t.width >= 1 << mips || t.height >= 1 << mips ) mips++;
-		}
+		if( t.flags.has(MipMapped) )
+			mips = t.mipLevels;
 
 		var rt = t.flags.has(Target);
 		var isCube = t.flags.has(Cube);
@@ -522,10 +521,18 @@ class DirectXDriver extends h3d.impl.Driver {
 			if (region.yMax > tex.height) region.yMax = tex.height;
 			if (region.xMin < 0) region.xMin = 0;
 			if (region.yMin < 0) region.yMin = 0;
-			pixels = hxd.Pixels.alloc(region.width >> mipLevel, region.height >> mipLevel, tex.format);
+			var w = region.width >> mipLevel;
+			var h = region.height >> mipLevel;
+			if( w == 0 ) w = 1;
+			if( h == 0 ) h = 1;
+			pixels = hxd.Pixels.alloc(w, h, tex.format);
 			captureTexPixels(pixels, tex, layer, mipLevel, region.xMin, region.yMin);
 		} else {
-			pixels = hxd.Pixels.alloc(tex.width >> mipLevel, tex.height >> mipLevel, tex.format);
+			var w = tex.width >> mipLevel;
+			var h = tex.height >> mipLevel;
+			if( w == 0 ) w = 1;
+			if( h == 0 ) h = 1;
+			pixels = hxd.Pixels.alloc(w, h, tex.format);
 			captureTexPixels(pixels, tex, layer, mipLevel);
 		}
 		return pixels;
@@ -562,16 +569,16 @@ class DirectXDriver extends h3d.impl.Driver {
 		}
 
 		var pitch = 0;
-		var bpp = hxd.Pixels.calcStride(1, tex.format);
+		var stride = hxd.Pixels.calcStride(desc.width, tex.format);
 		var ptr = tmp.map(0, Read, true, pitch);
 
 		if( hasDeviceError ) throw "Device was disposed during capturePixels";
 
-		if( pitch == desc.width * bpp )
-			@:privateAccess pixels.bytes.b.blit(0, ptr, 0, desc.width * desc.height * bpp);
+		if( pitch == stride )
+			@:privateAccess pixels.bytes.b.blit(0, ptr, 0, desc.height * stride);
 		else {
 			for( i in 0...desc.height )
-				@:privateAccess pixels.bytes.b.blit(i * desc.width * bpp, ptr, i * pitch, desc.width * bpp);
+				@:privateAccess pixels.bytes.b.blit(i * stride, ptr, i * pitch, stride);
 		}
 		tmp.unmap(0);
 		tmp.release();
@@ -877,8 +884,10 @@ class DirectXDriver extends h3d.impl.Driver {
 		Driver.omSetRenderTargets(textures.length, currentTargets, currentDepth == null ? null : currentDepth.view);
 		targetsCount = textures.length;
 
-		viewport[2] = tex.width >> mipLevel;
-		viewport[3] = tex.height >> mipLevel;
+		var w = tex.width >> mipLevel; if( w == 0 ) w = 1;
+		var h = tex.height >> mipLevel; if( h == 0 ) h = 1;
+		viewport[2] = w;
+		viewport[3] = h;
 		viewport[5] = 1.;
 		Driver.rsSetViewports(1, viewport);
 	}

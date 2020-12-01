@@ -39,6 +39,7 @@ class Texture {
 	public var wrap(default, set) : Wrap;
 	public var layerCount(get, never) : Int;
 	public var lodBias : Float = 0.;
+	public var mipLevels(get, never) : Int;
 
 	/**
 		If this callback is set, the texture can be re-allocated when the 3D context has been lost or when
@@ -65,6 +66,16 @@ class Texture {
 	function get_lastFrame()
 	{
 		return _lastFrame;
+	}
+
+	function get_mipLevels() {
+		if( !flags.has(MipMapped) )
+			return 1;
+		/* atm we don't allow textures with mipmaps < max levels */
+		var lv = 1;
+		var w = width, h = height;
+		while( (w >> lv) >= 1 || (h >> lv) >= 1 ) lv++;
+		return lv;
 	}
 
 	public function new(w, h, ?flags : Array<TextureFlags>, ?format : TextureFormat ) {
