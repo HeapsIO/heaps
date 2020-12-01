@@ -328,11 +328,22 @@ class Image extends Resource {
 				}
 				pos += totSize * layer;
 			}
-			var bytes = entry.getBytes();
+			var bytes;
 			var w = inf.width >> mipLevel;
 			var h = inf.height >> mipLevel;
 			if( w == 0 ) w = 1;
 			if( h == 0 ) h = 1;
+			if( inf.mipLevels == 1 && !inf.flags.has(IsCube) ) {
+				bytes = entry.getBytes();
+			} else {
+				var size = hxd.Pixels.calcDataSize(w, h, inf.pixelFormat);
+				entry.open();
+				entry.skip(pos);
+				bytes = haxe.io.Bytes.alloc(size);
+				entry.read(bytes, 0, size);
+				entry.close();
+				pos = 0;
+			}
 			pixels = new hxd.Pixels(w, h, bytes, inf.pixelFormat, pos);
 		case Raw:
 			var bytes = entry.getBytes();
