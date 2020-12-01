@@ -239,7 +239,7 @@ class CompressIMG extends Convert {
 			var tmpPath = new haxe.io.Path(dstPath);
 			tmpPath.ext = "tmp."+new haxe.io.Path(srcPath).ext;
 			var tmpFile = tmpPath.toString();
-			#if sys
+			#if (sys || nodejs)
 			try sys.FileSystem.deleteFile(tmpFile) catch( e : Dynamic ) {};
 			try sys.FileSystem.deleteFile(dstPath) catch( e : Dynamic ) {};
 			sys.io.File.copy(srcPath, tmpFile);
