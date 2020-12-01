@@ -6,7 +6,7 @@ enum Flags {
 	FlipY;
 }
 
-@:forward(bytes, width, height, offset, flags, clear, dispose, toPNG, clone, toVector, sub, blit)
+@:forward(bytes, format, width, height, offset, flags, clear, dispose, toPNG, clone, sub, blit)
 abstract PixelsARGB(Pixels) to Pixels {
 
 
@@ -25,69 +25,60 @@ abstract PixelsARGB(Pixels) to Pixels {
 	}
 }
 
-@:forward(bytes, format, width, height, offset, flags, clear, dispose, toPNG, clone, toVector, sub, blit, invalidFormat, willChange)
+@:forward(bytes, format, width, height, offset, flags, clear, dispose, toPNG, clone, sub, blit)
 @:access(hxd.Pixels)
 abstract PixelsFloat(Pixels) to Pixels {
 
 	public inline function getPixelF(x, y, ?v:h3d.Vector) {
 		if( v == null )
 			v = new h3d.Vector();
-		switch(this.format) {
-			case R32F:
-				var pix = ((x + y * this.width) << 2) + this.offset;
-				v.set(this.bytes.getFloat(pix),0,0,0);
-				return v;
-			case RGBA32F:
-				var pix = ((x + y * this.width) << 4) + this.offset;
-				v.set(this.bytes.getFloat(pix), this.bytes.getFloat(pix+4), this.bytes.getFloat(pix+8), this.bytes.getFloat(pix+12));
-				return v;
-			default:
-				this.invalidFormat();
-				return null;
-		}
+		var pix = ((x + y * this.width) << 2) + this.offset;
+		v.x = this.bytes.getFloat(pix);
+		return v;
 	}
 
 	public inline function setPixelF(x, y, v:h3d.Vector) {
-		switch(this.format) {
-			case R32F:
-				var pix = ((x + y * this.width) << 2) + this.offset;
-				this.bytes.setFloat(pix, v.x);
-			case RGBA32F:
-				var pix = ((x + y * this.width) << 4) + this.offset;
-				this.bytes.setFloat(pix, v.x);
-				this.bytes.setFloat(pix + 4, v.y);
-				this.bytes.setFloat(pix + 8, v.z);
-				this.bytes.setFloat(pix + 12, v.w);
-			default:
-				this.invalidFormat();
-		}
+		var pix = ((x + y * this.width) << 2) + this.offset;
+		this.bytes.setFloat(pix, v.x);
 	}
 
 	@:from public static function fromPixels(p:Pixels) : PixelsFloat {
 		p.setFlip(false);
+		p.convert(R32F);
 		return cast p;
 	}
 
-	public function convert( target : PixelFormat ) {
-		if( this.format == target )
-			return;
-		this.willChange();
-		var bytes : hxd.impl.UncheckedBytes = this.bytes;
-		switch( [this.format, target] ) {
+}
 
-		case [RGBA32F, R32F]:
-			var nbytes = haxe.io.Bytes.alloc(this.height * this.width * 4);
-			var out : hxd.impl.UncheckedBytes = nbytes;
-			for( i in 0 ... this.width * this.height )
-				nbytes.setFloat(i << 2, this.bytes.getFloat(i << 4));
-			this.bytes = nbytes;
+@:forward(bytes, format, width, height, offset, flags, clear, dispose, toPNG, clone, sub, blit)
+@:access(hxd.Pixels)
+abstract PixelsFloatRGBA(Pixels) to Pixels {
 
-		default:
-			throw "Cannot convert from " + this.format + " to " + target;
-		}
-
-		this.innerFormat = target;
+	public inline function getPixelF(x, y, ?v:h3d.Vector) {
+		if( v == null )
+			v = new h3d.Vector();
+		var pix = ((x + y * this.width) << 4) + this.offset;
+		v.x = this.bytes.getFloat(pix);
+		v.y = this.bytes.getFloat(pix+4);
+		v.z = this.bytes.getFloat(pix+8);
+		v.w = this.bytes.getFloat(pix+12);
+		return v;
 	}
+
+	public inline function setPixelF(x, y, v:h3d.Vector) {
+		var pix = ((x + y * this.width) << 4) + this.offset;
+		this.bytes.setFloat(pix, v.x);
+		this.bytes.setFloat(pix+4, v.y);
+		this.bytes.setFloat(pix+8, v.z);
+		this.bytes.setFloat(pix+12, v.w);
+	}
+
+	@:from public static function fromPixels(p:Pixels) : PixelsFloatRGBA {
+		p.setFlip(false);
+		p.convert(RGBA32F);
+		return cast p;
+	}
+
 }
 
 @:enum abstract Channel(Int) {
@@ -407,6 +398,13 @@ class Pixels {
 			}
 			this.bytes = nbytes;
 
+		case [RGBA32F, R32F]:
+			var nbytes = haxe.io.Bytes.alloc(this.height * this.width * 4);
+			var out : hxd.impl.UncheckedBytes = nbytes;
+			for( i in 0 ... this.width * this.height )
+				nbytes.setFloat(i << 2, this.bytes.getFloat(i << 4));
+			this.bytes = nbytes;
+
 		case [S3TC(a),S3TC(b)] if( a == b ):
 			// nothing
 
@@ -459,6 +457,39 @@ class Pixels {
 			bytes.setInt32(p, switchEndian(color));
 		default:
 			invalidFormat();
+		}
+	}
+
+	public function getPixelF(x, y, ?v:h3d.Vector) {
+		if( v == null )
+			v = new h3d.Vector();
+		var p = ((x + yflip(y) * width) * bytesPerPixel) + offset;
+		switch( format ) {
+		case R32F:
+			v.set(bytes.getFloat(p),0,0,0);
+			return v;
+		case RGBA32F:
+			v.set(bytes.getFloat(p), bytes.getFloat(p+4), bytes.getFloat(p+8), bytes.getFloat(p+12));
+			return v;
+		default:
+			v.setColor(getPixel(x,y));
+			return v;
+		}
+	}
+
+	public function setPixelF(x, y, v:h3d.Vector) {
+		willChange();
+		var p = ((x + yflip(y) * width) * bytesPerPixel) + offset;
+		switch( format ) {
+		case R32F:
+			bytes.setFloat(p, v.x);
+		case RGBA32F:
+			bytes.setFloat(p, v.x);
+			bytes.setFloat(p + 4, v.y);
+			bytes.setFloat(p + 8, v.z);
+			bytes.setFloat(p + 12, v.w);
+		default:
+			setPixel(x,y,v.toColor());
 		}
 	}
 
