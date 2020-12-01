@@ -20,8 +20,7 @@ class Indirect extends PropsDefinition {
 
 		// Sky Params
 		@param var skyMap : SamplerCube;
-		@param var skyThreshold : Float;
-		@param var skyScale : Float;
+		@param var skyHdrMax : Float;
 		@const var gammaCorrect : Bool;
 		@param var cameraInvViewProj : Mat4;
 		@param var skyColorValue : Vec3;
@@ -53,7 +52,7 @@ class Indirect extends PropsDefinition {
 					else {
 						var normal = (vec3( uvToScreen(calculatedUV), 1. ) * cameraInvViewProj.mat3x4()).normalize();
 						color = skyMap.get(rotateNormal(normal)).rgb;
-						color.rgb *= mix(1.0, skyScale, (max( max(color.r, max(color.g, color.b)) - skyThreshold, 0) / max(0.001, (1.0 - skyThreshold))));
+						color = min(color, skyHdrMax);
 					}
 					if( gammaCorrect )
 						color *= color;

@@ -385,7 +385,7 @@ class Renderer extends h3d.scene.Renderer {
 			pbrIndirect.irrSpecular = env.specular;
 			pbrIndirect.irrSpecularLevels = env.specLevels;
 			pbrIndirect.cameraInvViewProj.load(ctx.camera.getInverseViewProj());
-			pbrIndirect.skyScale = 1.0;
+			pbrIndirect.skyHdrMax = 1.0;
 			pbrIndirect.drawIndirectDiffuse = true;
 			pbrIndirect.drawIndirectSpecular = true;
 
@@ -397,8 +397,7 @@ class Renderer extends h3d.scene.Renderer {
 				pbrIndirect.skyMap = switch( skyMode ) {
 				case Hide: null;
 				case Env:
-					pbrIndirect.skyScale = env.scale;
-					pbrIndirect.skyThreshold = env.threshold;
+					pbrIndirect.skyHdrMax = env.hdrMax;
 					pbrIndirect.gammaCorrect = true;
 					env.env;
 				case Specular:

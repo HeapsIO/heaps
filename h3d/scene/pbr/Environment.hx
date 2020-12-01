@@ -52,8 +52,7 @@ class IrradShader extends IrradBase {
 		@param var cubeSize : Float;
 		@param var cubeScaleFactor : Float;
 
-		@param var threshold : Float;
-		@param var scale : Float;
+		@param var hdrMax : Float;
 
 		function cosineWeightedSampling( p : Vec2, n : Vec3 ) : Vec3 {
 			var sq = sqrt(1 - p.x);
@@ -97,9 +96,8 @@ class IrradShader extends IrradBase {
 				}
 				var amount = n.dot(l).saturate();
 				if( amount > 0 ) {
-					var envMapColor = envMap.get(l).rgb;
-					envMapColor *= mix(1.0, scale, (max( max(envMapColor.r, max(envMapColor.g, envMapColor.b)) - threshold, 0) / max(0.001, (1.0 - threshold))));
-					color += gammaCorrect(envMapColor) * amount;
+					var envColor = gammaCorrect(min(envMap.get(l).rgb, hdrMax));
+					color += envColor * amount;
 					totalWeight += amount;
 				}
 			}
@@ -207,6 +205,7 @@ class Environment {
 	public var specSize : Int;
 	public var specLevels : Int;
 	public var ignoredSpecLevels : Int = 1;
+	public var hdrMax : Float = 10.0;
 
 	// 2D Texture - Panoramic
 	public var source : h3d.mat.Texture;
@@ -219,8 +218,6 @@ class Environment {
 
 	public var power : Float = 1.;
 	public var rot : Float = 0.;
-	public var threshold : Float = 0.;
-	public var scale : Float = 1.;
 
 	/*
 		Source can be cube map already prepared or a 2D equirectangular map that
@@ -355,8 +352,7 @@ class Environment {
 		screen.shader.samplesBits = sampleBits;
 		screen.shader.envMap = env;
 		screen.shader.isSRGB = env.isSRGB();
-		screen.shader.threshold = threshold;
-		screen.shader.scale = scale;
+		screen.shader.hdrMax = hdrMax;
 
 		var engine = h3d.Engine.getCurrent();
 
