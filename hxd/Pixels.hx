@@ -529,6 +529,15 @@ class Pixels {
 		}
 	}
 
+	public static function isFloatFormat( format : PixelFormat ) {
+		return switch( format ) {
+		case R16F, RG16F, RGB16F, RGBA16F: true;
+		case R32F, RG32F, RGB32F, RGBA32F: true;
+		case S3TC(6): true;
+		default: false;
+		}
+	}
+
 	/**
 		Returns the byte offset for the requested channel (0=R,1=G,2=B,3=A)
 		Returns -1 if the channel is not found
