@@ -468,6 +468,9 @@ class Pixels {
 		case R32F:
 			v.set(bytes.getFloat(p),0,0,0);
 			return v;
+		case RG32F:
+			v.set(bytes.getFloat(p), bytes.getFloat(p+4),0,0);
+			return v;
 		case RGBA32F:
 			v.set(bytes.getFloat(p), bytes.getFloat(p+4), bytes.getFloat(p+8), bytes.getFloat(p+12));
 			return v;
