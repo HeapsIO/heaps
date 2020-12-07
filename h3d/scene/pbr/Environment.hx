@@ -156,6 +156,10 @@ class PanoramaToCube extends h3d.shader.ScreenShader {
 		@param var texture : Sampler2D;
 		@param var faceMatrix : Mat3;
 
+		// Fake HDR
+		@param var threshold : Float;
+		@param var aboveThresholdScale : Float;
+
 		function getNormal() : Vec3 {
 			var d = input.uv * 2. - 1.;
 			return (vec3(d,1.) * faceMatrix).normalize();
@@ -167,6 +171,10 @@ class PanoramaToCube extends h3d.shader.ScreenShader {
     		uv *= vec2(0.1591, 0.3183);
     		uv += 0.5;
 			pixelColor = texture.get(uv);
+
+			// Fake HDR
+			if( max(max(pixelColor.r, pixelColor.g), pixelColor.b) > threshold )
+				pixelColor *= aboveThresholdScale;
 		}
 
 	};
@@ -233,7 +241,7 @@ class Environment {
 	function get_lut() return getDefaultLUT();
 
 	function get_env() {
-		if( env == null || env.isDisposed() ) env = equiToCube(source);
+		if( (env == null || env.isDisposed()) && source != null) env = equiToCube(source);
 		return env;
 	}
 
@@ -257,7 +265,7 @@ class Environment {
 		return t;
 	}
 
-	public static function equiToCube( source : h3d.mat.Texture ) {
+	public static function equiToCube( source : h3d.mat.Texture, ?threshold = 1.0, ?scale = 1.0 ) {
 		if( source.flags.has(Loading) )
 			throw "Source is not ready";
 		if( source.flags.has(Cube) )
@@ -269,6 +277,8 @@ class Environment {
 		var pass = new h3d.pass.ScreenFx(new PanoramaToCube());
 		var engine = h3d.Engine.getCurrent();
 		pass.shader.texture = source;
+		pass.shader.aboveThresholdScale = scale;
+		pass.shader.threshold = threshold;
 		env.realloc = null;
 		for( i in 0...6 ) {
 			engine.pushTarget(env,i);
