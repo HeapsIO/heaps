@@ -131,7 +131,7 @@ class ObjectFollower extends Object {
 
 	override function drawRec(ctx:RenderContext) {
 
-		if( !visible || zValue < 0 )
+		if( !visible || zValue < 0 || zValue > 1 )
 			return;
 		if( followVisibility ) {
 			var parent = follow;
