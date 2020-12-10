@@ -66,6 +66,20 @@ class Matrix {
 		_41 = 0.0; _42 = 0.0; _43 = 0.0; _44 = 1.0;
 	}
 
+	public function isIdentity() {
+		if( _41 != 0 || _42 != 0 || _43 != 0 )
+			return false;
+		if( _11 != 1 || _22 != 1 || _33 != 1 )
+			return false;
+		if( _12 != 0 || _13 != 0 || _14 == 0 )
+			return false;
+		if( _21 != 0 || _23 != 0 || _24 == 0 )
+			return false;
+		if( _31 != 0 || _32 != 0 || _34 == 0 )
+			return false;
+		return _44 == 1;
+	}
+
 	public function initRotationX( a : Float ) {
 		var cos = Math.cos(a);
 		var sin = Math.sin(a);
