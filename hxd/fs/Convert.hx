@@ -233,6 +233,7 @@ class CompressIMG extends Convert {
 
 	override function convert() {
 		var format = getParam("format");
+		var mips = hasParam("mips") && getParam("mips") == true;
 		var tcFmt = TEXCONV_FMT.get(format);
 		if( tcFmt != null ) {
 			// texconv can only handle output dir, and it prepended to srcPath :'(
@@ -243,7 +244,9 @@ class CompressIMG extends Convert {
 			try sys.FileSystem.deleteFile(tmpFile) catch( e : Dynamic ) {};
 			try sys.FileSystem.deleteFile(dstPath) catch( e : Dynamic ) {};
 			sys.io.File.copy(srcPath, tmpFile);
-			command("texconv", ["-f", tcFmt, "-m", "1", "-y", "-nologo", tmpFile]);
+			var args = ["-f", tcFmt, "-y", "-nologo", tmpFile];
+			if( !mips ) args = ["-m", "1"].concat(args);
+			command("texconv", args);
 			sys.FileSystem.deleteFile(tmpFile);
 			tmpPath.ext = "tmp.DDS";
 			sys.FileSystem.rename(tmpPath.toString(), dstPath);
@@ -253,6 +256,10 @@ class CompressIMG extends Convert {
 			return;
 		}
 		var args = ["-silent"];
+		if( mips ) {
+			args.push("-miplevels");
+			args.push("20"); // max ?
+		}
 		if( hasParam("alpha") && format == "BC1" )
 			args = args.concat(["-DXT1UseAlpha","1","-AlphaThreshold",""+getParam("alpha")]);
 		args = args.concat(["-fd",""+getParam("format"),srcPath,dstPath]);
