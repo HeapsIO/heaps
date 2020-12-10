@@ -408,6 +408,8 @@ class DirectXDriver extends h3d.impl.Driver {
 		if( isArray )
 			desc.arraySize = t.layerCount;
 		if( t.flags.has(MipMapped) && !t.flags.has(ManualMipMapGen) ) {
+			if( t.format.match(S3TC(_)) )
+				throw "Cannot generate mipmaps for compressed texture "+t;
 			desc.bind |= RenderTarget;
 			desc.misc |= GenerateMips;
 		}
