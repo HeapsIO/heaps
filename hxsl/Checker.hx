@@ -809,6 +809,8 @@ class Checker {
 					default:
 						error("Precision qualifier not supported on " + v.type, pos);
 					}
+				case Borrow(source):
+					if ( v.kind != Local ) error("Borrow should not have a type qualifier", pos);
 				case Ignore, Doc(_):
 				}
 		}
