@@ -321,6 +321,7 @@ class FileConverter {
 		if( !sys.FileSystem.exists(fullOutPath) )
 			throw "Converted output file "+fullOutPath+" was not created";
 
+		match.ver = conv.version;
 		match.time = time;
 		match.hash = hash;
 		saveCache();
