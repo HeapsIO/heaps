@@ -491,6 +491,8 @@ class Image extends Resource {
 			flags.push(MipMapped);
 			flags.push(ManualMipMapGen);
 		}
+		if( fmt == R16U )
+			throw "Unsupported texture format "+fmt+" for "+entry.path;
 		tex = new h3d.mat.Texture(inf.width, inf.height, flags, fmt);
 		if( DEFAULT_FILTER != Linear ) tex.filter = DEFAULT_FILTER;
 		tex.setName(entry.path);
