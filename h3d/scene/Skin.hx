@@ -216,15 +216,18 @@ class Skin extends MultiMaterial {
 		syncJoints();
 	}
 
+	static var TMP_MAT = new h3d.Matrix();
+
 	@:noDebug
 	function syncJoints() {
 		if( !jointsUpdated ) return;
+		var tmpMat = TMP_MAT;
 		for( j in skinData.allJoints ) {
 			var id = j.index;
 			var m = currentAbsPose[id];
 			var r = currentRelPose[id];
 			var bid = j.bindIndex;
-			if( r == null ) r = j.defMat else if( j.retargetAnim ) { r._41 = j.defMat._41; r._42 = j.defMat._42; r._43 = j.defMat._43; }
+			if( r == null ) r = j.defMat else if( j.retargetAnim ) { tmpMat.load(r); r = tmpMat; r._41 = j.defMat._41; r._42 = j.defMat._42; r._43 = j.defMat._43; }
 			if( j.parent == null )
 				m.multiply3x4inline(r, absPos);
 			else
