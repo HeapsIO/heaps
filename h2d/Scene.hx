@@ -777,22 +777,37 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 
 	override function clipBounds(ctx:RenderContext, bounds:h2d.col.Bounds, scaleX = 1., scaleY = 1.)
 	{
-		// Scene always uses whole window surface as a filter bounds as to not clip out cameras.
-		if ( rotation == 0 ) {
-			bounds.addPos(-absX * scaleX, -absY * scaleY);
-			bounds.addPos((window.width / matA - absX) * scaleX, (window.height / matD - absY) * scaleY);
+		// See Object.clipBounds for special notes on why Scene clipper always outputs entire viewport.
+		// In short: Cameras.
+		var matA, matB, matC, matD, absX, absY;
+		@:privateAccess if( ctx.inFilter != null ) {
+			var f1 = ctx.baseShader.filterMatrixA;
+			var f2 = ctx.baseShader.filterMatrixB;
+			var tmpA = this.matA * f1.x + this.matB * f1.y;
+			var tmpB = this.matA * f2.x + this.matB * f2.y;
+			var tmpC = this.matC * f1.x + this.matD * f1.y;
+			var tmpD = this.matC * f2.x + this.matD * f2.y;
+			var tmpX = this.absX * f1.x + this.absY * f1.y + f1.z;
+			var tmpY = this.absX * f2.x + this.absY * f2.y + f2.z;
+			matA = (tmpA * ctx.viewA + tmpB * ctx.viewC) / scaleX;
+			matB = (tmpA * ctx.viewB + tmpB * ctx.viewD) / scaleY;
+			matC = (tmpC * ctx.viewA + tmpD * ctx.viewC) / scaleX;
+			matD = (tmpC * ctx.viewB + tmpD * ctx.viewD) / scaleY;
+			absX = (tmpX * ctx.viewA + tmpY * ctx.viewC + ctx.viewX);
+			absY = (tmpX * ctx.viewB + tmpY * ctx.viewD + ctx.viewY);
 		} else {
-			inline function calc(x:Float, y:Float) {
-				bounds.addPos((x * matA + y * matC) * scaleX, (x * matB + y * matD) * scaleY);
-			}
-			var ww = window.width / matA - absX;
-			var wh = window.height / matD - absY;
-			calc(-absX, -absY);
-			calc(ww - absX, -absY);
-			calc(-absX, wh - absY);
-			calc(ww - absX, wh - absY);
+			matA = (this.matA * ctx.viewA + this.matB * ctx.viewC) / scaleX;
+			matB = (this.matA * ctx.viewB + this.matB * ctx.viewD) / scaleY;
+			matC = (this.matC * ctx.viewA + this.matD * ctx.viewC) / scaleX;
+			matD = (this.matC * ctx.viewB + this.matD * ctx.viewD) / scaleY;
+			absX = (this.absX * ctx.viewA + this.absY * ctx.viewC + ctx.viewX);
+			absY = (this.absX * ctx.viewB + this.absY * ctx.viewD + ctx.viewY);
 		}
-		super.clipBounds(ctx, bounds, scaleX, scaleY);
+		var invDet = 1 / (matA * matD - matB * matC);
+		bounds.xMin = ( (-1 - absX) * matD + (absY + 1 ) * matC ) * invDet;
+		bounds.yMin = ( (absX + 1 ) * matB + (-1 - absY) * matA ) * invDet;
+		bounds.xMax = ( (1 - absX ) * matD + (absY - 1 ) * matC ) * invDet;
+		bounds.yMax = ( (absX - 1 ) * matB + (1 - absY ) * matA ) * invDet;
 	}
 
 	override function drawContent(ctx:RenderContext)

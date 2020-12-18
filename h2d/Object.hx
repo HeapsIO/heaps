@@ -749,6 +749,9 @@ class Object #if (domkit && !domkit_heaps) implements domkit.Model<h2d.Object> #
 		<span class="label">Internal usage</span>
 		Clip the local bounds with our global viewport.
 		Used during filter rendering in order to clip out areas that are off-screen and should not be rendered.
+
+		`h2d.Scene` note: `clipBounds` will always output bounds equivalent to entire window.
+		This is done in order for scene to never clip out cameras as they may render virtually any area of the Scene.
 	**/
 	@:dox(show)
 	function clipBounds( ctx : RenderContext, bounds : h2d.col.Bounds, scaleX = 1., scaleY = 1. ) {
