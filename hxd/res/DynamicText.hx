@@ -84,7 +84,7 @@ class DynamicText {
 			onMissing(path, "is missing");
 			return null;
 		}
-		if( Api.is(old,Array) ) {
+		if( Api.isOfType(old,Array) ) {
 			onMissing(path,"should be a group");
 			return null;
 		}
@@ -155,23 +155,23 @@ class DynamicText {
 						path.pop();
 						continue;
 					}
-					if( Api.is(sub,String) ) {
+					if( Api.isOfType(sub,String) ) {
 						onMissing(path,"should be a text and not a group");
 						path.pop();
 						continue;
 					}
 					// build structure
 					var ref = ref == null ? null : refIds.get(id);
-					if( Api.is(sub,Array) ) {
+					if( Api.isOfType(sub,Array) ) {
 						var elements : Array<Dynamic> = sub;
 						var data = [for( e in x.elements ) e];
 						var dataRef = ref == null ? null : [for( e in ref.elements ) e];
 						for( i in 0...elements.length ) {
 							var e = elements[i];
 							path.push("[" + i + "]");
-							if( Api.is(e, Array) ) {
+							if( Api.isOfType(e, Array) ) {
 								trace("TODO");
-							} else if( Api.is(e, String) ) {
+							} else if( Api.isOfType(e, String) ) {
 								var enew = applyText(path, e, data[i], dataRef == null ? null : dataRef[i], onMissing);
 								if( enew != null )
 									elements[i] = enew;
@@ -211,12 +211,12 @@ class DynamicText {
 				for( e in x.elements ) {
 					var v : Dynamic = parseXmlData(e);
 					if( isArray ) {
-						if( !Api.is(v, Array) ) v = [v];
+						if( !Api.isOfType(v, Array) ) v = [v];
 					} else {
-						if( Api.is(v, Array) ) {
+						if( Api.isOfType(v, Array) ) {
 							for( i in 0...a.length ) {
 								var v = a[i];
-								if( !Api.is(v, Array) )
+								if( !Api.isOfType(v, Array) )
 									a[i] = [v];
 							}
 							isArray = true;

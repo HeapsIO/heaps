@@ -360,7 +360,7 @@ class Style extends domkit.CssStyle {
 		var dom = obj.dom;
 		if(dom != null) {
 			for( s in dom.style ) {
-				if( s.p.name == "text" || hxd.impl.Api.is(s.value,h2d.Tile) ) continue;
+				if( s.p.name == "text" || hxd.impl.Api.isOfType(s.value,h2d.Tile) ) continue;
 				lines.push(' <font color="#D0D0D0"> ${s.p.name}</font> <font color="#808080">${s.value}</font><font color="#606060"> (style)</font>');
 			}
 			for( i in 0...dom.currentSet.length ) {

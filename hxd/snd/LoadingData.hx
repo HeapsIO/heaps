@@ -11,7 +11,7 @@ class LoadingData extends Data {
 
 	override function decode(out:haxe.io.Bytes, outPos:Int, sampleStart:Int, sampleCount:Int):Void {
 		var d = snd.getData();
-		if( hxd.impl.Api.is(d, LoadingData) )
+		if( hxd.impl.Api.isOfType(d, LoadingData) )
 			throw "Sound data is not yet available, use load() first";
 		d.decode(out, outPos, sampleStart, sampleCount);
 	}
@@ -20,7 +20,7 @@ class LoadingData extends Data {
 		if( waitCount > 10 )
 			throw "Failed to load data";
 		var d = snd.getData();
-		if( hxd.impl.Api.is(d, LoadingData) ) {
+		if( hxd.impl.Api.isOfType(d, LoadingData) ) {
 			waitCount++;
 			haxe.Timer.delay(load.bind(onEnd), 100);
 			return;

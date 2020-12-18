@@ -10,7 +10,7 @@ class Api {
 		#end
 	}
 
-	public static inline function is( v : Dynamic, t : Dynamic) : Bool {
+	public static inline function isOfType( v : Dynamic, t : Dynamic) : Bool {
 		#if (haxe_ver >= 4.1)
 		return Std.isOfType(v, t);
 		#else
