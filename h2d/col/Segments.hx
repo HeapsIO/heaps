@@ -3,7 +3,7 @@ import hxd.Math;
 
 /**
 	An abstract over the list of `Segment`s. Alternative representation of a polygon.
-	
+
 	Segments must be connected to form a complete polygonal shape.
 	Provides a more efficient distance calculus.
 

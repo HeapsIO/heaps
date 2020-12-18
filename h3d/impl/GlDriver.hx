@@ -1147,8 +1147,8 @@ class GlDriver extends Driver {
 		gl.bindTexture(bind, t.t.t);
 		pixels.convert(t.format);
 		pixels.setFlip(false);
+		var dataLen = pixels.dataSize;
 		#if hl
-		var dataLen = pixels.height*pixels.stride;
 		var stream = streamData(pixels.bytes.getData(),pixels.offset,dataLen);
 		if( t.format.match(S3TC(_)) ) {
 			#if( (hlsdl == "1.8.0") || (hlsdl == "1.9.0") )
@@ -1159,7 +1159,6 @@ class GlDriver extends Driver {
 		} else
 			gl.texImage2D(face, mipLevel, t.t.internalFmt, pixels.width, pixels.height, 0, getChannels(t.t), t.t.pixelFmt, stream);
 		#elseif js
-		var bufLen = pixels.stride * pixels.height;
 		#if hxnodejs
 		if( (pixels:Dynamic).bytes.b.hxBytes != null ) {
 			// if the pixels are a nodejs buffer, their might be GC'ed while upload !
@@ -1169,10 +1168,10 @@ class GlDriver extends Driver {
 		}
 		#end
 		var buffer : ArrayBufferView = switch( t.format ) {
-		case RGBA32F, R32F, RG32F, RGB32F: new Float32Array(@:privateAccess pixels.bytes.b.buffer, pixels.offset, bufLen>>2);
-		case RGBA16F, R16F, RG16F, RGB16F: new Uint16Array(@:privateAccess pixels.bytes.b.buffer, pixels.offset, bufLen>>1);
-		case RGB10A2, RG11B10UF: new Uint32Array(@:privateAccess pixels.bytes.b.buffer, pixels.offset, bufLen>>2);
-		default: new Uint8Array(@:privateAccess pixels.bytes.b.buffer, pixels.offset, bufLen);
+		case RGBA32F, R32F, RG32F, RGB32F: new Float32Array(@:privateAccess pixels.bytes.b.buffer, pixels.offset, dataLen>>2);
+		case RGBA16F, R16F, RG16F, RGB16F: new Uint16Array(@:privateAccess pixels.bytes.b.buffer, pixels.offset, dataLen>>1);
+		case RGB10A2, RG11B10UF: new Uint32Array(@:privateAccess pixels.bytes.b.buffer, pixels.offset, dataLen>>2);
+		default: new Uint8Array(@:privateAccess pixels.bytes.b.buffer, pixels.offset, dataLen);
 		}
 		if( t.format.match(S3TC(_)) )
 			gl.compressedTexImage2D(face, mipLevel, t.t.internalFmt, pixels.width, pixels.height, 0, buffer);
@@ -1426,23 +1425,28 @@ class GlDriver extends Driver {
 	override function capturePixels(tex:h3d.mat.Texture, layer:Int, mipLevel:Int, ?region:h2d.col.IBounds) {
 
 		var pixels : hxd.Pixels;
-		var x : Int, y : Int;
+		var x : Int, y : Int, w : Int, h : Int;
 		if (region != null) {
 			if (region.xMax > tex.width) region.xMax = tex.width;
 			if (region.yMax > tex.height) region.yMax = tex.height;
 			if (region.xMin < 0) region.xMin = 0;
 			if (region.yMin < 0) region.yMin = 0;
-			pixels = hxd.Pixels.alloc(region.width >> mipLevel, region.height >> mipLevel, tex.format);
+			w = region.width;
+			h = region.height;
 			x = region.xMin;
 			y = region.yMin;
 		} else {
-			pixels = hxd.Pixels.alloc(tex.width >> mipLevel, tex.height >> mipLevel, tex.format);
+			w = tex.width;
+			h = tex.height;
 			x = 0;
 			y = 0;
 		}
 
-		if( pixels.width == 0 || pixels.height == 0 )
-			return pixels;
+		w >>= mipLevel;
+		h >>= mipLevel;
+		if( w == 0 ) w = 1;
+		if( h == 0 ) h = 1;
+		pixels = hxd.Pixels.alloc(w, h, tex.format);
 
 		var old = curTarget;
 		var oldCount = numTargets;
@@ -1520,7 +1524,9 @@ class GlDriver extends Driver {
 			gl.framebufferRenderbuffer(GL.FRAMEBUFFER, GL.STENCIL_ATTACHMENT, GL.RENDERBUFFER, null);
 		}
 
-		gl.viewport(0, 0, tex.width >> mipLevel, tex.height >> mipLevel);
+		var w = tex.width >> mipLevel; if( w == 0 ) w = 1;
+		var h = tex.height >> mipLevel; if( h == 0 ) h = 1;
+		gl.viewport(0, 0, w, h);
 		for( i in 0...boundTextures.length )
 			boundTextures[i] = null;
 

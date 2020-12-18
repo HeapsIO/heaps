@@ -134,7 +134,7 @@ class Point #if apicheck implements h2d.impl.PointApi<Point,Matrix> #end {
 	}
 
 	/**
-		Multiplies `x,y` by scalar `f` and returns this Point.
+		Multiplies `x,y` by scalar `f`.
 	**/
 	public inline function scale( f : Float ) {
 		x *= f;

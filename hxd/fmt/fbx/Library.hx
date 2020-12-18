@@ -131,13 +131,13 @@ class Library extends BaseLibrary {
 				skin.material = skin.materials[0];
 				m.remove();
 				// ignore key frames for this object
-				defaultModelMatrixes.get(m.name).wasRemoved = o.model.getId();
+				// defaultModelMatrixes.get(m.name).wasRemoved = o.model.getId();
 			}
 			// set skin after materials
-			if( skinData.boundJoints.length > maxBonesPerSkin ) {
+			if( skinData.boundJoints.length > BaseLibrary.maxBonesPerSkin ) {
 				var model = hxd.impl.Api.downcast(skinData.primitive, h3d.prim.FBXModel);
 				var idx = model.geom.getIndexes();
-				skinData.split(maxBonesPerSkin, [for( i in idx.idx) idx.vidx[i]], model.multiMaterial ? model.geom.getMaterialByTriangle() : null);
+				skinData.split(BaseLibrary.maxBonesPerSkin, [for( i in idx.idx) idx.vidx[i]], model.multiMaterial ? model.geom.getMaterialByTriangle() : null);
 			}
 			skin.setSkinData(skinData);
 		}

@@ -180,7 +180,7 @@ class Mp3Data extends Data {
 			offset = (currentSample - frameStart) * 4 * channels;
 			out.blit(outPos, frame, offset, frame.length - offset);
 			outPos += frame.length - offset;
-			
+
 			sampleCount -= writeSamples;
 			currentSample += writeSamples;
 			seekFrame(currentFrame + 1);
@@ -213,7 +213,7 @@ class Mp3Data extends Data {
 		currentFrame = to;
 		mp3_decode_frame(reader, bytes, bytes.length, frameOffsets[to], frame, frame.length, 0);
 	}
-	
+
 	@:hlNative("fmt", "mp3_open") static function mp3_open( bytes : hl.Bytes, size : Int ) : Mp3File {
 		return null;
 	}

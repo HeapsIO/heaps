@@ -6,7 +6,7 @@ import hxd.Math;
 
 	Serves as a virtual container that does not display anything but can contain other objects
 	so the various transforms are inherited to its children.
-	
+
 	Private events `Object.onAdd`, `Object.onRemove` and `Object.onHierarchyChanged` can be used
 	to capture when Object is added/removed from the currently active scene as well as being moved withing the object tree.
 

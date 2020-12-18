@@ -67,7 +67,7 @@ class ArrayCopy extends ScreenFx<ArrayCopyShader> {
 		return inst.apply(from, fromLayer, to, blend, pass, layer);
 	}
 }
-	
+
 private class CopyShader extends h3d.shader.ScreenShader {
 
 	static var SRC = {

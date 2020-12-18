@@ -686,7 +686,7 @@ class TileGroup extends Drawable {
 		// On some mobile GPU, uploading while rendering does create a lot of stall.
 		// Let's make sure to force the upload before starting while we are still
 		// syncing our 2d scene.
-		content.flush();
+		if( visible ) content.flush();
 	}
 
 	/**

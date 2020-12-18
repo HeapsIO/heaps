@@ -11,7 +11,7 @@ private typedef RenderZoneStack = { hasRZ:Bool, x:Float, y:Float, w:Float, h:Flo
 
 /**
 	A 2D scene renderer.
-	
+
 	Passed during `Object.sync` and `Object.drawRec` and can be accessed directly via `Scene.renderer`.
 **/
 @:access(h2d.Scene)
@@ -72,7 +72,7 @@ class RenderContext extends h3d.impl.RenderContext {
 
 	/**
 		<span class="label">Internal usage</span>
-		
+
 		Used to calculate filter rendering bounds.
 	**/
 	@:dox(hide)
@@ -163,7 +163,7 @@ class RenderContext extends h3d.impl.RenderContext {
 
 	/**
 		<span class="label">Internal usage</span>
-		
+
 		Prepares RenderContext to begin rendering a new frame.
 	**/
 	public function begin() {
@@ -263,7 +263,7 @@ class RenderContext extends h3d.impl.RenderContext {
 		entry.vd = tmpD;
 		entry.vx = viewX;
 		entry.vy = viewY;
-		
+
 		viewA = cam.matA * tmpA + cam.matB * tmpC;
 		viewB = cam.matA * tmpB + cam.matB * tmpD;
 		viewC = cam.matC * tmpA + cam.matD * tmpC;
@@ -338,7 +338,7 @@ class RenderContext extends h3d.impl.RenderContext {
 		flush();
 		engine.pushTarget(t);
 		initShaders(baseShaderList);
-		
+
 		var entry = targetsStack[targetsStackIndex++];
 		if ( entry == null ) {
 			entry = { t: null, va: 0, vb: 0, vc: 0, vd: 0, vx: 0, vy: 0, hasRZ: false, rzX: 0, rzY: 0, rzW: 0, rzH: 0 };
@@ -492,7 +492,7 @@ class RenderContext extends h3d.impl.RenderContext {
 			w = rx2 - rx1;
 			h = ry2 - ry1;
 		}
-		
+
 		engine.setRenderZone(
 			Std.int(x * scaleX + (scene.viewportX+1) * (engine.width / 2) + 1e-10),
 			Std.int(y * scaleY + (scene.viewportY+1) * (engine.height / 2) + 1e-10),
@@ -500,7 +500,7 @@ class RenderContext extends h3d.impl.RenderContext {
 			Std.int(h * scaleY + 1e-10)
 		);
 	}
-	
+
 	inline function clearRZ() {
 		hasRenderZone = false;
 		engine.setRenderZone();

@@ -137,7 +137,13 @@ class ModelCache {
 			// if not - multiple children were added and cannot be returned as a single object
 			return parent.numChildren == prevChild + 1 ? parent.getChildAt(prevChild) : null;
 		}
-		return ctx.local3d.numChildren == 1 ? ctx.local3d.getChildAt(0) : ctx.local3d;
+		if( ctx.local3d.numChildren == 1 ) {
+			// if we have a single root with no scale/rotate/offset we can return it
+			var obj = ctx.local3d.getChildAt(0);
+			if( obj.getTransform().isIdentity() )
+				return obj;
+		}
+		return ctx.local3d;
 	}
 
 	#end

@@ -8,7 +8,7 @@ class Slider extends h2d.Interactive {
 		The slider background tile.
 
 		If Tile width does not match with Slider width, it will be resized through `Tile.setSize` to match the Slider width.
-		
+
 		Defaults to the monocolor 0x808080 Tile with the size of `Slider.width x 4` and centered vertically within `Slider.height`.
 	**/
 	public var tile : h2d.Tile;

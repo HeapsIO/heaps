@@ -4,7 +4,7 @@ import haxe.io.Output;
 
 @:access(h2d.Font)
 class Writer {
-	
+
 	static inline var VERSION : Int = 1;
 	// V1 format:
 	// [BFNT][0x00][0x01]
@@ -16,13 +16,13 @@ class Writer {
 	//     [prevChar:i4][advance:i2]
 	//   [kerning-terminator:0x00000000] or [kerning]
 	// [glyph-terminator:0x00000000] or [glyph]
-	
+
 	var out : Output;
-	
+
 	public function new( out : Output ) {
 		this.out = out;
 	}
-	
+
 	public function write( font : h2d.Font ) {
 		out.writeString("BFNT");
 		out.writeByte(0);
@@ -45,11 +45,11 @@ class Writer {
 		} else {
 			out.writeInt32(0);
 		}
-		
+
 		for ( id in font.glyphs.keys() ) {
-			
+
 			if (id == 0) continue; // Safety measure if for some reason there's actually a character with ID 0.
-			
+
 			var glyph = font.glyphs.get(id);
 			var t = glyph.t;
 			out.writeInt32(id);
@@ -72,7 +72,7 @@ class Writer {
 		}
 		out.writeInt32(0);
 	}
-	
+
 	inline function writeString( s : String ) {
 		if ( s == null ) s = "";
 		var bytes = haxe.io.Bytes.ofString(s);

@@ -40,10 +40,10 @@ class Reader {
 		if( b == 0xFF ) return null;
 		return i.readString(b);
 	}
-	
-	
+
+
 	static var HMD_STRINGS : Map<String,String>;
-	
+
 	// make sure some strings are reused between models
 	// in order to prevent many similar String to be kept into memory
 	function readCachedName() {

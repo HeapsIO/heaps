@@ -210,6 +210,20 @@ class Math {
 		return if( da > -max && da < max ) b else a + (da < 0 ? -max : max);
 	}
 
+	/**
+		Move a value towards the given target using the max increment. Return the new value.
+	**/
+	public static inline function valueMove( v : Float, target : Float, max : Float ) {
+		if( v < target ) {
+			v += max;
+			if( v > target ) v = target;
+		} else if( v > target ) {
+			v -= max;
+			if( v < target ) v = target;
+		}
+		return v;
+	}
+
 	public static inline function shuffle<T>( a : Array<T> ) {
 		var len = a.length;
 		for( i in 0...len ) {

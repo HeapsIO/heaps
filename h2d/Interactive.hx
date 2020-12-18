@@ -187,6 +187,7 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 			if( enableRightButton || e.button == 0 ) {
 				mouseDownButton = e.button;
 				onPush(e);
+				if( e.cancel ) mouseDownButton = -1;
 			}
 		case ERelease:
 			if( enableRightButton || e.button == 0 ) {
@@ -337,9 +338,9 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 		Sent when Interactive is unpressed under multiple circumstances.
 		* Always sent if user releases mouse while it is inside Interactive hitbox area.
 			This happens regardless if that Interactive was pressed prior or not,
-			and due to that it's not guaranteed that `Interactive.onPush` would precede this event.  
+			and due to that it's not guaranteed that `Interactive.onPush` would precede this event.
 			`Event.kind` is set to `ERelease` during this event.
-		* Sent before `Interactive.onReleaseOutside` if this Interactive was pressed, but released outside its hitbox area.  
+		* Sent before `Interactive.onReleaseOutside` if this Interactive was pressed, but released outside its hitbox area.
 			`Event.kind` is set to `EReleaseOutside` during this event.
 
 		See `Interactive.onClick` and `Interactive.onReleaseOutside` methods for separate events that trigger only when user interacts with this particular Interactive.
@@ -377,7 +378,7 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 	**/
 	public dynamic function onMove( e : hxd.Event ) {
 	}
-	
+
 	/**
 		Sent when user scrolls mouse wheel above the Interactive. Wheel delta can be obtained through the `Event.wheelDelta`.
 	**/

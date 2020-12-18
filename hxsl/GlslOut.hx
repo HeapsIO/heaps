@@ -34,6 +34,7 @@ class GlslOut {
 		m.set(BVec3, "bvec3");
 		m.set(BVec4, "bvec4");
 		m.set(FragCoord, "gl_FragCoord");
+		m.set(FrontFacing, "gl_FrontFacing");
 		for( g in m )
 			KWDS.set(g, true);
 		m;
@@ -255,12 +256,17 @@ class GlslOut {
 				return "textureCubeLodEXT";
 			default:
 			}
-		case Texel, TexelLod:
+		case Texel:
 			// if ( isES2 )
 			// 	decl("vec4 _texelFetch(sampler2d tex, ivec2 pos, int lod) ...")
 			// 	return "_texelFetch";
 			// else
 				return "texelFetch";
+		case TextureSize:
+			decl("vec2 _textureSize(sampler2D sampler, int lod) { return vec2(textureSize(sampler, lod)); }");
+			decl("vec3 _textureSize(sampler2DArray sampler, int lod) { return vec3(textureSize(sampler, lod)); }");
+			decl("vec2 _textureSize(samplerCube sampler, int lod) { return vec2(textureSize(sampler, lod)); }");
+			return "_textureSize";
 		case Mod if( rt == TInt && isES ):
 			decl("int _imod( int x, int y ) { return int(mod(float(x),float(y))); }");
 			return "_imod";
@@ -384,11 +390,29 @@ class GlslOut {
 		case TCall({ e : TGlobal(g = Texel) }, args):
 			add(getFunName(g,args,e.t));
 			add("(");
-			for( e in args ) {
-				addValue(e, tabs);
+			addValue(args[0], tabs); // sampler
+			add(", ");
+			addValue(args[1], tabs); // uv
+			if ( args.length != 2 ) {
+				// with LOD argument
 				add(", ");
+				addValue(args[2], tabs);
+				add(")");
+			} else {
+				add(", 0)");
 			}
-			add("0)");
+		case TCall({ e : TGlobal(g = TextureSize) }, args):
+			add(getFunName(g,args,e.t));
+			add("(");
+			addValue(args[0], tabs);
+			if ( args.length != 1 ) {
+				// with LOD argument
+				add(", ");
+				addValue(args[1], tabs);
+				add(")");
+			} else {
+				add(", 0)");
+			}
 		case TCall(v, args):
 			switch( v.e ) {
 			case TGlobal(g):

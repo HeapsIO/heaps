@@ -7,7 +7,7 @@ import hxd.Math;
 **/
 @:forward(push,remove)
 abstract Polygons(Array<Polygon>) from Array<Polygon> to Array<Polygon> {
-	
+
 	/**
 		An underlying Polygon array.
 	**/

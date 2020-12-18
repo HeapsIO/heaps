@@ -27,7 +27,7 @@ class Hide extends Filter {
 
 /**
 	A base class for filters that utilize separate Objects as a masking object.
-	
+
 	Not intended to be used directly.
 
 	Masking objects have a number of restrictions on them, see `AbstractMask.mask` for details.
@@ -41,7 +41,7 @@ class AbstractMask extends Filter {
 	var bindCount : Int = 0;
 	/**
 		The Object contents of which serve as a mask to the filtered Object.
-		
+
 		Masking Objects have following limitations:
 		* It cannot be a parent of the filtered Object.
 		* It should not contain any filters.
@@ -87,7 +87,7 @@ class AbstractMask extends Filter {
 		mask = m;
 		if( m != null && bindCount > 0 ) {
 			if( m.filter != null ) {
-				if( Std.is(m.filter,Hide) ) throw "Same mask can't be part of several filters";
+				if( hxd.impl.Api.is(m.filter,Hide) ) throw "Same mask can't be part of several filters";
 				throw "Can't set mask with filter "+m.filter;
 			}
 			m.filter = hide;

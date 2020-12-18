@@ -4,11 +4,11 @@ package h2d;
 	A 2D camera representation attached to `h2d.Scene`.
 
 	Enables ability to move, scale and rotate the scene viewport.
-	
+
 	Scene supports usage of multiple Camera instances.
 	To configure which layers each Camera renders - `Camera.layerVisible` method should be overridden.
 	By default, camera does not clip out the contents that are outside camera bounding box, which can be enabled through `Camera.clipViewport`.
-	
+
 	Due to Heaps event handling structure, only one Camera instance can handle the mouse/touch input, and can be set through `h2d.Scene.interactiveCamera` variable.
 	Note that during even handing, interactive camera does not check if the Camera itself is visible nor the layers filters as well as `clipViewport` is not applied.
 **/
@@ -80,7 +80,7 @@ class Camera {
 
 	/**
 		Camera visibility.
-		
+
 		Does not affect the user input when Camera is set as interactive camera.
 	**/
 	public var visible : Bool;
@@ -141,7 +141,7 @@ class Camera {
 		Does not affect the user input when Camera is set as interactive camera.
 
 		Usage example:
-		
+
 		```haxe
 		final LAYER_SHARED = 0;
 		final LAYER_PLAYER_1 = 2;
@@ -164,7 +164,7 @@ class Camera {
 	public dynamic function layerVisible( layer : Int ) : Bool {
 		return true;
 	}
-	
+
 	/**
 		<span class="label">Internal usage</span>
 
@@ -305,7 +305,7 @@ class Camera {
 	// Screen <-> Camera
 	/**
 		Convert screen position into a local camera position.
-		
+
 		Requires Camera being attached to a Scene.
 	**/
 	inline function screenXToCamera( mx : Float, my : Float ) : Float {
@@ -314,7 +314,7 @@ class Camera {
 
 	/**
 		Convert screen position into a local camera position.
-		
+
 		Requires Camera being attached to a Scene.
 	**/
 	inline function screenYToCamera( mx : Float, my : Float ) : Float {
@@ -323,7 +323,7 @@ class Camera {
 
 	/**
 		Convert local camera position to absolute screen position.
-		
+
 		Requires Camera being attached to a Scene.
 	**/
 	inline function cameraXToScreen( mx : Float, my : Float ) : Float {
@@ -332,7 +332,7 @@ class Camera {
 
 	/**
 		Convert local camera position to absolute screen position.
-		
+
 		Requires Camera being attached to a Scene.
 	**/
 	inline function cameraYToScreen( mx : Float, my : Float ) : Float {
@@ -427,7 +427,7 @@ class Camera {
 	/**
 		Convert local camera position into absolute scene position.
 		Does not represent screen position, see `Camera.cameraToScreen` to convert position with accounting of `scaleMode`.
-		
+
 		Requires Camera being attached to a Scene.
 	**/
 	public function cameraToScene( pt : h2d.col.Point ) {

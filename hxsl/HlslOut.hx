@@ -34,6 +34,7 @@ class HlslOut {
 		m.set(BVec3, "bool3");
 		m.set(BVec4, "bool4");
 		m.set(FragCoord,"_in.__pos__");
+		m.set(FrontFacing, "_in.isFrontFace");
 		for( g in m )
 			KWDS.set(g, true);
 		m;
@@ -43,6 +44,7 @@ class HlslOut {
 	var SV_TARGET = "SV_TARGET";
 	var SV_VertexID = "SV_VertexID";
 	var SV_InstanceID = "SV_InstanceID";
+	var SV_IsFrontFace = "SV_IsFrontFace";
 	var STATIC = "static ";
 	var buf : StringBuf;
 	var exprIds = 0;
@@ -265,7 +267,7 @@ class HlslOut {
 			if( g == Texture && isVertex )
 				add(",0");
 			add(")");
-		case TCall({ e : TGlobal(g = (Texel | TexelLod)) }, args):
+		case TCall({ e : TGlobal(g = (Texel)) }, args):
 			addValue(args[0], tabs);
 			add(".Load(");
 			switch ( args[1].t ) {
@@ -277,16 +279,28 @@ class HlslOut {
 					throw "assert";
 			}
 			addValue(args[1],tabs);
-			switch( g ) {
-				case Texel:
-					add(", 0");
-				case TexelLod:
-					add(", ");
-					addValue(args[2],tabs);
-				default:
-					throw "assert";
+			if ( args.length != 2 ) {
+				// with LOD argument
+				add(", ");
+				addValue(args[2], tabs);
+			} else {
+				add(", 0");
 			}
 			add("))");
+		case TCall({ e : TGlobal(g = (TextureSize)) }, args):
+			decl("float2 textureSize(Texture2D tex, int lod) { float w; float h; tex.GetDimensions(tex, (uint)lod, out w, out h); return float2(w, h); }");
+			decl("float3 textureSize(Texture2DArray tex, int lod) { float w; float h; float els; tex.GetDimensions(tex, (uint)lod, out w, out h, out els); return float3(w, h, els); }");
+			decl("float2 textureSize(TextureCube tex, int lod) { float w; float h; tex.GetDimensions(tex, (uint)lod, out w, out h); return float2(w, h); }");
+			add("textureSize(");
+			addValue(args[0], tabs);
+			if (args.length != 1) {
+				// With LOD argument
+				add(", ");
+				addValue(args[1],tabs);
+			} else {
+				add(", 0");
+			}
+			add(")");
 		case TCall(e = { e : TGlobal(g) }, args):
 			switch( [g,args.length] ) {
 			case [Vec2, 1] if( args[0].t == TFloat ):
@@ -609,6 +623,8 @@ class HlslOut {
 			add("\tuint vertexID : "+SV_VertexID+";\n");
 		if( foundGlobals.exists(InstanceID) )
 			add("\tuint instanceID : "+SV_InstanceID+";\n");
+		if( foundGlobals.exists(FrontFacing) )
+			add("\tbool isFrontFace : "+SV_IsFrontFace+";\n");
 		add("};\n\n");
 
 		add("struct s_output {\n");
