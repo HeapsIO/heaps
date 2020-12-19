@@ -527,7 +527,7 @@ class Renderer extends h3d.scene.Renderer {
 			var x = Std.int((e.relX / win.width) * 4);
 			var y = Std.int((e.relY / win.height) * 4);
 			if( slides.shader.mode != Full ) {
-				slides.shader.mode = h3d.shader.pbr.Slides.DebugMode.Full;
+				slides.shader.mode = Full;
 			} else {
 				var a : Array<h3d.shader.pbr.Slides.DebugMode>;
 				if( y == 3 )
