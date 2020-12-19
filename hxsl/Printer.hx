@@ -238,6 +238,7 @@ class Printer {
 			case OpNegBits:"~";
 			case OpIncrement:"++";
 			case OpDecrement:"--";
+			default: throw "assert"; // OpSpread for Haxe4.2+
 			});
 			addExpr(e, tabs);
 		case TBinop(op, e1, e2):

@@ -372,6 +372,7 @@ class GlslOut {
 			case OpIncrement: "++";
 			case OpDecrement: "--";
 			case OpNegBits: "~";
+			default: throw "assert"; // OpSpread for Haxe4.2+
 			});
 			addValue(e1, tabs);
 		case TVarDecl(v, init):
