@@ -73,27 +73,8 @@ class Linker {
 		switch( v.kind ) {
 		case Global, Input, Var, Local, Output:
 			// shared vars
-		case Param if ( shaderName != null ):
-			var valid = false;
-			for ( q in v.qualifiers ) {
-				switch (q) {
-					case Borrow(source):
-						if ( StringTools.startsWith(shaderName, source) )
-							valid = true;
-						break;
-					default:
-				}
-			}
-			for ( q in v2.qualifiers ) {
-				switch (q) {
-					case Borrow(source):
-						if ( StringTools.startsWith(shaderName, source) )
-							valid = true;
-						break;
-					default:
-				}
-			}
-			if (!valid) throw "assert";
+		case Param if ( shaderName != null && v2.hasBorrowQualifier(shaderName) ):
+			// Other variable attempts to borrow.
 		case Param, Function:
 			throw "assert";
 		}
@@ -110,7 +91,7 @@ class Linker {
 					}
 				// add a new field
 				if( ft == null )
-					fl2.push(allocVar(f1,p, null, null, shaderName).v);
+					fl2.push(allocVar(f1,p, shaderName).v);
 				else
 					mergeVar(path + "." + ft.name, f1, ft, p, shaderName);
 			}
@@ -120,9 +101,9 @@ class Linker {
 		}
 	}
 
-	function allocVar( v : TVar, p : Position, ?path : String, ?parent : AllocatedVar, ?shaderName : String ) : AllocatedVar {
+	function allocVar( v : TVar, p : Position, ?shaderName : String, ?path : String, ?parent : AllocatedVar ) : AllocatedVar {
 		if( v.parent != null && parent == null ) {
-			parent = allocVar(v.parent, p, null, null, shaderName);
+			parent = allocVar(v.parent, p, shaderName);
 			var p = parent.v;
 			path = p.name;
 			p = p.parent;
@@ -188,7 +169,7 @@ class Linker {
 		varMap.set(key, a);
 		switch( v2.type ) {
 		case TStruct(vl):
-			v2.type = TStruct([for( v in vl ) allocVar(v, p, key, a, shaderName).v]);
+			v2.type = TStruct([for( v in vl ) allocVar(v, p, shaderName, key, a).v]);
 		default:
 		}
 		return a;
@@ -379,7 +360,7 @@ class Linker {
 		for( s in shadersData ) {
 			isBatchShader = batchMode && StringTools.startsWith(s.name,"batchShader_");
 			for( v in s.vars ) {
-				var v2 = allocVar(v, null, null, null, s.name);
+				var v2 = allocVar(v, null, s.name);
 				if( isBatchShader && v2.v.kind == Param && !StringTools.startsWith(v2.path,"Batch_") )
 					v2.v.kind = Local;
 				if( v.kind == Output ) outVars.push(v);

@@ -385,7 +385,7 @@ class Tools {
 		if ( v.qualifiers != null )
 			for( q in v.qualifiers )
 				switch (q) {
-					case Borrow(s): return StringTools.startsWith(path, s);
+					case Borrow(s): return path == s;
 					default:
 				}
 		return false;
