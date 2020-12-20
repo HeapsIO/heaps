@@ -770,15 +770,15 @@ class Object #if (domkit && !domkit_heaps) implements domkit.Model<h2d.Object> #
 			matB = (tmpA * ctx.viewB + tmpB * ctx.viewD) / scaleY;
 			matC = (tmpC * ctx.viewA + tmpD * ctx.viewC) / scaleX;
 			matD = (tmpC * ctx.viewB + tmpD * ctx.viewD) / scaleY;
-			absX = (tmpX * ctx.viewA + tmpY * ctx.viewC + ctx.viewX) / scaleX;
-			absY = (tmpX * ctx.viewB + tmpY * ctx.viewD + ctx.viewY) / scaleY;
+			absX = (tmpX * ctx.viewA + tmpY * ctx.viewC + ctx.viewX);
+			absY = (tmpX * ctx.viewB + tmpY * ctx.viewD + ctx.viewY);
 		} else {
 			matA = (this.matA * ctx.viewA + this.matB * ctx.viewC) / scaleX;
 			matB = (this.matA * ctx.viewB + this.matB * ctx.viewD) / scaleY;
 			matC = (this.matC * ctx.viewA + this.matD * ctx.viewC) / scaleX;
 			matD = (this.matC * ctx.viewB + this.matD * ctx.viewD) / scaleY;
-			absX = (this.absX * ctx.viewA + this.absY * ctx.viewC + ctx.viewX) / scaleX;
-			absY = (this.absX * ctx.viewB + this.absY * ctx.viewD + ctx.viewY) / scaleY;
+			absX = (this.absX * ctx.viewA + this.absY * ctx.viewC + ctx.viewX);
+			absY = (this.absX * ctx.viewB + this.absY * ctx.viewD + ctx.viewY);
 		}
 
 		// intersect our transformed local view with our viewport in global space
@@ -864,7 +864,7 @@ class Object #if (domkit && !domkit_heaps) implements domkit.Model<h2d.Object> #
 		var yMin = Math.floor(total.yMin + 1e-10);
 		var width = Math.ceil(total.xMax - xMin - 1e-10);
 		var height = Math.ceil(total.yMax - yMin - 1e-10);
-
+		
 		if( width <= 0 || height <= 0 || total.xMax < total.xMin ) {
 			ctx.popFilter();
 			return;
@@ -896,16 +896,18 @@ class Object #if (domkit && !domkit_heaps) implements domkit.Model<h2d.Object> #
 		ctx.flush();
 
 		var finalTile = h2d.Tile.fromTexture(t);
-		finalTile.dx = Math.floor(xMin / scaleX);
-		finalTile.dy = Math.floor(yMin / scaleY);
-		finalTile.width = Math.ceil(finalTile.width / scaleX);
-		finalTile.height = Math.ceil(finalTile.height / scaleY);
+		finalTile.dx = xMin / scaleX;
+		finalTile.dy = yMin / scaleY;
 
 		var prev = finalTile;
 		finalTile = filter.draw(ctx, finalTile);
-		if( finalTile != prev && finalTile != null ) {
-			finalTile.dx += Math.floor(xMin / scaleX);
-			finalTile.dy += Math.floor(yMin / scaleY);
+		if (finalTile != null) {
+			if( finalTile != prev ) {
+				finalTile.dx += xMin / scaleX;
+				finalTile.dy += yMin / scaleY;
+			}
+			finalTile.width  = finalTile.width / scaleX;
+			finalTile.height = finalTile.height / scaleY;
 		}
 
 		shader.filterMatrixA.load(oldA);
