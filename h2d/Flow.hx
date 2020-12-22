@@ -650,6 +650,14 @@ class Flow extends Object {
 		updateConstraint();
 	}
 
+	override function onHierarchyMoved(parentChanged:Bool) {
+		super.onHierarchyMoved(parentChanged);
+		isConstraint = false;
+		constraintWidth = -1;
+		constraintHeight = -1;
+		updateConstraint();
+	}
+
 	override function contentChanged( s : Object ) {
 		while( s.parent != this )
 			s = s.parent;
