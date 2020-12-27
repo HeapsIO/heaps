@@ -79,8 +79,6 @@ class Console #if !macro extends h2d.Object #end {
 	var aliases : Map<String,String>;
 	var logDY : Float = 0;
 	var logs : Array<String>;
-	var traceLimit:Int = 200;
-	var traces = [];
 	var logIndex:Int;
 	var curCmd:String;
 
@@ -525,9 +523,7 @@ class Console #if !macro extends h2d.Object #end {
 	public function log( text : String, ?color ) {
 		if( color == null ) color = tf.textColor;
 		var oldH = logTxt.textHeight;
-		traces.push('<font color="#${StringTools.hex(color&0xFFFFFF,6)}">${StringTools.htmlEscape(text)}</font><br/>');
-		if (traces.length > traceLimit) traces.shift();
-		logTxt.text = traces.join("");
+		logTxt.text = logTxt.text + '<font color="#${StringTools.hex(color&0xFFFFFF,6)}">${StringTools.htmlEscape(text)}</font><br/>';
 		if( logDY != 0 ) logDY += logTxt.textHeight - oldH;
 		logTxt.alpha = 1;
 		logTxt.visible = true;

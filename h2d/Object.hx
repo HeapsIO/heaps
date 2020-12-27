@@ -903,8 +903,8 @@ class Object #if (domkit && !domkit_heaps) implements domkit.Model<h2d.Object> #
 		finalTile = filter.draw(ctx, finalTile);
 		if (finalTile != null) {
 			if( finalTile != prev ) {
-				finalTile.dx += xMin / scaleX;
-				finalTile.dy += yMin / scaleY;
+				finalTile.dx = (finalTile.dx + xMin) / scaleX;
+				finalTile.dy = (finalTile.dy + yMin) / scaleY;
 			}
 			finalTile.width  = finalTile.width / scaleX;
 			finalTile.height = finalTile.height / scaleY;
