@@ -43,6 +43,8 @@ class CheckBox extends h2d.Flow {
 		var t = h2d.Tile.fromColor(0x404040, width, width);
 		new h2d.Bitmap(t, box);
 
+		var borderWidth = borderLeft + borderRight;
+		var borderHeight = borderTop + borderBottom;
 		var t = h2d.Tile.fromColor(0, width - borderWidth * 2, width - borderHeight * 2);
 		var bg = new h2d.Bitmap(t, box);
 		bg.x = borderWidth;
