@@ -202,18 +202,20 @@ class CustomParser extends CssValue.ValueParser {
 	public function parseFlowBackground(value) {
 		return switch( value ) {
 		case VIdent("transparent"): null;
-		case VGroup([tile,VInt(x),VInt(y)]):
-			{ tile : parseTile(tile), borderW : x, borderH : y };
+		case VGroup([tile,VInt(w),VInt(h)]):
+			{ tile : parseTile(tile), borderL : w, borderT : h, borderR : w, borderB : h };
+		case VGroup([tile,VInt(l),VInt(t),VInt(r),VInt(b)]):
+			{ tile : parseTile(tile), borderL : l, borderT : t, borderR : r, borderB : b };
 		case VGroup([color,alpha]):
 			var c = parseColor(color);
 			var a = parseFloat(alpha);
-			return { tile : #if macro true #else h2d.Tile.fromColor(c,a) #end, borderW : 0, borderH : 0 };
+			return { tile : #if macro true #else h2d.Tile.fromColor(c,a) #end, borderL : 0, borderT : 0, borderR : 0, borderB : 0 };
 		case VCall("disc",args) if( args.length == 1 || args.length == 2 ):
 			var c = parseColor(args[0]);
 			var a = args[1] == null ? 1. : parseFloat(args[1]);
-			return { tile : #if macro true #else h2d.Tile.fromTexture(h3d.mat.Texture.genDisc(256,c,a)) #end, borderW : 0, borderH : 0 };
+			return { tile : #if macro true #else h2d.Tile.fromTexture(h3d.mat.Texture.genDisc(256,c,a)) #end, borderL : 0, borderT : 0, borderR : 0, borderB : 0 };
 		default:
-			{ tile : parseTile(value), borderW : 0, borderH : 0 };
+			{ tile : parseTile(value), borderL : 0, borderT : 0, borderR : 0, borderB : 0 };
 		}
 	}
 
@@ -635,7 +637,7 @@ class FlowComp extends ObjectComp implements domkit.Component.ComponentDecl<h2d.
 	@:p var maxWidth : Null<Int>;
 	@:p var maxHeight : Null<Int>;
 	@:p var backgroundId : Bool;
-	@:p(flowBackground) var background : { tile : h2d.Tile, borderW : Int, borderH : Int };
+	@:p(flowBackground) var background : { tile : h2d.Tile, borderL : Int, borderT : Int, borderR : Int, borderB : Int };
 	@:p(tile) var backgroundTile : h2d.Tile;
 	@:p(tilePos) var backgroundTilePos : { p : Int, y : Int };
 	@:p var backgroundTilePosX : Null<Int>;
@@ -706,8 +708,10 @@ class FlowComp extends ObjectComp implements domkit.Component.ComponentDecl<h2d.
 			o.borderWidth = o.borderHeight = 0;
 		} else {
 			o.backgroundTile = v.tile;
-			o.borderWidth = v.borderW;
-			o.borderHeight = v.borderH;
+			o.borderLeft = v.borderL;
+			o.borderTop = v.borderT;
+			o.borderRight = v.borderR;
+			o.borderBottom = v.borderB;
 		}
 	}
 

@@ -349,7 +349,7 @@ class Flow extends Object {
 	**/
 	public var backgroundTile(default, set) : h2d.Tile;
 	/**
-		Horizontal border width of the `Flow.backgroundTile`.
+		Set the border width of the `Flow.backgroundTile`'s left and right borders.
 
 		Does not affect padding by default, which can be enabled with `-D flow_border` compilation flag.
 		If border padding is enabled, `Flow.outerWidth` will be affected accordingly even if background tile is not set
@@ -360,9 +360,31 @@ class Flow extends Object {
 		@see `Flow.paddingHorizontal`
 		@see `h2d.ScaleGrid.borderWidth`
 	**/
-	public var borderWidth(default, set) : Int = 0;
+	public var borderWidth(never, set) : Int;
 	/**
-		Vertical border width of the `Flow.backgroundTile`.
+		Left border width of the `Flow.backgroundTile`.
+
+		Does not affect padding by default, which can be enabled with `-D flow_border` compilation flag.
+		If border padding is enabled, `Flow.outerHeight` will be affected accordingly even if background tile is not set
+		and will follow the same constraint limitation as padding.
+
+		@see `Flow.paddingLeft`
+		@see `h2d.ScaleGrid.borderLeft`
+	**/
+	public var borderLeft(default, set) : Int = 0;
+	/**
+		Right border width of the `Flow.backgroundTile`.
+
+		Does not affect padding by default, which can be enabled with `-D flow_border` compilation flag.
+		If border padding is enabled, `Flow.outerHeight` will be affected accordingly even if background tile is not set
+		and will follow the same constraint limitation as padding.
+
+		@see `Flow.paddingRight`
+		@see `h2d.ScaleGrid.borderRight`
+	**/
+	public var borderRight(default, set) : Int = 0;
+	/**
+		Set the border height of the `Flow.backgroundTile`'s top and bottom borders.
 
 		Does not affect padding by default, which can be enabled with `-D flow_border` compilation flag.
 		If border padding is enabled, `Flow.outerHeight` will be affected accordingly even if background tile is not set
@@ -373,8 +395,29 @@ class Flow extends Object {
 		@see `Flow.paddingVertical`
 		@see `h2d.ScaleGrid.borderHeight`
 	**/
-	public var borderHeight(default, set) : Int = 0;
+	public var borderHeight(never, set) : Int;
+	/**
+		Top border width of the `Flow.backgroundTile`.
 
+		Does not affect padding by default, which can be enabled with `-D flow_border` compilation flag.
+		If border padding is enabled, `Flow.outerHeight` will be affected accordingly even if background tile is not set
+		and will follow the same constraint limitation as padding.
+
+		@see `Flow.paddingTop`
+		@see `h2d.ScaleGrid.borderTop`
+	**/
+	public var borderTop(default, set) : Int = 0;
+	/**
+		Bottom border width of the `Flow.backgroundTile`.
+
+		Does not affect padding by default, which can be enabled with `-D flow_border` compilation flag.
+		If border padding is enabled, `Flow.outerHeight` will be affected accordingly even if background tile is not set
+		and will follow the same constraint limitation as padding.
+
+		@see `Flow.paddingBottom`
+		@see `h2d.ScaleGrid.borderBottom`
+	**/
+	public var borderBottom(default, set) : Int = 0;
 	/**
 		Calculate the client width, which is the inner size of the flow without the borders and padding.
 
@@ -597,12 +640,12 @@ class Flow extends Object {
 
 	function get_innerWidth() {
 		if( needReflow ) reflow();
-		return Math.ceil(calculatedWidth) - (paddingLeft + paddingRight #if flow_border + borderWidth * 2 #end);
+		return Math.ceil(calculatedWidth) - (paddingLeft + paddingRight #if flow_border + (borderLeft + borderRight) #end);
 	}
 
 	function get_innerHeight() {
 		if( needReflow ) reflow();
-		return Math.ceil(calculatedHeight) - (paddingTop + paddingBottom #if flow_border + borderHeight * 2 #end);
+		return Math.ceil(calculatedHeight) - (paddingTop + paddingBottom #if flow_border + (borderTop + borderBottom) #end);
 	}
 
 	function set_paddingLeft(v) {
@@ -876,7 +919,7 @@ class Flow extends Object {
 			return t;
 		if( t != null ) {
 			if( background == null ) {
-				var background = new h2d.ScaleGrid(t, borderWidth, borderHeight);
+				var background = new h2d.ScaleGrid(t, borderLeft, borderTop, borderRight, borderBottom);
 				addChildAt(background, 0);
 				getProperties(background).isAbsolute = true;
 				this.background = background;
@@ -896,19 +939,45 @@ class Flow extends Object {
 	}
 
 	function set_borderWidth(v) {
-		if( borderWidth == v )
+		if(borderLeft == v)
 			return v;
-		if( background != null ) background.borderWidth = v;
+		return borderLeft = borderRight = v;
+	}
+
+	function set_borderLeft(v) {
+		if( background != null ) background.borderLeft = v;
 		#if flow_border needReflow = true; #end
-		return borderWidth = v;
+		return borderLeft = v;
+	}
+
+	function set_borderRight(v) {
+		if( borderRight == v )
+			return v;
+		if( background != null ) background.borderRight = v;
+		#if flow_border needReflow = true; #end
+		return borderRight = v;
 	}
 
 	function set_borderHeight(v) {
-		if( borderHeight == v )
+		if(borderTop == v)
 			return v;
-		if( background != null ) background.borderHeight = v;
+		return borderTop = borderBottom = v;
+	}
+
+	function set_borderTop(v) {
+		if( borderTop == v )
+			return v;
+		if( background != null ) background.borderTop = v;
 		#if flow_border needReflow = true; #end
-		return borderHeight = v;
+		return borderTop = v;
+	}
+
+	function set_borderBottom(v) {
+		if( borderBottom == v )
+			return v;
+		if( background != null ) background.borderBottom = v;
+		#if flow_border needReflow = true; #end
+		return borderBottom = v;
 	}
 
 	/**
@@ -928,8 +997,10 @@ class Flow extends Object {
 				isConstraint = false;
 			}
 		}
-		var borderWidth = #if flow_border borderWidth #else 0 #end;
-		var borderHeight = #if flow_border borderHeight #else 0 #end;
+		var borderTop = #if flow_border borderTop #else 0 #end;
+		var borderBottom = #if flow_border borderBottom #else 0 #end;
+		var borderLeft = #if flow_border borderLeft #else 0 #end;
+		var borderRight = #if flow_border borderRight #else 0 #end;
 
 		var isConstraintWidth = realMaxWidth >= 0;
 		var isConstraintHeight = realMaxHeight >= 0;
@@ -937,8 +1008,8 @@ class Flow extends Object {
 		var maxTotWidth = realMaxWidth < 0 ? 100000000 : Math.floor(realMaxWidth);
 		var maxTotHeight = realMaxHeight < 0 ? 100000000 : Math.floor(realMaxHeight);
 		// inner size
-		var maxInWidth = maxTotWidth - (paddingLeft + paddingRight + borderWidth * 2);
-		var maxInHeight = maxTotHeight - (paddingTop + paddingBottom + borderHeight * 2);
+		var maxInWidth = maxTotWidth - (paddingLeft + paddingRight + (borderLeft + borderRight));
+		var maxInHeight = maxTotHeight - (paddingTop + paddingBottom + (borderTop + borderBottom));
 
 		if( debug )
 			debugGraphics.clear();
@@ -956,12 +1027,12 @@ class Flow extends Object {
 			var halign = horizontalAlign == null ? Left : horizontalAlign;
 			var valign = verticalAlign == null ? Bottom : verticalAlign;
 
-			var startX = paddingLeft + borderWidth;
+			var startX = paddingLeft + borderLeft;
 			var x = startX;
-			var y = paddingTop + borderHeight;
+			var y = paddingTop + borderTop;
 			cw = x;
 			var maxLineHeight = 0;
-			var minLineHeight = this.lineHeight != null ? lineHeight : (this.realMinHeight >= 0 && !multiline) ? (this.realMinHeight - (paddingTop + paddingBottom + borderHeight * 2)) : 0;
+			var minLineHeight = this.lineHeight != null ? lineHeight : (this.realMinHeight >= 0 && !multiline) ? (this.realMinHeight - (paddingTop + paddingBottom + borderTop + borderBottom)) : 0;
 			var lastIndex = 0;
 
 			inline function alignLine( maxIndex ) {
@@ -1036,12 +1107,12 @@ class Flow extends Object {
 				if( p.calculatedHeight > maxLineHeight ) maxLineHeight = p.calculatedHeight;
 			}
 			alignLine(children.length);
-			cw += paddingRight + borderWidth;
-			ch = y + maxLineHeight + paddingBottom + borderHeight;
+			cw += paddingRight + borderRight;
+			ch = y + maxLineHeight + paddingBottom + borderBottom;
 
 			// horizontal align
 			if( realMinWidth >= 0 && cw < realMinWidth ) cw = realMinWidth;
-			var endX = cw - (paddingRight + borderWidth);
+			var endX = cw - (paddingRight + borderRight);
 			var xmin = startX, xmax = endX;
 			var midSpace = 0, curAlign = null;
 			for( i in 0...children.length ) {
@@ -1101,12 +1172,12 @@ class Flow extends Object {
 			var halign = horizontalAlign == null ? Left : horizontalAlign;
 			var valign = verticalAlign == null ? Top : verticalAlign;
 
-			var startY = paddingTop + borderHeight;
+			var startY = paddingTop + borderTop;
 			var y = startY;
-			var x = paddingLeft + borderWidth;
+			var x = paddingLeft + borderLeft;
 			ch = y;
 			var maxColWidth = 0;
-			var minColWidth = this.colWidth != null ? colWidth : (this.realMinWidth >= 0 && !multiline) ? (this.realMinWidth - (paddingLeft + paddingRight + borderWidth * 2)) : 0;
+			var minColWidth = this.colWidth != null ? colWidth : (this.realMinWidth >= 0 && !multiline) ? (this.realMinWidth - (paddingLeft + paddingRight + borderLeft + borderRight)) : 0;
 			var lastIndex = 0;
 
 			inline function alignLine( maxIndex ) {
@@ -1184,13 +1255,13 @@ class Flow extends Object {
 				if( p.calculatedWidth > maxColWidth ) maxColWidth = p.calculatedWidth;
 			}
 			alignLine(children.length);
-			ch += paddingBottom + borderHeight;
-			cw = x + maxColWidth + paddingRight + borderWidth;
+			ch += paddingBottom + borderBottom;
+			cw = x + maxColWidth + paddingRight + borderRight;
 
 
 			// vertical align
 			if( realMinHeight >= 0 && ch < realMinHeight ) ch = realMinHeight;
-			var endY : Int = ch - (paddingBottom + borderHeight);
+			var endY : Int = ch - (paddingBottom + borderBottom);
 			var ymin = startY, ymax = endY;
 			var midSpace = 0, curAlign = null;
 			for( i in 0...children.length ) {
@@ -1277,14 +1348,14 @@ class Flow extends Object {
 				if( p.calculatedHeight > maxChildH ) maxChildH = p.calculatedHeight;
 			}
 
-			var xmin = paddingLeft + borderWidth;
-			var ymin = paddingTop + borderHeight;
-			var xmax = if(realMaxWidth > 0 && overflow != Expand) Math.floor(realMaxWidth - (paddingRight + borderWidth))
-				else hxd.Math.imax(xmin + maxChildW, realMinWidth - (paddingRight + borderWidth));
-			var ymax = if(realMaxWidth > 0 && overflow != Expand) Math.floor(realMaxHeight - (paddingBottom + borderHeight))
-				else hxd.Math.imax(ymin + maxChildH, realMinHeight - (paddingBottom + borderHeight));
-			cw = xmax + paddingRight + borderWidth;
-			ch = ymax + paddingBottom + borderHeight;
+			var xmin = paddingLeft + borderLeft;
+			var ymin = paddingTop + borderTop;
+			var xmax = if(realMaxWidth > 0 && overflow != Expand) Math.floor(realMaxWidth - (paddingRight + borderRight))
+				else hxd.Math.imax(xmin + maxChildW, realMinWidth - (paddingRight + borderRight));
+			var ymax = if(realMaxWidth > 0 && overflow != Expand) Math.floor(realMaxHeight - (paddingBottom + borderBottom))
+				else hxd.Math.imax(ymin + maxChildH, realMinHeight - (paddingBottom + borderBottom));
+			cw = xmax + paddingRight + borderRight;
+			ch = ymax + paddingBottom + borderBottom;
 
 			for( i in 0...children.length ) {
 				var c = childAt(i);
