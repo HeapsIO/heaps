@@ -661,7 +661,8 @@ class Flow extends Object {
 	override function contentChanged( s : Object ) {
 		while( s.parent != this )
 			s = s.parent;
-		if( getProperties(s).isAbsolute )
+		var p = getProperties(s);
+		if( p != null && p.isAbsolute )
 			return;
 		needReflow = true;
 		onContentChanged();
