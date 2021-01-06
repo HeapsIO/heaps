@@ -2,6 +2,7 @@ package h3d.mat;
 
 @:enum abstract PbrMode(String) {
 	var PBR = "PBR";
+	var Forward = "Forward";
 	var Overlay = "Overlay";
 	var Decal = "Decal";
 	var BeforeTonemapping = "BeforeTonemapping";
@@ -157,10 +158,7 @@ class PbrMaterial extends Material {
 		var props : PbrProps = getDefaultProps();
 		props.blend = switch( blendMode ) {
 			case None: None;
-			case Alpha:
-				// in PBR, Alpha blending is not correct - use alphaKill by default
-				props.alphaKill = true;
-				None;
+			case Alpha: Alpha;
 			case Add: Add;
 			case Multiply: Multiply;
 			case AlphaMultiply: AlphaMultiply;
@@ -181,6 +179,7 @@ class PbrMaterial extends Material {
 
 	function resetProps() {
 		var props : PbrProps = props;
+		mainPass.enableLights = true;
 		// Remove superfluous shader
 		mainPass.removeShader(mainPass.getShader(h3d.shader.VolumeDecal));
 		mainPass.removeShader(mainPass.getShader(h3d.shader.pbr.StrengthValues));
@@ -214,6 +213,8 @@ class PbrMaterial extends Material {
 		switch( props.mode ) {
 		case PBR:
 			// pass name set below (in set_blendMode)
+		case Forward:
+			mainPass.setPassName("forward");
 		case BeforeTonemapping:
 			mainPass.setPassName("beforeTonemapping");
 			if( props.emissive > 0 ) {
@@ -432,6 +433,7 @@ class PbrMaterial extends Material {
 				<dd>
 					<select field="mode">
 						<option value="PBR">PBR</option>
+						<option value="Forward">Forward PBR</option>
 						<option value="BeforeTonemapping">Before Tonemapping</option>
 						<option value="AfterTonemapping">After Tonemapping</option>
 						<option value="Overlay">Overlay</option>

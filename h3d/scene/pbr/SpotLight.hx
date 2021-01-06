@@ -49,7 +49,7 @@ class SpotLight extends Light {
 		return angle = v;
 	}
 
-	public static function spotLightPrim() {
+	public static function spotLightPrim() : h3d.prim.Polygon {
 		var engine = h3d.Engine.getCurrent();
 		var p : h3d.prim.Polygon = @:privateAccess engine.resCache.get(SpotLight);
 		if( p != null )

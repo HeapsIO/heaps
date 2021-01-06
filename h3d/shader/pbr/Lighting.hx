@@ -4,6 +4,8 @@ class Indirect extends PropsDefinition {
 
 	static var SRC = {
 
+		@:import h3d.shader.pbr.BDRF;
+
 		// Flags
 		@const var drawIndirectDiffuse : Bool;
 		@const var drawIndirectSpecular : Bool;
@@ -88,6 +90,8 @@ class Direct extends PropsDefinition {
 
 	static var SRC = {
 
+		@:import h3d.shader.pbr.BDRF;
+
 		var pbrLightDirection : Vec3;
 		var pbrLightColor : Vec3;
 		var pbrOcclusionFactor : Float;
@@ -108,34 +112,11 @@ class Direct extends PropsDefinition {
 				var diffuse = albedo / PI;
 
 				// General Cook-Torrance formula for microfacet BRDF
-				// 		f(l,v) = D(h).F(v,h).G(l,v,h) / 4(n.l)(n.v)
-
-				// formulas below from 2013 Siggraph "Real Shading in UE4"
-				var alpha = roughness * roughness;
-
-				// D = normal distribution fonction
-				// GGX (Trowbridge-Reitz) "Disney"
-				var alpha2 = alpha * alpha;
-				var denom = NdH * NdH * (alpha2 - 1.) + 1;
-				var D = alpha2 / (PI * denom * denom);
-
-				// F = fresnel term
-				// Schlick approx
-				// pow 5 optimized with Spherical Gaussian
-				// var F = F0 + (1 - F0) * pow(1 - v.dot(h), 5.);
-				var F = F0 + (1. - F0) * exp2( ( -5.55473 * VdH - 6.98316) * VdH );
-
-				// G = geometric attenuation
-				// Schlick (modified for UE4 with k=alpha/2)
-				// k = (rough + 1)² / 8
-				var k = (roughness + 1);
-				k *= k;
-				k *= 0.125;
-
-				//var G = (1 / (NdV * (1 - k) + k)) * (1 / (NdL * (1 - k) + k)) * NdL * NdV;
-				//var Att = 1 / (4 * NdL * NdV);
-				var G_Att = (1 / (NdV * (1 - k) + k)) * (1 / (NdL * (1 - k) + k)) * 0.25;
-				var specular = (D * F * G_Att).max(0.);
+				// 	f(l,v) = D(h).F(v,h).G(l,v,h) / 4(n.l)(n.v)
+				var D = normalDistributionGGX(NdH, roughness);// Normal distribution fonction
+				var F = fresnelSchlick(VdH, F0);// Fresnel term
+				var G = geometrySchlickGGX(NdV, NdL, roughness);// Geometric attenuation
+				var specular = (D * F * G).max(0.);
 
 				var direct = (diffuse * (1 - metalness) * (1 - F) + specular) * pbrLightColor * NdL;
 				pixelColor.rgb += direct * shadow * mix(1, occlusion, pbrOcclusionFactor);

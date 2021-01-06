@@ -464,6 +464,14 @@ class Renderer extends h3d.scene.Renderer {
 		setTarget(textures.hdr);
 		clear(0);
 		lighting();
+
+		begin(Forward);
+		var ls = hxd.impl.Api.downcast(getLightSystem(), h3d.scene.pbr.LightSystem);
+		ls.forwardMode = true;
+		draw("forward");
+		ls.forwardMode = false;
+		end();
+
 		if( renderMode == LightProbe ) return;
 
 		begin(BeforeTonemapping);
