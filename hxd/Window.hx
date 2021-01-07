@@ -14,6 +14,9 @@ class Window {
 
 	public var width(get, never) : Int;
 	public var height(get, never) : Int;
+	public var pixelWidth(get, never) : Int;
+	public var pixelHeight(get, never) : Int;
+
 	public var mouseX(get, never) : Int;
 	public var mouseY(get, never) : Int;
 	public var mouseLock(get, set) : Bool;
@@ -92,6 +95,13 @@ class Window {
 	}
 
 	function get_height() : Int {
+		return 0;
+	}
+
+	function get_pixelWidth() : Int {
+		return 0;
+	}
+	function get_pixelHeight() : Int {
 		return 0;
 	}
 
