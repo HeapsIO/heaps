@@ -139,14 +139,6 @@ class Window {
 		return windowHeight;
 	}
 	
-	function get_pixelWidth() : Int {
-		return window.pixelWidth;
-	}
-
-	function get_pixelHeight() : Int {
-		return window.pixelHeight;
-	}
-
 	function get_windowToPixelRatio() : Float {
 		return window.windowToPixelRatio;
 	}
