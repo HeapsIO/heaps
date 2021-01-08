@@ -283,8 +283,9 @@ class Engine {
 
 		// Set the driver size to actual pixel width
 		// (same as window size on normal displays, differs when high DPI is enabled)
-		var pw = window.pixelWidth;
-		var ph = window.pixelHeight;
+		var r = window.windowToPixelRatio;
+		var pw = Std.int(width / r);
+		var ph = Std.int(height / r);
 
 		if( !driver.isDisposed() ) driver.resize(pw, ph);
 	}
