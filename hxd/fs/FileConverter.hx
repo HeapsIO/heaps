@@ -118,7 +118,7 @@ class FileConverter {
 	}
 
 	function makeCommmand( obj : Dynamic ) : { cmd : ConvertCommand, priority : Int } {
-		if( hxd.impl.Api.is(obj,String) )
+		if( hxd.impl.Api.isOfType(obj,String) )
 			return { cmd : { conv : loadConvert(obj) }, priority : 0 };
 		if( obj.convert == null )
 			throw "Missing 'convert' in "+obj;
@@ -132,7 +132,7 @@ class FileConverter {
 			case "priority": priority = value;
 			default:
 				if( cmd.params == null ) cmd.params = {};
-				if( Reflect.isObject(value) && !hxd.impl.Api.is(value,String) ) throw "Invalid parameter value "+f+"="+value;
+				if( Reflect.isObject(value) && !hxd.impl.Api.isOfType(value,String) ) throw "Invalid parameter value "+f+"="+value;
 				Reflect.setField(cmd.params, f, value);
 			}
 		}

@@ -334,17 +334,17 @@ class ScenePanel extends Panel {
 	}
 
 	function getObjectIcon( o : h3d.scene.Object) {
-		if( Api.is(o, h3d.scene.Skin) )
+		if( Api.isOfType(o, h3d.scene.Skin) )
 			return "child";
-		if( Api.is(o, h3d.parts.Particles) || Api.is(o,h3d.parts.GpuParticles) )
+		if( Api.isOfType(o, h3d.parts.Particles) || Api.isOfType(o,h3d.parts.GpuParticles) )
 			return "sun-o";
-		if( Api.is(o, h3d.scene.Mesh) )
+		if( Api.isOfType(o, h3d.scene.Mesh) )
 			return "cube";
-		if( Api.is(o, h3d.scene.CustomObject) )
+		if( Api.isOfType(o, h3d.scene.CustomObject) )
 			return "globe";
-		if( Api.is(o, h3d.scene.Scene) )
+		if( Api.isOfType(o, h3d.scene.Scene) )
 			return "picture-o";
-		if( Api.is(o, h3d.scene.Light) )
+		if( Api.isOfType(o, h3d.scene.Light) )
 			return "lightbulb-o";
 		return null;
 	}

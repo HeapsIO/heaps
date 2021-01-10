@@ -194,7 +194,7 @@ class PropManager extends vdom.Client {
 
 	public function sameValue( v1 : Dynamic, v2 : Dynamic ) {
 		if( v1 == v2 ) return true;
-		if( hxd.impl.Api.is(v1, Array) && hxd.impl.Api.is(v2, Array) ) {
+		if( hxd.impl.Api.isOfType(v1, Array) && hxd.impl.Api.isOfType(v2, Array) ) {
 			var a1 : Array<Dynamic> = v1;
 			var a2 : Array<Dynamic> = v2;
 			if( a1.length != a2.length )
