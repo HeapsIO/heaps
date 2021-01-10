@@ -402,9 +402,10 @@ class System {
 		sentinel = new hl.UI.Sentinel(30, function() throw "Program timeout (infinite loop?)");
 		haxe.MainLoop.add(timeoutTick, -1) #if (haxe_ver >= 4) .isBlocking = false #end;
 		#end
-		#if (hlsdl || hldx)
-		haxe.MainLoop.add(updateCursor, -1) #if (haxe_ver >= 4) .isBlocking = false #end;
-		#end
 	}
+	
+	#if (hlsdl || hldx)
+	static var _ = haxe.MainLoop.add(updateCursor, -1) #if (haxe_ver >= 4) .isBlocking = false #end;
+	#end
 
 }
