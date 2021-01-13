@@ -21,7 +21,7 @@ class LightSystem extends h3d.scene.LightSystem {
 		else if( forwardMode ) {
 			var found = false;
             for( s in shaders ) {
-                var forward = Std.downcast(s, h3d.shader.pbr.DefaultFoward);
+                var forward = Std.downcast(s, h3d.shader.pbr.DefaultForward);
                 if( forward != null ) {
                     lightBuffer.setBuffers(forward);
                     found = true;

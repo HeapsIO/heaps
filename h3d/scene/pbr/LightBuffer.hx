@@ -2,7 +2,7 @@ package h3d.scene.pbr;
 
 class LightBuffer {
 
-	public var defaultForwardShader = new h3d.shader.pbr.DefaultFoward();
+	public var defaultForwardShader = new h3d.shader.pbr.DefaultForward();
 
 	var MAX_DIR_LIGHT = 2;
 	var MAX_SPOT_LIGHT = 3;
@@ -31,7 +31,7 @@ class LightBuffer {
 		defaultForwardShader.pointLightStride = POINT_LIGHT_INFO_SIZE * MAX_POINT_LIGHT;
 	}
 
-	public function setBuffers( s : h3d.shader.pbr.DefaultFoward ) {
+	public function setBuffers( s : h3d.shader.pbr.DefaultForward ) {
 		s.lightInfos = defaultForwardShader.lightInfos;
 		s.dirLightStride = defaultForwardShader.dirLightStride;
 		s.pointLightStride = defaultForwardShader.pointLightStride;
