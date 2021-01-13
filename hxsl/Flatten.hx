@@ -122,7 +122,6 @@ class Flatten {
 					var stride = varSize(t, a.t);
 					if( stride == 0 || stride & 3 != 0 ) throw new Error("Dynamic access to an Array which size is not 4 components-aligned is not allowed", e.p);
 					stride >>= 2;
-					eindex.t = TFloat; // force
 					eindex = toInt(mapExpr(eindex));
 					access(a, t, vp, AOffset(a,stride, stride == 1 ? eindex : { e : TBinop(OpMult,eindex,mkInt(stride,vp)), t : TInt, p : vp }));
 				default:
