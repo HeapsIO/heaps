@@ -116,16 +116,14 @@ class Flatten {
 			else {
 				switch( v.type ) {
 				case TArray(t, _) if( t.isSampler() ):
-					eindex = mapExpr(eindex);
-					var toInt = { e : TCall( { e : TGlobal(ToInt), t : TFun([]), p : vp }, [eindex]), t : TInt, p : vp };
-					access(a, t, vp, AOffset(a,1,toInt));
+					eindex = toInt(mapExpr(eindex));
+					access(a, t, vp, AOffset(a,1,eindex));
 				case TArray(t, _):
 					var stride = varSize(t, a.t);
 					if( stride == 0 || stride & 3 != 0 ) throw new Error("Dynamic access to an Array which size is not 4 components-aligned is not allowed", e.p);
 					stride >>= 2;
-					eindex = mapExpr(eindex);
-					var toInt = { e : TCall( { e : TGlobal(ToInt), t : TFun([]), p : vp }, [eindex]), t : TInt, p : vp };
-					access(a, t, vp, AOffset(a,stride, stride == 1 ? toInt : { e : TBinop(OpMult,toInt,mkInt(stride,vp)), t : TInt, p : vp }));
+					eindex = toInt(mapExpr(eindex));
+					access(a, t, vp, AOffset(a,stride, stride == 1 ? eindex : { e : TBinop(OpMult,eindex,mkInt(stride,vp)), t : TInt, p : vp }));
 				default:
 					throw "assert";
 				}
@@ -312,7 +310,7 @@ class Flatten {
 			switch( t ) {
 			case TInt:
 				e.t = TFloat;
-				e = { e : TCall({ e : TGlobal(ToInt), t : TFun([]), p : pos }, [e]), t : t, p : pos };
+				e = toInt(e);
 			case TVec(size,VInt):
 				e.t = TVec(size,VFloat);
 				e = { e : TCall({ e : TGlobal([IVec2,IVec3,IVec4][size-2]), t : TFun([]), p : pos }, [e]), t : t, p : pos };
@@ -321,7 +319,11 @@ class Flatten {
 			return e;
 		}
 	}
-
+	
+	function toInt( e : TExpr ) {
+		if( e.t == TInt ) return e;
+		return { e : TCall({ e : TGlobal(ToInt), t : TFun([]), p : e.p }, [e]), t : TInt, p : e.p };
+	}
 
 	function optimize( e : TExpr ) {
 		switch( e.e ) {
