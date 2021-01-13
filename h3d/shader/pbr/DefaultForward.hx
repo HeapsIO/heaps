@@ -1,6 +1,6 @@
 package h3d.shader.pbr;
 
-class DefaultFoward extends hxsl.Shader {
+class DefaultForward extends hxsl.Shader {
 
 	static var SRC = {
 
@@ -14,9 +14,9 @@ class DefaultFoward extends hxsl.Shader {
 		@param var lightInfos : Buffer<Vec4, BUFFER_SIZE>;
 
 		// Buffer Info
-		@param var dirLightCount : Int;
-		@param var pointLightCount : Int;
-		@param var spotLightCount : Int;
+		@const(8) var dirLightCount : Int;
+		@const(8) var pointLightCount : Int;
+		@const(8) var spotLightCount : Int;
 		@const(8) var dirLightStride : Int;
 		@const(8) var pointLightStride : Int;
 
@@ -185,15 +185,15 @@ class DefaultFoward extends hxsl.Shader {
 			F0 = mix(pbrSpecularColor, albedo, metalness);
 
 			// Dir Light
-			for( l in 0 ... dirLightCount )
+			@unroll for( l in 0 ... dirLightCount )
 				lightAccumulation += evaluateDirLight(l);
 
 			// Point Light
-			for( l in 0 ... pointLightCount )
+			@unroll for( l in 0 ... pointLightCount )
 				lightAccumulation += evaluatePointLight(l);
 
 			// Spot Light
-			for( l in 0 ... spotLightCount )
+			@unroll for( l in 0 ... spotLightCount )
 				lightAccumulation += evaluateSpotLight(l);
 
 			// Indirect only support the main env from the scene at the moment
