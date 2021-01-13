@@ -288,7 +288,13 @@ class GlDriver extends Driver {
 	}
 
 	override function getNativeShaderCode( shader : hxsl.RuntimeShader ) {
-		return "// vertex:\n" + ShaderCompiler.compile(shader.vertex.data) + "// fragment:\n" + ShaderCompiler.compile(shader.fragment.data);
+		inline function compile(sh) {
+			var glout = new ShaderCompiler();
+			glout.glES = glES;
+			glout.version = shaderVersion;
+			return glout.run(sh);
+		}
+		return "// vertex:\n" + compile(shader.vertex.data) + "// fragment:\n" + compile(shader.fragment.data);
 	}
 
 	override public function getDriverName(details:Bool) {
