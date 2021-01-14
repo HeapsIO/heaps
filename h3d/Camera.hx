@@ -288,6 +288,11 @@ class Camera {
 		m._44 = 1;
 	}
 
+	public function setTransform( m : Matrix ) {
+		pos.set(m._41, m._42, m._43);
+		target.load(pos.add(m.getDirection()));
+	}
+
 	function makeFrustumMatrix( m : Matrix ) {
 		m.zero();
 

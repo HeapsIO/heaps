@@ -549,6 +549,13 @@ class Matrix {
 		return [_11, _12, _13, _14, _21, _22, _23, _24, _31, _32, _33, _34, _41, _42, _43, _44];
 	}
 
+	public function getDirection() {
+		var q = new h3d.Quat();
+		q.initRotateMatrix(this);
+		q.normalize();
+		return q.getDirection();
+	}
+
 	/**
 		Extracts Euler rotation angles from rotation matrix
 	**/
