@@ -193,11 +193,9 @@ class Quat {
 	}
 
 	public inline function lerp( q1 : Quat, q2 : Quat, v : Float, nearest = false ) {
-		var v2;
+		var v2 = 1 - v;
 		if( nearest && q1.dot(q2) < 0 )
-			v2 = v - 1;
-		else
-			v2 = 1 - v;
+			v = -v;
 		var x = q1.x * v2 + q2.x * v;
 		var y = q1.y * v2 + q2.y * v;
 		var z = q1.z * v2 + q2.z * v;
