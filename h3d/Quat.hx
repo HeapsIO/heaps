@@ -198,10 +198,10 @@ class Quat {
 			v2 = v - 1;
 		else
 			v2 = 1 - v;
-		var x = q1.x * v + q2.x * v2;
-		var y = q1.y * v + q2.y * v2;
-		var z = q1.z * v + q2.z * v2;
-		var w = q1.w * v + q2.w * v2;
+		var x = q1.x * v2 + q2.x * v;
+		var y = q1.y * v2 + q2.y * v;
+		var z = q1.z * v2 + q2.z * v;
+		var w = q1.w * v2 + q2.w * v;
 		this.x = x;
 		this.y = y;
 		this.z = z;

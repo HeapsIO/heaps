@@ -133,7 +133,7 @@ class SmoothTarget extends Animation {
 			} else {
 
 				q1.set(m._12, m._13, m._21, m._23);
-				qout.lerp(o.q, q1, 1 - blend, true);
+				qout.lerp(o.q, q1, blend, true);
 				qout.normalize();
 				qout.toMatrix(mout);
 
