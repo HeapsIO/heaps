@@ -332,7 +332,7 @@ class GlDriver extends Driver {
 		return new CompiledShader(s, shader.vertex, shader);
 	}
 
-	function initShader( p : CompiledProgram, s : CompiledShader, shader : hxsl.RuntimeShader.RuntimeShaderData ) {
+	function initShader( p : CompiledProgram, s : CompiledShader, shader : hxsl.RuntimeShader.RuntimeShaderData, rt : hxsl.RuntimeShader ) {
 		var prefix = s.vertex ? "vertex" : "fragment";
 		s.globals = gl.getUniformLocation(p.p, prefix + "Globals");
 		s.params = gl.getUniformLocation(p.p, prefix + "Params");
@@ -361,7 +361,19 @@ class GlDriver extends Driver {
 				index = 0;
 			}
 			for( i in 0...count ) {
-				s.textures.push({ u : gl.getUniformLocation(p.p, prefix+name+"["+index+"]"), t : curT, mode : mode });
+				var loc = gl.getUniformLocation(p.p, prefix+name+"["+index+"]");
+				/*
+					This is a texture that is used in HxSL but has been optimized out by GLSL compiler.
+					While some drivers will correctly report `null` here, some others (AMD) will instead
+					return a uniform but still mismatch the texture slot, leading to swapped textures or
+					incorrect rendering. We also don't handle texture skipping in DirectX.
+
+					Fix is to make sure HxSL will optimize the texture out.
+					Alternate fix is to improve HxSL so he does it on its own.
+				*/
+				if( loc == null )
+					throw "Texture "+rt.spec.instances[t.instance].shader.data.name+"."+t.name+" is missing from shader output";
+				s.textures.push({ u : loc, t : curT, mode : mode });
 				index++;
 			}
 			t = t.next;
@@ -423,8 +435,8 @@ class GlDriver extends Driver {
 				throw "Program linkage failure: "+log+"\nVertex=\n"+shader.vertex.code+"\n\nFragment=\n"+shader.fragment.code;
 			}
 			firstShader = false;
-			initShader(p, p.vertex, shader.vertex);
-			initShader(p, p.fragment, shader.fragment);
+			initShader(p, p.vertex, shader.vertex, shader);
+			initShader(p, p.fragment, shader.fragment, shader);
 			var attribNames = [];
 			p.attribs = [];
 			p.hasAttribIndex = [];
