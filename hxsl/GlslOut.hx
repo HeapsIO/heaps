@@ -49,7 +49,7 @@ class GlslOut {
 	var isVertex : Bool;
 	var allNames : Map<String, Int>;
 	var outIndexes : Map<Int, Int>;
-	var intelDriverFix : Bool;
+
 	var isES(get,never) : Bool;
 	var isES2(get,never) : Bool;
 	var uniformBuffer : Int = 0;
@@ -58,6 +58,16 @@ class GlslOut {
 	public var glES : Null<Float>;
 	public var version : Null<Int>;
 
+	/*
+		Intel HD driver fix:
+			single element arrays are interpreted as not arrays, creating mismatch when
+			handling uniforms/textures. The fix changes decl[1] into decl[2] with one unused element.
+		
+		Should not be enabled on AMD driver as it will create mismatch wrt uniforms binding
+		when there are some unused textures in shader output.
+	*/
+	var intelDriverFix : Bool;
+	
 	public function new() {
 		varNames = new Map();
 		allNames = new Map();
@@ -642,19 +652,6 @@ class GlslOut {
 		decls = [];
 		buf = new StringBuf();
 		exprValues = [];
-
-		/*
-			Intel HD driver fix:
-				single element arrays are interpreted as not arrays, creating mismatch when
-				handling uniforms/textures. The fix changes decl[1] into decl[2] with one unused element
-
-				This fix is only for desktop, WebGL has errors with Cube Textures if there's
-				both Texture2D and TextureCube arrays in shader.
-				Also disable it for third party GL implementations (consoles)
-		*/
-		#if !(usegl || js)
-		intelDriverFix = true;
-		#end
 
 		decl("precision mediump float;");
 
