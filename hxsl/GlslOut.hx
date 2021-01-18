@@ -176,7 +176,7 @@ class GlslOut {
 			}
 			add("]");
 		case TBuffer(t, size):
-			add("uniform_buffer"+(uniformBuffer++));
+			add((isVertex ? "vertex_" : "") + "uniform_buffer"+(uniformBuffer++));
 			add(" { ");
 			v.type = TArray(t,size);
 			addVar(v);
