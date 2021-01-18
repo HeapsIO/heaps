@@ -540,7 +540,7 @@ class GlDriver extends Driver {
 		case Buffers:
 			if( s.buffers != null ) {
 				for( i in 0...s.buffers.length )
-					gl.bindBufferBase(GL2.UNIFORM_BUFFER, i, @:privateAccess buf.buffers[i].buffer.vbuf.b);
+					gl.bindBufferBase(GL2.UNIFORM_BUFFER, s.vertex ? i : curShader.vertex.buffers.length + i, @:privateAccess buf.buffers[i].buffer.vbuf.b);
 			}
 		case Textures:
 			var tcount = s.textures.length;
