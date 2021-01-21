@@ -14,16 +14,16 @@ class DefaultForward extends hxsl.Shader {
 		@param var lightInfos : Buffer<Vec4, BUFFER_SIZE>;
 
 		// Buffer Info
-		@const(8) var dirLightCount : Int;
-		@const(8) var pointLightCount : Int;
-		@const(8) var spotLightCount : Int;
-		@const(8) var dirLightStride : Int;
-		@const(8) var pointLightStride : Int;
+		@param var dirLightCount : Int;
+		@param var pointLightCount : Int;
+		@param var spotLightCount : Int;
+		@param var dirLightStride : Int;
+		@param var pointLightStride : Int;
 
 		// ShadowMaps
-		@param var dirShadowMaps : Array<Sampler2D, 2>;
-		@param var pointShadowMaps : Array<SamplerCube, 3>;
-		@param var spotShadowMaps : Array<Sampler2D, 3>;
+		//@param var dirShadowMaps : Array<Sampler2D, 2>;
+		//@param var pointShadowMaps : Array<SamplerCube, 3>;
+		//@param var spotShadowMaps : Array<Sampler2D, 3>;
 
 		// Direct Lighting
 		@param var cameraPosition : Vec3;
@@ -111,14 +111,14 @@ class DefaultForward extends hxsl.Shader {
 
 			// Shadow
 			var shadow = 1.0;
-			if( hasShadowMap ) {
+			/*if( hasShadowMap ) {
 				var shadowBias = lightInfos[i+1].a;
 				var shadowProj = mat3x4(lightInfos[i+2], lightInfos[i+3], lightInfos[i+4]);
 				var shadowPos = transformedPosition * shadowProj;
 				var shadowUv = screenToUv(shadowPos.xy);
 				var depth = dirShadowMaps[index].get(shadowUv.xy).r;
 				shadow = (shadowPos.z - shadowBias > depth) ? 0.0 : 1.0;
-			}
+			}*/
 
 			return directLighting(lightColor, lightDir) * shadow;
 		}
@@ -135,14 +135,14 @@ class DefaultForward extends hxsl.Shader {
 
 			// Shadow
 			var shadow = 1.0;
-			if( hasShadowMap ) {
+			/*if( hasShadowMap ) {
 				var shadowBias = lightInfos[i+2].b;
 				var posToLight = transformedPosition.xyz - lightPos;
 				var dir = normalize(posToLight.xyz);
 				var depth = pointShadowMaps[index].getLod(dir, 0).r * range;
 				var zMax = length(posToLight);
 				shadow = (zMax - shadowBias > depth) ? 0.0 : 1.0;
-			}
+			}*/
 
 			return directLighting(pointLightIntensity(delta, size, invRange4) * lightColor, delta.normalize()) * shadow;
 		}
@@ -161,7 +161,7 @@ class DefaultForward extends hxsl.Shader {
 
 			// Shadow
 			var shadow = 1.0;
-			if( hasShadowMap ) {
+			/*if( hasShadowMap ) {
 				var shadowBias = lightInfos[i+3].a;
 				var shadowProj = mat4(lightInfos[i+4], lightInfos[i+5], lightInfos[i+6], lightInfos[i+7]);
 				var shadowPos = vec4(transformedPosition, 1.0) * shadowProj;
@@ -169,7 +169,7 @@ class DefaultForward extends hxsl.Shader {
 				var shadowUv = screenToUv(shadowPos.xy);
 				var depth = spotShadowMaps[index].get(shadowUv.xy).r;
 				shadow = (shadowPos.z - shadowBias > depth) ? 0.0 : 1.0;
-			}
+			}*/
 
 			var fallOffInfo = spotLightIntensity(delta, lightDir, range, invRange4, fallOff, angle);
 			var fallOff = fallOffInfo.x;

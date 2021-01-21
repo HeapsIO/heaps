@@ -1,5 +1,7 @@
 package h3d.scene;
 
+import hxsl.ShaderList;
+
 private class BatchData {
 
 	public var count : Int;
@@ -14,6 +16,10 @@ private class BatchData {
 	public function new() {
 	}
 
+}
+
+interface MeshBatchAccess {
+	var perInstance : Bool;
 }
 
 /**
@@ -90,8 +96,29 @@ class MeshBatch extends Mesh {
 
 			var manager = cast(ctx,h3d.pass.Default).manager;
 			var shaders = p.getShadersRec();
-			var rt = manager.compileShaders(shaders,false);
 
+			// Keep only batched shader
+			var batchShaders : ShaderList = shaders;
+			var prev = null;
+			var cur = batchShaders;
+			while( cur != null ) {
+				if( Std.isOfType(cur.s, MeshBatchAccess) ) {
+					var access : MeshBatchAccess = cast cur.s;
+					if( !access.perInstance ) {
+						if( prev != null ) 
+							prev.next = cur.next;
+						else 
+							batchShaders = cur.next;	
+						cur = cur.next;
+					}
+				}
+				else {
+					prev = cur;
+					cur = cur.next;
+				}
+			}
+
+			var rt = manager.compileShaders(batchShaders, false);
 			var shader = manager.shaderCache.makeBatchShader(rt);
 
 			var b = new BatchData();
@@ -124,7 +151,7 @@ class MeshBatch extends Mesh {
 			b.next = dataPasses;
 			dataPasses = b;
 
-			var sl = shaders;
+			var sl = batchShaders;
 			while( sl != null ) {
 				b.shaders.push(sl.s);
 				sl = sl.next;

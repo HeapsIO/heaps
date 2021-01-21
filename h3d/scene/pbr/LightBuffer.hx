@@ -5,8 +5,8 @@ class LightBuffer {
 	public var defaultForwardShader = new h3d.shader.pbr.DefaultForward();
 
 	var MAX_DIR_LIGHT = 2;
-	var MAX_SPOT_LIGHT = 3;
-	var MAX_POINT_LIGHT = 3;
+	var MAX_SPOT_LIGHT = 6;
+	var MAX_POINT_LIGHT = 6;
 
 	var lightInfos : hxd.FloatBuffer;
 	final POINT_LIGHT_INFO_SIZE = 3;
@@ -43,12 +43,12 @@ class LightBuffer {
 		s.spotLightCount = defaultForwardShader.spotLightCount;
 		s.dirLightCount = defaultForwardShader.dirLightCount;
 
-		for( i in 0 ... s.pointLightCount )
+		/*for( i in 0 ... s.pointLightCount )
 			s.pointShadowMaps[i] = defaultForwardShader.pointShadowMaps[i];
 		for( i in 0 ... s.spotLightCount )
 			s.spotShadowMaps[i] = defaultForwardShader.spotShadowMaps[i];
 		for( i in 0 ... s.dirLightCount )
-			s.dirShadowMaps[i] = defaultForwardShader.dirShadowMaps[i];
+			s.dirShadowMaps[i] = defaultForwardShader.dirShadowMaps[i];*/
 
 		s.USE_INDIRECT = defaultForwardShader.USE_INDIRECT;
 		if( s.USE_INDIRECT > 0.0 ) {
@@ -105,14 +105,14 @@ class LightBuffer {
 				fillVector(lightInfos, pbr.lightColor, i);
 				lightInfos[i+3] = (dl.shadows != null && dl.shadows.mode != None) ? 1.0 : -1.0;
 				fillVector(lightInfos, pbr.lightDir, i+4);
-				if( lightInfos[i+3] > 0 ) {
+				/*if( lightInfos[i+3] > 0 ) {
 					lightInfos[i+7] = dl.shadows.bias;
 					s.dirShadowMaps[li] = dl.shadows.getShadowTex();
 					var mat = dl.shadows.getShadowProj();
 					fillFloats(lightInfos, mat._11, mat._21, mat._31, mat._41, i+8);
 					fillFloats(lightInfos, mat._12, mat._22, mat._32, mat._42, i+12);
 					fillFloats(lightInfos, mat._13, mat._23, mat._33, mat._43, i+16);
-				}
+				}*/
 				s.dirLightCount++;
 			}
 
@@ -129,10 +129,10 @@ class LightBuffer {
 				lightInfos[i+7] = pbr.invLightRange4;
 				lightInfos[i+8] = pl.range;
 				lightInfos[i+9] = (pl.shadows != null && pl.shadows.mode != None) ? 1.0 : -1.0;
-				if( lightInfos[i+9] > 0 ) {
+				/*if( lightInfos[i+9] > 0 ) {
 					lightInfos[i+10] = pl.shadows.bias;
 					s.pointShadowMaps[li] = pl.shadows.getShadowTex();
-				}
+				}*/
 				s.pointLightCount++;
 			}
 
@@ -151,7 +151,7 @@ class LightBuffer {
 				lightInfos[i+12] = pbr.angle;
 				lightInfos[i+13] = pbr.fallOff;
 				lightInfos[i+14] = (sl.shadows != null && sl.shadows.mode != None) ? 1.0 : -1.0;
-				if( lightInfos[i+14] > 0 ) {
+				/*if( lightInfos[i+14] > 0 ) {
 					lightInfos[i+15] = sl.shadows.bias;
 					var mat = sl.shadows.getShadowProj();
 					fillFloats(lightInfos, mat._11, mat._21, mat._31, mat._41, i+16);
@@ -159,7 +159,7 @@ class LightBuffer {
 					fillFloats(lightInfos, mat._13, mat._23, mat._33, mat._43, i+24);
 					fillFloats(lightInfos, mat._14, mat._24, mat._34, mat._44, i+28);
 					s.spotShadowMaps[li] = sl.shadows.getShadowTex();
-				}
+				}*/
 				s.spotLightCount++;
 			}
 
