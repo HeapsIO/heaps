@@ -380,8 +380,10 @@ class GlDriver extends Driver {
 		}
 		if( shader.bufferCount > 0 ) {
 			s.buffers = [for( i in 0...shader.bufferCount ) gl.getUniformBlockIndex(p.p,(shader.vertex?"vertex_":"")+"uniform_buffer"+i)];
+			var start = 0;
+			if( !s.vertex ) start = rt.vertex.bufferCount;
 			for( i in 0...shader.bufferCount )
-				gl.uniformBlockBinding(p.p,s.buffers[i],i);
+				gl.uniformBlockBinding(p.p,s.buffers[i],i + start);
 		}
 	}
 
