@@ -229,15 +229,6 @@ class Renderer extends h3d.scene.Renderer {
 			pbrOut.render();
 		}
 
-		if( renderMode == LightProbe ) {
-			resetTarget();
-			copy(textures.hdr, null);
-			// no warnings
-			for( p in passObjects ) if( p != null ) p.rendered = true;
-			end();
-			return;
-		}
-
 		end();
 	}
 
@@ -416,6 +407,8 @@ class Renderer extends h3d.scene.Renderer {
 				pbrIndirect.showSky = true;
 				pbrIndirect.skyMap = env.env;
 				pbrIndirect.gammaCorrect = false;
+				pbrIndirect.skyHdrMax = env.hdrMax;
+				pbrIndirect.skyColor = false;
 			}
 
 			if( pbrIndirect.skyMap == null && pbrIndirect.showSky && !pbrIndirect.skyColor )
@@ -472,7 +465,13 @@ class Renderer extends h3d.scene.Renderer {
 		ls.forwardMode = false;
 		end();
 
-		if( renderMode == LightProbe ) return;
+		if( renderMode == LightProbe ) {
+			resetTarget();
+			copy(textures.hdr, null);
+			// no warnings
+			for( p in passObjects ) if( p != null ) p.rendered = true;
+			return;
+		}
 
 		begin(BeforeTonemapping);
 		draw("beforeTonemappingDecal");
