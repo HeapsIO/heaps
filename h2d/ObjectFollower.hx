@@ -51,6 +51,7 @@ class ObjectFollower extends Object {
 	public var depthBias : Float = 0.;
 
 	var zValue : Float = 0.;
+	var outputScale : Float = 1.;
 
 	/**
 		Create a new ObjectFollower instance.
@@ -73,7 +74,7 @@ class ObjectFollower extends Object {
 		var height = s2d == null ? h3d.Engine.getCurrent().height : s2d.height;
 		var absPos = follow.getAbsPos();
 		var pos = new h3d.Vector(absPos._41 + offsetX, absPos._42 + offsetY, absPos._43 + offsetZ);
-		var p = scene.camera.project(pos.x, pos.y, pos.z, width, height);
+		var p = scene.camera.project(pos.x, pos.y, pos.z, width * outputScale, height * outputScale);
 		zValue = p.z;
 
 		if( horizontalAlign != Left || verticalAlign != Top ) {
