@@ -102,7 +102,7 @@ class MeshBatch extends Mesh {
 			var prev = null;
 			var cur = batchShaders;
 			while( cur != null ) {
-				if( Std.isOfType(cur.s, MeshBatchAccess) ) {
+				if( hxd.impl.Api.isOfType(cur.s, MeshBatchAccess) ) {
 					var access : MeshBatchAccess = cast cur.s;
 					if( !access.perInstance ) {
 						if( prev != null ) 
