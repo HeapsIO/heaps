@@ -47,7 +47,17 @@ class ScaleGrid extends h2d.TileGroup {
 	**/
 	public var tileBorders(default, set) : Bool;
 
+	/**
+		When enabled, the borders will ignore the final scale of the `h2d.ScaleGrid` to be rendered pixel perfect.
+		This does not change the values of `borderLeft`, `borderRight`, `borderTop` or `borderBottom`.
+
+		Center tile is always stretched.
+	 */
+	public var ignoreScale(default, set) : Bool;
+
 	var contentTile : h2d.Tile;
+	var currentScaleX = 1.;
+	var currentScaleY = 1.;
 
 	/**
 		Create a new ScaleGrid with specified parameters.
@@ -71,6 +81,13 @@ class ScaleGrid extends h2d.TileGroup {
 	function set_tileBorders(b) {
 		if( tileBorders == b ) return b;
 		this.tileBorders = b;
+		clear();
+		return b;
+	}
+
+	function set_ignoreScale(b) {
+		if(ignoreScale == b) return b;
+		this.ignoreScale = b;
 		clear();
 		return b;
 	}
@@ -139,83 +156,147 @@ class ScaleGrid extends h2d.TileGroup {
 	}
 
 	function checkUpdate() {
+		var needUpdate = false;
+		if(ignoreScale){
+			var s = getAbsPos().getScale();
+			if(currentScaleX != s.x || currentScaleY != s.y){
+				needUpdate = true;
+				currentScaleX = s.x;
+				currentScaleY = s.y;
+			}
+		}
+
 		if( content.isEmpty() || tile != contentTile ) {
-			clear();
 			contentTile = tile;
+			needUpdate = true;
+		}
+
+		if(needUpdate){
+			clear();
 			updateContent();
 		}
 	}
 
 	function updateContent() {
 		var bt = borderTop, bb = borderBottom, bl = borderLeft, br = borderRight;
+		var unscaledBl : Float = bl, unscaledBr : Float = br, unscaledBt : Float = bt, unscaledBb : Float = bb;
+		var invScaleX = 1.;
+		var invScaleY = 1.;
+		if(ignoreScale){
+			var s = getAbsPos().getScale();
+			if(s.x == 0. || s.y == 0.)
+				return;
+
+			invScaleX /= s.x;
+			invScaleY /= s.y;
+
+			unscaledBl *= invScaleX;
+			unscaledBr *= invScaleX;
+			unscaledBt *= invScaleY;
+			unscaledBb *= invScaleY;
+		}
 
 		// 4 corners
-		content.addColor(0, 0, curColor, tile.sub(0, 0, bl, bt));
-		content.addColor(width - br, 0, curColor, tile.sub(tile.width - br, 0, br, bt));
-		content.addColor(0, height-bb, curColor, tile.sub(0, tile.height - bb, bl, bb));
-		content.addColor(width - br, height - bb, curColor, tile.sub(tile.width - br, tile.height - bb, br, bb));
+		var t = tile.sub(0, 0, bl, bt);
+		t.scaleToSize(unscaledBl, unscaledBt);
+		content.addColor(0, 0, curColor, t);
+		t = tile.sub(tile.width - br, 0, br, bt);
+		t.scaleToSize(unscaledBr, unscaledBt);
+		content.addColor(width - unscaledBr, 0, curColor, t);
+		t = tile.sub(0, tile.height - bb, bl, bb);
+		t.scaleToSize(unscaledBl, unscaledBb);
+		content.addColor(0, height-unscaledBb, curColor, t);
+		t = tile.sub(tile.width - br, tile.height - bb, br, bb);
+		t.scaleToSize(unscaledBr, unscaledBb);
+		content.addColor(width - unscaledBr, height - unscaledBb, curColor, t);
 
-		var sizeX = tile.width - (br + bl);
-		var sizeY = tile.height - (bb + bt);
+		var innerTileWidth = tile.width - (br + bl);
+		var innerTileHeight = tile.height - (bb + bt);
+		var innerWidth = width - (unscaledBl + unscaledBr);
+		var innerHeight = height - (unscaledBt + unscaledBb);
 
 		if( !tileBorders ) {
-
-			var w = width - (br + bl);
-			var h = height - (bb + bt);
-
 			// top
-			var t = tile.sub(bl, 0, sizeX, bt);
-			t.scaleToSize(w, bt);
-			content.addColor(bl, 0, curColor, t);
+			var t = tile.sub(bl, 0, innerTileWidth, bt);
+			t.scaleToSize(innerWidth, unscaledBt);
+			content.addColor(unscaledBl, 0, curColor, t);
 
 			// bottom
-			var t = tile.sub(bl, tile.height - bb, sizeX, bb);
-			t.scaleToSize(w, bb);
-			content.addColor(bl, h + bt, curColor, t);
+			var t = tile.sub(bl, tile.height - bb, innerTileWidth, bb);
+			t.scaleToSize(innerWidth, unscaledBb);
+			content.addColor(unscaledBl, innerHeight + unscaledBt, curColor, t);
 
 			// left
-			var t = tile.sub(0, bt, bl, sizeY);
-			t.scaleToSize(bl, h);
-			content.addColor(0, bt, curColor, t);
+			var t = tile.sub(0, bt, bl, innerTileHeight);
+			t.scaleToSize(unscaledBl, innerHeight);
+			content.addColor(0, unscaledBt, curColor, t);
 
 			// right
-			var t = tile.sub(tile.width - br, bt, br, sizeY);
-			t.scaleToSize(br, h);
-			content.addColor(w + bl, bt, curColor, t);
-
+			var t = tile.sub(tile.width - br, bt, br, innerTileHeight);
+			t.scaleToSize(unscaledBr, innerHeight);
+			content.addColor(innerWidth + unscaledBl, unscaledBt, curColor, t);
 		} else {
+			var unscaledInnerTileWidth = innerTileWidth * invScaleX;
+			var unscaledInnerTileHeight = innerTileHeight * invScaleY;
 
-			var rw = Std.int((width - (bl + br)) / sizeX);
+			var rw = Std.int(innerWidth / unscaledInnerTileWidth);
 			for( x in 0...rw ) {
-				content.addColor(bl + x * sizeX, 0, curColor, tile.sub(bl, 0, sizeX, bt));
-				content.addColor(bl + x * sizeX, height - bb, curColor, tile.sub(bl, tile.height - bb, sizeX, bb));
+				// top
+				var t = tile.sub(bl, 0, innerTileWidth, bt);
+				t.scaleToSize(unscaledInnerTileWidth, unscaledBt);
+				content.addColor(unscaledBl + x * unscaledInnerTileWidth, 0, curColor, t);
+
+				// bottom
+				t = tile.sub(bl, tile.height - bb, innerTileWidth, bb);
+				t.scaleToSize(unscaledInnerTileWidth, unscaledBb);
+				content.addColor(unscaledBl + x * unscaledInnerTileWidth, height - unscaledBb, curColor, t);
 			}
-			var dx = width - (bl + br) - rw * sizeX;
+			var dx = innerWidth - rw * unscaledInnerTileWidth;
 			if( dx > 0 ) {
-				content.addColor(bl + rw * sizeX, 0, curColor, tile.sub(bl, 0, dx, bt));
-				content.addColor(bl + rw * sizeX, height - bb, curColor, tile.sub(bl, tile.height - bb, dx, bb));
+				// top
+				var t =  tile.sub(bl, 0, dx / invScaleX, bt);
+				t.scaleToSize(dx, unscaledBt);
+				content.addColor(unscaledBl + rw * unscaledInnerTileWidth, 0, curColor, t);
+
+				// bottom
+				t =  tile.sub(bl, tile.height - bb, dx / invScaleX, bb);
+				t.scaleToSize(dx, unscaledBb);
+				content.addColor(unscaledBl + rw * unscaledInnerTileWidth, height - unscaledBb, curColor, t);
 			}
 
-			var rh = Std.int((height - (bt + bb)) / sizeY);
+			var rh = Std.int(innerHeight / unscaledInnerTileHeight);
 			for( y in 0...rh ) {
-				content.addColor(0, bt + y * sizeY, curColor, tile.sub(0, bt, bl, sizeY));
-				content.addColor(width - br, bt + y * sizeY, curColor, tile.sub(tile.width - br, bt, br, sizeY));
+				// left
+				var t = tile.sub(0, bt, bl, innerTileHeight);
+				t.scaleToSize(unscaledBl, unscaledInnerTileHeight);
+				content.addColor(0, unscaledBt + y * unscaledInnerTileHeight, curColor, t);
+
+				// right
+				t = tile.sub(tile.width - br, bt, br, innerTileHeight);
+				t.scaleToSize(unscaledBr, unscaledInnerTileHeight);
+				content.addColor(width - unscaledBr, unscaledBt + y * unscaledInnerTileHeight, curColor, t);
 			}
-			var dy = height - (bt + bb) - rh * sizeY;
+			var dy = innerHeight - rh * unscaledInnerTileHeight;
 			if( dy > 0 ) {
-				content.addColor(0, bt + rh * sizeY, curColor, tile.sub(0, bt, bl, dy));
-				content.addColor(width - br, bt + rh * sizeY, curColor, tile.sub(tile.width - br, bt, br, dy));
+				// left
+				var t = tile.sub(0, bt, bl, dy / invScaleY);
+				t.scaleToSize(unscaledBl, dy);
+				content.addColor(0, bt + rh * unscaledInnerTileHeight, curColor, t);
+
+				// right
+				t = tile.sub(tile.width - br, bt, br, dy / invScaleY);
+				t.scaleToSize(unscaledBr, dy);
+				content.addColor(width - unscaledBr, unscaledBt + rh * unscaledInnerTileHeight, curColor, t);
 			}
 		}
 
-		var t = tile.sub(bl, bt, sizeX, sizeY);
-		t.scaleToSize(width - (br+bl),height - (bt+bb));
-		content.addColor(bl, bt, curColor, t);
+		var t = tile.sub(bl, bt, innerTileWidth, innerTileHeight);
+		t.scaleToSize(width - (unscaledBr + unscaledBl), height - (unscaledBt + unscaledBb));
+		content.addColor(unscaledBl, unscaledBt, curColor, t);
 	}
 
 	override function sync( ctx : RenderContext ) {
 		checkUpdate();
 		super.sync(ctx);
 	}
-
 }
