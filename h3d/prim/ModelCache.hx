@@ -121,8 +121,9 @@ class ModelCache {
 
 	#if hide
 
-	public function loadPrefab( res : hxd.res.Prefab, ?parent : h3d.scene.Object ) {
-		var p = res.load();
+	public function loadPrefab( res : hxd.res.Prefab, ?p : hrt.prefab.Prefab, ?parent : h3d.scene.Object ) {
+		if( p == null )
+			p = res.load();
 		var ctx = new hrt.prefab.Context();
 		ctx.init(res);
 		@:privateAccess ctx.shared.cache = this;
