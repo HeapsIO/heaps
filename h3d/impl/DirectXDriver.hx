@@ -98,6 +98,7 @@ class DirectXDriver extends h3d.impl.Driver {
 	var currentColorMask = -1;
 	var targetsCount = 1;
 	var allowDraw = false;
+	var maxSamplers = 16;
 
 	var depthStates : Map<Int,{ def : DepthStencilState, stencils : Array<{ op : Int, mask : Int, state : DepthStencilState }> }>;
 	var blendStates : Map<Int,BlendState>;
@@ -1143,7 +1144,7 @@ class DirectXDriver extends h3d.impl.Driver {
 				var bits = @:privateAccess t.bits;
 				if( t.lodBias != 0 )
 					bits |= Std.int((t.lodBias + 32)*32) << 10;
-				if( bits != state.samplerBits[i] ) {
+				if( i < maxSamplers && bits != state.samplerBits[i] ) {
 					var ss = samplerStates.get(bits);
 					if( ss == null ) {
 						var desc = new SamplerDesc();

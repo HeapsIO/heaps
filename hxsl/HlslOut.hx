@@ -54,7 +54,10 @@ class HlslOut {
 	var isVertex : Bool;
 	var allNames : Map<String, Int>;
 	var samplers : Map<Int, Int>;
+	var namedSamplers : Map<String, Int>;
+	var forcedSampler : String;
 	public var varNames : Map<Int,String>;
+	public var maxSamplers : Int = 16;
 
 	var varAccess : Map<Int,String>;
 
@@ -193,10 +196,22 @@ class HlslOut {
 			addValue(eif, tabs);
 			add(" : ");
 			addValue(eelse, tabs);
-		case TMeta(_, _, e):
-			addValue(e, tabs);
+		case TMeta(m,args,e):
+			handleMeta(m, args, addValue, e, tabs);
 		default:
 			addExpr(e, tabs);
+		}
+	}
+
+	function handleMeta( m, args : Array<Ast.Const>, callb, e, tabs ) {
+		switch( [m, args] ) {
+		case ["sampler", [CString(name)]]:
+			var prev = forcedSampler;
+			forcedSampler = name;
+			callb(e,tabs);
+			forcedSampler = null;
+		default:
+			callb(e,tabs);
 		}
 	}
 
@@ -251,13 +266,24 @@ class HlslOut {
 			var offset = 0;
 			var expr = switch( args[0].e ) {
 			case TArray(e,{ e : TConst(CInt(i)) }): offset = i; e;
+			case TArray(e,{ e : TBinop(OpAdd,{e:TVar(_)},{e:TConst(CInt(_))}) }): throw "Offset in texture access: need loop unroll?";
 			default: args[0];
 			}
 			switch( expr.e ) {
 			case TVar(v):
 				var samplerIndex = samplers.get(v.id);
 				if( samplerIndex == null ) throw "assert";
-				add('__Samplers[${samplerIndex+offset}]');
+				samplerIndex += offset;
+				if( forcedSampler != null ) {
+					var useIndex = namedSamplers.get("$"+forcedSampler);
+					if( useIndex != null )
+						samplerIndex = useIndex;
+					else {
+						useIndex = samplerIndex;
+						namedSamplers.set("$"+forcedSampler, useIndex);
+					}
+				}
+				add('__Samplers[$samplerIndex]');
 			default: throw "assert";
 			}
 			for( i in 1...args.length ) {
@@ -546,8 +572,8 @@ class HlslOut {
 			add("[");
 			addValue(index, tabs);
 			add("]");
-		case TMeta(_, _, e):
-			addExpr(e, tabs);
+		case TMeta(m, args, e):
+			handleMeta(m, args, addExpr, e, tabs);
 		}
 	}
 
@@ -693,8 +719,10 @@ class HlslOut {
 				samplerCount++;
 			}
 		}
-		if( samplerCount > 0 )
+		if( samplerCount > 0 ) {
+			if( samplerCount > maxSamplers ) samplerCount = maxSamplers;
 			add('SamplerState __Samplers[$samplerCount];\n');
+		}
 	}
 
 	function initStatics( s : ShaderData ) {
@@ -756,6 +784,7 @@ class HlslOut {
 
 		varAccess = new Map();
 		samplers = new Map();
+		namedSamplers = new Map();
 		initVars(s);
 		initGlobals(s);
 		initParams(s);
