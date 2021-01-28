@@ -284,6 +284,7 @@ class Printer {
 			tabs = old;
 			add("\n" + tabs + "}");
 		case TMeta(m, args, e):
+			add("@");
 			add(m);
 			if( args.length > 0 ) {
 				add("(");
