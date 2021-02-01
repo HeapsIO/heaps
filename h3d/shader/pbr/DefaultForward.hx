@@ -104,7 +104,7 @@ class DefaultForward extends hxsl.Shader {
 		}
 
 		function evaluateDirLight( index : Int ) : Vec3 {
-			var i = index * 3;
+			var i = index * 5;
 			var lightColor = lightInfos[i].rgb;
 			var lightDir = lightInfos[i+1].xyz;
 			var hasShadowMap = lightInfos[i].a > 0;
@@ -148,7 +148,7 @@ class DefaultForward extends hxsl.Shader {
 		}
 
 		function evaluateSpotLight( index : Int ) : Vec3 {
-			var i = index * 4 + dirLightStride + pointLightStride;
+			var i = index * 8 + dirLightStride + pointLightStride;
 			var lightColor = lightInfos[i].rgb;
 			var range = lightInfos[i].a;
 			var lightPos = lightInfos[i+1].xyz;
