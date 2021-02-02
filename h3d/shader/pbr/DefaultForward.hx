@@ -28,9 +28,11 @@ class DefaultForward extends hxsl.Shader {
 		// Direct Lighting
 		@param var cameraPosition : Vec3;
 		@param var emissivePower : Float;
+
+		@private var albedo : Vec3;
+
 		var view : Vec3;
 		var NdV : Float;
-		var albedo : Vec3;
 		var pbrSpecularColor : Vec3;
 		var metalness : Float;
 		var roughness : Float;
@@ -97,10 +99,6 @@ class DefaultForward extends hxsl.Shader {
 		function init() {
 			view = (cameraPosition - transformedPosition).normalize();
 			NdV = transformedNormal.dot(view).max(0.);
-			metalness = output.metalness;
-			roughness = output.roughness;
-			occlusion = output.occlusion;
-			emissive = output.emissive;
 		}
 
 		function evaluateDirLight( index : Int ) : Vec3 {

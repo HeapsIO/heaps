@@ -91,11 +91,6 @@ class DecalPBR extends hxsl.Shader {
 		};
 
 		var output : {
-			color : Vec4,
-			normal : Vec3,
-			metalness : Float,
-			roughness : Float,
-			occlusion : Float,
 			albedoStrength : Float,
 			normalStrength : Float,
 			pbrStrength : Float,
@@ -104,7 +99,6 @@ class DecalPBR extends hxsl.Shader {
 		@const var CENTERED : Bool;
 		@const var USE_ALBEDO : Bool;
 		@const var USE_NORMAL : Bool;
-		@const var USE_PBR : Bool;
 
 		@param var albedoStrength : Float;
 		@param var normalStrength : Float;
@@ -171,14 +165,13 @@ class DecalPBR extends hxsl.Shader {
 			if(	outsideBounds(localPos) )
 				discard;
 
-			var strength = vec4(0,0,0,0);
-			var prbValues = vec4(0,0,0,0);
-
+			var albedoSt = 0.;
+			var normalSt = 0.;
 			if( USE_ALBEDO ) {
 				var albedo = albedoTexture.get(calculatedUV);
 				pixelColor *= albedo;
 				alpha = pixelColor.a;
-				strength.r = albedoStrength * alpha;
+				albedoSt = albedoStrength;
 			}
 
 			if( USE_NORMAL ) {
@@ -193,25 +186,12 @@ class DecalPBR extends hxsl.Shader {
 				var tanX = worldTangent.xyz.normalize();
 				var tanY = n.cross(tanX) * -1;
 				transformedNormal = (nf.x * tanX + nf.y * tanY + nf.z * n).normalize();
-				strength.g = normalStrength * alpha;
+				normalSt = normalStrength;
 			}
 
-			if( USE_PBR ) {
-				var pbr = pbrTexture.get(calculatedUV).rgba;
-				prbValues.r = pbr.r;
-				prbValues.g = 1 - pbr.g * pbr.g;
-				prbValues.b = pbr.b;
-				strength.b = pbrStrength * alpha;
-			}
-
-			//output.color = pixelColor; // Allow override
-			output.normal = transformedNormal;
-			output.metalness = prbValues.r;
-			output.roughness = prbValues.g;
-			output.occlusion = prbValues.b;
-			output.albedoStrength = strength.r * fadeFactor;
-			output.normalStrength = strength.g * fadeFactor;
-			output.pbrStrength = strength.b * fadeFactor;
+			output.albedoStrength = albedoSt * alpha * fadeFactor;
+			output.normalStrength = normalSt * alpha * fadeFactor;
+			output.pbrStrength = pbrStrength * alpha * fadeFactor;
 		}
 	};
 

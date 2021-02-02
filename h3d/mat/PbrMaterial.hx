@@ -185,8 +185,8 @@ class PbrMaterial extends Material {
 		mainPass.removeShader(mainPass.getShader(h3d.shader.pbr.StrengthValues));
 		mainPass.removeShader(mainPass.getShader(h3d.shader.pbr.AlphaMultiply));
 		mainPass.removeShader(mainPass.getShader(h3d.shader.Parallax));
-		mainPass.removeShader(mainPass.getShader(h3d.shader.Emissive));
 		mainPass.removeShader(mainPass.getShader(h3d.shader.pbr.GammaCorrect));
+		#if editor
 		// Backward compatibility
 		if( props.depthTest == null ) props.depthTest = Less;
 		if( (props:Dynamic).colorMask == null ) props.colorMask = 15;
@@ -203,6 +203,7 @@ class PbrMaterial extends Material {
 			Reflect.deleteField(props, "stencilPassOp");
 			Reflect.deleteField(props, "stencilCompare");
 		}
+		#end
 	}
 
 	override function refreshProps() {
@@ -217,17 +218,10 @@ class PbrMaterial extends Material {
 			mainPass.setPassName("forward");
 		case BeforeTonemapping:
 			mainPass.setPassName("beforeTonemapping");
-			if( props.emissive > 0 ) {
-				var e = mainPass.getShader(h3d.shader.Emissive);
-				if( e == null ) {
-					e = new h3d.shader.Emissive(props.emissive);
-					e.setPriority(-1);
-					mainPass.addShader(e);
-				}
-			}
 			var gc = mainPass.getShader(h3d.shader.pbr.GammaCorrect);
 			if( gc == null ) {
 				gc = new h3d.shader.pbr.GammaCorrect();
+				gc.useEmissiveHDR = true;
 				gc.setPriority(-1);
 				mainPass.addShader(gc);
 			}
@@ -295,8 +289,10 @@ class PbrMaterial extends Material {
 			def = new h3d.shader.pbr.PropsValues();
 			mainPass.addShader(def);
 		}
-		if( tex != null ) tex.emissive = emit;
-		if( def != null ) def.emissive = emit;
+
+		// we should have either one or other
+		if( tex != null ) tex.emissiveValue = emit;
+		if( def != null ) def.emissiveValue = emit;
 
 		// Parallax
 		var ps = mainPass.getShader(h3d.shader.Parallax);
@@ -389,7 +385,7 @@ class PbrMaterial extends Material {
 		if( t != null ) {
 			if( spec == null ) {
 				spec = new h3d.shader.pbr.PropsTexture();
-				spec.emissive = emit;
+				spec.emissiveValue = emit;
 				mainPass.addShader(spec);
 			}
 			spec.texture = t;
@@ -400,7 +396,7 @@ class PbrMaterial extends Material {
 			// default values (if no texture)
 			if( def == null ) {
 				def = new h3d.shader.pbr.PropsValues();
-				def.emissive = emit;
+				def.emissiveValue = emit;
 				mainPass.addShader(def);
 			}
 		}
