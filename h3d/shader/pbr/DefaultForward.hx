@@ -10,7 +10,7 @@ class DefaultForward extends hxsl.Shader {
 		// Import pbr info
 		var output : {color : Vec4, metalness : Float, roughness : Float, occlusion : Float, emissive : Float };
 
-		@const(256) var BUFFER_SIZE : Int;
+		@const(256) var BUFFER_SIZE : Int = 1;
 		@param var lightInfos : Buffer<Vec4, BUFFER_SIZE>;
 
 		// Buffer Info
@@ -29,7 +29,7 @@ class DefaultForward extends hxsl.Shader {
 		@param var cameraPosition : Vec3;
 		@param var emissivePower : Float;
 
-		@private var albedo : Vec3;
+		var albedoGamma : Vec3;
 
 		var view : Vec3;
 		var NdV : Float;
@@ -41,7 +41,7 @@ class DefaultForward extends hxsl.Shader {
 		var F0 : Vec3;
 
 		// Indirect Lighting
-		@param var USE_INDIRECT = 1.0;
+		@const var USE_INDIRECT = true;
 		@param var irrLut : Sampler2D;
 		@param var irrDiffuse : SamplerCube;
 		@param var irrSpecular : SamplerCube;
@@ -60,7 +60,7 @@ class DefaultForward extends hxsl.Shader {
 		function indirectLighting() : Vec3 {
 			var F = F0 + (max(vec3(1 - roughness), F0) - F0) * exp2( ( -5.55473 * NdV - 6.98316) * NdV );
 			var rotatedNormal = rotateNormal(transformedNormal);
-			var diffuse = irrDiffuse.get(rotatedNormal).rgb * albedo;
+			var diffuse = irrDiffuse.get(rotatedNormal).rgb * albedoGamma;
 			var reflectVec = reflect(-view, transformedNormal);
 			var rotatedReflecVec = rotateNormal(reflectVec);
 			var envSpec = textureLod(irrSpecular, rotatedReflecVec, roughness * irrSpecularLevels).rgb;
@@ -77,7 +77,7 @@ class DefaultForward extends hxsl.Shader {
 				var half = (lightDirection + view).normalize();
 				var NdH = clamp(transformedNormal.dot(half), 0.0, 1.0);
 				var VdH = clamp(view.dot(half), 0.0, 1.0);
-				var diffuse = albedo / PI;
+				var diffuse = albedoGamma / PI;
 
 				// General Cook-Torrance formula for microfacet BRDF
 				// 	f(l,v) = D(h).F(v,h).G(l,v,h) / 4(n.l)(n.v)
@@ -93,7 +93,7 @@ class DefaultForward extends hxsl.Shader {
 
 		function __init__fragment() {
 			pbrSpecularColor = vec3(0.04);
-			albedo = pixelColor.rgb * pixelColor.rgb; // gamma correct
+			albedoGamma = pixelColor.rgb * pixelColor.rgb; // gamma correct
 		}
 
 		function init() {
@@ -180,7 +180,7 @@ class DefaultForward extends hxsl.Shader {
 
 			var lightAccumulation = vec3(0);
 
-			F0 = mix(pbrSpecularColor, albedo, metalness);
+			F0 = mix(pbrSpecularColor, albedoGamma, metalness);
 
 			// Dir Light
 			@unroll for( l in 0 ... dirLightCount )
@@ -195,7 +195,7 @@ class DefaultForward extends hxsl.Shader {
 				lightAccumulation += evaluateSpotLight(l);
 
 			// Indirect only support the main env from the scene at the moment
-			if( USE_INDIRECT > 0.0)
+			if( USE_INDIRECT )
 				lightAccumulation += indirectLighting();
 
 			// Emissive Pass

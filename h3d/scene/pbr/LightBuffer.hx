@@ -51,7 +51,7 @@ class LightBuffer {
 			s.dirShadowMaps[i] = defaultForwardShader.dirShadowMaps[i];*/
 
 		s.USE_INDIRECT = defaultForwardShader.USE_INDIRECT;
-		if( s.USE_INDIRECT > 0.0 ) {
+		if( s.USE_INDIRECT ) {
 			s.irrRotation = defaultForwardShader.irrRotation;
 			s.irrPower = defaultForwardShader.irrPower;
 			s.irrLut = defaultForwardShader.irrLut;
@@ -168,9 +168,9 @@ class LightBuffer {
 
 		s.lightInfos.uploadVector(lightInfos, 0, s.lightInfos.vertices, 0);
 
-		s.USE_INDIRECT = pbrRenderer.env != null ? 1.0 : 0.0;
+		s.USE_INDIRECT = pbrRenderer.env != null;
 		var pbrIndirect = @:privateAccess pbrRenderer.pbrIndirect;
-		if( s.USE_INDIRECT > 0.0 ) {
+		if( s.USE_INDIRECT ) {
 			s.irrRotation = pbrIndirect.irrRotation;
 			s.irrPower = pbrIndirect.irrPower;
 			s.irrLut = pbrIndirect.irrLut;
