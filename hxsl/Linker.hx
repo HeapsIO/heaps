@@ -126,7 +126,7 @@ class Linker {
 				if( vm == v )
 					return v2;
 			inline function isUnique( v : TVar, borrowed : Bool ) {
-				return (v.kind == Param && !borrowed && !v.hasQualifier(Shared) && !isBatchShader) || v.kind == Function || (v.kind == Var && v.hasQualifier(Private));
+				return (v.kind == Param && !borrowed && !v.hasQualifier(Shared) && !isBatchShader) || v.kind == Function || ((v.kind == Var || v.kind == Local) && v.hasQualifier(Private));
 			}
 			if( isUnique(v, v2.v.hasBorrowQualifier(shaderName)) || isUnique(v2.v, v.hasBorrowQualifier(v2.rootShaderName)) || (v.kind == Param && v2.v.kind == Param) /* two shared : one takes priority */ ) {
 				// allocate a new unique name in the shader if already in use
