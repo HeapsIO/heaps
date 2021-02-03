@@ -62,12 +62,12 @@ class GlslOut {
 		Intel HD driver fix:
 			single element arrays are interpreted as not arrays, creating mismatch when
 			handling uniforms/textures. The fix changes decl[1] into decl[2] with one unused element.
-		
+
 		Should not be enabled on AMD driver as it will create mismatch wrt uniforms binding
 		when there are some unused textures in shader output.
 	*/
 	var intelDriverFix : Bool;
-	
+
 	public function new() {
 		varNames = new Map();
 		allNames = new Map();
@@ -672,6 +672,15 @@ class GlslOut {
 			}
 		default:
 			addExpr(f.expr, "");
+		}
+		if( isVertex ) {
+			/**
+				In Heaps and DirectX, vertex output Z position is in [0,1] range
+				Whereas in OpenGL it's [-1, 1].
+				Given we have either [X, Y, 0, N] for zNear or [X, Y, F, F] for zFar,
+				this shader operation will map [0, 1] range to [-1, 1] for correct clipping.
+			**/
+			add("\tgl_Position.z += gl_Position.z - gl_Position.w;\n");
 		}
 		add("}");
 		exprValues.push(buf.toString());
