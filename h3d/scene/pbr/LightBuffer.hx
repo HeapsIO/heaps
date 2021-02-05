@@ -168,8 +168,8 @@ class LightBuffer {
 
 		s.lightInfos.uploadVector(lightInfos, 0, s.lightInfos.vertices, 0);
 
-		s.USE_INDIRECT = pbrRenderer.env != null;
 		var pbrIndirect = @:privateAccess pbrRenderer.pbrIndirect;
+		s.USE_INDIRECT = pbrRenderer.env != null && pbrIndirect.irrLut != null;
 		if( s.USE_INDIRECT ) {
 			s.irrRotation = pbrIndirect.irrRotation;
 			s.irrPower = pbrIndirect.irrPower;

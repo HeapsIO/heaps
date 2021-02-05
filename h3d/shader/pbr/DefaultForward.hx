@@ -41,7 +41,7 @@ class DefaultForward extends hxsl.Shader {
 		var F0 : Vec3;
 
 		// Indirect Lighting
-		@const var USE_INDIRECT = true;
+		@const var USE_INDIRECT = false;
 		@param var irrLut : Sampler2D;
 		@param var irrDiffuse : SamplerCube;
 		@param var irrSpecular : SamplerCube;
