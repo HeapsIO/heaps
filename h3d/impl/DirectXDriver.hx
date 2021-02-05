@@ -784,10 +784,16 @@ class DirectXDriver extends h3d.impl.Driver {
 	}
 
 	override function getNativeShaderCode( shader : hxsl.RuntimeShader ) {
-		var v = compileShader(shader.vertex, true).bytes;
-		var f = compileShader(shader.fragment, true).bytes;
-		return Driver.disassembleShader(v, None, null) + "\n" + Driver.disassembleShader(f, None, null);
-		//return "// vertex:\n" + new hxsl.HlslOut().run(shader.vertex.data) + "// fragment:\n" + new hxsl.HlslOut().run(shader.fragment.data);
+		function dumpShader(s:hxsl.RuntimeShader.RuntimeShaderData) {
+			var code = new hxsl.HlslOut().run(s.data);
+			try {
+				var scomp = compileShader(s, true).bytes;
+				code += "\n// ASM=\n" + Driver.disassembleShader(scomp, None, null) + "\n\n";
+			} catch( e : Dynamic ) {
+			}
+			return code;
+		}
+		return dumpShader(shader.vertex)+"\n\n"+dumpShader(shader.fragment);
 	}
 
 	override function hasFeature(f:Feature) {
