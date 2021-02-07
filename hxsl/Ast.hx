@@ -85,6 +85,7 @@ enum VarQualifier {
 	PerInstance( v : Int );
 	Doc( s : String );
 	Borrow( source : String );
+	Sampler( name : String );
 }
 
 enum Prec {

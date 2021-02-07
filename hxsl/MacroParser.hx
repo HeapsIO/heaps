@@ -29,6 +29,9 @@ class MacroParser {
 		case [ { expr: EConst(CString(s)), pos: pos } ] if (m.name == "doc"):
 			v.qualifiers.push(Doc(s));
 			return;
+		case [ { expr: EConst(CString(s)) } ] if (m.name == "sampler"):
+			v.qualifiers.push(Sampler(s));
+			return;
 		case [ e ] if (m.name == "borrow"):
 			var path = [];
 			function loop( e : Expr ) {

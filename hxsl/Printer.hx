@@ -63,6 +63,7 @@ class Printer {
 				case PerInstance(n): "perInstance("+n+")";
 				case Doc(s): "doc(\"" + StringTools.replace(s, '"', '\\"') + "\")";
 				case Borrow(s): "borrow(" + s + ")";
+				case Sampler(s): "sampler("+ s + ")";
 				}) + " ");
 		}
 		if( v.kind != defKind )

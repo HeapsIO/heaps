@@ -1,6 +1,51 @@
 package hxsl;
 using hxsl.Ast;
 
+class Samplers {
+
+	public var count : Int;
+	var named : Map<String, Int>;
+
+	public function new() {
+		count = 0;
+		named = new Map();
+	}
+
+	public function make( v : TVar, arr : Array<Int> ) : Array<Int> {
+
+		var ntex = switch( v.type ) {
+		case TArray(t, SConst(k)) if( t.isSampler() ): k;
+		case t if( t.isSampler() ): 1;
+		default:
+			return null;
+		}
+
+		var names = null;
+		if( v.qualifiers != null ) {
+			for( q in v.qualifiers ) {
+				switch( q ) {
+				case Sampler(nl): names = nl.split(",");
+				default:
+				}
+			}
+		}
+		for( i in 0...ntex ) {
+			if( names == null || names[i] == "" )
+				arr.push(count++);
+			else {
+				var idx = named.get(names[i]);
+				if( idx == null ) {
+					idx = count++;
+					named.set(names[i], idx);
+				}
+				arr.push(idx);
+			}
+		}
+		return arr;
+	}
+
+}
+
 class HlslOut {
 
 	static var KWD_LIST = [
@@ -53,11 +98,8 @@ class HlslOut {
 	var decls : Array<String>;
 	var isVertex : Bool;
 	var allNames : Map<String, Int>;
-	var samplers : Map<Int, Int>;
-	var namedSamplers : Map<String, Int>;
-	var forcedSampler : String;
+	var samplers : Map<Int, Array<Int>>;
 	public var varNames : Map<Int,String>;
-	public var maxSamplers : Int = 16;
 
 	var varAccess : Map<Int,String>;
 
@@ -205,11 +247,6 @@ class HlslOut {
 
 	function handleMeta( m, args : Array<Ast.Const>, callb, e, tabs ) {
 		switch( [m, args] ) {
-		case ["sampler", [CString(name)]]:
-			var prev = forcedSampler;
-			forcedSampler = name;
-			callb(e,tabs);
-			forcedSampler = null;
 		default:
 			callb(e,tabs);
 		}
@@ -271,19 +308,9 @@ class HlslOut {
 			}
 			switch( expr.e ) {
 			case TVar(v):
-				var samplerIndex = samplers.get(v.id);
-				if( samplerIndex == null ) throw "assert";
-				samplerIndex += offset;
-				if( forcedSampler != null ) {
-					var useIndex = namedSamplers.get("$"+forcedSampler);
-					if( useIndex != null )
-						samplerIndex = useIndex;
-					else {
-						useIndex = samplerIndex;
-						namedSamplers.set("$"+forcedSampler, useIndex);
-					}
-				}
-				add('__Samplers[$samplerIndex]');
+				var samplers = samplers.get(v.id);
+				if( samplers == null ) throw "assert";
+				add('__Samplers[${samplers[offset]}]');
 			default: throw "assert";
 			}
 			for( i in 1...args.length ) {
@@ -705,24 +732,12 @@ class HlslOut {
 		}
 		if( bufCount > 0 ) add("\n");
 
+		var ctx = new Samplers();
+		for( v in textures )
+			samplers.set(v.id, ctx.make(v, []));
 
-		var samplerCount = 0;
-		for( v in textures ) {
-			samplers.set(v.id, samplerCount);
-			switch( v.type ) {
-			case TArray(t, size):
-				samplerCount += switch( size ) {
-				case SConst(i): i;
-				default: throw "assert";
-				};
-			default:
-				samplerCount++;
-			}
-		}
-		if( samplerCount > 0 ) {
-			if( samplerCount > maxSamplers ) samplerCount = maxSamplers;
-			add('SamplerState __Samplers[$samplerCount];\n');
-		}
+		if( ctx.count > 0 )
+			add('SamplerState __Samplers[${ctx.count}];\n');
 	}
 
 	function initStatics( s : ShaderData ) {
@@ -784,7 +799,6 @@ class HlslOut {
 
 		varAccess = new Map();
 		samplers = new Map();
-		namedSamplers = new Map();
 		initVars(s);
 		initGlobals(s);
 		initParams(s);

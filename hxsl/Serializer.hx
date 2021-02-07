@@ -186,6 +186,7 @@ class Serializer {
 				case PerInstance(v): out.addInt32(v);
 				case Doc(s): writeString(s);
 				case Borrow(s): writeString(s);
+				case Sampler(s): writeString(s);
 				}
 			}
 		}
@@ -401,6 +402,7 @@ class Serializer {
 				case 9: PerInstance(input.readInt32());
 				case 10: Doc(readString());
 				case 11: Borrow(readString());
+				case 12: Sampler(readString());
 				default: throw "assert";
 				}
 				v.qualifiers.push(q);

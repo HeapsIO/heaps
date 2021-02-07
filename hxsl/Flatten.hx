@@ -359,6 +359,7 @@ class Flatten {
 			kind : Param,
 		};
 		var pos = 0;
+		var samplers = [];
 		for( v in vars ) {
 			var count = 1;
 			if( v.type != t ) {
@@ -372,11 +373,27 @@ class Flatten {
 			}
 			var a = new Alloc(g, null, pos, count);
 			a.v = v;
+			if( v.qualifiers != null )
+				for( q in v.qualifiers )
+					switch( q ) {
+					case Sampler(name):
+						for( i in 0...count )
+							samplers[pos+i] = name;
+					default:
+					}
 			varMap.set(v, a);
 			alloc.push(a);
 			pos += count;
 		}
 		g.type = TArray(t, SConst(pos));
+		if( samplers.length > 0 ) {
+			for( i in 0...pos )
+				if( samplers[i] == null )
+					samplers[i] = "";
+			if( g.qualifiers == null )
+				g.qualifiers = [];
+			g.qualifiers.push(Sampler(samplers.join(",")));
+		}
 		if( alloc.length > 0 ) {
 			outVars.push(g);
 			allocData.set(g, alloc);

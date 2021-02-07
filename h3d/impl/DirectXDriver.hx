@@ -26,6 +26,7 @@ private class ShaderContext {
 	public var paramsContent : hl.Bytes;
 	public var globals : dx.Resource;
 	public var params : dx.Resource;
+	public var samplersMap : Array<Int>;
 	#if debug
 	public var debugSource : String;
 	#end
@@ -777,6 +778,12 @@ class DirectXDriver extends h3d.impl.Driver {
 		ctx.bufferCount = shader.bufferCount;
 		ctx.globals = dx.Driver.createBuffer(shader.globalsSize * 16, Dynamic, ConstantBuffer, CpuWrite, None, 0, null);
 		ctx.params = dx.Driver.createBuffer(shader.paramsSize * 16, Dynamic, ConstantBuffer, CpuWrite, None, 0, null);
+		ctx.samplersMap = [];
+
+		var samplers = new hxsl.HlslOut.Samplers();
+		for( v in shader.data.vars )
+			samplers.make(v, ctx.samplersMap);
+
 		#if debug
 		ctx.debugSource = shader.code;
 		#end
@@ -1147,10 +1154,11 @@ class DirectXDriver extends h3d.impl.Driver {
 					if( start < 0 ) start = i;
 				}
 
+				var sidx = shader.samplersMap[i];
 				var bits = @:privateAccess t.bits;
 				if( t.lodBias != 0 )
 					bits |= Std.int((t.lodBias + 32)*32) << 10;
-				if( i < maxSamplers && bits != state.samplerBits[i] ) {
+				if( i < maxSamplers && bits != state.samplerBits[sidx] ) {
 					var ss = samplerStates.get(bits);
 					if( ss == null ) {
 						var desc = new SamplerDesc();
@@ -1164,10 +1172,10 @@ class DirectXDriver extends h3d.impl.Driver {
 						ss = Driver.createSamplerState(desc);
 						samplerStates.set(bits, ss);
 					}
-					state.samplerBits[i] = bits;
-					state.samplers[i] = ss;
-					smax = i;
-					if( sstart < 0 ) sstart = i;
+					state.samplerBits[sidx] = bits;
+					state.samplers[sidx] = ss;
+					if( sidx > smax ) smax = sidx;
+					if( sstart < 0 || sidx < sstart ) sstart = sidx;
 				}
 			}
 			switch( state.kind) {
