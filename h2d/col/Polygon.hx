@@ -280,10 +280,17 @@ abstract Polygon(Array<Point>) from Array<Point> to Array<Point> {
 	}
 
 	/**
-		Return the squared distance of `pt` to the closest edge.
+		Return the distance of `pt` to the closest edge.
 		If outside is `true`, only return a positive value if `pt` is outside the polygon, zero otherwise
 		If outside is `false`, only return a positive value if `pt` is inside the polygon, zero otherwise
 	**/
+	public function distance(pt : Point, ?outside : Bool) {
+		return Math.sqrt(distanceSq(pt, outside));
+	}
+
+	/**
+	 * Same as `distance` but returns the squared value
+	 */
 	public function distanceSq(pt : Point, ?outside : Bool) {
 		var p1 = points[points.length - 1];
 		var minDistSq = 1e10;
