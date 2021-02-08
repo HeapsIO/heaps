@@ -553,6 +553,18 @@ class Object implements hxd.impl.Serializable {
 	}
 
 	/**
+		Returns the position matrix relative to another scene object
+	**/
+	public function getRelPos( obj : Object ) {
+		if( obj == null )
+			return getAbsPos();
+		syncPos();
+		var m = new h3d.Matrix();
+		m.multiply(absPos, obj.getInvPos());
+		return m;
+	}
+
+	/**
 		Tell if the object is a Mesh.
 	**/
 	public inline function isMesh() {
