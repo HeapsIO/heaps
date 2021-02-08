@@ -80,6 +80,20 @@ class Matrix {
 		return _44 == 1;
 	}
 
+	public function isIdentityEpsilon( e : Float ) {
+		if( Math.abs(_41) > e || Math.abs(_42) > e || Math.abs(_43) > e )
+			return false;
+		if( Math.abs(_11-1) > e || Math.abs(_22-1) > e || Math.abs(_33-1) > e )
+			return false;
+		if( Math.abs(_12) > e || Math.abs(_13) > e || Math.abs(_14) > e )
+			return false;
+		if( Math.abs(_21) > e || Math.abs(_23) > e || Math.abs(_24) > e )
+			return false;
+		if( Math.abs(_31) > e || Math.abs(_32) > e || Math.abs(_34) > e )
+			return false;
+		return Math.abs(_44 - 1) <= e;
+	}
+
 	public function initRotationX( a : Float ) {
 		var cos = Math.cos(a);
 		var sin = Math.sin(a);
