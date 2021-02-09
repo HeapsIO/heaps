@@ -30,11 +30,12 @@ class Layers extends Object {
 	}
 
 	/**
-		Adds a child object `s` at the end of the layer 0.
+		Adds a child object `s` at the end of the `Layers.defaultLayer`.
 		@param s An object to be added.
 	**/
+	@:dox(show)
 	override function addChild(s) {
-		addChildAt(s, 0);
+		add(s, defaultLayer);
 	}
 
 	/**
@@ -82,6 +83,7 @@ class Layers extends Object {
 		@param s The object to be added.
 		@param index The position of the object in the layer.
 	**/
+	@:dox(show)
 	override function addChildAt( s : Object, index : Int ) {
 		add(s, -1, index);
 	}
@@ -181,6 +183,7 @@ class Layers extends Object {
 	/**
 		Return the `n`th element among the immediate children list on the `Layers.defaultLayer`, or null if there is none.
 	**/
+	@:dox(show)
 	override public function getChildAt(n:Int):Object
 	{
 		return getChildAtLayer(n);
@@ -188,6 +191,7 @@ class Layers extends Object {
 
 	/**
 		Return the `n`th element among the immediate children list on the `layer`, or null if there is none.
+		@param layer The layer children of which are used. Pass -1 to use `Layers.defaultLayer`.
 	**/
 	public function getChildAtLayer( n : Int, layer : Int = -1 ) : Object {
 		if ( layer == -1 ) layer = defaultLayer;
@@ -215,6 +219,7 @@ class Layers extends Object {
 		@param o The child to look up index of.
 		@returns `-1` if object is not a child of Layers, index of the child within its current layer otherwise.
 	**/
+	@:dox(show)
 	override public function getChildIndex( o : Object ):Int
 	{
 		if ( o.parent != this ) return -1;
