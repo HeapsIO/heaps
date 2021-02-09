@@ -74,8 +74,15 @@ class LocalEntry extends FileEntry {
 
 	override function loadBitmap( onLoaded : hxd.fs.LoadedBitmap -> Void ) : Void {
 		#if js
+		#if (multidriver && !macro)
+		var engine = h3d.Engine.getCurrent(); // hide
+		#end
 		var image = new js.html.Image();
 		image.onload = function(_) {
+			#if (multidriver && !macro)
+			if( engine.driver == null ) return;
+			engine.setCurrent();
+			#end
 			onLoaded(new LoadedBitmap(image));
 		};
 		image.src = "file://"+file;
@@ -147,7 +154,7 @@ class LocalEntry extends FileEntry {
 			WATCH_INDEX = 0;
 			return;
 		}
-		var t = try w.getModifTime() catch( e : Dynamic ) -1.;
+		var t = try w.getModifTime() catch( e : Dynamic ) return;
 		if( t == w.watchTime ) return;
 
 		#if (sys || nodejs)

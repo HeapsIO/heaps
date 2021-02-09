@@ -6,9 +6,10 @@ class ColorMult extends hxsl.Shader {
 		var pixelColor : Vec4;
 
 		@param var color : Vec4;
+		@param var amount : Float = 1.0;
 
 		function fragment() {
-			pixelColor *= color;
+			pixelColor.rgba = mix(pixelColor.rgba, pixelColor.rgba * color, amount);
 		}
 
 	};

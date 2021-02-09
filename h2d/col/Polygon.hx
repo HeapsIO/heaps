@@ -1,18 +1,33 @@
 package h2d.col;
 import hxd.Math;
 
+/**
+	An abstract around an Array of `Point`s that define a polygonal shape that can be collision-tested against.
+	@see `h2d.col.IPolygon`
+**/
 @:forward(push,remove,insert,copy)
 abstract Polygon(Array<Point>) from Array<Point> to Array<Point> {
 
+	/**
+		The underlying Array of vertices.
+	**/
 	public var points(get, never) : Array<Point>;
+	/**
+		The amount of vertices in the polygon.
+	**/
 	public var length(get, never) : Int;
 	inline function get_length() return this.length;
 	inline function get_points() return this;
 
+	/**
+		Create a new Polygon shape.
+		@param points An optional array of vertices the polygon should use.
+	**/
 	public inline function new( ?points ) {
 		this = points == null ? [] : points;
 	}
 
+	@:dox(hide)
 	public inline function iterator() {
 		return new hxd.impl.ArrayIterator(this);
 	}
@@ -26,6 +41,9 @@ abstract Polygon(Array<Point>) from Array<Point> to Array<Point> {
 		return new hxd.earcut.Earcut().triangulate(points);
 	}
 
+	/**
+		Returns new Segments instance containing polygon edges.
+	**/
 	public function toSegments() : Segments {
 		var segments = [];
 		var p1 = points[points.length - 1];
@@ -37,10 +55,17 @@ abstract Polygon(Array<Point>) from Array<Point> to Array<Point> {
 		return segments;
 	}
 
-	public function toIPolygon( scale = 1. ) {
+	/**
+		Converts Polygon to Int-based IPolygon.
+	**/
+	public function toIPolygon( scale = 1. ) : IPolygon {
 		return [for( p in points ) p.toIPoint(scale)];
 	}
 
+	/**
+		Returns bounding box of the Polygon.
+		@param b Optional Bounds instance to be filled. Returns new Bounds instance if `null`.
+	**/
 	public function getBounds( ?b : Bounds ) {
 		if( b == null ) b = new Bounds();
 		for( p in points )
@@ -48,6 +73,10 @@ abstract Polygon(Array<Point>) from Array<Point> to Array<Point> {
 		return b;
 	}
 
+	/**
+		Returns new `PolygonCollider` instance containing this Polygon.
+		@param isConvex Use simplified collision test suited for convex polygons. Results are undefined if polygon is concave.
+	**/
 	public function getCollider(isConvex : Bool = false) {
 		return new PolygonCollider([this], isConvex);
 	}
@@ -58,7 +87,10 @@ abstract Polygon(Array<Point>) from Array<Point> to Array<Point> {
 		return a.x < b.x ? -1 : 1;
 	}
 
-	//see Monotone_chain convex hull algorithm
+	/**
+		Returns a new Polygon containing a convex hull of this Polygon.
+		See Monotone chain algorithm for more details.
+	**/
 	public function convexHull() {
 		var len = points.length;
 		if( points.length < 3 )
@@ -89,6 +121,9 @@ abstract Polygon(Array<Point>) from Array<Point> to Array<Point> {
 	   return hull;
 	}
 
+	/**
+		Tests if polygon points are in the clockwise order.
+	**/
 	public function isClockwise() {
 		var sum = 0.;
 		var p1 = points[points.length - 1];
@@ -99,6 +134,9 @@ abstract Polygon(Array<Point>) from Array<Point> to Array<Point> {
 		return sum < 0; // Y axis is negative compared to classic maths
 	}
 
+	/**
+		Calculates total area of the Polygon.
+	**/
 	public function area() {
 		var sum = 0.;
 		var p1 = points[points.length - 1];
@@ -109,6 +147,9 @@ abstract Polygon(Array<Point>) from Array<Point> to Array<Point> {
 		return Math.abs(sum) * 0.5;
 	}
 
+	/**
+		Calculates a centroid of the Polygon and returns its position.
+	**/
 	public function centroid() {
 		var A = 0.;
 		var cx = 0.;
@@ -134,6 +175,9 @@ abstract Polygon(Array<Point>) from Array<Point> to Array<Point> {
 		return (p2.x - p1.x) * (t.y - p1.y) - (p2.y - p1.y) * (t.x - p1.x);
 	}
 
+	/**
+		Tests if polygon is convex or concave.
+	**/
 	public function isConvex() {
 		if(points.length < 4) return true;
 		var p1 = points[points.length - 2];
@@ -150,16 +194,27 @@ abstract Polygon(Array<Point>) from Array<Point> to Array<Point> {
 		return true;
 	}
 
+	/**
+		Reverses the Polygon points ordering. Can be used to change polygon from anti-clockwise to clockwise.
+	**/
 	public function reverse() : Void {
 		this.reverse();
 	}
 
+	/**
+		Transforms Polygon points by provided matrix.
+	**/
 	public function transform(mat: h2d.col.Matrix) {
 		for( i in 0...points.length ) {
 			points[i] = mat.transform(points[i]);
 		}
 	}
 
+	/**
+		Tests if Point `p` is inside this Polygon.
+		@param p The point to test against.
+		@param isConvex Use simplified collision test suited for convex polygons. Results are undefined if polygon is concave.
+	**/
 	@:noDebug
 	public function contains( p : Point, isConvex = false ) {
 		if( isConvex ) {
@@ -186,6 +241,12 @@ abstract Polygon(Array<Point>) from Array<Point> to Array<Point> {
 		}
 	}
 
+	/**
+		Returns closest Polygon vertex to Point `pt` within set maximum distance.
+		@param pt The point to test against.
+		@param maxDist Maximum distance vertex can be away from `pt` before it no longer considered close.
+		@returns A `Point` instance in the Polygon representing closest vertex (not the copy). `null` if no vertices were found near the `pt` within `maxDist`.
+	**/
 	public function findClosestPoint(pt : h2d.col.Point, maxDist : Float) {
 		var closest = null;
 		var minDist = maxDist * maxDist;
@@ -219,10 +280,17 @@ abstract Polygon(Array<Point>) from Array<Point> to Array<Point> {
 	}
 
 	/**
-		Return the squared distance of `pt` to the closest edge.
+		Return the distance of `pt` to the closest edge.
 		If outside is `true`, only return a positive value if `pt` is outside the polygon, zero otherwise
 		If outside is `false`, only return a positive value if `pt` is inside the polygon, zero otherwise
 	**/
+	public function distance(pt : Point, ?outside : Bool) {
+		return Math.sqrt(distanceSq(pt, outside));
+	}
+
+	/**
+	 * Same as `distance` but returns the squared value
+	 */
 	public function distanceSq(pt : Point, ?outside : Bool) {
 		var p1 = points[points.length - 1];
 		var minDistSq = 1e10;
@@ -306,7 +374,7 @@ abstract Polygon(Array<Point>) from Array<Point> to Array<Point> {
 	}
 
 	/**
-		check if polygon self-insterset
+		Check if polygon self-intersect
 	**/
 	public function selfIntersecting() {
 		if(points.length < 4) return false;

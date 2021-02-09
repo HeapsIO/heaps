@@ -65,7 +65,7 @@ class Camera2D extends SampleApp {
 
 	override private function init() {
 		super.init();
-		
+
 		// Second camera for sample controls
 		var uiCamera = new Camera();
 		// layerVisible allows to filter out layers that camera should not render.

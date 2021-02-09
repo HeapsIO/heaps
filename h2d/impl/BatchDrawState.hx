@@ -188,7 +188,7 @@ private class StateEntry {
 		A size of batch state.
 	**/
 	public var count : Int;
-	
+
 
 	public var next:StateEntry;
 

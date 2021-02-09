@@ -23,7 +23,7 @@ class ScaleMode2D extends SampleApp {
 		var halign:ScaleModeAlign = Center;
 		var valign:ScaleModeAlign = Center;
 
-		var sceneInfo:h2d.Text;
+		var sceneInfo:h2d.Text = null;
 
 		function setMode()
 		{

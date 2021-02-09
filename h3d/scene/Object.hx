@@ -323,18 +323,18 @@ class Object implements hxd.impl.Serializable {
 	/**
 		Convert a local position (or [0,0] if pt is null) relative to the object origin into an absolute global position, applying all the inherited transforms.
 	**/
-	public function localToGlobal( ?pt : h3d.Vector ) {
+	public function localToGlobal( ?pt : h3d.col.Point ) {
 		syncPos();
-		if( pt == null ) pt = new h3d.Vector();
-		pt.transform3x4(absPos);
+		if( pt == null ) pt = new h3d.col.Point();
+		pt.transform(absPos);
 		return pt;
 	}
 
 	/**
 		Convert an absolute global position into a local position relative to the object origin, applying all the inherited transforms.
 	**/
-	public function globalToLocal( pt : h3d.Vector ) {
-		pt.transform3x4(getInvPos());
+	public function globalToLocal( pt : h3d.col.Point ) {
+		pt.transform(getInvPos());
 		return pt;
 	}
 
@@ -550,6 +550,18 @@ class Object implements hxd.impl.Serializable {
 	public function getAbsPos() {
 		syncPos();
 		return absPos;
+	}
+
+	/**
+		Returns the position matrix relative to another scene object
+	**/
+	public function getRelPos( obj : Object ) {
+		if( obj == null )
+			return getAbsPos();
+		syncPos();
+		var m = new h3d.Matrix();
+		m.multiply(absPos, obj.getInvPos());
+		return m;
 	}
 
 	/**
@@ -817,6 +829,20 @@ class Object implements hxd.impl.Serializable {
 	}
 
 	/**
+		Returns the local position, scale and rotation of the object relative to its parent.
+	**/
+	public function getTransform( ?mat : h3d.Matrix ) : h3d.Matrix {
+		if( mat == null ) mat = new h3d.Matrix();
+		mat.initScale(scaleX, scaleY, scaleZ);
+		qRot.toMatrix(tmpMat);
+		mat.multiply3x4(mat, tmpMat);
+		mat.tx = x;
+		mat.ty = y;
+		mat.tz = z;
+		return mat;
+	}
+
+	/**
 		Rotate around the current rotation axis by the specified angles (in radian).
 	**/
 	public function rotate( rx : Float, ry : Float, rz : Float ) {
@@ -853,7 +879,7 @@ class Object implements hxd.impl.Serializable {
 	/**
 		Return the direction in which the object rotation is currently oriented to
 	**/
-	public function getDirection() {
+	public function getLocalDirection() {
 		return qRot.getDirection();
 	}
 

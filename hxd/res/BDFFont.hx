@@ -26,7 +26,7 @@ using StringTools;
 		this.stride = stride;
 		this.bits = new Array();
 	}
-	
+
 	static public function sortOnHeight( a : BDFFontChar, b : BDFFontChar ) {
 		return b.height - a.height; // Largest first
 	}
@@ -56,7 +56,7 @@ class BDFFont extends Resource {
 	@:access(h2d.Font)
 	public function toFont() : h2d.Font {
 		if ( font != null ) return font;
-		
+
 		// File starts with STARTFONT
 		if ( (entry.getBytes().getInt32(0) != 0x52415453) || (entry.getBytes().getInt32(8) != 0x2E322054) )
 			throw 'File does not appear to be a BDF file. Expecting STARTFONT';
@@ -78,7 +78,7 @@ class BDFFont extends Resource {
 		// Return the generated font
 		return font;
 	}
-	
+
 	/**
 	 * Extract what we can from the font header. Unlike other font formats supported by heaps, some
 	 * of the values need to be infered from what is given (e.g. line height is not specificed directly,
@@ -219,7 +219,7 @@ class BDFFont extends Resource {
 			} // glyphs
 
 		} // lines
-		
+
 		// Return linenum we are up to
 		return linenum;
 	}
@@ -240,7 +240,7 @@ class BDFFont extends Resource {
 		for ( d in glyphData ) volume += ( d.width * d.height );
 		var bitmapWidth : Int = Math.ceil( Math.sqrt( volume * (1 + BitmapPad) ) );
 		if ( bitmapWidth > BitmapMaxWidth ) throw 'The font bitmap is too big: ${bitmapWidth}x${bitmapWidth} (max ${BitmapMaxWidth}x${BitmapMaxWidth})';
-		
+
 		// Create the bitmap
 		var bitmapData : hxd.BitmapData = new hxd.BitmapData( bitmapWidth, bitmapWidth );
 		bitmapData.lock();
@@ -358,7 +358,7 @@ class BDFFont extends Resource {
 			else
 				font.lineHeight = a.t.height * 2; 
 		}
-		
+
 		// Estimate a baseline
 		var space = font.glyphs.get( " ".code );
 		var padding : Float = ( space.t.height * .5 );
@@ -379,7 +379,7 @@ class BDFFont extends Resource {
 		if( fallback == null )
 			fallback = font.glyphs.get( " ".code );
 		font.defaultChar = fallback;
-		
+
 		// Cleanup
 		bitmapData.dispose();
 		this.glyphData = null; // No longer required

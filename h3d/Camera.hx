@@ -170,10 +170,10 @@ class Camera {
 
 	public function update() {
 		if( follow != null ) {
-			pos.set(0, 0, 0);
-			target.set(0, 0, 0);
-			follow.pos.localToGlobal(pos);
-			follow.target.localToGlobal(target);
+			var fpos = follow.pos.localToGlobal();
+			var ftarget = follow.target.localToGlobal();
+			pos.set(fpos.x, fpos.y, fpos.z);
+			target.set(ftarget.x, ftarget.y, ftarget.z);
 			// Animate FOV
 			if( follow.pos.name != null ) {
 				var p = follow.pos;
@@ -201,9 +201,9 @@ class Camera {
 		frustum.loadMatrix(m);
 	}
 
-	public function getFrustumCorners(zMax=1.) : Array<h3d.Vector> {
+	public function getFrustumCorners(zMax=1., zMin=0.) : Array<h3d.Vector> {
 		return [
-			unproject(-1, 1, 0), unproject(1, 1, 0), unproject(1, -1, 0), unproject(-1, -1, 0),
+			unproject(-1, 1, zMin), unproject(1, 1, zMin), unproject(1, -1, zMin), unproject(-1, -1, zMin),
 			unproject(-1, 1, zMax), unproject(1, 1, zMax), unproject(1, -1, zMax), unproject(-1, -1, zMax)
 		];
 	}
@@ -286,6 +286,11 @@ class Camera {
 		m._42 = -ay.dot(pos);
 		m._43 = -az.dot(pos);
 		m._44 = 1;
+	}
+
+	public function setTransform( m : Matrix ) {
+		pos.set(m._41, m._42, m._43);
+		target.load(pos.add(m.getDirection()));
 	}
 
 	function makeFrustumMatrix( m : Matrix ) {

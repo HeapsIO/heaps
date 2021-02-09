@@ -66,6 +66,34 @@ class Matrix {
 		_41 = 0.0; _42 = 0.0; _43 = 0.0; _44 = 1.0;
 	}
 
+	public function isIdentity() {
+		if( _41 != 0 || _42 != 0 || _43 != 0 )
+			return false;
+		if( _11 != 1 || _22 != 1 || _33 != 1 )
+			return false;
+		if( _12 != 0 || _13 != 0 || _14 != 0 )
+			return false;
+		if( _21 != 0 || _23 != 0 || _24 != 0 )
+			return false;
+		if( _31 != 0 || _32 != 0 || _34 != 0 )
+			return false;
+		return _44 == 1;
+	}
+
+	public function isIdentityEpsilon( e : Float ) {
+		if( Math.abs(_41) > e || Math.abs(_42) > e || Math.abs(_43) > e )
+			return false;
+		if( Math.abs(_11-1) > e || Math.abs(_22-1) > e || Math.abs(_33-1) > e )
+			return false;
+		if( Math.abs(_12) > e || Math.abs(_13) > e || Math.abs(_14) > e )
+			return false;
+		if( Math.abs(_21) > e || Math.abs(_23) > e || Math.abs(_24) > e )
+			return false;
+		if( Math.abs(_31) > e || Math.abs(_32) > e || Math.abs(_34) > e )
+			return false;
+		return Math.abs(_44 - 1) <= e;
+	}
+
 	public function initRotationX( a : Float ) {
 		var cos = Math.cos(a);
 		var sin = Math.sin(a);
@@ -347,6 +375,12 @@ class Matrix {
 		initInverse(this);
 	}
 
+	public function getInverse( ?m : h3d.Matrix ) {
+		if( m == null ) m = new h3d.Matrix();
+		m.initInverse(this);
+		return m;
+	}
+
 	public inline function getDeterminant() {
 		return _11 * (_22*_33 - _23*_32) + _12 * (_23*_31 - _21*_33) + _13 * (_21*_32 - _22*_31);
 	}
@@ -527,6 +561,13 @@ class Matrix {
 
 	public function getFloats() {
 		return [_11, _12, _13, _14, _21, _22, _23, _24, _31, _32, _33, _34, _41, _42, _43, _44];
+	}
+
+	public function getDirection() {
+		var q = new h3d.Quat();
+		q.initRotateMatrix(this);
+		q.normalize();
+		return q.getDirection();
 	}
 
 	/**
@@ -730,6 +771,17 @@ class Matrix {
 		if( col.contrast != null ) colorContrast(col.contrast);
 		if( col.lightness != null ) colorLightness(col.lightness);
 		if( col.gain != null ) colorGain(col.gain.color, col.gain.alpha);
+	}
+
+	public inline function toMatrix2D( ?m : h2d.col.Matrix ) {
+		if( m == null ) m = new h2d.col.Matrix();
+		m.a = _11;
+		m.b = _12;
+		m.c = _21;
+		m.d = _22;
+		m.x = tx;
+		m.y = ty;
+		return m;
 	}
 
 	// STATICS

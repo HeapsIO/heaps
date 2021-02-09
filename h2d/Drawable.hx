@@ -1,24 +1,30 @@
 package h2d;
 
 /**
-	h2d.Drawable is the base class for all 2D objects that will draw something on screen.
+	A base class for all 2D objects that will draw something on the screen.
+
 	Unlike Object base class, all properties of Drawable only apply to the current object and are not inherited by its children.
 **/
 class Drawable extends Object {
 
 	/**
-		The color multiplier for the object. Can be used to adjust individually each of the four channels R,G,B,A (default [1,1,1,1])
+		The color multiplier for the drawable. Can be used to adjust individually each of the four channels R,G,B,A (default [1,1,1,1])
 	**/
 	public var color(default,default) : h3d.Vector;
 
 	/**
-		By enabling smoothing, scaling the object up or down will use hardware bilinear filtering resulting in less crisp aspect.
-		By default smooth is null and then Scene.defaultSmooth value is used.
+		By enabling smoothing, scaling the object up or down will use hardware bilinear filtering resulting in a less crisp aspect.
+
+		By default smooth is `null` in which case `Scene.defaultSmooth` value is used.
 	**/
 	public var smooth : Null<Bool>;
 
 	/**
-		By enabling tile wrapping, you can have tiles which size exceed the texture size and will repeat instead of displaying clamped pixels.
+		Enables texture uv wrap for this Drawable, causing tiles with uv exceeding the texture size to repeat instead of clamping on edges.
+
+		Note that `tileWrap` does not use the `Tile` region as a wrapping area but instead uses underlying `h3d.mat.Texture` size.
+		This is due to implementation specifics, as it just sets the `Texture.wrap` to either `Repeat` or `Clamp`.
+		Because of that, proper Tile tiling can be expected only when the tile covers an entire Texture area.
 	**/
 	public var tileWrap(default, set) : Bool;
 
@@ -39,6 +45,10 @@ class Drawable extends Object {
 
 	var shaders : hxsl.ShaderList;
 
+	/**
+		Create a new Drawable instance with given parent.
+		@param parent An optional parent `h2d.Object` instance to which Drawable adds itself if set.
+	**/
 	function new(parent : h2d.Object) {
 		super(parent);
 		color = new h3d.Vector(1, 1, 1, 1);
@@ -91,7 +101,8 @@ class Drawable extends Object {
 	}
 
 	/**
-		Set the `colorMatrix` value by specifying which effects to apply. Calling adjustColor() reset the colorMatrix to `null`
+		Set the `Drawable.colorMatrix` value by specifying which effects to apply.
+		Calling `adjustColor()` without arguments will reset the colorMatrix to `null`.
 	**/
 	public function adjustColor( ?col : h3d.Matrix.ColorAdjust ) : Void {
 		if( col == null )
@@ -129,7 +140,8 @@ class Drawable extends Object {
 	}
 
 	/**
-		Return the built shader code, can be used for debugging shader assembly
+		Returns the built shader code, can be used for debugging shader assembly
+		@param toHxsl Whether return an HXSL shader or the native shading language of the backend.
 	**/
 	public function getDebugShaderCode( toHxsl = true ) {
 		var shader = @:privateAccess {
@@ -145,7 +157,8 @@ class Drawable extends Object {
 	}
 
 	/**
-		Return the first shader of the given shader class among the object shaders
+		Returns the first shader of the given shader class among the drawable shaders.
+		@param stype The class of the shader to look up.
 	**/
 	public function getShader< T:hxsl.Shader >( stype : Class<T> ) : T {
 		if (shaders != null) for( s in shaders ) {
@@ -157,14 +170,16 @@ class Drawable extends Object {
 	}
 
 	/**
-		Return all object shaders
+		Returns an iterator of all drawable shaders
 	**/
 	public inline function getShaders() {
 		return shaders.iterator();
 	}
 
 	/**
-		Add a shader to the object shaders
+		Add a shader to the drawable shaders.
+
+		Keep in mind, that as stated before, drawable children do not inherit Drawable properties, which includes shaders.
 	**/
 	public function addShader<T:hxsl.Shader>( s : T ) : T {
 		if( s == null ) throw "Can't add null shader";
@@ -173,7 +188,7 @@ class Drawable extends Object {
 	}
 
 	/**
-		Remove a shader from the object shaders, returns true if found or false if it was not part of our shaders.
+		Remove a shader from the drawable shaders, returns true if found or false if it was not part of our shaders.
 	**/
 	public function removeShader( s : hxsl.Shader ) {
 		var prev = null, cur = shaders;

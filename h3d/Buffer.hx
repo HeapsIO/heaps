@@ -69,7 +69,7 @@ class Buffer {
 			h3d.Engine.getCurrent().mem.allocBuffer(this, stride);
 	}
 
-	public function isDisposed() {
+	public inline function isDisposed() {
 		return buffer == null || buffer.isDisposed();
 	}
 

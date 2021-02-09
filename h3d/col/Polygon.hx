@@ -162,15 +162,15 @@ class Polygon implements Collider {
 	public function new() {
 	}
 
-	public function addBuffers( vertexes : haxe.ds.Vector<hxd.impl.Float32>, indexes : haxe.ds.Vector<hxd.impl.UInt16>, stride = 3 ) {
+	public function addBuffers( vertexes : haxe.ds.Vector<hxd.impl.Float32>, indexes : haxe.ds.Vector<Int>, stride = 3 ) {
 		for(i in 0...Std.int(indexes.length / 3)) {
 			var k = i * 3;
 
 			var t = new TriPlane();
 
-			var i0 = (indexes[k]:Int) * stride;
-			var i1 = (indexes[k + 1]:Int) * stride;
-			var i2 = (indexes[k + 2]:Int) * stride;
+			var i0 = indexes[k] * stride;
+			var i1 = indexes[k + 1] * stride;
+			var i2 = indexes[k + 2] * stride;
 
 			t.init(
 				new Point(vertexes[i0], vertexes[i0 + 1], vertexes[i0 + 2]),

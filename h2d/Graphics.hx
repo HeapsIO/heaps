@@ -5,6 +5,7 @@ import hxd.impl.Allocator;
 
 private typedef GraphicsPoint = hxd.poly2tri.Point;
 
+@:dox(hide)
 class GPoint {
 	public var x : Float;
 	public var y : Float;
@@ -142,7 +143,7 @@ private class GraphicsContent extends h3d.prim.Primitive {
 			indexes = null;
 		}
 		state.clear();
-		
+
 		super.dispose();
 	}
 
@@ -156,6 +157,15 @@ private class GraphicsContent extends h3d.prim.Primitive {
 
 }
 
+/**
+	A simple interface to draw arbitrary 2D geometry.
+
+	Usage notes:
+	* While Graphics allows for multiple unique textures, each texture swap causes a new drawcall,
+	and due to that it's recommended to minimize the amount of used textures per Graphics instance,
+	ideally limiting to only one texture.
+	* Due to how Graphics operate, removing them from the active `h2d.Scene` will cause a loss of all data.
+**/
 class Graphics extends Drawable {
 
 	var content : GraphicsContent;
@@ -185,9 +195,22 @@ class Graphics extends Drawable {
 	var mx : Float = 0.;
 	var my : Float = 0.;
 
+	/**
+		The Tile used as source of Texture to render.
+	**/
 	public var tile : h2d.Tile;
+	/**
+		Adds bevel cut-off at line corners.
+
+		The value is a percentile in range of 0...1, dictating at which point edges get beveled based on their angle.
+		Value of 0 being not beveled and 1 being always beveled.
+	**/
 	public var bevel = 0.25; //0 = not beveled, 1 = always beveled
 
+	/**
+		Create a new Graphics instance.
+		@param parent An optional parent `h2d.Object` instance to which Graphics adds itself if set.
+	**/
 	public function new(?parent) {
 		super(parent);
 		content = new GraphicsContent();
@@ -200,6 +223,9 @@ class Graphics extends Drawable {
 		clear();
 	}
 
+	/**
+		Clears the Graphics contents.
+	**/
 	public function clear() {
 		content.clear();
 		tmpPoints = [];
@@ -410,6 +436,14 @@ class Graphics extends Drawable {
 		tmpPoints = [];
 	}
 
+	/**
+		Begins a solid color fill.
+
+		Beginning new fill will finish previous fill operation without need to call `Graphics.endFill`.
+
+		@param color An RGB color with which to fill the drawn shapes.
+		@param alpha A transparency of the fill color.
+	**/
 	public function beginFill( color : Int = 0, alpha = 1.  ) {
 		flush();
 		tile = fillTile;
@@ -421,6 +455,19 @@ class Graphics extends Drawable {
 	/**
 		Position a virtual tile at the given position and scale. Every draw will display a part of this tile relative
 		to these coordinates.
+
+		Note that in by default, Tile is not wrapped, and in order to render tiling texture, `Drawable.tileWrap` have to be set.
+		Additionally, both `Tile.dx` and `Tile.dy` are ignored (use `dx`/`dy` arguments instead)
+		as well as tile defined size of the tile through `Tile.width` and `Tile.height` (use `scaleX`/`scaleY` relative to texture size).
+
+		Beginning new fill will finish previous fill operation without need to call `Graphics.endFill`.
+
+		@param dx An X offset of the Tile relative to Graphics.
+		@param dy An Y offset of the Tile relative to Graphics.
+		@param scaleX A horizontal scale factor applied to the Tile texture.
+		@param scaleY A vertical scale factor applied to the Tile texture.
+		@param tile The tile to fill with. If null, uses previously used Tile with `beginTileFill` or throws an error.
+		Previous tile is remembered across `Graphics.clear` calls.
 	**/
 	public function beginTileFill( ?dx : Float, ?dy : Float, ?scaleX : Float, ?scaleY : Float, ?tile : h2d.Tile ) {
 		if ( tile == null )
@@ -451,12 +498,28 @@ class Graphics extends Drawable {
 		my = -dy * md;
 	}
 
+	/**
+		Draws a Tile at given position.
+		See `Graphics.beginTileFill` for limitations.
+
+		This methods ends current fill operation.
+		@param x The X position of the tile.
+		@param y The Y position of the tile.
+		@param tile The tile to draw.
+	**/
 	public function drawTile( x : Float, y : Float, tile : h2d.Tile ) {
 		beginTileFill(x, y, tile);
 		drawRect(x, y, tile.width, tile.height);
 		endFill();
 	}
 
+	/**
+		Sets an outline style. Changing the line style ends the currently drawn line.
+
+		@param size Width of the outline. Setting size to 0 will remove the outline.
+		@param color An outline RGB color.
+		@param alpha An outline transparency.
+	**/
 	public function lineStyle( size : Float = 0, color = 0, alpha = 1. ) {
 		flush();
 		this.lineSize = size;
@@ -466,16 +529,29 @@ class Graphics extends Drawable {
 		lineB = (color & 0xFF) / 255.;
 	}
 
+	/**
+		Ends the current line and starts new one at given position.
+	**/
 	public inline function moveTo(x,y) {
 		flush();
 		lineTo(x, y);
 	}
 
+	/**
+		Ends the current fill operation.
+	**/
 	public function endFill() {
 		flush();
 		doFill = false;
 	}
 
+	/**
+		Changes current fill color.
+		Does not interrupt current fill operation and can be utilized to customize color per vertex.
+		During tile fill operation, color serves as a tile color multiplier.
+		@param color The new fill color.
+		@param alpha The new fill transparency.
+	**/
 	public inline function setColor( color : Int, alpha : Float = 1. ) {
 		curA = alpha;
 		curR = ((color >> 16) & 0xFF) / 255.;
@@ -483,6 +559,13 @@ class Graphics extends Drawable {
 		curB = (color & 0xFF) / 255.;
 	}
 
+	/**
+		Draws a rectangle with given parameters.
+		@param x The rectangle top-left corner X position.
+		@param y The rectangle top-left corner Y position.
+		@param w The rectangle width.
+		@param h The rectangle height.
+	**/
 	public function drawRect( x : Float, y : Float, w : Float, h : Float ) {
 		flush();
 		lineTo(x, y);
@@ -500,6 +583,15 @@ class Graphics extends Drawable {
 		flush();
 	}
 
+	/**
+		Draws a rounded rectangle with given parameters.
+		@param x The rectangle top-left corner X position.
+		@param y The rectangle top-left corner Y position.
+		@param w The rectangle width.
+		@param h The rectangle height.
+		@param radius Radius of the rectangle corners.
+		@param nsegments Amount of segments used for corners. When `0` segment count calculated automatically.
+	**/
 	public function drawRoundedRect( x : Float, y : Float, w : Float, h : Float, radius : Float, nsegments = 0 ) {
 		if (radius <= 0) {
 			return drawRect(x, y, w, h);
@@ -531,6 +623,13 @@ class Graphics extends Drawable {
 		flush();
 	}
 
+	/**
+		Draws a circle centered at given position.
+		@param cx X center position of the circle.
+		@param cy Y center position of the circle.
+		@param radius Radius of the circle.
+		@param nsegments Amount of segments used to draw the circle. When `0`, amount of segments calculated automatically.
+	**/
 	public function drawCircle( cx : Float, cy : Float, radius : Float, nsegments = 0 ) {
 		flush();
 		if( nsegments == 0 )
@@ -544,6 +643,15 @@ class Graphics extends Drawable {
 		flush();
 	}
 
+	/**
+		Draws an ellipse centered at given position.
+		@param cx X center position of the ellipse.
+		@param cy Y center position of the ellipse.
+		@param radiusX Horizontal radius of an ellipse.
+		@param radiusY Vertical radius of an ellipse.
+		@param rotationAngle Ellipse rotation in radians.
+		@param nsegments Amount of segments used to draw an ellipse. When `0`, amount of segments calculated automatically.
+	**/
 	public function drawEllipse( cx : Float, cy : Float, radiusX : Float, radiusY : Float, rotationAngle : Float = 0, nsegments = 0 ) {
 		flush();
 		if( nsegments == 0 )
@@ -560,6 +668,15 @@ class Graphics extends Drawable {
 		flush();
 	}
 
+	/**
+		Draws a pie centered at given position.
+		@param cx X center position of the pie.
+		@param cy Y center position of the pie.
+		@param radius Radius of the pie.
+		@param angleStart Starting angle of the pie in radians.
+		@param angleLength The pie size in clockwise direction with `2*PI` being full circle.
+		@param nsegments Amount of segments used to draw the pie. When `0`, amount of segments calculated automatically.
+	**/
 	public function drawPie( cx : Float, cy : Float, radius : Float, angleStart:Float, angleLength:Float, nsegments = 0 ) {
 		if(Math.abs(angleLength) >= Math.PI * 2) {
 			return drawCircle(cx, cy, radius, nsegments);
@@ -578,6 +695,53 @@ class Graphics extends Drawable {
 		flush();
 	}
 
+	/**
+		Draws a double-edged pie centered at given position.
+		@param cx X center position of the pie.
+		@param cy Y center position of the pie.
+		@param radius The outer radius of the pie.
+		@param innerRadius The inner radius of the pie.
+		@param angleStart Starting angle of the pie in radians.
+		@param angleLength The pie size in clockwise direction with `2*PI` being full circle.
+		@param nsegments Amount of segments used to draw the pie. When `0`, amount of segments calculated automatically.
+	**/
+	public function drawPieInner( cx : Float, cy : Float, radius : Float, innerRadius : Float, angleStart:Float, angleLength:Float, nsegments = 0 ) {
+		flush();
+		if( Math.abs(angleLength) >= Math.PI * 2 + 1e-3 ) angleLength = Math.PI*2+1e-3;
+
+		var cs = Math.cos(angleStart);
+		var ss = Math.sin(angleStart);
+		var ce = Math.cos(angleStart + angleLength);
+		var se = Math.sin(angleStart + angleLength);
+
+		lineTo(cx + cs * innerRadius, cy + ss * innerRadius);
+
+		if( nsegments == 0 )
+			nsegments = Math.ceil(Math.abs(radius * angleLength / 4));
+		if( nsegments < 3 ) nsegments = 3;
+		var angle = angleLength / (nsegments - 1);
+		for( i in 0...nsegments ) {
+			var a = i * angle + angleStart;
+			lineTo(cx + Math.cos(a) * radius, cy + Math.sin(a) * radius);
+		}
+		lineTo(cx + ce * innerRadius, cy + se * innerRadius);
+		for( i in 0...nsegments ) {
+			var a = (nsegments - 1 - i) * angle + angleStart;
+			lineTo(cx + Math.cos(a) * innerRadius, cy + Math.sin(a) * innerRadius);
+		}
+		flush();
+	}
+
+	/**
+		Draws a rectangular pie centered at given position.
+		@param cx X center position of the pie.
+		@param cy Y center position of the pie.
+		@param width Width of the pie.
+		@param height Height of the pie.
+		@param angleStart Starting angle of the pie in radians.
+		@param angleLength The pie size in clockwise direction with `2*PI` being solid rectangle.
+		@param nsegments Amount of segments used to draw the pie. When `0`, amount of segments calculated automatically.
+	**/
 	public function drawRectanglePie( cx : Float, cy : Float, width : Float, height : Float, angleStart:Float, angleLength:Float, nsegments = 0 ) {
 		if(Math.abs(angleLength) >= Math.PI*2) {
 			return drawRect(cx-(width/2), cy-(height/2), width, height);
@@ -650,10 +814,24 @@ class Graphics extends Drawable {
 		lineTo(dx, dy);
 	}
 
+	/**
+		Draws a straight line from the current drawing position to the given position.
+	**/
 	public inline function lineTo( x : Float, y : Float ) {
 		addVertex(x, y, curR, curG, curB, curA, x * ma + y * mc + mx, x * mb + y * md + my);
 	}
 
+	/**
+		Advanced usage. Adds new vertex to the current polygon with given parameters and current line style.
+		@param x Vertex X position
+		@param y Vertex Y position
+		@param r Red tint value of the vertex when performing fill operation.
+		@param g Green tint value of the vertex when performing fill operation.
+		@param b Blue tint value of the vertex when performing fill operation.
+		@param a Alpha of the vertex when performing fill operation.
+		@param u Normalized horizontal Texture position from the current Tile fill operation.
+		@param v Normalized vertical Texture position from the current Tile fill operation.
+	**/
 	public function addVertex( x : Float, y : Float, r : Float, g : Float, b : Float, a : Float, u : Float = 0., v : Float = 0. ) {
 		if( x < xMin ) xMin = x;
 		if( y < yMin ) yMin = y;

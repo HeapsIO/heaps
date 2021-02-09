@@ -26,7 +26,7 @@ class Driver implements hxd.snd.Driver {
 	public inline function getBuffer(channels : Int, sampleCount : Int, rate : Int) : AudioBuffer {
 		return Context.getBuffer(channels, sampleCount, rate);
 	}
-	
+
 	/**
 		Puts AudioBuufer back to it's pool.
 	**/
@@ -91,7 +91,7 @@ class Driver implements hxd.snd.Driver {
 	public function setSourceVolume (source : SourceHandle, value : Float) : Void {
 		source.gain.gain.value = value;
 	}
-	
+
 	public function destroySource (source : SourceHandle) : Void {
 		stopSource(source);
 		source.gain.disconnect();
@@ -111,7 +111,7 @@ class Driver implements hxd.snd.Driver {
 		b.samples = 0;
 		return b;
 	}
-	
+
 	public function setBufferData (buffer : BufferHandle, data : haxe.io.Bytes, size : Int, format : Data.SampleFormat, channelCount : Int, samplingRate : Int) : Void {
 		var sampleCount = Std.int(size / hxd.snd.Data.formatBytes(format) / channelCount);
 		buffer.samples = sampleCount;

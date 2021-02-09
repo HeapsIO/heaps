@@ -261,7 +261,7 @@ class Polygon extends MeshPrimitive {
 
 	override function getCollider() : h3d.col.Collider {
 		var vertexes = new haxe.ds.Vector<hxd.impl.Float32>(points.length * 3);
-		var indexes = new haxe.ds.Vector<hxd.impl.UInt16>(idx.length);
+		var indexes = new haxe.ds.Vector<Int>(idx.length);
 		var vid = 0;
 		for( p in points ) {
 			vertexes[vid++] = p.x;

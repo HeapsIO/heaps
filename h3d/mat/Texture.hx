@@ -38,6 +38,8 @@ class Texture {
 	public var filter(default,set) : Filter;
 	public var wrap(default, set) : Wrap;
 	public var layerCount(get, never) : Int;
+	public var lodBias : Float = 0.;
+	public var mipLevels(get, never) : Int;
 
 	/**
 		If this callback is set, the texture can be re-allocated when the 3D context has been lost or when
@@ -64,6 +66,16 @@ class Texture {
 	function get_lastFrame()
 	{
 		return _lastFrame;
+	}
+
+	function get_mipLevels() {
+		if( !flags.has(MipMapped) )
+			return 1;
+		/* atm we don't allow textures with mipmaps < max levels */
+		var lv = 1;
+		var w = width, h = height;
+		while( (w >> lv) >= 1 || (h >> lv) >= 1 ) lv++;
+		return lv;
 	}
 
 	public function new(w, h, ?flags : Array<TextureFlags>, ?format : TextureFormat ) {
@@ -281,9 +293,11 @@ class Texture {
 		}
 	}
 
-	inline function checkSize(width, height, mip) {
-		if( width != this.width >> mip || height != this.height >> mip )
-			throw "Invalid upload size : " + width + "x" + height + " should be " + (this.width >> mip) + "x" + (this.height >> mip);
+	function checkSize(width, height, mip) {
+		var mw = this.width >> mip; if( mw == 0 ) mw = 1;
+		var mh = this.height >> mip; if( mh == 0 ) mh = 1;
+		if( width != mw || height != mh )
+			throw "Invalid upload size : " + width + "x" + height + " should be " + mw + "x" + mh;
 	}
 
 	function checkMipMapGen(mipLevel,layer) {
