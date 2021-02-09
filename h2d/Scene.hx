@@ -598,17 +598,6 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		return false;
 	}
 
-	public function startCapture( onEvent : hxd.Event -> Void, ?onCancel : Void -> Void, ?touchId : Int ) {
-		events.startCapture(function(e) {
-			screenToViewport(e);
-			onEvent(e);
-		},onCancel, touchId);
-	}
-
-	public function stopCapture() {
-		events.stopCapture();
-	}
-
 	/**
 		Starts input events capture and redirects them to `onEvent` method until `Scene.stopDrag` is called.
 
@@ -620,14 +609,25 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		@param onCancel An optional callback that is invoked when `Scene.stopDrag` is called.
 		@param refEvent For touch events, when defined, only capture events that match the reference `Event.touchId`.
 	**/
-	@:deprecated("Renamed to startCapture") @:dox(hide)
-	public inline function startDrag( onEvent : hxd.Event -> Void, ?onCancel : Void -> Void, ?refEvent : hxd.Event ) {
-		startCapture(onEvent, onCancel, refEvent != null ? refEvent.touchId : null);
+	public function startCapture( onEvent : hxd.Event -> Void, ?onCancel : Void -> Void, ?touchId : Int ) {
+		events.startCapture(function(e) {
+			screenToViewport(e);
+			onEvent(e);
+		},onCancel, touchId);
 	}
 
 	/**
 		Stops current input event capture.
 	**/
+	public function stopCapture() {
+		events.stopCapture();
+	}
+
+	@:deprecated("Renamed to startCapture") @:dox(hide)
+	public inline function startDrag( onEvent : hxd.Event -> Void, ?onCancel : Void -> Void, ?refEvent : hxd.Event ) {
+		startCapture(onEvent, onCancel, refEvent != null ? refEvent.touchId : null);
+	}
+
 	@:deprecated("Renamed to stopCapture") @:dox(hide)
 	public inline function stopDrag() {
 		stopCapture();
