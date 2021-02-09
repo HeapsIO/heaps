@@ -11,7 +11,7 @@ class LowPassDriver extends hxd.snd.Driver.EffectDriver<LowPass> {
 		super();
 		this.driver = driver;
 	}
-	
+
 	override function acquire() : Void {
 		var bytes = driver.getTmpBytes(4);
 		EFX.genFilters(1, bytes);

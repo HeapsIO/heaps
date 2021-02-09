@@ -263,7 +263,7 @@ class Benchmark extends h2d.Graphics {
 			s = s.next;
 		}
 
-		var space = 40;
+		var space = 52;
 		width -= space;
 
 		var count = 0;
@@ -309,11 +309,12 @@ class Benchmark extends h2d.Graphics {
 		}
 
 		var time = allocLabel(count++);
-		time.x = xPos + 10;
+		time.x = xPos + 3;
+		time.y = -1;
 		time.visible = true;
 		time.textColor = 0xFFFFFF;
 		var timeMs = totalTime / 1e6;
-		time.text = Std.int(timeMs) + "." + Std.int((timeMs * 10) % 10);
+		time.text = Std.int(timeMs) + "." + Std.int((timeMs * 10) % 10) + (measureCpu?" cpu" : " gpu");
 
 		while( labels.length > count )
 			labels.pop().remove();

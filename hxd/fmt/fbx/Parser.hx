@@ -24,7 +24,7 @@ class Parser {
 	var token : Null<Token>;
 	var binary : Bool;
 	var fbxVersion:Int;
-	
+
 	function new() {
 	}
 
@@ -46,37 +46,37 @@ class Parser {
 		this.pos = 0;
 		this.line = 0;
 		this.binary = (bytes.getString(0, 20) == "Kaydara FBX Binary  ") && bytes.get(20) == 0;
-		
+
 		token = null;
 		if (this.binary) {
 			// Skip header, magic [0x1A, 0x00] and version number.
 			fbxVersion = bytes.getInt32(0x17);
-			
+
 			this.pos = 21 + 2 + 4;
 			var firstNode = parseBinaryNode(getVersionedInt32());
 			if (firstNode.name != "") {
-				
+
 				// Root was omitted, read until all data obtained.
 				var nodes : Array<FbxNode> = [firstNode];
 				var size:Int = getVersionedInt32();
-				
+
 				while (size != 0) {
 					nodes.push(parseBinaryNode(size));
 					size = getVersionedInt32();
 				}
-				
+
 				return {
 					name: "Root",
 					props: [PInt(0), PString("Root"), PString("Root")],
 					childs: nodes
 				};
 			}
-			else 
+			else
 			{
 				return firstNode;
 			}
 		}
-		
+
 		return {
 			name: "Root",
 			props : [PInt(0),PString("Root"),PString("Root")],
@@ -172,7 +172,7 @@ class Parser {
 		if( childs == null ) childs = [];
 		return { name : name, props : props, childs : childs };
 	}
-	
+
 	function parseBinaryNodes( output : Array<FbxNode> ) {
 		var size : Int = getVersionedInt32();
 		while (size != 0)
@@ -181,7 +181,7 @@ class Parser {
 			size = getVersionedInt32();
 		}
 	}
-	
+
 	function readBinaryString( length : Int ) : String {
 		if  (length == 0 ) return "";
 		var str = bytes.getString(pos, length);
@@ -196,45 +196,45 @@ class Parser {
 		}
 		return str;
 	}
-	
+
 	function parseBinaryNode( nextRecord : Int ) : FbxNode {
-		
+
 		var numProperties : Int = getVersionedInt32();
 		var propertyListLength : UInt = getVersionedInt32();
 		var name : String = readBinaryString(getByte());
-		
+
 		var props : Array<FbxProp> = new Array();
 		var childs : Array<FbxNode> = new Array();
-		
+
 		var propStart : Int = pos;
-		
+
 		for ( i in 0...numProperties ) {
 			props.push(readBinaryProperty());
 		}
-		
+
 		pos = propStart + propertyListLength;
-		
+
 		if ( pos < nextRecord ) {
 			parseBinaryNodes(childs);
 		}
 		pos = nextRecord;
-		
+
 		return { name: name, props: props, childs: childs };
 	}
-	
+
 	function readBinaryProperty() : FbxProp {
-		
+
 		var arrayLen : Int = 0;
 		var arrayEncoding:Int;
 		var arrayCompressedLen:Int;
 		var arrayBytes:Bytes = null;
 		var arrayBytesPos:Int = 0;
-		
+
 		inline function readArray(entrySize:Int) {
 			arrayLen = getInt32();
 			arrayEncoding = getInt32();
 			arrayCompressedLen = getInt32();
-			
+
 			switch( arrayEncoding ) {
 				case 0:
 					arrayBytes = bytes;
@@ -242,17 +242,26 @@ class Parser {
 					pos += arrayLen * entrySize;
 				case 1:
 					arrayBytesPos = 0;
-					arrayBytes = haxe.zip.Uncompress.run(bytes.sub(pos, arrayCompressedLen));
+					var buf = bytes.sub(pos, arrayCompressedLen);
+					#if hxnodejs
+					try {
+						arrayBytes = haxe.zip.Uncompress.run(buf);
+					} catch( e : Dynamic ) {
+						arrayBytes = haxe.zip.InflateImpl.run(new haxe.io.BytesInput(buf));
+					}
+					#else
+					arrayBytes = haxe.zip.Uncompress.run(buf);
+					#end
 					pos += arrayCompressedLen;
 				default:
 					error("Unsupported array encoding: " + arrayEncoding);
 			}
 		}
-		
+
 		// Limitations:
 		// Int64 records are converted to Floats with top bits being lost.
 		// Raw binary data converted to Strings.
-		
+
 		var type : Int = getByte();
 		switch( type ) {
 			case 'Y'.code:
@@ -373,43 +382,43 @@ class Parser {
 	inline function nextChar() {
 		return StringTools.fastCodeAt(buf, pos++);
 	}
-	
+
 	inline function getVersionedInt32() {
 		var i : Int = bytes.getInt32(pos);
 		// No support for file sizes over Int32.
 		pos += fbxVersion >= 7500 ? 8 : 4;
 		return i;
 	}
-	
+
 	inline function getInt32() {
 		var i : Int = bytes.getInt32(pos);
 		pos += 4;
 		return i;
 	}
-	
+
 	inline function getInt16() {
 		var i : Int = bytes.get(pos) | (bytes.get(pos + 1) << 8);
 		pos += 2;
 		return i;
 	}
-	
+
 	inline function getFloat() {
 		var f : Float = bytes.getFloat(pos);
 		pos += 4;
 		return f;
 	}
-	
+
 	inline function getDouble() {
 		var d : Float = bytes.getDouble(pos);
 		pos += 8;
 		return d;
 	}
-	
+
 	inline function i64ToFloat( i64 : haxe.Int64 ) : Float {
-		return (i64.high * 4294967296) + 
+		return (i64.high * 4294967296) +
 						( (i64.low & 0x80000000) != 0 ? ((i64.low & 0x7fffffff) + 2147483648) : i64.low );
 	}
-	
+
 	inline function getByte() {
 		return bytes.get(pos++);
 	}

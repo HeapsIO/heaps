@@ -26,6 +26,7 @@ private class ShaderContext {
 	public var paramsContent : hl.Bytes;
 	public var globals : dx.Resource;
 	public var params : dx.Resource;
+	public var samplersMap : Array<Int>;
 	#if debug
 	public var debugSource : String;
 	#end
@@ -98,6 +99,7 @@ class DirectXDriver extends h3d.impl.Driver {
 	var currentColorMask = -1;
 	var targetsCount = 1;
 	var allowDraw = false;
+	var maxSamplers = 16;
 
 	var depthStates : Map<Int,{ def : DepthStencilState, stencils : Array<{ op : Int, mask : Int, state : DepthStencilState }> }>;
 	var blendStates : Map<Int,BlendState>;
@@ -381,9 +383,8 @@ class DirectXDriver extends h3d.impl.Driver {
 	override function allocTexture(t:h3d.mat.Texture):Texture {
 
 		var mips = 1;
-		if( t.flags.has(MipMapped) ) {
-			while( t.width >= 1 << mips || t.height >= 1 << mips ) mips++;
-		}
+		if( t.flags.has(MipMapped) )
+			mips = t.mipLevels;
 
 		var rt = t.flags.has(Target);
 		var isCube = t.flags.has(Cube);
@@ -409,6 +410,8 @@ class DirectXDriver extends h3d.impl.Driver {
 		if( isArray )
 			desc.arraySize = t.layerCount;
 		if( t.flags.has(MipMapped) && !t.flags.has(ManualMipMapGen) ) {
+			if( t.format.match(S3TC(_)) )
+				throw "Cannot generate mipmaps for compressed texture "+t;
 			desc.bind |= RenderTarget;
 			desc.misc |= GenerateMips;
 		}
@@ -522,10 +525,18 @@ class DirectXDriver extends h3d.impl.Driver {
 			if (region.yMax > tex.height) region.yMax = tex.height;
 			if (region.xMin < 0) region.xMin = 0;
 			if (region.yMin < 0) region.yMin = 0;
-			pixels = hxd.Pixels.alloc(region.width >> mipLevel, region.height >> mipLevel, tex.format);
+			var w = region.width >> mipLevel;
+			var h = region.height >> mipLevel;
+			if( w == 0 ) w = 1;
+			if( h == 0 ) h = 1;
+			pixels = hxd.Pixels.alloc(w, h, tex.format);
 			captureTexPixels(pixels, tex, layer, mipLevel, region.xMin, region.yMin);
 		} else {
-			pixels = hxd.Pixels.alloc(tex.width >> mipLevel, tex.height >> mipLevel, tex.format);
+			var w = tex.width >> mipLevel;
+			var h = tex.height >> mipLevel;
+			if( w == 0 ) w = 1;
+			if( h == 0 ) h = 1;
+			pixels = hxd.Pixels.alloc(w, h, tex.format);
 			captureTexPixels(pixels, tex, layer, mipLevel);
 		}
 		return pixels;
@@ -562,16 +573,16 @@ class DirectXDriver extends h3d.impl.Driver {
 		}
 
 		var pitch = 0;
-		var bpp = hxd.Pixels.calcStride(1, tex.format);
+		var stride = hxd.Pixels.calcStride(desc.width, tex.format);
 		var ptr = tmp.map(0, Read, true, pitch);
 
 		if( hasDeviceError ) throw "Device was disposed during capturePixels";
 
-		if( pitch == desc.width * bpp )
-			@:privateAccess pixels.bytes.b.blit(0, ptr, 0, desc.width * desc.height * bpp);
+		if( pitch == stride )
+			@:privateAccess pixels.bytes.b.blit(0, ptr, 0, desc.height * stride);
 		else {
 			for( i in 0...desc.height )
-				@:privateAccess pixels.bytes.b.blit(i * desc.width * bpp, ptr, i * pitch, desc.width * bpp);
+				@:privateAccess pixels.bytes.b.blit(i * stride, ptr, i * pitch, stride);
 		}
 		tmp.unmap(0);
 		tmp.release();
@@ -590,7 +601,7 @@ class DirectXDriver extends h3d.impl.Driver {
 		pixels.setFlip(false);
 		if( hasDeviceError ) return;
 		if( mipLevel >= t.t.mips ) throw "Mip level outside texture range : " + mipLevel + " (max = " + (t.t.mips - 1) + ")";
-		var stride = pixels.stride;
+		var stride = @:privateAccess pixels.stride;
 		switch( t.format ) {
 		case S3TC(n): stride = pixels.width * ((n == 1 || n == 4) ? 2 : 4); // "uncompressed" stride ?
 		default:
@@ -767,6 +778,12 @@ class DirectXDriver extends h3d.impl.Driver {
 		ctx.bufferCount = shader.bufferCount;
 		ctx.globals = dx.Driver.createBuffer(shader.globalsSize * 16, Dynamic, ConstantBuffer, CpuWrite, None, 0, null);
 		ctx.params = dx.Driver.createBuffer(shader.paramsSize * 16, Dynamic, ConstantBuffer, CpuWrite, None, 0, null);
+		ctx.samplersMap = [];
+
+		var samplers = new hxsl.HlslOut.Samplers();
+		for( v in shader.data.vars )
+			samplers.make(v, ctx.samplersMap);
+
 		#if debug
 		ctx.debugSource = shader.code;
 		#end
@@ -774,10 +791,16 @@ class DirectXDriver extends h3d.impl.Driver {
 	}
 
 	override function getNativeShaderCode( shader : hxsl.RuntimeShader ) {
-		var v = compileShader(shader.vertex, true).bytes;
-		var f = compileShader(shader.fragment, true).bytes;
-		return Driver.disassembleShader(v, None, null) + "\n" + Driver.disassembleShader(f, None, null);
-		//return "// vertex:\n" + new hxsl.HlslOut().run(shader.vertex.data) + "// fragment:\n" + new hxsl.HlslOut().run(shader.fragment.data);
+		function dumpShader(s:hxsl.RuntimeShader.RuntimeShaderData) {
+			var code = new hxsl.HlslOut().run(s.data);
+			try {
+				var scomp = compileShader(s, true).bytes;
+				code += "\n// ASM=\n" + Driver.disassembleShader(scomp, None, null) + "\n\n";
+			} catch( e : Dynamic ) {
+			}
+			return code;
+		}
+		return dumpShader(shader.vertex)+"\n\n"+dumpShader(shader.fragment);
 	}
 
 	override function hasFeature(f:Feature) {
@@ -877,8 +900,10 @@ class DirectXDriver extends h3d.impl.Driver {
 		Driver.omSetRenderTargets(textures.length, currentTargets, currentDepth == null ? null : currentDepth.view);
 		targetsCount = textures.length;
 
-		viewport[2] = tex.width >> mipLevel;
-		viewport[3] = tex.height >> mipLevel;
+		var w = tex.width >> mipLevel; if( w == 0 ) w = 1;
+		var h = tex.height >> mipLevel; if( h == 0 ) h = 1;
+		viewport[2] = w;
+		viewport[3] = h;
 		viewport[5] = 1.;
 		Driver.rsSetViewports(1, viewport);
 	}
@@ -971,11 +996,15 @@ class DirectXDriver extends h3d.impl.Driver {
 		}
 		if( s == currentShader )
 			return false;
+		setShader(s);
+		return true;
+	}
+
+	function setShader( s : CompiledShader ) {
 		currentShader = s;
 		dx.Driver.vsSetShader(s.vertex.shader);
 		dx.Driver.psSetShader(s.fragment.shader);
 		dx.Driver.iaSetInputLayout(s.layout);
-		return true;
 	}
 
 	override function getShaderInputNames() : InputNames {
@@ -1021,8 +1050,8 @@ class DirectXDriver extends h3d.impl.Driver {
 
 	override function uploadShaderBuffers(buffers:h3d.shader.Buffers, which:h3d.shader.Buffers.BufferKind) {
 		if( hasDeviceError ) return;
-		uploadBuffers(vertexShader, currentShader.vertex, buffers.vertex, which);
-		uploadBuffers(pixelShader, currentShader.fragment, buffers.fragment, which);
+		uploadBuffers(buffers, vertexShader, currentShader.vertex, buffers.vertex, which);
+		uploadBuffers(buffers, pixelShader, currentShader.fragment, buffers.fragment, which);
 	}
 
 	function uploadShaderBuffer( sbuffer : dx.Resource, buffer : haxe.ds.Vector<hxd.impl.Float32>, size : Int, prevContent : hl.Bytes ) {
@@ -1041,7 +1070,7 @@ class DirectXDriver extends h3d.impl.Driver {
 		sbuffer.unmap(0);
 	}
 
-	function uploadBuffers( state : PipelineState, shader : ShaderContext, buffers : h3d.shader.Buffers.ShaderBuffers, which : h3d.shader.Buffers.BufferKind ) {
+	function uploadBuffers( buf : h3d.shader.Buffers, state : PipelineState, shader : ShaderContext, buffers : h3d.shader.Buffers.ShaderBuffers, which : h3d.shader.Buffers.BufferKind ) {
 		switch( which ) {
 		case Globals:
 			if( shader.globalsSize > 0 ) {
@@ -1102,9 +1131,19 @@ class DirectXDriver extends h3d.impl.Driver {
 					}
 				}
 				if( t != null && t.t == null && t.realloc != null ) {
+					var s = currentShader;
 					t.alloc();
 					t.realloc();
 					if( hasDeviceError ) return;
+					if( s != currentShader ) {
+						// realloc triggered a shader change !
+						// we need to reset the original shader and reupload everything
+						setShader(s);
+						uploadShaderBuffers(buf,Globals);
+						uploadShaderBuffers(buf,Params);
+						uploadShaderBuffers(buf,Textures);
+						return;
+					}
 				}
 				t.lastFrame = frame;
 
@@ -1115,8 +1154,11 @@ class DirectXDriver extends h3d.impl.Driver {
 					if( start < 0 ) start = i;
 				}
 
+				var sidx = shader.samplersMap[i];
 				var bits = @:privateAccess t.bits;
-				if( bits != state.samplerBits[i] ) {
+				if( t.lodBias != 0 )
+					bits |= Std.int((t.lodBias + 32)*32) << 10;
+				if( i < maxSamplers && bits != state.samplerBits[sidx] ) {
 					var ss = samplerStates.get(bits);
 					if( ss == null ) {
 						var desc = new SamplerDesc();
@@ -1126,13 +1168,14 @@ class DirectXDriver extends h3d.impl.Driver {
 						// only the first sampler maxLod seems to be taken into account :'(
 						desc.minLod = 0;
 						desc.maxLod = 1e30;
+						desc.mipLodBias = t.lodBias;
 						ss = Driver.createSamplerState(desc);
 						samplerStates.set(bits, ss);
 					}
-					state.samplerBits[i] = bits;
-					state.samplers[i] = ss;
-					smax = i;
-					if( sstart < 0 ) sstart = i;
+					state.samplerBits[sidx] = bits;
+					state.samplers[sidx] = ss;
+					if( sidx > smax ) smax = sidx;
+					if( sstart < 0 || sidx < sstart ) sstart = sidx;
 				}
 			}
 			switch( state.kind) {

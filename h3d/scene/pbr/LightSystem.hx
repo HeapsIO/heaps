@@ -3,6 +3,14 @@ package h3d.scene.pbr;
 @:access(h3d.scene.pbr.Light)
 class LightSystem extends h3d.scene.LightSystem {
 
+	public var lightBuffer : h3d.scene.pbr.LightBuffer;
+	public var forwardMode = false;
+
+	public function new() {
+		super();
+		lightBuffer = new h3d.scene.pbr.LightBuffer();
+	}
+
 	override function computeLight( obj : h3d.scene.Object, shaders : hxsl.ShaderList ) : hxsl.ShaderList {
 		var light = hxd.impl.Api.downcast(obj, h3d.scene.pbr.Light);
 		if( light != null ) {
@@ -10,9 +18,26 @@ class LightSystem extends h3d.scene.LightSystem {
 			if( light.shadows.shader != null && light.shadows.mode != None )
 				shaders = ctx.allocShaderList(light.shadows.shader, shaders);
 		}
+		else if( forwardMode ) {
+			var found = false;
+            for( s in shaders ) {
+                var forward = Std.downcast(s, h3d.shader.pbr.DefaultForward);
+                if( forward != null ) {
+                    lightBuffer.setBuffers(forward);
+                    found = true;
+                    break;
+                }
+            }
+            if( !found )
+                shaders = ctx.allocShaderList(lightBuffer.defaultForwardShader, shaders);
+		}
 		return shaders;
 	}
 
+	override function initLights( ctx : h3d.scene.RenderContext ) @:privateAccess {
+		super.initLights(ctx);
+		lightBuffer.sync(ctx);
+	}
 
 	public function drawShadows( light : Light, passes : h3d.pass.PassList ) {
 		light.shadows.setContext(ctx);

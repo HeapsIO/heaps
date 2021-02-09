@@ -1,5 +1,15 @@
 package h2d;
 
+/**
+	A core 2D rendering component representing a region of an underlying `h3d.mat.Texture`.
+
+	Tiles cannot be created directly, and instances are created with the following methods:
+	* Via the Resource Management system: `hxd.res.Image.toTile`.
+	* From pre-existing Texture: `Tile.fromTexture`.
+	* From pre-existing `BitmapData` or `Pixels`: `Tile.fromBitmap` and `Tile.fromPixels` (as well as `Tile.autoCut`).
+	* From solid color: `Tile.fromColor`.
+	* From previously existing Tile instance via various methods, such as `Tile.sub`.
+**/
 @:allow(h2d)
 class Tile {
 
@@ -10,22 +20,77 @@ class Tile {
 	var u2 : Float;
 	var v2 : Float;
 
+	/**
+		Visual offset of the Tile along the X axis during rendering.
+	**/
 	public var dx : Float;
+	/**
+		Visual offset of the Tile along the Y axis during rendering.
+	**/
 	public var dy : Float;
+	/**
+		Horizontal position of the Tile on the Texture.
+
+		Cannot be modified directly, use `Tile.setPosition` instead.
+	**/
 	public var x(default,null) : Float;
+	/**
+		Vertical position of the Tile on the Texture.
+
+		Cannot be modified directly, use `Tile.setPosition` instead.
+	**/
 	public var y(default,null) : Float;
+	/**
+		Width of the Tile.
+		Not guaranteed to represent real width of the Tile on texture. (see `Tile.scaleToSize`)
+
+		Cannot be modified directly, use `Tile.setSize` instead.
+	**/
 	public var width(default,null) : Float;
+	/**
+		Height of the Tile.
+		Not guaranteed to represent real height of the Tile on texture. (see `Tile.scaleToSize`)
+
+		Cannot be modified directly, use `Tile.setSize` instead.
+	**/
 	public var height(default,null) : Float;
 
+	/**
+		The flip state of the Tile.
+		@see `Tile.flipX`
+	**/
+	public var xFlip(get,set) : Bool;
+	/**
+		The flip state of the Tile.
+		@see `Tile.flipY`
+	**/
+	public var yFlip(get,set) : Bool;
+
+	/**
+		An integer horizontal position of the Tile on the Texture.
+		Alias to `Math.floor(tile.x)`.
+	**/
 	public var ix(get,never) : Int;
 	inline function get_ix() return Math.floor(x);
 
+	/**
+		An integer vertical position of the Tile on the Texture.
+		Alias to `Math.floor(tile.y)`.
+	**/
 	public var iy(get,never) : Int;
 	inline function get_iy() return Math.floor(y);
 
+	/**
+		An integer width of the Tile.
+		Alias to `Math.ceil(tile.width + tile.x) - tile.ix`.
+	**/
 	public var iwidth(get,never) : Int;
 	inline function get_iwidth() return Math.ceil(width + x) - ix;
 
+	/**
+		An integer height of the Tile.
+		Alias to `Math.ceil(tile.height + tile.y) - tile.iy`.
+	**/
 	public var iheight(get,never) : Int;
 	inline function get_iheight() return Math.ceil(height + y) - iy;
 
@@ -40,10 +105,16 @@ class Tile {
 		if( tex != null ) setTexture(tex);
 	}
 
+	/**
+		Returns an underlying Texture instance.
+	**/
 	public inline function getTexture():h3d.mat.Texture {
 		return innerTex;
 	}
 
+	/**
+		Checks if Tile or underlying Texture were disposed.
+	**/
 	public function isDisposed() {
 		return innerTex == null || innerTex.isDisposed();
 	}
@@ -58,33 +129,71 @@ class Tile {
 		}
 	}
 
+	/**
+		Changes this Tile underlying texture to one used in the specified Tile.
+
+		If Tile was scaled, new uv will cover new width and height instead of the original unscaled one.
+
+		@param t The Tile used as a source of the Texture instance.
+
+		It's possible to switch texture by referring the Texture instance directly, by using access hacks:
+		```haxe
+		@:privateAccess tile.setTexture(myTextureInstance);
+		```
+	**/
 	public inline function switchTexture( t : Tile ) {
 		setTexture(t.innerTex);
 	}
 
+	/**
+		Create a sub-region of this Tile with specified size and offset.
+		@param x The offset on top of the current Tile offset along the X axis.
+		@param y The offset on top of the current Tile offset along the Y axis.
+		@param w The width of the new Tile region. Can exceed current tile size.
+		@param h The height of the new Tile region. Can exceed the current tile size.
+		@param dx An optional visual offset of the new Tile along the X axis.
+		@param dy An optional visual offset of the new Tile along the Y axis.
+	**/
 	public function sub( x : Float, y : Float, w : Float, h : Float, dx = 0., dy = 0. ) : Tile {
 		return new Tile(innerTex, this.x + x, this.y + y, w, h, dx, dy);
 	}
 
+	/**
+		Returns a new Tile with shifting origin point (`dx` and `dy`) to the tile center.
+
+		To modify this Tile origin point, use `Tile.setCenterRatio`.
+	**/
 	public function center():Tile {
 		return sub(0, 0, width, height, -(width * .5), -(height * .5));
 	}
 
+	/**
+		Sets `dx` / `dy` as origin point dictated by `px` / `py` with a default being center.
+	**/
 	public inline function setCenterRatio(?px:Float=0.5, ?py:Float=0.5) : Void {
 		dx = -(px*width);
 		dy = -(py*height);
 	}
 
+	/**
+		Flips the Tile horizontally. Note that `dx` is flipped as well.
+	**/
 	public function flipX() : Void {
 		var tmp = u; u = u2; u2 = tmp;
 		dx = -dx - width;
 	}
 
+	/**
+		Flips the Tile vertically. Note that `dy` is flipped as well.
+	**/
 	public function flipY() : Void {
 		var tmp = v; v = v2; v2 = tmp;
 		dy = -dy - height;
 	}
 
+	/**
+		Set the Tile position in the texture to the specified coordinate.
+	**/
 	public function setPosition(x : Float, y : Float) : Void {
 		this.x = x;
 		this.y = y;
@@ -97,6 +206,9 @@ class Tile {
 		}
 	}
 
+	/**
+		Set the Tile size in the texture to the specified dimensions.
+	**/
 	public function setSize(w : Float, h : Float) : Void {
 		this.width = w;
 		this.height = h;
@@ -107,11 +219,21 @@ class Tile {
 		}
 	}
 
+	/**
+		Rescales the Tile to be of the set width and height, but without affecting the uv coordinates.
+
+		Using this method allows to upscale/downscale Tiles, but creates a mismatch between the tile uv and width/height values.
+		Due to that, using any methods that modify the uv value will cause the new uv to treat scaled width and height as true dimensions
+		and can lead to unexpected results if not accounted for.
+	**/
 	public function scaleToSize( w : Float, h : Float ) : Void {
 		this.width = w;
 		this.height = h;
 	}
 
+	/**
+		Scrolls the texture position by specified amount.
+	**/
 	public function scrollDiscrete( dx : Float, dy : Float ) : Void {
 		var tex = innerTex;
 		u += dx / tex.width;
@@ -122,11 +244,18 @@ class Tile {
 		y = v * tex.height;
 	}
 
+	/**
+		Disposes of the Tile and its underlying Texture.
+		Note that if Texture is used by other Tile instances, it will cause them to point at a disposed texture and can lead to errors.
+	**/
 	public function dispose() : Void {
 		if( innerTex != null ) innerTex.dispose();
 		innerTex = null;
 	}
 
+	/**
+		Create a copy of this Tile instance.
+	**/
 	public function clone() : Tile {
 		var t = new Tile(null, x, y, width, height, dx, dy);
 		t.innerTex = innerTex;
@@ -137,8 +266,22 @@ class Tile {
 		return t;
 	}
 
+	function get_xFlip() return u2 < u;
+	function get_yFlip() return v2 < v;
+	function set_xFlip(v) {
+		if( v != xFlip ) flipX();
+		return v;
+	}
+	function set_yFlip(v) {
+		if( v != yFlip ) flipY();
+		return v;
+	}
+
 	/**
-		Split horizontaly or verticaly the number of given frames
+		Split the Tile horizontally or vertically by the number of given frames.
+		@param frames The amount of frames this Tile has to be split into.
+		@param vertical Causes split to be done vertically instead of horizontal split.
+		@param subpixel When enabled, retains the floating-point remainder if calculated frame size is not integral.
 	**/
 	public function split( frames : Int = 0, vertical = false, subpixel = false ) : Array<Tile> {
 		var tl = [];
@@ -160,7 +303,11 @@ class Tile {
 
 	/**
 		Split the tile into a list of tiles of Size x Size pixels.
-		Unlike grid which is X/Y ordered, gridFlatten returns a single dimensional array ordered in Y/X.
+
+		@param size The width and height of the new Tiles.
+		@param dx Optional visual offset of the new Tiles along the X axis.
+		@param dy Optional visual offset of the new Tiles along the Y axis.
+		@returns A one-dimensional array ordered in Y/X.
 	**/
 	public function gridFlatten( size : Float, dx = 0., dy = 0. ) : Array<Tile> {
 		return [for( y in 0...Std.int(height / size) ) for( x in 0...Std.int(width / size) ) sub(x * size, y * size, size, size, dx, dy)];
@@ -168,11 +315,17 @@ class Tile {
 
 	/**
 		Split the tile into a list of tiles of Size x Size pixels.
+
+		@param size The width and height of the new Tiles.
+		@param dx Optional visual offset of the new Tiles along the X axis.
+		@param dy Optional visual offset of the new Tiles along the Y axis.
+		@returns A two-dimensional array ordered in `[X][Y]`.
 	**/
 	public function grid( size : Float, dx = 0., dy = 0. ) : Array<Array<Tile>> {
 		return [for( x in 0...Std.int(width / size) ) [for( y in 0...Std.int(height / size) ) sub(x * size, y * size, size, size, dx, dy)]];
 	}
 
+	@:dox(hide)
 	public function toString() : String {
 		return "Tile(" + x + "," + y + "," + width + "x" + height + (dx != 0 || dy != 0 ? "," + dx + ":" + dy:"") + ")";
 	}
@@ -193,7 +346,13 @@ class Tile {
 		innerTex.uploadBitmap(bmp);
 	}
 
-
+	/**
+		Create a solid color Tile with specified width, height, color and alpha.
+		@param color The RGB color of the Tile.
+		@param width The width of the Tile in pixels.
+		@param height The height of the Tile in pixels.
+		@param alpha The transparency of the Tile.
+	**/
 	public static function fromColor( color : Int, ?width = 1, ?height = 1, ?alpha = 1. ) : Tile {
 		var t = new Tile(h3d.mat.Texture.fromColor(color,alpha),0,0,1,1);
 		// scale to size
@@ -202,12 +361,26 @@ class Tile {
 		return t;
 	}
 
+	/**
+		Creates a new Texture from provided BitmapData and returns a Tile representing it.
+	**/
 	public static function fromBitmap( bmp : hxd.BitmapData ) : Tile {
 		var tex = h3d.mat.Texture.fromBitmap(bmp);
 		return new Tile(tex, 0, 0, bmp.width, bmp.height);
 	}
 
-	public static function autoCut( bmp : hxd.BitmapData, width : Int, ?height : Int ) {
+	/**
+		Creates a new POT Texture from bmp and cuts it in a grid of tiles with maximum size of `[width, height]`.
+
+		Algorithm will use bottom-right pixels as background color and cut out empty space from each Tile and
+		will modify the origin point to retain the Tile position.
+		Each row scan continues as long as there are no empty tiles.
+
+		@param bmp The BitmapData which will be split into tiles.
+		@param width The width of a single grid entry.
+		@param height An optional height of a single grid entry. Width will be used if not provided.
+	**/
+	public static function autoCut( bmp : hxd.BitmapData, width : Int, ?height : Int ) : { main: Tile, tiles: Array<Array<Tile>> } {
 		#if js
 		bmp.lock();
 		#end
@@ -238,10 +411,16 @@ class Tile {
 		return { main : main, tiles : tl };
 	}
 
+	/**
+		Create new Tile from provided Texture instance.
+	**/
 	public static function fromTexture( t : h3d.mat.Texture ) : Tile {
 		return new Tile(t, 0, 0, t.width, t.height);
 	}
 
+	/**
+		Creates new POT Texture from Pixels and returns a Tile representing it.
+	**/
 	public static function fromPixels( pixels : hxd.Pixels ) : Tile {
 		var pix2 = pixels.makeSquare(true);
 		var t = h3d.mat.Texture.fromPixels(pix2);

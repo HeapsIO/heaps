@@ -74,8 +74,15 @@ class LocalEntry extends FileEntry {
 
 	override function loadBitmap( onLoaded : hxd.fs.LoadedBitmap -> Void ) : Void {
 		#if js
+		#if (multidriver && !macro)
+		var engine = h3d.Engine.getCurrent(); // hide
+		#end
 		var image = new js.html.Image();
 		image.onload = function(_) {
+			#if (multidriver && !macro)
+			if( engine.driver == null ) return;
+			engine.setCurrent();
+			#end
 			onLoaded(new LoadedBitmap(image));
 		};
 		image.src = "file://"+file;
@@ -134,12 +141,20 @@ class LocalEntry extends FileEntry {
 	#end
 
 	static function checkFiles() {
+		var filesToCheck = Math.ceil(WATCH_LIST.length / 60);
+		if( filesToCheck > LocalFileSystem.FILES_CHECK_MAX )
+			filesToCheck = LocalFileSystem.FILES_CHECK_MAX;
+		for( i in 0...filesToCheck )
+			checkNext();
+	}
+
+	static function checkNext() {
 		var w = WATCH_LIST[WATCH_INDEX++];
 		if( w == null ) {
 			WATCH_INDEX = 0;
 			return;
 		}
-		var t = try w.getModifTime() catch( e : Dynamic ) -1.;
+		var t = try w.getModifTime() catch( e : Dynamic ) return;
 		if( t == w.watchTime ) return;
 
 		#if (sys || nodejs)
@@ -203,6 +218,7 @@ class LocalFileSystem implements FileSystem {
 	public var baseDir(default,null) : String;
 	public var convert(default,null) : FileConverter;
 	static var isWindows = Sys.systemName() == "Windows";
+	public static var FILES_CHECK_MAX = 5;
 
 	public function new( dir : String, configuration : String ) {
 		baseDir = dir;

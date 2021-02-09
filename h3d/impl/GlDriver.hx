@@ -47,6 +47,7 @@ private extern class GL2 extends js.html.webgl.GL {
 	static inline var UNSIGNED_INT_10F_11F_11F_REV = 0x8C3B;
 	static inline var FUNC_MIN = 0x8007;
 	static inline var FUNC_MAX = 0x8008;
+	static inline var TEXTURE_LOD_BIAS : Int = 0x84FD;
 }
 private typedef Uniform = js.html.webgl.UniformLocation;
 private typedef Program = js.html.webgl.Program;
@@ -287,7 +288,13 @@ class GlDriver extends Driver {
 	}
 
 	override function getNativeShaderCode( shader : hxsl.RuntimeShader ) {
-		return "// vertex:\n" + ShaderCompiler.compile(shader.vertex.data) + "// fragment:\n" + ShaderCompiler.compile(shader.fragment.data);
+		inline function compile(sh) {
+			var glout = new ShaderCompiler();
+			glout.glES = glES;
+			glout.version = shaderVersion;
+			return glout.run(sh);
+		}
+		return "// vertex:\n" + compile(shader.vertex.data) + "// fragment:\n" + compile(shader.fragment.data);
 	}
 
 	override public function getDriverName(details:Bool) {
@@ -325,7 +332,7 @@ class GlDriver extends Driver {
 		return new CompiledShader(s, shader.vertex, shader);
 	}
 
-	function initShader( p : CompiledProgram, s : CompiledShader, shader : hxsl.RuntimeShader.RuntimeShaderData ) {
+	function initShader( p : CompiledProgram, s : CompiledShader, shader : hxsl.RuntimeShader.RuntimeShaderData, rt : hxsl.RuntimeShader ) {
 		var prefix = s.vertex ? "vertex" : "fragment";
 		s.globals = gl.getUniformLocation(p.p, prefix + "Globals");
 		s.params = gl.getUniformLocation(p.p, prefix + "Params");
@@ -354,15 +361,29 @@ class GlDriver extends Driver {
 				index = 0;
 			}
 			for( i in 0...count ) {
-				s.textures.push({ u : gl.getUniformLocation(p.p, prefix+name+"["+index+"]"), t : curT, mode : mode });
+				var loc = gl.getUniformLocation(p.p, prefix+name+"["+index+"]");
+				/*
+					This is a texture that is used in HxSL but has been optimized out by GLSL compiler.
+					While some drivers will correctly report `null` here, some others (AMD) will instead
+					return a uniform but still mismatch the texture slot, leading to swapped textures or
+					incorrect rendering. We also don't handle texture skipping in DirectX.
+
+					Fix is to make sure HxSL will optimize the texture out.
+					Alternate fix is to improve HxSL so he does it on its own.
+				*/
+				if( loc == null )
+					throw "Texture "+rt.spec.instances[t.instance].shader.data.name+"."+t.name+" is missing from shader output";
+				s.textures.push({ u : loc, t : curT, mode : mode });
 				index++;
 			}
 			t = t.next;
 		}
 		if( shader.bufferCount > 0 ) {
-			s.buffers = [for( i in 0...shader.bufferCount ) gl.getUniformBlockIndex(p.p,"uniform_buffer"+i)];
+			s.buffers = [for( i in 0...shader.bufferCount ) gl.getUniformBlockIndex(p.p,(shader.vertex?"vertex_":"")+"uniform_buffer"+i)];
+			var start = 0;
+			if( !s.vertex ) start = rt.vertex.bufferCount;
 			for( i in 0...shader.bufferCount )
-				gl.uniformBlockBinding(p.p,s.buffers[i],i);
+				gl.uniformBlockBinding(p.p,s.buffers[i],i + start);
 		}
 	}
 
@@ -416,8 +437,8 @@ class GlDriver extends Driver {
 				throw "Program linkage failure: "+log+"\nVertex=\n"+shader.vertex.code+"\n\nFragment=\n"+shader.fragment.code;
 			}
 			firstShader = false;
-			initShader(p, p.vertex, shader.vertex);
-			initShader(p, p.fragment, shader.fragment);
+			initShader(p, p.vertex, shader.vertex, shader);
+			initShader(p, p.fragment, shader.fragment, shader);
 			var attribNames = [];
 			p.attribs = [];
 			p.hasAttribIndex = [];
@@ -460,7 +481,11 @@ class GlDriver extends Driver {
 			programs.set(shader.id, p);
 		}
 		if( curShader == p ) return false;
+		setProgram(p);
+		return true;
+	}
 
+	function setProgram( p : CompiledProgram ) {
 		gl.useProgram(p.p);
 
 		for( a in p.attribs )
@@ -487,15 +512,14 @@ class GlDriver extends Driver {
 		curBuffer = null;
 		for( i in 0...boundTextures.length )
 			boundTextures[i] = null;
-		return true;
 	}
 
 	override function uploadShaderBuffers( buf : h3d.shader.Buffers, which : h3d.shader.Buffers.BufferKind ) {
-		uploadBuffer(curShader.vertex, buf.vertex, which);
-		uploadBuffer(curShader.fragment, buf.fragment, which);
+		uploadBuffer(buf, curShader.vertex, buf.vertex, which);
+		uploadBuffer(buf, curShader.fragment, buf.fragment, which);
 	}
 
-	function uploadBuffer( s : CompiledShader, buf : h3d.shader.Buffers.ShaderBuffers, which : h3d.shader.Buffers.BufferKind ) {
+	function uploadBuffer( buffer : h3d.shader.Buffers, s : CompiledShader, buf : h3d.shader.Buffers.ShaderBuffers, which : h3d.shader.Buffers.BufferKind ) {
 		switch( which ) {
 		case Globals:
 			if( s.globals != null ) {
@@ -517,8 +541,11 @@ class GlDriver extends Driver {
 			}
 		case Buffers:
 			if( s.buffers != null ) {
+				var start = 0;
+				if( !s.vertex && curShader.vertex.buffers != null )
+					start = curShader.vertex.buffers.length;
 				for( i in 0...s.buffers.length )
-					gl.bindBufferBase(GL2.UNIFORM_BUFFER, i, @:privateAccess buf.buffers[i].buffer.vbuf.b);
+					gl.bindBufferBase(GL2.UNIFORM_BUFFER, i + start, @:privateAccess buf.buffers[i].buffer.vbuf.b);
 			}
 		case Textures:
 			var tcount = s.textures.length;
@@ -537,8 +564,18 @@ class GlDriver extends Driver {
 					}
 				}
 				if( t != null && t.t == null && t.realloc != null ) {
+					var s = curShader;
 					t.alloc();
 					t.realloc();
+					if( curShader != s ) {
+						// realloc triggered a shader change !
+						// we need to reset the original shader and reupload everything
+						setProgram(s);
+						uploadShaderBuffers(buffer,Globals);
+						uploadShaderBuffers(buffer,Params);
+						uploadShaderBuffers(buffer,Textures);
+						return;
+					}
 				}
 				t.lastFrame = frame;
 
@@ -575,6 +612,10 @@ class GlDriver extends Driver {
 					var w = TWRAP[wrap];
 					gl.texParameteri(mode, GL.TEXTURE_WRAP_S, w);
 					gl.texParameteri(mode, GL.TEXTURE_WRAP_T, w);
+				}
+				if( t.lodBias != t.t.bias ) {
+					t.t.bias = t.lodBias;
+					gl.texParameterf(pt.mode, GL2.TEXTURE_LOD_BIAS, t.lodBias);
 				}
 			}
 		}
@@ -828,7 +869,7 @@ class GlDriver extends Driver {
 		discardError();
 		var tt = gl.createTexture();
 		var bind = getBindType(t);
-		var tt : Texture = { t : tt, width : t.width, height : t.height, internalFmt : GL.RGBA, pixelFmt : GL.UNSIGNED_BYTE, bits : -1, bind : bind #if multidriver, driver : this #end };
+		var tt : Texture = { t : tt, width : t.width, height : t.height, internalFmt : GL.RGBA, pixelFmt : GL.UNSIGNED_BYTE, bits : -1, bind : bind, bias : 0 #if multidriver, driver : this #end };
 		switch( t.format ) {
 		case RGBA:
 			// default
@@ -1129,8 +1170,8 @@ class GlDriver extends Driver {
 		gl.bindTexture(bind, t.t.t);
 		pixels.convert(t.format);
 		pixels.setFlip(false);
+		var dataLen = pixels.dataSize;
 		#if hl
-		var dataLen = pixels.height*pixels.stride;
 		var stream = streamData(pixels.bytes.getData(),pixels.offset,dataLen);
 		if( t.format.match(S3TC(_)) ) {
 			#if( (hlsdl == "1.8.0") || (hlsdl == "1.9.0") )
@@ -1141,7 +1182,6 @@ class GlDriver extends Driver {
 		} else
 			gl.texImage2D(face, mipLevel, t.t.internalFmt, pixels.width, pixels.height, 0, getChannels(t.t), t.t.pixelFmt, stream);
 		#elseif js
-		var bufLen = pixels.stride * pixels.height;
 		#if hxnodejs
 		if( (pixels:Dynamic).bytes.b.hxBytes != null ) {
 			// if the pixels are a nodejs buffer, their might be GC'ed while upload !
@@ -1151,10 +1191,10 @@ class GlDriver extends Driver {
 		}
 		#end
 		var buffer : ArrayBufferView = switch( t.format ) {
-		case RGBA32F, R32F, RG32F, RGB32F: new Float32Array(@:privateAccess pixels.bytes.b.buffer, pixels.offset, bufLen>>2);
-		case RGBA16F, R16F, RG16F, RGB16F: new Uint16Array(@:privateAccess pixels.bytes.b.buffer, pixels.offset, bufLen>>1);
-		case RGB10A2, RG11B10UF: new Uint32Array(@:privateAccess pixels.bytes.b.buffer, pixels.offset, bufLen>>2);
-		default: new Uint8Array(@:privateAccess pixels.bytes.b.buffer, pixels.offset, bufLen);
+		case RGBA32F, R32F, RG32F, RGB32F: new Float32Array(@:privateAccess pixels.bytes.b.buffer, pixels.offset, dataLen>>2);
+		case RGBA16F, R16F, RG16F, RGB16F: new Uint16Array(@:privateAccess pixels.bytes.b.buffer, pixels.offset, dataLen>>1);
+		case RGB10A2, RG11B10UF: new Uint32Array(@:privateAccess pixels.bytes.b.buffer, pixels.offset, dataLen>>2);
+		default: new Uint8Array(@:privateAccess pixels.bytes.b.buffer, pixels.offset, dataLen);
 		}
 		if( t.format.match(S3TC(_)) )
 			gl.compressedTexImage2D(face, mipLevel, t.t.internalFmt, pixels.width, pixels.height, 0, buffer);
@@ -1408,23 +1448,28 @@ class GlDriver extends Driver {
 	override function capturePixels(tex:h3d.mat.Texture, layer:Int, mipLevel:Int, ?region:h2d.col.IBounds) {
 
 		var pixels : hxd.Pixels;
-		var x : Int, y : Int;
+		var x : Int, y : Int, w : Int, h : Int;
 		if (region != null) {
 			if (region.xMax > tex.width) region.xMax = tex.width;
 			if (region.yMax > tex.height) region.yMax = tex.height;
 			if (region.xMin < 0) region.xMin = 0;
 			if (region.yMin < 0) region.yMin = 0;
-			pixels = hxd.Pixels.alloc(region.width >> mipLevel, region.height >> mipLevel, tex.format);
+			w = region.width;
+			h = region.height;
 			x = region.xMin;
 			y = region.yMin;
 		} else {
-			pixels = hxd.Pixels.alloc(tex.width >> mipLevel, tex.height >> mipLevel, tex.format);
+			w = tex.width;
+			h = tex.height;
 			x = 0;
 			y = 0;
 		}
 
-		if( pixels.width == 0 || pixels.height == 0 )
-			return pixels;
+		w >>= mipLevel;
+		h >>= mipLevel;
+		if( w == 0 ) w = 1;
+		if( h == 0 ) h = 1;
+		pixels = hxd.Pixels.alloc(w, h, tex.format);
 
 		var old = curTarget;
 		var oldCount = numTargets;
@@ -1486,14 +1531,25 @@ class GlDriver extends Driver {
 			gl.framebufferTextureLayer(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0, tex.t.t, mipLevel, layer);
 		else
 			gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0, tex.flags.has(Cube) ? CUBE_FACES[layer] : GL.TEXTURE_2D, tex.t.t, mipLevel);
+
 		if( tex.depthBuffer != null ) {
-			gl.framebufferRenderbuffer(GL.FRAMEBUFFER, GL.DEPTH_ATTACHMENT, GL.RENDERBUFFER, @:privateAccess tex.depthBuffer.b.r);
-			gl.framebufferRenderbuffer(GL.FRAMEBUFFER, GL.STENCIL_ATTACHMENT, GL.RENDERBUFFER, tex.depthBuffer.hasStencil() ? @:privateAccess tex.depthBuffer.b.r : null);
+			// Depthbuffer and stencilbuffer are combined in one buffer, created with GL.DEPTH_STENCIL
+			if(tex.depthBuffer.hasStencil() && tex.depthBuffer.format == Depth24Stencil8) {
+				gl.framebufferRenderbuffer(GL.FRAMEBUFFER, GL.DEPTH_STENCIL_ATTACHMENT, GL.RENDERBUFFER,@:privateAccess tex.depthBuffer.b.r);
+			} else {
+				gl.framebufferRenderbuffer(GL.FRAMEBUFFER, GL.DEPTH_STENCIL_ATTACHMENT, GL.RENDERBUFFER,null);
+				gl.framebufferRenderbuffer(GL.FRAMEBUFFER, GL.DEPTH_ATTACHMENT, GL.RENDERBUFFER, @:privateAccess tex.depthBuffer.b.r);
+				gl.framebufferRenderbuffer(GL.FRAMEBUFFER, GL.STENCIL_ATTACHMENT, GL.RENDERBUFFER,tex.depthBuffer.hasStencil() ? @:privateAccess tex.depthBuffer.b.r : null);
+			}
 		} else {
+			gl.framebufferRenderbuffer(GL.FRAMEBUFFER, GL.DEPTH_STENCIL_ATTACHMENT, GL.RENDERBUFFER,null);
 			gl.framebufferRenderbuffer(GL.FRAMEBUFFER, GL.DEPTH_ATTACHMENT, GL.RENDERBUFFER, null);
 			gl.framebufferRenderbuffer(GL.FRAMEBUFFER, GL.STENCIL_ATTACHMENT, GL.RENDERBUFFER, null);
 		}
-		gl.viewport(0, 0, tex.width >> mipLevel, tex.height >> mipLevel);
+
+		var w = tex.width >> mipLevel; if( w == 0 ) w = 1;
+		var h = tex.height >> mipLevel; if( h == 0 ) h = 1;
+		gl.viewport(0, 0, w, h);
 		for( i in 0...boundTextures.length )
 			boundTextures[i] = null;
 

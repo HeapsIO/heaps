@@ -61,6 +61,9 @@ class Printer {
 				case Range(min, max): "range(" + min + "," + max + ")";
 				case Ignore: "ignore";
 				case PerInstance(n): "perInstance("+n+")";
+				case Doc(s): "doc(\"" + StringTools.replace(s, '"', '\\"') + "\")";
+				case Borrow(s): "borrow(" + s + ")";
+				case Sampler(s): "sampler("+ s + ")";
 				}) + " ");
 		}
 		if( v.kind != defKind )
@@ -237,6 +240,7 @@ class Printer {
 			case OpNegBits:"~";
 			case OpIncrement:"++";
 			case OpDecrement:"--";
+			default: throw "assert"; // OpSpread for Haxe4.2+
 			});
 			addExpr(e, tabs);
 		case TBinop(op, e1, e2):
@@ -281,6 +285,7 @@ class Printer {
 			tabs = old;
 			add("\n" + tabs + "}");
 		case TMeta(m, args, e):
+			add("@");
 			add(m);
 			if( args.length > 0 ) {
 				add("(");

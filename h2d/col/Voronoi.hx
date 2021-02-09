@@ -37,7 +37,7 @@ private class RBNode<T:RBNode<T>> {
 
 	public function new() {
 		this.root = null;
-    }
+	}
 
 	public function rbInsertSuccessor(node : T, successor : T) {
 		var parent;
@@ -129,7 +129,7 @@ private class RBNode<T:RBNode<T>> {
 			parent = node.rbParent;
 			}
 		this.root.rbRed = false;
-    }
+	}
 
 	public function rbRemoveNode(node:T) {
 		// >>> rhill 2011-05-27: Performance: cache previous/next nodes
@@ -256,7 +256,7 @@ private class RBNode<T:RBNode<T>> {
 			parent = parent.rbParent;
 		} while (!node.rbRed);
 		if (node != null) {node.rbRed = false;}
-    }
+	}
 
 	function rbRotateLeft(node:T) {
 		var p = node,
@@ -280,7 +280,7 @@ private class RBNode<T:RBNode<T>> {
 			p.rbRight.rbParent = p;
 			}
 		q.rbLeft = p;
-    }
+	}
 
 	function rbRotateRight(node:T) {
 		var p = node,
@@ -304,35 +304,53 @@ private class RBNode<T:RBNode<T>> {
 			p.rbLeft.rbParent = p;
 			}
 		q.rbRight = p;
-    }
+	}
 
 	public function getFirst(node:T) {
 		while(node.rbLeft != null)
 			node = node.rbLeft;
 		return node;
-    }
+	}
 
 	public function getLast(node:T) {
 		while( node.rbRight != null )
 			node = node.rbRight;
 		return node;
-    }
+	}
 }
 
+/**
+	The resulting cell inside the Voronoi diagram.
+**/
 class Cell {
 
+	/**
+		The unique ID/Index of the cell.
+	**/
 	public var id : Int;
+	/**
+		The source seed point of the cell.
+	**/
 	public var point : Point;
+	/**
+		The list of the edges of the cell.
+	**/
 	public var halfedges : Array<Halfedge>;
 	public var closeMe : Bool;
 
+	@:dox(hide) @:noCompletion
 	public function new(id, point) {
 		this.id = id;
 		this.point = point;
 		this.halfedges = [];
 		this.closeMe = false;
-    }
+	}
 
+	/**
+		Returns an enclosing circle collider of the Cell.
+
+		_Implementation note_: Not the best possible solution and may produce artifacts.
+	**/
 	public function getCircle() {
 		// still not the best enclosing circle
 		// would require implementing http://www.personal.kent.edu/~rmuhamma/Compgeometry/MyCG/CG-Applets/Center/centercli.htm for complete solution
@@ -353,6 +371,7 @@ class Cell {
 		return new Circle(p.x, p.y, Math.sqrt(r));
 	}
 
+	@:dox(hide) @:noCompletion
 	public function prepare() {
 		var halfedges = this.halfedges, iHalfedge = halfedges.length, edge;
 		// get rid of unused halfedges
@@ -377,8 +396,10 @@ class Cell {
 	static function sortByAngle(a:Halfedge, b:Halfedge) {
 		return b.angle > a.angle ? 1 : (b.angle < a.angle ? -1 : 0);
 	}
-	
-	// Return a list of the neighbors
+
+	/**
+		Returns a list of the neighboring cells.
+	**/
 	public function getNeighbors() {
 		var neighbors = [],
 			iHalfedge = this.halfedges.length,
@@ -394,9 +415,11 @@ class Cell {
 				}
 			}
 		return neighbors;
-    }
+	}
 
-	// Return a list of the neighbor Indexes
+	/**
+		Returns a list of the neighbor Cell indexes.
+	**/
 	public function getNeighborIndexes() {
 		var neighbors = [],
 			iHalfedge = this.halfedges.length,
@@ -412,8 +435,11 @@ class Cell {
 				}
 			}
 		return neighbors;
-    }
+	}
 
+	/**
+		Returns a bounding box of the Cell.
+	**/
 	public function getBbox() {
 		var halfedges = this.halfedges,
 			iHalfedge = halfedges.length,
@@ -438,13 +464,15 @@ class Cell {
 			width: xmax-xmin,
 			height: ymax-ymin
 		};
-    }
+	}
 
-	// Return whether a point is inside, on, or outside the cell:
-	//   -1: point is outside the perimeter of the cell
-	//    0: point is on the perimeter of the cell
-	//    1: point is inside the perimeter of the cell
-	//
+	/**
+		Tests if given position is inside, on, or outside of the cell.
+		@returns
+		* -1: point is outside the perimeter of the cell
+		* 0: point is on the perimeter of the cell
+		* 1: point is inside the perimeter of the cell
+	**/
 	public function pointIntersection(x:Float, y:Float) {
 		// Check if point in polygon. Since all polygons of a Voronoi
 		// diagram are convex, then:
@@ -478,30 +506,66 @@ class Cell {
 
 }
 
+/**
+	The resulting edge inside the Voronoi diagram.
+**/
 class Edge {
-
+	/**
+		The unique ID/Index of the edge.
+	**/
 	public var id : Int;
+	/**
+		The left-hand seed point.
+	**/
 	public var lPoint : Point;
+	/**
+		The right-hand seed point.
+	**/
 	public var rPoint : Point;
+	/**
+		The left-hand cell along the edge.
+	**/
 	public var lCell : Null<Cell>;
+	/**
+		The right-hand cell along the edge.
+	**/
 	public var rCell : Null<Cell>;
+	/**
+		The first position of the edge segment.
+	**/
 	public var va : Null<Point>;
+	/**
+		The second position of the edge segment.
+	**/
 	public var vb : Null<Point>;
 
+	@:dox(hide) @:noCompletion
 	public function new(lPoint, rPoint) {
 		this.lPoint = lPoint;
 		this.rPoint = rPoint;
 		this.va = this.vb = null;
-    }
+	}
 }
 
-
+/**
+	The edge attached to a Voronoi `Cell`.
+**/
 class Halfedge {
 
+	/**
+		The seed Point of the Cell this edge is attached to.
+	**/
 	public var point : Point;
+	/**
+		The Edge this half-edge is attached to.
+	**/
 	public var edge : Edge;
+	/**
+		The perpendicular angle to the edge segment pointing in the direction of either neighboring Cell of the border.
+	**/
 	public var angle : Float;
 
+	@:dox(hide) @:noCompletion
 	public function new(edge, lPoint:Point, rPoint:Point) {
 		this.point = lPoint;
 		this.edge = edge;
@@ -525,25 +589,51 @@ class Halfedge {
 		}
 	}
 
+	/**
+		Returns the starting point of the edge segment.
+	**/
 	public inline function getStartpoint() {
 		return this.edge.lPoint == this.point ? this.edge.va : this.edge.vb;
-    }
+	}
 
+	/**
+		Returns the end point of the edge segment.
+	**/
 	public inline function getEndpoint() {
 		return this.edge.lPoint == this.point ? this.edge.vb : this.edge.va;
-    }
+	}
 
+	/**
+		Returns the neighboring Cell of this half-edge or null if it's a border edge.
+	**/
 	public inline function getTarget() {
 		return this.edge.lCell != null && this.edge.lCell.point != point ? this.edge.lCell : this.edge.rCell;
 	}
 
 }
 
+/**
+	The resulting diagram of the `Voronoi.compute`.
+**/
 class Diagram {
+	/**
+		The list of the generated cells.
+	**/
 	public var cells : Array<Cell>;
+	/**
+		The list of the diagram seed points.
+	**/
 	public var points : Array<Point>;
+	/**
+		The list of edges between diagram cells.
+	**/
 	public var edges : Array<Edge>;
+	/**
+		The duration it took to compute this diagram.
+	**/
 	public var execTime : Float;
+
+	@:dox(hide) @:noCompletion
 	public function new() {
 	}
 }
@@ -566,6 +656,11 @@ private class CircleEvent extends RBNode<CircleEvent> {
 	}
 }
 
+/**
+	A Steven Fortune's algorithm to compute Voronoi diagram from given set of Points and a bounding box.
+
+	The implementation is a port from JS library: https://github.com/gorhill/Javascript-Voronoi
+**/
 class Voronoi {
 
 	var epsilon : Float;
@@ -579,6 +674,9 @@ class Voronoi {
 	var firstCircleEvent : CircleEvent;
 	var pointCell : Map<Point,Cell>;
 
+	/**
+		Create a new Voronoi algorithm calculator.
+	**/
 	public function new( epsilon = 1e-9 ) {
 		this.epsilon = epsilon;
 		this.vertices = null;
@@ -586,8 +684,13 @@ class Voronoi {
 		this.cells = null;
 		this.beachsectionJunkyard = [];
 		this.circleEventJunkyard = [];
-    }
+	}
 
+	/**
+		Clean up the calculator from previous operation, and prepare for a new one.
+
+		Not required to be called manually, as it's invoked by `Voronoi.compute`.
+	**/
 	public function reset() {
 		if( this.beachline == null )
 			this.beachline = new RBTree<Beachsection>();
@@ -621,7 +724,7 @@ class Voronoi {
 		var v = new Point(x, y);
 		this.vertices.push(v);
 		return v;
-    }
+	}
 
 	// this create and add an edge to internal collection, and also create
 	// two halfedges which are added to each point's counterclockwise array
@@ -647,7 +750,7 @@ class Voronoi {
 		edge.vb = vb;
 		this.edges.push(edge);
 		return edge;
-    }
+	}
 
 	function setEdgeStartpoint(edge:Edge, lPoint, rPoint, vertex) {
 		if (edge.va == null && edge.vb == null) {
@@ -661,11 +764,11 @@ class Voronoi {
 		else {
 			edge.va = vertex;
 			}
-    }
+	}
 
 	function setEdgeEndpoint(edge, lPoint, rPoint, vertex) {
 		this.setEdgeStartpoint(edge, rPoint, lPoint, vertex);
-    }
+	}
 
 
 	// rhill 2011-06-02: A lot of Beachsection instanciations
@@ -750,7 +853,7 @@ class Voronoi {
 			}
 		// both parabolas have same distance to directrix, thus break point is midway
 		return (rfocx+lfocx)/2;
-    }
+	}
 
 	// calculate the right break point of a particular beach section,
 	// given a particular directrix
@@ -761,13 +864,13 @@ class Voronoi {
 			}
 		var point = arc.point;
 		return point.y == directrix ? point.x : Math.POSITIVE_INFINITY;
-    }
+	}
 
 	function detachBeachsection(beachsection) {
 		this.detachCircleEvent(beachsection); // detach potentially attached circle event
 		this.beachline.rbRemoveNode(beachsection); // remove from RB-tree
 		this.beachsectionJunkyard.push(beachsection); // mark for reuse
-    }
+	}
 
 	function removeBeachsection(beachsection:Beachsection) {
 		var circle = beachsection.circleEvent,
@@ -842,7 +945,7 @@ class Voronoi {
 		// adjacent to collapsed sections
 		this.attachCircleEvent(lArc);
 		this.attachCircleEvent(rArc);
-    }
+	}
 
 	function addBeachsection(point:Point) {
 		var x = point.x,
@@ -1015,7 +1118,7 @@ class Voronoi {
 			this.attachCircleEvent(rArc);
 			return;
 		}
-    }
+	}
 
 	function attachCircleEvent(arc:Beachsection) {
 		var lArc = arc.rbPrevious,
@@ -1104,7 +1207,7 @@ class Voronoi {
 		if (predecessor == null) {
 			this.firstCircleEvent = circleEvent;
 			}
-    }
+	}
 
 	function detachCircleEvent(arc:Beachsection) {
 		var circle = arc.circleEvent;
@@ -1116,7 +1219,7 @@ class Voronoi {
 			this.circleEventJunkyard.push(circle);
 			arc.circleEvent = null;
 		}
-    }
+	}
 
 	// ---------------------------------------------------------------------------
 	// Diagram completion methods
@@ -1397,7 +1500,7 @@ class Voronoi {
 			iLeft = 0;
 			while (iLeft < nHalfedges) {
 				va = halfedges[iLeft].getEndpoint();
-            	vz = halfedges[(iLeft+1) % nHalfedges].getStartpoint();
+				vz = halfedges[(iLeft+1) % nHalfedges].getStartpoint();
 				// if end point is not equal to start point, we need to add the missing
 				// halfedge(s) to close the cell
 				if (abs(va.x-vz.x)>=epsilon || abs(va.y-vz.y)>=epsilon) {
@@ -1420,7 +1523,7 @@ class Voronoi {
 							va = vb;
 							// fall through
 						} 
-						
+
 						if (this.equalWithepsilon(va.y,yb) && this.lessThanWithepsilon(va.x,xr)) {
 							lastBorderSegment = this.equalWithepsilon(vz.y,yb);
 							vb = this.createVertex(lastBorderSegment ? vz.x : xr, yb);
@@ -1432,7 +1535,7 @@ class Voronoi {
 							va = vb;
 							// fall through
 						} 
-						
+
 						if (this.equalWithepsilon(va.x,xr) && this.greaterThanWithepsilon(va.y,yt)) {
 							lastBorderSegment = this.equalWithepsilon(vz.x,xr);
 							vb = this.createVertex(xr, lastBorderSegment ? vz.y : yt);
@@ -1444,7 +1547,7 @@ class Voronoi {
 							va = vb;
 							// fall through
 						} 
-						
+
 						if (this.equalWithepsilon(va.y,yt) && this.greaterThanWithepsilon(va.x,xl)) {
 							lastBorderSegment = this.equalWithepsilon(vz.y,yt);
 							vb = this.createVertex(lastBorderSegment ? vz.x : xl, yt);
@@ -1509,6 +1612,9 @@ class Voronoi {
 	//   Voronoi points are kept client-side now, to allow
 	//   user to freely modify content. At compute time,
 	//   *references* to points are copied locally.
+	/**
+		Compute the Voronoi diagram based on given list of points and bounding box.
+	**/
 	public function compute(points:Array<Point>, bbox:Bounds) {
 		// to measure execution time
 		var startTime = haxe.Timer.stamp();

@@ -15,8 +15,9 @@ class Decal extends Mesh {
 	}
 
 	function syncDecalPBR( shader : h3d.shader.pbr.VolumeDecal.DecalPBR ) {
-		shader.normal = getAbsPos().up();
-		shader.tangent = getAbsPos().right();
+		var absPos = getAbsPos();
+		shader.normal.set(absPos._31, absPos._32, absPos._33); // up
+		shader.tangent.set(absPos._21, absPos._22, absPos._23); // right
 	}
 
 

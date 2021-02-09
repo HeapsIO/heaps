@@ -1,5 +1,8 @@
 package h2d;
 
+import h2d.RenderContext;
+import h2d.impl.BatchDrawState;
+
 private class ElementsIterator {
 	var e : BatchElement;
 	public inline function new(e) {
@@ -15,30 +18,90 @@ private class ElementsIterator {
 	}
 }
 
+/**
+	A base class for `SpriteBatch` elements which can be extended with custom logic.
+
+	See `BasicElement` as an example of custom element logic.
+**/
 @:allow(h2d.SpriteBatch)
 class BatchElement {
-	public var x : Float;
-	public var y : Float;
+	/**
+		Element X position.
+	**/
+	public var x : Float = 0;
+	/**
+		Element Y position.
+	**/
+	public var y : Float = 0;
+	/**
+		Shortcut to set both `BatchElement.scaleX` and `BatchElement.scaleY` at the same time.
+
+		Equivalent to `el.scaleX = el.scaleY = scale`.
+	**/
 	public var scale(never,set) : Float;
-	public var scaleX : Float;
-	public var scaleY : Float;
-	public var rotation : Float;
-	public var r : Float;
-	public var g : Float;
-	public var b : Float;
-	public var a : Float;
+	/**
+		X-axis scaling factor of the element.
+
+		This variable is used only if `SpriteBatch.hasRotationScale` is set to `true`.
+	**/
+	public var scaleX : Float = 1;
+	/**
+		Y-axis scaling factor of the element.
+
+		This variable is used only if `SpriteBatch.hasRotationScale` is set to `true`.
+	**/
+	public var scaleY : Float = 1;
+	/**
+		Element rotation in radians.
+
+		This variable is used only if `SpriteBatch.hasRotationScale` is set to `true`.
+	**/
+	public var rotation : Float = 0;
+	/**
+		Red tint value (0...1 range) of the element.
+	**/
+	public var r : Float = 1;
+	/**
+		Green tint value (0...1 range) of the element.
+	**/
+	public var g : Float = 1;
+	/**
+		Blue tint value (0...1 range) of the element.
+	**/
+	public var b : Float = 1;
+	/**
+		Alpha value of the element.
+	**/
+	public var a : Float = 1;
+	/**
+		The Tile this element renders.
+
+		Due to implementation specifics, this Tile instance is used only to provide rendering area, not the Texture itself,
+		as `SpriteBatch.tile` used as a source of rendered texture.
+	**/
 	public var t : Tile;
+	/**
+		Alpha value of the element.
+		Alias of `BatchElement.a`.
+	**/
 	public var alpha(get,set) : Float;
-	public var visible : Bool;
+	/**
+		If set to `false`, element will not be rendered.
+	**/
+	public var visible : Bool = true;
+	/**
+		Reference to parent SpriteBatch instance.
+	**/
 	public var batch(default, null) : SpriteBatch;
 
 	var prev : BatchElement;
 	var next : BatchElement;
 
-	public function new(t) {
-		x = 0; y = 0; r = 1; g = 1; b = 1; a = 1;
-		rotation = 0; scaleX = scaleY = 1;
-		visible = true;
+	/**
+		Create a new BatchElement instance with provided Tile.
+		@param t The tile used to render this BatchElement.
+	**/
+	public function new( t : Tile ) {
 		this.t = t;
 	}
 
@@ -54,10 +117,20 @@ class BatchElement {
 		return a = v;
 	}
 
+	/**
+		Override this method to perform custom logic per batch element.
+		Update method called only if `SpriteBatch.hasUpdate` is set to `true`.
+		@param dt The elapsed time in seconds since last update from `RenderContext.elapsedTime`.
+		@returns If method returns `false`, element will be removed from the SpriteBatch.
+	**/
+	@:dox(show)
 	function update(et:Float) {
 		return true;
 	}
 
+	/**
+		Remove this BatchElement from the parent SpriteBatch instance.
+	**/
 	public function remove() {
 		if( batch != null )
 			batch.delete(this);
@@ -65,11 +138,29 @@ class BatchElement {
 
 }
 
+/**
+	A simple `BatchElement` that provides primitive simulation of velocity, friction and gravity.
+
+	Parent `SpriteBatch` should have `SpriteBatch.hasUpdate` set to `true` in order for BasicElement to work properly.
+**/
 class BasicElement extends BatchElement {
 
+	/**
+		X-axis velocity of the element.
+	**/
 	public var vx : Float = 0.;
+	/**
+		Y-axis velocity of the element.
+	**/
 	public var vy : Float = 0.;
+	/**
+		The velocity friction.
+		When not `1`, multiplies velocity by `pow(friction, dt * 60)`.
+	**/
 	public var friction : Float = 1.;
+	/**
+		The gravity applied to vertical velocity in pixels per second.
+	**/
 	public var gravity : Float = 0.;
 
 	override function update(dt:Float) {
@@ -86,22 +177,56 @@ class BasicElement extends BatchElement {
 
 }
 
+/**
+	An active batched tile renderer.
+
+	Compared to `TileGroup` which is expected to be used as a static geometry,
+	SpriteBatch uploads GPU buffer each frame by collecting data from added `BatchElement` instance.
+	Due to that, dynamically removing and adding new geometry is fairly simple.
+
+	Usage note: While SpriteBatch allows for multiple unique textures, each texture swap causes a new drawcall,
+	and due to that it's recommended to minimize the amount of used textures per SpriteBatch instance,
+	ideally limiting to only one texture.
+**/
 class SpriteBatch extends Drawable {
 
+	/**
+		The Tile used as a base Texture to draw contents with.
+	**/
 	public var tile : Tile;
-	public var hasRotationScale : Bool;
-	public var hasUpdate : Bool;
+	/**
+		Enables usage of rotation and scaling of SpriteBatch elements at the cost of extra calculus.
+
+		Makes use of `BatchElement.scaleX`, `BatchElement.scaleY` and `BatchElement.rotation`.
+	**/
+	public var hasRotationScale : Bool = false;
+	/**
+		Enables usage of `update` method in SpriteBatch elements.
+	**/
+	public var hasUpdate : Bool = false;
 	var first : BatchElement;
 	var last : BatchElement;
 	var tmpBuf : hxd.FloatBuffer;
 	var buffer : h3d.Buffer;
-	var bufferVertices : Int;
+	var state : BatchDrawState;
+	var empty : Bool;
 
+	/**
+		Create new SpriteBatch instance.
+		@param t The Tile used as a base Texture to draw contents with.
+		@param parent An optional parent `h2d.Object` instance to which SpriteBatch adds itself if set.
+	**/
 	public function new(t,?parent) {
 		super(parent);
 		tile = t;
+		state = new BatchDrawState();
 	}
 
+	/**
+		Adds a new BatchElement to the SpriteBatch.
+		@param e The element to add.
+		@param before When set, element will be added to the beginning of the element chain (rendered first).
+	**/
 	public function add(e:BatchElement,before=false) {
 		e.batch = this;
 		if( first == null ) {
@@ -121,12 +246,21 @@ class SpriteBatch extends Drawable {
 		return e;
 	}
 
+	/**
+		Removes all elements from the SpriteBatch.
+
+		Usage note: Does not clear the `BatchElement.batch` nor `next`/`prev` variables on the child elements.
+	**/
 	public function clear() {
 		first = last = null;
 		flush();
 	}
 
-	public function alloc(t) {
+	/**
+		Creates a new BatchElement and returns it. Shortcut to `add(new BatchElement(t))`
+		@param t The Tile element will render.
+	**/
+	public function alloc( t : Tile ) : BatchElement {
 		return add(new BatchElement(t));
 	}
 
@@ -194,14 +328,16 @@ class SpriteBatch extends Drawable {
 	}
 
 	function flush() {
-		if( first == null ){
-			bufferVertices = 0;
+		if( first == null ) {
 			return;
 		}
 		if( tmpBuf == null ) tmpBuf = new hxd.FloatBuffer();
 		var pos = 0;
 		var e = first;
 		var tmp = tmpBuf;
+		var bufferVertices = 0;
+		state.clear();
+
 		while( e != null ) {
 			if( !e.visible ) {
 				e = e.next;
@@ -209,6 +345,8 @@ class SpriteBatch extends Drawable {
 			}
 
 			var t = e.t;
+			state.setTile(t);
+			state.add(4);
 
 			tmp.grow(pos + 8 * 4);
 
@@ -298,6 +436,7 @@ class SpriteBatch extends Drawable {
 			buffer.dispose();
 			buffer = null;
 		}
+		empty = bufferVertices == 0;
 		if( bufferVertices > 0 )
 			buffer = h3d.Buffer.ofSubFloats(tmpBuf, 8, bufferVertices, [Dynamic, Quads, RawFormat]);
 	}
@@ -308,24 +447,34 @@ class SpriteBatch extends Drawable {
 
 	@:allow(h2d)
 	function drawWith( ctx:RenderContext, obj : Drawable ) {
-		if( first == null || buffer == null || buffer.isDisposed() || bufferVertices == 0 ) return;
-		if( !ctx.beginDrawObject(obj, tile.getTexture()) ) return;
-		ctx.engine.renderQuadBuffer(buffer, 0, bufferVertices>>1);
+		if( first == null || buffer == null || buffer.isDisposed() || empty ) return;
+		if( !ctx.beginDrawBatchState(obj) ) return;
+		var engine = ctx.engine;
+		state.drawQuads(ctx, buffer);
 	}
 
+	/**
+		Checks if SpriteBatch contains any elements.
+	**/
 	public inline function isEmpty() {
 		return first == null;
 	}
 
+	/**
+		Returns an Iterator of all SpriteBatch elements.
+
+		Adding or removing the elements will affect the Iterator results.
+	**/
 	public inline function getElements() {
 		return new ElementsIterator(first);
 	}
 
-	override function onRemove()  {
+	override function onRemove() {
 		super.onRemove();
 		if( buffer != null ) {
 			buffer.dispose();
 			buffer = null;
 		}
+		state.clear();
 	}
 }

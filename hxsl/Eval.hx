@@ -70,6 +70,31 @@ class Eval {
 		return v2;
 	}
 
+	function checkSamplerRec(t:Type) {
+		if( t.isSampler() )
+			return true;
+		switch( t ) {
+		case TStruct(vl):
+			for( v in vl )
+				if( checkSamplerRec(v.type) )
+					return true;
+			return false;
+		case TArray(t, _):
+			return checkSamplerRec(t);
+		case TBuffer(_, size):
+			return true;
+		default:
+		}
+		return false;
+	}
+
+	function needsInline(f:TFunction) {
+		for( a in f.args )
+			if( checkSamplerRec(a.type) )
+				return true;
+		return false;
+	}
+
 	public function eval( s : ShaderData ) : ShaderData {
 		var funs = [];
 		for( f in s.funs ) {
@@ -80,9 +105,10 @@ class Eval {
 				ret : f.ret,
 				expr : f.expr,
 			};
-			if( !inlineCalls || f.kind != Helper )
+			if( (f.kind == Helper && inlineCalls) || needsInline(f2) )
+				funMap.set(f2.ref, f);
+			else
 				funs.push(f2);
-			funMap.set(f2.ref, f);
 		}
 		for( i in 0...funs.length ) {
 			curFun = funs[i];
@@ -252,8 +278,6 @@ class Eval {
 			case TGlobal(g):
 				var v = evalCall(g, args, eargs, e.p);
 				if( v != null ) v else TCall(c, args);
-			case TVar(_) if( !inlineCalls ):
-				TCall(c, args);
 			case TVar(v) if( funMap.exists(v) ):
 				// inline the function call
 				var f = funMap.get(v);
@@ -288,6 +312,8 @@ class Eval {
 					outExprs.push(e);
 				}
 				TBlock(outExprs);
+			case TVar(_):
+				TCall(c, args);
 			default:
 				Error.t("Cannot eval non-static call expresssion '" + new Printer().exprString(c)+"'", c.p);
 			}

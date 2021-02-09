@@ -1,5 +1,6 @@
 package hxd.inspect;
 import hxd.inspect.Property;
+import hxd.impl.Api;
 
 private class SceneObject extends TreeNode {
 
@@ -333,17 +334,17 @@ class ScenePanel extends Panel {
 	}
 
 	function getObjectIcon( o : h3d.scene.Object) {
-		if( Std.is(o, h3d.scene.Skin) )
+		if( Api.isOfType(o, h3d.scene.Skin) )
 			return "child";
-		if( Std.is(o, h3d.parts.Particles) || Std.is(o,h3d.parts.GpuParticles) )
+		if( Api.isOfType(o, h3d.parts.Particles) || Api.isOfType(o,h3d.parts.GpuParticles) )
 			return "sun-o";
-		if( Std.is(o, h3d.scene.Mesh) )
+		if( Api.isOfType(o, h3d.scene.Mesh) )
 			return "cube";
-		if( Std.is(o, h3d.scene.CustomObject) )
+		if( Api.isOfType(o, h3d.scene.CustomObject) )
 			return "globe";
-		if( Std.is(o, h3d.scene.Scene) )
+		if( Api.isOfType(o, h3d.scene.Scene) )
 			return "picture-o";
-		if( Std.is(o, h3d.scene.Light) )
+		if( Api.isOfType(o, h3d.scene.Light) )
 			return "lightbulb-o";
 		return null;
 	}
