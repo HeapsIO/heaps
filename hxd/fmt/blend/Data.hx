@@ -95,7 +95,7 @@ class Blend {
 			b.code = readChars(4);
 
 			if (b.code == 'ENDB') break;
-			
+
 			blocks.push(b);
 			b.blend = this;
 

@@ -77,12 +77,11 @@ class PointShadowMap extends Shadows {
 	}
 
 	override function syncShader(texture) {
-		var absPos = light.getAbsPos();
 		var pointLight = cast(light, h3d.scene.pbr.PointLight);
 		pshader.shadowMap = texture;
 		pshader.shadowBias = bias;
 		pshader.shadowPower = power;
-		pshader.lightPos = new h3d.Vector(absPos.tx, absPos.ty, absPos.tz);
+		light.getAbsPos().getPosition(pshader.lightPos);
 		pshader.zFar = pointLight.range;
 
 		// ESM
@@ -195,9 +194,9 @@ class PointShadowMap extends Shadows {
 		}
 
 		var texture = ctx.computingStatic ? createStaticTexture() : ctx.textures.allocTarget("pointShadowMap", size, size, false, format, true);
-		if( depth == null || depth.width != size || depth.height != size || depth.isDisposed() ) {
+		if( depth == null || depth.width != texture.width || depth.height != texture.height || depth.isDisposed() ) {
 			if( depth != null ) depth.dispose();
-			depth = new h3d.mat.DepthBuffer(size, size);
+			depth = new h3d.mat.DepthBuffer(texture.width, texture.height);
 		}
 		texture.depthBuffer = depth;
 

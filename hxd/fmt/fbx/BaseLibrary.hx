@@ -98,7 +98,7 @@ class BaseLibrary {
 	var namedConnect : Map<Int,Map<String,Int>>;
 	var invConnect : Map<Int,Array<Int>>;
 	var leftHand : Bool;
-	var defaultModelMatrixes : Map<String,DefaultMatrixes>;
+	var defaultModelMatrixes : Map<Int,DefaultMatrixes>;
 	var uvAnims : Map<String, Array<{ t : Float, u : Float, v : Float }>>;
 	var animationEvents : Array<{ frame : Int, data : String }>;
 	var isMaya : Bool;
@@ -128,7 +128,7 @@ class BaseLibrary {
 	/**
 		If there are too many bones, the model will be split in separate render passes.
 	**/
-	public var maxBonesPerSkin = 34;
+	public static var maxBonesPerSkin = 34;
 
 	/**
 		Consider unskinned joints to be simple objects
@@ -183,7 +183,7 @@ class BaseLibrary {
 			updateModelScale();
 
 		// init properties
-		for( m in this.root.getAll("Objects.Model") ) {
+		for( m in getAllModels() ) {
 			for( p in m.getAll("Properties70.P") )
 				switch( p.props[0].toString() ) {
 				case "UDP3DSMAX" | "Events":
@@ -220,6 +220,18 @@ class BaseLibrary {
 		default:
 			throw n.props[0]+" should be floats ";
 		}
+	}
+
+	function getAllModels() {
+		return this.root.getAll("Objects.Model");
+	}
+
+	function getRootModels() {
+		return [for( m in getAllModels() ) if( isRootModel(m) ) m];
+	}
+
+	function isRootModel( m ) {
+		return getParent(m,"Model",true) == null;
 	}
 
 	function updateModelScale() {
@@ -267,8 +279,8 @@ class BaseLibrary {
 			return;
 
 		// scale on root models
-		for( m in this.root.getAll("Objects.Model") ) {
-			var isRoot = getParent(m,"Model",true) == null;
+		for( m in getAllModels() ) {
+			var isRoot = isRootModel(m);
 			for( p in m.getAll("Properties70.P") )
 				switch( p.props[0].toString() ) {
 				case "Lcl Scaling" if( isRoot ):
@@ -319,38 +331,28 @@ class BaseLibrary {
 
 	function convertYupToZup( originalUpAxis : Int ) {
 		switch( originalUpAxis ) {
-			case 2: // Original Axis Z - Maya & 3DS Max 
-				var rootObject = root.get("Objects.Model.Properties70");
-				for( c in rootObject.childs ) {
-					if( c.props[0].toString() == "PreRotation" && c.props[4].toFloat() == -90 && c.props[5].toFloat()== 0 && c.props[6].toFloat() == 0 ) {
-						rootObject.childs.remove(c);
-						break;
+			case 2: // Original Axis Z - Maya & 3DS Max
+				for( rootObject in getRootModels() ) {
+					var props = rootObject.get("Properties70");
+					for( c in props.childs ) {
+						if( c.props[0].toString() == "PreRotation" && c.props[4].toFloat() == -90 && c.props[5].toFloat()== 0 && c.props[6].toFloat() == 0 ) {
+							props.childs.remove(c);
+							break;
+						}
 					}
 				}
 			case -1, 1: // Original Axis -Y or Y - Blender & Maya
-				var connections = root.get("Connections");
-				var rootId = 0;
-				for( c in connections.childs ) {
-					if( c.props[2].toInt() == 0 ) {
-						rootId = c.props[1].toInt();
-						break;
+				for( m in getRootModels() ) {
+					var needPreRot = true;
+					for( c in root.getAll("GlobalSettings.Properties70.P") ) {
+						if( c.props[0].toString() == "PreRotation" && c.props[4].toFloat() == 90 && c.props[5].toFloat()== 0 && c.props[6].toFloat() == 0 ) {
+							needPreRot = false;
+							break;
+						}
 					}
-				}
-				var rootObject = root.get("Objects.Model");
-				for( m in this.root.getAll("Objects.Model") ) {
-					if( m.props[0].toInt() == rootId ) {
-						var needPreRot = true;
-						for( c in root.getAll("GlobalSettings.Properties70.P") ) {
-							if( c.props[0].toString() == "PreRotation" && c.props[4].toFloat() == 90 && c.props[5].toFloat()== 0 && c.props[6].toFloat() == 0 ) {
-								needPreRot = false;
-								break;
-							}
-						}
-						if( needPreRot ) {
-							var preRotProp : FbxNode = {name : "P", props : [PString("PreRotation"), PString("Vector3D"), PString("Vector"), PString(""), PFloat(90),PFloat(0),PFloat(0)], childs : []};
-							m.get("Properties70").childs.insert(0, preRotProp);
-						}
-						break;
+					if( needPreRot ) {
+						var preRotProp : FbxNode = {name : "P", props : [PString("PreRotation"), PString("Vector3D"), PString("Vector"), PString(""), PFloat(90),PFloat(0),PFloat(0)], childs : []};
+						m.get("Properties70").childs.insert(0, preRotProp);
 					}
 				}
 			default:
@@ -501,12 +503,12 @@ class BaseLibrary {
 		return root;
 	}
 
-	public function ignoreMissingObject( name : String ) {
-		var def = defaultModelMatrixes.get(name);
+	function ignoreMissingObject( id : Int ) {
+		var def = defaultModelMatrixes.get(id);
 		if( def == null ) {
 			def = new DefaultMatrixes();
 			def.wasRemoved = -2;
-			defaultModelMatrixes.set(name, def);
+			defaultModelMatrixes.set(id, def);
 		}
 	}
 
@@ -517,7 +519,7 @@ class BaseLibrary {
 		var hobjects = new Map<Int, TmpObject>();
 
 		hobjects.set(0, oroot);
-		for( model in root.getAll("Objects.Model") ) {
+		for( model in getAllModels() ) {
 			if( skipObjects.get(model.getName()) )
 				continue;
 			var mtype = model.getType();
@@ -655,7 +657,7 @@ class BaseLibrary {
 	public function mergeModels( modelNames : Array<String> ) {
 		if( modelNames.length <= 1 )
 			return;
-		var models = root.getAll("Objects.Model");
+		var models = getAllModels();
 		function getModel(name) {
 			for( m in models )
 				if( m.getName() == name )
@@ -995,7 +997,7 @@ class BaseLibrary {
 		// process UVs
 		if( uvAnims != null ) {
 			var modelByName = new Map();
-			for( obj in this.root.getAll("Objects.Model") )
+			for( obj in getAllModels() )
 				modelByName.set(obj.getName(), obj);
 			for( obj in uvAnims.keys() ) {
 				var frames = uvAnims.get(obj);
@@ -1238,7 +1240,7 @@ class BaseLibrary {
 	function autoMerge() {
 		// if we have multiple deformers on the same joint, let's merge the geometries
 		var toMerge = [], mergeGroups = new Map<Int,Array<FbxNode>>();
-		for( model in root.getAll("Objects.Model") ) {
+		for( model in getAllModels() ) {
 			if( skipObjects.get(model.getName()) )
 				continue;
 			var mtype = model.getType();
@@ -1305,7 +1307,7 @@ class BaseLibrary {
 		for( j in iterJoints ) {
 			var jModel = ids.get(j.index);
 			var subDef = getParent(jModel, "Deformer", true);
-			var defMat = defaultModelMatrixes.get(jModel.getName());
+			var defMat = defaultModelMatrixes.get(jModel.getId());
 			j.defMat = defMat.toMatrix(leftHand);
 
 			if( subDef == null ) {
@@ -1441,8 +1443,8 @@ class BaseLibrary {
 	}
 
 	function getDefaultMatrixes( model : FbxNode ) {
-		var name = model.getName();
-		var d = defaultModelMatrixes.get(name);
+		var id = model.getId();
+		var d = defaultModelMatrixes.get(id);
 		if( d != null )
 			return d;
 		d = new DefaultMatrixes();
@@ -1472,7 +1474,7 @@ class BaseLibrary {
 		if( model.getType() == "LimbNode" )
 			updateDefaultMatrix(model, d);
 
-		defaultModelMatrixes.set(name, d);
+		defaultModelMatrixes.set(id, d);
 		return d;
 	}
 

@@ -56,7 +56,7 @@ class Sound extends SampleApp {
 		// 	music.position = slider.value * music.duration;
 		// };
 		// musicPosition.setPosition(460, 80);
-		
+
 		addSlider("Global vol", function() { return hxd.snd.Manager.get().masterVolume; }, function(v) { hxd.snd.Manager.get().masterVolume = v; });
 		addCheck("Beeper", function() { return beeper; }, function(v) { beeper = v; });
 		addButton("Play noise", function() {

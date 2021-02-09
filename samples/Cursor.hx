@@ -1,5 +1,5 @@
 class Cursor extends SampleApp {
-	
+
 	override function init() {
 		super.init();
 
@@ -11,12 +11,12 @@ class Cursor extends SampleApp {
 		bmp.line(0, 0, 0, 31, 0xFF0000FF);
 		bmp.line(0, 31, 31, 31, 0xFFFF0000);
 		bmp.line(31, 0, 31, 31, 0xFF00FF00);
-		
+
 		var animationSupported = false;
 		#if (flash || js || hldx || hlsdl)
 		animationSupported = true;
 		#end
-		
+
 		var animatedFrames = [bmp];
 		if (animationSupported)
 		{
@@ -29,7 +29,7 @@ class Cursor extends SampleApp {
 			bmp2.fill(15, 15, 2, 2, 0xFFFF00FF);
 			animatedFrames.push(bmp2);
 		}
-		
+
 		var cursors : Array<hxd.Cursor> = [Default,Button,Move,TextInput,Hide,Custom(new hxd.Cursor.CustomCursor([bmp],10,16,16)),Custom(new hxd.Cursor.CustomCursor(animatedFrames,10,16,16))];
 		var pos = 3;
 		for( c in cursors ) {
@@ -44,10 +44,10 @@ class Cursor extends SampleApp {
 			i.backgroundColor = Std.random(0x1000000) | 0xFF000000;
 			i.onOver = function(_) tf.alpha = 0.5;
 			i.onOut = function(_) tf.alpha = 1;
-			
+
 			switch(c) {
 				case Custom(cur):
-					
+
 					if (@:privateAccess cur.frames.length > 1) {
 						tf.text = "Custom (animated)";
 						if (!animationSupported) {
@@ -55,7 +55,7 @@ class Cursor extends SampleApp {
 							tf.textColor = 0xFF0000;
 						}
 					}
-					
+
 				default:
 			}
 		}

@@ -1,6 +1,47 @@
 package h3d.shader.pbr;
 
-class Light extends hxsl.Shader {
+class LightEvaluation extends hxsl.Shader {
+
+	static var SRC = {
+
+		/*
+			UE4 [Karis12] "Real Shading in Unreal Engine 4"
+			Modified with pointSize
+		*/
+		function pointLightIntensity( delta : Vec3, size : Float, invRange4 : Float ) : Float {
+			var dist = delta.dot(delta);
+			var falloff = saturate(1 - dist*dist * invRange4);
+			if( size > 0 ) {
+				dist = (dist.sqrt() - size).max(0.);
+				dist *= dist;
+			}
+			falloff *= falloff;
+			falloff *= 1 / (dist + 1);
+			return falloff;
+		}
+
+		function spotLightIntensity( delta : Vec3, lightDir : Vec3, range : Float, invRange4 : Float, angleFallOff : Float, angle : Float ) : Vec2 {
+			var dist = delta.dot(delta);
+			var falloff = saturate(1 - dist*dist * invRange4);
+			if( range > 0 ) {
+				dist = (dist.sqrt() - range).max(0.);
+				dist *= dist;
+			}
+			falloff *= falloff;
+			falloff *= 1 / (dist + 1);
+
+			var theta = dot(delta.normalize(), -lightDir);
+			var epsilon = angleFallOff - angle;
+			var angleFalloff = clamp((theta - angle) / epsilon, 0.0, 1.0);
+
+			return vec2(falloff, angleFalloff);
+		}
+
+
+	};
+}
+
+class Light extends LightEvaluation {
 
 	static var SRC = {
 
@@ -31,26 +72,15 @@ class SpotLight extends Light {
 		@param var cookieTex : Sampler2D;
 
 		function fragment() {
-			pbrOcclusionFactor = occlusionFactor;
-			pbrLightDirection = normalize(lightPos - transformedPosition);
-
 			var delta = lightPos - transformedPosition;
-			/*
-				UE4 [Karis12] "Real Shading in Unreal Engine 4"
-				Modified with pointSize
-			*/
-			var dist = delta.dot(delta);
-			var falloff = saturate(1 - dist*dist * invLightRange4);
-			if( range > 0 ) {
-				dist = (dist.sqrt() - range).max(0.);
-				dist *= dist;
-			}
-			falloff *= falloff;
-			falloff *= 1 / (dist + 1);
+			pbrLightDirection = delta.normalize();
+			var fallOffInfo =  spotLightIntensity(delta, spotDir, range, invLightRange4, fallOff, angle);
+			var fallOff = fallOffInfo.x;
+			var fallOffInfoAngle = fallOffInfo.y;
+			pbrLightColor = fallOff * lightColor;
+			pbrOcclusionFactor = occlusionFactor;
 
-			pbrLightColor = lightColor * falloff;
-
-			if(useCookie){
+			if( useCookie ) {
 				var posLightSpace = vec4(transformedPosition, 1.0) * lightProj;
 				var posUV = screenToUv(posLightSpace.xy/posLightSpace.w);
 				if(posUV.x > 1 || posUV.x < 0 || posUV.y > 1 || posUV.y < 0)
@@ -58,12 +88,8 @@ class SpotLight extends Light {
 				var cookie = cookieTex.get(posUV).rgba;
 				pbrLightColor *= cookie.rgb * cookie.a;
 			}
-			else{
-				var theta = dot(pbrLightDirection, -spotDir);
-				var epsilon = fallOff - angle;
-				var intensity = clamp((theta - angle) / epsilon, 0.0, 1.0);
-				pbrLightColor *= intensity;
-			}
+			else
+				pbrLightColor *= fallOffInfoAngle;
 		}
 	}
 }
@@ -77,22 +103,10 @@ class PointLight extends Light {
 		@param var pointSize : Float;
 
 		function fragment() {
-			pbrOcclusionFactor = occlusionFactor;
 			var delta = lightPos - transformedPosition;
 			pbrLightDirection = delta.normalize();
-			/*
-				UE4 [Karis12] "Real Shading in Unreal Engine 4"
-				Modified with pointSize
-			*/
-			var dist = delta.dot(delta);
-			var falloff = saturate(1 - dist*dist * invLightRange4);
-			if( pointSize > 0 ) {
-				dist = (dist.sqrt() - pointSize).max(0.);
-				dist *= dist;
-			}
-			falloff *= falloff;
-			falloff *= 1 / (dist + 1);
-			pbrLightColor = lightColor * falloff;
+			pbrLightColor = pointLightIntensity(delta, pointSize, invLightRange4) * lightColor;
+			pbrOcclusionFactor = occlusionFactor;
 		}
 	};
 }

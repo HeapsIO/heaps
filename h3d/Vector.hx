@@ -4,13 +4,14 @@ using hxd.Math;
 /**
 	A 4 floats vector. Everytime a Vector is returned, it means a copy is created.
 **/
-@:noDebug
-class Vector {
+class Vector #if apicheck implements h2d.impl.PointApi<Vector,Matrix> #end {
 
 	public var x : Float;
 	public var y : Float;
 	public var z : Float;
 	public var w : Float;
+
+	// -- gen api
 
 	public inline function new( x = 0., y = 0., z = 0., w = 1. ) {
 		this.x = x;
@@ -38,22 +39,22 @@ class Vector {
 		return new Vector(x + v.x, y + v.y, z + v.z, w + v.w);
 	}
 
-	// note : cross product is left-handed
+	public inline function multiply( v : Float ) {
+		// multiply only affects length
+		return new Vector(x * v, y * v, z * v, w);
+	}
+
+	public inline function equals( v : Vector ) {
+		return x == v.x && y == v.y && z == v.z && w == v.w;
+	}
+
 	public inline function cross( v : Vector ) {
+		// note : cross product is left-handed
 		return new Vector(y * v.z - z * v.y, z * v.x - x * v.z,  x * v.y - y * v.x, 1);
 	}
 
-	public inline function reflect( n : Vector ) {
-		var k = 2 * this.dot3(n);
-		return new Vector(x - k * n.x, y - k * n.y, z - k * n.z, 1);
-	}
-
-	public inline function dot3( v : Vector ) {
+	public inline function dot( v : Vector ) {
 		return x * v.x + y * v.y + z * v.z;
-	}
-
-	public inline function dot4( v : Vector ) {
-		return x * v.x + y * v.y + z * v.z + w * v.w;
 	}
 
 	public inline function lengthSq() {
@@ -64,7 +65,7 @@ class Vector {
 		return lengthSq().sqrt();
 	}
 
-	public function normalize() {
+	public inline function normalize() {
 		var k = lengthSq();
 		if( k < hxd.Math.EPSILON ) k = 0 else k = k.invSqrt();
 		x *= k;
@@ -72,14 +73,7 @@ class Vector {
 		z *= k;
 	}
 
-	public inline function normalizeFast() {
-		var k = lengthSq().invSqrt();
-		x *= k;
-		y *= k;
-		z *= k;
-	}
-
-	public inline function getNormalized() {
+	public inline function normalized() {
 		var k = lengthSq();
 		if( k < hxd.Math.EPSILON ) k = 0 else k = k.invSqrt();
 		return new Vector(x * k, y * k, z * k);
@@ -99,50 +93,17 @@ class Vector {
 		this.w = v.w;
 	}
 
-	public inline function scale3( f : Float ) {
+	public inline function scale( f : Float ) {
 		x *= f;
 		y *= f;
 		z *= f;
 	}
 
-	public inline function project( m : Matrix ) {
-		var px = x * m._11 + y * m._21 + z * m._31 + w * m._41;
-		var py = x * m._12 + y * m._22 + z * m._32 + w * m._42;
-		var pz = x * m._13 + y * m._23 + z * m._33 + w * m._43;
-		var iw = 1 / (x * m._14 + y * m._24 + z * m._34 + w * m._44);
-		x = px * iw;
-		y = py * iw;
-		z = pz * iw;
-		w = 1;
-	}
-
 	public inline function lerp( v1 : Vector, v2 : Vector, k : Float ) {
-		var x = Math.lerp(v1.x, v2.x, k);
-		var y = Math.lerp(v1.y, v2.y, k);
-		var z = Math.lerp(v1.z, v2.z, k);
-		var w = Math.lerp(v1.w, v2.w, k);
-		this.x = x;
-		this.y = y;
-		this.z = z;
-		this.w = w;
-	}
-
-	public inline function transform3x4( m : Matrix ) {
-		var px = x * m._11 + y * m._21 + z * m._31 + w * m._41;
-		var py = x * m._12 + y * m._22 + z * m._32 + w * m._42;
-		var pz = x * m._13 + y * m._23 + z * m._33 + w * m._43;
-		x = px;
-		y = py;
-		z = pz;
-	}
-
-	public inline function transform3x3( m : Matrix ) {
-		var px = x * m._11 + y * m._21 + z * m._31;
-		var py = x * m._12 + y * m._22 + z * m._32;
-		var pz = x * m._13 + y * m._23 + z * m._33;
-		x = px;
-		y = py;
-		z = pz;
+		this.x = Math.lerp(v1.x, v2.x, k);
+		this.y = Math.lerp(v1.y, v2.y, k);
+		this.z = Math.lerp(v1.z, v2.z, k);
+		this.w = Math.lerp(v1.w, v2.w, k);
 	}
 
 	public inline function transform( m : Matrix ) {
@@ -156,6 +117,46 @@ class Vector {
 		w = pw;
 	}
 
+	public inline function transformed( m : Matrix ) {
+		var px = x * m._11 + y * m._21 + z * m._31 + w * m._41;
+		var py = x * m._12 + y * m._22 + z * m._32 + w * m._42;
+		var pz = x * m._13 + y * m._23 + z * m._33 + w * m._43;
+		var pw = x * m._14 + y * m._24 + z * m._34 + w * m._44;
+		return new Vector(px,py,pz,pw);
+	}
+
+	public inline function transform3x4( m : Matrix ) {
+		var px = x * m._11 + y * m._21 + z * m._31 + w * m._41;
+		var py = x * m._12 + y * m._22 + z * m._32 + w * m._42;
+		var pz = x * m._13 + y * m._23 + z * m._33 + w * m._43;
+		x = px;
+		y = py;
+		z = pz;
+	}
+
+	public inline function transformed3x4( m : Matrix ) {
+		var px = x * m._11 + y * m._21 + z * m._31 + w * m._41;
+		var py = x * m._12 + y * m._22 + z * m._32 + w * m._42;
+		var pz = x * m._13 + y * m._23 + z * m._33 + w * m._43;
+		return new Vector(px,py,pz);
+	}
+
+	public inline function transform3x3( m : Matrix ) {
+		var px = x * m._11 + y * m._21 + z * m._31;
+		var py = x * m._12 + y * m._22 + z * m._32;
+		var pz = x * m._13 + y * m._23 + z * m._33;
+		x = px;
+		y = py;
+		z = pz;
+	}
+
+	public inline function transformed3x3( m : Matrix ) {
+		var px = x * m._11 + y * m._21 + z * m._31;
+		var py = x * m._12 + y * m._22 + z * m._32;
+		var pz = x * m._13 + y * m._23 + z * m._33;
+		return new Vector(px,py,pz);
+	}
+
 	public inline function clone() {
 		return new Vector(x,y,z,w);
 	}
@@ -166,6 +167,28 @@ class Vector {
 
 	public function toString() {
 		return '{${x.fmt()},${y.fmt()},${z.fmt()},${w.fmt()}}';
+	}
+
+	// --- end
+
+	public inline function reflect( n : Vector ) {
+		var k = 2 * this.dot(n);
+		return new Vector(x - k * n.x, y - k * n.y, z - k * n.z, 1);
+	}
+
+	public inline function dot4( v : Vector ) {
+		return x * v.x + y * v.y + z * v.z + w * v.w;
+	}
+
+	public inline function project( m : Matrix ) {
+		var px = x * m._11 + y * m._21 + z * m._31 + w * m._41;
+		var py = x * m._12 + y * m._22 + z * m._32 + w * m._42;
+		var pz = x * m._13 + y * m._23 + z * m._33 + w * m._43;
+		var iw = 1 / (x * m._14 + y * m._24 + z * m._34 + w * m._44);
+		x = px * iw;
+		y = py * iw;
+		z = pz * iw;
+		w = 1;
 	}
 
 	/// ----- COLOR FUNCTIONS
@@ -241,7 +264,7 @@ class Vector {
 		else {
 			var d = max - min;
 			s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-			if(max == r) 
+			if(max == r)
 				h = (g - b) / d + (g < b ? 6.0 : 0.0);
 			else if(max == g)
 				h = (b - r) / d + 2.0;
@@ -265,6 +288,20 @@ class Vector {
 		if(a.length > 2) r.z = a[2];
 		if(a.length > 3) r.w = a[3];
 		return r;
+	}
+
+	// deprecated (but not yet warnings)
+
+	@:noCompletion public inline function scale3( v : Float ) {
+		scale(v);
+	}
+
+	@:noCompletion public inline function dot3( v : Vector ) {
+		return dot(v);
+	}
+
+	@:noCompletion public inline function normalizeFast() {
+		normalize();
 	}
 
 }

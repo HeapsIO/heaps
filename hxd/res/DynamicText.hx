@@ -8,6 +8,7 @@ import haxe.xml.Fast in Access;
 #else
 import haxe.xml.Access;
 #end
+import hxd.impl.Api;
 
 typedef DynamicTextMeta = Map<String,DynamicTextMetaContent>;
 typedef DynamicTextMetaContent = { skip : Bool, sub : DynamicTextMeta };
@@ -83,7 +84,7 @@ class DynamicText {
 			onMissing(path, "is missing");
 			return null;
 		}
-		if( Std.is(old,Array) ) {
+		if( Api.isOfType(old,Array) ) {
 			onMissing(path,"should be a group");
 			return null;
 		}
@@ -154,23 +155,23 @@ class DynamicText {
 						path.pop();
 						continue;
 					}
-					if( Std.is(sub,String) ) {
+					if( Api.isOfType(sub,String) ) {
 						onMissing(path,"should be a text and not a group");
 						path.pop();
 						continue;
 					}
 					// build structure
 					var ref = ref == null ? null : refIds.get(id);
-					if( Std.is(sub,Array) ) {
+					if( Api.isOfType(sub,Array) ) {
 						var elements : Array<Dynamic> = sub;
 						var data = [for( e in x.elements ) e];
 						var dataRef = ref == null ? null : [for( e in ref.elements ) e];
 						for( i in 0...elements.length ) {
 							var e = elements[i];
 							path.push("[" + i + "]");
-							if( Std.is(e, Array) ) {
+							if( Api.isOfType(e, Array) ) {
 								trace("TODO");
-							} else if( Std.is(e, String) ) {
+							} else if( Api.isOfType(e, String) ) {
 								var enew = applyText(path, e, data[i], dataRef == null ? null : dataRef[i], onMissing);
 								if( enew != null )
 									elements[i] = enew;
@@ -210,12 +211,12 @@ class DynamicText {
 				for( e in x.elements ) {
 					var v : Dynamic = parseXmlData(e);
 					if( isArray ) {
-						if( !Std.is(v, Array) ) v = [v];
+						if( !Api.isOfType(v, Array) ) v = [v];
 					} else {
-						if( Std.is(v, Array) ) {
+						if( Api.isOfType(v, Array) ) {
 							for( i in 0...a.length ) {
 								var v = a[i];
-								if( !Std.is(v, Array) )
+								if( !Api.isOfType(v, Array) )
 									a[i] = [v];
 							}
 							isArray = true;
@@ -245,7 +246,7 @@ class DynamicText {
 
 	#if macro
 
-	static function findPos( pos : { file : String, content : String }, str : String ) {
+	static function findPos( pos : { file : String, content : String, pos : Position }, str : String ) {
 		// this might lead to false positive in case the same id is used several times
 		// but until we have a Xml parser with original position info that's the best we have
 		var index = pos.content.indexOf(str);
@@ -342,7 +343,7 @@ class DynamicText {
 				meta : [],
 				kind : FProp("get", "never", t),
 				access : [APublic, AStatic],
-				pos : pos,
+				pos : findPos(fpos, 'id="${id.toLowerCase()}"'),
 			});
 			fields.push( {
 				name : "get_"+id,

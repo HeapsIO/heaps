@@ -66,6 +66,6 @@ class Slides extends ScreenShader {
 	public var mode(get,set) : DebugMode;
 
 	function get_mode() : DebugMode { return cast smode; }
-	function set_mode(m) { smode = cast m; return m; }
+	function set_mode(m:DebugMode) { smode = cast m; return m; }
 
 }

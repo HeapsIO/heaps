@@ -1,11 +1,28 @@
 package h2d.filter;
 
+/**
+	Applies a bloom effect to the filtered Object.
+	Produces feathers to light areas in the objects.
+**/
 class Bloom extends Blur {
 
 	var bloom : h3d.pass.ScreenFx<h3d.shader.Bloom>;
+	/**
+		The bloom luminosity multiplier.
+	**/
 	public var amount(get, set) : Float;
+	/**
+		The bloom luminosity exponent.
+	**/
 	public var power(get, set) : Float;
 
+	/**
+		@param power The bloom luminosity exponent.
+		@param amount The bloom luminosity multiplier.
+		@param radius The bloom glow distance in pixels.
+		@param gain The bloom color intensity.
+		@param quality The sample count on each pixel as a tradeoff of speed/quality.
+	**/
 	public function new( power = 2., amount = 1., radius = 1., gain = 1., quality = 1. ) {
 		super(radius,gain,quality);
 		bloom = new h3d.pass.ScreenFx(new h3d.shader.Bloom());

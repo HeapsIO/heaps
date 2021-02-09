@@ -330,6 +330,8 @@ class Cache {
 			byID.set(r.signature, r);
 
 		#if shader_debug_dump
+		dbg.writeString("---- OUTPUT -----\n\n");
+		dbg.writeString(h3d.Engine.getCurrent().driver.getNativeShaderCode(r)+"\n\n");
 		if( dbg != null ) dbg.close();
 		haxe.Log.trace = oldTrace;
 		#end

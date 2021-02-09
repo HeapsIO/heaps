@@ -1,7 +1,7 @@
 package hxd;
 
 /**
-	Save provides simple interface to save and load serialized user data.  
+	Save provides simple interface to save and load serialized user data.
 	Data is serialized to String with `haxe.Serializer` and then stored in text form.
 **/
 class Save {
@@ -19,11 +19,13 @@ class Save {
 	}
 	#end
 
+	static var SALT = "s*al!t";
+
 	static function makeCRC( data : String ) {
-		return haxe.crypto.Sha1.encode(data + haxe.crypto.Sha1.encode(data + "s*al!t")).substr(4, 32);
+		return haxe.crypto.Sha1.encode(data + haxe.crypto.Sha1.encode(data + SALT)).substr(4, 32);
 	}
 
-	static function loadData( data : String, checkSum : Bool ) : Dynamic {
+	static function loadData( data : String, checkSum : Bool, defValue : Dynamic ) : Dynamic {
 		if( checkSum ) {
 			if( data.charCodeAt(data.length - 33) != '#'.code )
 				throw "Missing CRC";
@@ -32,7 +34,16 @@ class Save {
 			if( makeCRC(data) != crc )
 				throw "Invalid CRC";
 		}
-		return haxe.Unserializer.run(data);
+		var obj : Dynamic = haxe.Unserializer.run(data);
+
+		// set all fields that were not set to default value (auto upgrade)
+		if( defValue != null && Reflect.isObject(obj) && Reflect.isObject(defValue) ) {
+			for( f in Reflect.fields(defValue) ) {
+				if( Reflect.hasField(obj, f) ) continue;
+				Reflect.setField(obj, f, Reflect.field(defValue,f));
+			}
+		}
+		return obj;
 	}
 
 	static function saveData( value : Dynamic, checkSum : Bool ) : Dynamic {
@@ -51,19 +62,19 @@ class Save {
 		try {
 			var data = Reflect.field(getObj(name).data, "data");
 			cur.set(name, data);
-			return loadData(data,checkSum);
+			return loadData(data,checkSum,defValue);
 		} catch( e : Dynamic ) {
 			return defValue;
 		}
 		#else
-		return try loadData(readSaveData(name), checkSum) catch( e : Dynamic ) defValue;
+		return try loadData(readSaveData(name), checkSum, defValue) catch( e : Dynamic ) defValue;
 		#end
 	}
 
 	/**
-		Override this method to provide custom save lookup.  
-		By default it uses `name + ".sav"` for system targets and `localStorage.getItem(name)` on JS.  
-		Have no effect on flash (shared object is used).  
+		Override this method to provide custom save lookup.
+		By default it uses `name + ".sav"` for system targets and `localStorage.getItem(name)` on JS.
+		Have no effect on flash (shared object is used).
 		**Note:** This method is an utility method, to load data use `hxd.Save.load`
 	**/
 	@:noCompletion public static dynamic function readSaveData( name : String ) : String {

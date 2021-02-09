@@ -184,6 +184,9 @@ class Serializer {
 				case Precision(p): out.addByte(p.getIndex());
 				case Range(min, max): out.addDouble(min); out.addDouble(max);
 				case PerInstance(v): out.addInt32(v);
+				case Doc(s): writeString(s);
+				case Borrow(s): writeString(s);
+				case Sampler(s): writeString(s);
 				}
 			}
 		}
@@ -397,6 +400,9 @@ class Serializer {
 				case 7: Range(input.readDouble(), input.readDouble());
 				case 8: Ignore;
 				case 9: PerInstance(input.readInt32());
+				case 10: Doc(readString());
+				case 11: Borrow(readString());
+				case 12: Sampler(readString());
 				default: throw "assert";
 				}
 				v.qualifiers.push(q);
@@ -416,7 +422,7 @@ class Serializer {
 			expr : readExpr(),
 		};
 	}
-	
+
 	static var SIGN = 0x8B741D; // will be encoded to HXSL
 
 	public function unserialize( data : String ) : ShaderData {

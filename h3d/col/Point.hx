@@ -1,11 +1,13 @@
 package h3d.col;
 using hxd.Math;
 
-class Point {
+class Point #if apicheck implements h2d.impl.PointApi<Point,Matrix> #end {
 
 	public var x : Float;
 	public var y : Float;
 	public var z : Float;
+
+	// -- gen api ---
 
 	public inline function new(x=0.,y=0.,z=0.) {
 		this.x = x;
@@ -19,18 +21,10 @@ class Point {
 		z *= v;
 	}
 
-	public inline function inFrustum( f : Frustum, ?m : h3d.Matrix ) {
-		return f.hasPoint(this);
-	}
-
-	public inline function set(x, y, z) {
+	public inline function set(x=0., y=0., z=0.) {
 		this.x = x;
 		this.y = y;
 		this.z = z;
-	}
-
-	public inline function multiply( f : Float ) {
-		return new Point(x * f, y * f, z * f);
 	}
 
 	public inline function sub( p : Point ) {
@@ -39,6 +33,10 @@ class Point {
 
 	public inline function add( p : Point ) {
 		return new Point(x + p.x, y + p.y, z + p.z);
+	}
+
+	public inline function multiply( v : Float ) {
+		return new Point(x * v, y * v, z * v);
 	}
 
 	public inline function cross( p : Point ) {
@@ -51,13 +49,6 @@ class Point {
 
 	public inline function lengthSq() {
 		return x * x + y * y + z * z;
-	}
-
-	public inline function setLength(len:Float) {
-		normalizeFast();
-		x *= len;
-		y *= len;
-		z *= len;
 	}
 
 	public inline function length() {
@@ -79,22 +70,18 @@ class Point {
 		return distanceSq(p).sqrt();
 	}
 
-	public function normalize() {
+	public inline function normalize() {
 		var k = x * x + y * y + z * z;
 		if( k < hxd.Math.EPSILON ) k = 0 else k = k.invSqrt();
 		x *= k;
 		y *= k;
 		z *= k;
-		return this;
 	}
 
-	public inline function normalizeFast() {
+	public inline function normalized() {
 		var k = x * x + y * y + z * z;
-		k = k.invSqrt();
-		x *= k;
-		y *= k;
-		z *= k;
-		return this;
+		if( k < hxd.Math.EPSILON ) k = 0 else k = k.invSqrt();
+		return new Point(x*k,y*k,z*k);
 	}
 
 	public inline function lerp( p1 : Point, p2 : Point, k : Float ) {
@@ -115,6 +102,13 @@ class Point {
 		z = pz;
 	}
 
+	public inline function transformed( m : Matrix ) {
+		var px = x * m._11 + y * m._21 + z * m._31 + m._41;
+		var py = x * m._12 + y * m._22 + z * m._32 + m._42;
+		var pz = x * m._13 + y * m._23 + z * m._33 + m._43;
+		return new Point(px,py,pz);
+	}
+
 	public inline function transform3x3( m : Matrix ) {
 		var px = x * m._11 + y * m._21 + z * m._31;
 		var py = x * m._12 + y * m._22 + z * m._32;
@@ -124,8 +118,11 @@ class Point {
 		z = pz;
 	}
 
-	public inline function toVector() {
-		return new Vector(x, y, z);
+	public inline function transformed3x3( m : Matrix ) {
+		var px = x * m._11 + y * m._21 + z * m._31;
+		var py = x * m._12 + y * m._22 + z * m._32;
+		var pz = x * m._13 + y * m._23 + z * m._33;
+		return new Point(px,py,pz);
 	}
 
 	public inline function clone() {
@@ -141,5 +138,16 @@ class Point {
 	public function toString() {
 		return 'Point{${x.fmt()},${y.fmt()},${z.fmt()}}';
 	}
+
+	// ----
+
+	public inline function inFrustum( f : Frustum, ?m : h3d.Matrix ) {
+		return f.hasPoint(this);
+	}
+
+	public inline function toVector() {
+		return new Vector(x, y, z);
+	}
+
 
 }

@@ -1,7 +1,13 @@
 package h2d.filter;
 
+/**
+	A filter that renders nothing.
+**/
 class Nothing extends Filter {
 
+	/**
+		Create a new Nothing filter.
+	**/
 	public function new() {
 		super();
 	}

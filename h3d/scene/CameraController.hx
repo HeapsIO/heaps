@@ -229,6 +229,10 @@ class CameraController extends h3d.scene.Object {
 
 	override function sync(ctx:RenderContext) {
 
+		// Disable Camera Sync during bake
+		if( ctx.scene.renderer.renderMode == LightProbe )
+			return;
+
 		if( !ctx.visibleFlag && !alwaysSync ) {
 			super.sync(ctx);
 			return;

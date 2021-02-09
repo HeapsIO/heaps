@@ -337,7 +337,7 @@ class Manager {
 					c.position = (lastBuffer.start + lastBuffer.samples) / lastBuffer.sampleRate;
 					releaseSource(s);
 				} else if (c.queue.length > 0) {
-					c.sound    = c.queue[0];
+					c.sound    = c.queue.shift();
 					c.duration = c.sound.getData().duration;
 					c.position = 0;
 					releaseSource(s);
@@ -361,7 +361,7 @@ class Manager {
 				#end
 				playedSamples = 0;
 			}
-			c.position = (s.start + playedSamples) / s.buffers[0].sampleRate;
+			c.position = playedSamples / s.buffers[0].sampleRate;
 			c.positionChanged = false;
 
 			// enqueue next buffers

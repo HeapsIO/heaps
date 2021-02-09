@@ -133,9 +133,9 @@ class SpotShadowMap extends Shadows {
 		cullPasses(passes, function(col) return col.inFrustum(lightCamera.frustum));
 
 		var texture = ctx.computingStatic ? createStaticTexture() : ctx.textures.allocTarget("spotShadowMap", size, size, false, format);
-		if( customDepth && (depth == null || depth.width != size || depth.height != size || depth.isDisposed()) ) {
+		if( customDepth && (depth == null || depth.width != texture.width || depth.height != texture.height || depth.isDisposed()) ) {
 			if( depth != null ) depth.dispose();
-			depth = new h3d.mat.DepthBuffer(size, size);
+			depth = new h3d.mat.DepthBuffer(texture.width, texture.height);
 		}
 		texture.depthBuffer = depth;
 

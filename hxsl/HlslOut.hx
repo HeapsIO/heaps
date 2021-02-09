@@ -1,6 +1,51 @@
 package hxsl;
 using hxsl.Ast;
 
+class Samplers {
+
+	public var count : Int;
+	var named : Map<String, Int>;
+
+	public function new() {
+		count = 0;
+		named = new Map();
+	}
+
+	public function make( v : TVar, arr : Array<Int> ) : Array<Int> {
+
+		var ntex = switch( v.type ) {
+		case TArray(t, SConst(k)) if( t.isSampler() ): k;
+		case t if( t.isSampler() ): 1;
+		default:
+			return null;
+		}
+
+		var names = null;
+		if( v.qualifiers != null ) {
+			for( q in v.qualifiers ) {
+				switch( q ) {
+				case Sampler(nl): names = nl.split(",");
+				default:
+				}
+			}
+		}
+		for( i in 0...ntex ) {
+			if( names == null || names[i] == "" )
+				arr.push(count++);
+			else {
+				var idx = named.get(names[i]);
+				if( idx == null ) {
+					idx = count++;
+					named.set(names[i], idx);
+				}
+				arr.push(idx);
+			}
+		}
+		return arr;
+	}
+
+}
+
 class HlslOut {
 
 	static var KWD_LIST = [
@@ -34,6 +79,7 @@ class HlslOut {
 		m.set(BVec3, "bool3");
 		m.set(BVec4, "bool4");
 		m.set(FragCoord,"_in.__pos__");
+		m.set(FrontFacing, "_in.isFrontFace");
 		for( g in m )
 			KWDS.set(g, true);
 		m;
@@ -43,6 +89,7 @@ class HlslOut {
 	var SV_TARGET = "SV_TARGET";
 	var SV_VertexID = "SV_VertexID";
 	var SV_InstanceID = "SV_InstanceID";
+	var SV_IsFrontFace = "SV_IsFrontFace";
 	var STATIC = "static ";
 	var buf : StringBuf;
 	var exprIds = 0;
@@ -51,7 +98,7 @@ class HlslOut {
 	var decls : Array<String>;
 	var isVertex : Bool;
 	var allNames : Map<String, Int>;
-	var samplers : Map<Int, Int>;
+	var samplers : Map<Int, Array<Int>>;
 	public var varNames : Map<Int,String>;
 
 	var varAccess : Map<Int,String>;
@@ -191,10 +238,17 @@ class HlslOut {
 			addValue(eif, tabs);
 			add(" : ");
 			addValue(eelse, tabs);
-		case TMeta(_, _, e):
-			addValue(e, tabs);
+		case TMeta(m,args,e):
+			handleMeta(m, args, addValue, e, tabs);
 		default:
 			addExpr(e, tabs);
+		}
+	}
+
+	function handleMeta( m, args : Array<Ast.Const>, callb, e, tabs ) {
+		switch( [m, args] ) {
+		default:
+			callb(e,tabs);
 		}
 	}
 
@@ -240,7 +294,7 @@ class HlslOut {
 			addValue(args[0], tabs);
 			switch( g ) {
 			case Texture:
-				add(".Sample(");
+				add(isVertex ? ".SampleLevel(" : ".Sample(");
 			case TextureLod:
 				add(".SampleLevel(");
 			default:
@@ -249,21 +303,24 @@ class HlslOut {
 			var offset = 0;
 			var expr = switch( args[0].e ) {
 			case TArray(e,{ e : TConst(CInt(i)) }): offset = i; e;
+			case TArray(e,{ e : TBinop(OpAdd,{e:TVar(_)},{e:TConst(CInt(_))}) }): throw "Offset in texture access: need loop unroll?";
 			default: args[0];
 			}
 			switch( expr.e ) {
 			case TVar(v):
-				var samplerIndex = samplers.get(v.id);
-				if( samplerIndex == null ) throw "assert";
-				add('__Samplers[${samplerIndex+offset}]');
+				var samplers = samplers.get(v.id);
+				if( samplers == null ) throw "assert";
+				add('__Samplers[${samplers[offset]}]');
 			default: throw "assert";
 			}
 			for( i in 1...args.length ) {
 				add(",");
 				addValue(args[i],tabs);
 			}
+			if( g == Texture && isVertex )
+				add(",0");
 			add(")");
-		case TCall({ e : TGlobal(g = (Texel | TexelLod)) }, args):
+		case TCall({ e : TGlobal(g = (Texel)) }, args):
 			addValue(args[0], tabs);
 			add(".Load(");
 			switch ( args[1].t ) {
@@ -275,16 +332,28 @@ class HlslOut {
 					throw "assert";
 			}
 			addValue(args[1],tabs);
-			switch( g ) {
-				case Texel:
-					add(", 0");
-				case TexelLod:
-					add(", ");
-					addValue(args[2],tabs);
-				default:
-					throw "assert";
+			if ( args.length != 2 ) {
+				// with LOD argument
+				add(", ");
+				addValue(args[2], tabs);
+			} else {
+				add(", 0");
 			}
 			add("))");
+		case TCall({ e : TGlobal(g = (TextureSize)) }, args):
+			decl("float2 textureSize(Texture2D tex, int lod) { float w; float h; tex.GetDimensions(tex, (uint)lod, out w, out h); return float2(w, h); }");
+			decl("float3 textureSize(Texture2DArray tex, int lod) { float w; float h; float els; tex.GetDimensions(tex, (uint)lod, out w, out h, out els); return float3(w, h, els); }");
+			decl("float2 textureSize(TextureCube tex, int lod) { float w; float h; tex.GetDimensions(tex, (uint)lod, out w, out h); return float2(w, h); }");
+			add("textureSize(");
+			addValue(args[0], tabs);
+			if (args.length != 1) {
+				// With LOD argument
+				add(", ");
+				addValue(args[1],tabs);
+			} else {
+				add(", 0");
+			}
+			add(")");
 		case TCall(e = { e : TGlobal(g) }, args):
 			switch( [g,args.length] ) {
 			case [Vec2, 1] if( args[0].t == TFloat ):
@@ -443,6 +512,7 @@ class HlslOut {
 			case OpIncrement: "++";
 			case OpDecrement: "--";
 			case OpNegBits: "~";
+			default: throw "assert"; // OpSpread for Haxe4.2+
 			});
 			addValue(e1, tabs);
 		case TVarDecl(v, init):
@@ -529,8 +599,8 @@ class HlslOut {
 			add("[");
 			addValue(index, tabs);
 			add("]");
-		case TMeta(_, _, e):
-			addExpr(e, tabs);
+		case TMeta(m, args, e):
+			handleMeta(m, args, addExpr, e, tabs);
 		}
 	}
 
@@ -607,6 +677,8 @@ class HlslOut {
 			add("\tuint vertexID : "+SV_VertexID+";\n");
 		if( foundGlobals.exists(InstanceID) )
 			add("\tuint instanceID : "+SV_InstanceID+";\n");
+		if( foundGlobals.exists(FrontFacing) )
+			add("\tbool isFrontFace : "+SV_IsFrontFace+";\n");
 		add("};\n\n");
 
 		add("struct s_output {\n");
@@ -660,22 +732,12 @@ class HlslOut {
 		}
 		if( bufCount > 0 ) add("\n");
 
+		var ctx = new Samplers();
+		for( v in textures )
+			samplers.set(v.id, ctx.make(v, []));
 
-		var samplerCount = 0;
-		for( v in textures ) {
-			samplers.set(v.id, samplerCount);
-			switch( v.type ) {
-			case TArray(t, size):
-				samplerCount += switch( size ) {
-				case SConst(i): i;
-				default: throw "assert";
-				};
-			default:
-				samplerCount++;
-			}
-		}
-		if( samplerCount > 0 )
-			add('SamplerState __Samplers[$samplerCount];\n');
+		if( ctx.count > 0 )
+			add('SamplerState __Samplers[${ctx.count}];\n');
 	}
 
 	function initStatics( s : ShaderData ) {

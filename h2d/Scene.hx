@@ -2,24 +2,27 @@ package h2d;
 import hxd.Math;
 
 /**
-	Viewport alignment when scaling mode supports it.
+	Viewport alignment when scaling mode supports it. See `ScaleMode`.
 **/
 enum ScaleModeAlign {
-	/** Anchor Scene viewport horizontally to left side of the window. When passed to verticalAlign it will be treated as Center. **/
+	/** Anchor Scene viewport horizontally to the left side of the window. When passed to `verticalAlign` it will be treated as Center. **/
 	Left;
-	/** Anchor Scene viewport horizontally to right side of the window. When passed to verticalAlign it will be treated as Center. **/
+	/** Anchor Scene viewport horizontally to the right side of the window. When passed to `verticalAlign` it will be treated as Center. **/
 	Right;
-	/** Anchor to the center of window. **/
+	/** Anchor to the center of the window. **/
 	Center;
-	/** Anchor Scene viewport vertically to the top of a window. When passed to horizontalAlign it will be treated as Center. **/
+	/** Anchor Scene viewport vertically to the top of the window. When passed to `horizontalAlign` it will be treated as Center. **/
 	Top;
-	/** Anchor Scene viewport vertically to the bottom of a window. When passed to horizontalAlign it will be treated as Center. **/
+	/** Anchor Scene viewport vertically to the bottom of the window. When passed to `horizontalAlign` it will be treated as Center. **/
 	Bottom;
 }
 
 /**
 	Scaling mode of the 2D Scene.
-	See `ScaleMode2D` sample for showcase.
+
+	Set via `Scene.scaleMode`.
+
+	See ScaleMode2D sample for usage showcase.
 **/
 enum ScaleMode {
 
@@ -30,45 +33,74 @@ enum ScaleMode {
 
 	/**
 		Sets constant Scene size and stretches it to cover entire window. This behavior is same as old `setFixedSize` method.
+
+		@param width The width of the internal Scene viewport.
+		@param height The height of the internal Scene viewport.
 	**/
 	Stretch(width : Int, height : Int);
 
 	/**
-		Sets constant scene size and upscales it with preserving aspect-ratio to fit the window.
-		If `integerScale` is `true` - scaling will be performed  with only integer increments (1x, 2x, 3x, ...). Default: `false`
-		`horizontalAlign` controls viewport anchoring horizontally. Accepted values are `Left`, `Center` and `Right`. Default: `Center`
-		`verticalAlign` controls viewport anchoring vertically. Accepted values are `Top`, `Center` and `Bottom`. Default: `Center`
-		With `800x600` window, `LetterBox(320, 260)` will result in center-aligned Scene of size `320x260` upscaled to fit into screen.
+		Sets constant Scene size and upscales it with preserving the aspect-ratio to fit the window.
+
+		With `800x600` window, `LetterBox(320, 260)` will result in center-aligned Scene of size `320x260` upscaled to fit into the window.  
+		With same window but setting of `LetterBox(320, 260, true, Left, Top)` would result in the same Scene internal size,
+		upscaled to `640x480` resolution and anchored to the top-left corner of the window.
+
+		Note that while it's called LetterBox, there is no viewport rendering clipping apart from the out-of-bounds culling in `RenderContext.drawTile` / `Object.emitTile`.
+
+		@param width The width of the internal Scene viewport.
+		@param height The height of the internal Scene viewport.
+		@param integerScale When enabled, upscaling is performed only with integer increments (1x, 2x, 3x, etc) and can be used to achieve pixel-perfect scaling.
+		While enabled, the Scene won't be downscaled when internal viewport is larger than the window size and will remain at 1x zoom. Default: `false`.
+		@param horizontalAlign The horizontal viewport anchoring rule. Accepted values are `Left`, `Center` and `Right`. Default: `Center`.
+		@param verticalAlign The vertical viewport anchoring rule. Accepted values are `Top`, `Center` and `Bottom`. Default: `Center`.
+
 	**/
 	LetterBox(width : Int, height : Int, ?integerScale : Bool, ?horizontalAlign : ScaleModeAlign, ?verticalAlign : ScaleModeAlign);
 
 	/**
-		Sets constant Scene size, scale and alignment. Does not perform any adaptation to the screen apart from alignment.
-		`horizontalAlign` controls viewport anchoring horizontally. Accepted values are `Left`, `Center` and `Right`. Default: `Center`
-		`verticalAlign` controls viewport anchoring vertically. Accepted values are `Top`, `Center` and `Bottom`. Default: `Center`
-		With `800x600` window, `Fixed(200, 150, 2, Left, Center)` will result in Scene size of `200x150`, and visually upscaled to `400x300`, and aligned to middle-left of the window.
+		Sets constant Scene size, scale and alignment. Does not perform any adaptation to the window size apart from alignment.
+
+		With `800x600` window, `Fixed(200, 150, 2, Left, Center)` will result in the Scene size of `200x150`, and visually upscaled to `400x300`, and aligned to a middle-left of the window.
+
+		@param width The width of the internal Scene viewport.
+		@param height The height of the internal Scene viewport.
+		@param zoom The scaling multiplier of internal viewport when rendering onto the screen.
+		@param horizontalAlign The horizontal viewport anchoring rule. Accepted values are `Left`, `Center` and `Right`. Default: `Center`.
+		@param verticalAlign The vertical viewport anchoring rule. Accepted values are `Top`, `Center` and `Bottom`. Default: `Center`.
+
 	**/
 	Fixed(width : Int, height: Int, zoom : Float, ?horizontalAlign : ScaleModeAlign, ?verticalAlign : ScaleModeAlign);
 
 	/**
-		Upscales/downscales Scene according to `level` and matches Scene size to `ceil(window size / level)`.
-		With `800x600` window, `Zoom(2)` will result in `400x300` Scene size upscaled to fill entire window.
+		Upscales/downscales the Scene internal viewport according to `level` and matches Scene size to `ceil(window size / level)`.
+
+		With `800x600` window, `Zoom(2)` will result in the `400x300` Scene size upscaled to fill the entire window.
 	**/
 	Zoom(level : Float);
 
 	/**
-		Ensures that Scene size will be of minimum specified size.
+		Ensures that the Scene size will be of the minimum specified size.
+
 		Automatically calculates zoom level based on provided size according to `min(window width / min width, window height / min height)`, then applies same scaling as `Zoom(level)`.
-		Behavior is similiar to LetterBox, however instead of letterboxing effect, Scene size will change to cover the letterboxed parts.
+		The behavior is similar to `LetterBox`, however instead of constant internal viewport size, Scene size will change to cover the entire window.
+
 		`minWidth` or `minHeight` can be set to `0` in order to force scaling adjustment account only for either horizontal of vertical window size.
-		If `integerScale` is `true` - scaling will be performed  with only integer increments (1x, 2x, 3x, ...). Default: `false`
-		With `800x600` window, `AutoZoom(320, 260, false)` will result in Scene size of `347x260`. `AutoZoom(320, 260, true)` will result in size of `400x300`.
+		If both are `0`, results are undefined.
+
+		With `800x600` window, `AutoZoom(320, 260, false)` will result in the Scene size of `347x260`. `AutoZoom(320, 260, true)` will result in the size of `400x300`.
+
+		@param minWidth The minimum width of the internal Scene viewport.
+		@param minHeight The minimum height of the internal Scene viewport.
+		@param integerScale When enabled, upscaling is performed only with integer increments (1x, 2x, 3x, etc) and can be used to achieve pixel-perfect scaling.
+		While enabled, the Scene won't be downscaled when internal viewport is larger than the window size and will remain at 1x zoom. Default: `false`.
+
 	**/
 	AutoZoom(minWidth : Int, minHeight : Int, ?integerScaling : Bool);
 }
 
 /**
-	h2d.Scene is the root class for a 2D scene. All root objects are added to it before being drawn on screen.
+	The root class for a 2D scene. All root objects are added to it before being drawn on screen.
 **/
 class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.InteractiveScene {
 
@@ -113,68 +145,77 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	var offsetY(default, null) : Float;
 
 	/**
-		Horizontal scale of a scene when rendering to screen.
+		Horizontal scale of a scene when rendering to the screen.
+
 		Can change if the screen gets resized or `scaleMode` changes.
 	**/
 	public var viewportScaleX(default, null) : Float;
 	/**
-		Vertical scale of a scene when rendering to screen.
+		Vertical scale of a scene when rendering to the screen.
+
 		Can change if the screen gets resized or `scaleMode` changes.
 	**/
 	public var viewportScaleY(default, null) : Float;
 
 	/**
-		The current mouse X coordinates (in pixel) relative to the scene.
+		The current mouse X coordinates (in pixels) relative to the current `Scene.interactiveCamera`.
 	**/
 	public var mouseX(get, null) : Float;
 
 	/**
-		The current mouse Y coordinates (in pixel) relative to the scene.
+		The current mouse Y coordinates (in pixels) relative to the current `Scene.interactiveCamera`.
 	**/
 	public var mouseY(get, null) : Float;
 
 	/**
 		The zoom factor of the scene, allows to set a fixed x2, x4 etc. zoom for pixel art
-		When setting a zoom > 0, the scene resize will be automaticaly managed.
+		When setting a zoom > 0, the scene resize will be automatically managed.
 	**/
 	@:deprecated("zoom is deprecated, use scaleMode = Zoom(v) instead")
+	@:dox(hide)
 	public var zoom(get, set) : Int;
 
 	/**
-		Scene scaling mode. ( default : Resize )
+		Scene scaling mode.
+
 		Important thing to keep in mind - Scene does not clip rendering to it's scaled size and
-		graphics can render outside of it. However `drawTile` does check for those bounds and
+		graphics can render outside of it. However `RenderContext.drawTile` (and consecutively `Object.emitTile`) does check for those bounds and
 		will clip out tiles that are outside of the scene bounds.
 	**/
 	public var scaleMode(default, set) : ScaleMode = Resize;
 
 	/**
 		List of all cameras attached to the Scene. Should contain at least one camera to render (created by default).
+
 		Override `h2d.Camera.layerVisible` method to filter out specific layers from camera rendering.
-		To add or remove cameras use `addCamera` and `removeCamera` methods.
+
+		To add or remove cameras use `Scene.addCamera` and `Scene.removeCamera` methods.
 	**/
 	public var cameras(get, never) : haxe.ds.ReadOnlyArray<Camera>;
 	var _cameras : Array<Camera>;
 	/**
-		Alias to first camera in the list: `cameras[0]`
+		Alias to the first camera in the camera list: `cameras[0]`
 	**/
 	public var camera(get, never) : Camera;
 
 	/**
-		Camera instance that handles scene events.
+		Camera instance that handles the scene events.
+
 		Due to Heaps structure, only one Camera can work with the Interactives.
-		Contrary to rendering, event handling does not check if layer is visible for camera or not.
-		Should never be null. If Camera does not belong to the Scene, it will be added with `Scene.addCamera`.
+		Contrary to rendering, event handling does not check if layer is visible for the camera or not.
+
+		Should never be null. When set, if Camera does not belong to the Scene, it will be added with `Scene.addCamera`.
+		Would cause an exception when trying to remove current interactive camera from the list.
 	**/
 	public var interactiveCamera(default, set) : Camera;
 
 	/**
-		Set the default value for `h2d.Drawable.smooth` (default: false)
+		Controls the default value for `h2d.Drawable.smooth`. Default: `false`
 	**/
 	public var defaultSmooth(get, set) : Bool;
 
 	/**
-		The scene current renderer. Can be customized.
+		The current Scene renderer. Can be customized.
 	**/
 	public var renderer(get, set) : RenderContext;
 
@@ -187,7 +228,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	var shapePoint : h2d.col.Point;
 
 	/**
-		Create a new scene. A default 2D scene is already available in `hxd.App.s2d`
+		Create a new 2D scene. A default 2D scene is already available in `hxd.App.s2d`.
 	**/
 	public function new() {
 		super(null);
@@ -252,7 +293,11 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		return interactiveCamera = cam;
 	}
 
-	/** Adds Camera to Scene camera list with optional index at which it is added. **/
+	/**
+		Adds a Camera to the Scene camera list with optional index at which it is added.
+		@param cam The Camera instance to add.
+		@param pos Optional index at which the camera will be inserted.
+	**/
 	public function addCamera( cam : Camera, ?pos : Int ) {
 		if ( cam.scene != null )
 			cam.scene.removeCamera(cam);
@@ -262,7 +307,10 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		else _cameras.push(cam);
 	}
 
-	/** Removes Camera from Scene camera list. Current `interactiveCamera` cannot be removed. **/
+	/**
+		Removes the Camera from the Scene camera list.
+		Attempting to remove current `Scene.interactiveCamera` would cause an exception.
+	**/
 	public function removeCamera( cam : Camera ) {
 		if ( cam == interactiveCamera ) throw "Current interactive Camera cannot be removed from camera list!";
 		cam.scene = null;
@@ -273,10 +321,14 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		Set the fixed size for the scene, will prevent automatic scene resizing when screen size changes.
 	**/
 	@:deprecated("setFixedSize is deprecated, use scaleMode = Stretch(w, h) instead")
+	@:dox(hide) @:noCompletion
 	public function setFixedSize( w : Int, h : Int ) {
 		scaleMode = Stretch(w, h);
 	}
 
+	/**
+		Recalculates the scene viewport parameters based on `scaleMode`.
+	**/
 	@:dox(hide) @:noCompletion
 	public function checkResize() {
 		var engine = h3d.Engine.getCurrent();
@@ -413,7 +465,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	}
 
 	/**
-		Return the topmost visible Interactive at the specific coordinates
+		Returns the topmost visible Interactive at the specified coordinates.
 	**/
 	public function getInteractive( x : Float, y : Float ) : Interactive {
 		var pt = shapePoint;
@@ -528,14 +580,14 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	}
 
 	/**
-		Add an event listener that will capture all events not caught by an h2d.Interactive
+		Add an event listener that will capture all events that were not caught by an `h2d.Interactive`
 	**/
 	public function addEventListener( f : hxd.Event -> Void ) {
 		eventListeners.push(f);
 	}
 
 	/**
-		Remove a previously added event listener, return false it was not part of our event listeners.
+		Remove a previously added event listener, returns false it was not part of the event listeners.
 	**/
 	public function removeEventListener( f : hxd.Event -> Void ) {
 		for( e in eventListeners )
@@ -558,9 +610,15 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	}
 
 	/**
-		Start a drag and drop operation, sending all events to `onEvent` instead of the scene until `stopDrag()` is called.
-		@param	onCancel	If defined, will be called when stopDrag is called
-		@param	refEvent	For touch events, only capture events that matches the reference event touchId
+		Starts input events capture and redirects them to `onEvent` method until `Scene.stopDrag` is called.
+
+		While the method name may imply that only mouse events would be captured: This is not the case,
+		as it will also capture all other input events, including keyboard events.
+
+		@param onEvent A callback method that receives `hxd.Event` when input event happens.
+		Unless `onEvent` sets `Event.propagate` to `true`, event won't be sent to other Interactives.
+		@param onCancel An optional callback that is invoked when `Scene.stopDrag` is called.
+		@param refEvent For touch events, when defined, only capture events that match the reference `Event.touchId`.
 	**/
 	@:deprecated("Renamed to startCapture") @:dox(hide)
 	public inline function startDrag( onEvent : hxd.Event -> Void, ?onCancel : Void -> Void, ?refEvent : hxd.Event ) {
@@ -568,7 +626,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	}
 
 	/**
-		Stop the current drag and drop operation
+		Stops current input event capture.
 	**/
 	@:deprecated("Renamed to stopCapture") @:dox(hide)
 	public inline function stopDrag() {
@@ -576,7 +634,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	}
 
 	/**
-		Get the currently focused Interactive
+		Get the currently focused Interactive.
 	**/
 	public function getFocus() : Interactive {
 		if( events == null )
@@ -589,6 +647,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 			return null;
 		return interactive[interactive.indexOf(i)];
 	}
+
 
 	@:allow(h2d)
 	function addEventTarget(i:Interactive) {
@@ -650,7 +709,9 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	}
 
 	/**
-		Dispose the scene and all its children, freeing used GPU memory
+		Dispose the scene and all its children, freeing used GPU memory.
+
+		If Scene was allocated, causes `Object.onRemove` on all Scene objects.
 	**/
 	public function dispose() {
 		if( allocated )
@@ -659,8 +720,10 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	}
 
 	/**
-		Before render() or sync() are called, allow to set how much time has elapsed (in seconds) since the last frame in order to update scene animations.
-		This is managed automatically by hxd.App
+		<span class="label">Internal usage</span>
+
+		Before `Scene.render` or `Scene.sync` are called, allows to set how much time has elapsed (in seconds) since the last frame in order to update scene animations.
+		This is managed automatically by hxd.App.
 	**/
 	public function setElapsedTime( v : Float ) {
 		ctx.elapsedTime = v;
@@ -673,7 +736,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		ctx.engine = h3d.Engine.getCurrent();
 		var oldBG = ctx.engine.backgroundColor;
 		ctx.engine.backgroundColor = null; // prevent clear bg
-		ctx.engine.begin();
+		if( @:privateAccess !ctx.engine.inRender ) ctx.begin(); // don't reset current tex stack
 		ctx.globalAlpha = alpha;
 		ctx.begin();
 		ctx.pushTargets(texs);
@@ -698,7 +761,9 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	}
 
 	/**
-		Render the scene on screen. Internal usage only.
+		<span class="label">Internal usage</span>
+
+		Render the scene on the screen.
 	**/
 	public function render( engine : h3d.Engine ) {
 		ctx.engine = engine;
@@ -795,7 +860,10 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	}
 
 	/**
-		Capture the scene into a texture and render the resulting Bitmap
+		Capture the scene into a texture and returns the resulting `h2d.Bitmap`.
+
+		@param target Optional Tile to render onto. If not set, new Texture with interval Scene viewport dimensions is allocated,
+		otherwise Tile boundaries and Texture are used.
 	**/
 	public function captureBitmap( ?target : Tile ) {
 		var engine = h3d.Engine.getCurrent();

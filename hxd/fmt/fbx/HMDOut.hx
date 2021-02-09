@@ -181,8 +181,10 @@ class HMDOut extends BaseLibrary {
 		var vbuf = new hxd.FloatBuffer();
 		var ibufs = [];
 
-		if( skin != null && skin.isSplit() )
-			for( _ in skin.splitJoints ) ibufs.push(new hxd.IndexBuffer());
+		if( skin != null && skin.isSplit() ) {
+			for( _ in skin.splitJoints )
+				ibufs.push([]);
+		}
 
 		g.bounds = new h3d.col.Bounds();
 		var tmpBuf = new hxd.impl.TypedArray.Float32Array(stride);
@@ -320,7 +322,7 @@ class HMDOut extends BaseLibrary {
 				}
 				var idx = ibufs[mid];
 				if( idx == null ) {
-					idx = new hxd.IndexBuffer();
+					idx = [];
 					ibufs[mid] = idx;
 				}
 				for( n in 0...count - 2 ) {
@@ -342,6 +344,8 @@ class HMDOut extends BaseLibrary {
 		g.indexCounts = [];
 
 		var matMap = [], matCount = 0;
+		var is32 = g.vertexCount > 0x10000;
+
 		for( idx in ibufs ) {
 			if( idx == null ) {
 				matCount++;
@@ -349,8 +353,13 @@ class HMDOut extends BaseLibrary {
 			}
 			matMap.push(matCount++);
 			g.indexCounts.push(idx.length);
-			for( i in idx )
-				dataOut.writeUInt16(i);
+			if( is32 ) {
+				for( i in idx )
+					dataOut.writeInt32(i);
+			} else {
+				for( i in idx )
+					dataOut.writeUInt16(i);
+			}
 		}
 
 		if( skin != null && skin.isSplit() )
@@ -431,7 +440,7 @@ class HMDOut extends BaseLibrary {
 					foundSkin.push(o);
 					o2.skin = o;
 					if( o.model == null ) o.model = m;
-					ignoreMissingObject(m.getName()); // make sure we don't store animation for the model (only skin object has one)
+					ignoreMissingObject(m.getId()); // make sure we don't store animation for the model (only skin object has one)
 					// copy parent
 					var p = o.parent;
 					if( p != o2 ) {
@@ -597,10 +606,10 @@ class HMDOut extends BaseLibrary {
 					if( c.isJoint )
 						rootJoints.push(c.joint);
 				skin = createSkin(hskins, tmpGeom, rootJoints, bonesPerVertex);
-				if( skin.boundJoints.length > maxBonesPerSkin ) {
+				if( skin.boundJoints.length > BaseLibrary.maxBonesPerSkin ) {
 					var g = new hxd.fmt.fbx.Geometry(this, g);
 					var idx = g.getIndexes();
-					skin.split(maxBonesPerSkin, [for( i in idx.idx ) idx.vidx[i]], mids.length > 1 ? g.getMaterialByTriangle() : null);
+					skin.split(BaseLibrary.maxBonesPerSkin, [for( i in idx.idx ) idx.vidx[i]], mids.length > 1 ? g.getMaterialByTriangle() : null);
 				}
 				model.skin = makeSkin(skin, o.skin);
 			}
