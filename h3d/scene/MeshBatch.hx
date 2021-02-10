@@ -4,8 +4,9 @@ import hxsl.ShaderList;
 
 private class BatchData {
 
-	public var count : Int;
-	public var buffer : h3d.Buffer;
+	public var paramsCount : Int;
+	public var maxInstance : Int;
+	public var buffers : Array<h3d.Buffer> = [];
 	public var data : hxd.FloatBuffer;
 	public var params : hxsl.RuntimeShader.AllocParam;
 	public var shader : hxsl.BatchShader;
@@ -30,9 +31,6 @@ class MeshBatch extends Mesh {
 
 	var instanced : h3d.prim.Instanced;
 	var curInstances : Int = 0;
-	var maxInstances : Int = 0;
-	var shaderInstances : Int = 0;
-	var dataBuffer : h3d.Buffer;
 	var dataPasses : BatchData;
 	var indexCount : Int;
 	var modelViewID = hxsl.Globals.allocID("global.modelView");
@@ -40,6 +38,8 @@ class MeshBatch extends Mesh {
 	var colorSave = new h3d.Vector();
 	var colorMult : h3d.shader.ColorMult;
 	var needUpload = false;
+
+	static var MAX_BUFFER_ELEMENTS = 4096;
 
 	/**
 		Tells if we can use material.color as a global multiply over each instance color (default: true)
@@ -76,12 +76,12 @@ class MeshBatch extends Mesh {
 		var alloc = hxd.impl.Allocator.get();
 		while( dataPasses != null ) {
 			dataPasses.pass.removeShader(dataPasses.shader);
-			alloc.disposeBuffer(dataPasses.buffer);
+			for( b in dataPasses.buffers )
+				alloc.disposeBuffer(b);
 			alloc.disposeFloats(dataPasses.data);
 			dataPasses = dataPasses.next;
 		}
 		instanced.commands.dispose();
-		shaderInstances = 0;
 		shadersChanged = true;
 	}
 
@@ -89,7 +89,6 @@ class MeshBatch extends Mesh {
 		var scene = getScene();
 		if( scene == null ) return;
 		cleanPasses();
-		shaderInstances = maxInstances;
 		for( p in material.getPasses() ) @:privateAccess {
 			var ctx = scene.renderer.getPassByName(p.name);
 			if( ctx == null ) throw "Could't find renderer pass "+p.name;
@@ -105,10 +104,10 @@ class MeshBatch extends Mesh {
 				if( hxd.impl.Api.isOfType(cur.s, MeshBatchAccess) ) {
 					var access : MeshBatchAccess = cast cur.s;
 					if( !access.perInstance ) {
-						if( prev != null ) 
+						if( prev != null )
 							prev.next = cur.next;
-						else 
-							batchShaders = cur.next;	
+						else
+							batchShaders = cur.next;
 						cur = cur.next;
 					}
 				}
@@ -122,7 +121,8 @@ class MeshBatch extends Mesh {
 			var shader = manager.shaderCache.makeBatchShader(rt);
 
 			var b = new BatchData();
-			b.count = rt.vertex.paramsSize + rt.fragment.paramsSize;
+			b.paramsCount = rt.vertex.paramsSize + rt.fragment.paramsSize;
+			b.maxInstance = Std.int(MAX_BUFFER_ELEMENTS / b.paramsCount);
 			b.params = rt.fragment.params == null ? null : rt.fragment.params.clone();
 
 			var hd = b.params;
@@ -141,13 +141,12 @@ class MeshBatch extends Mesh {
 				b.params = hd;
 			}
 
-			var tot = b.count * shaderInstances;
 			b.shader = shader;
 			b.pass = p;
 			b.shaders = [null/*link shader*/];
+			p.dynamicParameters = true;
+
 			var alloc = hxd.impl.Allocator.get();
-			b.buffer = alloc.allocBuffer(tot,4,UniformDynamic);
-			b.data = alloc.allocFloats(tot * 4);
 			b.next = dataPasses;
 			dataPasses = b;
 
@@ -156,12 +155,11 @@ class MeshBatch extends Mesh {
 				b.shaders.push(sl.s);
 				sl = sl.next;
 			}
-
-			shader.Batch_Count = tot;
-			shader.Batch_Buffer = b.buffer;
-			shader.constBits = tot;
+			shader.Batch_Count = b.maxInstance * b.paramsCount;
+			shader.constBits = b.maxInstance * b.paramsCount;
 			shader.updateConstants(null);
 		}
+
 		// add batch shaders
 		var p = dataPasses;
 		while( p != null ) {
@@ -170,12 +168,10 @@ class MeshBatch extends Mesh {
 		}
 	}
 
-	public function begin( maxCount : Int ) {
-		if( maxCount > shaderInstances )
-			shadersChanged = true;
+	public function begin( emitCountTip = -1, resizeDown = false ) {
 		colorSave.load(material.color);
+
 		curInstances = 0;
-		maxInstances = maxCount;
 		if( shadersChanged ) {
 			if( colorMult != null ) {
 				material.mainPass.removeShader(colorMult);
@@ -195,13 +191,32 @@ class MeshBatch extends Mesh {
 				}
 			}
 		}
+
+		if( emitCountTip < 0 )
+			emitCountTip = 128;
+		var p = dataPasses;
+		var alloc = hxd.impl.Allocator.get();
+		while( p != null ) {
+			var size = emitCountTip * p.paramsCount * 4;
+			if( p.data == null || p.data.length < size || (resizeDown && p.data.length > size << 1) ) {
+				if( p.data != null ) alloc.disposeFloats(p.data);
+				p.data = alloc.allocFloats(size);
+			}
+			p = p.next;
+		}
 	}
 
-	function syncData( data : BatchData ) {
-		var p = data.params;
-		var buf = data.data;
-		var shaders = data.shaders;
-		var startPos = data.count * curInstances * 4;
+	function syncData( batch : BatchData ) {
+
+		var startPos = batch.paramsCount * curInstances << 2;
+		// in case we are bigger than emitCountTip
+		if( startPos + batch.paramsCount > batch.data.length )
+			batch.data.grow(batch.data.length << 1);
+
+		var p = batch.params;
+		var buf = batch.data;
+		var shaders = batch.shaders;
+
 		var calcInv = false;
 		while( p != null ) {
 			var pos = startPos + p.pos;
@@ -274,7 +289,6 @@ class MeshBatch extends Mesh {
 	}
 
 	public function emitInstance() {
-		if( curInstances == maxInstances ) throw "Too many instances";
 		syncPos();
 		var p = dataPasses;
 		while( p != null ) {
@@ -285,33 +299,65 @@ class MeshBatch extends Mesh {
 		curInstances++;
 	}
 
-	public inline function canEmitInstance() {
-		return curInstances < maxInstances;
-	}
-
 	override function sync(ctx:RenderContext) {
 		super.sync(ctx);
 		if( curInstances == 0 ) return;
 		var p = dataPasses;
+		var alloc = hxd.impl.Allocator.get();
 		while( p != null ) {
-			var upload = needUpload;
-			if( p.buffer.isDisposed() ) {
-				p.buffer = hxd.impl.Allocator.get().allocBuffer(p.count * shaderInstances,4,UniformDynamic);
-				p.shader.Batch_Buffer = p.buffer;
-				upload = true;
+			var index = 0;
+			var start = 0;
+			while( start < curInstances ) {
+				var upload = needUpload;
+				var buf = p.buffers[index];
+				if( buf == null || buf.isDisposed() ) {
+					buf = alloc.allocBuffer(MAX_BUFFER_ELEMENTS,4,UniformDynamic);
+					p.buffers[index] = buf;
+					upload = true;
+				}
+				var count = curInstances - start;
+				if( count > p.maxInstance )
+					count = p.maxInstance;
+				if( upload )
+					buf.uploadVector(p.data, start * p.paramsCount * 4, count * p.paramsCount);
+				start += count;
+				index++;
 			}
-			if( upload )
-				p.buffer.uploadVector(p.data,0,curInstances * p.count);
+			while( p.buffers.length > index )
+				alloc.disposeBuffer(p.buffers.pop());
 			p = p.next;
 		}
 		needUpload = false;
-		instanced.commands.setCommand(curInstances,indexCount);
 		if( colorMult != null ) colorMult.color.load(material.color);
+	}
+
+	override function draw(ctx:RenderContext) {
+		var p = dataPasses;
+		while( true ) {
+			if( p.pass == ctx.drawPass.pass ) {
+				p.shader.Batch_Buffer = p.buffers[ctx.drawPass.index];
+				var count = curInstances - p.maxInstance * ctx.drawPass.index;
+				instanced.commands.setCommand(count,indexCount);
+				break;
+			}
+			p = p.next;
+		}
+		ctx.uploadParams();
+		super.draw(ctx);
 	}
 
 	override function emit(ctx:RenderContext) {
 		if( curInstances == 0 ) return;
-		super.emit(ctx);
+		var p = dataPasses;
+		while( p != null ) {
+			var pass = p.pass;
+			// check that the pass is still enable
+			if( material.getPass(pass.name) != null ) {
+				for( i in 0...p.buffers.length )
+					ctx.emitPass(pass, this).index = i;
+			}
+			p = p.next;
+		}
 	}
 
 }
