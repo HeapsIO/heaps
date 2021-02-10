@@ -1,5 +1,8 @@
 package hxd.fs;
 
+/**
+	The `MultiFileSystem` file entry.
+**/
 private class MultiFileEntry extends FileEntry {
 
 	var fs : MultiFileSystem;
@@ -57,22 +60,46 @@ private class MultiFileEntry extends FileEntry {
 
 }
 
+/**
+	A container for multiple FileSystems that can be accessed as a singular FS.
+
+	The order of the file systems is important, as they are processed in first-come-first-serve manner, meaning that if file
+	exists in multiple instances, the first one that was found will be served.
+
+	Enables for usage of multiple different `FileSystem` instances to provide easy implementation of things like modding or 
+	partial asset embedding (by using `EmbedFileSystem` to store assets used while primary assets are loaded for another FS type).
+**/
 class MultiFileSystem implements FileSystem {
 
 	var cache : Map<String, MultiFileEntry>;
 	var root : MultiFileEntry;
+	/**
+		The list of FS instances used in the MultiFS.
+	**/
 	public var fs : Array<FileSystem>;
 
+	/**
+		Create a new MultiFileSystem instance.
+		@param fs The list of the FileSystem instances that are combined.
+	**/
 	public function new(fs) {
 		this.fs = fs;
 		cache = new Map();
 		root = new MultiFileEntry(this,[for( f in fs ) f.getRoot()]);
 	}
 
+	/**
+		Returns the root FileEntry directory of the FileSystem.
+	**/
 	public function getRoot() {
 		return root;
 	}
 
+	/**
+		Returns the FileEntry instance under the given `path`.
+
+		@throws `NotFound` if the file under given path does not exist.
+	**/
 	public function get( path : String ) : FileEntry {
 		var f = cache.get(path);
 		if( f != null )
@@ -94,6 +121,9 @@ class MultiFileSystem implements FileSystem {
 		return f;
 	}
 
+	/**
+		Checks whether the file under given `path` exists or not.
+	**/
 	public function exists( path : String ) : Bool {
 		for( f in fs )
 			if( f.exists(path) )
@@ -101,11 +131,17 @@ class MultiFileSystem implements FileSystem {
 		return false;
 	}
 
+	/**
+		Disposes of the file system and all underlying file system instances.
+	**/
 	public function dispose() {
 		for( f in fs )
 			f.dispose();
 	}
 
+	/**
+		Not supported and throws an error.
+	**/
 	public function dir( path : String ) : Array<FileEntry> {
 		throw "Not Supported";
 	}

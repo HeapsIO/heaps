@@ -2,6 +2,9 @@ package hxd.fs;
 
 #if !macro
 
+/**
+	The file entry of the `EmbedFileSystem`. Cannot be created directly.
+**/
 @:allow(hxd.fs.EmbedFileSystem)
 @:access(hxd.fs.EmbedFileSystem)
 private class EmbedEntry extends FileEntry {
@@ -179,6 +182,16 @@ private class EmbedEntry extends FileEntry {
 
 #end
 
+/**
+	An embedded file system that stores the assets inside the compiled binary.
+
+	Can be initialized via `Res.initEmbed` or `EmbedFileSystem.create`.
+
+	Implementation uses `haxe.Resource` to store the data and due to that it is not advised to use Embed FS on production when targeting JS
+	as that would cause assets to be inserted as base-64 encoded variables, inflating the output JS file size immensely.
+
+	Due to its nature - cannot be instantiated directly.
+**/
 class EmbedFileSystem #if !macro implements FileSystem #end {
 
 	#if !macro
@@ -189,6 +202,9 @@ class EmbedFileSystem #if !macro implements FileSystem #end {
 		this.root = root;
 	}
 
+	/**
+		Returns the root FileEntry directory of the FileSystem.
+	**/
 	public function getRoot() : FileEntry {
 		return new EmbedEntry(this,"root",".",null);
 	}
@@ -237,6 +253,9 @@ class EmbedFileSystem #if !macro implements FileSystem #end {
 		return r != null && r != true;
 	}
 
+	/**
+		Checks whether the file under given `path` exists or not.
+	**/
 	public function exists( path : String ) {
 		#if flash
 		var f = open(path);
@@ -251,6 +270,11 @@ class EmbedFileSystem #if !macro implements FileSystem #end {
 		#end
 	}
 
+	/**
+		Returns the FileEntry instance under the given `path`.
+
+		@throws `NotFound` if the file under given path does not exist.
+	**/
 	public function get( path : String ) {
 		if( !exists(path) )
 			throw new NotFound(path);
@@ -271,6 +295,11 @@ class EmbedFileSystem #if !macro implements FileSystem #end {
 	}
 	#end
 
+	/**
+		Creates an embedded FileSystem with assets from given `basePath` and `options`.
+
+		@returns An instance of `EmbedFileSystem`.
+	**/
 	public static macro function create( ?basePath : String, ?options : hxd.res.EmbedOptions ) {
 		var f = new hxd.res.FileTree(basePath);
 		var data = f.embed(options);
@@ -282,9 +311,15 @@ class EmbedFileSystem #if !macro implements FileSystem #end {
 		return macro { $types; @:privateAccess new hxd.fs.EmbedFileSystem(haxe.Unserializer.run($v { sdata } )); };
 	}
 
+	/**
+		Does nothing.
+	**/
 	public function dispose() {
 	}
 
+	/**
+		Unsupported, will throw an error.
+	**/
 	public function dir( path : String ) : Array<FileEntry> {
 		throw "Not Supported";
 	}

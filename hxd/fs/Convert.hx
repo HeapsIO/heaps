@@ -1,48 +1,114 @@
 package hxd.fs;
 
+/**
+	The base class that processes raw asset file into a compatible with the engine format.
+
+	@see [Resource baking](https://github.com/HeapsIO/heaps/wiki/Resource-Baking) wiki entry.
+**/
 @:keep @:keepSub
 class Convert {
+	/**
+		The list of original file extensions this Convert can process.
 
+		Considered to be able to process any file type if `null`.
+	**/
 	public var sourceExts(default,null) : Array<String>;
+	/**
+		The output extension of the processed file.
+	**/
 	public var destExt(default,null) : String;
 
 	/**
 		Major version of the Convert.
-		When incremented, all files processed by this Convert would be rebuilt. **/
+		When incremented, all files processed by this Convert would be rebuilt.
+	**/
 	public var version(default, null) : Int;
 
+	/**
+		The extra data passed via the convert rule. Can be null.
+
+		For example, when declaring convert as `{ convert: "myFancyConvert", compress: true }` would put `compress: true` inside the `params` objects.
+		Note that `convert`, `priority` and `then` names are reserved and cannot be used as params.
+	**/
 	public var params : Dynamic;
 
+	/**
+		The path to the original asset file that is to be converted.
+
+		Can be utilized to access files referenced by the asset.
+		The asset data itself can be accessed via `Convert.srcBytes`.
+	**/
 	public var srcPath : String;
+	/**
+		The path to the resulting converted asset file.
+
+		Should be used to save the output. Alternatively `Convert.save` can be used.
+	**/
 	public var dstPath : String;
+	/**
+		The name of the file that is to be converted.
+	**/
 	public var originalFilename : String;
+	/**
+		The contents of the original asset that should be converted.
+	**/
 	public var srcBytes : haxe.io.Bytes;
 
-	public function new( sourceExts, destExt ) {
+	/**
+		Create a new Convert instance. Base class should not be instantiated directly.
+
+		@param sourceExts The comma-separated list of the original file extensions this Convert can process or `null` for any.
+		@param destExt The output extension of the processed file.
+	**/
+	public function new( sourceExts : String, destExt : String ) {
 		this.sourceExts = sourceExts == null ? null : sourceExts.split(",");
 		this.destExt = destExt;
 		this.version = 0;
 	}
 
+	/**
+		Executes the conversion operation. Should be overridden by the subclass convert.
+
+		Should create the file at `Convert.dstPath` by calling `Convert.save` or directly via `sys.io.File` API.
+	**/
 	public function convert() {
 		throw "Not implemented";
 	}
 
+	/**
+		Checks if the param under `name` exists in the `Convert.params`, not `null` and not `false`.
+	**/
+	@:dox(show)
 	function hasParam( name : String ) {
 		var f : Dynamic = Reflect.field(params, name);
 		return f != null && f != false;
 	}
 
+	/**
+		Returns the param under `name` from the `Convert.params`. Throws an error if param is `null`.
+	**/
+	@:dox(show)
 	function getParam( name : String ) : Dynamic {
 		var f : Dynamic = Reflect.field(params, name);
 		if( f == null ) throw "Missing required parameter '"+name+"' for converting "+srcPath+" to "+dstPath;
 		return f;
 	}
 
+	/**
+		Saves the resulting `bytes` to the `Convert.dstPath`.
+		Should be called during `Convert.convert`, or the file in dstPath created via `sys.io.File`.
+	**/
+	@:dox(show)
 	function save( bytes : haxe.io.Bytes ) {
 		hxd.File.saveBytes(dstPath, bytes);
 	}
 
+	/**
+		Executes a shell command `cmd` with the given arguments `args`.
+
+		Equivalent to `Sys.command`, but will throw an error if the resulting code is not `0`.
+	**/
+	@:dox(show)
 	function command( cmd : String, args : Array<String> ) {
 		#if flash
 		trace("TODO");
@@ -56,6 +122,9 @@ class Convert {
 	}
 
 	static var converts = new Map<String,Array<Convert>>();
+	/**
+		Registers the Convert in the system to be used for file conversion.
+	**/
 	public static function register( c : Convert ) : Int {
 		var dest = converts.get(c.destExt);
 		if( dest == null ) {
@@ -69,8 +138,16 @@ class Convert {
 
 }
 
+/**
+	Converts FBX models to internal optimized HMD models.
+
+	Registered and enabled by default.
+**/
 class ConvertFBX2HMD extends Convert {
 
+	/**
+		Create a new FBX->HMD convert instance.
+	**/
 	public function new() {
 		super("fbx", "hmd");
 	}
@@ -90,11 +167,27 @@ class ConvertFBX2HMD extends Convert {
 
 }
 
+/**
+	The shell command convert.
+
+	Uses `Convert.command` to perform an operation via external tool and expects it to save the processed file at the `Convert.dstPath`.
+	The following two arguments can be used to substitute `Convert.srcPath` and `Convert.dstPath` respectively: `%SRC` and `%DST`.
+
+	For example, to create a simple shell command convert, register it as such:
+	`static var _ = Convert.register(new Command("gif", "png", "gif-split", ["%SRC", "%DST", "-horizontal", "-spacing", "2"]))`
+**/
 class Command extends Convert {
 
 	var cmd : String;
 	var args : Array<String>;
 
+	/**
+		Create a new shell command convert.
+		@param fr The comma-separated list of the original file extensions this Convert can process or `null` for any.
+		@param to The output extension of the processed file.
+		@param cmd The command that is to be executed.
+		@param args The list of arguments passed to the command. Use `%SRC` and `%DST` as a placeholder for `Convert.srcPath` and `Convert.dstPath` respectively.
+	**/
 	public function new(fr,to,cmd:String,args:Array<String>) {
 		super(fr,to);
 		this.cmd = cmd;
@@ -107,9 +200,21 @@ class Command extends Convert {
 
 }
 
+/**
+	Converts raw wave audio files to MP3.
+	
+	Expects `lame` to be accessible from command line.
 
+	Uses `--resample 44100` and `-h` flags.
+
+	Registered by default.
+
+	@see [Lame project](https://lame.sourceforge.io/) for the encoder.
+**/
 class ConvertWAV2MP3 extends Convert {
-
+	/**
+		Create a new WAV->MP3 convert.
+	**/
 	public function new() {
 		super("wav", "mp3");
 	}
@@ -122,8 +227,22 @@ class ConvertWAV2MP3 extends Convert {
 
 }
 
+/**
+	Converts raw wave audio files to OGG.
+
+	Expects `oggenc` to be accessible from command line.
+
+	Uses `--resample 44100` and `-Q` flags.
+
+	Registered by default.
+
+	@see [Xiph website](https://www.xiph.org/) for vorbis-tools.
+**/
 class ConvertWAV2OGG extends Convert {
 
+	/**
+		Create a new WAV->OGG convert.
+	**/
 	public function new() {
 		super("wav", "ogg");
 	}
@@ -148,8 +267,16 @@ class ConvertWAV2OGG extends Convert {
 
 }
 
+/**
+	Converts Truevision TGA files to PNG.
+
+	Registered by default.
+**/
 class ConvertTGA2PNG extends Convert {
 
+	/**
+		Create a new TGA->PNG convert.
+	**/
 	public function new() {
 		super("tga", "png");
 	}
@@ -187,10 +314,18 @@ class ConvertTGA2PNG extends Convert {
 
 }
 
+/**
+	Converts the BMFont FNT format to internal BFNT.
+
+	Registered and enabled by default.
+**/
 class ConvertFNT2BFNT extends Convert {
 
 	var emptyTile : h2d.Tile;
 
+	/**
+		Create a new FNT->BFNT convert.
+	**/
 	public function new() {
 		// Fake tile create subs before discarding the font.
 		emptyTile = @:privateAccess new h2d.Tile(null, 0, 0, 0, 0, 0, 0);
@@ -217,7 +352,20 @@ class ConvertFNT2BFNT extends Convert {
 
 }
 
+/**
+	Compresses the images to the DDS texture based on input params.
 
+	@param format The texture format to convert.
+	The following formats require `texconv` to be accessible from command-line: `R16F`, `R32F`, `RG16F`, `RG32F`, `RGB16F`, `RGB32F`, `RGBA16F`, `RGBA32F`
+	Any other format expects `CompressonatorCLI` to be accessible from command-line.
+	@param mips Set to `true` to enable mipmap generation.
+	@param alpha Required when `BC1` format to set alpha threshold.
+
+	@see [DirectXTex](https://github.com/microsoft/DirectXTex)
+	@see [Compressonator](https://gpuopen.com/compressonator/)
+
+	Registered for png, tga, jpg, jpeg by default.
+**/
 class CompressIMG extends Convert {
 
 	static var TEXCONV_FMT = [
@@ -270,6 +418,11 @@ class CompressIMG extends Convert {
 
 }
 
+/**
+	The dummy convert that saves an empty file.
+
+	Registered under names `dummy` and `remove` by default.
+**/
 class DummyConvert extends Convert {
 
 	override function convert() {

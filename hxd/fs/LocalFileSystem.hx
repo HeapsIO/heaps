@@ -1,7 +1,12 @@
 package hxd.fs;
 
-#if (sys || nodejs)
+#if (sys || nodejs || doc_gen)
 
+/**
+	The `LocalFileSystem` file entry.
+
+	Cannot be instantiated directly.
+**/
 @:allow(hxd.fs.LocalFileSystem)
 @:allow(hxd.fs.FileConverter)
 @:access(hxd.fs.LocalFileSystem)
@@ -211,15 +216,40 @@ class LocalEntry extends FileEntry {
 
 }
 
+/**
+	The OS file system-based FS. Works only on targets with access to `sys` package, such as HL or nodejs.
+
+	Can be initialized via `Res.initLocal`.
+
+	Local FS is the primary FS to use during development, as it allows complete access to the game access directly from OS file system,
+	as well as supports watching files `FileEntry.watch` for changes (allowing implementation of asset hot-reloading).
+**/
 class LocalFileSystem implements FileSystem {
 
 	var root : FileEntry;
 	var fileCache = new Map<String,{r:LocalEntry}>();
+	/**
+		The directory from which the assets are read. Usually a `res` directory.
+	**/
 	public var baseDir(default,null) : String;
+	/**
+		The instance of the file convert that handles processing of raw files so they can be used by the engine.
+	**/
 	public var convert(default,null) : FileConverter;
 	static var isWindows = Sys.systemName() == "Windows";
+	/**
+		The limit of files to check for changes per tick for watched files.
+		The limitation is done in order to avoid flooding the OS with the file access requests.
+
+		The amount of checks per tick is calculated as follows: `min(ceil(watched_files / 60), FILES_CHECK_MAX)`.
+	**/
 	public static var FILES_CHECK_MAX = 5;
 
+	/**
+		Create a new local file system instance.
+		@param dir The directory from which the assets are going to be read.
+		@param configuration The configuration name used for `FileConverter`. Pass `null` to use `"default"` configuration.
+	**/
 	public function new( dir : String, configuration : String ) {
 		baseDir = dir;
 		if( configuration == null )
@@ -247,11 +277,17 @@ class LocalFileSystem implements FileSystem {
 		root = new LocalEntry(this, "root", null, baseDir);
 	}
 
+	/**
+		Returns an absolute OS path to the given file entry `f`.
+	**/
 	public function getAbsolutePath( f : FileEntry ) : String {
 		var f = cast(f, LocalEntry);
 		return f.file;
 	}
 
+	/**
+		Returns the root FileEntry directory of the FileSystem.
+	**/
 	public function getRoot() : FileEntry {
 		return root;
 	}
@@ -299,6 +335,9 @@ class LocalFileSystem implements FileSystem {
 		return e;
 	}
 
+	/**
+		Clears the cache of the FileEntry instances, causing the access to previously accessed entries to yield new instances.
+	**/
 	public function clearCache() {
 		for( path in fileCache.keys() ) {
 			var r = fileCache.get(path);
@@ -306,11 +345,19 @@ class LocalFileSystem implements FileSystem {
 		}
 	}
 
+	/**
+		Checks whether the file under given `path` exists or not.
+	**/
 	public function exists( path : String ) {
 		var f = open(path);
 		return f != null;
 	}
 
+	/**
+		Returns the FileEntry instance under the given `path`.
+
+		@throws `NotFound` if the file under given path does not exist.
+	**/
 	public function get( path : String ) {
 		var f = open(path);
 		if( f == null )
@@ -318,10 +365,18 @@ class LocalFileSystem implements FileSystem {
 		return f;
 	}
 
+	/**
+		Disposes of the file system.
+	**/
 	public function dispose() {
 		fileCache = new Map();
 	}
 
+	/**
+		Returns the FileEntry directory under the given `path`.
+
+		@throws `NotFound` if the file under given path does not exist.
+	**/
 	public function dir( path : String ) : Array<FileEntry> {
 		if( !sys.FileSystem.exists(baseDir + path) || !sys.FileSystem.isDirectory(baseDir + path) )
 			throw new NotFound(baseDir + path);
