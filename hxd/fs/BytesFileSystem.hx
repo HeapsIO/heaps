@@ -2,12 +2,24 @@ package hxd.fs;
 
 using haxe.io.Path;
 
+/**
+	A Bytes-based file entry.
+
+	Can be used to create resources from outside of the Resource system.
+	For example, assets downloaded over the network or generated at runtime.
+**/
 class BytesFileEntry extends FileEntry {
 
 	var fullPath : String;
 	var bytes : haxe.io.Bytes;
 	var pos : Int;
 
+	/**
+		Create a new BytesFileEntry instance.
+
+		@param path The path of the file.
+		@param bytes The contents of the file.
+	**/
 	public function new(path, bytes) {
 		this.fullPath = path;
 		this.name = path.split("/").pop();
@@ -49,6 +61,7 @@ class BytesFileEntry extends FileEntry {
 		haxe.Timer.delay(onReady, 1);
 	}
 
+	@:dox(show)
 	override function loadBitmap( onLoaded : LoadedBitmap -> Void ) : Void {
 		#if flash
 		var loader = new flash.display.Loader();
@@ -85,34 +98,68 @@ class BytesFileEntry extends FileEntry {
 
 }
 
+/**
+	A base class for custom FileSystem based on preloaded Bytes data.
+
+	As bare minimum, inheriting classes should override the `getBytes`, and ideally `getRoot` and `dir` methods.
+**/
 class BytesFileSystem implements FileSystem {
 
 	function new() {
 	}
 
+	/**
+		Should be overridden by inheriting class, otherwise throws an exception.
+	**/
 	public function getRoot() {
 		throw "Not implemented";
 		return null;
 	}
 
+	/**
+		Returns the Bytes instance of the file under given `path`.
+		Should be overridden by inheriting class, otherwise throws an exception.
+	**/
+	@:dox(show)
 	function getBytes( path : String ) : haxe.io.Bytes {
 		throw "Not implemented";
 		return null;
 	}
 
+	/**
+		Returns whether file under given `path` exists.
+
+		Initially calls `getBytes()` and ideally should be overridden for optimization purposes.
+	**/
 	public function exists( path : String ) {
 		return getBytes(path) != null;
 	}
 
+	/**
+		Returns the BytesFileEntry instance for the file under given `path`.
+
+		Does not cache the file entries (causing a new entry instance returned on same path every time)
+		and ideally should be overridden for optimization purposes.
+
+		@throws `NotFound` if the file under given path does not exist.
+	**/
 	public function get( path : String ) {
 		var bytes = getBytes(path);
 		if( bytes == null ) throw "Resource not found '" + path + "'";
 		return new BytesFileEntry(path,bytes);
 	}
 
+	/**
+		Disposes of the BytesFileSystem.
+
+		Does nothing initially.
+	**/
 	public function dispose() {
 	}
 
+	/**
+		Should be overridden by inheriting class, otherwise throws an exception.
+	**/
 	public function dir( path : String ) : Array<FileEntry> {
 		throw "Not implemented";
 		return null;

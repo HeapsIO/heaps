@@ -1,14 +1,14 @@
 package hxd.fs;
 
-#if (sys || nodejs)
-
+#if (sys || nodejs || doc_gen)
+@:dox(hide)
 typedef ConvertConfig = {
 	var obj : Dynamic;
 	var rules : Array<ConvertRule>;
 }
-
+@:dox(hide)
 typedef ConvertRule = { pt : ConvertPattern, cmd : ConvertCommand, priority : Int };
-
+@:dox(hide)
 enum ConvertPattern {
 	Filename( name : String );
 	Regexp( r : EReg );
@@ -16,7 +16,7 @@ enum ConvertPattern {
 	Exts( e : Array<String> );
 	Wildcard;
 }
-
+@:dox(hide)
 typedef ConvertCommand = {
 	conv : Array<Convert>,
 	?params : Dynamic,
@@ -24,8 +24,23 @@ typedef ConvertCommand = {
 	?then : ConvertCommand
 }
 
+/**
+	A raw file processing helper.
+
+	Utilizes registered `Convert`s based on configuration rules and converts raw asset file to be useable
+	by the engine.
+	
+	For example, `fbx` models are converted to `hmd` models by FileConverter.
+
+	@see [Resource Baking](https://github.com/HeapsIO/heaps/wiki/Resource-Baking) wiki entry.
+**/
 class FileConverter {
 
+	/**
+		The convert configuration used.
+
+		@see [Resource Baking](https://github.com/HeapsIO/heaps/wiki/Resource-Baking#multiple-configurations) multiple configurations wiki entry.
+	**/
 	public var configuration(default,null) : String;
 
 	var baseDir : String;
@@ -46,9 +61,9 @@ class FileConverter {
 		// Enable it
 		static var __ = hxd.fs.FileConverter.addConfig({
 			"fs.convert": {
-				// Converts are identified by output extension of Convert.
+				// Converts are identified by output extension of the Convert.
 				"origext": { convert: "fancyext", priority: 0 },
-				// Shorter declaration with default priority 0:
+				// Shorter declaration with the default priority of 0:
 				"otherext": "fancyext"
 			}
 		});
@@ -59,6 +74,9 @@ class FileConverter {
 		return conf;
 	}
 
+	/**
+		Create a new FileConverter instance. Created automatically by `LocalFileSystem`.
+	**/
 	public function new(baseDir,configuration) {
 		this.baseDir = baseDir;
 		this.configuration = configuration;
@@ -76,6 +94,10 @@ class FileConverter {
 		defaultConfig = makeConfig(defaultCfg);
 	}
 
+	/**
+		Sent when the file is converted by the Convert instance.
+		@param c The Convert that performed file processing.
+	**/
 	public dynamic function onConvert( c : Convert ) {
 	}
 
@@ -88,7 +110,7 @@ class FileConverter {
 		var conf = Reflect.field(obj,"fs.convert."+configuration);
 		var merge = mergeRec(def, conf);
 		for( f in Reflect.fields(merge) ) {
-			var cmd = makeCommmand(Reflect.field(merge,f));
+			var cmd = makeCommand(Reflect.field(merge,f));
 			var pt = if( f.charCodeAt(0) == "^".code )
 				Regexp(new EReg(f,""));
 			else if( ~/^[a-zA-Z0-9,]+$/.match(f) ) {
@@ -100,11 +122,11 @@ class FileConverter {
 				Filename(f);
 			cfg.rules.push({ pt : pt, cmd : cmd.cmd, priority : cmd.priority });
 		}
-		cfg.rules.sort(sortByRulePiority);
+		cfg.rules.sort(sortByRulePriority);
 		return cfg;
 	}
 
-	static function sortByRulePiority( r1 : ConvertRule, r2 : ConvertRule ) {
+	static function sortByRulePriority( r1 : ConvertRule, r2 : ConvertRule ) {
 		if( r1.priority != r2.priority )
 			return r2.priority - r1.priority;
 		return r1.pt.getIndex() - r2.pt.getIndex();
@@ -117,7 +139,7 @@ class FileConverter {
 		return c;
 	}
 
-	function makeCommmand( obj : Dynamic ) : { cmd : ConvertCommand, priority : Int } {
+	function makeCommand( obj : Dynamic ) : { cmd : ConvertCommand, priority : Int } {
 		if( hxd.impl.Api.isOfType(obj,String) )
 			return { cmd : { conv : loadConvert(obj) }, priority : 0 };
 		if( obj.convert == null )
@@ -128,7 +150,7 @@ class FileConverter {
 			var value : Dynamic = Reflect.field(obj,f);
 			switch( f ) {
 			case "convert": //
-			case "then": cmd.then = makeCommmand(value).cmd;
+			case "then": cmd.then = makeCommand(value).cmd;
 			case "priority": priority = value;
 			default:
 				if( cmd.params == null ) cmd.params = {};
@@ -202,6 +224,10 @@ class FileConverter {
 		return null;
 	}
 
+	/**
+		Attempt to find a Convert rule to determine if file entry should be converted and perform processing if needed.
+		@param e The `LocalFileSystem` file entry that should be converted.
+	**/
 	public function run( e : LocalFileSystem.LocalEntry ) {
 		var rule = getConvertRule(e.path);
 		if( e.originalFile == null )
