@@ -301,7 +301,7 @@ class Texture {
 	}
 
 	function checkMipMapGen(mipLevel,layer) {
-		if( mipLevel == 0 && flags.has(MipMapped) && !flags.has(ManualMipMapGen) && (!flags.has(Cube) || layer == 5) )
+		if( mipLevel == 0 && flags.has(MipMapped) && !flags.has(ManualMipMapGen) && layer == layerCount - 1 )
 			mem.driver.generateMipMaps(this);
 	}
 
