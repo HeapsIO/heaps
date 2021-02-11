@@ -193,6 +193,17 @@ class Object #if (domkit && !domkit_heaps) implements domkit.Model<h2d.Object> #
 	}
 
 	/**
+		Tells if the object is contained into this object children, recursively.
+	**/
+	public function contains( o : Object ) {
+		while( o != null ) {
+			o = o.parent;
+			if( o == this ) return true;
+		}
+		return false;
+	}
+
+	/**
 		Find a single object in the tree by calling `f` on each and returning the first not-null value returned, or null if not found.
 	**/
 	public function find<T>( f : Object -> Null<T> ) : Null<T> {
@@ -511,7 +522,7 @@ class Object #if (domkit && !domkit_heaps) implements domkit.Model<h2d.Object> #
 	}
 
 	/**
-		Sets the parent container for this Object and it's children. 
+		Sets the parent container for this Object and it's children.
 		See `Object.contentChanged` for more details.
 	**/
 	@:dox(show)
@@ -1062,17 +1073,17 @@ class Object #if (domkit && !domkit_heaps) implements domkit.Model<h2d.Object> #
 	// ---- additional methods for containers (h2d.Flow)
 
 	/**
-		<span class="label">Advanced usage</span>  
+		<span class="label">Advanced usage</span>
 		Called by the children of a container object if they have `parentContainer` defined in them.
 		Primary use-case is when the child size got changed, requiring content to reevaluate positioning such as `Flow` layouts,
-		but also can be used for other purposes. 
+		but also can be used for other purposes.
 	**/
 	@:dox(show)
 	function contentChanged( s : Object ) {
 	}
 
 	/**
-		<span class="label">Advanced usage</span>  
+		<span class="label">Advanced usage</span>
 		This can be called by a parent container to constraint the size of its children.
 		Negative value mean that constraint is to be disabled.
 

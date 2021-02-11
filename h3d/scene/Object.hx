@@ -284,6 +284,17 @@ class Object implements hxd.impl.Serializable {
 	}
 
 	/**
+		Tells if the object is contained into this object children, recursively.
+	**/
+	public function contains( o : Object ) {
+		while( o != null ) {
+			o = o.parent;
+			if( o == this ) return true;
+		}
+		return false;
+	}
+
+	/**
 		Find a single object in the tree by calling `f` on each and returning the first not-null value returned, or null if not found.
 	**/
 	public function find<T>( f : Object -> Null<T> ) : Null<T> {
