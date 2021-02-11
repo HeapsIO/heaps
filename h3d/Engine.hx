@@ -311,7 +311,7 @@ class Engine {
 	}
 
 	public function getCurrentTarget() {
-		return targetStack == null ? null : targetStack.t;
+		return targetStack == null ? null : targetStack.t == nullTexture ? targetStack.textures[0] : targetStack.t;
 	}
 
 	public function pushTarget( tex : h3d.mat.Texture, layer = 0, mipLevel = 0 ) {
