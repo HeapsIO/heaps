@@ -36,6 +36,7 @@ class App implements h3d.IDrawable {
 	var isDisposed : Bool;
 
 	public function new() {
+		hxd.System.init();
 		var engine = h3d.Engine.getCurrent();
 		if( engine != null ) {
 			this.engine = engine;

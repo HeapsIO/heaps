@@ -144,8 +144,11 @@ class System {
 	static function get_allowTimeout() return false;
 	static function set_allowTimeout(b) return false;
 
-	static function __init__() : Void {
-		haxe.MainLoop.add(updateCursor, -1);
+	static var cursorLoop : haxe.MainLoop.MainEvent;
+	public static function init() : Void {
+		if ( cursorLoop == null ) {
+			cursorLoop = haxe.MainLoop.add(updateCursor, -1);
+		}
 	}
 
 }

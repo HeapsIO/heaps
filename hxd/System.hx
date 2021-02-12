@@ -53,6 +53,12 @@ class System {
 	}
 
 	/**
+		Platform-specific initialization, such as HL sentinel or cursor update on HL/JS.
+	**/
+	public static function init( ) : Void {
+	}
+
+	/**
 		Sets currently shown cursor.
 		This method is designated to be used by custom `hxd.System.setCursor`.
 		Calling it outside of automated Interactive cursor update system leads to undefined behavior, and not advised.
