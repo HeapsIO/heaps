@@ -438,7 +438,8 @@ class System {
 		#end
 		#if (hlsdl || hldx)
 		if ( cursorLoop == null ) {
-			MainLoop.add(updateCursor, -1) #if (haxe_ver >= 4) .isBlocking = false #end;
+			cursorLoop = MainLoop.add(updateCursor, -1);
+			#if (haxe_ver >= 4) cursorLoop.isBlocking = false #end;
 		}
 		#end
 	}
