@@ -840,6 +840,12 @@ class FlowComp extends ObjectComp implements domkit.Component.ComponentDecl<h2d.
 
 	static function set_overflow( o : h2d.Flow, v ) {
 		o.overflow = v;
+		if( v == Scroll ) @:privateAccess {
+			o.scrollBar.dom = domkit.Properties.create("flow", o.scrollBar);
+			o.scrollBar.dom.addClass("scrollbar");
+			o.scrollBarCursor.dom = domkit.Properties.create("flow", o.scrollBarCursor);
+			o.scrollBarCursor.dom.addClass("cursor");
+		}
 	}
 
 	static function set_reverse( o : h2d.Flow, v ) {

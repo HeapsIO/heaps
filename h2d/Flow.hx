@@ -82,8 +82,10 @@ enum FlowOverflow {
 		Compared to `Limit` - Flow will mask out the content that is outside of Flow bounds.
 	**/
 	Hidden;
-	// TODO: Scroll overflow, see #606
-	//Scroll;
+	/**
+		Similar to `Hidden` but allows to scroll using `Flow.scroll*` properties for control.
+	**/
+	Scroll;
 }
 
 /**
@@ -489,12 +491,31 @@ class Flow extends Object {
 	**/
 	public var fillHeight(default,set) : Bool = false;
 
+	/**
+	 	The scroll bar component created when `overflow` is set to `Scroll`
+	**/
+	public var scrollBar(default, null) : h2d.Flow;
+	/**
+	 	The scroll bar cursor component created when `overflow` is set to `Scroll`
+	**/
+	public var scrollBarCursor(default, null) : h2d.Flow;
+	/**
+	 	The amount of scrolling that is done when using mouse wheel (in pixels).
+	**/
+	public var scrollWheelSpeed(default, null) : Float = 30.;
+	/**
+	 	The current scrolling position for the flow content (in pixels). Only applies when overflow is Scroll or Hidden.
+	**/
+	public var scrollPosY(default, set) : Float = 0.;
+
 	var background : h2d.ScaleGrid;
 	var debugGraphics : h2d.Graphics;
 	var properties : Array<FlowProperties> = [];
 
 	var calculatedWidth : Float = 0.;
 	var calculatedHeight : Float = 0.;
+	var contentWidth : Float = 0.;
+	var contentHeight : Float = 0.;
 	var constraintWidth : Float = -1;
 	var constraintHeight : Float = -1;
 	var realMaxWidth : Float = -1;
@@ -569,6 +590,54 @@ class Flow extends Object {
 		if( overflow == v )
 			return v;
 		needReflow = true;
+		if( v == Scroll ) {
+			enableInteractive = true;
+			if( scrollBar == null ) {
+				scrollBar = new h2d.Flow(this);
+				scrollBar.backgroundTile = h2d.Tile.fromColor(0);
+				scrollBar.alpha = 0.5;
+				scrollBar.verticalAlign = Top;
+				scrollBar.enableInteractive = true;
+
+				function setCursor( e : hxd.Event) {
+					var cursorY = e.relY - scrollBarCursor.minHeight * 0.5;
+					if( cursorY < 0 ) cursorY = 0;
+					scrollPosY = (cursorY / (scrollBar.minHeight - scrollBarCursor.minHeight)) * (contentHeight - calculatedHeight);
+				}
+
+				var pushed = false;
+				scrollBar.interactive.cursor = Button;
+				scrollBar.interactive.onPush = function(e:hxd.Event) {
+					scrollBar.interactive.startDrag(function(e) {
+						switch( e.kind ) {
+						case ERelease, EReleaseOutside:
+							scrollBar.interactive.stopDrag();
+						case EPush, EMove:
+							setCursor(e);
+						default:
+						}
+						e.propagate = false;
+					});
+					setCursor(e);
+				};
+
+				var p = getProperties(scrollBar);
+				p.isAbsolute = true;
+				p.horizontalAlign = Right;
+				p.verticalAlign = Top;
+
+				scrollBarCursor = new h2d.Flow(scrollBar);
+				scrollBarCursor.minWidth = 10;
+				scrollBarCursor.minHeight = 20;
+				scrollBarCursor.backgroundTile = h2d.Tile.fromColor(-1);
+			}
+		} else {
+			if( scrollBar != null ) {
+				scrollBar.remove();
+				scrollBar = null;
+				scrollBarCursor = null;
+			}
+		}
 		return overflow = v;
 	}
 
@@ -614,6 +683,32 @@ class Flow extends Object {
 		paddingRight = v;
 		paddingBottom = v;
 		return v;
+	}
+
+	function set_scrollPosY(v:Float) {
+		if( needReflow ) reflow();
+		if( v < 0 ) v = 0;
+		if( v > contentHeight - calculatedHeight ) v = contentHeight - calculatedHeight;
+		if( scrollPosY == v )
+			return v;
+		var delta = Std.int(v) - Std.int(scrollPosY);
+		var i = 0;
+		for( c in children ) {
+			var p = properties[i++];
+			if( p.isAbsolute ) continue;
+			c.y -= delta;
+		}
+		scrollPosY = v;
+		updateScrollCursor();
+		return v;
+	}
+
+	function updateScrollCursor() {
+		if( scrollBarCursor == null ) return;
+		var prev = needReflow;
+		var p = scrollBar.getProperties(scrollBarCursor);
+		p.paddingTop = Std.int( scrollPosY * (calculatedHeight - scrollBarCursor.minHeight) / (contentHeight - calculatedHeight) );
+		needReflow = prev;
 	}
 
 	inline function set_paddingHorizontal(v) {
@@ -764,6 +859,7 @@ class Flow extends Object {
 	override function addChildAt( s, pos ) {
 		if( background != null ) pos++;
 		if( interactive != null ) pos++;
+		if( scrollBar != null && pos == children.length ) pos--;
 		var fp = getProperties(s);
 		super.addChildAt(s, pos);
 		if( fp == null ) fp = new FlowProperties(s) else properties.remove(fp);
@@ -807,16 +903,15 @@ class Flow extends Object {
 		super.sync(ctx);
 	}
 
-	override function drawRec(ctx:RenderContext)
-	{
-		if ( overflow == Hidden ) {
-			if ( posChanged ) {
+	override function drawRec(ctx:RenderContext) {
+		if( overflow == Hidden || overflow == Scroll ) {
+			if( posChanged ) {
 				calcAbsPos();
 				for ( c in children )
 					c.posChanged = true;
 				posChanged = false;
 			}
-			Mask.maskWith(ctx, this, hxd.Math.imax(outerWidth, maxWidth), hxd.Math.imax(outerHeight, maxHeight), 0, 0);
+			Mask.maskWith(ctx, this, Math.ceil(calculatedWidth), Math.ceil(calculatedHeight), 0, 0);
 			super.drawRec(ctx);
 			Mask.unmask(ctx);
 		} else {
@@ -904,6 +999,7 @@ class Flow extends Object {
 					interactive.width = calculatedWidth;
 					interactive.height = calculatedHeight;
 				}
+				interactive.onWheel = onMouseWheel;
 			}
 		} else {
 			if( interactive != null ) {
@@ -912,6 +1008,13 @@ class Flow extends Object {
 			}
 		}
 		return enableInteractive = b;
+	}
+
+	function onMouseWheel( e : hxd.Event ) {
+		if( overflow == Scroll )
+			scrollPosY += e.wheelDelta * scrollWheelSpeed;
+		else
+			e.propagate = true;
 	}
 
 	function set_backgroundTile(t) {
@@ -985,7 +1088,6 @@ class Flow extends Object {
 		See `Flow.needReflow` for more information.
 	**/
 	public function reflow() {
-
 		onBeforeReflow();
 
 		if( !isConstraint && (fillWidth || fillHeight) ) {
@@ -1392,8 +1494,22 @@ class Flow extends Object {
 			}
 		}
 
+		if( scrollPosY != 0 ) {
+			var i = 0;
+			var sy = Std.int(scrollPosY);
+			for( c in children ) {
+				var p = properties[i++];
+				if( p.isAbsolute ) continue;
+				c.y -= sy;
+			}
+		}
+
 		if( realMinWidth >= 0 && cw < realMinWidth ) cw = realMinWidth;
 		if( realMinHeight >= 0 && ch < realMinHeight ) ch = realMinHeight;
+
+		contentWidth = cw;
+		contentHeight = ch;
+
 		if( overflow != Expand ) {
 			if( isConstraintWidth && cw > maxTotWidth ) cw = maxTotWidth;
 			if( isConstraintHeight && ch > maxTotHeight ) ch = maxTotHeight;
@@ -1411,7 +1527,21 @@ class Flow extends Object {
 
 		calculatedWidth = cw;
 		calculatedHeight = ch;
+
+		if( scrollBar != null ) {
+			if( contentHeight <= calculatedHeight )
+				scrollBar.visible = false;
+			else {
+				scrollBar.visible = true;
+				scrollBar.minHeight = Math.ceil(calculatedHeight);
+				scrollBarCursor.minHeight = hxd.Math.imax(1, Std.int(calculatedHeight * (1 - (contentHeight - calculatedHeight)/contentHeight)));
+				updateScrollCursor();
+			}
+		}
+
 		needReflow = false;
+		if( overflow == Scroll || overflow == Hidden )
+			posChanged = true;
 
 		if( debug ) {
 			if( debugGraphics != children[children.length - 1] ) {
