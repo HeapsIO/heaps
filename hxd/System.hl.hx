@@ -424,16 +424,18 @@ class System {
 	#if (hlsdl || hldx)
 	static var cursorLoop : MainEvent;
 	#end
+	#if !usesys
+	static var timeoutLoop : MainEvent;
+	#end
 	public static function init() {
 		
 		#if ( target.threaded && (haxe_ver >= 4.2) )
 		mainThread = Thread.current();
 		#end
 		#if !usesys
-		if ( sentinel == null ) {
-			hl.Api.setErrorHandler(function(e) reportError(e)); // initialization error
-			sentinel = new hl.UI.Sentinel(30, function() throw "Program timeout (infinite loop?)");
-			MainLoop.add(timeoutTick, -1) #if (haxe_ver >= 4) .isBlocking = false #end;
+		if ( timeoutLoop == null ) {
+			timeoutLoop = MainLoop.add(timeoutTick, -1);
+			#if (haxe_ver >= 4) timeoutLoop.isBlocking = false #end;
 		}
 		#end
 		#if (hlsdl || hldx)
@@ -441,6 +443,13 @@ class System {
 			cursorLoop = MainLoop.add(updateCursor, -1);
 			#if (haxe_ver >= 4) cursorLoop.isBlocking = false #end;
 		}
+		#end
+	}
+
+	static function __init__() {
+		#if !usesys
+		hl.Api.setErrorHandler(function(e) reportError(e)); // initialization error
+		sentinel = new hl.UI.Sentinel(30, function() throw "Program timeout (infinite loop?)");
 		#end
 	}
 
