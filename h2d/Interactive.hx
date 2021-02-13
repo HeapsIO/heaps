@@ -249,33 +249,43 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 	}
 
 	/**
-		Starts input events capture and redirects them to `callb` method until `Interactive.stopDrag` is called.
+		Starts input events capture and redirects them to `callb` method until `Interactive.stopCapture` is called.
 		While the method name may imply that only mouse events would be captured: This is not the case,
 		as it will also capture all other input events, including keyboard events.
 
-		Starting event capture through `Interactive.startDrag` will convert `Event.relX` and `relY` to local coordinates
+		Starting event capture through `Interactive.startCapture` will convert `Event.relX` and `relY` to local coordinates
 		of the Interactive and will restore them after invoking `callb`.
-		In order to receive coordinates in scene coordinate space use `Scene.startDrag`.
+		In order to receive coordinates in scene coordinate space use `Scene.startCapture`.
 
 		@param callb A callback method that receives `hxd.Event` when input event happens.
 		Unless `callb` sets `Event.propagate` to `true`, event won't be sent to other Interactives.
-		@param onCancel An optional callback that is invoked when `Interactive.stopDrag` is called.
+		@param onCancel An optional callback that is invoked when `Interactive.stopCapture` is called.
 	**/
-	public function startDrag( callb : hxd.Event -> Void,?onCancel : Void -> Void ) {
-		scene.startDrag(function(event) {
+	public function startCapture(callb : hxd.Event -> Void, ?onCancel : Void -> Void, ?touchId : Int) {
+		scene.startCapture(function(event) {
 			var x = event.relX, y = event.relY;
 			eventToLocal(event);
 			callb(event);
 			event.relX = x;
 			event.relY = y;
-		},onCancel);
+		}, onCancel, touchId);
 	}
 
 	/**
 		Stops current input event capture.
 	**/
-	public function stopDrag() {
-		scene.stopDrag();
+	public function stopCapture() {
+		scene.stopCapture();
+	}
+
+	@:deprecated("Renamed to startCapture") @:dox(hide)
+	public inline function startDrag(callb,?onCancel) {
+		startCapture(callb, onCancel);
+	}
+
+	@:deprecated("Renamed to stopCapture") @:dox(hide)
+	public inline function stopDrag() {
+		stopCapture();
 	}
 
 	/**

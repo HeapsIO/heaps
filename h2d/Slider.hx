@@ -108,9 +108,9 @@ class Slider extends h2d.Interactive {
 
 			onChange();
 			var scene = scene;
-			startDrag(function(e) {
+			startCapture(function(e) {
 				if( this.scene != scene || e.kind == ERelease ) {
-					scene.stopDrag();
+					scene.stopCapture();
 					return;
 				}
 				value = getValue(e.relX);
