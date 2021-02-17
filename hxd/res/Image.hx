@@ -439,7 +439,7 @@ class Image extends Resource {
 				// immediately loading the PNG is faster than going through loadBitmap
 				tex.alloc();
 				for( layer in 0...tex.layerCount ) {
-						for( mip in 0...inf.mipLevels ) {
+					for( mip in 0...inf.mipLevels ) {
 						var pixels = getPixels(tex.format,null,layer * inf.mipLevels + mip);
 						tex.uploadPixels(pixels,mip,layer);
 						pixels.dispose();
