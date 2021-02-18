@@ -110,6 +110,10 @@ class MeshBatch extends Mesh {
 							batchShaders = cur.next;
 						cur = cur.next;
 					}
+					else {
+						prev = cur;
+						cur = cur.next;
+					}
 				}
 				else {
 					prev = cur;
