@@ -19,6 +19,7 @@ private extern class GL2 extends js.html.webgl.GL {
 	function uniformBlockBinding( p : Program, blockIndex : Int, blockBinding : Int ) : Void;
 	function framebufferTextureLayer( target : Int, attach : Int, t : js.html.webgl.Texture, level : Int, layer : Int ) : Void;
 	function texImage3D(target : Int, level : Int, internalformat : Int, width : Int, height : Int, depth : Int, border : Int, format : Int, type : Int, source : Dynamic) : Void;
+	function compressedTexImage3D(target : Int, level : Int, internalformat : Int, width : Int, height : Int, depth : Int, border : Int, source : Dynamic) : Void;
 	static inline var RGBA16F = 0x881A;
 	static inline var RGBA32F = 0x8814;
 	static inline var RED      = 0x1903;
@@ -1091,7 +1092,7 @@ class GlDriver extends Driver {
 		uploadTexturePixels(t, pixels, mipLevel, side);
 		pixels.dispose();
 	#else
-		if( t.format != RGBA || t.flags.has(Cube) ) {
+		if( t.format != RGBA || t.layerCount != 1 ) {
 			var pixels = bmp.getPixels();
 			uploadTexturePixels(t, pixels, mipLevel, side);
 			pixels.dispose();
@@ -1165,7 +1166,6 @@ class GlDriver extends Driver {
 	override function uploadTexturePixels( t : h3d.mat.Texture, pixels : hxd.Pixels, mipLevel : Int, side : Int ) {
 		var cubic = t.flags.has(Cube);
 		var bind = getBindType(t);
-		if( t.flags.has(IsArray) ) throw "TODO:texImage3D";
 		var face = cubic ? CUBE_FACES[side] : GL.TEXTURE_2D;
 		gl.bindTexture(bind, t.t.t);
 		pixels.convert(t.format);
@@ -1177,10 +1177,17 @@ class GlDriver extends Driver {
 			#if( (hlsdl == "1.8.0") || (hlsdl == "1.9.0") )
 			throw "Compressed textures require hlsdl 1.10+";
 			#else
-			gl.compressedTexImage2D(face, mipLevel, t.t.internalFmt, pixels.width, pixels.height, 0, dataLen, stream);
+			if( t.flags.has(IsArray) )
+				gl.compressedTexImage3D(face, mipLevel, t.t.internalFmt, pixels.width, pixels.height, side, 0, dataLen, stream);
+			else
+				gl.compressedTexImage2D(face, mipLevel, t.t.internalFmt, pixels.width, pixels.height, 0, dataLen, stream);
 			#end
-		} else
-			gl.texImage2D(face, mipLevel, t.t.internalFmt, pixels.width, pixels.height, 0, getChannels(t.t), t.t.pixelFmt, stream);
+		} else {
+			if( t.flags.has(IsArray) )
+				gl.texImage3D(face, mipLevel, t.t.internalFmt, pixels.width, pixels.height, side, 0, getChannels(t.t), t.t.pixelFmt, stream);
+			else
+				gl.texImage2D(face, mipLevel, t.t.internalFmt, pixels.width, pixels.height, 0, getChannels(t.t), t.t.pixelFmt, stream);
+		}
 		#elseif js
 		#if hxnodejs
 		if( (pixels:Dynamic).bytes.b.hxBytes != null ) {
@@ -1190,16 +1197,24 @@ class GlDriver extends Driver {
 			pixels = pixels.clone();
 		}
 		#end
+		if( t.flags.has(IsArray) ) throw "TODO:texImage3D";
 		var buffer : ArrayBufferView = switch( t.format ) {
 		case RGBA32F, R32F, RG32F, RGB32F: new Float32Array(@:privateAccess pixels.bytes.b.buffer, pixels.offset, dataLen>>2);
 		case RGBA16F, R16F, RG16F, RGB16F: new Uint16Array(@:privateAccess pixels.bytes.b.buffer, pixels.offset, dataLen>>1);
 		case RGB10A2, RG11B10UF: new Uint32Array(@:privateAccess pixels.bytes.b.buffer, pixels.offset, dataLen>>2);
 		default: new Uint8Array(@:privateAccess pixels.bytes.b.buffer, pixels.offset, dataLen);
 		}
-		if( t.format.match(S3TC(_)) )
-			gl.compressedTexImage2D(face, mipLevel, t.t.internalFmt, pixels.width, pixels.height, 0, buffer);
-		else
-			gl.texImage2D(face, mipLevel, t.t.internalFmt, pixels.width, pixels.height, 0, getChannels(t.t), t.t.pixelFmt, buffer);
+		if( t.format.match(S3TC(_)) ) {
+			if( t.flags.has(IsArray) )
+				gl.compressedTexImage3D(face, mipLevel, t.t.internalFmt, pixels.width, pixels.height, side, 0, buffer);
+			else
+				gl.compressedTexImage2D(face, mipLevel, t.t.internalFmt, pixels.width, pixels.height, 0, buffer);
+		} else {
+			if( t.flags.has(IsArray) )
+				gl.texImage3D(face, mipLevel, t.t.internalFmt, pixels.width, pixels.height, side, 0, getChannels(t.t), t.t.pixelFmt, buffer);
+			else
+				gl.texImage2D(face, mipLevel, t.t.internalFmt, pixels.width, pixels.height, 0, getChannels(t.t), t.t.pixelFmt, buffer);
+		}
 		#else
 		throw "Not implemented";
 		#end
