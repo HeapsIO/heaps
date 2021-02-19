@@ -324,7 +324,7 @@ class Pixels {
 	}
 
 	public function convert( target : PixelFormat ) {
-		if( format == target )
+		if( format == target || format.equals(target) )
 			return;
 		willChange();
 		var bytes : hxd.impl.UncheckedBytes = bytes;
