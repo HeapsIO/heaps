@@ -813,7 +813,7 @@ class DirectXDriver extends h3d.impl.Driver {
 	}
 
 	override function copyTexture(from:h3d.mat.Texture, to:h3d.mat.Texture) {
-		if( from.t == null || from.format != to.format || from.width != to.width || from.height != to.height )
+		if( from.t == null || from.format != to.format || from.width != to.width || from.height != to.height || from.layerCount != to.layerCount )
 			return false;
 		if( to.t == null )
 			to.alloc();

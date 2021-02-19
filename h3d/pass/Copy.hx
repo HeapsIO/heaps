@@ -110,7 +110,7 @@ class Copy extends ScreenFx<CopyShader> {
 
 	public static function run( from : h3d.mat.Texture, to : h3d.mat.Texture, ?blend : h3d.mat.BlendMode, ?pass : h3d.mat.Pass, ?layer : Int ) {
 		var engine = h3d.Engine.getCurrent();
-		if( to != null && from != null && (blend == null || blend == None) && pass == null && engine.driver.copyTexture(from, to) )
+		if( to != null && from != null && (blend == null || blend == None) && pass == null && layer == null && engine.driver.copyTexture(from, to) )
 			return;
 		var inst : Copy = @:privateAccess engine.resCache.get(Copy);
 		if( inst == null ) {
