@@ -324,10 +324,12 @@ class Object implements hxd.impl.Serializable {
 	/**
 		Return all materials in the tree.
 	**/
-	public function getMaterials( ?a : Array<h3d.mat.Material> ) {
+	public function getMaterials( ?a : Array<h3d.mat.Material>, recursive = true ) {
 		if( a == null ) a = [];
-		for( o in children )
-			o.getMaterials(a);
+		if( recursive ) {
+			for( o in children )
+				o.getMaterials(a);
+		}
 		return a;
 	}
 
