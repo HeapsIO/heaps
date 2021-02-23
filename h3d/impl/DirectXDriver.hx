@@ -1158,7 +1158,7 @@ class DirectXDriver extends h3d.impl.Driver {
 				var bits = @:privateAccess t.bits;
 				if( t.lodBias != 0 )
 					bits |= Std.int((t.lodBias + 32)*32) << 10;
-				if( i < maxSamplers && bits != state.samplerBits[sidx] ) {
+				if( sidx < maxSamplers && bits != state.samplerBits[sidx] ) {
 					var ss = samplerStates.get(bits);
 					if( ss == null ) {
 						var desc = new SamplerDesc();
