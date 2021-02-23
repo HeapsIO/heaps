@@ -175,6 +175,7 @@ class GlDriver extends Driver {
 	var maxCompressedTexturesSupport = 0;
 
 	var drawMode : Int;
+	var isIntelGpu : Bool;
 
 	static var BLACK = new h3d.Vector(0,0,0,0);
 
@@ -209,6 +210,8 @@ class GlDriver extends Driver {
 		#if hlsdl
 		hasMultiIndirect = gl.getConfigParameter(0) > 0;
 		maxCompressedTexturesSupport = 3;
+		var driver = getDriverName(false).toLowerCase();
+		isIntelGpu = ~/intel.*graphics/.match(driver);
 		#end
 
 		#if hlmesa
@@ -292,12 +295,19 @@ class GlDriver extends Driver {
 		return curShader.inputs;
 	}
 
+	function makeCompiler() {
+		var glout = new ShaderCompiler();
+		glout.glES = glES;
+		glout.version = shaderVersion;
+		#if !usegl
+		@:privateAccess glout.intelDriverFix = isIntelGpu;
+		#end
+		return glout;
+	}
+
 	override function getNativeShaderCode( shader : hxsl.RuntimeShader ) {
 		inline function compile(sh) {
-			var glout = new ShaderCompiler();
-			glout.glES = glES;
-			glout.version = shaderVersion;
-			return glout.run(sh);
+			return makeCompiler().run(sh);
 		}
 		return "// vertex:\n" + compile(shader.vertex.data) + "// fragment:\n" + compile(shader.fragment.data);
 	}
@@ -396,9 +406,7 @@ class GlDriver extends Driver {
 		var p = programs.get(shader.id);
 		if( p == null ) {
 			p = new CompiledProgram();
-			var glout = new ShaderCompiler();
-			glout.glES = glES;
-			glout.version = shaderVersion;
+			var glout = makeCompiler();
 			p.vertex = compileShader(glout,shader.vertex);
 			p.fragment = compileShader(glout,shader.fragment);
 
