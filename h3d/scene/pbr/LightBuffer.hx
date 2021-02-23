@@ -79,6 +79,7 @@ class LightBuffer {
 
 		var r = @:privateAccess ctx.scene.renderer;
 		var pbrRenderer = Std.downcast(r, Renderer);
+		if( pbrRenderer == null ) return;
 		var p : h3d.scene.pbr.Renderer.RenderProps = pbrRenderer.props;
 		var s = defaultForwardShader;
 
