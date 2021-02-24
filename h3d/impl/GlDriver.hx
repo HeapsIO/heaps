@@ -20,6 +20,8 @@ private extern class GL2 extends js.html.webgl.GL {
 	function framebufferTextureLayer( target : Int, attach : Int, t : js.html.webgl.Texture, level : Int, layer : Int ) : Void;
 	function texImage3D(target : Int, level : Int, internalformat : Int, width : Int, height : Int, depth : Int, border : Int, format : Int, type : Int, source : Dynamic) : Void;
 	function compressedTexImage3D(target : Int, level : Int, internalformat : Int, width : Int, height : Int, depth : Int, border : Int, source : Dynamic) : Void;
+	function texSubImage3D( target : Int, level : Int, xoffset : Int, yoffset : Int, zoffset : Int, width : Int, height : Int, depth : Int, format : Int, type : Int, image : Dynamic ) : Void;
+	function compressedTexSubImage3D( target : Int, level : Int, xoffset : Int, yoffset : Int, zoffset : Int, width : Int, height : Int, depth : Int, format : Int, image : Dynamic ) : Void;
 	static inline var RGBA16F = 0x881A;
 	static inline var RGBA32F = 0x8814;
 	static inline var RED      = 0x1903;
@@ -49,6 +51,8 @@ private extern class GL2 extends js.html.webgl.GL {
 	static inline var FUNC_MIN = 0x8007;
 	static inline var FUNC_MAX = 0x8008;
 	static inline var TEXTURE_LOD_BIAS : Int = 0x84FD;
+	static inline var TEXTURE_BASE_LEVEL = 0x813C;
+	static inline var TEXTURE_MAX_LEVEL = 0x813D;
 }
 private typedef Uniform = js.html.webgl.UniformLocation;
 private typedef Program = js.html.webgl.Program;
@@ -952,20 +956,28 @@ class GlDriver extends Driver {
 			return false;
 		}
 
-		if( t.flags.has(Cube) ) {
-			for( i in 0...6 ) {
-				gl.texImage2D(CUBE_FACES[i], 0, tt.internalFmt, tt.width, tt.height, 0, getChannels(tt), tt.pixelFmt, null);
-				if( checkError() ) break;
+		#if (hlsdl >= version("1.12.0"))
+		gl.texParameteri(bind, GL2.TEXTURE_BASE_LEVEL, 0);
+		gl.texParameteri(bind, GL2.TEXTURE_MAX_LEVEL, t.mipLevels-1);
+		#end
+		for(mip in 0...t.mipLevels) {
+			var w = hxd.Math.imax(1, tt.width >> mip);
+			var h = hxd.Math.imax(1, tt.height >> mip);
+			if( t.flags.has(Cube) ) {
+				for( i in 0...6 ) {
+					gl.texImage2D(CUBE_FACES[i], mip, tt.internalFmt, w, h, 0, getChannels(tt), tt.pixelFmt, null);
+					if( checkError() ) break;
+				}
+			} else if( t.flags.has(IsArray) ) {
+				gl.texImage3D(bind, mip, tt.internalFmt, w, h, t.layerCount, 0, getChannels(tt), tt.pixelFmt, null);
+				checkError();
+			} else {
+				#if js
+				if( !t.format.match(S3TC(_)) )
+				#end
+				gl.texImage2D(bind, mip, tt.internalFmt, w, h, 0, getChannels(tt), tt.pixelFmt, null);
+				checkError();
 			}
-		} else if( t.flags.has(IsArray) ) {
-			gl.texImage3D(GL2.TEXTURE_2D_ARRAY, 0, tt.internalFmt, tt.width, tt.height, t.layerCount, 0, getChannels(tt), tt.pixelFmt, null);
-			checkError();
-		} else {
-			#if js
-			if( !t.format.match(S3TC(_)) )
-			#end
-			gl.texImage2D(bind, 0, tt.internalFmt, tt.width, tt.height, 0, getChannels(tt), tt.pixelFmt, null);
-			checkError();
 		}
 		restoreBind();
 
@@ -1173,8 +1185,8 @@ class GlDriver extends Driver {
 
 	override function uploadTexturePixels( t : h3d.mat.Texture, pixels : hxd.Pixels, mipLevel : Int, side : Int ) {
 		var cubic = t.flags.has(Cube);
+		var face = cubic ? CUBE_FACES[side] : t.flags.has(IsArray) ? GL2.TEXTURE_2D_ARRAY : GL.TEXTURE_2D;
 		var bind = getBindType(t);
-		var face = cubic ? CUBE_FACES[side] : GL.TEXTURE_2D;
 		gl.bindTexture(bind, t.t.t);
 		pixels.convert(t.format);
 		pixels.setFlip(false);
@@ -1182,17 +1194,17 @@ class GlDriver extends Driver {
 		#if hl
 		var stream = streamData(pixels.bytes.getData(),pixels.offset,dataLen);
 		if( t.format.match(S3TC(_)) ) {
-			#if( (hlsdl == "1.8.0") || (hlsdl == "1.9.0") )
-			throw "Compressed textures require hlsdl 1.10+";
-			#else
 			if( t.flags.has(IsArray) )
-				gl.compressedTexImage3D(face, mipLevel, t.t.internalFmt, pixels.width, pixels.height, side, 0, dataLen, stream);
+				#if (hlsdl >= version("1.12.0"))
+				gl.compressedTexSubImage3D(face, mipLevel, 0, 0, side, pixels.width, pixels.height, 1, t.t.internalFmt, dataLen, stream);
+				#else throw "TextureArray support requires hlsdl 1.11+"; #end
 			else
 				gl.compressedTexImage2D(face, mipLevel, t.t.internalFmt, pixels.width, pixels.height, 0, dataLen, stream);
-			#end
 		} else {
 			if( t.flags.has(IsArray) )
-				gl.texImage3D(face, mipLevel, t.t.internalFmt, pixels.width, pixels.height, side, 0, getChannels(t.t), t.t.pixelFmt, stream);
+				#if (hlsdl >= version("1.12.0"))
+				gl.texSubImage3D(face, mipLevel, 0, 0, side, pixels.width, pixels.height, 1, getChannels(t.t), t.t.pixelFmt, stream);
+				#else throw "TextureArray support requires hlsdl 1.11+"; #end
 			else
 				gl.texImage2D(face, mipLevel, t.t.internalFmt, pixels.width, pixels.height, 0, getChannels(t.t), t.t.pixelFmt, stream);
 		}
@@ -1205,7 +1217,6 @@ class GlDriver extends Driver {
 			pixels = pixels.clone();
 		}
 		#end
-		if( t.flags.has(IsArray) ) throw "TODO:texImage3D";
 		var buffer : ArrayBufferView = switch( t.format ) {
 		case RGBA32F, R32F, RG32F, RGB32F: new Float32Array(@:privateAccess pixels.bytes.b.buffer, pixels.offset, dataLen>>2);
 		case RGBA16F, R16F, RG16F, RGB16F: new Uint16Array(@:privateAccess pixels.bytes.b.buffer, pixels.offset, dataLen>>1);
@@ -1214,12 +1225,12 @@ class GlDriver extends Driver {
 		}
 		if( t.format.match(S3TC(_)) ) {
 			if( t.flags.has(IsArray) )
-				gl.compressedTexImage3D(face, mipLevel, t.t.internalFmt, pixels.width, pixels.height, side, 0, buffer);
+				gl.compressedTexSubImage3D(face, mipLevel, 0, 0, side, pixels.width, pixels.height, 1, t.t.internalFmt, buffer);
 			else
 				gl.compressedTexImage2D(face, mipLevel, t.t.internalFmt, pixels.width, pixels.height, 0, buffer);
 		} else {
 			if( t.flags.has(IsArray) )
-				gl.texImage3D(face, mipLevel, t.t.internalFmt, pixels.width, pixels.height, side, 0, getChannels(t.t), t.t.pixelFmt, buffer);
+				gl.texSubImage3D(face, mipLevel, 0, 0, side, pixels.width, pixels.height, 1, getChannels(t.t), t.t.pixelFmt, buffer);
 			else
 				gl.texImage2D(face, mipLevel, t.t.internalFmt, pixels.width, pixels.height, 0, getChannels(t.t), t.t.pixelFmt, buffer);
 		}
@@ -1767,6 +1778,20 @@ class GlDriver extends Driver {
 
 	override function queryResult(q:Query) {
 		return GL.queryResult(q.q);
+	}
+
+	inline function debugCheckError() {
+		if(!debug) return;
+		var err = gl.getError();
+		if(err != GL.NO_ERROR) {
+			switch(err) {
+				case GL.INVALID_ENUM: throw "INVALID_ENUM";
+				case GL.INVALID_VALUE: throw "INVALID_VALUE";
+				case GL.INVALID_OPERATION: throw "INVALID_OPERATION";
+				case 1286: throw "INVALID_FRAMEBUFFER_OPERATION";
+				default: throw "Error: " + err;
+			}
+		}
 	}
 
 	#end
