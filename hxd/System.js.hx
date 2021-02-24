@@ -35,6 +35,9 @@ class System {
 	static var currentNativeCursor:hxd.Cursor;
 	static var currentCustomCursor:hxd.Cursor.CustomCursor;
 
+	/** If greater than 0, this will reduce loop framerate to reduce CPU usage **/
+	public static var fpsLimit = -1;
+
 	public static function getCurrentLoop() : Void -> Void {
 		return loopFunc;
 	}
@@ -52,7 +55,11 @@ class System {
 		var rqf : Dynamic = window.requestAnimationFrame ||
 			window.webkitRequestAnimationFrame ||
 			window.mozRequestAnimationFrame;
-		rqf(browserLoop);
+		if( fpsLimit>0 )
+			js.Browser.window.setTimeout( ()->rqf(browserLoop), 1000/fpsLimit );
+		else
+			rqf(browserLoop);
+
 		if( loopFunc != null ) loopFunc();
 	}
 
