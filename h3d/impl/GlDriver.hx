@@ -49,8 +49,6 @@ private extern class GL2 extends js.html.webgl.GL {
 	static inline var FUNC_MIN = 0x8007;
 	static inline var FUNC_MAX = 0x8008;
 	static inline var TEXTURE_LOD_BIAS : Int = 0x84FD;
-	static inline var TEXTURE_BASE_LEVEL = 0x813C;
-	static inline var TEXTURE_MAX_LEVEL = 0x813D;
 }
 private typedef Uniform = js.html.webgl.UniformLocation;
 private typedef Program = js.html.webgl.Program;
@@ -954,26 +952,20 @@ class GlDriver extends Driver {
 			return false;
 		}
 
-		gl.texParameteri(bind, GL2.TEXTURE_BASE_LEVEL, 0);
-		gl.texParameteri(bind, GL2.TEXTURE_MAX_LEVEL, t.mipLevels-1);
-		for(mip in 0...t.mipLevels) {
-			var w = hxd.Math.imax(1, tt.width >> mip);
-			var h = hxd.Math.imax(1, tt.height >> mip);
-			if( t.flags.has(Cube) ) {
-				for( i in 0...6 ) {
-					gl.texImage2D(CUBE_FACES[i], mip, tt.internalFmt, w, h, 0, getChannels(tt), tt.pixelFmt, null);
-					if( checkError() ) break;
-				}
-			} else if( t.flags.has(IsArray) ) {
-				gl.texImage3D(bind, mip, tt.internalFmt, w, h, t.layerCount, 0, getChannels(tt), tt.pixelFmt, null);
-				checkError();
-			} else {
-				#if js
-				if( !t.format.match(S3TC(_)) )
-				#end
-				gl.texImage2D(bind, mip, tt.internalFmt, w, h, 0, getChannels(tt), tt.pixelFmt, null);
-				checkError();
+		if( t.flags.has(Cube) ) {
+			for( i in 0...6 ) {
+				gl.texImage2D(CUBE_FACES[i], 0, tt.internalFmt, tt.width, tt.height, 0, getChannels(tt), tt.pixelFmt, null);
+				if( checkError() ) break;
 			}
+		} else if( t.flags.has(IsArray) ) {
+			gl.texImage3D(GL2.TEXTURE_2D_ARRAY, 0, tt.internalFmt, tt.width, tt.height, t.layerCount, 0, getChannels(tt), tt.pixelFmt, null);
+			checkError();
+		} else {
+			#if js
+			if( !t.format.match(S3TC(_)) )
+			#end
+			gl.texImage2D(bind, 0, tt.internalFmt, tt.width, tt.height, 0, getChannels(tt), tt.pixelFmt, null);
+			checkError();
 		}
 		restoreBind();
 
