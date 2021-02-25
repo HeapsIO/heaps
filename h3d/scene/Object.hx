@@ -595,18 +595,18 @@ class Object implements hxd.impl.Serializable {
 	}
 
 	/**
-		Build and return the global absolute recursive collider for the object.
+		Build and return the global or local recursive collider for the object.
 		Returns null if no collider was found or if ignoreCollide was set to true.
 	**/
-	@:final public function getCollider() : h3d.col.Collider {
+	@:final public function getCollider( local : Bool = false ) : h3d.col.Collider {
 		if( ignoreCollide )
 			return null;
 		var colliders = [];
-		var col = getGlobalCollider();
+		var col = local ? getLocalCollider() : getGlobalCollider();
 		if( col != null )
 			colliders.push(col);
 		for( obj in children ) {
-			var c = obj.getCollider();
+			var c = obj.getCollider(local);
 			if( c == null ) continue;
 			var cgrp = hxd.impl.Api.downcast(c, h3d.col.Collider.GroupCollider);
 			if( cgrp != null ) {
