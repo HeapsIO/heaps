@@ -270,4 +270,39 @@ class Polygon implements Collider {
 	}
 	#end
 
+	public static function fromPolygon2D( p : h2d.col.Polygon, z = 0. ) {
+		var pout = new Polygon();
+		if( p.isConvex() ) {
+			var p0 = p[0];
+			for( i in 0...p.length-2 ) {
+				var p1 = p[i+1];
+				var p2 = p[i+2];
+				var t = new TriPlane();
+				t.init(
+					new h3d.col.Point(p0.x, p0.y, z),
+					new h3d.col.Point(p1.x, p1.y, z),
+					new h3d.col.Point(p2.x, p2.y, z)
+				);
+				t.next = pout.triPlanes;
+				pout.triPlanes = t;
+			}
+		} else {
+			var idx = p.fastTriangulate();
+			for( i in 0...Std.int(idx.length/3) ) {
+				var p0 = p[idx[i*3]];
+				var p1 = p[idx[i*3+1]];
+				var p2 = p[idx[i*3+2]];
+				var t = new TriPlane();
+				t.init(
+					new h3d.col.Point(p0.x, p0.y, z),
+					new h3d.col.Point(p1.x, p1.y, z),
+					new h3d.col.Point(p2.x, p2.y, z)
+				);
+				t.next = pout.triPlanes;
+				pout.triPlanes = t;
+			}
+		}
+		return pout;
+	}
+
 }
