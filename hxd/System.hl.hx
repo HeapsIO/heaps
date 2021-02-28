@@ -38,6 +38,9 @@ class System {
 	#if !usesys
 	static var sentinel : hl.UI.Sentinel;
 	#end
+	#if ( target.threaded && (haxe_ver >= 4.2) )
+	static var mainThread : sys.thread.Thread;
+	#end
 
 	// -- HL
 	static var currentNativeCursor : hxd.Cursor = Default;
@@ -132,10 +135,26 @@ class System {
 		#if hxtelemetry
 		var hxt = new hxtelemetry.HxTelemetry();
 		#end
+		#if ( target.threaded && (haxe_ver >= 4.2) && heaps_unsafe_events)
+		var eventRecycle = [];
+		#end
 		while( true ) {
 			try {
 				hl.Api.setErrorHandler(reportError); // set exception trap
+
+				#if ( target.threaded && (haxe_ver >= 4.2) )
+				// Due to how 4.2+ timers work, instead of MainLoop, thread events have to be updated.
+				// Unsafe events rely on internal implementation of EventLoop, but utilize the recycling feature
+				// which in turn provides better optimization.
+				#if heaps_unsafe_events
+				@:privateAccess mainThread.events.__progress(Sys.time(), eventRecycle);
+				#else
+				mainThread.events.progress();
+				#end
+				#else
 				@:privateAccess haxe.MainLoop.tick();
+				#end
+
 				if( !mainLoop() ) break;
 			} catch( e : Dynamic ) {
 				hl.Api.setErrorHandler(null);
@@ -401,6 +420,9 @@ class System {
 		hl.Api.setErrorHandler(function(e) reportError(e)); // initialization error
 		sentinel = new hl.UI.Sentinel(30, function() throw "Program timeout (infinite loop?)");
 		haxe.MainLoop.add(timeoutTick, -1) #if (haxe_ver >= 4) .isBlocking = false #end;
+		#end
+		#if ( target.threaded && (haxe_ver >= 4.2) )
+		mainThread = sys.thread.Thread.current();
 		#end
 	}
 	
