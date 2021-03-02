@@ -121,6 +121,7 @@ class RenderContext extends h3d.impl.RenderContext {
 		currentManager.fillParams(shaderBuffers, drawPass.shader, drawPass.shaders);
 		engine.uploadShaderBuffers(shaderBuffers, Params);
 		engine.uploadShaderBuffers(shaderBuffers, Textures);
+		engine.uploadShaderBuffers(shaderBuffers, Buffers);
 	}
 
 	public function done() {

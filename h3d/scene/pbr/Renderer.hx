@@ -133,7 +133,7 @@ class Renderer extends h3d.scene.Renderer {
 
 	override function getPassByName(name:String):h3d.pass.Base {
 		switch( name ) {
-		case "overlay", "beforeTonemapping", "albedo", "afterTonemapping":
+		case "overlay", "beforeTonemapping", "albedo", "afterTonemapping", "forward":
 			return defaultPass;
 		case "default", "alpha", "additive":
 			return output;
@@ -193,7 +193,7 @@ class Renderer extends h3d.scene.Renderer {
 	function lighting() {
 
 		begin(Shadows);
-		var ls = hxd.impl.Api.downcast(getLightSystem(), LightSystem);
+		var ls = hxd.impl.Api.downcast(getLightSystem(), h3d.scene.pbr.LightSystem);
 		var count = ctx.engine.drawCalls;
 		if( ls != null ) drawShadows(ls);
 		if( ctx.lightSystem != null ) ctx.lightSystem.drawPasses = ctx.engine.drawCalls - count;
@@ -221,26 +221,47 @@ class Renderer extends h3d.scene.Renderer {
 		pbrProps.isScreen = false;
 		draw(pbrLightPass.name);
 
-		if( renderMode == LightProbe ) {
-			pbrProps.isScreen = true;
-			pbrOut.render();
-			resetTarget();
-			copy(textures.hdr, null);
-			// no warnings
-			for( p in passObjects ) if( p != null ) p.rendered = true;
-			end();
-			return;
-		}
-
-		// Indirect Lighting - Diffuse and Specular
- 		if( env != null ) {
+		if( !renderLightProbes() && env != null ) {
 			mark("Indirect Lighting");
 			pbrProps.isScreen = true;
 			pbrIndirect.drawIndirectDiffuse = true;
 			pbrIndirect.drawIndirectSpecular = true;
 			pbrOut.render();
 		}
+
 		end();
+	}
+
+	function renderLightProbes() {
+		var probePass = get("lightProbe");
+		if( probePass.isEmpty() )
+			return false;
+		function probeSort( passes : h3d.pass.PassList ) {
+			// Priority of the probe stored in _44 of AbsPos
+			passes.sort( (po1, po2) -> return Std.int(po1.obj.getAbsPos()._44 - po2.obj.getAbsPos()._44) );
+		}
+
+		// Probe Rendering & Blending
+		var probeOutput = allocTarget("probeOutput", true, 1.0, RGBA16F);
+		ctx.engine.pushTarget(probeOutput);
+		clear(0);
+
+		// Default Env & SkyBox
+		if( env != null ) {
+			mark("Indirect Lighting");
+			pbrProps.isScreen = true;
+			pbrIndirect.drawIndirectDiffuse = true;
+			pbrIndirect.drawIndirectSpecular = true;
+			pbrOut.render();
+		}
+
+		// Light Probe with Alpha Blend
+		pbrProps.isScreen = false;
+		renderPass(defaultPass, get("lightProbe"), probeSort);
+		ctx.engine.popTarget();
+
+		h3d.pass.Copy.run(probeOutput, textures.hdr, Add);
+		return true;
 	}
 
 	function drawShadows( ls : LightSystem ) {
@@ -347,34 +368,33 @@ class Renderer extends h3d.scene.Renderer {
 		if( env != null ) {
 			pbrIndirect.cameraPosition.load(ctx.camera.pos);
 			pbrIndirect.emissivePower = props.emissive * props.emissive;
-			pbrIndirect.rot = hxd.Math.degToRad(env.rot);
+			var rot = hxd.Math.degToRad(env.rot);
+			pbrIndirect.irrRotation.set(Math.cos(rot), Math.sin(rot));
 			pbrIndirect.irrPower = env.power * env.power;
 			pbrIndirect.irrLut = env.lut;
 			pbrIndirect.irrDiffuse = env.diffuse;
 			pbrIndirect.irrSpecular = env.specular;
 			pbrIndirect.irrSpecularLevels = env.specLevels;
 			pbrIndirect.cameraInvViewProj.load(ctx.camera.getInverseViewProj());
+			pbrIndirect.skyHdrMax = 1.0;
+			pbrIndirect.drawIndirectDiffuse = true;
+			pbrIndirect.drawIndirectSpecular = true;
 
 			pbrDirect.doDiscard = false;
 			switch( renderMode ) {
 			case Default:
-				pbrIndirect.drawIndirectDiffuse = true;
-				pbrIndirect.drawIndirectSpecular= true;
 				pbrIndirect.showSky = skyMode != Hide;
 				pbrIndirect.skyColor = false;
 				pbrIndirect.skyMap = switch( skyMode ) {
 				case Hide: null;
 				case Env:
-					pbrIndirect.skyScale = env.scale;
-					pbrIndirect.skyThreshold = env.threshold;
+					pbrIndirect.skyHdrMax = env.hdrMax;
 					pbrIndirect.gammaCorrect = true;
 					env.env;
 				case Specular:
-					pbrIndirect.skyScale = 1.0;
 					pbrIndirect.gammaCorrect = false;
 					env.specular;
 				case Irrad:
-					pbrIndirect.skyScale = 1.0;
 					pbrIndirect.gammaCorrect = false;
 					env.diffuse;
 				case Background:
@@ -388,13 +408,20 @@ class Renderer extends h3d.scene.Renderer {
 					pbrIndirect.showSky = false;
 
 			case LightProbe:
-				pbrIndirect.drawIndirectDiffuse = false;
-				pbrIndirect.drawIndirectSpecular = false;
 				pbrIndirect.showSky = true;
-				pbrIndirect.skyColor = false;
 				pbrIndirect.skyMap = env.env;
+				pbrIndirect.gammaCorrect = false;
+				pbrIndirect.skyHdrMax = env.hdrMax;
+				pbrIndirect.skyColor = false;
 			}
-			pbrDirect.doDiscard = true;
+
+			if( pbrIndirect.skyMap == null && pbrIndirect.showSky && !pbrIndirect.skyColor )
+				pbrIndirect.showSky = false;
+
+		}
+		else {
+			pbrIndirect.drawIndirectDiffuse = false;
+			pbrIndirect.drawIndirectSpecular = false;
 		}
 
 		tonemap.shader.mode = switch( toneMode ) {
@@ -405,6 +432,14 @@ class Renderer extends h3d.scene.Renderer {
 		tonemap.shader.hdrTexture = textures.hdr;
 	}
 
+	function drawPbrDecals( passName : String ) {
+		var passes = get(passName);
+		if( passes.isEmpty() ) return;
+		ctx.engine.pushTargets([textures.albedo,textures.normal,textures.pbr]);
+		renderPass(decalsOutput, passes);
+		ctx.engine.popTarget();
+	}
+
 	override function render() {
 		beginPbr();
 
@@ -412,21 +447,35 @@ class Renderer extends h3d.scene.Renderer {
 		clear(0, 1, 0);
 
 		begin(MainDraw);
-		renderPass(output, get("default"), frontToBack);
 		renderPass(output, get("terrain"));
+		drawPbrDecals("terrainDecal");
+		renderPass(output, get("default"), frontToBack);
 		renderPass(output, get("alpha"), backToFront);
 		renderPass(output, get("additive"));
 		end();
 
-		setTargets([textures.albedo,textures.normal,textures.pbr]);
 		begin(Decals);
-		renderPass(decalsOutput, get("decal"));
+		drawPbrDecals("decal");
 		end();
 
 		setTarget(textures.hdr);
 		clear(0);
 		lighting();
-		if( renderMode == LightProbe ) return;
+
+		begin(Forward);
+		var ls = hxd.impl.Api.downcast(getLightSystem(), h3d.scene.pbr.LightSystem);
+		ls.forwardMode = true;
+		draw("forward");
+		ls.forwardMode = false;
+		end();
+
+		if( renderMode == LightProbe ) {
+			resetTarget();
+			copy(textures.hdr, null);
+			// no warnings
+			for( p in passObjects ) if( p != null ) p.rendered = true;
+			return;
+		}
 
 		begin(BeforeTonemapping);
 		draw("beforeTonemappingDecal");
@@ -477,6 +526,7 @@ class Renderer extends h3d.scene.Renderer {
 			hasDebugEvent = false;
 			hxd.Window.getInstance().removeEventTarget(onEvent);
 		}
+		mark("vsync");
 	}
 
 	var debugPushPos : { x : Float, y : Float }

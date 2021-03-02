@@ -22,7 +22,7 @@ class Tiled extends hxd.App {
 		drawLayer(tiledMapData, tiles, 2, TILE_SIZE);
 		drawLayer(tiledMapData, tiles, 3, TILE_SIZE);
 	}
-		
+
 	function drawLayer(map:TiledMapData, tiles:h2d.Tile, layer:Int, size:Int) {
 		var tileGroup = new h2d.TileGroup(tiles);
 		var tileSetArray = tiles.gridFlatten(TILE_SIZE, 0, 0);

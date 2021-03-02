@@ -1,39 +1,67 @@
 package h2d.col;
 import hxd.Math;
 
+/**
+	The type of the edges when offsetting polygon with `IPolygon.offset`.
+**/
 enum OffsetKind {
 	Square;
 	Miter;
 	Round( arc : Float );
 }
 
+/**
+	An abstract around an Array of `IPoint`s that define a polygonal shape that can be collision-tested against.
+	@see `h2d.col.Polygon`
+**/
 @:forward(push,remove)
 abstract IPolygon(Array<IPoint>) from Array<IPoint> to Array<IPoint> {
-
+	/**
+		The underlying Array of vertices.
+	**/
 	public var points(get, never) : Array<IPoint>;
+	/**
+		The amount of vertices in the polygon.
+	**/
 	public var length(get, never) : Int;
 	inline function get_length() return this.length;
 	inline function get_points() return this;
 
+	/**
+		Create a new Polygon shape.
+		@param points An optional array of vertices the polygon should use.
+	**/
 	public inline function new( ?points ) {
 		this = points == null ? [] : points;
 	}
 
+	@:dox(hide)
 	public inline function iterator() {
 		return new hxd.impl.ArrayIterator(this);
 	}
 
-	public function toPolygon( scale = 1. ) {
+	/**
+		Converts this IPolygon into a floating point-based Polygon.
+	**/
+	public function toPolygon( scale = 1. ) : Polygon {
 		return [for( p in points ) p.toPoint(scale)];
 	}
 
-	public function getBounds( ?b : IBounds ) {
+	/**
+		Returns the bounding box of the IPolygon.
+	**/
+	public function getBounds( ?b : IBounds ) : IBounds {
 		if( b == null ) b = new IBounds();
 		for( p in points )
 			b.addPoint(p);
 		return b;
 	}
 
+	/**
+		Combines this IPolygon and a given IPolygon `p` and returns the resulting IPolygons.
+		@param p The IPolygon to union with.
+		@param withHoles When enabled, keeps the holes in resulting polygons as a separate IPolygon.
+	**/
 	public function union( p : IPolygon, withHoles = true ) : IPolygons {
 		var c = new hxd.clipper.Clipper();
 		if( !withHoles ) c.resultKind = NoHoles;
@@ -42,14 +70,30 @@ abstract IPolygon(Array<IPoint>) from Array<IPoint> to Array<IPoint> {
 		return c.execute(Union, NonZero, NonZero);
 	}
 
+	/**
+		Calculates an intersection areas between this IPolygon and a given IPolygon `p` and returns the resulting IPolygons.
+		@param p The IPolygon to intersect with.
+		@param withHoles When enabled, keeps the holes in resulting polygons as a separate IPolygon. 
+	**/
 	public inline function intersection( p : IPolygon, withHoles = true ) : IPolygons {
 		return clipperOp(p, Intersection, withHoles);
 	}
 
+	/**
+		Subtracts the area of a given IPolygon `p` from this IPolygon and returns the resulting IPolygons.
+		@param p The IPolygon to subtract with.
+		@param withHoles When enabled, keeps the holes in resulting polygons as a separate IPolygon. 
+	**/
 	public inline function subtraction( p : IPolygon, withHoles = true ) : IPolygons {
 		return clipperOp(p, Difference, withHoles);
 	}
 
+	/**
+		Offsets the polygon edges by specified amount and returns the resulting IPolygons.
+		@param delta The offset amount.
+		@param kind The corner rounding method.
+		@param withHoles When enabled, keeps the holes in resulting polygons as a separate IPolygon. 
+	**/
 	public function offset( delta : Float, kind : OffsetKind, withHoles = true ) : IPolygons {
 		var c = new hxd.clipper.Clipper.ClipperOffset();
 		switch( kind ) {
@@ -73,6 +117,10 @@ abstract IPolygon(Array<IPoint>) from Array<IPoint> to Array<IPoint> {
 		return c.execute(op, NonZero, NonZero);
 	}
 
+	/**
+		Returns a new IPolygon containing a convex hull of this IPolygon.
+		See Monotone chain algorithm for more details.
+	**/
 	public function convexHull() {
 		var len = points.length;
 		if( len < 3 )
@@ -103,6 +151,9 @@ abstract IPolygon(Array<IPoint>) from Array<IPoint> to Array<IPoint> {
 		return hull;
 	}
 
+	/**
+		Tests if polygon points are in the clockwise order.
+	**/
 	public function isClockwise() {
 		var sum = 0.;
 		var p1 = points[points.length - 1];
@@ -113,6 +164,9 @@ abstract IPolygon(Array<IPoint>) from Array<IPoint> to Array<IPoint> {
 		return sum < 0; // Y axis is negative compared to classic maths
 	}
 
+	/**
+		Calculates total area of the IPolygon.
+	**/
 	public function area() {
 		var sum = 0.;
 		var p1 = points[points.length - 1];
@@ -127,6 +181,9 @@ abstract IPolygon(Array<IPoint>) from Array<IPoint> to Array<IPoint> {
 		return (p2.x - p1.x) * (t.y - p1.y) - (p2.y - p1.y) * (t.x - p1.x);
 	}
 
+	/**
+		Tests if the polygon is convex or concave.
+	**/
 	public function isConvex() {
 		var p1 = points[points.length - 2];
 		var p2 = points[points.length - 1];
@@ -142,10 +199,18 @@ abstract IPolygon(Array<IPoint>) from Array<IPoint> to Array<IPoint> {
 		return true;
 	}
 
+	/**
+		Reverses the IPolygon points ordering. Can be used to change polygon from anti-clockwise to clockwise.
+	**/
 	public function reverse() : Void {
 		this.reverse();
 	}
 
+	/**
+		Tests if Point `p` is inside this IPolygon.
+		@param p The point to test against.
+		@param isConvex Use simplified collision test suited for convex polygons. Results are undefined if polygon is concave.
+	**/
 	public function contains( p : Point, isConvex = false ) {
 		if( isConvex ) {
 			var p1 = points[points.length - 1];
@@ -173,7 +238,7 @@ abstract IPolygon(Array<IPoint>) from Array<IPoint> to Array<IPoint> {
 
 
 	/**
-		Creates a new optimized polygon by eliminating almost colinear edges according to epsilon distance.
+		Creates a new optimized polygon by eliminating almost colinear edges according to the epsilon distance.
 	**/
 	public function optimize( epsilon : Float ) : IPolygon {
 		var out = [];

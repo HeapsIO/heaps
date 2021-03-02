@@ -20,6 +20,7 @@ class SmoothTarget extends Animation {
 	@:s public var target : Animation;
 	@:s public var blend : Float;
 	@:s var duration : Float;
+	@:s public var ignoreTranslate = false;
 
 	public function new( target : h3d.anim.Animation, duration = 0.5 ) {
 		super("SmoothTarget(" + target.name+")", target.frameCount, target.sampling);
@@ -132,7 +133,7 @@ class SmoothTarget extends Animation {
 			} else {
 
 				q1.set(m._12, m._13, m._21, m._23);
-				qout.lerp(o.q, q1, 1 - blend, true);
+				qout.lerp(o.q, q1, blend, true);
 				qout.normalize();
 				qout.toMatrix(mout);
 
@@ -149,9 +150,15 @@ class SmoothTarget extends Animation {
 				mout._32 *= sz;
 				mout._33 *= sz;
 
-				mout.tx = lerp(o.tx, m.tx, blend);
-				mout.ty = lerp(o.ty, m.ty, blend);
-				mout.tz = lerp(o.tz, m.tz, blend);
+				if( ignoreTranslate ) {
+					mout.tx = m.tx;
+					mout.ty = m.ty;
+					mout.tz = m.tz;
+				} else {
+					mout.tx = lerp(o.tx, m.tx, blend);
+					mout.ty = lerp(o.ty, m.ty, blend);
+					mout.tz = lerp(o.tz, m.tz, blend);
+				}
 
 				@:privateAccess if( o.targetSkin != null ) o.targetSkin.currentRelPose[o.targetJoint] = mout else o.targetObject.defaultTransform = mout;
 			}

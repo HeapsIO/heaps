@@ -20,7 +20,7 @@ class Default extends Base {
 	@global("camera.viewProj") var cameraViewProj : h3d.Matrix = ctx.camera.m;
 	@global("camera.inverseViewProj") var cameraInverseViewProj : h3d.Matrix = ctx.camera.getInverseViewProj();
 	@global("global.time") var globalTime : Float = ctx.time;
-	@global("global.pixelSize") var pixelSize : h3d.Vector = new h3d.Vector(2 / ctx.engine.width, 2 / ctx.engine.height);
+	@global("global.pixelSize") var pixelSize : h3d.Vector = getCurrentPixelSize();
 	@global("global.modelView") var globalModelView : h3d.Matrix;
 	@global("global.modelViewInverse") var globalModelViewInverse : h3d.Matrix;
 
@@ -28,6 +28,11 @@ class Default extends Base {
 		super(name);
 		manager = new ShaderManager(getOutputs());
 		initGlobals();
+	}
+
+	function getCurrentPixelSize() {
+		var t = ctx.engine.getCurrentTarget();
+		return new h3d.Vector(2 / (t == null ? ctx.engine.width : t.width), 2 / (t == null ? ctx.engine.height : t.height));
 	}
 
 	function getOutputs() : Array<hxsl.Output> {

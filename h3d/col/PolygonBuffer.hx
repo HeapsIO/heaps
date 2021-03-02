@@ -3,7 +3,7 @@ package h3d.col;
 class PolygonBuffer implements Collider {
 
 	var buffer : haxe.ds.Vector<hxd.impl.Float32>;
-	var indexes : haxe.ds.Vector<hxd.impl.UInt16>;
+	var indexes : haxe.ds.Vector<Int>;
 	var startIndex : Int;
 	var triCount : Int;
 	public var source : { entry : hxd.fs.FileEntry, geometryName : String };

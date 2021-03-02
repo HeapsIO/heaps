@@ -3,16 +3,48 @@ import hxd.Key in K;
 
 private typedef TextHistoryElement = { t : String, c : Int, sel : { start : Int, length : Int } };
 
+/**
+	A skinnable text input handler.
+
+	Supports text selection, keyboard cursor navigation, as well as basic hotkeys: `Ctrl + Z`, `Ctrl + Y` for undo and redo and `Ctrl + A` to select all text.
+**/
 class TextInput extends Text {
 
+	/**
+		Current position of the input cursor.
+		When TextInput is not focused value is -1.
+	**/
 	public var cursorIndex : Int = -1;
+	/**
+		The Tile used to render the input cursor.
+	**/
 	public var cursorTile : h2d.Tile;
+	/**
+		The Tile used to render the background for selected text.
+		When rendering, this Tile is stretched horizontally to fill entire selection area.
+	**/
 	public var selectionTile : h2d.Tile;
+	/**
+		The blinking interval of the cursor in seconds.
+	**/
 	public var cursorBlinkTime = 0.5;
+	/**
+		Maximum input width.
+		Contrary to `Text.maxWidth` does not cause a word-wrap, but also masks out contents that are outside the max width.
+	**/
 	public var inputWidth : Null<Int>;
+	/**
+		If not null, represents current text selection range.
+	**/
 	public var selectionRange : { start : Int, length : Int };
+	/**
+		When disabled, user would not be able to edit the input text (selection is still available).
+	**/
 	public var canEdit = true;
 
+	/**
+		If set, TextInput will render provided color as a background to text interactive area.
+	**/
 	public var backgroundColor(get, set) : Null<Int>;
 
 	var interactive : h2d.Interactive;
@@ -30,6 +62,11 @@ class TextInput extends Text {
 	var lastClick = 0.;
 	var maxHistorySize = 100;
 
+	/**
+		Create a new TextInput instance.
+		@param font The font used to render the text.
+		@param parent An optional parent `h2d.Object` instance to which TextInput adds itself if set.
+	**/
 	public function new(font, ?parent) {
 		super(font, parent);
 		interactive = new h2d.Interactive(0, 0);
@@ -51,7 +88,7 @@ class TextInput extends Text {
 
 				var pt = new h2d.col.Point();
 				var scene = getScene();
-				scene.startDrag(function(e) {
+				scene.startCapture(function(e) {
 					pt.x = e.relX;
 					pt.y = e.relY;
 					globalToLocal(pt);
@@ -65,7 +102,7 @@ class TextInput extends Text {
 					selectionSize = 0;
 					cursorIndex = index;
 					if( e.kind == ERelease || getScene() != scene )
-						scene.stopDrag();
+						scene.stopCapture();
 				});
 			}
 		};
@@ -261,7 +298,10 @@ class TextInput extends Text {
 		while( undo.length > maxHistorySize ) undo.shift();
 	}
 
-	public function getSelectedText() {
+	/**
+		Returns a String representing currently selected text area or `null` if no text is selected.
+	**/
+	public function getSelectedText() : String {
 		return selectionRange == null ? null : text.substr(selectionRange.start, selectionRange.length);
 	}
 
@@ -354,6 +394,9 @@ class TextInput extends Text {
 			ctx.popRenderZone();
 	}
 
+	/**
+		Sets focus on this `TextInput`.
+	**/
 	public function focus() {
 		interactive.focus();
 		if( cursorIndex < 0 ) {
@@ -362,43 +405,82 @@ class TextInput extends Text {
 		}
 	}
 
+	/**
+		Checks if TextInput is currently focused.
+	**/
 	public function hasFocus() {
 		return interactive.hasFocus();
 	}
 
+	/**
+		Delegate of underlying `Interactive.onOut`.
+	**/
 	public dynamic function onOut(e:hxd.Event) {
 	}
 
+	/**
+		Delegate of underlying `Interactive.onOver`.
+	**/
 	public dynamic function onOver(e:hxd.Event) {
 	}
 
+	/**
+		Delegate of underlying `Interactive.onMove`.
+	**/
 	public dynamic function onMove(e:hxd.Event) {
 	}
 
+	/**
+		Delegate of underlying `Interactive.onClick`.
+	**/
 	public dynamic function onClick(e:hxd.Event) {
 	}
 
+	/**
+		Delegate of underlying `Interactive.onPush`.
+	**/
 	public dynamic function onPush(e:hxd.Event) {
 	}
 
+	/**
+		Delegate of underlying `Interactive.onRelease`.
+	**/
 	public dynamic function onRelease(e:hxd.Event) {
 	}
 
+	/**
+		Delegate of underlying `Interactive.onKeyDown`.
+	**/
 	public dynamic function onKeyDown(e:hxd.Event) {
 	}
 
+	/**
+		Delegate of underlying `Interactive.onKeyUp`.
+	**/
 	public dynamic function onKeyUp(e:hxd.Event) {
 	}
 
+	/**
+		Delegate of underlying `Interactive.onTextInput`.
+	**/
 	public dynamic function onTextInput(e:hxd.Event) {
 	}
 
+	/**
+		Delegate of underlying `Interactive.onFocus`.
+	**/
 	public dynamic function onFocus(e:hxd.Event) {
 	}
 
+	/**
+		Delegate of underlying `Interactive.onFocusLost`.
+	**/
 	public dynamic function onFocusLost(e:hxd.Event) {
 	}
 
+	/**
+		Sent when user modifies TextInput contents.
+	**/
 	public dynamic function onChange() {
 	}
 

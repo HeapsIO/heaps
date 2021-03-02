@@ -56,7 +56,11 @@ class Animation implements hxd.impl.Serializable {
 	}
 
 	public function getDuration() {
-		return frameCount / (sampling * speed);
+		return frameToTime(frameCount);
+	}
+
+	inline function frameToTime(f) {
+		return f / (sampling * speed);
 	}
 
 	inline function getIFrame() {
@@ -101,6 +105,16 @@ class Animation implements hxd.impl.Serializable {
 	public function getEvents() return events;
 
 	public function getObjects() return objects;
+
+	public function getEventTime( id : String ) : Null<Float> {
+		if( events == null )
+			return null;
+		for( i in 0...events.length ) {
+			var ev = events[i];
+			if( ev != null && ev.indexOf(id) >= 0 ) return frameToTime(i);
+		}
+		return null;
+	}
 
 	public function setFrame( f : Float ) {
 		frame = f;

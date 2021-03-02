@@ -194,6 +194,14 @@ class Bounds implements Collider {
 		return p.x >= xMin && p.x < xMax && p.y >= yMin && p.y < yMax && p.z >= zMin && p.z < zMax;
 	}
 
+	public inline function containsBounds( b : Bounds ) {
+		return xMin <= b.xMin && yMin <= b.yMin && zMin <= b.zMin && xMax >= b.xMax && yMax >= b.yMax && zMax >= b.zMax;
+	}
+
+	public inline function containsSphere( s : Sphere ) {
+		return xMin <= s.x - s.r  && yMin <= s.y - s.r && zMin <= s.z - s.r && xMax >= s.x + s.r && yMax >= s.y + s.r && zMax >= s.z + s.r;
+	}
+
 	public inline function add( b : Bounds ) {
 		if( b.xMin < xMin ) xMin = b.xMin;
 		if( b.xMax > xMax ) xMax = b.xMax;
@@ -219,6 +227,19 @@ class Bounds implements Collider {
 		if( y > yMax ) yMax = y;
 		if( z < zMin ) zMin = z;
 		if( z > zMax ) zMax = z;
+	}
+
+	public inline function addSphere( s : Sphere ) {
+		addSpherePos(s.x, s.y, s.z, s.r);
+	}
+
+	public inline function addSpherePos( x : Float, y : Float, z : Float, r : Float ) {
+		if( x - r < xMin ) xMin = x - r;
+		if( x + r > xMax ) xMax = x + r;
+		if( y - r < yMin ) yMin = y - r;
+		if( y + r > yMax ) yMax = y + r;
+		if( z - r < zMin ) zMin = z - r;
+		if( z + r > zMax ) zMax = z + r;
 	}
 
 	public function intersection( a : Bounds, b : Bounds ) {
@@ -305,6 +326,10 @@ class Bounds implements Collider {
 
 	public inline function getMax() {
 		return new Point(xMax, yMax, zMax);
+	}
+
+	public inline function getVolume() {
+		return xSize * ySize * zSize;
 	}
 
 	inline function get_xSize() return xMax - xMin;

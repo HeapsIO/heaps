@@ -1,5 +1,6 @@
 package hxd.inspect;
 import hxd.inspect.Property;
+import hxd.impl.Api;
 
 enum RendererSection {
 	Core;
@@ -46,7 +47,7 @@ class SceneProps {
 			var m = Reflect.field(meta, f);
 			if( m != null && Reflect.hasField(m, "ignore") ) continue;
 			var v = Reflect.field(r, f);
-			if( !Std.is(v, hxsl.Shader) && !Std.is(v, h3d.pass.ScreenFx) && !Std.is(v,Group) ) continue;
+			if( !Api.isOfType(v, hxsl.Shader) && !Api.isOfType(v, h3d.pass.ScreenFx) && !Api.isOfType(v,Group) ) continue;
 
 			if( prev != null && StringTools.startsWith(f, prev.name) ) {
 				prev.group.push({ name : f.substr(prev.name.length), v : v });
@@ -120,7 +121,7 @@ class SceneProps {
 		case Core:
 
 			var props = [];
-			addDynamicProps(props, r, function(v) return !Std.is(v,hxsl.Shader) && !Std.is(v,h3d.pass.ScreenFx) && !Std.is(v,Group));
+			addDynamicProps(props, r, function(v) return !Api.isOfType(v,hxsl.Shader) && !Api.isOfType(v,h3d.pass.ScreenFx) && !Api.isOfType(v,Group));
 			return props;
 
 		}
@@ -252,7 +253,7 @@ class SceneProps {
 		var dl = hxd.impl.Api.downcast(l, h3d.scene.fwd.DirLight);
 		if( dl != null )
 			props.push(PFloats("direction", function() {
-				var dir = dl.getDirection();
+				var dir = dl.getLocalDirection();
 				return [dl.x, dl.y, dl.z];
 			}, function(fl) dl.setDirection(new h3d.Vector(fl[0], fl[1], fl[2]))));
 		var pl = hxd.impl.Api.downcast(l, h3d.scene.fwd.PointLight);
@@ -287,7 +288,7 @@ class SceneProps {
 	}
 
 	function getDynamicProps( v : Dynamic ) : Array<Property> {
-		if( Std.is(v,h3d.pass.ScreenFx) || Std.is(v,Group) ) {
+		if( Api.isOfType(v,h3d.pass.ScreenFx) || Api.isOfType(v,Group) ) {
 			var props = [];
 			addDynamicProps(props, v);
 			return props;
@@ -342,9 +343,9 @@ class SceneProps {
 				continue;
 
 			if( m != null && Reflect.hasField(m, "inspect") ) {
-				if( Std.is(v, Bool) )
+				if( Api.isOfType(v, Bool) )
 					props.unshift(PBool(f, function() return Reflect.getProperty(o, f), function(v) Reflect.setProperty(o, f, v)));
-				else if( Std.is(v, Float) ) {
+				else if( Api.isOfType(v, Float) ) {
 					var range : Array<Dynamic> = m.range;
 					if( range != null )
 						props.unshift(PRange(f, range[0], range[1], function() return Reflect.getProperty(o, f), function(v) Reflect.setProperty(o, f, v), range[2]));
@@ -401,7 +402,7 @@ class SceneProps {
 		var props = null;
 		for( f in Reflect.fields(propsValues) ) {
 			var v : Dynamic = Reflect.field(propsValues, f);
-			var isObj = Reflect.isObject(v) && !Std.is(v, String) && !Std.is(v, Array);
+			var isObj = Reflect.isObject(v) && !Api.isOfType(v, String) && !Api.isOfType(v, Array);
 			if( isObj ) {
 				var n = node.getChildByName(f);
 				if( n != null ) {

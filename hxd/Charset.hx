@@ -21,7 +21,7 @@ class Charset {
 		Polish support
 	**/
 	public static var POLISH = "ĄĆĘŁŃÓŚŹŻąćęłńóśźż";
-	
+
 	/**
 		Turkish support
 	**/
@@ -136,6 +136,15 @@ class Charset {
 
 	public function isBreakChar(code) {
 		return isSpace(code) || isCJK(code);
+	}
+
+	static var complementChars : Map<Int,Bool> = {
+		var str = "ヽヾーァィゥェォッャュョヮヵヶぁぃぅぇぉっゃゅょゎゕゖㇰㇱㇲㇳㇴㇵㇶㇷㇸㇹㇺㇻㇼㇽㇾㇿ々〻";
+		[for( i in 0...str.length ) str.charCodeAt(i) => true];
+	}
+
+	public function isComplementChar(code) {
+		return complementChars.exists(code);
 	}
 
 	static var inst : Charset;

@@ -23,6 +23,10 @@ class FileInput extends haxe.io.BytesInput {
 			this.position += pos;
 		}
 	}
+
+	public function tell() {
+		return this.position;
+	}
 }
 #end
 
@@ -30,7 +34,6 @@ class FileSeek {
 	#if (hl && hl_ver >= version("1.12.0"))
 	@:hlNative("std","file_seek2") static function seek2( f : sys.io.File.FileHandle, pos : Float, cur : Int ) : Bool { return false; }
 	#end
-	
 	public static function seek( f : FileInput, pos : Float, mode : FileSeekMode ) {
 		#if (hl && hl_ver >= version("1.12.0"))
 		if( !seek2(@:privateAccess f.__f,pos,mode.getIndex()) )

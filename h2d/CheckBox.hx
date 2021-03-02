@@ -1,14 +1,35 @@
 package h2d;
 
-class CheckBox extends h2d.Flow {
+/**
+	A simple Interactive checkbox button with a label.
 
+	Useful for fast construction of development UI, but lacks on configurability side.
+**/
+class CheckBox extends h2d.Flow {
+	/**
+		When disabled, the user would not be able to change the checkbox state by interacting with it.
+
+		It is still possible to change the `selected` state manually through the code even if checkbox is disabled.
+	**/
 	public var enable(default,set) : Bool = true;
+	/**
+		Current toggle state of the checkbox.
+
+		Note that changing the state from the code will cause `CheckBox.onChange` to trigger.
+	**/
 	public var selected(default,set) : Bool = false;
+	/**
+		Optional text label that will be shown to the right of the checkbox.
+	**/
 	public var text(default,set) : String = "";
 
 	var tf : h2d.Text;
 	var select : h2d.Bitmap;
 
+	/**
+		Create a new CheckBox instance.
+		@param parent An optional parent `h2d.Object` instance to which CheckBox adds itself if set.
+	**/
 	public function new(?parent) {
 		super(parent);
 		padding = 0;
@@ -22,6 +43,8 @@ class CheckBox extends h2d.Flow {
 		var t = h2d.Tile.fromColor(0x404040, width, width);
 		new h2d.Bitmap(t, box);
 
+		var borderWidth = borderLeft + borderRight;
+		var borderHeight = borderTop + borderBottom;
 		var t = h2d.Tile.fromColor(0, width - borderWidth * 2, width - borderHeight * 2);
 		var bg = new h2d.Bitmap(t, box);
 		bg.x = borderWidth;
@@ -69,6 +92,10 @@ class CheckBox extends h2d.Flow {
 		return selected;
 	}
 
+	/**
+		Sent when the `CheckBox.selected` state is changed.
+		Can be triggered both by user interaction (when checkbox is enabled) and from the software side by changing `selected` directly.
+	**/
 	public dynamic function onChange() {
 	}
 }

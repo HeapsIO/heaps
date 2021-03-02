@@ -77,12 +77,11 @@ class PointShadowMap extends Shadows {
 	}
 
 	override function syncShader(texture) {
-		var absPos = light.getAbsPos();
 		var pointLight = cast(light, h3d.scene.pbr.PointLight);
 		pshader.shadowMap = texture;
 		pshader.shadowBias = bias;
 		pshader.shadowPower = power;
-		pshader.lightPos = new h3d.Vector(absPos.tx, absPos.ty, absPos.tz);
+		light.getAbsPos().getPosition(pshader.lightPos);
 		pshader.zFar = pointLight.range;
 
 		// ESM
@@ -160,13 +159,18 @@ class PointShadowMap extends Shadows {
 		if( tmpTex != null) return tmpTex;
 		tmpTex = new h3d.mat.Texture(1,1, [Target,Cube], format);
 		tmpTex.name = "defaultCubeShadowMap";
-		if( format == RGBA )
-			tmpTex.clear(0xFFFFFF);
-		else
-			tmpTex.clearF(1);
+		clear(tmpTex);
 		return tmpTex;
 	}
 
+	inline function clear( t : h3d.mat.Texture, ?layer = -1 ) {
+		if( format == RGBA )
+			t.clear(0xFFFFFF, layer);
+		else
+			t.clearF(1, 1, 1, 1, layer);
+	}
+
+	var clearDepthColor = new h3d.Vector(1,1,1,1);
 	override function draw( passes : h3d.pass.PassList, ?sort ) {
 		if( !enabled )
 			return;
@@ -190,9 +194,9 @@ class PointShadowMap extends Shadows {
 		}
 
 		var texture = ctx.computingStatic ? createStaticTexture() : ctx.textures.allocTarget("pointShadowMap", size, size, false, format, true);
-		if( depth == null || depth.width != size || depth.height != size || depth.isDisposed() ) {
+		if( depth == null || depth.width != texture.width || depth.height != texture.height || depth.isDisposed() ) {
 			if( depth != null ) depth.dispose();
-			depth = new h3d.mat.DepthBuffer(size, size);
+			depth = new h3d.mat.DepthBuffer(texture.width, texture.height);
 		}
 		texture.depthBuffer = depth;
 
@@ -204,7 +208,7 @@ class PointShadowMap extends Shadows {
 
 			// Shadows on the current face is disabled
 			if( !faceMask.has(CubeFaceFlag.createByIndex(i)) ) {
-				texture.clear(0xFFFFFF, 0, i);
+				clear(texture, i);
 				continue;
 			}
 
@@ -215,13 +219,12 @@ class PointShadowMap extends Shadows {
 			cullPasses(passes, function(col) return col.inFrustum(lightCamera.frustum));
 			if( passes.isEmpty() ) {
 				passes.load(save);
-				texture.clear(0xFFFFFF, 0, i);
+				clear(texture, i);
 				continue;
 			}
 
 			ctx.engine.pushTarget(texture, i);
-			ctx.engine.clear(0xFFFFFF, 1);
-
+			format == RGBA ? ctx.engine.clear(0xFFFFFF, i) : ctx.engine.clearF(clearDepthColor, 1);
 			super.draw(passes,sort);
 			passes.load(save);
 			ctx.engine.popTarget();
