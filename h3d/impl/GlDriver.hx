@@ -2,11 +2,15 @@ package h3d.impl;
 import h3d.impl.Driver;
 import h3d.mat.Data;
 import h3d.mat.Pass;
-import h3d.mat.Stencil;#if (js||hlsdl||usegl)
+import h3d.mat.Stencil;
+
+#if (js||hlsdl||usegl)
 
 #if js
 import hxd.impl.TypedArray;
-import js.html.webgl.RenderingContext;private typedef GL = js.html.webgl.GL;
+import js.html.webgl.RenderingContext;
+
+private typedef GL = js.html.webgl.GL;
 
 private extern class GL2 extends js.html.webgl.GL {
 	// webgl2
