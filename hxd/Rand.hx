@@ -1,14 +1,23 @@
 package hxd;
 
+/**
+	`hxd.Rand` is a seeded random number generator, that allows to get always the same results starting from a given seed.
+**/
 class Rand {
 
 	var seed : Int;
 	var seed2 : Int;
 
+	/**
+		Create a random generator with a seed.
+	**/
 	public function new( seed : Int ) {
 		init(seed);
 	}
 
+	/**
+		Initialize the random generator with a seed.
+	**/
 	public function init(seed : Int) {
 		this.seed = seed;
 		this.seed2 = hash(seed);
@@ -38,10 +47,16 @@ class Rand {
 		return h;
 	}
 
+	/**
+		Return a random integer between 0 and n (excluded).
+	**/
 	public inline function random( n ) {
 		return uint() % n;
 	}
 
+	/**
+		Shuffle values of an array.
+	**/
 	public inline function shuffle<T>( a : Array<T> ) {
 		var len = a.length;
 		for( i in 0...len ) {
@@ -53,12 +68,18 @@ class Rand {
 		}
 	}
 
+	/**
+		Return a random float between 0.0 and 1.0 (excluded)
+	**/
 	public inline function rand() {
 		// we can't use a divider > 16807 or else two consecutive seeds
 		// might generate a similar float
 		return (uint() % 10007) / 10007.0;
 	}
 
+	/**
+		Return a random float between -scale and +scale (excluded)
+	**/
 	public inline function srand(scale=1.0) {
 		return ((int() % 10007) / 10007.0) * scale;
 	}

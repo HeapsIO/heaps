@@ -83,6 +83,9 @@ enum VarQualifier {
 	Range( min : Float, max : Float );
 	Ignore; // the variable is ignored in reflection (inspector)
 	PerInstance( v : Int );
+	Doc( s : String );
+	Borrow( source : String );
+	Sampler( name : String );
 }
 
 enum Prec {
@@ -204,7 +207,7 @@ enum TGlobal {
 	Texture;
 	TextureLod;
 	Texel;
-	TexelLod;
+	TextureSize;
 	// ...other texture* operations
 	// constructors
 	ToInt;
@@ -239,13 +242,14 @@ enum TGlobal {
 	ChannelRead;
 	ChannelReadLod;
 	ChannelFetch;
-	ChannelFetchLod;
+	ChannelTextureSize;
 	Trace;
 	// instancing
 	VertexID;
 	InstanceID;
 	// gl globals
 	FragCoord;
+	FrontFacing;
 }
 
 enum Component {
@@ -315,6 +319,17 @@ class Tools {
 		return v.name;
 	}
 
+	public static function getDoc( v : TVar ) {
+		if ( v.qualifiers == null )
+			return null;
+		for ( q in v.qualifiers )
+			switch ( q ) {
+			case Doc(s): return s;
+			default:
+			}
+		return null;
+	}
+
 	public static function getConstBits( v : TVar ) {
 		switch( v.type ) {
 		case TBool:
@@ -364,6 +379,16 @@ class Tools {
 			for( q2 in v.qualifiers )
 				if( q2 == q )
 					return true;
+		return false;
+	}
+
+	public static function hasBorrowQualifier( v : TVar, path : String ) {
+		if ( v.qualifiers != null )
+			for( q in v.qualifiers )
+				switch (q) {
+					case Borrow(s): return path == s;
+					default:
+				}
 		return false;
 	}
 

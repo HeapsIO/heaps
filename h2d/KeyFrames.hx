@@ -1,6 +1,9 @@
 package h2d;
 import hxd.fmt.kframes.Data;
 
+/**
+	[Keyframes](https://github.com/heapsio/keyframes/) integration; A `KeyFrames` animation layer.
+**/
 typedef KeyframesLayer = {
 	var id : Int;
 	var name : String;
@@ -12,7 +15,7 @@ typedef KeyframesLayer = {
 }
 
 /**
-	Adobe After effect player, see https://github.com/heapsio/keyframes/
+	Adobe After effect player, see [Keyframes](https://github.com/heapsio/keyframes/) library.
 **/
 class KeyFrames extends Mask {
 
@@ -20,20 +23,48 @@ class KeyFrames extends Mask {
 	var filePrefix : String;
 	var curFrame : Float;
 
+	/**
+		The FPS provided by the KeyFrames file.
+	**/
 	public var frameRate : Float;
+	/**
+		The total amount of frames in the animation.
+	**/
 	public var frameCount : Int;
+	/**
+		The current playback frame with the frame display progress fraction.
+	**/
 	public var currentFrame(get,set) : Float;
+	/**
+		The playback speed multiplier.
+	**/
 	public var speed : Float = 1.;
+	/**
+		Pauses the playback when enabled.
+	**/
 	public var pause : Bool = false;
+	/**
+		Whether to loop the animation or not.
+	**/
 	public var loop : Bool = false;
 
 	/**
-		When looping, will interpolate between last frame and first frame (default: false)
+		When looping, will interpolate between last frame and first frame.
 	**/
 	public var loopInterpolate : Bool = false;
 
+	/**
+		Use bilinear texture sampling instead of nearest neighbor.
+		@see `Drawable.smooth`
+	**/
 	public var smooth(default,set) = true;
 
+	/**
+		Create a new KeyFrames animation instance.
+		@param file The source file of the animation.
+		@param filePrefix An optional directory prefix when looking up images.
+		@param parent An optional parent `h2d.Object` instance to which KeyFrames adds itself if set.
+	**/
 	public function new( file : KeyframesFile, ?filePrefix : String, ?parent ) {
 		super(0,0,parent);
 		if( file.formatVersion == null )
@@ -95,6 +126,7 @@ class KeyFrames extends Mask {
 		}
 	}
 
+	@:dox(hide) @:noCompletion
 	public function set_smooth( v : Bool ) : Bool {
 		for( l in layers ){
 			var bmp = hxd.impl.Api.downcast(l.spr, h2d.Bitmap);
@@ -104,6 +136,11 @@ class KeyFrames extends Mask {
 		return smooth = v;
 	}
 
+	/**
+		Unpauses the playback and starts it at the specified frame.
+		@param speed The playback speed multiplier at which animation should run.
+		@param startFrame The frame at which the animation should start.
+	**/
 	public function play( speed : Float = 1., startFrame = 0 ) {
 		this.speed = speed;
 		pause = false;
@@ -235,6 +272,9 @@ class KeyFrames extends Mask {
 		return hxd.res.Loader.currentInstance.load(filePrefix == null ? path : filePrefix + path).toTile();
 	}
 
+	/**
+		Returns the animation layer objects under specified name.
+	**/
 	public function getLayer( name : String ) {
 		var layer = null;
 		for( l in layers ) {
@@ -285,6 +325,11 @@ class KeyFrames extends Mask {
 		}
 	}
 
+	/**
+		Sent when animation reaches the end.
+		`KeyFrames.currentFrame` equals to `KeyFrames.frameCount` when `KeyFrames.loop` is disabled,
+		is wrapped around to 0th frame if loop is enabled.
+	**/
 	public dynamic function onAnimEnd() {
 	}
 

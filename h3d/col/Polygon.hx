@@ -162,15 +162,15 @@ class Polygon implements Collider {
 	public function new() {
 	}
 
-	public function addBuffers( vertexes : haxe.ds.Vector<hxd.impl.Float32>, indexes : haxe.ds.Vector<hxd.impl.UInt16>, stride = 3 ) {
+	public function addBuffers( vertexes : haxe.ds.Vector<hxd.impl.Float32>, indexes : haxe.ds.Vector<Int>, stride = 3 ) {
 		for(i in 0...Std.int(indexes.length / 3)) {
 			var k = i * 3;
 
 			var t = new TriPlane();
 
-			var i0 = (indexes[k]:Int) * stride;
-			var i1 = (indexes[k + 1]:Int) * stride;
-			var i2 = (indexes[k + 2]:Int) * stride;
+			var i0 = indexes[k] * stride;
+			var i1 = indexes[k + 1] * stride;
+			var i2 = indexes[k + 2] * stride;
 
 			t.init(
 				new Point(vertexes[i0], vertexes[i0 + 1], vertexes[i0 + 2]),
@@ -269,5 +269,40 @@ class Polygon implements Collider {
 	function customUnserialize( ctx : hxbit.Serializer ) {
 	}
 	#end
+
+	public static function fromPolygon2D( p : h2d.col.Polygon, z = 0. ) {
+		var pout = new Polygon();
+		if( p.isConvex() ) {
+			var p0 = p[0];
+			for( i in 0...p.length-2 ) {
+				var p1 = p[i+1];
+				var p2 = p[i+2];
+				var t = new TriPlane();
+				t.init(
+					new h3d.col.Point(p0.x, p0.y, z),
+					new h3d.col.Point(p1.x, p1.y, z),
+					new h3d.col.Point(p2.x, p2.y, z)
+				);
+				t.next = pout.triPlanes;
+				pout.triPlanes = t;
+			}
+		} else {
+			var idx = p.fastTriangulate();
+			for( i in 0...Std.int(idx.length/3) ) {
+				var p0 = p[idx[i*3]];
+				var p1 = p[idx[i*3+1]];
+				var p2 = p[idx[i*3+2]];
+				var t = new TriPlane();
+				t.init(
+					new h3d.col.Point(p0.x, p0.y, z),
+					new h3d.col.Point(p1.x, p1.y, z),
+					new h3d.col.Point(p2.x, p2.y, z)
+				);
+				t.next = pout.triPlanes;
+				pout.triPlanes = t;
+			}
+		}
+		return pout;
+	}
 
 }

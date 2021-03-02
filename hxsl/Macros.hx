@@ -4,7 +4,7 @@ import haxe.macro.Expr;
 using hxsl.Ast;
 
 class Macros {
-
+	#if macro
 	static function makeType( t : Type ) : ComplexType {
 		return switch( t ) {
 		case TVoid: macro : Void;
@@ -151,6 +151,7 @@ class Macros {
 					pos : pos,
 					kind : FProp("get","set", t),
 					access : [APublic],
+					doc: v.getDoc(),
 				};
 				var name = v.name + "__";
 				var initVal = null;
@@ -377,6 +378,8 @@ class Macros {
 							var tsup = csup.t.get();
 							for( f in tsup.fields.get() )
 								supFields.set(f.name, true);
+							if( tsup.module != sup && tsup.module != Context.getLocalModule() )
+								sup = tsup.module+"."+tsup.name;
 							shader = { expr : EBlock([ { expr : ECall( { expr : EIdent("extends"), pos : pos }, [ { expr : EConst(CString(sup)), pos : pos } ]), pos : pos }, shader]), pos : pos };
 							supFields.remove("updateConstants");
 							supFields.remove("getParamValue");
@@ -477,5 +480,5 @@ class Macros {
 		});
 		return fields;
 	}
-
+	#end
 }

@@ -22,11 +22,20 @@ class Sphere implements Collider {
 		return new Point(x, y, z);
 	}
 
-	public inline function contains( p : Point ) {
+	public inline function distance( p : Point ) {
+		var d = distanceSq(p);
+		return d < 0 ? -Math.sqrt(-d) : Math.sqrt(d);
+	}
+
+	public inline function distanceSq( p : Point ) {
 		var dx = p.x - x;
 		var dy = p.y - y;
 		var dz = p.z - z;
-		return dx * dx + dy * dy + dz * dz < r * r;
+		return dx * dx + dy * dy + dz * dz - r * r;
+	}
+
+	public inline function contains( p : Point ) {
+		return distanceSq(p) < 0;
 	}
 
 	public function rayIntersection( r : Ray, bestMatch : Bool ) : Float {

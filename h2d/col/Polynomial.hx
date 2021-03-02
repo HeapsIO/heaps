@@ -112,6 +112,9 @@ private class QR {
 
 }
 
+/**
+	See `Polynomial.regress`.
+**/
 class Polynomial {
 
 	/**

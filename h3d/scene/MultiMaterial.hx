@@ -38,13 +38,15 @@ class MultiMaterial extends Mesh {
 		return super.getMaterialByName(name);
 	}
 
-	override function getMaterials( ?a : Array<h3d.mat.Material> ) {
+	override function getMaterials( ?a : Array<h3d.mat.Material>, recursive = true ) {
 		if( a == null ) a = [];
 		for( m in materials )
 			if( m != null && a.indexOf(m) < 0 )
 				a.push(m);
-		for( o in children )
-			o.getMaterials(a);
+		if( recursive ) {
+			for( o in children )
+				o.getMaterials(a);
+		}
 		return a;
 	}
 

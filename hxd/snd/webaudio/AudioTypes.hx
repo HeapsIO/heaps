@@ -69,7 +69,7 @@ class BufferPlayback {
 	public var ends : Float;
 
 	public var currentSample(get, never):Int;
-	
+
 	static inline var FADE_SAMPLES = 10; // Click prevent at the start.
 
 	var lastSamples:Int;
@@ -134,7 +134,7 @@ class BufferPlayback {
 		if (consumed || node == null) return ends;
 		var ctx = source.driver.ctx;
 		var shiftTime = ctx.currentTime;// + 16 / buffer.inst.sampleRate;
-		
+
 		node.playbackRate.setValueAtTime(source.pitch, shiftTime);
 		var elapsed = shiftTime - starts;
 		if ( elapsed < 0 ) {

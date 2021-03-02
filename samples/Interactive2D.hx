@@ -65,7 +65,7 @@ class Interactive2D extends SampleApp {
 			hover = false;
 			redrawGraphics();
 		}
-		
+
 		addCheck("isEllipse", function() return interactive.isEllipse, function(v) interactive.isEllipse = v);
 		addCheck("Rotate", function() return shouldRotate, function(v) {
 			shouldRotate = v;
@@ -132,7 +132,7 @@ class Interactive2D extends SampleApp {
 			case 3: interactive.shape = rectShape;
 			case 4: interactive.shape = null;
 		}
-		
+
 		redrawGraphics();
 		setRotation(interactive.rotation);
 	}

@@ -8,6 +8,7 @@ private class AllocatedVar {
 	public var merged : Array<TVar>;
 	public var kind : Null<FunctionKind>;
 	public var parent : AllocatedVar;
+	public var rootShaderName : String;
 	public var instanceIndex : Int;
 	public function new() {
 	}
@@ -68,10 +69,12 @@ class Linker {
 		return Error.t(msg, p);
 	}
 
-	function mergeVar( path : String, v : TVar, v2 : TVar, p : Position ) {
+	function mergeVar( path : String, v : TVar, v2 : TVar, p : Position, shaderName : String ) {
 		switch( v.kind ) {
 		case Global, Input, Var, Local, Output:
 			// shared vars
+		case Param if ( shaderName != null && v2.hasBorrowQualifier(shaderName) ):
+			// Other variable attempts to borrow.
 		case Param, Function:
 			throw "assert";
 		}
@@ -88,9 +91,9 @@ class Linker {
 					}
 				// add a new field
 				if( ft == null )
-					fl2.push(allocVar(f1,p).v);
+					fl2.push(allocVar(f1,p, shaderName).v);
 				else
-					mergeVar(path + "." + ft.name, f1, ft, p);
+					mergeVar(path + "." + ft.name, f1, ft, p, shaderName);
 			}
 		default:
 			if( !v.type.equals(v2.type) )
@@ -98,9 +101,9 @@ class Linker {
 		}
 	}
 
-	function allocVar( v : TVar, p : Position, ?path : String, ?parent : AllocatedVar ) : AllocatedVar {
+	function allocVar( v : TVar, p : Position, ?shaderName : String, ?path : String, ?parent : AllocatedVar ) : AllocatedVar {
 		if( v.parent != null && parent == null ) {
-			parent = allocVar(v.parent, p);
+			parent = allocVar(v.parent, p, shaderName);
 			var p = parent.v;
 			path = p.name;
 			p = p.parent;
@@ -122,10 +125,10 @@ class Linker {
 			for( vm in v2.merged )
 				if( vm == v )
 					return v2;
-			inline function isUnique( v : TVar ) {
-				return (v.kind == Param && !v.hasQualifier(Shared) && !isBatchShader) || v.kind == Function || (v.kind == Var && v.hasQualifier(Private));
+			inline function isUnique( v : TVar, borrowed : Bool ) {
+				return (v.kind == Param && !borrowed && !v.hasQualifier(Shared) && !isBatchShader) || v.kind == Function || ((v.kind == Var || v.kind == Local) && v.hasQualifier(Private));
 			}
-			if( isUnique(v) || isUnique(v2.v) || (v.kind == Param && v2.v.kind == Param) /* two shared : one takes priority */ ) {
+			if( isUnique(v, v2.v.hasBorrowQualifier(shaderName)) || isUnique(v2.v, v.hasBorrowQualifier(v2.rootShaderName)) || (v.kind == Param && v2.v.kind == Param) /* two shared : one takes priority */ ) {
 				// allocate a new unique name in the shader if already in use
 				var k = 2;
 				while( true ) {
@@ -140,7 +143,7 @@ class Linker {
 				key += k;
 			} else {
 				v2.merged.push(v);
-				mergeVar(key, v, v2.v, p);
+				mergeVar(key, v, v2.v, p, v2.rootShaderName);
 				varIdMap.set(v.id, v2.id);
 				return v2;
 			}
@@ -161,11 +164,12 @@ class Linker {
 		a.id = vid;
 		a.parent = parent;
 		a.instanceIndex = curInstance;
+		a.rootShaderName = shaderName;
 		allVars.push(a);
 		varMap.set(key, a);
 		switch( v2.type ) {
 		case TStruct(vl):
-			v2.type = TStruct([for( v in vl ) allocVar(v, p, key, a).v]);
+			v2.type = TStruct([for( v in vl ) allocVar(v, p, shaderName, key, a).v]);
 		default:
 		}
 		return a;
@@ -356,7 +360,7 @@ class Linker {
 		for( s in shadersData ) {
 			isBatchShader = batchMode && StringTools.startsWith(s.name,"batchShader_");
 			for( v in s.vars ) {
-				var v2 = allocVar(v, null);
+				var v2 = allocVar(v, null, s.name);
 				if( isBatchShader && v2.v.kind == Param && !StringTools.startsWith(v2.path,"Batch_") )
 					v2.v.kind = Local;
 				if( v.kind == Output ) outVars.push(v);

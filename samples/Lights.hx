@@ -86,7 +86,6 @@ class Lights extends SampleApp {
 		sp.setPosition(-30,-30,30);
 		sp.setDirection(new h3d.Vector(1,2,-5));
 		sp.range = 70;
-		sp.maxRange = 70;
 		sp.angle = 70;
 		sp.color.scale3(10);
 

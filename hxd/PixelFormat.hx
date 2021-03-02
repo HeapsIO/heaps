@@ -19,10 +19,13 @@ enum PixelFormat {
 	SRGB_ALPHA;
 	RGB10A2;
 	RG11B10UF; // unsigned float
+	R16U;
+	RGB16U;
+	RGBA16U;
+	PVRTC( ?v : Int);
 	ASTC( ?v : Int );
 	ETC( ?v : Int );
 	S3TC( ?v : Int );
-	PVRTC( ?v : Int);
 }
 
 enum abstract ASTC_FORMAT(Int) from Int to Int {

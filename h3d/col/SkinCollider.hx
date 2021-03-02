@@ -6,22 +6,31 @@ class SkinCollider implements hxd.impl.Serializable implements Collider {
 
 	@:s var obj : h3d.scene.Skin;
 	@:s var col : PolygonBuffer;
+	var currentBounds : h3d.col.Bounds;
 	var transform : PolygonBuffer;
-	var lastFrame : Int;
+	var lastFrame = -1;
+	var lastBoundsFrame = -1;
 
 	public function new( obj, col ) {
 		this.obj = obj;
 		this.col = col;
 		this.transform = new PolygonBuffer();
 		this.transform.setData(col.buffer.copy(), col.indexes, col.startIndex, col.triCount);
+		currentBounds = new h3d.col.Bounds();
 	}
 
 	public function contains(p) {
+		checkBounds();
+		if( !currentBounds.contains(p) )
+			return false;
 		applyTransform();
 		return transform.contains(p);
 	}
 
 	public function inFrustum(p, ?m : h3d.Matrix ) {
+		checkBounds();
+		if( !currentBounds.inFrustum(p,m) )
+			return false;
 		if( m != null )
 			throw "Not implemented";
 		applyTransform();
@@ -29,13 +38,28 @@ class SkinCollider implements hxd.impl.Serializable implements Collider {
 	}
 
 	public function inSphere( s : Sphere ) {
+		checkBounds();
+		if( !currentBounds.inSphere(s) )
+			return false;
+		applyTransform();
 		throw "Not implemented";
 		return false;
 	}
 
 	public function rayIntersection(r, bestMatch) {
+		checkBounds();
+		if( currentBounds.rayIntersection(r, false) < 0 )
+			return -1.;
 		applyTransform();
 		return transform.rayIntersection(r, bestMatch);
+	}
+
+	function checkBounds() {
+		if( !obj.jointsUpdated && lastBoundsFrame == obj.lastFrame ) return;
+		lastBoundsFrame = obj.lastFrame;
+		obj.syncJoints();
+		currentBounds.empty();
+		obj.getBoundsRec(currentBounds);
 	}
 
 	function applyTransform() {

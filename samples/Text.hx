@@ -186,9 +186,9 @@ class Text extends hxd.App {
 			var f2 = createFlow(flow);
 			createText(f2, multilineText, Align.Left);
 		}
-		
+
 		yoffset += flow.getBounds().height + 10;
-		
+
 		// Showcases all supported font formats.
 		var flow = createFlow(s2d);
 		flow.debug = false;

@@ -335,7 +335,7 @@ class GpuPartGroup {
 			v.x = srand();
 			v.y = srand();
 			v.z = srand();
-			v.normalizeFast();
+			v.normalize();
 			var r = g.emitStartDist + g.emitDist * rand();
 			p.x = v.x * r;
 			p.y = v.y * r;
@@ -363,7 +363,7 @@ class GpuPartGroup {
 			v.y = Math.sin(phi) * Math.sin(theta);
 			v.z = Math.cos(phi);
 
-			v.normalizeFast();
+			v.normalize();
 			var r = g.emitStartDist + g.emitDist * (emitOnBorder ? 1 : Math.sqrt(rand()));
 			p.x = Math.cos(theta) * r;
 			p.y = Math.sin(theta) * r;
@@ -410,7 +410,7 @@ class GpuPartGroup {
 			v.x = srand();
 			v.y = srand();
 			v.z = srand();
-			v.normalizeFast();
+			v.normalize();
 
 		}
 

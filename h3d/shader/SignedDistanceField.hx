@@ -3,7 +3,7 @@ package h3d.shader;
 class SignedDistanceField extends hxsl.Shader {
 
 	static var SRC = {
-		
+
 		@:import h3d.shader.Base2d;
 
 		// Mode of operation - single-channel or multi-channel.
@@ -31,7 +31,7 @@ class SignedDistanceField extends hxsl.Shader {
 				else if (channel == 2) textureSample.b;
 				else if (channel == 3) textureSample.a;
 				else median(textureSample.r, textureSample.g, textureSample.b);
-			
+
 			textureColor = vec4(1.0, 1.0, 1.0, smoothstep(alphaCutoff - smoothing, alphaCutoff + smoothing, distance));
 		}
 	}
