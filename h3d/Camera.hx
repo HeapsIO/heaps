@@ -221,13 +221,6 @@ class Camera {
 		return a;
 	}
 
-	public function getViewDirection( dx : Float, dy : Float, dz = 0. ) {
-		var a = new h3d.col.Point(dx,dy,dz);
-		a.transform3x3(mcam);
-		a.normalize();
-		return a;
-	}
-
 	public function movePosAxis( dx : Float, dy : Float, dz = 0. ) {
 		var p = new h3d.col.Point(dx, dy, dz);
 		p.transform3x3(mcam);

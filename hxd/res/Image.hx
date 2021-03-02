@@ -110,7 +110,7 @@ class Image extends Resource {
 					inf.height = f.readInt32();
 					var colbits = f.readByte();
 					inf.pixelFormat = switch( colbits ) {
-					case 8: BGRA;
+					case 4, 8: BGRA;
 					case 16: R16U;
 					case 48: RGB16U;
 					case 64: RGBA16U;
@@ -208,12 +208,13 @@ class Image extends Resource {
 			}
 
 		case 0x4273:
-			format = Basis;
+			inf.dataFormat = Basis;
 			f.skip(63);
+			inf.pixelFormat = BGRA;
 			var slicesPos = f.readInt32();
 			f.skip(slicesPos-42);
-			width = f.readUInt16();
-			height = f.readUInt16();
+			inf.width = f.readUInt16();
+			inf.height = f.readUInt16();
 		case 0x3F23: // HDR RADIANCE
 
 			inf.dataFormat = Hdr;
@@ -243,12 +244,6 @@ class Image extends Resource {
 					throw "RAW format does not match 32 bit per components on "+size+"x"+size;
 			}
 			inf.width = inf.height = size;
-
-		case _ if( entry.extension == "raw" ):
-			format = Raw32;
-			var size = Std.int(Math.sqrt(entry.size>>2));
-			if( entry.size != size * size * 4 ) throw "RAW format does not match 32 bit per components on "+size+"x"+size;
-			width = height = size;
 
 		default:
 			throw "Unsupported texture format " + entry.path;
@@ -370,7 +365,7 @@ class Image extends Resource {
 			var bytes = entry.getBytes();
 			var driver:h3d.impl.GlDriver = cast h3d.Engine.getCurrent().driver;
 			var f = switch(driver.checkTextureSupport()) {
-				case hxd.PixelFormat.S3TC(_): hxd.PixelFormat.S3TC(inf.bc);
+				case hxd.PixelFormat.S3TC(_): hxd.PixelFormat.S3TC(0);
 				case hxd.PixelFormat.ETC(_): hxd.PixelFormat.ETC(0);
 				case hxd.PixelFormat.ASTC(_): hxd.PixelFormat.ASTC(10);
 				case hxd.PixelFormat.PVRTC(_): hxd.PixelFormat.PVRTC(9);

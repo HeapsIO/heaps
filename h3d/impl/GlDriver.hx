@@ -179,8 +179,6 @@ class GlDriver extends Driver {
 
 	static var BLACK = new h3d.Vector(0,0,0,0);
 
-	static var BLACK = new h3d.Vector(0,0,0,0);
-
 	/**
 		Perform OUT_OF_MEMORY checks when allocating textures/buffers.
 		Default true, except in WebGL (false)
@@ -1013,7 +1011,7 @@ class GlDriver extends Driver {
 		return tt;
 	}
 
-	inline function checkMult4(t) {
+	inline function checkMult4(t:h3d.mat.Texture) {
 		if( t.width&3 != 0 || t.height&3 != 0 )
 			throw "Compressed texture "+t+" has size "+t.width+"x"+t.height+" - must be a multiple of 4";
 	}
