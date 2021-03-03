@@ -14,6 +14,8 @@ class Window {
 
 	public var width(get, never) : Int;
 	public var height(get, never) : Int;
+	public var windowToPixelRatio(get, never) : Float;
+
 	public var mouseX(get, never) : Int;
 	public var mouseY(get, never) : Int;
 	public var mouseLock(get, set) : Bool;
@@ -199,6 +201,10 @@ class Window {
 
 	function get_height() {
 		return Math.round(canvasPos.height * getPixelRatio());
+	}
+
+	function get_windowToPixelRatio() {
+		return 1.0;
 	}
 
 	function get_mouseX() {

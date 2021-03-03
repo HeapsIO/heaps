@@ -280,7 +280,14 @@ class Engine {
 		if( height < 32 ) height = 32;
 		this.width = width;
 		this.height = height;
-		if( !driver.isDisposed() ) driver.resize(width, height);
+
+		// Set the driver size to actual pixel width
+		// (same as window size on normal displays, differs when high DPI is enabled)
+		var r = window.windowToPixelRatio;
+		var pw = Std.int(width / r);
+		var ph = Std.int(height / r);
+
+		if( !driver.isDisposed() ) driver.resize(pw, ph);
 	}
 
 	public function begin() {

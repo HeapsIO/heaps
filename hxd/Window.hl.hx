@@ -26,6 +26,8 @@ class Window {
 
 	public var width(get, never) : Int;
 	public var height(get, never) : Int;
+	public var windowToPixelRatio(get, never) : Float;
+
 	public var mouseX(get, never) : Int;
 	public var mouseY(get, never) : Int;
 	public var mouseLock(get, set) : Bool;
@@ -50,13 +52,16 @@ class Window {
 	static inline var TOUCH_SCALE = #if (hl_ver >= version("1.12.0")) 10000 #else 100 #end;
 	#end
 
-	function new(title:String, width:Int, height:Int, fixed:Bool = false) {
+	function new(title:String, width:Int, height:Int, fixed:Bool = false, highDPI = false) {
 		this.windowWidth = width;
 		this.windowHeight = height;
 		eventTargets = new List();
 		resizeEvents = new List();
 		#if hlsdl
-		final sdlFlags = if (!fixed) sdl.Window.SDL_WINDOW_SHOWN | sdl.Window.SDL_WINDOW_RESIZABLE else sdl.Window.SDL_WINDOW_SHOWN;
+		var sdlFlags = if (!fixed) sdl.Window.SDL_WINDOW_SHOWN | sdl.Window.SDL_WINDOW_RESIZABLE else sdl.Window.SDL_WINDOW_SHOWN;
+		if (highDPI) {
+			sdlFlags |= sdl.Window.SDL_WINDOW_ALLOW_HIGHDPI;
+		}
 		window = new sdl.Window(title, width, height, sdl.Window.SDL_WINDOWPOS_CENTERED, sdl.Window.SDL_WINDOWPOS_CENTERED, sdlFlags);
 		#elseif hldx
 		final dxFlags = if (!fixed) dx.Window.RESIZABLE else 0;
@@ -132,6 +137,10 @@ class Window {
 
 	function get_height() : Int {
 		return windowHeight;
+	}
+	
+	function get_windowToPixelRatio() : Float {
+		return window.windowToPixelRatio;
 	}
 
 	function get_mouseLock() : Bool {
