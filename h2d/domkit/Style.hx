@@ -127,13 +127,17 @@ class Style extends domkit.CssStyle {
 			var scenes = [];
 			for( o in currentObjects ) {
 				var s = o.getScene();
-				if( scenes.indexOf(o) >= 0 ) continue;
+				if( s == null || scenes.indexOf(s) >= 0 ) continue;
 				scenes.push(s);
 				function scanRec(o:h2d.Object) {
 					if( o.dom != null ) @:privateAccess o.dom.currentValues = null;
 					for( o in o ) scanRec(o);
 				}
 				scanRec(s);
+			}
+			if( inspectModeActive ) {
+				inspectModeActive = false;
+				hxd.System.setNativeCursor(Default);
 			}
 		}
 		return allowInspect = b;
