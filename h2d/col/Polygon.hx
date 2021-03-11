@@ -458,4 +458,17 @@ abstract Polygon(Array<Point>) from Array<Point> to Array<Point> {
 		}
 	}
 
+	public static function makeCircle( x : Float, y : Float, radius : Float, npoints = 0 ) {
+		if( npoints == 0 )
+			npoints = Math.ceil(Math.abs(radius * 3.14 * 2 / 4));
+		if( npoints < 3 ) npoints = 3;
+		var angle = Math.PI * 2 / npoints;
+		var points = [];
+		for( i in 0...npoints ) {
+			var a = i * angle;
+			points.push(new Point(Math.cos(a) * radius + x, Math.sin(a) * radius + y));
+		}
+		return new Polygon(points);
+	}
+
 }

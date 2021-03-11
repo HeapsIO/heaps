@@ -210,7 +210,7 @@ class Object implements hxd.impl.Serializable {
 	inline function set_inheritCulled(b) return flags.set(FInheritCulled, b);
 	inline function set_ignoreCollide(b) return flags.set(FIgnoreCollide, b);
 	inline function set_allowSerialize(b) return !flags.set(FNoSerialize, !b);
-	inline function set_ignoreParentTransform(b) return flags.set(FIgnoreParentTransform, b);
+	inline function set_ignoreParentTransform(b) { if( b != ignoreParentTransform ) posChanged = true; return flags.set(FIgnoreParentTransform, b); }
 	inline function set_cullingColliderInherited(b) return flags.set(FCullingColliderInherited, b);
 
 	/**

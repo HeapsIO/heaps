@@ -161,10 +161,12 @@ class Camera {
 		return p;
 	}
 
-	public function rayFromScreen( pixelX : Float, pixelY : Float ) {
+	public function rayFromScreen( pixelX : Float, pixelY : Float, sceneWidth = -1, sceneHeight = -1 ) {
 		var engine = h3d.Engine.getCurrent();
-		var rx = (pixelX / engine.width - 0.5) * 2;
-		var ry = (0.5 - pixelY / engine.height) * 2;
+		if( sceneWidth < 0 ) sceneWidth = engine.width;
+		if( sceneHeight < 0 ) sceneHeight = engine.height;
+		var rx = (pixelX / sceneWidth - 0.5) * 2;
+		var ry = (0.5 - pixelY / sceneHeight) * 2;
 		return h3d.col.Ray.fromPoints(unproject(rx, ry, 0).toPoint(), unproject(rx, ry, 1).toPoint());
 	}
 

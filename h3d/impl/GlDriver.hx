@@ -1197,14 +1197,14 @@ class GlDriver extends Driver {
 			if( t.flags.has(IsArray) )
 				#if (hlsdl >= version("1.12.0"))
 				gl.compressedTexSubImage3D(face, mipLevel, 0, 0, side, pixels.width, pixels.height, 1, t.t.internalFmt, dataLen, stream);
-				#else throw "TextureArray support requires hlsdl 1.11+"; #end
+				#else throw "TextureArray support requires hlsdl 1.12+"; #end
 			else
 				gl.compressedTexImage2D(face, mipLevel, t.t.internalFmt, pixels.width, pixels.height, 0, dataLen, stream);
 		} else {
 			if( t.flags.has(IsArray) )
 				#if (hlsdl >= version("1.12.0"))
 				gl.texSubImage3D(face, mipLevel, 0, 0, side, pixels.width, pixels.height, 1, getChannels(t.t), t.t.pixelFmt, stream);
-				#else throw "TextureArray support requires hlsdl 1.11+"; #end
+				#else throw "TextureArray support requires hlsdl 1.12+"; #end
 			else
 				gl.texImage2D(face, mipLevel, t.t.internalFmt, pixels.width, pixels.height, 0, getChannels(t.t), t.t.pixelFmt, stream);
 		}

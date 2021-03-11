@@ -426,7 +426,7 @@ class System {
 	}
 	
 	#if (hlsdl || hldx)
-	static var _ = {
+	@:keep static var _ = {
 		haxe.MainLoop.add(timeoutTick, -1) #if (haxe_ver >= 4) .isBlocking = false #end;
 		haxe.MainLoop.add(updateCursor, -1) #if (haxe_ver >= 4) .isBlocking = false #end;
 	}
