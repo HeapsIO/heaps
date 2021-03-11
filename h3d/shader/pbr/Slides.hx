@@ -50,9 +50,9 @@ class Slides extends ScreenShader {
 				else {
 					var uv = vec2(x,y) - 3;
 					if( shadowIsCube ) {
-						var phi = uv.x*3.1415*2;
+						var phi = (1 - uv.x)*3.1415*2;
 						var theta = (-uv.y+0.5)*3.1415;
-						var dir = vec3(cos(phi)*cos(theta),sin(theta),sin(phi)*cos(theta));
+						var dir = vec3(cos(phi)*cos(theta),sin(phi)*cos(theta),sin(theta));
 						color = shadowMapCube.get(dir).xxx;
 					} else
 						color = shadowMap.get(uv).xxx;

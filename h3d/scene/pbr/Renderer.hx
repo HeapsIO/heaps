@@ -521,6 +521,7 @@ class Renderer extends h3d.scene.Renderer {
 						if( tex != null && tex != defaultShadows ) {
 							k--;
 							shadowMap = tex;
+							if( k == 0 ) break;
 						}
 					}
 					l = l.next;
