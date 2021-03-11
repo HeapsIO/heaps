@@ -25,7 +25,7 @@ class Timer {
 		the results for tmod/dt/fps over frames using the formula   dt = lerp(dt, elapsedTime, smoothFactor)
 		Default : 0 on HashLink, 0.95 on other platforms
 	**/
-	public static var smoothFactor = 0.95;
+	public static var smoothFactor = #if hl 0. #else 0.95 #end;
 
 	/**
 		The last timestamp in which update() function was called.
