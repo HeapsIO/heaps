@@ -19,8 +19,9 @@ class SmoothTarget extends Animation {
 
 	@:s public var target : Animation;
 	@:s public var blend : Float;
-	@:s var duration : Float;
+	@:s public var duration : Float;
 	@:s public var ignoreTranslate = false;
+	@:s public var easing : Float = 0.;
 
 	public function new( target : h3d.anim.Animation, duration = 0.5 ) {
 		super("SmoothTarget(" + target.name+")", target.frameCount, target.sampling);
@@ -98,6 +99,10 @@ class SmoothTarget extends Animation {
 		if( decompose ) throw "assert";
 		var objects = getSmoothObjects();
 		target.sync(true);
+
+		var bpow = Math.pow(blend, 1 + easing);
+		var blend = bpow / (bpow + Math.pow(1 - blend, easing + 1));
+
 		for( o in objects ) {
 			var m = @:privateAccess if( o.targetSkin != null ) o.targetSkin.currentRelPose[o.targetJoint] else if( o.targetObject != null ) o.targetObject.defaultTransform else null;
 
