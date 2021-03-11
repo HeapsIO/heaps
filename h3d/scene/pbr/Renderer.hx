@@ -81,8 +81,8 @@ class Renderer extends h3d.scene.Renderer {
 	public var displayMode : DisplayMode = Pbr;
 	public var env : Environment;
 	public var exposure(get,set) : Float;
-	public var debugMode = 0;
 	public var shadows = true;
+	var debugShadowMapIndex = 0;
 
 	static var ALPHA : hxsl.Output = Swiz(Value("output.color"),[W]);
 	var output = new h3d.pass.Output("default",[
@@ -506,10 +506,36 @@ class Renderer extends h3d.scene.Renderer {
 				copy(ldr, null);
 			}
 		case Debug:
-			var shadowMap = ctx.getGlobal("mainLightShadowMap");
+			var defaultShadows : h3d.mat.Texture = ctx.getGlobal("mainLightShadowMap");
+			var prev = slides.shader.shadowMap;
+			var shadowMap = defaultShadows;
+			if( debugShadowMapIndex < 0 )
+				debugShadowMapIndex = 0;
+			if( debugShadowMapIndex > 0 ) @:privateAccess {
+				var k = debugShadowMapIndex;
+				var l = ctx.lights;
+				while( l != null && l.next != null && k > 0 ) {
+					var pl = Std.downcast(l, Light);
+					if( pl != null && pl.shadows != null ) {
+						var tex = pl.shadows.getShadowTex();
+						if( tex != null && tex != defaultShadows ) {
+							k--;
+							shadowMap = tex;
+						}
+					}
+					l = l.next;
+				}
+				if( k > 0 )
+					debugShadowMapIndex -= k;
+				#if hl
+				if( l != null && shadowMap != prev ) Sys.println(l.name);
+				#end
+			}
 			if( shadowMap == null )
 				shadowMap = h3d.mat.Texture.fromColor(0);
 			slides.shader.shadowMap = shadowMap;
+			slides.shader.shadowMapCube = shadowMap;
+			slides.shader.shadowIsCube = shadowMap.flags.has(Cube);
 			slides.shader.shadowMapChannel = R;
 			pbrProps.isScreen = true;
 			slides.render();
@@ -529,8 +555,9 @@ class Renderer extends h3d.scene.Renderer {
 	function onEvent(e:hxd.Event) {
 		if( e.kind == EPush && e.button == 2 )
 			debugPushPos = { x : e.relX, y : e.relY };
+		var win = hxd.Window.getInstance();
+
 		if( e.kind == ERelease && e.button == 2 && hxd.Math.distance(e.relX-debugPushPos.x,e.relY-debugPushPos.y) < 10 ) {
-			var win = hxd.Window.getInstance();
 			var x = Std.int((e.relX / win.width) * 4);
 			var y = Std.int((e.relY / win.height) * 4);
 			if( slides.shader.mode != Full ) {
@@ -544,6 +571,8 @@ class Renderer extends h3d.scene.Renderer {
 				slides.shader.mode = a[x];
 			}
 		}
+		if( e.kind == EWheel && (slides.shader.mode == Shadow || (slides.shader.mode == Full && e.relX > win.width/4 && e.relY > win.height/4)) )
+			debugShadowMapIndex += e.wheelDelta > 0 ? 1 : -1;
 	}
 
 	// ---- PROPS
