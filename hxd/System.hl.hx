@@ -132,9 +132,6 @@ class System {
 		#else
 		var reportError = function(e) reportError(e);
 		#end
-		#if hxtelemetry
-		var hxt = new hxtelemetry.HxTelemetry();
-		#end
 		#if ( target.threaded && (haxe_ver >= 4.2) && heaps_unsafe_events)
 		var eventRecycle = [];
 		#end
@@ -160,9 +157,6 @@ class System {
 				hl.Api.setErrorHandler(null);
 				reportError(e);
 			}
-			#if hxtelemetry
-			hxt.advance_frame();
-			#end
 			#if hot_reload
 			check_reload();
 			#end
@@ -424,7 +418,7 @@ class System {
 		mainThread = sys.thread.Thread.current();
 		#end
 	}
-	
+
 	#if (hlsdl || hldx)
 	@:keep static var _ = {
 		haxe.MainLoop.add(timeoutTick, -1) #if (haxe_ver >= 4) .isBlocking = false #end;
