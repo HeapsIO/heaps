@@ -51,15 +51,22 @@ class System {
 	}
 
 	static function browserLoop() {
-		var window : Dynamic = js.Browser.window;
-		var rqf : Dynamic = window.requestAnimationFrame ||
-			window.webkitRequestAnimationFrame ||
-			window.mozRequestAnimationFrame;
-		if( fpsLimit>0 )
-			js.Browser.window.setTimeout( ()->rqf(browserLoop), 1000/fpsLimit );
-		else
-			rqf(browserLoop);
-
+		if( js.Browser.supported ) {
+			var window : Dynamic = js.Browser.window;
+			var rqf : Dynamic = window.requestAnimationFrame ||
+				window.webkitRequestAnimationFrame ||
+				window.mozRequestAnimationFrame;
+			if( fpsLimit>0 )
+				js.Browser.window.setTimeout( ()->rqf(browserLoop), 1000/fpsLimit );
+			else
+				rqf(browserLoop);
+		} else {
+			#if (nodejs && hxnodejs)
+			js.node.Timers.setTimeout(browserLoop, 0);
+			#else
+			throw "Cannot use browserLoop without Browser support nor defining nodejs + hxnodejs";
+			#end
+		}
 		if( loopFunc != null ) loopFunc();
 	}
 

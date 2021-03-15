@@ -312,7 +312,11 @@ class Pad {
 		Wait until a gamepad gets connected. On some platforms, this might require the user to press a button until it activates
 	**/
 	public static function wait( onPad : Pad -> Void ) {
+		#if js
+		if( !js.Browser.supported )
+			return;
 		waitPad = onPad;
+		#end
 		#if flash
 		if( !initDone ) {
 			initDone = true;

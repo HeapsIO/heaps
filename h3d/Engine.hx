@@ -75,7 +75,12 @@ class Engine {
 			driver = new h3d.impl.VulkanDriver();
 		else
 		#end
-		driver = new h3d.impl.GlDriver(antiAlias);
+		#if js
+		if( js.Browser.supported )
+			driver = new h3d.impl.GlDriver(antiAlias);
+		else
+		#end
+		driver = new h3d.impl.NullDriver();
 		#elseif flash
 		driver = new h3d.impl.Stage3dDriver(antiAlias);
 		#elseif hldx
