@@ -206,6 +206,7 @@ class GlDriver extends Driver {
 		commonFB = gl.createFramebuffer();
 		programs = new Map();
 		defStencil = new Stencil();
+		frame = hxd.Timer.frameCount;
 
 		#if hlsdl
 		hasMultiIndirect = gl.getConfigParameter(0) > 0;
