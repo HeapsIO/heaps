@@ -1,6 +1,8 @@
 package h3d.impl;
 import h3d.impl.Driver;
 
+#if (hlsdl && heaps_vulkan)
+
 class VulkanDriver extends Driver {
 
 	var ctx : sdl.Vulkan.VKContext;
@@ -80,3 +82,5 @@ class VulkanDriver extends Driver {
 	}
 
 }
+
+#end
