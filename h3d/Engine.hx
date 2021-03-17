@@ -76,11 +76,10 @@ class Engine {
 		else
 		#end
 		#if js
-		if( js.Browser.supported )
-			driver = new h3d.impl.GlDriver(antiAlias);
-		else
+		driver = js.Browser.supported ? new h3d.impl.GlDriver(antiAlias) : new h3d.impl.NullDriver();
+		#else
+		driver = new h3d.impl.GlDriver(antiAlias);
 		#end
-		driver = new h3d.impl.NullDriver();
 		#elseif flash
 		driver = new h3d.impl.Stage3dDriver(antiAlias);
 		#elseif hldx

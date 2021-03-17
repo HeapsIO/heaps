@@ -315,8 +315,8 @@ class Pad {
 		#if js
 		if( !js.Browser.supported )
 			return;
-		waitPad = onPad;
 		#end
+		waitPad = onPad;
 		#if flash
 		if( !initDone ) {
 			initDone = true;
