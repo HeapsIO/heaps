@@ -161,10 +161,6 @@ class Key {
 	public static inline var LALT = ALT | LOC_LEFT;
 	public static inline var RALT = ALT | LOC_RIGHT;
 
-	#if noEngine
-	public static var frameCount = 0;
-	#end
-
 	static var initDone = false;
 	static var keyPressed : Array<Int> = [];
 
