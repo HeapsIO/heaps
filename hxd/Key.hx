@@ -181,7 +181,7 @@ class Key {
 	}
 
 	public static inline function getFrame() {
-		return hxd.Timer.frameCount + 1;
+		return hxd.Timer.frameCount + 2;
 	}
 
 	public static function isPressed( code : Int ) {
