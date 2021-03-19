@@ -1089,6 +1089,7 @@ class Flow extends Object {
 	**/
 	public function reflow() {
 		onBeforeReflow();
+		syncPos();
 
 		if( !isConstraint && (fillWidth || fillHeight) ) {
 			var scene = getScene();
@@ -1103,6 +1104,18 @@ class Flow extends Object {
 		var borderBottom = #if flow_border borderBottom #else 0 #end;
 		var borderLeft = #if flow_border borderLeft #else 0 #end;
 		var borderRight = #if flow_border borderRight #else 0 #end;
+		var tmpBounds = tmpBounds;
+
+		if( tmpBounds == null ) throw "Recursive reflow";
+		this.tmpBounds = null;
+
+		inline function getSize(c:h2d.Object) {
+			var b = tmpBounds;
+			b.empty();
+			c.getBoundsRec(this, b, true);
+			if( b.isEmpty() ) b.addPos(0,0) else b.offset(-c.x, -c.y);
+			return b;
+		}
 
 		var isConstraintWidth = realMaxWidth >= 0;
 		var isConstraintHeight = realMaxHeight >= 0;
@@ -1186,7 +1199,7 @@ class Flow extends Object {
 						isConstraintHeight && p.constraint ? (maxInHeight - ph) / Math.abs(c.scaleX) : -1
 					);
 
-				var b = c.getSize(tmpBounds);
+				var b = getSize(c);
 				var br = false;
 				p.calculatedWidth = Math.ceil(b.xMax) + pw;
 				p.calculatedHeight = Math.ceil(b.yMax) + ph;
@@ -1332,7 +1345,7 @@ class Flow extends Object {
 						isConstraintHeight && p.constraint ? (maxInHeight - ph) / Math.abs(c.scaleY) : -1
 					);
 
-				var b = c.getSize(tmpBounds);
+				var b = getSize(c);
 				var br = false;
 
 				p.calculatedWidth = Math.ceil(b.xMax) + pw;
@@ -1440,7 +1453,7 @@ class Flow extends Object {
 						isConstraintHeight && p.constraint ? (maxInHeight - ph) / Math.abs(c.scaleY) : -1
 					);
 
-				var b = c.getSize(tmpBounds);
+				var b = getSize(c);
 				p.calculatedWidth = Math.ceil(b.xMax) + pw;
 				p.calculatedHeight = Math.ceil(b.yMax) + ph;
 				if( p.minWidth != null && p.calculatedWidth < p.minWidth ) p.calculatedWidth = p.minWidth;
@@ -1563,6 +1576,7 @@ class Flow extends Object {
 			debugGraphics.drawRect(0, 0, cw, ch);
 		}
 
+		this.tmpBounds = tmpBounds;
 		onAfterReflow();
 	}
 
