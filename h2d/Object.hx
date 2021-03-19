@@ -163,7 +163,7 @@ class Object #if (domkit && !domkit_heaps) implements domkit.Model<h2d.Object> #
 		the full glyphs size whereas `getSize` will ignore the pixels under the baseline.
 		@param out An optional bounds instance to fill. Allocates new Bounds instance and returns it if not set.
 	**/
-	public function getSize( ?out : h2d.col.Bounds ) : h2d.col.Bounds {
+	public final function getSize( ?out : h2d.col.Bounds ) : h2d.col.Bounds {
 		if( out == null ) out = new h2d.col.Bounds() else out.empty();
 		syncPos();
 		getBoundsRec(parent, out, true);
