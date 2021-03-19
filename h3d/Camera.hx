@@ -353,8 +353,10 @@ class Camera {
 	/**
 		Project a 3D point into the 2D screen. Make sure to update() the camera if it's been moved before using that.
 	**/
-	public function project( x : Float, y : Float, z : Float, screenWidth : Float, screenHeight : Float, snapToPixel = true ) {
-		var p = new h3d.Vector(x, y, z);
+	public function project( x : Float, y : Float, z : Float, screenWidth : Float, screenHeight : Float, snapToPixel = true, ?p: h3d.Vector) {
+		if(p == null)
+			p = new h3d.Vector();
+		p.set(x, y, z);
 		p.project(m);
 		p.x = (p.x + 1) * 0.5 * screenWidth;
 		p.y = (-p.y + 1) * 0.5 * screenHeight;
