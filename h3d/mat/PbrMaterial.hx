@@ -62,6 +62,7 @@ typedef PbrProps = {
 	@:optional var alphaKill : Bool;
 	@:optional var emissive : Float;
 	@:optional var parallax : Float;
+	@:optional var textureWrap : Bool;
 
 	var enableStencil : Bool;
 	@:optional var stencilCompare : PbrStencilCompare;
@@ -71,8 +72,6 @@ typedef PbrProps = {
 	@:optional var stencilValue : Int;
 	@:optional var stencilWriteMask : Int;
 	@:optional var stencilReadMask : Int;
-
-	@:optional var drawOrder : Int;
 }
 
 class PbrMaterial extends Material {
@@ -194,6 +193,8 @@ class PbrMaterial extends Material {
 		// Remove unused fields
 		if( props.emissive == 0 )
 			Reflect.deleteField(props,"emissive");
+		if( !props.textureWrap )
+			Reflect.deleteField(props,"textureWrap");
 		if( !props.enableStencil ) {
 			Reflect.deleteField(props, "stencilWriteMask");
 			Reflect.deleteField(props, "stencilReadMask");
@@ -264,6 +265,15 @@ class PbrMaterial extends Material {
 			tshader.killAlphaThreshold = 0.5;
 		}
 
+		if( props.textureWrap ) {
+			var t = texture;
+			if( t != null ) t.wrap = Repeat;
+			t = specularTexture;
+			if( t != null ) t.wrap = Repeat;
+			t = normalMap;
+			if( t != null ) t.wrap = Repeat;
+		}
+
 		mainPass.culling = props.culling ? Back : None;
 
 		shadows = props.shadows;
@@ -310,8 +320,6 @@ class PbrMaterial extends Material {
 		setColorMask();
 
 		setStencil();
-
-		mainPass.layer = props.drawOrder == null ? 0 : props.drawOrder;
 	}
 
 	function setColorMask() {
@@ -466,7 +474,7 @@ class PbrMaterial extends Material {
 				<dt>Shadows</dt><dd><input type="checkbox" field="shadows"/></dd>
 				<dt>Culled</dt><dd><input type="checkbox" field="culling"/></dd>
 				<dt>AlphaKill</dt><dd><input type="checkbox" field="alphaKill"/></dd>
-				<dt>Draw Order</dt><dd><input type="range" min="0" max="10" step="1" field="drawOrder"/></dd>
+				<dt>Wrap</dt><dd><input type="checkbox" field="textureWrap"/></dd>
 			</dl>
 		');
 	}

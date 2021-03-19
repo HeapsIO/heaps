@@ -109,9 +109,9 @@ class Renderer extends hxd.impl.AnyProps {
 			p.depth = z / w;
 		}
 		if( frontToBack )
-			passes.sort(function(p1, p2) return p1.pass.layer == p2.pass.layer ? (p1.depth > p2.depth ? 1 : -1) : p1.pass.layer - p2.pass.layer);
+			passes.sort(function(p1, p2) return p1.depth > p2.depth ? 1 : -1);
 		else
-			passes.sort(function(p1, p2) return p1.pass.layer == p2.pass.layer ? (p1.depth > p2.depth ? -1 : 1) : p1.pass.layer - p2.pass.layer);
+			passes.sort(function(p1, p2) return p1.depth > p2.depth ? -1 : 1);
 	}
 
 	inline function clear( ?color, ?depth, ?stencil ) {
