@@ -54,9 +54,11 @@ class GlslOut {
 	var isES2(get,never) : Bool;
 	var uniformBuffer : Int = 0;
 	var outIndex : Int = 0;
+	var inputIndex : Int = 0;
 	public var varNames : Map<Int,String>;
 	public var glES : Null<Float>;
 	public var version : Null<Int>;
+	public var isVulkan : Bool;
 
 	/*
 		Intel HD driver fix:
@@ -598,10 +600,14 @@ class GlslOut {
 	function initVar( v : TVar ){
 		switch( v.kind ) {
 		case Param, Global:
-			if( v.type.match(TBuffer(_)) )
-				add("layout(std140) ");
-			add("uniform ");
+			if( !isVulkan ) {
+				if( v.type.match(TBuffer(_)) )
+					add("layout(std140) ");
+				add("uniform ");
+			}
 		case Input:
+			if( isVulkan )
+				add('layout(location=${inputIndex++}) ');
 			add( isES2 ? "attribute " : "in ");
 		case Var:
 			add( isES2 ? "varying " : (isVertex ? "out " : "in "));
@@ -611,7 +617,7 @@ class GlslOut {
 				return;
 			}
 			if( isVertex ) return;
-			if( isES )
+			if( isES || isVulkan )
 				add('layout(location=${outIndex++}) ');
 			add("out ");
 		case Function:
@@ -635,10 +641,37 @@ class GlslOut {
 
 	function initVars( s : ShaderData ){
 		outIndex = 0;
+		inputIndex = 0;
 		uniformBuffer = 0;
 		outIndexes = new Map();
-		for( v in s.vars )
-			initVar(v);
+		if( isVulkan ) {
+			var params = [], globals = [];
+			for( v in s.vars )
+				switch( v.kind ) {
+				case Param: params.push(v);
+				case Global: globals.push(v);
+				default: initVar(v);
+				}
+			if( params.length > 0 ) {
+				add("layout(binding=0) uniform _Parameters_ {\n");
+				for( v in params ) {
+					add("\t");
+					initVar(v);
+				}
+				add("};\n");
+			}
+			if( globals.length > 0 ) {
+				add("layout(binding=1) uniform _Globals_ {\n");
+				for( v in globals ) {
+					add("\t");
+					initVar(v);
+				}
+				add("};\n");
+			}
+		} else {
+			for( v in s.vars )
+				initVar(v);
+		}
 		add("\n");
 
 		if( outIndex < 2 )
@@ -702,7 +735,7 @@ class GlslOut {
 		if( isES )
 			decl("#version " + (version < 100 ? 100 : version) + (version > 150 ? " es" : ""));
 		else if( version != null )
-			decl("#version " + (version > 150 ? 150 : version));
+			decl("#version " + (version > 150 && !isVulkan ? 150 : version));
 		else
 			decl("#version 130"); // OpenGL 3.0
 
