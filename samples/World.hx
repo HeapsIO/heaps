@@ -1,13 +1,29 @@
 import hxd.Key in K;
 
+class WorldMesh extends h3d.scene.World {
+
+	override function initChunkSoil(c:h3d.scene.World.WorldChunk) {
+		var cube = new h3d.prim.Cube(chunkSize, chunkSize, 0);
+		cube.addNormals();
+		cube.addUVs();
+		var soil = new h3d.scene.Mesh(cube, c.root);
+		soil.x = c.x;
+		soil.y = c.y;
+		soil.material.texture = h3d.mat.Texture.fromColor(0x408020);
+		soil.material.shadows = true;
+	}
+
+}
+
 class World extends hxd.App {
 
 	var world : h3d.scene.World;
 	var shadow :h3d.pass.DefaultShadowMap;
+	var tf : h2d.Text;
 
 	override function init() {
 
-		world = new h3d.scene.World(64, 128, s3d);
+		world = new WorldMesh(16, s3d);
 		var t = world.loadModel(hxd.Res.tree);
 		var r = world.loadModel(hxd.Res.rock);
 
@@ -30,9 +46,6 @@ class World extends hxd.App {
 		shadow.bias *= 0.1;
 		shadow.color.set(0.7, 0.7, 0.7);
 
-		#if castle
-		new hxd.inspect.Inspector(s3d);
-		#end
 
 		//
 		var parts = new h3d.parts.GpuParticles(world);
@@ -47,8 +60,13 @@ class World extends hxd.App {
 		s3d.camera.zNear = 1;
 		s3d.camera.zFar = 100;
 		new h3d.scene.CameraController(s3d).loadFromCamera();
+
+		tf = new h2d.Text(hxd.res.DefaultFont.get(), s2d);
 	}
 
+	override function update(dt:Float) {
+		tf.text = ""+engine.drawCalls;
+	}
 
 	static function main() {
 		hxd.Res.initEmbed();
