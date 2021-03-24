@@ -66,7 +66,7 @@ class Bounds implements Collider {
 	}
 
 	/**
-	 * Check if the camera model-view-projection Matrix intersects with the Bounds. Returns -1 if outside, 0 if interests and 1 if fully inside.
+	 * Check if the camera model-view-projection Matrix intersects with the Bounds. Returns -1 if outside, 0 if intersects and 1 if fully inside.
 	 * @param	mvp : the model-view-projection matrix to test against
 	 * @param	checkZ : tells if we will check against the near/far plane
 	 */
