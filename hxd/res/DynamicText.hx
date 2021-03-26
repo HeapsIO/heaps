@@ -234,6 +234,7 @@ class DynamicText {
 	}
 
 	static function parseText( str : String ) : Dynamic {
+		str = str.split("\r\n").join("\n");
 		if( str.split("::").length <= 1 )
 			return str;
 		return function(vars) {
