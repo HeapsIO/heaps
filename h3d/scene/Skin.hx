@@ -78,6 +78,7 @@ class Skin extends MultiMaterial {
 	var jointsGraphics : Graphics;
 
 	public var showJoints : Bool;
+	public var enableRetargeting : Bool = true;
 
 	public function new(s, ?mat, ?parent) {
 		super(null, mat, parent);
@@ -227,7 +228,7 @@ class Skin extends MultiMaterial {
 			var m = currentAbsPose[id];
 			var r = currentRelPose[id];
 			var bid = j.bindIndex;
-			if( r == null ) r = j.defMat else if( j.retargetAnim ) { tmpMat.load(r); r = tmpMat; r._41 = j.defMat._41; r._42 = j.defMat._42; r._43 = j.defMat._43; }
+			if( r == null ) r = j.defMat else if( j.retargetAnim && enableRetargeting ) { tmpMat.load(r); r = tmpMat; r._41 = j.defMat._41; r._42 = j.defMat._42; r._43 = j.defMat._43; }
 			if( j.parent == null )
 				m.multiply3x4inline(r, absPos);
 			else
