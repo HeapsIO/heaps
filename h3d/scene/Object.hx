@@ -210,7 +210,7 @@ class Object implements hxd.impl.Serializable {
 	inline function set_inheritCulled(b) return flags.set(FInheritCulled, b);
 	inline function set_ignoreCollide(b) return flags.set(FIgnoreCollide, b);
 	inline function set_allowSerialize(b) return !flags.set(FNoSerialize, !b);
-	inline function set_ignoreParentTransform(b) return flags.set(FIgnoreParentTransform, b);
+	inline function set_ignoreParentTransform(b) { if( b != ignoreParentTransform ) posChanged = true; return flags.set(FIgnoreParentTransform, b); }
 	inline function set_cullingColliderInherited(b) return flags.set(FCullingColliderInherited, b);
 
 	/**
@@ -284,6 +284,17 @@ class Object implements hxd.impl.Serializable {
 	}
 
 	/**
+		Tells if the object is contained into this object children, recursively.
+	**/
+	public function contains( o : Object ) {
+		while( o != null ) {
+			o = o.parent;
+			if( o == this ) return true;
+		}
+		return false;
+	}
+
+	/**
 		Find a single object in the tree by calling `f` on each and returning the first not-null value returned, or null if not found.
 	**/
 	public function find<T>( f : Object -> Null<T> ) : Null<T> {
@@ -313,28 +324,30 @@ class Object implements hxd.impl.Serializable {
 	/**
 		Return all materials in the tree.
 	**/
-	public function getMaterials( ?a : Array<h3d.mat.Material> ) {
+	public function getMaterials( ?a : Array<h3d.mat.Material>, recursive = true ) {
 		if( a == null ) a = [];
-		for( o in children )
-			o.getMaterials(a);
+		if( recursive ) {
+			for( o in children )
+				o.getMaterials(a);
+		}
 		return a;
 	}
 
 	/**
 		Convert a local position (or [0,0] if pt is null) relative to the object origin into an absolute global position, applying all the inherited transforms.
 	**/
-	public function localToGlobal( ?pt : h3d.Vector ) {
+	public function localToGlobal( ?pt : h3d.col.Point ) {
 		syncPos();
-		if( pt == null ) pt = new h3d.Vector();
-		pt.transform3x4(absPos);
+		if( pt == null ) pt = new h3d.col.Point();
+		pt.transform(absPos);
 		return pt;
 	}
 
 	/**
 		Convert an absolute global position into a local position relative to the object origin, applying all the inherited transforms.
 	**/
-	public function globalToLocal( pt : h3d.Vector ) {
-		pt.transform3x4(getInvPos());
+	public function globalToLocal( pt : h3d.col.Point ) {
+		pt.transform(getInvPos());
 		return pt;
 	}
 
@@ -550,6 +563,18 @@ class Object implements hxd.impl.Serializable {
 	public function getAbsPos() {
 		syncPos();
 		return absPos;
+	}
+
+	/**
+		Returns the position matrix relative to another scene object
+	**/
+	public function getRelPos( obj : Object ) {
+		if( obj == null )
+			return getAbsPos();
+		syncPos();
+		var m = new h3d.Matrix();
+		m.multiply(absPos, obj.getInvPos());
+		return m;
 	}
 
 	/**
@@ -817,6 +842,20 @@ class Object implements hxd.impl.Serializable {
 	}
 
 	/**
+		Returns the local position, scale and rotation of the object relative to its parent.
+	**/
+	public function getTransform( ?mat : h3d.Matrix ) : h3d.Matrix {
+		if( mat == null ) mat = new h3d.Matrix();
+		mat.initScale(scaleX, scaleY, scaleZ);
+		qRot.toMatrix(tmpMat);
+		mat.multiply3x4(mat, tmpMat);
+		mat.tx = x;
+		mat.ty = y;
+		mat.tz = z;
+		return mat;
+	}
+
+	/**
 		Rotate around the current rotation axis by the specified angles (in radian).
 	**/
 	public function rotate( rx : Float, ry : Float, rz : Float ) {
@@ -853,7 +892,7 @@ class Object implements hxd.impl.Serializable {
 	/**
 		Return the direction in which the object rotation is currently oriented to
 	**/
-	public function getDirection() {
+	public function getLocalDirection() {
 		return qRot.getDirection();
 	}
 

@@ -161,19 +161,21 @@ class Camera {
 		return p;
 	}
 
-	public function rayFromScreen( pixelX : Float, pixelY : Float ) {
+	public function rayFromScreen( pixelX : Float, pixelY : Float, sceneWidth = -1, sceneHeight = -1 ) {
 		var engine = h3d.Engine.getCurrent();
-		var rx = (pixelX / engine.width - 0.5) * 2;
-		var ry = (0.5 - pixelY / engine.height) * 2;
+		if( sceneWidth < 0 ) sceneWidth = engine.width;
+		if( sceneHeight < 0 ) sceneHeight = engine.height;
+		var rx = (pixelX / sceneWidth - 0.5) * 2;
+		var ry = (0.5 - pixelY / sceneHeight) * 2;
 		return h3d.col.Ray.fromPoints(unproject(rx, ry, 0).toPoint(), unproject(rx, ry, 1).toPoint());
 	}
 
 	public function update() {
 		if( follow != null ) {
-			pos.set(0, 0, 0);
-			target.set(0, 0, 0);
-			follow.pos.localToGlobal(pos);
-			follow.target.localToGlobal(target);
+			var fpos = follow.pos.localToGlobal();
+			var ftarget = follow.target.localToGlobal();
+			pos.set(fpos.x, fpos.y, fpos.z);
+			target.set(ftarget.x, ftarget.y, ftarget.z);
 			// Animate FOV
 			if( follow.pos.name != null ) {
 				var p = follow.pos;
@@ -201,9 +203,9 @@ class Camera {
 		frustum.loadMatrix(m);
 	}
 
-	public function getFrustumCorners(zMax=1.) : Array<h3d.Vector> {
+	public function getFrustumCorners(zMax=1., zMin=0.) : Array<h3d.Vector> {
 		return [
-			unproject(-1, 1, 0), unproject(1, 1, 0), unproject(1, -1, 0), unproject(-1, -1, 0),
+			unproject(-1, 1, zMin), unproject(1, 1, zMin), unproject(1, -1, zMin), unproject(-1, -1, zMin),
 			unproject(-1, 1, zMax), unproject(1, 1, zMax), unproject(1, -1, zMax), unproject(-1, -1, zMax)
 		];
 	}
@@ -211,7 +213,7 @@ class Camera {
 	public function lostUp() {
 		var p2 = pos.clone();
 		p2.normalize();
-		return Math.abs(p2.dot3(up)) > 0.999;
+		return Math.abs(p2.dot(up)) > 0.999;
 	}
 
 	public function getViewDirection( dx : Float, dy : Float, dz = 0. ) {
@@ -260,10 +262,10 @@ class Camera {
 		// this way we make sure that our [ax,ay,-az] matrix follow the same handness as our world
 		// We build a transposed version of Matrix.lookAt
 		var az = target.sub(pos);
-		if( rightHanded ) az.scale3(-1);
-		az.normalizeFast();
+		if( rightHanded ) az.scale(-1);
+		az.normalize();
 		var ax = up.cross(az);
-		ax.normalizeFast();
+		ax.normalize();
 		if( ax.length() == 0 ) {
 			ax.x = az.y;
 			ax.y = az.z;
@@ -282,10 +284,15 @@ class Camera {
 		m._32 = ay.z;
 		m._33 = az.z;
 		m._34 = 0;
-		m._41 = -ax.dot3(pos);
-		m._42 = -ay.dot3(pos);
-		m._43 = -az.dot3(pos);
+		m._41 = -ax.dot(pos);
+		m._42 = -ay.dot(pos);
+		m._43 = -az.dot(pos);
 		m._44 = 1;
+	}
+
+	public function setTransform( m : Matrix ) {
+		pos.set(m._41, m._42, m._43);
+		target.load(pos.add(m.getDirection()));
 	}
 
 	function makeFrustumMatrix( m : Matrix ) {
@@ -346,8 +353,10 @@ class Camera {
 	/**
 		Project a 3D point into the 2D screen. Make sure to update() the camera if it's been moved before using that.
 	**/
-	public function project( x : Float, y : Float, z : Float, screenWidth : Float, screenHeight : Float, snapToPixel = true ) {
-		var p = new h3d.Vector(x, y, z);
+	public function project( x : Float, y : Float, z : Float, screenWidth : Float, screenHeight : Float, snapToPixel = true, ?p: h3d.Vector) {
+		if(p == null)
+			p = new h3d.Vector();
+		p.set(x, y, z);
 		p.project(m);
 		p.x = (p.x + 1) * 0.5 * screenWidth;
 		p.y = (-p.y + 1) * 0.5 * screenHeight;

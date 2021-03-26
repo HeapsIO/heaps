@@ -41,12 +41,10 @@ class ThirdPersonCameraController extends CameraController {
 
 class Polygons extends hxd.App {
 
-	var world : h3d.scene.World;
 	var shadow : h3d.pass.DefaultShadowMap;
 	var cameraCtrl : h3d.scene.CameraController;
 
 	override function init() {
-		world = new h3d.scene.World(64, 128, s3d);
 
 		// Grid
 		var grid = new Grid(64, 64);
@@ -54,14 +52,12 @@ class Polygons extends hxd.App {
 		grid.addUVs();
 		var gridMesh = new Mesh(grid, s3d);
 		gridMesh.material.color.setColor(0x999999);
-		world.addChild(gridMesh);
 
 		// Cube
 		var cube = Cube.defaultUnitCube();
 		var cubeMesh = new Mesh(cube, s3d);
 		cubeMesh.setPosition(16, 32, 0.5);
 		cubeMesh.material.color.setColor(0xFFAA15);
-		world.addChild(cubeMesh);
 
 		// Cylinder
 		var cylinder = new Cylinder(16, 0.5);
@@ -70,7 +66,6 @@ class Polygons extends hxd.App {
 		var cylinderMesh = new Mesh(cylinder, s3d);
 		cylinderMesh.setPosition(24, 32, 0);
 		cylinderMesh.material.color.setColor(0x6FFFB0);
-		world.addChild(cylinderMesh);
 
 		// Disc on top of cylinder
 		var discTopCylinder = new Disc(0.5, 16);
@@ -79,7 +74,6 @@ class Polygons extends hxd.App {
 		var discTopCylinderMesh = new Mesh(discTopCylinder, s3d);
 		discTopCylinderMesh.setPosition(24, 32, 1);
 		discTopCylinderMesh.material.color.setColor(0x6FFFB0);
-		world.addChild(discTopCylinderMesh);
 
 		// Disc
 		var disc = new Disc(0.5, 16);
@@ -88,7 +82,6 @@ class Polygons extends hxd.App {
 		var discMesh = new Mesh(disc, s3d);
 		discMesh.setPosition(32, 32, 0.1);
 		discMesh.material.color.setColor(0x3D138D);
-		world.addChild(discMesh);
 
 		// Geosphere
 		var geosphere = new GeoSphere();
@@ -97,7 +90,6 @@ class Polygons extends hxd.App {
 		var geosphereMesh = new Mesh(geosphere, s3d);
 		geosphereMesh.setPosition(40, 32, 0.6);
 		geosphereMesh.material.color.setColor(0x00739D);
-		world.addChild(geosphereMesh);
 
 		// Sphere
 		var sphere = new Sphere(0.5, 16, 16);
@@ -106,9 +98,6 @@ class Polygons extends hxd.App {
 		var sphereMesh = new Mesh(sphere, s3d);
 		sphereMesh.setPosition(48, 32, 0.5);
 		sphereMesh.material.color.setColor(0xFF4040);
-		world.addChild(sphereMesh);
-
-		world.done();
 
 		// Lights
 		var light = new h3d.scene.fwd.DirLight(new h3d.Vector( 0.3, -0.4, -0.9), s3d);

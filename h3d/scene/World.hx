@@ -32,6 +32,7 @@ class WorldChunk {
 		root = new h3d.scene.Object();
 		buffers = new Map();
 		bounds = new h3d.col.Bounds();
+		root.inheritCulled = true;
 		root.name = "chunk[" + cx + "-" + cy + "]";
 	}
 
@@ -192,10 +193,8 @@ class WorldModel {
 }
 
 class World extends Object {
-	public var worldSize : Int;
-	public var chunkSize : Int;
-	public var originX : Float = 0.;
-	public var originY : Float = 0.;
+
+	public var chunkSize(default,null) : Int;
 
 	/*
 		For each texture loaded, will call resolveSpecularTexture and have separate spec texture.
@@ -211,28 +210,26 @@ class World extends Object {
 	*/
 	public var specularInAlpha = false;
 
-	var worldStride : Int;
 	var bigTextureSize = 2048;
 	var defaultDiffuseBG = 0;
 	var defaultNormalBG = 0x8080FF;
 	var defaultSpecularBG = 0;
 
-	var soilColor = 0x408020;
-	var chunks : Array<WorldChunk>;
+	var chunks : Map<Int,WorldChunk>;
 	var allChunks : Array<WorldChunk>;
+	var chunksBounds : { xMin : Int, yMin : Int, xMax : Int, yMax : Int };
 	var bigTextures : Array<{ diffuse : h3d.mat.BigTexture, spec : h3d.mat.BigTexture, normal : h3d.mat.BigTexture }>;
 	var textures : Map<String, WorldMaterial>;
 	var autoCollect : Bool;
 
-	public function new( chunkSize : Int, worldSize : Int, ?parent, ?autoCollect = true ) {
+	public function new( chunkSize : Int, parent, ?autoCollect = true ) {
 		super(parent);
 		chunks = [];
 		bigTextures = [];
 		allChunks = [];
+		chunksBounds = { xMin : 0x7FFFFFFF, yMin : 0x7FFFFFFF, xMax : 0x80000000, yMax : 0x80000000 };
 		textures = new Map();
 		this.chunkSize = chunkSize;
-		this.worldSize = worldSize;
-		this.worldStride = Math.ceil(worldSize / chunkSize);
 		this.autoCollect = autoCollect;
 		if( autoCollect )
 			h3d.Engine.getCurrent().mem.garbage = garbage;
@@ -505,57 +502,38 @@ class World extends Object {
 		return model;
 	}
 
+	inline function makeId( cx : Int, cy : Int ) {
+		return (cx & 0xFFFF) | ((cy & 0xFFFF) << 16);
+	}
+
 	function getChunk( x : Float, y : Float, create = false ) {
-		var ix = Std.int((x - originX) / chunkSize);
-		var iy = Std.int((y - originY) / chunkSize);
+		var ix = Math.floor(x / chunkSize);
+		var iy = Math.floor(y / chunkSize);
 		if( ix < 0 ) ix = 0;
 		if( iy < 0 ) iy = 0;
-		var cid = ix + iy * worldStride;
+		var cid = makeId(ix,iy);
 		var c = chunks[cid];
 		if( c == null && create ) {
 			c = new WorldChunk(ix, iy);
-			c.x = ix * chunkSize + originX;
-			c.y = iy * chunkSize + originY;
+			c.x = ix * chunkSize;
+			c.y = iy * chunkSize;
 			addChild(c.root);
 			chunks[cid] = c;
+			if( ix < chunksBounds.xMin ) chunksBounds.xMin = ix;
+			if( iy < chunksBounds.yMin ) chunksBounds.yMin = iy;
+			if( ix > chunksBounds.xMax ) chunksBounds.xMax = ix;
+			if( iy > chunksBounds.yMax ) chunksBounds.yMax = iy;
 			allChunks.push(c);
 		}
 		return c;
 	}
 
-	function initChunksBounds() {
-		var n = Std.int(worldSize / chunkSize);
-		for(x in 0...n)
-			for(y in 0...n) {
-				var c = getChunk(x * chunkSize + originX, y * chunkSize + originY);
-				if(c == null)
-					continue;
-				c.bounds.addPoint(new h3d.col.Point(c.x, c.y));
-				c.bounds.addPoint(new h3d.col.Point(c.x + chunkSize, c.y));
-				c.bounds.addPoint(new h3d.col.Point(c.x + chunkSize, c.y + chunkSize));
-				c.bounds.addPoint(new h3d.col.Point(c.x, c.y + chunkSize));
-			}
-	}
-
 	function initChunkSoil( c : WorldChunk ) {
-		var cube = new h3d.prim.Cube(chunkSize, chunkSize, 0);
-		cube.addNormals();
-		cube.addUVs();
-		var soil = new h3d.scene.Mesh(cube, c.root);
-		soil.x = c.x;
-		soil.y = c.y;
-		soil.material.texture = h3d.mat.Texture.fromColor(soilColor);
-		soil.material.shadows = true;
-	}
-
-	function precompute( e : WorldElement ) {
-
 	}
 
 	function initChunkElements( c : WorldChunk ) {
 		for( e in c.elements ) {
 			var model = e.model;
-			precompute(e);
 			for( g in model.geometries ) {
 				var b = c.buffers.get(g.m.bits);
 				if( b == null ) {
@@ -589,7 +567,7 @@ class World extends Object {
 		c.buffers = new Map();
 	}
 
-	function updateChunkBounds(c : WorldChunk, model : WorldModel, mat : h3d.Matrix ) {
+	function addChunkBounds(c : WorldChunk, model : WorldModel, mat : h3d.Matrix ) {
 		var b = model.bounds.clone();
 		b.transform(mat);
 		c.bounds.add(b);
@@ -664,21 +642,22 @@ class World extends Object {
 		m.rotate(0, 0, rotation);
 		m.translate(x, y, z);
 		c.elements.push(new WorldElement(model, m, true));
-		updateChunkBounds(c, model, m);
+		addChunkBounds(c, model, m);
 	}
 
 	public function addTransform( model : WorldModel, mat : h3d.Matrix ) {
 		var c = getChunk(mat.tx, mat.ty, true);
 		c.elements.push(new WorldElement(model, mat, false));
-		updateChunkBounds(c, model, mat);
+		addChunkBounds(c, model, mat);
 	}
 
 	override function syncRec(ctx:RenderContext) {
 		super.syncRec(ctx);
 		// don't do in sync() since animations in our world might affect our chunks
 		for( c in allChunks ) {
-			c.root.visible = ctx.computingStatic || c.bounds.inFrustum(ctx.camera.frustum);
-			if( c.root.visible ) {
+			var visible = ctx.computingStatic || c.bounds.inFrustum(ctx.camera.frustum);
+			c.root.culled = !visible;
+			if( visible ) {
 				c.lastFrame = ctx.frame;
 				initChunk(c);
 			}
@@ -696,9 +675,8 @@ class World extends Object {
 	public function getWorldBounds( ?b : h3d.col.Bounds ) {
 		if( b == null )
 			b = new h3d.col.Bounds();
-		for(c in chunks) {
+		for(c in allChunks)
 			b.add(c.bounds);
-		}
 		return b;
 	}
 

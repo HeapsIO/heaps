@@ -379,16 +379,26 @@ class SceneEvents {
 		}
 	}
 
-	public function startDrag( f : hxd.Event -> Void, ?onCancel : Void -> Void, ?refEvent : hxd.Event ) {
-		if( currentDrag != null && currentDrag.onCancel != null )
+	public function startCapture( f : hxd.Event -> Void, ?onCancel : Void -> Void, ?touchId : Int ) {
+		if ( currentDrag != null && currentDrag.onCancel != null )
 			currentDrag.onCancel();
-		currentDrag = { f : f, ref : refEvent == null ? null : refEvent.touchId, onCancel : onCancel };
+		currentDrag = { f: f, ref: touchId, onCancel: onCancel };
 	}
 
-	public function stopDrag() {
-		if( currentDrag != null && currentDrag.onCancel != null )
+	public function stopCapture() {
+		if ( currentDrag != null && currentDrag.onCancel != null )
 			currentDrag.onCancel();
 		currentDrag = null;
+	}
+
+	@:deprecated("Renamed to startCapture") @:dox(hide)
+	public inline function startDrag( f : hxd.Event -> Void, ?onCancel : Void -> Void, ?refEvent : hxd.Event ) {
+		startCapture(f, onCancel, refEvent != null ? refEvent.touchId : null);
+	}
+
+	@:deprecated("Renamed to stopCapture") @:dox(hide)
+	public inline function stopDrag() {
+		stopCapture();
 	}
 
 	public function getFocus() {

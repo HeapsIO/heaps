@@ -41,12 +41,17 @@ class Window {
 		When enabled, the browser zoom does not affect the canvas.
 		(default : true)
 	**/
-	public var useScreenPixels : Bool = true;
+	public var useScreenPixels : Bool = js.Browser.supported;
 
 	public function new( ?canvas : js.html.CanvasElement, ?globalEvents ) : Void {
 		var customCanvas = canvas != null;
 		eventTargets = new List();
 		resizeEvents = new List();
+		
+		if( !js.Browser.supported ) {
+			canvasPos = { "width":0, "top":0, "left":0, "height":0 };
+			return;
+		}
 
 		if( canvas == null ) {
 			canvas = cast js.Browser.document.getElementById("webgl");
@@ -355,6 +360,8 @@ class Window {
 	}
 
 	function set_displayMode( m : DisplayMode ) : DisplayMode {
+		if( !js.Browser.supported )
+			return m;
 		var doc = js.Browser.document;
 		var elt : Dynamic = doc.documentElement;
 		var fullscreen = m != Windowed;

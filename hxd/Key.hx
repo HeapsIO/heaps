@@ -133,7 +133,7 @@ class Key {
 	public static inline var MOUSE_BACK = 3;
 	public static inline var MOUSE_FORWARD = 4;
 	/**
-	 * Mouse wheel does not have an off signal, and should be checked only trough `isPressed` method.
+	 * Mouse wheel does not have an off signal, and should be checked only through `isPressed` method.
 	 * Note that there may be multiple wheel scrolls between 2 frames, and to receive more accurate
 	 * results, it is recommended to directly listen to wheel events which also provide OS-generated wheel delta value.
 	 * See `Interactive.onWheel` for per-interactive events. For scene-based see `Scene.addEventListener`
@@ -141,7 +141,7 @@ class Key {
 	 */
 	public static inline var MOUSE_WHEEL_UP = 5;
 	/**
-	 * Mouse wheel does not have an off signal, and should be checked only trough `isPressed` method.
+	 * Mouse wheel does not have an off signal, and should be checked only through `isPressed` method.
 	 * Note that there may be multiple wheel scrolls between 2 frames, and to receive more accurate
 	 * results, it is recommended to directly listen to wheel events which also provide OS-generated wheel delta value.
 	 * See `Interactive.onWheel` for per-interactive events. For scene-based see `Scene.addEventListener`
@@ -161,10 +161,6 @@ class Key {
 	public static inline var LALT = ALT | LOC_LEFT;
 	public static inline var RALT = ALT | LOC_RIGHT;
 
-	#if noEngine
-	public static var frameCount = 0;
-	#end
-
 	static var initDone = false;
 	static var keyPressed : Array<Int> = [];
 
@@ -181,7 +177,7 @@ class Key {
 	}
 
 	public static inline function getFrame() {
-		return hxd.Timer.frameCount + 1;
+		return hxd.Timer.frameCount + 2;
 	}
 
 	public static function isPressed( code : Int ) {

@@ -48,6 +48,9 @@ class Window {
 	static var CODEMAP = [for( i in 0...2048 ) i];
 	#if hlsdl
 	static inline var TOUCH_SCALE = #if (hl_ver >= version("1.12.0")) 10000 #else 100 #end;
+	#if heaps_vulkan
+	public static var USE_VULKAN = false;
+	#end
 	#end
 
 	function new(title:String, width:Int, height:Int, fixed:Bool = false) {
@@ -56,7 +59,10 @@ class Window {
 		eventTargets = new List();
 		resizeEvents = new List();
 		#if hlsdl
-		final sdlFlags = if (!fixed) sdl.Window.SDL_WINDOW_SHOWN | sdl.Window.SDL_WINDOW_RESIZABLE else sdl.Window.SDL_WINDOW_SHOWN;
+		var sdlFlags = if (!fixed) sdl.Window.SDL_WINDOW_SHOWN | sdl.Window.SDL_WINDOW_RESIZABLE else sdl.Window.SDL_WINDOW_SHOWN;
+		#if heaps_vulkan
+		if( USE_VULKAN ) sdlFlags |= sdl.Window.SDL_WINDOW_VULKAN;
+		#end
 		window = new sdl.Window(title, width, height, sdl.Window.SDL_WINDOWPOS_CENTERED, sdl.Window.SDL_WINDOWPOS_CENTERED, sdlFlags);
 		#elseif hldx
 		final dxFlags = if (!fixed) dx.Window.RESIZABLE else 0;

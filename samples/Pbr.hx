@@ -122,8 +122,8 @@ class Pbr extends SampleApp {
 		addSlider("Saturation", function() return saturation, function(v) saturation = v);
 		addSlider("Brightness", function() return brightness, function(v) brightness = v, -1, 1);
 
-		addSlider("Metalness", function() return pbrValues.metalness, function(v) pbrValues.metalness = v);
-		addSlider("Roughness", function() return pbrValues.roughness, function(v) pbrValues.roughness = v);
+		addSlider("Metalness", function() return pbrValues.metalnessValue, function(v) pbrValues.metalnessValue = v);
+		addSlider("Roughness", function() return pbrValues.roughnessValue, function(v) pbrValues.roughnessValue = v);
 
 		// debug
 		addCheck("Axis", function() return axis.visible, function(b) axis.visible = b);

@@ -35,6 +35,9 @@ class System {
 	static var currentNativeCursor:hxd.Cursor;
 	static var currentCustomCursor:hxd.Cursor.CustomCursor;
 
+	/** If greater than 0, this will reduce loop framerate to reduce CPU usage **/
+	public static var fpsLimit = -1;
+
 	public static function getCurrentLoop() : Void -> Void {
 		return loopFunc;
 	}
@@ -48,11 +51,22 @@ class System {
 	}
 
 	static function browserLoop() {
-		var window : Dynamic = js.Browser.window;
-		var rqf : Dynamic = window.requestAnimationFrame ||
-			window.webkitRequestAnimationFrame ||
-			window.mozRequestAnimationFrame;
-		rqf(browserLoop);
+		if( js.Browser.supported ) {
+			var window : Dynamic = js.Browser.window;
+			var rqf : Dynamic = window.requestAnimationFrame ||
+				window.webkitRequestAnimationFrame ||
+				window.mozRequestAnimationFrame;
+			if( fpsLimit>0 )
+				js.Browser.window.setTimeout( ()->rqf(browserLoop), 1000/fpsLimit );
+			else
+				rqf(browserLoop);
+		} else {
+			#if (nodejs && hxnodejs)
+			js.node.Timers.setTimeout(browserLoop, 0);
+			#else
+			throw "Cannot use browserLoop without Browser support nor defining nodejs + hxnodejs";
+			#end
+		}
 		if( loopFunc != null ) loopFunc();
 	}
 

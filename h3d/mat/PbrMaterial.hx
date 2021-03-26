@@ -2,6 +2,7 @@ package h3d.mat;
 
 @:enum abstract PbrMode(String) {
 	var PBR = "PBR";
+	var Forward = "Forward";
 	var Overlay = "Overlay";
 	var Decal = "Decal";
 	var BeforeTonemapping = "BeforeTonemapping";
@@ -61,6 +62,7 @@ typedef PbrProps = {
 	@:optional var alphaKill : Bool;
 	@:optional var emissive : Float;
 	@:optional var parallax : Float;
+	@:optional var textureWrap : Bool;
 
 	var enableStencil : Bool;
 	@:optional var stencilCompare : PbrStencilCompare;
@@ -70,8 +72,6 @@ typedef PbrProps = {
 	@:optional var stencilValue : Int;
 	@:optional var stencilWriteMask : Int;
 	@:optional var stencilReadMask : Int;
-
-	@:optional var drawOrder : Int;
 }
 
 class PbrMaterial extends Material {
@@ -157,10 +157,7 @@ class PbrMaterial extends Material {
 		var props : PbrProps = getDefaultProps();
 		props.blend = switch( blendMode ) {
 			case None: None;
-			case Alpha:
-				// in PBR, Alpha blending is not correct - use alphaKill by default
-				props.alphaKill = true;
-				None;
+			case Alpha: Alpha;
 			case Add: Add;
 			case Multiply: Multiply;
 			case AlphaMultiply: AlphaMultiply;
@@ -181,13 +178,14 @@ class PbrMaterial extends Material {
 
 	function resetProps() {
 		var props : PbrProps = props;
+		mainPass.enableLights = true;
 		// Remove superfluous shader
 		mainPass.removeShader(mainPass.getShader(h3d.shader.VolumeDecal));
 		mainPass.removeShader(mainPass.getShader(h3d.shader.pbr.StrengthValues));
 		mainPass.removeShader(mainPass.getShader(h3d.shader.pbr.AlphaMultiply));
 		mainPass.removeShader(mainPass.getShader(h3d.shader.Parallax));
-		mainPass.removeShader(mainPass.getShader(h3d.shader.Emissive));
 		mainPass.removeShader(mainPass.getShader(h3d.shader.pbr.GammaCorrect));
+		#if editor
 		// Backward compatibility
 		if( props.depthTest == null ) props.depthTest = Less;
 		if( (props:Dynamic).colorMask == null ) props.colorMask = 15;
@@ -195,6 +193,8 @@ class PbrMaterial extends Material {
 		// Remove unused fields
 		if( props.emissive == 0 )
 			Reflect.deleteField(props,"emissive");
+		if( !props.textureWrap )
+			Reflect.deleteField(props,"textureWrap");
 		if( !props.enableStencil ) {
 			Reflect.deleteField(props, "stencilWriteMask");
 			Reflect.deleteField(props, "stencilReadMask");
@@ -204,6 +204,7 @@ class PbrMaterial extends Material {
 			Reflect.deleteField(props, "stencilPassOp");
 			Reflect.deleteField(props, "stencilCompare");
 		}
+		#end
 	}
 
 	override function refreshProps() {
@@ -214,19 +215,14 @@ class PbrMaterial extends Material {
 		switch( props.mode ) {
 		case PBR:
 			// pass name set below (in set_blendMode)
+		case Forward:
+			mainPass.setPassName("forward");
 		case BeforeTonemapping:
 			mainPass.setPassName("beforeTonemapping");
-			if( props.emissive > 0 ) {
-				var e = mainPass.getShader(h3d.shader.Emissive);
-				if( e == null ) {
-					e = new h3d.shader.Emissive(props.emissive);
-					e.setPriority(-1);
-					mainPass.addShader(e);
-				}
-			}
 			var gc = mainPass.getShader(h3d.shader.pbr.GammaCorrect);
 			if( gc == null ) {
 				gc = new h3d.shader.pbr.GammaCorrect();
+				gc.useEmissiveHDR = true;
 				gc.setPriority(-1);
 				mainPass.addShader(gc);
 			}
@@ -269,6 +265,15 @@ class PbrMaterial extends Material {
 			tshader.killAlphaThreshold = 0.5;
 		}
 
+		if( props.textureWrap ) {
+			var t = texture;
+			if( t != null ) t.wrap = Repeat;
+			t = specularTexture;
+			if( t != null ) t.wrap = Repeat;
+			t = normalMap;
+			if( t != null ) t.wrap = Repeat;
+		}
+
 		mainPass.culling = props.culling ? Back : None;
 
 		shadows = props.shadows;
@@ -294,8 +299,10 @@ class PbrMaterial extends Material {
 			def = new h3d.shader.pbr.PropsValues();
 			mainPass.addShader(def);
 		}
-		if( tex != null ) tex.emissive = emit;
-		if( def != null ) def.emissive = emit;
+
+		// we should have either one or other
+		if( tex != null ) tex.emissiveValue = emit;
+		if( def != null ) def.emissiveValue = emit;
 
 		// Parallax
 		var ps = mainPass.getShader(h3d.shader.Parallax);
@@ -313,8 +320,6 @@ class PbrMaterial extends Material {
 		setColorMask();
 
 		setStencil();
-
-		mainPass.layer = props.drawOrder == null ? 0 : props.drawOrder;
 	}
 
 	function setColorMask() {
@@ -388,7 +393,7 @@ class PbrMaterial extends Material {
 		if( t != null ) {
 			if( spec == null ) {
 				spec = new h3d.shader.pbr.PropsTexture();
-				spec.emissive = emit;
+				spec.emissiveValue = emit;
 				mainPass.addShader(spec);
 			}
 			spec.texture = t;
@@ -399,7 +404,7 @@ class PbrMaterial extends Material {
 			// default values (if no texture)
 			if( def == null ) {
 				def = new h3d.shader.pbr.PropsValues();
-				def.emissive = emit;
+				def.emissiveValue = emit;
 				mainPass.addShader(def);
 			}
 		}
@@ -432,6 +437,7 @@ class PbrMaterial extends Material {
 				<dd>
 					<select field="mode">
 						<option value="PBR">PBR</option>
+						<option value="Forward">Forward PBR</option>
 						<option value="BeforeTonemapping">Before Tonemapping</option>
 						<option value="AfterTonemapping">After Tonemapping</option>
 						<option value="Overlay">Overlay</option>
@@ -468,7 +474,7 @@ class PbrMaterial extends Material {
 				<dt>Shadows</dt><dd><input type="checkbox" field="shadows"/></dd>
 				<dt>Culled</dt><dd><input type="checkbox" field="culling"/></dd>
 				<dt>AlphaKill</dt><dd><input type="checkbox" field="alphaKill"/></dd>
-				<dt>Draw Order</dt><dd><input type="range" min="0" max="10" step="1" field="drawOrder"/></dd>
+				<dt>Wrap</dt><dd><input type="checkbox" field="textureWrap"/></dd>
 			</dl>
 		');
 	}

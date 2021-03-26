@@ -33,8 +33,8 @@ class Convert {
 		return f != null && f != false;
 	}
 
-	function getParam( name : String ) {
-		var f = Reflect.field(params, name);
+	function getParam( name : String ) : Dynamic {
+		var f : Dynamic = Reflect.field(params, name);
 		if( f == null ) throw "Missing required parameter '"+name+"' for converting "+srcPath+" to "+dstPath;
 		return f;
 	}
@@ -220,8 +220,50 @@ class ConvertFNT2BFNT extends Convert {
 
 class CompressIMG extends Convert {
 
+	static var TEXCONV_FMT = [
+		"R16F" => "R16_FLOAT",
+		"R32F" => "R32_FLOAT",
+		"RG16F" => "R16G16_FLOAT",
+		"RG32F" => "R32G32_FLOAT",
+		"RGB16F" => "R16G16B16_FLOAT",
+		"RGB32F" => "R32G32B32_FLOAT",
+		"RGBA16F" => "R16G16B16A16_FLOAT",
+		"RGBA32F" => "R32G32B32A32_FLOAT",
+	];
+
 	override function convert() {
-		command("CompressonatorCLI", ["-silent","-fd",getParam("format"),srcPath,dstPath]);
+		var format = getParam("format");
+		var mips = hasParam("mips") && getParam("mips") == true;
+		var tcFmt = TEXCONV_FMT.get(format);
+		if( tcFmt != null ) {
+			// texconv can only handle output dir, and it prepended to srcPath :'(
+			var tmpPath = new haxe.io.Path(dstPath);
+			tmpPath.ext = "tmp."+new haxe.io.Path(srcPath).ext;
+			var tmpFile = tmpPath.toString();
+			#if (sys || nodejs)
+			try sys.FileSystem.deleteFile(tmpFile) catch( e : Dynamic ) {};
+			try sys.FileSystem.deleteFile(dstPath) catch( e : Dynamic ) {};
+			sys.io.File.copy(srcPath, tmpFile);
+			var args = ["-f", tcFmt, "-y", "-nologo", tmpFile];
+			if( !mips ) args = ["-m", "1"].concat(args);
+			command("texconv", args);
+			sys.FileSystem.deleteFile(tmpFile);
+			tmpPath.ext = "tmp.DDS";
+			sys.FileSystem.rename(tmpPath.toString(), dstPath);
+			#else
+			throw "Require sys";
+			#end
+			return;
+		}
+		var args = ["-silent"];
+		if( mips ) {
+			args.push("-miplevels");
+			args.push("20"); // max ?
+		}
+		if( hasParam("alpha") && format == "BC1" )
+			args = args.concat(["-DXT1UseAlpha","1","-AlphaThreshold",""+getParam("alpha")]);
+		args = args.concat(["-fd",""+getParam("format"),srcPath,dstPath]);
+		command("CompressonatorCLI", args);
 	}
 
 	static var _ = Convert.register(new CompressIMG("png,tga,jpg,jpeg","dds"));

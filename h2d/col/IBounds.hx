@@ -1,36 +1,71 @@
 package h2d.col;
 import hxd.Math;
 
+/**
+	An integer-based bounding box.
+	@see `h2d.col.Bounds`
+**/
 class IBounds {
 
+	/** X-axis left-most bounding box point. **/
 	public var xMin : Int;
+	/** Y-axis top-most bounding box point. **/
 	public var yMin : Int;
 
+	/** X-axis right-most bounds box point. **/
 	public var xMax : Int;
+	/** Y-axis bottom-most bounding box point. **/
 	public var yMax : Int;
 
 
+	/**
+		X-axis position of the bounding-box top-left corner. Modifying it alters both `xMin` and `xMax`.
+	**/
 	public var x(get, set) : Int;
+	/**
+		Y-axis position of the bounding-box top-left corner. Modifying it alters both `xMin` and `xMax`.
+	**/
 	public var y(get, set) : Int;
+	/**
+		Width of the bounding box. Equivalent of `xMax - xMin`.
+	**/
 	public var width(get, set) : Int;
+	/**
+		Height of the bounding box. Equivalent of `yMax - yMin`.
+	**/
 	public var height(get, set) : Int;
 
+	/**
+		Create new empty IBounds instance.
+	**/
 	public inline function new() {
 		empty();
 	}
 
-	public inline function toBounds( scale = 1. ) {
+	/**
+		Converts `IBounds` to regular `Bounds` scaled by provided scalar `scale`.
+	**/
+	public inline function toBounds( scale = 1. ) : Bounds {
 		return Bounds.fromValues(x * scale, y * scale, width * scale, height * scale);
 	}
 
-	public inline function intersects( b : IBounds ) {
+	/**
+		Tests if this IBounds instances intersects given `b` IBounds.
+	**/
+	public inline function intersects( b : IBounds ) : Bool {
 		return !(xMin > b.xMax || yMin > b.yMax || xMax < b.xMin || yMax < b.yMin);
 	}
 
-	public inline function contains( p : IPoint ) {
+	/**
+		Tests if IPoint `p` is inside the IBounds.
+	**/
+	public inline function contains( p : IPoint ) : Bool {
 		return p.x >= xMin && p.x < xMax && p.y >= yMin && p.y < yMax;
 	}
 
+	/**
+		Adds IBounds `b` to the IBounds, expanding min/max when necessary.
+	**/
 	public inline function addBounds( b : IBounds ) {
 		if( b.xMin < xMin ) xMin = b.xMin;
 		if( b.xMax > xMax ) xMax = b.xMax;
@@ -38,6 +73,9 @@ class IBounds {
 		if( b.yMax > yMax ) yMax = b.yMax;
 	}
 
+	/**
+		Adds IPoint `p` to the IBounds, expanding min/max when necessary.
+	**/
 	public inline function addPoint( p : IPoint ) {
 		if( p.x < xMin ) xMin = p.x;
 		if( p.x > xMax ) xMax = p.x;
@@ -45,6 +83,9 @@ class IBounds {
 		if( p.y > yMax ) yMax = p.y;
 	}
 
+	/**
+		Adds position `x` and `y` to the IBounds, expanding min/max when necessary.
+	**/
 	public inline function addPos( x : Int, y : Int ) {
 		if( x < xMin ) xMin = x;
 		if( x > xMax ) xMax = x;
@@ -52,23 +93,40 @@ class IBounds {
 		if( y > yMax ) yMax = y;
 	}
 
-	public inline function set(x, y, width, height) {
+	/**
+		Sets bounds from given rectangle.
+		@param x Rectangle horizontal position.
+		@param y Rectangle vertical position.
+		@param width Rectangle width.
+		@param height Rectangle height.
+	**/
+	public inline function set(x : Int, y : Int, width : Int, height : Int) {
 		this.xMin = x;
 		this.yMin = y;
 		this.xMax = x + width;
 		this.yMax = y + height;
 	}
 
+	/**
+		Sets `xMin` and `yMin` to values in given IPoint `p`.
+	**/
 	public inline function setMin( p : IPoint ) {
 		xMin = p.x;
 		yMin = p.y;
 	}
 
+	/**
+		Sets `xMax` and `yMax` to values in given IPoint `p`.
+	**/
 	public inline function setMax( p : IPoint ) {
 		xMax = p.x;
 		yMax = p.y;
 	}
 
+	/**
+		Sets this IBounds min/max values to a result of intersection between this IBounds and given IBounds `b`.
+		See `intersection` to get new instance of IBounds as intersection result.
+	**/
 	public inline function doIntersect( b : IBounds ) {
 		xMin = Math.imax(xMin, b.xMin);
 		yMin = Math.imax(yMin, b.yMin);
@@ -76,6 +134,9 @@ class IBounds {
 		yMax = Math.imin(yMax, b.yMax);
 	}
 
+	/**
+		Sets this IBounds min/max values to a result of combining this IBounds and given IBounds `b`. Equivalent of `addBounds`.
+	**/
 	public inline function doUnion( b : IBounds ) {
 		xMin = Math.imin(xMin, b.xMin);
 		yMin = Math.imin(yMin, b.yMin);
@@ -83,6 +144,9 @@ class IBounds {
 		yMax = Math.imax(yMax, b.yMax);
 	}
 
+	/**
+		Returns new Bounds instance containing intersection results of this IBounds and given IBounds `b`.
+	**/
 	public function intersection( b : IBounds ) : IBounds {
 		var i = new IBounds();
 		i.xMin = Math.imax(xMin, b.xMin);
@@ -94,6 +158,9 @@ class IBounds {
 		return i;
 	}
 
+	/**
+		Returns new Bounds instance containing union of this IBounds and given IBounds `b`.
+	**/
 	public function union( b : IBounds ) : IBounds {
 		var i = new IBounds();
 		i.xMin = Math.imin(xMin, b.xMin);
@@ -103,6 +170,9 @@ class IBounds {
 		return i;
 	}
 
+	/**
+		Copies min/max values from given IBounds `b` to this IBounds.
+	**/
 	public function load( b : IBounds ) {
 		xMin = b.xMin;
 		yMin = b.yMin;
@@ -110,6 +180,9 @@ class IBounds {
 		yMax = b.yMax;
 	}
 
+	/**
+		Moves entire bounding box by `dx,dy`.
+	**/
 	public inline function offset( dx : Int, dy : Int ) {
 		xMin += dx;
 		xMax += dx;
@@ -117,26 +190,45 @@ class IBounds {
 		yMax += dy;
 	}
 
-	public inline function getMin() {
+	/**
+		Returns a new IPoint containing `xMin` and `yMin`.
+	**/
+	public inline function getMin() : IPoint {
 		return new IPoint(xMin, yMin);
 	}
 
-	public inline function getCenter() {
+	/**
+		Returns a new IPoint containing center coordinate of the IBounds.
+	**/
+	public inline function getCenter() : IPoint {
 		return new IPoint((xMin + xMax) >> 1, (yMin + yMax) >> 1);
 	}
 
-	public inline function getSize() {
+	/**
+		Returns a new IPoint containing size of the IBounds.
+	**/
+	public inline function getSize() : IPoint {
 		return new IPoint(xMax - xMin, yMax - yMin);
 	}
 
-	public inline function getMax() {
+	/**
+		Returns a new IPoint containing `xMax` and `yMax`.
+	**/
+	public inline function getMax() : IPoint {
 		return new IPoint(xMax, yMax);
 	}
 
-	public inline function isEmpty() {
+	/**
+		Tests if bounding box is empty.
+		IBounds are considered empty when either `xMax` is less than or equals to `xMin` or `yMax` is less than or equals to `yMin`.
+	**/
+	public inline function isEmpty() : Bool {
 		return xMax <= xMin || yMax <= yMin;
 	}
 
+	/**
+		Clears IBounds into an empty state.
+	**/
 	public inline function empty() {
 		xMin = 0x7FFFFFFF;
 		yMin = 0x7FFFFFFF;
@@ -144,6 +236,9 @@ class IBounds {
 		yMax = -2147483648;
 	}
 
+	/**
+		Sets bounds to cover maximum area (`-2147483648...0x7FFFFFFF`).
+	**/
 	public inline function all() {
 		xMin = -2147483648;
 		yMin = -2147483648;
@@ -151,6 +246,9 @@ class IBounds {
 		yMax = 0x7FFFFFFF;
 	}
 
+	/**
+		Returns new copy of this IBounds instance.
+	**/
 	public inline function clone() {
 		var b = new IBounds();
 		b.xMin = xMin;
@@ -196,11 +294,19 @@ class IBounds {
 		return h;
 	}
 
+	@:dox(hide)
 	public function toString() {
 		return "{" + getMin() + "," + getSize() + "}";
 	}
 
-	public static inline function fromValues( x0 : Int, y0 : Int, width : Int, height : Int ) {
+	/**
+		Returns a new IBounds instance from given rectangle.
+		@param x Rectangle horizontal position.
+		@param y Rectangle vertical position.
+		@param width Rectangle width.
+		@param height Rectangle height.
+	**/
+	public static inline function fromValues( x0 : Int, y0 : Int, width : Int, height : Int ) : IBounds {
 		var b = new IBounds();
 		b.xMin = x0;
 		b.yMin = y0;
@@ -209,7 +315,10 @@ class IBounds {
 		return b;
 	}
 
-	public static inline function fromPoints( min : IPoint, max : IPoint ) {
+	/**
+		Returns a new IBounds instance from given min/max IPoints.
+	**/
+	public static inline function fromPoints( min : IPoint, max : IPoint ) : IBounds {
 		var b = new IBounds();
 		b.setMin(min);
 		b.setMax(max);

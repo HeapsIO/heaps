@@ -69,7 +69,7 @@ class Shadows extends Default {
 		return lightCamera.m;
 	}
 
-	public function getShadowTex() {
+	public function getShadowTex() : h3d.mat.Texture {
 		return null;
 	}
 

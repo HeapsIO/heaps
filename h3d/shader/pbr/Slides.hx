@@ -25,6 +25,8 @@ class Slides extends ScreenShader {
 		var emissive : Float;
 
 		@param var shadowMap : Channel;
+		@param var shadowMapCube : SamplerCube;
+		@const var shadowIsCube : Bool;
 		@const var smode : Int;
 
 		function getColor(x:Float,y:Float) : Vec3 {
@@ -45,8 +47,16 @@ class Slides extends ScreenShader {
 					color = depth.xxx;
 				else if( x < 3 )
 					color = occlusion.xxx;
-				else
-					color = shadowMap.get(vec2(x,y) - 3).xxx;
+				else {
+					var uv = vec2(x,y) - 3;
+					if( shadowIsCube ) {
+						var phi = (1 - uv.x)*3.1415*2;
+						var theta = (-uv.y+0.5)*3.1415;
+						var dir = vec3(cos(phi)*cos(theta),sin(phi)*cos(theta),sin(theta));
+						color = shadowMapCube.get(dir).xxx;
+					} else
+						color = shadowMap.get(uv).xxx;
+				}
 			}
 			return color;
 		}
@@ -66,6 +76,6 @@ class Slides extends ScreenShader {
 	public var mode(get,set) : DebugMode;
 
 	function get_mode() : DebugMode { return cast smode; }
-	function set_mode(m) { smode = cast m; return m; }
+	function set_mode(m:DebugMode) { smode = cast m; return m; }
 
 }

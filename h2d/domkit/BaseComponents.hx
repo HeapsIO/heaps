@@ -202,18 +202,20 @@ class CustomParser extends CssValue.ValueParser {
 	public function parseFlowBackground(value) {
 		return switch( value ) {
 		case VIdent("transparent"): null;
-		case VGroup([tile,VInt(x),VInt(y)]):
-			{ tile : parseTile(tile), borderW : x, borderH : y };
+		case VGroup([tile,VInt(w),VInt(h)]):
+			{ tile : parseTile(tile), borderL : w, borderT : h, borderR : w, borderB : h };
+		case VGroup([tile,VInt(l),VInt(t),VInt(r),VInt(b)]):
+			{ tile : parseTile(tile), borderL : l, borderT : t, borderR : r, borderB : b };
 		case VGroup([color,alpha]):
 			var c = parseColor(color);
 			var a = parseFloat(alpha);
-			return { tile : #if macro true #else h2d.Tile.fromColor(c,a) #end, borderW : 0, borderH : 0 };
+			return { tile : #if macro true #else h2d.Tile.fromColor(c,a) #end, borderL : 0, borderT : 0, borderR : 0, borderB : 0 };
 		case VCall("disc",args) if( args.length == 1 || args.length == 2 ):
 			var c = parseColor(args[0]);
 			var a = args[1] == null ? 1. : parseFloat(args[1]);
-			return { tile : #if macro true #else h2d.Tile.fromTexture(h3d.mat.Texture.genDisc(256,c,a)) #end, borderW : 0, borderH : 0 };
+			return { tile : #if macro true #else h2d.Tile.fromTexture(h3d.mat.Texture.genDisc(256,c,a)) #end, borderL : 0, borderT : 0, borderR : 0, borderB : 0 };
 		default:
-			{ tile : parseTile(value), borderW : 0, borderH : 0 };
+			{ tile : parseTile(value), borderL : 0, borderT : 0, borderR : 0, borderB : 0 };
 		}
 	}
 
@@ -256,7 +258,9 @@ class CustomParser extends CssValue.ValueParser {
 			#if macro
 				true;
 			#else
-				new h2d.filter.Outline(s, c);
+				var f = new h2d.filter.Outline(s, c);
+				f.alpha = (c >>> 24) / 255;
+				f;
 			#end
 		case VCall("brightness",[v]):
 			var v = parseFloatPercent(v);
@@ -279,6 +283,20 @@ class CustomParser extends CssValue.ValueParser {
 			#else
 				new h2d.filter.Glow(c, a, r, g, q, b);
 			#end
+		case VCall("blur",[r]):
+			var r = parseFloat(r);
+			#if macro
+				true;
+			#else
+				new h2d.filter.Blur(r);
+			#end
+		case VGroup(vl):
+			var fl = [for( v in vl ) parseFilter(v)];
+			#if macro
+				true;
+			#else
+				new h2d.filter.Group(fl);
+			#end
 		default: invalidProp();
 		}
 	}
@@ -287,27 +305,30 @@ class CustomParser extends CssValue.ValueParser {
 		if( value.match(VIdent("none")) )
 			return null;
 		var adj : h3d.Matrix.ColorAdjust = {};
-		switch( value ) {
-		case VGroup(vl):
-			var i = 0;
-			while( i < vl.length ) {
-				if( vl.length - i < 2 ) invalidProp();
-				switch( vl[i++] ) {
-				case VIdent("hue"):
-					adj.hue = parseFloat(vl[i++]) * Math.PI / 180;
-				case VIdent("contrast"):
-					adj.contrast = parseFloat(vl[i++]);
-				case VIdent("gain"):
-					if( vl.length - i < 2 ) invalidProp();
-					adj.gain = { color : parseColor(vl[i++]), alpha : parseFloat(vl[i++]) };
-				case VIdent("lightness"):
-					adj.lightness = parseFloat(vl[i++]);
-				case VIdent("saturation"):
-					adj.saturation = parseFloat(vl[i++]);
+
+		inline function parseVal(vcall: CssValue) {
+			switch(vcall) {
+				case VCall("hue-rotate", [v]):
+					adj.hue = parseFloat(v) * Math.PI / 180;
+				case VCall("contrast", [v]):
+					adj.contrast = parseFloat(v);
+				case VCall("gain", [c, a]):
+					adj.gain = { color : parseColor(c), alpha : parseFloat(a) };
+				case VCall("brightness",[v]):
+					adj.lightness = parseFloat(v);
+				case VCall("saturate",[v]):
+					adj.saturation = parseFloat(v);
 				default:
 					invalidProp();
-				}
 			}
+		}
+
+		switch( value ) {
+		case VGroup(vcalls):
+			for(vcall in vcalls)
+				parseVal(vcall);
+		case VCall(_):
+			parseVal(value);
 		default:
 			invalidProp();
 		}
@@ -317,7 +338,7 @@ class CustomParser extends CssValue.ValueParser {
 }
 
 #if !macro
-@:uiComp("object") @:parser(h2d.domkit.BaseComponents.CustomParser) @:domkitDecl
+@:uiComp("object") @:domkitDecl
 class ObjectComp implements h2d.domkit.Object implements domkit.Component.ComponentDecl<h2d.Object> {
 
 	@:p var x : Float;
@@ -526,35 +547,41 @@ class BitmapComp extends DrawableComp implements domkit.Component.ComponentDecl<
 	}
 
 	static function set_srcPos( o : h2d.Bitmap, pos ) {
-		setTilePos(o.tile,pos);
+		o.tile = setTilePos(o.tile, pos);
 	}
 
 	static function set_srcPosX( o : h2d.Bitmap, x : Int ) {
-		setTilePosX(o.tile, x);
+		o.tile = setTilePosX(o.tile, x);
 	}
 
 	static function set_srcPosY( o : h2d.Bitmap, y: Int ) {
-		setTilePosY(o.tile, y);
+		o.tile = setTilePosY(o.tile, y);
 	}
 
 	static function setTilePos( t : h2d.Tile, pos : Null<{ p : Int, ?y : Int }> ) {
-		if( t == null ) return;
+		if( t == null ) return null;
 		if( pos == null ) pos = {p:0};
 		var tex = t.getTexture();
+		t = t.clone();
 		if( pos.y == null && t.iwidth == tex.width )
 			t.setPosition(0, pos.p * t.iheight);
 		else
 			t.setPosition(pos.p * t.iwidth, pos.y * t.iheight);
+		return t;
 	}
 
 	static function setTilePosX( t : h2d.Tile, x : Int ) {
-		if( t == null ) return;
+		if( t == null ) return null;
+		t = t.clone();
 		t.setPosition(x * t.iwidth, t.iy);
+		return t;
 	}
 
 	static function setTilePosY( t : h2d.Tile, y : Int ) {
-		if( t == null ) return;
+		if( t == null ) return null;
+		t = t.clone();
 		t.setPosition(t.ix, y * t.iheight);
+		return t;
 	}
 
 	static function set_width( o : h2d.Bitmap, v : Null<Float> ) {
@@ -601,6 +628,25 @@ class HtmlTextComp extends TextComp implements domkit.Component.ComponentDecl<h2
 	}
 }
 
+@:uiComp("scale-grid") @:domkitDecl
+class ScaleGridComp extends DrawableComp implements domkit.Component.ComponentDecl<h2d.ScaleGrid> {
+
+	@:p var ignoreScale : Bool;
+	@:p var tileBorders : Bool;
+
+	static function create( parent : h2d.Object ) {
+		return new h2d.ScaleGrid(h2d.Tile.fromColor(0xFF00FF,32,32,0.9), 0, 0,parent);
+	}
+
+	static function set_ignoreScale(o : h2d.ScaleGrid, v) {
+		o.ignoreScale = v;
+	}
+
+	static function set_tileBorders(o : h2d.ScaleGrid, v) {
+		o.tileBorders = v;
+	}
+
+}
 
 @:uiComp("flow") @:domkitDecl
 class FlowComp extends ObjectComp implements domkit.Component.ComponentDecl<h2d.Flow> {
@@ -610,7 +656,7 @@ class FlowComp extends ObjectComp implements domkit.Component.ComponentDecl<h2d.
 	@:p var maxWidth : Null<Int>;
 	@:p var maxHeight : Null<Int>;
 	@:p var backgroundId : Bool;
-	@:p(flowBackground) var background : { tile : h2d.Tile, borderW : Int, borderH : Int };
+	@:p(flowBackground) var background : { tile : h2d.Tile, borderL : Int, borderT : Int, borderR : Int, borderB : Int };
 	@:p(tile) var backgroundTile : h2d.Tile;
 	@:p(tilePos) var backgroundTilePos : { p : Int, y : Int };
 	@:p var backgroundTilePosX : Null<Int>;
@@ -681,8 +727,10 @@ class FlowComp extends ObjectComp implements domkit.Component.ComponentDecl<h2d.
 			o.borderWidth = o.borderHeight = 0;
 		} else {
 			o.backgroundTile = v.tile;
-			o.borderWidth = v.borderW;
-			o.borderHeight = v.borderH;
+			o.borderLeft = v.borderL;
+			o.borderTop = v.borderT;
+			o.borderRight = v.borderR;
+			o.borderBottom = v.borderB;
 		}
 	}
 
@@ -691,27 +739,15 @@ class FlowComp extends ObjectComp implements domkit.Component.ComponentDecl<h2d.
 	}
 
 	static function set_backgroundTilePos( o : h2d.Flow, pos ) {
-		var t = o.backgroundTile;
-		if( t == null ) return;
-		t = t.clone();
-		@:privateAccess BitmapComp.setTilePos(t, pos);
-		o.backgroundTile = t;
+		o.backgroundTile = @:privateAccess BitmapComp.setTilePos(o.backgroundTile, pos);
 	}
 
 	static function set_backgroundTilePosX( o : h2d.Flow, x ) {
-		var t = o.backgroundTile;
-		if( t == null ) return;
-		t = t.clone();
-		@:privateAccess BitmapComp.setTilePosX(t, x);
-		o.backgroundTile = t;
+		o.backgroundTile = @:privateAccess BitmapComp.setTilePosX(o.backgroundTile, x);
 	}
 
 	static function set_backgroundTilePosY( o : h2d.Flow, y ) {
-		var t = o.backgroundTile;
-		if( t == null ) return;
-		t = t.clone();
-		@:privateAccess BitmapComp.setTilePosY(t, y);
-		o.backgroundTile = t;
+		o.backgroundTile = @:privateAccess BitmapComp.setTilePosY(o.backgroundTile, y);
 	}
 
 	static function set_backgroundId( o : h2d.Flow, id : Bool ) {
@@ -721,7 +757,7 @@ class FlowComp extends ObjectComp implements domkit.Component.ComponentDecl<h2d.
 		}
 		var bg = @:privateAccess o.background;
 		if( (bg.dom != null) != id )
-			bg.dom = id ? domkit.Properties.create("drawable",bg,{ id : "background" }) : null;
+			bg.dom = id ? domkit.Properties.create("scale-grid",bg,{ id : "background" }) : null;
 	}
 
 	static function set_backgroundAlpha( o : h2d.Flow, v ) {
@@ -804,6 +840,16 @@ class FlowComp extends ObjectComp implements domkit.Component.ComponentDecl<h2d.
 
 	static function set_overflow( o : h2d.Flow, v ) {
 		o.overflow = v;
+		if( v == Scroll ) @:privateAccess {
+			if( o.scrollBar.dom == null ) {
+				o.scrollBar.dom = domkit.Properties.create("flow", o.scrollBar);
+				o.scrollBar.dom.addClass("scrollbar");
+			}
+			if( o.scrollBarCursor.dom == null ) {
+				o.scrollBarCursor.dom = domkit.Properties.create("flow", o.scrollBarCursor);
+				o.scrollBarCursor.dom.addClass("cursor");
+			}
+		}
 	}
 
 	static function set_reverse( o : h2d.Flow, v ) {

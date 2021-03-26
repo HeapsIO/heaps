@@ -78,6 +78,7 @@ class Skin extends MultiMaterial {
 	var jointsGraphics : Graphics;
 
 	public var showJoints : Bool;
+	public var enableRetargeting : Bool = true;
 
 	public function new(s, ?mat, ?parent) {
 		super(null, mat, parent);
@@ -94,23 +95,37 @@ class Skin extends MultiMaterial {
 	}
 
 	override function getBoundsRec( b : h3d.col.Bounds ) {
+		// ignore primitive bounds !
+		var old = primitive;
+		primitive = null;
 		b = super.getBoundsRec(b);
-		var tmp = primitive.getBounds().clone();
-		var b0 = skinData.allJoints[0];
-		// not sure if that's the good joint
-		if( b0 != null && b0.parent == null ) {
-			var mtmp = absPos.clone();
-			var r = currentRelPose[b0.index];
-			if( r != null )
-				mtmp.multiply3x4(r, mtmp);
-			else
-				mtmp.multiply3x4(b0.defMat, mtmp);
-			if( b0.transPos != null )
-				mtmp.multiply3x4(b0.transPos, mtmp);
-			tmp.transform(mtmp);
-		} else
-			tmp.transform(absPos);
-		b.add(tmp);
+		primitive = old;
+		if( flags.has(FIgnoreBounds) )
+			return b;
+		syncJoints();
+		if( skinData.vertexWeights == null )
+			cast(primitive, h3d.prim.HMDModel).loadSkin(skinData);
+		for( j in skinData.allJoints ) {
+			if( j.offsetRay < 0 ) continue;
+			var m = currentPalette[j.bindIndex];
+			var pt = j.offsets.getMin();
+			pt.transform(m);
+			b.addSpherePos(pt.x, pt.y, pt.z, j.offsetRay);
+			var pt = j.offsets.getMax();
+			pt.transform(m);
+			b.addSpherePos(pt.x, pt.y, pt.z, j.offsetRay);
+		}
+		return b;
+	}
+
+	public function getCurrentSkeletonBounds() {
+		syncJoints();
+		var b = new h3d.col.Bounds();
+		for( j in skinData.allJoints ) {
+			if( j.bindIndex < 0 ) continue;
+			var r = currentAbsPose[j.index];
+			b.addSpherePos(r.tx, r.ty, r.tz, 0);
+		}
 		return b;
 	}
 
@@ -202,15 +217,18 @@ class Skin extends MultiMaterial {
 		syncJoints();
 	}
 
+	static var TMP_MAT = new h3d.Matrix();
+
 	@:noDebug
 	function syncJoints() {
 		if( !jointsUpdated ) return;
+		var tmpMat = TMP_MAT;
 		for( j in skinData.allJoints ) {
 			var id = j.index;
 			var m = currentAbsPose[id];
 			var r = currentRelPose[id];
 			var bid = j.bindIndex;
-			if( r == null ) r = j.defMat else if( j.retargetAnim ) { r._41 = j.defMat._41; r._42 = j.defMat._42; r._43 = j.defMat._43; }
+			if( r == null ) r = j.defMat else if( j.retargetAnim && enableRetargeting ) { tmpMat.load(r); r = tmpMat; r._41 = j.defMat._41; r._42 = j.defMat._42; r._43 = j.defMat._43; }
 			if( j.parent == null )
 				m.multiply3x4inline(r, absPos);
 			else

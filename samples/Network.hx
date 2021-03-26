@@ -56,8 +56,8 @@ class Cursor implements hxbit.NetworkSerializable {
 	@:rpc function blink( s : Float ) {
 		bmp.scale(s);
 		net.event.waitUntil(function(dt) {
-			bmp.scaleX *= hxd.Math.scaleTime(0.9, dt);
-			bmp.scaleY *= hxd.Math.scaleTime(0.9, dt);
+			bmp.scaleX *= Math.pow(0.9, dt * 60);
+			bmp.scaleY *= Math.pow(0.9, dt * 60);
 			if( bmp.scaleX < 1 ) {
 				bmp.scaleX = bmp.scaleY = 1;
 				return true;

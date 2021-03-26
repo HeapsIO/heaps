@@ -3,6 +3,7 @@ package h3d.mat;
 class MaterialSetup {
 
 	public var name(default,null) : String;
+	public var displayName(default,null) : String;
 	var database : MaterialDatabase;
 	var emptyMat : h3d.mat.Material;
 

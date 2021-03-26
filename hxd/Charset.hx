@@ -21,7 +21,7 @@ class Charset {
 		Polish support
 	**/
 	public static var POLISH = "ĄĆĘŁŃÓŚŹŻąćęłńóśźż";
-	
+
 	/**
 		Turkish support
 	**/

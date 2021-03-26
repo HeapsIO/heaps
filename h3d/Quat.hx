@@ -63,10 +63,21 @@ class Quat {
 		normalize();
 	}
 
+	public function initNormal( dir : h3d.col.Point ) {
+		var dir = dir.normalized();
+		if( dir.x*dir.x+dir.y*dir.y < Math.EPSILON )
+			initDirection(new h3d.Vector(1,0,0));
+		else {
+			var ay = new h3d.col.Point(dir.x, dir.y, 0).normalized();
+			var az = dir.cross(ay);
+			initDirection(dir.cross(az).toVector());
+		}
+	}
+
 	public function initDirection( dir : Vector ) {
 		// inlined version of initRotationMatrix(Matrix.lookAtX(dir))
-		var ax = dir.clone().getNormalized();
-		var ay = new Vector(-ax.y, ax.x, 0).getNormalized();
+		var ax = dir.clone().normalized();
+		var ay = new Vector(-ax.y, ax.x, 0).normalized();
 		if( ay.lengthSq() < Math.EPSILON ) {
 			ay.x = ax.y;
 			ay.y = ax.z;
@@ -193,15 +204,13 @@ class Quat {
 	}
 
 	public inline function lerp( q1 : Quat, q2 : Quat, v : Float, nearest = false ) {
-		var v2;
+		var v2 = 1 - v;
 		if( nearest && q1.dot(q2) < 0 )
-			v2 = v - 1;
-		else
-			v2 = 1 - v;
-		var x = q1.x * v + q2.x * v2;
-		var y = q1.y * v + q2.y * v2;
-		var z = q1.z * v + q2.z * v2;
-		var w = q1.w * v + q2.w * v2;
+			v = -v;
+		var x = q1.x * v2 + q2.x * v;
+		var y = q1.y * v2 + q2.y * v;
+		var z = q1.z * v2 + q2.z * v;
+		var w = q1.w * v2 + q2.w * v;
 		this.x = x;
 		this.y = y;
 		this.z = z;
@@ -252,7 +261,7 @@ class Quat {
 	}
 
 	public inline function getDirection() {
-		return new h3d.Vector(1 - 2 * ( y * y + z * z ), 2 * ( x * y - z * w ), 2 * ( x * z + y * w ));
+		return new h3d.Vector(1 - 2 * ( y * y + z * z ), 2 * ( x * y + z * w ), 2 * ( x * z - y * w ));
 	}
 
 	/**

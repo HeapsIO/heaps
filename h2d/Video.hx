@@ -23,6 +23,13 @@ private abstract VideoImpl(hl.Abstract<"hl_video">) {
 }
 #end
 
+/**
+	A video file playback Drawable. Due to platform specifics, each target have their own limitations.
+
+	* <span class="label">Hashlink</span>: Playback ability depends on `video` library.
+		At the time of HL 1.11 it's not bundled and have to be [compiled manually](https://github.com/HaxeFoundation/hashlink/tree/master/libs/video) with FFMPEG.
+	* <span class="label">JavaScript</span>: HTML Video element will be used. Playback is restricted by content-security policy and browser decoder capabilities.
+**/
 class Video extends Drawable {
 
 	#if hl
@@ -42,24 +49,50 @@ class Video extends Drawable {
 	var frameReady : Bool;
 	var loopVideo : Bool;
 
+	/**
+		Video width. Value is undefined until video is ready to play.
+	**/
 	public var videoWidth(default, null) : Int;
+	/**
+		Video height. Value is undefined until video is ready to play.
+	**/
 	public var videoHeight(default, null) : Int;
+	/**
+		Tells if video currently playing.
+	**/
 	public var playing(default, null) : Bool;
+	/**
+		Tells current timestamp of the video.
+	**/
 	public var time(get, null) : Float;
+	/**
+		When enabled, video will loop indefinitely.
+	**/
 	public var loop(get, set) : Bool;
 
+	/**
+		Create a new Video instance.
+		@param parent An optional parent `h2d.Object` instance to which Video adds itself if set.
+	**/
 	public function new(?parent) {
 		super(parent);
 		blendMode = None;
 		smooth = true;
 	}
 
+	/**
+		Sent when there is an error with the decoding or playback of the video.
+	**/
 	public dynamic function onError( msg : String ) {
 	}
 
+	/**
+		Sent when video playback is finished.
+	**/
 	public dynamic function onEnd() {
 	}
 
+	@:dox(hide) @:noCompletion
 	public function get_time() {
 		#if js
 		return playing ? v.currentTime : 0;
@@ -67,11 +100,13 @@ class Video extends Drawable {
 		return playing ? haxe.Timer.stamp() - playTime : 0;
 		#end
 	}
-	
+
+	@:dox(hide) @:noCompletion
 	public inline function get_loop() {
 		return loopVideo;
 	}
-	
+
+	@:dox(hide) @:noCompletion
 	public function set_loop(value : Bool) : Bool {
 		#if js
 		return v.loop = loopVideo = value;
@@ -80,6 +115,9 @@ class Video extends Drawable {
 		#end
 	}
 
+	/**
+		Disposes of the currently playing Video and frees GPU memory.
+	**/
 	public function dispose() {
 		#if hl
 		if( v != null ) {
@@ -107,6 +145,15 @@ class Video extends Drawable {
 		frameReady = false;
 	}
 
+	/**
+		Loads and starts the video playback by specified `path` and calls `onReady` when playback becomes possible.
+
+		* <span class="label">Hashlink</span>: Playback being immediately after `load`, unless video was not being able to initialize.
+		* <span class="label">JavaScript</span>: There won't be any video output until video is properly buffered enough data by the browser, in which case `onReady` is called.
+
+		@param path The video path. Have to be valid file-system path for HL or valid URL (full or relative) for JS.
+		@param onReady An optional callback signalling that video is initialized and began the video playback.
+	**/
 	public function load( path : String, ?onReady : Void -> Void ) {
 		dispose();
 
@@ -130,11 +177,11 @@ class Video extends Drawable {
 		v.autoplay = true;
 		v.muted = true;
 		v.loop = loopVideo;
-		
+
 		videoPlaying = false;
 		videoTimeupdate = false;
 		this.onReady = onReady;
-		
+
 		v.addEventListener("playing", checkReady, true);
 		v.addEventListener("timeupdate", checkReady, true);
 		v.addEventListener("ended", endHandler, true);
@@ -145,9 +192,9 @@ class Video extends Drawable {
 		onError("Video not supported on this platform");
 		#end
 	}
-	
+
 	#if js
-	
+
 	function errorHandler(e : js.html.Event) {
 		#if (haxe_ver >= 4)
 		onError(v.error.code + ": " + v.error.message);
@@ -155,11 +202,11 @@ class Video extends Drawable {
 		onError(Std.string(v.error.code));
 		#end
 	}
-	
+
 	function endHandler(e : js.html.Event) {
 		onEnd();
 	}
-	
+
 	function checkReady(e : js.html.Event) {
 		if (e.type == "playing") {
 			videoPlaying = true;
@@ -168,7 +215,7 @@ class Video extends Drawable {
 			videoTimeupdate = true;
 			v.removeEventListener("timeupdate", checkReady, true);
 		}
-		
+
 		if (videoPlaying && videoTimeupdate) {
 			frameReady = true;
 			videoWidth = v.videoWidth;

@@ -5,6 +5,7 @@ enum Step {
 	Decals;
 	Shadows;
 	Lighting;
+	Forward;
 	BeforeTonemapping;
 	AfterTonemapping;
 	Overlay;
