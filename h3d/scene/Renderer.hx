@@ -92,10 +92,6 @@ class Renderer extends hxd.impl.AnyProps {
 		return h3d.Engine.getCurrent().driver.hasFeature(f);
 	}
 
-	function getDefaultLight<T:h3d.scene.Light>( l : T ) : T {
-		return l;
-	}
-
 	function getLightSystem() : h3d.scene.LightSystem {
 		return ctx.scene.lightSystem;
 	}
