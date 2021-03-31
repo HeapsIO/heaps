@@ -63,7 +63,6 @@ class Renderer extends h3d.scene.Renderer {
 	var pbrIndirect = new h3d.shader.pbr.Lighting.Indirect();
 	var pbrDirect = new h3d.shader.pbr.Lighting.Direct();
 	var pbrProps = new h3d.shader.pbr.PropsImport();
-	var hasDebugEvent = false;
 	var enableFXAA = true;
 	var currentStep : h3d.impl.RendererFX.Step;
 
@@ -540,13 +539,13 @@ class Renderer extends h3d.scene.Renderer {
 			slides.shader.shadowMapChannel = R;
 			pbrProps.isScreen = true;
 			slides.render();
-			if( !hasDebugEvent ) {
-				hasDebugEvent = true;
+			if( !debugging ) {
+				debugging = true;
 				hxd.Window.getInstance().addEventTarget(onEvent);
 			}
 		}
-		if( hasDebugEvent && displayMode != Debug ) {
-			hasDebugEvent = false;
+		if( debugging && displayMode != Debug ) {
+			debugging = false;
 			hxd.Window.getInstance().removeEventTarget(onEvent);
 		}
 		mark("vsync");

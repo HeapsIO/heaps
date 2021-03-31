@@ -28,6 +28,7 @@ class Renderer extends hxd.impl.AnyProps {
 	var hasSetTarget = false;
 	var frontToBack : h3d.pass.PassList -> Void;
 	var backToFront : h3d.pass.PassList -> Void;
+	var debugging = false;
 
 	public var effects : Array<h3d.impl.RendererFX> = [];
 

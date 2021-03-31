@@ -10,6 +10,7 @@ class Style extends domkit.CssStyle {
 	public var allowInspect(default, set) = false;
 	public var inspectKeyCode : Int = 0;
 	public var inspectDetailsKeyCode : Int = hxd.Key.CTRL;
+	public var s3d : h3d.scene.Scene;
 
 	public function new() {
 		super();
@@ -157,6 +158,9 @@ class Style extends domkit.CssStyle {
 					inspectModeDetails = false;
 					inspectModeDetailsRight = -1;
 				}
+
+				if( inspectModeActive && s3d != null && @:privateAccess s3d.renderer.debugging )
+					inspectModeActive = false;
 
 				if( inspectModeActive )
 					updatePreview(e);
