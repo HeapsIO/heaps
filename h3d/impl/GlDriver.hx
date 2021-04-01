@@ -1344,9 +1344,9 @@ class GlDriver extends Driver {
 		#if hl
 		if( hasMultiIndirect ) {
 			var buf = gl.createBuffer();
-			gl.bindBuffer(GL2.DRAW_INDIRECT_BUFFER, buf);
-			gl.bufferData(GL2.DRAW_INDIRECT_BUFFER, b.commandCount * 20, streamData(bytes.getData(),0, b.commandCount * 20), GL.DYNAMIC_DRAW);
-			gl.bindBuffer(GL2.DRAW_INDIRECT_BUFFER, null);
+			gl.bindBuffer(GL.DRAW_INDIRECT_BUFFER, buf);
+			gl.bufferData(GL.DRAW_INDIRECT_BUFFER, b.commandCount * 20, streamData(bytes.getData(),0, b.commandCount * 20), GL.DYNAMIC_DRAW);
+			gl.bindBuffer(GL.DRAW_INDIRECT_BUFFER, null);
 			b.data = buf;
 			return;
 		}
@@ -1379,9 +1379,9 @@ class GlDriver extends Driver {
 		}
 		#if !js
 		if( hasMultiIndirect && commands.data != null ) {
-			gl.bindBuffer(GL2.DRAW_INDIRECT_BUFFER, commands.data);
+			gl.bindBuffer(GL.DRAW_INDIRECT_BUFFER, commands.data);
 			gl.multiDrawElementsIndirect(drawMode, ibuf.is32 ? GL.UNSIGNED_INT : GL.UNSIGNED_SHORT, null, commands.commandCount, 0);
-			gl.bindBuffer(GL2.DRAW_INDIRECT_BUFFER, null);
+			gl.bindBuffer(GL.DRAW_INDIRECT_BUFFER, null);
 			return;
 		}
 		#end
