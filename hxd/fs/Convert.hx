@@ -55,7 +55,7 @@ class Convert {
 		#end
 	}
 
-	static var converts = new Map<String,Array<Convert>>();
+	@:persistent static var converts = new Map<String,Array<Convert>>();
 	public static function register( c : Convert ) : Int {
 		var dest = converts.get(c.destExt);
 		if( dest == null ) {
