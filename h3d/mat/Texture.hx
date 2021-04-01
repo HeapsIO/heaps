@@ -40,6 +40,7 @@ class Texture {
 	public var layerCount(get, never) : Int;
 	public var lodBias : Float = 0.;
 	public var mipLevels(get, never) : Int;
+	var customMipLevels : Int;
 
 	/**
 		If this callback is set, the texture can be re-allocated when the 3D context has been lost or when
@@ -71,6 +72,8 @@ class Texture {
 	function get_mipLevels() {
 		if( !flags.has(MipMapped) )
 			return 1;
+		if( customMipLevels > 0 )
+			return customMipLevels;
 		/* atm we don't allow textures with mipmaps < max levels */
 		var lv = 1;
 		var w = width, h = height;

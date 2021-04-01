@@ -957,7 +957,7 @@ class GlDriver extends Driver {
 			return false;
 		}
 
-		#if (hlsdl >= version("1.12.0"))
+		#if (js || (hlsdl >= version("1.12.0")))
 		gl.texParameteri(bind, GL2.TEXTURE_BASE_LEVEL, 0);
 		gl.texParameteri(bind, GL2.TEXTURE_MAX_LEVEL, t.mipLevels-1);
 		#end

@@ -437,6 +437,7 @@ class Image extends Resource {
 		if( !getFormat().useAsyncDecode && !DEFAULT_ASYNC ) {
 			function load() {
 				// immediately loading the PNG is faster than going through loadBitmap
+				@:privateAccess tex.customMipLevels = inf.mipLevels;
 				tex.alloc();
 				for( layer in 0...tex.layerCount ) {
 					for( mip in 0...inf.mipLevels ) {
