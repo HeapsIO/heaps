@@ -5,7 +5,7 @@ class ColorMult extends hxsl.Shader {
 	static var SRC = {
 		var pixelColor : Vec4;
 
-		@param var color : Vec4;
+		@perInstance @param var color : Vec4;
 		@param var amount : Float = 1.0;
 
 		function fragment() {

@@ -69,9 +69,9 @@ class CacheFile extends Cache {
 		return shader;
 	}
 
-	override function createBatchShader( rt ) {
-		var b = super.createBatchShader(rt);
-		batchers.push({ rt : rt, shader : b });
+	override function createBatchShader( rt, shaders ) {
+		var b = super.createBatchShader(rt, shaders);
+		batchers.push({ rt : rt, shader : b.shader });
 		return b;
 	}
 
@@ -247,7 +247,7 @@ class CacheFile extends Cache {
 
 		// recompile or load runtime shaders
 		runtimeShaders = [];
-		var rttMap = new Map<String,RuntimeShader>();
+		var rttMap = new Map<String,{ rt : RuntimeShader, shaders : hxsl.ShaderList }>();
 		if( recompileRT ) {
 
 			for( r in runtimes ) {
@@ -263,7 +263,7 @@ class CacheFile extends Cache {
 								r = null; // was modified
 								break;
 							}
-							var sh = makeBatchShader(rt);
+							var sh = makeBatchShader(rt.rt, rt.shaders);
 							i.shader = { version : null, shader : sh.shader };
 							batchMode = true;
 						}
@@ -284,7 +284,7 @@ class CacheFile extends Cache {
 				var rt2 = rttMap.get(r.specSign);
 				if( rt2 != null ) throw "assert";
 				runtimeShaders.push(rt);
-				rttMap.set(r.specSign, rt);
+				rttMap.set(r.specSign, { rt : rt, shaders : shaderList });
 			}
 
 		} else {
@@ -315,7 +315,7 @@ class CacheFile extends Cache {
 								r = null; // was modified
 								break;
 							}
-							var sh = makeBatchShader(rt);
+							var sh = makeBatchShader(rt.rt, rt.shaders);
 							i.shader = { version : null, shader : sh.shader };
 							r.batchMode = true;
 						}
@@ -337,7 +337,7 @@ class CacheFile extends Cache {
 				addToCache(r, shaderList);
 				reviveRuntime(r);
 				runtimeShaders.push(r);
-				rttMap.set(spec.specSign, r);
+				rttMap.set(spec.specSign, { rt : r, shaders : shaderList });
 			}
 
 		}

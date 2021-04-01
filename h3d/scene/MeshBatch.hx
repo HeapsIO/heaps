@@ -19,10 +19,6 @@ private class BatchData {
 
 }
 
-interface MeshBatchAccess {
-	var perInstance : Bool;
-}
-
 /**
 	h3d.scene.MeshBatch allows to draw multiple meshed in a single draw call.
 	See samples/MeshBatch.hx for an example.
@@ -35,16 +31,9 @@ class MeshBatch extends Mesh {
 	var indexCount : Int;
 	var modelViewID = hxsl.Globals.allocID("global.modelView");
 	var modelViewInverseID = hxsl.Globals.allocID("global.modelViewInverse");
-	var colorSave = new h3d.Vector();
-	var colorMult : h3d.shader.ColorMult;
 	var needUpload = false;
 
 	static var MAX_BUFFER_ELEMENTS = 4096;
-
-	/**
-		Tells if we can use material.color as a global multiply over each instance color (default: true)
-	**/
-	public var allowGlobalMaterialColor : Bool = true;
 
 	/**
 	 * 	If set, use this position in emitInstance() instead MeshBatch absolute position
@@ -95,56 +84,13 @@ class MeshBatch extends Mesh {
 
 			var manager = cast(ctx,h3d.pass.Default).manager;
 			var shaders = p.getShadersRec();
-
-			// Keep only batched shader
-			var batchShaders : ShaderList = shaders;
-			var prev = null;
-			var cur = batchShaders;
-			while( cur != null ) {
-				if( hxd.impl.Api.isOfType(cur.s, MeshBatchAccess) ) {
-					var access : MeshBatchAccess = cast cur.s;
-					if( !access.perInstance ) {
-						if( prev != null )
-							prev.next = cur.next;
-						else
-							batchShaders = cur.next;
-						cur = cur.next;
-					}
-					else {
-						prev = cur;
-						cur = cur.next;
-					}
-				}
-				else {
-					prev = cur;
-					cur = cur.next;
-				}
-			}
-
-			var rt = manager.compileShaders(batchShaders, false);
-			var shader = manager.shaderCache.makeBatchShader(rt);
+			var rt = manager.compileShaders(shaders, false);
+			var shader = manager.shaderCache.makeBatchShader(rt, shaders);
 
 			var b = new BatchData();
-			b.paramsCount = rt.vertex.paramsSize + rt.fragment.paramsSize;
+			b.paramsCount = shader.paramsSize;
 			b.maxInstance = Std.int(MAX_BUFFER_ELEMENTS / b.paramsCount);
-			b.params = rt.fragment.params == null ? null : rt.fragment.params.clone();
-
-			var hd = b.params;
-			while( hd != null ) {
-				hd.pos += rt.vertex.paramsSize << 2;
-				hd = hd.next;
-			}
-
-			if( b.params == null )
-				b.params = rt.vertex.params;
-			else if( rt.vertex != null ) {
-				var vl = rt.vertex.params.clone();
-				var hd = vl;
-				while( vl.next != null ) vl = vl.next;
-				vl.next = b.params;
-				b.params = hd;
-			}
-
+			b.params = shader.params;
 			b.shader = shader;
 			b.pass = p;
 			b.shaders = [null/*link shader*/];
@@ -154,7 +100,7 @@ class MeshBatch extends Mesh {
 			b.next = dataPasses;
 			dataPasses = b;
 
-			var sl = batchShaders;
+			var sl = shaders;
 			while( sl != null ) {
 				b.shaders.push(sl.s);
 				sl = sl.next;
@@ -173,27 +119,10 @@ class MeshBatch extends Mesh {
 	}
 
 	public function begin( emitCountTip = -1, resizeDown = false ) {
-		colorSave.load(material.color);
-
 		curInstances = 0;
 		if( shadersChanged ) {
-			if( colorMult != null ) {
-				material.mainPass.removeShader(colorMult);
-				colorMult = null;
-			}
 			initShadersMapping();
 			shadersChanged = false;
-			if( allowGlobalMaterialColor ) {
-				if( colorMult == null ) {
-					colorMult = new h3d.shader.ColorMult();
-					material.mainPass.addShader(colorMult);
-				}
-			} else {
-				if( colorMult != null ) {
-					material.mainPass.removeShader(colorMult);
-					colorMult = null;
-				}
-			}
 		}
 
 		if( emitCountTip < 0 )
@@ -299,7 +228,6 @@ class MeshBatch extends Mesh {
 			syncData(p);
 			p = p.next;
 		}
-		if( allowGlobalMaterialColor ) material.color.load(colorSave);
 		curInstances++;
 	}
 
@@ -332,7 +260,6 @@ class MeshBatch extends Mesh {
 			p = p.next;
 		}
 		needUpload = false;
-		if( colorMult != null ) colorMult.color.load(material.color);
 	}
 
 	override function draw(ctx:RenderContext) {
