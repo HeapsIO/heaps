@@ -136,7 +136,7 @@ class Console #if !macro extends h2d.Object #end {
 		Add a new command to console.
 		@param name Command name.
 		@param help Optional command description text.
-		@param args An array of command arguments. 
+		@param args An array of command arguments.
 		@param callb The callback method taking the arguments listed in `args`.
 	**/
 	public function addCommand( name, ?help, args : Array<ConsoleArgDesc>, callb : Dynamic ) {
@@ -148,7 +148,7 @@ class Console #if !macro extends h2d.Object #end {
 	/**
 		Add a new command to console. <span class="label">Macro method</span>
 
-		The `callb` method arguments are used to determine console argument type and names. Due to that, 
+		The `callb` method arguments are used to determine console argument type and names. Due to that,
 		only the following callback argument types are supported: `Int`, `Float`, `String` and `Bool`.
 		Another limitation is that commands added via macro do not contain description.
 
@@ -534,7 +534,7 @@ class Console #if !macro extends h2d.Object #end {
 		var scene = ctx.scene;
 		if( scene != null ) {
 			x = 0;
-			y = scene.height - height;
+			y = scene.height - height*scaleY;
 			width = scene.width;
 			tf.maxWidth = width;
 			bg.tile.scaleToSize(width, height);
