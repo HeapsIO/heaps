@@ -225,7 +225,7 @@ class Environment {
 	public var specular : h3d.mat.Texture;
 
 	public var power : Float = 1.;
-	public var rot : Float = 0.;
+	public var rotation : Float = 0.;
 
 	/*
 		Source can be cube map already prepared or a 2D equirectangular map that
