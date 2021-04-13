@@ -83,7 +83,7 @@ class DirShadow extends hxsl.Shader {
 					var shadowPos = transformedPosition * shadowProj;
 					var shadowUv = screenToUv(shadowPos.xy);
 					var depth = shadowMap.get(shadowUv.xy);
-					shadow = shadowPos.z - shadowBias > depth ? 0 : 1;
+					shadow = shadowPos.z.saturate() - shadowBias > depth ? 0 : 1;
 				}
 			}
 			dirShadow = shadow;
