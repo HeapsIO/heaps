@@ -108,14 +108,8 @@ class DirShadowMap extends Shadows {
 
 			// Intersect with frustum bounds
 			var cameraBounds = new h3d.col.Bounds();
-			var zMax = 1.0;
-			var zMin = 0.0;
-			var n = ctx.camera.zNear;
-			var f = ctx.camera.zFar;
-			if( maxDist > 0 )
-				zMax = ((f + n - 2.0 * n * f / hxd.Math.clamp(maxDist, n, f)) / (f - n) + 1.0) / 2.0;
-			if( minDist > 0 )
-				zMin = ((f + n - 2.0 * n * f /  hxd.Math.clamp(minDist, n, f)) / (f - n) + 1.0) / 2.0;
+			var zMin = minDist < 0 ? 1.0 : ctx.camera.distanceToDepth(minDist);
+			var zMax = maxDist < 0 ? 1.0 : ctx.camera.distanceToDepth(maxDist);
 			for( pt in ctx.camera.getFrustumCorners(zMax, zMin) ) {
 				pt.transform(camera.mcam);
 				cameraBounds.addPos(pt.x, pt.y, pt.z);
