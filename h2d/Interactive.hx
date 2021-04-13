@@ -185,6 +185,7 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 		case EOut:
 			onOut(e);
 		case EWheel:
+			e.propagate = true; // propagate wheel events by default
 			onWheel(e);
 		case EFocusLost:
 			onFocusLost(e);
