@@ -51,8 +51,8 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 	public var enableRightButton : Bool = false;
 	var scene : Scene;
 	var mouseDownButton : Int = -1;
-	var parentMask : Mask;
 	var invDet : Float;
+	var maskedBounds : h2d.col.Bounds;
 
 	/**
 		Detailed shape collider for Interactive.
@@ -85,11 +85,11 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 	override function onAdd() {
 		this.scene = getScene();
 		if( scene != null ) scene.addEventTarget(this);
-		updateMask();
 		super.onAdd();
 	}
 
 	override function draw( ctx : RenderContext ) {
+		maskedBounds = ctx.getCurrentRenderZone();
 		if( backgroundColor != null ) emitTile(ctx, h2d.Tile.fromColor(backgroundColor, Std.int(width), Std.int(height), (backgroundColor>>>24)/255 ));
 	}
 
@@ -106,21 +106,6 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 			scene = getScene();
 			if( scene != null )
 				scene.addEventTarget(this);
-		}
-		if ( parentChanged )
-			updateMask();
-	}
-
-	function updateMask() {
-		parentMask = null;
-		var p = parent;
-		while( p != null ) {
-			var m = hxd.impl.Api.downcast(p, Mask);
-			if( m != null ) {
-				parentMask = m;
-				break;
-			}
-			p = p.parent;
 		}
 	}
 
@@ -153,20 +138,12 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 
 	@:dox(hide)
 	@:noCompletion public function handleEvent( e : hxd.Event ) {
-		if( parentMask != null && checkBounds(e) ) {
-			var p = parentMask;
+		if( maskedBounds != null && checkBounds(e) ) {
 			var pt = new h2d.col.Point(e.relX, e.relY);
 			localToGlobal(pt);
-			var saveX = pt.x, saveY = pt.y;
-			while( p != null ) {
-				pt.x = saveX;
-				pt.y = saveY;
-				var pt = p.globalToLocal(pt);
-				if( pt.x < 0 || pt.y < 0 || pt.x > p.width || pt.y > p.height ) {
-					e.cancel = true;
-					return;
-				}
-				p = @:privateAccess p.parentMask;
+			if( pt.x < maskedBounds.xMin || pt.y < maskedBounds.yMin || pt.x > maskedBounds.xMax || pt.y > maskedBounds.yMax ) {
+				e.cancel = true;
+				return;
 			}
 		}
 		if(shape == null && isEllipse && checkBounds(e) ) {

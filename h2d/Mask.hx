@@ -43,7 +43,7 @@ class Mask extends Object {
 		}
 
 		ctx.flush();
-		ctx.pushRenderZone(x1, y1, x2-x1, y2-y1);
+		ctx.clipRenderZone(x1, y1, x2-x1, y2-y1);
 	}
 
 	/**
@@ -63,7 +63,6 @@ class Mask extends Object {
 		The height of the masked area.
 	**/
 	public var height : Int;
-	var parentMask : Mask;
 
 	/**
 		Horizontal scroll offset of the Mask content in pixels. Can be clamped by `Mask.scrollBounds`.
@@ -107,30 +106,6 @@ class Mask extends Object {
 		scrollY += y;
 	}
 
-	override private function onHierarchyMoved(parentChanged:Bool) {
-		super.onHierarchyMoved(parentChanged);
-		if ( parentChanged )
-			updateMask();
-	}
-
-	override function onAdd() {
-		super.onAdd();
-		updateMask();
-	}
-
-	function updateMask() {
-		parentMask = null;
-		var p = parent;
-		while( p != null ) {
-			var m = hxd.impl.Api.downcast(p, Mask);
-			if( m != null ) {
-				parentMask = m;
-				break;
-			}
-			p = p.parent;
-		}
-	}
-
 	function set_scrollX( v : Float ) : Float {
 		if ( scrollBounds != null ) v = hxd.Math.clamp(v, scrollBounds.xMin, scrollBounds.xMax - width);
 		posChanged = true;
@@ -143,8 +118,7 @@ class Mask extends Object {
 		return scrollY = v;
 	}
 
-	override function calcAbsPos()
-	{
+	override function calcAbsPos() {
 		super.calcAbsPos();
 		absX -= scrollX;
 		absY -= scrollY;

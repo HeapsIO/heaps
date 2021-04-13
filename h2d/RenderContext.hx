@@ -20,12 +20,12 @@ class RenderContext extends h3d.impl.RenderContext {
 	static inline var BUFFERING = #if heaps_emit_tile_buffering true #else false #end;
 
 	/**
-		Current transparency value used for rendering objects. 
+		Current transparency value used for rendering objects.
 		Automatically managed by `Object`.
 	**/
 	public var globalAlpha = 1.;
 	/**
-		Temporary vertex buffer used to emit Tiles when `RenderContext.BUFFERING` is on.  
+		Temporary vertex buffer used to emit Tiles when `RenderContext.BUFFERING` is on.
 		Otherwise it's `null`. Internal usage only.
 	**/
 	@:dox(hide)
@@ -443,12 +443,18 @@ class RenderContext extends h3d.impl.RenderContext {
 		}
 	}
 
+	public function getCurrentRenderZone() {
+		if( !hasRenderZone )
+			return null;
+		return h2d.col.Bounds.fromValues(renderX, renderY, renderW, renderH);
+	}
+
 	/**
 		Pushes new render zone with respect to the old render zone settings by clipping new and old render zones,
 		pushing the intersection area result.
 		Used so that any call to the clipRenderZone respects the already set zone, and can't render outside of it.
 	**/
-	 public function clipRenderZone( x : Float, y : Float, w : Float, h : Float ) {
+	public function clipRenderZone( x : Float, y : Float, w : Float, h : Float ) {
 		if (!hasRenderZone) {
 			pushRenderZone( x, y, w, h );
 			return;
