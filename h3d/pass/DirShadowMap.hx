@@ -249,7 +249,9 @@ class DirShadowMap extends Shadows {
 		ctx.engine.clear(0xFFFFFF, 1);
 		super.draw(passes, sort);
 
-		if( border != null )
+		var doBlur = blur.radius > 0 && (mode != Mixed || !ctx.computingStatic);
+
+		if( border != null && !doBlur )
 			border.render();
 
 		ctx.engine.popTarget();
@@ -264,8 +266,14 @@ class DirShadowMap extends Shadows {
 			texture = merge;
 		}
 
-		if( blur.radius > 0 && (mode != Mixed || !ctx.computingStatic) )
+		if( doBlur ) {
 			blur.apply(ctx, texture);
+			if( border != null ) {
+				ctx.engine.pushTarget(texture);
+				border.render();
+				ctx.engine.popTarget();
+			}
+		}
 
 		syncShader(texture);
 	}
