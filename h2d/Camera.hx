@@ -86,13 +86,21 @@ class Camera {
 	public var visible : Bool;
 
 	/**
-		Makes camera to follow the referenced Object position.
+		Makes camera to follow the referenced target position.
 	**/
-	public var follow : h2d.Object;
+	public var follow : {x: Float, y: Float, rotation: Float};
 	/**
 		Enables `h2d.Object.rotation` sync between `Camera.follow` object and Camera.
 	**/
 	public var followRotation : Bool = false;
+	/**
+		Lerp factor for following the camera smoothly. (between : 0.0 - 1.0) (default : 1.0) 
+	**/
+	public var followLerp(default, set): Float;
+	/**
+		Offset the camera from follow target position.
+	**/
+	public var followOffset : {x: Float, y: Float};
 
 	var posChanged : Bool;
 
@@ -125,6 +133,7 @@ class Camera {
 		this.viewX = 0; this.viewY = 0;
 		this.viewW = 1; this.viewH = 1;
 		this.visible = true;
+		this.followLerp = 1.0;
 		if (scene != null) scene.addCamera(this);
 	}
 
@@ -206,8 +215,16 @@ class Camera {
 		if (scene == null) return;
 
 		if ( follow != null ) {
-			this.x = follow.absX;
-			this.y = follow.absY;
+			var fx = follow.x;
+			var fy = follow.y;
+			
+			if ( followLead != null ) {
+				fx += followLead.x;
+				fy += followLead.y;
+			}
+
+			this.x += (fx - this.x) * followLerp;
+			this.y += (fy - this.y) * followLerp;
 			if ( followRotation ) this.rotation = -follow.rotation;
 		}
 		if ( posChanged || force ) {
@@ -467,6 +484,13 @@ class Camera {
 	inline function set_rotation( v ) {
 		posChanged = true;
 		return this.rotation = v;
+	}
+
+	inline function set_followLerp( v )  {
+		if(v > 1.0) v = 1.0;
+		else if(v < 0.0) v = 0.0;
+
+		return this.followLerp = v;
 	}
 
 	inline function get_viewportX() { checkScene(); return viewX * scene.width; }
