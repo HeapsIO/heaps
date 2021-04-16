@@ -88,7 +88,7 @@ class Camera {
 	/**
 		Makes camera to follow the referenced target position.
 	**/
-	public var follow : {x: Float, y: Float, rotation: Float};
+	public var follow : Dynamic;
 	/**
 		Enables `h2d.Object.rotation` sync between `Camera.follow` object and Camera.
 	**/
