@@ -218,9 +218,9 @@ class Camera {
 			var fx = follow.x;
 			var fy = follow.y;
 			
-			if ( followLead != null ) {
-				fx += followLead.x;
-				fy += followLead.y;
+			if ( followOffset != null ) {
+				fx += followOffset.x;
+				fy += followOffset.y;
 			}
 
 			this.x += (fx - this.x) * followLerp;
