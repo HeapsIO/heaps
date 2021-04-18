@@ -145,4 +145,11 @@ class SmoothTransition extends Transition {
 		return rt;
 	}
 
+	override function clone(?a : Animation) : Animation {
+		if( a == null )
+			a = new SmoothTransition(anim1, anim2, speed);
+		super.clone(a);
+		var a : SmoothTransition = cast a;
+		return a;
+	}
 }

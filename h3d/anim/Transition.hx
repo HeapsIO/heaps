@@ -35,7 +35,11 @@ class Transition extends Animation {
 			a = new Transition(this.name.split("(")[0], anim1, anim2);
 		super.clone(a);
 		a.anim1 = anim1.clone();
+		a.anim1.initInstance();
+		a.anim1.loop = false;
 		a.anim2 = anim2.clone();
+		a.anim2.initInstance();
+		a.anim2.loop = false;
 		return a;
 	}
 
@@ -59,8 +63,10 @@ class Transition extends Animation {
 		while( tmp > 0 )
 			tmp = anim1.update(tmp);
 		var tmp = st;
-		while( tmp > 0 )
-			tmp = anim2.update(tmp);
+		if (anim1.frame == anim1.frameCount) {
+			while( tmp > 0)
+				tmp = anim2.update(tmp);
+		}
 		return rt;
 	}
 
