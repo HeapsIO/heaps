@@ -100,10 +100,6 @@ class Texture {
 		if( tw != w || th != h )
 			this.flags.set(IsNPOT);
 
-		// make the texture disposable if we're out of memory
-		// this can be disabled after allocation by reseting realloc
-		if( this.flags.has(Target) ) realloc = function() { };
-
 		this.width = w;
 		this.height = h;
 		this.mipMap = this.flags.has(MipMapped) ? Nearest : None;
