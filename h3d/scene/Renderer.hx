@@ -34,7 +34,7 @@ class Renderer extends hxd.impl.AnyProps {
 
 	public function new() {
 		allPasses = [];
-		passObjects = new SMap();
+		passObjects = new Map();
 		props = getDefaultProps();
 		// pre allocate closures
 		frontToBack = depthSort.bind(true);
@@ -54,7 +54,7 @@ class Renderer extends hxd.impl.AnyProps {
 			p.dispose();
 		for( f in effects )
 			f.dispose();
-		passObjects = new SMap();
+		passObjects = new Map();
 	}
 
 	function mark(id: String) {
