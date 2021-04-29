@@ -9,8 +9,6 @@ class PassObjects {
 	}
 }
 
-private typedef SMap<T> = #if flash haxe.ds.UnsafeStringMap<T> #else Map<String,T> #end;
-
 enum RenderMode{
 	Default;
 	LightProbe;
@@ -21,7 +19,7 @@ enum RenderMode{
 class Renderer extends hxd.impl.AnyProps {
 
 	var defaultPass : h3d.pass.Base;
-	var passObjects : SMap<PassObjects>;
+	var passObjects : Map<String,PassObjects>;
 	var allPasses : Array<h3d.pass.Base>;
 	var emptyPasses = new h3d.pass.PassList();
 	var ctx : RenderContext;
