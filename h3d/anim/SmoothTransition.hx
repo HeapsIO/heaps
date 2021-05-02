@@ -140,7 +140,8 @@ class SmoothTransition extends Transition {
 		blendFactor += st * tspeed;
 		if( blendFactor >= 1 ) {
 			blendFactor = 1;
-			onAnimEnd();
+			if( onAnimEnd != null )
+				onAnimEnd();
 		}
 		return rt;
 	}
