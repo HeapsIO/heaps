@@ -63,7 +63,7 @@ class Transition extends Animation {
 		while( tmp > 0 )
 			tmp = anim1.update(tmp);
 		var tmp = st;
-		while( tmp > 0)
+		while( tmp > 0 )
 			tmp = anim2.update(tmp);
 		return rt;
 	}
