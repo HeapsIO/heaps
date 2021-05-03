@@ -414,8 +414,8 @@ class Texture {
 		return t;
 	}
 
-	public static function fromPixels( pixels : hxd.Pixels ) {
-		var t = new Texture(pixels.width, pixels.height);
+	public static function fromPixels( pixels : hxd.Pixels, ?format ) {
+		var t = new Texture(pixels.width, pixels.height, null, format != null ? format : pixels.format);
 		t.uploadPixels(pixels);
 		return t;
 	}
