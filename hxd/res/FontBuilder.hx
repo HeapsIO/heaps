@@ -120,7 +120,7 @@ class FontBuilder {
 		}
 
 		if( innerTex == null ) {
-			innerTex = h3d.mat.Texture.fromPixels(pixels);
+			innerTex = h3d.mat.Texture.fromPixels(pixels, h3d.mat.Texture.nativeFormat);
 			font.tile = h2d.Tile.fromTexture(innerTex);
 			for( t in all )
 				t.setTexture(innerTex);
