@@ -295,14 +295,31 @@ class Image extends Resource {
 				throw "Not supported TGA "+r.header.imageType+"/"+r.header.bitsPerPixel;
 			var w = r.header.width;
 			var h = r.header.height;
-			pixels = hxd.Pixels.alloc(w, h, ARGB);
-			var access : hxd.Pixels.PixelsARGB = pixels;
-			var p = 0;
-			for( y in 0...h )
-				for( x in 0...w ) {
-					var c = r.imageData[x + y * w];
-					access.setPixel(x, y, c);
+			if( fmt == RGBA ) {
+				pixels = hxd.Pixels.alloc(w, h, RGBA);
+				var bytes = pixels.bytes;
+				#if hl
+				var bytes : hl.Bytes = bytes;
+				inline function set(i,c) bytes.setI32(i<<2,c);
+				#else
+				inline function set(i,c) bytes.setInt32(i<<2,c);
+				#end
+				for( i in 0...w*h ) {
+					var c = r.imageData[i];
+					c = (c >>> 24) | (c << 8);
+					set(i,c);
 				}
+			} else {
+				pixels = hxd.Pixels.alloc(w, h, ARGB);
+				var access : hxd.Pixels.PixelsARGB = pixels;
+				var p = 0;
+				for( y in 0...h ) {
+					for( x in 0...w ) {
+						var c = r.imageData[p++];
+						access.setPixel(x, y, c);
+					}
+				}
+			}
 			switch( r.header.imageOrigin ) {
 			case BottomLeft: pixels.flags.set(FlipY);
 			case TopLeft: // nothing
