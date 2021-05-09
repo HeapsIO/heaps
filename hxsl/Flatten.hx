@@ -300,6 +300,9 @@ class Flatten {
 				return Error.t("Access not supported for " + t.toString(), null);
 			var e = read(0, pos);
 			if( size == 4 ) {
+				// 0 size array : return vec4(0.)
+				if( a.pos == -1 )
+					return { e : TCall({ e : TGlobal(Vec4), t : TFun([]), p : pos },[{ e : TConst(CFloat(0)), t : TFloat, p : pos }]), t : TVec(4,VFloat), p : pos };
 				if( a.pos & 3 != 0 ) throw "assert";
 			} else {
 				var sw = [];
@@ -436,6 +439,13 @@ class Flatten {
 			default:
 			}
 			var size = varSize(v.type, t);
+			if( size == 0 ) {
+				// 0-size array !
+				var a = new Alloc(g, t, -1, size);
+				a.v = v;
+				varMap.set(v, a);
+				continue;
+			}
 			var best : Alloc = null;
 			for( a in alloc )
 				if( a.v == null && a.size >= size && (best == null || best.size > a.size) )

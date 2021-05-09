@@ -279,7 +279,6 @@ class Environment {
 		pass.shader.texture = source;
 		pass.shader.aboveThresholdScale = scale;
 		pass.shader.threshold = threshold;
-		env.realloc = null;
 		for( i in 0...6 ) {
 			engine.pushTarget(env,i);
 			pass.shader.faceMatrix = getCubeMatrix(i);

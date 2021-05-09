@@ -132,7 +132,7 @@ class Renderer extends h3d.scene.Renderer {
 
 	override function getPassByName(name:String):h3d.pass.Base {
 		switch( name ) {
-		case "overlay", "beforeTonemapping", "albedo", "afterTonemapping", "forward":
+		case "overlay", "beforeTonemapping", "albedo", "afterTonemapping", "forward", "forwardAlpha":
 			return defaultPass;
 		case "default", "alpha", "additive":
 			return output;
@@ -460,6 +460,7 @@ class Renderer extends h3d.scene.Renderer {
 		var ls = hxd.impl.Api.downcast(getLightSystem(), h3d.scene.pbr.LightSystem);
 		ls.forwardMode = true;
 		draw("forward");
+		renderPass(defaultPass, get("forwardAlpha"), backToFront);
 		ls.forwardMode = false;
 		end();
 

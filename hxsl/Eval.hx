@@ -164,7 +164,7 @@ class Eval {
 					out.push(handleReturn(e));
 				}
 			}
-			var t = if( isFinal ) out[out.length - 1].t else e.t;
+			var t = if( isFinal ) (out.length == 0 ? TVoid : out[out.length - 1].t) else e.t;
 			return { e : TBlock(out), t : t, p : e.p };
 		case TParenthesis(v):
 			var v = handleReturn(v, isFinal);

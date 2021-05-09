@@ -89,12 +89,20 @@ class PbrMaterial extends Material {
 				}
 			} else if( am != null )
 				mainPass.removeShader(am);
-			if( props == null || (props:PbrProps).mode == PBR ) {
+			var mode = props == null ? PBR : (props:PbrProps).mode;
+			switch( mode ) {
+			case PBR:
 				mainPass.setPassName(switch( b ) {
 				case Add, AlphaAdd, SoftAdd: "additive";
 				case Alpha, AlphaMultiply: "alpha";
 				default: "default";
 				});
+			case Forward:
+				mainPass.setPassName(switch( b ) {
+				case Alpha, AlphaMultiply: "forwardAlpha";
+				default: "forward";
+				});
+			default:
 			}
 		}
 		return this.blendMode = b;

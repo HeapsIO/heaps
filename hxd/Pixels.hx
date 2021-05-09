@@ -519,6 +519,10 @@ class Pixels {
 		return o.getBytes();
 	}
 
+	public function toDDS() {
+		return Pixels.toDDSLayers([this]);
+	}
+
 	public function clone() {
 		var p = new Pixels(width, height, null, format);
 		p.flags = flags;
@@ -613,7 +617,7 @@ class Pixels {
 		- can contain multiple layers (set isCubeMap = true if it's a cubemap)
 		- can contain single or multiple layers with mipmaps (auto detected with diffences in size)
 	**/
-	public static function toDDS( pixels : Array<Pixels>, isCubeMap = false ) {
+	public static function toDDSLayers( pixels : Array<Pixels>, isCubeMap = false ) {
 		if( pixels.length == 0 )
 			throw "Must contain at least one image";
 		var ref = pixels[0];
