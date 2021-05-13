@@ -79,7 +79,9 @@ class MeshBatch extends MultiMaterial {
 		var scene = getScene();
 		if( scene == null ) return;
 		cleanPasses();
-		for( index => mat in materials ) {
+		for( index in 0...materials.length ) {
+			var mat = materials[index];
+			if( mat == null ) continue;
 			var matInfo = @:privateAccess instanced.primitive.getMaterialIndexes(index);
 			for( p in mat.getPasses() ) @:privateAccess {
 				var ctx = scene.renderer.getPassByName(p.name);
