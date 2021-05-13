@@ -1377,10 +1377,18 @@ class GlDriver extends Driver {
 			curIndexBuffer = ibuf;
 			gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, ibuf.b);
 		}
+		var kind, size;
+		if( ibuf.is32 ) {
+			kind = GL.UNSIGNED_INT;
+			size = 4;
+		} else {
+			kind = GL.UNSIGNED_SHORT;
+			size = 2;
+		}
 		#if !js
 		if( hasMultiIndirect && commands.data != null ) {
 			gl.bindBuffer(GL.DRAW_INDIRECT_BUFFER, commands.data);
-			gl.multiDrawElementsIndirect(drawMode, ibuf.is32 ? GL.UNSIGNED_INT : GL.UNSIGNED_SHORT, null, commands.commandCount, 0);
+			gl.multiDrawElementsIndirect(drawMode, kind, null, commands.commandCount, 0);
 			gl.bindBuffer(GL.DRAW_INDIRECT_BUFFER, null);
 			return;
 		}
@@ -1389,9 +1397,9 @@ class GlDriver extends Driver {
 		if( args != null ) {
 			var p = 0;
 			for( i in 0...Std.int(args.length/3) )
-				gl.drawElementsInstanced(drawMode, args[p++], ibuf.is32 ? GL.UNSIGNED_INT : GL.UNSIGNED_SHORT, args[p++], args[p++]);
+				gl.drawElementsInstanced(drawMode, args[p++], kind, args[p++]*size, args[p++]);
 		} else
-			gl.drawElementsInstanced(drawMode, commands.indexCount, ibuf.is32 ? GL.UNSIGNED_INT : GL.UNSIGNED_SHORT, 0, commands.commandCount);
+			gl.drawElementsInstanced(drawMode, commands.indexCount, kind, commands.startIndex*size, commands.commandCount);
 	}
 
 	override function end() {

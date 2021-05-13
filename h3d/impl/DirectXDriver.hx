@@ -1219,7 +1219,7 @@ class DirectXDriver extends h3d.impl.Driver {
 			#if( (hldx == "1.8.0") || (hldx == "1.9.0") )
 			throw "Requires HLDX 1.10+";
 			#else
-			dx.Driver.drawIndexedInstanced(commands.indexCount, commands.commandCount, 0, 0, 0);
+			dx.Driver.drawIndexedInstanced(commands.indexCount, commands.commandCount, commands.startIndex, 0, 0);
 			#end
 		} else
 			dx.Driver.drawIndexedInstancedIndirect(commands.data, 0);
