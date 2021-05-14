@@ -25,6 +25,7 @@ package h3d.scene.pbr;
 	var Specular = "Specular";
 	var Irrad = "Irrad";
 	var Background = "Background";
+	var CustomColor = "CustomColor";
 }
 
 @:enum abstract TonemapMap(String) {
@@ -36,6 +37,7 @@ typedef RenderProps = {
 	var mode : DisplayMode;
 	var exposure : Float;
 	var sky : SkyMode;
+	var ?skyColor : Int;
 	var tone : TonemapMap;
 	var emissive : Float;
 	var occlusion : Float;
@@ -400,6 +402,11 @@ class Renderer extends h3d.scene.Renderer {
 					pbrIndirect.skyColorValue.setColor(ctx.engine.backgroundColor);
 					pbrIndirect.gammaCorrect = true;
 					null;
+				case CustomColor:
+					pbrIndirect.skyColor = true;
+					pbrIndirect.skyColorValue.setColor(props.skyColor);
+					pbrIndirect.gammaCorrect = true;
+					null;
 				};
 			case LightProbe:
 				pbrIndirect.showSky = true;
@@ -640,8 +647,10 @@ class Renderer extends h3d.scene.Renderer {
 								<option value="Specular">Show Specular</option>
 								<option value="Irrad">Show Irrad</option>
 								<option value="Background">Background Color</option>
+								<option value="CustomColor">Custom Color</option>
 							</select>
 						</dd>
+						'+(skyMode==CustomColor?'<dt>Sky Color</dt><dd><input type="color" field="skyColor"/></dd>':'')+'
 				</div>
 
 				<div class="group" name="Params">

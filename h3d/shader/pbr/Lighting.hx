@@ -49,16 +49,19 @@ class Indirect extends PropsDefinition {
 			if( isSky ) {
 				if( showSky ) {
 					var color : Vec3;
-					if( skyColor )
+					if( skyColor ) {
 						color = skyColorValue;
-					else {
+						if( gammaCorrect )
+							color *= color;
+					} else {
 						var normal = (vec3( uvToScreen(calculatedUV), 1. ) * cameraInvViewProj.mat3x4()).normalize();
 						color = skyMap.get(rotateNormal(normal)).rgb;
 						color = min(color, skyHdrMax);
+						if( gammaCorrect )
+							color *= color;
+						color *= irrPower;
 					}
-					if( gammaCorrect )
-						color *= color;
-					pixelColor.rgb += color * irrPower;
+					pixelColor.rgb += color;
 				} else
 					discard;
 			} else {
