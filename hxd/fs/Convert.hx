@@ -229,6 +229,7 @@ class CompressIMG extends Convert {
 		"RGB32F" => "R32G32B32_FLOAT",
 		"RGBA16F" => "R16G16B16A16_FLOAT",
 		"RGBA32F" => "R32G32B32A32_FLOAT",
+		"RGBA" => "R8G8B8A8_UNORM",
 	];
 
 	override function convert() {
