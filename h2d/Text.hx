@@ -107,6 +107,10 @@ class Text extends Drawable {
 		Extra line spacing in pixels.
 	**/
 	public var lineSpacing(default,set) : Float = 0;
+	/**
+		Allow line break.
+	**/
+	public var lineBreak(default,set) : Bool = true;
 
 	var glyphs : TileGroup;
 	var needsRebuild : Bool;
@@ -184,6 +188,13 @@ class Text extends Drawable {
 		lineSpacing = s;
 		rebuild();
 		return s;
+	}
+
+	function set_lineBreak(b) {
+		if( lineBreak == b ) return b;
+		lineBreak = b;
+		rebuild();
+		return b;
 	}
 
 	override function constraintSize(width:Float, height:Float) {
@@ -330,7 +341,7 @@ class Text extends Drawable {
 				var breakFound = false;
 				while( size <= maxWidth && k < max ) {
 					var cc = text.charCodeAt(k++);
-					if( font.charset.isSpace(cc) || cc == '\n'.code ) {
+					if( lineBreak && (font.charset.isSpace(cc) || cc == '\n'.code ) ) {
 						breakFound = true;
 						break;
 					}
@@ -342,7 +353,7 @@ class Text extends Drawable {
 				}
 				if( size > maxWidth || (!breakFound && size + afterData > maxWidth) ) {
 					newline = true;
-					if( font.charset.isSpace(cc) ){
+					if( lineBreak && font.charset.isSpace(cc) ){
 						lines.push(text.substr(restPos, i - restPos));
 						e = null;
 					}else{

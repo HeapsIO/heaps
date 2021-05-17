@@ -367,7 +367,7 @@ class ObjectComp implements h2d.domkit.Object implements domkit.Component.Compon
 	@:p var offsetY : Int;
 	@:p(none) var minWidth : Null<Int>;
 	@:p(none) var minHeight : Null<Int>;
-	@:p var lineBreak : Bool;
+	@:p var forceLineBreak : Bool;
 
 	static function set_rotation(o:h2d.Object, v:Float) {
 		o.rotation = v * Math.PI / 180;
@@ -485,7 +485,7 @@ class ObjectComp implements h2d.domkit.Object implements domkit.Component.Compon
 		if( p != null ) p.minHeight = v;
 	}
 
-	static function set_lineBreak(o:h2d.Object,v) {
+	static function set_forceLineBreak(o:h2d.Object,v) {
 		var p = getFlowProps(o);
 		if( p != null ) p.lineBreak = v;
 	}
@@ -601,6 +601,7 @@ class TextComp extends DrawableComp implements domkit.Component.ComponentDecl<h2
 	@:p(font) var font : h2d.Font;
 	@:p var letterSpacing = 0;
 	@:p var lineSpacing = 0;
+	@:p var lineBreak : Bool;
 	@:p(none) var maxWidth : Null<Int>;
 	@:p var textAlign : h2d.Text.Align = Left;
 	@:p(textShadow) var textShadow : { dx : Float, dy : Float, color : Int, alpha : Float };
@@ -616,6 +617,10 @@ class TextComp extends DrawableComp implements domkit.Component.ComponentDecl<h2
 
 	static function set_textShadow( t : h2d.Text, v ) {
 		t.dropShadow = v;
+	}
+
+	static function set_lineBreak( t : h2d.Text, v ) {
+		t.lineBreak = v;
 	}
 }
 
