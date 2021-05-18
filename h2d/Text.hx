@@ -302,7 +302,7 @@ class Text extends Drawable {
 	}
 
 	/**
-		<span class="label">Advanced usage</span>  
+		<span class="label">Advanced usage</span>
 		Perform a word-wrap of the text based on this Text settings.
 		@param text String to word-wrap.
 		@param leftMargin Starting x offset of the first line.
@@ -315,9 +315,9 @@ class Text extends Drawable {
 	function splitRawText( text : String, leftMargin = 0., afterData = 0., ?font : Font, ?sizes:Array<Float>, ?prevChar:Int = -1 ) {
 		var maxWidth = realMaxWidth;
 		if( maxWidth < 0 ) {
-			if ( sizes == null ) 
+			if ( sizes == null )
 				return text;
-			else 
+			else
 				maxWidth = Math.POSITIVE_INFINITY;
 		}
 		if ( font == null ) font = this.font;
@@ -351,9 +351,9 @@ class Text extends Drawable {
 					var nc = text.charCodeAt(k+1);
 					if( font.charset.isBreakChar(cc) && (nc == null || !font.charset.isComplementChar(nc)) ) break;
 				}
-				if( size > maxWidth || (!breakFound && size + afterData > maxWidth) ) {
+				if( lineBreak && (size > maxWidth || (!breakFound && size + afterData > maxWidth)) ) {
 					newline = true;
-					if( lineBreak && font.charset.isSpace(cc) ){
+					if( font.charset.isSpace(cc) ){
 						lines.push(text.substr(restPos, i - restPos));
 						e = null;
 					}else{
