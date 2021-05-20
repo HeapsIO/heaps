@@ -81,6 +81,7 @@ class Console #if !macro extends h2d.Object #end {
 	var logs : Array<String>;
 	var logIndex:Int;
 	var curCmd:String;
+	var errorColor = 0xC00000;
 
 	/**
 		The text character which should be pressed in order to automatically show console input.
@@ -392,7 +393,6 @@ class Console #if !macro extends h2d.Object #end {
 		logs.push(command);
 		logIndex = -1;
 
-		var errorColor = 0xC00000;
 
 		var args = [];
 		var c = '';
@@ -508,8 +508,13 @@ class Console #if !macro extends h2d.Object #end {
 				}
 			}
 		}
+
+		doCall(cmd.callb, vargs);
+	}
+
+	function doCall( callb : Dynamic, vargs : Array<Dynamic> ) {
 		try {
-			Reflect.callMethod(null, cmd.callb, vargs);
+			Reflect.callMethod(null, callb, vargs);
 		} catch( e : String ) {
 			log('ERROR $e', errorColor);
 		}
