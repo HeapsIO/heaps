@@ -53,7 +53,7 @@ class Benchmark extends h2d.Graphics {
 	var labels : Array<h2d.Text>;
 	var interact : h2d.Interactive;
 
-	public var estimateWait = true;
+	public var estimateWait = false;
 	public var enable(default,set) : Bool;
 
 	public var width : Null<Int>;
@@ -65,7 +65,7 @@ class Benchmark extends h2d.Graphics {
 	public var recalTime = 1e9;
 	public var smoothTime = 0.95;
 
-	public var measureCpu = true;
+	public var measureCpu = false;
 
 	var tip : h2d.Text;
 	var tipCurrent : StatsObject;
@@ -84,7 +84,7 @@ class Benchmark extends h2d.Graphics {
 		interact.cursor = Default;
 		interact.onOut = function(_) {
 			if( tip == null ) return;
-			tip.remove();
+			tip.parent.remove();
 			tip = null;
 			tipCurrent = null;
 		}
@@ -136,28 +136,29 @@ class Benchmark extends h2d.Graphics {
 				break;
 			s = s.next;
 		}
-		if( tip != null ) {
-			tip.remove();
-			tip = null;
-			tipCurrent = null;
+		if( tip == null ) {
+			var fl = new h2d.Flow(this);
+			fl.y = -23;
+			fl.backgroundTile = h2d.Tile.fromColor(0,1,1,0.8);
+			fl.padding = 5;
+			tip = new h2d.Text(font, fl);
+			tip.dropShadow = { dx : 0, dy : 1, color : 0, alpha : 1 };
 		}
-		if( s == null )
-			return;
-		tip = new h2d.Text(font, this);
-		tip.dropShadow = { dx : 0, dy : 1, color : 0, alpha : 1 };
-		tip.y = -20;
 		tipCurrent = s;
-		tipCurName = s.name;
+		tipCurName = s == null ? null : s.name;
 		syncTip(s);
 	}
 
 	function syncTip(s:StatsObject) {
-		tip.text = s.name+"( " + Std.int(s.time / 1e6) + "." + StringTools.lpad(""+(Std.int(s.time/1e4)%100),"0",2) + " ms " + s.drawCalls + " draws )";
-		var tw = tip.textWidth;
-		var tx = s.xPos + ((s.xSize - tw) * .5);
+		if( s == null )
+			tip.text = "total "+engine.drawCalls+" draws "+hxd.Math.fmt(engine.drawTriangles/1000000)+" Mtri";
+		else
+			tip.text = s.name+"( " + Std.int(s.time / 1e6) + "." + StringTools.lpad(""+(Std.int(s.time/1e4)%100),"0",2) + " ms " + s.drawCalls + " draws )";
+		var tw = tip.textWidth + 10;
+		var tx = s == null ? curWidth : s.xPos + ((s.xSize - tw) * .5);
 		if( tx + tw > curWidth ) tx = curWidth - tw;
 		if( tx < 0 ) tx = 0;
-		if( hxd.Math.abs(tip.x - tx) > 5 ) tip.x = Std.int(tx);
+		if( hxd.Math.abs(tip.parent.x - tx) > 5 ) tip.parent.x = Std.int(tx);
 	}
 
 	public function begin() {
@@ -203,6 +204,7 @@ class Benchmark extends h2d.Graphics {
 					var s = allocStat(q.name, dt);
 					totalTime += dt;
 					s.drawCalls = prev.drawCalls - q.drawCalls;
+					if( s.drawCalls < 0 ) s.drawCalls = 0;
 				}
 				// recycle
 				var n = q.next;
@@ -307,6 +309,9 @@ class Benchmark extends h2d.Graphics {
 			count++;
 			s = s.next;
 		}
+
+		if( tip != null && tipCurrent == null )
+			syncTip(null);
 
 		var time = allocLabel(count++);
 		time.x = xPos + 3;
