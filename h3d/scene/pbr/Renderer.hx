@@ -69,12 +69,12 @@ class Renderer extends h3d.scene.Renderer {
 	var currentStep : h3d.impl.RendererFX.Step;
 
 	var textures = {
-		albedo : null,
-		normal : null,
-		pbr : null,
-		other : null,
-		hdr : null,
-		ldr : null,
+		albedo : (null:h3d.mat.Texture),
+		normal : (null:h3d.mat.Texture),
+		pbr : (null:h3d.mat.Texture),
+		other : (null:h3d.mat.Texture),
+		hdr : (null:h3d.mat.Texture),
+		ldr : (null:h3d.mat.Texture),
 	};
 
 	public var skyMode : SkyMode = Hide;
