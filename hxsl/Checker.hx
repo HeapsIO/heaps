@@ -632,10 +632,16 @@ class Checker {
 				default:
 				}
 				type = t;
-				TExprDef.TArray(e1, e2);
+			case TMat2:
+				type = vec2;
+			case TMat3:
+				type = vec3;
+			case TMat4, TMat3x4:
+				type = vec4;
 			default:
 				error("Cannot index " + e1.t.toString() + " : should be an array", e.pos);
 			}
+			TExprDef.TArray(e1, e2);
 		case EArrayDecl(el):
 			if( el.length == 0 ) error("Empty array not supported", e.pos);
 			var el = [for( e in el ) typeExpr(e, Value)];
