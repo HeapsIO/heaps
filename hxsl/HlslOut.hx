@@ -595,10 +595,30 @@ class HlslOut {
 		case TBreak:
 			add("break");
 		case TArray(e, index):
-			addValue(e, tabs);
-			add("[");
-			addValue(index, tabs);
-			add("]");
+			switch( e.t ) {
+			case TMat2, TMat3, TMat3x4, TMat4:
+				switch( e.t ) {
+				case TMat2:
+					decl("float2 _matarr( float2x2 m, int idx ) { return float2(m[0][idx],m[1][idx]); }");
+				case TMat3:
+					decl("float3 _matarr( float3x3 m, int idx ) { return float3(m[0][idx],m[1][idx],m[2][idx]); }");
+				case TMat3x4:
+					decl("float4 _matarr( float3x4 m, int idx ) { return float4(m[0][idx],m[1][idx],m[2][idx],m[3][idx]); }");
+				case TMat4:
+					decl("float4 _matarr( float4x4 m, int idx ) { return float4(m[0][idx],m[1][idx],m[2][idx],m[3][idx]); }");
+				default:
+				}
+				add("_matarr(");
+				addValue(e,tabs);
+				add(",");
+				addValue(index,tabs);
+				add(")");
+			default:
+				addValue(e, tabs);
+				add("[");
+				addValue(index, tabs);
+				add("]");
+			}
 		case TMeta(m, args, e):
 			handleMeta(m, args, addExpr, e, tabs);
 		}
