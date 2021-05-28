@@ -120,6 +120,13 @@ class Dropdown extends Flow {
 		p.horizontalAlign = Right;
 		p.verticalAlign = Top;
 
+		inline function setItem(i) {
+			if( selectedItem != i ) {
+				selectedItem = i;
+				onChange(getItem(i));
+			}
+		}
+
 		//
 		fake = new Fake(this);
 		enableInteractive = true;
@@ -141,14 +148,14 @@ class Dropdown extends Flow {
 
 		interactive.onFocusLost = function(e) {
 			if (highlightedItem >= 0 && canEdit) {
-				selectedItem = highlightedItem;
+				setItem(highlightedItem);
 			}
 			close();
 		}
 
 		dropdownList.enableInteractive = true;
 		dropdownList.interactive.onClick = function(e) {
-			if( canEdit ) selectedItem = highlightedItem;
+			if( canEdit ) setItem(highlightedItem);
 			close();
 		}
 		dropdownList.interactive.onMove = function(e : hxd.Event) {
@@ -277,6 +284,13 @@ class Dropdown extends Flow {
 		Sent when dropdown is being closed. Triggered both by user input and programmatic action via `Dropdown.close`.
 	**/
 	public dynamic function onClose() {
+	}
+
+	/**
+		Sent when user change the item in the list.
+		@param item An object that was hovered.
+	**/
+	public dynamic function onChange(item : Object) {
 	}
 
 	/**
