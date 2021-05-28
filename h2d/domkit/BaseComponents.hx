@@ -692,6 +692,7 @@ class FlowComp extends ObjectComp implements domkit.Component.ComponentDecl<h2d.
 	@:p(hAlign) var contentHalign : h2d.Flow.FlowAlign;
 	@:p(cursor) var cursor : hxd.Cursor;
 	@:p var propagate : Bool;
+	@:p var inlineBlock : Bool;
 
 	static function set_minWidth( o : h2d.Flow, v ) {
 		o.minWidth = v;
@@ -803,6 +804,10 @@ class FlowComp extends ObjectComp implements domkit.Component.ComponentDecl<h2d.
 
 	static function set_layout( o : h2d.Flow, v ) {
 		o.layout = v;
+	}
+
+	static function set_inlineBlock( o : h2d.Flow, v ) {
+		o.isInline = !v;
 	}
 
 	static function set_vertical( o : h2d.Flow, v ) {
