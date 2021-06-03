@@ -3,7 +3,7 @@ package hxd.res;
 import haxe.macro.Context;
 import haxe.macro.Expr;
 
-private typedef FileEntry = { e : Expr, t : ComplexType };
+private typedef FileEntry = { e : Expr, t : ComplexType, ?doc:String };
 
 typedef FileTreeData = {
 	var name : String;
@@ -284,6 +284,7 @@ class FileTree {
 				pos : pos,
 				kind : FProp("get","never",field.t),
 				access : [AStatic, APublic],
+				doc: field.doc,
 			};
 			fields.push(field);
 			fields.push(fget);
@@ -331,7 +332,11 @@ class FileTree {
 			var ftype = extensions.get(f.ext);
 			if( ftype == null ) ftype = defaultExt;
 			var epath = { expr : EConst(CString(f.relPath)), pos : pos };
-			var field = { e : macro loader.loadCache($epath, ${ftype.e}), t : ftype.t };
+			var doc = if ( f.ext == "png" || f.ext == "jpg" || f.ext == "jpeg" || f.ext == "gif" )
+					'[${f.relPath}](file:///${f.fullPath})\n\n[![](file:///${f.fullPath})](file:///${f.fullPath})';
+				else
+					'[${f.relPath}](file:///${f.fullPath})';
+			var field = { e : macro loader.loadCache($epath, ${ftype.e}), t : ftype.t, doc: doc };
 			addField(f.ident, field);
 		}
 
