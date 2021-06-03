@@ -240,8 +240,8 @@ class Window {
 
 	function onMouseDown(e:js.html.MouseEvent) {
 		if (mouseLock) {
-				if (e.movementX != 0 || e.movementY != 0)
-					onMouseMove(e);
+			if (e.movementX != 0 || e.movementY != 0)
+				onMouseMove(e);
 		}
 		else {
 			if(e.clientX != curMouseX || e.clientY != curMouseY)
