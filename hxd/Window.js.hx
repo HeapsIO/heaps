@@ -226,9 +226,14 @@ class Window {
 	}
 
 	function set_mouseLock( v : Bool ) : Bool {
-		//if( v ) throw "Not implemented";
-		mouseLock = v;
-		return mouseLock;
+		var customCanvas = canvas != null;
+		if (v)
+			if (customCanvas) canvas.requestPointerLock();
+			else js.Browser.window.document.documentElement.requestPointerLock();
+		else
+			if (customCanvas) canvas.ownerDocument.exitPointerLock();
+			else js.Browser.window.document.exitPointerLock();
+		return mouseLock = v;
 	}
 
 	function get_vsync() : Bool return true;
@@ -288,11 +293,6 @@ class Window {
 	}
 
 	function onLockChange() {
-		var customCanvas = canvas != null;
-		if (customCanvas)
-			mouseLock = (canvas.ownerDocument.pointerLockElement == canvas);
-		else
-			mouseLock = (js.Browser.window.document.pointerLockElement == element);
 		
 	}
 
