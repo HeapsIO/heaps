@@ -16,7 +16,7 @@ class Window {
 	public var height(get, never) : Int;
 	public var mouseX(get, never) : Int;
 	public var mouseY(get, never) : Int;
-	@:isVar public var mouseLock(get, set) : Bool;
+	public var mouseLock(get, set) : Bool;
 	public var vsync(get, set) : Bool;
 	public var isFocused(get, never) : Bool;
 	public var propagateKeyEvents : Bool;
@@ -26,6 +26,7 @@ class Window {
 
 	var curMouseX : Float = 0.;
 	var curMouseY : Float = 0.;
+	var _mouseLock : Bool = false;
 
 	var canvas : js.html.CanvasElement;
 	var element : js.html.EventTarget;
@@ -222,7 +223,7 @@ class Window {
 	}
 
 	function get_mouseLock() : Bool {
-		return mouseLock;
+		return _mouseLock;
 	}
 
 	function set_mouseLock( v : Bool ) : Bool {
@@ -233,7 +234,7 @@ class Window {
 		else
 			if (customCanvas) canvas.ownerDocument.exitPointerLock();
 			else js.Browser.window.document.exitPointerLock();
-		return mouseLock = v;
+		return _mouseLock = v;
 	}
 
 	function get_vsync() : Bool return true;
