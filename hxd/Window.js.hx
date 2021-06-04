@@ -76,12 +76,10 @@ class Window {
 		// unless we're having a custom canvas (prevent leaking the listener)
 		if( customCanvas ) {
 			canvas.addEventListener("mousemove", onMouseMove);
-			canvas.ownerDocument.addEventListener("pointerlockchange", onLockChange);
 		}
 			
 		else {
 			js.Browser.window.addEventListener("mousemove", onMouseMove);
-			js.Browser.window.document.addEventListener("pointerlockchange", onLockChange);
 		}
 			
 		
@@ -294,10 +292,6 @@ class Window {
 		}
 		
 		event(new Event(EMove, mouseX, mouseY));
-	}
-
-	function onLockChange() {
-		
 	}
 
 	function onMouseWheel(e:js.html.WheelEvent) {
