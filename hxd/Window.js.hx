@@ -228,12 +228,15 @@ class Window {
 
 	function set_mouseLock( v : Bool ) : Bool {
 		var customCanvas = canvas != null;
-		if (v)
-			if (customCanvas) canvas.requestPointerLock();
-			else js.Browser.window.document.documentElement.requestPointerLock();
-		else
+		if (v) {
+				if (customCanvas) canvas.requestPointerLock();
+				else js.Browser.window.document.documentElement.requestPointerLock();
+			}
+			
+		else {
 			if (customCanvas) canvas.ownerDocument.exitPointerLock();
 			else js.Browser.window.document.exitPointerLock();
+		}
 		return _mouseLock = v;
 	}
 
