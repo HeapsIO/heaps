@@ -122,7 +122,13 @@ class Console #if !macro extends h2d.Object #end {
 		tf.x = 2;
 		tf.y = 1;
 		tf.textColor = 0xFFFFFFFF;
+		resetCommands();
+	}
 
+	/**
+	 * Reset all commands and aliases to default
+	 */
+	public function resetCommands() {
 		commands = new Map();
 		aliases = new Map();
 		addCommand("help", "Show help", [ { name : "command", t : AString, opt : true } ], showHelp);
