@@ -69,6 +69,9 @@ class DirectXDriver extends h3d.impl.Driver {
 	static inline var RECTS_ELTS = 4 * NTARGETS;
 	static inline var BLEND_FACTORS = NTARGETS;
 
+	public static var CACHE_FILE : String = null;
+	var cacheFileData : Map<String,haxe.io.Bytes>;
+
 	var driver : DriverInstance;
 	var shaders : Map<Int,CompiledShader>;
 
@@ -728,14 +731,42 @@ class DirectXDriver extends h3d.impl.Driver {
 		}
 	}
 
-	function getBinaryPayload( code : String ) {
+	function getBinaryPayload( vertex : Bool, code : String ) {
 		var bin = code.indexOf("//BIN=");
-		if( bin < 0 )
-			return null;
-		var end = code.indexOf("#", bin);
-		if( end < 0 )
-			return null;
-		return haxe.crypto.Base64.decode(code.substr(bin + 6, end - bin - 6));
+		if( bin >= 0 ) {
+			var end = code.indexOf("#", bin);
+			if( end >= 0 )
+				return haxe.crypto.Base64.decode(code.substr(bin + 6, end - bin - 6));
+		}
+		if( CACHE_FILE != null ) {
+			if( cacheFileData == null ) {
+				cacheFileData = new Map();
+				try {
+					var cache = new haxe.io.BytesInput(sys.io.File.getBytes(CACHE_FILE));
+					while( cache.position < cache.length ) {
+						var len = cache.readInt32();
+						if( len < 0 || len > 4<<20 ) break;
+						var key = cache.readString(len);
+						if( key == "" ) break;
+						var len = cache.readInt32();
+						if( len < 0 || len > 4<<20 ) break;
+						var str = cache.readString(len);
+						cacheFileData.set(key,haxe.crypto.Base64.decode(str));
+						cache.readByte(); // newline
+					}
+				} catch( e : Dynamic ) {
+				}
+			}
+			var bytes = cacheFileData.get(shaderVersion + haxe.crypto.Md5.encode(code));
+			if( bytes != null ) {
+				var sh = vertex ? Driver.createVertexShader(bytes) : Driver.createPixelShader(bytes);
+				// shader can't be compiled !
+				if( sh == null )
+					return null;
+				return bytes;
+			}
+		}
+		return null;
 	}
 
 	function addBinaryPayload( bytes ) {
@@ -748,7 +779,7 @@ class DirectXDriver extends h3d.impl.Driver {
 			shader.code = h.run(shader.data);
 			shader.data.funs = null;
 		}
-		var bytes = getBinaryPayload(shader.code);
+		var bytes = getBinaryPayload(shader.vertex, shader.code);
 		if( bytes == null ) {
 			bytes = try dx.Driver.compileShader(shader.code, "", "main", (shader.vertex?"vs_":"ps_") + shaderVersion, OptimizationLevel3) catch( err : String ) {
 				err = ~/^\(([0-9]+),([0-9]+)-([0-9]+)\)/gm.map(err, function(r) {
@@ -759,7 +790,8 @@ class DirectXDriver extends h3d.impl.Driver {
 				});
 				throw "Shader compilation error " + err + "\n\nin\n\n" + shader.code;
 			}
-			shader.code += addBinaryPayload(bytes);
+			if( cacheFileData == null )
+				shader.code += addBinaryPayload(bytes);
 		}
 		if( compileOnly )
 			return { s : null, bytes : bytes };
@@ -767,6 +799,27 @@ class DirectXDriver extends h3d.impl.Driver {
 		if( s == null ) {
 			if( hasDeviceError ) return null;
 			throw "Failed to create shader\n" + shader.code;
+		}
+
+		if( cacheFileData != null ) {
+			var key = shaderVersion + haxe.crypto.Md5.encode(shader.code);
+			if( cacheFileData.get(key) != bytes ) {
+				cacheFileData.set(key, bytes);
+				if( CACHE_FILE != null ) {
+					var out = sys.io.File.write(CACHE_FILE);
+					var keys = Lambda.array({ iterator : cacheFileData.keys });
+					keys.sort(Reflect.compare);
+					for( key in keys ) {
+						out.writeInt32(key.length);
+						out.writeString(key);
+						var b64 = haxe.crypto.Base64.encode(cacheFileData.get(key));
+						out.writeInt32(b64.length);
+						out.writeString(b64);
+						out.writeByte('\n'.code);
+					}
+					out.close();
+				}
+			}
 		}
 
 		var ctx = new ShaderContext(s);
