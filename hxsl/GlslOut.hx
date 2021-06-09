@@ -653,11 +653,16 @@ class GlslOut {
 		buf = new StringBuf();
 		exprValues = [];
 
-		decl("precision mediump float;");
-
 		if( s.funs.length != 1 ) throw "assert";
 		var f = s.funs[0];
 		isVertex = f.kind == Vertex;
+		
+		if (isVertex) {
+			decl("precision highp float;");
+		} else {
+			decl("precision mediump float;");
+		}
+
 		initVars(s);
 
 		var tmp = buf;
