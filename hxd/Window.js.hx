@@ -94,6 +94,7 @@ class Window {
 		element.addEventListener("keypress", onKeyPress);
 		element.addEventListener("blur", onFocus.bind(false));
 		element.addEventListener("focus", onFocus.bind(true));
+		element.addEventListener("resize", checkResize);
 		canvas.oncontextmenu = function(e){
 			e.stopPropagation();
 			e.preventDefault();
@@ -119,8 +120,6 @@ class Window {
 		}
 		curW = this.width;
 		curH = this.height;
-		timer = new haxe.Timer(100);
-		timer.run = checkResize;
 	}
 
 	function checkResize() {
