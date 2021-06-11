@@ -29,13 +29,17 @@ private class BatchData {
 class MeshBatch extends MultiMaterial {
 
 	var instanced : h3d.prim.Instanced;
-	var curInstances : Int = 0;
 	var dataPasses : BatchData;
 	var modelViewID = hxsl.Globals.allocID("global.modelView");
 	var modelViewInverseID = hxsl.Globals.allocID("global.modelViewInverse");
 	var needUpload = false;
 
 	static var MAX_BUFFER_ELEMENTS = 4096;
+
+	/**
+		The number of instances on this batch
+	**/
+	public var instanceCount(default,null) : Int = 0;
 
 	/**
 	 * 	If set, use this position in emitInstance() instead MeshBatch absolute position
@@ -129,7 +133,7 @@ class MeshBatch extends MultiMaterial {
 	}
 
 	public function begin( emitCountTip = -1, resizeDown = false ) {
-		curInstances = 0;
+		instanceCount = 0;
 		if( shadersChanged ) {
 			initShadersMapping();
 			shadersChanged = false;
@@ -151,7 +155,7 @@ class MeshBatch extends MultiMaterial {
 
 	function syncData( batch : BatchData ) {
 
-		var startPos = batch.paramsCount * curInstances << 2;
+		var startPos = batch.paramsCount * instanceCount << 2;
 		// in case we are bigger than emitCountTip
 		if( startPos + batch.paramsCount > batch.data.length )
 			batch.data.grow(batch.data.length << 1);
@@ -238,18 +242,18 @@ class MeshBatch extends MultiMaterial {
 			syncData(p);
 			p = p.next;
 		}
-		curInstances++;
+		instanceCount++;
 	}
 
 	override function sync(ctx:RenderContext) {
 		super.sync(ctx);
-		if( curInstances == 0 ) return;
+		if( instanceCount == 0 ) return;
 		var p = dataPasses;
 		var alloc = hxd.impl.Allocator.get();
 		while( p != null ) {
 			var index = 0;
 			var start = 0;
-			while( start < curInstances ) {
+			while( start < instanceCount ) {
 				var upload = needUpload;
 				var buf = p.buffers[index];
 				if( buf == null || buf.isDisposed() ) {
@@ -257,7 +261,7 @@ class MeshBatch extends MultiMaterial {
 					p.buffers[index] = buf;
 					upload = true;
 				}
-				var count = curInstances - start;
+				var count = instanceCount - start;
 				if( count > p.maxInstance )
 					count = p.maxInstance;
 				if( upload )
@@ -278,7 +282,7 @@ class MeshBatch extends MultiMaterial {
 			if( p.pass == ctx.drawPass.pass ) {
 				var bufferIndex = ctx.drawPass.index & 0xFFFF;
 				p.shader.Batch_Buffer = p.buffers[bufferIndex];
-				var count = curInstances - p.maxInstance * bufferIndex;
+				var count = instanceCount - p.maxInstance * bufferIndex;
 				instanced.commands.setCommand(count,p.indexCount,p.indexStart);
 				break;
 			}
@@ -292,7 +296,7 @@ class MeshBatch extends MultiMaterial {
 	}
 
 	override function emit(ctx:RenderContext) {
-		if( curInstances == 0 ) return;
+		if( instanceCount == 0 ) return;
 		var p = dataPasses;
 		while( p != null ) {
 			var pass = p.pass;
