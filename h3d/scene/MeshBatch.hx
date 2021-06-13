@@ -134,6 +134,7 @@ class MeshBatch extends MultiMaterial {
 
 	public function begin( emitCountTip = -1, resizeDown = false ) {
 		instanceCount = 0;
+		instanced.initBounds();
 		if( shadersChanged ) {
 			initShadersMapping();
 			shadersChanged = false;
@@ -236,7 +237,8 @@ class MeshBatch extends MultiMaterial {
 	}
 
 	public function emitInstance() {
-		syncPos();
+		if( worldPosition == null ) syncPos();
+		instanced.addInstanceBounds(worldPosition == null ? absPos : worldPosition);
 		var p = dataPasses;
 		while( p != null ) {
 			syncData(p);
