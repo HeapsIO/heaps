@@ -222,6 +222,30 @@ class TextInput extends Text {
 				selectionSize = 0;
 			}
 			return;
+		case K.C if (K.isDown(K.CTRL)):
+			if( text != "" && selectionRange != null ) {
+				hxd.System.setClipboardText(text.substr(selectionRange.start, selectionRange.length));
+			}
+		case K.X if (K.isDown(K.CTRL)):
+			if( text != "" && selectionRange != null ) {
+				if(hxd.System.setClipboardText(text.substr(selectionRange.start, selectionRange.length))) {
+					if( !canEdit ) return;
+					beforeChange();
+					cutSelection();
+					onChange();
+				}
+			}
+		case K.V if (K.isDown(K.CTRL)):
+			if( !canEdit ) return;
+			var t = hxd.System.getClipboardText();
+			if( t != null && t.length > 0 ) {
+				beforeChange();
+				if( selectionRange != null )
+					cutSelection();
+				text = text.substr(0, cursorIndex) + t + text.substr(cursorIndex);
+				cursorIndex += t.length;
+				onChange();
+			}
 		default:
 			if( e.kind == EKeyDown )
 				return;
