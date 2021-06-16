@@ -1714,8 +1714,6 @@ class GlDriver extends Driver {
 		#end
 	}
 
-	#if hl
-
 	override function allocQuery(kind:QueryKind) {
 		return { q : GL.createQuery(), kind : kind };
 	}
@@ -1764,8 +1762,6 @@ class GlDriver extends Driver {
 			}
 		}
 	}
-
-	#end
 
 	static var TFILTERS = [
 		[[GL.NEAREST,GL.NEAREST],[GL.LINEAR,GL.LINEAR]],
