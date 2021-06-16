@@ -55,7 +55,7 @@ class Convert {
 		#end
 	}
 
-	static var converts = new Map<String,Array<Convert>>();
+	@:persistent static var converts = new Map<String,Array<Convert>>();
 	public static function register( c : Convert ) : Int {
 		var dest = converts.get(c.destExt);
 		if( dest == null ) {
@@ -229,6 +229,7 @@ class CompressIMG extends Convert {
 		"RGB32F" => "R32G32B32_FLOAT",
 		"RGBA16F" => "R16G16B16A16_FLOAT",
 		"RGBA32F" => "R32G32B32A32_FLOAT",
+		"RGBA" => "R8G8B8A8_UNORM",
 	];
 
 	override function convert() {

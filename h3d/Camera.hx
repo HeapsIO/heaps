@@ -367,6 +367,14 @@ class Camera {
 		return p;
 	}
 
+	public function distanceToDepth( dist : Float ) {
+		return ((zFar + zNear - 2.0 * zNear * zFar / hxd.Math.clamp(dist, zNear, zFar)) / (zFar - zNear) + 1.0) / 2.0;
+	}
+
+	public function depthToDistance( depth : Float ) {
+		return (hxd.Math.clamp(depth, 0, 1) * zFar - zNear * zFar) / (zFar - zNear);
+	}
+
 	public function load( cam : Camera ) {
 		pos.load(cam.pos);
 		target.load(cam.target);

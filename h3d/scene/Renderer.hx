@@ -9,8 +9,6 @@ class PassObjects {
 	}
 }
 
-private typedef SMap<T> = #if flash haxe.ds.UnsafeStringMap<T> #else Map<String,T> #end;
-
 enum RenderMode{
 	Default;
 	LightProbe;
@@ -21,13 +19,14 @@ enum RenderMode{
 class Renderer extends hxd.impl.AnyProps {
 
 	var defaultPass : h3d.pass.Base;
-	var passObjects : SMap<PassObjects>;
+	var passObjects : Map<String,PassObjects>;
 	var allPasses : Array<h3d.pass.Base>;
 	var emptyPasses = new h3d.pass.PassList();
 	var ctx : RenderContext;
 	var hasSetTarget = false;
 	var frontToBack : h3d.pass.PassList -> Void;
 	var backToFront : h3d.pass.PassList -> Void;
+	var debugging = false;
 
 	public var effects : Array<h3d.impl.RendererFX> = [];
 
@@ -35,7 +34,7 @@ class Renderer extends hxd.impl.AnyProps {
 
 	public function new() {
 		allPasses = [];
-		passObjects = new SMap();
+		passObjects = new Map();
 		props = getDefaultProps();
 		// pre allocate closures
 		frontToBack = depthSort.bind(true);
@@ -55,7 +54,7 @@ class Renderer extends hxd.impl.AnyProps {
 			p.dispose();
 		for( f in effects )
 			f.dispose();
-		passObjects = new SMap();
+		passObjects = new Map();
 	}
 
 	function mark(id: String) {
@@ -90,10 +89,6 @@ class Renderer extends hxd.impl.AnyProps {
 
 	function hasFeature(f) {
 		return h3d.Engine.getCurrent().driver.hasFeature(f);
-	}
-
-	function getDefaultLight<T:h3d.scene.Light>( l : T ) : T {
-		return l;
 	}
 
 	function getLightSystem() : h3d.scene.LightSystem {

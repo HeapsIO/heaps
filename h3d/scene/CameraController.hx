@@ -225,6 +225,7 @@ class CameraController extends h3d.scene.Object {
 			cam.zFar = distance * 100;
 		}
 		cam.fovY = curOffset.w;
+		cam.update();
 	}
 
 	override function sync(ctx:RenderContext) {

@@ -12,6 +12,7 @@ class Input extends hxd.App {
 		console.addCommand("hello", "Prints the correct answer", [], function() console.log("World", 0xFF00FF));
 
 		debug = new h2d.Text(font, s2d);
+		debug.scale(2);
 		debug.x = debug.y = 5;
 
 		input = new h2d.TextInput(font, s2d);
@@ -45,7 +46,7 @@ class Input extends hxd.App {
 
 	override function update(dt:Float) {
 		// check special keys state
-		debug.text = "Cursor: " + input.cursorIndex + ", Sel: " + input.getSelectedText()+", Down: "+[for( i in 0...1024 ) if( hxd.Key.isDown(i) ) getKeyName(i)].join(",");
+		debug.text = "Cursor: " + input.cursorIndex + ", Sel: " + input.getSelectedText()+", Touch screen: " + hxd.System.getValue(IsTouch) + ", Down: "+[for( i in 0...1024 ) if( hxd.Key.isDown(i) ) getKeyName(i)].join(",");
 	}
 
 	static function main() {

@@ -3,13 +3,14 @@ package h3d.prim;
 class Instanced extends MeshPrimitive {
 
 	public var commands : h3d.impl.InstanceBuffer;
-	public var offset : h3d.col.Sphere;
+	public var bounds : h3d.col.Bounds;
 	var baseBounds : h3d.col.Bounds;
 	var tmpBounds : h3d.col.Bounds;
 	var primitive : MeshPrimitive;
 
 	public function new() {
-		offset = new h3d.col.Sphere();
+		bounds = new h3d.col.Bounds();
+		bounds.addPos(0,0,0); // if not init
 		tmpBounds = new h3d.col.Bounds();
 	}
 
@@ -32,6 +33,16 @@ class Instanced extends MeshPrimitive {
 		}
 	}
 
+	public function initBounds() {
+		bounds.empty();
+	}
+
+	public inline function addInstanceBounds( absPos : h3d.Matrix ) {
+		tmpBounds.load(baseBounds);
+		tmpBounds.transform(absPos);
+		bounds.add(tmpBounds);
+	}
+
 	override function dispose() {
 		// Not owning any resources
 	}
@@ -49,16 +60,7 @@ class Instanced extends MeshPrimitive {
 	}
 
 	override function getBounds():h3d.col.Bounds {
-		tmpBounds.load(baseBounds);
-		var r = offset.r;
-		tmpBounds.offset(offset.x, offset.y, offset.z);
-		tmpBounds.xMin -= r;
-		tmpBounds.yMin -= r;
-		tmpBounds.zMin -= r;
-		tmpBounds.xMax += r;
-		tmpBounds.yMax += r;
-		tmpBounds.zMax += r;
-		return tmpBounds;
+		return bounds;
 	}
 
 	// make public

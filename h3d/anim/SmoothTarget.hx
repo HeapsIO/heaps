@@ -100,8 +100,7 @@ class SmoothTarget extends Animation {
 		var objects = getSmoothObjects();
 		target.sync(true);
 
-		var bpow = Math.pow(blend, 1 + easing);
-		var blend = bpow / (bpow + Math.pow(1 - blend, easing + 1));
+		var blend = hxd.Math.easeFactor(blend, easing);
 
 		for( o in objects ) {
 			var m = @:privateAccess if( o.targetSkin != null ) o.targetSkin.currentRelPose[o.targetJoint] else if( o.targetObject != null ) o.targetObject.defaultTransform else null;

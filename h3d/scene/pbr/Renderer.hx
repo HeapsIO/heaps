@@ -25,6 +25,7 @@ package h3d.scene.pbr;
 	var Specular = "Specular";
 	var Irrad = "Irrad";
 	var Background = "Background";
+	var CustomColor = "CustomColor";
 }
 
 @:enum abstract TonemapMap(String) {
@@ -36,6 +37,7 @@ typedef RenderProps = {
 	var mode : DisplayMode;
 	var exposure : Float;
 	var sky : SkyMode;
+	var ?skyColor : Int;
 	var tone : TonemapMap;
 	var emissive : Float;
 	var occlusion : Float;
@@ -63,17 +65,16 @@ class Renderer extends h3d.scene.Renderer {
 	var pbrIndirect = new h3d.shader.pbr.Lighting.Indirect();
 	var pbrDirect = new h3d.shader.pbr.Lighting.Direct();
 	var pbrProps = new h3d.shader.pbr.PropsImport();
-	var hasDebugEvent = false;
 	var enableFXAA = true;
 	var currentStep : h3d.impl.RendererFX.Step;
 
 	var textures = {
-		albedo : null,
-		normal : null,
-		pbr : null,
-		other : null,
-		hdr : null,
-		ldr : null,
+		albedo : (null:h3d.mat.Texture),
+		normal : (null:h3d.mat.Texture),
+		pbr : (null:h3d.mat.Texture),
+		other : (null:h3d.mat.Texture),
+		hdr : (null:h3d.mat.Texture),
+		ldr : (null:h3d.mat.Texture),
 	};
 
 	public var skyMode : SkyMode = Hide;
@@ -133,7 +134,7 @@ class Renderer extends h3d.scene.Renderer {
 
 	override function getPassByName(name:String):h3d.pass.Base {
 		switch( name ) {
-		case "overlay", "beforeTonemapping", "albedo", "afterTonemapping", "forward":
+		case "overlay", "beforeTonemapping", "albedo", "afterTonemapping", "forward", "forwardAlpha":
 			return defaultPass;
 		case "default", "alpha", "additive":
 			return output;
@@ -368,8 +369,7 @@ class Renderer extends h3d.scene.Renderer {
 		if( env != null ) {
 			pbrIndirect.cameraPosition.load(ctx.camera.pos);
 			pbrIndirect.emissivePower = props.emissive * props.emissive;
-			var rot = hxd.Math.degToRad(env.rot);
-			pbrIndirect.irrRotation.set(Math.cos(rot), Math.sin(rot));
+			pbrIndirect.irrRotation.set(Math.cos(env.rotation), Math.sin(env.rotation));
 			pbrIndirect.irrPower = env.power * env.power;
 			pbrIndirect.irrLut = env.lut;
 			pbrIndirect.irrDiffuse = env.diffuse;
@@ -400,6 +400,11 @@ class Renderer extends h3d.scene.Renderer {
 				case Background:
 					pbrIndirect.skyColor = true;
 					pbrIndirect.skyColorValue.setColor(ctx.engine.backgroundColor);
+					pbrIndirect.gammaCorrect = true;
+					null;
+				case CustomColor:
+					pbrIndirect.skyColor = true;
+					pbrIndirect.skyColorValue.setColor(props.skyColor);
 					pbrIndirect.gammaCorrect = true;
 					null;
 				};
@@ -462,6 +467,7 @@ class Renderer extends h3d.scene.Renderer {
 		var ls = hxd.impl.Api.downcast(getLightSystem(), h3d.scene.pbr.LightSystem);
 		ls.forwardMode = true;
 		draw("forward");
+		renderPass(defaultPass, get("forwardAlpha"), backToFront);
 		ls.forwardMode = false;
 		end();
 
@@ -540,13 +546,13 @@ class Renderer extends h3d.scene.Renderer {
 			slides.shader.shadowMapChannel = R;
 			pbrProps.isScreen = true;
 			slides.render();
-			if( !hasDebugEvent ) {
-				hasDebugEvent = true;
+			if( !debugging ) {
+				debugging = true;
 				hxd.Window.getInstance().addEventTarget(onEvent);
 			}
 		}
-		if( hasDebugEvent && displayMode != Debug ) {
-			hasDebugEvent = false;
+		if( debugging && displayMode != Debug ) {
+			debugging = false;
 			hxd.Window.getInstance().removeEventTarget(onEvent);
 		}
 		mark("vsync");
@@ -641,8 +647,10 @@ class Renderer extends h3d.scene.Renderer {
 								<option value="Specular">Show Specular</option>
 								<option value="Irrad">Show Irrad</option>
 								<option value="Background">Background Color</option>
+								<option value="CustomColor">Custom Color</option>
 							</select>
 						</dd>
+						'+(skyMode==CustomColor?'<dt>Sky Color</dt><dd><input type="color" field="skyColor"/></dd>':'')+'
 				</div>
 
 				<div class="group" name="Params">

@@ -181,7 +181,7 @@ class System {
 		#if usesys
 		haxe.System.reportError(err + stack);
 		#else
-		Sys.stderr().writeString(err + stack + "\n");
+		try Sys.stderr().writeString(err + stack + "\n") catch( e : Dynamic ) {};
 
 		if ( Sys.systemName() != 'Windows' )
 			return;

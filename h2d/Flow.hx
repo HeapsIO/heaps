@@ -1011,10 +1011,10 @@ class Flow extends Object {
 	}
 
 	function onMouseWheel( e : hxd.Event ) {
-		if( overflow == Scroll )
+		if( overflow == Scroll ) {
 			scrollPosY += e.wheelDelta * scrollWheelSpeed;
-		else
-			e.propagate = true;
+			e.propagate = false;
+		}
 	}
 
 	function set_backgroundTile(t) {

@@ -271,7 +271,7 @@ class HtmlText extends Text {
 			info.height = splitNode.height;
 			info.baseLine = splitNode.baseLine;
  			var char = fnt.getChar(cc);
-			if (fnt.charset.isSpace(cc)) {
+			if (lineBreak && fnt.charset.isSpace(cc)) {
 				// Space characters are converted to \n
 				w -= (splitNode.width + letterSpacing + char.width + char.getKerningOffset(splitNode.prevChar));
 				splitNode.node.nodeValue = str.substr(0, splitNode.pos) + "\n" + str.substr(splitNode.pos + 1);
@@ -404,7 +404,7 @@ class HtmlText extends Text {
 					var prevChar = prevChar;
 					while ( size <= maxWidth && k < max ) {
 						var cc = text.charCodeAt(k++);
-						if ( font.charset.isSpace(cc) || cc == '\n'.code ) break;
+						if ( lineBreak && (font.charset.isSpace(cc) || cc == '\n'.code ) ) break;
 						var e = font.getChar(cc);
 						size += e.width + letterSpacing + e.getKerningOffset(prevChar);
 						prevChar = cc;
@@ -412,7 +412,7 @@ class HtmlText extends Text {
 						if ( font.charset.isBreakChar(cc) && (nc == null || !font.charset.isComplementChar(nc)) ) break;
 					}
 					// Avoid empty line when last char causes line-break while being CJK
-					if ( size > maxWidth && i != max - 1 ) {
+					if ( lineBreak && size > maxWidth && i != max - 1 ) {
 						// Next word will reach maxWidth
 						newline = true;
 						if ( font.charset.isSpace(cc) ) {

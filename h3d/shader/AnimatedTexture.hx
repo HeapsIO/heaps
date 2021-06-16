@@ -18,11 +18,11 @@ class AnimatedTexture extends hxsl.Shader {
 		@global var global : {
 			var time : Float;
 		};
-		@param var startFrame : Float = 0.0;
+		@perInstance @param var startFrame : Float = 0.0;
 		@param var speed : Float;
 		@param var frameDivision : Vec2;
 		@param var totalFrames : Float;
-		@param var startTime : Float;
+		@perInstance @param var startTime : Float;
 		@const var loop : Bool;
 
 		@private var blendFactor : Float;

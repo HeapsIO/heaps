@@ -225,7 +225,7 @@ class Environment {
 	public var specular : h3d.mat.Texture;
 
 	public var power : Float = 1.;
-	public var rot : Float = 0.;
+	public var rotation : Float = 0.;
 
 	/*
 		Source can be cube map already prepared or a 2D equirectangular map that
@@ -279,7 +279,6 @@ class Environment {
 		pass.shader.texture = source;
 		pass.shader.aboveThresholdScale = scale;
 		pass.shader.threshold = threshold;
-		env.realloc = null;
 		for( i in 0...6 ) {
 			engine.pushTarget(env,i);
 			pass.shader.faceMatrix = getCubeMatrix(i);

@@ -6,8 +6,11 @@ class Build {
 	var fs : hxd.fs.LocalFileSystem;
 	var out : { bytes : Array<haxe.io.Bytes>, size : Float };
 	var configuration : String;
+	var nextPath : String;
 
 	public var excludedExt : Array<String> = [];
+	public var excludePath : Array<String> = [];
+	public var includePath : Array<String> = [];
 	public var resPath : String = "res";
 	public var outPrefix : String;
 	public var pakDiff = false;
@@ -24,6 +27,11 @@ class Build {
 	}
 
 	function buildRec( path : String ) {
+
+		if( path != "" ) {
+			if( excludePath.indexOf(path) >= 0 ) return null;
+		}
+
 		var dir = resPath + (path == "" ? "" : "/" + path);
 		var f = new File();
 		#if !dataOnly
@@ -31,7 +39,8 @@ class Build {
 		#end
 		f.name = path.split("/").pop();
 		if( sys.FileSystem.isDirectory(dir) ) {
-			Sys.println(path == "" ? "<root>" : path);
+			var prevPath = nextPath;
+			nextPath = path == "" ? "<root>" : path;
 			f.isDirectory = true;
 			f.content = [];
 			for( name in sys.FileSystem.readDirectory(dir) ) {
@@ -41,12 +50,29 @@ class Build {
 				var s = buildRec(fpath);
 				if( s != null ) f.content.push(s);
 			}
+			nextPath = prevPath;
 			if( f.content.length == 0 && path != "" )
 				return null;
 		} else {
 			var ext = path.split("/").pop().split(".").pop().toLowerCase();
 			if( excludedExt.indexOf(ext) >= 0 )
 				return null;
+
+			if( includePath.length != 0 ) {
+				var found = false;
+				for( p in includePath )
+					if( StringTools.startsWith(path,p) ) {
+						found = true;
+						break;
+					}
+				if( !found ) return null;
+			}
+
+			if( nextPath != null ) {
+				Sys.println(nextPath);
+				nextPath = null;
+			}
+
 			var entry = try fs.get(path) catch( e : hxd.res.NotFound ) return null;
 			var filePath = fs.getAbsolutePath(entry);
 			var data = sys.io.File.getBytes(filePath);
@@ -149,7 +175,9 @@ class Build {
 			out.bytes = rebuild(pak, out.bytes);
 		}
 
-		var f = sys.io.File.write(outPrefix + ".pak");
+		var outFile = outPrefix + ".pak";
+		Sys.println("Writing "+outFile);
+		var f = sys.io.File.write(outFile);
 		new Writer(f).write(pak, null, out.bytes);
 		f.close();
 	}
@@ -205,6 +233,12 @@ class Build {
 			case "-exclude" if( args.length > 0 ):
 				for( ext in args.shift().split(",") )
 					b.excludedExt.push(ext);
+			case "-exclude-path" if( args.length > 0 ):
+				for( p in args.shift().split(",") )
+					b.excludePath.push(p);
+			case "-include-path" if( args.length > 0 ):
+				for( p in args.shift().split(",") )
+					b.includePath.push(p);
 			case "-check-ogg":
 				b.checkOGG = true;
 			case "-config" if( args.length > 0 ):
