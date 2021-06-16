@@ -281,6 +281,24 @@ class System {
 	}
 	#end
 
+	#if hlsdl
+	public static function getClipboardText() : String {
+		return sdl.Sdl.getClipboardText();
+	}
+	
+	public static function setClipboardText(text:String) : Bool {
+		return sdl.Sdl.setClipboardText(text);
+	}
+	#else
+	public static function getClipboardText() : String {
+		return hl.UI.getClipboardText();
+	}
+	
+	public static function setClipboardText(text:String) : Bool {
+		return hl.UI.setClipboardText(text);
+	}
+	#end
+
 	public static function getDeviceName() : String {
 		#if usesys
 		return haxe.System.name;

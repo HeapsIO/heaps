@@ -77,6 +77,14 @@ class System {
 
 	public static function openURL( url : String ) : Void {}
 
+	public static function setClipboardText( text : String ) : Bool {
+		return false;
+	}
+
+	public static function getClipboardText() : String {
+		return null;
+	}
+
 	// getters
 
 	static function get_width() : Int return 0;
