@@ -56,6 +56,7 @@ class Renderer extends hxd.impl.AnyProps {
 			p.dispose();
 		for( f in effects )
 			f.dispose();
+		ctx.lightSystem.dispose();
 		passObjects = new Map();
 	}
 
