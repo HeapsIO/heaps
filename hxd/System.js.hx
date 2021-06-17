@@ -140,6 +140,14 @@ class System {
 		}
 	}
 
+	public static function getClipboardText() : String {
+		return null;
+	}
+	
+	public static function setClipboardText(text:String) : Bool {
+		return false;
+	}
+
 	// getters
 
 	static function get_width() : Int return Math.round(js.Browser.document.body.clientWidth * js.Browser.window.devicePixelRatio);
