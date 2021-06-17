@@ -31,7 +31,6 @@ class Window {
 	var canvas : js.html.CanvasElement;
 	var element : js.html.EventTarget;
 	var canvasPos : { var width(default, never) : Float; var height(default, never) : Float; var left(default, never) : Float; var top(default, never) : Float; };
-	var timer : haxe.Timer;
 
 	var curW : Int;
 	var curH : Int;
@@ -94,7 +93,6 @@ class Window {
 		element.addEventListener("keypress", onKeyPress);
 		element.addEventListener("blur", onFocus.bind(false));
 		element.addEventListener("focus", onFocus.bind(true));
-		element.addEventListener("resize", checkResize);
 		canvas.oncontextmenu = function(e){
 			e.stopPropagation();
 			e.preventDefault();
@@ -120,8 +118,6 @@ class Window {
 		}
 		curW = this.width;
 		curH = this.height;
-		timer = new haxe.Timer(100);
-		timer.run = checkResize;
 	}
 
 	function checkResize() {
@@ -135,7 +131,6 @@ class Window {
 	}
 
 	public function dispose() {
-		timer.stop();
 	}
 
 	public dynamic function onClose() : Bool {
