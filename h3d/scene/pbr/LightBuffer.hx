@@ -12,14 +12,15 @@ class LightBuffer {
 	final POINT_LIGHT_INFO_SIZE = 3;
 	final SPOT_LIGHT_INFO_SIZE = 8;
 	final DIR_LIGHT_INFO_SIZE = 5;
+	var size = 0;
+	final stride = 4;
 
 	public function new() {
 		createBuffers();
 	}
 
 	function createBuffers() {
-		var stride = 4;
-		var size = 0;
+		size = 0;
 		size += MAX_DIR_LIGHT * DIR_LIGHT_INFO_SIZE;
 		size += MAX_POINT_LIGHT * POINT_LIGHT_INFO_SIZE;
 		size += MAX_SPOT_LIGHT * SPOT_LIGHT_INFO_SIZE;
@@ -76,12 +77,15 @@ class LightBuffer {
 	}
 
 	public function sync( ctx : h3d.scene.RenderContext ) {
+		if (defaultForwardShader.lightInfos.isDisposed())
+			defaultForwardShader.lightInfos = new h3d.Buffer(size, stride, [UniformBuffer, Dynamic]);
 
 		var r = @:privateAccess ctx.scene.renderer;
 		var pbrRenderer = Std.downcast(r, Renderer);
 		if( pbrRenderer == null ) return;
 		var p : h3d.scene.pbr.Renderer.RenderProps = pbrRenderer.props;
 		var s = defaultForwardShader;
+
 
 		s.cameraPosition = ctx.camera.pos;
 		s.emissivePower = p.emissive * p.emissive;
@@ -166,7 +170,6 @@ class LightBuffer {
 
 			l = l.next;
 		}
-
 		s.lightInfos.uploadVector(lightInfos, 0, s.lightInfos.vertices, 0);
 
 		var pbrIndirect = @:privateAccess pbrRenderer.pbrIndirect;
@@ -179,5 +182,9 @@ class LightBuffer {
 			s.irrSpecular = pbrIndirect.irrSpecular;
 			s.irrSpecularLevels = pbrIndirect.irrSpecularLevels;
 		}
+	}
+
+	public function dispose() {
+		defaultForwardShader.lightInfos.dispose();
 	}
 }

@@ -63,4 +63,7 @@ class LightSystem {
 		return shaders;
 	}
 
+	public function dispose(){
+	}
+
 }
