@@ -655,7 +655,6 @@ class Renderer extends h3d.scene.Renderer {
 					<dt>Emissive</dt><dd><input type="range" min="0" max="2" field="emissive"></dd>
 					<dt>Occlusion</dt><dd><input type="range" min="0" max="2" field="occlusion"></dd>
 					<dt>Exposure</dt><dd><input type="range" min="-3" max="3" field="exposure"></dd>
-					<dt>Shadows</dt><dd><input type="checkbox" field="shadows"></dd>
 				</div>
 			</dl>
 			</div>
