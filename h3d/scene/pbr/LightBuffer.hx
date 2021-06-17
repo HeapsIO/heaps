@@ -12,15 +12,15 @@ class LightBuffer {
 	final POINT_LIGHT_INFO_SIZE = 3;
 	final SPOT_LIGHT_INFO_SIZE = 8;
 	final DIR_LIGHT_INFO_SIZE = 5;
-	var size = 0;
-	final stride = 4;
+
 
 	public function new() {
 		createBuffers();
 	}
 
 	function createBuffers() {
-		size = 0;
+		var stride = 4;
+		var size = 0;
 		size += MAX_DIR_LIGHT * DIR_LIGHT_INFO_SIZE;
 		size += MAX_POINT_LIGHT * POINT_LIGHT_INFO_SIZE;
 		size += MAX_SPOT_LIGHT * SPOT_LIGHT_INFO_SIZE;
@@ -78,7 +78,7 @@ class LightBuffer {
 
 	public function sync( ctx : h3d.scene.RenderContext ) {
 		if (defaultForwardShader.lightInfos.isDisposed())
-			defaultForwardShader.lightInfos = new h3d.Buffer(size, stride, [UniformBuffer, Dynamic]);
+			createBuffers();
 
 		var r = @:privateAccess ctx.scene.renderer;
 		var pbrRenderer = Std.downcast(r, Renderer);
