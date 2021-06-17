@@ -32,6 +32,8 @@ class Renderer extends hxd.impl.AnyProps {
 
 	public var renderMode : RenderMode = Default;
 
+	public var shadows : Bool = true;
+
 	public function new() {
 		allPasses = [];
 		passObjects = new Map();

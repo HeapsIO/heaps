@@ -41,7 +41,6 @@ typedef RenderProps = {
 	var tone : TonemapMap;
 	var emissive : Float;
 	var occlusion : Float;
-	var shadows : Bool;
 }
 
 class DepthCopy extends h3d.shader.ScreenShader {
@@ -82,7 +81,6 @@ class Renderer extends h3d.scene.Renderer {
 	public var displayMode : DisplayMode = Pbr;
 	public var env : Environment;
 	public var exposure(get,set) : Float;
-	public var shadows = true;
 	var debugShadowMapIndex = 0;
 
 	static var ALPHA : hxsl.Output = Swiz(Value("output.color"),[W]);
@@ -215,7 +213,7 @@ class Renderer extends h3d.scene.Renderer {
 		pbrProps.isScreen = true;
 		if( ls != null ) {
 			var count = ctx.engine.drawCalls;
-			ls.drawScreenLights(this, lpass);
+			ls.drawScreenLights(this, lpass, shadows);
 			ctx.lightSystem.drawPasses += ctx.engine.drawCalls - count;
 		}
 		// Direct Lighting - With Primitive
@@ -312,6 +310,8 @@ class Renderer extends h3d.scene.Renderer {
 	override function computeStatic() {
 		var light = @:privateAccess ctx.lights;
 		var passes = get("shadow");
+		if (!shadows)
+			passes.clear();
 		while( light != null ) {
 			var plight = hxd.impl.Api.downcast(light, h3d.scene.pbr.Light);
 			if( plight != null ) {
@@ -592,7 +592,6 @@ class Renderer extends h3d.scene.Renderer {
 			sky : Irrad,
 			tone : Linear,
 			occlusion : 1.,
-			shadows: true
 		};
 		return props;
 	}
@@ -607,7 +606,6 @@ class Renderer extends h3d.scene.Renderer {
 		skyMode = props.sky;
 		toneMode = props.tone;
 		exposure = props.exposure;
-		shadows = props.shadows;
 	}
 
 	#if editor
@@ -657,7 +655,6 @@ class Renderer extends h3d.scene.Renderer {
 					<dt>Emissive</dt><dd><input type="range" min="0" max="2" field="emissive"></dd>
 					<dt>Occlusion</dt><dd><input type="range" min="0" max="2" field="occlusion"></dd>
 					<dt>Exposure</dt><dd><input type="range" min="-3" max="3" field="exposure"></dd>
-					<dt>Shadows</dt><dd><input type="checkbox" field="shadows"></dd>
 				</div>
 			</dl>
 			</div>

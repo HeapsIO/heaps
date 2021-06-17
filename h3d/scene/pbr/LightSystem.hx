@@ -45,7 +45,7 @@ class LightSystem extends h3d.scene.LightSystem {
 		passes.reset();
 	}
 
-	public function drawScreenLights( r : h3d.scene.Renderer, lightPass : h3d.pass.ScreenFx<Dynamic> ) {
+	public function drawScreenLights( r : h3d.scene.Renderer, lightPass : h3d.pass.ScreenFx<Dynamic>, shadows : Bool = true ) {
 		var plight = @:privateAccess ctx.lights;
 		var currentTarget = ctx.engine.getCurrentTarget();
 		var width = currentTarget == null ? ctx.engine.width : currentTarget.width;
@@ -53,7 +53,7 @@ class LightSystem extends h3d.scene.LightSystem {
 		while( plight != null ) {
 			var light = hxd.impl.Api.downcast(plight, h3d.scene.pbr.Light);
 			if( light != null && light.primitive == null ) {
-				if( light.shadows.shader != null ) lightPass.addShader(light.shadows.shader);
+				if( light.shadows.shader != null && shadows) lightPass.addShader(light.shadows.shader);
 				lightPass.addShader(light.shader);
 				lightPass.render();
 				lightPass.removeShader(light.shader);
