@@ -284,22 +284,6 @@ class Window {
 	}
 
 	function onMouseLeave(e:js.html.MouseEvent) {
-		if (e.altKey) {
-			var altEv = new Event(EKeyUp, mouseX, mouseY);
-			altEv.keyCode = js.html.KeyboardEvent.DOM_VK_ALT;
-			event(altEv);
-		}
-		if (e.ctrlKey) {
-			var ctrlEv = new Event(EKeyUp, mouseX, mouseY);
-			ctrlEv.keyCode = js.html.KeyboardEvent.DOM_VK_CONTROL;
-			event(ctrlEv);
-		}
-		if (e.shiftKey) {
-			var shiftEv = new Event(EKeyUp, mouseX, mouseY);
-			shiftEv.keyCode = js.html.KeyboardEvent.DOM_VK_SHIFT;
-			event(shiftEv);
-		}
-		
 		var ev = new Event(EReleaseOutside, mouseX, mouseY);
 		ev.button = switch( e.button ) {
 			case 1: 2;
