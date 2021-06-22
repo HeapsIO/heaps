@@ -31,7 +31,6 @@ class Window {
 	var canvas : js.html.CanvasElement;
 	var element : js.html.EventTarget;
 	var canvasPos : { var width(default, never) : Float; var height(default, never) : Float; var left(default, never) : Float; var top(default, never) : Float; };
-	var timer : haxe.Timer;
 
 	var curW : Int;
 	var curH : Int;
@@ -85,6 +84,7 @@ class Window {
 		
 		element.addEventListener("mousedown", onMouseDown);
 		element.addEventListener("mouseup", onMouseUp);
+		element.addEventListener("mouseleave", onMouseLeave);
 		element.addEventListener("wheel", onMouseWheel);
 		element.addEventListener("touchstart", onTouchStart);
 		element.addEventListener("touchmove", onTouchMove);
@@ -94,7 +94,6 @@ class Window {
 		element.addEventListener("keypress", onKeyPress);
 		element.addEventListener("blur", onFocus.bind(false));
 		element.addEventListener("focus", onFocus.bind(true));
-		element.addEventListener("resize", checkResize);
 		canvas.oncontextmenu = function(e){
 			e.stopPropagation();
 			e.preventDefault();
@@ -120,8 +119,6 @@ class Window {
 		}
 		curW = this.width;
 		curH = this.height;
-		timer = new haxe.Timer(100);
-		timer.run = checkResize;
 	}
 
 	function checkResize() {
@@ -135,7 +132,6 @@ class Window {
 	}
 
 	public function dispose() {
-		timer.stop();
 	}
 
 	public dynamic function onClose() : Bool {
@@ -274,6 +270,16 @@ class Window {
 				onMouseMove(e);
 		}
 		var ev = new Event(ERelease, mouseX, mouseY);
+		ev.button = switch( e.button ) {
+			case 1: 2;
+			case 2: 1;
+			case x: x;
+		};
+		event(ev);
+	}
+
+	function onMouseLeave(e:js.html.MouseEvent) {
+		var ev = new Event(EReleaseOutside, mouseX, mouseY);
 		ev.button = switch( e.button ) {
 			case 1: 2;
 			case 2: 1;

@@ -886,9 +886,13 @@ class Flow extends Object {
 
 	override function removeChildren() {
 		var k = 0;
-		while( numChildren>k ) {
+
+		while( numChildren > k ) {
 			var c = getChildAt(k);
-			if( c == background || c == interactive || c == debugGraphics ) k++; else removeChild(c);
+			if( c == background
+				|| c == interactive
+				|| c == debugGraphics
+				|| c == scrollBar ) k++; else removeChild(c);
 		}
 	}
 
