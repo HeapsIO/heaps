@@ -64,6 +64,17 @@ class ObjectCollider implements Collider implements hxd.impl.Serializable {
 		return res;
 	}
 
+	#if !macro
+	public function makeDebugObj() : h3d.scene.Object {
+		var ret = collider.makeDebugObj();
+		if( ret != null ) {
+			ret.ignoreParentTransform = true;
+			ret.follow = obj;
+		}
+		return ret;
+	}
+	#end
+
 	#if hxbit
 	function customSerialize( ctx : hxbit.Serializer ) {
 	}

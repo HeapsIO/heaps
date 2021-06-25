@@ -105,7 +105,39 @@ class Capsule implements Collider {
 		return "Capsule{" + a + "," + b + "," + hxd.Math.fmt(r) + "}";
 	}
 
-	#if (hxbit && !macro)
+	#if !macro
+	public function makeDebugObj() : h3d.scene.Object {
+		var obj = new h3d.scene.Object();
+
+		var segW = 12;
+		var segH = 6;
+
+		var dir = a.sub(b);
+		var full = a.add(b);
+		var dist = a.distance(b);
+		var midPoint = new Point(full.x / 2, full.y / 2, full.z / 2);
+
+		var prim = new h3d.prim.Sphere(r, segW, segH, 0.5);
+		prim.translate(0, 0, dist / 2);
+		prim.addNormals();
+		var spherea = new h3d.scene.Mesh(prim);
+		var sphereb = spherea.clone();
+		spherea.rotate(0, Math.PI / 2, 0);
+		obj.addChild(spherea);
+		sphereb.rotate(0, -1 * Math.PI / 2, 0);
+		obj.addChild(sphereb);
+
+		var cyl = new h3d.prim.Cylinder(segW, r, dist, true);
+		cyl.addNormals();
+		var cylMesh = new h3d.scene.Mesh(cyl);
+		cylMesh.rotate(0, Math.PI / 2, 0);
+		obj.addChild(cylMesh);
+
+		obj.setDirection(dir.toVector());
+		obj.setPosition(midPoint.x, midPoint.y, midPoint.z);
+		return obj;
+	}
+	#if hxbit
 	function customSerialize( ctx : hxbit.Serializer ) {
 		ctx.addFloat(a.x);
 		ctx.addFloat(a.y);
@@ -120,6 +152,7 @@ class Capsule implements Collider {
 		b = new Point(ctx.getFloat(), ctx.getFloat(), ctx.getFloat());
 		r = ctx.getFloat();
 	}
+	#end
 	#end
 
 }

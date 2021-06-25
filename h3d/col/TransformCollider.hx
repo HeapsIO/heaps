@@ -72,6 +72,15 @@ class TransformCollider implements Collider {
 		return res;
 	}
 
+	#if !macro
+	public function makeDebugObj() : h3d.scene.Object {
+		var obj = collider.makeDebugObj();
+		obj.ignoreParentTransform = true;
+		obj.defaultTransform = mat;
+		return obj;
+	}
+	#end
+
 	public static function make( mat : h3d.Matrix, col ) {
 		if( mat.isIdentityEpsilon(1e-10) )
 			return col;

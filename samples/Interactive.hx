@@ -1,6 +1,9 @@
 //PARAM=-D resourcesPath=../../skin_res
 
-class Interactive extends hxd.App {
+class Interactive extends SampleApp {
+
+	var interactives : Array<h3d.scene.Interactive> = [];
+	var showDebug = false;
 
 	var rnd : hxd.Rand;
 	var light : h3d.scene.fwd.DirLight;
@@ -34,9 +37,13 @@ class Interactive extends hxd.App {
 			beacon.remove();
 			beacon = null;
 		};
+		interactives.push(i);
+		if( showDebug )
+			i.showDebug = showDebug;
 	}
 
 	override function init() {
+		super.init();
 		light = new h3d.scene.fwd.DirLight(new h3d.Vector( 0.3, -0.4, -0.9), s3d);
 		light.enableSpecular = true;
 		light.color.set(0.28, 0.28, 0.28);
@@ -45,7 +52,7 @@ class Interactive extends hxd.App {
 
 		rnd = new hxd.Rand(5);
 		for(i in 0...8) {
-			var c = if( rnd.random(2) == 0 ) new h3d.prim.Cube() else new h3d.prim.Sphere(1,64,32);
+			var c = if( rnd.random(2) == 0 ) new h3d.prim.Cube() else new h3d.prim.Sphere(1, 30, 20);
 			//c.unindex();
 			c.addNormals();
 			c.addUVs();
@@ -53,13 +60,64 @@ class Interactive extends hxd.App {
 			m.x = rnd.srand() * 0.9;
 			m.y = rnd.srand() * 0.9;
 			m.scale(0.25 + rnd.rand() * 0.3);
+			if( i & 1 == 0 )
+				m.rotate(0.25, 0.5, 0.8);
 			m.material.mainPass.enableLights = true;
+
 			m.material.shadows = true;
 			var c = 0.3 + rnd.rand() * 0.3;
 			var color = new h3d.Vector(c, c * 0.6, c * 0.6);
 			m.material.color.load(color);
 
 			var interact = new h3d.scene.Interactive(m.getCollider(), s3d);
+			initInteract(interact, m);
+		}
+
+		// A cylinder with a capsule collider
+		{
+			var cradius = 0.5;
+			var cheight = 1;
+			var c = new h3d.prim.Cylinder(20, cradius, cheight);
+			//c.unindex();
+			c.addNormals();
+			c.addUVs();
+			var m = new h3d.scene.Mesh(c, s3d);
+			m.y = 1.2;
+			m.scale(0.25 + rnd.rand() * 0.3);
+			m.rotate(-0.25, -0.5, -0.8);
+			m.material.mainPass.enableLights = true;
+
+			m.material.shadows = true;
+			var c = 0.3 + rnd.rand() * 0.3;
+			var color = new h3d.Vector(c, c * 0.6, c * 0.6);
+			m.material.color.load(color);
+
+			var p1 = new h3d.col.Point(0, 0, cheight);
+			var p2 = new h3d.col.Point(0, 0, 0);
+			var col = new h3d.col.Capsule(p1, p2, cradius);
+
+			var interact = new h3d.scene.Interactive(new h3d.col.ObjectCollider(m, col), s3d);
+			initInteract(interact, m);
+		}
+
+		// A sphere with bounds (box/square collider)
+		{
+			var c = new h3d.prim.Sphere(0.5, 15, 10);
+			//c.unindex();
+			c.addNormals();
+			c.addUVs();
+			var m = new h3d.scene.Mesh(c, s3d);
+			m.x = 0.3;
+			m.y = -1.2;
+			m.material.mainPass.enableLights = true;
+
+			m.material.shadows = true;
+			var c = 0.3 + rnd.rand() * 0.3;
+			var color = new h3d.Vector(c, c * 0.6, c * 0.6);
+			m.material.color.load(color);
+
+			var col = m.getBounds();
+			var interact = new h3d.scene.Interactive(col, s3d);
 			initInteract(interact, m);
 		}
 
@@ -103,7 +161,16 @@ class Interactive extends hxd.App {
 			pix = null;
 		};
 
+		addCheck("Show Debug Colliders", function() { return showDebug; }, function(v) { setDebug(v); });
+
+		new h3d.scene.CameraController(s3d).loadFromCamera();
 		onResize();
+	}
+
+	function setDebug(showDebug) {
+		this.showDebug = showDebug;
+		for( i in interactives )
+			i.showDebug = showDebug;
 	}
 
 	override function onResize() {

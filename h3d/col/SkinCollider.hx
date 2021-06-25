@@ -91,13 +91,18 @@ class SkinCollider implements hxd.impl.Serializable implements Collider {
 		}
 	}
 
-	#if (hxbit && !macro)
+	#if !macro
+	public function makeDebugObj() : h3d.scene.Object {
+		return null;
+	}
+	#if hxbit
 	function customSerialize( ctx : hxbit.Serializer ) {
 	}
 	function customUnserialize( ctx : hxbit.Serializer ) {
 		this.transform = new PolygonBuffer();
 		this.transform.setData(col.buffer.copy(), col.indexes, col.startIndex, col.triCount);
 	}
+	#end
 	#end
 
 }
