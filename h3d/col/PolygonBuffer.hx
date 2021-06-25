@@ -92,7 +92,25 @@ class PolygonBuffer implements Collider {
 		return best;
 	}
 
-	#if (hxbit && !macro)
+	#if !macro
+	public function makeDebugObj() : h3d.scene.Object {
+		var points = new Array<Point>();
+		var idx = new hxd.IndexBuffer();
+		var i = startIndex;
+		for( t in 0...triCount ) {
+			idx.push(indexes[i++]);
+			idx.push(indexes[i++]);
+			idx.push(indexes[i++]);
+		}
+		i = 0;
+		while( i < buffer.length ) {
+			points.push(new Point(buffer[i++], buffer[i++], buffer[i++]));
+		}
+		var prim = new h3d.prim.Polygon(points, idx);
+		prim.addNormals();
+		return new h3d.scene.Mesh(prim);
+	}
+	#if hxbit
 	function customSerialize( ctx : hxbit.Serializer ) {
 		if( source == null )
 			throw "Cannot serialize " + this;
@@ -115,6 +133,7 @@ class PolygonBuffer implements Collider {
 		var prim = @:privateAccess lib.makePrimitive(gindex);
 		@:privateAccess prim.initCollider(this);
 	}
+	#end
 	#end
 
 }

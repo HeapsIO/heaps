@@ -7,28 +7,30 @@ class Sphere extends Polygon {
 	@:s var segsH : Int;
 	@:s var segsW : Int;
 
-	public function new( ray = 1., segsW = 8, segsH = 6 ) {
+	// Use 1 for a full sphere, 0.5 for a half sphere
+	@:s var portion : Float;
+
+	public function new( ray = 1., segsW = 8, segsH = 6, portion = 1. ) {
 		this.ray = ray;
 		this.segsH = segsH;
 		this.segsW = segsW;
+		this.portion = portion;
 
 		var dp = Math.PI * 2 / segsW;
 		var pts = [], idx = new hxd.IndexBuffer();
-		var dx = 1, dy = segsW + 1;
 		for( y in 0...segsH+1 ) {
-			var t = (y / segsH) * Math.PI;
+			var t = (y / segsH) * Math.PI * portion;
 			var st = Math.sin(t);
 			var pz = Math.cos(t);
 			var p = 0.;
 			for( x in 0...segsW+1 ) {
 				var px = st * Math.cos(p);
 				var py = st * Math.sin(p);
-				var i = pts.length;
 				pts.push(new Point(px * ray, py * ray, pz * ray));
 				p += dp;
 			}
 		}
-		for( y in 0...segsH )
+		for( y in 0...segsH ) {
 			for( x in 0...segsW ) {
 				inline function vertice(x, y) return x + y * (segsW + 1);
 				var v1 = vertice(x + 1, y);
@@ -40,12 +42,13 @@ class Sphere extends Polygon {
 					idx.push(v2);
 					idx.push(v4);
 				}
-				if( y != segsH - 1 ) {
+				if( y != segsH - 1 || portion != 1. ) {
 					idx.push(v2);
 					idx.push(v3);
 					idx.push(v4);
 				}
 			}
+		}
 
 		super(pts, idx);
 	}

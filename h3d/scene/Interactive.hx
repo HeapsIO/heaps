@@ -2,6 +2,9 @@ package h3d.scene;
 
 class Interactive extends Object implements hxd.SceneEvents.Interactive {
 
+	var debugObj : Object;
+	public var showDebug(default, set) : Bool = false;
+
 	@:s public var shape : h3d.col.Collider;
 
 	/**
@@ -40,6 +43,38 @@ class Interactive extends Object implements hxd.SceneEvents.Interactive {
 		super(parent);
 		this.shape = shape;
 		cursor = Button;
+	}
+
+	public function set_showDebug(val) {
+		if( !val ) {
+			if( debugObj != null )
+				debugObj.remove();
+			debugObj = null;
+			return false;
+		}
+		if( debugObj != null )
+			return true;
+		debugObj = shape.makeDebugObj();
+		if( debugObj != null ) {
+			setupDebugMaterial(debugObj);
+
+			debugObj.ignoreParentTransform = true;
+			this.addChild(debugObj);
+		}
+		return debugObj != null;
+	}
+
+	public static dynamic function setupDebugMaterial(debugObj: Object) {
+		var materials = debugObj.getMaterials();
+		for( m in materials ) {
+			var engine = h3d.Engine.getCurrent();
+			if( engine.driver.hasFeature(Wireframe) )
+				m.mainPass.wireframe = true;
+			m.castShadows = false;
+			m.receiveShadows = false;
+			// m.blendMode = Alpha;
+			// m.mainPass.depth(false, Always);
+		}
 	}
 
 	override function onAdd() {

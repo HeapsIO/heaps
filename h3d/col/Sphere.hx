@@ -86,7 +86,14 @@ class Sphere implements Collider {
 		return "Sphere{" + getCenter()+","+ hxd.Math.fmt(r) + "}";
 	}
 
-	#if (hxbit && !macro)
+	#if !macro
+	public function makeDebugObj() : h3d.scene.Object {
+		var prim = new h3d.prim.Sphere(r, 20, 15);
+		prim.translate(x, y, z);
+		prim.addNormals();
+		return new h3d.scene.Mesh(prim);
+	}
+	#if hxbit
 	function customSerialize( ctx : hxbit.Serializer ) {
 		ctx.addFloat(x);
 		ctx.addFloat(y);
@@ -99,6 +106,7 @@ class Sphere implements Collider {
 		z = ctx.getFloat();
 		r = ctx.getFloat();
 	}
+	#end
 	#end
 
 }

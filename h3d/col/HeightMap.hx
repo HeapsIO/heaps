@@ -85,4 +85,9 @@ class HeightMap implements Collider {
 		}
 	}
 
+	#if !macro
+	public function makeDebugObj() : h3d.scene.Object {
+		return null;
+	}
+	#end
 }
