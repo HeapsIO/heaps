@@ -586,10 +586,10 @@ class Graphics extends Drawable {
 		if( nsegments < 3 ) nsegments = 3;
 		var angle = hxd.Math.degToRad(90) / nsegments;
 		inline function corner(x, y, angleStart) {
-		for ( i in 0...nsegments-1) {
-			var a = (i + 1) * angle + hxd.Math.degToRad(angleStart);
-			lineTo(x + Math.cos(a) * radius, y + Math.sin(a) * radius);
-		}
+			for ( i in 0...nsegments-1) {
+				var a = (i + 1) * angle + hxd.Math.degToRad(angleStart);
+				lineTo(x + Math.cos(a) * radius, y + Math.sin(a) * radius);
+			}
 		}
 		lineTo(x, y - radius);
 		lineTo(x + w, y - radius);
