@@ -93,7 +93,9 @@ class SkinCollider implements hxd.impl.Serializable implements Collider {
 
 	#if !macro
 	public function makeDebugObj() : h3d.scene.Object {
-		return null;
+		var ret = new SkinColliderDebugObj(this);
+		ret.ignoreParentTransform = true;
+		return ret;
 	}
 	#if hxbit
 	function customSerialize( ctx : hxbit.Serializer ) {
@@ -106,3 +108,70 @@ class SkinCollider implements hxd.impl.Serializable implements Collider {
 	#end
 
 }
+
+#if !macro
+@:access(h3d.col.SkinCollider)
+@:access(h3d.scene.Skin)
+class SkinColliderDebugObj extends h3d.scene.Object {
+	var col : SkinCollider;
+	var skin : h3d.scene.Skin;
+
+	var box : h3d.scene.Box;
+	var boxes : Array<h3d.scene.Box> = [];
+
+	public function new(col : SkinCollider) {
+		super(null);
+		this.col = col;
+		this.skin = col.obj;
+		this.box = new h3d.scene.Box(0xFFFFFF, col.currentBounds);
+		addChild(box);
+		this.ignoreParentTransform = true;
+		// this.follow = col.obj;
+		createJoints();
+	}
+
+	function createJoints() {
+		var joints = skin.getSkinData().allJoints;
+		for( j in joints ) {
+			var b = new h3d.scene.Box(h3d.col.Bounds.fromValues(-1,-1,-1,2,2,2), this);
+			b.material.color.a = 0.5;
+			b.material.blendMode = Alpha;
+
+			if( j.offsets != null ) {
+				b.color = 0xFF00;
+				b.bounds.empty();
+
+				var pt = j.offsets.getMin();
+				b.bounds.addSpherePos(pt.x, pt.y, pt.z, j.offsetRay);
+				var pt = j.offsets.getMax();
+				b.bounds.addSpherePos(pt.x, pt.y, pt.z, j.offsetRay);
+			} else {
+				b.color = 0xFF0000;
+				b.material.castShadows = false;
+				b.material.receiveShadows = false;
+				b.material.mainPass.depth(false, Always);
+				b.bounds.empty();
+				b.bounds.addSpherePos(0,0,0,0.1);
+			}
+			boxes.push(b);
+		}
+	}
+
+	function updateJoints() {
+		for( i in 0...boxes.length ) {
+			var j = skin.skinData.allJoints[i];
+			var b = boxes[i];
+			if( j.offsets != null ) {
+				var m = skin.currentPalette[j.bindIndex];
+				b.setTransform(m);
+			} else
+				b.setTransform(skin.currentAbsPose[j.index]);
+		}
+	}
+
+	override function sync( ctx : h3d.scene.RenderContext ) {
+		col.checkBounds();
+		updateJoints();
+	}
+}
+#end
