@@ -295,13 +295,13 @@ class Graphics extends Drawable {
 			if(size < 0.1) size = 0.1;
 
 
-			var d = lineSize * 0.5 / size;
+			var d = lineSize / size;
 			nx *= d;
 			ny *= d;
 
 			if(size > bevel) {
 				content.add(p.x + nx, p.y + ny, 0, 0, p.r, p.g, p.b, p.a);
-				content.add(p.x - nx, p.y - ny, 0, 0, p.r, p.g, p.b, p.a);
+				content.add(p.x, p.y, 0, 0, p.r, p.g, p.b, p.a);
 
 				var pnext = i == last ? start : pindex + 2;
 
