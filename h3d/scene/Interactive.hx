@@ -72,7 +72,8 @@ class Interactive extends Object implements hxd.SceneEvents.Interactive {
 				m.mainPass.wireframe = true;
 			m.castShadows = false;
 			m.receiveShadows = false;
-			// m.blendMode = Alpha;
+			m.color.a = 0.7;
+			m.blendMode = Alpha;
 			// m.mainPass.depth(false, Always);
 		}
 	}

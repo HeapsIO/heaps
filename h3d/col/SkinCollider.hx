@@ -126,30 +126,20 @@ class SkinColliderDebugObj extends h3d.scene.Object {
 		this.box = new h3d.scene.Box(0xFFFFFF, col.currentBounds);
 		addChild(box);
 		this.ignoreParentTransform = true;
-		// this.follow = col.obj;
 		createJoints();
 	}
 
 	function createJoints() {
 		var joints = skin.getSkinData().allJoints;
 		for( j in joints ) {
-			var b = new h3d.scene.Box(h3d.col.Bounds.fromValues(-1,-1,-1,2,2,2), this);
-			b.material.color.a = 0.5;
-			b.material.blendMode = Alpha;
-
+			var b = new h3d.scene.Box(0xA0A0A0, h3d.col.Bounds.fromValues(-1,-1,-1,2,2,2), this);
 			if( j.offsets != null ) {
-				b.color = 0xFF00;
 				b.bounds.empty();
-
 				var pt = j.offsets.getMin();
 				b.bounds.addSpherePos(pt.x, pt.y, pt.z, j.offsetRay);
 				var pt = j.offsets.getMax();
 				b.bounds.addSpherePos(pt.x, pt.y, pt.z, j.offsetRay);
 			} else {
-				b.color = 0xFF0000;
-				b.material.castShadows = false;
-				b.material.receiveShadows = false;
-				b.material.mainPass.depth(false, Always);
 				b.bounds.empty();
 				b.bounds.addSpherePos(0,0,0,0.1);
 			}
