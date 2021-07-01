@@ -91,6 +91,7 @@ class DirectXDriver extends h3d.impl.Driver {
 	var currentIndex : IndexBuffer;
 	var currentDepth : DepthBuffer;
 	var currentTargets = new hl.NativeArray<RenderTargetView>(16);
+	var currentTargetResources = new hl.NativeArray<ShaderResourceView>(16);
 	var vertexShader : PipelineState;
 	var pixelShader : PipelineState;
 	var currentVBuffers = new hl.NativeArray<dx.Resource>(16);
@@ -881,6 +882,7 @@ class DirectXDriver extends h3d.impl.Driver {
 			curTexture = null;
 			currentDepth = defaultDepth;
 			currentTargets[0] = defaultTarget;
+			currentTargetResources[0] = null;
 			targetsCount = 1;
 			Driver.omSetRenderTargets(1, currentTargets, currentDepth.view);
 			viewport[2] = outputWidth;
@@ -943,6 +945,7 @@ class DirectXDriver extends h3d.impl.Driver {
 			}
 			tex.lastFrame = frame;
 			currentTargets[i] = rt;
+			currentTargetResources[i] = tex.t.view;
 			unbind(tex.t.view);
 			// prevent garbage
 			if( !tex.flags.has(WasCleared) ) {
@@ -1233,10 +1236,26 @@ class DirectXDriver extends h3d.impl.Driver {
 			}
 			switch( state.kind) {
 			case Vertex:
-				if( max >= 0 ) Driver.vsSetShaderResources(start, max - start + 1, state.resources.getRef().offset(start));
+				if( max >= 0 ) {
+					#if dxdebug
+					for( i in 0...max )
+						for( r in 0...targetsCount )
+							if( currentTargetResources[r] == state.resources[i] )
+								throw "Texture bound in output is set in shader";
+					#end
+					Driver.vsSetShaderResources(start, max - start + 1, state.resources.getRef().offset(start));
+				}
 				if( smax >= 0 ) Driver.vsSetSamplers(sstart, smax - sstart + 1, state.samplers.getRef().offset(sstart));
 			case Pixel:
-				if( max >= 0 ) Driver.psSetShaderResources(start, max - start + 1, state.resources.getRef().offset(start));
+				if( max >= 0 ) {
+					#if dxdebug
+					for( i in 0...max )
+						for( r in 0...targetsCount )
+							if( currentTargetResources[r] == state.resources[i] )
+								throw "Texture bound in output is set in shader";
+					#end
+					Driver.psSetShaderResources(start, max - start + 1, state.resources.getRef().offset(start));
+				}
 				if( smax >= 0 ) Driver.psSetSamplers(sstart, smax - sstart + 1, state.samplers.getRef().offset(sstart));
 			}
 		}
