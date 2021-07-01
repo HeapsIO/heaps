@@ -309,9 +309,11 @@ class DirectXDriver extends h3d.impl.Driver {
 	}
 
 	override function allocVertexes(m:ManagedBuffer):VertexBuffer {
-		var res = dx.Driver.createBuffer(m.size * m.stride * 4, Default, VertexBuffer, None, None, 0, null);
+		var size = m.size * m.stride * 4;
+		var uniform = m.flags.has(UniformBuffer);
+		var res = uniform ? dx.Driver.createBuffer(size, Dynamic, ConstantBuffer, CpuWrite, None, 0, null) : dx.Driver.createBuffer(size, Default, VertexBuffer, None, None, 0, null);
 		if( res == null ) return null;
-		return { res : res, count : m.size, stride : m.stride };
+		return { res : res, count : m.size, stride : m.stride, uniform : uniform };
 	}
 
 	override function allocIndexes( count : Int, is32 : Bool ) : IndexBuffer {
@@ -484,11 +486,28 @@ class DirectXDriver extends h3d.impl.Driver {
 
 	override function uploadVertexBuffer(v:VertexBuffer, startVertex:Int, vertexCount:Int, buf:hxd.FloatBuffer, bufPos:Int) {
 		if( hasDeviceError ) return;
-		updateBuffer(v.res, hl.Bytes.getArray(buf.getNative()).offset(bufPos<<2), startVertex * v.stride << 2, vertexCount * v.stride << 2);
+		var data = hl.Bytes.getArray(buf.getNative()).offset(bufPos<<2);
+		if( v.uniform ) {
+			if( startVertex != 0 ) throw "assert";
+			var ptr = v.res.map(0, WriteDiscard, true, null);
+			if( ptr == null ) throw "Can't map buffer";
+			ptr.blit(0, data, 0, vertexCount * v.stride << 2);
+			v.res.unmap(0);
+			return;
+		}
+		updateBuffer(v.res, data, startVertex * v.stride << 2, vertexCount * v.stride << 2);
 	}
 
 	override function uploadVertexBytes(v:VertexBuffer, startVertex:Int, vertexCount:Int, buf:haxe.io.Bytes, bufPos:Int) {
 		if( hasDeviceError ) return;
+		if( v.uniform ) {
+			if( startVertex != 0 ) throw "assert";
+			var ptr = v.res.map(0, WriteDiscard, true, null);
+			if( ptr == null ) throw "Can't map buffer";
+			ptr.blit(0, buf, 0, vertexCount * v.stride << 2);
+			v.res.unmap(0);
+			return;
+		}
 		updateBuffer(v.res, @:privateAccess buf.b.offset(bufPos << 2), startVertex * v.stride << 2, vertexCount * v.stride << 2);
 	}
 
