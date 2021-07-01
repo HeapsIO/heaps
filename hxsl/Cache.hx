@@ -18,7 +18,7 @@ class Cache {
 
 	var linkCache : SearchMap;
 	var linkShaders : Map<String, Shader>;
-	var batchShaders : Map<Int, { shader : SharedShader, params : RuntimeShader.AllocParam, size : Int }>;
+	var batchShaders : Map<RuntimeShader, { shader : SharedShader, params : RuntimeShader.AllocParam, size : Int }>;
 	var byID : Map<String, RuntimeShader>;
 	public var constsToGlobal : Bool;
 
@@ -458,10 +458,10 @@ class Cache {
 	}
 
 	public function makeBatchShader( rt : RuntimeShader, shaders ) : BatchShader {
-		var sh = batchShaders.get(rt.id);
+		var sh = batchShaders.get(rt); // don't use rt.id to avoid collisions on identical signatures
 		if( sh == null ) {
 			sh = createBatchShader(rt, shaders);
-			batchShaders.set(rt.id,sh);
+			batchShaders.set(rt,sh);
 		}
 		var shader = std.Type.createEmptyInstance(BatchShader);
 		@:privateAccess shader.shader = sh.shader;
