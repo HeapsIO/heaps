@@ -3,6 +3,7 @@ package h3d.scene;
 class CameraController extends h3d.scene.Object {
 
 	public var distance(get, never) : Float;
+	public var targetDistance(get, never) : Float;
 	public var theta(get, never) : Float;
 	public var phi(get, never) : Float;
 	public var fovY(get, never) : Float;
@@ -14,6 +15,8 @@ class CameraController extends h3d.scene.Object {
 	public var fovZoomAmount = 1.1;
 	public var panSpeed = 1.;
 	public var smooth = 0.6;
+	public var minDistance : Float = 0.;
+	public var maxDistance : Float = 1e20;
 
 	public var lockZPlanes = false;
 
@@ -41,6 +44,7 @@ class CameraController extends h3d.scene.Object {
 	}
 
 	inline function get_distance() return curPos.x / curOffset.w;
+	inline function get_targetDistance() return targetPos.x / targetOffset.w;
 	inline function get_theta() return curPos.y;
 	inline function get_phi() return curPos.z;
 	inline function get_fovY() return curOffset.w;
@@ -197,8 +201,19 @@ class CameraController extends h3d.scene.Object {
 			targetOffset.w = 1;
 	}
 
-	function zoom(delta) {
-		targetPos.x *= Math.pow(zoomAmount, delta);
+	function zoom(delta : Float) {
+		var dist = targetDistance;
+		if( (dist > minDistance && delta < 0) || (dist < maxDistance && delta > 0) ) {
+			targetPos.x *= Math.pow(zoomAmount, delta);
+			var expectedDist = targetDistance;
+			if( expectedDist < minDistance ) {
+				targetPos.x = minDistance * targetOffset.w;
+			}
+			if( expectedDist > maxDistance ) {
+				targetPos.x = maxDistance * targetOffset.w;
+			}
+		} else
+			pan( 0, 0, dist * (1 - Math.pow(zoomAmount, delta)) );
 	}
 
 	function rot(dx, dy) {
@@ -206,8 +221,8 @@ class CameraController extends h3d.scene.Object {
 		moveY += dy;
 	}
 
-	function pan(dx, dy) {
-		var v = new h3d.Vector(dx, dy);
+	function pan(dx, dy, dz = 0.) {
+		var v = new h3d.Vector(dx, dy, dz);
 		scene.camera.update();
 		v.transform3x3(scene.camera.getInverseView());
 		v.w = 0;
@@ -219,7 +234,11 @@ class CameraController extends h3d.scene.Object {
 		var distance = distance;
 		cam.target.load(curOffset);
 		cam.target.w = 1;
-		cam.pos.set( distance * Math.cos(theta) * Math.sin(phi) + cam.target.x, distance * Math.sin(theta) * Math.sin(phi) + cam.target.y, distance * Math.cos(phi) + cam.target.z );
+		cam.pos.set(
+			distance * Math.cos(theta) * Math.sin(phi) + cam.target.x,
+			distance * Math.sin(theta) * Math.sin(phi) + cam.target.y,
+			distance * Math.cos(phi) + cam.target.z
+		);
 		if( !lockZPlanes ) {
 			cam.zNear = distance * 0.01;
 			cam.zFar = distance * 100;
