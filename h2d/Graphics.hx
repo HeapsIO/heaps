@@ -164,7 +164,6 @@ class Graphics extends Drawable {
 	var curB : Float;
 	var curA : Float;
 	var lineSize : Float;
-	var lineAlignment : LineAlignment = Default;
 	var lineR : Float;
 	var lineG : Float;
 	var lineB : Float;
