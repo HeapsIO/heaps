@@ -400,7 +400,7 @@ class SpriteBatch extends Drawable {
 				tmp[pos++] = e.g;
 				tmp[pos++] = e.b;
 				tmp[pos++] = e.a;
-				tmp[pos++] = sx + t.width;
+				tmp[pos++] = sx + t.width + 0.1;
 				tmp[pos++] = sy;
 				tmp[pos++] = t.u2;
 				tmp[pos++] = t.v;
@@ -409,15 +409,15 @@ class SpriteBatch extends Drawable {
 				tmp[pos++] = e.b;
 				tmp[pos++] = e.a;
 				tmp[pos++] = sx;
-				tmp[pos++] = sy + t.height;
+				tmp[pos++] = sy + t.height + 0.1;
 				tmp[pos++] = t.u;
 				tmp[pos++] = t.v2;
 				tmp[pos++] = e.r;
 				tmp[pos++] = e.g;
 				tmp[pos++] = e.b;
 				tmp[pos++] = e.a;
-				tmp[pos++] = sx + t.width;
-				tmp[pos++] = sy + t.height;
+				tmp[pos++] = sx + t.width + 0.1;
+				tmp[pos++] = sy + t.height + 0.1;
 				tmp[pos++] = t.u2;
 				tmp[pos++] = t.v2;
 				tmp[pos++] = e.r;
