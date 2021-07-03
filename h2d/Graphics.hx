@@ -164,6 +164,7 @@ class Graphics extends Drawable {
 	var curB : Float;
 	var curA : Float;
 	var lineSize : Float;
+	var lineAlignment : LineAlignment = Default;
 	var lineR : Float;
 	var lineG : Float;
 	var lineB : Float;
@@ -245,7 +246,7 @@ class Graphics extends Drawable {
 		return true;
 	}
 
-	function flushLine( start ) {
+	function flushLine( start, isClosedShape ) {
 		var pts = tmpPoints;
 		var last = pts.length - 1;
 		var prev = pts[last];
@@ -300,8 +301,15 @@ class Graphics extends Drawable {
 			ny *= d;
 
 			if(size > bevel) {
-				content.add(p.x + nx, p.y + ny, 0, 0, p.r, p.g, p.b, p.a);
-				content.add(p.x, p.y, 0, 0, p.r, p.g, p.b, p.a);
+				if (isClosedShape) {
+					// Inset the line.
+					content.add(p.x + nx, p.y + ny, 0, 0, p.r, p.g, p.b, p.a);
+					content.add(p.x, p.y, 0, 0, p.r, p.g, p.b, p.a);
+				} else {
+					// Center the line.
+					content.add(p.x + nx * 0.5, p.y + ny * 0.5, 0, 0, p.r, p.g, p.b, p.a);
+					content.add(p.x - nx * 0.5, p.y - ny * 0.5, 0, 0, p.r, p.g, p.b, p.a);
+				}
 
 				var pnext = i == last ? start : pindex + 2;
 
@@ -333,6 +341,7 @@ class Graphics extends Drawable {
 				var pnext = i == last ? start : pindex + 3;
 
 				if(sign > 0) {
+					// TODO: fix this to respect line alignment.
 					content.add(p.x + nx, p.y + ny, 0, 0, p.r, p.g, p.b, p.a);
 					content.add(p.x - nnx, p.y - nny, 0, 0, p.r, p.g, p.b, p.a);
 					content.add(p.x + nnx, p.y + nny, 0, 0, p.r, p.g, p.b, p.a);
@@ -404,7 +413,7 @@ class Graphics extends Drawable {
 			pts.push(last);
 	}
 
-	function flush() {
+	function flush(isClosedShape = false) {
 		if( tmpPoints.length == 0 )
 			return;
 		if( doFill ) {
@@ -414,7 +423,7 @@ class Graphics extends Drawable {
 				pindex = 0;
 		}
 		if( lineSize > 0 ) {
-			flushLine(pindex);
+			flushLine(pindex, isClosedShape);
 			if( content.next() )
 				pindex = 0;
 		}
@@ -560,7 +569,7 @@ class Graphics extends Drawable {
 		lineTo(x + w, y + h);
 		lineTo(x, y + h);
 		lineTo(x, y);
-		flush();
+		flush(/* isClosedShape= */ true);
 	}
 
 	/**
@@ -586,7 +595,7 @@ class Graphics extends Drawable {
 		if( nsegments < 3 ) nsegments = 3;
 		var angle = hxd.Math.degToRad(90) / nsegments;
 		inline function corner(x, y, angleStart) {
-			for ( i in 0...nsegments-1) {
+			for ( i in 0...nsegments - 1) {
 				var a = (i + 1) * angle + hxd.Math.degToRad(angleStart);
 				lineTo(x + Math.cos(a) * radius, y + Math.sin(a) * radius);
 			}
@@ -604,7 +613,7 @@ class Graphics extends Drawable {
 		lineTo(x - radius, y);
 		corner(x, y, 180);
 		lineTo(x, y - radius);
-		flush();
+		flush(/* isClosedShape= */ true);
 	}
 
 	/**
@@ -624,7 +633,7 @@ class Graphics extends Drawable {
 			var a = i * angle;
 			lineTo(cx + Math.cos(a) * radius, cy + Math.sin(a) * radius);
 		}
-		flush();
+		flush(/* isClosedShape= */ true);
 	}
 
 	/**
@@ -649,7 +658,7 @@ class Graphics extends Drawable {
 			y1 = Math.cos(rotationAngle) * Math.sin(a) * radiusY + Math.cos(a) * Math.sin(rotationAngle) * radiusX;
 			lineTo(cx + x1, cy + y1);
 		}
-		flush();
+		flush(/* isClosedShape= */ true);
 	}
 
 	/**
@@ -676,7 +685,7 @@ class Graphics extends Drawable {
 			lineTo(cx + Math.cos(a) * radius, cy + Math.sin(a) * radius);
 		}
 		lineTo(cx, cy);
-		flush();
+		flush(/* isClosedShape= */ true);
 	}
 
 	/**
@@ -713,7 +722,7 @@ class Graphics extends Drawable {
 			var a = (nsegments - 1 - i) * angle + angleStart;
 			lineTo(cx + Math.cos(a) * innerRadius, cy + Math.sin(a) * innerRadius);
 		}
-		flush();
+		flush(/* isClosedShape= */ true);
 	}
 
 	/**
@@ -749,7 +758,7 @@ class Graphics extends Drawable {
 			lineTo(cx + _width, cy + _height);
 		}
 		lineTo(cx, cy);
-		flush();
+		flush(/* isClosedShape= */ true);
 	}
 
 	/**
