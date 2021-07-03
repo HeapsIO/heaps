@@ -646,12 +646,18 @@ class Graphics extends Drawable {
 		if( nsegments < 3 ) nsegments = 3;
 		var angle = Math.PI * 2 / nsegments;
 		var x1, y1;
-		for( i in 0...nsegments + 1 ) {
+		x1 = Math.cos(rotationAngle) * radiusX;
+		y1 = Math.sin(rotationAngle) * radiusX;
+		lineTo(cx + x1, cy + y1);
+		for( i in 1...nsegments ) {
 			var a = i * angle;
 			x1 = Math.cos(a) * Math.cos(rotationAngle) * radiusX - Math.sin(a) * Math.sin(rotationAngle) * radiusY;
 			y1 = Math.cos(rotationAngle) * Math.sin(a) * radiusY + Math.cos(a) * Math.sin(rotationAngle) * radiusX;
 			lineTo(cx + x1, cy + y1);
 		}
+		x1 = Math.cos(rotationAngle) * radiusX;
+		y1 = Math.sin(rotationAngle) * radiusX;
+		lineTo(cx + x1, cy + y1);
 		flush();
 	}
 
