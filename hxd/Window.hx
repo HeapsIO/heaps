@@ -6,6 +6,20 @@ enum DisplayMode {
 	Fullscreen;
 	FullscreenResize;
 }
+typedef Monitor = {
+	handle : MonitorHandle,
+	name : String,
+	left : Int,
+	right : Int,
+	top : Int,
+	bottom : Int
+}
+typedef DisplaySetting = {
+	width : Int,
+	height : Int,
+	ips : Int
+}
+typedef MonitorHandle = Null<Int>;
 
 class Window {
 
@@ -17,6 +31,7 @@ class Window {
 	public var mouseX(get, never) : Int;
 	public var mouseY(get, never) : Int;
 	public var mouseLock(get, set) : Bool;
+	public var monitor : MonitorHandle;
 	public var vsync(get, set) : Bool;
 	public var isFocused(get, never) : Bool;
 
@@ -77,6 +92,14 @@ class Window {
 	public static function getInstance() : Window {
 		if( inst == null ) inst = new Window();
 		return inst;
+	}
+
+	public static function getMonitors() : Array<Monitor> {
+		return [];
+	}
+
+	public function getDisplaySettings() : Array<DisplaySetting> {
+		return [];
 	}
 
 	function get_mouseX() : Int {

@@ -18,6 +18,18 @@ enum DisplayMode {
 }
 #end
 
+typedef Monitor = {
+	name : String,
+	width : Int,
+	height : Int
+}
+
+typedef DisplaySetting = {
+	width : Int,
+	height : Int,
+	framerates : Array<Int>
+}
+
 //@:coreApi
 class Window {
 
@@ -29,11 +41,14 @@ class Window {
 	public var mouseX(get, never) : Int;
 	public var mouseY(get, never) : Int;
 	public var mouseLock(get, set) : Bool;
+	public var monitor : Int;
+	public var framerate : Int;
 	public var vsync(get, set) : Bool;
 	public var isFocused(get, never) : Bool;
 
 	public var title(get, set) : String;
 	public var displayMode(get, set) : DisplayMode;
+	public var currentDisplaySetting(get, never) : DisplaySetting;
 
 	#if hlsdl
 	var window : sdl.Window;
@@ -46,6 +61,8 @@ class Window {
 	var curMouseY = 0;
 
 	static var CODEMAP = [for( i in 0...2048 ) i];
+	static var MIN_HEIGHT = 720;
+	static var MIN_FRAMERATE = 60; // 30 and 60 are always allowed
 	#if hlsdl
 	static inline var TOUCH_SCALE = #if (hl_ver >= version("1.12.0")) 10000 #else 100 #end;
 	#if heaps_vulkan
@@ -425,11 +442,61 @@ class Window {
 		return Windowed;
 	}
 
+	function selectedMonitor() : Dynamic {
+		var w = null;
+		for(i => m in #if hldx dx.Window.getMonitors() #elseif hlsdl sdl.Sdl.getDisplays() #else [] #end) {
+			if(i == monitor)
+				return m;
+			/*if(i == window.currentMonitor)
+				w = m;*/
+		}
+		return w;
+	}
+
 	function set_displayMode( m : DisplayMode ) : DisplayMode {
 		#if (hldx || hlsdl)
+		if(m != Windowed && monitor != -1) {
+			window.displayMode = Windowed;
+			var mon = selectedMonitor();
+			if(mon != null)
+				window.setPosition(mon.left, mon.top);
+		}
 		window.displayMode = m;
 		#end
 		return displayMode;
+	}
+
+	public function applyDisplay() {
+		displayMode = displayMode;
+	}
+
+	public function getMonitors() : Array<Monitor> {
+		return [for(m in #if hldx dx.Window.getMonitors() #elseif hlsdl sdl.Sdl.getDisplays() #else [] #end) { name: m.name, width: m.right-m.left, height: m.bottom-m.top}];
+	}
+
+	public function get_currentDisplaySetting() : DisplaySetting  {
+		trace("current window : " + window.width + ", " + window.height);
+		for(d in getDisplaySettings()) {
+			if(d.width == window.width && d.height == window.height)
+				return d;
+		}
+		return null;
+	}
+
+	public function getDisplaySettings() : Array<DisplaySetting> {
+		var map = new Map<String,DisplaySetting>();
+		for(d in #if hldx dx.Window.getDisplaySettings() #elseif hlsdl sdl.Sdl.getDisplayModes( monitor == -1 ? window.currentMonitor : monitor) #else [] #end) {
+			if(d.height >= MIN_HEIGHT && (d.framerate >= MIN_FRAMERATE || d.framerate == 30 || d.framerate == 60)) {
+				var key = '${d.width}x${d.height}';
+				var m = map[key];
+				if(m == null)
+					map[key] = { width: d.width, height: d.height, framerates: [ d.framerate ]};
+				else
+					m.framerates.push(d.framerate);
+			}
+		}
+
+		return [ for(k => v in map) v ];
 	}
 
 	function get_title() : String {
