@@ -121,6 +121,15 @@ class ObjectFollower extends Object {
 	}
 
 	override function syncPos() {
+		if( follow == null ) {
+			if( posChanged ) {
+				calcAbsPos();
+				for( c in children )
+					c.posChanged = true;
+				posChanged = false;
+			}
+			return;
+		}
 		followObject();
 		super.syncPos();
 	}
