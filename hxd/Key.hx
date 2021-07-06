@@ -228,7 +228,9 @@ class Key {
 		case ERelease:
 			if( e.button < 5 ) keyPressed[e.button] = -getFrame();
 		case EReleaseOutside:
+			var prev = keyPressed.copy();
 			keyPressed = [];
+			keyPressed[MOUSE_LEFT] = prev[MOUSE_LEFT];
 		case EWheel:
 			keyPressed[e.wheelDelta > 0 ? MOUSE_WHEEL_DOWN : MOUSE_WHEEL_UP] = getFrame();
 		default:
