@@ -148,11 +148,15 @@ class System {
 		return false;
 	}
 
+	public static function getLocale() : String {
+		return js.Browser.navigator.language + "_" + js.Browser.navigator.language.toUpperCase();
+	}
+
 	// getters
 
 	static function get_width() : Int return Math.round(js.Browser.document.body.clientWidth * js.Browser.window.devicePixelRatio);
 	static function get_height() : Int return Math.round(js.Browser.document.body.clientHeight  * js.Browser.window.devicePixelRatio);
-	static function get_lang() : String return "en";
+	static function get_lang() : String return js.Browser.navigator.language;
 	static function get_platform() : Platform {
 		var ua = js.Browser.navigator.userAgent.toLowerCase();
 		if( ua.indexOf("android")>=0 )
