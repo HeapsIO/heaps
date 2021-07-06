@@ -358,11 +358,11 @@ class System {
 	static var _lang : String;
 	static function get_lang() : String {
 		if( _lang == null ) {
-			var str = ~/_/g.replace(getLocale(), "-");
-			if( allowLCID && lcidMapping.exists(str) )
-				_lang = lcidMapping[str];
+			var loc = getLocale();
+			if( allowLCID && lcidMapping.exists(loc) )
+				_lang = lcidMapping[loc];
 			else
-				_lang = str.split("-")[0];
+				_lang = loc.split("-")[0];
 		}
 		return _lang;
 	}
@@ -376,6 +376,7 @@ class System {
 			var str = @:privateAccess Sys.makePath(sys_locale());
 			if( str == null ) str = "en";
 			_loc = ~/[.@]/g.split(str)[0];
+			_loc = ~/_/g.replace(_loc, "-");
 		}
 		return _loc;
 	}
