@@ -47,6 +47,9 @@ class System {
 	static var currentCustomCursor : hxd.Cursor.CustomCursor;
 	static var cursorVisible = true;
 
+	public static var allowLCID : Bool = false;
+	static var lcidMapping = [ "zh-TW" => "zh-TW", "zh-HK" => "zh-TW", "zh-MO" => "zh-TW" ];
+
 	public static function getCurrentLoop() : Void -> Void {
 		return loopFunc;
 	}
@@ -355,8 +358,11 @@ class System {
 	static var _lang : String;
 	static function get_lang() : String {
 		if( _lang == null ) {
-			var str = getLocale();
-			_lang = str.split("-").shift();
+			var str = ~/_/g.replace(getLocale(), "-");
+			if( allowLCID && lcidMapping.exists(str) )
+				_lang = lcidMapping[str];
+			else
+				_lang = str.split("-")[0];
 		}
 		return _lang;
 	}
@@ -369,7 +375,7 @@ class System {
 		if( _loc == null ) {
 			var str = @:privateAccess Sys.makePath(sys_locale());
 			if( str == null ) str = "en";
-			_loc = ~/[.@_]/g.split(str)[0];
+			_loc = ~/[.@]/g.split(str)[0];
 		}
 		return _loc;
 	}
