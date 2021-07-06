@@ -10,6 +10,10 @@ interface Collider extends hxd.impl.Serializable.StructSerializable {
 	public function contains( p : Point ) : Bool;
 	public function inFrustum( f : Frustum, ?localMatrix : h3d.Matrix ) : Bool;
 	public function inSphere( s : Sphere ) : Bool;
+
+	#if !macro
+	public function makeDebugObj() : h3d.scene.Object;
+	#end
 }
 
 
@@ -41,11 +45,25 @@ class OptimizedCollider implements hxd.impl.Serializable implements Collider {
 		return a.inSphere(s) && b.inSphere(s);
 	}
 
-	#if (hxbit && !macro)
+	#if !macro
+	public function makeDebugObj() : h3d.scene.Object {
+		var bobj = b.makeDebugObj();
+		var aobj = a.makeDebugObj();
+		if( aobj == null && bobj == null )
+			return null;
+		var ret = new h3d.scene.Object();
+		if( aobj != null )
+			ret.addChild(aobj);
+		if( bobj != null )
+			ret.addChild(bobj);
+		return ret;
+	}
+	#if hxbit
 	function customSerialize(ctx:hxbit.Serializer) {
 	}
 	function customUnserialize(ctx:hxbit.Serializer) {
 	}
+	#end
 	#end
 
 }
@@ -91,7 +109,20 @@ class GroupCollider implements Collider {
 		return false;
 	}
 
-	#if (hxbit && !macro && heaps_enable_serialize)
+	#if !macro
+	public function makeDebugObj() : h3d.scene.Object {
+		var ret : h3d.scene.Object = null;
+		for( c in colliders ) {
+			var toAdd = c.makeDebugObj();
+			if( toAdd == null )
+				continue;
+			if( ret == null )
+				ret = new h3d.scene.Object();
+			ret.addChild(toAdd);
+		}
+		return ret;
+	}
+	#if (hxbit && heaps_enable_serialize)
 
 	function customSerialize(ctx:hxbit.Serializer) {
 		ctx.addInt(colliders.length);
@@ -103,6 +134,7 @@ class GroupCollider implements Collider {
 		colliders = [for( i in 0...ctx.getInt() ) ctx.getStruct()];
 	}
 
+	#end
 	#end
 
 

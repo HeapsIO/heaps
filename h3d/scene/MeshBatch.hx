@@ -109,7 +109,6 @@ class MeshBatch extends MultiMaterial {
 				p.dynamicParameters = true;
 				p.batchMode = true;
 
-				var alloc = hxd.impl.Allocator.get();
 				b.next = dataPasses;
 				dataPasses = b;
 

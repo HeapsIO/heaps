@@ -91,6 +91,7 @@ class DirectXDriver extends h3d.impl.Driver {
 	var currentIndex : IndexBuffer;
 	var currentDepth : DepthBuffer;
 	var currentTargets = new hl.NativeArray<RenderTargetView>(16);
+	var currentTargetResources = new hl.NativeArray<ShaderResourceView>(16);
 	var vertexShader : PipelineState;
 	var pixelShader : PipelineState;
 	var currentVBuffers = new hl.NativeArray<dx.Resource>(16);
@@ -308,9 +309,11 @@ class DirectXDriver extends h3d.impl.Driver {
 	}
 
 	override function allocVertexes(m:ManagedBuffer):VertexBuffer {
-		var res = dx.Driver.createBuffer(m.size * m.stride * 4, Default, VertexBuffer, None, None, 0, null);
+		var size = m.size * m.stride * 4;
+		var uniform = m.flags.has(UniformBuffer);
+		var res = uniform ? dx.Driver.createBuffer(size, Dynamic, ConstantBuffer, CpuWrite, None, 0, null) : dx.Driver.createBuffer(size, Default, VertexBuffer, None, None, 0, null);
 		if( res == null ) return null;
-		return { res : res, count : m.size, stride : m.stride };
+		return { res : res, count : m.size, stride : m.stride, uniform : uniform };
 	}
 
 	override function allocIndexes( count : Int, is32 : Bool ) : IndexBuffer {
@@ -483,11 +486,28 @@ class DirectXDriver extends h3d.impl.Driver {
 
 	override function uploadVertexBuffer(v:VertexBuffer, startVertex:Int, vertexCount:Int, buf:hxd.FloatBuffer, bufPos:Int) {
 		if( hasDeviceError ) return;
-		updateBuffer(v.res, hl.Bytes.getArray(buf.getNative()).offset(bufPos<<2), startVertex * v.stride << 2, vertexCount * v.stride << 2);
+		var data = hl.Bytes.getArray(buf.getNative()).offset(bufPos<<2);
+		if( v.uniform ) {
+			if( startVertex != 0 ) throw "assert";
+			var ptr = v.res.map(0, WriteDiscard, true, null);
+			if( ptr == null ) throw "Can't map buffer";
+			ptr.blit(0, data, 0, vertexCount * v.stride << 2);
+			v.res.unmap(0);
+			return;
+		}
+		updateBuffer(v.res, data, startVertex * v.stride << 2, vertexCount * v.stride << 2);
 	}
 
 	override function uploadVertexBytes(v:VertexBuffer, startVertex:Int, vertexCount:Int, buf:haxe.io.Bytes, bufPos:Int) {
 		if( hasDeviceError ) return;
+		if( v.uniform ) {
+			if( startVertex != 0 ) throw "assert";
+			var ptr = v.res.map(0, WriteDiscard, true, null);
+			if( ptr == null ) throw "Can't map buffer";
+			ptr.blit(0, buf, 0, vertexCount * v.stride << 2);
+			v.res.unmap(0);
+			return;
+		}
 		updateBuffer(v.res, @:privateAccess buf.b.offset(bufPos << 2), startVertex * v.stride << 2, vertexCount * v.stride << 2);
 	}
 
@@ -881,6 +901,7 @@ class DirectXDriver extends h3d.impl.Driver {
 			curTexture = null;
 			currentDepth = defaultDepth;
 			currentTargets[0] = defaultTarget;
+			currentTargetResources[0] = null;
 			targetsCount = 1;
 			Driver.omSetRenderTargets(1, currentTargets, currentDepth.view);
 			viewport[2] = outputWidth;
@@ -943,6 +964,7 @@ class DirectXDriver extends h3d.impl.Driver {
 			}
 			tex.lastFrame = frame;
 			currentTargets[i] = rt;
+			currentTargetResources[i] = tex.t.view;
 			unbind(tex.t.view);
 			// prevent garbage
 			if( !tex.flags.has(WasCleared) ) {
@@ -1233,10 +1255,26 @@ class DirectXDriver extends h3d.impl.Driver {
 			}
 			switch( state.kind) {
 			case Vertex:
-				if( max >= 0 ) Driver.vsSetShaderResources(start, max - start + 1, state.resources.getRef().offset(start));
+				if( max >= 0 ) {
+					#if dxdebug
+					for( i in 0...max )
+						for( r in 0...targetsCount )
+							if( currentTargetResources[r] == state.resources[i] )
+								throw "Texture bound in output is set in shader";
+					#end
+					Driver.vsSetShaderResources(start, max - start + 1, state.resources.getRef().offset(start));
+				}
 				if( smax >= 0 ) Driver.vsSetSamplers(sstart, smax - sstart + 1, state.samplers.getRef().offset(sstart));
 			case Pixel:
-				if( max >= 0 ) Driver.psSetShaderResources(start, max - start + 1, state.resources.getRef().offset(start));
+				if( max >= 0 ) {
+					#if dxdebug
+					for( i in 0...max )
+						for( r in 0...targetsCount )
+							if( currentTargetResources[r] == state.resources[i] )
+								throw "Texture bound in output is set in shader";
+					#end
+					Driver.psSetShaderResources(start, max - start + 1, state.resources.getRef().offset(start));
+				}
 				if( smax >= 0 ) Driver.psSetSamplers(sstart, smax - sstart + 1, state.samplers.getRef().offset(sstart));
 			}
 		}

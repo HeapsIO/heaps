@@ -32,6 +32,8 @@ class Renderer extends hxd.impl.AnyProps {
 
 	public var renderMode : RenderMode = Default;
 
+	public var shadows : Bool = true;
+
 	public function new() {
 		allPasses = [];
 		passObjects = new Map();
@@ -54,6 +56,8 @@ class Renderer extends hxd.impl.AnyProps {
 			p.dispose();
 		for( f in effects )
 			f.dispose();
+		if ( ctx.lightSystem != null )
+			ctx.lightSystem.dispose();
 		passObjects = new Map();
 	}
 

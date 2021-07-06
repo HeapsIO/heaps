@@ -1694,7 +1694,7 @@ class GlDriver extends Driver {
 	function captureSubRenderBuffer( pixels : hxd.Pixels, x : Int, y : Int ) {
 		if( curTarget == null )
 			throw "Can't capture main render buffer in GL";
-		discardError();
+		gl.getError(); // always discard
 		#if js
 		var buffer : ArrayBufferView = @:privateAccess pixels.bytes.b;
 		switch( curTarget.format ) {
