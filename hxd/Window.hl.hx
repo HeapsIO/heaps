@@ -45,7 +45,7 @@ class Window {
 	var curMouseX = 0;
 	var curMouseY = 0;
 
-	static var CODEMAP = [for( i in 0...2048 ) i];
+	static var CODEMAP = #if hlsdl []; #else [for( i in 0...2048 ) i]; #end
 	#if hlsdl
 	static inline var TOUCH_SCALE = #if (hl_ver >= version("1.12.0")) 10000 #else 100 #end;
 	#if heaps_vulkan
@@ -338,9 +338,14 @@ class Window {
 
 		// EXTRA
 		var keys = [
-			//K.BACKSPACE
-			//K.TAB
-			//K.ENTER
+			8 => K.BACKSPACE,
+			9 => K.TAB,
+			13 => K.ENTER,
+			16 => K.SHIFT,
+			17 => K.CTRL,
+			18 => K.ALT,
+			27 => K.ESCAPE,
+			32 => K.SPACE,
 			1225 => K.LSHIFT,
 			1229 => K.RSHIFT,
 			1224 => K.LCTRL,
@@ -349,8 +354,6 @@ class Window {
 			1230 => K.RALT,
 			1227 => K.LEFT_WINDOW_KEY,
 			1231 => K.RIGHT_WINDOW_KEY,
-			// K.ESCAPE
-			// K.SPACE
 			1075 => K.PGUP,
 			1078 => K.PGDOWN,
 			1077 => K.END,
