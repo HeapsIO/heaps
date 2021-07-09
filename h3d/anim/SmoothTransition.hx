@@ -140,9 +140,17 @@ class SmoothTransition extends Transition {
 		blendFactor += st * tspeed;
 		if( blendFactor >= 1 ) {
 			blendFactor = 1;
-			onAnimEnd();
+			if( onAnimEnd != null )
+				onAnimEnd();
 		}
 		return rt;
 	}
 
+	override function clone(?a : Animation) : Animation {
+		if( a == null )
+			a = new SmoothTransition(anim1, anim2, speed);
+		super.clone(a);
+		var a : SmoothTransition = cast a;
+		return a;
+	}
 }
