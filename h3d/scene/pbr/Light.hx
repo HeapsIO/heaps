@@ -40,13 +40,4 @@ class Light extends h3d.scene.Light {
 		return _color = v;
 	}
 
-	override function get_enableSpecular() {
-		return true;
-	}
-
-	override function set_enableSpecular(b) {
-		if( !b ) throw "Not implemented for this light";
-		return true;
-	}
-
 }

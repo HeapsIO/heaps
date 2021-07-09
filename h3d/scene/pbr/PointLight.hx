@@ -27,12 +27,12 @@ class PointLight extends Light {
 	}
 
 	function get_range() {
-		return cullingDistance;
+		return scaleX;
 	}
 
 	function set_range(v:Float) {
 		setScale(v);
-		return cullingDistance = v;
+		return v;
 	}
 
 	override function draw(ctx:RenderContext) {
@@ -66,7 +66,7 @@ class PointLight extends Light {
 		s.x = absPos._41;
 		s.y = absPos._42;
 		s.z = absPos._43;
-		s.r = cullingDistance;
+		s.r = range;
 
 		if( !ctx.camera.frustum.hasSphere(s) )
 			return;
