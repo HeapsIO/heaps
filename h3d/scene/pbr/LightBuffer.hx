@@ -5,8 +5,8 @@ class LightBuffer {
 	public var defaultForwardShader = new h3d.shader.pbr.DefaultForward();
 
 	var MAX_DIR_LIGHT = 2;
-	var MAX_SPOT_LIGHT = 6;
-	var MAX_POINT_LIGHT = 6;
+	var MAX_SPOT_LIGHT = 10;
+	var MAX_POINT_LIGHT = 10;
 
 	var lightInfos : hxd.FloatBuffer;
 	final POINT_LIGHT_INFO_SIZE = 3;
@@ -103,7 +103,7 @@ class LightBuffer {
 
 			// Dir Light
 			var dl = Std.downcast(l, DirLight);
-			if( dl != null ) {
+			if( dl != null && s.dirLightCount < MAX_DIR_LIGHT ) {
 				var li = s.dirLightCount;
 				var i = li * DIR_LIGHT_INFO_SIZE * 4;
 				var pbr = @:privateAccess dl.pbr;
@@ -123,7 +123,7 @@ class LightBuffer {
 
 			// Point Light
 			var pl = Std.downcast(l, PointLight);
-			if( pl != null ) {
+			if( pl != null && s.pointLightCount < MAX_POINT_LIGHT ) {
 				var offset = MAX_DIR_LIGHT * DIR_LIGHT_INFO_SIZE * 4;
 				var li = s.pointLightCount;
 				var i = li * POINT_LIGHT_INFO_SIZE * 4 + offset;
@@ -143,7 +143,7 @@ class LightBuffer {
 
 			// Spot Light
 			var sl = Std.downcast(l, SpotLight);
-			if( sl != null ) {
+			if( sl != null && s.spotLightCount < MAX_SPOT_LIGHT ) {
 				var offset = (MAX_DIR_LIGHT * DIR_LIGHT_INFO_SIZE + MAX_POINT_LIGHT * POINT_LIGHT_INFO_SIZE) * 4 ;
 				var li = s.spotLightCount;
 				var i = s.spotLightCount * SPOT_LIGHT_INFO_SIZE * 4 + offset;

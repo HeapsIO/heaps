@@ -34,6 +34,20 @@ class LightSystem extends h3d.scene.LightSystem {
 		return shaders;
 	}
 
+	override function sortingCriteria ( l1, l2 ) {
+		var pbr1 = Std.downcast(l1, h3d.scene.pbr.Light);
+		var pbr2 = Std.downcast(l2, h3d.scene.pbr.Light);
+		var last1 = pbr1 != null && !pbr1.enableForward;
+		var last2 = pbr2 != null && !pbr2.enableForward;
+		if (last1 && !last2) {
+			return 1;
+		}
+		if (last2 && !last1) {
+			return -1;
+		}
+		return super.sortingCriteria(l1, l2);
+	}
+
 	override function initLights( ctx : h3d.scene.RenderContext ) @:privateAccess {
 		super.initLights(ctx);
 		lightBuffer.sync(ctx);
