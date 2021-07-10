@@ -94,6 +94,9 @@ class Window {
 		element.addEventListener("keypress", onKeyPress);
 		element.addEventListener("blur", onFocus.bind(false));
 		element.addEventListener("focus", onFocus.bind(true));
+
+		js.Browser.window.addEventListener("resize", checkResize);
+
 		canvas.oncontextmenu = function(e){
 			e.stopPropagation();
 			e.preventDefault();
