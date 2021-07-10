@@ -24,7 +24,7 @@ class Skin extends SampleApp {
 			m.mainPass.culling = None;
 			m.getPass("shadow").culling = None;
 		}
-		s3d.lightSystem.ambientLight.set(0.4, 0.4, 0.4);
+		cast(s3d.lightSystem,h3d.scene.fwd.LightSystem).ambientLight.set(0.4, 0.4, 0.4);
 
 		var shadow = s3d.renderer.getPass(h3d.pass.DefaultShadowMap);
 		shadow.power = 20;

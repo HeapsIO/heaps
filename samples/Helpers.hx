@@ -29,7 +29,7 @@ class Helpers extends hxd.App {
 
 		new AxesHelper( cube, 1 );
 
-		s3d.lightSystem.ambientLight.set( 0.3, 0.3, 0.3 );
+		cast(s3d.lightSystem,h3d.scene.fwd.LightSystem).ambientLight.set( 0.3, 0.3, 0.3 );
 
 		var dirLight = new DirLight( new Vector( 0.5, 0.5, -0.5 ), s3d );
 		dirLight.enableSpecular = true;

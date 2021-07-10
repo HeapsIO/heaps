@@ -48,7 +48,7 @@ class Interactive extends SampleApp {
 		light.enableSpecular = true;
 		light.color.set(0.28, 0.28, 0.28);
 
-		s3d.lightSystem.ambientLight.set(0.74, 0.74, 0.74);
+		cast(s3d.lightSystem,h3d.scene.fwd.LightSystem).ambientLight.set(0.74, 0.74, 0.74);
 
 		rnd = new hxd.Rand(5);
 		for(i in 0...8) {

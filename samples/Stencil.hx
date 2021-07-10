@@ -56,7 +56,7 @@ class Stencil extends hxd.App {
 		// adds a directional light to the scene
 		var light = new h3d.scene.fwd.DirLight(new h3d.Vector(-0.5, -0.5, -0.5), s3d);
 		light.enableSpecular = true;
-		s3d.lightSystem.ambientLight.set(0.3, 0.3, 0.3);
+		cast(s3d.lightSystem,h3d.scene.fwd.LightSystem).ambientLight.set(0.3, 0.3, 0.3);
 
 		s3d.camera.pos.set(5, 5, 5);
 	}
