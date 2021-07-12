@@ -401,7 +401,14 @@ class Bounds implements Collider {
 		return b;
 	}
 
-	#if (hxbit && !macro)
+	#if !macro
+	public function makeDebugObj() : h3d.scene.Object {
+		var prim = new h3d.prim.Cube(xMax - xMin, yMax - yMin, zMax - zMin);
+		prim.translate(xMin, yMin, zMin);
+		prim.addNormals();
+		return new h3d.scene.Mesh(prim);
+	}
+	#if hxbit
 	function customSerialize( ctx : hxbit.Serializer ) {
 		ctx.addFloat(xMin);
 		ctx.addFloat(xMax);
@@ -418,6 +425,7 @@ class Bounds implements Collider {
 		zMin = ctx.getFloat();
 		zMax = ctx.getFloat();
 	}
+	#end
 	#end
 
 }

@@ -94,6 +94,7 @@ class Skin extends MultiMaterial {
 		return s;
 	}
 
+	static var tmpVec = new h3d.Vector();
 	override function getBoundsRec( b : h3d.col.Bounds ) {
 		// ignore primitive bounds !
 		var old = primitive;
@@ -105,15 +106,17 @@ class Skin extends MultiMaterial {
 		syncJoints();
 		if( skinData.vertexWeights == null )
 			cast(primitive, h3d.prim.HMDModel).loadSkin(skinData);
+		var absScale = getAbsPos().getScale(tmpVec);
+		var scale = Math.max(Math.max(absScale.x, absScale.y), absScale.z);
 		for( j in skinData.allJoints ) {
 			if( j.offsetRay < 0 ) continue;
 			var m = currentPalette[j.bindIndex];
 			var pt = j.offsets.getMin();
 			pt.transform(m);
-			b.addSpherePos(pt.x, pt.y, pt.z, j.offsetRay);
+			b.addSpherePos(pt.x, pt.y, pt.z, j.offsetRay * scale);
 			var pt = j.offsets.getMax();
 			pt.transform(m);
-			b.addSpherePos(pt.x, pt.y, pt.z, j.offsetRay);
+			b.addSpherePos(pt.x, pt.y, pt.z, j.offsetRay * scale);
 		}
 		return b;
 	}

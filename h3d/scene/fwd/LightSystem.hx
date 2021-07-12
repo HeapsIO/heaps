@@ -5,7 +5,9 @@ class LightSystem extends h3d.scene.LightSystem {
 	public var maxLightsPerObject = 6;
 	var globals : hxsl.Globals;
 	var ambientShader : hxsl.Shader;
+	var lightCount : Int;
 	public var perPixelLighting : Bool = true;
+	public var ambientLight(default,null) : h3d.Vector;
 
 	/**
 		In the additive lighting model (by default), the lights are added after the ambient.
@@ -15,7 +17,7 @@ class LightSystem extends h3d.scene.LightSystem {
 
 	public function new() {
 		super();
-		ambientLight.set(0.5, 0.5, 0.5);
+		ambientLight = new h3d.Vector(0.5, 0.5, 0.5);
 		ambientShader = new h3d.shader.AmbientLight();
 		additiveLighting = true;
 	}
@@ -29,9 +31,12 @@ class LightSystem extends h3d.scene.LightSystem {
 	}
 
 	override function initLights(ctx) {
+		lightCount = 0;
+		this.ctx = ctx;
+		cullLights();
 		super.initLights(ctx);
 		if( lightCount <= maxLightsPerObject )
-			@:privateAccess ctx.lights = haxe.ds.ListSort.sortSingleLinked(ctx.lights, sortLight);
+			@:privateAccess ctx.lights = haxe.ds.ListSort.sortSingleLinked(ctx.lights, cast sortLight);
 	}
 
 	override function initGlobals( globals : hxsl.Globals ) {
@@ -39,7 +44,35 @@ class LightSystem extends h3d.scene.LightSystem {
 		globals.set("global.perPixelLighting", perPixelLighting);
 	}
 
-	function sortLight( l1 : h3d.scene.Light, l2 : h3d.scene.Light ) {
+	function cullLights() @:privateAccess  {
+		// remove lights which cullingDistance is outside of frustum
+		var ll = ctx.lights, prev : h3d.scene.Light = null;
+		var s = new h3d.col.Sphere();
+		while( ll != null ) {
+			var l = Std.downcast(ll, h3d.scene.fwd.Light);
+			if( l != null ) {
+				s.x = l.absPos._41;
+				s.y = l.absPos._42;
+				s.z = l.absPos._43;
+				s.r = l.cullingDistance;
+			}
+			if( l == null || (l.cullingDistance > 0 && !ctx.computingStatic && !ctx.camera.frustum.hasSphere(s)) ) {
+				if( prev == null )
+					ctx.lights = ll.next;
+				else
+					prev.next = ll.next;
+				ll = ll.next;
+				continue;
+			}
+
+			lightCount++;
+			l.objectDistance = 0.;
+			prev = ll;
+			ll = ll.next;
+		}
+	}
+
+	function sortLight( l1 : h3d.scene.fwd.Light, l2 : h3d.scene.fwd.Light ) {
 		var p = l1.priority - l2.priority;
 		if( p != 0 ) return -p;
 		return @:privateAccess (l1.objectDistance < l2.objectDistance ? -1 : 1);
@@ -47,15 +80,16 @@ class LightSystem extends h3d.scene.LightSystem {
 
 	override function computeLight( obj : h3d.scene.Object, shaders : hxsl.ShaderList ) : hxsl.ShaderList @:privateAccess {
 		if( lightCount > maxLightsPerObject ) {
-			var l = ctx.lights;
-			while( l != null ) {
+			var ll = ctx.lights;
+			while( ll != null ) {
+				var l = Std.downcast(ll, h3d.scene.fwd.Light);
 				if( obj.lightCameraCenter )
 					l.objectDistance = hxd.Math.distanceSq(l.absPos._41 - ctx.camera.target.x, l.absPos._42 - ctx.camera.target.y, l.absPos._43 - ctx.camera.target.z);
 				else
 					l.objectDistance = hxd.Math.distanceSq(l.absPos._41 - obj.absPos._41, l.absPos._42 - obj.absPos._42, l.absPos._43 - obj.absPos._43);
-				l = l.next;
+				ll = ll.next;
 			}
-			ctx.lights = haxe.ds.ListSort.sortSingleLinked(ctx.lights, sortLight);
+			ctx.lights = haxe.ds.ListSort.sortSingleLinked(ctx.lights, cast sortLight);
 		}
 		inline function add( s : hxsl.Shader ) {
 			shaders = ctx.allocShaderList(s, shaders);

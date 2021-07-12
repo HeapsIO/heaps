@@ -3,49 +3,42 @@ package h3d.scene;
 class LightSystem {
 
 	public var drawPasses : Int = 0;
-	public var ambientLight(default,null) : h3d.Vector;
 	public var shadowLight : h3d.scene.Light;
 
-	var lightCount : Int;
 	var ctx : RenderContext;
 
 	public function new() {
-		ambientLight = new h3d.Vector(1,1,1);
 	}
 
 	public function initGlobals( globals : hxsl.Globals ) {
 	}
 
-	function cullLights() @:privateAccess  {
-		// remove lights which cullingDistance is outside of frustum
-		var l = ctx.lights, prev : h3d.scene.Light = null;
-		var s = new h3d.col.Sphere();
-		while( l != null ) {
-			s.x = l.absPos._41;
-			s.y = l.absPos._42;
-			s.z = l.absPos._43;
-			s.r = l.cullingDistance;
+	function sortingCriteria ( l1 : Light, l2 : Light ) {
+		var d1 = l1.getAbsPos().getPosition().sub(ctx.camera.target).length();
+		var d2 = l2.getAbsPos().getPosition().sub(ctx.camera.target).length();
+		return d1 > d2 ? 1 : -1;
+	}
 
-			if( l.cullingDistance > 0 && !ctx.computingStatic && !ctx.camera.frustum.hasSphere(s) ) {
-				if( prev == null )
-					ctx.lights = l.next;
-				else
-					prev.next = l.next;
-				l = l.next;
-				continue;
-			}
-
-			lightCount++;
-			l.objectDistance = 0.;
-			prev = l;
+	public function sortLights ( ctx : h3d.scene.RenderContext ) @:privateAccess {
+		var lights = [];
+		var l = ctx.lights;
+		if ( l == null )
+			return;
+		while ( l != null ) {
+			lights.push(l);
 			l = l.next;
 		}
+		lights.sort(function(l1,l2) { return sortingCriteria(l1, l2); });
+		ctx.lights = lights[0];
+		for (i in 0...lights.length - 1) {
+			lights[i].next = lights[i + 1];
+		}
+		lights[lights.length-1].next = null;
 	}
 
 	public function initLights( ctx : h3d.scene.RenderContext ) @:privateAccess {
-		lightCount = 0;
 		this.ctx = ctx;
-		cullLights();
+		sortLights(ctx);
 		if( shadowLight == null || !shadowLight.allocated) {
 			var l = ctx.lights;
 			while( l != null ) {

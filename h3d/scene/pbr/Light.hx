@@ -8,6 +8,7 @@ class Light extends h3d.scene.Light {
 	public var shadows : h3d.pass.Shadows;
 	public var isMainLight = false;
 	public var occlusionFactor : Float;
+	public var enableForward : Bool = true;
 
 	function new(shader,?parent) {
 		super(shader,parent);
@@ -38,15 +39,6 @@ class Light extends h3d.scene.Light {
 
 	override function set_color(v:h3d.Vector) {
 		return _color = v;
-	}
-
-	override function get_enableSpecular() {
-		return true;
-	}
-
-	override function set_enableSpecular(b) {
-		if( !b ) throw "Not implemented for this light";
-		return true;
 	}
 
 }

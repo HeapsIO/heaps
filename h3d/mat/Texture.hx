@@ -326,20 +326,6 @@ class Texture {
 	}
 
 	/**
-		Swap two textures, this is an immediate operation.
-		BEWARE : if the texture is a cached image (hxd.res.Image), the swap will affect the cache!
-	**/
-	public function swapTexture( t : Texture ) {
-		checkAlloc();
-		t.checkAlloc();
-		if( isDisposed() || t.isDisposed() )
-			throw "One of the two texture is disposed";
-		var tmp = this.t;
-		this.t = t.t;
-		t.t = tmp;
-	}
-
-	/**
 		Downloads the current texture data from the GPU.
 		Beware, this is a very slow operation that shouldn't be done during rendering.
 	**/

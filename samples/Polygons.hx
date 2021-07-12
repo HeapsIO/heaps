@@ -101,7 +101,7 @@ class Polygons extends hxd.App {
 
 		// Lights
 		var light = new h3d.scene.fwd.DirLight(new h3d.Vector( 0.3, -0.4, -0.9), s3d);
-		s3d.lightSystem.ambientLight.setColor(0x909090);
+		cast(s3d.lightSystem,h3d.scene.fwd.LightSystem).ambientLight.setColor(0x909090);
 
 		shadow = s3d.renderer.getPass(h3d.pass.DefaultShadowMap);
 		shadow.size = 2048;

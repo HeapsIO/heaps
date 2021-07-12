@@ -33,13 +33,13 @@ class SpotLight extends Light {
 	}
 
 	function get_range() {
-		return cullingDistance;
+		return scaleX;
 	}
 
 	function set_range(v:Float) {
 		scaleX = v;
 		lightProj.zFar = v;
-		return cullingDistance = v;
+		return v;
 	}
 
 	function set_angle(v:Float) {
