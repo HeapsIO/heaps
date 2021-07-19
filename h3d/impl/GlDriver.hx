@@ -343,7 +343,7 @@ class GlDriver extends Driver {
 					Alternate fix is to improve HxSL so he does it on its own.
 				*/
 				if( loc == null )
-					throw "Texture "+rt.spec.instances[t.instance].shader.data.name+"."+t.name+" is missing from shader output";
+					throw "Texture "+rt.spec.instances[t.instance].shader.data.name+"."+t.name+" is missing from generated shader";
 				s.textures.push({ u : loc, t : curT, mode : mode });
 				index++;
 			}
