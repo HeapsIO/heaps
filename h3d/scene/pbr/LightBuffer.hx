@@ -76,6 +76,35 @@ class LightBuffer {
 		b[i+3] = v.a;
 	}
 
+	function sortingCriteria ( l1 : Light, l2 : Light, cameraTarget : Vector ) {
+		var pbr1 = Std.downcast(l1, h3d.scene.pbr.Light);
+		var pbr2 = Std.downcast(l2, h3d.scene.pbr.Light);
+		var last1 = pbr1 != null && !pbr1.enableForward;
+		var last2 = pbr2 != null && !pbr2.enableForward;
+		if (last1 && !last2) {
+			return 1;
+		}
+		if (last2 && !last1) {
+			return -1;
+		}
+		var d1 = l1.getAbsPos().getPosition().sub(cameraTarget).length();
+		var d2 = l2.getAbsPos().getPosition().sub(cameraTarget).length();
+		return d1 > d2 ? 1 : -1;
+	}
+
+	public function sortLights ( ctx : h3d.scene.RenderContext ) : Array<Light> @:privateAccess {
+		var lights = [];
+		var l = Std.downcast(ctx.lights, Light);
+		if ( l == null )
+			return null;
+		while ( l != null ) {
+			lights.push(l);
+			l = Std.downcast(l.next, Light);
+		}
+		lights.sort(function(l1,l2) { return sortingCriteria(l1, l2, @:privateAccess ctx.camera.target); });
+		return lights;
+	}
+
 	public function sync( ctx : h3d.scene.RenderContext ) {
 		if (defaultForwardShader.lightInfos.isDisposed())
 			createBuffers();
@@ -98,8 +127,8 @@ class LightBuffer {
 		for( i in 0 ... lightInfos.length )
 			lightInfos[i] = 0;
 
-		var l = @:privateAccess ctx.lights;
-		while( l != null ) {
+		var lights = sortLights(ctx);
+		for ( l in lights ) {
 
 			// Dir Light
 			var dl = Std.downcast(l, DirLight);
@@ -167,8 +196,6 @@ class LightBuffer {
 				}*/
 				s.spotLightCount++;
 			}
-
-			l = l.next;
 		}
 		s.lightInfos.uploadVector(lightInfos, 0, s.lightInfos.vertices, 0);
 
