@@ -408,24 +408,6 @@ class Bounds implements Collider {
 		prim.addNormals();
 		return new h3d.scene.Mesh(prim);
 	}
-	#if hxbit
-	function customSerialize( ctx : hxbit.Serializer ) {
-		ctx.addFloat(xMin);
-		ctx.addFloat(xMax);
-		ctx.addFloat(yMin);
-		ctx.addFloat(yMax);
-		ctx.addFloat(zMin);
-		ctx.addFloat(zMax);
-	}
-	function customUnserialize( ctx : hxbit.Serializer ) {
-		xMin = ctx.getFloat();
-		xMax = ctx.getFloat();
-		yMin = ctx.getFloat();
-		yMax = ctx.getFloat();
-		zMin = ctx.getFloat();
-		zMax = ctx.getFloat();
-	}
-	#end
 	#end
 
 }

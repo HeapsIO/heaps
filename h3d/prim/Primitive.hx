@@ -4,7 +4,7 @@ package h3d.prim;
 	h3d.prim.Primitive is the base class for all 3D primitives.
 	You can't create an instance of it and need to use one of its subclasses.
 **/
-class Primitive implements hxd.impl.Serializable {
+class Primitive {
 
 	/**
 		The primitive vertex buffer, holding its vertexes data.
@@ -132,14 +132,5 @@ class Primitive implements hxd.impl.Serializable {
 	public function toString() {
 		return Type.getClassName(Type.getClass(this)).split(".").pop();
 	}
-
-	#if hxbit
-	function customSerialize( ctx : hxbit.Serializer ) {
-		throw "Cannot serialize " + toString();
-	}
-	function customUnserialize( ctx : hxbit.Serializer ) {
-		throw "customUnserialize not implemented on " + toString();
-	}
-	#end
 
 }

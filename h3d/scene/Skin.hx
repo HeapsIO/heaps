@@ -1,8 +1,8 @@
 package h3d.scene;
 
 class Joint extends Object {
-	@:s public var skin : Skin;
-	@:s public var index : Int;
+	public var skin : Skin;
+	public var index : Int;
 
 	public function new(skin, j : h3d.anim.Skin.Joint ) {
 		super(null);
@@ -291,26 +291,5 @@ class Skin extends MultiMaterial {
 			primitive.render(ctx.engine);
 		}
 	}
-
-	#if (hxbit && !macro && heaps_enable_serialize)
-	override function customUnserialize(ctx:hxbit.Serializer) {
-		super.customUnserialize(ctx);
-		var prim = hxd.impl.Api.downcast(primitive, h3d.prim.HMDModel);
-		if( prim == null ) throw "Cannot load skin primitive " + prim;
-		jointsUpdated = true;
-		skinShader = material.mainPass.getShader(h3d.shader.Skin);
-		@:privateAccess {
-			var lib = prim.lib;
-			for( m in lib.header.models )
-				if( lib.header.geometries[m.geometry] == prim.data ) {
-					var skinData = lib.makeSkin(m.skin);
-					skinData.primitive = prim;
-					setSkinData(skinData, false);
-					break;
-				}
-		}
-	}
-	#end
-
 
 }
