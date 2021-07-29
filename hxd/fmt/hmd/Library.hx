@@ -366,7 +366,9 @@ class Library {
 			var p = objs[m.parent];
 			if( p != null ) p.addChild(obj);
 		}
-		return objs[0];
+		var o = objs[0];
+		if( o != null ) o.modelRoot = true;
+		return o;
 	}
 	#end
 
