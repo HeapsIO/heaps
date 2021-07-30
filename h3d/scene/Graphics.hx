@@ -55,6 +55,10 @@ class Graphics extends Mesh {
 		material.mainPass.culling = None;
 	}
 
+	override function getBoundsRec(b:h3d.col.Bounds):h3d.col.Bounds {
+		return super.getBoundsRec(b);
+	}
+
 	override function onRemove() {
 		super.onRemove();
 		bprim.clear();
@@ -246,6 +250,8 @@ class Graphics extends Mesh {
 
 	public function lineTo( x : Float, y : Float, z : Float ) {
 		if( is3D ) {
+			bprim.addBounds(curX, curY, curZ);
+			bprim.addBounds(x, y, z);
 			addVertex(x, y, z, curR, curG, curB, curA);
 			return;
 		}
