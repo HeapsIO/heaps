@@ -9,16 +9,6 @@ class SampleApp extends hxd.App {
 		fui.padding = 10;
 	}
 
-	#if hxbit
-	override function mainLoop() {
-		if( hxd.Key.isDown(hxd.Key.CTRL) && hxd.Key.isPressed("S".code) ) {
-			var bytes = s3d.serializeScene();
-			hxd.File.saveBytes("scene.hsd", bytes);
-		}
-		super.mainLoop();
-	}
-	#end
-
 	function getFont() {
 		return hxd.res.DefaultFont.get();
 	}
