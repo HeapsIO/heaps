@@ -27,7 +27,7 @@ typedef Monitor = {
 typedef DisplaySetting = {
 	width : Int,
 	height : Int,
-	framerates : Array<Int>
+	framerate : Int
 }
 
 //@:coreApi
@@ -41,8 +41,8 @@ class Window {
 	public var mouseX(get, never) : Int;
 	public var mouseY(get, never) : Int;
 	public var mouseLock(get, set) : Bool;
-	public var monitor : Int;
-	public var framerate : Int;
+	public var monitor : Int = -1;
+	public var framerate : Int = -1;
 	public var vsync(get, set) : Bool;
 	public var isFocused(get, never) : Bool;
 
@@ -59,6 +59,7 @@ class Window {
 	var windowHeight = 600;
 	var curMouseX = 0;
 	var curMouseY = 0;
+	var savedSize : { x : Int, y : Int, width : Int, height : Int };
 
 	static var CODEMAP = [for( i in 0...2048 ) i];
 	static var MIN_HEIGHT = 720;
@@ -127,6 +128,17 @@ class Window {
 
 	public function resize( width : Int, height : Int ) : Void {
 		#if (hldx || hlsdl)
+		if( window.displayMode == Fullscreen || window.displayMode == FullscreenResize ) {
+			var cds = currentDisplaySetting;
+			var mode = getBestDisplayMode(width, height, framerate != -1 ? framerate : cds.framerate);
+			#if hlsdl
+			if(mode != null) {
+				@:privateAccess sdl.Window.winSetDisplayMode(window.win, mode.mode.width, mode.mode.height, mode.mode.framerate);
+				width = mode.mode.width;
+				height = mode.mode.height;
+			}
+			#end
+		}
 		window.resize(width, height);
 		#end
 		windowWidth = width;
@@ -453,15 +465,66 @@ class Window {
 		return w;
 	}
 
+	function getBestDisplayMode(width, height, framerate) {
+		var m : {idx: Int, mode: DisplaySetting } = {
+			idx: -1,
+			mode: null
+		}
+		for( i => s in getDisplaySettings() ) {
+			if(s.width > width || s.height > height)
+				continue;
+			if(s.width == width && s.height == height && s.framerate == framerate)
+					return { idx: i, mode: s };
+			if(m.idx != -1) {
+				if( s.height < m.mode.height)
+					continue;
+				else if(s.height == m.mode.height) {
+					if(s.width < m.mode.width)
+						continue;
+					else if(s.width == m.mode.width && (s.framerate <= m.mode.framerate || m.mode.framerate > framerate))
+						continue;
+				}
+			}
+			m.idx = i;
+			m.mode = s;
+		}
+		return m.idx == -1 ? { idx: 0, mode: getDisplaySettings()[0] } : m;
+	}
+
 	function set_displayMode( m : DisplayMode ) : DisplayMode {
+		var oldMode = window.displayMode;
 		#if (hldx || hlsdl)
+		if( window.displayMode != m ) {
+			if(window.displayMode == Windowed) {
+				if( savedSize == null ) {
+					savedSize = { x: window.x, y: window.y, width: window.width, height: window.height };
+				}
+			}
+		}
 		if(m != Windowed && monitor != -1) {
 			window.displayMode = Windowed;
 			var mon = selectedMonitor();
 			if(mon != null)
 				window.setPosition(mon.left, mon.top);
 		}
-		window.displayMode = m;
+		if( m == Fullscreen || m == FullscreenResize ) {
+			var cds = currentDisplaySetting;
+			var fr = framerate != -1 ? framerate : cds.framerate;
+			var dm = getBestDisplayMode(windowWidth, windowHeight, framerate != -1 ? framerate : cds.framerate);
+			window.displayMode = m;
+			#if hlsdl
+			if(dm.idx != -1)
+				@:privateAccess sdl.Window.winSetDisplayMode(window.win, dm.mode.width, dm.mode.height, dm.mode.framerate);
+			#end
+		}
+		else {
+			window.displayMode = m;
+			if( oldMode != m && m == Windowed && savedSize != null) {
+				window.setPosition(savedSize.x, savedSize.y);
+				window.resize(savedSize.width, savedSize.height);
+				savedSize = null;
+			}
+		}
 		#end
 		return displayMode;
 	}
@@ -475,9 +538,8 @@ class Window {
 	}
 
 	public function get_currentDisplaySetting() : DisplaySetting  {
-		trace("current window : " + window.width + ", " + window.height);
 		for(d in getDisplaySettings()) {
-			if(d.width == window.width && d.height == window.height)
+			if(d.width == #if hlsdl sdl.Sdl.getScreenWidth() #elseif hldx 1920 #else 0 #end && d.height == #if hlsdl sdl.Sdl.getScreenHeight() #elseif hldx 1080 #else 0 #end)
 				return d;
 		}
 		return null;
@@ -485,18 +547,13 @@ class Window {
 
 	public function getDisplaySettings() : Array<DisplaySetting> {
 		var map = new Map<String,DisplaySetting>();
+		var f = [];
 		for(d in #if hldx dx.Window.getDisplaySettings() #elseif hlsdl sdl.Sdl.getDisplayModes( monitor == -1 ? window.currentMonitor : monitor) #else [] #end) {
 			if(d.height >= MIN_HEIGHT && (d.framerate >= MIN_FRAMERATE || d.framerate == 30 || d.framerate == 60)) {
-				var key = '${d.width}x${d.height}';
-				var m = map[key];
-				if(m == null)
-					map[key] = { width: d.width, height: d.height, framerates: [ d.framerate ]};
-				else
-					m.framerates.push(d.framerate);
+				f.push(d);
 			}
 		}
-
-		return [ for(k => v in map) v ];
+		return f;
 	}
 
 	function get_title() : String {
