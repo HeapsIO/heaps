@@ -1,7 +1,7 @@
 package h3d.parts;
 import hxd.Math;
 
-private typedef GpuSave = {
+typedef GpuSave = {
 	var type : String;
 	var version : Int;
 	var bounds : Array<Float>;
@@ -49,7 +49,7 @@ enum GpuEmitMode {
 	Disc;
 }
 
-private class GpuPart {
+class GpuPart {
 
 	public var index : Int;
 
