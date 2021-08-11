@@ -52,11 +52,18 @@ package h3d.mat;
 	var LessEqual = "LessEqual";
 }
 
+@:enum abstract PbrCullingMode(String) {
+	var None = "None";
+	var Back = "Back";
+	var Front = "Front";
+	var Both = "Both";
+}
+
 typedef PbrProps = {
 	var mode : PbrMode;
 	var blend : PbrBlend;
 	var shadows : Bool;
-	var culling : Bool;
+	var culling : PbrCullingMode;
 	var depthTest : PbrDepthTest;
 	var colorMask : Int;
 	@:optional var alphaKill : Bool;
@@ -121,7 +128,7 @@ class PbrMaterial extends Material {
 				mode : PBR,
 				blend : Alpha,
 				shadows : false,
-				culling : false,
+				culling : None,
 				depthTest : Less,
 				colorMask : 1 << 0 | 1 << 1 | 1 << 2 | 1 << 3,
 				enableStencil : false,
@@ -131,7 +138,7 @@ class PbrMaterial extends Material {
 				mode : Overlay,
 				blend : Alpha,
 				shadows : false,
-				culling : false,
+				culling : None,
 				alphaKill : true,
 				depthTest : Less,
 				colorMask : 1 << 0 | 1 << 1 | 1 << 2 | 1 << 3,
@@ -142,7 +149,7 @@ class PbrMaterial extends Material {
 				mode : Decal,
 				blend : Alpha,
 				shadows : false,
-				culling : true,
+				culling : Back,
 				depthTest : Less,
 				colorMask : 1 << 0 | 1 << 1 | 1 << 2 | 1 << 3,
 				enableStencil : false,
@@ -152,7 +159,7 @@ class PbrMaterial extends Material {
 				mode : PBR,
 				blend : None,
 				shadows : true,
-				culling : true,
+				culling : Back,
 				depthTest : Less,
 				colorMask : 1 << 0 | 1 << 1 | 1 << 2 | 1 << 3,
 				enableStencil : false,
@@ -187,17 +194,11 @@ class PbrMaterial extends Material {
 	function resetProps() {
 		var props : PbrProps = props;
 		mainPass.enableLights = true;
-		// Remove superfluous shader
-		mainPass.removeShader(mainPass.getShader(h3d.shader.VolumeDecal));
-		mainPass.removeShader(mainPass.getShader(h3d.shader.pbr.StrengthValues));
-		mainPass.removeShader(mainPass.getShader(h3d.shader.pbr.AlphaMultiply));
-		mainPass.removeShader(mainPass.getShader(h3d.shader.Parallax));
-		mainPass.removeShader(mainPass.getShader(h3d.shader.pbr.GammaCorrect));
-		#if editor
+
 		// Backward compatibility
-		if( props.depthTest == null ) props.depthTest = Less;
-		if( (props:Dynamic).colorMask == null ) props.colorMask = 15;
-		if( (props:Dynamic).enableStencil == null ) props.enableStencil = false;
+		if(Std.is((props:Dynamic).culling, Bool))
+			props.culling = (props:Dynamic).culling ? Back : None;
+		#if editor
 		// Remove unused fields
 		if( props.emissive == 0 )
 			Reflect.deleteField(props,"emissive");
@@ -282,7 +283,12 @@ class PbrMaterial extends Material {
 			if( t != null ) t.wrap = Repeat;
 		}
 
-		mainPass.culling = props.culling ? Back : None;
+		mainPass.culling = props.culling != null ? switch props.culling {
+			case None: None;
+			case Back: Back;
+			case Front: Front;
+			case Both: Both;
+		} : Back;
 
 		shadows = props.shadows;
 		if( shadows ) getPass("shadow").culling = mainPass.culling;
@@ -480,7 +486,15 @@ class PbrMaterial extends Material {
 				<dt>Emissive</dt><dd><input type="range" min="0" max="10" field="emissive"/></dd>
 				<dt>Parallax</dt><dd><input type="range" min="0" max="1" field="parallax"/></dd>
 				<dt>Shadows</dt><dd><input type="checkbox" field="shadows"/></dd>
-				<dt>Culled</dt><dd><input type="checkbox" field="culling"/></dd>
+				<dt>Culling</dt>
+				<dd>
+					<select field="culling">
+						<option value="None">None</option>
+						<option value="Back">Back</option>
+						<option value="Front">Front</option>
+						<option value="Both">Both</option>
+					</select>
+				</dd>
 				<dt>AlphaKill</dt><dd><input type="checkbox" field="alphaKill"/></dd>
 				<dt>Wrap</dt><dd><input type="checkbox" field="textureWrap"/></dd>
 			</dl>
