@@ -26,7 +26,8 @@ class TileLayerContent extends h3d.prim.Primitive {
 		Content bounds bottom edge.
 	**/
 	public var yMax : Float;
-	public var useAllocator = false;
+	
+	public var useAllocatorLimit = 1024;
 
 	var state : BatchDrawState;
 
@@ -41,7 +42,7 @@ class TileLayerContent extends h3d.prim.Primitive {
 	public function clear() {
 		tmp = new hxd.FloatBuffer();
 		if( buffer != null ) {
-			if(useAllocator) hxd.impl.Allocator.get().disposeBuffer(buffer);
+			if(buffer.vertices * 8 < useAllocatorLimit) hxd.impl.Allocator.get().disposeBuffer(buffer);
 			else buffer.dispose();
 		}
 		buffer = null;
@@ -509,7 +510,7 @@ class TileLayerContent extends h3d.prim.Primitive {
 	override public function alloc(engine:h3d.Engine) {
 		if( tmp == null ) clear();
 		if( tmp.length > 0 ) {
-			buffer = useAllocator
+			buffer = tmp.length < useAllocatorLimit
 				? hxd.impl.Allocator.get().ofFloats(tmp, 8, RawQuads)
 				: h3d.Buffer.ofFloats(tmp, 8, [Quads, RawFormat]);
 		}
@@ -517,7 +518,7 @@ class TileLayerContent extends h3d.prim.Primitive {
 
 	override function dispose() {
 		if( buffer != null ) {
-			if(useAllocator) hxd.impl.Allocator.get().disposeBuffer(buffer);
+			if(buffer.vertices * 8 < useAllocatorLimit) hxd.impl.Allocator.get().disposeBuffer(buffer);
 			else buffer.dispose();
 			buffer = null;
 		}
