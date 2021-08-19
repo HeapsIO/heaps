@@ -21,6 +21,12 @@ class TransformCollider implements Collider {
 		return m;
 	}
 
+	public function transform( m : Matrix ) {
+		var mt = new h3d.Matrix();
+		mt.multiply3x4(m, mat);
+		return new TransformCollider(mt, collider);
+	}
+
 	public function rayIntersection( r : Ray, bestMatch : Bool ) : Float {
 		var tmpRay = TMP_RAY;
 		TMP_RAY = null;
