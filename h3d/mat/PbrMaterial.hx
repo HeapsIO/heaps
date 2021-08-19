@@ -199,6 +199,8 @@ class PbrMaterial extends Material {
 		if(Std.is((props:Dynamic).culling, Bool))
 			props.culling = (props:Dynamic).culling ? Back : None;
 		#if editor
+		if( (props:Dynamic).colorMask == null ) props.colorMask = 15;
+
 		// Remove unused fields
 		if( props.emissive == 0 )
 			Reflect.deleteField(props,"emissive");
