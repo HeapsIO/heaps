@@ -614,10 +614,12 @@ class Flow extends Object {
 				var pushed = false;
 				scrollBar.interactive.cursor = Button;
 				scrollBar.interactive.onPush = function(e:hxd.Event) {
+					var scene = getScene();
+					if( scene == null ) return;
 					scrollBar.interactive.startCapture(function(e) {
 						switch( e.kind ) {
 						case ERelease, EReleaseOutside:
-							scrollBar.interactive.stopCapture();
+							scene.stopCapture();
 						case EPush, EMove:
 							setCursor(e);
 						default:
