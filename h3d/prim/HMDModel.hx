@@ -115,22 +115,31 @@ class HMDModel extends MeshPrimitive {
 		var pos = lib.getBuffers(data, [new hxd.fmt.hmd.Data.GeometryFormat("position", DVec3)]);
 		var ids = new Array();
 		var pts : Array<h3d.col.Point> = [];
+		var mpts = new Map();
 
 		for( i in 0...data.vertexCount ) {
 			var added = false;
 			var px = pos.vertexes[i * 3];
 			var py = pos.vertexes[i * 3 + 1];
 			var pz = pos.vertexes[i * 3 + 2];
-			for(i in 0...pts.length) {
-				var p = pts[i];
-				if(p.x == px && p.y == py && p.z == pz) {
-					ids.push(i);
-					added = true;
-					break;
+			var pid = Std.int((px + py + pz) * 10);
+			var arr = mpts.get(pid);
+			if( arr == null ) {
+				arr = [];
+				mpts.set(pid, arr);
+			} else {
+				for( idx in arr ) {
+					var p = pts[idx];
+					if( p.x == px && p.y == py && p.z == pz ) {
+						ids.push(idx);
+						added = true;
+						break;
+					}
 				}
 			}
 			if( !added ) {
 				ids.push(pts.length);
+				arr.push(pts.length);
 				pts.push(new h3d.col.Point(px,py,pz));
 			}
 		}
