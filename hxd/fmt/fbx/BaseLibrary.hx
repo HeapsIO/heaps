@@ -142,6 +142,11 @@ class BaseLibrary {
 	**/
 	public var normalizeScaleOrient : Bool = true;
 
+	/**
+		Keep high precision values. Might increase animation data size and compressed size.
+	**/
+	public var highPrecision : Bool = false;
+
 	public function new( fileName ) {
 		this.fileName = fileName;
 		root = { name : "Root", props : [], childs : [] };
@@ -772,9 +777,10 @@ class BaseLibrary {
 
 	function roundValues( data : Array<Float>, def : Float, mult : Float = 1. ) {
 		var hasValue = false;
+		var epsi = highPrecision ? 0 : 1e-3;
 		for( i in 0...data.length ) {
 			var v = data[i] * mult;
-			if( Math.abs(v - def) > 1e-3 )
+			if( Math.abs(v - def) > epsi )
 				hasValue = true;
 			else
 				v = def;
@@ -1362,7 +1368,7 @@ class BaseLibrary {
 
 	function round(v:Float) {
 		if( v != v ) throw "NaN found";
-		return std.Math.fround(v * 131072) / 131072;
+		return highPrecision ? v : std.Math.fround(v * 131072) / 131072;
 	}
 
 	function updateDefaultMatrix( model : FbxNode, d : DefaultMatrixes ) {

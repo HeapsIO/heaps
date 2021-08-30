@@ -169,6 +169,28 @@ class Geometry {
 		return { vidx : vout, idx : iout };
 	}
 
+	public function getPoints(?matrix) {
+		if( matrix == null ) matrix = getGeomMatrix();
+		if( matrix != null && matrix.isIdentity() ) matrix = null;
+		var verts = getVertices();
+		var points = [];
+		var tmp = new h3d.col.Point();
+		for( i in 0...Std.int(verts.length/3) ) {
+			var x = verts[i*3];
+			var y = verts[i*3+1];
+			var z = verts[i*3+2];
+			if( matrix != null ) {
+				tmp.set(x,y,z);
+				tmp.transform(matrix);
+				x = tmp.x;
+				y = tmp.y;
+				z = tmp.z;
+			}
+			points.push(new h3d.col.Point(x,y,z));
+		}
+		return points;
+	}
+
 	public function getNormals() {
 		return processVectors("LayerElementNormal", "Normals");
 	}

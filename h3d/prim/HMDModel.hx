@@ -110,7 +110,12 @@ class HMDModel extends MeshPrimitive {
 
 	public function recomputeNormals( ?name : String ) {
 
+		for( f in data.vertexFormat )
+			if( f.name == name )
+				return;
+
 		if( name == null ) name = "normal";
+
 
 		var pos = lib.getBuffers(data, [new hxd.fmt.hmd.Data.GeometryFormat("position", DVec3)]);
 		var ids = new Array();

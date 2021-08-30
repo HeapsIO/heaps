@@ -11,6 +11,7 @@ class HMDOut extends BaseLibrary {
 	var tmp = haxe.io.Bytes.alloc(4);
 	public var absoluteTexturePath : Bool;
 	public var optimizeSkin = true;
+	public var generateNormals = false;
 	/*
 		Store the skin indexes as multiple premultiplied floats instead of as packed into a single 4 bytes ints.
 		This is necessary for GPUs that does not respect OpenGLES spec and does not allow non-constant indexing in vertex shader (Adreno 20X)
@@ -128,6 +129,49 @@ class HMDOut extends BaseLibrary {
 		#end
 	}
 
+	function updateNormals( g : Geometry, vbuf : hxd.FloatBuffer, idx : Array<Array<Int>> ) {
+		var stride = g.vertexStride;
+		var normalPos = 0;
+		for( f in g.vertexFormat ) {
+			if( f.name == "logicNormal" ) break;
+			normalPos += f.format.getSize();
+		}
+
+		var points : Array<h3d.col.Point> = [];
+		var pmap = [];
+		for( vid in 0...g.vertexCount ) {
+			var x = vbuf[vid * stride];
+			var y = vbuf[vid * stride + 1];
+			var z = vbuf[vid * stride + 2];
+			var found = false;
+			for( i => p in points ) {
+				if( p.x == x && p.y == y && p.z == z ) {
+					pmap[vid] = i;
+					found = true;
+					break;
+				}
+			}
+			if( !found ) {
+				pmap[vid] = points.length;
+				points.push(new h3d.col.Point(x,y,z));
+			}
+		}
+		var realIdx = new hxd.IndexBuffer();
+		for( idx in idx )
+			for( i in idx )
+				realIdx.push(pmap[i]);
+
+		var poly = new h3d.prim.Polygon(points, realIdx);
+		poly.addNormals();
+
+		for( vid in 0...g.vertexCount ) {
+			var nid = pmap[vid];
+			vbuf[vid*stride + normalPos] = poly.normals[nid].x;
+			vbuf[vid*stride + normalPos + 1] = poly.normals[nid].y;
+			vbuf[vid*stride + normalPos + 2] = poly.normals[nid].z;
+		}
+	}
+
 	function buildGeom( geom : hxd.fmt.fbx.Geometry, skin : h3d.anim.Skin, dataOut : haxe.io.BytesOutput, genTangents : Bool ) {
 		var g = new Geometry();
 
@@ -170,6 +214,10 @@ class HMDOut extends BaseLibrary {
 			g.vertexFormat.push(new GeometryFormat("weights", [DFloat, DVec2, DVec3, DVec4][bonesPerVertex-1]));
 			g.vertexFormat.push(new GeometryFormat("indexes", floatSkinIndexes ? [DFloat, DVec2, DVec3, DVec4][bonesPerVertex-1] : DBytes4));
 		}
+
+		if( generateNormals )
+			g.vertexFormat.push(new GeometryFormat("logicNormal", DVec3));
+
 		var stride = 0;
 		for( f in g.vertexFormat )
 			stride += f.format.getSize();
@@ -267,6 +315,12 @@ class HMDOut extends BaseLibrary {
 						tmpBuf[p++] = int32tof(idx);
 				}
 
+				if( generateNormals ) {
+					tmpBuf[p++] = 0;
+					tmpBuf[p++] = 0;
+					tmpBuf[p++] = 0;
+				}
+
 				var total = 0.;
 				for( i in 0...stride )
 					total += tmpBuf[i];
@@ -335,6 +389,9 @@ class HMDOut extends BaseLibrary {
 			index[pos] = i; // restore
 			count = 0;
 		}
+
+		if( generateNormals )
+			updateNormals(g,vbuf,ibufs);
 
 		// write data
 		g.vertexPosition = dataOut.length;
