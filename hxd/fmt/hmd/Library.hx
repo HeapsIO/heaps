@@ -287,11 +287,11 @@ class Library {
 	}
 
 	@:access(h3d.anim.Skin)
-	function makeSkin( skin : Skin ) {
+	function makeSkin( skin : Skin, geom : Geometry ) {
 		var s = cachedSkin.get(skin.name);
 		if( s != null )
 			return s;
-		s = new h3d.anim.Skin(skin.name, 0, 3);
+		s = new h3d.anim.Skin(skin.name, 0, geom.props != null && geom.props.indexOf(FourBonesByVertex) >= 0 ? 4 : 3 );
 		s.namedJoints = new Map();
 		s.allJoints = [];
 		s.boundJoints = [];
@@ -352,7 +352,7 @@ class Library {
 			} else {
 				var prim = makePrimitive(m.geometry);
 				if( m.skin != null ) {
-					var skinData = makeSkin(m.skin);
+					var skinData = makeSkin(m.skin, header.geometries[m.geometry]);
 					skinData.primitive = prim;
 					obj = new h3d.scene.Skin(skinData, [for( mat in m.materials ) makeMaterial(m, mat, loadTexture)]);
 				} else if( m.materials.length == 1 )
@@ -584,7 +584,10 @@ class Library {
 			throw "assert";
 
 		@:privateAccess skin.vertexCount = geom.vertexCount;
-		var data = getBuffers(geom, [new hxd.fmt.hmd.Data.GeometryFormat("position",DVec3),new hxd.fmt.hmd.Data.GeometryFormat("weights",DVec3),new hxd.fmt.hmd.Data.GeometryFormat("indexes",DBytes4)]);
+		var data = getBuffers(geom, [
+			new hxd.fmt.hmd.Data.GeometryFormat("position",DVec3),
+			new hxd.fmt.hmd.Data.GeometryFormat("weights",DVec3),
+			new hxd.fmt.hmd.Data.GeometryFormat("indexes",DBytes4)]);
 		skin.vertexWeights = new haxe.ds.Vector(skin.vertexCount * skin.bonesPerVertex);
 		skin.vertexJoints = new haxe.ds.Vector(skin.vertexCount * skin.bonesPerVertex);
 

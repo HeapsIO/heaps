@@ -81,8 +81,10 @@ class ConvertFBX2HMD extends Convert {
 		if( params != null ) {
 			if( params.normals )
 				hmdout.generateNormals = true;
-			if( params.precise )
+			if( params.precise ) {
 				hmdout.highPrecision = true;
+				hmdout.fourBonesByVertex = true;
+			}
 		}
 		hmdout.load(fbx);
 		var isAnim = StringTools.startsWith(originalFilename, "Anim_") || originalFilename.toLowerCase().indexOf("_anim_") > 0;

@@ -121,9 +121,9 @@ class BaseLibrary {
 	public var skipObjects : Map<String,Bool>;
 
 	/**
-		Set how many bones per vertex should be created in skin data in makeObject(). Default is 3
+		Use 4 bones of influence per vertex instead of 3
 	**/
-	public var bonesPerVertex = 3;
+	public var fourBonesByVertex = false;
 
 	/**
 		If there are too many bones, the model will be split in separate render passes.
@@ -1297,7 +1297,9 @@ class BaseLibrary {
 		return keepJoints.get(j.name);
 	}
 
-	function createSkin( hskins : Map<Int,h3d.anim.Skin>, hgeom : Map<Int,{function vertexCount():Int;function setSkin(s:h3d.anim.Skin):Void;}>, rootJoints : Array<h3d.anim.Skin.Joint>, bonesPerVertex ) {
+	function createSkin( hskins : Map<Int,h3d.anim.Skin>, hgeom : Map<Int,{
+		function vertexCount():Int; function setSkin(s:h3d.anim.Skin):Void;
+	}>, rootJoints : Array<h3d.anim.Skin.Joint> ) {
 		var allJoints = [];
 		function collectJoints(j:h3d.anim.Skin.Joint) {
 			// collect subs first (allow easy removal of terminal unskinned joints)
@@ -1338,7 +1340,7 @@ class BaseLibrary {
 				if( skin != null )
 					return skin;
 				var geom = hgeom.get(getParent(def, "Geometry").getId());
-				skin = new h3d.anim.Skin(null, geom.vertexCount(), bonesPerVertex);
+				skin = new h3d.anim.Skin(null, geom.vertexCount(), fourBonesByVertex ? 4 : 3);
 				geom.setSkin(skin);
 				hskins.set(def.getId(), skin);
 			}

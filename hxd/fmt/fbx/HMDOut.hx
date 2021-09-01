@@ -12,11 +12,6 @@ class HMDOut extends BaseLibrary {
 	public var absoluteTexturePath : Bool;
 	public var optimizeSkin = true;
 	public var generateNormals = false;
-	/*
-		Store the skin indexes as multiple premultiplied floats instead of as packed into a single 4 bytes ints.
-		This is necessary for GPUs that does not respect OpenGLES spec and does not allow non-constant indexing in vertex shader (Adreno 20X)
-	*/
-	public var floatSkinIndexes = #if floatSkinIndexes true #else false #end;
 
 	function int32tof( v : Int ) : Float {
 		tmp.set(0, v & 0xFF);
@@ -210,9 +205,10 @@ class HMDOut extends BaseLibrary {
 			g.vertexFormat.push(new GeometryFormat("color", DVec3));
 
 		if( skin != null ) {
-			if( bonesPerVertex <= 0 || bonesPerVertex > 4 ) throw "assert";
-			g.vertexFormat.push(new GeometryFormat("weights", [DFloat, DVec2, DVec3, DVec4][bonesPerVertex-1]));
-			g.vertexFormat.push(new GeometryFormat("indexes", floatSkinIndexes ? [DFloat, DVec2, DVec3, DVec4][bonesPerVertex-1] : DBytes4));
+			if(fourBonesByVertex)
+				g.props = [FourBonesByVertex];
+			g.vertexFormat.push(new GeometryFormat("weights", DVec3));  // Only 3 weights are necessary even in fourBonesByVertex since they sum-up to 1
+			g.vertexFormat.push(new GeometryFormat("indexes", DBytes4));
 		}
 
 		if( generateNormals )
@@ -304,15 +300,12 @@ class HMDOut extends BaseLibrary {
 				if( skin != null ) {
 					var k = vidx * skin.bonesPerVertex;
 					var idx = 0;
-					for( i in 0...skin.bonesPerVertex ) {
+					if(!(skin.bonesPerVertex == 3 || skin.bonesPerVertex == 4)) throw "assert";
+					for( i in 0...3 )  // Only 3 weights are necessary even in fourBonesByVertex since they sum-up to 1
 						tmpBuf[p++] = skin.vertexWeights[k + i];
+					for( i in 0...skin.bonesPerVertex )
 						idx = (skin.vertexJoints[k + i] << (8*i)) | idx;
-					}
-					if( floatSkinIndexes ) {
-						for( i in 0...skin.bonesPerVertex )
-							tmpBuf[p++] = skin.vertexJoints[k + i] * 3;
-					} else
-						tmpBuf[p++] = int32tof(idx);
+					tmpBuf[p++] = int32tof(idx);
 				}
 
 				if( generateNormals ) {
@@ -662,7 +655,7 @@ class HMDOut extends BaseLibrary {
 				for( c in o.skin.childs )
 					if( c.isJoint )
 						rootJoints.push(c.joint);
-				skin = createSkin(hskins, tmpGeom, rootJoints, bonesPerVertex);
+				skin = createSkin(hskins, tmpGeom, rootJoints);
 				if( skin.boundJoints.length > BaseLibrary.maxBonesPerSkin ) {
 					var g = new hxd.fmt.fbx.Geometry(this, g);
 					var idx = g.getIndexes();

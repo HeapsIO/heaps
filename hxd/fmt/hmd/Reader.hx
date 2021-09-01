@@ -21,6 +21,8 @@ class Reader {
 			throw "Obsolete HasMaterialFlags";
 		case 2:
 			return HasExtraTextures;
+		case 3:
+			return FourBonesByVertex;
 		case unk:
 			throw "Unknown property #" + unk;
 		}

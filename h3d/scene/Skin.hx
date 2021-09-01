@@ -240,6 +240,7 @@ class Skin extends MultiMaterial {
 				currentPalette[bid].multiply3x4inline(j.transPos, m);
 		}
 		skinShader.bonesMatrixes = currentPalette;
+		skinShader.fourBonesByVertex = skinData.bonesPerVertex == 4;
 		if( jointsAbsPosInv != null ) jointsAbsPosInv._44 = 0; // mark as invalid
 		jointsUpdated = false;
 	}
