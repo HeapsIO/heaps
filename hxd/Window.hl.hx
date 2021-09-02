@@ -48,6 +48,7 @@ class Window {
 
 	public var title(get, set) : String;
 	public var displayMode(get, set) : DisplayMode;
+	public var currentMonitorIndex(get,null) : Int;
 	
 	#if hlsdl
 	var window : sdl.Window;
@@ -471,25 +472,21 @@ class Window {
 			idx: -1,
 			mode: null
 		}
+		var defaultId = -1;
+		var def = getDefaultDisplaySetting();
 		for( i => s in getDisplaySettings() ) {
-			if(s.width > width || s.height > height)
-				continue;
-			if(s.width == width && s.height == height && s.framerate == framerate)
+			if(s.width == def.width && s.height == def.height && s.framerate == def.framerate)
+				defaultId = i;
+			if(s.width == width && s.height == height) {
+				if(s.framerate == framerate)
 					return { idx: i, mode: s };
-			if(m.idx != -1) {
-				if( s.height < m.mode.height)
-					continue;
-				else if(s.height == m.mode.height) {
-					if(s.width < m.mode.width)
-						continue;
-					else if(s.width == m.mode.width && (s.framerate <= m.mode.framerate || m.mode.framerate > framerate))
-						continue;
-				}
+				else if(s.framerate == def.framerate)
+					m = {idx : i, mode : s };
+				else if(m.idx == -1)
+					m = {idx: i, mode : s };
 			}
-			m.idx = i;
-			m.mode = s;
 		}
-		return m.idx == -1 ? { idx: 0, mode: getDisplaySettings()[0] } : m;
+		return m.idx == -1 ? { idx: defaultId, mode: def } : m;
 	}
 
 	function set_displayMode( m : DisplayMode ) : DisplayMode {
@@ -503,7 +500,7 @@ class Window {
 			}
 		}
 		// No way to choose the screen in SDL, need to fit the window in the right screen before.
-		if(m != Windowed && monitor != -1) {
+		if(m != Windowed) {
 			window.displayMode = Windowed;
 			var mon = selectedMonitor();
 			if(mon != null) {
@@ -545,12 +542,38 @@ class Window {
 		return [for(m in #if hldx dx.Window.getMonitors() #elseif hlsdl sdl.Sdl.getDisplays() #else [] #end) { name: m.name, width: m.right-m.left, height: m.bottom-m.top}];
 	}
 
+	function get_currentMonitorIndex() : Int {
+		#if hldx
+		var current = window.getCurrentMonitor();
+		for(i => m in getMonitors()) {
+			if(m.name == current)
+				return i;
+		}
+		return -1;
+		#elseif hlsdl
+		return window.currentMonitor;
+		#else
+		return 0;
+		#end
+	}
+
 	public function getCurrentDisplaySetting(monitorId : Int = -1) : DisplaySetting {
 		#if hldx
 		var mon = monitorId != -1 ? getMonitors()[monitorId] : null;
 		return dx.Window.getCurrentDisplaySetting(mon == null ? null : mon.name);
 		#elseif hlsdl
-		return sdl.Sdl.getCurrentDisplayMode(monitorId);
+		return sdl.Sdl.getCurrentDisplayMode(monitorId == -1 ? 0 : monitorId);
+		#else
+		return null;
+		#end
+	}
+
+	public function getDefaultDisplaySetting(monitorId : Int = -1) : DisplaySetting {
+		#if hldx
+		var mon = monitorId != -1 ? getMonitors()[monitorId] : null;
+		return dx.Window.getRegistryDisplaySetting(mon == null ? null : mon.name);
+		#elseif hlsdl
+		return sdl.Sdl.getDesktopDisplayMode(monitorId == -1 ? 0 : monitorId);
 		#else
 		return null;
 		#end
