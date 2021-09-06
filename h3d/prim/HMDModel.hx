@@ -127,7 +127,7 @@ class HMDModel extends MeshPrimitive {
 			var px = pos.vertexes[i * 3];
 			var py = pos.vertexes[i * 3 + 1];
 			var pz = pos.vertexes[i * 3 + 2];
-			var pid = Std.int((px + py + pz) * 10);
+			var pid = Std.int((px + py + pz) * 10.01);
 			var arr = mpts.get(pid);
 			if( arr == null ) {
 				arr = [];
