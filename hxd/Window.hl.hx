@@ -568,7 +568,9 @@ class Window {
 		#end
 	}
 
-	public function getDefaultDisplaySetting(monitorId : Int = -1) : DisplaySetting {
+	public function getDefaultDisplaySetting(?monitorId : Int) : DisplaySetting {
+		if(monitorId == null)
+			monitorId = monitor;
 		#if hldx
 		var mon = monitorId != -1 ? getMonitors()[monitorId] : null;
 		return dx.Window.getRegistryDisplaySetting(mon == null ? null : mon.name);
@@ -579,10 +581,20 @@ class Window {
 		#end
 	}
 
-	public function getDisplaySettings() : Array<DisplaySetting> {
+	public function getDisplaySettings(?monitorId : Int) : Array<DisplaySetting> {
 		var map = new Map<String,DisplaySetting>();
 		var f = [];
-		for(d in #if hldx dx.Window.getDisplaySettings(selectedMonitor().name) #elseif hlsdl sdl.Sdl.getDisplayModes( monitor == -1 ? window.currentMonitor : monitor) #else [] #end) {
+		if(monitorId == null)
+			monitorId = monitor;
+		#if hldx
+		var m = dx.Window.getMonitors()[monitorId];
+		var l = m != null ? dx.Window.getDisplaySettings(m.name) : [];
+		#elseif hlsdl
+		var l = sdl.Sdl.getDisplayModes( monitorId == -1 ? window.currentMonitor : monitorId );
+		#else
+		var l = [];
+		#end
+		for(d in l) {
 			if(d.height >= MIN_HEIGHT && (d.framerate >= MIN_FRAMERATE || d.framerate == 30 || d.framerate == 60)) {
 				f.push(d);
 			}
