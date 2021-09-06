@@ -41,8 +41,8 @@ class Window {
 	public var mouseX(get, never) : Int;
 	public var mouseY(get, never) : Int;
 	public var mouseLock(get, set) : Bool;
-	public var monitor : Int = -1;
-	public var framerate : Int = -1;
+	public var monitor : Null<Int> = null;
+	public var framerate : Null<Int> = null;
 	public var vsync(get, set) : Bool;
 	public var isFocused(get, never) : Bool;
 
@@ -130,7 +130,7 @@ class Window {
 		#if (hldx || hlsdl)
 		if( window.displayMode == Fullscreen || window.displayMode == FullscreenResize ) {
 			var cds = getCurrentDisplaySetting();
-			var mode = getBestDisplayMode(width, height, framerate != -1 ? framerate : cds.framerate);
+			var mode = getBestDisplayMode(width, height, framerate != null ? framerate : cds.framerate);
 			#if hlsdl
 			if(mode != null) {
 				@:privateAccess sdl.Window.winSetDisplayMode(window.win, mode.mode.width, mode.mode.height, mode.mode.framerate);
@@ -455,13 +455,11 @@ class Window {
 	}
 
 	function selectedMonitor() : Dynamic {
-		var w = null;
-		if(monitor == -1)
-			monitor = 0;
+		var m = if(monitor == null) 0 else monitor;
 		#if hldx
-		return dx.Window.getMonitors()[monitor];
+		return dx.Window.getMonitors()[m];
 		#elseif hlsdl
-		return sdl.Sdl.getDisplays()[monitor];
+		return sdl.Sdl.getDisplays()[m];
 		#else
 		return null;
 		#end
@@ -510,7 +508,7 @@ class Window {
 		}
 		if( m == Fullscreen || m == FullscreenResize ) {
 			var cds = getCurrentDisplaySetting();
-			var dm = getBestDisplayMode(windowWidth, windowHeight, framerate != -1 ? framerate : cds.framerate);
+			var dm = getBestDisplayMode(windowWidth, windowHeight, framerate != null ? framerate : cds.framerate);
 			if(dm == null)
 				return oldMode;
 			window.displaySetting = dm.mode;
@@ -572,10 +570,10 @@ class Window {
 		if(monitorId == null)
 			monitorId = monitor;
 		#if hldx
-		var mon = monitorId != -1 ? getMonitors()[monitorId] : null;
+		var mon = monitorId != null ? getMonitors()[monitorId] : null;
 		return dx.Window.getRegistryDisplaySetting(mon == null ? null : mon.name);
 		#elseif hlsdl
-		return sdl.Sdl.getDesktopDisplayMode(monitorId == -1 ? 0 : monitorId);
+		return sdl.Sdl.getDesktopDisplayMode(monitorId == null ? 0 : monitorId);
 		#else
 		return null;
 		#end

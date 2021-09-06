@@ -19,7 +19,6 @@ typedef DisplaySetting = {
 	height : Int,
 	ips : Int
 }
-typedef MonitorHandle = Null<Int>;
 
 class Window {
 
@@ -31,7 +30,7 @@ class Window {
 	public var mouseX(get, never) : Int;
 	public var mouseY(get, never) : Int;
 	public var mouseLock(get, set) : Bool;
-	public var monitor : MonitorHandle;
+	public var monitor : Null<Int>;
 	public var vsync(get, set) : Bool;
 	public var isFocused(get, never) : Bool;
 
