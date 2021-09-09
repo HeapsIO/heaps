@@ -246,6 +246,7 @@ class Skin extends MultiMaterial {
 	}
 
 	override function emit( ctx : RenderContext ) {
+		syncJoints(); // In case sync was not called because of culling (eg fixedPosition)
 		if( splitPalette == null )
 			super.emit(ctx);
 		else {
