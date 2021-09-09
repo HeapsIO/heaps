@@ -196,7 +196,7 @@ class Object {
 	inline function get_inheritCulled() return flags.has(FInheritCulled);
 	inline function get_ignoreBounds() return flags.has(FIgnoreBounds);
 	inline function get_ignoreCollide() return flags.has(FIgnoreCollide);
-	inline function get_modelRoot() return !flags.has(FModelRoot);
+	inline function get_modelRoot() return flags.has(FModelRoot);
 	inline function get_ignoreParentTransform() return flags.has(FIgnoreParentTransform);
 	inline function get_cullingColliderInherited() return flags.has(FCullingColliderInherited);
 	inline function set_posChanged(b) return flags.set(FPosChanged, b || follow != null);
@@ -209,7 +209,7 @@ class Object {
 	inline function set_ignoreBounds(b) return flags.set(FIgnoreBounds, b);
 	inline function set_inheritCulled(b) return flags.set(FInheritCulled, b);
 	inline function set_ignoreCollide(b) return flags.set(FIgnoreCollide, b);
-	inline function set_modelRoot(b) return !flags.set(FModelRoot, !b);
+	inline function set_modelRoot(b) return flags.set(FModelRoot, b);
 	inline function set_ignoreParentTransform(b) { if( b != ignoreParentTransform ) posChanged = true; return flags.set(FIgnoreParentTransform, b); }
 	inline function set_cullingColliderInherited(b) return flags.set(FCullingColliderInherited, b);
 
