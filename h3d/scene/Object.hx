@@ -14,6 +14,8 @@ package h3d.scene;
 	public var FIgnoreCollide = 0x400;
 	public var FIgnoreParentTransform = 0x800;
 	public var FCullingColliderInherited = 0x1000;
+	public var FFixedPosition = 0x2000;
+	public var FFixedPositionSynced = 0x4000;
 	public inline function new(value) {
 		this = value;
 	}
@@ -145,8 +147,15 @@ class Object {
 	/**
 		When selecting the lights to apply to this object, we will use the camera target as reference
 		instead of the object absolute position. This is useful for very large objects so they can get good lighting.
+		(this is only relevant in forward rendering)
 	**/
 	public var lightCameraCenter(get, set) : Bool;
+
+	/**
+		When set, the object and all its children will not sync() unless this root object position has been changed.
+		This allows to optimize cpu cost of static objects having many children.
+	**/
+	public var fixedPosition(get, set) : Bool;
 
 	/**
 		When set, collider shape will be used for automatic frustum culling.
@@ -199,6 +208,7 @@ class Object {
 	inline function get_modelRoot() return flags.has(FModelRoot);
 	inline function get_ignoreParentTransform() return flags.has(FIgnoreParentTransform);
 	inline function get_cullingColliderInherited() return flags.has(FCullingColliderInherited);
+	inline function get_fixedPosition() return flags.has(FFixedPosition);
 	inline function set_posChanged(b) return flags.set(FPosChanged, b || follow != null);
 	inline function set_culled(b) return flags.set(FCulled, b);
 	inline function set_visible(b) return flags.set(FVisible,b);
@@ -212,6 +222,7 @@ class Object {
 	inline function set_modelRoot(b) return flags.set(FModelRoot, b);
 	inline function set_ignoreParentTransform(b) { if( b != ignoreParentTransform ) posChanged = true; return flags.set(FIgnoreParentTransform, b); }
 	inline function set_cullingColliderInherited(b) return flags.set(FCullingColliderInherited, b);
+	inline function set_fixedPosition(b) return flags.set(FFixedPosition, b);
 
 	/**
 		Create an animation instance bound to the object, set it as currentAnimation and play it.
@@ -712,6 +723,14 @@ class Object {
 
 		var changed = posChanged;
 		if( changed ) calcAbsPos();
+		if( fixedPosition ) {
+			if( flags.has(FFixedPositionSynced) && !changed ) {
+				ctx.visibleFlag = old;
+				ctx.cullingCollider = prevCollider;
+				return;
+			}
+			flags.set(FFixedPositionSynced, true);
+		}
 		sync(ctx);
 		posChanged = false;
 		lastFrame = ctx.frame;
