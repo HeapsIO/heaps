@@ -180,6 +180,7 @@ class Skin extends MultiMaterial {
 					break;
 				}
 			skinShader = hasNormalMap ? new h3d.shader.SkinTangent() : new h3d.shader.Skin();
+			skinShader.fourBonesByVertex = skinData.bonesPerVertex == 4;
 			var maxBones = 0;
 			if( skinData.splitJoints != null ) {
 				for( s in skinData.splitJoints )
@@ -240,7 +241,6 @@ class Skin extends MultiMaterial {
 				currentPalette[bid].multiply3x4inline(j.transPos, m);
 		}
 		skinShader.bonesMatrixes = currentPalette;
-		skinShader.fourBonesByVertex = skinData.bonesPerVertex == 4;
 		if( jointsAbsPosInv != null ) jointsAbsPosInv._44 = 0; // mark as invalid
 		jointsUpdated = false;
 	}
