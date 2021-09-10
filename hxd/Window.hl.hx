@@ -14,7 +14,6 @@ enum DisplayMode {
 	Windowed;
 	Borderless;
 	Fullscreen;
-	FullscreenResize;
 }
 #end
 
@@ -48,7 +47,9 @@ class Window {
 
 	public var title(get, set) : String;
 	public var displayMode(get, set) : DisplayMode;
+	#if (hl_ver >= version("1.12.0"))
 	public var currentMonitorIndex(get,null) : Int;
+	#end
 	
 	#if hlsdl
 	var window : sdl.Window;
@@ -128,10 +129,10 @@ class Window {
 
 	public function resize( width : Int, height : Int ) : Void {
 		#if (hldx || hlsdl)
-		if( window.displayMode == Fullscreen || window.displayMode == FullscreenResize ) {
+		if( window.displayMode == Fullscreen ) {
+			#if (hlsdl && hl_ver >= version("1.12.0") )
 			var cds = getCurrentDisplaySetting();
 			var mode = getBestDisplayMode(width, height, framerate != null ? framerate : cds.framerate);
-			#if hlsdl
 			if(mode != null) {
 				@:privateAccess sdl.Window.winSetDisplayMode(window.win, mode.mode.width, mode.mode.height, mode.mode.framerate);
 				width = mode.mode.width;
@@ -454,6 +455,60 @@ class Window {
 		return Windowed;
 	}
 
+	function set_displayMode( m : DisplayMode ) : DisplayMode {
+		var oldMode = window.displayMode;
+		#if (hldx || hlsdl)
+		#if (hl_ver >= version("1.12.0"))
+		if( window.displayMode != m ) {
+			if(window.displayMode == Windowed) {
+				if( savedSize == null ) {
+					savedSize = { x: window.x, y: window.y, width: window.width, height: window.height };
+				}
+			}
+		}
+		// No way to choose the screen in SDL, need to fit the window in the right screen before.
+		if(m != Windowed) {
+			window.displayMode = Windowed;
+			var mon = selectedMonitor();
+			if(mon != null) {
+				window.setPosition(mon.left, mon.top);
+				window.resize(mon.right-mon.left, mon.bottom-mon.top);
+			}
+		}
+		if( m == Fullscreen ) {
+			var cds = getCurrentDisplaySetting();
+			var dm = getBestDisplayMode(windowWidth, windowHeight, framerate != null ? framerate : cds.framerate);
+			if(dm == null)
+				return oldMode;
+			window.displaySetting = dm.mode;
+			#if hldx
+			var mon = selectedMonitor();
+			window.selectedMonitor = mon != null ? mon.name : null;
+			#elseif hlsdl
+			window.currentMonitor = monitor;
+			#end
+			window.displayMode = m;
+		}
+		else {
+			window.displayMode = m;
+			if( oldMode != m && m == Windowed && savedSize != null) {
+				window.setPosition(savedSize.x, savedSize.y);
+				window.resize(savedSize.width, savedSize.height);
+				savedSize = null;
+			}
+		}
+		#else
+		window.displayMode = m;
+		#end
+		#end
+		return displayMode;
+	}
+
+	public function applyDisplay() {
+		displayMode = displayMode;
+	}
+
+	#if (hl_ver >= version("1.12.0"))
 	function selectedMonitor() : Dynamic {
 		var m = if(monitor == null) 0 else monitor;
 		#if hldx
@@ -487,55 +542,6 @@ class Window {
 		return m.idx == -1 ? { idx: defaultId, mode: def } : m;
 	}
 
-	function set_displayMode( m : DisplayMode ) : DisplayMode {
-		var oldMode = window.displayMode;
-		#if (hldx || hlsdl)
-		if( window.displayMode != m ) {
-			if(window.displayMode == Windowed) {
-				if( savedSize == null ) {
-					savedSize = { x: window.x, y: window.y, width: window.width, height: window.height };
-				}
-			}
-		}
-		// No way to choose the screen in SDL, need to fit the window in the right screen before.
-		if(m != Windowed) {
-			window.displayMode = Windowed;
-			var mon = selectedMonitor();
-			if(mon != null) {
-				window.setPosition(mon.left, mon.top);
-				window.resize(mon.right-mon.left, mon.bottom-mon.top);
-			}
-		}
-		if( m == Fullscreen || m == FullscreenResize ) {
-			var cds = getCurrentDisplaySetting();
-			var dm = getBestDisplayMode(windowWidth, windowHeight, framerate != null ? framerate : cds.framerate);
-			if(dm == null)
-				return oldMode;
-			window.displaySetting = dm.mode;
-			#if hldx
-			var mon = selectedMonitor();
-			window.selectedMonitor = mon != null ? mon.name : null;
-			#elseif hlsdl
-			window.currentMonitor = monitor;
-			#end
-			window.displayMode = m;
-		}
-		else {
-			window.displayMode = m;
-			if( oldMode != m && m == Windowed && savedSize != null) {
-				window.setPosition(savedSize.x, savedSize.y);
-				window.resize(savedSize.width, savedSize.height);
-				savedSize = null;
-			}
-		}
-		#end
-		return displayMode;
-	}
-
-	public function applyDisplay() {
-		displayMode = displayMode;
-	}
-
 	public function getMonitors() : Array<Monitor> {
 		return [for(m in #if hldx dx.Window.getMonitors() #elseif hlsdl sdl.Sdl.getDisplays() #else [] #end) { name: m.name, width: m.right-m.left, height: m.bottom-m.top}];
 	}
@@ -547,7 +553,7 @@ class Window {
 			if(m.name == current)
 				return i;
 		}
-		return -1;
+		return 0;
 		#elseif hlsdl
 		return window.currentMonitor;
 		#else
@@ -555,12 +561,12 @@ class Window {
 		#end
 	}
 
-	public function getCurrentDisplaySetting(monitorId : Int = -1) : DisplaySetting {
+	public function getCurrentDisplaySetting(?monitorId : Int) : DisplaySetting {
 		#if hldx
-		var mon = monitorId != -1 ? getMonitors()[monitorId] : null;
+		var mon = monitorId != null ? getMonitors()[monitorId] : null;
 		return dx.Window.getCurrentDisplaySetting(mon == null ? null : mon.name);
 		#elseif hlsdl
-		return sdl.Sdl.getCurrentDisplayMode(monitorId == -1 ? 0 : monitorId);
+		return sdl.Sdl.getCurrentDisplayMode(monitorId == null ? 0 : monitorId);
 		#else
 		return null;
 		#end
@@ -588,7 +594,7 @@ class Window {
 		var m = dx.Window.getMonitors()[monitorId];
 		var l = m != null ? dx.Window.getDisplaySettings(m.name) : [];
 		#elseif hlsdl
-		var l = sdl.Sdl.getDisplayModes( monitorId == -1 ? window.currentMonitor : monitorId );
+		var l = sdl.Sdl.getDisplayModes( monitorId == null ? window.currentMonitor : monitorId );
 		#else
 		var l = [];
 		#end
@@ -599,6 +605,7 @@ class Window {
 		}
 		return f;
 	}
+	#end
 
 	function get_title() : String {
 		#if (hldx || hlsdl)
