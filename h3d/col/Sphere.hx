@@ -93,20 +93,6 @@ class Sphere implements Collider {
 		prim.addNormals();
 		return new h3d.scene.Mesh(prim);
 	}
-	#if hxbit
-	function customSerialize( ctx : hxbit.Serializer ) {
-		ctx.addFloat(x);
-		ctx.addFloat(y);
-		ctx.addFloat(z);
-		ctx.addFloat(r);
-	}
-	function customUnserialize( ctx : hxbit.Serializer ) {
-		x = ctx.getFloat();
-		y = ctx.getFloat();
-		z = ctx.getFloat();
-		r = ctx.getFloat();
-	}
-	#end
 	#end
 
 }

@@ -102,7 +102,7 @@ class Texture {
 
 		this.width = w;
 		this.height = h;
-		this.mipMap = this.flags.has(MipMapped) ? Nearest : None;
+		this.mipMap = this.flags.has(MipMapped) ? Linear : None;
 		this.filter = Linear;
 		this.wrap = Clamp;
 		bits &= 0x7FFF;

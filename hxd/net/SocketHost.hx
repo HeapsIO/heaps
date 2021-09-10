@@ -94,7 +94,7 @@ class SocketHost extends NetworkHost {
 		socket.onError = function(msg) {
 			if( !connected ) {
 				socket.onError = function(_) { };
-				onConnect(false);
+				if( onConnect != null ) onConnect(false);
 			} else
 				throw msg;
 		};
@@ -103,7 +103,7 @@ class SocketHost extends NetworkHost {
 			connected = true;
 			if( host == "127.0.0.1" ) enableSound = false;
 			clients = [self];
-			onConnect(true);
+			if( onConnect != null ) onConnect(true);
 		});
 	}
 

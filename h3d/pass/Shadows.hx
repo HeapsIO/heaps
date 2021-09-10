@@ -117,6 +117,7 @@ class Shadows extends Default {
 				case Mixed:
 					if( staticTexture == null || staticTexture.isDisposed() )
 						staticTexture = createDefaultShadowMap();
+					passes.filter(function(p) return p.pass.isStatic == false);
 					return true;
 				case Static:
 					if( staticTexture == null || staticTexture.isDisposed() )

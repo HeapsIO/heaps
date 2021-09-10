@@ -368,6 +368,8 @@ class ObjectComp implements h2d.domkit.Object implements domkit.Component.Compon
 	@:p(none) var minWidth : Null<Int>;
 	@:p(none) var minHeight : Null<Int>;
 	@:p var forceLineBreak : Bool;
+	@:p(none) var flexWeight : Null<Float>;
+	@:p var flex : Bool;
 
 	static function set_rotation(o:h2d.Object, v:Float) {
 		o.rotation = v * Math.PI / 180;
@@ -488,6 +490,22 @@ class ObjectComp implements h2d.domkit.Object implements domkit.Component.Compon
 	static function set_forceLineBreak(o:h2d.Object,v) {
 		var p = getFlowProps(o);
 		if( p != null ) p.lineBreak = v;
+	}
+
+	static function set_flex(o:h2d.Object,v:Bool) {
+		var p = getFlowProps(o);
+		if( p != null ) {
+			if(v && p.flexWeight == null)
+				p.flexWeight = 1.0;
+			else if(!v)
+				p.flexWeight = null;
+		}
+	}
+
+	static function set_flexWeight(o:h2d.Object,v) {
+		var p = getFlowProps(o);
+		if( p != null )
+			p.flexWeight = v;
 	}
 
 	static function updateComponentId(p:domkit.Properties<Dynamic>) {

@@ -11,11 +11,7 @@ class HMDOut extends BaseLibrary {
 	var tmp = haxe.io.Bytes.alloc(4);
 	public var absoluteTexturePath : Bool;
 	public var optimizeSkin = true;
-	/*
-		Store the skin indexes as multiple premultiplied floats instead of as packed into a single 4 bytes ints.
-		This is necessary for GPUs that does not respect OpenGLES spec and does not allow non-constant indexing in vertex shader (Adreno 20X)
-	*/
-	public var floatSkinIndexes = #if floatSkinIndexes true #else false #end;
+	public var generateNormals = false;
 
 	function int32tof( v : Int ) : Float {
 		tmp.set(0, v & 0xFF);
@@ -128,6 +124,49 @@ class HMDOut extends BaseLibrary {
 		#end
 	}
 
+	function updateNormals( g : Geometry, vbuf : hxd.FloatBuffer, idx : Array<Array<Int>> ) {
+		var stride = g.vertexStride;
+		var normalPos = 0;
+		for( f in g.vertexFormat ) {
+			if( f.name == "logicNormal" ) break;
+			normalPos += f.format.getSize();
+		}
+
+		var points : Array<h3d.col.Point> = [];
+		var pmap = [];
+		for( vid in 0...g.vertexCount ) {
+			var x = vbuf[vid * stride];
+			var y = vbuf[vid * stride + 1];
+			var z = vbuf[vid * stride + 2];
+			var found = false;
+			for( i => p in points ) {
+				if( p.x == x && p.y == y && p.z == z ) {
+					pmap[vid] = i;
+					found = true;
+					break;
+				}
+			}
+			if( !found ) {
+				pmap[vid] = points.length;
+				points.push(new h3d.col.Point(x,y,z));
+			}
+		}
+		var realIdx = new hxd.IndexBuffer();
+		for( idx in idx )
+			for( i in idx )
+				realIdx.push(pmap[i]);
+
+		var poly = new h3d.prim.Polygon(points, realIdx);
+		poly.addNormals();
+
+		for( vid in 0...g.vertexCount ) {
+			var nid = pmap[vid];
+			vbuf[vid*stride + normalPos] = poly.normals[nid].x;
+			vbuf[vid*stride + normalPos + 1] = poly.normals[nid].y;
+			vbuf[vid*stride + normalPos + 2] = poly.normals[nid].z;
+		}
+	}
+
 	function buildGeom( geom : hxd.fmt.fbx.Geometry, skin : h3d.anim.Skin, dataOut : haxe.io.BytesOutput, genTangents : Bool ) {
 		var g = new Geometry();
 
@@ -166,10 +205,15 @@ class HMDOut extends BaseLibrary {
 			g.vertexFormat.push(new GeometryFormat("color", DVec3));
 
 		if( skin != null ) {
-			if( bonesPerVertex <= 0 || bonesPerVertex > 4 ) throw "assert";
-			g.vertexFormat.push(new GeometryFormat("weights", [DFloat, DVec2, DVec3, DVec4][bonesPerVertex-1]));
-			g.vertexFormat.push(new GeometryFormat("indexes", floatSkinIndexes ? [DFloat, DVec2, DVec3, DVec4][bonesPerVertex-1] : DBytes4));
+			if(fourBonesByVertex)
+				g.props = [FourBonesByVertex];
+			g.vertexFormat.push(new GeometryFormat("weights", DVec3));  // Only 3 weights are necessary even in fourBonesByVertex since they sum-up to 1
+			g.vertexFormat.push(new GeometryFormat("indexes", DBytes4));
 		}
+
+		if( generateNormals )
+			g.vertexFormat.push(new GeometryFormat("logicNormal", DVec3));
+
 		var stride = 0;
 		for( f in g.vertexFormat )
 			stride += f.format.getSize();
@@ -256,15 +300,18 @@ class HMDOut extends BaseLibrary {
 				if( skin != null ) {
 					var k = vidx * skin.bonesPerVertex;
 					var idx = 0;
-					for( i in 0...skin.bonesPerVertex ) {
+					if(!(skin.bonesPerVertex == 3 || skin.bonesPerVertex == 4)) throw "assert";
+					for( i in 0...3 )  // Only 3 weights are necessary even in fourBonesByVertex since they sum-up to 1
 						tmpBuf[p++] = skin.vertexWeights[k + i];
+					for( i in 0...skin.bonesPerVertex )
 						idx = (skin.vertexJoints[k + i] << (8*i)) | idx;
-					}
-					if( floatSkinIndexes ) {
-						for( i in 0...skin.bonesPerVertex )
-							tmpBuf[p++] = skin.vertexJoints[k + i] * 3;
-					} else
-						tmpBuf[p++] = int32tof(idx);
+					tmpBuf[p++] = int32tof(idx);
+				}
+
+				if( generateNormals ) {
+					tmpBuf[p++] = 0;
+					tmpBuf[p++] = 0;
+					tmpBuf[p++] = 0;
 				}
 
 				var total = 0.;
@@ -335,6 +382,9 @@ class HMDOut extends BaseLibrary {
 			index[pos] = i; // restore
 			count = 0;
 		}
+
+		if( generateNormals )
+			updateNormals(g,vbuf,ibufs);
 
 		// write data
 		g.vertexPosition = dataOut.length;
@@ -605,11 +655,11 @@ class HMDOut extends BaseLibrary {
 				for( c in o.skin.childs )
 					if( c.isJoint )
 						rootJoints.push(c.joint);
-				skin = createSkin(hskins, tmpGeom, rootJoints, bonesPerVertex);
-				if( skin.boundJoints.length > BaseLibrary.maxBonesPerSkin ) {
+				skin = createSkin(hskins, tmpGeom, rootJoints);
+				if( skin.boundJoints.length > maxBonesPerSkin ) {
 					var g = new hxd.fmt.fbx.Geometry(this, g);
 					var idx = g.getIndexes();
-					skin.split(BaseLibrary.maxBonesPerSkin, [for( i in idx.idx ) idx.vidx[i]], mids.length > 1 ? g.getMaterialByTriangle() : null);
+					skin.split(maxBonesPerSkin, [for( i in idx.idx ) idx.vidx[i]], mids.length > 1 ? g.getMaterialByTriangle() : null);
 				}
 				model.skin = makeSkin(skin, o.skin);
 			}

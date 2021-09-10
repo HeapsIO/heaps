@@ -1,9 +1,9 @@
 package h3d.col;
 
-class ObjectCollider implements Collider implements hxd.impl.Serializable {
+class ObjectCollider implements Collider {
 
-	@:s public var obj : h3d.scene.Object;
-	@:s public var collider : Collider;
+	public var obj : h3d.scene.Object;
+	public var collider : Collider;
 	static var TMP_RAY = new Ray();
 	static var TMP_MAT = new Matrix();
 
@@ -72,13 +72,6 @@ class ObjectCollider implements Collider implements hxd.impl.Serializable {
 			ret.follow = obj;
 		}
 		return ret;
-	}
-	#end
-
-	#if hxbit
-	function customSerialize( ctx : hxbit.Serializer ) {
-	}
-	function customUnserialize( ctx : hxbit.Serializer ) {
 	}
 	#end
 

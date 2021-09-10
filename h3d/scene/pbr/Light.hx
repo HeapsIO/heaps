@@ -4,7 +4,7 @@ class Light extends h3d.scene.Light {
 
 	var _color : h3d.Vector;
 	var primitive : h3d.prim.Primitive;
-	@:s public var power : Float = 1.;
+	public var power : Float = 1.;
 	public var shadows : h3d.pass.Shadows;
 	public var isMainLight = false;
 	public var occlusionFactor : Float;

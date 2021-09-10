@@ -1,7 +1,7 @@
 package h3d.parts;
 import hxd.Math;
 
-private typedef GpuSave = {
+typedef GpuSave = {
 	var type : String;
 	var version : Int;
 	var bounds : Array<Float>;
@@ -49,7 +49,7 @@ enum GpuEmitMode {
 	Disc;
 }
 
-private class GpuPart {
+class GpuPart {
 
 	public var index : Int;
 
@@ -1008,34 +1008,5 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 			return h3d.mat.Texture.fromColor(0xFF00FF);
 		}
 	}
-
-	#if (hxbit && !macro && heaps_enable_serialize)
-	override function serialize( ctx : hxbit.Serializer ) {
-		var oldMat = materials;
-		primitive = null;
-		materials = [];
-		super.serialize(ctx);
-		materials = oldMat;
-	}
-	override function customSerialize(ctx:hxbit.Serializer) {
-		super.customSerialize(ctx);
-		ctx.addString(resourcePath);
-		ctx.addFloat(amount);
-		if( resourcePath == null )
-			ctx.addDynamic(save());
-
-	}
-	override function customUnserialize(ctx:hxbit.Serializer) {
-		super.customUnserialize(ctx);
-		resourcePath = ctx.getString();
-		amount = ctx.getFloat();
-		groups = [];
-		bounds = new h3d.col.Bounds();
-		if( resourcePath != null )
-			load(haxe.Json.parse(hxd.res.Loader.currentInstance.load(resourcePath).toText()), resourcePath);
-		else
-			load(ctx.getDynamic());
-	}
-	#end
 
 }

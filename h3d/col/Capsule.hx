@@ -137,22 +137,6 @@ class Capsule implements Collider {
 		obj.setPosition(midPoint.x, midPoint.y, midPoint.z);
 		return obj;
 	}
-	#if hxbit
-	function customSerialize( ctx : hxbit.Serializer ) {
-		ctx.addFloat(a.x);
-		ctx.addFloat(a.y);
-		ctx.addFloat(a.z);
-		ctx.addFloat(b.x);
-		ctx.addFloat(b.y);
-		ctx.addFloat(b.z);
-		ctx.addFloat(r);
-	}
-	function customUnserialize( ctx : hxbit.Serializer ) {
-		a = new Point(ctx.getFloat(), ctx.getFloat(), ctx.getFloat());
-		b = new Point(ctx.getFloat(), ctx.getFloat(), ctx.getFloat());
-		r = ctx.getFloat();
-	}
-	#end
 	#end
 
 }

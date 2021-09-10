@@ -110,27 +110,41 @@ class HMDModel extends MeshPrimitive {
 
 	public function recomputeNormals( ?name : String ) {
 
+		for( f in data.vertexFormat )
+			if( f.name == name )
+				return;
+
 		if( name == null ) name = "normal";
+
 
 		var pos = lib.getBuffers(data, [new hxd.fmt.hmd.Data.GeometryFormat("position", DVec3)]);
 		var ids = new Array();
 		var pts : Array<h3d.col.Point> = [];
+		var mpts = new Map();
 
 		for( i in 0...data.vertexCount ) {
 			var added = false;
 			var px = pos.vertexes[i * 3];
 			var py = pos.vertexes[i * 3 + 1];
 			var pz = pos.vertexes[i * 3 + 2];
-			for(i in 0...pts.length) {
-				var p = pts[i];
-				if(p.x == px && p.y == py && p.z == pz) {
-					ids.push(i);
-					added = true;
-					break;
+			var pid = Std.int((px + py + pz) * 10.01);
+			var arr = mpts.get(pid);
+			if( arr == null ) {
+				arr = [];
+				mpts.set(pid, arr);
+			} else {
+				for( idx in arr ) {
+					var p = pts[idx];
+					if( p.x == px && p.y == py && p.z == pz ) {
+						ids.push(idx);
+						added = true;
+						break;
+					}
 				}
 			}
 			if( !added ) {
 				ids.push(pts.length);
+				arr.push(pts.length);
 				pts.push(new h3d.col.Point(px,py,pz));
 			}
 		}
@@ -233,29 +247,5 @@ class HMDModel extends MeshPrimitive {
 		initCollider(poly);
 		return collider;
 	}
-
-	#if hxbit
-	override function customSerialize(ctx:hxbit.Serializer) {
-		ctx.addString(lib.resource.entry.path);
-		for( m in lib.header.models )
-			if( lib.header.geometries[m.geometry] == this.data ) {
-				ctx.addString(m.name);
-				break;
-			}
-	}
-	override function customUnserialize(ctx:hxbit.Serializer) {
-		var libPath = ctx.getString();
-		var modelPath = ctx.getString();
-		var ctx : hxd.fmt.hsd.Serializer = cast ctx;
-		lib = ctx.loadHMD(libPath);
-		for( m in lib.header.models )
-			if( m.name == modelPath ) {
-				this.data = lib.header.geometries[m.geometry];
-				@:privateAccess lib.cachedPrimitives[m.geometry] = this;
-				break;
-			}
-		dataPosition = lib.header.dataPosition;
-	}
-	#end
 
 }

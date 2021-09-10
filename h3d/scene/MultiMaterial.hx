@@ -56,17 +56,4 @@ class MultiMaterial extends Mesh {
 		super.draw(ctx);
 	}
 
-	#if (hxbit && !macro && heaps_enable_serialize)
-	override function customSerialize(ctx:hxbit.Serializer) {
-		super.customSerialize(ctx);
-		ctx.addInt(materials.length);
-		for( m in materials ) ctx.addKnownRef(m);
-	}
-
-	override function customUnserialize(ctx:hxbit.Serializer) {
-		super.customUnserialize(ctx);
-		materials = [for( i in 0...ctx.getInt() ) ctx.getKnownRef(h3d.mat.Material)];
-	}
-	#end
-
 }
