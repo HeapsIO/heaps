@@ -154,13 +154,6 @@ class TriPlane implements Collider {
 		prim.addNormals();
 		return new h3d.scene.Mesh(prim);
 	}
-	#if hxbit
-	function customSerialize( ctx : hxbit.Serializer ) {
-		throw "Cannot serialize "+this;
-	}
-	function customUnserialize( ctx : hxbit.Serializer ) {
-	}
-	#end
 	#end
 
 }
@@ -291,13 +284,6 @@ class Polygon implements Collider {
 		prim.addNormals();
 		return new h3d.scene.Mesh(prim);
 	}
-	#if hxbit
-	function customSerialize( ctx : hxbit.Serializer ) {
-		throw "Cannot serialize "+this;
-	}
-	function customUnserialize( ctx : hxbit.Serializer ) {
-	}
-	#end
 	#end
 
 	public static function fromPolygon2D( p : h2d.col.Polygon, z = 0. ) {

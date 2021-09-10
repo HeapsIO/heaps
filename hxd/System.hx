@@ -85,6 +85,10 @@ class System {
 		return null;
 	}
 
+	public static function getLocale() : String {
+		return "en_EN";
+	}
+
 	// getters
 
 	static function get_width() : Int return 0;

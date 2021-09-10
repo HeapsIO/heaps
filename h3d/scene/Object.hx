@@ -9,11 +9,13 @@ package h3d.scene;
 	public var FAllocated = 0x20;
 	public var FAlwaysSync = 0x40;
 	public var FInheritCulled = 0x80;
-	public var FNoSerialize = 0x100;
+	public var FModelRoot = 0x100;
 	public var FIgnoreBounds = 0x200;
 	public var FIgnoreCollide = 0x400;
 	public var FIgnoreParentTransform = 0x800;
 	public var FCullingColliderInherited = 0x1000;
+	public var FFixedPosition = 0x2000;
+	public var FFixedPositionSynced = 0x4000;
 	public inline function new(value) {
 		this = value;
 	}
@@ -30,11 +32,11 @@ package h3d.scene;
 	It can be used to create a virtual container that does not display anything but can contain other objects
 	so the various transforms are inherited to its children.
 **/
-class Object implements hxd.impl.Serializable {
+class Object {
 
 	static inline var ROT2RAD = -0.017453292519943295769236907684886;
 
-	@:s var flags : ObjectFlags;
+	var flags : ObjectFlags;
 	var children : Array<Object>;
 
 	/**
@@ -50,37 +52,37 @@ class Object implements hxd.impl.Serializable {
 	/**
 		The name of the object, can be used to retrieve an object within a tree by using `getObjectByName` (default null)
 	**/
-	@:s public var name : Null<String>;
+	public var name : Null<String>;
 
 	/**
 		The x position of the object relative to its parent.
 	**/
-	@:s public var x(default,set) : Float;
+	public var x(default,set) : Float;
 
 	/**
 		The y position of the object relative to its parent.
 	**/
-	@:s public var y(default, set) : Float;
+	public var y(default, set) : Float;
 
 	/**
 		The z position of the object relative to its parent.
 	**/
-	@:s public var z(default, set) : Float;
+	public var z(default, set) : Float;
 
 	/**
 		The amount of scaling along the X axis of this object (default 1.0)
 	**/
-	@:s public var scaleX(default,set) : Float;
+	public var scaleX(default,set) : Float;
 
 	/**
 		The amount of scaling along the Y axis of this object (default 1.0)
 	**/
-	@:s public var scaleY(default, set) : Float;
+	public var scaleY(default, set) : Float;
 
 	/**
 		The amount of scaling along the Z axis of this object (default 1.0)
 	**/
-	@:s public var scaleZ(default,set) : Float;
+	public var scaleZ(default,set) : Float;
 
 
 	/**
@@ -93,7 +95,7 @@ class Object implements hxd.impl.Serializable {
 	/**
 		Follow a given object or joint as if it was our parent. Ignore defaultTransform when set.
 	**/
-	@:s public var follow(default, set) : Object;
+	public var follow(default, set) : Object;
 
 	/**
 		When follow is set, only follow the position and ignore both scale and rotation.
@@ -105,7 +107,7 @@ class Object implements hxd.impl.Serializable {
 		It is used by the animation system.
 	**/
 	public var defaultTransform(default, set) : h3d.Matrix;
-	@:s public var currentAnimation(default, null) : h3d.anim.Animation;
+	public var currentAnimation(default, null) : h3d.anim.Animation;
 
 	/**
 		Inform that the object is not to be displayed and his animation doesn't have to be sync. Unlike visible, this doesn't apply to children unless inheritCulled is set to true.
@@ -133,9 +135,9 @@ class Object implements hxd.impl.Serializable {
 	public var ignoreCollide(get, set) : Bool;
 
 	/**
-		When enabled, the object can be serialized (default : true)
+		Tag the object as a model root
 	**/
-	public var allowSerialize(get, set) : Bool;
+	public var modelRoot(get, set) : Bool;
 
 	/**
 		When enabled, the object will not follow its parent transform
@@ -145,8 +147,15 @@ class Object implements hxd.impl.Serializable {
 	/**
 		When selecting the lights to apply to this object, we will use the camera target as reference
 		instead of the object absolute position. This is useful for very large objects so they can get good lighting.
+		(this is only relevant in forward rendering)
 	**/
 	public var lightCameraCenter(get, set) : Bool;
+
+	/**
+		When set, the object and all its children will not sync() unless this root object position has been changed.
+		This allows to optimize cpu cost of static objects having many children.
+	**/
+	public var fixedPosition(get, set) : Bool;
 
 	/**
 		When set, collider shape will be used for automatic frustum culling.
@@ -196,9 +205,10 @@ class Object implements hxd.impl.Serializable {
 	inline function get_inheritCulled() return flags.has(FInheritCulled);
 	inline function get_ignoreBounds() return flags.has(FIgnoreBounds);
 	inline function get_ignoreCollide() return flags.has(FIgnoreCollide);
-	inline function get_allowSerialize() return !flags.has(FNoSerialize);
+	inline function get_modelRoot() return flags.has(FModelRoot);
 	inline function get_ignoreParentTransform() return flags.has(FIgnoreParentTransform);
 	inline function get_cullingColliderInherited() return flags.has(FCullingColliderInherited);
+	inline function get_fixedPosition() return flags.has(FFixedPosition);
 	inline function set_posChanged(b) return flags.set(FPosChanged, b || follow != null);
 	inline function set_culled(b) return flags.set(FCulled, b);
 	inline function set_visible(b) return flags.set(FVisible,b);
@@ -209,9 +219,10 @@ class Object implements hxd.impl.Serializable {
 	inline function set_ignoreBounds(b) return flags.set(FIgnoreBounds, b);
 	inline function set_inheritCulled(b) return flags.set(FInheritCulled, b);
 	inline function set_ignoreCollide(b) return flags.set(FIgnoreCollide, b);
-	inline function set_allowSerialize(b) return !flags.set(FNoSerialize, !b);
+	inline function set_modelRoot(b) return flags.set(FModelRoot, b);
 	inline function set_ignoreParentTransform(b) { if( b != ignoreParentTransform ) posChanged = true; return flags.set(FIgnoreParentTransform, b); }
 	inline function set_cullingColliderInherited(b) return flags.set(FCullingColliderInherited, b);
+	inline function set_fixedPosition(b) return flags.set(FFixedPosition, b);
 
 	/**
 		Create an animation instance bound to the object, set it as currentAnimation and play it.
@@ -712,6 +723,14 @@ class Object implements hxd.impl.Serializable {
 
 		var changed = posChanged;
 		if( changed ) calcAbsPos();
+		if( fixedPosition ) {
+			if( flags.has(FFixedPositionSynced) && !changed ) {
+				ctx.visibleFlag = old;
+				ctx.cullingCollider = prevCollider;
+				return;
+			}
+			flags.set(FFixedPositionSynced, true);
+		}
 		sync(ctx);
 		posChanged = false;
 		lastFrame = ctx.frame;
@@ -967,75 +986,5 @@ class Object implements hxd.impl.Serializable {
 	public inline function iterator() : hxd.impl.ArrayIterator<Object> {
 		return new hxd.impl.ArrayIterator(children);
 	}
-
-	#if (hxbit && !macro && heaps_enable_serialize)
-	function customSerialize( ctx : hxbit.Serializer ) {
-
-		var children = [for( o in children ) if( o.allowSerialize ) o];
-		ctx.addInt(children.length);
-		for( o in children )
-			ctx.addKnownRef(o);
-		ctx.addDouble(qRot.x);
-		ctx.addDouble(qRot.y);
-		ctx.addDouble(qRot.z);
-		ctx.addDouble(qRot.w);
-
-		ctx.addBool(defaultTransform != null);
-		if( defaultTransform != null ) {
-			ctx.addFloat(defaultTransform._11);
-			ctx.addFloat(defaultTransform._12);
-			ctx.addFloat(defaultTransform._13);
-			ctx.addFloat(defaultTransform._21);
-			ctx.addFloat(defaultTransform._22);
-			ctx.addFloat(defaultTransform._23);
-			ctx.addFloat(defaultTransform._31);
-			ctx.addFloat(defaultTransform._32);
-			ctx.addFloat(defaultTransform._33);
-			ctx.addFloat(defaultTransform._41);
-			ctx.addFloat(defaultTransform._42);
-			ctx.addFloat(defaultTransform._43);
-		}
-
-	}
-
-	static var COUNT = 0;
-
-	function customUnserialize( ctx : hxbit.Serializer ) {
-		children = [for( i in 0...ctx.getInt() ) ctx.getKnownRef(Object)];
-		qRot = new h3d.Quat(ctx.getDouble(), ctx.getDouble(), ctx.getDouble(), ctx.getDouble());
-
-		if( ctx.getBool() ) {
-			defaultTransform = new h3d.Matrix();
-			defaultTransform.loadValues([
-				ctx.getFloat(),
-				ctx.getFloat(),
-				ctx.getFloat(),
-				0,
-				ctx.getFloat(),
-				ctx.getFloat(),
-				ctx.getFloat(),
-				0,
-				ctx.getFloat(),
-				ctx.getFloat(),
-				ctx.getFloat(),
-				0,
-				ctx.getFloat(),
-				ctx.getFloat(),
-				ctx.getFloat(),
-				1
-			]);
-		}
-
-		// init
-		for( c in children )
-			c.parent = this;
-		allocated = false;
-		posChanged = true;
-		absPos = new h3d.Matrix();
-		absPos.identity();
-		if( currentAnimation != null )
-			@:privateAccess currentAnimation.initAndBind(this);
-	}
-	#end
 
 }

@@ -1,6 +1,6 @@
 package h3d.col;
 
-interface Collider extends hxd.impl.Serializable.StructSerializable {
+interface Collider {
 
 	/**
 		Returns the distance of intersection between the ray and the collider, or negative if no collision.
@@ -17,10 +17,10 @@ interface Collider extends hxd.impl.Serializable.StructSerializable {
 }
 
 
-class OptimizedCollider implements hxd.impl.Serializable implements Collider {
+class OptimizedCollider implements Collider {
 
-	@:s public var a : Collider;
-	@:s public var b : Collider;
+	public var a : Collider;
+	public var b : Collider;
 
 	public function new(a, b) {
 		this.a = a;
@@ -58,12 +58,6 @@ class OptimizedCollider implements hxd.impl.Serializable implements Collider {
 			ret.addChild(bobj);
 		return ret;
 	}
-	#if hxbit
-	function customSerialize(ctx:hxbit.Serializer) {
-	}
-	function customUnserialize(ctx:hxbit.Serializer) {
-	}
-	#end
 	#end
 
 }
@@ -122,19 +116,6 @@ class GroupCollider implements Collider {
 		}
 		return ret;
 	}
-	#if (hxbit && heaps_enable_serialize)
-
-	function customSerialize(ctx:hxbit.Serializer) {
-		ctx.addInt(colliders.length);
-		for( c in colliders )
-			ctx.addStruct(c);
-	}
-
-	function customUnserialize(ctx:hxbit.Serializer) {
-		colliders = [for( i in 0...ctx.getInt() ) ctx.getStruct()];
-	}
-
-	#end
 	#end
 
 

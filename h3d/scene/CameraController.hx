@@ -38,7 +38,6 @@ class CameraController extends h3d.scene.Object {
 		super(parent);
 		name = "CameraController";
 		set(distance);
-		flags.set(FNoSerialize,true);
 		curPos.load(targetPos);
 		curOffset.load(targetOffset);
 	}

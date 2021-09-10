@@ -5,33 +5,33 @@ class Interactive extends Object implements hxd.SceneEvents.Interactive {
 	var debugObj : Object;
 	public var showDebug(default, set) : Bool = false;
 
-	@:s public var shape : h3d.col.Collider;
+	public var shape : h3d.col.Collider;
 
 	/**
 		If several interactive conflicts, the preciseShape (if defined) can be used to distinguish between the two.
 	**/
-	@:s public var preciseShape : Null<h3d.col.Collider>;
+	public var preciseShape : Null<h3d.col.Collider>;
 
 	/**
 		In case of conflicting shapes, usually the one in front of the camera is prioritized, unless you set an higher priority.
 	**/
-	@:s public var priority : Int;
+	public var priority : Int;
 
 	public var cursor(default,set) : Null<hxd.Cursor>;
 	/**
 		Set the default `cancel` mode (see `hxd.Event`), default to false.
 	**/
-	@:s public var cancelEvents : Bool = false;
+	public var cancelEvents : Bool = false;
 	/**
 		Set the default `propagate` mode (see `hxd.Event`), default to false.
 	**/
-	@:s public var propagateEvents : Bool = false;
-	@:s public var enableRightButton : Bool;
+	public var propagateEvents : Bool = false;
+	public var enableRightButton : Bool;
 
 	/**
 		Is it required to find the best hit point in a complex mesh or any hit possible point will be enough (default = false, faster).
 	**/
-	@:s public var bestMatch : Bool;
+	public var bestMatch : Bool;
 
 	var scene : Scene;
 	var mouseDownButton : Int = -1;

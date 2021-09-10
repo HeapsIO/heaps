@@ -14,9 +14,20 @@ enum DisplayMode {
 	Windowed;
 	Borderless;
 	Fullscreen;
-	FullscreenResize;
 }
 #end
+
+typedef Monitor = {
+	name : String,
+	width : Int,
+	height : Int
+}
+
+typedef DisplaySetting = {
+	width : Int,
+	height : Int,
+	framerate : Int
+}
 
 //@:coreApi
 class Window {
@@ -29,12 +40,17 @@ class Window {
 	public var mouseX(get, never) : Int;
 	public var mouseY(get, never) : Int;
 	public var mouseLock(get, set) : Bool;
+	public var monitor : Null<Int> = null;
+	public var framerate : Null<Int> = null;
 	public var vsync(get, set) : Bool;
 	public var isFocused(get, never) : Bool;
 
 	public var title(get, set) : String;
 	public var displayMode(get, set) : DisplayMode;
-
+	#if (hl_ver >= version("1.12.0"))
+	public var currentMonitorIndex(get,null) : Int;
+	#end
+	
 	#if hlsdl
 	var window : sdl.Window;
 	#elseif hldx
@@ -44,8 +60,11 @@ class Window {
 	var windowHeight = 600;
 	var curMouseX = 0;
 	var curMouseY = 0;
+	var savedSize : { x : Int, y : Int, width : Int, height : Int };
 
 	static var CODEMAP = [for( i in 0...2048 ) i];
+	static var MIN_HEIGHT = 720;
+	static var MIN_FRAMERATE = 60; // 30 and 60 are always allowed
 	#if hlsdl
 	static inline var TOUCH_SCALE = #if (hl_ver >= version("1.12.0")) 10000 #else 100 #end;
 	#if heaps_vulkan
@@ -110,6 +129,17 @@ class Window {
 
 	public function resize( width : Int, height : Int ) : Void {
 		#if (hldx || hlsdl)
+		if( window.displayMode == Fullscreen ) {
+			#if (hlsdl && hl_ver >= version("1.12.0") )
+			var cds = getCurrentDisplaySetting();
+			var mode = getBestDisplayMode(width, height, framerate != null ? framerate : cds.framerate);
+			if(mode != null) {
+				@:privateAccess sdl.Window.winSetDisplayMode(window.win, mode.mode.width, mode.mode.height, mode.mode.framerate);
+				width = mode.mode.width;
+				height = mode.mode.height;
+			}
+			#end
+		}
 		window.resize(width, height);
 		#end
 		windowWidth = width;
@@ -426,11 +456,156 @@ class Window {
 	}
 
 	function set_displayMode( m : DisplayMode ) : DisplayMode {
+		var oldMode = window.displayMode;
 		#if (hldx || hlsdl)
+		#if (hl_ver >= version("1.12.0"))
+		if( window.displayMode != m ) {
+			if(window.displayMode == Windowed) {
+				if( savedSize == null ) {
+					savedSize = { x: window.x, y: window.y, width: window.width, height: window.height };
+				}
+			}
+		}
+		// No way to choose the screen in SDL, need to fit the window in the right screen before.
+		if(m != Windowed) {
+			window.displayMode = Windowed;
+			var mon = selectedMonitor();
+			if(mon != null) {
+				window.setPosition(mon.left, mon.top);
+				window.resize(mon.right-mon.left, mon.bottom-mon.top);
+			}
+		}
+		if( m == Fullscreen ) {
+			var cds = getCurrentDisplaySetting();
+			var dm = getBestDisplayMode(windowWidth, windowHeight, framerate != null ? framerate : cds.framerate);
+			if(dm == null)
+				return oldMode;
+			window.displaySetting = dm.mode;
+			#if hldx
+			var mon = selectedMonitor();
+			window.selectedMonitor = mon != null ? mon.name : null;
+			#elseif hlsdl
+			window.currentMonitor = monitor;
+			#end
+			window.displayMode = m;
+		}
+		else {
+			window.displayMode = m;
+			if( oldMode != m && m == Windowed && savedSize != null) {
+				window.setPosition(savedSize.x, savedSize.y);
+				window.resize(savedSize.width, savedSize.height);
+				savedSize = null;
+			}
+		}
+		#else
 		window.displayMode = m;
+		#end
 		#end
 		return displayMode;
 	}
+
+	public function applyDisplay() {
+		displayMode = displayMode;
+	}
+
+	#if (hl_ver >= version("1.12.0"))
+	function selectedMonitor() : Dynamic {
+		var m = if(monitor == null) 0 else monitor;
+		#if hldx
+		return dx.Window.getMonitors()[m];
+		#elseif hlsdl
+		return sdl.Sdl.getDisplays()[m];
+		#else
+		return null;
+		#end
+	}
+
+	function getBestDisplayMode(width, height, framerate) {
+		var m : {idx: Int, mode: DisplaySetting } = {
+			idx: -1,
+			mode: null
+		}
+		var defaultId = -1;
+		var def = getDefaultDisplaySetting();
+		for( i => s in getDisplaySettings() ) {
+			if(s.width == def.width && s.height == def.height && s.framerate == def.framerate)
+				defaultId = i;
+			if(s.width == width && s.height == height) {
+				if(s.framerate == framerate)
+					return { idx: i, mode: s };
+				else if(s.framerate == def.framerate)
+					m = {idx : i, mode : s };
+				else if(m.idx == -1)
+					m = {idx: i, mode : s };
+			}
+		}
+		return m.idx == -1 ? { idx: defaultId, mode: def } : m;
+	}
+
+	public function getMonitors() : Array<Monitor> {
+		return [for(m in #if hldx dx.Window.getMonitors() #elseif hlsdl sdl.Sdl.getDisplays() #else [] #end) { name: m.name, width: m.right-m.left, height: m.bottom-m.top}];
+	}
+
+	function get_currentMonitorIndex() : Int {
+		#if hldx
+		var current = window.getCurrentMonitor();
+		for(i => m in getMonitors()) {
+			if(m.name == current)
+				return i;
+		}
+		return 0;
+		#elseif hlsdl
+		return window.currentMonitor;
+		#else
+		return 0;
+		#end
+	}
+
+	public function getCurrentDisplaySetting(?monitorId : Int) : DisplaySetting {
+		#if hldx
+		var mon = monitorId != null ? getMonitors()[monitorId] : null;
+		return dx.Window.getCurrentDisplaySetting(mon == null ? null : mon.name);
+		#elseif hlsdl
+		return sdl.Sdl.getCurrentDisplayMode(monitorId == null ? 0 : monitorId);
+		#else
+		return null;
+		#end
+	}
+
+	public function getDefaultDisplaySetting(?monitorId : Int) : DisplaySetting {
+		if(monitorId == null)
+			monitorId = monitor;
+		#if hldx
+		var mon = monitorId != null ? getMonitors()[monitorId] : null;
+		return dx.Window.getRegistryDisplaySetting(mon == null ? null : mon.name);
+		#elseif hlsdl
+		return sdl.Sdl.getDesktopDisplayMode(monitorId == null ? 0 : monitorId);
+		#else
+		return null;
+		#end
+	}
+
+	public function getDisplaySettings(?monitorId : Int) : Array<DisplaySetting> {
+		var map = new Map<String,DisplaySetting>();
+		var f = [];
+		if(monitorId == null)
+			monitorId = monitor;
+		#if hldx
+		var m = dx.Window.getMonitors()[monitorId];
+		var l = m != null ? dx.Window.getDisplaySettings(m.name) : [];
+		#elseif hlsdl
+		var l = sdl.Sdl.getDisplayModes( monitorId == null ? window.currentMonitor : monitorId );
+		#else
+		var l = [];
+		#end
+		for(d in l) {
+			if(d.height >= MIN_HEIGHT && (d.framerate >= MIN_FRAMERATE || d.framerate == 30 || d.framerate == 60)) {
+				f.push(d);
+			}
+		}
+		return f;
+	}
+	#end
 
 	function get_title() : String {
 		#if (hldx || hlsdl)

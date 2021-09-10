@@ -36,7 +36,7 @@ class CubeTexture extends hxd.App {
 		pt.enableSpecular = true;
 		pt.params.set(0, 1, 0);
 
-		s3d.lightSystem.ambientLight.set(0.1, 0.1, 0.1);
+		cast(s3d.lightSystem,h3d.scene.fwd.LightSystem).ambientLight.set(0.1, 0.1, 0.1);
 
 		new h3d.scene.CameraController(5, s3d).loadFromCamera();
 

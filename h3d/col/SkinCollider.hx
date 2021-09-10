@@ -2,10 +2,10 @@ package h3d.col;
 
 @:access(h3d.col.PolygonBuffer)
 @:access(h3d.scene.Skin)
-class SkinCollider implements hxd.impl.Serializable implements Collider {
+class SkinCollider implements Collider {
 
-	@:s var obj : h3d.scene.Skin;
-	@:s var col : PolygonBuffer;
+	var obj : h3d.scene.Skin;
+	var col : PolygonBuffer;
 	var currentBounds : h3d.col.Bounds;
 	var transform : PolygonBuffer;
 	var lastFrame = -1;
@@ -97,14 +97,6 @@ class SkinCollider implements hxd.impl.Serializable implements Collider {
 		ret.ignoreParentTransform = true;
 		return ret;
 	}
-	#if hxbit
-	function customSerialize( ctx : hxbit.Serializer ) {
-	}
-	function customUnserialize( ctx : hxbit.Serializer ) {
-		this.transform = new PolygonBuffer();
-		this.transform.setData(col.buffer.copy(), col.indexes, col.startIndex, col.triCount);
-	}
-	#end
 	#end
 
 }

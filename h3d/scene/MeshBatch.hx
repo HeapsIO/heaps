@@ -157,7 +157,7 @@ class MeshBatch extends MultiMaterial {
 
 		var startPos = batch.paramsCount * instanceCount << 2;
 		// in case we are bigger than emitCountTip
-		if( startPos + batch.paramsCount > batch.data.length )
+		if( startPos + (batch.paramsCount<<2) > batch.data.length )
 			batch.data.grow(batch.data.length << 1);
 
 		var p = batch.params;

@@ -18,10 +18,18 @@ class Skin extends SkinBase {
 				(relativePosition * bonesMatrixes[int(input.indexes.x)]) * input.weights.x +
 				(relativePosition * bonesMatrixes[int(input.indexes.y)]) * input.weights.y +
 				(relativePosition * bonesMatrixes[int(input.indexes.z)]) * input.weights.z;
-			transformedNormal = normalize(
+			transformedNormal = 
 				(input.normal * mat3(bonesMatrixes[int(input.indexes.x)])) * input.weights.x +
 				(input.normal * mat3(bonesMatrixes[int(input.indexes.y)])) * input.weights.y +
-				(input.normal * mat3(bonesMatrixes[int(input.indexes.z)])) * input.weights.z);
+				(input.normal * mat3(bonesMatrixes[int(input.indexes.z)])) * input.weights.z;
+
+			if(fourBonesByVertex) {
+				var w4 = 1 - (input.weights.x + input.weights.y + input.weights.z);
+				transformedPosition += (relativePosition * bonesMatrixes[int(input.indexes.w)]) * w4;
+				transformedNormal += (input.normal * mat3(bonesMatrixes[int(input.indexes.z)])) * w4;
+			}
+			
+			transformedNormal = normalize(transformedNormal);
 		}
 
 	};

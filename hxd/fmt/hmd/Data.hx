@@ -42,6 +42,7 @@ enum Property<T> {
 	CameraFOVY( v : Float ) : Property<Float>;
 	Unused_HasMaterialFlags; // TODO: Removing this will offset property indices
 	HasExtraTextures;
+	FourBonesByVertex;
 }
 
 typedef Properties = Null<Array<Property<Dynamic>>>;

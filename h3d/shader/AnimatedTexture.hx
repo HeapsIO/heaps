@@ -32,7 +32,7 @@ class AnimatedTexture extends hxsl.Shader {
 		function vertex() {
 			var frame = (global.time - startTime) * speed + float(int(startFrame));
 			blendFactor = frame.fract();
-			frame -= blendFactor;
+			frame = floor(frame);
 			if( loop ) frame %= totalFrames else frame = min(frame, totalFrames - 1);
 			var nextFrame = if( loop ) (frame + 1) % totalFrames else min(frame + 1, totalFrames - 1);
 

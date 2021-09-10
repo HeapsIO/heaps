@@ -185,6 +185,12 @@ class FlowProperties {
 	**/
 	public var constraint = true;
 
+	/**
+		When set, if a size constraint exists on the parent, element will be constrainted by the remaining space from non-flexible elements.
+		If the parent flow contains multiple flexible elements, the remaining space will be shared according to their weights.
+	**/
+	public var flexWeight : Null<Float>;
+
 	@:dox(hide)
 	public function new(elt) {
 		this.elt = elt;
@@ -608,10 +614,12 @@ class Flow extends Object {
 				var pushed = false;
 				scrollBar.interactive.cursor = Button;
 				scrollBar.interactive.onPush = function(e:hxd.Event) {
+					var scene = getScene();
+					if( scene == null ) return;
 					scrollBar.interactive.startCapture(function(e) {
 						switch( e.kind ) {
 						case ERelease, EReleaseOutside:
-							scrollBar.interactive.stopCapture();
+							scene.stopCapture();
 						case EPush, EMove:
 							setCursor(e);
 						default:
@@ -1188,6 +1196,36 @@ class Flow extends Object {
 				return size;
 			}
 
+			var flexibleWidth = maxInWidth;
+			var numFlexible = 0;
+			var totFlexWeight = 0.0;
+			for( i in 0...children.length ) {
+				var p = propAt(i);
+				var c = childAt(i);
+				if( p.isAbsolute || !c.visible ) continue;
+				if( p.isBreak ) {
+					flexibleWidth = maxInWidth;
+					continue;
+				}
+				flexibleWidth -= horizontalSpacing;
+				if( p.flexWeight > 0 ) {
+					numFlexible++;
+					totFlexWeight += p.flexWeight;
+				}
+				else {
+					var pw = p.paddingLeft + p.paddingRight;
+					var ph = p.paddingTop + p.paddingBottom;
+					c.constraintSize(
+						isConstraintWidth && p.constraint ? (maxInWidth - pw) / Math.abs(c.scaleX) : -1,
+						isConstraintHeight && p.constraint ? (maxInHeight - ph) / Math.abs(c.scaleX) : -1
+					);
+					flexibleWidth -= Math.ceil(getSize(c).xMax) + pw;
+				}
+			}
+
+			if( flexibleWidth < maxInWidth )
+				flexibleWidth += horizontalSpacing;
+
 			for( i in 0...children.length ) {
 				var p = propAt(i);
 				var isAbs = p.isAbsolute;
@@ -1199,7 +1237,7 @@ class Flow extends Object {
 				var ph = p.paddingTop + p.paddingBottom;
 				if( !isAbs )
 					c.constraintSize(
-						isConstraintWidth && p.constraint ? (maxInWidth - pw) / Math.abs(c.scaleX) : -1,
+						isConstraintWidth && p.constraint ? ((p.flexWeight > 0 ? Math.floor(flexibleWidth * p.flexWeight / totFlexWeight) : maxInWidth) - pw) / Math.abs(c.scaleX) : -1,
 						isConstraintHeight && p.constraint ? (maxInHeight - ph) / Math.abs(c.scaleX) : -1
 					);
 
@@ -1333,6 +1371,36 @@ class Flow extends Object {
 				return size;
 			}
 
+			var flexibleHeight = maxInHeight;
+			var numFlexible = 0;
+			var totFlexWeight = 0.0;
+			for( i in 0...children.length ) {
+				var p = propAt(i);
+				var c = childAt(i);
+				if( p.isAbsolute || !c.visible ) continue;
+				if( p.isBreak ) {
+					flexibleHeight = maxInHeight;
+					continue;
+				}
+				flexibleHeight -= verticalSpacing;
+				if( p.flexWeight > 0 ) {
+					numFlexible++;
+					totFlexWeight += p.flexWeight;
+				}
+				else {
+					var pw = p.paddingLeft + p.paddingRight;
+					var ph = p.paddingTop + p.paddingBottom;
+					c.constraintSize(
+						isConstraintWidth && p.constraint ? (maxInWidth - pw) / Math.abs(c.scaleX) : -1,
+						isConstraintHeight && p.constraint ? (maxInHeight - ph) / Math.abs(c.scaleX) : -1
+					);
+					flexibleHeight -= Math.ceil(getSize(c).yMax) + ph;
+				}
+			}
+
+			if( flexibleHeight < maxInHeight )
+				flexibleHeight += verticalSpacing;
+
 			for( i in 0...children.length ) {
 				var p = propAt(i);
 				var isAbs = p.isAbsolute;
@@ -1346,7 +1414,7 @@ class Flow extends Object {
 				if( !isAbs )
 					c.constraintSize(
 						isConstraintWidth && p.constraint ? (maxInWidth - pw) / Math.abs(c.scaleX) : -1,
-						isConstraintHeight && p.constraint ? (maxInHeight - ph) / Math.abs(c.scaleY) : -1
+						isConstraintHeight && p.constraint ? ((p.flexWeight > 0 ? Math.floor(flexibleHeight * p.flexWeight / totFlexWeight) : maxInHeight) - ph) / Math.abs(c.scaleY) : -1
 					);
 
 				var b = getSize(c);

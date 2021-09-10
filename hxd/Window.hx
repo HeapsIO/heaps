@@ -4,7 +4,6 @@ enum DisplayMode {
 	Windowed;
 	Borderless;
 	Fullscreen;
-	FullscreenResize;
 }
 
 class Window {
@@ -77,6 +76,10 @@ class Window {
 	public static function getInstance() : Window {
 		if( inst == null ) inst = new Window();
 		return inst;
+	}
+
+	public function getCurrentDisplaySetting(monitor : String = null) : DisplaySetting {
+		return null;
 	}
 
 	function get_mouseX() : Int {

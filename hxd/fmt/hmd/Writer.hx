@@ -17,6 +17,7 @@ class Writer {
 			out.writeFloat(v);
 		case Unused_HasMaterialFlags:
 		case HasExtraTextures:
+		case FourBonesByVertex:
 		}
 	}
 

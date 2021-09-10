@@ -3,12 +3,12 @@ import h3d.col.Point;
 
 class Sphere extends Polygon {
 
-	@:s var ray : Float;
-	@:s var segsH : Int;
-	@:s var segsW : Int;
+	var ray : Float;
+	var segsH : Int;
+	var segsW : Int;
 
 	// Use 1 for a full sphere, 0.5 for a half sphere
-	@:s var portion : Float;
+	var portion : Float;
 
 	public function new( ray = 1., segsW = 8, segsH = 6, portion = 1. ) {
 		this.ray = ray;
