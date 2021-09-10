@@ -128,7 +128,7 @@ class BaseLibrary {
 	/**
 		If there are too many bones, the model will be split in separate render passes.
 	**/
-	public static var maxBonesPerSkin = 34;
+	public var maxBonesPerSkin = 34;
 
 	/**
 		Consider unskinned joints to be simple objects

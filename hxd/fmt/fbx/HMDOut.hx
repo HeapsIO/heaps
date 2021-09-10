@@ -656,10 +656,10 @@ class HMDOut extends BaseLibrary {
 					if( c.isJoint )
 						rootJoints.push(c.joint);
 				skin = createSkin(hskins, tmpGeom, rootJoints);
-				if( skin.boundJoints.length > BaseLibrary.maxBonesPerSkin ) {
+				if( skin.boundJoints.length > maxBonesPerSkin ) {
 					var g = new hxd.fmt.fbx.Geometry(this, g);
 					var idx = g.getIndexes();
-					skin.split(BaseLibrary.maxBonesPerSkin, [for( i in idx.idx ) idx.vidx[i]], mids.length > 1 ? g.getMaterialByTriangle() : null);
+					skin.split(maxBonesPerSkin, [for( i in idx.idx ) idx.vidx[i]], mids.length > 1 ? g.getMaterialByTriangle() : null);
 				}
 				model.skin = makeSkin(skin, o.skin);
 			}
