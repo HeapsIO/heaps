@@ -484,10 +484,9 @@ class Window {
 			#if hldx
 			var mon = selectedMonitor();
 			window.selectedMonitor = mon != null ? mon.name : null;
-			#elseif hlsdl
-			window.currentMonitor = monitor;
 			#end
 			window.displayMode = m;
+			window.resize(dm.mode.width, dm.mode.height);
 		}
 		else {
 			window.displayMode = m;
@@ -555,7 +554,7 @@ class Window {
 		}
 		return 0;
 		#elseif hlsdl
-		return window.currentMonitor;
+		return window.getCurrentMonitor();
 		#else
 		return 0;
 		#end
@@ -594,7 +593,7 @@ class Window {
 		var m = dx.Window.getMonitors()[monitorId];
 		var l = m != null ? dx.Window.getDisplaySettings(m.name) : [];
 		#elseif hlsdl
-		var l = sdl.Sdl.getDisplayModes( monitorId == null ? window.currentMonitor : monitorId );
+		var l = sdl.Sdl.getDisplayModes( monitorId == null ? window.getCurrentMonitor() : monitorId );
 		#else
 		var l = [];
 		#end

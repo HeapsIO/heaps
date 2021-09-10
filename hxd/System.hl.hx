@@ -400,8 +400,8 @@ class System {
 	static function get_height() : Int return dx.Window.getScreenHeight();
 	static function get_platform() : Platform return PC; // TODO : Xbox ?
 	#elseif hlsdl
-	static function get_width() : Int return sdl.Sdl.getScreenWidth();
-	static function get_height() : Int return sdl.Sdl.getScreenHeight();
+	static function get_width() : Int return sdl.Sdl.getScreenWidth(@:privateAccess Window.inst.window);
+	static function get_height() : Int return sdl.Sdl.getScreenHeight(@:privateAccess Window.inst.window);
 	static function get_platform() : Platform {
 		if (platform == null)
 			platform = switch Sys.systemName() {
