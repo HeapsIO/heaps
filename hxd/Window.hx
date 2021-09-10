@@ -78,10 +78,6 @@ class Window {
 		return inst;
 	}
 
-	public function getCurrentDisplaySetting(monitor : String = null) : DisplaySetting {
-		return null;
-	}
-
 	function get_mouseX() : Int {
 		return 0;
 	}
