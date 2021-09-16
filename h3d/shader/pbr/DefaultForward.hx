@@ -4,6 +4,10 @@ class DefaultForward extends hxsl.Shader {
 
 	static var SRC = {
 
+		@const(16) var MAX_DIR_SHADOWS:Int;
+		@const(16) var MAX_POINT_SHADOWS:Int;
+		@const(16) var MAX_SPOT_SHADOWS:Int;
+
 		@:import h3d.shader.pbr.Light.LightEvaluation;
 		@:import h3d.shader.pbr.BDRF;
 
@@ -21,9 +25,9 @@ class DefaultForward extends hxsl.Shader {
 		@param var pointLightStride : Int;
 
 		// ShadowMaps
-		//@param var dirShadowMaps : Array<Sampler2D, 2>;
-		//@param var pointShadowMaps : Array<SamplerCube, 3>;
-		//@param var spotShadowMaps : Array<Sampler2D, 3>;
+		@param var dirShadowMaps : Array<Sampler2D, MAX_DIR_SHADOWS>;
+		@param var pointShadowMaps : Array<SamplerCube, MAX_POINT_SHADOWS>;
+		@param var spotShadowMaps : Array<Sampler2D, MAX_SPOT_SHADOWS>;
 
 		// Direct Lighting
 		@param var cameraPosition : Vec3;
@@ -101,24 +105,44 @@ class DefaultForward extends hxsl.Shader {
 			NdV = transformedNormal.dot(view).max(0.);
 		}
 
-		function evaluateDirLight( index : Int ) : Vec3 {
+		function evaluateDirShadow( index : Int ) : Float {
 			var i = index * 5;
-			var lightColor = lightInfos[i].rgb;
-			var lightDir = lightInfos[i+1].xyz;
-			var hasShadowMap = lightInfos[i].a > 0;
 
-			// Shadow
 			var shadow = 1.0;
-			/*if( hasShadowMap ) {
+			if (lightInfos[i].a > 0) {
 				var shadowBias = lightInfos[i+1].a;
 				var shadowProj = mat3x4(lightInfos[i+2], lightInfos[i+3], lightInfos[i+4]);
 				var shadowPos = transformedPosition * shadowProj;
 				var shadowUv = screenToUv(shadowPos.xy);
 				var depth = dirShadowMaps[index].get(shadowUv.xy).r;
 				shadow = (shadowPos.z - shadowBias > depth) ? 0.0 : 1.0;
-			}*/
+			}
+			return shadow;
+		}
 
-			return directLighting(lightColor, lightDir) * shadow;
+		function evaluateDirLight( index : Int ) : Vec3 {
+			var i = index * 5;
+			var lightColor = lightInfos[i].rgb;
+			var lightDir = lightInfos[i+1].xyz;
+
+			return directLighting(lightColor, lightDir);
+		}
+
+		function evaluatePointShadow( index : Int ) : Float {
+			var i = index * 3 + dirLightStride;
+
+			var shadow = 1.0;
+			if (lightInfos[i+2].g > 0) {
+				var lightPos = lightInfos[i+1].rgb;
+				var range = lightInfos[i+2].r;
+				var shadowBias = lightInfos[i+2].b;
+				var posToLight = transformedPosition.xyz - lightPos;
+				var dir = normalize(posToLight.xyz);
+				var depth = pointShadowMaps[index].getLod(dir, 0).r * range;
+				var zMax = length(posToLight);
+				shadow = (zMax - shadowBias > depth) ? 0.0 : 1.0;
+			}
+			return shadow;
 		}
 
 		function evaluatePointLight( index : Int ) : Vec3 {
@@ -127,22 +151,25 @@ class DefaultForward extends hxsl.Shader {
 			var size = lightInfos[i].a;
 			var lightPos = lightInfos[i+1].rgb;
 			var invRange4 = lightInfos[i+1].a;
-			var range = lightInfos[i+2].r;
-			var hasShadowMap = lightInfos[i+2].g > 0;
 			var delta = lightPos - transformedPosition;
 
-			// Shadow
-			var shadow = 1.0;
-			/*if( hasShadowMap ) {
-				var shadowBias = lightInfos[i+2].b;
-				var posToLight = transformedPosition.xyz - lightPos;
-				var dir = normalize(posToLight.xyz);
-				var depth = pointShadowMaps[index].getLod(dir, 0).r * range;
-				var zMax = length(posToLight);
-				shadow = (zMax - shadowBias > depth) ? 0.0 : 1.0;
-			}*/
+			return directLighting(pointLightIntensity(delta, size, invRange4) * lightColor, delta.normalize());
+		}
 
-			return directLighting(pointLightIntensity(delta, size, invRange4) * lightColor, delta.normalize()) * shadow;
+		function evaluateSpotShadow( index : Int ) : Float {
+			var i = index * 8 + dirLightStride + pointLightStride;
+
+			var shadow = 1.0;
+			if (lightInfos[i+3].b > 0) {
+				var shadowBias = lightInfos[i+3].a;
+				var shadowProj = mat4(lightInfos[i+4], lightInfos[i+5], lightInfos[i+6], lightInfos[i+7]);
+				var shadowPos = vec4(transformedPosition, 1.0) * shadowProj;
+				shadowPos.xyz /= shadowPos.w;
+				var shadowUv = screenToUv(shadowPos.xy);
+				var depth = spotShadowMaps[index].get(shadowUv.xy).r;
+				shadow = (shadowPos.z - shadowBias > depth) ? 0.0 : 1.0;
+			}
+			return shadow;
 		}
 
 		function evaluateSpotLight( index : Int ) : Vec3 {
@@ -154,26 +181,13 @@ class DefaultForward extends hxsl.Shader {
 			var lightDir = lightInfos[i+2].xyz;
 			var angle = lightInfos[i+3].r;
 			var fallOff = lightInfos[i+3].g;
-			var hasShadowMap = lightInfos[i+3].b > 0;
 			var delta = lightPos - transformedPosition;
-
-			// Shadow
-			var shadow = 1.0;
-			/*if( hasShadowMap ) {
-				var shadowBias = lightInfos[i+3].a;
-				var shadowProj = mat4(lightInfos[i+4], lightInfos[i+5], lightInfos[i+6], lightInfos[i+7]);
-				var shadowPos = vec4(transformedPosition, 1.0) * shadowProj;
-				shadowPos.xyz /= shadowPos.w;
-				var shadowUv = screenToUv(shadowPos.xy);
-				var depth = spotShadowMaps[index].get(shadowUv.xy).r;
-				shadow = (shadowPos.z - shadowBias > depth) ? 0.0 : 1.0;
-			}*/
 
 			var fallOffInfo = spotLightIntensity(delta, lightDir, range, invRange4, fallOff, angle);
 			var fallOff = fallOffInfo.x;
 			var fallOffInfoAngle = fallOffInfo.y;
 
-			return directLighting(fallOff * lightColor * fallOffInfoAngle, delta.normalize()) * shadow;
+			return directLighting(fallOff * lightColor * fallOffInfoAngle, delta.normalize());
 		}
 
 		function evaluateLighting() : Vec3 {
@@ -182,16 +196,25 @@ class DefaultForward extends hxsl.Shader {
 
 			F0 = mix(pbrSpecularColor, albedoGamma, metalness);
 
+			// Dir Light With Shadow
+			@unroll for( l in 0 ... MAX_DIR_SHADOWS )
+				lightAccumulation += evaluateDirLight(l) * evaluateDirShadow(l);
 			// Dir Light
-			@unroll for( l in 0 ... dirLightCount )
+			@unroll for( l in MAX_DIR_SHADOWS ... dirLightCount + MAX_DIR_SHADOWS )
 				lightAccumulation += evaluateDirLight(l);
 
+			// Point Light With Shadow
+			@unroll for( l in 0 ... MAX_POINT_SHADOWS )
+				lightAccumulation += evaluatePointLight(l) * evaluatePointShadow(l);
 			// Point Light
-			@unroll for( l in 0 ... pointLightCount )
+			@unroll for( l in MAX_POINT_SHADOWS ... pointLightCount + MAX_POINT_SHADOWS )
 				lightAccumulation += evaluatePointLight(l);
 
+			// Spot Light With Shadow
+			@unroll for( l in 0 ... MAX_SPOT_SHADOWS )
+				lightAccumulation += evaluateSpotLight(l) * evaluateSpotShadow(l);
 			// Spot Light
-			@unroll for( l in 0 ... spotLightCount )
+			@unroll for( l in MAX_SPOT_SHADOWS ... spotLightCount + MAX_SPOT_SHADOWS )
 				lightAccumulation += evaluateSpotLight(l);
 
 			// Indirect only support the main env from the scene at the moment
