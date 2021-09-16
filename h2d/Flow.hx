@@ -1167,6 +1167,7 @@ class Flow extends Object {
 					maxLineHeight = minLineHeight;
 				else if( overflow != Expand && minLineHeight != 0 )
 					maxLineHeight = minLineHeight;
+				var absHeight = maxLineHeight > maxInHeight && overflow != Expand ? maxInHeight : maxLineHeight;
 				for( i in lastIndex...maxIndex ) {
 					var p = propAt(i);
 					if( p.isAbsolute && p.verticalAlign == null ) continue;
@@ -1174,11 +1175,12 @@ class Flow extends Object {
 					if( !c.visible ) continue;
 					var a = p.verticalAlign != null ? p.verticalAlign : valign;
 					c.y = y + p.offsetY + p.paddingTop;
+					var height = p.isAbsolute ? absHeight : maxLineHeight;
 					switch( a ) {
 					case Bottom:
-						c.y += maxLineHeight - Std.int(p.calculatedHeight);
+						c.y += height - Std.int(p.calculatedHeight);
 					case Middle:
-						c.y += Std.int((maxLineHeight - p.calculatedHeight) * 0.5);
+						c.y += Std.int((height - p.calculatedHeight) * 0.5);
 					default:
 					}
 				}
@@ -1342,6 +1344,7 @@ class Flow extends Object {
 					maxColWidth = minColWidth;
 				else if( overflow != Expand && minColWidth != 0 )
 					maxColWidth = minColWidth;
+				var absWidth = maxColWidth > maxInWidth && overflow != Expand ? maxInWidth : maxColWidth;
 				for( i in lastIndex...maxIndex ) {
 					var p = propAt(i);
 					if( p.isAbsolute && p.horizontalAlign == null ) continue;
@@ -1349,11 +1352,12 @@ class Flow extends Object {
 					if( !c.visible ) continue;
 					var a = p.horizontalAlign != null ? p.horizontalAlign : halign;
 					c.x = x + p.offsetX + p.paddingLeft;
+					var width = p.isAbsolute ? absWidth : maxColWidth;
 					switch( a ) {
 					case Right:
-						c.x += maxColWidth - p.calculatedWidth;
+						c.x += width - p.calculatedWidth;
 					case Middle:
-						c.x += Std.int((maxColWidth - p.calculatedWidth) * 0.5);
+						c.x += Std.int((width - p.calculatedWidth) * 0.5);
 					default:
 					}
 				}
