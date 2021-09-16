@@ -56,6 +56,9 @@ class LightBuffer {
 		s.pointLightCount = defaultForwardShader.pointLightCount;
 		s.spotLightCount = defaultForwardShader.spotLightCount;
 		s.dirLightCount = defaultForwardShader.dirLightCount;
+		s.MAX_DIR_SHADOWS = MAX_DIR_SHADOW;
+		s.MAX_POINT_SHADOWS = MAX_POINT_SHADOW;
+		s.MAX_SPOT_SHADOWS = MAX_SPOT_SHADOW;
 
 		for( i in 0 ... MAX_POINT_SHADOW )
 			s.pointShadowMaps[i] = defaultForwardShader.pointShadowMaps[i];
