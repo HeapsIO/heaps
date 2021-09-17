@@ -71,7 +71,7 @@ class Default extends Base {
 			p.shader = manager.compileShaders(shaders, p.pass.batchMode);
 			p.shaders = shaders;
 			var t = p.shader.fragment.textures;
-			if( t == null )
+			if( t == null || t.type.match(TArray(_)) )
 				p.texture = 0;
 			else {
 				var t : h3d.mat.Texture = manager.getParamValue(t, shaders, true);
