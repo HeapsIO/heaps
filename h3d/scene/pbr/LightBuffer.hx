@@ -7,7 +7,7 @@ class LightBuffer {
 	var MAX_DIR_LIGHT = 2;
 	var MAX_SPOT_LIGHT = 10;
 	var MAX_POINT_LIGHT = 10;
-	var MAX_DIR_SHADOW = 2;
+	var MAX_DIR_SHADOW = 1;
 	var MAX_SPOT_SHADOW = 3;
 	var MAX_POINT_SHADOW = 3;
 
@@ -40,9 +40,6 @@ class LightBuffer {
 		defaultForwardShader.BUFFER_SIZE = size;
 		defaultForwardShader.dirLightStride = DIR_LIGHT_INFO_SIZE * MAX_DIR_LIGHT;
 		defaultForwardShader.pointLightStride = POINT_LIGHT_INFO_SIZE * MAX_POINT_LIGHT;
-		defaultForwardShader.MAX_DIR_SHADOWS = MAX_DIR_SHADOW;
-		defaultForwardShader.MAX_POINT_SHADOWS = MAX_POINT_SHADOW;
-		defaultForwardShader.MAX_SPOT_SHADOWS = MAX_SPOT_SHADOW;
 	}
 
 	public function setBuffers( s : h3d.shader.pbr.DefaultForward ) {
@@ -56,15 +53,15 @@ class LightBuffer {
 		s.pointLightCount = defaultForwardShader.pointLightCount;
 		s.spotLightCount = defaultForwardShader.spotLightCount;
 		s.dirLightCount = defaultForwardShader.dirLightCount;
-		s.MAX_DIR_SHADOWS = MAX_DIR_SHADOW;
-		s.MAX_POINT_SHADOWS = MAX_POINT_SHADOW;
-		s.MAX_SPOT_SHADOWS = MAX_SPOT_SHADOW;
+		s.DIR_SHADOW_COUNT = defaultForwardShader.DIR_SHADOW_COUNT;
+		s.POINT_SHADOW_COUNT = defaultForwardShader.POINT_SHADOW_COUNT;
+		s.SPOT_SHADOW_COUNT = defaultForwardShader.SPOT_SHADOW_COUNT;
 
-		for( i in 0 ... MAX_POINT_SHADOW )
+		for( i in 0 ... defaultForwardShader.POINT_SHADOW_COUNT )
 			s.pointShadowMaps[i] = defaultForwardShader.pointShadowMaps[i];
-		for( i in 0 ... MAX_SPOT_SHADOW )
+		for( i in 0 ... defaultForwardShader.SPOT_SHADOW_COUNT )
 			s.spotShadowMaps[i] = defaultForwardShader.spotShadowMaps[i];
-		for( i in 0 ... MAX_DIR_SHADOW )
+		for( i in 0 ... defaultForwardShader.DIR_SHADOW_COUNT )
 			s.dirShadowMaps[i] = defaultForwardShader.dirShadowMaps[i];
 
 		s.USE_INDIRECT = defaultForwardShader.USE_INDIRECT;
@@ -299,9 +296,12 @@ class LightBuffer {
 			lightInfos[i+14] = -1.0;
 		}
 
-		s.dirLightCount = dirLights.length + dirLightsShadow.length;
-		s.pointLightCount = pointLights.length + pointLightsShadow.length;
-		s.spotLightCount = spotLights.length + spotLightsShadow.length;
+		s.dirLightCount = dirLights.length;
+		s.pointLightCount = pointLights.length;
+		s.spotLightCount = spotLights.length;
+		s.DIR_SHADOW_COUNT = dirLightsShadow.length;
+		s.POINT_SHADOW_COUNT = pointLightsShadow.length;
+		s.SPOT_SHADOW_COUNT = spotLightsShadow.length;
 		s.lightInfos.uploadVector(lightInfos, 0, s.lightInfos.vertices, 0);
 
 		var pbrIndirect = @:privateAccess pbrRenderer.pbrIndirect;

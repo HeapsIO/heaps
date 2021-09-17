@@ -4,9 +4,9 @@ class DefaultForward extends hxsl.Shader {
 
 	static var SRC = {
 
-		@const(16) var MAX_DIR_SHADOWS:Int;
-		@const(16) var MAX_POINT_SHADOWS:Int;
-		@const(16) var MAX_SPOT_SHADOWS:Int;
+		@const(16) var DIR_SHADOW_COUNT:Int;
+		@const(16) var POINT_SHADOW_COUNT:Int;
+		@const(16) var SPOT_SHADOW_COUNT:Int;
 
 		@:import h3d.shader.pbr.Light.LightEvaluation;
 		@:import h3d.shader.pbr.BDRF;
@@ -25,9 +25,9 @@ class DefaultForward extends hxsl.Shader {
 		@param var pointLightStride : Int;
 
 		// ShadowMaps
-		@param var dirShadowMaps : Array<Sampler2D, MAX_DIR_SHADOWS>;
-		@param var pointShadowMaps : Array<SamplerCube, MAX_POINT_SHADOWS>;
-		@param var spotShadowMaps : Array<Sampler2D, MAX_SPOT_SHADOWS>;
+		@param var dirShadowMaps : Array<Sampler2D, DIR_SHADOW_COUNT>;
+		@param var pointShadowMaps : Array<SamplerCube, POINT_SHADOW_COUNT>;
+		@param var spotShadowMaps : Array<Sampler2D, SPOT_SHADOW_COUNT>;
 
 		// Direct Lighting
 		@param var cameraPosition : Vec3;
@@ -197,24 +197,24 @@ class DefaultForward extends hxsl.Shader {
 			F0 = mix(pbrSpecularColor, albedoGamma, metalness);
 
 			// Dir Light With Shadow
-			@unroll for( l in 0 ... MAX_DIR_SHADOWS )
+			@unroll for( l in 0 ... DIR_SHADOW_COUNT )
 				lightAccumulation += evaluateDirLight(l) * evaluateDirShadow(l);
 			// Dir Light
-			@unroll for( l in MAX_DIR_SHADOWS ... dirLightCount + MAX_DIR_SHADOWS )
+			@unroll for( l in DIR_SHADOW_COUNT ... dirLightCount + DIR_SHADOW_COUNT )
 				lightAccumulation += evaluateDirLight(l);
 
 			// Point Light With Shadow
-			@unroll for( l in 0 ... MAX_POINT_SHADOWS )
+			@unroll for( l in 0 ... POINT_SHADOW_COUNT )
 				lightAccumulation += evaluatePointLight(l) * evaluatePointShadow(l);
 			// Point Light
-			@unroll for( l in MAX_POINT_SHADOWS ... pointLightCount + MAX_POINT_SHADOWS )
+			@unroll for( l in POINT_SHADOW_COUNT ... pointLightCount + POINT_SHADOW_COUNT )
 				lightAccumulation += evaluatePointLight(l);
 
 			// Spot Light With Shadow
-			@unroll for( l in 0 ... MAX_SPOT_SHADOWS )
+			@unroll for( l in 0 ... SPOT_SHADOW_COUNT )
 				lightAccumulation += evaluateSpotLight(l) * evaluateSpotShadow(l);
 			// Spot Light
-			@unroll for( l in MAX_SPOT_SHADOWS ... spotLightCount + MAX_SPOT_SHADOWS )
+			@unroll for( l in SPOT_SHADOW_COUNT ... spotLightCount + SPOT_SHADOW_COUNT )
 				lightAccumulation += evaluateSpotLight(l);
 
 			// Indirect only support the main env from the scene at the moment
