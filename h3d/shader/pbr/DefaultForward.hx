@@ -1,5 +1,6 @@
 package h3d.shader.pbr;
 
+@:keep
 class DefaultForward extends hxsl.Shader {
 
 	static var SRC = {
