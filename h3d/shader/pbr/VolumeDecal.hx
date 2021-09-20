@@ -94,6 +94,7 @@ class DecalPBR extends hxsl.Shader {
 			albedoStrength : Float,
 			normalStrength : Float,
 			pbrStrength : Float,
+			emissiveStrength : Float,
 		};
 
 		@const var CENTERED : Bool;
@@ -103,6 +104,7 @@ class DecalPBR extends hxsl.Shader {
 		@param var albedoStrength : Float;
 		@param var normalStrength : Float;
 		@param var pbrStrength : Float;
+		@param var emissiveStrength : Float;
 
 		@global var depthMap : Channel;
 
@@ -192,6 +194,7 @@ class DecalPBR extends hxsl.Shader {
 			output.albedoStrength = albedoSt * alpha * fadeFactor;
 			output.normalStrength = normalSt * alpha * fadeFactor;
 			output.pbrStrength = pbrStrength * alpha * fadeFactor;
+			output.emissiveStrength = emissiveStrength * alpha * fadeFactor;
 		}
 	};
 
