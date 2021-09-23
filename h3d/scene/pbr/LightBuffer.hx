@@ -132,7 +132,7 @@ class LightBuffer {
 			var dl = Std.downcast(l, DirLight);
 			if (dl != null) {
 				if (dirLightCount + dirShadowCount < MAX_DIR_LIGHT) {
-					var hasShadow = dl.shadows != null && dl.shadows.mode != None && shadows;
+					var hasShadow = dl.shadows != null && dl.shadows.enabled && dl.shadows.mode != None && shadows;
 					if (hasShadow && dirShadowCount < MAX_DIR_SHADOW) {
 						dirLightsShadow.push(dl);
 						dirShadowCount++;
@@ -147,7 +147,7 @@ class LightBuffer {
 			var pl = Std.downcast(l, PointLight);
 			if (pl != null) {
 				if (pointLightCount + pointShadowCount < MAX_POINT_LIGHT) {
-					var hasShadow = pl.shadows != null && pl.shadows.mode != None && shadows;
+					var hasShadow = pl.shadows != null && pl.shadows.enabled && pl.shadows.mode != None && shadows;
 					if (hasShadow && pointShadowCount < MAX_POINT_SHADOW) {
 						pointLightsShadow.push(pl);
 						pointShadowCount++;
@@ -162,7 +162,7 @@ class LightBuffer {
 			var sl = Std.downcast(l, SpotLight);
 			if (sl != null) {
 				if (spotLightCount + spotShadowCount < MAX_SPOT_LIGHT) {
-					var hasShadow = sl.shadows != null && sl.shadows.mode != None && shadows;
+					var hasShadow = sl.shadows != null && sl.shadows.enabled && sl.shadows.mode != None && shadows;
 					if (hasShadow && spotShadowCount < MAX_SPOT_SHADOW) {
 						spotLightsShadow.push(sl);
 						spotShadowCount++;
