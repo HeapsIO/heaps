@@ -93,6 +93,10 @@ class DynamicText {
 			onMissing(path,"is no longer used");
 			return null;
 		}
+		if( ref != null && ref.innerHTML != strOld ) {
+			onMissing(path,"ignored since has changed");
+			return null;
+		}
 		var mparams = new Map();
 		var ok = true;
 		r_attr.map(strOld, function(r) { mparams.set(r.matched(1), true); return ""; });
@@ -110,10 +114,6 @@ class DynamicText {
 				onMissing(path,"is missing param '" + p + "'");
 				ok = false;
 			}
-		if( ref != null && ref.innerHTML != strOld ) {
-			onMissing(path,"ignored since has changed");
-			ok = false;
-		}
 		if( !ok )
 			return null;
 		return parseText(str);
