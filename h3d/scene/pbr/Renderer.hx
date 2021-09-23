@@ -101,7 +101,7 @@ class Renderer extends h3d.scene.Renderer {
 		Vec4([Swiz(Value("output.color"),[X,Y,Z]), Value("output.albedoStrength",1)]),
 		Vec4([Value("output.normal",3), Value("output.normalStrength",1)]),
 		Vec4([Value("output.metalness"), Value("output.roughness"), Value("output.occlusion"), Value("output.pbrStrength")]),
-		Vec4([Value("output.emissive"), Const(0), Const(0), Value("output.emissiveStrength")])
+		Vec4([Value("output.emissive"), Value("output.custom1"), Value("output.custom2"), Value("output.emissiveStrength")])
 	]);
 
 	public function new(?env) {
