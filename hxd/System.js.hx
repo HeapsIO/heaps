@@ -141,10 +141,17 @@ class System {
 	}
 
 	public static function getClipboardText() : String {
+		#if (hide && editor)
+		return nw.Clipboard.get().get(Text);
+		#end
 		return null;
 	}
-	
+
 	public static function setClipboardText(text:String) : Bool {
+		#if (hide && editor)
+		nw.Clipboard.get().set(text, Text);
+		return true;
+		#end
 		return false;
 	}
 
