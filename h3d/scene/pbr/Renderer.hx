@@ -463,8 +463,13 @@ class Renderer extends h3d.scene.Renderer {
 	override function render() {
 		beginPbr();
 
-		setTargets([textures.albedo,textures.normal,textures.pbr,textures.other,textures.depth]);
+		setTarget(textures.depth);
+		ctx.engine.clearF(new h3d.Vector(1));
+
+		setTargets([textures.albedo,textures.normal,textures.pbr,textures.other]);
 		clear(0, 1, 0);
+
+		setTargets([textures.albedo,textures.normal,textures.pbr,textures.other,textures.depth]);
 
 		begin(MainDraw);
 		renderPass(output, get("terrain"));
