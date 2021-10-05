@@ -89,7 +89,7 @@ class Renderer extends h3d.scene.Renderer {
 		Value("output.color"),
 		Vec4([Value("output.normal",3),ALPHA]),
 		Vec4([Value("output.metalness"), Value("output.roughness"), Value("output.occlusion"), ALPHA]),
-		Vec4([Value("output.emissive"), Const(0), Const(0), ALPHA]),
+		Vec4([Value("output.emissive"), Value("output.custom1"), Value("output.custom2"), ALPHA]),
 		Vec4([Value("output.depth"), Const(0), Const(0), ALPHA])
 	]);
 	var decalsOutput = new h3d.pass.Output("decals",[
