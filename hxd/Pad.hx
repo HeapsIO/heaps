@@ -617,7 +617,6 @@ class Pad {
 					p.rawYAxis = y;
 				}
 				else if( i == 1 ) {
-					trace(i+" "+x+","+y);
 					p.rawRXAxis = x;
 					p.rawRYAxis = y;
 				}
