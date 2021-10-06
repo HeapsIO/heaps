@@ -615,7 +615,11 @@ class Pad {
 				if( i == 0 ) {
 					p.rawXAxis = x;
 					p.rawYAxis = y;
-					// TODO: support right axis
+				}
+				else if( i == 1 ) {
+					trace(i+" "+x+","+y);
+					p.rawRXAxis = x;
+					p.rawRYAxis = y;
 				}
 			}
 		}
