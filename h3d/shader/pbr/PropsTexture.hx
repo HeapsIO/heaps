@@ -33,9 +33,9 @@ class PropsTexture extends hxsl.Shader {
 				roughness = 1 - v.g * v.g;
 				occlusion = v.b;
 				emissive = emissiveValue * v.a;
-				custom1 = custom1Value * v.a;
-				custom2 = custom2Value * v.a;
 			}
+			custom1 = custom1Value;
+			custom2 = custom2Value;
 		}
 
 		function fragment() {
