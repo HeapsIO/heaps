@@ -508,6 +508,43 @@ class Window {
 	}
 
 	#if (hl_ver >= version("1.12.0"))
+	public static function getMonitors() : Array<Monitor> {
+		return [for(m in #if hldx dx.Window.getMonitors() #elseif hlsdl sdl.Sdl.getDisplays() #else [] #end) { name: m.name, width: m.right-m.left, height: m.bottom-m.top}];
+	}
+
+	// If registry is set, return the default DisplaySetting when it's currently modified by the application.
+	public function getCurrentDisplaySetting(?monitorId : Int, registry : Bool = false) : DisplaySetting {
+		#if hldx
+		var mon = monitorId != null ? getMonitors()[monitorId] : null;
+		return dx.Window.getCurrentDisplaySetting(mon == null ? null : mon.name, registry);
+		#elseif hlsdl
+		return sdl.Sdl.getCurrentDisplayMode(monitorId == null ? 0 : monitorId, true);
+		#else
+		return null;
+		#end
+	}
+
+	public function getDisplaySettings(?monitorId : Int) : Array<DisplaySetting> {
+		var map = new Map<String,DisplaySetting>();
+		var f = [];
+		if(monitorId == null)
+			monitorId = monitor;
+		#if hldx
+		var m = dx.Window.getMonitors()[monitorId];
+		var l = m != null ? dx.Window.getDisplaySettings(m.name) : [];
+		#elseif hlsdl
+		var l = sdl.Sdl.getDisplayModes( monitorId == null ? window.currentMonitor : monitorId );
+		#else
+		var l = [];
+		#end
+		for(d in l) {
+			if(d.height >= MIN_HEIGHT && (d.framerate >= MIN_FRAMERATE || d.framerate == 30 || d.framerate == 60)) {
+				f.push(d);
+			}
+		}
+		return f;
+	}
+
 	function selectedMonitor() : Dynamic {
 		var m = if(monitor == null) 0 else monitor;
 		#if hldx
@@ -525,7 +562,7 @@ class Window {
 			mode: null
 		}
 		var defaultId = -1;
-		var def = getDefaultDisplaySetting();
+		var def = getCurrentDisplaySetting(null, true);
 		for( i => s in getDisplaySettings() ) {
 			if(s.width == def.width && s.height == def.height && s.framerate == def.framerate)
 				defaultId = i;
@@ -540,11 +577,7 @@ class Window {
 		}
 		return m.idx == -1 ? { idx: defaultId, mode: def } : m;
 	}
-
-	public function getMonitors() : Array<Monitor> {
-		return [for(m in #if hldx dx.Window.getMonitors() #elseif hlsdl sdl.Sdl.getDisplays() #else [] #end) { name: m.name, width: m.right-m.left, height: m.bottom-m.top}];
-	}
-
+	
 	function get_currentMonitorIndex() : Int {
 		#if hldx
 		var current = window.getCurrentMonitor();
@@ -554,58 +587,13 @@ class Window {
 		}
 		return 0;
 		#elseif hlsdl
-		return window.getCurrentMonitor();
+		return window.currentMonitor;
 		#else
 		return 0;
 		#end
 	}
 
-	public function getCurrentDisplaySetting(?monitorId : Int) : DisplaySetting {
-		#if hldx
-		var mon = monitorId != null ? getMonitors()[monitorId] : null;
-		return dx.Window.getCurrentDisplaySetting(mon == null ? null : mon.name);
-		#elseif hlsdl
-		return sdl.Sdl.getCurrentDisplayMode(monitorId == null ? 0 : monitorId);
-		#else
-		return null;
-		#end
-	}
-
-	public function getDefaultDisplaySetting(?monitorId : Int) : DisplaySetting {
-		if(monitorId == null)
-			monitorId = monitor;
-		#if hldx
-		var mon = monitorId != null ? getMonitors()[monitorId] : null;
-		return dx.Window.getRegistryDisplaySetting(mon == null ? null : mon.name);
-		#elseif hlsdl
-		return sdl.Sdl.getDesktopDisplayMode(monitorId == null ? 0 : monitorId);
-		#else
-		return null;
-		#end
-	}
-
-	public function getDisplaySettings(?monitorId : Int) : Array<DisplaySetting> {
-		var map = new Map<String,DisplaySetting>();
-		var f = [];
-		if(monitorId == null)
-			monitorId = monitor;
-		#if hldx
-		var m = dx.Window.getMonitors()[monitorId];
-		var l = m != null ? dx.Window.getDisplaySettings(m.name) : [];
-		#elseif hlsdl
-		var l = sdl.Sdl.getDisplayModes( monitorId == null ? window.getCurrentMonitor() : monitorId );
-		#else
-		var l = [];
-		#end
-		for(d in l) {
-			if(d.height >= MIN_HEIGHT && (d.framerate >= MIN_FRAMERATE || d.framerate == 30 || d.framerate == 60)) {
-				f.push(d);
-			}
-		}
-		return f;
-	}
 	#end
-
 	function get_title() : String {
 		#if (hldx || hlsdl)
 		return window.title;
