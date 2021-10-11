@@ -5,6 +5,7 @@ class LightSystem extends h3d.scene.LightSystem {
 
 	public var lightBuffer : h3d.scene.pbr.LightBuffer;
 	public var forwardMode = false;
+	public var lightingShaders : Array<hxsl.Shader> = [];
 
 	public function new() {
 		super();
@@ -17,8 +18,9 @@ class LightSystem extends h3d.scene.LightSystem {
 			shaders = ctx.allocShaderList(light.shader, shaders);
 			if( light.shadows.shader != null && light.shadows.mode != None )
 				shaders = ctx.allocShaderList(light.shadows.shader, shaders);
-		}
-		else if( forwardMode ) {
+			for( s in lightingShaders )
+				shaders = ctx.allocShaderList(s, shaders);
+		} else if( forwardMode ) {
 			var found = false;
             for( s in shaders ) {
                 var forward = Std.downcast(s, h3d.shader.pbr.DefaultForward);

@@ -140,6 +140,7 @@ class Macros {
 	static function buildFields( shader : ShaderData, inits : Array<{ v : TVar, e : Ast.TExpr }>, pos : Position ) {
 		var fields = new Array<Field>();
 		var globals = [], consts = [], params = [], eparams = [], tparams = [];
+		var metas = [{ name : ":noCompletion", pos : pos }, { name : ":keep", pos : pos }];
 		for( v in shader.vars ) {
 			var cpos = consts.length;
 			getConsts(v, pos, consts);
@@ -162,7 +163,7 @@ class Macros {
 					name : name,
 					pos : pos,
 					kind : FVar(t, initVal != null ? makeInit(initVal) : makeDef(v.type, pos)),
-					meta : [{ name : ":noCompletion", pos : pos }],
+					meta : metas,
 				};
 				var fget : Field = {
 					name : "get_" + v.name,
@@ -179,7 +180,7 @@ class Macros {
 							},
 					}),
 					access : [AInline],
-					meta : [{ name : ":noCompletion", pos : pos }],
+					meta : metas,
 				};
 				var fset : Field = {
 					name : "set_" + v.name,
@@ -196,7 +197,7 @@ class Macros {
 							}
 					}),
 					access : [AInline],
-					meta : [{ name : ":noCompletion", pos : pos }],
+					meta : metas,
 				};
 				fields.push(f);
 				fields.push(f2);

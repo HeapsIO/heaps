@@ -245,7 +245,10 @@ class PbrMaterial extends Material {
 		case Overlay:
 			mainPass.setPassName("overlay");
 		case Decal:
-			mainPass.setPassName("decal");
+			if (props.emissive != 0)
+				mainPass.setPassName("emissiveDecal");
+			else
+				mainPass.setPassName("decal");
 			var vd = mainPass.getShader(h3d.shader.VolumeDecal);
 			if( vd == null ) {
 				vd = new h3d.shader.VolumeDecal(1,1);

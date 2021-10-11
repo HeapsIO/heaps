@@ -7,6 +7,16 @@ class LightBuffer {
 	var MAX_DIR_LIGHT = 2;
 	var MAX_SPOT_LIGHT = 10;
 	var MAX_POINT_LIGHT = 10;
+	var MAX_DIR_SHADOW = 1;
+	var MAX_SPOT_SHADOW = 3;
+	var MAX_POINT_SHADOW = 3;
+
+	var pointLightsShadow : Array<PointLight> = [];
+	var spotLightsShadow : Array<SpotLight> = [];
+	var dirLightsShadow : Array<DirLight> = [];
+	var pointLights : Array<PointLight> = [];
+	var spotLights : Array<SpotLight> = [];
+	var dirLights : Array<DirLight> = [];
 
 	var lightInfos : hxd.FloatBuffer;
 	final POINT_LIGHT_INFO_SIZE = 3;
@@ -43,13 +53,16 @@ class LightBuffer {
 		s.pointLightCount = defaultForwardShader.pointLightCount;
 		s.spotLightCount = defaultForwardShader.spotLightCount;
 		s.dirLightCount = defaultForwardShader.dirLightCount;
+		s.DIR_SHADOW_COUNT = defaultForwardShader.DIR_SHADOW_COUNT;
+		s.POINT_SHADOW_COUNT = defaultForwardShader.POINT_SHADOW_COUNT;
+		s.SPOT_SHADOW_COUNT = defaultForwardShader.SPOT_SHADOW_COUNT;
 
-		/*for( i in 0 ... s.pointLightCount )
+		for( i in 0 ... defaultForwardShader.POINT_SHADOW_COUNT )
 			s.pointShadowMaps[i] = defaultForwardShader.pointShadowMaps[i];
-		for( i in 0 ... s.spotLightCount )
+		for( i in 0 ... defaultForwardShader.SPOT_SHADOW_COUNT )
 			s.spotShadowMaps[i] = defaultForwardShader.spotShadowMaps[i];
-		for( i in 0 ... s.dirLightCount )
-			s.dirShadowMaps[i] = defaultForwardShader.dirShadowMaps[i];*/
+		for( i in 0 ... defaultForwardShader.DIR_SHADOW_COUNT )
+			s.dirShadowMaps[i] = defaultForwardShader.dirShadowMaps[i];
 
 		s.USE_INDIRECT = defaultForwardShader.USE_INDIRECT;
 		if( s.USE_INDIRECT ) {
@@ -77,16 +90,6 @@ class LightBuffer {
 	}
 
 	function sortingCriteria ( l1 : Light, l2 : Light, cameraTarget : Vector ) {
-		var pbr1 = Std.downcast(l1, h3d.scene.pbr.Light);
-		var pbr2 = Std.downcast(l2, h3d.scene.pbr.Light);
-		var last1 = pbr1 != null && !pbr1.enableForward;
-		var last2 = pbr2 != null && !pbr2.enableForward;
-		if (last1 && !last2) {
-			return 1;
-		}
-		if (last2 && !last1) {
-			return -1;
-		}
 		var d1 = l1.getAbsPos().getPosition().sub(cameraTarget).length();
 		var d2 = l2.getAbsPos().getPosition().sub(cameraTarget).length();
 		return d1 > d2 ? 1 : -1;
@@ -98,11 +101,79 @@ class LightBuffer {
 		if ( l == null )
 			return null;
 		while ( l != null ) {
-			lights.push(l);
+			if (l.enableForward) {
+				lights.push(l);
+			}
 			l = Std.downcast(l.next, Light);
 		}
 		lights.sort(function(l1,l2) { return sortingCriteria(l1, l2, @:privateAccess ctx.camera.target); });
 		return lights;
+	}
+
+	public function fillLights (lights : Array<Light>, shadows : Bool) {
+		if (lights == null)
+			return;
+		pointLightsShadow = [];
+		spotLightsShadow = [];
+		dirLightsShadow = [];
+		pointLights = [];
+		spotLights = [];
+		dirLights = [];
+
+		var dirShadowCount = 0;
+		var pointShadowCount = 0;
+		var spotShadowCount = 0;
+
+		var dirLightCount = 0;
+		var pointLightCount = 0;
+		var spotLightCount = 0;
+
+		for (l in lights) {
+			var dl = Std.downcast(l, DirLight);
+			if (dl != null) {
+				if (dirLightCount + dirShadowCount < MAX_DIR_LIGHT) {
+					var hasShadow = dl.shadows != null && dl.shadows.enabled && dl.shadows.mode != None && shadows;
+					if (hasShadow && dirShadowCount < MAX_DIR_SHADOW) {
+						dirLightsShadow.push(dl);
+						dirShadowCount++;
+					} else {
+						dirLights.push(dl);
+						dirLightCount++;
+					}
+				}
+
+			}
+
+			var pl = Std.downcast(l, PointLight);
+			if (pl != null) {
+				if (pointLightCount + pointShadowCount < MAX_POINT_LIGHT) {
+					var hasShadow = pl.shadows != null && pl.shadows.enabled && pl.shadows.mode != None && shadows;
+					if (hasShadow && pointShadowCount < MAX_POINT_SHADOW) {
+						pointLightsShadow.push(pl);
+						pointShadowCount++;
+					} else {
+						pointLights.push(pl);
+						pointLightCount++;
+					}
+				}
+
+			}
+
+			var sl = Std.downcast(l, SpotLight);
+			if (sl != null) {
+				if (spotLightCount + spotShadowCount < MAX_SPOT_LIGHT) {
+					var hasShadow = sl.shadows != null && sl.shadows.enabled && sl.shadows.mode != None && shadows;
+					if (hasShadow && spotShadowCount < MAX_SPOT_SHADOW) {
+						spotLightsShadow.push(sl);
+						spotShadowCount++;
+					} else {
+						spotLights.push(sl);
+						spotLightCount++;
+					}
+				}
+
+			}
+		}
 	}
 
 	public function sync( ctx : h3d.scene.RenderContext ) {
@@ -128,77 +199,109 @@ class LightBuffer {
 			lightInfos[i] = 0;
 
 		var lights = sortLights(ctx);
-		if (lights != null) {
-			for ( l in lights ) {
+		fillLights(lights, pbrRenderer.shadows);
 
-				// Dir Light
-				var dl = Std.downcast(l, DirLight);
-				if( dl != null && s.dirLightCount < MAX_DIR_LIGHT ) {
-					var li = s.dirLightCount;
-					var i = li * DIR_LIGHT_INFO_SIZE * 4;
-					var pbr = @:privateAccess dl.pbr;
-					fillVector(lightInfos, pbr.lightColor, i);
-					lightInfos[i+3] = (dl.shadows != null && dl.shadows.mode != None) ? 1.0 : -1.0;
-					fillVector(lightInfos, pbr.lightDir, i+4);
-					/*if( lightInfos[i+3] > 0 ) {
-						lightInfos[i+7] = dl.shadows.bias;
-						s.dirShadowMaps[li] = dl.shadows.getShadowTex();
-						var mat = dl.shadows.getShadowProj();
-						fillFloats(lightInfos, mat._11, mat._21, mat._31, mat._41, i+8);
-						fillFloats(lightInfos, mat._12, mat._22, mat._32, mat._42, i+12);
-						fillFloats(lightInfos, mat._13, mat._23, mat._33, mat._43, i+16);
-					}*/
-					s.dirLightCount++;
-				}
-	
-				// Point Light
-				var pl = Std.downcast(l, PointLight);
-				if( pl != null && s.pointLightCount < MAX_POINT_LIGHT ) {
-					var offset = MAX_DIR_LIGHT * DIR_LIGHT_INFO_SIZE * 4;
-					var li = s.pointLightCount;
-					var i = li * POINT_LIGHT_INFO_SIZE * 4 + offset;
-					var pbr = @:privateAccess pl.pbr;
-					fillVector(lightInfos, pbr.lightColor, i);
-					lightInfos[i+3] = pbr.pointSize;
-					fillVector(lightInfos, pbr.lightPos, i+4);
-					lightInfos[i+7] = pbr.invLightRange4;
-					lightInfos[i+8] = pl.range;
-					lightInfos[i+9] = (pl.shadows != null && pl.shadows.mode != None) ? 1.0 : -1.0;
-					/*if( lightInfos[i+9] > 0 ) {
-						lightInfos[i+10] = pl.shadows.bias;
-						s.pointShadowMaps[li] = pl.shadows.getShadowTex();
-					}*/
-					s.pointLightCount++;
-				}
-	
-				// Spot Light
-				var sl = Std.downcast(l, SpotLight);
-				if( sl != null && s.spotLightCount < MAX_SPOT_LIGHT ) {
-					var offset = (MAX_DIR_LIGHT * DIR_LIGHT_INFO_SIZE + MAX_POINT_LIGHT * POINT_LIGHT_INFO_SIZE) * 4 ;
-					var li = s.spotLightCount;
-					var i = s.spotLightCount * SPOT_LIGHT_INFO_SIZE * 4 + offset;
-					var pbr = @:privateAccess sl.pbr;
-					fillVector(lightInfos, pbr.lightColor, i);
-					lightInfos[i+3] = pbr.range;
-					fillVector(lightInfos, pbr.lightPos, i+4);
-					lightInfos[i+7] = pbr.invLightRange4;
-					fillVector(lightInfos, pbr.spotDir, i+8);
-					lightInfos[i+12] = pbr.angle;
-					lightInfos[i+13] = pbr.fallOff;
-					lightInfos[i+14] = (sl.shadows != null && sl.shadows.mode != None) ? 1.0 : -1.0;
-					/*if( lightInfos[i+14] > 0 ) {
-						lightInfos[i+15] = sl.shadows.bias;
-						var mat = sl.shadows.getShadowProj();
-						fillFloats(lightInfos, mat._11, mat._21, mat._31, mat._41, i+16);
-						fillFloats(lightInfos, mat._12, mat._22, mat._32, mat._42, i+20);
-						fillFloats(lightInfos, mat._13, mat._23, mat._33, mat._43, i+24);
-						fillFloats(lightInfos, mat._14, mat._24, mat._34, mat._44, i+28);
-						s.spotShadowMaps[li] = sl.shadows.getShadowTex();
-					}*/
-					s.spotLightCount++;
-				}
-			}
+		// Dir Light With Shadow
+		for (li in 0...dirLightsShadow.length) {
+			var dl = dirLightsShadow[li];
+			var i = li * DIR_LIGHT_INFO_SIZE * 4;
+			var pbr = @:privateAccess dl.pbr;
+			fillVector(lightInfos, pbr.lightColor, i);
+			fillVector(lightInfos, pbr.lightDir, i+4);
+			lightInfos[i+3] = 1.0;
+			lightInfos[i+7] = dl.shadows.bias;
+			s.dirShadowMaps[li] = dl.shadows.getShadowTex();
+			var mat = dl.shadows.getShadowProj();
+			fillFloats(lightInfos, mat._11, mat._21, mat._31, mat._41, i+8);
+			fillFloats(lightInfos, mat._12, mat._22, mat._32, mat._42, i+12);
+			fillFloats(lightInfos, mat._13, mat._23, mat._33, mat._43, i+16);
 		}
+
+		// Dir Light
+		for (li in 0...dirLights.length) {
+			var dl = dirLights[li];
+			var i = (li + dirLightsShadow.length) * DIR_LIGHT_INFO_SIZE * 4;
+			var pbr = @:privateAccess dl.pbr;
+			fillVector(lightInfos, pbr.lightColor, i);
+			fillVector(lightInfos, pbr.lightDir, i+4);
+			lightInfos[i+3] = -1.0;
+		}
+
+		// Point Light With Shadows
+		for (li in 0...pointLightsShadow.length) {
+			var pl = pointLightsShadow[li];
+			var offset = MAX_DIR_LIGHT * DIR_LIGHT_INFO_SIZE * 4;
+			var i = li * POINT_LIGHT_INFO_SIZE * 4 + offset;
+			var pbr = @:privateAccess pl.pbr;
+			fillVector(lightInfos, pbr.lightColor, i);
+			lightInfos[i+3] = pbr.pointSize;
+			fillVector(lightInfos, pbr.lightPos, i+4);
+			lightInfos[i+7] = pbr.invLightRange4;
+			lightInfos[i+8] = pl.range;
+			lightInfos[i+9] = 1.0;
+			lightInfos[i+10] = pl.shadows.bias;
+			s.pointShadowMaps[li] = pl.shadows.getShadowTex();
+		}
+
+		// Point Light
+		for (li in 0...pointLights.length) {
+			var pl = pointLights[li];
+			var offset = MAX_DIR_LIGHT * DIR_LIGHT_INFO_SIZE * 4;
+			var i = (li + pointLightsShadow.length) * POINT_LIGHT_INFO_SIZE * 4 + offset;
+			var pbr = @:privateAccess pl.pbr;
+			fillVector(lightInfos, pbr.lightColor, i);
+			lightInfos[i+3] = pbr.pointSize;
+			fillVector(lightInfos, pbr.lightPos, i+4);
+			lightInfos[i+7] = pbr.invLightRange4;
+			lightInfos[i+8] = pl.range;
+			lightInfos[i+9] = -1.0;
+		}
+
+		// Spot Light With Shadow
+		for (li in 0...spotLightsShadow.length) {
+			var sl = spotLightsShadow[li];
+			var offset = (MAX_DIR_LIGHT * DIR_LIGHT_INFO_SIZE + MAX_POINT_LIGHT * POINT_LIGHT_INFO_SIZE) * 4 ;
+			var i = li * SPOT_LIGHT_INFO_SIZE * 4 + offset;
+			var pbr = @:privateAccess sl.pbr;
+			fillVector(lightInfos, pbr.lightColor, i);
+			lightInfos[i+3] = pbr.range;
+			fillVector(lightInfos, pbr.lightPos, i+4);
+			lightInfos[i+7] = pbr.invLightRange4;
+			fillVector(lightInfos, pbr.spotDir, i+8);
+			lightInfos[i+12] = pbr.angle;
+			lightInfos[i+13] = pbr.fallOff;
+			lightInfos[i+14] = 1.0;
+			lightInfos[i+15] = sl.shadows.bias;
+			var mat = sl.shadows.getShadowProj();
+			fillFloats(lightInfos, mat._11, mat._21, mat._31, mat._41, i+16);
+			fillFloats(lightInfos, mat._12, mat._22, mat._32, mat._42, i+20);
+			fillFloats(lightInfos, mat._13, mat._23, mat._33, mat._43, i+24);
+			fillFloats(lightInfos, mat._14, mat._24, mat._34, mat._44, i+28);
+			s.spotShadowMaps[li] = sl.shadows.getShadowTex();
+		}
+
+		// Spot Light
+		for (li in 0...spotLights.length) {
+			var sl = spotLights[li];
+			var offset = (MAX_DIR_LIGHT * DIR_LIGHT_INFO_SIZE + MAX_POINT_LIGHT * POINT_LIGHT_INFO_SIZE) * 4 ;
+			var i = (li + spotLightsShadow.length) * SPOT_LIGHT_INFO_SIZE * 4 + offset;
+			var pbr = @:privateAccess sl.pbr;
+			fillVector(lightInfos, pbr.lightColor, i);
+			lightInfos[i+3] = pbr.range;
+			fillVector(lightInfos, pbr.lightPos, i+4);
+			lightInfos[i+7] = pbr.invLightRange4;
+			fillVector(lightInfos, pbr.spotDir, i+8);
+			lightInfos[i+12] = pbr.angle;
+			lightInfos[i+13] = pbr.fallOff;
+			lightInfos[i+14] = -1.0;
+		}
+
+		s.dirLightCount = dirLights.length;
+		s.pointLightCount = pointLights.length;
+		s.spotLightCount = spotLights.length;
+		s.DIR_SHADOW_COUNT = dirLightsShadow.length;
+		s.POINT_SHADOW_COUNT = pointLightsShadow.length;
+		s.SPOT_SHADOW_COUNT = spotLightsShadow.length;
 		s.lightInfos.uploadVector(lightInfos, 0, s.lightInfos.vertices, 0);
 
 		var pbrIndirect = @:privateAccess pbrRenderer.pbrIndirect;

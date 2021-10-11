@@ -174,15 +174,14 @@ class HtmlText extends Text {
 		return { width: width, height: height, baseLine: baseLine };
 	}
 
-	override function validateText()
-	{
+	override function validateText() {
 		textXml = parseText(text);
 		validateNodes(textXml);
 	}
 
 	function validateNodes( xml : Xml ) {
-		if ( xml.nodeType == Element ) {
-
+		switch( xml.nodeType ) {
+		case Element:
 			var nodeName = xml.nodeName.toLowerCase();
 			switch ( nodeName ) {
 				case "img":
@@ -196,9 +195,12 @@ class HtmlText extends Text {
 				case "i", "italic":
 					loadFont("italic");
 			}
-
-			for ( child in xml )
-				validateNodes(xml);
+			for( child in xml )
+				validateNodes(child);
+		case Document:
+			for( child in xml )
+				validateNodes(child);
+		default:
 		}
 	}
 

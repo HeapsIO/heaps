@@ -6,6 +6,7 @@ class PropsImport extends hxsl.Shader {
 		@param var albedoTex : Sampler2D;
 		@param var normalTex : Sampler2D;
 		@param var pbrTex : Sampler2D;
+		@param var depthTex : Sampler2D;
 		@param var otherTex : Sampler2D;
 		@const var isScreen : Bool = true;
 
@@ -19,6 +20,8 @@ class PropsImport extends hxsl.Shader {
 		var roughness : Float;
 		var occlusion : Float;
 		var emissive : Float;
+		var custom1 : Float;
+		var custom2 : Float;
 		var calculatedUV : Vec2;
 		var transformedPosition : Vec3;
 		var pbrSpecularColor : Vec3;
@@ -37,7 +40,9 @@ class PropsImport extends hxsl.Shader {
 
 			var other = otherTex.get(uv);
 			emissive = other.r;
-			depth = other.g;
+			custom1 = other.g;
+			custom2 = other.b;
+			depth = depthTex.get(uv).r;
 
 			pbrSpecularColor = mix(vec3(0.04),albedo,metalness);
 
