@@ -207,6 +207,13 @@ class Renderer extends h3d.scene.Renderer {
 		if( ctx.lightSystem != null ) ctx.lightSystem.drawPasses = ctx.engine.drawCalls - count;
 		end();
 
+		var pbrLightSystem : h3d.scene.pbr.LightSystem = cast ctx.lightSystem;
+		if (pbrLightSystem != null) {
+			while (pbrLightSystem.lightingShaders.length != 0) {
+				pbrLightSystem.lightingShaders.pop();
+			}
+		}
+
 		begin(Lighting);
 		var lpass = screenLightPass;
 		if( lpass == null ) {
