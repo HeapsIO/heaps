@@ -57,8 +57,12 @@ class LightSystem extends h3d.scene.LightSystem {
 			if( light != null && light.primitive == null ) {
 				if( light.shadows.shader != null && shadows) lightPass.addShader(light.shadows.shader);
 				lightPass.addShader(light.shader);
+				for( s in lightingShaders )
+					lightPass.addShader(s);
 				lightPass.render();
 				lightPass.removeShader(light.shader);
+				for( s in lightingShaders )
+					lightPass.removeShader(s);
 				if( light.shadows.shader != null ) lightPass.removeShader(light.shadows.shader);
 			}
 			plight = plight.next;
