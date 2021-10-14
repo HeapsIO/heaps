@@ -157,9 +157,12 @@ class Text extends Drawable {
 						sdfShader = new h3d.shader.SignedDistanceField();
 						addShader(sdfShader);
 					}
+					// Automatically use linear sampling if not designated otherwise.
+					if (smooth == null) smooth = true;
 					sdfShader.alphaCutoff = alphaCutoff;
 					sdfShader.smoothing = smoothing;
 					sdfShader.channel = channel;
+					sdfShader.autoSmoothing = smoothing == -1;
 			}
 		}
 		if( glyphs != null ) glyphs.remove();
