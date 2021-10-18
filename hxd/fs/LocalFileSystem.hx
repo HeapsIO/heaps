@@ -219,7 +219,7 @@ class LocalEntry extends FileEntry {
 /**
 	The OS file system-based FS. Works only on targets with access to `sys` package, such as HL or nodejs.
 
-	Can be initialized via `Res.initLocal`.
+	Can be initialized via `hxd.Res.initLocal`.
 
 	Local FS is the primary FS to use during development, as it allows complete access to the game access directly from OS file system,
 	as well as supports watching files `FileEntry.watch` for changes (allowing implementation of asset hot-reloading).

@@ -32,14 +32,14 @@ typedef ConvertCommand = {
 	
 	For example, `fbx` models are converted to `hmd` models by FileConverter.
 
-	@see [Resource Baking](https://github.com/HeapsIO/heaps/wiki/Resource-Baking) wiki entry.
+	@see [Resource Baking](https://heaps.io/documentation/resource-baking.html) wiki entry.
 **/
 class FileConverter {
 
 	/**
 		The convert configuration used.
 
-		@see [Resource Baking](https://github.com/HeapsIO/heaps/wiki/Resource-Baking#multiple-configurations) multiple configurations wiki entry.
+		@see [Resource Baking](https://heaps.io/documentation/resource-baking.html#multiple-configurations) multiple configurations wiki entry.
 	**/
 	public var configuration(default,null) : String;
 

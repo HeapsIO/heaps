@@ -11,15 +11,19 @@ class FileEntry {
 	**/
 	public var name(default, null) : String;
 	/**
-		The local path of the file.
+		The local path of the file from the resource root.
+		
+		For instance `/myproject/res/ui/background/image.png` will have a path of `ui/background/image.png`
 	**/
 	public var path(get, never) : String;
 	/**
 		The directory path the file is placed in.
+		
+		For instance `/myproject/res/ui/background/image.png` will have a path of directory of `ui/background`
 	**/
 	public var directory(get, never) : String;
 	/**
-		File extension of the file without the dot (i.e. `png`).
+		Lowercase file extension of the file without the dot (i.e. `png`).
 	**/
 	public var extension(get, never) : String;
 	/**
@@ -97,13 +101,13 @@ class FileEntry {
 	/**
 		Loads the file, preparing it to be accessed. `FileEntry.isAvailable` can be used to determine is file is loaded/ready to be accessed.
 
-		This is an asynchronous operation and delayed for at least one frame. Only exception is `LocalFileSystem` in macro context.
+		This is an asynchronous operation and may be delayed for at least one frame.
 		
 		@param onReady The callback that is invoked after the file is loaded.
 	**/
 	public function load( ?onReady : Void -> Void ) : Void { if( !isAvailable ) throw "load() not implemented"; else if( onReady != null ) onReady(); }
 	/**
-		Loads the file as platform-specific Bitmap. Will throw an exception for anything except JS and flash targets.
+		Loads the file as platform-specific Bitmap. Will throw an exception for anything except JS target.
 		For FileSystem-independent bitmap loading use `hxd.res.Image` Resource.
 
 		This is an asynchronous operation and delayed for at least one frame.
@@ -112,7 +116,9 @@ class FileEntry {
 	**/
 	public function loadBitmap( onLoaded : LoadedBitmap -> Void ) : Void { throw "loadBitmap() not implemented"; }
 	/**
-		Set the file change callback to the file. Only one callback can be set at a time and only works for `LocalFileSystem`.
+		Register a function that will be called if the file changes. This might only be supported on file based filesystems.
+
+		Only one callback can be set at a time.
 
 		@param onChanged The callback that is invoked when the file is changed. Pass `null` to stop monitoring the file for changes.
 	**/
@@ -129,6 +135,8 @@ class FileEntry {
 		Usually a shortcut to `FileSystem.get` this entry belongs to with combined path of this file and given name.
 
 		Can be used only for directory entries.
+
+		@throws NotFound if the file under given path does not exist.
 	**/
 	public function get( name : String ) : FileEntry return null;
 

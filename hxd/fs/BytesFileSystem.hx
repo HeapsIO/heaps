@@ -5,7 +5,9 @@ using haxe.io.Path;
 /**
 	A Bytes-based file entry.
 
-	Can be used to create resources from outside of the Resource system.
+	Not intended to be used directly, see notes on `hxd.fs.BytesFileSystem`.
+
+	Can be used to create resources from outside of the Resource system via `hxd.res.Any.fromBytes`.
 	For example, assets downloaded over the network or generated at runtime.
 **/
 class BytesFileEntry extends FileEntry {
@@ -99,7 +101,10 @@ class BytesFileEntry extends FileEntry {
 }
 
 /**
-	A base class for custom FileSystem based on preloaded Bytes data.
+	A dummy FileSystem for `hxd.res.Any.fromBytes`.
+
+	While not being designed to be used directly, it is suitable as a base class for simplified `FileSystem` implementation.
+	However it is still recommended to implement FileSystem directly.
 
 	As bare minimum, inheriting classes should override the `getBytes`, and ideally `getRoot` and `dir` methods.
 **/

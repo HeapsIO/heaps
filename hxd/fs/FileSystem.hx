@@ -34,6 +34,8 @@ interface FileSystem {
 		Returns the FileEntry directory under the given `path`.
 
 		Not all file systems support `dir()`.
+		
+		@throws `NotFound` if the file under given path does not exist.
 	**/
 	public function dir( path : String ) : Array<FileEntry> ;
 }

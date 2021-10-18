@@ -55,7 +55,7 @@ enum Align {
 /**
 	A basic text renderer with multiline support.
 
-	See [Text](https://github.com/HeapsIO/heaps/wiki/Text) section of the manual for more details.
+	See [Text](https://heaps.io/documentation/text.html) section of the manual for more details.
 **/
 class Text extends Drawable {
 	/**

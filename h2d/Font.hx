@@ -134,7 +134,7 @@ enum FontType {
 		To render an SDF font, `Text` utilizes `h3d.shader.SignedDistanceField` shader to produce smoothed and scalable text.
 		Because shader expects texture to use bilinear filtering, Text automatically enables `Drawable.smooth` on itself.
 
-		See [Text](https://github.com/HeapsIO/heaps/wiki/Text) manual and [libgdx wiki](https://github.com/libgdx/libgdx/wiki/Distance-field-fonts) for more details.
+		See [Text](https://heaps.io/documentation/text.html) manual and [libgdx wiki](https://github.com/libgdx/libgdx/wiki/Distance-field-fonts) for more details.
 
 		@param channel The channel that serves as distance data source.
 		@param alphaCutoff The distance value that is considered to be the edge. Usually should be 0.5.

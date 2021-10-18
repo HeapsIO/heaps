@@ -3,7 +3,7 @@ package hxd.fs;
 /**
 	The base class that processes raw asset file into a compatible with the engine format.
 
-	@see [Resource baking](https://github.com/HeapsIO/heaps/wiki/Resource-Baking) wiki entry.
+	@see [Resource baking](https://heaps.io/documentation/resource-baking.html) wiki entry.
 **/
 @:keep @:keepSub
 class Convert {
@@ -145,9 +145,7 @@ class Convert {
 **/
 class ConvertFBX2HMD extends Convert {
 
-	/**
-		Create a new FBX->HMD convert instance.
-	**/
+	@:dox(hide)
 	public function new() {
 		super("fbx", "hmd");
 	}
@@ -212,9 +210,8 @@ class Command extends Convert {
 	@see [Lame project](https://lame.sourceforge.io/) for the encoder.
 **/
 class ConvertWAV2MP3 extends Convert {
-	/**
-		Create a new WAV->MP3 convert.
-	**/
+
+	@:dox(hide)
 	public function new() {
 		super("wav", "mp3");
 	}
@@ -240,9 +237,7 @@ class ConvertWAV2MP3 extends Convert {
 **/
 class ConvertWAV2OGG extends Convert {
 
-	/**
-		Create a new WAV->OGG convert.
-	**/
+	@:dox(hide)
 	public function new() {
 		super("wav", "ogg");
 	}
@@ -274,9 +269,7 @@ class ConvertWAV2OGG extends Convert {
 **/
 class ConvertTGA2PNG extends Convert {
 
-	/**
-		Create a new TGA->PNG convert.
-	**/
+	@:dox(hide)
 	public function new() {
 		super("tga", "png");
 	}
@@ -323,9 +316,7 @@ class ConvertFNT2BFNT extends Convert {
 
 	var emptyTile : h2d.Tile;
 
-	/**
-		Create a new FNT->BFNT convert.
-	**/
+	@:dox(hide)
 	public function new() {
 		// Fake tile create subs before discarding the font.
 		emptyTile = @:privateAccess new h2d.Tile(null, 0, 0, 0, 0, 0, 0);

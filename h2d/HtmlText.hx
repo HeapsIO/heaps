@@ -41,7 +41,7 @@ enum ImageVerticalAlign {
 /**
 	A simple HTML text renderer.
 
-	See the [Text](https://github.com/HeapsIO/heaps/wiki/Text) section of the manual for more details and a list of the supported HTML tags.
+	See the [Text](https://heaps.io/documentation/text.html) section of the manual for more details and a list of the supported HTML tags.
 **/
 class HtmlText extends Text {
 
