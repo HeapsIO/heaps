@@ -181,7 +181,6 @@ class Graphics extends Drawable {
 	var lineB : Float;
 	var lineA : Float;
 	var doFill : Bool;
-	var fillTile : h2d.Tile;
 
 	var xMin : Float;
 	var yMin : Float;
@@ -214,7 +213,7 @@ class Graphics extends Drawable {
 	public function new(?parent) {
 		super(parent);
 		content = new GraphicsContent();
-		fillTile = tile = h2d.Tile.fromColor(0xFFFFFF);
+		tile = h2d.Tile.fromColor(0xFFFFFF);
 		clear();
 	}
 
@@ -264,7 +263,7 @@ class Graphics extends Drawable {
 		var prev = pts[last];
 		var p = pts[0];
 		
-		content.setTile(fillTile);
+		content.setTile(h2d.Tile.fromColor(0xFFFFFF));
 		var closed = p.x == prev.x && p.y == prev.y;
 		var count = pts.length;
 		if( !closed ) {
@@ -446,7 +445,7 @@ class Graphics extends Drawable {
 	**/
 	public function beginFill( color : Int = 0, alpha = 1.  ) {
 		flush();
-		tile = fillTile;
+		tile = h2d.Tile.fromColor(0xFFFFFF);
 		content.setTile(tile);
 		setColor(color,alpha);
 		doFill = true;
