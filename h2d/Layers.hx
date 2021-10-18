@@ -13,13 +13,6 @@ class Layers extends Object {
 	var layerCount : Int;
 
 	/**
-		The default layer to which new objects are added.
-
-		`Layers.getChildAt`, `Layers.addChild` and `Layers.addChildAt` will use that layer index when adding children.
-	**/
-	public var defaultLayer : Int = 0;
-
-	/**
 		Create a new Layers instance.
 		@param parent An optional parent `h2d.Object` instance to which Layers adds itself if set.
 	**/
@@ -30,18 +23,18 @@ class Layers extends Object {
 	}
 
 	/**
-		Adds a child object `s` at the end of the `Layers.defaultLayer`.
+		Adds a child object `s` at the end of the topmost layer.
 		@param s An object to be added.
 	**/
 	@:dox(show)
 	override function addChild(s) {
-		add(s, defaultLayer);
+		add(s, -1);
 	}
 
 	/**
 	 * Adds a child object `s` at the end of the given `layer`.
 	 * @param s An object to be added.
-	 * @param layer An index of the layer the object should be added at with 0 being the bottom-most layer. Pass -1 to use `Layers.defaultLayer`.
+	 * @param layer An index of the layer the object should be added at with 0 being the bottom-most layer. Pass -1 to use topmost layer.
 	 * @param index An optional index at which the object should be inserted inside the layer. Pass -1 to append to the end.
 	 */
 	public function add( s : Object, layer : Int = -1, index : Int = -1) {
@@ -53,7 +46,7 @@ class Layers extends Object {
 			s.allocated = old;
 		}
 
-		if ( layer == -1 ) layer = defaultLayer;
+		if ( layer == -1 ) layer = layerCount == 0 ? 0 : layerCount - 1;
 
 		// Populate layer list
 		while ( layer >= layerCount )
@@ -77,7 +70,7 @@ class Layers extends Object {
 	}
 
 	/**
-		Adds a child object `s` at specified `index` in the `Layers.defaultLayer`.
+		Adds a child object `s` at specified `index` on the top topmost layer.
 
 		Warning: Previous behavior of `Layers.addChildAt` is no longer applicable and `Layers.add` should be used instead.
 		@param s The object to be added.
@@ -181,20 +174,11 @@ class Layers extends Object {
 	}
 
 	/**
-		Return the `n`th element among the immediate children list on the `Layers.defaultLayer`, or null if there is none.
-	**/
-	@:dox(show)
-	override public function getChildAt(n:Int):Object
-	{
-		return getChildAtLayer(n);
-	}
-
-	/**
 		Return the `n`th element among the immediate children list on the `layer`, or null if there is none.
-		@param layer The layer children of which are used. Pass -1 to use `Layers.defaultLayer`.
+		@param layer The layer children of which are used. Pass -1 to use the topmost layer.
 	**/
-	public function getChildAtLayer( n : Int, layer : Int = -1 ) : Object {
-		if ( layer == -1 ) layer = defaultLayer;
+	public function getChildAtLayer( n : Int, layer : Int ) : Object {
+		if ( layer == -1 ) layer = layerCount == 0 ? 0 : layerCount - 1;
 		if ( layer >= layerCount || n < 0 || n >= layersIndexes[layer] ) return null;
 		if ( layer == 0 ) return children[n];
 		return children[layersIndexes[layer - 1] + n];
@@ -219,8 +203,7 @@ class Layers extends Object {
 		@param o The child to look up index of.
 		@returns `-1` if object is not a child of Layers, index of the child within its current layer otherwise.
 	**/
-	@:dox(show)
-	override public function getChildIndex( o : Object ):Int
+	public function getChildIndexInLayer( o : Object ):Int
 	{
 		if ( o.parent != this ) return -1;
 
