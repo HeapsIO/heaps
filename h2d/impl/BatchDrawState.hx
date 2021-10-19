@@ -53,7 +53,8 @@ class BatchDrawState {
 			if ( tail.texture == null ) tail.texture = texture;
 			else if ( tail.texture != texture ) {
 				var cur = tail;
-				if ( cur.next == null ) cur.next = tail = new StateEntry(texture);
+				if ( cur.count == 0 ) cur.set(texture);
+				else if ( cur.next == null ) cur.next = tail = new StateEntry(texture);
 				else tail = cur.next.set(texture);
 			}
 		}
