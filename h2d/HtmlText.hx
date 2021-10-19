@@ -616,7 +616,8 @@ class HtmlText extends Text {
 							shader.channel = channel;
 							shader.alphaCutoff = alphaCutoff;
 							shader.smoothing = smoothing;
-							glyphs.smooth = true;
+							shader.autoSmoothing = smoothing == -1;
+							glyphs.smooth = this.smooth;
 							glyphs.addShader(shader);
 						default:
 					}

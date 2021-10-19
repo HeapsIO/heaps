@@ -138,7 +138,7 @@ enum FontType {
 
 		@param channel The channel that serves as distance data source.
 		@param alphaCutoff The distance value that is considered to be the edge. Usually should be 0.5.
-		@param smoothing The smoothing of edge. Lower value lead to sharper edges.
+		@param smoothing The smoothing of edge. Lower value lead to sharper edges. Value of -1 sets it to automatic.
 	**/
 	SignedDistanceField(channel : SDFChannel, alphaCutoff : Float, smoothing : Float);
 }
