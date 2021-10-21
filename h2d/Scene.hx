@@ -735,9 +735,10 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 				throw "Can only draw to texture created with Target flag";
 		ctx.engine = h3d.Engine.getCurrent();
 		var oldBG = ctx.engine.backgroundColor;
+		var inRender = @:privateAccess ctx.engine.inRender;
 		ctx.engine.backgroundColor = null; // prevent clear bg
 		ctx.globalAlpha = alpha;
-		if( @:privateAccess !ctx.engine.inRender ) { // don't reset current tex stack
+		if( !inRender ) { // don't reset current tex stack
 			ctx.engine.begin();
 			ctx.begin();
 		}
@@ -747,6 +748,10 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		if( outputs != null ) @:privateAccess ctx.manager.setOutput();
 		ctx.popTarget();
 		ctx.engine.backgroundColor = oldBG;
+		if( !inRender ) {
+			ctx.end();
+			ctx.engine.end();
+		}
 	}
 
 	/**
