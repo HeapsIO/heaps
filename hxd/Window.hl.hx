@@ -456,9 +456,9 @@ class Window {
 	}
 
 	function set_displayMode( m : DisplayMode ) : DisplayMode {
-		var oldMode = window.displayMode;
 		#if (hldx || hlsdl)
 		#if (hl_ver >= version("1.12.0"))
+		var oldMode = window.displayMode;
 		if( window.displayMode != m ) {
 			if(window.displayMode == Windowed) {
 				if( savedSize == null ) {
