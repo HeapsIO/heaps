@@ -42,7 +42,7 @@ enum ScaleMode {
 	/**
 		Sets constant Scene size and upscales it with preserving the aspect-ratio to fit the window.
 
-		With `800x600` window, `LetterBox(320, 260)` will result in center-aligned Scene of size `320x260` upscaled to fit into the window.  
+		With `800x600` window, `LetterBox(320, 260)` will result in center-aligned Scene of size `320x260` upscaled to fit into the window.
 		With same window but setting of `LetterBox(320, 260, true, Left, Top)` would result in the same Scene internal size,
 		upscaled to `640x480` resolution and anchored to the top-left corner of the window.
 
@@ -736,9 +736,11 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		ctx.engine = h3d.Engine.getCurrent();
 		var oldBG = ctx.engine.backgroundColor;
 		ctx.engine.backgroundColor = null; // prevent clear bg
-		if( @:privateAccess !ctx.engine.inRender ) ctx.begin(); // don't reset current tex stack
 		ctx.globalAlpha = alpha;
-		ctx.begin();
+		if( @:privateAccess !ctx.engine.inRender ) { // don't reset current tex stack
+			ctx.engine.begin();
+			ctx.begin();
+		}
 		ctx.pushTargets(texs);
 		if( outputs != null ) @:privateAccess ctx.manager.setOutput(outputs);
 		s.drawRec(ctx);
