@@ -546,7 +546,7 @@ class Window {
 	}
 
 	function selectedMonitor() : Dynamic {
-		var m = if(monitor == null) 0 else monitor;
+		var m = if(monitor == null) currentMonitorIndex else monitor;
 		#if hldx
 		return dx.Window.getMonitors()[m];
 		#elseif hlsdl
