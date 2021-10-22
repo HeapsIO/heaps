@@ -35,31 +35,35 @@ class DecalOverlay extends hxsl.Shader {
 		var pixelTransformedPosition : Vec3;
 		var projectedPosition : Vec4;
 		var localPos : Vec3;
+		var fadeFactor : Float;
 
 		function outsideBounds() : Bool {
 			return ( localPos.x > 0.5 || localPos.x < -0.5 || localPos.y > 0.5 || localPos.y < -0.5 || localPos.z > 0.5 || localPos.z < -0.5 );
 		}
 
+		function __init__fragment() {
+			{
+				var matrix = camera.inverseViewProj * global.modelViewInverse;
+				var screenPos = projectedPosition.xy / projectedPosition.w;
+				var depth = depthMap.get(screenToUv(screenPos));
+				var ruv = vec4( screenPos, depth, 1 );
+				var wpos = ruv * matrix;
+				var ppos = ruv * camera.inverseViewProj;
+
+				pixelTransformedPosition = ppos.xyz / ppos.w;
+				localPos = (wpos.xyz / wpos.w);
+				calculatedUV = localPos.xy;
+				fadeFactor = 1 - clamp( pow( max( 0.0, abs(localPos.z * 2) - fadeStart) / (fadeEnd - fadeStart), fadePower), 0, 1);
+
+				if( CENTERED )
+					calculatedUV += 0.5;
+
+				if(	outsideBounds() )
+					discard;
+			}
+		}
+
 		function fragment() {
-
-			var matrix = camera.inverseViewProj * global.modelViewInverse;
-			var screenPos = projectedPosition.xy / projectedPosition.w;
-			var depth = depthMap.get(screenToUv(screenPos));
-			var ruv = vec4( screenPos, depth, 1 );
-			var wpos = ruv * matrix;
-			var ppos = ruv * camera.inverseViewProj;
-
-			pixelTransformedPosition = ppos.xyz / ppos.w;
-			localPos = (wpos.xyz / wpos.w);
-			calculatedUV = localPos.xy;
-			var fadeFactor = 1 - clamp( pow( max( 0.0, abs(localPos.z * 2) - fadeStart) / (fadeEnd - fadeStart), fadePower), 0, 1);
-
-			if( CENTERED )
-				calculatedUV += 0.5;
-
-			if(	outsideBounds() )
-				discard;
-
 			var color = colorTexture.get(calculatedUV);
 			pixelColor.rgb *= color.rgb;
 			if( GAMMA_CORRECT ) pixelColor.rgb *= pixelColor.rgb;
@@ -138,6 +142,24 @@ class DecalPBR extends hxsl.Shader {
 			output.normalStrength = USE_NORMAL ? normalStrength * pixelColor.a * fadeFactor : 0.0;
 			output.pbrStrength = pbrStrength * pixelColor.a * fadeFactor;
 			output.emissiveStrength = emissiveStrength * pixelColor.a * fadeFactor;
+
+			{
+				var matrix = camera.inverseViewProj * global.modelViewInverse;
+				var screenPos = projectedPosition.xy / projectedPosition.w;
+				var depth = depthMap.get(screenToUv(screenPos));
+				var ruv = vec4( screenPos, depth, 1 );
+				var wpos = ruv * matrix;
+
+				var localPos = (wpos.xyz / wpos.w);
+				calculatedUV = localPos.xy;
+				fadeFactor = 1 - clamp( pow( max( 0.0, abs(localPos.z * 2) - fadeStart) / (fadeEnd - fadeStart), fadePower), 0, 1);
+
+				if( CENTERED )
+					calculatedUV += 0.5;
+
+				if(	outsideBounds(localPos) )
+					discard;
+			}
 		}
 
 		function getWorlPos( pos : Vec2 ) : Vec3{
@@ -154,28 +176,13 @@ class DecalPBR extends hxsl.Shader {
 
 		function fragment() {
 
-			var matrix = camera.inverseViewProj * global.modelViewInverse;
-			var screenPos = projectedPosition.xy / projectedPosition.w;
-			var depth = depthMap.get(screenToUv(screenPos));
-			var ruv = vec4( screenPos, depth, 1 );
-			var wpos = ruv * matrix;
-
-			var localPos = (wpos.xyz / wpos.w);
-			calculatedUV = localPos.xy;
-			fadeFactor = 1 - clamp( pow( max( 0.0, abs(localPos.z * 2) - fadeStart) / (fadeEnd - fadeStart), fadePower), 0, 1);
-
-			if( CENTERED )
-				calculatedUV += 0.5;
-
-			if(	outsideBounds(localPos) )
-				discard;
-
 			if( USE_ALBEDO ) {
 				var albedo = albedoTexture.get(calculatedUV);
 				pixelColor *= albedo;
 			}
 
 			if( USE_NORMAL ) {
+				var screenPos = projectedPosition.xy / projectedPosition.w;
 				var worldPos = getWorlPos(screenPos);
 				var ddx = worldPos - getWorlPos(screenPos + vec2(global.pixelSize.x, 0));
 				var ddy = worldPos - getWorlPos(screenPos + vec2(0, global.pixelSize.y));
