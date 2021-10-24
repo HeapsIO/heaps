@@ -18,6 +18,12 @@ typedef VertexBuffer = { b : js.html.webgl.Buffer, stride : Int #if multidriver,
 typedef Texture = { t : js.html.webgl.Texture, width : Int, height : Int, internalFmt : Int, pixelFmt : Int, bits : Int, bias : Float, bind : Int #if multidriver, driver : Driver #end };
 typedef DepthBuffer = { r : js.html.webgl.Renderbuffer #if multidriver, driver : Driver #end };
 typedef Query = {};
+#elseif (hlsdl && heaps_vulkan)
+typedef IndexBuffer = { b : sdl.Vulkan.VkBuffer, is32 : Bool };
+typedef VertexBuffer = { b : sdl.Vulkan.VkBuffer };
+typedef Texture = {};
+typedef DepthBuffer = {};
+typedef Query = {};
 #elseif hlsdl
 typedef IndexBuffer = { b : sdl.GL.Buffer, is32 : Bool };
 typedef VertexBuffer = { b : sdl.GL.Buffer, stride : Int };

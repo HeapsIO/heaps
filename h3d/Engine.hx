@@ -69,12 +69,9 @@ class Engine {
 		window.addResizeEvent(onWindowResize);
 		#if macro
 		driver = new h3d.impl.NullDriver();
+		#elseif (hlsdl && heaps_vulkan)
+		driver = new h3d.impl.VulkanDriver();
 		#elseif (js || hlsdl || usegl)
-		#if (hlsdl && heaps_vulkan)
-		if( hxd.Window.USE_VULKAN )
-			driver = new h3d.impl.VulkanDriver();
-		else
-		#end
 		driver = new h3d.impl.GlDriver(antiAlias);
 		#elseif flash
 		driver = new h3d.impl.Stage3dDriver(antiAlias);

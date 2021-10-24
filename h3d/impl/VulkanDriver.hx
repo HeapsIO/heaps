@@ -1,4 +1,5 @@
 package h3d.impl;
+#if (hlsdl && heaps_vulkan)
 import h3d.impl.Driver;
 import sdl.Vulkan;
 
@@ -14,8 +15,6 @@ class CompiledShader {
 	}
 }
 
-#if (hlsdl && heaps_vulkan)
-
 class VulkanDriver extends Driver {
 
 	var ctx : VkContext;
@@ -26,12 +25,13 @@ class VulkanDriver extends Driver {
 	var defaultMultisample : VkPipelineMultisample;
 	var defaultLayout : VkPipelineLayout;
 	var currentImage : VkImage;
+	var command : VkCommandBuffer;
 	var savedPointers : Array<Dynamic> = [];
 
 	public function new() {
 		var win = hxd.Window.getInstance();
 		ctx = @:privateAccess win.window.vkctx;
-		currentImage = ctx.setCurrent();
+		beginFrame();
 		initViewport(win.width, win.height);
 		if( !ctx.beginFrame() ) throw "assert";
 		defaultInput = new VkPipelineInputAssembly();
@@ -61,6 +61,11 @@ class VulkanDriver extends Driver {
 		inf.setLayoutCount = 1;
 		inf.setLayouts = makeArray([ctx.createDescriptorSetLayout(dset)]);
 		defaultLayout = ctx.createPipelineLayout(inf);
+	}
+
+	function beginFrame() {
+		currentImage = ctx.getCurrentImage();
+		command = ctx.getCurrentCommandBuffer();
 	}
 
 	function initViewport(width:Int,height:Int) {
@@ -108,7 +113,7 @@ class VulkanDriver extends Driver {
 
 	override function present() {
 		ctx.endFrame();
-		currentImage = ctx.setCurrent();
+		beginFrame();
 		if( !ctx.beginFrame() ) {
 			var win = hxd.Window.getInstance();
 			if( !ctx.initSwapchain(win.width, win.height) )
@@ -218,11 +223,11 @@ class VulkanDriver extends Driver {
 
 	override function clear(?color:Vector, ?depth:Float, ?stencil:Int) {
 		if( color != null )
-			currentImage.clearColor(color.r, color.g, color.b, color.a);
+			command.clearColorImage(currentImage, color.r, color.g, color.b, color.a);
 		if( depth != null || stencil != null ) {
 			if( depth == null || stencil == null ) throw "Can't clear depth without clearing stencil";
 			// *** TODO *** setup depth buffer
-			// currentImage.clearDepthStencil(depth, stencil);
+			// command.clearDepthStencilImage(currentImage, depth, stencil);
 		}
 	}
 
@@ -231,7 +236,22 @@ class VulkanDriver extends Driver {
 	}
 
 	override function allocIndexes( count : Int, is32 : Bool ) : IndexBuffer {
-		return cast {};
+		var inf = new VkBufferCreateInfo();
+		inf.usage.set(TRANSFER_DST);
+		inf.usage.set(INDEX_BUFFER);
+		inf.size = count * (is32?4:2);
+		var b = ctx.createBuffer(inf);
+		if( b == null ) return null;
+
+		var memReq = new VkMemoryRequirements();
+		ctx.getBufferMemoryRequirements(b, memReq);
+		var allocInfo = new VkMemoryAllocateInfo();
+		allocInfo.size = memReq.size;
+		//allocInfo.memoryTypeIndex =  findMemoryType(memRequirements.memoryTypeBits, properties);
+		var mem = ctx.allocateMemory(allocInfo);
+		if( !ctx.bindBufferMemory(b, mem, 0) ) throw "assert";
+
+		return { b : b, is32 : is32 };
 	}
 
 	override function allocVertexes( m : ManagedBuffer ) : VertexBuffer {
@@ -296,11 +316,12 @@ class VulkanDriver extends Driver {
 
 		var pipe = ctx.createGraphicsPipeline(inf);
 		if( pipe == null ) throw "Failed to create pipeline";
-		Vulkan.bindPipeline(GRAPHICS, pipe);
+		command.bindPipeline(GRAPHICS, pipe);
 	}
 
 	override function draw(ibuf:IndexBuffer, startIndex:Int, ntriangles:Int) {
-		Vulkan.drawIndexed(ntriangles * 3, 1, startIndex, 0, 0);
+		command.bindIndexBuffer(ibuf.b, 0, ibuf.is32?1:0);
+		command.drawIndexed(ntriangles * 3, 1, startIndex, 0, 0);
 		Sys.exit(0);
 	}
 
