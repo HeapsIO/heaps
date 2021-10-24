@@ -26,6 +26,7 @@ class VulkanDriver extends Driver {
 	var defaultMultisample : VkPipelineMultisample;
 	var defaultLayout : VkPipelineLayout;
 	var currentImage : VkImage;
+	var savedPointers : Array<Dynamic> = [];
 
 	public function new() {
 		var win = hxd.Window.getInstance();
@@ -38,7 +39,27 @@ class VulkanDriver extends Driver {
 		defaultMultisample = new VkPipelineMultisample();
 		defaultMultisample.rasterizationSamples = 1;
 
+		var bind0 = new VkDescriptorSetLayoutBinding();
+		bind0.binding = 0;
+		bind0.descriptorType = UNIFORM_BUFFER;
+		bind0.descriptorCount = 1;
+		bind0.stageFlags.set(VERTEX_BIT);
+		bind0.stageFlags.set(FRAGMENT_BIT);
+
+		var bind1 = new VkDescriptorSetLayoutBinding();
+		bind1.binding = 1;
+		bind1.descriptorType = UNIFORM_BUFFER;
+		bind1.descriptorCount = 1;
+		bind1.stageFlags.set(VERTEX_BIT);
+		bind1.stageFlags.set(FRAGMENT_BIT);
+
+		var dset = new VkDescriptorSetLayoutInfo();
+		dset.bindingCount = 2;
+		dset.bindings = makeArray([bind0,bind1]);
+
 		var inf = new VkPipelineLayoutInfo();
+		inf.setLayoutCount = 1;
+		inf.setLayouts = makeArray([ctx.createDescriptorSetLayout(dset)]);
 		defaultLayout = ctx.createPipelineLayout(inf);
 	}
 
@@ -127,15 +148,12 @@ class VulkanDriver extends Driver {
 		return mod;
 	}
 
-	/**
-		/!\ Warning : this function converts an array of struct pointers into a single
-		block aligned struct array. All references inside this block are not scanned so
-		it's important to keep any pointer that is referenced by this data
-	**/
-	@:generic static inline function makeArray<T>( a : Array<T> ) {
+	@:generic inline function makeArray<T>( a : Array<T>, keepInMemory=true ) {
 		var n = new hl.NativeArray<T>(a.length);
-		for( i in 0...a.length )
+		for( i in 0...a.length ) {
 			n[i] = a[i];
+			if( keepInMemory ) savedPointers.push(a[i]);
+		}
 		return Vulkan.makeArray(n);
 	}
 
@@ -159,6 +177,7 @@ class VulkanDriver extends Driver {
 			if( v.kind == Input ) {
 				names.push(v.name);
 				var a = new VkVertexInputAttributeDescription();
+				a.location = attribs.length;
 				a.binding = attribs.length;
 				a.offset = position;
 				a.format = switch( v.type ) {
@@ -248,10 +267,45 @@ class VulkanDriver extends Driver {
 
 
 		inf.layout = defaultLayout;
-		//inf.renderPass = new VkRenderPass();
+
+		var colorAttach = new VkAttachmentDescription();
+		colorAttach.format = B8G8R8A8_UNORM;
+		colorAttach.samples = 1;
+		colorAttach.loadOp = CLEAR;
+		colorAttach.storeOp = STORE;
+		colorAttach.stencilLoadOp = DONT_CARE;
+		colorAttach.stencilStoreOp = DONT_CARE;
+		colorAttach.initialLayout = UNDEFINED;
+		colorAttach.finalLayout = PRESENT_SRC_KHR;
+
+		var colorAttachRef = new VkAttachmentReference();
+		colorAttachRef.attachment = 0;
+		colorAttachRef.layout = COLOR_ATTACHMENT_OPTIMAL;
+
+		var subPass = new VkSubpassDescription();
+		subPass.pipelineBindPoint = GRAPHICS;
+		subPass.colorAttachmentCount = 1;
+		subPass.colorAttachments = makeArray([colorAttachRef]);
+
+		var renderPass = new VkRenderPassInfo();
+		renderPass.attachmentCount = 1;
+		renderPass.attachments = makeArray([colorAttach]);
+		renderPass.subpassCount = 1;
+		renderPass.subpasses = makeArray([subPass]);
+		inf.renderPass = ctx.createRenderPass(renderPass);
 
 		var pipe = ctx.createGraphicsPipeline(inf);
 		if( pipe == null ) throw "Failed to create pipeline";
+		Vulkan.bindPipeline(GRAPHICS, pipe);
+	}
+
+	override function draw(ibuf:IndexBuffer, startIndex:Int, ntriangles:Int) {
+		Vulkan.drawIndexed(ntriangles * 3, 1, startIndex, 0, 0);
+		Sys.exit(0);
+	}
+
+	override function drawInstanced(ibuf:IndexBuffer, commands:InstanceBuffer) {
+		throw "TODO";
 	}
 
 	static var CULLING : Array<VkCullModeFlags> = [NONE, BACK, FRONT, FRONT_AND_BACK];
