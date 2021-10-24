@@ -18,18 +18,19 @@ class CompiledShader {
 
 class VulkanDriver extends Driver {
 
-	var ctx : VKContext;
+	var ctx : VkContext;
 	var currentShader : CompiledShader;
 	var programs : Map<Int,CompiledShader> = new Map();
 	var defaultInput : VkPipelineInputAssembly;
 	var defaultViewport : VkPipelineViewport;
 	var defaultMultisample : VkPipelineMultisample;
 	var defaultLayout : VkPipelineLayout;
+	var currentImage : VkImage;
 
 	public function new() {
 		var win = hxd.Window.getInstance();
 		ctx = @:privateAccess win.window.vkctx;
-		ctx.setCurrent();
+		currentImage = ctx.setCurrent();
 		initViewport(win.width, win.height);
 		if( !ctx.beginFrame() ) throw "assert";
 		defaultInput = new VkPipelineInputAssembly();
@@ -86,6 +87,7 @@ class VulkanDriver extends Driver {
 
 	override function present() {
 		ctx.endFrame();
+		currentImage = ctx.setCurrent();
 		if( !ctx.beginFrame() ) {
 			var win = hxd.Window.getInstance();
 			if( !ctx.initSwapchain(win.width, win.height) )
@@ -150,6 +152,7 @@ class VulkanDriver extends Driver {
 		}
 		c.stages = makeArray([makeStage(c.vertex,VERTEX_BIT), makeStage(c.fragment,FRAGMENT_BIT)]);
 
+		// **** TODO !! *** check for usage of input variable in shader output binary
 		var attribs = [], position = 0;
 		var names = [];
 		for( v in shader.vertex.data.vars )
@@ -192,7 +195,16 @@ class VulkanDriver extends Driver {
 	}
 
 	override function begin(frame:Int) {
-		sdl.Vulkan.clearColorImage(0, 0.5, 0, 1);
+	}
+
+	override function clear(?color:Vector, ?depth:Float, ?stencil:Int) {
+		if( color != null )
+			currentImage.clearColor(color.r, color.g, color.b, color.a);
+		if( depth != null || stencil != null ) {
+			if( depth == null || stencil == null ) throw "Can't clear depth without clearing stencil";
+			// *** TODO *** setup depth buffer
+			// currentImage.clearDepthStencil(depth, stencil);
+		}
 	}
 
 	override function allocTexture( t : h3d.mat.Texture ) : Texture {
