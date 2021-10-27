@@ -7,6 +7,9 @@ class Hide extends Filter {
 	public var input : h2d.Tile;
 	public var maskVisible : Bool;
 
+	public var inputWidth:Int;
+	public var inputHeight:Int;
+
 	public function new() {
 		super();
 		this.boundsExtend = 1;
@@ -15,6 +18,8 @@ class Hide extends Filter {
 	override function draw( ctx : RenderContext, input : h2d.Tile ) {
 		this.frame = ctx.frame;
 		this.input = input;
+		this.inputWidth = input.iwidth;
+		this.inputHeight = input.iheight;
 		return maskVisible ? input : null;
 	}
 
@@ -109,7 +114,7 @@ class AbstractMask extends Filter {
 		maskMatrix.x /= tile.width;
 		maskMatrix.y /= tile.height;
 
-		maskMatrix.scale(tile.width / t.width, tile.height / t.height);
+		maskMatrix.scale(tile.width / hide.inputWidth, tile.height / hide.inputHeight);
 		t.filter = smooth ? Linear : Nearest;
 
 		return t;
@@ -125,6 +130,18 @@ class AbstractMask extends Filter {
 			}
 			hide.input = null;
 		}
+	}
+
+	override function set_resolutionScale(v:Float):Float
+	{
+		hide.resolutionScale = v;
+		return super.set_resolutionScale(v);
+	}
+
+	override function set_useScreenResolution(v:Bool):Bool
+	{
+		hide.useScreenResolution = v;
+		return super.set_useScreenResolution(v);
 	}
 
 }
