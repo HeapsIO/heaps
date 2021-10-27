@@ -386,4 +386,33 @@ class Benchmark extends h2d.Graphics {
 		if( measureCpu ) q.value = haxe.Timer.stamp() * 1e9;
 	}
 
+	public static function takeControl( app : hxd.App, ?s3d : h3d.scene.Scene ) @:privateAccess {
+		if( s3d == null ) s3d = app.s3d;
+		var cur = hxd.System.getCurrentLoop();
+		var prevInt = s3d.interactives;
+		var prevScenes = app.sevents.scenes;
+		app.sevents.scenes = [s3d];
+		s3d.interactives = [];
+		var camCtrl = new h3d.scene.CameraController(s3d);
+		var prevStates = new Map();
+		var frustum = s3d.camera.frustum;
+		function getRec( obj : h3d.scene.Object ) {
+			if( obj.cullingCollider != null ) {
+				prevStates.set(obj,{ cul : obj.cullingCollider, culled : obj.culled });
+				obj.culled = obj.culled || !obj.cullingCollider.inFrustum(frustum);
+				obj.cullingCollider = null;
+			}
+			for( o in obj )
+				getRec(o);
+		}
+		getRec(s3d);
+		camCtrl.loadFromCamera();
+		if( app.s2d != null ) app.s2d.setElapsedTime(0);
+		if( app.s3d != null ) app.s3d.setElapsedTime(0);
+		hxd.System.setLoop(function() {
+			app.sevents.checkEvents();
+			app.engine.render(app);
+		});
+	}
+
 }
