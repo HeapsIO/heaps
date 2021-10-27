@@ -259,7 +259,7 @@ class Console #if !macro extends h2d.Object #end {
 		}
 		for( cmdName in all ) {
 			var c = commands.get(cmdName);
-			var str = "/" + cmdName;
+			var str = String.fromCharCode(shortKeyChar) + cmdName;
 			for( a in aliases.keys() )
 				if( aliases.get(a) == cmdName )
 					str += "|" + a;
@@ -311,6 +311,11 @@ class Console #if !macro extends h2d.Object #end {
 	}
 
 	function getCommandSuggestion(cmd : String) : String {
+		var hadShortKey = false;
+		if (cmd.charCodeAt(0) == shortKeyChar) {
+			hadShortKey = true;
+			cmd = cmd.substr(1);
+		}
 		if (cmd == "") {
 			return "";
 		}
@@ -325,6 +330,8 @@ class Console #if !macro extends h2d.Object #end {
 			}
 		}
 
+		if (hadShortKey && closestCommand != "")
+			closestCommand = String.fromCharCode(shortKeyChar) + closestCommand;
 		return closestCommand;
 	}
 
@@ -391,7 +398,7 @@ class Console #if !macro extends h2d.Object #end {
 
 	function handleCommand( command : String ) {
 		command = StringTools.trim(command);
-		if( command.charCodeAt(0) == "/".code ) command = command.substr(1);
+		if( command.charCodeAt(0) == shortKeyChar ) command = command.substr(1);
 		if( command == "" ) {
 			hide();
 			return;
