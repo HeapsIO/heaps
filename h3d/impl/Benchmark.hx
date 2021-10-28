@@ -406,6 +406,7 @@ class Benchmark extends h2d.Graphics {
 				getRec(o);
 		}
 		getRec(s3d);
+		s3d.ctx.debugCulling = true;
 		camCtrl.loadFromCamera();
 		if( app.s2d != null ) app.s2d.setElapsedTime(0);
 		if( app.s3d != null ) app.s3d.setElapsedTime(0);
