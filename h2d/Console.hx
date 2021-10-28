@@ -330,6 +330,9 @@ class Console #if !macro extends h2d.Object #end {
 			}
 		}
 
+		if( aliases.exists(cmd) )
+			closestCommand = cmd;
+
 		if (hadShortKey && closestCommand != "")
 			closestCommand = String.fromCharCode(shortKeyChar) + closestCommand;
 		return closestCommand;
