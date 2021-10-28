@@ -741,7 +741,8 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		if( !inRender ) { // don't reset current tex stack
 			ctx.engine.begin();
 			ctx.begin();
-		}
+		} else if( @:privateAccess ctx.targetFlipY == 0 )
+			ctx.begin(); // ctx was never init, most likely a new scene
 		ctx.pushTargets(texs);
 		if( outputs != null ) @:privateAccess ctx.manager.setOutput(outputs);
 		s.drawRec(ctx);
