@@ -37,8 +37,8 @@ class FileConverter {
 	static var extraConfigs:Array<Dynamic> = [];
 
 	/**
-		Add extra convert configuration. Should be props.json-compatible structure.  
-		Can be used to add or override converts that are enabled by default.  
+		Add extra convert configuration. Should be props.json-compatible structure.
+		Can be used to add or override converts that are enabled by default.
 		Sample code of Convert registration and enabling it by default:
 		```haxe
 		// Register Convert
@@ -89,9 +89,10 @@ class FileConverter {
 		var merge = mergeRec(def, conf);
 		for( f in Reflect.fields(merge) ) {
 			var cmd = makeCommmand(Reflect.field(merge,f));
-			var pt = if( f.charCodeAt(0) == "^".code )
+			var pt = if( f.charCodeAt(0) == "^".code ) {
+				f = f.split("\\/").join("/").split("/").join("\\/");
 				Regexp(new EReg(f,""));
-			else if( ~/^[a-zA-Z0-9,]+$/.match(f) ) {
+			} else if( ~/^[a-zA-Z0-9,]+$/.match(f) ) {
 				var el = f.toLowerCase().split(",");
 				el.length == 1 ? Ext(el[0]) : Exts(el);
 			} else if( f == "*" )
