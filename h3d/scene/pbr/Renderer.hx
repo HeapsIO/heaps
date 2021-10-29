@@ -282,11 +282,12 @@ class Renderer extends h3d.scene.Renderer {
 	function drawShadows( ls : LightSystem ) {
 		var light = @:privateAccess ctx.lights;
 		var passes = get("shadow");
-		if( !shadows )
-			passes.clear();
 		while( light != null ) {
 			var plight = hxd.impl.Api.downcast(light, h3d.scene.pbr.Light);
-			if( plight != null ) ls.drawShadows(plight, passes);
+			if( plight != null ) {
+				if( !shadows ) passes.clear();
+				ls.drawShadows(plight, passes);
+			}
 			light = light.next;
 		}
 	}

@@ -274,7 +274,7 @@ class DirShadowMap extends Shadows {
 
 		if( mode != Mixed || ctx.computingStatic ) {
 			lightCamera.orthoBounds.empty();
-			calcShadowBounds(lightCamera);
+			if( !passes.isEmpty() ) calcShadowBounds(lightCamera);
 			lightCamera.update();
 		}
 
