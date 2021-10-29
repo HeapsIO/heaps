@@ -139,7 +139,8 @@ class HMDOut extends BaseLibrary {
 			var y = vbuf[vid * stride + 1];
 			var z = vbuf[vid * stride + 2];
 			var found = false;
-			for( i => p in points ) {
+			for( i in 0...points.length ) {
+				var p = points[i];
 				if( p.x == x && p.y == y && p.z == z ) {
 					pmap[vid] = i;
 					found = true;
