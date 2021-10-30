@@ -56,7 +56,7 @@ class Reader {
 		var n = HMD_STRINGS.get(name);
 		if( n != null ) return n;
 		HMD_STRINGS.set(name,name);
-		return name;	
+		return name;
 	}
 
 	function readPosition(hasScale=true) {
@@ -125,7 +125,7 @@ class Reader {
 		return s;
 	}
 
-	public function readHeader() : Data {
+	public function readHeader( fast = false ) : Data {
 		var d = new Data();
 		var h = i.readString(3);
 		if( h != "HMD" ) {
@@ -138,6 +138,8 @@ class Reader {
 		d.version = version;
 		d.geometries = [];
 		d.dataPosition = i.readInt32();
+		if( fast )
+			i = new haxe.io.BytesInput(i.read(d.dataPosition-12));
 		d.props = readProps();
 
 		for( k in 0...i.readInt32() ) {
