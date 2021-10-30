@@ -127,13 +127,19 @@ class Image extends Resource {
 			inf.height = f.readUInt16();
 
 		case 0x4444: // DDS
+			#if editor
+			var f = new haxe.io.BytesInput(f.read(30*4+10));
+			inline function skip(n) f.position += n;
+			#else
+			inline function skip(n) f.skip(n);
+			#end
 			inf.dataFormat = Dds;
-			f.skip(10);
+			skip(10);
 			inf.height = f.readInt32();
 			inf.width = f.readInt32();
-			f.skip(8);
+			skip(2*4);
 			inf.mipLevels = f.readInt32();
-			f.skip(12*4);
+			skip(12*4);
 			var caps = f.readInt32();
 			var fourCC = f.readInt32();
 			var bpp = f.readInt32();
@@ -162,7 +168,7 @@ class Image extends Resource {
 				default: null;
 				}
 			case _ if( fourCC == 0x30315844 /* DX10 */ ):
-				f.skip(3 * 4);
+				skip(3 * 4);
 				inf.flags.set(Dxt10Header);
 				var dxgi = f.readInt32(); // DXGI_FORMAT_xxxx value
 				inf.pixelFormat = switch( dxgi ) {
