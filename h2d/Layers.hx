@@ -55,7 +55,7 @@ class Layers extends Object {
 		if ( index != -1 ) {
 			// Prevent inserting out of layer bounds.
 			if ( layer == 0 )
-				super.addChildAt(s, hxd.Math.imin(layersIndexes[0], hxd.Math.imin(index, layersIndexes[layer])));
+				super.addChildAt(s, hxd.Math.imax(0, hxd.Math.imin(index, layersIndexes[layer])));
 			else if ( index < 0 ) // clamp 0..
 				super.addChildAt(s, layersIndexes[layer - 1]);
 			else // clamp ..layerSize
