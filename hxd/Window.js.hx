@@ -97,11 +97,13 @@ class Window {
 
 		js.Browser.window.addEventListener("resize", checkResize);
 
-		canvas.oncontextmenu = function(e){
+		canvas.addEventListener("contextmenu", function(e){
 			e.stopPropagation();
-			e.preventDefault();
+			if (e.button == 2) {
+				e.preventDefault();
+			}
 			return false;
-		};
+		});
 		if( globalEvents ) {
 			// make first mousedown on canvas trigger event
 			canvas.addEventListener("mousedown", function(e) {
