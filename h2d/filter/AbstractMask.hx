@@ -96,7 +96,7 @@ class AbstractMask extends Filter {
 		return m;
 	}
 
-	function getMaskTexture( tile : h2d.Tile ) {
+	function getMaskTexture( ctx : h2d.RenderContext, tile : h2d.Tile ) {
 		var t = hide.input == null ? null : hide.input.getTexture();
 		if( t == null ) return null;
 
@@ -110,9 +110,10 @@ class AbstractMask extends Filter {
 		tmpMatrix.prependTranslate(tile.dx, tile.dy);
 		maskMatrix.multiply(tmpMatrix, maskMatrix);
 
+		var resolutionScale = ctx.getFilterScale(@:privateAccess h2d.Object.tmpPoint);
 		// move from tex a to tex b
-		maskMatrix.x /= tile.width;
-		maskMatrix.y /= tile.height;
+		maskMatrix.x /= tile.width / resolutionScale.x;
+		maskMatrix.y /= tile.height / resolutionScale.y;
 
 		maskMatrix.scale(tile.width / hide.inputWidth, tile.height / hide.inputHeight);
 		t.filter = smooth ? Linear : Nearest;
