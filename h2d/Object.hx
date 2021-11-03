@@ -870,6 +870,8 @@ class Object #if (domkit && !domkit_heaps) implements domkit.Model<h2d.Object> #
 			scaleY = scale.y;
 		}
 
+		ctx.setFilterScale(scaleX, scaleY);
+
 		clipBounds(ctx, total, scaleX, scaleY);
 
 		var xMin = Math.floor(total.xMin + 1e-10);

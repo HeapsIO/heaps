@@ -52,7 +52,7 @@ class Mask extends AbstractMask {
 	function set_smoothAlpha(v) return pass.shader.smoothAlpha = v;
 
 	override function draw( ctx : RenderContext, t : h2d.Tile ) {
-		var mask = getMaskTexture(t);
+		var mask = getMaskTexture(ctx, t);
 		if( mask == null ) {
 			if( this.mask == null ) throw "Mask filter has no mask object";
 			return null;
@@ -60,7 +60,7 @@ class Mask extends AbstractMask {
 		var out = ctx.textures.allocTileTarget("maskTmp", t);
 		ctx.engine.pushTarget(out);
 		pass.shader.texture = t.getTexture();
-		pass.shader.mask = getMaskTexture(t);
+		pass.shader.mask = getMaskTexture(ctx, t);
 		pass.shader.maskMatA.set(maskMatrix.a, maskMatrix.c, maskMatrix.x);
 		pass.shader.maskMatB.set(maskMatrix.b, maskMatrix.d, maskMatrix.y);
 		pass.render();
