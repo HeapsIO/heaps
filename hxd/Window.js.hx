@@ -95,7 +95,15 @@ class Window {
 		element.addEventListener("blur", onFocus.bind(false));
 		element.addEventListener("focus", onFocus.bind(true));
 
-		js.Browser.window.addEventListener("resize", checkResize);
+		if ((js.Browser.window:Dynamic).ResizeObserver != null) {
+			// Modern solution for canvas resize monitoring, supported in most browsers, but not Haxe API.
+			var observer = js.Syntax.construct("ResizeObserver", function(e) {
+				checkResize();
+			});
+			observer.observe(canvas);
+		} else {
+			js.Browser.window.addEventListener("resize", checkResize);
+		}
 
 		canvas.addEventListener("contextmenu", function(e){
 			e.stopPropagation();
