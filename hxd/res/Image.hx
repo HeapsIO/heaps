@@ -38,6 +38,7 @@ class ImageInfo {
 	public var width(default,null) : Int = 0;
 	public var height(default,null) : Int = 0;
 	public var mipLevels(default,null) : Int = 1;
+	public var layerCount(default,null) : Int = 1;
 	public var flags(default,null) : haxe.EnumFlags<ImageInfoFlag>;
 	public var dataFormat(default,null) : ImageFormat;
 	public var pixelFormat(default,null) : PixelFormat;
@@ -128,7 +129,7 @@ class Image extends Resource {
 
 		case 0x4444: // DDS
 			#if editor
-			var f = new haxe.io.BytesInput(f.read(30*4+10));
+			var f = new haxe.io.BytesInput(f.read(33*4+10));
 			inline function skip(n) f.position += n;
 			#else
 			inline function skip(n) f.skip(n);
@@ -172,6 +173,8 @@ class Image extends Resource {
 				inf.flags.set(Dxt10Header);
 				var dxgi = f.readInt32(); // DXGI_FORMAT_xxxx value
 				inf.pixelFormat = switch( dxgi ) {
+				case 28:
+					RGBA;
 				case 95: // BC6H_UF16
 					S3TC(6);
 				case 98: // BC7_UNORM
@@ -179,6 +182,9 @@ class Image extends Resource {
 				default:
 					throw entry.path+" has unsupported DXGI format "+dxgi;
 				}
+				var imgType = f.readInt32();
+				skip(4);
+				inf.layerCount = f.readInt32();
 			case 111: // D3DFMT_R16F
 				inf.pixelFormat = R16F;
 			case 112: // D3DFMT_G16R16F
@@ -517,7 +523,10 @@ class Image extends Resource {
 		}
 		if( fmt == R16U )
 			throw "Unsupported texture format "+fmt+" for "+entry.path;
-		tex = new h3d.mat.Texture(inf.width, inf.height, flags, fmt);
+		if( inf.layerCount > 1 )
+			tex = new h3d.mat.TextureArray(inf.width, inf.height, inf.layerCount, flags, fmt);
+		else
+			tex = new h3d.mat.Texture(inf.width, inf.height, flags, fmt);
 		if( DEFAULT_FILTER != Linear ) tex.filter = DEFAULT_FILTER;
 		tex.setName(entry.path);
 		setupTextureFlags(tex);
