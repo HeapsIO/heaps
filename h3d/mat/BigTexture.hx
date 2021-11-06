@@ -265,6 +265,7 @@ class BigTexture {
 	function flush() {
 		if( allPixels == null || loadCount > 0 )
 			return;
+		onPixelsReady(allPixels);
 		if( tex.width != size ) tex.resize(size, size);
 		tex.uploadPixels(allPixels);
 		allPixels.dispose();
@@ -273,6 +274,9 @@ class BigTexture {
 			waitTimer.stop();
 			waitTimer = null;
 		}
+	}
+
+	dynamic function onPixelsReady( pixels : hxd.Pixels ) {
 	}
 
 	public function done() {
