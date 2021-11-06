@@ -653,14 +653,16 @@ class Pixels {
 		}
 
 		outSize += 128; // header
+		var dx10h = layerCount > 1 && !isCubeMap;
+		if( dx10h ) outSize += 20;
 		var ddsOut = haxe.io.Bytes.alloc(outSize);
 		var outPos = 0;
 		inline function write(v) { ddsOut.setInt32(outPos,v); outPos += 4; }
 		write(0x20534444); // 'DDS '
 		write(124);
 		write(0x1 | 0x2 | 0x4 | 0x8 | 0x1000 | 0x20000);
-		write(width);
 		write(height);
+		write(width);
 		write(ref.stride);
 		write(1);
 		write(levels.length);
@@ -669,6 +671,15 @@ class Pixels {
 		write(32);
 
 		switch( fmt ) {
+		case _ if( dx10h ):
+			write(0x4);
+			write(0x30315844);
+			write(0);
+			write(0);
+			write(0);
+			write(0);
+			write(0);
+
 		case ARGB, BGRA, RGBA:
 			write( 0x1 | 0x40 );
 			write(0); // FOURCC
@@ -682,7 +693,6 @@ class Pixels {
 			writeMask(B);
 			writeMask(A);
 		default:
-			var alpha = getChannelOffset(fmt, A) >= 0;
 			write( 0x4 );
 			write(switch( fmt ) {
 			case R16F: 111;
@@ -701,12 +711,26 @@ class Pixels {
 		}
 
 		//
-		write((pixels.length == 1 ? 0 : 0x8) | 0x1000 | (levels.length == 1 ? 0 : 0x400000));
+		write(dx10h ? 0x1000 : ((pixels.length == 1 ? 0 : 0x8) | 0x1000 | (levels.length == 1 ? 0 : 0x400000)));
 		var cubebits = 0x200 | 0x400 | (layerCount > 1 ? 0x800 : 0) | (layerCount > 2 ? 0x1000 : 0) | (layerCount > 3 ? 0x2000 : 0) | (layerCount > 4 ? 0x4000 : 0) | (layerCount > 5 ? 0x8000 : 0);
 		write( isCubeMap ? cubebits : 0 );
 		write(0);
 		write(0);
 		write(0);
+
+		if( dx10h ) {
+			switch( fmt ) {
+			case RGBA:
+				write(28); // DXGI_FORMAT_R8G8B8A8_UNORM
+			default:
+				throw "Unsupported DXT10 format "+fmt;
+			}
+			write(3); // 2D texture
+			write(0);
+			write(layerCount);
+			write(0);
+		}
+
 		// add image data
 		for( i in 0...layerCount )
 			for( l in 0...levels.length ) {
