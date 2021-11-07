@@ -38,13 +38,18 @@ class MeshBatchPart {
 **/
 class MeshBatch extends MultiMaterial {
 
+	static var modelViewID = hxsl.Globals.allocID("global.modelView");
+	static var modelViewInverseID = hxsl.Globals.allocID("global.modelViewInverse");
+	static var MAX_BUFFER_ELEMENTS = 4096;
+
 	var instanced : h3d.prim.Instanced;
 	var dataPasses : BatchData;
-	var modelViewID = hxsl.Globals.allocID("global.modelView");
-	var modelViewInverseID = hxsl.Globals.allocID("global.modelViewInverse");
 	var needUpload = false;
 
-	static var MAX_BUFFER_ELEMENTS = 4096;
+	/**
+		Set if shader list or shader constants has changed, before calling begin()
+	**/
+	public var shadersChanged = true;
 
 	/**
 		The number of instances on this batch
@@ -56,11 +61,6 @@ class MeshBatch extends MultiMaterial {
 	**/
 	public var worldPosition : Matrix;
 	var invWorldPosition : Matrix;
-
-	/**
-		Set if shader list or shader constants has changed, before calling begin()
-	**/
-	public var shadersChanged = true;
 
 	/**
 		Tells the mesh batch to draw only a subpart of the primitive
