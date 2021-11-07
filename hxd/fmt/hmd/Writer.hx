@@ -121,7 +121,11 @@ class Writer {
 				out.writeByte(f.format.toInt());
 			}
 			out.writeInt32(g.vertexPosition);
-			out.writeByte(g.indexCounts.length);
+			if( g.indexCounts.length >= 0xFF ) {
+				out.writeByte(0xFF);
+				out.writeInt32(g.indexCounts.length);
+			} else
+				out.writeByte(g.indexCounts.length);
 			for( i in g.indexCounts )
 				out.writeInt32(i);
 			out.writeInt32(g.indexPosition);
@@ -151,7 +155,11 @@ class Writer {
 			writePosition(m.position);
 			out.writeInt32(m.geometry + 1);
 			if( m.geometry < 0 ) continue;
-			out.writeByte(m.materials.length);
+			if( m.materials.length >= 0xFF ) {
+				out.writeByte(0xFF);
+				out.writeInt32(m.materials.length);
+			} else
+				out.writeByte(m.materials.length);
 			for( m in m.materials )
 				out.writeInt32(m);
 			if( m.skin == null )

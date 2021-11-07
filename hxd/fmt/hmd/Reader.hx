@@ -149,7 +149,9 @@ class Reader {
 			g.vertexStride = i.readByte();
 			g.vertexFormat = [for( k in 0...i.readByte() ) new GeometryFormat(readCachedName(), GeometryDataFormat.fromInt(i.readByte()))];
 			g.vertexPosition = i.readInt32();
-			g.indexCounts = [for( k in 0...i.readByte() ) i.readInt32()];
+			var subCount = i.readByte();
+			if( subCount == 0xFF ) subCount = i.readInt32();
+			g.indexCounts = [for( k in 0...subCount ) i.readInt32()];
 			g.indexPosition = i.readInt32();
 			g.bounds = readBounds();
 			d.geometries.push(g);
@@ -183,7 +185,9 @@ class Reader {
 			d.models.push(m);
 			if( m.geometry < 0 ) continue;
 			m.materials = [];
-			for( k in 0...i.readByte() )
+			var matCount = i.readByte();
+			if( matCount == 0xFF ) matCount = i.readInt32();
+			for( k in 0...matCount )
 				m.materials.push(i.readInt32());
 			m.skin = readSkin();
 		}
