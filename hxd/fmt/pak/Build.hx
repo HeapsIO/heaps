@@ -207,7 +207,7 @@ class Build {
 				var pakFile = args.shift();
 				var fs = sys.io.File.read(pakFile);
 				var pak = new hxd.fmt.pak.Reader(fs).readHeader();
-				var baseDir = pakFile.substr(0,-4);
+				var baseDir = b.outPrefix == null ? pakFile.substr(0,-4) : b.outPrefix;
 				function extractRec(f:hxd.fmt.pak.Data.File, dir) {
 					#if !dataOnly
 					hxd.System.timeoutTick();
