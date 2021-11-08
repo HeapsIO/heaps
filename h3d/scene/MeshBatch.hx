@@ -307,8 +307,10 @@ class MeshBatch extends MultiMaterial {
 				if( buf == null || buf.isDisposed() ) {
 					buf = alloc.allocBuffer(MAX_BUFFER_ELEMENTS,4,UniformDynamic);
 					p.buffers[index] = buf;
-					buf.uploadVector(p.data, start * p.paramsCount * 4, count * p.paramsCount);
+					upload = true;
 				}
+				if( upload )
+					buf.uploadVector(p.data, start * p.paramsCount * 4, count * p.paramsCount);
 				if( psBytes != null ) {
 					if( p.instanceBuffers == null ) p.instanceBuffers = [];
 					var buf = p.instanceBuffers[index];
