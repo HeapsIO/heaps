@@ -50,7 +50,7 @@ class Window {
 	#if (hl_ver >= version("1.12.0"))
 	public var currentMonitorIndex(get,null) : Int;
 	#end
-	
+
 	#if hlsdl
 	var window : sdl.Window;
 	#elseif hldx
@@ -563,8 +563,8 @@ class Window {
 			mode: null
 		}
 		var defaultId = -1;
-		var def = getCurrentDisplaySetting(null, true);
-		for( i => s in getDisplaySettings() ) {
+		var def = getCurrentDisplaySetting(currentMonitorIndex, true);
+		for( i => s in getDisplaySettings(currentMonitorIndex) ) {
 			if(s.width == def.width && s.height == def.height && s.framerate == def.framerate)
 				defaultId = i;
 			if(s.width == width && s.height == height) {
@@ -578,7 +578,7 @@ class Window {
 		}
 		return m.idx == -1 ? { idx: defaultId, mode: def } : m;
 	}
-	
+
 	function get_currentMonitorIndex() : Int {
 		#if hldx
 		var current = window.getCurrentMonitor();
