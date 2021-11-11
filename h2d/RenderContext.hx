@@ -345,6 +345,7 @@ class RenderContext extends h3d.impl.RenderContext {
 		Finalizes Filter rendering and removes top-most Object from filter stack.
 	**/
 	public function popFilter() {
+		inFilter.spr = null;
 		filterStackIndex--;
 		if( filterStackIndex > 0 ) {
 			inFilter = filterStack[filterStackIndex - 1];
