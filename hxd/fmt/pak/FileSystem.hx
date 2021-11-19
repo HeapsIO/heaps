@@ -59,6 +59,7 @@ private class PakEntry extends FileEntry {
 	var openedBytes : haxe.io.Bytes;
 	var cachedBytes : haxe.io.Bytes;
 	var bytesPosition : Int;
+	var relPath : String;
 
 	public function new(fs, parent, f, p) {
 		this.fs = fs;
@@ -70,7 +71,10 @@ private class PakEntry extends FileEntry {
 	}
 
 	override function get_path() {
-		return parent == null ? "<root>" : (parent.parent == null ? name : parent.path + "/" + name);
+		if( relPath != null )
+			return relPath;
+		relPath = parent == null ? "<root>" : (parent.parent == null ? name : parent.path + "/" + name);
+		return relPath;
 	}
 
 	override function get_size() {
