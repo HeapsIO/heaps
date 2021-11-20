@@ -53,7 +53,7 @@ class Atlas extends Resource {
 			return contents;
 
 		contents = new Map();
-		var lines = entry.getBytes().toString().split("\n");
+		var lines = entry.getText().split("\n");
 
 		var basePath = entry.path.split("/");
 		basePath.pop();

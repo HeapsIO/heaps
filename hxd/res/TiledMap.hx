@@ -21,7 +21,7 @@ typedef TiledMapData = {
 class TiledMap extends Resource {
 
 	public function toMap() : TiledMapData {
-		var data = entry.getBytes().toString();
+		var data = entry.getText();
 		var base = new haxe.crypto.BaseCode(haxe.io.Bytes.ofString("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"));
 		var x = new Access(Xml.parse(data).firstElement());
 		var layers = [];
