@@ -11,6 +11,26 @@ class FileEntry {
 	public var isAvailable(get, never) : Bool;
 
 	public function getBytes() : haxe.io.Bytes return null;
+	public function readBytes( out : haxe.io.Bytes, outPos : Int, pos : Int, len : Int ) : Int { throw "readBytes() not implemented"; }
+
+
+	static var TMP_BYTES : haxe.io.Bytes = null;
+	/**
+		Similar to readBytes except :
+		a) a temporary buffer is reused, meaning a single fetchBytes must occur at a single time
+		b) it will throw an Eof exception if the data is not available
+	**/
+	public function fetchBytes( pos, len ) : haxe.io.Bytes {
+		var bytes = TMP_BYTES;
+		if( bytes == null || bytes.length < len ) {
+			var allocSize = (len + 65535) & 0xFFFF0000;
+			bytes = haxe.io.Bytes.alloc(allocSize);
+			TMP_BYTES = bytes;
+		}
+		if( readBytes(bytes,0,pos,len) < len )
+			throw new haxe.io.Eof();
+		return bytes;
+	}
 
 	public function getText() return getBytes().toString();
 

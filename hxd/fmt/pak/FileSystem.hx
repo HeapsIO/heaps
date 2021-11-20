@@ -98,6 +98,23 @@ private class PakEntry extends FileEntry {
 		return pak.read(file.dataSize);
 	}
 
+	override function readBytes( out : haxe.io.Bytes, outPos : Int, pos : Int, len : Int ) : Int {
+		FileSeek.seek(pak,file.dataPosition + pos, SeekBegin);
+		if( pos + len > file.dataSize )
+			len = file.dataSize - pos;
+		var tot = 0;
+		while( len > 0 ) {
+			var k = pak.readBytes(out, outPos, len);
+			if( k <= 0 ) break;
+			len -= k;
+			outPos += k;
+			tot += k;
+			fs.totalReadBytes += k;
+			fs.totalReadCount++;
+		}
+		return tot;
+	}
+
 	override function open() {
 		if( openedBytes == null )
 			openedBytes = fs.getCached(this);

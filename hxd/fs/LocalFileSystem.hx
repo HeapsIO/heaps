@@ -24,6 +24,21 @@ class LocalEntry extends FileEntry {
 		return sys.io.File.getBytes(file);
 	}
 
+	override function readBytes( out : haxe.io.Bytes, outPos : Int, pos : Int, len : Int ) : Int {
+		var f = sys.io.File.read(file);
+		f.seek(pos, SeekBegin);
+		var tot = 0;
+		while( len > 0 ) {
+			var k = f.readBytes(out, outPos, len);
+			if( k <= 0 ) break;
+			outPos += k;
+			tot += k;
+			len -= k;
+		}
+		f.close();
+		return tot;
+	}
+
 	override function open() {
 		if( fread != null )
 			fread.seek(0, SeekBegin);

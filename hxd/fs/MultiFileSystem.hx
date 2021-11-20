@@ -12,6 +12,7 @@ private class MultiFileEntry extends FileEntry {
 	}
 
 	override function getBytes() : haxe.io.Bytes return el[0].getBytes();
+	override function readBytes( bytes, outPos, pos, len ) return el[0].readBytes(bytes,outPos,pos,len);
 
 	override function open() el[0].open();
 	override function skip( nbytes : Int ) el[0].skip(nbytes);

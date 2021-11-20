@@ -38,6 +38,16 @@ private class EmbedEntry extends FileEntry {
 		#end
 	}
 
+	override function readBytes( out : haxe.io.Bytes, outPos : Int, pos : Int, len : Int ) : Int {
+		if( bytes == null )
+			open();
+		if( pos + len > bytes.length )
+			len = bytes.length - pos;
+		if( len < 0 ) len = 0;
+		out.blit(outPos, bytes, pos, len);
+		return len;
+	}
+
 	override function open() {
 		#if flash
 		if( bytes == null )
