@@ -37,12 +37,7 @@ class FileEntry {
 	}
 
 	public function getText() return getBytes().toString();
-
-	public function open() { }
-	public function skip( nbytes : Int ) { }
-	public function readByte() : Int return 0;
-	public function read( out : haxe.io.Bytes, pos : Int, size : Int ) {}
-	public function close() {}
+	public function open() return @:privateAccess new FileInput(this);
 
 	public function load( ?onReady : Void -> Void ) : Void { if( !isAvailable ) throw "load() not implemented"; else if( onReady != null ) onReady(); }
 	public function loadBitmap( onLoaded : LoadedBitmap -> Void ) : Void { throw "loadBitmap() not implemented"; }

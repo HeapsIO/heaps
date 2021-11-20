@@ -6,7 +6,6 @@ class BytesFileEntry extends FileEntry {
 
 	var fullPath : String;
 	var bytes : haxe.io.Bytes;
-	var pos : Int;
 
 	public function new(path, bytes) {
 		this.fullPath = path;
@@ -28,25 +27,6 @@ class BytesFileEntry extends FileEntry {
 		if( len < 0 ) len = 0;
 		out.blit(outPos, bytes, pos, len);
 		return len;
-	}
-
-	override function open() {
-		pos = 0;
-	}
-
-	override function skip( nbytes : Int ) {
-		pos += nbytes;
-	}
-	override function readByte() : Int {
-		return bytes.get(pos++);
-	}
-
-	override function read( out : haxe.io.Bytes, pos : Int, size : Int ) {
-		out.blit(pos, bytes, this.pos, size);
-		this.pos += size;
-	}
-
-	override function close() {
 	}
 
 	override function load( ?onReady : Void -> Void ) : Void {

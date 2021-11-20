@@ -11,7 +11,6 @@ class LocalEntry extends FileEntry {
 	var relPath : String;
 	var file : String;
 	var originalFile : String;
-	var fread : sys.io.FileInput;
 
 	function new(fs, name, relPath, file) {
 		this.fs = fs;
@@ -27,42 +26,9 @@ class LocalEntry extends FileEntry {
 	override function readBytes( out : haxe.io.Bytes, outPos : Int, pos : Int, len : Int ) : Int {
 		var f = sys.io.File.read(file);
 		f.seek(pos, SeekBegin);
-		var tot = 0;
-		while( len > 0 ) {
-			var k = f.readBytes(out, outPos, len);
-			if( k <= 0 ) break;
-			outPos += k;
-			tot += k;
-			len -= k;
-		}
+		var tot = f.readBytes(out, outPos, len);
 		f.close();
 		return tot;
-	}
-
-	override function open() {
-		if( fread != null )
-			fread.seek(0, SeekBegin);
-		else
-			fread = sys.io.File.read(file);
-	}
-
-	override function skip(nbytes:Int) {
-		fread.seek(nbytes, SeekCur);
-	}
-
-	override function readByte() {
-		return fread.readByte();
-	}
-
-	override function read( out : haxe.io.Bytes, pos : Int, size : Int ) : Void {
-		fread.readFullBytes(out, pos, size);
-	}
-
-	override function close() {
-		if( fread != null ) {
-			fread.close();
-			fread = null;
-		}
 	}
 
 	var isDirCached : Null<Bool>;

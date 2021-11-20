@@ -55,10 +55,6 @@ private class PakEntry extends FileEntry {
 	var file : Data.File;
 	var pak : FileInput;
 	var subs : Array<PakEntry>;
-
-	var openedBytes : haxe.io.Bytes;
-	var cachedBytes : haxe.io.Bytes;
-	var bytesPosition : Int;
 	var relPath : String;
 
 	public function new(fs, parent, f, p) {
@@ -90,8 +86,6 @@ private class PakEntry extends FileEntry {
 	}
 
 	override function getBytes() {
-		if( cachedBytes != null )
-			return cachedBytes;
 		setPos();
 		fs.totalReadBytes += file.dataSize;
 		fs.totalReadCount++;
@@ -113,40 +107,6 @@ private class PakEntry extends FileEntry {
 			fs.totalReadCount++;
 		}
 		return tot;
-	}
-
-	override function open() {
-		if( openedBytes == null )
-			openedBytes = fs.getCached(this);
-		if( openedBytes == null ) {
-			fs.totalReadBytes += file.dataSize;
-			fs.totalReadCount++;
-			openedBytes = haxe.io.Bytes.alloc(file.dataSize);
-			setPos();
-			pak.readBytes(openedBytes, 0, file.dataSize);
-		}
-		bytesPosition = 0;
-	}
-
-	override function close() {
-		if( openedBytes != null ) {
-			fs.saveCached(this);
-			openedBytes = null;
-		}
-	}
-
-	override function skip( nbytes ) {
-		if( nbytes < 0 || bytesPosition + nbytes > file.dataSize ) throw "Invalid skip";
-		bytesPosition += nbytes;
-	}
-
-	override function readByte() {
-		return openedBytes.get(bytesPosition++);
-	}
-
-	override function read( out : haxe.io.Bytes, pos : Int, len : Int ) {
-		out.blit(pos, openedBytes, bytesPosition, len);
-		bytesPosition += len;
 	}
 
 	override function exists( name : String ) {
@@ -203,9 +163,6 @@ class FileSystem implements hxd.fs.FileSystem {
 	var root : PakEntry;
 	var dict : Map<String,PakEntry>;
 	var files : Array<FileInput>;
-	var readCache : Array<PakEntry> = [];
-	var currentCacheSize = 0;
-	public var readCacheSize = 8 << 20; // 8 MB of emulated cache
 	public var totalReadBytes = 0;
 	public var totalReadCount = 0;
 
@@ -241,38 +198,6 @@ class FileSystem implements hxd.fs.FileSystem {
 		for( f in files )
 			f.close();
 		files = [];
-	}
-
-	function getCached( e : PakEntry ) {
-		if( readCacheSize == 0 )
-			return null;
-		var index = readCache.lastIndexOf(e);
-		if( index < 0 )
-			return null;
-		if( index != readCache.length - 1 ) {
-			readCache.splice(index, 1);
-			readCache.push(e);
-		}
-		return e.cachedBytes;
-	}
-
-	function saveCached( e : PakEntry ) {
-		if( readCacheSize == 0 )
-			return;
-		var index = readCache.lastIndexOf(e);
-		if( index < 0 ) {
-			// don't cache if too big wrt our size
-			if( e.openedBytes.length > readCacheSize )
-				return;
-			readCache.push(e);
-			e.cachedBytes = e.openedBytes;
-			currentCacheSize += e.cachedBytes.length;
-		}
-		while( currentCacheSize > readCacheSize ) {
-			var e = readCache.shift();
-			currentCacheSize -= e.cachedBytes.length;
-			e.cachedBytes = null;
-		}
 	}
 
 	function addRec( parent : PakEntry, path : String, f : Data.File, pak : FileInput, delta : Int ) {

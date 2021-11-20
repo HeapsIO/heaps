@@ -80,7 +80,8 @@ class Image extends Resource {
 		if( inf != null )
 			return inf;
 		inf = new ImageInfo();
-		var f = new hxd.fs.FileInput(entry);
+		var f = entry.open();
+		f.fetch(256); // should be enough to fit DDS header
 		var head = try f.readUInt16() catch( e : haxe.io.Eof ) 0;
 		switch( head ) {
 		case 0xD8FF: // JPG
@@ -128,19 +129,13 @@ class Image extends Resource {
 			inf.height = f.readUInt16();
 
 		case 0x4444: // DDS
-			#if editor
-			var f = new haxe.io.BytesInput(f.read(33*4+10));
-			inline function skip(n) f.position += n;
-			#else
-			inline function skip(n) f.skip(n);
-			#end
 			inf.dataFormat = Dds;
-			skip(10);
+			f.skip(10);
 			inf.height = f.readInt32();
 			inf.width = f.readInt32();
-			skip(2*4);
+			f.skip(2*4);
 			inf.mipLevels = f.readInt32();
-			skip(12*4);
+			f.skip(12*4);
 			var caps = f.readInt32();
 			var fourCC = f.readInt32();
 			var bpp = f.readInt32();
@@ -169,7 +164,7 @@ class Image extends Resource {
 				default: null;
 				}
 			case _ if( fourCC == 0x30315844 /* DX10 */ ):
-				skip(3 * 4);
+				f.skip(3 * 4);
 				inf.flags.set(Dxt10Header);
 				var dxgi = f.readInt32(); // DXGI_FORMAT_xxxx value
 				inf.pixelFormat = switch( dxgi ) {
@@ -183,7 +178,7 @@ class Image extends Resource {
 					throw entry.path+" has unsupported DXGI format "+dxgi;
 				}
 				var imgType = f.readInt32();
-				skip(4);
+				f.skip(4);
 				inf.layerCount = f.readInt32();
 			case 111: // D3DFMT_R16F
 				inf.pixelFormat = R16F;
@@ -366,11 +361,8 @@ class Image extends Resource {
 				bytes = entry.getBytes();
 			} else {
 				var size = hxd.Pixels.calcDataSize(w, h, inf.pixelFormat);
-				entry.open();
-				entry.skip(pos);
 				bytes = haxe.io.Bytes.alloc(size);
-				entry.read(bytes, 0, size);
-				entry.close();
+				entry.readFull(bytes,pos,size);
 				pos = 0;
 			}
 			pixels = new hxd.Pixels(w, h, bytes, inf.pixelFormat, pos);
@@ -468,11 +460,29 @@ class Image extends Resource {
 				// immediately loading the PNG is faster than going through loadBitmap
 				@:privateAccess tex.customMipLevels = inf.mipLevels;
 				tex.alloc();
-				for( layer in 0...tex.layerCount ) {
-					for( mip in 0...inf.mipLevels ) {
-						var pixels = getPixels(tex.format,null,layer * inf.mipLevels + mip);
-						tex.uploadPixels(pixels,mip,layer);
-						pixels.dispose();
+				switch( inf.dataFormat ) {
+				case Dds:
+					var pos = 128;
+					if( inf.flags.has(Dxt10Header) ) pos += 20;
+					for( layer in 0...tex.layerCount ) {
+						for( mip in 0...inf.mipLevels ) {
+							var w = inf.width >> mip;
+							var h = inf.height >> mip;
+							if( w == 0 ) w = 1;
+							if( h == 0 ) h = 1;
+							var size = hxd.Pixels.calcDataSize(w, h, inf.pixelFormat);
+							var bytes = entry.fetchBytes(pos, size);
+							tex.uploadPixels(new hxd.Pixels(w,h,bytes,inf.pixelFormat),mip,layer);
+							pos += size;
+						}
+					}
+				default:
+					for( layer in 0...tex.layerCount ) {
+						for( mip in 0...inf.mipLevels ) {
+							var pixels = getPixels(tex.format,null,layer * inf.mipLevels + mip);
+							tex.uploadPixels(pixels,mip,layer);
+							pixels.dispose();
+						}
 					}
 				}
 				tex.realloc = loadTexture;

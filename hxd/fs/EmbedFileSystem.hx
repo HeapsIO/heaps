@@ -14,7 +14,6 @@ private class EmbedEntry extends FileEntry {
 	#else
 	var data : String;
 	var bytes : haxe.io.Bytes;
-	var readPos : Int;
 	#end
 
 	function new(fs, name, relPath, data) {
@@ -46,54 +45,6 @@ private class EmbedEntry extends FileEntry {
 		if( len < 0 ) len = 0;
 		out.blit(outPos, bytes, pos, len);
 		return len;
-	}
-
-	override function open() {
-		#if flash
-		if( bytes == null )
-			bytes = Type.createInstance(data, []);
-		bytes.position = 0;
-		#else
-		if( bytes == null ) {
-			bytes = haxe.Resource.getBytes(data);
-			if( bytes == null ) throw "Missing resource " + data;
-		}
-		readPos = 0;
-		#end
-	}
-
-	override function skip( nbytes : Int ) {
-		#if flash
-		bytes.position += nbytes;
-		#else
-		readPos += nbytes;
-		#end
-	}
-
-	override function readByte() : Int {
-		#if flash
-		return bytes.readUnsignedByte();
-		#else
-		return bytes.get(readPos++);
-		#end
-	}
-
-	override function read( out : haxe.io.Bytes, pos : Int, size : Int ) : Void {
-		#if flash
-		bytes.readBytes(out.getData(), pos, size);
-		#else
-		out.blit(pos, bytes, readPos, size);
-		readPos += size;
-		#end
-	}
-
-	override function close() {
-		#if flash
-		bytes = null;
-		#else
-		bytes = null;
-		readPos = 0;
-		#end
 	}
 
 	override function load( ?onReady : Void -> Void ) : Void {
