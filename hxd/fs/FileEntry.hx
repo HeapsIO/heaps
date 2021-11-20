@@ -27,9 +27,13 @@ class FileEntry {
 			bytes = haxe.io.Bytes.alloc(allocSize);
 			TMP_BYTES = bytes;
 		}
+		readFull(bytes,pos,len);
+		return bytes;
+	}
+
+	public function readFull( bytes, pos, len ) {
 		if( readBytes(bytes,0,pos,len) < len )
 			throw new haxe.io.Eof();
-		return bytes;
 	}
 
 	public function getText() return getBytes().toString();
