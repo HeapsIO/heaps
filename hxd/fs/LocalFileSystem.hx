@@ -20,14 +20,6 @@ class LocalEntry extends FileEntry {
 		this.file = file;
 	}
 
-	override function getSign() : Int {
-		var old = if( fread == null ) -1 else fread.tell();
-		open();
-		var i = fread.readInt32();
-		if( old < 0 ) close() else fread.seek(old, SeekBegin);
-		return i;
-	}
-
 	override function getBytes() : haxe.io.Bytes {
 		return sys.io.File.getBytes(file);
 	}

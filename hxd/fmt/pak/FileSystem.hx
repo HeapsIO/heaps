@@ -89,13 +89,6 @@ private class PakEntry extends FileEntry {
 		FileSeek.seek(pak,file.dataPosition, SeekBegin);
 	}
 
-	override function getSign() {
-		setPos();
-		fs.totalReadBytes += 4;
-		fs.totalReadCount++;
-		return pak.readInt32();
-	}
-
 	override function getBytes() {
 		if( cachedBytes != null )
 			return cachedBytes;

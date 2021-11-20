@@ -11,8 +11,6 @@ private class MultiFileEntry extends FileEntry {
 		name = el[0].name;
 	}
 
-	override function getSign() : Int return el[0].getSign();
-
 	override function getBytes() : haxe.io.Bytes return el[0].getBytes();
 
 	override function open() el[0].open();

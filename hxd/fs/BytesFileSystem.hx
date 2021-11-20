@@ -18,10 +18,6 @@ class BytesFileEntry extends FileEntry {
 		return fullPath;
 	}
 
-	override function getSign() : Int {
-		return bytes.get(0) | (bytes.get(1) << 8) | (bytes.get(2) << 16) | (bytes.get(3) << 24);
-	}
-
 	override function getBytes() : haxe.io.Bytes {
 		return bytes;
 	}

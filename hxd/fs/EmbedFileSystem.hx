@@ -24,22 +24,6 @@ private class EmbedEntry extends FileEntry {
 		this.data = data;
 	}
 
-	override function getSign() : Int {
-		#if flash
-		var old = bytes == null ? 0 : bytes.position;
-		open();
-		bytes.endian = flash.utils.Endian.LITTLE_ENDIAN;
-		var v = bytes.readUnsignedInt();
-		bytes.position = old;
-		return v;
-		#else
-		var old = readPos;
-		open();
-		readPos = old;
-		return bytes.get(0) | (bytes.get(1) << 8) | (bytes.get(2) << 16) | (bytes.get(3) << 24);
-		#end
-	}
-
 	override function getBytes() : haxe.io.Bytes {
 		#if flash
 		if( data == null )

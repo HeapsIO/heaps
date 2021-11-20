@@ -10,9 +10,6 @@ class FileEntry {
 	public var isDirectory(get, never) : Bool;
 	public var isAvailable(get, never) : Bool;
 
-	// first four bytes of the file
-	public function getSign() : Int return 0;
-
 	public function getBytes() : haxe.io.Bytes return null;
 
 	public function getText() return getBytes().toString();
