@@ -293,3 +293,20 @@ class DummyConvert extends Convert {
 	];
 
 }
+
+class ConvertBinJSON extends Convert {
+
+	override function convert() {
+		var json = haxe.Json.parse(srcBytes.toString());
+		var out = new haxe.io.BytesOutput();
+		new hxd.fmt.hbson.Writer(out).write(json);
+		save(out.getBytes());
+	}
+
+	static var _ = [
+		Convert.register(new ConvertBinJSON("json,prefab,l3d","hbson"))
+	];
+
+}
+
+
