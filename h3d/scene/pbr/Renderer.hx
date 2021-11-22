@@ -236,8 +236,8 @@ class Renderer extends h3d.scene.Renderer {
 		pbrProps.isScreen = false;
 		draw(pbrLightPass.name);
 
-		if( !renderLightProbes() && env != null ) {
-			mark("Indirect Lighting");
+		mark("Indirect Lighting");
+		if( !renderLightProbes() && env != null && env.power > 0.0 ) {
 			pbrProps.isScreen = true;
 			pbrIndirect.drawIndirectDiffuse = true;
 			pbrIndirect.drawIndirectSpecular = true;
@@ -262,8 +262,7 @@ class Renderer extends h3d.scene.Renderer {
 		clear(0);
 
 		// Default Env & SkyBox
-		if( env != null ) {
-			mark("Indirect Lighting");
+		if( env != null && env.power > 0.0  ) {
 			pbrProps.isScreen = true;
 			pbrIndirect.drawIndirectDiffuse = true;
 			pbrIndirect.drawIndirectSpecular = true;
