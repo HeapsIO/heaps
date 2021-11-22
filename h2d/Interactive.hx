@@ -11,7 +11,7 @@ package h2d;
 	By default, Interactive only reacts to primary (left) mouse button for actions, see `Interactive.enableRightButton` for details.
 **/
 @:allow(h2d.Scene)
-class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
+class Interactive extends Object implements hxd.SceneEvents.Interactive {
 
 	/**
 		Width of the Interactive. Ignored if `Interactive.shape` is set.
