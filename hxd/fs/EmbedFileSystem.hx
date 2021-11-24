@@ -23,23 +23,36 @@ private class EmbedEntry extends FileEntry {
 		this.data = data;
 	}
 
+	function init() {
+		#if flash
+		if( bytes == null )
+			bytes = Type.createInstance(data, []);
+		bytes.position = 0;
+		#else
+		if( bytes == null ) {
+			bytes = haxe.Resource.getBytes(data);
+			if( bytes == null ) throw "Missing resource " + data;
+		}
+		#end
+	}
+
 	override function getBytes() : haxe.io.Bytes {
 		#if flash
 		if( data == null )
 			return null;
 		if( bytes == null )
-			open();
+			init();
 		return haxe.io.Bytes.ofData(bytes);
 		#else
 		if( bytes == null )
-			open();
+			init();
 		return bytes;
 		#end
 	}
 
 	override function readBytes( out : haxe.io.Bytes, outPos : Int, pos : Int, len : Int ) : Int {
 		if( bytes == null )
-			open();
+			init();
 		if( pos + len > bytes.length )
 			len = bytes.length - pos;
 		if( len < 0 ) len = 0;
@@ -64,7 +77,7 @@ private class EmbedEntry extends FileEntry {
 			onLoaded(new LoadedBitmap(content.bitmapData));
 			loader.unload();
 		});
-		open();
+		init();
 		loader.loadBytes(bytes);
 		close(); // flash will copy bytes content in loadBytes() !
 		#elseif js
@@ -108,10 +121,10 @@ private class EmbedEntry extends FileEntry {
 
 	override function get_size() {
 		#if flash
-		open();
+		init();
 		return bytes.length;
 		#else
-		open();
+		init();
 		return bytes.length;
 		#end
 	}
