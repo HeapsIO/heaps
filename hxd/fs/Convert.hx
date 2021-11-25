@@ -271,13 +271,22 @@ class CompressIMG extends Convert {
 			args.push("-miplevels");
 			args.push("20"); // max ?
 		}
+		var ext = srcPath.split(".").pop();
+		var tmpPath = null;
+		if( ext == "envd" || ext == "envs" ) {
+			// copy temporary (compressonator uses file extension ;_;)
+			tmpPath = Sys.getEnv("TEMP")+"/output_"+dstPath.split("/").pop()+".dds";
+			trace(tmpPath);
+			sys.io.File.saveBytes(tmpPath, sys.io.File.getBytes(srcPath));
+		}
 		if( hasParam("alpha") && format == "BC1" )
 			args = args.concat(["-DXT1UseAlpha","1","-AlphaThreshold",""+getParam("alpha")]);
-		args = args.concat(["-fd",""+getParam("format"),srcPath,dstPath]);
+		args = args.concat(["-fd",""+getParam("format"),tmpPath == null ? srcPath : tmpPath,dstPath]);
 		command("CompressonatorCLI", args);
+		if( tmpPath != null ) sys.FileSystem.deleteFile(tmpPath);
 	}
 
-	static var _ = Convert.register(new CompressIMG("png,tga,jpg,jpeg","dds"));
+	static var _ = Convert.register(new CompressIMG("png,tga,jpg,jpeg,dds,envd,envs","dds"));
 
 }
 
