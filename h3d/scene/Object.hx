@@ -725,7 +725,7 @@ class Object {
 		var changed = posChanged;
 		if( changed ) calcAbsPos();
 		if( fixedPosition ) {
-			if( flags.has(FFixedPositionSynced) && !changed ) {
+			if( flags.has(FFixedPositionSynced) && !changed && !ctx.wasContextLost ) {
 				ctx.visibleFlag = old;
 				ctx.cullingCollider = prevCollider;
 				return;

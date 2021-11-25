@@ -368,6 +368,13 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 	}
 
 	/**
+		Automatically called when the 3D context is lost
+	**/
+	public function onContextLost() {
+		ctx.wasContextLost = true;
+	}
+
+	/**
 		Render the scene on screen. Internal usage only.
 	**/
 	@:access(h3d.mat.Pass)
@@ -442,6 +449,7 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 			engine.driver.setRenderFlag(CameraHandness,0);
 
 		ctx.done();
+		ctx.wasContextLost = false;
 		ctx.scene = null;
 		ctx.camera = null;
 		ctx.engine = null;
