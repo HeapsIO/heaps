@@ -212,6 +212,7 @@ class Renderer extends h3d.scene.Renderer {
 			while (pbrLightSystem.lightingShaders.length != 0) {
 				pbrLightSystem.lightingShaders.pop();
 			}
+			pbrLightSystem.lightBuffer.sync(ctx);
 		}
 
 		begin(Lighting);
