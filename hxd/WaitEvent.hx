@@ -29,7 +29,7 @@ class WaitEvent {
 		return false;
 	}
 
-	public function wait( time : Float, callb ) {
+	public function wait( time : Float, callb : Void -> Void ) {
 		function tmp(dt:Float) {
 			time -= dt;
 			if( time < 0 ) {

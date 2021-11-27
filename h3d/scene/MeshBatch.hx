@@ -9,6 +9,7 @@ private class BatchData {
 	public var matIndex : Int;
 	public var indexCount : Int;
 	public var indexStart : Int;
+	public var instanceBuffers : Array<h3d.impl.InstanceBuffer>;
 	public var buffers : Array<h3d.Buffer> = [];
 	public var data : hxd.FloatBuffer;
 	public var params : hxsl.RuntimeShader.AllocParam;
@@ -22,19 +23,33 @@ private class BatchData {
 
 }
 
+class MeshBatchPart {
+	public var indexStart : Int;
+	public var indexCount : Int;
+	public var baseVertex : Int;
+	public var bounds : h3d.col.Bounds;
+	public function new() {
+	}
+}
+
 /**
 	h3d.scene.MeshBatch allows to draw multiple meshed in a single draw call.
 	See samples/MeshBatch.hx for an example.
 **/
 class MeshBatch extends MultiMaterial {
 
+	static var modelViewID = hxsl.Globals.allocID("global.modelView");
+	static var modelViewInverseID = hxsl.Globals.allocID("global.modelViewInverse");
+	static var MAX_BUFFER_ELEMENTS = 4096;
+
 	var instanced : h3d.prim.Instanced;
 	var dataPasses : BatchData;
-	var modelViewID = hxsl.Globals.allocID("global.modelView");
-	var modelViewInverseID = hxsl.Globals.allocID("global.modelViewInverse");
 	var needUpload = false;
 
-	static var MAX_BUFFER_ELEMENTS = 4096;
+	/**
+		Set if shader list or shader constants has changed, before calling begin()
+	**/
+	public var shadersChanged = true;
 
 	/**
 		The number of instances on this batch
@@ -48,9 +63,10 @@ class MeshBatch extends MultiMaterial {
 	var invWorldPosition : Matrix;
 
 	/**
-		Set if shader list or shader constants has changed, before calling begin()
+		Tells the mesh batch to draw only a subpart of the primitive
 	**/
-	public var shadersChanged = true;
+	public var primitiveSubPart : MeshBatchPart;
+	var primitiveSubBytes : haxe.io.Bytes;
 
 	public function new( primitive, ?material, ?parent ) {
 		instanced = new h3d.prim.Instanced();
@@ -72,6 +88,10 @@ class MeshBatch extends MultiMaterial {
 			dataPasses.pass.removeShader(dataPasses.shader);
 			for( b in dataPasses.buffers )
 				alloc.disposeBuffer(b);
+			if( dataPasses.instanceBuffers != null ) {
+				for( b in dataPasses.instanceBuffers )
+					b.dispose();
+			}
 			alloc.disposeFloats(dataPasses.data);
 			dataPasses = dataPasses.next;
 		}
@@ -118,7 +138,8 @@ class MeshBatch extends MultiMaterial {
 					sl = sl.next;
 				}
 				shader.Batch_Count = b.maxInstance * b.paramsCount;
-				shader.constBits = b.maxInstance * b.paramsCount;
+				shader.Batch_HasOffset = primitiveSubPart != null;
+				shader.constBits = (shader.Batch_Count << 1) | (shader.Batch_HasOffset ? 1 : 0);
 				shader.updateConstants(null);
 			}
 		}
@@ -237,7 +258,29 @@ class MeshBatch extends MultiMaterial {
 
 	public function emitInstance() {
 		if( worldPosition == null ) syncPos();
-		instanced.addInstanceBounds(worldPosition == null ? absPos : worldPosition);
+		var ps = primitiveSubPart;
+		if( ps != null ) @:privateAccess {
+			instanced.tmpBounds.load(primitiveSubPart.bounds);
+			instanced.tmpBounds.transform(worldPosition == null ? absPos : worldPosition);
+			instanced.bounds.add(instanced.tmpBounds);
+
+			if( primitiveSubBytes == null ) {
+				primitiveSubBytes = haxe.io.Bytes.alloc(128);
+				instanced.commands = null;
+			}
+			if( primitiveSubBytes.length < (instanceCount+1) * 20 ) {
+				var next = haxe.io.Bytes.alloc(Std.int(primitiveSubBytes.length*3/2));
+				next.blit(0, primitiveSubBytes, 0, instanceCount * 20);
+				primitiveSubBytes = next;
+			}
+			var p = instanceCount * 20;
+			primitiveSubBytes.setInt32(p, ps.indexCount);
+			primitiveSubBytes.setInt32(p + 4, 1);
+			primitiveSubBytes.setInt32(p + 8, ps.indexStart);
+			primitiveSubBytes.setInt32(p + 12, ps.baseVertex);
+			primitiveSubBytes.setInt32(p + 16, 0);
+		} else
+			instanced.addInstanceBounds(worldPosition == null ? absPos : worldPosition);
 		var p = dataPasses;
 		while( p != null ) {
 			syncData(p);
@@ -251,28 +294,54 @@ class MeshBatch extends MultiMaterial {
 		if( instanceCount == 0 ) return;
 		var p = dataPasses;
 		var alloc = hxd.impl.Allocator.get();
+		var psBytes = primitiveSubBytes;
 		while( p != null ) {
 			var index = 0;
 			var start = 0;
 			while( start < instanceCount ) {
 				var upload = needUpload;
 				var buf = p.buffers[index];
+				var count = instanceCount - start;
+				if( count > p.maxInstance )
+					count = p.maxInstance;
 				if( buf == null || buf.isDisposed() ) {
 					buf = alloc.allocBuffer(MAX_BUFFER_ELEMENTS,4,UniformDynamic);
 					p.buffers[index] = buf;
 					upload = true;
 				}
-				var count = instanceCount - start;
-				if( count > p.maxInstance )
-					count = p.maxInstance;
 				if( upload )
 					buf.uploadVector(p.data, start * p.paramsCount * 4, count * p.paramsCount);
+				if( psBytes != null ) {
+					if( p.instanceBuffers == null ) p.instanceBuffers = [];
+					var buf = p.instanceBuffers[index];
+					if( buf == null /*|| buf.isDisposed()*/ ) {
+						buf = new h3d.impl.InstanceBuffer();
+						var sub = psBytes.sub(start*20,count*20);
+						for( i in 0...count )
+							sub.setInt32(i*20+16, i);
+						buf.setBuffer(count, sub);
+						p.instanceBuffers[index] = buf;
+					}
+				}
 				start += count;
 				index++;
 			}
 			while( p.buffers.length > index )
 				alloc.disposeBuffer(p.buffers.pop());
 			p = p.next;
+		}
+		if( psBytes != null ) {
+			var prim = cast(primitive,h3d.prim.MeshPrimitive);
+			var offsets = @:privateAccess prim.getBuffer("Batch_Start");
+			if( offsets == null || offsets.vertices < instanceCount || offsets.isDisposed() ) {
+				if( offsets != null ) offsets.dispose();
+				var tmp = haxe.io.Bytes.alloc(4 * instanceCount);
+				for( i in 0...instanceCount )
+					tmp.setFloat(i<<2, i);
+				offsets = new h3d.Buffer(instanceCount, 1);
+				offsets.uploadBytes(tmp,0,instanceCount);
+				@:privateAccess prim.addBuffer("Batch_Start", offsets);
+			}
 		}
 		needUpload = false;
 	}
@@ -283,8 +352,11 @@ class MeshBatch extends MultiMaterial {
 			if( p.pass == ctx.drawPass.pass ) {
 				var bufferIndex = ctx.drawPass.index & 0xFFFF;
 				p.shader.Batch_Buffer = p.buffers[bufferIndex];
-				var count = instanceCount - p.maxInstance * bufferIndex;
-				instanced.commands.setCommand(count,p.indexCount,p.indexStart);
+				if( p.instanceBuffers == null ) {
+					var count = instanceCount - p.maxInstance * bufferIndex;
+					instanced.commands.setCommand(count,p.indexCount,p.indexStart);
+				} else
+					instanced.commands = p.instanceBuffers[bufferIndex];
 				break;
 			}
 			p = p.next;

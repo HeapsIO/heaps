@@ -1312,8 +1312,10 @@ class DirectXDriver extends h3d.impl.Driver {
 			#else
 			dx.Driver.drawIndexedInstanced(commands.indexCount, commands.commandCount, commands.startIndex, 0, 0);
 			#end
-		} else
-			dx.Driver.drawIndexedInstancedIndirect(commands.data, 0);
+		} else {
+			for( i in 0...commands.commandCount )
+				dx.Driver.drawIndexedInstancedIndirect(commands.data,i * 20);
+		}
 	}
 
 	static var COMPARE : Array<ComparisonFunc> = [
