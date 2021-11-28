@@ -88,6 +88,7 @@ class TextInput extends Text {
 
 				var pt = new h2d.col.Point();
 				var scene = getScene();
+				if( scene == null ) return; // was removed
 				scene.startCapture(function(e) {
 					pt.x = e.relX;
 					pt.y = e.relY;

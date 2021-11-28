@@ -26,7 +26,17 @@ class Interactive extends Object implements hxd.SceneEvents.Interactive {
 		Set the default `propagate` mode (see `hxd.Event`), default to false.
 	**/
 	public var propagateEvents : Bool = false;
-	public var enableRightButton : Bool;
+
+	/**
+		When enabled, interacting with secondary mouse buttons (right button/wheel) will cause `onPush`, `onClick`, `onRelease` and `onReleaseOutside` callbacks.
+		Otherwise those callbacks will only be triggered with primary mouse button (left button).
+	**/
+	public var enableRightButton : Bool = false;
+
+	/**
+	 	When enabled, allows to receive several onClick events the same frame.
+	**/
+	public var allowMultiClick : Bool = false;
 
 	/**
 		Is it required to find the best hit point in a complex mesh or any hit possible point will be enough (default = false, faster).
@@ -35,6 +45,7 @@ class Interactive extends Object implements hxd.SceneEvents.Interactive {
 
 	var scene : Scene;
 	var mouseDownButton : Int = -1;
+	var lastClickFrame : Int = -1;
 
 	@:allow(h3d.scene.Scene)
 	var hitPoint = new h3d.Vector();
@@ -118,8 +129,11 @@ class Interactive extends Object implements hxd.SceneEvents.Interactive {
 		case ERelease:
 			if( enableRightButton || e.button == 0 ) {
 				onRelease(e);
-				if( mouseDownButton == e.button )
+				var frame = hxd.Timer.frameCount;
+				if( mouseDownButton == e.button && (lastClickFrame != frame || allowMultiClick) ) {
 					onClick(e);
+					lastClickFrame = frame;
+				}
 			}
 			mouseDownButton = -1;
 		case EReleaseOutside:

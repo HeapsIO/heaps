@@ -89,6 +89,7 @@ class Charset {
 		m("»".code, '"'.code);
 		m("“".code, '"'.code);
 		m("”".code, '"'.code);
+		m("„".code, '"'.code);
 		m("‘".code, "'".code);
 		m("’".code, "'".code);
 		m("´".code, "'".code);

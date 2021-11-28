@@ -8,6 +8,8 @@ package h3d.mat;
 	var BeforeTonemapping = "BeforeTonemapping";
 	var AfterTonemapping = "AfterTonemapping";
 	var Distortion = "Distortion";
+	var DecalPass = "DecalPass";
+	var TerrainPass = "TerrainPass";
 }
 
 @:enum abstract PbrBlend(String) {
@@ -260,6 +262,18 @@ class PbrMaterial extends Material {
 				sv = new h3d.shader.pbr.StrengthValues();
 				mainPass.addShader(sv);
 			}
+		case DecalPass:
+			if (props.emissive != 0)
+				mainPass.setPassName("emissiveDecal");
+			else
+				mainPass.setPassName("decal");
+			var sv = mainPass.getShader(h3d.shader.pbr.StrengthValues);
+			if( sv == null ) {
+				sv = new h3d.shader.pbr.StrengthValues();
+				mainPass.addShader(sv);
+			}
+		case TerrainPass:
+			mainPass.setPassName("terrain");
 		}
 
 		// Blend modes
@@ -462,6 +476,8 @@ class PbrMaterial extends Material {
 						<option value="Overlay">Overlay</option>
 						<option value="Distortion">Distortion</option>
 						<option value="Decal">Decal</option>
+						<option value="DecalPass">DecalPass</option>
+						<option value="TerrainPass">TerrainPass</option>
 					</select>
 				</dd>
 				<dt>Blend</dt>

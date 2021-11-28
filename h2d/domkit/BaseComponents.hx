@@ -501,12 +501,12 @@ class ObjectComp implements h2d.domkit.Object implements domkit.Component.Compon
 @:uiComp("drawable") @:domkitDecl
 class DrawableComp extends ObjectComp implements domkit.Component.ComponentDecl<h2d.Drawable> {
 
-	@:p(colorF) var color : h3d.Vector;
+	@:p(colorF) #if domkit_drawable_color var color #else var tint #end : h3d.Vector;
 	@:p(auto) var smooth : Null<Bool>;
 	@:p(colorAdjust) var colorAdjust : Null<h3d.Matrix.ColorAdjust>;
 	@:p var tileWrap : Bool;
 
-	static function set_color( o : h2d.Drawable, v ) {
+	static function #if domkit_drawable_color set_color #else set_tint #end( o : h2d.Drawable, v ) {
 		if(v != null)
 			o.color.load(v);
 		else
@@ -605,7 +605,7 @@ class TextComp extends DrawableComp implements domkit.Component.ComponentDecl<h2
 	@:p(none) var maxWidth : Null<Int>;
 	@:p var textAlign : h2d.Text.Align = Left;
 	@:p(textShadow) var textShadow : { dx : Float, dy : Float, color : Int, alpha : Float };
-	@:p(color) var textColor: Int;
+	@:p(color) var #if domkit_drawable_color textColor #else color #end : Null<Int>;
 
 	static function create( parent : h2d.Object ) {
 		return new h2d.Text(hxd.res.DefaultFont.get(),parent);
@@ -622,6 +622,12 @@ class TextComp extends DrawableComp implements domkit.Component.ComponentDecl<h2
 	static function set_lineBreak( t : h2d.Text, v ) {
 		t.lineBreak = v;
 	}
+
+	#if !domkit_drawable_color
+	static function set_color( t : h2d.Text, v : Null<Int> ) {
+		t.textColor = v == null ? -1 : v;
+	}
+	#end
 }
 
 @:uiComp("html-text") @:domkitDecl

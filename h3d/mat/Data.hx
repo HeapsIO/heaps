@@ -122,6 +122,10 @@ enum TextureFlags {
 		Tells if it's a texture array
 	**/
 	IsArray;
+	/**
+		Allows the texture to be loaded asynchronously (requires initializating hxd.res.Image.ASYNC_LOADER)
+	**/
+	AsyncLoading;
 }
 
 typedef TextureFormat = hxd.PixelFormat;

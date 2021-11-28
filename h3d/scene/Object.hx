@@ -528,8 +528,9 @@ class Object {
 	// kept for internal cleanup
 	function onRemove() {
 		allocated = false;
-		for( c in children )
-			c.onRemove();
+		var i = children.length - 1;
+		while( i >= 0 )
+			children[i--].onRemove();
 	}
 
 	/**
@@ -724,7 +725,7 @@ class Object {
 		var changed = posChanged;
 		if( changed ) calcAbsPos();
 		if( fixedPosition ) {
-			if( flags.has(FFixedPositionSynced) && !changed ) {
+			if( flags.has(FFixedPositionSynced) && !changed && !ctx.wasContextLost ) {
 				ctx.visibleFlag = old;
 				ctx.cullingCollider = prevCollider;
 				return;

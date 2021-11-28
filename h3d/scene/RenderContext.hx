@@ -21,9 +21,10 @@ class RenderContext extends h3d.impl.RenderContext {
 	public var lightSystem : h3d.scene.LightSystem;
 	public var extraShaders : hxsl.ShaderList;
 	public var visibleFlag : Bool;
+	public var debugCulling : Bool;
+	public var wasContextLost : Bool;
 	public var shaderBuffers : h3d.shader.Buffers;
 	public var cullingCollider : h3d.col.Collider;
-	public var debugCulling : Bool;
 
 	var allocPool : h3d.pass.PassObject;
 	var allocFirst : h3d.pass.PassObject;

@@ -11,7 +11,7 @@ package h2d;
 	By default, Interactive only reacts to primary (left) mouse button for actions, see `Interactive.enableRightButton` for details.
 **/
 @:allow(h2d.Scene)
-class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
+class Interactive extends Object implements hxd.SceneEvents.Interactive {
 
 	/**
 		Width of the Interactive. Ignored if `Interactive.shape` is set.
@@ -25,6 +25,7 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 		Cursor used when Interactive is under mouse cursor.
 	**/
 	public var cursor(default,set) : Null<hxd.Cursor> = Button;
+
 	/**
 		Performs an elliptic hit-test instead of rectangular one based on `Interactive.width` and `height`. Ignored if `Interactive.shape` is set.
 	**/
@@ -37,20 +38,26 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 		Set the default `hxd.Event.propagate` mode.
 	**/
 	public var propagateEvents : Bool = false;
+
+	/**
+		When enabled, interacting with secondary mouse buttons (right button/wheel) will cause `onPush`, `onClick`, `onRelease` and `onReleaseOutside` callbacks.
+		Otherwise those callbacks will only be triggered with primary mouse button (left button).
+	**/
+	public var enableRightButton : Bool = false;
+
+	/**
+	 	When enabled, allows to receive several onClick events the same frame.
+	**/
+	public var allowMultiClick : Bool = false;
+
 	/**
 		If set, Interactive will draw a `Tile` with `[width, height]` dimensions of specified color (including alpha).
 	**/
 	public var backgroundColor : Null<Int>;
-	/**
-		When enabled, interacting with secondary mouse buttons (right button/wheel) will cause `onPush`, `onClick`, `onRelease` and `onReleaseOutside` callbacks.
-		Otherwise those callbacks will only be triggered with primary mouse button (left button).
 
-		Note that Interactive remembers only the last pressed button when pressing on it, hence pressing Interactive with the left button and then the right button
-		would not cause `onClick` on either when releasing left button first, as pressed state is reset internally.
-	**/
-	public var enableRightButton : Bool = false;
 	var scene : Scene;
 	var mouseDownButton : Int = -1;
+	var lastClickFrame : Int = -1;
 	var invDet : Float;
 	var maskedBounds : h2d.col.Bounds;
 
@@ -169,8 +176,11 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 		case ERelease:
 			if( enableRightButton || e.button == 0 ) {
 				onRelease(e);
-				if( mouseDownButton == e.button )
+				var frame = hxd.Timer.frameCount;
+				if( mouseDownButton == e.button && (lastClickFrame != frame || allowMultiClick) ) {
 					onClick(e);
+					lastClickFrame = frame;
+				}
 			}
 			mouseDownButton = -1;
 		case EReleaseOutside:

@@ -36,11 +36,6 @@ class LightSystem extends h3d.scene.LightSystem {
 		return shaders;
 	}
 
-	override function initLights( ctx : h3d.scene.RenderContext ) @:privateAccess {
-		super.initLights(ctx);
-		lightBuffer.sync(ctx);
-	}
-
 	public function drawShadows( light : Light, passes : h3d.pass.PassList ) {
 		light.shadows.setContext(ctx);
 		light.shadows.draw(passes);

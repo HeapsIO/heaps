@@ -52,6 +52,8 @@ class ObjectFollower extends Object {
 
 	var zValue : Float = 0.;
 	var outputScale : Float = 1.;
+	var tmpPos = new h3d.Vector();
+	var tmpSize : h2d.col.Bounds;
 
 	/**
 		Create a new ObjectFollower instance.
@@ -74,13 +76,14 @@ class ObjectFollower extends Object {
 		var height = s2d == null ? h3d.Engine.getCurrent().height : s2d.height;
 		var absPos = follow.getAbsPos();
 		var pos = new h3d.Vector(absPos._41 + offsetX, absPos._42 + offsetY, absPos._43 + offsetZ);
-		var p = scene.camera.project(pos.x, pos.y, pos.z, width * outputScale, height * outputScale);
+		var p = scene.camera.project(pos.x, pos.y, pos.z, width * outputScale, height * outputScale, tmpPos);
 		zValue = p.z;
 
 		if( horizontalAlign != Left || verticalAlign != Top ) {
+			if( tmpSize == null ) tmpSize = new h2d.col.Bounds();
 			var prev = follow;
 			follow = null;
-			var b = getSize(); // prevent recursive
+			var b = getSize(tmpSize); // prevent recursive
 			follow = prev;
 
 			var w = b.width, h = b.height;
@@ -109,7 +112,7 @@ class ObjectFollower extends Object {
 			pos.x += move.x * depthBias;
 			pos.y += move.y * depthBias;
 			pos.z += move.z * depthBias;
-			var p2 = scene.camera.project(pos.x, pos.y, pos.z, width, height);
+			var p2 = scene.camera.project(pos.x, pos.y, pos.z, width, height, tmpPos);
 			zValue = p2.z;
 		}
 	}

@@ -58,14 +58,15 @@ class BDFFont extends Resource {
 		if ( font != null ) return font;
 
 		// File starts with STARTFONT
-		if ( (entry.getBytes().getInt32(0) != 0x52415453) || (entry.getBytes().getInt32(8) != 0x2E322054) )
+		var text = entry.getText();
+		if( !StringTools.startsWith(text,"STARTFONT") )
 			throw 'File does not appear to be a BDF file. Expecting STARTFONT';
 
 		// Init empty font
 		font = new h2d.Font( null, 0 );
 
 		// Break file into lines
-		var lines = entry.getBytes().toString().split("\n");
+		var lines = text.split("\n");
 		var linenum = 0;
 
 		// Parse the header
@@ -356,7 +357,7 @@ class BDFFont extends Resource {
 			if ( a == null )
 				font.lineHeight = font.size * 2;
 			else
-				font.lineHeight = a.t.height * 2; 
+				font.lineHeight = a.t.height * 2;
 		}
 
 		// Estimate a baseline
@@ -388,7 +389,7 @@ class BDFFont extends Resource {
 	/**
 	 * Each line of the BDF file is split by spaces into an Array. Sometimes the
 	 * line is actually a string and shouldn't be split. This method detects that
-	 * by checking for "quote marks" and joining the string back up. 
+	 * by checking for "quote marks" and joining the string back up.
 	 * @param p The split line
 	 * @return String The resulting string
 	 */

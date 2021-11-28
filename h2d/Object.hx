@@ -7,7 +7,7 @@ import hxd.Math;
 	Serves as a virtual container that does not display anything but can contain other objects
 	so the various transforms are inherited to its children.
 
-	Private events `Object.onAdd`, `Object.onRemove` and `Object.onHierarchyChanged` can be used
+	Private events `Object.onAdd`, `Object.onRemove` and `Object.onHierarchyMoved` can be used
 	to capture when Object is added/removed from the currently active scene as well as being moved withing the object tree.
 
 	Object exposes a number of properties to control position, scale and rotation of the Object relative to its parent,
@@ -488,8 +488,9 @@ class Object #if (domkit && !domkit_heaps) implements domkit.Model<h2d.Object> #
 		allocated = false;
 		if( filter != null )
 			filter.unbind(this);
-		for( c in children )
-			c.onRemove();
+		var i = children.length - 1;
+		while( i >= 0 )
+			children[i--].onRemove();
 	}
 
 	/**
