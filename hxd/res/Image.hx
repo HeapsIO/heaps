@@ -454,9 +454,33 @@ class Image extends Resource {
 		loadTexture();
 	}
 
-	function loadTexture() {
+	static var BLACK_1x1 = Pixels.alloc(1,1,RGBA);
+	public static var ASYNC_LOADER : hxd.impl.AsyncLoader;
+
+	function asyncLoad( data : haxe.io.Bytes ) {
+		if( tex == null || tex.isDisposed() ) return;
+		tex.dispose();
+		@:privateAccess {
+			tex.format = inf.pixelFormat;
+			tex.width = inf.width;
+			tex.height = inf.height;
+		}
+		loadTexture(data);
+	}
+
+	function loadTexture( ?asyncData:haxe.io.Bytes ) {
 		if( !getFormat().useAsyncDecode && !DEFAULT_ASYNC ) {
 			function load() {
+				if( inf.dataFormat == Dds && asyncData == null && tex.flags.has(AsyncLoading) ) @:privateAccess {
+					tex.format = RGBA;
+					tex.width = 1;
+					tex.height = 1;
+					tex.customMipLevels = 1;
+					tex.alloc();
+					tex.uploadPixels(BLACK_1x1);
+					ASYNC_LOADER.load(this);
+					return;
+				}
 				// immediately loading the PNG is faster than going through loadBitmap
 				@:privateAccess tex.customMipLevels = inf.mipLevels;
 				tex.alloc();
@@ -471,8 +495,8 @@ class Image extends Resource {
 							if( w == 0 ) w = 1;
 							if( h == 0 ) h = 1;
 							var size = hxd.Pixels.calcDataSize(w, h, inf.pixelFormat);
-							var bytes = entry.fetchBytes(pos, size);
-							tex.uploadPixels(new hxd.Pixels(w,h,bytes,inf.pixelFormat),mip,layer);
+							var bytes = asyncData == null ? entry.fetchBytes(pos, size) : asyncData;
+							tex.uploadPixels(new hxd.Pixels(w,h,bytes,inf.pixelFormat,asyncData == null ? 0 : pos),mip,layer);
 							pos += size;
 						}
 					}
@@ -485,7 +509,7 @@ class Image extends Resource {
 						}
 					}
 				}
-				tex.realloc = loadTexture;
+				tex.realloc = () -> loadTexture();
 				if(ENABLE_AUTO_WATCH)
 					watch(watchCallb);
 			}
@@ -501,7 +525,7 @@ class Image extends Resource {
 				tex.alloc();
 				tex.uploadBitmap(bmp);
 				bmp.dispose();
-				tex.realloc = loadTexture;
+				tex.realloc = () -> loadTexture();
 				tex.flags.unset(Loading);
 				@:privateAccess if( tex.waitLoads != null ) {
 					var arr = tex.waitLoads;
