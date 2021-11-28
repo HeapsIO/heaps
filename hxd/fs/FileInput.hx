@@ -6,9 +6,9 @@ class FileInput extends haxe.io.Input {
 
 	var entry : FileEntry;
 	var cache : haxe.io.Bytes;
-	var cachePos : Int;
-	var cacheLen : Int;
-	var nextReadPos : Int;
+	var cachePos : Int = 0;
+	var cacheLen : Int = 0;
+	var nextReadPos : Int = 0;
 
 	function new(entry) {
 		this.entry = entry;
