@@ -78,11 +78,14 @@ class DynamicText {
 
 	static var r_attr = ~/::([A-Za-z0-9_]+)::/g;
 
-	static function applyText( path : Array<String>, old : Dynamic, x : Access, ref : Access, onMissing ) {
+	static function applyText( path : Array<String>, old : Dynamic, x : Access, ref : Access, onMissing : Array<String> -> String -> String ) {
 		var str = x == null ? null : x.innerHTML;
+		var missingStr = false;
 		if( str == null ) {
-			onMissing(path, "is missing");
-			return null;
+			str = onMissing(path, "is missing");
+			if( str == null )
+				return null;
+			missingStr = true;
 		}
 		if( Api.isOfType(old,Array) ) {
 			onMissing(path,"should be a group");
@@ -100,6 +103,10 @@ class DynamicText {
 		var mparams = new Map();
 		var ok = true;
 		r_attr.map(strOld, function(r) { mparams.set(r.matched(1), true); return ""; });
+		if( missingStr ) {
+			for( k in mparams.keys() )
+				str += " ::"+k+"::";
+		}
 		r_attr.map(str, function(r) {
 			var p = r.matched(1);
 			if( !mparams.exists(p) ) {
@@ -170,7 +177,7 @@ class DynamicText {
 							var e = elements[i];
 							path.push("[" + i + "]");
 							if( Api.isOfType(e, Array) ) {
-								trace("TODO");
+								throw "TODO";
 							} else if( Api.isOfType(e, String) ) {
 								var enew = applyText(path, e, data[i], dataRef == null ? null : dataRef[i], onMissing);
 								if( enew != null )
@@ -190,7 +197,31 @@ class DynamicText {
 		}
 		for( f in fields.keys() ) {
 			path.push(f);
-			onMissing(path,"is missing");
+			var str = onMissing(path,"is missing");
+			if( str != null ) {
+				function replaceRec(obj:Dynamic,f,str) {
+					var v : Dynamic = Reflect.field(obj, f);
+					if( Api.isOfType(v, String) )
+						Reflect.setField(obj, f, str);
+					else if( Reflect.isFunction(v) )
+						Reflect.setField(obj, f, (_) -> str);
+					else if( Api.isOfType(v,Array) ) {
+						var arr : Array<Dynamic> = v;
+						for( i in 0...arr.length )
+							arr[i] = applyText(path, arr[i], null, null, onMissing);
+					} else if( Type.typeof(v) == TObject ) {
+						for( f in Reflect.fields(v) ) {
+							path.push(f);
+							var str = onMissing(path," is missing");
+							if( str != null )
+								replaceRec(v, f, str);
+							path.pop();
+						}
+					} else
+						throw "assert";
+				}
+				replaceRec(obj, f, str);
+			}
 			path.pop();
 		}
 	}
@@ -372,7 +403,7 @@ class DynamicText {
 			public static function load( data : String ) {
 				DATA = hxd.res.DynamicText.parse(data);
 			}
-			public static function applyLang( data : String, ?reference, ?onMissing, ?ignoreMeta : hxd.res.DynamicText.DynamicTextMeta ) {
+			public static function applyLang( data : String, ?reference, ?onMissing, ?ignoreMeta : hxd.res.DynamicText.DynamicTextMeta, ?setLocKeys ) {
 				if( onMissing == null ) onMissing = function(msg) trace(msg);
 				@:privateAccess hxd.res.DynamicText.apply(DATA,data,reference,function(path,msg) {
 					if( ignoreMeta != null ) {
@@ -380,12 +411,14 @@ class DynamicText {
 						for( p in path ) {
 							var me = m.get(p);
 							if( me == null ) break;
-							if( me.skip ) return;
+							if( me.skip ) return null;
 							m = me.sub;
 							if( m == null ) break;
 						}
 					}
-					onMissing(path.join(".")+" "+msg);
+					var path = path.join(".");
+					onMissing(path+" "+msg);
+					return setLocKeys ? "#"+path : null;
 				});
 			}
 		};
