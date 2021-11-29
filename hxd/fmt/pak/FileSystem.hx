@@ -53,14 +53,14 @@ private class PakEntry extends FileEntry {
 	var fs : FileSystem;
 	var parent : PakEntry;
 	var file : Data.File;
-	var pak : FileInput;
+	var pakFile : Int;
 	var subs : Array<PakEntry>;
 	var relPath : String;
 
 	public function new(fs, parent, f, p) {
 		this.fs = fs;
 		this.file = f;
-		this.pak = p;
+		this.pakFile = p;
 		this.parent = parent;
 		name = file.name;
 		if( f.isDirectory ) subs = [];
@@ -82,6 +82,7 @@ private class PakEntry extends FileEntry {
 	}
 
 	function setPos() {
+		var pak = fs.getFile(pakFile);
 		FileSeek.seek(pak,file.dataPosition, SeekBegin);
 	}
 
@@ -89,10 +90,12 @@ private class PakEntry extends FileEntry {
 		setPos();
 		fs.totalReadBytes += file.dataSize;
 		fs.totalReadCount++;
+		var pak = fs.getFile(pakFile);
 		return pak.read(file.dataSize);
 	}
 
 	override function readBytes( out : haxe.io.Bytes, outPos : Int, pos : Int, len : Int ) : Int {
+		var pak = fs.getFile(pakFile);
 		FileSeek.seek(pak,file.dataPosition + pos, SeekBegin);
 		if( pos + len > file.dataSize )
 			len = file.dataSize - pos;
@@ -162,7 +165,11 @@ class FileSystem implements hxd.fs.FileSystem {
 
 	var root : PakEntry;
 	var dict : Map<String,PakEntry>;
-	var files : Array<FileInput>;
+	#if target.threaded
+	var threadIdentifier : sys.thread.Tls<Null<Int>>;
+	var threadIdCache : Array<Null<Int>>;
+	#end
+	var files : Array<{ path : String, inputs : Array<FileInput> }>;
 	public var totalReadBytes = 0;
 	public var totalReadCount = 0;
 
@@ -173,46 +180,74 @@ class FileSystem implements hxd.fs.FileSystem {
 		f.isDirectory = true;
 		f.content = [];
 		files = [];
-		root = new PakEntry(this, null, f, null);
+		threadIdCache = [];
+		threadIdentifier = new sys.thread.Tls();
+		root = new PakEntry(this, null, f, -1);
 	}
 
 	public function loadPak( file : String ) {
-		#if (air3 || sys || nodejs)
-		addPak(File.read(file));
-		#else
-		throw "TODO";
-		#end
-	}
-
-	public function addPak( s : FileInput ) {
+		var index = files.length;
+		files.push({ path : file, inputs : [] });
+		var s = getFile(index);
 		var pak = new Reader(s).readHeader();
 		if( pak.root.isDirectory ) {
 			for( f in pak.root.content )
-				addRec(root, f.name, f, s, pak.headerSize);
+				addRec(root, f.name, f, index, pak.headerSize);
 		} else
-			addRec(root, pak.root.name, pak.root, s, pak.headerSize);
-		files.push(s);
+			addRec(root, pak.root.name, pak.root, index, pak.headerSize);
 	}
 
 	public function dispose() {
-		for( f in files )
-			f.close();
+		for( f in files ) {
+			for( i in f.inputs )
+				if( i != null )
+					i.close();
+		}
 		files = [];
 	}
 
-	function addRec( parent : PakEntry, path : String, f : Data.File, pak : FileInput, delta : Int ) {
+	inline function getThreadID() : Int {
+	#if (target.threaded)
+		var id : Null<Int> = threadIdentifier.value;
+		if( id == null ) {
+			id = threadIdCache.length;
+			threadIdCache.push(id);
+			threadIdentifier.value = id;
+		}
+		return id;
+	#else
+		return 0;
+	#end
+	}
+
+	function getFile( pakFile : Int ) {
+		var f = files[pakFile];
+		var id = getThreadID();
+		var input = f.inputs[id];
+		if( input == null ) {
+			#if (air3 || sys || nodejs)
+			input = File.read(f.path);
+			#else
+			throw "File.read not implemented";
+			#end
+			f.inputs[id] = input;
+		}
+		return input;
+	}
+
+	function addRec( parent : PakEntry, path : String, f : Data.File, pakFile : Int, delta : Int ) {
 		var ent = dict.get(path);
 		if( ent != null ) {
 			ent.file = f;
-			ent.pak = pak;
+			ent.pakFile = pakFile;
 		} else {
-			ent = new PakEntry(this, parent, f, pak);
+			ent = new PakEntry(this, parent, f, pakFile);
 			dict.set(path, ent);
 			parent.subs.push(ent);
 		}
 		if( f.isDirectory ) {
 			for( sub in f.content )
-				addRec(ent, path + "/" + sub.name, sub, pak, delta);
+				addRec(ent, path + "/" + sub.name, sub, pakFile, delta);
 		} else
 			f.dataPosition += delta;
 	}
