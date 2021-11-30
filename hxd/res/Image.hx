@@ -26,6 +26,18 @@ package hxd.res;
 
 	inline function toInt() return this;
 
+	public function getName() {
+		return switch( (cast this:ImageFormat) ) {
+		case Jpg: "JPG";
+		case Png: "PNG";
+		case Gif: "GIF";
+		case Tga: "TGA";
+		case Dds: "DDS";
+		case Raw: "RAW";
+		case Hdr: "HDR";
+		};
+	}
+
 }
 
 enum ImageInfoFlag {
@@ -456,6 +468,7 @@ class Image extends Resource {
 
 	static var BLACK_1x1 = Pixels.alloc(1,1,RGBA);
 	public static var ASYNC_LOADER : hxd.impl.AsyncLoader;
+	public static var LOG_TEXTURE_LOAD = #if heaps_texture_load true #else false #end;
 
 	function asyncLoad( data : haxe.io.Bytes ) {
 		if( tex == null || tex.isDisposed() ) return;
@@ -471,7 +484,7 @@ class Image extends Resource {
 	function loadTexture( ?asyncData:haxe.io.Bytes ) {
 		if( !getFormat().useAsyncDecode && !DEFAULT_ASYNC ) {
 			function load() {
-				if( inf.dataFormat == Dds && asyncData == null && tex.flags.has(AsyncLoading) ) @:privateAccess {
+				if( tex.flags.has(AsyncLoading) && asyncData == null && ASYNC_LOADER.isSupported(this) ) @:privateAccess {
 					tex.format = RGBA;
 					tex.width = 1;
 					tex.height = 1;
@@ -481,6 +494,7 @@ class Image extends Resource {
 					ASYNC_LOADER.load(this);
 					return;
 				}
+				var t0 = haxe.Timer.stamp();
 				// immediately loading the PNG is faster than going through loadBitmap
 				@:privateAccess tex.customMipLevels = inf.mipLevels;
 				tex.alloc();
@@ -508,6 +522,11 @@ class Image extends Resource {
 							pixels.dispose();
 						}
 					}
+				}
+				if( LOG_TEXTURE_LOAD && asyncData == null ) {
+					var time = (haxe.Timer.stamp()-t0)*1000.0;
+					var fmtStr = inf.pixelFormat.match(S3TC(_)) ? "DXT" : inf.dataFormat.getName();
+					#if hl Sys.println #else trace #end(fmtStr+" "+Std.int(time)+"."+(Std.int(time*10)%10)+"ms "+inf.width+"x"+inf.height+" "+entry.path);
 				}
 				tex.realloc = () -> loadTexture();
 				if(ENABLE_AUTO_WATCH)

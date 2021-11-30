@@ -23,6 +23,8 @@ class Slides extends ScreenShader {
 		var roughness : Float;
 		var occlusion : Float;
 		var emissive : Float;
+		var custom1 : Float;
+		var custom2 : Float;
 
 		@param var shadowMap : Channel;
 		@param var shadowMapCube : SamplerCube;
@@ -42,7 +44,7 @@ class Slides extends ScreenShader {
 					color = metalness.xxx;
 			} else {
 				if( x < 1 )
-					color = emissive.xxx;
+					color = vec3(emissive, custom1, custom2);
 				else if( x < 2 )
 					color = depth.xxx;
 				else if( x < 3 )

@@ -3,7 +3,6 @@ package h3d.scene;
 class Interactive extends Object implements hxd.SceneEvents.Interactive {
 
 	var debugObj : Object;
-	public var showDebug(default, set) : Bool = false;
 
 	public var shape : h3d.col.Collider;
 
@@ -43,6 +42,12 @@ class Interactive extends Object implements hxd.SceneEvents.Interactive {
 	**/
 	public var bestMatch : Bool;
 
+	/**
+	 	When set, will display the debug object of the shape (using makeDebugObj)
+	**/
+	public var showDebug(get, set) : Bool;
+
+
 	var scene : Scene;
 	var mouseDownButton : Int = -1;
 	var lastClickFrame : Int = -1;
@@ -55,6 +60,9 @@ class Interactive extends Object implements hxd.SceneEvents.Interactive {
 		this.shape = shape;
 		cursor = Button;
 	}
+
+
+	inline function get_showDebug() return debugObj != null;
 
 	public function set_showDebug(val) {
 		if( !val ) {
