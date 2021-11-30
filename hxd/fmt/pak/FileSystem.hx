@@ -180,8 +180,10 @@ class FileSystem implements hxd.fs.FileSystem {
 		f.isDirectory = true;
 		f.content = [];
 		files = [];
+		#if target.threaded
 		threadIdCache = [];
 		threadIdentifier = new sys.thread.Tls();
+		#end
 		root = new PakEntry(this, null, f, -1);
 	}
 
