@@ -489,8 +489,10 @@ class Object #if (domkit && !domkit_heaps) implements domkit.Model<h2d.Object> #
 		if( filter != null )
 			filter.unbind(this);
 		var i = children.length - 1;
-		while( i >= 0 )
-			children[i--].onRemove();
+		while( i >= 0 ) {
+			var c = children[i--];
+			if( c != null ) c.onRemove();
+		}
 	}
 
 	/**
