@@ -491,6 +491,8 @@ class Image extends Resource {
 					tex.customMipLevels = 1;
 					tex.alloc();
 					tex.uploadPixels(BLACK_1x1);
+					tex.width = inf.width;
+					tex.height = inf.height;
 					ASYNC_LOADER.load(this);
 					return;
 				}
