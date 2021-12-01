@@ -25,6 +25,9 @@ class ThreadAsyncLoader implements AsyncLoader {
 	}
 
 	function threadLoop() {
+		#if hl
+		hl.Profile.event(-8); // mark thread as invisible for debugger
+		#end
 		while( true ) {
 			var t = deque.pop(true);
 			if( t.tex == null || t.tex.isDisposed() ) continue;
