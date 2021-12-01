@@ -17,6 +17,8 @@ class ThreadAsyncLoader implements AsyncLoader {
 	var lock : sys.thread.Lock;
 	var currentTex : hxd.res.Image;
 
+	public var enabled = true;
+
 	public function new() {
 		deque = new sys.thread.Deque();
 		lock = new sys.thread.Lock();
@@ -75,7 +77,7 @@ class ThreadAsyncLoader implements AsyncLoader {
 	}
 
 	public function isSupported(t:hxd.res.Image) {
-		return switch( t.getFormat() ) {
+		return enabled && switch( t.getFormat() ) {
 		case Dds, Raw: true;
 		default: false;
 		}
