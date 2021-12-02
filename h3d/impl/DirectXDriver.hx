@@ -838,7 +838,7 @@ class DirectXDriver extends h3d.impl.Driver {
 						out.writeString(b64);
 						out.writeByte('\n'.code);
 					}
-					sys.io.File.saveBytes(CACHE_FILE.output, out.getBytes());
+					try sys.io.File.saveBytes(CACHE_FILE.output, out.getBytes()) catch( e : Dynamic ) {};
 				}
 			}
 		}
