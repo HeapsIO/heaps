@@ -242,6 +242,8 @@ class Manager {
 		c.next         = channels;
 		c.isLoading    = sdat.isLoading();
 		c.isVirtual    = driver == null;
+		c.position     = 0;
+		c.positionChanged = false;
 
 		channels = c;
 		return c;
