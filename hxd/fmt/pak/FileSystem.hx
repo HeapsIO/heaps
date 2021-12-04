@@ -199,6 +199,30 @@ class FileSystem implements hxd.fs.FileSystem {
 			addRec(root, pak.root.name, pak.root, index, pak.headerSize);
 	}
 
+	/**
+		Add the .pak file directly.
+
+		This method is intended to be used with single-threaded environment such as HTML5 target,
+		as it doesn't have access to sys package.
+		
+		Use with multi-threaded environment at your own risk with `-D heaps_add_pak_multithreaded` flag.
+	**/
+	#if (target.threaded && !heaps_add_pak_multithreaded)
+	@:deprecated("addPak method is not designed to work in multi-threaded environment, avoid or use -D heaps_add_pak_multithreaded")
+	#end
+	public function addPak( file : FileInput, ?path : String ) {
+		var index = files.length;
+		var info = { path: path, inputs: [] };
+		info.inputs[getThreadID()] = file;
+		files.push(info);
+		var pak = new Reader(file).readHeader();
+		if( pak.root.isDirectory ) {
+			for( f in pak.root.content )
+				addRec(root, f.name, f, index, pak.headerSize);
+		} else
+			addRec(root, pak.root.name, pak.root, index, pak.headerSize);
+	}
+
 	public function dispose() {
 		for( f in files ) {
 			for( i in f.inputs )
