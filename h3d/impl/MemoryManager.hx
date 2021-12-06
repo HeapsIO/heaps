@@ -226,6 +226,8 @@ class MemoryManager {
 	// ------------------------------------- TEXTURES ------------------------------------------
 
 	function memSize( t : h3d.mat.Texture ) {
+		if( t.flags.has(AsyncLoading) && t.flags.has(Loading) )
+			return 4; // 1x1 pixel
 		var size = hxd.Pixels.calcDataSize(t.width,t.height,t.format);
 		if( t.mipLevels > 0 ) {
 			for( i in 1...t.mipLevels ) {

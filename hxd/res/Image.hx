@@ -473,6 +473,7 @@ class Image extends Resource {
 	function asyncLoad( data : haxe.io.Bytes ) {
 		if( tex == null || tex.isDisposed() ) return;
 		tex.dispose();
+		tex.flags.unset(Loading);
 		@:privateAccess {
 			tex.format = inf.pixelFormat;
 			tex.width = inf.width;
@@ -490,6 +491,7 @@ class Image extends Resource {
 					tex.width = 1;
 					tex.height = 1;
 					tex.customMipLevels = 1;
+					tex.flags.set(Loading);
 					tex.alloc();
 					tex.uploadPixels(BLACK_1x1);
 					tex.width = inf.width;
