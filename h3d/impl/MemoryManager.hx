@@ -241,7 +241,7 @@ class MemoryManager {
 		textures.sort(sortByLRU);
 		for( t in textures ) {
 			if( t.realloc == null || t.isDisposed() ) continue;
-			if( force || t.lastFrame < hxd.Timer.frameCount - 3600 ) {
+			if( (force || t.lastFrame < hxd.Timer.frameCount - 3600) && t.lastFrame != h3d.mat.Texture.PREVENT_AUTO_DISPOSE ) {
 				t.dispose();
 				return true;
 			}
@@ -262,13 +262,15 @@ class MemoryManager {
 
 	@:allow(h3d.mat.Texture.alloc)
 	function allocTexture( t : h3d.mat.Texture ) {
-		var free = cleanTextures(false);
-		t.t = driver.allocTexture(t);
-		if( t.t == null ) {
+		while( true ) {
+			var free = cleanTextures(false);
+			t.t = driver.allocTexture(t);
+			if( t.t != null ) break;
+
 			if( driver.isDisposed() ) return;
-			if( !cleanTextures(true) ) throw "Maximum texture memory reached";
-			allocTexture(t);
-			return;
+			while( cleanTextures(false) ) {} // clean all old textures
+			if( !free && !cleanTextures(true) )
+				throw "Maximum texture memory reached";
 		}
 		textures.push(t);
 		texMemory += memSize(t);
@@ -276,13 +278,15 @@ class MemoryManager {
 
 	@:allow(h3d.mat.DepthBuffer.alloc)
 	function allocDepth( b : h3d.mat.DepthBuffer ) {
-		var free = cleanTextures(false);
-		b.b = driver.allocDepthBuffer(b);
-		if( b.b == null ) {
+		while( true ) {
+			var free = cleanTextures(false);
+			b.b = driver.allocDepthBuffer(b);
+			if( b.b != null ) break;
+
 			if( driver.isDisposed() ) return;
-			if( !cleanTextures(true) ) throw "Maximum texture memory reached";
-			allocDepth(b);
-			return;
+			while( cleanTextures(false) ) {} // clean all old textures
+			if( !free && !cleanTextures(true) )
+				throw "Maximum texture memory reached";
 		}
 		depths.push(b);
 		texMemory += b.width * b.height * 4;

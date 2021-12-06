@@ -6,6 +6,7 @@ class Texture {
 
 	static var UID = 0;
 	static final PREVENT_AUTO_DISPOSE = 0x7FFFFFFF;
+	static final PREVENT_FORCED_DISPOSE = -1;
 
 	/**
 		The default texture color format
@@ -159,6 +160,10 @@ class Texture {
 	**/
 	public function preventAutoDispose() {
 		lastFrame = PREVENT_AUTO_DISPOSE;
+	}
+
+	public function preventForcedDispose() {
+		lastFrame = PREVENT_FORCED_DISPOSE;
 	}
 
 	/**
