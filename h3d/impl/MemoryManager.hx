@@ -225,8 +225,16 @@ class MemoryManager {
 
 	// ------------------------------------- TEXTURES ------------------------------------------
 
-	function bpp( t : h3d.mat.Texture ) {
-		return 4;
+	function memSize( t : h3d.mat.Texture ) {
+		var size = hxd.Pixels.calcDataSize(t.width,t.height,t.format);
+		if( t.mipLevels > 0 ) {
+			for( i in 1...t.mipLevels ) {
+				var w = t.width >> i; if( w == 0 ) w = 1;
+				var h = t.height >> i; if( h == 0 ) h = 1;
+				size += hxd.Pixels.calcDataSize(w,h,t.format);
+			}
+		}
+		return size * t.layerCount;
 	}
 
 	public function cleanTextures( force = true ) {
@@ -249,7 +257,7 @@ class MemoryManager {
 	function deleteTexture( t : h3d.mat.Texture ) {
 		if( !textures.remove(t) ) return;
 		driver.disposeTexture(t);
-		texMemory -= t.width * t.height * bpp(t);
+		texMemory -= memSize(t);
 	}
 
 	@:allow(h3d.mat.Texture.alloc)
@@ -263,7 +271,7 @@ class MemoryManager {
 			return;
 		}
 		textures.push(t);
-		texMemory += t.width * t.height * bpp(t);
+		texMemory += memSize(t);
 	}
 
 	@:allow(h3d.mat.DepthBuffer.alloc)
@@ -393,7 +401,7 @@ class MemoryManager {
 				all.push(inf);
 			}
 			inf.count++;
-			var size = t.width * t.height * bpp(t);
+			var size = memSize(t);
 			inf.size += size;
 			addStack(t.allocPos, inf.stacks, size);
 		}
