@@ -17,10 +17,12 @@ class ModelCache {
 	}
 
 	public function dispose() {
-		anims = new Map();
-		models = new Map();
+		for( m in models )
+			m.lib.dispose();
 		for( t in textures )
 			t.dispose();
+		anims = new Map();
+		models = new Map();
 		textures = new Map();
 	}
 
