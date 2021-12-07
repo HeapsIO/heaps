@@ -36,6 +36,14 @@ class FileEntry {
 			throw new haxe.io.Eof();
 	}
 
+	/**
+		Read first 4 bytes of the file.
+	**/
+	public function getSign() : Int {
+		var bytes = fetchBytes(0, 4);
+		return bytes.get(0) | (bytes.get(1) << 8) | (bytes.get(2) << 16) | (bytes.get(3) << 24);
+	}
+
 	public function getText() return getBytes().toString();
 	public function open() return @:privateAccess new FileInput(this);
 
