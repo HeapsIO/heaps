@@ -894,6 +894,8 @@ class DirectXDriver extends h3d.impl.Driver {
 			from.preventAutoDispose();
 			to.alloc();
 			from.lastFrame = prev;
+			if( from.t == null ) throw "assert";
+			if( to.t == null ) return false;
 		}
 		to.t.res.copyResource(from.t.res);
 		to.flags.set(WasCleared);
