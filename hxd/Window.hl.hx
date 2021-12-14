@@ -545,7 +545,10 @@ class Window {
 				f.push(d);
 			}
 		}
-		return f;
+		if(f.length > 0)
+			return f;
+		else
+			return l;
 	}
 
 	function selectedMonitor() : Dynamic {
