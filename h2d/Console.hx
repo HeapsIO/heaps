@@ -45,6 +45,14 @@ typedef ConsoleArgDesc = {
 		Inserting optional arguments between non-optional arguments leads to an undefined behavior.
 	**/
 	?opt : Bool,
+	/**
+		When provided, suggestions will be provided for the args of the command.
+		the first arg to the function is the full tokenized command
+		the second arg to the function the current arg
+
+		the function should return the best suggestion for the current arg only.
+	**/
+	?argSuggestions: (Array<String>, String)->String,
 }
 
 /**
@@ -310,6 +318,64 @@ class Console #if !macro extends h2d.Object #end {
 		logIndex = -1;
 	}
 
+	function splitCommands(command: String): Array<String> {
+		var args = [];
+		var c = '';
+		var i = 0;
+
+		function readString(endChar:String) {
+			var string = '';
+
+			while (i < command.length) {
+				c = command.charAt(++i);
+				if (c == endChar) {
+					++i;
+					return string;
+				}
+				string += c;
+			}
+
+			return null;
+		}
+
+		inline function skipSpace() {
+			c = command.charAt(i);
+			while (c == ' ' || c == '\t') {
+				c = command.charAt(++i);
+			}
+			--i;
+		}
+
+		var last = '';
+		while (i < command.length) {
+			c = command.charAt(i);
+
+			switch (c) {
+			case ' ' | '\t':
+				skipSpace();
+
+				args.push(last);
+				last = '';
+			case "'" | '"':
+				var string = readString(c);
+				if (string == null) {
+					return null;
+				}
+
+				args.push(string);
+				last = '';
+
+				skipSpace();
+			default:
+				last += c;
+			}
+
+			++i;
+		}
+		args.push(last);
+		return args;
+	}
+
 	function getCommandSuggestion(cmd : String) : String {
 		var hadShortKey = false;
 		if (cmd.charCodeAt(0) == shortKeyChar) {
@@ -321,22 +387,57 @@ class Console #if !macro extends h2d.Object #end {
 		}
 		var lowCmd = cmd.toLowerCase();
 
-		var closestCommand = "";
-		var commandNames = commands.keys();
-		for (command in commandNames) {
+		var tokenizedCmds = splitCommands(cmd);
+		if (tokenizedCmds == null) return ""; // badly formatted string
+		if (tokenizedCmds.length == 1) {
+			// if there is only one command, we will default to command suggestions
+			var closestCommand = "";
+			var commandNames = commands.keys();
+			for (command in commandNames) {
 			if (command.toLowerCase().indexOf(lowCmd) == 0) {
-				if (closestCommand == "" || closestCommand.length > command.length) {
-					closestCommand = command;
+					if (closestCommand == "" || closestCommand.length > command.length) {
+						closestCommand = command;
+					}
 				}
 			}
+
+			if( aliases.exists(cmd) )
+				closestCommand = cmd;
+
+			if (hadShortKey && closestCommand != "")
+				closestCommand = String.fromCharCode(shortKeyChar) + closestCommand;
+			return closestCommand;
+		} else {
+			// there must be an exact matched commands or alias for commands args suggestions to work.
+			var commandName = tokenizedCmds[0];
+			// check for aliases
+			if (this.aliases.exists(commandName)) commandName = this.aliases.get(commandName);
+			// if no existing command, exit
+			if (this.commands[commandName] == null) return "";
+			// we will only provide completion for the last arg
+			var lastArg = tokenizedCmds[tokenizedCmds.length-1];
+			var lastArgIndex = tokenizedCmds.length - 2;
+			var command = this.commands[commandName];
+			// if the args exceed the command's args, we provide no suggestion
+			if (lastArgIndex >= command.args.length) return "";
+			// if the arg does not have suggestions we will also provide no suggestion
+			if (command.args[lastArgIndex] == null) return "";
+			// if there is no suggestion, we will also return
+			if (command.args[lastArgIndex].argSuggestions == null) return "";
+			// call the function to get the suggestion
+			var suggestion = command.args[lastArgIndex].argSuggestions(tokenizedCmds, lastArg);
+			// if no suggestion, we will return no suggestion
+			if (suggestion == null) return "";
+			// reconstruct the command
+			var commandBuilder: Array<String> = [];
+			commandBuilder.push((hadShortKey ? String.fromCharCode(shortKeyChar) : "") + tokenizedCmds[0]);
+			for (ind in 1...tokenizedCmds.length-1) {
+				commandBuilder.push(tokenizedCmds[ind]);
+			}
+			commandBuilder.push(suggestion);
+			return commandBuilder.join(" ");
 		}
 
-		if( aliases.exists(cmd) )
-			closestCommand = cmd;
-
-		if (hadShortKey && closestCommand != "")
-			closestCommand = String.fromCharCode(shortKeyChar) + closestCommand;
-		return closestCommand;
 	}
 
 	function handleKey( e : hxd.Event ) {
@@ -410,63 +511,11 @@ class Console #if !macro extends h2d.Object #end {
 		logs.push(command);
 		logIndex = -1;
 
-
-		var args = [];
-		var c = '';
-		var i = 0;
-
-		function readString(endChar:String) {
-			var string = '';
-
-			while (i < command.length) {
-				c = command.charAt(++i);
-				if (c == endChar) {
-					++i;
-					return string;
-				}
-				string += c;
-			}
-
-			return null;
+		var args = splitCommands(command);
+		if (args == null) {
+			log('Bad formated string', errorColor);
+			return;
 		}
-
-		inline function skipSpace() {
-			c = command.charAt(i);
-			while (c == ' ' || c == '\t') {
-				c = command.charAt(++i);
-			}
-			--i;
-		}
-
-		var last = '';
-		while (i < command.length) {
-			c = command.charAt(i);
-
-			switch (c) {
-			case ' ' | '\t':
-				skipSpace();
-
-				args.push(last);
-				last = '';
-			case "'" | '"':
-				var string = readString(c);
-				if (string == null) {
-					log('Bad formated string', errorColor);
-					return;
-				}
-
-				args.push(string);
-				last = '';
-
-				skipSpace();
-			default:
-				last += c;
-			}
-
-			++i;
-		}
-		args.push(last);
-
 		var cmdName = args[0];
 		if( aliases.exists(cmdName) ) cmdName = aliases.get(cmdName);
 		var cmd = commands.get(cmdName);
