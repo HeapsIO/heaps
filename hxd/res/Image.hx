@@ -473,6 +473,7 @@ class Image extends Resource {
 	function asyncLoad( data : haxe.io.Bytes ) {
 		if( tex == null || tex.isDisposed() ) return;
 		tex.dispose();
+		tex.flags.unset(Loading);
 		@:privateAccess {
 			tex.format = inf.pixelFormat;
 			tex.width = inf.width;
@@ -485,13 +486,18 @@ class Image extends Resource {
 		if( !getFormat().useAsyncDecode && !DEFAULT_ASYNC ) {
 			function load() {
 				if( tex.flags.has(AsyncLoading) && asyncData == null && ASYNC_LOADER.isSupported(this) ) @:privateAccess {
+					tex.dispose();
 					tex.format = RGBA;
 					tex.width = 1;
 					tex.height = 1;
 					tex.customMipLevels = 1;
+					tex.flags.set(Loading);
 					tex.alloc();
 					tex.uploadPixels(BLACK_1x1);
+					tex.width = inf.width;
+					tex.height = inf.height;
 					ASYNC_LOADER.load(this);
+					tex.realloc = () -> loadTexture();
 					return;
 				}
 				var t0 = haxe.Timer.stamp();

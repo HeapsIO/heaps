@@ -260,6 +260,13 @@ class Library {
 		return p;
 	}
 
+	public function dispose() {
+		for( p in cachedPrimitives )
+			if( p != null )
+				p.decref();
+		cachedPrimitives = [];
+	}
+
 	function makeMaterial( model : Model, mid : Int, loadTexture : String -> h3d.mat.Texture ) {
 		var m = header.materials[mid];
 		var mat = h3d.mat.MaterialSetup.current.createMaterial();

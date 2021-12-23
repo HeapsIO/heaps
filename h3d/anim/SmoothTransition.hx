@@ -58,7 +58,8 @@ class SmoothTransition extends Transition {
 			}
 			so.isAnim2 = true;
 		}
-		for( so in allObjects ) {
+		for( o in objects ) {
+			var so : SmoothedObject = cast o;
 			if( so.isAnim1 && so.isAnim2 )
 				continue;
 			if( so.targetSkin != null ) {
