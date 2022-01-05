@@ -99,7 +99,11 @@ class LocalEntry extends FileEntry {
 	}
 
 	var watchCallback : Void -> Void;
+	#if hl
+	var watchHandle : hl.uv.Fs;
+	#else
 	var watchTime : Float;
+	#end
 
 	static var WATCH_INDEX = 0;
 	static var WATCH_LIST : Array<LocalEntry> = null;
@@ -127,6 +131,17 @@ class LocalEntry extends FileEntry {
 			WATCH_INDEX = 0;
 			return;
 		}
+		#if hl
+		var wd = w.watchHandle.fetch();
+		while(wd != null) {
+			switch(wd.type) {
+				case Change:
+					w.watchCallback();
+				case Rename:
+			}
+			wd = w.watchHandle.fetch();
+		}
+		#else
 		var t = try w.getModifTime() catch( e : Dynamic ) return;
 		if( t == w.watchTime ) return;
 
@@ -153,6 +168,7 @@ class LocalEntry extends FileEntry {
 
 		w.watchTime = t;
 		w.watchCallback();
+		#end
 	}
 
 	override function watch( onChanged : Null < Void -> Void > ) {
@@ -160,6 +176,10 @@ class LocalEntry extends FileEntry {
 			if( watchCallback != null ) {
 				WATCH_LIST.remove(this);
 				watchCallback = null;
+				#if hl
+				watchHandle.close();
+				watchHandle = null;
+				#end
 			}
 			return;
 		}
@@ -173,12 +193,23 @@ class LocalEntry extends FileEntry {
 			var path = path;
 			for( w in WATCH_LIST )
 				if( w.path == path ) {
+					#if hl
+					if(w.watchHandle != null) {
+						w.watchHandle.close();
+						w.watchHandle = null;
+					}
+					#end
 					w.watchCallback = null;
 					WATCH_LIST.remove(w);
 				}
 			WATCH_LIST.push(this);
 		}
+		#if hl
+		watchHandle = new hl.uv.Fs();
+		watchHandle.start(file);
+		#else
 		watchTime = getModifTime();
+		#end
 		watchCallback = function() { fs.convert.run(this); onChanged(); }
 	}
 
