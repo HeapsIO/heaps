@@ -16,6 +16,7 @@ button {
 	background: #333;
 	fill-width: true;
 	height: 30;
+	transition: background 0.5;
 }
 
 button.highlight {
@@ -30,6 +31,16 @@ button:hover {
 	background: #444;
 }
 
+button text {
+	align: middle middle;
+	color : #aaa;
+	transition : color;
+}
+
+button:hover text {
+	color : white;
+}
+
 button:active {
-	background: #222;
+	background: #666;
 }
