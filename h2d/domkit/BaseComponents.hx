@@ -672,8 +672,8 @@ class FlowComp extends ObjectComp implements domkit.Component.ComponentDecl<h2d.
 	@:p(tilePos) var backgroundTilePos : { p : Int, y : Int };
 	@:p var backgroundTilePosX : Null<Int>;
 	@:p var backgroundTilePosY : Null<Int>;
-	@:p var backgroundAlpha : Float;
-	@:p var backgroundSmooth : Bool;
+	@:p var backgroundAlpha : Float = 1;
+	@:p(auto) var backgroundSmooth : Null<Bool>;
 	@:p var debug : Bool;
 	@:p var layout : h2d.Flow.FlowLayout;
 	@:p var vertical : Bool;
@@ -779,7 +779,7 @@ class FlowComp extends ObjectComp implements domkit.Component.ComponentDecl<h2d.
 		bg.alpha = v;
 	}
 
-	static function set_backgroundSmooth( o : h2d.Flow, v ) {
+	static function set_backgroundSmooth( o : h2d.Flow, v : Null<Bool> ) {
 		var bg = @:privateAccess o.background;
 		if(bg == null)
 			return;
