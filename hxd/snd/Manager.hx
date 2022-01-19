@@ -242,6 +242,7 @@ class Manager {
 		c.next         = channels;
 		c.isLoading    = sdat.isLoading();
 		c.isVirtual    = driver == null;
+		c.lastStamp    = haxe.Timer.stamp();
 
 		channels = c;
 		return c;
