@@ -274,16 +274,21 @@ class CompressIMG extends Convert {
 		var ext = srcPath.split(".").pop();
 		var tmpPath = null;
 		if( ext == "envd" || ext == "envs" ) {
+			#if !(sys || nodejs)
+			throw "Can't process "+srcPath;
+			#else
 			// copy temporary (compressonator uses file extension ;_;)
 			tmpPath = Sys.getEnv("TEMP")+"/output_"+dstPath.split("/").pop()+".dds";
-			trace(tmpPath);
 			sys.io.File.saveBytes(tmpPath, sys.io.File.getBytes(srcPath));
+			#end
 		}
 		if( hasParam("alpha") && format == "BC1" )
 			args = args.concat(["-DXT1UseAlpha","1","-AlphaThreshold",""+getParam("alpha")]);
 		args = args.concat(["-fd",""+getParam("format"),tmpPath == null ? srcPath : tmpPath,dstPath]);
 		command("CompressonatorCLI", args);
+		#if (sys || nodejs)
 		if( tmpPath != null ) sys.FileSystem.deleteFile(tmpPath);
+		#end
 	}
 
 	static var _ = Convert.register(new CompressIMG("png,tga,jpg,jpeg,dds,envd,envs","dds"));
