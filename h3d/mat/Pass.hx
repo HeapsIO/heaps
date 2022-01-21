@@ -42,6 +42,7 @@ class Pass {
 	@:bits(bits) public var blendAlphaOp : Operation;
 	@:bits(bits) public var wireframe : Bool;
 	public var colorMask : Int;
+	public var layer : Int = 0;
 
 	public var stencil : Stencil;
 
