@@ -4,7 +4,7 @@ import hxsl.Ast;
 class GlslOut {
 
 	static var KWD_LIST = [
-		"input", "output", "discard", "sample",
+		"input", "output", "discard", #if js "sample", #end
 		"dvec2", "dvec3", "dvec4", "hvec2", "hvec3", "hvec4", "fvec2", "fvec3", "fvec4",
 		"int", "float", "bool", "long", "short", "double", "half", "fixed", "unsigned", "superp",
 		"lowp", "mediump", "highp", "precision", "invariant", "discard",
