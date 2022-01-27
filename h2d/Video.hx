@@ -1,40 +1,17 @@
 package h2d;
 
-#if hl
-private abstract VideoImpl(hl.Abstract<"hl_video">) {
-
-	@:hlNative("video","video_close") public function close() : Void {
-	}
-
-	@:hlNative("video","video_decode_frame") public function decodeFrame( out : hl.Bytes, time : hl.Ref<Float> ) : Bool {
-		return false;
-	}
-
-	@:hlNative("video","video_get_size") public function getSize( width : hl.Ref<Int>, height : hl.Ref<Int> ) : Void {
-	}
-
-	@:hlNative("video","video_open") public static function open( file : hl.Bytes ) : VideoImpl {
-		return null;
-	}
-
-	@:hlNative("video","video_init") public static function init() {
-	}
-
-}
-#end
-
 /**
 	A video file playback Drawable. Due to platform specifics, each target have their own limitations.
 
-	* <span class="label">Hashlink</span>: Playback ability depends on `video` library.
-		At the time of HL 1.11 it's not bundled and have to be [compiled manually](https://github.com/HaxeFoundation/hashlink/tree/master/libs/video) with FFMPEG.
+	* <span class="label">Hashlink</span>: Playback ability depends on `https://github.com/HeapsIO/hlvideo` library. It support only video with the AV1 codec packed into a WEBM container.
+		
 	* <span class="label">JavaScript</span>: HTML Video element will be used. Playback is restricted by content-security policy and browser decoder capabilities.
 **/
 class Video extends Drawable {
 
-	#if hl
-	static var INIT_DONE = false;
-	var v : VideoImpl;
+	#if (hl && hlvideo)
+	var webm : hl.video.Webm;
+	var codec : hl.video.Aom.Codec;
 	var pixels : hxd.Pixels;
 	#elseif js
 	var v : js.html.VideoElement;
@@ -109,7 +86,10 @@ class Video extends Drawable {
 	@:dox(hide) @:noCompletion
 	public function set_loop(value : Bool) : Bool {
 		#if js
-		return v.loop = loopVideo = value;
+		loopVideo = value;
+		if(v != null)
+			v.loop = loopVideo;
+		return loopVideo;
 		#else
 		return loopVideo = value;
 		#end
@@ -119,11 +99,15 @@ class Video extends Drawable {
 		Disposes of the currently playing Video and frees GPU memory.
 	**/
 	public function dispose() {
-		#if hl
-		if( v != null ) {
-			v.close();
-			v = null;
-		};
+		#if (hl && hlvideo)
+		if( webm != null ) {
+			webm.close();
+			webm = null;
+		}
+		if( codec != null ) {
+			codec.close();
+			codec = null;
+		}
 		pixels = null;
 		#elseif js
 		if ( v != null ) {
@@ -148,30 +132,17 @@ class Video extends Drawable {
 	/**
 		Loads and starts the video playback by specified `path` and calls `onReady` when playback becomes possible.
 
-		* <span class="label">Hashlink</span>: Playback being immediately after `load`, unless video was not being able to initialize.
+		* <span class="label">Hashlink</span>: Playback being immediately after `loadFile`, unless video was not being able to initialize.
 		* <span class="label">JavaScript</span>: There won't be any video output until video is properly buffered enough data by the browser, in which case `onReady` is called.
 
 		@param path The video path. Have to be valid file-system path for HL or valid URL (full or relative) for JS.
 		@param onReady An optional callback signalling that video is initialized and began the video playback.
 	**/
-	public function load( path : String, ?onReady : Void -> Void ) {
+	public function loadFile( path : String, ?onReady : Void -> Void ) {
 		dispose();
 
-		#if hl
-		if( !INIT_DONE ) { INIT_DONE = true; VideoImpl.init(); }
-		v = VideoImpl.open(@:privateAccess path.toUtf8());
-		if( v == null ) {
-			onError("Failed to init video " + path);
-			return;
-		}
-		var w = 0, h = 0;
-		v.getSize(w, h);
-		videoWidth = w;
-		videoHeight = h;
-		playing = true;
-		playTime = haxe.Timer.stamp();
-		videoTime = 0.;
-		if( onReady != null ) onReady();
+		#if (hl && hlvideo)
+		webm = hl.video.Webm.fromFile(path);
 		#elseif js
 		v = js.Browser.document.createVideoElement();
 		v.autoplay = true;
@@ -190,6 +161,57 @@ class Video extends Drawable {
 		v.play();
 		#else
 		onError("Video not supported on this platform");
+		return;
+		#end
+		start();
+		if( onReady != null ) onReady();
+	}
+
+	/**
+		Loads and starts the video playback by specified `res` and calls `onReady` when playback becomes possible.
+
+		* <span class="label">Hashlink</span>: Playback being immediately after `loadResource`, unless video was not being able to initialize.
+		* <span class="label">JavaScript</span>: Not implemented
+
+		@param res The heaps resource of a valid video file
+		@param onReady An optional callback signalling that video is initialized and began the video playback.
+	**/
+	public function loadResource( res : hxd.res.Resource, ?onReady : Void -> Void ) {
+		#if (hl && hlvideo)
+		var e = res.entry;
+		webm = hl.video.Webm.fromReader(function(offset : Int, len : Int) {
+			var buf = haxe.io.Bytes.alloc(len);
+			var n = e.readBytes(buf, 0, offset, len);
+			return buf;
+		}, res.entry.size);
+		webm.availableSize = res.entry.size;
+		start();
+		if( onReady != null ) onReady();
+		#else
+		onError("Video from resource not supported on this platform");
+		#end
+	}
+
+	function start() {
+		#if (hl && hlvideo)
+		try {
+			webm.init();
+		} catch(e:Any) {
+			onError("Failed to init video : " + e);
+			return;
+		}
+		codec = webm.createCodec();
+		if(codec == null) {
+			onError("Can't create codec " + webm.videoCodec);
+			return;
+		}
+		var w = 0, h = 0;
+		videoWidth = webm.width;
+		videoHeight = webm.height;
+		playing = true;
+		playTime = haxe.Timer.stamp();
+		videoTime = 0.;
+		loadNextFrame();
 		#end
 	}
 
@@ -228,6 +250,7 @@ class Video extends Drawable {
 				onReady();
 				onReady = null;
 			}
+			loadNextFrame();
 		}
 	}
 	#end
@@ -237,22 +260,47 @@ class Video extends Drawable {
 			ctx.drawTile(this, tile);
 	}
 
+	function loadNextFrame() {
+		if( texture == null ) {
+			var w = videoWidth, h = videoHeight;
+			texture = new h3d.mat.Texture(w, h);
+			tile = h2d.Tile.fromTexture(texture);
+			#if (hl && hlvideo)
+			pixels = new hxd.Pixels(w, h, haxe.io.Bytes.alloc(w * h * 4), h3d.mat.Texture.nativeFormat);
+			#end
+		}
+		#if (hl && hlvideo)
+		var t : Null<Float>;
+		if((t = webm.readFrame(codec, pixels.bytes)) == null) {
+			if(loopVideo) {
+				webm.rewind();
+				webm.readFrame(codec, pixels.bytes);
+				frameReady = true;
+				playTime = haxe.Timer.stamp();
+				videoTime = 0.;
+			}
+			else {
+				frameReady = false;
+				playing = false;
+				videoTime = 0.;
+			}
+		}
+		else {
+			frameReady = true; // delay decode/upload for more reliable FPS
+			videoTime = t;
+		}
+		#end
+	}
+
 	#if js
 	@:access(h3d.mat.Texture)
 	#end
 	override function sync(ctx:RenderContext) {
 		if( !playing )
 			return;
-		if( texture == null ) {
-			var w = videoWidth, h = videoHeight;
-			texture = new h3d.mat.Texture(w, h);
-			tile = h2d.Tile.fromTexture(texture);
-			#if hl
-			pixels = new hxd.Pixels(w, h, haxe.io.Bytes.alloc(w * h * 4), h3d.mat.Texture.nativeFormat);
-			#end
-		}
-		if( frameReady ) {
-			#if hl
+		
+		if( frameReady && time >= videoTime ) {
+			#if (hl && hlvideo)
 			texture.uploadPixels(pixels);
 			frameReady = false;
 			#elseif js
@@ -262,15 +310,8 @@ class Video extends Drawable {
 			texture.flags.set(WasCleared);
 			texture.checkMipMapGen(0, 0);
 			#end
+			loadNextFrame();
 		}
-		#if hl
-		if( time >= videoTime ) {
-			var t = 0.;
-			v.decodeFrame(pixels.bytes, t);
-			videoTime = t;
-			frameReady = true; // delay decode/upload for more reliable FPS
-		}
-		#end
 	}
 
 }
