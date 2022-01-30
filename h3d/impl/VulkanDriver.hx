@@ -32,6 +32,8 @@ class VulkanDriver extends Driver {
 	var defaultClearValues : ArrayStruct<VkClearValue>;
 	var inRenderPass = false;
 	var currentFramebuffer : VkFramebuffer;
+	var memReq = new VkMemoryRequirements();
+	var allocInfo = new VkMemoryAllocateInfo();
 
 	public function new() {
 		var win = hxd.Window.getInstance();
@@ -72,7 +74,7 @@ class VulkanDriver extends Driver {
 		defaultInput.topology = TRIANGLE_LIST;
 		defaultMultisample = new VkPipelineMultisample();
 		defaultMultisample.rasterizationSamples = 1;
-
+/*
 		var bind0 = new VkDescriptorSetLayoutBinding();
 		bind0.binding = 0;
 		bind0.descriptorType = UNIFORM_BUFFER;
@@ -90,6 +92,9 @@ class VulkanDriver extends Driver {
 		var dset = new VkDescriptorSetLayoutInfo();
 		dset.bindingCount = 2;
 		dset.bindings = makeArray([bind0,bind1]);
+*/
+		var dset = new VkDescriptorSetLayoutInfo();
+		dset.bindingCount = 0;
 
 		var inf = new VkPipelineLayoutInfo();
 		inf.setLayoutCount = 1;
@@ -240,7 +245,7 @@ class VulkanDriver extends Driver {
 			stage.stage.set(t);
 			return stage;
 		}
-		c.stages = makeArray([makeStage(c.vertex,VERTEX_BIT), makeStage(c.fragment,FRAGMENT_BIT)]);
+		c.stages = makeArray([makeStage(c.vertex,VERTEX), makeStage(c.fragment,FRAGMENT)]);
 
 		// **** TODO !! *** check for usage of input variable in shader output binary
 		var attribs = [], position = 0;
@@ -302,27 +307,54 @@ class VulkanDriver extends Driver {
 		return cast {};
 	}
 
-	override function allocIndexes( count : Int, is32 : Bool ) : IndexBuffer {
+	function allocBuffer( type, size, stride ) {
 		var inf = new VkBufferCreateInfo();
 		inf.usage.set(TRANSFER_DST);
-		inf.usage.set(INDEX_BUFFER);
-		inf.size = count * (is32?4:2);
-		var b = ctx.createBuffer(inf);
-		if( b == null ) return null;
-
-		var memReq = new VkMemoryRequirements();
-		ctx.getBufferMemoryRequirements(b, memReq);
-		var allocInfo = new VkMemoryAllocateInfo();
+		inf.usage.set(type);
+		inf.size = size * stride;
+		var buf = ctx.createBuffer(inf);
+		if( buf == null )
+			return null;
+		ctx.getBufferMemoryRequirements(buf, memReq);
 		allocInfo.size = memReq.size;
-		//allocInfo.memoryTypeIndex =  findMemoryType(memRequirements.memoryTypeBits, properties);
+		var properties = new haxe.EnumFlags<VkMemoryPropertyFlag>();
+		properties.set(HOST_VISIBLE);
+		allocInfo.memoryTypeIndex = ctx.findMemoryType(memReq.memoryTypeBits, properties);
 		var mem = ctx.allocateMemory(allocInfo);
-		if( !ctx.bindBufferMemory(b, mem, 0) ) throw "assert";
+		if( !ctx.bindBufferMemory(buf, mem, 0) )
+			throw "assert";
+		return { buf : buf, mem : mem, stride : stride };
+	}
 
-		return { b : b, is32 : is32 };
+	override function allocIndexes( count : Int, is32 : Bool ) : IndexBuffer {
+		return allocBuffer(INDEX_BUFFER, count, is32?8:2);
 	}
 
 	override function allocVertexes( m : ManagedBuffer ) : VertexBuffer {
-		return cast {};
+		return allocBuffer(VERTEX_BUFFER, m.size, m.stride * 4);
+	}
+
+	function updateBuffer( mem : VkDeviceMemory, bytes : hl.Bytes, offset : Int, size : Int ) {
+		var ptr = ctx.mapMemory(mem, offset, size, 0);
+		if( ptr == null ) throw "Failed to map buffer";
+		ptr.blit(0, bytes, 0, size);
+		ctx.unmapMemory(mem);
+	}
+
+	override function uploadIndexBuffer( i : IndexBuffer, startIndice : Int, indiceCount : Int, buf : hxd.IndexBuffer, bufPos : Int ) {
+		updateBuffer(i.mem, hl.Bytes.getArray(buf.getNative()).offset(bufPos * i.stride), startIndice * i.stride, indiceCount * i.stride);
+	}
+
+	override function uploadIndexBytes( i : IndexBuffer, startIndice : Int, indiceCount : Int, buf : haxe.io.Bytes , bufPos : Int ) {
+		updateBuffer(i.mem, @:privateAccess buf.b.offset(bufPos * i.stride), startIndice * i.stride, indiceCount * i.stride);
+	}
+
+	override function uploadVertexBuffer( v : VertexBuffer, startVertex : Int, vertexCount : Int, buf : hxd.FloatBuffer, bufPos : Int ) {
+		updateBuffer(v.mem, hl.Bytes.getArray(buf.getNative()).offset(bufPos<<2), startVertex * v.stride, vertexCount * v.stride);
+	}
+
+	override function uploadVertexBytes( v : VertexBuffer, startVertex : Int, vertexCount : Int, buf : haxe.io.Bytes, bufPos : Int ) {
+		updateBuffer(v.mem, @:privateAccess buf.b.offset(bufPos << 2), startVertex * v.stride, vertexCount * v.stride);
 	}
 
 	override function selectMaterial( pass : h3d.mat.Pass ) {
@@ -375,7 +407,7 @@ class VulkanDriver extends Driver {
 	}
 
 	override function draw(ibuf:IndexBuffer, startIndex:Int, ntriangles:Int) {
-		command.bindIndexBuffer(ibuf.b, 0, ibuf.is32?1:0);
+		command.bindIndexBuffer(ibuf.buf, 0, ibuf.stride==8?1:0);
 		command.drawIndexed(ntriangles * 3, 1, startIndex, 0, 0);
 		Sys.exit(0);
 	}
