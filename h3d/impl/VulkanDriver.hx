@@ -39,7 +39,9 @@ class VulkanDriver extends Driver {
 		var win = hxd.Window.getInstance();
 		ctx = @:privateAccess win.window.vkctx;
 
-		defaultClearValues = makeArray([new VkClearValue()]);
+		var clr = new VkClearValue();
+		clr.colorR = 0.5;
+		defaultClearValues = makeArray([clr]);
 
 		var colorAttach = new VkAttachmentDescription();
 		colorAttach.format = B8G8R8A8_UNORM;
@@ -184,6 +186,10 @@ class VulkanDriver extends Driver {
 	}
 
 	override function present() {
+		if( inRenderPass ) {
+			command.endRenderPass();
+			inRenderPass = false;
+		}
 		ctx.endFrame();
 		beginFrame();
 		if( !ctx.beginFrame() ) {
@@ -274,7 +280,7 @@ class VulkanDriver extends Driver {
 			var b = new VkVertexInputBindingDescription();
 			b.binding = i;
 			b.inputRate = VERTEX;
-			b.stride = position;
+			b.stride = position * 4;
 			b;
 		}];
 		vin.vertexBindingDescriptionCount = bindings.length;
@@ -319,11 +325,30 @@ class VulkanDriver extends Driver {
 		allocInfo.size = memReq.size;
 		var properties = new haxe.EnumFlags<VkMemoryPropertyFlag>();
 		properties.set(HOST_VISIBLE);
+		properties.set(HOST_COHERENT);
 		allocInfo.memoryTypeIndex = ctx.findMemoryType(memReq.memoryTypeBits, properties);
 		var mem = ctx.allocateMemory(allocInfo);
 		if( !ctx.bindBufferMemory(buf, mem, 0) )
 			throw "assert";
 		return { buf : buf, mem : mem, stride : stride };
+	}
+
+	override function selectBuffer( v : h3d.Buffer ) {
+		var arr = makeArray([@:privateAccess v.buffer.vbuf.buf], false);
+		command.bindVertexBuffers(0, 1, arr, null);
+	}
+
+	override function selectMultiBuffers( buffers : Buffer.BufferOffset ) {
+		var arr = [], offsets = [];
+		while( buffers != null ) {
+			arr.push(@:privateAccess buffers.buffer.buffer.vbuf.buf);
+			offsets.push(new VkDeviceSize(buffers.offset * 4));
+			buffers = buffers.next;
+		}
+		var count = arr.length;
+		var arr = makeArray(arr, false);
+		var offsets = makeArray(offsets, false);
+		command.bindVertexBuffers(0, count, arr, offsets);
 	}
 
 	override function allocIndexes( count : Int, is32 : Bool ) : IndexBuffer {
@@ -383,8 +408,6 @@ class VulkanDriver extends Driver {
 
 		var blend = new VkPipelineColorBlend();
 		inf.colorBlend = blend;
-
-
 		inf.layout = defaultLayout;
 		inf.renderPass = defaultRenderPass;
 
@@ -409,7 +432,6 @@ class VulkanDriver extends Driver {
 	override function draw(ibuf:IndexBuffer, startIndex:Int, ntriangles:Int) {
 		command.bindIndexBuffer(ibuf.buf, 0, ibuf.stride==8?1:0);
 		command.drawIndexed(ntriangles * 3, 1, startIndex, 0, 0);
-		Sys.exit(0);
 	}
 
 	override function drawInstanced(ibuf:IndexBuffer, commands:InstanceBuffer) {
