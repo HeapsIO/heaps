@@ -24,13 +24,47 @@ class VulkanDriver extends Driver {
 	var defaultViewport : VkPipelineViewport;
 	var defaultMultisample : VkPipelineMultisample;
 	var defaultLayout : VkPipelineLayout;
+	var defaultRenderPass : VkRenderPass;
 	var currentImage : VkImage;
 	var command : VkCommandBuffer;
 	var savedPointers : Array<Dynamic> = [];
+	var frameBuffers : Array<{ img : VkImage, fb : VkFramebuffer }> = [];
+	var defaultClearValues : ArrayStruct<VkClearValue>;
+	var inRenderPass = false;
+	var currentFramebuffer : VkFramebuffer;
 
 	public function new() {
 		var win = hxd.Window.getInstance();
 		ctx = @:privateAccess win.window.vkctx;
+
+		defaultClearValues = makeArray([new VkClearValue()]);
+
+		var colorAttach = new VkAttachmentDescription();
+		colorAttach.format = B8G8R8A8_UNORM;
+		colorAttach.samples = 1;
+		colorAttach.loadOp = CLEAR;
+		colorAttach.storeOp = STORE;
+		colorAttach.stencilLoadOp = DONT_CARE;
+		colorAttach.stencilStoreOp = DONT_CARE;
+		colorAttach.initialLayout = UNDEFINED;
+		colorAttach.finalLayout = PRESENT_SRC_KHR;
+
+		var colorAttachRef = new VkAttachmentReference();
+		colorAttachRef.attachment = 0;
+		colorAttachRef.layout = COLOR_ATTACHMENT_OPTIMAL;
+
+		var subPass = new VkSubpassDescription();
+		subPass.pipelineBindPoint = GRAPHICS;
+		subPass.colorAttachmentCount = 1;
+		subPass.colorAttachments = makeArray([colorAttachRef]);
+
+		var renderPass = new VkRenderPassInfo();
+		renderPass.attachmentCount = 1;
+		renderPass.attachments = makeArray([colorAttach]);
+		renderPass.subpassCount = 1;
+		renderPass.subpasses = makeArray([subPass]);
+		defaultRenderPass = ctx.createRenderPass(renderPass);
+
 		beginFrame();
 		initViewport(win.width, win.height);
 		if( !ctx.beginFrame() ) throw "assert";
@@ -64,8 +98,41 @@ class VulkanDriver extends Driver {
 	}
 
 	function beginFrame() {
+		var win = hxd.Window.getInstance();
+
 		currentImage = ctx.getCurrentImage();
 		command = ctx.getCurrentCommandBuffer();
+		var fb = null;
+		for( f in frameBuffers ) {
+			if( f.img == currentImage ) {
+				fb = f.fb;
+				break;
+			}
+		}
+		if( fb == null ) {
+			var viewInfo = new VkImageViewInfo();
+			viewInfo.image = currentImage;
+			viewInfo.viewType = TYPE_2D;
+			viewInfo.format = ctx.getCurrentImageFormat();
+			viewInfo.layerCount = 1;
+			viewInfo.levelCount = 1;
+			viewInfo.aspectMask.set(COLOR);
+
+			var view = ctx.createImageView(viewInfo);
+
+			var framebuffer = new VkFramebufferInfo();
+			framebuffer.renderPass = defaultRenderPass;
+			framebuffer.attachmentCount = 1;
+			framebuffer.width = win.width;
+			framebuffer.height = win.height;
+			framebuffer.layers = 1;
+			framebuffer.attachments = makeArray([view]);
+
+			fb = ctx.createFramebuffer(framebuffer);
+			if( fb == null ) throw "Failed to create framebuffer";
+			frameBuffers.push({ img : currentImage, fb : fb });
+		}
+		currentFramebuffer = fb;
 	}
 
 	function initViewport(width:Int,height:Int) {
@@ -287,35 +354,23 @@ class VulkanDriver extends Driver {
 
 
 		inf.layout = defaultLayout;
-
-		var colorAttach = new VkAttachmentDescription();
-		colorAttach.format = B8G8R8A8_UNORM;
-		colorAttach.samples = 1;
-		colorAttach.loadOp = CLEAR;
-		colorAttach.storeOp = STORE;
-		colorAttach.stencilLoadOp = DONT_CARE;
-		colorAttach.stencilStoreOp = DONT_CARE;
-		colorAttach.initialLayout = UNDEFINED;
-		colorAttach.finalLayout = PRESENT_SRC_KHR;
-
-		var colorAttachRef = new VkAttachmentReference();
-		colorAttachRef.attachment = 0;
-		colorAttachRef.layout = COLOR_ATTACHMENT_OPTIMAL;
-
-		var subPass = new VkSubpassDescription();
-		subPass.pipelineBindPoint = GRAPHICS;
-		subPass.colorAttachmentCount = 1;
-		subPass.colorAttachments = makeArray([colorAttachRef]);
-
-		var renderPass = new VkRenderPassInfo();
-		renderPass.attachmentCount = 1;
-		renderPass.attachments = makeArray([colorAttach]);
-		renderPass.subpassCount = 1;
-		renderPass.subpasses = makeArray([subPass]);
-		inf.renderPass = ctx.createRenderPass(renderPass);
+		inf.renderPass = defaultRenderPass;
 
 		var pipe = ctx.createGraphicsPipeline(inf);
 		if( pipe == null ) throw "Failed to create pipeline";
+
+		if( !inRenderPass ) {
+			var win = hxd.Window.getInstance();
+			var begin = new VkRenderPassBeginInfo();
+			begin.renderPass = defaultRenderPass;
+			begin.framebuffer = currentFramebuffer;
+			begin.renderAreaExtentX = win.width;
+			begin.renderAreaExtentY = win.height;
+			begin.clearValueCount = 1;
+			begin.clearValues = defaultClearValues;
+			command.beginRenderPass(begin,INLINE);
+			inRenderPass = true;
+		}
 		command.bindPipeline(GRAPHICS, pipe);
 	}
 
