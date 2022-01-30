@@ -7,10 +7,58 @@ enum DisplayMode {
 	FullscreenResize;
 }
 
+private class NativeDroppedFile implements hxd.DropFileEvent.DroppedFile {
+
+	public var kind : hxd.DropFileEvent.DropFileContentKind;
+	public var name : String;
+	public var type : String;
+
+	var item : js.html.DataTransferItem;
+
+	public function new( item : js.html.DataTransferItem ) {
+		this.item = item;
+		if (item.kind == "file") {
+			var file = item.getAsFile();
+			this.name = file.name;
+			this.type = file.type;
+		} else {
+			this.name = "";
+			this.type = item.type;
+		}
+	}
+
+	public function getBytes( callback : ( data : haxe.io.Bytes ) -> Void ) {
+		if (item.kind == "file") {
+			var file = item.getAsFile();
+			var reader = new js.html.FileReader();
+			// TODO: Make sure no errors happen.
+			reader.onload = (_) -> callback(haxe.io.Bytes.ofData(reader.result));
+			reader.readAsArrayBuffer(file);
+		} else {
+			item.getAsString(( str : String ) -> callback(haxe.io.Bytes.ofString(str)) );
+		}
+	}
+
+	public function getString( callback : ( data : String ) -> Void ) {
+		if (item.kind == "file") {
+			var file = item.getAsFile();
+			var reader = new js.html.FileReader();
+			// TODO: Make sure no errors happen.
+			reader.onload = (_) -> callback(reader.result);
+			reader.readAsText(file);
+		} else {
+			item.getAsString(( str : String ) -> callback(str) );
+		}
+	}
+
+}
+
 class Window {
 
 	var resizeEvents : List<Void -> Void>;
 	var eventTargets : List<Event -> Void>;
+	var dropTargets : List<DropFileEvent -> Void>;
+	var dropDragEvent: DropFileEvent = new DropFileEvent(DropMove, null); // Reused drag event when dragging over time.
 
 	public var width(get, never) : Int;
 	public var height(get, never) : Int;
@@ -48,6 +96,7 @@ class Window {
 		var customCanvas = canvas != null;
 		eventTargets = new List();
 		resizeEvents = new List();
+		dropTargets = new List();
 
 		if( !js.Browser.supported ) {
 			canvasPos = { "width":0, "top":0, "left":0, "height":0 };
@@ -192,6 +241,53 @@ class Window {
 	}
 
 	public function resize( width : Int, height : Int ) : Void {
+	}
+
+	public function addDragAndDropTarget( f : ( event : DropFileEvent ) -> Void ) : Void {
+		if( dropTargets.length == 0 ) {
+			var element = canvas; // Probably should adhere to `globalEvents`?
+			element.addEventListener("dragenter", handleDragAndDropEvent);
+			element.addEventListener("dragleave", handleDragAndDropEvent);
+			element.addEventListener("dragover", handleDragAndDropEvent);
+			element.addEventListener("drop", handleDragAndDropEvent);
+		}
+		dropTargets.add(f);
+	}
+
+	public function removeDragAndDropTarget( f : ( event : DropFileEvent ) -> Void ) : Void {
+		for( e in dropTargets )
+			if( Reflect.compareMethods(e, f) ) {
+				dropTargets.remove(f);
+				break;
+			}
+		if( dropTargets.length == 0 ) {
+			var element = canvas; // Probably should adhere to `globalEvents`?
+			element.removeEventListener("dragenter", handleDragAndDropEvent);
+			element.removeEventListener("dragleave", handleDragAndDropEvent);
+			element.removeEventListener("dragover", handleDragAndDropEvent);
+			element.removeEventListener("drop", handleDragAndDropEvent);
+		}
+	}
+
+	function handleDragAndDropEvent( e : js.html.DragEvent ) {
+		var files : Array<hxd.DropFileEvent.DroppedFile> = [];
+		// TODO: Don't allocate dropped file every time, only when it changes.
+		if( e.dataTransfer != null )
+			for( i in 0...e.dataTransfer.items.length )
+				files.push(new NativeDroppedFile(e.dataTransfer.items[i]));
+		var ev = switch( e.type ) {
+			case "dragenter":
+				new DropFileEvent(DropStart, files);
+			case "dragleave":
+				new DropFileEvent(DropEnd, files);
+			case "drop":
+				new DropFileEvent(Drop, files);
+			case "dragover":
+				dropDragEvent.files = files;
+				dropDragEvent;
+			default: throw "assert";
+		}
+		for( e in dropTargets ) e(ev);
 	}
 
 	@:deprecated("Use the displayMode property instead")

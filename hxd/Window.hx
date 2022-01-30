@@ -68,6 +68,12 @@ class Window {
 	public function resize( width : Int, height : Int ) : Void {
 	}
 
+	public function addDragAndDropTarget( f : ( event : DropFileEvent ) -> Void ) : Void {
+	}
+
+	public function removeDragAndDropTarget( f : ( event : DropFileEvent ) -> Void ) : Void {
+	}
+
 	@:deprecated("Use the displayMode property instead")
 	public function setFullScreen( v : Bool ) : Void {
 	}
