@@ -10,14 +10,20 @@ import haxe.io.Bytes;
 enum DropFileEventKind {
 	/**
 		User initiated the drag&drop operation by dragging content over the window.
+
+		Only fired if `DropFileEvent.SupportsOngoingEvent` is `true`.
 	**/
 	DropStart;
 	/**
 		User cancelled the drag&drop operation by moving cursor outside the window area.
+
+		Only fired if `DropFileEvent.SupportsOngoingEvent` is `true`.
 	**/
 	DropEnd;
 	/**
 		User continued the drag&drop operation by moving the cursor within the window area.
+
+		Only fired if `DropFileEvent.SupportsOngoingEvent` is `true`.
 	**/
 	DropMove;
 	/**
@@ -97,6 +103,9 @@ interface DroppedFile {
 	@see `hxd.Window.removeDragAndDropTarget`
 **/
 class DropFileEvent {
+
+	public static inline var SupportsOngoingEvent = #if js true #else false #end ;
+
 	/**
 		The event type of the drag&drop operation.
 	**/

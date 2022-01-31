@@ -68,9 +68,15 @@ class Window {
 	public function resize( width : Int, height : Int ) : Void {
 	}
 
+	/**
+		Add a drag&drop events callback.
+	**/
 	public function addDragAndDropTarget( f : ( event : DropFileEvent ) -> Void ) : Void {
 	}
 
+	/**
+		Remove a drag&drop events callback.
+	**/
 	public function removeDragAndDropTarget( f : ( event : DropFileEvent ) -> Void ) : Void {
 	}
 

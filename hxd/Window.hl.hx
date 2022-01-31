@@ -29,11 +29,46 @@ typedef DisplaySetting = {
 	framerate : Int
 }
 
+private class NativeDroppedFile implements hxd.DropFileEvent.DroppedFile {
+
+	public var kind : hxd.DropFileEvent.DropFileContentKind;
+	public var name : String;
+	public var type : String;
+
+	public function new( kind : hxd.DropFileEvent.DropFileContentKind, name : String ) {
+		this.kind = kind;
+		this.name = name;
+		this.type = "";
+	}
+
+	public function getBytes( callback : ( data : haxe.io.Bytes ) -> Void ) {
+		haxe.Timer.delay(() -> callback(getBytesSync()), 1);
+	}
+
+	public function getString( callback : ( data : String ) -> Void ) {
+		haxe.Timer.delay(() -> callback(getStringSync()), 1);
+	}
+
+	public function getBytesSync() : haxe.io.Bytes {
+		return
+			if (kind == KString) haxe.io.Bytes.ofString(name);
+			else sys.io.File.getBytes(name);
+	}
+
+	public function getStringSync():String {
+		return
+			if (kind == KString) name;
+			else sys.io.File.getContent(name);
+	}
+}
+
 //@:coreApi
 class Window {
 
 	var resizeEvents : List<Void -> Void>;
 	var eventTargets : List<Event -> Void>;
+	var dropTargets : List<DropFileEvent -> Void>;
+	var dropFiles : Array<hxd.DropFileEvent.DroppedFile>;
 
 	public var width(get, never) : Int;
 	public var height(get, never) : Int;
@@ -77,6 +112,7 @@ class Window {
 		this.windowHeight = height;
 		eventTargets = new List();
 		resizeEvents = new List();
+		dropTargets = new List();
 		#if hlsdl
 		var sdlFlags = if (!fixed) sdl.Window.SDL_WINDOW_SHOWN | sdl.Window.SDL_WINDOW_RESIZABLE else sdl.Window.SDL_WINDOW_SHOWN;
 		#if heaps_vulkan
@@ -147,6 +183,34 @@ class Window {
 		windowWidth = width;
 		windowHeight = height;
 		for( f in resizeEvents ) f();
+	}
+
+	public function addDragAndDropTarget( f : ( event : DropFileEvent ) -> Void ) : Void {
+		dropTargets.push(f);
+		#if (hl_ver >= version("1.12.0"))
+		#if hlsdl
+		sdl.Sdl.setDragAndDropEnabled(true);
+		#elseif hldx
+		
+		#end
+		#end
+	}
+
+	public function removeDragAndDropTarget( f : ( event : DropFileEvent ) -> Void ) : Void {
+		for( e in dropTargets )
+			if( Reflect.compareMethods(e, f) ) {
+				dropTargets.remove(f);
+				break;
+			}
+		if ( dropTargets.length == 0 ) {
+			#if (hl_ver >= version("1.12.0"))
+			#if hlsdl
+			sdl.Sdl.setDragAndDropEnabled(false);
+			#elseif hldx
+
+			#end
+			#end
+		}
 	}
 
 	@:deprecated("Use the displayMode property instead")
@@ -316,6 +380,18 @@ class Window {
 			#end
 			eh = new Event(ERelease, e.mouseX, e.mouseY);
 			eh.touchId = e.fingerId;
+		#if (hl_ver >= version("1.12.0"))
+		case DropStart:
+			dropFiles = [];
+		case DropFile:
+			dropFiles.push(new NativeDroppedFile(KFile, @:privateAccess String.fromUTF8(e.dropFile)));
+		case DropText:
+			dropFiles.push(new NativeDroppedFile(KString, @:privateAccess String.fromUTF8(e.dropFile)));
+		case DropEnd:
+			for ( dt in dropTargets ) dt(new DropFileEvent(Drop, dropFiles));
+			dropFiles = null;
+		#end
+		
 		#elseif hldx
 		case KeyDown:
 			eh = new Event(EKeyDown);
