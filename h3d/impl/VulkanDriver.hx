@@ -15,31 +15,150 @@ class CompiledShader {
 	}
 }
 
+class VulkanFrame {
+	public var command : VkCommandBuffer;
+	public var fence : VkFence;
+	public var submit : VkSubmitInfo;
+	public var imageAvailable : VkSemaphore;
+	public var renderFinished : VkSemaphore;
+	public function new() {
+	}
+}
+
 class VulkanDriver extends Driver {
 
 	var ctx : VkContext;
 	var currentShader : CompiledShader;
 	var programs : Map<Int,CompiledShader> = new Map();
-	var defaultInput : VkPipelineInputAssembly;
-	var defaultViewport : VkPipelineViewport;
-	var defaultMultisample : VkPipelineMultisample;
-	var defaultLayout : VkPipelineLayout;
-	var defaultRenderPass : VkRenderPass;
-	var currentImage : VkImage;
 	var command : VkCommandBuffer;
 	var savedPointers : Array<Dynamic> = [];
-	var frameBuffers : Array<{ img : VkImage, fb : VkFramebuffer }> = [];
-	var currentFramebuffer : VkFramebuffer;
+
 	var memReq = new VkMemoryRequirements();
 	var allocInfo = new VkMemoryAllocateInfo();
+
 	var rangeAll : VkImageSubResourceRange;
+	var defaultViewport : VkPipelineViewport;
+	var defaultLayout : VkPipelineLayout;
+	var defaultRenderPass : VkRenderPass;
+
+	var queueFamily : Int;
+	var outImageFormat : VkFormat;
+	var outImages : Array<{ img : VkImage, framebuffer : VkFramebuffer, fence : VkFence }>;
 	var viewportWidth : Int;
 	var viewportHeight : Int;
 
+	var frames : Array<VulkanFrame>;
+	var currentImageIndex : Int;
+	var currentFrameIndex : Int;
+
 	public function new() {
 		var win = hxd.Window.getInstance();
-		ctx = @:privateAccess win.window.vkctx;
+		initContext(@:privateAccess win.window.vkctx);
+		initDefaults();
+		initSwapchain(win.width, win.height);
+		beginFrame();
+	}
 
+	function initContext(surface) {
+		var queueFamily = 0;
+		ctx = Vulkan.initContext(surface, queueFamily);
+		if( ctx == null ) throw "Failed to init context";
+		this.queueFamily = queueFamily;
+
+		var poolInf = new VkCommandPoolCreateInfo();
+		poolInf.flags.set(RESET_COMMAND_BUFFER);
+		poolInf.queueFamilyIndex = queueFamily;
+		var pool = ctx.createCommandPool(poolInf);
+
+		var frameCount = 2;
+		frames = [];
+		for( i in 0...frameCount ) {
+			var frame = new VulkanFrame();
+			var inf = new VkCommandBufferAllocateInfo();
+			inf.commandPool = pool;
+			inf.level = PRIMARY;
+			inf.commandBufferCount = 1;
+
+			var arr = new hl.NativeArray(1);
+			if( !ctx.allocateCommandBuffers(inf,arr) )
+				throw "assert";
+			frame.command = arr[0];
+
+			var inf = new VkFenceCreateInfo();
+			inf.flags.set(SIGNALED);
+			frame.fence = ctx.createFence(inf);
+
+			var inf = new VkSemaphoreCreateInfo();
+			frame.imageAvailable = ctx.createSemaphore(inf);
+			frame.renderFinished = ctx.createSemaphore(inf);
+
+			var submit = new VkSubmitInfo();
+			submit.waitSemaphoreCount = 1;
+			submit.pWaitSemaphores = makeArray([frame.imageAvailable]);
+			var flags = new haxe.EnumFlags<VkPipelineStageFlag>();
+			flags.set(COLOR_ATTACHMENT_OUTPUT);
+			submit.pWaitDstStageMask = makeArray([flags]);
+			submit.commandBufferCount = 1;
+			submit.pCommandBuffers = makeArray([frame.command]);
+			submit.signalSemaphoreCount = 1;
+			submit.pSignalSemaphores = makeArray([frame.renderFinished]);
+			frame.submit = submit;
+
+			frames.push(frame);
+		}
+	}
+
+	function initSwapchain( width : Int, height : Int ) {
+		var images = new hl.NativeArray(2);
+		var format : VkFormat = UNDEFINED;
+		if( !ctx.initSwapchain(width, height, images, format) )
+			throw "Failed to init swapchain";
+		outImageFormat = format;
+		outImages = [];
+		for( img in images ) {
+			var viewInfo = new VkImageViewCreateInfo();
+			viewInfo.image = img;
+			viewInfo.viewType = TYPE_2D;
+			viewInfo.format = format;
+			viewInfo.layerCount = 1;
+			viewInfo.levelCount = 1;
+			viewInfo.aspectMask.set(COLOR);
+
+			var view = ctx.createImageView(viewInfo);
+
+			var framebuffer = new VkFramebufferCreateInfo();
+			framebuffer.renderPass = defaultRenderPass;
+			framebuffer.attachmentCount = 1;
+			framebuffer.width = width;
+			framebuffer.height = height;
+			framebuffer.layers = 1;
+			framebuffer.attachments = makeArray([view]); // abstract
+
+			var fb = ctx.createFramebuffer(framebuffer);
+			outImages.push({ img : img, framebuffer : fb, fence : null });
+		}
+
+		var vp = new VkPipelineViewport();
+
+		var vdef = new VkViewport();
+		vdef.width = width;
+		vdef.height = height;
+		vdef.maxDepth = 1;
+		vp.viewportCount = 1;
+		vp.viewports = makeRef(vdef);
+
+		var sdef = new VkRect2D();
+		sdef.extendX = width;
+		sdef.extendY = height;
+		vp.scissorCount = 1;
+		vp.scissors = makeRef(sdef);
+
+		defaultViewport = vp;
+		viewportWidth = width;
+		viewportHeight = height;
+	}
+
+	function initDefaults() {
 		rangeAll = new VkImageSubResourceRange();
 		rangeAll.aspectMask.set(COLOR);
 		rangeAll.levelCount = -1;
@@ -70,7 +189,7 @@ class VulkanDriver extends Driver {
         dep.dstStageMask.set(COLOR_ATTACHMENT_OUTPUT);
         dep.dstAccessMask.set(COLOR_ATTACHMENT_WRITE);
 
-		var renderPass = new VkRenderPassInfo();
+		var renderPass = new VkRenderPassCreateInfo();
 		renderPass.attachmentCount = 1;
 		renderPass.attachments = makeRef(colorAttach);
 		renderPass.subpassCount = 1;
@@ -79,13 +198,6 @@ class VulkanDriver extends Driver {
 		renderPass.dependencies = makeRef(dep);
 		defaultRenderPass = ctx.createRenderPass(renderPass);
 
-		if( !ctx.beginFrame() ) throw "assert";
-		initViewport(win.width, win.height);
-		beginFrame();
-		defaultInput = new VkPipelineInputAssembly();
-		defaultInput.topology = TRIANGLE_LIST;
-		defaultMultisample = new VkPipelineMultisample();
-		defaultMultisample.rasterizationSamples = 1;
 /*
 		var bind0 = new VkDescriptorSetLayoutBinding();
 		bind0.binding = 0;
@@ -105,78 +217,44 @@ class VulkanDriver extends Driver {
 		dset.bindingCount = 2;
 		dset.bindings = makeArray([bind0,bind1]);
 */
-		var dset = new VkDescriptorSetLayoutInfo();
+		var dset = new VkDescriptorSetLayoutCreateInfo();
 		dset.bindingCount = 0;
 
-		var inf = new VkPipelineLayoutInfo();
+		var inf = new VkPipelineLayoutCreateInfo();
 		inf.setLayoutCount = 1;
 		inf.setLayouts = makeArray([ctx.createDescriptorSetLayout(dset)]); // abstract
 		defaultLayout = ctx.createPipelineLayout(inf);
 	}
 
 	function beginFrame() {
-		currentImage = ctx.getCurrentImage();
-		command = ctx.getCurrentCommandBuffer();
-		var fb = null;
-		for( f in frameBuffers ) {
-			if( f.img == currentImage ) {
-				fb = f.fb;
-				break;
-			}
-		}
-		if( fb == null ) {
-			var viewInfo = new VkImageViewInfo();
-			viewInfo.image = currentImage;
-			viewInfo.viewType = TYPE_2D;
-			viewInfo.format = ctx.getCurrentImageFormat();
-			viewInfo.layerCount = 1;
-			viewInfo.levelCount = 1;
-			viewInfo.aspectMask.set(COLOR);
+		var frame = frames[currentFrameIndex];
+		ctx.waitForFence(frame.fence, -1);
+		currentImageIndex = ctx.getNextImageIndex(frame.imageAvailable);
+		if( currentImageIndex < 0 )
+			throw "assert";
+		var img = outImages[currentImageIndex];
+		if( img.fence != null )
+			ctx.waitForFence(img.fence, -1);
+		img.fence = frame.fence;
+		ctx.resetFence(frame.fence);
 
-			var view = ctx.createImageView(viewInfo);
-
-			var framebuffer = new VkFramebufferInfo();
-			framebuffer.renderPass = defaultRenderPass;
-			framebuffer.attachmentCount = 1;
-			framebuffer.width = viewportWidth;
-			framebuffer.height = viewportHeight;
-			framebuffer.layers = 1;
-			framebuffer.attachments = makeArray([view]); // abstract
-
-			fb = ctx.createFramebuffer(framebuffer);
-			if( fb == null ) throw "Failed to create framebuffer";
-			frameBuffers.push({ img : currentImage, fb : fb });
-		}
-		currentFramebuffer = fb;
+		var inf = new VkCommandBufferBeginInfo();
+		inf.flags.set(ONE_TIME_SUBMIT);
+		command = frame.command;
+		command.begin(inf);
 
 		var begin = new VkRenderPassBeginInfo();
 		begin.renderPass = defaultRenderPass;
-		begin.framebuffer = currentFramebuffer;
+		begin.framebuffer = outImages[currentImageIndex].framebuffer;
 		begin.renderAreaExtentX = viewportWidth;
 		begin.renderAreaExtentY = viewportHeight;
 		begin.clearValueCount = 0;
 		command.beginRenderPass(begin,INLINE);
 	}
 
-	function initViewport(width:Int,height:Int) {
-		var vp = new VkPipelineViewport();
-
-		var vdef = new VkViewport();
-		vdef.width = width;
-		vdef.height = height;
-		vdef.maxDepth = 1;
-		vp.viewportCount = 1;
-		vp.viewports = makeRef(vdef);
-
-		var sdef = new VkRect2D();
-		sdef.extendX = width;
-		sdef.extendY = height;
-		vp.scissorCount = 1;
-		vp.scissors = makeRef(sdef);
-
-		defaultViewport = vp;
-		viewportWidth = width;
-		viewportHeight = height;
+	function endFrame() {
+		command.endRenderPass();
+		command.end();
 	}
 
 	override function hasFeature( f : Feature ) {
@@ -204,11 +282,17 @@ class VulkanDriver extends Driver {
 	}
 
 	override function present() {
-		command.endRenderPass();
-		ctx.endFrame();
-		if( !ctx.beginFrame() )
-			throw "assert:resize";
+		endFrame();
+		submit();
 		beginFrame();
+	}
+
+	function submit() {
+		var frame = frames[currentFrameIndex];
+		ctx.queueSubmit(frame.submit, frame.fence);
+		ctx.present(frame.renderFinished, currentImageIndex);
+		currentFrameIndex++;
+		currentFrameIndex %= frames.length;
 	}
 
 	override function init( onCreate : Bool -> Void, forceSoftware = false ) {
@@ -407,7 +491,11 @@ class VulkanDriver extends Driver {
 	}
 
 	override function selectMaterial( pass : h3d.mat.Pass ) {
-		var inf = new VkGraphicsPipelineInfo();
+
+		var defaultInput = new VkPipelineInputAssembly();
+		defaultInput.topology = TRIANGLE_LIST;
+
+		var inf = new VkGraphicsPipelineCreateInfo();
 
 		inf.stageCount = 2;
 		inf.stages = currentShader.stages;
@@ -421,6 +509,8 @@ class VulkanDriver extends Driver {
 		raster.lineWidth = 1;
 		inf.rasterization = raster;
 
+		var defaultMultisample = new VkPipelineMultisample();
+		defaultMultisample.rasterizationSamples = 1;
 		inf.multisample = defaultMultisample;
 
 		var stencil = new VkPipelineDepthStencil();
