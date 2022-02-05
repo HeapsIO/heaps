@@ -51,6 +51,7 @@ class VulkanDriver extends Driver {
 	var defaultRenderPass : VkRenderPass;
 
 	var queueFamily : Int;
+	var depthFormat : VkFormat;
 	var outImageFormat : VkFormat;
 	var outImages : Array<{ img : VkImage, framebuffer : VkFramebuffer, fence : VkFence }>;
 	var viewportWidth : Int;
@@ -74,6 +75,7 @@ class VulkanDriver extends Driver {
 		ctx = Vulkan.initContext(surface, queueFamily);
 		if( ctx == null ) throw "Failed to init context";
 		this.queueFamily = queueFamily;
+		this.depthFormat = D24_UNORM_S8_UINT;
 
 		var poolInf = new VkCommandPoolCreateInfo();
 		poolInf.flags.set(RESET_COMMAND_BUFFER);
@@ -125,9 +127,32 @@ class VulkanDriver extends Driver {
 		var format : VkFormat = UNDEFINED;
 		if( !ctx.initSwapchain(width, height, images, format) )
 			throw "Failed to init swapchain";
+
 		outImageFormat = format;
 		outImages = [];
 		for( img in images ) {
+
+			var inf = new VkImageCreateInfo();
+			inf.imageType = TYPE_2D;
+			inf.width = width;
+			inf.height = height;
+			inf.depth = 1;
+			inf.arrayLayers = 1;
+			inf.mipLevels = 1;
+			inf.tiling = OPTIMAL;
+			inf.samples = 1;
+			inf.format = depthFormat;
+			inf.usage.set(DEPTH_STENCIL_ATTACHMENT);
+
+			var depth = ctx.createImage(inf);
+			ctx.getImageMemoryRequirements(depth,memReq);
+			allocInfo.size = memReq.size;
+			var properties = new haxe.EnumFlags<VkMemoryPropertyFlag>();
+			properties.set(DEVICE_LOCAL);
+			allocInfo.memoryTypeIndex = ctx.findMemoryType(memReq.memoryTypeBits, properties);
+			var mem = ctx.allocateMemory(allocInfo);
+			ctx.bindImageMemory(depth, mem, 0);
+
 			var viewInfo = new VkImageViewCreateInfo();
 			viewInfo.image = img;
 			viewInfo.viewType = TYPE_2D;
@@ -138,13 +163,22 @@ class VulkanDriver extends Driver {
 
 			var view = ctx.createImageView(viewInfo);
 
+			var viewInfo = new VkImageViewCreateInfo();
+			viewInfo.image = depth;
+			viewInfo.viewType = TYPE_2D;
+			viewInfo.format = depthFormat;
+			viewInfo.layerCount = 1;
+			viewInfo.levelCount = 1;
+			viewInfo.aspectMask.set(DEPTH);
+			var depthView = ctx.createImageView(viewInfo);
+
 			var framebuffer = new VkFramebufferCreateInfo();
 			framebuffer.renderPass = defaultRenderPass;
-			framebuffer.attachmentCount = 1;
 			framebuffer.width = width;
 			framebuffer.height = height;
 			framebuffer.layers = 1;
-			framebuffer.attachments = makeArray([view]); // abstract
+			framebuffer.attachmentCount = 2;
+			framebuffer.attachments = makeArray([view,depthView]); // abstract
 
 			var fb = ctx.createFramebuffer(framebuffer);
 			outImages.push({ img : img, framebuffer : fb, fence : null });
@@ -186,24 +220,42 @@ class VulkanDriver extends Driver {
 		colorAttach.initialLayout = UNDEFINED;
 		colorAttach.finalLayout = PRESENT_SRC_KHR;
 
+		var depthAttach = new VkAttachmentDescription();
+		depthAttach.format = depthFormat;
+		depthAttach.samples = 1;
+		depthAttach.loadOp = LOAD;
+		depthAttach.storeOp = STORE;
+		depthAttach.stencilLoadOp = LOAD;
+		depthAttach.stencilStoreOp = STORE;
+		depthAttach.initialLayout = UNDEFINED;
+		depthAttach.finalLayout = DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
 		var colorAttachRef = new VkAttachmentReference();
 		colorAttachRef.attachment = 0;
 		colorAttachRef.layout = COLOR_ATTACHMENT_OPTIMAL;
+
+		var depthAttachRef = new VkAttachmentReference();
+		depthAttachRef.attachment = 1;
+		depthAttachRef.layout = DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
 		var subPass = new VkSubpassDescription();
 		subPass.pipelineBindPoint = GRAPHICS;
 		subPass.colorAttachmentCount = 1;
 		subPass.colorAttachments = makeRef(colorAttachRef);
+		subPass.depthStencilAttachment = makeRef(depthAttachRef);
 
         var dep = new VkSubpassDependency();
 		dep.srcSubpass = -1;
         dep.srcStageMask.set(COLOR_ATTACHMENT_OUTPUT);
+        dep.srcStageMask.set(EARLY_FRAGMENT_TESTS);
         dep.dstStageMask.set(COLOR_ATTACHMENT_OUTPUT);
+        dep.dstStageMask.set(EARLY_FRAGMENT_TESTS);
         dep.dstAccessMask.set(COLOR_ATTACHMENT_WRITE);
+		dep.dstAccessMask.set(DEPTH_STENCIL_ATTACHMENT_WRITE);
 
 		var renderPass = new VkRenderPassCreateInfo();
-		renderPass.attachmentCount = 1;
-		renderPass.attachments = makeRef(colorAttach);
+		renderPass.attachmentCount = 2;
+		renderPass.attachments = makeArray([colorAttach,depthAttach]);
 		renderPass.subpassCount = 1;
 		renderPass.subpasses = makeRef(subPass);
 		renderPass.dependencyCount = 1;
@@ -233,7 +285,7 @@ class VulkanDriver extends Driver {
 		begin.framebuffer = outImages[currentImageIndex].framebuffer;
 		begin.renderAreaExtentX = viewportWidth;
 		begin.renderAreaExtentY = viewportHeight;
-		begin.clearValueCount = 0;
+
 		command.beginRenderPass(begin,INLINE);
 	}
 
@@ -403,15 +455,20 @@ class VulkanDriver extends Driver {
 	override function begin(frame:Int) {
 	}
 
+	var tmpClearAttach = new VkClearAttachment();
+	var tmpClearRect = new VkClearRect();
+
 	override function clear(?color:Vector, ?depth:Float, ?stencil:Int) {
+		var clear = tmpClearAttach;
+		var rect = tmpClearRect;
 		if( color != null ) {
-			var clear = new VkClearAttachment();
+			clear.colorAttachment = 0;
+			clear.aspectMask = new haxe.EnumFlags();
 			clear.aspectMask.set(COLOR);
 			clear.r = color.r;
 			clear.g = color.g;
 			clear.b = color.b;
 			clear.a = color.a;
-			var rect = new VkClearRect();
 			rect.extendX = viewportWidth;
 			rect.extendY = viewportHeight;
 			rect.layerCount = 1;
@@ -419,8 +476,16 @@ class VulkanDriver extends Driver {
 		}
 		if( depth != null || stencil != null ) {
 			if( depth == null || stencil == null ) throw "Can't clear depth without clearing stencil";
-			// *** TODO *** setup depth buffer
-			// command.clearDepthStencilImage(currentImage, depth, stencil);
+			clear.colorAttachment = 1;
+			clear.aspectMask = new haxe.EnumFlags();
+			clear.aspectMask.set(DEPTH);
+			clear.aspectMask.set(STENCIL);
+			clear.depth = (depth:Float);
+			clear.stencil = stencil;
+			rect.extendX = viewportWidth;
+			rect.extendY = viewportHeight;
+			rect.layerCount = 1;
+			command.clearAttachments(1, makeRef(clear), 1, makeRef(rect));
 		}
 	}
 
