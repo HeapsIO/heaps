@@ -713,7 +713,10 @@ class GlslOut {
 				Given we have either [X, Y, 0, N] for zNear or [X, Y, F, F] for zFar,
 				this shader operation will map [0, 1] range to [-1, 1] for correct clipping.
 			**/
-			add("\tgl_Position.z += gl_Position.z - gl_Position.w;\n");
+			if( isVulkan )
+				add("\tgl_Position.y = -gl_Position.y;\n");
+			else
+				add("\tgl_Position.z += gl_Position.z - gl_Position.w;\n");
 		}
 		add("}");
 		exprValues.push(buf.toString());

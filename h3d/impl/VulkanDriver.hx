@@ -29,24 +29,26 @@ class VulkanDriver extends Driver {
 	var command : VkCommandBuffer;
 	var savedPointers : Array<Dynamic> = [];
 	var frameBuffers : Array<{ img : VkImage, fb : VkFramebuffer }> = [];
-	var defaultClearValues : ArrayStruct<VkClearValue>;
-	var inRenderPass = false;
 	var currentFramebuffer : VkFramebuffer;
 	var memReq = new VkMemoryRequirements();
 	var allocInfo = new VkMemoryAllocateInfo();
+	var rangeAll : VkImageSubResourceRange;
+	var viewportWidth : Int;
+	var viewportHeight : Int;
 
 	public function new() {
 		var win = hxd.Window.getInstance();
 		ctx = @:privateAccess win.window.vkctx;
 
-		var clr = new VkClearValue();
-		clr.colorR = 0.5;
-		defaultClearValues = makeArray([clr]);
+		rangeAll = new VkImageSubResourceRange();
+		rangeAll.aspectMask.set(COLOR);
+		rangeAll.levelCount = -1;
+		rangeAll.layerCount = -1;
 
 		var colorAttach = new VkAttachmentDescription();
 		colorAttach.format = B8G8R8A8_UNORM;
 		colorAttach.samples = 1;
-		colorAttach.loadOp = CLEAR;
+		colorAttach.loadOp = LOAD;
 		colorAttach.storeOp = STORE;
 		colorAttach.stencilLoadOp = DONT_CARE;
 		colorAttach.stencilStoreOp = DONT_CARE;
@@ -60,18 +62,26 @@ class VulkanDriver extends Driver {
 		var subPass = new VkSubpassDescription();
 		subPass.pipelineBindPoint = GRAPHICS;
 		subPass.colorAttachmentCount = 1;
-		subPass.colorAttachments = makeArray([colorAttachRef]);
+		subPass.colorAttachments = makeRef(colorAttachRef);
+
+        var dep = new VkSubpassDependency();
+		dep.srcSubpass = -1;
+        dep.srcStageMask.set(COLOR_ATTACHMENT_OUTPUT);
+        dep.dstStageMask.set(COLOR_ATTACHMENT_OUTPUT);
+        dep.dstAccessMask.set(COLOR_ATTACHMENT_WRITE);
 
 		var renderPass = new VkRenderPassInfo();
 		renderPass.attachmentCount = 1;
-		renderPass.attachments = makeArray([colorAttach]);
+		renderPass.attachments = makeRef(colorAttach);
 		renderPass.subpassCount = 1;
-		renderPass.subpasses = makeArray([subPass]);
+		renderPass.subpasses = makeRef(subPass);
+		renderPass.dependencyCount = 1;
+		renderPass.dependencies = makeRef(dep);
 		defaultRenderPass = ctx.createRenderPass(renderPass);
 
-		beginFrame();
-		initViewport(win.width, win.height);
 		if( !ctx.beginFrame() ) throw "assert";
+		initViewport(win.width, win.height);
+		beginFrame();
 		defaultInput = new VkPipelineInputAssembly();
 		defaultInput.topology = TRIANGLE_LIST;
 		defaultMultisample = new VkPipelineMultisample();
@@ -100,13 +110,11 @@ class VulkanDriver extends Driver {
 
 		var inf = new VkPipelineLayoutInfo();
 		inf.setLayoutCount = 1;
-		inf.setLayouts = makeArray([ctx.createDescriptorSetLayout(dset)]);
+		inf.setLayouts = makeArray([ctx.createDescriptorSetLayout(dset)]); // abstract
 		defaultLayout = ctx.createPipelineLayout(inf);
 	}
 
 	function beginFrame() {
-		var win = hxd.Window.getInstance();
-
 		currentImage = ctx.getCurrentImage();
 		command = ctx.getCurrentCommandBuffer();
 		var fb = null;
@@ -130,16 +138,24 @@ class VulkanDriver extends Driver {
 			var framebuffer = new VkFramebufferInfo();
 			framebuffer.renderPass = defaultRenderPass;
 			framebuffer.attachmentCount = 1;
-			framebuffer.width = win.width;
-			framebuffer.height = win.height;
+			framebuffer.width = viewportWidth;
+			framebuffer.height = viewportHeight;
 			framebuffer.layers = 1;
-			framebuffer.attachments = makeArray([view]);
+			framebuffer.attachments = makeArray([view]); // abstract
 
 			fb = ctx.createFramebuffer(framebuffer);
 			if( fb == null ) throw "Failed to create framebuffer";
 			frameBuffers.push({ img : currentImage, fb : fb });
 		}
 		currentFramebuffer = fb;
+
+		var begin = new VkRenderPassBeginInfo();
+		begin.renderPass = defaultRenderPass;
+		begin.framebuffer = currentFramebuffer;
+		begin.renderAreaExtentX = viewportWidth;
+		begin.renderAreaExtentY = viewportHeight;
+		begin.clearValueCount = 0;
+		command.beginRenderPass(begin,INLINE);
 	}
 
 	function initViewport(width:Int,height:Int) {
@@ -150,15 +166,17 @@ class VulkanDriver extends Driver {
 		vdef.height = height;
 		vdef.maxDepth = 1;
 		vp.viewportCount = 1;
-		vp.viewports = makeArray([vdef]);
+		vp.viewports = makeRef(vdef);
 
 		var sdef = new VkRect2D();
 		sdef.extendX = width;
 		sdef.extendY = height;
 		vp.scissorCount = 1;
-		vp.scissors = makeArray([sdef]);
+		vp.scissors = makeRef(sdef);
 
 		defaultViewport = vp;
+		viewportWidth = width;
+		viewportHeight = height;
 	}
 
 	override function hasFeature( f : Feature ) {
@@ -186,20 +204,11 @@ class VulkanDriver extends Driver {
 	}
 
 	override function present() {
-		if( inRenderPass ) {
-			command.endRenderPass();
-			inRenderPass = false;
-		}
+		command.endRenderPass();
 		ctx.endFrame();
+		if( !ctx.beginFrame() )
+			throw "assert:resize";
 		beginFrame();
-		if( !ctx.beginFrame() ) {
-			var win = hxd.Window.getInstance();
-			if( !ctx.initSwapchain(win.width, win.height) )
-				throw "assert";
-			initViewport(win.width, win.height);
-			if( !ctx.beginFrame() )
-				throw "assert";
-		}
 	}
 
 	override function init( onCreate : Bool -> Void, forceSoftware = false ) {
@@ -229,6 +238,10 @@ class VulkanDriver extends Driver {
 		var mod = ctx.createShaderModule(bytes, bytes.length);
 		if( mod == null ) throw "assert";
 		return mod;
+	}
+
+	@:generic inline function makeRef<T>( v : T ) : ArrayStruct<T> {
+		return Vulkan.makeRef(v);
 	}
 
 	@:generic inline function makeArray<T>( a : Array<T>, keepInMemory=true ) {
@@ -280,7 +293,7 @@ class VulkanDriver extends Driver {
 			var b = new VkVertexInputBindingDescription();
 			b.binding = i;
 			b.inputRate = VERTEX;
-			b.stride = position * 4;
+			b.stride = 24;//position * 4;
 			b;
 		}];
 		vin.vertexBindingDescriptionCount = bindings.length;
@@ -300,8 +313,19 @@ class VulkanDriver extends Driver {
 	}
 
 	override function clear(?color:Vector, ?depth:Float, ?stencil:Int) {
-		if( color != null )
-			command.clearColorImage(currentImage, color.r, color.g, color.b, color.a);
+		if( color != null ) {
+			var clear = new VkClearAttachment();
+			clear.aspectMask.set(COLOR);
+			clear.r = color.r;
+			clear.g = color.g;
+			clear.b = color.b;
+			clear.a = color.a;
+			var rect = new VkClearRect();
+			rect.extendX = viewportWidth;
+			rect.extendY = viewportHeight;
+			rect.layerCount = 1;
+			command.clearAttachments(1, makeRef(clear), 1, makeRef(rect));
+		}
 		if( depth != null || stencil != null ) {
 			if( depth == null || stencil == null ) throw "Can't clear depth without clearing stencil";
 			// *** TODO *** setup depth buffer
@@ -392,7 +416,6 @@ class VulkanDriver extends Driver {
 		inf.viewport = defaultViewport;
 
 		var raster = new VkPipelineRasterization();
-		raster.rasterizerDiscardEnable = true;
 		raster.polygonMode = pass.wireframe	? LINE : FILL;
 		raster.cullMode = CULLING[pass.culling.getIndex()];
 		raster.lineWidth = 1;
@@ -406,7 +429,16 @@ class VulkanDriver extends Driver {
 		stencil.depthCompareOp = COMPARE[pass.depthTest.getIndex()];
 		inf.depthStencil = stencil;
 
+		var colorAttach = new VkPipelineColorBlendAttachmentState();
+		colorAttach.colorWriteMask = 15;
+		colorAttach.blendEnable = false;
+
 		var blend = new VkPipelineColorBlend();
+		blend.attachmentCount = 1;
+		blend.logicOp = COPY;
+		blend.attachmentCount = 1;
+		blend.attachments = makeRef(colorAttach);
+
 		inf.colorBlend = blend;
 		inf.layout = defaultLayout;
 		inf.renderPass = defaultRenderPass;
@@ -414,18 +446,6 @@ class VulkanDriver extends Driver {
 		var pipe = ctx.createGraphicsPipeline(inf);
 		if( pipe == null ) throw "Failed to create pipeline";
 
-		if( !inRenderPass ) {
-			var win = hxd.Window.getInstance();
-			var begin = new VkRenderPassBeginInfo();
-			begin.renderPass = defaultRenderPass;
-			begin.framebuffer = currentFramebuffer;
-			begin.renderAreaExtentX = win.width;
-			begin.renderAreaExtentY = win.height;
-			begin.clearValueCount = 1;
-			begin.clearValues = defaultClearValues;
-			command.beginRenderPass(begin,INLINE);
-			inRenderPass = true;
-		}
 		command.bindPipeline(GRAPHICS, pipe);
 	}
 
