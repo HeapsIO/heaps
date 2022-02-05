@@ -3,13 +3,23 @@ package h3d.impl;
 import h3d.impl.Driver;
 import sdl.Vulkan;
 
+class CompiledShaderData {
+	public var vertex : Bool;
+	public var module : VkShaderModule;
+	public var pushConstantsOffset : Int;
+	public var globalsOffset : Int;
+	public function new() {
+	}
+}
+
 class CompiledShader {
 	public var shader : hxsl.RuntimeShader;
-	public var vertex : VkShaderModule;
-	public var fragment : VkShaderModule;
+	public var vertex : CompiledShaderData;
+	public var fragment : CompiledShaderData;
 	public var stages : ArrayStruct<VkPipelineShaderStage>;
 	public var input : VkPipelineVertexInput;
 	public var inputID : InputNames;
+	public var layout : VkPipelineLayout;
 	public function new(shader) {
 		this.shader = shader;
 	}
@@ -38,7 +48,6 @@ class VulkanDriver extends Driver {
 
 	var rangeAll : VkImageSubResourceRange;
 	var defaultViewport : VkPipelineViewport;
-	var defaultLayout : VkPipelineLayout;
 	var defaultRenderPass : VkRenderPass;
 
 	var queueFamily : Int;
@@ -50,6 +59,7 @@ class VulkanDriver extends Driver {
 	var frames : Array<VulkanFrame>;
 	var currentImageIndex : Int;
 	var currentFrameIndex : Int;
+	var limits : VkPhysicalDeviceLimits;
 
 	public function new() {
 		var win = hxd.Window.getInstance();
@@ -106,6 +116,8 @@ class VulkanDriver extends Driver {
 
 			frames.push(frame);
 		}
+
+		limits = ctx.getLimits();
 	}
 
 	function initSwapchain( width : Int, height : Int ) {
@@ -197,33 +209,6 @@ class VulkanDriver extends Driver {
 		renderPass.dependencyCount = 1;
 		renderPass.dependencies = makeRef(dep);
 		defaultRenderPass = ctx.createRenderPass(renderPass);
-
-/*
-		var bind0 = new VkDescriptorSetLayoutBinding();
-		bind0.binding = 0;
-		bind0.descriptorType = UNIFORM_BUFFER;
-		bind0.descriptorCount = 1;
-		bind0.stageFlags.set(VERTEX_BIT);
-		bind0.stageFlags.set(FRAGMENT_BIT);
-
-		var bind1 = new VkDescriptorSetLayoutBinding();
-		bind1.binding = 1;
-		bind1.descriptorType = UNIFORM_BUFFER;
-		bind1.descriptorCount = 1;
-		bind1.stageFlags.set(VERTEX_BIT);
-		bind1.stageFlags.set(FRAGMENT_BIT);
-
-		var dset = new VkDescriptorSetLayoutInfo();
-		dset.bindingCount = 2;
-		dset.bindings = makeArray([bind0,bind1]);
-*/
-		var dset = new VkDescriptorSetLayoutCreateInfo();
-		dset.bindingCount = 0;
-
-		var inf = new VkPipelineLayoutCreateInfo();
-		inf.setLayoutCount = 1;
-		inf.setLayouts = makeArray([ctx.createDescriptorSetLayout(dset)]); // abstract
-		defaultLayout = ctx.createPipelineLayout(inf);
 	}
 
 	function beginFrame() {
@@ -313,15 +298,19 @@ class VulkanDriver extends Driver {
 
 	static var STAGE_NAME = @:privateAccess "main".toUtf8();
 
-	function compile( shader : hxsl.RuntimeShader.RuntimeShaderData ) {
+	function compile( shader : hxsl.RuntimeShader.RuntimeShaderData, padding : Int ) {
 		var out = new hxsl.GlslOut();
 		out.version = 450;
 		out.isVulkan = true;
+		@:privateAccess out.vulkanParametersPadding = padding;
 		var source = out.run(shader.data);
 		var bytes = sdl.Vulkan.compileShader(source, "", "main", shader.vertex ? Vertex : Fragment);
 		var mod = ctx.createShaderModule(bytes, bytes.length);
 		if( mod == null ) throw "assert";
-		return mod;
+		var sh = new CompiledShaderData();
+		sh.vertex = shader.vertex;
+		sh.module = mod;
+		return sh;
 	}
 
 	@:generic inline function makeRef<T>( v : T ) : ArrayStruct<T> {
@@ -339,8 +328,8 @@ class VulkanDriver extends Driver {
 
 	function compileShader( shader : hxsl.RuntimeShader ) {
 		var c = new CompiledShader(shader);
-		c.vertex = compile(shader.vertex);
-		c.fragment = compile(shader.fragment);
+		c.vertex = compile(shader.vertex, 0);
+		c.fragment = compile(shader.fragment, shader.vertex.globalsSize + shader.vertex.paramsSize);
 		inline function makeStage(module,t) {
 			var stage = new VkPipelineShaderStage();
 			stage.module = module;
@@ -348,7 +337,7 @@ class VulkanDriver extends Driver {
 			stage.stage.set(t);
 			return stage;
 		}
-		c.stages = makeArray([makeStage(c.vertex,VERTEX), makeStage(c.fragment,FRAGMENT)]);
+		c.stages = makeArray([makeStage(c.vertex.module,VERTEX), makeStage(c.fragment.module,FRAGMENT)]);
 
 		// **** TODO !! *** check for usage of input variable in shader output binary
 		var attribs = [], position = 0;
@@ -357,9 +346,9 @@ class VulkanDriver extends Driver {
 			if( v.kind == Input ) {
 				names.push(v.name);
 				var a = new VkVertexInputAttributeDescription();
+				a.binding = 0;
 				a.location = attribs.length;
-				a.binding = attribs.length;
-				a.offset = position;
+				a.offset = position * 4;
 				a.format = switch( v.type ) {
 				case TFloat: position++; R32_SFLOAT;
 				case TVec(2, t): position += 2; R32G32_SFLOAT;
@@ -370,21 +359,39 @@ class VulkanDriver extends Driver {
 				attribs.push(a);
 			}
 
+
+		var bind = new VkVertexInputBindingDescription();
+		bind.binding = 0;
+		bind.inputRate = VERTEX;
+		bind.stride = position * 4;
+
 		var vin = new VkPipelineVertexInput();
 		vin.vertexAttributeDescriptionCount = attribs.length;
 		vin.vertexAttributeDescriptions = makeArray(attribs);
-		var bindings = [for( i in 0...attribs.length ) {
-			var b = new VkVertexInputBindingDescription();
-			b.binding = i;
-			b.inputRate = VERTEX;
-			b.stride = 24;//position * 4;
-			b;
-		}];
-		vin.vertexBindingDescriptionCount = bindings.length;
-		vin.vertexBindingDescriptions = makeArray(bindings);
+		vin.vertexBindingDescriptionCount = 1;
+		vin.vertexBindingDescriptions = makeRef(bind);
 
 		c.input = vin;
 		c.inputID = InputNames.get(names);
+
+
+		var vconsts = new VkPushConstantRange();
+		vconsts.stageFlags.set(VERTEX);
+		vconsts.size = (shader.vertex.globalsSize + shader.vertex.paramsSize) * 16;
+
+		var fconsts = new VkPushConstantRange();
+		fconsts.stageFlags.set(FRAGMENT);
+		fconsts.offset = vconsts.size;
+		fconsts.size = (shader.fragment.globalsSize + shader.fragment.paramsSize) * 16;
+		c.fragment.pushConstantsOffset = vconsts.size;
+
+		c.vertex.globalsOffset = shader.vertex.globalsSize * 16;
+		c.fragment.globalsOffset = shader.fragment.globalsSize * 16;
+
+		var inf = new VkPipelineLayoutCreateInfo();
+		inf.pushConstantRangeCount = 2;
+		inf.pushConstantRanges = makeArray([vconsts,fconsts]);
+		c.layout = ctx.createPipelineLayout(inf);
 
 		return c;
 	}
@@ -506,6 +513,7 @@ class VulkanDriver extends Driver {
 		var raster = new VkPipelineRasterization();
 		raster.polygonMode = pass.wireframe	? LINE : FILL;
 		raster.cullMode = CULLING[pass.culling.getIndex()];
+		raster.frontFace = CLOCKWISE;
 		raster.lineWidth = 1;
 		inf.rasterization = raster;
 
@@ -530,13 +538,37 @@ class VulkanDriver extends Driver {
 		blend.attachments = makeRef(colorAttach);
 
 		inf.colorBlend = blend;
-		inf.layout = defaultLayout;
+		inf.layout = currentShader.layout;
 		inf.renderPass = defaultRenderPass;
 
 		var pipe = ctx.createGraphicsPipeline(inf);
 		if( pipe == null ) throw "Failed to create pipeline";
 
 		command.bindPipeline(GRAPHICS, pipe);
+	}
+
+	override function uploadShaderBuffers( buf : h3d.shader.Buffers, which : h3d.shader.Buffers.BufferKind ) {
+		uploadBuffer(buf, currentShader.vertex, buf.vertex, which);
+		uploadBuffer(buf, currentShader.fragment, buf.fragment, which);
+	}
+
+	function uploadBuffer( buffer : h3d.shader.Buffers, s : CompiledShaderData, buf : h3d.shader.Buffers.ShaderBuffers, which : h3d.shader.Buffers.BufferKind ) {
+		switch( which ) {
+		case Globals:
+			if( buf.globals.length > 0 ) {
+				var flags = new haxe.EnumFlags<VkShaderStageFlag>();
+				flags.set(s.vertex ? VERTEX : FRAGMENT);
+				command.pushConstants(currentShader.layout, flags, s.pushConstantsOffset, buf.globals.length*4, hl.Bytes.getArray(buf.globals.toArray()));
+			}
+		case Params:
+			if( buf.params.length > 0 ) {
+				var flags = new haxe.EnumFlags<VkShaderStageFlag>();
+				flags.set(s.vertex ? VERTEX : FRAGMENT);
+				command.pushConstants(currentShader.layout, flags, s.pushConstantsOffset + s.globalsOffset, buf.params.length*4, hl.Bytes.getArray(buf.params.toArray()));
+			}
+		case Buffers:
+		case Textures:
+		}
 	}
 
 	override function draw(ibuf:IndexBuffer, startIndex:Int, ntriangles:Int) {

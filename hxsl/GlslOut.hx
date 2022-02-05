@@ -55,6 +55,8 @@ class GlslOut {
 	var uniformBuffer : Int = 0;
 	var outIndex : Int = 0;
 	var inputIndex : Int = 0;
+	var varyingIndex : Int = 0;
+	var vulkanParametersPadding : Int = 0;
 	public var varNames : Map<Int,String>;
 	public var glES : Null<Float>;
 	public var version : Null<Int>;
@@ -610,6 +612,8 @@ class GlslOut {
 				add('layout(location=${inputIndex++}) ');
 			add( isES2 ? "attribute " : "in ");
 		case Var:
+			if( isVulkan )
+				add('layout(location=${varyingIndex++}) ');
 			add( isES2 ? "varying " : (isVertex ? "out " : "in "));
 		case Output:
 			if( isES2 ) {
@@ -652,17 +656,15 @@ class GlslOut {
 				case Global: globals.push(v);
 				default: initVar(v);
 				}
-			if( params.length > 0 ) {
-				add("layout(binding=0) uniform _Parameters_ {\n");
-				for( v in params ) {
+			if( params.length > 0 || globals.length > 0 ) {
+				add("layout( push_constant ) uniform _Constants_ {\n");
+				if( vulkanParametersPadding > 0 )
+					add("\tvec4 __dummy["+vulkanParametersPadding+"];\n");
+				for( v in globals ) {
 					add("\t");
 					initVar(v);
 				}
-				add("};\n");
-			}
-			if( globals.length > 0 ) {
-				add("layout(binding=1) uniform _Globals_ {\n");
-				for( v in globals ) {
+				for( v in params ) {
 					add("\t");
 					initVar(v);
 				}
