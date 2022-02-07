@@ -659,8 +659,10 @@ class GlslOut {
 		
 		if (isVertex) {
 			decl("precision highp float;");
+			decl("precision mediump sampler2DArray;");
 		} else {
 			decl("precision mediump float;");
+			decl("precision mediump sampler2DArray;");
 		}
 
 		initVars(s);
