@@ -73,6 +73,11 @@ class CustomParser extends CssValue.ValueParser {
 		#end
 	}
 
+	public function parseResource( v : CssValue) {
+		var path = parsePath(v);
+		return loadResource(path);
+	}
+
 	public function parseTile( v : CssValue) {
 		try {
 			switch( v ) {
@@ -550,6 +555,24 @@ class MaskComp extends ObjectComp implements domkit.Component.ComponentDecl<h2d.
 
 	static function create( parent : h2d.Object ) {
 		return new h2d.Mask(0,0,parent);
+	}
+}
+
+@:uiComp("video") @:domkitDecl
+class VideoComp extends DrawableComp implements domkit.Component.ComponentDecl<h2d.Video> {
+	@:p(resource) var src : hxd.res.Any;
+	@:p var loop : Bool;
+
+	static function create( parent : h2d.Object ) {
+		return new h2d.Video(parent);
+	}
+
+	static function set_src( o : h2d.Video, v ) {
+		o.loadResource(v);
+	}
+
+	static function set_loop( o : h2d.Video, v ) {
+		o.loop = v;
 	}
 }
 
