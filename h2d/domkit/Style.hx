@@ -69,14 +69,14 @@ class Style extends domkit.CssStyle {
 	function onChange( ntry : Int = 0 ) {
 		if( ntry >= 10 ) return;
 		ntry++;
-		var oldRules = rules;
+		var oldRules = data.rules;
 		errors = [];
-		rules = [];
+		data.rules = [];
 		for( r in resources ) {
-			var txt = try r.entry.getText() catch( e : Dynamic ) { haxe.Timer.delay(onChange.bind(ntry),100); rules = oldRules; return; }
+			var txt = try r.entry.getText() catch( e : Dynamic ) { haxe.Timer.delay(onChange.bind(ntry),100); data.rules = oldRules; return; }
 			var parser = new domkit.CssParser();
 			try {
-				add(parser.parseSheet(txt));
+				data.add(parser.parseSheet(txt));
 			} catch( e : domkit.Error ) {
 				parser.warnings.push({ msg : e.message, pmin : e.pmin, pmax : e.pmax });
 			}
