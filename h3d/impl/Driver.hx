@@ -21,7 +21,7 @@ typedef Query = {};
 #elseif (hlsdl && heaps_vulkan)
 typedef IndexBuffer = { buf : sdl.Vulkan.VkBuffer, mem : sdl.Vulkan.VkDeviceMemory, stride : Int };
 typedef VertexBuffer = { buf : sdl.Vulkan.VkBuffer, mem : sdl.Vulkan.VkDeviceMemory, stride : Int };
-typedef Texture = {};
+typedef Texture = { img : sdl.Vulkan.VkImage, mem : sdl.Vulkan.VkDeviceMemory, view : sdl.Vulkan.VkImageView };
 typedef DepthBuffer = {};
 typedef Query = {};
 #elseif hlsdl

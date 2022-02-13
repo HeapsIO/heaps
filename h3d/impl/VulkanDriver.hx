@@ -41,6 +41,7 @@ class VulkanDriver extends Driver {
 	var currentShader : CompiledShader;
 	var programs : Map<Int,CompiledShader> = new Map();
 	var command : VkCommandBuffer;
+	var commandPool : VkCommandPool;
 	var savedPointers : Array<Dynamic> = [];
 
 	var memReq = new VkMemoryRequirements();
@@ -80,15 +81,14 @@ class VulkanDriver extends Driver {
 		var poolInf = new VkCommandPoolCreateInfo();
 		poolInf.flags.set(RESET_COMMAND_BUFFER);
 		poolInf.queueFamilyIndex = queueFamily;
-		var pool = ctx.createCommandPool(poolInf);
+		commandPool = ctx.createCommandPool(poolInf);
 
 		var frameCount = 2;
 		frames = [];
 		for( i in 0...frameCount ) {
 			var frame = new VulkanFrame();
 			var inf = new VkCommandBufferAllocateInfo();
-			inf.commandPool = pool;
-			inf.level = PRIMARY;
+			inf.commandPool = commandPool;
 			inf.commandBufferCount = 1;
 
 			var arr = new hl.NativeArray(1);
@@ -146,12 +146,11 @@ class VulkanDriver extends Driver {
 
 			var depth = ctx.createImage(inf);
 			ctx.getImageMemoryRequirements(depth,memReq);
-			allocInfo.size = memReq.size;
 			var properties = new haxe.EnumFlags<VkMemoryPropertyFlag>();
 			properties.set(DEVICE_LOCAL);
-			allocInfo.memoryTypeIndex = ctx.findMemoryType(memReq.memoryTypeBits, properties);
-			var mem = ctx.allocateMemory(allocInfo);
-			ctx.bindImageMemory(depth, mem, 0);
+			var mem = allocMemory(properties);
+			if( !ctx.bindImageMemory(depth, mem, 0) )
+				throw "assert";
 
 			var viewInfo = new VkImageViewCreateInfo();
 			viewInfo.image = img;
@@ -411,7 +410,6 @@ class VulkanDriver extends Driver {
 				attribs.push(a);
 			}
 
-
 		var bind = new VkVertexInputBindingDescription();
 		bind.binding = 0;
 		bind.inputRate = VERTEX;
@@ -489,25 +487,196 @@ class VulkanDriver extends Driver {
 		}
 	}
 
+	function allocMemory( properties : haxe.EnumFlags<VkMemoryPropertyFlag> ) {
+		allocInfo.size = memReq.size;
+		allocInfo.memoryTypeIndex = ctx.findMemoryType(memReq.memoryTypeBits, properties);
+		if( allocInfo.memoryTypeIndex < 0 )
+			throw "Could not find matching memory type";
+		return ctx.allocateMemory(allocInfo);
+	}
+
 	override function allocTexture( t : h3d.mat.Texture ) : Texture {
-		return cast {};
+		var inf = new VkImageCreateInfo();
+		inf.imageType = TYPE_2D;
+		inf.width = t.width;
+		inf.height = t.height;
+		inf.depth = 1;
+		inf.arrayLayers = t.layerCount;
+		inf.mipLevels = t.mipLevels;
+		inf.tiling = OPTIMAL;
+		inf.samples = 1;
+		inf.format = switch( t.format ) {
+			case BGRA: B8G8R8A8_UNORM;
+			case RGBA: R8G8B8A8_UNORM;
+			case RGBA16F: R16G16B16A16_SFLOAT;
+			case RGBA32F: R32G32B32A32_SFLOAT;
+			case R8: R8_UNORM;
+			case R16F: R16_SFLOAT;
+			case R32F: R32_SFLOAT;
+			case RG8: R8G8_UNORM;
+			case RG16F: R16G16_SFLOAT;
+			case RG32F: R32G32_SFLOAT;
+			case RGB8: R8G8_UNORM;
+			case RGB16F: R16G16B16_SFLOAT;
+			case RGB32F: R32G32B32_SFLOAT;
+			case SRGB: R8G8B8_SRGB;
+			case SRGB_ALPHA: R8G8B8A8_SRGB;
+			case RGB10A2: A2R10G10B10_UNORM_PACK32;
+			case R16U: R16_UINT;
+			case RGB16U: R16G16B16_UINT;
+			case RGBA16U: R16G16B16A16_UINT;
+			case S3TC(v):
+				switch( v ) {
+				case 1: BC1_RGBA_UNORM_BLOCK;
+				case 2: BC2_UNORM_BLOCK;
+				case 3: BC3_UNORM_BLOCK;
+				case 4: BC4_UNORM_BLOCK;
+				case 5: BC5_UNORM_BLOCK;
+				case 6: BC6H_UFLOAT_BLOCK;
+				case 7: BC7_UNORM_BLOCK;
+				default: throw "Unsupported texture format "+t.format;
+				}
+			default: throw "Unsupported texture format " + t.format;
+		};
+		inf.usage.set(SAMPLED);
+		inf.usage.set(TRANSFER_DST);
+
+		var img = ctx.createImage(inf);
+		if( img == null )
+			throw "Failed to created texture";
+
+		ctx.getImageMemoryRequirements(img,memReq);
+		var properties = new haxe.EnumFlags<VkMemoryPropertyFlag>();
+		properties.set(DEVICE_LOCAL);
+		var mem = allocMemory(properties);
+		if( mem == null ) {
+			ctx.destroyImage(img);
+			return null;
+		}
+
+		if( !ctx.bindImageMemory(img, mem, 0) )
+			throw "assert";
+
+		var viewInfo = new VkImageViewCreateInfo();
+		viewInfo.image = img;
+		viewInfo.viewType = TYPE_2D;
+		viewInfo.format = inf.format;
+		viewInfo.layerCount = t.layerCount;
+		viewInfo.levelCount = t.mipLevels;
+		viewInfo.aspectMask.set(COLOR);
+
+		var view = ctx.createImageView(viewInfo);
+		if( view == null )
+			throw "assert";
+
+		return { img : img, view : view, mem : mem };
+	}
+
+	override function uploadTextureBitmap( t : h3d.mat.Texture, bmp : hxd.BitmapData, mipLevel : Int, layer : Int ) {
+		var pixels = bmp.getPixels();
+		uploadTexturePixels(t, pixels, mipLevel, layer);
+		pixels.dispose();
+	}
+
+	override function uploadTexturePixels(t:h3d.mat.Texture, pixels:hxd.Pixels, mipLevel:Int, layer:Int) {
+		var tmpBuf = allocBuffer(TRANSFER_SRC,pixels.dataSize,1);
+		updateBuffer(tmpBuf.mem, (pixels.bytes:hl.Bytes).offset(pixels.offset), 0, pixels.dataSize);
+		transitionImage(t, UNDEFINED, TRANSFER_DST_OPTIMAL, mipLevel, layer);
+		var cmd = beginCommand();
+		var region = new VkBufferImageCopy();
+		region.aspectMask.set(COLOR);
+		region.mipLevel = mipLevel;
+		region.baseArrayLayer = layer;
+		region.layerCount = 1;
+		region.imageWidth = t.width >> mipLevel;
+		region.imageHeight = t.height >> mipLevel;
+		region.imageDepth = 1;
+		if( region.imageWidth == 0 ) region.imageWidth = 1;
+		if( region.imageHeight == 0 ) region.imageHeight = 1;
+		cmd.copyBufferToImage(tmpBuf.buf,t.t.img,TRANSFER_DST_OPTIMAL,1,makeRef(region));
+		endCommand(cmd);
+		transitionImage(t, TRANSFER_DST_OPTIMAL, SHADER_READ_ONLY_OPTIMAL, mipLevel, layer);
+		t.flags.set(WasCleared);
+		ctx.destroyBuffer(tmpBuf.buf);
+		ctx.freeMemory(tmpBuf.mem);
+	}
+
+	function beginCommand() : VkCommandBuffer {
+		var allocInfo = new VkCommandBufferAllocateInfo();
+        allocInfo.commandPool = commandPool;
+        allocInfo.commandBufferCount = 1;
+		var bufs = new hl.NativeArray(1);
+		ctx.allocateCommandBuffers(allocInfo, bufs);
+		var cmd = bufs[0];
+
+        var beginInfo = new VkCommandBufferBeginInfo();
+        beginInfo.flags.set(ONE_TIME_SUBMIT);
+		cmd.begin(beginInfo);
+		return cmd;
+	}
+
+	function endCommand( cmd : VkCommandBuffer ) {
+		cmd.end();
+
+        var submit = new VkSubmitInfo();
+        submit.commandBufferCount = 1;
+        submit.pCommandBuffers = makeArray([cmd]);
+		ctx.queueSubmit(submit, null);
+		ctx.queueWaitIdle();
+
+		var buffers = new hl.NativeArray(1);
+		buffers[0] = cmd;
+        ctx.freeCommandBuffers(commandPool, buffers);
+	}
+
+	function transitionImage(t:h3d.mat.Texture, from, to, mipLevel, layer ) {
+		var cmd = beginCommand();
+
+		var b = new VkImageMemoryBarrier();
+        b.oldLayout = from;
+        b.newLayout = to;
+        b.image = t.t.img;
+        b.aspectMask.set(COLOR);
+        b.baseMipLevel = mipLevel;
+        b.levelCount = 1;
+        b.baseArrayLayer = layer;
+        b.layerCount = 1;
+
+        var source = new haxe.EnumFlags<VkPipelineStageFlag>();
+        var dest = new haxe.EnumFlags<VkPipelineStageFlag>();
+
+		switch( [from,to] ) {
+		case [UNDEFINED, TRANSFER_DST_OPTIMAL]:
+            b.dstAccessMask.set(TRANSFER_WRITE);
+            source.set(TOP_OF_PIPE);
+            dest.set(TRANSFER);
+		case [TRANSFER_DST_OPTIMAL, SHADER_READ_ONLY_OPTIMAL]:
+            b.srcAccessMask.set(TRANSFER_WRITE);
+            b.dstAccessMask.set(SHADER_READ);
+            source.set(TRANSFER);
+            dest.set(FRAGMENT_SHADER);
+		default:
+			throw "assert";
+		}
+
+		var flags = new haxe.EnumFlags<VkDependencyFlag>();
+        cmd.pipelineBarrier(source, dest, flags, 0, null, 0, null, 1, makeRef(b));
+		endCommand(cmd);
 	}
 
 	function allocBuffer( type, size, stride ) {
 		var inf = new VkBufferCreateInfo();
-		inf.usage.set(TRANSFER_DST);
 		inf.usage.set(type);
+		if( type != TRANSFER_SRC ) inf.usage.set(TRANSFER_DST);
 		inf.size = size * stride;
 		var buf = ctx.createBuffer(inf);
 		if( buf == null )
 			return null;
 		ctx.getBufferMemoryRequirements(buf, memReq);
-		allocInfo.size = memReq.size;
 		var properties = new haxe.EnumFlags<VkMemoryPropertyFlag>();
 		properties.set(HOST_VISIBLE);
 		properties.set(HOST_COHERENT);
-		allocInfo.memoryTypeIndex = ctx.findMemoryType(memReq.memoryTypeBits, properties);
-		var mem = ctx.allocateMemory(allocInfo);
+		var mem = allocMemory(properties);
 		if( !ctx.bindBufferMemory(buf, mem, 0) )
 			throw "assert";
 		return { buf : buf, mem : mem, stride : stride };
