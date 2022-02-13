@@ -1,5 +1,5 @@
 package hxsl;
-import hxsl.Ast;
+using hxsl.Ast;
 
 class GlslOut {
 
@@ -56,6 +56,7 @@ class GlslOut {
 	var outIndex : Int = 0;
 	var inputIndex : Int = 0;
 	var varyingIndex : Int = 0;
+	var textureIndex : Int = 0;
 	var vulkanParametersPadding : Int = 0;
 	public var varNames : Map<Int,String>;
 	public var glES : Null<Float>;
@@ -606,6 +607,9 @@ class GlslOut {
 				if( v.type.match(TBuffer(_)) )
 					add("layout(std140) ");
 				add("uniform ");
+			} else {
+				if( isSampler(v.type) )
+					add('layout(binding=${textureIndex++}) uniform ');
 			}
 		case Input:
 			if( isVulkan )
@@ -643,6 +647,15 @@ class GlslOut {
 		add(";\n");
 	}
 
+	function isSampler( t : Type ) {
+		if( t.isSampler() )
+			return true;
+		return switch( t ) {
+		case TArray(t,_): t.isSampler();
+		default: false;
+		}
+	}
+
 	function initVars( s : ShaderData ){
 		outIndex = 0;
 		inputIndex = 0;
@@ -659,16 +672,23 @@ class GlslOut {
 			if( params.length > 0 || globals.length > 0 ) {
 				add("layout( push_constant ) uniform _Constants_ {\n");
 				if( vulkanParametersPadding > 0 )
-					add("\tvec4 __dummy["+vulkanParametersPadding+"];\n");
+					add("\tvec4 _dummy_padding_["+vulkanParametersPadding+"];\n");
 				for( v in globals ) {
+					if( isSampler(v.type) ) continue;
 					add("\t");
 					initVar(v);
 				}
 				for( v in params ) {
+					if( isSampler(v.type) ) continue;
 					add("\t");
 					initVar(v);
 				}
 				add("};\n");
+				for( v in globals.concat(params) ) {
+					if( isSampler(v.type) ) {
+						initVar(v);
+					}
+				}
 			}
 		} else {
 			for( v in s.vars )

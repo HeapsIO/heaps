@@ -20,6 +20,7 @@ class CompiledShader {
 	public var input : VkPipelineVertexInput;
 	public var inputID : InputNames;
 	public var layout : VkPipelineLayout;
+	public var samplerSets : hl.NativeArray<VkDescriptorSet>;
 	public function new(shader) {
 		this.shader = shader;
 	}
@@ -42,6 +43,7 @@ class VulkanDriver extends Driver {
 	var programs : Map<Int,CompiledShader> = new Map();
 	var command : VkCommandBuffer;
 	var commandPool : VkCommandPool;
+	var samplerPool : VkDescriptorPool;
 	var savedPointers : Array<Dynamic> = [];
 
 	var memReq = new VkMemoryRequirements();
@@ -63,6 +65,9 @@ class VulkanDriver extends Driver {
 	var currentFrameIndex : Int;
 	var limits : VkPhysicalDeviceLimits;
 
+	var defaultSampler : VkSampler; // TOREMOVE
+	var frameCount = 2;
+
 	public function new() {
 		var win = hxd.Window.getInstance();
 		initContext(@:privateAccess win.window.vkctx);
@@ -73,6 +78,7 @@ class VulkanDriver extends Driver {
 
 	function initContext(surface) {
 		var queueFamily = 0;
+
 		ctx = Vulkan.initContext(surface, queueFamily);
 		if( ctx == null ) throw "Failed to init context";
 		this.queueFamily = queueFamily;
@@ -83,7 +89,10 @@ class VulkanDriver extends Driver {
 		poolInf.queueFamilyIndex = queueFamily;
 		commandPool = ctx.createCommandPool(poolInf);
 
-		var frameCount = 2;
+
+		var inf = new VkSamplerCreateInfo();
+		defaultSampler = ctx.createSampler(inf);
+
 		frames = [];
 		for( i in 0...frameCount ) {
 			var frame = new VulkanFrame();
@@ -438,12 +447,65 @@ class VulkanDriver extends Driver {
 		c.vertex.globalsOffset = shader.vertex.globalsSize * 16;
 		c.fragment.globalsOffset = shader.fragment.globalsSize * 16;
 
+		var bindings = [], sets = [];
+		for( i in 0...shader.vertex.texturesCount ) {
+			var s = new VkDescriptorSetLayoutBinding();
+			s.binding = i;
+			s.descriptorCount = 1;
+			s.descriptorType = COMBINED_IMAGE_SAMPLER;
+			s.stageFlags.set(VERTEX);
+			bindings.push(s);
+		}
+		for( i in 0...shader.fragment.texturesCount ) {
+			var s = new VkDescriptorSetLayoutBinding();
+			s.binding = i;
+			s.descriptorCount = 1;
+			s.descriptorType = COMBINED_IMAGE_SAMPLER;
+			s.stageFlags.set(FRAGMENT);
+			bindings.push(s);
+		}
+		if( bindings.length > 0 ) {
+			var desc = new VkDescriptorSetLayoutCreateInfo();
+			desc.bindingCount = bindings.length;
+			desc.bindings = makeArray(bindings);
+			var set = ctx.createDescriptorSetLayout(desc);
+			c.samplerSets = allocateDescriptorSets(set);
+			sets.push(set);
+		}
+
 		var inf = new VkPipelineLayoutCreateInfo();
 		inf.pushConstantRangeCount = 2;
 		inf.pushConstantRanges = makeArray([vconsts,fconsts]);
+		inf.setLayoutCount = sets.length;
+		inf.setLayouts = sets.length == 0 ? null : makeArray(sets);
 		c.layout = ctx.createPipelineLayout(inf);
 
+
 		return c;
+	}
+
+	function allocateDescriptorSets( set : VkDescriptorSetLayout ) {
+		if( samplerPool == null ) {
+			var poolSize = new VkDescriptorPoolSize();
+			poolSize.descriptorCount = frameCount;
+			poolSize.type = COMBINED_IMAGE_SAMPLER;
+			var poolInf = new VkDescriptorPoolCreateInfo();
+			poolInf.poolSizeCount = 1;
+			poolInf.pPoolSizes = makeArray([poolSize]);
+			poolInf.maxSets = 4096;
+			poolInf.flags.set(UPDATE_AFTER_BIND);
+			samplerPool = ctx.createDescriptorPool(poolInf);
+			if( samplerPool == null )
+				throw "assert";
+		}
+		var sets = new hl.NativeArray(frameCount);
+		var inf = new VkDescriptorSetAllocateInfo();
+		inf.descriptorPool = samplerPool;
+		inf.descriptorSetCount = frameCount;
+		inf.pSetLayouts = makeArray([for( i in 0...frameCount ) set]);
+		if( !ctx.allocateDescriptorSets(inf, sets) )
+			throw "assert";
+		return sets;
 	}
 
 	override function getShaderInputNames() : InputNames {
@@ -800,8 +862,22 @@ class VulkanDriver extends Driver {
 				flags.set(s.vertex ? VERTEX : FRAGMENT);
 				command.pushConstants(currentShader.layout, flags, s.pushConstantsOffset + s.globalsOffset, buf.params.length*4, hl.Bytes.getArray(buf.params.toArray()));
 			}
-		case Buffers:
 		case Textures:
+			if( buf.tex.length > 0 ) {
+				var s = currentShader.samplerSets[currentFrameIndex];
+				var imageInfo = new VkDescriptorImageInfo();
+				imageInfo.imageView = buf.tex[0].t.view;
+				imageInfo.sampler = defaultSampler;
+				imageInfo.imageLayout = SHADER_READ_ONLY_OPTIMAL;
+				var write = new VkWriteDescriptorSet();
+				write.descriptorCount = 1;
+				write.descriptorType = COMBINED_IMAGE_SAMPLER;
+				write.dstSet = s;
+				write.pImageInfo = makeArray([imageInfo]);
+				ctx.updateDescriptorSets(1, makeArray([write]), 0, null);
+				command.bindDescriptorSets(GRAPHICS, currentShader.layout, 0, 1, makeArray([s]), 0, null);
+			}
+		case Buffers:
 		}
 	}
 

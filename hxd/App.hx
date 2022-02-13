@@ -142,6 +142,9 @@ class App implements h3d.IDrawable {
 			init();
 			hxd.Timer.skip();
 			mainLoop();
+			#if heaps_vulkan
+			engine.driver.present();
+			#end
 			hxd.System.setLoop(mainLoop);
 			hxd.Key.initialize();
 		});
