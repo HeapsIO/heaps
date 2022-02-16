@@ -196,10 +196,12 @@ class HlslOut {
 	function addVar( v : TVar ) {
 		switch( v.type ) {
 		case TArray(t, size), TBuffer(t,size):
-			var old = v.type;
-			v.type = t;
-			addVar(v);
-			v.type = old;
+			addVar({
+				id : v.id,
+				name : v.name,
+				type : t,
+				kind : v.kind,
+			});
 			addArraySize(size);
 		default:
 			addType(v.type);
