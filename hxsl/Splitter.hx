@@ -2,7 +2,6 @@ package hxsl;
 using hxsl.Ast;
 
 private class VarProps {
-	public var origin : TVar;
 	public var v : TVar;
 	public var read : Int;
 	public var write : Int;
@@ -43,14 +42,20 @@ class Splitter {
 				throw "assert";
 			}
 
-		var vafterMap = [];
+		// perform a first mapVars before we map fragment shader vars		
+		vfun = {
+			ret : vfun.ret,
+			ref : vfun.ref,
+			kind : vfun.kind,
+			args : vfun.args,
+			expr : mapVars(vfun.expr),
+		};
+
 		for( inf in Lambda.array(vvars) ) {
 			var v = inf.v;
-			if( inf.local ) continue;
 			switch( v.kind ) {
 			case Var, Local:
-				var fv = fvars.get(inf.origin.id);
-				v.kind = fv != null && fv.read > 0 ? Var : Local;
+				v.kind = fvars.exists(v.id) ? Var : Local;
 			default:
 			}
 			switch( v.kind ) {
@@ -60,39 +65,29 @@ class Splitter {
 					var nv : TVar = {
 						id : Tools.allocVarId(),
 						name : v.name,
-						kind : Local,
+						kind : v.kind,
 						type : v.type,
 					};
-					uniqueName(nv);
-					varMap.set(inf.origin, nv);
-
-					var ninf = new VarProps(nv);
-					ninf.read++;
-					vvars.set(nv.id, ninf);
-
+					vars = vvars;
+					var ninf = get(nv);
+					v.kind = Local;
 					var p = vfun.expr.p;
-					var e = { e : TBinop(OpAssign, { e : TVar(v), t : nv.type, p : p }, { e : TVar(nv), t : v.type, p : p } ), t : nv.type, p : p };
-					vafterMap.push(() -> addExpr(vfun, e));
-
-					if( v.kind == Var )
-						vafterMap.push(() -> varMap.set(inf.origin, v)); // restore
+					var e = { e : TBinop(OpAssign, { e : TVar(nv), t : nv.type, p : p }, { e : TVar(v), t : v.type, p : p } ), t : nv.type, p : p };
+					addExpr(vfun, e);
+					checkExpr(e);
+					if( nv.kind == Var ) {
+						var old = fvars.get(v.id);
+						varMap.set(v, nv);
+						fvars.remove(v.id);
+						var np = new VarProps(nv);
+						np.read = old.read;
+						np.write = old.write;
+						fvars.set(nv.id, np);
+					}
 				}
 			default:
 			}
 		}
-
-		// perform a first mapVars before we map fragment shader vars
-		vfun = {
-			ret : vfun.ret,
-			ref : vfun.ref,
-			kind : vfun.kind,
-			args : vfun.args,
-			expr : mapVars(vfun.expr),
-		};
-
-		for( f in vafterMap )
-			f();
-
 		var finits = [];
 		var todo = [];
 		for( inf in fvars ) {
@@ -107,24 +102,22 @@ class Splitter {
 					type : v.type,
 				};
 				uniqueName(nv);
-				var i = vvars.get(inf.origin.id);
+				var i = vvars.get(v.id);
 				if( i == null ) {
 					i = new VarProps(v);
-					vvars.set(inf.origin.id, i);
+					vvars.set(v.id, i);
 				}
 				i.read++;
-				varMap.set(inf.origin, nv);
-
-				var ninf = new VarProps(nv);
-				ninf.origin = inf.origin;
-
-				// make sure it's listed in variables
-				fvars.set(inf.origin.id, ninf);
-				vvars.set(nv.id, ninf);
-
+				var vp = new VarProps(nv);
+				vp.write = 1;
+				vvars.set(nv.id, vp);
+				var fp = new VarProps(nv);
+				fp.read = 1;
+				todo.push(fp);
 				addExpr(vfun, { e : TBinop(OpAssign, { e : TVar(nv), t : v.type, p : vfun.expr.p }, { e : TVar(v), t : v.type, p : vfun.expr.p } ), t : v.type, p : vfun.expr.p } );
+				varMap.set(v, nv);
+				inf.local = true;
 			case Var if( inf.write > 0 ):
-				// prevent error when writing to a varying
 				var nv : TVar = {
 					id : Tools.allocVarId(),
 					name : v.name,
@@ -133,10 +126,12 @@ class Splitter {
 				};
 				uniqueName(nv);
 				finits.push( { e : TVarDecl(nv, { e : TVar(v), t : v.type, p : ffun.expr.p } ), t:TVoid, p:ffun.expr.p } );
-				varMap.set(inf.origin, nv);
+				varMap.set(v, nv);
 			default:
 			}
 		}
+		for( v in todo )
+			fvars.set(v.v.id, v);
 
 		// final check
 		for( v in vvars )
@@ -144,6 +139,12 @@ class Splitter {
 		for( v in fvars )
 			checkVar(v, false, vvars, ffun.expr.p);
 
+		// support for double mapping v -> v1 -> v2
+		for( v in varMap.keys() ) {
+			var v2 = varMap.get(varMap.get(v));
+			if( v2 != null )
+				varMap.set(v, v2);
+		}
 		ffun = {
 			ret : ffun.ret,
 			ref : ffun.ref,
@@ -160,22 +161,21 @@ class Splitter {
 			ffun.expr = { e : TBlock(finits), t : TVoid, p : ffun.expr.p };
 		}
 
-		var vvars = [for( v in vvars ) if( !v.local ) v];
-		var fvars = [for( v in fvars ) if( !v.local ) v];
+		var vvars = [for( v in vvars ) if( !v.local ) v.v];
+		var fvars = [for( v in fvars ) if( !v.local ) v.v];
 		// make sure we sort the inputs the same way they were sent in
-		inline function getId(v:VarProps) return v.origin == null ? v.v.id : v.origin.id;
-		vvars.sort(function(v1, v2) return getId(v1) - getId(v2));
-		fvars.sort(function(v1, v2) return getId(v1) - getId(v2));
+		vvars.sort(function(v1, v2) return v1.id - v2.id);
+		fvars.sort(function(v1, v2) return v1.id - v2.id);
 
 		return {
 			vertex : {
 				name : "vertex",
-				vars : [for( v in vvars ) v.v],
+				vars : vvars,
 				funs : [vfun],
 			},
 			fragment : {
 				name : "fragment",
-				vars : [for( v in fvars ) v.v],
+				vars : fvars,
 				funs : [ffun],
 			},
 		};
@@ -196,8 +196,7 @@ class Splitter {
 			throw new Error("Variable " + v.v.name + " is used without being initialized", p);
 		case Var:
 			if( !vertex ) {
-				var i = vvars.get(v.origin.id);
-				if( i != null && i.v.kind == Input ) return;
+				var i = vvars.get(v.v.id);
 				if( i == null || i.write == 0 ) throw new Error("Varying " + v.v.name + " is not written by vertex shader",p);
 			}
 		default:
@@ -211,7 +210,7 @@ class Splitter {
 			v2 == null ? e : { e : TVar(v2), t : e.t, p : e.p };
 		case TVarDecl(v, init):
 			var v2 = varMap.get(v);
-			v2 == null ? e.map(mapVars) : { e : TVarDecl(v2,init == null ? null : mapVars(init)), t : e.t, p : e.p };
+			v2 == null ? e.map(mapVars) : { e : TVarDecl(v2,mapVars(init)), t : e.t, p : e.p };
 		case TFor(v, it, loop):
 			var v2 = varMap.get(v);
 			v2 == null ? e.map(mapVars) : { e : TFor(v2,mapVars(it),mapVars(loop)), t : e.t, p : e.p };
@@ -223,23 +222,24 @@ class Splitter {
 	function get( v : TVar ) {
 		var i = vars.get(v.id);
 		if( i == null ) {
-			var nv = varMap.get(v);
-			if( nv == null ) {
-				if( v.kind == Global || v.kind == Output || v.kind == Input )
-					nv = v;
-				else {
-					nv = {
-						id : Tools.allocVarId(),
-						name : v.name,
-						kind : v.kind,
-						type : v.type,
-					};
-					uniqueName(nv);
-				}
+			var v2 = varMap.get(v);
+			if( v2 != null )
+				return get(v2);
+			var oldName = v.name;
+			uniqueName(v);
+			if( v.kind == Local && oldName != v.name ) {
+				// variable renamed : restore its name and create a new one
+				var nv : TVar = {
+					id : Tools.allocVarId(),
+					name : v.name,
+					kind : v.kind,
+					type : v.type,
+				};
 				varMap.set(v,nv);
+				v.name = oldName;
+				v = nv;
 			}
-			i = new VarProps(nv);
-			i.origin = v;
+			i = new VarProps(v);
 			vars.set(v.id, i);
 		}
 		return i;
@@ -248,6 +248,7 @@ class Splitter {
 	function uniqueName( v : TVar ) {
 		if( v.kind == Global || v.kind == Output || v.kind == Input )
 			return;
+		v.parent = null;
 		var n = varNames.get(v.name);
 		if( n != null && n != v ) {
 			var prefix = v.name;
