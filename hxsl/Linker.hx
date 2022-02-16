@@ -318,25 +318,6 @@ class Linker {
 		cur.onStack = false;
 	}
 
-	function uniqueLocals( expr : TExpr, locals : Map < String, Bool > ) : Void {
-		switch( expr.e ) {
-		case TVarDecl(v, _):
-			if( locals.exists(v.name) ) {
-				var k = 2;
-				while( locals.exists(v.name + k) )
-					k++;
-				v.name += k;
-			}
-			locals.set(v.name, true);
-		case TBlock(el):
-			var locals = [for( k in locals.keys() ) k => true];
-			for( e in el )
-				uniqueLocals(e, locals);
-		default:
-			expr.iter(uniqueLocals.bind(_, locals));
-		}
-	}
-
 	public function link( shadersData : Array<ShaderData> ) : ShaderData {
 		debug("---------------------- LINKING -----------------------");
 		varMap = new Map();
@@ -347,11 +328,12 @@ class Linker {
 
 		var dupShaders = new Map();
 		shadersData = [for( s in shadersData ) {
-			var s = s, sreal = s;
-			if( dupShaders.exists(s) )
-				s = Clone.shaderData(s);
-			dupShaders.set(s, sreal);
-			s;
+			if( dupShaders.exists(s.name) )
+				Clone.shaderData(s);
+			else {
+				dupShaders.set(s.name, s);
+				s;
+			}
 		}];
 
 		// globalize vars
@@ -507,7 +489,6 @@ class Linker {
 					exprs.push(s.body);
 				}
 			var expr = { e : TBlock(exprs), t : TVoid, p : exprs.length == 0 ? null : exprs[0].p };
-			uniqueLocals(expr, new Map());
 			return {
 				kind : kind,
 				ref : v,
@@ -522,8 +503,8 @@ class Linker {
 		];
 
 		// make sure the first merged var is the original for duplicate shaders
-		for( s in dupShaders.keys() ) {
-			var sreal = dupShaders.get(s);
+		for( s in shadersData ) {
+			var sreal = dupShaders.get(s.name);
 			if( s == sreal ) continue;
 			for( i in 0...s.vars.length )
 				allocVar(s.vars[i],null).merged.unshift(sreal.vars[i]);
