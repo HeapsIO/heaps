@@ -257,6 +257,10 @@ class Cache {
 		}
 		#end
 
+		var prev = s;
+		var splitter = new hxsl.Splitter();
+		var s = try splitter.split(s) catch( e : Error ) { e.msg += "\n\nin\n\n"+Printer.shaderToString(s); throw e; };
+
 		// params tracking
 		var paramVars = new Map();
 		for( v in linker.allVars )
@@ -266,11 +270,10 @@ class Cache {
 				default:
 				}
 				var inf = shaderDatas[v.instanceIndex];
-				paramVars.set(v.id, { instance : inf.index, index : inf.inst.params.get(v.merged[0].id) } );
+				var nv = @:privateAccess splitter.varMap.get(v.v);
+				paramVars.set(nv == null ? v.id : nv.id, { instance : inf.index, index : inf.inst.params.get(v.merged[0].id) } );
 			}
 
-		var prev = s;
-		var s = try new hxsl.Splitter().split(s) catch( e : Error ) { e.msg += "\n\nin\n\n"+Printer.shaderToString(s); throw e; };
 
 		#if debug
 		Printer.check(s.vertex,[prev]);
@@ -379,6 +382,9 @@ class Cache {
 		var flat = new Flatten();
 		var c = new RuntimeShaderData();
 		var data = flat.flatten(s, kind, constsToGlobal);
+		#if (hl && heaps_compact_mem)
+		data = hl.Api.compact(data, null, 0, null);
+		#end
 		var textures = [];
 		c.consts = flat.consts;
 		c.texturesCount = 0;
