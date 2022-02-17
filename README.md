@@ -15,6 +15,9 @@ Heaps is currently working on:
 - Consoles (Nintendo Switch, Sony PS4, XBox One - requires being a registered developer)
 - Flash Stage3D
 
+_Warning: Heaps is low-level flexible engine made essentially in-house by ShiroGames, and features are implemented when needed. It's open source, but not community oriented. It's not for people who don't know how to work with a low-level engine, especially not for people who only used gamemaker/unity/ue/godot or any other engine that is extremely reliant on its editor. People who stick with Heaps are mainly ones who want more control over the internals, and they know how to build whatever they want on it. People without such experience 9 out of 10 times would have a really hard time with Heaps._
+
+_Heaps does not contain optional game components often found in more dense game engines, such as: an entity system, a collision system, physics system, tween library, 'n so on. Those options are for you to integrate yourself or DIY, according to your individual project's needs. Instead, it provides you with a base io (input/output) framework, which of course includes input handling and output handling (rendering, shaders, etc.), but also core game components such as a scene tree, scene handling, cameras, 'n so on, for both 2D and 3D modules._
 
 Community
 ---------
