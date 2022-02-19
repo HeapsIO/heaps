@@ -95,7 +95,8 @@ class MeshBatch extends MultiMaterial {
 			alloc.disposeFloats(dataPasses.data);
 			dataPasses = dataPasses.next;
 		}
-		instanced.commands.dispose();
+		if( instanced.commands != null )
+			instanced.commands.dispose();
 		shadersChanged = true;
 	}
 
