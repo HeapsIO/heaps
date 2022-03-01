@@ -42,6 +42,14 @@ class Config {
 
 
 	/**
+		Directories not explored by the resource scan
+	**/
+	public static var ignoredDirs = [
+		"backups" => true, // LDtk backup folders
+	];
+
+
+	/**
 		Paired extensions are files that can have the same name but different extensions.
 		Only the "main" one will be accessible through hxd.Res.
 		Example : ["fbx" => "png,jpg,jpeg,gif"]
