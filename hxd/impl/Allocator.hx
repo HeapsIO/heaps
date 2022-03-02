@@ -29,8 +29,12 @@ class Allocator {
 
 	public function ofFloats( v : hxd.FloatBuffer, stride : Int, flags : BufferFlags ) {
 		var nvert = Std.int(v.length / stride);
-		var b = allocBuffer(nvert, stride, flags);
-		b.uploadVector(v, 0, nvert);
+		return ofSubFloats(v, stride, nvert, flags);
+	}
+
+	public function ofSubFloats( v : hxd.FloatBuffer, stride : Int, vertices : Int, flags : BufferFlags ) {
+		var b = allocBuffer(vertices, stride, flags);
+		b.uploadVector(v, 0, vertices);
 		return b;
 	}
 
