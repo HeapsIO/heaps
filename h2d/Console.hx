@@ -319,11 +319,12 @@ class Console #if !macro extends h2d.Object #end {
 		if (cmd == "") {
 			return "";
 		}
+		var lowCmd = cmd.toLowerCase();
 
 		var closestCommand = "";
 		var commandNames = commands.keys();
 		for (command in commandNames) {
-			if (command.indexOf(cmd) == 0) {
+			if (command.toLowerCase().indexOf(lowCmd) == 0) {
 				if (closestCommand == "" || closestCommand.length > command.length) {
 					closestCommand = command;
 				}
