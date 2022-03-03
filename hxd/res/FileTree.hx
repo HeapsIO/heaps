@@ -96,6 +96,9 @@ class FileTree {
 		for( f in sys.FileSystem.readDirectory(dir) ) {
 			var path = dir + "/" + f;
 			if( sys.FileSystem.isDirectory(path) ) {
+				if( Config.ignoredDirs.exists(f) )
+					continue;
+
 				if( f.charCodeAt(0) == ".".code || f.charCodeAt(0) == "_".code )
 					continue;
 				var d = tree.dirs.get(f);
