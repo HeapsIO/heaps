@@ -366,7 +366,7 @@ class Renderer extends h3d.scene.Renderer {
 		var props : RenderProps = props;
 
 		// reset tonemap shaders
-		var s = @:privateAccess tonemap.shaders;
+		var s = @:privateAccess tonemap.pass.shaders;
 		while( s != null ) {
 			if( s.s != tonemap.shader ) tonemap.removeShader(s.s);
 			s = s.next;
