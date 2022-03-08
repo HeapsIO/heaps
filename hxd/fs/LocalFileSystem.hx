@@ -117,6 +117,7 @@ class LocalEntry extends FileEntry {
 	#if (hl_ver >= version("1.12.0")) @:hlNative("std","file_is_locked") #end static function fileIsLocked( b : hl.Bytes ) { return false; }
 	#end
 
+	#if !hl
 	static function checkFiles() {
 		var filesToCheck = Math.ceil(WATCH_LIST.length / 60);
 		if( filesToCheck > LocalFileSystem.FILES_CHECK_MAX )
@@ -131,17 +132,6 @@ class LocalEntry extends FileEntry {
 			WATCH_INDEX = 0;
 			return;
 		}
-		#if hl
-		var wd = w.watchHandle.fetch();
-		while(wd != null) {
-			switch(wd.type) {
-				case Change:
-					w.watchCallback();
-				case Rename:
-			}
-			wd = w.watchHandle.fetch();
-		}
-		#else
 		var t = try w.getModifTime() catch( e : Dynamic ) return;
 		if( t == w.watchTime ) return;
 
@@ -168,8 +158,8 @@ class LocalEntry extends FileEntry {
 
 		w.watchTime = t;
 		w.watchCallback();
-		#end
 	}
+	#end
 
 	override function watch( onChanged : Null < Void -> Void > ) {
 		if( onChanged == null ) {
@@ -186,7 +176,7 @@ class LocalEntry extends FileEntry {
 		if( watchCallback == null ) {
 			if( WATCH_LIST == null ) {
 				WATCH_LIST = [];
-				#if !macro
+				#if (!macro && !hl)
 				haxe.MainLoop.add(checkFiles);
 				#end
 			}
@@ -205,8 +195,12 @@ class LocalEntry extends FileEntry {
 			WATCH_LIST.push(this);
 		}
 		#if hl
-		watchHandle = new hl.uv.Fs();
-		watchHandle.start(file);
+		watchHandle = new hl.uv.Fs(file, function(ev) {
+			switch(ev) {
+				case Change: onChanged();
+				case Rename:
+			}
+		});
 		#else
 		watchTime = getModifTime();
 		#end
