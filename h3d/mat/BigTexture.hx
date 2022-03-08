@@ -167,8 +167,8 @@ class BigTexture {
 		var tsize = t.getSize();
 		var q = allocPos(tsize.width,tsize.height);
 		#if !hl
-		if( t.getFormat() == Dds )
-			throw "BigTexture does not support DDS on this platform for "+t.entry.path;
+		if( t.getPixelFormat().match(S3TC(_)) )
+			throw "BigTexture does not support compressed textures on this platform for "+t.entry.path;
 		#end
 		if( q == null )
 			return null;

@@ -332,6 +332,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	@:dox(hide) @:noCompletion
 	public function checkResize() {
 		var engine = h3d.Engine.getCurrent();
+		if (engine == null) return;
 
 		inline function setSceneSize( w : Int, h : Int ) {
 			if ( w != this.width || h != this.height ) {

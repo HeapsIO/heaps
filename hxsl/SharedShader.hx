@@ -51,6 +51,9 @@ class SharedShader {
 		if( src == "" )
 			return;
 		data = new hxsl.Serializer().unserialize(src);
+		for( v in data.vars )
+			initVarId(v);
+		data = compactMem(data);
 		initialize();
 	}
 
@@ -81,7 +84,9 @@ class SharedShader {
 		eval.eliminateConditionals = true;
 		#end
 		eval.unrollLoops = UNROLL_LOOPS;
-		var i = new ShaderInstance(eval.eval(data));
+		var edata = eval.eval(data);
+		edata = compactMem(edata);
+		var i = new ShaderInstance(edata);
 		#if debug
 		Printer.check(i.shader, [data]);
 		#end
@@ -118,8 +123,17 @@ class SharedShader {
 		}
 	}
 
-	function browseVar( v : TVar, ?path : String ) {
+	function initVarId( v : TVar ) {
 		v.id = Tools.allocVarId();
+		switch( v.type ) {
+		case TStruct(vl):
+			for( v in vl )
+				initVarId(v);
+		default:
+		}
+	}
+
+	function browseVar( v : TVar, ?path : String ) {
 		if( path == null )
 			path = v.getName();
 		else
@@ -145,6 +159,13 @@ class SharedShader {
 				consts = c;
 			}
 		}
+	}
+
+	public static function compactMem<T>( mem : T ) {
+		#if (hl && heaps_compact_mem)
+		mem = hl.Api.compact(mem, null, 0, null);
+		#end
+		return mem;
 	}
 
 }

@@ -309,6 +309,31 @@ class Macros {
 			}),
 			access : [AOverride],
 		});
+		index = 0;
+		fields.push( {
+			name : "setParamIndexValue",
+			pos : pos,
+			kind : FFun( {
+				args : [ { name : "index", type : macro : Int }, { name : "val", type : macro : Dynamic } ],
+				expr : {
+					expr : ESwitch(macro index, [for( p in eparams ) { values : [macro $v{ index++ } ], expr : macro $p = val } ], macro {}),
+					pos : pos,
+				},
+			}),
+			access : [AOverride],
+		});
+		fields.push( {
+			name : "setParamIndexFloatValue",
+			pos : pos,
+			kind : FFun( {
+				args : [ { name : "index", type : macro : Int }, { name : "val", type : macro : Float } ],
+				expr : {
+					expr : ESwitch(macro index, [for( i in 0...tparams.length ) if( tparams[i] == TFloat ) { values : [macro $v{i}], expr : macro ${eparams[i]} = val }], macro {}),
+					pos : pos,
+				},
+			}),
+			access : [AOverride],
+		});
 		if( params.length > 0 ) {
 			var cexpr = [];
 			var type = Context.getLocalClass().toString().split(".").pop();
@@ -385,6 +410,8 @@ class Macros {
 							supFields.remove("updateConstants");
 							supFields.remove("getParamValue");
 							supFields.remove("getParamFloatValue");
+							supFields.remove("setParamValue");
+							supFields.remove("setParamFloatValue");
 							supFields.remove("clone");
 							csup = tsup.superClass;
 						} while( true);

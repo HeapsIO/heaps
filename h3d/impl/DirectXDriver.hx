@@ -798,7 +798,9 @@ class DirectXDriver extends h3d.impl.Driver {
 		var h = new hxsl.HlslOut();
 		if( shader.code == null ){
 			shader.code = h.run(shader.data);
+			#if !heaps_compact_mem
 			shader.data.funs = null;
+			#end
 		}
 		var bytes = getBinaryPayload(shader.vertex, shader.code);
 		if( bytes == null ) {

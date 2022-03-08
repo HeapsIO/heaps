@@ -50,6 +50,14 @@ class Shader {
 		throw "assert"; // will be subclassed in sub shaders
 		return 0.;
 	}
+	
+	public function setParamIndexValue( index : Int, val : Dynamic ) {
+		throw "assert"; // will be subclassed in sub shaders
+	}
+
+	public function setParamIndexFloatValue( index : Int, val : Float ) {
+		throw "assert"; // will be subclassed in sub shaders
+	}
 
 	public function updateConstants( globals : Globals ) {
 		throw "assert";

@@ -9,6 +9,7 @@ class Build {
 	var nextPath : String;
 
 	public var excludedExt : Array<String> = [];
+	public var excludedNames : Array<String> = [];
 	public var excludePath : Array<String> = [];
 	public var includePath : Array<String> = [];
 	public var resPath : String = "res";
@@ -44,6 +45,8 @@ class Build {
 			f.isDirectory = true;
 			f.content = [];
 			for( name in sys.FileSystem.readDirectory(dir) ) {
+				if( excludedNames.indexOf(name)>=0 )
+					continue;
 				var fpath = path == "" ? name : path+"/"+name;
 				if( name.charCodeAt(0) == ".".code )
 					continue;
@@ -233,6 +236,9 @@ class Build {
 			case "-exclude" if( args.length > 0 ):
 				for( ext in args.shift().split(",") )
 					b.excludedExt.push(ext);
+			case "-exclude-names" if( args.length > 0 ):
+				for( ext in args.shift().split(",") )
+					b.excludedNames.push(ext);
 			case "-exclude-path" if( args.length > 0 ):
 				for( p in args.shift().split(",") )
 					b.excludePath.push(p);
