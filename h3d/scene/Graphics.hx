@@ -223,6 +223,13 @@ class Graphics extends Mesh {
 		setColor(color, alpha);
 	}
 
+	public function setColorF( r : Float, g : Float, b : Float, a : Float = 1.) {
+		curA = a;
+		curR = r;
+		curG = g;
+		curB = b;
+	}
+
 	public function setColor( color : Int, alpha = 1. ) {
 		curA = alpha;
 		curR = ((color >> 16) & 0xFF) / 255.;

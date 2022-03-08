@@ -242,6 +242,7 @@ class Manager {
 		c.next         = channels;
 		c.isLoading    = sdat.isLoading();
 		c.isVirtual    = driver == null;
+		c.lastStamp    = haxe.Timer.stamp();
 
 		channels = c;
 		return c;
@@ -361,7 +362,7 @@ class Manager {
 				#end
 				playedSamples = 0;
 			}
-			c.position = playedSamples / s.buffers[0].sampleRate;
+			c.position = s.start / targetRate + playedSamples / s.buffers[0].sampleRate;
 			c.positionChanged = false;
 
 			// enqueue next buffers

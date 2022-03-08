@@ -81,6 +81,8 @@ typedef PbrProps = {
 	@:optional var stencilValue : Int;
 	@:optional var stencilWriteMask : Int;
 	@:optional var stencilReadMask : Int;
+
+	@:optional var drawOrder : String;
 }
 
 class PbrMaterial extends Material {
@@ -198,7 +200,7 @@ class PbrMaterial extends Material {
 		mainPass.enableLights = true;
 
 		// Backward compatibility
-		if(Std.is((props:Dynamic).culling, Bool))
+		if(Std.isOfType((props:Dynamic).culling, Bool))
 			props.culling = (props:Dynamic).culling ? Back : None;
 		#if editor
 		if( (props:Dynamic).colorMask == null ) props.colorMask = 15;
@@ -217,6 +219,8 @@ class PbrMaterial extends Material {
 			Reflect.deleteField(props, "stencilPassOp");
 			Reflect.deleteField(props, "stencilCompare");
 		}
+		if( props.drawOrder == "0" )
+			Reflect.deleteField(props,"drawOrder");
 		#end
 	}
 
@@ -353,6 +357,16 @@ class PbrMaterial extends Material {
 		setColorMask();
 
 		setStencil();
+
+		var p = passes;
+		var layer = 0;
+		while ( p != null ) {
+			if ( props.drawOrder == null )
+				mainPass.layer = 0;
+			else
+				mainPass.layer = Std.parseInt(props.drawOrder);
+			p = p.nextPass;
+		}
 	}
 
 	function setColorMask() {
@@ -464,6 +478,7 @@ class PbrMaterial extends Material {
 	#if editor
 	override function editProps() {
 		var props : PbrProps = props;
+		var layers : Array< { name : String, value : Int }> = hide.Ide.inst.currentConfig.get("material.drawOrder", []);
 		return new js.jquery.JQuery('
 			<dl>
 				<dt>Mode</dt>
@@ -518,6 +533,13 @@ class PbrMaterial extends Material {
 				</dd>
 				<dt>AlphaKill</dt><dd><input type="checkbox" field="alphaKill"/></dd>
 				<dt>Wrap</dt><dd><input type="checkbox" field="textureWrap"/></dd>
+				<dt>Draw Order</dt>
+				<dd>
+					<select field="drawOrder">
+						<option value="" selected disabled hidden>Default</option>
+						${[for( i in 0...layers.length ) '<option value="${layers[i].value}">${layers[i].name}</option>'].join("")}
+					</select>
+				</dd>
 			</dl>
 		');
 	}
