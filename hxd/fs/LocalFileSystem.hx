@@ -99,7 +99,12 @@ class LocalEntry extends FileEntry {
 	}
 
 	var watchCallback : Void -> Void;
+	#if (hl && (hl_ver >= version("1.12.0")))
+	var watchHandle : hl.uv.Fs;
+	var lastChanged : Float = 0;
+	#else
 	var watchTime : Float;
+	#end
 
 	static var WATCH_INDEX = 0;
 	static var WATCH_LIST : Array<LocalEntry> = null;
@@ -113,6 +118,7 @@ class LocalEntry extends FileEntry {
 	#if (hl_ver >= version("1.12.0")) @:hlNative("std","file_is_locked") #end static function fileIsLocked( b : hl.Bytes ) { return false; }
 	#end
 
+	#if (!hl || hl_ver < version("1.12.0"))
 	static function checkFiles() {
 		var filesToCheck = Math.ceil(WATCH_LIST.length / 60);
 		if( filesToCheck > LocalFileSystem.FILES_CHECK_MAX )
@@ -154,31 +160,56 @@ class LocalEntry extends FileEntry {
 		w.watchTime = t;
 		w.watchCallback();
 	}
+	#end
 
 	override function watch( onChanged : Null < Void -> Void > ) {
 		if( onChanged == null ) {
 			if( watchCallback != null ) {
 				WATCH_LIST.remove(this);
 				watchCallback = null;
+				#if (hl && (hl_ver >= version("1.12.0")))
+				watchHandle.close();
+				watchHandle = null;
+				#end
 			}
 			return;
 		}
 		if( watchCallback == null ) {
 			if( WATCH_LIST == null ) {
 				WATCH_LIST = [];
-				#if !macro
+				#if (!macro && (!hl || (hl_ver < version("1.12.0"))))
 				haxe.MainLoop.add(checkFiles);
 				#end
 			}
 			var path = path;
 			for( w in WATCH_LIST )
 				if( w.path == path ) {
+					#if (hl && (hl_ver >= version("1.12.0")))
+					if(w.watchHandle != null) {
+						w.watchHandle.close();
+						w.watchHandle = null;
+					}
+					#end
 					w.watchCallback = null;
 					WATCH_LIST.remove(w);
 				}
 			WATCH_LIST.push(this);
 		}
+		#if (hl && (hl_ver >= version("1.12.0")))
+		watchHandle = new hl.uv.Fs(file, function(ev) {
+			switch(ev) {
+				case Change:
+					// For any reason, uvfs send 2 events for a single change
+					if(Sys.time() - lastChanged > 0.1 ) {
+						lastChanged = Sys.time();
+						onChanged();
+					}
+				case Rename:
+			}
+		});
+		#else
 		watchTime = getModifTime();
+		#end
 		watchCallback = function() { fs.convert.run(this); onChanged(); }
 	}
 
