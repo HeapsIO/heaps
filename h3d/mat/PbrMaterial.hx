@@ -32,6 +32,12 @@ package h3d.mat;
 	var NotEqual= "NotEqual";
 }
 
+@:enum abstract PbrDepthWrite(String) {
+	var Default = "Default";
+	var On = "On";
+	var Off = "Off";
+}
+
 @:enum abstract PbrStencilOp(String) {
 	var Keep = "Keep";
 	var Zero = "Zero";
@@ -67,6 +73,7 @@ typedef PbrProps = {
 	var shadows : Bool;
 	var culling : PbrCullingMode;
 	var depthTest : PbrDepthTest;
+	@:optional var depthWrite : PbrDepthWrite;
 	var colorMask : Int;
 	@:optional var alphaKill : Bool;
 	@:optional var emissive : Float;
@@ -90,7 +97,11 @@ class PbrMaterial extends Material {
 	override function set_blendMode(b:BlendMode) {
 		if( mainPass != null ) {
 			mainPass.setBlendMode(b);
-			mainPass.depthWrite = b == None;
+			var dwrite = props != null ? (props:PbrProps).depthWrite : null;
+			if(dwrite != null && dwrite != Default)
+				mainPass.depthWrite = dwrite == On;
+			else
+				mainPass.depthWrite = b == None;
 			var am = mainPass.getShader(h3d.shader.pbr.AlphaMultiply);
 			if( b == AlphaMultiply ) {
 				if( am == null ) {
@@ -221,6 +232,8 @@ class PbrMaterial extends Material {
 		}
 		if( props.drawOrder == "0" )
 			Reflect.deleteField(props,"drawOrder");
+		if( props.depthWrite == Default )
+		 	Reflect.deleteField(props, "depthWrite");
 		#end
 	}
 
@@ -328,6 +341,9 @@ class PbrMaterial extends Material {
 			default: Less;
 		}
 
+		if(props.depthWrite != null && props.depthWrite != Default)
+		 	mainPass.depthWrite = props.depthWrite == On;
+
 		// Get values from specular texture
 		var emit = props.emissive == null ? 0 : props.emissive;
 		var tex = mainPass.getShader(h3d.shader.pbr.PropsTexture);
@@ -359,7 +375,6 @@ class PbrMaterial extends Material {
 		setStencil();
 
 		var p = passes;
-		var layer = 0;
 		while ( p != null ) {
 			if ( props.drawOrder == null )
 				mainPass.layer = 0;
@@ -517,6 +532,14 @@ class PbrMaterial extends Material {
 						<option value="Never">Never</option>
 						<option value="Equal">Equal</option>
 						<option value="NotEqual">NotEqual</option>
+					</select>
+				</dd>
+				<dt>Depth Write</dt>
+				<dd>
+					<select field="depthWrite">
+						<option value="Default">Default</option>
+						<option value="On">On</option>
+						<option value="Off">Off</option>
 					</select>
 				</dd>
 				<dt>Emissive</dt><dd><input type="range" min="0" max="10" field="emissive"/></dd>
