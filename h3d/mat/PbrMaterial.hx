@@ -537,6 +537,7 @@ class PbrMaterial extends Material {
 				<dt>Depth Write</dt>
 				<dd>
 					<select field="depthWrite">
+						<option value="" selected disabled hidden>Default</option>
 						<option value="Default">Default</option>
 						<option value="On">On</option>
 						<option value="Off">Off</option>
