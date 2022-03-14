@@ -35,9 +35,9 @@ class ShaderList {
 		return shaders;
 	}
 
-	public static var maxListSize = 32;
+	public static var MAX_LIST_SIZE = 0;
 	static function checkSize(list : ShaderList) {
-		if(maxListSize <= 0)
+		if(MAX_LIST_SIZE <= 0)
 			return;
 		var hd = list;
 		var count = 0;
@@ -45,7 +45,7 @@ class ShaderList {
 			++count;
 			hd = hd.next;
 		}
-		if(count > maxListSize)
+		if(count > MAX_LIST_SIZE)
 			throw "Too many shaders";
 	}
 }
