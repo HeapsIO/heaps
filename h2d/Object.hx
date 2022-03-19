@@ -556,7 +556,10 @@ class Object #if (domkit && !domkit_heaps) implements domkit.Model<h2d.Object> #
 	public function drawTo( t : h3d.mat.Texture ) {
 		var s = getScene();
 		var needDispose = s == null;
-		if( s == null ) s = new h2d.Scene();
+		if( s == null ) {
+			s = new h2d.Scene();
+			onAdd();
+		}
 		@:privateAccess s.drawImplTo(this, [t]);
 		if( needDispose ) {
 			s.dispose();
