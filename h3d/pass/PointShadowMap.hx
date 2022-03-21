@@ -77,6 +77,8 @@ class PointShadowMap extends Shadows {
 	}
 
 	override function syncShader(texture) {
+		if( texture == null )
+			throw "assert";
 		var pointLight = cast(light, h3d.scene.pbr.PointLight);
 		pshader.shadowMap = texture;
 		pshader.shadowBias = bias;
