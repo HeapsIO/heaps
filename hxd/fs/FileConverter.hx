@@ -256,7 +256,7 @@ class FileConverter {
 		var cacheFile = baseDir + tmpDir + "cache.dat";
 		var time = try sys.FileSystem.stat(cacheFile).mtime.getTime() catch( e : Dynamic ) 0;
 		if( cache == null || time > cacheTime ) {
-			cache = try haxe.Unserializer.run(sys.io.File.getContent(cacheFile)) catch( e : Dynamic ) new Map();
+			cache = try haxe.Unserializer.run(sys.io.File.getContent(cacheFile)) catch( e : Dynamic ) cache == null ? new Map() : cache;
 			cacheTime = time;
 		}
 		var entry = cache.get(e.file);
