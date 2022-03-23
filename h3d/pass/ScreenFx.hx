@@ -8,12 +8,10 @@ class ScreenFx<T:h3d.shader.ScreenShader> {
 	var manager : ShaderManager;
 	var _engine : h3d.Engine;
 	var engine(get,never) : h3d.Engine;
-	var shaders : hxsl.ShaderList;
 	var buffers : h3d.shader.Buffers;
 
 	public function new(shader, ?output) {
 		this.shader = shader;
-		shaders = new hxsl.ShaderList(shader);
 		manager = new ShaderManager(output);
 		pass = new h3d.mat.Pass("screenfx", new hxsl.ShaderList(shader));
 		pass.culling = None;
@@ -34,37 +32,23 @@ class ScreenFx<T:h3d.shader.ScreenShader> {
 			manager.globals.fastSet(g.gid, g.value);
 	}
 
-	public function addShader<T:hxsl.Shader>(s:T) {
-		shaders = hxsl.ShaderList.addSort(s, shaders);
+	public inline function addShader<T:hxsl.Shader>(s:T) {
 		return pass.addShader(s);
 	}
 
-	public function removeShader(s:hxsl.Shader) {
-		var prev : hxsl.ShaderList = null;
-		var cur = shaders;
-		while( cur != null ) {
-			if( cur.s == s ) {
-				if( prev == null ) shaders = cur.next else prev.next = cur.next;
-				return true;
-			}
-			prev = cur;
-			cur = cur.next;
-		}
-		return false;
+	public inline function removeShader(s:hxsl.Shader) {
+		return pass.removeShader(s);
 	}
 
-	public function getShader<T:hxsl.Shader>(cl:Class<T>) : T {
-		for( s in shaders ) {
-			var si = hxd.impl.Api.downcast(s, cl);
-			if( si != null ) return si;
-		}
-		return null;
+	public inline function getShader<T:hxsl.Shader>(cl:Class<T>) : T {
+		return pass.getShader(cl);
 	}
 
 	public function render() {
 		if( primitive == null )
 			primitive = h3d.prim.Plane2D.get();
 		shader.flipY = engine.driver.hasFeature(BottomLeftCoords) && engine.getCurrentTarget() != null ? -1 : 1;
+		var shaders = @:privateAccess pass.shaders;
 		var rts = manager.compileShaders(shaders);
 		engine.selectMaterial(pass);
 		engine.selectShader(rts);

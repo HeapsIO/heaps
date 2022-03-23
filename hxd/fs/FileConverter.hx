@@ -33,6 +33,7 @@ class FileConverter {
 	var configs : Map<String,ConvertConfig> = new Map();
 	var defaultConfig : ConvertConfig;
 	var cache : Map<String,Array<{ out : String, time : Int, hash : String, ver : Null<Int> }>>;
+	var cacheTime : Float;
 
 	static var extraConfigs:Array<Dynamic> = [];
 
@@ -252,8 +253,12 @@ class FileConverter {
 	}
 
 	function convertAndCache( e : LocalFileSystem.LocalEntry, outFile : String, conv : Convert, params : Dynamic ) {
-		if( cache == null )
-			cache = try haxe.Unserializer.run(sys.io.File.getContent(baseDir + tmpDir + "cache.dat")) catch( e : Dynamic ) new Map();
+		var cacheFile = baseDir + tmpDir + "cache.dat";
+		var time = try sys.FileSystem.stat(cacheFile).mtime.getTime() catch( e : Dynamic ) 0;
+		if( cache == null || time > cacheTime ) {
+			cache = try haxe.Unserializer.run(sys.io.File.getContent(cacheFile)) catch( e : Dynamic ) cache == null ? new Map() : cache;
+			cacheTime = time;
+		}
 		var entry = cache.get(e.file);
 		var needInsert = false;
 		if( entry == null ) {
@@ -264,6 +269,7 @@ class FileConverter {
 			if( needInsert ) cache.set(e.file, entry);
 			sys.FileSystem.createDirectory(baseDir + tmpDir);
 			sys.io.File.saveContent(baseDir + tmpDir + "cache.dat", haxe.Serializer.run(cache));
+			cacheTime = Date.now().getTime();
 		}
 
 		var match = null;

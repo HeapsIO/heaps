@@ -136,4 +136,25 @@ class CacheAllocator extends Allocator {
 		lastGC = now;
 	}
 
+	public function clear() {
+		for ( c in buffers ) {
+			for ( b in c.available ) {
+				b.dispose();
+			}
+			for ( b in c.disposed ) {
+				b.dispose();
+			}
+		}
+		for ( c in indexBuffers ) {
+			for ( b in c.available ) {
+				b.dispose();
+			}
+			for ( b in c.disposed ) {
+				b.dispose();
+			}
+		}
+		buffers = [];
+		indexBuffers = [];
+	}
+
 }
