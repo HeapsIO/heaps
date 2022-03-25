@@ -4,7 +4,7 @@ package h2d;
 	A video file playback Drawable. Due to platform specifics, each target have their own limitations.
 
 	* <span class="label">Hashlink</span>: Playback ability depends on `https://github.com/HeapsIO/hlvideo` library. It support only video with the AV1 codec packed into a WEBM container.
-		
+
 	* <span class="label">JavaScript</span>: HTML Video element will be used. Playback is restricted by content-security policy and browser decoder capabilities.
 **/
 class Video extends Drawable {
@@ -53,7 +53,6 @@ class Video extends Drawable {
 	**/
 	public function new(?parent) {
 		super(parent);
-		blendMode = None;
 		smooth = true;
 	}
 
@@ -220,7 +219,7 @@ class Video extends Drawable {
 	function errorHandler(e : js.html.Event) {
 		#if (haxe_ver >= 4)
 		onError(v.error.code + ": " + v.error.message);
-		#else 
+		#else
 		onError(Std.string(v.error.code));
 		#end
 	}
@@ -298,7 +297,7 @@ class Video extends Drawable {
 	override function sync(ctx:RenderContext) {
 		if( !playing )
 			return;
-		
+
 		if( frameReady && time >= videoTime ) {
 			#if (hl && hlvideo)
 			texture.uploadPixels(pixels);
