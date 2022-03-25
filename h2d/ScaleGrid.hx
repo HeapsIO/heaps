@@ -52,8 +52,13 @@ class ScaleGrid extends h2d.TileGroup {
 		This does not change the values of `borderLeft`, `borderRight`, `borderTop` or `borderBottom`.
 
 		Center tile is always stretched.
-	 */
+	**/
 	public var ignoreScale(default, set) : Bool;
+
+	/**
+		Scale factor applied to borders only. If combined with `ignoreScale`, becomes an absolute scale independent from the scene scale.
+	**/
+	public var borderScale(default, set) : Float = 1.0;
 
 	var contentTile : h2d.Tile;
 	var currentScaleX = 1.;
@@ -89,6 +94,13 @@ class ScaleGrid extends h2d.TileGroup {
 		this.ignoreScale = b;
 		clear();
 		return b;
+	}
+
+	function set_borderScale(s) {
+		if(borderScale == s) return s;
+		this.borderScale = s;
+		clear();
+		return s;
 	}
 
 	function set_width(w) {
@@ -178,7 +190,10 @@ class ScaleGrid extends h2d.TileGroup {
 
 	function updateContent() {
 		var bt = borderTop, bb = borderBottom, bl = borderLeft, br = borderRight;
-		var unscaledBl : Float = bl, unscaledBr : Float = br, unscaledBt : Float = bt, unscaledBb : Float = bb;
+		var unscaledBl : Float = bl * borderScale,
+			unscaledBr : Float = br * borderScale,
+			unscaledBt : Float = bt * borderScale,
+			unscaledBb : Float = bb * borderScale;
 		var invScaleX = 1.;
 		var invScaleY = 1.;
 		if(ignoreScale){

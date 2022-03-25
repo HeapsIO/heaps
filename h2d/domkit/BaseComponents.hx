@@ -691,6 +691,7 @@ class HtmlTextComp extends TextComp implements domkit.Component.ComponentDecl<h2
 class ScaleGridComp extends DrawableComp implements domkit.Component.ComponentDecl<h2d.ScaleGrid> {
 
 	@:p var ignoreScale : Bool;
+	@:p var borderScale : Float;
 	@:p var tileBorders : Bool;
 
 	static function create( parent : h2d.Object ) {
@@ -699,6 +700,10 @@ class ScaleGridComp extends DrawableComp implements domkit.Component.ComponentDe
 
 	static function set_ignoreScale(o : h2d.ScaleGrid, v) {
 		o.ignoreScale = v;
+	}
+
+	static function set_borderScale(o : h2d.ScaleGrid, v) {
+		o.borderScale = v;
 	}
 
 	static function set_tileBorders(o : h2d.ScaleGrid, v) {
