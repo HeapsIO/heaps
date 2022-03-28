@@ -191,9 +191,10 @@ class BigTexture {
 			var alphaPos = hxd.Pixels.getChannelOffset(allPixels.format, A);
 			var srcRedPos = hxd.Pixels.getChannelOffset(pixels.format, R);
 			var srcBpp = @:privateAccess pixels.bytesPerPixel;
+			var offset = pixels.offset;
 			for( dy in 0...pixels.height ) {
 				var w = (x + (y + dy) * size) * bpp + alphaPos;
-				var r = dy * pixels.width * srcBpp + srcRedPos;
+				var r = dy * pixels.width * srcBpp + srcRedPos + offset;
 				for( dx in 0...pixels.width ) {
 					allPixels.bytes.set(w, pixels.bytes.get(r));
 					w += bpp;
@@ -202,8 +203,9 @@ class BigTexture {
 			}
 		} else {
 			pixels.convert(allPixels.format);
+			var offset = pixels.offset;
 			for( dy in 0...pixels.height )
-				allPixels.bytes.blit((x + (y + dy) * size) * bpp, pixels.bytes, dy * pixels.width * bpp, pixels.width * bpp);
+				allPixels.bytes.blit((x + (y + dy) * size) * bpp, pixels.bytes, offset + dy * pixels.width * bpp, pixels.width * bpp);
 		}
 		pixels.dispose();
 	}
