@@ -102,6 +102,7 @@ class LocalEntry extends FileEntry {
 	#if (hl && (hl_ver >= version("1.12.0")))
 	var watchHandle : hl.uv.Fs;
 	var lastChanged : Float = 0;
+	var onChangedDelay : haxe.Timer;
 	#else
 	var watchTime : Float;
 	#end
@@ -196,14 +197,15 @@ class LocalEntry extends FileEntry {
 			WATCH_LIST.push(this);
 		}
 		#if (hl && (hl_ver >= version("1.12.0")))
+		if(watchHandle != null)
+			watchHandle.close();
 		watchHandle = new hl.uv.Fs(originalFile, function(ev) {
 			switch(ev) {
 				case Change:
-					// For any reason, uvfs send 2 events for a single change
-					if(Sys.time() - lastChanged > 0.1 ) {
-						lastChanged = Sys.time();
-						haxe.Timer.delay(onChanged, 100);
-					}
+					lastChanged = Sys.time();
+					if(onChangedDelay != null)
+						onChangedDelay.stop();
+					onChangedDelay = haxe.Timer.delay(onChanged, 10);
 				case Rename:
 			}
 		});
