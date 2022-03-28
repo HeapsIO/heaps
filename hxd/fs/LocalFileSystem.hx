@@ -202,7 +202,7 @@ class LocalEntry extends FileEntry {
 					// For any reason, uvfs send 2 events for a single change
 					if(Sys.time() - lastChanged > 0.1 ) {
 						lastChanged = Sys.time();
-						onChanged();
+						haxe.Timer.delay(onChanged, 100);
 					}
 				case Rename:
 			}
