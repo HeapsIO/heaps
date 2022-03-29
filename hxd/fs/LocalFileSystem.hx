@@ -199,16 +199,20 @@ class LocalEntry extends FileEntry {
 		#if (hl && (hl_ver >= version("1.12.0")))
 		if(watchHandle != null)
 			watchHandle.close();
+		lastChanged = getModifTime()-1;
 		watchHandle = new hl.uv.Fs(originalFile, function(ev) {
 			switch(ev) {
 				case Change:
-					lastChanged = Sys.time();
-					if(onChangedDelay != null)
-						onChangedDelay.stop();
-					onChangedDelay = haxe.Timer.delay(function() {
-						fs.convert.run(this);
-						onChanged();
-					}, 10);
+					if(getModifTime() != lastChanged) {
+						lastChanged = getModifTime();
+						if(onChangedDelay != null)
+							onChangedDelay.stop();
+						onChangedDelay = haxe.Timer.delay(function() {
+							fs.convert.run(this);
+							onChanged();
+						}, 10);
+					}
+
 				case Rename:
 			}
 		});
