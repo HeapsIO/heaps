@@ -205,7 +205,10 @@ class LocalEntry extends FileEntry {
 					lastChanged = Sys.time();
 					if(onChangedDelay != null)
 						onChangedDelay.stop();
-					onChangedDelay = haxe.Timer.delay(onChanged, 10);
+					onChangedDelay = haxe.Timer.delay(function() {
+						fs.convert.run(this);
+						onChanged();
+					}, 10);
 				case Rename:
 			}
 		});
