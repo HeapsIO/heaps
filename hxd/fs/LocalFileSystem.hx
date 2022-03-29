@@ -199,7 +199,7 @@ class LocalEntry extends FileEntry {
 		#if (hl && (hl_ver >= version("1.12.0")))
 		if(watchHandle != null)
 			watchHandle.close();
-		lastChanged = getModifTime()-1;
+		lastChanged = getModifTime();
 		watchHandle = new hl.uv.Fs(originalFile, function(ev) {
 			switch(ev) {
 				case Change:
