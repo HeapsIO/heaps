@@ -211,39 +211,39 @@ class BigTexture {
 	}
 
 	function upload( t : hxd.res.Image, q : QuadTree, alphaChannel ) {
-		if( !t.getFormat().useAsyncDecode )
+		if( !t.getFormat().useLoadBitmap ) {
 			uploadPixels(t.getPixels(), q.x, q.y, alphaChannel);
-		else {
-			loadCount++;
-			var o = { t : t, q : q, alpha : alphaChannel, skip : false };
-			pending.push(o);
-			function load() {
-				if( alphaChannel ) {
-					if( o.skip )
-						return;
-					// wait for the color to be set before overwriting alpha
-					if( q.loadingColor ) {
-						haxe.Timer.delay(load, 10);
-						return;
-					}
-				} else
-					q.loadingColor = true;
-				t.entry.loadBitmap(function(bmp) {
-					if( o.skip ) return;
-					if( !alphaChannel ) q.loadingColor = false;
-					lastEvent = haxe.Timer.stamp();
-					pending.remove(o);
-					var bmp = bmp.toBitmap();
-					var pixels = bmp.getPixels();
-					bmp.dispose();
-					uploadPixels(pixels, q.x, q.y, alphaChannel);
-					loadCount--;
-					flush();
-				});
-			}
-			load();
+			return;
 		}
 
+		loadCount++;
+		var o = { t : t, q : q, alpha : alphaChannel, skip : false };
+		pending.push(o);
+		function load() {
+			if( alphaChannel ) {
+				if( o.skip )
+					return;
+				// wait for the color to be set before overwriting alpha
+				if( q.loadingColor ) {
+					haxe.Timer.delay(load, 10);
+					return;
+				}
+			} else
+				q.loadingColor = true;
+			t.entry.loadBitmap(function(bmp) {
+				if( o.skip ) return;
+				if( !alphaChannel ) q.loadingColor = false;
+				lastEvent = haxe.Timer.stamp();
+				pending.remove(o);
+				var bmp = bmp.toBitmap();
+				var pixels = bmp.getPixels();
+				bmp.dispose();
+				uploadPixels(pixels, q.x, q.y, alphaChannel);
+				loadCount--;
+				flush();
+			});
+		}
+		load();
 	}
 
 	function retry( pixels ) {

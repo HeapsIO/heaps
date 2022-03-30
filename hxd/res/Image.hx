@@ -14,9 +14,9 @@ package hxd.res;
 		Tells if we might not be able to directly decode the image without going through a loadBitmap async call.
 		This for example occurs when we want to decode progressive JPG in JS.
 	*/
-	public var useAsyncDecode(get, never) : Bool;
+	public var useLoadBitmap(get, never) : Bool;
 
-	inline function get_useAsyncDecode() {
+	inline function get_useLoadBitmap() {
 		#if hl
 		return false;
 		#else
@@ -66,15 +66,11 @@ class Image extends Resource {
 	**/
 	public static var DEFAULT_FILTER : h3d.mat.Data.Filter = Linear;
 
-	/**
-		Forces async decoding for images if available on the target platform.
-	**/
-	public static var DEFAULT_ASYNC = false;
-
 	static var ENABLE_AUTO_WATCH = true;
 
 	var tex : h3d.mat.Texture;
 	var inf : ImageInfo;
+	public var enableAsyncLoading : Bool;
 
 	public inline function getFormat() {
 		return getInfo().dataFormat;
@@ -483,66 +479,7 @@ class Image extends Resource {
 	}
 
 	function loadTexture( ?asyncData:haxe.io.Bytes ) {
-		if( !getFormat().useAsyncDecode && !DEFAULT_ASYNC ) {
-			function load() {
-				if( tex.flags.has(AsyncLoading) && asyncData == null && ASYNC_LOADER.isSupported(this) ) @:privateAccess {
-					tex.dispose();
-					tex.format = RGBA;
-					tex.width = 1;
-					tex.height = 1;
-					tex.customMipLevels = 1;
-					tex.flags.set(Loading);
-					tex.alloc();
-					tex.uploadPixels(BLACK_1x1);
-					tex.width = inf.width;
-					tex.height = inf.height;
-					ASYNC_LOADER.load(this);
-					tex.realloc = () -> loadTexture();
-					return;
-				}
-				var t0 = haxe.Timer.stamp();
-				// immediately loading the PNG is faster than going through loadBitmap
-				@:privateAccess tex.customMipLevels = inf.mipLevels;
-				tex.alloc();
-				switch( inf.dataFormat ) {
-				case Dds:
-					var pos = 128;
-					if( inf.flags.has(Dxt10Header) ) pos += 20;
-					for( layer in 0...tex.layerCount ) {
-						for( mip in 0...inf.mipLevels ) {
-							var w = inf.width >> mip;
-							var h = inf.height >> mip;
-							if( w == 0 ) w = 1;
-							if( h == 0 ) h = 1;
-							var size = hxd.Pixels.calcDataSize(w, h, inf.pixelFormat);
-							var bytes = asyncData == null ? entry.fetchBytes(pos, size) : asyncData;
-							tex.uploadPixels(new hxd.Pixels(w,h,bytes,inf.pixelFormat,asyncData == null ? 0 : pos),mip,layer);
-							pos += size;
-						}
-					}
-				default:
-					for( layer in 0...tex.layerCount ) {
-						for( mip in 0...inf.mipLevels ) {
-							var pixels = getPixels(tex.format,null,layer * inf.mipLevels + mip);
-							tex.uploadPixels(pixels,mip,layer);
-							pixels.dispose();
-						}
-					}
-				}
-				if( LOG_TEXTURE_LOAD && asyncData == null ) {
-					var time = (haxe.Timer.stamp()-t0)*1000.0;
-					var fmtStr = inf.pixelFormat.match(S3TC(_)) ? "DXT" : inf.dataFormat.getName();
-					#if hl Sys.println #else trace #end(fmtStr+" "+Std.int(time)+"."+(Std.int(time*10)%10)+"ms "+inf.width+"x"+inf.height+" "+entry.path);
-				}
-				tex.realloc = () -> loadTexture();
-				if(ENABLE_AUTO_WATCH)
-					watch(watchCallb);
-			}
-			if( entry.isAvailable )
-				load();
-			else
-				entry.load(load);
-		} else {
+		if( getFormat().useLoadBitmap ) {
 			// use native decoding
 			tex.flags.set(Loading);
 			entry.loadBitmap(function(bmp) {
@@ -561,7 +498,67 @@ class Image extends Resource {
 				if(ENABLE_AUTO_WATCH)
 					watch(watchCallb);
 			});
+			return;
 		}
+
+		function load() {
+			if( (enableAsyncLoading || tex.flags.has(AsyncLoading)) && asyncData == null && ASYNC_LOADER.isSupported(this) ) @:privateAccess {
+				tex.dispose();
+				tex.format = RGBA;
+				tex.width = 1;
+				tex.height = 1;
+				tex.customMipLevels = 1;
+				tex.flags.set(Loading);
+				tex.alloc();
+				tex.uploadPixels(BLACK_1x1);
+				tex.width = inf.width;
+				tex.height = inf.height;
+				ASYNC_LOADER.load(this);
+				tex.realloc = () -> loadTexture();
+				return;
+			}
+			var t0 = haxe.Timer.stamp();
+			// immediately loading the PNG is faster than going through loadBitmap
+			@:privateAccess tex.customMipLevels = inf.mipLevels;
+			tex.alloc();
+			switch( inf.dataFormat ) {
+			case Dds:
+				var pos = 128;
+				if( inf.flags.has(Dxt10Header) ) pos += 20;
+				for( layer in 0...tex.layerCount ) {
+					for( mip in 0...inf.mipLevels ) {
+						var w = inf.width >> mip;
+						var h = inf.height >> mip;
+						if( w == 0 ) w = 1;
+						if( h == 0 ) h = 1;
+						var size = hxd.Pixels.calcDataSize(w, h, inf.pixelFormat);
+						var bytes = asyncData == null ? entry.fetchBytes(pos, size) : asyncData;
+						tex.uploadPixels(new hxd.Pixels(w,h,bytes,inf.pixelFormat,asyncData == null ? 0 : pos),mip,layer);
+						pos += size;
+					}
+				}
+			default:
+				for( layer in 0...tex.layerCount ) {
+					for( mip in 0...inf.mipLevels ) {
+						var pixels = getPixels(tex.format,null,layer * inf.mipLevels + mip);
+						tex.uploadPixels(pixels,mip,layer);
+						pixels.dispose();
+					}
+				}
+			}
+			if( LOG_TEXTURE_LOAD && asyncData == null ) {
+				var time = (haxe.Timer.stamp()-t0)*1000.0;
+				var fmtStr = inf.pixelFormat.match(S3TC(_)) ? "DXT" : inf.dataFormat.getName();
+				#if hl Sys.println #else trace #end(fmtStr+" "+Std.int(time)+"."+(Std.int(time*10)%10)+"ms "+inf.width+"x"+inf.height+" "+entry.path);
+			}
+			tex.realloc = () -> loadTexture();
+			if(ENABLE_AUTO_WATCH)
+				watch(watchCallb);
+		}
+		if( entry.isAvailable )
+			load();
+		else
+			entry.load(load);
 	}
 
 	public function toTexture() : h3d.mat.Texture {

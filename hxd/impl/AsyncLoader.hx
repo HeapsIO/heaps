@@ -85,3 +85,29 @@ class ThreadAsyncLoader implements AsyncLoader {
 
 }
 #end
+
+#if hxnodejs
+class NodeLoader implements AsyncLoader {
+
+	var fs : hxd.fs.LocalFileSystem;
+
+	public function new() {
+		fs = Std.downcast(hxd.res.Loader.currentInstance.fs, hxd.fs.LocalFileSystem);
+		if( fs == null ) throw "Loader should be local filesystem";
+	}
+
+	public function isSupported( img : hxd.res.Image ) {
+		var ent = Std.downcast(img.entry, hxd.fs.LocalFileSystem.LocalEntry);
+		return ent != null;
+	}
+
+	public function load( img : hxd.res.Image ) {
+		var ent = Std.downcast(img.entry, hxd.fs.LocalFileSystem.LocalEntry);
+		js.node.Fs.readFile(@:privateAccess ent.file, function(err,buf) {
+			if( err != null ) throw err;
+			@:privateAccess img.asyncLoad(buf.hxToBytes());
+		});
+	}
+
+}
+#end
