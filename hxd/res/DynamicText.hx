@@ -346,6 +346,8 @@ class DynamicText {
 		}
 	}
 
+	@:persistent static var BUILD_CACHE = new Map<String,{time:Float,fields:Array<Field>}>();
+
 	public static function build( file : String ) {
 		var paths = FileTree.resolvePaths();
 		var fullPath = null;
@@ -354,6 +356,21 @@ class DynamicText {
 				fullPath = p + "/" + file;
 		if( fullPath == null )
 			fullPath = paths[0] + "/" + file;
+		var current = BUILD_CACHE.get(fullPath);
+		var time = sys.FileSystem.stat(fullPath).mtime.getTime();
+		Context.registerModuleDependency(Context.getLocalModule(), fullPath);
+		var fields;
+		if( current != null && current.time == time ) {
+			fields = current.fields;
+		} else {
+			fields = buildFields(fullPath);
+			if( fields == null ) return null;
+			BUILD_CACHE.set(fullPath, { time : time, fields : fields });
+		}
+		return Context.getBuildFields().concat(fields);
+	}
+
+	static function buildFields( fullPath : String ) {
 		var content = null, x = null;
 		try {
 			content = sys.io.File.getContent(fullPath);
@@ -362,8 +379,7 @@ class DynamicText {
 			Context.error(e.message, Context.makePosition({min:e.position, max:e.position, file:fullPath}));
 			return null;
 		}
-		Context.registerModuleDependency(Context.getLocalModule(), fullPath);
-		var fields = Context.getBuildFields();
+		var fields : Array<Field> = [];
 		var pos = Context.currentPos();
 		var fpos = { file : fullPath, content : content.toLowerCase(), pos : pos };
 		for( x in new Access(x.firstElement()).elements ) {
