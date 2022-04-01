@@ -47,6 +47,8 @@ class ScaleGrid extends h2d.TileGroup {
 	**/
 	public var tileBorders(default, set) : Bool;
 
+	public var tileCenter(default, set) : Bool;
+
 	/**
 		When enabled, the borders will ignore the final scale of the `h2d.ScaleGrid` to be rendered pixel perfect.
 		This does not change the values of `borderLeft`, `borderRight`, `borderTop` or `borderBottom`.
@@ -85,6 +87,13 @@ class ScaleGrid extends h2d.TileGroup {
 	function set_tileBorders(b) {
 		if( tileBorders == b ) return b;
 		this.tileBorders = b;
+		clear();
+		return b;
+	}
+
+	function set_tileCenter(b) {
+		if( tileCenter == b ) return b;
+		this.tileCenter = b;
 		clear();
 		return b;
 	}
@@ -304,9 +313,41 @@ class ScaleGrid extends h2d.TileGroup {
 			}
 		}
 
-		var t = tile.sub(bl, bt, innerTileWidth, innerTileHeight);
-		t.scaleToSize(width - (unscaledBr + unscaledBl), height - (unscaledBt + unscaledBb));
-		content.addColor(unscaledBl, unscaledBt, curColor, t);
+		if( !tileCenter ) {
+			var t = tile.sub(bl, bt, innerTileWidth, innerTileHeight);
+			t.scaleToSize(width - (unscaledBr + unscaledBl), height - (unscaledBt + unscaledBb));
+			content.addColor(unscaledBl, unscaledBt, curColor, t);
+		}
+		else {
+			var unscaledInnerTileWidth = innerTileWidth * invScaleX;
+			var unscaledInnerTileHeight = innerTileHeight * invScaleY;
+			var rw = Std.int( ( width - (unscaledBr + unscaledBl) ) / unscaledInnerTileWidth );
+			var rh = Std.int(innerHeight / unscaledInnerTileHeight);
+			for( y in 0...rh )
+				for( x in 0...rw ) {
+					var t = tile.sub(bl, bt, unscaledInnerTileWidth, unscaledInnerTileWidth);
+					content.addColor(unscaledBl + x * unscaledInnerTileWidth, unscaledBt + y * unscaledInnerTileHeight, curColor, t);
+				}
+
+			var dx = innerWidth - rw * unscaledInnerTileWidth;
+			if( dx > 0 ) {
+				for( y in 0...rh ) {
+					var t = tile.sub(bl, bt, dx, unscaledInnerTileWidth);
+					content.addColor(unscaledBl + rw * unscaledInnerTileWidth, unscaledBt + y * unscaledInnerTileHeight, curColor, t);
+				}
+			}
+			var dy = innerHeight - rh * unscaledInnerTileHeight;
+			if( dy > 0 ) {
+				for( x in 0...rw ) {
+					var t = tile.sub(bl, bt, unscaledInnerTileWidth, dy);
+					content.addColor(unscaledBl + x * unscaledInnerTileWidth, unscaledBt + rh * unscaledInnerTileHeight, curColor, t);
+				}
+			}
+			if( dx > 0 && dy > 0 ) {
+				var t = tile.sub(bl, bt, dx, dy);
+				content.addColor(unscaledBl + rw * unscaledInnerTileWidth, unscaledBt + rh * unscaledInnerTileHeight, curColor, t);
+			}
+		}
 	}
 
 	override function sync( ctx : RenderContext ) {
