@@ -42,11 +42,10 @@ class Config {
 
 
 	/**
-		Directories not explored by the resource scan
+		Directory names not explored by the resource scan
+		Example: `ignoredDirs = [ "backups"=>true ]`
 	**/
-	public static var ignoredDirs = [
-		"backups" => true, // LDtk backup folders
-	];
+	public static var ignoredDirs : Map<String,Bool> = [];
 
 
 	/**
