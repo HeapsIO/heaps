@@ -330,6 +330,9 @@ class Printer {
 		#if (haxe_ver >= 4)
 		case OpIn: " in ";
 		#end
+		#if (haxe_ver >= "4.3.0")
+		case OpNullCoal: "??";
+		#end
 		}
 	}
 

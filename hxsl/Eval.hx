@@ -417,6 +417,9 @@ class Eval {
 			#if (haxe_ver >= 4)
 			case OpIn: throw "assert";
 			#end
+			#if (haxe_ver >= "4.3.0")
+			case OpNullCoal: throw "assert";
+			#end
 			}
 		case TUnop(op, e):
 			var e = evalExpr(e);
