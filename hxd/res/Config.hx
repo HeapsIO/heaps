@@ -42,6 +42,13 @@ class Config {
 
 
 	/**
+		Directory names not explored by the resource scan
+		Example: `ignoredDirs = [ "backups"=>true ]`
+	**/
+	public static var ignoredDirs : Map<String,Bool> = [];
+
+
+	/**
 		Paired extensions are files that can have the same name but different extensions.
 		Only the "main" one will be accessible through hxd.Res.
 		Example : ["fbx" => "png,jpg,jpeg,gif"]
