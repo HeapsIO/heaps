@@ -69,6 +69,8 @@ class Convert {
 
 }
 
+#if (sys || nodejs)
+
 class ConvertFBX2HMD extends Convert {
 
 	public function new() {
@@ -141,7 +143,6 @@ class ConvertWAV2OGG extends Convert {
 	override function convert() {
 		var cmd = "oggenc";
 		var args = ["--resample", "44100", "-Q", srcPath, "-o", dstPath];
-		#if (sys || nodejs)
 		if( Sys.systemName() == "Windows" ) cmd = "oggenc2";
 		if( hasParam("mono") ) {
 			var f = sys.io.File.read(srcPath);
@@ -150,7 +151,6 @@ class ConvertWAV2OGG extends Convert {
 			if( wav.header.channels >= 2 )
 				args.push("--downmix");
 		}
-		#end
 		command(cmd, args);
 	}
 
@@ -165,7 +165,6 @@ class ConvertTGA2PNG extends Convert {
 	}
 
 	override function convert() {
-		#if (sys || nodejs)
 		var input = new haxe.io.BytesInput(sys.io.File.getBytes(srcPath));
 		var r = new format.tga.Reader(input).read();
 		if( r.header.imageType != UncompressedTrueColor || r.header.bitsPerPixel != 32 )
@@ -188,9 +187,6 @@ class ConvertTGA2PNG extends Convert {
 			throw "Not supported "+r.header.imageOrigin;
 		}
 		sys.io.File.saveBytes(dstPath, pix.toPNG());
-		#else
-		throw "Not implemented";
-		#end
 	}
 
 	static var _ = Convert.register(new ConvertTGA2PNG());
@@ -217,9 +213,7 @@ class ConvertFNT2BFNT extends Convert {
 	}
 
 	function resolveTile( path : String ) : h2d.Tile {
-		#if sys
 		if (!sys.FileSystem.exists(path)) throw "Could not resolve BitmapFont texture reference at path: " + path;
-		#end
 		return emptyTile;
 	}
 
@@ -242,6 +236,10 @@ class CompressIMG extends Convert {
 		"RGBA" => "R8G8B8A8_UNORM",
 	];
 
+	function makeImage( path : String ) {
+		return @:privateAccess new hxd.res.Image(new hxd.fs.BytesFileSystem.BytesFileEntry(path,sys.io.File.getBytes(path)));
+	}
+
 	override function convert() {
 		var format = getParam("format");
 		var mips = hasParam("mips") && getParam("mips") == true;
@@ -251,7 +249,6 @@ class CompressIMG extends Convert {
 			var tmpPath = new haxe.io.Path(dstPath);
 			tmpPath.ext = "tmp."+new haxe.io.Path(srcPath).ext;
 			var tmpFile = tmpPath.toString();
-			#if (sys || nodejs)
 			try sys.FileSystem.deleteFile(tmpFile) catch( e : Dynamic ) {};
 			try sys.FileSystem.deleteFile(dstPath) catch( e : Dynamic ) {};
 			sys.io.File.copy(srcPath, tmpFile);
@@ -261,10 +258,63 @@ class CompressIMG extends Convert {
 			sys.FileSystem.deleteFile(tmpFile);
 			tmpPath.ext = "tmp.DDS";
 			sys.FileSystem.rename(tmpPath.toString(), dstPath);
-			#else
-			throw "Require sys";
-			#end
 			return;
+		}
+		var path = new haxe.io.Path(srcPath);
+		if ( path.ext == "dds" ) {
+			var image = makeImage(srcPath);
+			var info = image.getInfo();
+			if ( info.layerCount > 1 && info.dataFormat == Dds ) {
+				var oldBytes = srcBytes;
+				var oldPath = srcPath;
+				for ( layer in 0...info.layerCount ) {
+					var layerPixels = [];
+					for( mip in 0...info.mipLevels ) {
+						var pixels = image.getPixels(null, null, layer * info.mipLevels + mip);
+						layerPixels.push(pixels);
+					}
+					var layerBytes = hxd.Pixels.toDDSLayers(layerPixels);
+					for ( pixels in layerPixels )
+						pixels.dispose();
+					var tmpPath = dstPath + path.file + "_" + layer + "." + path.ext;
+					sys.io.File.saveBytes(tmpPath, layerBytes);
+					srcBytes = layerBytes;
+					srcPath =  tmpPath;
+					convert();
+					sys.FileSystem.deleteFile(tmpPath);
+				}
+				srcBytes = oldBytes;
+				srcPath = oldPath;
+				var convertPixels = [];
+				var format = null;
+				for ( layer in 0...info.layerCount ) {
+					var layerPath = null;
+					var image = null;
+					for ( fmt in ["BC1", "BC3"] ) {
+						try {
+							layerPath = dstPath + path.file + "_" + layer +"_dds_"+ fmt + "." + path.ext;
+							image = makeImage(layerPath);
+						} catch(e : Dynamic) {}
+						if ( image != null ) {
+							format = fmt;
+							break;
+						}
+					}
+					if ( image == null )
+						throw "Unsupported format";
+					for ( mip in 0... info.mipLevels) {
+						var pixels = image.getPixels(null, null, mip);
+						convertPixels.push(pixels);
+					}
+					sys.FileSystem.deleteFile(layerPath);
+				}
+				var convertBytes = hxd.Pixels.toDDSLayers(convertPixels);
+				for ( pixels in convertPixels )
+					pixels.dispose();
+				var tmpPath = dstPath + path.file + "_" + format + "." + path.ext;
+				sys.io.File.saveBytes(tmpPath, convertBytes);
+				return;
+			}
 		}
 		var args = ["-silent"];
 		if( mips ) {
@@ -274,21 +324,15 @@ class CompressIMG extends Convert {
 		var ext = srcPath.split(".").pop();
 		var tmpPath = null;
 		if( ext == "envd" || ext == "envs" ) {
-			#if !(sys || nodejs)
-			throw "Can't process "+srcPath;
-			#else
 			// copy temporary (compressonator uses file extension ;_;)
 			tmpPath = Sys.getEnv("TEMP")+"/output_"+dstPath.split("/").pop()+".dds";
 			sys.io.File.saveBytes(tmpPath, sys.io.File.getBytes(srcPath));
-			#end
 		}
 		if( hasParam("alpha") && format == "BC1" )
 			args = args.concat(["-DXT1UseAlpha","1","-AlphaThreshold",""+getParam("alpha")]);
 		args = args.concat(["-fd",""+getParam("format"),tmpPath == null ? srcPath : tmpPath,dstPath]);
 		command("CompressonatorCLI", args);
-		#if (sys || nodejs)
 		if( tmpPath != null ) sys.FileSystem.deleteFile(tmpPath);
-		#end
 	}
 
 	static var _ = Convert.register(new CompressIMG("png,tga,jpg,jpeg,dds,envd,envs","dds"));
@@ -323,4 +367,4 @@ class ConvertBinJSON extends Convert {
 
 }
 
-
+#end
