@@ -178,6 +178,12 @@ class Image extends Resource {
 				inf.pixelFormat = switch( dxgi ) {
 				case 28:
 					RGBA;
+				case 71: // BC1_UNORM
+					S3TC(1);
+				case 74: // BC2_UNORM
+					S3TC(2);
+				case 77: // BC3_UNORM
+					S3TC(3);
 				case 95: // BC6H_UF16
 					S3TC(6);
 				case 98: // BC7_UNORM

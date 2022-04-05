@@ -625,7 +625,7 @@ class Pixels {
 		var levels : Array<Array<Pixels>> = [];
 		var outSize = 0;
 		for( p in pixels ) {
-			if( p.format != fmt ) throw "All images must be of the same pixel format";
+			if( !p.format.equals(fmt) ) throw "All images must be of the same pixel format";
 			outSize += p.dataSize;
 			var found = false;
 			for( sz in levels ) {
@@ -722,6 +722,13 @@ class Pixels {
 			switch( fmt ) {
 			case RGBA:
 				write(28); // DXGI_FORMAT_R8G8B8A8_UNORM
+			case S3TC(n):
+				write(switch( n ) {
+				case 1: 71;
+				case 2: 74;
+				case 3: 77;
+				default: throw "Unnsupported format "+fmt;
+				});
 			default:
 				throw "Unsupported DXT10 format "+fmt;
 			}
