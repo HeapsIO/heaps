@@ -266,6 +266,58 @@ class CompressIMG extends Convert {
 			#end
 			return;
 		}
+		var path = new haxe.io.Path(srcPath);
+		if ( path.ext == "dds" ) {
+			var image = hxd.res.Any.fromBytes(srcPath, sys.io.File.getBytes(srcPath)).toImage();
+			var info = image.getInfo();
+			if ( info.layerCount > 1 && info.dataFormat == Dds ) {
+				var oldBytes = srcBytes;
+				var oldPath = srcPath;
+				for ( layer in 0...info.layerCount ) {
+					var layerPixels = [];
+					for( mip in 0...info.mipLevels ) {
+						var pixels = image.getPixels(null, null, layer * info.mipLevels + mip);
+						layerPixels.push(pixels);
+					}
+					var layerBytes = hxd.Pixels.toDDSLayers(layerPixels);
+					var tmpPath = dstPath + path.file + "_" + layer + "." + path.ext;
+					sys.io.File.saveBytes(tmpPath, layerBytes);
+					srcBytes = layerBytes;
+					srcPath =  tmpPath;
+					convert();
+					sys.FileSystem.deleteFile(tmpPath);
+				}
+				srcBytes = oldBytes;
+				srcPath = oldPath;
+				var convertPixels = [];
+				var format = null;
+				for ( layer in 0...info.layerCount ) {
+					var layerPath = null;
+					var image = null;
+					for ( fmt in ["BC1", "BC3"] ) {
+						try {
+							layerPath = dstPath + path.file + "_" + layer +"_dds_"+ fmt + "." + path.ext;
+							image = hxd.res.Any.fromBytes(layerPath, sys.io.File.getBytes(layerPath)).toImage();
+						} catch(e : Dynamic) {}
+						if ( image != null ) {
+							format = fmt;
+							break;
+						}
+					}
+					if ( image == null )
+						throw "Unsupported format";
+					for ( mip in 0... info.mipLevels) {
+						var pixels = image.getPixels(null, null, mip);
+						convertPixels.push(pixels);
+					}
+					sys.FileSystem.deleteFile(layerPath);
+				}
+				var convertBytes = hxd.Pixels.toDDSLayers(convertPixels);
+				var tmpPath = dstPath + path.file + "_" + format + "." + path.ext;
+				sys.io.File.saveBytes(tmpPath, convertBytes);
+				return;
+			}
+		}
 		var args = ["-silent"];
 		if( mips ) {
 			args.push("-miplevels");
