@@ -257,6 +257,17 @@ class MeshBatch extends MultiMaterial {
 		needUpload = true;
 	}
 
+	override function getBoundsRec( b : h3d.col.Bounds ) {
+		var old = primitive;
+		primitive = null;
+		b = super.getBoundsRec(b);
+		primitive = old;
+		if( primitive == null || flags.has(FIgnoreBounds) )
+			return b;
+		b.add(primitive.getBounds());
+		return b;
+	}
+
 	public function emitInstance() {
 		if( worldPosition == null ) syncPos();
 		var ps = primitiveSubPart;
