@@ -86,7 +86,7 @@ class ThreadAsyncLoader implements AsyncLoader {
 }
 #end
 
-#if hxnodejs
+#if (hxnodejs && !macro)
 class NodeLoader implements AsyncLoader {
 
 	var fs : hxd.fs.LocalFileSystem;
