@@ -289,8 +289,8 @@ class Font {
 				k = k.next;
 			}
 		}
-		lineHeight = lineHeight * ratio;
-		baseLine = baseLine * ratio;
+		lineHeight = Math.ceil(lineHeight * ratio);
+		baseLine = Math.ceil(baseLine * ratio);
 		this.size = size;
 	}
 
