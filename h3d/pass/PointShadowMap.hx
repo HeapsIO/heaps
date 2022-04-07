@@ -83,7 +83,7 @@ class PointShadowMap extends Shadows {
 		pshader.shadowMap = texture;
 		pshader.shadowBias = bias;
 		pshader.shadowPower = power;
-		light.getAbsPos().getPosition(pshader.lightPos);
+		pshader.lightPos = light.getAbsPos().getPosition();
 		pshader.zFar = pointLight.range;
 
 		// ESM
