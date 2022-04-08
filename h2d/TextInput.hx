@@ -382,6 +382,8 @@ class TextInput extends Text {
 			cursorX = calcTextWidth(text.substr(0, cursorIndex));
 			if( inputWidth != null && cursorX - scrollX >= inputWidth )
 				scrollX = cursorX - inputWidth + 1;
+			else if( cursorX < scrollX && cursorIndex > 0 )
+				scrollX = cursorX - hxd.Math.imin(inputWidth, Std.int(cursorX));
 			else if( cursorX < scrollX )
 				scrollX = cursorX;
 		}
