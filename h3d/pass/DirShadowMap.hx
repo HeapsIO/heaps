@@ -7,6 +7,7 @@ class DirShadowMap extends Shadows {
 	var dshader : h3d.shader.DirShadow;
 	var border : Border;
 	var mergePass = new h3d.pass.ScreenFx(new h3d.shader.MinMaxShader());
+	var boundingObject : h3d.scene.Object;
 
 	/**
 		Shrink the frustum of the light to the bounds containing all visible objects
@@ -70,7 +71,8 @@ class DirShadowMap extends Shadows {
 			// add visible casters in light camera position
 			var mtmp = new h3d.Matrix();
 			var btmp = autoZPlanes ? new h3d.col.Bounds() : null;
-			ctx.scene.iterVisibleMeshes(function(m) {
+			var obj = boundingObject != null ? boundingObject : ctx.scene;
+			obj.iterVisibleMeshes(function(m) {
 				if( m.primitive == null || !m.material.castShadows ) return;
 				var b = m.primitive.getBounds();
 				if( b.xMin > b.xMax ) return;
