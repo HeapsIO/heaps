@@ -583,10 +583,11 @@ class Graphics extends Drawable {
 		if (radius <= 0) {
 			return drawRect(x, y, w, h);
 		}
+		radius = Math.min(radius, Math.min(w * 0.5, h * 0.5));
 		x += radius;
 		y += radius;
-		w = Math.max(0, w - radius * 2);
-		h = Math.max(0, h - radius * 2);
+		w -= radius * 2;
+		h -= radius * 2;
 		flush();
 		if( nsegments == 0 )
 			nsegments = Math.ceil(Math.abs(radius * hxd.Math.degToRad(90) / 4));
