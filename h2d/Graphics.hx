@@ -585,8 +585,8 @@ class Graphics extends Drawable {
 		}
 		x += radius;
 		y += radius;
-		w -= radius * 2;
-		h -= radius * 2;
+		w = Math.max(0, w - radius * 2);
+		h = Math.max(0, h - radius * 2);
 		flush();
 		if( nsegments == 0 )
 			nsegments = Math.ceil(Math.abs(radius * hxd.Math.degToRad(90) / 4));
@@ -599,16 +599,24 @@ class Graphics extends Drawable {
 		}
 		}
 		lineTo(x, y - radius);
-		lineTo(x + w, y - radius);
+		if (w != 0) {
+			lineTo(x + w, y - radius);
+		}
 		corner(x + w, y, 270);
 		lineTo(x + w + radius, y);
-		lineTo(x + w + radius, y + h);
+		if (h != 0) {
+			lineTo(x + w + radius, y + h);
+		}
 		corner(x + w, y + h, 0);
 		lineTo(x + w, y + h + radius);
-		lineTo(x, y + h + radius);
+		if (w != 0) {
+			lineTo(x, y + h + radius);
+		}
 		corner(x, y + h, 90);
 		lineTo(x - radius, y + h);
-		lineTo(x - radius, y);
+		if (h != 0) {
+			lineTo(x - radius, y);
+		}
 		corner(x, y, 180);
 		lineTo(x, y - radius);
 		flush();
