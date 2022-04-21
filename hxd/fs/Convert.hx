@@ -89,6 +89,8 @@ class ConvertFBX2HMD extends Convert {
 			}
 			if( params.maxBones != null)
 				hmdout.maxBonesPerSkin = params.maxBones;
+			if ( params.tangents != null)
+				hmdout.generateTangents = true;
 		}
 		hmdout.load(fbx);
 		var isAnim = StringTools.startsWith(originalFilename, "Anim_") || originalFilename.toLowerCase().indexOf("_anim_") > 0;
