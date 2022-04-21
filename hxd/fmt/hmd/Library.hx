@@ -283,6 +283,15 @@ class Library {
 		mat.model = resource;
 		var props = h3d.mat.MaterialSetup.current.loadMaterialProps(mat);
 		if( props == null ) props = mat.getDefaultModelProps();
+		if( (props:Dynamic).__ref != null ) {
+			try {
+				setupMaterialLibrary(mat, hxd.res.Loader.currentInstance.load((props:Dynamic).__ref).toPrefab(), (props:Dynamic).name);
+			} catch( e : hxd.res.NotFound ) {
+				e.path += " (in "+resource.entry.path+"@"+mat.name+")";
+				throw e;
+			}
+			return mat;
+		}
 		mat.props = props;
 		return mat;
 	}
@@ -715,6 +724,18 @@ class Library {
 			b.setMax(pt2);
 			j.offsetRay = r;
 		}
+	}
+
+	public dynamic static function setupMaterialLibrary( mat : h3d.mat.Material, lib : hrt.prefab.Resource, name : String ) {
+		#if hide
+		var m  = lib.load().get(hrt.prefab.Material,name);
+		@:privateAccess m.update(mat, m.renderProps(),
+		function loadTexture ( path : String ) {
+			return hxd.res.Loader.currentInstance.load(path).toTexture();
+		});
+		#else
+		throw "Don't know how to setup material library";
+		#end
 	}
 
 }
