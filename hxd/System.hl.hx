@@ -169,7 +169,7 @@ class System {
 
 	#if hot_reload
 	@:hlNative("std","sys_check_reload")
-	static function check_reload() return false;
+	static function check_reload( ?debug : hl.Bytes ) return false;
 	#end
 
 	public dynamic static function reportError( e : Dynamic ) {
