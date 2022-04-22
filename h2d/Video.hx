@@ -1,5 +1,106 @@
 package h2d;
 
+#if (hl && hlvideo)
+
+enum FrameState {
+	Free;
+	Loading;
+	Ready;
+	Ended;
+}
+
+typedef Frame = {
+	var pixels : hxd.Pixels;
+	var state : FrameState;
+	var time : Float;
+}
+
+class FrameCache {
+	var frames : Array<Frame> = [];
+	var readCursor = 0;
+	var writeCursor = 0;
+	var width : Int;
+	var height : Int;
+
+	public function new(size : Int, w : Int, h : Int) {
+		width = w;
+		height = h;
+		frames = [];
+		for(i in 0 ... size) {
+			frames[i] = {
+				pixels: new hxd.Pixels(w, h, haxe.io.Bytes.alloc(w * h * 4), h3d.mat.Texture.nativeFormat),
+				state: Free,
+				time: 0
+			}
+		}
+	}
+
+	public function currentFrame() : Frame {
+		if( frames == null )
+			return null;
+		return frames[readCursor];
+	}
+
+	public function nextFrame() : Bool {
+		var nextCursor = (readCursor + 1) % frames.length;
+		frames[readCursor].state = Free;
+		readCursor = nextCursor;
+		return true;
+	}
+
+	function frameBufferSize() {
+		if(writeCursor < readCursor)
+			return frames.length - readCursor + writeCursor;
+		else
+			return writeCursor - readCursor;
+	}
+
+	public function isFull() {
+		if(writeCursor < readCursor)
+			return frames.length - readCursor + writeCursor >= frames.length - 1;
+		else
+			return writeCursor - readCursor >= frames.length - 1;
+	}
+
+	public function isEmpty() {
+		return readCursor == writeCursor;
+	}
+
+	public function prepareFrame(webm : hl.video.Webm, codec : hl.video.Aom.Codec, loop : Bool) : Frame {
+		if(frames[writeCursor].state != Free)
+			return null;
+
+		var savedCursor = writeCursor;
+		var f = frames[writeCursor];
+
+		var time = webm.readFrame(codec, f.pixels.bytes);
+		if(time == null) {
+			if(loop) {
+				webm.rewind();
+				time = webm.readFrame(codec, f.pixels.bytes);
+			}
+			else {
+				f.time = 0;
+				f.state = Ended;
+				return f;
+			}
+		}
+		f.time = time;
+		f.state = Ready;
+		writeCursor++; 
+		if(writeCursor >= frames.length)
+			writeCursor %= frames.length;
+		return f;
+	}
+
+	public function dispose() {
+		for(f in frames)
+			f.pixels.dispose();
+	}
+}
+
+#end
+
 /**
 	A video file playback Drawable. Due to platform specifics, each target have their own limitations.
 
@@ -12,7 +113,10 @@ class Video extends Drawable {
 	#if (hl && hlvideo)
 	var webm : hl.video.Webm;
 	var codec : hl.video.Aom.Codec;
-	var pixels : hxd.Pixels;
+	var multithread : Bool;
+	var cache : FrameCache;
+	var frameCacheSize : Int;
+	var lastFrameTime : Float;
 	#elseif js
 	var v : js.html.VideoElement;
 	var videoPlaying : Bool;
@@ -37,7 +141,7 @@ class Video extends Drawable {
 	/**
 		Tells if video currently playing.
 	**/
-	public var playing(default, null) : Bool;
+	public var playing(default,set) : Bool;
 	/**
 		Tells current timestamp of the video.
 	**/
@@ -50,12 +154,24 @@ class Video extends Drawable {
 	/**
 		Create a new Video instance.
 		@param parent An optional parent `h2d.Object` instance to which Video adds itself if set.
+		@param cacheSize <span class="label">Hashlink</span>: async precomputing up to `cache` frame. If 0, synchronized computing
 	**/
-	public function new(?parent) {
+	public function new(?parent, cacheSize : Int = 10) {
 		super(parent);
 		smooth = true;
+		#if (hl && hlvideo)
+		multithread = cacheSize != 0;
+		frameCacheSize = cacheSize == 0 ? 1 : cacheSize;
+		#end
 	}
 
+	function set_playing(b) {
+		if(!playing && b)
+			lastFrameTime = haxe.Timer.stamp();
+		playing = b;
+		return playing;
+	}
+	
 	/**
 		Sent when there is an error with the decoding or playback of the video.
 	**/
@@ -107,7 +223,9 @@ class Video extends Drawable {
 			codec.close();
 			codec = null;
 		}
-		pixels = null;
+		if( cache != null )
+			cache.dispose();
+		cache = null;
 		#elseif js
 		if ( v != null ) {
 			v.removeEventListener("ended", endHandler, true);
@@ -207,10 +325,18 @@ class Video extends Drawable {
 		var w = 0, h = 0;
 		videoWidth = webm.width;
 		videoHeight = webm.height;
+		videoTime = 0.;
+		texture = new h3d.mat.Texture(videoWidth, videoHeight);
+		tile = h2d.Tile.fromTexture(texture);
+		cache = new FrameCache(frameCacheSize, webm.width, webm.height);
+		if(multithread) {
+			threadInit();
+			while(!cache.isFull()) Sys.sleep(0.01);
+		}
+		else
+			loadNextFrame();
 		playing = true;
 		playTime = haxe.Timer.stamp();
-		videoTime = 0.;
-		loadNextFrame();
 		#end
 	}
 
@@ -241,6 +367,8 @@ class Video extends Drawable {
 			frameReady = true;
 			videoWidth = v.videoWidth;
 			videoHeight = v.videoHeight;
+			texture = new h3d.mat.Texture(videoWidth, videoHeight);
+			tile = h2d.Tile.fromTexture(texture);
 			playing = true;
 			playTime = haxe.Timer.stamp();
 			videoTime = 0.0;
@@ -260,34 +388,8 @@ class Video extends Drawable {
 	}
 
 	function loadNextFrame() {
-		if( texture == null ) {
-			var w = videoWidth, h = videoHeight;
-			texture = new h3d.mat.Texture(w, h);
-			tile = h2d.Tile.fromTexture(texture);
-			#if (hl && hlvideo)
-			pixels = new hxd.Pixels(w, h, haxe.io.Bytes.alloc(w * h * 4), h3d.mat.Texture.nativeFormat);
-			#end
-		}
 		#if (hl && hlvideo)
-		var t : Null<Float>;
-		if((t = webm.readFrame(codec, pixels.bytes)) == null) {
-			if(loopVideo) {
-				webm.rewind();
-				webm.readFrame(codec, pixels.bytes);
-				frameReady = true;
-				playTime = haxe.Timer.stamp();
-				videoTime = 0.;
-			}
-			else {
-				frameReady = false;
-				playing = false;
-				videoTime = 0.;
-			}
-		}
-		else {
-			frameReady = true; // delay decode/upload for more reliable FPS
-			videoTime = t;
-		}
+		cache.prepareFrame(webm, codec, loopVideo);
 		#end
 	}
 
@@ -298,19 +400,52 @@ class Video extends Drawable {
 		if( !playing )
 			return;
 
+		#if js 
 		if( frameReady && time >= videoTime ) {
-			#if (hl && hlvideo)
-			texture.uploadPixels(pixels);
-			frameReady = false;
-			#elseif js
 			texture.alloc();
 			texture.checkSize(videoWidth, videoHeight, 0);
 			@:privateAccess cast (@:privateAccess texture.mem.driver, h3d.impl.GlDriver).uploadTextureVideoElement(texture, v, 0, 0);
 			texture.flags.set(WasCleared);
 			texture.checkMipMapGen(0, 0);
-			#end
-			loadNextFrame();
 		}
+		#elseif (hl && hlvideo)
+		var frame = cache.currentFrame();
+		if( frame != null && frame.state == Ready) {
+			if(frame.time == 0) {
+				videoTime = 0;
+				lastFrameTime = haxe.Timer.stamp();
+			}
+			var lastFrameDelay = haxe.Timer.stamp() - lastFrameTime;
+			if(videoTime + lastFrameDelay >= frame.time) {
+				texture.uploadPixels(frame.pixels);
+				videoTime = frame.time;
+				cache.nextFrame();
+				if(!multithread)
+					loadNextFrame();
+				lastFrameTime = haxe.Timer.stamp();
+			}
+		}
+		#end
 	}
 
+	#if (hl && hlvideo)
+	public function threadInit() {
+		sys.thread.Thread.create(function() {
+			var first = true;
+			while(cache != null) {
+				try {
+					if( cache.isFull() ) {
+						first = false;
+						Sys.sleep(0.01);
+					}
+					else
+						cache.prepareFrame(webm, codec, loopVideo);
+				}
+				catch(e : Any) {
+					trace("Can't prepare frame : " + e);
+				}
+			}
+		});
+	}
+	#end
 }
