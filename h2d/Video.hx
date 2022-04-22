@@ -166,8 +166,10 @@ class Video extends Drawable {
 	}
 
 	function set_playing(b) {
+		#if (hl && hlvideo)
 		if(!playing && b)
 			lastFrameTime = haxe.Timer.stamp();
+		#end
 		playing = b;
 		return playing;
 	}
