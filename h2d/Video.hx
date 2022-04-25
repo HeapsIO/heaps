@@ -405,6 +405,8 @@ class Video extends Drawable {
 		}
 		#elseif (hl && hlvideo)
 		var frame = cache.currentFrame();
+		if( frame != null && frame.state == Ended )
+			playing = false;
 		if( frame != null && frame.state == Ready) {
 			if(frame.time == 0) {
 				videoTime = 0;
@@ -442,7 +444,7 @@ class Video extends Drawable {
 				}
 			}
 			stopThread = false;
-			trace("Stopping thread");
+			// trace("Stopping thread");
 		});
 	}
 	#end
