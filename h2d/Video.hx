@@ -87,7 +87,7 @@ class FrameCache {
 		}
 		f.time = time;
 		f.state = Ready;
-		writeCursor++; 
+		writeCursor++;
 		if(writeCursor >= frames.length)
 			writeCursor %= frames.length;
 		return f;
@@ -116,7 +116,7 @@ class Video extends Drawable {
 	var multithread : Bool;
 	var cache : FrameCache;
 	var frameCacheSize : Int;
-	var lastFrameTime : Float;
+	var stopThread = false;
 	#elseif js
 	var v : js.html.VideoElement;
 	var videoPlaying : Bool;
@@ -141,7 +141,7 @@ class Video extends Drawable {
 	/**
 		Tells if video currently playing.
 	**/
-	public var playing(default,set) : Bool;
+	public var playing : Bool;
 	/**
 		Tells current timestamp of the video.
 	**/
@@ -156,7 +156,7 @@ class Video extends Drawable {
 		@param parent An optional parent `h2d.Object` instance to which Video adds itself if set.
 		@param cacheSize <span class="label">Hashlink</span>: async precomputing up to `cache` frame. If 0, synchronized computing
 	**/
-	public function new(?parent, cacheSize : Int = 10) {
+	public function new(?parent, cacheSize : Int = 20) {
 		super(parent);
 		smooth = true;
 		#if (hl && hlvideo)
@@ -165,15 +165,6 @@ class Video extends Drawable {
 		#end
 	}
 
-	function set_playing(b) {
-		#if (hl && hlvideo)
-		if(!playing && b)
-			lastFrameTime = haxe.Timer.stamp();
-		#end
-		playing = b;
-		return playing;
-	}
-	
 	/**
 		Sent when there is an error with the decoding or playback of the video.
 	**/
@@ -217,6 +208,11 @@ class Video extends Drawable {
 	**/
 	public function dispose() {
 		#if (hl && hlvideo)
+		if( multithread ) {
+			stopThread = true;
+			while(stopThread)
+				Sys.sleep(0.01);
+		}
 		if( webm != null ) {
 			webm.close();
 			webm = null;
@@ -402,7 +398,7 @@ class Video extends Drawable {
 		if( !playing )
 			return;
 
-		#if js 
+		#if js
 		if( frameReady && time >= videoTime ) {
 			texture.alloc();
 			texture.checkSize(videoWidth, videoHeight, 0);
@@ -415,38 +411,41 @@ class Video extends Drawable {
 		if( frame != null && frame.state == Ready) {
 			if(frame.time == 0) {
 				videoTime = 0;
-				lastFrameTime = haxe.Timer.stamp();
 			}
-			var lastFrameDelay = haxe.Timer.stamp() - lastFrameTime;
-			if(videoTime + lastFrameDelay >= frame.time) {
+			if(haxe.Timer.stamp() - playTime >= frame.time) {
 				texture.uploadPixels(frame.pixels);
 				videoTime = frame.time;
 				cache.nextFrame();
 				if(!multithread)
 					loadNextFrame();
-				lastFrameTime = haxe.Timer.stamp();
 			}
 		}
 		#end
 	}
 
 	#if (hl && hlvideo)
-	public function threadInit() {
+	function threadInit() {
 		sys.thread.Thread.create(function() {
 			var first = true;
-			while(cache != null) {
-				try {
-					if( cache.isFull() ) {
-						first = false;
-						Sys.sleep(0.01);
-					}
-					else
-						cache.prepareFrame(webm, codec, loopVideo);
+			var finished = false;
+			while(!stopThread) {
+				if( cache.isFull() || finished ) {
+					first = false;
+					Sys.sleep(0.01);
 				}
-				catch(e : Any) {
-					trace("Can't prepare frame : " + e);
+				else {
+					var f = null;
+					try {
+						f = cache.prepareFrame(webm, codec, loopVideo);
+					} catch(e : Dynamic) {
+						trace(e);
+					}
+					if( !loopVideo && (f == null || f.state == Ended) )
+						finished = true;
 				}
 			}
+			stopThread = false;
+			trace("Stopping thread");
 		});
 	}
 	#end
