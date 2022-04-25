@@ -115,7 +115,7 @@ class Video extends Drawable {
 	var codec : hl.video.Aom.Codec;
 	var multithread : Bool;
 	var cache : FrameCache;
-	var frameCacheSize : Int;
+	var frameCacheSize : Int = 20;
 	var stopThread = false;
 	#elseif js
 	var v : js.html.VideoElement;
@@ -156,13 +156,9 @@ class Video extends Drawable {
 		@param parent An optional parent `h2d.Object` instance to which Video adds itself if set.
 		@param cacheSize <span class="label">Hashlink</span>: async precomputing up to `cache` frame. If 0, synchronized computing
 	**/
-	public function new(?parent, cacheSize : Int = 20) {
+	public function new(?parent) {
 		super(parent);
 		smooth = true;
-		#if (hl && hlvideo)
-		multithread = cacheSize != 0;
-		frameCacheSize = cacheSize == 0 ? 1 : cacheSize;
-		#end
 	}
 
 	/**
@@ -208,7 +204,7 @@ class Video extends Drawable {
 	**/
 	public function dispose() {
 		#if (hl && hlvideo)
-		if( multithread ) {
+		if( frameCacheSize > 1 ) {
 			stopThread = true;
 			while(stopThread)
 				Sys.sleep(0.01);
@@ -326,7 +322,8 @@ class Video extends Drawable {
 		videoTime = 0.;
 		texture = new h3d.mat.Texture(videoWidth, videoHeight);
 		tile = h2d.Tile.fromTexture(texture);
-		cache = new FrameCache(frameCacheSize, webm.width, webm.height);
+		var multithread = frameCacheSize > 1;
+		cache = new FrameCache(multithread ? frameCacheSize : 1, webm.width, webm.height);
 		if(multithread) {
 			threadInit();
 			while(!cache.isFull()) Sys.sleep(0.01);
@@ -416,7 +413,7 @@ class Video extends Drawable {
 				texture.uploadPixels(frame.pixels);
 				videoTime = frame.time;
 				cache.nextFrame();
-				if(!multithread)
+				if(frameCacheSize <= 1)
 					loadNextFrame();
 			}
 		}
