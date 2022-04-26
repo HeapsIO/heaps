@@ -283,6 +283,7 @@ class Library {
 		mat.model = resource;
 		var props = h3d.mat.MaterialSetup.current.loadMaterialProps(mat);
 		if( props == null ) props = mat.getDefaultModelProps();
+		#if hide
 		if( (props:Dynamic).__ref != null ) {
 			try {
 				setupMaterialLibrary(mat, hxd.res.Loader.currentInstance.load((props:Dynamic).__ref).toPrefab(), (props:Dynamic).name);
@@ -292,6 +293,7 @@ class Library {
 			}
 			return mat;
 		}
+		#end
 		mat.props = props;
 		return mat;
 	}
@@ -726,16 +728,14 @@ class Library {
 		}
 	}
 
+	#if hide
 	public dynamic static function setupMaterialLibrary( mat : h3d.mat.Material, lib : hrt.prefab.Resource, name : String ) {
-		#if hide
 		var m  = lib.load().get(hrt.prefab.Material,name);
 		@:privateAccess m.update(mat, m.renderProps(),
 		function loadTexture ( path : String ) {
 			return hxd.res.Loader.currentInstance.load(path).toTexture();
 		});
-		#else
-		throw "Don't know how to setup material library";
-		#end
 	}
+	#end
 
 }
