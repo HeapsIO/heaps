@@ -161,7 +161,7 @@ class System {
 				reportError(e);
 			}
 			#if hot_reload
-			check_reload();
+			if( check_reload() ) onReload();
 			#end
 		}
 		Sys.exit(0);
@@ -171,6 +171,12 @@ class System {
 	@:hlNative("std","sys_check_reload")
 	static function check_reload( ?debug : hl.Bytes ) return false;
 	#end
+	
+	/**
+		onReload() is called when app hot reload is enabled with -D hot-reload and is also enabled when running hashlink.
+		The later can be done by running `hl --hot-reload` or by setting hotReload:true in VSCode launch props.
+	**/
+	public dynamic static function onReload() {}
 
 	public dynamic static function reportError( e : Dynamic ) {
 		#if (haxe_ver >= 4.1)
