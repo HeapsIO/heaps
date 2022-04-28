@@ -282,6 +282,24 @@ class Pad {
 		d.rumble( strength, Std.int(time_s*1000.) );
 		#elseif (hldx || usesys)
 		d.rumble( strength, time_s );
+		#elseif js
+		var d: Dynamic = d;
+		var time = Std.int(time_s * 1000.);
+
+		// FF and Safari
+		if (d.hapticActuators != null && d.hapticActuators.length > 0) {
+			d.hapticActuators[0].pulse(strength, time);
+			return;
+		}
+
+		// Chrome
+		if (d.vibrationActuator != null) {
+			d.vibrationActuator.playEffect('dual-rumble', {
+				duration: time,
+				strongMagnitude: strength,
+				weakMagnitude: strength,
+			});
+		}
 		#end
 	}
 
