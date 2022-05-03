@@ -158,7 +158,6 @@ class System {
 				if( !mainLoop() ) break;
 			} catch( e : Dynamic ) {
 				hl.Api.setErrorHandler(null);
-				reportError(e);
 			}
 			#if hot_reload
 			if( check_reload() ) onReload();
@@ -171,7 +170,7 @@ class System {
 	@:hlNative("std","sys_check_reload")
 	static function check_reload( ?debug : hl.Bytes ) return false;
 	#end
-	
+
 	/**
 		onReload() is called when app hot reload is enabled with -D hot-reload and is also enabled when running hashlink.
 		The later can be done by running `hl --hot-reload` or by setting hotReload:true in VSCode launch props.
@@ -190,7 +189,7 @@ class System {
 		#if usesys
 		haxe.System.reportError(err + stack);
 		#else
-		try Sys.stderr().writeString(err + stack + "\n") catch( e : Dynamic ) {};
+		try Sys.stderr().writeString( err + stack + "\r\n" ) catch( e : Dynamic ) {};
 
 		if ( Sys.systemName() != 'Windows' )
 			return;
