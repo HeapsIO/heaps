@@ -320,6 +320,8 @@ class System {
 		return haxe.System.name;
 		#elseif hlsdl
 		return "PC/" + sdl.Sdl.getDevices()[0];
+		#elseif (hldx && dx12)
+		return "PC/" + dx.Dx12.getDeviceName();
 		#elseif hldx
 		return "PC/" + dx.Driver.getDeviceName();
 		#else
