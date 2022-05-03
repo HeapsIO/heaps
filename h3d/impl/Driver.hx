@@ -30,6 +30,12 @@ typedef VertexBuffer = { b : haxe.GLTypes.Buffer, stride : Int };
 typedef Texture = { t : haxe.GLTypes.Texture, width : Int, height : Int, internalFmt : Int, pixelFmt : Int, bits : Int, bind : Int, bias : Float };
 typedef DepthBuffer = { r : haxe.GLTypes.Renderbuffer };
 typedef Query = { q : haxe.GLTypes.Query, kind : QueryKind };
+#elseif (hldx && dx12)
+typedef IndexBuffer = {};
+typedef VertexBuffer = {};
+typedef Texture = {};
+typedef DepthBuffer = {};
+typedef Query = {};
 #elseif hldx
 typedef IndexBuffer = { res : dx.Resource, count : Int, bits : Int };
 typedef VertexBuffer = { res : dx.Resource, count : Int, stride : Int, uniform : Bool };
