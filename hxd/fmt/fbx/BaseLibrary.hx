@@ -265,8 +265,10 @@ class BaseLibrary {
 			case "LastSaved|ApplicationName": app = p.props[4].toString();
 			default:
 			}
-		if( app.indexOf("Blender") >= 0 && unitScale == originScale )
-			scaleFactor = unitScale / 100; // Adjust blender output scaling
+		if( app.indexOf("Blender") >= 0 && unitScale == originScale ) {
+			if ( unitScale == 0 ) scaleFactor = 1; // 0.9999999776482582 scale turning into 0
+			else scaleFactor = unitScale / 100; // Adjust blender output scaling
+		}
 
 		if( scaleFactor == 1 && geometryScaleFactor == 1 )
 			return;
