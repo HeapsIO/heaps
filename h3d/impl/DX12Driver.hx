@@ -17,6 +17,12 @@ class DxFrame {
 	}
 }
 
+class CompiledShader {
+	public var inputNames : InputNames;
+	public function new() {
+	}
+}
+
 class DX12Driver extends h3d.impl.Driver {
 
 	var driver : DriverInstance;
@@ -38,6 +44,10 @@ class DX12Driver extends h3d.impl.Driver {
 	var currentWidth : Int;
 	var currentHeight : Int;
 
+	var currentShader : CompiledShader;
+	var compiledShaders : Map<Int,CompiledShader> = new Map();
+	var compiler : ShaderCompiler;
+
 	static var BUFFER_COUNT = 2;
 
 	public function new() {
@@ -53,7 +63,7 @@ class DX12Driver extends h3d.impl.Driver {
 		for(i in 0...BUFFER_COUNT) {
 			var f = new DxFrame();
 			f.allocator = new CommandAllocator(Direct);
-			f.commandList = new CommandList(0, Direct, f.allocator, null);
+			f.commandList = new CommandList(Direct, f.allocator, null);
 			f.commandList.close();
 			frames.push(f);
 		}
@@ -66,6 +76,8 @@ class DX12Driver extends h3d.impl.Driver {
 		heap = new DescriptorHeap(inf);
 		rtvDescSize = Driver.getDescriptorHandleIncrementSize(RTV);
 		rtvAddress = heap.getHandle(false);
+
+		compiler = new ShaderCompiler();
 	}
 
 	function beginFrame() {
@@ -85,6 +97,40 @@ class DX12Driver extends h3d.impl.Driver {
 		clearColor.b = 0.9;
 		clearColor.a = 1.0;
 		frame.commandList.clearRenderTargetView(rtvAddress.offset(currentFrame * rtvDescSize), clearColor);
+	}
+
+	function compileShader( shader : hxsl.RuntimeShader ) : CompiledShader {
+		function compileSource( sh : hxsl.RuntimeShader.RuntimeShaderData, profile ) {
+			var args = [];
+			var out = new hxsl.HlslOut();
+			var source = out.run(sh.data);
+			return compiler.compile(source, profile, args);
+		}
+		var vs = compileSource(shader.vertex, "vs_6_0");
+		var ps = compileSource(shader.fragment, "ps_6_0");
+		var sign = new RootSignatureDesc();
+		var signSize = 0;
+		var signBytes = Driver.serializeRootSignature(sign, 1, signSize);
+		var sign = new RootSignature(signBytes,signSize);
+		var p = new GraphicsPipelineStateDesc();
+		var state = Driver.createGraphicsPipelineState(p);
+		throw "TODO";
+	}
+
+	override function selectShader( shader : hxsl.RuntimeShader ) {
+		var sh = compiledShaders.get(shader.id);
+		if( sh == null ) {
+			sh = compileShader(shader);
+			compiledShaders.set(shader.id, sh);
+		}
+		if( currentShader == sh )
+			return false;
+		currentShader = sh;
+		return true;
+	}
+
+	override function getShaderInputNames() : InputNames {
+		return currentShader.inputNames;
 	}
 
 	override function dispose() {
