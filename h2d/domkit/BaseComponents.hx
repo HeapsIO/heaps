@@ -192,6 +192,7 @@ class CustomParser extends CssValue.ValueParser {
 					cutoff: args.length >= 4 ? parseFloat(args[3]) : 0.5,
 					smooth: args.length >= 5 ? parseFloat(args[4]) : 1.0/32.0
 				};
+				adjustSdfParams(sdf);
 			default:
 				path = parsePath(value);
 		}
@@ -204,6 +205,10 @@ class CustomParser extends CssValue.ValueParser {
 		else
 			return res.to(hxd.res.BitmapFont).toFont();
 		#end
+	}
+
+	public static dynamic function adjustSdfParams( sdf : { size : Int, channel : h2d.Font.SDFChannel, cutoff : Float, smooth : Float }) {
+
 	}
 
 	public function parseTextShadow( value : CssValue ) {
