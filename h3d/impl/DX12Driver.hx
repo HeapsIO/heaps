@@ -5,6 +5,7 @@ package h3d.impl;
 import h3d.impl.Driver;
 import dx.Dx12;
 import haxe.Int64;
+import h3d.mat.Pass;
 
 private typedef Driver = Dx12;
 
@@ -18,10 +19,21 @@ class DxFrame {
 	}
 }
 
-class CompiledShader {
-	public var inputNames : InputNames;
+class CachedPipeline {
+	public var bytes : hl.Bytes;
+	public var size : Int;
 	public var pipeline : GraphicsPipelineState;
+	public function new() {
+	}
+}
+
+class CompiledShader {
+	public var inputCount : Int;
+	public var inputNames : InputNames;
+	public var pipeline : GraphicsPipelineStateDesc;
+	public var pipelines : Map<Int,hl.NativeArray<CachedPipeline>> = new Map();
 	public var rootSignature : RootSignature;
+	public var inputLayout : hl.CArray<InputElementDesc>;
 	public function new() {
 	}
 }
@@ -37,15 +49,29 @@ class CompiledShader {
 	@:packed public var viewport(default,null) : Viewport;
 	@:packed public var rect(default,null) : Rect;
 
+	public var pass : h3d.mat.Pass;
+
 	public function new() {
 		renderTargets = new hl.Bytes(8 * 8);
 		depthStencils = new hl.Bytes(8 * 8);
 		vertexViews = hl.CArray.alloc(VertexBufferView, 16);
+		pass = new h3d.mat.Pass("default");
+		pass.stencil = new h3d.mat.Stencil();
 	}
 
 }
 
 class DX12Driver extends h3d.impl.Driver {
+
+	static inline var PSIGN_MATID = 0;
+	static inline var PSIGN_COLOR_MASK = PSIGN_MATID + 4;
+	static inline var PSIGN_STENCIL_MASK = PSIGN_COLOR_MASK + 1;
+	static inline var PSIGN_STENCIL_OPS = PSIGN_STENCIL_MASK + 3;
+	static inline var PSIGN_RENDER_TARGETS = PSIGN_STENCIL_OPS + 4;
+	static inline var PSIGN_BUF_OFFSETS = PSIGN_RENDER_TARGETS + 8;
+
+	var pipelineSignature = new hl.Bytes(64);
+	var adlerOut = new hl.Bytes(4);
 
 	var driver : DriverInstance;
 	var hasDeviceError = false;
@@ -60,6 +86,9 @@ class DX12Driver extends h3d.impl.Driver {
 	var rtvAddress : Address;
 	var currentFrame : Int;
 	var fenceValue : Int64 = 0;
+	var needPipelineFlush = false;
+	var currentPass : h3d.mat.Pass;
+	var renderTargetCount = 1;
 
 	var currentWidth : Int;
 	var currentHeight : Int;
@@ -127,6 +156,7 @@ class DX12Driver extends h3d.impl.Driver {
 
 		tmp.viewport.width = currentWidth;
 		tmp.viewport.height = currentHeight;
+		tmp.viewport.maxDepth = 1;
 		tmp.rect.right = currentWidth;
 		tmp.rect.bottom = currentHeight;
 		frame.commandList.iaSetPrimitiveTopology(TRIANGLELIST);
@@ -186,7 +216,7 @@ class DX12Driver extends h3d.impl.Driver {
 				d.instanceDataStepRate = perInst;
 			} else
 				d.inputSlotClass = PER_VERTEX_DATA;
-			d.alignedByteOffset = -1;
+			d.alignedByteOffset = 1; // will trigger error if not set in makePipeline()
 		}
 
 		var p = new GraphicsPipelineStateDesc();
@@ -201,15 +231,16 @@ class DX12Driver extends h3d.impl.Driver {
 		p.numRenderTargets = 1;
 		p.rtvFormats[0] = R8G8B8A8_UNORM;
 		p.sampleDesc.count = 1;
+		p.sampleMask = -1;
 		p.inputLayout.inputElementDescs = inputLayout[0];
 		p.inputLayout.numElements = inputLayout.length;
 
-		var state = Driver.createGraphicsPipelineState(p);
-
 		var c = new CompiledShader();
 		c.inputNames = InputNames.get([for( v in inputs ) v.name]);
-		c.pipeline = state;
+		c.pipeline = p;
 		c.rootSignature = sign;
+		c.inputLayout = inputLayout;
+		c.inputCount = inputs.length;
 		return c;
 	}
 
@@ -222,8 +253,7 @@ class DX12Driver extends h3d.impl.Driver {
 		if( currentShader == sh )
 			return false;
 		currentShader = sh;
-		frame.commandList.setPipelineState(sh.pipeline);
-		frame.commandList.setGraphicsRootSignature(sh.rootSignature);
+		needPipelineFlush = true;
 		return true;
 	}
 
@@ -364,21 +394,137 @@ class DX12Driver extends h3d.impl.Driver {
 		throw "TODO";
 	}
 
+	override function selectMaterial( pass : h3d.mat.Pass ) @:privateAccess {
+		needPipelineFlush = true;
+		pipelineSignature.setI32(PSIGN_MATID, pass.bits);
+		pipelineSignature.setUI8(PSIGN_COLOR_MASK, pass.colorMask);
+		var st = pass.stencil;
+		if( st != null ) {
+			pipelineSignature.setI32(PSIGN_STENCIL_MASK, st.maskBits);
+			pipelineSignature.setI32(PSIGN_STENCIL_OPS, st.opBits);
+		} else {
+			pipelineSignature.setI32(PSIGN_STENCIL_MASK, 0);
+			pipelineSignature.setI32(PSIGN_STENCIL_OPS, 0);
+		}
+	}
+
 	override function selectMultiBuffers(buffers:h3d.Buffer.BufferOffset) {
 		var views = tmp.vertexViews;
 		var bufferCount = 0;
 		while( buffers != null ) {
-			var v = views[bufferCount++];
+			var v = views[bufferCount];
 			var bview = @:privateAccess buffers.buffer.buffer.vbuf.view;
 			v.bufferLocation = bview.bufferLocation;
 			v.sizeInBytes = bview.sizeInBytes;
 			v.strideInBytes = bview.strideInBytes;
+			pipelineSignature.setUI8(PSIGN_BUF_OFFSETS + bufferCount, buffers.offset);
 			buffers = buffers.next;
+			bufferCount++;
 		}
+		needPipelineFlush = true;
 		frame.commandList.iaSetVertexBuffers(0, bufferCount, views[0]);
 	}
 
+
+	static var CULL : Array<CullMode> = [NONE,BACK,FRONT,NONE];
+	static var BLEND_OP : Array<BlendOp> = [ADD,SUBTRACT,REV_SUBTRACT,MIN,MAX];
+	static var COMP : Array<ComparisonFunc> = [ALWAYS, NEVER, EQUAL, NOT_EQUAL, GREATER, GREATER_EQUAL, LESS, LESS_EQUAL];
+	static var BLEND : Array<Blend> = [
+		ONE,ZERO,SRC_ALPHA,SRC_COLOR,DEST_ALPHA,DEST_COLOR,INV_SRC_ALPHA,INV_SRC_COLOR,INV_DEST_ALPHA,INV_DEST_COLOR,
+		SRC1_COLOR,SRC1_ALPHA,INV_SRC1_COLOR,INV_SRC1_ALPHA,SRC_ALPHA_SAT
+	];
+	static var BLEND_ALPHA : Array<Blend> = [
+		ONE,ZERO,SRC_ALPHA,SRC_ALPHA,DEST_ALPHA,DEST_ALPHA,INV_SRC_ALPHA,INV_SRC_ALPHA,INV_DEST_ALPHA,INV_DEST_ALPHA,
+		SRC1_ALPHA,SRC1_ALPHA,INV_SRC1_ALPHA,INV_SRC1_ALPHA,SRC_ALPHA_SAT,
+	];
+
+	function makePipeline( shader : CompiledShader ) {
+		var p = shader.pipeline;
+		var passBits = pipelineSignature.getI32(PSIGN_MATID);
+		var colorMask = pipelineSignature.getUI8(PSIGN_COLOR_MASK);
+		var stencilMask = pipelineSignature.getI32(PSIGN_STENCIL_MASK) & 0xFFFFFF;
+		var stencilOp = pipelineSignature.getI32(PSIGN_STENCIL_OPS);
+
+		var csrc = Pass.getBlendSrc(passBits);
+		var cdst = Pass.getBlendDst(passBits);
+		var asrc = Pass.getBlendAlphaSrc(passBits);
+		var adst = Pass.getBlendAlphaDst(passBits);
+		var cop = Pass.getBlendOp(passBits);
+		var aop = Pass.getBlendAlphaOp(passBits);
+		var dw = Pass.getDepthWrite(passBits);
+		var cmp = Pass.getDepthTest(passBits);
+		var cull = Pass.getCulling(passBits);
+		var wire = Pass.getWireframe(passBits);
+		if( wire != 0 ) cull = 0;
+
+		p.numRenderTargets = renderTargetCount;
+		p.rasterizerState.cullMode = CULL[cull];
+		p.rasterizerState.fillMode = wire == 0 ? SOLID : WIREFRAME;
+		p.depthStencilDesc.depthEnable = cmp != 0;
+		p.depthStencilDesc.depthWriteMask = dw == 0 ? ZERO : ALL;
+		p.depthStencilDesc.depthFunc = COMP[cmp];
+
+		var bl = p.blendState;
+		for( i in 0...renderTargetCount ) {
+			var t = bl.renderTargets[i];
+			t.blendEnable = csrc != 0 || cdst != 1;
+			t.srcBlend = BLEND[csrc];
+			t.dstBlend = BLEND[cdst];
+			t.srcBlendAlpha = BLEND_ALPHA[asrc];
+			t.dstBlendAlpha = BLEND_ALPHA[adst];
+			t.blendOp = BLEND_OP[cop];
+			t.blendOpAlpha = BLEND_OP[aop];
+			t.renderTargetWriteMask = colorMask;
+		}
+		for( i in 0...shader.inputCount ) {
+			var d = shader.inputLayout[i];
+			d.alignedByteOffset = pipelineSignature.getUI8(PSIGN_BUF_OFFSETS + i) << 2;
+		}
+
+		if( stencilMask != 0 || stencilOp != 0 ) throw "TODO:stencil";
+
+		return Driver.createGraphicsPipelineState(p);
+	}
+
+	function flushPipeline() {
+		if( !needPipelineFlush ) return;
+		needPipelineFlush = false;
+		var signature = pipelineSignature;
+		var signatureSize = PSIGN_BUF_OFFSETS + currentShader.inputCount;
+		hl.Format.digest(adlerOut, signature, signatureSize, 3);
+		var hash = adlerOut.getI32(0);
+		var pipes = currentShader.pipelines.get(hash);
+		if( pipes == null )
+			pipes = new hl.NativeArray(1);
+		var insert = -1;
+		for( i in 0...pipes.length ) {
+			var p = pipes[i];
+			if( p == null ) {
+				insert = i;
+				break;
+			}
+			if( p.size == signatureSize && p.bytes.compare(0, signature, 0, signatureSize) == 0 ) {
+				frame.commandList.setPipelineState(p.pipeline);
+				return;
+			}
+		}
+		if( insert < 0 ) {
+			var pipes2 = new hl.NativeArray(pipes.length + 1);
+			pipes2.blit(0, pipes, 0, insert);
+			currentShader.pipelines.set(hash, pipes2);
+			pipes = pipes2;
+		}
+		var cp = new CachedPipeline();
+		cp.bytes = signature.sub(0, signatureSize);
+		cp.size = signatureSize;
+		cp.pipeline = makePipeline(currentShader);
+		pipes[insert] = cp;
+		frame.commandList.setGraphicsRootSignature(currentShader.rootSignature);
+		frame.commandList.setPipelineState(cp.pipeline);
+	}
+
 	override function draw( ibuf : IndexBuffer, startIndex : Int, ntriangles : Int ) {
+		flushPipeline();
 		frame.commandList.iaSetIndexBuffer(ibuf.view);
 		frame.commandList.drawIndexedInstanced(ibuf.count,1,0,0,0);
 	}
