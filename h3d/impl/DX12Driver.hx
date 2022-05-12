@@ -10,7 +10,8 @@ import h3d.mat.Pass;
 private typedef Driver = Dx12;
 
 class DxFrame {
-	public var backbuffer : Resource;
+	public var backBuffer : GpuResource;
+	public var depthBuffer : GpuResource;
 	public var allocator : CommandAllocator;
 	public var commandList : CommandList;
 	public var fenceValue : Int64;
@@ -34,6 +35,7 @@ class CompiledShader {
 	public var pipelines : Map<Int,hl.NativeArray<CachedPipeline>> = new Map();
 	public var rootSignature : RootSignature;
 	public var inputLayout : hl.CArray<InputElementDesc>;
+	public var shader : hxsl.RuntimeShader;
 	public function new() {
 	}
 }
@@ -46,6 +48,7 @@ class CompiledShader {
 	@:packed public var heap(default,null) : HeapProperties;
 	@:packed public var barrier(default,null) : ResourceBarrier;
 	@:packed public var clearColor(default,null) : ClearColor;
+	@:packed public var clearValue(default,null) : ClearValue;
 	@:packed public var viewport(default,null) : Viewport;
 	@:packed public var rect(default,null) : Rect;
 
@@ -81,9 +84,12 @@ class DX12Driver extends h3d.impl.Driver {
 	var frame : DxFrame;
 	var fence : Fence;
 	var fenceEvent : WaitEvent;
-	var heap : DescriptorHeap;
+
 	var rtvDescSize : Int;
+	var dsvDescSize : Int;
 	var rtvAddress : Address;
+	var dsvAddress : Address;
+
 	var currentFrame : Int;
 	var fenceValue : Int64 = 0;
 	var needPipelineFlush = false;
@@ -125,11 +131,17 @@ class DX12Driver extends h3d.impl.Driver {
 		var inf = new DescriptorHeapDesc();
 		inf.type = RTV;
 		inf.numDescriptors = BUFFER_COUNT;
-		heap = new DescriptorHeap(inf);
+		var heap = new DescriptorHeap(inf);
 		rtvDescSize = Driver.getDescriptorHandleIncrementSize(RTV);
 		rtvAddress = heap.getHandle(false);
 
+		inf.type = DSV;
+		var heap = new DescriptorHeap(inf);
+		dsvDescSize = Driver.getDescriptorHandleIncrementSize(DSV);
+		dsvAddress = heap.getHandle(false);
+
 		compiler = new ShaderCompiler();
+		resize(window.width, window.height);
 	}
 
 	function beginFrame() {
@@ -141,18 +153,11 @@ class DX12Driver extends h3d.impl.Driver {
 			frame.toRelease.pop().release();
 
 		var b = tmp.barrier;
-		b.resource = frame.backbuffer;
+		b.resource = frame.backBuffer;
 		b.subResource = -1;
 		b.stateBefore = PRESENT;
 		b.stateAfter = RENDER_TARGET;
 		frame.commandList.resourceBarrier(b);
-
-		var clear = tmp.clearColor;
-		clear.r = 0.4;
-		clear.g = 0.6;
-		clear.b = 0.9;
-		clear.a = 1.0;
-		frame.commandList.clearRenderTargetView(rtvAddress.offset(currentFrame * rtvDescSize), clear);
 
 		tmp.viewport.width = currentWidth;
 		tmp.viewport.height = currentHeight;
@@ -164,7 +169,8 @@ class DX12Driver extends h3d.impl.Driver {
 		frame.commandList.rsSetViewports(1, tmp.viewport);
 
 		tmp.renderTargets[0] = rtvAddress.offset(currentFrame * rtvDescSize);
-		frame.commandList.omSetRenderTargets(1, tmp.renderTargets, true, null);
+		tmp.depthStencils[0] = dsvAddress.offset(currentFrame * dsvDescSize);
+		frame.commandList.omSetRenderTargets(1, tmp.renderTargets, true, tmp.depthStencils);
 	}
 
 	static var VERTEX_FORMATS = [null,null,R32G32_FLOAT,R32G32B32_FLOAT,R32G32B32A32_FLOAT];
@@ -178,17 +184,42 @@ class DX12Driver extends h3d.impl.Driver {
 		}
 		var vs = compileSource(shader.vertex, "vs_6_0");
 		var ps = compileSource(shader.fragment, "ps_6_0");
+
+		var inputs = [];
+		for( v in shader.vertex.data.vars )
+			switch( v.kind ) {
+			case Input: inputs.push(v);
+			default:
+			}
+
+		var params = hl.CArray.alloc(RootParameterConstants,4);
+		var paramCount = 0, registerCount = 0;
+
+		function allocParam(size,vis) {
+			if( size == 0 ) return;
+			var p = params[paramCount++];
+			p.parameterType = CONSTANTS;
+			p.shaderRegister = registerCount++;
+			p.registerSpace = 0;
+			p.shaderVisibility = vis;
+			p.num32BitValues = size << 2;
+		}
+
+		registerCount = 1;
+		allocParam(shader.vertex.paramsSize, VERTEX);
+		allocParam(shader.vertex.globalsSize, VERTEX);
+		registerCount = 0;
+		allocParam(shader.fragment.paramsSize, PIXEL);
+		allocParam(shader.fragment.globalsSize, PIXEL);
+
 		var sign = new RootSignatureDesc();
 		sign.flags.set(ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+		sign.numParameters = paramCount;
+		sign.parameters = params[0];
 
 		var signSize = 0;
 		var signBytes = Driver.serializeRootSignature(sign, 1, signSize);
 		var sign = new RootSignature(signBytes,signSize);
-
-		var inputs = [];
-		for( v in shader.vertex.data.vars )
-			if( v.kind == Input )
-				inputs.push(v);
 
 		var inputLayout = hl.CArray.alloc(InputElementDesc, inputs.length);
 		for( i => v in inputs ) {
@@ -216,7 +247,7 @@ class DX12Driver extends h3d.impl.Driver {
 				d.instanceDataStepRate = perInst;
 			} else
 				d.inputSlotClass = PER_VERTEX_DATA;
-			d.alignedByteOffset = 1; // will trigger error if not set in makePipeline()
+			d.alignedByteOffset = -1;
 		}
 
 		var p = new GraphicsPipelineStateDesc();
@@ -230,10 +261,13 @@ class DX12Driver extends h3d.impl.Driver {
 		p.primitiveTopologyType = TRIANGLE;
 		p.numRenderTargets = 1;
 		p.rtvFormats[0] = R8G8B8A8_UNORM;
+		p.dsvFormat = D24_UNORM_S8_UINT;
 		p.sampleDesc.count = 1;
 		p.sampleMask = -1;
 		p.inputLayout.inputElementDescs = inputLayout[0];
 		p.inputLayout.numElements = inputLayout.length;
+
+		//Driver.createGraphicsPipelineState(p);
 
 		var c = new CompiledShader();
 		c.inputNames = InputNames.get([for( v in inputs ) v.name]);
@@ -241,7 +275,10 @@ class DX12Driver extends h3d.impl.Driver {
 		c.rootSignature = sign;
 		c.inputLayout = inputLayout;
 		c.inputCount = inputs.length;
-		return c;
+		c.shader = shader;
+		for( i in 0...inputs.length )
+			inputLayout[i].alignedByteOffset = 1; // will trigger error if not set in makePipeline()
+	   return c;
 	}
 
 	override function selectShader( shader : hxsl.RuntimeShader ) {
@@ -254,6 +291,7 @@ class DX12Driver extends h3d.impl.Driver {
 			return false;
 		currentShader = sh;
 		needPipelineFlush = true;
+		frame.commandList.setGraphicsRootSignature(currentShader.rootSignature);
 		return true;
 	}
 
@@ -262,6 +300,19 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	override function dispose() {
+	}
+
+	override function clear(?color:Vector, ?depth:Float, ?stencil:Int) {
+		if( color != null ) {
+			var clear = tmp.clearColor;
+			clear.r = color.r;
+			clear.g = color.g;
+			clear.b = color.b;
+			clear.a = color.a;
+			frame.commandList.clearRenderTargetView(rtvAddress.offset(currentFrame * rtvDescSize), clear);
+		}
+		if( depth != null || stencil != null )
+			frame.commandList.clearDepthStencilView(dsvAddress.offset(currentFrame * dsvDescSize), depth != null ? (stencil != null ? BOTH : DEPTH) : STENCIL, (depth:Float), stencil);
 	}
 
 	override function resize(width:Int, height:Int)  {
@@ -280,16 +331,37 @@ class DX12Driver extends h3d.impl.Driver {
 		fenceEvent.wait(-1);
 		fenceValue++;
 
-		for( f in frames )
-			if( f.backbuffer != null )
-				f.backbuffer.release();
+		for( f in frames ) {
+			if( f.backBuffer != null )
+				f.backBuffer.release();
+			if( f.depthBuffer != null )
+				f.depthBuffer.release();
+		}
 
-		if( !Driver.resize(width, height, BUFFER_COUNT, R8G8B8A8_UNORM) )
-			throw "Failed to resize backbuffer to " + width + "x" + height;
+		Driver.resize(width, height, BUFFER_COUNT, R8G8B8A8_UNORM);
 
 		for( i => f in frames ) {
-			f.backbuffer = Driver.getBackBuffer(i);
-			Driver.createRenderTargetView(f.backbuffer, null, rtvAddress.offset(i * rtvDescSize));
+			f.backBuffer = Driver.getBackBuffer(i);
+			Driver.createRenderTargetView(f.backBuffer, null, rtvAddress.offset(i * rtvDescSize));
+
+			var desc = new ResourceDesc();
+			var flags = new haxe.EnumFlags();
+			desc.dimension = TEXTURE2D;
+			desc.width = width;
+			desc.height = height;
+			desc.depthOrArraySize = 1;
+			desc.mipLevels = 1;
+			desc.sampleDesc.count = 1;
+			desc.format = D24_UNORM_S8_UINT;
+			desc.flags.set(ALLOW_DEPTH_STENCIL);
+			tmp.heap.type = DEFAULT;
+
+			tmp.clearValue.format = desc.format;
+			tmp.clearValue.depth = 1;
+			tmp.clearValue.stencil= 0;
+			f.depthBuffer = Driver.createCommittedResource(tmp.heap, flags, desc, DEPTH_WRITE, tmp.clearValue);
+
+			Driver.createDepthStencilView(f.depthBuffer, null, dsvAddress.offset(i * dsvDescSize));
 		}
 
 		beginFrame();
@@ -380,6 +452,24 @@ class DX12Driver extends h3d.impl.Driver {
 
 	override function uploadVertexBytes(v:VertexBuffer, startVertex:Int, vertexCount:Int, buf:haxe.io.Bytes, bufPos:Int) {
 		updateBuffer(v.res, @:privateAccess buf.b.offset(bufPos << 2), startVertex * v.stride << 2, vertexCount * v.stride << 2, VERTEX_AND_CONSTANT_BUFFER);
+	}
+
+	override function uploadShaderBuffers(buffers:h3d.shader.Buffers, which:h3d.shader.Buffers.BufferKind) {
+		uploadBuffers(buffers.vertex, which, currentShader.shader.vertex);
+		uploadBuffers(buffers.fragment, which, currentShader.shader.fragment);
+	}
+
+	function uploadBuffers( buf : h3d.shader.Buffers.ShaderBuffers, which:h3d.shader.Buffers.BufferKind, shader : hxsl.RuntimeShader.RuntimeShaderData ) {
+		switch( which ) {
+		case Params:
+			frame.commandList.setGraphicsRoot32BitConstants(0, shader.paramsSize << 2,  hl.Bytes.getArray(buf.params.toData()), 0);
+		case Globals:
+			frame.commandList.setGraphicsRoot32BitConstants(shader.paramsSize == 0 ? 0 : 1, shader.globalsSize << 2,  hl.Bytes.getArray(buf.globals.toData()), 0);
+		case Textures:
+			if( buf.tex.length > 0 ) throw "TODO";
+		case Buffers:
+			if( buf.buffers != null && buf.buffers.length > 0 ) throw "TODO";
+		}
 	}
 
 	function waitForFrame( index : Int ) {
@@ -519,7 +609,6 @@ class DX12Driver extends h3d.impl.Driver {
 		cp.size = signatureSize;
 		cp.pipeline = makePipeline(currentShader);
 		pipes[insert] = cp;
-		frame.commandList.setGraphicsRootSignature(currentShader.rootSignature);
 		frame.commandList.setPipelineState(cp.pipeline);
 	}
 
@@ -531,7 +620,7 @@ class DX12Driver extends h3d.impl.Driver {
 
 	override function present() {
 		var barrier = tmp.barrier;
-		barrier.resource = frame.backbuffer;
+		barrier.resource = frame.backBuffer;
 		barrier.subResource = -1;
 		barrier.stateBefore = RENDER_TARGET;
 		barrier.stateAfter = PRESENT;
