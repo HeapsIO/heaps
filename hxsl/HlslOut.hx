@@ -100,6 +100,7 @@ class HlslOut {
 	var allNames : Map<String, Int>;
 	var samplers : Map<Int, Array<Int>>;
 	public var varNames : Map<Int,String>;
+	public var baseRegister : Int = 0;
 
 	var varAccess : Map<Int,String>;
 
@@ -714,7 +715,7 @@ class HlslOut {
 	}
 
 	function initGlobals( s : ShaderData ) {
-		add("cbuffer _globals : register(b0) {\n");
+		add('cbuffer _globals : register(b$baseRegister) {\n');
 		for( v in s.vars )
 			if( v.kind == Global ) {
 				add("\t");
@@ -727,7 +728,7 @@ class HlslOut {
 	function initParams( s : ShaderData ) {
 		var textures = [];
 		var buffers = [];
-		add("cbuffer _params : register(b1) {\n");
+		add('cbuffer _params : register(b${baseRegister+1}) {\n');
 		for( v in s.vars )
 			if( v.kind == Param ) {
 				switch( v.type ) {
@@ -747,7 +748,7 @@ class HlslOut {
 
 		var bufCount = 0;
 		for( b in buffers ) {
-			add('cbuffer _buffer$bufCount : register(b${bufCount+2}) { ');
+			add('cbuffer _buffer$bufCount : register(b${bufCount+baseRegister+2}) { ');
 			addVar(b);
 			add("; };\n");
 			bufCount++;
