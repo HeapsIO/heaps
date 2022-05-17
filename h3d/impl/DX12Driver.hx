@@ -69,6 +69,8 @@ class CompiledShader {
 	@:packed public var viewport(default,null) : Viewport;
 	@:packed public var rect(default,null) : Rect;
 	@:packed public var tex2DSRV(default,null) : Tex2DSRV;
+	@:packed public var texCubeSRV(default,null) : TexCubeSRV;
+	@:packed public var tex2DArraySRV(default,null) : Tex2DArraySRV;
 	@:packed public var bufferSRV(default,null) : BufferSRV;
 	@:packed public var samplerDesc(default,null) : SamplerDesc;
 	@:packed public var cbvDesc(default,null) : ConstantBufferViewDesc;
@@ -82,7 +84,12 @@ class CompiledShader {
 		pass = new h3d.mat.Pass("default");
 		pass.stencil = new h3d.mat.Stencil();
 		tex2DSRV.dimension = TEXTURE2D;
+		texCubeSRV.dimension = TEXTURECUBE;
+		tex2DArraySRV.dimension = TEXTURE2DARRAY;
+		tex2DSRV.mipLevels = texCubeSRV.mipLevels = tex2DArraySRV.mipLevels = -1;
 		tex2DSRV.shader4ComponentMapping = ShaderComponentMapping.DEFAULT;
+		texCubeSRV.shader4ComponentMapping = ShaderComponentMapping.DEFAULT;
+		tex2DArraySRV.shader4ComponentMapping = ShaderComponentMapping.DEFAULT;
 		bufferSRV.dimension = BUFFER;
 		bufferSRV.flags = RAW;
 		bufferSRV.shader4ComponentMapping = ShaderComponentMapping.DEFAULT;
@@ -719,9 +726,6 @@ class DX12Driver extends h3d.impl.Driver {
 			throw t+" is compressed "+t.width+"x"+t.height+" but should be a 4x4 multiple";
 
 		var isRT = t.flags.has(Target);
-		var isCube = t.flags.has(Cube);
-		var isArray = t.flags.has(IsArray);
-
 		var td = new TextureData();
 		td.format = getTextureFormat(t);
 
@@ -774,7 +778,7 @@ class DX12Driver extends h3d.impl.Driver {
 		upd.slicePitch = pixels.dataSize;
 
 		transition(t.t, COPY_DEST);
-		if( !Driver.updateSubResource(frame.commandList, t.t.res, tmpBuf, 0, 0, 1, upd) )
+		if( !Driver.updateSubResource(frame.commandList, t.t.res, tmpBuf, 0, subRes, 1, upd) )
 			throw "Failed to update sub resource";
 		transition(t.t, PIXEL_SHADER_RESOURCE);
 
@@ -832,10 +836,22 @@ class DX12Driver extends h3d.impl.Driver {
 				var sampler = frame.samplerViews.alloc(regs.texturesCount);
 				for( i in 0...regs.texturesCount ) {
 					var t = buf.tex[i];
-					var desc = tmp.tex2DSRV;
-					desc.mipLevels = t.mipLevels;
-					desc.format = t.t.format;
-					Driver.createShaderResourceView(t.t.res, desc, srv.offset(i * frame.shaderResourceViews.stride));
+					var tdesc : ShaderResourceViewDesc;
+					if( t.flags.has(Cube) ) {
+						var desc = tmp.texCubeSRV;
+						desc.format = t.t.format;
+						tdesc = desc;
+					} else if( t.flags.has(IsArray) ) {
+						var desc = tmp.tex2DArraySRV;
+						desc.format = t.t.format;
+						desc.arraySize = t.layerCount;
+						tdesc = desc;
+					} else {
+						var desc = tmp.tex2DSRV;
+						desc.format = t.t.format;
+						tdesc = desc;
+					}
+					Driver.createShaderResourceView(t.t.res, tdesc, srv.offset(i * frame.shaderResourceViews.stride));
 
 					var desc = tmp.samplerDesc;
 					desc.filter = switch( [t.filter, t.mipMap] ) {
