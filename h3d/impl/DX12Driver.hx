@@ -11,9 +11,7 @@ private typedef Driver = Dx12;
 
 class DxFrame {
 	public var backBuffer : GpuResource;
-	public var backBufferAddress : Address;
 	public var depthBuffer : GpuResource;
-	public var depthBufferAddress : Address;
 	public var allocator : CommandAllocator;
 	public var commandList : CommandList;
 	public var fenceValue : Int64;
@@ -79,7 +77,7 @@ class CompiledShader {
 
 	public function new() {
 		renderTargets = new hl.Bytes(8 * 8);
-		depthStencils = new hl.Bytes(8 * 8);
+		depthStencils = new hl.Bytes(8);
 		vertexViews = hl.CArray.alloc(VertexBufferView, 16);
 		pass = new h3d.mat.Pass("default");
 		pass.stencil = new h3d.mat.Stencil();
@@ -99,59 +97,61 @@ class CompiledShader {
 
 }
 
-class ManagedHeapFL {
-	public var pos : Int;
-	public var count : Int;
-	public var next : ManagedHeapFL;
-	public function new(pos,count,?next) {
-		this.pos = pos;
-		this.count = count;
-		this.next = next;
-	}
-}
-
 class ManagedHeap {
 
 	public var stride(default,null) : Int;
 	var size : Int;
+	var start : Int;
+	var cursor : Int;
+	var limit : Int;
 	var heap : DescriptorHeap;
 	var address : Address;
 	var cpuToGpu : Int64;
-	var free : ManagedHeapFL;
+	var type : DescriptorHeapType;
 
 	public function new(type,size=8) {
+		this.type = type;
+		this.stride = Driver.getDescriptorHandleIncrementSize(type);
+		allocHeap(size);
+	}
+
+	function allocHeap( size : Int ) {
 		var desc = new DescriptorHeapDesc();
 		desc.type = type;
 		desc.numDescriptors = size;
 		if( type == CBV_SRV_UAV || type == SAMPLER )
 			desc.flags = SHADER_VISIBLE;
 		heap = new DescriptorHeap(desc);
-		free = new ManagedHeapFL(0, size);
+		limit = cursor = start = 0;
 		this.size = size;
-		this.stride = Driver.getDescriptorHandleIncrementSize(type);
 		address = heap.getHandle(false);
 		cpuToGpu = heap.getHandle(true).value - address.value;
 	}
 
-	public function reset() {
-		if( free == null ) {
-			free = new ManagedHeapFL(0, size);
-			return;
-		}
-		free.pos = 0;
-		free.count = size;
-		free.next = null;
+	public dynamic function onExpand( prev : DescriptorHeap, current : DescriptorHeap ) {
+		throw "Too many buffers";
 	}
 
 	public function alloc( count : Int ) {
-		if( free == null || free.count < count )
-			throw "Too many decriptors";
-		var pos = free.pos;
-		free.pos += count;
-		free.count -= count;
-		if( free.count == 0 )
-			free = free.next;
+		if( cursor >= limit && cursor + count > size )
+			cursor = 0;
+		if( cursor < limit && cursor + count >= limit ) {
+			var prev = heap;
+			allocHeap((size * 3) >> 1);
+			onExpand(prev, heap);
+		}
+		var pos = cursor;
+		cursor += count;
 		return address.offset(pos * stride);
+	}
+
+	public function clear() {
+		limit = cursor = start = 0;
+	}
+
+	public function next() {
+		limit = start;
+		start = cursor;
 	}
 
 	public inline function toGPU( address : Address ) : Address {
@@ -180,6 +180,12 @@ class VertexBufferData extends ResourceData {
 
 class TextureData extends ResourceData {
 	public var format : DxgiFormat;
+}
+
+class DepthBufferData extends ResourceData {
+}
+
+class QueryData {
 }
 
 class DX12Driver extends h3d.impl.Driver {
@@ -248,6 +254,8 @@ class DX12Driver extends h3d.impl.Driver {
 
 		renderTargetViews = new ManagedHeap(RTV);
 		depthStenciViews = new ManagedHeap(DSV);
+		renderTargetViews.onExpand = function(prev,next) frame.toRelease.push(prev);
+		depthStenciViews.onExpand = function(prev,next) frame.toRelease.push(prev);
 
 		compiler = new ShaderCompiler();
 		resize(window.width, window.height);
@@ -267,27 +275,20 @@ class DX12Driver extends h3d.impl.Driver {
 		b.stateBefore = PRESENT;
 		b.stateAfter = RENDER_TARGET;
 		frame.commandList.resourceBarrier(b);
-
-		tmp.viewport.width = currentWidth;
-		tmp.viewport.height = currentHeight;
-		tmp.viewport.maxDepth = 1;
-		tmp.rect.right = currentWidth;
-		tmp.rect.bottom = currentHeight;
 		frame.commandList.iaSetPrimitiveTopology(TRIANGLELIST);
-		frame.commandList.rsSetScissorRects(1, tmp.rect);
-		frame.commandList.rsSetViewports(1, tmp.viewport);
 
-		tmp.renderTargets[0] = frame.backBufferAddress;
-		tmp.depthStencils[0] = frame.depthBufferAddress;
-		frame.commandList.omSetRenderTargets(1, tmp.renderTargets, true, tmp.depthStencils);
+		renderTargetViews.next();
+		depthStenciViews.next();
+
+		setRenderTarget(null);
 
 		var arr = new hl.NativeArray(2);
 		arr[0] = @:privateAccess frame.shaderResourceViews.heap;
 		arr[1] = @:privateAccess frame.samplerViews.heap;
 		frame.commandList.setDescriptorHeaps(arr);
 
-		frame.shaderResourceViews.reset();
-		frame.samplerViews.reset();
+		frame.shaderResourceViews.clear();
+		frame.samplerViews.clear();
 	}
 
 	inline function unsafeCastTo<T,R>( v : T, c : Class<R> ) : R {
@@ -303,10 +304,10 @@ class DX12Driver extends h3d.impl.Driver {
 			clear.g = color.g;
 			clear.b = color.b;
 			clear.a = color.a;
-			frame.commandList.clearRenderTargetView(frame.backBufferAddress, clear);
+			frame.commandList.clearRenderTargetView(tmp.renderTargets[0], clear);
 		}
 		if( depth != null || stencil != null )
-			frame.commandList.clearDepthStencilView(frame.depthBufferAddress, depth != null ? (stencil != null ? BOTH : DEPTH) : STENCIL, (depth:Float), stencil);
+			frame.commandList.clearDepthStencilView(tmp.depthStencils[0], depth != null ? (stencil != null ? BOTH : DEPTH) : STENCIL, (depth:Float), stencil);
 	}
 
 	override function resize(width:Int, height:Int)  {
@@ -334,14 +335,11 @@ class DX12Driver extends h3d.impl.Driver {
 
 		Driver.resize(width, height, BUFFER_COUNT, R8G8B8A8_UNORM);
 
-		// TODO : use circular buffer instead
-		renderTargetViews.reset();
-		depthStenciViews.reset();
+		renderTargetViews.clear();
+		depthStenciViews.clear();
 
 		for( i => f in frames ) {
 			f.backBuffer = Driver.getBackBuffer(i);
-			f.backBufferAddress = renderTargetViews.alloc(1);
-			Driver.createRenderTargetView(f.backBuffer, null, f.backBufferAddress);
 
 			var desc = new ResourceDesc();
 			var flags = new haxe.EnumFlags();
@@ -359,8 +357,6 @@ class DX12Driver extends h3d.impl.Driver {
 			tmp.clearValue.depth = 1;
 			tmp.clearValue.stencil= 0;
 			f.depthBuffer = Driver.createCommittedResource(tmp.heap, flags, desc, DEPTH_WRITE, tmp.clearValue);
-			f.depthBufferAddress = depthStenciViews.alloc(1);
-			Driver.createDepthStencilView(f.depthBuffer, null, f.depthBufferAddress);
 		}
 
 		beginFrame();
@@ -396,6 +392,34 @@ class DX12Driver extends h3d.impl.Driver {
 		b.stateAfter = to;
 		frame.commandList.resourceBarrier(b);
 		res.state = to;
+	}
+
+	override function setRenderTarget(tex:Null<h3d.mat.Texture>, layer:Int = 0, mipLevel:Int = 0) {
+		var texView = renderTargetViews.alloc(1);
+		Driver.createRenderTargetView(tex == null ? frame.backBuffer : tex.t.res, null, texView);
+		tmp.renderTargets[0] = texView;
+		var depths = null;
+		if( tex == null || tex.depthBuffer != null ) {
+			var depthView = depthStenciViews.alloc(1);
+			Driver.createDepthStencilView(tex == null ? frame.depthBuffer : @:privateAccess tex.depthBuffer.b.res, null, depthView);
+			depths = tmp.depthStencils;
+			depths[0] = depthView;
+		}
+		frame.commandList.omSetRenderTargets(1, tmp.renderTargets, true, depths);
+
+		var w = tex == null ? currentWidth : tex.width;
+		var h = tex == null ? currentHeight : tex.height;
+		tmp.viewport.width = w;
+		tmp.viewport.height = h;
+		tmp.viewport.maxDepth = 1;
+		tmp.rect.right = w;
+		tmp.rect.bottom = h;
+		frame.commandList.rsSetScissorRects(1, tmp.rect);
+		frame.commandList.rsSetViewports(1, tmp.viewport);
+	}
+
+	override function setRenderTargets(textures:Array<h3d.mat.Texture>) {
+		throw "TODO";
 	}
 
 	// ---- SHADERS -----
@@ -740,8 +764,19 @@ class DX12Driver extends h3d.impl.Driver {
 		desc.format = td.format;
 		tmp.heap.type = DEFAULT;
 
+		var clear = null;
+		if( isRT ) {
+			desc.flags.set(ALLOW_RENDER_TARGET);
+			clear = tmp.clearValue;
+			clear.format = desc.format;
+			clear.color.r = 0;
+			clear.color.g = 0;
+			clear.color.b = 0;
+			clear.color.a = 0;
+		}
+
 		td.state = isRT ? RENDER_TARGET : COPY_DEST;
-		td.res = Driver.createCommittedResource(tmp.heap, flags, desc, isRT ? RENDER_TARGET : COPY_DEST, null);
+		td.res = Driver.createCommittedResource(tmp.heap, flags, desc, isRT ? RENDER_TARGET : COPY_DEST, clear);
 		return td;
 	}
 
@@ -1031,6 +1066,8 @@ class DX12Driver extends h3d.impl.Driver {
 		pipes[insert] = cp;
 		frame.commandList.setPipelineState(cp.pipeline);
 	}
+
+	// --- DRAW etc.
 
 	override function draw( ibuf : IndexBuffer, startIndex : Int, ntriangles : Int ) {
 		flushPipeline();
