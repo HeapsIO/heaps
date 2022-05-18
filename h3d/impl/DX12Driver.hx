@@ -682,6 +682,12 @@ class DX12Driver extends h3d.impl.Driver {
 		return currentShader.inputNames;
 	}
 
+	function disposeResource( r : ResourceData ) {
+		frame.toRelease.push(r.res);
+		r.res = null;
+		r.state = PRESENT;
+	}
+
 	// ----- BUFFERS
 
 	function allocBuffer( size : Int, heapType, state ) {
@@ -725,6 +731,14 @@ class DX12Driver extends h3d.impl.Driver {
 		view.sizeInBytes = size;
 		buf.view = view;
 		return buf;
+	}
+
+	override function disposeVertexes(v:VertexBuffer) {
+		disposeResource(v);
+	}
+
+	override function disposeIndexes(v:IndexBuffer) {
+		disposeResource(v);
 	}
 
 	function updateBuffer( res : GpuResource, bytes : hl.Bytes, startByte : Int, bytesCount : Int ) {
@@ -827,6 +841,36 @@ class DX12Driver extends h3d.impl.Driver {
 		td.state = isRT ? RENDER_TARGET : COPY_DEST;
 		td.res = Driver.createCommittedResource(tmp.heap, flags, desc, isRT ? RENDER_TARGET : COPY_DEST, clear);
 		return td;
+	}
+
+	override function allocDepthBuffer(b:h3d.mat.DepthBuffer):DepthBuffer {
+		var td = new DepthBufferData();
+		var desc = new ResourceDesc();
+		var flags = new haxe.EnumFlags();
+		desc.dimension = TEXTURE2D;
+		desc.width = b.width;
+		desc.height = b.height;
+		desc.depthOrArraySize = 1;
+		desc.mipLevels = 1;
+		desc.sampleDesc.count = 1;
+		desc.format = D24_UNORM_S8_UINT;
+		desc.flags.set(ALLOW_DEPTH_STENCIL);
+		tmp.heap.type = DEFAULT;
+
+		tmp.clearValue.format = desc.format;
+		tmp.clearValue.depth = 1;
+		tmp.clearValue.stencil= 0;
+		td.state = DEPTH_WRITE;
+		td.res = Driver.createCommittedResource(tmp.heap, flags, desc, DEPTH_WRITE, tmp.clearValue);
+		return td;
+	}
+
+	override function disposeTexture(t:h3d.mat.Texture) {
+		disposeResource(t.t);
+	}
+
+	override function disposeDepthBuffer(b:h3d.mat.DepthBuffer) {
+		disposeResource(@:privateAccess b.b);
 	}
 
 	override function uploadTextureBitmap(t:h3d.mat.Texture, bmp:hxd.BitmapData, mipLevel:Int, side:Int) {
@@ -935,6 +979,7 @@ class DX12Driver extends h3d.impl.Driver {
 						desc.format = t.t.format;
 						tdesc = desc;
 					}
+					transition(t.t, shader.vertex ? NON_PIXEL_SHADER_RESOURCE : PIXEL_SHADER_RESOURCE);
 					Driver.createShaderResourceView(t.t.res, tdesc, srv.offset(i * frame.shaderResourceViews.stride));
 
 					var desc = tmp.samplerDesc;
