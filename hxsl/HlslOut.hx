@@ -734,11 +734,15 @@ class HlslOut {
 				switch( v.type ) {
 				case TArray(t, _) if( t.isSampler() ):
 					textures.push(v);
+					continue;
 				case TBuffer(_):
 					buffers.push(v);
 					continue;
 				default:
-					if( v.type.isSampler() ) textures.push(v);
+					if( v.type.isSampler() ) {
+						textures.push(v);
+						continue;
+					}
 				}
 				add("\t");
 				addVar(v);
@@ -756,11 +760,19 @@ class HlslOut {
 		if( bufCount > 0 ) add("\n");
 
 		var ctx = new Samplers();
-		for( v in textures )
+		var texCount = 0;
+		for( v in textures ) {
+			addVar(v);
+			add(' : register(t${texCount});\n');
+			switch( v.type ) {
+			case TArray(_,SConst(n)): texCount += n;
+			default: texCount++;
+			}
 			samplers.set(v.id, ctx.make(v, []));
+		}
 
 		if( ctx.count > 0 )
-			add('SamplerState __Samplers[${ctx.count}];\n');
+			add('SamplerState __Samplers[${ctx.count}] : register(s0);\n');
 	}
 
 	function initStatics( s : ShaderData ) {
