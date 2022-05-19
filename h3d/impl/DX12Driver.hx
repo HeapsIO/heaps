@@ -10,7 +10,7 @@ import h3d.mat.Pass;
 private typedef Driver = Dx12;
 
 class DxFrame {
-	public var backBuffer : GpuResource;
+	public var backBuffer : ResourceData;
 	public var depthBuffer : GpuResource;
 	public var allocator : CommandAllocator;
 	public var commandList : CommandList;
@@ -61,6 +61,8 @@ class CompiledShader {
 	public var depthStencils : hl.BytesAccess<Address>;
 	public var vertexViews : hl.CArray<VertexBufferView>;
 	public var descriptors2 : hl.NativeArray<DescriptorHeap>;
+	public var viewports : hl.CArray<Viewport>;
+	public var rects : hl.CArray<Rect>;
 	@:packed public var heap(default,null) : HeapProperties;
 	@:packed public var barrier(default,null) : ResourceBarrier;
 	@:packed public var clearColor(default,null) : ClearColor;
@@ -80,6 +82,8 @@ class CompiledShader {
 		renderTargets = new hl.Bytes(8 * 8);
 		depthStencils = new hl.Bytes(8);
 		vertexViews = hl.CArray.alloc(VertexBufferView, 16);
+		viewports = hl.CArray.alloc(Viewport, 8);
+		rects = hl.CArray.alloc(Rect, 8);
 		pass = new h3d.mat.Pass("default");
 		pass.stencil = new h3d.mat.Stencil();
 		tex2DSRV.dimension = TEXTURE2D;
@@ -197,6 +201,16 @@ class VertexBufferData extends ResourceData {
 
 class TextureData extends ResourceData {
 	public var format : DxgiFormat;
+	public var color : h3d.Vector;
+	var clearColorChanges : Int;
+	public function setClearColor( c : h3d.Vector ) {
+		var color = color;
+		if( clearColorChanges > 10 || (color.r == c.r && color.g == c.g && color.b == c.b && color.a == c.a) )
+			return false;
+		clearColorChanges++;
+		color.load(c);
+		return true;
+	}
 }
 
 class DepthBufferData extends ResourceData {
@@ -259,6 +273,7 @@ class DX12Driver extends h3d.impl.Driver {
 		frames = [];
 		for(i in 0...BUFFER_COUNT) {
 			var f = new DxFrame();
+			f.backBuffer = new ResourceData();
 			f.allocator = new CommandAllocator(DIRECT);
 			f.commandList = new CommandList(DIRECT, f.allocator, null);
 			f.commandList.close();
@@ -287,12 +302,7 @@ class DX12Driver extends h3d.impl.Driver {
 		while( frame.toRelease.length > 0 )
 			frame.toRelease.pop().release();
 
-		var b = tmp.barrier;
-		b.resource = frame.backBuffer;
-		b.subResource = -1;
-		b.stateBefore = PRESENT;
-		b.stateAfter = RENDER_TARGET;
-		frame.commandList.resourceBarrier(b);
+		transition(frame.backBuffer, RENDER_TARGET);
 		frame.commandList.iaSetPrimitiveTopology(TRIANGLELIST);
 
 		renderTargetViews.next();
@@ -316,7 +326,20 @@ class DX12Driver extends h3d.impl.Driver {
 			clear.g = color.g;
 			clear.b = color.b;
 			clear.a = color.a;
-			frame.commandList.clearRenderTargetView(tmp.renderTargets[0], clear);
+			var count = currentRenderTargets.length;
+			if( count == 0 ) count = 1;
+			for( i in 0...count ) {
+				var tex = currentRenderTargets[i];
+				if( tex != null && tex.t.setClearColor(color) ) {
+					// update texture to use another clear value
+					var prev = tex.t;
+					tex.t = allocTexture(tex);
+					@:privateAccess tex.t.clearColorChanges = prev.clearColorChanges;
+					frame.toRelease.push(prev.res);
+					Driver.createRenderTargetView(tex.t.res, null, tmp.renderTargets[i]);
+				}
+				frame.commandList.clearRenderTargetView(tmp.renderTargets[i], clear);
+			}
 		}
 		if( depth != null || stencil != null )
 			frame.commandList.clearDepthStencilView(tmp.depthStencils[0], depth != null ? (stencil != null ? BOTH : DEPTH) : STENCIL, (depth:Float), stencil);
@@ -343,8 +366,8 @@ class DX12Driver extends h3d.impl.Driver {
 		waitGpu();
 
 		for( f in frames ) {
-			if( f.backBuffer != null )
-				f.backBuffer.release();
+			if( f.backBuffer.res != null )
+				f.backBuffer.res.release();
 			if( f.depthBuffer != null )
 				f.depthBuffer.release();
 		}
@@ -355,8 +378,9 @@ class DX12Driver extends h3d.impl.Driver {
 		depthStenciViews.clear();
 
 		for( i => f in frames ) {
-			f.backBuffer = Driver.getBackBuffer(i);
-			f.backBuffer.setName("Backbuffer#"+i);
+			f.backBuffer.res = Driver.getBackBuffer(i);
+			f.backBuffer.res.setName("Backbuffer#"+i);
+			f.backBuffer.state = PRESENT;
 
 			var desc = new ResourceDesc();
 			var flags = new haxe.EnumFlags();
@@ -412,40 +436,6 @@ class DX12Driver extends h3d.impl.Driver {
 		res.state = to;
 	}
 
-	override function setRenderTarget(tex:Null<h3d.mat.Texture>, layer:Int = 0, mipLevel:Int = 0) {
-
-		if( tex != null ) transition(tex.t, RENDER_TARGET);
-
-		var texView = renderTargetViews.alloc(1);
-		Driver.createRenderTargetView(tex == null ? frame.backBuffer : tex.t.res, null, texView);
-		tmp.renderTargets[0] = texView;
-		var depths = null;
-		if( tex == null || tex.depthBuffer != null ) {
-			var depthView = depthStenciViews.alloc(1);
-			Driver.createDepthStencilView(tex == null ? frame.depthBuffer : @:privateAccess tex.depthBuffer.b.res, null, depthView);
-			depths = tmp.depthStencils;
-			depths[0] = depthView;
-			depthEnabled = true;
-		} else
-			depthEnabled = false;
-		frame.commandList.omSetRenderTargets(1, tmp.renderTargets, true, depths);
-
-		while( currentRenderTargets.length > 0 ) currentRenderTargets.pop();
-		if( tex != null ) currentRenderTargets.push(tex);
-
-		var w = tex == null ? currentWidth : tex.width;
-		var h = tex == null ? currentHeight : tex.height;
-		tmp.viewport.width = w;
-		tmp.viewport.height = h;
-		tmp.viewport.maxDepth = 1;
-		tmp.rect.right = w;
-		tmp.rect.bottom = h;
-		frame.commandList.rsSetScissorRects(1, tmp.rect);
-		frame.commandList.rsSetViewports(1, tmp.viewport);
-
-		pipelineSignature.setI32(PSIGN_RENDER_TARGETS, tex == null ? 0 : getRTBits(tex) | (depths == null ? 0 : 0x80000000));
-		needPipelineFlush = true;
-	}
 
 	function getRTBits( tex : h3d.mat.Texture ) {
 		inline function mk(channels,format) {
@@ -468,8 +458,73 @@ class DX12Driver extends h3d.impl.Driver {
 		}
 	}
 
+	function getDepthView( tex : h3d.mat.Texture ) {
+		if( tex != null && tex.depthBuffer == null ) {
+			depthEnabled = false;
+			return null;
+		}
+		var depthView = depthStenciViews.alloc(1);
+		Driver.createDepthStencilView(tex == null ? frame.depthBuffer : @:privateAccess tex.depthBuffer.b.res, null, depthView);
+		var depths = tmp.depthStencils;
+		depths[0] = depthView;
+		depthEnabled = true;
+		return depths;
+	}
+
+	override function setRenderTarget(tex:Null<h3d.mat.Texture>, layer:Int = 0, mipLevel:Int = 0) {
+
+		if( tex != null ) transition(tex.t, RENDER_TARGET);
+
+		var texView = renderTargetViews.alloc(1);
+		Driver.createRenderTargetView(tex == null ? frame.backBuffer.res : tex.t.res, null, texView);
+		tmp.renderTargets[0] = texView;
+		frame.commandList.omSetRenderTargets(1, tmp.renderTargets, true, getDepthView(tex));
+
+		while( currentRenderTargets.length > 0 ) currentRenderTargets.pop();
+		if( tex != null ) currentRenderTargets.push(tex);
+
+		var w = tex == null ? currentWidth : tex.width;
+		var h = tex == null ? currentHeight : tex.height;
+		tmp.viewport.width = w;
+		tmp.viewport.height = h;
+		tmp.viewport.maxDepth = 1;
+		tmp.rect.right = w;
+		tmp.rect.bottom = h;
+		frame.commandList.rsSetScissorRects(1, tmp.rect);
+		frame.commandList.rsSetViewports(1, tmp.viewport);
+
+		pipelineSignature.setI32(PSIGN_RENDER_TARGETS, tex == null ? 0 : getRTBits(tex) | (depthEnabled ? 0x80000000 : 0));
+		needPipelineFlush = true;
+	}
+
 	override function setRenderTargets(textures:Array<h3d.mat.Texture>) {
-		throw "TODO";
+		while( currentRenderTargets.length > textures.length )
+			currentRenderTargets.pop();
+
+		var texViews = renderTargetViews.alloc(textures.length);
+		var bits = 0;
+		for( i => t in textures ) {
+			var view = texViews.offset(renderTargetViews.stride * i);
+			Driver.createRenderTargetView(t.t.res, null, view);
+			tmp.renderTargets[i] = view;
+			currentRenderTargets[i] = t;
+			bits |= getRTBits(t) << (i << 2);
+			var vp = tmp.viewports[i];
+			vp.width = t.width;
+			vp.height = t.height;
+			vp.maxDepth = 1;
+			var rect = tmp.rects[i];
+			rect.right = t.width;
+			rect.bottom = t.height;
+			transition(t.t, RENDER_TARGET);
+		}
+
+		frame.commandList.omSetRenderTargets(textures.length, tmp.renderTargets, true, getDepthView(textures[0]));
+		frame.commandList.rsSetScissorRects(textures.length, tmp.rects[0]);
+		frame.commandList.rsSetViewports(textures.length, tmp.viewports[0]);
+
+		pipelineSignature.setI32(PSIGN_RENDER_TARGETS, bits | (depthEnabled ? 0x80000000 : 0));
+		needPipelineFlush = true;
 	}
 
 	override function captureRenderBuffer( pixels : hxd.Pixels ) {
@@ -929,13 +984,15 @@ class DX12Driver extends h3d.impl.Driver {
 
 		var clear = null;
 		if( isRT ) {
+			var color = t.t == null || t.t.color == null ? new h3d.Vector(0,0,0,0) : t.t.color; // reuse prev color
 			desc.flags.set(ALLOW_RENDER_TARGET);
 			clear = tmp.clearValue;
 			clear.format = desc.format;
-			clear.color.r = 0;
-			clear.color.g = 0;
-			clear.color.b = 0;
-			clear.color.a = 0;
+			clear.color.r = color.r;
+			clear.color.g = color.g;
+			clear.color.b = color.b;
+			clear.color.a = color.a;
+			td.color = color;
 		}
 
 		td.state = isRT ? RENDER_TARGET : COPY_DEST;
@@ -1199,7 +1256,7 @@ class DX12Driver extends h3d.impl.Driver {
 		var wire = Pass.getWireframe(passBits);
 		if( wire != 0 ) cull = 0;
 
-		var rtCount = p.numRenderTargets;
+		var rtCount = currentRenderTargets.length;
 		if( rtCount == 0 ) rtCount = 1;
 
 		p.numRenderTargets = rtCount;
@@ -1231,7 +1288,7 @@ class DX12Driver extends h3d.impl.Driver {
 			d.alignedByteOffset = pipelineSignature.getUI8(PSIGN_BUF_OFFSETS + i) << 2;
 		}
 
-		if( stencilMask != 0 || stencilOp != 0 ) throw "TODO:stencil";
+		if( stencilMask != 0 || stencilOp != 0 ) trace("TODO:stencil");
 
 		return Driver.createGraphicsPipelineState(p);
 	}
@@ -1287,15 +1344,6 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	function flushFrame() {
-
-		// necessary even if we don't present so we don't get an error at begin frame
-		var barrier = tmp.barrier;
-		barrier.resource = frame.backBuffer;
-		barrier.subResource = -1;
-		barrier.stateBefore = RENDER_TARGET;
-		barrier.stateAfter = PRESENT;
-		frame.commandList.resourceBarrier(barrier);
-
 		frame.commandList.close();
 		frame.commandList.execute();
 		currentShader = null;
@@ -1305,6 +1353,8 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	override function present() {
+
+		transition(frame.backBuffer, PRESENT);
 		flushFrame();
 		Driver.present(window.vsync);
 
