@@ -95,6 +95,7 @@ class CompiledShader {
 		samplerDesc.comparisonFunc = NEVER;
 		samplerDesc.maxLod = 1e30;
 		descriptors2 = new hl.NativeArray(2);
+		barrier.subResource = -1; // all
 	}
 
 }
@@ -321,6 +322,13 @@ class DX12Driver extends h3d.impl.Driver {
 			frame.commandList.clearDepthStencilView(tmp.depthStencils[0], depth != null ? (stencil != null ? BOTH : DEPTH) : STENCIL, (depth:Float), stencil);
 	}
 
+	function waitGpu() {
+		Driver.signal(fence, fenceValue);
+		fence.setEvent(fenceValue, fenceEvent);
+		fenceEvent.wait(-1);
+		fenceValue++;
+	}
+
 	override function resize(width:Int, height:Int)  {
 
 		if( currentWidth == width && currentHeight == height )
@@ -332,10 +340,7 @@ class DX12Driver extends h3d.impl.Driver {
 		if( frame != null )
 			frame.commandList.close();
 
-		Driver.signal(fence, fenceValue);
-		fence.setEvent(fenceValue, fenceEvent);
-		fenceEvent.wait(-1);
-		fenceValue++;
+		waitGpu();
 
 		for( f in frames ) {
 			if( f.backBuffer != null )
@@ -351,6 +356,7 @@ class DX12Driver extends h3d.impl.Driver {
 
 		for( i => f in frames ) {
 			f.backBuffer = Driver.getBackBuffer(i);
+			f.backBuffer.setName("Backbuffer#"+i);
 
 			var desc = new ResourceDesc();
 			var flags = new haxe.EnumFlags();
@@ -368,6 +374,7 @@ class DX12Driver extends h3d.impl.Driver {
 			tmp.clearValue.depth = 1;
 			tmp.clearValue.stencil= 0;
 			f.depthBuffer = Driver.createCommittedResource(tmp.heap, flags, desc, DEPTH_WRITE, tmp.clearValue);
+			f.depthBuffer.setName("Depthbuffer#"+i);
 		}
 
 		beginFrame();
@@ -463,6 +470,94 @@ class DX12Driver extends h3d.impl.Driver {
 
 	override function setRenderTargets(textures:Array<h3d.mat.Texture>) {
 		throw "TODO";
+	}
+
+	override function captureRenderBuffer( pixels : hxd.Pixels ) {
+		var rt = currentRenderTargets[0];
+		if( rt == null )
+			throw "Can't capture main render buffer in DirectX";
+		captureTexPixels(pixels, rt, 0, 0);
+	}
+
+	override function capturePixels(tex:h3d.mat.Texture, layer:Int, mipLevel:Int, ?region:h2d.col.IBounds):hxd.Pixels {
+		var pixels : hxd.Pixels;
+		if (region != null) {
+			if (region.xMax > tex.width) region.xMax = tex.width;
+			if (region.yMax > tex.height) region.yMax = tex.height;
+			if (region.xMin < 0) region.xMin = 0;
+			if (region.yMin < 0) region.yMin = 0;
+			var w = region.width >> mipLevel;
+			var h = region.height >> mipLevel;
+			if( w == 0 ) w = 1;
+			if( h == 0 ) h = 1;
+			pixels = hxd.Pixels.alloc(w, h, tex.format);
+			captureTexPixels(pixels, tex, layer, mipLevel, region.xMin, region.yMin);
+		} else {
+			var w = tex.width >> mipLevel;
+			var h = tex.height >> mipLevel;
+			if( w == 0 ) w = 1;
+			if( h == 0 ) h = 1;
+			pixels = hxd.Pixels.alloc(w, h, tex.format);
+			captureTexPixels(pixels, tex, layer, mipLevel);
+		}
+		return pixels;
+	}
+
+	function captureTexPixels( pixels: hxd.Pixels, tex:h3d.mat.Texture, layer:Int, mipLevel:Int, x : Int = 0, y : Int = 0)  {
+
+		if( pixels.width == 0 || pixels.height == 0 )
+			return;
+
+		var totalSize : hl.BytesAccess<Int64> = new hl.Bytes(8);
+		var src = new TextureCopyLocation();
+		src.res = tex.t.res;
+		src.subResourceIndex = mipLevel + layer * tex.mipLevels;
+		var srcDesc = makeTextureDesc(tex);
+
+		var dst = new TextureCopyLocation();
+		dst.type = PLACED_FOOTPRINT;
+		Driver.getCopyableFootprints(srcDesc, src.subResourceIndex, 1, 0, dst.placedFootprint, null, null, totalSize);
+
+		var desc = new ResourceDesc();
+		var flags = new haxe.EnumFlags();
+		desc.dimension = BUFFER;
+		desc.width = totalSize[0];
+		desc.height = 1;
+		desc.depthOrArraySize = 1;
+		desc.mipLevels = 1;
+		desc.sampleDesc.count = 1;
+		desc.layout = ROW_MAJOR;
+		tmp.heap.type = READBACK;
+		var tmpBuf = Driver.createCommittedResource(tmp.heap, flags, desc, COPY_DEST, null);
+
+		var box = new Box();
+		box.left = x;
+		box.right = pixels.width;
+		box.top = y;
+		box.bottom = pixels.height;
+		box.back = 1;
+
+		transition(tex.t, COPY_SOURCE);
+		dst.res = tmpBuf;
+		frame.commandList.copyTextureRegion(dst, 0, 0, 0, src, box);
+
+		flushFrame();
+		waitGpu();
+
+		var output = tmpBuf.map(0, null);
+		var stride = hxd.Pixels.calcStride(pixels.width, tex.format);
+		var rowStride = dst.placedFootprint.footprint.rowPitch;
+		if( rowStride == stride )
+			(pixels.bytes:hl.Bytes).blit(pixels.offset, output, 0, stride * pixels.height);
+		else {
+			for( i in 0...pixels.height )
+				(pixels.bytes:hl.Bytes).blit(pixels.offset + i * stride, output, i * rowStride, stride);
+		}
+
+		tmpBuf.unmap(0,null);
+		tmpBuf.release();
+
+		beginFrame();
 	}
 
 	// ---- SHADERS -----
@@ -807,24 +902,29 @@ class DX12Driver extends h3d.impl.Driver {
 		}
 	}
 
-	override function allocTexture(t:h3d.mat.Texture):Texture {
-
-		if( t.format.match(S3TC(_)) && (t.width & 3 != 0 || t.height & 3 != 0) )
-			throw t+" is compressed "+t.width+"x"+t.height+" but should be a 4x4 multiple";
-
-		var isRT = t.flags.has(Target);
-		var td = new TextureData();
-		td.format = getTextureFormat(t);
-
+	function makeTextureDesc(t:h3d.mat.Texture) {
 		var desc = new ResourceDesc();
-		var flags = new haxe.EnumFlags();
 		desc.dimension = TEXTURE2D;
 		desc.width = t.width;
 		desc.height = t.height;
 		desc.depthOrArraySize = t.layerCount;
 		desc.mipLevels = t.mipLevels;
 		desc.sampleDesc.count = 1;
-		desc.format = td.format;
+		desc.format = getTextureFormat(t);
+		return desc;
+	}
+
+	override function allocTexture(t:h3d.mat.Texture):Texture {
+
+		if( t.format.match(S3TC(_)) && (t.width & 3 != 0 || t.height & 3 != 0) )
+			throw t+" is compressed "+t.width+"x"+t.height+" but should be a 4x4 multiple";
+
+		var isRT = t.flags.has(Target);
+
+		var flags = new haxe.EnumFlags();
+		var desc = makeTextureDesc(t);
+		var td = new TextureData();
+		td.format = desc.format;
 		tmp.heap.type = DEFAULT;
 
 		var clear = null;
@@ -840,6 +940,8 @@ class DX12Driver extends h3d.impl.Driver {
 
 		td.state = isRT ? RENDER_TARGET : COPY_DEST;
 		td.res = Driver.createCommittedResource(tmp.heap, flags, desc, isRT ? RENDER_TARGET : COPY_DEST, clear);
+		td.res.setName(t.name == null ? "Texture#"+t.id : t.name);
+
 		return td;
 	}
 
@@ -867,6 +969,7 @@ class DX12Driver extends h3d.impl.Driver {
 
 	override function disposeTexture(t:h3d.mat.Texture) {
 		disposeResource(t.t);
+		t.t = null;
 	}
 
 	override function disposeDepthBuffer(b:h3d.mat.DepthBuffer) {
@@ -1183,7 +1286,9 @@ class DX12Driver extends h3d.impl.Driver {
 		}
 	}
 
-	override function present() {
+	function flushFrame() {
+
+		// necessary even if we don't present so we don't get an error at begin frame
 		var barrier = tmp.barrier;
 		barrier.resource = frame.backBuffer;
 		barrier.subResource = -1;
@@ -1193,13 +1298,14 @@ class DX12Driver extends h3d.impl.Driver {
 
 		frame.commandList.close();
 		frame.commandList.execute();
-
 		currentShader = null;
-
 		Driver.flushMessages();
-
 		frame.fenceValue = fenceValue++;
 		Driver.signal(fence, frame.fenceValue);
+	}
+
+	override function present() {
+		flushFrame();
 		Driver.present(window.vsync);
 
 		waitForFrame(Driver.getCurrentBackBufferIndex());
