@@ -111,11 +111,13 @@ class Skin extends MultiMaterial {
 			if( j.offsetRay < 0 ) continue;
 			var m = currentPalette[j.bindIndex];
 			var pt = j.offsets.getMin();
-			pt.transform(m);
-			b.addSpherePos(pt.x, pt.y, pt.z, j.offsetRay * scale);
-			var pt = j.offsets.getMax();
-			pt.transform(m);
-			b.addSpherePos(pt.x, pt.y, pt.z, j.offsetRay * scale);
+			if ( m != null ) {
+				pt.transform(m);
+				b.addSpherePos(pt.x, pt.y, pt.z, j.offsetRay * scale);
+				var pt = j.offsets.getMax();
+				pt.transform(m);
+				b.addSpherePos(pt.x, pt.y, pt.z, j.offsetRay * scale);
+			}
 		}
 		return b;
 	}
@@ -227,6 +229,7 @@ class Skin extends MultiMaterial {
 		if( !jointsUpdated ) return;
 		var tmpMat = TMP_MAT;
 		for( j in skinData.allJoints ) {
+			if ( j.follow != null ) continue;
 			var id = j.index;
 			var m = currentAbsPose[id];
 			var r = currentRelPose[id];
