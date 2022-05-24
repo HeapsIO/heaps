@@ -6,6 +6,7 @@ import h3d.impl.Driver;
 import dx.Dx12;
 import haxe.Int64;
 import h3d.mat.Pass;
+import h3d.mat.Stencil;
 
 private typedef Driver = Dx12;
 
@@ -223,8 +224,9 @@ class DX12Driver extends h3d.impl.Driver {
 
 	static inline var PSIGN_MATID = 0;
 	static inline var PSIGN_COLOR_MASK = PSIGN_MATID + 4;
-	static inline var PSIGN_STENCIL_MASK = PSIGN_COLOR_MASK + 1;
-	static inline var PSIGN_STENCIL_OPS = PSIGN_STENCIL_MASK + 3;
+	static inline var PSIGN_UNUSED = PSIGN_COLOR_MASK + 1;
+	static inline var PSIGN_STENCIL_MASK = PSIGN_UNUSED + 1;
+	static inline var PSIGN_STENCIL_OPS = PSIGN_STENCIL_MASK + 2;
 	static inline var PSIGN_RENDER_TARGETS = PSIGN_STENCIL_OPS + 4;
 	static inline var PSIGN_BUF_OFFSETS = PSIGN_RENDER_TARGETS + 8;
 
@@ -258,6 +260,7 @@ class DX12Driver extends h3d.impl.Driver {
 	var tmp : TempObjects;
 	var currentRenderTargets : Array<h3d.mat.Texture> = [];
 	var depthEnabled = true;
+	var curStencilRef : Int = -1;
 
 	static var BUFFER_COUNT = 2;
 
@@ -307,6 +310,7 @@ class DX12Driver extends h3d.impl.Driver {
 
 		renderTargetViews.next();
 		depthStenciViews.next();
+		curStencilRef = -1;
 
 		setRenderTarget(null);
 
@@ -1185,10 +1189,14 @@ class DX12Driver extends h3d.impl.Driver {
 		pipelineSignature.setUI8(PSIGN_COLOR_MASK, pass.colorMask);
 		var st = pass.stencil;
 		if( st != null ) {
-			pipelineSignature.setI32(PSIGN_STENCIL_MASK, st.maskBits);
+			pipelineSignature.setUI16(PSIGN_STENCIL_MASK, st.maskBits & 0xFFFF);
 			pipelineSignature.setI32(PSIGN_STENCIL_OPS, st.opBits);
+			if( curStencilRef != st.reference ) {
+				curStencilRef = st.reference;
+				frame.commandList.omSetStencilRef(st.reference);
+			}
 		} else {
-			pipelineSignature.setI32(PSIGN_STENCIL_MASK, 0);
+			pipelineSignature.setUI16(PSIGN_STENCIL_MASK, 0);
 			pipelineSignature.setI32(PSIGN_STENCIL_OPS, 0);
 		}
 	}
@@ -1236,12 +1244,13 @@ class DX12Driver extends h3d.impl.Driver {
 		ONE,ZERO,SRC_ALPHA,SRC_ALPHA,DEST_ALPHA,DEST_ALPHA,INV_SRC_ALPHA,INV_SRC_ALPHA,INV_DEST_ALPHA,INV_DEST_ALPHA,
 		SRC1_ALPHA,SRC1_ALPHA,INV_SRC1_ALPHA,INV_SRC1_ALPHA,SRC_ALPHA_SAT,
 	];
+	static var STENCIL_OP : Array<StencilOp> = [KEEP, ZERO, REPLACE, INCR_SAT, INCR, DECR_SAT, DECR, INVERT];
 
 	function makePipeline( shader : CompiledShader ) {
 		var p = shader.pipeline;
 		var passBits = pipelineSignature.getI32(PSIGN_MATID);
 		var colorMask = pipelineSignature.getUI8(PSIGN_COLOR_MASK);
-		var stencilMask = pipelineSignature.getI32(PSIGN_STENCIL_MASK) & 0xFFFFFF;
+		var stencilMask = pipelineSignature.getUI16(PSIGN_STENCIL_MASK);
 		var stencilOp = pipelineSignature.getI32(PSIGN_STENCIL_OPS);
 
 		var csrc = Pass.getBlendSrc(passBits);
@@ -1288,7 +1297,23 @@ class DX12Driver extends h3d.impl.Driver {
 			d.alignedByteOffset = pipelineSignature.getUI8(PSIGN_BUF_OFFSETS + i) << 2;
 		}
 
-		if( stencilMask != 0 || stencilOp != 0 ) trace("TODO:stencil");
+		var stencil = stencilMask != 0 || stencilOp != 0;
+		var st = p.depthStencilDesc;
+		st.stencilEnable = stencil;
+		if( stencil ) {
+			var front = st.frontFace;
+			var back = st.backFace;
+			st.stencilReadMask = stencilMask & 0xFF;
+			st.stencilWriteMask = stencilMask >> 8;
+			front.stencilFunc = COMP[Stencil.getFrontTest(stencilOp)];
+			front.stencilPassOp = STENCIL_OP[Stencil.getFrontPass(stencilOp)];
+			front.stencilFailOp = STENCIL_OP[Stencil.getFrontSTfail(stencilOp)];
+			front.stencilDepthFailOp = STENCIL_OP[Stencil.getFrontDPfail(stencilOp)];
+			back.stencilFunc = COMP[Stencil.getBackTest(stencilOp)];
+			back.stencilPassOp = STENCIL_OP[Stencil.getBackPass(stencilOp)];
+			back.stencilFailOp = STENCIL_OP[Stencil.getBackSTfail(stencilOp)];
+			back.stencilDepthFailOp = STENCIL_OP[Stencil.getBackDPfail(stencilOp)];
+		}
 
 		return Driver.createGraphicsPipelineState(p);
 	}
@@ -1298,11 +1323,14 @@ class DX12Driver extends h3d.impl.Driver {
 		needPipelineFlush = false;
 		var signature = pipelineSignature;
 		var signatureSize = PSIGN_BUF_OFFSETS + currentShader.inputCount;
+		adlerOut.setI32(0, 0);
 		hl.Format.digest(adlerOut, signature, signatureSize, 3);
 		var hash = adlerOut.getI32(0);
 		var pipes = currentShader.pipelines.get(hash);
-		if( pipes == null )
+		if( pipes == null ) {
 			pipes = new hl.NativeArray(1);
+			currentShader.pipelines.set(hash, pipes);
+		}
 		var insert = -1;
 		for( i in 0...pipes.length ) {
 			var p = pipes[i];
@@ -1315,6 +1343,7 @@ class DX12Driver extends h3d.impl.Driver {
 				return;
 			}
 		}
+		var signatureBytes = @:privateAccess new haxe.io.Bytes(pipelineSignature, signatureSize);
 		if( insert < 0 ) {
 			var pipes2 = new hl.NativeArray(pipes.length + 1);
 			pipes2.blit(0, pipes, 0, insert);
