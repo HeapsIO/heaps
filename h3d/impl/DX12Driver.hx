@@ -76,6 +76,7 @@ class CompiledShader {
 	@:packed public var bufferSRV(default,null) : BufferSRV;
 	@:packed public var samplerDesc(default,null) : SamplerDesc;
 	@:packed public var cbvDesc(default,null) : ConstantBufferViewDesc;
+	@:packed public var rtvDesc(default,null) : RenderTargetViewDesc;
 
 	public var pass : h3d.mat.Pass;
 
@@ -259,6 +260,7 @@ class DX12Driver extends h3d.impl.Driver {
 
 	var tmp : TempObjects;
 	var currentRenderTargets : Array<h3d.mat.Texture> = [];
+	var defaultDepth : h3d.mat.DepthBuffer;
 	var depthEnabled = true;
 	var curStencilRef : Int = -1;
 
@@ -267,6 +269,14 @@ class DX12Driver extends h3d.impl.Driver {
 	public function new() {
 		window = @:privateAccess dx.Window.windows[0];
 		reset();
+	}
+
+	override function hasFeature(f:Feature):Bool {
+		return true;
+	}
+
+	override function isSupportedFormat(fmt:h3d.mat.Data.TextureFormat):Bool {
+		return true;
 	}
 
 	function reset() {
@@ -292,6 +302,7 @@ class DX12Driver extends h3d.impl.Driver {
 		depthStenciViews = new ManagedHeap(DSV);
 		renderTargetViews.onFree = function(prev) frame.toRelease.push(prev);
 		depthStenciViews.onFree = function(prev) frame.toRelease.push(prev);
+		defaultDepth = new h3d.mat.DepthBuffer(0,0, Depth24Stencil8);
 
 		compiler = new ShaderCompiler();
 		resize(window.width, window.height);
@@ -468,11 +479,15 @@ class DX12Driver extends h3d.impl.Driver {
 			return null;
 		}
 		var depthView = depthStenciViews.alloc(1);
-		Driver.createDepthStencilView(tex == null ? frame.depthBuffer : @:privateAccess tex.depthBuffer.b.res, null, depthView);
+		Driver.createDepthStencilView(tex == null || tex.depthBuffer == defaultDepth ? frame.depthBuffer : @:privateAccess tex.depthBuffer.b.res, null, depthView);
 		var depths = tmp.depthStencils;
 		depths[0] = depthView;
 		depthEnabled = true;
 		return depths;
+	}
+
+	override function getDefaultDepthBuffer():h3d.mat.DepthBuffer {
+		return defaultDepth;
 	}
 
 	override function setRenderTarget(tex:Null<h3d.mat.Texture>, layer:Int = 0, mipLevel:Int = 0) {
@@ -480,15 +495,33 @@ class DX12Driver extends h3d.impl.Driver {
 		if( tex != null ) transition(tex.t, RENDER_TARGET);
 
 		var texView = renderTargetViews.alloc(1);
-		Driver.createRenderTargetView(tex == null ? frame.backBuffer.res : tex.t.res, null, texView);
+		var desc = null;
+		if( layer != 0 || mipLevel != 0 ) {
+			desc = tmp.rtvDesc;
+			desc.format = tex.t.format;
+			if( tex.flags.has(IsArray) || tex.flags.has(Cube) ) {
+				desc.viewDimension = TEXTURE2DARRAY;
+				desc.mipSlice = mipLevel;
+				desc.firstArraySlice = layer;
+				desc.arraySize = 1;
+				desc.planeSlice = 0;
+			} else {
+				desc.viewDimension = TEXTURE2D;
+				desc.mipSlice = mipLevel;
+				desc.planeSlice = 0;
+			}
+		}
+		Driver.createRenderTargetView(tex == null ? frame.backBuffer.res : tex.t.res, desc, texView);
 		tmp.renderTargets[0] = texView;
 		frame.commandList.omSetRenderTargets(1, tmp.renderTargets, true, getDepthView(tex));
 
 		while( currentRenderTargets.length > 0 ) currentRenderTargets.pop();
 		if( tex != null ) currentRenderTargets.push(tex);
 
-		var w = tex == null ? currentWidth : tex.width;
-		var h = tex == null ? currentHeight : tex.height;
+		var w = tex == null ? currentWidth : tex.width >> mipLevel;
+		var h = tex == null ? currentHeight : tex.height >> mipLevel;
+		if( w == 0 ) w = 1;
+		if( h == 0 ) h = 1;
 		tmp.viewport.width = w;
 		tmp.viewport.height = h;
 		tmp.viewport.maxDepth = 1;
@@ -1363,7 +1396,7 @@ class DX12Driver extends h3d.impl.Driver {
 	override function draw( ibuf : IndexBuffer, startIndex : Int, ntriangles : Int ) {
 		flushPipeline();
 		frame.commandList.iaSetIndexBuffer(ibuf.view);
-		frame.commandList.drawIndexedInstanced(ibuf.count,1,0,0,0);
+		frame.commandList.drawIndexedInstanced(ntriangles * 3,1,startIndex,0,0);
 		if( frame.shaderResourceViews.available < 128 || frame.samplerViews.available < 64 ) {
 			var arr = tmp.descriptors2;
 			arr[0] = frame.shaderResourceViews.grow(function(prev) frame.toRelease.push(prev));
