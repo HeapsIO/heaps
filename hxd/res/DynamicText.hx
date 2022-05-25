@@ -178,7 +178,7 @@ class DynamicText {
 							path.push("[" + i + "]");
 							if( Api.isOfType(e, Array) ) {
 								throw "TODO";
-							} else if( Api.isOfType(e, String) ) {
+							} else if( Api.isOfType(e, String) || Reflect.isFunction(e) ) {
 								var enew = applyText(path, e, data[i], dataRef == null ? null : dataRef[i], onMissing);
 								if( enew != null )
 									elements[i] = enew;
