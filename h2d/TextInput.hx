@@ -160,21 +160,12 @@ class TextInput extends Text {
 
 		switch( e.keyCode ) {
 		case K.LEFT if (K.isDown(K.CTRL)):
-			if (cursorIndex > 0) {
-				var charset = hxd.Charset.getDefault();
-				while (cursorIndex > 0 && charset.isSpace(StringTools.fastCodeAt(text, cursorIndex - 1))) cursorIndex--;
-				while (cursorIndex > 0 && !charset.isSpace(StringTools.fastCodeAt(text, cursorIndex - 1))) cursorIndex--;
-			}
+			cursorIndex = getWordStart();
 		case K.LEFT:
 			if( cursorIndex > 0 )
 				cursorIndex--;
 		case K.RIGHT if (K.isDown(K.CTRL)):
-			var len = text.length;
-			if (cursorIndex < text.length) {
-				var charset = hxd.Charset.getDefault();
-				while (cursorIndex < len && charset.isSpace(StringTools.fastCodeAt(text, cursorIndex))) cursorIndex++;
-				while (cursorIndex < len && !charset.isSpace(StringTools.fastCodeAt(text, cursorIndex))) cursorIndex++;
-			}
+			cursorIndex = getWordEnd();
 		case K.RIGHT:
 			if( cursorIndex < text.length )
 				cursorIndex++;
@@ -190,14 +181,16 @@ class TextInput extends Text {
 		case K.DELETE:
 			if( cursorIndex < text.length && canEdit ) {
 				beforeChange();
-				text = text.substr(0, cursorIndex) + text.substr(cursorIndex + 1);
+				var end = K.isDown(K.CTRL) ? getWordEnd() : cursorIndex + 1;
+				text = text.substr(0, cursorIndex) + text.substr(end);
 				onChange();
 			}
 		case K.BACKSPACE:
 			if( cursorIndex > 0 && canEdit ) {
 				beforeChange();
-				cursorIndex--;
-				text = text.substr(0, cursorIndex) + text.substr(cursorIndex + 1);
+				var end = cursorIndex;
+				cursorIndex = K.isDown(K.CTRL) ? getWordStart() : cursorIndex - 1;
+				text = text.substr(0, cursorIndex) + text.substr(end);
 				onChange();
 			}
 		case K.ESCAPE, K.ENTER, K.NUMPAD_ENTER:
@@ -208,12 +201,14 @@ class TextInput extends Text {
 			if( undo.length > 0 && canEdit ) {
 				redo.push(curHistoryState());
 				setState(undo.pop());
+				onChange();
 			}
 			return;
 		case K.Y if( K.isDown(K.CTRL) ):
 			if( redo.length > 0 && canEdit ) {
 				undo.push(curHistoryState());
 				setState(redo.pop());
+				onChange();
 			}
 			return;
 		case K.A if (K.isDown(K.CTRL)):
@@ -297,6 +292,28 @@ class TextInput extends Text {
 		text = text.substr(0, cursorIndex) + text.substr(end);
 		selectionRange = null;
 		return true;
+	}
+
+	function getWordEnd() {
+		var len = text.length;
+		if (cursorIndex >= len) {
+			return cursorIndex;
+		}
+		var charset = hxd.Charset.getDefault();
+		var ret = cursorIndex;
+		while (ret < len && charset.isSpace(StringTools.fastCodeAt(text, ret))) ret++;
+		while (ret < len && !charset.isSpace(StringTools.fastCodeAt(text, ret))) ret++;
+		return ret;
+	}
+	function getWordStart() {
+		if (cursorIndex <= 0) {
+			return cursorIndex;
+		}
+		var charset = hxd.Charset.getDefault();
+		var ret = cursorIndex;
+		while (ret > 0 && charset.isSpace(StringTools.fastCodeAt(text, ret - 1))) ret--;
+		while (ret > 0 && !charset.isSpace(StringTools.fastCodeAt(text, ret - 1))) ret--;
+		return ret;
 	}
 
 	function setState(h:TextHistoryElement) {
