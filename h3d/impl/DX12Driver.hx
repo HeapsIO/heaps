@@ -10,6 +10,24 @@ import h3d.mat.Stencil;
 
 private typedef Driver = Dx12;
 
+class TempBuffer {
+	public var next : TempBuffer;
+	public var buffer : GpuResource;
+	public var size : Int;
+	public var lastUse : Int;
+	public function new() {
+	}
+	public inline function count() {
+		var b = this;
+		var k = 0;
+		while( b != null ) {
+			k++;
+			b = b.next;
+		}
+		return k;
+	}
+}
+
 class DxFrame {
 	public var backBuffer : ResourceData;
 	public var depthBuffer : GpuResource;
@@ -19,6 +37,8 @@ class DxFrame {
 	public var toRelease : Array<Resource> = [];
 	public var shaderResourceViews : ManagedHeap;
 	public var samplerViews : ManagedHeap;
+	public var availableBuffers : TempBuffer;
+	public var usedBuffers : TempBuffer;
 	public function new() {
 	}
 }
@@ -186,13 +206,17 @@ class ResourceData {
 	}
 }
 
-class IndexBufferData extends ResourceData {
+class BufferData extends ResourceData {
+	public var uploaded : Bool;
+}
+
+class IndexBufferData extends BufferData {
 	public var view : IndexBufferView;
 	public var count : Int;
 	public var bits : Int;
 }
 
-class VertexBufferData extends ResourceData {
+class VertexBufferData extends BufferData {
 	public var view : dx.Dx12.VertexBufferView;
 	public var stride : Int;
 }
@@ -261,8 +285,10 @@ class DX12Driver extends h3d.impl.Driver {
 	var curStencilRef : Int = -1;
 	var rtWidth : Int;
 	var rtHeight : Int;
+	var frameCount : Int;
 
 	static var BUFFER_COUNT = 2;
+	public static var DEBUG = false;
 
 	public function new() {
 		window = @:privateAccess dx.Window.windows[0];
@@ -284,7 +310,7 @@ class DX12Driver extends h3d.impl.Driver {
 
 	function reset() {
 		var flags = new DriverInitFlags();
-		flags.set(DEBUG);
+		if( DEBUG ) flags.set(DriverInitFlag.DEBUG);
 		driver = Driver.create(window, flags);
 		frames = [];
 		for(i in 0...BUFFER_COUNT) {
@@ -318,6 +344,23 @@ class DX12Driver extends h3d.impl.Driver {
 		frame.commandList.reset(frame.allocator, null);
 		while( frame.toRelease.length > 0 )
 			frame.toRelease.pop().release();
+
+		var used = frame.usedBuffers;
+		var b = frame.availableBuffers;
+		var prev = null;
+		while( b != null ) {
+			if( b.lastUse < frameCount - 120 ) {
+				b.buffer.release();
+				b = b.next;
+			} else {
+				var n = b.next;
+				b.next = used;
+				used = b;
+				b = n;
+			}
+		}
+		frame.availableBuffers = used;
+		frame.usedBuffers = null;
 
 		transition(frame.backBuffer, RENDER_TARGET);
 		frame.commandList.iaSetPrimitiveTopology(TRIANGLELIST);
@@ -921,6 +964,7 @@ class DX12Driver extends h3d.impl.Driver {
 		view.strideInBytes = m.stride << 2;
 		buf.view = view;
 		buf.stride = m.stride;
+		buf.uploaded = m.flags.has(Dynamic);
 		return buf;
 	}
 
@@ -947,37 +991,46 @@ class DX12Driver extends h3d.impl.Driver {
 		disposeResource(v);
 	}
 
-	function updateBuffer( res : GpuResource, bytes : hl.Bytes, startByte : Int, bytesCount : Int ) {
-		var tmpBuf = allocBuffer(bytesCount, UPLOAD, GENERIC_READ);
-		var ptr = tmpBuf.map(0, null);
-		ptr.blit(0, bytes, 0, bytesCount);
-		tmpBuf.unmap(0,null);
-		frame.commandList.copyBufferRegion(res, startByte, tmpBuf, 0, bytesCount);
-		frame.toRelease.push(tmpBuf);
+	function updateBuffer( b : BufferData, bytes : hl.Bytes, startByte : Int, bytesCount : Int ) {
+		var tmpBuf;
+		if( b.uploaded )
+			tmpBuf = allocDynamicBuffer(bytes.offset(startByte), bytesCount);
+		else {
+			var size = calcCBVSize(bytesCount);
+			tmpBuf = allocBuffer(size, UPLOAD, GENERIC_READ);
+			var ptr = tmpBuf.map(0, null);
+			ptr.blit(0, bytes, 0, bytesCount);
+			tmpBuf.unmap(0,null);
+		}
+		frame.commandList.copyBufferRegion(b.res, startByte, tmpBuf, 0, bytesCount);
+		if( !b.uploaded ) {
+			frame.toRelease.push(tmpBuf);
+			b.uploaded = true;
+		}
 	}
 
 	override function uploadIndexBuffer(i:IndexBuffer, startIndice:Int, indiceCount:Int, buf:hxd.IndexBuffer, bufPos:Int) {
 		transition(i, COPY_DEST);
-		updateBuffer(i.res, hl.Bytes.getArray(buf.getNative()).offset(bufPos << i.bits), startIndice << i.bits, indiceCount << i.bits);
+		updateBuffer(i, hl.Bytes.getArray(buf.getNative()).offset(bufPos << i.bits), startIndice << i.bits, indiceCount << i.bits);
 		transition(i, INDEX_BUFFER);
 	}
 
 	override function uploadIndexBytes(i:IndexBuffer, startIndice:Int, indiceCount:Int, buf:haxe.io.Bytes, bufPos:Int) {
 		transition(i, COPY_DEST);
-		updateBuffer(i.res, @:privateAccess buf.b.offset(bufPos << i.bits), startIndice << i.bits, indiceCount << i.bits);
+		updateBuffer(i, @:privateAccess buf.b.offset(bufPos << i.bits), startIndice << i.bits, indiceCount << i.bits);
 		transition(i, INDEX_BUFFER);
 	}
 
 	override function uploadVertexBuffer(v:VertexBuffer, startVertex:Int, vertexCount:Int, buf:hxd.FloatBuffer, bufPos:Int) {
 		var data = hl.Bytes.getArray(buf.getNative()).offset(bufPos<<2);
 		transition(v, COPY_DEST);
-		updateBuffer(v.res, data, startVertex * v.stride << 2, vertexCount * v.stride << 2);
+		updateBuffer(v, data, startVertex * v.stride << 2, vertexCount * v.stride << 2);
 		transition(v, VERTEX_AND_CONSTANT_BUFFER);
 	}
 
 	override function uploadVertexBytes(v:VertexBuffer, startVertex:Int, vertexCount:Int, buf:haxe.io.Bytes, bufPos:Int) {
 		transition(v, COPY_DEST);
-		updateBuffer(v.res, @:privateAccess buf.b.offset(bufPos << 2), startVertex * v.stride << 2, vertexCount * v.stride << 2);
+		updateBuffer(v, @:privateAccess buf.b.offset(bufPos << 2), startVertex * v.stride << 2, vertexCount * v.stride << 2);
 		transition(v, VERTEX_AND_CONSTANT_BUFFER);
 	}
 
@@ -1144,12 +1197,37 @@ class DX12Driver extends h3d.impl.Driver {
 		return sz;
  	}
 
-	function allocDynamicCBV( data : hl.Bytes, dataSize : Int ) {
-		var tmpBuf = allocBuffer(calcCBVSize(dataSize), UPLOAD, GENERIC_READ);
+	function allocDynamicBuffer( data : hl.Bytes, dataSize : Int ) {
+		var b = frame.availableBuffers, prev = null;
+		var tmpBuf = null;
+		var size = calcCBVSize(dataSize);
+		while( b != null ) {
+			if( b.size >= size && b.size < size << 1 ) {
+				tmpBuf = b.buffer;
+				if( prev == null )
+					frame.availableBuffers = b.next;
+				else
+					prev.next = b.next;
+				b.lastUse = frameCount;
+				b.next = frame.usedBuffers;
+				frame.usedBuffers = b;
+				break;
+			}
+			prev = b;
+			b = b.next;
+		}
+		if( tmpBuf == null ) {
+			tmpBuf = allocBuffer(size, UPLOAD, GENERIC_READ);
+			var b = new TempBuffer();
+			b.buffer = tmpBuf;
+			b.size = size;
+			b.lastUse = frameCount;
+			b.next = frame.usedBuffers;
+			frame.usedBuffers = b;
+		}
 		var ptr = tmpBuf.map(0, null);
 		ptr.blit(0, data, 0, dataSize);
 		tmpBuf.unmap(0,null);
-		frame.toRelease.push(tmpBuf);
 		return tmpBuf;
 	}
 
@@ -1162,7 +1240,7 @@ class DX12Driver extends h3d.impl.Driver {
 				if( regs.params & 0x100 != 0 ) {
 					// update CBV
 					var srv = frame.shaderResourceViews.alloc(1);
-					var cbv = allocDynamicCBV(data,dataSize);
+					var cbv = allocDynamicBuffer(data,dataSize);
 					var desc = tmp.cbvDesc;
 					desc.bufferLocation = cbv.getGpuVirtualAddress();
 					desc.sizeInBytes = calcCBVSize(dataSize);
@@ -1437,6 +1515,7 @@ class DX12Driver extends h3d.impl.Driver {
 
 	override function present() {
 
+		frameCount++;
 		transition(frame.backBuffer, PRESENT);
 		flushFrame();
 		Driver.present(window.vsync);
