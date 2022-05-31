@@ -54,6 +54,7 @@ class CachedPipeline {
 class ShaderRegisters {
 	public var globals : Int;
 	public var params : Int;
+	public var buffers : Int;
 	public var textures : Int;
 	public var samplers : Int;
 	public var texturesCount : Int;
@@ -219,6 +220,7 @@ class IndexBufferData extends BufferData {
 class VertexBufferData extends BufferData {
 	public var view : dx.Dx12.VertexBufferView;
 	public var stride : Int;
+	public var size : Int;
 }
 
 class TextureData extends ResourceData {
@@ -277,6 +279,7 @@ class DX12Driver extends h3d.impl.Driver {
 	var currentShader : CompiledShader;
 	var compiledShaders : Map<Int,CompiledShader> = new Map();
 	var compiler : ShaderCompiler;
+	var currentIndex : IndexBuffer;
 
 	var tmp : TempObjects;
 	var currentRenderTargets : Array<h3d.mat.Texture> = [];
@@ -368,6 +371,7 @@ class DX12Driver extends h3d.impl.Driver {
 		renderTargetViews.next();
 		depthStenciViews.next();
 		curStencilRef = -1;
+		currentIndex = null;
 
 		setRenderTarget(null);
 
@@ -789,6 +793,11 @@ class DX12Driver extends h3d.impl.Driver {
 			var regs = new ShaderRegisters();
 			regs.globals = allocConsts(sh.globalsSize, vis, false);
 			regs.params = allocConsts(sh.paramsSize, vis, sh.vertex ? vertexParamsCBV : fragmentParamsCBV);
+			if( sh.bufferCount > 0 ) {
+				regs.buffers = paramsCount;
+				for( i in 0...sh.bufferCount )
+					allocConsts(1, vis, true);
+			}
 			if( sh.texturesCount > 0 ) {
 				regs.texturesCount = sh.texturesCount;
 				regs.textures = paramsCount;
@@ -964,6 +973,7 @@ class DX12Driver extends h3d.impl.Driver {
 		view.strideInBytes = m.stride << 2;
 		buf.view = view;
 		buf.stride = m.stride;
+		buf.size = size;
 		buf.uploaded = m.flags.has(Dynamic);
 		return buf;
 	}
@@ -1297,7 +1307,20 @@ class DX12Driver extends h3d.impl.Driver {
 				frame.commandList.setGraphicsRootDescriptorTable(regs.samplers, frame.samplerViews.toGPU(sampler));
 			}
 		case Buffers:
-			if( buf.buffers != null && buf.buffers.length > 0 ) throw "TODO";
+			if( shader.bufferCount > 0 ) {
+				for( i in 0...shader.bufferCount ) {
+					var srv = frame.shaderResourceViews.alloc(1);
+					var b = buf.buffers[i];
+					var cbv = @:privateAccess b.buffer.vbuf;
+					transition(cbv, shader.vertex ? NON_PIXEL_SHADER_RESOURCE : PIXEL_SHADER_RESOURCE);
+
+					var desc = tmp.cbvDesc;
+					desc.bufferLocation = cbv.res.getGpuVirtualAddress();
+					desc.sizeInBytes = cbv.size;
+					Driver.createConstantBufferView(desc, srv);
+					frame.commandList.setGraphicsRootDescriptorTable(regs.buffers + i, frame.shaderResourceViews.toGPU(srv));
+				}
+			}
 		}
 	}
 
@@ -1494,13 +1517,29 @@ class DX12Driver extends h3d.impl.Driver {
 
 	override function draw( ibuf : IndexBuffer, startIndex : Int, ntriangles : Int ) {
 		flushPipeline();
-		frame.commandList.iaSetIndexBuffer(ibuf.view);
+		if( currentIndex != ibuf ) {
+			currentIndex = ibuf;
+			frame.commandList.iaSetIndexBuffer(ibuf.view);
+		}
 		frame.commandList.drawIndexedInstanced(ntriangles * 3,1,startIndex,0,0);
 		if( frame.shaderResourceViews.available < 128 || frame.samplerViews.available < 64 ) {
 			var arr = tmp.descriptors2;
 			arr[0] = frame.shaderResourceViews.grow(function(prev) frame.toRelease.push(prev));
 			arr[1] = frame.samplerViews.grow(function(prev) frame.toRelease.push(prev));
 			frame.commandList.setDescriptorHeaps(arr);
+		}
+	}
+
+	override function drawInstanced(ibuf:IndexBuffer, commands:InstanceBuffer) {
+		flushPipeline();
+		if( currentIndex != ibuf ) {
+			currentIndex = ibuf;
+			frame.commandList.iaSetIndexBuffer(ibuf.view);
+		}
+		if( commands.data != null ) {
+			throw "TODO:ExecuteIndirect";
+		} else {
+			frame.commandList.drawIndexedInstanced(commands.indexCount, commands.commandCount, commands.startIndex, 0, 0);
 		}
 	}
 
