@@ -62,8 +62,6 @@ class CompiledShader {
 	public var depthStencils : hl.BytesAccess<Address>;
 	public var vertexViews : hl.CArray<VertexBufferView>;
 	public var descriptors2 : hl.NativeArray<DescriptorHeap>;
-	public var viewports : hl.CArray<Viewport>;
-	public var rects : hl.CArray<Rect>;
 	@:packed public var heap(default,null) : HeapProperties;
 	@:packed public var barrier(default,null) : ResourceBarrier;
 	@:packed public var clearColor(default,null) : ClearColor;
@@ -84,8 +82,6 @@ class CompiledShader {
 		renderTargets = new hl.Bytes(8 * 8);
 		depthStencils = new hl.Bytes(8);
 		vertexViews = hl.CArray.alloc(VertexBufferView, 16);
-		viewports = hl.CArray.alloc(Viewport, 8);
-		rects = hl.CArray.alloc(Rect, 8);
 		pass = new h3d.mat.Pass("default");
 		pass.stencil = new h3d.mat.Stencil();
 		tex2DSRV.dimension = TEXTURE2D;
@@ -263,6 +259,8 @@ class DX12Driver extends h3d.impl.Driver {
 	var defaultDepth : h3d.mat.DepthBuffer;
 	var depthEnabled = true;
 	var curStencilRef : Int = -1;
+	var rtWidth : Int;
+	var rtHeight : Int;
 
 	static var BUFFER_COUNT = 2;
 
@@ -372,8 +370,8 @@ class DX12Driver extends h3d.impl.Driver {
 		if( currentWidth == width && currentHeight == height )
 			return;
 
-		currentWidth = width;
-		currentHeight = height;
+		currentWidth = rtWidth = width;
+		currentHeight = rtHeight = height;
 
 		if( frame != null )
 			frame.commandList.close();
@@ -490,6 +488,20 @@ class DX12Driver extends h3d.impl.Driver {
 		return defaultDepth;
 	}
 
+	function initViewport(w,h) {
+		rtWidth = w;
+		rtHeight = h;
+		tmp.viewport.width = w;
+		tmp.viewport.height = h;
+		tmp.viewport.maxDepth = 1;
+		tmp.rect.top = 0;
+		tmp.rect.left = 0;
+		tmp.rect.right = w;
+		tmp.rect.bottom = h;
+		frame.commandList.rsSetScissorRects(1, tmp.rect);
+		frame.commandList.rsSetViewports(1, tmp.viewport);
+	}
+
 	override function setRenderTarget(tex:Null<h3d.mat.Texture>, layer:Int = 0, mipLevel:Int = 0) {
 
 		if( tex != null ) transition(tex.t, RENDER_TARGET);
@@ -522,14 +534,7 @@ class DX12Driver extends h3d.impl.Driver {
 		var h = tex == null ? currentHeight : tex.height >> mipLevel;
 		if( w == 0 ) w = 1;
 		if( h == 0 ) h = 1;
-		tmp.viewport.width = w;
-		tmp.viewport.height = h;
-		tmp.viewport.maxDepth = 1;
-		tmp.rect.right = w;
-		tmp.rect.bottom = h;
-		frame.commandList.rsSetScissorRects(1, tmp.rect);
-		frame.commandList.rsSetViewports(1, tmp.viewport);
-
+		initViewport(w, h);
 		pipelineSignature.setI32(PSIGN_RENDER_TARGETS, tex == null ? 0 : getRTBits(tex) | (depthEnabled ? 0x80000000 : 0));
 		needPipelineFlush = true;
 	}
@@ -538,6 +543,7 @@ class DX12Driver extends h3d.impl.Driver {
 		while( currentRenderTargets.length > textures.length )
 			currentRenderTargets.pop();
 
+		var t0 = textures[0];
 		var texViews = renderTargetViews.alloc(textures.length);
 		var bits = 0;
 		for( i => t in textures ) {
@@ -546,22 +552,30 @@ class DX12Driver extends h3d.impl.Driver {
 			tmp.renderTargets[i] = view;
 			currentRenderTargets[i] = t;
 			bits |= getRTBits(t) << (i << 2);
-			var vp = tmp.viewports[i];
-			vp.width = t.width;
-			vp.height = t.height;
-			vp.maxDepth = 1;
-			var rect = tmp.rects[i];
-			rect.right = t.width;
-			rect.bottom = t.height;
 			transition(t.t, RENDER_TARGET);
 		}
 
 		frame.commandList.omSetRenderTargets(textures.length, tmp.renderTargets, true, getDepthView(textures[0]));
-		frame.commandList.rsSetScissorRects(textures.length, tmp.rects[0]);
-		frame.commandList.rsSetViewports(textures.length, tmp.viewports[0]);
+		initViewport(t0.width, t0.height);
 
 		pipelineSignature.setI32(PSIGN_RENDER_TARGETS, bits | (depthEnabled ? 0x80000000 : 0));
 		needPipelineFlush = true;
+	}
+
+	override function setRenderZone(x:Int, y:Int, width:Int, height:Int) {
+		if( width < 0 && height < 0 && x == 0 && y == 0 ) {
+			tmp.rect.left = 0;
+			tmp.rect.top = 0;
+			tmp.rect.right = rtWidth;
+			tmp.rect.bottom = rtHeight;
+			frame.commandList.rsSetScissorRects(1, tmp.rect);
+		} else {
+			tmp.rect.left = x;
+			tmp.rect.top = y;
+			tmp.rect.right = x + width;
+			tmp.rect.bottom = y + height;
+			frame.commandList.rsSetScissorRects(1, tmp.rect);
+		}
 	}
 
 	override function captureRenderBuffer( pixels : hxd.Pixels ) {
