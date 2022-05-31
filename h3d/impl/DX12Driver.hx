@@ -269,8 +269,13 @@ class DX12Driver extends h3d.impl.Driver {
 		reset();
 	}
 
-	override function hasFeature(f:Feature):Bool {
-		return true;
+	override function hasFeature(f:Feature) {
+		return switch(f) {
+		case Queries, BottomLeftCoords:
+			false;
+		default:
+			true;
+		};
 	}
 
 	override function isSupportedFormat(fmt:h3d.mat.Data.TextureFormat):Bool {
@@ -1175,6 +1180,8 @@ class DX12Driver extends h3d.impl.Driver {
 				var sampler = frame.samplerViews.alloc(regs.texturesCount);
 				for( i in 0...regs.texturesCount ) {
 					var t = buf.tex[i];
+					if( t.t == null )
+						t.alloc();
 					var tdesc : ShaderResourceViewDesc;
 					if( t.flags.has(Cube) ) {
 						var desc = tmp.texCubeSRV;
