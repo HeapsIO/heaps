@@ -27,19 +27,31 @@ class MeshInst {
 
 }
 
+class PerMeshColor extends hxsl.Shader {
+	static var SRC = {
+		@perInstance @param var color : Vec4;
+		var pixelColor : Vec4;
+		function fragment() {
+			pixelColor *= color;
+		}
+	}
+}
+
 class MeshBatch extends hxd.App {
 
 	var batch : h3d.scene.MeshBatch;
 	var meshes : Array<MeshInst>;
 	var instanced : h3d.prim.Instanced;
+	var shader : PerMeshColor;
 
 	override function init() {
 		new h3d.scene.fwd.DirLight(new h3d.Vector(-2,-3,-10), s3d);
 		var cube = new h3d.prim.Cube(1,1,1,true);
 		cube.unindex();
 		cube.addNormals();
-		cast(s3d.lightSystem,h3d.scene.fwd.LightSystem).ambientLight.set(0.5,0.5,0.5);
 		batch = new h3d.scene.MeshBatch(cube,s3d);
+		shader = new PerMeshColor();
+		batch.material.mainPass.addShader(shader);
 		meshes = [];
 		new h3d.scene.CameraController(20,s3d);
 	}
@@ -59,7 +71,7 @@ class MeshBatch extends hxd.App {
 			batch.y = m.y;
 			batch.setScale(m.scale);
 			batch.setRotation(0,0,m.rot);
-			batch.material.color.load(m.color);
+			shader.color.load(m.color);
 			batch.emitInstance();
 		}
 	}
