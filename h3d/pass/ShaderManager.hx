@@ -221,6 +221,18 @@ class ShaderManager {
 			curInstanceValue = si.s;
 			return curInstanceValue;
 		}
+		inline function getParamValue( p : hxsl.RuntimeShader.AllocParam, shaders : hxsl.ShaderList, opt = false ) : Dynamic {
+			if( p.perObjectGlobal != null ) {
+				var v : Dynamic = globals.fastGet(p.perObjectGlobal.gid);
+				if( v == null ) throw "Missing global value " + p.perObjectGlobal.path+" for shader "+shaderInfo(shaders,p.perObjectGlobal.path);
+				if( p.type.match(TChannel(_)) )
+					return v.texture;
+				return v;
+			}
+			var v = getInstance(p.instance).getParamValue(p.index);
+			if( v == null && !opt ) throw "Missing param value " + shaders.s + "." + p.name;
+			return v;
+		}
 		inline function fill(buf:h3d.shader.Buffers.ShaderBuffers, s:hxsl.RuntimeShader.RuntimeShaderData) {
 			var p = s.params;
 			var ptr = getPtr(buf.params);
