@@ -851,6 +851,15 @@ class DirectXDriver extends h3d.impl.Driver {
 		ctx.paramsContent = new hl.Bytes(shader.paramsSize * 16);
 		ctx.paramsContent.fill(0, shader.paramsSize * 16, 0xDD);
 		ctx.texturesCount = shader.texturesCount;
+
+		var p = shader.textures;
+		while( p != null ) {
+			switch( p.type ) {
+			case TArray( TSampler2D , SConst(n) ): ctx.textures2DCount = n;
+			default:
+			}
+			p = p.next;
+		}
 		ctx.bufferCount = shader.bufferCount;
 		ctx.globals = dx.Driver.createBuffer(shader.globalsSize * 16, Dynamic, ConstantBuffer, CpuWrite, None, 0, null);
 		ctx.params = dx.Driver.createBuffer(shader.paramsSize * 16, Dynamic, ConstantBuffer, CpuWrite, None, 0, null);
