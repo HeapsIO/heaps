@@ -10,7 +10,7 @@ class DirectXDriver extends h3d.impl.Driver {
 
 }
 
-#elseif hldx
+#elseif (hldx && !dx12)
 
 import h3d.impl.Driver;
 import dx.Driver;
