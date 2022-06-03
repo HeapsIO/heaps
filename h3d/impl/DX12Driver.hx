@@ -89,6 +89,7 @@ class ShaderRegisters {
 	public var textures : Int;
 	public var samplers : Int;
 	public var texturesCount : Int;
+	public var textures2DCount : Int;
 	public function new() {
 	}
 }
@@ -304,6 +305,7 @@ class DX12Driver extends h3d.impl.Driver {
 
 	var renderTargetViews : ManagedHeap;
 	var depthStenciViews : ManagedHeap;
+	var indirectCommand : CommandSignature;
 
 	var currentFrame : Int;
 	var fenceValue : Int64 = 0;
@@ -375,11 +377,19 @@ class DX12Driver extends h3d.impl.Driver {
 		depthStenciViews.onFree = function(prev) frame.toRelease.push(prev);
 		defaultDepth = new h3d.mat.DepthBuffer(0,0, Depth24Stencil8);
 
+		var desc = new CommandSignatureDesc();
+		desc.byteStride = 5 * 4;
+		desc.numArgumentDescs = 1;
+		desc.argumentDescs = new IndirectArgumentDesc();
+		desc.argumentDescs.type = DRAW_INDEXED;
+		indirectCommand = Driver.createCommandSignature(desc,null);
+
 		compiler = new ShaderCompiler();
 		resize(window.width, window.height);
 	}
 
 	function beginFrame() {
+		frameCount = hxd.Timer.frameCount;
 		currentFrame = Driver.getCurrentBackBufferIndex();
 		frame = frames[currentFrame];
 		frame.allocator.reset();
@@ -607,7 +617,10 @@ class DX12Driver extends h3d.impl.Driver {
 
 	override function setRenderTarget(tex:Null<h3d.mat.Texture>, layer:Int = 0, mipLevel:Int = 0) {
 
-		if( tex != null ) transition(tex.t, RENDER_TARGET);
+		if( tex != null ) {
+			if( tex.t == null ) tex.alloc();
+			transition(tex.t, RENDER_TARGET);
+		}
 
 		var texView = renderTargetViews.alloc(1);
 		var isArr = tex != null && (tex.flags.has(IsArray) || tex.flags.has(Cube));
@@ -854,6 +867,15 @@ class DX12Driver extends h3d.impl.Driver {
 				regs.texturesCount = sh.texturesCount;
 				regs.textures = paramsCount;
 
+				var p = sh.textures;
+				while( p != null ) {
+					switch( p.type ) {
+					case TArray( TSampler2D , SConst(n) ): regs.textures2DCount = n;
+					default:
+					}
+					p = p.next;
+				}
+
 				var r = allocDescTable(vis);
 				r.rangeType = SRV;
 				r.baseShaderRegister = 0;
@@ -1048,12 +1070,31 @@ class DX12Driver extends h3d.impl.Driver {
 		return buf;
 	}
 
+	override function allocInstanceBuffer(b:InstanceBuffer, bytes:haxe.io.Bytes) {
+		var dataSize = b.commandCount * 5 * 4;
+		var buf = allocBuffer(dataSize, DEFAULT, COPY_DEST);
+		var tmpBuf = allocDynamicBuffer(bytes, dataSize);
+		frame.commandList.copyBufferRegion(buf, 0, tmpBuf, 0, dataSize);
+		b.data = buf;
+
+		var b = tmp.barrier;
+		b.resource = buf;
+		b.stateBefore = COPY_DEST;
+		b.stateAfter = NON_PIXEL_SHADER_RESOURCE;
+		frame.commandList.resourceBarrier(b);
+	}
+
 	override function disposeVertexes(v:VertexBuffer) {
 		disposeResource(v);
 	}
 
 	override function disposeIndexes(v:IndexBuffer) {
 		disposeResource(v);
+	}
+
+	override function disposeInstanceBuffer(b:InstanceBuffer) {
+		disposeResource(b.data);
+		b.data = null;
 	}
 
 	function updateBuffer( b : BufferData, bytes : hl.Bytes, startByte : Int, bytesCount : Int ) {
@@ -1172,6 +1213,8 @@ class DX12Driver extends h3d.impl.Driver {
 		td.state = isRT ? RENDER_TARGET : COPY_DEST;
 		td.res = Driver.createCommittedResource(tmp.heap, flags, desc, isRT ? RENDER_TARGET : COPY_DEST, clear);
 		td.res.setName(t.name == null ? "Texture#"+t.id : t.name);
+		t.lastFrame = frameCount;
+		t.flags.unset(WasCleared);
 
 		return td;
 	}
@@ -1252,11 +1295,15 @@ class DX12Driver extends h3d.impl.Driver {
 		t.flags.set(WasCleared);
 	}
 
+	override function copyTexture(from:h3d.mat.Texture, to:h3d.mat.Texture):Bool {
+		return false;
+	}
+
 	// ----- PIPELINE UPDATE
 
 	override function uploadShaderBuffers(buffers:h3d.shader.Buffers, which:h3d.shader.Buffers.BufferKind) {
-		uploadBuffers(buffers.vertex, which, currentShader.shader.vertex, currentShader.vertexRegisters);
-		uploadBuffers(buffers.fragment, which, currentShader.shader.fragment, currentShader.fragmentRegisters);
+		uploadBuffers(buffers, buffers.vertex, which, currentShader.shader.vertex, currentShader.vertexRegisters);
+		uploadBuffers(buffers, buffers.fragment, which, currentShader.shader.fragment, currentShader.fragmentRegisters);
 	}
 
 	function calcCBVSize( dataSize : Int ) {
@@ -1300,7 +1347,7 @@ class DX12Driver extends h3d.impl.Driver {
 		return tmpBuf;
 	}
 
-	function uploadBuffers( buf : h3d.shader.Buffers.ShaderBuffers, which:h3d.shader.Buffers.BufferKind, shader : hxsl.RuntimeShader.RuntimeShaderData, regs : ShaderRegisters ) {
+	function uploadBuffers( buffers : h3d.shader.Buffers, buf : h3d.shader.Buffers.ShaderBuffers, which:h3d.shader.Buffers.BufferKind, shader : hxsl.RuntimeShader.RuntimeShaderData, regs : ShaderRegisters ) {
 		switch( which ) {
 		case Params:
 			if( shader.paramsSize > 0 ) {
@@ -1327,8 +1374,32 @@ class DX12Driver extends h3d.impl.Driver {
 				var sampler = frame.samplerViews.alloc(regs.texturesCount);
 				for( i in 0...regs.texturesCount ) {
 					var t = buf.tex[i];
-					if( t.t == null )
+
+					if( t == null || t.isDisposed() ) {
+						if( i < regs.textures2DCount ) {
+							var color = h3d.mat.Defaults.loadingTextureColor;
+							t = h3d.mat.Texture.fromColor(color, (color >>> 24) / 255);
+						} else {
+							t = h3d.mat.Texture.defaultCubeTexture();
+						}
+					}
+					if( t != null && t.t == null && t.realloc != null ) {
+						var s = currentShader;
 						t.alloc();
+						t.realloc();
+						if( hasDeviceError ) return;
+						if( s != currentShader ) {
+							// realloc triggered a shader change !
+							// we need to reset the original shader and reupload everything
+							currentShader = null;
+							selectShader(s.shader);
+							uploadShaderBuffers(buffers,Globals);
+							uploadShaderBuffers(buffers,Params);
+							uploadShaderBuffers(buffers,Textures);
+							return;
+						}
+					}
+
 					var tdesc : ShaderResourceViewDesc;
 					if( t.flags.has(Cube) ) {
 						var desc = tmp.texCubeSRV;
@@ -1344,6 +1415,7 @@ class DX12Driver extends h3d.impl.Driver {
 						desc.format = t.t.format;
 						tdesc = desc;
 					}
+					t.lastFrame = frameCount;
 					transition(t.t, shader.vertex ? NON_PIXEL_SHADER_RESOURCE : PIXEL_SHADER_RESOURCE);
 					Driver.createShaderResourceView(t.t.res, tdesc, srv.offset(i * frame.shaderResourceViews.stride));
 
@@ -1373,7 +1445,7 @@ class DX12Driver extends h3d.impl.Driver {
 					var cbv = @:privateAccess b.buffer.vbuf;
 					if( cbv.view != null )
 						throw "Buffer was allocated without UniformBuffer flag";
-					transition(cbv, shader.vertex ? NON_PIXEL_SHADER_RESOURCE : PIXEL_SHADER_RESOURCE);
+					transition(cbv, VERTEX_AND_CONSTANT_BUFFER);
 					var desc = tmp.cbvDesc;
 					desc.bufferLocation = cbv.res.getGpuVirtualAddress();
 					desc.sizeInBytes = cbv.size;
@@ -1592,7 +1664,7 @@ class DX12Driver extends h3d.impl.Driver {
 			frame.commandList.iaSetIndexBuffer(ibuf.view);
 		}
 		if( commands.data != null ) {
-			throw "TODO:ExecuteIndirect";
+			frame.commandList.executeIndirect(indirectCommand, commands.commandCount, commands.data, 0, null, 0);
 		} else {
 			frame.commandList.drawIndexedInstanced(commands.indexCount, commands.commandCount, commands.startIndex, 0, 0);
 		}
@@ -1621,7 +1693,6 @@ class DX12Driver extends h3d.impl.Driver {
 
 	override function present() {
 
-		frameCount++;
 		transition(frame.backBuffer, PRESENT);
 		flushFrame();
 		Driver.present(window.vsync);
