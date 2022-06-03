@@ -4,8 +4,32 @@ import hxsl.RuntimeShader;
 
 class SearchMap {
 	public var linked : RuntimeShader;
-	public var next : Map<Int,SearchMap>;
-	public function new() {
+	var nexts : Array<SearchMap> = [];
+	var minId = 0;
+
+	public function new() { }
+
+	public function set(id: Int, s: SearchMap) {
+		if(minId == 0) {
+			minId = id;
+			nexts = [s];
+			return;
+		}
+
+		var offset = id - minId;
+		if(offset < 0) {
+			var n = [];
+			for(i in 0...nexts.length)
+				n[i - offset] = nexts[i];  // shift indices
+			nexts = n;
+			minId += offset;
+			offset = 0;
+		}
+		nexts[offset] = s;
+	}
+
+	inline public function get(id: Int) {
+		return nexts[id - minId];
 	}
 }
 
@@ -155,11 +179,10 @@ class Cache {
 		var c = linkCache;
 		for( s in shaders ) {
 			var i = @:privateAccess s.instance;
-			if( c.next == null ) c.next = new Map();
-			var cs = c.next.get(i.id);
+			var cs = c.get(i.id);
 			if( cs == null ) {
 				cs = new SearchMap();
-				c.next.set(i.id, cs);
+				c.set(i.id, cs);
 			}
 			c = cs;
 		}

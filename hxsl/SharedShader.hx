@@ -2,11 +2,12 @@ package hxsl;
 using hxsl.Ast;
 
 class ShaderInstance {
+	static var UID = 0;
 	public var id : Int;
 	public var shader : ShaderData;
 	public var params : Map<Int,Int>;
 	public function new(shader) {
-		id = Tools.allocVarId();
+		id = ++UID;
 		this.shader = shader;
 		params = new Map();
 	}

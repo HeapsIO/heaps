@@ -347,11 +347,10 @@ class CacheFile extends Cache {
 		var c = linkCache;
 		for( s in shaders ) {
 			var i = @:privateAccess s.instance;
-			if( c.next == null ) c.next = new Map();
-			var cs = c.next.get(i.id);
+			var cs = c.get(i.id);
 			if( cs == null ) {
 				cs = new Cache.SearchMap();
-				c.next.set(i.id, cs);
+				c.set(i.id, cs);
 			}
 			c = cs;
 		}
