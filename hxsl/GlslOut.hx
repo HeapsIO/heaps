@@ -14,30 +14,33 @@ class GlslOut {
 	];
 	static var KWDS = [for( k in KWD_LIST ) k => true];
 	static var GLOBALS = {
-		var m = new Map();
+		var gl = [];
+		inline function set(g:hxsl.Ast.TGlobal,str:String) {
+			gl[g.getIndex()] = str;
+		}
 		for( g in hxsl.Ast.TGlobal.createAll() ) {
 			var n = "" + g;
 			n = n.charAt(0).toLowerCase() + n.substr(1);
-			m.set(g, n);
+			set(g, n);
 		}
-		m.set(ToInt, "int");
-		m.set(ToFloat, "float");
-		m.set(ToBool, "bool");
-		m.set(LReflect, "reflect");
-		m.set(Mat3x4, "_mat3x4");
-		m.set(VertexID, "gl_VertexID");
-		m.set(InstanceID, "gl_InstanceID");
-		m.set(IVec2, "ivec2");
-		m.set(IVec3, "ivec3");
-		m.set(IVec4, "ivec4");
-		m.set(BVec2, "bvec2");
-		m.set(BVec3, "bvec3");
-		m.set(BVec4, "bvec4");
-		m.set(FragCoord, "gl_FragCoord");
-		m.set(FrontFacing, "gl_FrontFacing");
-		for( g in m )
+		set(ToInt, "int");
+		set(ToFloat, "float");
+		set(ToBool, "bool");
+		set(LReflect, "reflect");
+		set(Mat3x4, "_mat3x4");
+		set(VertexID, "gl_VertexID");
+		set(InstanceID, "gl_InstanceID");
+		set(IVec2, "ivec2");
+		set(IVec3, "ivec3");
+		set(IVec4, "ivec4");
+		set(BVec2, "bvec2");
+		set(BVec3, "bvec3");
+		set(BVec4, "bvec4");
+		set(FragCoord, "gl_FragCoord");
+		set(FrontFacing, "gl_FrontFacing");
+		for( g in gl )
 			KWDS.set(g, true);
-		m;
+		gl;
 	};
 	static var MAT34 = "struct _mat3x4 { vec4 a; vec4 b; vec4 c; };";
 
@@ -296,7 +299,7 @@ class GlslOut {
 			decl("vec2 uvToScreen( vec2 v ) { return v * vec2(2.,-2.) + vec2(-1., 1.); }");
 		default:
 		}
-		return GLOBALS.get(g);
+		return GLOBALS[g.getIndex()];
 	}
 
 	function addExpr( e : TExpr, tabs : String ) {
@@ -316,7 +319,7 @@ class GlslOut {
 		case TVar(v):
 			ident(v);
 		case TGlobal(g):
-			add(GLOBALS.get(g));
+			add(GLOBALS[g.getIndex()]);
 		case TParenthesis(e):
 			add("(");
 			addValue(e,tabs);
