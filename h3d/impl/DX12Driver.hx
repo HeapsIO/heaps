@@ -1296,7 +1296,30 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	override function copyTexture(from:h3d.mat.Texture, to:h3d.mat.Texture):Bool {
-		return false;
+		if( from.t == null || from.format != to.format || from.width != to.width || from.height != to.height || from.layerCount != to.layerCount )
+			return false;
+		if( to.t == null ) {
+			var prev = from.lastFrame;
+			from.preventAutoDispose();
+			to.alloc();
+			from.lastFrame = prev;
+			if( from.t == null ) throw "assert";
+			if( to.t == null ) return false;
+		}
+		transition(from.t, COPY_SOURCE);
+		transition(to.t, COPY_DEST);
+		var dst = new TextureCopyLocation();
+		var src = new TextureCopyLocation();
+		dst.res = to.t.res;
+		src.res = from.t.res;
+		frame.commandList.copyTextureRegion(dst, 0, 0, 0, src, null);
+		to.flags.set(WasCleared);
+		for( t in currentRenderTargets )
+			if( t == to || t == from ) {
+				transition(t.t, RENDER_TARGET);
+				break;
+			}
+		return true;
 	}
 
 	// ----- PIPELINE UPDATE
