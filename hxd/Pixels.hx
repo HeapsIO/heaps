@@ -437,6 +437,9 @@ class Pixels {
 			return switchBR(bytes.getInt32(p));
 		case ARGB:
 			return switchEndian(bytes.getInt32(p));
+		case RG8:
+			var b = bytes.getUInt16(p);
+			return ((b & 0xff) << 8) | (b >> 8);
 		default:
 			invalidFormat();
 			return 0;
@@ -455,6 +458,8 @@ class Pixels {
 			bytes.setInt32(p, switchBR(color));
 		case ARGB:
 			bytes.setInt32(p, switchEndian(color));
+		case RG8:
+			bytes.setUInt16(p, ((color & 0xff) << 8) | ((color & 0xff00) >> 8));
 		default:
 			invalidFormat();
 		}
