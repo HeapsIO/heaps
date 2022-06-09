@@ -70,6 +70,11 @@ class DxFrame {
 	public var samplerCache : ManagedHeapArray;
 	public var availableBuffers : TempBuffer;
 	public var usedBuffers : TempBuffer;
+	public var queryHeaps : Array<QueryHeap> = [];
+	public var queriesPending : Array<Query> = [];
+	public var queryCurrentHeap : Int;
+	public var queryHeapOffset : Int;
+	public var queryBuffer : GpuResource;
 	public function new() {
 	}
 }
@@ -279,6 +284,11 @@ class DepthBufferData extends ResourceData {
 }
 
 class QueryData {
+	public var heap : Int;
+	public var offset : Int;
+	public var result : Float;
+	public function new() {
+	}
 }
 
 class DX12Driver extends h3d.impl.Driver {
@@ -328,6 +338,7 @@ class DX12Driver extends h3d.impl.Driver {
 	var rtWidth : Int;
 	var rtHeight : Int;
 	var frameCount : Int;
+	var tsFreq : haxe.Int64;
 
 	public static var INITIAL_RT_COUNT = 1024;
 	public static var BUFFER_COUNT = 2;
@@ -384,6 +395,8 @@ class DX12Driver extends h3d.impl.Driver {
 		desc.argumentDescs.type = DRAW_INDEXED;
 		indirectCommand = Driver.createCommandSignature(desc,null);
 
+		tsFreq = Driver.getTimestampFrequency();
+
 		compiler = new ShaderCompiler();
 		resize(window.width, window.height);
 	}
@@ -396,6 +409,7 @@ class DX12Driver extends h3d.impl.Driver {
 		frame.commandList.reset(frame.allocator, null);
 		while( frame.toRelease.length > 0 )
 			frame.toRelease.pop().release();
+		beginQueries();
 
 		var used = frame.usedBuffers;
 		var b = frame.availableBuffers;
@@ -480,7 +494,7 @@ class DX12Driver extends h3d.impl.Driver {
 		@:privateAccess defaultDepth.height = height;
 
 		if( frame != null )
-			frame.commandList.close();
+			flushFrame(true);
 
 		waitGpu();
 
@@ -1668,6 +1682,89 @@ class DX12Driver extends h3d.impl.Driver {
 		frame.commandList.setPipelineState(cp.pipeline);
 	}
 
+	// QUERIES
+
+	static inline var QUERY_COUNT = 128;
+
+	override function allocQuery( queryKind : QueryKind ) : Query {
+		if( queryKind != TimeStamp )
+			throw "Not implemented";
+		return new Query();
+	}
+
+	override function deleteQuery( q : Query ) {
+		// nothing to do
+	}
+
+	override function beginQuery( q : Query ) {
+		// nothing
+	}
+
+	override function endQuery( q : Query ) {
+		var heap = frame.queryHeaps[frame.queryCurrentHeap];
+		if( heap == null ) {
+			var desc = new QueryHeapDesc();
+			desc.type = TIMESTAMP;
+			desc.count = QUERY_COUNT;
+			heap = Driver.createQueryHeap(desc);
+			frame.queryHeaps[frame.queryCurrentHeap] = heap;
+			if( frame.queryBuffer != null ) {
+				frame.queryBuffer.release();
+				frame.queryBuffer = null;
+			}
+		}
+		q.offset = frame.queryHeapOffset++;
+		q.heap = frame.queryCurrentHeap;
+		frame.commandList.endQuery(heap, TIMESTAMP, q.offset);
+		frame.queriesPending.push(q);
+		if( frame.queryHeapOffset == QUERY_COUNT ) {
+			frame.queryHeapOffset = 0;
+			frame.queryCurrentHeap++;
+		}
+	}
+
+	override function queryResultAvailable( q : Query ) {
+		return q.heap < 0;
+	}
+
+	override function queryResult( q : Query ) {
+		return q.result;
+	}
+
+	function beginQueries() {
+		if( frame.queryBuffer == null || frame.queriesPending.length == 0 )
+			return;
+		var ptr : hl.BytesAccess<Int64> = frame.queryBuffer.map(0, null);
+		while( true ) {
+			var q = frame.queriesPending.pop();
+			if( q == null ) break;
+			if( q.heap >= 0 ) {
+				var position = q.heap * QUERY_COUNT + q.offset;
+				var v = ptr[position];
+				q.result = ((v / tsFreq).low + (v % tsFreq).low / tsFreq.low) * 1e9;
+				q.heap = -1;
+			}
+		}
+		frame.queryBuffer.unmap(0, null);
+	}
+
+	function flushQueries() {
+		if( frame.queryHeapOffset > 0 )
+			frame.queryCurrentHeap++;
+		if( frame.queryCurrentHeap == 0 )
+			return;
+		if( frame.queryBuffer == null )
+			frame.queryBuffer = allocBuffer(frame.queryHeaps.length * QUERY_COUNT * 8, READBACK, COPY_DEST);
+		var position = 0;
+		for( i in 0...frame.queryCurrentHeap ) {
+			var count = i < frame.queryCurrentHeap - 1 ? QUERY_COUNT : frame.queryHeapOffset;
+			frame.commandList.resolveQueryData(frame.queryHeaps[i], TIMESTAMP, 0, count, frame.queryBuffer, position);
+			position += count * 8;
+		}
+		frame.queryCurrentHeap = 0;
+		frame.queryHeapOffset = 0;
+	}
+
 	// --- DRAW etc.
 
 	override function draw( ibuf : IndexBuffer, startIndex : Int, ntriangles : Int ) {
@@ -1705,7 +1802,8 @@ class DX12Driver extends h3d.impl.Driver {
 		}
 	}
 
-	function flushFrame() {
+	function flushFrame( onResize : Bool = false ) {
+		flushQueries();
 		frame.commandList.close();
 		frame.commandList.execute();
 		currentShader = null;
