@@ -586,6 +586,20 @@ class Flow extends Object {
 		return verticalAlign = v;
 	}
 
+	function makeScrollBar(): h2d.Flow {
+		var bar = new h2d.Flow();
+		bar.backgroundTile = h2d.Tile.fromColor(0);
+		bar.alpha = 0.5;
+		return bar;
+	}
+	function makeScrollBarCursor(): h2d.Flow {
+		var cursor = new h2d.Flow();
+		cursor.minWidth = 10;
+		cursor.minHeight = 20;
+		cursor.backgroundTile = h2d.Tile.fromColor(-1);
+		return cursor;
+	}
+
 	function set_overflow(v) {
 		if( overflow == v )
 			return v;
@@ -593,9 +607,8 @@ class Flow extends Object {
 		if( v == Scroll ) {
 			enableInteractive = true;
 			if( scrollBar == null ) {
-				scrollBar = new h2d.Flow(this);
-				scrollBar.backgroundTile = h2d.Tile.fromColor(0);
-				scrollBar.alpha = 0.5;
+				scrollBar = makeScrollBar();
+				addChild(scrollBar);
 				scrollBar.verticalAlign = Top;
 				scrollBar.enableInteractive = true;
 
@@ -628,10 +641,8 @@ class Flow extends Object {
 				p.horizontalAlign = Right;
 				p.verticalAlign = Top;
 
-				scrollBarCursor = new h2d.Flow(scrollBar);
-				scrollBarCursor.minWidth = 10;
-				scrollBarCursor.minHeight = 20;
-				scrollBarCursor.backgroundTile = h2d.Tile.fromColor(-1);
+				scrollBarCursor = makeScrollBarCursor();
+				scrollBar.addChild(scrollBarCursor);
 			}
 		} else {
 			if( scrollBar != null ) {
