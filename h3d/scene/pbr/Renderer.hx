@@ -583,6 +583,9 @@ class Renderer extends h3d.scene.Renderer {
 				debugging = true;
 				hxd.Window.getInstance().addEventTarget(onEvent);
 			}
+			#if editor
+			renderPass(defaultPass, get("ui"), backToFront);
+			#end
 		}
 		if( debugging && displayMode != Debug ) {
 			debugging = false;
