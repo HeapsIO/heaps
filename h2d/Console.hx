@@ -374,18 +374,24 @@ class Console #if !macro extends h2d.Object #end {
 				curCmd = tf.text;
 				logIndex = logs.length - 1;
 			}
-			else logIndex--;
+			else {
+				var curLog = logs[logIndex];
+				while(curLog == logs[logIndex] && logIndex > 0)
+					logIndex--;
+			}
 			tf.text = logs[logIndex];
 			tf.cursorIndex = tf.text.length;
 		case Key.DOWN:
 			if(tf.text == curCmd) return;
+			var curLog = logs[logIndex];
+			while(curLog == logs[logIndex] && logIndex < logs.length - 1)
+				logIndex++;
 			if(logIndex == logs.length - 1) {
 				tf.text = curCmd == null ? "" : curCmd;
 				tf.cursorIndex = tf.text.length;
 				logIndex = -1;
 				return;
 			}
-			logIndex++;
 			tf.text = logs[logIndex];
 			tf.cursorIndex = tf.text.length;
 		}
