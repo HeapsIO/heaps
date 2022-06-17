@@ -49,7 +49,7 @@ class ToneMapping extends ScreenShader {
 		return exposure = v;
 	}
 
-	function set_gamma(v) {
+	function set_gamma(v:Float) {
 		invGamma = 1.0/v;
 		return gamma = v;
 	}
