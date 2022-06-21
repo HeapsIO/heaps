@@ -36,12 +36,15 @@ class ShaderList {
 	}
 
 	public static var MAX_LIST_SIZE = 0;
+	public static var ALLOW_DUPLICATES = true;
 	static function checkSize(list : ShaderList) {
 		if(MAX_LIST_SIZE <= 0)
 			return;
 		var hd = list;
 		var count = 0;
 		while(hd != null) {
+			if(!ALLOW_DUPLICATES && hd.next != null && hd.next.s == hd.s)
+				throw "Duplicate shader " + Std.string(hd.s);
 			++count;
 			hd = hd.next;
 		}
