@@ -231,6 +231,21 @@ class Pass {
 		return false;
 	}
 
+	public function removeShaders< T:hxsl.Shader >(t:Class<T>) {
+		var sl = shaders, prev = null;
+		while( sl != null ) {
+			if( hxd.impl.Api.isOfType(sl.s, t) ) {
+				if( prev == null )
+					shaders = sl.next;
+				else
+					prev.next = sl.next;
+			}
+			else
+				prev = sl;
+			sl = sl.next;
+		}
+	}
+
 	public function getShader< T:hxsl.Shader >(t:Class<T>) : T {
 		var s = shaders;
 		while( s != parentShaders ) {
