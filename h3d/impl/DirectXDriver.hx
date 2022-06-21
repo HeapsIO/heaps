@@ -71,6 +71,9 @@ class DirectXDriver extends h3d.impl.Driver {
 
 	public static var CACHE_FILE : { input : String, output : String } = null;
 	var cacheFileData : Map<String,haxe.io.Bytes>;
+	#if debug_shader_cache
+	var cacheFileDebugData = new Map<String, String>();
+	#end
 
 	var driver : DriverInstance;
 	var shaders : Map<Int,CompiledShader>;
@@ -772,6 +775,16 @@ class DirectXDriver extends h3d.impl.Driver {
 						if( len < 0 || len > 4<<20 ) break;
 						var str = cache.readString(len);
 						cacheFileData.set(key,haxe.crypto.Base64.decode(str));
+						#if debug_shader_cache
+						var peek = @:privateAccess cache.b[cache.position];
+						if(peek != '\n'.code) {
+							cache.readByte(); // skip null marker
+							var len = cache.readInt32();
+							if( len < 0 || len > 4<<20 ) break;
+							var code = cache.readString(len);
+							cacheFileDebugData.set(key, code);
+						}
+						#end
 						cache.readByte(); // newline
 					}
 				}
@@ -828,6 +841,9 @@ class DirectXDriver extends h3d.impl.Driver {
 			var key = shaderVersion + haxe.crypto.Md5.encode(shader.code);
 			if( cacheFileData.get(key) != bytes ) {
 				cacheFileData.set(key, bytes);
+				#if debug_shader_cache
+				cacheFileDebugData.set(key, shader.code.split('\n').join('\\n'));
+				#end
 				if( CACHE_FILE != null ) {
 					var out = new haxe.io.BytesOutput();
 					var keys = Lambda.array({ iterator : cacheFileData.keys });
@@ -838,6 +854,14 @@ class DirectXDriver extends h3d.impl.Driver {
 						var b64 = haxe.crypto.Base64.encode(cacheFileData.get(key));
 						out.writeInt32(b64.length);
 						out.writeString(b64);
+						#if debug_shader_cache
+						var s = cacheFileDebugData.get(key);
+						if(s != null) {
+							out.writeByte(0);
+							out.writeInt32(s.length);
+							out.writeString(s);
+						}
+						#end
 						out.writeByte('\n'.code);
 					}
 					try sys.io.File.saveBytes(CACHE_FILE.output, out.getBytes()) catch( e : Dynamic ) {};
