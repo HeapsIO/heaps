@@ -408,8 +408,10 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 
 		var passes = [];
 		var passIndex = -1;
-		for ( passId in ctx.passes.keys() ) {
-			var curPass = ctx.passes.get(passId);
+		for ( passId in 0...ctx.passes.length ) {
+			var curPass = ctx.passes[passId];
+			if ( curPass == null )
+				continue;
 			var pobjs = ctx.cachedPassObjects[++passIndex];
 			if( pobjs == null ) {
 				pobjs = new Renderer.PassObjects();

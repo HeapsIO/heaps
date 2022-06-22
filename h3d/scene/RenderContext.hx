@@ -31,7 +31,7 @@ class RenderContext extends h3d.impl.RenderContext {
 	var cachedShaderList : Array<hxsl.ShaderList>;
 	var cachedPassObjects : Array<Renderer.PassObjects>;
 	var cachedPos : Int;
-	var passes : Map<Int, h3d.pass.PassObject>;
+	var passes : Array<h3d.pass.PassObject>;
 	var lights : Light;
 	var currentManager : h3d.pass.ShaderManager;
 
@@ -98,8 +98,10 @@ class RenderContext extends h3d.impl.RenderContext {
 			allocPool = o.nextAlloc;
 		o.pass = pass;
 		o.obj = obj;
-		o.next = passes.get(pass.passId);
-		passes.set(pass.passId, o);
+		if ( passes.length <= pass.passId )
+			passes.resize(pass.passId);
+		o.next = passes[pass.passId];
+		passes[pass.passId] = o;
 		return o;
 	}
 
