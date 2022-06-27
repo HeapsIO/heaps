@@ -448,4 +448,9 @@ class Video extends Drawable {
 		});
 	}
 	#end
+
+    override function getBoundsRec( relativeTo : Object, out : h2d.col.Bounds, forSize : Bool ) {
+        super.getBoundsRec(relativeTo, out, forSize);
+        if( tile != null ) addBounds(relativeTo, out, tile.dx, tile.dy, tile.width, tile.height);
+    }
 }
