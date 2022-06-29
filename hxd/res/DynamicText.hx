@@ -266,7 +266,7 @@ class DynamicText {
 
 	static function parseText( str : String ) : Dynamic {
 		str = str.split("\r\n").join("\n");
-		if( str.split("::").length <= 1 )
+		if( !r_attr.match(str) )
 			return str;
 		return function(vars) {
 			var str = str;
@@ -307,23 +307,21 @@ class DynamicText {
 			return macro : Array<String>;
 		case "t":
 			var tstring = macro : String;
-			var vars = x.innerHTML.split("::");
-			if( vars.length <= 1 )
+			if (!r_attr.match(x.innerHTML))
 				return tstring;
 			// printer function
 			var i = 1;
 			var fields = new Array<Field>();
 			var map = new Map();
-			while( i < vars.length ) {
-				var name = vars[i];
-				if( map.exists(name) ) {
-					i += 2;
-					continue;
+			r_attr.map(x.innerHTML, function(r) {
+				var name = r.matched(1);
+				if( !map.exists(name) ) {
+					map.set(name, true);
+					fields.push( { name : name, kind : FVar(macro : Dynamic), pos : pos.pos, meta : [] } );
 				}
-				map.set(name, true);
-				fields.push( { name : name, kind : FVar(macro : Dynamic), pos : pos.pos, meta : [] } );
-				i += 2;
-			}
+				return r.matched(0);
+			});
+
 			return TFunction([TAnonymous(fields)], tstring);
 		default:
 			Context.error("Unknown node " + x.name, findPos(pos,'<${x.name.toLowerCase()}'));
