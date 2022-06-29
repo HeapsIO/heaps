@@ -242,7 +242,9 @@ class GlslOut {
 				return "mat_to_34";
 			}
 		case DFdx, DFdy, Fwidth:
-			decl("#extension GL_OES_standard_derivatives:enable");
+			if( isVertex ) throw "Can't use "+g+" in vertex shader";
+			if( version < 300 )
+				decl("#extension GL_OES_standard_derivatives:enable");
 		case Pack:
 			decl("vec4 pack( float v ) { vec4 color = fract(v * vec4(1, 255, 255.*255., 255.*255.*255.)); return color - color.yzww * vec4(1. / 255., 1. / 255., 1. / 255., 0.); }");
 		case Unpack:
