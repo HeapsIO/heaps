@@ -749,6 +749,7 @@ class FlowComp extends ObjectComp implements domkit.Component.ComponentDecl<h2d.
 	@:p var fillWidth: Bool;
 	@:p var fillHeight: Bool;
 	@:p var overflow: h2d.Flow.FlowOverflow;
+	@:p var scrollWheelSpeed: Float;
 	@:p var reverse : Bool;
 
 	@:p(align) var contentAlign : { h : h2d.Flow.FlowAlign, v : h2d.Flow.FlowAlign };
@@ -924,6 +925,10 @@ class FlowComp extends ObjectComp implements domkit.Component.ComponentDecl<h2d.
 				o.scrollBarCursor.dom.addClass("cursor");
 			}
 		}
+	}
+
+	static function set_scrollWheelSpeed( o : h2d.Flow, v ) {
+		o.scrollWheelSpeed = v;
 	}
 
 	static function set_reverse( o : h2d.Flow, v ) {

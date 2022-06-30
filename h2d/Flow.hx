@@ -502,7 +502,7 @@ class Flow extends Object {
 	/**
 	 	The amount of scrolling that is done when using mouse wheel (in pixels).
 	**/
-	public var scrollWheelSpeed(default, null) : Float = 30.;
+	public var scrollWheelSpeed : Float = 30.;
 	/**
 	 	The current scrolling position for the flow content (in pixels). Only applies when overflow is Scroll or Hidden.
 	**/
