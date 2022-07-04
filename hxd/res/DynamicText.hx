@@ -76,7 +76,7 @@ class DynamicText {
 		applyRec([], obj, x, ref, onMissing);
 	}
 
-	static var r_attr = ~/::([A-Za-z0-9_]+)::/g;
+	public static var r_attr = ~/::(.+?)::/g;
 
 	static function applyText( path : Array<String>, old : Dynamic, x : Access, ref : Access, onMissing : Array<String> -> String -> String ) {
 		var str = x == null ? null : x.innerHTML;
