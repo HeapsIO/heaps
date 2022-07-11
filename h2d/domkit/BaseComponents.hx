@@ -698,6 +698,8 @@ class ScaleGridComp extends DrawableComp implements domkit.Component.ComponentDe
 	@:p var ignoreScale : Bool;
 	@:p var borderScale : Float;
 	@:p var tileBorders : Bool;
+	@:p var width : Float;
+	@:p var height : Float;
 
 	static function create( parent : h2d.Object ) {
 		return new h2d.ScaleGrid(h2d.Tile.fromColor(0xFF00FF,32,32,0.9), 0, 0,parent);
@@ -713,6 +715,14 @@ class ScaleGridComp extends DrawableComp implements domkit.Component.ComponentDe
 
 	static function set_tileBorders(o : h2d.ScaleGrid, v) {
 		o.tileBorders = v;
+	}
+
+	static function set_width( o : h2d.ScaleGrid, v : Float ) {
+		o.width = v;
+	}
+
+	static function set_height( o : h2d.ScaleGrid, v : Float ) {
+		o.height = v;
 	}
 
 }
