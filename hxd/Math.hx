@@ -261,6 +261,16 @@ class Math {
 		return (std.Math.random() - 0.5) * (max * 2);
 	}
 
+	/**
+	 * Returns a random element from an array.
+	 * @param array the given array.
+	 * @return a random element from the given array.
+	 */
+	public static function randomElement( array : Array<T> ) {
+        var random_index = std.Math.floor( std.Math.random() * (array.length) );
+        return array[random_index];
+    }
+
 
 	/**
 	 * takes an int , masks it and devide so that it safely maps 0...255 to 0...1.0
