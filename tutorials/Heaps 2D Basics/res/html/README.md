@@ -1,0 +1,1 @@
+The `.html` will be copied from here when compiling to html5/js.

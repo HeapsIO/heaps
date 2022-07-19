@@ -1,0 +1,68 @@
+#---------------------------------------------
+#
+# compiling several files
+#
+# (make sure to deactivate all -main and -hl
+#  in the compile.hxml first!! or you'll get
+#  a recursive compile, infinitely running!)
+#
+#---------------------------------------------
+
+compile_config.hxml
+-lib hlsdl
+--cmd echo compiled 1 file... please wait...
+
+--each
+
+
+-main Tutorial_01
+-hl tut01.hl
+-D windowTitle=Heaps 2D Tutorial: Part 01
+
+
+--next
+
+
+-main Tutorial_02
+-hl tut02.hl
+-D windowTitle=Heaps 2D Tutorial: Part 02
+
+
+--next
+
+
+-main Tutorial_03
+-hl tut03.hl
+-D windowTitle=Heaps 2D Tutorial: Part 03
+
+
+--next
+
+
+-main Tutorial_04
+-hl tut04.hl
+-D windowTitle=Heaps 2D Tutorial: Part 04
+
+
+--next
+
+
+-main Tutorial_05
+-hl tut05.hl
+-D windowTitle=Heaps 2D Tutorial: Part 05
+
+
+--next
+
+
+-main Tutorial_06
+-hl tut06.hl
+-D windowTitle=Heaps 2D Tutorial: Part 06
+
+
+--next
+
+
+-main Tutorial_07
+-hl tut07.hl
+-D windowTitle=Heaps 2D Tutorial: Part 07

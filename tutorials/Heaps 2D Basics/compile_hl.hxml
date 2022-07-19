@@ -1,0 +1,19 @@
+compile_config.hxml
+
+-lib hlsdl
+#-lib hldx
+
+-hl game_app_executable_with_hashlink.hl
+
+
+#---------------------------------------------
+# Main file:
+#---------------------------------------------
+
+#-main Tutorial_01
+#-main Tutorial_02
+#-main Tutorial_03
+#-main Tutorial_04
+#-main Tutorial_05
+#-main Tutorial_06
+-main Tutorial_07

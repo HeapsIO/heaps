@@ -1,0 +1,47 @@
+#--------------------------------------
+#
+# Heaps core libraries
+#
+#--------------------------------------
+-lib heaps
+-lib hlsdl
+#-lib hldx
+
+#--------------------------------------
+#
+# external libraries
+#
+#--------------------------------------
+
+#-lib 
+
+#--------------------------------------
+#
+# code & game assets/resources
+#
+#--------------------------------------
+
+# main directory for code
+-cp src
+
+# additional directories
+-p res
+
+#--------------------------------------
+#
+# Output
+#
+#--------------------------------------
+
+-main Main
+
+-hl game_app_executable_with_hashlink.hl
+
+#-D windowSize=400x300
+#-D windowSize=800x600
+-D windowSize=1280x720
+#-D windowSize=1920x1080
+-D windowTitle=Heaps 2D Tutorial, object oriented design
+#-D resourcesPath=assets ???
+#-D dce=full
+-D debug=true

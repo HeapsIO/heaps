@@ -1,0 +1,74 @@
+#---------------------------------------------
+#
+# compiling several files
+#
+# (make sure to deactivate all -main and -hl
+#  in the compile.hxml first!! or you'll get
+#  a recursive compile, infinitely running!)
+#
+#---------------------------------------------
+
+compile_config.hxml
+--cmd echo compiled 1 file to ./out/js/... please wait...
+
+--each
+
+
+-main Tutorial_01
+-D windowTitle=Heaps 2D Tutorial: Part 01
+-js ./out/js/01/script_to_embed_in_html_file.js
+--cmd COPY .\res\html\run_game_in_browser.html .\out\js\01\
+
+
+--next
+
+
+-main Tutorial_02
+-D windowTitle=Heaps 2D Tutorial: Part 02
+-js ./out/js/02/script_to_embed_in_html_file.js
+--cmd COPY .\res\html\run_game_in_browser.html .\out\js\02\
+
+
+--next
+
+
+-main Tutorial_03
+-D windowTitle=Heaps 2D Tutorial: Part 03
+-js ./out/js/03/script_to_embed_in_html_file.js
+--cmd COPY .\res\html\run_game_in_browser.html .\out\js\03\
+
+
+--next
+
+
+-main Tutorial_04
+-D windowTitle=Heaps 2D Tutorial: Part 04
+-js ./out/js/04/script_to_embed_in_html_file.js
+--cmd COPY .\res\html\run_game_in_browser.html .\out\js\04\
+
+
+--next
+
+
+-main Tutorial_05
+-D windowTitle=Heaps 2D Tutorial: Part 05
+-js ./out/js/05/script_to_embed_in_html_file.js
+--cmd COPY .\res\html\run_game_in_browser.html .\out\js\05\
+
+
+--next
+
+
+-main Tutorial_06
+-D windowTitle=Heaps 2D Tutorial: Part 06
+-js ./out/js/06/script_to_embed_in_html_file.js
+--cmd COPY .\res\html\run_game_in_browser.html .\out\js\06\
+
+
+--next
+
+
+-main Tutorial_07
+-D windowTitle=Heaps 2D Tutorial: Part 07
+-js ./out/js/07/script_to_embed_in_html_file.js
+--cmd COPY .\res\html\run_game_in_browser.html .\out\js\07\
