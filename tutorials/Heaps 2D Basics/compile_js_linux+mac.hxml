@@ -1,0 +1,18 @@
+compile_config.hxml
+
+-js script_to_embed_in_html_file.js
+
+# html template
+--cmd cp ./res/html/run_game_in_browser.html .
+
+#---------------------------------------------
+# Main file:
+#---------------------------------------------
+
+#-main Tutorial_01
+#-main Tutorial_02
+#-main Tutorial_03
+#-main Tutorial_04 ok
+#-main Tutorial_05
+#-main Tutorial_06
+-main Tutorial_07
