@@ -417,6 +417,8 @@ class ObjectComp implements h2d.domkit.Object implements domkit.Component.Compon
 	@:p(none) var minWidth : Null<Int>;
 	@:p(none) var minHeight : Null<Int>;
 	@:p var forceLineBreak : Bool;
+	@:p(none) var autoSize : Null<Float>;
+
 
 	static function set_rotation(o:h2d.Object, v:Float) {
 		o.rotation = v * Math.PI / 180;
@@ -532,6 +534,11 @@ class ObjectComp implements h2d.domkit.Object implements domkit.Component.Compon
 	static function set_minHeight(o:h2d.Object,v) {
 		var p = getFlowProps(o);
 		if( p != null ) p.minHeight = v;
+	}
+
+	static function set_autoSize(o:h2d.Object,v) {
+		var p = getFlowProps(o);
+		if( p != null ) p.autoSize = v;
 	}
 
 	static function set_forceLineBreak(o:h2d.Object,v) {

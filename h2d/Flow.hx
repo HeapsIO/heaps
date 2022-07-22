@@ -185,6 +185,11 @@ class FlowProperties {
 	**/
 	public var constraint = true;
 
+	/**
+		When set, element will use the maximum size of non-autoSize elements as size constraint instead of current constraint on the parent flow.
+	**/
+	public var autoSize : Null<Float>;
+
 	@:dox(hide)
 	public function new(elt) {
 		this.elt = elt;
@@ -1153,6 +1158,16 @@ class Flow extends Object {
 			return properties[ reverse ? children.length - i - 1 : i ];
 		}
 
+		inline function forChildren(func : Int->FlowProperties->h2d.Object->Void) {
+			for( i in 0...children.length ) {
+				var p = propAt(i);
+				if( p.isAbsolute && p.horizontalAlign == null && p.verticalAlign == null ) continue;
+				var c = childAt(i);
+				if( !c.visible ) continue;
+				func(i, p, c);
+			}
+		}
+
 		var cw, ch;
 		switch(layout) {
 		case Horizontal:
@@ -1203,43 +1218,50 @@ class Flow extends Object {
 				return size;
 			}
 
-			for( i in 0...children.length ) {
-				var p = propAt(i);
-				var isAbs = p.isAbsolute;
-				if( isAbs && p.horizontalAlign == null && p.verticalAlign == null ) continue;
-				var c = childAt(i);
-				if( !c.visible ) continue;
-
+			inline function calcSize(p : FlowProperties, c : h2d.Object) {
 				var pw = p.paddingLeft + p.paddingRight;
 				var ph = p.paddingTop + p.paddingBottom;
-				if( !isAbs )
+				if( !p.isAbsolute )
 					c.constraintSize(
 						isConstraintWidth && p.constraint ? (maxInWidth - pw) / Math.abs(c.scaleX) : -1,
-						isConstraintHeight && p.constraint ? (maxInHeight - ph) / Math.abs(c.scaleX) : -1
+						isConstraintHeight && p.constraint ? ((p.autoSize != null ? maxLineHeight * p.autoSize : maxInHeight) - ph) / Math.abs(c.scaleY) : -1
 					);
 
 				var b = getSize(c);
-				var br = false;
 				p.calculatedWidth = Math.ceil(b.xMax) + pw;
 				p.calculatedHeight = Math.ceil(b.yMax) + ph;
 				if( p.minWidth != null && p.calculatedWidth < p.minWidth ) p.calculatedWidth = p.minWidth;
 				if( p.minHeight != null && p.calculatedHeight < p.minHeight ) p.calculatedHeight = p.minHeight;
-
-				if( isAbs ) continue;
-
-				if( ((multiline && x - startX + p.calculatedWidth > maxInWidth) || p.lineBreak) && x - startX > 0 ) {
-					br = true;
-					alignLine(i);
-					y += maxLineHeight + verticalSpacing;
-					maxLineHeight = 0;
-					x = startX;
-				}
-				p.isBreak = br;
-				x += p.calculatedWidth;
-				if( x > cw ) cw = x;
-				x += horizontalSpacing;
-				if( p.calculatedHeight > maxLineHeight ) maxLineHeight = p.calculatedHeight;
 			}
+
+			forChildren(function(i, p, c) {
+				if(p.autoSize == null) {
+					calcSize(p, c);
+					if( p.calculatedHeight > maxLineHeight ) maxLineHeight = p.calculatedHeight;
+				}
+			});
+
+			forChildren(function(i, p, c) {
+				if(p.autoSize != null)
+					calcSize(p, c);
+
+				if(!p.isAbsolute) {
+					var br = false;
+					if( ((multiline && x - startX + p.calculatedWidth > maxInWidth) || p.lineBreak) && x - startX > 0 ) {
+						br = true;
+						alignLine(i);
+						y += maxLineHeight + verticalSpacing;
+						maxLineHeight = 0;
+						x = startX;
+					}
+					p.isBreak = br;
+					x += p.calculatedWidth;
+					if( x > cw ) cw = x;
+					x += horizontalSpacing;
+					if( p.calculatedHeight > maxLineHeight ) maxLineHeight = p.calculatedHeight;
+				}
+			});
+
 			alignLine(children.length);
 			cw += paddingRight + borderRight;
 			ch = y + maxLineHeight + paddingBottom + borderBottom;
@@ -1350,46 +1372,51 @@ class Flow extends Object {
 				return size;
 			}
 
-			for( i in 0...children.length ) {
-				var p = propAt(i);
-				var isAbs = p.isAbsolute;
-				if( isAbs && p.horizontalAlign == null && p.verticalAlign == null ) continue;
-
-				var c = childAt(i);
-				if( !c.visible ) continue;
-
+			inline function calcSize(p : FlowProperties, c : h2d.Object) {
 				var pw = p.paddingLeft + p.paddingRight;
 				var ph = p.paddingTop + p.paddingBottom;
-				if( !isAbs )
+				if( !p.isAbsolute )
 					c.constraintSize(
-						isConstraintWidth && p.constraint ? (maxInWidth - pw) / Math.abs(c.scaleX) : -1,
+						isConstraintWidth && p.constraint ? ((p.autoSize != null ? maxColWidth * p.autoSize : maxInWidth) - pw) / Math.abs(c.scaleX) : -1,
 						isConstraintHeight && p.constraint ? (maxInHeight - ph) / Math.abs(c.scaleY) : -1
 					);
 
 				var b = getSize(c);
-				var br = false;
-
 				p.calculatedWidth = Math.ceil(b.xMax) + pw;
 				p.calculatedHeight = Math.ceil(b.yMax) + ph;
 				if( p.minWidth != null && p.calculatedWidth < p.minWidth ) p.calculatedWidth = p.minWidth;
 				if( p.minHeight != null && p.calculatedHeight < p.minHeight ) p.calculatedHeight = p.minHeight;
-
-				if( isAbs ) continue;
-
-				if( ((multiline && y - startY + p.calculatedHeight > maxInHeight) || p.lineBreak) && y - startY > 0 ) {
-					br = true;
-					alignLine(i);
-					x += maxColWidth + horizontalSpacing;
-					maxColWidth = 0;
-					y = startY;
-				}
-				p.isBreak = br;
-				c.y = y + p.offsetY + p.paddingTop;
-				y += p.calculatedHeight;
-				if( y > ch ) ch = y;
-				y += verticalSpacing;
-				if( p.calculatedWidth > maxColWidth ) maxColWidth = p.calculatedWidth;
 			}
+
+			forChildren(function(i, p, c) {
+				if(p.autoSize == null) {
+					calcSize(p, c);
+					if( p.calculatedWidth > maxColWidth ) maxColWidth = p.calculatedWidth;
+				}
+			});
+
+			forChildren(function(i, p, c) {
+				if(p.autoSize != null)
+					calcSize(p, c);
+
+				if(!p.isAbsolute) {
+					var br = false;
+					if( ((multiline && y - startY + p.calculatedHeight > maxInHeight) || p.lineBreak) && y - startY > 0 ) {
+						br = true;
+						alignLine(i);
+						x += maxColWidth + horizontalSpacing;
+						maxColWidth = 0;
+						y = startY;
+					}
+					p.isBreak = br;
+					c.y = y + p.offsetY + p.paddingTop;
+					y += p.calculatedHeight;
+					if( y > ch ) ch = y;
+					y += verticalSpacing;
+					if( p.calculatedWidth > maxColWidth ) maxColWidth = p.calculatedWidth;
+				}
+			});
+			
 			alignLine(children.length);
 			ch += paddingBottom + borderBottom;
 			cw = x + maxColWidth + paddingRight + borderRight;
