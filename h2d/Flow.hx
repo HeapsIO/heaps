@@ -1218,12 +1218,15 @@ class Flow extends Object {
 				return size;
 			}
 
+			var autoWidth = maxInWidth;
+			var autoSum = 0.0;
+
 			inline function calcSize(p : FlowProperties, c : h2d.Object) {
 				var pw = p.paddingLeft + p.paddingRight;
 				var ph = p.paddingTop + p.paddingBottom;
 				if( !p.isAbsolute )
 					c.constraintSize(
-						isConstraintWidth && p.constraint ? (maxInWidth - pw) / Math.abs(c.scaleX) : -1,
+						isConstraintWidth && p.constraint ? ((p.autoSize != null ? Math.floor(autoWidth * p.autoSize / autoSum) : maxInWidth) - pw) / Math.abs(c.scaleX) : -1,
 						isConstraintHeight && p.constraint ? ((p.autoSize != null ? maxLineHeight * p.autoSize : maxInHeight) - ph) / Math.abs(c.scaleY) : -1
 					);
 
@@ -1235,10 +1238,14 @@ class Flow extends Object {
 			}
 
 			forChildren(function(i, p, c) {
+				autoWidth -= horizontalSpacing;
 				if(p.autoSize == null) {
 					calcSize(p, c);
 					if( p.calculatedHeight > maxLineHeight ) maxLineHeight = p.calculatedHeight;
+					autoWidth -= p.calculatedWidth;
 				}
+				else 
+					autoSum += p.autoSize;
 			});
 
 			forChildren(function(i, p, c) {
@@ -1372,13 +1379,16 @@ class Flow extends Object {
 				return size;
 			}
 
+			var autoHeight = maxInHeight;
+			var autoSum = 0.0;
+
 			inline function calcSize(p : FlowProperties, c : h2d.Object) {
 				var pw = p.paddingLeft + p.paddingRight;
 				var ph = p.paddingTop + p.paddingBottom;
 				if( !p.isAbsolute )
 					c.constraintSize(
 						isConstraintWidth && p.constraint ? ((p.autoSize != null ? maxColWidth * p.autoSize : maxInWidth) - pw) / Math.abs(c.scaleX) : -1,
-						isConstraintHeight && p.constraint ? (maxInHeight - ph) / Math.abs(c.scaleY) : -1
+						isConstraintHeight && p.constraint ? ((p.autoSize != null ? Math.floor(autoHeight * p.autoSize / autoSum) : maxInHeight) - ph) / Math.abs(c.scaleY) : -1
 					);
 
 				var b = getSize(c);
@@ -1389,10 +1399,14 @@ class Flow extends Object {
 			}
 
 			forChildren(function(i, p, c) {
+				autoHeight -= verticalSpacing; 
 				if(p.autoSize == null) {
 					calcSize(p, c);
 					if( p.calculatedWidth > maxColWidth ) maxColWidth = p.calculatedWidth;
+					autoHeight -= p.calculatedHeight;
 				}
+				else
+					autoSum += p.autoSize;
 			});
 
 			forChildren(function(i, p, c) {
