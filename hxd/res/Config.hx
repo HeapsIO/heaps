@@ -31,6 +31,10 @@ class Config {
 		#end
 	];
 
+	public static function addExtension( extension, className) {
+		extensions.set(extension, className);
+	}
+
 	/**
 		File extensions ignored by the resource scan
 	**/
@@ -63,6 +67,13 @@ class Config {
 		"l3d" => "bake",
 		"css" => "less",
 	];
+
+	public static function addPairedExtension( main, shadow) {
+		if (pairedExtensions.exists(main)) 
+			pairedExtensions.set(main, pairedExtensions.get(main) + "," + shadow);
+		else 
+			pairedExtensions.set(main, shadow);
+	}
 
 	static function defined( name : String ) {
 		return haxe.macro.Context.defined(name);
