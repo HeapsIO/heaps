@@ -312,4 +312,23 @@ class Font {
 		tile.dispose();
 	}
 
+	/**
+	 	Calculate a baseLine default value based on available glyphs.
+	 */
+	public function calcBaseLine() {
+		var padding : Float = 0;
+		var space = glyphs.get(" ".code);
+		if( space != null )
+			padding = (space.t.height * .5);
+
+		var a = glyphs.get("A".code);
+		if( a == null )
+			a = glyphs.get("a".code);
+		if( a == null )
+			a = glyphs.get("0".code); // numerical only
+		if( a == null )
+			return lineHeight - 2 - padding;
+		return a.t.dy + a.t.height - padding;
+	}
+
 }
