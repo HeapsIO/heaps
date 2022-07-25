@@ -31,6 +31,10 @@ class Config {
 		#end
 	];
 
+	public static function addExtension( extension, className) {
+		extensions.set(extension, className);
+	}
+
 	/**
 		File extensions ignored by the resource scan
 	**/
