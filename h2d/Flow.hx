@@ -1241,10 +1241,10 @@ class Flow extends Object {
 				autoWidth -= horizontalSpacing;
 				if(p.autoSize == null) {
 					calcSize(p, c);
-					if( p.calculatedHeight > maxLineHeight ) maxLineHeight = p.calculatedHeight;
+					// if( p.calculatedHeight > maxLineHeight ) maxLineHeight = p.calculatedHeight;
 					autoWidth -= p.calculatedWidth;
 				}
-				else 
+				else
 					autoSum += p.autoSize;
 			});
 
@@ -1399,10 +1399,10 @@ class Flow extends Object {
 			}
 
 			forChildren(function(i, p, c) {
-				autoHeight -= verticalSpacing; 
+				autoHeight -= verticalSpacing;
 				if(p.autoSize == null) {
 					calcSize(p, c);
-					if( p.calculatedWidth > maxColWidth ) maxColWidth = p.calculatedWidth;
+					// if( p.calculatedWidth > maxColWidth ) maxColWidth = p.calculatedWidth;
 					autoHeight -= p.calculatedHeight;
 				}
 				else
@@ -1430,7 +1430,7 @@ class Flow extends Object {
 					if( p.calculatedWidth > maxColWidth ) maxColWidth = p.calculatedWidth;
 				}
 			});
-			
+
 			alignLine(children.length);
 			ch += paddingBottom + borderBottom;
 			cw = x + maxColWidth + paddingRight + borderRight;
