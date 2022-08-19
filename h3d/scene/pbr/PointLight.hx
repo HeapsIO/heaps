@@ -3,7 +3,7 @@ package h3d.scene.pbr;
 class PointLight extends Light {
 
 	var pbr : h3d.shader.pbr.Light.PointLight;
-	public var size : Float;
+	public var size : Float = 0.;
 	public var zNear : Float = 0.02;
 	/**
 		Alias for uniform scale.

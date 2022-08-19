@@ -6,7 +6,7 @@ class SpotLight extends Light {
 
 	public var range(get,set) : Float;
 	public var angle(default,set) : Float;
-	public var fallOff : Float;
+	public var fallOff : Float = 0.;
 	public var cookie : h3d.mat.Texture;
 	var lightProj : h3d.Camera;
 
