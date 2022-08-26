@@ -1241,8 +1241,10 @@ class Flow extends Object {
 				autoWidth -= horizontalSpacing;
 				if(p.autoSize == null) {
 					calcSize(p, c);
-					// if( p.calculatedHeight > maxLineHeight ) maxLineHeight = p.calculatedHeight;
-					autoWidth -= p.calculatedWidth;
+					if(!p.isAbsolute) {
+						if( p.calculatedHeight > maxLineHeight ) maxLineHeight = p.calculatedHeight;
+						autoWidth -= p.calculatedWidth;
+					}
 				}
 				else
 					autoSum += p.autoSize;
@@ -1402,8 +1404,10 @@ class Flow extends Object {
 				autoHeight -= verticalSpacing;
 				if(p.autoSize == null) {
 					calcSize(p, c);
-					// if( p.calculatedWidth > maxColWidth ) maxColWidth = p.calculatedWidth;
-					autoHeight -= p.calculatedHeight;
+					if(!p.isAbsolute) {
+						if( p.calculatedWidth > maxColWidth ) maxColWidth = p.calculatedWidth;
+						autoHeight -= p.calculatedHeight;
+					}
 				}
 				else
 					autoSum += p.autoSize;
