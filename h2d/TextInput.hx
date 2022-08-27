@@ -150,6 +150,16 @@ class TextInput extends Text {
 	override function constraintSize(width:Float, height:Float) {
 		// disable (don't allow multiline textinput for now)
 	}
+	
+	function isKeyDownCtrl():Bool {
+		#if hl
+		if(Sys.systemName() == "Mac"){
+			// Command
+			return K.isDown(K.LEFT_WINDOW_KEY);
+		}
+		#end
+		return K.isDown(K.CTRL);
+	}
 
 	function handleKey( e : hxd.Event ) {
 		if( e.cancel || cursorIndex < 0 )
@@ -159,12 +169,12 @@ class TextInput extends Text {
 		var oldText = text;
 
 		switch( e.keyCode ) {
-		case K.LEFT if (K.isDown(K.CTRL)):
+		case K.LEFT if (isKeyDownCtrl()):
 			cursorIndex = getWordStart();
 		case K.LEFT:
 			if( cursorIndex > 0 )
 				cursorIndex--;
-		case K.RIGHT if (K.isDown(K.CTRL)):
+		case K.RIGHT if (isKeyDownCtrl()):
 			cursorIndex = getWordEnd();
 		case K.RIGHT:
 			if( cursorIndex < text.length )
@@ -181,7 +191,7 @@ class TextInput extends Text {
 		case K.DELETE:
 			if( cursorIndex < text.length && canEdit ) {
 				beforeChange();
-				var end = K.isDown(K.CTRL) ? getWordEnd() : cursorIndex + 1;
+				var end = isKeyDownCtrl() ? getWordEnd() : cursorIndex + 1;
 				text = text.substr(0, cursorIndex) + text.substr(end);
 				onChange();
 			}
@@ -189,7 +199,7 @@ class TextInput extends Text {
 			if( cursorIndex > 0 && canEdit ) {
 				beforeChange();
 				var end = cursorIndex;
-				cursorIndex = K.isDown(K.CTRL) ? getWordStart() : cursorIndex - 1;
+				cursorIndex = isKeyDownCtrl() ? getWordStart() : cursorIndex - 1;
 				text = text.substr(0, cursorIndex) + text.substr(end);
 				onChange();
 			}
@@ -197,32 +207,32 @@ class TextInput extends Text {
 			cursorIndex = -1;
 			interactive.blur();
 			return;
-		case K.Z if( K.isDown(K.CTRL) ):
+		case K.Z if( isKeyDownCtrl() ):
 			if( undo.length > 0 && canEdit ) {
 				redo.push(curHistoryState());
 				setState(undo.pop());
 				onChange();
 			}
 			return;
-		case K.Y if( K.isDown(K.CTRL) ):
+		case K.Y if( isKeyDownCtrl() ):
 			if( redo.length > 0 && canEdit ) {
 				undo.push(curHistoryState());
 				setState(redo.pop());
 				onChange();
 			}
 			return;
-		case K.A if (K.isDown(K.CTRL)):
+		case K.A if (isKeyDownCtrl()):
 			if (text != "") {
 				cursorIndex = text.length;
 				selectionRange = {start: 0, length: text.length};
 				selectionSize = 0;
 			}
 			return;
-		case K.C if (K.isDown(K.CTRL)):
+		case K.C if (isKeyDownCtrl()):
 			if( text != "" && selectionRange != null ) {
 				hxd.System.setClipboardText(text.substr(selectionRange.start, selectionRange.length));
 			}
-		case K.X if (K.isDown(K.CTRL)):
+		case K.X if (isKeyDownCtrl()):
 			if( text != "" && selectionRange != null ) {
 				if(hxd.System.setClipboardText(text.substr(selectionRange.start, selectionRange.length))) {
 					if( !canEdit ) return;
@@ -231,7 +241,7 @@ class TextInput extends Text {
 					onChange();
 				}
 			}
-		case K.V if (K.isDown(K.CTRL)):
+		case K.V if (isKeyDownCtrl()):
 			if( !canEdit ) return;
 			var t = hxd.System.getClipboardText();
 			if( t != null && t.length > 0 ) {
