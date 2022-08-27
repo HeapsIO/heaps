@@ -22,8 +22,8 @@ class CollideCheck extends hxd.App {
 		}
 		rrect.endFill();
 
-		rrect.x = s2d.width / 2;
-		rrect.y = s2d.height / 2;
+		rrect.x = s2d.width >> 1;
+		rrect.y = s2d.height >> 1;
 		rrect.rotation = Math.PI / 3;
 
 		line = new h2d.Graphics(s2d);
