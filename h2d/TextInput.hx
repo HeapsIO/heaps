@@ -34,6 +34,10 @@ class TextInput extends Text {
 	**/
 	public var inputWidth : Null<Int>;
 	/**
+		Whether the text input allows multiple lines.
+	**/
+	public var multiline: Bool = false;
+	/**
 		If not null, represents current text selection range.
 	**/
 	public var selectionRange : { start : Int, length : Int };
@@ -51,6 +55,8 @@ class TextInput extends Text {
 	var cursorText : String;
 	var cursorX : Float;
 	var cursorXIndex : Int;
+	var cursorY : Float;
+	var cursorYIndex : Int;
 	var cursorBlink = 0.;
 	var cursorScroll = 0;
 	var scrollX = 0.;
@@ -193,10 +199,23 @@ class TextInput extends Text {
 				text = text.substr(0, cursorIndex) + text.substr(end);
 				onChange();
 			}
-		case K.ESCAPE, K.ENTER, K.NUMPAD_ENTER:
+		case K.ESCAPE:
 			cursorIndex = -1;
 			interactive.blur();
 			return;
+		case K.ENTER, K.NUMPAD_ENTER:
+			if(!multiline) {
+				cursorIndex = -1;
+				interactive.blur();
+				return;
+			} else {
+				beforeChange();
+				if( selectionRange != null )
+					cutSelection();
+				text = text.substr(0, cursorIndex) + '\n' + text.substr(cursorIndex);
+				cursorIndex++;
+				onChange();
+			}
 		case K.Z if( K.isDown(K.CTRL) ):
 			if( undo.length > 0 && canEdit ) {
 				redo.push(curHistoryState());
@@ -305,6 +324,7 @@ class TextInput extends Text {
 		while (ret < len && !charset.isSpace(StringTools.fastCodeAt(text, ret))) ret++;
 		return ret;
 	}
+
 	function getWordStart() {
 		if (cursorIndex <= 0) {
 			return cursorIndex;
@@ -340,6 +360,70 @@ class TextInput extends Text {
 		while( undo.length > maxHistorySize ) undo.shift();
 	}
 
+	function getAllLines() {
+		var lines = this.text.split('\n');
+		var finalLines : Array<String> = [];
+
+		for(l in lines) {
+			var splitText = splitText(l).split('\n');
+			finalLines = finalLines.concat(splitText);
+		}
+
+		for(i in 0...finalLines.length) {
+			finalLines[i] += '\n';
+		}
+
+		return finalLines;
+	}
+
+	function getCurrentLine() : String {
+		var lines = getAllLines();
+		var currIndex = 0;
+
+		for(i in 0...lines.length) {
+			currIndex += lines[i].length;
+			if(cursorIndex < currIndex) {
+				return lines[i];
+			}
+		}
+		return '';
+	}
+	
+	function getCursorXOffset() {
+		var lines = getAllLines();
+		var offset = cursorIndex;
+		var currLine = getCurrentLine();
+		var currIndex = 0;
+
+		for(i in 0...lines.length) {
+			currIndex += lines[i].length;
+			if(cursorIndex < currIndex) {
+				break;
+			} else {
+				offset -= lines[i].length;
+			}
+		}
+
+		return calcTextWidth(currLine.substr(0, offset));
+	}
+
+	function getCursorYOffset() {
+		// return 0.0;
+		var lines = getAllLines();
+		var currIndex = 0;
+		var lineNum = 0;
+
+		for(i in 0...lines.length) {
+			currIndex += lines[i].length;
+			if(cursorIndex < currIndex) {
+				lineNum = i;
+				break;
+			}
+		}
+
+		return lineNum * font.lineHeight;
+	}
+
 	/**
 		Returns a String representing currently selected text area or `null` if no text is selected.
 	**/
@@ -371,18 +455,30 @@ class TextInput extends Text {
 
 	function textPos( x : Float, y : Float ) {
 		x += scrollX;
+		var lineIndex = Math.floor(y / font.lineHeight);
+		var lines = getAllLines();
+		var selectedLine = lines[lineIndex];
 		var pos = 0;
-		while( pos < text.length ) {
-			if( calcTextWidth(text.substr(0,pos+1)) > x )
-				break;
-			pos++;
+		for(i in 0...lineIndex) {
+			pos += lines[i].length;
 		}
-		return pos;
+
+		var linePos = 0;
+		while( linePos < selectedLine.length ) {
+			if( calcTextWidth(selectedLine.substr(0,linePos+1)) > x ) {
+				pos++;
+				break;
+			}
+			pos++;
+			linePos++;
+		}
+		return pos - 1;
 	}
 
 	override function sync(ctx) {
+		var lines = getAllLines();
 		interactive.width = (inputWidth != null ? inputWidth : maxWidth != null ? Math.ceil(maxWidth) : textWidth);
-		interactive.height = font.lineHeight;
+		interactive.height = font.lineHeight * lines.length;
 		super.sync(ctx);
 	}
 
@@ -396,7 +492,8 @@ class TextInput extends Text {
 			if( cursorIndex > text.length ) cursorIndex = text.length;
 			cursorText = text;
 			cursorXIndex = cursorIndex;
-			cursorX = calcTextWidth(text.substr(0, cursorIndex));
+			cursorX = getCursorXOffset();
+			cursorY = getCursorYOffset();
 			if( inputWidth != null && cursorX - scrollX >= inputWidth )
 				scrollX = cursorX - inputWidth + 1;
 			else if( cursorX < scrollX && cursorIndex > 0 )
@@ -409,16 +506,35 @@ class TextInput extends Text {
 		absY -= scrollX * matC;
 
 		if( selectionRange != null ) {
-			if( selectionSize == 0 ) {
-				selectionPos = calcTextWidth(text.substr(0, selectionRange.start));
-				selectionSize = calcTextWidth(text.substr(selectionRange.start, selectionRange.length));
+			var lines = getAllLines();
+			var lineOffset = 0;
+
+			for(i in 0...lines.length) {
+				var line = lines[i];
+
+				var selEnd = line.length;
+
+				if(selectionRange.start > lineOffset + line.length || selectionRange.start + selectionRange.length < lineOffset) {
+					lineOffset += line.length;
+					continue;
+				}
+
+				var selStart = Math.floor(Math.max(0, selectionRange.start - lineOffset));
+				var selEnd = Math.floor(Math.min(line.length - selStart, selectionRange.length + selectionRange.start - lineOffset - selStart));
+				
+				selectionPos = calcTextWidth(line.substr(0, selStart));
+				selectionSize = calcTextWidth(line.substr(selStart, selEnd));
 				if( selectionRange.start + selectionRange.length == text.length ) selectionSize += cursorTile.width; // last pixel
+	
+				selectionTile.dx += selectionPos;
+				selectionTile.dy += i * font.lineHeight;
+				selectionTile.width += selectionSize;
+				emitTile(ctx, selectionTile);
+				selectionTile.dx -= selectionPos;
+				selectionTile.dy -= i * font.lineHeight;
+				selectionTile.width -= selectionSize;
+				lineOffset += line.length;
 			}
-			selectionTile.dx += selectionPos;
-			selectionTile.width += selectionSize;
-			emitTile(ctx, selectionTile);
-			selectionTile.dx -= selectionPos;
-			selectionTile.width -= selectionSize;
 		}
 
 		super.draw(ctx);
@@ -429,8 +545,11 @@ class TextInput extends Text {
 			cursorBlink += ctx.elapsedTime;
 			if( cursorBlink % (cursorBlinkTime * 2) < cursorBlinkTime ) {
 				cursorTile.dx += cursorX - scrollX;
+				cursorTile.dy += cursorY;
 				emitTile(ctx, cursorTile);
 				cursorTile.dx -= cursorX - scrollX;
+				cursorTile.dy -= cursorY;
+
 			}
 		}
 
