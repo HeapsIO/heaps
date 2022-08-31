@@ -154,9 +154,12 @@ class Window {
 		for( f in resizeEvents ) f();
 	}
 
-	public function setCursorPos( x : Int, y : Int ) : Void {
+	public function setCursorPos( x : Int, y : Int, emitEvent: Bool = false ) : Void {
 		#if hldx
 		window.setCursorPosition(x, y);
+		curMouseX = x;
+		curMouseY = y;
+		if (emitEvent) event(new hxd.Event(EMove, x, y));
 		#else
 		throw "Not implemented";
 		#end
