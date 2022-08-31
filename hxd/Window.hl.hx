@@ -1,5 +1,6 @@
 package hxd;
 import hxd.Key in K;
+import hxd.impl.MouseMode;
 
 #if (hlsdl && hldx)
 #error "You shouldn't use both -lib hlsdl and -lib hldx"
@@ -39,7 +40,10 @@ class Window {
 	public var height(get, never) : Int;
 	public var mouseX(get, never) : Int;
 	public var mouseY(get, never) : Int;
+	@:deprecated("Use mouseMode = AbsoluteUnbound")
 	public var mouseLock(get, set) : Bool;
+	public var mouseClip(get, set) : Bool;
+	public var mouseMode(default, set): MouseMode = Absolute;
 	public var monitor : Null<Int> = null;
 	public var framerate : Null<Int> = null;
 	public var vsync(get, set) : Bool;
@@ -55,6 +59,7 @@ class Window {
 	var window : sdl.Window;
 	#elseif hldx
 	var window : dx.Window;
+	var _mouseClip : Bool;
 	#end
 	var windowWidth = 800;
 	var windowHeight = 600;
@@ -149,6 +154,14 @@ class Window {
 		for( f in resizeEvents ) f();
 	}
 
+	public function setCursorPos( x : Int, y : Int ) : Void {
+		#if hldx
+		window.setCursorPosition(x, y);
+		#else
+		throw "Not implemented";
+		#end
+	}
+
 	@:deprecated("Use the displayMode property instead")
 	public function setFullScreen( v : Bool ) : Void {
 		#if (hldx || hlsdl)
@@ -173,12 +186,39 @@ class Window {
 	}
 
 	function get_mouseLock() : Bool {
-		return false;
+		return mouseMode == AbsoluteUnbound;
 	}
 
 	function set_mouseLock(v:Bool) : Bool {
+		return set_mouseMode(v ? AbsoluteUnbound : Absolute) == AbsoluteUnbound;
+	}
+
+	function get_mouseClip() : Bool {
+		#if hldx
+		return _mouseClip;
+		#else
+		return false;
+		#end
+	}
+
+	function set_mouseClip( v : Bool ) : Bool {
+		#if hldx
+		window.clipCursor(v);
+		return _mouseClip = v;
+		#else
 		if( v ) throw "Not implemented";
 		return false;
+		#end
+	}
+
+	function set_mouseMode( v : MouseMode ) : MouseMode {
+		#if hldx
+		window.setRelativeMouseMode(v != Absolute);
+		return mouseMode = v;
+		#else
+		if ( v != Absolute ) throw "Not implemented";
+		return Absolute;
+		#end
 	}
 
 	#if (hldx||hlsdl)
@@ -238,8 +278,10 @@ class Window {
 			default:
 			}
 		case MouseDown if (!hxd.System.getValue(IsTouch)):
-			curMouseX = e.mouseX;
-			curMouseY = e.mouseY;
+			if (mouseMode == Absolute) {
+				curMouseX = e.mouseX;
+				curMouseY = e.mouseY;
+			}
 			eh = new Event(EPush, e.mouseX, e.mouseY);
 			// middle button -> 2 / right button -> 1
 			eh.button = switch( e.button - 1 ) {
@@ -249,8 +291,10 @@ class Window {
 			case x: x;
 			}
 		case MouseUp if (!hxd.System.getValue(IsTouch)):
-			curMouseX = e.mouseX;
-			curMouseY = e.mouseY;
+			if (mouseMode == Absolute) {
+				curMouseX = e.mouseX;
+				curMouseY = e.mouseY;
+			}
 			eh = new Event(ERelease, e.mouseX, e.mouseY);
 			eh.button = switch( e.button - 1 ) {
 			case 0: 0;
@@ -259,9 +303,47 @@ class Window {
 			case x: x;
 			};
 		case MouseMove if (!hxd.System.getValue(IsTouch)):
-			curMouseX = e.mouseX;
-			curMouseY = e.mouseY;
-			eh = new Event(EMove, e.mouseX, e.mouseY);
+			switch (mouseMode) {
+				case Absolute:
+					curMouseX = e.mouseX;
+					curMouseY = e.mouseY;
+					eh = new Event(EMove, e.mouseX, e.mouseY);
+				case Relative(callback):
+					#if (hldx || hlsdl)
+					var ev = new Event(EMove, e.mouseXRel, e.mouseYRel);
+					#else
+					var ev = new Event(EMove, e.mouseX - curMouseX, e.mouseY - curMouseY);
+					#end
+					callback(ev);
+					if (!ev.cancel && ev.propagate) {
+						ev.cancel = false;
+						ev.propagate = false;
+						ev.relX = curMouseX;
+						ev.relY = curMouseY;
+					}
+				case AbsoluteUnbound:
+					#if (hldx || hlsdl)
+					curMouseX += e.mouseXRel;
+					curMouseY += e.mouseYRel;
+					#else
+					curMouseX += e.mouseX - curMouseX;
+					curMouseY += e.mouseY - curMouseY;
+					#end
+					eh = new Event(EMove, curMouseX, curMouseY);
+				case AbsoluteWrap:
+					#if (hldx || hlsdl)
+					curMouseX += e.mouseXRel;
+					curMouseY += e.mouseYRel;
+					#else
+					curMouseX += e.mouseX - curMouseX;
+					curMouseY += e.mouseY - curMouseY;
+					#end
+					if (curMouseX < 0) curMouseX = width + (curMouseX % width);
+					else if (curMouseX >= width) curMouseX %= width;
+					if (curMouseY < 0) curMouseY = height + (curMouseY % height);
+					else if (curMouseY >= height) curMouseY %= height;
+					eh = new Event(EMove, curMouseX, curMouseY);
+			}
 		case MouseWheel:
 			eh = new Event(EWheel, mouseX, mouseY);
 			eh.wheelDelta = -e.wheelDelta;

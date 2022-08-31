@@ -1,5 +1,7 @@
 package hxd;
 
+import hxd.impl.MouseMode;
+
 enum DisplayMode {
 	Windowed;
 	Borderless;
@@ -15,7 +17,16 @@ class Window {
 	public var height(get, never) : Int;
 	public var mouseX(get, never) : Int;
 	public var mouseY(get, never) : Int;
+	@:deprecated("Use mouseMode = AbsoluteUnbound")
 	public var mouseLock(get, set) : Bool;
+	/**
+		If set, will restrain the mouse cursor within the window boundaries.
+	**/
+	public var mouseClip(get, set) : Bool;
+	/**
+		Set the mouse movement input handling mode. See `MouseMode` for more details on each mode.
+	**/
+	public var mouseMode(default, set) : MouseMode = Absolute;
 	public var vsync(get, set) : Bool;
 	public var isFocused(get, never) : Bool;
 
@@ -72,6 +83,13 @@ class Window {
 	public function setFullScreen( v : Bool ) : Void {
 	}
 
+	/**
+		Set the hardware mouse cursor position relative to window boundaries.
+	**/
+	public function setCursorPos( x : Int, y : Int ) : Void {
+		throw "Not implemented";
+	}
+
 	static var inst : Window = null;
 	public static function getInstance() : Window {
 		if( inst == null ) inst = new Window();
@@ -95,12 +113,25 @@ class Window {
 	}
 
 	function get_mouseLock() : Bool {
-		return false;
+		return mouseMode == AbsoluteUnbound;
 	}
 
 	function set_mouseLock( v : Bool ) : Bool {
-		if( v ) throw "Not implemented";
+		return set_mouseMode(v ? AbsoluteUnbound : Absolute) == AbsoluteUnbound;
+	}
+
+	function get_mouseClip() : Bool {
 		return false;
+	}
+
+	function set_mouseClip( v : Bool ) : Bool {
+		if ( v ) throw "Not implemented";
+		return false;
+	}
+
+	function set_mouseMode( v : MouseMode ) : MouseMode {
+		if ( v != Absolute ) throw "Not implemented";
+		return Absolute;
 	}
 
 	function get_vsync() : Bool return true;
