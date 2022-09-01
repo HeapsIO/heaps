@@ -456,8 +456,8 @@ class TextInput extends Text {
 	function textPos( x : Float, y : Float ) {
 		x += scrollX;
 		var lineIndex = Math.floor(y / font.lineHeight);
-		lineIndex = Math.floor(hxd.Math.clamp(lineIndex, 0, lines.length - 1));
 		var lines = getAllLines();
+		lineIndex = hxd.Math.iclamp(lineIndex, 0, lines.length - 1);
 		var selectedLine = lines[lineIndex];
 		var pos = 0;
 		for(i in 0...lineIndex) {
