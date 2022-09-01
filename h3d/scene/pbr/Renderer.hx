@@ -72,7 +72,9 @@ class Renderer extends h3d.scene.Renderer {
 		normal : (null:h3d.mat.Texture),
 		pbr : (null:h3d.mat.Texture),
 		other : (null:h3d.mat.Texture),
+		#if !MRT_low
 		depth : (null:h3d.mat.Texture),
+		#end
 		hdr : (null:h3d.mat.Texture),
 		ldr : (null:h3d.mat.Texture),
 	};
@@ -89,20 +91,26 @@ class Renderer extends h3d.scene.Renderer {
 		Value("output.color"),
 		Vec4([Value("output.normal",3),ALPHA]),
 		Vec4([Value("output.metalness"), Value("output.roughness"), Value("output.occlusion"), ALPHA]),
+		#if !MRT_low
 		Vec4([Value("output.emissive"), Value("output.custom1"), Value("output.custom2"), ALPHA]),
 		Vec4([Value("output.depth"), Const(0), Const(0), ALPHA])
+		#else
+		Vec4([Value("output.emissive"),Value("output.depth"),Const(0), ALPHA /* ? */])
+		#end
 	]);
 	var decalsOutput = new h3d.pass.Output("decals",[
 		Vec4([Swiz(Value("output.color"),[X,Y,Z]), Value("output.albedoStrength",1)]),
 		Vec4([Value("output.normal",3), Value("output.normalStrength",1)]),
 		Vec4([Value("output.metalness"), Value("output.roughness"), Value("output.occlusion"), Value("output.pbrStrength")])
 	]);
+	#if !MRT_low
 	var emissiveDecalsOutput = new h3d.pass.Output("emissiveDecal",[
 		Vec4([Swiz(Value("output.color"),[X,Y,Z]), Value("output.albedoStrength",1)]),
 		Vec4([Value("output.normal",3), Value("output.normalStrength",1)]),
 		Vec4([Value("output.metalness"), Value("output.roughness"), Value("output.occlusion"), Value("output.pbrStrength")]),
 		Vec4([Value("output.emissive"), Value("output.custom1"), Value("output.custom2"), Value("output.emissiveStrength")])
 	]);
+	#end
 
 	public function new(?env) {
 		super();
@@ -118,7 +126,9 @@ class Renderer extends h3d.scene.Renderer {
 		allPasses.push(output);
 		allPasses.push(defaultPass);
 		allPasses.push(decalsOutput);
+		#if !MRT_low
 		allPasses.push(emissiveDecalsOutput);
+		#end
 		allPasses.push(new h3d.pass.Shadows(null));
 		refreshProps();
 	}
@@ -145,7 +155,7 @@ class Renderer extends h3d.scene.Renderer {
 			return defaultPass;
 		case "default", "alpha", "additive":
 			return output;
-		case "decal":
+		case "decal" #if MRT_low, "emissiveDecal" #end:
 			return decalsOutput;
 		}
 		return super.getPassByName(name);
@@ -344,15 +354,19 @@ class Renderer extends h3d.scene.Renderer {
 		textures.albedo = allocTarget("albedo", true, 1.);
 		textures.normal = allocTarget("normal", true, 1., RGBA16F);
 		textures.pbr = allocTarget("pbr", true, 1.);
+		#if !MRT_low
 		textures.other = allocTarget("other", true, 1.);
 		textures.depth = allocTarget("depth", true, 1., R32F);
+		#else
+		textures.other = allocTarget("other", true, 1., RGBA32F);
+		#end
 		textures.hdr = allocTarget("hdrOutput", true, 1, RGBA16F);
 		textures.ldr = allocTarget("ldrOutput");
 	}
 
 	function initGlobals() {
 		ctx.setGlobal("albedoMap", { texture : textures.albedo, channel : hxsl.Channel.R });
-		ctx.setGlobal("depthMap", { texture : textures.depth, channel : hxsl.Channel.R });
+		ctx.setGlobal("depthMap", { texture : #if !MRT_low textures.depth #else textures.other #end, channel : #if !MRT_low hxsl.Channel.R #else hxsl.Channel.G #end });
 		ctx.setGlobal("normalMap", { texture : textures.normal, channel : hxsl.Channel.R });
 		ctx.setGlobal("occlusionMap", { texture : textures.pbr, channel : hxsl.Channel.B });
 		ctx.setGlobal("hdrMap", textures.hdr);
@@ -378,7 +392,9 @@ class Renderer extends h3d.scene.Renderer {
 		pbrProps.albedoTex = textures.albedo;
 		pbrProps.normalTex = textures.normal;
 		pbrProps.pbrTex = textures.pbr;
+		#if !MRT_low
 		pbrProps.depthTex = textures.depth;
+		#end
 		pbrProps.otherTex = textures.other;
 		pbrProps.cameraInverseViewProj = ctx.camera.getInverseViewProj();
 		pbrProps.occlusionPower = props.occlusion * props.occlusion;
@@ -461,23 +477,30 @@ class Renderer extends h3d.scene.Renderer {
 	}
 
 	function drawEmissiveDecals( passName : String ) {
+		#if !MRT_low
 		var passes = get(passName);
 		if( passes.isEmpty() ) return;
 		ctx.engine.pushTargets([textures.albedo,textures.normal,textures.pbr,textures.other]);
 		renderPass(emissiveDecalsOutput, passes);
 		ctx.engine.popTarget();
+		#else
+		drawPbrDecals(passName);
+		#end
 	}
 
 	override function render() {
 		beginPbr();
-
+		#if !MRT_low
 		setTarget(textures.depth);
 		ctx.engine.clearF(new h3d.Vector(1));
+		#end
 
 		setTargets([textures.albedo,textures.normal,textures.pbr,textures.other]);
 		clear(0, 1, 0);
 
+		#if !MRT_low
 		setTargets([textures.albedo,textures.normal,textures.pbr,textures.other,textures.depth]);
+		#end
 
 		begin(MainDraw);
 		renderPass(output, get("terrain"));
