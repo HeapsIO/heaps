@@ -163,6 +163,8 @@ class Window {
 	public function setCursorPos( x : Int, y : Int, emitEvent: Bool = false ) : Void {
 		#if hldx
 		if (mouseMode == Absolute) window.setCursorPosition(x, y);
+		#elseif hlsdl
+		if (mouseMode == Absolute) window.warpMouse(x, y);
 		#else
 		throw "Not implemented";
 		#end
@@ -205,6 +207,8 @@ class Window {
 	function get_mouseClip() : Bool {
 		#if hldx
 		return _mouseClip;
+		#elseif hlsdl
+		return window.grab;
 		#else
 		return false;
 		#end
@@ -214,6 +218,8 @@ class Window {
 		#if hldx
 		window.clipCursor(v);
 		return _mouseClip = v;
+		#elseif hlsdl
+		return window.grab = v;
 		#else
 		if( v ) throw "Not implemented";
 		return false;
@@ -225,6 +231,15 @@ class Window {
 
 		var forced = onMouseModeChange(mouseMode, v);
 		if (forced != null) v = forced;
+
+		#if hldx
+		window.setRelativeMouseMode(v != Absolute);
+		return mouseMode = v;
+		#elseif hlsdl
+		sdl.Sdl.setRelativeMouseMode(v != Absolute);
+		#else
+		if ( v != Absolute ) throw "Not implemented";
+		#end
 
 		if ( v == Absolute ) {
 			switch ( mouseMode ) {
@@ -238,6 +253,8 @@ class Window {
 					}
 					#if hldx
 					window.setCursorPosition(curMouseX, curMouseY);
+					#elseif hlsdl
+					window.warpMouse(curMouseX, curMouseY);
 					#end
 				default:
 			}
@@ -246,13 +263,7 @@ class Window {
 		startMouseX = curMouseX;
 		startMouseY = curMouseY;
 		
-		#if hldx
-		window.setRelativeMouseMode(v != Absolute);
 		return mouseMode = v;
-		#else
-		if ( v != Absolute ) throw "Not implemented";
-		return Absolute;
-		#end
 	}
 
 	#if (hldx||hlsdl)
