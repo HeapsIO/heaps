@@ -202,7 +202,7 @@ class LocalEntry extends FileEntry {
 		lastChanged = getModifTime();
 		watchHandle = new hl.uv.Fs(originalFile, function(ev) {
 			switch(ev) {
-				case Change:
+				case Change|Rename:
 					if(getModifTime() != lastChanged) {
 						lastChanged = getModifTime();
 						if(onChangedDelay != null)
@@ -212,8 +212,6 @@ class LocalEntry extends FileEntry {
 							onChanged();
 						}, 10);
 					}
-
-				case Rename:
 			}
 		});
 		#else
