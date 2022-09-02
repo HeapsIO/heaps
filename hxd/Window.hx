@@ -42,6 +42,17 @@ class Window {
 		return true;
 	}
 
+	/**
+		An event called when `mouseMode` is changed.
+
+		Note that changing from `Relative(callbackA)` to `Relative(callbackB)` would also cause this event as any other parameter changes.
+
+		@returns Force-override of the mouse mode that will be used as an active mode or null.
+	**/
+	public dynamic function onMouseModeChange( from : MouseMode, to : MouseMode ) : Null<MouseMode> {
+		return null;
+	}
+
 	public function event( e : hxd.Event ) : Void {
 		for( et in eventTargets )
 			et(e);
@@ -113,11 +124,11 @@ class Window {
 	}
 
 	function get_mouseLock() : Bool {
-		return mouseMode == AbsoluteUnbound;
+		return switch (mouseMode) { case AbsoluteUnbound(_): true; default: false; };
 	}
 
-	function set_mouseLock( v : Bool ) : Bool {
-		return set_mouseMode(v ? AbsoluteUnbound : Absolute) == AbsoluteUnbound;
+	function set_mouseLock(v:Bool) : Bool {
+		return set_mouseMode(v ? AbsoluteUnbound(true) : Absolute).equals(AbsoluteUnbound(true));
 	}
 
 	function get_mouseClip() : Bool {

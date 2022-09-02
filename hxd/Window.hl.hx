@@ -65,6 +65,8 @@ class Window {
 	var windowHeight = 600;
 	var curMouseX = 0;
 	var curMouseY = 0;
+	var startMouseX = 0;
+	var startMouseY = 0;
 	var savedSize : { x : Int, y : Int, width : Int, height : Int };
 
 	static var CODEMAP = [for( i in 0...2048 ) i];
@@ -98,6 +100,10 @@ class Window {
 
 	public dynamic function onClose() : Bool {
 		return true;
+	}
+
+	public dynamic function onMouseModeChange( from : MouseMode, to : MouseMode ) : Null<MouseMode> {
+		return null;
 	}
 
 	public function event( e : hxd.Event ) : Void {
@@ -156,13 +162,13 @@ class Window {
 
 	public function setCursorPos( x : Int, y : Int, emitEvent: Bool = false ) : Void {
 		#if hldx
-		window.setCursorPosition(x, y);
-		curMouseX = x;
-		curMouseY = y;
-		if (emitEvent) event(new hxd.Event(EMove, x, y));
+		if (mouseMode == Absolute) window.setCursorPosition(x, y);
 		#else
 		throw "Not implemented";
 		#end
+		curMouseX = x;
+		curMouseY = y;
+		if (emitEvent) event(new hxd.Event(EMove, x, y));
 	}
 
 	@:deprecated("Use the displayMode property instead")
@@ -189,11 +195,11 @@ class Window {
 	}
 
 	function get_mouseLock() : Bool {
-		return mouseMode == AbsoluteUnbound;
+		return switch (mouseMode) { case AbsoluteUnbound(_): true; default: false; };
 	}
 
 	function set_mouseLock(v:Bool) : Bool {
-		return set_mouseMode(v ? AbsoluteUnbound : Absolute) == AbsoluteUnbound;
+		return set_mouseMode(v ? AbsoluteUnbound(true) : Absolute).equals(AbsoluteUnbound(true));
 	}
 
 	function get_mouseClip() : Bool {
@@ -215,6 +221,23 @@ class Window {
 	}
 
 	function set_mouseMode( v : MouseMode ) : MouseMode {
+		if ( v.equals(mouseMode) ) return v;
+
+		var forced = onMouseModeChange(mouseMode, v);
+		if (forced != null) v = forced;
+
+		if ( v == Absolute ) {
+			switch ( mouseMode ) {
+				case Relative(_, restorePos) | AbsoluteUnbound(restorePos) | AbsoluteWrap(restorePos):
+					if ( restorePos ) setCursorPos(startMouseX, startMouseY);
+					else setCursorPos(hxd.Math.iclamp(curMouseX, 0, width), hxd.Math.iclamp(curMouseY, 0, height));
+				default:
+			}
+		}
+
+		startMouseX = curMouseX;
+		startMouseY = curMouseY;
+		
 		#if hldx
 		window.setRelativeMouseMode(v != Absolute);
 		return mouseMode = v;
@@ -285,7 +308,7 @@ class Window {
 				curMouseX = e.mouseX;
 				curMouseY = e.mouseY;
 			}
-			eh = new Event(EPush, e.mouseX, e.mouseY);
+			eh = new Event(EPush, curMouseX, curMouseY);
 			// middle button -> 2 / right button -> 1
 			eh.button = switch( e.button - 1 ) {
 			case 0: 0;
@@ -298,7 +321,7 @@ class Window {
 				curMouseX = e.mouseX;
 				curMouseY = e.mouseY;
 			}
-			eh = new Event(ERelease, e.mouseX, e.mouseY);
+			eh = new Event(ERelease, curMouseX, curMouseY);
 			eh.button = switch( e.button - 1 ) {
 			case 0: 0;
 			case 1: 2;
@@ -311,7 +334,7 @@ class Window {
 					curMouseX = e.mouseX;
 					curMouseY = e.mouseY;
 					eh = new Event(EMove, e.mouseX, e.mouseY);
-				case Relative(callback):
+				case Relative(callback, _):
 					#if (hldx || hlsdl)
 					var ev = new Event(EMove, e.mouseXRel, e.mouseYRel);
 					#else
@@ -324,7 +347,7 @@ class Window {
 						ev.relX = curMouseX;
 						ev.relY = curMouseY;
 					}
-				case AbsoluteUnbound:
+				case AbsoluteUnbound(_):
 					#if (hldx || hlsdl)
 					curMouseX += e.mouseXRel;
 					curMouseY += e.mouseYRel;
@@ -333,7 +356,7 @@ class Window {
 					curMouseY += e.mouseY - curMouseY;
 					#end
 					eh = new Event(EMove, curMouseX, curMouseY);
-				case AbsoluteWrap:
+				case AbsoluteWrap(_):
 					#if (hldx || hlsdl)
 					curMouseX += e.mouseXRel;
 					curMouseY += e.mouseYRel;

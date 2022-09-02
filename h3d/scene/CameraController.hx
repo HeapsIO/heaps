@@ -166,7 +166,7 @@ class CameraController extends h3d.scene.Object {
 			pushTime = haxe.Timer.stamp();
 			pushStartX = pushX = e.relX;
 			pushStartY = pushY = e.relY;
-			hxd.Window.getInstance().mouseMode = AbsoluteUnbound;
+			hxd.Window.getInstance().mouseMode = AbsoluteUnbound(true);
 		case ERelease, EReleaseOutside:
 			if( pushing == e.button ) {
 				pushing = -1;
