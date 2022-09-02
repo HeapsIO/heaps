@@ -457,6 +457,7 @@ class TextInput extends Text {
 		x += scrollX;
 		var lineIndex = Math.floor(y / font.lineHeight);
 		var lines = getAllLines();
+		lineIndex = hxd.Math.iclamp(lineIndex, 0, lines.length - 1);
 		var selectedLine = lines[lineIndex];
 		var pos = 0;
 		for(i in 0...lineIndex) {
