@@ -40,7 +40,7 @@ class Window {
 	public var height(get, never) : Int;
 	public var mouseX(get, never) : Int;
 	public var mouseY(get, never) : Int;
-	@:deprecated("Use mouseMode = AbsoluteUnbound")
+	@:deprecated("Use mouseMode = AbsoluteUnbound(true)")
 	public var mouseLock(get, set) : Bool;
 	public var mouseClip(get, set) : Bool;
 	public var mouseMode(default, set): MouseMode = Absolute;
@@ -160,7 +160,7 @@ class Window {
 		for( f in resizeEvents ) f();
 	}
 
-	public function setCursorPos( x : Int, y : Int, emitEvent: Bool = false ) : Void {
+	public function setCursorPos( x : Int, y : Int, emitEvent : Bool = false ) : Void {
 		#if hldx
 		if (mouseMode == Absolute) window.setCursorPosition(x, y);
 		#elseif hlsdl

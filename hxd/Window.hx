@@ -17,7 +17,7 @@ class Window {
 	public var height(get, never) : Int;
 	public var mouseX(get, never) : Int;
 	public var mouseY(get, never) : Int;
-	@:deprecated("Use mouseMode = AbsoluteUnbound")
+	@:deprecated("Use mouseMode = AbsoluteUnbound(true)")
 	public var mouseLock(get, set) : Bool;
 	/**
 		If set, will restrain the mouse cursor within the window boundaries.
@@ -97,7 +97,7 @@ class Window {
 	/**
 		Set the hardware mouse cursor position relative to window boundaries.
 	**/
-	public function setCursorPos( x : Int, y : Int ) : Void {
+	public function setCursorPos( x : Int, y : Int, emitEvent : Bool = false ) : Void {
 		throw "Not implemented";
 	}
 
