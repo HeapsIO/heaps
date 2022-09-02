@@ -229,8 +229,16 @@ class Window {
 		if ( v == Absolute ) {
 			switch ( mouseMode ) {
 				case Relative(_, restorePos) | AbsoluteUnbound(restorePos) | AbsoluteWrap(restorePos):
-					if ( restorePos ) setCursorPos(startMouseX, startMouseY);
-					else setCursorPos(hxd.Math.iclamp(curMouseX, 0, width), hxd.Math.iclamp(curMouseY, 0, height));
+					if ( restorePos ) {
+						curMouseX = startMouseX;
+						curMouseY = startMouseY;
+					} else {
+						curMouseX = hxd.Math.iclamp(curMouseX, 0, width);
+						curMouseY = hxd.Math.iclamp(curMouseY, 0, height);
+					}
+					#if hldx
+					window.setCursorPosition(curMouseX, curMouseY);
+					#end
 				default:
 			}
 		}
@@ -346,6 +354,7 @@ class Window {
 						ev.propagate = false;
 						ev.relX = curMouseX;
 						ev.relY = curMouseY;
+						eh = ev;
 					}
 				case AbsoluteUnbound(_):
 					#if (hldx || hlsdl)
