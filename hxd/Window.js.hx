@@ -1,5 +1,6 @@
 package hxd;
 
+import js.Browser;
 import hxd.impl.MouseMode;
 
 enum DisplayMode {
@@ -278,12 +279,11 @@ class Window {
 		var forced = onMouseModeChange(mouseMode, v);
 		if (forced != null) v = forced;
 		
+		var target = canvas != null ? canvas : Browser.window.document.documentElement;
 		if ( v == Absolute ) {
-			if ( canvas != null ) canvas.ownerDocument.exitPointerLock();
-			else js.Browser.window.document.exitPointerLock();
+			if ( target.ownerDocument.pointerLockElement == target ) target.ownerDocument.exitPointerLock();
 		} else {
-			var target = canvas != null ? canvas : js.Browser.window.document.documentElement;
-			if (js.Browser.document.pointerLockElement != target) target.requestPointerLock();
+			if ( target.ownerDocument.pointerLockElement != target ) target.requestPointerLock();
 		}
 		return mouseMode = v;
 	}
@@ -296,8 +296,8 @@ class Window {
 	}
 
 	function onPointerLockChange( e : js.html.Event ) {
-		var lockTarget = canvas != null ? canvas : js.Browser.document.documentElement;
-		if ( js.Browser.document.pointerLockElement != lockTarget && mouseMode != Absolute ) {
+		var lockTarget = canvas != null ? canvas : Browser.document.documentElement;
+		if ( mouseMode != Absolute && lockTarget.ownerDocument.pointerLockElement != lockTarget ) {
 			// User cancelled out of the pointer lock by pressing escape or by other means: Switch to Absolute mode
 			mouseMode = Absolute;
 		}
@@ -307,9 +307,9 @@ class Window {
 		if ( mouseMode == Absolute ) {
 			if ( e.clientX != curMouseX || e.clientY != curMouseY ) onMouseMove(e);
 		} else {
-			var lockTarget = canvas != null ? canvas : js.Browser.document.documentElement;
+			var lockTarget = canvas != null ? canvas : Browser.document.documentElement;
 			// If we attempted to enter locked mode when browser didn't let us - try to enter locked mode on user click.
-			if ( js.Browser.document.pointerLockElement != lockTarget ) lockTarget.requestPointerLock();
+			if ( lockTarget.ownerDocument.pointerLockElement != lockTarget ) lockTarget.requestPointerLock();
 			if ( e.movementX != 0 || e.movementY != 0 ) onMouseMove(e);
 		}
 		var ev = new Event(EPush, mouseX, mouseY);
