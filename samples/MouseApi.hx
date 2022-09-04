@@ -14,9 +14,7 @@ class MouseApi extends SampleApp {
 	var relativePath: Graphics;
 	var relX: Float;
 	var relY: Float;
-	#if js
 	var expectedMode: MouseMode;
-	#end
 
 	override function init() {
 		super.init();
