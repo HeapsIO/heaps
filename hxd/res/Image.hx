@@ -238,7 +238,7 @@ class Image extends Resource {
 
 		case _ if( entry.extension == "tga" ):
 			inf.dataFormat = Tga;
-			inf.pixelFormat = ARGB;
+			inf.pixelFormat = BGRA;
 			f.skip(10);
 			inf.width = f.readUInt16();
 			inf.height = f.readUInt16();
@@ -311,41 +311,10 @@ class Image extends Resource {
 			#end
 		case Tga:
 			var bytes = entry.getBytes();
-			var r = new format.tga.Reader(new haxe.io.BytesInput(bytes)).read();
-			if( r.header.imageType != UncompressedTrueColor || r.header.bitsPerPixel != 32 )
-				throw "Not supported TGA "+r.header.imageType+"/"+r.header.bitsPerPixel;
-			var w = r.header.width;
-			var h = r.header.height;
-			if( fmt == RGBA ) {
-				pixels = hxd.Pixels.alloc(w, h, RGBA);
-				var bytes = pixels.bytes;
-				#if hl
-				var bytes : hl.Bytes = bytes;
-				inline function set(i,c) bytes.setI32(i<<2,c);
-				#else
-				inline function set(i,c) bytes.setInt32(i<<2,c);
-				#end
-				for( i in 0...w*h ) {
-					var c = r.imageData[i];
-					c = (c >>> 24) | (c << 8);
-					set(i,c);
-				}
-			} else {
-				pixels = hxd.Pixels.alloc(w, h, ARGB);
-				var access : hxd.Pixels.PixelsARGB = pixels;
-				var p = 0;
-				for( y in 0...h ) {
-					for( x in 0...w ) {
-						var c = r.imageData[p++];
-						access.setPixel(x, y, c);
-					}
-				}
-			}
-			switch( r.header.imageOrigin ) {
-			case BottomLeft: pixels.flags.set(FlipY);
-			case TopLeft: // nothing
-			default: throw "Not supported "+r.header.imageOrigin;
-			}
+			var tga = new format.tga.Reader(new haxe.io.BytesInput(bytes)).read();
+			pixels = new Pixels(inf.width, inf.height, format.tga.Tools.extract32(tga, true), BGRA);
+			if( fmt != null ) pixels.convert(fmt);
+
 		case Dds:
 			var pos = 128;
 			var mipLevel = 0;
