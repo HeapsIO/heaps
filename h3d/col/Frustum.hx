@@ -120,7 +120,7 @@ class Frustum {
 			return false;
 		if( b.testPlane(ptop) < 0 )
 			return false;
-		if( b.testPlane(ptop) < 0 )
+		if( b.testPlane(pbottom) < 0 )
 			return false;
 		if( b.testPlane(pnear) < 0 )
 			return false;
