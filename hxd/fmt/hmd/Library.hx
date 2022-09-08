@@ -587,14 +587,18 @@ class Library {
 		if( skin.vertexWeights != null )
 			return;
 
-		if( skin.bonesPerVertex != 3 )
-			throw "assert";
-
 		@:privateAccess skin.vertexCount = geom.vertexCount;
-		var data = getBuffers(geom, [
+
+		// For now only take 3 first weights into account even in 4 bones per vertex, which should be fine since they're sorted
+		var format = [
 			new hxd.fmt.hmd.Data.GeometryFormat("position",DVec3),
 			new hxd.fmt.hmd.Data.GeometryFormat("weights",DVec3),
-			new hxd.fmt.hmd.Data.GeometryFormat("indexes",DBytes4)]);
+			new hxd.fmt.hmd.Data.GeometryFormat("indexes",DBytes4)];
+		var data = getBuffers(geom, format);
+		var formatStride = 0;
+		for(f in format)
+			formatStride += f.format.getSize();
+
 		skin.vertexWeights = new haxe.ds.Vector(skin.vertexCount * skin.bonesPerVertex);
 		skin.vertexJoints = new haxe.ds.Vector(skin.vertexCount * skin.bonesPerVertex);
 
@@ -631,7 +635,7 @@ class Library {
 		for( r in ranges ) {
 			for( idx in r.pos...r.pos+r.count ) {
 				var vidx = data.indexes[idx];
-				var p = vidx * 7;
+				var p = vidx * formatStride;
 				var x = vbuf[p];
 				if( x != x ) {
 					// already processed
