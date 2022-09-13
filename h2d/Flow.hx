@@ -969,8 +969,8 @@ class Flow extends Object {
 			needReflow = true;
 
 		var oldW = realMinWidth, oldH = realMinHeight;
-		realMinWidth = if( minWidth == null && fillWidth ) Math.ceil(constraintWidth) else if( minWidth != null ) minWidth else -1;
-		realMinHeight = if( minHeight == null && fillHeight ) Math.ceil(constraintHeight) else if( minHeight != null ) minHeight else -1;
+		realMinWidth = if(fillWidth) hxd.Math.imax(Math.ceil(constraintWidth), minWidth != null ? minWidth : -1) else if( minWidth != null ) minWidth else -1;
+		realMinHeight = if(fillHeight) hxd.Math.imax(Math.ceil(constraintHeight), minHeight != null ? minHeight : -1) else if( minHeight != null ) minHeight else -1;
 		if(realMinWidth != oldW || realMinHeight != oldH)
 			needReflow = true;
 	}
