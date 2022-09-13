@@ -1227,7 +1227,7 @@ class Flow extends Object {
 				if( !p.isAbsolute )
 					c.constraintSize(
 						isConstraintWidth && p.constraint ? ((p.autoSize != null ? Math.floor(autoWidth * p.autoSize / autoSum) : maxInWidth) - pw) / Math.abs(c.scaleX) : -1,
-						isConstraintHeight && p.constraint ? ((p.autoSize != null ? maxLineHeight * p.autoSize : maxInHeight) - ph) / Math.abs(c.scaleY) : -1
+						isConstraintHeight && p.constraint ? ((p.autoSize != null ? hxd.Math.imax(maxLineHeight, minLineHeight) * p.autoSize : maxInHeight) - ph) / Math.abs(c.scaleY) : -1
 					);
 
 				var b = getSize(c);
@@ -1389,7 +1389,7 @@ class Flow extends Object {
 				var ph = p.paddingTop + p.paddingBottom;
 				if( !p.isAbsolute )
 					c.constraintSize(
-						isConstraintWidth && p.constraint ? ((p.autoSize != null ? maxColWidth * p.autoSize : maxInWidth) - pw) / Math.abs(c.scaleX) : -1,
+						isConstraintWidth && p.constraint ? ((p.autoSize != null ? hxd.Math.imax(maxColWidth, minColWidth) * p.autoSize : maxInWidth) - pw) / Math.abs(c.scaleX) : -1,
 						isConstraintHeight && p.constraint ? ((p.autoSize != null ? Math.floor(autoHeight * p.autoSize / autoSum) : maxInHeight) - ph) / Math.abs(c.scaleY) : -1
 					);
 
