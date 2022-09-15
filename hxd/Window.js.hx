@@ -40,7 +40,7 @@ class Window {
 
 	var curMouseX : Float = 0.;
 	var curMouseY : Float = 0.;
-	var _mouseLock : Bool = false;
+	var pointerLockTarget : js.html.Element;
 
 	var canvas : js.html.CanvasElement;
 	var element : js.html.EventTarget;
@@ -57,6 +57,13 @@ class Window {
 		(default : true)
 	**/
 	public var useScreenPixels : Bool = js.Browser.supported;
+	/**
+		When enabled, the user click event on the canvas that would trigger mouse capture to be enabled would be discarded.
+		(default : true)
+	**/
+	public var discardMouseCaptureEvent : Bool = true;
+	var discardMouseUp : Int = -1;
+	var canLockMouse : Bool = true;
 
 	public function new( ?canvas : js.html.CanvasElement, ?globalEvents ) : Void {
 		var customCanvas = canvas != null;
@@ -286,11 +293,11 @@ class Window {
 
 		var forced = onMouseModeChange(mouseMode, v);
 		if (forced != null) v = forced;
-		
-		var target = canvas != null ? canvas : Browser.window.document.documentElement;
+		var target = this.pointerLockTarget = canvas != null ? canvas : Browser.window.document.documentElement;
+
 		if ( v == Absolute ) {
 			if ( target.ownerDocument.pointerLockElement == target ) target.ownerDocument.exitPointerLock();
-		} else {
+		} else if ( canLockMouse ) {
 			if ( target.ownerDocument.pointerLockElement != target ) target.requestPointerLock();
 		}
 		return mouseMode = v;
@@ -304,10 +311,12 @@ class Window {
 	}
 
 	function onPointerLockChange( e : js.html.Event ) {
-		var lockTarget = canvas != null ? canvas : Browser.document.documentElement;
-		if ( mouseMode != Absolute && lockTarget.ownerDocument.pointerLockElement != lockTarget ) {
+		if ( mouseMode != Absolute && pointerLockTarget.ownerDocument.pointerLockElement != pointerLockTarget ) {
+			// Firefox: Do not instantly re-lock the mouse if user altered mouseMode via `onMouseMouseChange` back into relative.
+			canLockMouse = false;
 			// User cancelled out of the pointer lock by pressing escape or by other means: Switch to Absolute mode
 			mouseMode = Absolute;
+			canLockMouse = true;
 		}
 	}
 
@@ -315,9 +324,15 @@ class Window {
 		if ( mouseMode == Absolute ) {
 			if ( e.clientX != curMouseX || e.clientY != curMouseY ) onMouseMove(e);
 		} else {
-			var lockTarget = canvas != null ? canvas : Browser.document.documentElement;
 			// If we attempted to enter locked mode when browser didn't let us - try to enter locked mode on user click.
-			if ( lockTarget.ownerDocument.pointerLockElement != lockTarget ) lockTarget.requestPointerLock();
+			if ( pointerLockTarget.ownerDocument.pointerLockElement != pointerLockTarget ) {
+				pointerLockTarget.requestPointerLock();
+				if (discardMouseCaptureEvent) {
+					// Avoid stray ERelease due to discarded EPush event.
+					discardMouseUp = e.button;
+					return;
+				}
+			}
 			if ( e.movementX != 0 || e.movementY != 0 ) onMouseMove(e);
 		}
 		var ev = new Event(EPush, mouseX, mouseY);
@@ -330,6 +345,10 @@ class Window {
 	}
 
 	function onMouseUp(e:js.html.MouseEvent) {
+		if ( discardMouseUp == e.button ) {
+			discardMouseUp = -1;
+			return;
+		}
 		if ( mouseMode == Absolute ? (e.clientX != curMouseX || e.clientY != curMouseY) : (e.movementX != 0 || e.movementY != 0) ) {
 			onMouseMove(e);
 		}
@@ -359,6 +378,7 @@ class Window {
 				curMouseY = e.clientY;
 				event(new Event(EMove, curMouseX, curMouseY));
 			case Relative(callback, _):
+				if (pointerLockTarget.ownerDocument.pointerLockElement != pointerLockTarget) return;
 				var ev = new Event(EMove, e.movementX, e.movementY);
 				callback(ev);
 				if (!ev.cancel && ev.propagate) {
@@ -369,6 +389,7 @@ class Window {
 					event(ev);
 				}
 			case AbsoluteUnbound(_):
+				if (pointerLockTarget.ownerDocument.pointerLockElement != pointerLockTarget) return;
 				curMouseX += e.movementX;
 				curMouseY += e.movementY;
 				event(new Event(EMove, curMouseX, curMouseY));

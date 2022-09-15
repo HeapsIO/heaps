@@ -24,8 +24,10 @@ class MouseApi extends SampleApp {
 		addText("Press Escape or right click to restore to Absolute mouse mode");
 		state = addText("\n");
 
+		#if !js // Not supported on JS
 		// Lock the mouse within the window boundaries.
 		addCheck("MouseClip", () -> window.mouseClip, (v) -> window.mouseClip = v);
+		#end
 		
 		// Use setCursorPos in order to warp the mouse
 		// JS: Due to browser limitations only useful in relative modes to move the virtual cursor.
