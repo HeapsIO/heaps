@@ -1,5 +1,8 @@
 package hxd.impl;
 
+/**
+	The mouse movement input handling mode.
+**/
 enum MouseMode {
 	/**
 		Default mouse movement mode. Causes `EMove` events in window coordinates.
@@ -33,15 +36,4 @@ enum MouseMode {
 		Otherwise mouse position is clipped to window boundaries.
 	**/
 	AbsoluteUnbound(restorePos : Bool);
-	/**
-		Alternate relative mouse movement mode. In this mode, the mouse cursor is hidden, and `EMove` event mouse position can wrap around the window boundaries.
-
-		JS/HTML: Due to browser limitations, `restorePos` is always forced to `true`.
-		Mouse mode is force-changed to `Absolute` when user presses `Escape` or somehow else exits mouse capture mode.
-		Override `Window.onMouseModeChange` event in order to catch such cases.
-		
-		@param restorePos If set, when changing mouse mode to `Absolute`, cursor position would be restored to the position it was on when this mode was enabled.
-		Otherwise mouse position remains unchanged.
-	**/
-	AbsoluteWrap(restorePos : Bool);
 }

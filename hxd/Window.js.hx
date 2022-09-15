@@ -364,14 +364,6 @@ class Window {
 				curMouseX += e.movementX;
 				curMouseY += e.movementY;
 				event(new Event(EMove, curMouseX, curMouseY));
-			case AbsoluteWrap(_):
-				curMouseX += e.movementX;
-				curMouseY += e.movementY;
-				if (curMouseX < 0) curMouseX = width + (curMouseX % width);
-				else if (curMouseX >= width) curMouseX %= width;
-				if (curMouseY < 0) curMouseY = height + (curMouseY % height);
-				else if (curMouseY >= height) curMouseY %= height;
-				event(new Event(EMove, curMouseX, curMouseY));
 		}
 	}
 

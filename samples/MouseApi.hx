@@ -44,8 +44,6 @@ class MouseApi extends SampleApp {
 		});
 		// Mouse position would be able to leave the window boundaries, but clipped on exit.
 		addButton("AbsoluteUnbound", () -> window.mouseMode = expectedMode = AbsoluteUnbound(restore));
-		// Mouse position would wrap around the window boundaries.
-		addButton("AbsoluteWrap", () -> window.mouseMode = expectedMode = AbsoluteWrap(restore));
 		// When restoring to Absolute: Either clip mouse position or restore to where it entered relative mode.
 		addCheck("RestorePos", () -> restore, (v) -> restore = v);
 		// Would set propagate flag in Relative mode, allowing mouse movement events to pass trough.

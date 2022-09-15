@@ -243,7 +243,7 @@ class Window {
 
 		if ( v == Absolute ) {
 			switch ( mouseMode ) {
-				case Relative(_, restorePos) | AbsoluteUnbound(restorePos) | AbsoluteWrap(restorePos):
+				case Relative(_, restorePos) | AbsoluteUnbound(restorePos):
 					if ( restorePos ) {
 						curMouseX = startMouseX;
 						curMouseY = startMouseY;
@@ -375,19 +375,6 @@ class Window {
 					curMouseX += e.mouseX - curMouseX;
 					curMouseY += e.mouseY - curMouseY;
 					#end
-					eh = new Event(EMove, curMouseX, curMouseY);
-				case AbsoluteWrap(_):
-					#if (hldx || hlsdl)
-					curMouseX += e.mouseXRel;
-					curMouseY += e.mouseYRel;
-					#else
-					curMouseX += e.mouseX - curMouseX;
-					curMouseY += e.mouseY - curMouseY;
-					#end
-					if (curMouseX < 0) curMouseX = width + (curMouseX % width);
-					else if (curMouseX >= width) curMouseX %= width;
-					if (curMouseY < 0) curMouseY = height + (curMouseY % height);
-					else if (curMouseY >= height) curMouseY %= height;
 					eh = new Event(EMove, curMouseX, curMouseY);
 			}
 		case MouseWheel:
