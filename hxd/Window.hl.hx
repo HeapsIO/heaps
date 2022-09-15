@@ -42,7 +42,15 @@ class Window {
 	public var mouseY(get, never) : Int;
 	@:deprecated("Use mouseMode = AbsoluteUnbound(true)")
 	public var mouseLock(get, set) : Bool;
+	/**
+		If set, will restrain the mouse cursor within the window boundaries.
+	**/
 	public var mouseClip(get, set) : Bool;
+	/**
+		Set the mouse movement input handling mode.
+
+		@see `hxd.impl.MouseMode` for more details on each mode.
+	**/
 	public var mouseMode(default, set): MouseMode = Absolute;
 	public var monitor : Null<Int> = null;
 	public var framerate : Null<Int> = null;

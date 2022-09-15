@@ -24,7 +24,9 @@ class Window {
 	**/
 	public var mouseClip(get, set) : Bool;
 	/**
-		Set the mouse movement input handling mode. See `MouseMode` for more details on each mode.
+		Set the mouse movement input handling mode.
+
+		@see `hxd.impl.MouseMode` for more details on each mode.
 	**/
 	public var mouseMode(default, set) : MouseMode = Absolute;
 	public var vsync(get, set) : Bool;
