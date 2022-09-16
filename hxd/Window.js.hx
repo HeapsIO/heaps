@@ -376,7 +376,7 @@ class Window {
 			case Absolute:
 				curMouseX = e.clientX;
 				curMouseY = e.clientY;
-				event(new Event(EMove, curMouseX, curMouseY));
+				event(new Event(EMove, mouseX, mouseY));
 			case Relative(callback, _):
 				if (pointerLockTarget.ownerDocument.pointerLockElement != pointerLockTarget) return;
 				var ev = new Event(EMove, e.movementX, e.movementY);
@@ -392,7 +392,7 @@ class Window {
 				if (pointerLockTarget.ownerDocument.pointerLockElement != pointerLockTarget) return;
 				curMouseX += e.movementX;
 				curMouseY += e.movementY;
-				event(new Event(EMove, curMouseX, curMouseY));
+				event(new Event(EMove, mouseX, mouseY));
 		}
 	}
 
