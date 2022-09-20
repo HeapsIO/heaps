@@ -10,6 +10,12 @@ private typedef TextHistoryElement = { t : String, c : Int, sel : { start : Int,
 **/
 class TextInput extends Text {
 
+#if sys
+	public static final modifierKey: Int = Sys.systemName() == "Mac" ? K.LEFT_WINDOW_KEY : K.CTRL;
+#else
+	public static final modifierKey: Int = K.CTRL;
+#end
+
 	/**
 		Current position of the input cursor.
 		When TextInput is not focused value is -1.
@@ -165,12 +171,12 @@ class TextInput extends Text {
 		var oldText = text;
 
 		switch( e.keyCode ) {
-		case K.LEFT if (K.isDown(K.CTRL)):
+		case K.LEFT if (K.isDown(modifierKey)):
 			cursorIndex = getWordStart();
 		case K.LEFT:
 			if( cursorIndex > 0 )
 				cursorIndex--;
-		case K.RIGHT if (K.isDown(K.CTRL)):
+		case K.RIGHT if (K.isDown(modifierKey)):
 			cursorIndex = getWordEnd();
 		case K.RIGHT:
 			if( cursorIndex < text.length )
@@ -216,32 +222,32 @@ class TextInput extends Text {
 				cursorIndex++;
 				onChange();
 			}
-		case K.Z if( K.isDown(K.CTRL) ):
+		case K.Z if( K.isDown(modifierKey) ):
 			if( undo.length > 0 && canEdit ) {
 				redo.push(curHistoryState());
 				setState(undo.pop());
 				onChange();
 			}
 			return;
-		case K.Y if( K.isDown(K.CTRL) ):
+		case K.Y if( K.isDown(modifierKey) ):
 			if( redo.length > 0 && canEdit ) {
 				undo.push(curHistoryState());
 				setState(redo.pop());
 				onChange();
 			}
 			return;
-		case K.A if (K.isDown(K.CTRL)):
+		case K.A if (K.isDown(modifierKey)):
 			if (text != "") {
 				cursorIndex = text.length;
 				selectionRange = {start: 0, length: text.length};
 				selectionSize = 0;
 			}
 			return;
-		case K.C if (K.isDown(K.CTRL)):
+		case K.C if (K.isDown(modifierKey)):
 			if( text != "" && selectionRange != null ) {
 				hxd.System.setClipboardText(text.substr(selectionRange.start, selectionRange.length));
 			}
-		case K.X if (K.isDown(K.CTRL)):
+		case K.X if (K.isDown(modifierKey)):
 			if( text != "" && selectionRange != null ) {
 				if(hxd.System.setClipboardText(text.substr(selectionRange.start, selectionRange.length))) {
 					if( !canEdit ) return;
@@ -250,7 +256,7 @@ class TextInput extends Text {
 					onChange();
 				}
 			}
-		case K.V if (K.isDown(K.CTRL)):
+		case K.V if (K.isDown(modifierKey)):
 			if( !canEdit ) return;
 			var t = hxd.System.getClipboardText();
 			if( t != null && t.length > 0 ) {
@@ -388,7 +394,7 @@ class TextInput extends Text {
 		}
 		return '';
 	}
-	
+
 	function getCursorXOffset() {
 		var lines = getAllLines();
 		var offset = cursorIndex;
@@ -522,11 +528,11 @@ class TextInput extends Text {
 
 				var selStart = Math.floor(Math.max(0, selectionRange.start - lineOffset));
 				var selEnd = Math.floor(Math.min(line.length - selStart, selectionRange.length + selectionRange.start - lineOffset - selStart));
-				
+
 				selectionPos = calcTextWidth(line.substr(0, selStart));
 				selectionSize = calcTextWidth(line.substr(selStart, selEnd));
 				if( selectionRange.start + selectionRange.length == text.length ) selectionSize += cursorTile.width; // last pixel
-	
+
 				selectionTile.dx += selectionPos;
 				selectionTile.dy += i * font.lineHeight;
 				selectionTile.width += selectionSize;
