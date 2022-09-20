@@ -416,6 +416,14 @@ class HlslOut {
 				decl("float2 screenToUv( float2 v ) { return v * float2(0.5, -0.5) + float2(0.5,0.5); }");
 			case UvToScreen:
 				decl("float2 uvToScreen( float2 v ) { return v * float2(2.,-2.) + float2(-1., 1.); }");
+			case DFdx:
+				decl("float dFdx( float v ) { return ddx(v); }");
+				decl("float2 dFdx( float2 v ) { return ddx(v); }");
+				decl("float3 dFdx( float3 v ) { return ddx(v); }");
+			case DFdy:
+				decl("float dFdy( float v ) { return ddy(v); }");
+				decl("float2 dFdy( float2 v ) { return ddy(v); }");
+				decl("float3 dFdy( float3 v ) { return ddy(v); }");
 			default:
 			}
 			add(GLOBALS.get(g));
