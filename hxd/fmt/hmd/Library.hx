@@ -587,9 +587,14 @@ class Library {
 		if( skin.vertexWeights != null )
 			return;
 
+		var bonesPerVertex = skin.bonesPerVertex;
+		if( !(bonesPerVertex == 3 || bonesPerVertex == 4) )
+			throw "assert";
+		var use4Bones = bonesPerVertex == 4;
+
 		@:privateAccess skin.vertexCount = geom.vertexCount;
 
-		// For now only take 3 first weights into account even in 4 bones per vertex, which should be fine since they're sorted
+		// Only 3 weights are necessary even in fourBonesByVertex since they sum-up to 1
 		var format = [
 			new hxd.fmt.hmd.Data.GeometryFormat("position",DVec3),
 			new hxd.fmt.hmd.Data.GeometryFormat("weights",DVec3),
@@ -599,8 +604,8 @@ class Library {
 		for(f in format)
 			formatStride += f.format.getSize();
 
-		skin.vertexWeights = new haxe.ds.Vector(skin.vertexCount * skin.bonesPerVertex);
-		skin.vertexJoints = new haxe.ds.Vector(skin.vertexCount * skin.bonesPerVertex);
+		skin.vertexWeights = new haxe.ds.Vector(skin.vertexCount * bonesPerVertex);
+		skin.vertexJoints = new haxe.ds.Vector(skin.vertexCount * bonesPerVertex);
 
 		for( j in skin.boundJoints )
 			j.offsets = new h3d.col.Bounds();
@@ -647,16 +652,22 @@ class Library {
 				var w1 = vbuf[p++];
 				var w2 = vbuf[p++];
 				var w3 = vbuf[p++];
+				var w4 = 0.0;
 
-				var vout = vidx * 3;
+				var vout = vidx * bonesPerVertex;
 				skin.vertexWeights[vout] = w1;
 				skin.vertexWeights[vout+1] = w2;
 				skin.vertexWeights[vout+2] = w3;
 
-				var w = (w1 == 0 ? 1 : 0) | (w2 == 0 ? 2 : 0) | (w3 == 0 ? 4 : 0);
+				if(use4Bones) {
+					w4 = 1.0 - w1 - w2 - w3;
+					skin.vertexWeights[vout+3] = w4;
+				}
+
+				var w = (w1 == 0 ? 1 : 0) | (w2 == 0 ? 2 : 0) | (w3 == 0 ? 4 : 0) | (w4 == 0 ? 8 : 0);
 				var idx = haxe.io.FPHelper.floatToI32(vbuf[p++]);
 				bounds.addPos(x,y,z);
-				for( i in 0...3 ) {
+				for( i in 0...bonesPerVertex ) {
 					if( w & (1<<i) != 0 ) {
 						skin.vertexJoints[vout++] = -1;
 						continue;
