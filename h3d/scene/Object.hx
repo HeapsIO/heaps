@@ -16,7 +16,7 @@ package h3d.scene;
 	public var FCullingColliderInherited = 0x1000;
 	public var FFixedPosition = 0x2000;
 	public var FFixedPositionSynced = 0x4000;
-	public var FCulledNoSync = 0x8000;
+	public var FAlwaysSync = 0x8000;
 	public inline function new(value) {
 		this = value;
 	}
@@ -159,10 +159,10 @@ class Object {
 	public var fixedPosition(get, set) : Bool;
 
 	/**
-		When set, the object and all its children will not sync() if this root object is culled.
+		When unset, the object and all its children will not sync() if this root object or one of its parent is culled or not visible.
 		This allows to optimize cpu cost of objects having many children.
 	**/
-	public var culledNoSync(get, set) : Bool;
+	public var alwaysSync(get, set) : Bool;
 
 	/**
 		When set, collider shape will be used for automatic frustum culling.
@@ -190,7 +190,7 @@ class Object {
 		Create a new empty object, and adds it to the parent object if not null.
 	**/
 	public function new( ?parent : Object ) {
-		flags = new ObjectFlags(0);
+		flags = new ObjectFlags(0x8000);
 		absPos = new h3d.Matrix();
 		absPos.identity();
 		x = 0; y = 0; z = 0; scaleX = 1; scaleY = 1; scaleZ = 1;
@@ -216,7 +216,7 @@ class Object {
 	inline function get_ignoreParentTransform() return flags.has(FIgnoreParentTransform);
 	inline function get_cullingColliderInherited() return flags.has(FCullingColliderInherited);
 	inline function get_fixedPosition() return flags.has(FFixedPosition);
-	inline function get_culledNoSync() return flags.has(FCulledNoSync);
+	inline function get_alwaysSync() return flags.has(FAlwaysSync);
 	inline function set_posChanged(b) return flags.set(FPosChanged, b || follow != null);
 	inline function set_culled(b) return flags.set(FCulled, b);
 	inline function set_visible(b) return flags.set(FVisible,b);
@@ -231,7 +231,7 @@ class Object {
 	inline function set_ignoreParentTransform(b) { if( b != ignoreParentTransform ) posChanged = true; return flags.set(FIgnoreParentTransform, b); }
 	inline function set_cullingColliderInherited(b) return flags.set(FCullingColliderInherited, b);
 	inline function set_fixedPosition(b) return flags.set(FFixedPosition, b);
-	inline function set_culledNoSync(b) return flags.set(FCulledNoSync, b);
+	inline function set_alwaysSync(b) return flags.set(FAlwaysSync, b);
 
 	/**
 		Create an animation instance bound to the object, set it as currentAnimation and play it.
@@ -716,7 +716,7 @@ class Object {
 			if( parent == null && old != null )
 				return; // if we were removed by an animation event
 		}
-		if ( culled && culledNoSync )
+		if ( !alwaysSync && (culled || !visible || !ctx.visibleFlag) )
 			return;
 		var old = ctx.visibleFlag;
 		if( !visible || (culled && inheritCulled) )
