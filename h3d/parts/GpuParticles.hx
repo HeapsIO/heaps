@@ -905,7 +905,7 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 				return; // was removed
 		}
 
-		if( !ctx.visibleFlag && !alwaysSync )
+		if( !ctx.visibleFlag && !alwaysSyncAnimation )
 			return;
 
 		for( g in groups ) {

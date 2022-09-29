@@ -7,7 +7,7 @@ package h3d.scene;
 	public var FFollowPositionOnly = 0x08;
 	public var FLightCameraCenter = 0x10;
 	public var FAllocated = 0x20;
-	public var FAlwaysSync = 0x40;
+	public var FAlwaysSyncAnimation = 0x40;
 	public var FInheritCulled = 0x80;
 	public var FModelRoot = 0x100;
 	public var FIgnoreBounds = 0x200;
@@ -115,9 +115,9 @@ class Object {
 	public var culled(get, set) : Bool;
 
 	/**
-		When an object is not visible or culled, its animation does not get synchronized unless you set alwaysSync=true
+		When an object is not visible or culled, its animation does not get synchronized unless you set alwaysSyncAnimation=true
 	**/
-	public var alwaysSync(get, set) : Bool;
+	public var alwaysSyncAnimation(get, set) : Bool;
 
 	/**
 		When enabled, the culled flag and culling collider is inherited by children objects.
@@ -201,7 +201,7 @@ class Object {
 	inline function get_culled() return flags.has(FCulled);
 	inline function get_followPositionOnly() return flags.has(FFollowPositionOnly);
 	inline function get_lightCameraCenter() return flags.has(FLightCameraCenter);
-	inline function get_alwaysSync() return flags.has(FAlwaysSync);
+	inline function get_alwaysSyncAnimation() return flags.has(FAlwaysSyncAnimation);
 	inline function get_inheritCulled() return flags.has(FInheritCulled);
 	inline function get_ignoreBounds() return flags.has(FIgnoreBounds);
 	inline function get_ignoreCollide() return flags.has(FIgnoreCollide);
@@ -215,7 +215,7 @@ class Object {
 	inline function set_allocated(b) return flags.set(FAllocated, b);
 	inline function set_followPositionOnly(b) return flags.set(FFollowPositionOnly, b);
 	inline function set_lightCameraCenter(b) return flags.set(FLightCameraCenter, b);
-	inline function set_alwaysSync(b) return flags.set(FAlwaysSync, b);
+	inline function set_alwaysSyncAnimation(b) return flags.set(FAlwaysSyncAnimation, b);
 	inline function set_ignoreBounds(b) return flags.set(FIgnoreBounds, b);
 	inline function set_inheritCulled(b) return flags.set(FInheritCulled, b);
 	inline function set_ignoreCollide(b) return flags.set(FIgnoreCollide, b);
@@ -702,7 +702,7 @@ class Object {
 			var dt = ctx.elapsedTime;
 			while( dt > 0 && currentAnimation != null )
 				dt = currentAnimation.update(dt);
-			if( currentAnimation != null && ((ctx.visibleFlag && visible && !culled) || alwaysSync)  )
+			if( currentAnimation != null && ((ctx.visibleFlag && visible && !culled) || alwaysSyncAnimation)  )
 				currentAnimation.sync();
 			if( parent == null && old != null )
 				return; // if we were removed by an animation event

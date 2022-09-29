@@ -259,7 +259,7 @@ class CameraController extends h3d.scene.Object {
 		if( ctx.scene.renderer.renderMode == LightProbe )
 			return;
 
-		if( !ctx.visibleFlag && !alwaysSync ) {
+		if( !ctx.visibleFlag && !alwaysSyncAnimation ) {
 			super.sync(ctx);
 			return;
 		}
