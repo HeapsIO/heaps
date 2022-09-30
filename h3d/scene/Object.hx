@@ -706,6 +706,7 @@ class Object {
 	}
 
 	function syncRec( ctx : RenderContext ) {
+		#if sceneprof h3d.impl.SceneProf.mark(this); #end
 		if( currentAnimation != null ) {
 			var old = parent;
 			var dt = ctx.elapsedTime;
@@ -781,9 +782,10 @@ class Object {
 	}
 
 	function emitRec( ctx : RenderContext ) {
+		#if sceneprof h3d.impl.SceneProf.mark(this); #end
 
 		if( !visible || (culled && inheritCulled && !ctx.computingStatic) )
-			return;
+			return;		
 
 		// fallback in case the object was added during a sync() event and we somehow didn't update it
 		if( posChanged ) {
