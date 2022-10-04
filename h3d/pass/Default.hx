@@ -94,7 +94,7 @@ class Default extends Base {
 	override function draw( passes : h3d.pass.PassList, ?sort : h3d.pass.PassList -> Void ) {
 		if( passes.isEmpty() )
 			return;
-		#if sceneprof h3d.impl.SceneProf.begin("draw", ctx); #end
+		#if sceneprof h3d.impl.SceneProf.begin("draw", ctx.frame); #end
 		for( g in ctx.sharedGlobals )
 			globals.fastSet(g.gid, g.value);
 		setGlobals();

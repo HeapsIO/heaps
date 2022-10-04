@@ -782,7 +782,9 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		sync(ctx);
 		if( children.length == 0 ) return;
 		ctx.begin();
+		#if sceneprof h3d.impl.SceneProf.begin("2d", ctx.frame); #end
 		ctx.drawScene();
+		#if sceneprof h3d.impl.SceneProf.end(); #end
 		ctx.end();
 	}
 

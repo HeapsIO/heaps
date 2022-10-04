@@ -403,11 +403,11 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 		ctx.start();
 		renderer.start();
 
-		#if sceneprof h3d.impl.SceneProf.begin("sync", ctx); #end
+		#if sceneprof h3d.impl.SceneProf.begin("sync", ctx.frame); #end
 		syncRec(ctx);
 		#if sceneprof
 		h3d.impl.SceneProf.end();
-		h3d.impl.SceneProf.begin("emit", ctx);
+		h3d.impl.SceneProf.begin("emit", ctx.frame);
 		#end
 		emitRec(ctx);
 		#if sceneprof h3d.impl.SceneProf.end(); #end

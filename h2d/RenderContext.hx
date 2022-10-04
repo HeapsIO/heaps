@@ -739,6 +739,7 @@ class RenderContext extends h3d.impl.RenderContext {
 
 		if( !beginDraw(obj, tile.getTexture(), true, true) ) return false;
 
+		#if sceneprof h3d.impl.SceneProf.mark(obj); #end
 		setupColor(obj);
 		baseShader.absoluteMatrixA.set(tile.width * obj.matA, tile.height * obj.matC, obj.absX + tile.dx * obj.matA + tile.dy * obj.matC);
 		baseShader.absoluteMatrixB.set(tile.width * obj.matB, tile.height * obj.matD, obj.absY + tile.dx * obj.matB + tile.dy * obj.matD);

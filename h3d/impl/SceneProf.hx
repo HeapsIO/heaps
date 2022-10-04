@@ -38,10 +38,12 @@ class SceneProf {
     static var curSection : String;
 
 	static var stackCache : Map<h3d.scene.Object, Array<String>>;
+	static var stackCache2d : Map<h2d.Object, Array<String>>;
 
 	public static function start() {
 		enable = true;
 		stackCache = new Map();
+		stackCache2d = new Map();
 		frames = [];
 		lastFrameId = -1;
 	}
@@ -50,14 +52,14 @@ class SceneProf {
 		enable = false;
 	}
 
-	public static function begin(section: String, ctx : h3d.scene.RenderContext) {
+	public static function begin(section: String, frame : Int) {
 		if(!enable) return;
-		if(ctx.frame != lastFrameId) {
+		if(frame != lastFrameId) {
 			var f = new Frame();
 			f.startTime = Sys.time();
 			frames.push(f);
 			curFrame = f;
-			lastFrameId = ctx.frame;
+			lastFrameId = frame;
 		}
         curSection = section;
 	}
@@ -77,13 +79,28 @@ class SceneProf {
 		return s;
 	}
 
-	public static function mark(obj: h3d.scene.Object) {
+	static function getStack2d(o: h2d.Object) : Array<String> {
+		var r = stackCache2d.get(o);
+		if(r != null)
+			return r;
+		var s = null;
+		if(o.parent != null)
+			s = getStack2d(o.parent).copy();
+		else s = [];
+
+		var name = o.name != null ? o.name : Type.getClassName(Type.getClass(o));
+		s.unshift(name);
+		stackCache2d.set(o, s);
+		return s;
+	}
+
+	public static function mark(?o3d: h3d.scene.Object, ?o2d: h2d.Object) {
 		if(!enable) return;
 		var t = Sys.time();
 		curFrame.samples.push({
 			time: t,
 			sect: curSection,
-			stack: getStack(obj)
+			stack: o3d != null ? getStack(o3d) : getStack2d(o2d)
 		});
 	}
 
