@@ -708,6 +708,7 @@ class TileGroup extends Drawable {
 		if( !ctx.beginDrawBatchState(obj) ) return;
 		var min = rangeMin < 0 ? 0 : rangeMin * 2;
 		if( rangeMax > 0 && rangeMax < max * 2 ) max = rangeMax * 2;
+		#if sceneprof h3d.impl.SceneProf.mark(this); #end
 		content.doRender(ctx, min, max - min);
 	}
 
