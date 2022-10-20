@@ -50,6 +50,7 @@ class ImageInfo {
 	public var width(default,null) : Int = 0;
 	public var height(default,null) : Int = 0;
 	public var mipLevels(default,null) : Int = 1;
+	public var mipOffset(default,null) : Int = 0;
 	public var layerCount(default,null) : Int = 1;
 	public var flags(default,null) : haxe.EnumFlags<ImageInfoFlag>;
 	public var dataFormat(default,null) : ImageFormat;
@@ -65,6 +66,11 @@ class Image extends Resource {
 		Specify if we will automatically convert non-power-of-two textures to power-of-two.
 	**/
 	public static var DEFAULT_FILTER : h3d.mat.Data.Filter = Linear;
+
+	/**
+		Reduce textures quality with mipmaps by only loading up to the desired size.
+	**/
+	public static var MIPMAP_MAX_SIZE = 0;
 
 	static var ENABLE_AUTO_WATCH = true;
 
@@ -265,6 +271,15 @@ class Image extends Resource {
 		if( inf.pixelFormat == null )
 			throw "Unsupported internal format ("+entry.path+")";
 
+		if( MIPMAP_MAX_SIZE != 0 && inf.mipLevels > 1 ) {
+			while( (inf.width|inf.height) & 1 == 0 && inf.width >> 1 >= MIPMAP_MAX_SIZE && inf.height >> 1 >= MIPMAP_MAX_SIZE ) {
+				inf.width >>= 1;
+				inf.height >>= 1;
+				inf.mipLevels--;
+				inf.mipOffset++;
+			}
+		}
+
 		return inf;
 	}
 
@@ -350,14 +365,16 @@ class Image extends Resource {
 			var pos = 128;
 			var mipLevel = 0;
 			if( inf.flags.has(Dxt10Header) ) pos += 20;
+			index += inf.mipOffset;
 			if( index > 0 ) {
+				var totLevels = inf.mipLevels + inf.mipOffset;
 				var bpp = hxd.Pixels.calcStride(1, inf.pixelFormat);
-				var layer = Std.int(index / inf.mipLevels);
-				mipLevel = index % inf.mipLevels;
+				var layer = Std.int(index / totLevels);
+				mipLevel = index % totLevels;
 				var totSize = 0;
-				for( i in 0...inf.mipLevels ) {
-					var w = inf.width >> i;
-					var h = inf.height >> i;
+				for( i in 0...totLevels ) {
+					var w = (inf.width << inf.mipOffset) >> i;
+					var h = (inf.height << inf.mipOffset) >> i;
 					if( w == 0 ) w = 1;
 					if( h == 0 ) h = 1;
 					var size = hxd.Pixels.calcDataSize(w, h, inf.pixelFormat);
@@ -367,11 +384,11 @@ class Image extends Resource {
 				pos += totSize * layer;
 			}
 			var bytes;
-			var w = inf.width >> mipLevel;
-			var h = inf.height >> mipLevel;
+			var w = inf.width >> (mipLevel - inf.mipOffset);
+			var h = inf.height >> (mipLevel - inf.mipOffset);
 			if( w == 0 ) w = 1;
 			if( h == 0 ) h = 1;
-			if( inf.mipLevels == 1 && !inf.flags.has(IsCube) ) {
+			if( inf.mipLevels + inf.mipOffset == 1 && !inf.flags.has(IsCube) ) {
 				bytes = entry.getBytes();
 			} else {
 				var size = hxd.Pixels.calcDataSize(w, h, inf.pixelFormat);
@@ -532,6 +549,12 @@ class Image extends Resource {
 				var pos = 128;
 				if( inf.flags.has(Dxt10Header) ) pos += 20;
 				for( layer in 0...tex.layerCount ) {
+					for( mip in 0...inf.mipOffset ) {
+						var w = (inf.width << inf.mipOffset) >> mip;
+						var h = (inf.height << inf.mipOffset) >> mip;
+						var size = hxd.Pixels.calcDataSize(w, h, inf.pixelFormat);
+						pos += size;
+					}
 					for( mip in 0...inf.mipLevels ) {
 						var w = inf.width >> mip;
 						var h = inf.height >> mip;
