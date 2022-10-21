@@ -267,6 +267,38 @@ class DirShadowMap extends Shadows {
 		return true;
 	}
 
+	function processShadowMap( passes, tex, ?sort) {
+		ctx.engine.pushTarget(tex);
+		ctx.engine.clear(0xFFFFFF, 1);
+		super.draw(passes, sort);
+
+		var doBlur = blur.radius > 0 && (mode != Mixed || !ctx.computingStatic);
+
+		if( border != null && !doBlur )
+			border.render();
+
+		ctx.engine.popTarget();
+
+		if( mode == Mixed && !ctx.computingStatic ) {
+			var merge = ctx.textures.allocTarget("mergedDirShadowMap", size, size, false, format);
+			mergePass.shader.texA = tex;
+			mergePass.shader.texB = staticTexture;
+			ctx.engine.pushTarget(merge);
+			mergePass.render();
+			ctx.engine.popTarget();
+			tex = merge;
+		}
+
+		if( doBlur ) {
+			blur.apply(ctx, tex);
+			if( border != null ) {
+				ctx.engine.pushTarget(tex);
+				border.render();
+				ctx.engine.popTarget();
+			}
+		}
+	}
+
 	override function draw( passes, ?sort ) {
 		if( !enabled )
 			return;
@@ -281,13 +313,6 @@ class DirShadowMap extends Shadows {
 		}
 
 		cullPasses(passes,function(col) return col.inFrustum(lightCamera.frustum));
-
-		var texture = ctx.textures.allocTarget("dirShadowMap", size, size, false, format);
-		if( customDepth && (depth == null || depth.width != size || depth.height != size || depth.isDisposed()) ) {
-			if( depth != null ) depth.dispose();
-			depth = new h3d.mat.DepthBuffer(size, size);
-		}
-		texture.depthBuffer = depth;
 
 		if( mode != Mixed || ctx.computingStatic ) {
 			var ct = ctx.camera.target;
@@ -306,35 +331,14 @@ class DirShadowMap extends Shadows {
 			lightCamera.update();
 		}
 
-		ctx.engine.pushTarget(texture);
-		ctx.engine.clear(0xFFFFFF, 1);
-		super.draw(passes, sort);
-
-		var doBlur = blur.radius > 0 && (mode != Mixed || !ctx.computingStatic);
-
-		if( border != null && !doBlur )
-			border.render();
-
-		ctx.engine.popTarget();
-
-		if( mode == Mixed && !ctx.computingStatic ) {
-			var merge = ctx.textures.allocTarget("mergedDirShadowMap", size, size, false, format);
-			mergePass.shader.texA = texture;
-			mergePass.shader.texB = staticTexture;
-			ctx.engine.pushTarget(merge);
-			mergePass.render();
-			ctx.engine.popTarget();
-			texture = merge;
+		var texture = ctx.textures.allocTarget("dirShadowMap", size, size, false, format);
+		if( customDepth && (depth == null || depth.width != size || depth.height != size || depth.isDisposed()) ) {
+			if( depth != null ) depth.dispose();
+			depth = new h3d.mat.DepthBuffer(size, size);
 		}
+		texture.depthBuffer = depth;
 
-		if( doBlur ) {
-			blur.apply(ctx, texture);
-			if( border != null ) {
-				ctx.engine.pushTarget(texture);
-				border.render();
-				ctx.engine.popTarget();
-			}
-		}
+		processShadowMap(passes, texture, sort);
 
 		syncShader(texture);
 	}
