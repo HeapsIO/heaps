@@ -24,7 +24,7 @@ class Matrix {
 	/**
 		Create a new identity Matrix.
 	**/
-	public function new() {
+	inline public function new() {
 		identity();
 	}
 
@@ -189,7 +189,7 @@ class Matrix {
 	}
 
 	/**
-		Concatenates Matrix `a` and `b` and stores the result in this Matrix. 
+		Concatenates Matrix `a` and `b` and stores the result in this Matrix.
 		Matrix can be the target of of it's own `multiply`.
 		Keep in mind that order of matrixes matter in concatenation.
 	**/
@@ -208,9 +208,8 @@ class Matrix {
 		Returns a Point with a total scaling applied by the Matrix.
 		@param p Optional Point instance. If provided, sets values of given Point and returns it. Otherwise returns new Point instance.
 	**/
-	public inline function getScale(?p: h2d.col.Point) {
-		if(p == null)
-			p = new h2d.col.Point();
+	public inline function getScale() {
+		var p = new h2d.col.Point();
 		p.x = Math.sqrt(a * a + b * b);
 		p.y = Math.sqrt(c * c + d * d);
 		if( getDeterminant() < 0 ) {
