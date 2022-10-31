@@ -35,7 +35,7 @@ class Matrix {
 	public var ty(get, set) : Float;
 	public var tz(get, set) : Float;
 
-	public function new() {
+	inline public function new() {
 	}
 
 	inline function get_tx() return _41;
