@@ -68,6 +68,11 @@ class MeshBatch extends MultiMaterial {
 	public var primitiveSubPart : MeshBatchPart;
 	var primitiveSubBytes : haxe.io.Bytes;
 
+	/** 
+		If set, exact bounds will be recalculated during emitInstance (default true)
+	**/
+	public var calcBounds = true;
+
 	public function new( primitive, ?material, ?parent ) {
 		instanced = new h3d.prim.Instanced();
 		instanced.commands = new h3d.impl.InstanceBuffer();
@@ -272,9 +277,11 @@ class MeshBatch extends MultiMaterial {
 		if( worldPosition == null ) syncPos();
 		var ps = primitiveSubPart;
 		if( ps != null ) @:privateAccess {
-			instanced.tmpBounds.load(primitiveSubPart.bounds);
-			instanced.tmpBounds.transform(worldPosition == null ? absPos : worldPosition);
-			instanced.bounds.add(instanced.tmpBounds);
+			if(calcBounds) {
+				instanced.tmpBounds.load(primitiveSubPart.bounds);
+				instanced.tmpBounds.transform(worldPosition == null ? absPos : worldPosition);
+				instanced.bounds.add(instanced.tmpBounds);
+			}
 
 			if( primitiveSubBytes == null ) {
 				primitiveSubBytes = haxe.io.Bytes.alloc(128);
@@ -291,7 +298,7 @@ class MeshBatch extends MultiMaterial {
 			primitiveSubBytes.setInt32(p + 8, ps.indexStart);
 			primitiveSubBytes.setInt32(p + 12, ps.baseVertex);
 			primitiveSubBytes.setInt32(p + 16, 0);
-		} else
+		} else if(calcBounds)
 			instanced.addInstanceBounds(worldPosition == null ? absPos : worldPosition);
 		var p = dataPasses;
 		while( p != null ) {
