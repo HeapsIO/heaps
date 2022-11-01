@@ -576,14 +576,26 @@ class Renderer extends h3d.scene.Renderer {
 			if( debugShadowMapIndex > 0 ) @:privateAccess {
 				var k = debugShadowMapIndex;
 				var l = ctx.lights;
-				while( l != null && l.next != null && k > 0 ) {
+				while( l != null && k > 0 ) {
 					var pl = Std.downcast(l, Light);
 					if( pl != null && pl.shadows != null ) {
-						var tex = pl.shadows.getShadowTex();
-						if( tex != null && tex != defaultShadows ) {
-							k--;
-							shadowMap = tex;
-							if( k == 0 ) break;
+						var cl = Std.downcast(pl.shadows, h3d.pass.CascadeShadowMap);
+						if ( cl != null ) {
+							for ( tex in cl.getShadowTextures() ) {
+								if ( tex != null && tex != defaultShadows ) {
+									k--;
+									shadowMap = tex;
+									if ( k == 0 ) break;
+								}
+							}
+							if ( k == 0 ) break;
+						} else {
+							var tex = pl.shadows.getShadowTex();
+							if( tex != null && tex != defaultShadows ) {
+								k--;
+								shadowMap = tex;
+								if( k == 0 ) break;
+							}
 						}
 					}
 					l = l.next;
