@@ -403,14 +403,14 @@ class HtmlText extends Text {
 
 					var size = x + esize + letterSpacing;
 					var k = i + 1, max = text.length;
-					var prevChar = prevChar;
+					var prevChar = cc;
 					while ( size <= maxWidth && k < max ) {
 						var cc = text.charCodeAt(k++);
 						if ( lineBreak && (font.charset.isSpace(cc) || cc == '\n'.code ) ) break;
 						var e = font.getChar(cc);
 						size += e.width + letterSpacing + e.getKerningOffset(prevChar);
 						prevChar = cc;
-						var nc = text.charCodeAt(k+1);
+						var nc = text.charCodeAt(k);
 						if ( font.charset.isBreakChar(cc) && (nc == null || !font.charset.isComplementChar(nc)) ) break;
 					}
 					// Avoid empty line when last char causes line-break while being CJK
