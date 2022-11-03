@@ -209,7 +209,7 @@ class Animation {
 
 	public function update(dt:Float) : Float {
 		if( !isInstance )
-			throw "You must instanciate this animation first";
+			throw "You must instantiate this animation first";
 
 		if( !isPlaying() )
 			return 0;
