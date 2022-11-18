@@ -271,15 +271,6 @@ class Library {
 		var m = header.materials[mid];
 		var mat = h3d.mat.MaterialSetup.current.createMaterial();
 		mat.name = m.name;
-		if( m.diffuseTexture != null ) {
-			mat.texture = loadTexture(m.diffuseTexture);
-			if( mat.texture == null ) mat.texture = h3d.mat.Texture.fromColor(0xFF00FF);
-		}
-		if( m.specularTexture != null )
-			mat.specularTexture = loadTexture(m.specularTexture);
-		if( m.normalMap != null )
-			mat.normalMap = loadTexture(m.normalMap);
-		mat.blendMode = m.blendMode;
 		mat.model = resource;
 		var props = h3d.mat.MaterialSetup.current.loadMaterialProps(mat);
 		if( props == null ) props = mat.getDefaultModelProps();
@@ -294,6 +285,15 @@ class Library {
 			return mat;
 		}
 		#end
+		if( m.diffuseTexture != null ) {
+			mat.texture = loadTexture(m.diffuseTexture);
+			if( mat.texture == null ) mat.texture = h3d.mat.Texture.fromColor(0xFF00FF);
+		}
+		if( m.specularTexture != null )
+			mat.specularTexture = loadTexture(m.specularTexture);
+		if( m.normalMap != null )
+			mat.normalMap = loadTexture(m.normalMap);
+		mat.blendMode = m.blendMode;
 		mat.props = props;
 		return mat;
 	}
@@ -750,6 +750,15 @@ class Library {
 		function loadTexture ( path : String ) {
 			return hxd.res.Loader.currentInstance.load(path).toTexture();
 		});
+		for ( c in m.children ) {
+			var shader = Std.downcast(c, hrt.prefab.Shader);
+			if ( shader == null )
+				continue;
+			shader.clone();
+			var ctx = new hrt.prefab.Context();
+			var s = shader.makeShader(ctx);
+			@:privateAccess shader.applyShader(null, mat, s);
+		}
 	}
 	#end
 
