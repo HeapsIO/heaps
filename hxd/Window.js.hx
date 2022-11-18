@@ -123,9 +123,9 @@ class Window {
 				checkResize();
 			});
 			observer.observe(canvas);
-		} else {
-			js.Browser.window.addEventListener("resize", checkResize);
 		}
+
+		js.Browser.window.addEventListener("resize", checkResize);
 
 		js.Browser.document.addEventListener("pointerlockchange", onPointerLockChange);
 
