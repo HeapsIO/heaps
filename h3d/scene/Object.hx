@@ -38,6 +38,7 @@ class Object {
 	static inline var ROT2RAD = -0.017453292519943295769236907684886;
 
 	var flags : ObjectFlags;
+	var lastFrame : Int;
 	var children : Array<Object>;
 
 	/**
@@ -184,7 +185,6 @@ class Object {
 	var invPos : h3d.Matrix;
 	var qRot : h3d.Quat;
 	var posChanged(get,set) : Bool;
-	var lastFrame : Int;
 
 	/**
 		Create a new empty object, and adds it to the parent object if not null.
