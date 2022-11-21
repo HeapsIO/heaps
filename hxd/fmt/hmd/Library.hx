@@ -272,6 +272,7 @@ class Library {
 		var mat = h3d.mat.MaterialSetup.current.createMaterial();
 		mat.name = m.name;
 		mat.model = resource;
+		mat.blendMode = m.blendMode;
 		var props = h3d.mat.MaterialSetup.current.loadMaterialProps(mat);
 		if( props == null ) props = mat.getDefaultModelProps();
 		#if hide
@@ -293,7 +294,6 @@ class Library {
 			mat.specularTexture = loadTexture(m.specularTexture);
 		if( m.normalMap != null )
 			mat.normalMap = loadTexture(m.normalMap);
-		mat.blendMode = m.blendMode;
 		mat.props = props;
 		return mat;
 	}
