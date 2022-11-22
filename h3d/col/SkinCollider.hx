@@ -2,10 +2,10 @@ package h3d.col;
 
 @:access(h3d.col.PolygonBuffer)
 @:access(h3d.scene.Skin)
-class SkinCollider implements hxd.impl.Serializable implements Collider {
+class SkinCollider implements Collider {
 
-	@:s var obj : h3d.scene.Skin;
-	@:s var col : PolygonBuffer;
+	var obj : h3d.scene.Skin;
+	var col : PolygonBuffer;
 	var currentBounds : h3d.col.Bounds;
 	var transform : PolygonBuffer;
 	var lastFrame = -1;
@@ -91,13 +91,69 @@ class SkinCollider implements hxd.impl.Serializable implements Collider {
 		}
 	}
 
-	#if (hxbit && !macro)
-	function customSerialize( ctx : hxbit.Serializer ) {
-	}
-	function customUnserialize( ctx : hxbit.Serializer ) {
-		this.transform = new PolygonBuffer();
-		this.transform.setData(col.buffer.copy(), col.indexes, col.startIndex, col.triCount);
+	#if !macro
+	public function makeDebugObj() : h3d.scene.Object {
+		var ret = new SkinColliderDebugObj(this);
+		ret.ignoreParentTransform = true;
+		return ret;
 	}
 	#end
 
 }
+
+#if !macro
+@:access(h3d.col.SkinCollider)
+@:access(h3d.scene.Skin)
+class SkinColliderDebugObj extends h3d.scene.Object {
+	var col : SkinCollider;
+	var skin : h3d.scene.Skin;
+
+	var box : h3d.scene.Box;
+	var boxes : Array<h3d.scene.Box> = [];
+
+	public function new(col : SkinCollider) {
+		super(null);
+		this.col = col;
+		this.skin = col.obj;
+		this.box = new h3d.scene.Box(0xFFFFFF, col.currentBounds);
+		addChild(box);
+		this.ignoreParentTransform = true;
+		createJoints();
+	}
+
+	function createJoints() {
+		var joints = skin.getSkinData().allJoints;
+		for( j in joints ) {
+			var b = new h3d.scene.Box(0xA0A0A0, h3d.col.Bounds.fromValues(-1,-1,-1,2,2,2), this);
+			if( j.offsets != null ) {
+				b.bounds.empty();
+				var pt = j.offsets.getMin();
+				b.bounds.addSpherePos(pt.x, pt.y, pt.z, j.offsetRay);
+				var pt = j.offsets.getMax();
+				b.bounds.addSpherePos(pt.x, pt.y, pt.z, j.offsetRay);
+			} else {
+				b.bounds.empty();
+				b.bounds.addSpherePos(0,0,0,0.1);
+			}
+			boxes.push(b);
+		}
+	}
+
+	function updateJoints() {
+		for( i in 0...boxes.length ) {
+			var j = skin.skinData.allJoints[i];
+			var b = boxes[i];
+			if( j.offsets != null ) {
+				var m = skin.currentPalette[j.bindIndex];
+				b.setTransform(m);
+			} else
+				b.setTransform(skin.currentAbsPose[j.index]);
+		}
+	}
+
+	override function sync( ctx : h3d.scene.RenderContext ) {
+		col.checkBounds();
+		updateJoints();
+	}
+}
+#end

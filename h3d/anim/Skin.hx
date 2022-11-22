@@ -9,6 +9,7 @@ class Joint {
 	public var defMat : h3d.Matrix; // the default bone matrix
 	public var transPos : h3d.Matrix; // inverse pose matrix
 	public var parent : Joint;
+	public var follow : Joint;
 	public var subs : Array<Joint>;
 
 	public var offsets : h3d.col.Bounds;

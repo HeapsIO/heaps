@@ -92,28 +92,23 @@ class PolygonBuffer implements Collider {
 		return best;
 	}
 
-	#if (hxbit && !macro)
-	function customSerialize( ctx : hxbit.Serializer ) {
-		if( source == null )
-			throw "Cannot serialize " + this;
-		ctx.addString(source.entry.path);
-		ctx.addString(source.geometryName);
-	}
-	function customUnserialize( ctx : hxbit.Serializer ) {
-		var file = ctx.getString();
-		var name = ctx.getString();
-		var ctx : hxd.fmt.hsd.Serializer = cast ctx;
-		var lib = ctx.loadHMD(file);
-		var gindex = -1;
-		for( h in lib.header.models )
-			if( h.name == name ) {
-				gindex = h.geometry;
-				break;
-			}
-		if( gindex < 0 )
-			throw file+" does not have model " + name;
-		var prim = @:privateAccess lib.makePrimitive(gindex);
-		@:privateAccess prim.initCollider(this);
+	#if !macro
+	public function makeDebugObj() : h3d.scene.Object {
+		var points = new Array<Point>();
+		var idx = new hxd.IndexBuffer();
+		var i = startIndex;
+		for( t in 0...triCount ) {
+			idx.push(indexes[i++]);
+			idx.push(indexes[i++]);
+			idx.push(indexes[i++]);
+		}
+		i = 0;
+		while( i < buffer.length ) {
+			points.push(new Point(buffer[i++], buffer[i++], buffer[i++]));
+		}
+		var prim = new h3d.prim.Polygon(points, idx);
+		prim.addNormals();
+		return new h3d.scene.Mesh(prim);
 	}
 	#end
 

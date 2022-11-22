@@ -73,6 +73,13 @@ class Ray {
 		return "Ray{" + getPos() + "," + getDir() + "}";
 	}
 
+	public inline function distance( p : Plane ) : Float {
+		var d = lx * p.nx + ly * p.ny + lz * p.nz;
+		var nd = p.d - (px * p.nx + py * p.ny + pz * p.nz);
+		// line parallel with plane
+		return Math.abs(d) < Math.EPSILON ? (Math.abs(nd) < Math.EPSILON ? 0. : -1) : nd / d;
+	}
+
 	public inline function intersect( p : Plane ) : Null<Point> {
 		var d = lx * p.nx + ly * p.ny + lz * p.nz;
 		var nd = p.d - (px * p.nx + py * p.ny + pz * p.nz);

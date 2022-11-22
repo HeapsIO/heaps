@@ -6,7 +6,7 @@ typedef HideProps = {
 
 class ModelCache {
 
-	var models : Map<String, { lib : hxd.fmt.hmd.Library, props : HideProps }>;
+	var models : Map<String, { lib : hxd.fmt.hmd.Library, props : HideProps, col : Array<h3d.col.TransformCollider> }>;
 	var textures : Map<String, h3d.mat.Texture>;
 	var anims : Map<String, h3d.anim.Animation>;
 
@@ -17,10 +17,12 @@ class ModelCache {
 	}
 
 	public function dispose() {
-		anims = new Map();
-		models = new Map();
+		for( m in models )
+			m.lib.dispose();
 		for( t in textures )
 			t.dispose();
+		anims = new Map();
+		models = new Map();
 		textures = new Map();
 	}
 
@@ -39,7 +41,7 @@ class ModelCache {
 				haxe.Json.parse(hxd.res.Loader.currentInstance.load(parts.join(".")).toText());
 			} catch( e : hxd.res.NotFound )
 				null;
-			m = { lib : res.toHmd(), props : props };
+			m = { lib : res.toHmd(), props : props, col : null };
 			models.set(path, m);
 		}
 		return m;
@@ -50,7 +52,30 @@ class ModelCache {
 		return m.lib.makeObject(loadTexture.bind(res));
 	}
 
-	public function loadTexture( model : hxd.res.Model, texturePath ) : h3d.mat.Texture {
+	public function loadCollider( res : hxd.res.Model ) {
+		var m = loadLibraryData(res);
+		var lib = m.lib;
+		if( m.col == null ) {
+			var colliders = [];
+			for( m in lib.header.models ) {
+				if( m.geometry < 0 ) continue;
+				var pos = m.position.toMatrix();
+				var parent = lib.header.models[m.parent];
+				while( parent != null ) {
+					var pp = parent.position.toMatrix();
+					pos.multiply3x4(pos, pp);
+					parent = lib.header.models[parent.parent];
+				}
+				var prim = @:privateAccess lib.makePrimitive(m.geometry);
+				var col = cast(prim.getCollider(), h3d.col.Collider.OptimizedCollider);
+				colliders.push(new h3d.col.TransformCollider(pos,col));
+			}
+			m.col = colliders;
+		}
+		return m.col;
+	}
+
+	public function loadTexture( model : hxd.res.Model, texturePath, async = false ) : h3d.mat.Texture {
 		var fullPath = texturePath;
 		if(model != null)
 			fullPath = model.entry.path + "@" + fullPath;
@@ -84,8 +109,9 @@ class ModelCache {
 				throw error;
 			}
 		}
-
-		t = tres.toTexture();
+		var img = tres.toImage();
+		img.enableAsyncLoading = async;
+		t = img.toTexture();
 		textures.set(fullPath, t);
 		return t;
 	}

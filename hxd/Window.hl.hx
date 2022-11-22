@@ -1,5 +1,6 @@
 package hxd;
 import hxd.Key in K;
+import hxd.impl.MouseMode;
 
 #if (hlsdl && hldx)
 #error "You shouldn't use both -lib hlsdl and -lib hldx"
@@ -14,9 +15,20 @@ enum DisplayMode {
 	Windowed;
 	Borderless;
 	Fullscreen;
-	FullscreenResize;
 }
 #end
+
+typedef Monitor = {
+	name : String,
+	width : Int,
+	height : Int
+}
+
+typedef DisplaySetting = {
+	width : Int,
+	height : Int,
+	framerate : Int
+}
 
 //@:coreApi
 class Window {
@@ -28,26 +40,51 @@ class Window {
 	public var height(get, never) : Int;
 	public var mouseX(get, never) : Int;
 	public var mouseY(get, never) : Int;
+	@:deprecated("Use mouseMode = AbsoluteUnbound(true)")
 	public var mouseLock(get, set) : Bool;
+	/**
+		If set, will restrain the mouse cursor within the window boundaries.
+	**/
+	public var mouseClip(get, set) : Bool;
+	/**
+		Set the mouse movement input handling mode.
+
+		@see `hxd.impl.MouseMode` for more details on each mode.
+	**/
+	public var mouseMode(default, set): MouseMode = Absolute;
+	public var monitor : Null<Int> = null;
+	public var framerate : Null<Int> = null;
 	public var vsync(get, set) : Bool;
 	public var isFocused(get, never) : Bool;
 
 	public var title(get, set) : String;
 	public var displayMode(get, set) : DisplayMode;
+	#if (hl_ver >= version("1.12.0"))
+	public var currentMonitorIndex(get,null) : Int;
+	#end
 
 	#if hlsdl
 	var window : sdl.Window;
 	#elseif hldx
 	var window : dx.Window;
+	var _mouseClip : Bool;
 	#end
 	var windowWidth = 800;
 	var windowHeight = 600;
 	var curMouseX = 0;
 	var curMouseY = 0;
+	var startMouseX = 0;
+	var startMouseY = 0;
+	var savedSize : { x : Int, y : Int, width : Int, height : Int };
 
 	static var CODEMAP = [for( i in 0...2048 ) i];
+	static var MIN_HEIGHT = 720;
+	static var MIN_FRAMERATE = 60; // 30 and 60 are always allowed
 	#if hlsdl
 	static inline var TOUCH_SCALE = #if (hl_ver >= version("1.12.0")) 10000 #else 100 #end;
+	#if heaps_vulkan
+	public static var USE_VULKAN = false;
+	#end
 	#end
 
 	function new(title:String, width:Int, height:Int, fixed:Bool = false) {
@@ -56,8 +93,13 @@ class Window {
 		eventTargets = new List();
 		resizeEvents = new List();
 		#if hlsdl
-		final sdlFlags = if (!fixed) sdl.Window.SDL_WINDOW_SHOWN | sdl.Window.SDL_WINDOW_RESIZABLE else sdl.Window.SDL_WINDOW_SHOWN;
+		var sdlFlags = if (!fixed) sdl.Window.SDL_WINDOW_SHOWN | sdl.Window.SDL_WINDOW_RESIZABLE else sdl.Window.SDL_WINDOW_SHOWN;
+		#if heaps_vulkan
+		if( USE_VULKAN ) sdlFlags |= sdl.Window.SDL_WINDOW_VULKAN;
+		#end
 		window = new sdl.Window(title, width, height, sdl.Window.SDL_WINDOWPOS_CENTERED, sdl.Window.SDL_WINDOWPOS_CENTERED, sdlFlags);
+		this.windowWidth = window.width;
+		this.windowHeight = window.height;
 		#elseif hldx
 		final dxFlags = if (!fixed) dx.Window.RESIZABLE else 0;
 		window = new dx.Window(title, width, height, dx.Window.CW_USEDEFAULT, dx.Window.CW_USEDEFAULT, dxFlags);
@@ -66,6 +108,10 @@ class Window {
 
 	public dynamic function onClose() : Bool {
 		return true;
+	}
+
+	public dynamic function onMouseModeChange( from : MouseMode, to : MouseMode ) : Null<MouseMode> {
+		return null;
 	}
 
 	public function event( e : hxd.Event ) : Void {
@@ -104,11 +150,35 @@ class Window {
 
 	public function resize( width : Int, height : Int ) : Void {
 		#if (hldx || hlsdl)
+		if( window.displayMode == Fullscreen ) {
+			#if (hlsdl && hl_ver >= version("1.12.0") )
+			var cds = getCurrentDisplaySetting();
+			var mode = getBestDisplayMode(width, height, framerate != null ? framerate : cds.framerate);
+			if(mode != null) {
+				@:privateAccess sdl.Window.winSetDisplayMode(window.win, mode.mode.width, mode.mode.height, mode.mode.framerate);
+				width = mode.mode.width;
+				height = mode.mode.height;
+			}
+			#end
+		}
 		window.resize(width, height);
 		#end
 		windowWidth = width;
 		windowHeight = height;
 		for( f in resizeEvents ) f();
+	}
+
+	public function setCursorPos( x : Int, y : Int, emitEvent : Bool = false ) : Void {
+		#if hldx
+		if (mouseMode == Absolute) window.setCursorPosition(x, y);
+		#elseif hlsdl
+		if (mouseMode == Absolute) window.warpMouse(x, y);
+		#else
+		throw "Not implemented";
+		#end
+		curMouseX = x;
+		curMouseY = y;
+		if (emitEvent) event(new hxd.Event(EMove, x, y));
 	}
 
 	@:deprecated("Use the displayMode property instead")
@@ -135,12 +205,73 @@ class Window {
 	}
 
 	function get_mouseLock() : Bool {
-		return false;
+		return switch (mouseMode) { case AbsoluteUnbound(_): true; default: false; };
 	}
 
 	function set_mouseLock(v:Bool) : Bool {
+		return set_mouseMode(v ? AbsoluteUnbound(true) : Absolute).equals(AbsoluteUnbound(true));
+	}
+
+	function get_mouseClip() : Bool {
+		#if hldx
+		return _mouseClip;
+		#elseif hlsdl
+		return window.grab;
+		#else
+		return false;
+		#end
+	}
+
+	function set_mouseClip( v : Bool ) : Bool {
+		#if hldx
+		window.clipCursor(v);
+		return _mouseClip = v;
+		#elseif hlsdl
+		return window.grab = v;
+		#else
 		if( v ) throw "Not implemented";
 		return false;
+		#end
+	}
+
+	function set_mouseMode( v : MouseMode ) : MouseMode {
+		if ( v.equals(mouseMode) ) return v;
+
+		var forced = onMouseModeChange(mouseMode, v);
+		if (forced != null) v = forced;
+
+		#if hldx
+		window.setRelativeMouseMode(v != Absolute);
+		return mouseMode = v;
+		#elseif hlsdl
+		sdl.Sdl.setRelativeMouseMode(v != Absolute);
+		#else
+		if ( v != Absolute ) throw "Not implemented";
+		#end
+
+		if ( v == Absolute ) {
+			switch ( mouseMode ) {
+				case Relative(_, restorePos) | AbsoluteUnbound(restorePos):
+					if ( restorePos ) {
+						curMouseX = startMouseX;
+						curMouseY = startMouseY;
+					} else {
+						curMouseX = hxd.Math.iclamp(curMouseX, 0, width);
+						curMouseY = hxd.Math.iclamp(curMouseY, 0, height);
+					}
+					#if hldx
+					window.setCursorPosition(curMouseX, curMouseY);
+					#elseif hlsdl
+					window.warpMouse(curMouseX, curMouseY);
+					#end
+				default:
+			}
+		}
+
+		startMouseX = curMouseX;
+		startMouseY = curMouseY;
+		
+		return mouseMode = v;
 	}
 
 	#if (hldx||hlsdl)
@@ -200,9 +331,11 @@ class Window {
 			default:
 			}
 		case MouseDown if (!hxd.System.getValue(IsTouch)):
-			curMouseX = e.mouseX;
-			curMouseY = e.mouseY;
-			eh = new Event(EPush, e.mouseX, e.mouseY);
+			if (mouseMode == Absolute) {
+				curMouseX = e.mouseX;
+				curMouseY = e.mouseY;
+			}
+			eh = new Event(EPush, curMouseX, curMouseY);
 			// middle button -> 2 / right button -> 1
 			eh.button = switch( e.button - 1 ) {
 			case 0: 0;
@@ -211,9 +344,11 @@ class Window {
 			case x: x;
 			}
 		case MouseUp if (!hxd.System.getValue(IsTouch)):
-			curMouseX = e.mouseX;
-			curMouseY = e.mouseY;
-			eh = new Event(ERelease, e.mouseX, e.mouseY);
+			if (mouseMode == Absolute) {
+				curMouseX = e.mouseX;
+				curMouseY = e.mouseY;
+			}
+			eh = new Event(ERelease, curMouseX, curMouseY);
 			eh.button = switch( e.button - 1 ) {
 			case 0: 0;
 			case 1: 2;
@@ -221,9 +356,35 @@ class Window {
 			case x: x;
 			};
 		case MouseMove if (!hxd.System.getValue(IsTouch)):
-			curMouseX = e.mouseX;
-			curMouseY = e.mouseY;
-			eh = new Event(EMove, e.mouseX, e.mouseY);
+			switch (mouseMode) {
+				case Absolute:
+					curMouseX = e.mouseX;
+					curMouseY = e.mouseY;
+					eh = new Event(EMove, e.mouseX, e.mouseY);
+				case Relative(callback, _):
+					#if (hldx || hlsdl)
+					var ev = new Event(EMove, e.mouseXRel, e.mouseYRel);
+					#else
+					var ev = new Event(EMove, e.mouseX - curMouseX, e.mouseY - curMouseY);
+					#end
+					callback(ev);
+					if (!ev.cancel && ev.propagate) {
+						ev.cancel = false;
+						ev.propagate = false;
+						ev.relX = curMouseX;
+						ev.relY = curMouseY;
+						eh = ev;
+					}
+				case AbsoluteUnbound(_):
+					#if (hldx || hlsdl)
+					curMouseX += e.mouseXRel;
+					curMouseY += e.mouseYRel;
+					#else
+					curMouseX += e.mouseX - curMouseX;
+					curMouseY += e.mouseY - curMouseY;
+					#end
+					eh = new Event(EMove, curMouseX, curMouseY);
+			}
 		case MouseWheel:
 			eh = new Event(EWheel, mouseX, mouseY);
 			eh.wheelDelta = -e.wheelDelta;
@@ -421,11 +582,147 @@ class Window {
 
 	function set_displayMode( m : DisplayMode ) : DisplayMode {
 		#if (hldx || hlsdl)
+		var oldMode = window.displayMode;
+		#if (hl_ver >= version("1.12.0"))
+		var oldMode = window.displayMode;
+		if( window.displayMode != m ) {
+			if(window.displayMode == Windowed) {
+				if( savedSize == null ) {
+					savedSize = { x: window.x, y: window.y, width: window.width, height: window.height };
+				}
+			}
+		}
+		// No way to choose the screen in SDL, need to fit the window in the right screen before.
+		if(m != Windowed) {
+			window.displayMode = Windowed;
+			var mon = selectedMonitor();
+			if(mon != null) {
+				window.setPosition(mon.left, mon.top);
+				window.resize(mon.right-mon.left, mon.bottom-mon.top);
+			}
+		}
+		if( m == Fullscreen ) {
+			var cds = getCurrentDisplaySetting();
+			var dm = getBestDisplayMode(windowWidth, windowHeight, framerate != null ? framerate : cds.framerate);
+			if(dm == null)
+				return oldMode;
+			window.displaySetting = dm.mode;
+			#if hldx
+			var mon = selectedMonitor();
+			window.selectedMonitor = mon != null ? mon.name : null;
+			#end
+			window.displayMode = m;
+			window.resize(dm.mode.width, dm.mode.height);
+		}
+		else {
+			window.displayMode = m;
+			if( oldMode != m && m == Windowed && savedSize != null) {
+				window.setPosition(savedSize.x, savedSize.y);
+				window.resize(savedSize.width, savedSize.height);
+				savedSize = null;
+			}
+		}
+		#else
 		window.displayMode = m;
+		#end
 		#end
 		return displayMode;
 	}
 
+	public function applyDisplay() {
+		displayMode = displayMode;
+	}
+
+	#if (hl_ver >= version("1.12.0"))
+	public static function getMonitors() : Array<Monitor> {
+		return [for(m in #if hldx dx.Window.getMonitors() #elseif hlsdl sdl.Sdl.getDisplays() #else [] #end) { name: m.name, width: m.right-m.left, height: m.bottom-m.top}];
+	}
+
+	// If registry is set, return the default DisplaySetting when it's currently modified by the application.
+	public function getCurrentDisplaySetting(?monitorId : Int, registry : Bool = false) : DisplaySetting {
+		#if hldx
+		var mon = monitorId != null ? getMonitors()[monitorId] : null;
+		return dx.Window.getCurrentDisplaySetting(mon == null ? null : mon.name, registry);
+		#elseif hlsdl
+		return sdl.Sdl.getCurrentDisplayMode(monitorId == null ? 0 : monitorId, true);
+		#else
+		return null;
+		#end
+	}
+
+	public function getDisplaySettings(?monitorId : Int) : Array<DisplaySetting> {
+		var map = new Map<String,DisplaySetting>();
+		var f = [];
+		if(monitorId == null)
+			monitorId = monitor;
+		#if hldx
+		var m = dx.Window.getMonitors()[monitorId];
+		var l = m != null ? dx.Window.getDisplaySettings(m.name) : [];
+		#elseif hlsdl
+		var l = sdl.Sdl.getDisplayModes( monitorId == null ? window.currentMonitor : monitorId );
+		#else
+		var l = [];
+		#end
+		for(d in l) {
+			if(d.height >= MIN_HEIGHT && (d.framerate >= MIN_FRAMERATE || d.framerate == 30 || d.framerate == 60)) {
+				f.push(d);
+			}
+		}
+		if(f.length > 0)
+			return f;
+		else
+			return l;
+	}
+
+	function selectedMonitor() : Dynamic {
+		var m = if(monitor == null) currentMonitorIndex else monitor;
+		#if hldx
+		return dx.Window.getMonitors()[m];
+		#elseif hlsdl
+		return sdl.Sdl.getDisplays()[m];
+		#else
+		return null;
+		#end
+	}
+
+	function getBestDisplayMode(width, height, framerate) {
+		var m : {idx: Int, mode: DisplaySetting } = {
+			idx: -1,
+			mode: null
+		}
+		var defaultId = -1;
+		var def = getCurrentDisplaySetting(currentMonitorIndex, true);
+		for( i => s in getDisplaySettings(currentMonitorIndex) ) {
+			if(s.width == def.width && s.height == def.height && s.framerate == def.framerate)
+				defaultId = i;
+			if(s.width == width && s.height == height) {
+				if(s.framerate == framerate)
+					return { idx: i, mode: s };
+				else if(s.framerate == def.framerate)
+					m = {idx : i, mode : s };
+				else if(m.idx == -1)
+					m = {idx: i, mode : s };
+			}
+		}
+		return m.idx == -1 ? { idx: defaultId, mode: def } : m;
+	}
+
+	function get_currentMonitorIndex() : Int {
+		#if hldx
+		var current = window.getCurrentMonitor();
+		for(i => m in getMonitors()) {
+			if(m.name == current)
+				return i;
+		}
+		return 0;
+		#elseif hlsdl
+		return window.currentMonitor;
+		#else
+		return 0;
+		#end
+	}
+
+	#end
 	function get_title() : String {
 		#if (hldx || hlsdl)
 		return window.title;

@@ -22,12 +22,12 @@ class SmoothTransition extends Transition {
 	]);
 
 	public var blendFactor : Float;
-	var tspeed : Float;
+	var duration : Float;
 
-	public function new(current, target, speed) {
+	public function new(current, target, duration) {
 		super("smooth", current, target);
 		blendFactor = 0.;
-		this.tspeed = speed;
+		this.duration = duration;
 		if( !anim1.isInstance || !anim2.isInstance )
 			throw "Both animations must be instances";
 		this.isInstance = true;
@@ -58,7 +58,8 @@ class SmoothTransition extends Transition {
 			}
 			so.isAnim2 = true;
 		}
-		for( so in allObjects ) {
+		for( o in objects ) {
+			var so : SmoothedObject = cast o;
 			if( so.isAnim1 && so.isAnim2 )
 				continue;
 			if( so.targetSkin != null ) {
@@ -109,7 +110,7 @@ class SmoothTransition extends Transition {
 			q1.set(m1._12, m1._13, m1._21, m1._23);
 			q2.set(m2._12, m2._13, m2._21, m2._23);
 			// shortest path
-			qout.lerp(q1, q2, a, true);
+			qout.lerp(q1, q2, b, true);
 			qout.normalize();
 			qout.toMatrix(m);
 			// interpolate scale
@@ -137,10 +138,10 @@ class SmoothTransition extends Transition {
 	override function update( dt : Float ) : Float {
 		var rt = super.update(dt);
 		var st = dt - rt;
-		blendFactor += st * tspeed;
+		blendFactor += st * speed / duration;
 		if( blendFactor >= 1 ) {
 			blendFactor = 1;
-			onAnimEnd();
+			if( onAnimEnd != null ) onAnimEnd();
 		}
 		return rt;
 	}

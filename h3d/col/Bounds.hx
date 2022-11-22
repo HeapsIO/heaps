@@ -66,7 +66,7 @@ class Bounds implements Collider {
 	}
 
 	/**
-	 * Check if the camera model-view-projection Matrix intersects with the Bounds. Returns -1 if outside, 0 if interests and 1 if fully inside.
+	 * Check if the camera model-view-projection Matrix intersects with the Bounds. Returns -1 if outside, 0 if intersects and 1 if fully inside.
 	 * @param	mvp : the model-view-projection matrix to test against
 	 * @param	checkZ : tells if we will check against the near/far plane
 	 */
@@ -401,22 +401,12 @@ class Bounds implements Collider {
 		return b;
 	}
 
-	#if (hxbit && !macro)
-	function customSerialize( ctx : hxbit.Serializer ) {
-		ctx.addFloat(xMin);
-		ctx.addFloat(xMax);
-		ctx.addFloat(yMin);
-		ctx.addFloat(yMax);
-		ctx.addFloat(zMin);
-		ctx.addFloat(zMax);
-	}
-	function customUnserialize( ctx : hxbit.Serializer ) {
-		xMin = ctx.getFloat();
-		xMax = ctx.getFloat();
-		yMin = ctx.getFloat();
-		yMax = ctx.getFloat();
-		zMin = ctx.getFloat();
-		zMax = ctx.getFloat();
+	#if !macro
+	public function makeDebugObj() : h3d.scene.Object {
+		var prim = new h3d.prim.Cube(xMax - xMin, yMax - yMin, zMax - zMin);
+		prim.translate(xMin, yMin, zMin);
+		prim.addNormals();
+		return new h3d.scene.Mesh(prim);
 	}
 	#end
 

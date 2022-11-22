@@ -23,8 +23,12 @@ class Slides extends ScreenShader {
 		var roughness : Float;
 		var occlusion : Float;
 		var emissive : Float;
+		var custom1 : Float;
+		var custom2 : Float;
 
 		@param var shadowMap : Channel;
+		@param var shadowMapCube : SamplerCube;
+		@const var shadowIsCube : Bool;
 		@const var smode : Int;
 
 		function getColor(x:Float,y:Float) : Vec3 {
@@ -40,13 +44,21 @@ class Slides extends ScreenShader {
 					color = metalness.xxx;
 			} else {
 				if( x < 1 )
-					color = emissive.xxx;
+					color = vec3(emissive, custom1, custom2);
 				else if( x < 2 )
 					color = depth.xxx;
 				else if( x < 3 )
 					color = occlusion.xxx;
-				else
-					color = shadowMap.get(vec2(x,y) - 3).xxx;
+				else {
+					var uv = vec2(x,y) - 3;
+					if( shadowIsCube ) {
+						var phi = (1 - uv.x)*3.1415*2;
+						var theta = (-uv.y+0.5)*3.1415;
+						var dir = vec3(cos(phi)*cos(theta),sin(phi)*cos(theta),sin(theta));
+						color = shadowMapCube.get(dir).xxx;
+					} else
+						color = shadowMap.get(uv).xxx;
+				}
 			}
 			return color;
 		}

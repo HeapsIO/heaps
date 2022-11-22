@@ -1,8 +1,8 @@
 package h3d.scene;
 
 class Joint extends Object {
-	@:s public var skin : Skin;
-	@:s public var index : Int;
+	public var skin : Skin;
+	public var index : Int;
 
 	public function new(skin, j : h3d.anim.Skin.Joint ) {
 		super(null);
@@ -78,6 +78,7 @@ class Skin extends MultiMaterial {
 	var jointsGraphics : Graphics;
 
 	public var showJoints : Bool;
+	public var enableRetargeting : Bool = true;
 
 	public function new(s, ?mat, ?parent) {
 		super(null, mat, parent);
@@ -104,15 +105,19 @@ class Skin extends MultiMaterial {
 		syncJoints();
 		if( skinData.vertexWeights == null )
 			cast(primitive, h3d.prim.HMDModel).loadSkin(skinData);
+		var absScale = getAbsPos().getScale();
+		var scale = Math.max(Math.max(absScale.x, absScale.y), absScale.z);
 		for( j in skinData.allJoints ) {
 			if( j.offsetRay < 0 ) continue;
 			var m = currentPalette[j.bindIndex];
 			var pt = j.offsets.getMin();
-			pt.transform(m);
-			b.addSpherePos(pt.x, pt.y, pt.z, j.offsetRay);
-			var pt = j.offsets.getMax();
-			pt.transform(m);
-			b.addSpherePos(pt.x, pt.y, pt.z, j.offsetRay);
+			if ( m != null ) {
+				pt.transform(m);
+				b.addSpherePos(pt.x, pt.y, pt.z, j.offsetRay * scale);
+				var pt = j.offsets.getMax();
+				pt.transform(m);
+				b.addSpherePos(pt.x, pt.y, pt.z, j.offsetRay * scale);
+			}
 		}
 		return b;
 	}
@@ -176,6 +181,7 @@ class Skin extends MultiMaterial {
 					break;
 				}
 			skinShader = hasNormalMap ? new h3d.shader.SkinTangent() : new h3d.shader.Skin();
+			skinShader.fourBonesByVertex = skinData.bonesPerVertex == 4;
 			var maxBones = 0;
 			if( skinData.splitJoints != null ) {
 				for( s in skinData.splitJoints )
@@ -211,7 +217,7 @@ class Skin extends MultiMaterial {
 	}
 
 	override function sync( ctx : RenderContext ) {
-		if( !ctx.visibleFlag && !alwaysSync )
+		if( !ctx.visibleFlag && !alwaysSyncAnimation )
 			return;
 		syncJoints();
 	}
@@ -223,11 +229,12 @@ class Skin extends MultiMaterial {
 		if( !jointsUpdated ) return;
 		var tmpMat = TMP_MAT;
 		for( j in skinData.allJoints ) {
+			if ( j.follow != null ) continue;
 			var id = j.index;
 			var m = currentAbsPose[id];
 			var r = currentRelPose[id];
 			var bid = j.bindIndex;
-			if( r == null ) r = j.defMat else if( j.retargetAnim ) { tmpMat.load(r); r = tmpMat; r._41 = j.defMat._41; r._42 = j.defMat._42; r._43 = j.defMat._43; }
+			if( r == null ) r = j.defMat else if( j.retargetAnim && enableRetargeting ) { tmpMat.load(r); r = tmpMat; r._41 = j.defMat._41; r._42 = j.defMat._42; r._43 = j.defMat._43; }
 			if( j.parent == null )
 				m.multiply3x4inline(r, absPos);
 			else
@@ -241,6 +248,7 @@ class Skin extends MultiMaterial {
 	}
 
 	override function emit( ctx : RenderContext ) {
+		syncJoints(); // In case sync was not called because of culling (eg fixedPosition)
 		if( splitPalette == null )
 			super.emit(ctx);
 		else {
@@ -254,7 +262,7 @@ class Skin extends MultiMaterial {
 			if( jointsGraphics == null ) {
 				jointsGraphics = new Graphics(this);
 				jointsGraphics.material.mainPass.depth(false, Always);
-				jointsGraphics.material.mainPass.setPassName("add");
+				jointsGraphics.material.mainPass.setPassName("overlay");
 			}
 			var topParent : Object = this;
 			while( topParent.parent != null )
@@ -287,26 +295,5 @@ class Skin extends MultiMaterial {
 			primitive.render(ctx.engine);
 		}
 	}
-
-	#if (hxbit && !macro && heaps_enable_serialize)
-	override function customUnserialize(ctx:hxbit.Serializer) {
-		super.customUnserialize(ctx);
-		var prim = hxd.impl.Api.downcast(primitive, h3d.prim.HMDModel);
-		if( prim == null ) throw "Cannot load skin primitive " + prim;
-		jointsUpdated = true;
-		skinShader = material.mainPass.getShader(h3d.shader.Skin);
-		@:privateAccess {
-			var lib = prim.lib;
-			for( m in lib.header.models )
-				if( lib.header.geometries[m.geometry] == prim.data ) {
-					var skinData = lib.makeSkin(m.skin);
-					skinData.primitive = prim;
-					setSkinData(skinData, false);
-					break;
-				}
-		}
-	}
-	#end
-
 
 }

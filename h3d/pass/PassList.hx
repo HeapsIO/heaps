@@ -46,6 +46,19 @@ class PassList {
 	}
 
 	/**
+	 * Return the number of passes
+	 */
+	public inline function count() {
+		var c = current;
+		var n = 0;
+		while( c != null ) {
+			n++;
+			c = c.next;
+		}
+		return n;
+ 	}
+
+	/**
 		Save the discarded list, allow to perfom some filters, then call "load" to restore passes
 	**/
 	public inline function save() {

@@ -4,7 +4,7 @@ package h3d.prim;
 	h3d.prim.Primitive is the base class for all 3D primitives.
 	You can't create an instance of it and need to use one of its subclasses.
 **/
-class Primitive implements hxd.impl.Serializable {
+class Primitive {
 
 	/**
 		The primitive vertex buffer, holding its vertexes data.
@@ -17,7 +17,7 @@ class Primitive implements hxd.impl.Serializable {
 	public var indexes : Indexes;
 
 	/**
-		Current amount of references to this Primitive.  
+		Current amount of references to this Primitive.
 		Use `incref` and `decref` methods to affect this value. If it reaches 0, it will be atuomatically disposed.
 	**/
 	public var refCount(default, null) : Int = 0;
@@ -61,7 +61,7 @@ class Primitive implements hxd.impl.Serializable {
 	}
 
 	/**
-		Decrease reference count of the Primitive.  
+		Decrease reference count of the Primitive.
 		If recount reaches zero, Primitive is automatically disposed when last referencing mesh is removed from scene.
 	**/
 	public function decref():Void
@@ -84,6 +84,13 @@ class Primitive implements hxd.impl.Serializable {
 		Select the specified sub material before drawin. Used for internal usage.
 	**/
 	public function selectMaterial( material : Int ) {
+	}
+
+	/**
+		Returns the number and offset of indexes for the specified material
+	**/
+	public function getMaterialIndexes( material : Int ) : { count : Int, start : Int } {
+		return { start : 0, count : indexes == null ? triCount() * 3 : indexes.count };
 	}
 
 	@:noCompletion public function buildNormalsDisplay() : Primitive {
@@ -125,14 +132,5 @@ class Primitive implements hxd.impl.Serializable {
 	public function toString() {
 		return Type.getClassName(Type.getClass(this)).split(".").pop();
 	}
-
-	#if hxbit
-	function customSerialize( ctx : hxbit.Serializer ) {
-		throw "Cannot serialize " + toString();
-	}
-	function customUnserialize( ctx : hxbit.Serializer ) {
-		throw "customUnserialize not implemented on " + toString();
-	}
-	#end
 
 }

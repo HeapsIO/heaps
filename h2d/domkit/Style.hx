@@ -10,6 +10,7 @@ class Style extends domkit.CssStyle {
 	public var allowInspect(default, set) = false;
 	public var inspectKeyCode : Int = 0;
 	public var inspectDetailsKeyCode : Int = hxd.Key.CTRL;
+	public var s3d : h3d.scene.Scene;
 
 	public function new() {
 		super();
@@ -42,10 +43,13 @@ class Style extends domkit.CssStyle {
 	/**
 		Returns number of dom elements that were updated
 	**/
-	public function sync() {
+	public function sync( ?dt : Float ) {
+		if( dt == null )
+			dt = hxd.Timer.elapsedTime;
 		var T0 = domkit.CssStyle.TAG;
 		for( o in currentObjects )
 			o.dom.applyStyle(this, true);
+		updateTime(dt);
 		return domkit.CssStyle.TAG - T0;
 	}
 
@@ -65,14 +69,14 @@ class Style extends domkit.CssStyle {
 	function onChange( ntry : Int = 0 ) {
 		if( ntry >= 10 ) return;
 		ntry++;
-		var oldRules = rules;
+		var oldRules = data.rules;
 		errors = [];
-		rules = [];
+		data.rules = [];
 		for( r in resources ) {
-			var txt = try r.entry.getText() catch( e : Dynamic ) { haxe.Timer.delay(onChange.bind(ntry),100); rules = oldRules; return; }
+			var txt = try r.entry.getText() catch( e : Dynamic ) { haxe.Timer.delay(onChange.bind(ntry),100); data.rules = oldRules; return; }
 			var parser = new domkit.CssParser();
 			try {
-				add(parser.parseSheet(txt));
+				data.add(parser.parseSheet(txt));
 			} catch( e : domkit.Error ) {
 				parser.warnings.push({ msg : e.message, pmin : e.pmin, pmax : e.pmax });
 			}
@@ -93,7 +97,7 @@ class Style extends domkit.CssStyle {
 				if( currentObjects.length == 0 ) return;
 				var scene = currentObjects[0].getScene();
 				var fl = new h2d.Flow();
-				scene.addChildAt(fl,100);
+				scene.add(fl,100);
 				fl.backgroundTile = h2d.Tile.fromColor(0x400000,0.9);
 				fl.padding = 10;
 				errorsText = new h2d.Text(hxd.res.DefaultFont.get(), fl);
@@ -127,13 +131,17 @@ class Style extends domkit.CssStyle {
 			var scenes = [];
 			for( o in currentObjects ) {
 				var s = o.getScene();
-				if( scenes.indexOf(o) >= 0 ) continue;
+				if( s == null || scenes.indexOf(s) >= 0 ) continue;
 				scenes.push(s);
 				function scanRec(o:h2d.Object) {
 					if( o.dom != null ) @:privateAccess o.dom.currentValues = null;
 					for( o in o ) scanRec(o);
 				}
 				scanRec(s);
+			}
+			if( inspectModeActive ) {
+				inspectModeActive = false;
+				hxd.System.setNativeCursor(Default);
 			}
 		}
 		return allowInspect = b;
@@ -153,6 +161,9 @@ class Style extends domkit.CssStyle {
 					inspectModeDetails = false;
 					inspectModeDetailsRight = -1;
 				}
+
+				if( inspectModeActive && s3d != null && @:privateAccess s3d.renderer.debugging )
+					inspectModeActive = false;
 
 				if( inspectModeActive )
 					updatePreview(e);

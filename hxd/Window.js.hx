@@ -1,5 +1,8 @@
 package hxd;
 
+import js.Browser;
+import hxd.impl.MouseMode;
+
 enum DisplayMode {
 	Windowed;
 	Borderless;
@@ -16,7 +19,18 @@ class Window {
 	public var height(get, never) : Int;
 	public var mouseX(get, never) : Int;
 	public var mouseY(get, never) : Int;
+	@:deprecated("Use mouseMode = AbsoluteUnbound(true)")
 	public var mouseLock(get, set) : Bool;
+	/**
+		If set, will restrain the mouse cursor within the window boundaries.
+	**/
+	public var mouseClip(get, set) : Bool;
+	/**
+		Set the mouse movement input handling mode.
+
+		@see `hxd.impl.MouseMode` for more details on each mode.
+	**/
+	public var mouseMode(default, set) : MouseMode = Absolute;
 	public var vsync(get, set) : Bool;
 	public var isFocused(get, never) : Bool;
 	public var propagateKeyEvents : Bool;
@@ -26,27 +40,40 @@ class Window {
 
 	var curMouseX : Float = 0.;
 	var curMouseY : Float = 0.;
+	var pointerLockTarget : js.html.Element;
 
 	var canvas : js.html.CanvasElement;
 	var element : js.html.EventTarget;
 	var canvasPos : { var width(default, never) : Float; var height(default, never) : Float; var left(default, never) : Float; var top(default, never) : Float; };
-	var timer : haxe.Timer;
 
 	var curW : Int;
 	var curH : Int;
 
 	var focused : Bool;
+	var observer : Dynamic;
 
 	/**
 		When enabled, the browser zoom does not affect the canvas.
 		(default : true)
 	**/
-	public var useScreenPixels : Bool = true;
+	public var useScreenPixels : Bool = js.Browser.supported;
+	/**
+		When enabled, the user click event on the canvas that would trigger mouse capture to be enabled would be discarded.
+		(default : true)
+	**/
+	public var discardMouseCaptureEvent : Bool = true;
+	var discardMouseUp : Int = -1;
+	var canLockMouse : Bool = true;
 
 	public function new( ?canvas : js.html.CanvasElement, ?globalEvents ) : Void {
 		var customCanvas = canvas != null;
 		eventTargets = new List();
 		resizeEvents = new List();
+
+		if( !js.Browser.supported ) {
+			canvasPos = { "width":0, "top":0, "left":0, "height":0 };
+			return;
+		}
 
 		if( canvas == null ) {
 			canvas = cast js.Browser.document.getElementById("webgl");
@@ -68,12 +95,18 @@ class Window {
 		canvasPos = canvas.getBoundingClientRect();
 		// add mousemove on window (track mouse even when outside of component)
 		// unless we're having a custom canvas (prevent leaking the listener)
-		if( customCanvas )
+		if( customCanvas ) {
 			canvas.addEventListener("mousemove", onMouseMove);
-		else
+		}
+
+		else {
 			js.Browser.window.addEventListener("mousemove", onMouseMove);
+		}
+
+
 		element.addEventListener("mousedown", onMouseDown);
 		element.addEventListener("mouseup", onMouseUp);
+		element.addEventListener("mouseleave", onMouseLeave);
 		element.addEventListener("wheel", onMouseWheel);
 		element.addEventListener("touchstart", onTouchStart);
 		element.addEventListener("touchmove", onTouchMove);
@@ -83,11 +116,26 @@ class Window {
 		element.addEventListener("keypress", onKeyPress);
 		element.addEventListener("blur", onFocus.bind(false));
 		element.addEventListener("focus", onFocus.bind(true));
-		canvas.oncontextmenu = function(e){
+
+		if ((js.Browser.window:Dynamic).ResizeObserver != null) {
+			// Modern solution for canvas resize monitoring, supported in most browsers, but not Haxe API.
+			observer = js.Syntax.construct("ResizeObserver", function(e) {
+				checkResize();
+			});
+			observer.observe(canvas);
+		}
+
+		js.Browser.window.addEventListener("resize", checkResize);
+
+		js.Browser.document.addEventListener("pointerlockchange", onPointerLockChange);
+
+		canvas.addEventListener("contextmenu", function(e){
 			e.stopPropagation();
-			e.preventDefault();
+			if (e.button == 2) {
+				e.preventDefault();
+			}
 			return false;
-		};
+		});
 		if( globalEvents ) {
 			// make first mousedown on canvas trigger event
 			canvas.addEventListener("mousedown", function(e) {
@@ -108,8 +156,6 @@ class Window {
 		}
 		curW = this.width;
 		curH = this.height;
-		timer = new haxe.Timer(100);
-		timer.run = checkResize;
 	}
 
 	function checkResize() {
@@ -123,11 +169,19 @@ class Window {
 	}
 
 	public function dispose() {
-		timer.stop();
+		if( inst == this ) inst = null;
+		if ((js.Browser.window:Dynamic).ResizeObserver != null) {
+			observer.disconnect();
+			observer = null;
+		}
 	}
 
 	public dynamic function onClose() : Bool {
 		return true;
+	}
+
+	public dynamic function onMouseModeChange( from : MouseMode, to : MouseMode ) : Null<MouseMode> {
+		return null;
 	}
 
 	public function event( e : hxd.Event ) : Void {
@@ -178,6 +232,14 @@ class Window {
 		else
 			doc.exitFullscreen();
 	}
+	
+
+	public function setCursorPos( x : Int, y : Int, emitEvent : Bool = false ) : Void {
+		if ( mouseMode == Absolute ) throw "setCursorPos only allowed in relative mouse modes on this platform.";
+		curMouseX = x + canvasPos.left;
+		curMouseY = y + canvasPos.top;
+		if (emitEvent) event(new hxd.Event(EMove, x, y));
+	}
 
 	public function setCurrent() {
 		inst = this;
@@ -210,12 +272,35 @@ class Window {
 	}
 
 	function get_mouseLock() : Bool {
+		return switch (mouseMode) { case AbsoluteUnbound(_): true; default: false; };
+	}
+
+	function set_mouseLock(v:Bool) : Bool {
+		return set_mouseMode(v ? AbsoluteUnbound(true) : Absolute).equals(AbsoluteUnbound(true));
+	}
+
+	function get_mouseClip() : Bool {
 		return false;
 	}
 
-	function set_mouseLock( v : Bool ) : Bool {
-		if( v ) throw "Not implemented";
+	function set_mouseClip( v : Bool ) : Bool {
+		if ( v ) throw "Can't clip cursor on this platform.";
 		return false;
+	}
+
+	function set_mouseMode( v : MouseMode ) : MouseMode {
+		if ( v.equals(mouseMode) ) return v;
+
+		var forced = onMouseModeChange(mouseMode, v);
+		if (forced != null) v = forced;
+		var target = this.pointerLockTarget = canvas != null ? canvas : Browser.window.document.documentElement;
+
+		if ( v == Absolute ) {
+			if ( target.ownerDocument.pointerLockElement == target ) target.ownerDocument.exitPointerLock();
+		} else if ( canLockMouse ) {
+			if ( target.ownerDocument.pointerLockElement != target ) target.requestPointerLock();
+		}
+		return mouseMode = v;
 	}
 
 	function get_vsync() : Bool return true;
@@ -225,9 +310,31 @@ class Window {
 		return true;
 	}
 
+	function onPointerLockChange( e : js.html.Event ) {
+		if ( mouseMode != Absolute && pointerLockTarget.ownerDocument.pointerLockElement != pointerLockTarget ) {
+			// Firefox: Do not instantly re-lock the mouse if user altered mouseMode via `onMouseMouseChange` back into relative.
+			canLockMouse = false;
+			// User cancelled out of the pointer lock by pressing escape or by other means: Switch to Absolute mode
+			mouseMode = Absolute;
+			canLockMouse = true;
+		}
+	}
+
 	function onMouseDown(e:js.html.MouseEvent) {
-		if(e.clientX != curMouseX || e.clientY != curMouseY)
-			onMouseMove(e);
+		if ( mouseMode == Absolute ) {
+			if ( e.clientX != curMouseX || e.clientY != curMouseY ) onMouseMove(e);
+		} else {
+			// If we attempted to enter locked mode when browser didn't let us - try to enter locked mode on user click.
+			if ( pointerLockTarget.ownerDocument.pointerLockElement != pointerLockTarget ) {
+				pointerLockTarget.requestPointerLock();
+				if (discardMouseCaptureEvent) {
+					// Avoid stray ERelease due to discarded EPush event.
+					discardMouseUp = e.button;
+					return;
+				}
+			}
+			if ( e.movementX != 0 || e.movementY != 0 ) onMouseMove(e);
+		}
 		var ev = new Event(EPush, mouseX, mouseY);
 		ev.button = switch( e.button ) {
 			case 1: 2;
@@ -238,8 +345,13 @@ class Window {
 	}
 
 	function onMouseUp(e:js.html.MouseEvent) {
-		if(e.clientX != curMouseX || e.clientY != curMouseY)
+		if ( discardMouseUp == e.button ) {
+			discardMouseUp = -1;
+			return;
+		}
+		if ( mouseMode == Absolute ? (e.clientX != curMouseX || e.clientY != curMouseY) : (e.movementX != 0 || e.movementY != 0) ) {
 			onMouseMove(e);
+		}
 		var ev = new Event(ERelease, mouseX, mouseY);
 		ev.button = switch( e.button ) {
 			case 1: 2;
@@ -249,10 +361,39 @@ class Window {
 		event(ev);
 	}
 
+	function onMouseLeave(e:js.html.MouseEvent) {
+		var ev = new Event(EReleaseOutside, mouseX, mouseY);
+		ev.button = switch( e.button ) {
+			case 1: 2;
+			case 2: 1;
+			case x: x;
+		};
+		event(ev);
+	}
+
 	function onMouseMove(e:js.html.MouseEvent) {
-		curMouseX = e.clientX;
-		curMouseY = e.clientY;
-		event(new Event(EMove, mouseX, mouseY));
+		switch (mouseMode) {
+			case Absolute:
+				curMouseX = e.clientX;
+				curMouseY = e.clientY;
+				event(new Event(EMove, mouseX, mouseY));
+			case Relative(callback, _):
+				if (pointerLockTarget.ownerDocument.pointerLockElement != pointerLockTarget) return;
+				var ev = new Event(EMove, e.movementX, e.movementY);
+				callback(ev);
+				if (!ev.cancel && ev.propagate) {
+					ev.cancel = false;
+					ev.propagate = false;
+					ev.relX = curMouseX;
+					ev.relY = curMouseY;
+					event(ev);
+				}
+			case AbsoluteUnbound(_):
+				if (pointerLockTarget.ownerDocument.pointerLockElement != pointerLockTarget) return;
+				curMouseX += e.movementX;
+				curMouseY += e.movementY;
+				event(new Event(EMove, mouseX, mouseY));
+		}
 	}
 
 	function onMouseWheel(e:js.html.WheelEvent) {
@@ -355,6 +496,8 @@ class Window {
 	}
 
 	function set_displayMode( m : DisplayMode ) : DisplayMode {
+		if( !js.Browser.supported )
+			return m;
 		var doc = js.Browser.document;
 		var elt : Dynamic = doc.documentElement;
 		var fullscreen = m != Windowed;

@@ -33,12 +33,13 @@ class FileConverter {
 	var configs : Map<String,ConvertConfig> = new Map();
 	var defaultConfig : ConvertConfig;
 	var cache : Map<String,Array<{ out : String, time : Int, hash : String, ver : Null<Int> }>>;
+	var cacheTime : Float;
 
 	static var extraConfigs:Array<Dynamic> = [];
 
 	/**
-		Add extra convert configuration. Should be props.json-compatible structure.  
-		Can be used to add or override converts that are enabled by default.  
+		Add extra convert configuration. Should be props.json-compatible structure.
+		Can be used to add or override converts that are enabled by default.
 		Sample code of Convert registration and enabling it by default:
 		```haxe
 		// Register Convert
@@ -89,9 +90,10 @@ class FileConverter {
 		var merge = mergeRec(def, conf);
 		for( f in Reflect.fields(merge) ) {
 			var cmd = makeCommmand(Reflect.field(merge,f));
-			var pt = if( f.charCodeAt(0) == "^".code )
+			var pt = if( f.charCodeAt(0) == "^".code ) {
+				f = f.split("\\/").join("/").split("/").join("\\/");
 				Regexp(new EReg(f,""));
-			else if( ~/^[a-zA-Z0-9,]+$/.match(f) ) {
+			} else if( ~/^[a-zA-Z0-9,]+$/.match(f) ) {
 				var el = f.toLowerCase().split(",");
 				el.length == 1 ? Ext(el[0]) : Exts(el);
 			} else if( f == "*" )
@@ -251,8 +253,12 @@ class FileConverter {
 	}
 
 	function convertAndCache( e : LocalFileSystem.LocalEntry, outFile : String, conv : Convert, params : Dynamic ) {
-		if( cache == null )
-			cache = try haxe.Unserializer.run(sys.io.File.getContent(baseDir + tmpDir + "cache.dat")) catch( e : Dynamic ) new Map();
+		var cacheFile = baseDir + tmpDir + "cache.dat";
+		var time = try sys.FileSystem.stat(cacheFile).mtime.getTime() catch( e : Dynamic ) 0;
+		if( cache == null || time > cacheTime ) {
+			cache = try haxe.Unserializer.run(sys.io.File.getContent(cacheFile)) catch( e : Dynamic ) cache == null ? new Map() : cache;
+			cacheTime = time;
+		}
 		var entry = cache.get(e.file);
 		var needInsert = false;
 		if( entry == null ) {
@@ -263,6 +269,7 @@ class FileConverter {
 			if( needInsert ) cache.set(e.file, entry);
 			sys.FileSystem.createDirectory(baseDir + tmpDir);
 			sys.io.File.saveContent(baseDir + tmpDir + "cache.dat", haxe.Serializer.run(cache));
+			cacheTime = Date.now().getTime();
 		}
 
 		var match = null;

@@ -10,18 +10,42 @@ class FileEntry {
 	public var isDirectory(get, never) : Bool;
 	public var isAvailable(get, never) : Bool;
 
-	// first four bytes of the file
-	public function getSign() : Int return 0;
-
 	public function getBytes() : haxe.io.Bytes return null;
+	public function readBytes( out : haxe.io.Bytes, outPos : Int, pos : Int, len : Int ) : Int { throw "readBytes() not implemented"; }
+
+
+	static var TMP_BYTES : haxe.io.Bytes = null;
+	/**
+		Similar to readBytes except :
+		a) a temporary buffer is reused, meaning a single fetchBytes must occur at a single time
+		b) it will throw an Eof exception if the data is not available
+	**/
+	public function fetchBytes( pos, len ) : haxe.io.Bytes {
+		var bytes = TMP_BYTES;
+		if( bytes == null || bytes.length < len ) {
+			var allocSize = (len + 65535) & 0xFFFF0000;
+			bytes = haxe.io.Bytes.alloc(allocSize);
+			TMP_BYTES = bytes;
+		}
+		readFull(bytes,pos,len);
+		return bytes;
+	}
+
+	public function readFull( bytes, pos, len ) {
+		if( readBytes(bytes,0,pos,len) < len )
+			throw new haxe.io.Eof();
+	}
+
+	/**
+		Read first 4 bytes of the file.
+	**/
+	public function getSign() : Int {
+		var bytes = fetchBytes(0, 4);
+		return bytes.get(0) | (bytes.get(1) << 8) | (bytes.get(2) << 16) | (bytes.get(3) << 24);
+	}
 
 	public function getText() return getBytes().toString();
-
-	public function open() { }
-	public function skip( nbytes : Int ) { }
-	public function readByte() : Int return 0;
-	public function read( out : haxe.io.Bytes, pos : Int, size : Int ) {}
-	public function close() {}
+	public function open() return @:privateAccess new FileInput(this);
 
 	public function load( ?onReady : Void -> Void ) : Void { if( !isAvailable ) throw "load() not implemented"; else if( onReady != null ) onReady(); }
 	public function loadBitmap( onLoaded : LoadedBitmap -> Void ) : Void { throw "loadBitmap() not implemented"; }

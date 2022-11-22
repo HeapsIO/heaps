@@ -55,6 +55,10 @@ class Graphics extends Mesh {
 		material.mainPass.culling = None;
 	}
 
+	override function getBoundsRec(b:h3d.col.Bounds):h3d.col.Bounds {
+		return super.getBoundsRec(b);
+	}
+
 	override function onRemove() {
 		super.onRemove();
 		bprim.clear();
@@ -64,8 +68,10 @@ class Graphics extends Mesh {
 		if( is3D == v )
 			return v;
 		if( v ) {
+			material.texture = h3d.mat.Texture.fromColor(-1);
 			material.mainPass.removeShader(lineShader);
 		} else {
+			material.texture = null;
 			material.mainPass.addShader(lineShader);
 		}
 		bprim.clear();
@@ -217,6 +223,13 @@ class Graphics extends Mesh {
 		setColor(color, alpha);
 	}
 
+	public function setColorF( r : Float, g : Float, b : Float, a : Float = 1.) {
+		curA = a;
+		curR = r;
+		curG = g;
+		curB = b;
+	}
+
 	public function setColor( color : Int, alpha = 1. ) {
 		curA = alpha;
 		curR = ((color >> 16) & 0xFF) / 255.;
@@ -246,6 +259,8 @@ class Graphics extends Mesh {
 
 	public function lineTo( x : Float, y : Float, z : Float ) {
 		if( is3D ) {
+			bprim.addBounds(curX, curY, curZ);
+			bprim.addBounds(x, y, z);
 			addVertex(x, y, z, curR, curG, curB, curA);
 			return;
 		}
@@ -296,14 +311,5 @@ class Graphics extends Mesh {
 		curY = y;
 		curZ = z;
 	}
-
-	#if (hxbit && !macro && heaps_enable_serialize)
-	override function customUnserialize(ctx:hxbit.Serializer) {
-		super.customUnserialize(ctx);
-		lineShader = material.mainPass.getShader(h3d.shader.LineShader);
-		tmpPoints = [];
-		bprim = cast primitive;
-	}
-	#end
 
 }

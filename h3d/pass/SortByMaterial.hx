@@ -21,6 +21,8 @@ class SortByMaterial {
 				textureIdMap[p.texture] = textureCount++;
 		}
 		passes.sort(function(o1, o2) {
+			if ( o1.pass.layer != o2.pass.layer )
+				return o1.pass.layer - o2.pass.layer;
 			var d = shaderIdMap[o1.shader.id] - shaderIdMap[o2.shader.id];
 			if( d != 0 ) return d;
 			return textureIdMap[o1.texture] - textureIdMap[o2.texture];

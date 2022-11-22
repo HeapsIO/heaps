@@ -47,6 +47,9 @@ class System {
 	static var currentCustomCursor : hxd.Cursor.CustomCursor;
 	static var cursorVisible = true;
 
+	public static var allowLCID : Bool = false;
+	static var lcidMapping = [ "zh-TW" => "zh-TW", "zh-HK" => "zh-TW", "zh-MO" => "zh-TW" ];
+
 	public static function getCurrentLoop() : Void -> Void {
 		return loopFunc;
 	}
@@ -132,9 +135,6 @@ class System {
 		#else
 		var reportError = function(e) reportError(e);
 		#end
-		#if hxtelemetry
-		var hxt = new hxtelemetry.HxTelemetry();
-		#end
 		#if ( target.threaded && (haxe_ver >= 4.2) && heaps_unsafe_events)
 		var eventRecycle = [];
 		#end
@@ -158,13 +158,9 @@ class System {
 				if( !mainLoop() ) break;
 			} catch( e : Dynamic ) {
 				hl.Api.setErrorHandler(null);
-				reportError(e);
 			}
-			#if hxtelemetry
-			hxt.advance_frame();
-			#end
 			#if hot_reload
-			check_reload();
+			if( check_reload() ) onReload();
 			#end
 		}
 		Sys.exit(0);
@@ -172,8 +168,14 @@ class System {
 
 	#if hot_reload
 	@:hlNative("std","sys_check_reload")
-	static function check_reload() return false;
+	static function check_reload( ?debug : hl.Bytes ) return false;
 	#end
+
+	/**
+		onReload() is called when app hot reload is enabled with -D hot-reload and is also enabled when running hashlink.
+		The later can be done by running `hl --hot-reload` or by setting hotReload:true in VSCode launch props.
+	**/
+	public dynamic static function onReload() {}
 
 	public dynamic static function reportError( e : Dynamic ) {
 		#if (haxe_ver >= 4.1)
@@ -187,7 +189,7 @@ class System {
 		#if usesys
 		haxe.System.reportError(err + stack);
 		#else
-		Sys.stderr().writeString(err + stack + "\n");
+		try Sys.stderr().writeString( err + stack + "\r\n" ) catch( e : Dynamic ) {};
 
 		if ( Sys.systemName() != 'Windows' )
 			return;
@@ -287,11 +289,39 @@ class System {
 	}
 	#end
 
+	#if (hl_ver < version("1.12.0"))
+	public static function getClipboardText() : String {
+		return null;
+	}
+
+	public static function setClipboardText(text:String) : Bool {
+		return false;
+	}
+	#elseif hlsdl
+	public static function getClipboardText() : String {
+		return sdl.Sdl.getClipboardText();
+	}
+
+	public static function setClipboardText(text:String) : Bool {
+		return sdl.Sdl.setClipboardText(text);
+	}
+	#else
+	public static function getClipboardText() : String {
+		return hl.UI.getClipboardText();
+	}
+
+	public static function setClipboardText(text:String) : Bool {
+		return hl.UI.setClipboardText(text);
+	}
+	#end
+
 	public static function getDeviceName() : String {
 		#if usesys
 		return haxe.System.name;
 		#elseif hlsdl
 		return "PC/" + sdl.Sdl.getDevices()[0];
+		#elseif (hldx && dx12)
+		return "PC/" + dx.Dx12.getDeviceName();
 		#elseif hldx
 		return "PC/" + dx.Driver.getDeviceName();
 		#else
@@ -343,8 +373,11 @@ class System {
 	static var _lang : String;
 	static function get_lang() : String {
 		if( _lang == null ) {
-			var str = getLocale();
-			_lang = str.split("-").shift();
+			var loc = getLocale();
+			if( allowLCID && lcidMapping.exists(loc) )
+				_lang = lcidMapping[loc];
+			else
+				_lang = loc.split("-")[0];
 		}
 		return _lang;
 	}
@@ -357,7 +390,8 @@ class System {
 		if( _loc == null ) {
 			var str = @:privateAccess Sys.makePath(sys_locale());
 			if( str == null ) str = "en";
-			_loc = ~/[.@_]/g.split(str)[0];
+			_loc = ~/[.@]/g.split(str)[0];
+			_loc = ~/_/g.replace(_loc, "-");
 		}
 		return _loc;
 	}
@@ -373,8 +407,13 @@ class System {
 	static function get_height() : Int return dx.Window.getScreenHeight();
 	static function get_platform() : Platform return PC; // TODO : Xbox ?
 	#elseif hlsdl
+	#if (hl_ver >= version("1.12.0"))
+	static function get_width() : Int return sdl.Sdl.getScreenWidth(@:privateAccess Window.inst.window);
+	static function get_height() : Int return sdl.Sdl.getScreenHeight(@:privateAccess Window.inst.window);
+	#else
 	static function get_width() : Int return sdl.Sdl.getScreenWidth();
 	static function get_height() : Int return sdl.Sdl.getScreenHeight();
+	#end
 	static function get_platform() : Platform {
 		if (platform == null)
 			platform = switch Sys.systemName() {
@@ -424,9 +463,9 @@ class System {
 		mainThread = sys.thread.Thread.current();
 		#end
 	}
-	
+
 	#if (hlsdl || hldx)
-	static var _ = {
+	@:keep static var _ = {
 		haxe.MainLoop.add(timeoutTick, -1) #if (haxe_ver >= 4) .isBlocking = false #end;
 		haxe.MainLoop.add(updateCursor, -1) #if (haxe_ver >= 4) .isBlocking = false #end;
 	}

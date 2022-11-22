@@ -53,7 +53,7 @@ class Atlas extends Resource {
 			return contents;
 
 		contents = new Map();
-		var lines = entry.getBytes().toString().split("\n");
+		var lines = entry.getText().split("\n");
 
 		var basePath = entry.path.split("/");
 		basePath.pop();
@@ -128,11 +128,11 @@ class Atlas extends Resource {
 				}
 				tl[index] = { t : t, width : origW, height : origH };
 			}
-
-			// remove first element if index started at 1 instead of 0
-			for( tl in contents )
-				if( tl.length > 1 && tl[0] == null ) tl.shift();
 		}
+
+		// remove first element if index started at 1 instead of 0
+		for( tl in contents )
+			if( tl.length > 1 && tl[0] == null ) tl.shift();
 		return contents;
 	}
 

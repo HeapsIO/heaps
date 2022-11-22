@@ -41,7 +41,7 @@ enum ScaleMode {
 	/**
 		Sets constant Scene size and upscales it with preserving the aspect-ratio to fit the window.
 
-		With `800x600` window, `LetterBox(320, 260)` will result in center-aligned Scene of size `320x260` upscaled to fit into the window.  
+		With `800x600` window, `LetterBox(320, 260)` will result in center-aligned Scene of size `320x260` upscaled to fit into the window.
 		With same window but setting of `LetterBox(320, 260, true, Left, Top)` would result in the same Scene internal size,
 		upscaled to `640x480` resolution and anchored to the top-left corner of the window.
 
@@ -331,6 +331,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	@:dox(hide) @:noCompletion
 	public function checkResize() {
 		var engine = h3d.Engine.getCurrent();
+		if (engine == null) return;
 
 		inline function setSceneSize( w : Int, h : Int ) {
 			if ( w != this.width || h != this.height ) {
@@ -734,16 +735,24 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 				throw "Can only draw to texture created with Target flag";
 		ctx.engine = h3d.Engine.getCurrent();
 		var oldBG = ctx.engine.backgroundColor;
+		var inRender = @:privateAccess ctx.engine.inRender;
 		ctx.engine.backgroundColor = null; // prevent clear bg
-		if( @:privateAccess !ctx.engine.inRender ) ctx.begin(); // don't reset current tex stack
 		ctx.globalAlpha = alpha;
-		ctx.begin();
+		if( !inRender ) { // don't reset current tex stack
+			ctx.engine.begin();
+			ctx.begin();
+		} else if( @:privateAccess ctx.targetFlipY == 0 )
+			ctx.begin(); // ctx was never init, most likely a new scene
 		ctx.pushTargets(texs);
 		if( outputs != null ) @:privateAccess ctx.manager.setOutput(outputs);
 		s.drawRec(ctx);
 		if( outputs != null ) @:privateAccess ctx.manager.setOutput();
 		ctx.popTarget();
 		ctx.engine.backgroundColor = oldBG;
+		if( !inRender ) {
+			ctx.end();
+			ctx.engine.end();
+		}
 	}
 
 	/**
@@ -772,7 +781,9 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		sync(ctx);
 		if( children.length == 0 ) return;
 		ctx.begin();
+		#if sceneprof h3d.impl.SceneProf.begin("2d", ctx.frame); #end
 		ctx.drawScene();
+		#if sceneprof h3d.impl.SceneProf.end(); #end
 		ctx.end();
 	}
 
@@ -784,24 +795,39 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		for ( cam in cameras ) cam.sync(ctx, forceCamSync);
 	}
 
-	override function clipBounds(ctx:RenderContext, bounds:h2d.col.Bounds)
+	override function clipBounds(ctx:RenderContext, bounds:h2d.col.Bounds, scaleX = 1., scaleY = 1.)
 	{
-		// Scene always uses whole window surface as a filter bounds as to not clip out cameras.
-		if ( rotation == 0 ) {
-			bounds.addPos(-absX, -absY);
-			bounds.addPos(window.width / matA - absX, window.height / matD - absY);
+		// See Object.clipBounds for special notes on why Scene clipper always outputs entire viewport.
+		// In short: Cameras.
+		var matA, matB, matC, matD, absX, absY;
+		@:privateAccess if( ctx.inFilter != null ) {
+			var f1 = ctx.baseShader.filterMatrixA;
+			var f2 = ctx.baseShader.filterMatrixB;
+			var tmpA = this.matA * f1.x + this.matB * f1.y;
+			var tmpB = this.matA * f2.x + this.matB * f2.y;
+			var tmpC = this.matC * f1.x + this.matD * f1.y;
+			var tmpD = this.matC * f2.x + this.matD * f2.y;
+			var tmpX = this.absX * f1.x + this.absY * f1.y + f1.z;
+			var tmpY = this.absX * f2.x + this.absY * f2.y + f2.z;
+			matA = (tmpA * ctx.viewA + tmpB * ctx.viewC) / scaleX;
+			matB = (tmpA * ctx.viewB + tmpB * ctx.viewD) / scaleY;
+			matC = (tmpC * ctx.viewA + tmpD * ctx.viewC) / scaleX;
+			matD = (tmpC * ctx.viewB + tmpD * ctx.viewD) / scaleY;
+			absX = (tmpX * ctx.viewA + tmpY * ctx.viewC + ctx.viewX);
+			absY = (tmpX * ctx.viewB + tmpY * ctx.viewD + ctx.viewY);
 		} else {
-			inline function calc(x:Float, y:Float) {
-				bounds.addPos(x * matA + y * matC, x * matB + y * matD);
-			}
-			var ww = window.width / matA - absX;
-			var wh = window.height / matD - absY;
-			calc(-absX, -absY);
-			calc(ww - absX, -absY);
-			calc(-absX, wh - absY);
-			calc(ww - absX, wh - absY);
+			matA = (this.matA * ctx.viewA + this.matB * ctx.viewC) / scaleX;
+			matB = (this.matA * ctx.viewB + this.matB * ctx.viewD) / scaleY;
+			matC = (this.matC * ctx.viewA + this.matD * ctx.viewC) / scaleX;
+			matD = (this.matC * ctx.viewB + this.matD * ctx.viewD) / scaleY;
+			absX = (this.absX * ctx.viewA + this.absY * ctx.viewC + ctx.viewX);
+			absY = (this.absX * ctx.viewB + this.absY * ctx.viewD + ctx.viewY);
 		}
-		super.clipBounds(ctx, bounds);
+		var invDet = 1 / (matA * matD - matB * matC);
+		bounds.xMin = ( (-1 - absX) * matD + (absY + 1 ) * matC ) * invDet;
+		bounds.yMin = ( (absX + 1 ) * matB + (-1 - absY) * matA ) * invDet;
+		bounds.xMax = ( (1 - absX ) * matD + (absY - 1 ) * matC ) * invDet;
+		bounds.yMax = ( (absX - 1 ) * matB + (1 - absY ) * matA ) * invDet;
 	}
 
 	override function drawContent(ctx:RenderContext)

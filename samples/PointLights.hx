@@ -47,7 +47,7 @@ class PointLights extends hxd.App {
 		dir = new h3d.scene.fwd.DirLight(new h3d.Vector(0.2, 0.3, -1), s3d);
 		dir.color.set(0.1, 0.1, 0.1);
 
-		s3d.lightSystem.ambientLight.set(0, 0, 0);
+		cast(s3d.lightSystem,h3d.scene.fwd.LightSystem).ambientLight.set(0, 0, 0);
 
 		s3d.camera.pos.set(5, 1, 3);
 		new h3d.scene.CameraController(s3d).loadFromCamera();

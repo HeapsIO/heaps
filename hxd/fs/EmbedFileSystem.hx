@@ -14,7 +14,6 @@ private class EmbedEntry extends FileEntry {
 	#else
 	var data : String;
 	var bytes : haxe.io.Bytes;
-	var readPos : Int;
 	#end
 
 	function new(fs, name, relPath, data) {
@@ -24,37 +23,7 @@ private class EmbedEntry extends FileEntry {
 		this.data = data;
 	}
 
-	override function getSign() : Int {
-		#if flash
-		var old = bytes == null ? 0 : bytes.position;
-		open();
-		bytes.endian = flash.utils.Endian.LITTLE_ENDIAN;
-		var v = bytes.readUnsignedInt();
-		bytes.position = old;
-		return v;
-		#else
-		var old = readPos;
-		open();
-		readPos = old;
-		return bytes.get(0) | (bytes.get(1) << 8) | (bytes.get(2) << 16) | (bytes.get(3) << 24);
-		#end
-	}
-
-	override function getBytes() : haxe.io.Bytes {
-		#if flash
-		if( data == null )
-			return null;
-		if( bytes == null )
-			open();
-		return haxe.io.Bytes.ofData(bytes);
-		#else
-		if( bytes == null )
-			open();
-		return bytes;
-		#end
-	}
-
-	override function open() {
+	function init() {
 		#if flash
 		if( bytes == null )
 			bytes = Type.createInstance(data, []);
@@ -64,42 +33,31 @@ private class EmbedEntry extends FileEntry {
 			bytes = haxe.Resource.getBytes(data);
 			if( bytes == null ) throw "Missing resource " + data;
 		}
-		readPos = 0;
 		#end
 	}
 
-	override function skip( nbytes : Int ) {
+	override function getBytes() : haxe.io.Bytes {
 		#if flash
-		bytes.position += nbytes;
+		if( data == null )
+			return null;
+		if( bytes == null )
+			init();
+		return haxe.io.Bytes.ofData(bytes);
 		#else
-		readPos += nbytes;
+		if( bytes == null )
+			init();
+		return bytes;
 		#end
 	}
 
-	override function readByte() : Int {
-		#if flash
-		return bytes.readUnsignedByte();
-		#else
-		return bytes.get(readPos++);
-		#end
-	}
-
-	override function read( out : haxe.io.Bytes, pos : Int, size : Int ) : Void {
-		#if flash
-		bytes.readBytes(out.getData(), pos, size);
-		#else
-		out.blit(pos, bytes, readPos, size);
-		readPos += size;
-		#end
-	}
-
-	override function close() {
-		#if flash
-		bytes = null;
-		#else
-		bytes = null;
-		readPos = 0;
-		#end
+	override function readBytes( out : haxe.io.Bytes, outPos : Int, pos : Int, len : Int ) : Int {
+		if( bytes == null )
+			init();
+		if( pos + len > bytes.length )
+			len = bytes.length - pos;
+		if( len < 0 ) len = 0;
+		out.blit(outPos, bytes, pos, len);
+		return len;
 	}
 
 	override function load( ?onReady : Void -> Void ) : Void {
@@ -119,7 +77,7 @@ private class EmbedEntry extends FileEntry {
 			onLoaded(new LoadedBitmap(content.bitmapData));
 			loader.unload();
 		});
-		open();
+		init();
 		loader.loadBytes(bytes);
 		close(); // flash will copy bytes content in loadBytes() !
 		#elseif js
@@ -163,10 +121,10 @@ private class EmbedEntry extends FileEntry {
 
 	override function get_size() {
 		#if flash
-		open();
+		init();
 		return bytes.length;
 		#else
-		open();
+		init();
 		return bytes.length;
 		#end
 	}
@@ -286,7 +244,11 @@ class EmbedFileSystem #if !macro implements FileSystem #end {
 	}
 
 	public function dir( path : String ) : Array<FileEntry> {
+		#if macro
 		throw "Not Supported";
+		#else
+		return subFiles(path);
+		#end
 	}
 
 }

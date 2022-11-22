@@ -71,7 +71,7 @@ class Default extends Base {
 			p.shader = manager.compileShaders(shaders, p.pass.batchMode);
 			p.shaders = shaders;
 			var t = p.shader.fragment.textures;
-			if( t == null )
+			if( t == null || t.type.match(TArray(_)) )
 				p.texture = 0;
 			else {
 				var t : h3d.mat.Texture = manager.getParamValue(t, shaders, true);
@@ -94,6 +94,7 @@ class Default extends Base {
 	override function draw( passes : h3d.pass.PassList, ?sort : h3d.pass.PassList -> Void ) {
 		if( passes.isEmpty() )
 			return;
+		#if sceneprof h3d.impl.SceneProf.begin("draw", ctx.frame); #end
 		for( g in ctx.sharedGlobals )
 			globals.fastSet(g.gid, g.value);
 		setGlobals();
@@ -105,6 +106,7 @@ class Default extends Base {
 		ctx.currentManager = manager;
 		var buf = ctx.shaderBuffers, prevShader = null;
 		for( p in passes ) {
+			#if sceneprof h3d.impl.SceneProf.mark(p.obj); #end
 			globalModelView = p.obj.absPos;
 			if( p.shader.hasGlobal(globalModelViewInverse_id.toInt()) )
 				globalModelViewInverse = p.obj.getInvPos();
@@ -126,7 +128,7 @@ class Default extends Base {
 			}
 			drawObject(p);
 		}
+		#if sceneprof h3d.impl.SceneProf.end(); #end
 		ctx.nextPass();
 	}
-
 }

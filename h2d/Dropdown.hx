@@ -10,7 +10,7 @@ private class Fake extends Object {
 	override function getBoundsRec(relativeTo:Object, out:h2d.col.Bounds, forSize:Bool) {
 		super.getBoundsRec(relativeTo, out, forSize);
 		if (dd.selectedItem >= 0) {
-			var item = @:privateAccess dd.items[dd.selectedItem];
+			var item = @:privateAccess dd.getItem(dd.selectedItem);
 			var size = item.getSize();
 			addBounds(relativeTo, out, 0, 0, size.width, size.height);
 		}
@@ -18,12 +18,14 @@ private class Fake extends Object {
 
 	override function draw(ctx) {
 		if (dd.selectedItem >= 0) {
-			var item = @:privateAccess dd.items[dd.selectedItem];
+			var item = @:privateAccess dd.getItem(dd.selectedItem);
 			var oldX = item.absX;
 			var oldY = item.absY;
 			item.absX = absX;
 			item.absY = absY;
+			for( c in item ) c.posChanged = true;
 			item.drawRec(ctx);
+			for( c in item ) c.posChanged = true;
 			item.absX = oldX;
 			item.absY = oldY;
 		}
@@ -39,8 +41,8 @@ private class Fake extends Object {
 
 	Note that when `dropdownList` opens and closes, item objects will receive the `onHierarchyChanged` callback.
 **/
+@:uiNoComponent
 class Dropdown extends Flow {
-	var items : Array<h2d.Object>;
 	var fake : Fake;
 	var cursor : h2d.Bitmap;
 	var arrow : h2d.Bitmap;
@@ -66,8 +68,6 @@ class Dropdown extends Flow {
 	public var canEdit(default,set) : Bool = true;
 	/**
 		A reference to the Flow that will contain the items.
-
-		Adding objects to this Flow will not automatically add them to the item list, use `Dropdown.addItem` instead.
 	**/
 	public var dropdownList : Flow;
 	/**
@@ -120,9 +120,15 @@ class Dropdown extends Flow {
 		p.horizontalAlign = Right;
 		p.verticalAlign = Top;
 
+		inline function setItem(i) {
+			if( selectedItem != i ) {
+				selectedItem = i;
+				onChange(getItem(i));
+			}
+		}
+
 		//
 		fake = new Fake(this);
-		items = [];
 		enableInteractive = true;
 		interactive.onPush = function(e:hxd.Event) {
 			if( e.button == 0 && canEdit )
@@ -142,18 +148,19 @@ class Dropdown extends Flow {
 
 		interactive.onFocusLost = function(e) {
 			if (highlightedItem >= 0 && canEdit) {
-				selectedItem = highlightedItem;
+				setItem(highlightedItem);
 			}
 			close();
 		}
 
 		dropdownList.enableInteractive = true;
 		dropdownList.interactive.onClick = function(e) {
-			if( canEdit ) selectedItem = highlightedItem;
+			if( canEdit ) setItem(highlightedItem);
 			close();
 		}
 		dropdownList.interactive.onMove = function(e : hxd.Event) {
 			var clickPos = dropdownList.localToGlobal(new h2d.col.Point(e.relX, e.relY));
+			var items = getItems();
 			for (i in 0...items.length) {
 				var item = items[i];
 				var bds = item.getBounds();
@@ -177,11 +184,19 @@ class Dropdown extends Flow {
 			}
 		}
 		dropdownList.interactive.onOut = function(e : hxd.Event) {
-			onOutItem(items[highlightedItem]);
+			onOutItem(getItem(highlightedItem));
 			highlightedItem = -1;
 			cursor.visible = false;
 		}
 		needReflow = true;
+	}
+
+	function getItems() : Array<h2d.Object> {
+		return [for( i => obj in dropdownList.children ) if( !dropdownList.properties[i].isAbsolute ) obj];
+	}
+
+	function getItem(index) {
+		return getItems()[index];
 	}
 
 	override function set_backgroundTile(t) {
@@ -204,7 +219,6 @@ class Dropdown extends Flow {
 		Adds the Object `s` to the dropdown list. `s` is not restricted to be the same type across all items.
 	**/
 	public function addItem(s : Object) {
-		items.push(s);
 		dropdownList.addChild(s);
 		var width = Std.int(dropdownList.getSize().width);
 		if( maxWidth != null && width > maxWidth ) width = maxWidth;
@@ -218,6 +232,7 @@ class Dropdown extends Flow {
 	}
 
 	function set_selectedItem(s) {
+		var items = getItems();
 		if( s < 0 )
 			s = -1;
 		else if( s >= items.length )
@@ -269,6 +284,13 @@ class Dropdown extends Flow {
 		Sent when dropdown is being closed. Triggered both by user input and programmatic action via `Dropdown.close`.
 	**/
 	public dynamic function onClose() {
+	}
+
+	/**
+		Sent when user change the item in the list.
+		@param item An object that was hovered.
+	**/
+	public dynamic function onChange(item : Object) {
 	}
 
 	/**

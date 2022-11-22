@@ -21,6 +21,8 @@ class Reader {
 			throw "Obsolete HasMaterialFlags";
 		case 2:
 			return HasExtraTextures;
+		case 3:
+			return FourBonesByVertex;
 		case unk:
 			throw "Unknown property #" + unk;
 		}
@@ -54,7 +56,7 @@ class Reader {
 		var n = HMD_STRINGS.get(name);
 		if( n != null ) return n;
 		HMD_STRINGS.set(name,name);
-		return name;	
+		return name;
 	}
 
 	function readPosition(hasScale=true) {
@@ -123,7 +125,7 @@ class Reader {
 		return s;
 	}
 
-	public function readHeader() : Data {
+	public function readHeader( fast = false ) : Data {
 		var d = new Data();
 		var h = i.readString(3);
 		if( h != "HMD" ) {
@@ -136,6 +138,8 @@ class Reader {
 		d.version = version;
 		d.geometries = [];
 		d.dataPosition = i.readInt32();
+		if( fast )
+			i = new haxe.io.BytesInput(i.read(d.dataPosition-12));
 		d.props = readProps();
 
 		for( k in 0...i.readInt32() ) {
@@ -145,7 +149,9 @@ class Reader {
 			g.vertexStride = i.readByte();
 			g.vertexFormat = [for( k in 0...i.readByte() ) new GeometryFormat(readCachedName(), GeometryDataFormat.fromInt(i.readByte()))];
 			g.vertexPosition = i.readInt32();
-			g.indexCounts = [for( k in 0...i.readByte() ) i.readInt32()];
+			var subCount = i.readByte();
+			if( subCount == 0xFF ) subCount = i.readInt32();
+			g.indexCounts = [for( k in 0...subCount ) i.readInt32()];
 			g.indexPosition = i.readInt32();
 			g.bounds = readBounds();
 			d.geometries.push(g);
@@ -179,7 +185,9 @@ class Reader {
 			d.models.push(m);
 			if( m.geometry < 0 ) continue;
 			m.materials = [];
-			for( k in 0...i.readByte() )
+			var matCount = i.readByte();
+			if( matCount == 0xFF ) matCount = i.readInt32();
+			for( k in 0...matCount )
 				m.materials.push(i.readInt32());
 			m.skin = readSkin();
 		}

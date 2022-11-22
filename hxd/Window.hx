@@ -1,10 +1,11 @@
 package hxd;
 
+import hxd.impl.MouseMode;
+
 enum DisplayMode {
 	Windowed;
 	Borderless;
 	Fullscreen;
-	FullscreenResize;
 }
 
 class Window {
@@ -16,7 +17,18 @@ class Window {
 	public var height(get, never) : Int;
 	public var mouseX(get, never) : Int;
 	public var mouseY(get, never) : Int;
+	@:deprecated("Use mouseMode = AbsoluteUnbound(true)")
 	public var mouseLock(get, set) : Bool;
+	/**
+		If set, will restrain the mouse cursor within the window boundaries.
+	**/
+	public var mouseClip(get, set) : Bool;
+	/**
+		Set the mouse movement input handling mode.
+
+		@see `hxd.impl.MouseMode` for more details on each mode.
+	**/
+	public var mouseMode(default, set) : MouseMode = Absolute;
 	public var vsync(get, set) : Bool;
 	public var isFocused(get, never) : Bool;
 
@@ -30,6 +42,17 @@ class Window {
 
 	public dynamic function onClose() : Bool {
 		return true;
+	}
+
+	/**
+		An event called when `mouseMode` is changed.
+
+		Note that changing from `Relative(callbackA)` to `Relative(callbackB)` would also cause this event as any other parameter changes.
+
+		@returns Force-override of the mouse mode that will be used as an active mode or null.
+	**/
+	public dynamic function onMouseModeChange( from : MouseMode, to : MouseMode ) : Null<MouseMode> {
+		return null;
 	}
 
 	public function event( e : hxd.Event ) : Void {
@@ -73,6 +96,13 @@ class Window {
 	public function setFullScreen( v : Bool ) : Void {
 	}
 
+	/**
+		Set the hardware mouse cursor position relative to window boundaries.
+	**/
+	public function setCursorPos( x : Int, y : Int, emitEvent : Bool = false ) : Void {
+		throw "Not implemented";
+	}
+
 	static var inst : Window = null;
 	public static function getInstance() : Window {
 		if( inst == null ) inst = new Window();
@@ -96,12 +126,25 @@ class Window {
 	}
 
 	function get_mouseLock() : Bool {
+		return switch (mouseMode) { case AbsoluteUnbound(_): true; default: false; };
+	}
+
+	function set_mouseLock(v:Bool) : Bool {
+		return set_mouseMode(v ? AbsoluteUnbound(true) : Absolute).equals(AbsoluteUnbound(true));
+	}
+
+	function get_mouseClip() : Bool {
 		return false;
 	}
 
-	function set_mouseLock( v : Bool ) : Bool {
-		if( v ) throw "Not implemented";
+	function set_mouseClip( v : Bool ) : Bool {
+		if ( v ) throw "Not implemented";
 		return false;
+	}
+
+	function set_mouseMode( v : MouseMode ) : MouseMode {
+		if ( v != Absolute ) throw "Not implemented";
+		return Absolute;
 	}
 
 	function get_vsync() : Bool return true;

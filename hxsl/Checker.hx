@@ -632,10 +632,16 @@ class Checker {
 				default:
 				}
 				type = t;
-				TExprDef.TArray(e1, e2);
+			case TMat2:
+				type = vec2;
+			case TMat3:
+				type = vec3;
+			case TMat4, TMat3x4:
+				type = vec4;
 			default:
 				error("Cannot index " + e1.t.toString() + " : should be an array", e.pos);
 			}
+			TExprDef.TArray(e1, e2);
 		case EArrayDecl(el):
 			if( el.length == 0 ) error("Empty array not supported", e.pos);
 			var el = [for( e in el ) typeExpr(e, Value)];
@@ -788,7 +794,7 @@ class Checker {
 					}
 					if( tv.kind != Global && tv.kind != Param ) error("@const only allowed on parameter or global", pos);
 				case PerObject: if( tv.kind != Global ) error("@perObject only allowed on global", pos);
-				case PerInstance(_): if( tv.kind != Input ) error("@perInstance only allowed on input", pos);
+				case PerInstance(_): if( tv.kind != Input && tv.kind != Param && (tv.kind != Global || v.qualifiers.indexOf(PerObject) < 0) ) error("@perInstance only allowed on input/param", pos);
 				case Nullable: if( tv.kind != Param ) error("@nullable only allowed on parameter or global", pos);
 				case Name(_):
 					if( parent != null ) error("Cannot have an explicit name for a structure variable", pos);

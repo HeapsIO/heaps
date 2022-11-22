@@ -40,10 +40,7 @@ class Library {
 	public function getData() {
 		var entry = resource.entry;
 		var b = haxe.io.Bytes.alloc(entry.size - header.dataPosition);
-		entry.open();
-		entry.skip(header.dataPosition);
-		entry.read(b, 0, b.length);
-		entry.close();
+		entry.readFull(b, header.dataPosition, b.length);
 		return b;
 	}
 
@@ -142,12 +139,10 @@ class Library {
 		var vsize = geom.vertexCount * geom.vertexStride * 4;
 		var vbuf = haxe.io.Bytes.alloc(vsize);
 		var entry = resource.entry;
-		entry.open();
-		entry.skip(header.dataPosition + geom.vertexPosition);
-		entry.read(vbuf, 0, vsize);
 
-		entry.skip(geom.indexPosition - (geom.vertexPosition + vsize));
+		entry.readFull(vbuf, header.dataPosition + geom.vertexPosition, vsize);
 
+		var dataPos = header.dataPosition + geom.indexPosition;
 		var isSmall = geom.vertexCount <= 0x10000;
 		var imult = isSmall ? 2 : 4;
 
@@ -158,11 +153,11 @@ class Library {
 			var ipos = 0;
 			for( i in 0...material )
 				ipos += geom.indexCounts[i];
-			entry.skip(ipos * imult);
+			dataPos += ipos * imult;
 			isize = geom.indexCounts[material] * imult;
 		}
 		var ibuf = haxe.io.Bytes.alloc(isize);
-		entry.read(ibuf, 0, isize);
+		entry.readFull(ibuf, dataPos, isize);
 
 		var buf = new GeometryBuffer();
 		if( material == null ) {
@@ -253,7 +248,6 @@ class Library {
 			#end
 		}
 
-		entry.close();
 		return buf;
 	}
 
@@ -266,10 +260,32 @@ class Library {
 		return p;
 	}
 
+	public function dispose() {
+		for( p in cachedPrimitives )
+			if( p != null )
+				p.decref();
+		cachedPrimitives = [];
+	}
+
 	function makeMaterial( model : Model, mid : Int, loadTexture : String -> h3d.mat.Texture ) {
 		var m = header.materials[mid];
 		var mat = h3d.mat.MaterialSetup.current.createMaterial();
 		mat.name = m.name;
+		mat.model = resource;
+		mat.blendMode = m.blendMode;
+		var props = h3d.mat.MaterialSetup.current.loadMaterialProps(mat);
+		if( props == null ) props = mat.getDefaultModelProps();
+		#if hide
+		if( (props:Dynamic).__ref != null ) {
+			try {
+				setupMaterialLibrary(mat, hxd.res.Loader.currentInstance.load((props:Dynamic).__ref).toPrefab(), (props:Dynamic).name);
+			} catch( e : hxd.res.NotFound ) {
+				e.path += " (in "+resource.entry.path+"@"+mat.name+")";
+				throw e;
+			}
+			return mat;
+		}
+		#end
 		if( m.diffuseTexture != null ) {
 			mat.texture = loadTexture(m.diffuseTexture);
 			if( mat.texture == null ) mat.texture = h3d.mat.Texture.fromColor(0xFF00FF);
@@ -278,20 +294,16 @@ class Library {
 			mat.specularTexture = loadTexture(m.specularTexture);
 		if( m.normalMap != null )
 			mat.normalMap = loadTexture(m.normalMap);
-		mat.blendMode = m.blendMode;
-		mat.model = resource;
-		var props = h3d.mat.MaterialSetup.current.loadMaterialProps(mat);
-		if( props == null ) props = mat.getDefaultModelProps();
 		mat.props = props;
 		return mat;
 	}
 
 	@:access(h3d.anim.Skin)
-	function makeSkin( skin : Skin ) {
+	function makeSkin( skin : Skin, geom : Geometry ) {
 		var s = cachedSkin.get(skin.name);
 		if( s != null )
 			return s;
-		s = new h3d.anim.Skin(skin.name, 0, 3);
+		s = new h3d.anim.Skin(skin.name, 0, geom.props != null && geom.props.indexOf(FourBonesByVertex) >= 0 ? 4 : 3 );
 		s.namedJoints = new Map();
 		s.allJoints = [];
 		s.boundJoints = [];
@@ -352,7 +364,7 @@ class Library {
 			} else {
 				var prim = makePrimitive(m.geometry);
 				if( m.skin != null ) {
-					var skinData = makeSkin(m.skin);
+					var skinData = makeSkin(m.skin, header.geometries[m.geometry]);
 					skinData.primitive = prim;
 					obj = new h3d.scene.Skin(skinData, [for( mat in m.materials ) makeMaterial(m, mat, loadTexture)]);
 				} else if( m.materials.length == 1 )
@@ -366,7 +378,9 @@ class Library {
 			var p = objs[m.parent];
 			if( p != null ) p.addChild(obj);
 		}
-		return objs[0];
+		var o = objs[0];
+		if( o != null ) o.modelRoot = true;
+		return o;
 	}
 	#end
 
@@ -463,12 +477,9 @@ class Library {
 		}
 
 		var entry = resource.entry;
-		entry.open();
-		entry.skip(header.dataPosition + a.dataPosition);
 		var count = stride * a.frames + singleStride;
 		var data = haxe.io.Bytes.alloc(count * 4);
-		entry.read(data,0,data.length);
-		entry.close();
+		entry.readFull(data,header.dataPosition + a.dataPosition,data.length);
 
 		#if hl
 		b.setData(data, stride);
@@ -488,8 +499,7 @@ class Library {
 		var l = new h3d.anim.LinearAnimation(a.name, a.frames, a.sampling);
 
 		var entry = resource.entry;
-		entry.open();
-		entry.skip(header.dataPosition + a.dataPosition);
+		var dataPos = header.dataPosition + a.dataPosition;
 
 		for( o in a.objects ) {
 			var pos = o.flags.has(HasPosition), rot = o.flags.has(HasRotation), scale = o.flags.has(HasScale);
@@ -499,8 +509,8 @@ class Library {
 					frameCount = 1;
 				var fl = new haxe.ds.Vector<h3d.anim.LinearAnimation.LinearFrame>(frameCount);
 				var size = ((pos ? 3 : 0) + (rot ? 3 : 0) + (scale?3:0)) * 4 * frameCount;
-				var data = haxe.io.Bytes.alloc(size);
-				entry.read(data, 0, size);
+				var data = entry.fetchBytes(dataPos, size);
+				dataPos += size;
 				var p = 0;
 				for( i in 0...frameCount ) {
 					var f = new h3d.anim.LinearAnimation.LinearFrame();
@@ -541,8 +551,8 @@ class Library {
 			if( o.flags.has(HasUV) ) {
 				var fl = new haxe.ds.Vector(a.frames*2);
 				var size = 2 * 4 * a.frames;
-				var data = haxe.io.Bytes.alloc(size);
-				entry.read(data, 0, size);
+				var data = entry.fetchBytes(dataPos, size);
+				dataPos += size;
 				for( i in 0...fl.length )
 					fl[i] = data.getFloat(i * 4);
 				l.addUVCurve(o.name, fl);
@@ -550,8 +560,8 @@ class Library {
 			if( o.flags.has(HasAlpha) ) {
 				var fl = new haxe.ds.Vector(a.frames);
 				var size = 4 * a.frames;
-				var data = haxe.io.Bytes.alloc(size);
-				entry.read(data, 0, size);
+				var data = entry.fetchBytes(dataPos, size);
+				dataPos += size;
 				for( i in 0...fl.length )
 					fl[i] = data.getFloat(i * 4);
 				l.addAlphaCurve(o.name, fl);
@@ -560,8 +570,8 @@ class Library {
 				for( p in o.props ) {
 					var fl = new haxe.ds.Vector(a.frames);
 					var size = 4 * a.frames;
-					var data = haxe.io.Bytes.alloc(size);
-					entry.read(data, 0, size);
+					var data = entry.fetchBytes(dataPos, size);
+					dataPos += size;
 					for( i in 0...fl.length )
 						fl[i] = data.getFloat(i * 4);
 					l.addPropCurve(o.name, p, fl);
@@ -569,7 +579,6 @@ class Library {
 			}
 		}
 
-		entry.close();
 		return l;
 	}
 
@@ -578,13 +587,25 @@ class Library {
 		if( skin.vertexWeights != null )
 			return;
 
-		if( skin.bonesPerVertex != 3 )
+		var bonesPerVertex = skin.bonesPerVertex;
+		if( !(bonesPerVertex == 3 || bonesPerVertex == 4) )
 			throw "assert";
+		var use4Bones = bonesPerVertex == 4;
 
 		@:privateAccess skin.vertexCount = geom.vertexCount;
-		var data = getBuffers(geom, [new hxd.fmt.hmd.Data.GeometryFormat("position",DVec3),new hxd.fmt.hmd.Data.GeometryFormat("weights",DVec3),new hxd.fmt.hmd.Data.GeometryFormat("indexes",DBytes4)]);
-		skin.vertexWeights = new haxe.ds.Vector(skin.vertexCount * skin.bonesPerVertex);
-		skin.vertexJoints = new haxe.ds.Vector(skin.vertexCount * skin.bonesPerVertex);
+
+		// Only 3 weights are necessary even in fourBonesByVertex since they sum-up to 1
+		var format = [
+			new hxd.fmt.hmd.Data.GeometryFormat("position",DVec3),
+			new hxd.fmt.hmd.Data.GeometryFormat("weights",DVec3),
+			new hxd.fmt.hmd.Data.GeometryFormat("indexes",DBytes4)];
+		var data = getBuffers(geom, format);
+		var formatStride = 0;
+		for(f in format)
+			formatStride += f.format.getSize();
+
+		skin.vertexWeights = new haxe.ds.Vector(skin.vertexCount * bonesPerVertex);
+		skin.vertexJoints = new haxe.ds.Vector(skin.vertexCount * bonesPerVertex);
 
 		for( j in skin.boundJoints )
 			j.offsets = new h3d.col.Bounds();
@@ -619,7 +640,7 @@ class Library {
 		for( r in ranges ) {
 			for( idx in r.pos...r.pos+r.count ) {
 				var vidx = data.indexes[idx];
-				var p = vidx * 7;
+				var p = vidx * formatStride;
 				var x = vbuf[p];
 				if( x != x ) {
 					// already processed
@@ -631,16 +652,22 @@ class Library {
 				var w1 = vbuf[p++];
 				var w2 = vbuf[p++];
 				var w3 = vbuf[p++];
+				var w4 = 0.0;
 
-				var vout = vidx * 3;
+				var vout = vidx * bonesPerVertex;
 				skin.vertexWeights[vout] = w1;
 				skin.vertexWeights[vout+1] = w2;
 				skin.vertexWeights[vout+2] = w3;
 
-				var w = (w1 == 0 ? 1 : 0) | (w2 == 0 ? 2 : 0) | (w3 == 0 ? 4 : 0);
+				if(use4Bones) {
+					w4 = 1.0 - w1 - w2 - w3;
+					skin.vertexWeights[vout+3] = w4;
+				}
+
+				var w = (w1 == 0 ? 1 : 0) | (w2 == 0 ? 2 : 0) | (w3 == 0 ? 4 : 0) | (w4 == 0 ? 8 : 0);
 				var idx = haxe.io.FPHelper.floatToI32(vbuf[p++]);
 				bounds.addPos(x,y,z);
-				for( i in 0...3 ) {
+				for( i in 0...bonesPerVertex ) {
 					if( w & (1<<i) != 0 ) {
 						skin.vertexJoints[vout++] = -1;
 						continue;
@@ -715,5 +742,24 @@ class Library {
 			j.offsetRay = r;
 		}
 	}
+
+	#if hide
+	public dynamic static function setupMaterialLibrary( mat : h3d.mat.Material, lib : hrt.prefab.Resource, name : String ) {
+		var m  = lib.load().get(hrt.prefab.Material,name);
+		@:privateAccess m.update(mat, m.renderProps(),
+		function loadTexture ( path : String ) {
+			return hxd.res.Loader.currentInstance.load(path).toTexture();
+		});
+		for ( c in m.children ) {
+			var shader = Std.downcast(c, hrt.prefab.Shader);
+			if ( shader == null )
+				continue;
+			shader.clone();
+			var ctx = new hrt.prefab.Context();
+			var s = shader.makeShader(ctx);
+			@:privateAccess shader.applyShader(null, mat, s);
+		}
+	}
+	#end
 
 }

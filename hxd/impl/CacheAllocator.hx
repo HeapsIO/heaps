@@ -64,6 +64,7 @@ class CacheAllocator extends Allocator {
 	}
 
 	override function disposeBuffer(b:h3d.Buffer) {
+		if( b.isDisposed() ) return;
 		var f = b.flags;
 		var flags = f.has(RawFormat) ? (f.has(Quads) ? RawQuads : RawFormat) : (f.has(UniformBuffer) ? UniformDynamic : Dynamic);
 		var id = flags.toInt() | (b.buffer.stride << 3) | (b.vertices << 16);
@@ -89,6 +90,7 @@ class CacheAllocator extends Allocator {
 	}
 
 	override function disposeIndexBuffer( i : h3d.Indexes ) {
+		if( i.isDisposed() ) return;
 		var id = i.count;
 		var c = indexBuffers.get(id);
 		if( c == null ) {
@@ -132,6 +134,27 @@ class CacheAllocator extends Allocator {
 				indexBuffers.remove(b);
 		}
 		lastGC = now;
+	}
+
+	public function clear() {
+		for ( c in buffers ) {
+			for ( b in c.available ) {
+				b.dispose();
+			}
+			for ( b in c.disposed ) {
+				b.dispose();
+			}
+		}
+		for ( c in indexBuffers ) {
+			for ( b in c.available ) {
+				b.dispose();
+			}
+			for ( b in c.disposed ) {
+				b.dispose();
+			}
+		}
+		buffers = [];
+		indexBuffers = [];
 	}
 
 }

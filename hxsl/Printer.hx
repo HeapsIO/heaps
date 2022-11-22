@@ -327,9 +327,7 @@ class Printer {
 		case OpAssignOp(op):opStr(op) + "=";
 		case OpArrow:"=>";
 		case OpInterval:"...";
-		#if (haxe_ver >= 4)
-		case OpIn: " in ";
-		#end
+		default: "??"+op;
 		}
 	}
 

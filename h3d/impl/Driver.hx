@@ -30,9 +30,15 @@ typedef VertexBuffer = { b : haxe.GLTypes.Buffer, stride : Int };
 typedef Texture = { t : haxe.GLTypes.Texture, width : Int, height : Int, internalFmt : Int, pixelFmt : Int, bits : Int, bind : Int, bias : Float };
 typedef DepthBuffer = { r : haxe.GLTypes.Renderbuffer };
 typedef Query = { q : haxe.GLTypes.Query, kind : QueryKind };
+#elseif (hldx && dx12)
+typedef IndexBuffer = DX12Driver.IndexBufferData;
+typedef VertexBuffer = DX12Driver.VertexBufferData;
+typedef Texture = h3d.impl.DX12Driver.TextureData;
+typedef DepthBuffer = h3d.impl.DX12Driver.DepthBufferData;
+typedef Query = h3d.impl.DX12Driver.QueryData;
 #elseif hldx
 typedef IndexBuffer = { res : dx.Resource, count : Int, bits : Int };
-typedef VertexBuffer = { res : dx.Resource, count : Int, stride : Int };
+typedef VertexBuffer = { res : dx.Resource, count : Int, stride : Int, uniform : Bool };
 typedef Texture = { res : dx.Resource, view : dx.Driver.ShaderResourceView, rt : Array<dx.Driver.RenderTargetView>, mips : Int };
 typedef DepthBuffer = { res : dx.Resource, view : dx.Driver.DepthStencilView };
 typedef Query = {};
