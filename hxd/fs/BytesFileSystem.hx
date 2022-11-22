@@ -6,7 +6,6 @@ class BytesFileEntry extends FileEntry {
 
 	var fullPath : String;
 	var bytes : haxe.io.Bytes;
-	var pos : Int;
 
 	public function new(path, bytes) {
 		this.fullPath = path;
@@ -18,31 +17,16 @@ class BytesFileEntry extends FileEntry {
 		return fullPath;
 	}
 
-	override function getSign() : Int {
-		return bytes.get(0) | (bytes.get(1) << 8) | (bytes.get(2) << 16) | (bytes.get(3) << 24);
-	}
-
 	override function getBytes() : haxe.io.Bytes {
 		return bytes;
 	}
 
-	override function open() {
-		pos = 0;
-	}
-
-	override function skip( nbytes : Int ) {
-		pos += nbytes;
-	}
-	override function readByte() : Int {
-		return bytes.get(pos++);
-	}
-
-	override function read( out : haxe.io.Bytes, pos : Int, size : Int ) {
-		out.blit(pos, bytes, this.pos, size);
-		this.pos += size;
-	}
-
-	override function close() {
+	override function readBytes( out : haxe.io.Bytes, outPos : Int, pos : Int, len : Int ) : Int {
+		if( pos + len > bytes.length )
+			len = bytes.length - pos;
+		if( len < 0 ) len = 0;
+		out.blit(outPos, bytes, pos, len);
+		return len;
 	}
 
 	override function load( ?onReady : Void -> Void ) : Void {

@@ -11,7 +11,6 @@ class LocalEntry extends FileEntry {
 	var relPath : String;
 	var file : String;
 	var originalFile : String;
-	var fread : sys.io.FileInput;
 
 	function new(fs, name, relPath, file) {
 		this.fs = fs;
@@ -20,42 +19,16 @@ class LocalEntry extends FileEntry {
 		this.file = file;
 	}
 
-	override function getSign() : Int {
-		var old = if( fread == null ) -1 else fread.tell();
-		open();
-		var i = fread.readInt32();
-		if( old < 0 ) close() else fread.seek(old, SeekBegin);
-		return i;
-	}
-
 	override function getBytes() : haxe.io.Bytes {
 		return sys.io.File.getBytes(file);
 	}
 
-	override function open() {
-		if( fread != null )
-			fread.seek(0, SeekBegin);
-		else
-			fread = sys.io.File.read(file);
-	}
-
-	override function skip(nbytes:Int) {
-		fread.seek(nbytes, SeekCur);
-	}
-
-	override function readByte() {
-		return fread.readByte();
-	}
-
-	override function read( out : haxe.io.Bytes, pos : Int, size : Int ) : Void {
-		fread.readFullBytes(out, pos, size);
-	}
-
-	override function close() {
-		if( fread != null ) {
-			fread.close();
-			fread = null;
-		}
+	override function readBytes( out : haxe.io.Bytes, outPos : Int, pos : Int, len : Int ) : Int {
+		var f = sys.io.File.read(file);
+		f.seek(pos, SeekBegin);
+		var tot = f.readBytes(out, outPos, len);
+		f.close();
+		return tot;
 	}
 
 	var isDirCached : Null<Bool>;
@@ -126,7 +99,13 @@ class LocalEntry extends FileEntry {
 	}
 
 	var watchCallback : Void -> Void;
+	#if (hl && (hl_ver >= version("1.12.0")) && !usesys)
+	var watchHandle : hl.uv.Fs;
+	var lastChanged : Float = 0;
+	var onChangedDelay : haxe.Timer;
+	#else
 	var watchTime : Float;
+	#end
 
 	static var WATCH_INDEX = 0;
 	static var WATCH_LIST : Array<LocalEntry> = null;
@@ -140,6 +119,7 @@ class LocalEntry extends FileEntry {
 	#if (hl_ver >= version("1.12.0")) @:hlNative("std","file_is_locked") #end static function fileIsLocked( b : hl.Bytes ) { return false; }
 	#end
 
+	#if (!hl || hl_ver < version("1.12.0"))
 	static function checkFiles() {
 		var filesToCheck = Math.ceil(WATCH_LIST.length / 60);
 		if( filesToCheck > LocalFileSystem.FILES_CHECK_MAX )
@@ -181,31 +161,62 @@ class LocalEntry extends FileEntry {
 		w.watchTime = t;
 		w.watchCallback();
 	}
+	#end
 
 	override function watch( onChanged : Null < Void -> Void > ) {
 		if( onChanged == null ) {
 			if( watchCallback != null ) {
 				WATCH_LIST.remove(this);
 				watchCallback = null;
+				#if (hl && (hl_ver >= version("1.12.0")) && !usesys)
+				watchHandle.close();
+				watchHandle = null;
+				#end
 			}
 			return;
 		}
 		if( watchCallback == null ) {
 			if( WATCH_LIST == null ) {
 				WATCH_LIST = [];
-				#if !macro
+				#if (!macro && (!hl || (hl_ver < version("1.12.0"))))
 				haxe.MainLoop.add(checkFiles);
 				#end
 			}
 			var path = path;
 			for( w in WATCH_LIST )
 				if( w.path == path ) {
+					#if (hl && (hl_ver >= version("1.12.0")) && !usesys)
+					if(w.watchHandle != null) {
+						w.watchHandle.close();
+						w.watchHandle = null;
+					}
+					#end
 					w.watchCallback = null;
 					WATCH_LIST.remove(w);
 				}
 			WATCH_LIST.push(this);
 		}
+		#if (hl && (hl_ver >= version("1.12.0")) && !usesys)
+		if(watchHandle != null)
+			watchHandle.close();
+		lastChanged = getModifTime();
+		watchHandle = new hl.uv.Fs(originalFile, function(ev) {
+			switch(ev) {
+				case Change|Rename:
+					if(getModifTime() != lastChanged) {
+						lastChanged = getModifTime();
+						if(onChangedDelay != null)
+							onChangedDelay.stop();
+						onChangedDelay = haxe.Timer.delay(function() {
+							fs.convert.run(this);
+							onChanged();
+						}, 10);
+					}
+			}
+		});
+		#else
 		watchTime = getModifTime();
+		#end
 		watchCallback = function() { fs.convert.run(this); onChanged(); }
 	}
 

@@ -174,15 +174,14 @@ class HtmlText extends Text {
 		return { width: width, height: height, baseLine: baseLine };
 	}
 
-	override function validateText()
-	{
+	override function validateText() {
 		textXml = parseText(text);
 		validateNodes(textXml);
 	}
 
 	function validateNodes( xml : Xml ) {
-		if ( xml.nodeType == Element ) {
-
+		switch( xml.nodeType ) {
+		case Element:
 			var nodeName = xml.nodeName.toLowerCase();
 			switch ( nodeName ) {
 				case "img":
@@ -196,9 +195,12 @@ class HtmlText extends Text {
 				case "i", "italic":
 					loadFont("italic");
 			}
-
-			for ( child in xml )
-				validateNodes(xml);
+			for( child in xml )
+				validateNodes(child);
+		case Document:
+			for( child in xml )
+				validateNodes(child);
+		default:
 		}
 	}
 
@@ -271,7 +273,7 @@ class HtmlText extends Text {
 			info.height = splitNode.height;
 			info.baseLine = splitNode.baseLine;
  			var char = fnt.getChar(cc);
-			if (fnt.charset.isSpace(cc)) {
+			if (lineBreak && fnt.charset.isSpace(cc)) {
 				// Space characters are converted to \n
 				w -= (splitNode.width + letterSpacing + char.width + char.getKerningOffset(splitNode.prevChar));
 				splitNode.node.nodeValue = str.substr(0, splitNode.pos) + "\n" + str.substr(splitNode.pos + 1);
@@ -401,18 +403,18 @@ class HtmlText extends Text {
 
 					var size = x + esize + letterSpacing;
 					var k = i + 1, max = text.length;
-					var prevChar = prevChar;
+					var prevChar = cc;
 					while ( size <= maxWidth && k < max ) {
 						var cc = text.charCodeAt(k++);
-						if ( font.charset.isSpace(cc) || cc == '\n'.code ) break;
+						if ( lineBreak && (font.charset.isSpace(cc) || cc == '\n'.code ) ) break;
 						var e = font.getChar(cc);
 						size += e.width + letterSpacing + e.getKerningOffset(prevChar);
 						prevChar = cc;
-						var nc = text.charCodeAt(k+1);
+						var nc = text.charCodeAt(k);
 						if ( font.charset.isBreakChar(cc) && (nc == null || !font.charset.isComplementChar(nc)) ) break;
 					}
 					// Avoid empty line when last char causes line-break while being CJK
-					if ( size > maxWidth && i != max - 1 ) {
+					if ( lineBreak && size > maxWidth && i != max - 1 ) {
 						// Next word will reach maxWidth
 						newline = true;
 						if ( font.charset.isSpace(cc) ) {
@@ -614,7 +616,8 @@ class HtmlText extends Text {
 							shader.channel = channel;
 							shader.alphaCutoff = alphaCutoff;
 							shader.smoothing = smoothing;
-							glyphs.smooth = true;
+							shader.autoSmoothing = smoothing == -1;
+							glyphs.smooth = this.smooth;
 							glyphs.addShader(shader);
 						default:
 					}

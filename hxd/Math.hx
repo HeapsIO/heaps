@@ -136,6 +136,21 @@ class Math {
 	}
 
 	/**
+	 	Similar to linear interpolation (k is between [0,1]), but can be controled with easing parameter. When easing is 0 it's linear.
+	**/
+	public inline static function ease(a:Float, b:Float, k:Float, easing:Float) {
+		return lerp(a, b, easeFactor(k, easing));
+	}
+
+	/**
+		ease = lerp(a,b,easeFactor(k,easing))
+	**/
+	public inline static function easeFactor( k : Float, easing : Float ) {
+		var p = Math.pow(k, 1 + easing);
+		return p / (p + Math.pow(1 - k, easing + 1));
+	}
+
+	/**
 		Same as lerp but is scaled based on current FPS, using current elapsed time in seconds.
 	**/
 	public inline static function lerpTime(a:Float, b:Float, k:Float, dt:Float) {

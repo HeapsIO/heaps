@@ -161,8 +161,6 @@ class DynamicShader extends Shader {
 		updateConstantsFinal(globals);
 	}
 
-
-	#if hscript
 	@:keep public function hscriptGet( field : String ) : Dynamic {
 		var vid = varNames.get(field);
 		if( vid == null )
@@ -184,7 +182,6 @@ class DynamicShader extends Shader {
 			values[vid] = value;
 		return value;
 	}
-	#end
 
 	override function toString() {
 		return "DynamicShader<" + shader.data.name+">";

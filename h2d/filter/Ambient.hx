@@ -41,7 +41,7 @@ class Ambient extends AbstractMask {
 
 	override function draw( ctx : RenderContext, t : h2d.Tile ) {
 		var out = ctx.textures.allocTileTarget("ambientTmp", t);
-		pass.apply(t.getTexture(), out, getMaskTexture(t), maskMatrix);
+		pass.apply(t.getTexture(), out, getMaskTexture(ctx, t), maskMatrix);
 		return h2d.Tile.fromTexture(out);
 	}
 

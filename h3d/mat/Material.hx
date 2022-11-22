@@ -306,33 +306,6 @@ class Material extends BaseMaterial {
 	}
 	#end
 
-
-	#if hxbit
-	function customSerialize( ctx : hxbit.Serializer ) {
-		// other props are serialized in BaseMaterial !
-		ctx.addInt(blendMode.getIndex());
-		ctx.addBool(castShadows);
-		ctx.addBool(receiveShadows);
-		ctx.addDynamic(props);
-	}
-
-	function customUnserialize( ctx : hxbit.Serializer ) {
-		var last = mainPass.shaders;
-		while( last.next != null ) last = last.next;
-		mshader = cast last.s;
-
-		// prevent changing the passes while setting blendmode/props
-		// since we have unserialized them, they are correctly set already
-		var old = passes;
-		passes = null;
-		blendMode = BlendMode.createByIndex(ctx.getInt());
-		castShadows = ctx.getBool();
-		receiveShadows = ctx.getBool();
-		props = ctx.getDynamic();
-		passes = old;
-	}
-	#end
-
 	/*
 		Shortcut to create a material for the current renderer setup using the specific diffuse texture.
 	*/

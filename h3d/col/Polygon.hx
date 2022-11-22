@@ -144,11 +144,15 @@ class TriPlane implements Collider {
 		return [new Point(p0x, p0y, p0z), new Point(d1x + p0x, d1y + p0y, d1z + p0z), new Point(d2x + p0x, d2y + p0y, d2z + p0z)];
 	}
 
-	#if (hxbit && !macro)
-	function customSerialize( ctx : hxbit.Serializer ) {
-		throw "Cannot serialize "+this;
-	}
-	function customUnserialize( ctx : hxbit.Serializer ) {
+	#if !macro
+	public function makeDebugObj() : h3d.scene.Object {
+		var p0 = new Point(p0x, p0y, p0z);
+		var d1 = new Point(d1x, d1y, d1z);
+		var d2 = new Point(d2x, d2y, d2z);
+		var points : Array<Point> = [ p0, d1.add(p0), d2.add(p0) ];
+		var prim = new h3d.prim.Polygon(points);
+		prim.addNormals();
+		return new h3d.scene.Mesh(prim);
 	}
 	#end
 
@@ -190,7 +194,6 @@ class Polygon implements Collider {
 
 	public function clone() : h3d.col.Polygon {
 		var clone = new h3d.col.Polygon();
-		clone.triPlanes = new TriPlane();
 		clone.triPlanes = triPlanes.clone();
 		return clone;
 	}
@@ -262,11 +265,24 @@ class Polygon implements Collider {
 		return false;
 	}
 
-	#if (hxbit && !macro)
-	function customSerialize( ctx : hxbit.Serializer ) {
-		throw "Cannot serialize "+this;
-	}
-	function customUnserialize( ctx : hxbit.Serializer ) {
+	#if !macro
+	public function makeDebugObj() : h3d.scene.Object {
+		var points : Array<Point> = [];
+		var idx = new hxd.IndexBuffer();
+
+		var t = triPlanes;
+		while( t != null ) {
+			var p0 = new Point(t.p0x, t.p0y, t.p0z);
+			var d1 = new Point(t.d1x, t.d1y, t.d1z);
+			var d2 = new Point(t.d2x, t.d2y, t.d2z);
+			points.push(p0);
+			points.push(d1.add(p0));
+			points.push(d2.add(p0));
+			t = t.next;
+		}
+		var prim = new h3d.prim.Polygon(points);
+		prim.addNormals();
+		return new h3d.scene.Mesh(prim);
 	}
 	#end
 

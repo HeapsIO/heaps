@@ -5,10 +5,10 @@ import h3d.mat.Data;
 #if !macro
 @:build(hxd.impl.BitsBuilder.build())
 #end
-class Stencil implements hxd.impl.Serializable {
+class Stencil {
 
-	@:s var maskBits  : Int = 0;
-	@:s var opBits    : Int = 0;
+	var maskBits  : Int = 0;
+	var opBits    : Int = 0;
 
 	@:bits(maskBits, 8) public var readMask : Int;
 	@:bits(maskBits, 8) public var writeMask : Int;
@@ -64,14 +64,5 @@ class Stencil implements hxd.impl.Serializable {
 		opBits = s.opBits;
 		maskBits = s.maskBits;
 	}
-
-	#if (!macro && hxbit)
-	public function customSerialize( ctx : hxbit.Serializer ) {
-	}
-	public function customUnserialize( ctx : hxbit.Serializer ) {
-		loadMaskBits(maskBits);
-		loadOpBits(opBits);
-	}
-	#end
 
 }

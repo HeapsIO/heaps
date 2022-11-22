@@ -111,7 +111,7 @@ class Dump {
 					prefix = prefix.substr(1);
 				}
 				if( s.split != null )
-					add('Split : ${s.split.length} ${s.split.toString()}');
+					add('Split : ${s.split.length} ${[for( s in s.split ) '{mat:${s.materialIndex}, joints:${s.joints.length}}'].join(' ')}');
 			}
 			prefix = "";
 		}

@@ -86,15 +86,14 @@ var noiseSeed : Int;
 
 // Permutation polynomial (ring size 289 = 17*17)
 function permute(x:Float) : Float {
-  x += noiseSeed * 67.;
-  return mod289(((x*34.0)+1.0)*x + noiseSeed*89.);
+  return mod289((((x + noiseSeed * 67.)*34.0)+1.0)*x + noiseSeed*89.);
 }
 
 // Hashed 2-D gradients with an extra rotation.
 // (The constant 0.0243902439 is 1/41)
 function rgrad2(p:Vec2, rot:Float) : Vec2 {
 // For more isotropic gradients, sin/cos can be used instead.
-  var u = permute(permute(p.x) + p.y) * 0.0243902439 + rot; // Rotate by shift
+  var u = permute(permute(p.x) + p.y + noiseSeed) * 0.0243902439 + rot; // Rotate by shift
   u = fract(u) * 6.28318530718; // 2*pi
   return vec2(cos(u), sin(u));
 }

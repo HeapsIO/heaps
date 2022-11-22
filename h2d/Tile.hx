@@ -423,7 +423,7 @@ class Tile {
 	**/
 	public static function fromPixels( pixels : hxd.Pixels ) : Tile {
 		var pix2 = pixels.makeSquare(true);
-		var t = h3d.mat.Texture.fromPixels(pix2);
+		var t = h3d.mat.Texture.fromPixels(pix2, h3d.mat.Texture.nativeFormat);
 		if( pix2 != pixels ) pix2.dispose();
 		return new Tile(t, 0, 0, pixels.width, pixels.height);
 	}

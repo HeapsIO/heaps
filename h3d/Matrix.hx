@@ -35,7 +35,7 @@ class Matrix {
 	public var ty(get, set) : Float;
 	public var tz(get, set) : Float;
 
-	public function new() {
+	inline public function new() {
 	}
 
 	inline function get_tx() return _41;
@@ -229,8 +229,8 @@ class Matrix {
 		multiply(this, tmp);
 	}
 
-	public inline function getPosition( ?v : Vector ) {
-		if( v == null ) v = new Vector();
+	public inline function getPosition() {
+		var v = new Vector();
 		v.set(_41,_42,_43,_44);
 		return v;
 	}
@@ -253,9 +253,8 @@ class Matrix {
 		_44 = vw;
 	}
 
-	public inline function getScale(?v: h3d.Vector) {
-		if(v == null)
-			v = new Vector();
+	public inline function getScale() {
+		var v = new Vector();
 		v.x = Math.sqrt(_11 * _11 + _12 * _12 + _13 * _13);
 		v.y = Math.sqrt(_21 * _21 + _22 * _22 + _23 * _23);
 		v.z = Math.sqrt(_31 * _31 + _32 * _32 + _33 * _33);

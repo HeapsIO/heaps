@@ -40,7 +40,7 @@ class Any extends Resource {
 	}
 
 	public function toText() {
-		return entry.getBytes().toString();
+		return entry.getText();
 	}
 
 	public function toImage() {

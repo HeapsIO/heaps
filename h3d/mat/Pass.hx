@@ -5,16 +5,16 @@ import h3d.mat.Data;
 #if !macro
 @:build(hxd.impl.BitsBuilder.build())
 #end
-class Pass implements hxd.impl.Serializable {
+class Pass {
 
-	@:s public var name(default, null) : String;
+	public var name(default, null) : String;
 	var flags : Int;
 	var passId : Int;
-	@:s var bits : Int = 0;
-	@:s var parentPass : Pass;
+	var bits : Int = 0;
+	var parentPass : Pass;
 	var parentShaders : hxsl.ShaderList;
 	var shaders : hxsl.ShaderList;
-	@:s var nextPass : Pass;
+	var nextPass : Pass;
 
 	@:bits(flags) public var enableLights : Bool;
 	/**
@@ -44,7 +44,7 @@ class Pass implements hxd.impl.Serializable {
 	public var colorMask : Int;
 	public var layer : Int = 0;
 
-	@:s public var stencil : Stencil;
+	public var stencil : Stencil;
 
 	// one bit for internal engine usage
 	@:bits(bits) @:noCompletion var reserved : Bool;
@@ -95,66 +95,42 @@ class Pass implements hxd.impl.Serializable {
 	}
 
 	public function setBlendMode( b : BlendMode ) {
+		blendOp = Add;
+		blendAlphaOp = Add;
+
 		switch( b ) {
 		case None: // Out = 1 * Src + 0 * Dst
 			blend(One, Zero);
-			blendOp = Add;
-			blendAlphaOp = Add;
 		case Alpha: // Out = SrcA * Src + (1 - SrcA) * Dst
 			blend(SrcAlpha, OneMinusSrcAlpha);
-			blendOp = Add;
-			blendAlphaOp = Add;
+			blendAlphaSrc = One;
 		case Add: // Out = SrcA * Src + 1 * Dst
 			blend(SrcAlpha, One);
-			blendOp = Add;
-			blendAlphaOp = Add;
+			blendAlphaSrc = One;
 		case AlphaAdd: // Out = Src + (1 - SrcA) * Dst
 			blend(One, OneMinusSrcAlpha);
-			blendOp = Add;
-			blendAlphaOp = Add;
 		case SoftAdd: // Out = (1 - Dst) * Src + 1 * Dst
 			blend(OneMinusDstColor, One);
-			blendOp = Add;
-			blendAlphaOp = Add;
+			blendAlphaSrc = One;
 		case Multiply: // Out = Dst * Src + 0 * Dst
-			blend(DstColor, Zero);
-			blendOp = Add;
-			blendAlphaOp = Add;
+			blend(DstColor, One);
+			blendAlphaSrc = One;
 		case AlphaMultiply: // Out = Dst * Src + (1 - SrcA) * Dst
 			blend(DstColor, OneMinusSrcAlpha);
-			blendOp = Add;
-			blendAlphaOp = Add;
 		case Erase: // Out = 0 * Src + (1 - Srb) * Dst
 			blend(Zero, OneMinusSrcColor);
-			blendOp = Add;
-			blendAlphaOp = Add;
 		case Screen: // Out = 1 * Src + (1 - Srb) * Dst
 			blend(One, OneMinusSrcColor);
-			blendOp = Add;
-			blendAlphaOp = Add;
 		case Sub: // Out = 1 * Dst - SrcA * Src
 			blend(SrcAlpha, One);
 			blendOp = ReverseSub;
 			blendAlphaOp = ReverseSub;
-
-		// The output color min/max of the source and dest colors.
-		// The blend parameters Src and Dst are ignored for this equation.
 		case Max: // Out = MAX( Src, Dst )
-			blendSrc = Zero;
-			blendAlphaSrc = Zero;
-			blendDst = Zero;
-			blendAlphaDst = Zero;
-			blendAlphaSrc = Zero;
-			blendAlphaDst = Zero;
+			blend(One, One);
 			blendAlphaOp = Max;
 			blendOp = Max;
 		case Min: // Out = MIN( Src, Dst )
-			blendSrc = Zero;
-			blendAlphaSrc = Zero;
-			blendDst = Zero;
-			blendAlphaDst = Zero;
-			blendAlphaSrc = Zero;
-			blendAlphaDst = Zero;
+			blend(One, One);
 			blendAlphaOp = Min;
 			blendOp = Min;
 		}
@@ -231,6 +207,21 @@ class Pass implements hxd.impl.Serializable {
 		return false;
 	}
 
+	public function removeShaders< T:hxsl.Shader >(t:Class<T>) {
+		var sl = shaders, prev = null;
+		while( sl != null ) {
+			if( hxd.impl.Api.isOfType(sl.s, t) ) {
+				if( prev == null )
+					shaders = sl.next;
+				else
+					prev.next = sl.next;
+			}
+			else
+				prev = sl;
+			sl = sl.next;
+		}
+	}
+
 	public function getShader< T:hxsl.Shader >(t:Class<T>) : T {
 		var s = shaders;
 		while( s != parentShaders ) {
@@ -291,37 +282,6 @@ class Pass implements hxd.impl.Serializable {
 			return h3d.Engine.getCurrent().driver.getNativeShaderCode(shader);
 		}
 	}
-
-	#if hxbit
-
-	public function customSerialize( ctx : hxbit.Serializer ) {
-		var ctx : hxd.fmt.hsd.Serializer = cast ctx;
-		var s = shaders;
-		while( s != parentShaders ) {
-			ctx.addShader(s.s);
-			s = s.next;
-		}
-		ctx.addShader(null);
-	}
-	public function customUnserialize( ctx : hxbit.Serializer ) {
-		var ctx : hxd.fmt.hsd.Serializer = cast ctx;
-		var head = null;
-		while( true ) {
-			var s = ctx.getShader();
-			if( s == null ) break;
-			var sl = new hxsl.ShaderList(s);
-			if( head == null ) {
-				head = shaders = sl;
-			} else {
-				head.next = sl;
-				head = sl;
-			}
-		}
-		setPassName(name);
-		loadBits(bits);
-	}
-	#end
-
 	#end
 
 }

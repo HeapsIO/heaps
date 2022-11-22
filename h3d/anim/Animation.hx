@@ -19,22 +19,22 @@ class AnimatedObject {
 
 }
 
-class Animation implements hxd.impl.Serializable {
+class Animation {
 
 	static inline var EPSILON = 0.000001;
 
-	@:s public var name : String;
-	@:s public var resourcePath : String;
-	@:s public var frameCount(default, null) : Int;
-	@:s public var sampling(default,null) : Float;
-	@:s public var frame(default, null) : Float;
+	public var name : String;
+	public var resourcePath : String;
+	public var frameCount(default, null) : Int;
+	public var sampling(default,null) : Float;
+	public var frame(default, null) : Float;
 
-	@:s public var speed : Float;
+	public var speed : Float;
 	public var onAnimEnd : Void -> Void;
 	public var onEvent : String -> Void;
 
-	@:s public var pause : Bool;
-	@:s public var loop : Bool;
+	public var pause : Bool;
+	public var loop : Bool;
 
 	public var events(default, null) : Array<Array<String>>;
 
@@ -209,7 +209,7 @@ class Animation implements hxd.impl.Serializable {
 
 	public function update(dt:Float) : Float {
 		if( !isInstance )
-			throw "You must instanciate this animation first";
+			throw "You must instantiate this animation first";
 
 		if( !isPlaying() )
 			return 0;
@@ -281,22 +281,5 @@ class Animation implements hxd.impl.Serializable {
 	public function toString() {
 		return name;
 	}
-
-	#if (hxbit && !macro && heaps_enable_serialize)
-	public function unserialize(ctx) {
-		super.unserialize(ctx);
-		if( objects == null ) objects = [];
-	}
-
-	function customSerialize(ctx:hxbit.Serializer) {
-	}
-
-	function customUnserialize(ctx:hxbit.Serializer) {
-		var l = cast(ctx, hxd.fmt.hsd.Serializer).loadAnimation(resourcePath);
-		var objects = [for( a in l.objects ) a.clone()];
-		l.clone(this);
-		this.objects = objects;
-	}
-	#end
 
 }

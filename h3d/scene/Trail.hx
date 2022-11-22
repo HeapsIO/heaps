@@ -92,7 +92,7 @@ class Trail extends Mesh {
 
 	override function sync(ctx) {
 		super.sync(ctx);
-		if( ctx.elapsedTime == 0 || (!ctx.visibleFlag && !alwaysSync) )
+		if( ctx.elapsedTime == 0 || (!ctx.visibleFlag && !alwaysSyncAnimation) )
 			return;
 
 		var curX = absPos._41;

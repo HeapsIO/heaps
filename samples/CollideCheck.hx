@@ -55,7 +55,7 @@ class CollideCheck extends hxd.App {
 			}
 		var view = new h2d.Bitmap(h2d.Tile.fromPixels(bmp));
 		view.alpha = 0.5;
-		s2d.addChildAt(view, 0);
+		s2d.add(view, 0);
 		bmp.dispose();
 	}
 

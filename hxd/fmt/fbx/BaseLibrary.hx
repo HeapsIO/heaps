@@ -121,14 +121,14 @@ class BaseLibrary {
 	public var skipObjects : Map<String,Bool>;
 
 	/**
-		Set how many bones per vertex should be created in skin data in makeObject(). Default is 3
+		Use 4 bones of influence per vertex instead of 3
 	**/
-	public var bonesPerVertex = 3;
+	public var fourBonesByVertex = false;
 
 	/**
 		If there are too many bones, the model will be split in separate render passes.
 	**/
-	public static var maxBonesPerSkin = 34;
+	public var maxBonesPerSkin = 34;
 
 	/**
 		Consider unskinned joints to be simple objects
@@ -141,6 +141,11 @@ class BaseLibrary {
 		Convert centimeters to meters and axis to Z-up (Maya FBX export)
 	**/
 	public var normalizeScaleOrient : Bool = true;
+
+	/**
+		Keep high precision values. Might increase animation data size and compressed size.
+	**/
+	public var highPrecision : Bool = false;
 
 	public function new( fileName ) {
 		this.fileName = fileName;
@@ -260,8 +265,10 @@ class BaseLibrary {
 			case "LastSaved|ApplicationName": app = p.props[4].toString();
 			default:
 			}
-		if( app.indexOf("Blender") >= 0 && unitScale == originScale )
-			scaleFactor = unitScale / 100; // Adjust blender output scaling
+		if( app.indexOf("Blender") >= 0 && unitScale == originScale ) {
+			if ( unitScale == 0 ) scaleFactor = 1; // 0.9999999776482582 scale turning into 0
+			else scaleFactor = unitScale / 100; // Adjust blender output scaling
+		}
 
 		if( scaleFactor == 1 && geometryScaleFactor == 1 )
 			return;
@@ -772,9 +779,10 @@ class BaseLibrary {
 
 	function roundValues( data : Array<Float>, def : Float, mult : Float = 1. ) {
 		var hasValue = false;
+		var epsi = highPrecision ? 0 : 1e-3;
 		for( i in 0...data.length ) {
 			var v = data[i] * mult;
-			if( Math.abs(v - def) > 1e-3 )
+			if( Math.abs(v - def) > epsi )
 				hasValue = true;
 			else
 				v = def;
@@ -1291,7 +1299,9 @@ class BaseLibrary {
 		return keepJoints.get(j.name);
 	}
 
-	function createSkin( hskins : Map<Int,h3d.anim.Skin>, hgeom : Map<Int,{function vertexCount():Int;function setSkin(s:h3d.anim.Skin):Void;}>, rootJoints : Array<h3d.anim.Skin.Joint>, bonesPerVertex ) {
+	function createSkin( hskins : Map<Int,h3d.anim.Skin>, hgeom : Map<Int,{
+		function vertexCount():Int; function setSkin(s:h3d.anim.Skin):Void;
+	}>, rootJoints : Array<h3d.anim.Skin.Joint> ) {
 		var allJoints = [];
 		function collectJoints(j:h3d.anim.Skin.Joint) {
 			// collect subs first (allow easy removal of terminal unskinned joints)
@@ -1332,7 +1342,7 @@ class BaseLibrary {
 				if( skin != null )
 					return skin;
 				var geom = hgeom.get(getParent(def, "Geometry").getId());
-				skin = new h3d.anim.Skin(null, geom.vertexCount(), bonesPerVertex);
+				skin = new h3d.anim.Skin(null, geom.vertexCount(), fourBonesByVertex ? 4 : 3);
 				geom.setSkin(skin);
 				hskins.set(def.getId(), skin);
 			}
@@ -1362,7 +1372,7 @@ class BaseLibrary {
 
 	function round(v:Float) {
 		if( v != v ) throw "NaN found";
-		return std.Math.fround(v * 131072) / 131072;
+		return highPrecision ? v : std.Math.fround(v * 131072) / 131072;
 	}
 
 	function updateDefaultMatrix( model : FbxNode, d : DefaultMatrixes ) {

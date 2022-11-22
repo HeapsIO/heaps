@@ -185,6 +185,11 @@ class FlowProperties {
 	**/
 	public var constraint = true;
 
+	/**
+		When set, element will use the maximum size of non-autoSize elements as size constraint instead of current constraint on the parent flow.
+	**/
+	public var autoSize : Null<Float>;
+
 	@:dox(hide)
 	public function new(elt) {
 		this.elt = elt;
@@ -502,7 +507,7 @@ class Flow extends Object {
 	/**
 	 	The amount of scrolling that is done when using mouse wheel (in pixels).
 	**/
-	public var scrollWheelSpeed(default, null) : Float = 30.;
+	public var scrollWheelSpeed : Float = 30.;
 	/**
 	 	The current scrolling position for the flow content (in pixels). Only applies when overflow is Scroll or Hidden.
 	**/
@@ -586,6 +591,20 @@ class Flow extends Object {
 		return verticalAlign = v;
 	}
 
+	function makeScrollBar(): h2d.Flow {
+		var bar = new h2d.Flow();
+		bar.backgroundTile = h2d.Tile.fromColor(0);
+		bar.alpha = 0.5;
+		return bar;
+	}
+	function makeScrollBarCursor(): h2d.Flow {
+		var cursor = new h2d.Flow();
+		cursor.minWidth = 10;
+		cursor.minHeight = 20;
+		cursor.backgroundTile = h2d.Tile.fromColor(-1);
+		return cursor;
+	}
+
 	function set_overflow(v) {
 		if( overflow == v )
 			return v;
@@ -593,9 +612,8 @@ class Flow extends Object {
 		if( v == Scroll ) {
 			enableInteractive = true;
 			if( scrollBar == null ) {
-				scrollBar = new h2d.Flow(this);
-				scrollBar.backgroundTile = h2d.Tile.fromColor(0);
-				scrollBar.alpha = 0.5;
+				scrollBar = makeScrollBar();
+				addChild(scrollBar);
 				scrollBar.verticalAlign = Top;
 				scrollBar.enableInteractive = true;
 
@@ -608,10 +626,12 @@ class Flow extends Object {
 				var pushed = false;
 				scrollBar.interactive.cursor = Button;
 				scrollBar.interactive.onPush = function(e:hxd.Event) {
+					var scene = getScene();
+					if( scene == null ) return;
 					scrollBar.interactive.startCapture(function(e) {
 						switch( e.kind ) {
 						case ERelease, EReleaseOutside:
-							scrollBar.interactive.stopCapture();
+							scene.stopCapture();
 						case EPush, EMove:
 							setCursor(e);
 						default:
@@ -626,10 +646,8 @@ class Flow extends Object {
 				p.horizontalAlign = Right;
 				p.verticalAlign = Top;
 
-				scrollBarCursor = new h2d.Flow(scrollBar);
-				scrollBarCursor.minWidth = 10;
-				scrollBarCursor.minHeight = 20;
-				scrollBarCursor.backgroundTile = h2d.Tile.fromColor(-1);
+				scrollBarCursor = makeScrollBarCursor();
+				scrollBar.addChild(scrollBarCursor);
 			}
 		} else {
 			if( scrollBar != null ) {
@@ -886,9 +904,13 @@ class Flow extends Object {
 
 	override function removeChildren() {
 		var k = 0;
-		while( numChildren>k ) {
+
+		while( numChildren > k ) {
 			var c = getChildAt(k);
-			if( c == background || c == interactive || c == debugGraphics ) k++; else removeChild(c);
+			if( c == background
+				|| c == interactive
+				|| c == debugGraphics
+				|| c == scrollBar ) k++; else removeChild(c);
 		}
 	}
 
@@ -947,8 +969,8 @@ class Flow extends Object {
 			needReflow = true;
 
 		var oldW = realMinWidth, oldH = realMinHeight;
-		realMinWidth = if( minWidth == null && fillWidth ) Math.ceil(constraintWidth) else if( minWidth != null ) minWidth else -1;
-		realMinHeight = if( minHeight == null && fillHeight ) Math.ceil(constraintHeight) else if( minHeight != null ) minHeight else -1;
+		realMinWidth = if(fillWidth) hxd.Math.imax(Math.ceil(constraintWidth), minWidth != null ? minWidth : -1) else if( minWidth != null ) minWidth else -1;
+		realMinHeight = if(fillHeight) hxd.Math.imax(Math.ceil(constraintHeight), minHeight != null ? minHeight : -1) else if( minHeight != null ) minHeight else -1;
 		if(realMinWidth != oldW || realMinHeight != oldH)
 			needReflow = true;
 	}
@@ -1011,10 +1033,10 @@ class Flow extends Object {
 	}
 
 	function onMouseWheel( e : hxd.Event ) {
-		if( overflow == Scroll )
+		if( overflow == Scroll ) {
 			scrollPosY += e.wheelDelta * scrollWheelSpeed;
-		else
-			e.propagate = true;
+			e.propagate = false;
+		}
 	}
 
 	function set_backgroundTile(t) {
@@ -1089,6 +1111,7 @@ class Flow extends Object {
 	**/
 	public function reflow() {
 		onBeforeReflow();
+		syncPos();
 
 		if( !isConstraint && (fillWidth || fillHeight) ) {
 			var scene = getScene();
@@ -1103,6 +1126,18 @@ class Flow extends Object {
 		var borderBottom = #if flow_border borderBottom #else 0 #end;
 		var borderLeft = #if flow_border borderLeft #else 0 #end;
 		var borderRight = #if flow_border borderRight #else 0 #end;
+		var tmpBounds = tmpBounds;
+
+		if( tmpBounds == null ) throw "Recursive reflow";
+		this.tmpBounds = null;
+
+		inline function getSize(c:h2d.Object) {
+			var b = tmpBounds;
+			b.empty();
+			c.getBoundsRec(this, b, true);
+			if( b.isEmpty() ) b.addPos(0,0) else b.offset(-c.x, -c.y);
+			return b;
+		}
 
 		var isConstraintWidth = realMaxWidth >= 0;
 		var isConstraintHeight = realMaxHeight >= 0;
@@ -1121,6 +1156,16 @@ class Flow extends Object {
 		}
 		inline function propAt(i: Int) {
 			return properties[ reverse ? children.length - i - 1 : i ];
+		}
+
+		inline function forChildren(func : Int->FlowProperties->h2d.Object->Void) {
+			for( i in 0...children.length ) {
+				var p = propAt(i);
+				if( p.isAbsolute && p.horizontalAlign == null && p.verticalAlign == null ) continue;
+				var c = childAt(i);
+				if( !c.visible ) continue;
+				func(i, p, c);
+			}
 		}
 
 		var cw, ch;
@@ -1142,6 +1187,7 @@ class Flow extends Object {
 					maxLineHeight = minLineHeight;
 				else if( overflow != Expand && minLineHeight != 0 )
 					maxLineHeight = minLineHeight;
+				var absHeight = maxLineHeight > maxInHeight && overflow != Expand ? maxInHeight : maxLineHeight;
 				for( i in lastIndex...maxIndex ) {
 					var p = propAt(i);
 					if( p.isAbsolute && p.verticalAlign == null ) continue;
@@ -1149,11 +1195,12 @@ class Flow extends Object {
 					if( !c.visible ) continue;
 					var a = p.verticalAlign != null ? p.verticalAlign : valign;
 					c.y = y + p.offsetY + p.paddingTop;
+					var height = p.isAbsolute ? absHeight : maxLineHeight;
 					switch( a ) {
 					case Bottom:
-						c.y += maxLineHeight - Std.int(p.calculatedHeight);
+						c.y += height - Std.int(p.calculatedHeight);
 					case Middle:
-						c.y += Std.int((maxLineHeight - p.calculatedHeight) * 0.5);
+						c.y += Std.int((height - p.calculatedHeight) * 0.5);
 					default:
 					}
 				}
@@ -1171,43 +1218,59 @@ class Flow extends Object {
 				return size;
 			}
 
-			for( i in 0...children.length ) {
-				var p = propAt(i);
-				var isAbs = p.isAbsolute;
-				if( isAbs && p.horizontalAlign == null && p.verticalAlign == null ) continue;
-				var c = childAt(i);
-				if( !c.visible ) continue;
+			var autoWidth = maxInWidth;
+			var autoSum = 0.0;
 
+			inline function calcSize(p : FlowProperties, c : h2d.Object) {
 				var pw = p.paddingLeft + p.paddingRight;
 				var ph = p.paddingTop + p.paddingBottom;
-				if( !isAbs )
+				if( !p.isAbsolute )
 					c.constraintSize(
-						isConstraintWidth && p.constraint ? (maxInWidth - pw) / Math.abs(c.scaleX) : -1,
-						isConstraintHeight && p.constraint ? (maxInHeight - ph) / Math.abs(c.scaleX) : -1
+						isConstraintWidth && p.constraint ? ((p.autoSize != null ? Math.floor(autoWidth * p.autoSize / autoSum) : maxInWidth) - pw) / Math.abs(c.scaleX) : -1,
+						isConstraintHeight && p.constraint ? ((p.autoSize != null ? hxd.Math.imax(maxLineHeight, minLineHeight) * p.autoSize : maxInHeight) - ph) / Math.abs(c.scaleY) : -1
 					);
 
-				var b = c.getSize(tmpBounds);
-				var br = false;
+				var b = getSize(c);
 				p.calculatedWidth = Math.ceil(b.xMax) + pw;
 				p.calculatedHeight = Math.ceil(b.yMax) + ph;
 				if( p.minWidth != null && p.calculatedWidth < p.minWidth ) p.calculatedWidth = p.minWidth;
 				if( p.minHeight != null && p.calculatedHeight < p.minHeight ) p.calculatedHeight = p.minHeight;
-
-				if( isAbs ) continue;
-
-				if( ((multiline && x - startX + p.calculatedWidth > maxInWidth) || p.lineBreak) && x - startX > 0 ) {
-					br = true;
-					alignLine(i);
-					y += maxLineHeight + verticalSpacing;
-					maxLineHeight = 0;
-					x = startX;
-				}
-				p.isBreak = br;
-				x += p.calculatedWidth;
-				if( x > cw ) cw = x;
-				x += horizontalSpacing;
-				if( p.calculatedHeight > maxLineHeight ) maxLineHeight = p.calculatedHeight;
 			}
+
+			forChildren(function(i, p, c) {
+				autoWidth -= horizontalSpacing;
+				if(p.autoSize == null) {
+					calcSize(p, c);
+					if(!p.isAbsolute) {
+						if( p.calculatedHeight > maxLineHeight ) maxLineHeight = p.calculatedHeight;
+						autoWidth -= p.calculatedWidth;
+					}
+				}
+				else
+					autoSum += p.autoSize;
+			});
+
+			forChildren(function(i, p, c) {
+				if(p.autoSize != null)
+					calcSize(p, c);
+
+				if(!p.isAbsolute) {
+					var br = false;
+					if( ((multiline && x - startX + p.calculatedWidth > maxInWidth) || p.lineBreak) && x - startX > 0 ) {
+						br = true;
+						alignLine(i);
+						y += maxLineHeight + verticalSpacing;
+						maxLineHeight = 0;
+						x = startX;
+					}
+					p.isBreak = br;
+					x += p.calculatedWidth;
+					if( x > cw ) cw = x;
+					x += horizontalSpacing;
+					if( p.calculatedHeight > maxLineHeight ) maxLineHeight = p.calculatedHeight;
+				}
+			});
+
 			alignLine(children.length);
 			cw += paddingRight + borderRight;
 			ch = y + maxLineHeight + paddingBottom + borderBottom;
@@ -1287,6 +1350,7 @@ class Flow extends Object {
 					maxColWidth = minColWidth;
 				else if( overflow != Expand && minColWidth != 0 )
 					maxColWidth = minColWidth;
+				var absWidth = maxColWidth > maxInWidth && overflow != Expand ? maxInWidth : maxColWidth;
 				for( i in lastIndex...maxIndex ) {
 					var p = propAt(i);
 					if( p.isAbsolute && p.horizontalAlign == null ) continue;
@@ -1294,11 +1358,12 @@ class Flow extends Object {
 					if( !c.visible ) continue;
 					var a = p.horizontalAlign != null ? p.horizontalAlign : halign;
 					c.x = x + p.offsetX + p.paddingLeft;
+					var width = p.isAbsolute ? absWidth : maxColWidth;
 					switch( a ) {
 					case Right:
-						c.x += maxColWidth - p.calculatedWidth;
+						c.x += width - p.calculatedWidth;
 					case Middle:
-						c.x += Std.int((maxColWidth - p.calculatedWidth) * 0.5);
+						c.x += Std.int((width - p.calculatedWidth) * 0.5);
 					default:
 					}
 				}
@@ -1316,46 +1381,60 @@ class Flow extends Object {
 				return size;
 			}
 
-			for( i in 0...children.length ) {
-				var p = propAt(i);
-				var isAbs = p.isAbsolute;
-				if( isAbs && p.horizontalAlign == null && p.verticalAlign == null ) continue;
+			var autoHeight = maxInHeight;
+			var autoSum = 0.0;
 
-				var c = childAt(i);
-				if( !c.visible ) continue;
-
+			inline function calcSize(p : FlowProperties, c : h2d.Object) {
 				var pw = p.paddingLeft + p.paddingRight;
 				var ph = p.paddingTop + p.paddingBottom;
-				if( !isAbs )
+				if( !p.isAbsolute )
 					c.constraintSize(
-						isConstraintWidth && p.constraint ? (maxInWidth - pw) / Math.abs(c.scaleX) : -1,
-						isConstraintHeight && p.constraint ? (maxInHeight - ph) / Math.abs(c.scaleY) : -1
+						isConstraintWidth && p.constraint ? ((p.autoSize != null ? hxd.Math.imax(maxColWidth, minColWidth) * p.autoSize : maxInWidth) - pw) / Math.abs(c.scaleX) : -1,
+						isConstraintHeight && p.constraint ? ((p.autoSize != null ? Math.floor(autoHeight * p.autoSize / autoSum) : maxInHeight) - ph) / Math.abs(c.scaleY) : -1
 					);
 
-				var b = c.getSize(tmpBounds);
-				var br = false;
-
+				var b = getSize(c);
 				p.calculatedWidth = Math.ceil(b.xMax) + pw;
 				p.calculatedHeight = Math.ceil(b.yMax) + ph;
 				if( p.minWidth != null && p.calculatedWidth < p.minWidth ) p.calculatedWidth = p.minWidth;
 				if( p.minHeight != null && p.calculatedHeight < p.minHeight ) p.calculatedHeight = p.minHeight;
-
-				if( isAbs ) continue;
-
-				if( ((multiline && y - startY + p.calculatedHeight > maxInHeight) || p.lineBreak) && y - startY > 0 ) {
-					br = true;
-					alignLine(i);
-					x += maxColWidth + horizontalSpacing;
-					maxColWidth = 0;
-					y = startY;
-				}
-				p.isBreak = br;
-				c.y = y + p.offsetY + p.paddingTop;
-				y += p.calculatedHeight;
-				if( y > ch ) ch = y;
-				y += verticalSpacing;
-				if( p.calculatedWidth > maxColWidth ) maxColWidth = p.calculatedWidth;
 			}
+
+			forChildren(function(i, p, c) {
+				autoHeight -= verticalSpacing;
+				if(p.autoSize == null) {
+					calcSize(p, c);
+					if(!p.isAbsolute) {
+						if( p.calculatedWidth > maxColWidth ) maxColWidth = p.calculatedWidth;
+						autoHeight -= p.calculatedHeight;
+					}
+				}
+				else
+					autoSum += p.autoSize;
+			});
+
+			forChildren(function(i, p, c) {
+				if(p.autoSize != null)
+					calcSize(p, c);
+
+				if(!p.isAbsolute) {
+					var br = false;
+					if( ((multiline && y - startY + p.calculatedHeight > maxInHeight) || p.lineBreak) && y - startY > 0 ) {
+						br = true;
+						alignLine(i);
+						x += maxColWidth + horizontalSpacing;
+						maxColWidth = 0;
+						y = startY;
+					}
+					p.isBreak = br;
+					c.y = y + p.offsetY + p.paddingTop;
+					y += p.calculatedHeight;
+					if( y > ch ) ch = y;
+					y += verticalSpacing;
+					if( p.calculatedWidth > maxColWidth ) maxColWidth = p.calculatedWidth;
+				}
+			});
+
 			alignLine(children.length);
 			ch += paddingBottom + borderBottom;
 			cw = x + maxColWidth + paddingRight + borderRight;
@@ -1440,7 +1519,7 @@ class Flow extends Object {
 						isConstraintHeight && p.constraint ? (maxInHeight - ph) / Math.abs(c.scaleY) : -1
 					);
 
-				var b = c.getSize(tmpBounds);
+				var b = getSize(c);
 				p.calculatedWidth = Math.ceil(b.xMax) + pw;
 				p.calculatedHeight = Math.ceil(b.yMax) + ph;
 				if( p.minWidth != null && p.calculatedWidth < p.minWidth ) p.calculatedWidth = p.minWidth;
@@ -1563,6 +1642,7 @@ class Flow extends Object {
 			debugGraphics.drawRect(0, 0, cw, ch);
 		}
 
+		this.tmpBounds = tmpBounds;
 		onAfterReflow();
 	}
 

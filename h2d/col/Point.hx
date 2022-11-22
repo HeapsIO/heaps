@@ -160,7 +160,7 @@ class Point #if apicheck implements h2d.impl.PointApi<Point,Matrix> #end {
 	**/
 	public inline function lerp( a : Point, b : Point, k : Float ) {
 		x = hxd.Math.lerp(a.x, b.x, k);
-		y = hxd.Math.lerp(a.y, a.y, k);
+		y = hxd.Math.lerp(a.y, b.y, k);
 	}
 
 	/**

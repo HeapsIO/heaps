@@ -7,7 +7,7 @@ import hxd.Math;
 	@see `Object.getBounds`
 	@see `Object.getSize`
 **/
-class Bounds {
+class Bounds implements Collider {
 
 	/** X-axis left-most bounding box point. **/
 	public var xMin : Float;

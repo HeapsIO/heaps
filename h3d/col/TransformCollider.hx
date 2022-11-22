@@ -21,6 +21,12 @@ class TransformCollider implements Collider {
 		return m;
 	}
 
+	public function transform( m : Matrix ) {
+		var mt = new h3d.Matrix();
+		mt.multiply3x4(m, mat);
+		return new TransformCollider(mt, collider);
+	}
+
 	public function rayIntersection( r : Ray, bestMatch : Bool ) : Float {
 		var tmpRay = TMP_RAY;
 		TMP_RAY = null;
@@ -71,6 +77,15 @@ class TransformCollider implements Collider {
 		s.r = oldR;
 		return res;
 	}
+
+	#if !macro
+	public function makeDebugObj() : h3d.scene.Object {
+		var obj = collider.makeDebugObj();
+		obj.ignoreParentTransform = true;
+		obj.defaultTransform = mat;
+		return obj;
+	}
+	#end
 
 	public static function make( mat : h3d.Matrix, col ) {
 		if( mat.isIdentityEpsilon(1e-10) )

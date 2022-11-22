@@ -97,7 +97,7 @@ class SpotShadowMap extends Shadows {
 		staticTexture.preventAutoDispose();
 		staticTexture.realloc = function () {
 			if( pixelsForRealloc != null ) {
-				staticTexture.uploadPixels(pixelsForRealloc); 
+				staticTexture.uploadPixels(pixelsForRealloc);
 			}
 		}
 		return staticTexture;
@@ -169,6 +169,7 @@ class SpotShadowMap extends Shadows {
 		lightCamera.pos.set(absPos.tx, absPos.ty, absPos.tz);
 		lightCamera.target.set(absPos.tx + ldir.x, absPos.ty + ldir.y, absPos.tz + ldir.z);
 		lightCamera.fovY = spotLight.angle;
+		lightCamera.zNear = spotLight.range * 0.05; // first 5% outside of range
 		lightCamera.zFar = spotLight.range;
 		lightCamera.update();
 	}

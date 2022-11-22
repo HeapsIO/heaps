@@ -26,6 +26,10 @@ enum ConsoleArg {
 		A text string parameter with limitation to only accept the specified list values.
 	**/
 	AEnum( values : Array<String> );
+	/**
+		An array of remaining arguments.
+	**/
+	AArray(t: ConsoleArg);
 }
 
 /**
@@ -81,6 +85,7 @@ class Console #if !macro extends h2d.Object #end {
 	var logs : Array<String>;
 	var logIndex:Int;
 	var curCmd:String;
+	var errorColor = 0xC00000;
 
 	/**
 		The text character which should be pressed in order to automatically show console input.
@@ -121,7 +126,13 @@ class Console #if !macro extends h2d.Object #end {
 		tf.x = 2;
 		tf.y = 1;
 		tf.textColor = 0xFFFFFFFF;
+		resetCommands();
+	}
 
+	/**
+	 * Reset all commands and aliases to default
+	 */
+	public function resetCommands() {
 		commands = new Map();
 		aliases = new Map();
 		addCommand("help", "Show help", [ { name : "command", t : AString, opt : true } ], showHelp);
@@ -136,7 +147,7 @@ class Console #if !macro extends h2d.Object #end {
 		Add a new command to console.
 		@param name Command name.
 		@param help Optional command description text.
-		@param args An array of command arguments. 
+		@param args An array of command arguments.
 		@param callb The callback method taking the arguments listed in `args`.
 	**/
 	public function addCommand( name, ?help, args : Array<ConsoleArgDesc>, callb : Dynamic ) {
@@ -148,7 +159,7 @@ class Console #if !macro extends h2d.Object #end {
 	/**
 		Add a new command to console. <span class="label">Macro method</span>
 
-		The `callb` method arguments are used to determine console argument type and names. Due to that, 
+		The `callb` method arguments are used to determine console argument type and names. Due to that,
 		only the following callback argument types are supported: `Int`, `Float`, `String` and `Bool`.
 		Another limitation is that commands added via macro do not contain description.
 
@@ -252,14 +263,14 @@ class Console #if !macro extends h2d.Object #end {
 		}
 		for( cmdName in all ) {
 			var c = commands.get(cmdName);
-			var str = "/" + cmdName;
+			var str = String.fromCharCode(shortKeyChar) + cmdName;
 			for( a in aliases.keys() )
 				if( aliases.get(a) == cmdName )
 					str += "|" + a;
 			for( a in c.args ) {
 				var astr = a.name;
 				switch( a.t ) {
-				case AInt, AFloat:
+				case AInt, AFloat, AArray(_):
 					astr += ":"+a.t.getName().substr(1);
 				case AString:
 					// nothing
@@ -304,20 +315,31 @@ class Console #if !macro extends h2d.Object #end {
 	}
 
 	function getCommandSuggestion(cmd : String) : String {
+		var hadShortKey = false;
+		if (cmd.charCodeAt(0) == shortKeyChar) {
+			hadShortKey = true;
+			cmd = cmd.substr(1);
+		}
 		if (cmd == "") {
 			return "";
 		}
+		var lowCmd = cmd.toLowerCase();
 
 		var closestCommand = "";
 		var commandNames = commands.keys();
 		for (command in commandNames) {
-			if (command.indexOf(cmd) == 0) {
+			if (command.toLowerCase().indexOf(lowCmd) == 0) {
 				if (closestCommand == "" || closestCommand.length > command.length) {
 					closestCommand = command;
 				}
 			}
 		}
 
+		if( aliases.exists(cmd) )
+			closestCommand = cmd;
+
+		if (hadShortKey && closestCommand != "")
+			closestCommand = String.fromCharCode(shortKeyChar) + closestCommand;
 		return closestCommand;
 	}
 
@@ -356,18 +378,24 @@ class Console #if !macro extends h2d.Object #end {
 				curCmd = tf.text;
 				logIndex = logs.length - 1;
 			}
-			else logIndex--;
+			else {
+				var curLog = logs[logIndex];
+				while(curLog == logs[logIndex] && logIndex > 0)
+					logIndex--;
+			}
 			tf.text = logs[logIndex];
 			tf.cursorIndex = tf.text.length;
 		case Key.DOWN:
 			if(tf.text == curCmd) return;
+			var curLog = logs[logIndex];
+			while(curLog == logs[logIndex] && logIndex < logs.length - 1)
+				logIndex++;
 			if(logIndex == logs.length - 1) {
 				tf.text = curCmd == null ? "" : curCmd;
 				tf.cursorIndex = tf.text.length;
 				logIndex = -1;
 				return;
 			}
-			logIndex++;
 			tf.text = logs[logIndex];
 			tf.cursorIndex = tf.text.length;
 		}
@@ -384,7 +412,7 @@ class Console #if !macro extends h2d.Object #end {
 
 	function handleCommand( command : String ) {
 		command = StringTools.trim(command);
-		if( command.charCodeAt(0) == "/".code ) command = command.substr(1);
+		if( command.charCodeAt(0) == shortKeyChar ) command = command.substr(1);
 		if( command == "" ) {
 			hide();
 			return;
@@ -392,7 +420,6 @@ class Console #if !macro extends h2d.Object #end {
 		logs.push(command);
 		logIndex = -1;
 
-		var errorColor = 0xC00000;
 
 		var args = [];
 		var c = '';
@@ -438,8 +465,11 @@ class Console #if !macro extends h2d.Object #end {
 					return;
 				}
 
-				args.push(string);
-				last = '';
+				last = string;
+				if (i < command.length - 1) {
+					args.push(string);
+					last = '';
+				}
 
 				skipSpace();
 			default:
@@ -457,59 +487,91 @@ class Console #if !macro extends h2d.Object #end {
 			log('Unknown command "${cmdName}"',errorColor);
 			return;
 		}
-		var vargs = new Array<Dynamic>();
-		for( i in 0...cmd.args.length ) {
-			var a = cmd.args[i];
-			var v = args[i + 1];
-			if( v == null ) {
-				if( a.opt ) {
-					vargs.push(null);
-					continue;
-				}
-				log('Missing argument ${a.name}',errorColor);
-				return;
-			}
-			switch( a.t ) {
+
+		function parseArgument( v : String, t: ConsoleArg, name : String, loneArg = false ): Dynamic {
+			switch( t ) {
 			case AInt:
 				var i = Std.parseInt(v);
 				if( i == null ) {
-					log('$v should be Int for argument ${a.name}',errorColor);
-					return;
+					log('$v should be Int for argument $name',errorColor);
+					return null;
 				}
-				vargs.push(i);
+				return i;
 			case AFloat:
 				var f = Std.parseFloat(v);
 				if( Math.isNaN(f) ) {
-					log('$v should be Float for argument ${a.name}',errorColor);
-					return;
+					log('$v should be Float for argument $name',errorColor);
+					return null;
 				}
-				vargs.push(f);
+				return f;
 			case ABool:
 				switch( v ) {
-				case "true", "1": vargs.push(true);
-				case "false", "0": vargs.push(false);
+				case "true", "1": return true;
+				case "false", "0": return false;
 				default:
-					log('$v should be Bool for argument ${a.name}',errorColor);
-					return;
+					log('$v should be Bool for argument $name',errorColor);
+					return null;
 				}
 			case AString:
 				// if we take a single string, let's pass the whole args (allows spaces)
-				vargs.push(cmd.args.length == 1 ? StringTools.trim(command.substr(args[0].length)) : v);
+				return loneArg ? StringTools.trim(command.substr(args[0].length)) : v;
 			case AEnum(values):
 				var found = false;
-				for( v2 in values )
-					if( v == v2 ) {
-						found = true;
-						vargs.push(v2);
-					}
-				if( !found ) {
-					log('$v should be [${values.join("|")}] for argument ${a.name}', errorColor);
+				for( v2 in values ) {
+					if( v == v2 )
+						return v2;
+				}
+				log('$v should be [${values.join("|")}] for argument $name', errorColor);
+				return null;
+			case AArray(t):
+				log('Cannot have nested arrays for argument $name');
+				return null;
+			}
+			return null;
+		}
+
+		var vargs = new Array<Dynamic>();
+		for( i in 0...cmd.args.length ) {
+			var a = cmd.args[i];
+			switch( a.t ) {
+			case AArray(t):
+				if (i != cmd.args.length - 1) {
+					log('Array ${a.name} should be last argument',errorColor);
 					return;
 				}
+				var arr = [];
+				for (j in (i + 1)...args.length) {
+					var v = args[j];
+					var parsed = parseArgument(v, t, a.name);
+					if (parsed == null)
+						return;
+					arr.push(parsed);
+				}
+				vargs.push(arr);
+			default:
+				var v = args[i + 1];
+				if( v == null ) {
+					if( a.opt ) {
+						vargs.push(null);
+						continue;
+					}
+					log('Missing argument ${a.name}',errorColor);
+					return;
+				}
+
+				var parsed = parseArgument(v, a.t, a.name, cmd.args.length == 1);
+				if (parsed == null)
+					return;
+				vargs.push(parsed);
 			}
 		}
+
+		doCall(cmd.callb, vargs);
+	}
+
+	function doCall( callb : Dynamic, vargs : Array<Dynamic> ) {
 		try {
-			Reflect.callMethod(null, cmd.callb, vargs);
+			Reflect.callMethod(null, callb, vargs);
 		} catch( e : String ) {
 			log('ERROR $e', errorColor);
 		}
@@ -534,7 +596,7 @@ class Console #if !macro extends h2d.Object #end {
 		var scene = ctx.scene;
 		if( scene != null ) {
 			x = 0;
-			y = scene.height - height;
+			y = scene.height - height*scaleY;
 			width = scene.width;
 			tf.maxWidth = width;
 			bg.tile.scaleToSize(width, height);

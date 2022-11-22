@@ -95,12 +95,17 @@ class App implements h3d.IDrawable {
 		engine = h3d.Engine.getCurrent(); // if was changed
 		isDisposed = false;
 		engine.onReady = staticHandler; // in case we have another pending app
+		engine.onContextLost = onContextLost;
 		engine.onResized = function() {
 			if( s2d == null ) return; // if disposed
 			s2d.checkResize();
 			onResize();
 		};
 		hxd.System.setLoop(mainLoop);
+	}
+
+	function onContextLost() {
+		if( s3d != null ) s3d.onContextLost();
 	}
 
 	function setScene2D( s2d : h2d.Scene, disposePrevious = true ) {
@@ -127,6 +132,7 @@ class App implements h3d.IDrawable {
 	function setup() {
 		var initDone = false;
 		engine.onReady = staticHandler;
+		engine.onContextLost = onContextLost;
 		engine.onResized = function() {
 			if( s2d == null ) return; // if disposed
 			s2d.checkResize();

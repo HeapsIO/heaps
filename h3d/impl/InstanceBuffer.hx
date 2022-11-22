@@ -5,17 +5,19 @@ class InstanceBuffer {
 
 	var data : Dynamic;
 	var driver : h3d.impl.Driver;
-	public var indexCount(default,null) : Int = 0;
+	var indexCount : Int;
+	var startIndex : Int;
 	public var triCount(default,null) : Int = 0;
 	public var commandCount(default, null) : Int;
 
 	public function new() {
 	}
 
-	public function setCommand( commandCount : Int, indexCount : Int ) {
+	public function setCommand( commandCount : Int, indexCount : Int, startIndex=0 ) {
 		this.commandCount = commandCount;
 		this.indexCount = indexCount;
 		this.triCount = Std.int((commandCount * indexCount) / 3);
+		this.startIndex = startIndex;
 	}
 
 	/**
