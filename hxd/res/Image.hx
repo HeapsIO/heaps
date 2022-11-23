@@ -36,6 +36,7 @@ package hxd.res;
 		case Dds: "DDS";
 		case Raw: "RAW";
 		case Hdr: "HDR";
+		case Basis: "BASIS";
 		};
 	}
 
