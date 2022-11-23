@@ -50,7 +50,7 @@ class TextureChannels extends Texture {
 
 	public function setResource( c : hxd.Pixels.Channel, res : hxd.res.Image, ?srcChannel : hxd.Pixels.Channel ) {
 		if( srcChannel == null ) srcChannel = c;
-		if( !allowAsync || !res.getFormat().useAsyncDecode )
+		if( !allowAsync || !res.getFormat().useLoadBitmap )
 			setPixelsInner(c, res.getPixels(), srcChannel);
 		else {
 			res.entry.loadBitmap(function(bmp) {

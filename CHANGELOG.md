@@ -1,3 +1,8 @@
+## 1.9.1 (March 5, 2021)
+
+HL:
+* Another Haxe 4.2.1 fix
+
 ## 1.9.0 (February 28, 2021)
 
 HL:

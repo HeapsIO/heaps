@@ -2,8 +2,8 @@ package h3d.anim;
 
 class Transition extends Animation {
 
-	@:s public var anim1 : Animation;
-	@:s public var anim2 : Animation;
+	public var anim1 : Animation;
+	public var anim2 : Animation;
 
 	public function new( transitionName : String, anim1 : Animation, anim2 : Animation ) {
 		var r1 = 1, r2 = 1;

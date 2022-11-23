@@ -7,7 +7,12 @@ class SignedDistanceField extends hxsl.Shader {
 		@:import h3d.shader.Base2d;
 
 		// Mode of operation - single-channel or multi-channel.
+		// 0123 = RGBA, evertyhing else is MSDF.
 		@const var channel : Int = 0;
+		/**
+			Use automatic edge smoothing based on derivatives.
+		**/
+		@const var autoSmoothing : Bool = false;
 		/**
 			Variable used to determine the edge of the field. ( default : 0.5 ) 
 			Can be used to provide cheaper Outline for Text compared to Filter usage.
@@ -32,7 +37,8 @@ class SignedDistanceField extends hxsl.Shader {
 				else if (channel == 3) textureSample.a;
 				else median(textureSample.r, textureSample.g, textureSample.b);
 
-			textureColor = vec4(1.0, 1.0, 1.0, smoothstep(alphaCutoff - smoothing, alphaCutoff + smoothing, distance));
+			var smoothVal = autoSmoothing ? abs(fwidth(distance) * 0.5) : smoothing;
+			textureColor = vec4(1.0, 1.0, 1.0, smoothstep(alphaCutoff - smoothVal, alphaCutoff + smoothVal, distance));
 		}
 	}
 

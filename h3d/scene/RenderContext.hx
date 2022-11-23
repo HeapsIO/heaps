@@ -21,6 +21,8 @@ class RenderContext extends h3d.impl.RenderContext {
 	public var lightSystem : h3d.scene.LightSystem;
 	public var extraShaders : hxsl.ShaderList;
 	public var visibleFlag : Bool;
+	public var debugCulling : Bool;
+	public var wasContextLost : Bool;
 	public var shaderBuffers : h3d.shader.Buffers;
 	public var cullingCollider : h3d.col.Collider;
 
@@ -29,7 +31,7 @@ class RenderContext extends h3d.impl.RenderContext {
 	var cachedShaderList : Array<hxsl.ShaderList>;
 	var cachedPassObjects : Array<Renderer.PassObjects>;
 	var cachedPos : Int;
-	var passes : h3d.pass.PassObject;
+	var passes : Array<h3d.pass.PassObject>;
 	var lights : Light;
 	var currentManager : h3d.pass.ShaderManager;
 
@@ -52,7 +54,7 @@ class RenderContext extends h3d.impl.RenderContext {
 		sharedGlobals = [];
 		lights = null;
 		drawPass = null;
-		passes = null;
+		passes = [];
 		lights = null;
 		cachedPos = 0;
 		visibleFlag = true;
@@ -96,8 +98,10 @@ class RenderContext extends h3d.impl.RenderContext {
 			allocPool = o.nextAlloc;
 		o.pass = pass;
 		o.obj = obj;
-		o.next = passes;
-		passes = o;
+		if ( passes.length <= pass.passId )
+			passes.resize(pass.passId);
+		o.next = passes[pass.passId];
+		passes[pass.passId] = o;
 		return o;
 	}
 
@@ -146,7 +150,7 @@ class RenderContext extends h3d.impl.RenderContext {
 			c.s = null;
 			c.next = null;
 		}
-		passes = null;
+		passes = [];
 		lights = null;
 	}
 

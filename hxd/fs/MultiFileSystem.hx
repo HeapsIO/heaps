@@ -11,16 +11,10 @@ private class MultiFileEntry extends FileEntry {
 		name = el[0].name;
 	}
 
-	override function getSign() : Int return el[0].getSign();
-
 	override function getBytes() : haxe.io.Bytes return el[0].getBytes();
+	override function readBytes( bytes, outPos, pos, len ) return el[0].readBytes(bytes,outPos,pos,len);
 
-	override function open() el[0].open();
-	override function skip( nbytes : Int ) el[0].skip(nbytes);
-
-	override function readByte() : Int return el[0].readByte();
-	override function read( out : haxe.io.Bytes, pos : Int, size : Int ) return el[0].read(out, pos, size);
-	override function close() el[0].close();
+	override function open() return el[0].open();
 
 	override function load( ?onReady : Void -> Void ) : Void return el[0].load(onReady);
 	override function loadBitmap( onLoaded : LoadedBitmap -> Void ) : Void return el[0].loadBitmap(onLoaded);

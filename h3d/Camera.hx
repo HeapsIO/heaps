@@ -161,10 +161,12 @@ class Camera {
 		return p;
 	}
 
-	public function rayFromScreen( pixelX : Float, pixelY : Float ) {
+	public function rayFromScreen( pixelX : Float, pixelY : Float, sceneWidth = -1, sceneHeight = -1 ) {
 		var engine = h3d.Engine.getCurrent();
-		var rx = (pixelX / engine.width - 0.5) * 2;
-		var ry = (0.5 - pixelY / engine.height) * 2;
+		if( sceneWidth < 0 ) sceneWidth = engine.width;
+		if( sceneHeight < 0 ) sceneHeight = engine.height;
+		var rx = (pixelX / sceneWidth - 0.5) * 2;
+		var ry = (0.5 - pixelY / sceneHeight) * 2;
 		return h3d.col.Ray.fromPoints(unproject(rx, ry, 0).toPoint(), unproject(rx, ry, 1).toPoint());
 	}
 
@@ -351,8 +353,10 @@ class Camera {
 	/**
 		Project a 3D point into the 2D screen. Make sure to update() the camera if it's been moved before using that.
 	**/
-	public function project( x : Float, y : Float, z : Float, screenWidth : Float, screenHeight : Float, snapToPixel = true ) {
-		var p = new h3d.Vector(x, y, z);
+	public function project( x : Float, y : Float, z : Float, screenWidth : Float, screenHeight : Float, snapToPixel = true, ?p: h3d.Vector) {
+		if(p == null)
+			p = new h3d.Vector();
+		p.set(x, y, z);
 		p.project(m);
 		p.x = (p.x + 1) * 0.5 * screenWidth;
 		p.y = (-p.y + 1) * 0.5 * screenHeight;
@@ -361,6 +365,14 @@ class Camera {
 			p.y = Math.round(p.y);
 		}
 		return p;
+	}
+
+	public function distanceToDepth( dist : Float ) {
+		return ((zFar + zNear - 2.0 * zNear * zFar / hxd.Math.clamp(dist, zNear, zFar)) / (zFar - zNear) + 1.0) / 2.0;
+	}
+
+	public function depthToDistance( depth : Float ) {
+		return (hxd.Math.clamp(depth, 0, 1) * zFar - zNear * zFar) / (zFar - zNear);
 	}
 
 	public function load( cam : Camera ) {

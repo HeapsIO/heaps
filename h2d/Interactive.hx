@@ -11,7 +11,7 @@ package h2d;
 	By default, Interactive only reacts to primary (left) mouse button for actions, see `Interactive.enableRightButton` for details.
 **/
 @:allow(h2d.Scene)
-class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
+class Interactive extends Object implements hxd.SceneEvents.Interactive {
 
 	/**
 		Width of the Interactive. Ignored if `Interactive.shape` is set.
@@ -25,6 +25,7 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 		Cursor used when Interactive is under mouse cursor.
 	**/
 	public var cursor(default,set) : Null<hxd.Cursor> = Button;
+
 	/**
 		Performs an elliptic hit-test instead of rectangular one based on `Interactive.width` and `height`. Ignored if `Interactive.shape` is set.
 	**/
@@ -37,22 +38,28 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 		Set the default `hxd.Event.propagate` mode.
 	**/
 	public var propagateEvents : Bool = false;
+
+	/**
+		When enabled, interacting with secondary mouse buttons (right button/wheel) will cause `onPush`, `onClick`, `onRelease` and `onReleaseOutside` callbacks.
+		Otherwise those callbacks will only be triggered with primary mouse button (left button).
+	**/
+	public var enableRightButton : Bool = false;
+
+	/**
+	 	When enabled, allows to receive several onClick events the same frame.
+	**/
+	public var allowMultiClick : Bool = false;
+
 	/**
 		If set, Interactive will draw a `Tile` with `[width, height]` dimensions of specified color (including alpha).
 	**/
 	public var backgroundColor : Null<Int>;
-	/**
-		When enabled, interacting with secondary mouse buttons (right button/wheel) will cause `onPush`, `onClick`, `onRelease` and `onReleaseOutside` callbacks.
-		Otherwise those callbacks will only be triggered with primary mouse button (left button).
 
-		Note that Interactive remembers only the last pressed button when pressing on it, hence pressing Interactive with the left button and then the right button
-		would not cause `onClick` on either when releasing left button first, as pressed state is reset internally.
-	**/
-	public var enableRightButton : Bool = false;
 	var scene : Scene;
 	var mouseDownButton : Int = -1;
-	var parentMask : Mask;
+	var lastClickFrame : Int = -1;
 	var invDet : Float;
+	var maskedBounds : h2d.col.Bounds;
 
 	/**
 		Detailed shape collider for Interactive.
@@ -85,11 +92,11 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 	override function onAdd() {
 		this.scene = getScene();
 		if( scene != null ) scene.addEventTarget(this);
-		updateMask();
 		super.onAdd();
 	}
 
 	override function draw( ctx : RenderContext ) {
+		maskedBounds = ctx.getCurrentRenderZone();
 		if( backgroundColor != null ) emitTile(ctx, h2d.Tile.fromColor(backgroundColor, Std.int(width), Std.int(height), (backgroundColor>>>24)/255 ));
 	}
 
@@ -106,21 +113,6 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 			scene = getScene();
 			if( scene != null )
 				scene.addEventTarget(this);
-		}
-		if ( parentChanged )
-			updateMask();
-	}
-
-	function updateMask() {
-		parentMask = null;
-		var p = parent;
-		while( p != null ) {
-			var m = hxd.impl.Api.downcast(p, Mask);
-			if( m != null ) {
-				parentMask = m;
-				break;
-			}
-			p = p.parent;
 		}
 	}
 
@@ -153,20 +145,12 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 
 	@:dox(hide)
 	@:noCompletion public function handleEvent( e : hxd.Event ) {
-		if( parentMask != null && checkBounds(e) ) {
-			var p = parentMask;
+		if( maskedBounds != null && checkBounds(e) ) {
 			var pt = new h2d.col.Point(e.relX, e.relY);
 			localToGlobal(pt);
-			var saveX = pt.x, saveY = pt.y;
-			while( p != null ) {
-				pt.x = saveX;
-				pt.y = saveY;
-				var pt = p.globalToLocal(pt);
-				if( pt.x < 0 || pt.y < 0 || pt.x > p.width || pt.y > p.height ) {
-					e.cancel = true;
-					return;
-				}
-				p = @:privateAccess p.parentMask;
+			if( pt.x < maskedBounds.xMin || pt.y < maskedBounds.yMin || pt.x > maskedBounds.xMax || pt.y > maskedBounds.yMax ) {
+				e.cancel = true;
+				return;
 			}
 		}
 		if(shape == null && isEllipse && checkBounds(e) ) {
@@ -192,8 +176,11 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 		case ERelease:
 			if( enableRightButton || e.button == 0 ) {
 				onRelease(e);
-				if( mouseDownButton == e.button )
+				var frame = hxd.Timer.frameCount;
+				if( mouseDownButton == e.button && (lastClickFrame != frame || allowMultiClick) ) {
 					onClick(e);
+					lastClickFrame = frame;
+				}
 			}
 			mouseDownButton = -1;
 		case EReleaseOutside:
@@ -208,6 +195,7 @@ class Interactive extends Drawable implements hxd.SceneEvents.Interactive {
 		case EOut:
 			onOut(e);
 		case EWheel:
+			e.propagate = true; // propagate wheel events by default
 			onWheel(e);
 		case EFocusLost:
 			onFocusLost(e);

@@ -72,10 +72,10 @@ class Group extends Filter {
 		}
 	}
 
-	override function getBounds(s:Object, bounds:h2d.col.Bounds) {
+	override function getBounds(s:Object, bounds:h2d.col.Bounds, scale:h2d.col.Point) {
 		for( f in filters )
 			if( f.enable && !f.autoBounds )
-				f.getBounds(s, bounds);
+				f.getBounds(s, bounds, scale);
 	}
 
 	override function draw( ctx : RenderContext, input : h2d.Tile ) {

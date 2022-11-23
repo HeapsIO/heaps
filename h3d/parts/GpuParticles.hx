@@ -1,7 +1,7 @@
 package h3d.parts;
 import hxd.Math;
 
-private typedef GpuSave = {
+typedef GpuSave = {
 	var type : String;
 	var version : Int;
 	var bounds : Array<Float>;
@@ -49,7 +49,7 @@ enum GpuEmitMode {
 	Disc;
 }
 
-private class GpuPart {
+class GpuPart {
 
 	public var index : Int;
 
@@ -165,6 +165,8 @@ class GpuPartGroup {
 	public var colorGradient : h3d.mat.Texture	= null;
 
 	public var isRelative(default, set) : Bool	= false;
+	public var attachToCam(default, set) : Bool	= false;
+	public var distanceToCam(default, set) : Float	= 0;
 
 	inline function set_sortMode(v) { needRebuild = true; return sortMode = v; }
 	inline function set_size(v) { needRebuild = true; return size = v; }
@@ -189,6 +191,8 @@ class GpuPartGroup {
 	inline function set_rotSpeed(v) { needRebuild = true; return rotSpeed = v; }
 	inline function set_rotSpeedRand(v) { needRebuild = true; return rotSpeedRand = v; }
 	inline function set_isRelative(v) { needRebuild = true; return isRelative = v; }
+	inline function set_attachToCam(v) { needRebuild = true; return attachToCam = v; }
+	inline function set_distanceToCam(v) { needRebuild = true; return distanceToCam = v; }
 
 	public function new(parent) {
 		this.parent = parent;
@@ -901,7 +905,7 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 				return; // was removed
 		}
 
-		if( !ctx.visibleFlag && !alwaysSync )
+		if( !ctx.visibleFlag && !alwaysSyncAnimation )
 			return;
 
 		for( g in groups ) {
@@ -963,7 +967,17 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 					g.pshader.transform.load(absPos);
 				else
 					g.pshader.transform.identity();
-				g.pshader.offset.set(0, 0, 0);
+				if ( g.attachToCam ) {
+					ignoreParentTransform = true;
+					var camPos = ctx.camera.pos;
+					var camDir = ctx.camera.target.sub(ctx.camera.pos).normalized().clone();
+					var offset = camDir;
+					offset.scale(g.distanceToCam);
+					var emitterPos = camPos.add(offset);
+					g.pshader.offset.set( getAbsPos().getPosition().x + emitterPos.x, getAbsPos().getPosition().y + emitterPos.y, getAbsPos().getPosition().z + emitterPos.z );
+				}
+				else
+					g.pshader.offset.set(0, 0, 0);
 			}
 		}
 
@@ -994,34 +1008,5 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 			return h3d.mat.Texture.fromColor(0xFF00FF);
 		}
 	}
-
-	#if (hxbit && !macro && heaps_enable_serialize)
-	override function serialize( ctx : hxbit.Serializer ) {
-		var oldMat = materials;
-		primitive = null;
-		materials = [];
-		super.serialize(ctx);
-		materials = oldMat;
-	}
-	override function customSerialize(ctx:hxbit.Serializer) {
-		super.customSerialize(ctx);
-		ctx.addString(resourcePath);
-		ctx.addFloat(amount);
-		if( resourcePath == null )
-			ctx.addDynamic(save());
-
-	}
-	override function customUnserialize(ctx:hxbit.Serializer) {
-		super.customUnserialize(ctx);
-		resourcePath = ctx.getString();
-		amount = ctx.getFloat();
-		groups = [];
-		bounds = new h3d.col.Bounds();
-		if( resourcePath != null )
-			load(haxe.Json.parse(hxd.res.Loader.currentInstance.load(resourcePath).toText()), resourcePath);
-		else
-			load(ctx.getDynamic());
-	}
-	#end
 
 }

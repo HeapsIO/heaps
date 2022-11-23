@@ -223,12 +223,16 @@ class Pad {
 	public var config : PadConfig = DEFAULT_CONFIG;
 	public var xAxis(get,never) : Float;
 	public var yAxis(get,never) : Float;
+	public var rxAxis(get,never) : Float;
+	public var ryAxis(get,never) : Float;
 	public var axisDeadZone : Float = 0.1;
 	public var buttons : Array<Bool> = [];
 	public var values : Array<Float> = [];
 	var prevButtons : Array<Bool> = [];
 	var rawXAxis : Float = 0.;
 	var rawYAxis : Float = 0.;
+	var rawRXAxis : Float = 0.;
+	var rawRYAxis : Float = 0.;
 
 	function get_xAxis() {
 		if( rawXAxis*rawXAxis + rawYAxis*rawYAxis < axisDeadZone*axisDeadZone ) return 0.;
@@ -238,6 +242,16 @@ class Pad {
 	function get_yAxis() {
 		if( rawXAxis*rawXAxis + rawYAxis*rawYAxis < axisDeadZone*axisDeadZone ) return 0.;
 		return rawYAxis;
+	}
+
+	function get_rxAxis() {
+		if( rawRXAxis*rawRXAxis + rawRYAxis*rawRYAxis < axisDeadZone*axisDeadZone ) return 0.;
+		return rawRXAxis;
+	}
+
+	function get_ryAxis() {
+		if( rawRXAxis*rawRXAxis + rawRYAxis*rawRYAxis < axisDeadZone*axisDeadZone ) return 0.;
+		return rawRYAxis;
 	}
 
 	public dynamic function onDisconnect(){
@@ -257,6 +271,7 @@ class Pad {
 
 	public function reset() {
 		rawXAxis = rawYAxis = 0;
+		rawRXAxis = rawRYAxis = 0;
 		for( i in 0...buttons.length ) buttons[i] = false;
 		for( i in 0...buttons.length ) prevButtons[i] = false;
 		for( i in 0...values.length ) values[i] = 0;
@@ -267,6 +282,24 @@ class Pad {
 		d.rumble( strength, Std.int(time_s*1000.) );
 		#elseif (hldx || usesys)
 		d.rumble( strength, time_s );
+		#elseif js
+		var d: Dynamic = d;
+		var time = Std.int(time_s * 1000.);
+
+		// FF and Safari
+		if (d.hapticActuators != null && d.hapticActuators.length > 0) {
+			d.hapticActuators[0].pulse(strength, time);
+			return;
+		}
+
+		// Chrome
+		if (d.vibrationActuator != null) {
+			d.vibrationActuator.playEffect('dual-rumble', {
+				duration: time,
+				strongMagnitude: strength,
+				weakMagnitude: strength,
+			});
+		}
 		#end
 	}
 
@@ -312,6 +345,10 @@ class Pad {
 		Wait until a gamepad gets connected. On some platforms, this might require the user to press a button until it activates
 	**/
 	public static function wait( onPad : Pad -> Void ) {
+		#if js
+		if( !js.Browser.supported )
+			return;
+		#end
 		waitPad = onPad;
 		#if flash
 		if( !initDone ) {
@@ -328,6 +365,7 @@ class Pad {
 				p.d.enabled = true;
 				var axisCount = 0;
 				var axisX = 0, axisY = 1;
+				var raxisX = 2, raxisY = 3;
 				for( i in 0...p.d.numControls ) {
 					var c = p.d.getControlAt(i);
 					var cid = c.id;
@@ -344,6 +382,10 @@ class Pad {
 								p.rawXAxis = v;
 							else if( axisID == axisY )
 								p.rawYAxis = -v;
+							else if( axisID == raxisX)
+								p.rawRXAxis = v;
+							else if( axisID == raxisY)
+								p.rawRYAxis = -v;
 						});
 					} else if( StringTools.startsWith(c.id, "BUTTON_") ) {
 						c.addEventListener(flash.events.Event.CHANGE, function(_) {
@@ -456,6 +498,10 @@ class Pad {
 			rawXAxis = v;
 		else if( axisId == 1 )
 			rawYAxis = v;
+		else if( axisId == 2 )
+			rawRXAxis = v;
+		else if( axisId == 3 )
+			rawRYAxis = v;
 	}
 
 	static function initPad( index ){
@@ -534,6 +580,10 @@ class Pad {
 					p.rawXAxis = v;
 				else if( ii == GameController.CONFIG.analogY )
 					p.rawYAxis = -v;
+				else if( ii == GameController.CONFIG.ranalogX )
+					p.rawRXAxis = v;
+				else if( ii == GameController.CONFIG.ranalogY )
+					p.rawRYAxis = -v;
 			}
 		}
 	}
@@ -583,6 +633,10 @@ class Pad {
 				if( i == 0 ) {
 					p.rawXAxis = x;
 					p.rawYAxis = y;
+				}
+				else if( i == 1 ) {
+					p.rawRXAxis = x;
+					p.rawRYAxis = y;
 				}
 			}
 		}

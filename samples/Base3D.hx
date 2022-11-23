@@ -50,7 +50,7 @@ class Base3D extends SampleApp {
 		light.enableSpecular = true;
 
 		// set the ambient light to 30%
-		s3d.lightSystem.ambientLight.set(0.3, 0.3, 0.3);
+		cast(s3d.lightSystem,h3d.scene.fwd.LightSystem).ambientLight.set(0.3, 0.3, 0.3);
 
 		// disable shadows
 		obj1.material.shadows = false;

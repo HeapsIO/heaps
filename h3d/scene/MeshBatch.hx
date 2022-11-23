@@ -6,6 +6,10 @@ private class BatchData {
 
 	public var paramsCount : Int;
 	public var maxInstance : Int;
+	public var matIndex : Int;
+	public var indexCount : Int;
+	public var indexStart : Int;
+	public var instanceBuffers : Array<h3d.impl.InstanceBuffer>;
 	public var buffers : Array<h3d.Buffer> = [];
 	public var data : hxd.FloatBuffer;
 	public var params : hxsl.RuntimeShader.AllocParam;
@@ -19,32 +23,38 @@ private class BatchData {
 
 }
 
-interface MeshBatchAccess {
-	var perInstance : Bool;
+class MeshBatchPart {
+	public var indexStart : Int;
+	public var indexCount : Int;
+	public var baseVertex : Int;
+	public var bounds : h3d.col.Bounds;
+	public function new() {
+	}
 }
 
 /**
 	h3d.scene.MeshBatch allows to draw multiple meshed in a single draw call.
 	See samples/MeshBatch.hx for an example.
 **/
-class MeshBatch extends Mesh {
+class MeshBatch extends MultiMaterial {
 
-	var instanced : h3d.prim.Instanced;
-	var curInstances : Int = 0;
-	var dataPasses : BatchData;
-	var indexCount : Int;
-	var modelViewID = hxsl.Globals.allocID("global.modelView");
-	var modelViewInverseID = hxsl.Globals.allocID("global.modelViewInverse");
-	var colorSave = new h3d.Vector();
-	var colorMult : h3d.shader.ColorMult;
-	var needUpload = false;
-
+	static var modelViewID = hxsl.Globals.allocID("global.modelView");
+	static var modelViewInverseID = hxsl.Globals.allocID("global.modelViewInverse");
 	static var MAX_BUFFER_ELEMENTS = 4096;
 
+	var instanced : h3d.prim.Instanced;
+	var dataPasses : BatchData;
+	var needUpload = false;
+
 	/**
-		Tells if we can use material.color as a global multiply over each instance color (default: true)
+		Set if shader list or shader constants has changed, before calling begin()
 	**/
-	public var allowGlobalMaterialColor : Bool = true;
+	public var shadersChanged = true;
+
+	/**
+		The number of instances on this batch
+	**/
+	public var instanceCount(default,null) : Int = 0;
 
 	/**
 	 * 	If set, use this position in emitInstance() instead MeshBatch absolute position
@@ -53,18 +63,23 @@ class MeshBatch extends Mesh {
 	var invWorldPosition : Matrix;
 
 	/**
-		Set if shader list or shader constants has changed, before calling begin()
+		Tells the mesh batch to draw only a subpart of the primitive
 	**/
-	public var shadersChanged = true;
+	public var primitiveSubPart : MeshBatchPart;
+	var primitiveSubBytes : haxe.io.Bytes;
+
+	/** 
+		If set, exact bounds will be recalculated during emitInstance (default true)
+	**/
+	public var calcBounds = true;
 
 	public function new( primitive, ?material, ?parent ) {
 		instanced = new h3d.prim.Instanced();
 		instanced.commands = new h3d.impl.InstanceBuffer();
 		instanced.setMesh(primitive);
-		super(instanced, material, parent);
+		super(instanced, material == null ? null : [material], parent);
 		for( p in this.material.getPasses() )
 			@:privateAccess p.batchMode = true;
-		indexCount = primitive.indexes == null ? primitive.triCount() * 3 : primitive.indexes.count;
 	}
 
 	override function onRemove() {
@@ -78,10 +93,15 @@ class MeshBatch extends Mesh {
 			dataPasses.pass.removeShader(dataPasses.shader);
 			for( b in dataPasses.buffers )
 				alloc.disposeBuffer(b);
+			if( dataPasses.instanceBuffers != null ) {
+				for( b in dataPasses.instanceBuffers )
+					b.dispose();
+			}
 			alloc.disposeFloats(dataPasses.data);
 			dataPasses = dataPasses.next;
 		}
-		instanced.commands.dispose();
+		if( instanced.commands != null )
+			instanced.commands.dispose();
 		shadersChanged = true;
 	}
 
@@ -89,79 +109,45 @@ class MeshBatch extends Mesh {
 		var scene = getScene();
 		if( scene == null ) return;
 		cleanPasses();
-		for( p in material.getPasses() ) @:privateAccess {
-			var ctx = scene.renderer.getPassByName(p.name);
-			if( ctx == null ) throw "Could't find renderer pass "+p.name;
+		for( index in 0...materials.length ) {
+			var mat = materials[index];
+			if( mat == null ) continue;
+			var matInfo = @:privateAccess instanced.primitive.getMaterialIndexes(index);
+			for( p in mat.getPasses() ) @:privateAccess {
+				var ctx = scene.renderer.getPassByName(p.name);
+				if( ctx == null ) throw "Could't find renderer pass "+p.name;
 
-			var manager = cast(ctx,h3d.pass.Default).manager;
-			var shaders = p.getShadersRec();
+				var manager = cast(ctx,h3d.pass.Default).manager;
+				var shaders = p.getShadersRec();
+				var rt = manager.compileShaders(shaders, false);
+				var shader = manager.shaderCache.makeBatchShader(rt, shaders);
 
-			// Keep only batched shader
-			var batchShaders : ShaderList = shaders;
-			var prev = null;
-			var cur = batchShaders;
-			while( cur != null ) {
-				if( hxd.impl.Api.isOfType(cur.s, MeshBatchAccess) ) {
-					var access : MeshBatchAccess = cast cur.s;
-					if( !access.perInstance ) {
-						if( prev != null )
-							prev.next = cur.next;
-						else
-							batchShaders = cur.next;
-						cur = cur.next;
-					}
-					else {
-						prev = cur;
-						cur = cur.next;
-					}
+				var b = new BatchData();
+				b.indexCount = matInfo.count;
+				b.indexStart = matInfo.start;
+				b.paramsCount = shader.paramsSize;
+				b.maxInstance = Std.int(MAX_BUFFER_ELEMENTS / b.paramsCount);
+				b.params = shader.params;
+				b.shader = shader;
+				b.pass = p;
+				b.matIndex = index;
+				b.shaders = [null/*link shader*/];
+				p.dynamicParameters = true;
+				p.batchMode = true;
+
+				b.next = dataPasses;
+				dataPasses = b;
+
+				var sl = shaders;
+				while( sl != null ) {
+					b.shaders.push(sl.s);
+					sl = sl.next;
 				}
-				else {
-					prev = cur;
-					cur = cur.next;
-				}
+				shader.Batch_Count = b.maxInstance * b.paramsCount;
+				shader.Batch_HasOffset = primitiveSubPart != null;
+				shader.constBits = (shader.Batch_Count << 1) | (shader.Batch_HasOffset ? 1 : 0);
+				shader.updateConstants(null);
 			}
-
-			var rt = manager.compileShaders(batchShaders, false);
-			var shader = manager.shaderCache.makeBatchShader(rt);
-
-			var b = new BatchData();
-			b.paramsCount = rt.vertex.paramsSize + rt.fragment.paramsSize;
-			b.maxInstance = Std.int(MAX_BUFFER_ELEMENTS / b.paramsCount);
-			b.params = rt.fragment.params == null ? null : rt.fragment.params.clone();
-
-			var hd = b.params;
-			while( hd != null ) {
-				hd.pos += rt.vertex.paramsSize << 2;
-				hd = hd.next;
-			}
-
-			if( b.params == null )
-				b.params = rt.vertex.params;
-			else if( rt.vertex != null ) {
-				var vl = rt.vertex.params.clone();
-				var hd = vl;
-				while( vl.next != null ) vl = vl.next;
-				vl.next = b.params;
-				b.params = hd;
-			}
-
-			b.shader = shader;
-			b.pass = p;
-			b.shaders = [null/*link shader*/];
-			p.dynamicParameters = true;
-
-			var alloc = hxd.impl.Allocator.get();
-			b.next = dataPasses;
-			dataPasses = b;
-
-			var sl = batchShaders;
-			while( sl != null ) {
-				b.shaders.push(sl.s);
-				sl = sl.next;
-			}
-			shader.Batch_Count = b.maxInstance * b.paramsCount;
-			shader.constBits = b.maxInstance * b.paramsCount;
-			shader.updateConstants(null);
 		}
 
 		// add batch shaders
@@ -173,27 +159,11 @@ class MeshBatch extends Mesh {
 	}
 
 	public function begin( emitCountTip = -1, resizeDown = false ) {
-		colorSave.load(material.color);
-
-		curInstances = 0;
+		instanceCount = 0;
+		instanced.initBounds();
 		if( shadersChanged ) {
-			if( colorMult != null ) {
-				material.mainPass.removeShader(colorMult);
-				colorMult = null;
-			}
 			initShadersMapping();
 			shadersChanged = false;
-			if( allowGlobalMaterialColor ) {
-				if( colorMult == null ) {
-					colorMult = new h3d.shader.ColorMult();
-					material.mainPass.addShader(colorMult);
-				}
-			} else {
-				if( colorMult != null ) {
-					material.mainPass.removeShader(colorMult);
-					colorMult = null;
-				}
-			}
 		}
 
 		if( emitCountTip < 0 )
@@ -212,9 +182,9 @@ class MeshBatch extends Mesh {
 
 	function syncData( batch : BatchData ) {
 
-		var startPos = batch.paramsCount * curInstances << 2;
+		var startPos = batch.paramsCount * instanceCount << 2;
 		// in case we are bigger than emitCountTip
-		if( startPos + batch.paramsCount > batch.data.length )
+		if( startPos + (batch.paramsCount<<2) > batch.data.length )
 			batch.data.grow(batch.data.length << 1);
 
 		var p = batch.params;
@@ -292,15 +262,50 @@ class MeshBatch extends Mesh {
 		needUpload = true;
 	}
 
+	override function getBoundsRec( b : h3d.col.Bounds ) {
+		var old = primitive;
+		primitive = null;
+		b = super.getBoundsRec(b);
+		primitive = old;
+		if( primitive == null || flags.has(FIgnoreBounds) )
+			return b;
+		b.add(primitive.getBounds());
+		return b;
+	}
+
 	public function emitInstance() {
-		syncPos();
+		if( worldPosition == null ) syncPos();
+		var ps = primitiveSubPart;
+		if( ps != null ) @:privateAccess {
+			if(calcBounds) {
+				instanced.tmpBounds.load(primitiveSubPart.bounds);
+				instanced.tmpBounds.transform(worldPosition == null ? absPos : worldPosition);
+				instanced.bounds.add(instanced.tmpBounds);
+			}
+
+			if( primitiveSubBytes == null ) {
+				primitiveSubBytes = haxe.io.Bytes.alloc(128);
+				instanced.commands = null;
+			}
+			if( primitiveSubBytes.length < (instanceCount+1) * 20 ) {
+				var next = haxe.io.Bytes.alloc(Std.int(primitiveSubBytes.length*3/2));
+				next.blit(0, primitiveSubBytes, 0, instanceCount * 20);
+				primitiveSubBytes = next;
+			}
+			var p = instanceCount * 20;
+			primitiveSubBytes.setInt32(p, ps.indexCount);
+			primitiveSubBytes.setInt32(p + 4, 1);
+			primitiveSubBytes.setInt32(p + 8, ps.indexStart);
+			primitiveSubBytes.setInt32(p + 12, ps.baseVertex);
+			primitiveSubBytes.setInt32(p + 16, 0);
+		} else if(calcBounds)
+			instanced.addInstanceBounds(worldPosition == null ? absPos : worldPosition);
 		var p = dataPasses;
 		while( p != null ) {
 			syncData(p);
 			p = p.next;
 		}
-		if( allowGlobalMaterialColor ) material.color.load(colorSave);
-		curInstances++;
+		instanceCount++;
 	}
 
 	public inline function canEmitInstance() {
@@ -309,25 +314,38 @@ class MeshBatch extends Mesh {
 
 	override function sync(ctx:RenderContext) {
 		super.sync(ctx);
-		if( curInstances == 0 ) return;
+		if( instanceCount == 0 ) return;
 		var p = dataPasses;
 		var alloc = hxd.impl.Allocator.get();
+		var psBytes = primitiveSubBytes;
 		while( p != null ) {
 			var index = 0;
 			var start = 0;
-			while( start < curInstances ) {
+			while( start < instanceCount ) {
 				var upload = needUpload;
 				var buf = p.buffers[index];
+				var count = instanceCount - start;
+				if( count > p.maxInstance )
+					count = p.maxInstance;
 				if( buf == null || buf.isDisposed() ) {
 					buf = alloc.allocBuffer(MAX_BUFFER_ELEMENTS,4,UniformDynamic);
 					p.buffers[index] = buf;
 					upload = true;
 				}
-				var count = curInstances - start;
-				if( count > p.maxInstance )
-					count = p.maxInstance;
 				if( upload )
 					buf.uploadVector(p.data, start * p.paramsCount * 4, count * p.paramsCount);
+				if( psBytes != null ) {
+					if( p.instanceBuffers == null ) p.instanceBuffers = [];
+					var buf = p.instanceBuffers[index];
+					if( buf == null /*|| buf.isDisposed()*/ ) {
+						buf = new h3d.impl.InstanceBuffer();
+						var sub = psBytes.sub(start*20,count*20);
+						for( i in 0...count )
+							sub.setInt32(i*20+16, i);
+						buf.setBuffer(count, sub);
+						p.instanceBuffers[index] = buf;
+					}
+				}
 				start += count;
 				index++;
 			}
@@ -335,34 +353,54 @@ class MeshBatch extends Mesh {
 				alloc.disposeBuffer(p.buffers.pop());
 			p = p.next;
 		}
+		if( psBytes != null ) {
+			var prim = cast(primitive,h3d.prim.MeshPrimitive);
+			var offsets = @:privateAccess prim.getBuffer("Batch_Start");
+			if( offsets == null || offsets.vertices < instanceCount || offsets.isDisposed() ) {
+				if( offsets != null ) offsets.dispose();
+				var tmp = haxe.io.Bytes.alloc(4 * instanceCount);
+				for( i in 0...instanceCount )
+					tmp.setFloat(i<<2, i);
+				offsets = new h3d.Buffer(instanceCount, 1);
+				offsets.uploadBytes(tmp,0,instanceCount);
+				@:privateAccess prim.addBuffer("Batch_Start", offsets);
+			}
+		}
 		needUpload = false;
-		if( colorMult != null ) colorMult.color.load(material.color);
 	}
 
 	override function draw(ctx:RenderContext) {
 		var p = dataPasses;
 		while( true ) {
 			if( p.pass == ctx.drawPass.pass ) {
-				p.shader.Batch_Buffer = p.buffers[ctx.drawPass.index];
-				var count = curInstances - p.maxInstance * ctx.drawPass.index;
-				instanced.commands.setCommand(count,indexCount);
+				var bufferIndex = ctx.drawPass.index & 0xFFFF;
+				p.shader.Batch_Buffer = p.buffers[bufferIndex];
+				if( p.instanceBuffers == null ) {
+					var count = instanceCount - p.maxInstance * bufferIndex;
+					instanced.commands.setCommand(count,p.indexCount,p.indexStart);
+				} else
+					instanced.commands = p.instanceBuffers[bufferIndex];
 				break;
 			}
 			p = p.next;
 		}
 		ctx.uploadParams();
+		var prev = ctx.drawPass.index;
+		ctx.drawPass.index >>= 16;
 		super.draw(ctx);
+		ctx.drawPass.index = prev;
 	}
 
 	override function emit(ctx:RenderContext) {
-		if( curInstances == 0 ) return;
+		if( instanceCount == 0 ) return;
 		var p = dataPasses;
 		while( p != null ) {
 			var pass = p.pass;
 			// check that the pass is still enable
-			if( material.getPass(pass.name) != null ) {
+			var material = materials[p.matIndex];
+			if( material != null && material.getPass(pass.name) != null ) {
 				for( i in 0...p.buffers.length )
-					ctx.emitPass(pass, this).index = i;
+					ctx.emitPass(pass, this).index = i | (p.matIndex << 16);
 			}
 			p = p.next;
 		}

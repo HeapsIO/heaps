@@ -140,6 +140,7 @@ class Macros {
 	static function buildFields( shader : ShaderData, inits : Array<{ v : TVar, e : Ast.TExpr }>, pos : Position ) {
 		var fields = new Array<Field>();
 		var globals = [], consts = [], params = [], eparams = [], tparams = [];
+		var metas = [{ name : ":noCompletion", pos : pos }, { name : ":keep", pos : pos }];
 		for( v in shader.vars ) {
 			var cpos = consts.length;
 			getConsts(v, pos, consts);
@@ -162,7 +163,7 @@ class Macros {
 					name : name,
 					pos : pos,
 					kind : FVar(t, initVal != null ? makeInit(initVal) : makeDef(v.type, pos)),
-					meta : [{ name : ":noCompletion", pos : pos }],
+					meta : metas,
 				};
 				var fget : Field = {
 					name : "get_" + v.name,
@@ -179,7 +180,7 @@ class Macros {
 							},
 					}),
 					access : [AInline],
-					meta : [{ name : ":noCompletion", pos : pos }],
+					meta : metas,
 				};
 				var fset : Field = {
 					name : "set_" + v.name,
@@ -196,7 +197,7 @@ class Macros {
 							}
 					}),
 					access : [AInline],
-					meta : [{ name : ":noCompletion", pos : pos }],
+					meta : metas,
 				};
 				fields.push(f);
 				fields.push(f2);
@@ -308,6 +309,31 @@ class Macros {
 			}),
 			access : [AOverride],
 		});
+		index = 0;
+		fields.push( {
+			name : "setParamIndexValue",
+			pos : pos,
+			kind : FFun( {
+				args : [ { name : "index", type : macro : Int }, { name : "val", type : macro : Dynamic } ],
+				expr : {
+					expr : ESwitch(macro index, [for( p in eparams ) { values : [macro $v{ index++ } ], expr : macro $p = val } ], macro {}),
+					pos : pos,
+				},
+			}),
+			access : [AOverride],
+		});
+		fields.push( {
+			name : "setParamIndexFloatValue",
+			pos : pos,
+			kind : FFun( {
+				args : [ { name : "index", type : macro : Int }, { name : "val", type : macro : Float } ],
+				expr : {
+					expr : ESwitch(macro index, [for( i in 0...tparams.length ) if( tparams[i] == TFloat ) { values : [macro $v{i}], expr : macro ${eparams[i]} = val }], macro {}),
+					pos : pos,
+				},
+			}),
+			access : [AOverride],
+		});
 		if( params.length > 0 ) {
 			var cexpr = [];
 			var type = Context.getLocalClass().toString().split(".").pop();
@@ -384,6 +410,8 @@ class Macros {
 							supFields.remove("updateConstants");
 							supFields.remove("getParamValue");
 							supFields.remove("getParamFloatValue");
+							supFields.remove("setParamValue");
+							supFields.remove("setParamFloatValue");
 							supFields.remove("clone");
 							csup = tsup.superClass;
 						} while( true);

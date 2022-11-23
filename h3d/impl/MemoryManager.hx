@@ -225,15 +225,25 @@ class MemoryManager {
 
 	// ------------------------------------- TEXTURES ------------------------------------------
 
-	function bpp( t : h3d.mat.Texture ) {
-		return 4;
+	function memSize( t : h3d.mat.Texture ) {
+		if( t.flags.has(AsyncLoading) && t.flags.has(Loading) )
+			return 4; // 1x1 pixel
+		var size = hxd.Pixels.calcDataSize(t.width,t.height,t.format);
+		if( t.mipLevels > 0 ) {
+			for( i in 1...t.mipLevels ) {
+				var w = t.width >> i; if( w == 0 ) w = 1;
+				var h = t.height >> i; if( h == 0 ) h = 1;
+				size += hxd.Pixels.calcDataSize(w,h,t.format);
+			}
+		}
+		return size * t.layerCount;
 	}
 
 	public function cleanTextures( force = true ) {
 		textures.sort(sortByLRU);
 		for( t in textures ) {
 			if( t.realloc == null || t.isDisposed() ) continue;
-			if( force || t.lastFrame < hxd.Timer.frameCount - 3600 ) {
+			if( (force || t.lastFrame < hxd.Timer.frameCount - 3600) && t.lastFrame != h3d.mat.Texture.PREVENT_AUTO_DISPOSE ) {
 				t.dispose();
 				return true;
 			}
@@ -249,32 +259,36 @@ class MemoryManager {
 	function deleteTexture( t : h3d.mat.Texture ) {
 		if( !textures.remove(t) ) return;
 		driver.disposeTexture(t);
-		texMemory -= t.width * t.height * bpp(t);
+		texMemory -= memSize(t);
 	}
 
 	@:allow(h3d.mat.Texture.alloc)
 	function allocTexture( t : h3d.mat.Texture ) {
-		var free = cleanTextures(false);
-		t.t = driver.allocTexture(t);
-		if( t.t == null ) {
+		while( true ) {
+			var free = cleanTextures(false);
+			t.t = driver.allocTexture(t);
+			if( t.t != null ) break;
+
 			if( driver.isDisposed() ) return;
-			if( !cleanTextures(true) ) throw "Maximum texture memory reached";
-			allocTexture(t);
-			return;
+			while( cleanTextures(false) ) {} // clean all old textures
+			if( !free && !cleanTextures(true) )
+				throw "Maximum texture memory reached";
 		}
 		textures.push(t);
-		texMemory += t.width * t.height * bpp(t);
+		texMemory += memSize(t);
 	}
 
 	@:allow(h3d.mat.DepthBuffer.alloc)
 	function allocDepth( b : h3d.mat.DepthBuffer ) {
-		var free = cleanTextures(false);
-		b.b = driver.allocDepthBuffer(b);
-		if( b.b == null ) {
+		while( true ) {
+			var free = cleanTextures(false);
+			b.b = driver.allocDepthBuffer(b);
+			if( b.b != null ) break;
+
 			if( driver.isDisposed() ) return;
-			if( !cleanTextures(true) ) throw "Maximum texture memory reached";
-			allocDepth(b);
-			return;
+			while( cleanTextures(false) ) {} // clean all old textures
+			if( !free && !cleanTextures(true) )
+				throw "Maximum texture memory reached";
 		}
 		depths.push(b);
 		texMemory += b.width * b.height * 4;
@@ -393,7 +407,7 @@ class MemoryManager {
 				all.push(inf);
 			}
 			inf.count++;
-			var size = t.width * t.height * bpp(t);
+			var size = memSize(t);
 			inf.size += size;
 			addStack(t.allocPos, inf.stacks, size);
 		}

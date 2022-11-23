@@ -10,8 +10,6 @@ class MacroHelper {
 		switch( e.expr ) {
 		case EConst(CIdent("gl")):
 			e.expr = EConst(CIdent("GL"));
-		case EConst(CIdent("GL2")):
-			e.expr = EConst(CIdent("GL"));
 		default:
 			haxe.macro.ExprTools.iter(e, replaceGLLoop);
 		}

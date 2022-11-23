@@ -8,6 +8,7 @@ private typedef TargetStackEntry = CameraStackEntry & {
 };
 
 private typedef RenderZoneStack = { hasRZ:Bool, x:Float, y:Float, w:Float, h:Float };
+private typedef FilterStack = { spr: h2d.Object, scaleX:Float, scaleY:Float };
 
 /**
 	A 2D scene renderer.
@@ -20,12 +21,12 @@ class RenderContext extends h3d.impl.RenderContext {
 	static inline var BUFFERING = #if heaps_emit_tile_buffering true #else false #end;
 
 	/**
-		Current transparency value used for rendering objects. 
+		Current transparency value used for rendering objects.
 		Automatically managed by `Object`.
 	**/
 	public var globalAlpha = 1.;
 	/**
-		Temporary vertex buffer used to emit Tiles when `RenderContext.BUFFERING` is on.  
+		Temporary vertex buffer used to emit Tiles when `RenderContext.BUFFERING` is on.
 		Otherwise it's `null`. Internal usage only.
 	**/
 	@:dox(hide)
@@ -96,8 +97,9 @@ class RenderContext extends h3d.impl.RenderContext {
 	var renderZoneStack:Array<RenderZoneStack> = [];
 	var renderZoneIndex:Int = 0;
 	var hasUVPos : Bool;
-	var filterStack : Array<h2d.Object>;
-	var inFilter : Object;
+	var filterStack : Array<FilterStack>;
+	var filterStackIndex : Int;
+	var inFilter : FilterStack;
 	var inFilterBlend : BlendMode;
 
 	var viewA : Float;
@@ -139,6 +141,7 @@ class RenderContext extends h3d.impl.RenderContext {
 		cameraStack = [];
 		cameraStackIndex = 0;
 		filterStack = [];
+		filterStackIndex = 0;
 	}
 
 	override function dispose() {
@@ -297,9 +300,43 @@ class RenderContext extends h3d.impl.RenderContext {
 	public function pushFilter( spr : h2d.Object ) {
 		if( filterStack.length == 0 && onEnterFilter != null )
 			if( !onEnterFilter(spr) ) return false;
-		filterStack.push(spr);
-		inFilter = spr;
+		inFilter = filterStack[filterStackIndex++];
+		if ( inFilter == null ) {
+			inFilter = { spr: null, scaleX: 1, scaleY: 1 };
+			filterStack.push(inFilter);
+		}
+		inFilter.spr = spr;
+		inFilter.scaleX = 1;
+		inFilter.scaleY = 1;
 		return true;
+	}
+
+	/**
+		<span class="label">Internal usage</span>
+
+		Sets the current filter texture resolution scale factor.
+	**/
+	public function setFilterScale( scaleX : Float, scaleY : Float ) {
+		if ( inFilter != null ) {
+			inFilter.scaleX = scaleX;
+			inFilter.scaleY = scaleY;
+		}
+	}
+
+	/**
+		Retrieves the current filter scale factor.
+		
+		@param into The 2D Point instance into which the scale is written. Creates a new Point if null.
+		@returns The current filter resolution scale or `{ 1, 1 }` point.
+	**/
+	public function getFilterScale( ?into : h2d.col.Point ) {
+		if ( into == null ) into = new h2d.col.Point();
+		if ( inFilter != null ) {
+			into.set(inFilter.scaleX, inFilter.scaleY);
+		} else {
+			into.set(1, 1);
+		}
+		return into;
 	}
 
 	/**
@@ -308,12 +345,13 @@ class RenderContext extends h3d.impl.RenderContext {
 		Finalizes Filter rendering and removes top-most Object from filter stack.
 	**/
 	public function popFilter() {
-		var spr = filterStack.pop();
-		if( filterStack.length > 0 ) {
-			inFilter = filterStack[filterStack.length - 1];
+		inFilter.spr = null;
+		filterStackIndex--;
+		if( filterStackIndex > 0 ) {
+			inFilter = filterStack[filterStackIndex - 1];
 		} else {
 			inFilter = null;
-			if( onLeaveFilter != null ) onLeaveFilter(spr);
+			if( onLeaveFilter != null ) onLeaveFilter(filterStack[filterStackIndex].spr);
 		}
 	}
 
@@ -443,12 +481,18 @@ class RenderContext extends h3d.impl.RenderContext {
 		}
 	}
 
+	public function getCurrentRenderZone() {
+		if( !hasRenderZone )
+			return null;
+		return h2d.col.Bounds.fromValues(renderX, renderY, renderW, renderH);
+	}
+
 	/**
 		Pushes new render zone with respect to the old render zone settings by clipping new and old render zones,
 		pushing the intersection area result.
 		Used so that any call to the clipRenderZone respects the already set zone, and can't render outside of it.
 	**/
-	 public function clipRenderZone( x : Float, y : Float, w : Float, h : Float ) {
+	public function clipRenderZone( x : Float, y : Float, w : Float, h : Float ) {
 		if (!hasRenderZone) {
 			pushRenderZone( x, y, w, h );
 			return;
@@ -549,7 +593,7 @@ class RenderContext extends h3d.impl.RenderContext {
 		texture.filter = (currentObj.smooth == null ? defaultSmooth : (currentObj.smooth:Bool)) ? Linear : Nearest;
 		texture.wrap = currentObj.tileWrap && (currentObj.filter == null || inFilter != null) ? Repeat : Clamp;
 		var blend = currentObj.blendMode;
-		if( inFilter == currentObj && blend == Erase ) blend = Add; // add THEN erase
+		if( inFilter != null && inFilter.spr == currentObj && blend == Erase ) blend = Add; // add THEN erase
 		if( inFilterBlend != null ) blend = inFilterBlend;
 		if( blend != currentBlend ) {
 			currentBlend = blend;
@@ -575,7 +619,7 @@ class RenderContext extends h3d.impl.RenderContext {
 	}
 
 	inline function setupColor( obj : h2d.Drawable ) {
-		if( inFilter == obj ) {
+		if( inFilter != null && inFilter.spr == obj ) {
 			baseShader.color.set(obj.color.r,obj.color.g,obj.color.b,obj.color.a);
 		}
 		else if( inFilterBlend != null ) {
@@ -693,6 +737,7 @@ class RenderContext extends h3d.impl.RenderContext {
 
 		if( !beginDraw(obj, tile.getTexture(), true, true) ) return false;
 
+		#if sceneprof h3d.impl.SceneProf.mark(obj); #end
 		setupColor(obj);
 		baseShader.absoluteMatrixA.set(tile.width * obj.matA, tile.height * obj.matC, obj.absX + tile.dx * obj.matA + tile.dy * obj.matC);
 		baseShader.absoluteMatrixB.set(tile.width * obj.matB, tile.height * obj.matD, obj.absY + tile.dx * obj.matB + tile.dy * obj.matD);

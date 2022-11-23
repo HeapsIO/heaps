@@ -69,9 +69,20 @@ class Engine {
 		#if macro
 		driver = new h3d.impl.NullDriver();
 		#elseif (js || hlsdl || usegl)
+		#if (hlsdl && heaps_vulkan)
+		if( hxd.Window.USE_VULKAN )
+			driver = new h3d.impl.VulkanDriver();
+		else
+		#end
+		#if js
+		driver = js.Browser.supported ? new h3d.impl.GlDriver(antiAlias) : new h3d.impl.NullDriver();
+		#else
 		driver = new h3d.impl.GlDriver(antiAlias);
+		#end
 		#elseif flash
 		driver = new h3d.impl.Stage3dDriver(antiAlias);
+		#elseif (hldx && dx12)
+		driver = new h3d.impl.DX12Driver();
 		#elseif hldx
 		driver = new h3d.impl.DirectXDriver();
 		#elseif usesys

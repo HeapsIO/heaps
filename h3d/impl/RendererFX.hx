@@ -9,6 +9,7 @@ enum Step {
 	BeforeTonemapping;
 	AfterTonemapping;
 	Overlay;
+	Custom( name : String );
 }
 
 interface RendererFX {

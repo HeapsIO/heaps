@@ -25,12 +25,32 @@ class ShaderList {
 			prev = hd;
 			hd = hd.next;
 		}
-		if( prev == null )
-			return new ShaderList(s, shaders);
+		if( prev == null ) {
+			var l = new ShaderList(s, shaders);
+			checkSize(l);
+			return l;
+		}
 		prev.next = new ShaderList(s, prev.next);
+		checkSize(shaders);
 		return shaders;
 	}
 
+	public static var MAX_LIST_SIZE = 0;
+	public static var ALLOW_DUPLICATES = true;
+	static function checkSize(list : ShaderList) {
+		if(MAX_LIST_SIZE <= 0)
+			return;
+		var hd = list;
+		var count = 0;
+		while(hd != null) {
+			if(!ALLOW_DUPLICATES && hd.next != null && hd.next.s == hd.s)
+				throw "Duplicate shader " + Std.string(hd.s);
+			++count;
+			hd = hd.next;
+		}
+		if(count > MAX_LIST_SIZE)
+			throw "Too many shaders";
+	}
 }
 
 private class ShaderIterator {

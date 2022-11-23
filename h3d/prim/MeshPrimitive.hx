@@ -15,6 +15,13 @@ class MeshPrimitive extends Primitive {
 		return bufferCache.exists(hxsl.Globals.allocID(name));
 	}
 
+	function getBuffer( name : String ) {
+		if( bufferCache == null )
+			return null;
+		var b = bufferCache.get(hxsl.Globals.allocID(name));
+		return b == null ? null : b.buffer;
+	}
+
 	function addBuffer( name : String, buf, offset = 0 ) {
 		if( bufferCache == null )
 			bufferCache = new Map();

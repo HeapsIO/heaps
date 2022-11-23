@@ -9,6 +9,7 @@ class ToneMapping extends ScreenShader {
 		@param var exposureExp : Float;
 		@const var isSRBG : Bool;
 		@const var mode : Int;
+		@param var invGamma : Float;
 
 		var hdrColor : Vec4;
 
@@ -29,16 +30,18 @@ class ToneMapping extends ScreenShader {
 			}
 			// gamma correct
 			if( !isSRBG )
-				color.rgb = color.rgb.sqrt();
+				color.rgb = pow(color.rgb, vec3(invGamma));
 			pixelColor = color;
 		}
 	}
 
 	public var exposure(default,set) : Float;
+	public var gamma(default,set) : Float;
 
 	public function new() {
 		super();
 		exposure = 0;
+		gamma = 2.0;
 	}
 
 	function set_exposure(v) {
@@ -46,5 +49,8 @@ class ToneMapping extends ScreenShader {
 		return exposure = v;
 	}
 
-
+	function set_gamma(v:Float) {
+		invGamma = 1.0/v;
+		return gamma = v;
+	}
 }

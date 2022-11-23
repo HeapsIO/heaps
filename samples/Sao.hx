@@ -98,7 +98,7 @@ class Sao extends SampleApp {
 		s3d.camera.zNear = 0.1 * wscale;
 		s3d.camera.zFar = 150 * wscale;
 
-		s3d.lightSystem.ambientLight.set(0.5, 0.5, 0.5);
+		cast(s3d.lightSystem,h3d.scene.fwd.LightSystem).ambientLight.set(0.5, 0.5, 0.5);
 		var dir = new h3d.scene.fwd.DirLight(new h3d.Vector( -0.3, -0.2, -1), s3d);
 		dir.color.set(0.5, 0.5, 0.5);
 
