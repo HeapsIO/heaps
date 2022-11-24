@@ -90,6 +90,10 @@ class Default extends Base {
 		@:privateAccess p.obj.draw(ctx);
 	}
 
+	static public dynamic function onShaderError(e: Dynamic, p: PassObject) {
+		throw e;
+	}
+
 	@:access(h3d.scene)
 	override function draw( passes : h3d.pass.PassList, ?sort : h3d.pass.PassList -> Void ) {
 		if( passes.isEmpty() )
@@ -112,7 +116,12 @@ class Default extends Base {
 				globalModelViewInverse = p.obj.getInvPos();
 			if( prevShader != p.shader ) {
 				prevShader = p.shader;
-				ctx.engine.selectShader(p.shader);
+				try {
+					ctx.engine.selectShader(p.shader);
+				} catch(e : Dynamic) {
+					onShaderError(e, p);
+					continue;
+				}
 				if( buf == null )
 					buf = ctx.shaderBuffers = new h3d.shader.Buffers(p.shader);
 				else
