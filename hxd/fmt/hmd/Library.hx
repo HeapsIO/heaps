@@ -280,9 +280,7 @@ class Library {
 			try {
 				if ( setupMaterialLibrary(mat, hxd.res.Loader.currentInstance.load((props:Dynamic).__ref).toPrefab(), (props:Dynamic).name) )
 					return mat;
-			} catch( e : hxd.res.NotFound ) {
-				e.path += " (in "+resource.entry.path+"@"+mat.name+")";
-				throw e;
+			} catch( e : Dynamic ) {
 			}
 		}
 		#end
