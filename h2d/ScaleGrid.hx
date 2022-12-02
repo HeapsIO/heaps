@@ -325,14 +325,14 @@ class ScaleGrid extends h2d.TileGroup {
 			var rh = Std.int(innerHeight / unscaledInnerTileHeight);
 			for( y in 0...rh )
 				for( x in 0...rw ) {
-					var t = tile.sub(bl, bt, unscaledInnerTileWidth, unscaledInnerTileWidth);
+					var t = tile.sub(bl, bt, unscaledInnerTileWidth, unscaledInnerTileHeight);
 					content.addColor(unscaledBl + x * unscaledInnerTileWidth, unscaledBt + y * unscaledInnerTileHeight, curColor, t);
 				}
 
 			var dx = innerWidth - rw * unscaledInnerTileWidth;
 			if( dx > 0 ) {
 				for( y in 0...rh ) {
-					var t = tile.sub(bl, bt, dx, unscaledInnerTileWidth);
+					var t = tile.sub(bl, bt, dx, unscaledInnerTileHeight);
 					content.addColor(unscaledBl + rw * unscaledInnerTileWidth, unscaledBt + y * unscaledInnerTileHeight, curColor, t);
 				}
 			}
