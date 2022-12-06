@@ -100,7 +100,7 @@ class Checker {
 			case ToBool:
 				[for( t in baseType ) { args : [ { name : "value", type : t } ], ret : TBool } ];
 			case Clamp:
-				var r = [];
+				var r = [ { args : [ { name : "value", type : TInt }, { name : "min", type : TInt }, { name : "max", type : TInt } ], ret : TInt } ];
 				for( t in genType ) {
 					r.push( { args : [ { name : "value", type : t }, { name : "min", type : t }, { name : "max", type : t } ], ret : t } );
 					if( t != TFloat )
