@@ -307,14 +307,6 @@ class DirShadowMap extends Shadows {
 			return;
 
 		if( mode != Mixed || ctx.computingStatic ) {
-			lightCamera.orthoBounds.empty();
-			if( !passes.isEmpty() ) calcShadowBounds(lightCamera);
-			lightCamera.update();
-		}
-
-		cullPasses(passes,function(col) return col.inFrustum(lightCamera.frustum));
-
-		if( mode != Mixed || ctx.computingStatic ) {
 			var ct = ctx.camera.target;
 			var slight = light == null ? ctx.lightSystem.shadowLight : light;
 			var ldir = slight == null ? null : @:privateAccess slight.getShadowDirection();
@@ -329,7 +321,13 @@ class DirShadowMap extends Shadows {
 			lightCamera.target.z += ct.z;
 			lightCamera.pos.load(ct);
 			lightCamera.update();
+
+			lightCamera.orthoBounds.empty();
+			if( !passes.isEmpty() ) calcShadowBounds(lightCamera);
+			lightCamera.update();
 		}
+
+		cullPasses(passes,function(col) return col.inFrustum(lightCamera.frustum));
 
 		var texture = ctx.textures.allocTarget("dirShadowMap", size, size, false, format);
 		if( customDepth && (depth == null || depth.width != size || depth.height != size || depth.isDisposed()) ) {
