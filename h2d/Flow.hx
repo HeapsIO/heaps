@@ -1238,7 +1238,7 @@ class Flow extends Object {
 			}
 
 			forChildren(function(i, p, c) {
-				autoWidth -= horizontalSpacing;
+				if(i > 0) autoWidth -= horizontalSpacing;
 				if(p.autoSize == null) {
 					calcSize(p, c);
 					if(!p.isAbsolute) {
@@ -1401,7 +1401,7 @@ class Flow extends Object {
 			}
 
 			forChildren(function(i, p, c) {
-				autoHeight -= verticalSpacing;
+				if(i > 0) autoHeight -= verticalSpacing;
 				if(p.autoSize == null) {
 					calcSize(p, c);
 					if(!p.isAbsolute) {
