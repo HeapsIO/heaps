@@ -180,7 +180,7 @@ class CascadeShadowMap extends DirShadowMap {
 		}
 		var near = shadowNear;
 		var far = shadowNear + firstCascadeSize;
-		for ( i in 0...cascade ) {
+		for ( i in 0...cascade - 1 ) {
 			var cascadeBounds = new h3d.col.Bounds();
 			function addCorner(x,y,d) {
 				var pt = ctx.camera.unproject(x,y,ctx.camera.distanceToDepth(d)).toPoint();
@@ -206,6 +206,7 @@ class CascadeShadowMap extends DirShadowMap {
 			near += firstCascadeSize * hxd.Math.pow(pow, i);
 			far += firstCascadeSize * hxd.Math.pow(pow, i+1);
 		}
+		lightCameras[cascade - 1].orthoBounds = lightCamera.orthoBounds.clone();
 	}
 
 	override function setGlobals() {

@@ -12,12 +12,6 @@ class CascadeShadow extends DirShadow {
 
 		function fragment() {
 			if( enable ) {
-				var camProjectedPosition = vec4(transformedPosition, 1) * camViewProj;
-				var index = 0;
-				@unroll for ( i in 0...CASCADE_COUNT-1 ) {
-					if ( camProjectedPosition.z > cascadeLimits[i] )
-				 		index = i + 1;
-				}
 				if( USE_PCF ) {
 					shadow = 1.0;
 					var texelSize = 1.0/shadowRes;
