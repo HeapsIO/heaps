@@ -198,12 +198,10 @@ class CascadeShadowMap extends DirShadowMap {
 				far = shadowFar;
 			addCorners(near);
 			addCorners(hxd.Math.min(far, shadowFar));
-			lightCameras[i].orthoBounds = bounds.clone();
-			lightCameras[i].orthoBounds.intersection(lightCameras[i].orthoBounds, cascadeBounds);
+			lightCameras[i].orthoBounds = cascadeBounds;
 			var limits = lightCameras[i].orthoBounds.clone();
 			lightCameras[i].orthoBounds.empty();
 			calcBounds(lightCameras[i], limits);
-			lightCameras[i].orthoBounds.intersection(lightCameras[i].orthoBounds, limits);
 
 			near += firstCascadeSize * hxd.Math.pow(pow, i);
 			far += firstCascadeSize * hxd.Math.pow(pow, i+1);
@@ -260,16 +258,6 @@ class CascadeShadowMap extends DirShadowMap {
 			return;
 
 		if( mode != Mixed || ctx.computingStatic ) {
-			lightCamera.orthoBounds.empty();
-			for ( lC in lightCameras ) lC.orthoBounds.empty();
-			if( !passes.isEmpty() ) calcCascadeShadowBounds(lightCamera);
-			lightCamera.update();
-			for ( lC in lightCameras ) lC.update();
-		}
-
-		cullPasses(passes,function(col) return col.inFrustum(lightCamera.frustum));
-
-		if( mode != Mixed || ctx.computingStatic ) {
 			var ct = ctx.camera.target;
 			var slight = light == null ? ctx.lightSystem.shadowLight : light;
 			var ldir = slight == null ? null : @:privateAccess slight.getShadowDirection();
@@ -297,7 +285,15 @@ class CascadeShadowMap extends DirShadowMap {
 				lightCameras[i].pos.load(ct);
 				lightCameras[i].update();
 			}
+
+			lightCamera.orthoBounds.empty();
+			for ( lC in lightCameras ) lC.orthoBounds.empty();
+			if( !passes.isEmpty() ) calcCascadeShadowBounds(lightCamera);
+			lightCamera.update();
+			for ( lC in lightCameras ) lC.update();
 		}
+
+		cullPasses(passes,function(col) return col.inFrustum(lightCamera.frustum));
 
 		var textures = [];
 		if ( g != null )
