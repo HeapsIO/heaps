@@ -326,16 +326,6 @@ class Linker {
 		shaders = [];
 		locals = new Map();
 
-		var dupShaders = new Map();
-		shadersData = [for( s in shadersData ) {
-			if( dupShaders.exists(s.name) )
-				Clone.shaderData(s);
-			else {
-				dupShaders.set(s.name, s);
-				s;
-			}
-		}];
-
 		// globalize vars
 		curInstance = 0;
 		var outVars = [];
@@ -501,15 +491,6 @@ class Linker {
 			build(Vertex, "vertex", v),
 			build(Fragment, "fragment", f),
 		];
-
-		// make sure the first merged var is the original for duplicate shaders
-		for( s in shadersData ) {
-			var sreal = dupShaders.get(s.name);
-			if( s == sreal ) continue;
-			for( i in 0...s.vars.length )
-				allocVar(s.vars[i],null).merged.unshift(sreal.vars[i]);
-		}
-
 		return { name : "out", vars : outVars, funs : funs };
 	}
 
