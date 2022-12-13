@@ -33,140 +33,7 @@ class CascadeShadowMap extends DirShadowMap {
 		return cshader.cascadeShadowMaps;
 	}
 
-	public dynamic function calcBounds( camera : h3d.Camera, ?limits : h3d.col.Bounds) {
-		var bounds = camera.orthoBounds;
-		var zMax = -1e9, zMin = 1e9;
-		// add visible casters in light camera position
-		var mtmp = new h3d.Matrix();
-		var btmp = autoZPlanes ? new h3d.col.Bounds() : null;
-		var obj = boundingObject != null ? boundingObject : ctx.scene;
-		obj.iterVisibleMeshes(function(m) {
-			if( m.primitive == null || !m.material.castShadows ) return;
-			var b = m.primitive.getBounds();
-			if( b.xMin > b.xMax ) return;
-
-			var absPos = Std.isOfType(m.primitive, h3d.prim.Instanced) ? h3d.Matrix.I() : m.getAbsPos();
-			if( autoZPlanes ) {
-				btmp.load(b);
-				btmp.transform(absPos);
-				if( btmp.zMax > zMax ) zMax = btmp.zMax;
-				if( btmp.zMin < zMin ) zMin = btmp.zMin;
-			}
-
-			var points = [];
-			mtmp.multiply3x4(absPos, camera.mcam);
-
-			var p = new h3d.col.Point(b.xMin, b.yMin, b.zMin);
-			p.transform(mtmp);
-			points.push(p);
-
-			var p = new h3d.col.Point(b.xMin, b.yMin, b.zMax);
-			p.transform(mtmp);
-			points.push(p);
-
-			var p = new h3d.col.Point(b.xMin, b.yMax, b.zMin);
-			p.transform(mtmp);
-			points.push(p);
-
-			var p = new h3d.col.Point(b.xMin, b.yMax, b.zMax);
-			p.transform(mtmp);
-			points.push(p);				
-
-			var p = new h3d.col.Point(b.xMax, b.yMin, b.zMin);
-			p.transform(mtmp);
-			points.push(p);
-
-			var p = new h3d.col.Point(b.xMax, b.yMin, b.zMax);
-			p.transform(mtmp);
-			points.push(p);
-
-			var p = new h3d.col.Point(b.xMax, b.yMax, b.zMin);
-			p.transform(mtmp);
-			points.push(p);
-
-			var p = new h3d.col.Point(b.xMax, b.yMax, b.zMax);
-			p.transform(mtmp);
-			points.push(p);
-
-			var add = true;
-			if ( limits != null ) {
-				add = false;
-				for ( p in points ) {
-					if ( limits.contains(p) ) {
-						add = true;
-						break;
-					}
-				}
-			}
-			if ( add ) {
-				for ( p in points ) {
-					bounds.addPoint(p);
-				}
-			}
-
-		});
-
-		if( mode == Dynamic ) {
-
-			// Intersect with frustum bounds
-			var cameraBounds = new h3d.col.Bounds();
-			var minDist = minDist < 0 ? ctx.camera.zNear : minDist;
-			var maxDist = maxDist < 0 ? ctx.camera.zFar : maxDist;
-
-			inline function addCorner(x,y,d) {
-				var dist = d?minDist:maxDist;
-				var pt = ctx.camera.unproject(x,y,ctx.camera.distanceToDepth(dist)).toPoint();
-				if( autoZPlanes ) {
-					// let's auto limit our frustrum to our zMin/Max planes
-					var r = h3d.col.Ray.fromPoints(ctx.camera.pos.toPoint(), pt);
-					var d2 = r.distance(h3d.col.Plane.Z(d?zMax:zMin));
-					var k = d ? 1 : -1;
-					if( d2 > 0 && d2*k > dist*k )
-						pt.load(r.getPoint(d2));
-				}
-				pt.transform(camera.mcam);
-				cameraBounds.addPos(pt.x, pt.y, pt.z);
-			}
-
-			inline function addCorners(d) {
-				addCorner(-1,-1,d);
-				addCorner(-1,1,d);
-				addCorner(1,-1,d);
-				addCorner(1,1,d);
-			}
-
-			addCorners(true);
-			addCorners(false);
-
-			// Keep the zMin from the bounds of visible objects
-			// Prevent shadows inside frustum from objects outside frustum being clipped
-			cameraBounds.zMin = bounds.zMin;
-			bounds.intersection(bounds, cameraBounds);
-			if( autoZPlanes ) {
-				/*
-					Let's intersect again our light camera bounds with our scene zMax plane
-					so we can tighten the zMin, which will give us better precision
-					for our depth map.
-				*/
-				var v = camera.target.sub(camera.pos).normalized();
-				var dMin = 1e9;
-				for( dx in 0...2 )
-					for( dy in 0...2 ) {
-						var px = dx > 0 ? bounds.xMax : bounds.xMin;
-						var py = dy > 0 ? bounds.yMax : bounds.yMin;
-						var r0 = new h3d.col.Point(px,py,bounds.zMin).transformed(camera.getInverseView());
-						var r = h3d.col.Ray.fromValues(r0.x, r0.y, r0.z, v.x, v.y, v.z);
-						var d = r.distance(h3d.col.Plane.Z(zMax));
-						if( d < dMin ) dMin = d;
-					}
-				bounds.zMin += dMin;
-			}
-		}
-		bounds.scaleCenter(1.01);
-	}
-
-	public function calcCascadeShadowBounds( camera : h3d.Camera ) {
-		calcBounds(camera);
+	public function updateCascadeBounds( camera : h3d.Camera ) {
 		var bounds = camera.orthoBounds;
 
 		lightCamera.update();
@@ -178,8 +45,9 @@ class CascadeShadowMap extends DirShadowMap {
 			shadowNear = hxd.Math.min(shadowNear, corner.z / corner.w);
 			shadowFar = hxd.Math.max(shadowFar, corner.z / corner.w);
 		}
-		var near = shadowNear;
-		var far = shadowNear + firstCascadeSize;
+		var step = (maxDist - minDist - firstCascadeSize) / (cascade - 1);
+		var near = minDist;
+		var far = minDist + firstCascadeSize;
 		for ( i in 0...cascade - 1 ) {
 			var cascadeBounds = new h3d.col.Bounds();
 			function addCorner(x,y,d) {
@@ -194,17 +62,12 @@ class CascadeShadowMap extends DirShadowMap {
 				addCorner(1,1,d);
 			}
 
-			if ( i == cascade - 1 )
-				far = shadowFar;
 			addCorners(near);
-			addCorners(hxd.Math.min(far, shadowFar));
+			addCorners(far);
 			lightCameras[i].orthoBounds = cascadeBounds;
-			var limits = lightCameras[i].orthoBounds.clone();
-			lightCameras[i].orthoBounds.empty();
-			calcBounds(lightCameras[i], limits);
 
-			near += firstCascadeSize * hxd.Math.pow(pow, i);
-			far += firstCascadeSize * hxd.Math.pow(pow, i+1);
+			near = minDist + firstCascadeSize + hxd.Math.pow((i) / (cascade - 1), pow) * step;
+			far = minDist + firstCascadeSize + hxd.Math.pow((i+1) / (cascade - 1), pow) * step;
 		}
 		lightCameras[cascade - 1].orthoBounds = lightCamera.orthoBounds.clone();
 	}
@@ -289,12 +152,14 @@ class CascadeShadowMap extends DirShadowMap {
 
 			lightCamera.orthoBounds.empty();
 			for ( lC in lightCameras ) lC.orthoBounds.empty();
-			if( !passes.isEmpty() ) calcCascadeShadowBounds(lightCamera);
+			if( !passes.isEmpty() ) calcShadowBounds(lightCamera);
 			lightCamera.update();
-			for ( lC in lightCameras ) lC.update();
 		}
 
 		cullPasses(passes,function(col) return col.inFrustum(lightCamera.frustum));
+
+		updateCascadeBounds(lightCamera);
+		for ( lC in lightCameras ) lC.update();
 
 		var textures = [];
 		if ( g != null )
