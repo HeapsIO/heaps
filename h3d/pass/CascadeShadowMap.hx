@@ -8,8 +8,8 @@ class CascadeShadowMap extends DirShadowMap {
 
 	public var pow : Float = 1.0;
 	public var firstCascadeSize : Float = 10.0;
+	public var castingMaxDist : Float = 0.0;
 	public var cascade(default, set) = 1;
-	public var debug : Bool = false;
 	public function set_cascade(v) {
 		cascade = v;
 		lightCameras = [];
@@ -36,7 +36,6 @@ class CascadeShadowMap extends DirShadowMap {
 	public function updateCascadeBounds( camera : h3d.Camera ) {
 		var bounds = camera.orthoBounds;
 
-		lightCamera.update();
 		var shadowNear = hxd.Math.POSITIVE_INFINITY;
 		var shadowFar = hxd.Math.NEGATIVE_INFINITY;
 		var corners = lightCamera.getFrustumCorners();
@@ -99,7 +98,7 @@ class CascadeShadowMap extends DirShadowMap {
 		cshader.cascadeLimits[cascade-1] = pt.z;
 		cshader.camViewProj = ctx.camera.m;
 		cshader.CASCADE_COUNT = cascade;
-		cshader.shadowBias = bias * 2.0; // experimental value for consistency with/without cascades
+		cshader.shadowBias = bias / lightCamera.orthoBounds.zSize;
 		cshader.shadowPower = power;
 		cshader.shadowProj = getShadowProj();
 
@@ -110,14 +109,11 @@ class CascadeShadowMap extends DirShadowMap {
 		// PCF
 		cshader.USE_PCF = samplingKind == PCF;
 		cshader.shadowRes.set(textures[0].width,textures[0].height);
-		cshader.pcfScale = pcfScale * 5.0; // experimental value for consistency with/without cascades
+		cshader.pcfScale = pcfScale;
 		cshader.pcfQuality = pcfQuality;
 	}
 
 	override function draw( passes, ?sort ) {
-		if ( g != null )
-			g.clear();
-
 		if( !enabled )
 			return;
 
@@ -156,6 +152,12 @@ class CascadeShadowMap extends DirShadowMap {
 			lightCamera.orthoBounds.empty();
 			for ( lC in lightCameras ) lC.orthoBounds.empty();
 			if( !passes.isEmpty() ) calcShadowBounds(lightCamera);
+			if ( castingMaxDist > 0.0 ) {
+				var pt = ctx.camera.pos.clone();
+				pt.transform(lightCamera.mcam);
+				lightCamera.orthoBounds.zMax = pt.z + castingMaxDist; 
+				lightCamera.orthoBounds.zMin = pt.z - castingMaxDist;
+			} 
 			lightCamera.update();
 		}
 
@@ -165,8 +167,6 @@ class CascadeShadowMap extends DirShadowMap {
 		for ( lC in lightCameras ) lC.update();
 
 		var textures = [];
-		if ( g != null )
-			g.clear();
 		for (i in 0...cascade) {
 			var texture = ctx.textures.allocTarget("cascadeShadowMap", size, size, false, format);
 			if( customDepth && (depth == null || depth.width != size || depth.height != size || depth.isDisposed()) ) {
@@ -181,51 +181,24 @@ class CascadeShadowMap extends DirShadowMap {
 			cullPasses(passes,function(col) return col.inFrustum(lightCameras[i].frustum));
 			processShadowMap( passes, texture, sort);
 			passes.load(p);
-			drawCascade(lightCameras[i], i);
 
 		}
-		drawCascade(lightCamera);
 		syncCascadeShader(textures);
+
+		#if editor
+		drawDebug();
+		#end
 	}
 
-	var g : h3d.scene.Graphics;
-	function drawCascade( c : h3d.Camera, cascade=-1 ) {
+	override function drawDebug() {
+		super.drawDebug();
+
 		if ( !debug )
 			return;
 
-		if( g == null ) {
-			g = new h3d.scene.Graphics(ctx.scene);
-			g.name = "frustumDebug";
-			g.material.mainPass.setPassName("overlay");
-			g.ignoreBounds = true;
-		}
-
-		var nearPlaneCorner = [c.unproject(-1, 1, 0), c.unproject(1, 1, 0), c.unproject(1, -1, 0), c.unproject(-1, -1, 0)];
-		var farPlaneCorner = [c.unproject(-1, 1, 1), c.unproject(1, 1, 1), c.unproject(1, -1, 1), c.unproject(-1, -1, 1)];
-
-		var colors = [0xffffff, 0xff0000, 0x00ff00, 0x0000ff, 0xffff00, 0x00ffff, 0xff00ff, 0x000000];
-		g.lineStyle(1, colors[cascade+1]);
-
-		// Near Plane
-		var last = nearPlaneCorner[nearPlaneCorner.length - 1];
-		g.moveTo(last.x,last.y,last.z);
-		for( fc in nearPlaneCorner ) {
-			g.lineTo(fc.x, fc.y, fc.z);
-		}
-
-		// Far Plane
-		var last = farPlaneCorner[farPlaneCorner.length - 1];
-		g.moveTo(last.x,last.y,last.z);
-		for( fc in farPlaneCorner ) {
-			g.lineTo(fc.x, fc.y, fc.z);
-		}
-
-		// Connections
-		for( i in 0 ... 4 ) {
-			var np = nearPlaneCorner[i];
-			var fp = farPlaneCorner[i];
-			g.moveTo(np.x, np.y, np.z);
-			g.lineTo(fp.x, fp.y, fp.z);
+		var colors = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00, 0x00ffff, 0xff00ff, 0x000000];
+		for ( i in 0...cascade ) {
+			drawBounds(lightCameras[i], colors[i]);
 		}
 	}
 }

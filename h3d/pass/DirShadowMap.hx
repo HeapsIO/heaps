@@ -299,6 +299,8 @@ class DirShadowMap extends Shadows {
 		}
 	}
 
+	var g : h3d.scene.Graphics;
+	public var debug : Bool;
 	override function draw( passes, ?sort ) {
 		if( !enabled )
 			return;
@@ -339,6 +341,10 @@ class DirShadowMap extends Shadows {
 		processShadowMap(passes, texture, sort);
 
 		syncShader(texture);
+
+		#if editor
+		drawDebug();
+		#end
 	}
 
 	override function computeStatic( passes : h3d.pass.PassList ) {
@@ -353,5 +359,49 @@ class DirShadowMap extends Shadows {
 		dshader.shadowMap = staticTexture;
 		if( old != null )
 			old.dispose();
+	}
+
+	function drawDebug() {
+		if( g == null ) {
+			g = new h3d.scene.Graphics(ctx.scene);
+			g.name = "frustumDebug";
+			g.material.mainPass.setPassName("overlay");
+			g.ignoreBounds = true;
+		}
+		if ( !debug )
+			return;
+		g.clear();
+
+		drawBounds(lightCamera, 0xffffff);
+	}
+
+	function drawBounds(camera : h3d.Camera, color : Int) {
+
+		var nearPlaneCorner = [camera.unproject(-1, 1, 0), camera.unproject(1, 1, 0), camera.unproject(1, -1, 0), camera.unproject(-1, -1, 0)];
+		var farPlaneCorner = [camera.unproject(-1, 1, 1), camera.unproject(1, 1, 1), camera.unproject(1, -1, 1), camera.unproject(-1, -1, 1)];
+
+		g.lineStyle(1, color);
+
+		// Near Plane
+		var last = nearPlaneCorner[nearPlaneCorner.length - 1];
+		g.moveTo(last.x,last.y,last.z);
+		for( fc in nearPlaneCorner ) {
+			g.lineTo(fc.x, fc.y, fc.z);
+		}
+
+		// Far Plane
+		var last = farPlaneCorner[farPlaneCorner.length - 1];
+		g.moveTo(last.x,last.y,last.z);
+		for( fc in farPlaneCorner ) {
+			g.lineTo(fc.x, fc.y, fc.z);
+		}
+
+		// Connections
+		for( i in 0 ... 4 ) {
+			var np = nearPlaneCorner[i];
+			var fp = farPlaneCorner[i];
+			g.moveTo(np.x, np.y, np.z);
+			g.lineTo(fp.x, fp.y, fp.z);
+		}
 	}
 }
