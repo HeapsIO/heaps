@@ -64,6 +64,9 @@ class CascadeShadowMap extends DirShadowMap {
 
 			addCorners(near);
 			addCorners(far);
+			// Increasing z range has no effect on resolution, only on depth precision.
+			cascadeBounds.zMax = lightCamera.orthoBounds.zMax;
+			cascadeBounds.zMin = lightCamera.orthoBounds.zMin;
 			lightCameras[i].orthoBounds = cascadeBounds;
 
 			near = minDist + firstCascadeSize + hxd.Math.pow((i) / (cascade - 1), pow) * step;
