@@ -111,6 +111,14 @@ class Renderer extends h3d.scene.Renderer {
 		Vec4([Value("output.emissive"), Value("output.custom1"), Value("output.custom2"), Value("output.emissiveStrength")])
 	]);
 	#end
+	var colorDepthOutput = new h3d.pass.Output("colorDepth",[
+		Value("output.color"),
+		#if !MRT_low
+		Vec4([Value("output.depth"),Const(0),Const(0),h3d.scene.pbr.Renderer.ALPHA])
+		#else
+		Vec4([Const(0),Value("output.depth"),Const(0), Const(0)])
+		#end
+	]);
 
 	public function new(?env) {
 		super();
@@ -126,6 +134,7 @@ class Renderer extends h3d.scene.Renderer {
 		allPasses.push(output);
 		allPasses.push(defaultPass);
 		allPasses.push(decalsOutput);
+		allPasses.push(colorDepthOutput);
 		#if !MRT_low
 		allPasses.push(emissiveDecalsOutput);
 		#end
@@ -522,7 +531,9 @@ class Renderer extends h3d.scene.Renderer {
 		begin(Forward);
 		var ls = hxd.impl.Api.downcast(getLightSystem(), h3d.scene.pbr.LightSystem);
 		ls.forwardMode = true;
-		draw("forward");
+		setTargets([textures.hdr, #if !MRT_low textures.depth #else textures.other #end]);
+		renderPass(colorDepthOutput, get("forward"));
+		setTarget(textures.hdr);
 		renderPass(defaultPass, get("forwardAlpha"), backToFront);
 		ls.forwardMode = false;
 		end();
