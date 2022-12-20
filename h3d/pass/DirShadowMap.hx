@@ -70,6 +70,7 @@ class DirShadowMap extends Shadows {
 		if( autoShrink ) {
 			// add visible casters in light camera position
 			var mtmp = new h3d.Matrix();
+			var identity = h3d.Matrix.I();
 			var btmp = autoZPlanes ? new h3d.col.Bounds() : null;
 			var obj = boundingObject != null ? boundingObject : ctx.scene;
 			obj.iterVisibleMeshes(function(m) {
@@ -77,7 +78,7 @@ class DirShadowMap extends Shadows {
 				var b = m.primitive.getBounds();
 				if( b.xMin > b.xMax ) return;
 
-				var absPos = Std.isOfType(m.primitive, h3d.prim.Instanced) ? h3d.Matrix.I() : m.getAbsPos();
+				var absPos = Std.isOfType(m.primitive, h3d.prim.Instanced) ? identity : m.getAbsPos();
 				if( autoZPlanes ) {
 					btmp.load(b);
 					btmp.transform(absPos);
