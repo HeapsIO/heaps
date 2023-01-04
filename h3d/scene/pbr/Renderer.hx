@@ -414,9 +414,6 @@ class Renderer extends h3d.scene.Renderer {
 
 	function beginPbr() {
 		var props : RenderProps = props;
-		if ( displayMode == Performance ) {
-			performance.shader.gradient = hrt.impl.TextureType.Utils.getTextureFromValue(props.performanceGradient);
-		}
 		// reset tonemap shaders
 		var s = @:privateAccess tonemap.pass.shaders;
 		while( s != null ) {
