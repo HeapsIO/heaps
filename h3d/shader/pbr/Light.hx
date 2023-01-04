@@ -124,3 +124,15 @@ class DirLight extends Light {
 		}
 	};
 }
+
+class Performance extends hxsl.Shader {
+	static var SRC = {
+		@param var maxLights : Int;
+		var pixelColor : Vec4;
+		var pbrLightColor : Vec3;
+		function fragment() {
+			var d = vec3(1.0 / maxLights);
+			pixelColor.rgb = (pbrLightColor.r + pbrLightColor.g + pbrLightColor.b) > 0.0 ? d : vec3(0.0);
+		}
+	}
+}
