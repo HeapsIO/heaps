@@ -130,9 +130,11 @@ class Performance extends hxsl.Shader {
 		@param var maxLights : Int;
 		var pixelColor : Vec4;
 		var pbrLightColor : Vec3;
+		var shadow : Float;
 		function fragment() {
 			var d = vec3(1.0 / maxLights);
-			pixelColor.rgb = (pbrLightColor.r + pbrLightColor.g + pbrLightColor.b) > 0.0 ? d : vec3(0.0);
+			// prevent missing texture from generated shader.
+			pixelColor.rgb = ((pixelColor.r) > 0.0 ? vec3(0.0) : vec3(0.0)) + ((pbrLightColor.r + pbrLightColor.g + pbrLightColor.b) > 0.0 ? d : vec3(0.0));
 		}
 	}
 }
