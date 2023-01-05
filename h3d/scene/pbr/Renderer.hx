@@ -279,8 +279,9 @@ class Renderer extends h3d.scene.Renderer {
 		draw(pbrLightPass.name);
 
 		if ( displayMode == Performance ) {
-			end();
-			return;
+			var perf = allocTarget("performance", RGBA16F);
+			h3d.pass.Copy.run(textures.hdr, perf);
+			performance.shader.hdrMap = perf;
 		}
 
 		mark("Indirect Lighting");
@@ -660,8 +661,13 @@ class Renderer extends h3d.scene.Renderer {
 			renderPass(defaultPass, get("ui"), backToFront);
 			#end
 		case Performance:
-			var hdr = ctx.getGlobal("hdrMap");
-			performance.shader.hdrMap = hdr;
+			if( enableFXAA ) {
+					mark("FXAA");
+				fxaa.apply(ldr);
+			}
+			else {
+				copy(ldr, null);
+			}
 			performance.render();
 			#if editor
 			renderPass(defaultPass, get("overlay"), backToFront);
