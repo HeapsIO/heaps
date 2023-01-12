@@ -19,9 +19,13 @@ class CascadeShadowMap extends DirShadowMap {
 		}
 		return cascade;
 	}
+	public var debugShader : Bool = false;
+
+	static var debugColors = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00, 0x00ffff, 0xff00ff, 0x000000];
 
 	public function new( light : h3d.scene.Light ) {
 		super(light);
+		format = R32F;
 		shader = dshader = cshader = new h3d.shader.CascadeShadow();
 	}
 
@@ -64,8 +68,8 @@ class CascadeShadowMap extends DirShadowMap {
 			addCorners(near);
 			addCorners(far);
 			// Increasing z range has no effect on resolution, only on depth precision.
-			cascadeBounds.zMax = lightCamera.orthoBounds.zMax;
-			cascadeBounds.zMin = lightCamera.orthoBounds.zMin;
+			// cascadeBounds.zMax = lightCamera.orthoBounds.zMax;
+			// cascadeBounds.zMin = lightCamera.orthoBounds.zMin;
 			lightCameras[i].orthoBounds = cascadeBounds;
 
 			near = minDist + firstCascadeSize + hxd.Math.pow((i) / (cascade - 1), pow) * step;
@@ -84,19 +88,19 @@ class CascadeShadowMap extends DirShadowMap {
 	}
 
 	function syncCascadeShader(textures : Array<h3d.mat.Texture>) {
+		cshader.DEBUG = debugShader;
 		for ( i in 0...cascade ) {
-			cshader.cascadeShadowMaps[i] = textures[i];
-			cshader.cascadeProjs[i] = lightCameras[i].m;
+			cshader.cascadeShadowMaps[cascade - 1 - i] = textures[i];
+			cshader.cascadeProjs[cascade - 1 - i] = lightCameras[i].m;
+			if ( debugShader )
+				cshader.cascadeDebugs[cascade - 1 - i] = h3d.Vector.fromColor(debugColors[i]);
 		}
 		for ( i in 0...cascade-1 ) {
 			var pt = lightCameras[i].unproject(0,0,1);
 			pt.transform(ctx.camera.m);
-			cshader.cascadeLimits[i] = pt.z;
 		}
 		var pt = lightCamera.unproject(0,0,1);
 		pt.transform(ctx.camera.m);
-		cshader.cascadeLimits[cascade-1] = pt.z;
-		cshader.camViewProj = ctx.camera.m;
 		cshader.CASCADE_COUNT = cascade;
 		cshader.shadowBias = bias / lightCamera.orthoBounds.zSize;
 		cshader.shadowPower = power;
@@ -196,9 +200,8 @@ class CascadeShadowMap extends DirShadowMap {
 		if ( !debug )
 			return;
 
-		var colors = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00, 0x00ffff, 0xff00ff, 0x000000];
 		for ( i in 0...cascade ) {
-			drawBounds(lightCameras[i], colors[i]);
+			drawBounds(lightCameras[i], debugColors[i]);
 		}
 	}
 }
