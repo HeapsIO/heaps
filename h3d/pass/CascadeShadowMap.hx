@@ -37,6 +37,18 @@ class CascadeShadowMap extends DirShadowMap {
 		return cshader.cascadeShadowMaps;
 	}
 
+	function computeNearFar( i : Int ) {
+		var min = minDist < 0.0 ? ctx.camera.zNear : minDist;
+		var max = maxDist < 0.0 ? ctx.camera.zFar : maxDist;
+		if ( i == 0 ) {
+			return {near : min, far : min + firstCascadeSize};
+		}
+		var step = (max - min - firstCascadeSize) / (cascade - 1);
+		var near = min + firstCascadeSize + hxd.Math.pow((i - 1) / (cascade - 1), pow) * step;
+		var far = min + firstCascadeSize + hxd.Math.pow(i / (cascade - 1), pow) * step;
+		return {near : near, far : far};
+	}
+
 	public function updateCascadeBounds( camera : h3d.Camera ) {
 		var bounds = camera.orthoBounds;
 
@@ -48,9 +60,6 @@ class CascadeShadowMap extends DirShadowMap {
 			shadowNear = hxd.Math.min(shadowNear, corner.z / corner.w);
 			shadowFar = hxd.Math.max(shadowFar, corner.z / corner.w);
 		}
-		var step = (maxDist - minDist - firstCascadeSize) / (cascade - 1);
-		var near = minDist;
-		var far = minDist + firstCascadeSize;
 		for ( i in 0...cascade - 1 ) {
 			var cascadeBounds = new h3d.col.Bounds();
 			function addCorner(x,y,d) {
@@ -65,15 +74,13 @@ class CascadeShadowMap extends DirShadowMap {
 				addCorner(1,1,d);
 			}
 
-			addCorners(near);
-			addCorners(far);
+			var nearFar = computeNearFar(i);
+			addCorners(nearFar.near);
+			addCorners(nearFar.far);
 			// Increasing z range has no effect on resolution, only on depth precision.
-			// cascadeBounds.zMax = lightCamera.orthoBounds.zMax;
-			// cascadeBounds.zMin = lightCamera.orthoBounds.zMin;
+			cascadeBounds.zMax = lightCamera.orthoBounds.zMax;
+			cascadeBounds.zMin = lightCamera.orthoBounds.zMin;
 			lightCameras[i].orthoBounds = cascadeBounds;
-
-			near = minDist + firstCascadeSize + hxd.Math.pow((i) / (cascade - 1), pow) * step;
-			far = minDist + firstCascadeSize + hxd.Math.pow((i+1) / (cascade - 1), pow) * step;
 		}
 		lightCameras[cascade - 1].orthoBounds = lightCamera.orthoBounds.clone();
 	}
@@ -90,19 +97,15 @@ class CascadeShadowMap extends DirShadowMap {
 	function syncCascadeShader(textures : Array<h3d.mat.Texture>) {
 		cshader.DEBUG = debugShader;
 		for ( i in 0...cascade ) {
-			cshader.cascadeShadowMaps[cascade - 1 - i] = textures[i];
-			cshader.cascadeProjs[cascade - 1 - i] = lightCameras[i].m;
+			var c = cascade - 1 - i;
+			cshader.cascadeShadowMaps[c] = textures[i];
+			cshader.cascadeProjs[c] = lightCameras[i].m;
 			if ( debugShader )
-				cshader.cascadeDebugs[cascade - 1 - i] = h3d.Vector.fromColor(debugColors[i]);
+				cshader.cascadeDebugs[c] = h3d.Vector.fromColor(debugColors[i]);
+			cshader.cascadeBias[c] = Math.pow(computeNearFar(i).far / computeNearFar(0).far, 1.2) * bias;
 		}
-		for ( i in 0...cascade-1 ) {
-			var pt = lightCameras[i].unproject(0,0,1);
-			pt.transform(ctx.camera.m);
-		}
-		var pt = lightCamera.unproject(0,0,1);
-		pt.transform(ctx.camera.m);
 		cshader.CASCADE_COUNT = cascade;
-		cshader.shadowBias = bias / lightCamera.orthoBounds.zSize;
+		cshader.shadowBias = bias;
 		cshader.shadowPower = power;
 		cshader.shadowProj = getShadowProj();
 
