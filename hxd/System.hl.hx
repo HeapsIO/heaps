@@ -139,9 +139,10 @@ class System {
 		var eventRecycle = [];
 		#end
 		while( true ) {
+			#if !heaps_no_error_trap
 			try {
 				hl.Api.setErrorHandler(reportError); // set exception trap
-
+			#end
 				#if ( target.threaded && (haxe_ver >= 4.2) )
 				// Due to how 4.2+ timers work, instead of MainLoop, thread events have to be updated.
 				// Unsafe events rely on internal implementation of EventLoop, but utilize the recycling feature
@@ -156,9 +157,11 @@ class System {
 				#end
 
 				if( !mainLoop() ) break;
+			#if !heaps_no_error_trap
 			} catch( e : Dynamic ) {
 				hl.Api.setErrorHandler(null);
 			}
+			#end
 			#if hot_reload
 			if( check_reload() ) onReload();
 			#end
