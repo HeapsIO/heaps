@@ -96,6 +96,13 @@ class Style extends domkit.CssStyle {
 			if( errorsText == null ) {
 				if( currentObjects.length == 0 ) return;
 				var scene = currentObjects[0].getScene();
+				if( scene == null ) {
+					for( o in currentObjects ) {
+						scene = o.getScene();
+						if( scene != null ) break;
+					}
+					if( scene == null ) return;
+				}
 				var fl = new h2d.Flow();
 				scene.add(fl,100);
 				fl.backgroundTile = h2d.Tile.fromColor(0x400000,0.9);
