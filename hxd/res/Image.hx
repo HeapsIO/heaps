@@ -272,7 +272,8 @@ class Image extends Resource {
 			throw "Unsupported internal format ("+entry.path+")";
 
 		if( MIPMAP_MAX_SIZE != 0 && inf.mipLevels > 1 ) {
-			while( (inf.width|inf.height) & 1 == 0 && inf.width >> 1 >= MIPMAP_MAX_SIZE && inf.height >> 1 >= MIPMAP_MAX_SIZE ) {
+			// Check next miplevel dimensions are divisible by 4.
+			while( (inf.width|inf.height) & 7 == 0 && inf.width >> 1 >= MIPMAP_MAX_SIZE && inf.height >> 1 >= MIPMAP_MAX_SIZE ) {
 				inf.width >>= 1;
 				inf.height >>= 1;
 				inf.mipLevels--;
