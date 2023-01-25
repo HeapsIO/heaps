@@ -294,7 +294,6 @@ class Object #if (domkit && !domkit_heaps) implements domkit.Model<h2d.Object> #
 		if( width <= 0 || height <= 0 ) return;
 
 		if( relativeTo == null  ) {
-			var x, y;
 			out.addPos(dx * matA + dy * matC + absX, dx * matB + dy * matD + absY);
 			out.addPos((dx + width) * matA + dy * matC + absX, (dx + width) * matB + dy * matD + absY);
 			out.addPos(dx * matA + (dy + height) * matC + absX, dx * matB + (dy + height) * matD + absY);
