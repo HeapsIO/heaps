@@ -148,8 +148,7 @@ class Linker {
 				return v2;
 			}
 		}
-		// var vid = allVars.length + 1;  // I think this is incorrect, but I'm not certain
-		var vid = Tools.allocVarId();
+		var vid = allVars.length + 1;
 		var v2 : TVar = {
 			id : vid,
 			name : vname,
