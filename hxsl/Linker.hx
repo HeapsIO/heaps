@@ -148,9 +148,8 @@ class Linker {
 				return v2;
 			}
 		}
-		var vid = allVars.length + 1;
 		var v2 : TVar = {
-			id : vid,
+			id : hxsl.Tools.allocVarId(),
 			name : vname,
 			type : v.type,
 			kind : v.kind,
@@ -161,7 +160,7 @@ class Linker {
 		a.v = v2;
 		a.merged = [v];
 		a.path = key;
-		a.id = vid;
+		a.id = v2.id;
 		a.parent = parent;
 		a.instanceIndex = curInstance;
 		a.rootShaderName = shaderName;
