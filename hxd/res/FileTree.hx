@@ -77,7 +77,7 @@ class FileTree {
 
 	static var invalidChars = ~/[^A-Za-z0-9_]/g;
 	static var KEYWORDS = [for( k in ["break","case","cast","catch","class","continue","default","do","dynamic",
-									"else","extends","extern","false","for","function","if","implementes","import",
+									"else","extends","extern","false","for","function","if","implements","import",
 									"interface","never","null","override","package","private","public","return",
 									"static","super","switch","this","throw","trace","true","typedef","untyped",
 									"using","var","final","while"] ) k => true];
