@@ -293,13 +293,15 @@ class HlslOut {
 			var acc = varAccess.get(v.id);
 			if( acc != null ) add(acc);
 			ident(v);
-		case TCall({ e : TGlobal(g = (Texture | TextureLod)) }, args):
+		case TCall({ e : TGlobal(g = (Texture | TextureLod | Grad)) }, args):
 			addValue(args[0], tabs);
 			switch( g ) {
 			case Texture:
 				add(isVertex ? ".SampleLevel(" : ".Sample(");
 			case TextureLod:
 				add(".SampleLevel(");
+			case Grad:
+				add(".SampleGrad(");
 			default:
 				throw "assert";
 			}

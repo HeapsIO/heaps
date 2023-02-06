@@ -277,6 +277,8 @@ class GlslOut {
 			// 	return "_texelFetch";
 			// else
 				return "texelFetch";
+		case Grad:
+			return "textureGrad";
 		case TextureSize:
 			switch( args[0].t ) {
 			case TSampler2D, TChannel(_):

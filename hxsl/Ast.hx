@@ -208,6 +208,7 @@ enum TGlobal {
 	TextureLod;
 	Texel;
 	TextureSize;
+	Grad;
 	// ...other texture* operations
 	// constructors
 	ToInt;
@@ -243,6 +244,7 @@ enum TGlobal {
 	ChannelReadLod;
 	ChannelFetch;
 	ChannelTextureSize;
+	ChannelGrad;
 	Trace;
 	// instancing
 	VertexID;

@@ -238,6 +238,9 @@ class Dce {
 		case TCall({ e : TGlobal(ChannelFetch) }, [_, pos, lod, { e : TConst(CInt(cid)) }]):
 			var c = channelVars[cid];
 			return { e : TCall({ e : TGlobal(Texel), p : e.p, t : TVoid }, [{ e : TVar(c), t : c.type, p : e.p }, mapExpr(pos,true), mapExpr(lod,true)]), t : TVoid, p : e.p };
+		case TCall({ e : TGlobal(ChannelGrad) }, [_, pos, dPdx, dPdy, { e: TConst(CInt(cid)) }]):
+			var c = channelVars[cid];
+			return { e : TCall({ e: TGlobal(Grad), p : e.p, t : TVoid }, [{ e : TVar(c), t : c.type, p : e.p }, mapExpr(pos,true), mapExpr(dPdx,true), mapExpr(dPdy,true)]), t : TVoid, p : e.p };
 		case TCall({ e : TGlobal(ChannelTextureSize) }, [_, { e : TConst(CInt(cid)) }]):
 			var c = channelVars[cid];
 			return { e : TCall({ e : TGlobal(TextureSize), p : e.p, t : TVoid }, [{ e : TVar(c), t : c.type, p : e.p }]), t : TVoid, p : e.p };
