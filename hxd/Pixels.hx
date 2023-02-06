@@ -440,6 +440,8 @@ class Pixels {
 		case RG8:
 			var b = bytes.getUInt16(p);
 			return ((b & 0xff) << 8) | (b >> 8);
+		case R8:
+			return bytes.get(p);
 		default:
 			invalidFormat();
 			return 0;
@@ -519,6 +521,8 @@ class Pixels {
  		switch( format ) {
 		case ARGB:
 			png = std.format.png.Tools.build32ARGB(width, height, bytes #if (format >= "3.3") , level #end);
+		case R8:
+			png = std.format.png.Tools.buildGrey(width, height, bytes #if (format >= "3.3") , level #end);
 		default:
 			convert(BGRA);
 			png = std.format.png.Tools.build32BGRA(width, height, bytes #if (format >= "3.3") , level #end);
