@@ -149,6 +149,14 @@ class Dce {
 			writeTo.pop();
 			if( isAffected.indexOf(v) < 0 )
 				isAffected.push(v);
+		case TBinop(OpAssign | OpAssignOp(_), { e : TArray({ e: TVar(v) }, i) }, e):
+			var v = get(v);
+			writeTo.push(v);
+			check(i, writeTo, isAffected);
+			check(e, writeTo, isAffected);
+			writeTo.pop();
+			if ( isAffected.indexOf(v) < 0 )
+				isAffected.push(v);
 		case TBlock(el):
 			var noWrite = [];
 			for( i in 0...el.length )
@@ -224,7 +232,7 @@ class Dce {
 				count++;
 			}
 			return { e : TBlock(out), p : e.p, t : e.t };
-		case TVarDecl(v,_) | TBinop(OpAssign | OpAssignOp(_), { e : (TVar(v) | TSwiz( { e : TVar(v) }, _)) }, _) if( !get(v).used ):
+		case TVarDecl(v,_) | TBinop(OpAssign | OpAssignOp(_), { e : (TVar(v) | TSwiz( { e : TVar(v) }, _) | TArray( { e : TVar(v) }, _)) }, _) if( !get(v).used ):
 			return { e : TConst(CNull), t : e.t, p : e.p };
 		case TCall({ e : TGlobal(ChannelRead) }, [_, uv, { e : TConst(CInt(cid)) }]):
 			var c = channelVars[cid];
