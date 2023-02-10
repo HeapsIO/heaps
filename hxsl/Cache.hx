@@ -536,7 +536,7 @@ class Cache {
 			var instanceIndex = 1;
 			var forcedIndex = forcedPerInstance.length - 1;
 			var s = shaders;
-			while( s != null && forcedIndex > 0 ) {
+			while( s != null && forcedIndex >= 0 ) {
 				if( @:privateAccess s.s.shader.data.name == forcedPerInstance[forcedIndex].shader ) {
 					instancedParams[instanceIndex] = forcedPerInstance[forcedIndex].params;
 					forcedIndex--;
