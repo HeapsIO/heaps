@@ -150,6 +150,13 @@ class CacheFile extends Cache {
 			return this.readString(f);
 		}
 
+		function readStringOpt() {
+			var len = f.readByte();
+			if( len == '\n'.code ) return null;
+			if( len == 0xFF ) len = f.readInt32();
+			return f.readString(len - 1);
+		}
+
 		function unserialize() {
 			return haxe.Unserializer.run(readString());
 		}
@@ -194,7 +201,11 @@ class CacheFile extends Cache {
 			var name = readString();
 			if( name == null ) break;
 			var rt = readString();
-			batchMap.set(name, rt);
+			var str = readStringOpt();
+			var inst = null;
+			if( str != null )
+				inst = [for( s in str.split(";") ) { var v = s.split("="); { shader : v[0], params : v[1].split(",") }}];
+			batchMap.set(name, { rt : rt, inst : inst });
 		}
 
 		shaders = new Map();
@@ -258,12 +269,12 @@ class CacheFile extends Cache {
 					var s = Type.createEmptyInstance(hxsl.Shader);
 					@:privateAccess {
 						if( i.shader == null ) {
-							var rt = rttMap.get(i.batch);
+							var rt = rttMap.get(i.batch.rt);
 							if( rt == null ) {
 								r = null; // was modified
 								break;
 							}
-							var sh = makeBatchShader(rt.rt, rt.shaders, null);
+							var sh = makeBatchShader(rt.rt, rt.shaders, i.batch.inst);
 							i.shader = { version : null, shader : sh.shader };
 							batchMode = true;
 						}
@@ -310,12 +321,12 @@ class CacheFile extends Cache {
 					var s = Type.createEmptyInstance(hxsl.Shader);
 					@:privateAccess {
 						if( i.shader == null ) {
-							var rt = rttMap.get(i.batch);
+							var rt = rttMap.get(i.batch.rt);
 							if( rt == null ) {
 								r = null; // was modified
 								break;
 							}
-							var sh = makeBatchShader(rt.rt, rt.shaders, null);
+							var sh = makeBatchShader(rt.rt, rt.shaders, i.batch.inst);
 							i.shader = { version : null, shader : sh.shader };
 							r.batchMode = true;
 						}
@@ -427,13 +438,13 @@ class CacheFile extends Cache {
 			out.writeByte("\n".code);
 		}
 
-		function writeString(str:String) {
+		function writeString(str:String,isOpt=false) {
 			if( str == null ) {
 				out.writeByte(0);
 				return;
 			}
 			var bytes = haxe.io.Bytes.ofString(str);
-			if( bytes.length < 254 )
+			if( bytes.length < 254 || (isOpt && bytes.length == '\n'.code-1) )
 				out.writeByte(bytes.length + 1);
 			else {
 				out.writeByte(0xFF);
@@ -477,9 +488,8 @@ class CacheFile extends Cache {
 			separator();
 			writeString(@:privateAccess b.shader.data.name);
 			writeString(@:privateAccess b.rt.spec.signature);
-			if( b.instance != null ) {
-				throw "Not implemented";
-			}
+			if( b.instance != null )
+				writeString([for( s in b.instance ) s.shader+"="+s.params.join(",")].join(";"), true);
 		}
 		separator();
 		writeString(null);
