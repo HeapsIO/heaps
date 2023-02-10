@@ -42,7 +42,7 @@ class Cache {
 
 	var linkCache : SearchMap;
 	var linkShaders : Map<String, Shader>;
-	var batchShaders : Map<RuntimeShader, { shader : SharedShader, params : RuntimeShader.AllocParam, size : Int }>;
+	var batchShaders : Map<RuntimeShader, Map<String,{ shader : SharedShader, params : RuntimeShader.AllocParam, size : Int }>>;
 	var byID : Map<String, RuntimeShader>;
 	public var constsToGlobal : Bool;
 
@@ -486,11 +486,21 @@ class Cache {
 		return c;
 	}
 
-	public function makeBatchShader( rt : RuntimeShader, shaders ) : BatchShader {
-		var sh = batchShaders.get(rt); // don't use rt.id to avoid collisions on identical signatures
+	public function makeBatchShader( rt : RuntimeShader, shaders, forcedPerInstance : Array<{ shader : String, params : Array<String> }> ) : BatchShader {
+		var msh = batchShaders.get(rt); // don't use rt.id to avoid collisions on identical signatures
+		if( msh == null ) {
+			msh = new Map();
+			batchShaders.set(rt, msh);
+		}
+		if( forcedPerInstance != null ) {
+			for( fp in forcedPerInstance )
+				fp.params.sort(Reflect.compare);
+		}
+		var sign = forcedPerInstance == null ? "" : haxe.crypto.Md5.encode([for( s in forcedPerInstance ) s.shader+"="+s.params.join(",")].join(";")).substr(0,8);
+		var sh = msh.get(sign);
 		if( sh == null ) {
-			sh = createBatchShader(rt, shaders);
-			batchShaders.set(rt,sh);
+			sh = createBatchShader(rt, shaders, forcedPerInstance, forcedPerInstance == null ? null : sign);
+			msh.set(sign,sh);
 		}
 		var shader = std.Type.createEmptyInstance(BatchShader);
 		@:privateAccess shader.shader = sh.shader;
@@ -508,9 +518,9 @@ class Cache {
 		return false;
 	}
 
-	function createBatchShader( rt : RuntimeShader, shaders : hxsl.ShaderList ) : { shader : SharedShader, params : RuntimeShader.AllocParam, size : Int } {
+	function createBatchShader( rt : RuntimeShader, shaders : hxsl.ShaderList, forcedPerInstance : Array<{ shader : String, params : Array<String> }>, extraSign : String ) : { shader : SharedShader, params : RuntimeShader.AllocParam, size : Int } {
 		var s = new hxsl.SharedShader("");
-		var id = rt.spec.signature.substr(0, 8);
+		var id = (extraSign == null ? rt.spec.signature : haxe.crypto.Md5.encode(rt.spec.signature + extraSign)).substr(0, 8);
 
 		function declVar( name, t, kind ) : TVar {
 			return {
@@ -519,6 +529,21 @@ class Cache {
 				name : name,
 				kind : kind,
 			};
+		}
+
+		var instancedParams = [];
+		if( forcedPerInstance != null ) {
+			var instanceIndex = 1;
+			var forcedIndex = forcedPerInstance.length - 1;
+			var s = shaders;
+			while( s != null && forcedIndex > 0 ) {
+				if( @:privateAccess s.s.shader.data.name == forcedPerInstance[forcedIndex].shader ) {
+					instancedParams[instanceIndex] = forcedPerInstance[forcedIndex].params;
+					forcedIndex--;
+				}
+				instanceIndex++;
+				s = s.next;
+			}
 		}
 
 		var pos = null;
@@ -642,17 +667,26 @@ class Cache {
 			params = p2;
 		}
 
+		inline function isPerInstance(p:RuntimeShader.AllocParam,v) {
+			var params = instancedParams[p.instance];
+			if( params != null && params.indexOf(p.name) >= 0 )
+				return true;
+			if( this.isPerInstance(v) )
+				return true;
+			return false;
+		}
+
 		var p = rt.vertex.params;
 		while( p != null ) {
 			var v = getVar(p);
-			if( isPerInstance(v) )
+			if( isPerInstance(p, v) )
 				addParam(p);
 			p = p.next;
 		}
 		var p = rt.fragment.params;
 		while( p != null ) {
 			var v = getVar(p);
-			if( isPerInstance(v) )
+			if( isPerInstance(p, v) )
 				addParam(p);
 			p = p.next;
 		}
