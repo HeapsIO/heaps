@@ -1,5 +1,5 @@
-#if sceneprof
 package h3d.impl;
+#if sceneprof
 
 private class Frame {
 	public var samples : Array<{ time : Float, sect: String, stack : Array<String> }> = [];

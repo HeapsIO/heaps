@@ -96,7 +96,7 @@ class DynamicText {
 			onMissing(path,"is no longer used");
 			return null;
 		}
-		if( ref != null && ref.innerHTML != strOld ) {
+		if( ref != null && StringTools.trim(ref.innerHTML) != StringTools.trim(strOld) ) {
 			onMissing(path,"ignored since has changed");
 			return null;
 		}

@@ -262,7 +262,7 @@ class Skin extends MultiMaterial {
 			if( jointsGraphics == null ) {
 				jointsGraphics = new Graphics(this);
 				jointsGraphics.material.mainPass.depth(false, Always);
-				jointsGraphics.material.mainPass.setPassName("overlay");
+				jointsGraphics.material.mainPass.setPassName("alpha");
 			}
 			var topParent : Object = this;
 			while( topParent.parent != null )

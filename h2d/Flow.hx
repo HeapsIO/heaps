@@ -1237,8 +1237,9 @@ class Flow extends Object {
 				if( p.minHeight != null && p.calculatedHeight < p.minHeight ) p.calculatedHeight = p.minHeight;
 			}
 
+			var count = 0;
 			forChildren(function(i, p, c) {
-				autoWidth -= horizontalSpacing;
+				if(count > 0 && !p.isAbsolute) autoWidth -= horizontalSpacing;
 				if(p.autoSize == null) {
 					calcSize(p, c);
 					if(!p.isAbsolute) {
@@ -1248,6 +1249,7 @@ class Flow extends Object {
 				}
 				else
 					autoSum += p.autoSize;
+				count++;
 			});
 
 			forChildren(function(i, p, c) {
@@ -1400,8 +1402,9 @@ class Flow extends Object {
 				if( p.minHeight != null && p.calculatedHeight < p.minHeight ) p.calculatedHeight = p.minHeight;
 			}
 
+			var count = 0;
 			forChildren(function(i, p, c) {
-				autoHeight -= verticalSpacing;
+				if(count > 0 && !p.isAbsolute) autoHeight -= verticalSpacing;
 				if(p.autoSize == null) {
 					calcSize(p, c);
 					if(!p.isAbsolute) {
@@ -1411,6 +1414,7 @@ class Flow extends Object {
 				}
 				else
 					autoSum += p.autoSize;
+				count++;
 			});
 
 			forChildren(function(i, p, c) {

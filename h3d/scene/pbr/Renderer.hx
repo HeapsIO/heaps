@@ -17,6 +17,7 @@ package h3d.scene.pbr;
 		Debug slides
 	*/
 	var Debug = "Debug";
+	var Performance = "Performance";
 }
 
 @:enum abstract SkyMode(String) {
@@ -66,6 +67,7 @@ class Renderer extends h3d.scene.Renderer {
 	var pbrProps = new h3d.shader.pbr.PropsImport();
 	var enableFXAA = true;
 	var currentStep : h3d.impl.RendererFX.Step;
+	var performance = new h3d.pass.ScreenFx(new h3d.shader.pbr.PerformanceViewer());
 
 	var textures = {
 		albedo : (null:h3d.mat.Texture),
@@ -111,6 +113,14 @@ class Renderer extends h3d.scene.Renderer {
 		Vec4([Value("output.emissive"), Value("output.custom1"), Value("output.custom2"), Value("output.emissiveStrength")])
 	]);
 	#end
+	var colorDepthOutput = new h3d.pass.Output("colorDepth",[
+		Value("output.color"),
+		#if !MRT_low
+		Vec4([Value("output.depth"),Const(0),Const(0),h3d.scene.pbr.Renderer.ALPHA])
+		#else
+		Vec4([Const(0),Value("output.depth"),Const(0), Const(0)])
+		#end
+	]);
 
 	public function new(?env) {
 		super();
@@ -126,6 +136,7 @@ class Renderer extends h3d.scene.Renderer {
 		allPasses.push(output);
 		allPasses.push(defaultPass);
 		allPasses.push(decalsOutput);
+		allPasses.push(colorDepthOutput);
 		#if !MRT_low
 		allPasses.push(emissiveDecalsOutput);
 		#end
@@ -226,6 +237,26 @@ class Renderer extends h3d.scene.Renderer {
 		}
 
 		begin(Lighting);
+		if ( displayMode == Performance ) {
+			var content;
+			try {
+				content = hxd.res.Loader.currentInstance.load("props.json").toText();
+			} catch ( e : Dynamic ) {
+				throw "Missing props.json";
+			}
+			var obj = try haxe.Json.parse(content) catch( e : Dynamic ) throw "Failed to parse props.json";
+			var ls = hxd.impl.Api.downcast(getLightSystem(), h3d.scene.pbr.LightSystem);
+			var s = new h3d.shader.pbr.Light.Performance();
+
+			s.maxLights = Std.parseInt(Reflect.field(obj, "performance.maxLights"));
+			var gradient = Reflect.field(obj, "performance.lightGradient");
+			try {
+				performance.shader.gradient = hxd.res.Loader.currentInstance.load(gradient).toTexture();
+			} catch ( e : Dynamic ) {
+				throw "Missing performance.lightGradient in props.json";
+			}
+			ls.lightingShaders.push(s);
+		}
 		var lpass = screenLightPass;
 		if( lpass == null ) {
 			lpass = new h3d.pass.ScreenFx(new h3d.shader.ScreenShader());
@@ -246,6 +277,12 @@ class Renderer extends h3d.scene.Renderer {
 		// Direct Lighting - With Primitive
 		pbrProps.isScreen = false;
 		draw(pbrLightPass.name);
+
+		if ( displayMode == Performance ) {
+			var perf = allocTarget("performance", RGBA16F);
+			h3d.pass.Copy.run(textures.hdr, perf);
+			performance.shader.hdrMap = perf;
+		}
 
 		mark("Indirect Lighting");
 		if( !renderLightProbes() && env != null && env.power > 0.0 ) {
@@ -378,7 +415,6 @@ class Renderer extends h3d.scene.Renderer {
 
 	function beginPbr() {
 		var props : RenderProps = props;
-
 		// reset tonemap shaders
 		var s = @:privateAccess tonemap.pass.shaders;
 		while( s != null ) {
@@ -526,7 +562,9 @@ class Renderer extends h3d.scene.Renderer {
 		begin(Forward);
 		var ls = hxd.impl.Api.downcast(getLightSystem(), h3d.scene.pbr.LightSystem);
 		ls.forwardMode = true;
-		draw("forward");
+		setTargets([textures.hdr, #if !MRT_low textures.depth #else textures.other #end]);
+		renderPass(colorDepthOutput, get("forward"));
+		setTarget(textures.hdr);
 		renderPass(defaultPass, get("forwardAlpha"), backToFront);
 		ls.forwardMode = false;
 		end();
@@ -623,6 +661,20 @@ class Renderer extends h3d.scene.Renderer {
 				hxd.Window.getInstance().addEventTarget(onEvent);
 			}
 			#if editor
+			renderPass(defaultPass, get("overlay"), backToFront);
+			renderPass(defaultPass, get("ui"), backToFront);
+			#end
+		case Performance:
+			if( enableFXAA ) {
+					mark("FXAA");
+				fxaa.apply(ldr);
+			}
+			else {
+				copy(ldr, null);
+			}
+			performance.render();
+			#if editor
+			renderPass(defaultPass, get("overlay"), backToFront);
 			renderPass(defaultPass, get("ui"), backToFront);
 			#end
 		}
@@ -698,6 +750,7 @@ class Renderer extends h3d.scene.Renderer {
 						<option value="MatCap">MatCap</option>
 						<option value="Debug">Debug</option>
 						<option value="Distortion">Distortion</option>
+						<option value="Performance">Performance</option>
 					</select>
 				</dd>
 

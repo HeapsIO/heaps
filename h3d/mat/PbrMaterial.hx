@@ -90,6 +90,7 @@ typedef PbrProps = {
 	@:optional var stencilReadMask : Int;
 
 	@:optional var drawOrder : String;
+	@:optional var useChecker : Bool;
 }
 
 class PbrMaterial extends Material {
@@ -237,6 +238,8 @@ class PbrMaterial extends Material {
 			Reflect.deleteField(props,"drawOrder");
 		if( props.depthWrite == Default )
 		 	Reflect.deleteField(props, "depthWrite");
+		if ( !props.useChecker )
+			Reflect.deleteField(props, "useChecker");
 		#end
 	}
 
@@ -384,6 +387,14 @@ class PbrMaterial extends Material {
 			else
 				mainPass.layer = Std.parseInt(props.drawOrder);
 			p = p.nextPass;
+		}
+
+		if ( texture != null && props.useChecker ) {
+			mainPass.addShader(new h3d.shader.Checker());
+		} else {
+			var s = mainPass.getShader(h3d.shader.Checker);
+			if ( s != null )
+				mainPass.removeShader(s); 
 		}
 	}
 
@@ -567,6 +578,7 @@ class PbrMaterial extends Material {
 						${[for( i in 0...layers.length ) '<option value="${layers[i].value}">${layers[i].name}</option>'].join("")}
 					</select>
 				</dd>
+				<dt>Checker</dt><dd><input type="checkbox" field="useChecker"/></dd>
 			</dl>
 		');
 	}

@@ -66,8 +66,8 @@ private class GraphicsContent extends h3d.prim.Primitive {
 		bufferDirty = true;
 	}
 
-	public function setTile( tile : h2d.Tile ) {	
-		state.setTile(tile);	
+	public function setTile( tile : h2d.Tile ) {
+		state.setTile(tile);
 	}
 
 	public function next() {
@@ -186,6 +186,10 @@ class Graphics extends Drawable {
 	var yMin : Float;
 	var xMax : Float;
 	var yMax : Float;
+	var xMinSize : Float;
+	var yMinSize : Float;
+	var xMaxSize : Float;
+	var yMaxSize : Float;
 
 	var ma : Float = 1.;
 	var mb : Float = 0.;
@@ -234,11 +238,18 @@ class Graphics extends Drawable {
 		yMin = Math.POSITIVE_INFINITY;
 		yMax = Math.NEGATIVE_INFINITY;
 		xMax = Math.NEGATIVE_INFINITY;
+		xMinSize = Math.POSITIVE_INFINITY;
+		yMinSize = Math.POSITIVE_INFINITY;
+		yMaxSize = Math.NEGATIVE_INFINITY;
+		xMaxSize = Math.NEGATIVE_INFINITY;
 	}
 
 	override function getBoundsRec( relativeTo, out, forSize ) {
 		super.getBoundsRec(relativeTo, out, forSize);
-		if( tile != null ) addBounds(relativeTo, out, xMin, yMin, xMax - xMin, yMax - yMin);
+		if( tile != null ) {
+			if( forSize ) addBounds(relativeTo, out, xMinSize, yMinSize, xMaxSize - xMinSize, yMaxSize - yMinSize);
+			else addBounds(relativeTo, out, xMin, yMin, xMax - xMin, yMax - yMin);
+		}
 	}
 
 	function isConvex( points : Array<GPoint> ) {
@@ -262,7 +273,7 @@ class Graphics extends Drawable {
 		var last = pts.length - 1;
 		var prev = pts[last];
 		var p = pts[0];
-		
+
 		content.setTile(h2d.Tile.fromColor(0xFFFFFF));
 		var closed = p.x == prev.x && p.y == prev.y;
 		var count = pts.length;
@@ -832,10 +843,15 @@ class Graphics extends Drawable {
 		@param v Normalized vertical Texture position from the current Tile fill operation.
 	**/
 	public function addVertex( x : Float, y : Float, r : Float, g : Float, b : Float, a : Float, u : Float = 0., v : Float = 0. ) {
-		if( x < xMin ) xMin = x;
-		if( y < yMin ) yMin = y;
-		if( x > xMax ) xMax = x;
-		if( y > yMax ) yMax = y;
+		var half = lineSize / 2.0;
+		if( x - half < xMin ) xMin = x - half;
+		if( y - half < yMin ) yMin = y - half;
+		if( x + half > xMax ) xMax = x + half;
+		if( y + half > yMax ) yMax = y + half;
+		if( x < xMinSize ) xMinSize = x;
+		if( y < yMinSize ) yMinSize = y;
+		if( x > xMaxSize ) xMaxSize = x;
+		if( y > yMaxSize ) yMaxSize = y;
 		if( doFill )
 			content.add(x, y, u, v, r, g, b, a);
 		var gp = new GPoint();

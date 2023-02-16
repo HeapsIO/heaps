@@ -66,6 +66,25 @@ class Bounds implements Collider {
 		return p.x >= xMin && p.x < xMax && p.y >= yMin && p.y < yMax;
 	}
 
+	public function rayIntersection( r : Ray ) : Float {
+		var minTx = (xMin - r.px) / r.lx;
+		var minTy = (yMin - r.py) / r.ly;
+		var maxTx = (xMax - r.px) / r.lx;
+		var maxTy = (yMax - r.py) / r.ly;
+
+		var realMinTx = Math.min(minTx, maxTx);
+		var realMinTy = Math.min(minTy, maxTy);
+		var realMaxTx = Math.max(minTx, maxTx);
+		var realMaxTy = Math.max(minTy, maxTy);
+
+		var minmax = Math.min(realMaxTx, realMaxTy);
+		var maxmin = Math.max(realMinTx, realMinTy);
+
+		if(minmax < maxmin)	return -1;
+
+		return maxmin;
+	}
+
 	/**
 	 * Same as distance but does not perform sqrt
 	 */

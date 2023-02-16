@@ -113,7 +113,7 @@ class Pass {
 			blend(OneMinusDstColor, One);
 			blendAlphaSrc = One;
 		case Multiply: // Out = Dst * Src + 0 * Dst
-			blend(DstColor, One);
+			blend(DstColor, Zero);
 			blendAlphaSrc = One;
 		case AlphaMultiply: // Out = Dst * Src + (1 - SrcA) * Dst
 			blend(DstColor, OneMinusSrcAlpha);
