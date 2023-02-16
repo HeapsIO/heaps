@@ -529,6 +529,7 @@ class RenderContext extends h3d.impl.RenderContext {
 			w = rx2 - rx1;
 			h = ry2 - ry1;
 		}
+
 		engine.setRenderZone(
 			Std.int(x * scaleX + (scene.viewportX+1) * (engine.width / 2) + 1e-10),
 			Std.int(y * scaleY + (scene.viewportY+1) * (engine.height / 2) + 1e-10),
@@ -536,6 +537,7 @@ class RenderContext extends h3d.impl.RenderContext {
 			Std.int(h * scaleY + 1e-10)
 		);
 	}
+
 	inline function clearRZ() {
 		hasRenderZone = false;
 		engine.setRenderZone();

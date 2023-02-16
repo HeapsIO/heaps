@@ -491,9 +491,6 @@ class Renderer extends h3d.scene.Renderer {
 				pbrIndirect.skyColor = false;
 			}
 
-			if( pbrIndirect.skyMap == null && pbrIndirect.showSky && !pbrIndirect.skyColor )
-				pbrIndirect.showSky = false;
-
 		}
 		else {
 			pbrIndirect.drawIndirectDiffuse = false;

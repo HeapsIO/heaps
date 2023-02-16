@@ -12,8 +12,8 @@ class DirectXDriver extends h3d.impl.Driver {
 
 #elseif (hldx && !dx12)
 
-import dx.Driver;
 import h3d.impl.Driver;
+import dx.Driver;
 import h3d.mat.Pass;
 
 private class ShaderContext {

@@ -1,5 +1,6 @@
 package h2d;
 import hxd.Math;
+
 /**
 	Viewport alignment when scaling mode supports it. See `ScaleMode`.
 **/

@@ -1,8 +1,8 @@
 package h3d.impl;
 import h3d.impl.Driver;
-import h3d.mat.Data;
 import h3d.mat.Pass;
 import h3d.mat.Stencil;
+import h3d.mat.Data;
 
 #if (js||hlsdl||usegl)
 
@@ -62,7 +62,8 @@ private typedef Program = js.html.webgl.Program;
 private typedef GLShader = js.html.webgl.Shader;
 private typedef Framebuffer = js.html.webgl.Framebuffer;
 #elseif hlsdl
-import sdl.GL;private typedef Uniform = sdl.GL.Uniform;
+import sdl.GL;
+private typedef Uniform = sdl.GL.Uniform;
 private typedef Program = sdl.GL.Program;
 private typedef GLShader = sdl.GL.Shader;
 private typedef Framebuffer = sdl.GL.Framebuffer;
@@ -70,7 +71,8 @@ private typedef Texture = h3d.impl.Driver.Texture;
 private typedef Query = h3d.impl.Driver.Query;
 private typedef VertexArray = sdl.GL.VertexArray;
 #elseif usegl
-import haxe.GLTypes;private typedef Uniform = haxe.GLTypes.Uniform;
+import haxe.GLTypes;
+private typedef Uniform = haxe.GLTypes.Uniform;
 private typedef Program = haxe.GLTypes.Program;
 private typedef GLShader = haxe.GLTypes.Shader;
 private typedef Framebuffer = haxe.GLTypes.Framebuffer;
@@ -134,8 +136,8 @@ class GlDriver extends Driver {
 	static var UID = 0;
 	public var gl : GL;
 	public static var ALLOW_WEBGL2 = true;
-	// Set to 'highp' to get high precision on devices that support it
-	public static var MAX_PRECISION = 'mediump';
+	// Set to 'mediump' to avoid high precision to target devices that doesn't support high precision
+	public static var MAX_PRECISION = 'highp';
 	public var textureSupport:hxd.PixelFormat;
 	#end
 

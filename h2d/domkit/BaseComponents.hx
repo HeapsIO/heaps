@@ -1,6 +1,6 @@
 package h2d.domkit;
-import domkit.CssValue;
 import domkit.Property;
+import domkit.CssValue;
 
 typedef FlowBg = { tile : #if macro Bool #else h2d.Tile #end, borderL : Int, borderT : Int, borderR : Int, borderB : Int, ?color : Int }
 
