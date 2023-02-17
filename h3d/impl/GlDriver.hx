@@ -90,7 +90,7 @@ class GlDriver extends Driver {
 	static var UID = 0;
 	public var gl : GL;
 	public static var ALLOW_WEBGL2 = true;
-	// Set to 'mediump' to avoid high precision to target devices that doesn't support high precision
+	// Set to 'mediump' to avoid high precision. Can give better performance, but will can mess up shadows for example.
 	public static var MAX_PRECISION = 'highp';
 	public var textureSupport:hxd.PixelFormat;
 	#end
@@ -928,6 +928,7 @@ class GlDriver extends Driver {
 				case 8: tt.internalFmt = hxd.PixelFormat.PVRTC_FORMAT.RGB_4BPPV1;
 				case 9: tt.internalFmt = hxd.PixelFormat.PVRTC_FORMAT.RGBA_4BPPV1;
 				default: throw "Unsupported texture format "+t.format;
+				}
 		default:
 			throw "Unsupported texture format "+t.format;
 		}
