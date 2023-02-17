@@ -202,7 +202,7 @@ class Parser {
 		var numProperties : Int = getVersionedInt32();
 		var propertyListLength : UInt = getVersionedInt32();
 		var name : String = readBinaryString(getByte());
-		
+
 		var props : Array<FbxProp> = new Array();
 		var childs : Array<FbxNode> = new Array();
 
