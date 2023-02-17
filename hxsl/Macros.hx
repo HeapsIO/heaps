@@ -314,6 +314,7 @@ class Macros {
 			name : "setParamIndexValue",
 			pos : pos,
 			kind : FFun( {
+				ret : macro : Void,
 				args : [ { name : "index", type : macro : Int }, { name : "val", type : macro : Dynamic } ],
 				expr : {
 					expr : ESwitch(macro index, [for( p in eparams ) { values : [macro $v{ index++ } ], expr : macro $p = val } ], macro {}),
@@ -326,6 +327,7 @@ class Macros {
 			name : "setParamIndexFloatValue",
 			pos : pos,
 			kind : FFun( {
+				ret : macro : Void,
 				args : [ { name : "index", type : macro : Int }, { name : "val", type : macro : Float } ],
 				expr : {
 					expr : ESwitch(macro index, [for( i in 0...tparams.length ) if( tparams[i] == TFloat ) { values : [macro $v{i}], expr : macro ${eparams[i]} = val }], macro {}),
