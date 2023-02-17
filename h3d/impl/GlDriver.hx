@@ -910,25 +910,25 @@ class GlDriver extends Driver {
 			case 3: tt.internalFmt = hxd.PixelFormat.DXT_FORMAT.RGBA_DXT5;
 			default: throw "Unsupported texture format "+t.format;
 			}
-			case ASTC(n):
-				checkMult4(t);
-				switch( n ) {
-				case 10: tt.internalFmt = hxd.PixelFormat.ASTC_FORMAT.RGBA_4x4;
-				default: throw "Unsupported texture format "+t.format;
-				}
-			case ETC(n):
-				checkMult4(t);
-				switch( n ) {
-				case 0: tt.internalFmt = hxd.PixelFormat.ETC_FORMAT.RGB_ETC1;
-				default: throw "Unsupported texture format "+t.format;
-				}
-			case PVRTC(n):
-				checkMult4(t);
-				switch(n) {
-				case 8: tt.internalFmt = hxd.PixelFormat.PVRTC_FORMAT.RGB_4BPPV1;
-				case 9: tt.internalFmt = hxd.PixelFormat.PVRTC_FORMAT.RGBA_4BPPV1;
-				default: throw "Unsupported texture format "+t.format;
-				}
+		case ASTC(n):
+			checkMult4(t);
+			switch( n ) {
+			case 10: tt.internalFmt = hxd.PixelFormat.ASTC_FORMAT.RGBA_4x4;
+			default: throw "Unsupported texture format "+t.format;
+			}
+		case ETC(n):
+			checkMult4(t);
+			switch( n ) {
+			case 0: tt.internalFmt = hxd.PixelFormat.ETC_FORMAT.RGB_ETC1;
+			default: throw "Unsupported texture format "+t.format;
+			}
+		case PVRTC(n):
+			checkMult4(t);
+			switch(n) {
+			case 8: tt.internalFmt = hxd.PixelFormat.PVRTC_FORMAT.RGB_4BPPV1;
+			case 9: tt.internalFmt = hxd.PixelFormat.PVRTC_FORMAT.RGBA_4BPPV1;
+			default: throw "Unsupported texture format "+t.format;
+			}
 		default:
 			throw "Unsupported texture format "+t.format;
 		}
