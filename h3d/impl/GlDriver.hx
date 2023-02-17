@@ -1,8 +1,8 @@
 package h3d.impl;
 import h3d.impl.Driver;
+import h3d.mat.Data;
 import h3d.mat.Pass;
 import h3d.mat.Stencil;
-import h3d.mat.Data;
 
 #if (js||hlsdl||usegl)
 
@@ -11,52 +11,6 @@ import hxd.impl.TypedArray;
 import js.html.webgl.RenderingContext;
 
 private typedef GL = js.html.webgl.GL2;
-
-private extern class GL2 extends js.html.webgl.GL {
-	// webgl2
-	function drawBuffers( buffers : Array<Int> ) : Void;
-	function vertexAttribDivisor( index : Int, divisor : Int ) : Void;
-	function drawElementsInstanced( mode : Int, count : Int, type : Int, offset : Int, instanceCount : Int) : Void;
-	function getUniformBlockIndex( p : Program, name : String ) : Int;
-	function bindBufferBase( target : Int, index : Int, buffer : js.html.webgl.Buffer ) : Void;
-	function uniformBlockBinding( p : Program, blockIndex : Int, blockBinding : Int ) : Void;
-	function framebufferTextureLayer( target : Int, attach : Int, t : js.html.webgl.Texture, level : Int, layer : Int ) : Void;
-	function texImage3D(target : Int, level : Int, internalformat : Int, width : Int, height : Int, depth : Int, border : Int, format : Int, type : Int, source : Dynamic) : Void;
-	function compressedTexImage3D(target : Int, level : Int, internalformat : Int, width : Int, height : Int, depth : Int, border : Int, source : Dynamic) : Void;
-	function texSubImage3D( target : Int, level : Int, xoffset : Int, yoffset : Int, zoffset : Int, width : Int, height : Int, depth : Int, format : Int, type : Int, image : Dynamic ) : Void;
-	function compressedTexSubImage3D( target : Int, level : Int, xoffset : Int, yoffset : Int, zoffset : Int, width : Int, height : Int, depth : Int, format : Int, image : Dynamic ) : Void;
-	static inline var RGBA16F = 0x881A;
-	static inline var RGBA32F = 0x8814;
-	static inline var RED      = 0x1903;
-	static inline var RG       = 0x8227;
-	static inline var RGBA8	   = 0x8058;
-	static inline var BGRA 		 = 0x80E1;
-	static inline var HALF_FLOAT = 0x140B;
-	static inline var SRGB       = 0x8C40;
-	static inline var SRGB8      = 0x8C41;
-	static inline var SRGB_ALPHA = 0x8C42;
-	static inline var SRGB8_ALPHA = 0x8C43;
-	static inline var R8 		  = 0x8229;
-	static inline var RG8 		  = 0x822B;
-	static inline var R16F 		  = 0x822D;
-	static inline var R32F 		  = 0x822E;
-	static inline var RG16F 	  = 0x822F;
-	static inline var RG32F 	  = 0x8230;
-	static inline var RGB16F 	  = 0x881B;
-	static inline var RGB32F 	  = 0x8815;
-	static inline var R11F_G11F_B10F = 0x8C3A;
-	static inline var RGB10_A2     = 0x8059;
-	static inline var DEPTH_COMPONENT24 = 0x81A6;
-	static inline var UNIFORM_BUFFER = 0x8A11;
-	static inline var TEXTURE_2D_ARRAY = 0x8C1A;
-	static inline var UNSIGNED_INT_2_10_10_10_REV = 0x8368;
-	static inline var UNSIGNED_INT_10F_11F_11F_REV = 0x8C3B;
-	static inline var FUNC_MIN = 0x8007;
-	static inline var FUNC_MAX = 0x8008;
-	static inline var TEXTURE_LOD_BIAS : Int = 0x84FD;
-	static inline var TEXTURE_BASE_LEVEL = 0x813C;
-	static inline var TEXTURE_MAX_LEVEL = 0x813D;
-}
 private typedef Uniform = js.html.webgl.UniformLocation;
 private typedef Program = js.html.webgl.Program;
 private typedef GLShader = js.html.webgl.Shader;
@@ -865,14 +819,14 @@ class GlDriver extends Driver {
 		case GL.SRGB, GL.SRGB8: GL.RGB;
 		case GL.RGBA: GL.RGBA;
 		case GL.RGB: GL.RGB;
-		case GL2.R11F_G11F_B10F: GL.RGB;
-		case GL2.RGB10_A2: GL.RGBA;
-		case GL2.RED, GL2.R8, GL2.R16F, GL2.R32F: GL2.RED;
-		case GL2.RG, GL2.RG8, GL2.RG16F, GL2.RG32F: GL2.RG;
-		case GL2.RGB16F, GL2.RGB32F: GL.RGB;
+		case GL.R11F_G11F_B10F: GL.RGB;
+		case GL.RGB10_A2: GL.RGBA;
+		case GL.RED, GL.R8, GL.R16F, GL.R32F: GL.RED;
+		case GL.RG, GL.RG8, GL.RG16F, GL.RG32F: GL.RG;
+		case GL.RGB16F, GL.RGB32F: GL.RGB;
 		case hxd.PixelFormat.DXT_FORMAT.RGBA_DXT1,hxd.PixelFormat.DXT_FORMAT.RGBA_DXT3,
-			hxd.PixelFormat.DXT_FORMAT.RGBA_DXT5,hxd.PixelFormat.ASTC_FORMAT.RGBA_4x4,
-			hxd.PixelFormat.PVRTC_FORMAT.RGBA_4BPPV1: GL.RGBA;
+		hxd.PixelFormat.DXT_FORMAT.RGBA_DXT5,hxd.PixelFormat.ASTC_FORMAT.RGBA_4x4,
+		hxd.PixelFormat.PVRTC_FORMAT.RGBA_4BPPV1: GL.RGBA;
 		case hxd.PixelFormat.PVRTC_FORMAT.RGB_4BPPV1, hxd.PixelFormat.ETC_FORMAT.RGB_ETC1: GL.RGB;
 		default: throw "Invalid format " + t.internalFmt;
 		}
@@ -956,25 +910,24 @@ class GlDriver extends Driver {
 			case 3: tt.internalFmt = hxd.PixelFormat.DXT_FORMAT.RGBA_DXT5;
 			default: throw "Unsupported texture format "+t.format;
 			}
-		case ASTC(n):
-			checkMult4(t);
-			switch( n ) {
-			case 10: tt.internalFmt = hxd.PixelFormat.ASTC_FORMAT.RGBA_4x4;
-			default: throw "Unsupported texture format "+t.format;
-			}
-		case ETC(n):
-			checkMult4(t);
-			switch( n ) {
-			case 0: tt.internalFmt = hxd.PixelFormat.ETC_FORMAT.RGB_ETC1;
-			default: throw "Unsupported texture format "+t.format;
-			}
-		case PVRTC(n):
-			checkMult4(t);
-			switch(n) {
-			case 8: tt.internalFmt = hxd.PixelFormat.PVRTC_FORMAT.RGB_4BPPV1;
-			case 9: tt.internalFmt = hxd.PixelFormat.PVRTC_FORMAT.RGBA_4BPPV1;
-			default: throw "Unsupported texture format "+t.format;
-			}
+			case ASTC(n):
+				checkMult4(t);
+				switch( n ) {
+				case 10: tt.internalFmt = hxd.PixelFormat.ASTC_FORMAT.RGBA_4x4;
+				default: throw "Unsupported texture format "+t.format;
+				}
+			case ETC(n):
+				checkMult4(t);
+				switch( n ) {
+				case 0: tt.internalFmt = hxd.PixelFormat.ETC_FORMAT.RGB_ETC1;
+				default: throw "Unsupported texture format "+t.format;
+				}
+			case PVRTC(n):
+				checkMult4(t);
+				switch(n) {
+				case 8: tt.internalFmt = hxd.PixelFormat.PVRTC_FORMAT.RGB_4BPPV1;
+				case 9: tt.internalFmt = hxd.PixelFormat.PVRTC_FORMAT.RGBA_4BPPV1;
+				default: throw "Unsupported texture format "+t.format;
 		default:
 			throw "Unsupported texture format "+t.format;
 		}
@@ -1012,7 +965,7 @@ class GlDriver extends Driver {
 			} else {
 				#if js
 				if( !t.format.match(S3TC(_)) && !t.format.match(ETC(_)) && !t.format.match(ASTC(_)) && !t.format.match(PVRTC(_))) 
-					#end
+				#end
 				gl.texImage2D(bind, mip, tt.internalFmt, w, h, 0, getChannels(tt), tt.pixelFmt, null);
 				checkError();
 			}
@@ -1272,7 +1225,7 @@ class GlDriver extends Driver {
 					gl.compressedTexSubImage3D(face, mipLevel, 0, 0, side, pixels.width, pixels.height, 1, t.t.internalFmt, buffer);
 				else
 					gl.compressedTexImage2D(face, mipLevel, t.t.internalFmt, pixels.width, pixels.height, 0, buffer);
-			default: 
+			default:
 				if( t.flags.has(IsArray) )
 					gl.texSubImage3D(face, mipLevel, 0, 0, side, pixels.width, pixels.height, 1, getChannels(t.t), t.t.pixelFmt, buffer);
 				else
@@ -1617,6 +1570,7 @@ class GlDriver extends Driver {
 			gl.framebufferTextureLayer(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0, tex.t.t, mipLevel, layer);
 		else
 			gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0, tex.flags.has(Cube) ? CUBE_FACES[layer] : GL.TEXTURE_2D, tex.t.t, mipLevel);
+
 		if( tex.depthBuffer != null ) {
 			// Depthbuffer and stencilbuffer are combined in one buffer, created with GL.DEPTH_STENCIL
 			if(tex.depthBuffer.hasStencil() && tex.depthBuffer.format == Depth24Stencil8) {
@@ -1704,8 +1658,6 @@ class GlDriver extends Driver {
 		#end
 	}
 
-	
-	
 	#if js
 	/**
 		Get the max supported precision to use for shaders

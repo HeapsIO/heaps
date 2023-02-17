@@ -181,6 +181,7 @@ class Parser {
 			size = getVersionedInt32();
 		}
 	}
+
 	function readBinaryString( length : Int ) : String {
 		if  (length == 0 ) return "";
 		var str = bytes.getString(pos, length);
@@ -195,11 +196,13 @@ class Parser {
 		}
 		return str;
 	}
+
 	function parseBinaryNode( nextRecord : Int ) : FbxNode {
 
 		var numProperties : Int = getVersionedInt32();
 		var propertyListLength : UInt = getVersionedInt32();
 		var name : String = readBinaryString(getByte());
+		
 		var props : Array<FbxProp> = new Array();
 		var childs : Array<FbxNode> = new Array();
 

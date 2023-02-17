@@ -203,7 +203,7 @@ class HMDModel extends MeshPrimitive {
 		var buf = h3d.Buffer.ofFloats(v, 3);
 		addBuffer("tangent", buf, 0);
 	}
-	
+
 	override function render( engine : h3d.Engine ) {
 		if( curMaterial < 0 ) {
 			super.render(engine);

@@ -1,8 +1,8 @@
+import h3d.Engine;
+import h2d.TextInput;
 import h2d.Camera;
 import h2d.Graphics;
-import h2d.TextInput;
 import h2d.TileGroup;
-import h3d.Engine;
 import hxd.Key;
 import hxd.Res;
 
@@ -65,41 +65,6 @@ class Camera2D extends SampleApp {
 
 	override private function init() {
 		super.init();
-		
-		// Second camera for sample controls
-		var uiCamera = new Camera();
-		// layerVisible allows to filter out layers that camera should not render.
-		uiCamera.layerVisible = (idx) -> idx == 2;
-		s2d.add(fui, 2);
-		// Add UI camera to scene. Note that order of cameras in array matters, as they are rendered in-order.
-		s2d.addCamera(uiCamera);
-		// Only one camera can handle user input events.
-		// When assigning newly-created camera as interactiveCamera - adding it to Scene can be omitted, as it will be added automatically.
-		s2d.interactiveCamera = uiCamera;
-
-		// See Tiled sample
-		var followX = s2d.width * .5;
-		var followY = s2d.height * .5;
-		var tileSize = 16;
-		var tmx = Res.tileMap.toMap();
-
-		var tset = Res.tiles.toTile();
-		var tiles = tset.gridFlatten(tileSize, 0, 0);
-		for ( l in tmx.layers ) {
-			var group : TileGroup = new TileGroup(tset);
-			// Props layer won't be visible on main camera, but will be visible in the follower camera.
-			s2d.add(group, l.name == "Props" ? 1 : 0);
-			group.x = followX - tmx.width * (tileSize / 2);
-			group.y = followY - tmx.height * (tileSize / 2);
-			var y = 0, x = 0;
-			for (gid in l.data) {
-				if (gid != 0) group.add(x * tileSize, y * tileSize, tiles[gid-1]);
-				if (++x == tmx.width) {
-					x = 0;
-					y++;
-				}
-			}
-		}
 
 		// Second camera for sample controls
 		var uiCamera = new Camera();
