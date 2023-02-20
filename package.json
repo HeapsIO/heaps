@@ -1,6 +1,6 @@
 {
   "name": "@hacksawstudios/heaps",
-  "version": "1.9.1",
+  "version": "1.9.6",
   "description": "_High Performance Game Framework_",
   "main": "index.js",
   "dependencies": {
