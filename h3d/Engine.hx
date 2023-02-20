@@ -1,5 +1,6 @@
 package h3d;
 import h3d.mat.Data;
+
 private class TargetTmp {
 	public var t : h3d.mat.Texture;
 	public var textures : Array<h3d.mat.Texture>;

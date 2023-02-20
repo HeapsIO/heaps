@@ -1,7 +1,7 @@
 package hxd.fmt.fbx;
-import h3d.col.Point;
 import haxe.io.Bytes;
 using hxd.fmt.fbx.Data;
+import h3d.col.Point;
 
 #if (haxe_ver < 4)
 import haxe.xml.Fast in Access;
