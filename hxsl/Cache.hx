@@ -690,9 +690,9 @@ class Cache {
 			params = p2;
 		}
 
-		inline function isPerInstance(p:RuntimeShader.AllocParam,v) {
+		inline function isPerInstance(p:RuntimeShader.AllocParam,v:TVar) {
 			var params = instancedParams[p.instance];
-			if( params != null && params.indexOf(p.name) >= 0 )
+			if( params != null && params.indexOf(v.name) >= 0 )
 				return true;
 			if( this.isPerInstance(v) )
 				return true;
