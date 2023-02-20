@@ -2,6 +2,26 @@ package hxsl;
 using hxsl.Ast;
 import hxsl.RuntimeShader;
 
+class BatchInstanceParams {
+
+	var forcedPerInstance : Array<{ shader : String, params : Array<String> }>;
+	var cachedSignature : String;
+
+	public function new( forcedPerInstance ) {
+		this.forcedPerInstance = forcedPerInstance;
+	}
+
+	public function getSignature() {
+		if( cachedSignature == null ) {
+			for( fp in forcedPerInstance )
+				fp.params.sort(Reflect.compare);
+			cachedSignature = haxe.crypto.Md5.encode([for( s in forcedPerInstance ) s.shader+"="+s.params.join(",")].join(";")).substr(0,8);
+		}
+		return cachedSignature;
+	}
+
+}
+
 class SearchMap {
 	public var linked : RuntimeShader;
 	var nexts : Array<SearchMap> = [];
@@ -42,8 +62,9 @@ class Cache {
 
 	var linkCache : SearchMap;
 	var linkShaders : Map<String, Shader>;
-	var batchShaders : Map<RuntimeShader, Map<String,{ shader : SharedShader, params : RuntimeShader.AllocParam, size : Int }>>;
+	var batchShaders : Map<RuntimeShader, { shader : SharedShader, params : RuntimeShader.AllocParam, size : Int }>;
 	var byID : Map<String, RuntimeShader>;
+	var batchShadersParams : Map<String, Map<RuntimeShader, { shader : SharedShader, params : RuntimeShader.AllocParam, size : Int }>>;
 	public var constsToGlobal : Bool;
 
 	function new() {
@@ -51,6 +72,7 @@ class Cache {
 		linkCache = new SearchMap();
 		linkShaders = new Map();
 		batchShaders = new Map();
+		batchShadersParams = new Map();
 		byID = new Map();
 	}
 
@@ -486,21 +508,21 @@ class Cache {
 		return c;
 	}
 
-	public function makeBatchShader( rt : RuntimeShader, shaders, forcedPerInstance : Array<{ shader : String, params : Array<String> }> ) : BatchShader {
-		var msh = batchShaders.get(rt); // don't use rt.id to avoid collisions on identical signatures
-		if( msh == null ) {
-			msh = new Map();
-			batchShaders.set(rt, msh);
+	public function makeBatchShader( rt : RuntimeShader, shaders, params : BatchInstanceParams ) : BatchShader {
+		var batchMap;
+		if( params == null )
+			batchMap = batchShaders;
+		else {
+			batchMap = batchShadersParams.get(params.getSignature());
+			if( batchMap == null ) {
+				batchMap = new Map();
+				batchShadersParams.set(params.getSignature(),batchMap);
+			}
 		}
-		if( forcedPerInstance != null ) {
-			for( fp in forcedPerInstance )
-				fp.params.sort(Reflect.compare);
-		}
-		var sign = forcedPerInstance == null ? "" : haxe.crypto.Md5.encode([for( s in forcedPerInstance ) s.shader+"="+s.params.join(",")].join(";")).substr(0,8);
-		var sh = msh.get(sign);
+		var sh = batchMap.get(rt); // don't use rt.id to avoid collisions on identical signatures
 		if( sh == null ) {
-			sh = createBatchShader(rt, shaders, forcedPerInstance, forcedPerInstance == null ? null : sign);
-			msh.set(sign,sh);
+			sh = createBatchShader(rt, shaders, params);
+			batchMap.set(rt,  sh);
 		}
 		var shader = std.Type.createEmptyInstance(BatchShader);
 		@:privateAccess shader.shader = sh.shader;
@@ -518,9 +540,9 @@ class Cache {
 		return false;
 	}
 
-	function createBatchShader( rt : RuntimeShader, shaders : hxsl.ShaderList, forcedPerInstance : Array<{ shader : String, params : Array<String> }>, extraSign : String ) : { shader : SharedShader, params : RuntimeShader.AllocParam, size : Int } {
+	function createBatchShader( rt : RuntimeShader, shaders : hxsl.ShaderList, params : BatchInstanceParams ) : { shader : SharedShader, params : RuntimeShader.AllocParam, size : Int } {
 		var s = new hxsl.SharedShader("");
-		var id = (extraSign == null ? rt.spec.signature : haxe.crypto.Md5.encode(rt.spec.signature + extraSign)).substr(0, 8);
+		var id = (params == null ? rt.spec.signature : haxe.crypto.Md5.encode(rt.spec.signature + params.getSignature())).substr(0, 8);
 
 		function declVar( name, t, kind ) : TVar {
 			return {
@@ -532,7 +554,8 @@ class Cache {
 		}
 
 		var instancedParams = [];
-		if( forcedPerInstance != null ) {
+		if( params != null ) {
+			var forcedPerInstance = @:privateAccess params.forcedPerInstance;
 			var instanceIndex = 1;
 			var forcedIndex = forcedPerInstance.length - 1;
 			var s = shaders;

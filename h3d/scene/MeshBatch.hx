@@ -73,7 +73,7 @@ class MeshBatch extends MultiMaterial {
 	**/
 	public var calcBounds = true;
 
-	var forcedPerInstance : Array<{ shader : String, params : Array<String> }>;
+	var instancedParams : hxsl.Cache.BatchInstanceParams;
 
 	public function new( primitive, ?material, ?parent ) {
 		instanced = new h3d.prim.Instanced();
@@ -122,7 +122,7 @@ class MeshBatch extends MultiMaterial {
 				var manager = cast(ctx,h3d.pass.Default).manager;
 				var shaders = p.getShadersRec();
 				var rt = manager.compileShaders(shaders, false);
-				var shader = manager.shaderCache.makeBatchShader(rt, shaders, forcedPerInstance);
+				var shader = manager.shaderCache.makeBatchShader(rt, shaders, instancedParams);
 
 				var b = new BatchData();
 				b.indexCount = matInfo.count;

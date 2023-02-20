@@ -31,7 +31,7 @@ class CacheFile extends Cache {
 	var shaders : Map<String,{ shader : SharedShader, version : String }> = new Map();
 	var runtimeShaders : Array<RuntimeShader> = [];
 	var linkers : Array<{ shader : Shader, vars : Array<hxsl.Output> }> = [];
-	var batchers : Array<{ shader : SharedShader, rt : RuntimeShader, instance : Array<{shader:String,params:Array<String>}> }> = [];
+	var batchers : Array<{ shader : SharedShader, rt : RuntimeShader, params : hxsl.Cache.BatchInstanceParams }> = [];
 
 	// sources
 	var compiledSources : Map<String,{ vertex : String, fragment : String }> = new Map();
@@ -69,9 +69,9 @@ class CacheFile extends Cache {
 		return shader;
 	}
 
-	override function createBatchShader( rt, shaders, perInstance, sign ) {
-		var b = super.createBatchShader(rt, shaders, perInstance, sign);
-		batchers.push({ rt : rt, shader : b.shader, instance : perInstance });
+	override function createBatchShader( rt, shaders, params ) {
+		var b = super.createBatchShader(rt, shaders, params);
+		batchers.push({ rt : rt, shader : b.shader, params : params });
 		return b;
 	}
 
@@ -202,10 +202,10 @@ class CacheFile extends Cache {
 			if( name == null ) break;
 			var rt = readString();
 			var str = readStringOpt();
-			var inst = null;
+			var params = null;
 			if( str != null )
-				inst = [for( s in str.split(";") ) { var v = s.split("="); { shader : v[0], params : v[1].split(",") }}];
-			batchMap.set(name, { rt : rt, inst : inst });
+				params = new hxsl.Cache.BatchInstanceParams([for( s in str.split(";") ) { var v = s.split("="); { shader : v[0], params : v[1].split(",") }}]);
+			batchMap.set(name, { rt : rt, params : params });
 		}
 
 		shaders = new Map();
@@ -274,7 +274,7 @@ class CacheFile extends Cache {
 								r = null; // was modified
 								break;
 							}
-							var sh = makeBatchShader(rt.rt, rt.shaders, i.batch.inst);
+							var sh = makeBatchShader(rt.rt, rt.shaders, i.batch.params);
 							i.shader = { version : null, shader : sh.shader };
 							batchMode = true;
 						}
@@ -326,7 +326,7 @@ class CacheFile extends Cache {
 								r = null; // was modified
 								break;
 							}
-							var sh = makeBatchShader(rt.rt, rt.shaders, i.batch.inst);
+							var sh = makeBatchShader(rt.rt, rt.shaders, i.batch.params);
 							i.shader = { version : null, shader : sh.shader };
 							r.batchMode = true;
 						}
@@ -488,8 +488,8 @@ class CacheFile extends Cache {
 			separator();
 			writeString(@:privateAccess b.shader.data.name);
 			writeString(@:privateAccess b.rt.spec.signature);
-			if( b.instance != null )
-				writeString([for( s in b.instance ) s.shader+"="+s.params.join(",")].join(";"), true);
+			if( b.params != null )
+				writeString([for( s in @:privateAccess b.params.forcedPerInstance ) s.shader+"="+s.params.join(",")].join(";"), true);
 		}
 		separator();
 		writeString(null);
