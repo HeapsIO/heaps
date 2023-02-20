@@ -1,11 +1,11 @@
 {
   "name": "@hacksawstudios/heaps",
-  "version": "1.9.6",
+  "version": "1.9.7",
   "description": "_High Performance Game Framework_",
   "main": "index.js",
   "dependencies": {
-    "@hacksawstudios/haxe-module-installer": "1.2.1",
-    "fs-extra": "9.1.0"
+    "@hacksawstudios/haxe-module-installer": "1.2.6",
+    "fs-extra": "11.1.0"
   },
   "scripts": {
     "postinstall": "npx @hacksawstudios/haxe-module-installer",

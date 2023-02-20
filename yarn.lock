@@ -2,22 +2,27 @@
 # yarn lockfile v1
 
 
-"@hacksawstudios/haxe-module-installer@1.2.1":
-  version "1.2.1"
-  resolved "https://packagecloud.io/hacksawstudios/client/npm/@hacksawstudios/haxe-module-installer/-/haxe-module-installer-1.2.1.tgz#02a985aca0fcfecc522367c4b4e6e57529fe0dbd"
-  integrity sha1-AqmFrKD8/sxSI2fEtObldSn+Db0=
-
-at-least-node@^1.0.0:
-  version "1.0.0"
-  resolved "https://registry.yarnpkg.com/at-least-node/-/at-least-node-1.0.0.tgz#602cd4b46e844ad4effc92a8011a3c46e0238dc2"
-  integrity sha512-+q/t7Ekv1EDY2l6Gda6LLiX14rU9TV20Wa3ofeQmwPFZbOMo9DXrLbOjFaaclkXKWidIaopwAObQDqwWtGUjqg==
-
-fs-extra@9.1.0:
-  version "9.1.0"
-  resolved "https://registry.yarnpkg.com/fs-extra/-/fs-extra-9.1.0.tgz#5954460c764a8da2094ba3554bf839e6b9a7c86d"
-  integrity sha512-hcg3ZmepS30/7BSFqRvoo3DOMQu7IjqxO5nCDt+zM9XWjb33Wg7ziNT+Qvqbuc3+gWpzO02JubVyk2G4Zvo1OQ==
+"@hacksawstudios/haxe-module-installer@1.2.6":
+  version "1.2.6"
+  resolved "https://hacksawgaming-281033247142.d.codeartifact.eu-west-1.amazonaws.com:443/npm/hacksaw-client-artifacts/@hacksawstudios/haxe-module-installer/-/haxe-module-installer-1.2.6.tgz#fcb9c643a30f11200a647f437a9befce984ad5f4"
+  integrity sha512-2bWK3hAmF+bVMxxVRCez7OJIbBo+nu1JvUSXdeoaJVsgPtFBCKZ6dAfi7VqRHZo7IQJKaHFzI2seMKD5OFckmA==
   dependencies:
-    at-least-node "^1.0.0"
+    fs-extra "10.1.0"
+
+fs-extra@10.1.0:
+  version "10.1.0"
+  resolved "https://hacksawgaming-281033247142.d.codeartifact.eu-west-1.amazonaws.com:443/npm/hacksaw-client-artifacts/fs-extra/-/fs-extra-10.1.0.tgz#02873cfbc4084dde127eaa5f9905eef2325d1abf"
+  integrity sha512-oRXApq54ETRj4eMiFzGnHWGy+zo5raudjuxN0b8H7s/RU2oW0Wvsx9O0ACRN/kRq9E8Vu/ReskGB5o3ji+FzHQ==
+  dependencies:
+    graceful-fs "^4.2.0"
+    jsonfile "^6.0.1"
+    universalify "^2.0.0"
+
+fs-extra@11.1.0:
+  version "11.1.0"
+  resolved "https://hacksawgaming-281033247142.d.codeartifact.eu-west-1.amazonaws.com:443/npm/hacksaw-client-artifacts/fs-extra/-/fs-extra-11.1.0.tgz#5784b102104433bb0e090f48bfc4a30742c357ed"
+  integrity sha512-0rcTq621PD5jM/e0a3EJoGC/1TC5ZBCERW82LQuwfGnCa1V8w7dpYH1yNu+SLb6E5dkeCBzKEyLGlFrnr+dUyw==
+  dependencies:
     graceful-fs "^4.2.0"
     jsonfile "^6.0.1"
     universalify "^2.0.0"
