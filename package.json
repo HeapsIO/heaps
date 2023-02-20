@@ -1,9 +1,9 @@
 {
   "name": "@hacksawstudios/heaps",
-  "version": "1.9.7",
+  "version": "1.9.8",
   "description": "_High Performance Game Framework_",
   "main": "index.js",
-  "dependencies": {
+  "devDependencies": {
     "@hacksawstudios/haxe-module-installer": "1.2.6",
     "fs-extra": "11.1.0"
   },
