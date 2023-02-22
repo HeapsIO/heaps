@@ -41,7 +41,7 @@ class AnimMeshBatcher extends Object {
 	var originalObject : Object;
 
 	var batches : Array<MeshBatch> = [];
-	public function new(object : h3d.scene.Object, resetSpawn : Void -> Void, spawn : h3d.Matrix -> Bool, ?parent) {
+	public function new(object : h3d.scene.Object, spawn : h3d.Matrix -> Bool, ?parent) {
 		super(parent);
 		originalObject = object;
 		addChild(originalObject);
@@ -55,10 +55,8 @@ class AnimMeshBatcher extends Object {
 		}
 
 		var tmp = new h3d.Matrix();
-		for ( b in batches ) {
-			tmp.zero();
-			resetSpawn();
-			while ( spawn(tmp) ) {
+		while ( spawn(tmp) ) {
+			for ( b in batches ) {
 				b.worldPosition = tmp;
 				b.emitInstance();
 			}
