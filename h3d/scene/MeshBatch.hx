@@ -129,6 +129,8 @@ class MeshBatch extends MultiMaterial {
 				b.indexStart = matInfo.start;
 				b.paramsCount = shader.paramsSize;
 				b.maxInstance = Std.int(MAX_BUFFER_ELEMENTS / b.paramsCount);
+				 if ( b.maxInstance <= 0 )
+					throw "Mesh batch shaders needs at least one perInstance parameter";
 				b.params = shader.params;
 				b.shader = shader;
 				b.pass = p;
