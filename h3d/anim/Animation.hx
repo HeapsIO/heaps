@@ -173,7 +173,7 @@ class Animation {
 			var joint = hxd.impl.Api.downcast(obj, h3d.scene.Skin.Joint);
 			if( joint != null ) {
 				currentSkin = cast joint.parent;
-				a.targetSkin = currentSkin;
+				a.targetSkin = currentSkin != null ? currentSkin : joint.skin;
 				a.targetJoint = joint.index;
 			} else {
 				a.targetObject = obj;
