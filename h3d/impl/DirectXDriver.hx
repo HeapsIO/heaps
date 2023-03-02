@@ -104,6 +104,9 @@ class DirectXDriver extends h3d.impl.Driver {
 	var currentStencilOpBits = -1;
 	var currentStencilRef = 0;
 	var currentColorMask = -1;
+	var currentColorMaskIndex = -1;
+	var colorMaskIndexes : Map<Int, Int>;
+	var colorMaskIndex = 1;
 	var targetsCount = 1;
 	var allowDraw = false;
 	var maxSamplers = 16;
@@ -170,6 +173,7 @@ class DirectXDriver extends h3d.impl.Driver {
 		samplerStates = new Map();
 		vertexShader = new PipelineState(Vertex);
 		pixelShader = new PipelineState(Pixel);
+		colorMaskIndexes = new Map();
 
 		try
 			driver = Driver.create(window, backBufferFormat, getDriverFlags())
@@ -654,7 +658,6 @@ class DirectXDriver extends h3d.impl.Driver {
 		currentMaterialBits = bits;
 		currentStencilOpBits = stOpBits;
 		currentStencilMaskBits = stMaskBits;
-		currentColorMask = mask;
 
 		var depthBits = bits & (Pass.depthWrite_mask | Pass.depthTest_mask);
 		var depths = depthStates.get(depthBits);
@@ -731,7 +734,19 @@ class DirectXDriver extends h3d.impl.Driver {
 			Driver.rsSetState(raster);
 		}
 
-		var blendBits = (bits & (Pass.blendSrc_mask | Pass.blendDst_mask | Pass.blendAlphaSrc_mask | Pass.blendAlphaDst_mask | Pass.blendOp_mask | Pass.blendAlphaOp_mask)) | mask;
+		var bitsMask = Pass.blendSrc_mask | Pass.blendDst_mask | Pass.blendAlphaSrc_mask | Pass.blendAlphaDst_mask | Pass.blendOp_mask | Pass.blendAlphaOp_mask;
+		if ( currentColorMask != mask ) {
+			currentColorMaskIndex = colorMaskIndexes.get(mask);
+			if ( currentColorMaskIndex == 0 ) {
+				if ( bitsMask & colorMaskIndex != 0 )
+					throw "Too many color mask configurations";
+				currentColorMaskIndex = colorMaskIndex++;
+				colorMaskIndexes.set(mask, currentColorMaskIndex);
+			}
+		}
+		currentColorMask = mask;
+
+		var blendBits = (bits & bitsMask) | currentColorMaskIndex;
 		var blend = blendStates.get(blendBits);
 		if( blend == null ) {
 			var desc = new RenderTargetBlendDesc();
@@ -741,11 +756,35 @@ class DirectXDriver extends h3d.impl.Driver {
 			desc.destBlendAlpha = BLEND_ALPHA[Pass.getBlendAlphaDst(bits)];
 			desc.blendOp = BLEND_OP[Pass.getBlendOp(bits)];
 			desc.blendOpAlpha = BLEND_OP[Pass.getBlendAlphaOp(bits)];
-			desc.renderTargetWriteMask = mask;
+			desc.renderTargetWriteMask = mask & 15;
 			desc.blendEnable = !(desc.srcBlend == One && desc.srcBlendAlpha == One && desc.destBlend == Zero && desc.destBlendAlpha == Zero && desc.blendOp == Add && desc.blendOpAlpha == Add);
-			var tmp = new hl.NativeArray(1);
-			tmp[0] = desc;
-			blend = Driver.createBlendState(false, false, tmp, 1);
+			var maski = mask >> 4;
+			if ( maski > 0 ) {
+				var tmp = new hl.NativeArray(targetsCount);
+				tmp[0] = desc;
+				for ( i in 1...targetsCount ) {
+					if ( maski & 15 > 0 ) {
+						var desci = new RenderTargetBlendDesc();
+						desci.srcBlend = desc.srcBlend;
+						desci.destBlend = desc.destBlend;
+						desci.srcBlendAlpha = desc.srcBlendAlpha;
+						desci.destBlendAlpha = desc.destBlendAlpha;
+						desci.blendOp = desc.blendOp;
+						desci.blendOpAlpha = desc.blendOpAlpha;
+						desci.renderTargetWriteMask = maski & 15;
+						desci.blendEnable = desc.blendEnable;
+						tmp[i] = desci;
+					} else {
+						tmp[i] = desc;
+					}
+					maski = maski >> 4;
+				}
+				blend = Driver.createBlendState(false, true, tmp, targetsCount);
+			} else {
+				var tmp = new hl.NativeArray(1);
+				tmp[0] = desc;
+				blend = Driver.createBlendState(false, false, tmp, 1);
+			}
 			blendStates.set(blendBits, blend);
 		}
 		if( blend != currentBlendState ) {
