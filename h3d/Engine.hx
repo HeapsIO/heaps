@@ -68,30 +68,32 @@ class Engine {
 		lastTime = haxe.Timer.stamp();
 		window.addResizeEvent(onWindowResize);
 		#if macro
-		driver = new h3d.impl.NullDriver();
-		#elseif (js || hlsdl || usegl)
-		#if (hlsdl && heaps_vulkan)
-		if( hxd.Window.USE_VULKAN )
-			driver = new h3d.impl.VulkanDriver();
-		else
-		#end
-		#if js
-		driver = js.Browser.supported ? new h3d.impl.GlDriver(antiAlias) : new h3d.impl.NullDriver();
-		#else
-		driver = new h3d.impl.GlDriver(antiAlias);
-		#end
+			driver = new h3d.impl.NullDriver();
+		#elseif js
+			#if webgpu
+			driver = new h3d.impl.WebGpuDriver();
+			#else
+			driver = js.Browser.supported ? new h3d.impl.GlDriver(antiAlias) : new h3d.impl.NullDriver();
+			#end
+		#elseif (hlsdl || usegl)
+			#if heaps_vulkan
+			if( hxd.Window.USE_VULKAN )
+				driver = new h3d.impl.VulkanDriver();
+			else
+			#end
+			driver = new h3d.impl.GlDriver(antiAlias);
 		#elseif flash
-		driver = new h3d.impl.Stage3dDriver(antiAlias);
+			driver = new h3d.impl.Stage3dDriver(antiAlias);
 		#elseif (hldx && dx12)
-		driver = new h3d.impl.DX12Driver();
+			driver = new h3d.impl.DX12Driver();
 		#elseif hldx
-		driver = new h3d.impl.DirectXDriver();
+			driver = new h3d.impl.DirectXDriver();
 		#elseif usesys
-		driver = new haxe.GraphicsDriver(antiAlias);
+			driver = new haxe.GraphicsDriver(antiAlias);
 		#else
-		#if sys Sys.println #else trace #end("No output driver available." #if hl + " Compile with -lib hlsdl or -lib hldx" #end);
-		driver = new h3d.impl.LogDriver(new h3d.impl.NullDriver());
-		driver.logEnable = true;
+			#if sys Sys.println #else trace #end("No output driver available." #if hl + " Compile with -lib hlsdl or -lib hldx" #end);
+			driver = new h3d.impl.LogDriver(new h3d.impl.NullDriver());
+			driver.logEnable = true;
 		#end
 		setCurrent();
 	}
