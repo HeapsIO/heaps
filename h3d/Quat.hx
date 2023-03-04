@@ -247,6 +247,32 @@ class Quat {
 	}
 
 	/**
+		Makes a unit quaternion to the power of the value.
+	**/
+	public inline function pow( v : Float ) {
+		// ln()
+		var r = Math.sqrt(x*x+y*y+z*z);
+		var t = r > Math.EPSILON ? Math.atan2(r,w)/r : 0;
+		w = 0.5 * Math.log(w*w+x*x+y*y+z*z);
+		x *= t;
+		y *= t;
+		z *= t;
+		// scale
+		x *= v;
+		y *= v;
+		z *= v;
+		w *= v;
+		// exp
+		var r = Math.sqrt(x*x+y*y+z*z);
+		var et = Math.exp(w);
+		var s = r > Math.EPSILON ? et *Math.sin(r)/r : 0;
+		w = et * Math.cos(r);
+		x *= s;
+		y *= s;
+		z *= s;
+	}
+
+	/**
 		Negate the quaternion: this will not change the actual angle, use `conjugate` for that.
 	**/
 	public inline function negate() {

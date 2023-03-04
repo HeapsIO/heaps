@@ -155,6 +155,14 @@ class Pass {
 		}
 	}
 
+	public function setColorMaski(r, g, b, a, i) {
+		if ( i > 8 )
+			throw "Color mask i supports 8 Render target";
+		var mask = (r?1:0) | (g?2:0) | (b?4:0) | (a?8:0);
+		mask = mask << (i * 4);
+		this.colorMask = this.colorMask | mask;
+	}
+
 	public function addShader<T:hxsl.Shader>(s:T) : T {
 		// throwing an exception will require NG GameServer review
 		if( s == null ) return null;
