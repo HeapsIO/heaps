@@ -74,10 +74,10 @@ class Quat {
 		}
 	}
 
-	public function initDirection( dir : Vector ) {
+	public function initDirection( dir : Vector, ?up : Vector ) {
 		// inlined version of initRotationMatrix(Matrix.lookAtX(dir))
 		var ax = dir.clone().normalized();
-		var ay = new Vector(-ax.y, ax.x, 0).normalized();
+		var ay = up == null ? new Vector(-ax.y, ax.x, 0).normalized() : up.cross(ax).normalized();
 		if( ay.lengthSq() < Math.EPSILON ) {
 			ay.x = ax.y;
 			ay.y = ax.z;
@@ -288,6 +288,10 @@ class Quat {
 
 	public inline function getDirection() {
 		return new h3d.Vector(1 - 2 * ( y * y + z * z ), 2 * ( x * y + z * w ), 2 * ( x * z - y * w ));
+	}
+
+	public inline function getUpAxis() {
+		return new h3d.Vector(2 * ( x*z + y*w ),2 * ( y*z - x*w ), 1 - 2 * ( x*x + y*y ));
 	}
 
 	/**
