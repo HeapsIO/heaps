@@ -4,7 +4,7 @@ import h2d.RenderContext;
 import h2d.impl.BatchDrawState;
 
 /**
-   Iterates through the BatchElement linked list.
+	Iterates through the BatchElement linked list.
 **/
 private class ElementsIterator {
 	var e : BatchElement;
@@ -22,7 +22,7 @@ private class ElementsIterator {
 }
 
 /**
-   Iterates through the BatchElement linked list in reverse (from the last element backwards to the first element).
+	Iterates through the BatchElement linked list in reverse (from the last element backwards to the first element).
 **/
 
 private class ReversedElementsIterator {
@@ -285,7 +285,7 @@ class SpriteBatch extends Drawable {
 		@param e The element to add.
 		@param before When set, element will be added to the beginning of the element chain (rendered first). If `hasZOrder` is enabled, this is ignored.
 	**/
-	public function add(e:BatchElement,before=false) {
+	public function add(e:BatchElement, before=false) {
 		e.batch = this;
 		
 		// If hasZOrder=true insert it in the correct spot in the linked list.
@@ -299,11 +299,11 @@ class SpriteBatch extends Drawable {
 		return e;
 	}
 	/**
-	 * Add element by their z-order. 
-	 * 
-	 * If the values are the same it will add it to front of the elements with the same values.
-	 * @param e The element to insert into the linked list sorted by z-order.
-	 */
+		Add element by their z-order. 
+
+		If the values are the same it will add it to front of the elements with the same values.
+		@param e The element to insert into the linked list sorted by z-order.
+	**/
 	function insertByZOrder(e:BatchElement) {
 		var inserted = false;
 
@@ -321,11 +321,11 @@ class SpriteBatch extends Drawable {
 		return e;
 	}
 	/**
-	 * Add element to the end (or beginning) of the element chain.
-	 * @param e 
-	 * @param before When set, element will be added to the beginning of the element chain (rendered first).
+		Add element to the end (or beginning) of the element chain.
+		@param e The element to add.
+		@param before When set, element will be added to the beginning of the element chain (rendered first).
 	 */
-	inline function addDefault(e:BatchElement,before=false) {
+	inline function addDefault(e:BatchElement, before=false) {
 
 		if( first == null ) {
 			first = last = e;
@@ -362,9 +362,9 @@ class SpriteBatch extends Drawable {
 	}
 
 	/**
-	   Insert element before a certain element
-	   @param e The element to insert
-	   @param before The element to insert before
+		Insert element before a certain element
+		@param e The element to insert
+		@param before The element to insert before
 	**/
 	public function insertBefore(e:BatchElement, before:BatchElement) {
 		e.batch = this;
@@ -389,9 +389,9 @@ class SpriteBatch extends Drawable {
 	}
 
 	/**
-	   Insert element after a certain element.
-	   @param e The element to insert
-	   @param after The element to insert after.
+		Insert element after a certain element.
+		@param e The element to insert
+		@param after The element to insert after.
 	**/
 	public function insertAfter(e:BatchElement, after:BatchElement) {
 		e.batch = this;
@@ -629,8 +629,8 @@ class SpriteBatch extends Drawable {
 	}
 
 	/**
-	   Get number of elements in SpriteBatch
-	   @return Int
+		Get number of elements in SpriteBatch
+		@return Int
 	**/
 	function get_length():Int {
 		return [for (e in this.getElements()) e].length;
