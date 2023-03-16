@@ -338,6 +338,9 @@ class Checker {
 		case TSwiz(e, _):
 			checkWrite(e);
 			return;
+		case TArray(e, _):
+			checkWrite(e);
+			return;
 		default:
 		}
 		error("This expression cannot be assigned", e.p);
