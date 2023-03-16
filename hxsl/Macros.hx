@@ -436,7 +436,7 @@ class Macros {
 								fields.push(f);
 					} catch( e : Ast.Error ) {
 						fields.remove(f);
-						Context.error(e.msg, e.pos);
+						Context.fatalError(e.msg, e.pos);
 					}
 				default:
 				}
