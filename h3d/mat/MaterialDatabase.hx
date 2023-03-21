@@ -48,7 +48,7 @@ class MaterialDatabase {
 		return Reflect.field(p, material.name);
 	}
 
-	public function saveMatProps( material : Material, setup : MaterialSetup ) {
+	public function saveMatProps( material : Material, setup : MaterialSetup, ?defaultProps : Any ) {
 		var path = ["materials", setup.name, material.name];
 		var root : Dynamic = getModelData(material.model);
 		if( root == null )
@@ -68,7 +68,7 @@ class MaterialDatabase {
 		Reflect.deleteField(root, name);
 
 		var currentProps = material.props;
-		var defaultProps = material.getDefaultProps();
+		if ( defaultProps == null ) defaultProps = material.getDefaultProps();
 		if( currentProps == null || Std.string(defaultProps) == Std.string(currentProps) ) {
 			// cleanup
 			while( path.length > 0 ) {
