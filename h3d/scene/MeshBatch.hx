@@ -266,15 +266,19 @@ class MeshBatch extends MultiMaterial {
 		needUpload = true;
 	}
 
-	override function getBoundsRec( b : h3d.col.Bounds ) {
+	override function addBoundsRec( b : h3d.col.Bounds, relativeTo: h3d.Matrix ) {
 		var old = primitive;
 		primitive = null;
-		b = super.getBoundsRec(b);
+		super.addBoundsRec(b, relativeTo);
 		primitive = old;
 		if( primitive == null || flags.has(FIgnoreBounds) )
-			return b;
-		b.add(primitive.getBounds());
-		return b;
+			return;
+		// already transformed in absolute
+		var bounds = primitive.getBounds();
+		if( relativeTo == null )
+			b.add(bounds);
+		else
+			b.addTransform(bounds, relativeTo);
 	}
 
 	public function emitInstance() {

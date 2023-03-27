@@ -386,17 +386,19 @@ class Object {
 	}
 
 	/**
-		Return the bounds of this object and all its children, in absolute global coordinates.
+		Return the bounds of this object and all its children, in absolute global coordinates or relative to the
+		object being used as parameter.
 	**/
-	@:final public function getBounds( ?b : h3d.col.Bounds ) {
+	@:final public function getBounds( ?b : h3d.col.Bounds, ?relativeTo : Object ) {
 		if( b == null )
 			b = new h3d.col.Bounds();
-		if( parent != null )
+		if( parent != null && parent != relativeTo )
 			parent.syncPos();
-		return getBoundsRec(b);
+		addBoundsRec(b, relativeTo == null ? null : relativeTo.getInvPos());
+		return b;
 	}
 
-	function getBoundsRec( b : h3d.col.Bounds ) {
+	function addBoundsRec( b : h3d.col.Bounds, relativeTo : h3d.Matrix ) {
 		if( posChanged ) {
 			for( c in children )
 				c.posChanged = true;
@@ -404,8 +406,7 @@ class Object {
 			calcAbsPos();
 		}
 		for( c in children )
-			c.getBoundsRec(b);
-		return b;
+			c.addBoundsRec(b, relativeTo);
 	}
 
 	/**
@@ -785,7 +786,7 @@ class Object {
 		#if sceneprof h3d.impl.SceneProf.mark(this); #end
 
 		if( !visible || (culled && inheritCulled && !ctx.computingStatic) )
-			return;		
+			return;
 
 		// fallback in case the object was added during a sync() event and we somehow didn't update it
 		if( posChanged ) {

@@ -55,10 +55,6 @@ class Graphics extends Mesh {
 		material.mainPass.culling = None;
 	}
 
-	override function getBoundsRec(b:h3d.col.Bounds):h3d.col.Bounds {
-		return super.getBoundsRec(b);
-	}
-
 	override function onRemove() {
 		super.onRemove();
 		bprim.clear();

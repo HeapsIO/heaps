@@ -59,7 +59,7 @@ class SkinCollider extends Collider {
 		lastBoundsFrame = obj.lastFrame;
 		obj.syncJoints();
 		currentBounds.empty();
-		obj.getBoundsRec(currentBounds);
+		obj.addBoundsRec(currentBounds,null);
 	}
 
 	function applyTransform() {
