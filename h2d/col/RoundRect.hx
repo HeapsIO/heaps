@@ -3,7 +3,7 @@ package h2d.col;
 /**
 	A Collider representing the rectangle with the rounded edges, forming a 2D capsule.
 **/
-class RoundRect implements Collider {
+class RoundRect extends Collider {
 	/**
 		The horizontal position of the rectangle center.
 	**/
@@ -110,4 +110,11 @@ class RoundRect implements Collider {
 		return inside(p);
 	}
 
+	public function collideCircle( c : Circle ) : Bool {
+		throw "Not implemented";
+	}
+
+	public function collideBounds( b : Bounds ) : Bool {
+		throw "Not implemented";
+	}
 }
