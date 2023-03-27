@@ -137,8 +137,10 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 					p = p.parent;
 				if( p != null ) continue;
 
-				var minv = i.getInvPos();
-				r.transform(minv);
+				if( !i.isAbsoluteShape ) {
+					var minv = i.getInvPos();
+					r.transform(minv);
+				}
 
 				// check for NaN
 				if( r.lx != r.lx ) {
@@ -460,9 +462,9 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 
 	var prevDB : h3d.mat.DepthBuffer;
 	var prevEngine = null;
-	/** 
+	/**
 		Temporarily overrides the output render target. This is useful for picture-in-picture rendering,
-		where the output render target has a different size from the window. 
+		where the output render target has a different size from the window.
 		`tex` must have a matching depthBuffer attached.
 		Call `setOutputTarget()` after `render()` has been called.
 	**/

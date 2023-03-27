@@ -47,6 +47,10 @@ class Interactive extends Object implements hxd.SceneEvents.Interactive {
 	**/
 	public var showDebug(get, set) : Bool;
 
+	/**
+	 *  Tells if our shape is in absolute space (for example ObjectCollider) or relative to the interactive transform.
+	 */
+	public var isAbsoluteShape : Bool = false;
 
 	var scene : Scene;
 	var mouseDownButton : Int = -1;
@@ -76,8 +80,7 @@ class Interactive extends Object implements hxd.SceneEvents.Interactive {
 		debugObj = shape.makeDebugObj();
 		if( debugObj != null ) {
 			setupDebugMaterial(debugObj);
-
-			debugObj.ignoreParentTransform = true;
+			debugObj.ignoreParentTransform = isAbsoluteShape;
 			this.addChild(debugObj);
 		}
 		return debugObj != null;
