@@ -1,6 +1,6 @@
 package h3d.col;
 
-class ObjectCollider implements Collider {
+class ObjectCollider extends Collider {
 
 	public var obj : h3d.scene.Object;
 	public var collider : Collider;

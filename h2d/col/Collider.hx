@@ -3,11 +3,13 @@ package h2d.col;
 /**
 	A common interface for 2D Shapes to hit-test again the mouse or a specific point in space.
 **/
-interface Collider /* extends hxd.impl.Serializable.StructSerializable */ {
+abstract class Collider {
 
 	/**
 		Tests if Point `p` is inside the Collider.
 	**/
-	public function contains( p : Point ) : Bool;
+	public abstract function contains( p : Point ) : Bool;
+	public abstract function collideCircle( c : Circle ) : Bool;
+	public abstract function collideBounds( b : Bounds ) : Bool;
 
 }

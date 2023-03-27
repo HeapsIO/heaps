@@ -1,6 +1,6 @@
 package h3d.col;
 
-class PolygonBuffer implements Collider {
+class PolygonBuffer extends Collider {
 
 	var buffer : haxe.ds.Vector<hxd.impl.Float32>;
 	var indexes : haxe.ds.Vector<Int>;

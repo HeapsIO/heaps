@@ -1,7 +1,7 @@
 package h3d.col;
 import hxd.Math;
 
-class Bounds implements Collider {
+class Bounds extends Collider {
 
 	public var xMin : Float;
 	public var xMax : Float;

@@ -1,23 +1,23 @@
 package h3d.col;
 
-interface Collider {
+abstract class Collider {
 
 	/**
 		Returns the distance of intersection between the ray and the collider, or negative if no collision.
 		If bestMatch is false, only negative/positive value needs to be returned, with no additional precision.
 	**/
-	public function rayIntersection( r : Ray, bestMatch : Bool ) : Float;
-	public function contains( p : Point ) : Bool;
-	public function inFrustum( f : Frustum, ?localMatrix : h3d.Matrix ) : Bool;
-	public function inSphere( s : Sphere ) : Bool;
+	public abstract function rayIntersection( r : Ray, bestMatch : Bool ) : Float;
+	public abstract function contains( p : Point ) : Bool;
+	public abstract function inFrustum( f : Frustum, ?localMatrix : h3d.Matrix ) : Bool;
+	public abstract function inSphere( s : Sphere ) : Bool;
 
 	#if !macro
-	public function makeDebugObj() : h3d.scene.Object;
+	public abstract function makeDebugObj() : h3d.scene.Object;
 	#end
 }
 
 
-class OptimizedCollider implements Collider {
+class OptimizedCollider extends Collider {
 
 	public var a : Collider;
 	public var b : Collider;
@@ -62,7 +62,7 @@ class OptimizedCollider implements Collider {
 
 }
 
-class GroupCollider implements Collider {
+class GroupCollider extends Collider {
 
 	public var colliders : Array<Collider>;
 

@@ -1,6 +1,6 @@
 package h3d.col;
 
-class Sphere implements Collider {
+class Sphere extends Collider {
 
 	public var x : Float;
 	public var y : Float;

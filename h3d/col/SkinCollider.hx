@@ -2,7 +2,7 @@ package h3d.col;
 
 @:access(h3d.col.PolygonBuffer)
 @:access(h3d.scene.Skin)
-class SkinCollider implements Collider {
+class SkinCollider extends Collider {
 
 	var obj : h3d.scene.Skin;
 	var col : PolygonBuffer;

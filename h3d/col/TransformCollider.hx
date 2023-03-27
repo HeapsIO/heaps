@@ -1,6 +1,6 @@
 package h3d.col;
 
-class TransformCollider implements Collider {
+class TransformCollider extends Collider {
 
 	public var collider : Collider;
 	public var mat(default, set) : h3d.Matrix;
