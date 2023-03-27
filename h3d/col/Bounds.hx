@@ -211,6 +211,12 @@ class Bounds extends Collider {
 		if( b.zMax > zMax ) zMax = b.zMax;
 	}
 
+	public inline function addTransform( b : Bounds, m : h3d.Matrix ) {
+		var tmp = b.clone();
+		tmp.transform(m);
+		add(tmp);
+	}
+
 	public inline function addPoint( p : Point ) {
 		if( p.x < xMin ) xMin = p.x;
 		if( p.x > xMax ) xMax = p.x;
