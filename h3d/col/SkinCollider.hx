@@ -93,9 +93,7 @@ class SkinCollider extends Collider {
 
 	#if !macro
 	public function makeDebugObj() : h3d.scene.Object {
-		var ret = new SkinColliderDebugObj(this);
-		ret.ignoreParentTransform = true;
-		return ret;
+		return new SkinColliderDebugObj(this);
 	}
 	#end
 

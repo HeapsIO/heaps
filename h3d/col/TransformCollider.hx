@@ -81,7 +81,6 @@ class TransformCollider extends Collider {
 	#if !macro
 	public function makeDebugObj() : h3d.scene.Object {
 		var obj = collider.makeDebugObj();
-		obj.ignoreParentTransform = true;
 		obj.defaultTransform = mat;
 		return obj;
 	}

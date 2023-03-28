@@ -67,10 +67,8 @@ class ObjectCollider extends Collider {
 	#if !macro
 	public function makeDebugObj() : h3d.scene.Object {
 		var ret = collider.makeDebugObj();
-		if( ret != null ) {
-			ret.ignoreParentTransform = true;
+		if( ret != null )
 			ret.follow = obj;
-		}
 		return ret;
 	}
 	#end
