@@ -158,7 +158,7 @@ class HMDModel extends MeshPrimitive {
 			v[k++] = n.y;
 			v[k++] = n.z;
 		}
-		var buf = h3d.Buffer.ofFloats(v, 3);
+		var buf = h3d.Buffer.ofFloats(v, 3, data.vertexCount > 0x10000 ? [LargeBuffer] : null);
 		addBuffer(name, buf, 0);
 		normalsRecomputed = name;
 	}
