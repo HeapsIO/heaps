@@ -13,6 +13,12 @@ class FPoint {
 		this.z = z;
 	}
 
+	public inline function set(x=0.,y=0.,z=0.) {
+		this.x = x;
+		this.y = y;
+		this.z = z;
+	}
+
 	public inline function sub( p : FPoint ) {
 		return new FPoint(x - p.x, y - p.y, z - p.z);
 	}
