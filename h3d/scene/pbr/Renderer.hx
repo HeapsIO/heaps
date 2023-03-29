@@ -32,6 +32,7 @@ package h3d.scene.pbr;
 @:enum abstract TonemapMap(String) {
 	var Linear = "Linear";
 	var Reinhard = "Reinhard";
+	var Filmic = "Filmic";
 }
 
 typedef RenderProps = {
@@ -42,6 +43,11 @@ typedef RenderProps = {
 	var tone : TonemapMap;
 	var emissive : Float;
 	var occlusion : Float;
+	var a : Float;
+	var b : Float;
+	var c : Float;
+	var d : Float;
+	var e : Float;
 }
 
 class DepthCopy extends h3d.shader.ScreenShader {
@@ -497,8 +503,16 @@ class Renderer extends h3d.scene.Renderer {
 		tonemap.shader.mode = switch( toneMode ) {
 			case Linear: 0;
 			case Reinhard: 1;
+			case Filmic: 2;
 			default: 0;
 		};
+		if ( toneMode == Filmic ) {
+			tonemap.shader.a = props.a;
+			tonemap.shader.b = props.b;
+			tonemap.shader.c = props.c;
+			tonemap.shader.d = props.d;
+			tonemap.shader.e = props.e;
+		}
 		tonemap.shader.hdrTexture = textures.hdr;
 	}
 
@@ -705,6 +719,11 @@ class Renderer extends h3d.scene.Renderer {
 			sky : Irrad,
 			tone : Linear,
 			occlusion : 1.,
+			a : 2.51,
+			b : 0.03,
+			c : 2.43,
+			d : 0.59,
+			e : 0.14,
 		};
 		return props;
 	}
@@ -746,8 +765,15 @@ class Renderer extends h3d.scene.Renderer {
 						<select field="tone">
 							<option value="Linear">Linear</option>
 							<option value="Reinhard">Reinhard</option>
+							<option value="Filmic">Filmic</option>
 						</select>
 					</dd>
+					<dt>Filmic a</dt><dd><input type="range" min="0" max="5" field="a"></dd>
+					<dt>Filmic b</dt><dd><input type="range" min="0" max="2" field="b"></dd>
+					<dt>Filmic c</dt><dd><input type="range" min="0" max="5" field="c"></dd>
+					<dt>Filmic d</dt><dd><input type="range" min="0" max="5" field="d"></dd>
+					<dt>Filmic e</dt><dd><input type="range" min="0" max="0.5" field="e"></dd>
+
 				</div>
 
 				<div class="group" name="Environment">
