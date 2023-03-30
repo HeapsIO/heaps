@@ -43,11 +43,11 @@ typedef RenderProps = {
 	var tone : TonemapMap;
 	var emissive : Float;
 	var occlusion : Float;
-	var a : Float;
-	var b : Float;
-	var c : Float;
-	var d : Float;
-	var e : Float;
+	var ?a : Float;
+	var ?b : Float;
+	var ?c : Float;
+	var ?d : Float;
+	var ?e : Float;
 }
 
 class DepthCopy extends h3d.shader.ScreenShader {
