@@ -127,6 +127,18 @@ class HtmlText extends Text {
 		glyphs.drawWith(ctx,this);
 	}
 
+	override function getShader< T:hxsl.Shader >( stype : Class<T> ) : T {
+		if (shaders != null) for( s in shaders ) {
+			var c = Std.downcast(s, h3d.shader.ColorMatrix);
+			if ( c != null && !c.enabled )
+				continue;
+			var s = hxd.impl.Api.downcast(s, stype);
+			if( s != null )
+				return s;
+		}
+		return null;
+	}
+
 	/**
 		Method that should return an `h2d.Tile` instance for `<img>` tags. By default calls `HtmlText.defaultLoadImage` method.
 
