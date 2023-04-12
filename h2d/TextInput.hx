@@ -266,7 +266,9 @@ class TextInput extends Text {
 				return;
 			if( e.charCode != 0 && canEdit ) {
 
-				if( !font.hasChar(e.charCode) ) return; // don't allow chars not supported by font
+				if( !font.hasChar(e.charCode) ) return; // don't allow chars not supported by font				
+				if(e.charCode == 8) return;
+				if(K.isDown(K.CTRL)) return;
 
 				beforeChange();
 				if( selectionRange != null )
