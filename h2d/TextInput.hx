@@ -53,12 +53,11 @@ class TextInput extends Text {
 
 	/**
 		When disabled, showSoftwareKeyboard will not be called.
-	 */
+	**/
 	public var useSoftwareKeyboard : Bool = true;
-	/**
-		If defined, will be called during onFocus. The function should return null if edit is canceled.
-	*/
-	public static var showSoftwareKeyboard : (text:String, multiline:Bool) -> String;
+	public static dynamic function showSoftwareKeyboard(target:TextInput, onTextChange:String->Void, onCursorMove:Int->Void, onFinish:()->Void) {}
+	public static dynamic function hideSoftwareKeyboard() {}
+	public static dynamic function updateSoftwareKeyboard(text:String, cursorIndex:Int) {}
 
 	var interactive : h2d.Interactive;
 	var cursorText : String;
@@ -132,21 +131,22 @@ class TextInput extends Text {
 		};
 		interactive.onFocus = function(e) {
 			onFocus(e);
-			if ( showSoftwareKeyboard != null && useSoftwareKeyboard && canEdit ) {
-				haxe.Timer.delay(function () {
-					var str = showSoftwareKeyboard(text, multiline);
-					if (str != null) {
-						beforeChange();
-						text = str;
-						onChange();
-					}
-					interactive.blur();
-				}, 0);
+			if ( useSoftwareKeyboard && canEdit ) {
+				showSoftwareKeyboard(this, function(str) {
+						if (text != str) {
+							beforeChange();
+							text = str;
+							onChange();
+							if (text != str)
+								updateSoftwareKeyboard(text, cursorIndex);
+						}
+					}, (pos) -> cursorIndex = pos, () -> interactive.blur());
 			}
 		}
 		interactive.onFocusLost = function(e) {
 			cursorIndex = -1;
 			selectionRange = null;
+			hideSoftwareKeyboard();
 			onFocusLost(e);
 		};
 
