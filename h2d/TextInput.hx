@@ -55,9 +55,8 @@ class TextInput extends Text {
 		When disabled, showSoftwareKeyboard will not be called.
 	**/
 	public var useSoftwareKeyboard : Bool = true;
-	public static dynamic function showSoftwareKeyboard(target:TextInput, onTextChange:String->Void, onCursorMove:Int->Void, onFinish:()->Void) {}
-	public static dynamic function hideSoftwareKeyboard() {}
-	public static dynamic function updateSoftwareKeyboard(text:String, cursorIndex:Int) {}
+	public static dynamic function showSoftwareKeyboard(target:TextInput) {}
+	public static dynamic function hideSoftwareKeyboard(target:TextInput) {}
 
 	var interactive : h2d.Interactive;
 	var cursorText : String;
@@ -131,22 +130,13 @@ class TextInput extends Text {
 		};
 		interactive.onFocus = function(e) {
 			onFocus(e);
-			if ( useSoftwareKeyboard && canEdit ) {
-				showSoftwareKeyboard(this, function(str) {
-						if (text != str) {
-							beforeChange();
-							text = str;
-							onChange();
-							if (text != str)
-								updateSoftwareKeyboard(text, cursorIndex);
-						}
-					}, (pos) -> cursorIndex = pos, () -> interactive.blur());
-			}
+			if ( useSoftwareKeyboard && canEdit )
+				showSoftwareKeyboard(this);
 		}
 		interactive.onFocusLost = function(e) {
 			cursorIndex = -1;
 			selectionRange = null;
-			hideSoftwareKeyboard();
+			hideSoftwareKeyboard(this);
 			onFocusLost(e);
 		};
 
