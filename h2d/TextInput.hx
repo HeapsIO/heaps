@@ -51,6 +51,13 @@ class TextInput extends Text {
 	**/
 	public var backgroundColor(get, set) : Null<Int>;
 
+	/**
+		When disabled, showSoftwareKeyboard will not be called.
+	**/
+	public var useSoftwareKeyboard : Bool = true;
+	public static dynamic function showSoftwareKeyboard(target:TextInput) {}
+	public static dynamic function hideSoftwareKeyboard(target:TextInput) {}
+
 	var interactive : h2d.Interactive;
 	var cursorText : String;
 	var cursorX : Float;
@@ -121,9 +128,15 @@ class TextInput extends Text {
 			onTextInput(e);
 			handleKey(e);
 		};
+		interactive.onFocus = function(e) {
+			onFocus(e);
+			if ( useSoftwareKeyboard && canEdit )
+				showSoftwareKeyboard(this);
+		}
 		interactive.onFocusLost = function(e) {
 			cursorIndex = -1;
 			selectionRange = null;
+			hideSoftwareKeyboard(this);
 			onFocusLost(e);
 		};
 
@@ -142,7 +155,6 @@ class TextInput extends Text {
 
 		interactive.onKeyUp = function(e) onKeyUp(e);
 		interactive.onRelease = function(e) onRelease(e);
-		interactive.onFocus = function(e) onFocus(e);
 		interactive.onKeyUp = function(e) onKeyUp(e);
 		interactive.onMove = function(e) onMove(e);
 		interactive.onOver = function(e) onOver(e);
