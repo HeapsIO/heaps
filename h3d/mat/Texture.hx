@@ -19,6 +19,7 @@ class Texture {
 		#else
 			RGBA
 		#end;
+	public static var TRILINEAR_FILTERING_ENABLED : Bool = true;
 
 	var t : h3d.impl.Driver.Texture;
 	var mem : h3d.impl.MemoryManager;
@@ -103,7 +104,10 @@ class Texture {
 
 		this.width = w;
 		this.height = h;
-		this.mipMap = this.flags.has(MipMapped) ? Linear : None;
+		if ( this.flags.has(MipMapped) )
+			this.mipMap = TRILINEAR_FILTERING_ENABLED ? Linear : Nearest;
+		else
+			this.mipMap = None;
 		this.filter = Linear;
 		this.wrap = Clamp;
 		bits &= 0x7FFF;
