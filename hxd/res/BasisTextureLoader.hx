@@ -121,7 +121,7 @@ class BasisTextureLoader {
 			});
 
 			_transcoderPending = js.lib.Promise.all([jsContent, binaryContent]).then((arr) -> {
-				final transcoder = arr[0];
+				final transcoder = arr[0].toString();
 				final wasm = arr[1];
 				var fn = BasisWorker.func;
 
