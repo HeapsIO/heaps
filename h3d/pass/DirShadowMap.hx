@@ -57,7 +57,7 @@ class DirShadowMap extends Shadows {
 	override function dispose() {
 		super.dispose();
 		if( customDepth && depth != null ) depth.dispose();
-		border.dispose();
+		if ( border != null ) border.dispose();
 	}
 
 	public override function getShadowTex() {
