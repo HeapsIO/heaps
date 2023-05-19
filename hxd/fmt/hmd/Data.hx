@@ -1,6 +1,6 @@
 package hxd.fmt.hmd;
 
-@:enum abstract GeometryDataFormat(Int) {
+enum abstract GeometryDataFormat(Int) {
 
 	public var DFloat = 1;
 	public var DVec2 = 2;

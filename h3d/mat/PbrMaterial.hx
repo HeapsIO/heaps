@@ -1,6 +1,6 @@
 package h3d.mat;
 
-@:enum abstract PbrMode(String) {
+enum abstract PbrMode(String) {
 	var PBR = "PBR";
 	var Forward = "Forward";
 	var Overlay = "Overlay";
@@ -12,7 +12,7 @@ package h3d.mat;
 	var TerrainPass = "TerrainPass";
 }
 
-@:enum abstract PbrBlend(String) {
+enum abstract PbrBlend(String) {
 	var None = "None";
 	var Alpha = "Alpha";
 	var Add = "Add";
@@ -21,7 +21,7 @@ package h3d.mat;
 	var AlphaMultiply = "AlphaMultiply";
 }
 
-@:enum abstract PbrDepthTest(String) {
+enum abstract PbrDepthTest(String) {
 	var Less = "Less";
 	var LessEqual = "LessEqual";
 	var Greater = "Greater";
@@ -32,13 +32,13 @@ package h3d.mat;
 	var NotEqual= "NotEqual";
 }
 
-@:enum abstract PbrDepthWrite(String) {
+enum abstract PbrDepthWrite(String) {
 	var Default = "Default";
 	var On = "On";
 	var Off = "Off";
 }
 
-@:enum abstract PbrStencilOp(String) {
+enum abstract PbrStencilOp(String) {
 	var Keep = "Keep";
 	var Zero = "Zero";
 	var Replace = "Replace";
@@ -49,7 +49,7 @@ package h3d.mat;
 	var Invert = "Invert";
 }
 
-@:enum abstract PbrStencilCompare(String) {
+enum abstract PbrStencilCompare(String) {
 	var Always = "Always";
 	var Never = "Never";
 	var Equal = "Equal";
@@ -60,7 +60,7 @@ package h3d.mat;
 	var LessEqual = "LessEqual";
 }
 
-@:enum abstract PbrCullingMode(String) {
+enum abstract PbrCullingMode(String) {
 	var None = "None";
 	var Back = "Back";
 	var Front = "Front";

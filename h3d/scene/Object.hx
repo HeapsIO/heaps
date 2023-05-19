@@ -1,6 +1,6 @@
 package h3d.scene;
 
-@:enum abstract ObjectFlags(Int) {
+enum abstract ObjectFlags(Int) {
 	public var FPosChanged = 0x01;
 	public var FVisible = 0x02;
 	public var FCulled = 0x04;
@@ -388,7 +388,7 @@ class Object {
 	/**
 		Return the bounds of this object and all its children, in absolute global coordinates.
 	**/
-	@:final public function getBounds( ?b : h3d.col.Bounds ) {
+	final public function getBounds( ?b : h3d.col.Bounds ) {
 		if( b == null )
 			b = new h3d.col.Bounds();
 		if( parent != null )
@@ -619,7 +619,7 @@ class Object {
 		Build and return the global absolute recursive collider for the object.
 		Returns null if no collider was found or if ignoreCollide was set to true.
 	**/
-	@:final public function getCollider() : h3d.col.Collider {
+	final public function getCollider() : h3d.col.Collider {
 		if( ignoreCollide )
 			return null;
 		var colliders = [];

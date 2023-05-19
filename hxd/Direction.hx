@@ -1,6 +1,6 @@
 package hxd;
 
-@:enum abstract Direction(Int) {
+enum abstract Direction(Int) {
 
 	public var Up = 1;
 	public var Left = 4;
