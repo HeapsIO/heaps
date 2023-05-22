@@ -538,13 +538,21 @@ class Window {
 			93 => K.QWERTY_BRACKET_RIGHT,
 			96 => K.QWERTY_TILDE,
 			167 => K.QWERTY_BACKSLASH,
+
+			// AZERTY
+			41 => K.QWERTY_BRACKET_LEFT, // degree
+			94 => K.QWERTY_BRACKET_RIGHT, // caret
+			249 => K.QWERTY_TILDE, // percent
+			58 => K.QWERTY_SLASH, // slash
+
 			1101 => K.CONTEXT_MENU,
 			1057 => K.CAPS_LOCK,
 			1071 => K.SCROLL_LOCK,
 			1072 => K.PAUSE_BREAK,
 			1083 => K.NUM_LOCK,
-			// Because hlsdl uses sym code, instead of scancode - INTL_BACKSLASH always reports 0x5C, e.g. regular slash.
-			//none => K.INTL_BACKSLASH
+			// LowerThan on AZERTY, none on QWERTY because hlsdl uses sym code, instead of scancode - INTL_BACKSLASH always reports 0x5C, e.g. regular slash.
+			60 => K.INTL_BACKSLASH,
+
 			//1070 => K.PRINT_SCREEN
 		];
 		for( sdl in keys.keys() )
