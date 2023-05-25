@@ -279,7 +279,7 @@ class FileTree {
 					ret : field.t,
 					expr : { expr : EMeta({ name : ":privateAccess", params : [], pos : pos }, { expr : EReturn(field.e), pos : pos }), pos : pos },
 				}),
-				meta : [ { name:":extern", pos:pos, params:[] } ],
+				meta : [ { name:"extern", pos:pos, params:[] } ],
 				access : [AStatic, AInline, APrivate],
 			};
 			var field : Field = {

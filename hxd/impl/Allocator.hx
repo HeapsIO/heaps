@@ -1,6 +1,6 @@
 package hxd.impl;
 
-@:enum abstract BufferFlags(Int) {
+enum abstract BufferFlags(Int) {
 	public var Dynamic = 0;
 	public var UniformDynamic = 1;
 	public var RawFormat = 2;
