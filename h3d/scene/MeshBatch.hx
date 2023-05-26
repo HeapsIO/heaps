@@ -157,7 +157,7 @@ class MeshBatch extends MultiMaterial {
 		// add batch shaders
 		var p = dataPasses;
 		while( p != null ) {
-			p.pass.addShader(p.shader);
+			p.pass.addSelfShader(p.shader);
 			p = p.next;
 		}
 	}
