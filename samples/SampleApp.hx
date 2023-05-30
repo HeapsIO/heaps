@@ -28,7 +28,7 @@ class SampleApp extends hxd.App {
 		return f;
 	}
 
-	function addSlider( label : String, get : Void -> Float, set : Float -> Void, min : Float = 0., max : Float = 1. ) {
+	function addSlider( label : String, get : Void -> Float, set : Float -> Void, min : Float = 0., max : Float = 1., intValues = false ) {
 		var f = new h2d.Flow(fui);
 
 		f.horizontalSpacing = 5;
@@ -47,12 +47,13 @@ class SampleApp extends hxd.App {
 		tf.text = "" + hxd.Math.fmt(sli.value);
 		sli.onChange = function() {
 			set(sli.value);
-			tf.text = "" + hxd.Math.fmt(sli.value);
+			tf.text = "" + (intValues ? Std.int(sli.value) : hxd.Math.fmt(sli.value));
 			f.needReflow = true;
 		};
 		tf.onChange = function() {
-			var v = Std.parseFloat(tf.text);
-			if( Math.isNaN(v) ) return;
+			var p = Std.parseFloat(tf.text);
+			if( Math.isNaN(p) ) return;
+			var v = intValues ? Std.int(p) : p;
 			sli.value = v;
 			set(v);
 		};

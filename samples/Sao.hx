@@ -1,13 +1,18 @@
-import hxd.Math;
 import h3d.pass.ScalableAO;
+
+import hxd.Math;
+import hxd.Window;
 import hxd.Key in K;
 
 class CustomRenderer extends h3d.scene.fwd.Renderer {
 
 	public var sao : h3d.pass.ScalableAO;
 	public var saoBlur : h3d.pass.Blur;
+	var fxaa : h3d.pass.FXAA;
+
 	public var mode = 0;
 	public var hasMRT : Bool;
+	public var enableFXAA : Bool;
 	var out : h3d.mat.Texture;
 	var mrt : h3d.pass.Output;
 
@@ -17,8 +22,12 @@ class CustomRenderer extends h3d.scene.fwd.Renderer {
 		super();
 		sao = new h3d.pass.ScalableAO();
 		saoBlur = new h3d.pass.Blur();
+		fxaa = new h3d.pass.FXAA();
 		sao.shader.sampleRadius	= 0.2;
 		sao.shader.numSamples = 30;
+		shadow.power = 8;
+		shadow.blur.quality = 1.0;
+		enableFXAA = true;
 		hasMRT = h3d.Engine.getCurrent().driver.hasFeature(MultipleRenderTargets);
 		if( !hasMRT ) throw "This sample requires MRT";
 		mrt = new h3d.pass.Output("mrt",[Value("output.color"), PackFloat(Value("output.depth")), PackNormal(Value("output.normal"))]);
@@ -48,10 +57,11 @@ class CustomRenderer extends h3d.scene.fwd.Renderer {
 			bench.measure("saoBlur");
 			saoBlur.apply(ctx, saoTarget);
 			bench.measure("saoBlend");
-			copy(color, null);
+			if (enableFXAA) fxaa.apply(color) else copy(color, null);
 			copy(saoTarget, null, mode == 0 ? Multiply : null);
-		} else
-			copy(color, null);
+		} else {
+			if (enableFXAA) fxaa.apply(color) else copy(color, null);
+		}
 	}
 
 }
@@ -108,13 +118,25 @@ class Sao extends SampleApp {
 		new h3d.scene.CameraController(s3d).loadFromCamera();
 
 		var c = renderer;
-		addSlider("Samples", function() return c.sao.shader.numSamples, function(v) c.sao.shader.numSamples = Std.int(v), 1, 101);
+		addText("SAO:");
+		addSlider("Samples", function() return c.sao.shader.numSamples, function(v) c.sao.shader.numSamples = Std.int(v), 1, 101, true);
 		addSlider("Bias", function() return c.sao.shader.bias, function(v) c.sao.shader.bias = v, 0, 0.3);
 		addSlider("Intensity", function() return c.sao.shader.intensity, function(v) c.sao.shader.intensity = v, 0, 10);
 		addSlider("Radius", function() return c.sao.shader.sampleRadius, function(v) c.sao.shader.sampleRadius = v);
 		addSlider("Blur", function() return c.saoBlur.radius, function(v) c.saoBlur.radius = v, 0, 10);
 		addSlider("BlurQuality", function() return c.saoBlur.quality, function(v) c.saoBlur.quality = v);
 		addSlider("BlurLineary", function() return c.saoBlur.linear, function(v) c.saoBlur.linear = v);
+		addText("Shadow:");
+		// addSlider("ShadowQuality", function() return c.shadow.pcfQuality, function(v) c.shadow.pcfQuality = Std.int(v), 0, 2); // No noticeable effect?
+		addSlider("Power", function() return c.shadow.power, function(v) c.shadow.power = v, 0, 50);
+		addSlider("Size", function() return Math.log(c.shadow.size)/Math.log(2), function(v) c.shadow.size = Std.int(Math.pow(2, Std.int(v))), 6, 12, true);
+		addSlider("BlurQuality", function() return c.shadow.blur.quality, function(v) c.shadow.blur.quality = v, 0, 2);
+		addSlider("BlurRadius", function() return c.shadow.blur.radius, function(v) c.shadow.blur.radius = v, 0, 10);
+		addText("Scene:");
+		addCheck("FXAA", function() return c.enableFXAA, function(v) c.enableFXAA = v);
+		// addCheck("Fullscreen", function() return Window.getInstance().displayMode == DisplayMode.Fullscreen, function(v) Window.getInstance().displayMode = v ? DisplayMode.Fullscreen : DisplayMode.Windowed);
+		addCheck("VSync", function() return Window.getInstance().vsync, function(v) Window.getInstance().vsync = v);
+		addText("Modes: (1) All, (2) Disable SAO, (3) Isolate SAO");
 
 		onResize();
 	}
@@ -142,8 +164,6 @@ class Sao extends SampleApp {
 			r.mode = 1;
 		if(K.isPressed(K.NUMBER_3))
 			r.mode = 2;
-		if( K.isPressed("V".code) )
-			hxd.Window.getInstance().vsync = !hxd.Window.getInstance().vsync;
 	}
 
 	static function main() {
