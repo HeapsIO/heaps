@@ -310,7 +310,8 @@ class Pass {
 			sl = sl.next;
 		}
 		selfShadersCache = shaders;
-		prev.next = selfShadersCache;
+		if ( prev != null )
+			prev.next = selfShadersCache;
 		return selfShaders;
 	}
 
