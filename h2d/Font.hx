@@ -107,7 +107,7 @@ class FontChar {
 /**
 	Channel reading method for `FontType.SignedDistanceField`.
 **/
-@:enum abstract SDFChannel(Int) from Int to Int {
+enum abstract SDFChannel(Int) from Int to Int {
 	/** Use red channel of a texture to determine distance. **/
 	var Red = 0;
 	/** Use green channel of a texture to determine distance. **/

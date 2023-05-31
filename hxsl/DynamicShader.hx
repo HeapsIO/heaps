@@ -1,6 +1,6 @@
 package hxsl;
 
-@:enum private abstract AccessKind(Int) {
+private enum abstract AccessKind(Int) {
 	var Dynamic = 0;
 	var Float = 1;
 	var Structure = 2;

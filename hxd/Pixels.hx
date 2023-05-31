@@ -81,7 +81,7 @@ abstract PixelsFloatRGBA(Pixels) to Pixels {
 
 }
 
-@:enum abstract Channel(Int) {
+enum abstract Channel(Int) {
 	public var R = 0;
 	public var G = 1;
 	public var B = 2;

@@ -11,7 +11,7 @@ abstract KFSize<T:Float>(Array<T>) {
 	inline function set_y(v) return this[1] = v;
 }
 
-@:enum abstract KFAnimProp(String) {
+enum abstract KFAnimProp(String) {
 	var AnchorPoint = "ANCHOR_POINT";
 	var XPosition = "X_POSITION";
 	var YPosition = "Y_POSITION";

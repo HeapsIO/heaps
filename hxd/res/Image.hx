@@ -1,6 +1,6 @@
 package hxd.res;
 
-@:enum abstract ImageFormat(Int) {
+enum abstract ImageFormat(Int) {
 
 	var Jpg = 0;
 	var Png = 1;
