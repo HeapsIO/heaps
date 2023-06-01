@@ -1,6 +1,6 @@
 package h3d.scene.pbr;
 
-@:enum abstract DisplayMode(String) {
+enum abstract DisplayMode(String) {
 	/*
 		Full PBR display
 	*/
@@ -20,7 +20,7 @@ package h3d.scene.pbr;
 	var Performance = "Performance";
 }
 
-@:enum abstract SkyMode(String) {
+enum abstract SkyMode(String) {
 	var Hide = "Hide";
 	var Env = "Env";
 	var Specular = "Specular";
@@ -29,7 +29,7 @@ package h3d.scene.pbr;
 	var CustomColor = "CustomColor";
 }
 
-@:enum abstract TonemapMap(String) {
+enum abstract TonemapMap(String) {
 	var Linear = "Linear";
 	var Reinhard = "Reinhard";
 	var Filmic = "Filmic";
