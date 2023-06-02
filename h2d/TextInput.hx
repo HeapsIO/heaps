@@ -153,8 +153,13 @@ class TextInput extends Text {
 	
 	function isKeyDownCtrl():Bool {
 		#if hl
-		if(Sys.systemName() == "Mac"){
+		if (Sys.systemName() == "Mac") {
 			// Command
+			return K.isDown(K.LEFT_WINDOW_KEY);
+		}
+		#elseif js
+		var isMac = ~/macintosh|mac os x/.match(js.Browser.navigator.userAgent.toLowerCase());
+		if (isMac) {
 			return K.isDown(K.LEFT_WINDOW_KEY);
 		}
 		#end
