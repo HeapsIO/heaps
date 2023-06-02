@@ -20,6 +20,7 @@ class Texture {
 			RGBA
 		#end;
 	public static var TRILINEAR_FILTERING_ENABLED : Bool = true;
+	public static var DEFAULT_WRAP : Wrap = Clamp;
 
 	var t : h3d.impl.Driver.Texture;
 	var mem : h3d.impl.MemoryManager;
@@ -109,7 +110,7 @@ class Texture {
 		else
 			this.mipMap = None;
 		this.filter = Linear;
-		this.wrap = Clamp;
+		this.wrap = DEFAULT_WRAP;
 		bits &= 0x7FFF;
 		#if track_alloc
 		this.allocPos = new hxd.impl.AllocPos();
