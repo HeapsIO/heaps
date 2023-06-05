@@ -754,9 +754,13 @@ class Library {
 			var shader = Std.downcast(c, hrt.prefab.Shader);
 			if ( shader == null )
 				continue;
+			#if prefab2
+			var s = shader.make().shader;
+			#else
 			shader.clone();
 			var ctx = new hrt.prefab.Context();
 			var s = shader.makeShader(ctx);
+			#end
 			@:privateAccess shader.applyShader(null, mat, s);
 		}
 		return true;
