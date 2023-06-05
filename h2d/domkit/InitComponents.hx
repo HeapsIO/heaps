@@ -10,7 +10,7 @@ class InitComponents {
 			domkit.Macros.setDefaultParser("h2d.domkit.BaseComponents.CustomParser");
 		// force base components to be built before custom components
 		@:privateAccess domkit.Macros.preload = [
-			for( o in ["Object","Bitmap","Text","Flow","Mask"] )
+			for( o in ["Object","Bitmap","Text","Flow","Mask", "ScaleGrid", "Input"] )
 				'h2d.domkit.BaseComponents.${o}Comp'
 		];
 		return null;
