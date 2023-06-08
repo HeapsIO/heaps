@@ -148,6 +148,31 @@ class ModelCache {
 	#if hide
 
 	public function loadPrefab( res : hxd.res.Prefab, ?p : hrt.prefab.Prefab, ?parent : h3d.scene.Object ) {
+		#if prefab2
+		if( p == null )
+			p = res.load();
+		var prevChild = 0;
+		var local3d = null;
+		if( parent != null ) {
+			prevChild = parent.numChildren;
+			local3d = parent;
+		} else {
+			local3d = new h3d.scene.Object();
+		}
+		var ctx2 = p.make(parent);
+		if( parent != null ) {
+			// only return object if a single child was added
+			// if not - multiple children were added and cannot be returned as a single object
+			return parent.numChildren == prevChild + 1 ? parent.getChildAt(prevChild) : null;
+		}
+		if( local3d.numChildren == 1 ) {
+			// if we have a single root with no scale/rotate/offset we can return it
+			var obj = local3d.getChildAt(0);
+			if( obj.getTransform().isIdentity() )
+				return obj;
+		}
+		return local3d;
+		#else
 		if( p == null )
 			p = res.load();
 		var ctx = new hrt.prefab.Context();
@@ -171,6 +196,7 @@ class ModelCache {
 				return obj;
 		}
 		return ctx.local3d;
+		#end
 	}
 
 	#end
