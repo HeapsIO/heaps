@@ -16,14 +16,8 @@ class Sound extends Resource {
 
 	public static function supportedFormat( fmt : SoundFormat ) {
 		return switch( fmt ) {
-		case Wav, Mp3:
+		case Wav, Mp3, OggVorbis:
 			return true;
-		case OggVorbis:
-			#if (hl || stb_ogg_sound)
-			return true;
-			#else
-			return false;
-			#end
 		}
 	}
 
@@ -43,11 +37,7 @@ class Sound extends Resource {
 		case 255, 'I'.code: // MP3 (or ID3)
 			data = new hxd.snd.Mp3Data(bytes);
 		case 'O'.code: // Ogg (vorbis)
-			#if (hl || stb_ogg_sound)
 			data = new hxd.snd.OggData(bytes);
-			#else
-			throw "OGG format requires -lib stb_ogg_sound (for " + entry.path+")";
-			#end
 		default:
 		}
 		if( data == null )

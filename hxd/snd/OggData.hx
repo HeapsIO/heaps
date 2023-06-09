@@ -80,7 +80,148 @@ class OggData extends Data {
 
 }
 
+#elseif js
+
+class OggData extends Data {
+	
+	var buffer : haxe.io.Bytes;
+	var onEnd : Void -> Void;
+	
+	#if stb_ogg_sound
+	var stbFallback:OggDataSTB;
+	var bytesFallback:haxe.io.Bytes;
+	#end
+	
+	public function new(bytes:haxe.io.Bytes) {
+		
+		if (bytes == null) return;
+		
+		// header check: OGG container, Vorbis audio, version 0 of spec
+		if (bytes.getString(0, 4) != "OggS" || bytes.getString(29, 6) != "vorbis" || bytes.getInt32(35) != 0) {
+			throw "Invalid OGG header";
+		}
+		
+		sampleFormat = F32;
+		channels = bytes.get(39);
+		samplingRate = bytes.getInt32(40);
+		
+		#if stb_ogg_sound
+		stbFallback = null;
+		bytesFallback = bytes;
+		#end
+		
+		var ctx = hxd.snd.webaudio.Context.get();
+		if( ctx == null ) return;
+		ctx.decodeAudioData(bytes.getData(), processBuffer, onError);
+		
+		// is this valid or causes issues onerror?
+		var decodedRate = Std.int(ctx.sampleRate);
+		samples = Math.ceil(samples * decodedRate / samplingRate);
+		samplingRate = decodedRate;
+	}
+	
+	override function isLoading() {
+		#if stb_ogg_sound
+		if (stbFallback != null) return stbFallback.isLoading();
+		#end
+		return buffer == null;
+	}
+
+	override public function load(onEnd:Void->Void) {
+		#if stb_ogg_sound
+		if (stbFallback != null) {
+			stbFallback.load(onEnd);
+			return;
+		}
+		#end
+		if( buffer != null ) onEnd() else this.onEnd = onEnd;
+	}
+	
+	function processBuffer( buf : js.html.audio.AudioBuffer ) {
+		
+		var left = buf.getChannelData(0);
+		samples = buf.length; // actual decoded samples
+
+		if( channels == 1 ) {
+			buffer = haxe.io.Bytes.ofData(left.buffer);
+			return;
+		}
+
+		var right = buf.numberOfChannels < 2 ? left : buf.getChannelData(1);
+		var join = new hxd.impl.TypedArray.Float32Array(left.length * 2);
+		var w = 0;
+		for( i in 0...buf.length ) {
+			join[w++] = left[i];
+			join[w++] = right[i];
+		}
+
+ 		buffer = haxe.io.Bytes.ofData(join.buffer);
+		if( onEnd != null ) {
+			onEnd();
+			onEnd = null;
+		}
+	}
+	
+	function onError(_:js.html.DOMException) {
+		// if OGG cannot be read by browser (e.g. Safari), use STB library instead
+		#if stb_ogg_sound
+		stbFallback = new OggDataSTB(bytesFallback);
+		bytesFallback = null;
+		samples = stbFallback.samples;
+		samplingRate = stbFallback.samplingRate;
+		sampleFormat = stbFallback.sampleFormat;
+		channels = stbFallback.channels;
+		#else
+		throw "Ogg support requires -lib stb_ogg_sound";
+		#end
+	}
+	
+	#if stb_ogg_sound
+	override function resample(rate:Int, format:Data.SampleFormat, channels:Int):Data {
+		if (stbFallback != null) return stbFallback.resample(rate, format, channels);
+		else return super.resample(rate, format, channels);
+	}
+	#end
+	
+	override function decodeBuffer(out:haxe.io.Bytes, outPos:Int, sampleStart:Int, sampleCount:Int) {
+		
+		#if stb_ogg_sound
+		if (stbFallback != null) {
+			stbFallback.decodeBuffer(out, outPos, sampleStart, sampleCount);
+			return;
+		}
+		#end
+		
+		if( buffer == null ) {
+			// not yet available : fill with blanks
+			out.fill(outPos, sampleCount * 4 * channels, 0);
+		} else {
+			out.blit(outPos, buffer, sampleStart * 4 * channels, sampleCount * 4 * channels);
+		}
+	}
+}
+
 #elseif stb_ogg_sound
+
+// standalone STB-based support for OGG
+typedef OggData = OggDataSTB;
+
+#else
+
+class OggData extends Data {
+
+	public function new( bytes : haxe.io.Bytes ) {
+	}
+
+	override function decodeBuffer(out:haxe.io.Bytes, outPos:Int, sampleStart:Int, sampleCount:Int) {
+		throw "Ogg support requires -lib stb_ogg_sound";
+	}
+
+}
+
+#end
+
+#if stb_ogg_sound
 
 private class BytesOutput extends haxe.io.Output {
 
@@ -110,7 +251,7 @@ private class BytesOutput extends haxe.io.Output {
 
 }
 
-class OggData extends Data {
+class OggDataSTB extends Data {
 
 	var reader : stb.format.vorbis.Reader;
 	var output : BytesOutput;
@@ -137,7 +278,7 @@ class OggData extends Data {
 			return this;
 		switch( format ) {
 		case I16, F32 if( rate % this.samplingRate == 0 && channels >= this.channels ):
-			var c = new OggData(null);
+			var c = new OggDataSTB(null);
 			c.reader = reader;
 			c.samples = samples;
 			c.samplingRate = samplingRate;
@@ -178,20 +319,6 @@ class OggData extends Data {
 			}
 		}
 		out.blit(outPos, decoded, (sampleStart - decodedFirst) * bpp, sampleCount * bpp);
-	}
-
-
-}
-
-#else
-
-class OggData extends Data {
-
-	public function new( bytes : haxe.io.Bytes ) {
-	}
-
-	override function decodeBuffer(out:haxe.io.Bytes, outPos:Int, sampleStart:Int, sampleCount:Int) {
-		throw "Ogg support requires -lib stb_ogg_sound";
 	}
 
 }
