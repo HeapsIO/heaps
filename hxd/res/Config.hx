@@ -90,11 +90,10 @@ class Config {
 			#if !heaps_enable_hl_mp3
 			ignoredExtensions.set("mp3", true);
 			#end
-		case JS:
+		default:
 			#if !stb_ogg_sound
 			ignoredExtensions.set("ogg", true);
 			#end
-		default:
 		}
 		return pf;
 	}
