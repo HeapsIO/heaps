@@ -90,6 +90,10 @@ class Config {
 			#if !heaps_enable_hl_mp3
 			ignoredExtensions.set("mp3", true);
 			#end
+		case JS:
+			#if !stb_ogg_sound
+			haxe.macro.Context.fatalError("Build error: OGG fallback required for full browser coverage (Safari). Include -lib stb_ogg_sound", haxe.macro.Context.currentPos());
+			#end
 		default:
 		}
 		return pf;

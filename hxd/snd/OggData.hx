@@ -114,7 +114,6 @@ class OggData extends Data {
 		if( ctx == null ) return;
 		ctx.decodeAudioData(bytes.getData(), processBuffer, onError);
 		
-		// is this valid or causes issues onerror?
 		var decodedRate = Std.int(ctx.sampleRate);
 		samples = Math.ceil(samples * decodedRate / samplingRate);
 		samplingRate = decodedRate;
@@ -172,7 +171,7 @@ class OggData extends Data {
 		sampleFormat = stbFallback.sampleFormat;
 		channels = stbFallback.channels;
 		#else
-		throw "Ogg support requires -lib stb_ogg_sound";
+		throw "Ogg support on this browser requires -lib stb_ogg_sound";
 		#end
 	}
 	
@@ -214,7 +213,7 @@ class OggData extends Data {
 	}
 
 	override function decodeBuffer(out:haxe.io.Bytes, outPos:Int, sampleStart:Int, sampleCount:Int) {
-		throw "Ogg support requires -lib stb_ogg_sound";
+		throw "Ogg support on this target requires -lib stb_ogg_sound";
 	}
 
 }
