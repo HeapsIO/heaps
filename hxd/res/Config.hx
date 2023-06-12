@@ -92,7 +92,7 @@ class Config {
 			#end
 		case JS:
 			#if !stb_ogg_sound
-			haxe.macro.Context.fatalError("Build error: OGG fallback required for full browser coverage (Safari). Include -lib stb_ogg_sound", haxe.macro.Context.currentPos());
+			ignoredExtensions.set("ogg", true);
 			#end
 		default:
 		}
