@@ -43,7 +43,19 @@ class Config {
 		"lch" => true, // labchirp source
 		"fla" => true, // Adobe flash
 	];
-
+	
+	/**
+		File extensions that fail compilation if found by the resource scan
+	**/
+	public static var illegalExtensions:haxe.ds.Map<String, String> = [
+		#if (!hl && !stb_ogg_sound)
+		"ogg" => "OGG fallback required for full browser coverage (Safari). Include -lib stb_ogg_sound"
+		#end
+	];
+	
+	public static function addIllegalExtension( extension, errorMsg ) {
+		illegalExtensions.set(extension, errorMsg);
+	}
 
 	/**
 		Directory names not explored by the resource scan
@@ -89,10 +101,6 @@ class Config {
 		case HL:
 			#if !heaps_enable_hl_mp3
 			ignoredExtensions.set("mp3", true);
-			#end
-		case JS:
-			#if !stb_ogg_sound
-			haxe.macro.Context.fatalError("Build error: OGG fallback required for full browser coverage (Safari). Include -lib stb_ogg_sound", haxe.macro.Context.currentPos());
 			#end
 		default:
 		}

@@ -118,6 +118,8 @@ class FileTree {
 				var noExt = extParts.shift();
 				var ident = makeIdent(noExt);
 				var ext = extParts.join(".").toLowerCase();
+				if( Config.illegalExtensions.exists(ext) )
+					Context.fatalError("Build error: " + Config.illegalExtensions.get(ext), pos);
 				if( Config.ignoredExtensions.exists(ext) )
 					continue;
 				// override previous file definition, if any
