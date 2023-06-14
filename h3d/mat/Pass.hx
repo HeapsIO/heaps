@@ -312,6 +312,8 @@ class Pass {
 		selfShadersCache = shaders;
 		if ( prev != null )
 			prev.next = selfShadersCache;
+		else 
+			selfShaders = shaders;
 		return selfShaders;
 	}
 
