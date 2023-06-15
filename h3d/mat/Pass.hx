@@ -18,6 +18,7 @@ class Pass {
 	var selfShadersCache : hxsl.ShaderList;
 	var shaders : hxsl.ShaderList;
 	var nextPass : Pass;
+	var culled : Bool = false;
 
 	@:bits(flags) public var enableLights : Bool;
 	/**
@@ -312,7 +313,7 @@ class Pass {
 		selfShadersCache = shaders;
 		if ( prev != null )
 			prev.next = selfShadersCache;
-		else 
+		else
 			selfShaders = shaders;
 		return selfShaders;
 	}

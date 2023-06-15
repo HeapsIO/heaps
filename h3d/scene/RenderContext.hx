@@ -45,7 +45,8 @@ class RenderContext extends h3d.impl.RenderContext {
 	public inline function emit( mat : h3d.mat.Material, obj, index = 0 ) {
 		var p = mat.mainPass;
 		while( p != null ) {
-			emitPass(p, obj).index = index;
+			if ( !p.culled )
+				emitPass(p, obj).index = index;
 			p = p.nextPass;
 		}
 	}
