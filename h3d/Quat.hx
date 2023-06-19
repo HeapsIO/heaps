@@ -77,7 +77,10 @@ class Quat {
 	public function initDirection( dir : Vector, ?up : Vector ) {
 		// inlined version of initRotationMatrix(Matrix.lookAtX(dir))
 		var ax = dir.clone().normalized();
-		var ay = up == null ? new Vector(-ax.y, ax.x, 0).normalized() : up.cross(ax).normalized();
+		var ay = new Vector(-ax.y, ax.x, 0);
+		if( up != null ) 
+			ay.load(up.cross(ax));
+		ay.normalize();
 		if( ay.lengthSq() < Math.EPSILON ) {
 			ay.x = ax.y;
 			ay.y = ax.z;

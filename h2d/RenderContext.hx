@@ -481,10 +481,13 @@ class RenderContext extends h3d.impl.RenderContext {
 		}
 	}
 
-	public function getCurrentRenderZone() {
+	public function getCurrentRenderZone( ?bounds : h2d.col.Bounds ) {
 		if( !hasRenderZone )
 			return null;
-		return h2d.col.Bounds.fromValues(renderX, renderY, renderW, renderH);
+		if( bounds == null )
+			bounds = new h2d.col.Bounds();
+		bounds.set(renderX, renderY, renderW, renderH);
+		return bounds;
 	}
 
 	/**
