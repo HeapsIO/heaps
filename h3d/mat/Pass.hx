@@ -174,7 +174,7 @@ class Pass {
 		return s;
 	}
 
-	public function addSelfShader<T:hxsl.Shader>(s:T) : T {
+	function addSelfShader<T:hxsl.Shader>(s:T) : T {
 		if ( s == null ) return null;
 		selfShadersChanged = true;
 		selfShaders = hxsl.ShaderList.addSort(s, selfShaders);
