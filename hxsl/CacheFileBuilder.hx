@@ -6,6 +6,7 @@ enum CacheFilePlatform {
 	PS4;
 	XBoxOne;
 	NX;
+	NXBinaries;
 }
 
 private class CustomCacheFile extends CacheFile {
@@ -51,6 +52,7 @@ private class CustomCacheFile extends CacheFile {
 		case PS4: "ps4";
 		case XBoxOne: "xboxone";
 		case NX: "nx";
+		case NXBinaries: "nxbin";
 		};
 	}
 
@@ -65,6 +67,7 @@ class CacheFileBuilder {
 	public var dxShaderVersion = "5_0";
 	var glout : GlslOut;
 	var hasCompiled : Bool;
+	var binariesPath : String;
 
 	public function new() {
 	}
@@ -151,11 +154,18 @@ class CacheFileBuilder {
 			sys.FileSystem.deleteFile(tmpOut);
 			return code + binaryPayload(data);
 		case NX:
-			#if hlnx
 			if( rd.vertex )
-				glout = new haxe.GlslOut();
+				glout = new hxsl.NXGlslOut();
 			return glout.run(rd.data);
-			#end
+		case NXBinaries:
+			var path = binariesPath + '/${r.signature}.glslc';
+			if ( !sys.FileSystem.exists(path) ) {
+				return null;
+			}
+			if ( rd.vertex )
+				return "empty"; // binary is in fragment.code
+			var data = sys.io.File.getBytes(path);
+			return binaryPayload(data);
 		}
 		throw "Missing implementation for " + platform;
 	}
@@ -197,6 +207,9 @@ class CacheFileBuilder {
 				builder.platforms.push(XBoxOne);
 			case "-nx":
 				builder.platforms.push(NX);
+			case "-nxbinary":
+				builder.binariesPath = getArg();
+				builder.platforms.push(NXBinaries);
 			default:
 				throw "Unknown parameter " + f;
 			}
