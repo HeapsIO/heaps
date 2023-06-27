@@ -261,6 +261,21 @@ class Flow extends Object {
 	**/
 	public var maxHeight(default, set) : Null<Int>;
 
+
+	/**
+		Scale the computed width of the flow by X ammount. Can be used to animate the flow width when
+		it's dynamic.
+	**/
+	public var scaleWidth(default, set) : Float = 1.0;
+
+	/**
+		Scale the computed height of the flow by X ammount. Can be used to animate the flow height when
+		it's dynamic.
+	**/
+	public var scaleHeight(default, set) : Float = 1.0;
+
+
+
 	/**
 		Sets the minimum row height when `Flow.layout` is `Horizontal`.
 	**/
@@ -957,6 +972,22 @@ class Flow extends Object {
 		return h;
 	}
 
+	function set_scaleWidth(w) {
+		if (scaleHeight != w) {
+			scaleWidth = w;
+			needReflow = true;
+		}
+		return w;
+	}
+
+	function set_scaleHeight(h) {
+		if (scaleHeight != h) {
+			scaleHeight = h;
+			needReflow = true;
+		}
+		return h;
+	}
+
 	function updateConstraint() {
 		var oldW = realMaxWidth, oldH = realMaxHeight;
 		realMaxWidth = if( maxWidth == null ) constraintWidth else if( constraintWidth < 0 ) maxWidth else hxd.Math.min(maxWidth, constraintWidth);
@@ -1608,8 +1639,8 @@ class Flow extends Object {
 			background.height = Math.ceil(ch);
 		}
 
-		calculatedWidth = cw;
-		calculatedHeight = ch;
+		calculatedWidth = cw * scaleWidth;
+		calculatedHeight = ch * scaleHeight;
 
 		if( scrollBar != null ) {
 			if( contentHeight <= calculatedHeight )

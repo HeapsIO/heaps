@@ -755,6 +755,9 @@ class FlowComp extends ObjectComp implements domkit.Component.ComponentDecl<h2d.
 	@:p(auto) var height : Null<Int>;
 	@:p var maxWidth : Null<Int>;
 	@:p var maxHeight : Null<Int>;
+	@:p var scaleWidth : Float;
+	@:p var scaleHeight : Float;
+
 	@:p var backgroundId : Bool;
 	@:p(flowBackground) @:t(flowBackground) var background : FlowBg;
 	@:p(tile) var backgroundTile : h2d.Tile;
@@ -804,6 +807,14 @@ class FlowComp extends ObjectComp implements domkit.Component.ComponentDecl<h2d.
 
 	static function set_height( o : h2d.Flow, v ) {
 		o.minHeight = o.maxHeight = v;
+	}
+
+	static function set_scaleWidth(o : h2d.Flow, v) {
+		o.scaleWidth = v;
+	}
+
+	static function set_scaleHeight(o : h2d.Flow, v) {
+		o.scaleHeight = v;
 	}
 
 	static function set_contentValign( o : h2d.Flow, a ) {
