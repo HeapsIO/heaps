@@ -44,7 +44,7 @@ class BaseDecal extends hxsl.Shader {
 		function getWorlPos( pos : Vec2 ) : Vec3{
 			var depth = depthMap.get(screenToUv(pos)).r;
 			var ruv = vec4( pos, depth, 1 );
-			var wpos = ruv * camera.inverseViewProj * global.modelViewInverse;
+			var wpos = ruv * camera.inverseViewProj;
 			var result = (wpos.xyz / wpos.w);
 			return result;
 		}
@@ -171,7 +171,7 @@ class DecalPBR extends BaseDecal {
 
 		function fragment() {
 			{
-				var matrix = camera.inverseViewProj;
+				var matrix = camera.inverseViewProj * global.modelViewInverse;
 				var screenPos = projectedPosition.xy / projectedPosition.w;
 
 				var depth = depthMap.get(screenToUv(screenPos));
@@ -209,10 +209,7 @@ class DecalPBR extends BaseDecal {
 			}
 
 			if(USE_NORMAL_FADE) {
-				var z = vec3(0,0,1) * global.modelView.mat3();
-				var angle = acos(z.dot(worldNormal)) / PI;
-				fadeFactor = 1;
-				pixelColor = vec4(1);
+				normalFade(worldNormal);
 			}
 		}
 	};
