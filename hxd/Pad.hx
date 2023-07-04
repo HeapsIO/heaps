@@ -509,7 +509,7 @@ class Pad {
 		if( @:privateAccess sp.ptr == null )
 			return;
 		var p = new hxd.Pad();
-		p.index = sp.id;
+		p.index = index;
 		p.d = sp;
 		pads.set( p.index, p );
 		for( axis in 0...6 )
