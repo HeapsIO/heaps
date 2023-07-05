@@ -395,7 +395,7 @@ class Renderer extends h3d.scene.Renderer {
 
 	function initTextures() {
 		textures.albedo = allocTarget("albedo", true, 1.);
-		textures.normal = allocTarget("normal", true, 1., RGB10A2);
+		textures.normal = allocTarget("normal", true, 1., #if MRT_low RGB10A2 #else RGBA16F #end);
 		textures.pbr = allocTarget("pbr", true, 1.);
 		#if !MRT_low
 		textures.other = allocTarget("other", true, 1.);
