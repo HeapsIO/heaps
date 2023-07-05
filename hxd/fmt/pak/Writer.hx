@@ -4,9 +4,11 @@ import hxd.fmt.pak.Data;
 class Writer {
 
 	var o : haxe.io.Output;
+	var align : Int = 0;
 
-	public function new(o) {
+	public function new(o, ?align) {
 		this.o = o;
+		this.align = align;
 	}
 
 	public function writeFile( f : File ) {
@@ -31,12 +33,23 @@ class Writer {
 		}
 	}
 
+	function addPadding( pos : Int ) {
+		var padLen = align - pos % align;
+		for (i in 0...padLen) {
+			o.writeByte(0);
+		}
+
+	}
+
 	public function write( pak : Data, content : haxe.io.Bytes, ?arrayContent : Array<haxe.io.Bytes> ) {
 
 		if( arrayContent != null ) {
 			pak.dataSize = 0;
-			for( b in arrayContent )
+			for( b in arrayContent ) {
 				pak.dataSize += b.length;
+				if (align > 1)
+					pak.dataSize += align - b.length % align;
+			}
 		} else
 			pak.dataSize = content.length;
 
@@ -44,16 +57,21 @@ class Writer {
 		new Writer(header).writeFile(pak.root);
 		var header = header.getBytes();
 		pak.headerSize = header.length + 16;
+		if (align > 1)
+			pak.headerSize += align - pak.headerSize % align;
 
 		o.writeString("PAK");
 		o.writeByte(pak.version);
 		o.writeInt32(pak.headerSize);
 		o.writeInt32(pak.dataSize);
 		o.write(header);
+		if (align > 1) addPadding(header.length + 16); // Align for end of DATA
 		o.writeString("DATA");
 		if( arrayContent != null ) {
-			for( b in arrayContent )
+			for( b in arrayContent ) {
 				o.write(b);
+				if (align > 1) addPadding(b.length);
+			}
 		} else
 			o.write(content);
 	}
