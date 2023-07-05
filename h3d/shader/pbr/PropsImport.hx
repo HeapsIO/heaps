@@ -35,6 +35,9 @@ class PropsImport extends hxsl.Shader {
 			albedo *= albedo; // gamma correct
 
 			normal = normalTex.get(uv).xyz;
+			#if MRT_low
+			normal = unpackNormal(vec4(normal, 1.0));
+			#end
 			var pbr = pbrTex.get(uv);
 			metalness = pbr.r;
 			roughness = pbr.g;

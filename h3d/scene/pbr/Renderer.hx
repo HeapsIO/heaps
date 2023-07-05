@@ -285,7 +285,7 @@ class Renderer extends h3d.scene.Renderer {
 		draw(pbrLightPass.name);
 
 		if ( displayMode == Performance ) {
-			var perf = allocTarget("performance", #if MRT_low RG11B10UF #else RGBA16F #end);
+			var perf = allocTarget("performance", #if MRT_low RGB10A2 #else RGBA16F #end);
 			h3d.pass.Copy.run(textures.hdr, perf);
 			performance.shader.hdrMap = perf;
 		}
@@ -311,7 +311,7 @@ class Renderer extends h3d.scene.Renderer {
 		}
 
 		// Probe Rendering & Blending
-		var probeOutput = allocTarget("probeOutput", true, 1.0, #if MRT_low RG11B10UF #else RGBA16F #end);
+		var probeOutput = allocTarget("probeOutput", true, 1.0, #if MRT_low RGB10A2 #else RGBA16F #end);
 		ctx.engine.pushTarget(probeOutput);
 		clear(0);
 
@@ -395,13 +395,13 @@ class Renderer extends h3d.scene.Renderer {
 
 	function initTextures() {
 		textures.albedo = allocTarget("albedo", true, 1.);
-		textures.normal = allocTarget("normal", true, 1., RGBA16F);
+		textures.normal = allocTarget("normal", true, 1., RGB10A2);
 		textures.pbr = allocTarget("pbr", true, 1.);
 		#if !MRT_low
 		textures.other = allocTarget("other", true, 1.);
 		#end
 		textures.depth = allocTarget("depth", true, 1., R32F);
-		textures.hdr = allocTarget("hdrOutput", true, 1, #if MRT_low RG11B10UF #else RGBA16F #end);
+		textures.hdr = allocTarget("hdrOutput", true, 1, #if MRT_low RGB10A2 #else RGBA16F #end);
 		textures.ldr = allocTarget("ldrOutput");
 	}
 

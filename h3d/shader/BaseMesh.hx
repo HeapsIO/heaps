@@ -86,7 +86,7 @@ class BaseMesh extends hxsl.Shader {
 		function fragment() {
 			output.color = pixelColor;
 			output.depth = depth;
-			output.normal = transformedNormal;
+			output.normal = #if MRT_low packNormal(transformedNormal).rgb #else transformedNormal #end;
 			output.worldDist = worldDist;
 		}
 
