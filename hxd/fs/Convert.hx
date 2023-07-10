@@ -243,6 +243,23 @@ class CompressIMG extends Convert {
 	}
 
 	override function convert() {
+		var resizedTexturePath : String = null;
+		if( hasParam("size") ) {
+			try {
+				var maxSize = getParam("size");
+				var image = makeImage(srcPath);
+				var pxls = image.getPixels();
+				if( pxls.width == pxls.height && pxls.width > maxSize ) {
+					srcPath = Sys.getEnv("TEMP")+"/output_resized_"+srcPath.split("/").pop();
+					resizedTexturePath = srcPath;
+					var resizedTexture = hxd.Pixels.alloc(maxSize, maxSize, pxls.format);
+					resizedTexture.blit(0, 0, pxls, 0, 0, maxSize, maxSize);
+					sys.io.File.saveBytes(srcPath, resizedTexture.toPNG());
+				}
+			} catch(e : Dynamic) {
+				trace("Faile to resize", e);
+			}
+		}
 		var format = getParam("format");
 		var mips = hasParam("mips") && getParam("mips") == true;
 		var tcFmt = TEXCONV_FMT.get(format);
@@ -335,6 +352,7 @@ class CompressIMG extends Convert {
 		args = args.concat(["-fd",""+getParam("format"),tmpPath == null ? srcPath : tmpPath,dstPath]);
 		command("CompressonatorCLI", args);
 		if( tmpPath != null ) sys.FileSystem.deleteFile(tmpPath);
+		if( resizedTexturePath != null ) sys.FileSystem.deleteFile(resizedTexturePath);
 	}
 
 	static var _ = Convert.register(new CompressIMG("png,tga,jpg,jpeg,dds,envd,envs","dds"));
