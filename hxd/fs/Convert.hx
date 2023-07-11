@@ -243,25 +243,42 @@ class CompressIMG extends Convert {
 	}
 
 	override function convert() {
-		var resizedTexturePath : String = null;
+		var resizedImagePath : String = null;
+		var mips = hasParam("mips") && getParam("mips") == true;
 		if( hasParam("size") ) {
 			try {
 				var maxSize = getParam("size");
 				var image = makeImage(srcPath);
 				var pxls = image.getPixels();
 				if( pxls.width == pxls.height && pxls.width > maxSize ) {
+					pxls.dispose();
+					var prevMip = mips;
+					if ( !prevMip ) Reflect.setField(params, "mips", true);
+					Reflect.deleteField(params, "size");
+					var tmpPath = new haxe.io.Path(dstPath);
+					tmpPath.ext = "forced_mips." + tmpPath.ext;
+					var prevDstPath = dstPath;
+					dstPath = tmpPath.toString();
+					convert();
+					dstPath = prevDstPath;
+					Reflect.setField(params, "size", maxSize);
+					if ( !prevMip )	Reflect.deleteField(params, "mips");
+					var prevMipSize = hxd.res.Image.MIPMAP_MAX_SIZE;
+					hxd.res.Image.MIPMAP_MAX_SIZE = maxSize;
+					var mippedImage = makeImage(tmpPath.toString());
+					var resizedPixels = mippedImage.getPixels();
+					hxd.res.Image.MIPMAP_MAX_SIZE = prevMipSize;
 					srcPath = Sys.getEnv("TEMP")+"/output_resized_"+srcPath.split("/").pop();
-					resizedTexturePath = srcPath;
-					var resizedTexture = hxd.Pixels.alloc(maxSize, maxSize, pxls.format);
-					resizedTexture.blit(0, 0, pxls, 0, 0, maxSize, maxSize);
-					sys.io.File.saveBytes(srcPath, resizedTexture.toPNG());
+					resizedImagePath = srcPath;
+					sys.io.File.saveBytes(srcPath, resizedPixels.toPNG());
+					resizedPixels.dispose();
+					sys.FileSystem.deleteFile(tmpPath.toString());
 				}
 			} catch(e : Dynamic) {
 				trace("Faile to resize", e);
 			}
 		}
 		var format = getParam("format");
-		var mips = hasParam("mips") && getParam("mips") == true;
 		var tcFmt = TEXCONV_FMT.get(format);
 		if( tcFmt != null ) {
 			// texconv can only handle output dir, and it prepended to srcPath :'(
@@ -298,7 +315,7 @@ class CompressIMG extends Convert {
 					var tmpPath = dstPath + path.file + "_" + layer + "." + path.ext;
 					sys.io.File.saveBytes(tmpPath, layerBytes);
 					srcBytes = layerBytes;
-					srcPath =  tmpPath;
+					srcPath = tmpPath;
 					convert();
 					sys.FileSystem.deleteFile(tmpPath);
 				}
@@ -352,7 +369,7 @@ class CompressIMG extends Convert {
 		args = args.concat(["-fd",""+getParam("format"),tmpPath == null ? srcPath : tmpPath,dstPath]);
 		command("CompressonatorCLI", args);
 		if( tmpPath != null ) sys.FileSystem.deleteFile(tmpPath);
-		if( resizedTexturePath != null ) sys.FileSystem.deleteFile(resizedTexturePath);
+		if( resizedImagePath != null ) sys.FileSystem.deleteFile(resizedImagePath);
 	}
 
 	static var _ = Convert.register(new CompressIMG("png,tga,jpg,jpeg,dds,envd,envs","dds"));
