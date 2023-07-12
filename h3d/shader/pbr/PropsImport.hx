@@ -36,7 +36,7 @@ class PropsImport extends hxsl.Shader {
 
 			normal = normalTex.get(uv).xyz;
 			#if MRT_low
-			normal = unpackNormal(vec4(normal, 1.0));
+			normal = (normal - 0.5) * 2.0;
 			#end
 			var pbr = pbrTex.get(uv);
 			metalness = pbr.r;
