@@ -567,7 +567,7 @@ class Window {
 		return haxe.System.vsync = b;
 	}
 
-	function get_isFocused() : Bool return false;
+	function get_isFocused() : Bool return true;
 
 	#else
 
