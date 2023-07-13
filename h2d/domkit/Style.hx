@@ -30,6 +30,11 @@ class Style extends domkit.CssStyle {
 			o.dom.applyStyle(this);
 	}
 
+	override function clear() {
+		super.clear();
+		resources.resize(0);
+	}
+
 	public function addObject( obj ) {
 		currentObjects.remove(obj);
 		currentObjects.push(obj);
