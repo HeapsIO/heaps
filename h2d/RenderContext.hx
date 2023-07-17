@@ -501,10 +501,11 @@ class RenderContext extends h3d.impl.RenderContext {
 			return;
 		}
 
-		x = Math.max( x, renderX );
-		y = Math.max( y, renderY );
 		var x2 = Math.min( x + w, renderX + renderW );
 		var y2 = Math.min( y + h, renderY + renderH );
+		x = Math.max( x, renderX );
+		y = Math.max( y, renderY );
+
 		if (x2 < x) x2 = x;
 		if (y2 < y) y2 = y;
 
