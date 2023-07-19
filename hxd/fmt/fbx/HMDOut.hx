@@ -158,8 +158,10 @@ class HMDOut extends BaseLibrary {
 		}
 		var realIdx = new hxd.IndexBuffer();
 		for( idx in idx ) {
-			if ( idx == null )
+			if ( idx == null ) {
 				trace("Empty list of vertex indexes");
+				continue;
+			}
 			for( i in idx )
 				realIdx.push(pmap[i]);
 		}
@@ -675,11 +677,12 @@ class HMDOut extends BaseLibrary {
 
 			var gdata = hgeom.get(g.getId());
 			if( gdata == null ) {
-				var geom = try {
+				var geom =
+				// try {
 					buildGeom(new hxd.fmt.fbx.Geometry(this, g), skin, dataOut, hasNormalMap || generateTangents);
-				} catch ( e : Dynamic ) {
-						throw e + " in " + model.name;
-				}
+				// } catch ( e : Dynamic ) {
+				// 		throw e + " in " + model.name;
+				// }
 				gdata = { gid : d.geometries.length, materials : geom.materials };
 				d.geometries.push(geom.g);
 				hgeom.set(g.getId(), gdata);
