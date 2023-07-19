@@ -306,9 +306,9 @@ class LogDriver extends Driver {
 		return d.allocIndexes(count,is32);
 	}
 
-	override function allocVertexes( m : ManagedBuffer ) : VertexBuffer {
-		log('AllocVertexes size=${m.size} stride=${m.stride}');
-		return d.allocVertexes(m);
+	override function allocBuffer( b : Buffer ) : GPUBuffer {
+		log('AllocBuffer count=${b.vertices} stride=${b.stride}');
+		return d.allocBuffer(b);
 	}
 
 	override function disposeTexture( t : h3d.mat.Texture ) {
@@ -321,9 +321,9 @@ class LogDriver extends Driver {
 		d.disposeIndexes(i);
 	}
 
-	override function disposeVertexes( v : VertexBuffer ) {
-		log('DisposeIndexes');
-		d.disposeVertexes(v);
+	override function disposeBuffer( b : GPUBuffer ) {
+		log('DisposeBuffer');
+		d.disposeBuffer(b);
 	}
 
 	override function uploadIndexBuffer( i : IndexBuffer, startIndice : Int, indiceCount : Int, buf : hxd.IndexBuffer, bufPos : Int ) {
@@ -336,14 +336,14 @@ class LogDriver extends Driver {
 		d.uploadIndexBytes(i, startIndice, indiceCount, buf, bufPos);
 	}
 
-	override function uploadVertexBuffer( v : VertexBuffer, startVertex : Int, vertexCount : Int, buf : hxd.FloatBuffer, bufPos : Int ) {
-		log('UploadVertexBuffer');
-		d.uploadVertexBuffer(v, startVertex, vertexCount, buf, bufPos);
+	override function uploadBufferData( b : GPUBuffer, startVertex : Int, vertexCount : Int, buf : hxd.FloatBuffer, bufPos : Int ) {
+		log('UploadBufferData');
+		d.uploadBufferData(b, startVertex, vertexCount, buf, bufPos);
 	}
 
-	override function uploadVertexBytes( v : VertexBuffer, startVertex : Int, vertexCount : Int, buf : haxe.io.Bytes, bufPos : Int ) {
+	override function uploadBufferBytes( b : GPUBuffer, startVertex : Int, vertexCount : Int, buf : haxe.io.Bytes, bufPos : Int ) {
 		log('UploadVertexBytes');
-		d.uploadVertexBytes(v, startVertex, vertexCount, buf, bufPos);
+		d.uploadBufferBytes(b, startVertex, vertexCount, buf, bufPos);
 	}
 
 	override function uploadTextureBitmap( t : h3d.mat.Texture, bmp : hxd.BitmapData, mipLevel : Int, side : Int ) {

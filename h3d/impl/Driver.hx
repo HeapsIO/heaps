@@ -2,55 +2,49 @@ package h3d.impl;
 
 #if macro
 typedef IndexBuffer = {};
-typedef VertexBuffer = {};
+typedef GPUBuffer = {};
 typedef Texture = {};
-typedef DepthBuffer = {};
-typedef Query = {};
-#elseif flash
-typedef IndexBuffer = flash.display3D.IndexBuffer3D;
-typedef VertexBuffer = Stage3dDriver.VertexWrapper;
-typedef Texture = flash.display3D.textures.TextureBase;
 typedef DepthBuffer = {};
 typedef Query = {};
 #elseif js
 typedef IndexBuffer = { b : js.html.webgl.Buffer, is32 : Bool };
-typedef VertexBuffer = { b : js.html.webgl.Buffer, stride : Int #if multidriver, driver : Driver #end };
+typedef GPUBuffer = { b : js.html.webgl.Buffer, stride : Int #if multidriver, driver : Driver #end };
 typedef Texture = { t : js.html.webgl.Texture, width : Int, height : Int, internalFmt : Int, pixelFmt : Int, bits : Int, bias : Float, bind : Int #if multidriver, driver : Driver #end };
 typedef DepthBuffer = { r : js.html.webgl.Renderbuffer #if multidriver, driver : Driver #end };
 typedef Query = {};
 #elseif hlsdl
 typedef IndexBuffer = { b : sdl.GL.Buffer, is32 : Bool };
-typedef VertexBuffer = { b : sdl.GL.Buffer, stride : Int };
+typedef GPUBuffer = { b : sdl.GL.Buffer, stride : Int };
 typedef Texture = { t : sdl.GL.Texture, width : Int, height : Int, internalFmt : Int, pixelFmt : Int, bits : Int, bind : Int, bias : Float };
 typedef DepthBuffer = { r : sdl.GL.Renderbuffer };
 typedef Query = { q : sdl.GL.Query, kind : QueryKind };
 #elseif usegl
 typedef IndexBuffer = { b : haxe.GLTypes.Buffer, is32 : Bool };
-typedef VertexBuffer = { b : haxe.GLTypes.Buffer, stride : Int };
+typedef GPUBuffer = { b : haxe.GLTypes.Buffer, stride : Int };
 typedef Texture = { t : haxe.GLTypes.Texture, width : Int, height : Int, internalFmt : Int, pixelFmt : Int, bits : Int, bind : Int, bias : Float };
 typedef DepthBuffer = { r : haxe.GLTypes.Renderbuffer };
 typedef Query = { q : haxe.GLTypes.Query, kind : QueryKind };
 #elseif (hldx && dx12)
 typedef IndexBuffer = DX12Driver.IndexBufferData;
-typedef VertexBuffer = DX12Driver.VertexBufferData;
+typedef GPUBuffer = DX12Driver.VertexBufferData;
 typedef Texture = h3d.impl.DX12Driver.TextureData;
 typedef DepthBuffer = h3d.impl.DX12Driver.DepthBufferData;
 typedef Query = h3d.impl.DX12Driver.QueryData;
 #elseif hldx
 typedef IndexBuffer = { res : dx.Resource, count : Int, bits : Int };
-typedef VertexBuffer = { res : dx.Resource, count : Int, stride : Int, uniform : Bool };
+typedef GPUBuffer = { res : dx.Resource, count : Int, stride : Int, uniform : Bool };
 typedef Texture = { res : dx.Resource, view : dx.Driver.ShaderResourceView, rt : Array<dx.Driver.RenderTargetView>, mips : Int };
 typedef DepthBuffer = { res : dx.Resource, view : dx.Driver.DepthStencilView };
 typedef Query = {};
 #elseif usesys
 typedef IndexBuffer = haxe.GraphicsDriver.IndexBuffer;
-typedef VertexBuffer = haxe.GraphicsDriver.VertexBuffer;
+typedef GPUBuffer = haxe.GraphicsDriver.VertexBuffer;
 typedef Texture = haxe.GraphicsDriver.Texture;
 typedef DepthBuffer = haxe.GraphicsDriver.DepthBuffer;
 typedef Query = haxe.GraphicsDriver.Query;
 #else
 typedef IndexBuffer = {};
-typedef VertexBuffer = {};
+typedef GPUBuffer = {};
 typedef Texture = {};
 typedef DepthBuffer = {};
 typedef Query = {};
@@ -269,7 +263,7 @@ class Driver {
 		return null;
 	}
 
-	public function allocVertexes( m : ManagedBuffer ) : VertexBuffer {
+	public function allocBuffer( b : h3d.Buffer ) : GPUBuffer {
 		return null;
 	}
 
@@ -282,7 +276,7 @@ class Driver {
 	public function disposeIndexes( i : IndexBuffer ) {
 	}
 
-	public function disposeVertexes( v : VertexBuffer ) {
+	public function disposeBuffer( b : GPUBuffer ) {
 	}
 
 	public function disposeInstanceBuffer( b : h3d.impl.InstanceBuffer ) {
@@ -294,10 +288,10 @@ class Driver {
 	public function uploadIndexBytes( i : IndexBuffer, startIndice : Int, indiceCount : Int, buf : haxe.io.Bytes , bufPos : Int ) {
 	}
 
-	public function uploadVertexBuffer( v : VertexBuffer, startVertex : Int, vertexCount : Int, buf : hxd.FloatBuffer, bufPos : Int ) {
+	public function uploadBufferData( b : GPUBuffer, startVertex : Int, vertexCount : Int, buf : hxd.FloatBuffer, bufPos : Int ) {
 	}
 
-	public function uploadVertexBytes( v : VertexBuffer, startVertex : Int, vertexCount : Int, buf : haxe.io.Bytes, bufPos : Int ) {
+	public function uploadBufferBytes( b : GPUBuffer, startVertex : Int, vertexCount : Int, buf : haxe.io.Bytes, bufPos : Int ) {
 	}
 
 	public function uploadTextureBitmap( t : h3d.mat.Texture, bmp : hxd.BitmapData, mipLevel : Int, side : Int ) {
@@ -306,7 +300,7 @@ class Driver {
 	public function uploadTexturePixels( t : h3d.mat.Texture, pixels : hxd.Pixels, mipLevel : Int, side : Int ) {
 	}
 
-	public function readVertexBytes( v : VertexBuffer, startVertex : Int, vertexCount : Int, buf : haxe.io.Bytes, bufPos : Int ) {
+	public function readBufferBytes( v : GPUBuffer, startVertex : Int, vertexCount : Int, buf : haxe.io.Bytes, bufPos : Int ) {
 		throw "Driver does not allow to read vertex bytes";
 	}
 

@@ -153,41 +153,21 @@ class Engine {
 	function renderBuffer( b : Buffer, indexes : Indexes, vertPerTri : Int, startTri = 0, drawTri = -1 ) {
 		if( indexes.isDisposed() )
 			return;
-		do {
-			var ntri = Std.int(b.vertices / vertPerTri);
-			var pos = Std.int(b.position / vertPerTri);
-			if( startTri > 0 ) {
-				if( startTri >= ntri ) {
-					startTri -= ntri;
-					b = b.next;
-					continue;
-				}
-				pos += startTri;
-				ntri -= startTri;
-				startTri = 0;
-			}
-			if( drawTri >= 0 ) {
-				if( drawTri == 0 ) return;
-				drawTri -= ntri;
-				if( drawTri < 0 ) {
-					ntri += drawTri;
-					drawTri = 0;
-				}
-			}
-			if( ntri > 0 && selectBuffer(b) ) {
-				// *3 because it's the position in indexes which are always by 3
-				driver.draw(indexes.ibuf, pos * 3, ntri);
-				drawTriangles += ntri;
-				drawCalls++;
-			}
-			b = b.next;
-		} while( b != null );
+		var ntri = Std.int(b.vertices / vertPerTri);
+		if( drawTri < 0 )
+			drawTri = ntri - startTri;
+		if( startTri < 0 || drawTri < 0 || startTri + drawTri > ntri )
+			throw "Invalid vertices count";
+		if( drawTri > 0 && selectBuffer(b) ) {
+			// *3 because it's the position in indexes which are always by 3
+			driver.draw(indexes.ibuf, startTri * 3, drawTri);
+			drawTriangles += drawTri;
+			drawCalls++;
+		}
 	}
 
 	// we use custom indexes, so the number of triangles is the number of indexes/3
 	public function renderIndexed( b : Buffer, indexes : Indexes, startTri = 0, drawTri = -1 ) {
-		if( b.next != null )
-			throw "Buffer is split";
 		if( indexes.isDisposed() )
 			return;
 		var maxTri = Std.int(indexes.count / 3);

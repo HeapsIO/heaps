@@ -59,7 +59,7 @@ class HMDModel extends MeshPrimitive {
 
 	override function alloc(engine:h3d.Engine) {
 		dispose();
-		buffer = new h3d.Buffer(data.vertexCount, data.vertexStride, [LargeBuffer]);
+		buffer = new h3d.Buffer(data.vertexCount, data.vertexStride);
 
 		var entry = lib.resource.entry;
 
@@ -97,7 +97,7 @@ class HMDModel extends MeshPrimitive {
 		var alias = bufferAliases.get(name);
 		var buffer = bufferCache.get(hxsl.Globals.allocID(alias.realName));
 		if( buffer == null ) throw "Buffer " + alias.realName+" not found for alias " + name;
-		if( buffer.offset + alias.offset > buffer.buffer.buffer.stride ) throw "Alias " + name+" for buffer " + alias.realName+" outside stride";
+		if( buffer.offset + alias.offset > buffer.buffer.stride ) throw "Alias " + name+" for buffer " + alias.realName+" outside stride";
 		addBuffer(name, buffer.buffer, buffer.offset + alias.offset);
 	}
 
@@ -158,7 +158,7 @@ class HMDModel extends MeshPrimitive {
 			v[k++] = n.y;
 			v[k++] = n.z;
 		}
-		var buf = h3d.Buffer.ofFloats(v, 3, data.vertexCount > 0x10000 ? [LargeBuffer] : null);
+		var buf = h3d.Buffer.ofFloats(v, 3);
 		addBuffer(name, buf, 0);
 		normalsRecomputed = name;
 	}
