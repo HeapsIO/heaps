@@ -364,13 +364,14 @@ class Particles extends h3d.scene.Mesh {
 		}
 		var stride = 10;
 		if( hasColor ) stride += 4;
-		var buffer = h3d.Buffer.ofSubFloats(tmp, stride, Std.int(pos/stride), [Dynamic, RawFormat]);
+		var count = Std.int(pos/stride);
+		var buffer = hxd.impl.Allocator.get().ofSubFloats(tmp, stride, count,RawFormat);
 		if( pshader.is3D )
 			pshader.size.set(globalSize, globalSize);
 		else
 			pshader.size.set(globalSize * ctx.engine.height / ctx.engine.width * 4, globalSize * 4);
 		ctx.uploadParams();
-		ctx.engine.renderQuadBuffer(buffer);
+		ctx.engine.renderQuadBuffer(buffer, 0, Std.int(count/3));
 		buffer.dispose();
 	}
 
