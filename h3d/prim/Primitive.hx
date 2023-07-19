@@ -26,7 +26,7 @@ class Primitive {
 		The number of triangles the primitive has.
 	**/
 	public function triCount() {
-		return if( indexes != null ) Std.int(indexes.count / 3) else if( buffer == null ) 0 else Std.int(buffer.totalVertices() / 3);
+		return if( indexes != null ) Std.int(indexes.count / 3) else if( buffer == null ) 0 else Std.int(buffer.vertices / 3);
 	}
 
 	/**

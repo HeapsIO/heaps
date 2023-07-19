@@ -58,7 +58,7 @@ class NullDriver extends Driver {
 		return cast {};
 	}
 
-	override function allocVertexes( m : ManagedBuffer ) : VertexBuffer {
+	override function allocBuffer( b : Buffer ) : GPUBuffer {
 		return cast {};
 	}
 

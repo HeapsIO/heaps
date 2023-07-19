@@ -67,7 +67,7 @@ class CacheAllocator extends Allocator {
 		if( b.isDisposed() ) return;
 		var f = b.flags;
 		var flags = f.has(RawFormat) ? (f.has(Quads) ? RawQuads : RawFormat) : (f.has(UniformBuffer) ? UniformDynamic : Dynamic);
-		var id = flags.toInt() | (b.buffer.stride << 3) | (b.vertices << 16);
+		var id = flags.toInt() | (b.stride << 3) | (b.vertices << 16);
 		var c = buffers.get(id);
 		if( c == null ) {
 			c = new Cache(function(b:h3d.Buffer) b.dispose());

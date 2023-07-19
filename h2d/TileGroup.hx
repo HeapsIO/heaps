@@ -26,7 +26,7 @@ class TileLayerContent extends h3d.prim.Primitive {
 		Content bounds bottom edge.
 	**/
 	public var yMax : Float;
-	
+
 	public var useAllocatorLimit = 1024;
 
 	var state : BatchDrawState;
@@ -58,7 +58,7 @@ class TileLayerContent extends h3d.prim.Primitive {
 	}
 
 	override public function triCount() {
-		return if( buffer == null ) tmp.length >> 4 else buffer.totalVertices() >> 1;
+		return if( buffer == null ) tmp.length >> 4 else buffer.vertices >> 1;
 	}
 
 	/**
