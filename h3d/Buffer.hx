@@ -6,14 +6,6 @@ enum BufferFlag {
 	**/
 	Dynamic;
 	/**
-		The buffer contains only triangles. Imply Managed. Make sure the position is aligned on 3 vertices multiples.
-	**/
-	Triangles;
-	/**
-		The buffer contains only quads. Imply Managed. Make sure the position is aligned on 4 vertices multiples.
-	**/
-	Quads;
-	/**
 		Directly map the buffer content to the shader inputs, without assuming [pos:vec3,normal:vec3,uv:vec2] default prefix.
 	**/
 	RawFormat;

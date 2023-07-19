@@ -26,7 +26,7 @@ class Instanced extends MeshPrimitive {
 		buffer = m.buffer;
 		indexes = m.indexes;
 		baseBounds = m.getBounds();
-		if( indexes == null ) indexes = engine.mem.triIndexes;
+		if( indexes == null ) indexes = engine.mem.getTriIndexes(buffer.vertices);
 		for( bid in m.bufferCache.keys() ) {
 			var b = m.bufferCache.get(bid);
 			addBuffer(hxsl.Globals.getIDName(bid), b.buffer, b.offset);
