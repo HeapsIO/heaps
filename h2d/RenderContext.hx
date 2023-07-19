@@ -325,7 +325,7 @@ class RenderContext extends h3d.impl.RenderContext {
 
 	/**
 		Retrieves the current filter scale factor.
-		
+
 		@param into The 2D Point instance into which the scale is written. Creates a new Point if null.
 		@returns The current filter resolution scale or `{ 1, 1 }` point.
 	**/
@@ -580,7 +580,7 @@ class RenderContext extends h3d.impl.RenderContext {
 		if( bufPos == 0 ) return;
 		beforeDraw();
 		var nverts = Std.int(bufPos / stride);
-		var tmp = new h3d.Buffer(nverts, stride, [Quads,Dynamic,RawFormat]);
+		var tmp = new h3d.Buffer(nverts, stride, [Dynamic,RawFormat]);
 		tmp.uploadVector(buffer, 0, nverts);
 		engine.renderQuadBuffer(tmp);
 		tmp.dispose();
@@ -750,7 +750,7 @@ class RenderContext extends h3d.impl.RenderContext {
 		baseShader.uvPos.set(tile.u, tile.v, tile.u2 - tile.u, tile.v2 - tile.v);
 		beforeDraw();
 		if( fixedBuffer == null || fixedBuffer.isDisposed() ) {
-			fixedBuffer = new h3d.Buffer(4, 8, [Quads, RawFormat]);
+			fixedBuffer = new h3d.Buffer(4, 8, [RawFormat]);
 			var k = new hxd.FloatBuffer();
 			for( v in [0, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1] )
 				k.push(v);

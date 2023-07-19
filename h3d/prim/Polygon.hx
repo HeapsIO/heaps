@@ -84,7 +84,6 @@ class Polygon extends MeshPrimitive {
 			}
 		}
 		var flags : Array<h3d.Buffer.BufferFlag> = [];
-		if( idx == null ) flags.push(Triangles);
 		if( normals == null || tangents != null ) flags.push(RawFormat);
 		buffer = h3d.Buffer.ofFloats(buf, size, flags);
 
@@ -281,10 +280,10 @@ class Polygon extends MeshPrimitive {
 		var bufs = getBuffers(engine);
 		if( indexes != null )
 			engine.renderMultiBuffers(bufs, indexes);
-		else if( buffer.flags.has(Quads) )
-			engine.renderMultiBuffers(bufs, engine.mem.quadIndexes, 0, triCount());
-		else
-			engine.renderMultiBuffers(bufs, engine.mem.triIndexes, 0, triCount());
+		else {
+			var count = triCount();
+			engine.renderMultiBuffers(bufs, engine.mem.getTriIndexes(count*3), 0, count);
+		}
 	}
 
 }

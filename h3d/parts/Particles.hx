@@ -364,7 +364,7 @@ class Particles extends h3d.scene.Mesh {
 		}
 		var stride = 10;
 		if( hasColor ) stride += 4;
-		var buffer = h3d.Buffer.ofSubFloats(tmp, stride, Std.int(pos/stride), [Quads, Dynamic, RawFormat]);
+		var buffer = h3d.Buffer.ofSubFloats(tmp, stride, Std.int(pos/stride), [Dynamic, RawFormat]);
 		if( pshader.is3D )
 			pshader.size.set(globalSize, globalSize);
 		else

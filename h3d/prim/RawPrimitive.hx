@@ -5,7 +5,7 @@ class RawPrimitive extends Primitive {
 	var vcount : Int;
 	var tcount : Int;
 	var bounds : h3d.col.Bounds;
-	public var onContextLost : Void -> { vbuf : hxd.FloatBuffer, stride : Int, ?ibuf : hxd.IndexBuffer, ?quads : Bool };
+	public var onContextLost : Void -> { vbuf : hxd.FloatBuffer, stride : Int, ?ibuf : hxd.IndexBuffer };
 
 	public function new( inf : { vbuf : hxd.FloatBuffer, stride : Int, ?ibuf : hxd.IndexBuffer, ?quads : Bool, ?bounds : h3d.col.Bounds }, persist = false ) {
 		onContextLost = function() return inf;
@@ -18,11 +18,10 @@ class RawPrimitive extends Primitive {
 		if( onContextLost == null ) throw "Cannot realloc " + this;
 		var inf = onContextLost();
 		var flags : Array<h3d.Buffer.BufferFlag> = [];
-		if( inf.ibuf == null ) flags.push(inf.quads ? Quads : Triangles);
 		if( inf.stride < 8 ) flags.push(RawFormat);
 		buffer = h3d.Buffer.ofFloats(inf.vbuf, inf.stride, flags);
 		vcount = buffer.vertices;
-		tcount = inf.ibuf != null ? Std.int(inf.ibuf.length / 3) : inf.quads ? vcount >> 1 : Std.int(vcount/3);
+		tcount = inf.ibuf != null ? Std.int(inf.ibuf.length / 3) : Std.int(vcount/3);
 		if( inf.ibuf != null )
 			indexes = h3d.Indexes.alloc(inf.ibuf);
 		else if( indexes != null ) {

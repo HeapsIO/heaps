@@ -4,7 +4,6 @@ enum abstract BufferFlags(Int) {
 	public var Dynamic = 0;
 	public var UniformDynamic = 1;
 	public var RawFormat = 2;
-	public var RawQuads = 3;
 	public inline function toInt() : Int {
 		return this;
 	}
@@ -23,7 +22,6 @@ class Allocator {
 				case Dynamic: [Dynamic];
 				case UniformDynamic: [UniformBuffer,Dynamic];
 				case RawFormat: [RawFormat];
-				case RawQuads: [Quads, RawFormat];
 			});
 	}
 

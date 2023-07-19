@@ -511,8 +511,8 @@ class TileLayerContent extends h3d.prim.Primitive {
 		if( tmp == null ) clear();
 		if( tmp.length > 0 ) {
 			buffer = tmp.length < useAllocatorLimit
-				? hxd.impl.Allocator.get().ofFloats(tmp, 8, RawQuads)
-				: h3d.Buffer.ofFloats(tmp, 8, [Quads, RawFormat]);
+				? hxd.impl.Allocator.get().ofFloats(tmp, 8, RawFormat)
+				: h3d.Buffer.ofFloats(tmp, 8, [RawFormat]);
 		}
 	}
 

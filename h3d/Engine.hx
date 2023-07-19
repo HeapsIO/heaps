@@ -142,11 +142,11 @@ class Engine {
 	}
 
 	public inline function renderTriBuffer( b : Buffer, start = 0, max = -1 ) {
-		return renderBuffer(b, mem.triIndexes, 3, start, max);
+		return renderBuffer(b, mem.getTriIndexes(b.vertices), 3, start, max);
 	}
 
 	public inline function renderQuadBuffer( b : Buffer, start = 0, max = -1 ) {
-		return renderBuffer(b, mem.quadIndexes, 2, start, max);
+		return renderBuffer(b, mem.getQuadIndexes(b.vertices), 2, start, max);
 	}
 
 	// we use preallocated indexes so all the triangles are stored inside our buffers

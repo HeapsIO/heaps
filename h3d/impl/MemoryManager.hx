@@ -14,8 +14,10 @@ class MemoryManager {
 	var textures : Array<h3d.mat.Texture>;
 	var depths : Array<h3d.mat.DepthBuffer>;
 
-	public var triIndexes(default,null) : Indexes;
-	public var quadIndexes(default,null) : Indexes;
+	var triIndexes16 : Indexes;
+	var quadIndexes16 : Indexes;
+	var triIndexes32 : Indexes;
+	var quadIndexes32 : Indexes;
 	public var usedMemory(default, null) : Float = 0;
 	public var texMemory(default, null) : Float = 0;
 
@@ -34,7 +36,7 @@ class MemoryManager {
 	function initIndexes() {
 		var indices = new hxd.IndexBuffer();
 		for( i in 0...SIZE ) indices.push(i);
-		triIndexes = h3d.Indexes.alloc(indices);
+		triIndexes16 = h3d.Indexes.alloc(indices);
 
 		var indices = new hxd.IndexBuffer();
 		var p = 0;
@@ -48,7 +50,7 @@ class MemoryManager {
 			indices.push(k + 3);
 		}
 		indices.push(SIZE);
-		quadIndexes = h3d.Indexes.alloc(indices);
+		quadIndexes16 = h3d.Indexes.alloc(indices);
 	}
 
 	/**
@@ -56,6 +58,22 @@ class MemoryManager {
 		Might be called several times if we need to allocate a lot of memory
 	**/
 	public dynamic function garbage() {
+	}
+
+	public function getTriIndexes( vertices : Int ) {
+		if( vertices <= SIZE )
+			return triIndexes16;
+		if( triIndexes32 == null || triIndexes32.count < vertices )
+			throw "TODO";
+		return triIndexes32;
+	}
+
+	public function getQuadIndexes( vertices : Int ) {
+		if( vertices <= SIZE )
+			return quadIndexes16;
+		if( quadIndexes32 == null || quadIndexes32.count < vertices )
+			throw "TODO";
+		return quadIndexes32;
 	}
 
 	// ------------------------------------- BUFFERS ------------------------------------------
@@ -197,10 +215,14 @@ class MemoryManager {
 	}
 
 	public function dispose() {
-		if( triIndexes != null ) triIndexes.dispose();
-		if( quadIndexes != null ) quadIndexes.dispose();
-		triIndexes = null;
-		quadIndexes = null;
+		if( triIndexes16 != null ) triIndexes16.dispose();
+		if( quadIndexes16 != null ) quadIndexes16.dispose();
+		if( triIndexes32 != null ) triIndexes32.dispose();
+		if( quadIndexes32 != null ) quadIndexes32.dispose();
+		triIndexes16 = null;
+		quadIndexes16 = null;
+		triIndexes32 = null;
+		quadIndexes32 = null;
 		for( t in textures.copy() )
 			t.dispose();
 		for( b in depths.copy() )
