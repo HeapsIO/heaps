@@ -157,9 +157,13 @@ class HMDOut extends BaseLibrary {
 			}
 		}
 		var realIdx = new hxd.IndexBuffer();
-		for( idx in idx )
+		for( idx in idx ) {
+			if ( idx == null )
+				trace("Empty list of vertex indexes");
 			for( i in idx )
 				realIdx.push(pmap[i]);
+		}
+			
 
 		var poly = new h3d.prim.Polygon(points, realIdx);
 		poly.addNormals();
