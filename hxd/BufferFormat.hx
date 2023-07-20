@@ -73,6 +73,12 @@ class BufferFormat {
 		return make(inputs);
 	}
 
+	public function pop() {
+		var inputs = inputs.copy();
+		inputs.pop();
+		return make(inputs);
+	}
+
 	public inline function getInputs() {
 		return inputs.iterator();
 	}
