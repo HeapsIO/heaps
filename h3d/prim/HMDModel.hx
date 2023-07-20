@@ -59,11 +59,11 @@ class HMDModel extends MeshPrimitive {
 
 	override function alloc(engine:h3d.Engine) {
 		dispose();
-		buffer = new h3d.Buffer(data.vertexCount, data.vertexStride);
+		buffer = new h3d.Buffer(data.vertexCount, data.vertexFormat.stride);
 
 		var entry = lib.resource.entry;
 
-		var size = data.vertexCount * data.vertexStride * 4;
+		var size = data.vertexCount * data.vertexFormat.stride * 4;
 		var bytes = entry.fetchBytes(dataPosition + data.vertexPosition, size);
 		buffer.uploadBytes(bytes, 0, data.vertexCount);
 
@@ -81,9 +81,9 @@ class HMDModel extends MeshPrimitive {
 		indexes.uploadBytes(bytes, 0, indexCount);
 
 		var pos = 0;
-		for( f in data.vertexFormat ) {
+		for( f in data.vertexFormat.getInputs() ) {
 			addBuffer(f.name, buffer, pos);
-			pos += f.format.getSize();
+			pos += f.type.getSize();
 		}
 
 		if( normalsRecomputed != null )
@@ -103,14 +103,13 @@ class HMDModel extends MeshPrimitive {
 
 	public function recomputeNormals( ?name : String ) {
 
-		for( f in data.vertexFormat )
-			if( f.name == name )
-				return;
+		if( name != null && data.vertexFormat.hasInput("name") )
+			return;
 
 		if( name == null ) name = "normal";
 
 
-		var pos = lib.getBuffers(data, [new hxd.fmt.hmd.Data.GeometryFormat("position", DVec3)]);
+		var pos = lib.getBuffers(data, hxd.BufferFormat.POS3D);
 		var ids = new Array();
 		var pts : Array<h3d.col.Point> = [];
 		var mpts = new Map();
@@ -164,7 +163,7 @@ class HMDModel extends MeshPrimitive {
 	}
 
 	public function addTangents() {
-		var pos = lib.getBuffers(data, [new hxd.fmt.hmd.Data.GeometryFormat("position", DVec3)]);
+		var pos = lib.getBuffers(data, hxd.BufferFormat.POS3D);
 		var ids = new Array();
 		var pts : Array<h3d.col.Point> = [];
 		for( i in 0...data.vertexCount ) {
@@ -216,7 +215,7 @@ class HMDModel extends MeshPrimitive {
 	}
 
 	function initCollider( poly : h3d.col.PolygonBuffer ) {
-		var buf= lib.getBuffers(data, [new hxd.fmt.hmd.Data.GeometryFormat("position", DVec3)]);
+		var buf= lib.getBuffers(data, hxd.BufferFormat.POS3D);
 		poly.setData(buf.vertexes, buf.indexes);
 		if( collider == null ) {
 			var sphere = data.bounds.toSphere();

@@ -118,7 +118,7 @@ enum OptAlgorithm {
 
 class WorldModel {
 	public var r : hxd.res.Model;
-	public var stride : Int;
+	public var format : hxd.BufferFormat;
 	public var buf : hxd.FloatBuffer;
 	public var idx : hxd.IndexBuffer;
 	public var geometries : Array<WorldModelGeometry>;
@@ -135,6 +135,7 @@ class WorldModel {
 		switch( algo ) {
 		case None:
 		case TopDown:
+			var stride = format.stride;
 			var vertexCount = Std.int(buf.length/stride);
 			var vertexRemap = new haxe.ds.Vector(vertexCount);
 			var indexRemap = new hxd.IndexBuffer(idx.length);
@@ -246,17 +247,14 @@ class World extends Object {
 
 	function buildFormat() {
 		var r = {
-			fmt : [
-				new hxd.fmt.hmd.Data.GeometryFormat("position", DVec3),
-				new hxd.fmt.hmd.Data.GeometryFormat("normal", DVec3),
-			],
+			fmt : hxd.BufferFormat.POS3D_NORMAL,
 			defaults : [],
 		};
 		if(enableNormalMaps) {
-			r.defaults[r.fmt.length] = new h3d.Vector(1,0,0);
-			r.fmt.push(new hxd.fmt.hmd.Data.GeometryFormat("tangent", DVec3));
+			r.defaults[2] = new h3d.Vector(1,0,0);
+			r.fmt = r.fmt.append("tangent", DVec3);
 		}
-		r.fmt.push(new hxd.fmt.hmd.Data.GeometryFormat("uv", DVec2));
+		r.fmt = r.fmt.append("uv", DVec2);
 		return r;
 	}
 
@@ -400,9 +398,7 @@ class World extends Object {
 		var format = buildFormat();
 
 		var model = new WorldModel(r);
-		model.stride = 0;
-		for( f in format.fmt )
-			model.stride += f.format.getSize();
+		model.format = format.fmt;
 
 		var startVertex = 0, startIndex = 0;
 		for( m in models ) {
@@ -429,7 +425,7 @@ class World extends Object {
 				var data = lib.getBuffers(geom, format.fmt, format.defaults, mid);
 
 				var m = new WorldModelGeometry(wmat);
-				m.vertexCount = Std.int(data.vertexes.length / model.stride);
+				m.vertexCount = Std.int(data.vertexes.length / model.format.stride);
 				m.indexCount = data.indexes.length;
 				m.startVertex = startVertex;
 				m.startIndex = startIndex;
@@ -437,7 +433,7 @@ class World extends Object {
 
 				var vl = data.vertexes;
 				var p = 0;
-				var extra = model.stride - 8;
+				var extra = model.format.stride - 8;
 				if(enableNormalMaps)
 					extra -= 3;
 
@@ -537,7 +533,7 @@ class World extends Object {
 			for( g in model.geometries ) {
 				var b = c.buffers.get(g.m.bits);
 				if( b == null ) {
-					var bp = new h3d.prim.BigPrimitive(getStride(model), true);
+					var bp = new h3d.prim.BigPrimitive(getFormat(model).stride, true);
 					bp.hasTangents = enableNormalMaps;
 					b = new h3d.scene.Mesh(bp, c.root);
 					b.name = g.m.name;
@@ -550,10 +546,10 @@ class World extends Object {
 					var m = e.transform;
 					var scale = m._33;
 					var rotZ = hxd.Math.atan2(m._12 / scale, m._11 / scale);
-					p.addSub(model.buf, model.idx, g.startVertex, Std.int(g.startIndex / 3), g.vertexCount, Std.int(g.indexCount / 3), m.tx, m.ty, m.tz, rotZ, scale, model.stride, 0., 0., 1., null);
+					p.addSub(model.buf, model.idx, g.startVertex, Std.int(g.startIndex / 3), g.vertexCount, Std.int(g.indexCount / 3), m.tx, m.ty, m.tz, rotZ, scale, model.format.stride, 0., 0., 1., null);
 				}
 				else
-					p.addSub(model.buf, model.idx, g.startVertex, Std.int(g.startIndex / 3), g.vertexCount, Std.int(g.indexCount / 3), 0., 0., 0., 0., 0., model.stride, 0., 0., 1., e.transform);
+					p.addSub(model.buf, model.idx, g.startVertex, Std.int(g.startIndex / 3), g.vertexCount, Std.int(g.indexCount / 3), 0., 0., 0., 0., 0., model.format.stride, 0., 0., 1., e.transform);
 			}
 		}
 	}
@@ -631,8 +627,8 @@ class World extends Object {
 			cleanChunk(c);
 	}
 
-	function getStride( model : WorldModel ) {
-		return model.stride;
+	function getFormat( model : WorldModel ) {
+		return model.format;
 	}
 
 	public function add( model : WorldModel, x : Float, y : Float, z : Float, scale = 1., rotation = 0. ) {

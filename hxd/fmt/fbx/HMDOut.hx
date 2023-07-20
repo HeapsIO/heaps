@@ -129,11 +129,11 @@ class HMDOut extends BaseLibrary {
 	}
 
 	function updateNormals( g : Geometry, vbuf : hxd.FloatBuffer, idx : Array<Array<Int>> ) {
-		var stride = g.vertexStride;
+		var stride = g.vertexFormat.stride;
 		var normalPos = 0;
-		for( f in g.vertexFormat ) {
+		for( f in g.vertexFormat.getInputs() ) {
 			if( f.name == "logicNormal" ) break;
-			normalPos += f.format.getSize();
+			normalPos += f.type.getSize();
 		}
 
 		var points : Array<h3d.col.Point> = [];
@@ -165,7 +165,7 @@ class HMDOut extends BaseLibrary {
 			for( i in idx )
 				realIdx.push(pmap[i]);
 		}
-			
+
 
 		var poly = new h3d.prim.Polygon(points, realIdx);
 		poly.addNormals();
@@ -203,32 +203,28 @@ class HMDOut extends BaseLibrary {
 		var tangents = genTangents ? buildTangents(geom) : null;
 
 		// build format
-		g.vertexFormat = [
+		var format = [
 			new GeometryFormat("position", DVec3),
 		];
 		if( normals != null )
-			g.vertexFormat.push(new GeometryFormat("normal", DVec3));
+			format.push(new GeometryFormat("normal", DVec3));
 		if( tangents != null )
-			g.vertexFormat.push(new GeometryFormat("tangent", DVec3));
+			format.push(new GeometryFormat("tangent", DVec3));
 		for( i in 0...uvs.length )
-			g.vertexFormat.push(new GeometryFormat("uv" + (i == 0 ? "" : "" + (i + 1)), DVec2));
+			format.push(new GeometryFormat("uv" + (i == 0 ? "" : "" + (i + 1)), DVec2));
 		if( colors != null )
-			g.vertexFormat.push(new GeometryFormat("color", DVec3));
+			format.push(new GeometryFormat("color", DVec3));
 
 		if( skin != null ) {
 			if(fourBonesByVertex)
 				g.props = [FourBonesByVertex];
-			g.vertexFormat.push(new GeometryFormat("weights", DVec3));  // Only 3 weights are necessary even in fourBonesByVertex since they sum-up to 1
-			g.vertexFormat.push(new GeometryFormat("indexes", DBytes4));
+			format.push(new GeometryFormat("weights", DVec3));  // Only 3 weights are necessary even in fourBonesByVertex since they sum-up to 1
+			format.push(new GeometryFormat("indexes", DBytes4));
 		}
 
 		if( generateNormals )
-			g.vertexFormat.push(new GeometryFormat("logicNormal", DVec3));
-
-		var stride = 0;
-		for( f in g.vertexFormat )
-			stride += f.format.getSize();
-		g.vertexStride = stride;
+			format.push(new GeometryFormat("logicNormal", DVec3));
+		g.vertexFormat = hxd.BufferFormat.make(format);
 		g.vertexCount = 0;
 
 		// build geometry
@@ -242,6 +238,7 @@ class HMDOut extends BaseLibrary {
 		}
 
 		g.bounds = new h3d.col.Bounds();
+		var stride = g.vertexFormat.stride;
 		var tmpBuf = new hxd.impl.TypedArray.Float32Array(stride);
 		var vertexRemap = new Array<Int>();
 		var index = geom.getPolygons();

@@ -63,18 +63,16 @@ class Library {
 		}
 		if( stride > 11 )
 			throw "Unsupported stride";
-		return { format : format, defs : defs };
+		return { format : hxd.BufferFormat.make(format), defs : defs };
 	}
 
-	public function load( format : Array<GeometryFormat>, ?defaults : Array<h3d.Vector>, modelIndex = -1 ) {
+	public function load( format : hxd.BufferFormat, ?defaults : Array<h3d.Vector>, modelIndex = -1 ) {
 		var vtmp = new h3d.Vector();
 		var models = modelIndex < 0 ? header.models : [header.models[modelIndex]];
 		var outVertex = new hxd.FloatBuffer();
 		var outIndex = new hxd.IndexBuffer();
-		var stride = 0;
+		var stride = format.stride;
 		var mid = -1;
-		for( f in format )
-			stride += f.format.getSize();
 		for( m in models ) {
 			var geom = header.geometries[m.geometry];
 			if( geom == null ) continue;
@@ -104,39 +102,39 @@ class Library {
 	}
 
 	@:noDebug
-	public function getBuffers( geom : Geometry, format : Array<GeometryFormat>, ?defaults : Array<h3d.Vector>, ?material : Int ) {
+	public function getBuffers( geom : Geometry, format : hxd.BufferFormat, ?defaults : Array<h3d.Vector>, ?material : Int ) {
 
 		if( material == 0 && geom.indexCounts.length == 1 )
 			material = null;
 
 		var map = null, stride = 0;
-		for( i in 0...format.length ) {
-			var i = format.length - 1 - i;
-			var f = format[i];
-			var size  = f.format.getSize();
+		for( i in 0...@:privateAccess format.inputs.length ) {
+			var i = @:privateAccess format.inputs.length - 1 - i;
+			var input = @:privateAccess format.inputs[i];
+			var size  = input.type.getSize();
 			var offset = 0;
 			var found = false;
-			for( f2 in geom.vertexFormat ) {
-				if( f2.name == f.name ) {
-					if( f2.format.getSize() < size )
-						throw 'Requested ${f.name} data has only ${f2.format.getSize()} regs instead of $size';
+			for( f2 in geom.vertexFormat.getInputs() ) {
+				if( f2.name == input.name ) {
+					if( f2.type.getSize() < size )
+						throw 'Requested ${input.name} data has only ${f2.type.getSize()} regs instead of $size';
 					found = true;
 					break;
 				}
-				offset += f2.format.getSize();
+				offset += f2.type.getSize();
 			}
 			if( found ) {
 				map = new FormatMap(size, offset, null, map);
 			} else {
 				var def = defaults == null ? null : defaults[i];
 				if( def == null )
-					throw 'Missing required ${f.name}';
+					throw 'Missing required ${input.name}';
 				map = new FormatMap(size, 0, def, map);
 			}
 			stride += size;
 		}
 
-		var vsize = geom.vertexCount * geom.vertexStride * 4;
+		var vsize = geom.vertexCount * geom.vertexFormat.stride * 4;
 		var vbuf = haxe.io.Bytes.alloc(vsize);
 		var entry = resource.entry;
 
@@ -168,7 +166,7 @@ class Library {
 				var m = map;
 				while( m != null ) {
 					if( m.def == null ) {
-						var r = vid * geom.vertexStride;
+						var r = vid * geom.vertexFormat.stride;
 						for( i in 0...m.size )
 							buf.vertexes[w++] = vbuf.getFloat((r + m.offset + i) << 2);
 					} else {
@@ -215,7 +213,7 @@ class Library {
 					var m = map;
 					while( m != null ) {
 						if( m.def == null ) {
-							var r = vid * geom.vertexStride;
+							var r = vid * geom.vertexFormat.stride;
 							for( i in 0...m.size )
 								vertexes.push(vbuf.getFloat((r + m.offset + i) << 2));
 						} else {
@@ -593,14 +591,12 @@ class Library {
 		@:privateAccess skin.vertexCount = geom.vertexCount;
 
 		// Only 3 weights are necessary even in fourBonesByVertex since they sum-up to 1
-		var format = [
+		var format = hxd.BufferFormat.make([
 			new hxd.fmt.hmd.Data.GeometryFormat("position",DVec3),
 			new hxd.fmt.hmd.Data.GeometryFormat("weights",DVec3),
-			new hxd.fmt.hmd.Data.GeometryFormat("indexes",DBytes4)];
+			new hxd.fmt.hmd.Data.GeometryFormat("indexes",DBytes4)]);
 		var data = getBuffers(geom, format);
-		var formatStride = 0;
-		for(f in format)
-			formatStride += f.format.getSize();
+		var formatStride = format.stride;
 
 		skin.vertexWeights = new haxe.ds.Vector(skin.vertexCount * bonesPerVertex);
 		skin.vertexJoints = new haxe.ds.Vector(skin.vertexCount * bonesPerVertex);

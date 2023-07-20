@@ -114,11 +114,11 @@ class Writer {
 		for( g in d.geometries ) {
 			writeProps(g.props);
 			out.writeInt32(g.vertexCount);
-			out.writeByte(g.vertexStride);
-			out.writeByte(g.vertexFormat.length);
-			for( f in g.vertexFormat ) {
+			out.writeByte(g.vertexFormat.stride);
+			out.writeByte(@:privateAccess g.vertexFormat.inputs.length);
+			for( f in g.vertexFormat.getInputs() ) {
 				writeName(f.name);
-				out.writeByte(f.format.toInt());
+				out.writeByte(f.type.toInt());
 			}
 			out.writeInt32(g.vertexPosition);
 			if( g.indexCounts.length >= 0xFF ) {
