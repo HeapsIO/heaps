@@ -27,7 +27,17 @@ class MeshPrimitive extends Primitive {
 			bufferCache = new Map();
 		var id = hxsl.Globals.allocID(name);
 		var old = bufferCache.get(id);
-		if( old != null ) old.dispose();
+		if( old != null ) {
+			// don't dispose the buffer if it's used by another attribute
+			var inUse = old.buffer == buf;
+			for( b in bufferCache )
+				if( b != old && b.buffer == old.buffer ) {
+					inUse = true;
+					break;
+				}
+			if( !inUse )
+				old.dispose();
+		}
 		bufferCache.set(id, new h3d.Buffer.BufferOffset(buf, offset));
 		layouts = null;
 	}
