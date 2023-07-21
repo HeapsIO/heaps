@@ -19,13 +19,6 @@
 			"url": "file://${workspaceFolder}/index.html",
 			"webRoot": "${workspaceFolder}",
 			"preLaunchTask": "HeapsJS"
-		},
-		{
-            "name": "Flash",
-            "type": "fdb",
-            "request": "launch",
-			"program": "${workspaceRoot}/::name::.swf",
-			"preLaunchTask": "HeapsSWF"
-        }
+		}
 	]
 }
