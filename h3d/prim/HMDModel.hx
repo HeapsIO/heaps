@@ -103,7 +103,7 @@ class HMDModel extends MeshPrimitive {
 
 	public function recomputeNormals( ?name : String ) {
 
-		if( name != null && data.vertexFormat.hasInput("name") )
+		if( name != null && data.vertexFormat.hasInput(name) )
 			return;
 
 		if( name == null ) name = "normal";
