@@ -33,6 +33,18 @@ enum abstract InputFormat(Int) {
 	static inline function fromInt( v : Int ) : InputFormat {
 		return new InputFormat(v);
 	}
+
+	public static function fromHXSL( t : hxsl.Ast.Type ) {
+		return switch( t ) {
+		case TVec(2, VFloat): DVec2;
+		case TVec(3, VFloat): DVec3;
+		case TVec(4, VFloat): DVec4;
+		case TBytes(4): DBytes4;
+		case TFloat: DFloat;
+		default: throw "Unsupported buffer type " + t;
+		}
+	}
+
 }
 
 @:structInit
@@ -120,8 +132,30 @@ class BufferFormat {
 		return POS3D_UV;
 	}
 
-	public static function make( inputs ) {
-		return new BufferFormat(inputs);
+	static var ALL_FORMATS = new Map<String,Array<BufferFormat>>();
+	public static function make( inputs : Array<BufferInput> ) {
+		var names = [];
+		for( b in inputs )
+			names.push(b);
+		var key = names.join("|");
+		var arr = ALL_FORMATS.get(key);
+		if( arr == null ) {
+			arr = [];
+			ALL_FORMATS.set(key,arr);
+		}
+		for( fmt in arr ) {
+			var found = true;
+			for( i in 0...inputs.length )
+				if( inputs[i].type != fmt.inputs[i].type ) {
+					found = false;
+					break;
+				}
+			if( found )
+				return fmt;
+		}
+		var fmt = new BufferFormat(inputs);
+		arr.push(fmt);
+		return fmt;
 	}
 
 }
