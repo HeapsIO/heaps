@@ -136,7 +136,7 @@ class BufferFormat {
 	public static function make( inputs : Array<BufferInput> ) {
 		var names = [];
 		for( b in inputs )
-			names.push(b);
+			names.push(b.name);
 		var key = names.join("|");
 		var arr = ALL_FORMATS.get(key);
 		if( arr == null ) {
