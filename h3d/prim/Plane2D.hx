@@ -35,7 +35,7 @@ class Plane2D extends Primitive {
 		v.push( 1);
 		v.push( 0);
 
-		buffer = h3d.Buffer.ofFloats(v, 4, [RawFormat]);
+		buffer = h3d.Buffer.ofFloats(v, hxd.BufferFormat.XY_UV);
 	}
 
 	override function render(engine:h3d.Engine) {

@@ -365,7 +365,21 @@ class Particles extends h3d.scene.Mesh {
 		var stride = 10;
 		if( hasColor ) stride += 4;
 		var count = Std.int(pos/stride);
-		var buffer = hxd.impl.Allocator.get().ofSubFloats(tmp, stride, count,RawFormat);
+		var format = PART_FMT;
+		if( format == null ) {
+			format = PART_FMT = hxd.BufferFormat.make([
+				{ name : "position", type : DVec3 },
+				{ name : "rpos", type : DVec2 },
+				{ name : "rotation", type : DFloat },
+				{ name : "size", type : DVec2 },
+				{ name : "uv", type : DVec2 },
+			]);
+		}
+		if( hasColor ) {
+			format = PART_FMT_COLOR;
+			if( format == null ) format = PART_FMT_COLOR = PART_FMT.append("color", DVec4);
+		}
+		var buffer = hxd.impl.Allocator.get().ofSubFloats(tmp, count, format);
 		if( pshader.is3D )
 			pshader.size.set(globalSize, globalSize);
 		else
@@ -374,5 +388,8 @@ class Particles extends h3d.scene.Mesh {
 		ctx.engine.renderQuadBuffer(buffer, 0, Std.int(count/3));
 		buffer.dispose();
 	}
+
+	static var PART_FMT : hxd.BufferFormat;
+	static var PART_FMT_COLOR : hxd.BufferFormat;
 
 }

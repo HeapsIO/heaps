@@ -81,7 +81,7 @@ class MemoryManager {
 	function allocBuffer( b : Buffer ) {
 		if( b.vbuf != null ) return;
 
-		var mem = b.vertices * b.stride * 4;
+		var mem = b.getMemSize();
 
 		if( mem == 0 ) return;
 
@@ -107,7 +107,7 @@ class MemoryManager {
 		driver.disposeBuffer(b.vbuf);
 		b.vbuf = null;
 		b.mem = null;
-		usedMemory -= b.vertices * b.stride * 4;
+		usedMemory -= b.getMemSize();
 		buffers.remove(b);
 	}
 
@@ -243,7 +243,7 @@ class MemoryManager {
 	public function stats() {
 		var total = 0.;
 		for( b in buffers )
-			total += b.stride * b.vertices * 4;
+			total += b.getMemSize();
 		return {
 			bufferCount : buffers.length,
 			bufferMemory : total,

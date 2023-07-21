@@ -6,10 +6,6 @@ enum BufferFlag {
 	**/
 	Dynamic;
 	/**
-		Directly map the buffer content to the shader inputs, without assuming [pos:vec3,normal:vec3,uv:vec2] default prefix.
-	**/
-	RawFormat;
-	/**
 		Used internaly
 	**/
 	NoAlloc;
@@ -31,13 +27,13 @@ class Buffer {
 	var mem : h3d.impl.MemoryManager;
 	var vbuf : h3d.impl.Driver.GPUBuffer;
 	public var vertices(default,null) : Int;
-	public var stride(default,null) : Int;
+	public var format(default,null) : hxd.BufferFormat;
 	public var flags(default, null) : haxe.EnumFlags<BufferFlag>;
 
-	public function new(vertices, stride, ?flags : Array<BufferFlag> ) {
+	public function new(vertices, format : hxd.BufferFormat, ?flags : Array<BufferFlag> ) {
 		id = GUID++;
 		this.vertices = vertices;
-		this.stride = stride;
+		this.format = format;
 		this.flags = new haxe.EnumFlags();
 		#if track_alloc
 		this.allocPos = new hxd.impl.AllocPos();
@@ -47,6 +43,10 @@ class Buffer {
 				this.flags.set(f);
 		if( !this.flags.has(NoAlloc) )
 			@:privateAccess h3d.Engine.getCurrent().mem.allocBuffer(this);
+	}
+
+	public inline function getMemSize() {
+		return vertices * (format.stride << 2);
 	}
 
 	public inline function isDisposed() {
@@ -78,15 +78,15 @@ class Buffer {
 		mem.driver.readBufferBytes(vbuf, startVertice, vertices, bytes, bytesPosition);
 	}
 
-	public static function ofFloats( v : hxd.FloatBuffer, stride : Int, ?flags ) {
-		var nvert = Std.int(v.length / stride);
-		var b = new Buffer(nvert, stride, flags);
+	public static function ofFloats( v : hxd.FloatBuffer, format : hxd.BufferFormat, ?flags ) {
+		var nvert = Std.int(v.length / format.stride);
+		var b = new Buffer(nvert, format, flags);
 		b.uploadVector(v, 0, nvert);
 		return b;
 	}
 
-	public static function ofSubFloats( v : hxd.FloatBuffer, stride : Int, vertices : Int, ?flags ) {
-		var b = new Buffer(vertices, stride, flags);
+	public static function ofSubFloats( v : hxd.FloatBuffer, vertices : Int, format : hxd.BufferFormat, ?flags ) {
+		var b = new Buffer(vertices, format, flags);
 		b.uploadVector(v, 0, vertices);
 		return b;
 	}

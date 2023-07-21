@@ -580,7 +580,7 @@ class RenderContext extends h3d.impl.RenderContext {
 		if( bufPos == 0 ) return;
 		beforeDraw();
 		var nverts = Std.int(bufPos / stride);
-		var tmp = new h3d.Buffer(nverts, stride, [Dynamic,RawFormat]);
+		var tmp = new h3d.Buffer(nverts, hxd.BufferFormat.XY_UV_RGBA, [Dynamic]);
 		tmp.uploadVector(buffer, 0, nverts);
 		engine.renderQuadBuffer(tmp);
 		tmp.dispose();
@@ -750,7 +750,7 @@ class RenderContext extends h3d.impl.RenderContext {
 		baseShader.uvPos.set(tile.u, tile.v, tile.u2 - tile.u, tile.v2 - tile.v);
 		beforeDraw();
 		if( fixedBuffer == null || fixedBuffer.isDisposed() ) {
-			fixedBuffer = new h3d.Buffer(4, 8, [RawFormat]);
+			fixedBuffer = new h3d.Buffer(4, hxd.BufferFormat.H2D);
 			var k = new hxd.FloatBuffer();
 			for( v in [0, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1] )
 				k.push(v);

@@ -327,6 +327,9 @@ class MeshBatch extends MultiMaterial {
 		}
 	}
 
+	static var VEC4_FMT = hxd.BufferFormat.make([{ name : "data", type : DVec4 }]);
+	static var SINGLE_FLOAT_FMT = hxd.BufferFormat.make([{ name : "data", type : DFloat }]);
+
 	override function sync(ctx:RenderContext) {
 		super.sync(ctx);
 		if( instanceCount == 0 ) return;
@@ -343,7 +346,7 @@ class MeshBatch extends MultiMaterial {
 				if( count > p.maxInstance )
 					count = p.maxInstance;
 				if( buf == null || buf.isDisposed() ) {
-					buf = alloc.allocBuffer(MAX_BUFFER_ELEMENTS,4,UniformDynamic);
+					buf = alloc.allocBuffer(MAX_BUFFER_ELEMENTS,VEC4_FMT,UniformDynamic);
 					p.buffers[index] = buf;
 					upload = true;
 				}
@@ -376,7 +379,7 @@ class MeshBatch extends MultiMaterial {
 				var tmp = haxe.io.Bytes.alloc(4 * instanceCount);
 				for( i in 0...instanceCount )
 					tmp.setFloat(i<<2, i);
-				offsets = new h3d.Buffer(instanceCount, 1);
+				offsets = new h3d.Buffer(instanceCount, SINGLE_FLOAT_FMT);
 				offsets.uploadBytes(tmp,0,instanceCount);
 				@:privateAccess prim.addBuffer("Batch_Start", offsets);
 			}

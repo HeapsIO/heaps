@@ -438,7 +438,7 @@ class SpriteBatch extends Drawable {
 		}
 		empty = bufferVertices == 0;
 		if( bufferVertices > 0 )
-			buffer = h3d.Buffer.ofSubFloats(tmpBuf, 8, bufferVertices, [Dynamic, RawFormat]);
+			buffer = h3d.Buffer.ofSubFloats(tmpBuf, bufferVertices, hxd.BufferFormat.H2D, [Dynamic]);
 	}
 
 	override function draw( ctx : RenderContext ) {

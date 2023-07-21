@@ -41,6 +41,7 @@ private class CompiledShader {
 	public var layout : Layout;
 	public var inputs : InputNames;
 	public var offsets : Array<Int>;
+	public var format : hxd.BufferFormat;
 	public function new() {
 	}
 }
@@ -316,11 +317,11 @@ class DirectXDriver extends h3d.impl.Driver {
 	}
 
 	override function allocBuffer(b:Buffer):GPUBuffer {
-		var size = b.vertices * b.stride * 4;
+		var size = b.getMemSize();
 		var uniform = b.flags.has(UniformBuffer);
 		var res = uniform ? dx.Driver.createBuffer(size, Dynamic, ConstantBuffer, CpuWrite, None, 0, null) : dx.Driver.createBuffer(size, Default, VertexBuffer, None, None, 0, null);
 		if( res == null ) return null;
-		return { res : res, count : b.vertices, stride : b.stride, uniform : uniform };
+		return { res : res, count : b.vertices, stride : b.format.stride, uniform : uniform };
 	}
 
 	override function allocIndexes( count : Int, is32 : Bool ) : IndexBuffer {
@@ -1099,7 +1100,7 @@ class DirectXDriver extends h3d.impl.Driver {
 			s.fragment = fragment.s;
 			s.offsets = [];
 
-			var layout = [], offset = 0;
+			var layout = [], offset = 0, format : Array<hxd.BufferFormat.BufferInput> = [];
 			for( v in shader.vertex.data.vars )
 				if( v.kind == Input ) {
 					var e = new LayoutElement();
@@ -1130,20 +1131,15 @@ class DirectXDriver extends h3d.impl.Driver {
 					layout.push(e);
 					s.offsets.push(offset);
 					inputs.push(v.name);
-
-					var size = switch( v.type ) {
-					case TVec(n, _): n;
-					case TBytes(n): n;
-					case TFloat: 1;
-					default: throw "assert " + v.type;
-					}
-
-					offset += size;
+					var t = hxd.BufferFormat.InputFormat.fromHXSL(v.type);
+					format.push({ name : v.name, type : t });
+					offset += t.getSize();
 				}
 
 			var n = new hl.NativeArray(layout.length);
 			for( i in 0...layout.length )
 				n[i] = layout[i];
+			s.format = hxd.BufferFormat.make(format);
 			s.inputs = InputNames.get(inputs);
 			s.layout = Driver.createInputLayout(n, vertex.bytes, vertex.bytes.length);
 			if( s.layout == null )
@@ -1171,11 +1167,16 @@ class DirectXDriver extends h3d.impl.Driver {
 		if( hasDeviceError ) return;
 		var vbuf = @:privateAccess buffer.vbuf;
 		var start = -1, max = -1, position = 0;
+		var bufOffsets;
+		if( buffer.format == currentShader.format || currentShader.format.isSubSet(buffer.format) )
+			bufOffsets = currentShader.offsets;
+		else
+			bufOffsets = buffer.format.getMatchingOffsets(currentShader.format);
 		for( i in 0...currentShader.inputs.names.length ) {
-			if( currentVBuffers[i] != vbuf.res || offsets[i] != currentShader.offsets[i] << 2 ) {
+			if( currentVBuffers[i] != vbuf.res || offsets[i] != bufOffsets[i] << 2 ) {
 				currentVBuffers[i] = vbuf.res;
-				strides[i] = buffer.stride << 2;
-				offsets[i] = currentShader.offsets[i] << 2;
+				strides[i] = buffer.format.stride << 2;
+				offsets[i] = bufOffsets[i] << 2;
 				if( start < 0 ) start = i;
 				max = i;
 			}
@@ -1193,7 +1194,7 @@ class DirectXDriver extends h3d.impl.Driver {
 			if( currentVBuffers[index] != vbuf.res || offsets[index] != bl.offset << 2 ) {
 				currentVBuffers[index] = vbuf.res;
 				offsets[index] = bl.offset << 2;
-				strides[index] = bl.buffer.stride << 2;
+				strides[index] = bl.buffer.format.stride << 2;
 				if( start < 0 ) start = index;
 				max = index;
 			}

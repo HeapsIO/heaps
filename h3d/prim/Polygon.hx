@@ -29,29 +29,15 @@ class Polygon extends MeshPrimitive {
 	override function alloc( engine : h3d.Engine ) {
 		dispose();
 
-		var size = 3;
-		var names = ["position"];
-		var positions = [0];
-		if( normals != null ) {
-			names.push("normal");
-			positions.push(size);
-			size += 3;
-		}
-		if( tangents != null ) {
-			names.push("tangent");
-			positions.push(size);
-			size += 3;
-		}
-		if( uvs != null ) {
-			names.push("uv");
-			positions.push(size);
-			size += 2;
-		}
-		if( colors != null ) {
-			names.push("color");
-			positions.push(size);
-			size += 3;
-		}
+		var format = hxd.BufferFormat.POS3D;
+		if( normals != null )
+			format = format.append("normal", DVec3);
+		if( tangents != null )
+			format = format.append("tangent", DVec3);
+		if( uvs != null )
+			format = format.append("uv", DVec2);
+		if( colors != null )
+			format = format.append("color", DVec3);
 
 		var buf = new hxd.FloatBuffer();
 		for( k in 0...points.length ) {
@@ -83,12 +69,13 @@ class Polygon extends MeshPrimitive {
 				buf.push(c.z);
 			}
 		}
-		var flags : Array<h3d.Buffer.BufferFlag> = [];
-		if( normals == null || tangents != null ) flags.push(RawFormat);
-		buffer = h3d.Buffer.ofFloats(buf, size, flags);
+		buffer = h3d.Buffer.ofFloats(buf, format);
 
-		for( i in 0...names.length )
-			addBuffer(names[i], buffer, positions[i]);
+		var position = 0;
+		for( i in format.getInputs() ) {
+			addBuffer(i.name, buffer, position);
+			position += i.type.getSize();
+		}
 
 		if( idx != null )
 			indexes = h3d.Indexes.alloc(idx);

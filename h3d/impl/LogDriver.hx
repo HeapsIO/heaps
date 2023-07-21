@@ -307,7 +307,7 @@ class LogDriver extends Driver {
 	}
 
 	override function allocBuffer( b : Buffer ) : GPUBuffer {
-		log('AllocBuffer count=${b.vertices} stride=${b.stride}');
+		log('AllocBuffer count=${b.vertices} format=${b.format}');
 		return d.allocBuffer(b);
 	}
 

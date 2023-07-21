@@ -6,7 +6,7 @@ class DynamicPrimitive extends Primitive {
 	var ibuf : hxd.IndexBuffer;
 	var vsize : Int;
 	var isize : Int;
-	var stride : Int;
+	var format : hxd.BufferFormat;
 
 	/** Minimum number of elements in vertex buffer **/
 	public var minVSize = 0;
@@ -15,8 +15,8 @@ class DynamicPrimitive extends Primitive {
 
 	public var bounds = new h3d.col.Bounds();
 
-	public function new( stride : Int ) {
-		this.stride = stride;
+	public function new( format ) {
+		this.format = format;
 	}
 
 	override function getBounds() {
@@ -24,7 +24,7 @@ class DynamicPrimitive extends Primitive {
 	}
 
 	public function getBuffer( vertices : Int ) {
-		if( vbuf == null ) vbuf = hxd.impl.Allocator.get().allocFloats(vertices * stride) else vbuf.grow(vertices * stride);
+		if( vbuf == null ) vbuf = hxd.impl.Allocator.get().allocFloats(vertices * format.stride) else vbuf.grow(vertices * format.stride);
 		vsize = vertices;
 		return vbuf;
 	}
@@ -59,7 +59,7 @@ class DynamicPrimitive extends Primitive {
 		}
 
 		if( buffer == null )
-			buffer = alloc.allocBuffer(hxd.Math.imax(minVSize, vsize), stride, Dynamic);
+			buffer = alloc.allocBuffer(hxd.Math.imax(minVSize, vsize), format, Dynamic);
 		if( indexes == null )
 			indexes = alloc.allocIndexBuffer(hxd.Math.imax(minISize, isize));
 

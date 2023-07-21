@@ -40,7 +40,7 @@ class Graphics extends Mesh {
 	public var is3D(default, set) : Bool;
 
 	public function new(?parent) {
-		bprim = new h3d.prim.BigPrimitive(12);
+		bprim = new h3d.prim.BigPrimitive(hxd.BufferFormat.POS3D_NORMAL_UV_RGBA);
 		bprim.isStatic = false;
 		super(bprim, null, parent);
 		tmpPoints = [];

@@ -68,7 +68,7 @@ private class CompiledProgram {
 	public var p : Program;
 	public var vertex : CompiledShader;
 	public var fragment : CompiledShader;
-	public var stride : Int;
+	public var format : hxd.BufferFormat;
 	public var inputs : InputNames;
 	public var attribs : Array<CompiledAttribute>;
 	public var hasAttribIndex : Array<Bool>;
@@ -413,27 +413,31 @@ class GlDriver extends Driver {
 			var attribNames = [];
 			p.attribs = [];
 			p.hasAttribIndex = [];
-			p.stride = 0;
+			var format : Array<hxd.BufferFormat.BufferInput> = [];
+			var stride = 0;
 			for( v in shader.vertex.data.vars )
 				switch( v.kind ) {
 				case Input:
-					var t = GL.FLOAT;
-					var size = switch( v.type ) {
-					case TVec(n, _): n;
-					case TBytes(n): t = GL.BYTE; n;
-					case TFloat: 1;
-					default: throw "assert " + v.type;
-					}
+					var t = hxd.BufferFormat.InputFormat.fromHXSL(v.type);
 					var index = gl.getAttribLocation(p.p, glout.varNames.exists(v.id) ? glout.varNames.get(v.id) : v.name);
 					if( index < 0 ) {
-						p.stride += size;
+						stride += t.getSize();
 						continue;
 					}
 					var a = new CompiledAttribute();
-					a.type = t;
-					a.size = size;
+					a.type = GL.FLOAT;
 					a.index = index;
-					a.offset = p.stride;
+					a.size = t.getSize();
+					a.offset = stride;
+					stride += a.size;
+
+					switch( v.type ) {
+					case TBytes(n):
+						a.type = GL.BYTE;
+						a.size = n;
+					default:
+					}
+
 					a.divisor = 0;
 					if( v.qualifiers != null ) {
 						for( q in v.qualifiers )
@@ -445,9 +449,10 @@ class GlDriver extends Driver {
 					p.attribs.push(a);
 					p.hasAttribIndex[a.index] = true;
 					attribNames.push(v.name);
-					p.stride += size;
+					format.push({ name : v.name, type : t });
 				default:
 				}
+			p.format = hxd.BufferFormat.make(format);
 			p.inputs = InputNames.get(attribNames);
 			programs.set(shader.id, p);
 		}
@@ -1008,13 +1013,13 @@ class GlDriver extends Driver {
 		discardError();
 		var vb = gl.createBuffer();
 		gl.bindBuffer(GL.ARRAY_BUFFER, vb);
-		if( b.vertices * b.stride == 0 ) throw "assert";
+		if( b.vertices * b.format.stride == 0 ) throw "assert";
 		#if js
-		gl.bufferData(GL.ARRAY_BUFFER, b.vertices * b.stride * 4, b.flags.has(Dynamic) ? GL.DYNAMIC_DRAW : GL.STATIC_DRAW);
+		gl.bufferData(GL.ARRAY_BUFFER, b.getMemSize(), b.flags.has(Dynamic) ? GL.DYNAMIC_DRAW : GL.STATIC_DRAW);
 		#elseif hl
-		gl.bufferDataSize(GL.ARRAY_BUFFER, b.vertices * b.stride * 4, b.flags.has(Dynamic) ? GL.DYNAMIC_DRAW : GL.STATIC_DRAW);
+		gl.bufferDataSize(GL.ARRAY_BUFFER, b.getMemSize(), b.flags.has(Dynamic) ? GL.DYNAMIC_DRAW : GL.STATIC_DRAW);
 		#else
-		var tmp = new Uint8Array(b.vertices * b.stride * 4);
+		var tmp = new Uint8Array(b.getMemSize());
 		gl.bufferData(GL.ARRAY_BUFFER, tmp, b.flags.has(Dynamic) ? GL.DYNAMIC_DRAW : GL.STATIC_DRAW);
 		#end
 		var outOfMem = outOfMemoryCheck && gl.getError() == GL.OUT_OF_MEMORY;
@@ -1023,7 +1028,7 @@ class GlDriver extends Driver {
 			gl.deleteBuffer(vb);
 			return null;
 		}
-		return { b : vb, stride : b.stride #if multidriver, driver : this #end };
+		return { b : vb, stride : b.format.stride #if multidriver, driver : this #end };
 	}
 
 	override function allocIndexes( count : Int, is32 : Bool ) : IndexBuffer {
@@ -1268,7 +1273,6 @@ class GlDriver extends Driver {
 	}
 
 	override function selectBuffer( b : h3d.Buffer ) {
-
 		if( b == curBuffer )
 			return;
 
@@ -1277,41 +1281,21 @@ class GlDriver extends Driver {
 		curBuffer = b;
 
 		var m = @:privateAccess b.vbuf;
-		if( m.stride < curShader.stride )
-			throw "Buffer stride (" + m.stride + ") and shader stride (" + curShader.stride + ") mismatch";
-
 		#if multidriver
 		if( m.driver != this )
 			throw "Invalid buffer context";
 		#end
 		gl.bindBuffer(GL.ARRAY_BUFFER, m.b);
-
-		if( b.flags.has(RawFormat) ) {
+		var strideBytes = m.stride * 4;
+		if( b.format == curShader.format || curShader.format.isSubSet(b.format) ) {
 			for( a in curShader.attribs ) {
-				var pos = a.offset;
-				gl.vertexAttribPointer(a.index, a.size, a.type, false, m.stride * 4, pos * 4);
+				gl.vertexAttribPointer(a.index, a.size, a.type, false, strideBytes, a.offset * 4);
 				updateDivisor(a);
 			}
 		} else {
-			var offset = 8;
-			for( i in 0...curShader.attribs.length ) {
-				var a = curShader.attribs[i];
-				var pos;
-				switch( curShader.inputs.names[i] ) {
-				case "position":
-					pos = 0;
-				case "normal":
-					if( m.stride < 6 ) throw "Buffer is missing NORMAL data, set it to RAW format ?" #if track_alloc + @:privateAccess v.allocPos #end;
-					pos = 3;
-				case "uv":
-					if( m.stride < 8 ) throw "Buffer is missing UV data, set it to RAW format ?" #if track_alloc + @:privateAccess v.allocPos #end;
-					pos = 6;
-				case s:
-					pos = offset;
-					offset += a.size;
-					if( offset > m.stride ) throw "Buffer is missing '"+s+"' data, set it to RAW format ?" #if track_alloc + @:privateAccess v.allocPos #end;
-				}
-				gl.vertexAttribPointer(a.index, a.size, a.type, false, m.stride * 4, pos * 4);
+			var offsets = b.format.getMatchingOffsets(curShader.format);
+			for( i => a in curShader.attribs ) {
+				gl.vertexAttribPointer(a.index, a.size, a.type, false, strideBytes, offsets[i] * 4);
 				updateDivisor(a);
 			}
 		}
@@ -1320,7 +1304,7 @@ class GlDriver extends Driver {
 	override function selectMultiBuffers( buffers : Buffer.BufferOffset ) {
 		for( a in curShader.attribs ) {
 			gl.bindBuffer(GL.ARRAY_BUFFER, @:privateAccess buffers.buffer.vbuf.b);
-			gl.vertexAttribPointer(a.index, a.size, a.type, false, buffers.buffer.stride * 4, buffers.offset * 4);
+			gl.vertexAttribPointer(a.index, a.size, a.type, false, buffers.buffer.format.stride * 4, buffers.offset * 4);
 			updateDivisor(a);
 			buffers = buffers.next;
 		}

@@ -36,7 +36,7 @@ class LightBuffer {
 		size += MAX_SPOT_LIGHT * SPOT_LIGHT_INFO_SIZE;
 		size = hxd.Math.imax(1, size); // Avoid empty buffer
 		lightInfos = new hxd.FloatBuffer(size * stride);
-		defaultForwardShader.lightInfos = new h3d.Buffer(size, stride, [UniformBuffer, Dynamic]);
+		defaultForwardShader.lightInfos = new h3d.Buffer(size, hxd.BufferFormat.make([{ name : "uniformData", type : DVec4 }]), [UniformBuffer, Dynamic]);
 		defaultForwardShader.BUFFER_SIZE = size;
 		defaultForwardShader.dirLightStride = DIR_LIGHT_INFO_SIZE * MAX_DIR_LIGHT;
 		defaultForwardShader.pointLightStride = POINT_LIGHT_INFO_SIZE * MAX_POINT_LIGHT;

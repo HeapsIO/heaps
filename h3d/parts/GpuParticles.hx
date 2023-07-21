@@ -452,6 +452,15 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 
 	static inline var VERSION = 2;
 	static inline var STRIDE = 14;
+	static var PFORMAT = hxd.BufferFormat.make([
+		{ name : "position", type : DVec3 },
+		{ name : "normal", type : DVec3 },
+		{ name : "uv", type : DVec2 },
+		{ name : "time", type : DFloat },
+		{ name : "life", type : DFloat },
+		{ name : "init", type : DVec2 },
+		{ name : "delta", type : DVec2 },
+	]);
 
 	var groups : Array<GpuPartGroup>;
 	var primitiveBuffers : Array<hxd.FloatBuffer>;
@@ -685,11 +694,10 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 			primitiveBuffers.resize(groups.length);
 
 		for( gid in 0...groups.length ) {
-			if( primitiveBuffers[gid] == null ||  primitiveBuffers[gid].length > STRIDE * partCount * 4 )
+			if( primitiveBuffers[gid] == null || primitiveBuffers[gid].length > STRIDE * partCount * 4 )
 				primitiveBuffers[gid] = new hxd.FloatBuffer();
 			primitiveBuffers[gid].grow(STRIDE * groups[gid].nparts * 4);
-			primitives[gid] = new h3d.prim.RawPrimitive( { vbuf : primitiveBuffers[gid], stride : STRIDE, quads : true, bounds:bounds }, true);
-			primitives[gid].buffer.flags.set(RawFormat);
+			primitives[gid] = new h3d.prim.RawPrimitive( { vbuf : primitiveBuffers[gid], format : PFORMAT, bounds:bounds }, true);
 		}
 
 		if( hasLoop ) {

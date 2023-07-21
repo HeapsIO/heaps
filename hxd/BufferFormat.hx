@@ -63,6 +63,7 @@ class BufferFormat {
 	public var uid : Int;
 	public var stride(default,null) : Int;
 	var inputs : Array<BufferInput>;
+	var offsets : Map<Int, Array<Int>>;
 
 	function new( inputs : Array<BufferInput> ) {
 		uid = _UID++;
@@ -91,6 +92,42 @@ class BufferFormat {
 		return make(inputs);
 	}
 
+	public function isSubSet( fmt : BufferFormat ) {
+		if( fmt == this )
+			return true;
+		if( inputs.length >= fmt.inputs.length )
+			return false;
+		for( i in 0...inputs.length ) {
+			var i1 = inputs[i];
+			var i2 = fmt.inputs[i];
+			if( i1.name != i2.name || i1.type != i2.type )
+				return false;
+		}
+		return true;
+	}
+
+	public function getMatchingOffsets( target : BufferFormat ) {
+		var offs = offsets == null ? null : offsets.get(target.uid);
+		if( offs != null )
+			return offs;
+		offs = [];
+		for( i in target.inputs ) {
+			var v = 0;
+			for( i2 in inputs ) {
+				if( i2.name == i.name ) {
+					offs.push(v);
+					v = -1;
+					break;
+				}
+				v += i2.type.getSize();
+			}
+			if( v >= 0 ) throw "Missing buffer input '"+i.name+"'";
+		}
+		if( offsets == null ) offsets = new Map();
+		offsets.set(target.uid, offs);
+		return offs;
+	}
+
 	public inline function getInputs() {
 		return inputs.iterator();
 	}
@@ -105,6 +142,7 @@ class BufferFormat {
 	public static var POS3D_NORMAL(get,null) : BufferFormat;
 	public static var POS3D_UV(get,null) : BufferFormat;
 	public static var POS3D_NORMAL_UV(get,null) : BufferFormat;
+	public static var POS3D_NORMAL_UV_RGBA(get,null) : BufferFormat;
 
 	static inline function get_H2D() return XY_UV_RGBA;
 	static function get_XY_UV_RGBA() {
@@ -126,6 +164,10 @@ class BufferFormat {
 	static function get_POS3D_NORMAL_UV() {
 		if( POS3D_NORMAL_UV == null ) POS3D_NORMAL_UV = make([{ name : "position", type : DVec3 },{ name : "normal", type : DVec3 },{ name : "uv", type : DVec2 }]);
 		return POS3D_NORMAL_UV;
+	}
+	static function get_POS3D_NORMAL_UV_RGBA() {
+		if( POS3D_NORMAL_UV_RGBA == null ) POS3D_NORMAL_UV_RGBA = POS3D_NORMAL_UV.append("color",DVec4);
+		return POS3D_NORMAL_UV_RGBA;
 	}
 	static function get_POS3D_UV() {
 		if( POS3D_UV == null ) POS3D_UV = make([{ name : "position", type : DVec3 },{ name : "uv", type : DVec2 }]);

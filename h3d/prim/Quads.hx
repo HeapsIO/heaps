@@ -94,12 +94,15 @@ class Quads extends Primitive {
 				v.push(t.v);
 			}
 		}
-		var size = 3;
-		if( normals != null ) size += 3;
-		if( uvs != null ) size += 2;
-		var flags : Array<h3d.Buffer.BufferFlag> = [];
-		if( normals == null ) flags.push(RawFormat);
-		buffer = h3d.Buffer.ofFloats(v, size, flags);
+		var format = if( normals != null && uvs != null )
+			hxd.BufferFormat.POS3D_NORMAL_UV
+		else if( normals != null )
+			hxd.BufferFormat.POS3D_NORMAL
+		else if( uvs != null )
+			hxd.BufferFormat.POS3D_UV
+		else
+			hxd.BufferFormat.POS3D;
+		buffer = h3d.Buffer.ofFloats(v, format);
 	}
 
 	public function addNormals() {
