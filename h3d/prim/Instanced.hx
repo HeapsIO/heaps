@@ -16,13 +16,17 @@ class Instanced extends MeshPrimitive {
 
 	public function setMesh( m : MeshPrimitive ) {
 		if(refCount > 0) {
-			if(primitive != null)
+			if(primitive != null) {
 				primitive.decref();
+				bufferCache = null;
+			}
 			m.incref();
 		}
 		primitive = m;
 		var engine = h3d.Engine.getCurrent();
-		if( m.buffer == null || m.buffer.isDisposed() ) m.alloc(engine);
+		if( m.buffer == null || m.buffer.isDisposed() ) {
+			m.alloc(engine);
+		}
 		buffer = m.buffer;
 		indexes = m.indexes;
 		baseBounds = m.getBounds();
