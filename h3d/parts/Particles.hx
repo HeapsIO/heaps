@@ -370,7 +370,7 @@ class Particles extends h3d.scene.Mesh {
 			format = PART_FMT = hxd.BufferFormat.make([
 				{ name : "position", type : DVec3 },
 				{ name : "rpos", type : DVec2 },
-				{ name : "rotation", type : DFloat },
+				{ name : "rot", type : DFloat },
 				{ name : "size", type : DVec2 },
 				{ name : "uv", type : DVec2 },
 			]);
