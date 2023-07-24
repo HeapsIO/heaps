@@ -287,26 +287,18 @@ class MemoryManager {
 			inf.size += size;
 			addStack(t.allocPos, inf.stacks, size);
 		}
-		for( buf in buffers ) {
-			var buf = buf;
-			while( buf != null ) {
-				var b = buf.allocHead;
-				while( b != null ) {
-					var key = b.allocPos == null ? "null" : b.allocPos.position;
-					var inf = h.get(key);
-					if( inf == null ) {
-						inf = { position : key, count : 0, size : 0, tex : false, stacks : [] };
-						h.set(key, inf);
-						all.push(inf);
-					}
-					inf.count++;
-					var size = b.vertices * b.buffer.stride * 4;
-					inf.size += size;
-					addStack(b.allocPos, inf.stacks, size);
-					b = b.allocNext;
-				}
-				buf = buf.next;
+		for( b in buffers ) {
+			var key = b.allocPos == null ? "null" : b.allocPos.position;
+			var inf = h.get(key);
+			if( inf == null ) {
+				inf = { position : key, count : 0, size : 0, tex : false, stacks : [] };
+				h.set(key, inf);
+				all.push(inf);
 			}
+			inf.count++;
+			var size = b.vertices * b.format.stride * 4;
+			inf.size += size;
+			addStack(b.allocPos, inf.stacks, size);
 		}
 		all.sort(function(a, b) return b.size - a.size);
 		return all;
