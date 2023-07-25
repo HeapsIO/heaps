@@ -2,6 +2,7 @@ package hxd.fmt.fbx;
 using hxd.fmt.fbx.Data;
 import hxd.fmt.fbx.BaseLibrary;
 import hxd.fmt.hmd.Data;
+import hxd.BufferFormat;
 
 class HMDOut extends BaseLibrary {
 
@@ -13,6 +14,7 @@ class HMDOut extends BaseLibrary {
 	public var optimizeSkin = true;
 	public var generateNormals = false;
 	public var generateTangents = false;
+	public var lowPrecConfig : Map<String,Precision>;
 
 	function int32tof( v : Int ) : Float {
 		tmp.set(0, v & 0xFF);
@@ -178,6 +180,37 @@ class HMDOut extends BaseLibrary {
 		}
 	}
 
+	inline function writePrec( v : Float, p : Precision ) {
+		switch( p ) {
+		case F32: writeFloat(v);
+		case F16: dataOut.writeUInt16(hxd.BufferFormat.float32to16(v,true));
+		case S8: dataOut.writeByte(hxd.BufferFormat.float32toS8(v));
+		case U8: dataOut.writeByte(BufferFormat.float32toU8(v));
+		}
+	}
+
+	inline function precisionSize(p:Precision) {
+		return switch( p ) {
+		case F32: 4;
+		case F16: 2;
+		case U8, S8: 1;
+		}
+	}
+
+	inline function flushPrec( p : Precision, count : Int ) {
+		var b = (count * precisionSize(p)) & 3;
+		switch( b ) {
+		case 0:
+		case 1:
+			dataOut.writeUInt16(0);
+			dataOut.writeByte(0);
+		case 2:
+			dataOut.writeUInt16(0);
+		case 3:
+			dataOut.writeByte(0);
+		}
+	}
+
 	function buildGeom( geom : hxd.fmt.fbx.Geometry, skin : h3d.anim.Skin, dataOut : haxe.io.BytesOutput, genTangents : Bool ) {
 		var g = new Geometry();
 
@@ -202,28 +235,41 @@ class HMDOut extends BaseLibrary {
 		// generate tangents
 		var tangents = genTangents ? buildTangents(geom) : null;
 
+		inline function getPrec(n) {
+			var p = lowPrecConfig == null ? null : lowPrecConfig.get(n);
+			if( p == null ) p = F32;
+			return p;
+		}
+		var ppos = getPrec("position");
+		var pnormal = getPrec("normal");
+		var pcolor = getPrec("color");
+		var puv = getPrec("uv");
+		var pweight = getPrec("weights");
+
 		// build format
-		var format = [
-			new GeometryFormat("position", DVec3),
-		];
+		var format = [];
+		inline function addFormat(name,type,prec) {
+			format.push(new hxd.BufferFormat.BufferInput(name,type,prec));
+		}
+		addFormat("position", DVec3, ppos);
 		if( normals != null )
-			format.push(new GeometryFormat("normal", DVec3));
+			addFormat("normal", DVec3, pnormal);
 		if( tangents != null )
-			format.push(new GeometryFormat("tangent", DVec3));
+			addFormat("tangent", DVec3, pnormal);
 		for( i in 0...uvs.length )
-			format.push(new GeometryFormat("uv" + (i == 0 ? "" : "" + (i + 1)), DVec2));
+			addFormat("uv"+(i == 0 ? "" : ""+(i+1)), DVec2, puv);
 		if( colors != null )
-			format.push(new GeometryFormat("color", DVec3));
+			addFormat("color", DVec3, pcolor);
 
 		if( skin != null ) {
 			if(fourBonesByVertex)
 				g.props = [FourBonesByVertex];
-			format.push(new GeometryFormat("weights", DVec3));  // Only 3 weights are necessary even in fourBonesByVertex since they sum-up to 1
+			addFormat("weights", DVec3, pweight);  // Only 3 weights are necessary even in fourBonesByVertex since they sum-up to 1
 			format.push(new GeometryFormat("indexes", DBytes4));
 		}
 
 		if( generateNormals )
-			format.push(new GeometryFormat("logicNormal", DVec3));
+			addFormat("logicNormal", DVec3, pnormal);
 		g.vertexFormat = hxd.BufferFormat.make(format);
 		g.vertexCount = 0;
 
@@ -396,8 +442,56 @@ class HMDOut extends BaseLibrary {
 
 		// write data
 		g.vertexPosition = dataOut.length;
-		for( i in 0...vbuf.length )
-			writeFloat(vbuf[i]);
+		if( lowPrecConfig == null ) {
+			for( i in 0...vbuf.length )
+				writeFloat(vbuf[i]);
+		} else {
+			for( index in 0...Std.int(vbuf.length / stride) ) {
+				var i = index * stride;
+				writePrec(vbuf[i++], ppos);
+				writePrec(vbuf[i++], ppos);
+				writePrec(vbuf[i++], ppos);
+				flushPrec(ppos,3);
+				if( normals != null ) {
+					writePrec(vbuf[i++], pnormal);
+					writePrec(vbuf[i++], pnormal);
+					writePrec(vbuf[i++], pnormal);
+					flushPrec(pnormal,3);
+				}
+				if( tangents != null ) {
+					writePrec(vbuf[i++], pnormal);
+					writePrec(vbuf[i++], pnormal);
+					writePrec(vbuf[i++], pnormal);
+					flushPrec(pnormal,3);
+				}
+				for( k in 0...uvs.length ) {
+					writePrec(vbuf[i++], puv);
+					writePrec(vbuf[i++], puv);
+					flushPrec(puv,2);
+				}
+				if( colors != null ) {
+					writePrec(vbuf[i++], pcolor);
+					writePrec(vbuf[i++], pcolor);
+					writePrec(vbuf[i++], pcolor);
+					flushPrec(pcolor,3);
+				}
+				if( skin != null ) {
+					writePrec(vbuf[i++], pweight);
+					writePrec(vbuf[i++], pweight);
+					writePrec(vbuf[i++], pweight);
+					flushPrec(pweight,3);
+					writeFloat(vbuf[i++]);
+				}
+				if( generateNormals ) {
+					writePrec(vbuf[i++], pnormal);
+					writePrec(vbuf[i++], pnormal);
+					writePrec(vbuf[i++], pnormal);
+					flushPrec(pnormal,3);
+				}
+				if( i != (index + 1) * stride )
+					throw "assert";
+			}
+		}
 		g.indexPosition = dataOut.length;
 		g.indexCounts = [];
 

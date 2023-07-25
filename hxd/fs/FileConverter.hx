@@ -134,16 +134,26 @@ class FileConverter {
 			case "priority": priority = value;
 			default:
 				if( cmd.params == null ) cmd.params = {};
-				if( Reflect.isObject(value) && !hxd.impl.Api.isOfType(value,String) ) throw "Invalid parameter value "+f+"="+value;
 				Reflect.setField(cmd.params, f, value);
 			}
 		}
-		if( cmd.params != null ) {
-			var fl = Reflect.fields(cmd.params);
-			fl.sort(Reflect.compare);
-			cmd.paramsStr = [for( f in fl ) f+"_"+Reflect.field(cmd.params,f)].join("_");
-		}
+		if( cmd.params != null )
+			cmd.paramsStr = formatValue(cmd.params);
 		return { cmd : cmd, priority : priority };
+	}
+
+	function formatValue( v : Dynamic ) : String {
+		if( !Reflect.isObject(v) )
+			return Std.string(v);
+		if( Std.isOfType(v,String) )
+			return v;
+		if( Std.isOfType(v,Array) ) {
+			var a : Array<Dynamic> = v;
+			return [for( v in a ) formatValue(v)].toString();
+		}
+		var fl = Reflect.fields(v);
+		fl.sort(Reflect.compare);
+		return [for( f in fl ) f+"_"+formatValue(Reflect.field(v,f))].join("_");
 	}
 
 	function mergeRec( a : Dynamic, b : Dynamic ) {

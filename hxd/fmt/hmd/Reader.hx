@@ -147,7 +147,11 @@ class Reader {
 			g.props = readProps();
 			g.vertexCount = i.readInt32();
 			var stride = i.readByte();
-			g.vertexFormat = hxd.BufferFormat.make([for( k in 0...i.readByte() ) new GeometryFormat(readCachedName(), @:privateAccess GeometryDataFormat.fromInt(i.readByte()))]);
+			g.vertexFormat = hxd.BufferFormat.make([for( k in 0...i.readByte() ) {
+				var name = readCachedName();
+				var type = i.readByte();
+				new GeometryFormat(name, @:privateAccess GeometryDataFormat.fromInt(type&15), @:privateAccess Precision.fromInt(type>>4));
+			}]);
 			if( stride != g.vertexFormat.stride ) throw "assert";
 			g.vertexPosition = i.readInt32();
 			var subCount = i.readByte();

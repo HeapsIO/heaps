@@ -4,13 +4,13 @@ import hxd.fmt.hmd.Data;
 private class FormatMap {
 	public var size : Int;
 	public var offset : Int;
+	public var precision : hxd.BufferFormat.Precision;
 	public var def : h3d.Vector;
-	public var next : FormatMap;
-	public function new(size, offset, def, next) {
+	public function new(size, offset, def, prec) {
 		this.size = size;
 		this.offset = offset;
+		this.precision = prec;
 		this.def = def;
-		this.next = next;
 	}
 }
 
@@ -107,36 +107,44 @@ class Library {
 		if( material == 0 && geom.indexCounts.length == 1 )
 			material = null;
 
-		var map = null, stride = 0;
-		for( i in 0...@:privateAccess format.inputs.length ) {
-			var i = @:privateAccess format.inputs.length - 1 - i;
-			var input = @:privateAccess format.inputs[i];
-			var size  = input.type.getSize();
-			var offset = 0;
-			var found = false;
-			for( f2 in geom.vertexFormat.getInputs() ) {
-				if( f2.name == input.name ) {
-					if( f2.type.getSize() < size )
-						throw 'Requested ${input.name} data has only ${f2.type.getSize()} regs instead of $size';
-					found = true;
-					break;
-				}
-				offset += f2.type.getSize();
-			}
-			if( found ) {
-				map = new FormatMap(size, offset, null, map);
-			} else {
-				var def = defaults == null ? null : defaults[i];
+		var maps = [];
+		var index = 0, stride = 0, lowPrec = false;
+		for( i in format.getInputs() ) {
+			var i2 = geom.vertexFormat.getInput(i.name);
+			var map;
+			if( i2 == null ) {
+				var def = defaults == null ? null : defaults[index];
 				if( def == null )
-					throw 'Missing required ${input.name}';
-				map = new FormatMap(size, 0, def, map);
+					throw 'Missing required ${i.name}';
+				map = new FormatMap(i.type.getSize(), 0, def, F32);
+			} else {
+				if( i2.type != i.type )
+					throw 'Requested ${i.name} ${i.type} but found ${i2.type}';
+				map = new FormatMap(i.type.getSize(), geom.vertexFormat.calculateInputOffset(i2.name), null, i2.precision);
+				if( i2.precision != F32 ) lowPrec = true;
 			}
-			stride += size;
+			maps.push(map);
+			stride += i.type.getSize();
+			index++;
 		}
 
-		var vsize = geom.vertexCount * geom.vertexFormat.stride * 4;
+		var geomStride = geom.vertexFormat.strideBytes;
+		var vsize = geom.vertexCount * geomStride;
 		var vbuf = haxe.io.Bytes.alloc(vsize);
 		var entry = resource.entry;
+
+		inline function readBuffer( vid : Int, index : Int, map : FormatMap ) {
+			if( lowPrec ) {
+				return switch( map.precision ) {
+				case F32: vbuf.getFloat(vid * geomStride + (index<<2) + map.offset);
+				case F16: hxd.BufferFormat.float16to32(vbuf.getUInt16(vid * geomStride + (index<<1) + map.offset));
+				case S8: hxd.BufferFormat.floatS8to32(vbuf.get(vid * geomStride + index + map.offset));
+				case U8: hxd.BufferFormat.floatU8to32(vbuf.get(vid * geomStride + index + map.offset));
+				}
+			} else {
+				return vbuf.getFloat(vid * geomStride + (index<<2) + map.offset);
+			}
+		}
 
 		entry.readFull(vbuf, header.dataPosition + geom.vertexPosition, vsize);
 
@@ -163,12 +171,10 @@ class Library {
 			buf.indexes = new haxe.ds.Vector(geom.indexCount);
 			var w = 0;
 			for( vid in 0...geom.vertexCount ) {
-				var m = map;
-				while( m != null ) {
+				for( m in maps ) {
 					if( m.def == null ) {
-						var r = vid * geom.vertexFormat.stride;
 						for( i in 0...m.size )
-							buf.vertexes[w++] = vbuf.getFloat((r + m.offset + i) << 2);
+							buf.vertexes[w++] = readBuffer(vid,i,m);
 					} else {
 						switch( m.size ) {
 						case 1:
@@ -187,7 +193,6 @@ class Library {
 							buf.vertexes[w++] = m.def.w;
 						}
 					}
-					m = m.next;
 				}
 			}
 			if( isSmall ) {
@@ -210,12 +215,10 @@ class Library {
 				if( rid == 0 ) {
 					rid = ++vcount;
 					vmap[vid] = rid;
-					var m = map;
-					while( m != null ) {
+					for( m in maps ) {
 						if( m.def == null ) {
-							var r = vid * geom.vertexFormat.stride;
 							for( i in 0...m.size )
-								vertexes.push(vbuf.getFloat((r + m.offset + i) << 2));
+								vertexes.push(readBuffer(vid,i,m));
 						} else {
 							switch( m.size ) {
 							case 1:
@@ -234,7 +237,6 @@ class Library {
 								vertexes.push(m.def.w);
 							}
 						}
-						m = m.next;
 					}
 				}
 				buf.indexes[i] = rid - 1;

@@ -89,8 +89,19 @@ class ConvertFBX2HMD extends Convert {
 			}
 			if( params.maxBones != null)
 				hmdout.maxBonesPerSkin = params.maxBones;
-			if ( params.tangents != null)
+			if( params.tangents != null)
 				hmdout.generateTangents = true;
+			if( params.lowp != null ) {
+				var m : haxe.DynamicAccess<String> = params.lowp;
+				hmdout.lowPrecConfig = [];
+				for( k in m.keys() )
+					hmdout.lowPrecConfig.set(k, switch( m.get(k) ) {
+					case "f16": F16;
+					case "u8": U8;
+					case "s8": S8;
+					case x: throw "Invalid precision '"+x+"' should be u8|s8|f16";
+				});
+			}
 		}
 		hmdout.load(fbx);
 		var isAnim = StringTools.startsWith(originalFilename, "Anim_") || originalFilename.toLowerCase().indexOf("_anim_") > 0;

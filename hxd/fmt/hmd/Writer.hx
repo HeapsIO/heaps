@@ -118,7 +118,7 @@ class Writer {
 			out.writeByte(@:privateAccess g.vertexFormat.inputs.length);
 			for( f in g.vertexFormat.getInputs() ) {
 				writeName(f.name);
-				out.writeByte(f.type.toInt());
+				out.writeByte(f.type.toInt() | (f.precision.toInt() << 4));
 			}
 			out.writeInt32(g.vertexPosition);
 			if( g.indexCounts.length >= 0xFF ) {
