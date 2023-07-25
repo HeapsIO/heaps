@@ -547,6 +547,13 @@ class Flow extends Object {
 		return properties[getChildIndex(e)];
 	}
 
+	inline function flowCeil( f : Float ) {
+		return hxd.Math.ceil(f - hxd.Math.EPSILON);
+	}
+	inline function flowFloor( f : Float ) {
+		return hxd.Math.floor(f + hxd.Math.EPSILON);
+	}
+
 	function set_layout(v) {
 		if(layout == v)
 			return v;
@@ -743,22 +750,22 @@ class Flow extends Object {
 
 	function get_outerWidth() {
 		if( needReflow ) reflow();
-		return Math.ceil(calculatedWidth);
+		return flowCeil(calculatedWidth);
 	}
 
 	function get_outerHeight() {
 		if( needReflow ) reflow();
-		return Math.ceil(calculatedHeight);
+		return flowCeil(calculatedHeight);
 	}
 
 	function get_innerWidth() {
 		if( needReflow ) reflow();
-		return Math.ceil(calculatedWidth) - (paddingLeft + paddingRight #if flow_border + (borderLeft + borderRight) #end);
+		return flowCeil(calculatedWidth) - (paddingLeft + paddingRight #if flow_border + (borderLeft + borderRight) #end);
 	}
 
 	function get_innerHeight() {
 		if( needReflow ) reflow();
-		return Math.ceil(calculatedHeight) - (paddingTop + paddingBottom #if flow_border + (borderTop + borderBottom) #end);
+		return flowCeil(calculatedHeight) - (paddingTop + paddingBottom #if flow_border + (borderTop + borderBottom) #end);
 	}
 
 	function set_paddingLeft(v) {
@@ -933,7 +940,7 @@ class Flow extends Object {
 					c.posChanged = true;
 				posChanged = false;
 			}
-			Mask.maskWith(ctx, this, Math.ceil(calculatedWidth), Math.ceil(calculatedHeight), 0, 0);
+			Mask.maskWith(ctx, this, flowCeil(calculatedWidth), flowCeil(calculatedHeight), 0, 0);
 			super.drawRec(ctx);
 			Mask.unmask(ctx);
 		} else {
@@ -969,8 +976,8 @@ class Flow extends Object {
 			needReflow = true;
 
 		var oldW = realMinWidth, oldH = realMinHeight;
-		realMinWidth = if(fillWidth) hxd.Math.imax(Math.ceil(constraintWidth), minWidth != null ? minWidth : -1) else if( minWidth != null ) minWidth else -1;
-		realMinHeight = if(fillHeight) hxd.Math.imax(Math.ceil(constraintHeight), minHeight != null ? minHeight : -1) else if( minHeight != null ) minHeight else -1;
+		realMinWidth = if(fillWidth) hxd.Math.imax(flowCeil(constraintWidth), minWidth != null ? minWidth : -1) else if( minWidth != null ) minWidth else -1;
+		realMinHeight = if(fillHeight) hxd.Math.imax(flowCeil(constraintHeight), minHeight != null ? minHeight : -1) else if( minHeight != null ) minHeight else -1;
 		if(realMinWidth != oldW || realMinHeight != oldH)
 			needReflow = true;
 	}
@@ -1049,8 +1056,8 @@ class Flow extends Object {
 				getProperties(background).isAbsolute = true;
 				this.background = background;
 				if( !needReflow ) {
-					background.width = Math.ceil(calculatedWidth);
-					background.height = Math.ceil(calculatedHeight);
+					background.width = flowCeil(calculatedWidth);
+					background.height = flowCeil(calculatedHeight);
 				}
 			}
 			background.tile = t;
@@ -1142,8 +1149,8 @@ class Flow extends Object {
 		var isConstraintWidth = realMaxWidth >= 0;
 		var isConstraintHeight = realMaxHeight >= 0;
 		// outer size
-		var maxTotWidth = realMaxWidth < 0 ? 100000000 : Math.floor(realMaxWidth);
-		var maxTotHeight = realMaxHeight < 0 ? 100000000 : Math.floor(realMaxHeight);
+		var maxTotWidth = realMaxWidth < 0 ? 100000000 : flowFloor(realMaxWidth);
+		var maxTotHeight = realMaxHeight < 0 ? 100000000 : flowFloor(realMaxHeight);
 		// inner size
 		var maxInWidth = maxTotWidth - (paddingLeft + paddingRight + (borderLeft + borderRight));
 		var maxInHeight = maxTotHeight - (paddingTop + paddingBottom + (borderTop + borderBottom));
@@ -1226,13 +1233,13 @@ class Flow extends Object {
 				var ph = p.paddingTop + p.paddingBottom;
 				if( !p.isAbsolute )
 					c.constraintSize(
-						isConstraintWidth && p.constraint ? ((p.autoSize != null ? Math.floor(autoWidth * p.autoSize / autoSum) : maxInWidth) - pw) / Math.abs(c.scaleX) : -1,
+						isConstraintWidth && p.constraint ? ((p.autoSize != null ? flowFloor(autoWidth * p.autoSize / autoSum) : maxInWidth) - pw) / Math.abs(c.scaleX) : -1,
 						isConstraintHeight && p.constraint ? ((p.autoSize != null ? hxd.Math.imax(maxLineHeight, minLineHeight) * p.autoSize : maxInHeight) - ph) / Math.abs(c.scaleY) : -1
 					);
 
 				var b = getSize(c);
-				p.calculatedWidth = Math.ceil(b.xMax) + pw;
-				p.calculatedHeight = Math.ceil(b.yMax) + ph;
+				p.calculatedWidth = flowCeil(b.xMax) + pw;
+				p.calculatedHeight = flowCeil(b.yMax) + ph;
 				if( p.minWidth != null && p.calculatedWidth < p.minWidth ) p.calculatedWidth = p.minWidth;
 				if( p.minHeight != null && p.calculatedHeight < p.minHeight ) p.calculatedHeight = p.minHeight;
 			}
@@ -1392,12 +1399,12 @@ class Flow extends Object {
 				if( !p.isAbsolute )
 					c.constraintSize(
 						isConstraintWidth && p.constraint ? ((p.autoSize != null ? hxd.Math.imax(maxColWidth, minColWidth) * p.autoSize : maxInWidth) - pw) / Math.abs(c.scaleX) : -1,
-						isConstraintHeight && p.constraint ? ((p.autoSize != null ? Math.floor(autoHeight * p.autoSize / autoSum) : maxInHeight) - ph) / Math.abs(c.scaleY) : -1
+						isConstraintHeight && p.constraint ? ((p.autoSize != null ? flowFloor(autoHeight * p.autoSize / autoSum) : maxInHeight) - ph) / Math.abs(c.scaleY) : -1
 					);
 
 				var b = getSize(c);
-				p.calculatedWidth = Math.ceil(b.xMax) + pw;
-				p.calculatedHeight = Math.ceil(b.yMax) + ph;
+				p.calculatedWidth = flowCeil(b.xMax) + pw;
+				p.calculatedHeight = flowCeil(b.yMax) + ph;
 				if( p.minWidth != null && p.calculatedWidth < p.minWidth ) p.calculatedWidth = p.minWidth;
 				if( p.minHeight != null && p.calculatedHeight < p.minHeight ) p.calculatedHeight = p.minHeight;
 			}
@@ -1524,8 +1531,8 @@ class Flow extends Object {
 					);
 
 				var b = getSize(c);
-				p.calculatedWidth = Math.ceil(b.xMax) + pw;
-				p.calculatedHeight = Math.ceil(b.yMax) + ph;
+				p.calculatedWidth = flowCeil(b.xMax) + pw;
+				p.calculatedHeight = flowCeil(b.yMax) + ph;
 				if( p.minWidth != null && p.calculatedWidth < p.minWidth ) p.calculatedWidth = p.minWidth;
 				if( p.minHeight != null && p.calculatedHeight < p.minHeight ) p.calculatedHeight = p.minHeight;
 				if( isAbs ) continue;
@@ -1535,9 +1542,9 @@ class Flow extends Object {
 
 			var xmin = paddingLeft + borderLeft;
 			var ymin = paddingTop + borderTop;
-			var xmax = if(realMaxWidth > 0 && overflow != Expand) Math.floor(realMaxWidth - (paddingRight + borderRight))
+			var xmax = if(realMaxWidth > 0 && overflow != Expand) flowFloor(realMaxWidth - (paddingRight + borderRight))
 				else hxd.Math.imax(xmin + maxChildW, realMinWidth - (paddingRight + borderRight));
-			var ymax = if(realMaxWidth > 0 && overflow != Expand) Math.floor(realMaxHeight - (paddingBottom + borderBottom))
+			var ymax = if(realMaxWidth > 0 && overflow != Expand) flowFloor(realMaxHeight - (paddingBottom + borderBottom))
 				else hxd.Math.imax(ymin + maxChildH, realMinHeight - (paddingBottom + borderBottom));
 			cw = xmax + paddingRight + borderRight;
 			ch = ymax + paddingBottom + borderBottom;
@@ -1604,8 +1611,8 @@ class Flow extends Object {
 		}
 
 		if( background != null ) {
-			background.width = Math.ceil(cw);
-			background.height = Math.ceil(ch);
+			background.width = flowCeil(cw);
+			background.height = flowCeil(ch);
 		}
 
 		calculatedWidth = cw;
@@ -1616,7 +1623,7 @@ class Flow extends Object {
 				scrollBar.visible = false;
 			else {
 				scrollBar.visible = true;
-				scrollBar.minHeight = Math.ceil(calculatedHeight);
+				scrollBar.minHeight = flowCeil(calculatedHeight);
 				scrollBarCursor.minHeight = hxd.Math.imax(1, Std.int(calculatedHeight * (1 - (contentHeight - calculatedHeight)/contentHeight)));
 				updateScrollCursor();
 			}
