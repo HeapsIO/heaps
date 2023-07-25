@@ -38,10 +38,10 @@ private class ShaderContext {
 private class CompiledShader {
 	public var vertex : ShaderContext;
 	public var fragment : ShaderContext;
-	public var layout : Layout;
-	public var inputs : InputNames;
-	public var offsets : Array<Int>;
 	public var format : hxd.BufferFormat;
+	public var perInst : Array<Int>;
+	public var layouts : Map<Int, Layout>;
+	public var vertexBytes : haxe.io.Bytes;
 	public function new() {
 	}
 }
@@ -94,6 +94,7 @@ class DirectXDriver extends h3d.impl.Driver {
 	var currentShader : CompiledShader;
 	var currentIndex : IndexBuffer;
 	var currentDepth : DepthBuffer;
+	var currentLayout : Layout;
 	var currentTargets = new hl.NativeArray<RenderTargetView>(16);
 	var currentTargetResources = new hl.NativeArray<ShaderResourceView>(16);
 	var vertexShader : PipelineState;
@@ -160,7 +161,9 @@ class DirectXDriver extends h3d.impl.Driver {
 			for( s in shaders ) {
 				s.fragment.shader.release();
 				s.vertex.shader.release();
-				s.layout.release();
+				for( l in s.layouts )
+					l.release();
+				s.layouts = [];
 			}
 		}
 		if( depthStates != null ) for( s in depthStates ) { if( s.def != null ) s.def.release(); for( s in s.stencils ) if( s.state != null ) s.state.release(); }
@@ -1094,17 +1097,15 @@ class DirectXDriver extends h3d.impl.Driver {
 			s = new CompiledShader();
 			var vertex = compileShader(shader.vertex);
 			var fragment = compileShader(shader.fragment);
-			var inputs = [];
 			if( hasDeviceError ) return false;
 			s.vertex = vertex.s;
 			s.fragment = fragment.s;
-			s.offsets = [];
-
-			var layout = [], offset = 0, format : Array<hxd.BufferFormat.BufferInput> = [];
+			s.vertexBytes = vertex.bytes;
+			s.perInst = [];
+			s.layouts = new Map();
+			var format : Array<hxd.BufferFormat.BufferInput> = [];
 			for( v in shader.vertex.data.vars )
 				if( v.kind == Input ) {
-					var e = new LayoutElement();
-					var name = hxsl.HlslOut.semanticName(v.name);
 					var perInst = 0;
 					if( v.qualifiers != null )
 						for( q in v.qualifiers )
@@ -1112,38 +1113,11 @@ class DirectXDriver extends h3d.impl.Driver {
 							case PerInstance(k): perInst = k;
 							default:
 							}
-					e.semanticName = @:privateAccess name.toUtf8();
-					e.inputSlot = layout.length;
-					e.format = switch( v.type ) {
-					case TFloat: R32_FLOAT;
-					case TVec(2, VFloat): R32G32_FLOAT;
-					case TVec(3, VFloat): R32G32B32_FLOAT;
-					case TVec(4, VFloat): R32G32B32A32_FLOAT;
-					case TBytes(4): R8G8B8A8_UINT;
-					default:
-						throw "Unsupported input type " + hxsl.Ast.Tools.toString(v.type);
-					};
-					if( perInst > 0 ) {
-						e.inputSlotClass = PerInstanceData;
-						e.instanceDataStepRate = perInst;
-					} else
-						e.inputSlotClass = PerVertexData;
-					layout.push(e);
-					s.offsets.push(offset);
-					inputs.push(v.name);
+					s.perInst.push(perInst);
 					var t = hxd.BufferFormat.InputFormat.fromHXSL(v.type);
 					format.push({ name : v.name, type : t });
-					offset += t.getSize();
 				}
-
-			var n = new hl.NativeArray(layout.length);
-			for( i in 0...layout.length )
-				n[i] = layout[i];
 			s.format = hxd.BufferFormat.make(format);
-			s.inputs = InputNames.get(inputs);
-			s.layout = Driver.createInputLayout(n, vertex.bytes, vertex.bytes.length);
-			if( s.layout == null )
-				throw "Failed to create input layout";
 			shaders.set(shader.id, s);
 		}
 		if( s == currentShader )
@@ -1156,27 +1130,67 @@ class DirectXDriver extends h3d.impl.Driver {
 		currentShader = s;
 		dx.Driver.vsSetShader(s.vertex.shader);
 		dx.Driver.psSetShader(s.fragment.shader);
-		dx.Driver.iaSetInputLayout(s.layout);
+		currentLayout = null;
 	}
 
-	override function getShaderInputNames() : InputNames {
-		return currentShader.inputs;
+	function makeLayout( mapping : Array<hxd.BufferFormat.BufferMapping> ) {
+		var layout = new hl.NativeArray(mapping.length);
+		for( index => input in @:privateAccess currentShader.format.inputs ) {
+			var inf = mapping[index];
+			var e = new LayoutElement();
+			var name = hxsl.HlslOut.semanticName(input.name);
+			e.semanticName = @:privateAccess name.toUtf8();
+			e.inputSlot = index;
+			e.format = switch( [input.type, inf.precision] ) {
+			case [DFloat, F32]: R32_FLOAT;
+			case [DFloat, F16]: R16_FLOAT;
+			case [DVec2, F32]: R32G32_FLOAT;
+			case [DVec2, F16]: R16G16_FLOAT;
+			case [DVec3, F32]: R32G32B32_FLOAT;
+			case [DVec4, F32]: R32G32B32A32_FLOAT;
+			case [DVec3|DVec4, S8]: R8G8B8A8_SNORM;
+			case [DVec3|DVec4, U8]: R8G8B8A8_UNORM;
+			case [DVec3|DVec4, F16]: R16G16B16A16_FLOAT;
+			case [DBytes4, F32]: R8G8B8A8_UINT;
+			default:
+				throw "Unsupported input type " + input.type+"."+inf.precision;
+			};
+			var perInst = currentShader.perInst[index];
+			if( perInst > 0 ) {
+				e.inputSlotClass = PerInstanceData;
+				e.instanceDataStepRate = perInst;
+			} else
+				e.inputSlotClass = PerVertexData;
+			layout[index] = e;
+		}
+		var l = Driver.createInputLayout(layout, currentShader.vertexBytes, currentShader.vertexBytes.length);
+		if( l == null )
+			throw "Failed to create input layout";
+		return l;
 	}
 
 	override function selectBuffer(buffer:Buffer) {
 		if( hasDeviceError ) return;
+		// select layout
+		var layout = currentShader.layouts.get(buffer.format.uid);
+		if( layout == null ) {
+			layout = makeLayout(buffer.format.resolveMapping(currentShader.format));
+			currentShader.layouts.set(buffer.format.uid, layout);
+		}
+		if( layout != currentLayout ) {
+			dx.Driver.iaSetInputLayout(layout);
+			currentLayout = layout;
+		}
+		var map = buffer.format.resolveMapping(currentShader.format);
 		var vbuf = @:privateAccess buffer.vbuf;
-		var start = -1, max = -1, position = 0;
-		var bufOffsets;
-		if( buffer.format == currentShader.format || currentShader.format.isSubSet(buffer.format) )
-			bufOffsets = currentShader.offsets;
-		else
-			bufOffsets = buffer.format.getMatchingOffsets(currentShader.format);
-		for( i in 0...currentShader.inputs.names.length ) {
-			if( currentVBuffers[i] != vbuf.res || offsets[i] != bufOffsets[i] << 2 ) {
+		var start = -1, max = -1;
+		var stride = buffer.format.strideBytes;
+		for( i in 0...map.length ) {
+			var inf = map[i];
+			if( currentVBuffers[i] != vbuf.res || offsets[i] != inf.offset || strides[i] != stride ) {
 				currentVBuffers[i] = vbuf.res;
-				strides[i] = buffer.format.stride << 2;
-				offsets[i] = bufOffsets[i] << 2;
+				strides[i] = stride;
+				offsets[i] = inf.offset;
 				if( start < 0 ) start = i;
 				max = i;
 			}
@@ -1185,21 +1199,25 @@ class DirectXDriver extends h3d.impl.Driver {
 			Driver.iaSetVertexBuffers(start, max - start + 1, currentVBuffers.getRef().offset(start), hl.Bytes.getArray(strides).offset(start << 2), hl.Bytes.getArray(offsets).offset(start << 2));
 	}
 
-	override function selectMultiBuffers(bl:Buffer.BufferOffset) {
+	override function selectMultiBuffers(formats:hxd.BufferFormat.MultiFormat,buffers:Array<Buffer>) {
 		if( hasDeviceError ) return;
-		var index = 0;
-		var start = -1, max = -1;
-		while( bl != null ) {
-			var vbuf = @:privateAccess bl.buffer.vbuf;
-			if( currentVBuffers[index] != vbuf.res || offsets[index] != bl.offset << 2 ) {
-				currentVBuffers[index] = vbuf.res;
-				offsets[index] = bl.offset << 2;
-				strides[index] = bl.buffer.format.stride << 2;
-				if( start < 0 ) start = index;
-				max = index;
+		var layout = currentShader.layouts.get(-formats.uid-1);
+		if( layout == null ) {
+			layout = makeLayout(formats.resolveMapping(currentShader.format));
+			currentShader.layouts.set(-formats.uid-1, layout);
+		}
+		var map = formats.resolveMapping(currentShader.format);
+		var start = -1, max = -1, force = false;
+		for( i in 0...map.length ) {
+			var inf = map[i];
+			var buf = buffers[inf.bufferIndex];
+			if( currentVBuffers[i] != @:privateAccess buf.vbuf.res || offsets[i] != inf.offset || strides[i] != buf.format.strideBytes ) {
+				currentVBuffers[i] = @:privateAccess buf.vbuf.res;
+				strides[i] = buf.format.strideBytes;
+				offsets[i] = inf.offset;
+				if( start < 0 ) start = i;
+				max = i;
 			}
-			index++;
-			bl = bl.next;
 		}
 		if( max >= 0 )
 			Driver.iaSetVertexBuffers(start, max - start + 1, currentVBuffers.getRef().offset(start), hl.Bytes.getArray(strides).offset(start << 2), hl.Bytes.getArray(offsets).offset(start << 2));

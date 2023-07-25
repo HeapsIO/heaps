@@ -42,14 +42,6 @@ class NullDriver extends Driver {
 		return true;
 	}
 
-	override function getShaderInputNames() : InputNames {
-		var names = [];
-		for( v in cur.vertex.data.vars )
-			if( v.kind == Input )
-				names.push(v.name);
-		return InputNames.get(names);
-	}
-
 	override function allocTexture( t : h3d.mat.Texture ) : Texture {
 		return cast {};
 	}

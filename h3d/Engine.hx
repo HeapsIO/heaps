@@ -180,11 +180,11 @@ class Engine {
 		}
 	}
 
-	public function renderMultiBuffers( buffers : Buffer.BufferOffset, indexes : Indexes, startTri = 0, drawTri = -1 ) {
+	public function renderMultiBuffers( format : hxd.BufferFormat.MultiFormat, buffers : Array<Buffer>, indexes : Indexes, startTri = 0, drawTri = -1 ) {
 		var maxTri = Std.int(indexes.count / 3);
 		if( maxTri <= 0 ) return;
 		flushTarget();
-		driver.selectMultiBuffers(buffers);
+		driver.selectMultiBuffers(format, buffers);
 		if( indexes.isDisposed() )
 			return;
 		if( drawTri < 0 ) drawTri = maxTri - startTri;
@@ -196,9 +196,7 @@ class Engine {
 		}
 	}
 
-	public function renderInstanced( buffers : Buffer.BufferOffset, indexes : Indexes, commands : h3d.impl.InstanceBuffer ) {
-		flushTarget();
-		driver.selectMultiBuffers(buffers);
+	public function renderInstanced( indexes : Indexes, commands : h3d.impl.InstanceBuffer ) {
 		if( indexes.isDisposed() )
 			return;
 		if( commands.commandCount > 0 ) {

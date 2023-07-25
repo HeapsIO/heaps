@@ -117,26 +117,6 @@ enum RenderFlag {
 	CameraHandness;
 }
 
-class InputNames {
-	public var id(default,null) : Int;
-	public var names(default,null) : Array<String>;
-	function new(names) {
-		this.id = UID++;
-		this.names = names;
-	}
-	static var UID = 0;
-	static var CACHE = new Map<String,InputNames>();
-	public static function get( names : Array<String> ) {
-		var key = names.join("|");
-		var i = CACHE.get(key);
-		if( i == null ) {
-			i = new InputNames(names.copy());
-			CACHE.set(key,i);
-		}
-		return i;
-	}
-}
-
 class Driver {
 
 	public var logEnable : Bool;
@@ -210,14 +190,10 @@ class Driver {
 	public function uploadShaderBuffers( buffers : h3d.shader.Buffers, which : h3d.shader.Buffers.BufferKind ) {
 	}
 
-	public function getShaderInputNames() : InputNames {
-		return null;
-	}
-
 	public function selectBuffer( buffer : Buffer ) {
 	}
 
-	public function selectMultiBuffers( buffers : Buffer.BufferOffset ) {
+	public function selectMultiBuffers( format : hxd.BufferFormat.MultiFormat, buffers : Array<h3d.Buffer> ) {
 	}
 
 	public function draw( ibuf : IndexBuffer, startIndex : Int, ntriangles : Int ) {

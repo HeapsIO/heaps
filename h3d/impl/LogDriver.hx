@@ -247,18 +247,14 @@ class LogDriver extends Driver {
 		return inf;
 	}
 
-	override function getShaderInputNames() {
-		return d.getShaderInputNames();
-	}
-
 	override function selectBuffer( buffer : Buffer ) {
 		log('SelectBuffer');
 		d.selectBuffer(buffer);
 	}
 
-	override function selectMultiBuffers( buffers : Buffer.BufferOffset ) {
+	override function selectMultiBuffers( formats : hxd.BufferFormat.MultiFormat, buffers : Array<Buffer> ) {
 		log('SelectMultiBuffers');
-		d.selectMultiBuffers(buffers);
+		d.selectMultiBuffers(formats,buffers);
 	}
 
 	override function draw( ibuf : IndexBuffer, startIndex : Int, ntriangles : Int ) {

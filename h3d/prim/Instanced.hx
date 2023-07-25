@@ -1,6 +1,6 @@
 package h3d.prim;
 
-class Instanced extends MeshPrimitive {
+class Instanced extends Primitive {
 
 	public var commands : h3d.impl.InstanceBuffer;
 	public var bounds : h3d.col.Bounds;
@@ -15,26 +15,15 @@ class Instanced extends MeshPrimitive {
 	}
 
 	public function setMesh( m : MeshPrimitive ) {
-		if(refCount > 0) {
-			if(primitive != null) {
+		if( refCount > 0 ) {
+			if( primitive != null )
 				primitive.decref();
-				bufferCache = null;
-			}
 			m.incref();
 		}
 		primitive = m;
-		var engine = h3d.Engine.getCurrent();
-		if( m.buffer == null || m.buffer.isDisposed() ) {
-			m.alloc(engine);
-		}
-		buffer = m.buffer;
-		indexes = m.indexes;
 		baseBounds = m.getBounds();
-		if( indexes == null ) indexes = engine.mem.getTriIndexes(buffer.vertices);
-		for( bid in m.bufferCache.keys() ) {
-			var b = m.bufferCache.get(bid);
-			addBuffer(hxsl.Globals.getIDName(bid), b.buffer, b.offset);
-		}
+		if( m.buffer == null )
+			m.alloc(h3d.Engine.getCurrent()); // make sure first alloc is done
 	}
 
 	public function initBounds() {
@@ -48,7 +37,7 @@ class Instanced extends MeshPrimitive {
 	}
 
 	override function dispose() {
-		// Not owning any resources
+		// Not owning any buffer
 	}
 
 	override function incref() {
@@ -67,15 +56,18 @@ class Instanced extends MeshPrimitive {
 		return bounds;
 	}
 
-	// make public
-	public override function addBuffer( name, buffer, offset = 0 ) {
-		super.addBuffer(name, buffer, offset);
-	}
-
 	override function render( engine : h3d.Engine ) {
-		if( buffer.isDisposed() )
-			setMesh(primitive);
-		engine.renderInstanced(getBuffers(engine),indexes,commands);
+		if( primitive.buffer == null || primitive.buffer.isDisposed() )
+			primitive.alloc(engine);
+		@:privateAccess engine.flushTarget();
+		@:privateAccess if( primitive.buffers == null )
+			engine.driver.selectBuffer(primitive.buffer);
+		else
+			engine.driver.selectMultiBuffers(primitive.formats,primitive.buffers);
+		var indexes = primitive.indexes;
+		if( indexes == null )
+			indexes = engine.mem.getTriIndexes(triCount() * 3);
+		engine.renderInstanced(indexes,commands);
 	}
 
 }

@@ -70,13 +70,6 @@ class Polygon extends MeshPrimitive {
 			}
 		}
 		buffer = h3d.Buffer.ofFloats(buf, format);
-
-		var position = 0;
-		for( i in format.getInputs() ) {
-			addBuffer(i.name, buffer, position);
-			position += i.type.getSize();
-		}
-
 		if( idx != null )
 			indexes = h3d.Indexes.alloc(idx);
 	}
@@ -264,13 +257,14 @@ class Polygon extends MeshPrimitive {
 	override function render( engine : h3d.Engine ) {
 		if( buffer == null || buffer.isDisposed() )
 			alloc(engine);
-		var bufs = getBuffers(engine);
-		if( indexes != null )
-			engine.renderMultiBuffers(bufs, indexes);
-		else {
-			var count = triCount();
-			engine.renderMultiBuffers(bufs, engine.mem.getTriIndexes(count*3), 0, count);
-		}
+		var indexes = indexes;
+		var count = triCount();
+		if( indexes == null )
+			indexes = engine.mem.getTriIndexes(count*3);
+		if( buffers != null )
+			engine.renderMultiBuffers(formats, buffers, indexes, 0, count);
+		else
+			engine.renderIndexed(buffer, indexes, 0, count);
 	}
 
 }

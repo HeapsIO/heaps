@@ -10,12 +10,15 @@ class HMDModel extends MeshPrimitive {
 	var curMaterial : Int;
 	var collider : h3d.col.Collider;
 	var normalsRecomputed : String;
-	var bufferAliases : Map<String,{ realName : String, offset : Int }> = new Map();
 
 	public function new(data, dataPos, lib) {
 		this.data = data;
 		this.dataPosition = dataPos;
 		this.lib = lib;
+	}
+
+	override function hasInput( name : String ) {
+		return super.hasInput(name) || data.vertexFormat.hasInput(name);
 	}
 
 	override function triCount() {
@@ -46,24 +49,13 @@ class HMDModel extends MeshPrimitive {
 		lib.loadSkin(data, skin);
 	}
 
-	public function addAlias( name : String, realName : String, offset = 0 ) {
-		var old = bufferAliases.get(name);
-		if( old != null ) {
-			if( old.realName != realName || old.offset != offset ) throw "Conflicting alias "+name;
-			return;
-		}
-		bufferAliases.set(name, {realName : realName, offset : offset });
-		// already allocated !
-		if( bufferCache != null ) allocAlias(name);
-	}
-
 	override function alloc(engine:h3d.Engine) {
 		dispose();
 		buffer = new h3d.Buffer(data.vertexCount, data.vertexFormat);
 
 		var entry = lib.resource.entry;
 
-		var size = data.vertexCount * data.vertexFormat.stride * 4;
+		var size = data.vertexCount * data.vertexFormat.strideBytes;
 		var bytes = entry.fetchBytes(dataPosition + data.vertexPosition, size);
 		buffer.uploadBytes(bytes, 0, data.vertexCount);
 
@@ -80,29 +72,17 @@ class HMDModel extends MeshPrimitive {
 		var bytes = entry.fetchBytes(dataPosition + data.indexPosition, size);
 		indexes.uploadBytes(bytes, 0, indexCount);
 
-		var pos = 0;
-		for( f in data.vertexFormat.getInputs() ) {
-			addBuffer(f.name, buffer, pos);
-			pos += f.type.getSize();
+		if( normalsRecomputed != null ) {
+			var name = normalsRecomputed;
+			normalsRecomputed = null;
+			recomputeNormals(name);
 		}
-
-		if( normalsRecomputed != null )
-			recomputeNormals(normalsRecomputed);
-
-		for( name in bufferAliases.keys() )
-			allocAlias(name);
-	}
-
-	function allocAlias( name : String ) {
-		var alias = bufferAliases.get(name);
-		var buffer = bufferCache.get(hxsl.Globals.allocID(alias.realName));
-		if( buffer == null ) throw "Buffer " + alias.realName+" not found for alias " + name;
-		if( buffer.offset + alias.offset > buffer.buffer.format.stride ) throw "Alias " + name+" for buffer " + alias.realName+" outside stride";
-		addBuffer(name, buffer.buffer, buffer.offset + alias.offset);
 	}
 
 	public function recomputeNormals( ?name : String ) {
 
+		if( normalsRecomputed != null )
+			return;
 		if( name != null && data.vertexFormat.hasInput(name) )
 			return;
 
@@ -157,12 +137,14 @@ class HMDModel extends MeshPrimitive {
 			v[k++] = n.y;
 			v[k++] = n.z;
 		}
-		var buf = h3d.Buffer.ofFloats(v, hxd.BufferFormat.make([{ name : "normal", type : DVec3 }]));
-		addBuffer(name, buf, 0);
+		var buf = h3d.Buffer.ofFloats(v, hxd.BufferFormat.make([{ name : name, type : DVec3 }]));
+		addBuffer(buf);
 		normalsRecomputed = name;
 	}
 
 	public function addTangents() {
+		if( hasInput("tangent") )
+			return;
 		var pos = lib.getBuffers(data, hxd.BufferFormat.POS3D);
 		var ids = new Array();
 		var pts : Array<h3d.col.Point> = [];
@@ -200,7 +182,7 @@ class HMDModel extends MeshPrimitive {
 			v[k++] = t.z;
 		}
 		var buf = h3d.Buffer.ofFloats(v, hxd.BufferFormat.make([{ name : "tangent", type : DVec3 }]));
-		addBuffer("tangent", buf, 0);
+		addBuffer(buf);
 	}
 
 	override function render( engine : h3d.Engine ) {
@@ -210,7 +192,10 @@ class HMDModel extends MeshPrimitive {
 		}
 		if( indexes == null || indexes.isDisposed() )
 			alloc(engine);
-		engine.renderMultiBuffers(getBuffers(engine), indexes, indexesTriPos[curMaterial], Std.int(data.indexCounts[curMaterial]/3));
+		if( buffers == null )
+			engine.renderIndexed(buffer, indexes, indexesTriPos[curMaterial], Std.int(data.indexCounts[curMaterial]/3));
+		else
+			engine.renderMultiBuffers(formats, buffers, indexes, indexesTriPos[curMaterial], Std.int(data.indexCounts[curMaterial]/3));
 		curMaterial = -1;
 	}
 

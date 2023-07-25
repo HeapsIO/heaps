@@ -1,5 +1,34 @@
 package hxd;
 
+
+enum abstract Precision(Int) {
+	var F32 = 0;
+	var F16 = 1;
+	var U8 = 2;
+	var S8 = 3;
+	inline function new(v) {
+		this = v;
+	}
+	public inline function getSize() {
+		return SIZES[this];
+	}
+	public inline function toInt() {
+		return this;
+	}
+	static inline function fromInt( v : Int ) : Precision {
+		return new Precision(v);
+	}
+	public function toString() {
+		return switch( new Precision(this) ) {
+		case F32: "F32";
+		case F16: "F16";
+		case U8: "U8";
+		case S8: "S8";
+		}
+	}
+	static var SIZES = [4,2,1,1];
+}
+
 enum abstract InputFormat(Int) {
 
 	public var DFloat = 1;
@@ -51,26 +80,70 @@ enum abstract InputFormat(Int) {
 class BufferInput {
 	public var name(default,null) : String;
 	public var type(default,null) : InputFormat;
-	public inline function new( name : String, type : InputFormat ) {
+	public var precision(default,null) : Precision;
+	public inline function new( name : String, type : InputFormat, precision = F32 ) {
 		this.name = name;
 		this.type = type;
+		this.precision = precision;
 	}
+	public inline function getBytesSize() {
+		return type.getSize() * precision.getSize();
+	}
+	public inline function equals(b:BufferInput) {
+		return type == b.type && name == b.name && precision == b.precision;
+	}
+}
+
+abstract BufferMapping(Int) {
+	public var bufferIndex(get,never) : Int;
+	public var offset(get,never) : Int;
+	public var precision(get,never) : Precision;
+	public function new(index,offset,prec:Precision) {
+		this = (index << 3) | prec.toInt() | (offset << 16);
+	}
+	inline function get_bufferIndex() return (this >> 3) & 0xFF;
+	inline function get_precision() return @:privateAccess new Precision(this & 7);
+	inline function get_offset() return this >> 16;
 }
 
 class BufferFormat {
 
 	static var _UID = 0;
-	public var uid : Int;
+	public var uid(default,null) : Int;
 	public var stride(default,null) : Int;
+	public var strideBytes(default,null) : Int;
 	var inputs : Array<BufferInput>;
-	var offsets : Map<Int, Array<Int>>;
+	var mappings : Array<Array<BufferMapping>>;
 
 	function new( inputs : Array<BufferInput> ) {
 		uid = _UID++;
 		stride = 0;
 		this.inputs = inputs.copy();
-		for( i in inputs )
+		for( i in inputs ) {
 			stride += i.type.getSize();
+			strideBytes += i.getBytesSize();
+			// 4 bytes align
+			if( strideBytes & 3 != 0 )
+				strideBytes += 4 - (strideBytes & 3);
+		}
+	}
+
+	public function getInput( name : String ) {
+		for( i in inputs )
+			if( i.name == name )
+				return i;
+		return null;
+	}
+
+	public function calculateInputOffset( name : String ) {
+		var offset = 0;
+		for( i in inputs ) {
+			if( i.name == name )
+				return offset;
+			offset += i.getBytesSize();
+			if( offset & 3 != 0 ) offset += 4 - (offset & 3);
+		}
+		throw "Input not found : "+name;
 	}
 
 	public function hasInput( name : String, ?type : InputFormat ) {
@@ -106,30 +179,33 @@ class BufferFormat {
 		return true;
 	}
 
-	public function getMatchingOffsets( target : BufferFormat ) {
-		var offs = offsets == null ? null : offsets.get(target.uid);
-		if( offs != null )
-			return offs;
-		offs = [];
+	public function resolveMapping( target : BufferFormat ) {
+		var m = mappings == null ? null : mappings[target.uid];
+		if( m != null )
+			return m;
+		m = [];
 		for( i in target.inputs ) {
-			var v = 0;
+			var found = false;
 			for( i2 in inputs ) {
-				if( i2.name == i.name ) {
-					offs.push(v);
-					v = -1;
+				if( i2.name == i.name && i2.type == i.type ) {
+					m.push(new BufferMapping(0,calculateInputOffset(i2.name),i2.precision));
+					found = true;
 					break;
 				}
-				v += i2.type.getSize();
 			}
-			if( v >= 0 ) throw "Missing buffer input '"+i.name+"'";
+			if( !found ) throw "Missing buffer input '"+i.name+"'";
 		}
-		if( offsets == null ) offsets = new Map();
-		offsets.set(target.uid, offs);
-		return offs;
+		if( mappings == null ) mappings = [];
+		mappings[target.uid] = m;
+		return m;
 	}
 
 	public inline function getInputs() {
 		return inputs.iterator();
+	}
+
+	public function toString() {
+		return [for( i in inputs ) i.name+":"+i.type.toString()+(i.precision == F32?"":"."+i.precision.toString().toLowerCase())].toString();
 	}
 
 	/**
@@ -188,7 +264,7 @@ class BufferFormat {
 		for( fmt in arr ) {
 			var found = true;
 			for( i in 0...inputs.length )
-				if( inputs[i].type != fmt.inputs[i].type ) {
+				if( !inputs[i].equals(fmt.inputs[i]) ) {
 					found = false;
 					break;
 				}
@@ -200,4 +276,120 @@ class BufferFormat {
 		return fmt;
 	}
 
+	public static function float32to16( v : Float, denormalsAreZero : Bool = false ) : Int {
+		var i = haxe.io.FPHelper.floatToI32(v);
+		var sign = (i & 0x80000000) >>> 16;
+		var exp = (i & 0x7f800000) >>> 23;
+		var bits = i & 0x7FFFFF;
+		if( exp > 112 )
+			return sign | (((exp - 112) << 10)&0x7C00) | (bits>>13);
+		if( exp < 113 && exp > 101 && !denormalsAreZero )
+			return sign | ((((0x7FF000+bits)>>(125-exp))+1)>>1);
+		if( exp > 143 )
+			return sign | 0x7FFF;
+		return 0;
+	}
+
+	public static function float16to32( v : Int ) : Float {
+		var sign = (v & 0x8000) << 16;
+		var bits = (v & 0x3FF) << 13;
+		var exp = (v & 0x7C00) >> 10;
+		if( exp != 0 )
+			return haxe.io.FPHelper.i32ToFloat(sign | ((exp + 112) << 23) | bits);
+		if( bits == 0 )
+			return 0;
+		var bitcount = haxe.io.FPHelper.floatToI32(bits) >> 23; // hack to get exp (number of leading zeros)
+		return haxe.io.FPHelper.i32ToFloat(sign | ((bitcount - 37) << 23) | ((bits<<(150-bitcount))&0x7FE000));
+	}
+
+	public static function float32toS8( v : Float ) : Int {
+		if( v >= 1 )
+			return 0x7F;
+		if( v <= -1 )
+			return 0x80;
+		var i = Math.floor(v * 128);
+		return v >= 0 ? i : (0x7F - i) | 0x80;
+	}
+
+	public static function floatS8to32( v : Int ) {
+		return (v & 0x80 != 0 ? -1 : 1) * ((v&0x7F)/127);
+	}
+
+	public static function float32toU8( v : Float ) : Int {
+		if( v < 0 )
+			return 0;
+		if( v >= 1 )
+			return 0xFF;
+		return Math.floor(v * 256);
+	}
+
+	public inline static function floatU8to32( v : Int ) {
+		return (v & 0xFF) / 255;
+	}
+
 }
+
+typedef MultiFormatCache = Map<Int, { found : MultiFormat, nexts : MultiFormatCache }>;
+
+class MultiFormat {
+
+	static var UID = 0;
+	static var CACHE = new MultiFormatCache();
+
+	static var _UID = 0;
+	public var uid(default,null) : Int;
+	var formats : Array<BufferFormat>;
+	var mappings : Array<Array<BufferMapping>> = [];
+
+	function new( formats : Array<BufferFormat> ) {
+		uid = _UID++;
+		this.formats = formats;
+	}
+
+	public inline function resolveMapping( format : hxd.BufferFormat ) {
+		var m = mappings[format.uid];
+		if( m == null )
+			m = makeMapping(format);
+		return m;
+	}
+
+	function makeMapping( format : hxd.BufferFormat ) {
+		var m = [];
+		for( input in format.getInputs() ) {
+			var found = false;
+			for( idx => f in formats ) {
+				var i = f.getInput(input.name);
+				if( i != null && i.type == input.type ) {
+					var offset = f.calculateInputOffset(i.name);
+					m.push(new BufferMapping(idx,offset,i.precision));
+					found = true;
+					break;
+				}
+			}
+			if( !found )
+				throw "Missing shader buffer "+input.name;
+		}
+		mappings[format.uid] = m;
+		return m;
+	}
+
+	public static var MAX_FORMATS = 16;
+	public static function make( formats : Array<BufferFormat> ) : MultiFormat {
+		if( formats.length > MAX_FORMATS )
+			throw "Too many formats (addBuffer leak?) "+[for( f in formats ) f.toString()];
+		var c = { found : null, nexts : CACHE };
+		for( f in formats ) {
+			var c2 = c.nexts.get(f.uid);
+			if( c2 == null ) {
+				c2 = { found : null, nexts : new Map() };
+				c.nexts.set(f.uid, c2);
+			}
+			c = c2;
+		}
+		if( c.found == null )
+			c.found = new MultiFormat(formats);
+		return c.found;
+	}
+
+}
+
