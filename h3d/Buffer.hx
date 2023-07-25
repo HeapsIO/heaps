@@ -60,9 +60,11 @@ class Buffer {
 		}
 	}
 
-	public function uploadVector( buf : hxd.FloatBuffer, bufPos : Int, vertices : Int, startVertice = 0 ) {
+	public function uploadFloats( buf : hxd.FloatBuffer, bufPos : Int, vertices : Int, startVertice = 0 ) {
 		if( startVertice < 0 || vertices < 0 || startVertice + vertices > this.vertices )
 			throw "Invalid vertices count";
+		if( format.hasLowPrecision )
+			throw "Can't upload floats on low precision buffer";
 		mem.driver.uploadBufferData(vbuf, startVertice, vertices, buf, bufPos);
 	}
 
@@ -81,13 +83,13 @@ class Buffer {
 	public static function ofFloats( v : hxd.FloatBuffer, format : hxd.BufferFormat, ?flags ) {
 		var nvert = Std.int(v.length / format.stride);
 		var b = new Buffer(nvert, format, flags);
-		b.uploadVector(v, 0, nvert);
+		b.uploadFloats(v, 0, nvert);
 		return b;
 	}
 
 	public static function ofSubFloats( v : hxd.FloatBuffer, vertices : Int, format : hxd.BufferFormat, ?flags ) {
 		var b = new Buffer(vertices, format, flags);
-		b.uploadVector(v, 0, vertices);
+		b.uploadFloats(v, 0, vertices);
 		return b;
 	}
 

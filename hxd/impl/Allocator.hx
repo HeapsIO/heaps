@@ -32,7 +32,7 @@ class Allocator {
 
 	public function ofSubFloats( v : hxd.FloatBuffer, vertices : Int, format, flags : BufferFlags = Dynamic ) {
 		var b = allocBuffer(vertices, format, flags);
-		b.uploadVector(v, 0, vertices);
+		b.uploadFloats(v, 0, vertices);
 		return b;
 	}
 

@@ -63,7 +63,7 @@ class DynamicPrimitive extends Primitive {
 		if( indexes == null )
 			indexes = alloc.allocIndexBuffer(hxd.Math.imax(minISize, isize));
 
-		buffer.uploadVector(vbuf, 0, vsize);
+		buffer.uploadFloats(vbuf, 0, vsize);
 		indexes.upload(ibuf, 0, isize);
 	}
 

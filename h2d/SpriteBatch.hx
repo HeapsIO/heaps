@@ -430,7 +430,7 @@ class SpriteBatch extends Drawable {
 		bufferVertices = pos>>3;
 		if( buffer != null && !buffer.isDisposed() ) {
 			if( buffer.vertices >= bufferVertices ){
-				buffer.uploadVector(tmpBuf, 0, bufferVertices);
+				buffer.uploadFloats(tmpBuf, 0, bufferVertices);
 				return;
 			}
 			buffer.dispose();

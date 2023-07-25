@@ -112,6 +112,7 @@ class BufferFormat {
 	public var uid(default,null) : Int;
 	public var stride(default,null) : Int;
 	public var strideBytes(default,null) : Int;
+	public var hasLowPrecision(default,null) : Bool;
 	var inputs : Array<BufferInput>;
 	var mappings : Array<Array<BufferMapping>>;
 
@@ -119,12 +120,15 @@ class BufferFormat {
 		uid = _UID++;
 		stride = 0;
 		this.inputs = inputs.copy();
+		hasLowPrecision = false;
 		for( i in inputs ) {
 			stride += i.type.getSize();
 			strideBytes += i.getBytesSize();
 			// 4 bytes align
 			if( strideBytes & 3 != 0 )
 				strideBytes += 4 - (strideBytes & 3);
+			if( i.precision != F32 )
+				hasLowPrecision = true;
 		}
 	}
 

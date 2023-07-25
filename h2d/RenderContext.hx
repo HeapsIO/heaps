@@ -581,7 +581,7 @@ class RenderContext extends h3d.impl.RenderContext {
 		beforeDraw();
 		var nverts = Std.int(bufPos / stride);
 		var tmp = new h3d.Buffer(nverts, hxd.BufferFormat.XY_UV_RGBA, [Dynamic]);
-		tmp.uploadVector(buffer, 0, nverts);
+		tmp.uploadFloats(buffer, 0, nverts);
 		engine.renderQuadBuffer(tmp);
 		tmp.dispose();
 		bufPos = 0;
@@ -754,7 +754,7 @@ class RenderContext extends h3d.impl.RenderContext {
 			var k = new hxd.FloatBuffer();
 			for( v in [0, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1] )
 				k.push(v);
-			fixedBuffer.uploadVector(k, 0, 4);
+			fixedBuffer.uploadFloats(k, 0, 4);
 		}
 		engine.renderQuadBuffer(fixedBuffer);
 		return true;

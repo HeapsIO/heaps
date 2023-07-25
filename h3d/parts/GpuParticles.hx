@@ -887,7 +887,7 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 		if( firstPart <= lastPart ) {
 			uploadedCount += lastPart - firstPart + 1;
 			var primitive = primitives[groups.indexOf(g)];
-			primitive.buffer.uploadVector(vbuf, (firstPart) * 4 * STRIDE, (lastPart - firstPart + 1) * 4, (firstPart) * 4);
+			primitive.buffer.uploadFloats(vbuf, (firstPart) * 4 * STRIDE, (lastPart - firstPart + 1) * 4, (firstPart) * 4);
 		}
 	}
 

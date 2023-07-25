@@ -302,7 +302,7 @@ class LightBuffer {
 		s.DIR_SHADOW_COUNT = dirLightsShadow.length;
 		s.POINT_SHADOW_COUNT = pointLightsShadow.length;
 		s.SPOT_SHADOW_COUNT = spotLightsShadow.length;
-		s.lightInfos.uploadVector(lightInfos, 0, s.lightInfos.vertices, 0);
+		s.lightInfos.uploadFloats(lightInfos, 0, s.lightInfos.vertices, 0);
 
 		var pbrIndirect = @:privateAccess pbrRenderer.pbrIndirect;
 		s.USE_INDIRECT = pbrRenderer.env != null && pbrIndirect.irrLut != null;
