@@ -1520,6 +1520,7 @@ class DX12Driver extends h3d.impl.Driver {
 			v.bufferLocation = bview.bufferLocation;
 			v.sizeInBytes = bview.sizeInBytes;
 			v.strideInBytes = bview.strideInBytes;
+			if( inf.offset >= 256 ) throw "assert";
 			pipelineSignature.setUI8(PSIGN_LAYOUT + i, inf.offset | inf.precision.toInt());
 		}
 		needPipelineFlush = true;
@@ -1536,6 +1537,7 @@ class DX12Driver extends h3d.impl.Driver {
 			v.bufferLocation = bview.bufferLocation;
 			v.sizeInBytes = bview.sizeInBytes;
 			v.strideInBytes = bview.strideInBytes;
+			if( inf.offset >= 256 ) throw "assert";
 			pipelineSignature.setUI8(PSIGN_LAYOUT + i, inf.offset | inf.precision.toInt());
 		}
 		needPipelineFlush = true;
@@ -1604,7 +1606,6 @@ class DX12Driver extends h3d.impl.Driver {
 		for( i in 0...shader.inputCount ) {
 			var d = shader.inputLayout[i];
 			var offset = pipelineSignature.getUI8(PSIGN_LAYOUT + i);
-			trace(offset);
 			d.alignedByteOffset = offset & ~3;
 			d.format = @:privateAccess switch( [shader.format.inputs[i].type, new hxd.BufferFormat.Precision(offset&3)] ) {
 			case [DFloat, F32]: R32_FLOAT;
