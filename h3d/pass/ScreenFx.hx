@@ -61,6 +61,7 @@ class ScreenFx<T:h3d.shader.ScreenShader> {
 		engine.uploadShaderBuffers(buffers, Globals);
 		engine.uploadShaderBuffers(buffers, Params);
 		engine.uploadShaderBuffers(buffers, Textures);
+		engine.uploadShaderBuffers(buffers, Buffers);
 		primitive.render(engine);
 	}
 
