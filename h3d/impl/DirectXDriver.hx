@@ -1206,6 +1206,10 @@ class DirectXDriver extends h3d.impl.Driver {
 			layout = makeLayout(formats.resolveMapping(currentShader.format));
 			currentShader.layouts.set(-formats.uid-1, layout);
 		}
+		if( layout != currentLayout ) {
+			dx.Driver.iaSetInputLayout(layout);
+			currentLayout = layout;
+		}
 		var map = formats.resolveMapping(currentShader.format);
 		var start = -1, max = -1, force = false;
 		for( i in 0...map.length ) {
