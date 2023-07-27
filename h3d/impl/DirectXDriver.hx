@@ -321,10 +321,9 @@ class DirectXDriver extends h3d.impl.Driver {
 
 	override function allocBuffer(b:Buffer):GPUBuffer {
 		var size = b.getMemSize();
-		var uniform = b.flags.has(UniformBuffer);
-		var res = uniform ? dx.Driver.createBuffer(size, Dynamic, ConstantBuffer, CpuWrite, None, 0, null) : dx.Driver.createBuffer(size, Default, VertexBuffer, None, None, 0, null);
+		var res = b.flags.has(UniformBuffer) ? dx.Driver.createBuffer(size, Dynamic, ConstantBuffer, CpuWrite, None, 0, null) : dx.Driver.createBuffer(size, Default, VertexBuffer, None, None, 0, null);
 		if( res == null ) return null;
-		return { res : res, count : b.vertices, stride : b.format.stride, uniform : uniform };
+		return res;
 	}
 
 	override function allocIndexes( count : Int, is32 : Bool ) : IndexBuffer {
@@ -461,8 +460,8 @@ class DirectXDriver extends h3d.impl.Driver {
 					rt.release();
 	}
 
-	override function disposeBuffer(b:GPUBuffer) {
-		b.res.release();
+	override function disposeBuffer(b:Buffer) {
+		b.vbuf.release();
 	}
 
 	override function disposeIndexes(i:IndexBuffer) {
@@ -495,31 +494,31 @@ class DirectXDriver extends h3d.impl.Driver {
 		updateBuffer(i.res, @:privateAccess buf.b.offset(bufPos << i.bits), startIndice << i.bits, indiceCount << i.bits);
 	}
 
-	override function uploadBufferData(b:GPUBuffer, startVertex:Int, vertexCount:Int, buf:hxd.FloatBuffer, bufPos:Int) {
+	override function uploadBufferData(b:Buffer, startVertex:Int, vertexCount:Int, buf:hxd.FloatBuffer, bufPos:Int) {
 		if( hasDeviceError ) return;
 		var data = hl.Bytes.getArray(buf.getNative()).offset(bufPos<<2);
-		if( b.uniform ) {
+		if( b.flags.has(UniformBuffer) ) {
 			if( startVertex != 0 ) throw "assert";
-			var ptr = b.res.map(0, WriteDiscard, true, null);
+			var ptr = b.vbuf.map(0, WriteDiscard, true, null);
 			if( ptr == null ) throw "Can't map buffer";
-			ptr.blit(0, data, 0, vertexCount * b.stride << 2);
-			b.res.unmap(0);
+			ptr.blit(0, data, 0, vertexCount * b.format.strideBytes);
+			b.vbuf.unmap(0);
 			return;
 		}
-		updateBuffer(b.res, data, startVertex * b.stride << 2, vertexCount * b.stride << 2);
+		updateBuffer(b.vbuf, data, startVertex * b.format.strideBytes, vertexCount * b.format.strideBytes);
 	}
 
-	override function uploadBufferBytes(v:GPUBuffer, startVertex:Int, vertexCount:Int, buf:haxe.io.Bytes, bufPos:Int) {
+	override function uploadBufferBytes(b:Buffer, startVertex:Int, vertexCount:Int, buf:haxe.io.Bytes, bufPos:Int) {
 		if( hasDeviceError ) return;
-		if( v.uniform ) {
+		if( b.flags.has(UniformBuffer) ) {
 			if( startVertex != 0 ) throw "assert";
-			var ptr = v.res.map(0, WriteDiscard, true, null);
+			var ptr = b.vbuf.map(0, WriteDiscard, true, null);
 			if( ptr == null ) throw "Can't map buffer";
-			ptr.blit(0, buf, 0, vertexCount * v.stride << 2);
-			v.res.unmap(0);
+			ptr.blit(0, buf, 0, vertexCount * b.format.strideBytes);
+			b.vbuf.unmap(0);
 			return;
 		}
-		updateBuffer(v.res, @:privateAccess buf.b.offset(bufPos << 2), startVertex * v.stride << 2, vertexCount * v.stride << 2);
+		updateBuffer(b.vbuf, @:privateAccess buf.b.offset(bufPos), startVertex * b.format.strideBytes, vertexCount * b.format.strideBytes);
 	}
 
 	override function readIndexBytes(v:IndexBuffer, startIndice:Int, indiceCount:Int, buf:haxe.io.Bytes, bufPos:Int) {
@@ -537,17 +536,18 @@ class DirectXDriver extends h3d.impl.Driver {
 		tmp.release();
 	}
 
-	override function readBufferBytes(b:GPUBuffer, startVertex:Int, vertexCount:Int, buf:haxe.io.Bytes, bufPos:Int) {
-		var tmp = dx.Driver.createBuffer(vertexCount * b.stride * 4, Staging, None, CpuRead | CpuWrite, None, 0, null);
-		box.left = startVertex * b.stride * 4;
+	override function readBufferBytes(b:Buffer, startVertex:Int, vertexCount:Int, buf:haxe.io.Bytes, bufPos:Int) {
+		var stride = b.format.strideBytes;
+		var tmp = dx.Driver.createBuffer(vertexCount * stride, Staging, None, CpuRead | CpuWrite, None, 0, null);
+		box.left = startVertex * stride;
 		box.top = 0;
 		box.front = 0;
-		box.right = (startVertex + vertexCount) * 4 * b.stride;
+		box.right = (startVertex + vertexCount) * stride;
 		box.bottom = 1;
 		box.back = 1;
-		tmp.copySubresourceRegion(0, 0, 0, 0, b.res, 0, box);
+		tmp.copySubresourceRegion(0, 0, 0, 0, b.vbuf, 0, box);
 		var ptr = tmp.map(0, Read, true, null);
-		@:privateAccess buf.b.blit(bufPos, ptr, 0, vertexCount * b.stride * 4);
+		@:privateAccess buf.b.blit(bufPos, ptr, 0, vertexCount * stride);
 		tmp.unmap(0);
 		tmp.release();
 	}
@@ -1182,13 +1182,13 @@ class DirectXDriver extends h3d.impl.Driver {
 			currentLayout = layout;
 		}
 		var map = buffer.format.resolveMapping(currentShader.format);
-		var vbuf = @:privateAccess buffer.vbuf;
+		var vbuf = buffer.vbuf;
 		var start = -1, max = -1;
 		var stride = buffer.format.strideBytes;
 		for( i in 0...map.length ) {
 			var inf = map[i];
-			if( currentVBuffers[i] != vbuf.res || offsets[i] != inf.offset || strides[i] != stride ) {
-				currentVBuffers[i] = vbuf.res;
+			if( currentVBuffers[i] != vbuf || offsets[i] != inf.offset || strides[i] != stride ) {
+				currentVBuffers[i] = vbuf;
 				strides[i] = stride;
 				offsets[i] = inf.offset;
 				if( start < 0 ) start = i;
@@ -1215,8 +1215,8 @@ class DirectXDriver extends h3d.impl.Driver {
 		for( i in 0...map.length ) {
 			var inf = map[i];
 			var buf = buffers[inf.bufferIndex];
-			if( currentVBuffers[i] != @:privateAccess buf.vbuf.res || offsets[i] != inf.offset || strides[i] != buf.format.strideBytes ) {
-				currentVBuffers[i] = @:privateAccess buf.vbuf.res;
+			if( currentVBuffers[i] != buf.vbuf || offsets[i] != inf.offset || strides[i] != buf.format.strideBytes ) {
+				currentVBuffers[i] = buf.vbuf;
 				strides[i] = buf.format.strideBytes;
 				offsets[i] = inf.offset;
 				if( start < 0 ) start = i;
@@ -1281,7 +1281,7 @@ class DirectXDriver extends h3d.impl.Driver {
 			var first = -1;
 			var max = -1;
 			for( i in 0...shader.bufferCount ) {
-				var buf = @:privateAccess buffers.buffers[i].vbuf.res;
+				var buf = buffers.buffers[i].vbuf;
 				var tid = i + 2;
 				if( buf != state.buffers[tid] ) {
 					state.buffers[tid] = buf;

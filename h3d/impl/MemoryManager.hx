@@ -104,9 +104,12 @@ class MemoryManager {
 
 	function freeBuffer( b : Buffer ) {
 		if( b.vbuf == null ) return;
-		driver.disposeBuffer(b.vbuf);
+		driver.disposeBuffer(b);
 		b.vbuf = null;
 		b.mem = null;
+		#if multidriver
+		b.driver = null;
+		#end
 		usedMemory -= b.getMemSize();
 		buffers.remove(b);
 	}

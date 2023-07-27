@@ -23,9 +23,12 @@ class Buffer {
 	var allocPos : hxd.impl.AllocPos;
 	var allocNext : Buffer;
 	#end
+	#if multidriver
+	var driver : h3d.impl.Driver;
+	#end
 
 	var mem : h3d.impl.MemoryManager;
-	var vbuf : h3d.impl.Driver.GPUBuffer;
+	@:allow(h3d.impl.Driver) var vbuf : h3d.impl.Driver.GPUBuffer;
 	public var vertices(default,null) : Int;
 	public var format(default,null) : hxd.BufferFormat;
 	public var flags(default, null) : haxe.EnumFlags<BufferFlag>;
@@ -65,19 +68,19 @@ class Buffer {
 			throw "Invalid vertices count";
 		if( format.hasLowPrecision )
 			throw "Can't upload floats on low precision buffer";
-		mem.driver.uploadBufferData(vbuf, startVertice, vertices, buf, bufPos);
+		mem.driver.uploadBufferData(this, startVertice, vertices, buf, bufPos);
 	}
 
 	public function uploadBytes( data : haxe.io.Bytes, dataPos : Int, vertices : Int ) {
 		if( vertices < 0 || vertices > this.vertices )
 			throw "Invalid vertices count";
-		mem.driver.uploadBufferBytes(vbuf, 0, vertices, data, dataPos);
+		mem.driver.uploadBufferBytes(this, 0, vertices, data, dataPos);
 	}
 
 	public function readBytes( bytes : haxe.io.Bytes, bytesPosition : Int, vertices : Int,  startVertice : Int = 0 ) {
 		if( startVertice < 0 || vertices < 0 || startVertice + vertices > this.vertices )
 			throw "Invalid vertices count";
-		mem.driver.readBufferBytes(vbuf, startVertice, vertices, bytes, bytesPosition);
+		mem.driver.readBufferBytes(this, startVertice, vertices, bytes, bytesPosition);
 	}
 
 	public static function ofFloats( v : hxd.FloatBuffer, format : hxd.BufferFormat, ?flags ) {

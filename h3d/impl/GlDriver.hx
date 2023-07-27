@@ -508,7 +508,7 @@ class GlDriver extends Driver {
 				if( !s.vertex && curShader.vertex.buffers != null )
 					start = curShader.vertex.buffers.length;
 				for( i in 0...s.buffers.length )
-					gl.bindBufferBase(GL.UNIFORM_BUFFER, i + start, @:privateAccess buf.buffers[i].vbuf.b);
+					gl.bindBufferBase(GL.UNIFORM_BUFFER, i + start, buf.buffers[i].vbuf);
 			}
 		case Textures:
 			var tcount = s.textures.length;
@@ -1015,7 +1015,7 @@ class GlDriver extends Driver {
 			gl.deleteBuffer(vb);
 			return null;
 		}
-		return { b : vb, stride : b.format.stride #if multidriver, driver : this #end };
+		return vb;
 	}
 
 	override function allocIndexes( count : Int, is32 : Bool ) : IndexBuffer {
@@ -1052,8 +1052,8 @@ class GlDriver extends Driver {
 		gl.deleteBuffer(i.b);
 	}
 
-	override function disposeBuffer( b : GPUBuffer ) {
-		gl.deleteBuffer(b.b);
+	override function disposeBuffer( b : h3d.Buffer ) {
+		gl.deleteBuffer(b.vbuf);
 	}
 
 	override function generateMipMaps( t : h3d.mat.Texture ) {
@@ -1198,28 +1198,28 @@ class GlDriver extends Driver {
 		restoreBind();
 	}
 
-	override function uploadBufferData( b : GPUBuffer, startVertex : Int, vertexCount : Int, buf : hxd.FloatBuffer, bufPos : Int ) {
-		var stride : Int = b.stride;
-		gl.bindBuffer(GL.ARRAY_BUFFER, b.b);
+	override function uploadBufferData( b : h3d.Buffer, startVertex : Int, vertexCount : Int, buf : hxd.FloatBuffer, bufPos : Int ) {
+		var stride = b.format.strideBytes;
+		gl.bindBuffer(GL.ARRAY_BUFFER, b.vbuf);
 		#if hl
 		var data = #if hl hl.Bytes.getArray(buf.getNative()) #else buf.getNative() #end;
-		gl.bufferSubData(GL.ARRAY_BUFFER, startVertex * stride * 4, streamData(data,bufPos * 4,vertexCount * stride * 4), bufPos * 4 * STREAM_POS, vertexCount * stride * 4);
+		gl.bufferSubData(GL.ARRAY_BUFFER, startVertex * stride, streamData(data,bufPos * 4,vertexCount * stride), bufPos * 4 * STREAM_POS, vertexCount * stride);
 		#else
 		var buf : Float32Array = buf.getNative();
 		var sub = new Float32Array(buf.buffer, bufPos * 4, vertexCount * stride);
-		gl.bufferSubData(GL.ARRAY_BUFFER, startVertex * stride * 4, sub);
+		gl.bufferSubData(GL.ARRAY_BUFFER, startVertex * stride, sub);
 		#end
 		gl.bindBuffer(GL.ARRAY_BUFFER, null);
 	}
 
-	override function uploadBufferBytes( b : GPUBuffer, startVertex : Int, vertexCount : Int, buf : haxe.io.Bytes, bufPos : Int ) {
-		var stride : Int = b.stride;
-		gl.bindBuffer(GL.ARRAY_BUFFER, b.b);
+	override function uploadBufferBytes( b : h3d.Buffer, startVertex : Int, vertexCount : Int, buf : haxe.io.Bytes, bufPos : Int ) {
+		var stride = b.format.strideBytes;
+		gl.bindBuffer(GL.ARRAY_BUFFER, b.vbuf);
 		#if hl
-		gl.bufferSubData(GL.ARRAY_BUFFER, startVertex * stride * 4, streamData(buf.getData(),bufPos * 4,vertexCount * stride * 4), bufPos * 4 * STREAM_POS, vertexCount * stride * 4);
+		gl.bufferSubData(GL.ARRAY_BUFFER, startVertex * stride, streamData(buf.getData(),bufPos,vertexCount * stride), bufPos * STREAM_POS, vertexCount * stride);
 		#else
-		var sub = new Uint8Array(buf.getData(), bufPos * 4, vertexCount * stride * 4);
-		gl.bufferSubData(GL.ARRAY_BUFFER, startVertex * stride * 4, sub);
+		var sub = new Uint8Array(buf.getData(), bufPos, vertexCount * stride);
+		gl.bufferSubData(GL.ARRAY_BUFFER, startVertex * stride, sub);
 		#end
 		gl.bindBuffer(GL.ARRAY_BUFFER, null);
 	}
@@ -1265,12 +1265,11 @@ class GlDriver extends Driver {
 
 		if( curShader == null )
 			throw "No shader selected";
-		var m = @:privateAccess b.vbuf;
 		#if multidriver
-		if( m.driver != this )
+		if( @:privateAccess b.driver != this )
 			throw "Invalid buffer context";
 		#end
-		gl.bindBuffer(GL.ARRAY_BUFFER, m.b);
+		gl.bindBuffer(GL.ARRAY_BUFFER, b.vbuf);
 		curBuffer = b;
 
 		var strideBytes = b.format.strideBytes;
@@ -1294,7 +1293,7 @@ class GlDriver extends Driver {
 			var inf = map[i];
 			var b = buffers[inf.bufferIndex];
 			if( curBuffer != b ) {
-				gl.bindBuffer(GL.ARRAY_BUFFER, @:privateAccess b.vbuf.b);
+				gl.bindBuffer(GL.ARRAY_BUFFER, b.vbuf);
 				curBuffer = b;
 			}
 			var norm = false;

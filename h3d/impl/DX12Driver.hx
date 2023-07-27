@@ -261,7 +261,6 @@ class IndexBufferData extends BufferData {
 
 class VertexBufferData extends BufferData {
 	public var view : dx.Dx12.VertexBufferView;
-	public var stride : Int;
 	public var size : Int;
 }
 
@@ -1047,7 +1046,6 @@ class DX12Driver extends h3d.impl.Driver {
 			view.strideInBytes = m.format.strideBytes;
 			buf.view = view;
 		}
-		buf.stride = m.format.strideBytes;
 		buf.size = bufSize;
 		buf.uploaded = m.flags.has(Dynamic);
 		return buf;
@@ -1082,8 +1080,8 @@ class DX12Driver extends h3d.impl.Driver {
 		frame.commandList.resourceBarrier(b);
 	}
 
-	override function disposeBuffer(v:GPUBuffer) {
-		disposeResource(v);
+	override function disposeBuffer(v:Buffer) {
+		disposeResource(v.vbuf);
 	}
 
 	override function disposeIndexes(v:IndexBuffer) {
@@ -1125,17 +1123,17 @@ class DX12Driver extends h3d.impl.Driver {
 		transition(i, INDEX_BUFFER);
 	}
 
-	override function uploadBufferData(v:GPUBuffer, startVertex:Int, vertexCount:Int, buf:hxd.FloatBuffer, bufPos:Int) {
+	override function uploadBufferData(b:Buffer, startVertex:Int, vertexCount:Int, buf:hxd.FloatBuffer, bufPos:Int) {
 		var data = hl.Bytes.getArray(buf.getNative()).offset(bufPos<<2);
-		transition(v, COPY_DEST);
-		updateBuffer(v, data, startVertex * v.stride, vertexCount * v.stride);
-		transition(v, VERTEX_AND_CONSTANT_BUFFER);
+		transition(b.vbuf, COPY_DEST);
+		updateBuffer(b.vbuf, data, startVertex * b.format.strideBytes, vertexCount * b.format.strideBytes);
+		transition(b.vbuf, VERTEX_AND_CONSTANT_BUFFER);
 	}
 
-	override function uploadBufferBytes(v:GPUBuffer, startVertex:Int, vertexCount:Int, buf:haxe.io.Bytes, bufPos:Int) {
-		transition(v, COPY_DEST);
-		updateBuffer(v, @:privateAccess buf.b.offset(bufPos << 2), startVertex * v.stride, vertexCount * v.stride);
-		transition(v, VERTEX_AND_CONSTANT_BUFFER);
+	override function uploadBufferBytes(b:Buffer, startVertex:Int, vertexCount:Int, buf:haxe.io.Bytes, bufPos:Int) {
+		transition(b.vbuf, COPY_DEST);
+		updateBuffer(b.vbuf, @:privateAccess buf.b.offset(bufPos), startVertex * b.format.strideBytes, vertexCount * b.format.strideBytes);
+		transition(b.vbuf, VERTEX_AND_CONSTANT_BUFFER);
 	}
 
 	// ------------ TEXTURES -------
@@ -1463,7 +1461,7 @@ class DX12Driver extends h3d.impl.Driver {
 				for( i in 0...shader.bufferCount ) {
 					var srv = frame.shaderResourceViews.alloc(1);
 					var b = buf.buffers[i];
-					var cbv = @:privateAccess b.vbuf;
+					var cbv = b.vbuf;
 					if( cbv.view != null )
 						throw "Buffer was allocated without UniformBuffer flag";
 					transition(cbv, VERTEX_AND_CONSTANT_BUFFER);
@@ -1511,9 +1509,9 @@ class DX12Driver extends h3d.impl.Driver {
 
 	override function selectBuffer(buffer:Buffer) {
 		var views = tmp.vertexViews;
-		var bview = @:privateAccess buffer.vbuf.view;
+		var bview = buffer.vbuf.view;
 		var map = buffer.format.resolveMapping(currentShader.format);
-		var vbuf = @:privateAccess buffer.vbuf;
+		var vbuf = buffer.vbuf;
 		for( i in 0...currentShader.inputCount ) {
 			var v = views[i];
 			var inf = map[i];
