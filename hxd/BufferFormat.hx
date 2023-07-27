@@ -307,12 +307,12 @@ class BufferFormat {
 	}
 
 	public static function float32toS8( v : Float ) : Int {
-		if( v >= 1 )
-			return 0x7F;
-		if( v <= -1 )
-			return 0x80;
 		var i = Math.floor(v * 128);
-		return v >= 0 ? i : (0x7F - i) | 0x80;
+		if( i >= 127 )
+			return 0x7F;
+		if( i <= -127 )
+			return 0x80;
+		return i >= 0 ? i : (0x7F + i) | 0x80;
 	}
 
 	public static function floatS8to32( v : Int ) {
