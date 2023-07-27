@@ -46,7 +46,7 @@ class Buffer {
 	}
 
 	public inline function getMemSize() {
-		return vertices * (format.stride << 2);
+		return vertices * format.strideBytes;
 	}
 
 	public inline function isDisposed() {
