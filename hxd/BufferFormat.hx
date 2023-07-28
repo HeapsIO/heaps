@@ -360,18 +360,23 @@ class MultiFormat {
 	function makeMapping( format : hxd.BufferFormat ) {
 		var m = [];
 		for( input in format.getInputs() ) {
-			var found = false;
+			var found = false, match = null;
 			for( idx => f in formats ) {
 				var i = f.getInput(input.name);
-				if( i != null && i.type == input.type ) {
+				if( i != null ) {
+					match = i;
+					if( i.type != input.type ) continue;
 					var offset = f.calculateInputOffset(i.name);
 					m.push(new BufferMapping(idx,offset,i.precision));
 					found = true;
 					break;
 				}
 			}
-			if( !found )
+			if( !found ) {
+				if( match != null )
+					throw "Shader buffer "+input.name+" was requested with "+input.type+" but found with "+match.type;
 				throw "Missing shader buffer "+input.name;
+			}
 		}
 		mappings[format.uid] = m;
 		return m;
