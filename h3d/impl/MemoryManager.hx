@@ -4,7 +4,7 @@ class MemoryManager {
 
 	static inline var MAX_MEMORY = 4096 * (1024. * 1024.); // MB
 	static inline var MAX_BUFFERS = 65536;
-	static inline var SIZE = 65533;
+	static inline var SIZE = 65532;
 	static var ALL_FLAGS = Type.allEnums(Buffer.BufferFlag);
 
 	@:allow(h3d)
@@ -40,7 +40,7 @@ class MemoryManager {
 
 		var indices = new hxd.IndexBuffer();
 		var p = 0;
-		for( i in 0...SIZE >> 2 ) {
+		for( i in 0...Std.int(SIZE/6) ) {
 			var k = i << 2;
 			indices.push(k);
 			indices.push(k + 1);
@@ -63,16 +63,43 @@ class MemoryManager {
 	public function getTriIndexes( vertices : Int ) {
 		if( vertices <= SIZE )
 			return triIndexes16;
-		if( triIndexes32 == null || triIndexes32.count < vertices )
-			throw "TODO";
+		if( triIndexes32 == null || triIndexes32.count < vertices ) {
+			var sz = 1 << 17;
+			while( sz < vertices ) sz <<= 1;
+			var bytes = haxe.io.Bytes.alloc(sz << 2);
+			for( i in 0...sz )
+				bytes.setInt32(i<<2, i);
+			if( triIndexes32 != null )
+				triIndexes32.dispose();
+			triIndexes32 = new h3d.Indexes(sz,true);
+			triIndexes32.uploadBytes(bytes,0,sz);
+		}
 		return triIndexes32;
 	}
 
 	public function getQuadIndexes( vertices : Int ) {
-		if( vertices <= SIZE )
+		var nquads = ((vertices + 3) >> 2) * 6;
+		if( nquads <= SIZE )
 			return quadIndexes16;
-		if( quadIndexes32 == null || quadIndexes32.count < vertices )
-			throw "TODO";
+		if( quadIndexes32 == null || quadIndexes32.count < vertices ) {
+			var sz = 1 << 17;
+			while( sz < nquads ) sz <<= 1;
+			var bytes = haxe.io.Bytes.alloc(sz << 2);
+			var p = 0;
+			for( i in 0...Std.int(sz/6) ) {
+				var k = i << 2;
+				bytes.setInt32(p++ << 2, k);
+				bytes.setInt32(p++ << 2, k + 1);
+				bytes.setInt32(p++ << 2, k + 2);
+				bytes.setInt32(p++ << 2, k + 2);
+				bytes.setInt32(p++ << 2, k + 1);
+				bytes.setInt32(p++ << 2, k + 3);
+			}
+			if( quadIndexes32 != null )
+				quadIndexes32.dispose();
+			quadIndexes32 = new h3d.Indexes(sz,true);
+			quadIndexes32.uploadBytes(bytes,0,sz);
+		}
 		return quadIndexes32;
 	}
 
