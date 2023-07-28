@@ -385,7 +385,7 @@ class Particles extends h3d.scene.Mesh {
 		else
 			pshader.size.set(globalSize * ctx.engine.height / ctx.engine.width * 4, globalSize * 4);
 		ctx.uploadParams();
-		ctx.engine.renderQuadBuffer(buffer, 0, Std.int(count/3));
+		ctx.engine.renderQuadBuffer(buffer, 0, (count >> 1));
 		buffer.dispose();
 	}
 
