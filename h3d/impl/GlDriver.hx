@@ -1009,6 +1009,9 @@ class GlDriver extends Driver {
 		var tmp = new Uint8Array(b.getMemSize());
 		gl.bufferData(GL.ARRAY_BUFFER, tmp, b.flags.has(Dynamic) ? GL.DYNAMIC_DRAW : GL.STATIC_DRAW);
 		#end
+		#if multidriver
+		@:privateAccess b.driver = this;
+		#end
 		var outOfMem = outOfMemoryCheck && gl.getError() == GL.OUT_OF_MEMORY;
 		gl.bindBuffer(GL.ARRAY_BUFFER, null);
 		if( outOfMem ) {
@@ -1206,7 +1209,7 @@ class GlDriver extends Driver {
 		gl.bufferSubData(GL.ARRAY_BUFFER, startVertex * stride, streamData(data,bufPos * 4,vertexCount * stride), bufPos * 4 * STREAM_POS, vertexCount * stride);
 		#else
 		var buf : Float32Array = buf.getNative();
-		var sub = new Float32Array(buf.buffer, bufPos * 4, vertexCount * stride);
+		var sub = new Float32Array(buf.buffer, bufPos * 4, (vertexCount * stride) >> 2);
 		gl.bufferSubData(GL.ARRAY_BUFFER, startVertex * stride, sub);
 		#end
 		gl.bindBuffer(GL.ARRAY_BUFFER, null);
