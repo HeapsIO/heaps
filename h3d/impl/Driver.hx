@@ -38,7 +38,7 @@ typedef DepthBuffer = { res : dx.Resource, view : dx.Driver.DepthStencilView };
 typedef Query = {};
 #elseif usesys
 typedef IndexBuffer = haxe.GraphicsDriver.IndexBuffer;
-typedef GPUBuffer = haxe.GraphicsDriver.VertexBuffer;
+typedef GPUBuffer = haxe.GraphicsDriver.GPUBuffer;
 typedef Texture = haxe.GraphicsDriver.Texture;
 typedef DepthBuffer = haxe.GraphicsDriver.DepthBuffer;
 typedef Query = haxe.GraphicsDriver.Query;
