@@ -74,6 +74,7 @@ class Renderer extends h3d.scene.Renderer {
 	var enableFXAA = true;
 	var currentStep : h3d.impl.RendererFX.Step;
 	var performance = new h3d.pass.ScreenFx(new h3d.shader.pbr.PerformanceViewer());
+	var indirectEnv = true;
 
 	var textures = {
 		albedo : (null:h3d.mat.Texture),
@@ -275,11 +276,13 @@ class Renderer extends h3d.scene.Renderer {
 		mark("DirectLighting");
 		// Direct Lighting - FullScreen
 		pbrProps.isScreen = true;
+		beforeFullScreenLights();
 		if( ls != null ) {
 			var count = ctx.engine.drawCalls;
 			ls.drawScreenLights(this, lpass, shadows);
 			ctx.lightSystem.drawPasses += ctx.engine.drawCalls - count;
 		}
+		afterFullScreenLights();
 		// Direct Lighting - With Primitive
 		pbrProps.isScreen = false;
 		draw(pbrLightPass.name);
@@ -291,7 +294,7 @@ class Renderer extends h3d.scene.Renderer {
 		}
 
 		mark("Indirect Lighting");
-		if( !renderLightProbes() && env != null && env.power > 0.0 ) {
+		if( !renderLightProbes() && indirectEnv  && env != null && env.power > 0.0 ) {
 			pbrProps.isScreen = true;
 			pbrIndirect.drawIndirectDiffuse = true;
 			pbrIndirect.drawIndirectSpecular = true;
@@ -300,6 +303,9 @@ class Renderer extends h3d.scene.Renderer {
 
 		end();
 	}
+
+	function beforeFullScreenLights() {}
+	function afterFullScreenLights() {}
 
 	function renderLightProbes() {
 		var probePass = get("lightProbe");
@@ -316,7 +322,7 @@ class Renderer extends h3d.scene.Renderer {
 		clear(0);
 
 		// Default Env & SkyBox
-		if( env != null && env.power > 0.0  ) {
+		if( indirectEnv && env != null && env.power > 0.0 ) {
 			pbrProps.isScreen = true;
 			pbrIndirect.drawIndirectDiffuse = true;
 			pbrIndirect.drawIndirectSpecular = true;
