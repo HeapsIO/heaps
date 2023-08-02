@@ -67,7 +67,7 @@ class Texture {
 		return _lastFrame;
 	}
 
-	function get_lastFrame()
+	inline function get_lastFrame()
 	{
 		return _lastFrame;
 	}
