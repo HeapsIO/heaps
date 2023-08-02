@@ -20,7 +20,7 @@ class VolumeDecal extends hxsl.Shader {
 			transformedTangent = vec4((tangent * global.modelView.mat3()).normalize(),1.);
 		}
 
-		function fragment() {
+		function __init__fragment() {
 			var matrix = camera.inverseViewProj * global.modelViewInverse;
 			var screenPos = projectedPosition.xy / projectedPosition.w;
 			var ruv = vec4(
@@ -32,6 +32,10 @@ class VolumeDecal extends hxsl.Shader {
 			var ppos = ruv * camera.inverseViewProj;
 			pixelTransformedPosition = ppos.xyz / ppos.w;
 			calculatedUV = scale * (wpos.xy / wpos.w);
+		}
+
+		function fragment() {
+			
 			if( isCentered ) calculatedUV += 0.5;
 			if( min(min(calculatedUV.x, calculatedUV.y), min(1 - calculatedUV.x, 1 - calculatedUV.y)) < 0 )
 				discard;

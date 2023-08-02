@@ -82,10 +82,6 @@ class DecalOverlay extends BaseDecal {
 
 
 		function __init__fragment() {
-		}
-
-		function fragment() {
-
 			{
 				var matrix = camera.inverseViewProj * global.modelViewInverse;
 				var screenPos = projectedPosition.xy / projectedPosition.w;
@@ -105,8 +101,9 @@ class DecalOverlay extends BaseDecal {
 				if(	outsideBounds(localPos) )
 					discard;
 			}
+		}
 
-
+		function fragment() {
 			if(USE_NORMAL_FADE) {
 				var worldNormal = getWorldNormal();
 				normalFade(worldNormal);
@@ -162,14 +159,6 @@ class DecalPBR extends BaseDecal {
 		}
 
 		function __init__fragment() {
-			output.albedoStrength = USE_ALBEDO ? albedoStrength * pixelColor.a * fadeFactor : 0.0;
-			output.normalStrength = USE_NORMAL ? normalStrength * pixelColor.a * fadeFactor : 0.0;
-			output.pbrStrength = pbrStrength * pixelColor.a * fadeFactor;
-			output.emissiveStrength = emissiveStrength * pixelColor.a * fadeFactor;
-		}
-
-
-		function fragment() {
 			{
 				var matrix = camera.inverseViewProj * global.modelViewInverse;
 				var screenPos = projectedPosition.xy / projectedPosition.w;
@@ -184,11 +173,18 @@ class DecalPBR extends BaseDecal {
 
 				calculatedUV = localPos.xy;
 				fadeFactor = 1 - clamp( pow( max( 0.0, abs(localPos.z * 2) - fadeStart) / (fadeEnd - fadeStart), fadePower), 0, 1);
+
+				if( CENTERED )
+					calculatedUV += 0.5;
 			}
+			output.albedoStrength = USE_ALBEDO ? albedoStrength * pixelColor.a * fadeFactor : 0.0;
+			output.normalStrength = USE_NORMAL ? normalStrength * pixelColor.a * fadeFactor : 0.0;
+			output.pbrStrength = pbrStrength * pixelColor.a * fadeFactor;
+			output.emissiveStrength = emissiveStrength * pixelColor.a * fadeFactor;
+		}
 
-			if( CENTERED )
-				calculatedUV += 0.5;
 
+		function fragment() {
 			if( USE_ALBEDO ) {
 				var albedo = albedoTexture.get(calculatedUV);
 				pixelColor *= albedo;
