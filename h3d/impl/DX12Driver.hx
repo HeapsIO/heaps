@@ -817,7 +817,7 @@ class DX12Driver extends h3d.impl.Driver {
 
 	function compileShader( shader : hxsl.RuntimeShader ) : CompiledShader {
 
-		var params = hl.CArray.alloc(RootParameterConstants,8);
+		var params = hl.CArray.alloc(RootParameterConstants,16);
 		var paramsCount = 0, regCount = 0;
 		var texDescs = [];
 		var vertexParamsCBV = false;
@@ -904,9 +904,15 @@ class DX12Driver extends h3d.impl.Driver {
 			return regs;
 		}
 
+		// Costs in units:
+		// Descriptor Tables cost 1 each
+		// Root CBVs cost 2 each
+		// Root SRVs cost 2 each
+		// Root UAVs cost 2 each
+		// Root Constants cost 1 per 32-bit value
 		function calcSize( sh : hxsl.RuntimeShader.RuntimeShaderData ) {
 			var s = (sh.globalsSize + sh.paramsSize) << 2;
-			if( sh.texturesCount > 0 ) s += 2;
+			s += sh.texturesCount << 1;
 			return s;
 		}
 
@@ -1089,7 +1095,8 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	override function disposeInstanceBuffer(b:InstanceBuffer) {
-		disposeResource(b.data);
+		frame.toRelease.push((b.data:GpuResource));
+		// disposeResource(b.data);
 		b.data = null;
 	}
 
