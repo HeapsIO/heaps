@@ -1343,6 +1343,7 @@ class DX12Driver extends h3d.impl.Driver {
 		var b = frame.availableBuffers, prev = null;
 		var tmpBuf = null;
 		var size = calcCBVSize(dataSize);
+		if ( size == 0 ) size = 1;
 		while( b != null ) {
 			if( b.size >= size && b.size < size << 1 ) {
 				tmpBuf = b.buffer;
