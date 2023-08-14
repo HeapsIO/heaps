@@ -245,23 +245,10 @@ class Renderer extends h3d.scene.Renderer {
 
 		begin(Lighting);
 		if ( displayMode == Performance ) {
-			var content;
-			try {
-				content = hxd.res.Loader.currentInstance.load("props.json").toText();
-			} catch ( e : Dynamic ) {
-				throw "Missing props.json";
-			}
-			var obj = try haxe.Json.parse(content) catch( e : Dynamic ) throw "Failed to parse props.json";
 			var ls = hxd.impl.Api.downcast(getLightSystem(), h3d.scene.pbr.LightSystem);
 			var s = new h3d.shader.pbr.Light.Performance();
-
-			s.maxLights = Std.parseInt(Reflect.field(obj, "performance.maxLights"));
-			var gradient = Reflect.field(obj, "performance.lightGradient");
-			try {
-				performance.shader.gradient = hxd.res.Loader.currentInstance.load(gradient).toTexture();
-			} catch ( e : Dynamic ) {
-				throw "Missing performance.lightGradient in props.json";
-			}
+			performance.shader.gradient = getLightingPerformanceGradient();
+			s.maxLights = performance.shader.gradient.width - 1;
 			ls.lightingShaders.push(s);
 		}
 		var lpass = screenLightPass;
@@ -713,6 +700,16 @@ class Renderer extends h3d.scene.Renderer {
 		}
 		if( e.kind == EWheel && (slides.shader.mode == Shadow || (slides.shader.mode == Full && e.relX > win.width/4 && e.relY > win.height/4)) )
 			debugShadowMapIndex += e.wheelDelta > 0 ? 1 : -1;
+	}
+
+	function getLightingPerformanceGradient() {
+		var g : h3d.mat.Texture = @:privateAccess ctx.engine.resCache.get("lighting_performance_gradient");
+		if ( g != null )
+			return g;
+		g = hxd.res.Embed.getResource("h3d/scene/pbr/lighting_performance_gradient.png").toImage().toTexture();
+		@:privateAccess ctx.engine.resCache.set("lighting_performance_gradient", g);
+		g.filter = Nearest;
+		return g;
 	}
 
 	// ---- PROPS
