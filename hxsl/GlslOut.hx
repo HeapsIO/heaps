@@ -574,6 +574,9 @@ class GlslOut {
 		if( n != null )
 			return n;
 		n = v.name;
+		// prevent input renaming
+		if ( v.kind == Var )
+			n += "_varying";
 		if( KWDS.exists(n) )
 			n = "_" + n;
 		if( allNames.exists(n) ) {
