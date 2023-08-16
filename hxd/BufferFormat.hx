@@ -118,7 +118,7 @@ class BufferFormat {
 
 	function new( inputs : Array<BufferInput> ) {
 		uid = _UID++;
-		stride = 0;
+		stride = strideBytes = 0;
 		this.inputs = inputs.copy();
 		hasLowPrecision = false;
 		for( i in inputs ) {
