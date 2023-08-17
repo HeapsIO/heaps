@@ -188,7 +188,9 @@ class FlowProperties {
 	/**
 		When set, element will use the maximum size of non-autoSize elements as size constraint instead of current constraint on the parent flow.
 	**/
-	public var autoSize : Null<Float>;
+	public var autoSize(never, set) : Null<Float>;
+	public var autoSizeWidth : Null<Float>;
+	public var autoSizeHeight : Null<Float>;
 
 	@:dox(hide)
 	public function new(elt) {
@@ -209,6 +211,11 @@ class FlowProperties {
 			isBreak = false;
 		}
 		return isAbsolute = a;
+	}
+
+	function set_autoSize(s) {
+		autoSizeWidth = s;
+		autoSizeHeight = s;
 	}
 
 }
@@ -1233,8 +1240,8 @@ class Flow extends Object {
 				var ph = p.paddingTop + p.paddingBottom;
 				if( !p.isAbsolute )
 					c.constraintSize(
-						isConstraintWidth && p.constraint ? ((p.autoSize != null ? flowFloor(autoWidth * p.autoSize / autoSum) : maxInWidth) - pw) / Math.abs(c.scaleX) : -1,
-						isConstraintHeight && p.constraint ? ((p.autoSize != null ? hxd.Math.imax(maxLineHeight, minLineHeight) * p.autoSize : maxInHeight) - ph) / Math.abs(c.scaleY) : -1
+						isConstraintWidth && p.constraint ? ((p.autoSizeWidth != null ? flowFloor(autoWidth * p.autoSizeWidth / autoSum) : maxInWidth) - pw) / Math.abs(c.scaleX) : -1,
+						isConstraintHeight && p.constraint ? ((p.autoSizeHeight != null ? hxd.Math.imax(maxLineHeight, minLineHeight) * p.autoSizeHeight : maxInHeight) - ph) / Math.abs(c.scaleY) : -1
 					);
 
 				var b = getSize(c);
@@ -1247,7 +1254,7 @@ class Flow extends Object {
 			var count = 0;
 			forChildren(function(i, p, c) {
 				if(count > 0 && !p.isAbsolute) autoWidth -= horizontalSpacing;
-				if(p.autoSize == null) {
+				if(p.autoSizeWidth == null) {
 					calcSize(p, c);
 					if(!p.isAbsolute) {
 						if( p.calculatedHeight > maxLineHeight ) maxLineHeight = p.calculatedHeight;
@@ -1255,12 +1262,12 @@ class Flow extends Object {
 					}
 				}
 				else
-					autoSum += p.autoSize;
+					autoSum += p.autoSizeWidth;
 				count++;
 			});
 
 			forChildren(function(i, p, c) {
-				if(p.autoSize != null)
+				if(p.autoSizeWidth != null || p.autoSizeHeight != null)
 					calcSize(p, c);
 
 				if(!p.isAbsolute) {
@@ -1398,8 +1405,8 @@ class Flow extends Object {
 				var ph = p.paddingTop + p.paddingBottom;
 				if( !p.isAbsolute )
 					c.constraintSize(
-						isConstraintWidth && p.constraint ? ((p.autoSize != null ? hxd.Math.imax(maxColWidth, minColWidth) * p.autoSize : maxInWidth) - pw) / Math.abs(c.scaleX) : -1,
-						isConstraintHeight && p.constraint ? ((p.autoSize != null ? flowFloor(autoHeight * p.autoSize / autoSum) : maxInHeight) - ph) / Math.abs(c.scaleY) : -1
+						isConstraintWidth && p.constraint ? ((p.autoSizeWidth != null ? hxd.Math.imax(maxColWidth, minColWidth) * p.autoSizeWidth : maxInWidth) - pw) / Math.abs(c.scaleX) : -1,
+						isConstraintHeight && p.constraint ? ((p.autoSizeHeight != null ? flowFloor(autoHeight * p.autoSizeHeight / autoSum) : maxInHeight) - ph) / Math.abs(c.scaleY) : -1
 					);
 
 				var b = getSize(c);
@@ -1412,7 +1419,7 @@ class Flow extends Object {
 			var count = 0;
 			forChildren(function(i, p, c) {
 				if(count > 0 && !p.isAbsolute) autoHeight -= verticalSpacing;
-				if(p.autoSize == null) {
+				if(p.autoSizeHeight == null) {
 					calcSize(p, c);
 					if(!p.isAbsolute) {
 						if( p.calculatedWidth > maxColWidth ) maxColWidth = p.calculatedWidth;
@@ -1420,12 +1427,12 @@ class Flow extends Object {
 					}
 				}
 				else
-					autoSum += p.autoSize;
+					autoSum += p.autoSizeHeight;
 				count++;
 			});
 
 			forChildren(function(i, p, c) {
-				if(p.autoSize != null)
+				if(p.autoSizeWidth != null || p.autoSizeHeight != null)
 					calcSize(p, c);
 
 				if(!p.isAbsolute) {
