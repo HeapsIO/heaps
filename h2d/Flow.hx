@@ -216,6 +216,7 @@ class FlowProperties {
 	function set_autoSize(s) {
 		autoSizeWidth = s;
 		autoSizeHeight = s;
+		return s;
 	}
 
 }
