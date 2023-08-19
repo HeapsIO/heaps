@@ -4,20 +4,38 @@ import h3d.impl.Driver;
 import h3d.impl.WebGpuApi;
 import h3d.mat.Pass;
 
+class WebGpuShader {
+	public var inputs : InputNames;
+	public var pipeline : GPURenderPipeline;
+	public function new() {
+	}
+}
+
+class WebGpuFrame {
+	public var colorTex : GPUTexture;
+	public var depthTex : GPUTexture;
+	public var colorView : GPUTextureView;
+	public var depthView : GPUTextureView;
+	public var toDelete : Array<{ function destroy() : Void; }> = [];
+	public function new() {
+	}
+}
+
 class WebGpuDriver extends h3d.impl.Driver {
 
 	var canvas : js.html.CanvasElement;
 	var context : GPUCanvasContext;
 	var device : GPUDevice;
 
-	var colorTex : GPUTexture;
-	var depthTex : GPUTexture;
-	var colorView : GPUTextureView;
-	var depthView : GPUTextureView;
 	var commandList : GPUCommandEncoder;
 	var renderPass : GPURenderPassEncoder;
 	var renderPassDesc : GPURenderPassDescriptor;
 	var needClear : Bool;
+	var currentShader : WebGpuShader;
+	var shaderCache : Map<Int, WebGpuShader> = new Map();
+	var frames : Array<WebGpuFrame> = [];
+	var frame : WebGpuFrame;
+	var frameCount : Int = 0;
 
 	public function new() {
 		inst = this;
@@ -37,7 +55,6 @@ class WebGpuDriver extends h3d.impl.Driver {
 				canvas = @:privateAccess hxd.Window.getInstance().canvas;
 				context = cast canvas.getContext("webgpu");
 				resize(canvas.width, canvas.height);
-				beginFrame();
 				onCreate(false);
 			});
 		});
@@ -58,15 +75,29 @@ class WebGpuDriver extends h3d.impl.Driver {
 			alphaMode : Opaque,
 		});
 
-		colorTex = context.getCurrentTexture();
-		colorView = colorTex.createView();
-		depthTex = device.createTexture({
-			size : { width : width, height : height },
-			dimension : D2,
-			format : Depth24plus_stencil8,
-			usage : (RENDER_ATTACHMENT:GPUTextureUsageFlags) | COPY_SRC,
-		});
-		depthView = depthTex.createView();
+		if( frames != null ) {
+			for( f in frames ) {
+				f.depthTex.destroy();
+				for( t in f.toDelete )
+					t.destroy();
+			}
+		}
+
+		frames = [];
+		for( i in 0...2 ) {
+			var f = new WebGpuFrame();
+			f.depthTex = device.createTexture({
+				size : { width : width, height : height },
+				dimension : D2,
+				format : Depth24plus_stencil8,
+				usage : (RENDER_ATTACHMENT:GPUTextureUsageFlags) | COPY_SRC,
+			});
+			f.depthView = f.depthTex.createView();
+			frames.push(f);
+		}
+
+		frameCount = 0;
+		beginFrame();
 	}
 
 	override function setRenderTarget(tex:Null<h3d.mat.Texture>, layer:Int = 0, mipLevel:Int = 0) {
@@ -74,12 +105,12 @@ class WebGpuDriver extends h3d.impl.Driver {
 		if( tex == null ) {
 			renderPassDesc = {
 				colorAttachments : [{
-					view : colorView,
+					view : frame.colorView,
 					loadOp : Load,
 					storeOp: Store
 				}],
 				depthStencilAttachment: {
-					view : depthView,
+					view : frame.depthView,
 					depthLoadOp: Load,
 					depthStoreOp: Store,
 					stencilLoadOp: Load,
@@ -93,23 +124,35 @@ class WebGpuDriver extends h3d.impl.Driver {
 
 	function beginFrame() {
 		if( device == null ) return;
-		colorTex = context.getCurrentTexture();
-		colorView = colorTex.createView();
+		frame = frames[(frameCount++)%frames.length];
+		frame.colorTex = context.getCurrentTexture();
+		frame.colorView = frame.colorTex.createView();
+		for( t in frame.toDelete )
+			t.destroy();
+		frame.toDelete = [];
 		commandList = device.createCommandEncoder();
 		setRenderTarget(null);
+		currentShader = null;
+	}
+
+	function beginPass() {
+		if( renderPass != null )
+			return;
+		renderPass = commandList.beginRenderPass(renderPassDesc);
+		for( c in renderPassDesc.colorAttachments )
+			c.clearValue = js.Lib.undefined;
+		var depth = renderPassDesc.depthStencilAttachment;
+		if( depth != null ) {
+			depth.depthClearValue = js.Lib.undefined;
+			depth.stencilClearValue = js.Lib.undefined;
+		}
+		needClear = false;
 	}
 
 	function flushPass() {
 		if( needClear ) {
-			renderPass = commandList.beginRenderPass(renderPassDesc);
-			for( c in renderPassDesc.colorAttachments )
-				c.clearValue = js.Lib.undefined;
-			var depth = renderPassDesc.depthStencilAttachment;
-			if( depth != null ) {
-				depth.depthClearValue = js.Lib.undefined;
-				depth.stencilClearValue = js.Lib.undefined;
-			}
-			needClear = false;
+			if( renderPass != null ) throw "assert";
+			beginPass();
 		}
 		if( renderPass != null ) {
 			renderPass.end();
@@ -123,6 +166,7 @@ class WebGpuDriver extends h3d.impl.Driver {
 			device.queue.submit([commandList.finish()]);
 			commandList = null;
 		}
+		frame = frame == frames[0] ? frames[1] : frames[0];
 	}
 
 	override function begin(frame:Int) {
@@ -161,11 +205,115 @@ class WebGpuDriver extends h3d.impl.Driver {
 	}
 
 	override function allocVertexes(m:ManagedBuffer):VertexBuffer {
-		return cast {};
+		return allocBuffer(VERTEX,m.size,m.stride << 2);
 	}
 
 	override function allocIndexes(count:Int, is32:Bool):IndexBuffer {
-		return cast {};
+		return allocBuffer(INDEX,count,is32?2:4);
+	}
+
+	function allocBuffer(type:GPUBufferUsage,count,stride) {
+		var buf = device.createBuffer({
+			size : count * stride,
+			usage : (type:GPUBufferUsageFlags) | COPY_DST,
+			mappedAtCreation: false,
+		});
+		return { buf : buf, count : count, stride : stride };
+	}
+
+	override function uploadVertexBytes(v:VertexBuffer, startVertex:Int, vertexCount:Int, buf:haxe.io.Bytes, bufPos:Int) {
+		uploadBuffer(v,startVertex,vertexCount,buf,bufPos);
+	}
+
+	override function uploadIndexBytes(i:IndexBuffer, startIndice:Int, indiceCount:Int, buf:haxe.io.Bytes, bufPos:Int) {
+		uploadBuffer(i,startIndice,indiceCount,buf,bufPos);
+	}
+
+	function uploadBuffer(b:VertexBuffer,start:Int,count:Int,buf:haxe.io.Bytes, bufPos:Int) {
+		var size = count * b.stride;
+		var tmpBuf = device.createBuffer({
+			size : size,
+			usage : (MAP_WRITE:GPUBufferUsageFlags) | COPY_SRC,
+			mappedAtCreation : true,
+		});
+		new js.lib.Uint8Array(tmpBuf.getMappedRange()).set(cast buf.getData(), bufPos);
+		tmpBuf.unmap();
+		// copy
+		commandList.copyBufferToBuffer(tmpBuf,0,b.buf,start*b.stride,size);
+		// delete later
+		frame.toDelete.push(tmpBuf);
+	}
+
+
+	function compile( shader : hxsl.RuntimeShader.RuntimeShaderData ) {
+		var comp = new hxsl.WgslOut();
+		var source = comp.run(shader.data);
+		trace(source);
+		return device.createShaderModule({ code : source });
+	}
+
+	function makeShader( shader : hxsl.RuntimeShader ) {
+		var sh = new WebGpuShader();
+		var attribNames = [];
+		for( v in shader.vertex.data.vars ) {
+			if( v.kind != Input ) continue;
+			attribNames.push(v.name);
+		}
+		sh.inputs = InputNames.get(attribNames);
+
+		var vertex = compile(shader.vertex);
+		var fragment = compile(shader.fragment);
+
+		var layout = device.createPipelineLayout({ bindGroupLayouts: [] });
+		var pipeline = device.createRenderPipeline({
+			layout : layout,
+			vertex : { module : vertex, entryPoint : "main", buffers : [
+				{
+					attributes: [{ shaderLocation : 0, offset : 0, format : Float32x3 }],
+					arrayStride: 4 * 3,
+					stepMode: GPUVertexStepMode.Vertex
+				},
+				{
+					attributes: [{ shaderLocation : 1, offset : 0, format : Float32x3 }],
+					arrayStride: 4 * 3, // sizeof(float) * 3
+					stepMode: GPUVertexStepMode.Vertex
+				}
+			]},
+			fragment : { module : fragment, entryPoint : "main", targets : [{ format : Bgra8unorm }] },
+			primitive : { frontFace : CW, cullMode : None, topology : Triangle_list },
+			depthStencil : {
+				depthWriteEnabled: true,
+				depthCompare: Less,
+				format: Depth24plus_stencil8
+			}
+		});
+
+		sh.pipeline = pipeline;
+
+		return sh;
+	}
+
+	override function selectShader( shader : hxsl.RuntimeShader ) {
+		var sh = shaderCache.get(shader.id);
+		if( sh == null ) {
+			sh = makeShader(shader);
+			shaderCache.set(shader.id, sh);
+		}
+		if( sh == currentShader )
+			return false;
+		currentShader = sh;
+		beginPass();
+		renderPass.setPipeline(sh.pipeline);
+		return true;
+	}
+
+	override function getShaderInputNames():InputNames {
+		return currentShader.inputs;
+	}
+
+	override function draw(ibuf:IndexBuffer, startIndex:Int, ntriangles:Int) {
+		renderPass.setIndexBuffer(ibuf.buf, ibuf.stride==2?Uint16:Uint32, startIndex*ibuf.stride);
+		renderPass.draw(ntriangles*3);
 	}
 
 	static var inst : WebGpuDriver;

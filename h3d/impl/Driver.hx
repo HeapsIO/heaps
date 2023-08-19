@@ -12,6 +12,12 @@ typedef VertexBuffer = Stage3dDriver.VertexWrapper;
 typedef Texture = flash.display3D.textures.TextureBase;
 typedef DepthBuffer = {};
 typedef Query = {};
+#elseif (js && webgpu)
+typedef IndexBuffer = { buf : WebGpuApi.GPUBuffer, stride : Int };
+typedef VertexBuffer = { buf : WebGpuApi.GPUBuffer, stride : Int };
+typedef Texture = {};
+typedef DepthBuffer = {};
+typedef Query = {};
 #elseif js
 typedef IndexBuffer = { b : js.html.webgl.Buffer, is32 : Bool };
 typedef VertexBuffer = { b : js.html.webgl.Buffer, stride : Int #if multidriver, driver : Driver #end };

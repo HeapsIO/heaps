@@ -917,8 +917,8 @@ enum abstract GPUIndexFormat(String) {
 }
 
 enum abstract GPUFrontFace(String) {
-	var Ccw = "ccw";
-	var Cw = "cw";
+	var CCW = "ccw";
+	var CW = "cw";
 }
 
 enum abstract GPUCullMode(String) {
