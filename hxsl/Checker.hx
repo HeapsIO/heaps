@@ -826,6 +826,7 @@ class Checker {
 					default: error("Sampler should be on sampler type or sampler array", pos);
 					}
 				case Ignore, Doc(_):
+				case SgInput, SgOutput:
 				}
 		}
 		if( tv.type != null )

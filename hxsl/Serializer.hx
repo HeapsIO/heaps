@@ -187,6 +187,7 @@ class Serializer {
 				case Doc(s): writeString(s);
 				case Borrow(s): writeString(s);
 				case Sampler(s): writeString(s);
+				case SgInput, SgOutput:
 				}
 			}
 		}
@@ -403,6 +404,8 @@ class Serializer {
 				case 10: Doc(readString());
 				case 11: Borrow(readString());
 				case 12: Sampler(readString());
+				case 13: SgInput;
+				case 14: SgOutput;
 				default: throw "assert";
 				}
 				v.qualifiers.push(q);

@@ -64,6 +64,8 @@ class Printer {
 				case Doc(s): "doc(\"" + StringTools.replace(s, '"', '\\"') + "\")";
 				case Borrow(s): "borrow(" + s + ")";
 				case Sampler(s): "sampler("+ s + ")";
+				case SgInput: "sginput";
+				case SgOutput: "sgoutput";
 				}) + " ");
 		}
 		if( v.kind != defKind )

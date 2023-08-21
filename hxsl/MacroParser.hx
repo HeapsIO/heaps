@@ -78,6 +78,10 @@ class MacroParser {
 			v.qualifiers.push(Ignore);
 		case "perInstance":
 			v.qualifiers.push(PerInstance(1));
+		case "sginput":
+			v.qualifiers.push(SgInput);
+		case "sgoutput":
+				v.qualifiers.push(SgOutput);
 		default:
 			error("Unsupported qualifier " + m.name, m.pos);
 		}
