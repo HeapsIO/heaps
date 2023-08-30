@@ -15,6 +15,10 @@ class ShaderCache {
 		sourceFile = file + ".source";
 	}
 
+	public function disableSave() {
+		outputFile = null;
+	}
+
 	function load() {
 		data = new Map();
 		try loadFile(file) catch( e : Dynamic ) {};
