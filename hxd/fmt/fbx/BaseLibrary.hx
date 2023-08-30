@@ -1371,7 +1371,7 @@ class BaseLibrary {
 	}
 
 	function round(v:Float) {
-		if( v != v ) throw "NaN found";
+		if( v != v ) throw "NaN found (could be multiple skin mesh, currently not supported)";
 		return highPrecision ? v : std.Math.fround(v * 131072) / 131072;
 	}
 
