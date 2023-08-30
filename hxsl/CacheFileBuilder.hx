@@ -68,6 +68,8 @@ class CacheFileBuilder {
 	var glout : GlslOut;
 	var hasCompiled : Bool;
 	var binariesPath : String;
+	var shaderCache : h3d.impl.ShaderCache;
+	var shaderCacheConfig : String = "";
 
 	public function new() {
 	}
@@ -81,6 +83,8 @@ class CacheFileBuilder {
 			@:privateAccess cache.save();
 			if( hasCompiled ) Sys.println("");
 		}
+		if( shaderCache != null )
+			@:privateAccess shaderCache.save();
 	}
 
 	function binaryPayload( data : haxe.io.Bytes ) {
@@ -90,6 +94,19 @@ class CacheFileBuilder {
 	public function compileShader( r : RuntimeShader, rd : RuntimeShader.RuntimeShaderData ) : String {
 		hasCompiled = true;
 		Sys.print(".");
+		var s = generateShader(r, rd);
+		if( s == null )
+			return null;
+		if( s.bytes == null )
+			return s.code;
+		if( s.code == null )
+			return binaryPayload(s.bytes);
+		if( shaderCache != null )
+			shaderCache.saveCompiledShader(s.code, s.bytes, shaderCacheConfig);
+		return s.code + binaryPayload(s.bytes);
+	}
+
+	function generateShader( r : RuntimeShader, rd : RuntimeShader.RuntimeShaderData ) : { code : String, bytes : haxe.io.Bytes } {
 		switch( platform ) {
 		case DirectX:
 			#if hldx
@@ -102,7 +119,7 @@ class CacheFileBuilder {
 			var out = new HlslOut();
 			var code = out.run(rd.data);
 			var bytes = dx.Driver.compileShader(code, "", "main", (rd.vertex?"vs_":"ps_") + dxShaderVersion, OptimizationLevel3);
-			return code + binaryPayload(bytes);
+			return { code : code, bytes : bytes };
 			#else
 			throw "DirectX compilation requires -lib hldx";
 			#end
@@ -112,7 +129,7 @@ class CacheFileBuilder {
 				glout = new GlslOut();
 				glout.version = 150;
 			}
-			return glout.run(rd.data);
+			return { code : glout.run(rd.data), bytes : null };
 		case PS4:
 			#if hlps
 			var out = new ps.gnm.PsslOut();
@@ -131,7 +148,7 @@ class CacheFileBuilder {
 			var data = sys.io.File.getBytes(tmpOut);
 			sys.FileSystem.deleteFile(tmpSrc);
 			sys.FileSystem.deleteFile(tmpOut);
-			return code + binaryPayload(data);
+			return { code : code, bytes : data };
 			#else
 			throw "PS4 compilation requires -lib hlps";
 			#end
@@ -152,20 +169,19 @@ class CacheFileBuilder {
 			var data = sys.io.File.getBytes(tmpOut);
 			sys.FileSystem.deleteFile(tmpSrc);
 			sys.FileSystem.deleteFile(tmpOut);
-			return code + binaryPayload(data);
+			return { code : code, bytes : data };
 		case NX:
 			if( rd.vertex )
 				glout = new hxsl.NXGlslOut();
-			return glout.run(rd.data);
+			return { code : glout.run(rd.data), bytes : null };
 		case NXBinaries:
 			var path = binariesPath + '/${r.signature}.glslc';
-			if ( !sys.FileSystem.exists(path) ) {
+			if ( !sys.FileSystem.exists(path) )
 				return null;
-			}
 			if ( rd.vertex )
-				return "empty"; // binary is in fragment.code
+				return { code : "empty", bytes : null }; // binary is in fragment.code
 			var data = sys.io.File.getBytes(path);
-			return binaryPayload(data);
+			return { code : null, bytes : data };
 		}
 		throw "Missing implementation for " + platform;
 	}
@@ -210,11 +226,19 @@ class CacheFileBuilder {
 			case "-nxbinary":
 				builder.binariesPath = getArg();
 				builder.platforms.push(NXBinaries);
+			case "-build-cache":
+				builder.shaderCache = new h3d.impl.ShaderCache(getArg());
+			case "-build-cache-source":
+				builder.shaderCache.keepSource = true;
+			case "-build-cache-config":
+				builder.shaderCacheConfig = getArg();
 			default:
 				throw "Unknown parameter " + f;
 			}
 		}
-		builder.run();		
+		if( builder.platforms.length == 0 )
+			throw "No platform selected";
+		builder.run();
 		Sys.exit(0);
 	}
 

@@ -4,8 +4,8 @@ class ShaderCache {
 
 	var file : String;
 	var outputFile : String;
-	var data : Map<String, haxe.io.Bytes>;
-	var sources : Map<String, String>;
+	var data : Map<String, haxe.io.Bytes> = [];
+	var sources : Map<String, String> = [];
 	var sourceFile : String;
 	public var keepSource : Bool;
 
