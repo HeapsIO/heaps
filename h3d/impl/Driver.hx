@@ -119,7 +119,15 @@ enum RenderFlag {
 
 class Driver {
 
+	static var SHADER_CACHE : h3d.impl.ShaderCache;
+	var shaderCache = SHADER_CACHE;
+
+	public static function setShaderCache( cache : h3d.impl.ShaderCache ) {
+		SHADER_CACHE = cache;
+	}
+
 	public var logEnable : Bool;
+
 
 	public function hasFeature( f : Feature ) {
 		return false;
