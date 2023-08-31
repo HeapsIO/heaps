@@ -4,7 +4,7 @@ class ShaderCache {
 
 	var file : String;
 	var outputFile : String;
-	var data : Map<String, haxe.io.Bytes> = [];
+	var data : Map<String, haxe.io.Bytes> = null;
 	var sources : Map<String, String> = [];
 	var sourceFile : String;
 	public var keepSource : Bool;
@@ -13,7 +13,6 @@ class ShaderCache {
 		this.file = file;
 		this.outputFile = outputFile ?? file;
 		sourceFile = file + ".source";
-		load();
 	}
 
 	public function disableSave() {
