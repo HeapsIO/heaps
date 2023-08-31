@@ -13,6 +13,7 @@ class ShaderCache {
 		this.file = file;
 		this.outputFile = outputFile ?? file;
 		sourceFile = file + ".source";
+		load();
 	}
 
 	public function disableSave() {
