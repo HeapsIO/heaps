@@ -21,6 +21,7 @@ class OptimizedCollider extends Collider {
 
 	public var a : Collider;
 	public var b : Collider;
+	public var checkInside : Bool;
 
 	public function new(a, b) {
 		this.a = a;
@@ -28,8 +29,12 @@ class OptimizedCollider extends Collider {
 	}
 
 	public function rayIntersection( r : Ray, bestMatch : Bool ) : Float {
-		if( a.rayIntersection(r, bestMatch) < 0 )
-			return -1;
+		if( a.rayIntersection(r, bestMatch) < 0 ) {
+			if( !checkInside )
+				return -1;
+			if( !a.contains(r.getPoint(0)) )
+				return -1;
+		}
 		return b.rayIntersection(r, bestMatch);
 	}
 
