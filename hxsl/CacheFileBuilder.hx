@@ -66,6 +66,7 @@ class CacheFileBuilder {
 	public var dxInitDone = false;
 	public var dxShaderVersion = "5_0";
 	var glout : GlslOut;
+	var vertexOut : String;
 	var hasCompiled : Bool;
 	var binariesPath : String;
 	var shaderCache : h3d.impl.ShaderCache;
@@ -175,13 +176,18 @@ class CacheFileBuilder {
 				glout = new hxsl.NXGlslOut();
 			return { code : glout.run(rd.data), bytes : null };
 		case NXBinaries:
+			if( rd.vertex )
+				glout = new hxsl.NXGlslOut();
+			if ( rd.vertex ) {
+				vertexOut = glout.run(rd.data);
+				return { code : vertexOut, bytes : null }; // binary is in fragment.code
+			}
 			var path = binariesPath + '/${r.signature}.glslc';
-			if ( !sys.FileSystem.exists(path) )
+			if ( !sys.FileSystem.exists(path) || vertexOut == null )
 				return null;
-			if ( rd.vertex )
-				return { code : "empty", bytes : null }; // binary is in fragment.code
-			var data = sys.io.File.getBytes(path);
-			return { code : null, bytes : data };
+			var code = vertexOut + glout.run(rd.data);
+			vertexOut = null;
+			return { code : code, bytes : sys.io.File.getBytes(path) };
 		}
 		throw "Missing implementation for " + platform;
 	}
