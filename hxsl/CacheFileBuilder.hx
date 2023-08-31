@@ -234,6 +234,7 @@ class CacheFileBuilder {
 				builder.platforms.push(NXBinaries);
 			case "-build-cache":
 				builder.shaderCache = new h3d.impl.ShaderCache(getArg());
+				builder.shaderCache.initEmpty();
 			case "-build-cache-source":
 				builder.shaderCache.keepSource = true;
 			case "-build-cache-config":
