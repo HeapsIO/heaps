@@ -68,12 +68,16 @@ class Buffer {
 			throw "Invalid vertices count";
 		if( format.hasLowPrecision )
 			throw "Can't upload floats on low precision buffer";
+		if( vertices == 0 )
+			return;
 		mem.driver.uploadBufferData(this, startVertice, vertices, buf, bufPos);
 	}
 
 	public function uploadBytes( data : haxe.io.Bytes, dataPos : Int, vertices : Int ) {
 		if( vertices < 0 || vertices > this.vertices )
 			throw "Invalid vertices count";
+		if( vertices == 0 )
+			return;
 		mem.driver.uploadBufferBytes(this, 0, vertices, data, dataPos);
 	}
 
