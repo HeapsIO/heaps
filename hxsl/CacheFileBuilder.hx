@@ -27,7 +27,13 @@ private class CustomCacheFile extends CacheFile {
 	override function addSource(r:RuntimeShader) {
 		r.vertex.code = build.compileShader(r, r.vertex);
 		r.fragment.code = build.compileShader(r, r.fragment);
-		super.addSource(r);
+		if ( build.platform == NXBinaries ) {
+			// NXBinaries requires both vertex and fragment shader to work, avoid null access and skip the shader instead.
+			try {
+				super.addSource(r);
+			} catch ( e : Dynamic ) {}
+		} else
+			super.addSource(r);
 	}
 
 	override function resolveShader(name:String):hxsl.Shader {
