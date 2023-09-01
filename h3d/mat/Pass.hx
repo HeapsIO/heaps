@@ -214,6 +214,8 @@ class Pass {
 		var sl = shaders, prev = null;
 		while( sl != null ) {
 			if( sl.s == s ) {
+				if ( selfShadersCache == sl )
+					selfShadersCache = selfShadersCache.next;
 				if( prev == null )
 					shaders = sl.next;
 				else
@@ -227,6 +229,8 @@ class Pass {
 		prev = null;
 		while ( sl != null ) {
 			if ( sl.s == s ) {
+				if ( selfShadersCache == sl )
+					selfShadersCache = selfShadersCache.next;
 				if ( prev == null )
 					selfShaders = sl.next;
 				else
@@ -240,9 +244,12 @@ class Pass {
 	}
 
 	public function removeShaders< T:hxsl.Shader >(t:Class<T>) {
-		var sl = shaders, prev = null;
+		var sl = shaders;
+		var prev = null;
 		while( sl != null ) {
 			if( hxd.impl.Api.isOfType(sl.s, t) ) {
+				if ( selfShadersCache == sl )
+					selfShadersCache = selfShadersCache.next;
 				if( prev == null )
 					shaders = sl.next;
 				else
@@ -256,6 +263,8 @@ class Pass {
 		prev = null;
 		while( sl != null ) {
 			if( hxd.impl.Api.isOfType(sl.s, t) ) {
+				if ( selfShadersCache == sl )
+					selfShadersCache = selfShadersCache.next;
 				if( prev == null )
 					selfShaders = sl.next;
 				else
@@ -298,6 +307,18 @@ class Pass {
 
 	public inline function getShaders() {
 		return shaders.iterateTo(parentShaders);
+	}
+
+	function checkInfiniteLoop() {
+		var shaderList = [];
+		var s = selfShaders;
+		while ( s != null ) {
+			for ( already in shaderList )
+				if ( already == s )
+					throw "infinite loop";
+			shaderList.push(s);
+			s = s.next;
+		}
 	}
 
 	function selfShadersRec(rebuild : Bool) {
