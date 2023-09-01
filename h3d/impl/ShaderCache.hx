@@ -18,7 +18,7 @@ class ShaderCache {
 	public function disableSave() {
 		outputFile = null;
 	}
-	
+
 	public function initEmpty() {
 		data = [];
 		sources = [];
@@ -32,6 +32,9 @@ class ShaderCache {
 	}
 
 	function loadFile( file : String ) {
+		#if !sys
+		throw "Cannot load shader cache with this platform";
+		#else
 		if( !sys.FileSystem.exists(file) )
 			return;
 		var cache = new haxe.io.BytesInput(sys.io.File.getBytes(file));
@@ -46,9 +49,13 @@ class ShaderCache {
 			data.set(key,haxe.crypto.Base64.decode(str));
 			cache.readByte(); // newline
 		}
+		#end
 	}
 
 	function loadSources() {
+		#if !sys
+		throw "Cannot load shader cache with this platform";
+		#else
 		sources = new Map();
 		if( !sys.FileSystem.exists(sourceFile) )
 			return;
@@ -65,6 +72,7 @@ class ShaderCache {
 			cache.readByte(); // newline
 			cache.readByte(); // newline
 		}
+		#end
 	}
 
 	public function resolveShaderBinary( source : String, ?configurationKey = "" ) {
@@ -99,7 +107,9 @@ class ShaderCache {
 			out.writeString(b64);
 			out.writeByte('\n'.code);
 		}
+		#if sys
 		try sys.io.File.saveBytes(outputFile, out.getBytes()) catch( e : Dynamic ) {};
+		#end
 	}
 
 	function saveSources() {
@@ -115,6 +125,8 @@ class ShaderCache {
 			out.writeByte('\n'.code);
 			out.writeByte('\n'.code);
 		}
+		#if sys
 		try sys.io.File.saveBytes(sourceFile, out.getBytes()) catch( e : Dynamic ) {};
+		#end
 	}
 }
