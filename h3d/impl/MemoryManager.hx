@@ -125,7 +125,6 @@ class MemoryManager {
 			}
 		}
 		usedMemory += mem;
-		b.mem = this;
 		buffers.push(b);
 	}
 
@@ -133,12 +132,9 @@ class MemoryManager {
 		if( b.vbuf == null ) return;
 		driver.disposeBuffer(b);
 		b.vbuf = null;
-		b.mem = null;
-		#if multidriver
-		b.driver = null;
-		#end
-		usedMemory -= b.getMemSize();
-		buffers.remove(b);
+		// in case it was allocated with a previous memory manager
+		if( buffers.remove(b) )
+			usedMemory -= b.getMemSize();
 	}
 
 	// ------------------------------------- INDEXES ------------------------------------------

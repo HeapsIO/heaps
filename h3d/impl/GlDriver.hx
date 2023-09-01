@@ -1010,7 +1010,8 @@ class GlDriver extends Driver {
 		gl.bufferData(GL.ARRAY_BUFFER, tmp, b.flags.has(Dynamic) ? GL.DYNAMIC_DRAW : GL.STATIC_DRAW);
 		#end
 		#if multidriver
-		@:privateAccess b.driver = this;
+		@:privateAccess if( b.engine.driver != this )
+			throw "Invalid buffer context";
 		#end
 		var outOfMem = outOfMemoryCheck && gl.getError() == GL.OUT_OF_MEMORY;
 		gl.bindBuffer(GL.ARRAY_BUFFER, null);
@@ -1269,7 +1270,7 @@ class GlDriver extends Driver {
 		if( curShader == null )
 			throw "No shader selected";
 		#if multidriver
-		if( @:privateAccess b.driver != this )
+		if( @:privateAccess b.engine.driver != this )
 			throw "Invalid buffer context";
 		#end
 		gl.bindBuffer(GL.ARRAY_BUFFER, b.vbuf);
