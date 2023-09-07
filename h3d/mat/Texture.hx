@@ -55,7 +55,7 @@ class Texture {
 		When the texture is used as render target, tells which depth buffer will be used.
 		If set to null, depth testing is disabled.
 	**/
-	public var depthBuffer : DepthBuffer;
+	public var depthBuffer : Texture;
 
 	var _lastFrame:Int;
 
@@ -85,10 +85,6 @@ class Texture {
 	}
 
 	public function new(w, h, ?flags : Array<TextureFlags>, ?format : TextureFormat ) {
-		#if !noEngine
-		var engine = h3d.Engine.getCurrent();
-		this.mem = engine.mem;
-		#end
 		if( format == null ) format = nativeFormat;
 		this.id = ++UID;
 		this.format = format;
@@ -96,6 +92,13 @@ class Texture {
 		if( flags != null )
 			for( f in flags )
 				this.flags.set(f);
+
+		if ( !isDepth() ) {
+			#if !noEngine
+			var engine = h3d.Engine.getCurrent();
+			this.mem = engine.mem;
+			#end
+		}
 
 		var tw = 1, th = 1;
 		while( tw < w ) tw <<= 1;
@@ -115,7 +118,7 @@ class Texture {
 		#if track_alloc
 		this.allocPos = new hxd.impl.AllocPos();
 		#end
-		if( !this.flags.has(NoAlloc) ) alloc();
+		if( !this.flags.has(NoAlloc) && (!isDepth() || width > 0) ) alloc();
 	}
 
 	function get_layerCount() {
@@ -123,7 +126,9 @@ class Texture {
 	}
 
 	public function alloc() {
-		if( t == null )
+		if ( isDepth() )
+			h3d.Engine.getCurrent().mem.allocDepth(this);
+		else if( t == null )
 			mem.allocTexture(this);
 	}
 
@@ -331,8 +336,12 @@ class Texture {
 	}
 
 	public function dispose() {
-		if( t != null )
-			mem.deleteTexture(this);
+		if( t != null ) {
+			if ( isDepth() )
+				h3d.Engine.getCurrent().mem.deleteTexture(this);
+			else
+				mem.deleteTexture(this);
+		}
 	}
 
 	/**
@@ -550,4 +559,24 @@ class Texture {
 		b.dispose();
 	}
 
+	public function hasStencil() {
+		return switch( format ) {
+		case Depth24Stencil8: true;
+		default: false;
+		}
+	}
+
+	public function isDepth() {
+		return switch( format ) {
+		case Depth16, Depth24, Depth24Stencil8: true;
+		default: false;
+		}
+	}
+
+	/**
+		This will return the default depth buffer, which is automatically resized to the screen size.
+	**/
+	public static function getDefaultDepth() {
+		return h3d.Engine.getCurrent().driver.getDefaultDepthBuffer();
+	}
 }

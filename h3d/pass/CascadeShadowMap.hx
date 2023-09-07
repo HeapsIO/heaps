@@ -176,7 +176,7 @@ class CascadeShadowMap extends DirShadowMap {
 			var texture = ctx.textures.allocTarget("cascadeShadowMap", size, size, false, format);
 			if( customDepth && (depth == null || depth.width != size || depth.height != size || depth.isDisposed()) ) {
 				if( depth != null ) depth.dispose();
-				depth = new h3d.mat.DepthBuffer(size, size);
+				depth = new h3d.mat.Texture(size, size, Depth24Stencil8);
 			}
 			texture.depthBuffer = depth;
 			textures.push(texture);

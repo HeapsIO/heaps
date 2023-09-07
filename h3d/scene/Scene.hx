@@ -460,7 +460,7 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 		}
 	}
 
-	var prevDB : h3d.mat.DepthBuffer;
+	var prevDB : h3d.mat.Texture;
 	var prevEngine = null;
 	/**
 		Temporarily overrides the output render target. This is useful for picture-in-picture rendering,

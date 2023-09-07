@@ -278,9 +278,6 @@ class TextureData extends ResourceData {
 	}
 }
 
-class DepthBufferData extends ResourceData {
-}
-
 class QueryData {
 	public var heap : Int;
 	public var offset : Int;
@@ -330,7 +327,7 @@ class DX12Driver extends h3d.impl.Driver {
 
 	var tmp : TempObjects;
 	var currentRenderTargets : Array<h3d.mat.Texture> = [];
-	var defaultDepth : h3d.mat.DepthBuffer;
+	var defaultDepth : h3d.mat.Texture;
 	var depthEnabled = true;
 	var curStencilRef : Int = -1;
 	var rtWidth : Int;
@@ -384,7 +381,7 @@ class DX12Driver extends h3d.impl.Driver {
 		depthStenciViews = new ManagedHeap(DSV, INITIAL_RT_COUNT);
 		renderTargetViews.onFree = function(prev) frame.toRelease.push(prev);
 		depthStenciViews.onFree = function(prev) frame.toRelease.push(prev);
-		defaultDepth = new h3d.mat.DepthBuffer(0,0, Depth24Stencil8);
+		defaultDepth = new h3d.mat.Texture(0,0, Depth24Stencil8);
 
 		var desc = new CommandSignatureDesc();
 		desc.byteStride = 5 * 4;
@@ -602,14 +599,14 @@ class DX12Driver extends h3d.impl.Driver {
 				throw "Depth size mismatch";
 		}
 		var depthView = depthStenciViews.alloc(1);
-		Driver.createDepthStencilView(tex == null || tex.depthBuffer == defaultDepth ? frame.depthBuffer : @:privateAccess tex.depthBuffer.b.res, null, depthView);
+		Driver.createDepthStencilView(tex == null || tex.depthBuffer == defaultDepth ? frame.depthBuffer : @:privateAccess tex.depthBuffer.t.res, null, depthView);
 		var depths = tmp.depthStencils;
 		depths[0] = depthView;
 		depthEnabled = true;
 		return depths;
 	}
 
-	override function getDefaultDepthBuffer():h3d.mat.DepthBuffer {
+	override function getDefaultDepthBuffer():h3d.mat.Texture {
 		return defaultDepth;
 	}
 
@@ -1222,8 +1219,8 @@ class DX12Driver extends h3d.impl.Driver {
 		return td;
 	}
 
-	override function allocDepthBuffer(b:h3d.mat.DepthBuffer):DepthBuffer {
-		var td = new DepthBufferData();
+	override function allocDepthBuffer(b:h3d.mat.Texture):Texture {
+		var td = new TextureData();
 		var desc = new ResourceDesc();
 		var flags = new haxe.EnumFlags();
 		desc.dimension = TEXTURE2D;
@@ -1249,8 +1246,8 @@ class DX12Driver extends h3d.impl.Driver {
 		t.t = null;
 	}
 
-	override function disposeDepthBuffer(b:h3d.mat.DepthBuffer) {
-		disposeResource(@:privateAccess b.b);
+	override function disposeDepthBuffer(t:h3d.mat.Texture) {
+		disposeResource(@:privateAccess t.t);
 	}
 
 	override function uploadTextureBitmap(t:h3d.mat.Texture, bmp:hxd.BitmapData, mipLevel:Int, side:Int) {

@@ -3,7 +3,7 @@ package h3d.pass;
 class DirShadowMap extends Shadows {
 
 	var customDepth : Bool;
-	var depth : h3d.mat.DepthBuffer;
+	var depth : h3d.mat.Texture;
 	var dshader : h3d.shader.DirShadow;
 	var border : Border;
 	var mergePass = new h3d.pass.ScreenFx(new h3d.shader.MinMaxShader());
@@ -33,7 +33,7 @@ class DirShadowMap extends Shadows {
 		shader = dshader = new h3d.shader.DirShadow();
 		border = new Border(size, size);
 		customDepth = h3d.Engine.getCurrent().driver.hasFeature(AllocDepthBuffer);
-		if( !customDepth ) depth = h3d.mat.DepthBuffer.getDefault();
+		if( !customDepth ) depth = h3d.mat.Texture.getDefaultDepth();
 	}
 
 	override function set_mode(m:Shadows.RenderMode) {
@@ -335,7 +335,8 @@ class DirShadowMap extends Shadows {
 		var texture = ctx.textures.allocTarget("dirShadowMap", size, size, false, format);
 		if( customDepth && (depth == null || depth.width != size || depth.height != size || depth.isDisposed()) ) {
 			if( depth != null ) depth.dispose();
-			depth = new h3d.mat.DepthBuffer(size, size);
+			depth = new h3d.mat.Texture(size, size, Depth24Stencil8);
+			depth.name = "dirShadowMapDepth";
 		}
 		texture.depthBuffer = depth;
 

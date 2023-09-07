@@ -12,7 +12,7 @@ class MemoryManager {
 	var buffers : Array<Buffer>;
 	var indexes : Array<Indexes>;
 	var textures : Array<h3d.mat.Texture>;
-	var depths : Array<h3d.mat.DepthBuffer>;
+	var depths : Array<h3d.mat.Texture>;
 
 	var triIndexes16 : Indexes;
 	var quadIndexes16 : Indexes;
@@ -210,12 +210,12 @@ class MemoryManager {
 		texMemory += memSize(t);
 	}
 
-	@:allow(h3d.mat.DepthBuffer.alloc)
-	function allocDepth( b : h3d.mat.DepthBuffer ) {
+	@:allow(h3d.mat.Texture.alloc)
+	function allocDepth( b : h3d.mat.Texture ) {
 		while( true ) {
 			var free = cleanTextures(false);
-			b.b = driver.allocDepthBuffer(b);
-			if( b.b != null ) break;
+			b.t = driver.allocDepthBuffer(b);
+			if( b.t != null ) break;
 
 			if( driver.isDisposed() ) return;
 			while( cleanTextures(false) ) {} // clean all old textures
@@ -226,8 +226,8 @@ class MemoryManager {
 		texMemory += b.width * b.height * 4;
 	}
 
-	@:allow(h3d.mat.DepthBuffer.dispose)
-	function deleteDepth( b : h3d.mat.DepthBuffer ) {
+	@:allow(h3d.mat.Texture.dispose)
+	function deleteDepth( b : h3d.mat.Texture ) {
 		if( !depths.remove(b) ) return;
 		driver.disposeDepthBuffer(b);
 		texMemory -= b.width * b.height * 4;

@@ -3,7 +3,7 @@ package h3d.pass;
 class SpotShadowMap extends Shadows {
 
 	var customDepth : Bool;
-	var depth : h3d.mat.DepthBuffer;
+	var depth : h3d.mat.Texture;
 	var sshader : h3d.shader.SpotShadow;
 	var border : Border;
 	var mergePass = new h3d.pass.ScreenFx(new h3d.shader.MinMaxShader());
@@ -17,7 +17,7 @@ class SpotShadowMap extends Shadows {
 		shader = sshader = new h3d.shader.SpotShadow();
 		border = new Border(size, size);
 		customDepth = h3d.Engine.getCurrent().driver.hasFeature(AllocDepthBuffer);
-		if( !customDepth ) depth = h3d.mat.DepthBuffer.getDefault();
+		if( !customDepth ) depth = h3d.mat.Texture.getDefaultDepth();
 	}
 
 	override function set_mode(m:Shadows.RenderMode) {
@@ -135,7 +135,7 @@ class SpotShadowMap extends Shadows {
 		var texture = ctx.computingStatic ? createStaticTexture() : ctx.textures.allocTarget("spotShadowMap", size, size, false, format);
 		if( customDepth && (depth == null || depth.width != texture.width || depth.height != texture.height || depth.isDisposed()) ) {
 			if( depth != null ) depth.dispose();
-			depth = new h3d.mat.DepthBuffer(texture.width, texture.height);
+			depth = new h3d.mat.Texture(texture.width, texture.height, Depth24Stencil8);
 		}
 		texture.depthBuffer = depth;
 

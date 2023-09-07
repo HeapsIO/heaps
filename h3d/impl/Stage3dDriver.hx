@@ -80,7 +80,7 @@ class Stage3dDriver extends Driver {
 	var isStandardMode : Bool;
 	var flashVersion : Float;
 	var tdisposed : Texture;
-	var defaultDepth : h3d.mat.DepthBuffer;
+	var defaultDepth : h3d.mat.Texture;
 	var curColorMask = -1;
 
 	@:allow(h3d.impl.VertexWrapper)
@@ -97,7 +97,7 @@ class Stage3dDriver extends Driver {
 		curSamplerBits = [];
 		curMultiBuffer = [];
 		defStencil = new Stencil();
-		defaultDepth = new h3d.mat.DepthBuffer( -1, -1);
+		defaultDepth = new h3d.mat.Texture( -1, -1, Depth24Stencil8);
 	}
 
 	override function logImpl( str : String ) {
@@ -786,7 +786,7 @@ class Stage3dDriver extends Driver {
 		}
 	}
 
-	override function allocDepthBuffer(b:h3d.mat.DepthBuffer):DepthBuffer {
+	override function allocDepthBuffer(b:h3d.mat.Texture):DepthBuffer {
 		throw "You can't allocate custom depth buffer on this platform.";
 	}
 

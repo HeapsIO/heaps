@@ -12,7 +12,7 @@ enum CubeFaceFlag {
 class PointShadowMap extends Shadows {
 
 	var customDepth : Bool;
-	var depth : h3d.mat.DepthBuffer;
+	var depth : h3d.mat.Texture;
 	var pshader : h3d.shader.PointShadow;
 	var mergePass = new h3d.pass.ScreenFx(new h3d.shader.MinMaxShader.CubeMinMaxShader());
 	public var faceMask(default, null) : haxe.EnumFlags<CubeFaceFlag>;
@@ -31,7 +31,7 @@ class PointShadowMap extends Shadows {
 		lightCamera.fovY = 90;
 		shader = pshader = new h3d.shader.PointShadow();
 		customDepth = h3d.Engine.getCurrent().driver.hasFeature(AllocDepthBuffer);
-		if( !customDepth ) depth = h3d.mat.DepthBuffer.getDefault();
+		if( !customDepth ) depth = h3d.mat.Texture.getDefaultDepth();
 
 		faceMask.set(Front);
 		faceMask.set(Back);
@@ -202,7 +202,7 @@ class PointShadowMap extends Shadows {
 		var texture = ctx.computingStatic ? createStaticTexture() : ctx.textures.allocTarget("pointShadowMap", size, size, false, format, true);
 		if( depth == null || depth.width != texture.width || depth.height != texture.height || depth.isDisposed() ) {
 			if( depth != null ) depth.dispose();
-			depth = new h3d.mat.DepthBuffer(texture.width, texture.height);
+			depth = new h3d.mat.Texture(texture.width, texture.height, Depth24Stencil8);
 		}
 		texture.depthBuffer = depth;
 

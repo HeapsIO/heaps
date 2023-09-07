@@ -572,6 +572,7 @@ class GlDriver extends Driver {
 					var mode = pt.mode;
 					gl.texParameteri(mode, GL.TEXTURE_MAG_FILTER, flags[0]);
 					gl.texParameteri(mode, GL.TEXTURE_MIN_FILTER, flags[1]);
+					gl.texParameteri(mode, GL.TEXTURE_COMPARE_MODE, GL.NONE);
 					var w = TWRAP[wrap];
 					gl.texParameteri(mode, GL.TEXTURE_WRAP_S, w);
 					gl.texParameteri(mode, GL.TEXTURE_WRAP_T, w);
@@ -765,7 +766,7 @@ class GlDriver extends Driver {
 			bits |= GL.DEPTH_BUFFER_BIT;
 		}
 		if( stencil != null ) {
-			// reset stencyl mask when we allow to change it
+			// reset stencil mask when we allow to change it
 			@:privateAccess selectStencilBits(defStencil.opBits, defStencil.maskBits);
 			gl.clearStencil(stencil);
 			bits |= GL.STENCIL_BUFFER_BIT;
@@ -792,7 +793,7 @@ class GlDriver extends Driver {
 			disposeDepthBuffer(defaultDepth);
 			defaultDepth.width = this.bufferWidth;
 			defaultDepth.height = this.bufferHeight;
-			defaultDepth.b = allocDepthBuffer(defaultDepth);
+			defaultDepth.t = allocDepthBuffer(defaultDepth);
 		}
 	}
 
@@ -954,40 +955,54 @@ class GlDriver extends Driver {
 			gl.bindTexture(t.bind, t.t);
 	}
 
-	override function allocDepthBuffer( b : h3d.mat.DepthBuffer ) : DepthBuffer {
-		var r = gl.createRenderbuffer();
-		if( b.format == null )
-			@:privateAccess b.format = #if js (glES >= 3 ? Depth24Stencil8 : Depth16) #else Depth24Stencil8 #end;
-		var format = switch( b.format ) {
-		case Depth16: GL.DEPTH_COMPONENT16;
-		case Depth24 #if js if( glES >= 3 ) #end: GL.DEPTH_COMPONENT24;
-		case Depth24Stencil8: GL.DEPTH_STENCIL;
+	override function allocDepthBuffer( t : h3d.mat.Texture ) : Texture {
+		var tt = gl.createTexture();
+		var tt : Texture = { t : tt, width : t.width, height : t.height, internalFmt : GL.RGBA, pixelFmt : GL.UNSIGNED_BYTE, bits : -1, bind : GL.TEXTURE_2D, bias : 0 #if multidriver, driver : this #end };
+		var fmt = GL.DEPTH_COMPONENT;
+		switch( t.format ) {
+		case Depth16:
+			tt.internalFmt = GL.DEPTH_COMPONENT16;
+		case Depth24 #if js if( glES >= 3 ) #end: tt.internalFmt = GL.DEPTH_COMPONENT;
+		case Depth24Stencil8:
+			tt.internalFmt = GL.DEPTH24_STENCIL8;
+			tt.pixelFmt = GL.UNSIGNED_INT_24_8;
+			fmt = GL.DEPTH_STENCIL;
 		default:
-			throw "Unsupported depth format "+b.format;
+			throw "Unsupported depth format "+	t.format;
 		}
-		gl.bindRenderbuffer(GL.RENDERBUFFER, r);
-		gl.renderbufferStorage(GL.RENDERBUFFER, format, b.width, b.height);
-		gl.bindRenderbuffer(GL.RENDERBUFFER, null);
-		return { r : r #if multidriver, driver : this #end };
+		t.lastFrame = frame;
+		t.flags.unset(WasCleared);
+		gl.bindTexture(tt.bind, tt.t);
+
+		#if (js || (hlsdl >= version("1.12.0")))
+		gl.texParameteri(tt.bind, GL.TEXTURE_MIN_FILTER, GL.NEAREST);
+		gl.texParameteri(tt.bind, GL.TEXTURE_MAG_FILTER, GL.NEAREST);
+		gl.texParameteri(tt.bind, GL.TEXTURE_WRAP_S, GL.CLAMP_TO_EDGE);
+		gl.texParameteri(tt.bind, GL.TEXTURE_WRAP_T, GL.CLAMP_TO_EDGE);
+		#end
+		gl.texImage2D(tt.bind, 0, tt.internalFmt, tt.width, tt.height, 0, fmt, tt.pixelFmt, null);
+
+		restoreBind();
+		return tt;
 	}
 
-	override function disposeDepthBuffer( b : h3d.mat.DepthBuffer ) {
-		@:privateAccess if( b.b != null && b.b.r != null ) {
-			gl.deleteRenderbuffer(b.b.r);
-			b.b = null;
+	override function disposeDepthBuffer( b : h3d.mat.Texture ) {
+		@:privateAccess if( b.t != null && b.t.t != null ) {
+			gl.deleteTexture(b.t.t);
+			b.t = null;
 		}
 	}
 
-	var defaultDepth : h3d.mat.DepthBuffer;
+	var defaultDepth : h3d.mat.Texture;
 
-	override function getDefaultDepthBuffer() : h3d.mat.DepthBuffer {
+	override function getDefaultDepthBuffer() : h3d.mat.Texture {
 		if( defaultDepth != null )
 			return defaultDepth;
-		defaultDepth = new h3d.mat.DepthBuffer(0, 0);
+		defaultDepth = new h3d.mat.Texture(0, 0, Depth24Stencil8);
 		@:privateAccess {
 			defaultDepth.width = this.bufferWidth;
 			defaultDepth.height = this.bufferHeight;
-			defaultDepth.b = allocDepthBuffer(defaultDepth);
+			defaultDepth.t = allocDepthBuffer(defaultDepth);
 		}
 		return defaultDepth;
 	}
@@ -1522,16 +1537,16 @@ class GlDriver extends Driver {
 		if( tex.depthBuffer != null ) {
 			// Depthbuffer and stencilbuffer are combined in one buffer, created with GL.DEPTH_STENCIL
 			if(tex.depthBuffer.hasStencil() && tex.depthBuffer.format == Depth24Stencil8) {
-				gl.framebufferRenderbuffer(GL.FRAMEBUFFER, GL.DEPTH_STENCIL_ATTACHMENT, GL.RENDERBUFFER,@:privateAccess tex.depthBuffer.b.r);
+				gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.DEPTH_STENCIL_ATTACHMENT, GL.TEXTURE_2D,@:privateAccess tex.depthBuffer.t.t, 0);
 			} else {
-				gl.framebufferRenderbuffer(GL.FRAMEBUFFER, GL.DEPTH_STENCIL_ATTACHMENT, GL.RENDERBUFFER,null);
-				gl.framebufferRenderbuffer(GL.FRAMEBUFFER, GL.DEPTH_ATTACHMENT, GL.RENDERBUFFER, @:privateAccess tex.depthBuffer.b.r);
-				gl.framebufferRenderbuffer(GL.FRAMEBUFFER, GL.STENCIL_ATTACHMENT, GL.RENDERBUFFER,tex.depthBuffer.hasStencil() ? @:privateAccess tex.depthBuffer.b.r : null);
+				gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.DEPTH_STENCIL_ATTACHMENT, GL.TEXTURE_2D,null,0);
+				gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.DEPTH_ATTACHMENT, GL.TEXTURE_2D, @:privateAccess tex.depthBuffer.t.t,0);
+				gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.STENCIL_ATTACHMENT, GL.TEXTURE_2D,tex.depthBuffer.hasStencil() ? @:privateAccess tex.depthBuffer.t.t : null,0);
 			}
 		} else {
-			gl.framebufferRenderbuffer(GL.FRAMEBUFFER, GL.DEPTH_STENCIL_ATTACHMENT, GL.RENDERBUFFER,null);
-			gl.framebufferRenderbuffer(GL.FRAMEBUFFER, GL.DEPTH_ATTACHMENT, GL.RENDERBUFFER, null);
-			gl.framebufferRenderbuffer(GL.FRAMEBUFFER, GL.STENCIL_ATTACHMENT, GL.RENDERBUFFER, null);
+			gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.DEPTH_STENCIL_ATTACHMENT, GL.TEXTURE_2D,null,0);
+			gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.DEPTH_ATTACHMENT, GL.TEXTURE_2D, null,0);
+			gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.STENCIL_ATTACHMENT, GL.TEXTURE_2D, null,0);
 		}
 
 		var w = tex.width >> mipLevel; if( w == 0 ) w = 1;
@@ -1613,6 +1628,8 @@ class GlDriver extends Driver {
 			features.set(f,checkFeature(f));
 		if( gl.getExtension("WEBGL_compressed_texture_s3tc") != null )
 			maxCompressedTexturesSupport = 3;
+		if( glES < 3 )
+			gl.getExtension("WEBGL_depth_texture");
 	}
 	function checkFeature( f : Feature ) {
 		return switch( f ) {
