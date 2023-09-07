@@ -232,8 +232,8 @@ class DirectXDriver extends h3d.impl.Driver {
 		depthDesc.bind = DepthStencil | ShaderResource;
 		var depth = Driver.createTexture2d(depthDesc);
 		if( depth == null ) throw "Failed to create depthBuffer";
-		var depthView = Driver.createDepthStencilView(depth,D24_UNORM_S8_UINT, false);
-		var readOnlyDepthView = Driver.createDepthStencilView(depth, D24_UNORM_S8_UINT, true);
+		var depthView = Driver.createDepthStencilView(depth,D24_UNORM_S8_UINT);
+		var readOnlyDepthView = Driver.createDepthStencilView(depth, D24_UNORM_S8_UINT);
 
 		var vdesc = new ShaderResourceViewDesc();
 		vdesc.format = R24_UNORM_X8_TYPELESS;
@@ -366,8 +366,8 @@ class DirectXDriver extends h3d.impl.Driver {
 		vdesc.start = 0;
 		vdesc.count = -1;
 		var srv = Driver.createShaderResourceView(depth,vdesc);
-		var depthView = Driver.createDepthStencilView(depth,D24_UNORM_S8_UINT, false);
-		var readOnlyDepthView = Driver.createDepthStencilView(depth, D24_UNORM_S8_UINT, true);
+		var depthView = Driver.createDepthStencilView(depth,D24_UNORM_S8_UINT);
+		var readOnlyDepthView = Driver.createDepthStencilView(depth, D24_UNORM_S8_UINT);
 		return { res : depth, view : srv, depthView : depthView, rt : null, mips : 0 };
 	}
 
