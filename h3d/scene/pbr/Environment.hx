@@ -254,7 +254,7 @@ class Environment {
 		var t : h3d.mat.Texture = @:privateAccess engine.resCache.get(IrradLut);
 		if( t != null )
 			return t;
-		t = new h3d.mat.Texture(128, 128, [Target], RGBA32F);
+		t = new h3d.mat.Texture(128, 128, [Target], DEFAULT_FORMAT);
 		if( LUT_PIXELS == null ) {
 			computeIrradLut(t);
 			LUT_PIXELS = t.capturePixels();
