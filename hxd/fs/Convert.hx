@@ -194,7 +194,7 @@ class ConvertTGA2PNG extends Convert {
 			}
 		switch( r.header.imageOrigin ) {
 		case BottomLeft:
-			pix.flags.set(FlipY);
+			pix.flipY();
 		case TopLeft:
 		default:
 			throw "Not supported "+r.header.imageOrigin;
@@ -317,7 +317,7 @@ class CompressIMG extends Convert {
 				for ( layer in 0...info.layerCount ) {
 					var layerPixels = [];
 					for( mip in 0...info.mipLevels ) {
-						var pixels = image.getPixels(null, null, layer * info.mipLevels + mip);
+						var pixels = image.getPixels(null, layer * info.mipLevels + mip);
 						layerPixels.push(pixels);
 					}
 					var layerBytes = hxd.Pixels.toDDSLayers(layerPixels);
@@ -350,7 +350,7 @@ class CompressIMG extends Convert {
 					if ( image == null )
 						throw "Unsupported format";
 					for ( mip in 0... info.mipLevels) {
-						var pixels = image.getPixels(null, null, mip);
+						var pixels = image.getPixels(null, mip);
 						convertPixels.push(pixels);
 					}
 					sys.FileSystem.deleteFile(layerPath);

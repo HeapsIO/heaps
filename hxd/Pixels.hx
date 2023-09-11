@@ -3,7 +3,6 @@ package hxd;
 enum Flags {
 	ReadOnly;
 	AlphaPremultiplied;
-	FlipY;
 }
 
 @:forward(bytes, format, width, height, offset, flags, clear, dispose, toPNG, clone, sub, blit)
@@ -20,7 +19,6 @@ abstract PixelsARGB(Pixels) to Pixels {
 
 	@:from public static function fromPixels(p:Pixels) : PixelsARGB {
 		p.convert(ARGB);
-		p.setFlip(false);
 		return cast p;
 	}
 }
@@ -43,7 +41,6 @@ abstract PixelsFloat(Pixels) to Pixels {
 	}
 
 	@:from public static function fromPixels(p:Pixels) : PixelsFloat {
-		p.setFlip(false);
 		p.convert(R32F);
 		return cast p;
 	}
@@ -74,7 +71,6 @@ abstract PixelsFloatRGBA(Pixels) to Pixels {
 	}
 
 	@:from public static function fromPixels(p:Pixels) : PixelsFloatRGBA {
-		p.setFlip(false);
 		p.convert(RGBA32F);
 		return cast p;
 	}
@@ -142,15 +138,11 @@ class Pixels {
 		var stride = calcStride(width, format);
 		var outP = 0;
 		for( dy in 0...height ) {
-			var p = (x + yflip(y + dy) * this.width) * bytesPerPixel + offset;
+			var p = (x + (y + dy) * this.width) * bytesPerPixel + offset;
 			out.blit(outP, this.bytes, p, stride);
 			outP += stride;
 		}
 		return new hxd.Pixels(width, height, out, format);
-	}
-
-	inline function yflip(y:Int) {
-		return if( flags.has(FlipY) ) this.height - 1 - y else y;
 	}
 
 	public function blit( x : Int, y : Int, src : hxd.Pixels, srcX : Int, srcY : Int, width : Int, height : Int ) {
@@ -165,8 +157,8 @@ class Pixels {
 			throw "assert";
 		var stride = calcStride(width, format);
 		for( dy in 0...height ) {
-			var srcP = (srcX + src.yflip(dy + srcY) * src.width) * bpp + src.offset;
-			var dstP = (x + yflip(dy + y) * this.width) * bpp + offset;
+			var srcP = (srcX + (dy + srcY) * src.width) * bpp + src.offset;
+			var dstP = (x + (dy + y) * this.width) * bpp + offset;
 			bytes.blit(dstP, src.bytes, srcP, stride);
 		}
 	}
@@ -224,10 +216,6 @@ class Pixels {
 		var idx = 0;
 		var p = offset;
 		var dl = 0;
-		if( flags.has(FlipY) ) {
-			p += ((height - 1) * width) * bytesPerPixel;
-			dl = -width * 2 * bytesPerPixel;
-		}
 		switch(format) {
 		case BGRA:
 			for( y in 0...height ) {
@@ -303,11 +291,8 @@ class Pixels {
 		if( flags.has(ReadOnly) ) copyInner();
 	}
 
-	public function setFlip( b : Bool ) {
-		#if js if( b == null ) b = false; #end
-		if( flags.has(FlipY) == b ) return;
+	public function flipY() {
 		willChange();
-		if( b ) flags.set(FlipY) else flags.unset(FlipY);
 		if( stride%4 != 0 ) invalidFormat();
 		for( y in 0...height >> 1 ) {
 			var p1 = y * stride + offset;
@@ -429,7 +414,7 @@ class Pixels {
 	}
 
 	public function getPixel(x, y) : Int {
-		var p = ((x + yflip(y) * width) * bytesPerPixel) + offset;
+		var p = ((x + y * width) * bytesPerPixel) + offset;
 		switch(format) {
 		case BGRA:
 			return bytes.getInt32(p);
@@ -449,7 +434,7 @@ class Pixels {
 	}
 
 	public function setPixel(x, y, color) : Void {
-		var p = ((x + yflip(y) * width) * bytesPerPixel) + offset;
+		var p = ((x + y * width) * bytesPerPixel) + offset;
 		willChange();
 		switch(format) {
 		case R8:
@@ -470,7 +455,7 @@ class Pixels {
 	public function getPixelF(x, y, ?v:h3d.Vector) {
 		if( v == null )
 			v = new h3d.Vector();
-		var p = ((x + yflip(y) * width) * bytesPerPixel) + offset;
+		var p = ((x + y * width) * bytesPerPixel) + offset;
 		switch( format ) {
 		case R32F:
 			v.set(bytes.getFloat(p),0,0,0);
@@ -489,7 +474,7 @@ class Pixels {
 
 	public function setPixelF(x, y, v:h3d.Vector) {
 		willChange();
-		var p = ((x + yflip(y) * width) * bytesPerPixel) + offset;
+		var p = ((x + y * width) * bytesPerPixel) + offset;
 		switch( format ) {
 		case R32F:
 			bytes.setFloat(p, v.x);
@@ -513,7 +498,6 @@ class Pixels {
 
 	public function toPNG( ?level = 9 ) {
 		var png;
-		setFlip(false);
 		if( offset != 0 ) {
 			bytes = bytes.sub(offset, calcDataSize(width,height, format));
 			offset = 0;

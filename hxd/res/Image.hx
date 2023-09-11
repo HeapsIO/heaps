@@ -284,7 +284,7 @@ class Image extends Resource {
 		return inf;
 	}
 
-	public function getPixels( ?fmt : PixelFormat, ?flipY : Bool, ?index : Int ) {
+	public function getPixels( ?fmt : PixelFormat, ?index : Int ) {
 		var pixels : hxd.Pixels;
 		if( index == null )
 			index = 0;
@@ -293,7 +293,7 @@ class Image extends Resource {
 			var bytes = entry.getBytes(); // using getTmpBytes cause bug in E2
 			#if hl
 			if( fmt == null ) fmt = inf.pixelFormat;
-			pixels = decodePNG(bytes, inf.width, inf.height, fmt, flipY);
+			pixels = decodePNG(bytes, inf.width, inf.height, fmt);
 			if( pixels == null ) throw "Failed to decode PNG " + entry.path;
 			#else
 			if( inf.pixelFormat != BGRA )
@@ -303,8 +303,7 @@ class Image extends Resource {
 			// we only support BGRA decoding here
 			pixels = Pixels.alloc(inf.width, inf.height, BGRA);
 			var pdata = png.read();
-			format.png.Tools.extract32(pdata, pixels.bytes, flipY);
-			if( flipY ) pixels.flags.set(FlipY);
+			format.png.Tools.extract32(pdata, pixels.bytes, false);
 			#end
 		case Gif:
 			var bytes = entry.getBytes();
@@ -317,7 +316,7 @@ class Image extends Resource {
 			var bytes = entry.getBytes();
 			#if hl
 			if( fmt == null ) fmt = inf.pixelFormat;
-			pixels = decodeJPG(bytes, inf.width, inf.height, fmt, flipY);
+			pixels = decodeJPG(bytes, inf.width, inf.height, fmt);
 			if( pixels == null ) throw "Failed to decode JPG " + entry.path;
 			#else
 			if( inf.pixelFormat != BGRA )
@@ -358,7 +357,7 @@ class Image extends Resource {
 				}
 			}
 			switch( r.header.imageOrigin ) {
-			case BottomLeft: pixels.flags.set(FlipY);
+			case BottomLeft: pixels.flipY();
 			case TopLeft: // nothing
 			default: throw "Not supported "+r.header.imageOrigin;
 			}
@@ -406,13 +405,12 @@ class Image extends Resource {
 			pixels = new hxd.Pixels(data.width, data.height, data.bytes, inf.pixelFormat);
 		}
 		if( fmt != null ) pixels.convert(fmt);
-		if( flipY != null ) pixels.setFlip(flipY);
 		return pixels;
 	}
 
 	#if hl
 
-	static function decodeJPG( src : haxe.io.Bytes, width : Int, height : Int, requestedFmt : hxd.PixelFormat, flipY : Bool ) {
+	static function decodeJPG( src : haxe.io.Bytes, width : Int, height : Int, requestedFmt : hxd.PixelFormat ) {
 		var outFmt = requestedFmt;
 		var ifmt : hl.Format.PixelFormat = switch( requestedFmt ) {
 		case RGBA: RGBA;
@@ -423,14 +421,13 @@ class Image extends Resource {
 			BGRA;
 		};
 		var dst = haxe.io.Bytes.alloc(width * height * 4);
-		if( !hl.Format.decodeJPG(src.getData(), src.length, dst.getData(), width, height, width * 4, ifmt, (flipY?1:0)) )
+		if( !hl.Format.decodeJPG(src.getData(), src.length, dst.getData(), width, height, width * 4, ifmt, 0) )
 			return null;
 		var pix = new hxd.Pixels(width, height, dst, outFmt);
-		if( flipY ) pix.flags.set(FlipY);
 		return pix;
 	}
 
-	static function decodePNG( src : haxe.io.Bytes, width : Int, height : Int, requestedFmt : hxd.PixelFormat, flipY : Bool ) {
+	static function decodePNG( src : haxe.io.Bytes, width : Int, height : Int, requestedFmt : hxd.PixelFormat ) {
 		var outFmt = requestedFmt;
 		var ifmt : hl.Format.PixelFormat = switch( requestedFmt ) {
 		case RGBA: RGBA;
@@ -458,10 +455,9 @@ class Image extends Resource {
 		default:
 		}
 		var dst = haxe.io.Bytes.alloc(width * height * pxsize);
-		if( !hl.Format.decodePNG(src.getData(), src.length, dst.getData(), width, height, width * stride, ifmt, (flipY?1:0)) )
+		if( !hl.Format.decodePNG(src.getData(), src.length, dst.getData(), width, height, width * stride, ifmt, 0) )
 			return null;
 		var pix = new hxd.Pixels(width, height, dst, outFmt);
-		if( flipY ) pix.flags.set(FlipY);
 		return pix;
 	}
 
@@ -570,7 +566,7 @@ class Image extends Resource {
 			default:
 				for( layer in 0...tex.layerCount ) {
 					for( mip in 0...inf.mipLevels ) {
-						var pixels = getPixels(tex.format,null,layer * inf.mipLevels + mip);
+						var pixels = getPixels(tex.format,layer * inf.mipLevels + mip);
 						tex.uploadPixels(pixels,mip,layer);
 						pixels.dispose();
 					}
