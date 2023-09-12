@@ -809,10 +809,10 @@ class GlDriver extends Driver {
 		case GL.RGB: GL.RGB;
 		case GL.R11F_G11F_B10F: GL.RGB;
 		case GL.RGB10_A2: GL.RGBA;
-		case GL.RED, GL.R8, GL.R16F, GL.R32F: GL.RED;
-		case GL.RG, GL.RG8, GL.RG16F, GL.RG32F: GL.RG;
-		case GL.RGB16F, GL.RGB32F: GL.RGB;
-		case 0x83F1, 0x83F2, 0x83F3: GL.RGBA;
+		case GL.RED, GL.R8, GL.R16F, GL.R32F, 0x822A: GL.RED;
+		case GL.RG, GL.RG8, GL.RG16F, GL.RG32F, 0x822C: GL.RG;
+		case GL.RGB16F, GL.RGB32F, 0x8054: GL.RGB;
+		case 0x83F1, 0x83F2, 0x83F3, 0x805B: GL.RGBA;
 		default: throw "Invalid format " + t.internalFmt;
 		}
 	}
@@ -868,6 +868,18 @@ class GlDriver extends Driver {
 		case RG16F:
 			tt.internalFmt = GL.RG16F;
 			tt.pixelFmt = GL.HALF_FLOAT;
+		case R16U:
+			tt.internalFmt = 0x822A; // GL.R16
+			tt.pixelFmt = GL.UNSIGNED_SHORT;
+		case RG16U:
+			tt.internalFmt = 0x822C; // GL.RG16
+			tt.pixelFmt = GL.UNSIGNED_SHORT;
+		case RGB16U:
+			tt.internalFmt = 0x8054; // GL.RGB16
+			tt.pixelFmt = GL.UNSIGNED_SHORT;
+		case RGBA16U:
+			tt.internalFmt = 0x805B; // GL.RGBA16
+			tt.pixelFmt = GL.UNSIGNED_SHORT;
 		case R32F:
 			tt.internalFmt = GL.R32F;
 			tt.pixelFmt = GL.FLOAT;
@@ -898,6 +910,12 @@ class GlDriver extends Driver {
 		default:
 			throw "Unsupported texture format "+t.format;
 		}
+
+		#if js
+		if( tt.pixelFmt == GL.UNSIGNED_SHORT && !has16Bits )
+			throw "16 bit textures requires EXT_texture_norm16 extension";
+		#end
+
 		t.lastFrame = frame;
 		t.flags.unset(WasCleared);
 		gl.bindTexture(bind, tt.t);
@@ -1194,7 +1212,7 @@ class GlDriver extends Driver {
 		#end
 		var buffer : ArrayBufferView = switch( t.format ) {
 		case RGBA32F, R32F, RG32F, RGB32F: new Float32Array(@:privateAccess pixels.bytes.b.buffer, pixels.offset, dataLen>>2);
-		case RGBA16F, R16F, RG16F, RGB16F: new Uint16Array(@:privateAccess pixels.bytes.b.buffer, pixels.offset, dataLen>>1);
+		case RGBA16F, R16F, RG16F, RGB16F, RGBA16U, R16U, RG16U, RGB16U: new Uint16Array(@:privateAccess pixels.bytes.b.buffer, pixels.offset, dataLen>>1);
 		case RGB10A2, RG11B10UF: new Uint32Array(@:privateAccess pixels.bytes.b.buffer, pixels.offset, dataLen>>2);
 		default: new Uint8Array(@:privateAccess pixels.bytes.b.buffer, pixels.offset, dataLen);
 		}
@@ -1622,6 +1640,7 @@ class GlDriver extends Driver {
 
 	#if js
 	var features : Map<Feature,Bool> = new Map();
+	var has16Bits : Bool;
 	function makeFeatures() {
 		for( f in Type.allEnums(Feature) )
 			features.set(f,checkFeature(f));
@@ -1629,6 +1648,7 @@ class GlDriver extends Driver {
 			maxCompressedTexturesSupport = 3;
 		if( glES < 3 )
 			gl.getExtension("WEBGL_depth_texture");
+		has16Bits = gl.getExtension("EXT_texture_norm16") != null; // 16 bit textures
 	}
 	function checkFeature( f : Feature ) {
 		return switch( f ) {
@@ -1696,7 +1716,7 @@ class GlDriver extends Driver {
 		var buffer : ArrayBufferView = @:privateAccess pixels.bytes.b;
 		switch( curTarget.format ) {
 		case RGBA32F, R32F, RG32F, RGB32F: buffer = new Float32Array(buffer.buffer);
-		case RGBA16F, R16F, RG16F, RGB16F: buffer = new Uint16Array(buffer.buffer);
+		case RGBA16F, R16F, RG16F, RGB16F, RGBA16U, R16U, RG16U, RGB16U: buffer = new Uint16Array(buffer.buffer);
 		case RGB10A2, RG11B10UF: buffer = new Uint32Array(buffer.buffer);
 		default:
 		}

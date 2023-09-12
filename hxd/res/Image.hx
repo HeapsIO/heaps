@@ -124,12 +124,14 @@ class Image extends Resource {
 					inf.width = f.readInt32();
 					inf.height = f.readInt32();
 					var colbits = f.readByte();
-					inf.pixelFormat = switch( colbits ) {
-					case 8: BGRA;
-					case 16: R16U;
-					case 48: RGB16U;
-					case 64: RGBA16U;
-					default: throw "Unsupported png format "+colbits+"("+entry.path+")";
+					var colType = f.readByte();
+					inf.pixelFormat = switch( [colbits, colType] ) {
+					case [8,_]: BGRA; // TODO : grayscale png image
+					case [16,0]: R16U;
+					case [16,2]: RGBA16U; // RGB16U is not supported on DirectX !
+					case [16,4]: RG16U; // gray + alpha
+					case [16,6]: RGBA16U;
+					default: throw "Unsupported png format "+colbits+"/"+colType+"("+entry.path+")";
 					}
 					break;
 				}
@@ -296,14 +298,18 @@ class Image extends Resource {
 			pixels = decodePNG(bytes, inf.width, inf.height, fmt);
 			if( pixels == null ) throw "Failed to decode PNG " + entry.path;
 			#else
-			if( inf.pixelFormat != BGRA )
-				throw "No support to decode "+inf.pixelFormat+" on this platform ("+entry.path+")";
 			var png = new format.png.Reader(new haxe.io.BytesInput(bytes));
 			png.checkCRC = false;
-			// we only support BGRA decoding here
-			pixels = Pixels.alloc(inf.width, inf.height, BGRA);
+			pixels = Pixels.alloc(inf.width, inf.height, inf.pixelFormat);
 			var pdata = png.read();
-			format.png.Tools.extract32(pdata, pixels.bytes, false);
+			switch( inf.pixelFormat ) {
+			case BGRA:
+				format.png.Tools.extract32(pdata, pixels.bytes, false);
+			case R16U, RG16U, RGB16U, RGBA16U:
+				format.png.Tools.extract(pdata, pixels.bytes, inf.pixelFormat == RGBA16U && format.png.Tools.getHeader(pdata).color.match(ColTrue(false)));
+			default:
+				throw "No support to decode "+inf.pixelFormat+" on this platform ("+entry.path+")";
+			}
 			#end
 		case Gif:
 			var bytes = entry.getBytes();
@@ -436,6 +442,7 @@ class Image extends Resource {
 		case R16U: cast 12;
 		case RGB16U: cast 13;
 		case RGBA16U: cast 14;
+		case RG16U: cast 15;
 		default:
 			outFmt = BGRA;
 			BGRA;
@@ -446,6 +453,9 @@ class Image extends Resource {
 		case R16U:
 			stride = 1;
 			pxsize = 2;
+		case RG16U:
+			stride = 2;
+			pxsize = 4;
 		case RGB16U:
 			stride = 3;
 			pxsize = 6;
@@ -603,8 +613,6 @@ class Image extends Resource {
 			flags.push(MipMapped);
 			flags.push(ManualMipMapGen);
 		}
-		if( fmt == R16U )
-			throw "Unsupported texture format "+fmt+" for "+entry.path;
 		if( inf.layerCount > 1 )
 			tex = new h3d.mat.TextureArray(inf.width, inf.height, inf.layerCount, flags, fmt);
 		else

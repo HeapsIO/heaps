@@ -549,7 +549,7 @@ class Pixels {
 		case R16U, R16F: 2;
 		case R32F: 4;
 		case RG8: 2;
-		case RG16F: 4;
+		case RG16U, RG16F: 4;
 		case RG32F: 8;
 		case RGB8: 3;
 		case RGB16U, RGB16F: 6;
@@ -583,7 +583,7 @@ class Pixels {
 		return switch( format ) {
 		case R8, R16F, R32F, R16U:
 			if( channel == R ) 0 else -1;
-		case RG8, RG16F, RG32F:
+		case RG8, RG16F, RG16U, RG32F:
 			var p = calcStride(1,format);
 			[0, p, -1, -1][channel.toInt()];
 		case RGB8, RGB16F, RGB32F, RGB16U:
