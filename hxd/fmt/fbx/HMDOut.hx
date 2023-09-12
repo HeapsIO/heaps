@@ -221,8 +221,6 @@ class HMDOut extends BaseLibrary {
 		var colors = geom.getColors();
 		var mats = geom.getMaterials();
 
-		check();
-
 		// remove empty color data
 		if( colors != null ) {
 			var hasData = false;
