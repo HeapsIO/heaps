@@ -23,7 +23,7 @@ typedef Query = { q : haxe.GLTypes.Query, kind : QueryKind };
 #elseif (hldx && dx12)
 typedef IndexBuffer = DX12Driver.IndexBufferData;
 typedef GPUBuffer = DX12Driver.VertexBufferData;
-typedef Texture = { t : h3d.impl.DX12Driver.TextureData, tmpBuf : dx.Dx12.GpuResource };
+typedef Texture = h3d.impl.DX12Driver.TextureData;
 typedef Query = h3d.impl.DX12Driver.QueryData;
 #elseif hldx
 typedef IndexBuffer = { res : dx.Resource, count : Int, bits : Int };
