@@ -216,22 +216,26 @@ class Image extends Resource {
 				inf.pixelFormat = RGBA32F;
 			case 0:
 				// RGB
-				if( caps & 0x40 != 0 ) {
-					switch( [bpp, rMask, gMask, bMask, aMask] ) {
-					case [32, 0xFF0000, 0xFF00, 0xFF, 0xFF000000]:
-						inf.pixelFormat = BGRA;
-					case [32, 0xFF, 0xFF00, 0xFF0000, 0xFF000000]:
-						inf.pixelFormat = RGBA;
-					default:
-						throw "Unsupported RGB DDS "+bpp+"bits "+StringTools.hex(rMask)+"/"+StringTools.hex(gMask)+"/"+StringTools.hex(bMask)+"/"+StringTools.hex(aMask);
-					}
+				switch( [bpp, rMask, gMask, bMask, aMask] ) {
+				case [32, 0xFF0000, 0xFF00, 0xFF, 0xFF000000]:
+					inf.pixelFormat = BGRA;
+				case [32, 0xFF, 0xFF00, 0xFF0000, 0xFF000000]:
+					inf.pixelFormat = RGBA;
+				case [16, 0xFFFF, 0, 0, 0]:
+					inf.pixelFormat = R16U;
+				case [32, 0xFFFF, 0xFFFF0000, 0, 0]:
+					inf.pixelFormat = RG16U;
+				default:
+					throw "Unsupported RGB DDS "+bpp+"bits "+StringTools.hex(rMask)+"/"+StringTools.hex(gMask)+"/"+StringTools.hex(bMask)+"/"+StringTools.hex(aMask);
 				}
+			case 36:
+				inf.pixelFormat = RGBA16U;
 			default:
 			}
 
 			if( inf.pixelFormat == null ) {
 				var fid = String.fromCharCode(fourCC&0xFF)+String.fromCharCode((fourCC>>8)&0xFF)+String.fromCharCode((fourCC>>16)&0xFF)+String.fromCharCode(fourCC>>>24);
-				if( fourCC & 0xFF == fourCC ) fid = "0x"+fourCC;
+				if( fourCC & 0xFF == fourCC ) fid = ""+fourCC;
 				throw entry.path+" has unsupported 4CC "+fid;
 			}
 
