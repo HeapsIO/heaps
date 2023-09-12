@@ -272,7 +272,7 @@ class Key {
 		case QWERTY_MINUS: "Minus";
 		case QWERTY_EQUALS: "Equals";
 		case QWERTY_BRACKET_LEFT: "BracketLeft";
-		case QWERTY_BRACKET_RIGHT: "BacketRight";
+		case QWERTY_BRACKET_RIGHT: "BracketRight";
 		case QWERTY_SEMICOLON: "Semicolon";
 		case QWERTY_QUOTE: "Quote";
 		case QWERTY_BACKSLASH: "Backslash";
