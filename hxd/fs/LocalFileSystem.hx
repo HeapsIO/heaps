@@ -112,7 +112,7 @@ class LocalEntry extends FileEntry {
 	static var tmpDir : String = null;
 
 	inline function getModifTime(){
-		return sys.FileSystem.stat(originalFile != null ? originalFile : file).mtime.getTime();
+		return try sys.FileSystem.stat(originalFile != null ? originalFile : file).mtime.getTime() catch( e : Dynamic ) 0;
 	}
 
 	#if hl
