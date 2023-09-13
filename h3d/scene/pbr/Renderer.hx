@@ -83,7 +83,9 @@ class Renderer extends h3d.scene.Renderer {
 		#if !MRT_low
 		other : (null:h3d.mat.Texture),
 		#end
+		#if js
 		depth : (null:h3d.mat.Texture),
+		#end
 		hdr : (null:h3d.mat.Texture),
 		ldr : (null:h3d.mat.Texture),
 	};
@@ -101,11 +103,13 @@ class Renderer extends h3d.scene.Renderer {
 		Vec4([Value("output.normal",3),ALPHA]),
 		#if !MRT_low
 		Vec4([Value("output.metalness"), Value("output.roughness"), Value("output.occlusion"), ALPHA]),
-		Vec4([Value("output.emissive"), Value("output.custom1"), Value("output.custom2"), ALPHA]),
+		Vec4([Value("output.emissive"), Value("output.custom1"), Value("output.custom2"), ALPHA])
 		#else
-		Vec4([Value("output.metalness"), Value("output.roughness"), Value("output.emissive"), ALPHA]),
+		Vec4([Value("output.metalness"), Value("output.roughness"), Value("output.emissive"), ALPHA])
 		#end
-		Vec4([Value("output.depth"),Const(0), Const(0), ALPHA /* ? */])
+		#if js
+		,Vec4([Value("output.depth"),Const(0), Const(0), ALPHA /* ? */])
+		#end
 	]);
 	var decalsOutput = new h3d.pass.Output("decals",[
 		Vec4([Swiz(Value("output.color"),[X,Y,Z]), Value("output.albedoStrength",1)]),
@@ -127,8 +131,10 @@ class Renderer extends h3d.scene.Renderer {
 		#end
 	]);
 	var colorDepthOutput = new h3d.pass.Output("colorDepth",[
-		Value("output.color"),
-		Vec4([Value("output.depth"),Const(0),Const(0),h3d.scene.pbr.Renderer.ALPHA])
+		Value("output.color")
+		#if js
+		,Vec4([Value("output.depth"),Const(0),Const(0),h3d.scene.pbr.Renderer.ALPHA])
+		#end
 	]);
 
 	public function new(?env) {
@@ -305,7 +311,7 @@ class Renderer extends h3d.scene.Renderer {
 
 		// Probe Rendering & Blending
 		var probeOutput = allocTarget("probeOutput", true, 1.0, #if MRT_low RGB10A2 #else RGBA16F #end);
-		ctx.engine.pushTarget(probeOutput);
+		ctx.engine.pushTarget(probeOutput, ReadOnly);
 		clear(0);
 
 		// Default Env & SkyBox
@@ -393,14 +399,24 @@ class Renderer extends h3d.scene.Renderer {
 		#if !MRT_low
 		textures.other = allocTarget("other", true, 1.);
 		#end
+		#if js
 		textures.depth = allocTarget("depth", true, 1., R32F);
+		#end
 		textures.hdr = allocTarget("hdrOutput", true, 1, #if MRT_low RGB10A2 #else RGBA16F #end);
 		textures.ldr = allocTarget("ldrOutput");
 	}
 
+	public function getPbrDepth() {
+		#if js
+		return textures.depth;
+		#else
+		return textures.albedo.depthBuffer;
+		#end
+	}
+
 	function initGlobals() {
 		ctx.setGlobal("albedoMap", { texture : textures.albedo, channel : hxsl.Channel.R });
-		ctx.setGlobal("depthMap", { texture : textures.depth, channel : hxsl.Channel.R });
+		ctx.setGlobal("depthMap", { texture : getPbrDepth(), channel : hxsl.Channel.R });
 		ctx.setGlobal("normalMap", { texture : textures.normal, channel : hxsl.Channel.R });
 		ctx.setGlobal("occlusionMap", { texture : textures.pbr, channel : hxsl.Channel.B });
 		ctx.setGlobal("hdrMap", textures.hdr);
@@ -425,7 +441,7 @@ class Renderer extends h3d.scene.Renderer {
 		pbrProps.albedoTex = textures.albedo;
 		pbrProps.normalTex = textures.normal;
 		pbrProps.pbrTex = textures.pbr;
-		pbrProps.depthTex = textures.depth;
+		pbrProps.depthTex = getPbrDepth();
 		#if !MRT_low
 		pbrProps.otherTex = textures.other;
 		#end
@@ -512,7 +528,7 @@ class Renderer extends h3d.scene.Renderer {
 	function drawPbrDecals( passName : String ) {
 		var passes = get(passName);
 		if( passes.isEmpty() ) return;
-		ctx.engine.pushTargets([textures.albedo,textures.normal,textures.pbr]);
+		ctx.engine.pushTargets([textures.albedo,textures.normal,textures.pbr], ReadOnly);
 		renderPass(decalsOutput, passes);
 		ctx.engine.popTarget();
 	}
@@ -520,20 +536,32 @@ class Renderer extends h3d.scene.Renderer {
 	function drawEmissiveDecals( passName : String ) {
 		var passes = get(passName);
 		if( passes.isEmpty() ) return;
-		ctx.engine.pushTargets([textures.albedo,textures.normal,textures.pbr#if !MRT_low ,textures.other #end]);
+		ctx.engine.pushTargets([textures.albedo,textures.normal,textures.pbr#if !MRT_low ,textures.other #end], ReadOnly);
 		renderPass(emissiveDecalsOutput, passes);
 		ctx.engine.popTarget();
 	}
 
+	function getPbrRenderTargets( depth : Bool ) {
+		#if js
+		if ( depth )
+			return [textures.albedo, textures.normal, textures.pbr #if !MRT_low , textures.other #end #if js , getPbrDepth() #end];
+		#end
+		return [textures.albedo, textures.normal, textures.pbr #if !MRT_low , textures.other #end];
+	}
+
 	override function render() {
 		beginPbr();
+		#if js
 		setTarget(textures.depth);
 		ctx.engine.clearF(new h3d.Vector(1));
+		#end
 
-		setTargets([textures.albedo,textures.normal,textures.pbr#if !MRT_low ,textures.other #end]);
+		setTargets(getPbrRenderTargets(false));
 		clear(0, 1, 0);
 
-		setTargets([textures.albedo,textures.normal,textures.pbr#if !MRT_low ,textures.other #end,textures.depth]);
+		#if js
+		setTargets(getPbrRenderTargets(true));
+		#end
 
 		begin(MainDraw);
 		renderPass(output, get("terrain"));
@@ -548,14 +576,18 @@ class Renderer extends h3d.scene.Renderer {
 		drawEmissiveDecals("emissiveDecal");
 		end();
 
-		setTarget(textures.hdr);
+		setTarget(textures.hdr, ReadOnly);
 		clear(0);
 		lighting();
 
+		setTarget(textures.hdr);
 		begin(Forward);
+		setTarget(textures.hdr);
 		var ls = hxd.impl.Api.downcast(getLightSystem(), h3d.scene.pbr.LightSystem);
 		ls.forwardMode = true;
-		setTargets([textures.hdr, textures.depth]);
+		#if js
+		setTargets([textures.hdr, getPbrDepth()]);
+		#end
 		renderPass(colorDepthOutput, get("forward"));
 		setTarget(textures.hdr);
 		renderPass(defaultPass, get("forwardAlpha"), backToFront);
@@ -570,19 +602,27 @@ class Renderer extends h3d.scene.Renderer {
 			return;
 		}
 
+		setTarget(textures.hdr, ReadOnly);
 		begin(BeforeTonemapping);
+		setTarget(textures.hdr, ReadOnly);
 		draw("beforeTonemappingDecal");
+		setTarget(textures.hdr);
 		draw("beforeTonemapping");
+		setTarget(textures.hdr, ReadOnly);
 		end();
 
-		setTarget(textures.ldr);
+		setTarget(textures.ldr, ReadOnly);
 		tonemap.render();
 
 		begin(AfterTonemapping);
+		setTarget(textures.ldr, ReadOnly);
 		draw("afterTonemappingDecal");
+		setTarget(textures.ldr);
 		draw("afterTonemapping");
+		setTarget(textures.ldr, ReadOnly);
 		end();
 
+		setTarget(textures.ldr);
 		begin(Overlay);
 		draw("overlay");
 		end();

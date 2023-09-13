@@ -606,6 +606,21 @@ class GlDriver extends Driver {
 		if( curColorMask != pass.colorMask ) {
 			var m = pass.colorMask;
 			gl.colorMask(m & 1 != 0, m & 2 != 0, m & 4 != 0, m & 8 != 0);
+			var mi = m >> 4;
+			if ( mi > 0 ) {
+				#if (hl_ver >= version("1.14.0"))
+				var i = 1;
+				do {
+					if ( mi & 15 > 0 ) {
+						gl.colorMaski(i, mi & 1 != 0, mi & 2 != 0, mi & 4 != 0, mi & 8 != 0);
+					}
+					mi = mi >> 4;
+					i++;
+				} while ( mi > 0 );
+				#else
+				throw "GL ColorMaski support requires hlsdl 1.14+";
+				#end
+			}
 			curColorMask = m;
 		}
 
@@ -1515,7 +1530,7 @@ class GlDriver extends Driver {
 		return pixels;
 	}
 
-	override function setRenderTarget( tex : h3d.mat.Texture, layer = 0, mipLevel = 0 ) {
+	override function setRenderTarget( tex : h3d.mat.Texture, layer = 0, mipLevel = 0, depthBinding : h3d.Engine.DepthBinding = ReadWrite ) {
 		unbindTargets();
 		curTarget = tex;
 		if( tex == null ) {
@@ -1553,7 +1568,7 @@ class GlDriver extends Driver {
 		else
 			gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0, tex.flags.has(Cube) ? CUBE_FACES[layer] : GL.TEXTURE_2D, tex.t.t, mipLevel);
 
-		if( tex.depthBuffer != null ) {
+		if( tex.depthBuffer != null && depthBinding != NotBound ) {
 			// Depthbuffer and stencilbuffer are combined in one buffer, created with GL.DEPTH_STENCIL
 			if(tex.depthBuffer.hasStencil() && tex.depthBuffer.format == Depth24Stencil8) {
 				gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.DEPTH_STENCIL_ATTACHMENT, GL.TEXTURE_2D,@:privateAccess tex.depthBuffer.t.t, 0);
@@ -1588,9 +1603,9 @@ class GlDriver extends Driver {
 		#end
 	}
 
-	override function setRenderTargets( textures : Array<h3d.mat.Texture> ) {
+	override function setRenderTargets( textures : Array<h3d.mat.Texture>, depthBinding : h3d.Engine.DepthBinding = ReadWrite ) {
 		unbindTargets();
-		setRenderTarget(textures[0]);
+		setRenderTarget(textures[0], depthBinding);
 		if( textures.length < 2 )
 			return;
 		numTargets = textures.length;
@@ -1613,6 +1628,49 @@ class GlDriver extends Driver {
 		}
 		setDrawBuffers(textures.length);
 		if( needClear ) clear(BLACK);
+	}
+
+	override function setDepth( depthBuffer : h3d.mat.Texture ) {
+		unbindTargets();
+		curTarget = depthBuffer;
+
+		depthBuffer.lastFrame = frame;
+		curTargetLayer = 0;
+		curTargetMip = 0;
+		#if multidriver
+		if( depthBuffer.t.driver != this )
+			throw "Invalid texture context";
+		#end
+		gl.bindFramebuffer(GL.FRAMEBUFFER, commonFB);
+
+		gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0, GL.TEXTURE_2D, null, 0);
+
+		if(depthBuffer.hasStencil() && depthBuffer.format == Depth24Stencil8) {
+			gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.DEPTH_STENCIL_ATTACHMENT, GL.TEXTURE_2D,@:privateAccess depthBuffer.t.t, 0);
+		} else {
+			gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.DEPTH_STENCIL_ATTACHMENT, GL.TEXTURE_2D,null,0);
+			gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.DEPTH_ATTACHMENT, GL.TEXTURE_2D, @:privateAccess depthBuffer.t.t,0);
+			gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.STENCIL_ATTACHMENT, GL.TEXTURE_2D,depthBuffer.hasStencil() ? @:privateAccess depthBuffer.t.t : null,0);
+		}
+
+		var w = depthBuffer.width; if( w == 0 ) w = 1;
+		var h = depthBuffer.height; if( h == 0 ) h = 1;
+		gl.viewport(0, 0, w, h);
+		for( i in 0...boundTextures.length )
+			boundTextures[i] = null;
+
+		// if( !tex.flags.has(WasCleared) ) {
+		// 	tex.flags.set(WasCleared); // once we draw to, do not clear again
+		// 	clear(BLACK);
+		// }
+
+		#if js
+		if( glDebug ) {
+			var code = gl.checkFramebufferStatus(GL.FRAMEBUFFER);
+			if( code != GL.FRAMEBUFFER_COMPLETE )
+				throw "Invalid frame buffer: "+code;
+		}
+		#end
 	}
 
 	override function init( onCreate : Bool -> Void, forceSoftware = false ) {

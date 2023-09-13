@@ -19,6 +19,7 @@ class Pass {
 	var shaders : hxsl.ShaderList;
 	var nextPass : Pass;
 	var culled : Bool = false;
+	var rendererFlags : Int = 0;
 
 	@:bits(flags) public var enableLights : Bool;
 	/**
@@ -167,10 +168,15 @@ class Pass {
 		this.colorMask = this.colorMask | mask;
 	}
 
+	function resetRendererFlags() {
+		rendererFlags = 0;
+	}
+
 	public function addShader<T:hxsl.Shader>(s:T) : T {
 		// throwing an exception will require NG GameServer review
 		if( s == null ) return null;
 		shaders = hxsl.ShaderList.addSort(s, shaders);
+		resetRendererFlags();
 		return s;
 	}
 
@@ -178,6 +184,7 @@ class Pass {
 		if ( s == null ) return null;
 		selfShadersChanged = true;
 		selfShaders = hxsl.ShaderList.addSort(s, selfShaders);
+		resetRendererFlags();
 		return s;
 	}
 
@@ -214,6 +221,7 @@ class Pass {
 		var sl = shaders, prev = null;
 		while( sl != null ) {
 			if( sl.s == s ) {
+				resetRendererFlags();
 				if ( selfShadersCache == sl )
 					selfShadersCache = selfShadersCache.next;
 				if( prev == null )
@@ -229,6 +237,7 @@ class Pass {
 		prev = null;
 		while ( sl != null ) {
 			if ( sl.s == s ) {
+				resetRendererFlags();
 				if ( selfShadersCache == sl )
 					selfShadersCache = selfShadersCache.next;
 				if ( prev == null )
@@ -248,6 +257,7 @@ class Pass {
 		var prev = null;
 		while( sl != null ) {
 			if( hxd.impl.Api.isOfType(sl.s, t) ) {
+				resetRendererFlags();
 				if ( selfShadersCache == sl )
 					selfShadersCache = selfShadersCache.next;
 				if( prev == null )
@@ -263,6 +273,7 @@ class Pass {
 		prev = null;
 		while( sl != null ) {
 			if( hxd.impl.Api.isOfType(sl.s, t) ) {
+				resetRendererFlags();
 				if ( selfShadersCache == sl )
 					selfShadersCache = selfShadersCache.next;
 				if( prev == null )

@@ -90,6 +90,8 @@ class RenderContext extends h3d.impl.RenderContext {
 	}
 
 	public function emitPass( pass : h3d.mat.Pass, obj : h3d.scene.Object ) @:privateAccess {
+		if ( pass.rendererFlags & 1 == 0 )
+			@:privateAccess scene.renderer.setPassFlags(pass);
 		var o = allocPool;
 		if( o == null ) {
 			o = new h3d.pass.PassObject();

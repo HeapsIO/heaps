@@ -28,7 +28,7 @@ typedef Query = h3d.impl.DX12Driver.QueryData;
 #elseif hldx
 typedef IndexBuffer = { res : dx.Resource, count : Int, bits : Int };
 typedef GPUBuffer = dx.Resource;
-typedef Texture = { res : dx.Resource, view : dx.Driver.ShaderResourceView, ?depthView : dx.Driver.DepthStencilView, rt : Array<dx.Driver.RenderTargetView>, mips : Int };
+typedef Texture = { res : dx.Resource, view : dx.Driver.ShaderResourceView, ?depthView : dx.Driver.DepthStencilView, ?readOnlyDepthView : dx.Driver.DepthStencilView, rt : Array<dx.Driver.RenderTargetView>, mips : Int };
 typedef Query = {};
 #elseif usesys
 typedef IndexBuffer = haxe.GraphicsDriver.IndexBuffer;
@@ -205,10 +205,13 @@ class Driver {
 	public function setRenderZone( x : Int, y : Int, width : Int, height : Int ) {
 	}
 
-	public function setRenderTarget( tex : Null<h3d.mat.Texture>, layer = 0, mipLevel = 0 ) {
+	public function setRenderTarget( tex : Null<h3d.mat.Texture>, layer = 0, mipLevel = 0, depthBinding : h3d.Engine.DepthBinding = ReadWrite ) {
 	}
 
-	public function setRenderTargets( textures : Array<h3d.mat.Texture> ) {
+	public function setRenderTargets( textures : Array<h3d.mat.Texture>, depthBinding : h3d.Engine.DepthBinding = ReadWrite ) {
+	}
+
+	public function setDepth( tex : Null<h3d.mat.Texture> ) {
 	}
 
 	public function allocDepthBuffer( b : h3d.mat.Texture ) : Texture {

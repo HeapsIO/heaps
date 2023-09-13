@@ -7,12 +7,21 @@ private class TargetTmp {
 	public var next : TargetTmp;
 	public var layer : Int;
 	public var mipLevel : Int;
-	public function new(t, n, l, m) {
+	public var depthBinding : DepthBinding;
+	public function new(t, n, l, m, db) {
 		this.t = t;
 		this.next = n;
 		this.layer = l;
 		this.mipLevel = m;
+		this.depthBinding = db;
 	}
+}
+
+enum DepthBinding {
+	ReadWrite;
+	ReadOnly;
+	DepthOnly;
+	NotBound;
 }
 
 class Engine {
@@ -47,6 +56,7 @@ class Engine {
 	var currentTargetTex : h3d.mat.Texture;
 	var currentTargetLayer : Int;
 	var currentTargetMip : Int;
+	var currentDepthBinding : DepthBinding;
 	var needFlushTarget : Bool;
 	var nullTexture : h3d.mat.Texture;
 	var textureColorCache = new Map<Int,h3d.mat.Texture>();
@@ -301,16 +311,17 @@ class Engine {
 		return targetStack == null ? null : targetStack.t == nullTexture ? targetStack.textures[0] : targetStack.t;
 	}
 
-	public function pushTarget( tex : h3d.mat.Texture, layer = 0, mipLevel = 0 ) {
+	public function pushTarget( tex : h3d.mat.Texture, layer = 0, mipLevel = 0, depthBinding = ReadWrite ) {
 		var c = targetTmp;
 		if( c == null )
-			c = new TargetTmp(tex, targetStack, layer, mipLevel);
+			c = new TargetTmp(tex, targetStack, layer, mipLevel, depthBinding);
 		else {
 			targetTmp = c.next;
 			c.t = tex;
 			c.next = targetStack;
 			c.mipLevel = mipLevel;
 			c.layer = layer;
+			c.depthBinding = depthBinding;
 		}
 		targetStack = c;
 		updateNeedFlush();
@@ -321,13 +332,17 @@ class Engine {
 		if( t == null )
 			needFlushTarget = currentTargetTex != null;
 		else
-			needFlushTarget = currentTargetTex != t.t || currentTargetLayer != t.layer || currentTargetMip != t.mipLevel || t.textures != null;
+			needFlushTarget = currentTargetTex != t.t || currentTargetLayer != t.layer || currentTargetMip != t.mipLevel || t.textures != null || currentDepthBinding != t.depthBinding;
 	}
 
-	public function pushTargets( textures : Array<h3d.mat.Texture> ) {
-		pushTarget(nullTexture);
+	public function pushTargets( textures : Array<h3d.mat.Texture>, depthBinding = ReadWrite ) {
+		pushTarget(nullTexture, depthBinding);
 		targetStack.textures = textures;
 		needFlushTarget = true;
+	}
+
+	public function pushDepth( depthBuffer : h3d.mat.Texture ) {
+		pushTarget(depthBuffer, DepthOnly);
 	}
 
 	public function popTarget() {
@@ -353,13 +368,16 @@ class Engine {
 			driver.setRenderTarget(null);
 			currentTargetTex = null;
 		} else {
-			if( t.textures != null )
-				driver.setRenderTargets(t.textures);
+			if ( t.depthBinding == DepthOnly )
+				driver.setDepth(t.t);
+			else if( t.textures != null )
+				driver.setRenderTargets(t.textures, t.depthBinding);
 			else
-				driver.setRenderTarget(t.t, t.layer, t.mipLevel);
+				driver.setRenderTarget(t.t, t.layer, t.mipLevel, t.depthBinding);
 			currentTargetTex = t.t;
 			currentTargetLayer = t.layer;
 			currentTargetMip = t.mipLevel;
+			currentDepthBinding = t.depthBinding;
 		}
 		needFlushTarget = false;
 	}

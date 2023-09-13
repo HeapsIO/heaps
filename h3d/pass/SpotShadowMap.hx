@@ -2,7 +2,6 @@ package h3d.pass;
 
 class SpotShadowMap extends Shadows {
 
-	var customDepth : Bool;
 	var depth : h3d.mat.Texture;
 	var sshader : h3d.shader.SpotShadow;
 	var border : Border;
@@ -16,8 +15,6 @@ class SpotShadowMap extends Shadows {
 		lightCamera.zNear = 0.01;
 		shader = sshader = new h3d.shader.SpotShadow();
 		border = new Border(size, size);
-		customDepth = h3d.Engine.getCurrent().driver.hasFeature(AllocDepthBuffer);
-		if( !customDepth ) depth = h3d.mat.Texture.getDefaultDepth();
 	}
 
 	override function set_mode(m:Shadows.RenderMode) {
@@ -44,7 +41,7 @@ class SpotShadowMap extends Shadows {
 
 	override function dispose() {
 		super.dispose();
-		if( customDepth && depth != null ) depth.dispose();
+		if( depth != null ) depth.dispose();
 		border.dispose();
 	}
 
@@ -133,7 +130,7 @@ class SpotShadowMap extends Shadows {
 		cullPasses(passes, function(col) return col.inFrustum(lightCamera.frustum));
 
 		var texture = ctx.computingStatic ? createStaticTexture() : ctx.textures.allocTarget("spotShadowMap", size, size, false, format);
-		if( customDepth && (depth == null || depth.width != texture.width || depth.height != texture.height || depth.isDisposed()) ) {
+		if( depth == null || depth.width != texture.width || depth.height != texture.height || depth.isDisposed() ) {
 			if( depth != null ) depth.dispose();
 			depth = new h3d.mat.Texture(texture.width, texture.height, Depth24Stencil8);
 		}

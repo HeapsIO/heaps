@@ -173,18 +173,13 @@ class CascadeShadowMap extends DirShadowMap {
 
 		var textures = [];
 		for (i in 0...cascade) {
-			var texture = ctx.textures.allocTarget("cascadeShadowMap", size, size, false, format);
-			if( customDepth && (depth == null || depth.width != size || depth.height != size || depth.isDisposed()) ) {
-				if( depth != null ) depth.dispose();
-				depth = new h3d.mat.Texture(size, size, Depth24Stencil8);
-			}
-			texture.depthBuffer = depth;
-			textures.push(texture);
+			var texture = ctx.textures.allocTarget("cascadeShadowMap", size, size, false, Depth24Stencil8);
 
 			currentCascadeIndex = i;
 			var p = passes.save();
 			cullPasses(passes,function(col) return col.inFrustum(lightCameras[i].frustum));
-			processShadowMap( passes, texture, sort);
+			texture = processShadowMap( passes, texture, sort);
+			textures.push(texture);
 			passes.load(p);
 
 		}
