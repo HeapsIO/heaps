@@ -560,7 +560,7 @@ class ObjectComp implements h2d.domkit.Object implements domkit.Component.Compon
 	}
 
 	static function updateComponentId(p:domkit.Properties<Dynamic>) {
-		cast(p.obj,h2d.Object).name = p.id;
+		cast(p.obj,h2d.Object).name = p.id.toString();
 	}
 
 	@:keep static var _ = { @:privateAccess domkit.Properties.updateComponentId = updateComponentId; true; }

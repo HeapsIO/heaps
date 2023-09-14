@@ -63,7 +63,7 @@ class Style extends domkit.CssStyle {
 			var path = s.p.name;
 			var ee = e;
 			while(ee != null) {
-				path = (ee.id != null ? "#" + ee.id : ee.component.name) + "." + path;
+				path = (ee.id.isDefined() ? "#" + ee.id.toString() : ee.component.name) + "." + path;
 				ee = ee.parent;
 			}
 			if( msg == null ) msg = "Invalid property value '"+(domkit.CssParser.valueStr(s.value))+"'";
@@ -270,7 +270,7 @@ class Style extends domkit.CssStyle {
 				for( c in dom.classes )
 					nameParts.push("."+c);
 			}
-			if( dom.id != null )
+			if( dom.id.isDefined() )
 				nameParts.push("#"+dom.id);
 		}
 		else
