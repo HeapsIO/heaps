@@ -29,7 +29,6 @@ class PointShadowMap extends Shadows {
 		lightCamera.screenRatio = 1.0;
 		lightCamera.fovY = 90;
 		shader = pshader = new h3d.shader.PointShadow();
-		depth = h3d.mat.Texture.getDefaultDepth();
 
 		faceMask.set(Front);
 		faceMask.set(Back);
