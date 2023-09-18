@@ -338,7 +338,7 @@ class Texture {
 	public function dispose() {
 		if( t != null ) {
 			if ( isDepth() )
-				h3d.Engine.getCurrent().mem.deleteTexture(this);
+				h3d.Engine.getCurrent().mem.deleteDepth(this);
 			else
 				mem.deleteTexture(this);
 		}
