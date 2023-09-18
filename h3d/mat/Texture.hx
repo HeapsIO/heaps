@@ -221,7 +221,7 @@ class Texture {
 	}
 
 	public inline function isDisposed() {
-		return t == null && realloc == null;
+		return isDepth() ? t == null : t == null && realloc == null;
 	}
 
 	public function resize(width, height) {
