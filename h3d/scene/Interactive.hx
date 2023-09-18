@@ -65,6 +65,19 @@ class Interactive extends Object implements hxd.SceneEvents.Interactive {
 		cursor = Button;
 	}
 
+	public function getPoint( ray : h3d.col.Ray, bestMatch : Bool ) {
+		var rold = ray.clone();
+		ray.transform(getInvPos());
+		var d = shape.rayIntersection(ray, bestMatch);
+		if( d < 0 ) {
+			ray.load(rold);
+			return null;
+		}
+		var pt = ray.getPoint(d);
+		pt.transform(getAbsPos());
+		ray.load(rold);
+		return pt;
+	}
 
 	inline function get_showDebug() return debugObj != null;
 
