@@ -962,6 +962,9 @@ class GlDriver extends Driver {
 					if( checkError() ) break;
 				}
 			} else if( t.flags.has(IsArray) ) {
+				#if js
+				if( !t.format.match(S3TC(_)) )
+				#end
 				gl.texImage3D(bind, mip, tt.internalFmt, w, h, t.layerCount, 0, getChannels(tt), tt.pixelFmt, null);
 				checkError();
 			} else {
@@ -972,6 +975,16 @@ class GlDriver extends Driver {
 				checkError();
 			}
 		}
+
+		#if js
+		if( t.flags.has(IsArray) ) {
+			if (t.format.match(S3TC(_))) {
+				gl.texStorage3D(bind, t.mipLevels, tt.internalFmt, tt.width, tt.height, t.layerCount);
+				checkError();
+			}
+		}
+		#end
+
 		restoreBind();
 
 		if( outOfMem ) {
