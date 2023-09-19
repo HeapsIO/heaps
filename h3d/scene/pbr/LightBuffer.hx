@@ -299,9 +299,12 @@ class LightBuffer {
 		s.dirLightCount = dirLights.length;
 		s.pointLightCount = pointLights.length;
 		s.spotLightCount = spotLights.length;
-		s.DIR_SHADOW_COUNT = dirLightsShadow.length;
-		s.POINT_SHADOW_COUNT = pointLightsShadow.length;
-		s.SPOT_SHADOW_COUNT = spotLightsShadow.length;
+		pointLights = [];
+		spotLights = [];
+		dirLights = [];
+		s.DIR_SHADOW_COUNT = MAX_DIR_SHADOW;
+		s.POINT_SHADOW_COUNT = MAX_POINT_SHADOW;
+		s.SPOT_SHADOW_COUNT = MAX_SPOT_SHADOW;
 		s.lightInfos.uploadFloats(lightInfos, 0, s.lightInfos.vertices, 0);
 
 		var pbrIndirect = @:privateAccess pbrRenderer.pbrIndirect;
