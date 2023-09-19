@@ -336,22 +336,9 @@ class CompressIMG extends Convert {
 				srcBytes = oldBytes;
 				srcPath = oldPath;
 				var convertPixels = [];
-				var format = null;
 				for ( layer in 0...info.layerCount ) {
-					var layerPath = null;
-					var image = null;
-					for ( fmt in ["BC1", "BC3"] ) {
-						try {
-							layerPath = dstPath + path.file + "_" + layer +"_dds_"+ fmt + "." + path.ext;
-							image = makeImage(layerPath);
-						} catch(e : Dynamic) {}
-						if ( image != null ) {
-							format = fmt;
-							break;
-						}
-					}
-					if ( image == null )
-						throw "Unsupported format";
+					var layerPath = dstPath + path.file + "_" + layer +"_dds_"+ format + "." + path.ext;
+					var image = makeImage(layerPath);
 					for ( mip in 0... info.mipLevels) {
 						var pixels = image.getPixels(null, mip);
 						convertPixels.push(pixels);
