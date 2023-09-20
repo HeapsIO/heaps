@@ -953,6 +953,21 @@ class GlDriver extends Driver {
 		gl.texParameteri(bind, GL.TEXTURE_BASE_LEVEL, 0);
 		gl.texParameteri(bind, GL.TEXTURE_MAX_LEVEL, t.mipLevels-1);
 		#end
+
+		#if js
+		// Modern texture allocation that supports both compressed and uncompressed texture in WebGL
+		// texStorate2D/3D is only defined in OpenGL 4.2 but is defined in openGL ES 3 which the js target targets
+
+		// Patch RGBA to be RGBA8 because texStorage expect a "Sized Internal Format"
+		var sizedFormat = tt.internalFmt == GL.RGBA ? GL.RGBA8 : tt.internalFmt;
+		if( t.flags.has(IsArray) && !t.flags.has(Cube) ) {
+			gl.texStorage3D(bind, t.mipLevels, sizedFormat, tt.width, tt.height, t.layerCount);
+			checkError();
+		} else {
+			gl.texStorage2D(bind, t.mipLevels, sizedFormat, tt.width, tt.height);
+			checkError();
+		}
+		#else
 		for(mip in 0...t.mipLevels) {
 			var w = hxd.Math.imax(1, tt.width >> mip);
 			var h = hxd.Math.imax(1, tt.height >> mip);
@@ -962,24 +977,10 @@ class GlDriver extends Driver {
 					if( checkError() ) break;
 				}
 			} else if( t.flags.has(IsArray) ) {
-				#if js
-				if( !t.format.match(S3TC(_)) )
-				#end
 				gl.texImage3D(bind, mip, tt.internalFmt, w, h, t.layerCount, 0, getChannels(tt), tt.pixelFmt, null);
 				checkError();
 			} else {
-				#if js
-				if( !t.format.match(S3TC(_)) )
-				#end
 				gl.texImage2D(bind, mip, tt.internalFmt, w, h, 0, getChannels(tt), tt.pixelFmt, null);
-				checkError();
-			}
-		}
-
-		#if js
-		if( t.flags.has(IsArray) ) {
-			if (t.format.match(S3TC(_))) {
-				gl.texStorage3D(bind, t.mipLevels, tt.internalFmt, tt.width, tt.height, t.layerCount);
 				checkError();
 			}
 		}
@@ -1143,7 +1144,7 @@ class GlDriver extends Driver {
 		} else {
 			var img = bmp.toNative();
 			gl.bindTexture(GL.TEXTURE_2D, t.t.t);
-			gl.texImage2D(GL.TEXTURE_2D, mipLevel, t.t.internalFmt, getChannels(t.t), t.t.pixelFmt, img.getImageData(0, 0, bmp.width, bmp.height));
+			gl.texSubImage2D(GL.TEXTURE_2D, mipLevel, 0, 0, getChannels(t.t), t.t.pixelFmt, img.getImageData(0, 0, bmp.width, bmp.height));
 			restoreBind();
 		}
 	#end
@@ -1250,12 +1251,12 @@ class GlDriver extends Driver {
 			if( t.flags.has(IsArray) )
 				gl.compressedTexSubImage3D(face, mipLevel, 0, 0, side, pixels.width, pixels.height, 1, t.t.internalFmt, buffer);
 			else
-				gl.compressedTexImage2D(face, mipLevel, t.t.internalFmt, pixels.width, pixels.height, 0, buffer);
+				gl.compressedTexSubImage2D(face, mipLevel, 0, 0, pixels.width, pixels.height, t.t.internalFmt, buffer);
 		} else {
 			if( t.flags.has(IsArray) )
 				gl.texSubImage3D(face, mipLevel, 0, 0, side, pixels.width, pixels.height, 1, getChannels(t.t), t.t.pixelFmt, buffer);
 			else
-				gl.texImage2D(face, mipLevel, t.t.internalFmt, pixels.width, pixels.height, 0, getChannels(t.t), t.t.pixelFmt, buffer);
+				gl.texSubImage2D(face, mipLevel, 0, 0, pixels.width, pixels.height, getChannels(t.t), t.t.pixelFmt, buffer);
 		}
 		#else
 		throw "Not implemented";
@@ -1769,12 +1770,7 @@ class GlDriver extends Driver {
 		if( t.flags.has(IsArray) ) throw "TODO:texImage3D";
 		var face = cubic ? CUBE_FACES[side] : GL.TEXTURE_2D;
 		gl.bindTexture(bind, t.t.t);
-		if (glES >= 3) {
-			// WebGL2 support
-			gl.texImage2D(face, mipLevel, t.t.internalFmt, v.videoWidth, v.videoHeight, 0, getChannels(t.t), t.t.pixelFmt, untyped v);
-		} else {
-			gl.texImage2D(face, mipLevel, t.t.internalFmt, t.t.internalFmt, t.t.pixelFmt, v);
-		}
+		gl.texSubImage2D(face, mipLevel, 0, 0, v.videoWidth, v.videoHeight, getChannels(t.t), t.t.pixelFmt, untyped v);
 		restoreBind();
 	}
 
