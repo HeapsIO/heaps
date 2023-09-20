@@ -720,9 +720,18 @@ class TextComp extends DrawableComp implements domkit.Component.ComponentDecl<h2
 @:uiComp("html-text") @:domkitDecl
 class HtmlTextComp extends TextComp implements domkit.Component.ComponentDecl<h2d.HtmlText> {
 	@:p var condenseWhite : Bool;
+	@:p var propagateInteractiveNode: Bool;
 
 	static function create( parent : h2d.Object ) {
 		return new h2d.HtmlText(hxd.res.DefaultFont.get(),parent);
+	}
+
+	static function set_condenseWhite(o : h2d.HtmlText, v) {
+		o.condenseWhite = v;
+	}
+
+	static function set_propagateInteractiveNode(o : h2d.HtmlText, v) {
+		o.propagateInteractiveNode = v;
 	}
 }
 

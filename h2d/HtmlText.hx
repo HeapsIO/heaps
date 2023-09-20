@@ -71,6 +71,12 @@ class HtmlText extends Text {
 		If not set, uncondensed whitespace is left as is, as well as line-breaks.
 	**/
 	public var condenseWhite(default,set) : Bool = true;
+
+	/**
+		When enabled, nodes that create interactives will propagate events
+	**/
+	public var propagateInteractiveNode(default,set) : Bool = false;
+
 	/**
 		The spacing after `<img>` tags in pixels.
 	**/
@@ -168,6 +174,16 @@ class HtmlText extends Text {
 		Called on a <a> tag click
 	**/
 	public dynamic function onHyperlink(url:String) : Void {
+	}
+	/**
+		Called on a <a> tag over
+	**/
+	public dynamic function onOverHyperlink(url:String) : Void {
+	}
+	/**
+		Called on a <a> tag out
+	**/
+	public dynamic function onOutHyperlink(url:String) : Void {
 	}
 
 	/**
@@ -592,9 +608,16 @@ class HtmlText extends Text {
 			if(aHrefs == null || aHrefs.length == 0)
 				return;
 			aInteractive = new Interactive(0, metrics[sizePos].height, this);
+			aInteractive.propagateEvents = propagateInteractiveNode;
 			var href = aHrefs[aHrefs.length-1];
 			aInteractive.onClick = function(event) {
 				onHyperlink(href);
+			}
+			aInteractive.onOver = function(event) {
+				onOverHyperlink(href);
+			}
+			aInteractive.onOut = function(event) {
+				onOutHyperlink(href);
 			}
 			aInteractive.x = xPos;
 			aInteractive.y = yPos;
@@ -796,6 +819,14 @@ class HtmlText extends Text {
 	function set_condenseWhite(value: Bool) {
 		if ( this.condenseWhite != value ) {
 			this.condenseWhite = value;
+			rebuild();
+		}
+		return value;
+	}
+
+	function set_propagateInteractiveNode(value: Bool) {
+		if ( this.propagateInteractiveNode != value ) {
+			this.propagateInteractiveNode = value;
 			rebuild();
 		}
 		return value;
