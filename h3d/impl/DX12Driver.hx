@@ -64,7 +64,8 @@ class DxFrame {
 	public var commandList : CommandList;
 	public var fenceValue : Int64;
 	public var toRelease : Array<Resource> = [];
-	public var tmpBufToRelease : Array<Texture> = [];
+	public var tmpBufToNullify : Array<Texture> = [];
+	public var tmpBufToRelease : Array<dx.Dx12.GpuResource> = [];
 	public var shaderResourceViews : ManagedHeap;
 	public var samplerViews : ManagedHeap;
 	public var shaderResourceCache : ManagedHeapArray;
@@ -404,6 +405,7 @@ class DX12Driver extends h3d.impl.Driver {
 	function beginFrame() {
 		frameCount = hxd.Timer.frameCount;
 		currentFrame = Driver.getCurrentBackBufferIndex();
+		var prevFrame = frame;
 		frame = frames[currentFrame];
 		defaultDepth.t.res = frame.depthBuffer;
 		frame.allocator.reset();
@@ -411,10 +413,16 @@ class DX12Driver extends h3d.impl.Driver {
 		while( frame.toRelease.length > 0 )
 			frame.toRelease.pop().release();
 		while( frame.tmpBufToRelease.length > 0 ) {
-			var t = frame.tmpBufToRelease.pop();
-			if ( t.tmpBuf != null )
-				t.tmpBuf.release();
-			t.tmpBuf = null;
+			var tmpBuf = frame.tmpBufToRelease.pop();
+			if ( tmpBuf != null )
+				tmpBuf.release();
+		}
+		if ( prevFrame != null ) {
+			while ( prevFrame.tmpBufToNullify.length > 0 ) {
+				var t = prevFrame.tmpBufToNullify.pop();
+				frame.tmpBufToRelease.push(t.tmpBuf);
+				t.tmpBuf = null;
+			}
 		}
 		beginQueries();
 
@@ -875,14 +883,12 @@ class DX12Driver extends h3d.impl.Driver {
 		return vsSource+"\n\n\n\n"+psSource;
 	}
 
-	function compileShader( shader : hxsl.RuntimeShader ) : CompiledShader {
-
+	function computeRootSignature( shader : hxsl.RuntimeShader ) {
 		var params = hl.CArray.alloc(RootParameterConstants,16);
 		var paramsCount = 0, regCount = 0;
 		var texDescs = [];
 		var vertexParamsCBV = false;
 		var fragmentParamsCBV = false;
-		var c = new CompiledShader();
 
 		inline function unsafeCastTo<T,R>( v : T, c : Class<R> ) : R {
 			var arr = new hl.NativeArray<T>(1);
@@ -995,23 +1001,12 @@ class DX12Driver extends h3d.impl.Driver {
 				throw "Too many globals";
 		}
 
-		c.vertexRegisters = allocParams(shader.vertex);
+		var vertexRegisters = allocParams(shader.vertex);
 		var fragmentRegStart = regCount;
-		c.fragmentRegisters = allocParams(shader.fragment);
+		var fragmentRegisters = allocParams(shader.fragment);
 
 		if( paramsCount > params.length )
 			throw "ASSERT : Too many parameters";
-
-		var vs = compileSource(shader.vertex, "vs_6_0", 0);
-		var ps = compileSource(shader.fragment, "ps_6_0", fragmentRegStart);
-
-		var inputs = [];
-		for( v in shader.vertex.data.vars )
-			switch( v.kind ) {
-			case Input: inputs.push(v);
-			default:
-			}
-
 
 		var sign = new RootSignatureDesc();
 		sign.flags.set(ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
@@ -1021,9 +1016,30 @@ class DX12Driver extends h3d.impl.Driver {
 		sign.numParameters = paramsCount;
 		sign.parameters = params[0];
 
+		return { sign : sign, fragmentRegStart : fragmentRegStart, vertexRegisters : vertexRegisters, fragmentRegisters : fragmentRegisters, params : params };
+	}
+
+	function compileShader( shader : hxsl.RuntimeShader ) : CompiledShader {
+
+		var res = computeRootSignature(shader);
+
+		var c = new CompiledShader();
+		c.vertexRegisters = res.vertexRegisters;
+		c.fragmentRegisters = res.fragmentRegisters;
+
+		var vs = compileSource(shader.vertex, "vs_6_0", 0);
+		var ps = compileSource(shader.fragment, "ps_6_0", res.fragmentRegStart);
+
 		var signSize = 0;
-		var signBytes = Driver.serializeRootSignature(sign, 1, signSize);
+		var signBytes = Driver.serializeRootSignature(res.sign, 1, signSize);
 		var sign = new RootSignature(signBytes,signSize);
+
+		var inputs = [];
+		for( v in shader.vertex.data.vars )
+			switch( v.kind ) {
+			case Input: inputs.push(v);
+			default:
+			}
 
 		var inputLayout = hl.CArray.alloc(InputElementDesc, inputs.length);
 		var format : Array<hxd.BufferFormat.BufferInput> = [];
@@ -1330,6 +1346,7 @@ class DX12Driver extends h3d.impl.Driver {
 		tmp.heap.type = UPLOAD;
 		var subRes = mipLevel + side * t.mipLevels;
 		var nbRes = t.mipLevels * t.layerCount;
+		// Todo : optimize for video, currently allocating a new tmpBuf every frame.
 		if ( t.t.tmpBuf == null ) {
 			var tmpSize = t.t.res.getRequiredIntermediateSize(0, nbRes).low;
 			t.t.tmpBuf = allocGPU(tmpSize, UPLOAD, GENERIC_READ);
@@ -1354,7 +1371,7 @@ class DX12Driver extends h3d.impl.Driver {
 			throw "Failed to update sub resource";
 		transition(t.t, PIXEL_SHADER_RESOURCE);
 
-		frame.tmpBufToRelease.push(t.t);
+		frame.tmpBufToNullify.push(t.t);
 		t.flags.set(WasCleared);
 	}
 
