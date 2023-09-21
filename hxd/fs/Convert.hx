@@ -302,7 +302,11 @@ class CompressIMG extends Convert {
 			try sys.FileSystem.deleteFile(tmpFile) catch( e : Dynamic ) {};
 			try sys.FileSystem.deleteFile(dstPath) catch( e : Dynamic ) {};
 			sys.io.File.copy(srcPath, tmpFile);
-			var args = ["-f", tcFmt, "-y", "-nologo", tmpFile];
+
+			// convert srgb textures to normal space
+			var srgbParam = hasParam("srgb") && getParam("srgb") ? "-srgb" : "";
+
+			var args = ["-f", tcFmt, "-y", "-nologo", srgbParam, tmpFile];
 			if( !mips ) args = ["-m", "1"].concat(args);
 			command("texconv", args);
 			sys.FileSystem.deleteFile(tmpFile);
