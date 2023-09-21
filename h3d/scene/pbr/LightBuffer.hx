@@ -8,8 +8,8 @@ class LightBuffer {
 	var MAX_SPOT_LIGHT = 10;
 	var MAX_POINT_LIGHT = 10;
 	var MAX_DIR_SHADOW = 1;
-	var MAX_SPOT_SHADOW = 3;
-	var MAX_POINT_SHADOW = 3;
+	var MAX_SPOT_SHADOW = 2;
+	var MAX_POINT_SHADOW = 2;
 
 	var pointLightsShadow : Array<PointLight> = [];
 	var spotLightsShadow : Array<SpotLight> = [];
@@ -299,13 +299,16 @@ class LightBuffer {
 		s.dirLightCount = dirLights.length;
 		s.pointLightCount = pointLights.length;
 		s.spotLightCount = spotLights.length;
-		pointLights = [];
-		spotLights = [];
-		dirLights = [];
 		s.DIR_SHADOW_COUNT = MAX_DIR_SHADOW;
 		s.POINT_SHADOW_COUNT = MAX_POINT_SHADOW;
 		s.SPOT_SHADOW_COUNT = MAX_SPOT_SHADOW;
 		s.lightInfos.uploadFloats(lightInfos, 0, s.lightInfos.vertices, 0);
+		pointLights = [];
+		spotLights = [];
+		dirLights = [];
+		pointLightsShadow = [];
+		spotLightsShadow = [];
+		dirLightsShadow = [];
 
 		var pbrIndirect = @:privateAccess pbrRenderer.pbrIndirect;
 		s.USE_INDIRECT = pbrRenderer.env != null && pbrIndirect.irrLut != null;
