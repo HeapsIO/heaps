@@ -384,6 +384,33 @@ class CustomParser extends CssValue.ValueParser {
 		return adj;
 	}
 
+	public function transitionColorAdjust(v1: h3d.Matrix.ColorAdjust, v2: h3d.Matrix.ColorAdjust, t: Float): h3d.Matrix.ColorAdjust {
+		if(v1 == null || v2 == null)
+			return v2;
+		var adj: h3d.Matrix.ColorAdjust = {};
+		if(v1.saturation != null && v2.saturation != null)
+			adj.saturation = hxd.Math.lerp(v1.saturation, v2.saturation, t);
+		else
+			adj.saturation = v2.saturation;
+		if(v1.lightness != null && v2.lightness != null)
+			adj.lightness = hxd.Math.lerp(v1.lightness, v2.lightness, t);
+		else
+			adj.lightness = v2.lightness;
+		if(v1.hue != null && v2.hue != null)
+			adj.hue = hxd.Math.lerp(v1.hue, v2.hue, t);
+		else
+			adj.hue = v2.hue;
+		if(v1.contrast != null && v2.contrast != null)
+			adj.contrast = hxd.Math.lerp(v1.contrast, v2.contrast, t);
+		else
+			adj.contrast = v2.contrast;
+		if(v1.gain != null && v2.gain != null)
+			adj.gain = {color: transitionColor(v1.gain.color, v2.gain.color, t), alpha: hxd.Math.lerp(v1.gain.alpha, v2.gain.alpha, t)};
+		else
+			adj.gain = v2.gain;
+		return adj;
+	}
+
 }
 
 #if !macro
@@ -572,7 +599,7 @@ class DrawableComp extends ObjectComp implements domkit.Component.ComponentDecl<
 
 	@:p(colorF) @:t(colorF) #if domkit_drawable_color var color #else var tint #end : h3d.Vector;
 	@:p(auto) var smooth : Null<Bool>;
-	@:p(colorAdjust) var colorAdjust : Null<h3d.Matrix.ColorAdjust>;
+	@:p(colorAdjust) @:t(colorAdjust) var colorAdjust : Null<h3d.Matrix.ColorAdjust>;
 	@:p var tileWrap : Bool;
 
 	static function #if domkit_drawable_color set_color #else set_tint #end( o : h2d.Drawable, v ) {
