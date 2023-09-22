@@ -604,10 +604,10 @@ class HtmlText extends Text {
 	}
 
 	function addNode( e : Xml, font : Font, align : Align, rebuild : Bool, metrics : Array<LineInfo> ) {
-		inline function createInteractive() {
+		function createInteractive() {
 			if(aHrefs == null || aHrefs.length == 0)
 				return;
-			aInteractive = new Interactive(0, metrics[sizePos].height, this);
+			aInteractive = new Interactive(0, metrics[sizePos].baseLine, this);
 			aInteractive.propagateEvents = propagateInteractiveNode;
 			var href = aHrefs[aHrefs.length-1];
 			aInteractive.onClick = function(event) {
