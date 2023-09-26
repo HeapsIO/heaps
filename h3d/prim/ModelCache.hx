@@ -157,7 +157,7 @@ class ModelCache {
 			prevChild = parent.numChildren;
 			local3d = parent;
 		} else {
-			local3d = new h3d.scene.Object();
+			local3d = parent = new h3d.scene.Object();
 		}
 		var ctx2 = p.make(parent);
 		if( parent != null ) {
