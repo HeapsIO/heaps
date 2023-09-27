@@ -851,7 +851,7 @@ class HtmlText extends Text {
 	override function getBoundsRec( relativeTo : Object, out : h2d.col.Bounds, forSize : Bool ) {
 		if( forSize )
 			for( i in elements )
-				if( hxd.impl.Api.isOfType(i,h2d.Bitmap) )
+				if( hxd.impl.Api.isOfType(i,h2d.Bitmap) || hxd.impl.Api.isOfType(i,h2d.Interactive) )
 					i.visible = false;
 		super.getBoundsRec(relativeTo, out, forSize);
 		if( forSize )
