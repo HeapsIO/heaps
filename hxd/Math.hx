@@ -138,7 +138,7 @@ class Math {
 	/**
 		Returns a value between 0 and 1, that determines where val lies between a and b.
 	 */
-	 public inline static function inverseLerp(a:Float, b:Float, val:Float) {
+	public inline static function inverseLerp(a:Float, b:Float, val:Float) {
 		return (val - a) / (b - a);
 	}
 
