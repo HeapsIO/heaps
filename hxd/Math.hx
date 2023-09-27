@@ -136,6 +136,13 @@ class Math {
 	}
 
 	/**
+		Returns a value between 0 and 1, that determines where val lies between a and b.
+	 */
+	 public inline static function inverseLerp(a:Float, b:Float, val:Float) {
+		return (val - a) / (b - a);
+	}
+
+	/**
 	 	Similar to linear interpolation (k is between [0,1]), but can be controled with easing parameter. When easing is 0 it's linear.
 	**/
 	public inline static function ease(a:Float, b:Float, k:Float, easing:Float) {
