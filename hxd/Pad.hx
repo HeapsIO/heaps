@@ -228,6 +228,7 @@ class Pad {
 	public var axisDeadZone : Float = 0.1;
 	public var buttons : Array<Bool> = [];
 	public var values : Array<Float> = [];
+	public var prevValues : Array<Float> = [];
 	var prevButtons : Array<Bool> = [];
 	var rawXAxis : Float = 0.;
 	var rawYAxis : Float = 0.;
@@ -275,6 +276,7 @@ class Pad {
 		for( i in 0...buttons.length ) buttons[i] = false;
 		for( i in 0...buttons.length ) prevButtons[i] = false;
 		for( i in 0...values.length ) values[i] = 0;
+		for( i in 0...values.length ) prevValues[i] = 0;
 	}
 
 	public function rumble( strength : Float, time_s : Float ){
@@ -420,9 +422,12 @@ class Pad {
 					}
 			});
 			flash.Lib.current.addEventListener(flash.events.Event.EXIT_FRAME, function(_){
-				for( p in pads )
+				for( p in pads ) {
 					for( i in 0...p.buttons.length )
 						p.prevButtons[i] = p.buttons[i];
+					for( i in 0...p.values.length )
+						p.prevValues[i] = p.values[i];
+				}
 			});
 			var count = flash.ui.GameInput.numDevices; // necessary to trigger added
 		}
@@ -553,9 +558,12 @@ class Pad {
 	}
 
 	static function syncPads(){
-		for( p in pads )
+		for( p in pads ) {
 			for( i in 0...p.buttons.length )
 				p.prevButtons[i] = p.buttons[i];
+			for( i in 0...p.values.length )
+				p.prevValues[i] = p.values[i];
+		}
 	}
 
 	#elseif (hldx || usesys)
@@ -567,6 +575,7 @@ class Pad {
 			var k = p.d.getButtons();
 			for( i in 0...GameController.NUM_BUTTONS ){
 				p.prevButtons[i] = p.buttons[i];
+				p.prevValues[i] = p.values[i];
 				p._setButton(i, k & (1 << i) != 0);
 			}
 
@@ -575,6 +584,7 @@ class Pad {
 				var v = p.d.getAxis(i);
 				p.prevButtons[ii] = p.buttons[ii];
 				p._detectAnalogButton(ii, v);
+				p.prevValues[ii] = p.values[ii];
 				p.values[ii] = v;
 				if( ii == GameController.CONFIG.analogX )
 					p.rawXAxis = v;
@@ -623,13 +633,17 @@ class Pad {
 			for( i in 0...p.d.buttons.length ) {
 				p.prevButtons[i] = p.buttons[i];
 				p.buttons[i] = p.d.buttons[i].pressed;
+				p.prevValues[i] = p.values[i];
 				p.values[i] = p.d.buttons[i].value;
 			}
 			for( i in 0...p.d.axes.length >> 1 ) {
 				var x = p.d.axes[i << 1];
 				var y = p.d.axes[(i << 1) + 1]; // y neg !;
-				p.values[(i << 1) + p.d.buttons.length] = x;
-				p.values[(i << 1) + p.d.buttons.length + 1] = -y;
+				var ii = (i << 1) + p.d.buttons.length;
+				p.prevValues[ii] = p.values[ii];
+				p.prevValues[ii + 1] = p.values[ii + 1];
+				p.values[ii] = x;
+				p.values[ii + 1] = -y;
 				if( i == 0 ) {
 					p.rawXAxis = x;
 					p.rawYAxis = y;
