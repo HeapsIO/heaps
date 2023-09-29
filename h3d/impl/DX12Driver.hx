@@ -867,12 +867,30 @@ class DX12Driver extends h3d.impl.Driver {
 
 	static var VERTEX_FORMATS = [null,null,R32G32_FLOAT,R32G32B32_FLOAT,R32G32B32A32_FLOAT];
 
+	function getBinaryPayload( vertex : Bool, code : String ) {
+		var bin = code.indexOf("//BIN=");
+		if( bin >= 0 ) {
+			var end = code.indexOf("#", bin);
+			if( end >= 0 )
+				return haxe.crypto.Base64.decode(code.substr(bin + 6, end - bin - 6));
+		}
+		if( shaderCache != null )
+			return shaderCache.resolveShaderBinary(code);
+		return null;
+	}
+
 	function compileSource( sh : hxsl.RuntimeShader.RuntimeShaderData, profile, baseRegister ) {
 		var args = [];
 		var out = new hxsl.HlslOut();
 		out.baseRegister = baseRegister;
-		var source = out.run(sh.data);
-		return compiler.compile(source, profile, args);
+		if ( sh.code == null ) {
+			sh.code = out.run(sh.data);
+		}
+		var bytes = getBinaryPayload(sh.vertex, sh.code);
+		if ( bytes == null ) {
+			return compiler.compile(sh.code, profile, args);
+		}
+		return bytes;
 	}
 
 	override function getNativeShaderCode( shader : hxsl.RuntimeShader ) {
@@ -883,18 +901,67 @@ class DX12Driver extends h3d.impl.Driver {
 		return vsSource+"\n\n\n\n"+psSource;
 	}
 
+	function stringifyRootSignature( sign : RootSignatureDesc, name : String, params : hl.CArray<RootParameterConstants> ) : String {
+		var s = '#define ${name} "RootFlags(';
+		if ( sign.flags.toInt() == 0 )
+			s += '0'; // no flags
+		else {
+			// RootFlags
+			for ( f in haxe.EnumTools.getConstructors(RootSignatureFlag) ) {
+				if ( !sign.flags.has(haxe.EnumTools.createByName(RootSignatureFlag, f)) )
+					continue;
+				s += Std.string(f) + '|';
+			}
+			s = s.substr(0, s.length - 1);
+		}
+		s += ')",';
+
+		for ( param in params ) {
+			var vis = 'SHADER_VISIBILITY_${param.shaderVisibility == VERTEX ? "VERTEX" : "PIXEL"}';
+			if ( param.parameterType == CONSTANTS ) {
+				var shaderRegister = param.shaderRegister;
+				s += 'RootConstants(num32BitConstants=${param.num32BitValues},b${shaderRegister}, visibility=${vis}),';
+			} else {
+				try {
+					var p = unsafeCastTo(param, RootParameterDescriptorTable);
+					if ( p == null ) continue;
+					var descRange = p.descriptorRanges;
+					if ( descRange == null ) continue;
+					var baseShaderRegister = descRange.baseShaderRegister;
+					switch ( descRange.rangeType) {
+					case CBV:
+						s += 'DescriptorTable(CBV(b${baseShaderRegister}), visibility = ${vis}),';
+					case SRV:
+						s += 'DescriptorTable(SRV(t${baseShaderRegister},numDescriptors = ${descRange.numDescriptors}), visibility = ${vis}),';
+					case SAMPLER:
+						var baseShaderRegister = descRange.baseShaderRegister;
+						s += 'DescriptorTable(Sampler(s${baseShaderRegister}, space=${descRange.registerSpace}, numDescriptors = ${descRange.numDescriptors}), visibility = ${vis}),';
+					case UAV:
+						throw "Not supported";
+					}
+				} catch ( e : Dynamic ) {
+					continue;
+				}
+			}
+		}
+
+		s += '\n';
+		return s;
+	}
+
+	inline function unsafeCastTo<T,R>( v : T, c : Class<R> ) : R {
+		var arr = new hl.NativeArray<T>(1);
+		arr[0] = v;
+		return (cast arr : hl.NativeArray<R>)[0];
+	}
+
+
 	function computeRootSignature( shader : hxsl.RuntimeShader ) {
 		var params = hl.CArray.alloc(RootParameterConstants,16);
 		var paramsCount = 0, regCount = 0;
 		var texDescs = [];
 		var vertexParamsCBV = false;
 		var fragmentParamsCBV = false;
-
-		inline function unsafeCastTo<T,R>( v : T, c : Class<R> ) : R {
-			var arr = new hl.NativeArray<T>(1);
-			arr[0] = v;
-			return (cast arr : hl.NativeArray<R>)[0];
-		}
 
 		function allocDescTable(vis) {
 			var p = unsafeCastTo(params[paramsCount++], RootParameterDescriptorTable);

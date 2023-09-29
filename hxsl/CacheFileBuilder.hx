@@ -5,6 +5,7 @@ enum CacheFilePlatform {
 	OpenGL;
 	PS4;
 	XBoxOne;
+	XBoxSeries;
 	NX;
 	NXBinaries;
 }
@@ -57,6 +58,7 @@ private class CustomCacheFile extends CacheFile {
 		case OpenGL: "gl";
 		case PS4: "ps4";
 		case XBoxOne: "xboxone";
+		case XBoxSeries: "xbox";
 		case NX: "nx";
 		case NXBinaries: "nxbin";
 		};
@@ -70,7 +72,11 @@ class CacheFileBuilder {
 	public var platforms : Array<CacheFilePlatform> = [];
 	public var shaderLib : Map<String,String> = new Map();
 	public var dxInitDone = false;
+	#if (hldx && dx12)
+	public var dx12Driver : h3d.impl.DX12Driver;
+	#end
 	public var dxShaderVersion = "5_0";
+	public var dxcShaderVersion = "6_0";
 	var glout : GlslOut;
 	var vertexOut : String;
 	var hasCompiled : Bool;
@@ -116,7 +122,7 @@ class CacheFileBuilder {
 	function generateShader( r : RuntimeShader, rd : RuntimeShader.RuntimeShaderData ) : { code : String, bytes : haxe.io.Bytes } {
 		switch( platform ) {
 		case DirectX:
-			#if hldx
+			#if (hldx && !dx12)
 			if( !dxInitDone ) {
 				var win = new dx.Window("", 800, 600);
 				win.visible = false;
@@ -128,7 +134,7 @@ class CacheFileBuilder {
 			var bytes = dx.Driver.compileShader(code, "", "main", (rd.vertex?"vs_":"ps_") + dxShaderVersion, OptimizationLevel3);
 			return { code : code, bytes : bytes };
 			#else
-			throw "DirectX compilation requires -lib hldx";
+			throw "DirectX compilation requires -lib hldx without -D dx12";
 			#end
 		case OpenGL:
 			if( rd.vertex ) {
@@ -177,6 +183,38 @@ class CacheFileBuilder {
 			sys.FileSystem.deleteFile(tmpSrc);
 			sys.FileSystem.deleteFile(tmpOut);
 			return { code : code, bytes : data };
+		case XBoxSeries:
+			#if (hldx && dx12)
+			if( !dxInitDone ) {
+				var win = new dx.Window("", 800, 600);
+				win.visible = false;
+				dxInitDone = true;
+				dx12Driver = new h3d.impl.DX12Driver();
+			}
+			var out = new HlslOut();
+			var tmpFile = "tmp";
+			var tmpSrc = tmpFile + ".hlsl";
+			var tmpOut = tmpFile + ".sb";
+			var sign = @:privateAccess dx12Driver.computeRootSignature(r);
+			out.baseRegister = rd.vertex ? 0 : sign.fragmentRegStart;
+			var code = out.run(rd.data);
+			var serializeRootSignature = @:privateAccess dx12Driver.stringifyRootSignature(sign.sign, "ROOT_SIGNATURE", sign.params);
+			code = serializeRootSignature + code;
+			sys.io.File.saveContent(tmpSrc, code);
+			var args = ["-rootsig-define", "ROOT_SIGNATURE", "-T", (rd.vertex ? "vs_" : "ps_") + dxcShaderVersion,"-O3","-Fo", tmpOut, tmpSrc];
+			var p = new sys.io.Process(Sys.getEnv("GXDKLatest")+ "bin\\Scarlett\\dxc.exe", args);
+			var error = p.stderr.readAll().toString();
+			var ecode = p.exitCode();
+			if( ecode != 0 )
+				throw "ERROR while compiling " + tmpSrc + "\n" + error;
+			p.close();
+			var data = sys.io.File.getBytes(tmpOut);
+			sys.FileSystem.deleteFile(tmpSrc);
+			sys.FileSystem.deleteFile(tmpOut);
+			return { code : null, bytes : data };
+			#else
+			throw "-lib hldx and -D dx12 are required to generate binaries for XBoxSeries";
+			#end
 		case NX:
 			if( rd.vertex )
 				glout = new hxsl.NXGlslOut();
@@ -233,6 +271,8 @@ class CacheFileBuilder {
 				builder.platforms.push(PS4);
 			case "-xbox":
 				builder.platforms.push(XBoxOne);
+			case "-xbs":
+				builder.platforms.push(XBoxSeries);
 			case "-nx":
 				builder.platforms.push(NX);
 			case "-nxbinary":
