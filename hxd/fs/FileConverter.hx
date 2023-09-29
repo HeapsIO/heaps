@@ -326,7 +326,11 @@ class FileConverter {
 		conv.originalFilename = e.name;
 		conv.params = params;
 		onConvert(conv);
+		var prev = hxd.System.allowTimeout;
+		hxd.System.allowTimeout = false;
 		conv.convert();
+		if( prev ) hxd.System.timeoutTick();
+		hxd.System.allowTimeout = prev;
 		conv.srcPath = null;
 		conv.dstPath = null;
 		conv.srcBytes = null;
