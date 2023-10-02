@@ -115,7 +115,7 @@ class CacheFileBuilder {
 		if( s.code == null )
 			return binaryPayload(s.bytes);
 		if( shaderCache != null )
-			shaderCache.saveCompiledShader(s.code, s.bytes, shaderCacheConfig);
+			shaderCache.saveCompiledShader(s.code, s.bytes, shaderCacheConfig, false);
 		return s.code + binaryPayload(s.bytes);
 	}
 
