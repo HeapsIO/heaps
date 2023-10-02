@@ -211,7 +211,7 @@ class CacheFileBuilder {
 			var data = sys.io.File.getBytes(tmpOut);
 			sys.FileSystem.deleteFile(tmpSrc);
 			sys.FileSystem.deleteFile(tmpOut);
-			return { code : null, bytes : data };
+			return { code : code, bytes : data };
 			#else
 			throw "-lib hldx and -D dx12 are required to generate binaries for XBoxSeries";
 			#end
