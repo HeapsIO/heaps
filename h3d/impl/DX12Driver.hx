@@ -879,12 +879,13 @@ class DX12Driver extends h3d.impl.Driver {
 		return null;
 	}
 
-	function compileSource( sh : hxsl.RuntimeShader.RuntimeShaderData, profile, baseRegister ) {
+	function compileSource( sh : hxsl.RuntimeShader.RuntimeShaderData, profile, baseRegister, rootStr = "" ) {
 		var args = [];
 		var out = new hxsl.HlslOut();
 		out.baseRegister = baseRegister;
 		if ( sh.code == null ) {
 			sh.code = out.run(sh.data);
+			sh.code = rootStr + sh.code;
 		}
 		var bytes = getBinaryPayload(sh.vertex, sh.code);
 		if ( bytes == null ) {
@@ -1094,8 +1095,9 @@ class DX12Driver extends h3d.impl.Driver {
 		c.vertexRegisters = res.vertexRegisters;
 		c.fragmentRegisters = res.fragmentRegisters;
 
-		var vs = compileSource(shader.vertex, "vs_6_0", 0);
-		var ps = compileSource(shader.fragment, "ps_6_0", res.fragmentRegStart);
+		var rootStr = stringifyRootSignature(res.sign, "ROOT_SIGNATURE", res.params);
+		var vs = compileSource(shader.vertex, "vs_6_0", 0, rootStr);
+		var ps = compileSource(shader.fragment, "ps_6_0", res.fragmentRegStart, rootStr);
 
 		var signSize = 0;
 		var signBytes = Driver.serializeRootSignature(res.sign, 1, signSize);
