@@ -80,7 +80,7 @@ class ShaderCache {
 		return data.get(configurationKey + haxe.crypto.Md5.encode(source));
 	}
 
-	public function saveCompiledShader( source : String, bytes : haxe.io.Bytes, ?configurationKey = "" ) {
+	public function saveCompiledShader( source : String, bytes : haxe.io.Bytes, ?configurationKey = "", ?saveToFile = true ) {
 		if( outputFile == null )
 			return;
 		if( data == null ) load();
@@ -88,7 +88,8 @@ class ShaderCache {
 		if( data.get(key) == bytes && (!keepSource || sources.get(key) == source) )
 			return;
 		data.set(key, bytes);
-		save();
+		if( saveToFile )
+			save();
 		if( keepSource ) {
 			sources.set(key, source);
 			saveSources();
