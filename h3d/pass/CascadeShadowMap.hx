@@ -6,6 +6,7 @@ class CascadeShadowMap extends DirShadowMap {
 	var lightCameras : Array<h3d.Camera> = [];
 	var currentCascadeIndex = 0;
 
+	public var params : Array<hrt.prefab.Light.CascadeParams> = [];
 	public var pow : Float = 1.0;
 	public var firstCascadeSize : Float = 10.0;
 	public var castingMaxDist : Float = 0.0;
@@ -96,13 +97,14 @@ class CascadeShadowMap extends DirShadowMap {
 
 	function syncCascadeShader(textures : Array<h3d.mat.Texture>) {
 		cshader.DEBUG = debugShader;
+		params.resize(cascade);
 		for ( i in 0...cascade ) {
 			var c = cascade - 1 - i;
 			cshader.cascadeShadowMaps[c] = textures[i];
 			cshader.cascadeProjs[c] = lightCameras[i].m;
 			if ( debugShader )
 				cshader.cascadeDebugs[c] = h3d.Vector.fromColor(debugColors[i]);
-			cshader.cascadeBias[c] = Math.pow(computeNearFar(i).far / computeNearFar(0).far, 1.2) * bias;
+			cshader.cascadeBias[c] = params[c] != null ? params[c].bias : 0.001;
 		}
 		cshader.CASCADE_COUNT = cascade;
 		cshader.shadowBias = bias;
