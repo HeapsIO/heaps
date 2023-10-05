@@ -50,6 +50,11 @@ class ObjectFollower extends Object {
 	**/
 	public var depthBias : Float = 0.;
 
+	/**
+		Express the offset in terms of the current camera direction.
+	**/
+	public var cameraRelative : Bool = false;
+
 	var zValue : Float = 0.;
 	var outputScale : Float = 1.;
 	var tmpPos = new h3d.Vector();
@@ -75,7 +80,17 @@ class ObjectFollower extends Object {
 		var width = s2d == null ? h3d.Engine.getCurrent().width : s2d.width;
 		var height = s2d == null ? h3d.Engine.getCurrent().height : s2d.height;
 		var absPos = follow.getAbsPos();
-		var pos = new h3d.Vector(absPos._41 + offsetX, absPos._42 + offsetY, absPos._43 + offsetZ);
+		var pos = new h3d.Vector();
+		if( cameraRelative ) {
+			var m = new h3d.Matrix();
+			inline m.load(scene.camera.mcam);
+			inline m.transpose();
+			var tmp = new h3d.Vector(offsetX, offsetZ, offsetY);
+			tmp.transform3x3(m);
+			pos.set(absPos._41 + tmp.x, absPos._42 + tmp.y, absPos._43 + tmp.z);
+		} else {
+			pos.set(absPos._41 + offsetX, absPos._42 + offsetY, absPos._43 + offsetZ);
+		}
 		var p = scene.camera.project(pos.x, pos.y, pos.z, width * outputScale, height * outputScale, tmpPos);
 		zValue = p.z;
 
