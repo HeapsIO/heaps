@@ -282,7 +282,8 @@ class CustomParser extends CssValue.ValueParser {
 	public function parseFilter(value) : #if macro Bool #else h2d.filter.Filter #end {
 		return switch( value ) {
 		case VIdent("none"): #if macro true #else null #end;
-		case VCall("grayscale",[]): #if macro true #else h2d.filter.ColorMatrix.grayed() #end;
+		case VIdent("nothing"): #if macro true #else new h2d.filter.Nothing() #end;
+		case VIdent("grayscale"), VCall("grayscale",[]): #if macro true #else h2d.filter.ColorMatrix.grayed() #end;
 		case VCall("grayscale",[v]):
 			var v = parseFloatPercent(v);
 			#if macro
