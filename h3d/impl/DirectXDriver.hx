@@ -468,14 +468,19 @@ class DirectXDriver extends h3d.impl.Driver {
 		t.lastFrame = frame;
 		t.flags.unset(WasCleared);
 
+		return { res : tex, view : makeTexView(t, tex, 0), rt : rt ? [] : null, mips : mips };
+	}
+
+	function makeTexView( t : h3d.mat.Texture, tex, startMip ) {
+		var isCube = t.flags.has(Cube);
+		var isArray = t.flags.has(IsArray);
 		var vdesc = new ShaderResourceViewDesc();
-		vdesc.format = desc.format;
+		vdesc.format = getTextureFormat(t);
 		vdesc.dimension = isCube ? TextureCube : isArray ? Texture2DArray : Texture2D;
-		vdesc.arraySize = desc.arraySize;
-		vdesc.start = 0; // top mip level
+		vdesc.arraySize = isArray ? t.layerCount : isCube ? 6 : 0;
+		vdesc.start = startMip; // top mip level
 		vdesc.count = -1; // all mip levels
-		var view = Driver.createShaderResourceView(tex, vdesc);
-		return { res : tex, view : view, rt : rt ? [] : null, mips : mips };
+		return Driver.createShaderResourceView(tex, vdesc);
 	}
 
 	override function disposeTexture( t : h3d.mat.Texture ) {
@@ -484,6 +489,10 @@ class DirectXDriver extends h3d.impl.Driver {
 		t.t = null;
 		if( tt.view != null ) tt.view.release();
 		if( tt.res != null ) tt.res.release();
+		if( tt.views != null )
+			for( v in tt.views )
+				if( v != null )
+					v.release();
 		if( tt.rt != null )
 			for( rt in tt.rt )
 				if( rt != null )
@@ -1335,6 +1344,14 @@ class DirectXDriver extends h3d.impl.Driver {
 				t.lastFrame = frame;
 
 				var view = t.t.view;
+				if( t.startingMip > 0 ) {
+					if( t.t.views == null ) t.t.views = [];
+					view = t.t.views[t.startingMip];
+					if( view == null ) {
+						view = makeTexView(t, t.t.res, t.startingMip);
+						t.t.views[t.startingMip] = view;
+					}
+				}
 				if( view != state.resources[i] || t.t.depthView != null ) {
 					state.resources[i] = view;
 					max = i;

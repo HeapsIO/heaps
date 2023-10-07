@@ -13,7 +13,7 @@ typedef Query = {};
 #elseif hlsdl
 typedef IndexBuffer = { b : sdl.GL.Buffer, is32 : Bool };
 typedef GPUBuffer = sdl.GL.Buffer;
-typedef Texture = { t : sdl.GL.Texture, width : Int, height : Int, internalFmt : Int, pixelFmt : Int, bits : Int, bind : Int, bias : Float };
+typedef Texture = { t : sdl.GL.Texture, width : Int, height : Int, internalFmt : Int, pixelFmt : Int, bits : Int, bind : Int, bias : Float, startMip : Int };
 typedef Query = { q : sdl.GL.Query, kind : QueryKind };
 #elseif usegl
 typedef IndexBuffer = { b : haxe.GLTypes.Buffer, is32 : Bool };
@@ -28,7 +28,7 @@ typedef Query = h3d.impl.DX12Driver.QueryData;
 #elseif hldx
 typedef IndexBuffer = { res : dx.Resource, count : Int, bits : Int };
 typedef GPUBuffer = dx.Resource;
-typedef Texture = { res : dx.Resource, view : dx.Driver.ShaderResourceView, ?depthView : dx.Driver.DepthStencilView, ?readOnlyDepthView : dx.Driver.DepthStencilView, rt : Array<dx.Driver.RenderTargetView>, mips : Int };
+typedef Texture = { res : dx.Resource, view : dx.Driver.ShaderResourceView, ?depthView : dx.Driver.DepthStencilView, ?readOnlyDepthView : dx.Driver.DepthStencilView, rt : Array<dx.Driver.RenderTargetView>, mips : Int, ?views : Array<dx.Driver.ShaderResourceView> };
 typedef Query = {};
 #elseif usesys
 typedef IndexBuffer = haxe.GraphicsDriver.IndexBuffer;

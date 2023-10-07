@@ -41,6 +41,7 @@ class Texture {
 	public var filter(default,set) : Filter;
 	public var wrap(default, set) : Wrap;
 	public var layerCount(get, never) : Int;
+	public var startingMip : Int = 0;
 	public var lodBias : Float = 0.;
 	public var mipLevels(get, never) : Int;
 	var customMipLevels : Int;

@@ -1577,19 +1577,23 @@ class DX12Driver extends h3d.impl.Driver {
 					if( t.flags.has(Cube) ) {
 						var desc = tmp.texCubeSRV;
 						desc.format = t.t.format;
+						desc.mostDetailedMip = t.startingMip;
 						tdesc = desc;
 					} else if( t.flags.has(IsArray) ) {
 						var desc = tmp.tex2DArraySRV;
 						desc.format = t.t.format;
 						desc.arraySize = t.layerCount;
+						desc.mostDetailedMip = t.startingMip;
 						tdesc = desc;
 					} else if ( t.isDepth() ) {
 						var desc = tmp.tex2DSRV;
 						desc.format = R24_UNORM_X8_TYPELESS;
+						desc.mostDetailedMip = t.startingMip;
 						tdesc = desc;
 					} else {
 						var desc = tmp.tex2DSRV;
 						desc.format = t.t.format;
+						desc.mostDetailedMip = t.startingMip;
 						tdesc = desc;
 					}
 					t.lastFrame = frameCount;

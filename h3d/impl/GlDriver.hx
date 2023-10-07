@@ -577,6 +577,10 @@ class GlDriver extends Driver {
 					gl.texParameteri(mode, GL.TEXTURE_WRAP_S, w);
 					gl.texParameteri(mode, GL.TEXTURE_WRAP_T, w);
 				}
+				if( t.t.startMip != t.startingMip ) {
+					gl.texParameteri(pt.mode, GL.TEXTURE_BASE_LEVEL, t.startingMip);
+					t.t.startMip = t.startingMip;
+				}
 				#if !js
 				if( t.lodBias != t.t.bias ) {
 					t.t.bias = t.lodBias;
@@ -853,7 +857,7 @@ class GlDriver extends Driver {
 		discardError();
 		var tt = gl.createTexture();
 		var bind = getBindType(t);
-		var tt : Texture = { t : tt, width : t.width, height : t.height, internalFmt : GL.RGBA, pixelFmt : GL.UNSIGNED_BYTE, bits : -1, bind : bind, bias : 0 #if multidriver, driver : this #end };
+		var tt : Texture = { t : tt, width : t.width, height : t.height, internalFmt : GL.RGBA, pixelFmt : GL.UNSIGNED_BYTE, bits : -1, bind : bind, bias : 0, startMip : t.startingMip #if multidriver, driver : this #end };
 		switch( t.format ) {
 		case RGBA:
 			// default
@@ -950,7 +954,7 @@ class GlDriver extends Driver {
 		}
 
 		#if (js || (hlsdl >= version("1.12.0")))
-		gl.texParameteri(bind, GL.TEXTURE_BASE_LEVEL, 0);
+		gl.texParameteri(bind, GL.TEXTURE_BASE_LEVEL, t.startingMip);
 		gl.texParameteri(bind, GL.TEXTURE_MAX_LEVEL, t.mipLevels-1);
 		#end
 
@@ -1006,7 +1010,7 @@ class GlDriver extends Driver {
 
 	override function allocDepthBuffer( t : h3d.mat.Texture ) : Texture {
 		var tt = gl.createTexture();
-		var tt : Texture = { t : tt, width : t.width, height : t.height, internalFmt : GL.RGBA, pixelFmt : GL.UNSIGNED_BYTE, bits : -1, bind : GL.TEXTURE_2D, bias : 0 #if multidriver, driver : this #end };
+		var tt : Texture = { t : tt, width : t.width, height : t.height, internalFmt : GL.RGBA, pixelFmt : GL.UNSIGNED_BYTE, bits : -1, bind : GL.TEXTURE_2D, bias : 0, startMip: 0 #if multidriver, driver : this #end };
 		var fmt = GL.DEPTH_COMPONENT;
 		switch( t.format ) {
 		case Depth16:
