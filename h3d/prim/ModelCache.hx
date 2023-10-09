@@ -106,7 +106,7 @@ class ModelCache {
 				tres = hxd.res.Loader.currentInstance.load(path);
 			} catch( e : hxd.res.NotFound ) {
 				// force good path error
-				throw error;
+				throw error + (model != null ? " fullpath : " + fullPath : "");
 			}
 		}
 		var img = tres.toImage();
