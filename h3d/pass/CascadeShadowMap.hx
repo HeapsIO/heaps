@@ -1,12 +1,16 @@
 package h3d.pass;
 
+typedef CascadeParams = {
+	var bias : Float;
+}
+
 class CascadeShadowMap extends DirShadowMap {
 
 	var cshader : h3d.shader.CascadeShadow;
 	var lightCameras : Array<h3d.Camera> = [];
 	var currentCascadeIndex = 0;
 
-	public var params : Array<hrt.prefab.Light.CascadeParams> = [];
+	public var params : Array<CascadeParams> = [];
 	public var pow : Float = 1.0;
 	public var firstCascadeSize : Float = 10.0;
 	public var castingMaxDist : Float = 0.0;
@@ -97,7 +101,6 @@ class CascadeShadowMap extends DirShadowMap {
 
 	function syncCascadeShader(textures : Array<h3d.mat.Texture>) {
 		cshader.DEBUG = debugShader;
-		params.resize(cascade);
 		for ( i in 0...cascade ) {
 			var c = cascade - 1 - i;
 			cshader.cascadeShadowMaps[c] = textures[i];
