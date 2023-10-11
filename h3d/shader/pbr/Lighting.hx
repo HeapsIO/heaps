@@ -45,7 +45,11 @@ class Indirect extends PropsDefinition {
 		}
 
 		function fragment() {
+			#if !MRT_low
 			var isSky = normal.dot(normal) <= 0;
+			#else
+			var isSky = normal.dot(normal) > 1.1; // due to normal packing, sky normal is likely sqrt(3) > 1.7
+			#end
 			if( isSky ) {
 				if( showSky ) {
 					var color : Vec3;
