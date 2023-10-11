@@ -722,6 +722,10 @@ class DX12Driver extends h3d.impl.Driver {
 		var texViews = renderTargetViews.alloc(textures.length);
 		var bits = 0;
 		for( i => t in textures ) {
+			if ( t.t == null ) {
+				t.alloc();
+				if ( hasDeviceError ) return;
+			}
 			var view = texViews.offset(renderTargetViews.stride * i);
 			Driver.createRenderTargetView(t.t.res, null, view);
 			tmp.renderTargets[i] = view;
