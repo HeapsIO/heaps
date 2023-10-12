@@ -6,7 +6,7 @@ typedef HideProps = {
 
 class ModelCache {
 
-	var models : Map<String, { lib : hxd.fmt.hmd.Library, props : HideProps, col : Array<h3d.col.TransformCollider> }>;
+	var models : Map<String, { lib : hxd.fmt.hmd.Library, props : HideProps, col : Array<h3d.col.TransformCollider>, lastTime : Float }>;
 	var textures : Map<String, h3d.mat.Texture>;
 	var anims : Map<String, h3d.anim.Animation>;
 
@@ -41,9 +41,10 @@ class ModelCache {
 				haxe.Json.parse(hxd.res.Loader.currentInstance.load(parts.join(".")).toText());
 			} catch( e : hxd.res.NotFound )
 				null;
-			m = { lib : res.toHmd(), props : props, col : null };
+			m = { lib : res.toHmd(), props : props, col : null, lastTime : 0. };
 			models.set(path, m);
 		}
+		m.lastTime = haxe.Timer.stamp();
 		return m;
 	}
 
@@ -143,6 +144,27 @@ class ModelCache {
 			setAnimationProps(a, res.name, m.props);
 		}
 		return a;
+	}
+
+	public function cleanModels( lastUseTime = 180 ) {
+		var now = haxe.Timer.stamp();
+		var lastT = now - lastUseTime;
+		for( m in models ) {
+			if( m.lastTime < lastT ) {
+				var usedPrim = false;
+				for( p in @:privateAccess m.lib.cachedPrimitives )
+					if( p.refCount > 1 ) {
+						usedPrim = true;
+						break;
+					}
+				if( usedPrim )
+					m.lastTime = now;
+				else {
+					models.remove(m.lib.resource.entry.path);
+					m.lib.dispose();
+				}
+			}
+		}
 	}
 
 	#if hide
