@@ -1049,9 +1049,11 @@ class GlDriver extends Driver {
 	var defaultDepth : h3d.mat.Texture;
 
 	override function getDefaultDepthBuffer() : h3d.mat.Texture {
+		// Unfortunately there is no way to bind the depth buffer of the default frame buffer to a frame buffer object.
 		if( defaultDepth != null )
 			return defaultDepth;
 		defaultDepth = new h3d.mat.Texture(0, 0, Depth24Stencil8);
+		defaultDepth.name = "defaultDepthBuffer";
 		@:privateAccess {
 			defaultDepth.width = this.bufferWidth;
 			defaultDepth.height = this.bufferHeight;

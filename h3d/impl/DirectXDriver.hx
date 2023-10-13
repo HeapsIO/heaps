@@ -184,6 +184,7 @@ class DirectXDriver extends h3d.impl.Driver {
 		shaderVersion = if( version < 10 ) "3_0" else if( version < 11 ) "4_0" else "5_0";
 
 		Driver.iaSetPrimitiveTopology(TriangleList);
+		// Create a default depth buffer to mimic opengl.
 		defaultDepthInst = new h3d.mat.Texture(-1, -1, Depth24Stencil8);
 		defaultDepthInst.name = "defaultDepth";
 		for( i in 0...VIEWPORTS_ELTS )
@@ -321,6 +322,7 @@ class DirectXDriver extends h3d.impl.Driver {
 	}
 
 	override function getDefaultDepthBuffer():h3d.mat.Texture {
+		// Create an extra depth buffer to fit opengl default frame buffer.
 		if( extraDepthInst == null ) @:privateAccess {
 			extraDepthInst = new h3d.mat.Texture(0, 0, Depth24Stencil8);
 			extraDepthInst.name = "extraDepth";
