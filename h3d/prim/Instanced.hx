@@ -22,7 +22,7 @@ class Instanced extends Primitive {
 		}
 		primitive = m;
 		baseBounds = m.getBounds();
-		if( m.buffer == null )
+		if( m.buffer == null || m.indexes == null )
 			m.alloc(h3d.Engine.getCurrent()); // make sure first alloc is done
 	}
 
@@ -57,7 +57,7 @@ class Instanced extends Primitive {
 	}
 
 	override function render( engine : h3d.Engine ) {
-		if( primitive.buffer == null || primitive.buffer.isDisposed() )
+		if( primitive.indexes == null || primitive.buffer.isDisposed() )
 			primitive.alloc(engine);
 		@:privateAccess engine.flushTarget();
 		@:privateAccess if( primitive.buffers == null )
