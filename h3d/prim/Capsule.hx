@@ -99,7 +99,7 @@ class Capsule extends Polygon {
 	override function addNormals() {
 	}
 
-	public static function defaultUnitSphere() {
+	public static function defaultUnitCapsule() {
 		var engine = h3d.Engine.getCurrent();
 		var s : Capsule = @:privateAccess engine.resCache.get(Capsule);
 		if( s != null )
