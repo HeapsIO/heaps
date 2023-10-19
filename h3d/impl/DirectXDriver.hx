@@ -210,6 +210,7 @@ class DirectXDriver extends h3d.impl.Driver {
 	override function resize(width:Int, height:Int)  {
 		if( defaultDepth != null ) {
 			defaultDepth.depthView.release();
+			defaultDepth.readOnlyDepthView.release();
 			defaultDepth.view.release();
 			defaultDepth.res.release();
 		}
@@ -377,6 +378,7 @@ class DirectXDriver extends h3d.impl.Driver {
 		var d = b.t;
 		b.t = null;
 		d.depthView.release();
+		d.readOnlyDepthView.release();
 		d.view.release();
 		d.res.release();
 	}
