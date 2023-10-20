@@ -4,7 +4,7 @@ import domkit.CssValue;
 
 typedef FlowBg = { tile : #if macro Bool #else h2d.Tile #end, borderL : Int, borderT : Int, borderR : Int, borderB : Int, ?color : Int }
 
-class CustomParser extends CssValue.ValueParser {
+class CustomParser extends domkit.CssValue.ValueParser {
 
 	public function new() {
 		super();
