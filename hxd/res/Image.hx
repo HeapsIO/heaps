@@ -625,7 +625,7 @@ class Image extends Resource {
 		tex.setName(entry.path);
 		setupTextureFlags(tex);
 		// DirectX12 texture array triggers an access violation.
-		if ( tex.flags.has(IsArray) )
+		if ( tex.flags.has(IsArray) || !tex.flags.has(LazyLoading) )
 			loadTexture();
 		else
 			tex.realloc = () -> loadTexture();
