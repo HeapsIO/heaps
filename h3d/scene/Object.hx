@@ -917,8 +917,8 @@ class Object {
 	/**
 		Set the rotation using the specified look at direction
 	**/
-	public function setDirection( v : h3d.Vector ) {
-		qRot.initDirection(v);
+	public function setDirection( v : h3d.Vector, ?up ) {
+		qRot.initDirection(v, up);
 		posChanged = true;
 	}
 
