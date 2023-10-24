@@ -241,8 +241,7 @@ class Checker {
 			var kind = switch( f.name ) {
 			case "vertex":  Vertex;
 			case "fragment": Fragment;
-			case "__init__", "__init__vertex", "__init__fragment": Init;
-			default: Helper;
+			default: StringTools.startsWith(f.name,"__init__") ? Init : Helper;
 			}
 			if( args.length != 0 && kind != Helper )
 				error(kind+" function should have no argument", pos);
@@ -427,11 +426,12 @@ class Checker {
 		case EIdent(name):
 			var v = vars.get(name);
 			if( v != null ) {
-				switch( name ) {
-				case "vertex", "fragment", "__init__", "__init__vertex", "__init__fragment":
-					error("Function cannot be accessed", e.pos);
-				default:
+				var canCall =  switch( name ) {
+				case "vertex", "fragment": false;
+				default: !StringTools.startsWith(name,"__init__");
 				}
+				if( !canCall )
+					error("Function cannot be accessed", e.pos);
 				type = v.type;
 				TVar(v);
 			} else {
