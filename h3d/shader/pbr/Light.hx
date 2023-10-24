@@ -46,6 +46,7 @@ class Light extends LightEvaluation {
 	static var SRC = {
 
 		var pbrLightDirection : Vec3;
+		var pbrSpecularLightDirection : Vec3;
 		var pbrLightColor : Vec3;
 		var pbrOcclusionFactor : Float;
 		var transformedPosition : Vec3;
@@ -137,4 +138,62 @@ class Performance extends hxsl.Shader {
 			pixelColor.rgb = ((pixelColor.r) > 0.0 ? vec3(0.0) : vec3(0.0)) + ((pbrLightColor.r + pbrLightColor.g + pbrLightColor.b) > 0.0 ? d : vec3(0.0));
 		}
 	}
+}
+
+class CapsuleLight extends Light {
+
+	static var SRC = {
+		var normal : Vec3;
+
+		@param var lightPos : Vec3;
+		@param var radius : Float;
+		@param var invRange4 : Float;
+		@param var halfLength : Float;
+		@param var left : Vec3;
+
+
+		function closestPointOnLine(a : Vec3, b : Vec3 , c : Vec3) : Vec3 {
+			var ab = b - a;
+			var t = dot(c - a, ab) / dot(ab, ab);
+			return a + t * ab ;
+		}
+
+		function closestPointOnSegment( a : Vec3, b : Vec3, c : Vec3) : Vec3 {
+			var ab = b - a;
+			var t = dot(c - a, ab) / dot(ab, ab);
+			return a + saturate(t) * ab;
+		}
+
+		var pixelColor : Vec4;
+		var view : Vec3;
+		function fragment() {
+			var P0 = lightPos - halfLength * left;
+			var P1 = lightPos + halfLength * left;
+
+			// Diffuse: place a point light on the closest point on the sphere placed on the closest position on the segment.
+			var spherePos = closestPointOnSegment(P0, P1, transformedPosition);
+			var delta = spherePos - transformedPosition;
+			pbrLightDirection = delta.normalize();
+			var closestPointDiffuse = spherePos - pbrLightDirection * saturate((length(delta) - 1e-5) / radius) * radius;
+			delta = closestPointDiffuse - transformedPosition;
+			pbrLightDirection = normalize(delta);
+
+			// Attenuation.
+			var falloff = pointLightIntensity(delta, radius, invRange4);
+
+			// Specular.
+			var R = view - 2.0 * dot(view, normal) * normal;
+			var posToLight = lightPos - transformedPosition;
+			// Intersect a light plane with reflected ray and place a sphere on the closest point on segment.
+			var onPlane = transformedPosition + R * dot(posToLight, R);
+			var spherePosSpec = closestPointOnSegment(P0, P1, onPlane);
+			pbrSpecularLightDirection = normalize(spherePosSpec - transformedPosition);
+			// Get closest point on the sphere.
+			var closestPointSpecular = spherePosSpec - pbrSpecularLightDirection * saturate(length(spherePosSpec - transformedPosition) - 1e-5 / radius) * radius;
+			pbrSpecularLightDirection = normalize(closestPointSpecular - transformedPosition);
+
+			pbrLightColor = falloff * lightColor;
+			pbrOcclusionFactor = occlusionFactor;
+		}
+	};
 }
