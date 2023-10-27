@@ -43,6 +43,7 @@ class Checker {
 		if( GLOBALS != null ) return GLOBALS;
 		var globals = new Map();
 		var genType = [TFloat, vec2, vec3, vec4];
+		var genIType = [TInt, ivec2, ivec3, ivec4];
 		var baseType = [TFloat, TBool, TInt];
 		var genFloat = [for( t in genType ) { args : [ { name : "value", type : t } ], ret : t } ];
 		var genFloat2 = [for( t in genType ) { args : [ { name : "a", type : t }, { name : "b", type : t } ], ret : t } ];
@@ -183,6 +184,10 @@ class Checker {
 				[{ args : [{ name : "uv", type : vec2 }], ret : vec2 }];
 			case Trace:
 				[];
+			case FloatBitsToInt, FloatBitsToUint:
+				[for( i => t in genType ) { args : [ { name: "x", type: t } ], ret: genIType[i] }];
+			case IntBitsToFloat, UintBitsToFloat:
+				[for( i => t in genType ) { args : [ { name: "x", type: genIType[i] } ], ret: t }];
 			case VertexID, InstanceID, FragCoord, FrontFacing:
 				null;
 			}

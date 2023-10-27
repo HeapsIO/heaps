@@ -38,6 +38,9 @@ class GlslOut {
 		set(BVec4, "bvec4");
 		set(FragCoord, "gl_FragCoord");
 		set(FrontFacing, "gl_FrontFacing");
+		set(FrontFacing, "gl_FrontFacing");
+		set(FloatBitsToUint, "_floatBitsToUint");
+		set(UintBitsToFloat, "_uintBitsToFloat");
 		for( g in gl )
 			KWDS.set(g, true);
 		gl;
@@ -299,6 +302,23 @@ class GlslOut {
 			decl("vec2 screenToUv( vec2 v ) { return v * vec2(0.5,-0.5) + vec2(0.5,0.5); }");
 		case UvToScreen:
 			decl("vec2 uvToScreen( vec2 v ) { return v * vec2(2.,-2.) + vec2(-1., 1.); }");
+		case FloatBitsToInt, IntBitsToFloat:
+			if( version < 330 )
+				decl("#extension GL_ARB_shader_bit_encoding :enable");
+		case FloatBitsToUint:
+			if( version < 330 )
+				decl("#extension GL_ARB_shader_bit_encoding :enable");
+			decl("int _floatBitsToUint( float v) { return int(floatBitsToUint(v)); }");
+			decl("ivec2 _floatBitsToUint( vec2 v ) { return ivec2(floatBitsToUint(v)); }");
+			decl("ivec3 _floatBitsToUint( vec3 v ) { return ivec3(floatBitsToUint(v)); }");
+			decl("ivec4 _floatBitsToUint( vec4 v ) { return ivec4(floatBitsToUint(v)); }");
+		case UintBitsToFloat:
+			if( version < 330 )
+				decl("#extension GL_ARB_shader_bit_encoding :enable");
+			decl("float _uintBitsToFloat( int v ) { return uintBitsToFloat(uint(v)); }");
+			decl("vec2 _uintBitsToFloat( ivec2 v ) { return uintBitsToFloat(uvec2(v)); }");
+			decl("vec3 _uintBitsToFloat( ivec3 v ) { return uintBitsToFloat(uvec3(v)); }");
+			decl("vec4 _uintBitsToFloat( ivec4 v ) { return uintBitsToFloat(uvec4(v)); }");
 		default:
 		}
 		return GLOBALS[g.getIndex()];

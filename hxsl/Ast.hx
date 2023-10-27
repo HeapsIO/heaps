@@ -274,6 +274,11 @@ enum TGlobal {
 	// gl globals
 	FragCoord;
 	FrontFacing;
+	// bit casting
+	FloatBitsToInt;
+	FloatBitsToUint;
+	IntBitsToFloat;
+	UintBitsToFloat;
 }
 
 enum Component {
