@@ -466,6 +466,9 @@ class Pixels {
 		case RGBA32F:
 			v.set(bytes.getFloat(p), bytes.getFloat(p+4), bytes.getFloat(p+8), bytes.getFloat(p+12));
 			return v;
+		case R16U:
+			v.set(bytes.getUInt16(p) / 65535.0,0,0,0);
+			return v;
 		default:
 			v.setColor(getPixel(x,y));
 			return v;
