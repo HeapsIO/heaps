@@ -76,7 +76,7 @@ class DynamicText {
 		applyRec([], obj, x, ref, onMissing);
 	}
 
-	static var r_attr = ~/::([A-Za-z0-9_]+)::/g;
+	public static var r_attr = ~/::(.+?)::/g;
 
 	static function applyText( path : Array<String>, old : Dynamic, x : Access, ref : Access, onMissing : Array<String> -> String -> String ) {
 		var str = x == null ? null : x.innerHTML;
@@ -96,7 +96,7 @@ class DynamicText {
 			onMissing(path,"is no longer used");
 			return null;
 		}
-		if( ref != null && ref.innerHTML != strOld ) {
+		if( ref != null && StringTools.trim(ref.innerHTML) != StringTools.trim(strOld) ) {
 			onMissing(path,"ignored since has changed");
 			return null;
 		}
@@ -178,7 +178,7 @@ class DynamicText {
 							path.push("[" + i + "]");
 							if( Api.isOfType(e, Array) ) {
 								throw "TODO";
-							} else if( Api.isOfType(e, String) ) {
+							} else if( Api.isOfType(e, String) || Reflect.isFunction(e) ) {
 								var enew = applyText(path, e, data[i], dataRef == null ? null : dataRef[i], onMissing);
 								if( enew != null )
 									elements[i] = enew;
@@ -266,7 +266,7 @@ class DynamicText {
 
 	static function parseText( str : String ) : Dynamic {
 		str = str.split("\r\n").join("\n");
-		if( str.split("::").length <= 1 )
+		if( !r_attr.match(str) )
 			return str;
 		return function(vars) {
 			var str = str;
@@ -307,23 +307,21 @@ class DynamicText {
 			return macro : Array<String>;
 		case "t":
 			var tstring = macro : String;
-			var vars = x.innerHTML.split("::");
-			if( vars.length <= 1 )
+			if (!r_attr.match(x.innerHTML))
 				return tstring;
 			// printer function
 			var i = 1;
 			var fields = new Array<Field>();
 			var map = new Map();
-			while( i < vars.length ) {
-				var name = vars[i];
-				if( map.exists(name) ) {
-					i += 2;
-					continue;
+			r_attr.map(x.innerHTML, function(r) {
+				var name = r.matched(1);
+				if( !map.exists(name) ) {
+					map.set(name, true);
+					fields.push( { name : name, kind : FVar(macro : Dynamic), pos : pos.pos, meta : [] } );
 				}
-				map.set(name, true);
-				fields.push( { name : name, kind : FVar(macro : Dynamic), pos : pos.pos, meta : [] } );
-				i += 2;
-			}
+				return r.matched(0);
+			});
+
 			return TFunction([TAnonymous(fields)], tstring);
 		default:
 			Context.error("Unknown node " + x.name, findPos(pos,'<${x.name.toLowerCase()}'));
@@ -346,6 +344,8 @@ class DynamicText {
 		}
 	}
 
+	@:persistent static var BUILD_CACHE = new Map<String,{time:Float,fields:Array<Field>}>();
+
 	public static function build( file : String ) {
 		var paths = FileTree.resolvePaths();
 		var fullPath = null;
@@ -354,6 +354,21 @@ class DynamicText {
 				fullPath = p + "/" + file;
 		if( fullPath == null )
 			fullPath = paths[0] + "/" + file;
+		var current = BUILD_CACHE.get(fullPath);
+		var time = sys.FileSystem.stat(fullPath).mtime.getTime();
+		Context.registerModuleDependency(Context.getLocalModule(), fullPath);
+		var fields;
+		if( current != null && current.time == time ) {
+			fields = current.fields;
+		} else {
+			fields = buildFields(fullPath);
+			if( fields == null ) return null;
+			BUILD_CACHE.set(fullPath, { time : time, fields : fields });
+		}
+		return Context.getBuildFields().concat(fields);
+	}
+
+	static function buildFields( fullPath : String ) {
 		var content = null, x = null;
 		try {
 			content = sys.io.File.getContent(fullPath);
@@ -362,8 +377,7 @@ class DynamicText {
 			Context.error(e.message, Context.makePosition({min:e.position, max:e.position, file:fullPath}));
 			return null;
 		}
-		Context.registerModuleDependency(Context.getLocalModule(), fullPath);
-		var fields = Context.getBuildFields();
+		var fields : Array<Field> = [];
 		var pos = Context.currentPos();
 		var fpos = { file : fullPath, content : content.toLowerCase(), pos : pos };
 		for( x in new Access(x.firstElement()).elements ) {

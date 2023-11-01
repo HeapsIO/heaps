@@ -1,6 +1,6 @@
 package hxd.res;
 
-@:enum abstract ImageFormat(Int) {
+enum abstract ImageFormat(Int) {
 
 	var Jpg = 0;
 	var Png = 1;
@@ -14,9 +14,9 @@ package hxd.res;
 		Tells if we might not be able to directly decode the image without going through a loadBitmap async call.
 		This for example occurs when we want to decode progressive JPG in JS.
 	*/
-	public var useAsyncDecode(get, never) : Bool;
+	public var useLoadBitmap(get, never) : Bool;
 
-	inline function get_useAsyncDecode() {
+	inline function get_useLoadBitmap() {
 		#if hl
 		return false;
 		#else
@@ -50,6 +50,7 @@ class ImageInfo {
 	public var width(default,null) : Int = 0;
 	public var height(default,null) : Int = 0;
 	public var mipLevels(default,null) : Int = 1;
+	public var mipOffset(default,null) : Int = 0;
 	public var layerCount(default,null) : Int = 1;
 	public var flags(default,null) : haxe.EnumFlags<ImageInfoFlag>;
 	public var dataFormat(default,null) : ImageFormat;
@@ -67,14 +68,15 @@ class Image extends Resource {
 	public static var DEFAULT_FILTER : h3d.mat.Data.Filter = Linear;
 
 	/**
-		Forces async decoding for images if available on the target platform.
+		Reduce textures quality with mipmaps by only loading up to the desired size.
 	**/
-	public static var DEFAULT_ASYNC = false;
+	public static var MIPMAP_MAX_SIZE = 0;
 
 	static var ENABLE_AUTO_WATCH = true;
 
 	var tex : h3d.mat.Texture;
 	var inf : ImageInfo;
+	public var enableAsyncLoading : Bool;
 
 	public inline function getFormat() {
 		return getInfo().dataFormat;
@@ -122,12 +124,14 @@ class Image extends Resource {
 					inf.width = f.readInt32();
 					inf.height = f.readInt32();
 					var colbits = f.readByte();
-					inf.pixelFormat = switch( colbits ) {
-					case 8: BGRA;
-					case 16: R16U;
-					case 48: RGB16U;
-					case 64: RGBA16U;
-					default: throw "Unsupported png format "+colbits+"("+entry.path+")";
+					var colType = f.readByte();
+					inf.pixelFormat = switch( [colbits, colType] ) {
+					case [8,_]: BGRA; // TODO : grayscale png image
+					case [16,0]: R16U;
+					case [16,2]: RGBA16U; // RGB16U is not supported on DirectX !
+					case [16,4]: RG16U; // gray + alpha
+					case [16,6]: RGBA16U;
+					default: throw "Unsupported png format "+colbits+"/"+colType+"("+entry.path+")";
 					}
 					break;
 				}
@@ -182,6 +186,12 @@ class Image extends Resource {
 				inf.pixelFormat = switch( dxgi ) {
 				case 28:
 					RGBA;
+				case 71: // BC1_UNORM
+					S3TC(1);
+				case 74: // BC2_UNORM
+					S3TC(2);
+				case 77: // BC3_UNORM
+					S3TC(3);
 				case 95: // BC6H_UF16
 					S3TC(6);
 				case 98: // BC7_UNORM
@@ -206,22 +216,26 @@ class Image extends Resource {
 				inf.pixelFormat = RGBA32F;
 			case 0:
 				// RGB
-				if( caps & 0x40 != 0 ) {
-					switch( [bpp, rMask, gMask, bMask, aMask] ) {
-					case [32, 0xFF0000, 0xFF00, 0xFF, 0xFF000000]:
-						inf.pixelFormat = BGRA;
-					case [32, 0xFF, 0xFF00, 0xFF0000, 0xFF000000]:
-						inf.pixelFormat = RGBA;
-					default:
-						throw "Unsupported RGB DDS "+bpp+"bits "+StringTools.hex(rMask)+"/"+StringTools.hex(gMask)+"/"+StringTools.hex(bMask)+"/"+StringTools.hex(aMask);
-					}
+				switch( [bpp, rMask, gMask, bMask, aMask] ) {
+				case [32, 0xFF0000, 0xFF00, 0xFF, 0xFF000000]:
+					inf.pixelFormat = BGRA;
+				case [32, 0xFF, 0xFF00, 0xFF0000, 0xFF000000]:
+					inf.pixelFormat = RGBA;
+				case [16, 0xFFFF, 0, 0, 0]:
+					inf.pixelFormat = R16U;
+				case [32, 0xFFFF, 0xFFFF0000, 0, 0]:
+					inf.pixelFormat = RG16U;
+				default:
+					throw "Unsupported RGB DDS "+bpp+"bits "+StringTools.hex(rMask)+"/"+StringTools.hex(gMask)+"/"+StringTools.hex(bMask)+"/"+StringTools.hex(aMask);
 				}
+			case 36:
+				inf.pixelFormat = RGBA16U;
 			default:
 			}
 
 			if( inf.pixelFormat == null ) {
 				var fid = String.fromCharCode(fourCC&0xFF)+String.fromCharCode((fourCC>>8)&0xFF)+String.fromCharCode((fourCC>>16)&0xFF)+String.fromCharCode(fourCC>>>24);
-				if( fourCC & 0xFF == fourCC ) fid = "0x"+fourCC;
+				if( fourCC & 0xFF == fourCC ) fid = ""+fourCC;
 				throw entry.path+" has unsupported 4CC "+fid;
 			}
 
@@ -263,10 +277,25 @@ class Image extends Resource {
 		if( inf.pixelFormat == null )
 			throw "Unsupported internal format ("+entry.path+")";
 
+		if( MIPMAP_MAX_SIZE != 0 && inf.mipLevels > 1 ) {
+			// Check next miplevel dimensions are divisible by 4.
+			while( (inf.width|inf.height) & 7 == 0 && inf.width >> 1 >= MIPMAP_MAX_SIZE && inf.height >> 1 >= MIPMAP_MAX_SIZE ) {
+				inf.width >>= 1;
+				inf.height >>= 1;
+				inf.mipLevels--;
+				inf.mipOffset++;
+			}
+		}
+
+		customCheckInfo(this);
+
 		return inf;
 	}
 
-	public function getPixels( ?fmt : PixelFormat, ?flipY : Bool, ?index : Int ) {
+	public static dynamic function customCheckInfo(i : Image) {
+	}
+
+	public function getPixels( ?fmt : PixelFormat, ?index : Int ) {
 		var pixels : hxd.Pixels;
 		if( index == null )
 			index = 0;
@@ -275,18 +304,21 @@ class Image extends Resource {
 			var bytes = entry.getBytes(); // using getTmpBytes cause bug in E2
 			#if hl
 			if( fmt == null ) fmt = inf.pixelFormat;
-			pixels = decodePNG(bytes, inf.width, inf.height, fmt, flipY);
+			pixels = decodePNG(bytes, inf.width, inf.height, fmt);
 			if( pixels == null ) throw "Failed to decode PNG " + entry.path;
 			#else
-			if( inf.pixelFormat != BGRA )
-				throw "No support to decode "+inf.pixelFormat+" on this platform ("+entry.path+")";
 			var png = new format.png.Reader(new haxe.io.BytesInput(bytes));
 			png.checkCRC = false;
-			// we only support BGRA decoding here
-			pixels = Pixels.alloc(inf.width, inf.height, BGRA);
+			pixels = Pixels.alloc(inf.width, inf.height, inf.pixelFormat);
 			var pdata = png.read();
-			format.png.Tools.extract32(pdata, pixels.bytes, flipY);
-			if( flipY ) pixels.flags.set(FlipY);
+			switch( inf.pixelFormat ) {
+			case BGRA:
+				format.png.Tools.extract32(pdata, pixels.bytes, false);
+			case R16U, RG16U, RGB16U, RGBA16U:
+				format.png.Tools.extract(pdata, pixels.bytes, inf.pixelFormat == RGBA16U && format.png.Tools.getHeader(pdata).color.match(ColTrue(false)));
+			default:
+				throw "No support to decode "+inf.pixelFormat+" on this platform ("+entry.path+")";
+			}
 			#end
 		case Gif:
 			var bytes = entry.getBytes();
@@ -299,7 +331,7 @@ class Image extends Resource {
 			var bytes = entry.getBytes();
 			#if hl
 			if( fmt == null ) fmt = inf.pixelFormat;
-			pixels = decodeJPG(bytes, inf.width, inf.height, fmt, flipY);
+			pixels = decodeJPG(bytes, inf.width, inf.height, fmt);
 			if( pixels == null ) throw "Failed to decode JPG " + entry.path;
 			#else
 			if( inf.pixelFormat != BGRA )
@@ -340,7 +372,7 @@ class Image extends Resource {
 				}
 			}
 			switch( r.header.imageOrigin ) {
-			case BottomLeft: pixels.flags.set(FlipY);
+			case BottomLeft: pixels.flipY();
 			case TopLeft: // nothing
 			default: throw "Not supported "+r.header.imageOrigin;
 			}
@@ -348,14 +380,16 @@ class Image extends Resource {
 			var pos = 128;
 			var mipLevel = 0;
 			if( inf.flags.has(Dxt10Header) ) pos += 20;
+			index += inf.mipOffset;
 			if( index > 0 ) {
+				var totLevels = inf.mipLevels + inf.mipOffset;
 				var bpp = hxd.Pixels.calcStride(1, inf.pixelFormat);
-				var layer = Std.int(index / inf.mipLevels);
-				mipLevel = index % inf.mipLevels;
+				var layer = Std.int(index / totLevels);
+				mipLevel = index % totLevels;
 				var totSize = 0;
-				for( i in 0...inf.mipLevels ) {
-					var w = inf.width >> i;
-					var h = inf.height >> i;
+				for( i in 0...totLevels ) {
+					var w = (inf.width << inf.mipOffset) >> i;
+					var h = (inf.height << inf.mipOffset) >> i;
 					if( w == 0 ) w = 1;
 					if( h == 0 ) h = 1;
 					var size = hxd.Pixels.calcDataSize(w, h, inf.pixelFormat);
@@ -365,11 +399,11 @@ class Image extends Resource {
 				pos += totSize * layer;
 			}
 			var bytes;
-			var w = inf.width >> mipLevel;
-			var h = inf.height >> mipLevel;
+			var w = inf.width >> (mipLevel - inf.mipOffset);
+			var h = inf.height >> (mipLevel - inf.mipOffset);
 			if( w == 0 ) w = 1;
 			if( h == 0 ) h = 1;
-			if( inf.mipLevels == 1 && !inf.flags.has(IsCube) ) {
+			if( inf.mipLevels + inf.mipOffset == 1 && !inf.flags.has(IsCube) ) {
 				bytes = entry.getBytes();
 			} else {
 				var size = hxd.Pixels.calcDataSize(w, h, inf.pixelFormat);
@@ -386,13 +420,12 @@ class Image extends Resource {
 			pixels = new hxd.Pixels(data.width, data.height, data.bytes, inf.pixelFormat);
 		}
 		if( fmt != null ) pixels.convert(fmt);
-		if( flipY != null ) pixels.setFlip(flipY);
 		return pixels;
 	}
 
 	#if hl
 
-	static function decodeJPG( src : haxe.io.Bytes, width : Int, height : Int, requestedFmt : hxd.PixelFormat, flipY : Bool ) {
+	static function decodeJPG( src : haxe.io.Bytes, width : Int, height : Int, requestedFmt : hxd.PixelFormat ) {
 		var outFmt = requestedFmt;
 		var ifmt : hl.Format.PixelFormat = switch( requestedFmt ) {
 		case RGBA: RGBA;
@@ -403,14 +436,13 @@ class Image extends Resource {
 			BGRA;
 		};
 		var dst = haxe.io.Bytes.alloc(width * height * 4);
-		if( !hl.Format.decodeJPG(src.getData(), src.length, dst.getData(), width, height, width * 4, ifmt, (flipY?1:0)) )
+		if( !hl.Format.decodeJPG(src.getData(), src.length, dst.getData(), width, height, width * 4, ifmt, 0) )
 			return null;
 		var pix = new hxd.Pixels(width, height, dst, outFmt);
-		if( flipY ) pix.flags.set(FlipY);
 		return pix;
 	}
 
-	static function decodePNG( src : haxe.io.Bytes, width : Int, height : Int, requestedFmt : hxd.PixelFormat, flipY : Bool ) {
+	static function decodePNG( src : haxe.io.Bytes, width : Int, height : Int, requestedFmt : hxd.PixelFormat ) {
 		var outFmt = requestedFmt;
 		var ifmt : hl.Format.PixelFormat = switch( requestedFmt ) {
 		case RGBA: RGBA;
@@ -419,6 +451,7 @@ class Image extends Resource {
 		case R16U: cast 12;
 		case RGB16U: cast 13;
 		case RGBA16U: cast 14;
+		case RG16U: cast 15;
 		default:
 			outFmt = BGRA;
 			BGRA;
@@ -429,6 +462,9 @@ class Image extends Resource {
 		case R16U:
 			stride = 1;
 			pxsize = 2;
+		case RG16U:
+			stride = 2;
+			pxsize = 4;
 		case RGB16U:
 			stride = 3;
 			pxsize = 6;
@@ -438,10 +474,9 @@ class Image extends Resource {
 		default:
 		}
 		var dst = haxe.io.Bytes.alloc(width * height * pxsize);
-		if( !hl.Format.decodePNG(src.getData(), src.length, dst.getData(), width, height, width * stride, ifmt, (flipY?1:0)) )
+		if( !hl.Format.decodePNG(src.getData(), src.length, dst.getData(), width, height, width * stride, ifmt, 0) )
 			return null;
 		var pix = new hxd.Pixels(width, height, dst, outFmt);
-		if( flipY ) pix.flags.set(FlipY);
 		return pix;
 	}
 
@@ -483,66 +518,7 @@ class Image extends Resource {
 	}
 
 	function loadTexture( ?asyncData:haxe.io.Bytes ) {
-		if( !getFormat().useAsyncDecode && !DEFAULT_ASYNC ) {
-			function load() {
-				if( tex.flags.has(AsyncLoading) && asyncData == null && ASYNC_LOADER.isSupported(this) ) @:privateAccess {
-					tex.dispose();
-					tex.format = RGBA;
-					tex.width = 1;
-					tex.height = 1;
-					tex.customMipLevels = 1;
-					tex.flags.set(Loading);
-					tex.alloc();
-					tex.uploadPixels(BLACK_1x1);
-					tex.width = inf.width;
-					tex.height = inf.height;
-					ASYNC_LOADER.load(this);
-					tex.realloc = () -> loadTexture();
-					return;
-				}
-				var t0 = haxe.Timer.stamp();
-				// immediately loading the PNG is faster than going through loadBitmap
-				@:privateAccess tex.customMipLevels = inf.mipLevels;
-				tex.alloc();
-				switch( inf.dataFormat ) {
-				case Dds:
-					var pos = 128;
-					if( inf.flags.has(Dxt10Header) ) pos += 20;
-					for( layer in 0...tex.layerCount ) {
-						for( mip in 0...inf.mipLevels ) {
-							var w = inf.width >> mip;
-							var h = inf.height >> mip;
-							if( w == 0 ) w = 1;
-							if( h == 0 ) h = 1;
-							var size = hxd.Pixels.calcDataSize(w, h, inf.pixelFormat);
-							var bytes = asyncData == null ? entry.fetchBytes(pos, size) : asyncData;
-							tex.uploadPixels(new hxd.Pixels(w,h,bytes,inf.pixelFormat,asyncData == null ? 0 : pos),mip,layer);
-							pos += size;
-						}
-					}
-				default:
-					for( layer in 0...tex.layerCount ) {
-						for( mip in 0...inf.mipLevels ) {
-							var pixels = getPixels(tex.format,null,layer * inf.mipLevels + mip);
-							tex.uploadPixels(pixels,mip,layer);
-							pixels.dispose();
-						}
-					}
-				}
-				if( LOG_TEXTURE_LOAD && asyncData == null ) {
-					var time = (haxe.Timer.stamp()-t0)*1000.0;
-					var fmtStr = inf.pixelFormat.match(S3TC(_)) ? "DXT" : inf.dataFormat.getName();
-					#if hl Sys.println #else trace #end(fmtStr+" "+Std.int(time)+"."+(Std.int(time*10)%10)+"ms "+inf.width+"x"+inf.height+" "+entry.path);
-				}
-				tex.realloc = () -> loadTexture();
-				if(ENABLE_AUTO_WATCH)
-					watch(watchCallb);
-			}
-			if( entry.isAvailable )
-				load();
-			else
-				entry.load(load);
-		} else {
+		if( getFormat().useLoadBitmap ) {
 			// use native decoding
 			tex.flags.set(Loading);
 			entry.loadBitmap(function(bmp) {
@@ -561,7 +537,73 @@ class Image extends Resource {
 				if(ENABLE_AUTO_WATCH)
 					watch(watchCallb);
 			});
+			return;
 		}
+
+		function load() {
+			if( (enableAsyncLoading || tex.flags.has(AsyncLoading)) && asyncData == null && ASYNC_LOADER.isSupported(this) ) @:privateAccess {
+				tex.dispose();
+				tex.format = RGBA;
+				tex.width = 1;
+				tex.height = 1;
+				tex.customMipLevels = 1;
+				tex.flags.set(Loading);
+				tex.alloc();
+				tex.uploadPixels(BLACK_1x1);
+				tex.width = inf.width;
+				tex.height = inf.height;
+				ASYNC_LOADER.load(this);
+				tex.realloc = () -> loadTexture();
+				return;
+			}
+			var t0 = haxe.Timer.stamp();
+			// immediately loading the PNG is faster than going through loadBitmap
+			@:privateAccess tex.customMipLevels = inf.mipLevels;
+			tex.alloc();
+			switch( inf.dataFormat ) {
+			case Dds:
+				var pos = 128;
+				if( inf.flags.has(Dxt10Header) ) pos += 20;
+				for( layer in 0...tex.layerCount ) {
+					for( mip in 0...inf.mipOffset ) {
+						var w = (inf.width << inf.mipOffset) >> mip;
+						var h = (inf.height << inf.mipOffset) >> mip;
+						var size = hxd.Pixels.calcDataSize(w, h, inf.pixelFormat);
+						pos += size;
+					}
+					for( mip in 0...inf.mipLevels ) {
+						var w = inf.width >> mip;
+						var h = inf.height >> mip;
+						if( w == 0 ) w = 1;
+						if( h == 0 ) h = 1;
+						var size = hxd.Pixels.calcDataSize(w, h, inf.pixelFormat);
+						var bytes = asyncData == null ? entry.fetchBytes(pos, size) : asyncData;
+						tex.uploadPixels(new hxd.Pixels(w,h,bytes,inf.pixelFormat,asyncData == null ? 0 : pos),mip,layer);
+						pos += size;
+					}
+				}
+			default:
+				for( layer in 0...tex.layerCount ) {
+					for( mip in 0...inf.mipLevels ) {
+						var pixels = getPixels(tex.format,layer * inf.mipLevels + mip);
+						tex.uploadPixels(pixels,mip,layer);
+						pixels.dispose();
+					}
+				}
+			}
+			if( LOG_TEXTURE_LOAD && asyncData == null ) {
+				var time = (haxe.Timer.stamp()-t0)*1000.0;
+				var fmtStr = inf.pixelFormat.match(S3TC(_)) ? "DXT" : inf.dataFormat.getName();
+				#if hl Sys.println #else trace #end(fmtStr+" "+Std.int(time)+"."+(Std.int(time*10)%10)+"ms "+inf.width+"x"+inf.height+" "+entry.path);
+			}
+			tex.realloc = () -> loadTexture();
+			if(ENABLE_AUTO_WATCH)
+				watch(watchCallb);
+		}
+		if( entry.isAvailable )
+			load();
+		else
+			entry.load(load);
 	}
 
 	public function toTexture() : h3d.mat.Texture {
@@ -580,8 +622,6 @@ class Image extends Resource {
 			flags.push(MipMapped);
 			flags.push(ManualMipMapGen);
 		}
-		if( fmt == R16U )
-			throw "Unsupported texture format "+fmt+" for "+entry.path;
 		if( inf.layerCount > 1 )
 			tex = new h3d.mat.TextureArray(inf.width, inf.height, inf.layerCount, flags, fmt);
 		else
@@ -589,7 +629,11 @@ class Image extends Resource {
 		if( DEFAULT_FILTER != Linear ) tex.filter = DEFAULT_FILTER;
 		tex.setName(entry.path);
 		setupTextureFlags(tex);
-		loadTexture();
+		// DirectX12 texture array triggers an access violation.
+		if ( tex.flags.has(IsArray) || !tex.flags.has(LazyLoading) )
+			loadTexture();
+		else
+			tex.realloc = () -> loadTexture();
 		return tex;
 	}
 

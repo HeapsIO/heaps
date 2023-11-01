@@ -30,6 +30,11 @@ class Style extends domkit.CssStyle {
 			o.dom.applyStyle(this);
 	}
 
+	override function clear() {
+		super.clear();
+		resources.resize(0);
+	}
+
 	public function addObject( obj ) {
 		currentObjects.remove(obj);
 		currentObjects.push(obj);
@@ -58,7 +63,7 @@ class Style extends domkit.CssStyle {
 			var path = s.p.name;
 			var ee = e;
 			while(ee != null) {
-				path = (ee.id != null ? "#" + ee.id : ee.component.name) + "." + path;
+				path = (ee.id.isDefined() ? "#" + ee.id.toString() : ee.component.name) + "." + path;
 				ee = ee.parent;
 			}
 			if( msg == null ) msg = "Invalid property value '"+(domkit.CssParser.valueStr(s.value))+"'";
@@ -69,14 +74,14 @@ class Style extends domkit.CssStyle {
 	function onChange( ntry : Int = 0 ) {
 		if( ntry >= 10 ) return;
 		ntry++;
-		var oldRules = rules;
+		var oldRules = data.rules;
 		errors = [];
-		rules = [];
+		data.rules = [];
 		for( r in resources ) {
-			var txt = try r.entry.getText() catch( e : Dynamic ) { haxe.Timer.delay(onChange.bind(ntry),100); rules = oldRules; return; }
+			var txt = try r.entry.getText() catch( e : Dynamic ) { haxe.Timer.delay(onChange.bind(ntry),100); data.rules = oldRules; return; }
 			var parser = new domkit.CssParser();
 			try {
-				add(parser.parseSheet(txt));
+				data.add(parser.parseSheet(txt));
 			} catch( e : domkit.Error ) {
 				parser.warnings.push({ msg : e.message, pmin : e.pmin, pmax : e.pmax });
 			}
@@ -96,6 +101,13 @@ class Style extends domkit.CssStyle {
 			if( errorsText == null ) {
 				if( currentObjects.length == 0 ) return;
 				var scene = currentObjects[0].getScene();
+				if( scene == null ) {
+					for( o in currentObjects ) {
+						scene = o.getScene();
+						if( scene != null ) break;
+					}
+					if( scene == null ) return;
+				}
 				var fl = new h2d.Flow();
 				scene.add(fl,100);
 				fl.backgroundTile = h2d.Tile.fromColor(0x400000,0.9);
@@ -258,7 +270,7 @@ class Style extends domkit.CssStyle {
 				for( c in dom.classes )
 					nameParts.push("."+c);
 			}
-			if( dom.id != null )
+			if( dom.id.isDefined() )
 				nameParts.push("#"+dom.id);
 		}
 		else

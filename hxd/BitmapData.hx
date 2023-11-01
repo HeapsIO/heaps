@@ -623,7 +623,6 @@ class BitmapData {
 	public function setPixels( pixels : Pixels ) {
 		if( pixels.width != width || pixels.height != height )
 			throw "Invalid pixels size";
-		pixels.setFlip(false);
 		#if flash
 		var bytes = pixels.bytes.getData();
 		bytes.position = 0;

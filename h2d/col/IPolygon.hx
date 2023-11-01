@@ -14,7 +14,7 @@ enum OffsetKind {
 	An abstract around an Array of `IPoint`s that define a polygonal shape that can be collision-tested against.
 	@see `h2d.col.Polygon`
 **/
-@:forward(push,remove)
+@:forward(push,remove,insert,copy)
 abstract IPolygon(Array<IPoint>) from Array<IPoint> to Array<IPoint> {
 	/**
 		The underlying Array of vertices.

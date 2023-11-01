@@ -68,6 +68,13 @@ class MeshBatch extends MultiMaterial {
 	public var primitiveSubPart : MeshBatchPart;
 	var primitiveSubBytes : haxe.io.Bytes;
 
+	/**
+		If set, exact bounds will be recalculated during emitInstance (default true)
+	**/
+	public var calcBounds = true;
+
+	var instancedParams : hxsl.Cache.BatchInstanceParams;
+
 	public function new( primitive, ?material, ?parent ) {
 		instanced = new h3d.prim.Instanced();
 		instanced.commands = new h3d.impl.InstanceBuffer();
@@ -95,7 +102,8 @@ class MeshBatch extends MultiMaterial {
 			alloc.disposeFloats(dataPasses.data);
 			dataPasses = dataPasses.next;
 		}
-		instanced.commands.dispose();
+		if( instanced.commands != null )
+			instanced.commands.dispose();
 		shadersChanged = true;
 	}
 
@@ -114,13 +122,15 @@ class MeshBatch extends MultiMaterial {
 				var manager = cast(ctx,h3d.pass.Default).manager;
 				var shaders = p.getShadersRec();
 				var rt = manager.compileShaders(shaders, false);
-				var shader = manager.shaderCache.makeBatchShader(rt, shaders);
+				var shader = manager.shaderCache.makeBatchShader(rt, shaders, instancedParams);
 
 				var b = new BatchData();
 				b.indexCount = matInfo.count;
 				b.indexStart = matInfo.start;
 				b.paramsCount = shader.paramsSize;
 				b.maxInstance = Std.int(MAX_BUFFER_ELEMENTS / b.paramsCount);
+				 if ( b.maxInstance <= 0 )
+					throw "Mesh batch shaders needs at least one perInstance parameter";
 				b.params = shader.params;
 				b.shader = shader;
 				b.pass = p;
@@ -147,7 +157,7 @@ class MeshBatch extends MultiMaterial {
 		// add batch shaders
 		var p = dataPasses;
 		while( p != null ) {
-			p.pass.addShader(p.shader);
+			@:privateAccess p.pass.addSelfShader(p.shader);
 			p = p.next;
 		}
 	}
@@ -256,13 +266,30 @@ class MeshBatch extends MultiMaterial {
 		needUpload = true;
 	}
 
+	override function addBoundsRec( b : h3d.col.Bounds, relativeTo: h3d.Matrix ) {
+		var old = primitive;
+		primitive = null;
+		super.addBoundsRec(b, relativeTo);
+		primitive = old;
+		if( primitive == null || flags.has(FIgnoreBounds) )
+			return;
+		// already transformed in absolute
+		var bounds = primitive.getBounds();
+		if( relativeTo == null )
+			b.add(bounds);
+		else
+			b.addTransform(bounds, relativeTo);
+	}
+
 	public function emitInstance() {
 		if( worldPosition == null ) syncPos();
 		var ps = primitiveSubPart;
 		if( ps != null ) @:privateAccess {
-			instanced.tmpBounds.load(primitiveSubPart.bounds);
-			instanced.tmpBounds.transform(worldPosition == null ? absPos : worldPosition);
-			instanced.bounds.add(instanced.tmpBounds);
+			if(calcBounds) {
+				instanced.tmpBounds.load(primitiveSubPart.bounds);
+				instanced.tmpBounds.transform(worldPosition == null ? absPos : worldPosition);
+				instanced.bounds.add(instanced.tmpBounds);
+			}
 
 			if( primitiveSubBytes == null ) {
 				primitiveSubBytes = haxe.io.Bytes.alloc(128);
@@ -279,7 +306,7 @@ class MeshBatch extends MultiMaterial {
 			primitiveSubBytes.setInt32(p + 8, ps.indexStart);
 			primitiveSubBytes.setInt32(p + 12, ps.baseVertex);
 			primitiveSubBytes.setInt32(p + 16, 0);
-		} else
+		} else if(calcBounds)
 			instanced.addInstanceBounds(worldPosition == null ? absPos : worldPosition);
 		var p = dataPasses;
 		while( p != null ) {
@@ -288,6 +315,20 @@ class MeshBatch extends MultiMaterial {
 		}
 		instanceCount++;
 	}
+
+	public function disposeBuffers() {
+		if( instanceCount == 0 ) return;
+		var p = dataPasses;
+		var alloc = hxd.impl.Allocator.get();
+		while( p != null ) {
+			for ( b in p.buffers )
+				b.dispose();
+			p = p.next;
+		}
+	}
+
+	static var VEC4_FMT = hxd.BufferFormat.make([{ name : "data", type : DVec4 }]);
+	static var BATCH_START_FMT = hxd.BufferFormat.make([{ name : "Batch_Start", type : DFloat }]);
 
 	override function sync(ctx:RenderContext) {
 		super.sync(ctx);
@@ -305,12 +346,12 @@ class MeshBatch extends MultiMaterial {
 				if( count > p.maxInstance )
 					count = p.maxInstance;
 				if( buf == null || buf.isDisposed() ) {
-					buf = alloc.allocBuffer(MAX_BUFFER_ELEMENTS,4,UniformDynamic);
+					buf = alloc.allocBuffer(MAX_BUFFER_ELEMENTS,VEC4_FMT,UniformDynamic);
 					p.buffers[index] = buf;
 					upload = true;
 				}
 				if( upload )
-					buf.uploadVector(p.data, start * p.paramsCount * 4, count * p.paramsCount);
+					buf.uploadFloats(p.data, start * p.paramsCount * 4, count * p.paramsCount);
 				if( psBytes != null ) {
 					if( p.instanceBuffers == null ) p.instanceBuffers = [];
 					var buf = p.instanceBuffers[index];
@@ -331,16 +372,18 @@ class MeshBatch extends MultiMaterial {
 			p = p.next;
 		}
 		if( psBytes != null ) {
-			var prim = cast(primitive,h3d.prim.MeshPrimitive);
-			var offsets = @:privateAccess prim.getBuffer("Batch_Start");
+			var offsets = @:privateAccess instanced.primitive.resolveBuffer("Batch_Start");
 			if( offsets == null || offsets.vertices < instanceCount || offsets.isDisposed() ) {
-				if( offsets != null ) offsets.dispose();
+				if( offsets != null ) {
+					offsets.dispose();
+					@:privateAccess instanced.primitive.removeBuffer(offsets);
+				}
 				var tmp = haxe.io.Bytes.alloc(4 * instanceCount);
 				for( i in 0...instanceCount )
 					tmp.setFloat(i<<2, i);
-				offsets = new h3d.Buffer(instanceCount, 1);
+				offsets = new h3d.Buffer(instanceCount, BATCH_START_FMT);
 				offsets.uploadBytes(tmp,0,instanceCount);
-				@:privateAccess prim.addBuffer("Batch_Start", offsets);
+				@:privateAccess instanced.primitive.addBuffer(offsets);
 			}
 		}
 		needUpload = false;

@@ -4,6 +4,7 @@ class Math {
 
 	public static inline var PI = 3.14159265358979323;
 	public static inline var EPSILON = 1e-10;
+	public static inline var EPSILON2 = 1e-20;
 
 	public static var POSITIVE_INFINITY(get, never) : Float;
 	public static var NEGATIVE_INFINITY(get, never) : Float;
@@ -133,6 +134,13 @@ class Math {
 	**/
 	public inline static function lerp(a:Float, b:Float, k:Float) {
 		return a + k * (b - a);
+	}
+
+	/**
+		Returns a value between 0 and 1, that determines where val lies between a and b.
+	 */
+	public inline static function inverseLerp(a:Float, b:Float, val:Float) {
+		return (val - a) / (b - a);
 	}
 
 	/**

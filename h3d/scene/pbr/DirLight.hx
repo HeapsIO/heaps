@@ -4,9 +4,9 @@ class DirLight extends Light {
 
 	var pbr : h3d.shader.pbr.Light.DirLight;
 
-	public function new(?dir: h3d.Vector, ?parent) {
+	public function new(?dir: h3d.Vector, ?parent, ?cascade) {
 		pbr = new h3d.shader.pbr.Light.DirLight();
-		shadows = new h3d.pass.DirShadowMap(this);
+		shadows = cascade ? new h3d.pass.CascadeShadowMap(this) : new h3d.pass.DirShadowMap(this);
 		super(pbr,parent);
 		if( dir != null ) setDirection(dir);
 	}

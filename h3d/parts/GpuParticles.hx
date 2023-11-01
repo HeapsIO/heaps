@@ -452,6 +452,15 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 
 	static inline var VERSION = 2;
 	static inline var STRIDE = 14;
+	static var PFORMAT = hxd.BufferFormat.make([
+		{ name : "position", type : DVec3 },
+		{ name : "normal", type : DVec3 },
+		{ name : "uv", type : DVec2 },
+		{ name : "time", type : DFloat },
+		{ name : "life", type : DFloat },
+		{ name : "init", type : DVec2 },
+		{ name : "delta", type : DVec2 },
+	]);
 
 	var groups : Array<GpuPartGroup>;
 	var primitiveBuffers : Array<hxd.FloatBuffer>;
@@ -501,9 +510,11 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 			if( p != null ) p.dispose();
 	}
 
-	override function getBoundsRec(b:h3d.col.Bounds) {
-		if( flags.has(FIgnoreBounds) )
-			return super.getBoundsRec(b);
+	override function addBoundsRec(b:h3d.col.Bounds, relativeTo) {
+		if( flags.has(FIgnoreBounds) ) {
+			super.addBoundsRec(b, relativeTo);
+			return;
+		}
 		for( g in groups )
 			if( g.needRebuild ) {
 				var s = getScene();
@@ -516,7 +527,7 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 				}
 				break;
 			}
-		return super.getBoundsRec(b);
+		super.addBoundsRec(b, relativeTo);
 	}
 
 	public dynamic function onEnd() {
@@ -683,11 +694,10 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 			primitiveBuffers.resize(groups.length);
 
 		for( gid in 0...groups.length ) {
-			if( primitiveBuffers[gid] == null ||  primitiveBuffers[gid].length > STRIDE * partCount * 4 )
+			if( primitiveBuffers[gid] == null || primitiveBuffers[gid].length > STRIDE * partCount * 4 )
 				primitiveBuffers[gid] = new hxd.FloatBuffer();
 			primitiveBuffers[gid].grow(STRIDE * groups[gid].nparts * 4);
-			primitives[gid] = new h3d.prim.RawPrimitive( { vbuf : primitiveBuffers[gid], stride : STRIDE, quads : true, bounds:bounds }, true);
-			primitives[gid].buffer.flags.set(RawFormat);
+			primitives[gid] = new h3d.prim.RawPrimitive( { vbuf : primitiveBuffers[gid], format : PFORMAT, bounds:bounds }, true);
 		}
 
 		if( hasLoop ) {
@@ -877,7 +887,7 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 		if( firstPart <= lastPart ) {
 			uploadedCount += lastPart - firstPart + 1;
 			var primitive = primitives[groups.indexOf(g)];
-			primitive.buffer.uploadVector(vbuf, (firstPart) * 4 * STRIDE, (lastPart - firstPart + 1) * 4, (firstPart) * 4);
+			primitive.buffer.uploadFloats(vbuf, (firstPart) * 4 * STRIDE, (lastPart - firstPart + 1) * 4, (firstPart) * 4);
 		}
 	}
 
@@ -905,7 +915,7 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 				return; // was removed
 		}
 
-		if( !ctx.visibleFlag && !alwaysSync )
+		if( !ctx.visibleFlag && !alwaysSyncAnimation )
 			return;
 
 		for( g in groups ) {

@@ -15,7 +15,8 @@ class ParticleShader extends hxsl.Shader {
 
 		@input var input : {
 			var position : Vec3;
-			var normal : Vec3;
+			var rpos : Vec2;
+			var rot : Float;
 			var size : Vec2;
 			var uv : Vec2;
 		};
@@ -36,8 +37,8 @@ class ParticleShader extends hxsl.Shader {
 		}
 
 		function vertex() {
-			var rpos = input.normal.xy;
-			var rot = input.normal.z;
+			var rpos = input.rpos;
+			var rot = input.rot;
 			var cr = rot.cos();
 			var sr = rot.sin();
 			var pos = input.size * rpos;

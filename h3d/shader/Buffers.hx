@@ -1,6 +1,6 @@
 package h3d.shader;
 
-@:enum abstract BufferKind(Int) {
+enum abstract BufferKind(Int) {
 	public var Globals = 0;
 	public var Params = 1;
 	public var Textures = 2;

@@ -107,7 +107,7 @@ class FontChar {
 /**
 	Channel reading method for `FontType.SignedDistanceField`.
 **/
-@:enum abstract SDFChannel(Int) from Int to Int {
+enum abstract SDFChannel(Int) from Int to Int {
 	/** Use red channel of a texture to determine distance. **/
 	var Red = 0;
 	/** Use green channel of a texture to determine distance. **/
@@ -258,6 +258,8 @@ class Font {
 		f.charset = charset;
 		f.defaultChar = defaultChar.clone();
 		f.type = type;
+		f.offsetX = offsetX;
+		f.offsetY = offsetY;
 		for( g in glyphs.keys() ) {
 			var c = glyphs.get(g);
 			var c2 = c.clone();
@@ -289,8 +291,8 @@ class Font {
 				k = k.next;
 			}
 		}
-		lineHeight = lineHeight * ratio;
-		baseLine = baseLine * ratio;
+		lineHeight = Math.ceil(lineHeight * ratio);
+		baseLine = Math.ceil(baseLine * ratio);
 		this.size = size;
 	}
 
@@ -308,6 +310,25 @@ class Font {
 	**/
 	public function dispose() {
 		tile.dispose();
+	}
+
+	/**
+	 	Calculate a baseLine default value based on available glyphs.
+	 */
+	public function calcBaseLine() {
+		var padding : Float = 0;
+		var space = glyphs.get(" ".code);
+		if( space != null )
+			padding = (space.t.height * .5);
+
+		var a = glyphs.get("A".code);
+		if( a == null )
+			a = glyphs.get("a".code);
+		if( a == null )
+			a = glyphs.get("0".code); // numerical only
+		if( a == null )
+			return lineHeight - 2 - padding;
+		return a.t.dy + a.t.height - padding;
 	}
 
 }

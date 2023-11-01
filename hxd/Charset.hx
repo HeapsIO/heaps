@@ -140,7 +140,7 @@ class Charset {
 	}
 
 	static var complementChars : Map<Int,Bool> = {
-		var str = "ヽヾーァィゥェォッャュョヮヵヶぁぃぅぇぉっゃゅょゎゕゖㇰㇱㇲㇳㇴㇵㇶㇷㇸㇹㇺㇻㇼㇽㇾㇿ々〻";
+		var str = "ヽヾーァィゥェォッャュョヮヵヶぁぃぅぇぉっゃゅょゎゕゖㇰㇱㇲㇳㇴㇵㇶㇷㇸㇹㇺㇻㇼㇽㇾㇿ々〻。，";
 		[for( i in 0...str.length ) str.charCodeAt(i) => true];
 	}
 

@@ -26,7 +26,7 @@ class TileLayerContent extends h3d.prim.Primitive {
 		Content bounds bottom edge.
 	**/
 	public var yMax : Float;
-	
+
 	public var useAllocatorLimit = 1024;
 
 	var state : BatchDrawState;
@@ -58,7 +58,7 @@ class TileLayerContent extends h3d.prim.Primitive {
 	}
 
 	override public function triCount() {
-		return if( buffer == null ) tmp.length >> 4 else buffer.totalVertices() >> 1;
+		return if( buffer == null ) tmp.length >> 4 else buffer.vertices >> 1;
 	}
 
 	/**
@@ -511,8 +511,8 @@ class TileLayerContent extends h3d.prim.Primitive {
 		if( tmp == null ) clear();
 		if( tmp.length > 0 ) {
 			buffer = tmp.length < useAllocatorLimit
-				? hxd.impl.Allocator.get().ofFloats(tmp, 8, RawQuads)
-				: h3d.Buffer.ofFloats(tmp, 8, [Quads, RawFormat]);
+				? hxd.impl.Allocator.get().ofFloats(tmp, hxd.BufferFormat.H2D)
+				: h3d.Buffer.ofFloats(tmp, hxd.BufferFormat.H2D);
 		}
 	}
 
@@ -708,6 +708,7 @@ class TileGroup extends Drawable {
 		if( !ctx.beginDrawBatchState(obj) ) return;
 		var min = rangeMin < 0 ? 0 : rangeMin * 2;
 		if( rangeMax > 0 && rangeMax < max * 2 ) max = rangeMax * 2;
+		#if sceneprof h3d.impl.SceneProf.mark(this); #end
 		content.doRender(ctx, min, max - min);
 	}
 

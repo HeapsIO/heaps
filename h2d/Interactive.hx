@@ -96,7 +96,7 @@ class Interactive extends Object implements hxd.SceneEvents.Interactive {
 	}
 
 	override function draw( ctx : RenderContext ) {
-		maskedBounds = ctx.getCurrentRenderZone();
+		maskedBounds = ctx.getCurrentRenderZone(maskedBounds);
 		if( backgroundColor != null ) emitTile(ctx, h2d.Tile.fromColor(backgroundColor, Std.int(width), Std.int(height), (backgroundColor>>>24)/255 ));
 	}
 

@@ -74,12 +74,16 @@ class HlslOut {
 		m.set(InstanceID,"_in.instanceID");
 		m.set(IVec2, "int2");
 		m.set(IVec3, "int3");
-		m.set(IVec4, "int3");
+		m.set(IVec4, "int4");
 		m.set(BVec2, "bool2");
 		m.set(BVec3, "bool3");
 		m.set(BVec4, "bool4");
 		m.set(FragCoord,"_in.__pos__");
 		m.set(FrontFacing, "_in.isFrontFace");
+		m.set(FloatBitsToInt, "asint");
+		m.set(FloatBitsToUint, "asuint");
+		m.set(IntBitsToFloat, "asfloat");
+		m.set(UintBitsToFloat, "_uintBitsToFloat");
 		for( g in m )
 			KWDS.set(g, true);
 		m;
@@ -100,6 +104,7 @@ class HlslOut {
 	var allNames : Map<String, Int>;
 	var samplers : Map<Int, Array<Int>>;
 	public var varNames : Map<Int,String>;
+	public var baseRegister : Int = 0;
 
 	var varAccess : Map<Int,String>;
 
@@ -196,10 +201,12 @@ class HlslOut {
 	function addVar( v : TVar ) {
 		switch( v.type ) {
 		case TArray(t, size), TBuffer(t,size):
-			var old = v.type;
-			v.type = t;
-			addVar(v);
-			v.type = old;
+			addVar({
+				id : v.id,
+				name : v.name,
+				type : t,
+				kind : v.kind,
+			});
 			addArraySize(size);
 		default:
 			addType(v.type);
@@ -413,6 +420,19 @@ class HlslOut {
 				decl("float2 screenToUv( float2 v ) { return v * float2(0.5, -0.5) + float2(0.5,0.5); }");
 			case UvToScreen:
 				decl("float2 uvToScreen( float2 v ) { return v * float2(2.,-2.) + float2(-1., 1.); }");
+			case DFdx:
+				decl("float dFdx( float v ) { return ddx(v); }");
+				decl("float2 dFdx( float2 v ) { return ddx(v); }");
+				decl("float3 dFdx( float3 v ) { return ddx(v); }");
+			case DFdy:
+				decl("float dFdy( float v ) { return ddy(v); }");
+				decl("float2 dFdy( float2 v ) { return ddy(v); }");
+				decl("float3 dFdy( float3 v ) { return ddy(v); }");
+			case UintBitsToFloat:
+				decl("float _uintBitsToFloat( int v ) { return asfloat(asuint(v)); }");
+				decl("float2 _uintBitsToFloat( int2 v ) { return asfloat(asuint(v)); }");
+				decl("float3 _uintBitsToFloat( int3 v ) { return asfloat(asuint(v)); }");
+				decl("float4 _uintBitsToFloat( int4 v ) { return asfloat(asuint(v)); }");
 			default:
 			}
 			add(GLOBALS.get(g));
@@ -712,7 +732,7 @@ class HlslOut {
 	}
 
 	function initGlobals( s : ShaderData ) {
-		add("cbuffer _globals : register(b0) {\n");
+		add('cbuffer _globals : register(b$baseRegister) {\n');
 		for( v in s.vars )
 			if( v.kind == Global ) {
 				add("\t");
@@ -725,17 +745,21 @@ class HlslOut {
 	function initParams( s : ShaderData ) {
 		var textures = [];
 		var buffers = [];
-		add("cbuffer _params : register(b1) {\n");
+		add('cbuffer _params : register(b${baseRegister+1}) {\n');
 		for( v in s.vars )
 			if( v.kind == Param ) {
 				switch( v.type ) {
 				case TArray(t, _) if( t.isSampler() ):
 					textures.push(v);
+					continue;
 				case TBuffer(_):
 					buffers.push(v);
 					continue;
 				default:
-					if( v.type.isSampler() ) textures.push(v);
+					if( v.type.isSampler() ) {
+						textures.push(v);
+						continue;
+					}
 				}
 				add("\t");
 				addVar(v);
@@ -745,7 +769,7 @@ class HlslOut {
 
 		var bufCount = 0;
 		for( b in buffers ) {
-			add('cbuffer _buffer$bufCount : register(b${bufCount+2}) { ');
+			add('cbuffer _buffer$bufCount : register(b${bufCount+baseRegister+2}) { ');
 			addVar(b);
 			add("; };\n");
 			bufCount++;
@@ -753,11 +777,19 @@ class HlslOut {
 		if( bufCount > 0 ) add("\n");
 
 		var ctx = new Samplers();
-		for( v in textures )
+		var texCount = 0;
+		for( v in textures ) {
+			addVar(v);
+			add(' : register(t${texCount});\n');
+			switch( v.type ) {
+			case TArray(_,SConst(n)): texCount += n;
+			default: texCount++;
+			}
 			samplers.set(v.id, ctx.make(v, []));
+		}
 
 		if( ctx.count > 0 )
-			add('SamplerState __Samplers[${ctx.count}];\n');
+			add('SamplerState __Samplers[${ctx.count}] : register(s0);\n');
 	}
 
 	function initStatics( s : ShaderData ) {

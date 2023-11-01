@@ -31,7 +31,7 @@ class RenderContext extends h3d.impl.RenderContext {
 	var cachedShaderList : Array<hxsl.ShaderList>;
 	var cachedPassObjects : Array<Renderer.PassObjects>;
 	var cachedPos : Int;
-	var passes : h3d.pass.PassObject;
+	var passes : Array<h3d.pass.PassObject>;
 	var lights : Light;
 	var currentManager : h3d.pass.ShaderManager;
 
@@ -45,7 +45,8 @@ class RenderContext extends h3d.impl.RenderContext {
 	public inline function emit( mat : h3d.mat.Material, obj, index = 0 ) {
 		var p = mat.mainPass;
 		while( p != null ) {
-			emitPass(p, obj).index = index;
+			if ( !p.culled )
+				emitPass(p, obj).index = index;
 			p = p.nextPass;
 		}
 	}
@@ -54,7 +55,7 @@ class RenderContext extends h3d.impl.RenderContext {
 		sharedGlobals = [];
 		lights = null;
 		drawPass = null;
-		passes = null;
+		passes = [];
 		lights = null;
 		cachedPos = 0;
 		visibleFlag = true;
@@ -89,6 +90,8 @@ class RenderContext extends h3d.impl.RenderContext {
 	}
 
 	public function emitPass( pass : h3d.mat.Pass, obj : h3d.scene.Object ) @:privateAccess {
+		if ( pass.rendererFlags & 1 == 0 )
+			@:privateAccess scene.renderer.setPassFlags(pass);
 		var o = allocPool;
 		if( o == null ) {
 			o = new h3d.pass.PassObject();
@@ -98,8 +101,10 @@ class RenderContext extends h3d.impl.RenderContext {
 			allocPool = o.nextAlloc;
 		o.pass = pass;
 		o.obj = obj;
-		o.next = passes;
-		passes = o;
+		if ( passes.length <= pass.passId )
+			passes.resize(pass.passId);
+		o.next = passes[pass.passId];
+		passes[pass.passId] = o;
 		return o;
 	}
 
@@ -148,7 +153,7 @@ class RenderContext extends h3d.impl.RenderContext {
 			c.s = null;
 			c.next = null;
 		}
-		passes = null;
+		passes = [];
 		lights = null;
 	}
 

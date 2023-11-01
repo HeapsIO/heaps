@@ -14,30 +14,36 @@ class GlslOut {
 	];
 	static var KWDS = [for( k in KWD_LIST ) k => true];
 	static var GLOBALS = {
-		var m = new Map();
+		var gl = [];
+		inline function set(g:hxsl.Ast.TGlobal,str:String) {
+			gl[g.getIndex()] = str;
+		}
 		for( g in hxsl.Ast.TGlobal.createAll() ) {
 			var n = "" + g;
 			n = n.charAt(0).toLowerCase() + n.substr(1);
-			m.set(g, n);
+			set(g, n);
 		}
-		m.set(ToInt, "int");
-		m.set(ToFloat, "float");
-		m.set(ToBool, "bool");
-		m.set(LReflect, "reflect");
-		m.set(Mat3x4, "_mat3x4");
-		m.set(VertexID, "gl_VertexID");
-		m.set(InstanceID, "gl_InstanceID");
-		m.set(IVec2, "ivec2");
-		m.set(IVec3, "ivec3");
-		m.set(IVec4, "ivec4");
-		m.set(BVec2, "bvec2");
-		m.set(BVec3, "bvec3");
-		m.set(BVec4, "bvec4");
-		m.set(FragCoord, "gl_FragCoord");
-		m.set(FrontFacing, "gl_FrontFacing");
-		for( g in m )
+		set(ToInt, "int");
+		set(ToFloat, "float");
+		set(ToBool, "bool");
+		set(LReflect, "reflect");
+		set(Mat3x4, "_mat3x4");
+		set(VertexID, "gl_VertexID");
+		set(InstanceID, "gl_InstanceID");
+		set(IVec2, "ivec2");
+		set(IVec3, "ivec3");
+		set(IVec4, "ivec4");
+		set(BVec2, "bvec2");
+		set(BVec3, "bvec3");
+		set(BVec4, "bvec4");
+		set(FragCoord, "gl_FragCoord");
+		set(FrontFacing, "gl_FrontFacing");
+		set(FrontFacing, "gl_FrontFacing");
+		set(FloatBitsToUint, "_floatBitsToUint");
+		set(UintBitsToFloat, "_uintBitsToFloat");
+		for( g in gl )
 			KWDS.set(g, true);
-		m;
+		gl;
 	};
 	static var MAT34 = "struct _mat3x4 { vec4 a; vec4 b; vec4 c; };";
 
@@ -239,7 +245,9 @@ class GlslOut {
 				return "mat_to_34";
 			}
 		case DFdx, DFdy, Fwidth:
-			decl("#extension GL_OES_standard_derivatives:enable");
+			if( isVertex ) throw "Can't use "+g+" in vertex shader";
+			if( version < 300 )
+				decl("#extension GL_OES_standard_derivatives:enable");
 		case Pack:
 			decl("vec4 pack( float v ) { vec4 color = fract(v * vec4(1, 255, 255.*255., 255.*255.*255.)); return color - color.yzww * vec4(1. / 255., 1. / 255., 1. / 255., 0.); }");
 		case Unpack:
@@ -273,9 +281,15 @@ class GlslOut {
 			// else
 				return "texelFetch";
 		case TextureSize:
-			decl("vec2 _textureSize(sampler2D sampler, int lod) { return vec2(textureSize(sampler, lod)); }");
-			decl("vec3 _textureSize(sampler2DArray sampler, int lod) { return vec3(textureSize(sampler, lod)); }");
-			decl("vec2 _textureSize(samplerCube sampler, int lod) { return vec2(textureSize(sampler, lod)); }");
+			switch( args[0].t ) {
+			case TSampler2D, TChannel(_):
+				decl("vec2 _textureSize(sampler2D sampler, int lod) { return vec2(textureSize(sampler, lod)); }");
+			case TSamplerCube:
+				decl("vec2 _textureSize(samplerCube sampler, int lod) { return vec2(textureSize(sampler, lod)); }");
+			case TSampler2DArray:
+				decl("vec3 _textureSize(sampler2DArray sampler, int lod) { return vec3(textureSize(sampler, lod)); }");
+			default:
+			}
 			return "_textureSize";
 		case Mod if( rt == TInt && isES ):
 			decl("int _imod( int x, int y ) { return int(mod(float(x),float(y))); }");
@@ -288,9 +302,26 @@ class GlslOut {
 			decl("vec2 screenToUv( vec2 v ) { return v * vec2(0.5,-0.5) + vec2(0.5,0.5); }");
 		case UvToScreen:
 			decl("vec2 uvToScreen( vec2 v ) { return v * vec2(2.,-2.) + vec2(-1., 1.); }");
+		case FloatBitsToInt, IntBitsToFloat:
+			if( version < 330 )
+				decl("#extension GL_ARB_shader_bit_encoding :enable");
+		case FloatBitsToUint:
+			if( version < 330 )
+				decl("#extension GL_ARB_shader_bit_encoding :enable");
+			decl("int _floatBitsToUint( float v) { return int(floatBitsToUint(v)); }");
+			decl("ivec2 _floatBitsToUint( vec2 v ) { return ivec2(floatBitsToUint(v)); }");
+			decl("ivec3 _floatBitsToUint( vec3 v ) { return ivec3(floatBitsToUint(v)); }");
+			decl("ivec4 _floatBitsToUint( vec4 v ) { return ivec4(floatBitsToUint(v)); }");
+		case UintBitsToFloat:
+			if( version < 330 )
+				decl("#extension GL_ARB_shader_bit_encoding :enable");
+			decl("float _uintBitsToFloat( int v ) { return uintBitsToFloat(uint(v)); }");
+			decl("vec2 _uintBitsToFloat( ivec2 v ) { return uintBitsToFloat(uvec2(v)); }");
+			decl("vec3 _uintBitsToFloat( ivec3 v ) { return uintBitsToFloat(uvec3(v)); }");
+			decl("vec4 _uintBitsToFloat( ivec4 v ) { return uintBitsToFloat(uvec4(v)); }");
 		default:
 		}
-		return GLOBALS.get(g);
+		return GLOBALS[g.getIndex()];
 	}
 
 	function addExpr( e : TExpr, tabs : String ) {
@@ -310,7 +341,7 @@ class GlslOut {
 		case TVar(v):
 			ident(v);
 		case TGlobal(g):
-			add(GLOBALS.get(g));
+			add(GLOBALS[g.getIndex()]);
 		case TParenthesis(e):
 			add("(");
 			addValue(e,tabs);
@@ -563,6 +594,9 @@ class GlslOut {
 		if( n != null )
 			return n;
 		n = v.name;
+		// prevent input renaming
+		if ( v.kind == Var )
+			n += "_varying";
 		if( KWDS.exists(n) )
 			n = "_" + n;
 		if( allNames.exists(n) ) {
@@ -656,12 +690,11 @@ class GlslOut {
 		if( s.funs.length != 1 ) throw "assert";
 		var f = s.funs[0];
 		isVertex = f.kind == Vertex;
-		
-		if (isVertex) {
+
+		if (isVertex)
 			decl("precision highp float;");
-		} else {
+		else
 			decl("precision mediump float;");
-		}
 
 		initVars(s);
 

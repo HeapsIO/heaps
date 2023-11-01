@@ -259,22 +259,8 @@ class FontParser {
 
 		font.tile = tile;
 
-		if ( font.baseLine == 0 ) {
-			var padding : Float = 0;
-			var space = glyphs.get(" ".code);
-			if( space != null )
-				padding = (space.t.height * .5);
-
-			var a = glyphs.get("A".code);
-			if( a == null )
-				a = glyphs.get("a".code);
-			if( a == null )
-				a = glyphs.get("0".code); // numerical only
-			if( a == null )
-				font.baseLine = font.lineHeight - 2 - padding;
-			else
-				font.baseLine = a.t.dy + a.t.height - padding;
-		}
+		if( font.baseLine == 0 )
+			font.baseLine = font.calcBaseLine();
 
 		var fallback = glyphs.get(0xFFFD); // <?>
 		if( fallback == null )

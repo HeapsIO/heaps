@@ -3,7 +3,6 @@ package hxd;
 enum Flags {
 	ReadOnly;
 	AlphaPremultiplied;
-	FlipY;
 }
 
 @:forward(bytes, format, width, height, offset, flags, clear, dispose, toPNG, clone, sub, blit)
@@ -20,7 +19,6 @@ abstract PixelsARGB(Pixels) to Pixels {
 
 	@:from public static function fromPixels(p:Pixels) : PixelsARGB {
 		p.convert(ARGB);
-		p.setFlip(false);
 		return cast p;
 	}
 }
@@ -43,7 +41,6 @@ abstract PixelsFloat(Pixels) to Pixels {
 	}
 
 	@:from public static function fromPixels(p:Pixels) : PixelsFloat {
-		p.setFlip(false);
 		p.convert(R32F);
 		return cast p;
 	}
@@ -74,14 +71,13 @@ abstract PixelsFloatRGBA(Pixels) to Pixels {
 	}
 
 	@:from public static function fromPixels(p:Pixels) : PixelsFloatRGBA {
-		p.setFlip(false);
 		p.convert(RGBA32F);
 		return cast p;
 	}
 
 }
 
-@:enum abstract Channel(Int) {
+enum abstract Channel(Int) {
 	public var R = 0;
 	public var G = 1;
 	public var B = 2;
@@ -142,15 +138,11 @@ class Pixels {
 		var stride = calcStride(width, format);
 		var outP = 0;
 		for( dy in 0...height ) {
-			var p = (x + yflip(y + dy) * this.width) * bytesPerPixel + offset;
+			var p = (x + (y + dy) * this.width) * bytesPerPixel + offset;
 			out.blit(outP, this.bytes, p, stride);
 			outP += stride;
 		}
 		return new hxd.Pixels(width, height, out, format);
-	}
-
-	inline function yflip(y:Int) {
-		return if( flags.has(FlipY) ) this.height - 1 - y else y;
 	}
 
 	public function blit( x : Int, y : Int, src : hxd.Pixels, srcX : Int, srcY : Int, width : Int, height : Int ) {
@@ -165,8 +157,8 @@ class Pixels {
 			throw "assert";
 		var stride = calcStride(width, format);
 		for( dy in 0...height ) {
-			var srcP = (srcX + src.yflip(dy + srcY) * src.width) * bpp + src.offset;
-			var dstP = (x + yflip(dy + y) * this.width) * bpp + offset;
+			var srcP = (srcX + (dy + srcY) * src.width) * bpp + src.offset;
+			var dstP = (x + (dy + y) * this.width) * bpp + offset;
 			bytes.blit(dstP, src.bytes, srcP, stride);
 		}
 	}
@@ -224,10 +216,6 @@ class Pixels {
 		var idx = 0;
 		var p = offset;
 		var dl = 0;
-		if( flags.has(FlipY) ) {
-			p += ((height - 1) * width) * bytesPerPixel;
-			dl = -width * 2 * bytesPerPixel;
-		}
 		switch(format) {
 		case BGRA:
 			for( y in 0...height ) {
@@ -303,11 +291,8 @@ class Pixels {
 		if( flags.has(ReadOnly) ) copyInner();
 	}
 
-	public function setFlip( b : Bool ) {
-		#if js if( b == null ) b = false; #end
-		if( flags.has(FlipY) == b ) return;
+	public function flipY() {
 		willChange();
-		if( b ) flags.set(FlipY) else flags.unset(FlipY);
 		if( stride%4 != 0 ) invalidFormat();
 		for( y in 0...height >> 1 ) {
 			var p1 = y * stride + offset;
@@ -429,7 +414,7 @@ class Pixels {
 	}
 
 	public function getPixel(x, y) : Int {
-		var p = ((x + yflip(y) * width) * bytesPerPixel) + offset;
+		var p = ((x + y * width) * bytesPerPixel) + offset;
 		switch(format) {
 		case BGRA:
 			return bytes.getInt32(p);
@@ -437,6 +422,11 @@ class Pixels {
 			return switchBR(bytes.getInt32(p));
 		case ARGB:
 			return switchEndian(bytes.getInt32(p));
+		case RG8:
+			var b = bytes.getUInt16(p);
+			return ((b & 0xff) << 8) | (b >> 8);
+		case R8:
+			return bytes.get(p);
 		default:
 			invalidFormat();
 			return 0;
@@ -444,7 +434,7 @@ class Pixels {
 	}
 
 	public function setPixel(x, y, color) : Void {
-		var p = ((x + yflip(y) * width) * bytesPerPixel) + offset;
+		var p = ((x + y * width) * bytesPerPixel) + offset;
 		willChange();
 		switch(format) {
 		case R8:
@@ -455,6 +445,8 @@ class Pixels {
 			bytes.setInt32(p, switchBR(color));
 		case ARGB:
 			bytes.setInt32(p, switchEndian(color));
+		case RG8:
+			bytes.setUInt16(p, ((color & 0xff) << 8) | ((color & 0xff00) >> 8));
 		default:
 			invalidFormat();
 		}
@@ -463,7 +455,7 @@ class Pixels {
 	public function getPixelF(x, y, ?v:h3d.Vector) {
 		if( v == null )
 			v = new h3d.Vector();
-		var p = ((x + yflip(y) * width) * bytesPerPixel) + offset;
+		var p = ((x + y * width) * bytesPerPixel) + offset;
 		switch( format ) {
 		case R32F:
 			v.set(bytes.getFloat(p),0,0,0);
@@ -474,6 +466,9 @@ class Pixels {
 		case RGBA32F:
 			v.set(bytes.getFloat(p), bytes.getFloat(p+4), bytes.getFloat(p+8), bytes.getFloat(p+12));
 			return v;
+		case R16U:
+			v.set(bytes.getUInt16(p) / 65535.0,0,0,0);
+			return v;
 		default:
 			v.setColor(getPixel(x,y));
 			return v;
@@ -482,7 +477,7 @@ class Pixels {
 
 	public function setPixelF(x, y, v:h3d.Vector) {
 		willChange();
-		var p = ((x + yflip(y) * width) * bytesPerPixel) + offset;
+		var p = ((x + y * width) * bytesPerPixel) + offset;
 		switch( format ) {
 		case R32F:
 			bytes.setFloat(p, v.x);
@@ -506,10 +501,15 @@ class Pixels {
 
 	public function toPNG( ?level = 9 ) {
 		var png;
-		setFlip(false);
-		switch( format ) {
+		if( offset != 0 ) {
+			bytes = bytes.sub(offset, calcDataSize(width,height, format));
+			offset = 0;
+		}
+ 		switch( format ) {
 		case ARGB:
 			png = std.format.png.Tools.build32ARGB(width, height, bytes #if (format >= "3.3") , level #end);
+		case R8:
+			png = std.format.png.Tools.buildGrey(width, height, bytes #if (format >= "3.3") , level #end);
 		default:
 			convert(BGRA);
 			png = std.format.png.Tools.build32BGRA(width, height, bytes #if (format >= "3.3") , level #end);
@@ -552,7 +552,7 @@ class Pixels {
 		case R16U, R16F: 2;
 		case R32F: 4;
 		case RG8: 2;
-		case RG16F: 4;
+		case RG16U, RG16F: 4;
 		case RG32F: 8;
 		case RGB8: 3;
 		case RGB16U, RGB16F: 6;
@@ -564,6 +564,8 @@ class Pixels {
 			if( n == 1 || n == 4 )
 				return blocks << 1;
 			return blocks << 2;
+		case Depth16, Depth24, Depth24Stencil8:
+			throw "Not a pixel format";
 		}
 	}
 
@@ -584,7 +586,7 @@ class Pixels {
 		return switch( format ) {
 		case R8, R16F, R32F, R16U:
 			if( channel == R ) 0 else -1;
-		case RG8, RG16F, RG32F:
+		case RG8, RG16F, RG16U, RG32F:
 			var p = calcStride(1,format);
 			[0, p, -1, -1][channel.toInt()];
 		case RGB8, RGB16F, RGB32F, RGB16U:
@@ -602,7 +604,7 @@ class Pixels {
 			channel.toInt() * 4;
 		case RGB10A2, RG11B10UF:
 			throw "Bit packed format";
-		case S3TC(_):
+		case S3TC(_), Depth16, Depth24, Depth24Stencil8:
 			throw "Not supported";
 		}
 	}
@@ -625,7 +627,7 @@ class Pixels {
 		var levels : Array<Array<Pixels>> = [];
 		var outSize = 0;
 		for( p in pixels ) {
-			if( p.format != fmt ) throw "All images must be of the same pixel format";
+			if( !p.format.equals(fmt) ) throw "All images must be of the same pixel format";
 			outSize += p.dataSize;
 			var found = false;
 			for( sz in levels ) {
@@ -722,6 +724,13 @@ class Pixels {
 			switch( fmt ) {
 			case RGBA:
 				write(28); // DXGI_FORMAT_R8G8B8A8_UNORM
+			case S3TC(n):
+				write(switch( n ) {
+				case 1: 71;
+				case 2: 74;
+				case 3: 77;
+				default: throw "Unnsupported format "+fmt;
+				});
 			default:
 				throw "Unsupported DXT10 format "+fmt;
 			}

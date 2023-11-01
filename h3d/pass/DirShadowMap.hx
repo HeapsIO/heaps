@@ -2,11 +2,11 @@ package h3d.pass;
 
 class DirShadowMap extends Shadows {
 
-	var customDepth : Bool;
-	var depth : h3d.mat.DepthBuffer;
+	var depth : h3d.mat.Texture;
 	var dshader : h3d.shader.DirShadow;
 	var border : Border;
 	var mergePass = new h3d.pass.ScreenFx(new h3d.shader.MinMaxShader());
+	var boundingObject : h3d.scene.Object;
 
 	/**
 		Shrink the frustum of the light to the bounds containing all visible objects
@@ -31,8 +31,6 @@ class DirShadowMap extends Shadows {
 		lightCamera.orthoBounds = new h3d.col.Bounds();
 		shader = dshader = new h3d.shader.DirShadow();
 		border = new Border(size, size);
-		customDepth = h3d.Engine.getCurrent().driver.hasFeature(AllocDepthBuffer);
-		if( !customDepth ) depth = h3d.mat.DepthBuffer.getDefault();
 	}
 
 	override function set_mode(m:Shadows.RenderMode) {
@@ -55,8 +53,8 @@ class DirShadowMap extends Shadows {
 
 	override function dispose() {
 		super.dispose();
-		if( customDepth && depth != null ) depth.dispose();
-		border.dispose();
+		if( depth != null ) depth.dispose();
+		if ( border != null ) border.dispose();
 	}
 
 	public override function getShadowTex() {
@@ -69,13 +67,15 @@ class DirShadowMap extends Shadows {
 		if( autoShrink ) {
 			// add visible casters in light camera position
 			var mtmp = new h3d.Matrix();
+			var identity = h3d.Matrix.I();
 			var btmp = autoZPlanes ? new h3d.col.Bounds() : null;
-			ctx.scene.iterVisibleMeshes(function(m) {
+			var obj = boundingObject != null ? boundingObject : ctx.scene;
+			obj.iterVisibleMeshes(function(m) {
 				if( m.primitive == null || !m.material.castShadows ) return;
 				var b = m.primitive.getBounds();
 				if( b.xMin > b.xMax ) return;
 
-				var absPos = m.getAbsPos();
+				var absPos = Std.isOfType(m.primitive, h3d.prim.Instanced) ? identity : m.getAbsPos();
 				if( autoZPlanes ) {
 					btmp.load(b);
 					btmp.transform(absPos);
@@ -265,27 +265,55 @@ class DirShadowMap extends Shadows {
 		return true;
 	}
 
+	function processShadowMap( passes, tex, ?sort) {
+		if ( tex.isDepth() )
+			ctx.engine.pushDepth(tex);
+		else
+			ctx.engine.pushTarget(tex);
+		ctx.engine.clear(0xFFFFFF, 1.0);
+		super.draw(passes, sort);
+
+		var doBlur = blur.radius > 0 && (mode != Mixed || !ctx.computingStatic);
+
+		if( border != null && !doBlur )
+			border.render();
+
+		ctx.engine.popTarget();
+
+		if( mode == Mixed && !ctx.computingStatic ) {
+			var merge = ctx.textures.allocTarget("mergedDirShadowMap", size, size, false, format);
+			mergePass.shader.texA = tex;
+			mergePass.shader.texB = staticTexture;
+			ctx.engine.pushTarget(merge);
+			mergePass.render();
+			ctx.engine.popTarget();
+			tex = merge;
+		}
+
+		if( doBlur ) {
+			if ( tex.isDepth() ) {
+				var tmp = ctx.textures.allocTarget("dirShadowMapFloat", size, size, false, format);
+				h3d.pass.Copy.run(tex, tmp);
+				tex = tmp;
+			}
+			blur.apply(ctx, tex);
+			if( border != null ) {
+				ctx.engine.pushTarget(tex);
+				border.render();
+				ctx.engine.popTarget();
+			}
+		}
+		return tex;
+	}
+
+	var g : h3d.scene.Graphics;
+	public var debug : Bool;
 	override function draw( passes, ?sort ) {
 		if( !enabled )
 			return;
 
 		if( !filterPasses(passes) )
 			return;
-
-		if( mode != Mixed || ctx.computingStatic ) {
-			lightCamera.orthoBounds.empty();
-			if( !passes.isEmpty() ) calcShadowBounds(lightCamera);
-			lightCamera.update();
-		}
-
-		cullPasses(passes,function(col) return col.inFrustum(lightCamera.frustum));
-
-		var texture = ctx.textures.allocTarget("dirShadowMap", size, size, false, format);
-		if( customDepth && (depth == null || depth.width != size || depth.height != size || depth.isDisposed()) ) {
-			if( depth != null ) depth.dispose();
-			depth = new h3d.mat.DepthBuffer(size, size);
-		}
-		texture.depthBuffer = depth;
 
 		if( mode != Mixed || ctx.computingStatic ) {
 			var ct = ctx.camera.target;
@@ -302,39 +330,34 @@ class DirShadowMap extends Shadows {
 			lightCamera.target.z += ct.z;
 			lightCamera.pos.load(ct);
 			lightCamera.update();
+
+			lightCamera.orthoBounds.empty();
+			if( !passes.isEmpty() ) calcShadowBounds(lightCamera);
+			lightCamera.update();
 		}
 
-		ctx.engine.pushTarget(texture);
-		ctx.engine.clear(0xFFFFFF, 1);
-		super.draw(passes, sort);
+		cullPasses(passes,function(col) return col.inFrustum(lightCamera.frustum));
 
-		var doBlur = blur.radius > 0 && (mode != Mixed || !ctx.computingStatic);
-
-		if( border != null && !doBlur )
-			border.render();
-
-		ctx.engine.popTarget();
-
-		if( mode == Mixed && !ctx.computingStatic ) {
-			var merge = ctx.textures.allocTarget("mergedDirShadowMap", size, size, false, format);
-			mergePass.shader.texA = texture;
-			mergePass.shader.texB = staticTexture;
-			ctx.engine.pushTarget(merge);
-			mergePass.render();
-			ctx.engine.popTarget();
-			texture = merge;
+		#if js
+		var texture = ctx.textures.allocTarget("dirShadowMap", size, size, false, format);
+		if( depth == null || depth.width != size || depth.height != size || depth.isDisposed() ) {
+			if( depth != null ) depth.dispose();
+			depth = new h3d.mat.Texture(size, size, Depth24Stencil8);
+			depth.name = "dirShadowMapDepth";
 		}
+		texture.depthBuffer = depth;
+		#else
+		depth = ctx.textures.allocTarget("dirShadowMap", size, size, false, Depth24Stencil8);
+		var texture = depth;
+		#end
 
-		if( doBlur ) {
-			blur.apply(ctx, texture);
-			if( border != null ) {
-				ctx.engine.pushTarget(texture);
-				border.render();
-				ctx.engine.popTarget();
-			}
-		}
+		texture = processShadowMap(passes, texture, sort);
 
 		syncShader(texture);
+
+		#if editor
+		drawDebug();
+		#end
 	}
 
 	override function computeStatic( passes : h3d.pass.PassList ) {
@@ -349,5 +372,49 @@ class DirShadowMap extends Shadows {
 		dshader.shadowMap = staticTexture;
 		if( old != null )
 			old.dispose();
+	}
+
+	function drawDebug() {
+		if( g == null ) {
+			g = new h3d.scene.Graphics(ctx.scene);
+			g.name = "frustumDebug";
+			g.material.mainPass.setPassName("overlay");
+			g.ignoreBounds = true;
+		}
+		if ( !debug )
+			return;
+		g.clear();
+
+		drawBounds(lightCamera, 0xffffff);
+	}
+
+	function drawBounds(camera : h3d.Camera, color : Int) {
+
+		var nearPlaneCorner = [camera.unproject(-1, 1, 0), camera.unproject(1, 1, 0), camera.unproject(1, -1, 0), camera.unproject(-1, -1, 0)];
+		var farPlaneCorner = [camera.unproject(-1, 1, 1), camera.unproject(1, 1, 1), camera.unproject(1, -1, 1), camera.unproject(-1, -1, 1)];
+
+		g.lineStyle(1, color);
+
+		// Near Plane
+		var last = nearPlaneCorner[nearPlaneCorner.length - 1];
+		g.moveTo(last.x,last.y,last.z);
+		for( fc in nearPlaneCorner ) {
+			g.lineTo(fc.x, fc.y, fc.z);
+		}
+
+		// Far Plane
+		var last = farPlaneCorner[farPlaneCorner.length - 1];
+		g.moveTo(last.x,last.y,last.z);
+		for( fc in farPlaneCorner ) {
+			g.lineTo(fc.x, fc.y, fc.z);
+		}
+
+		// Connections
+		for( i in 0 ... 4 ) {
+			var np = nearPlaneCorner[i];
+			var fp = farPlaneCorner[i];
+			g.moveTo(np.x, np.y, np.z);
+			g.lineTo(fp.x, fp.y, fp.z);
+		}
 	}
 }

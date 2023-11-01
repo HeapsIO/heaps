@@ -7,7 +7,7 @@ class Light extends h3d.scene.Light {
 	public var power : Float = 1.;
 	public var shadows : h3d.pass.Shadows;
 	public var isMainLight = false;
-	public var occlusionFactor : Float;
+	public var occlusionFactor : Float = 0.;
 	public var enableForward : Bool = true;
 
 	function new(shader,?parent) {

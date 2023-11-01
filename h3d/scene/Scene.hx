@@ -137,8 +137,10 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 					p = p.parent;
 				if( p != null ) continue;
 
-				var minv = i.getInvPos();
-				r.transform(minv);
+				if( !i.isAbsoluteShape ) {
+					var minv = i.getInvPos();
+					r.transform(minv);
+				}
 
 				// check for NaN
 				if( r.lx != r.lx ) {
@@ -307,23 +309,26 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 		ctx.lightSystem = null;
 
 		var found = null;
-		var passes = new h3d.pass.PassList(@:privateAccess ctx.passes);
-
-		if( !passes.isEmpty() ) {
-			var p = hardwarePass;
-			if( p == null )
-				hardwarePass = p = new h3d.pass.HardwarePick();
-			ctx.setGlobal("depthMap", { texture : h3d.mat.Texture.fromColor(0xFF00000, 0) });
-			p.pickX = pixelX;
-			p.pickY = pixelY;
-			p.setContext(ctx);
-			p.draw(passes);
-			if( p.pickedIndex >= 0 )
-				for( po in passes )
-					if( p.pickedIndex-- == 0 ) {
-						found = po.obj;
-						break;
-					}
+		for ( passes in @:privateAccess ctx.passes ) {
+			if ( found != null )
+				break;
+			var passList = new h3d.pass.PassList(passes);
+			if( !passList.isEmpty() ) {
+				var p = hardwarePass;
+				if( p == null )
+					hardwarePass = p = new h3d.pass.HardwarePick();
+				ctx.setGlobal("depthMap", { texture : h3d.mat.Texture.fromColor(0xFF00000, 0) });
+				p.pickX = pixelX;
+				p.pickY = pixelY;
+				p.setContext(ctx);
+				p.draw(passList);
+				if( p.pickedIndex >= 0 )
+					for( po in passList )
+						if( p.pickedIndex-- == 0 ) {
+							found = po.obj;
+							break;
+						}
+			}
 		}
 
 		ctx.done();
@@ -400,25 +405,21 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 		ctx.start();
 		renderer.start();
 
+		#if sceneprof h3d.impl.SceneProf.begin("sync", ctx.frame); #end
 		syncRec(ctx);
+		#if sceneprof
+		h3d.impl.SceneProf.end();
+		h3d.impl.SceneProf.begin("emit", ctx.frame);
+		#end
 		emitRec(ctx);
-		// sort by pass id
-		ctx.passes = haxe.ds.ListSort.sortSingleLinked(ctx.passes, function(p1, p2) {
-			return p1.pass.passId - p2.pass.passId;
-		});
+		#if sceneprof h3d.impl.SceneProf.end(); #end
 
-		// group by pass implementation
-		var curPass = ctx.passes;
 		var passes = [];
 		var passIndex = -1;
-		while( curPass != null ) {
-			var passId = curPass.pass.passId;
-			var p = curPass, prev = null;
-			while( p != null && p.pass.passId == passId ) {
-				prev = p;
-				p = p.next;
-			}
-			prev.next = null;
+		for ( passId in 0...ctx.passes.length ) {
+			var curPass = ctx.passes[passId];
+			if ( curPass == null )
+				continue;
 			var pobjs = ctx.cachedPassObjects[++passIndex];
 			if( pobjs == null ) {
 				pobjs = new Renderer.PassObjects();
@@ -427,7 +428,6 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 			pobjs.name = curPass.pass.name;
 			pobjs.passes.init(curPass);
 			passes.push(pobjs);
-			curPass = p;
 		}
 
 		// send to rendered
@@ -460,4 +460,31 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 		}
 	}
 
+	var prevDB : h3d.mat.Texture;
+	var prevEngine = null;
+	/**
+		Temporarily overrides the output render target. This is useful for picture-in-picture rendering,
+		where the output render target has a different size from the window.
+		`tex` must have a matching depthBuffer attached.
+		Call `setOutputTarget()` after `render()` has been called.
+	**/
+	public function setOutputTarget( ?engine: h3d.Engine, ?tex : h3d.mat.Texture ) @:privateAccess {
+		if(tex != null) {
+			if(prevDB != null) throw "missing setOutputTarget()";
+			engine.pushTarget(tex);
+			engine.width = tex.width;
+			engine.height = tex.height;
+			prevDB = ctx.textures.defaultDepthBuffer;
+			prevEngine = engine;
+			ctx.textures.defaultDepthBuffer = tex.depthBuffer;
+		}
+		else {
+			prevEngine.popTarget();
+			prevEngine.width = prevDB.width;
+			prevEngine.height = prevDB.height;
+			ctx.textures.defaultDepthBuffer = prevDB;
+			prevDB = null;
+			prevEngine = null;
+		}
+	}
 }

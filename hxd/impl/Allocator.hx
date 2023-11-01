@@ -1,10 +1,9 @@
 package hxd.impl;
 
-@:enum abstract BufferFlags(Int) {
+enum abstract BufferFlags(Int) {
 	public var Dynamic = 0;
-	public var UniformDynamic = 1;
-	public var RawFormat = 2;
-	public var RawQuads = 3;
+	public var Static = 1;
+	public var UniformDynamic = 2;
 	public inline function toInt() : Int {
 		return this;
 	}
@@ -17,20 +16,23 @@ class Allocator {
 
 	// GPU
 
-	public function allocBuffer( vertices : Int, stride : Int, flags : BufferFlags ) : h3d.Buffer {
-		return new h3d.Buffer(vertices, stride,
+	public function allocBuffer( vertices : Int, format, flags : BufferFlags = Dynamic ) : h3d.Buffer {
+		return new h3d.Buffer(vertices, format,
 			switch( flags ) {
-				case Dynamic: [Dynamic];
-				case UniformDynamic: [UniformBuffer,Dynamic];
-				case RawFormat: [RawFormat];
-				case RawQuads: [Quads, RawFormat];
+			case Static: null;
+			case Dynamic: [Dynamic];
+			case UniformDynamic: [UniformBuffer,Dynamic];
 			});
 	}
 
-	public function ofFloats( v : hxd.FloatBuffer, stride : Int, flags : BufferFlags ) {
-		var nvert = Std.int(v.length / stride);
-		var b = allocBuffer(nvert, stride, flags);
-		b.uploadVector(v, 0, nvert);
+	public function ofFloats( v : hxd.FloatBuffer, format : hxd.BufferFormat, flags : BufferFlags = Dynamic ) {
+		var nvert = Std.int(v.length / format.stride);
+		return ofSubFloats(v, nvert, format, flags);
+	}
+
+	public function ofSubFloats( v : hxd.FloatBuffer, vertices : Int, format, flags : BufferFlags = Dynamic ) {
+		var b = allocBuffer(vertices, format, flags);
+		b.uploadFloats(v, 0, vertices);
 		return b;
 	}
 

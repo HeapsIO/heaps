@@ -130,7 +130,7 @@ class Driver implements hxd.snd.Driver {
 				if (channelCount == 1) {
 					var chn = buffer.inst.getChannelData(0);
 					for ( i in 0...sampleCount ) {
-						chn[i] = ui8[i] / 0xff;
+						chn[i] = (ui8[i] - 0x80) / 0x80;
 					}
 				} else {
 					var left = buffer.inst.getChannelData(0);
@@ -138,8 +138,8 @@ class Driver implements hxd.snd.Driver {
 					// TODO: 3+ channels
 					var r = 0;
 					for ( i in 0...sampleCount ) {
-						left[i] = ui8[r] / 0xff;
-						right[i] = ui8[r+1] / 0xff;
+						left[i] = (ui8[r] - 0x80) / 0x80;
+						right[i] = (ui8[r+1] - 0x80) / 0x80;
 						r += channelCount;
 					}
 				}

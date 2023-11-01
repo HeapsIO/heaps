@@ -26,6 +26,10 @@ enum ConsoleArg {
 		A text string parameter with limitation to only accept the specified list values.
 	**/
 	AEnum( values : Array<String> );
+	/**
+		An array of remaining arguments.
+	**/
+	AArray(t: ConsoleArg);
 }
 
 /**
@@ -266,7 +270,7 @@ class Console #if !macro extends h2d.Object #end {
 			for( a in c.args ) {
 				var astr = a.name;
 				switch( a.t ) {
-				case AInt, AFloat:
+				case AInt, AFloat, AArray(_):
 					astr += ":"+a.t.getName().substr(1);
 				case AString:
 					// nothing
@@ -319,11 +323,12 @@ class Console #if !macro extends h2d.Object #end {
 		if (cmd == "") {
 			return "";
 		}
+		var lowCmd = cmd.toLowerCase();
 
 		var closestCommand = "";
 		var commandNames = commands.keys();
 		for (command in commandNames) {
-			if (command.indexOf(cmd) == 0) {
+			if (command.toLowerCase().indexOf(lowCmd) == 0) {
 				if (closestCommand == "" || closestCommand.length > command.length) {
 					closestCommand = command;
 				}
@@ -373,18 +378,24 @@ class Console #if !macro extends h2d.Object #end {
 				curCmd = tf.text;
 				logIndex = logs.length - 1;
 			}
-			else logIndex--;
+			else {
+				var curLog = logs[logIndex];
+				while(curLog == logs[logIndex] && logIndex > 0)
+					logIndex--;
+			}
 			tf.text = logs[logIndex];
 			tf.cursorIndex = tf.text.length;
 		case Key.DOWN:
 			if(tf.text == curCmd) return;
+			var curLog = logs[logIndex];
+			while(curLog == logs[logIndex] && logIndex < logs.length - 1)
+				logIndex++;
 			if(logIndex == logs.length - 1) {
 				tf.text = curCmd == null ? "" : curCmd;
 				tf.cursorIndex = tf.text.length;
 				logIndex = -1;
 				return;
 			}
-			logIndex++;
 			tf.text = logs[logIndex];
 			tf.cursorIndex = tf.text.length;
 		}
@@ -454,8 +465,11 @@ class Console #if !macro extends h2d.Object #end {
 					return;
 				}
 
-				args.push(string);
-				last = '';
+				last = string;
+				if (i < command.length - 1) {
+					args.push(string);
+					last = '';
+				}
 
 				skipSpace();
 			default:
@@ -473,55 +487,82 @@ class Console #if !macro extends h2d.Object #end {
 			log('Unknown command "${cmdName}"',errorColor);
 			return;
 		}
-		var vargs = new Array<Dynamic>();
-		for( i in 0...cmd.args.length ) {
-			var a = cmd.args[i];
-			var v = args[i + 1];
-			if( v == null ) {
-				if( a.opt ) {
-					vargs.push(null);
-					continue;
-				}
-				log('Missing argument ${a.name}',errorColor);
-				return;
-			}
-			switch( a.t ) {
+
+		function parseArgument( v : String, t: ConsoleArg, name : String, loneArg = false ): Dynamic {
+			switch( t ) {
 			case AInt:
 				var i = Std.parseInt(v);
 				if( i == null ) {
-					log('$v should be Int for argument ${a.name}',errorColor);
-					return;
+					log('$v should be Int for argument $name',errorColor);
+					return null;
 				}
-				vargs.push(i);
+				return i;
 			case AFloat:
 				var f = Std.parseFloat(v);
 				if( Math.isNaN(f) ) {
-					log('$v should be Float for argument ${a.name}',errorColor);
-					return;
+					log('$v should be Float for argument $name',errorColor);
+					return null;
 				}
-				vargs.push(f);
+				return f;
 			case ABool:
 				switch( v ) {
-				case "true", "1": vargs.push(true);
-				case "false", "0": vargs.push(false);
+				case "true", "1": return true;
+				case "false", "0": return false;
 				default:
-					log('$v should be Bool for argument ${a.name}',errorColor);
-					return;
+					log('$v should be Bool for argument $name',errorColor);
+					return null;
 				}
 			case AString:
 				// if we take a single string, let's pass the whole args (allows spaces)
-				vargs.push(cmd.args.length == 1 ? StringTools.trim(command.substr(args[0].length)) : v);
+				return loneArg ? StringTools.trim(command.substr(args[0].length)) : v;
 			case AEnum(values):
 				var found = false;
-				for( v2 in values )
-					if( v == v2 ) {
-						found = true;
-						vargs.push(v2);
-					}
-				if( !found ) {
-					log('$v should be [${values.join("|")}] for argument ${a.name}', errorColor);
+				for( v2 in values ) {
+					if( v == v2 )
+						return v2;
+				}
+				log('$v should be [${values.join("|")}] for argument $name', errorColor);
+				return null;
+			case AArray(t):
+				log('Cannot have nested arrays for argument $name');
+				return null;
+			}
+			return null;
+		}
+
+		var vargs = new Array<Dynamic>();
+		for( i in 0...cmd.args.length ) {
+			var a = cmd.args[i];
+			switch( a.t ) {
+			case AArray(t):
+				if (i != cmd.args.length - 1) {
+					log('Array ${a.name} should be last argument',errorColor);
 					return;
 				}
+				var arr = [];
+				for (j in (i + 1)...args.length) {
+					var v = args[j];
+					var parsed = parseArgument(v, t, a.name);
+					if (parsed == null)
+						return;
+					arr.push(parsed);
+				}
+				vargs.push(arr);
+			default:
+				var v = args[i + 1];
+				if( v == null ) {
+					if( a.opt ) {
+						vargs.push(null);
+						continue;
+					}
+					log('Missing argument ${a.name}',errorColor);
+					return;
+				}
+
+				var parsed = parseArgument(v, a.t, a.name, cmd.args.length == 1);
+				if (parsed == null)
+					return;
+				vargs.push(parsed);
 			}
 		}
 

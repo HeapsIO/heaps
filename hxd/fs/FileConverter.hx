@@ -33,6 +33,7 @@ class FileConverter {
 	var configs : Map<String,ConvertConfig> = new Map();
 	var defaultConfig : ConvertConfig;
 	var cache : Map<String,Array<{ out : String, time : Int, hash : String, ver : Null<Int> }>>;
+	var cacheTime : Float;
 
 	static var extraConfigs:Array<Dynamic> = [];
 
@@ -133,16 +134,26 @@ class FileConverter {
 			case "priority": priority = value;
 			default:
 				if( cmd.params == null ) cmd.params = {};
-				if( Reflect.isObject(value) && !hxd.impl.Api.isOfType(value,String) ) throw "Invalid parameter value "+f+"="+value;
 				Reflect.setField(cmd.params, f, value);
 			}
 		}
-		if( cmd.params != null ) {
-			var fl = Reflect.fields(cmd.params);
-			fl.sort(Reflect.compare);
-			cmd.paramsStr = [for( f in fl ) f+"_"+Reflect.field(cmd.params,f)].join("_");
-		}
+		if( cmd.params != null )
+			cmd.paramsStr = formatValue(cmd.params);
 		return { cmd : cmd, priority : priority };
+	}
+
+	function formatValue( v : Dynamic ) : String {
+		if( !Reflect.isObject(v) )
+			return Std.string(v);
+		if( Std.isOfType(v,String) )
+			return v;
+		if( Std.isOfType(v,Array) ) {
+			var a : Array<Dynamic> = v;
+			return [for( v in a ) formatValue(v)].toString();
+		}
+		var fl = Reflect.fields(v);
+		fl.sort(Reflect.compare);
+		return [for( f in fl ) f+"_"+formatValue(Reflect.field(v,f))].join("_");
 	}
 
 	function mergeRec( a : Dynamic, b : Dynamic ) {
@@ -252,8 +263,12 @@ class FileConverter {
 	}
 
 	function convertAndCache( e : LocalFileSystem.LocalEntry, outFile : String, conv : Convert, params : Dynamic ) {
-		if( cache == null )
-			cache = try haxe.Unserializer.run(sys.io.File.getContent(baseDir + tmpDir + "cache.dat")) catch( e : Dynamic ) new Map();
+		var cacheFile = baseDir + tmpDir + "cache.dat";
+		var time = try sys.FileSystem.stat(cacheFile).mtime.getTime() catch( e : Dynamic ) 0;
+		if( cache == null || time > cacheTime ) {
+			cache = try haxe.Unserializer.run(sys.io.File.getContent(cacheFile)) catch( e : Dynamic ) cache == null ? new Map() : cache;
+			cacheTime = time;
+		}
 		var entry = cache.get(e.file);
 		var needInsert = false;
 		if( entry == null ) {
@@ -264,6 +279,7 @@ class FileConverter {
 			if( needInsert ) cache.set(e.file, entry);
 			sys.FileSystem.createDirectory(baseDir + tmpDir);
 			sys.io.File.saveContent(baseDir + tmpDir + "cache.dat", haxe.Serializer.run(cache));
+			cacheTime = Date.now().getTime();
 		}
 
 		var match = null;
@@ -310,7 +326,11 @@ class FileConverter {
 		conv.originalFilename = e.name;
 		conv.params = params;
 		onConvert(conv);
+		var prev = hxd.System.allowTimeout;
+		hxd.System.allowTimeout = false;
 		conv.convert();
+		if( prev ) hxd.System.timeoutTick();
+		hxd.System.allowTimeout = prev;
 		conv.srcPath = null;
 		conv.dstPath = null;
 		conv.srcBytes = null;

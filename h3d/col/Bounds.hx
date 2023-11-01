@@ -1,7 +1,7 @@
 package h3d.col;
 import hxd.Math;
 
-class Bounds implements Collider {
+class Bounds extends Collider {
 
 	public var xMin : Float;
 	public var xMax : Float;
@@ -209,6 +209,12 @@ class Bounds implements Collider {
 		if( b.yMax > yMax ) yMax = b.yMax;
 		if( b.zMin < zMin ) zMin = b.zMin;
 		if( b.zMax > zMax ) zMax = b.zMax;
+	}
+
+	public inline function addTransform( b : Bounds, m : h3d.Matrix ) {
+		var tmp = b.clone();
+		tmp.transform(m);
+		add(tmp);
 	}
 
 	public inline function addPoint( p : Point ) {

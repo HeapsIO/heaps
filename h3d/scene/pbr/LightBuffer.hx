@@ -8,8 +8,8 @@ class LightBuffer {
 	var MAX_SPOT_LIGHT = 10;
 	var MAX_POINT_LIGHT = 10;
 	var MAX_DIR_SHADOW = 1;
-	var MAX_SPOT_SHADOW = 3;
-	var MAX_POINT_SHADOW = 3;
+	var MAX_SPOT_SHADOW = 2;
+	var MAX_POINT_SHADOW = 2;
 
 	var pointLightsShadow : Array<PointLight> = [];
 	var spotLightsShadow : Array<SpotLight> = [];
@@ -36,7 +36,7 @@ class LightBuffer {
 		size += MAX_SPOT_LIGHT * SPOT_LIGHT_INFO_SIZE;
 		size = hxd.Math.imax(1, size); // Avoid empty buffer
 		lightInfos = new hxd.FloatBuffer(size * stride);
-		defaultForwardShader.lightInfos = new h3d.Buffer(size, stride, [UniformBuffer, Dynamic]);
+		defaultForwardShader.lightInfos = new h3d.Buffer(size, hxd.BufferFormat.make([{ name : "uniformData", type : DVec4 }]), [UniformBuffer, Dynamic]);
 		defaultForwardShader.BUFFER_SIZE = size;
 		defaultForwardShader.dirLightStride = DIR_LIGHT_INFO_SIZE * MAX_DIR_LIGHT;
 		defaultForwardShader.pointLightStride = POINT_LIGHT_INFO_SIZE * MAX_POINT_LIGHT;
@@ -299,10 +299,16 @@ class LightBuffer {
 		s.dirLightCount = dirLights.length;
 		s.pointLightCount = pointLights.length;
 		s.spotLightCount = spotLights.length;
-		s.DIR_SHADOW_COUNT = dirLightsShadow.length;
-		s.POINT_SHADOW_COUNT = pointLightsShadow.length;
-		s.SPOT_SHADOW_COUNT = spotLightsShadow.length;
-		s.lightInfos.uploadVector(lightInfos, 0, s.lightInfos.vertices, 0);
+		s.DIR_SHADOW_COUNT = MAX_DIR_SHADOW;
+		s.POINT_SHADOW_COUNT = MAX_POINT_SHADOW;
+		s.SPOT_SHADOW_COUNT = MAX_SPOT_SHADOW;
+		s.lightInfos.uploadFloats(lightInfos, 0, s.lightInfos.vertices, 0);
+		pointLights = [];
+		spotLights = [];
+		dirLights = [];
+		pointLightsShadow = [];
+		spotLightsShadow = [];
+		dirLightsShadow = [];
 
 		var pbrIndirect = @:privateAccess pbrRenderer.pbrIndirect;
 		s.USE_INDIRECT = pbrRenderer.env != null && pbrIndirect.irrLut != null;

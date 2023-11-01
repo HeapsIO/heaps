@@ -2,10 +2,54 @@ package hxsl;
 using hxsl.Ast;
 import hxsl.RuntimeShader;
 
+class BatchInstanceParams {
+
+	var forcedPerInstance : Array<{ shader : String, params : Array<String> }>;
+	var cachedSignature : String;
+
+	public function new( forcedPerInstance ) {
+		this.forcedPerInstance = forcedPerInstance;
+	}
+
+	public function getSignature() {
+		if( cachedSignature == null ) {
+			for( fp in forcedPerInstance )
+				fp.params.sort(Reflect.compare);
+			cachedSignature = haxe.crypto.Md5.encode([for( s in forcedPerInstance ) s.shader+"="+s.params.join(",")].join(";")).substr(0,8);
+		}
+		return cachedSignature;
+	}
+
+}
+
 class SearchMap {
 	public var linked : RuntimeShader;
-	public var next : Map<Int,SearchMap>;
-	public function new() {
+	var nexts : Array<SearchMap> = [];
+	var minId = 0;
+
+	public function new() { }
+
+	public function set(id: Int, s: SearchMap) {
+		if(minId == 0) {
+			minId = id;
+			nexts = [s];
+			return;
+		}
+
+		var offset = id - minId;
+		if(offset < 0) {
+			var n = [];
+			for(i in 0...nexts.length)
+				n[i - offset] = nexts[i];  // shift indices
+			nexts = n;
+			minId += offset;
+			offset = 0;
+		}
+		nexts[offset] = s;
+	}
+
+	inline public function get(id: Int) {
+		return nexts[id - minId];
 	}
 }
 
@@ -20,6 +64,7 @@ class Cache {
 	var linkShaders : Map<String, Shader>;
 	var batchShaders : Map<RuntimeShader, { shader : SharedShader, params : RuntimeShader.AllocParam, size : Int }>;
 	var byID : Map<String, RuntimeShader>;
+	var batchShadersParams : Map<String, Map<RuntimeShader, { shader : SharedShader, params : RuntimeShader.AllocParam, size : Int }>>;
 	public var constsToGlobal : Bool;
 
 	function new() {
@@ -27,6 +72,7 @@ class Cache {
 		linkCache = new SearchMap();
 		linkShaders = new Map();
 		batchShaders = new Map();
+		batchShadersParams = new Map();
 		byID = new Map();
 	}
 
@@ -155,11 +201,10 @@ class Cache {
 		var c = linkCache;
 		for( s in shaders ) {
 			var i = @:privateAccess s.instance;
-			if( c.next == null ) c.next = new Map();
-			var cs = c.next.get(i.id);
+			var cs = c.get(i.id);
 			if( cs == null ) {
 				cs = new SearchMap();
-				c.next.set(i.id, cs);
+				c.set(i.id, cs);
 			}
 			c = cs;
 		}
@@ -257,6 +302,10 @@ class Cache {
 		}
 		#end
 
+		var prev = s;
+		var splitter = new hxsl.Splitter();
+		var s = try splitter.split(s) catch( e : Error ) { e.msg += "\n\nin\n\n"+Printer.shaderToString(s); throw e; };
+
 		// params tracking
 		var paramVars = new Map();
 		for( v in linker.allVars )
@@ -266,11 +315,10 @@ class Cache {
 				default:
 				}
 				var inf = shaderDatas[v.instanceIndex];
-				paramVars.set(v.id, { instance : inf.index, index : inf.inst.params.get(v.merged[0].id) } );
+				var nv = @:privateAccess splitter.varMap.get(v.v);
+				paramVars.set(nv == null ? v.id : nv.id, { instance : inf.index, index : inf.inst.params.get(v.merged[0].id) } );
 			}
 
-		var prev = s;
-		var s = try new hxsl.Splitter().split(s) catch( e : Error ) { e.msg += "\n\nin\n\n"+Printer.shaderToString(s); throw e; };
 
 		#if debug
 		Printer.check(s.vertex,[prev]);
@@ -379,6 +427,9 @@ class Cache {
 		var flat = new Flatten();
 		var c = new RuntimeShaderData();
 		var data = flat.flatten(s, kind, constsToGlobal);
+		#if (hl && heaps_compact_mem)
+		data = hl.Api.compact(data, null, 0, null);
+		#end
 		var textures = [];
 		c.consts = flat.consts;
 		c.texturesCount = 0;
@@ -457,11 +508,21 @@ class Cache {
 		return c;
 	}
 
-	public function makeBatchShader( rt : RuntimeShader, shaders ) : BatchShader {
-		var sh = batchShaders.get(rt); // don't use rt.id to avoid collisions on identical signatures
+	public function makeBatchShader( rt : RuntimeShader, shaders, params : BatchInstanceParams ) : BatchShader {
+		var batchMap;
+		if( params == null )
+			batchMap = batchShaders;
+		else {
+			batchMap = batchShadersParams.get(params.getSignature());
+			if( batchMap == null ) {
+				batchMap = new Map();
+				batchShadersParams.set(params.getSignature(),batchMap);
+			}
+		}
+		var sh = batchMap.get(rt); // don't use rt.id to avoid collisions on identical signatures
 		if( sh == null ) {
-			sh = createBatchShader(rt, shaders);
-			batchShaders.set(rt,sh);
+			sh = createBatchShader(rt, shaders, params);
+			batchMap.set(rt,  sh);
 		}
 		var shader = std.Type.createEmptyInstance(BatchShader);
 		@:privateAccess shader.shader = sh.shader;
@@ -479,9 +540,9 @@ class Cache {
 		return false;
 	}
 
-	function createBatchShader( rt : RuntimeShader, shaders : hxsl.ShaderList ) : { shader : SharedShader, params : RuntimeShader.AllocParam, size : Int } {
+	function createBatchShader( rt : RuntimeShader, shaders : hxsl.ShaderList, params : BatchInstanceParams ) : { shader : SharedShader, params : RuntimeShader.AllocParam, size : Int } {
 		var s = new hxsl.SharedShader("");
-		var id = rt.spec.signature.substr(0, 8);
+		var id = (params == null ? rt.spec.signature : haxe.crypto.Md5.encode(rt.spec.signature + params.getSignature())).substr(0, 8);
 
 		function declVar( name, t, kind ) : TVar {
 			return {
@@ -490,6 +551,22 @@ class Cache {
 				name : name,
 				kind : kind,
 			};
+		}
+
+		var instancedParams = [];
+		if( params != null ) {
+			var forcedPerInstance = @:privateAccess params.forcedPerInstance;
+			var instanceIndex = 1;
+			var forcedIndex = forcedPerInstance.length - 1;
+			var s = shaders;
+			while( s != null && forcedIndex >= 0 ) {
+				if( @:privateAccess s.s.shader.data.name == forcedPerInstance[forcedIndex].shader ) {
+					instancedParams[instanceIndex] = forcedPerInstance[forcedIndex].params;
+					forcedIndex--;
+				}
+				instanceIndex++;
+				s = s.next;
+			}
 		}
 
 		var pos = null;
@@ -613,17 +690,26 @@ class Cache {
 			params = p2;
 		}
 
+		inline function isPerInstance(p:RuntimeShader.AllocParam,v:TVar) {
+			var params = instancedParams[p.instance];
+			if( params != null && params.indexOf(v.name) >= 0 )
+				return true;
+			if( this.isPerInstance(v) )
+				return true;
+			return false;
+		}
+
 		var p = rt.vertex.params;
 		while( p != null ) {
 			var v = getVar(p);
-			if( isPerInstance(v) )
+			if( isPerInstance(p, v) )
 				addParam(p);
 			p = p.next;
 		}
 		var p = rt.fragment.params;
 		while( p != null ) {
 			var v = getVar(p);
-			if( isPerInstance(v) )
+			if( isPerInstance(p, v) )
 				addParam(p);
 			p = p.next;
 		}

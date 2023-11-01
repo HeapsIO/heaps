@@ -12,7 +12,7 @@ class DefaultForward extends hxsl.Shader {
 		@:import h3d.shader.pbr.BDRF;
 
 		// Import pbr info
-		var output : {color : Vec4, metalness : Float, roughness : Float, occlusion : Float, emissive : Float };
+		var output : {color : Vec4, metalness : Float, roughness : Float, occlusion : Float, emissive : Float, depth : Float };
 
 		@const(256) var BUFFER_SIZE : Int = 1;
 		@param var lightInfos : Buffer<Vec4, BUFFER_SIZE>;
@@ -56,6 +56,7 @@ class DefaultForward extends hxsl.Shader {
 		var transformedNormal : Vec3;
 		var transformedPosition : Vec3;
 		var pixelColor : Vec4;
+		var depth : Float;
 
 		function rotateNormal( n : Vec3 ) : Vec3 {
 			return vec3(n.x * irrRotation.x - n.y * irrRotation.y, n.x * irrRotation.y + n.y * irrRotation.x, n.z);
@@ -230,6 +231,7 @@ class DefaultForward extends hxsl.Shader {
 		function fragment() {
 			init();
 			output.color = vec4(evaluateLighting(), pixelColor.a);
+			output.depth = depth;
 		}
 
 	};

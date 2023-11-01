@@ -1,6 +1,6 @@
 package h3d.col;
 
-class Sphere implements Collider {
+class Sphere extends Collider {
 
 	public var x : Float;
 	public var y : Float;
@@ -76,6 +76,17 @@ class Sphere implements Collider {
 		z = oldZ;
 		r = oldR;
 		return res;
+	}
+
+	public function transform( m : h3d.Matrix ) {
+		var s = m.getScale();
+		var smax = hxd.Math.max(hxd.Math.max(hxd.Math.abs(s.x), hxd.Math.abs(s.y)), hxd.Math.abs(s.z));
+		r *= smax;
+		var pt = new h3d.col.Point(x,y,z);
+		pt.transform(m);
+		x = pt.x;
+		y = pt.y;
+		z = pt.z;
 	}
 
 	public inline function inSphere( s : Sphere ) {

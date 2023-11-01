@@ -1,6 +1,6 @@
 package h3d.mat;
 
-@:enum private abstract DefaultKind(String) {
+private enum abstract DefaultKind(String) {
 	var Opaque = "Opaque";
 	var Alpha = "Alpha";
 	var AlphaKill = "AlphaKill";

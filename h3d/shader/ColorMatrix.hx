@@ -6,9 +6,11 @@ class ColorMatrix extends hxsl.Shader {
 		var pixelColor : Vec4;
 
 		@param var matrix : Mat4;
+		@const var enabled : Bool = true; // allows for drop shadow toggle
 
 		function fragment() {
-			pixelColor = vec4( (vec4(pixelColor.rgb,1.) * matrix).rgb, (pixelColor * matrix).a);
+			if ( enabled )
+				pixelColor = vec4( (vec4(pixelColor.rgb,1.) * matrix).rgb, (pixelColor * matrix).a);
 		}
 
 	};

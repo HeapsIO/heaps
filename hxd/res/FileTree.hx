@@ -77,7 +77,7 @@ class FileTree {
 
 	static var invalidChars = ~/[^A-Za-z0-9_]/g;
 	static var KEYWORDS = [for( k in ["break","case","cast","catch","class","continue","default","do","dynamic",
-									"else","extends","extern","false","for","function","if","implementes","import",
+									"else","extends","extern","false","for","function","if","implements","import",
 									"interface","never","null","override","package","private","public","return",
 									"static","super","switch","this","throw","trace","true","typedef","untyped",
 									"using","var","final","while"] ) k => true];
@@ -96,6 +96,9 @@ class FileTree {
 		for( f in sys.FileSystem.readDirectory(dir) ) {
 			var path = dir + "/" + f;
 			if( sys.FileSystem.isDirectory(path) ) {
+				if( Config.ignoredDirs.exists(f) )
+					continue;
+
 				if( f.charCodeAt(0) == ".".code || f.charCodeAt(0) == "_".code )
 					continue;
 				var d = tree.dirs.get(f);
@@ -276,8 +279,8 @@ class FileTree {
 					ret : field.t,
 					expr : { expr : EMeta({ name : ":privateAccess", params : [], pos : pos }, { expr : EReturn(field.e), pos : pos }), pos : pos },
 				}),
-				meta : [ { name:":extern", pos:pos, params:[] } ],
-				access : [AStatic, AInline, APrivate],
+				meta : [],
+				access : [AExtern, AStatic, AInline, APrivate],
 			};
 			var field : Field = {
 				name : fname,

@@ -36,9 +36,9 @@ class HardwarePick extends Default {
 		material.blend(One, Zero);
 		texOut = new h3d.mat.Texture(3, 3, [Target]);
 		#if !flash
-		texOut.depthBuffer = new h3d.mat.DepthBuffer(3, 3);
+		texOut.depthBuffer = new h3d.mat.Texture(3, 3, Depth24Stencil8);
 		#else
-		texOut.depthBuffer = h3d.mat.DepthBuffer.getDefault();
+		texOut.depthBuffer = h3d.mat.Texture.getDefaultDepth();
 		#end
 	}
 

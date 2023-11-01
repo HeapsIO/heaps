@@ -244,7 +244,11 @@ class EmbedFileSystem #if !macro implements FileSystem #end {
 	}
 
 	public function dir( path : String ) : Array<FileEntry> {
+		#if macro
 		throw "Not Supported";
+		#else
+		return subFiles(path);
+		#end
 	}
 
 }

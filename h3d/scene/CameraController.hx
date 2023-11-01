@@ -156,14 +156,21 @@ class CameraController extends h3d.scene.Object {
 			else
 				zoom(e.wheelDelta);
 		case EPush:
-			@:privateAccess scene.events.startCapture(onEvent, function() pushing = -1, e.touchId);
+			@:privateAccess scene.events.startCapture(onEvent, function() {
+				pushing = -1;
+				var wnd = hxd.Window.getInstance();
+				wnd.setCursorPos(Std.int(pushStartX), Std.int(pushStartY));
+				wnd.mouseMode = Absolute;
+			}, e.touchId);
 			pushing = e.button;
 			pushTime = haxe.Timer.stamp();
 			pushStartX = pushX = e.relX;
 			pushStartY = pushY = e.relY;
+			hxd.Window.getInstance().mouseMode = AbsoluteUnbound(true);
 		case ERelease, EReleaseOutside:
 			if( pushing == e.button ) {
 				pushing = -1;
+				var wnd = hxd.Window.getInstance();
 				@:privateAccess scene.events.stopCapture();
 				if( e.kind == ERelease && haxe.Timer.stamp() - pushTime < 0.2 && hxd.Math.distance(e.relX - pushStartX,e.relY - pushStartY) < 5 )
 					onClick(e);
@@ -252,7 +259,7 @@ class CameraController extends h3d.scene.Object {
 		if( ctx.scene.renderer.renderMode == LightProbe )
 			return;
 
-		if( !ctx.visibleFlag && !alwaysSync ) {
+		if( !ctx.visibleFlag && !alwaysSyncAnimation ) {
 			super.sync(ctx);
 			return;
 		}

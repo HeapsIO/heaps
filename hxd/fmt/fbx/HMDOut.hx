@@ -2,6 +2,7 @@ package hxd.fmt.fbx;
 using hxd.fmt.fbx.Data;
 import hxd.fmt.fbx.BaseLibrary;
 import hxd.fmt.hmd.Data;
+import hxd.BufferFormat;
 
 class HMDOut extends BaseLibrary {
 
@@ -12,6 +13,8 @@ class HMDOut extends BaseLibrary {
 	public var absoluteTexturePath : Bool;
 	public var optimizeSkin = true;
 	public var generateNormals = false;
+	public var generateTangents = false;
+	public var lowPrecConfig : Map<String,Precision>;
 
 	function int32tof( v : Int ) : Float {
 		tmp.set(0, v & 0xFF);
@@ -35,6 +38,9 @@ class HMDOut extends BaseLibrary {
 		var normals = geom.getNormals();
 		var uvs = geom.getUVs();
 		var index = geom.getIndexes();
+
+		if ( index.vidx.length > 0 && uvs[0] == null ) @:privateAccess
+			throw "Need UVs to build tangents" + geom.lib != null ? ' in ${geom.lib.fileName}' : '';
 
 		#if (hl && !hl_disable_mikkt && (haxe_ver >= "4.0"))
 		var m = new hl.Format.Mikktspace();
@@ -112,8 +118,9 @@ class HMDOut extends BaseLibrary {
 			throw "Failed to call 'mikktspace' executable required to generate tangent data. Please ensure it's in your PATH";
 		}
 		var bytes = sys.io.File.getBytes(outFile);
-		var arr = [];
-		for( i in 0...index.vidx.length*4 )
+		var size = index.vidx.length*4;
+		var arr = new hxd.FloatBuffer(size);
+		for( i in 0...size )
 			arr[i] = bytes.getFloat(i << 2);
 		sys.FileSystem.deleteFile(fileName);
 		sys.FileSystem.deleteFile(outFile);
@@ -125,11 +132,11 @@ class HMDOut extends BaseLibrary {
 	}
 
 	function updateNormals( g : Geometry, vbuf : hxd.FloatBuffer, idx : Array<Array<Int>> ) {
-		var stride = g.vertexStride;
+		var stride = g.vertexFormat.stride;
 		var normalPos = 0;
-		for( f in g.vertexFormat ) {
+		for( f in g.vertexFormat.getInputs() ) {
 			if( f.name == "logicNormal" ) break;
-			normalPos += f.format.getSize();
+			normalPos += f.type.getSize();
 		}
 
 		var points : Array<h3d.col.Point> = [];
@@ -153,9 +160,15 @@ class HMDOut extends BaseLibrary {
 			}
 		}
 		var realIdx = new hxd.IndexBuffer();
-		for( idx in idx )
+		for( idx in idx ) {
+			if ( idx == null ) {
+				trace("Empty list of vertex indexes");
+				continue;
+			}
 			for( i in idx )
 				realIdx.push(pmap[i]);
+		}
+
 
 		var poly = new h3d.prim.Polygon(points, realIdx);
 		poly.addNormals();
@@ -165,6 +178,37 @@ class HMDOut extends BaseLibrary {
 			vbuf[vid*stride + normalPos] = poly.normals[nid].x;
 			vbuf[vid*stride + normalPos + 1] = poly.normals[nid].y;
 			vbuf[vid*stride + normalPos + 2] = poly.normals[nid].z;
+		}
+	}
+
+	inline function writePrec( v : Float, p : Precision ) {
+		switch( p ) {
+		case F32: writeFloat(v);
+		case F16: dataOut.writeUInt16(hxd.BufferFormat.float32to16(v,true));
+		case S8: dataOut.writeByte(hxd.BufferFormat.float32toS8(v));
+		case U8: dataOut.writeByte(BufferFormat.float32toU8(v));
+		}
+	}
+
+	inline function precisionSize(p:Precision) {
+		return switch( p ) {
+		case F32: 4;
+		case F16: 2;
+		case U8, S8: 1;
+		}
+	}
+
+	inline function flushPrec( p : Precision, count : Int ) {
+		var b = (count * precisionSize(p)) & 3;
+		switch( b ) {
+		case 0:
+		case 1:
+			dataOut.writeUInt16(0);
+			dataOut.writeByte(0);
+		case 2:
+			dataOut.writeUInt16(0);
+		case 3:
+			dataOut.writeByte(0);
 		}
 	}
 
@@ -192,33 +236,42 @@ class HMDOut extends BaseLibrary {
 		// generate tangents
 		var tangents = genTangents ? buildTangents(geom) : null;
 
+		inline function getPrec(n) {
+			var p = lowPrecConfig == null ? null : lowPrecConfig.get(n);
+			if( p == null ) p = F32;
+			return p;
+		}
+		var ppos = getPrec("position");
+		var pnormal = getPrec("normal");
+		var pcolor = getPrec("color");
+		var puv = getPrec("uv");
+		var pweight = getPrec("weights");
+
 		// build format
-		g.vertexFormat = [
-			new GeometryFormat("position", DVec3),
-		];
+		var format = [];
+		inline function addFormat(name,type,prec) {
+			format.push(new hxd.BufferFormat.BufferInput(name,type,prec));
+		}
+		addFormat("position", DVec3, ppos);
 		if( normals != null )
-			g.vertexFormat.push(new GeometryFormat("normal", DVec3));
+			addFormat("normal", DVec3, pnormal);
 		if( tangents != null )
-			g.vertexFormat.push(new GeometryFormat("tangent", DVec3));
+			addFormat("tangent", DVec3, pnormal);
 		for( i in 0...uvs.length )
-			g.vertexFormat.push(new GeometryFormat("uv" + (i == 0 ? "" : "" + (i + 1)), DVec2));
+			addFormat("uv"+(i == 0 ? "" : ""+(i+1)), DVec2, puv);
 		if( colors != null )
-			g.vertexFormat.push(new GeometryFormat("color", DVec3));
+			addFormat("color", DVec3, pcolor);
 
 		if( skin != null ) {
 			if(fourBonesByVertex)
 				g.props = [FourBonesByVertex];
-			g.vertexFormat.push(new GeometryFormat("weights", DVec3));  // Only 3 weights are necessary even in fourBonesByVertex since they sum-up to 1
-			g.vertexFormat.push(new GeometryFormat("indexes", DBytes4));
+			addFormat("weights", DVec3, pweight);  // Only 3 weights are necessary even in fourBonesByVertex since they sum-up to 1
+			format.push(new GeometryFormat("indexes", DBytes4));
 		}
 
 		if( generateNormals )
-			g.vertexFormat.push(new GeometryFormat("logicNormal", DVec3));
-
-		var stride = 0;
-		for( f in g.vertexFormat )
-			stride += f.format.getSize();
-		g.vertexStride = stride;
+			addFormat("logicNormal", DVec3, pnormal);
+		g.vertexFormat = hxd.BufferFormat.make(format);
 		g.vertexCount = 0;
 
 		// build geometry
@@ -232,6 +285,7 @@ class HMDOut extends BaseLibrary {
 		}
 
 		g.bounds = new h3d.col.Bounds();
+		var stride = g.vertexFormat.stride;
 		var tmpBuf = new hxd.impl.TypedArray.Float32Array(stride);
 		var vertexRemap = new Array<Int>();
 		var index = geom.getPolygons();
@@ -389,8 +443,56 @@ class HMDOut extends BaseLibrary {
 
 		// write data
 		g.vertexPosition = dataOut.length;
-		for( i in 0...vbuf.length )
-			writeFloat(vbuf[i]);
+		if( lowPrecConfig == null ) {
+			for( i in 0...vbuf.length )
+				writeFloat(vbuf[i]);
+		} else {
+			for( index in 0...Std.int(vbuf.length / stride) ) {
+				var i = index * stride;
+				writePrec(vbuf[i++], ppos);
+				writePrec(vbuf[i++], ppos);
+				writePrec(vbuf[i++], ppos);
+				flushPrec(ppos,3);
+				if( normals != null ) {
+					writePrec(vbuf[i++], pnormal);
+					writePrec(vbuf[i++], pnormal);
+					writePrec(vbuf[i++], pnormal);
+					flushPrec(pnormal,3);
+				}
+				if( tangents != null ) {
+					writePrec(vbuf[i++], pnormal);
+					writePrec(vbuf[i++], pnormal);
+					writePrec(vbuf[i++], pnormal);
+					flushPrec(pnormal,3);
+				}
+				for( k in 0...uvs.length ) {
+					writePrec(vbuf[i++], puv);
+					writePrec(vbuf[i++], puv);
+					flushPrec(puv,2);
+				}
+				if( colors != null ) {
+					writePrec(vbuf[i++], pcolor);
+					writePrec(vbuf[i++], pcolor);
+					writePrec(vbuf[i++], pcolor);
+					flushPrec(pcolor,3);
+				}
+				if( skin != null ) {
+					writePrec(vbuf[i++], pweight);
+					writePrec(vbuf[i++], pweight);
+					writePrec(vbuf[i++], pweight);
+					flushPrec(pweight,3);
+					writeFloat(vbuf[i++]);
+				}
+				if( generateNormals ) {
+					writePrec(vbuf[i++], pnormal);
+					writePrec(vbuf[i++], pnormal);
+					writePrec(vbuf[i++], pnormal);
+					flushPrec(pnormal,3);
+				}
+				if( i != (index + 1) * stride )
+					throw "assert";
+			}
+		}
 		g.indexPosition = dataOut.length;
 		g.indexCounts = [];
 
@@ -667,7 +769,12 @@ class HMDOut extends BaseLibrary {
 
 			var gdata = hgeom.get(g.getId());
 			if( gdata == null ) {
-				var geom = buildGeom(new hxd.fmt.fbx.Geometry(this, g), skin, dataOut, hasNormalMap);
+				var geom =
+				// try {
+					buildGeom(new hxd.fmt.fbx.Geometry(this, g), skin, dataOut, hasNormalMap || generateTangents);
+				// } catch ( e : Dynamic ) {
+				// 		throw e + " in " + model.name;
+				// }
 				gdata = { gid : d.geometries.length, materials : geom.materials };
 				d.geometries.push(geom.g);
 				hgeom.set(g.getId(), gdata);

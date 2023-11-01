@@ -5,7 +5,7 @@ package h2d.col;
 
 	Note that it checks as `channel > cutoff`, not `channel >= cutoff`, hence cutoff value of 255 would never pass the test.
 **/
-class PixelsCollider implements Collider {
+class PixelsCollider extends Collider {
 
 	/**
 		The source pixel data which is tested against.
@@ -94,6 +94,14 @@ class PixelsCollider implements Collider {
 			       (pixel >>> 8  & 0xff) > greenCutoff &&
 			       (pixel        & 0xff) > redCutoff;
 		}
+	}
+
+	public function collideCircle( c : Circle ) : Bool {
+		throw "Not implemented";
+	}
+
+	public function collideBounds( b : Bounds ) : Bool {
+		throw "Not implemented";
 	}
 
 }

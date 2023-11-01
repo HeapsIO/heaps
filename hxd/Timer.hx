@@ -22,7 +22,7 @@ class Timer {
 
 	/**
 		The smoothing done between frames. A smoothing of 0 gives "real time" values, higher values will smooth
-		the results for tmod/dt/fps over frames using the formula   dt = lerp(dt, elapsedTime, smoothFactor)
+		the results for tmod/dt/fps over frames using the formula   dt = lerp(elapsedTime, dt, smoothFactor)
 		Default : 0 on HashLink, 0.95 on other platforms
 	**/
 	public static var smoothFactor = #if hl 0. #else 0.95 #end;

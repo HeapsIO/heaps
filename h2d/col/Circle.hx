@@ -4,7 +4,7 @@ import hxd.Math;
 /**
 	The circular hitbox implementation of a 2D Collider.
 **/
-class Circle implements Collider {
+class Circle extends Collider {
 
 	/**
 		Horizontal position of the Circle center.

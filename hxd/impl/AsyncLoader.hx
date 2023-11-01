@@ -41,7 +41,7 @@ class ThreadAsyncLoader implements AsyncLoader {
 				var pos = 128;
 				if( inf.flags.has(Dxt10Header) ) pos += 20;
 				for( layer in 0...t.tex.layerCount ) {
-					for( mip in 0...inf.mipLevels ) {
+					for( mip in 0...inf.mipLevels+inf.mipOffset ) {
 						var w = inf.width >> mip;
 						var h = inf.height >> mip;
 						if( w == 0 ) w = 1;
@@ -81,6 +81,32 @@ class ThreadAsyncLoader implements AsyncLoader {
 		case Dds, Raw: true;
 		default: false;
 		}
+	}
+
+}
+#end
+
+#if (hxnodejs && !macro)
+class NodeLoader implements AsyncLoader {
+
+	var fs : hxd.fs.LocalFileSystem;
+
+	public function new() {
+		fs = Std.downcast(hxd.res.Loader.currentInstance.fs, hxd.fs.LocalFileSystem);
+		if( fs == null ) throw "Loader should be local filesystem";
+	}
+
+	public function isSupported( img : hxd.res.Image ) {
+		var ent = Std.downcast(img.entry, hxd.fs.LocalFileSystem.LocalEntry);
+		return ent != null;
+	}
+
+	public function load( img : hxd.res.Image ) {
+		var ent = Std.downcast(img.entry, hxd.fs.LocalFileSystem.LocalEntry);
+		js.node.Fs.readFile(@:privateAccess ent.file, function(err,buf) {
+			if( err != null ) throw err;
+			@:privateAccess img.asyncLoad(buf.hxToBytes());
+		});
 	}
 
 }

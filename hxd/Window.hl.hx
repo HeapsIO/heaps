@@ -1,5 +1,6 @@
 package hxd;
 import hxd.Key in K;
+import hxd.impl.MouseMode;
 
 #if (hlsdl && hldx)
 #error "You shouldn't use both -lib hlsdl and -lib hldx"
@@ -74,7 +75,18 @@ class Window {
 	public var height(get, never) : Int;
 	public var mouseX(get, never) : Int;
 	public var mouseY(get, never) : Int;
+	@:deprecated("Use mouseMode = AbsoluteUnbound(true)")
 	public var mouseLock(get, set) : Bool;
+	/**
+		If set, will restrain the mouse cursor within the window boundaries.
+	**/
+	public var mouseClip(get, set) : Bool;
+	/**
+		Set the mouse movement input handling mode.
+
+		@see `hxd.impl.MouseMode` for more details on each mode.
+	**/
+	public var mouseMode(default, set): MouseMode = Absolute;
 	public var monitor : Null<Int> = null;
 	public var framerate : Null<Int> = null;
 	public var vsync(get, set) : Bool;
@@ -90,11 +102,14 @@ class Window {
 	var window : sdl.Window;
 	#elseif hldx
 	var window : dx.Window;
+	var _mouseClip : Bool;
 	#end
 	var windowWidth = 800;
 	var windowHeight = 600;
 	var curMouseX = 0;
 	var curMouseY = 0;
+	var startMouseX = 0;
+	var startMouseY = 0;
 	var savedSize : { x : Int, y : Int, width : Int, height : Int };
 
 	static var CODEMAP = [for( i in 0...2048 ) i];
@@ -129,6 +144,10 @@ class Window {
 
 	public dynamic function onClose() : Bool {
 		return true;
+	}
+
+	public dynamic function onMouseModeChange( from : MouseMode, to : MouseMode ) : Null<MouseMode> {
+		return null;
 	}
 
 	public function event( e : hxd.Event ) : Void {
@@ -187,7 +206,7 @@ class Window {
 
 	public function addDragAndDropTarget( f : ( event : DropFileEvent ) -> Void ) : Void {
 		dropTargets.push(f);
-		#if (hl_ver >= version("1.12.0"))
+		#if (hl_ver >= version("1.13.0"))
 		#if hlsdl
 		sdl.Sdl.setDragAndDropEnabled(true);
 		#elseif hldx
@@ -203,7 +222,7 @@ class Window {
 				break;
 			}
 		if ( dropTargets.length == 0 ) {
-			#if (hl_ver >= version("1.12.0"))
+			#if (hl_ver >= version("1.13.0"))
 			#if hlsdl
 			sdl.Sdl.setDragAndDropEnabled(false);
 			#elseif hldx
@@ -211,6 +230,19 @@ class Window {
 			#end
 			#end
 		}
+	}
+
+	public function setCursorPos( x : Int, y : Int, emitEvent : Bool = false ) : Void {
+		#if hldx
+		if (mouseMode == Absolute) window.setCursorPosition(x, y);
+		#elseif hlsdl
+		if (mouseMode == Absolute) window.warpMouse(x, y);
+		#else
+		throw "Not implemented";
+		#end
+		curMouseX = x;
+		curMouseY = y;
+		if (emitEvent) event(new hxd.Event(EMove, x, y));
 	}
 
 	@:deprecated("Use the displayMode property instead")
@@ -237,12 +269,73 @@ class Window {
 	}
 
 	function get_mouseLock() : Bool {
-		return false;
+		return switch (mouseMode) { case AbsoluteUnbound(_): true; default: false; };
 	}
 
 	function set_mouseLock(v:Bool) : Bool {
+		return set_mouseMode(v ? AbsoluteUnbound(true) : Absolute).equals(AbsoluteUnbound(true));
+	}
+
+	function get_mouseClip() : Bool {
+		#if hldx
+		return _mouseClip;
+		#elseif hlsdl
+		return window.grab;
+		#else
+		return false;
+		#end
+	}
+
+	function set_mouseClip( v : Bool ) : Bool {
+		#if hldx
+		window.clipCursor(v);
+		return _mouseClip = v;
+		#elseif hlsdl
+		return window.grab = v;
+		#else
 		if( v ) throw "Not implemented";
 		return false;
+		#end
+	}
+
+	function set_mouseMode( v : MouseMode ) : MouseMode {
+		if ( v.equals(mouseMode) ) return v;
+
+		var forced = onMouseModeChange(mouseMode, v);
+		if (forced != null) v = forced;
+
+		#if hldx
+		window.setRelativeMouseMode(v != Absolute);
+		return mouseMode = v;
+		#elseif hlsdl
+		sdl.Sdl.setRelativeMouseMode(v != Absolute);
+		#else
+		if ( v != Absolute ) throw "Not implemented";
+		#end
+
+		if ( v == Absolute ) {
+			switch ( mouseMode ) {
+				case Relative(_, restorePos) | AbsoluteUnbound(restorePos):
+					if ( restorePos ) {
+						curMouseX = startMouseX;
+						curMouseY = startMouseY;
+					} else {
+						curMouseX = hxd.Math.iclamp(curMouseX, 0, width);
+						curMouseY = hxd.Math.iclamp(curMouseY, 0, height);
+					}
+					#if hldx
+					window.setCursorPosition(curMouseX, curMouseY);
+					#elseif hlsdl
+					window.warpMouse(curMouseX, curMouseY);
+					#end
+				default:
+			}
+		}
+
+		startMouseX = curMouseX;
+		startMouseY = curMouseY;
+		
+		return mouseMode = v;
 	}
 
 	#if (hldx||hlsdl)
@@ -302,9 +395,11 @@ class Window {
 			default:
 			}
 		case MouseDown if (!hxd.System.getValue(IsTouch)):
-			curMouseX = e.mouseX;
-			curMouseY = e.mouseY;
-			eh = new Event(EPush, e.mouseX, e.mouseY);
+			if (mouseMode == Absolute) {
+				curMouseX = e.mouseX;
+				curMouseY = e.mouseY;
+			}
+			eh = new Event(EPush, curMouseX, curMouseY);
 			// middle button -> 2 / right button -> 1
 			eh.button = switch( e.button - 1 ) {
 			case 0: 0;
@@ -313,9 +408,11 @@ class Window {
 			case x: x;
 			}
 		case MouseUp if (!hxd.System.getValue(IsTouch)):
-			curMouseX = e.mouseX;
-			curMouseY = e.mouseY;
-			eh = new Event(ERelease, e.mouseX, e.mouseY);
+			if (mouseMode == Absolute) {
+				curMouseX = e.mouseX;
+				curMouseY = e.mouseY;
+			}
+			eh = new Event(ERelease, curMouseX, curMouseY);
 			eh.button = switch( e.button - 1 ) {
 			case 0: 0;
 			case 1: 2;
@@ -323,9 +420,35 @@ class Window {
 			case x: x;
 			};
 		case MouseMove if (!hxd.System.getValue(IsTouch)):
-			curMouseX = e.mouseX;
-			curMouseY = e.mouseY;
-			eh = new Event(EMove, e.mouseX, e.mouseY);
+			switch (mouseMode) {
+				case Absolute:
+					curMouseX = e.mouseX;
+					curMouseY = e.mouseY;
+					eh = new Event(EMove, e.mouseX, e.mouseY);
+				case Relative(callback, _):
+					#if (hldx || hlsdl)
+					var ev = new Event(EMove, e.mouseXRel, e.mouseYRel);
+					#else
+					var ev = new Event(EMove, e.mouseX - curMouseX, e.mouseY - curMouseY);
+					#end
+					callback(ev);
+					if (!ev.cancel && ev.propagate) {
+						ev.cancel = false;
+						ev.propagate = false;
+						ev.relX = curMouseX;
+						ev.relY = curMouseY;
+						eh = ev;
+					}
+				case AbsoluteUnbound(_):
+					#if (hldx || hlsdl)
+					curMouseX += e.mouseXRel;
+					curMouseY += e.mouseYRel;
+					#else
+					curMouseX += e.mouseX - curMouseX;
+					curMouseY += e.mouseY - curMouseY;
+					#end
+					eh = new Event(EMove, curMouseX, curMouseY);
+			}
 		case MouseWheel:
 			eh = new Event(EWheel, mouseX, mouseY);
 			eh.wheelDelta = -e.wheelDelta;
@@ -491,13 +614,21 @@ class Window {
 			93 => K.QWERTY_BRACKET_RIGHT,
 			96 => K.QWERTY_TILDE,
 			167 => K.QWERTY_BACKSLASH,
+
+			// AZERTY
+			41 => K.QWERTY_BRACKET_LEFT, // degree
+			94 => K.QWERTY_BRACKET_RIGHT, // caret
+			249 => K.QWERTY_TILDE, // percent
+			58 => K.QWERTY_SLASH, // slash
+
 			1101 => K.CONTEXT_MENU,
 			1057 => K.CAPS_LOCK,
 			1071 => K.SCROLL_LOCK,
 			1072 => K.PAUSE_BREAK,
 			1083 => K.NUM_LOCK,
-			// Because hlsdl uses sym code, instead of scancode - INTL_BACKSLASH always reports 0x5C, e.g. regular slash.
-			//none => K.INTL_BACKSLASH
+			// LowerThan on AZERTY, none on QWERTY because hlsdl uses sym code, instead of scancode - INTL_BACKSLASH always reports 0x5C, e.g. regular slash.
+			60 => K.INTL_BACKSLASH,
+
 			//1070 => K.PRINT_SCREEN
 		];
 		for( sdl in keys.keys() )
@@ -512,7 +643,7 @@ class Window {
 		return haxe.System.vsync = b;
 	}
 
-	function get_isFocused() : Bool return false;
+	function get_isFocused() : Bool return true;
 
 	#else
 

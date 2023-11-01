@@ -9,10 +9,12 @@ class Build {
 	var nextPath : String;
 
 	public var excludedExt : Array<String> = [];
+	public var excludedNames : Array<String> = [];
 	public var excludePath : Array<String> = [];
 	public var includePath : Array<String> = [];
 	public var resPath : String = "res";
 	public var outPrefix : String;
+	public var align : Int = 0;
 	public var pakDiff = false;
 	public var checkJPG = false;
 	public var checkOGG = false;
@@ -44,6 +46,8 @@ class Build {
 			f.isDirectory = true;
 			f.content = [];
 			for( name in sys.FileSystem.readDirectory(dir) ) {
+				if( excludedNames.indexOf(name)>=0 )
+					continue;
 				var fpath = path == "" ? name : path+"/"+name;
 				if( name.charCodeAt(0) == ".".code )
 					continue;
@@ -89,6 +93,8 @@ class Build {
 			f.checksum = haxe.crypto.Adler32.make(data);
 			out.bytes.push(data);
 			out.size += data.length;
+			if (align > 1)
+				out.size += align - data.length % align;
 		}
 		return f;
 	}
@@ -178,7 +184,7 @@ class Build {
 		var outFile = outPrefix + ".pak";
 		Sys.println("Writing "+outFile);
 		var f = sys.io.File.write(outFile);
-		new Writer(f).write(pak, null, out.bytes);
+		new Writer(f, align).write(pak, null, out.bytes);
 		f.close();
 	}
 
@@ -224,6 +230,8 @@ class Build {
 				}
 				extractRec(pak.root, baseDir);
 				Sys.exit(0);
+			case "-align" if( args.length > 0 ):
+				b.align = Std.parseInt(args.shift());
 			case "-diff":
 				b.pakDiff = true;
 			case "-res" if( args.length > 0 ):
@@ -233,6 +241,9 @@ class Build {
 			case "-exclude" if( args.length > 0 ):
 				for( ext in args.shift().split(",") )
 					b.excludedExt.push(ext);
+			case "-exclude-names" if( args.length > 0 ):
+				for( ext in args.shift().split(",") )
+					b.excludedNames.push(ext);
 			case "-exclude-path" if( args.length > 0 ):
 				for( p in args.shift().split(",") )
 					b.excludePath.push(p);
