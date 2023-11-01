@@ -823,7 +823,7 @@ class Matrix {
 		if( m == null ) m = new Matrix();
 		var ax = dir.normalized();
 		var ay = up.cross(ax).normalized();
-		if( ay.lengthSq() < Math.EPSILON ) {
+		if( ay.lengthSq() < Math.EPSILON2 ) {
 			ay.x = ax.y;
 			ay.y = ax.z;
 			ay.z = ax.x;

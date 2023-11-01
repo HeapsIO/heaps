@@ -4,6 +4,7 @@ class Math {
 
 	public static inline var PI = 3.14159265358979323;
 	public static inline var EPSILON = 1e-10;
+	public static inline var EPSILON2 = 1e-20;
 
 	public static var POSITIVE_INFINITY(get, never) : Float;
 	public static var NEGATIVE_INFINITY(get, never) : Float;

@@ -67,7 +67,7 @@ class Vector #if apicheck implements h2d.impl.PointApi<Vector,Matrix> #end {
 
 	public inline function normalize() {
 		var k = lengthSq();
-		if( k < hxd.Math.EPSILON ) k = 0 else k = k.invSqrt();
+		if( k < hxd.Math.EPSILON2 ) k = 0 else k = k.invSqrt();
 		x *= k;
 		y *= k;
 		z *= k;
@@ -75,7 +75,7 @@ class Vector #if apicheck implements h2d.impl.PointApi<Vector,Matrix> #end {
 
 	public inline function normalized() {
 		var k = lengthSq();
-		if( k < hxd.Math.EPSILON ) k = 0 else k = k.invSqrt();
+		if( k < hxd.Math.EPSILON2 ) k = 0 else k = k.invSqrt();
 		return new Vector(x * k, y * k, z * k);
 	}
 
