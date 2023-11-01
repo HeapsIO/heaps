@@ -99,7 +99,7 @@ class Mp3Data extends Data {
 		this.frame = haxe.io.Bytes.alloc(1152*channels*4); // 2 channels, F32.
 		this.currentSample = -1;
 		this.currentFrame = -1;
-		this.reader = mp3_open(bytes, bytes.length);
+		this.reader = mp3_open();
 
 		#end
 	}
@@ -214,7 +214,7 @@ class Mp3Data extends Data {
 		mp3_decode_frame(reader, bytes, bytes.length, frameOffsets[to], frame, frame.length, 0);
 	}
 
-	@:hlNative("fmt", "mp3_open") static function mp3_open( bytes : hl.Bytes, size : Int ) : Mp3File {
+	@:hlNative("fmt", "mp3_open") static function mp3_open() : Mp3File {
 		return null;
 	}
 
