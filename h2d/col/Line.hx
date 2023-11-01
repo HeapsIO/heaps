@@ -46,7 +46,7 @@ class Line {
 	**/
 	public inline function intersect( l : Line ) {
 		var d = (p1.x - p2.x) * (l.p1.y - l.p2.y) - (p1.y - p2.y) * (l.p1.x - l.p2.x);
-		if( hxd.Math.abs(d) < hxd.Math.EPSILON )
+		if( hxd.Math.abs(d) < hxd.Math.EPSILON2 )
 			return null;
 		var a = p1.x*p2.y - p1.y * p2.x;
 		var b = l.p1.x*l.p2.y - l.p1.y*l.p2.x;
@@ -60,7 +60,7 @@ class Line {
 	**/
 	public inline function intersectWith( l : Line, pt : Point ) {
 		var d = (p1.x - p2.x) * (l.p1.y - l.p2.y) - (p1.y - p2.y) * (l.p1.x - l.p2.x);
-		if( hxd.Math.abs(d) < hxd.Math.EPSILON )
+		if( hxd.Math.abs(d) < hxd.Math.EPSILON2 )
 			return false;
 		var a = p1.x*p2.y - p1.y * p2.x;
 		var b = l.p1.x*l.p2.y - l.p1.y*l.p2.x;

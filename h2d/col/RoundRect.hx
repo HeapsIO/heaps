@@ -42,7 +42,7 @@ class RoundRect extends Collider {
 		this.dy = dy * 2;
 		this.ray = h * 0.5;
 		lenSq = this.dx * this.dx + this.dy * this.dy;
-		invLenSq = lenSq < hxd.Math.EPSILON ? 0 : 1 / lenSq;
+		invLenSq = lenSq < hxd.Math.EPSILON2 ? 0 : 1 / lenSq;
 	}
 
 	// distance segment

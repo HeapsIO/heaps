@@ -37,7 +37,7 @@ class Ray {
 	function normalize() {
 		var l = lx * lx + ly * ly + lz * lz;
 		if( l == 1. ) return;
-		if( l < Math.EPSILON ) l = 0 else l = Math.invSqrt(l);
+		if( l < Math.EPSILON2 ) l = 0 else l = Math.invSqrt(l);
 		lx *= l;
 		ly *= l;
 		lz *= l;
@@ -77,15 +77,15 @@ class Ray {
 		var d = lx * p.nx + ly * p.ny + lz * p.nz;
 		var nd = p.d - (px * p.nx + py * p.ny + pz * p.nz);
 		// line parallel with plane
-		return Math.abs(d) < Math.EPSILON ? (Math.abs(nd) < Math.EPSILON ? 0. : -1) : nd / d;
+		return Math.abs(d) < Math.EPSILON2 ? (Math.abs(nd) < Math.EPSILON2 ? 0. : -1) : nd / d;
 	}
 
 	public inline function intersect( p : Plane ) : Null<Point> {
 		var d = lx * p.nx + ly * p.ny + lz * p.nz;
 		var nd = p.d - (px * p.nx + py * p.ny + pz * p.nz);
 		// line parallel with plane
-		if( Math.abs(d) < Math.EPSILON )
-			return Math.abs(nd) < Math.EPSILON ? new Point(px, py, pz) : null;
+		if( Math.abs(d) < Math.EPSILON2 )
+			return Math.abs(nd) < Math.EPSILON2 ? new Point(px, py, pz) : null;
 		else {
 			var k = nd / d;
 			return new Point(px + lx * k, py + ly * k, pz + lz * k);

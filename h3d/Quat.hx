@@ -65,7 +65,7 @@ class Quat {
 
 	public function initNormal( dir : h3d.col.Point ) {
 		var dir = dir.normalized();
-		if( dir.x*dir.x+dir.y*dir.y < Math.EPSILON )
+		if( dir.x*dir.x+dir.y*dir.y < Math.EPSILON2 )
 			initDirection(new h3d.Vector(1,0,0));
 		else {
 			var ay = new h3d.col.Point(dir.x, dir.y, 0).normalized();
@@ -81,7 +81,7 @@ class Quat {
 		if( up != null ) 
 			ay.load(up.cross(ax));
 		ay.normalize();
-		if( ay.lengthSq() < Math.EPSILON ) {
+		if( ay.lengthSq() < Math.EPSILON2 ) {
 			ay.x = ax.y;
 			ay.y = ax.z;
 			ay.z = ax.x;
@@ -164,7 +164,7 @@ class Quat {
 
 	public function normalize() {
 		var len = x * x + y * y + z * z + w * w;
-		if( len < hxd.Math.EPSILON ) {
+		if( len < hxd.Math.EPSILON2 ) {
 			x = y = z = 0;
 			w = 1;
 		} else {

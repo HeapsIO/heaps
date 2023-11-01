@@ -72,7 +72,7 @@ class Point #if apicheck implements h2d.impl.PointApi<Point,Matrix> #end {
 
 	public inline function normalize() {
 		var k = x * x + y * y + z * z;
-		if( k < hxd.Math.EPSILON ) k = 0 else k = k.invSqrt();
+		if( k < hxd.Math.EPSILON2 ) k = 0 else k = k.invSqrt();
 		x *= k;
 		y *= k;
 		z *= k;
@@ -80,7 +80,7 @@ class Point #if apicheck implements h2d.impl.PointApi<Point,Matrix> #end {
 
 	public inline function normalized() {
 		var k = x * x + y * y + z * z;
-		if( k < hxd.Math.EPSILON ) k = 0 else k = k.invSqrt();
+		if( k < hxd.Math.EPSILON2 ) k = 0 else k = k.invSqrt();
 		return new Point(x*k,y*k,z*k);
 	}
 
