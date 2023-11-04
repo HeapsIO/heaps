@@ -3,8 +3,7 @@ using hxsl.Ast;
 
 class WgslOut {
 
-	static var KWD_LIST = [
-	];
+	static var KWD_LIST = ["alias","const","const_assert","continuing","diagnostic","enable","fn","let","loop","requires","struct"];
 	static var KWDS = [for( k in KWD_LIST ) k => true];
 	static var GLOBALS = {
 		var m = new Map();
@@ -56,22 +55,23 @@ class WgslOut {
 		case TVoid:
 			add("void");
 		case TInt:
-			add("int");
+			add("i32");
 		case TBytes(n):
-			add("uint"+n);
+			add('vec$n<ui32>');
 		case TBool:
 			add("bool");
 		case TFloat:
-			add("float");
+			add("f32");
 		case TString:
 			add("string");
 		case TVec(size, k):
+			add('vec$size<');
 			switch( k ) {
-			case VFloat: add("float");
-			case VInt: add("int");
+			case VFloat: add("f32");
+			case VInt: add("i32");
 			case VBool: add("bool");
 			}
-			add(size);
+			add('>');
 		case TMat2:
 			add("float2x2");
 		case TMat3:
@@ -94,7 +94,7 @@ class WgslOut {
 			}
 			add(" }");
 		case TFun(_):
-			add("function");
+			add("fn ");
 		case TArray(t, size), TBuffer(t,size):
 			addType(t);
 			add("[");
@@ -130,9 +130,9 @@ class WgslOut {
 			});
 			addArraySize(size);
 		default:
-			addType(v.type);
-			add(" ");
 			ident(v);
+			add(" : ");
+			addType(v.type);
 		}
 	}
 
@@ -414,7 +414,7 @@ class WgslOut {
 		function declVar(prefix:String, v : TVar ) {
 			add("\t");
 			addVar(v);
-			add(";\n");
+			add(",\n");
 			varAccess.set(v.id, prefix);
 		}
 
@@ -423,36 +423,60 @@ class WgslOut {
 			collectGlobals(foundGlobals, f.expr);
 
 		add("struct s_input {\n");
+		var index = 0;
 		for( v in s.vars )
-			if( v.kind == Input || (v.kind == Var && !isVertex) )
+			if( v.kind == Input || (v.kind == Var && !isVertex) ) {
+				add('@location(${index++}) ');
 				declVar("_in.", v);
+			}
 		add("};\n\n");
 
 		add("struct s_output {\n");
+		var index = 0;
 		for( v in s.vars )
-			if( v.kind == Output )
+			if( v.kind == Output || (v.kind == Var && isVertex) ) {
+				if( v.kind == Output && isVertex )
+					add('@builtin(position) ');
+				else
+					add('@location(${index++}) ');
 				declVar("_out.", v);
-		for( v in s.vars )
-			if( v.kind == Var && isVertex )
-				declVar("_out.", v);
+			}
 		add("};\n\n");
 	}
 
 	function initGlobals( s : ShaderData ) {
-		add('cbuffer _globals {\n');
+		var found = false;
+		for( v in s.vars )
+			if( v.kind == Global ) {
+				found = true;
+				break;
+			}
+		if( !found )
+			return;
+
+		add('struct _globals {\n');
 		for( v in s.vars )
 			if( v.kind == Global ) {
 				add("\t");
 				addVar(v);
-				add(";\n");
+				add(",\n");
 			}
 		add("};\n\n");
 	}
 
 	function initParams( s : ShaderData ) {
+		var found = false;
+		for( v in s.vars )
+			if( v.kind == Param ) {
+				found = true;
+				break;
+			}
+		if( !found )
+			return;
+
 		var textures = [];
 		var buffers = [];
-		add('cbuffer _params {\n');
+		add('struct _params {\n');
 		for( v in s.vars )
 			if( v.kind == Param ) {
 				switch( v.type ) {
@@ -495,21 +519,23 @@ class WgslOut {
 	}
 
 	function initStatics( s : ShaderData ) {
-		add("s_input _in;\n");
-		add("s_output _out;\n");
+		add("var<private> _in : s_input;\n");
+		add("var<private> _out : s_output;\n");
 
 		add("\n");
 		for( v in s.vars )
 			if( v.kind == Local ) {
+				add("var<private> ");
 				addVar(v);
 				add(";\n");
 			}
 		add("\n");
 	}
 
-	function emitMain( expr : TExpr ) {
-		add("s_output main( s_input __in ) {\n");
-		add("\t_in = __in;\n");
+	function emitMain( s : ShaderData, expr : TExpr ) {
+		add(isVertex ? "@vertex " : "@fragment ");
+		add("fn main( in__ : s_input ) -> s_output {\n");
+		add("\t_in = in__;\n");
 		switch( expr.e ) {
 		case TBlock(el):
 			for( e in el ) {
@@ -557,7 +583,7 @@ class WgslOut {
 
 		var tmp = buf;
 		buf = new StringBuf();
-		emitMain(f.expr);
+		emitMain(s, f.expr);
 		exprValues.push(buf.toString());
 		buf = tmp;
 
