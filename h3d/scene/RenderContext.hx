@@ -45,7 +45,8 @@ class RenderContext extends h3d.impl.RenderContext {
 	public inline function emit( mat : h3d.mat.Material, obj, index = 0 ) {
 		var p = mat.mainPass;
 		while( p != null ) {
-			emitPass(p, obj).index = index;
+			if ( !p.culled )
+				emitPass(p, obj).index = index;
 			p = p.nextPass;
 		}
 	}
@@ -89,6 +90,8 @@ class RenderContext extends h3d.impl.RenderContext {
 	}
 
 	public function emitPass( pass : h3d.mat.Pass, obj : h3d.scene.Object ) @:privateAccess {
+		if ( pass.rendererFlags & 1 == 0 )
+			@:privateAccess scene.renderer.setPassFlags(pass);
 		var o = allocPool;
 		if( o == null ) {
 			o = new h3d.pass.PassObject();

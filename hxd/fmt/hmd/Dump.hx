@@ -47,13 +47,13 @@ class Dump {
 			add('@$k GEOMETRY');
 			prefix += "\t";
 			add('Vertex Count : ${g.vertexCount}');
-			add('Vertex Stride : ${g.vertexStride}');
+			add('Vertex Stride : ${g.vertexFormat.stride}');
 			add('Index Count : ${g.indexCount} ${g.indexCounts.length > 1 ? g.indexCounts.toString() : ''}');
 			add('Bounds : center=${g.bounds.getCenter()} size=${g.bounds.getSize()}');
 			add('Format :');
 			addProps(g.props);
-			for( f in g.vertexFormat )
-				add('\t${f.name} ${f.format.toString().substr(1)}');
+			for( f in g.vertexFormat.getInputs() )
+				add('\t${f.name} ${f.type.toString().substr(1)}');
 			prefix = "";
 		}
 		if( h.geometries.length > 0 ) add('');
@@ -169,9 +169,7 @@ class Dump {
 
 		for( k in 0...h.geometries.length ) {
 			var g = h.geometries[k];
-			var stride = 0;
-			for( f in g.vertexFormat )
-				stride += f.format.getSize();
+			var stride = g.vertexFormat.stride;
 			add('@$k GEOMETRY');
 			prefix += '\t';
 			d.position = g.vertexPosition;

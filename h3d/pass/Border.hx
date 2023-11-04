@@ -42,7 +42,7 @@ class Border extends ScreenFx<BorderShader> {
 		add(width-size, height);
 		add(width, height);
 
-		this.primitive = new h3d.prim.RawPrimitive({ vbuf : bbuf, stride : 2, quads : true }, true);
+		this.primitive = new h3d.prim.RawPrimitive({ vbuf : bbuf, format : hxd.BufferFormat.make([{ name : "position", type : DVec2 }]) }, true);
 		shader.color.set(1,1,1,1);
 	}
 

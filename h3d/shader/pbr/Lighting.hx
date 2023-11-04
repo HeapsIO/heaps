@@ -45,7 +45,11 @@ class Indirect extends PropsDefinition {
 		}
 
 		function fragment() {
+			#if !MRT_low
 			var isSky = normal.dot(normal) <= 0;
+			#else
+			var isSky = normal.dot(normal) > 1.1; // due to normal packing, sky normal is likely sqrt(3) > 1.7
+			#end
 			if( isSky ) {
 				if( showSky ) {
 					var color : Vec3;
@@ -96,16 +100,21 @@ class Direct extends PropsDefinition {
 		@:import h3d.shader.pbr.BDRF;
 
 		var pbrLightDirection : Vec3;
+		var pbrSpecularLightDirection : Vec3;
 		var pbrLightColor : Vec3;
 		var pbrOcclusionFactor : Float;
 		@const var doDiscard : Bool = true;
+
+		function __init__fragment2() {
+			pbrSpecularLightDirection = pbrLightDirection;
+		}
 
 		function fragment() {
 
 			var NdL = normal.dot(pbrLightDirection).max(0.);
 			if( pbrLightColor.dot(pbrLightColor) > 0.0001 && NdL > 0 ) {
 
-				var half = (pbrLightDirection + view).normalize();
+				var half = (pbrSpecularLightDirection + view).normalize();
 				var NdH = normal.dot(half).max(0.);
 				var VdH = view.dot(half).max(0.);
 

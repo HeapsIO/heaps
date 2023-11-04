@@ -306,7 +306,7 @@ abstract Polygon(Array<Point>) from Array<Point> to Array<Point> {
 		return minDistSq == 1e10 ? 0. : minDistSq;
 	}
 
-	public function rayIntersection( r : h2d.col.Ray, bestMatch : Bool ) : Float {
+	public function rayIntersection( r : h2d.col.Ray, bestMatch : Bool, ?oriented = false ) : Float {
 		var dmin = -1.;
 		var p0 = points[points.length - 1];
 
@@ -319,11 +319,14 @@ abstract Polygon(Array<Point>) from Array<Point> to Array<Point> {
 			var u = ( r.lx * (p0.y - r.py) - r.ly * (p0.x - r.px) ) / ( r.ly * (p.x - p0.x) - r.lx * (p.y - p0.y) );
 			var x = p0.x + u * (p.x - p0.x);
 			var y = p0.y + u * (p.y - p0.y);
-			var d = Math.distanceSq(x - r.px, y - r.py);
+			var v = new h2d.col.Point(x - r.px, y - r.py);
 
-			if(d < dmin || dmin < 0) {
-				if( !bestMatch ) return Math.sqrt(d);
-				dmin = d;
+			if(!oriented || r.getDir().dot(v) > 0) {
+				var d = Math.distanceSq(v.x, v.y);
+				if(d < dmin || dmin < 0) {
+					if( !bestMatch ) return Math.sqrt(d);
+						dmin = d;
+				}
 			}
 			p0 = p;
 		}

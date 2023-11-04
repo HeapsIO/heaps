@@ -43,6 +43,7 @@ class Checker {
 		if( GLOBALS != null ) return GLOBALS;
 		var globals = new Map();
 		var genType = [TFloat, vec2, vec3, vec4];
+		var genIType = [TInt, ivec2, ivec3, ivec4];
 		var baseType = [TFloat, TBool, TInt];
 		var genFloat = [for( t in genType ) { args : [ { name : "value", type : t } ], ret : t } ];
 		var genFloat2 = [for( t in genType ) { args : [ { name : "a", type : t }, { name : "b", type : t } ], ret : t } ];
@@ -183,6 +184,10 @@ class Checker {
 				[{ args : [{ name : "uv", type : vec2 }], ret : vec2 }];
 			case Trace:
 				[];
+			case FloatBitsToInt, FloatBitsToUint:
+				[for( i => t in genType ) { args : [ { name: "x", type: t } ], ret: genIType[i] }];
+			case IntBitsToFloat, UintBitsToFloat:
+				[for( i => t in genType ) { args : [ { name: "x", type: genIType[i] } ], ret: t }];
 			case VertexID, InstanceID, FragCoord, FrontFacing:
 				null;
 			}
@@ -241,8 +246,7 @@ class Checker {
 			var kind = switch( f.name ) {
 			case "vertex":  Vertex;
 			case "fragment": Fragment;
-			case "__init__", "__init__vertex", "__init__fragment": Init;
-			default: Helper;
+			default: StringTools.startsWith(f.name,"__init__") ? Init : Helper;
 			}
 			if( args.length != 0 && kind != Helper )
 				error(kind+" function should have no argument", pos);
@@ -338,6 +342,9 @@ class Checker {
 		case TSwiz(e, _):
 			checkWrite(e);
 			return;
+		case TArray(e, _):
+			checkWrite(e);
+			return;
 		default:
 		}
 		error("This expression cannot be assigned", e.p);
@@ -424,11 +431,12 @@ class Checker {
 		case EIdent(name):
 			var v = vars.get(name);
 			if( v != null ) {
-				switch( name ) {
-				case "vertex", "fragment", "__init__", "__init__vertex", "__init__fragment":
-					error("Function cannot be accessed", e.pos);
-				default:
+				var canCall =  switch( name ) {
+				case "vertex", "fragment": false;
+				default: !StringTools.startsWith(name,"__init__");
 				}
+				if( !canCall )
+					error("Function cannot be accessed", e.pos);
 				type = v.type;
 				TVar(v);
 			} else {

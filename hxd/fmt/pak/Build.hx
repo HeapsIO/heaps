@@ -14,6 +14,7 @@ class Build {
 	public var includePath : Array<String> = [];
 	public var resPath : String = "res";
 	public var outPrefix : String;
+	public var align : Int = 0;
 	public var pakDiff = false;
 	public var checkJPG = false;
 	public var checkOGG = false;
@@ -92,6 +93,8 @@ class Build {
 			f.checksum = haxe.crypto.Adler32.make(data);
 			out.bytes.push(data);
 			out.size += data.length;
+			if (align > 1)
+				out.size += align - data.length % align;
 		}
 		return f;
 	}
@@ -181,7 +184,7 @@ class Build {
 		var outFile = outPrefix + ".pak";
 		Sys.println("Writing "+outFile);
 		var f = sys.io.File.write(outFile);
-		new Writer(f).write(pak, null, out.bytes);
+		new Writer(f, align).write(pak, null, out.bytes);
 		f.close();
 	}
 
@@ -227,6 +230,8 @@ class Build {
 				}
 				extractRec(pak.root, baseDir);
 				Sys.exit(0);
+			case "-align" if( args.length > 0 ):
+				b.align = Std.parseInt(args.shift());
 			case "-diff":
 				b.pakDiff = true;
 			case "-res" if( args.length > 0 ):

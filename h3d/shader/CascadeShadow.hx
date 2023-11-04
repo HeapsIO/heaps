@@ -60,7 +60,7 @@ class CascadeShadow extends DirShadow {
 			}
 
 			if ( DEBUG ) {
-				pixelColor = vec4(1.0, 1.0, 1.0, 1.0);
+				pixelColor = vec4(0.0, 0.0, 0.0, 1.0);
 				@unroll for ( c in 0...CASCADE_COUNT ) {
 					var shadowPos = transformedPosition * cascadeProjs[c];
 					if ( inside(shadowPos) ) {

@@ -325,7 +325,7 @@ class RenderContext extends h3d.impl.RenderContext {
 
 	/**
 		Retrieves the current filter scale factor.
-		
+
 		@param into The 2D Point instance into which the scale is written. Creates a new Point if null.
 		@returns The current filter resolution scale or `{ 1, 1 }` point.
 	**/
@@ -481,10 +481,13 @@ class RenderContext extends h3d.impl.RenderContext {
 		}
 	}
 
-	public function getCurrentRenderZone() {
+	public function getCurrentRenderZone( ?bounds : h2d.col.Bounds ) {
 		if( !hasRenderZone )
 			return null;
-		return h2d.col.Bounds.fromValues(renderX, renderY, renderW, renderH);
+		if( bounds == null )
+			bounds = new h2d.col.Bounds();
+		bounds.set(renderX, renderY, renderW, renderH);
+		return bounds;
 	}
 
 	/**
@@ -498,10 +501,11 @@ class RenderContext extends h3d.impl.RenderContext {
 			return;
 		}
 
-		x = Math.max( x, renderX );
-		y = Math.max( y, renderY );
 		var x2 = Math.min( x + w, renderX + renderW );
 		var y2 = Math.min( y + h, renderY + renderH );
+		x = Math.max( x, renderX );
+		y = Math.max( y, renderY );
+
 		if (x2 < x) x2 = x;
 		if (y2 < y) y2 = y;
 
@@ -576,8 +580,8 @@ class RenderContext extends h3d.impl.RenderContext {
 		if( bufPos == 0 ) return;
 		beforeDraw();
 		var nverts = Std.int(bufPos / stride);
-		var tmp = new h3d.Buffer(nverts, stride, [Quads,Dynamic,RawFormat]);
-		tmp.uploadVector(buffer, 0, nverts);
+		var tmp = new h3d.Buffer(nverts, hxd.BufferFormat.XY_UV_RGBA, [Dynamic]);
+		tmp.uploadFloats(buffer, 0, nverts);
 		engine.renderQuadBuffer(tmp);
 		tmp.dispose();
 		bufPos = 0;
@@ -746,11 +750,11 @@ class RenderContext extends h3d.impl.RenderContext {
 		baseShader.uvPos.set(tile.u, tile.v, tile.u2 - tile.u, tile.v2 - tile.v);
 		beforeDraw();
 		if( fixedBuffer == null || fixedBuffer.isDisposed() ) {
-			fixedBuffer = new h3d.Buffer(4, 8, [Quads, RawFormat]);
+			fixedBuffer = new h3d.Buffer(4, hxd.BufferFormat.H2D);
 			var k = new hxd.FloatBuffer();
 			for( v in [0, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1] )
 				k.push(v);
-			fixedBuffer.uploadVector(k, 0, 4);
+			fixedBuffer.uploadFloats(k, 0, 4);
 		}
 		engine.renderQuadBuffer(fixedBuffer);
 		return true;

@@ -89,8 +89,19 @@ class ConvertFBX2HMD extends Convert {
 			}
 			if( params.maxBones != null)
 				hmdout.maxBonesPerSkin = params.maxBones;
-			if ( params.tangents != null)
+			if( params.tangents != null)
 				hmdout.generateTangents = true;
+			if( params.lowp != null ) {
+				var m : haxe.DynamicAccess<String> = params.lowp;
+				hmdout.lowPrecConfig = [];
+				for( k in m.keys() )
+					hmdout.lowPrecConfig.set(k, switch( m.get(k) ) {
+					case "f16": F16;
+					case "u8": U8;
+					case "s8": S8;
+					case x: throw "Invalid precision '"+x+"' should be u8|s8|f16";
+				});
+			}
 		}
 		hmdout.load(fbx);
 		var isAnim = StringTools.startsWith(originalFilename, "Anim_") || originalFilename.toLowerCase().indexOf("_anim_") > 0;
@@ -183,7 +194,7 @@ class ConvertTGA2PNG extends Convert {
 			}
 		switch( r.header.imageOrigin ) {
 		case BottomLeft:
-			pix.flags.set(FlipY);
+			pix.flipY();
 		case TopLeft:
 		default:
 			throw "Not supported "+r.header.imageOrigin;
@@ -236,6 +247,9 @@ class CompressIMG extends Convert {
 		"RGBA16F" => "R16G16B16A16_FLOAT",
 		"RGBA32F" => "R32G32B32A32_FLOAT",
 		"RGBA" => "R8G8B8A8_UNORM",
+		"R16U" => "R16_UNORM",
+		"RG16U" => "R16G16_UNORM",
+		"RGBA16U" => "R16G16B16A16_UNORM",
 	];
 
 	function makeImage( path : String ) {
@@ -243,8 +257,42 @@ class CompressIMG extends Convert {
 	}
 
 	override function convert() {
-		var format = getParam("format");
+		var resizedImagePath : String = null;
 		var mips = hasParam("mips") && getParam("mips") == true;
+		if( hasParam("size") ) {
+			try {
+				var maxSize = getParam("size");
+				var image = makeImage(srcPath);
+				var pxls = image.getPixels();
+				if( pxls.width == pxls.height && pxls.width > maxSize ) {
+					pxls.dispose();
+					var prevMip = mips;
+					if ( !prevMip ) Reflect.setField(params, "mips", true);
+					Reflect.deleteField(params, "size");
+					var tmpPath = new haxe.io.Path(dstPath);
+					tmpPath.ext = "forced_mips." + tmpPath.ext;
+					var prevDstPath = dstPath;
+					dstPath = tmpPath.toString();
+					convert();
+					dstPath = prevDstPath;
+					Reflect.setField(params, "size", maxSize);
+					if ( !prevMip )	Reflect.deleteField(params, "mips");
+					var prevMipSize = hxd.res.Image.MIPMAP_MAX_SIZE;
+					hxd.res.Image.MIPMAP_MAX_SIZE = maxSize;
+					var mippedImage = makeImage(tmpPath.toString());
+					var resizedPixels = mippedImage.getPixels();
+					hxd.res.Image.MIPMAP_MAX_SIZE = prevMipSize;
+					srcPath = Sys.getEnv("TEMP")+"/output_resized_"+srcPath.split("/").pop();
+					resizedImagePath = srcPath;
+					sys.io.File.saveBytes(srcPath, resizedPixels.toPNG());
+					resizedPixels.dispose();
+					sys.FileSystem.deleteFile(tmpPath.toString());
+				}
+			} catch(e : Dynamic) {
+				trace("Faile to resize", e);
+			}
+		}
+		var format = getParam("format");
 		var tcFmt = TEXCONV_FMT.get(format);
 		if( tcFmt != null ) {
 			// texconv can only handle output dir, and it prepended to srcPath :'(
@@ -254,7 +302,16 @@ class CompressIMG extends Convert {
 			try sys.FileSystem.deleteFile(tmpFile) catch( e : Dynamic ) {};
 			try sys.FileSystem.deleteFile(dstPath) catch( e : Dynamic ) {};
 			sys.io.File.copy(srcPath, tmpFile);
-			var args = ["-f", tcFmt, "-y", "-nologo", tmpFile];
+
+			var args = [
+				"-f",
+				tcFmt,
+				"-y",
+				"-nologo",
+				"-srgb", // Convert srgb to linear color space if target format doesn't support srgb (i.e from convertig from PNG to dds RGBA)
+				tmpFile
+			];
+
 			if( !mips ) args = ["-m", "1"].concat(args);
 			command("texconv", args);
 			sys.FileSystem.deleteFile(tmpFile);
@@ -272,7 +329,7 @@ class CompressIMG extends Convert {
 				for ( layer in 0...info.layerCount ) {
 					var layerPixels = [];
 					for( mip in 0...info.mipLevels ) {
-						var pixels = image.getPixels(null, null, layer * info.mipLevels + mip);
+						var pixels = image.getPixels(null, layer * info.mipLevels + mip);
 						layerPixels.push(pixels);
 					}
 					var layerBytes = hxd.Pixels.toDDSLayers(layerPixels);
@@ -281,31 +338,18 @@ class CompressIMG extends Convert {
 					var tmpPath = dstPath + path.file + "_" + layer + "." + path.ext;
 					sys.io.File.saveBytes(tmpPath, layerBytes);
 					srcBytes = layerBytes;
-					srcPath =  tmpPath;
+					srcPath = tmpPath;
 					convert();
 					sys.FileSystem.deleteFile(tmpPath);
 				}
 				srcBytes = oldBytes;
 				srcPath = oldPath;
 				var convertPixels = [];
-				var format = null;
 				for ( layer in 0...info.layerCount ) {
-					var layerPath = null;
-					var image = null;
-					for ( fmt in ["BC1", "BC3"] ) {
-						try {
-							layerPath = dstPath + path.file + "_" + layer +"_dds_"+ fmt + "." + path.ext;
-							image = makeImage(layerPath);
-						} catch(e : Dynamic) {}
-						if ( image != null ) {
-							format = fmt;
-							break;
-						}
-					}
-					if ( image == null )
-						throw "Unsupported format";
+					var layerPath = dstPath + path.file + "_" + layer +"_dds_"+ format + "." + path.ext;
+					var image = makeImage(layerPath);
 					for ( mip in 0... info.mipLevels) {
-						var pixels = image.getPixels(null, null, mip);
+						var pixels = image.getPixels(null, mip);
 						convertPixels.push(pixels);
 					}
 					sys.FileSystem.deleteFile(layerPath);
@@ -335,6 +379,7 @@ class CompressIMG extends Convert {
 		args = args.concat(["-fd",""+getParam("format"),tmpPath == null ? srcPath : tmpPath,dstPath]);
 		command("CompressonatorCLI", args);
 		if( tmpPath != null ) sys.FileSystem.deleteFile(tmpPath);
+		if( resizedImagePath != null ) sys.FileSystem.deleteFile(resizedImagePath);
 	}
 
 	static var _ = Convert.register(new CompressIMG("png,tga,jpg,jpeg,dds,envd,envs","dds"));

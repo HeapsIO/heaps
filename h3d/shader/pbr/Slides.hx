@@ -1,6 +1,6 @@
 package h3d.shader.pbr;
 
-@:enum abstract DebugMode(Int) {
+enum abstract DebugMode(Int) {
 	var Full = 0;
 	var Albedo = 1;
 	var Normal = 2;

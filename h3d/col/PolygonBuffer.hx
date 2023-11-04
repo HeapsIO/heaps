@@ -1,6 +1,6 @@
 package h3d.col;
 
-class PolygonBuffer implements Collider {
+class PolygonBuffer extends Collider {
 
 	var buffer : haxe.ds.Vector<hxd.impl.Float32>;
 	var indexes : haxe.ds.Vector<Int>;
@@ -16,6 +16,39 @@ class PolygonBuffer implements Collider {
 		this.indexes = indexes;
 		this.startIndex = startIndex;
 		this.triCount = triCount >= 0 ? triCount : Std.int((indexes.length - startIndex) / 3);
+	}
+
+	public function getBounds() {
+		var i = startIndex;
+		var b = new Bounds();
+		for( t in 0...triCount*3 ) {
+			var pos = indexes[i++] * 3;
+			b.addPos(buffer[pos++], buffer[pos++], buffer[pos]);
+		}
+		return b;
+	}
+
+	public function getPoints() {
+		var vmin = 1 << 30;
+		var vmax = -(1<<30);
+		for( i in startIndex...startIndex + triCount*3 ) {
+			var pos = indexes[i];
+			if( pos < vmin ) vmin = pos;
+			if( pos > vmax ) vmax = pos;
+		}
+		var vcount = (vmax + 1) - vmin;
+		var bits = new hxd.impl.BitSet(vcount);
+		var points = [];
+		for( i in startIndex...startIndex + triCount*3 ) {
+			var pos = indexes[i];
+			var vidx = pos - vmin;
+			if( !bits.get(vidx) ) {
+				pos *= 3;
+				points.push(new FPoint(buffer[pos++], buffer[pos++], buffer[pos]));
+				bits.set(vidx);
+			}
+		}
+		return points;
 	}
 
 	public function contains( p : Point ) {

@@ -40,7 +40,7 @@ class Graphics extends Mesh {
 	public var is3D(default, set) : Bool;
 
 	public function new(?parent) {
-		bprim = new h3d.prim.BigPrimitive(12);
+		bprim = new h3d.prim.BigPrimitive(hxd.BufferFormat.POS3D_NORMAL_UV_RGBA);
 		bprim.isStatic = false;
 		super(bprim, null, parent);
 		tmpPoints = [];
@@ -53,10 +53,6 @@ class Graphics extends Mesh {
 		vcolor.setPriority(-100);
 		material.mainPass.addShader(vcolor);
 		material.mainPass.culling = None;
-	}
-
-	override function getBoundsRec(b:h3d.col.Bounds):h3d.col.Bounds {
-		return super.getBoundsRec(b);
 	}
 
 	override function onRemove() {

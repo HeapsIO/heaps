@@ -204,12 +204,9 @@ class FileSystem implements hxd.fs.FileSystem {
 
 		This method is intended to be used with single-threaded environment such as HTML5 target,
 		as it doesn't have access to sys package.
-		
-		Use with multi-threaded environment at your own risk with `-D heaps_add_pak_multithreaded` flag.
+
+		Use with multi-threaded environment at your own risk.
 	**/
-	#if (target.threaded && !heaps_add_pak_multithreaded)
-	@:deprecated("addPak method is not designed to work in multi-threaded environment, avoid or use -D heaps_add_pak_multithreaded")
-	#end
 	public function addPak( file : FileInput, ?path : String ) {
 		var index = files.length;
 		var info = { path: path, inputs: [] };

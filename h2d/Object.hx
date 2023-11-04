@@ -495,7 +495,7 @@ class Object #if (domkit && !domkit_heaps) implements domkit.Model<h2d.Object> #
 	}
 
 	/**
-		Populates Matrix with current absolute object transform values. See `Object.getAbsPos` for up-to-date values.
+		Populates `m` with current absolute object transform values. See `Object.getAbsPos` for up-to-date values.
 	**/
 	@:dox(show)
 	function getMatrix( m : h2d.col.Matrix ) {

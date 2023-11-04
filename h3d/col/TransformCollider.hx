@@ -1,6 +1,6 @@
 package h3d.col;
 
-class TransformCollider implements Collider {
+class TransformCollider extends Collider {
 
 	public var collider : Collider;
 	public var mat(default, set) : h3d.Matrix;
@@ -81,7 +81,6 @@ class TransformCollider implements Collider {
 	#if !macro
 	public function makeDebugObj() : h3d.scene.Object {
 		var obj = collider.makeDebugObj();
-		obj.ignoreParentTransform = true;
 		obj.defaultTransform = mat;
 		return obj;
 	}

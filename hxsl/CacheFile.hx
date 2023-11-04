@@ -55,6 +55,8 @@ class CacheFile extends Cache {
 		return "gl";
 		#elseif hldx
 		return "dx";
+		#elseif hlnx
+		return "nx";
 		#else
 		return "unk";
 		#end
@@ -196,12 +198,14 @@ class CacheFile extends Cache {
 
 		batchers = [];
 		var batchMap = new Map();
+		var alreadySkipped = false;
 		while( true ) {
-			skip();
+			if ( !alreadySkipped ) skip();
 			var name = readString();
 			if( name == null ) break;
 			var rt = readString();
 			var str = readStringOpt();
+			alreadySkipped = str == null;
 			var params = null;
 			if( str != null )
 				params = new hxsl.Cache.BatchInstanceParams([for( s in str.split(";") ) { var v = s.split("="); { shader : v[0], params : v[1].split(",") }}]);
@@ -274,7 +278,7 @@ class CacheFile extends Cache {
 								r = null; // was modified
 								break;
 							}
-							var sh = makeBatchShader(rt.rt, rt.shaders, i.batch.params);
+							var sh = makeBatchShader(rt.rt, rt.shaders.next, i.batch.params);
 							i.shader = { version : null, shader : sh.shader };
 							batchMode = true;
 						}
@@ -326,7 +330,7 @@ class CacheFile extends Cache {
 								r = null; // was modified
 								break;
 							}
-							var sh = makeBatchShader(rt.rt, rt.shaders, i.batch.params);
+							var sh = makeBatchShader(rt.rt, rt.shaders.next, i.batch.params);
 							i.shader = { version : null, shader : sh.shader };
 							r.batchMode = true;
 						}

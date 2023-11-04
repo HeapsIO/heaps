@@ -74,12 +74,16 @@ class HlslOut {
 		m.set(InstanceID,"_in.instanceID");
 		m.set(IVec2, "int2");
 		m.set(IVec3, "int3");
-		m.set(IVec4, "int3");
+		m.set(IVec4, "int4");
 		m.set(BVec2, "bool2");
 		m.set(BVec3, "bool3");
 		m.set(BVec4, "bool4");
 		m.set(FragCoord,"_in.__pos__");
 		m.set(FrontFacing, "_in.isFrontFace");
+		m.set(FloatBitsToInt, "asint");
+		m.set(FloatBitsToUint, "asuint");
+		m.set(IntBitsToFloat, "asfloat");
+		m.set(UintBitsToFloat, "_uintBitsToFloat");
 		for( g in m )
 			KWDS.set(g, true);
 		m;
@@ -424,6 +428,11 @@ class HlslOut {
 				decl("float dFdy( float v ) { return ddy(v); }");
 				decl("float2 dFdy( float2 v ) { return ddy(v); }");
 				decl("float3 dFdy( float3 v ) { return ddy(v); }");
+			case UintBitsToFloat:
+				decl("float _uintBitsToFloat( int v ) { return asfloat(asuint(v)); }");
+				decl("float2 _uintBitsToFloat( int2 v ) { return asfloat(asuint(v)); }");
+				decl("float3 _uintBitsToFloat( int3 v ) { return asfloat(asuint(v)); }");
+				decl("float4 _uintBitsToFloat( int4 v ) { return asfloat(asuint(v)); }");
 			default:
 			}
 			add(GLOBALS.get(g));

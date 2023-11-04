@@ -139,8 +139,16 @@ class Linker {
 							return a;
 					k++;
 				}
-				vname += k;
-				key += k;
+				if( v.kind == Input ) {
+					// it's not allowed to rename an input var, let's rename existing var instead
+					varMap.remove(key);
+					varMap.set(key + k, v2);
+					v2.v.name += k;
+					v2.path += k;
+				} else {
+					vname += k;
+					key += k;
+				}
 			} else {
 				v2.merged.push(v);
 				mergeVar(key, v, v2.v, p, v2.rootShaderName);

@@ -1,6 +1,6 @@
 package h3d.scene.pbr;
 
-@:enum abstract DisplayMode(String) {
+enum abstract DisplayMode(String) {
 	/*
 		Full PBR display
 	*/
@@ -20,7 +20,7 @@ package h3d.scene.pbr;
 	var Performance = "Performance";
 }
 
-@:enum abstract SkyMode(String) {
+enum abstract SkyMode(String) {
 	var Hide = "Hide";
 	var Env = "Env";
 	var Specular = "Specular";
@@ -29,9 +29,10 @@ package h3d.scene.pbr;
 	var CustomColor = "CustomColor";
 }
 
-@:enum abstract TonemapMap(String) {
+enum abstract TonemapMap(String) {
 	var Linear = "Linear";
 	var Reinhard = "Reinhard";
+	var Filmic = "Filmic";
 }
 
 typedef RenderProps = {
@@ -42,6 +43,11 @@ typedef RenderProps = {
 	var tone : TonemapMap;
 	var emissive : Float;
 	var occlusion : Float;
+	var ?a : Float;
+	var ?b : Float;
+	var ?c : Float;
+	var ?d : Float;
+	var ?e : Float;
 }
 
 class DepthCopy extends h3d.shader.ScreenShader {
@@ -68,15 +74,16 @@ class Renderer extends h3d.scene.Renderer {
 	var enableFXAA = true;
 	var currentStep : h3d.impl.RendererFX.Step;
 	var performance = new h3d.pass.ScreenFx(new h3d.shader.pbr.PerformanceViewer());
+	var indirectEnv = true;
 
 	var textures = {
 		albedo : (null:h3d.mat.Texture),
 		normal : (null:h3d.mat.Texture),
 		pbr : (null:h3d.mat.Texture),
-		other : (null:h3d.mat.Texture),
 		#if !MRT_low
-		depth : (null:h3d.mat.Texture),
+		other : (null:h3d.mat.Texture),
 		#end
+		depth : (null:h3d.mat.Texture),
 		hdr : (null:h3d.mat.Texture),
 		ldr : (null:h3d.mat.Texture),
 	};
@@ -92,34 +99,36 @@ class Renderer extends h3d.scene.Renderer {
 	var output = new h3d.pass.Output("default",[
 		Value("output.color"),
 		Vec4([Value("output.normal",3),ALPHA]),
-		Vec4([Value("output.metalness"), Value("output.roughness"), Value("output.occlusion"), ALPHA]),
 		#if !MRT_low
+		Vec4([Value("output.metalness"), Value("output.roughness"), Value("output.occlusion"), ALPHA]),
 		Vec4([Value("output.emissive"), Value("output.custom1"), Value("output.custom2"), ALPHA]),
-		Vec4([Value("output.depth"), Const(0), Const(0), ALPHA])
 		#else
-		Vec4([Value("output.emissive"),Value("output.depth"),Const(0), ALPHA /* ? */])
+		Vec4([Value("output.metalness"), Value("output.roughness"), Value("output.emissive"), ALPHA]),
 		#end
+		Vec4([Value("output.depth"),Const(0), Const(0), ALPHA /* ? */])
 	]);
 	var decalsOutput = new h3d.pass.Output("decals",[
 		Vec4([Swiz(Value("output.color"),[X,Y,Z]), Value("output.albedoStrength",1)]),
 		Vec4([Value("output.normal",3), Value("output.normalStrength",1)]),
+		#if !MRT_low
 		Vec4([Value("output.metalness"), Value("output.roughness"), Value("output.occlusion"), Value("output.pbrStrength")])
+		#else
+		Vec4([Value("output.metalness"), Value("output.roughness"), Value("output.emissive"), Value("output.pbrStrength")])
+		#end
 	]);
-	#if !MRT_low
 	var emissiveDecalsOutput = new h3d.pass.Output("emissiveDecal",[
 		Vec4([Swiz(Value("output.color"),[X,Y,Z]), Value("output.albedoStrength",1)]),
 		Vec4([Value("output.normal",3), Value("output.normalStrength",1)]),
+		#if !MRT_low
 		Vec4([Value("output.metalness"), Value("output.roughness"), Value("output.occlusion"), Value("output.pbrStrength")]),
 		Vec4([Value("output.emissive"), Value("output.custom1"), Value("output.custom2"), Value("output.emissiveStrength")])
+		#else
+		Vec4([Value("output.metalness"), Value("output.roughness"), Value("output.emissive"), Value("output.pbrStrength")])
+		#end
 	]);
-	#end
 	var colorDepthOutput = new h3d.pass.Output("colorDepth",[
 		Value("output.color"),
-		#if !MRT_low
 		Vec4([Value("output.depth"),Const(0),Const(0),h3d.scene.pbr.Renderer.ALPHA])
-		#else
-		Vec4([Const(0),Value("output.depth"),Const(0), Const(0)])
-		#end
 	]);
 
 	public function new(?env) {
@@ -137,9 +146,7 @@ class Renderer extends h3d.scene.Renderer {
 		allPasses.push(defaultPass);
 		allPasses.push(decalsOutput);
 		allPasses.push(colorDepthOutput);
-		#if !MRT_low
 		allPasses.push(emissiveDecalsOutput);
-		#end
 		allPasses.push(new h3d.pass.Shadows(null));
 		refreshProps();
 	}
@@ -166,7 +173,7 @@ class Renderer extends h3d.scene.Renderer {
 			return defaultPass;
 		case "default", "alpha", "additive":
 			return output;
-		case "decal" #if MRT_low, "emissiveDecal" #end:
+		case "decal" #if MRT_low , "emissiveDecal" #end:
 			return decalsOutput;
 		}
 		return super.getPassByName(name);
@@ -238,23 +245,10 @@ class Renderer extends h3d.scene.Renderer {
 
 		begin(Lighting);
 		if ( displayMode == Performance ) {
-			var content;
-			try {
-				content = hxd.res.Loader.currentInstance.load("props.json").toText();
-			} catch ( e : Dynamic ) {
-				throw "Missing props.json";
-			}
-			var obj = try haxe.Json.parse(content) catch( e : Dynamic ) throw "Failed to parse props.json";
 			var ls = hxd.impl.Api.downcast(getLightSystem(), h3d.scene.pbr.LightSystem);
 			var s = new h3d.shader.pbr.Light.Performance();
-
-			s.maxLights = Std.parseInt(Reflect.field(obj, "performance.maxLights"));
-			var gradient = Reflect.field(obj, "performance.lightGradient");
-			try {
-				performance.shader.gradient = hxd.res.Loader.currentInstance.load(gradient).toTexture();
-			} catch ( e : Dynamic ) {
-				throw "Missing performance.lightGradient in props.json";
-			}
+			performance.shader.gradient = getLightingPerformanceGradient();
+			s.maxLights = performance.shader.gradient.width - 1;
 			ls.lightingShaders.push(s);
 		}
 		var lpass = screenLightPass;
@@ -269,23 +263,25 @@ class Renderer extends h3d.scene.Renderer {
 		mark("DirectLighting");
 		// Direct Lighting - FullScreen
 		pbrProps.isScreen = true;
+		beforeFullScreenLights();
 		if( ls != null ) {
 			var count = ctx.engine.drawCalls;
 			ls.drawScreenLights(this, lpass, shadows);
 			ctx.lightSystem.drawPasses += ctx.engine.drawCalls - count;
 		}
+		afterFullScreenLights();
 		// Direct Lighting - With Primitive
 		pbrProps.isScreen = false;
 		draw(pbrLightPass.name);
 
 		if ( displayMode == Performance ) {
-			var perf = allocTarget("performance", RGBA16F);
+			var perf = allocTarget("performance", #if MRT_low RGB10A2 #else RGBA16F #end);
 			h3d.pass.Copy.run(textures.hdr, perf);
 			performance.shader.hdrMap = perf;
 		}
 
 		mark("Indirect Lighting");
-		if( !renderLightProbes() && env != null && env.power > 0.0 ) {
+		if( !renderLightProbes() && indirectEnv  && env != null && env.power > 0.0 ) {
 			pbrProps.isScreen = true;
 			pbrIndirect.drawIndirectDiffuse = true;
 			pbrIndirect.drawIndirectSpecular = true;
@@ -294,6 +290,9 @@ class Renderer extends h3d.scene.Renderer {
 
 		end();
 	}
+
+	function beforeFullScreenLights() {}
+	function afterFullScreenLights() {}
 
 	function renderLightProbes() {
 		var probePass = get("lightProbe");
@@ -305,12 +304,12 @@ class Renderer extends h3d.scene.Renderer {
 		}
 
 		// Probe Rendering & Blending
-		var probeOutput = allocTarget("probeOutput", true, 1.0, RGBA16F);
+		var probeOutput = allocTarget("probeOutput", true, 1.0, #if MRT_low RGB10A2 #else RGBA16F #end);
 		ctx.engine.pushTarget(probeOutput);
 		clear(0);
 
 		// Default Env & SkyBox
-		if( env != null && env.power > 0.0  ) {
+		if( indirectEnv && env != null && env.power > 0.0 ) {
 			pbrProps.isScreen = true;
 			pbrIndirect.drawIndirectDiffuse = true;
 			pbrIndirect.drawIndirectSpecular = true;
@@ -389,21 +388,23 @@ class Renderer extends h3d.scene.Renderer {
 
 	function initTextures() {
 		textures.albedo = allocTarget("albedo", true, 1.);
-		textures.normal = allocTarget("normal", true, 1., RGBA16F);
+		textures.normal = allocTarget("normal", true, 1., #if MRT_low RGB10A2 #else RGBA16F #end);
 		textures.pbr = allocTarget("pbr", true, 1.);
 		#if !MRT_low
 		textures.other = allocTarget("other", true, 1.);
-		textures.depth = allocTarget("depth", true, 1., R32F);
-		#else
-		textures.other = allocTarget("other", true, 1., RGBA32F);
 		#end
-		textures.hdr = allocTarget("hdrOutput", true, 1, RGBA16F);
+		textures.depth = allocTarget("depth", true, 1., R32F);
+		textures.hdr = allocTarget("hdrOutput", true, 1, #if MRT_low RGB10A2 #else RGBA16F #end);
 		textures.ldr = allocTarget("ldrOutput");
+	}
+
+	public function getPbrDepth() {
+		return textures.depth;
 	}
 
 	function initGlobals() {
 		ctx.setGlobal("albedoMap", { texture : textures.albedo, channel : hxsl.Channel.R });
-		ctx.setGlobal("depthMap", { texture : #if !MRT_low textures.depth #else textures.other #end, channel : #if !MRT_low hxsl.Channel.R #else hxsl.Channel.G #end });
+		ctx.setGlobal("depthMap", { texture : getPbrDepth(), channel : hxsl.Channel.R });
 		ctx.setGlobal("normalMap", { texture : textures.normal, channel : hxsl.Channel.R });
 		ctx.setGlobal("occlusionMap", { texture : textures.pbr, channel : hxsl.Channel.B });
 		ctx.setGlobal("hdrMap", textures.hdr);
@@ -428,10 +429,10 @@ class Renderer extends h3d.scene.Renderer {
 		pbrProps.albedoTex = textures.albedo;
 		pbrProps.normalTex = textures.normal;
 		pbrProps.pbrTex = textures.pbr;
+		pbrProps.depthTex = getPbrDepth();
 		#if !MRT_low
-		pbrProps.depthTex = textures.depth;
-		#end
 		pbrProps.otherTex = textures.other;
+		#end
 		pbrProps.cameraInverseViewProj = ctx.camera.getInverseViewProj();
 		pbrProps.occlusionPower = props.occlusion * props.occlusion;
 
@@ -499,8 +500,16 @@ class Renderer extends h3d.scene.Renderer {
 		tonemap.shader.mode = switch( toneMode ) {
 			case Linear: 0;
 			case Reinhard: 1;
+			case Filmic: 2;
 			default: 0;
 		};
+		if ( toneMode == Filmic ) {
+			tonemap.shader.a = props.a;
+			tonemap.shader.b = props.b;
+			tonemap.shader.c = props.c;
+			tonemap.shader.d = props.d;
+			tonemap.shader.e = props.e;
+		}
 		tonemap.shader.hdrTexture = textures.hdr;
 	}
 
@@ -513,30 +522,28 @@ class Renderer extends h3d.scene.Renderer {
 	}
 
 	function drawEmissiveDecals( passName : String ) {
-		#if !MRT_low
 		var passes = get(passName);
 		if( passes.isEmpty() ) return;
-		ctx.engine.pushTargets([textures.albedo,textures.normal,textures.pbr,textures.other]);
+		ctx.engine.pushTargets([textures.albedo,textures.normal,textures.pbr#if !MRT_low ,textures.other #end]);
 		renderPass(emissiveDecalsOutput, passes);
 		ctx.engine.popTarget();
-		#else
-		drawPbrDecals(passName);
-		#end
+	}
+
+	function getPbrRenderTargets( depth : Bool ) {
+		if ( depth )
+			return [textures.albedo, textures.normal, textures.pbr #if !MRT_low , textures.other #end, getPbrDepth()];
+		return [textures.albedo, textures.normal, textures.pbr #if !MRT_low , textures.other #end];
 	}
 
 	override function render() {
 		beginPbr();
-		#if !MRT_low
 		setTarget(textures.depth);
 		ctx.engine.clearF(new h3d.Vector(1));
-		#end
 
-		setTargets([textures.albedo,textures.normal,textures.pbr,textures.other]);
+		setTargets(getPbrRenderTargets(false));
 		clear(0, 1, 0);
 
-		#if !MRT_low
-		setTargets([textures.albedo,textures.normal,textures.pbr,textures.other,textures.depth]);
-		#end
+		setTargets(getPbrRenderTargets(true));
 
 		begin(MainDraw);
 		renderPass(output, get("terrain"));
@@ -558,7 +565,7 @@ class Renderer extends h3d.scene.Renderer {
 		begin(Forward);
 		var ls = hxd.impl.Api.downcast(getLightSystem(), h3d.scene.pbr.LightSystem);
 		ls.forwardMode = true;
-		setTargets([textures.hdr, #if !MRT_low textures.depth #else textures.other #end]);
+		setTargets([textures.hdr, getPbrDepth()]);
 		renderPass(colorDepthOutput, get("forward"));
 		setTarget(textures.hdr);
 		renderPass(defaultPass, get("forwardAlpha"), backToFront);
@@ -705,6 +712,16 @@ class Renderer extends h3d.scene.Renderer {
 			debugShadowMapIndex += e.wheelDelta > 0 ? 1 : -1;
 	}
 
+	function getLightingPerformanceGradient() {
+		var g : h3d.mat.Texture = @:privateAccess ctx.engine.resCache.get("lighting_performance_gradient");
+		if ( g != null )
+			return g;
+		g = hxd.res.Embed.getResource("h3d/scene/pbr/lighting_performance_gradient.png").toImage().toTexture();
+		@:privateAccess ctx.engine.resCache.set("lighting_performance_gradient", g);
+		g.filter = Nearest;
+		return g;
+	}
+
 	// ---- PROPS
 
 	override function getDefaultProps( ?kind : String ):Any {
@@ -715,6 +732,11 @@ class Renderer extends h3d.scene.Renderer {
 			sky : Irrad,
 			tone : Linear,
 			occlusion : 1.,
+			a : 2.51,
+			b : 0.03,
+			c : 2.43,
+			d : 0.59,
+			e : 0.14,
 		};
 		return props;
 	}
@@ -756,8 +778,15 @@ class Renderer extends h3d.scene.Renderer {
 						<select field="tone">
 							<option value="Linear">Linear</option>
 							<option value="Reinhard">Reinhard</option>
+							<option value="Filmic">Filmic</option>
 						</select>
 					</dd>
+					<dt>Filmic a</dt><dd><input type="range" min="0" max="5" field="a"></dd>
+					<dt>Filmic b</dt><dd><input type="range" min="0" max="2" field="b"></dd>
+					<dt>Filmic c</dt><dd><input type="range" min="0" max="5" field="c"></dd>
+					<dt>Filmic d</dt><dd><input type="range" min="0" max="5" field="d"></dd>
+					<dt>Filmic e</dt><dd><input type="range" min="0" max="0.5" field="e"></dd>
+
 				</div>
 
 				<div class="group" name="Environment">

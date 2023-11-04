@@ -87,13 +87,13 @@ private class GraphicsContent extends h3d.prim.Primitive {
 	override function alloc( engine : h3d.Engine ) {
 		if (index.length <= 0) return ;
 		var alloc = Allocator.get();
-		buffer = alloc.ofFloats(tmp, 8, RawFormat);
+		buffer = alloc.ofFloats(tmp, hxd.BufferFormat.H2D);
 		#if track_alloc
 		@:privateAccess buffer.allocPos = allocPos;
 		#end
 		indexes = alloc.ofIndexes(index);
 		for( b in buffers ) {
-			if( b.vbuf == null || b.vbuf.isDisposed() ) b.vbuf = alloc.ofFloats(b.buf, 8, RawFormat);
+			if( b.vbuf == null || b.vbuf.isDisposed() ) b.vbuf = alloc.ofFloats(b.buf, hxd.BufferFormat.H2D);
 			if( b.ibuf == null || b.ibuf.isDisposed() ) b.ibuf = alloc.ofIndexes(b.idx);
 		}
 		bufferDirty = false;
@@ -114,7 +114,7 @@ private class GraphicsContent extends h3d.prim.Primitive {
 			var allocator = Allocator.get();
 			if ( bufferDirty ) {
 				allocator.disposeBuffer(buffer);
-				buffer = allocator.ofFloats(tmp, 8, RawFormat);
+				buffer = allocator.ofFloats(tmp, hxd.BufferFormat.H2D);
 				bufferDirty = false;
 			}
 			if ( indexDirty ) {

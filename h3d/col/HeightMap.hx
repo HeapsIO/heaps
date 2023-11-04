@@ -5,7 +5,7 @@ package h3d.col;
 	In order to use, you need to extends this class and override the getZ method
 	in order to return appropriate Z value based on X and Y coordinates.
 **/
-class HeightMap implements Collider {
+class HeightMap extends Collider {
 
 	/**
 		When performing raycast check, tells by how much step we advance.

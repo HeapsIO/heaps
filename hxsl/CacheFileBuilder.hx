@@ -5,7 +5,9 @@ enum CacheFilePlatform {
 	OpenGL;
 	PS4;
 	XBoxOne;
+	XBoxSeries;
 	NX;
+	NXBinaries;
 }
 
 private class CustomCacheFile extends CacheFile {
@@ -26,7 +28,13 @@ private class CustomCacheFile extends CacheFile {
 	override function addSource(r:RuntimeShader) {
 		r.vertex.code = build.compileShader(r, r.vertex);
 		r.fragment.code = build.compileShader(r, r.fragment);
-		super.addSource(r);
+		if ( build.platform == NXBinaries ) {
+			// NXBinaries requires both vertex and fragment shader to work, avoid null access and skip the shader instead.
+			try {
+				super.addSource(r);
+			} catch ( e : Dynamic ) {}
+		} else
+			super.addSource(r);
 	}
 
 	override function resolveShader(name:String):hxsl.Shader {
@@ -50,7 +58,9 @@ private class CustomCacheFile extends CacheFile {
 		case OpenGL: "gl";
 		case PS4: "ps4";
 		case XBoxOne: "xboxone";
+		case XBoxSeries: "xbox";
 		case NX: "nx";
+		case NXBinaries: "nxbin";
 		};
 	}
 
@@ -62,9 +72,17 @@ class CacheFileBuilder {
 	public var platforms : Array<CacheFilePlatform> = [];
 	public var shaderLib : Map<String,String> = new Map();
 	public var dxInitDone = false;
+	#if (hldx && dx12)
+	public var dx12Driver : h3d.impl.DX12Driver;
+	#end
 	public var dxShaderVersion = "5_0";
+	public var dxcShaderVersion = "6_0";
 	var glout : GlslOut;
+	var vertexOut : String;
 	var hasCompiled : Bool;
+	var binariesPath : String;
+	var shaderCache : h3d.impl.ShaderCache;
+	var shaderCacheConfig : String = "";
 
 	public function new() {
 	}
@@ -78,6 +96,8 @@ class CacheFileBuilder {
 			@:privateAccess cache.save();
 			if( hasCompiled ) Sys.println("");
 		}
+		if( shaderCache != null )
+			@:privateAccess shaderCache.save();
 	}
 
 	function binaryPayload( data : haxe.io.Bytes ) {
@@ -87,9 +107,22 @@ class CacheFileBuilder {
 	public function compileShader( r : RuntimeShader, rd : RuntimeShader.RuntimeShaderData ) : String {
 		hasCompiled = true;
 		Sys.print(".");
+		var s = generateShader(r, rd);
+		if( s == null )
+			return null;
+		if( s.bytes == null )
+			return s.code;
+		if( s.code == null )
+			return binaryPayload(s.bytes);
+		if( shaderCache != null )
+			shaderCache.saveCompiledShader(s.code, s.bytes, shaderCacheConfig, false);
+		return s.code + binaryPayload(s.bytes);
+	}
+
+	function generateShader( r : RuntimeShader, rd : RuntimeShader.RuntimeShaderData ) : { code : String, bytes : haxe.io.Bytes } {
 		switch( platform ) {
 		case DirectX:
-			#if hldx
+			#if (hldx && !dx12)
 			if( !dxInitDone ) {
 				var win = new dx.Window("", 800, 600);
 				win.visible = false;
@@ -99,9 +132,9 @@ class CacheFileBuilder {
 			var out = new HlslOut();
 			var code = out.run(rd.data);
 			var bytes = dx.Driver.compileShader(code, "", "main", (rd.vertex?"vs_":"ps_") + dxShaderVersion, OptimizationLevel3);
-			return code + binaryPayload(bytes);
+			return { code : code, bytes : bytes };
 			#else
-			throw "DirectX compilation requires -lib hldx";
+			throw "DirectX compilation requires -lib hldx without -D dx12";
 			#end
 		case OpenGL:
 			if( rd.vertex ) {
@@ -109,7 +142,7 @@ class CacheFileBuilder {
 				glout = new GlslOut();
 				glout.version = 150;
 			}
-			return glout.run(rd.data);
+			return { code : glout.run(rd.data), bytes : null };
 		case PS4:
 			#if hlps
 			var out = new ps.gnm.PsslOut();
@@ -128,7 +161,7 @@ class CacheFileBuilder {
 			var data = sys.io.File.getBytes(tmpOut);
 			sys.FileSystem.deleteFile(tmpSrc);
 			sys.FileSystem.deleteFile(tmpOut);
-			return code + binaryPayload(data);
+			return { code : code, bytes : data };
 			#else
 			throw "PS4 compilation requires -lib hlps";
 			#end
@@ -149,13 +182,56 @@ class CacheFileBuilder {
 			var data = sys.io.File.getBytes(tmpOut);
 			sys.FileSystem.deleteFile(tmpSrc);
 			sys.FileSystem.deleteFile(tmpOut);
-			return code + binaryPayload(data);
-		case NX:
-			#if hlnx
-			if( rd.vertex )
-				glout = new haxe.GlslOut();
-			return glout.run(rd.data);
+			return { code : code, bytes : data };
+		case XBoxSeries:
+			#if (hldx && dx12)
+			if( !dxInitDone ) {
+				var win = new dx.Window("", 800, 600);
+				win.visible = false;
+				dxInitDone = true;
+				dx12Driver = new h3d.impl.DX12Driver();
+			}
+			var out = new HlslOut();
+			var tmpFile = "tmp";
+			var tmpSrc = tmpFile + ".hlsl";
+			var tmpOut = tmpFile + ".sb";
+			var sign = @:privateAccess dx12Driver.computeRootSignature(r);
+			out.baseRegister = rd.vertex ? 0 : sign.fragmentRegStart;
+			var code = out.run(rd.data);
+			var serializeRootSignature = @:privateAccess dx12Driver.stringifyRootSignature(sign.sign, "ROOT_SIGNATURE", sign.params);
+			code = serializeRootSignature + code;
+			sys.io.File.saveContent(tmpSrc, code);
+			var args = ["-rootsig-define", "ROOT_SIGNATURE", "-T", (rd.vertex ? "vs_" : "ps_") + dxcShaderVersion,"-O3","-Fo", tmpOut, tmpSrc];
+			var p = new sys.io.Process(Sys.getEnv("GXDKLatest")+ "bin\\Scarlett\\dxc.exe", args);
+			var error = p.stderr.readAll().toString();
+			var ecode = p.exitCode();
+			if( ecode != 0 )
+				throw "ERROR while compiling " + tmpSrc + "\n" + error;
+			p.close();
+			var data = sys.io.File.getBytes(tmpOut);
+			sys.FileSystem.deleteFile(tmpSrc);
+			sys.FileSystem.deleteFile(tmpOut);
+			return { code : code, bytes : data };
+			#else
+			throw "-lib hldx and -D dx12 are required to generate binaries for XBoxSeries";
 			#end
+		case NX:
+			if( rd.vertex )
+				glout = new hxsl.NXGlslOut();
+			return { code : glout.run(rd.data), bytes : null };
+		case NXBinaries:
+			if( rd.vertex )
+				glout = new hxsl.NXGlslOut();
+			if ( rd.vertex ) {
+				vertexOut = glout.run(rd.data);
+				return { code : vertexOut, bytes : null }; // binary is in fragment.code
+			}
+			var path = binariesPath + '/${r.signature}.glslc';
+			if ( !sys.FileSystem.exists(path) || vertexOut == null )
+				return null;
+			var code = vertexOut + glout.run(rd.data);
+			vertexOut = null;
+			return { code : code, bytes : sys.io.File.getBytes(path) };
 		}
 		throw "Missing implementation for " + platform;
 	}
@@ -195,13 +271,27 @@ class CacheFileBuilder {
 				builder.platforms.push(PS4);
 			case "-xbox":
 				builder.platforms.push(XBoxOne);
+			case "-xbs":
+				builder.platforms.push(XBoxSeries);
 			case "-nx":
 				builder.platforms.push(NX);
+			case "-nxbinary":
+				builder.binariesPath = getArg();
+				builder.platforms.push(NXBinaries);
+			case "-build-cache":
+				builder.shaderCache = new h3d.impl.ShaderCache(getArg());
+				builder.shaderCache.initEmpty();
+			case "-build-cache-source":
+				builder.shaderCache.keepSource = true;
+			case "-build-cache-config":
+				builder.shaderCacheConfig = getArg();
 			default:
 				throw "Unknown parameter " + f;
 			}
 		}
-		builder.run();		
+		if( builder.platforms.length == 0 )
+			throw "No platform selected";
+		builder.run();
 		Sys.exit(0);
 	}
 

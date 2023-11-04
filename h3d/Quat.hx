@@ -65,7 +65,7 @@ class Quat {
 
 	public function initNormal( dir : h3d.col.Point ) {
 		var dir = dir.normalized();
-		if( dir.x*dir.x+dir.y*dir.y < Math.EPSILON )
+		if( dir.x*dir.x+dir.y*dir.y < Math.EPSILON2 )
 			initDirection(new h3d.Vector(1,0,0));
 		else {
 			var ay = new h3d.col.Point(dir.x, dir.y, 0).normalized();
@@ -74,11 +74,14 @@ class Quat {
 		}
 	}
 
-	public function initDirection( dir : Vector ) {
+	public function initDirection( dir : Vector, ?up : Vector ) {
 		// inlined version of initRotationMatrix(Matrix.lookAtX(dir))
 		var ax = dir.clone().normalized();
-		var ay = new Vector(-ax.y, ax.x, 0).normalized();
-		if( ay.lengthSq() < Math.EPSILON ) {
+		var ay = new Vector(-ax.y, ax.x, 0);
+		if( up != null ) 
+			ay.load(up.cross(ax));
+		ay.normalize();
+		if( ay.lengthSq() < Math.EPSILON2 ) {
 			ay.x = ax.y;
 			ay.y = ax.z;
 			ay.z = ax.x;
@@ -161,7 +164,7 @@ class Quat {
 
 	public function normalize() {
 		var len = x * x + y * y + z * z + w * w;
-		if( len < hxd.Math.EPSILON ) {
+		if( len < hxd.Math.EPSILON2 ) {
 			x = y = z = 0;
 			w = 1;
 		} else {
@@ -253,7 +256,7 @@ class Quat {
 		// ln()
 		var r = Math.sqrt(x*x+y*y+z*z);
 		var t = r > Math.EPSILON ? Math.atan2(r,w)/r : 0;
-		w = 0.5 * Math.log(w*w+x*x+y*y+z*z);
+		w = 0.5 * std.Math.log(w*w+x*x+y*y+z*z);
 		x *= t;
 		y *= t;
 		z *= t;
@@ -264,7 +267,7 @@ class Quat {
 		w *= v;
 		// exp
 		var r = Math.sqrt(x*x+y*y+z*z);
-		var et = Math.exp(w);
+		var et = std.Math.exp(w);
 		var s = r > Math.EPSILON ? et *Math.sin(r)/r : 0;
 		w = et * Math.cos(r);
 		x *= s;
@@ -288,6 +291,10 @@ class Quat {
 
 	public inline function getDirection() {
 		return new h3d.Vector(1 - 2 * ( y * y + z * z ), 2 * ( x * y + z * w ), 2 * ( x * z - y * w ));
+	}
+
+	public inline function getUpAxis() {
+		return new h3d.Vector(2 * ( x*z + y*w ),2 * ( y*z - x*w ), 1 - 2 * ( x*x + y*y ));
 	}
 
 	/**

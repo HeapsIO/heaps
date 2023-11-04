@@ -208,6 +208,8 @@ class CubeToPanorama extends h3d.shader.ScreenShader {
 
 class Environment {
 
+	static var DEFAULT_FORMAT : hxd.PixelFormat = RGBA32F;
+
 	public var sampleBits : Int;
 	public var diffSize : Int;
 	public var specSize : Int;
@@ -252,7 +254,7 @@ class Environment {
 		var t : h3d.mat.Texture = @:privateAccess engine.resCache.get(IrradLut);
 		if( t != null )
 			return t;
-		t = new h3d.mat.Texture(128, 128, [Target], RGBA32F);
+		t = new h3d.mat.Texture(128, 128, [Target], DEFAULT_FORMAT);
 		if( LUT_PIXELS == null ) {
 			computeIrradLut(t);
 			LUT_PIXELS = t.capturePixels();
@@ -273,7 +275,7 @@ class Environment {
 
 		if( source.width != source.height * 2 )
 			throw "Unrecognized environment map format";
-		var env = new h3d.mat.Texture(source.height, source.height, [Cube, Target], hxd.Pixels.isFloatFormat(source.format) ? RGBA32F : RGBA );
+		var env = new h3d.mat.Texture(source.height, source.height, [Cube, Target], hxd.Pixels.isFloatFormat(source.format) ? DEFAULT_FORMAT : RGBA );
 		var pass = new h3d.pass.ScreenFx(new PanoramaToCube());
 		var engine = h3d.Engine.getCurrent();
 		pass.shader.texture = source;
@@ -297,12 +299,12 @@ class Environment {
 
 	function createTextures() {
 		if( diffuse == null ) {
-			diffuse = new h3d.mat.Texture(diffSize, diffSize, [Cube, Target], RGBA32F);
+			diffuse = new h3d.mat.Texture(diffSize, diffSize, [Cube, Target], DEFAULT_FORMAT);
 			diffuse.setName("irradDiffuse");
 			diffuse.preventAutoDispose();
 		}
 		if( specular == null ) {
-			specular = new h3d.mat.Texture(specSize, specSize, [Cube, Target, MipMapped, ManualMipMapGen], RGBA32F);
+			specular = new h3d.mat.Texture(specSize, specSize, [Cube, Target, MipMapped, ManualMipMapGen], DEFAULT_FORMAT);
 			specular.setName("irradSpecular");
 			specular.mipMap = Linear;
 			specular.preventAutoDispose();

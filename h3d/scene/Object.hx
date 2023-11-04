@@ -1,6 +1,6 @@
 package h3d.scene;
 
-@:enum abstract ObjectFlags(Int) {
+enum abstract ObjectFlags(Int) {
 	public var FPosChanged = 0x01;
 	public var FVisible = 0x02;
 	public var FCulled = 0x04;
@@ -386,17 +386,19 @@ class Object {
 	}
 
 	/**
-		Return the bounds of this object and all its children, in absolute global coordinates.
+		Return the bounds of this object and all its children, in absolute global coordinates or relative to the
+		object being used as parameter.
 	**/
-	@:final public function getBounds( ?b : h3d.col.Bounds ) {
+	final public function getBounds( ?b : h3d.col.Bounds, ?relativeTo : Object ) {
 		if( b == null )
 			b = new h3d.col.Bounds();
-		if( parent != null )
+		if( parent != null && parent != relativeTo )
 			parent.syncPos();
-		return getBoundsRec(b);
+		addBoundsRec(b, relativeTo == null ? null : relativeTo.getInvPos());
+		return b;
 	}
 
-	function getBoundsRec( b : h3d.col.Bounds ) {
+	function addBoundsRec( b : h3d.col.Bounds, relativeTo : h3d.Matrix ) {
 		if( posChanged ) {
 			for( c in children )
 				c.posChanged = true;
@@ -404,8 +406,7 @@ class Object {
 			calcAbsPos();
 		}
 		for( c in children )
-			c.getBoundsRec(b);
-		return b;
+			c.addBoundsRec(b, relativeTo);
 	}
 
 	/**
@@ -619,7 +620,7 @@ class Object {
 		Build and return the global absolute recursive collider for the object.
 		Returns null if no collider was found or if ignoreCollide was set to true.
 	**/
-	@:final public function getCollider() : h3d.col.Collider {
+	final public function getCollider() : h3d.col.Collider {
 		if( ignoreCollide )
 			return null;
 		var colliders = [];
@@ -785,7 +786,7 @@ class Object {
 		#if sceneprof h3d.impl.SceneProf.mark(this); #end
 
 		if( !visible || (culled && inheritCulled && !ctx.computingStatic) )
-			return;		
+			return;
 
 		// fallback in case the object was added during a sync() event and we somehow didn't update it
 		if( posChanged ) {
@@ -916,8 +917,8 @@ class Object {
 	/**
 		Set the rotation using the specified look at direction
 	**/
-	public function setDirection( v : h3d.Vector ) {
-		qRot.initDirection(v);
+	public function setDirection( v : h3d.Vector, ?up ) {
+		qRot.initDirection(v, up);
 		posChanged = true;
 	}
 

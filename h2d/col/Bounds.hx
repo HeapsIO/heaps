@@ -7,7 +7,7 @@ import hxd.Math;
 	@see `Object.getBounds`
 	@see `Object.getSize`
 **/
-class Bounds implements Collider {
+class Bounds extends Collider {
 
 	/** X-axis left-most bounding box point. **/
 	public var xMin : Float;
@@ -57,6 +57,14 @@ class Bounds implements Collider {
 	**/
 	public inline function intersects( b : Bounds ) : Bool {
 		return !(xMin > b.xMax || yMin > b.yMax || xMax < b.xMin || yMax < b.yMin);
+	}
+
+	public inline function collideBounds( b : Bounds ) : Bool {
+		return intersects(b);
+	}
+
+	public inline function collideCircle( c : Circle ) : Bool {
+		return c.collideBounds(this);
 	}
 
 	/**
