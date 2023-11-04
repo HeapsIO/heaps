@@ -287,40 +287,40 @@ enum GPUMapMode {
 
 typedef GPUMapModeFlags = haxe.EnumFlags<GPUMapMode>;
 
-extern class GPUBuffer {
+extern class GPU_Buffer {
 	var size(default,null) : GPUSize64;
 	var usage(default,null) : GPUBufferUsageFlags;
 	var mapState(default,null) : GPUBufferMapState;
 	/**
-	 * Maps the given range of the {@link GPUBuffer} and resolves the returned {@link Promise} when the
-	 * {@link GPUBuffer}'s content is ready to be accessed with {@link GPUBuffer#getMappedRange}.
+	 * Maps the given range of the {@link GPU_Buffer} and resolves the returned {@link Promise} when the
+	 * {@link GPU_Buffer}'s content is ready to be accessed with {@link GPU_Buffer#getMappedRange}.
 	 * The resolution of the returned {@link Promise} **only** indicates that the buffer has been mapped.
 	 * It does not guarantee the completion of any other operations visible to the content timeline,
 	 * and in particular does not imply that any other {@link Promise} returned from
-	 * {@link GPUQueue#onSubmittedWorkDone()} or {@link GPUBuffer#mapAsync} on other {@link GPUBuffer}s
+	 * {@link GPUQueue#onSubmittedWorkDone()} or {@link GPU_Buffer#mapAsync} on other {@link GPU_Buffer}s
 	 * have resolved.
 	 * The resolution of the {@link Promise} returned from {@link GPUQueue#onSubmittedWorkDone}
 	 * **does** imply the completion of
-	 * {@link GPUBuffer#mapAsync} calls made prior to that call,
-	 * on {@link GPUBuffer}s last used exclusively on that queue.
+	 * {@link GPU_Buffer#mapAsync} calls made prior to that call,
+	 * on {@link GPU_Buffer}s last used exclusively on that queue.
 	 * @param mode - Whether the buffer should be mapped for reading or writing.
 	 * @param offset - Offset in bytes into the buffer to the start of the range to map.
 	 * @param size - Size in bytes of the range to map.
 	 */
 	function mapAsync( mode: GPUMapModeFlags, ?offset: GPUSize64, ?size: GPUSize64 ) : Promise<Void>;
 	/**
-	 * Returns an {@link ArrayBuffer} with the contents of the {@link GPUBuffer} in the given mapped range.
+	 * Returns an {@link ArrayBuffer} with the contents of the {@link GPU_Buffer} in the given mapped range.
 	 * @param offset - Offset in bytes into the buffer to return buffer contents from.
 	 * @param size - Size in bytes of the {@link ArrayBuffer} to return.
 	 */
 	function getMappedRange( ?offset: GPUSize64, ?size: GPUSize64 ) : js.lib.ArrayBuffer;
 	/**
-	 * Unmaps the mapped range of the {@link GPUBuffer} and makes it's contents available for use by the
+	 * Unmaps the mapped range of the {@link GPU_Buffer} and makes it's contents available for use by the
 	 * GPU again.
 	 */
 	function unmap() : Void;
 	/**
-	 * Destroys the {@link GPUBuffer}.
+	 * Destroys the {@link GPU_Buffer}.
 	 * Note: It is valid to destroy a buffer multiple times.
 	 * Note: Since no further operations can be enqueued using this buffer, implementations can
 	 * free resource allocations, including mapped memory that was just unmapped.
@@ -470,7 +470,7 @@ extern class GPUQueue {
 	function submit( commandBuffers: Array<GPUCommandBuffer> ) : Void;
 	function onSubmittedWorkDone() : Promise<Void>;
 	/**
-	 * Issues a write operation of the provided data into a {@link GPUBuffer}.
+	 * Issues a write operation of the provided data into a {@link GPU_Buffer}.
 	 * @param buffer - The buffer to write to.
 	 * @param bufferOffset - Offset in bytes into `buffer` to begin writing at.
 	 * @param data - Data to write into `buffer`.
@@ -479,7 +479,7 @@ extern class GPUQueue {
 	 * @param size - Size of content to write from `data` to `buffer`. Given in elements if
 	 * 	`data` is a `TypedArray` and bytes otherwise.
 	 */
-	function writeBuffer( buffer: GPUBuffer, bufferOffset: GPUSize64, data: BufferSource, ?dataOffset: GPUSize64, ?size: GPUSize64 ) : Void;
+	function writeBuffer( buffer: GPU_Buffer, bufferOffset: GPUSize64, data: BufferSource, ?dataOffset: GPUSize64, ?size: GPUSize64 ) : Void;
 	/**
 	 * Issues a write operation of the provided data into a {@link GPUTexture}.
 	 * @param destination - The texture subresource and origin to write to.
@@ -619,7 +619,7 @@ typedef GPUBufferDescriptor = {> GPUObjectDescriptorBase,
 	var usage: GPUBufferUsageFlags;
 	/**
 	 * If `true` creates the buffer in an already mapped state, allowing
-	 * {@link GPUBuffer#getMappedRange} to be called immediately. It is valid to set
+	 * {@link GPU_Buffer#getMappedRange} to be called immediately. It is valid to set
 	 * {@link GPUBufferDescriptor#mappedAtCreation} to `true` even if {@link GPUBufferDescriptor#usage}
 	 * does not contain {@link GPUBufferUsage#MAP_READ} or {@link GPUBufferUsage#MAP_WRITE}. This can be
 	 * used to set the buffer's initial data.
@@ -1153,7 +1153,7 @@ extern class GPURenderCommands extends GPUBindingCommands {
 	 * @param size - Size in bytes of the index data in `buffer`.
 	 * 	Defaults to the size of the buffer minus the offset.
 	 */
-	function setIndexBuffer( buffer: GPUBuffer, indexFormat: GPUIndexFormat, ?offset: GPUSize64, ?size: GPUSize64 ) : Void;
+	function setIndexBuffer( buffer: GPU_Buffer, indexFormat: GPUIndexFormat, ?offset: GPUSize64, ?size: GPUSize64 ) : Void;
 	/**
 	 * Sets the current vertex buffer for the given slot.
 	 * @param slot - The vertex buffer slot to set the vertex buffer for.
@@ -1162,7 +1162,7 @@ extern class GPURenderCommands extends GPUBindingCommands {
 	 * @param size - Size in bytes of the vertex data in `buffer`.
 	 * 	Defaults to the size of the buffer minus the offset.
 	 */
-	function setVertexBuffer( slot: GPUIndex32, buffer: GPUBuffer, ?offset: GPUSize64, ?size: GPUSize64 ) : Void;
+	function setVertexBuffer( slot: GPUIndex32, buffer: GPU_Buffer, ?offset: GPUSize64, ?size: GPUSize64 ) : Void;
 	/**
 	 * Draws primitives.
 	 * See [[#rendering-operations]] for the detailed specification.
@@ -1173,8 +1173,8 @@ extern class GPURenderCommands extends GPUBindingCommands {
 	 */
 	function draw( vertexCount: GPUSize32, ?instanceCount: GPUSize32, ?firstVertex: GPUSize32, ?firstInstance: GPUSize32 ) : Void;
 	function drawIndexed( indexCount: GPUSize32, ?instanceCount: GPUSize32, ?firstIndex: GPUSize32, ?baseVertex: GPUSignedOffset32, ?firstInstance: GPUSize32 ) : Void;
-	function drawIndirect( indirectBuffer: GPUBuffer, indirectOffset: GPUSize64 ) : Void;
-	function drawIndexedIndirect( indirectBuffer: GPUBuffer, indirectOffset: GPUSize64 ) : Void;
+	function drawIndirect( indirectBuffer: GPU_Buffer, indirectOffset: GPUSize64 ) : Void;
+	function drawIndexedIndirect( indirectBuffer: GPU_Buffer, indirectOffset: GPUSize64 ) : Void;
 }
 
 typedef GPUColor = {
@@ -1433,7 +1433,7 @@ extern class GPUComputePassEncoder extends GPUBindingCommands {
 	function dispatchWorkgroups( workgroupCountX: GPUSize32, ?workgroupCountY: GPUSize32, ?workgroupCountZ: GPUSize32 ) : Void;
 	/**
 	 * Dispatch work to be performed with the current {@link GPUComputePipeline} using parameters read
-	 * from a {@link GPUBuffer}.
+	 * from a {@link GPU_Buffer}.
 	 * See [[#computing-operations]] for the detailed specification.
 	 * packed block of **three 32-bit unsigned integer values (12 bytes total)**,
 	 * given in the same order as the arguments for {@link GPUComputePassEncoder#dispatchWorkgroups}.
@@ -1441,7 +1441,7 @@ extern class GPUComputePassEncoder extends GPUBindingCommands {
 	 * @param indirectBuffer - Buffer containing the indirect dispatch parameters.
 	 * @param indirectOffset - Offset in bytes into `indirectBuffer` where the dispatch data begins.
 	 */
-	function dispatchWorkgroupsIndirect( indirectBuffer: GPUBuffer, indirectOffset: GPUSize64 ) : Void;
+	function dispatchWorkgroupsIndirect( indirectBuffer: GPU_Buffer, indirectOffset: GPUSize64 ) : Void;
 	/**
 	 * Completes recording of the compute pass commands sequence.
 	 */
@@ -1461,17 +1461,17 @@ extern class GPUCommandEncoder extends GPUDebugCommands {
 	function beginComputePass( ?descriptor: GPUComputePassDescriptor ) : GPUComputePassEncoder;
 	/**
 	 * Encode a command into the {@link GPUCommandEncoder} that copies data from a sub-region of a
-	 * {@link GPUBuffer} to a sub-region of another {@link GPUBuffer}.
-	 * @param source - The {@link GPUBuffer} to copy from.
+	 * {@link GPU_Buffer} to a sub-region of another {@link GPU_Buffer}.
+	 * @param source - The {@link GPU_Buffer} to copy from.
 	 * @param sourceOffset - Offset in bytes into `source` to begin copying from.
-	 * @param destination - The {@link GPUBuffer} to copy to.
+	 * @param destination - The {@link GPU_Buffer} to copy to.
 	 * @param destinationOffset - Offset in bytes into `destination` to place the copied data.
 	 * @param size - Bytes to copy.
 	 */
-	function copyBufferToBuffer( source: GPUBuffer, sourceOffset: GPUSize64, destination: GPUBuffer, destinationOffset: GPUSize64, size: GPUSize64 ) : Void;
+	function copyBufferToBuffer( source: GPU_Buffer, sourceOffset: GPUSize64, destination: GPU_Buffer, destinationOffset: GPUSize64, size: GPUSize64 ) : Void;
 	/**
 	 * Encode a command into the {@link GPUCommandEncoder} that copies data from a sub-region of a
-	 * {@link GPUBuffer} to a sub-region of one or multiple continuous texture subresources.
+	 * {@link GPU_Buffer} to a sub-region of one or multiple continuous texture subresources.
 	 * @param source - Combined with `copySize`, defines the region of the source buffer.
 	 * @param destination - Combined with `copySize`, defines the region of the destination texture subresource.
 	 * 	`copySize`:
@@ -1479,7 +1479,7 @@ extern class GPUCommandEncoder extends GPUDebugCommands {
 	function copyBufferToTexture( source: GPUImageCopyBuffer, destination: GPUImageCopyTexture, copySize: GPUExtent3D ) : Void;
 	/**
 	 * Encode a command into the {@link GPUCommandEncoder} that copies data from a sub-region of one or
-	 * multiple continuous texture subresourcesto a sub-region of a {@link GPUBuffer}.
+	 * multiple continuous texture subresourcesto a sub-region of a {@link GPU_Buffer}.
 	 * @param source - Combined with `copySize`, defines the region of the source texture subresources.
 	 * @param destination - Combined with `copySize`, defines the region of the destination buffer.
 	 * 	`copySize`:
@@ -1496,12 +1496,12 @@ extern class GPUCommandEncoder extends GPUDebugCommands {
 	function copyTextureToTexture( source: GPUImageCopyTexture, destination: GPUImageCopyTexture, copySize: GPUExtent3D ) : Void;
 	/**
 	 * Encode a command into the {@link GPUCommandEncoder} that fills a sub-region of a
-	 * {@link GPUBuffer} with zeros.
-	 * @param buffer - The {@link GPUBuffer} to clear.
+	 * {@link GPU_Buffer} with zeros.
+	 * @param buffer - The {@link GPU_Buffer} to clear.
 	 * @param offset - Offset in bytes into `buffer` where the sub-region to clear begins.
 	 * @param size - Size in bytes of the sub-region to clear. Defaults to the size of the buffer minus `offset`.
 	 */
-	function clearBuffer( buffer: GPUBuffer, ?offset: GPUSize64, ?size: GPUSize64 ) : Void;
+	function clearBuffer( buffer: GPU_Buffer, ?offset: GPUSize64, ?size: GPUSize64 ) : Void;
 	/**
 	 * Writes a timestamp value into a querySet when all previous commands have completed executing.
 	 * @param querySet - The query set that will store the timestamp values.
@@ -1509,14 +1509,14 @@ extern class GPUCommandEncoder extends GPUDebugCommands {
 	 */
 	function writeTimestamp( querySet: GPUQuerySet, queryIndex: GPUSize32 ) : Void;
 	/**
-	 * Resolves query results from a {@link GPUQuerySet} out into a range of a {@link GPUBuffer}.
+	 * Resolves query results from a {@link GPUQuerySet} out into a range of a {@link GPU_Buffer}.
 	 * 	querySet:
 	 * 	firstQuery:
 	 * 	queryCount:
 	 * 	destination:
 	 * 	destinationOffset:
 	 */
-	function resolveQuerySet( querySet: GPUQuerySet, firstQuery: GPUSize32, queryCount: GPUSize32, destination: GPUBuffer, destinationOffset: GPUSize64 ) : Void;
+	function resolveQuerySet( querySet: GPUQuerySet, firstQuery: GPUSize32, queryCount: GPUSize32, destination: GPU_Buffer, destinationOffset: GPUSize64 ) : Void;
 	/**
 	 * Completes recording of the commands sequence and returns a corresponding {@link GPUCommandBuffer}.
 	 * 	descriptor:
@@ -1614,9 +1614,9 @@ extern class GPUSampler {}
 
 typedef GPUBufferBinding = {
 	/**
-	 * The {@link GPUBuffer} to bind.
+	 * The {@link GPU_Buffer} to bind.
 	 */
-	var buffer: GPUBuffer;
+	var buffer: GPU_Buffer;
 	/**
 	 * The offset, in bytes, from the beginning of {@link GPUBufferBinding#buffer} to the
 	 * beginning of the range exposed to the shader by the buffer binding.
@@ -1840,7 +1840,7 @@ extern class GPUDevice {
 	 */
 	function destroy() : Void;
 
-	function createBuffer( descriptor: GPUBufferDescriptor ) : GPUBuffer;
+	function createBuffer( descriptor: GPUBufferDescriptor ) : GPU_Buffer;
 	function createTexture( descriptor: GPUTextureDescriptor ) : GPUTexture;
 	function createSampler( ?descriptor: GPUSamplerDescriptor ) : GPUSampler;
 	//function importExternalTexture( descriptor: GPUExternalTextureDescriptor ) : GPUExternalTexture;

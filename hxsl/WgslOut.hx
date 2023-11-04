@@ -24,6 +24,7 @@ class WgslOut {
 	var decls : Array<String>;
 	var isVertex : Bool;
 	var allNames : Map<String, Int>;
+	var hasVarying : Bool;
 	public var varNames : Map<Int,String>;
 
 	var varAccess : Map<Int,String>;
@@ -422,14 +423,23 @@ class WgslOut {
 		for( f in s.funs )
 			collectGlobals(foundGlobals, f.expr);
 
-		add("struct s_input {\n");
-		var index = 0;
+		hasVarying = false;
 		for( v in s.vars )
-			if( v.kind == Input || (v.kind == Var && !isVertex) ) {
-				add('@location(${index++}) ');
-				declVar("_in.", v);
+			if( v.kind == Var ) {
+				hasVarying = true;
+				break;
 			}
-		add("};\n\n");
+
+		if( isVertex || hasVarying ) {
+			add("struct s_input {\n");
+			var index = 0;
+			for( v in s.vars )
+				if( v.kind == Input || (v.kind == Var && !isVertex) ) {
+					add('@location(${index++}) ');
+					declVar("_in.", v);
+				}
+			add("};\n\n");
+		}
 
 		add("struct s_output {\n");
 		var index = 0;
@@ -519,7 +529,8 @@ class WgslOut {
 	}
 
 	function initStatics( s : ShaderData ) {
-		add("var<private> _in : s_input;\n");
+		if( isVertex || hasVarying )
+			add("var<private> _in : s_input;\n");
 		add("var<private> _out : s_output;\n");
 
 		add("\n");
@@ -534,8 +545,12 @@ class WgslOut {
 
 	function emitMain( s : ShaderData, expr : TExpr ) {
 		add(isVertex ? "@vertex " : "@fragment ");
-		add("fn main( in__ : s_input ) -> s_output {\n");
-		add("\t_in = in__;\n");
+		if( isVertex || hasVarying ) {
+			add("fn main( in__ : s_input ) -> s_output {\n");
+			add("\t_in = in__;\n");
+		} else {
+			add("fn main() -> s_output {\n");
+		}
 		switch( expr.e ) {
 		case TBlock(el):
 			for( e in el ) {

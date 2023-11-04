@@ -5,7 +5,7 @@ import h3d.impl.WebGpuApi;
 import h3d.mat.Pass;
 
 class WebGpuShader {
-	public var inputs : InputNames;
+	public var format : hxd.BufferFormat;
 	public var pipeline : GPURenderPipeline;
 	public function new() {
 	}
@@ -28,11 +28,12 @@ class WebGpuDriver extends h3d.impl.Driver {
 	var device : GPUDevice;
 
 	var commandList : GPUCommandEncoder;
+	var commandUpload : GPUCommandEncoder;
 	var renderPass : GPURenderPassEncoder;
 	var renderPassDesc : GPURenderPassDescriptor;
 	var needClear : Bool;
 	var currentShader : WebGpuShader;
-	var shaderCache : Map<Int, WebGpuShader> = new Map();
+	var shadersCache : Map<Int, WebGpuShader> = new Map();
 	var frames : Array<WebGpuFrame> = [];
 	var frame : WebGpuFrame;
 	var frameCount : Int = 0;
@@ -100,7 +101,7 @@ class WebGpuDriver extends h3d.impl.Driver {
 		beginFrame();
 	}
 
-	override function setRenderTarget(tex:Null<h3d.mat.Texture>, layer:Int = 0, mipLevel:Int = 0) {
+	override function setRenderTarget(tex:Null<h3d.mat.Texture>, layer:Int = 0, mipLevel:Int = 0, depthBinding : h3d.Engine.DepthBinding = ReadWrite ) {
 		flushPass();
 		if( tex == null ) {
 			renderPassDesc = {
@@ -162,8 +163,12 @@ class WebGpuDriver extends h3d.impl.Driver {
 
 	function flushFrame() {
 		flushPass();
-		if( commandList != null ) {
-			device.queue.submit([commandList.finish()]);
+		if( commandList != null || commandUpload != null ) {
+			var arr = [];
+			if( commandUpload != null ) arr.push(commandUpload.finish());
+			if( commandList != null ) arr.push(commandList.finish());
+			device.queue.submit(arr);
+			commandUpload = null;
 			commandList = null;
 		}
 		frame = frame == frames[0] ? frames[1] : frames[0];
@@ -204,44 +209,70 @@ class WebGpuDriver extends h3d.impl.Driver {
 		return "WebGPU";
 	}
 
-	override function allocVertexes(m:ManagedBuffer):VertexBuffer {
-		return allocBuffer(VERTEX,m.size,m.stride << 2);
+	override function allocBuffer( b : h3d.Buffer ):GPUBuffer {
+		return _allocBuffer(VERTEX,b.vertices,b.format.strideBytes);
 	}
 
 	override function allocIndexes(count:Int, is32:Bool):IndexBuffer {
-		return allocBuffer(INDEX,count,is32?2:4);
+		var stride = is32?4:2;
+		var buf = _allocBuffer(INDEX,count,stride);
+		return { buf : buf, stride : stride };
 	}
 
-	function allocBuffer(type:GPUBufferUsage,count,stride) {
-		var buf = device.createBuffer({
-			size : count * stride,
-			usage : (type:GPUBufferUsageFlags) | COPY_DST,
-			mappedAtCreation: false,
+	function _allocBuffer(type:GPUBufferUsage,count,stride) {
+		var totSize = count * stride;
+		return device.createBuffer({
+			size : (totSize + 3) & ~3,
+			usage : (type:GPUBufferUsageFlags),
+			mappedAtCreation: true,
 		});
-		return { buf : buf, count : count, stride : stride };
 	}
 
-	override function uploadVertexBytes(v:VertexBuffer, startVertex:Int, vertexCount:Int, buf:haxe.io.Bytes, bufPos:Int) {
-		uploadBuffer(v,startVertex,vertexCount,buf,bufPos);
+	override function uploadBufferData( b : Buffer, startVertex : Int, vertexCount : Int, buf : hxd.FloatBuffer, bufPos : Int ) {
+		var buf : js.lib.Float32Array = buf.getNative();
+		var buf = new js.lib.Float32Array(buf.buffer, bufPos * 4, vertexCount * b.format.strideBytes >> 2);
+		uploadBuffer(b.vbuf,b.format.stride,startVertex,vertexCount,buf,0);
+	}
+
+	override function uploadBufferBytes(v:h3d.Buffer, startVertex:Int, vertexCount:Int, buf:haxe.io.Bytes, bufPos:Int) {
+		uploadBuffer(v.vbuf,v.format.stride,startVertex,vertexCount,cast buf.getData(),bufPos);
+	}
+
+	override function uploadIndexBuffer( i : IndexBuffer, startIndice : Int, indiceCount : Int, buf : hxd.IndexBuffer, bufPos : Int ) {
+		var buf = new js.lib.Uint16Array(buf.getNative());
+		var sub = new js.lib.Uint16Array(buf.buffer, bufPos * i.stride, indiceCount);
+		uploadBuffer(i.buf,i.stride,startIndice,indiceCount,sub,0);
 	}
 
 	override function uploadIndexBytes(i:IndexBuffer, startIndice:Int, indiceCount:Int, buf:haxe.io.Bytes, bufPos:Int) {
-		uploadBuffer(i,startIndice,indiceCount,buf,bufPos);
+		uploadBuffer(i.buf,i.stride,startIndice,indiceCount,cast buf.getData(),bufPos);
 	}
 
-	function uploadBuffer(b:VertexBuffer,start:Int,count:Int,buf:haxe.io.Bytes, bufPos:Int) {
-		var size = count * b.stride;
+	function uploadBuffer(buf:GPU_Buffer,stride:Int,start:Int,count:Int,data:Dynamic,bufPos:Int) {
+		/*
+		var size = ((count * stride) + 3) & ~3;
 		var tmpBuf = device.createBuffer({
 			size : size,
 			usage : (MAP_WRITE:GPUBufferUsageFlags) | COPY_SRC,
 			mappedAtCreation : true,
 		});
-		new js.lib.Uint8Array(tmpBuf.getMappedRange()).set(cast buf.getData(), bufPos);
+		new js.lib.Uint8Array(tmpBuf.getMappedRange()).set(data, bufPos);
 		tmpBuf.unmap();
 		// copy
-		commandList.copyBufferToBuffer(tmpBuf,0,b.buf,start*b.stride,size);
+		if( commandUpload == null )
+			commandUpload = device.createCommandEncoder();
+		commandUpload.copyBufferToBuffer(tmpBuf,0,buf,start*stride,size);
 		// delete later
 		frame.toDelete.push(tmpBuf);
+		*/
+		var map = buf.getMappedRange();
+		if( data is js.lib.Uint16Array )
+			new js.lib.Uint16Array(map).set(data,bufPos);
+		else if( data is js.lib.Float32Array )
+			new js.lib.Float32Array(map).set(data,bufPos);
+		else
+			new js.lib.Uint8Array(map).set(data,bufPos);
+		buf.unmap();
 	}
 
 
@@ -254,12 +285,13 @@ class WebGpuDriver extends h3d.impl.Driver {
 
 	function makeShader( shader : hxsl.RuntimeShader ) {
 		var sh = new WebGpuShader();
-		var attribNames = [];
+		var format : Array<hxd.BufferFormat.BufferInput> = [];
 		for( v in shader.vertex.data.vars ) {
 			if( v.kind != Input ) continue;
-			attribNames.push(v.name);
+			var t = hxd.BufferFormat.InputFormat.fromHXSL(v.type);
+			format.push({ name : v.name, type : t });
 		}
-		sh.inputs = InputNames.get(attribNames);
+		sh.format = hxd.BufferFormat.make(format);
 
 		var vertex = compile(shader.vertex);
 		var fragment = compile(shader.fragment);
@@ -270,12 +302,12 @@ class WebGpuDriver extends h3d.impl.Driver {
 			vertex : { module : vertex, entryPoint : "main", buffers : [
 				{
 					attributes: [{ shaderLocation : 0, offset : 0, format : Float32x3 }],
-					arrayStride: 4 * 3,
+					arrayStride: 4 * 6,
 					stepMode: GPUVertexStepMode.Vertex
 				},
 				{
-					attributes: [{ shaderLocation : 1, offset : 0, format : Float32x3 }],
-					arrayStride: 4 * 3, // sizeof(float) * 3
+					attributes: [{ shaderLocation : 1, offset : 3*4, format : Float32x3 }],
+					arrayStride: 4 * 6, // sizeof(float) * 3
 					stepMode: GPUVertexStepMode.Vertex
 				}
 			]},
@@ -294,10 +326,10 @@ class WebGpuDriver extends h3d.impl.Driver {
 	}
 
 	override function selectShader( shader : hxsl.RuntimeShader ) {
-		var sh = shaderCache.get(shader.id);
+		var sh = shadersCache.get(shader.id);
 		if( sh == null ) {
 			sh = makeShader(shader);
-			shaderCache.set(shader.id, sh);
+			shadersCache.set(shader.id, sh);
 		}
 		if( sh == currentShader )
 			return false;
@@ -307,13 +339,14 @@ class WebGpuDriver extends h3d.impl.Driver {
 		return true;
 	}
 
-	override function getShaderInputNames():InputNames {
-		return currentShader.inputs;
+	override function selectBuffer(b:Buffer) {
+		for( i in 0...@:privateAccess currentShader.format.inputs.length )
+			renderPass.setVertexBuffer(i, b.vbuf);
 	}
 
 	override function draw(ibuf:IndexBuffer, startIndex:Int, ntriangles:Int) {
 		renderPass.setIndexBuffer(ibuf.buf, ibuf.stride==2?Uint16:Uint32, startIndex*ibuf.stride);
-		renderPass.draw(ntriangles*3);
+		renderPass.drawIndexed(ntriangles*3);
 	}
 
 	static var inst : WebGpuDriver;
