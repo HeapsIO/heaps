@@ -1,99 +1,37 @@
 package hxd;
 
+import haxe.ds.ReadOnlyArray;
 import haxe.io.Bytes;
-
-/**
-	The Drag&Drop event type.
-
-	@see `hxd.DropFileEvent.kind`
-**/
-enum DropFileEventKind {
-	/**
-		User initiated the drag&drop operation by dragging content over the window.
-
-		Only fired if `DropFileEvent.SupportsOngoingEvent` is `true`.
-	**/
-	DropStart;
-	/**
-		User cancelled the drag&drop operation by moving cursor outside the window area.
-
-		Only fired if `DropFileEvent.SupportsOngoingEvent` is `true`.
-	**/
-	DropEnd;
-	/**
-		User continued the drag&drop operation by moving the cursor within the window area.
-
-		Only fired if `DropFileEvent.SupportsOngoingEvent` is `true`.
-	**/
-	DropMove;
-	/**
-		User confirmed the drag&drop operation.
-	**/
-	Drop;
-}
-
-/**
-	The type of the content that was drag&dropped by user.
-
-	@see `DroppedFile.kind`
-**/
-enum DropFileContentKind {
-	/**
-		The dropped file contents is a string.
-	**/
-	KString;
-	/**
-		The dropped file contents is a binary file.
-	**/
-	KFile;
-	/**
-		The dropped file contents are an unsupported type.
-	**/
-	KUnknown(type: String);
-}
 
 /**
 	The information about the dropped file.
 **/
-interface DroppedFile {
+abstract class DroppedFile {
 	/**
-		The content type of the dropped file.
+		The dropped file name/path.
 	**/
-	var kind : DropFileContentKind;
+	public var file(default, null) : String;
+	#if js
 	/**
-		The dropped file name if available.
+		The native JS data transfer file.
 	**/
-	var name : String;
-	/**
-		The dropped file MIME type if available.
-	**/
-	var type : String;
+	public var native(default, null) : js.html.File;
 
-	/**
-		Retrieve the dropped file contents as Bytes and pass it to `callback`.
-	**/
-	function getBytes( callback : (data : Bytes) -> Void ) : Void;
-	/**
-		Retrieve the dropped file contents as a String and pass to to `callback`.
-	**/
-	function getString( callback : (data : String) -> Void ) : Void;
-
-	/**
-		Return the native file information data.
-	**/
-	// function getNative()
-
-	#if !js
-	/**
-		[non-`js` target only] Returns the contents of the dropped file as Bytes.
-	**/
-	function getBytesSync() : Bytes;
-	/**
-		[non-`js` target only] Returns the contents of the dropped file as a String.
-	**/
-	function getStringSync() : String;
+	public function new( native : js.html.File ) {
+		this.file = native.name;
+		this.native = native;
+	}
+	#else
+	public function new( file : String ) {
+		this.file = file;
+	}
 	#end
 
+
+	/**
+		Retrieve the dropped file contents asynchronously and pass it to `callback`.
+	**/
+	abstract public function getBytes( callback : (data : Bytes) -> Void ) : Void;
 }
 
 /**
@@ -103,28 +41,29 @@ interface DroppedFile {
 	@see `hxd.Window.removeDragAndDropTarget`
 **/
 class DropFileEvent {
-
-	public static inline var SupportsOngoingEvent = #if js true #else false #end ;
-
-	/**
-		The event type of the drag&drop operation.
-	**/
-	public var kind: DropFileEventKind;
-
 	/**
 		The list of the files that were dropped.
 
 		Only guaranteed to be populated when `kind == Drop`.
 	**/
-	public var files: Array<DroppedFile>;
+	public var files(default, null): ReadOnlyArray<DroppedFile>;
 	/**
 		The first dropped file. Alias to `files[0]`.
 	**/
 	public var file(get, never): Null<DroppedFile>;
+	/**
+		The X position inside the window at which the file was dropped.
+	**/
+	public var dropX(default, null): Int;
+	/**
+		The Y position inside the window at which the file was dropped.
+	**/
+	public var dropY(default, null): Int;
 	
-	public function new(kind: DropFileEventKind, files: Array<DroppedFile>) {
-		this.kind = kind;
+	public function new( files : Array<DroppedFile>, dx : Int, dy : Int ) {
 		this.files = files;
+		this.dropX = dx;
+		this.dropY = dy;
 	}
 
 	inline function get_file() return files[0];

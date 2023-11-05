@@ -10,48 +10,13 @@ enum DisplayMode {
 	FullscreenResize;
 }
 
-private class NativeDroppedFile implements hxd.DropFileEvent.DroppedFile {
-
-	public var kind : hxd.DropFileEvent.DropFileContentKind;
-	public var name : String;
-	public var type : String;
-
-	var item : js.html.DataTransferItem;
-
-	public function new( item : js.html.DataTransferItem ) {
-		this.item = item;
-		if (item.kind == "file") {
-			var file = item.getAsFile();
-			this.name = file.name;
-			this.type = file.type;
-		} else {
-			this.name = "";
-			this.type = item.type;
-		}
-	}
+private class NativeDroppedFile extends hxd.DropFileEvent.DroppedFile {
 
 	public function getBytes( callback : ( data : haxe.io.Bytes ) -> Void ) {
-		if (item.kind == "file") {
-			var file = item.getAsFile();
-			var reader = new js.html.FileReader();
-			// TODO: Make sure no errors happen.
-			reader.onload = (_) -> callback(haxe.io.Bytes.ofData(reader.result));
-			reader.readAsArrayBuffer(file);
-		} else {
-			item.getAsString(( str : String ) -> callback(haxe.io.Bytes.ofString(str)) );
-		}
-	}
-
-	public function getString( callback : ( data : String ) -> Void ) {
-		if (item.kind == "file") {
-			var file = item.getAsFile();
-			var reader = new js.html.FileReader();
-			// TODO: Make sure no errors happen.
-			reader.onload = (_) -> callback(reader.result);
-			reader.readAsText(file);
-		} else {
-			item.getAsString(( str : String ) -> callback(str) );
-		}
+		var reader = new js.html.FileReader();
+		reader.onload = (_) -> callback(haxe.io.Bytes.ofData(reader.result));
+		reader.onerror = (_) -> callback(null);
+		reader.readAsArrayBuffer(native);
 	}
 
 }
@@ -61,7 +26,6 @@ class Window {
 	var resizeEvents : List<Void -> Void>;
 	var eventTargets : List<Event -> Void>;
 	var dropTargets : List<DropFileEvent -> Void>;
-	var dropDragEvent: DropFileEvent = new DropFileEvent(DropMove, null); // Reused drag event when dragging over time.
 
 	public var width(get, never) : Int;
 	public var height(get, never) : Int;
@@ -273,8 +237,6 @@ class Window {
 	public function addDragAndDropTarget( f : ( event : DropFileEvent ) -> Void ) : Void {
 		if( dropTargets.length == 0 ) {
 			var element = canvas; // Probably should adhere to `globalEvents`?
-			element.addEventListener("dragenter", handleDragAndDropEvent);
-			element.addEventListener("dragleave", handleDragAndDropEvent);
 			element.addEventListener("dragover", handleDragAndDropEvent);
 			element.addEventListener("drop", handleDragAndDropEvent);
 		}
@@ -289,32 +251,21 @@ class Window {
 			}
 		if( dropTargets.length == 0 ) {
 			var element = canvas; // Probably should adhere to `globalEvents`?
-			element.removeEventListener("dragenter", handleDragAndDropEvent);
-			element.removeEventListener("dragleave", handleDragAndDropEvent);
 			element.removeEventListener("dragover", handleDragAndDropEvent);
 			element.removeEventListener("drop", handleDragAndDropEvent);
 		}
 	}
 
 	function handleDragAndDropEvent( e : js.html.DragEvent ) {
-		var files : Array<hxd.DropFileEvent.DroppedFile> = [];
-		// TODO: Don't allocate dropped file every time, only when it changes.
-		if( e.dataTransfer != null )
-			for( i in 0...e.dataTransfer.items.length )
-				files.push(new NativeDroppedFile(e.dataTransfer.items[i]));
-		var ev = switch( e.type ) {
-			case "dragenter":
-				new DropFileEvent(DropStart, files);
-			case "dragleave":
-				new DropFileEvent(DropEnd, files);
-			case "drop":
-				new DropFileEvent(Drop, files);
-			case "dragover":
-				dropDragEvent.files = files;
-				dropDragEvent;
-			default: throw "assert";
-		}
-		for( e in dropTargets ) e(ev);
+		e.preventDefault();
+		if ( e.type == "dragover" || e.dataTransfer == null || e.dataTransfer.files.length == 0 ) return;
+		var ev = new DropFileEvent([
+				for ( file in e.dataTransfer.files ) new NativeDroppedFile(file)
+			],
+			Math.round((e.clientX - canvasPos.left) * getPixelRatio()),
+			Math.round((e.clientY - canvasPos.top) * getPixelRatio())
+		);
+		for( dt in dropTargets ) dt(ev);
 	}
 
 	@:deprecated("Use the displayMode property instead")
