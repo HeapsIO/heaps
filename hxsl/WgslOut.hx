@@ -74,13 +74,13 @@ class WgslOut {
 			}
 			add('>');
 		case TMat2:
-			add("float2x2");
+			add("mat2x2f");
 		case TMat3:
-			add("float3x3");
+			add("mat3x3f");
 		case TMat4:
-			add("float4x4");
+			add("mat4x4f");
 		case TMat3x4:
-			add("float4x3");
+			add("mat3x4f");
 		case TSampler2D:
 			add("Texture2D");
 		case TSamplerCube:
@@ -97,15 +97,16 @@ class WgslOut {
 		case TFun(_):
 			add("fn ");
 		case TArray(t, size), TBuffer(t,size):
+			add("array<");
 			addType(t);
-			add("[");
+			add(",");
 			switch( size ) {
 			case SVar(v):
 				ident(v);
 			case SConst(v):
 				add(v);
 			}
-			add("]");
+			add(">");
 		case TChannel(n):
 			add("channel" + n);
 		}
@@ -121,20 +122,9 @@ class WgslOut {
 	}
 
 	function addVar( v : TVar ) {
-		switch( v.type ) {
-		case TArray(t, size), TBuffer(t,size):
-			addVar({
-				id : v.id,
-				name : v.name,
-				type : t,
-				kind : v.kind,
-			});
-			addArraySize(size);
-		default:
-			ident(v);
-			add(" : ");
-			addType(v.type);
-		}
+		ident(v);
+		add(" : ");
+		addType(v.type);
 	}
 
 	function addValue( e : TExpr, tabs : String ) {
@@ -486,7 +476,6 @@ class WgslOut {
 
 		var textures = [];
 		var buffers = [];
-		add('struct _params {\n');
 		for( v in s.vars )
 			if( v.kind == Param ) {
 				switch( v.type ) {
@@ -502,11 +491,10 @@ class WgslOut {
 						continue;
 					}
 				}
-				add("\t");
+				add("@group(0) @binding(0) var<uniform> ");
 				addVar(v);
 				add(";\n");
 			}
-		add("};\n\n");
 
 		var bufCount = 0;
 		for( b in buffers ) {

@@ -1631,7 +1631,8 @@ typedef GPUBufferBinding = {
 
 extern class GPUExternalTexture {}
 
-typedef GPUBindingResource = haxe.ds.Either<GPUSampler,haxe.ds.Either<GPUTextureView, haxe.ds.Either<GPUBufferBinding,GPUExternalTexture>>>;
+abstract GPUBindingResource(Dynamic) from GPUSampler from GPUTextureView from GPUBufferBinding from GPUExternalTexture {
+}
 
 
 typedef GPUBindGroupEntry = {

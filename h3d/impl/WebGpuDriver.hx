@@ -4,8 +4,20 @@ import h3d.impl.Driver;
 import h3d.impl.WebGpuApi;
 import h3d.mat.Pass;
 
+class WebGpuSubShader {
+	public var kind : GPUShaderStage;
+	public var module : GPUShaderModule;
+	public var groups : Array<GPUBindGroupLayout>;
+	public var paramsBufferSize : Int;
+	public function new() {
+	}
+}
+
 class WebGpuShader {
 	public var format : hxd.BufferFormat;
+	public var vertex : WebGpuSubShader;
+	public var fragment : WebGpuSubShader;
+	public var layout : GPUPipelineLayout;
 	public var pipeline : GPURenderPipeline;
 	public function new() {
 	}
@@ -276,30 +288,53 @@ class WebGpuDriver extends h3d.impl.Driver {
 	}
 
 
-	function compile( shader : hxsl.RuntimeShader.RuntimeShaderData ) {
+	function compile( shader : hxsl.RuntimeShader.RuntimeShaderData, kind ) {
 		var comp = new hxsl.WgslOut();
 		var source = comp.run(shader.data);
-		trace(source);
-		return device.createShaderModule({ code : source });
+		var sh = new WebGpuSubShader();
+		sh.kind = kind;
+		sh.module = device.createShaderModule({ code : source });
+		sh.groups = [];
+		for( v in shader.data.vars ) {
+			switch( v.kind ) {
+			case Param:
+				var size = hxsl.Ast.Tools.size(v.type) * 4;
+				var g = device.createBindGroupLayout({ entries : [{
+					binding: 0,
+					visibility : kind,
+					buffer : {
+						type : Uniform,
+						hasDynamicOffset : false,
+						minBindingSize: size,
+					}
+				}]});
+				sh.paramsBufferSize = size;
+				sh.groups.push(g);
+			default:
+			}
+		}
+		return sh;
 	}
 
 	function makeShader( shader : hxsl.RuntimeShader ) {
 		var sh = new WebGpuShader();
 		var format : Array<hxd.BufferFormat.BufferInput> = [];
 		for( v in shader.vertex.data.vars ) {
-			if( v.kind != Input ) continue;
-			var t = hxd.BufferFormat.InputFormat.fromHXSL(v.type);
-			format.push({ name : v.name, type : t });
+			switch( v.kind ) {
+			case Input:
+				var t = hxd.BufferFormat.InputFormat.fromHXSL(v.type);
+				format.push({ name : v.name, type : t });
+			default:
+			}
 		}
 		sh.format = hxd.BufferFormat.make(format);
+		sh.vertex = compile(shader.vertex,VERTEX);
+		sh.fragment = compile(shader.fragment,FRAGMENT);
+		sh.layout = device.createPipelineLayout({ bindGroupLayouts: sh.vertex.groups.concat(sh.fragment.groups) });
 
-		var vertex = compile(shader.vertex);
-		var fragment = compile(shader.fragment);
-
-		var layout = device.createPipelineLayout({ bindGroupLayouts: [] });
 		var pipeline = device.createRenderPipeline({
-			layout : layout,
-			vertex : { module : vertex, entryPoint : "main", buffers : [
+			layout : sh.layout,
+			vertex : { module : sh.vertex.module, entryPoint : "main", buffers : [
 				{
 					attributes: [{ shaderLocation : 0, offset : 0, format : Float32x3 }],
 					arrayStride: 4 * 6,
@@ -311,7 +346,7 @@ class WebGpuDriver extends h3d.impl.Driver {
 					stepMode: GPUVertexStepMode.Vertex
 				}
 			]},
-			fragment : { module : fragment, entryPoint : "main", targets : [{ format : Bgra8unorm }] },
+			fragment : { module : sh.fragment.module, entryPoint : "main", targets : [{ format : Bgra8unorm }] },
 			primitive : { frontFace : CW, cullMode : None, topology : Triangle_list },
 			depthStencil : {
 				depthWriteEnabled: true,
@@ -342,6 +377,50 @@ class WebGpuDriver extends h3d.impl.Driver {
 	override function selectBuffer(b:Buffer) {
 		for( i in 0...@:privateAccess currentShader.format.inputs.length )
 			renderPass.setVertexBuffer(i, b.vbuf);
+	}
+
+	override function uploadShaderBuffers(buffers:h3d.shader.Buffers, which:h3d.shader.Buffers.BufferKind) {
+		_uploadShaderBuffers(buffers.vertex, which, currentShader.vertex);
+		_uploadShaderBuffers(buffers.fragment, which, currentShader.fragment);
+	}
+
+	function _uploadShaderBuffers(buffers:h3d.shader.Buffers.ShaderBuffers, which:h3d.shader.Buffers.BufferKind, sh:WebGpuSubShader) {
+		switch( which ) {
+		case Globals:
+			if( buffers.globals.length == 0 )
+				return;
+			throw "TODO";
+		case Params:
+			if( buffers.params.length == 0 )
+				return;
+			var flags = new haxe.EnumFlags();
+			var buffer = device.createBuffer({
+				size : sh.paramsBufferSize,
+				usage : UNIFORM,
+				mappedAtCreation : true,
+			});
+			var map = buffer.getMappedRange();
+			new js.lib.Float32Array(map).set(cast buffers.params);
+			buffer.unmap();
+			var group = device.createBindGroup({
+				layout : sh.groups[0],
+				entries: [{
+					binding: 0,
+					resource: {
+						buffer : buffer,
+					}
+				}],
+			});
+			renderPass.setBindGroup(0, group);
+		case Textures:
+			if( buffers.tex.length == 0 )
+				return;
+			throw "TODO";
+		case Buffers:
+			if( buffers.buffers == null || buffers.buffers.length == 0 )
+				return;
+			throw "TODO";
+		}
 	}
 
 	override function draw(ibuf:IndexBuffer, startIndex:Int, ntriangles:Int) {
