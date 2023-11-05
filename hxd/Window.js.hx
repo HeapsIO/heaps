@@ -12,6 +12,11 @@ enum DisplayMode {
 
 private class NativeDroppedFile extends hxd.DropFileEvent.DroppedFile {
 
+	public function new( native : js.html.File ) {
+		super(native.name);
+		this.native = native;
+	}
+
 	public function getBytes( callback : ( data : haxe.io.Bytes ) -> Void ) {
 		var reader = new js.html.FileReader();
 		reader.onload = (_) -> callback(haxe.io.Bytes.ofData(reader.result));

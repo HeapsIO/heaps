@@ -17,15 +17,11 @@ abstract class DroppedFile {
 	**/
 	public var native(default, null) : js.html.File;
 
-	public function new( native : js.html.File ) {
-		this.file = native.name;
-		this.native = native;
-	}
-	#else
+	#end
+
 	public function new( file : String ) {
 		this.file = file;
 	}
-	#end
 
 
 	/**
