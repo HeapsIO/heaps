@@ -3,7 +3,6 @@ package h3d.impl;
 class MemoryManager {
 
 	static inline var MAX_MEMORY = 4096 * (1024. * 1024.); // MB
-	static inline var MAX_BUFFERS = 65536;
 	static inline var SIZE = 65532;
 	static var ALL_FLAGS = Type.allEnums(Buffer.BufferFlag);
 
@@ -112,17 +111,14 @@ class MemoryManager {
 
 		if( mem == 0 ) return;
 
-		while( usedMemory + mem > MAX_MEMORY || buffers.length >= MAX_BUFFERS || (b.vbuf = driver.allocBuffer(b)) == null ) {
+		while( usedMemory + mem > MAX_MEMORY || (b.vbuf = driver.allocBuffer(b)) == null ) {
 
 			if( driver.isDisposed() ) return;
 
 			var size = usedMemory;
 			garbage();
-			if( usedMemory == size ) {
-				if( buffers.length >= MAX_BUFFERS )
-					throw "Too many buffers";
+			if( usedMemory == size )
 				throw "Memory full (" + Math.fceil(size / 1024) + " KB," + buffers.length + " buffers)";
-			}
 		}
 		usedMemory += mem;
 		buffers.push(b);
