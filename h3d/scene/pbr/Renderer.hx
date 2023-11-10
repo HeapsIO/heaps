@@ -48,6 +48,7 @@ typedef RenderProps = {
 	var ?c : Float;
 	var ?d : Float;
 	var ?e : Float;
+	var ?forceDirectDiscard : Bool;
 }
 
 class DepthCopy extends h3d.shader.ScreenShader {
@@ -75,7 +76,6 @@ class Renderer extends h3d.scene.Renderer {
 	var currentStep : h3d.impl.RendererFX.Step;
 	var performance = new h3d.pass.ScreenFx(new h3d.shader.pbr.PerformanceViewer());
 	var indirectEnv = true;
-	var forceDirectDiscard = false;
 
 	var textures = {
 		albedo : (null:h3d.mat.Texture),
@@ -453,7 +453,7 @@ class Renderer extends h3d.scene.Renderer {
 			pbrIndirect.drawIndirectDiffuse = true;
 			pbrIndirect.drawIndirectSpecular = true;
 
-			pbrDirect.doDiscard = forceDirectDiscard;
+			pbrDirect.doDiscard = props.forceDirectDiscard ?? false;
 			switch( renderMode ) {
 			case Default:
 				pbrIndirect.showSky = skyMode != Hide;
@@ -803,6 +803,7 @@ class Renderer extends h3d.scene.Renderer {
 							</select>
 						</dd>
 						'+(skyMode==CustomColor?'<dt>Sky Color</dt><dd><input type="color" field="skyColor"/></dd>':'')+'
+					<dt>Force direct discard</dt><dd><input type="checkbox" field="forceDirectDiscard"></dd>
 				</div>
 
 				<div class="group" name="Params">
