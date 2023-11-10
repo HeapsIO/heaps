@@ -75,6 +75,7 @@ class Renderer extends h3d.scene.Renderer {
 	var currentStep : h3d.impl.RendererFX.Step;
 	var performance = new h3d.pass.ScreenFx(new h3d.shader.pbr.PerformanceViewer());
 	var indirectEnv = true;
+	var forceDirectDiscard = false;
 
 	var textures = {
 		albedo : (null:h3d.mat.Texture),
@@ -452,7 +453,7 @@ class Renderer extends h3d.scene.Renderer {
 			pbrIndirect.drawIndirectDiffuse = true;
 			pbrIndirect.drawIndirectSpecular = true;
 
-			pbrDirect.doDiscard = false;
+			pbrDirect.doDiscard = forceDirectDiscard;
 			switch( renderMode ) {
 			case Default:
 				pbrIndirect.showSky = skyMode != Hide;
