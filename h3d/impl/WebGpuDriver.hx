@@ -18,7 +18,8 @@ class WebGpuShader {
 	public var vertex : WebGpuSubShader;
 	public var fragment : WebGpuSubShader;
 	public var layout : GPUPipelineLayout;
-	public var pipeline : GPURenderPipeline;
+	public var inputCount : Int;
+	public var pipelines : PipelineCache<GPURenderPipeline> = new PipelineCache();
 	public function new() {
 	}
 }
@@ -49,6 +50,8 @@ class WebGpuDriver extends h3d.impl.Driver {
 	var frames : Array<WebGpuFrame> = [];
 	var frame : WebGpuFrame;
 	var frameCount : Int = 0;
+	var pipelineBuilder = new PipelineCache.PipelineBuilder();
+	var curStencilRef : Int;
 
 	public function new() {
 		inst = this;
@@ -115,6 +118,7 @@ class WebGpuDriver extends h3d.impl.Driver {
 
 	override function setRenderTarget(tex:Null<h3d.mat.Texture>, layer:Int = 0, mipLevel:Int = 0, depthBinding : h3d.Engine.DepthBinding = ReadWrite ) {
 		flushPass();
+		pipelineBuilder.setRenderTarget(tex, depthBinding != NotBound);
 		if( tex == null ) {
 			renderPassDesc = {
 				colorAttachments : [{
@@ -133,6 +137,10 @@ class WebGpuDriver extends h3d.impl.Driver {
 			return;
 		}
 		throw "TODO";
+	}
+
+	override function setRenderTargets(textures:Array<h3d.mat.Texture>, depthBinding:h3d.Engine.DepthBinding = ReadWrite) {
+		pipelineBuilder.setRenderTargets(textures, depthBinding != NotBound);
 	}
 
 	function beginFrame() {
@@ -159,6 +167,7 @@ class WebGpuDriver extends h3d.impl.Driver {
 			depth.depthClearValue = js.Lib.undefined;
 			depth.stencilClearValue = js.Lib.undefined;
 		}
+		curStencilRef = -1;
 		needClear = false;
 	}
 
@@ -331,33 +340,17 @@ class WebGpuDriver extends h3d.impl.Driver {
 		sh.vertex = compile(shader.vertex,VERTEX);
 		sh.fragment = compile(shader.fragment,FRAGMENT);
 		sh.layout = device.createPipelineLayout({ bindGroupLayouts: sh.vertex.groups.concat(sh.fragment.groups) });
-
-		var pipeline = device.createRenderPipeline({
-			layout : sh.layout,
-			vertex : { module : sh.vertex.module, entryPoint : "main", buffers : [
-				{
-					attributes: [{ shaderLocation : 0, offset : 0, format : Float32x3 }],
-					arrayStride: 4 * 6,
-					stepMode: GPUVertexStepMode.Vertex
-				},
-				{
-					attributes: [{ shaderLocation : 1, offset : 3*4, format : Float32x3 }],
-					arrayStride: 4 * 6, // sizeof(float) * 3
-					stepMode: GPUVertexStepMode.Vertex
-				}
-			]},
-			fragment : { module : sh.fragment.module, entryPoint : "main", targets : [{ format : Bgra8unorm }] },
-			primitive : { frontFace : CW, cullMode : None, topology : Triangle_list },
-			depthStencil : {
-				depthWriteEnabled: true,
-				depthCompare: Less,
-				format: Depth24plus_stencil8
-			}
-		});
-
-		sh.pipeline = pipeline;
-
+		sh.inputCount = format.length;
 		return sh;
+	}
+
+	override function selectMaterial( pass : h3d.mat.Pass ) {
+		pipelineBuilder.selectMaterial(pass);
+		var st = pass.stencil;
+		if( st != null && curStencilRef != st.reference ) {
+			curStencilRef = st.reference;
+			renderPass.setStencilReference(st.reference);
+		}
 	}
 
 	override function selectShader( shader : hxsl.RuntimeShader ) {
@@ -370,13 +363,16 @@ class WebGpuDriver extends h3d.impl.Driver {
 			return false;
 		currentShader = sh;
 		beginPass();
-		renderPass.setPipeline(sh.pipeline);
+		pipelineBuilder.setShader(shader);
 		return true;
 	}
 
-	override function selectBuffer(b:Buffer) {
-		for( i in 0...@:privateAccess currentShader.format.inputs.length )
-			renderPass.setVertexBuffer(i, b.vbuf);
+	override function selectBuffer(buffer:Buffer) {
+		var map = buffer.format.resolveMapping(currentShader.format);
+		for( i in 0...currentShader.inputCount ) {
+			renderPass.setVertexBuffer(i, buffer.vbuf);
+			pipelineBuilder.setBuffer(i, map[i], buffer.format.strideBytes);
+		}
 	}
 
 	override function uploadShaderBuffers(buffers:h3d.shader.Buffers, which:h3d.shader.Buffers.BufferKind) {
@@ -423,10 +419,66 @@ class WebGpuDriver extends h3d.impl.Driver {
 		}
 	}
 
+	function flushPipeline() {
+		if( !pipelineBuilder.needFlush ) return;
+		var cache = pipelineBuilder.lookup(currentShader.pipelines, currentShader.inputCount);
+		if( cache.pipeline == null )
+			cache.pipeline = makePipeline(currentShader);
+		renderPass.setPipeline(cache.pipeline);
+	}
+
+	function makePipeline( sh : WebGpuShader ) {
+		var buffers : Array<GPUVertexBufferLayout> = [];
+		var targets = [{ format : Bgra8unorm }];
+		var pass = pipelineBuilder.getCurrentPass();
+		for( i in 0...sh.inputCount ) {
+			var inf = pipelineBuilder.getBufferInput(i);
+			var type = @:privateAccess currentShader.format.inputs[i].type;
+			if( inf.precision != F32 ) throw "TODO";
+			buffers.push({
+				attributes: [{ shaderLocation : i, offset : inf.offset, format :
+					switch( type ) {
+					case DFloat: Float32;
+					case DVec2: Float32x2;
+					case DVec3: Float32x3;
+					case DVec4: Float32x4;
+					case DBytes4: Uint8x4;
+					}
+				}],
+				arrayStride : pipelineBuilder.getBufferStride(i),
+				stepMode: GPUVertexStepMode.Vertex,
+			});
+		}
+		var pipeline = device.createRenderPipeline({
+			layout : sh.layout,
+			vertex : { module : sh.vertex.module, entryPoint : "main", buffers : buffers },
+			fragment : { module : sh.fragment.module, entryPoint : "main", targets : targets },
+			primitive : { frontFace : CW, cullMode : switch( pass.culling ) { case None, Both: None; case Back: Back; case Front: Front; }, topology : Triangle_list },
+			depthStencil : {
+				depthWriteEnabled: pass.depthWrite,
+				depthCompare: COMPARE[pass.depthTest.getIndex()],
+				format: Depth24plus_stencil8
+			}
+		});
+		return pipeline;
+	}
+
 	override function draw(ibuf:IndexBuffer, startIndex:Int, ntriangles:Int) {
+		flushPipeline();
 		renderPass.setIndexBuffer(ibuf.buf, ibuf.stride==2?Uint16:Uint32, startIndex*ibuf.stride);
 		renderPass.drawIndexed(ntriangles*3);
 	}
+
+	static var COMPARE : Array<GPUCompareFunction> = [
+		Always,
+		Never,
+		Equal,
+		Not_equal,
+		Greater,
+		Greater_equal,
+		Less,
+		Less_equal,
+	];
 
 	static var inst : WebGpuDriver;
 	static function checkReady() {
