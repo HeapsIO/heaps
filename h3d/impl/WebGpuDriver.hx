@@ -8,7 +8,7 @@ class WebGpuSubShader {
 	public var kind : GPUShaderStage;
 	public var module : GPUShaderModule;
 	public var groups : Array<GPUBindGroupLayout>;
-	public var paramsBufferSize : Int;
+	public var paramsBufferSize : Int = 0;
 	public function new() {
 	}
 }
@@ -387,7 +387,7 @@ class WebGpuDriver extends h3d.impl.Driver {
 				return;
 			throw "TODO";
 		case Params:
-			if( buffers.params.length == 0 )
+			if( sh.paramsBufferSize == 0 )
 				return;
 			var flags = new haxe.EnumFlags();
 			var buffer = device.createBuffer({
@@ -429,8 +429,23 @@ class WebGpuDriver extends h3d.impl.Driver {
 
 	function makePipeline( sh : WebGpuShader ) {
 		var buffers : Array<GPUVertexBufferLayout> = [];
-		var targets = [{ format : Bgra8unorm }];
 		var pass = pipelineBuilder.getCurrentPass();
+		var targets = [{
+			format : Bgra8unorm,
+			writeMask : pass.colorMask,
+			blend : {
+				color : {
+					operation : OP[pass.blendOp.getIndex()],
+					srcFactor : BLEND[pass.blendSrc.getIndex()],
+					dstFactor : BLEND[pass.blendDst.getIndex()],
+				},
+				alpha : {
+					operation : OP[pass.blendAlphaOp.getIndex()],
+					srcFactor : BLEND[pass.blendAlphaSrc.getIndex()],
+					dstFactor : BLEND[pass.blendAlphaDst.getIndex()],
+				},
+			},
+		}];
 		for( i in 0...sh.inputCount ) {
 			var inf = pipelineBuilder.getBufferInput(i);
 			var type = @:privateAccess currentShader.format.inputs[i].type;
@@ -478,6 +493,27 @@ class WebGpuDriver extends h3d.impl.Driver {
 		Greater_equal,
 		Less,
 		Less_equal,
+	];
+
+	static var OP : Array<GPUBlendOperation> = [
+		Add,
+		Subtract,
+		Reverse_subtract,
+		Min,
+		Max,
+	];
+
+	static var BLEND : Array<GPUBlendFactor> = [
+		One,
+		Zero,
+		Src_alpha,
+		Src,
+		Dst_alpha,
+		Dst,
+		One_minus_src_alpha,
+		One_minus_src,
+		One_minus_dst_alpha,
+		One_minus_dst,
 	];
 
 	static var inst : WebGpuDriver;
