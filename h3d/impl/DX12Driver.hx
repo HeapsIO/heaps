@@ -1635,7 +1635,7 @@ class DX12Driver extends h3d.impl.Driver {
 			v.sizeInBytes = bview.sizeInBytes;
 			v.strideInBytes = bview.strideInBytes;
 			if( inf.offset >= 256 ) throw "assert";
-			pipelineBuilder.setBuffer(i, inf);
+			pipelineBuilder.setBuffer(i, inf, bview.strideInBytes);
 		}
 		frame.commandList.iaSetVertexBuffers(0, currentShader.inputCount, views[0]);
 	}
@@ -1651,7 +1651,7 @@ class DX12Driver extends h3d.impl.Driver {
 			v.sizeInBytes = bview.sizeInBytes;
 			v.strideInBytes = bview.strideInBytes;
 			if( inf.offset >= 256 ) throw "assert";
-			pipelineBuilder.setBuffer(i, inf);
+			pipelineBuilder.setBuffer(i, inf, bview.strideInBytes);
 		}
 		frame.commandList.iaSetVertexBuffers(0, map.length, views[0]);
 	}

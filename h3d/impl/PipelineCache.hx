@@ -1,7 +1,50 @@
 package h3d.impl;
 
+#if hl
+@:forward(setI32,setUI8,setUI16,getUI8,getUI16,getI32,sub)
+private abstract Bytes(hl.Bytes) from hl.Bytes {
+	public function new(size) this = new hl.Bytes(size);
+	public inline function compare( bytes : Bytes, size : Int ) {
+		return this.compare(0, bytes, 0, size);
+	}
+}
+#else
+@:forward(sub)
+private abstract Bytes(haxe.io.Bytes) from haxe.io.Bytes {
+	public function new(size) {
+		this = haxe.io.Bytes.alloc(size);
+	}
+	public inline function setI32(idx:Int,v:Int) {
+		this.setInt32(idx, v);
+	}
+	public inline function setUI8(idx:Int,v:Int) {
+		this.set(idx, v);
+	}
+	public inline function setUI16(idx:Int,v:Int) {
+		this.setUInt16(idx, v);
+	}
+	public inline function getI32(idx:Int) {
+		return this.getInt32(idx);
+	}
+	public inline function getUI8(idx:Int) {
+		return this.get(idx);
+	}
+	public inline function getUI16(idx:Int) {
+		return this.getUInt16(idx);
+	}
+	public function compare( bytes : Bytes, size : Int ) {
+		var bytes : haxe.io.Bytes = cast bytes;
+		for( i in 0...size ) {
+			var d = this.get(i) - bytes.get(i);
+			if( d != 0 ) return d;
+		}
+		return 0;
+	}
+}
+#end
+
 @:generic class CachedPipeline<T> {
-	public var bytes : hl.Bytes;
+	public var bytes : Bytes;
 	public var size : Int;
 	public var pipeline : T;
 	public function new() {
@@ -9,7 +52,7 @@ package h3d.impl;
 }
 
 @:forward(get,set)
-abstract PipelineCache<T>(Map<Int,hl.NativeArray<CachedPipeline<T>>>) {
+abstract PipelineCache<T>(Map<Int,#if hl hl.NativeArray #else Array #end<CachedPipeline<T>>>) {
 
 	public function new() {
 		this = new Map();
@@ -27,15 +70,19 @@ class PipelineBuilder {
 	static inline var PSIGN_RENDER_TARGETS = PSIGN_STENCIL_OPS + 4;
 	static inline var PSIGN_LAYOUT = PSIGN_RENDER_TARGETS + 8;
 	static inline var MAX_BUFFERS = 8;
-	static inline var PSIGN_SIZE = PSIGN_LAYOUT + MAX_BUFFERS * 2;
+	static inline var SHIFT_PER_BUFFER = #if js 2 #else 1 #end;
+	static inline var PSIGN_SIZE = PSIGN_LAYOUT + (MAX_BUFFERS << SHIFT_PER_BUFFER);
 
 	public var needFlush : Bool;
-	var signature = new hl.Bytes(64);
-	var adlerOut = new hl.Bytes(4);
+	var signature = new Bytes(64);
 	var tmpPass = new h3d.mat.Pass("");
 	var tmpStencil = new h3d.mat.Stencil();
+	#if hl
+	var adlerOut = new Bytes(4);
+	#end
 
 	public function new() {
+		if( PSIGN_SIZE > 64 ) throw "assert";
 	}
 
 	static function getRTBits( tex : h3d.mat.Texture ) {
@@ -95,8 +142,11 @@ class PipelineBuilder {
 		needFlush = true;
 	}
 
-	public inline function setBuffer( i : Int, inf : hxd.BufferFormat.BufferMapping ) {
-		signature.setUI16(PSIGN_LAYOUT + (i<<1), (inf.offset << 1) | inf.precision.toInt());
+	public inline function setBuffer( i : Int, inf : hxd.BufferFormat.BufferMapping, stride : Int ) {
+		signature.setUI16(PSIGN_LAYOUT + (i<<SHIFT_PER_BUFFER), (inf.offset << 1) | inf.precision.toInt());
+		#if js
+		signature.setUI16(PSIGN_LAYOUT + (i<<SHIFT_PER_BUFFER) + 2, stride);
+		#end
 		needFlush = true;
 	}
 
@@ -117,20 +167,41 @@ class PipelineBuilder {
 	}
 
 	public function getBufferInput( i : Int ) {
-		var b = signature.getUI16(PSIGN_LAYOUT + (i<<1));
+		var b = signature.getUI16(PSIGN_LAYOUT + (i<<SHIFT_PER_BUFFER));
 		return new hxd.BufferFormat.BufferMapping(i, (b >> 1) & ~3, @:privateAccess new hxd.BufferFormat.Precision(b & 7));
+	}
+
+	#if js
+	public function getBufferStride( i : Int ) {
+		return signature.getUI16(PSIGN_LAYOUT + (i << SHIFT_PER_BUFFER) + 2);
+	}
+	#end
+
+	function hashSign( size : Int ) {
+		#if hl
+		adlerOut.setI32(0, 0);
+		hl.Format.digest(adlerOut, signature, signatureSize, 3);
+		return adlerOut.getI32(0);
+		#else
+		var tot = 0;
+		for( i in 0...size>>2 )
+			tot = (tot * 31 + signature.getI32(i<<2)) % 0x7FFFFFFF;
+		switch( size & 3 ) {
+		case 0:
+		case 2: tot = (tot * 31 + signature.getUI16(size - 2)) % 0x7FFFFFFF;
+		default: throw "assert";
+		}
+		return tot;
+		#end
 	}
 
 	public function lookup<T>( cache : PipelineCache<T>, inputs : Int ) : CachedPipeline<T> {
 		needFlush = false;
-		var signature = signature;
-		var signatureSize = PSIGN_LAYOUT + (inputs << 1);
-		adlerOut.setI32(0, 0);
-		hl.Format.digest(adlerOut, signature, signatureSize, 3);
-		var hash = adlerOut.getI32(0);
+		var signatureSize = PSIGN_LAYOUT + (inputs << SHIFT_PER_BUFFER);
+		var hash = hashSign(signatureSize);
 		var pipes = cache.get(hash);
 		if( pipes == null ) {
-			pipes = new hl.NativeArray(1);
+			pipes = #if hl new hl.NativeArray(1) #else [] #end;
 			cache.set(hash, pipes);
 		}
 		var insert = -1;
@@ -140,15 +211,18 @@ class PipelineBuilder {
 				insert = i;
 				break;
 			}
-			if( p.size == signatureSize && p.bytes.compare(0, signature, 0, signatureSize) == 0 )
+			if( p.size == signatureSize && p.bytes.compare(signature, signatureSize) == 0 )
 				return p;
 		}
-		var signatureBytes = @:privateAccess new haxe.io.Bytes(signature, signatureSize);
 		if( insert < 0 ) {
+			#if hl
 			var pipes2 = new hl.NativeArray(pipes.length + 1);
 			pipes2.blit(0, pipes, 0, insert);
 			cache.set(hash, pipes2);
 			pipes = pipes2;
+			#else
+			insert = pipes.length + 1;
+			#end
 		}
 		var cp = new CachedPipeline<T>();
 		cp.bytes = signature.sub(0, signatureSize);
