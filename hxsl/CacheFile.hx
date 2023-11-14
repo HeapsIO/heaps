@@ -53,6 +53,8 @@ class CacheFile extends Cache {
 		return Sys.systemName().toLowerCase();
 		#elseif hlsdl
 		return "gl";
+		#elseif (hldx && dx12)
+		return "dx12";
 		#elseif hldx
 		return "dx";
 		#elseif hlnx
