@@ -514,7 +514,7 @@ class Pad {
 		if( @:privateAccess sp.ptr == null )
 			return;
 		var p = new hxd.Pad();
-		p.index = index;
+		p.index = sp.id;
 		p.d = sp;
 		pads.set( p.index, p );
 		for( axis in 0...6 )
@@ -528,15 +528,8 @@ class Pad {
 		var p = pads.get( e.controller );
 		switch( e.type ){
 			case GControllerAdded:
-				if( initDone ){
-					if( p != null ){
-						pads.remove( p.index );
-						p.d.close();
-						p.connected = false;
-						p.onDisconnect();
-					}
+				if( initDone )
 					initPad(e.controller);
-				}
 			case GControllerRemoved:
 				if( p != null ){
 					pads.remove( p.index );
