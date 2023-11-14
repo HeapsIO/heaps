@@ -5,7 +5,7 @@ import hxd.Math;
 	A simple 2D position/vector container.
 	@see `h2d.col.IPoint`
 **/
-class Point #if apicheck implements h2d.impl.PointApi<Point,Matrix> #end {
+class PointImpl #if apicheck implements h2d.impl.PointApi<Point,Matrix> #end {
 
 	/**
 		The horizontal position of the point.
@@ -66,7 +66,7 @@ class Point #if apicheck implements h2d.impl.PointApi<Point,Matrix> #end {
 	/**
 		Returns a new Point with the position of this Point multiplied by a given scalar `v`.
 	**/
-	public inline function multiply( v : Float ) {
+	public inline function scaled( v : Float ) {
 		return new Point(x * v, y * v);
 	}
 
@@ -222,5 +222,22 @@ class Point #if apicheck implements h2d.impl.PointApi<Point,Matrix> #end {
 		x = x2;
 		y = y2;
 	}
+
+}
+
+@:forward abstract Point(PointImpl) from PointImpl to PointImpl {
+
+	public inline function new(x=0.,y=0.) {
+		this = new PointImpl(x,y);
+	}
+
+	@:op(a - b) public inline function sub(p:Point) return this.sub(p);
+	@:op(a + b) public inline function add(p:Point) return this.add(p);
+	@:op(a *= b) public inline function transform(m:Matrix) this.transform(m);
+	@:op(a * b) public inline function transformed(m:Matrix) return this.transformed(m);
+
+	@:op(a *= b) public inline function scale(v:Float) this.scale(v);
+	@:op(a * b) public inline function scaled(v:Float) return this.scaled(v);
+	@:op(a * b) static inline function scaledInv( f : Float, p : Point ) return p.scaled(f);
 
 }

@@ -9,8 +9,7 @@ typedef ColorAdjust = {
 	?gain : { color : Int, alpha : Float },
 };
 
-@:noDebug
-class Matrix {
+class MatrixImpl {
 
 	static var tmp = new Matrix();
 
@@ -783,6 +782,21 @@ class Matrix {
 		return m;
 	}
 
+}
+
+
+@:forward abstract Matrix(MatrixImpl) from MatrixImpl to MatrixImpl {
+
+	public inline function new() {
+		this = new MatrixImpl();
+	}
+
+	@:op(a * b) public inline function multiplied( m : Matrix ) {
+		var mout = new Matrix();
+		mout.multiply(this, m);
+		return mout;
+	}
+
 	// STATICS
 
 	public static function I() {
@@ -847,4 +861,5 @@ class Matrix {
 		m._44 = 1;
 		return m;
 	}
+
 }

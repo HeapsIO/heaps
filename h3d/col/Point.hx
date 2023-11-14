@@ -1,7 +1,7 @@
 package h3d.col;
 using hxd.Math;
 
-class Point #if apicheck implements h2d.impl.PointApi<Point,Matrix> #end {
+class PointImpl #if apicheck implements h2d.impl.PointApi<Point,Matrix> #end {
 
 	public var x : Float;
 	public var y : Float;
@@ -35,7 +35,7 @@ class Point #if apicheck implements h2d.impl.PointApi<Point,Matrix> #end {
 		return new Point(x + p.x, y + p.y, z + p.z);
 	}
 
-	public inline function multiply( v : Float ) {
+	public inline function scaled( v : Float ) {
 		return new Point(x * v, y * v, z * v);
 	}
 
@@ -142,12 +142,30 @@ class Point #if apicheck implements h2d.impl.PointApi<Point,Matrix> #end {
 	// ----
 
 	public inline function inFrustum( f : Frustum, ?m : h3d.Matrix ) {
-		return f.hasPoint(this);
+		return f.hasPoint((this:Point));
 	}
 
 	public inline function toVector() {
 		return new Vector(x, y, z);
 	}
 
+
+}
+
+@:forward abstract Point(PointImpl) from PointImpl to PointImpl {
+
+	public inline function new(x=0.,y=0.,z=0.) {
+		this = new PointImpl(x,y,z);
+	}
+
+	@:op(a - b) public inline function sub(p:Point) return this.sub(p);
+	@:op(a + b) public inline function add(p:Point) return this.add(p);
+	@:op(a *= b) public inline function transform(m:Matrix) this.transform(m);
+	@:op(a * b) public inline function transformed(m:Matrix) return this.transformed(m);
+	@:to public inline function toVector() return this.toVector();
+
+	@:op(a *= b) public inline function scale(v:Float) this.scale(v);
+	@:op(a * b) public inline function scaled(v:Float) return this.scaled(v);
+	@:op(a * b) static inline function scaledInv( f : Float, p : Point ) return p.scaled(f);
 
 }

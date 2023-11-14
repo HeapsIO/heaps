@@ -38,7 +38,7 @@ abstract Polygon(Array<Point>) from Array<Point> to Array<Point> {
 		Returns the points indexes
 	**/
 	public function fastTriangulate() {
-		return new hxd.earcut.Earcut().triangulate(points);
+		return new hxd.earcut.Earcut().triangulate(cast points);
 	}
 
 	/**

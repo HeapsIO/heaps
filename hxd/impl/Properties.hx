@@ -35,7 +35,7 @@ class Properties {
 				continue;
 			case TClass(Array):
 				switch( Type.typeof(vprev) ) {
-				case TClass(h3d.Vector):
+				case TClass(h3d.Vector.VectorImpl):
 					var v : Array<Float> = v;
 					var vprev : h3d.Vector = vprev;
 					vprev.set();
@@ -48,7 +48,7 @@ class Properties {
 				}
 			case TClass(String):
 				switch( Type.typeof(vprev) ) {
-				case TClass(h3d.Vector):
+				case TClass(h3d.Vector.VectorImpl):
 					var v : String = v;
 					var vprev : h3d.Vector = vprev;
 					if( v.charCodeAt(0) == '#'.code )  {

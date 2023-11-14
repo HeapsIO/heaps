@@ -47,7 +47,7 @@ class IPoint #if apicheck implements h2d.impl.PointApi.IPointApi<IPoint> #end {
 	/**
 		Returns a new IPoint with the position of this IPoint multiplied by a given scalar `v`.
 	**/
-	public inline function multiply( v : Int ) {
+	public inline function scaled( v : Int ) {
 		return new IPoint(x * v, y * v);
 	}
 

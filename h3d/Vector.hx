@@ -4,7 +4,7 @@ using hxd.Math;
 /**
 	A 4 floats vector. Everytime a Vector is returned, it means a copy is created.
 **/
-class Vector #if apicheck implements h2d.impl.PointApi<Vector,Matrix> #end {
+class VectorImpl #if apicheck implements h2d.impl.PointApi<Vector,Matrix> #end {
 
 	public var x : Float;
 	public var y : Float;
@@ -39,8 +39,8 @@ class Vector #if apicheck implements h2d.impl.PointApi<Vector,Matrix> #end {
 		return new Vector(x + v.x, y + v.y, z + v.z, w + v.w);
 	}
 
-	public inline function multiply( v : Float ) {
-		// multiply only affects length
+	public inline function scaled( v : Float ) {
+		// see scale
 		return new Vector(x * v, y * v, z * v, w);
 	}
 
@@ -94,6 +94,10 @@ class Vector #if apicheck implements h2d.impl.PointApi<Vector,Matrix> #end {
 	}
 
 	public inline function scale( f : Float ) {
+		/*
+			The scale of a vector represents its length and thus
+			only x/y/z should be affected by scaling
+		*/
 		x *= f;
 		y *= f;
 		z *= f;
@@ -276,6 +280,31 @@ class Vector #if apicheck implements h2d.impl.PointApi<Vector,Matrix> #end {
 		return new h3d.Vector(h, s, l, a);
 	}
 
+}
+
+
+
+/**
+	A 4 floats vector. Everytime a Vector is returned, it means a copy is created.
+	For function manipulating the length (length, normalize, dot, scale, etc.), the Vector
+	acts like a Point in the sense only the X/Y/Z components will be affected.
+**/
+@:forward abstract Vector(VectorImpl) from VectorImpl to VectorImpl {
+
+	public inline function new( x = 0., y = 0., z = 0., w = 1. ) {
+		this = new VectorImpl(x,y,z,w);
+	}
+
+	@:op(a - b) public inline function sub(v:Vector) return this.sub(v);
+	@:op(a + b) public inline function add(v:Vector) return this.add(v);
+	@:op(a *= b) public inline function transform(m:Matrix) this.transform(m);
+	@:op(a * b) public inline function transformed(m:Matrix) return this.transformed(m);
+	@:to public inline function toPoint() return this.toPoint();
+
+	@:op(a *= b) public inline function scale(v:Float) this.scale(v);
+	@:op(a * b) public inline function scaled(v:Float) return this.scaled(v);
+	@:op(a * b) static inline function scaledInv( f : Float, v : Vector ) return v.scaled(f);
+
 	public static inline function fromColor( c : Int, scale : Float = 1.0 ) {
 		var s = scale / 255;
 		return new Vector(((c>>16)&0xFF)*s,((c>>8)&0xFF)*s,(c&0xFF)*s,(c >>> 24)*s);
@@ -288,20 +317,6 @@ class Vector #if apicheck implements h2d.impl.PointApi<Vector,Matrix> #end {
 		if(a.length > 2) r.z = a[2];
 		if(a.length > 3) r.w = a[3];
 		return r;
-	}
-
-	// deprecated (but not yet warnings)
-
-	@:noCompletion public inline function scale3( v : Float ) {
-		scale(v);
-	}
-
-	@:noCompletion public inline function dot3( v : Vector ) {
-		return dot(v);
-	}
-
-	@:noCompletion public inline function normalizeFast() {
-		normalize();
 	}
 
 }
