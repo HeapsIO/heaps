@@ -386,6 +386,12 @@ class Benchmark extends h2d.Graphics {
 		if( measureCpu ) q.value = haxe.Timer.stamp() * 1e9;
 	}
 
+	public function getCurrentId() {
+		if ( currentFrame != null )
+			return currentFrame.name;
+		return null;
+	}
+
 	public static function takeControl( app : hxd.App, ?s3d : h3d.scene.Scene ) @:privateAccess {
 		if( s3d == null ) s3d = app.s3d;
 		var cur = hxd.System.getCurrentLoop();
