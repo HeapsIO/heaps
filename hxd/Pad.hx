@@ -516,6 +516,13 @@ class Pad {
 		var p = new hxd.Pad();
 		p.index = sp.id;
 		p.d = sp;
+		var prev = pads.get( p.index );
+		if (prev != null) {
+			pads.remove( p.index );
+			prev.d.close();
+			prev.connected = false;
+			prev.onDisconnect();
+		}
 		pads.set( p.index, p );
 		for( axis in 0...6 )
 			p._setAxis( axis, sp.getAxis(axis) );
