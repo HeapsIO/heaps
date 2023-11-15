@@ -51,7 +51,7 @@ class Checker {
 		for( g in Ast.TGlobal.createAll() ) {
 			var def = switch( g ) {
 			case Vec2, Vec3, Vec4, Mat2, Mat3, Mat3x4, Mat4, IVec2, IVec3, IVec4, BVec2, BVec3, BVec4: [];
-			case Radians, Degrees, Cos, Sin, Tan, Asin, Acos, Exp, Log, Exp2, Log2, Sqrt, Inversesqrt, Abs, Sign, Floor, Ceil, Fract, Saturate: genFloat;
+			case Radians, Degrees, Cos, Sin, Tan, Asin, Acos, Exp, Log, Exp2, Log2, Sqrt, Inversesqrt, Abs, Sign, Floor, Ceil, RoundEven, Fract, Saturate: genFloat;
 			case Atan: genFloat.concat(genFloat2);
 			case Pow: genFloat2;
 			case LReflect:

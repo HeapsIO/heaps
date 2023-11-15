@@ -84,6 +84,7 @@ class HlslOut {
 		m.set(FloatBitsToUint, "asuint");
 		m.set(IntBitsToFloat, "asfloat");
 		m.set(UintBitsToFloat, "_uintBitsToFloat");
+		m.set(RoundEven, "round");
 		for( g in m )
 			KWDS.set(g, true);
 		m;

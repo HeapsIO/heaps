@@ -279,6 +279,7 @@ enum TGlobal {
 	FloatBitsToUint;
 	IntBitsToFloat;
 	UintBitsToFloat;
+	RoundEven;
 }
 
 enum Component {
