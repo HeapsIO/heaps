@@ -539,7 +539,7 @@ class Renderer extends h3d.scene.Renderer {
 	override function render() {
 		beginPbr();
 		setTarget(textures.depth);
-		ctx.engine.clearF(new h3d.Vector(1));
+		ctx.engine.clearF(new h3d.Vector4(1));
 
 		setTargets(getPbrRenderTargets(false));
 		clear(0, 1, 0);

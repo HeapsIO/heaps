@@ -10,7 +10,7 @@ class Drawable extends Object {
 	/**
 		The color multiplier for the drawable. Can be used to adjust individually each of the four channels R,G,B,A (default [1,1,1,1])
 	**/
-	public var color(default,default) : h3d.Vector;
+	public var color(default,default) : h3d.Vector4;
 
 	/**
 		By enabling smoothing, scaling the object up or down will use hardware bilinear filtering resulting in a less crisp aspect.
@@ -51,7 +51,7 @@ class Drawable extends Object {
 	**/
 	function new(parent : h2d.Object) {
 		super(parent);
-		color = new h3d.Vector(1, 1, 1, 1);
+		color = new h3d.Vector4(1, 1, 1, 1);
 	}
 
 	function set_tileWrap(b) {

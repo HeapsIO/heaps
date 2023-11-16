@@ -15,7 +15,7 @@ class Default extends Base {
 	@global("camera.zFar") var cameraFar : Float = ctx.camera.zFar;
 	@global("camera.proj") var cameraProj : h3d.Matrix = ctx.camera.mproj;
 	@global("camera.position") var cameraPos : h3d.Vector = ctx.camera.pos;
-	@global("camera.projDiag") var cameraProjDiag : h3d.Vector = new h3d.Vector(ctx.camera.mproj._11,ctx.camera.mproj._22,ctx.camera.mproj._33,ctx.camera.mproj._44);
+	@global("camera.projDiag") var cameraProjDiag : h3d.Vector4 = new h3d.Vector4(ctx.camera.mproj._11,ctx.camera.mproj._22,ctx.camera.mproj._33,ctx.camera.mproj._44);
 	@global("camera.projFlip") var cameraProjFlip : Float = ctx.engine.driver.hasFeature(BottomLeftCoords) && ctx.engine.getCurrentTarget() != null ? -1 : 1;
 	@global("camera.viewProj") var cameraViewProj : h3d.Matrix = ctx.camera.m;
 	@global("camera.inverseViewProj") var cameraInverseViewProj : h3d.Matrix = ctx.camera.getInverseViewProj();

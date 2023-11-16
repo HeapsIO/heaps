@@ -251,7 +251,7 @@ class World extends Object {
 			defaults : [],
 		};
 		if(enableNormalMaps) {
-			r.defaults[2] = new h3d.Vector(1,0,0);
+			r.defaults[2] = new h3d.Vector4(1,0,0);
 			r.fmt = r.fmt.append("tangent", DVec3);
 		}
 		r.fmt = r.fmt.append("uv", DVec2);
@@ -455,7 +455,7 @@ class World extends Object {
 
 					// position
 					var pt = new h3d.Vector(x,y,z);
-					pt.transform3x4(pos);
+					pt.transform(pos);
 					model.buf.push(pt.x);
 					model.buf.push(pt.y);
 					model.buf.push(pt.z);

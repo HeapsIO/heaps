@@ -561,11 +561,16 @@ class Tools {
 			case CFloat(f): f;
 			case CString(s): s;
 			}
-		case TCall({ e : TGlobal(Vec2 | Vec3 | Vec4) }, args):
+		case TCall({ e : TGlobal(Vec4) }, args):
 			var vals = [for( a in args ) evalConst(a)];
 			if( vals.length == 1 )
-				return new Types.Vec(vals[0], vals[0], vals[0], vals[0]);
-			return new Types.Vec(vals[0], vals[1], vals[2], vals[3]);
+				return new Types.Vec4(vals[0], vals[0], vals[0], vals[0]);
+			return new Types.Vec4(vals[0], vals[1], vals[2], vals[3]);
+		case TCall({ e : TGlobal(Vec2 | Vec3) }, args):
+			var vals = [for( a in args ) evalConst(a)];
+			if( vals.length == 1 )
+				return new Types.Vec(vals[0], vals[0], vals[0]);
+			return new Types.Vec(vals[0], vals[1], vals[2]);
 		default:
 			throw "Unhandled constant init " + Printer.toString(e);
 		}

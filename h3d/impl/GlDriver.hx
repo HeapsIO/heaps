@@ -130,7 +130,7 @@ class GlDriver extends Driver {
 	var drawMode : Int;
 	var isIntelGpu : Bool;
 
-	static var BLACK = new h3d.Vector(0,0,0,0);
+	static var BLACK = new h3d.Vector4(0,0,0,0);
 
 	/**
 		Perform OUT_OF_MEMORY checks when allocating textures/buffers.
@@ -764,7 +764,7 @@ class GlDriver extends Driver {
 		curStMaskBits = maskBits;
 	}
 
-	override function clear( ?color : h3d.Vector, ?depth : Float, ?stencil : Int ) {
+	override function clear( ?color : h3d.Vector4, ?depth : Float, ?stencil : Int ) {
 		var bits = 0;
 		if( color != null ) {
 			gl.colorMask(true, true, true, true);

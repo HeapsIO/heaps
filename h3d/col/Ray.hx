@@ -45,7 +45,7 @@ class Ray {
 
 	public inline function transform( m : h3d.Matrix ) {
 		var p = new h3d.Vector(px, py, pz);
-		p.transform3x4(m);
+		p.transform(m);
 		px = p.x;
 		py = p.y;
 		pz = p.z;

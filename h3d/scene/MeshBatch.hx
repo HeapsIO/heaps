@@ -237,21 +237,22 @@ class MeshBatch extends MultiMaterial {
 			}
 			var curShader = shaders[p.instance];
 			switch( p.type ) {
+			case TVec(4, _):
+				var v : h3d.Vector4 = curShader.getParamValue(p.index);
+				buf[pos++] = v.x;
+				buf[pos++] = v.y;
+				buf[pos++] = v.z;
+				buf[pos++] = v.w;
 			case TVec(size, _):
 				var v : h3d.Vector = curShader.getParamValue(p.index);
 				switch( size ) {
 				case 2:
 					buf[pos++] = v.x;
 					buf[pos++] = v.y;
-				case 3:
-					buf[pos++] = v.x;
-					buf[pos++] = v.y;
-					buf[pos++] = v.z;
 				default:
 					buf[pos++] = v.x;
 					buf[pos++] = v.y;
 					buf[pos++] = v.z;
-					buf[pos++] = v.w;
 				}
 			case TFloat:
 				buf[pos++] = curShader.getParamFloatValue(p.index);

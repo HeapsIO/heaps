@@ -42,15 +42,23 @@ class Properties {
 					if( v.length >= 1 ) vprev.x = v[0];
 					if( v.length >= 2 ) vprev.y = v[1];
 					if( v.length >= 3 ) vprev.z = v[2];
+					continue;
+				case TClass(h3d.Vector4.Vector4Impl):
+					var v : Array<Float> = v;
+					var vprev : h3d.Vector4 = vprev;
+					vprev.set();
+					if( v.length >= 1 ) vprev.x = v[0];
+					if( v.length >= 2 ) vprev.y = v[1];
+					if( v.length >= 3 ) vprev.z = v[2];
 					if( v.length >= 4 ) vprev.w = v[3];
 					continue;
 				default:
 				}
 			case TClass(String):
 				switch( Type.typeof(vprev) ) {
-				case TClass(h3d.Vector.VectorImpl):
+				case TClass(h3d.Vector4.Vector4Impl):
 					var v : String = v;
-					var vprev : h3d.Vector = vprev;
+					var vprev : h3d.Vector4 = vprev;
 					if( v.charCodeAt(0) == '#'.code )  {
 						var color = Std.parseInt("0x" + v.substr(1));
 						vprev.set(

@@ -5,7 +5,7 @@ private class FormatMap {
 	public var size : Int;
 	public var offset : Int;
 	public var precision : hxd.BufferFormat.Precision;
-	public var def : h3d.Vector;
+	public var def : h3d.Vector4;
 	public function new(size, offset, def, prec) {
 		this.size = size;
 		this.offset = offset;
@@ -66,7 +66,7 @@ class Library {
 		return { format : hxd.BufferFormat.make(format), defs : defs };
 	}
 
-	public function load( format : hxd.BufferFormat, ?defaults : Array<h3d.Vector>, modelIndex = -1 ) {
+	public function load( format : hxd.BufferFormat, ?defaults : Array<h3d.Vector4>, modelIndex = -1 ) {
 		var vtmp = new h3d.Vector();
 		var models = modelIndex < 0 ? header.models : [header.models[modelIndex]];
 		var outVertex = new hxd.FloatBuffer();
@@ -88,7 +88,7 @@ class Library {
 				vtmp.x = data.vertexes[p++];
 				vtmp.y = data.vertexes[p++];
 				vtmp.z = data.vertexes[p++];
-				vtmp.transform3x4(pos);
+				vtmp.transform(pos);
 				outVertex.push(vtmp.x);
 				outVertex.push(vtmp.y);
 				outVertex.push(vtmp.z);
@@ -102,7 +102,7 @@ class Library {
 	}
 
 	@:noDebug
-	public function getBuffers( geom : Geometry, format : hxd.BufferFormat, ?defaults : Array<h3d.Vector>, ?material : Int ) {
+	public function getBuffers( geom : Geometry, format : hxd.BufferFormat, ?defaults : Array<h3d.Vector4>, ?material : Int ) {
 
 		if( material == 0 && geom.indexCounts.length == 1 )
 			material = null;

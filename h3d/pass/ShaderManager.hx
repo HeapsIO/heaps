@@ -32,17 +32,19 @@ class ShaderManager {
 		case TFloat:
 			out[pos] = v;
 			return 1;
-		case TVec(n, _):
-			var v : h3d.Vector = v;
+		case TVec(4, _):
+			var v : hxsl.Types.Vec4 = v;
 			out[pos++] = v.x;
 			out[pos++] = v.y;
-			switch( n ) {
-			case 3:
+			out[pos++] = v.z;
+			out[pos++] = v.w;
+			return 4;
+		case TVec(n, _):
+			var v : hxsl.Types.Vec = v;
+			out[pos++] = v.x;
+			out[pos++] = v.y;
+			if( n == 3 )
 				out[pos++] = v.z;
-			case 4:
-				out[pos++] = v.z;
-				out[pos++] = v.w;
-			}
 			return n;
 		case TMat4:
 			var m : h3d.Matrix = v;
@@ -94,7 +96,7 @@ class ShaderManager {
 			out[pos++] = 0;
 			return 12;
 		case TArray(TVec(4,VFloat), SConst(len)):
-			var v : Array<h3d.Vector> = v;
+			var v : Array<h3d.Vector4> = v;
 			for( i in 0...len ) {
 				var n = v[i];
 				if( n == null ) break;

@@ -62,8 +62,8 @@ class CascadeShadowMap extends DirShadowMap {
 		var corners = lightCamera.getFrustumCorners();
 		for ( corner in corners ) {
 			corner.transform(ctx.camera.mcam);
-			shadowNear = hxd.Math.min(shadowNear, corner.z / corner.w);
-			shadowFar = hxd.Math.max(shadowFar, corner.z / corner.w);
+			shadowNear = hxd.Math.min(shadowNear, corner.z);
+			shadowFar = hxd.Math.max(shadowFar, corner.z);
 		}
 		for ( i in 0...cascade - 1 ) {
 			var cascadeBounds = new h3d.col.Bounds();
@@ -106,7 +106,7 @@ class CascadeShadowMap extends DirShadowMap {
 			cshader.cascadeShadowMaps[c] = textures[i];
 			cshader.cascadeProjs[c] = lightCameras[i].m;
 			if ( debugShader )
-				cshader.cascadeDebugs[c] = h3d.Vector.fromColor(debugColors[i]);
+				cshader.cascadeDebugs[c] = h3d.Vector4.fromColor(debugColors[i]);
 			cshader.cascadeBias[c] = params[c] != null ? params[c].bias : 0.001;
 		}
 		cshader.CASCADE_COUNT = cascade;
@@ -166,7 +166,7 @@ class CascadeShadowMap extends DirShadowMap {
 			if( !passes.isEmpty() ) calcShadowBounds(lightCamera);
 			var pt = ctx.camera.pos.clone();
 			pt.transform(lightCamera.mcam);
-			lightCamera.orthoBounds.zMax = pt.z + (castingMaxDist > 0.0 ? castingMaxDist : maxDist < 0.0 ? ctx.camera.zFar : maxDist); 
+			lightCamera.orthoBounds.zMax = pt.z + (castingMaxDist > 0.0 ? castingMaxDist : maxDist < 0.0 ? ctx.camera.zFar : maxDist);
 			lightCamera.orthoBounds.zMin = pt.z - (castingMaxDist > 0.0 ? castingMaxDist : maxDist < 0.0 ? ctx.camera.zFar : maxDist);
 			lightCamera.update();
 		}

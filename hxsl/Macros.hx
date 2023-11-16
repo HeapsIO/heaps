@@ -8,10 +8,10 @@ class Macros {
 	static function makeType( t : Type ) : ComplexType {
 		return switch( t ) {
 		case TVoid: macro : Void;
-		case TVec(_, t):
+		case TVec(n, t):
 			switch( t ) {
 			case VFloat:
-				macro : hxsl.Types.Vec;
+				n == 4 ? (macro : hxsl.Types.Vec4) : (macro : hxsl.Types.Vec);
 			case VInt:
 				macro : hxsl.Types.IVec;
 			case VBool:
@@ -57,10 +57,10 @@ class Macros {
 	static function makeDef( t : Type, pos : Position ) : haxe.macro.Expr {
 		return switch( t ) {
 		case TFloat, TInt: macro 0;
-		case TVec(_, t):
+		case TVec(n, t):
 			switch( t ) {
 			case VFloat:
-				macro new hxsl.Types.Vec();
+				n == 4 ? macro new hxsl.Types.Vec4() : macro new hxsl.Types.Vec();
 			case VInt:
 				macro new hxsl.Types.IVec();
 			case VBool:
@@ -99,7 +99,7 @@ class Macros {
 					default: throw "assert";
 				};
 			{
-				expr : ENew({ pack : ["h3d"], name : "Vector" }, [for( a in args ) makeInit(a)]),
+				expr : ENew({ pack : ["hxsl"], name : "Types", sub : (g == Vec4 ? "Vec4" : "Vec") }, [for( a in args ) makeInit(a)]),
 				pos : e.p,
 			}
 		default:

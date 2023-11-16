@@ -268,10 +268,10 @@ class VertexBufferData extends BufferData {
 
 class TextureData extends ResourceData {
 	public var format : DxgiFormat;
-	public var color : h3d.Vector;
+	public var color : h3d.Vector4;
 	public var tmpBuf : dx.Dx12.GpuResource;
 	var clearColorChanges : Int;
-	public function setClearColor( c : h3d.Vector ) {
+	public function setClearColor( c : h3d.Vector4 ) {
 		var color = color;
 		if( clearColorChanges > 10 || (color.r == c.r && color.g == c.g && color.b == c.b && color.a == c.a) )
 			return false;
@@ -465,7 +465,7 @@ class DX12Driver extends h3d.impl.Driver {
 		frame.commandList.setDescriptorHeaps(arr);
 	}
 
-	override function clear(?color:Vector, ?depth:Float, ?stencil:Int) {
+	override function clear(?color:Vector4, ?depth:Float, ?stencil:Int) {
 		if( color != null ) {
 			var clear = tmp.clearColor;
 			clear.r = color.r;
@@ -1354,7 +1354,7 @@ class DX12Driver extends h3d.impl.Driver {
 
 		var clear = null;
 		if( isRT ) {
-			var color = t.t == null || t.t.color == null ? new h3d.Vector(0,0,0,0) : t.t.color; // reuse prev color
+			var color = t.t == null || t.t.color == null ? new h3d.Vector4(0,0,0,0) : t.t.color; // reuse prev color
 			desc.flags.set(ALLOW_RENDER_TARGET);
 			clear = tmp.clearValue;
 			clear.format = desc.format;

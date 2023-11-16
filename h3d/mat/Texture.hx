@@ -247,7 +247,7 @@ class Texture {
 		alloc();
 		if( !flags.has(Target) ) throw "Texture should be target";
 		var engine = h3d.Engine.getCurrent();
-		var color = new h3d.Vector(r,g,b,a);
+		var color = new h3d.Vector4(r,g,b,a);
 		if( layer < 0 ) {
 			for( i in 0...layerCount ) {
 				engine.pushTarget(this, i);

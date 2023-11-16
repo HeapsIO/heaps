@@ -167,7 +167,7 @@ class Camera {
 		if( sceneHeight < 0 ) sceneHeight = engine.height;
 		var rx = (pixelX / sceneWidth - 0.5) * 2;
 		var ry = (0.5 - pixelY / sceneHeight) * 2;
-		return h3d.col.Ray.fromPoints(unproject(rx, ry, 0).toPoint(), unproject(rx, ry, 1).toPoint());
+		return h3d.col.Ray.fromPoints(unproject(rx, ry, 0), unproject(rx, ry, 1));
 	}
 
 	public function update() {

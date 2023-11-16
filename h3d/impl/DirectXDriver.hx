@@ -286,7 +286,7 @@ class DirectXDriver extends h3d.impl.Driver {
 		haxe.Timer.delay(onCreate.bind(false), 1);
 	}
 
-	override function clear(?color:h3d.Vector, ?depth:Float, ?stencil:Int) {
+	override function clear(?color:h3d.Vector4, ?depth:Float, ?stencil:Int) {
 		if( color != null ) {
 			for( i in 0...targetsCount )
 				Driver.clearColor(currentTargets[i], color.r, color.g, color.b, color.a);

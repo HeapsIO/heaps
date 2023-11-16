@@ -27,15 +27,15 @@ abstract PixelsARGB(Pixels) to Pixels {
 @:access(hxd.Pixels)
 abstract PixelsFloat(Pixels) to Pixels {
 
-	public inline function getPixelF(x, y, ?v:h3d.Vector) {
+	public inline function getPixelF(x, y, ?v:h3d.Vector4) {
 		if( v == null )
-			v = new h3d.Vector();
+			v = new h3d.Vector4();
 		var pix = ((x + y * this.width) << 2) + this.offset;
 		v.x = this.bytes.getFloat(pix);
 		return v;
 	}
 
-	public inline function setPixelF(x, y, v:h3d.Vector) {
+	public inline function setPixelF(x, y, v:h3d.Vector4) {
 		var pix = ((x + y * this.width) << 2) + this.offset;
 		this.bytes.setFloat(pix, v.x);
 	}
@@ -51,9 +51,9 @@ abstract PixelsFloat(Pixels) to Pixels {
 @:access(hxd.Pixels)
 abstract PixelsFloatRGBA(Pixels) to Pixels {
 
-	public inline function getPixelF(x, y, ?v:h3d.Vector) {
+	public inline function getPixelF(x, y, ?v:h3d.Vector4) {
 		if( v == null )
-			v = new h3d.Vector();
+			v = new h3d.Vector4();
 		var pix = ((x + y * this.width) << 4) + this.offset;
 		v.x = this.bytes.getFloat(pix);
 		v.y = this.bytes.getFloat(pix+4);
@@ -62,7 +62,7 @@ abstract PixelsFloatRGBA(Pixels) to Pixels {
 		return v;
 	}
 
-	public inline function setPixelF(x, y, v:h3d.Vector) {
+	public inline function setPixelF(x, y, v:h3d.Vector4) {
 		var pix = ((x + y * this.width) << 4) + this.offset;
 		this.bytes.setFloat(pix, v.x);
 		this.bytes.setFloat(pix+4, v.y);
@@ -452,9 +452,9 @@ class Pixels {
 		}
 	}
 
-	public function getPixelF(x, y, ?v:h3d.Vector) {
+	public function getPixelF(x, y, ?v:h3d.Vector4) {
 		if( v == null )
-			v = new h3d.Vector();
+			v = new h3d.Vector4();
 		var p = ((x + y * width) * bytesPerPixel) + offset;
 		switch( format ) {
 		case R32F:
@@ -475,7 +475,7 @@ class Pixels {
 		}
 	}
 
-	public function setPixelF(x, y, v:h3d.Vector) {
+	public function setPixelF(x, y, v:h3d.Vector4) {
 		willChange();
 		var p = ((x + y * width) * bytesPerPixel) + offset;
 		switch( format ) {

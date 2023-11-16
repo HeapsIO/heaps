@@ -45,14 +45,14 @@ class CustomParser extends domkit.CssValue.ValueParser {
 	}
 
 
-	function transitionColorF( v1 : h3d.Vector, v2 : h3d.Vector, t : Float ) : h3d.Vector {
-		var v = new h3d.Vector();
+	function transitionColorF( v1 : h3d.Vector4, v2 : h3d.Vector4, t : Float ) : h3d.Vector4 {
+		var v = new h3d.Vector4();
 		v.lerp(v1,v2,t);
 		return v;
 	}
 
-	function parseColorF( v : CssValue ) : h3d.Vector {
-		var f = new h3d.Vector();
+	function parseColorF( v : CssValue ) : h3d.Vector4 {
+		var f = new h3d.Vector4();
 		switch( v ) {
 		case VInt(i):
 			f.r = f.g = f.b = i;
@@ -571,7 +571,7 @@ class ObjectComp implements h2d.domkit.Object implements domkit.Component.Compon
 @:uiComp("drawable") @:domkitDecl
 class DrawableComp extends ObjectComp implements domkit.Component.ComponentDecl<h2d.Drawable> {
 
-	@:p(colorF) @:t(colorF) #if domkit_drawable_color var color #else var tint #end : h3d.Vector;
+	@:p(colorF) @:t(colorF) #if domkit_drawable_color var color #else var tint #end : h3d.Vector4;
 	@:p(auto) var smooth : Null<Bool>;
 	@:p(colorAdjust) var colorAdjust : Null<h3d.Matrix.ColorAdjust>;
 	@:p var tileWrap : Bool;

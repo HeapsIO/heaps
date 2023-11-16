@@ -48,7 +48,7 @@ class Engine {
 	var realFps : Float;
 	var lastTime : Float;
 	var antiAlias : Int;
-	var tmpVector = new h3d.Vector();
+	var tmpVector = new h3d.Vector4();
 	var window : hxd.Window;
 
 	var targetTmp : TargetTmp;
@@ -382,7 +382,7 @@ class Engine {
 		needFlushTarget = false;
 	}
 
-	public function clearF( color : h3d.Vector, ?depth : Float, ?stencil : Int ) {
+	public function clearF( color : h3d.Vector4, ?depth : Float, ?stencil : Int ) {
 		flushTarget();
 		driver.clear(color, depth, stencil);
 	}

@@ -57,7 +57,7 @@ class Interactive extends Object implements hxd.SceneEvents.Interactive {
 	var lastClickFrame : Int = -1;
 
 	@:allow(h3d.scene.Scene)
-	var hitPoint = new h3d.Vector();
+	var hitPoint = new h3d.Vector4();
 
 	public function new(shape, ?parent) {
 		super(parent);

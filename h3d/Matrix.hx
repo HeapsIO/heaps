@@ -230,7 +230,7 @@ class MatrixImpl {
 
 	public inline function getPosition() {
 		var v = new Vector();
-		v.set(_41,_42,_43,_44);
+		v.set(_41,_42,_43);
 		return v;
 	}
 
@@ -238,7 +238,6 @@ class MatrixImpl {
 		_41 = v.x;
 		_42 = v.y;
 		_43 = v.z;
-		_44 = v.w;
 	}
 
 	public function prependTranslation( x = 0., y = 0., z = 0. ) {

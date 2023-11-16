@@ -159,7 +159,7 @@ class Driver {
 	function logImpl( str : String ) {
 	}
 
-	public function clear( ?color : h3d.Vector, ?depth : Float, ?stencil : Int ) {
+	public function clear( ?color : h3d.Vector4, ?depth : Float, ?stencil : Int ) {
 	}
 
 	public function captureRenderBuffer( pixels : hxd.Pixels ) {

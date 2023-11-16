@@ -148,7 +148,7 @@ class CubeShadowMap extends Shadows {
 		return false;
 	}
 
-	var clearDepthColor = new h3d.Vector(1,1,1,1);
+	var clearDepthColor = new h3d.Vector4(1,1,1,1);
 	override function draw( passes : h3d.pass.PassList, ?sort ) {
 		if( !enabled )
 			return;
@@ -179,7 +179,7 @@ class CubeShadowMap extends Shadows {
 		var absPos = light.getAbsPos();
 		lightCamera.pos.set(absPos.tx, absPos.ty, absPos.tz);
 		updateLightCameraNearFar(light);
-		
+
 
 		for( i in 0...6 ) {
 

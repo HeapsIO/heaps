@@ -29,20 +29,20 @@ class Slot {
 	public var name : String;
 	public var bone : Bone;
 	public var attachment : String;
-	public var color : h3d.Vector;
+	public var color : h3d.Vector4;
 	public var blendMode : h2d.BlendMode;
 
 	public function new() {
-		color = new h3d.Vector(1, 1, 1, 1);
+		color = new h3d.Vector4(1, 1, 1, 1);
 	}
 }
 
 class Attachment {
 	public var skin : Skin;
 	public var slot : Slot;
-	public var color : h3d.Vector;
+	public var color : h3d.Vector4;
 	public function new() {
-		color = new h3d.Vector(1, 1, 1, 1);
+		color = new h3d.Vector4(1, 1, 1, 1);
 	}
 }
 
