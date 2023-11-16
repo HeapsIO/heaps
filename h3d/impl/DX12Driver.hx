@@ -1430,8 +1430,7 @@ class DX12Driver extends h3d.impl.Driver {
 		}
 		var previousSize : hl.BytesAccess<Int64> = new hl.Bytes(8);
 		Driver.getCopyableFootprints(makeTextureDesc(t), 0, subRes, 0, null, null, null, previousSize);
-		var offset = previousSize[0];
-		offset = offset < 0 ? 0 : offset;
+		var offsetAligned = ((previousSize[0] + 512 - 1) / 512) * 512;
 
 		var upd = new SubResourceData();
 		var stride = @:privateAccess pixels.stride;
@@ -1444,7 +1443,7 @@ class DX12Driver extends h3d.impl.Driver {
 		upd.slicePitch = pixels.dataSize;
 
 		transition(t.t, COPY_DEST);
-		if( !Driver.updateSubResource(frame.commandList, t.t.res, t.t.tmpBuf, offset, subRes, 1, upd) )
+		if( !Driver.updateSubResource(frame.commandList, t.t.res, t.t.tmpBuf, offsetAligned, subRes, 1, upd) )
 			throw "Failed to update sub resource";
 		transition(t.t, PIXEL_SHADER_RESOURCE);
 
