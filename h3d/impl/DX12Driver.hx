@@ -191,7 +191,7 @@ class ManagedHeap {
 		limit = cursor = start = 0;
 		this.size = size;
 		address = heap.getHandle(false);
-		cpuToGpu = heap.getHandle(true).value - address.value;
+		cpuToGpu = desc.flags == SHADER_VISIBLE ? ( heap.getHandle(true).value - address.value ) : 0;
 	}
 
 	public dynamic function onFree( prev : DescriptorHeap ) {
@@ -1197,7 +1197,7 @@ class DX12Driver extends h3d.impl.Driver {
 		var size = m.getMemSize();
 		var bufSize = m.flags.has(UniformBuffer) ? calcCBVSize(size) : size;
 		buf.state = COPY_DEST;
-		buf.res = allocGPU(bufSize, DEFAULT, COPY_DEST);
+		buf.res = allocGPU(bufSize, DEFAULT, COMMON);
 		if( !m.flags.has(UniformBuffer) ) {
 			var view = new VertexBufferView();
 			view.bufferLocation = buf.res.getGpuVirtualAddress();
@@ -1216,7 +1216,7 @@ class DX12Driver extends h3d.impl.Driver {
 		buf.count = count;
 		buf.bits = is32?2:1;
 		var size = count << buf.bits;
-		buf.res = allocGPU(size, DEFAULT, COPY_DEST);
+		buf.res = allocGPU(size, DEFAULT, COMMON);
 		var view = new IndexBufferView();
 		view.bufferLocation = buf.res.getGpuVirtualAddress();
 		view.format = is32 ? R32_UINT : R16_UINT;
@@ -1227,7 +1227,7 @@ class DX12Driver extends h3d.impl.Driver {
 
 	override function allocInstanceBuffer(b:InstanceBuffer, bytes:haxe.io.Bytes) {
 		var dataSize = b.commandCount * 5 * 4;
-		var buf = allocGPU(dataSize, DEFAULT, COPY_DEST);
+		var buf = allocGPU(dataSize, DEFAULT, COMMON);
 		var tmpBuf = allocDynamicBuffer(bytes, dataSize);
 		frame.commandList.copyBufferRegion(buf, 0, tmpBuf, 0, dataSize);
 		b.data = buf;
@@ -1370,7 +1370,7 @@ class DX12Driver extends h3d.impl.Driver {
 		}
 
 		td.state = isRT ? RENDER_TARGET : COPY_DEST;
-		td.res = Driver.createCommittedResource(tmp.heap, flags, desc, isRT ? RENDER_TARGET : COPY_DEST, clear);
+		td.res = Driver.createCommittedResource(tmp.heap, flags, desc, isRT ? RENDER_TARGET : COMMON, clear);
 		td.res.setName(t.name == null ? "Texture#"+t.id : t.name);
 		t.lastFrame = frameCount;
 		t.flags.unset(WasCleared);
