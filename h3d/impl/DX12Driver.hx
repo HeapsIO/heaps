@@ -1059,15 +1059,19 @@ class DX12Driver extends h3d.impl.Driver {
 		var total = totalVertex + totalFragment;
 
 		if( total > 64 ) {
-			var withoutVP = total - (shader.vertex.paramsSize << 2);
-			var withoutFP = total - (shader.fragment.paramsSize << 2);
-			if( total > 64 && (withoutVP < 64 || withoutFP > 64) ) {
+			var vertexParamSizeCost = (shader.vertex.paramsSize << 2);
+			var fragmentParamSizeCost = (shader.fragment.paramsSize << 2);
+
+			// Remove the size cost of the root constant and add one descriptor table.
+			var withoutVP = total - vertexParamSizeCost + 1;
+			var withoutFP = total - fragmentParamSizeCost + 1;
+			if( withoutVP < 64 || withoutFP > 64 ) {
 				vertexParamsCBV = true;
-				total -= (shader.vertex.paramsSize << 2);
+				total = withoutVP;
 			}
 			if( total > 64 ) {
 				fragmentParamsCBV = true;
-				total -= (shader.fragment.paramsSize << 2);
+				total = total - fragmentParamSizeCost + 1;
 			}
 			if( total > 64 )
 				throw "Too many globals";
