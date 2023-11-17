@@ -1092,7 +1092,7 @@ class DX12Driver extends h3d.impl.Driver {
 		sign.numParameters = paramsCount;
 		sign.parameters = params[0];
 
-		return { sign : sign, fragmentRegStart : fragmentRegStart, vertexRegisters : vertexRegisters, fragmentRegisters : fragmentRegisters, params : params };
+		return { sign : sign, fragmentRegStart : fragmentRegStart, vertexRegisters : vertexRegisters, fragmentRegisters : fragmentRegisters, params : params, texDescs : texDescs };
 	}
 
 	function compileShader( shader : hxsl.RuntimeShader ) : CompiledShader {
