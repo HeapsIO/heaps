@@ -303,6 +303,21 @@ class BaseLibrary {
 				default:
 				}
 		}
+
+		// scale blender's geometry transform
+		if (app.indexOf("Blender") >= 0) {
+			for( m in getAllModels() ) {
+				for( p in m.getAll("Properties70.P") ) {
+					if (p.props[0].toString() == "Lcl Translation" || p.props[0].toString() == "GeometricTranslation") {
+						for( idx in [4,5,6] ) {
+							var v = p.props[idx].toFloat();
+							p.props[idx] = PFloat(v * scaleFactor);
+						}
+					}
+				}
+			}
+		}
+
 		// scale on skin
 		for( t in this.root.getAll("Objects.Deformer.Transform") ) {
 			var m = toFloats(t);
@@ -343,6 +358,14 @@ class BaseLibrary {
 					var props = rootObject.get("Properties70");
 					for( c in props.childs ) {
 						if( c.props[0].toString() == "PreRotation" && c.props[4].toFloat() == -90 && c.props[5].toFloat()== 0 && c.props[6].toFloat() == 0 ) {
+							for( c2 in props.childs ) {
+								if( c2.props[0].toString() == "Lcl Translation") {
+									var temp = c2.props[5].toFloat();
+									c2.props[5] = PFloat(-c2.props[6].toFloat());
+									c2.props[6] = PFloat(temp);
+								}
+							}
+
 							props.childs.remove(c);
 							break;
 						}
