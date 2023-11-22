@@ -30,6 +30,12 @@ class Style extends domkit.CssStyle {
 			o.dom.applyStyle(this);
 	}
 
+	public function unload( r : hxd.res.Resource ) {
+		r.watch(null);
+		resources.remove(r);
+		onChange();
+	}
+
 	override function clear() {
 		super.clear();
 		resources.resize(0);
