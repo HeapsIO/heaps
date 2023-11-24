@@ -70,7 +70,7 @@ class CapsuleLight extends Light {
 		pbr.radius = radius;
 		pbr.halfLength = length * 0.5;
 		pbr.occlusionFactor = occlusionFactor;
-		pbr.left = absPos.front();
+		pbr.left.load(absPos.front());
 		var d = range - radius;
 		pbr.invRange4 = 1 / (d * d * d * d);
 	}
