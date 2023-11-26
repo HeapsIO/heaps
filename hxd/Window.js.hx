@@ -10,10 +10,27 @@ enum DisplayMode {
 	FullscreenResize;
 }
 
+private class NativeDroppedFile extends hxd.DropFileEvent.DroppedFile {
+
+	public function new( native : js.html.File ) {
+		super(native.name);
+		this.native = native;
+	}
+
+	public function getBytes( callback : ( data : haxe.io.Bytes ) -> Void ) {
+		var reader = new js.html.FileReader();
+		reader.onload = (_) -> callback(haxe.io.Bytes.ofData(reader.result));
+		reader.onerror = (_) -> callback(null);
+		reader.readAsArrayBuffer(native);
+	}
+
+}
+
 class Window {
 
 	var resizeEvents : List<Void -> Void>;
 	var eventTargets : List<Event -> Void>;
+	var dropTargets : List<DropFileEvent -> Void>;
 
 	public var width(get, never) : Int;
 	public var height(get, never) : Int;
@@ -69,6 +86,7 @@ class Window {
 		var customCanvas = canvas != null;
 		eventTargets = new List();
 		resizeEvents = new List();
+		dropTargets = new List();
 
 		if( !js.Browser.supported ) {
 			canvasPos = { "width":0, "top":0, "left":0, "height":0 };
@@ -219,6 +237,40 @@ class Window {
 	}
 
 	public function resize( width : Int, height : Int ) : Void {
+	}
+
+	public function addDragAndDropTarget( f : ( event : DropFileEvent ) -> Void ) : Void {
+		if( dropTargets.length == 0 ) {
+			var element = canvas; // Probably should adhere to `globalEvents`?
+			element.addEventListener("dragover", handleDragAndDropEvent);
+			element.addEventListener("drop", handleDragAndDropEvent);
+		}
+		dropTargets.add(f);
+	}
+
+	public function removeDragAndDropTarget( f : ( event : DropFileEvent ) -> Void ) : Void {
+		for( e in dropTargets )
+			if( Reflect.compareMethods(e, f) ) {
+				dropTargets.remove(f);
+				break;
+			}
+		if( dropTargets.length == 0 ) {
+			var element = canvas; // Probably should adhere to `globalEvents`?
+			element.removeEventListener("dragover", handleDragAndDropEvent);
+			element.removeEventListener("drop", handleDragAndDropEvent);
+		}
+	}
+
+	function handleDragAndDropEvent( e : js.html.DragEvent ) {
+		e.preventDefault();
+		if ( e.type == "dragover" || e.dataTransfer == null || e.dataTransfer.files.length == 0 ) return;
+		var ev = new DropFileEvent([
+				for ( file in e.dataTransfer.files ) new NativeDroppedFile(file)
+			],
+			Math.round((e.clientX - canvasPos.left) * getPixelRatio()),
+			Math.round((e.clientY - canvasPos.top) * getPixelRatio())
+		);
+		for( dt in dropTargets ) dt(ev);
 	}
 
 	@:deprecated("Use the displayMode property instead")
