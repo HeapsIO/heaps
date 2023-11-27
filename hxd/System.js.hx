@@ -67,7 +67,14 @@ class System {
 			throw "Cannot use browserLoop without Browser support nor defining nodejs + hxnodejs";
 			#end
 		}
+		#if webgpu
+		if( @:privateAccess !h3d.impl.WebGpuDriver.checkReady() )
+			return;
+		#end
 		if( loopFunc != null ) loopFunc();
+		#if webgpu
+		@:privateAccess h3d.impl.WebGpuDriver.inst.present();
+		#end
 	}
 
 	public static function start( callb : Void -> Void ) : Void {

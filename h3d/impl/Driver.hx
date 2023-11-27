@@ -5,6 +5,12 @@ typedef IndexBuffer = {};
 typedef GPUBuffer = {};
 typedef Texture = {};
 typedef Query = {};
+#elseif (js && webgpu)
+typedef IndexBuffer = { buf : WebGpuApi.GPU_Buffer, stride : Int };
+typedef GPUBuffer = WebGpuApi.GPU_Buffer;
+typedef Texture = {};
+typedef DepthBuffer = {};
+typedef Query = {};
 #elseif js
 typedef IndexBuffer = { b : js.html.webgl.Buffer, is32 : Bool };
 typedef GPUBuffer = js.html.webgl.Buffer;

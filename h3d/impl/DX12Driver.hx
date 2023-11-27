@@ -81,14 +81,6 @@ class DxFrame {
 	}
 }
 
-class CachedPipeline {
-	public var bytes : hl.Bytes;
-	public var size : Int;
-	public var pipeline : GraphicsPipelineState;
-	public function new() {
-	}
-}
-
 class ShaderRegisters {
 	public var globals : Int;
 	public var params : Int;
@@ -106,7 +98,7 @@ class CompiledShader {
 	public var fragmentRegisters : ShaderRegisters;
 	public var format : hxd.BufferFormat;
 	public var pipeline : GraphicsPipelineStateDesc;
-	public var pipelines : Map<Int,hl.NativeArray<CachedPipeline>> = new Map();
+	public var pipelines : PipelineCache<GraphicsPipelineState> = new PipelineCache();
 	public var rootSignature : RootSignature;
 	public var inputLayout : hl.CArray<InputElementDesc>;
 	public var inputCount : Int;
@@ -291,16 +283,7 @@ class QueryData {
 
 class DX12Driver extends h3d.impl.Driver {
 
-	static inline var PSIGN_MATID = 0;
-	static inline var PSIGN_COLOR_MASK = PSIGN_MATID + 4;
-	static inline var PSIGN_UNUSED = PSIGN_COLOR_MASK + 1;
-	static inline var PSIGN_STENCIL_MASK = PSIGN_UNUSED + 1;
-	static inline var PSIGN_STENCIL_OPS = PSIGN_STENCIL_MASK + 2;
-	static inline var PSIGN_RENDER_TARGETS = PSIGN_STENCIL_OPS + 4;
-	static inline var PSIGN_LAYOUT = PSIGN_RENDER_TARGETS + 8;
-
-	var pipelineSignature = new hl.Bytes(64);
-	var adlerOut = new hl.Bytes(4);
+	var pipelineBuilder = new PipelineCache.PipelineBuilder();
 
 	var driver : DriverInstance;
 	var hasDeviceError = false;
@@ -317,7 +300,6 @@ class DX12Driver extends h3d.impl.Driver {
 
 	var currentFrame : Int;
 	var fenceValue : Int64 = 0;
-	var needPipelineFlush = false;
 	var currentPass : h3d.mat.Pass;
 
 	var currentWidth : Int;
@@ -584,28 +566,6 @@ class DX12Driver extends h3d.impl.Driver {
 		res.state = to;
 	}
 
-
-	function getRTBits( tex : h3d.mat.Texture ) {
-		inline function mk(channels,format) {
-			return ((channels - 1) << 2) | (format + 1);
-		}
-		return switch( tex.format ) {
-		case RGBA: mk(4,0);
-		case R8: mk(1, 0);
-		case RG8: mk(2, 0);
-		case RGB8: mk(3, 0);
-		case R16F: mk(1,1);
-		case RG16F: mk(2,1);
-		case RGB16F: mk(3,1);
-		case RGBA16F: mk(4,1);
-		case R32F: mk(1,2);
-		case RG32F: mk(2,2);
-		case RGB32F: mk(3,2);
-		case RGBA32F: mk(4,2);
-		default: throw "Unsupported RT format "+tex.format;
-		}
-	}
-
 	function getDepthViewFromTexture( tex : h3d.mat.Texture, readOnly : Bool ) {
 		if ( tex != null && tex.depthBuffer == null ) {
 			depthEnabled = false;
@@ -708,8 +668,7 @@ class DX12Driver extends h3d.impl.Driver {
 		if( w == 0 ) w = 1;
 		if( h == 0 ) h = 1;
 		initViewport(w, h);
-		pipelineSignature.setI32(PSIGN_RENDER_TARGETS, tex == null ? 0 : getRTBits(tex) | (depthEnabled ? 0x80000000 : 0));
-		needPipelineFlush = true;
+		pipelineBuilder.setRenderTarget(tex,depthEnabled);
 	}
 
 	override function setRenderTargets(textures:Array<h3d.mat.Texture>, depthBinding : h3d.Engine.DepthBinding = ReadWrite) {
@@ -720,7 +679,6 @@ class DX12Driver extends h3d.impl.Driver {
 
 		var t0 = textures[0];
 		var texViews = renderTargetViews.alloc(textures.length);
-		var bits = 0;
 		for( i => t in textures ) {
 			if ( t.t == null ) {
 				t.alloc();
@@ -730,7 +688,6 @@ class DX12Driver extends h3d.impl.Driver {
 			Driver.createRenderTargetView(t.t.res, null, view);
 			tmp.renderTargets[i] = view;
 			currentRenderTargets[i] = t;
-			bits |= getRTBits(t) << (i << 2);
 			if ( !t.flags.has(WasCleared) ) {
 				t.flags.set(WasCleared);
 				var clear = tmp.clearColor;
@@ -745,9 +702,7 @@ class DX12Driver extends h3d.impl.Driver {
 
 		frame.commandList.omSetRenderTargets(textures.length, tmp.renderTargets, true, depthEnabled ? getDepthViewFromTexture(t0, depthBinding == ReadOnly) : null);
 		initViewport(t0.width, t0.height);
-
-		pipelineSignature.setI32(PSIGN_RENDER_TARGETS, bits | (depthEnabled ? 0x80000000 : 0));
-		needPipelineFlush = true;
+		pipelineBuilder.setRenderTargets(textures, depthEnabled);
 	}
 
 	override function setDepth(depthBuffer : h3d.mat.Texture) {
@@ -758,9 +713,7 @@ class DX12Driver extends h3d.impl.Driver {
 		while( currentRenderTargets.length > 0 ) currentRenderTargets.pop();
 
 		initViewport(depthBuffer.width, depthBuffer.height);
-
-		pipelineSignature.setI32(PSIGN_RENDER_TARGETS, 0x80000000);
-		needPipelineFlush = true;
+		pipelineBuilder.setDepth(depthBuffer);
 	}
 
 	override function setRenderZone(x:Int, y:Int, width:Int, height:Int) {
@@ -1659,26 +1612,17 @@ class DX12Driver extends h3d.impl.Driver {
 		if( currentShader == sh )
 			return false;
 		currentShader = sh;
-		needPipelineFlush = true;
+		pipelineBuilder.setShader(shader);
 		frame.commandList.setGraphicsRootSignature(currentShader.rootSignature);
 		return true;
 	}
 
-	override function selectMaterial( pass : h3d.mat.Pass ) @:privateAccess {
-		needPipelineFlush = true;
-		pipelineSignature.setI32(PSIGN_MATID, pass.bits);
-		pipelineSignature.setUI8(PSIGN_COLOR_MASK, pass.colorMask);
+	override function selectMaterial( pass : h3d.mat.Pass ) {
+		pipelineBuilder.selectMaterial(pass);
 		var st = pass.stencil;
-		if( st != null ) {
-			pipelineSignature.setUI16(PSIGN_STENCIL_MASK, st.maskBits & 0xFFFF);
-			pipelineSignature.setI32(PSIGN_STENCIL_OPS, st.opBits);
-			if( curStencilRef != st.reference ) {
-				curStencilRef = st.reference;
-				frame.commandList.omSetStencilRef(st.reference);
-			}
-		} else {
-			pipelineSignature.setUI16(PSIGN_STENCIL_MASK, 0);
-			pipelineSignature.setI32(PSIGN_STENCIL_OPS, 0);
+		if( st != null && curStencilRef != st.reference ) {
+			curStencilRef = st.reference;
+			frame.commandList.omSetStencilRef(st.reference);
 		}
 	}
 
@@ -1694,9 +1638,8 @@ class DX12Driver extends h3d.impl.Driver {
 			v.sizeInBytes = bview.sizeInBytes;
 			v.strideInBytes = bview.strideInBytes;
 			if( inf.offset >= 256 ) throw "assert";
-			pipelineSignature.setUI8(PSIGN_LAYOUT + i, inf.offset | inf.precision.toInt());
+			pipelineBuilder.setBuffer(i, inf, bview.strideInBytes);
 		}
-		needPipelineFlush = true;
 		frame.commandList.iaSetVertexBuffers(0, currentShader.inputCount, views[0]);
 	}
 
@@ -1711,9 +1654,8 @@ class DX12Driver extends h3d.impl.Driver {
 			v.sizeInBytes = bview.sizeInBytes;
 			v.strideInBytes = bview.strideInBytes;
 			if( inf.offset >= 256 ) throw "assert";
-			pipelineSignature.setUI8(PSIGN_LAYOUT + i, inf.offset | inf.precision.toInt());
+			pipelineBuilder.setBuffer(i, inf, bview.strideInBytes);
 		}
-		needPipelineFlush = true;
 		frame.commandList.iaSetVertexBuffers(0, map.length, views[0]);
 	}
 
@@ -1732,44 +1674,30 @@ class DX12Driver extends h3d.impl.Driver {
 
 	function makePipeline( shader : CompiledShader ) {
 		var p = shader.pipeline;
-		var passBits = pipelineSignature.getI32(PSIGN_MATID);
-		var colorMask = pipelineSignature.getUI8(PSIGN_COLOR_MASK);
-		var stencilMask = pipelineSignature.getUI16(PSIGN_STENCIL_MASK);
-		var stencilOp = pipelineSignature.getI32(PSIGN_STENCIL_OPS);
-
-		var csrc = Pass.getBlendSrc(passBits);
-		var cdst = Pass.getBlendDst(passBits);
-		var asrc = Pass.getBlendAlphaSrc(passBits);
-		var adst = Pass.getBlendAlphaDst(passBits);
-		var cop = Pass.getBlendOp(passBits);
-		var aop = Pass.getBlendAlphaOp(passBits);
-		var dw = Pass.getDepthWrite(passBits);
-		var cmp = Pass.getDepthTest(passBits);
-		var cull = Pass.getCulling(passBits);
-		var wire = Pass.getWireframe(passBits);
-		if( wire != 0 ) cull = 0;
+		var pass = pipelineBuilder.getCurrentPass();
+		if( pass.wireframe ) pass.culling = None;
 
 		var rtCount = currentRenderTargets.length;
 		if( rtCount == 0 ) rtCount = 1;
 
 		p.numRenderTargets = rtCount;
-		p.rasterizerState.cullMode = CULL[cull];
-		p.rasterizerState.fillMode = wire == 0 ? SOLID : WIREFRAME;
-		p.depthStencilDesc.depthEnable = cmp != 0;
-		p.depthStencilDesc.depthWriteMask = dw == 0 || !depthEnabled ? ZERO : ALL;
-		p.depthStencilDesc.depthFunc = COMP[cmp];
+		p.rasterizerState.cullMode = CULL[pass.culling.getIndex()];
+		p.rasterizerState.fillMode = pass.wireframe ? WIREFRAME : SOLID;
+		p.depthStencilDesc.depthEnable = pass.depthTest != Always;
+		p.depthStencilDesc.depthWriteMask = !pass.depthWrite || !depthEnabled ? ZERO : ALL;
+		p.depthStencilDesc.depthFunc = COMP[pass.depthTest.getIndex()];
 
 		var bl = p.blendState;
 		for( i in 0...rtCount ) {
 			var t = bl.renderTargets[i];
-			t.blendEnable = csrc != 0 || cdst != 1;
-			t.srcBlend = BLEND[csrc];
-			t.dstBlend = BLEND[cdst];
-			t.srcBlendAlpha = BLEND_ALPHA[asrc];
-			t.dstBlendAlpha = BLEND_ALPHA[adst];
-			t.blendOp = BLEND_OP[cop];
-			t.blendOpAlpha = BLEND_OP[aop];
-			t.renderTargetWriteMask = colorMask;
+			t.blendEnable = pass.blendSrc != One || pass.blendDst != Zero;
+			t.srcBlend = BLEND[pass.blendSrc.getIndex()];
+			t.dstBlend = BLEND[pass.blendDst.getIndex()];
+			t.srcBlendAlpha = BLEND_ALPHA[pass.blendAlphaSrc.getIndex()];
+			t.dstBlendAlpha = BLEND_ALPHA[pass.blendAlphaDst.getIndex()];
+			t.blendOp = BLEND_OP[pass.blendOp.getIndex()];
+			t.blendOpAlpha = BLEND_OP[pass.blendAlphaOp.getIndex()];
+			t.renderTargetWriteMask = pass.colorMask;
 
 			var t = currentRenderTargets[i];
 			p.rtvFormats[i] = t == null ? R8G8B8A8_UNORM : t.t.format;
@@ -1778,9 +1706,9 @@ class DX12Driver extends h3d.impl.Driver {
 
 		for( i in 0...shader.inputCount ) {
 			var d = shader.inputLayout[i];
-			var offset = pipelineSignature.getUI8(PSIGN_LAYOUT + i);
-			d.alignedByteOffset = offset & ~3;
-			d.format = @:privateAccess switch( [shader.format.inputs[i].type, new hxd.BufferFormat.Precision(offset&3)] ) {
+			var inf = pipelineBuilder.getBufferInput(i);
+			d.alignedByteOffset = inf.offset;
+			d.format = @:privateAccess switch( [shader.format.inputs[i].type, inf.precision] ) {
 			case [DFloat, F32]: R32_FLOAT;
 			case [DFloat, F16]: R16_FLOAT;
 			case [DFloat, S8]: R8_SNORM;
@@ -1802,65 +1730,33 @@ class DX12Driver extends h3d.impl.Driver {
 			};
 		}
 
-		var stencil = stencilMask != 0 || stencilOp != 0;
+		var stencil = pass.stencil;
 		var st = p.depthStencilDesc;
-		st.stencilEnable = stencil;
-		if( stencil ) {
+		st.stencilEnable = stencil != null;
+		if( stencil != null ) {
 			var front = st.frontFace;
 			var back = st.backFace;
-			st.stencilReadMask = stencilMask & 0xFF;
-			st.stencilWriteMask = stencilMask >> 8;
-			front.stencilFunc = COMP[Stencil.getFrontTest(stencilOp)];
-			front.stencilPassOp = STENCIL_OP[Stencil.getFrontPass(stencilOp)];
-			front.stencilFailOp = STENCIL_OP[Stencil.getFrontSTfail(stencilOp)];
-			front.stencilDepthFailOp = STENCIL_OP[Stencil.getFrontDPfail(stencilOp)];
-			back.stencilFunc = COMP[Stencil.getBackTest(stencilOp)];
-			back.stencilPassOp = STENCIL_OP[Stencil.getBackPass(stencilOp)];
-			back.stencilFailOp = STENCIL_OP[Stencil.getBackSTfail(stencilOp)];
-			back.stencilDepthFailOp = STENCIL_OP[Stencil.getBackDPfail(stencilOp)];
+			st.stencilReadMask = stencil.readMask;
+			st.stencilWriteMask = stencil.writeMask;
+			front.stencilFunc = COMP[stencil.frontTest.getIndex()];
+			front.stencilPassOp = STENCIL_OP[stencil.frontPass.getIndex()];
+			front.stencilFailOp = STENCIL_OP[stencil.frontSTfail.getIndex()];
+			front.stencilDepthFailOp = STENCIL_OP[stencil.frontDPfail.getIndex()];
+			back.stencilFunc = COMP[stencil.backTest.getIndex()];
+			back.stencilPassOp = STENCIL_OP[stencil.backPass.getIndex()];
+			back.stencilFailOp = STENCIL_OP[stencil.backSTfail.getIndex()];
+			back.stencilDepthFailOp = STENCIL_OP[stencil.backDPfail.getIndex()];
 		}
 
 		return Driver.createGraphicsPipelineState(p);
 	}
 
 	function flushPipeline() {
-		if( !needPipelineFlush ) return;
-		needPipelineFlush = false;
-		var signature = pipelineSignature;
-		var signatureSize = PSIGN_LAYOUT + currentShader.inputCount;
-		adlerOut.setI32(0, 0);
-		hl.Format.digest(adlerOut, signature, signatureSize, 3);
-		var hash = adlerOut.getI32(0);
-		var pipes = currentShader.pipelines.get(hash);
-		if( pipes == null ) {
-			pipes = new hl.NativeArray(1);
-			currentShader.pipelines.set(hash, pipes);
-		}
-		var insert = -1;
-		for( i in 0...pipes.length ) {
-			var p = pipes[i];
-			if( p == null ) {
-				insert = i;
-				break;
-			}
-			if( p.size == signatureSize && p.bytes.compare(0, signature, 0, signatureSize) == 0 ) {
-				frame.commandList.setPipelineState(p.pipeline);
-				return;
-			}
-		}
-		var signatureBytes = @:privateAccess new haxe.io.Bytes(pipelineSignature, signatureSize);
-		if( insert < 0 ) {
-			var pipes2 = new hl.NativeArray(pipes.length + 1);
-			pipes2.blit(0, pipes, 0, insert);
-			currentShader.pipelines.set(hash, pipes2);
-			pipes = pipes2;
-		}
-		var cp = new CachedPipeline();
-		cp.bytes = signature.sub(0, signatureSize);
-		cp.size = signatureSize;
-		cp.pipeline = makePipeline(currentShader);
-		pipes[insert] = cp;
-		frame.commandList.setPipelineState(cp.pipeline);
+		if( !pipelineBuilder.needFlush ) return;
+		var cache = pipelineBuilder.lookup(currentShader.pipelines, currentShader.inputCount);
+		if( cache.pipeline == null )
+			cache.pipeline = makePipeline(currentShader);
+		frame.commandList.setPipelineState(cache.pipeline);
 	}
 
 	// QUERIES
