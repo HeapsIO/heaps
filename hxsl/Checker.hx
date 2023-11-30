@@ -85,6 +85,12 @@ class Checker {
 					{ args : [ { name: "tex", type: TSampler2D }, { name: "pos", type: ivec2 }, { name: "lod", type: TInt } ], ret: vec4 },
 					{ args : [ { name: "tex", type: TSampler2DArray }, { name: "pos", type: ivec3 }, { name: "lod", type: TInt } ], ret: vec4 },
 				];
+			case Grad:
+				[
+					{ args : [ { name: "tex", type: TSampler2D }, { name: "pos", type: vec2 }, { name: "dPdx", type: vec2 }, { name: "dPdy", type: vec2 } ], ret: vec4 },
+					{ args : [ { name: "tex", type: TSampler2DArray }, { name: "pos", type: vec3 }, { name: "dPdx", type: vec2 }, { name: "dPdy", type: vec2 } ], ret: vec4 },
+					{ args : [ { name: "tex", type: TSamplerCube }, { name: "pos", type: vec3 }, { name: "dPdx", type: vec3 }, { name: "dPdy", type: vec3 } ], ret: vec4 },
+				];
 			case TextureSize:
 				[
 					{ args : [ { name: "tex", type: TSampler2D } ], ret: vec2 },
@@ -166,6 +172,13 @@ class Checker {
 					{ args : [ { name : "channel", type : TChannel(2) }, { name : "pos", type : ivec2 }, { name : "lod", type : TInt } ], ret : vec2 },
 					{ args : [ { name : "channel", type : TChannel(3) }, { name : "pos", type : ivec2 }, { name : "lod", type : TInt } ], ret : vec3 },
 					{ args : [ { name : "channel", type : TChannel(4) }, { name : "pos", type : ivec2 }, { name : "lod", type : TInt } ], ret : vec4 },
+				];
+			case ChannelGrad:
+				[
+					{ args : [ { name: "channel", type: TChannel(1) }, { name: "pos", type: vec2 }, { name: "dPdx", type: vec2 }, { name: "dPdy", type: vec2 } ], ret: TFloat },
+					{ args : [ { name: "channel", type: TChannel(2) }, { name: "pos", type: vec2 }, { name: "dPdx", type: vec2 }, { name: "dPdy", type: vec2 } ], ret: vec2 },
+					{ args : [ { name: "channel", type: TChannel(3) }, { name: "pos", type: vec2 }, { name: "dPdx", type: vec2 }, { name: "dPdy", type: vec2 } ], ret: vec3 },
+					{ args : [ { name: "channel", type: TChannel(4) }, { name: "pos", type: vec2 }, { name: "dPdx", type: vec2 }, { name: "dPdy", type: vec2 } ], ret: vec4 },
 				];
 			case ChannelTextureSize:
 				[
@@ -927,6 +940,8 @@ class Checker {
 			case ["getLod", TChannel(_)]: ChannelReadLod;
 			case ["fetch"|"fetchLod", TSampler2D|TSampler2DArray]: Texel;
 			case ["fetch"|"fetchLod", TChannel(_)]: ChannelFetch;
+			case ["grad", TSampler2D|TSampler2DArray|TSamplerCube]: Grad;
+			case ["grad", TChannel(_)]: ChannelGrad;
 			case ["size", TSampler2D|TSampler2DArray|TSamplerCube]: TextureSize;
 			case ["size", TChannel(_)]: ChannelTextureSize;
 			default: null;
