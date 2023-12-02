@@ -539,11 +539,8 @@ class Emulator {
 			}
 		case FORMAT_STEREOF32:
 			var bdata = buffer.alloc(size >> 2);
-			#if flash
-			flash.Memory.select(data.getData());
-			#end
 			for( i in 0...size>>2 )
-				buffer.data[i] = #if flash flash.Memory.getFloat #else data.getFloat #end(i<<2);
+				buffer.data[i] = data.getFloat(i<<2);
 		default:
 			throw "Format not supported 0x" + StringTools.hex(format);
 		}

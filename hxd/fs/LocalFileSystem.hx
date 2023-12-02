@@ -352,10 +352,6 @@ class LocalFileSystem implements FileSystem {
 	public var baseDir(default,null) : String;
 
 	public function new( dir : String ) {
-		#if flash
-		if( flash.system.Capabilities.playerType == "Desktop" )
-			throw "Please compile with -lib air3";
-		#end
 		throw "Local file system is not supported for this platform";
 	}
 

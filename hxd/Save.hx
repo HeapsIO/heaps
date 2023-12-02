@@ -7,18 +7,6 @@ package hxd;
 class Save {
 
 	static var cur = new Map<String,String>();
-	#if flash
-	static var saveObj : flash.net.SharedObject;
-	static var curObj : String;
-	static function getObj( name : String ) {
-		if( curObj != name ) {
-			curObj = name;
-			saveObj = flash.net.SharedObject.getLocal(name);
-		}
-		return saveObj;
-	}
-	#end
-
 	static var SALT = "s*al!t";
 
 	static function makeCRC( data : String ) {
@@ -58,23 +46,12 @@ class Save {
 		@param checkSum Set to true if data expected to have crc checksum prepending the data. Should be set for entries saved with `checkSum = true`.
 	**/
 	public static function load<T>( ?defValue : T, ?name = "save", checkSum = false ) : T {
-		#if flash
-		try {
-			var data = Reflect.field(getObj(name).data, "data");
-			cur.set(name, data);
-			return loadData(data,checkSum,defValue);
-		} catch( e : Dynamic ) {
-			return defValue;
-		}
-		#else
 		return try loadData(readSaveData(name), checkSum, defValue) catch( e : Dynamic ) defValue;
-		#end
 	}
 
 	/**
 		Override this method to provide custom save lookup.
 		By default it uses `name + ".sav"` for system targets and `localStorage.getItem(name)` on JS.
-		Have no effect on flash (shared object is used).
 		**Note:** This method is an utility method, to load data use `hxd.Save.load`
 	**/
 	@:noCompletion public static dynamic function readSaveData( name : String ) : String {
@@ -91,7 +68,6 @@ class Save {
 	/**
 		Override this method to provide custom save storage.
 		By default it stores saves in `name + ".sav"` file in current working directory on system targets and `localStorage.setItem(name)` on JS.
-		Have no effect on flash (shared object is used)
 		**Note:** This method is an utility method, to save data use `hxd.Save.save`
 	**/
 	@:noCompletion public static dynamic function writeSaveData( name : String, data : String ) {
@@ -107,12 +83,9 @@ class Save {
 	/**
 		Deletes save with specified name.
 		Override this method when using custom save lookup.
-		Does not work on flash.
 	**/
 	public dynamic static function delete( name = "save" ) {
-		#if flash
-		throw "TODO";
-		#elseif sys
+		#if sys
 		try sys.FileSystem.deleteFile(name+".sav") catch( e : Dynamic ) {}
 		#elseif js
 		try js.Browser.window.localStorage.removeItem(name) catch( e : Dynamic ) {}
@@ -124,20 +97,10 @@ class Save {
 		@param checkSum When set, save data is prepended by salted crc checksum for data validation. When save is loaded, `checkSum` flag should be set accordingly.
 	**/
 	public static function save( val : Dynamic, ?name = "save", checkSum = false ) {
-		#if flash
-		var data = saveData(val, checkSum);
-		if( data == cur.get(name) )
-			return false;
-		cur.set(name, data);
-		getObj(name).setProperty("data", data);
-		try saveObj.flush() catch( e : Dynamic ) throw "Can't write save (disk full ?)";
-		return true;
-		#else
 		var data = saveData(val,checkSum);
 		try if( readSaveData(name) == data ) return false catch( e : Dynamic ) {};
 		writeSaveData(name, data);
 		return true;
-		#end
 	}
 
 }

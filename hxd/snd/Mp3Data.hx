@@ -8,9 +8,7 @@ private typedef Mp3File = hl.Abstract<"fmt_mp3">;
 
 class Mp3Data extends Data {
 
-	#if flash
-	var snd : flash.media.Sound;
-	#elseif js
+	#if js
 	var buffer : haxe.io.Bytes;
 	var onEnd : Void -> Void;
 	#elseif hl
@@ -49,20 +47,7 @@ class Mp3Data extends Data {
 		samplingRate = format.mp3.Constants.MPEG.srEnum2Num(header.samplingRate);
 		channels = header.channelMode == Mono ? 1 : 2;
 
-		#if flash
-
-		// flash only allows to decode mp3 in stereo 44.1Khz
-		channels = 2;
-		if( samplingRate != 44100 ) {
-			samples = Math.ceil(samples * 44100.0 / samplingRate);
-			samplingRate = 44100;
-		}
-
-		snd = new flash.media.Sound();
-		bytes.getData().position = 0;
-		snd.loadCompressedDataFromByteArray(bytes.getData(), bytes.length);
-
-		#elseif js
+		#if js
 
 		var ctx = hxd.snd.webaudio.Context.get();
 		if( ctx == null ) return;
@@ -141,23 +126,7 @@ class Mp3Data extends Data {
 	#end
 
 	override function decodeBuffer(out:haxe.io.Bytes, outPos:Int, sampleStart:Int, sampleCount:Int) {
-		#if flash
-		var b = out.getData();
-		b.position = outPos;
-		while( sampleCount > 0 ) {
-			var r = Std.int(snd.extract(b, sampleCount, sampleStart + 2257 /* MAGIC_DELAY, silence added at mp3 start */ ));
-			if( r == 0 ) {
-				while( sampleCount > 0 ) {
-					b.writeFloat(0);
-					b.writeFloat(0);
-					sampleCount--;
-				}
-				return;
-			}
-			sampleCount -= r;
-			sampleStart += r;
-		}
-		#elseif js
+		#if js
 		if( buffer == null ) {
 			// not yet available : fill with blanks
 			out.fill(outPos, sampleCount * 4 * channels, 0);

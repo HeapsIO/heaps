@@ -65,10 +65,8 @@ class Cache {
 	var batchShaders : Map<RuntimeShader, { shader : SharedShader, params : RuntimeShader.AllocParam, size : Int }>;
 	var byID : Map<String, RuntimeShader>;
 	var batchShadersParams : Map<String, Map<RuntimeShader, { shader : SharedShader, params : RuntimeShader.AllocParam, size : Int }>>;
-	public var constsToGlobal : Bool;
 
 	function new() {
-		constsToGlobal = false;
 		linkCache = new SearchMap();
 		linkShaders = new Map();
 		batchShaders = new Map();
@@ -426,7 +424,7 @@ class Cache {
 	function flattenShader( s : ShaderData, kind : FunctionKind, params : Map<Int,{ instance:Int, index:Int }> ) {
 		var flat = new Flatten();
 		var c = new RuntimeShaderData();
-		var data = flat.flatten(s, kind, constsToGlobal);
+		var data = flat.flatten(s, kind);
 		#if (hl && heaps_compact_mem)
 		data = hl.Api.compact(data, null, 0, null);
 		#end

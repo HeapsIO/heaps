@@ -1,13 +1,9 @@
 package hxd;
 
-typedef BitmapInnerData =
-#if flash
-	flash.display.BitmapData;
-#elseif js
-	js.html.CanvasRenderingContext2D;
+#if js 
+typedef BitmapInnerData = js.html.CanvasRenderingContext2D;
 #else
-	BitmapInnerDataImpl;
-
+typedef BitmapInnerData = BitmapInnerDataImpl;
 class BitmapInnerDataImpl {
 	#if hl
 	public var pixels : hl.BytesAccess<Int>;
@@ -23,15 +19,7 @@ class BitmapInnerDataImpl {
 
 class BitmapData {
 
-	#if flash
-	static var tmpRect = new flash.geom.Rectangle();
-	static var tmpPoint = new flash.geom.Point();
-	static var tmpMatrix = new flash.geom.Matrix();
-	#end
-
-#if flash
-	var bmp : flash.display.BitmapData;
-#elseif js
+#if js
 	var ctx : js.html.CanvasRenderingContext2D;
 	var lockImage : js.html.ImageData;
 	var pixel : js.html.ImageData;
@@ -46,9 +34,7 @@ class BitmapData {
 		if( width == -101 && height == -102 ) {
 			// no alloc
 		} else {
-			#if flash
-			bmp = new flash.display.BitmapData(width, height, true, 0);
-			#elseif js
+			#if js
 			var canvas = js.Browser.document.createCanvasElement();
 			canvas.width = width;
 			canvas.height = height;
@@ -68,11 +54,7 @@ class BitmapData {
 	}
 
 	public function clear( color : Int ) {
-		#if flash
-		bmp.fillRect(bmp.rect, color);
-		#else
 		fill(0, 0, width, height, color);
-		#end
 	}
 
 	static inline function notImplemented() {
@@ -80,14 +62,7 @@ class BitmapData {
 	}
 
 	public function fill( x : Int, y : Int, width : Int, height : Int, color : Int ) {
-		#if flash
-		var r = tmpRect;
-		r.x = x;
-		r.y = y;
-		r.width = width;
-		r.height = height;
-		bmp.fillRect(r, color);
-		#elseif js
+		#if js
 		ctx.fillStyle = 'rgba(${(color>>16)&0xFF}, ${(color>>8)&0xFF}, ${color&0xFF}, ${(color>>>24)/255})';
 		ctx.fillRect(x, y, width, height);
 		#else
@@ -112,100 +87,12 @@ class BitmapData {
 	}
 
 	public function draw( x : Int, y : Int, src : BitmapData, srcX : Int, srcY : Int, width : Int, height : Int, ?blendMode : h2d.BlendMode ) {
-		#if flash
-		if( blendMode == null ) blendMode = Alpha;
-		var r = tmpRect;
-		r.x = srcX;
-		r.y = srcY;
-		r.width = width;
-		r.height = height;
-		switch( blendMode ) {
-		case None:
-			var p = tmpPoint;
-			p.x = x;
-			p.y = y;
-			bmp.copyPixels(src.bmp, r, p);
-		case Alpha:
-			var p = tmpPoint;
-			p.x = x;
-			p.y = y;
-			bmp.copyPixels(src.bmp, r, p, src.bmp, null, true);
-		case Add:
-			var m = tmpMatrix;
-			m.tx = x - srcX;
-			m.ty = y - srcY;
-			r.x = x;
-			r.y = y;
-			bmp.draw(src.bmp, m, null, flash.display.BlendMode.ADD, r, false);
-		case Erase:
-			var m = tmpMatrix;
-			m.tx = x - srcX;
-			m.ty = y - srcY;
-			r.x = x;
-			r.y = y;
-			bmp.draw(src.bmp, m, null, flash.display.BlendMode.ERASE, r, false);
-		case Multiply:
-			var m = tmpMatrix;
-			m.tx = x - srcX;
-			m.ty = y - srcY;
-			r.x = x;
-			r.y = y;
-			bmp.draw(src.bmp, m, null, flash.display.BlendMode.MULTIPLY, r, false);
-		case Screen:
-			var m = tmpMatrix;
-			m.tx = x - srcX;
-			m.ty = y - srcY;
-			r.x = x;
-			r.y = y;
-			bmp.draw(src.bmp, m, null, flash.display.BlendMode.SCREEN, r, false);
-		case SoftAdd, AlphaAdd, AlphaMultiply, Sub, Max, Min:
-			throw "BlendMode not supported";
-		}
-		#else
-		notImplemented();
-		#end
+		drawScaled(x,y,width,height,src,srcX,srcY,width,height,blendMode);
 	}
 
 	public function drawScaled( x : Int, y : Int, width : Int, height : Int, src : BitmapData, srcX : Int, srcY : Int, srcWidth : Int, srcHeight : Int, ?blendMode : h2d.BlendMode, smooth = true ) {
 		if( blendMode == null ) blendMode = Alpha;
-		#if flash
-
-		var b = switch( blendMode ) {
-		case None:
-			// todo : clear before ?
-			flash.display.BlendMode.NORMAL;
-		case Alpha:
-			flash.display.BlendMode.NORMAL;
-		case Add:
-			flash.display.BlendMode.ADD;
-		case Erase:
-			flash.display.BlendMode.ERASE;
-		case Multiply:
-			flash.display.BlendMode.MULTIPLY;
-		case Screen:
-			flash.display.BlendMode.SCREEN;
-		case SoftAdd, AlphaAdd, AlphaMultiply, Sub, Max, Min:
-			throw "BlendMode not supported";
-		}
-
-		var m = tmpMatrix;
-		m.a = width / srcWidth;
-		m.d = height / srcHeight;
-		m.tx = x - srcX * m.a;
-		m.ty = y - srcY * m.d;
-
-		var r = tmpRect;
-		r.x = x;
-		r.y = y;
-		r.width = width;
-		r.height = height;
-
-		bmp.draw(src.bmp, m, null, b, r, smooth);
-		m.a = 1;
-		m.d = 1;
-
-		#elseif hl
-
+		#if hl
 		if( blendMode != None ) throw "BitmapData.drawScaled blendMode no supported : " + blendMode;
 		if( x < 0 || y < 0 || width < 0 || height < 0 || srcX < 0 || srcY < 0 || srcWidth < 0 || srcHeight < 0 ||
 			x + width > this.width || y + height > this.height || srcX + srcWidth > src.width || srcY + srcHeight > src.height )
@@ -215,7 +102,6 @@ class BitmapData {
 			src.data.pixels, (srcX + srcY * src.width)<<2, src.width<<2, srcWidth, srcHeight,
 			smooth?1:0
 		);
-
 		#else
 		notImplemented();
 		#end
@@ -459,9 +345,7 @@ class BitmapData {
 	}
 
 	public inline function dispose() {
-		#if flash
-		bmp.dispose();
-		#elseif js
+		#if js
 		ctx = null;
 		pixel = null;
 		#else
@@ -474,11 +358,7 @@ class BitmapData {
 	}
 
 	public function sub( x, y, w, h ) : BitmapData {
-		#if flash
-		var b = new flash.display.BitmapData(w, h);
-		b.copyPixels(bmp, new flash.geom.Rectangle(x, y, w, h), new flash.geom.Point(0, 0));
-		return fromNative(b);
-		#elseif js
+		#if js
 		var canvas = js.Browser.document.createCanvasElement();
 		canvas.width = w;
 		canvas.height = h;
@@ -507,9 +387,7 @@ class BitmapData {
 		Inform that we will perform several pixel operations on the BitmapData.
 	**/
 	public function lock() {
-		#if flash
-		bmp.lock();
-		#elseif js
+		#if js
 		if( lockImage == null )
 			lockImage = ctx.getImageData(0, 0, width, height);
 		#end
@@ -519,9 +397,7 @@ class BitmapData {
 		Inform that we have finished performing pixel operations on the BitmapData.
 	**/
 	public function unlock() {
-		#if flash
-		bmp.unlock();
-		#elseif js
+		#if js
 		if( lockImage != null ) {
 			ctx.putImageData(lockImage, 0, 0);
 			lockImage = null;
@@ -532,10 +408,8 @@ class BitmapData {
 	/**
 		Access the pixel color value at the given position. Note : this function can be very slow if done many times and the BitmapData has not been locked.
 	**/
-	public #if flash inline #end function getPixel( x : Int, y : Int ) : Int {
-		#if flash
-		return bmp.getPixel32(x, y);
-		#elseif js
+	public function getPixel( x : Int, y : Int ) : Int {
+		#if js
 		var i = lockImage;
 		var a;
 		if( i != null )
@@ -553,10 +427,8 @@ class BitmapData {
 	/**
 		Modify the pixel color value at the given position. Note : this function can be very slow if done many times and the BitmapData has not been locked.
 	**/
-	public #if flash inline #end function setPixel( x : Int, y : Int, c : Int ) {
-		#if flash
-		bmp.setPixel32(x, y, c);
-		#elseif js
+	public function setPixel( x : Int, y : Int, c : Int ) {
+		#if js
 		var i : js.html.ImageData = lockImage;
 		if( i != null ) {
 			var a = (x + y * i.width) << 2;
@@ -582,9 +454,7 @@ class BitmapData {
 	}
 
 	inline function get_width() : Int {
-		#if flash
-		return bmp.width;
-		#elseif js
+		#if js
 		return ctx.canvas.width;
 		#else
 		return data.width;
@@ -592,9 +462,7 @@ class BitmapData {
 	}
 
 	inline function get_height() {
-		#if flash
-		return bmp.height;
-		#elseif js
+		#if js
 		return ctx.canvas.height;
 		#else
 		return data.height;
@@ -602,11 +470,7 @@ class BitmapData {
 	}
 
 	public function getPixels() : Pixels {
-		#if flash
-		var p = new Pixels(width, height, haxe.io.Bytes.ofData(bmp.getPixels(bmp.rect)), ARGB);
-		p.flags.set(AlphaPremultiplied);
-		return p;
-		#elseif js
+		#if js
 		var w = width;
 		var h = height;
 		var data = ctx.getImageData(0, 0, w, h).data;
@@ -623,20 +487,7 @@ class BitmapData {
 	public function setPixels( pixels : Pixels ) {
 		if( pixels.width != width || pixels.height != height )
 			throw "Invalid pixels size";
-		#if flash
-		var bytes = pixels.bytes.getData();
-		bytes.position = 0;
-		switch( pixels.format ) {
-		case BGRA:
-			bytes.endian = flash.utils.Endian.LITTLE_ENDIAN;
-		case ARGB:
-			bytes.endian = flash.utils.Endian.BIG_ENDIAN;
-		default:
-			pixels.convert(BGRA);
-			bytes.endian = flash.utils.Endian.LITTLE_ENDIAN;
-		}
-		bmp.setPixels(bmp.rect, bytes);
-		#elseif js
+		#if js
 		var img = ctx.createImageData(pixels.width, pixels.height);
 		pixels.convert(RGBA);
 		for( i in 0...pixels.width*pixels.height*4 ) img.data[i] = pixels.bytes.get(i);
@@ -650,9 +501,7 @@ class BitmapData {
 	}
 
 	public inline function toNative() : BitmapInnerData {
-		#if flash
-		return bmp;
-		#elseif js
+		#if js
 		return ctx;
 		#else
 		return data;
@@ -661,9 +510,7 @@ class BitmapData {
 
 	public static function fromNative( data : BitmapInnerData ) : BitmapData {
 		var b = new BitmapData( -101, -102 );
-		#if flash
-		b.bmp = data;
-		#elseif js
+		#if js
 		b.ctx = data;
 		#else
 		b.data = data;

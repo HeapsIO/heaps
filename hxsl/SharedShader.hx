@@ -37,7 +37,7 @@ class ShaderConst {
 
 class SharedShader {
 
-	public static var UNROLL_LOOPS = #if flash true #else false #end;
+	public static var UNROLL_LOOPS = false;
 
 	public var data : ShaderData;
 	public var globals : Array<ShaderGlobal>;
@@ -81,9 +81,6 @@ class SharedShader {
 			c = c.next;
 		}
 		eval.inlineCalls = true;
-		#if flash
-		eval.eliminateConditionals = true;
-		#end
 		eval.unrollLoops = UNROLL_LOOPS;
 		var edata = eval.eval(data);
 		edata = compactMem(edata);

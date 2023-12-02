@@ -104,10 +104,7 @@ private class ALChannel {
 #end
 class NativeChannel {
 
-	#if flash
-	var snd : flash.media.Sound;
-	var channel : flash.media.SoundChannel;
-	#elseif js
+	#if js
 	// Avoid excessive buffer allocation when playing many sounds.
 	// bufferSamples is constant and never change at runtime, so it's safe to use general pool.
 	static var bufferPool : Array<haxe.io.Float32Array> = new Array();
@@ -126,11 +123,7 @@ class NativeChannel {
 
 	public function new( bufferSamples : Int ) {
 		this.bufferSamples = bufferSamples;
-		#if flash
-		snd = new flash.media.Sound();
-		snd.addEventListener(flash.events.SampleDataEvent.SAMPLE_DATA, onFlashSample);
-		channel = snd.play(0, 0x7FFFFFFF);
-		#elseif js
+		#if js
 		var ctx = hxd.snd.webaudio.Context.get();
 
 		var rate = Std.int(ctx.sampleRate);
@@ -164,16 +157,6 @@ class NativeChannel {
 		channel = new ALChannel(bufferSamples, this);
 		#end
 	}
-
-	#if flash
-	function onFlashSample( event : flash.events.SampleDataEvent ) {
-		var buf = event.data;
-		buf.length = bufferSamples * 2 * 4;
-		buf.position = 0;
-		onSample(haxe.io.Float32Array.fromBytes(haxe.io.Bytes.ofData(buf)));
-		buf.position = bufferSamples * 2 * 4;
-	}
-	#end
 
 	#if js
 
@@ -215,12 +198,7 @@ class NativeChannel {
 	}
 
 	public function stop() {
-		#if flash
-		if( channel != null ) {
-			channel.stop();
-			channel = null;
-		}
-		#elseif js
+		#if js
 		if ( front != null ) {
 			current.removeEventListener("ended", swap);
 			current.stop();

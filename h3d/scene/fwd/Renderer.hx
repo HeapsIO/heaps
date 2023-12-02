@@ -1,7 +1,5 @@
 package h3d.scene.fwd;
 
-private typedef SMap<T> = #if flash haxe.ds.UnsafeStringMap<T> #else Map<String,T> #end
-
 class DepthPass extends h3d.pass.Default {
 
 	var depthMapId : Int;

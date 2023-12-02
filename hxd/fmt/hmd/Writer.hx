@@ -40,7 +40,7 @@ class Writer {
 			out.writeByte(0xFF);
 			return;
 		}
-		#if (flash || js)
+		#if js
 		out.writeByte(haxe.io.Bytes.ofString(name).length);
 		#else
 		out.writeByte(name.length);

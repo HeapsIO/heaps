@@ -33,40 +33,10 @@ class Flatten {
 	public function new() {
 	}
 
-	public function flatten( s : ShaderData, kind : FunctionKind, constsToGlobal : Bool ) : ShaderData {
+	public function flatten( s : ShaderData, kind : FunctionKind ) : ShaderData {
 		globals = [];
 		params = [];
 		outVars = [];
-		if( constsToGlobal ) {
-			consts = [];
-			var p = s.funs[0].expr.p;
-			var gc : TVar = {
-				id : Tools.allocVarId(),
-				name : "__consts__",
-				kind : Global,
-				type : null,
-			};
-			econsts = {
-				e : TVar(gc),
-				t : null,
-				p : p,
-			};
-			s = {
-				name : s.name,
-				vars : s.vars.copy(),
-				funs : [for( f in s.funs ) mapFun(f, mapConsts)],
-			};
-			for( v in s.vars )
-				switch( v.type ) {
-				case TBytes(_):
-					allocConst(255, p);
-				default:
-				}
-			if( consts.length > 0 ) {
-				gc.type = econsts.t = TArray(TFloat, SConst(consts.length));
-				s.vars.push(gc);
-			}
-		}
 		varMap = new Map();
 		allocData = new Map();
 		for( v in s.vars )

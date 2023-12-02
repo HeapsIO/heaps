@@ -179,8 +179,7 @@ class RenderContext extends h3d.impl.RenderContext {
 		inFilter = null;
 		manager.globals.set("time", time);
 		manager.globals.set("global.time", time);
-		// todo : we might prefer to auto-detect this by running a test and capturing its output
-		baseShader.pixelAlign = #if flash true #else false #end;
+		baseShader.pixelAlign = false;
 		baseShader.halfPixelInverse.set(0.5 / engine.width, 0.5 / engine.height);
 		baseShader.viewportA.set(scene.viewportA, 0, scene.viewportX);
 		baseShader.viewportB.set(0, scene.viewportD * -baseFlipY, scene.viewportY * -baseFlipY);

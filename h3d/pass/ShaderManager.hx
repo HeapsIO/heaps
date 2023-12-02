@@ -10,9 +10,6 @@ class ShaderManager {
 
 	public function new(?output:Array<hxsl.Output>) {
 		shaderCache = hxsl.Cache.get();
-		#if flash
-		shaderCache.constsToGlobal = true;
-		#end
 		globals = new hxsl.Globals();
 		currentOutput = new hxsl.ShaderList(null);
 		setOutput(output);

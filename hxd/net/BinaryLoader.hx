@@ -3,9 +3,6 @@ package hxd.net;
 class BinaryLoader {
 
 	public var url(default, null) : String;
-	#if flash
-	var loader : flash.net.URLLoader;
-	#end
 
 	public function new( url : String ) {
 		this.url = url;
@@ -22,16 +19,7 @@ class BinaryLoader {
 	}
 
 	public function load() {
-		#if flash
-
-		loader = new flash.net.URLLoader();
-		loader.dataFormat = flash.net.URLLoaderDataFormat.BINARY;
-		loader.addEventListener(flash.events.IOErrorEvent.IO_ERROR, function(e:flash.events.IOErrorEvent) onError(e.text));
-		loader.addEventListener(flash.events.Event.COMPLETE, function(_) onLoaded(haxe.io.Bytes.ofData(loader.data)));
-		loader.addEventListener(flash.events.ProgressEvent.PROGRESS, function(e:flash.events.ProgressEvent) onProgress(Std.int(e.bytesLoaded), Std.int(e.bytesTotal)));
-		loader.load(new flash.net.URLRequest(url));
-
-		#elseif js
+		#if js
 
 		var xhr = new js.html.XMLHttpRequest();
 		xhr.open('GET', url, true);
