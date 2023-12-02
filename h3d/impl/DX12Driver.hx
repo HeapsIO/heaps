@@ -906,7 +906,7 @@ class DX12Driver extends h3d.impl.Driver {
 		return vsSource+"\n\n\n\n"+psSource;
 	}
 
-	function stringifyRootSignature( sign : RootSignatureDesc, name : String, params : hl.CArray<RootParameterConstants> ) : String {
+	function stringifyRootSignature( sign : RootSignatureDesc, name : String, params : hl.CArray<RootParameterConstants>, paramsCount : Int ) : String {
 		var s = '#define ${name} "RootFlags(';
 		if ( sign.flags.toInt() == 0 )
 			s += '0'; // no flags
@@ -921,7 +921,8 @@ class DX12Driver extends h3d.impl.Driver {
 		}
 		s += ')",';
 
-		for ( param in params ) {
+		for ( i in 0...paramsCount ) {
+			var param = params[i];
 			var vis = 'SHADER_VISIBILITY_${param.shaderVisibility == VERTEX ? "VERTEX" : "PIXEL"}';
 			if ( param.parameterType == CONSTANTS ) {
 				var shaderRegister = param.shaderRegister;
@@ -962,7 +963,8 @@ class DX12Driver extends h3d.impl.Driver {
 
 
 	function computeRootSignature( shader : hxsl.RuntimeShader ) {
-		var params = hl.CArray.alloc(RootParameterConstants,16);
+		var allocatedParams = 16;
+		var params = hl.CArray.alloc(RootParameterConstants,allocatedParams);
 		var paramsCount = 0, regCount = 0;
 		var texDescs = [];
 		var vertexParamsCBV = false;
@@ -1081,7 +1083,7 @@ class DX12Driver extends h3d.impl.Driver {
 		var fragmentRegStart = regCount;
 		var fragmentRegisters = allocParams(shader.fragment);
 
-		if( paramsCount > params.length )
+		if( paramsCount > allocatedParams )
 			throw "ASSERT : Too many parameters";
 
 		var sign = new RootSignatureDesc();
@@ -1092,7 +1094,7 @@ class DX12Driver extends h3d.impl.Driver {
 		sign.numParameters = paramsCount;
 		sign.parameters = params[0];
 
-		return { sign : sign, fragmentRegStart : fragmentRegStart, vertexRegisters : vertexRegisters, fragmentRegisters : fragmentRegisters, params : params, texDescs : texDescs };
+		return { sign : sign, fragmentRegStart : fragmentRegStart, vertexRegisters : vertexRegisters, fragmentRegisters : fragmentRegisters, params : params, paramsCount : paramsCount, texDescs : texDescs };
 	}
 
 	function compileShader( shader : hxsl.RuntimeShader ) : CompiledShader {
@@ -1103,7 +1105,7 @@ class DX12Driver extends h3d.impl.Driver {
 		c.vertexRegisters = res.vertexRegisters;
 		c.fragmentRegisters = res.fragmentRegisters;
 
-		var rootStr = stringifyRootSignature(res.sign, "ROOT_SIGNATURE", res.params);
+		var rootStr = stringifyRootSignature(res.sign, "ROOT_SIGNATURE", res.params, res.paramsCount);
 		var vs = compileSource(shader.vertex, "vs_6_0", 0, rootStr);
 		var ps = compileSource(shader.fragment, "ps_6_0", res.fragmentRegStart, rootStr);
 
@@ -1154,7 +1156,7 @@ class DX12Driver extends h3d.impl.Driver {
 		p.sampleDesc.count = 1;
 		p.sampleMask = -1;
 		p.inputLayout.inputElementDescs = inputLayout[0];
-		p.inputLayout.numElements = inputLayout.length;
+		p.inputLayout.numElements = inputs.length;
 
 		//Driver.createGraphicsPipelineState(p);
 
