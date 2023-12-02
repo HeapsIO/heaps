@@ -21,7 +21,7 @@ class Style extends domkit.CssStyle {
 	public function load( r : hxd.res.Resource, watchChanges = true ) {
 		if( watchChanges ) r.watch(function() {
 			#if (sys || nodejs)
-			var fs = hxd.impl.Api.downcast(hxd.res.Loader.currentInstance.fs, hxd.fs.LocalFileSystem);
+			var fs = Std.downcast(hxd.res.Loader.currentInstance.fs, hxd.fs.LocalFileSystem);
 			if( fs != null ) fs.clearCache();
 			#end
 			onChange();
@@ -128,7 +128,7 @@ class Style extends domkit.CssStyle {
 				fl.padding = 10;
 				errorsText = new h2d.Text(hxd.res.DefaultFont.get(), fl);
 			}
-			var fl = hxd.impl.Api.downcast(errorsText.parent, h2d.Flow);
+			var fl = Std.downcast(errorsText.parent, h2d.Flow);
 			var sc = fl.getScene();
 			fl.maxWidth = sc.width;
 			errorsText.text = errors.join("\n");
@@ -397,7 +397,7 @@ class Style extends domkit.CssStyle {
 		var dom = obj.dom;
 		if(dom != null) {
 			for( s in dom.style ) {
-				if( s.p.name == "text" || hxd.impl.Api.isOfType(s.value,h2d.Tile) ) continue;
+				if( s.p.name == "text" || Std.isOfType(s.value,h2d.Tile) ) continue;
 				lines.push(' <font color="#D0D0D0"> ${s.p.name}</font> <font color="#808080">${s.value}</font><font color="#606060"> (style)</font>');
 			}
 			for( i in 0...dom.currentSet.length ) {

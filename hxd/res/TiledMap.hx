@@ -1,9 +1,5 @@
 package hxd.res;
-#if (haxe_ver < 4)
-import haxe.xml.Fast in Access;
-#else
 import haxe.xml.Access;
-#end
 
 typedef TiledMapLayer = {
 	var data : Array<Int>;

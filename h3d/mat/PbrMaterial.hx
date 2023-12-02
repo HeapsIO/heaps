@@ -213,7 +213,7 @@ class PbrMaterial extends Material {
 		mainPass.enableLights = true;
 
 		// Backward compatibility
-		if(Std.isOfType((props:Dynamic).culling, Bool))
+		if( (props:Dynamic).culling is Bool )
 			props.culling = (props:Dynamic).culling ? Back : None;
 		#if editor
 		if( (props:Dynamic).colorMask == null ) props.colorMask = 15;

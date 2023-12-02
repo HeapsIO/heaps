@@ -603,10 +603,6 @@ class RenderContext extends h3d.impl.RenderContext {
 		if( blend != currentBlend ) {
 			currentBlend = blend;
 			pass.setBlendMode(blend);
-			#if flash
-			// flash does not allow blend separate operations
-			// this will get us good color but wrong alpha
-			#else
 			// accumulate correctly alpha values
 			if( blend == Alpha || blend == Add ) {
 				pass.blendAlphaSrc = One;
@@ -614,7 +610,6 @@ class RenderContext extends h3d.impl.RenderContext {
 				if( inFilterBlend != null )
 					pass.blendSrc = One;
 			}
-			#end
 		}
 		manager.fillParams(buffers, compiledShader, currentShaders);
 		engine.selectMaterial(pass);

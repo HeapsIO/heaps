@@ -256,7 +256,7 @@ class Pass {
 		var sl = shaders;
 		var prev = null;
 		while( sl != null ) {
-			if( hxd.impl.Api.isOfType(sl.s, t) ) {
+			if( Std.isOfType(sl.s, t) ) {
 				resetRendererFlags();
 				if ( selfShadersCache == sl )
 					selfShadersCache = selfShadersCache.next;
@@ -272,7 +272,7 @@ class Pass {
 		sl = selfShaders;
 		prev = null;
 		while( sl != null ) {
-			if( hxd.impl.Api.isOfType(sl.s, t) ) {
+			if( Std.isOfType(sl.s, t) ) {
 				resetRendererFlags();
 				if ( selfShadersCache == sl )
 					selfShadersCache = selfShadersCache.next;
@@ -294,7 +294,7 @@ class Pass {
 
 	function _getShader< T:hxsl.Shader >(t:Class<T>, s : hxsl.ShaderList) : T {
 		while( s != null && s != parentShaders ) {
-			var sh = hxd.impl.Api.downcast(s.s, t);
+			var sh = Std.downcast(s.s, t);
 			if( sh != null )
 				return sh;
 			s = s.next;

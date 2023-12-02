@@ -236,13 +236,11 @@ class LocalFileSystem implements FileSystem {
 		if( configuration == null )
 			configuration = "default";
 
-		#if (macro && haxe_ver >= 4.0)
+		#if macro
 		var exePath = null;
-		#elseif (haxe_ver >= 3.3)
+		#else
 		var pr = Sys.programPath();
 		var exePath = pr == null ? null : pr.split("\\").join("/").split("/");
-		#else
-		var exePath = Sys.executablePath().split("\\").join("/").split("/");
 		#end
 
 		if( exePath != null ) exePath.pop();

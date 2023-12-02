@@ -338,11 +338,7 @@ class Video extends Drawable {
 	#if js
 
 	function errorHandler(e : js.html.Event) {
-		#if (haxe_ver >= 4)
 		onError(v.error.code + ": " + v.error.message);
-		#else
-		onError(Std.string(v.error.code));
-		#end
 	}
 
 	function endHandler(e : js.html.Event) {

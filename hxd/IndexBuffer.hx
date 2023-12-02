@@ -25,7 +25,7 @@ abstract IndexBuffer(InnerData) {
 
 	public inline function new(length = 0) {
 		#if js
-		this = #if (haxe_ver >= 4) js.Syntax.construct #else untyped __new__ #end(Array, length);
+		this = js.Syntax.construct(Array, length);
 		#else
 		this = new InnerData();
 		if( length > 0 ) grow(length);

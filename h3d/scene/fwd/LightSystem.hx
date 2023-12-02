@@ -23,11 +23,11 @@ class LightSystem extends h3d.scene.LightSystem {
 	}
 
 	function get_additiveLighting() {
-		return hxd.impl.Api.downcast(ambientShader,h3d.shader.AmbientLight).additive;
+		return Std.downcast(ambientShader,h3d.shader.AmbientLight).additive;
 	}
 
 	function set_additiveLighting(b) {
-		return hxd.impl.Api.downcast(ambientShader,h3d.shader.AmbientLight).additive = b;
+		return Std.downcast(ambientShader,h3d.shader.AmbientLight).additive = b;
 	}
 
 	override function initLights(ctx) {

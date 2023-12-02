@@ -450,7 +450,7 @@ class ObjectComp implements h2d.domkit.Object implements domkit.Component.Compon
 	}
 
 	static function getFlowProps( o : h2d.Object ) {
-		var p = hxd.impl.Api.downcast(o.parent, h2d.Flow);
+		var p = Std.downcast(o.parent, h2d.Flow);
 		return p == null ? null : p.getProperties(o);
 	}
 

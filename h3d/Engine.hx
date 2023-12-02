@@ -90,8 +90,6 @@ class Engine {
 		#else
 		driver = new h3d.impl.GlDriver(antiAlias);
 		#end
-		#elseif flash
-		driver = new h3d.impl.Stage3dDriver(antiAlias);
 		#elseif (hldx && dx12)
 		driver = new h3d.impl.DX12Driver();
 		#elseif hldx

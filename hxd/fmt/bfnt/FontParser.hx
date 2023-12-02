@@ -1,10 +1,6 @@
 package hxd.fmt.bfnt;
 
-#if (haxe_ver < 4)
-import haxe.xml.Fast in Access;
-#else
 import haxe.xml.Access;
-#end
 
 class FontParser {
 

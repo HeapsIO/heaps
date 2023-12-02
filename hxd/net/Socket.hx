@@ -34,7 +34,7 @@ class Socket {
 
 	static var openedSocks = [];
 	#if hl
-	var s : #if (haxe_ver >= 4) hl.uv.Stream #else Dynamic #end;
+	var s : hl.uv.Stream;
 	#elseif (nodejs && hxnodejs)
 	var s : js.node.net.Socket;
 	#end
@@ -44,11 +44,6 @@ class Socket {
 
 	public function new() {
 		out = new SocketOutput();
-		#if hl
-			#if (haxe_ver < 4)
-			throw "Not supported in Haxe 3.x";
-			#end
-		#end
 	}
 
 	public function set_timeout(t:Null<Float>) {
@@ -58,7 +53,7 @@ class Socket {
 	public function connect( host : String, port : Int, onConnect : Void -> Void ) {
 		close();
 		openedSocks.push(this);
-		#if (hl && haxe_ver >= 4)
+		#if hl
 		var tcp = new hl.uv.Tcp();
 		s = tcp;
 		tcp.connect(new sys.net.Host(host), port, function(b) {
@@ -79,7 +74,7 @@ class Socket {
 	public function bind( host : String, port : Int, onConnect : Socket -> Void, listenCount = 5 ) {
 		close();
 		openedSocks.push(this);
-		#if (hl && haxe_ver >= 4)
+		#if hl
 		var tcp = new hl.uv.Tcp();
 		s = tcp;
 		try {

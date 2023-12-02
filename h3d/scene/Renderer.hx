@@ -72,7 +72,7 @@ class Renderer extends hxd.impl.AnyProps {
 
 	public function getPass<T:h3d.pass.Base>( c : Class<T> ) : T {
 		for( p in allPasses )
-			if( hxd.impl.Api.isOfType(p, c) )
+			if( Std.isOfType(p, c) )
 				return cast p;
 		return null;
 	}

@@ -34,7 +34,7 @@ private class ALChannel {
 	public function new(samples, native) {
 		if ( nativeUpdate == null ) {
 			nativeUpdate = haxe.MainLoop.add(updateChannels);
-			#if (haxe_ver >= 4) nativeUpdate.isBlocking = false; #end
+			nativeUpdate.isBlocking = false;
 			nativeChannels = [];
 		}
 		this.native = native;

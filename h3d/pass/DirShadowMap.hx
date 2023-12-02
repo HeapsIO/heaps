@@ -75,7 +75,7 @@ class DirShadowMap extends Shadows {
 				var b = m.primitive.getBounds();
 				if( b.xMin > b.xMax ) return;
 
-				var absPos = Std.isOfType(m.primitive, h3d.prim.Instanced) ? identity : m.getAbsPos();
+				var absPos = m.primitive is h3d.prim.Instanced ? identity : m.getAbsPos();
 				if( autoZPlanes ) {
 					btmp.load(b);
 					btmp.transform(absPos);

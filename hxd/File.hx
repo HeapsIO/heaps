@@ -24,7 +24,7 @@ class File {
 
 	public static function browse( onSelect : BrowseSelect -> Void, ?options : BrowseOptions ) {
 		if( options == null ) options = {};
-		#if (hl && (haxe_ver >= 4))
+		#if hl
 			var old = hxd.System.allowTimeout;
 			hxd.System.allowTimeout = false;
 			var path = hl.UI.loadFile({
@@ -103,7 +103,7 @@ class File {
 
 	public static function saveAs( dataContent : haxe.io.Bytes, ?options : BrowseOptions ) {
 		if( options == null ) options = { };
-		#if (hl && (haxe_ver >= 4))
+		#if hl
 			var old = hxd.System.allowTimeout;
 			hxd.System.allowTimeout = false;
 			var path = hl.UI.saveFile({

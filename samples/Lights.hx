@@ -141,7 +141,7 @@ class Lights extends SampleApp {
 			m.m.x = m.cx + Math.cos(m.pos) * m.ray;
 			m.m.y = m.cy + Math.sin(m.pos) * m.ray;
 
-			var cc = hxd.impl.Api.downcast(m.m.cullingCollider, h3d.col.Sphere);
+			var cc = Std.downcast(m.m.cullingCollider, h3d.col.Sphere);
 			if( cc != null ) {
 				var absPos = m.m.getAbsPos();
 				cc.x = absPos.tx;

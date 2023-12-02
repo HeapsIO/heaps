@@ -26,7 +26,7 @@ class MaterialDatabase {
 	function saveData( model : hxd.res.Resource, data : Dynamic ) {
 		var file = getFilePath(model);
 		#if ((sys || nodejs) && !usesys)
-		var fs = hxd.impl.Api.downcast(hxd.res.Loader.currentInstance.fs, hxd.fs.LocalFileSystem);
+		var fs = Std.downcast(hxd.res.Loader.currentInstance.fs, hxd.fs.LocalFileSystem);
 		if( fs != null && !haxe.io.Path.isAbsolute(file) )
 			file = fs.baseDir + file;
 		if( data == null )

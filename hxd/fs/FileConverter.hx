@@ -120,7 +120,7 @@ class FileConverter {
 	}
 
 	function makeCommmand( obj : Dynamic ) : { cmd : ConvertCommand, priority : Int } {
-		if( hxd.impl.Api.isOfType(obj,String) )
+		if( obj is String )
 			return { cmd : { conv : loadConvert(obj) }, priority : 0 };
 		if( obj.convert == null )
 			throw "Missing 'convert' in "+obj;
@@ -145,9 +145,9 @@ class FileConverter {
 	function formatValue( v : Dynamic ) : String {
 		if( !Reflect.isObject(v) )
 			return Std.string(v);
-		if( Std.isOfType(v,String) )
+		if( v is String )
 			return v;
-		if( Std.isOfType(v,Array) ) {
+		if( v is Array ) {
 			var a : Array<Dynamic> = v;
 			return [for( v in a ) formatValue(v)].toString();
 		}

@@ -3,12 +3,7 @@ package hxd.res;
 import haxe.macro.Context;
 import haxe.macro.Expr;
 #end
-#if (haxe_ver < 4)
-import haxe.xml.Fast in Access;
-#else
 import haxe.xml.Access;
-#end
-import hxd.impl.Api;
 
 typedef DynamicTextMeta = Map<String,DynamicTextMetaContent>;
 typedef DynamicTextMetaContent = { skip : Bool, sub : DynamicTextMeta };
@@ -87,7 +82,7 @@ class DynamicText {
 				return null;
 			missingStr = true;
 		}
-		if( Api.isOfType(old,Array) ) {
+		if( Std.isOfType(old,Array) ) {
 			onMissing(path,"should be a group");
 			return null;
 		}
@@ -162,23 +157,23 @@ class DynamicText {
 						path.pop();
 						continue;
 					}
-					if( Api.isOfType(sub,String) ) {
+					if( Std.isOfType(sub,String) ) {
 						onMissing(path,"should be a text and not a group");
 						path.pop();
 						continue;
 					}
 					// build structure
 					var ref = ref == null ? null : refIds.get(id);
-					if( Api.isOfType(sub,Array) ) {
+					if( Std.isOfType(sub,Array) ) {
 						var elements : Array<Dynamic> = sub;
 						var data = [for( e in x.elements ) e];
 						var dataRef = ref == null ? null : [for( e in ref.elements ) e];
 						for( i in 0...elements.length ) {
 							var e = elements[i];
 							path.push("[" + i + "]");
-							if( Api.isOfType(e, Array) ) {
+							if( Std.isOfType(e, Array) ) {
 								throw "TODO";
-							} else if( Api.isOfType(e, String) || Reflect.isFunction(e) ) {
+							} else if( Std.isOfType(e, String) || Reflect.isFunction(e) ) {
 								var enew = applyText(path, e, data[i], dataRef == null ? null : dataRef[i], onMissing);
 								if( enew != null )
 									elements[i] = enew;
@@ -201,11 +196,11 @@ class DynamicText {
 			if( str != null ) {
 				function replaceRec(obj:Dynamic,f,str) {
 					var v : Dynamic = Reflect.field(obj, f);
-					if( Api.isOfType(v, String) )
+					if( Std.isOfType(v, String) )
 						Reflect.setField(obj, f, str);
 					else if( Reflect.isFunction(v) )
 						Reflect.setField(obj, f, (_) -> str);
-					else if( Api.isOfType(v,Array) ) {
+					else if( Std.isOfType(v,Array) ) {
 						var arr : Array<Dynamic> = v;
 						for( i in 0...arr.length )
 							arr[i] = applyText(path, arr[i], null, null, onMissing);
@@ -242,12 +237,12 @@ class DynamicText {
 				for( e in x.elements ) {
 					var v : Dynamic = parseXmlData(e);
 					if( isArray ) {
-						if( !Api.isOfType(v, Array) ) v = [v];
+						if( !Std.isOfType(v, Array) ) v = [v];
 					} else {
-						if( Api.isOfType(v, Array) ) {
+						if( Std.isOfType(v, Array) ) {
 							for( i in 0...a.length ) {
 								var v = a[i];
-								if( !Api.isOfType(v, Array) )
+								if( !Std.isOfType(v, Array) )
 									a[i] = [v];
 							}
 							isArray = true;

@@ -643,7 +643,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		var f = events.getFocus();
 		if( f == null )
 			return null;
-		var i = hxd.impl.Api.downcast(f, h2d.Interactive);
+		var i = Std.downcast(f, h2d.Interactive);
 		if( i == null )
 			return null;
 		return interactive[interactive.indexOf(i)];

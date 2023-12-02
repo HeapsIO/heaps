@@ -138,7 +138,7 @@ class HtmlText extends Text {
 			var c = Std.downcast(s, h3d.shader.ColorMatrix);
 			if ( c != null && !c.enabled )
 				continue;
-			var s = hxd.impl.Api.downcast(s, stype);
+			var s = Std.downcast(s, stype);
 			if( s != null )
 				return s;
 		}
@@ -851,7 +851,7 @@ class HtmlText extends Text {
 	override function getBoundsRec( relativeTo : Object, out : h2d.col.Bounds, forSize : Bool ) {
 		if( forSize )
 			for( i in elements )
-				if( hxd.impl.Api.isOfType(i,h2d.Bitmap) || hxd.impl.Api.isOfType(i,h2d.Interactive) )
+				if( i is h2d.Bitmap || i is h2d.Interactive )
 					i.visible = false;
 		super.getBoundsRec(relativeTo, out, forSize);
 		if( forSize )

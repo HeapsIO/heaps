@@ -41,9 +41,7 @@ class HardwarePick extends Default {
 	override function dispose() {
 		super.dispose();
 		texOut.dispose();
-		#if !flash
 		texOut.depthBuffer.dispose();
-		#end
 	}
 
 	override function getOutputs() : Array<hxsl.Output> {

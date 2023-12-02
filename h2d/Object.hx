@@ -386,7 +386,7 @@ class Object #if (domkit && !domkit_heaps) implements domkit.Model<h2d.Object> #
 	public function getScene() : Scene {
 		var p = this;
 		while( p.parent != null ) p = p.parent;
-		return hxd.impl.Api.downcast(p, Scene);
+		return Std.downcast(p, Scene);
 	}
 
 	function set_visible(b) {

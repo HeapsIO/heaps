@@ -230,7 +230,7 @@ class Renderer extends h3d.scene.Renderer {
 	function lighting() {
 
 		begin(Shadows);
-		var ls = hxd.impl.Api.downcast(getLightSystem(), h3d.scene.pbr.LightSystem);
+		var ls = Std.downcast(getLightSystem(), h3d.scene.pbr.LightSystem);
 		var count = ctx.engine.drawCalls;
 		if( ls != null ) drawShadows(ls);
 		if( ctx.lightSystem != null ) ctx.lightSystem.drawPasses = ctx.engine.drawCalls - count;
@@ -246,7 +246,7 @@ class Renderer extends h3d.scene.Renderer {
 
 		begin(Lighting);
 		if ( displayMode == Performance ) {
-			var ls = hxd.impl.Api.downcast(getLightSystem(), h3d.scene.pbr.LightSystem);
+			var ls = Std.downcast(getLightSystem(), h3d.scene.pbr.LightSystem);
 			var s = new h3d.shader.pbr.Light.Performance();
 			performance.shader.gradient = getLightingPerformanceGradient();
 			s.maxLights = performance.shader.gradient.width - 1;
@@ -330,7 +330,7 @@ class Renderer extends h3d.scene.Renderer {
 		var light = @:privateAccess ctx.lights;
 		var passes = get("shadow");
 		while( light != null ) {
-			var plight = hxd.impl.Api.downcast(light, h3d.scene.pbr.Light);
+			var plight = Std.downcast(light, h3d.scene.pbr.Light);
 			if( plight != null ) {
 				if( !shadows ) passes.clear();
 				ls.drawShadows(plight, passes);
@@ -377,7 +377,7 @@ class Renderer extends h3d.scene.Renderer {
 		if (!shadows)
 			passes.clear();
 		while( light != null ) {
-			var plight = hxd.impl.Api.downcast(light, h3d.scene.pbr.Light);
+			var plight = Std.downcast(light, h3d.scene.pbr.Light);
 			if( plight != null ) {
 				plight.shadows.setContext(ctx);
 				plight.shadows.computeStatic(passes);
@@ -564,7 +564,7 @@ class Renderer extends h3d.scene.Renderer {
 		lighting();
 
 		begin(Forward);
-		var ls = hxd.impl.Api.downcast(getLightSystem(), h3d.scene.pbr.LightSystem);
+		var ls = Std.downcast(getLightSystem(), h3d.scene.pbr.LightSystem);
 		ls.forwardMode = true;
 		setTargets([textures.hdr, getPbrDepth()]);
 		renderPass(colorDepthOutput, get("forward"));
