@@ -92,7 +92,7 @@ class FileConverter {
 			var cmd = makeCommmand(Reflect.field(merge,f));
 			var pt = if( f.charCodeAt(0) == "^".code ) {
 				f = f.split("\\/").join("/").split("/").join("\\/");
-				Regexp(new EReg(f,""));
+				Regexp(new EReg(f,"i"));
 			} else if( ~/^[a-zA-Z0-9,]+$/.match(f) ) {
 				var el = f.toLowerCase().split(",");
 				el.length == 1 ? Ext(el[0]) : Exts(el);
