@@ -194,8 +194,10 @@ class Skin extends MultiMaterial {
 				if( m != null ) {
 					if( m.normalMap != null )
 						@:privateAccess m.mainPass.addShaderAtIndex(skinShader, m.mainPass.getShaderIndex(m.normalShader) + 1);
-					else
-						m.mainPass.addShader(skinShader);
+					else {
+						if ( m.mainPass.getShader(h3d.shader.SkinTangent) == null )
+							m.mainPass.addShader(skinShader);
+					}
 					if( skinData.splitJoints != null ) m.mainPass.dynamicParameters = true;
 				}
 		}
