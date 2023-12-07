@@ -8,7 +8,9 @@ class MaterialDatabase {
 	}
 
 	function getFilePath( model : hxd.res.Resource ) {
-		return model.entry.directory+"/materials.props";
+		var dir = model.entry.directory;
+		var filename = "materials.props";
+		return dir == null || dir == "" ? filename : model.entry.directory + "/" + filename;
 	}
 
 	public function getModelData( model : hxd.res.Resource ) {
