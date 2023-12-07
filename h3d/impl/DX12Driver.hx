@@ -485,6 +485,9 @@ class DX12Driver extends h3d.impl.Driver {
 				}
 				frame.commandList.clearRenderTargetView(tmp.renderTargets[i], clear);
 			}
+			// clear backbuffer
+			if( count == 0 )
+				frame.commandList.clearRenderTargetView(tmp.renderTargets[0], clear);
 		}
 		if( depth != null || stencil != null )
 			frame.commandList.clearDepthStencilView(tmp.depthStencils[0], depth != null ? (stencil != null ? BOTH : DEPTH) : STENCIL, (depth:Float), stencil);
