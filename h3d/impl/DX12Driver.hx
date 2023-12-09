@@ -390,10 +390,11 @@ class DX12Driver extends h3d.impl.Driver {
 		defaultDepth.name = "defaultDepth";
 
 		var desc = new CommandSignatureDesc();
+		var adesc = hl.CArray.alloc(IndirectArgumentDesc, 1);
 		desc.byteStride = 5 * 4;
 		desc.numArgumentDescs = 1;
-		desc.argumentDescs = new IndirectArgumentDesc();
-		desc.argumentDescs.type = DRAW_INDEXED;
+		desc.argumentDescs = adesc;
+		adesc[0].type = DRAW_INDEXED;
 		indirectCommand = Driver.createCommandSignature(desc,null);
 
 		tsFreq = Driver.getTimestampFrequency();
@@ -933,9 +934,8 @@ class DX12Driver extends h3d.impl.Driver {
 			} else {
 				try {
 					var p = unsafeCastTo(param, RootParameterDescriptorTable);
-					if ( p == null ) continue;
-					var descRange = p.descriptorRanges;
-					if ( descRange == null ) continue;
+					if( p == null || p.descriptorRanges == null ) continue;
+					var descRange = p.descriptorRanges[0];
 					var baseShaderRegister = descRange.baseShaderRegister;
 					switch ( descRange.rangeType) {
 					case CBV:
@@ -977,9 +977,10 @@ class DX12Driver extends h3d.impl.Driver {
 			var p = unsafeCastTo(params[paramsCount++], RootParameterDescriptorTable);
 			p.parameterType = DESCRIPTOR_TABLE;
 			p.numDescriptorRanges = 1;
-			var range = new DescriptorRange();
+			var rangeArr = hl.CArray.alloc(DescriptorRange,1);
+			var range = rangeArr[0];
 			texDescs.push(range);
-			p.descriptorRanges = range;
+			p.descriptorRanges = rangeArr;
 			p.shaderVisibility = vis;
 			return range;
 		}
@@ -1095,7 +1096,7 @@ class DX12Driver extends h3d.impl.Driver {
 		sign.flags.set(DENY_DOMAIN_SHADER_ROOT_ACCESS);
 		sign.flags.set(DENY_GEOMETRY_SHADER_ROOT_ACCESS);
 		sign.numParameters = paramsCount;
-		sign.parameters = params[0];
+		sign.parameters = cast params;
 
 		return { sign : sign, fragmentRegStart : fragmentRegStart, vertexRegisters : vertexRegisters, fragmentRegisters : fragmentRegisters, params : params, paramsCount : paramsCount, texDescs : texDescs };
 	}
@@ -1158,7 +1159,7 @@ class DX12Driver extends h3d.impl.Driver {
 		p.dsvFormat = UNKNOWN;
 		p.sampleDesc.count = 1;
 		p.sampleMask = -1;
-		p.inputLayout.inputElementDescs = inputLayout[0];
+		p.inputLayout.inputElementDescs = inputLayout;
 		p.inputLayout.numElements = inputs.length;
 
 		//Driver.createGraphicsPipelineState(p);
