@@ -328,7 +328,6 @@ class MeshBatch extends MultiMaterial {
 		}
 	}
 
-	static var VEC4_FMT = hxd.BufferFormat.make([{ name : "data", type : DVec4 }]);
 	static var BATCH_START_FMT = hxd.BufferFormat.make([{ name : "Batch_Start", type : DFloat }]);
 
 	override function sync(ctx:RenderContext) {
@@ -347,7 +346,7 @@ class MeshBatch extends MultiMaterial {
 				if( count > p.maxInstance )
 					count = p.maxInstance;
 				if( buf == null || buf.isDisposed() ) {
-					buf = alloc.allocBuffer(MAX_BUFFER_ELEMENTS,VEC4_FMT,UniformDynamic);
+					buf = alloc.allocBuffer(MAX_BUFFER_ELEMENTS,hxd.BufferFormat.VEC4_DATA,UniformDynamic);
 					p.buffers[index] = buf;
 					upload = true;
 				}

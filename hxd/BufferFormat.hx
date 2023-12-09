@@ -223,6 +223,7 @@ class BufferFormat {
 	public static var POS3D_UV(get,null) : BufferFormat;
 	public static var POS3D_NORMAL_UV(get,null) : BufferFormat;
 	public static var POS3D_NORMAL_UV_RGBA(get,null) : BufferFormat;
+	public static var VEC4_DATA(get,null) : BufferFormat;
 
 	static inline function get_H2D() return XY_UV_RGBA;
 	static function get_XY_UV_RGBA() {
@@ -252,6 +253,10 @@ class BufferFormat {
 	static function get_POS3D_UV() {
 		if( POS3D_UV == null ) POS3D_UV = make([{ name : "position", type : DVec3 },{ name : "uv", type : DVec2 }]);
 		return POS3D_UV;
+	}
+	static function get_VEC4_DATA() {
+		if( VEC4_DATA == null ) VEC4_DATA = hxd.BufferFormat.make([{ name : "data", type : DVec4 }]);
+		return VEC4_DATA;
 	}
 
 	static var ALL_FORMATS = new Map<String,Array<BufferFormat>>();
