@@ -26,6 +26,10 @@ class WgslOut {
 	var allNames : Map<String, Int>;
 	var hasVarying : Bool;
 	public var varNames : Map<Int,String>;
+	public var paramsGroup : Int = 0;
+	public var paramsBinding : Int = 0;
+	public var globalsGroup : Int = 0;
+	public var globalsBinding : Int = 0;
 
 	var varAccess : Map<Int,String>;
 
@@ -454,14 +458,12 @@ class WgslOut {
 		if( !found )
 			return;
 
-		add('struct _globals {\n');
 		for( v in s.vars )
 			if( v.kind == Global ) {
-				add("\t");
+				add('@group(${globalsGroup}) @binding(${globalsBinding}) var<uniform> ');
 				addVar(v);
-				add(",\n");
+				add(";\n");
 			}
-		add("};\n\n");
 	}
 
 	function initParams( s : ShaderData ) {
@@ -491,7 +493,7 @@ class WgslOut {
 						continue;
 					}
 				}
-				add("@group(0) @binding(0) var<uniform> ");
+				add('@group($paramsGroup) @binding($paramsBinding) var<uniform> ');
 				addVar(v);
 				add(";\n");
 			}
