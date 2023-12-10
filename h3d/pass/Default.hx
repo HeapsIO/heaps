@@ -8,7 +8,7 @@ class Default extends Base {
 	var globals(get, never) : hxsl.Globals;
 	var defaultSort = new SortByMaterial().sort;
 
-	inline function get_globals() return manager.globals;
+	inline function get_globals() return ctx.globals;
 
 	@global("camera.view") var cameraView : h3d.Matrix = ctx.camera.mcam;
 	@global("camera.zNear") var cameraNear : Float = ctx.camera.zNear;
@@ -43,7 +43,7 @@ class Default extends Base {
 		var o = @:privateAccess new h3d.pass.PassObject();
 		o.pass = p;
 		setupShaders(new h3d.pass.PassList(o));
-		return manager.compileShaders(o.shaders, p.batchMode ? Batch : Default);
+		return manager.compileShaders(ctx.globals, o.shaders, p.batchMode ? Batch : Default);
 	}
 
 	function processShaders( p : h3d.pass.PassObject, shaders : hxsl.ShaderList ) {
@@ -68,13 +68,13 @@ class Default extends Base {
 				}
 				shaders = ctx.lightSystem.computeLight(p.obj, shaders);
 			}
-			p.shader = manager.compileShaders(shaders, p.pass.batchMode ? Batch : Default);
+			p.shader = manager.compileShaders(ctx.globals, shaders, p.pass.batchMode ? Batch : Default);
 			p.shaders = shaders;
 			var t = p.shader.fragment.textures;
 			if( t == null || t.type.match(TArray(_)) )
 				p.texture = 0;
 			else {
-				var t : h3d.mat.Texture = manager.getParamValue(t, shaders, true);
+				var t : h3d.mat.Texture = manager.getParamValue(ctx.globals, t, shaders, true);
 				p.texture = t == null ? 0 : t.id;
 			}
 		}
@@ -97,8 +97,6 @@ class Default extends Base {
 		if( passes.isEmpty() )
 			return;
 		#if sceneprof h3d.impl.SceneProf.begin("draw", ctx.frame); #end
-		for( g in ctx.sharedGlobals )
-			globals.fastSet(g.gid, g.value);
 		setGlobals();
 		setupShaders(passes);
 		if( sort == null )
@@ -128,11 +126,11 @@ class Default extends Base {
 					buf = ctx.shaderBuffers = new h3d.shader.Buffers(p.shader);
 				else
 					buf.grow(p.shader);
-				manager.fillGlobals(buf, p.shader);
+				manager.fillGlobals(ctx.globals, buf, p.shader);
 				ctx.engine.uploadShaderBuffers(buf, Globals);
 			}
 			if( !p.pass.dynamicParameters ) {
-				manager.fillParams(buf, p.shader, p.shaders);
+				manager.fillParams(ctx.globals, buf, p.shader, p.shaders);
 				ctx.engine.uploadShaderBuffers(buf, Params);
 				ctx.engine.uploadShaderBuffers(buf, Textures);
 				ctx.engine.uploadShaderBuffers(buf, Buffers);

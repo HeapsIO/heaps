@@ -121,7 +121,7 @@ class MeshBatch extends MultiMaterial {
 
 				var manager = cast(ctx,h3d.pass.Default).manager;
 				var shaders = p.getShadersRec();
-				var rt = manager.compileShaders(shaders, Default);
+				var rt = manager.compileShaders(scene.ctx.globals, shaders, Default);
 				var shader = manager.shaderCache.makeBatchShader(rt, shaders, instancedParams);
 
 				var b = new BatchData();

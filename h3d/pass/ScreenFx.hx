@@ -27,11 +27,6 @@ class ScreenFx<T:h3d.shader.ScreenShader> {
 		h3d.pass.Copy.run(src,dst);
 	}
 
-	public function setGlobals( ctx :  h3d.scene.RenderContext ) {
-		for( g in @:privateAccess ctx.sharedGlobals )
-			manager.globals.fastSet(g.gid, g.value);
-	}
-
 	public inline function addShader<T:hxsl.Shader>(s:T) {
 		return pass.addShader(s);
 	}
@@ -49,15 +44,17 @@ class ScreenFx<T:h3d.shader.ScreenShader> {
 			primitive = h3d.prim.Plane2D.get();
 		shader.flipY = engine.driver.hasFeature(BottomLeftCoords) && engine.getCurrentTarget() != null ? -1 : 1;
 		var shaders = @:privateAccess pass.shaders;
-		var rts = manager.compileShaders(shaders);
+		var ctx = h3d.impl.RenderContext.get();
+		var globals = ctx == null ? new hxsl.Globals() : ctx.globals;
+		var rts = manager.compileShaders(globals, shaders);
 		engine.selectMaterial(pass);
 		engine.selectShader(rts);
 		if( buffers == null )
 			buffers = new h3d.shader.Buffers(rts);
 		else
 			buffers.grow(rts);
-		manager.fillGlobals(buffers, rts);
-		manager.fillParams(buffers, rts, shaders);
+		manager.fillGlobals(globals, buffers, rts);
+		manager.fillParams(globals, buffers, rts, shaders);
 		engine.uploadShaderBuffers(buffers, Globals);
 		engine.uploadShaderBuffers(buffers, Params);
 		engine.uploadShaderBuffers(buffers, Textures);

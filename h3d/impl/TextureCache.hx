@@ -5,11 +5,9 @@ class TextureCache {
 	var cache : Array<h3d.mat.Texture>;
 	var position : Int = 0;
 	var defaultDepthBuffer : h3d.mat.Texture;
-	var ctx : h3d.impl.RenderContext;
 	public var defaultFormat : hxd.PixelFormat;
 
-	public function new(ctx) {
-		this.ctx = ctx;
+	public function new() {
 		cache = [];
 		var engine = h3d.Engine.getCurrent();
 		defaultFormat = h3d.mat.Texture.nativeFormat;

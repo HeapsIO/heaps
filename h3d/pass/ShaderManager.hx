@@ -4,13 +4,11 @@ class ShaderManager {
 
 	public static var STRICT = true;
 
-	public var globals : hxsl.Globals;
 	var shaderCache : hxsl.Cache;
 	var currentOutput : hxsl.ShaderList;
 
 	public function new(?output:Array<hxsl.Output>) {
 		shaderCache = hxsl.Cache.get();
-		globals = new hxsl.Globals();
 		currentOutput = new hxsl.ShaderList(null);
 		setOutput(output);
 	}
@@ -170,7 +168,7 @@ class ShaderManager {
 		#end
 	}
 
-	public inline function getParamValue( p : hxsl.RuntimeShader.AllocParam, shaders : hxsl.ShaderList, opt = false ) : Dynamic {
+	public inline function getParamValue( globals : hxsl.Globals, p : hxsl.RuntimeShader.AllocParam, shaders : hxsl.ShaderList, opt = false ) : Dynamic {
 		if( p.perObjectGlobal != null ) {
 			var v : Dynamic = globals.fastGet(p.perObjectGlobal.gid);
 			if( v == null ) throw "Missing global value " + p.perObjectGlobal.path+" for shader "+shaderInfo(shaders,p.perObjectGlobal.path);
@@ -186,7 +184,7 @@ class ShaderManager {
 		return v;
 	}
 
-	public function fillGlobals( buf : h3d.shader.Buffers, s : hxsl.RuntimeShader ) {
+	public function fillGlobals( globals : hxsl.Globals, buf : h3d.shader.Buffers, s : hxsl.RuntimeShader ) {
 		inline function fill(buf:h3d.shader.Buffers.ShaderBuffers, s:hxsl.RuntimeShader.RuntimeShaderData) {
 			var g = s.globals;
 			var ptr = getPtr(buf.globals);
@@ -202,7 +200,7 @@ class ShaderManager {
 		fill(buf.fragment, s.fragment);
 	}
 
-	public function fillParams( buf : h3d.shader.Buffers, s : hxsl.RuntimeShader, shaders : hxsl.ShaderList ) {
+	public function fillParams( globals : hxsl.Globals, buf : h3d.shader.Buffers, s : hxsl.RuntimeShader, shaders : hxsl.ShaderList ) {
 		var curInstance = -1;
 		var curInstanceValue = null;
 		inline function getInstance( index : Int ) {
@@ -270,7 +268,7 @@ class ShaderManager {
 		fill(buf.fragment, s.fragment);
 	}
 
-	public function compileShaders( shaders : hxsl.ShaderList, mode : hxsl.Linker.LinkMode = Default ) {
+	public function compileShaders( globals : hxsl.Globals, shaders : hxsl.ShaderList, mode : hxsl.Linker.LinkMode = Default ) {
 		globals.resetChannels();
 		for( s in shaders ) s.updateConstants(globals);
 		currentOutput.next = shaders;

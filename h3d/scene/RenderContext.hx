@@ -17,7 +17,6 @@ class RenderContext extends h3d.impl.RenderContext {
 	public var pbrLightPass : h3d.mat.Pass;
 	public var computingStatic : Bool;
 
-	var sharedGlobals : Array<SharedGlobal>;
 	public var lightSystem : h3d.scene.LightSystem;
 	public var extraShaders : hxsl.ShaderList;
 	public var visibleFlag : Bool;
@@ -52,7 +51,6 @@ class RenderContext extends h3d.impl.RenderContext {
 	}
 
 	public function start() {
-		sharedGlobals = [];
 		lights = null;
 		drawPass = null;
 		passes = [];
@@ -61,6 +59,7 @@ class RenderContext extends h3d.impl.RenderContext {
 		visibleFlag = true;
 		time += elapsedTime;
 		frame++;
+		setCurrent();
 	}
 
 	public inline function nextPass() {
@@ -68,25 +67,11 @@ class RenderContext extends h3d.impl.RenderContext {
 		drawPass = null;
 	}
 
-	public function getGlobal( name : String ) : Dynamic {
-		var id = hxsl.Globals.allocID(name);
-		for( g in sharedGlobals )
-			if( g.gid == id )
-				return g.value;
-		return null;
+	public inline function getGlobal(name) {
+		return globals.get(name);
 	}
-
-	public inline function setGlobal( name : String, value : Dynamic ) {
-		setGlobalID(hxsl.Globals.allocID(name), value);
-	}
-
-	public function setGlobalID( gid : Int, value : Dynamic ) {
-		for( g in sharedGlobals )
-			if( g.gid == gid ) {
-				g.value = value;
-				return;
-			}
-		sharedGlobals.push(new SharedGlobal(gid, value));
+	public inline function setGlobal(name,v:Dynamic) {
+		globals.set(name, v);
 	}
 
 	public function emitPass( pass : h3d.mat.Pass, obj : h3d.scene.Object ) @:privateAccess {
@@ -125,7 +110,7 @@ class RenderContext extends h3d.impl.RenderContext {
 	}
 
 	public function uploadParams() {
-		currentManager.fillParams(shaderBuffers, drawPass.shader, drawPass.shaders);
+		currentManager.fillParams(globals, shaderBuffers, drawPass.shader, drawPass.shaders);
 		engine.uploadShaderBuffers(shaderBuffers, Params);
 		engine.uploadShaderBuffers(shaderBuffers, Textures);
 		engine.uploadShaderBuffers(shaderBuffers, Buffers);
@@ -155,6 +140,7 @@ class RenderContext extends h3d.impl.RenderContext {
 		}
 		passes = [];
 		lights = null;
+		clearCurrent();
 	}
 
 }
