@@ -1,6 +1,5 @@
 package h3d.pass;
 
-@:build(hxsl.Macros.buildGlobals())
 @:access(h3d.mat.Pass)
 class Default extends Base {
 
@@ -10,29 +9,9 @@ class Default extends Base {
 
 	inline function get_globals() return ctx.globals;
 
-	@global("camera.view") var cameraView : h3d.Matrix = ctx.camera.mcam;
-	@global("camera.zNear") var cameraNear : Float = ctx.camera.zNear;
-	@global("camera.zFar") var cameraFar : Float = ctx.camera.zFar;
-	@global("camera.proj") var cameraProj : h3d.Matrix = ctx.camera.mproj;
-	@global("camera.position") var cameraPos : h3d.Vector = ctx.camera.pos;
-	@global("camera.projDiag") var cameraProjDiag : h3d.Vector4 = new h3d.Vector4(ctx.camera.mproj._11,ctx.camera.mproj._22,ctx.camera.mproj._33,ctx.camera.mproj._44);
-	@global("camera.projFlip") var cameraProjFlip : Float = ctx.engine.driver.hasFeature(BottomLeftCoords) && ctx.engine.getCurrentTarget() != null ? -1 : 1;
-	@global("camera.viewProj") var cameraViewProj : h3d.Matrix = ctx.camera.m;
-	@global("camera.inverseViewProj") var cameraInverseViewProj : h3d.Matrix = ctx.camera.getInverseViewProj();
-	@global("global.time") var globalTime : Float = ctx.time;
-	@global("global.pixelSize") var pixelSize : h3d.Vector = getCurrentPixelSize();
-	@global("global.modelView") var globalModelView : h3d.Matrix;
-	@global("global.modelViewInverse") var globalModelViewInverse : h3d.Matrix;
-
 	public function new(name) {
 		super(name);
 		manager = new ShaderManager(getOutputs());
-		initGlobals();
-	}
-
-	function getCurrentPixelSize() {
-		var t = ctx.engine.getCurrentTarget();
-		return new h3d.Vector(2 / (t == null ? ctx.engine.width : t.width), 2 / (t == null ? ctx.engine.height : t.height));
 	}
 
 	function getOutputs() : Array<hxsl.Output> {
@@ -97,7 +76,6 @@ class Default extends Base {
 		if( passes.isEmpty() )
 			return;
 		#if sceneprof h3d.impl.SceneProf.begin("draw", ctx.frame); #end
-		setGlobals();
 		setupShaders(passes);
 		if( sort == null )
 			defaultSort(passes);
@@ -106,9 +84,9 @@ class Default extends Base {
 		var buf = ctx.shaderBuffers, prevShader = null;
 		for( p in passes ) {
 			#if sceneprof h3d.impl.SceneProf.mark(p.obj); #end
-			globalModelView = p.obj.absPos;
-			if( p.shader.hasGlobal(globalModelViewInverse_id.toInt()) )
-				globalModelViewInverse = p.obj.getInvPos();
+			ctx.globalModelView = p.obj.absPos;
+			if( p.shader.hasGlobal(ctx.globalModelViewInverse_id.toInt()) )
+				ctx.globalModelViewInverse = p.obj.getInvPos();
 			if( prevShader != p.shader ) {
 				prevShader = p.shader;
 				if( onShaderError != null ) {

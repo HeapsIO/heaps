@@ -447,7 +447,6 @@ class Macros {
 	public static function buildGlobals() {
 		var fields = Context.getBuildFields();
 		var globals = [];
-		var sets = [];
 		for( f in fields ) {
 			if( f.meta == null ) continue;
 			for( m in f.meta ) {
@@ -484,7 +483,7 @@ class Macros {
 						});
 						globals.push(macro $i{id} = new hxsl.Globals.GlobalSlot($v{ name }));
 						if( set != null )
-							sets.push(macro $i{f.name} = $set);
+							Context.error("Value ignored", set.pos);
 					default:
 					}
 			}
@@ -495,15 +494,6 @@ class Macros {
 			kind : FFun({
 				ret : null,
 				expr : { expr : EBlock(globals), pos : p },
-				args : [],
-			}),
-			pos : p,
-		});
-		fields.push({
-			name : "setGlobals",
-			kind : FFun({
-				ret : null,
-				expr : { expr : EBlock(sets), pos : p },
 				args : [],
 			}),
 			pos : p,

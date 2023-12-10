@@ -9,6 +9,7 @@ private class SharedGlobal {
 	}
 }
 
+@:build(hxsl.Macros.buildGlobals())
 class RenderContext extends h3d.impl.RenderContext {
 
 	public var camera : h3d.Camera;
@@ -25,6 +26,20 @@ class RenderContext extends h3d.impl.RenderContext {
 	public var shaderBuffers : h3d.shader.Buffers;
 	public var cullingCollider : h3d.col.Collider;
 
+	@global("camera.view") var cameraView : h3d.Matrix;
+	@global("camera.zNear") var cameraNear : Float;
+	@global("camera.zFar") var cameraFar : Float;
+	@global("camera.proj") var cameraProj : h3d.Matrix;
+	@global("camera.position") var cameraPos : h3d.Vector;
+	@global("camera.projDiag") var cameraProjDiag : h3d.Vector4;
+	@global("camera.projFlip") var cameraProjFlip : Float;
+	@global("camera.viewProj") var cameraViewProj : h3d.Matrix;
+	@global("camera.inverseViewProj") var cameraInverseViewProj : h3d.Matrix;
+	@global("global.time") var globalTime : Float;
+	@global("global.pixelSize") var pixelSize : h3d.Vector;
+	@global("global.modelView") var globalModelView : h3d.Matrix;
+	@global("global.modelViewInverse") var globalModelViewInverse : h3d.Matrix;
+
 	var allocPool : h3d.pass.PassObject;
 	var allocFirst : h3d.pass.PassObject;
 	var cachedShaderList : Array<hxsl.ShaderList>;
@@ -37,6 +52,24 @@ class RenderContext extends h3d.impl.RenderContext {
 		super();
 		cachedShaderList = [];
 		cachedPassObjects = [];
+		initGlobals();
+	}
+
+	public function setCamera( cam : h3d.Camera ) {
+		cameraView = cam.mcam;
+		cameraNear = cam.zNear;
+		cameraFar = cam.zFar;
+		cameraProj = cam.mproj;
+		cameraPos = cam.pos;
+		cameraProjDiag = new h3d.Vector4(cam.mproj._11,cam.mproj._22,cam.mproj._33,cam.mproj._44);
+		cameraProjFlip = engine.driver.hasFeature(BottomLeftCoords) && engine.getCurrentTarget() != null ? -1 : 1;
+		cameraViewProj = cam.m;
+		cameraInverseViewProj = camera.getInverseViewProj();
+	}
+
+	function getCurrentPixelSize() {
+		var t = engine.getCurrentTarget();
+		return new h3d.Vector(2 / (t == null ? engine.width : t.width), 2 / (t == null ? engine.height : t.height));
 	}
 
 	@:access(h3d.mat.Pass)
@@ -59,6 +92,9 @@ class RenderContext extends h3d.impl.RenderContext {
 		time += elapsedTime;
 		frame++;
 		setCurrent();
+		globalTime = time;
+		pixelSize = getCurrentPixelSize();
+		setCamera(camera);
 	}
 
 	public inline function nextPass() {
