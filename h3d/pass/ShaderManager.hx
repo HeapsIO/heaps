@@ -192,14 +192,8 @@ class ShaderManager {
 			var ptr = getPtr(buf.globals);
 			while( g != null ) {
 				var v = globals.fastGet(g.gid);
-				if( v == null ) {
-					if( g.path == "__consts__" ) {
-						fillRec(s.consts, g.type, ptr, g.pos);
-						g = g.next;
-						continue;
-					}
+				if( v == null )
 					throw "Missing global value " + g.path;
-				}
 				fillRec(v, g.type, ptr, g.pos);
 				g = g.next;
 			}

@@ -26,8 +26,6 @@ class Flatten {
 	var params : Array<TVar>;
 	var outVars : Array<TVar>;
 	var varMap : Map<TVar,Alloc>;
-	var econsts : TExpr;
-	public var consts : Array<Float>;
 	public var allocData : Map< TVar, Array<Alloc> >;
 
 	public function new() {
@@ -102,119 +100,6 @@ class Flatten {
 			e.map(mapExpr);
 		};
 		return optimize(e);
-	}
-
-	function mapConsts( e : TExpr ) : TExpr {
-		switch( e.e ) {
-		case TArray(ea, eindex = { e : TConst(CInt(_)) } ):
-			return { e : TArray(mapConsts(ea), eindex), t : e.t, p : e.p };
-		case TBinop(OpMult, _, { t : TMat3x4 } ):
-			allocConst(1, e.p); // pre-alloc
-		case TArray(ea, eindex):
-			switch( ea.t ) {
-			case TArray(t, _):
-				var stride = varSize(t, VFloat) >> 2;
-				allocConst(stride, e.p); // pre-alloc
-			default:
-			}
-		case TConst(c):
-			switch( c ) {
-			case CFloat(v):
-				return allocConst(v, e.p);
-			case CInt(v):
-				return allocConst(v, e.p);
-			default:
-				return e;
-			}
-		case TGlobal(g):
-			switch( g ) {
-			case Pack:
-				allocConsts([1, 255, 255 * 255, 255 * 255 * 255], e.p);
-				allocConsts([1/255, 1/255, 1/255, 0], e.p);
-			case Unpack:
-				allocConsts([1, 1 / 255, 1 / (255 * 255), 1 / (255 * 255 * 255)], e.p);
-			case Radians:
-				allocConst(Math.PI / 180, e.p);
-			case Degrees:
-				allocConst(180 / Math.PI, e.p);
-			case Log:
-				allocConst(0.6931471805599453, e.p);
-			case Exp:
-				allocConst(1.4426950408889634, e.p);
-			case Mix:
-				allocConst(1, e.p);
-			case UnpackNormal:
-				allocConst(0.5, e.p);
-			case PackNormal:
-				allocConst(1, e.p);
-				allocConst(0.5, e.p);
-			case ScreenToUv:
-				allocConsts([0.5,0.5], e.p);
-				allocConsts([0.5,-0.5], e.p);
-			case UvToScreen:
-				allocConsts([2,-2], e.p);
-				allocConsts([-1,1], e.p);
-			case Smoothstep:
-				allocConst(2.0, e.p);
-				allocConst(3.0, e.p);
-			default:
-			}
-		case TCall( { e : TGlobal(Vec4) }, [ { e : TVar( { kind : Global | Param | Input | Var } ), t : TVec(3, VFloat) }, { e : TConst(CInt(1)) } ]):
-			// allow var expansion without relying on a constant
-			return e;
-		default:
-		}
-		return e.map(mapConsts);
-	}
-
-	function allocConst( v : Float, p ) : TExpr {
-		var index = consts.indexOf(v);
-		if( index < 0 ) {
-			index = consts.length;
-			consts.push(v);
-		}
-		return { e : TArray(econsts, { e : TConst(CInt(index)), t : TInt, p : p } ), t : TFloat, p : p };
-	}
-
-	function allocConsts( va : Array<Float>, p ) : TExpr {
-		var pad = (va.length - 1) & 3;
-		var index = -1;
-		for( i in 0...consts.length - (va.length - 1) ) {
-			if( (i >> 2) != (i + pad) >> 2 ) continue;
-			var found = true;
-			for( j in 0...va.length )
-				if( consts[i + j] != va[j] ) {
-					found = false;
-					break;
-				}
-			if( found ) {
-				index = i;
-				break;
-			}
-		}
-		if( index < 0 ) {
-			// pad
-			while( consts.length >> 2 != (consts.length + pad) >> 2 )
-				consts.push(0);
-			index = consts.length;
-			for( v in va )
-				consts.push(v);
-		}
-		inline function get(i) : TExpr {
-			return { e : TArray(econsts, { e : TConst(CInt(index+i)), t : TInt, p : p } ), t : TFloat, p : p };
-		}
-		switch( va.length ) {
-		case 1:
-			return get(0);
-		case 2:
-			return { e : TCall( { e : TGlobal(Vec2), t : TVoid, p : p }, [get(0), get(1)]), t : TVec(2, VFloat), p : p };
-		case 3:
-			return { e : TCall( { e : TGlobal(Vec3), t : TVoid, p : p }, [get(0), get(1), get(2)]), t : TVec(3, VFloat), p : p };
-		case 4:
-			return { e : TCall( { e : TGlobal(Vec4), t : TVoid, p : p }, [get(0), get(1), get(3), get(4)]), t : TVec(4, VFloat), p : p };
-		default:
-			throw "assert";
-		}
 	}
 
 	inline function mkInt(v:Int,pos) {

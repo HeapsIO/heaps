@@ -429,7 +429,6 @@ class Cache {
 		data = hl.Api.compact(data, null, 0, null);
 		#end
 		var textures = [];
-		c.consts = flat.consts;
 		c.texturesCount = 0;
 		for( g in flat.allocData.keys() ) {
 			var alloc = flat.allocData.get(g);
