@@ -24,17 +24,19 @@ class Splitter {
 	public function new() {
 	}
 
-	public function split( s : ShaderData ) : { vertex : ShaderData, fragment : ShaderData } {
+	public function split( s : ShaderData ) : Array<ShaderData> {
 		var vfun = null, vvars = new Map();
 		var ffun = null, fvars = new Map();
+		var isCompute = false;
 		varNames = new Map();
 		varMap = new Map();
 		for( f in s.funs )
 			switch( f.kind ) {
-			case Vertex:
+			case Vertex, Main:
 				vars = vvars;
 				vfun = f;
 				checkExpr(f.expr);
+				if( f.kind == Main ) isCompute = true;
 			case Fragment:
 				vars = fvars;
 				ffun = f;
@@ -144,20 +146,22 @@ class Splitter {
 		for( v in fvars )
 			checkVar(v, false, vvars, ffun.expr.p);
 
-		ffun = {
-			ret : ffun.ret,
-			ref : ffun.ref,
-			kind : ffun.kind,
-			args : ffun.args,
-			expr : mapVars(ffun.expr),
-		};
-		switch( ffun.expr.e ) {
-		case TBlock(el):
-			for( e in finits )
-				el.unshift(e);
-		default:
-			finits.push(ffun.expr);
-			ffun.expr = { e : TBlock(finits), t : TVoid, p : ffun.expr.p };
+		if( ffun != null ) {
+			ffun = {
+				ret : ffun.ret,
+				ref : ffun.ref,
+				kind : ffun.kind,
+				args : ffun.args,
+				expr : mapVars(ffun.expr),
+			};
+			switch( ffun.expr.e ) {
+			case TBlock(el):
+				for( e in finits )
+					el.unshift(e);
+			default:
+				finits.push(ffun.expr);
+				ffun.expr = { e : TBlock(finits), t : TVoid, p : ffun.expr.p };
+			}
 		}
 
 		var vvars = [for( v in vvars ) if( !v.local ) v];
@@ -167,18 +171,24 @@ class Splitter {
 		vvars.sort(function(v1, v2) return getId(v1) - getId(v2));
 		fvars.sort(function(v1, v2) return getId(v1) - getId(v2));
 
-		return {
-			vertex : {
+		return isCompute ? [
+			{
+				name : "main",
+				vars : [for( v in vvars ) v.v],
+				funs : [vfun],
+			}
+		] : [
+			{
 				name : "vertex",
 				vars : [for( v in vvars ) v.v],
 				funs : [vfun],
 			},
-			fragment : {
+			{
 				name : "fragment",
 				vars : [for( v in fvars ) v.v],
 				funs : [ffun],
-			},
-		};
+			}
+		];
 	}
 
 	function addExpr( f : TFunction, e : TExpr ) {

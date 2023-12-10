@@ -1,6 +1,12 @@
 package hxsl;
 using hxsl.Ast;
 
+enum LinkMode {
+	Default;
+	Batch;
+	Compute;
+}
+
 private class AllocatedVar {
 	public var id : Int;
 	public var v : TVar;
@@ -28,6 +34,7 @@ private class ShaderInfos {
 	public var vertex : Null<Bool>;
 	public var onStack : Bool;
 	public var hasDiscard : Bool;
+	public var isCompute : Bool;
 	public var marked : Null<Bool>;
 	public function new(n, v) {
 		this.name = n;
@@ -49,12 +56,12 @@ class Linker {
 	var varIdMap : Map<Int,Int>;
 	var locals : Map<Int,Bool>;
 	var curInstance : Int;
-	var batchMode : Bool;
+	var mode : LinkMode;
 	var isBatchShader : Bool;
 	var debugDepth = 0;
 
-	public function new(batchMode=false) {
-		this.batchMode = batchMode;
+	public function new(mode) {
+		this.mode = mode;
 	}
 
 	inline function debug( msg : String, ?pos : haxe.PosInfos ) {
@@ -348,7 +355,7 @@ class Linker {
 		curInstance = 0;
 		var outVars = [];
 		for( s in shadersData ) {
-			isBatchShader = batchMode && StringTools.startsWith(s.name,"batchShader_");
+			isBatchShader = mode == Batch && StringTools.startsWith(s.name,"batchShader_");
 			for( v in s.vars ) {
 				var v2 = allocVar(v, null, s.name);
 				if( isBatchShader && v2.v.kind == Param && !StringTools.startsWith(v2.path,"Batch_") )
@@ -375,8 +382,13 @@ class Linker {
 				if( v.kind == null ) throw "assert";
 				switch( v.kind ) {
 				case Vertex, Fragment:
+					if( mode == Compute )
+						throw "Unexpected "+v.kind.getName().toLowerCase()+"() function in compute shader";
 					addShader(s.name + "." + (v.kind == Vertex ? "vertex" : "fragment"), v.kind == Vertex, f.expr, priority);
-
+				case Main:
+					if( mode != Compute )
+						throw "Unexpected main() outside compute shader";
+					addShader(s.name, true, f.expr, priority).isCompute = true;
 				case Init:
 					var prio : Array<Int>;
 					var status : Null<Bool> = switch( f.ref.name ) {
@@ -408,7 +420,7 @@ class Linker {
 
 		// force shaders containing discard to be included
 		for( s in shaders )
-			if( s.hasDiscard ) {
+			if( s.hasDiscard || s.isCompute ) {
 				initDependencies(s);
 				entry.deps.set(s, true);
 			}
@@ -505,7 +517,7 @@ class Linker {
 				expr : expr,
 			};
 		}
-		var funs = [
+		var funs = mode == Compute ? [build(Main,"main",v)] : [
 			build(Vertex, "vertex", v),
 			build(Fragment, "fragment", f),
 		];

@@ -7,6 +7,8 @@ class ShaderManager {
 	public var globals : hxsl.Globals;
 	var shaderCache : hxsl.Cache;
 	var currentOutput : hxsl.ShaderList;
+	var currentCompute : hxsl.ShaderList;
+	var computeBuffers : h3d.shader.Buffers;
 
 	public function new(?output:Array<hxsl.Output>) {
 		shaderCache = hxsl.Cache.get();
@@ -192,20 +194,14 @@ class ShaderManager {
 			var ptr = getPtr(buf.globals);
 			while( g != null ) {
 				var v = globals.fastGet(g.gid);
-				if( v == null ) {
-					if( g.path == "__consts__" ) {
-						fillRec(s.consts, g.type, ptr, g.pos);
-						g = g.next;
-						continue;
-					}
+				if( v == null )
 					throw "Missing global value " + g.path;
-				}
 				fillRec(v, g.type, ptr, g.pos);
 				g = g.next;
 			}
 		}
 		fill(buf.vertex, s.vertex);
-		fill(buf.fragment, s.fragment);
+		if( s.fragment != null ) fill(buf.fragment, s.fragment);
 	}
 
 	public function fillParams( buf : h3d.shader.Buffers, s : hxsl.RuntimeShader, shaders : hxsl.ShaderList ) {
@@ -273,16 +269,45 @@ class ShaderManager {
 			}
 		}
 		fill(buf.vertex, s.vertex);
-		fill(buf.fragment, s.fragment);
+		if( s.fragment != null ) fill(buf.fragment, s.fragment);
 	}
 
-	public function compileShaders( shaders : hxsl.ShaderList, batchMode : Bool = false ) {
+	public function compileShaders( shaders : hxsl.ShaderList, mode : hxsl.Linker.LinkMode = Default ) {
 		globals.resetChannels();
 		for( s in shaders ) s.updateConstants(globals);
-		currentOutput.next = shaders;
-		var s = shaderCache.link(currentOutput, batchMode);
-		currentOutput.next = null;
+		var s;
+		if( mode == Compute )
+			s = shaderCache.link(shaders, mode);
+		else {
+			currentOutput.next = shaders;
+			s = shaderCache.link(currentOutput, mode);
+			currentOutput.next = null;
+		}
 		return s;
+	}
+
+	public function computeDispatch( shader : hxsl.Shader, x = 1, y = 1, z = 1 ) {
+		if( currentCompute == null )
+			currentCompute = new hxsl.ShaderList(null);
+		shader.updateConstants(globals);
+		currentCompute.s = shader;
+		var rt = shaderCache.link(currentCompute, Compute);
+		var bufs = computeBuffers;
+		if( bufs == null ) {
+			bufs = new h3d.shader.Buffers(rt);
+			computeBuffers = bufs;
+		}
+		bufs.grow(rt);
+		fillParams(bufs, rt, currentCompute);
+		fillGlobals(bufs, rt);
+		var e = h3d.Engine.getCurrent();
+		e.driver.selectShader(rt);
+		e.driver.uploadShaderBuffers(bufs, Params);
+		e.driver.uploadShaderBuffers(bufs, Globals);
+		e.driver.uploadShaderBuffers(bufs, Buffers);
+		e.driver.uploadShaderBuffers(bufs, Textures);
+		e.driver.computeDispatch(x,y,z);
+		currentCompute.s = null;
 	}
 
 }

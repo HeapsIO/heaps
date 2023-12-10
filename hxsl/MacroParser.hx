@@ -115,7 +115,7 @@ class MacroParser {
 			case "Channel3": return TChannel(3);
 			case "Channel4": return TChannel(4);
 			}
-		case TPath( { pack : [], name : name = ("Array"|"Buffer"), sub : null, params : [t, size] } ):
+		case TPath( { pack : [], name : name = ("Array"|"Buffer"|"RWBuffer"), sub : null, params : [t, size] } ):
 			var t = switch( t ) {
 			case TPType(t): parseType(t, pos);
 			default: null;
@@ -129,7 +129,12 @@ class MacroParser {
 			default: null;
 			}
 			if( t != null && size != null )
-				return name == "Array" ? TArray(t, size) : TBuffer(t,size);
+				return switch( name ) {
+				case "Array": TArray(t, size);
+				case "Buffer": TBuffer(t,size,Uniform);
+				case "RWBuffer": TBuffer(t,size,RW);
+				default: throw "assert";
+				}
 		case TAnonymous(fl):
 			return TStruct([for( f in fl ) {
 				switch( f.kind ) {

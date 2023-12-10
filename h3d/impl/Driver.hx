@@ -317,4 +317,10 @@ class Driver {
 		return 0.;
 	}
 
+	// --- COMPUTE
+
+	public function computeDispatch( x : Int = 1, y : Int = 1, z : Int = 1 ) {
+		throw "Not implemented";
+	}
+
 }

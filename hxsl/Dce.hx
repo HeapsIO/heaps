@@ -34,30 +34,27 @@ class Dce {
 		#end
 	}
 
-	public function dce( vertex : ShaderData, fragment : ShaderData ) {
+	public function dce( shaders : Array<ShaderData> ) {
 		// collect vars dependencies
 		used = new Map();
 		channelVars = [];
 
 		var inputs = [];
-		for( v in vertex.vars ) {
-			var i = get(v);
-			if( v.kind == Input )
-				inputs.push(i);
-			if( v.kind == Output )
-				i.keep = true;
-		}
-		for( v in fragment.vars ) {
-			var i = get(v);
-			if( v.kind == Output )
-				i.keep = true;
+		for( s in shaders ) {
+			for( v in s.vars ) {
+				var i = get(v);
+				if( v.kind == Input )
+					inputs.push(i);
+				if( v.kind == Output || v.type.match(TBuffer(_,_,RW)) )
+					i.keep = true;
+			}
 		}
 
 		// collect dependencies
-		for( f in vertex.funs )
-			check(f.expr, [], []);
-		for( f in fragment.funs )
-			check(f.expr, [], []);
+		for( s in shaders ) {
+			for( f in s.funs )
+				check(f.expr, [], []);
+		}
 
 		var outExprs = [];
 		while( true ) {
@@ -74,10 +71,10 @@ class Dce {
 				markRec(v);
 
 			outExprs = [];
-			for( f in vertex.funs )
-				outExprs.push(mapExpr(f.expr, false));
-			for( f in fragment.funs )
-				outExprs.push(mapExpr(f.expr, false));
+			for( s in shaders ) {
+				for( f in s.funs )
+					outExprs.push(mapExpr(f.expr, false));
+			}
 
 			// post add conditional branches
 			markAsKeep = false;
@@ -86,22 +83,19 @@ class Dce {
 			if( !markAsKeep ) break;
 		}
 
-		for( f in vertex.funs )
-			f.expr = outExprs.shift();
-		for( f in fragment.funs )
-			f.expr = outExprs.shift();
+		for( s in shaders ) {
+			for( f in s.funs )
+				f.expr = outExprs.shift();
+		}
 
 		for( v in used ) {
 			if( v.used ) continue;
 			if( v.v.kind == VarKind.Input) continue;
-			vertex.vars.remove(v.v);
-			fragment.vars.remove(v.v);
+			for( s in shaders )
+				s.vars.remove(v.v);
 		}
 
-		return {
-			fragment : fragment,
-			vertex : vertex,
-		}
+		return shaders.copy();
 	}
 
 	function get( v : TVar ) {

@@ -43,12 +43,14 @@ class Buffers {
 
 	public function new( s : hxsl.RuntimeShader ) {
 		vertex = new ShaderBuffers(s.vertex);
-		fragment = new ShaderBuffers(s.fragment);
+		if( s.fragment != null )
+			fragment = new ShaderBuffers(s.fragment);
 	}
 
 	public inline function grow( s : hxsl.RuntimeShader ) {
 		vertex.grow(s.vertex);
-		fragment.grow(s.fragment);
+		if( s.fragment != null )
+			fragment.grow(s.fragment);
 	}
 }
 

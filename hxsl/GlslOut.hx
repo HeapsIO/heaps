@@ -181,12 +181,13 @@ class GlslOut {
 			case SConst(n): add(n);
 			}
 			add("]");
-		case TBuffer(t, size):
+		case TBuffer(t, size, kind):
+			if( kind != Uniform ) throw "TODO";
 			add((isVertex ? "vertex_" : "") + "uniform_buffer"+(uniformBuffer++));
 			add(" { ");
 			v.type = TArray(t,size);
 			addVar(v);
-			v.type = TBuffer(t,size);
+			v.type = TBuffer(t,size, kind);
 			add("; }");
 		default:
 			addType(v.type);

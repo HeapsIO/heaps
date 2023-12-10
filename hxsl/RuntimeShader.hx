@@ -44,7 +44,7 @@ class AllocGlobal {
 }
 
 class RuntimeShaderData {
-	public var vertex : Bool;
+	public var kind : hxsl.Ast.FunctionKind;
 	public var data : Ast.ShaderData;
 	public var code : String;
 	public var params : AllocParam;
@@ -55,7 +55,6 @@ class RuntimeShaderData {
 	public var texturesCount : Int;
 	public var buffers : AllocParam;
 	public var bufferCount : Int;
-	public var consts : Array<Float>;
 	public function new() {
 	}
 }
@@ -76,14 +75,18 @@ class RuntimeShader {
 	public var id : Int;
 	public var vertex : RuntimeShaderData;
 	public var fragment : RuntimeShaderData;
+	public var compute(get,set) : RuntimeShaderData;
 	public var globals : Map<Int,Bool>;
+
+	inline function get_compute() return vertex;
+	inline function set_compute(v) return vertex = v;
 
 	/**
 		Signature of the resulting HxSL code.
 		Several shaders with the different specification might still get the same resulting signature.
 	**/
 	public var signature : String;
-	public var batchMode : Bool;
+	public var mode : hxsl.Linker.LinkMode;
 	public var spec : { instances : Array<ShaderInstanceDesc>, signature : String };
 
 	public function new() {
@@ -94,5 +97,8 @@ class RuntimeShader {
 		return globals.exists(gid);
 	}
 
+	public function getShaders() {
+		return mode == Compute ? [compute] : [vertex, fragment];
+	}
 
 }

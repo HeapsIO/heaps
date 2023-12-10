@@ -13,6 +13,10 @@ enum BufferFlag {
 		Used for shader input buffer
 	**/
 	UniformBuffer;
+	/**
+		Can be written
+	**/
+	ReadWriteBuffer;
 }
 
 @:allow(h3d.impl.MemoryManager)
