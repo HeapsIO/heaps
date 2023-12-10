@@ -32,7 +32,6 @@ class RenderContext extends h3d.impl.RenderContext {
 	var cachedPos : Int;
 	var passes : Array<h3d.pass.PassObject>;
 	var lights : Light;
-	var currentManager : h3d.pass.ShaderManager;
 
 	public function new() {
 		super();
@@ -111,7 +110,7 @@ class RenderContext extends h3d.impl.RenderContext {
 	}
 
 	public function uploadParams() {
-		currentManager.fillParams(globals, shaderBuffers, drawPass.shader, drawPass.shaders);
+		fillParams(shaderBuffers, drawPass.shader, drawPass.shaders);
 		engine.uploadShaderBuffers(shaderBuffers, Params);
 		engine.uploadShaderBuffers(shaderBuffers, Textures);
 		engine.uploadShaderBuffers(shaderBuffers, Buffers);

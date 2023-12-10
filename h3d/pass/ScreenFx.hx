@@ -45,16 +45,17 @@ class ScreenFx<T:h3d.shader.ScreenShader> {
 		shader.flipY = engine.driver.hasFeature(BottomLeftCoords) && engine.getCurrentTarget() != null ? -1 : 1;
 		var shaders = @:privateAccess pass.shaders;
 		var ctx = h3d.impl.RenderContext.get();
-		var globals = ctx == null ? new hxsl.Globals() : ctx.globals;
-		var rts = manager.compileShaders(globals, shaders);
+		if( ctx == null )
+			throw "Missing render context";
+		var rts = manager.compileShaders(ctx.globals, shaders);
 		engine.selectMaterial(pass);
 		engine.selectShader(rts);
 		if( buffers == null )
 			buffers = new h3d.shader.Buffers(rts);
 		else
 			buffers.grow(rts);
-		manager.fillGlobals(globals, buffers, rts);
-		manager.fillParams(globals, buffers, rts, shaders);
+		ctx.fillGlobals(buffers, rts);
+		ctx.fillParams(buffers, rts, shaders);
 		engine.uploadShaderBuffers(buffers, Globals);
 		engine.uploadShaderBuffers(buffers, Params);
 		engine.uploadShaderBuffers(buffers, Textures);

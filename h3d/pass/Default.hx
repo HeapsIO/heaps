@@ -74,7 +74,7 @@ class Default extends Base {
 			if( t == null || t.type.match(TArray(_)) )
 				p.texture = 0;
 			else {
-				var t : h3d.mat.Texture = manager.getParamValue(ctx.globals, t, shaders, true);
+				var t : h3d.mat.Texture = ctx.getParamValue(t, shaders, true);
 				p.texture = t == null ? 0 : t.id;
 			}
 		}
@@ -103,7 +103,6 @@ class Default extends Base {
 			defaultSort(passes);
 		else
 			sort(passes);
-		ctx.currentManager = manager;
 		var buf = ctx.shaderBuffers, prevShader = null;
 		for( p in passes ) {
 			#if sceneprof h3d.impl.SceneProf.mark(p.obj); #end
@@ -126,11 +125,11 @@ class Default extends Base {
 					buf = ctx.shaderBuffers = new h3d.shader.Buffers(p.shader);
 				else
 					buf.grow(p.shader);
-				manager.fillGlobals(ctx.globals, buf, p.shader);
+				ctx.fillGlobals(buf, p.shader);
 				ctx.engine.uploadShaderBuffers(buf, Globals);
 			}
 			if( !p.pass.dynamicParameters ) {
-				manager.fillParams(ctx.globals, buf, p.shader, p.shaders);
+				ctx.fillParams(buf, p.shader, p.shaders);
 				ctx.engine.uploadShaderBuffers(buf, Params);
 				ctx.engine.uploadShaderBuffers(buf, Textures);
 				ctx.engine.uploadShaderBuffers(buf, Buffers);

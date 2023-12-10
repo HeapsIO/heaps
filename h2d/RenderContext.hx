@@ -215,7 +215,7 @@ class RenderContext extends h3d.impl.RenderContext {
 			buffers = new h3d.shader.Buffers(compiledShader);
 		else
 			buffers.grow(compiledShader);
-		manager.fillGlobals(globals, buffers, compiledShader);
+		fillGlobals(buffers, compiledShader);
 		engine.selectShader(compiledShader);
 		engine.uploadShaderBuffers(buffers, Globals);
 	}
@@ -612,7 +612,7 @@ class RenderContext extends h3d.impl.RenderContext {
 					pass.blendSrc = One;
 			}
 		}
-		manager.fillParams(globals, buffers, compiledShader, currentShaders);
+		fillParams(buffers, compiledShader, currentShaders);
 		engine.selectMaterial(pass);
 		engine.uploadShaderBuffers(buffers, Params);
 		engine.uploadShaderBuffers(buffers, Textures);
