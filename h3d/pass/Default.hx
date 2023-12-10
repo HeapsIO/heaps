@@ -43,7 +43,7 @@ class Default extends Base {
 		var o = @:privateAccess new h3d.pass.PassObject();
 		o.pass = p;
 		setupShaders(new h3d.pass.PassList(o));
-		return manager.compileShaders(o.shaders, p.batchMode);
+		return manager.compileShaders(o.shaders, p.batchMode ? Batch : Default);
 	}
 
 	function processShaders( p : h3d.pass.PassObject, shaders : hxsl.ShaderList ) {
@@ -68,7 +68,7 @@ class Default extends Base {
 				}
 				shaders = ctx.lightSystem.computeLight(p.obj, shaders);
 			}
-			p.shader = manager.compileShaders(shaders, p.pass.batchMode);
+			p.shader = manager.compileShaders(shaders, p.pass.batchMode ? Batch : Default);
 			p.shaders = shaders;
 			var t = p.shader.fragment.textures;
 			if( t == null || t.type.match(TArray(_)) )

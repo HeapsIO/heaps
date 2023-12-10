@@ -1,5 +1,10 @@
 package hxsl;
 
+enum BufferKind {
+	Uniform;
+	RW;
+}
+
 enum Type {
 	TVoid;
 	TInt;
@@ -17,7 +22,7 @@ enum Type {
 	TStruct( vl : Array<TVar> );
 	TFun( variants : Array<FunType> );
 	TArray( t : Type, size : SizeDecl );
-	TBuffer( t : Type, size : SizeDecl );
+	TBuffer( t : Type, size : SizeDecl, kind : BufferKind );
 	TChannel( size : Int );
 	TMat2;
 }
@@ -187,6 +192,7 @@ enum FunctionKind {
 	Fragment;
 	Init;
 	Helper;
+	Main;
 }
 
 enum TGlobal {
@@ -280,6 +286,8 @@ enum TGlobal {
 	IntBitsToFloat;
 	UintBitsToFloat;
 	RoundEven;
+	// compute
+	SetLayout;
 }
 
 enum Component {
@@ -418,7 +426,12 @@ class Tools {
 			prefix + "Vec" + size;
 		case TStruct(vl):"{" + [for( v in vl ) v.name + " : " + toString(v.type)].join(",") + "}";
 		case TArray(t, s): toString(t) + "[" + (switch( s ) { case SConst(i): "" + i; case SVar(v): v.name; } ) + "]";
-		case TBuffer(t, s): "buffer "+toString(t) + "[" + (switch( s ) { case SConst(i): "" + i; case SVar(v): v.name; } ) + "]";
+		case TBuffer(t, s, k):
+			var prefix = switch( k ) {
+			case Uniform: "buffer";
+			case RW: "rwbuffer";
+			};
+			prefix+" "+toString(t) + "[" + (switch( s ) { case SConst(i): "" + i; case SVar(v): v.name; } ) + "]";
 		case TBytes(n): "Bytes" + n;
 		default: t.getName().substr(1);
 		}
@@ -457,6 +470,8 @@ class Tools {
 			return hasSideEffect(e) || hasSideEffect(index);
 		case TConst(_), TVar(_), TGlobal(_):
 			return false;
+		case TCall({ e : TGlobal(SetLayout) },_):
+			return true;
 		case TCall(e, pl):
 			if( !e.e.match(TGlobal(_)) )
 				return true;
@@ -545,7 +560,7 @@ class Tools {
 		case TMat3x4: 12;
 		case TBytes(s): s;
 		case TBool, TString, TSampler2D, TSampler2DArray, TSamplerCube, TFun(_): 0;
-		case TArray(t, SConst(v)), TBuffer(t, SConst(v)): size(t) * v;
+		case TArray(t, SConst(v)), TBuffer(t, SConst(v),_): size(t) * v;
 		case TArray(_, SVar(_)), TBuffer(_): 0;
 		}
 	}

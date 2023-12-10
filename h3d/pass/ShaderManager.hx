@@ -270,11 +270,11 @@ class ShaderManager {
 		fill(buf.fragment, s.fragment);
 	}
 
-	public function compileShaders( shaders : hxsl.ShaderList, batchMode : Bool = false ) {
+	public function compileShaders( shaders : hxsl.ShaderList, mode : hxsl.Linker.LinkMode = Default ) {
 		globals.resetChannels();
 		for( s in shaders ) s.updateConstants(globals);
 		currentOutput.next = shaders;
-		var s = shaderCache.link(currentOutput, batchMode);
+		var s = shaderCache.link(currentOutput, mode);
 		currentOutput.next = null;
 		return s;
 	}

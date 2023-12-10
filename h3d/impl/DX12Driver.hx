@@ -875,7 +875,7 @@ class DX12Driver extends h3d.impl.Driver {
 
 	static var VERTEX_FORMATS = [null,null,R32G32_FLOAT,R32G32B32_FLOAT,R32G32B32A32_FLOAT];
 
-	function getBinaryPayload( vertex : Bool, code : String ) {
+	function getBinaryPayload( code : String ) {
 		var bin = code.indexOf("//BIN=");
 		if( bin >= 0 ) {
 			var end = code.indexOf("#", bin);
@@ -895,7 +895,7 @@ class DX12Driver extends h3d.impl.Driver {
 			sh.code = out.run(sh.data);
 			sh.code = rootStr + sh.code;
 		}
-		var bytes = getBinaryPayload(sh.vertex, sh.code);
+		var bytes = getBinaryPayload(sh.code);
 		if ( bytes == null ) {
 			return compiler.compile(sh.code, profile, args);
 		}
@@ -1010,10 +1010,10 @@ class DX12Driver extends h3d.impl.Driver {
 
 
 		function allocParams( sh : hxsl.RuntimeShader.RuntimeShaderData ) {
-			var vis = sh.vertex ? VERTEX : PIXEL;
+			var vis = sh.kind == Vertex ? VERTEX : PIXEL;
 			var regs = new ShaderRegisters();
 			regs.globals = allocConsts(sh.globalsSize, vis, false);
-			regs.params = allocConsts(sh.paramsSize, vis, sh.vertex ? vertexParamsCBV : fragmentParamsCBV);
+			regs.params = allocConsts(sh.paramsSize, vis, sh.kind == Vertex ? vertexParamsCBV : fragmentParamsCBV);
 			if( sh.bufferCount > 0 ) {
 				regs.buffers = paramsCount;
 				for( i in 0...sh.bufferCount )
@@ -1612,10 +1612,10 @@ class DX12Driver extends h3d.impl.Driver {
 					t.lastFrame = frameCount;
 					var state = if ( t.isDepth() )
 						DEPTH_READ;
-					else if ( shader.vertex )
-						NON_PIXEL_SHADER_RESOURCE;
+					else if ( shader.kind == Fragment )
+						PIXEL_SHADER_RESOURCE
 					else
-						PIXEL_SHADER_RESOURCE;
+						NON_PIXEL_SHADER_RESOURCE;
 					transition(t.t, state);
 					Driver.createShaderResourceView(t.t.res, tdesc, srv.offset(i * frame.shaderResourceViews.stride));
 

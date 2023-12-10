@@ -188,6 +188,8 @@ class Checker {
 				[for( i => t in genType ) { args : [ { name: "x", type: t } ], ret: genIType[i] }];
 			case IntBitsToFloat, UintBitsToFloat:
 				[for( i => t in genType ) { args : [ { name: "x", type: genIType[i] } ], ret: t }];
+			case SetLayout:
+				[{ args : [{ name : "x", type : TInt },{ name : "y", type : TInt },{ name : "z", type : TInt }], ret : TVoid }];
 			case VertexID, InstanceID, FragCoord, FrontFacing:
 				null;
 			}
@@ -246,6 +248,7 @@ class Checker {
 			var kind = switch( f.name ) {
 			case "vertex":  Vertex;
 			case "fragment": Fragment;
+			case "main": Main;
 			default: StringTools.startsWith(f.name,"__init__") ? Init : Helper;
 			}
 			if( args.length != 0 && kind != Helper )
@@ -336,6 +339,8 @@ class Checker {
 		case TVar(v):
 			switch( v.kind ) {
 			case Local, Var, Output:
+				return;
+			case Param if( v.type.match(TBuffer(_,_,RW)) ):
 				return;
 			default:
 			}
@@ -631,7 +636,7 @@ class Checker {
 			default: unify(e2.t, TInt, e2.p);
 			}
 			switch( e1.t ) {
-			case TArray(t, size), TBuffer(t,size):
+			case TArray(t, size), TBuffer(t,size,_):
 				switch( [size, e2.e] ) {
 				case [SConst(v), TConst(CInt(i))] if( i >= v ):
 					error("Indexing outside array bounds", e.pos);
@@ -849,7 +854,7 @@ class Checker {
 				vl[i] = makeVar( { type : v.type, qualifiers : v.qualifiers, name : v.name, kind : v.kind, expr : null }, pos, parent);
 			}
 			return parent.type;
-		case TArray(t, size), TBuffer(t,size):
+		case TArray(t, size), TBuffer(t,size,_):
 			switch( t ) {
 			case TArray(_):
 				error("Multidimentional arrays are not allowed", pos);
@@ -894,7 +899,11 @@ class Checker {
 				SVar(v2);
 			}
 			t = makeVarType(t,parent,pos);
-			return vt.match(TArray(_)) ? TArray(t, s) : TBuffer(t,s);
+			return switch( vt ) {
+			case TArray(_): TArray(t, s);
+			case TBuffer(_,_,kind): TBuffer(t,s,kind);
+			default: throw "assert";
+			}
 		default:
 			return vt;
 		}

@@ -41,15 +41,15 @@ private typedef ShaderCompiler = hxsl.GlslOut;
 
 private class CompiledShader {
 	public var s : GLShader;
-	public var vertex : Bool;
+	public var kind : hxsl.Ast.FunctionKind;
 	public var globals : Uniform;
 	public var params : Uniform;
 	public var textures : Array<{ u : Uniform, t : hxsl.Ast.Type, mode : Int }>;
 	public var buffers : Array<Int>;
 	public var shader : hxsl.RuntimeShader.RuntimeShaderData;
-	public function new(s,vertex,shader) {
+	public function new(s,kind,shader) {
 		this.s = s;
-		this.vertex = vertex;
+		this.kind = kind;
 		this.shader = shader;
 	}
 }
@@ -275,7 +275,7 @@ class GlDriver extends Driver {
 	}
 
 	function compileShader( glout : ShaderCompiler, shader : hxsl.RuntimeShader.RuntimeShaderData ) {
-		var type = shader.vertex ? GL.VERTEX_SHADER : GL.FRAGMENT_SHADER;
+		var type = shader.kind == Vertex ? GL.VERTEX_SHADER : GL.FRAGMENT_SHADER;
 		var s = gl.createShader(type);
 		if( shader.code == null ){
 			shader.code = glout.run(shader.data);
@@ -296,11 +296,11 @@ class GlDriver extends Driver {
 				codeLines[i] = (i+1) + "\t" + codeLines[i];
 			throw "An error occurred compiling the shaders: " + log + line+"\n\n"+codeLines.join("\n");
 		}
-		return new CompiledShader(s, shader.vertex, shader);
+		return new CompiledShader(s, shader.kind, shader);
 	}
 
 	function initShader( p : CompiledProgram, s : CompiledShader, shader : hxsl.RuntimeShader.RuntimeShaderData, rt : hxsl.RuntimeShader ) {
-		var prefix = s.vertex ? "vertex" : "fragment";
+		var prefix = s.kind == Vertex ? "vertex" : "fragment";
 		s.globals = gl.getUniformLocation(p.p, prefix + "Globals");
 		s.params = gl.getUniformLocation(p.p, prefix + "Params");
 		s.textures = [];
@@ -346,9 +346,9 @@ class GlDriver extends Driver {
 			t = t.next;
 		}
 		if( shader.bufferCount > 0 ) {
-			s.buffers = [for( i in 0...shader.bufferCount ) gl.getUniformBlockIndex(p.p,(shader.vertex?"vertex_":"")+"uniform_buffer"+i)];
+			s.buffers = [for( i in 0...shader.bufferCount ) gl.getUniformBlockIndex(p.p,(shader.kind==Vertex?"vertex_":"")+"uniform_buffer"+i)];
 			var start = 0;
-			if( !s.vertex ) start = rt.vertex.bufferCount;
+			if( s.kind == Fragment ) start = rt.vertex.bufferCount;
 			for( i in 0...shader.bufferCount )
 				gl.uniformBlockBinding(p.p,s.buffers[i],i + start);
 		}
@@ -505,7 +505,7 @@ class GlDriver extends Driver {
 		case Buffers:
 			if( s.buffers != null ) {
 				var start = 0;
-				if( !s.vertex && curShader.vertex.buffers != null )
+				if( s.kind == Fragment && curShader.vertex.buffers != null )
 					start = curShader.vertex.buffers.length;
 				for( i in 0...s.buffers.length )
 					gl.bindBufferBase(GL.UNIFORM_BUFFER, i + start, buf.buffers[i].vbuf);
@@ -544,7 +544,7 @@ class GlDriver extends Driver {
 
 				if( pt.u == null ) continue;
 
-				var idx = s.vertex ? i : curShader.vertex.textures.length + i;
+				var idx = s.kind == Fragment ? curShader.vertex.textures.length + i : i;
 				if( boundTextures[idx] != t.t ) {
 					boundTextures[idx] = t.t;
 

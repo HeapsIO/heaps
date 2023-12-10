@@ -861,9 +861,9 @@ class DirectXDriver extends h3d.impl.Driver {
 			shader.data.funs = null;
 			#end
 		}
-		var bytes = getBinaryPayload(shader.vertex, shader.code);
+		var bytes = getBinaryPayload(shader.kind == Vertex, shader.code);
 		if( bytes == null ) {
-			bytes = try dx.Driver.compileShader(shader.code, "", "main", (shader.vertex?"vs_":"ps_") + shaderVersion, OptimizationLevel3) catch( err : String ) {
+			bytes = try dx.Driver.compileShader(shader.code, "", "main", (shader.kind==Vertex?"vs_":"ps_") + shaderVersion, OptimizationLevel3) catch( err : String ) {
 				err = ~/^\(([0-9]+),([0-9]+)-([0-9]+)\)/gm.map(err, function(r) {
 					var line = Std.parseInt(r.matched(1));
 					var char = Std.parseInt(r.matched(2));
@@ -877,7 +877,7 @@ class DirectXDriver extends h3d.impl.Driver {
 		}
 		if( compileOnly )
 			return { s : null, bytes : bytes };
-		var s = shader.vertex ? Driver.createVertexShader(bytes) : Driver.createPixelShader(bytes);
+		var s = shader.kind == Vertex ? Driver.createVertexShader(bytes) : Driver.createPixelShader(bytes);
 		if( s == null ) {
 			if( hasDeviceError ) return null;
 			throw "Failed to create shader\n" + shader.code;

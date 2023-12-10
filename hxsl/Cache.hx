@@ -1,6 +1,7 @@
 package hxsl;
 using hxsl.Ast;
 import hxsl.RuntimeShader;
+import hxsl.Linker.LinkMode;
 
 class BatchInstanceParams {
 
@@ -195,7 +196,7 @@ class Cache {
 	}
 
 	@:noDebug
-	public function link( shaders : hxsl.ShaderList, batchMode : Bool ) {
+	public function link( shaders : hxsl.ShaderList, mode : LinkMode ) {
 		var c = linkCache;
 		for( s in shaders ) {
 			var i = @:privateAccess s.instance;
@@ -207,11 +208,11 @@ class Cache {
 			c = cs;
 		}
 		if( c.linked == null )
-			c.linked = compileRuntimeShader(shaders, batchMode);
+			c.linked = compileRuntimeShader(shaders, mode);
 		return c.linked;
 	}
 
-	function compileRuntimeShader( shaders : hxsl.ShaderList, batchMode : Bool ) {
+	function compileRuntimeShader( shaders : hxsl.ShaderList, mode : LinkMode ) {
 		var shaderDatas = [];
 		var index = 0;
 		for( s in shaders ) {
@@ -262,14 +263,14 @@ class Cache {
 		//TRACE = shaderId == 0;
 		#end
 
-		var linker = new hxsl.Linker(batchMode);
+		var linker = new hxsl.Linker(mode);
 		var s = try linker.link([for( s in shaderDatas ) s.inst.shader]) catch( e : Error ) {
 			var shaders = [for( s in shaderDatas ) Printer.shaderToString(s.inst.shader)];
 			e.msg += "\n\nin\n\n" + shaders.join("\n-----\n");
 			throw e;
 		}
 
-		if( batchMode ) {
+		if( mode == Batch ) {
 			function checkRec( v : TVar ) {
 				if( v.qualifiers != null && v.qualifiers.indexOf(PerObject) >= 0 ) {
 					if( v.qualifiers.length == 1 ) v.qualifiers = null else {
@@ -302,7 +303,7 @@ class Cache {
 
 		var prev = s;
 		var splitter = new hxsl.Splitter();
-		var s = try splitter.split(s) catch( e : Error ) { e.msg += "\n\nin\n\n"+Printer.shaderToString(s); throw e; };
+		var sl = try splitter.split(s) catch( e : Error ) { e.msg += "\n\nin\n\n"+Printer.shaderToString(s); throw e; };
 
 		// params tracking
 		var paramVars = new Map();
@@ -319,41 +320,42 @@ class Cache {
 
 
 		#if debug
-		Printer.check(s.vertex,[prev]);
-		Printer.check(s.fragment,[prev]);
+		for( s in sl )
+			Printer.check(s,[prev]);
 		#end
 
 		#if shader_debug_dump
 		if( dbg != null ) {
 			dbg.writeString("----- SPLIT ----\n\n");
-			dbg.writeString(Printer.shaderToString(s.vertex, DEBUG_IDS) + "\n\n");
-			dbg.writeString(Printer.shaderToString(s.fragment, DEBUG_IDS) + "\n\n");
+			for( s in sl )
+				dbg.writeString(Printer.shaderToString(s, DEBUG_IDS) + "\n\n");
 		}
 		#end
 
-		var prev = s;
-		var s = new hxsl.Dce().dce(s.vertex, s.fragment);
+		var prev = sl;
+		var sl = new hxsl.Dce().dce(sl);
 
 		#if debug
-		Printer.check(s.vertex,[prev.vertex]);
-		Printer.check(s.fragment,[prev.fragment]);
+		for( i => s in sl )
+			Printer.check(s,[prev[i]]);
 		#end
 
 		#if shader_debug_dump
 		if( dbg != null ) {
 			dbg.writeString("----- DCE ----\n\n");
-			dbg.writeString(Printer.shaderToString(s.vertex, DEBUG_IDS) + "\n\n");
-			dbg.writeString(Printer.shaderToString(s.fragment, DEBUG_IDS) + "\n\n");
+			for( s in sl )
+				dbg.writeString(Printer.shaderToString(s, DEBUG_IDS) + "\n\n");
 		}
 		#end
 
-		var r = buildRuntimeShader(s.vertex, s.fragment, paramVars);
+		var r = buildRuntimeShader(sl, paramVars);
+		r.mode = mode;
 
 		#if shader_debug_dump
 		if( dbg != null ) {
 			dbg.writeString("----- FLATTEN ----\n\n");
-			dbg.writeString(Printer.shaderToString(r.vertex.data, DEBUG_IDS) + "\n\n");
-			dbg.writeString(Printer.shaderToString(r.fragment.data,DEBUG_IDS)+"\n\n");
+			for( s in r.getShaders() )
+				dbg.writeString(Printer.shaderToString(s.data, DEBUG_IDS) + "\n\n");
 		}
 		#end
 
@@ -366,9 +368,7 @@ class Cache {
 
 		var signParts = [for( i in r.spec.instances ) i.shader.data.name+"_" + i.bits + "_" + i.index];
 		r.spec.signature = haxe.crypto.Md5.encode(signParts.join(":"));
-		r.signature = haxe.crypto.Md5.encode(Printer.shaderToString(r.vertex.data) + Printer.shaderToString(r.fragment.data));
-		r.batchMode = batchMode;
-
+		r.signature = haxe.crypto.Md5.encode([for( s in r.getShaders() ) Printer.shaderToString(s.data)].join(""));
 		var r2 = byID.get(r.signature);
 		if( r2 != null )
 			r.id = r2.id; // same id but different variable mapping
@@ -385,19 +385,33 @@ class Cache {
 		return r;
 	}
 
-	function buildRuntimeShader( vertex : ShaderData, fragment : ShaderData, paramVars ) {
+	function buildRuntimeShader( shaders : Array<ShaderData>, paramVars ) {
 		var r = new RuntimeShader();
-		r.vertex = flattenShader(vertex, Vertex, paramVars);
-		r.vertex.vertex = true;
-		r.fragment = flattenShader(fragment, Fragment, paramVars);
 		r.globals = new Map();
-		initGlobals(r, r.vertex);
-		initGlobals(r, r.fragment);
-
-		#if debug
-		Printer.check(r.vertex.data,[vertex]);
-		Printer.check(r.fragment.data,[fragment]);
-		#end
+		for( s in shaders ) {
+			var kind = switch( s.name ) {
+			case "vertex": Vertex;
+			case "fragment": Fragment;
+			case "main": Main;
+			default: throw "assert";
+			}
+			var fl = flattenShader(s, kind, paramVars);
+			fl.kind = kind;
+			switch( kind ) {
+			case Vertex:
+				r.vertex = fl;
+			case Fragment:
+				r.fragment = fl;
+			case Main:
+				r.compute = fl;
+			default:
+				throw "assert";
+			}
+			initGlobals(r, fl);
+			#if debug
+			Printer.check(fl.data,[s]);
+			#end
+		}
 		return r;
 	}
 
@@ -467,8 +481,15 @@ class Cache {
 					c.params = out[0];
 					c.paramsSize = size;
 				case TArray(TBuffer(_), _):
-					c.buffers = out[0];
-					c.bufferCount = out.length;
+					if( c.buffers == null ) {
+						c.buffers = out[0];
+						c.bufferCount = out.length;
+					} else {
+						var p = c.buffers;
+						while( p.next != null ) p = p.next;
+						p.next = out[0];
+						c.bufferCount += out.length;
+					}
 				default: throw "assert";
 				}
 			case Global:
@@ -574,7 +595,7 @@ class Cache {
 		inputOffset.qualifiers = [PerInstance(1)];
 
 		var vcount = declVar("Batch_Count",TInt,Param);
-		var vbuffer = declVar("Batch_Buffer",TBuffer(TVec(4,VFloat),SVar(vcount)),Param);
+		var vbuffer = declVar("Batch_Buffer",TBuffer(TVec(4,VFloat),SVar(vcount),Uniform),Param);
 		var voffset = declVar("Batch_Offset", TInt, Local);
 		var ebuffer = { e : TVar(vbuffer), p : pos, t : vbuffer.type };
 		var eoffset = { e : TVar(voffset), p : pos, t : voffset.type };

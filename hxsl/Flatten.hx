@@ -42,6 +42,7 @@ class Flatten {
 		var prefix = switch( kind ) {
 		case Vertex: "vertex";
 		case Fragment: "fragment";
+		case Main: "compute";
 		default: throw "assert";
 		}
 		pack(prefix + "Globals", Global, globals, VFloat);
@@ -50,7 +51,8 @@ class Flatten {
 		var textures = packTextures(prefix + "Textures", allVars, TSampler2D)
 			.concat(packTextures(prefix+"TexturesCube", allVars, TSamplerCube))
 			.concat(packTextures(prefix+"TexturesArray", allVars, TSampler2DArray));
-		packBuffers(allVars);
+		packBuffers("buffers", allVars, Uniform);
+		packBuffers("rwbuffers", allVars, RW);
 		var funs = [for( f in s.funs ) mapFun(f, mapExpr)];
 		return {
 			name : s.name,
@@ -259,22 +261,24 @@ class Flatten {
 		return alloc;
 	}
 
-	function packBuffers( vars : Array<TVar> ) {
+	function packBuffers( name : String, vars : Array<TVar>, kind ) {
 		var alloc = new Array<Alloc>();
 		var g : TVar = {
 			id : Tools.allocVarId(),
-			name : "buffers",
+			name : name,
 			type : TVoid,
 			kind : Param,
 		};
 		for( v in vars )
-			if( v.type.match(TBuffer(_)) ) {
+			switch( v.type ) {
+			case TBuffer(_,_,k) if( kind == k ):
 				var a = new Alloc(g, null, alloc.length, 1);
 				a.v = v;
 				alloc.push(a);
 				outVars.push(v);
+			default:
 			}
-		g.type = TArray(TBuffer(TVoid,SConst(0)),SConst(alloc.length));
+		g.type = TArray(TBuffer(TVoid,SConst(0),kind),SConst(alloc.length));
 		allocData.set(g, alloc);
 	}
 
