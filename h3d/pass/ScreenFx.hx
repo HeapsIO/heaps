@@ -45,8 +45,12 @@ class ScreenFx<T:h3d.shader.ScreenShader> {
 		shader.flipY = engine.driver.hasFeature(BottomLeftCoords) && engine.getCurrentTarget() != null ? -1 : 1;
 		var shaders = @:privateAccess pass.shaders;
 		var ctx = h3d.impl.RenderContext.get();
-		if( ctx == null )
-			throw "Missing render context";
+		var isNewCtx = false;
+		if( ctx == null ) {
+			isNewCtx = true;
+			ctx = @:privateAccess new h3d.impl.RenderContext();
+			ctx.setCurrent();
+		}
 		var rts = manager.compileShaders(ctx.globals, shaders);
 		engine.selectMaterial(pass);
 		engine.selectShader(rts);
@@ -61,6 +65,8 @@ class ScreenFx<T:h3d.shader.ScreenShader> {
 		engine.uploadShaderBuffers(buffers, Textures);
 		engine.uploadShaderBuffers(buffers, Buffers);
 		primitive.render(engine);
+		if( isNewCtx )
+			ctx.clearCurrent();
 	}
 
 	public function dispose() {
