@@ -67,9 +67,10 @@ class RenderContext extends h3d.impl.RenderContext {
 		drawPass = null;
 	}
 
-	public inline function getGlobal(name) {
+	public inline function getGlobal(name) : Dynamic {
 		return globals.get(name);
 	}
+
 	public inline function setGlobal(name,v:Dynamic) {
 		globals.set(name, v);
 	}
