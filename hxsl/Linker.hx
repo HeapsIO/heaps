@@ -1,12 +1,6 @@
 package hxsl;
 using hxsl.Ast;
 
-enum LinkMode {
-	Default;
-	Batch;
-	Compute;
-}
-
 private class AllocatedVar {
 	public var id : Int;
 	public var v : TVar;
@@ -56,7 +50,7 @@ class Linker {
 	var varIdMap : Map<Int,Int>;
 	var locals : Map<Int,Bool>;
 	var curInstance : Int;
-	var mode : LinkMode;
+	var mode : hxsl.RuntimeShader.LinkMode;
 	var isBatchShader : Bool;
 	var debugDepth = 0;
 
@@ -411,6 +405,15 @@ class Linker {
 			priority++;
 		}
 		shaders.sort(sortByPriorityDesc);
+
+		var uid = 0;
+		for( s in shaders )
+			s.uid = uid++;
+
+		#if shader_debug_dump
+		for( s in shaders )
+			debug("Found shader "+s.name+":"+s.uid);
+		#end
 
 		// build dependency tree
 		var entry = new ShaderInfos("<entry>", false);

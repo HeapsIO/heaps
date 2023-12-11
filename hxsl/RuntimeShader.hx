@@ -1,5 +1,11 @@
 package hxsl;
 
+enum LinkMode {
+	Default;
+	Batch;
+	Compute;
+}
+
 class AllocParam {
 	public var name : String;
 	public var pos : Int;
@@ -86,7 +92,7 @@ class RuntimeShader {
 		Several shaders with the different specification might still get the same resulting signature.
 	**/
 	public var signature : String;
-	public var mode : hxsl.Linker.LinkMode;
+	public var mode : LinkMode;
 	public var spec : { instances : Array<ShaderInstanceDesc>, signature : String };
 
 	public function new() {

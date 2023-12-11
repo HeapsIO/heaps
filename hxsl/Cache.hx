@@ -1,7 +1,6 @@
 package hxsl;
 using hxsl.Ast;
 import hxsl.RuntimeShader;
-import hxsl.Linker.LinkMode;
 
 class BatchInstanceParams {
 
