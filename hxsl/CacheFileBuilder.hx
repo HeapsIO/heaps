@@ -198,7 +198,7 @@ class CacheFileBuilder {
 			var sign = @:privateAccess dx12Driver.computeRootSignature(r);
 			out.baseRegister = rd.vertex ? 0 : sign.fragmentRegStart;
 			var code = out.run(rd.data);
-			var serializeRootSignature = @:privateAccess dx12Driver.stringifyRootSignature(sign.sign, "ROOT_SIGNATURE", sign.params);
+			var serializeRootSignature = @:privateAccess dx12Driver.stringifyRootSignature(sign.sign, "ROOT_SIGNATURE", sign.params, sign.paramsCount);
 			code = serializeRootSignature + code;
 			sys.io.File.saveContent(tmpSrc, code);
 			var args = ["-rootsig-define", "ROOT_SIGNATURE", "-T", (rd.vertex ? "vs_" : "ps_") + dxcShaderVersion,"-O3","-Fo", tmpOut, tmpSrc];
