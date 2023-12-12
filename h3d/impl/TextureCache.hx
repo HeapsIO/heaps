@@ -40,7 +40,7 @@ class TextureCache {
 		position = 0;
 	}
 
-	function lookupTarget( name, width, height, format, isCube ) {
+	function lookupTarget( name, width, height, format, isCube, isMipmapped ) {
 		var t = cache[position];
 		// look for a suitable candidate
 		for( i in position+1...cache.length ) {
@@ -59,6 +59,7 @@ class TextureCache {
 		}
 		var flags : Array<h3d.mat.Data.TextureFlags> = [Target];
 		if( isCube ) flags.push(Cube);
+		if( isMipmapped ) flags.push(MipMapped);
 		var newt = new h3d.mat.Texture(width, height, flags, format);
 		// make the texture disposable if we're out of memory
 		newt.realloc = function() {};
@@ -69,11 +70,11 @@ class TextureCache {
 		return newt;
 	}
 
-	public function allocTarget( name : String, width : Int, height : Int, defaultDepth=true, ?format:hxd.PixelFormat, isCube = false ) {
+	public function allocTarget( name : String, width : Int, height : Int, defaultDepth=true, ?format:hxd.PixelFormat, isCube = false, isMipmapped = false ) {
 		var t = cache[position];
 		if( format == null ) format = defaultFormat;
 		if( t == null || t.isDisposed() || t.width != width || t.height != height || t.format != format || isCube != t.flags.has(Cube) )
-			t = lookupTarget(name,width,height,format,isCube);
+			t = lookupTarget(name,width,height,format,isCube,isMipmapped);
 		t.depthBuffer = defaultDepth ? defaultDepthBuffer : null;
 		t.setName(name);
 		position++;
