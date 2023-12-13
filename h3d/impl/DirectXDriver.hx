@@ -839,9 +839,13 @@ class DirectXDriver extends h3d.impl.Driver {
 		if( shaderCache != null ) {
 			var bytes = shaderCache.resolveShaderBinary(code, shaderVersion);
 			if( bytes != null ) {
-				var sh = vertex ? Driver.createVertexShader(bytes) : Driver.createPixelShader(bytes);
-				// shader can't be compiled !
-				if( sh == null )
+				try {
+					var sh = vertex ? Driver.createVertexShader(bytes) : Driver.createPixelShader(bytes);
+					// shader can't be compiled !
+					if( sh == null )
+						return null;
+				}
+				catch( d : Dynamic)
 					return null;
 				return bytes;
 			}
