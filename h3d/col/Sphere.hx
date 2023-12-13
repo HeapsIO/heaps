@@ -7,7 +7,7 @@ class Sphere extends Collider {
 	public var z : Float;
 	public var r : Float;
 
-	public inline function new(x=0., y=0., z=0., r=0.) {
+	public inline function new(x=0., y=0., z=0., r=1.) {
 		load(x, y, z, r);
 	}
 
