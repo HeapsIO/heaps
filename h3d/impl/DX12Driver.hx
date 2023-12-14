@@ -59,6 +59,7 @@ class ManagedHeapArray {
 
 class DxFrame {
 	public var backBuffer : ResourceData;
+	public var backBufferView : Address;
 	public var depthBuffer : GpuResource;
 	public var allocator : CommandAllocator;
 	public var commandList : CommandList;
@@ -452,8 +453,9 @@ class DX12Driver extends h3d.impl.Driver {
 		curStencilRef = -1;
 		currentIndex = null;
 
+		frame.backBufferView = renderTargetViews.alloc(1);
+		Driver.createRenderTargetView(frame.backBuffer.res, null, frame.backBufferView);
 		setRenderTarget(null);
-
 
 		frame.shaderResourceCache.reset();
 		frame.samplerCache.reset();
@@ -488,7 +490,7 @@ class DX12Driver extends h3d.impl.Driver {
 			}
 			// clear backbuffer
 			if( count == 0 )
-				frame.commandList.clearRenderTargetView(tmp.renderTargets[0], clear);
+				frame.commandList.clearRenderTargetView(frame.backBufferView, clear);
 		}
 		if( depth != null || stencil != null )
 			frame.commandList.clearDepthStencilView(tmp.depthStencils[0], depth != null ? (stencil != null ? BOTH : DEPTH) : STENCIL, (depth:Float), stencil);
@@ -673,7 +675,6 @@ class DX12Driver extends h3d.impl.Driver {
 
 		depthEnabled = depthBinding != NotBound;
 
-		var texView = renderTargetViews.alloc(1);
 		var isArr = tex != null && (tex.flags.has(IsArray) || tex.flags.has(Cube));
 		var desc = null;
 		if( layer != 0 || mipLevel != 0 || isArr ) {
@@ -691,8 +692,15 @@ class DX12Driver extends h3d.impl.Driver {
 				desc.planeSlice = 0;
 			}
 		}
-		Driver.createRenderTargetView(tex == null ? frame.backBuffer.res : tex.t.res, desc, texView);
-		tmp.renderTargets[0] = texView;
+		if (tex != null) {
+			var texView = renderTargetViews.alloc(1);
+			Driver.createRenderTargetView(tex.t.res, desc, texView);
+			tmp.renderTargets[0] = texView;
+		}
+		else {
+			tmp.renderTargets[0] = frame.backBufferView;
+		}
+
 		if ( tex != null && !tex.flags.has(WasCleared) ) {
 			tex.flags.set(WasCleared);
 			var clear = tmp.clearColor;
