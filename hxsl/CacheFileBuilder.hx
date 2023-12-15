@@ -131,7 +131,7 @@ class CacheFileBuilder {
 			}
 			var out = new HlslOut();
 			var code = out.run(rd.data);
-			var bytes = dx.Driver.compileShader(code, "", "main", (rd.vertex?"vs_":"ps_") + dxShaderVersion, OptimizationLevel3);
+			var bytes = dx.Driver.compileShader(code, "", "main", ((rd.kind == Vertex)?"vs_":"ps_") + dxShaderVersion, OptimizationLevel3);
 			return { code : code, bytes : bytes };
 			#else
 			throw "DirectX compilation requires -lib hldx without -D dx12";
@@ -151,7 +151,7 @@ class CacheFileBuilder {
 			var tmpSrc = tmpFile + ".pssl";
 			var tmpOut = tmpFile + ".sb";
 			sys.io.File.saveContent(tmpSrc, code);
-			var args = ["-profile", rd.vertex ? "sce_vs_vs_orbis" : "sce_ps_orbis", "-o", tmpOut, tmpSrc];
+			var args = ["-profile", (rd.kind == Vertex) ? "sce_vs_vs_orbis" : "sce_ps_orbis", "-o", tmpOut, tmpSrc];
 			var p = new sys.io.Process("orbis-wave-psslc.exe", args);
 			var error = p.stderr.readAll().toString();
 			var ecode = p.exitCode();
@@ -196,12 +196,12 @@ class CacheFileBuilder {
 			var tmpSrc = tmpFile + ".hlsl";
 			var tmpOut = tmpFile + ".sb";
 			var sign = @:privateAccess dx12Driver.computeRootSignature(r);
-			out.baseRegister = rd.vertex ? 0 : sign.fragmentRegStart;
+			out.baseRegister = (rd.kind == Vertex) ? 0 : sign.fragmentRegStart;
 			var code = out.run(rd.data);
 			var serializeRootSignature = @:privateAccess dx12Driver.stringifyRootSignature(sign.sign, "ROOT_SIGNATURE", sign.params, sign.paramsCount);
 			code = serializeRootSignature + code;
 			sys.io.File.saveContent(tmpSrc, code);
-			var args = ["-rootsig-define", "ROOT_SIGNATURE", "-T", (rd.vertex ? "vs_" : "ps_") + dxcShaderVersion,"-O3","-Fo", tmpOut, tmpSrc];
+			var args = ["-rootsig-define", "ROOT_SIGNATURE", "-T", ( (rd.kind == Vertex) ? "vs_" : "ps_") + dxcShaderVersion,"-O3","-Fo", tmpOut, tmpSrc];
 			var p = new sys.io.Process(Sys.getEnv("GXDKLatest")+ "bin\\Scarlett\\dxc.exe", args);
 			var error = p.stderr.readAll().toString();
 			var ecode = p.exitCode();
