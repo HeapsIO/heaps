@@ -140,23 +140,6 @@ class Drawable extends Object {
 	}
 
 	/**
-		Returns the built shader code, can be used for debugging shader assembly
-		@param toHxsl Whether return an HXSL shader or the native shading language of the backend.
-	**/
-	public function getDebugShaderCode( toHxsl = true ) {
-		var shader = @:privateAccess {
-			var ctx = getScene().ctx;
-			ctx.manager.compileShaders(ctx.globals, new hxsl.ShaderList(ctx.baseShader,shaders));
-		}
-		if( toHxsl ) {
-			var toString = hxsl.Printer.shaderToString.bind(_, true);
-			return "// vertex:\n" + toString(shader.vertex.data) + "\n\nfragment:\n" + toString(shader.fragment.data);
-		} else {
-			return h3d.Engine.getCurrent().driver.getNativeShaderCode(shader);
-		}
-	}
-
-	/**
 		Returns the first shader of the given shader class among the drawable shaders.
 		@param stype The class of the shader to look up.
 	**/

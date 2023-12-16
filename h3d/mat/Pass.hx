@@ -377,16 +377,4 @@ class Pass {
 		return p;
 	}
 
-	#if !macro
-	public function getDebugShaderCode( scene : h3d.scene.Scene, toHxsl = true ) {
-		var shader = scene.renderer.debugCompileShader(this);
-		if( toHxsl ) {
-			var toString = hxsl.Printer.shaderToString.bind(_, true);
-			return "// vertex:\n" + toString(shader.vertex.data) + "\n\nfragment:\n" + toString(shader.fragment.data);
-		} else {
-			return h3d.Engine.getCurrent().driver.getNativeShaderCode(shader);
-		}
-	}
-	#end
-
 }

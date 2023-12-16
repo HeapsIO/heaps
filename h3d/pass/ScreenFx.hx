@@ -5,14 +5,14 @@ class ScreenFx<T:h3d.shader.ScreenShader> {
 	public var shader : T;
 	public var pass : h3d.mat.Pass;
 	public var primitive : h3d.prim.Primitive;
-	var manager : ShaderManager;
+	var output : OutputShader;
 	var _engine : h3d.Engine;
 	var engine(get,never) : h3d.Engine;
 	var buffers : h3d.shader.Buffers;
 
 	public function new(shader, ?output) {
 		this.shader = shader;
-		manager = new ShaderManager(output);
+		this.output = new OutputShader(output);
 		pass = new h3d.mat.Pass("screenfx", new hxsl.ShaderList(shader));
 		pass.culling = None;
 		pass.depth(false, Always);
@@ -51,7 +51,7 @@ class ScreenFx<T:h3d.shader.ScreenShader> {
 			ctx = @:privateAccess new h3d.impl.RenderContext();
 			ctx.setCurrent();
 		}
-		var rts = manager.compileShaders(ctx.globals, shaders);
+		var rts = output.compileShaders(ctx.globals, shaders);
 		engine.selectMaterial(pass);
 		engine.selectShader(rts);
 		if( buffers == null )

@@ -746,9 +746,9 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		} else if( @:privateAccess ctx.targetFlipY == 0 )
 			ctx.begin(); // ctx was never init, most likely a new scene
 		ctx.pushTargets(texs);
-		if( outputs != null ) @:privateAccess ctx.manager.setOutput(outputs);
+		if( outputs != null ) @:privateAccess ctx.output.setOutput(outputs);
 		s.drawRec(ctx);
-		if( outputs != null ) @:privateAccess ctx.manager.setOutput();
+		if( outputs != null ) @:privateAccess ctx.output.setOutput();
 		ctx.popTarget();
 		ctx.engine.backgroundColor = oldBG;
 		if( !inRender ) {

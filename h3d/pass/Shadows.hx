@@ -13,7 +13,7 @@ enum ShadowSamplingKind {
 		ESM;
 	}
 
-class Shadows extends Default {
+class Shadows extends Output {
 
 	var lightCamera : h3d.Camera;
 	var format : hxd.PixelFormat;
@@ -34,7 +34,7 @@ class Shadows extends Default {
 	public function new(light) {
 		if( format == null ) format = R16F;
 		if( !h3d.Engine.getCurrent().driver.isSupportedFormat(format) ) format = h3d.mat.Texture.nativeFormat;
-		super("shadow");
+		super("shadow", getOutputs());
 		this.light = light;
 		blur = new Blur(5);
 		blur.quality = 0.5;
@@ -77,7 +77,7 @@ class Shadows extends Default {
 		return false;
 	}
 
-	override function getOutputs() : Array<hxsl.Output> {
+	function getOutputs() : Array<hxsl.Output> {
 		if(isUsingWorldDist())
 			return [Swiz(Value("output.worldDist",1),[X,X,X,X])];
 

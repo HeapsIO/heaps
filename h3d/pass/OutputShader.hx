@@ -1,6 +1,6 @@
 package h3d.pass;
 
-class ShaderManager {
+class OutputShader {
 
 	var shaderCache : hxsl.Cache;
 	var currentOutput : hxsl.ShaderList;

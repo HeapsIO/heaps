@@ -119,10 +119,10 @@ class MeshBatch extends MultiMaterial {
 				var ctx = scene.renderer.getPassByName(p.name);
 				if( ctx == null ) throw "Could't find renderer pass "+p.name;
 
-				var manager = cast(ctx,h3d.pass.Default).manager;
+				var output = ctx.output;
 				var shaders = p.getShadersRec();
-				var rt = manager.compileShaders(scene.ctx.globals, shaders, Default);
-				var shader = manager.shaderCache.makeBatchShader(rt, shaders, instancedParams);
+				var rt = output.compileShaders(scene.ctx.globals, shaders, Default);
+				var shader = output.shaderCache.makeBatchShader(rt, shaders, instancedParams);
 
 				var b = new BatchData();
 				b.indexCount = matInfo.count;

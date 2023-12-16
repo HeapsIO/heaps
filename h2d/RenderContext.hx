@@ -80,7 +80,7 @@ class RenderContext extends h3d.impl.RenderContext {
 	public var tmpBounds = new h2d.col.Bounds();
 	var texture : h3d.mat.Texture;
 	var baseShader : h3d.shader.Base2d;
-	var manager : h3d.pass.ShaderManager;
+	var output : h3d.pass.OutputShader;
 	var compiledShader : hxsl.RuntimeShader;
 	var buffers : h3d.shader.Buffers;
 	var fixedBuffer : h3d.Buffer;
@@ -128,7 +128,7 @@ class RenderContext extends h3d.impl.RenderContext {
 		if( BUFFERING )
 			buffer = new hxd.FloatBuffer();
 		bufPos = 0;
-		manager = new h3d.pass.ShaderManager();
+		output = new h3d.pass.OutputShader();
 		pass = new h3d.mat.Pass("",null);
 		pass.depth(true, Always);
 		pass.culling = None;
@@ -210,7 +210,7 @@ class RenderContext extends h3d.impl.RenderContext {
 
 	function initShaders( shaders ) {
 		currentShaders = shaders;
-		compiledShader = manager.compileShaders(globals, shaders);
+		compiledShader = output.compileShaders(globals, shaders);
 		if( buffers == null )
 			buffers = new h3d.shader.Buffers(compiledShader);
 		else

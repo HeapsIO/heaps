@@ -1,17 +1,13 @@
 package h3d.scene.fwd;
 
-class DepthPass extends h3d.pass.Default {
+class DepthPass extends h3d.pass.Output {
 
 	var depthMapId : Int;
 	public var enableSky : Bool = false;
 
 	public function new() {
-		super("depth");
+		super("depth",  [PackFloat(Value("output.depth"))]);
 		depthMapId = hxsl.Globals.allocID("depthMap");
-	}
-
-	override function getOutputs() : Array<hxsl.Output> {
-		return [PackFloat(Value("output.depth"))];
 	}
 
 	override function draw( passes, ?sort ) {
@@ -25,17 +21,13 @@ class DepthPass extends h3d.pass.Default {
 
 }
 
-class NormalPass extends h3d.pass.Default {
+class NormalPass extends h3d.pass.Output {
 
 	var normalMapId : Int;
 
 	public function new() {
-		super("normal");
+		super("normal", [PackNormal(Value("output.normal"))]);
 		normalMapId = hxsl.Globals.allocID("normalMap");
-	}
-
-	override function getOutputs() : Array<hxsl.Output> {
-		return [PackNormal(Value("output.normal"))];
 	}
 
 	override function draw( passes, ?sort ) {
@@ -51,25 +43,25 @@ class NormalPass extends h3d.pass.Default {
 
 class Renderer extends h3d.scene.Renderer {
 
-	var def(get, never) : h3d.pass.Base;
-	public var depth : h3d.pass.Base = new DepthPass();
-	public var normal : h3d.pass.Base = new NormalPass();
+	var def(get, never) : h3d.pass.Output;
+	public var depth : h3d.pass.Output = new DepthPass();
+	public var normal : h3d.pass.Output = new NormalPass();
 	public var shadow = new h3d.pass.DefaultShadowMap(1024);
 
 	public function new() {
 		super();
-		defaultPass = new h3d.pass.Default("default");
+		defaultPass = new h3d.pass.Output("default");
 		allPasses = [defaultPass, depth, normal, shadow];
 	}
 
 	inline function get_def() return defaultPass;
 
 	// can be overriden for benchmark purposes
-	function renderPass(p:h3d.pass.Base, passes, ?sort) {
+	function renderPass(p:h3d.pass.Output, passes, ?sort) {
 		p.draw(passes, sort);
 	}
 
-	override function getPassByName(name:String):h3d.pass.Base {
+	override function getPassByName(name:String):h3d.pass.Output {
 		if( name == "alpha" || name == "additive" )
 			return defaultPass;
 		return super.getPassByName(name);
