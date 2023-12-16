@@ -256,14 +256,9 @@ class BufferData extends ResourceData {
 	public var uploaded : Bool;
 }
 
-class IndexBufferData extends BufferData {
-	public var view : IndexBufferView;
-	public var count : Int;
-	public var bits : Int;
-}
-
 class VertexBufferData extends BufferData {
 	public var view : dx.Dx12.VertexBufferView;
+	public var iview : dx.Dx12.IndexBufferView;
 	public var size : Int;
 }
 
@@ -327,7 +322,7 @@ class DX12Driver extends h3d.impl.Driver {
 	var currentShader : CompiledShader;
 	var compiledShaders : Map<Int,CompiledShader> = new Map();
 	var compiler : ShaderCompiler;
-	var currentIndex : IndexBuffer;
+	var currentIndex : Buffer;
 
 	var tmp : TempObjects;
 	var currentRenderTargets : Array<h3d.mat.Texture> = [];
@@ -1212,7 +1207,15 @@ class DX12Driver extends h3d.impl.Driver {
 		var bufSize = m.flags.has(UniformBuffer) ? calcCBVSize(size) : size;
 		buf.state = COPY_DEST;
 		buf.res = allocGPU(bufSize, DEFAULT, COMMON);
-		if( !m.flags.has(UniformBuffer) ) {
+		if( m.flags.has(UniformBuffer) ) {
+			// no view
+		} else if( m.flags.has(IndexBuffer) ) {
+			var view = new IndexBufferView();
+			view.bufferLocation = buf.res.getGpuVirtualAddress();
+			view.format = m.format.strideBytes == 4 ? R32_UINT : R16_UINT;
+			view.sizeInBytes = size;
+			buf.iview = view;
+		} else {
 			var view = new VertexBufferView();
 			view.bufferLocation = buf.res.getGpuVirtualAddress();
 			view.sizeInBytes = size;
@@ -1221,21 +1224,6 @@ class DX12Driver extends h3d.impl.Driver {
 		}
 		buf.size = bufSize;
 		buf.uploaded = m.flags.has(Dynamic);
-		return buf;
-	}
-
-	override function allocIndexes( count : Int, is32 : Bool ) : IndexBuffer {
-		var buf = new IndexBufferData();
-		buf.state = COPY_DEST;
-		buf.count = count;
-		buf.bits = is32?2:1;
-		var size = count << buf.bits;
-		buf.res = allocGPU(size, DEFAULT, COMMON);
-		var view = new IndexBufferView();
-		view.bufferLocation = buf.res.getGpuVirtualAddress();
-		view.format = is32 ? R32_UINT : R16_UINT;
-		view.sizeInBytes = size;
-		buf.view = view;
 		return buf;
 	}
 
@@ -1255,10 +1243,6 @@ class DX12Driver extends h3d.impl.Driver {
 
 	override function disposeBuffer(v:Buffer) {
 		disposeResource(v.vbuf);
-	}
-
-	override function disposeIndexes(v:IndexBuffer) {
-		disposeResource(v);
 	}
 
 	override function disposeInstanceBuffer(b:InstanceBuffer) {
@@ -1285,29 +1269,24 @@ class DX12Driver extends h3d.impl.Driver {
 		}
 	}
 
-	override function uploadIndexBuffer(i:IndexBuffer, startIndice:Int, indiceCount:Int, buf:hxd.IndexBuffer, bufPos:Int) {
-		transition(i, COPY_DEST);
-		updateBuffer(i, hl.Bytes.getArray(buf.getNative()).offset(bufPos << i.bits), startIndice << i.bits, indiceCount << i.bits);
-		transition(i, INDEX_BUFFER);
-	}
-
-	override function uploadIndexBytes(i:IndexBuffer, startIndice:Int, indiceCount:Int, buf:haxe.io.Bytes, bufPos:Int) {
-		transition(i, COPY_DEST);
-		updateBuffer(i, @:privateAccess buf.b.offset(bufPos << i.bits), startIndice << i.bits, indiceCount << i.bits);
-		transition(i, INDEX_BUFFER);
+	override function uploadIndexData(i:Buffer, startIndice:Int, indiceCount:Int, buf:hxd.IndexBuffer, bufPos:Int) {
+		var bits = i.format.strideBytes >> 1;
+		transition(i.vbuf, COPY_DEST);
+		updateBuffer(i.vbuf, hl.Bytes.getArray(buf.getNative()).offset(bufPos << bits), startIndice << bits, indiceCount << bits);
+		transition(i.vbuf, INDEX_BUFFER);
 	}
 
 	override function uploadBufferData(b:Buffer, startVertex:Int, vertexCount:Int, buf:hxd.FloatBuffer, bufPos:Int) {
 		var data = hl.Bytes.getArray(buf.getNative()).offset(bufPos<<2);
 		transition(b.vbuf, COPY_DEST);
 		updateBuffer(b.vbuf, data, startVertex * b.format.strideBytes, vertexCount * b.format.strideBytes);
-		transition(b.vbuf, VERTEX_AND_CONSTANT_BUFFER);
+		transition(b.vbuf, b.flags.has(IndexBuffer) ? INDEX_BUFFER : VERTEX_AND_CONSTANT_BUFFER);
 	}
 
 	override function uploadBufferBytes(b:Buffer, startVertex:Int, vertexCount:Int, buf:haxe.io.Bytes, bufPos:Int) {
 		transition(b.vbuf, COPY_DEST);
 		updateBuffer(b.vbuf, @:privateAccess buf.b.offset(bufPos), startVertex * b.format.strideBytes, vertexCount * b.format.strideBytes);
-		transition(b.vbuf, VERTEX_AND_CONSTANT_BUFFER);
+		transition(b.vbuf, b.flags.has(IndexBuffer) ? INDEX_BUFFER : VERTEX_AND_CONSTANT_BUFFER);
 	}
 
 	// ------------ TEXTURES -------
@@ -1962,21 +1941,21 @@ class DX12Driver extends h3d.impl.Driver {
 
 	// --- DRAW etc.
 
-	override function draw( ibuf : IndexBuffer, startIndex : Int, ntriangles : Int ) {
+	override function draw( ibuf : Buffer, startIndex : Int, ntriangles : Int ) {
 		flushPipeline();
 		if( currentIndex != ibuf ) {
 			currentIndex = ibuf;
-			frame.commandList.iaSetIndexBuffer(ibuf.view);
+			frame.commandList.iaSetIndexBuffer(ibuf.vbuf.iview);
 		}
 		frame.commandList.drawIndexedInstanced(ntriangles * 3,1,startIndex,0,0);
 		flushResources();
 	}
 
-	override function drawInstanced(ibuf:IndexBuffer, commands:InstanceBuffer) {
+	override function drawInstanced(ibuf:Buffer, commands:InstanceBuffer) {
 		flushPipeline();
 		if( currentIndex != ibuf ) {
 			currentIndex = ibuf;
-			frame.commandList.iaSetIndexBuffer(ibuf.view);
+			frame.commandList.iaSetIndexBuffer(ibuf.vbuf.iview);
 		}
 		if( commands.data != null ) {
 			frame.commandList.executeIndirect(indirectCommand, commands.commandCount, commands.data, 0, null, 0);

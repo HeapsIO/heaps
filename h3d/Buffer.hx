@@ -17,6 +17,10 @@ enum BufferFlag {
 		Can be written
 	**/
 	ReadWriteBuffer;
+	/**
+		Used as index buffer
+	**/
+	IndexBuffer;
 }
 
 @:allow(h3d.impl.MemoryManager)

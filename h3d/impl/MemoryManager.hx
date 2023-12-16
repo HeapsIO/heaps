@@ -9,7 +9,6 @@ class MemoryManager {
 	@:allow(h3d)
 	var driver : Driver;
 	var buffers : Array<Buffer>;
-	var indexes : Array<Indexes>;
 	var textures : Array<h3d.mat.Texture>;
 	var depths : Array<h3d.mat.Texture>;
 
@@ -25,7 +24,6 @@ class MemoryManager {
 	}
 
 	public function init() {
-		indexes = new Array();
 		textures = new Array();
 		buffers = new Array();
 		depths = new Array();
@@ -133,24 +131,6 @@ class MemoryManager {
 			usedMemory -= b.getMemSize();
 	}
 
-	// ------------------------------------- INDEXES ------------------------------------------
-
-	@:allow(h3d.Indexes)
-	function deleteIndexes( i : Indexes ) {
-		indexes.remove(i);
-		driver.disposeIndexes(i.ibuf);
-		i.ibuf = null;
-		usedMemory -= i.count * (i.is32 ? 4 : 2);
-	}
-
-	@:allow(h3d.Indexes)
-	function allocIndexes( i : Indexes ) {
-		i.ibuf = driver.allocIndexes(i.count,i.is32);
-		indexes.push(i);
-		usedMemory += i.count * (i.is32 ? 4 : 2);
-	}
-
-
 	// ------------------------------------- TEXTURES ------------------------------------------
 
 	function memSize( t : h3d.mat.Texture ) {
@@ -251,10 +231,7 @@ class MemoryManager {
 			b.dispose();
 		for( b in buffers.copy() )
 			b.dispose();
-		for( i in indexes.copy() )
-			i.dispose();
 		buffers = [];
-		indexes = [];
 		textures = [];
 		usedMemory = 0;
 		texMemory = 0;

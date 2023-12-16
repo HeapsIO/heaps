@@ -64,7 +64,7 @@ class DynamicPrimitive extends Primitive {
 			indexes = alloc.allocIndexBuffer(hxd.Math.imax(minISize, isize));
 
 		buffer.uploadFloats(vbuf, 0, vsize);
-		indexes.upload(ibuf, 0, isize);
+		indexes.uploadIndexes(ibuf, 0, isize);
 	}
 
 	override function dispose() {

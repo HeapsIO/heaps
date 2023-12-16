@@ -76,7 +76,7 @@ class DirectXDriver extends h3d.impl.Driver {
 	var strides : Array<Int> = [];
 	var offsets : Array<Int> = [];
 	var currentShader : CompiledShader;
-	var currentIndex : IndexBuffer;
+	var currentIndex : h3d.Buffer;
 	var currentDepth : Texture;
 	var currentLayout : Layout;
 	var currentTargets = new hl.NativeArray<RenderTargetView>(16);
@@ -328,16 +328,10 @@ class DirectXDriver extends h3d.impl.Driver {
 
 	override function allocBuffer(b:Buffer):GPUBuffer {
 		var size = b.getMemSize();
-		var res = b.flags.has(UniformBuffer) ? dx.Driver.createBuffer(size, Dynamic, ConstantBuffer, CpuWrite, None, 0, null) : dx.Driver.createBuffer(size, Default, VertexBuffer, None, None, 0, null);
+		var res = b.flags.has(UniformBuffer) ? dx.Driver.createBuffer(size, Dynamic, ConstantBuffer, CpuWrite, None, 0, null) :
+				dx.Driver.createBuffer(size, Default, b.flags.has(IndexBuffer) ? IndexBuffer : VertexBuffer, None, None, 0, null);
 		if( res == null ) return null;
 		return res;
-	}
-
-	override function allocIndexes( count : Int, is32 : Bool ) : IndexBuffer {
-		var bits = is32 ? 2 : 1;
-		var res = dx.Driver.createBuffer(count << bits, Default, IndexBuffer, None, None, 0, null);
-		if( res == null ) return null;
-		return { res : res, count : count, bits : bits  };
 	}
 
 	override function allocDepthBuffer( b : h3d.mat.Texture ) : Texture {
@@ -499,10 +493,6 @@ class DirectXDriver extends h3d.impl.Driver {
 		b.vbuf.release();
 	}
 
-	override function disposeIndexes(i:IndexBuffer) {
-		i.res.release();
-	}
-
 	override function generateMipMaps(texture:h3d.mat.Texture) {
 		if( hasDeviceError ) return;
 		Driver.generateMips(texture.t.view);
@@ -519,14 +509,10 @@ class DirectXDriver extends h3d.impl.Driver {
 		updateResCount++;
 	}
 
-	override function uploadIndexBuffer(i:IndexBuffer, startIndice:Int, indiceCount:Int, buf:hxd.IndexBuffer, bufPos:Int) {
+	override function uploadIndexData(i:Buffer, startIndice:Int, indiceCount:Int, buf:hxd.IndexBuffer, bufPos:Int) {
 		if( hasDeviceError ) return;
-		updateBuffer(i.res, hl.Bytes.getArray(buf.getNative()).offset(bufPos << i.bits), startIndice << i.bits, indiceCount << i.bits);
-	}
-
-	override function uploadIndexBytes(i:IndexBuffer, startIndice:Int, indiceCount:Int, buf:haxe.io.Bytes, bufPos:Int) {
-		if( hasDeviceError ) return;
-		updateBuffer(i.res, @:privateAccess buf.b.offset(bufPos << i.bits), startIndice << i.bits, indiceCount << i.bits);
+		var bits = i.format.strideBytes >> 1;
+		updateBuffer(i.vbuf, hl.Bytes.getArray(buf.getNative()).offset(bufPos << bits), startIndice << bits, indiceCount << bits);
 	}
 
 	override function uploadBufferData(b:Buffer, startVertex:Int, vertexCount:Int, buf:hxd.FloatBuffer, bufPos:Int) {
@@ -554,21 +540,6 @@ class DirectXDriver extends h3d.impl.Driver {
 			return;
 		}
 		updateBuffer(b.vbuf, @:privateAccess buf.b.offset(bufPos), startVertex * b.format.strideBytes, vertexCount * b.format.strideBytes);
-	}
-
-	override function readIndexBytes(v:IndexBuffer, startIndice:Int, indiceCount:Int, buf:haxe.io.Bytes, bufPos:Int) {
-		var tmp = dx.Driver.createBuffer(indiceCount << v.bits, Staging, None, CpuRead | CpuWrite, None, 0, null);
-		box.left = startIndice << v.bits;
-		box.top = 0;
-		box.front = 0;
-		box.right = (startIndice + indiceCount) << v.bits;
-		box.bottom = 1;
-		box.back = 1;
-		tmp.copySubresourceRegion(0, 0, 0, 0, v.res, 0, box);
-		var ptr = tmp.map(0, Read, true, null);
-		@:privateAccess buf.b.blit(bufPos, ptr, 0, indiceCount << v.bits);
-		tmp.unmap(0);
-		tmp.release();
 	}
 
 	override function readBufferBytes(b:Buffer, startVertex:Int, vertexCount:Int, buf:haxe.io.Bytes, bufPos:Int) {
@@ -1409,12 +1380,12 @@ class DirectXDriver extends h3d.impl.Driver {
 		}
 	}
 
-	override function draw(ibuf:IndexBuffer, startIndex:Int, ntriangles:Int) {
+	override function draw(ibuf:Buffer, startIndex:Int, ntriangles:Int) {
 		if( !allowDraw )
 			return;
 		if( currentIndex != ibuf ) {
 			currentIndex = ibuf;
-			dx.Driver.iaSetIndexBuffer(ibuf.res,ibuf.bits == 2,0);
+			dx.Driver.iaSetIndexBuffer(ibuf.vbuf,ibuf.format.strideBytes == 4,0);
 		}
 		dx.Driver.drawIndexed(ntriangles * 3, startIndex, 0);
 	}
@@ -1428,12 +1399,12 @@ class DirectXDriver extends h3d.impl.Driver {
 		b.data = null;
 	}
 
-	override function drawInstanced(ibuf:IndexBuffer, commands:InstanceBuffer) {
+	override function drawInstanced(ibuf:Buffer, commands:InstanceBuffer) {
 		if( !allowDraw )
 			return;
 		if( currentIndex != ibuf ) {
 			currentIndex = ibuf;
-			dx.Driver.iaSetIndexBuffer(ibuf.res,ibuf.bits == 2,0);
+			dx.Driver.iaSetIndexBuffer(ibuf.vbuf,ibuf.format.strideBytes == 4,0);
 		}
 		if( commands.data == null ) {
 			#if( (hldx == "1.8.0") || (hldx == "1.9.0") )

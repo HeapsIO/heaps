@@ -1,42 +1,34 @@
 package h3d.impl;
 
 #if macro
-typedef IndexBuffer = {};
 typedef GPUBuffer = {};
 typedef Texture = {};
 typedef Query = {};
 #elseif js
-typedef IndexBuffer = { b : js.html.webgl.Buffer, is32 : Bool };
 typedef GPUBuffer = js.html.webgl.Buffer;
 typedef Texture = { t : js.html.webgl.Texture, width : Int, height : Int, internalFmt : Int, pixelFmt : Int, bits : Int, bias : Float, bind : Int #if multidriver, driver : Driver #end, startMip : Int };
 typedef Query = {};
 #elseif hlsdl
-typedef IndexBuffer = { b : sdl.GL.Buffer, is32 : Bool };
 typedef GPUBuffer = sdl.GL.Buffer;
 typedef Texture = { t : sdl.GL.Texture, width : Int, height : Int, internalFmt : Int, pixelFmt : Int, bits : Int, bind : Int, bias : Float, startMip : Int };
 typedef Query = { q : sdl.GL.Query, kind : QueryKind };
 #elseif usegl
-typedef IndexBuffer = { b : haxe.GLTypes.Buffer, is32 : Bool };
 typedef GPUBuffer = haxe.GLTypes.Buffer;
 typedef Texture = { t : haxe.GLTypes.Texture, width : Int, height : Int, internalFmt : Int, pixelFmt : Int, bits : Int, bind : Int, bias : Float, startMip : Int };
 typedef Query = { q : haxe.GLTypes.Query, kind : QueryKind };
 #elseif (hldx && dx12)
-typedef IndexBuffer = DX12Driver.IndexBufferData;
 typedef GPUBuffer = DX12Driver.VertexBufferData;
 typedef Texture = h3d.impl.DX12Driver.TextureData;
 typedef Query = h3d.impl.DX12Driver.QueryData;
 #elseif hldx
-typedef IndexBuffer = { res : dx.Resource, count : Int, bits : Int };
 typedef GPUBuffer = dx.Resource;
 typedef Texture = { res : dx.Resource, view : dx.Driver.ShaderResourceView, ?depthView : dx.Driver.DepthStencilView, ?readOnlyDepthView : dx.Driver.DepthStencilView, rt : Array<dx.Driver.RenderTargetView>, mips : Int, ?views : Array<dx.Driver.ShaderResourceView> };
 typedef Query = {};
 #elseif usesys
-typedef IndexBuffer = haxe.GraphicsDriver.IndexBuffer;
 typedef GPUBuffer = haxe.GraphicsDriver.GPUBuffer;
 typedef Texture = haxe.GraphicsDriver.Texture;
 typedef Query = haxe.GraphicsDriver.Query;
 #else
-typedef IndexBuffer = {};
 typedef GPUBuffer = {};
 typedef Texture = {};
 typedef Query = {};
@@ -196,10 +188,10 @@ class Driver {
 	public function selectMultiBuffers( format : hxd.BufferFormat.MultiFormat, buffers : Array<h3d.Buffer> ) {
 	}
 
-	public function draw( ibuf : IndexBuffer, startIndex : Int, ntriangles : Int ) {
+	public function draw( ibuf : Buffer, startIndex : Int, ntriangles : Int ) {
 	}
 
-	public function drawInstanced( ibuf : IndexBuffer, commands : h3d.impl.InstanceBuffer ) {
+	public function drawInstanced( ibuf : Buffer, commands : h3d.impl.InstanceBuffer ) {
 	}
 
 	public function setRenderZone( x : Int, y : Int, width : Int, height : Int ) {
@@ -238,10 +230,6 @@ class Driver {
 		return null;
 	}
 
-	public function allocIndexes( count : Int, is32 : Bool ) : IndexBuffer {
-		return null;
-	}
-
 	public function allocBuffer( b : h3d.Buffer ) : GPUBuffer {
 		return null;
 	}
@@ -252,19 +240,13 @@ class Driver {
 	public function disposeTexture( t : h3d.mat.Texture ) {
 	}
 
-	public function disposeIndexes( i : IndexBuffer ) {
-	}
-
 	public function disposeBuffer( b : Buffer ) {
 	}
 
 	public function disposeInstanceBuffer( b : h3d.impl.InstanceBuffer ) {
 	}
 
-	public function uploadIndexBuffer( i : IndexBuffer, startIndice : Int, indiceCount : Int, buf : hxd.IndexBuffer, bufPos : Int ) {
-	}
-
-	public function uploadIndexBytes( i : IndexBuffer, startIndice : Int, indiceCount : Int, buf : haxe.io.Bytes , bufPos : Int ) {
+	public function uploadIndexData( i : Buffer, startIndice : Int, indiceCount : Int, buf : hxd.IndexBuffer, bufPos : Int ) {
 	}
 
 	public function uploadBufferData( b : Buffer, startVertex : Int, vertexCount : Int, buf : hxd.FloatBuffer, bufPos : Int ) {
@@ -281,10 +263,6 @@ class Driver {
 
 	public function readBufferBytes( b : Buffer, startVertex : Int, vertexCount : Int, buf : haxe.io.Bytes, bufPos : Int ) {
 		throw "Driver does not allow to read vertex bytes";
-	}
-
-	public function readIndexBytes( v : IndexBuffer, startVertex : Int, vertexCount : Int, buf : haxe.io.Bytes, bufPos : Int ) {
-		throw "Driver does not allow to read index bytes";
 	}
 
 	/**

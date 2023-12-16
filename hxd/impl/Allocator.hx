@@ -47,7 +47,7 @@ class Allocator {
 	public function ofIndexes( ib: hxd.IndexBuffer, length = -1) {
 		if( length < 0 && ib != null ) length = ib.length;
 		var idx = allocIndexBuffer( length );
-		idx.upload(ib, 0, length);
+		idx.uploadIndexes(ib, 0, length);
 		return idx;
 	}
 

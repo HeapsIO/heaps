@@ -46,10 +46,6 @@ class NullDriver extends Driver {
 		return cast {};
 	}
 
-	override function allocIndexes( count : Int, is32 : Bool ) : IndexBuffer {
-		return cast {};
-	}
-
 	override function allocBuffer( b : Buffer ) : GPUBuffer {
 		return cast {};
 	}

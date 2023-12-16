@@ -225,6 +225,9 @@ class BufferFormat {
 	public static var POS3D_NORMAL_UV_RGBA(get,null) : BufferFormat;
 	public static var VEC4_DATA(get,null) : BufferFormat;
 
+	public static var INDEX16(get,null) : BufferFormat;
+	public static var INDEX32(get,null) : BufferFormat;
+
 	static inline function get_H2D() return XY_UV_RGBA;
 	static function get_XY_UV_RGBA() {
 		if( XY_UV_RGBA == null ) XY_UV_RGBA = make([{ name : "position", type : DVec2 },{ name : "uv", type : DVec2 },{ name : "color", type : DVec4 }]);
@@ -257,6 +260,18 @@ class BufferFormat {
 	static function get_VEC4_DATA() {
 		if( VEC4_DATA == null ) VEC4_DATA = hxd.BufferFormat.make([{ name : "data", type : DVec4 }]);
 		return VEC4_DATA;
+	}
+
+	static function get_INDEX16() {
+		if( INDEX16 == null ) {
+			INDEX16 = hxd.BufferFormat.make([{ name : "index", type : DFloat, precision: F16 }]);
+			INDEX16.strideBytes = 2; // fix ! not subject to vertex buffer alignment !
+		}
+		return INDEX16;
+	}
+	static function get_INDEX32() {
+		if( INDEX32 == null ) INDEX32 = hxd.BufferFormat.make([{ name : "index", type : DFloat, precision: F32 }]);
+		return INDEX32;
 	}
 
 	static var ALL_FORMATS = new Map<String,Array<BufferFormat>>();
