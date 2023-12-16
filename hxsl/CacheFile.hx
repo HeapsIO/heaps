@@ -271,7 +271,7 @@ class CacheFile extends Cache {
 
 			for( r in runtimes ) {
 				var shaderList = null;
-				var mode : hxsl.Linker.LinkMode = Default;
+				var mode : RuntimeShader.LinkMode = Default;
 				r.inst.reverse();
 				for( i in r.inst ) {
 					var s = Type.createEmptyInstance(hxsl.Shader);

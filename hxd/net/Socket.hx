@@ -41,6 +41,8 @@ class Socket {
 	public var out(default, null) : SocketOutput;
 	public var input(default, null) : SocketInput;
 	public var timeout(default, set) : Null<Float>;
+	
+	public static inline var ALLOW_BIND = #if (hl || (nodejs && hxnodejs)) true #else false #end;
 
 	public function new() {
 		out = new SocketOutput();

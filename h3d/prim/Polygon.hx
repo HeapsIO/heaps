@@ -110,7 +110,7 @@ class Polygon extends MeshPrimitive {
 		}
 	}
 
-	public function translate( dx, dy, dz ) {
+	public function translate( dx : Float, dy : Float, dz : Float ) {
 		translatedX += dx;
 		translatedY += dy;
 		translatedZ += dz;

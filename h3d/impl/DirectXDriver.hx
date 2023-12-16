@@ -280,6 +280,8 @@ class DirectXDriver extends h3d.impl.Driver {
 		if( color != null ) {
 			for( i in 0...targetsCount )
 				Driver.clearColor(currentTargets[i], color.r, color.g, color.b, color.a);
+			if (targetsCount == 0)
+				Driver.clearColor(defaultTarget, color.r, color.g, color.b, color.a);
 		}
 		if( currentDepth != null && (depth != null || stencil != null) )
 			Driver.clearDepthStencilView(currentDepth.depthView, depth, stencil);
@@ -839,9 +841,13 @@ class DirectXDriver extends h3d.impl.Driver {
 		if( shaderCache != null ) {
 			var bytes = shaderCache.resolveShaderBinary(code, shaderVersion);
 			if( bytes != null ) {
-				var sh = vertex ? Driver.createVertexShader(bytes) : Driver.createPixelShader(bytes);
-				// shader can't be compiled !
-				if( sh == null )
+				try {
+					var sh = vertex ? Driver.createVertexShader(bytes) : Driver.createPixelShader(bytes);
+					// shader can't be compiled !
+					if( sh == null )
+						return null;
+				}
+				catch( d : Dynamic)
 					return null;
 				return bytes;
 			}

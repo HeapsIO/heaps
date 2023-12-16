@@ -261,15 +261,16 @@ class DirShadowMap extends Shadows {
 	}
 
 	function processShadowMap( passes, tex, ?sort) {
-
 		var prevViewProj = @:privateAccess ctx.cameraViewProj;
 		@:privateAccess ctx.cameraViewProj = getShadowProj();
-
-		if ( tex.isDepth() )
+		if ( tex.isDepth() ) {
 			ctx.engine.pushDepth(tex);
-		else
+			ctx.engine.clear(null, 1.0);
+		}
+		else {
 			ctx.engine.pushTarget(tex);
-		ctx.engine.clear(0xFFFFFF, 1.0);
+			ctx.engine.clear(0xFFFFFF);
+		}
 		super.draw(passes, sort);
 
 		var doBlur = blur.radius > 0 && (mode != Mixed || !ctx.computingStatic);

@@ -151,7 +151,7 @@ class Pbr extends SampleApp {
 
 		if( grid == null ) return;
 
-		var color = new h3d.Vector(1, 0, 0);
+		var color = new h3d.Vector4(1, 0, 0, 1);
 		var m = new h3d.Matrix();
 		m.identity();
 		m.colorSaturate(saturation - 1);

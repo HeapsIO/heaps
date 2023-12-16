@@ -1,12 +1,6 @@
 package hxsl;
 using hxsl.Ast;
 
-enum LinkMode {
-	Default;
-	Batch;
-	Compute;
-}
-
 private class AllocatedVar {
 	public var id : Int;
 	public var v : TVar;
@@ -28,8 +22,10 @@ private class ShaderInfos {
 	public var body : TExpr;
 	public var usedFunctions : Array<TFunction>;
 	public var deps : Map<ShaderInfos, Bool>;
-	public var read : Map<Int,AllocatedVar>;
-	public var write : Map<Int,AllocatedVar>;
+	public var readMap : Map<Int,AllocatedVar>;
+	public var readVars : Array<AllocatedVar>;
+	public var writeMap : Map<Int,AllocatedVar>;
+	public var writeVars : Array<AllocatedVar>;
 	public var processed : Map<Int, Bool>;
 	public var vertex : Null<Bool>;
 	public var onStack : Bool;
@@ -42,8 +38,10 @@ private class ShaderInfos {
 		this.vertex = v;
 		processed = new Map();
 		usedFunctions = [];
-		read = new Map();
-		write = new Map();
+		readMap = new Map();
+		readVars = [];
+		writeMap = new Map();
+		writeVars = [];
 	}
 }
 
@@ -56,7 +54,7 @@ class Linker {
 	var varIdMap : Map<Int,Int>;
 	var locals : Map<Int,Bool>;
 	var curInstance : Int;
-	var mode : LinkMode;
+	var mode : hxsl.RuntimeShader.LinkMode;
 	var isBatchShader : Bool;
 	var debugDepth = 0;
 
@@ -193,9 +191,12 @@ class Linker {
 		switch( e.e ) {
 		case TVar(v) if( !locals.exists(v.id) ):
 			var v = allocVar(v, e.p);
-			if( curShader != null && !curShader.write.exists(v.id) ) {
+			if( curShader != null && !curShader.writeMap.exists(v.id) ) {
 				debug(curShader.name + " read " + v.path);
-				curShader.read.set(v.id, v);
+				if( !curShader.readMap.exists(v.id) ) {
+					curShader.readMap.set(v.id, v);
+					curShader.readVars.push(v);
+				}
 				// if we read a varying, force into fragment
 				if( curShader.vertex == null && v.v.kind == Var ) {
 					debug("Force " + curShader.name+" into fragment (use varying)");
@@ -208,9 +209,10 @@ class Linker {
 			case [OpAssign, TVar(v)] if( !locals.exists(v.id) ):
 				var e2 = mapExprVar(e2);
 				var v = allocVar(v, e1.p);
-				if( curShader != null ) {
+				if( curShader != null && !curShader.writeMap.exists(v.id) ) {
 					debug(curShader.name + " write " + v.path);
-					curShader.write.set(v.id, v);
+					curShader.writeMap.set(v.id, v);
+					curShader.writeVars.push(v);
 				}
 				// don't read the var
 				return { e : TBinop(op, { e : TVar(v.v), t : v.v.type, p : e.p }, e2), t : e.t, p : e.p };
@@ -220,10 +222,11 @@ class Linker {
 				var e2 = mapExprVar(e2);
 
 				var v = allocVar(v, e1.p);
-				if( curShader != null ) {
+				if( curShader != null && !curShader.writeMap.exists(v.id) ) {
 					// TODO : mark as partial write if SWIZ
 					debug(curShader.name + " write " + v.path);
-					curShader.write.set(v.id, v);
+					curShader.writeMap.set(v.id, v);
+					curShader.writeVars.push(v);
 				}
 				return { e : TBinop(op, e1, e2), t : e.t, p : e.p };
 			default:
@@ -267,7 +270,7 @@ class Linker {
 				continue;
 			} else if( !found )
 				continue;
-			if( !parent.write.exists(v.id) )
+			if( !parent.writeMap.exists(v.id) )
 				continue;
 			if( s.vertex ) {
 				if( parent.vertex == false )
@@ -280,7 +283,7 @@ class Linker {
 			debugDepth++;
 			initDependencies(parent);
 			debugDepth--;
-			if( !parent.read.exists(v.id) )
+			if( !parent.readMap.exists(v.id) )
 				return;
 		}
 		if( v.v.kind == Var )
@@ -291,8 +294,8 @@ class Linker {
 		if( s.deps != null )
 			return;
 		s.deps = new Map();
-		for( r in s.read )
-			buildDependency(s, r, s.write.exists(r.id));
+		for( r in s.readVars )
+			buildDependency(s, r, s.writeMap.exists(r.id));
 		// propagate fragment flag
 		if( s.vertex == null )
 			for( d in s.deps.keys() )
@@ -412,6 +415,15 @@ class Linker {
 		}
 		shaders.sort(sortByPriorityDesc);
 
+		var uid = 0;
+		for( s in shaders )
+			s.uid = uid++;
+
+		#if shader_debug_dump
+		for( s in shaders )
+			debug("Found shader "+s.name+":"+s.uid);
+		#end
+
 		// build dependency tree
 		var entry = new ShaderInfos("<entry>", false);
 		entry.deps = new Map();
@@ -430,7 +442,7 @@ class Linker {
 		for( s in shaders ) {
 			if( s.vertex != null ) continue;
 			var onlyParams = true;
-			for( r in s.read )
+			for( r in s.readVars )
 				if( r.v.kind != Param ) {
 					onlyParams = false;
 					break;
@@ -470,9 +482,9 @@ class Linker {
 				outVars.push(v.v);
 		}
 		for( s in v.concat(f) ) {
-			for( v in s.read )
+			for( v in s.readVars )
 				addVar(v);
-			for( v in s.write )
+			for( v in s.writeVars )
 				addVar(v);
 		}
 		// cleanup unused structure vars

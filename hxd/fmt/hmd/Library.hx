@@ -14,6 +14,21 @@ private class FormatMap {
 	}
 }
 
+#if hide
+private class ContextShared extends hrt.prefab.ContextShared {
+	var customLoadTexture : String -> h3d.mat.Texture;
+
+	public function new(loadTexture : String -> h3d.mat.Texture, ?res : hxd.res.Resource) {
+		super(res);
+		this.customLoadTexture = loadTexture;
+	}
+
+	override function loadTexture(path:String, async:Bool = false):h3d.mat.Texture {
+			return customLoadTexture(path);
+	}
+}
+#end
+
 class GeometryBuffer {
 	public var vertexes : haxe.ds.Vector<hxd.impl.Float32>;
 	public var indexes : haxe.ds.Vector<Int>;
@@ -278,7 +293,7 @@ class Library {
 		#if hide
 		if( (props:Dynamic).__ref != null ) {
 			try {
-				if ( setupMaterialLibrary(mat, hxd.res.Loader.currentInstance.load((props:Dynamic).__ref).toPrefab(), (props:Dynamic).name) )
+				if ( setupMaterialLibrary(loadTexture, mat, hxd.res.Loader.currentInstance.load((props:Dynamic).__ref).toPrefab(), (props:Dynamic).name) )
 					return mat;
 			} catch( e : Dynamic ) {
 			}
@@ -740,29 +755,30 @@ class Library {
 	}
 
 	#if hide
-	public dynamic static function setupMaterialLibrary( mat : h3d.mat.Material, lib : hrt.prefab.Resource, name : String ) {
-		var m  = lib.load().getOpt(hrt.prefab.Material,name);
-		if ( m == null )
-			return false;
-		@:privateAccess m.update(mat, m.renderProps(),
-		function loadTexture ( path : String ) {
-			return hxd.res.Loader.currentInstance.load(path).toTexture();
-		});
-		for ( c in m.children ) {
-			var shader = Std.downcast(c, hrt.prefab.Shader);
-			if ( shader == null )
-				continue;
-			#if prefab2
-			var s = shader.make().shader;
-			#else
-			shader.clone();
-			var ctx = new hrt.prefab.Context();
-			var s = shader.makeShader(ctx);
-			#end
-			@:privateAccess shader.applyShader(null, mat, s);
-		}
-		return true;
-	}
+	static var materialContainer : h3d.scene.Mesh;
+    public dynamic static function setupMaterialLibrary( loadTexture : String -> h3d.mat.Texture, mat : h3d.mat.Material, lib : hrt.prefab.Resource, name : String ) {
+        var m  = lib.load().getOpt(hrt.prefab.Material,name);
+        if ( m == null )
+            return false;
+
+		if (materialContainer == null)
+			materialContainer = new h3d.scene.Mesh(null, mat, null);
+
+        var ctx = new hrt.prefab.Context();
+		ctx.shared = new ContextShared(loadTexture, null);
+
+        materialContainer.material = mat;
+        ctx.local3d = materialContainer;
+        m.make(ctx);
+
+        // Ensure there is no leak with this
+		materialContainer.material = null;
+
+		while (materialContainer.numChildren > 0)
+			@:privateAccess materialContainer.children[materialContainer.numChildren - 1].remove();
+
+        return true;
+    }
 	#end
 
 }

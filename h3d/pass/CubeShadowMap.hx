@@ -162,7 +162,7 @@ class CubeShadowMap extends Shadows {
 			return;
 		}
 
-		var texture = ctx.computingStatic ? createStaticTexture() : ctx.textures.allocTarget("pointShadowMap", size, size, false, format, true);
+		var texture = ctx.computingStatic ? createStaticTexture() : ctx.textures.allocTarget("pointShadowMap", size, size, false, format, [Cube]);
 		if( depth == null || depth.width != texture.width || depth.height != texture.height || depth.isDisposed() ) {
 			if( depth != null ) depth.dispose();
 			depth = new h3d.mat.Texture(texture.width, texture.height, Depth24Stencil8);
@@ -221,7 +221,7 @@ class CubeShadowMap extends Shadows {
 		var validBakedTexture = (staticTexture != null && staticTexture.width == dynamicTex.width);
 		var merge : h3d.mat.Texture = null;
 		if( mode == Mixed && !ctx.computingStatic && validBakedTexture)
-			merge = ctx.textures.allocTarget("mergedPointShadowMap", size, size, false, format, true);
+			merge = ctx.textures.allocTarget("mergedPointShadowMap", size, size, false, format, [Cube]);
 
 		if( mode == Mixed && !ctx.computingStatic && merge != null ) {
 			for( i in 0 ... 6 ) {

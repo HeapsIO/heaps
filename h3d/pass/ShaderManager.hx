@@ -16,7 +16,7 @@ class ShaderManager {
 		currentOutput.s = shaderCache.getLinkShader(output);
 	}
 
-	public function compileShaders( globals : hxsl.Globals, shaders : hxsl.ShaderList, mode : hxsl.Linker.LinkMode = Default ) {
+	public function compileShaders( globals : hxsl.Globals, shaders : hxsl.ShaderList, mode : hxsl.RuntimeShader.LinkMode = Default ) {
 		globals.resetChannels();
 		for( s in shaders ) s.updateConstants(globals);
 		currentOutput.next = shaders;
