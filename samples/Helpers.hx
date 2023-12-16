@@ -117,7 +117,7 @@ class PointLightHelper extends h3d.scene.Mesh {
 		prim.addNormals();
 		prim.addUVs();
 		super( prim, light );
-		material.color = light.color;
+		material.color = light.color.toVector4();
 		material.mainPass.wireframe = true;
 	}
 }
