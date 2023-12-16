@@ -62,9 +62,12 @@ class RenderContext extends h3d.impl.RenderContext {
 		cameraProj = cam.mproj;
 		cameraPos = cam.pos;
 		cameraProjDiag = new h3d.Vector4(cam.mproj._11,cam.mproj._22,cam.mproj._33,cam.mproj._44);
-		cameraProjFlip = engine.driver.hasFeature(BottomLeftCoords) && engine.getCurrentTarget() != null ? -1 : 1;
 		cameraViewProj = cam.m;
 		cameraInverseViewProj = camera.getInverseViewProj();
+	}
+
+	public function setupTarget() {
+		cameraProjFlip = engine.driver.hasFeature(BottomLeftCoords) && engine.getCurrentTarget() != null ? -1 : 1;
 	}
 
 	function getCurrentPixelSize() {

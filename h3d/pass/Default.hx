@@ -76,6 +76,7 @@ class Default extends Base {
 		if( passes.isEmpty() )
 			return;
 		#if sceneprof h3d.impl.SceneProf.begin("draw", ctx.frame); #end
+		ctx.setupTarget();
 		setupShaders(passes);
 		if( sort == null )
 			defaultSort(passes);
