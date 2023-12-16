@@ -90,11 +90,6 @@ class CascadeShadowMap extends DirShadowMap {
 		lightCameras[cascade - 1].orthoBounds = lightCamera.orthoBounds.clone();
 	}
 
-	override function setGlobals() {
-		super.setGlobals();
-		cameraViewProj = getCascadeProj(currentCascadeIndex);
-	}
-
 	function getCascadeProj(i:Int) {
 		return lightCameras[i].m;
 	}
@@ -123,6 +118,10 @@ class CascadeShadowMap extends DirShadowMap {
 		cshader.shadowRes.set(textures[0].width,textures[0].height);
 		cshader.pcfScale = pcfScale;
 		cshader.pcfQuality = pcfQuality;
+	}
+
+	override function getShadowProj():Matrix {
+		return getCascadeProj(currentCascadeIndex);
 	}
 
 	override function draw( passes, ?sort ) {

@@ -9,6 +9,7 @@ private class SharedGlobal {
 	}
 }
 
+@:build(hxsl.Macros.buildGlobals())
 class RenderContext extends h3d.impl.RenderContext {
 
 	public var camera : h3d.Camera;
@@ -17,7 +18,6 @@ class RenderContext extends h3d.impl.RenderContext {
 	public var pbrLightPass : h3d.mat.Pass;
 	public var computingStatic : Bool;
 
-	var sharedGlobals : Array<SharedGlobal>;
 	public var lightSystem : h3d.scene.LightSystem;
 	public var extraShaders : hxsl.ShaderList;
 	public var visibleFlag : Bool;
@@ -26,6 +26,20 @@ class RenderContext extends h3d.impl.RenderContext {
 	public var shaderBuffers : h3d.shader.Buffers;
 	public var cullingCollider : h3d.col.Collider;
 
+	@global("camera.view") var cameraView : h3d.Matrix;
+	@global("camera.zNear") var cameraNear : Float;
+	@global("camera.zFar") var cameraFar : Float;
+	@global("camera.proj") var cameraProj : h3d.Matrix;
+	@global("camera.position") var cameraPos : h3d.Vector;
+	@global("camera.projDiag") var cameraProjDiag : h3d.Vector4;
+	@global("camera.projFlip") var cameraProjFlip : Float;
+	@global("camera.viewProj") var cameraViewProj : h3d.Matrix;
+	@global("camera.inverseViewProj") var cameraInverseViewProj : h3d.Matrix;
+	@global("global.time") var globalTime : Float;
+	@global("global.pixelSize") var pixelSize : h3d.Vector;
+	@global("global.modelView") var globalModelView : h3d.Matrix;
+	@global("global.modelViewInverse") var globalModelViewInverse : h3d.Matrix;
+
 	var allocPool : h3d.pass.PassObject;
 	var allocFirst : h3d.pass.PassObject;
 	var cachedShaderList : Array<hxsl.ShaderList>;
@@ -33,12 +47,32 @@ class RenderContext extends h3d.impl.RenderContext {
 	var cachedPos : Int;
 	var passes : Array<h3d.pass.PassObject>;
 	var lights : Light;
-	var currentManager : h3d.pass.ShaderManager;
 
 	public function new() {
 		super();
 		cachedShaderList = [];
 		cachedPassObjects = [];
+		initGlobals();
+	}
+
+	public function setCamera( cam : h3d.Camera ) {
+		cameraView = cam.mcam;
+		cameraNear = cam.zNear;
+		cameraFar = cam.zFar;
+		cameraProj = cam.mproj;
+		cameraPos = cam.pos;
+		cameraProjDiag = new h3d.Vector4(cam.mproj._11,cam.mproj._22,cam.mproj._33,cam.mproj._44);
+		cameraViewProj = cam.m;
+		cameraInverseViewProj = camera.getInverseViewProj();
+	}
+
+	public function setupTarget() {
+		cameraProjFlip = engine.driver.hasFeature(BottomLeftCoords) && engine.getCurrentTarget() != null ? -1 : 1;
+	}
+
+	function getCurrentPixelSize() {
+		var t = engine.getCurrentTarget();
+		return new h3d.Vector(2 / (t == null ? engine.width : t.width), 2 / (t == null ? engine.height : t.height));
 	}
 
 	@:access(h3d.mat.Pass)
@@ -52,7 +86,6 @@ class RenderContext extends h3d.impl.RenderContext {
 	}
 
 	public function start() {
-		sharedGlobals = [];
 		lights = null;
 		drawPass = null;
 		passes = [];
@@ -61,6 +94,10 @@ class RenderContext extends h3d.impl.RenderContext {
 		visibleFlag = true;
 		time += elapsedTime;
 		frame++;
+		setCurrent();
+		globalTime = time;
+		pixelSize = getCurrentPixelSize();
+		setCamera(camera);
 	}
 
 	public inline function nextPass() {
@@ -68,25 +105,12 @@ class RenderContext extends h3d.impl.RenderContext {
 		drawPass = null;
 	}
 
-	public function getGlobal( name : String ) : Dynamic {
-		var id = hxsl.Globals.allocID(name);
-		for( g in sharedGlobals )
-			if( g.gid == id )
-				return g.value;
-		return null;
+	public inline function getGlobal(name) : Dynamic {
+		return globals.get(name);
 	}
 
-	public inline function setGlobal( name : String, value : Dynamic ) {
-		setGlobalID(hxsl.Globals.allocID(name), value);
-	}
-
-	public function setGlobalID( gid : Int, value : Dynamic ) {
-		for( g in sharedGlobals )
-			if( g.gid == gid ) {
-				g.value = value;
-				return;
-			}
-		sharedGlobals.push(new SharedGlobal(gid, value));
+	public inline function setGlobal(name,v:Dynamic) {
+		globals.set(name, v);
 	}
 
 	public function emitPass( pass : h3d.mat.Pass, obj : h3d.scene.Object ) @:privateAccess {
@@ -125,7 +149,7 @@ class RenderContext extends h3d.impl.RenderContext {
 	}
 
 	public function uploadParams() {
-		currentManager.fillParams(shaderBuffers, drawPass.shader, drawPass.shaders);
+		fillParams(shaderBuffers, drawPass.shader, drawPass.shaders);
 		engine.uploadShaderBuffers(shaderBuffers, Params);
 		engine.uploadShaderBuffers(shaderBuffers, Textures);
 		engine.uploadShaderBuffers(shaderBuffers, Buffers);
@@ -155,6 +179,7 @@ class RenderContext extends h3d.impl.RenderContext {
 		}
 		passes = [];
 		lights = null;
+		clearCurrent();
 	}
 
 }

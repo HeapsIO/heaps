@@ -146,7 +146,7 @@ class Drawable extends Object {
 	public function getDebugShaderCode( toHxsl = true ) {
 		var shader = @:privateAccess {
 			var ctx = getScene().ctx;
-			ctx.manager.compileShaders(new hxsl.ShaderList(ctx.baseShader,shaders));
+			ctx.manager.compileShaders(ctx.globals, new hxsl.ShaderList(ctx.baseShader,shaders));
 		}
 		if( toHxsl ) {
 			var toString = hxsl.Printer.shaderToString.bind(_, true);

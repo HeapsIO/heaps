@@ -20,7 +20,7 @@ class DepthPass extends h3d.pass.Default {
 		ctx.engine.clear(enableSky ? 0 : 0xFF0000, 1);
 		super.draw(passes, sort);
 		ctx.engine.popTarget();
-		ctx.setGlobalID(depthMapId, { texture : texture });
+		ctx.globals.fastSet(depthMapId, { texture : texture });
 	}
 
 }
@@ -44,7 +44,7 @@ class NormalPass extends h3d.pass.Default {
 		ctx.engine.clear(0x808080, 1);
 		super.draw(passes, sort);
 		ctx.engine.popTarget();
-		ctx.setGlobalID(normalMapId, texture);
+		ctx.globals.fastSet(normalMapId, texture);
 	}
 
 }

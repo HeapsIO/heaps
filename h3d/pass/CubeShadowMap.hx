@@ -50,13 +50,6 @@ class CubeShadowMap extends Shadows {
 		return true;
 	}
 
-	override function setGlobals() {
-		super.setGlobals();
-		cameraViewProj = getShadowProj();
-		cameraFar = lightCamera.zFar;
-		cameraPos = lightCamera.pos;
-	}
-
 	override function saveStaticData() {
 		if( mode != Mixed && mode != Static )
 			return null;
@@ -180,6 +173,10 @@ class CubeShadowMap extends Shadows {
 		lightCamera.pos.set(absPos.tx, absPos.ty, absPos.tz);
 		updateLightCameraNearFar(light);
 
+		var prevFar = @:privateAccess ctx.cameraFar;
+		var prevPos = @:privateAccess ctx.cameraPos;
+		@:privateAccess ctx.cameraFar = lightCamera.zFar;
+		@:privateAccess ctx.cameraPos = lightCamera.pos;
 
 		for( i in 0...6 ) {
 
@@ -206,6 +203,9 @@ class CubeShadowMap extends Shadows {
 			passes.load(save);
 			ctx.engine.popTarget();
 		}
+
+		@:privateAccess ctx.cameraFar = prevFar;
+		@:privateAccess ctx.cameraPos = prevPos;
 
 		// Blur is applied even if there's no shadows - TO DO : remove the useless blur pass
 		if( blur.radius > 0 )

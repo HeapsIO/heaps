@@ -173,12 +173,12 @@ class RenderContext extends h3d.impl.RenderContext {
 		viewD = scene.viewportD;
 		viewX = scene.viewportX;
 		viewY = scene.viewportY;
-
+		setCurrent();
 		targetFlipY = engine.driver.hasFeature(BottomLeftCoords) ? -1 : 1;
 		baseFlipY = engine.getCurrentTarget() != null ? targetFlipY : 1;
 		inFilter = null;
-		manager.globals.set("time", time);
-		manager.globals.set("global.time", time);
+		globals.set("time", time);
+		globals.set("global.time", time);
 		baseShader.pixelAlign = false;
 		baseShader.halfPixelInverse.set(0.5 / engine.width, 0.5 / engine.height);
 		baseShader.viewportA.set(scene.viewportA, 0, scene.viewportX);
@@ -210,12 +210,12 @@ class RenderContext extends h3d.impl.RenderContext {
 
 	function initShaders( shaders ) {
 		currentShaders = shaders;
-		compiledShader = manager.compileShaders(shaders);
+		compiledShader = manager.compileShaders(globals, shaders);
 		if( buffers == null )
 			buffers = new h3d.shader.Buffers(compiledShader);
 		else
 			buffers.grow(compiledShader);
-		manager.fillGlobals(buffers, compiledShader);
+		fillGlobals(buffers, compiledShader);
 		engine.selectShader(compiledShader);
 		engine.uploadShaderBuffers(buffers, Globals);
 	}
@@ -230,6 +230,7 @@ class RenderContext extends h3d.impl.RenderContext {
 		texture = null;
 		currentObj = null;
 		baseShaderList.next = null;
+		clearCurrent();
 		if ( targetsStackIndex != 0 ) throw "Missing popTarget()";
 		if ( cameraStackIndex != 0 ) throw "Missing popCamera()";
 	}
@@ -611,7 +612,7 @@ class RenderContext extends h3d.impl.RenderContext {
 					pass.blendSrc = One;
 			}
 		}
-		manager.fillParams(buffers, compiledShader, currentShaders);
+		fillParams(buffers, compiledShader, currentShaders);
 		engine.selectMaterial(pass);
 		engine.uploadShaderBuffers(buffers, Params);
 		engine.uploadShaderBuffers(buffers, Textures);
@@ -773,7 +774,7 @@ class RenderContext extends h3d.impl.RenderContext {
 			var prevInst = @:privateAccess t.instance;
 			if( s != t )
 				paramsChanged = true;
-			s.updateConstants(manager.globals);
+			s.updateConstants(globals);
 			if( @:privateAccess s.instance != prevInst )
 				shaderChanged = true;
 		}
@@ -784,7 +785,7 @@ class RenderContext extends h3d.impl.RenderContext {
 			baseShader.hasUVPos = hasUVPos;
 			baseShader.isRelative = isRelative;
 			baseShader.killAlpha = killAlpha;
-			baseShader.updateConstants(manager.globals);
+			baseShader.updateConstants(globals);
 			baseShaderList.next = obj.shaders;
 			initShaders(baseShaderList);
 		} else if( paramsChanged ) {

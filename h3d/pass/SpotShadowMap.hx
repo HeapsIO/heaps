@@ -49,11 +49,6 @@ class SpotShadowMap extends Shadows {
 		return sshader.shadowMap;
 	}
 
-	override function setGlobals() {
-		super.setGlobals();
-		cameraViewProj = getShadowProj();
-	}
-
 	override function syncShader(texture) {
 		sshader.shadowMap = texture;
 		sshader.shadowMapChannel = format == h3d.mat.Texture.nativeFormat ? PackedFloat : R;
@@ -148,12 +143,15 @@ class SpotShadowMap extends Shadows {
 		var validBakedTexture = (staticTexture != null && staticTexture.width == texture.width);
 		if( mode == Mixed && !ctx.computingStatic && validBakedTexture ) {
 			var merge = ctx.textures.allocTarget("mergedSpotShadowMap", size, size, false, format);
+			var prev = @:privateAccess ctx.cameraViewProj;
+			@:privateAccess ctx.cameraViewProj = getShadowProj();
 			mergePass.shader.texA = texture;
 			mergePass.shader.texB = staticTexture;
 			ctx.engine.pushTarget(merge);
 			mergePass.render();
 			ctx.engine.popTarget();
 			texture = merge;
+			@:privateAccess ctx.cameraViewProj = prev;
 		}
 
 		syncShader(texture);

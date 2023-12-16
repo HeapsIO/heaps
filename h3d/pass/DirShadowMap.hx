@@ -186,11 +186,6 @@ class DirShadowMap extends Shadows {
 		bounds.scaleCenter(1.01);
 	}
 
-	override function setGlobals() {
-		super.setGlobals();
-		cameraViewProj = getShadowProj();
-	}
-
 	override function syncShader(texture) {
 		dshader.shadowMap = texture;
 		dshader.shadowMapChannel = format == h3d.mat.Texture.nativeFormat ? PackedFloat : R;
@@ -266,6 +261,8 @@ class DirShadowMap extends Shadows {
 	}
 
 	function processShadowMap( passes, tex, ?sort) {
+		var prevViewProj = @:privateAccess ctx.cameraViewProj;
+		@:privateAccess ctx.cameraViewProj = getShadowProj();
 		if ( tex.isDepth() ) {
 			ctx.engine.pushDepth(tex);
 			ctx.engine.clear(null, 1.0);
@@ -306,6 +303,9 @@ class DirShadowMap extends Shadows {
 				ctx.engine.popTarget();
 			}
 		}
+
+		@:privateAccess ctx.cameraViewProj = prevViewProj;
+
 		return tex;
 	}
 

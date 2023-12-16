@@ -739,6 +739,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		var inRender = @:privateAccess ctx.engine.inRender;
 		ctx.engine.backgroundColor = null; // prevent clear bg
 		ctx.globalAlpha = alpha;
+		var prevCtx = h3d.impl.RenderContext.get();
 		if( !inRender ) { // don't reset current tex stack
 			ctx.engine.begin();
 			ctx.begin();
@@ -754,6 +755,8 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 			ctx.end();
 			ctx.engine.end();
 		}
+		if( prevCtx != null )
+			prevCtx.setCurrent();
 	}
 
 	/**
