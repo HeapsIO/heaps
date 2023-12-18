@@ -77,6 +77,25 @@ class VectorImpl #if apicheck implements h2d.impl.PointApi<Vector,Matrix> #end {
 		return new Vector(x * k, y * k, z * k);
 	}
 
+	public inline function packNormal() {
+		x = x * 0.5 + 0.5;
+		y = y * 0.5 + 0.5;
+		z = z * 0.5 + 0.5;
+	}
+
+	public inline function unpackNormal() {
+		x = x * 2.0 - 1.0;
+		y = y * 2.0 - 1.0;
+		z = z * 2.0 - 1.0;
+	}
+
+	public inline function normalStrength(strength : Float) {
+		var k = 1.0 / strength;
+		x *= k;
+		y *= k;
+		normalize();
+	}
+
 	public inline function set(x=0.,y=0.,z=0.) {
 		this.x = x;
 		this.y = y;
