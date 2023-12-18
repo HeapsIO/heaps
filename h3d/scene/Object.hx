@@ -891,8 +891,8 @@ class Object {
 	/**
 		Rotate around the current rotation axis by the specified angles (in radian).
 	**/
-	public function rotate( rx : Float, ry : Float, rz : Float ) {
-		var qTmp = new h3d.Quat();
+	public function rotate( rx : Float, ry : Float, rz : Float, ?qTmp : h3d.Quat ) {
+		if ( qTmp == null ) qTmp = new h3d.Quat();
 		qTmp.initRotation(rx, ry, rz);
 		qRot.multiply(qTmp,qRot);
 		posChanged = true;
