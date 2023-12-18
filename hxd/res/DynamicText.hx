@@ -118,7 +118,7 @@ class DynamicText {
 			}
 		if( !ok )
 			return null;
-		return parseText(str);
+		return parseText(str, ref);
 	}
 
 	public static function applyRec( path : Array<String>, obj : Dynamic, data : Access, ref : Access, onMissing ) {
@@ -253,15 +253,15 @@ class DynamicText {
 				return a;
 			}
 		case "t":
-			return parseText(x.innerHTML);
+			return parseText(x.innerHTML, x);
 		default:
 			throw "Unknown tag " + x.name;
 		}
 	}
 
-	static function parseText( str : String ) : Dynamic {
+	static function parseText( str : String, ?x : Access ) : Dynamic {
 		str = str.split("\r\n").join("\n");
-		if( !r_attr.match(str) )
+		if( !r_attr.match(str) && (x == null || !x.has.opts) )
 			return str;
 		return function(vars) {
 			var str = str;
@@ -302,7 +302,7 @@ class DynamicText {
 			return macro : Array<String>;
 		case "t":
 			var tstring = macro : String;
-			if (!r_attr.match(x.innerHTML))
+			if (!r_attr.match(x.innerHTML) && !x.has.opts)
 				return tstring;
 			// printer function
 			var i = 1;
@@ -316,6 +316,19 @@ class DynamicText {
 				}
 				return r.matched(0);
 			});
+			if (x.has.opts) {
+				var opts = x.att.opts.split(",");
+				for (o in opts) {
+					var found = false;
+					for (f in fields) {
+						if (f.name == o)
+							found = true;
+					}
+					if (!found) {
+						fields.push( { name : o, kind : FVar(macro : Dynamic), pos : pos.pos, meta : [] } );
+					}
+				}
+			}
 
 			return TFunction([TAnonymous(fields)], tstring);
 		default:
