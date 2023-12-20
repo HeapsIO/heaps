@@ -217,7 +217,21 @@ class LocalEntry extends FileEntry {
 		#else
 		watchTime = getModifTime();
 		#end
-		watchCallback = function() { fs.convert.run(this); onChanged(); }
+
+		if (watchOnChangedHistory == null)
+			watchOnChangedHistory = new Array<Null<Void -> Void>>();
+
+		watchOnChangedHistory.push(onChanged);
+		watchCallback = function() {
+			fs.convert.run(this);
+
+			var idx = watchOnChangedHistory.length -1;
+			while (idx >= 0) {
+				if (watchOnChangedHistory[idx] != null)
+					watchOnChangedHistory[idx]();
+				idx--;
+			}
+		}
 	}
 
 }
