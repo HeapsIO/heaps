@@ -401,6 +401,7 @@ class ObjectComp implements h2d.domkit.Object implements domkit.Component.Compon
 	@:p var scaleY : Float;
 	@:p var blend : h2d.BlendMode = Alpha;
 	@:p(filter) var filter : h2d.filter.Filter;
+	@:p var filterSmooth : Bool;
 
 	// flow properties
 	@:p(box) var margin : { left : Int, top : Int, right : Int, bottom : Int };
@@ -443,6 +444,10 @@ class ObjectComp implements h2d.domkit.Object implements domkit.Component.Compon
 
 	static function set_filter(o:h2d.Object, f:h2d.filter.Filter) {
 		o.filter = f;
+	}
+
+	static function set_filterSmooth(o:h2d.Object, b:Bool) {
+		if( o.filter != null ) o.filter.smooth = b;
 	}
 
 	static function set_blend(o:h2d.Object, b:h2d.BlendMode) {

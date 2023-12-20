@@ -29,9 +29,8 @@ class Filter {
 	**/
 	public var boundsExtend : Float = 0.;
 	/**
-		When enabled, some filters will use bilinear filtering on temporary textures.
-		Does not affect the majority of filters.
-		@see `AbstractMask`
+		When enabled, filters on not Object which are not Drawable will use bilinear filtering when displayed
+		and some filter will also use bilinear filtering on intermediate textures.
 	**/
 	public var smooth = false;
 	/**

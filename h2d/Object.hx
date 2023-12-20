@@ -691,6 +691,7 @@ class Object #if (domkit && !domkit_heaps) implements domkit.Model<h2d.Object> #
 	function emitTile( ctx : RenderContext, tile : h2d.Tile ) {
 		if( nullDrawable == null )
 			nullDrawable = @:privateAccess new h2d.Drawable(null);
+		nullDrawable.smooth = filter != null && filter.smooth ? true : null;
 		if( !ctx.hasBuffering() ) {
 			nullDrawable.absX = absX;
 			nullDrawable.absY = absY;
