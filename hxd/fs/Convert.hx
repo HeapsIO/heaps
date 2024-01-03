@@ -74,12 +74,6 @@ class ConvertFBX2HMD extends Convert {
 
 	override function convert() {
 		var fbx = try hxd.fmt.fbx.Parser.parse(srcBytes) catch (e:Dynamic) throw Std.string(e) + " in " + srcPath;
-
-		var filePath = "C:/Users/leovg/Desktop/Export.fbx";
-		var out = new haxe.io.BytesOutput();
-		new hxd.fmt.fbx.Writer(out).write(fbx);
-		sys.io.File.saveBytes(filePath, out.getBytes());
-
 		var hmdout = new hxd.fmt.fbx.HMDOut(srcPath);
 		if (params != null) {
 			if (params.normals)

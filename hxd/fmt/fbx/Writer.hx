@@ -185,7 +185,282 @@ class Writer {
 		return globalSettings;
 	}
 
-	public function write(fbx:FbxNode) {
+	function buildDefinitions() {
+		var defGlobalSettings : FbxNode = { name:"ObjectType", props:[PString("GlobalSettings")], childs: [
+			{ name: "Count", props: [PInt(1)], childs: null }
+		] };
+
+		var modelCount = 1;
+		var defModel : FbxNode = { name:"ObjectType", props:[PString("Model")], childs: [
+			{ name: "Count", props: [PInt(modelCount)], childs: null },
+			{ name: "PropertyTemplate", props: [PString("FbxNode")], childs: [
+				{ name:"Properties70", props: null, childs: [
+					{ name: "P", props: [PString("QuaternionInterpolate"), PString("enum"), PString(""), PString(""), PInt(0)], childs:null },
+					{ name: "P", props: [PString("RotationOffset"), PString("Vector3D"), PString("Vector"), PString(""), PInt(0), PInt(0), PInt(0)], childs:null },
+					{ name: "P", props: [PString("RotationPivot"), PString("Vector3D"), PString("Vector"), PString(""), PInt(0), PInt(0), PInt(0)], childs:null },
+					{ name: "P", props: [PString("ScalingOffset"), PString("Vector3D"), PString("Vector"), PString(""), PInt(0), PInt(0), PInt(0)], childs:null },
+					{ name: "P", props: [PString("ScalingPivot"), PString("Vector3D"), PString("Vector"), PString(""), PInt(0), PInt(0), PInt(0)], childs:null },
+					{ name: "P", props: [PString("TranslationActive"), PString("bool"), PString(""), PString(""), PInt(0)], childs:null },
+					{ name: "P", props: [PString("TranslationMin"), PString("Vector3D"), PString("Vector"), PString(""), PInt(0), PInt(0), PInt(0)], childs:null },
+					{ name: "P", props: [PString("TranslationMax"), PString("Vector3D"), PString("Vector"), PString(""), PInt(0), PInt(0), PInt(0)], childs:null },
+					{ name: "P", props: [PString("TranslationMinX"), PString("bool"), PString(""), PString(""), PInt(0)], childs:null },
+					{ name: "P", props: [PString("TranslationMinY"), PString("bool"), PString(""), PString(""), PInt(0)], childs:null },
+					{ name: "P", props: [PString("TranslationMinZ"), PString("bool"), PString(""), PString(""), PInt(0)], childs:null },
+					{ name: "P", props: [PString("TranslationMaxX"), PString("bool"), PString(""), PString(""), PInt(0)], childs:null },
+					{ name: "P", props: [PString("TranslationMaxY"), PString("bool"), PString(""), PString(""), PInt(0)], childs:null },
+					{ name: "P", props: [PString("TranslationMaxZ"), PString("bool"), PString(""), PString(""), PInt(0)], childs:null },
+					{ name: "P", props: [PString("RotationOrder"), PString("enum"), PString(""), PString(""), PInt(0)], childs:null },
+					{ name: "P", props: [PString("RotationSpaceForLimitOnly"), PString("bool"), PString(""), PString(""), PInt(0)], childs:null },
+					{ name: "P", props: [PString("RotationStiffnessX"), PString("double"), PString("Number"), PString(""), PInt(0)], childs:null },
+					{ name: "P", props: [PString("RotationStiffnessY"), PString("double"), PString("Number"), PString(""), PInt(0)], childs:null },
+					{ name: "P", props: [PString("RotationStiffnessZ"), PString("double"), PString("Number"), PString(""), PInt(0)], childs:null },
+					{ name: "P", props: [PString("AxisLen"), PString("double"), PString("Number"), PString(""), PInt(10)], childs:null },
+					{ name: "P", props: [PString("PreRotation"), PString("Vector3D"), PString("Vector"), PString(""), PInt(0), PInt(0), PInt(0)], childs:null },
+					{ name: "P", props: [PString("PostRotation"), PString("Vector3D"), PString("Vector"), PString(""), PInt(0), PInt(0), PInt(0)], childs:null },
+					{ name: "P", props: [PString("RotationActive"), PString("bool"), PString(""), PString(""), PInt(0)], childs:null },
+					{ name: "P", props: [PString("RotationMin"), PString("Vector3D"), PString("Vector"), PString(""), PInt(0), PInt(0), PInt(0)], childs:null },
+					{ name: "P", props: [PString("RotationMax"), PString("Vector3D"), PString("Vector"), PString(""), PInt(0), PInt(0), PInt(0)], childs:null },
+					{ name: "P", props: [PString("RotationMinX"), PString("bool"), PString(""), PString(""), PInt(0)], childs:null },
+					{ name: "P", props: [PString("RotationMinY"), PString("bool"), PString(""), PString(""), PInt(0)], childs:null },
+					{ name: "P", props: [PString("RotationMinZ"), PString("bool"), PString(""), PString(""), PInt(0)], childs:null },
+					{ name: "P", props: [PString("RotationMaxX"), PString("bool"), PString(""), PString(""), PInt(0)], childs:null },
+					{ name: "P", props: [PString("RotationMaxY"), PString("bool"), PString(""), PString(""), PInt(0)], childs:null },
+					{ name: "P", props: [PString("RotationMaxZ"), PString("bool"), PString(""), PString(""), PInt(0)], childs:null },
+					{ name: "P", props: [PString("InheritType"), PString("enum"), PString(""), PString(""), PInt(0)], childs:null },
+					{ name: "P", props: [PString("ScalingActive"), PString("bool"), PString(""), PString(""), PInt(0)], childs:null },
+					{ name: "P", props: [PString("ScalingMin"), PString("Vector3D"), PString("Vector"), PString(""), PInt(0), PInt(0), PInt(0)], childs:null },
+					{ name: "P", props: [PString("ScalingMax"), PString("Vector3D"), PString("Vector"), PString(""), PInt(1), PInt(1), PInt(1)], childs:null },
+					{ name: "P", props: [PString("ScalingMinX"), PString("bool"), PString(""), PString(""), PInt(0)], childs:null },
+					{ name: "P", props: [PString("ScalingMinY"), PString("bool"), PString(""), PString(""), PInt(0)], childs:null },
+					{ name: "P", props: [PString("ScalingMinZ"), PString("bool"), PString(""), PString(""), PInt(0)], childs:null },
+					{ name: "P", props: [PString("ScalingMaxX"), PString("bool"), PString(""), PString(""), PInt(0)], childs:null },
+					{ name: "P", props: [PString("ScalingMaxY"), PString("bool"), PString(""), PString(""), PInt(0)], childs:null },
+					{ name: "P", props: [PString("ScalingMaxZ"), PString("bool"), PString(""), PString(""), PInt(0)], childs:null },
+					{ name: "P", props: [PString("GeometricTranslation"), PString("Vector3D"), PString("Vector"), PString(""), PInt(0), PInt(0), PInt(0)], childs:null },
+					{ name: "P", props: [PString("GeometricRotation"), PString("Vector3D"), PString("Vector"), PString(""), PInt(0), PInt(0), PInt(0)], childs:null },
+					{ name: "P", props: [PString("GeometricScaling"), PString("Vector3D"), PString("Vector"), PString(""), PInt(1), PInt(1), PInt(1)], childs:null },
+					{ name: "P", props: [PString("MinDampRangeX"), PString("double"), PString("Number"), PString(""), PInt(0)], childs:null },
+					{ name: "P", props: [PString("MinDampRangeY"), PString("double"), PString("Number"), PString(""), PInt(0)], childs:null },
+					{ name: "P", props: [PString("MinDampRangeZ"), PString("double"), PString("Number"), PString(""), PInt(0)], childs:null },
+					{ name: "P", props: [PString("MaxDampRangeX"), PString("double"), PString("Number"), PString(""), PInt(0)], childs:null },
+					{ name: "P", props: [PString("MaxDampRangeY"), PString("double"), PString("Number"), PString(""), PInt(0)], childs:null },
+					{ name: "P", props: [PString("MaxDampRangeZ"), PString("double"), PString("Number"), PString(""), PInt(0)], childs:null },
+					{ name: "P", props: [PString("MinDampStrengthX"), PString("double"), PString("Number"), PString(""), PInt(0)], childs:null },
+					{ name: "P", props: [PString("MinDampStrengthY"), PString("double"), PString("Number"), PString(""), PInt(0)], childs:null },
+					{ name: "P", props: [PString("MinDampStrengthZ"), PString("double"), PString("Number"), PString(""), PInt(0)], childs:null },
+					{ name: "P", props: [PString("MaxDampStrengthX"), PString("double"), PString("Number"), PString(""), PInt(0)], childs:null },
+					{ name: "P", props: [PString("MaxDampStrengthY"), PString("double"), PString("Number"), PString(""), PInt(0)], childs:null },
+					{ name: "P", props: [PString("MaxDampStrengthZ"), PString("double"), PString("Number"), PString(""), PInt(0)], childs:null },
+					{ name: "P", props: [PString("PreferedAngleX"), PString("double"), PString("Number"), PString(""), PInt(0)], childs:null },
+					{ name: "P", props: [PString("PreferedAngleY"), PString("double"), PString("Number"), PString(""), PInt(0)], childs:null },
+					{ name: "P", props: [PString("PreferedAngleZ"), PString("double"), PString("Number"), PString(""), PInt(0)], childs:null },
+					{ name: "P", props: [PString("LookAtProperty"), PString("object"), PString(""), PString("")], childs:null },
+					{ name: "P", props: [PString("UpVectorProperty"), PString("object"), PString(""), PString("")], childs:null },
+					{ name: "P", props: [PString("Show"), PString("bool"), PString(""), PString(""), PInt(1)], childs:null },
+					{ name: "P", props: [PString("NegativePercentShapeSupport"), PString("bool"), PString(""), PString(""), PInt(1)], childs:null },
+					{ name: "P", props: [PString("DefaultAttributeIndex"), PString("int"), PString("Integer"), PString(""), PInt(-1)], childs:null },
+					{ name: "P", props: [PString("Freeze"), PString("bool"), PString(""), PString(""), PInt(0)], childs:null },
+					{ name: "P", props: [PString("LODBox"), PString("bool"), PString(""), PString(""), PInt(0)], childs:null },
+					{ name: "P", props: [PString("Lcl Translation"), PString("Lcl Translation"), PString(""), PString("A"), PInt(0), PInt(0), PInt(0)], childs:null },
+					{ name: "P", props: [PString("Lcl Rotation"), PString("Lcl Rotation"), PString(""), PString("A"), PInt(0), PInt(0), PInt(0)], childs:null },
+					{ name: "P", props: [PString("Lcl Scaling"), PString("Lcl Scaling"), PString(""), PString("A"), PInt(1), PInt(1), PInt(1)], childs:null },
+					{ name: "P", props: [PString("Visibility"), PString("Visibility"), PString(""), PString("A"), PInt(1)], childs:null },
+					{ name: "P", props: [PString("Visibility Inheritance"), PString("Visibility Inheritance"), PString(""), PString(""), PInt(1)], childs:null },
+				] }
+			] }
+		] };
+
+		var materialCount = 1;
+		var defMaterial : FbxNode = { name:"ObjectType", props:[PString("Material")], childs: [
+			{ name: "Count", props: [PInt(materialCount)], childs: null },
+			{ name: "PropertyTemplate", props: [PString("FbxSurfacePhong")], childs: [
+					{ name:"Properties70", props: null, childs: [
+					{ name: "P", props: [PString("ShadingModel"), PString("KString"), PString(""), PString(""), PString("Phong")], childs: null },
+					{ name: "P", props: [PString("MultiLayer"), PString("bool"), PString(""), PString(""), PInt(0)], childs: null },
+					{ name: "P", props: [PString("EmissiveColor"), PString("Color"), PString(""), PString("A"), PInt(0), PInt(0), PInt(0)], childs: null },
+					{ name: "P", props: [PString("EmissiveFactor"), PString("Number"), PString(""), PString("A"), PInt(1)], childs: null },
+					{ name: "P", props: [PString("AmbientColor"), PString("Color"), PString(""), PString("A"), PFloat(0.2), PFloat(0.2), PFloat(0.2)], childs: null },
+					{ name: "P", props: [PString("AmbientFactor"), PString("Number"), PString(""), PString("A"), PInt(1)], childs: null },
+					{ name: "P", props: [PString("DiffuseColor"), PString("Color"), PString(""), PString("A"), PFloat(0.8), PFloat(0.8), PFloat(0.8)], childs: null },
+					{ name: "P", props: [PString("DiffuseFactor"), PString("Number"), PString(""), PString("A"), PInt(1)], childs: null },
+					{ name: "P", props: [PString("Bump"), PString("Vector3D"), PString("Vector"), PString(""), PInt(0), PInt(0), PInt(0)], childs: null },
+					{ name: "P", props: [PString("NormalMap"), PString("Vector3D"), PString("Vector"), PString(""), PInt(0), PInt(0), PInt(0)], childs: null },
+					{ name: "P", props: [PString("BumpFactor"), PString("double"), PString("Number"), PString(""), PInt(1)], childs: null },
+					{ name: "P", props: [PString("TransparentColor"), PString("Color"), PString(""), PString("A"), PInt(0), PInt(0), PInt(0)], childs: null },
+					{ name: "P", props: [PString("TransparencyFactor"), PString("Number"), PString(""), PString("A"), PInt(0)], childs: null },
+					{ name: "P", props: [PString("DisplacementColor"), PString("ColorRGB"), PString("Color"), PString(""), PInt(0), PInt(0), PInt(0)], childs: null },
+					{ name: "P", props: [PString("DisplacementFactor"), PString("double"), PString("Number"), PString(""), PInt(1)], childs: null },
+					{ name: "P", props: [PString("VectorDisplacementColor"), PString("ColorRGB"), PString("Color"), PString(""), PInt(0), PInt(0), PInt(0)], childs: null },
+					{ name: "P", props: [PString("VectorDisplacementFactor"), PString("double"), PString("Number"), PString(""), PInt(1)], childs: null },
+					{ name: "P", props: [PString("SpecularColor"), PString("Color"), PString(""), PString("A"), PFloat(0.2), PFloat(0.2), PFloat(0.2)], childs: null },
+					{ name: "P", props: [PString("SpecularFactor"), PString("Number"), PString(""), PString("A"), PInt(1)], childs: null },
+					{ name: "P", props: [PString("ShininessExponent"), PString("Number"), PString(""), PString("A"), PInt(20)], childs: null },
+					{ name: "P", props: [PString("ReflectionColor"), PString("Color"), PString(""), PString("A"), PInt(0), PInt(0), PInt(0)], childs: null },
+					{ name: "P", props: [PString("ReflectionFactor"), PString("Number"), PString(""), PString("A"), PInt(1)], childs: null },
+				]}
+			] },
+		] };
+
+		var geometryCount = 1;
+		var defGeometry : FbxNode = { name:"ObjectType", props:[PString("Geometry")], childs: [
+			{ name: "Count", props: [PInt(geometryCount)], childs: null },
+			{ name: "PropertyTemplate", props: [PString("FbxMesh")], childs: [
+					{ name:"Properties70", props: null, childs: [
+					{ name: "P", props: [PString("Color"), PString("ColorRGB"), PString("Color"), PString(""), PFloat(0.8), PFloat(0.8), PFloat(0.8)], childs: null },
+					{ name: "P", props: [PString("BBoxMin"), PString("Vector3D"), PString("Vector"), PString(""), PInt(0), PInt(0), PInt(0)], childs: null },
+					{ name: "P", props: [PString("BBoxMax"), PString("Vector3D"), PString("Vector"), PString(""), PInt(0), PInt(0), PInt(0)], childs: null },
+					{ name: "P", props: [PString("Primary Visibility"), PString("bool"), PString(""), PString(""), PInt(1)], childs: null },
+					{ name: "P", props: [PString("Casts Shadows"), PString("bool"), PString(""), PString(""), PInt(1)], childs: null },
+					{ name: "P", props: [PString("Receive Shadows"), PString("bool"), PString(""), PString(""), PInt(1)], childs: null },
+				] }
+			] }
+		] };
+
+		var defCount = 4;
+		var definitions : FbxNode = { name:"Definitions", props: null, childs: [
+			{ name: "Version", props: [PInt(100)], childs: null },
+			{ name: "Count", props: [PInt(defCount)], childs: null },
+			defGlobalSettings,
+			defModel,
+			defMaterial,
+			defGeometry
+		]};
+
+		return definitions;
+	}
+
+	function buildObjects(mesh: h3d.scene.Mesh) {
+		var hmdModel = Std.downcast(mesh.primitive, h3d.prim.HMDModel);
+		var bufs = @:privateAccess hmdModel.getDataBuffers(hmdModel.data.vertexFormat);
+
+		var vertices = new Array<Float>();
+		var normals = new Array<Float>();
+		var uvs = new Array<Float>();
+
+		var idxVertex = 0;
+		while (idxVertex < bufs.vertexes.length) {
+			vertices.push(bufs.vertexes[idxVertex]);
+			vertices.push(bufs.vertexes[idxVertex + 1]);
+			vertices.push(bufs.vertexes[idxVertex + 2]);
+
+			normals.push(bufs.vertexes[idxVertex + 3]);
+			normals.push(bufs.vertexes[idxVertex + 4]);
+			normals.push(bufs.vertexes[idxVertex + 5]);
+
+			uvs.push(bufs.vertexes[idxVertex + 6]);
+			uvs.push(bufs.vertexes[idxVertex + 7]);
+
+			@:privateAccess idxVertex += hmdModel.data.vertexFormat.stride;
+		}
+
+		var indexes = new Array<Int>();
+		var idxIndex = 0;
+		for (i in bufs.indexes) {
+			// This is because the last index that close the polygon (in our case, we work with triangles, so the third)
+			// need to be increased by one and then set to negative.
+			// (This is because original index is XOR'ed with -1.)
+			// We also need to keep indexes in range of vertices length
+			if (idx % 3 == 2) {
+				indexes.push( -1 * (i + 1));
+			}
+			else {
+				indexes.push(i);
+			}
+
+			idxIndex++;
+		}
+
+		var geometry : FbxNode = { name:"Geometry", props: [PInt(111), PString("Geometry::Cube"), PString("Mesh")], childs:[
+			{ name:"Vertices", props: [PFloats(vertices)], childs: null},
+			{ name:"PolygonVertexIndex", props: [PInts(indexes)], childs: null},
+			//{ name:"Edges", props: [PInts(edges)], childs: null},
+			{ name:"GeometryVersion", props: [PInt(124)], childs: null},
+			{ name:"LayerElementNormal", props: [PInt(0)], childs: [
+				{ name: "Version", props: [ PInt(101) ], childs: null },
+				{ name: "Name", props: [ PString("") ], childs: null },
+				{ name: "MappingInformationType", props: [ PString(/*"ByVertex"*/ "AllSame") ], childs: null },
+				{ name: "ReferenceInformationType", props: [ PString("Direct") ], childs: null },
+				{ name: "Normals", props: [ PFloats(/*normals*/[0,0,1]) ], childs: null },
+			]},
+			{ name:"LayerElementUV", props: [PInt(0)], childs: [
+				{ name: "Version", props: [ PInt(101) ], childs: null },
+				{ name: "Name", props: [ PString("UVMap") ], childs: null },
+				{ name: "MappingInformationType", props: [ PString(/*"ByVertex"*/ "AllSame") ], childs: null },
+				{ name: "ReferenceInformationType", props: [ PString("Direct") ], childs: null },
+				{ name: "UV", props: [ PFloats( /*uvs*/ [1,1] ) ], childs: null },
+			]},
+			{ name:"LayerElementMaterial", props: [PInt(0)], childs: [
+				{ name: "Version", props: [ PInt(101) ], childs: null },
+				{ name: "Name", props: [ PString("") ], childs: null },
+				{ name: "MappingInformationType", props: [ PString("AllSame") ], childs: null },
+				{ name: "ReferenceInformationType", props: [ PString("IndexToDirect") ], childs: null },
+				{ name: "Materials", props: [ PInts( [ 0 ] ) ], childs: null },
+			]},
+			{ name:"Layer", props: [PInt(0)], childs: [
+				{ name: "Version", props: [ PInt(100) ], childs: null },
+				{ name: "LayerElement", props: null, childs: [
+					{ name: "Type", props: [ PString("LayerElementNormal") ], childs: null },
+					{ name: "TypedIndex", props: [ PInt(0) ], childs: null },
+				] },
+				{ name: "LayerElement", props: null, childs: [
+					{ name: "Type", props: [ PString("LayerElementMaterial") ], childs: null },
+					{ name: "TypedIndex", props: [ PInt(0) ], childs: null },
+				] },
+				{ name: "LayerElement", props: null, childs: [
+					{ name: "Type", props: [ PString("LayerElementUV") ], childs: null },
+					{ name: "TypedIndex", props: [ PInt(0) ], childs: null },
+				] },
+			]}
+		] };
+
+		var model : FbxNode = { name:"Model", props: [PInt(222), PString("Model::Cube"), PString("Mesh")], childs:[
+			{ name:"Version", props:[ PInt(232)], childs:null },
+			{ name:"Properties70", props: null, childs: [
+				{ name:"P", props:[PString("InheritType"), PString("enum"), PString(""), PString(""), PInt(1)], childs: null },
+				{ name:"P", props:[PString("DefaultAttributeIndex"), PString("int"), PString("Integer"), PString(""), PInt(0)], childs: null },
+				{ name:"P", props:[PString("Lcl Translation"), PString("Lcl Translation"), PString(""), PString("A"), PFloat(0), PFloat(0), PFloat(0)], childs: null },
+				{ name:"P", props:[PString("Lcl Translation"), PString("Lcl Translation"), PString(""), PString("A"), PFloat(0), PFloat(0), PFloat(0)], childs: null },
+				{ name:"P", props:[PString("Lcl Rotation"), PString("Lcl Rotation"), PString(""), PString("A"), PFloat(0), PFloat(0), PFloat(0)], childs: null },
+				{ name:"P", props:[PString("Lcl Scaling"), PString("Lcl Scaling"), PString(""), PString("A"), PFloat(1), PFloat(1), PFloat(1)], childs: null },
+			]}
+		] };
+
+		var material : FbxNode = { name:"Material", props: [PInt(333), PString("Material::Material"), PString("")], childs:[
+			{ name: "Version", props: [PInt(102)], childs: null },
+			{ name: "ShadingModel", props: [PString("phong")], childs: null },
+			{ name: "MultiLayer", props: [PInt(0)], childs: null },
+			{ name: "Properties70", props: null, childs: [
+				{ name:"P", props: [PString("EmissiveColor"), PString("Color"), PString(""), PString("A"), PInt(1), PInt(1), PInt(1)], childs: null },
+				{ name:"P", props: [PString("EmissiveFactor"), PString("Number"), PString(""), PString("A"), PInt(0)], childs: null },
+				{ name:"P", props: [PString("AmbientColor"), PString("Color"), PString(""), PString("A"), PFloat(0.5), PFloat(0.5), PFloat(0.5)], childs: null },
+				{ name:"P", props: [PString("AmbientFactor"), PString("Number"), PString(""), PString("A"), PInt(0)], childs: null },
+				{ name:"P", props: [PString("DiffuseColor"), PString("Color"), PString(""), PString("A"), PFloat(0.8), PFloat(0.8), PFloat(0.8)], childs: null },
+				{ name:"P", props: [PString("BumpFactor"), PString("double"), PString("Number"), PString(""), PInt(0)], childs: null },
+				{ name:"P", props: [PString("SpecularColor"), PString("Color"), PString(""), PString("A"), PFloat(0.8), PFloat(0.8), PFloat(0.8)], childs: null },
+				{ name:"P", props: [PString("SpecularFactor"), PString("Number"), PString(""), PString("A"), PInt(25)], childs: null },
+				{ name:"P", props: [PString("ShininessExponent"), PString("Number"), PString(""), PString("A"), PInt(25)], childs: null },
+				{ name:"P", props: [PString("ReflectionColor"), PString("Color"), PString(""), PString("A"), PFloat(0.8), PFloat(0.8), PFloat(0.8)], childs: null },
+				{ name:"P", props: [PString("ReflectionFactor"), PString("Number"), PString(""), PString("A"), PInt(0)], childs: null },
+				{ name:"P", props: [PString("Shininess"), PString("Number"), PString(""), PString("A"), PInt(25)], childs: null },
+				{ name:"P", props: [PString("Emissive"), PString("Vector3D"), PString("Vector"), PString(""), PInt(0), PInt(0), PInt(0)], childs: null },
+				{ name:"P", props: [PString("Ambient"), PString("Vector3D"), PString("Vector"), PString(""), PInt(0), PInt(0), PInt(0)], childs: null },
+				{ name:"P", props: [PString("Diffuse"), PString("Vector3D"), PString("Vector"), PString(""), PFloat(0.8), PFloat(0.8), PFloat(0.8)], childs: null },
+				{ name:"P", props: [PString("Specular"), PString("Vector3D"), PString("Vector"), PString(""), PFloat(0.2), PFloat(0.2), PFloat(0.2)], childs: null },
+				{ name:"P", props: [PString("Opacity"), PString("double"), PString("Number"), PString(""), PInt(1)], childs: null },
+				{ name:"P", props: [PString("Reflectivity"), PString("double"), PString("Number"), PString(""), PInt(0)], childs: null }
+			] },
+		] };
+
+		var objects : FbxNode = { name: "Objects", props: null, childs: [ geometry, model, material] };
+		return objects;
+	}
+
+	function buildConnections() {
+		var connections : FbxNode = null;
+		return connections;
+	}
+
+	public function write(mesh: h3d.scene.Mesh) {
 		var old = out;
 		var header = new haxe.io.BytesOutput();
 		out = header;
@@ -195,14 +470,9 @@ class Writer {
 
 		writeHeader();
 		writeNode(buildGlobalSettings());
-
-		// // We dont't want the root node to be written here
-		// for (c in fbx.childs) {
-		// 	writeNode(c);
-		// }
-
-		// writeNode(node);
-
+		writeNode(buildDefinitions());
+		writeNode(buildObjects(mesh));
+		//writeNode(buildConnections());
 
 		var bytes = header.getBytes();
 		out = old;
