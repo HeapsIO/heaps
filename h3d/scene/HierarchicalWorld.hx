@@ -3,6 +3,7 @@ package h3d.scene;
 typedef WorldData = {
 	var x : Int;
 	var y : Int;
+	var subdivPow : Float;
 	var size : Int;
 	var depth : Int;
 	var maxDepth : Int;
@@ -104,6 +105,7 @@ class HierarchicalWorld extends Object {
 				var halfChildSize = childSize >> 1;
 				var childData : WorldData = {
 					size : childSize,
+					subdivPow : data.subdivPow,
 					x : i * childSize - halfChildSize,
 					y : j * childSize - halfChildSize,
 					depth : data.depth + 1,
@@ -141,7 +143,7 @@ class HierarchicalWorld extends Object {
 
 		culled = !bounds.inFrustum(ctx.camera.frustum);
 		if ( !isLeaf() ) {
-			if ( FULL || calcDist(ctx) < data.size * 2.0 ) {
+			if ( FULL || calcDist(ctx) < data.size * data.subdivPow ) {
 				if ( canSubdivide() ) {
 					subdivide();
 				}
