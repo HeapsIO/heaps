@@ -334,9 +334,9 @@ class Writer {
 		return definitions;
 	}
 
-	function buildObjects(objects: Array<h3d.scene.Object>) {
+	function buildObjects(objects: Array<h3d.scene.Object>, objectTreeRoot : Dynamic) {
 		var objectsNode : FbxNode = { name: "Objects", props: null, childs: [] };
-		var input = { objectsNode : objectsNode, nextFreeId : 1};
+		var input = { objectsNode : objectsNode, nextFreeId : 1 };
 
 		function buildObject(object : h3d.scene.Object, input : Dynamic) {
 			// Define uniques ids for representing model, geometry and material node
@@ -429,14 +429,22 @@ class Writer {
 				]}
 			] };
 
+			@:privateAccess var objectRot = object.qRot.toMatrix();
+			objectRot._12 = -objectRot._12;
+			objectRot._13 = -objectRot._13;
+			objectRot._21 = -objectRot._21;
+			objectRot._31 = -objectRot._31;
+			objectRot._41 = -objectRot._41;
+
+			var rot = objectRot.getEulerAngles() * (180.0 / Math.PI);
 			var model : FbxNode = { name:"Model", props: [PInt(modelId), PString('Model::${mesh.name}'), PString("Mesh")], childs:[
 				{ name:"Version", props:[ PInt(232)], childs:null },
 				{ name:"Properties70", props: null, childs: [
 					{ name:"P", props:[PString("InheritType"), PString("enum"), PString(""), PString(""), PInt(1)], childs: null },
 					{ name:"P", props:[PString("DefaultAttributeIndex"), PString("int"), PString("Integer"), PString(""), PInt(0)], childs: null },
-					{ name:"P", props:[PString("Lcl Translation"), PString("Lcl Translation"), PString(""), PString("A"), PFloat(0), PFloat(0), PFloat(0)], childs: null },
-					{ name:"P", props:[PString("Lcl Rotation"), PString("Lcl Rotation"), PString(""), PString("A"), PFloat(0), PFloat(0), PFloat(0)], childs: null },
-					{ name:"P", props:[PString("Lcl Scaling"), PString("Lcl Scaling"), PString(""), PString("A"), PFloat(1), PFloat(1), PFloat(1)], childs: null },
+					{ name:"P", props:[PString("Lcl Translation"), PString("Lcl Translation"), PString(""), PString("A"), PFloat(-object.x), PFloat(object.y), PFloat(object.z)], childs: null },
+					{ name:"P", props:[PString("Lcl Rotation"), PString("Lcl Rotation"), PString(""), PString("A"), PFloat(rot.x), PFloat(rot.y), PFloat(rot.z)], childs: null },
+					{ name:"P", props:[PString("Lcl Scaling"), PString("Lcl Scaling"), PString(""), PString("A"), PFloat(object.scaleX), PFloat(object.scaleY), PFloat(object.scaleZ)], childs: null },
 				]}
 			] };
 
@@ -471,19 +479,22 @@ class Writer {
 			input.objectsNode.childs.push(material);
 		}
 
-		function build(objects: Array<h3d.scene.Object>, input : Dynamic) {
+		function build(objects: Array<h3d.scene.Object>, input : Dynamic, parent : Dynamic) {
 			for (o in objects) {
 				// We're not supporting anything except meshes for now
 				var mesh = Std.downcast(o, h3d.scene.Mesh);
 				if (mesh == null)
 					continue;
 
+				var objectLeaf = { id: input.nextFreeId, children : [] };
+				parent.children.push(objectLeaf);
+
 				buildObject(o, input);
-				build(@:privateAccess o.children, input);
+				build(@:privateAccess o.children, input, objectLeaf);
 			}
 		}
 
-		build(objects, input);
+		build(objects, input, objectTreeRoot);
 		return input.objectsNode;
 	}
 
@@ -517,11 +528,79 @@ class Writer {
 
 		// if( version > Data.CURRENT_VERSION ) throw "Can't write HMD v" + version;
 
+		function clone(obj : h3d.scene.Object, ?into : h3d.scene.Mesh) : h3d.scene.Mesh {
+			var o : h3d.scene.Mesh = null;
+			if (into != null) {
+				o = into;
+			}
+			else {
+				var m = Std.downcast(obj, h3d.scene.Mesh);
+				o = new h3d.scene.Mesh(m.primitive, m.material, null);
+			}
+
+			o.x = obj.x;
+			o.y = obj.y;
+			o.z = obj.z;
+			o.scaleX = obj.scaleX;
+			o.scaleY = obj.scaleY;
+			o.scaleZ = obj.scaleZ;
+			@:privateAccess o.qRot.load(obj.qRot);
+			o.name = obj.name;
+			o.follow = obj.follow;
+			o.followPositionOnly = obj.followPositionOnly;
+			o.visible = obj.visible;
+			if( obj.defaultTransform != null )
+				o.defaultTransform = obj.defaultTransform.clone();
+			return o;
+		}
+
+		var root : h3d.scene.Mesh = null;
+		function getMeshes( o : h3d.scene.Object, ?parent : h3d.scene.Mesh) {
+			var m = Std.downcast(o, h3d.scene.Mesh);
+
+			if (m == null) {
+				for( c in @:privateAccess o.children ) {
+					var m2 = Std.downcast(c, h3d.scene.Mesh);
+					if( m2 != null && m2.name == "root") {
+						var mesh = clone(m2);
+
+						// Since it's the parent object that is holding informations
+						// apply it on mesh object
+						clone(o, mesh);
+
+						if (root == null) 
+							root = cast mesh;
+
+						if (parent != null)
+							parent.addChild(mesh);
+
+						parent = cast mesh;
+					}
+				}
+			}
+			else if (m.name != "root") {
+				if (root == null) 
+					root = cast clone(m);
+
+				if (parent == null)
+					parent = cast clone(m);
+				else
+					parent.addChild(clone(m));
+			}
+
+			for( c in @:privateAccess o.children )
+				getMeshes(c, parent);
+		}
+
+		getMeshes(objects[0]);
+
 		writeHeader();
 		writeNode(buildGlobalSettings());
-		writeNode(buildDefinitions(objects));
-		writeNode(buildObjects(objects));
-		//writeNode(buildConnections(objectTree));
+		writeNode(buildDefinitions([ root ]));
+
+		var objectTreeRoot = { id: 0, children: [] };
+		writeNode(buildObjects([ root ], objectTreeRoot));
+		writeNode(buildConnections(objectTreeRoot));
 
 		var bytes = header.getBytes();
 		out = old;
