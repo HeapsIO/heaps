@@ -12,8 +12,8 @@ private class SharedGlobal {
 @:build(hxsl.Macros.buildGlobals())
 class RenderContext extends h3d.impl.RenderContext {
 
-	public var camera : h3d.Camera;
-	public var scene : Scene;
+	public var camera(default,null) : h3d.Camera;
+	public var scene(default,null) : Scene;
 	public var drawPass : h3d.pass.PassObject;
 	public var pbrLightPass : h3d.mat.Pass;
 	public var computingStatic : Bool;
@@ -47,14 +47,16 @@ class RenderContext extends h3d.impl.RenderContext {
 	var passes : Array<h3d.pass.PassObject>;
 	var lights : Light;
 
-	public function new() {
+	public function new(scene) {
 		super();
+		this.scene = scene;
 		cachedShaderList = [];
 		cachedPassObjects = [];
 		initGlobals();
 	}
 
 	public function setCamera( cam : h3d.Camera ) {
+		camera = cam;
 		cameraView = cam.mcam;
 		cameraNear = cam.zNear;
 		cameraFar = cam.zFar;
@@ -94,9 +96,10 @@ class RenderContext extends h3d.impl.RenderContext {
 		time += elapsedTime;
 		frame++;
 		setCurrent();
+		engine = h3d.Engine.getCurrent();
 		globalTime = time;
 		pixelSize = getCurrentPixelSize();
-		setCamera(camera);
+		setCamera(scene.camera);
 	}
 
 	public inline function nextPass() {
