@@ -287,7 +287,11 @@ class GlDriver extends Driver {
 		var type = switch( shader.kind ) {
 		case Vertex: GL.VERTEX_SHADER;
 		case Fragment: GL.FRAGMENT_SHADER;
+		#if js
+		case Main: throw "Compute shader is not supported";
+		#else
 		case Main: GL.COMPUTE_SHADER;
+		#end
 		default: throw "assert";
 		};
 		var s = gl.createShader(type);
