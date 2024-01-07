@@ -8,7 +8,6 @@ class ScreenFx<T:h3d.shader.ScreenShader> {
 	var output : OutputShader;
 	var _engine : h3d.Engine;
 	var engine(get,never) : h3d.Engine;
-	var buffers : h3d.shader.Buffers;
 
 	public function new(shader, ?output) {
 		this.shader = shader;
@@ -54,10 +53,8 @@ class ScreenFx<T:h3d.shader.ScreenShader> {
 		var rts = output.compileShaders(ctx.globals, shaders);
 		engine.selectMaterial(pass);
 		engine.selectShader(rts);
-		if( buffers == null )
-			buffers = new h3d.shader.Buffers(rts);
-		else
-			buffers.grow(rts);
+		var buffers = ctx.shaderBuffers;
+		buffers.grow(rts);
 		ctx.fillGlobals(buffers, rts);
 		ctx.fillParams(buffers, rts, shaders);
 		engine.uploadShaderBuffers(buffers, Globals);

@@ -10,6 +10,7 @@ class RenderContext {
 	public var frame : Int;
 	public var textures : h3d.impl.TextureCache;
 	public var globals : hxsl.Globals;
+	public var shaderBuffers = new h3d.shader.Buffers();
 
 	function new() {
 		engine = h3d.Engine.getCurrent();
@@ -213,7 +214,7 @@ class RenderContext {
 			}
 		}
 		fill(buf.vertex, s.vertex);
-		fill(buf.fragment, s.fragment);
+		if( s.fragment != null ) fill(buf.fragment, s.fragment);
 	}
 
 	public function fillParams( buf : h3d.shader.Buffers, s : hxsl.RuntimeShader, shaders : hxsl.ShaderList ) {
@@ -281,7 +282,7 @@ class RenderContext {
 			}
 		}
 		fill(buf.vertex, s.vertex);
-		fill(buf.fragment, s.fragment);
+		if( s.fragment != null ) fill(buf.fragment, s.fragment);
 	}
 
 	static var inst : RenderContext;

@@ -23,7 +23,6 @@ class RenderContext extends h3d.impl.RenderContext {
 	public var visibleFlag : Bool;
 	public var debugCulling : Bool;
 	public var wasContextLost : Bool;
-	public var shaderBuffers : h3d.shader.Buffers;
 	public var cullingCollider : h3d.col.Collider;
 
 	@global("camera.view") var cameraView : h3d.Matrix;

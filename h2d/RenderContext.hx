@@ -82,7 +82,6 @@ class RenderContext extends h3d.impl.RenderContext {
 	var baseShader : h3d.shader.Base2d;
 	var output : h3d.pass.OutputShader;
 	var compiledShader : hxsl.RuntimeShader;
-	var buffers : h3d.shader.Buffers;
 	var fixedBuffer : h3d.Buffer;
 	var pass : h3d.mat.Pass;
 	var currentShaders : hxsl.ShaderList;
@@ -211,10 +210,8 @@ class RenderContext extends h3d.impl.RenderContext {
 	function initShaders( shaders ) {
 		currentShaders = shaders;
 		compiledShader = output.compileShaders(globals, shaders);
-		if( buffers == null )
-			buffers = new h3d.shader.Buffers(compiledShader);
-		else
-			buffers.grow(compiledShader);
+		var buffers = shaderBuffers;
+		buffers.grow(compiledShader);
 		fillGlobals(buffers, compiledShader);
 		engine.selectShader(compiledShader);
 		engine.uploadShaderBuffers(buffers, Globals);
@@ -612,6 +609,7 @@ class RenderContext extends h3d.impl.RenderContext {
 					pass.blendSrc = One;
 			}
 		}
+		var buffers = shaderBuffers;
 		fillParams(buffers, compiledShader, currentShaders);
 		engine.selectMaterial(pass);
 		engine.uploadShaderBuffers(buffers, Params);
