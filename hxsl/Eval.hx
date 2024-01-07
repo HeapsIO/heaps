@@ -202,7 +202,7 @@ class Eval {
 			case TArray(_, SConst(v)):
 				TConst(CInt(v));
 			default:
-				Error.t("Length() on invalid type "+Printer.toString(args[0]), pos);
+				null;
 			}
 		case [ChannelRead|ChannelReadLod, _]:
 			var i = switch( args[0].e ) { case TConst(CInt(i)): i; default: Error.t("Cannot eval complex channel " + Printer.toString(args[0],true)+" "+constantsToString(), pos); throw "assert"; };
