@@ -364,7 +364,9 @@ class Checker {
 		switch( e.e ) {
 		case TVar(v):
 			switch( v.kind ) {
-			case Local, Var, Output:
+			case Var, Output:
+				return;
+			case Local if( v.qualifiers == null || v.qualifiers.indexOf(Final) < 0 ):
 				return;
 			case Param if( v.type.match(TBuffer(_,_,RW)) ):
 				return;
@@ -749,6 +751,8 @@ class Checker {
 					continue;
 				if( einit != null )
 					inits.push({ v : v, e : einit });
+				else if( v.qualifiers != null && v.qualifiers.indexOf(Final) >= 0 )
+					error("Final variable needs initializer", e.pos);
 				vars.set(v.name, v);
 			}
 		case ECall( { expr : EIdent("import") }, [e]):
@@ -834,6 +838,7 @@ class Checker {
 						p = p.parent;
 					}
 					if( tv.kind != Global && tv.kind != Param ) error("@const only allowed on parameter or global", pos);
+				case Final: if( tv.kind != Local ) error("final only allowed on local", pos);
 				case PerObject: if( tv.kind != Global ) error("@perObject only allowed on global", pos);
 				case PerInstance(_): if( tv.kind != Input && tv.kind != Param && (tv.kind != Global || v.qualifiers.indexOf(PerObject) < 0) ) error("@perInstance only allowed on input/param", pos);
 				case Nullable: if( tv.kind != Param ) error("@nullable only allowed on parameter or global", pos);

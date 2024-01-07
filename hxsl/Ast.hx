@@ -91,6 +91,7 @@ enum VarQualifier {
 	Doc( s : String );
 	Borrow( source : String );
 	Sampler( name : String );
+	Final;
 }
 
 enum Prec {

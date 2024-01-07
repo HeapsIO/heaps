@@ -96,6 +96,7 @@ class HlslOut {
 	var SV_InstanceID = "SV_InstanceID";
 	var SV_IsFrontFace = "SV_IsFrontFace";
 	var STATIC = "static ";
+	var CONST = "const ";
 	var buf : StringBuf;
 	var exprIds = 0;
 	var exprValues : Array<String>;
@@ -467,7 +468,10 @@ class HlslOut {
 				add(i);
 				add("] = ");
 				addExpr(el[i], tabs);
-				newLine(el[i]);
+				if( i < el.length - 1 ) {
+					newLine(el[i]);
+					add(tabs);
+				}
 			}
 		case TBinop(OpAssign,evar = { e : TVar(_) },{ e : TArrayDecl(el) }):
 			for( i in 0...el.length ) {
@@ -476,6 +480,10 @@ class HlslOut {
 				add(i);
 				add("] = ");
 				addExpr(el[i], tabs);
+				if( i < el.length - 1 ) {
+					newLine(el[i]);
+					add(tabs);
+				}
 			}
 		case TArrayDecl(el):
 			add("{");
@@ -828,8 +836,32 @@ class HlslOut {
 		add("\n");
 		for( v in s.vars )
 			if( v.kind == Local ) {
+				var isConst = v.qualifiers != null && v.qualifiers.indexOf(Final) >= 0;
 				add(STATIC);
+				if( isConst )
+					add(CONST);
 				addVar(v);
+				if( isConst ) {
+					var found = null;
+					for( f in s.funs ) {
+						switch( f.expr.e ) {
+						case TBlock(el):
+							for( e in el ) {
+								switch( e.e ) {
+								case TBinop(OpAssign, { e : TVar(v2) }, einit) if( v2 == v ):
+									found = einit;
+									break;
+								default:
+								}
+							}
+						default:
+						}
+					}
+					if( found == null )
+						throw "Constant variable "+v.name+" is missing initializer";
+					add(" = ");
+					addExpr(found,"");
+				}
 				add(";\n");
 			}
 		add("\n");
@@ -845,6 +877,12 @@ class HlslOut {
 		switch( expr.e ) {
 		case TBlock(el):
 			for( e in el ) {
+				switch( e.e ) {
+				case TBinop(OpAssign,evar = { e : TVar(v) },_) if( v.qualifiers != null && v.qualifiers.indexOf(Final) >= 0 ):
+					// ignore (is a static const)
+					continue;
+				default:
+				}
 				add("\t");
 				addExpr(e, "\t");
 				newLine(e);

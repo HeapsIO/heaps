@@ -191,7 +191,7 @@ class Serializer {
 			for( q in v.qualifiers ) {
 				out.addByte(q.getIndex());
 				switch (q) {
-				case Private, Nullable, PerObject, Shared, Ignore:
+				case Private, Nullable, PerObject, Shared, Ignore, Final:
 				case Const(max): out.addInt32(max == null ? 0 : max);
 				case Name(n): writeString(n);
 				case Precision(p): out.addByte(p.getIndex());
@@ -416,6 +416,7 @@ class Serializer {
 				case 10: Doc(readString());
 				case 11: Borrow(readString());
 				case 12: Sampler(readString());
+				case 13: Final;
 				default: throw "assert";
 				}
 				v.qualifiers.push(q);

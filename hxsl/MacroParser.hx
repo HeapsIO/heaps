@@ -188,7 +188,7 @@ class MacroParser {
 					expr : v.expr == null ? null : parseExpr(v.expr),
 					type : v.type == null ? null : parseType(v.type, e.pos),
 					kind : null,
-					qualifiers : [],
+					qualifiers : v.isFinal ? [Final] : [],
 				}
 			}]);
 		case EFunction(FNamed(name,_),f) if( f.expr != null ):
