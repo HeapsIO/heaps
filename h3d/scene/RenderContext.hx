@@ -41,6 +41,7 @@ class RenderContext extends h3d.impl.RenderContext {
 
 	var allocPool : h3d.pass.PassObject;
 	var allocFirst : h3d.pass.PassObject;
+	var computeLink = new hxsl.ShaderList(null,null);
 	var cachedShaderList : Array<hxsl.ShaderList>;
 	var cachedPassObjects : Array<Renderer.PassObjects>;
 	var cachedPos : Int;
@@ -143,6 +144,36 @@ class RenderContext extends h3d.impl.RenderContext {
 		sl.s = s;
 		sl.next = next;
 		return sl;
+	}
+
+	public function computeDispatch( shader : hxsl.Shader, x = 1, y = 1, z = 1 ) {
+
+		var prev = h3d.impl.RenderContext.get();
+		if( prev != this )
+			start();
+
+		// compile shader
+		globals.resetChannels();
+		shader.updateConstants(globals);
+		computeLink.s = shader;
+		var rt = hxsl.Cache.get().link(computeLink, Compute);
+		// upload buffers
+		engine.driver.selectShader(rt);
+		var buf = shaderBuffers;
+		buf.grow(rt);
+		fillGlobals(buf, rt);
+		engine.uploadShaderBuffers(buf, Globals);
+		fillParams(buf, rt, computeLink);
+		engine.uploadShaderBuffers(buf, Params);
+		engine.uploadShaderBuffers(buf, Textures);
+		engine.uploadShaderBuffers(buf, Buffers);
+		engine.driver.computeDispatch(x,y,z);
+		computeLink.s = null;
+
+		if( prev != this ) {
+			done();
+			if( prev != null ) prev.setCurrent();
+		}
 	}
 
 	public function emitLight( l : Light ) {
