@@ -3,16 +3,46 @@ import hxsl.Ast;
 
 class GlslOut {
 
-	static var KWD_LIST = [
-		"input", "output", "discard", #if js "sample", #end
-		"dvec2", "dvec3", "dvec4", "hvec2", "hvec3", "hvec4", "fvec2", "fvec3", "fvec4",
-		"int", "float", "bool", "long", "short", "double", "half", "fixed", "unsigned", "superp",
-		"lowp", "mediump", "highp", "precision", "invariant", "discard",
-		"struct", "asm", "union", "template", "this", "packed", "goto", "sizeof","namespace",
-		"noline", "volatile", "external", "flat", "input", "output",
-		"out","attribute","const","uniform","varying","inout","void",
-	];
-	static var KWDS = [for( k in KWD_LIST ) k => true];
+	static var KWD_LIST = "attribute const uniform varying buffer shared
+	coherent volatile restrict readonly writeonly
+	atomic_uint
+	layout
+	centroid flat smooth noperspective
+	patch sample
+	break continue do for while switch case default
+	if else
+	subroutine
+	in out inout
+	float double int void bool true false
+	invariant precise
+	discard return
+	mat2 mat3 mat4 dmat2 dmat3 dmat4
+	mat2x2 mat2x3 mat2x4 dmat2x2 dmat2x3 dmat2x4
+	mat3x2 mat3x3 mat3x4 dmat3x2 dmat3x3 dmat3x4
+	mat4x2 mat4x3 mat4x4 dmat4x2 dmat4x3 dmat4x4
+	vec2 vec3 vec4 ivec2 ivec3 ivec4 bvec2 bvec3 bvec4 dvec2 dvec3 dvec4
+	uint uvec2 uvec3 uvec4
+	lowp mediump highp precision
+	image1D iimage1D uimage1D
+	image2D iimage2D uimage2D
+	image3D iimage3D uimage3D
+	struct
+	common partition active
+	asm
+	class union enum typedef template this packed
+	resource
+	goto
+	inline noinline public static extern external interface
+	long short half fixed unsigned superp
+	input output
+	hvec2 hvec3 hvec4 fvec2 fvec3 fvec4
+	sampler3DRect
+	filter
+	sizeof cast
+	namespace using
+	row_major";
+
+	static var KWDS = [for( k in ~/[ \t\r\n]+/g.split(KWD_LIST) ) k => true];
 	static var GLOBALS = {
 		var gl = [];
 		inline function set(g:hxsl.Ast.TGlobal,str:String) {
@@ -55,6 +85,7 @@ class GlslOut {
 	var isVertex : Bool;
 	var allNames : Map<String, Int>;
 	var outIndexes : Map<Int, Int>;
+	var isCompute : Bool;
 
 	var isES(get,never) : Bool;
 	var isES2(get,never) : Bool;
@@ -182,7 +213,11 @@ class GlslOut {
 			}
 			add("]");
 		case TBuffer(t, size, kind):
-			if( kind != Uniform ) throw "TODO";
+			switch( kind ) {
+			case Uniform:
+			case RW:
+				add("rw_");
+			}
 			add((isVertex ? "vertex_" : "") + "uniform_buffer"+(uniformBuffer++));
 			add(" { ");
 			v.type = TArray(t,size);
@@ -426,6 +461,8 @@ class GlslOut {
 			} else {
 				add("/*var*/");
 			}
+		case TCall( { e : TGlobal(SetLayout) }, _):
+			// nothing
 		case TCall( { e : TGlobal(Saturate) }, [e]):
 			add("clamp(");
 			addValue(e, tabs);
@@ -633,9 +670,18 @@ class GlslOut {
 	function initVar( v : TVar ){
 		switch( v.kind ) {
 		case Param, Global:
-			if( v.type.match(TBuffer(_)) )
+			switch( v.type ) {
+			case TBuffer(_, _, kind):
 				add("layout(std140) ");
-			add("uniform ");
+				switch( kind ) {
+				case Uniform:
+					add("uniform ");
+				case RW:
+					add("buffer ");
+				}
+			default:
+				add("uniform ");
+			}
 		case Input:
 			add( isES2 ? "attribute " : "in ");
 		case Var:
@@ -682,7 +728,22 @@ class GlslOut {
 			decl("#extension GL_EXT_draw_buffers : enable");
 	}
 
+	var computeLayout = [1,1,1];
+	function collectGlobals( m : Map<TGlobal,Bool>, e : TExpr ) {
+		switch( e.e )  {
+		case TGlobal(g): m.set(g,true);
+		case TCall({ e : TGlobal(SetLayout) }, [{ e : TConst(CInt(x)) }, { e : TConst(CInt(y)) }, { e : TConst(CInt(z)) }]):
+			computeLayout = [x,y,z];
+		default: hxsl.Tools.iter(e,collectGlobals.bind(m));
+		}
+	}
+
 	public function run( s : ShaderData ) {
+
+		var foundGlobals = new Map();
+		for( f in s.funs )
+			collectGlobals(foundGlobals, f.expr);
+
 		locals = new Map();
 		decls = [];
 		buf = new StringBuf();
@@ -691,13 +752,17 @@ class GlslOut {
 		if( s.funs.length != 1 ) throw "assert";
 		var f = s.funs[0];
 		isVertex = f.kind == Vertex;
+		isCompute = f.kind == Main;
 
-		if (isVertex)
+		if (isVertex || isCompute)
 			decl("precision highp float;");
 		else
 			decl("precision mediump float;");
 
 		initVars(s);
+
+		if( isCompute )
+			decl('layout(local_size_x = ${computeLayout[0]}, local_size_y = ${computeLayout[1]}, local_size_z = ${computeLayout[2]}) in;');
 
 		var tmp = buf;
 		buf = new StringBuf();
@@ -740,6 +805,8 @@ class GlslOut {
 
 		if( isES )
 			decl("#version " + (version < 100 ? 100 : version) + (version > 150 ? " es" : ""));
+		else if( isCompute )
+			decl("#version 430");
 		else if( version != null )
 			decl("#version " + (version > 150 ? 150 : version));
 		else
