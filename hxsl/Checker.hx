@@ -987,6 +987,11 @@ class Checker {
 					return FGlobal(g.g, e, sel);
 			default:
 			}
+			switch( [g.g, e.t] ) {
+			case [Length, TArray(_)]:
+				return FField({ e : TCall({ e : TGlobal(Length), t : TVoid, p : pos },[e]), t : TInt, p : pos });
+			default:
+			}
 		}
 		// swizzle ?
 		var stype;
