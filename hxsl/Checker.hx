@@ -274,6 +274,32 @@ class Checker {
 		for( i in 0...tfuns.length )
 			typeFun(tfuns[i], funs[i].f.expr);
 
+		var localInits = [];
+		for( i in inits.copy() ) {
+			if( i.v.kind == Local ) {
+				localInits.push({ e : TBinop(OpAssign,{ e : TVar(i.v), p : i.e.p, t : i.v.type },i.e), p : i.e.p, t : i.v.type });
+				inits.remove(i);
+			}
+		}
+		if( localInits.length > 0 ) {
+			var fv : TVar = {
+				id : Tools.allocVarId(),
+				name : "__init__consts__",
+				kind : Function,
+				type : TFun([{ args : [], ret : TVoid }]),
+			};
+			if( vars.exists(fv.name) )
+				error("assert", localInits[0].p);
+			vars.set(fv.name, fv);
+			tfuns.push({
+				kind : Init,
+				ref : fv,
+				args : [],
+				ret : TVoid,
+				expr : { e : TBlock(localInits), p : localInits[0].p, t : TVoid },
+			});
+		}
+
 		var vars = Lambda.array(vars);
 		vars.sort(function(v1, v2) return (v1.id < 0 ? -v1.id : v1.id) - (v2.id < 0 ? -v2.id : v2.id));
 		return {
@@ -706,8 +732,8 @@ class Checker {
 				}
 				var einit = null;
 				if( v.expr != null ) {
-					if( v.kind != Param )
-						error("Cannot initialize variable declaration if not @param", v.expr.pos);
+					if( v.kind != Param && v.kind != Local )
+						error("Cannot initialize variable declaration if not @param or local", v.expr.pos);
 					var e = typeExpr(v.expr, v.type == null ? Value : With(v.type));
 					if( v.type == null )
 						v.type = e.t;
@@ -767,6 +793,8 @@ class Checker {
 		case TParenthesis(e): checkConst(e);
 		case TCall({ e : TGlobal(Vec2 | Vec3 | Vec4 | IVec2 | IVec3 | IVec4) }, args):
 			for( a in args ) checkConst(a);
+		case TArrayDecl(el):
+			for( e in el ) checkConst(e);
 		default:
 			error("This expression should be constant", e.p);
 		}

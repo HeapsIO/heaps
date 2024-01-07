@@ -102,6 +102,11 @@ class Macros {
 				expr : ENew({ pack : ["hxsl"], name : "Types", sub : (g == Vec4 ? "Vec4" : "Vec") }, [for( a in args ) makeInit(a)]),
 				pos : e.p,
 			}
+		case TArrayDecl(el):
+			{
+				expr : EArrayDecl([for( e in el ) makeInit(e)]),
+				pos : e.p,
+			}
 		default:
 			Error.t("Unsupported init expr", e.p);
 		}
