@@ -524,9 +524,6 @@ class Writer {
 		var old = out;
 		var header = new haxe.io.BytesOutput();
 		out = header;
-		// version = d.version;
-
-		// if( version > Data.CURRENT_VERSION ) throw "Can't write HMD v" + version;
 
 		function clone(obj : h3d.scene.Object, ?into : h3d.scene.Mesh) : h3d.scene.Mesh {
 			var o : h3d.scene.Mesh = null;
@@ -554,8 +551,9 @@ class Writer {
 			return o;
 		}
 
+		var roots : Array<h3d.scene.Mesh> = [];
 		var root : h3d.scene.Mesh = null;
-		function getMeshes( o : h3d.scene.Object, ?parent : h3d.scene.Mesh) {
+		function extractMeshes( o : h3d.scene.Object, ?parent : h3d.scene.Mesh) {
 			var m = Std.downcast(o, h3d.scene.Mesh);
 
 			if (m == null) {
@@ -568,7 +566,7 @@ class Writer {
 						// apply it on mesh object
 						clone(o, mesh);
 
-						if (root == null) 
+						if (root == null)
 							root = cast mesh;
 
 						if (parent != null)
@@ -579,7 +577,7 @@ class Writer {
 				}
 			}
 			else if (m.name != "root") {
-				if (root == null) 
+				if (root == null)
 					root = cast clone(m);
 
 				if (parent == null)
@@ -589,17 +587,21 @@ class Writer {
 			}
 
 			for( c in @:privateAccess o.children )
-				getMeshes(c, parent);
+				extractMeshes(c, parent);
 		}
 
-		getMeshes(objects[0]);
+		for (o in objects) {
+			root = null;
+			extractMeshes(o);
+			roots.push(root);
+		}
 
 		writeHeader();
 		writeNode(buildGlobalSettings());
-		writeNode(buildDefinitions([ root ]));
+		writeNode(buildDefinitions(cast roots));
 
 		var objectTreeRoot = { id: 0, children: [] };
-		writeNode(buildObjects([ root ], objectTreeRoot));
+		writeNode(buildObjects(cast roots, objectTreeRoot));
 		writeNode(buildConnections(objectTreeRoot));
 
 		var bytes = header.getBytes();
