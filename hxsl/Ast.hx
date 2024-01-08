@@ -5,6 +5,13 @@ enum BufferKind {
 	RW;
 }
 
+enum TexDimension {
+	T1D;
+	T2D;
+	T3D;
+	TCube;
+}
+
 enum Type {
 	TVoid;
 	TInt;
@@ -16,15 +23,14 @@ enum Type {
 	TMat4;
 	TMat3x4;
 	TBytes( size : Int );
-	TSampler2D;
-	TSampler2DArray;
-	TSamplerCube;
+	TSampler( dim : TexDimension, isArray : Bool );
+	TRWTexture( dim : TexDimension, isArray : Bool, channels : Int );
+	TMat2;
 	TStruct( vl : Array<TVar> );
 	TFun( variants : Array<FunType> );
 	TArray( t : Type, size : SizeDecl );
 	TBuffer( t : Type, size : SizeDecl, kind : BufferKind );
 	TChannel( size : Int );
-	TMat2;
 }
 
 enum VecType {
@@ -196,6 +202,15 @@ enum FunctionKind {
 	Main;
 }
 
+enum ComputeVar {
+	GlobalInvocation;
+	LocalInvocation;
+	NumWorkGroups;
+	WorkGroup;
+	WorkGroupSize;
+	LocalInvocationIndex;
+}
+
 enum TGlobal {
 	Radians;
 	Degrees;
@@ -289,6 +304,7 @@ enum TGlobal {
 	RoundEven;
 	// compute
 	SetLayout;
+	ComputeVar;
 }
 
 enum Component {
@@ -407,9 +423,9 @@ class Tools {
 		return false;
 	}
 
-	public static function isSampler( t : Type ) {
+	public static function isTexture( t : Type ) {
 		return switch( t ) {
-		case TSampler2D, TSamplerCube, TSampler2DArray, TChannel(_):
+		case TSampler(_), TChannel(_), TRWTexture(_):
 			true;
 		default:
 			false;
@@ -434,6 +450,10 @@ class Tools {
 			};
 			prefix+" "+toString(t) + "[" + (switch( s ) { case SConst(i): "" + i; case SVar(v): v.name; } ) + "]";
 		case TBytes(n): "Bytes" + n;
+		case TSampler(dim, arr):
+			"Sampler"+dim.getName().substr(1)+(arr ? "Array":"");
+		case TRWTexture(dim, arr,dims):
+			"RWTexture"+dim.getName().substr(1)+(arr ? "Array":"")+"<"+(dims == 1 ? "Float" : "Vec"+dims)+">";
 		default: t.getName().substr(1);
 		}
 	}
@@ -560,7 +580,7 @@ class Tools {
 		case TMat4: 16;
 		case TMat3x4: 12;
 		case TBytes(s): s;
-		case TBool, TString, TSampler2D, TSampler2DArray, TSamplerCube, TFun(_): 0;
+		case TBool, TString, TSampler(_), TRWTexture(_), TFun(_): 0;
 		case TArray(t, SConst(v)), TBuffer(t, SConst(v),_): size(t) * v;
 		case TArray(_, SVar(_)), TBuffer(_): 0;
 		}

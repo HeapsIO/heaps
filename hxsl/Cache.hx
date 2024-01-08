@@ -461,7 +461,7 @@ class Cache {
 					}
 					var ap = new AllocParam(a.v.name, a.pos, p.instance, p.index, a.v.type);
 					switch( a.v.type ) {
-					case TArray(t,_) if( t.isSampler() ):
+					case TArray(t,_) if( t.isTexture() ):
 						// hack to mark array of texture, see ShaderManager.fillParams
 						ap.pos = -a.size;
 						count += a.size;
@@ -473,7 +473,7 @@ class Cache {
 				for( i in 0...out.length - 1 )
 					out[i].next = out[i + 1];
 				switch( g.type ) {
-				case TArray(t, _) if( t.isSampler() ):
+				case TArray(t, _) if( t.isTexture() ):
 					textures.push({ t : t, all : out });
 					c.texturesCount += count;
 				case TArray(TVec(4, VFloat), SConst(size)):

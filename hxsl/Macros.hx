@@ -23,15 +23,13 @@ class Macros {
 			for( v in vl ) {
 				fields.push({ pos : pos, name : v.name, kind : FVar(makeType(v.type)) });
 				if( v.type.match(TChannel(_)) )
-				fields.push({ pos : pos, name : v.name+"Channel", kind : FVar(macro : hxsl.Channel) });
+					fields.push({ pos : pos, name : v.name+"Channel", kind : FVar(macro : hxsl.Channel) });
 			}
 			TAnonymous(fields);
-		case TSampler2D:
-			macro : hxsl.Types.Sampler2D;
-		case TSampler2DArray:
-			macro : hxsl.Types.Sampler2DArray;
-		case TSamplerCube:
-			macro : hxsl.Types.SamplerCube;
+		case TSampler(_, false), TRWTexture(_,false,_):
+			macro : hxsl.Types.Texture;
+		case TSampler(_, true), TRWTexture(_,true,_):
+			macro : hxsl.Types.TextureArray;
 		case TMat2, TMat3, TMat3x4, TMat4:
 			macro : hxsl.Types.Matrix;
 		case TString:
@@ -46,7 +44,7 @@ class Macros {
 			var t = makeType(t);
 			macro : Array<$t>;
 		case TChannel(_):
-			macro : hxsl.Types.ChannelTextureType;
+			macro : hxsl.Types.TextureChannel;
 		case TFun(_):
 			throw "assert";
 		case TBuffer(_):

@@ -45,7 +45,7 @@ class Dce {
 				var i = get(v);
 				if( v.kind == Input )
 					inputs.push(i);
-				if( v.kind == Output || v.type.match(TBuffer(_,_,RW)) )
+				if( v.kind == Output || v.type.match(TBuffer(_,_,RW) | TRWTexture(_)) )
 					i.keep = true;
 			}
 		}

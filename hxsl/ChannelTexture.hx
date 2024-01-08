@@ -1,3 +1,3 @@
 package hxsl;
 
-typedef ChannelTexture = { texture : hxsl.Types.ChannelTextureType, channel : hxsl.Channel };
+typedef ChannelTexture = { texture : hxsl.Types.TextureChannel, channel : hxsl.Channel };

@@ -130,6 +130,12 @@ class GlslOut {
 			decls.push(s);
 	}
 
+	function getSamplerType(dim:TexDimension,arr) {
+		var name = "sampler" + dim.getName().substr(1);
+		if( arr ) name += "Array";
+		return name;
+	}
+
 	function addType( t : Type ) {
 		switch( t ) {
 		case TVoid:
@@ -162,14 +168,13 @@ class GlslOut {
 		case TMat3x4:
 			decl(MAT34);
 			add("_mat3x4");
-		case TSampler2D:
-			add("sampler2D");
-		case TSampler2DArray:
-			add("sampler2DArray");
-			if( isES )
-				decl("precision lowp sampler2DArray;");
-		case TSamplerCube:
-			add("samplerCube");
+		case TSampler(dim,arr):
+			var name = getSamplerType(dim,arr);
+			add(name);
+			if( isES && arr )
+				decl("precision lowp "+name+";");
+		case TRWTexture(dim, arr, chans):
+			add("image"+dim.getName().substr(1)+(arr?"Array":""));
 		case TStruct(vl):
 			add("struct { ");
 			for( v in vl ) {
@@ -294,18 +299,18 @@ class GlslOut {
 			decl("vec3 unpackNormal( vec4 v ) { return normalize((v.xyz - vec3(0.5)) * vec3(2.)); }");
 		case Texture:
 			switch( args[0].t ) {
-			case TSampler2D, TSampler2DArray, TChannel(_) if( isES2 ):
+			case TSampler(T2D,_), TChannel(_) if( isES2 ):
 				return "texture2D";
-			case TSamplerCube if( isES2 ):
+			case TSampler(TCube,_) if( isES2 ):
 				return "textureCube";
 			default:
 			}
 		case TextureLod:
 			switch( args[0].t ) {
-			case TSampler2D, TSampler2DArray, TChannel(_) if( isES2 ):
+			case TSampler(T2D,_), TChannel(_) if( isES2 ):
 				decl("#extension GL_EXT_shader_texture_lod : enable");
 				return "texture2DLodEXT";
-			case TSamplerCube if( isES2 ):
+			case TSampler(TCube,_) if( isES2 ):
 				decl("#extension GL_EXT_shader_texture_lod : enable");
 				return "textureCubeLodEXT";
 			default:
@@ -318,12 +323,14 @@ class GlslOut {
 				return "texelFetch";
 		case TextureSize:
 			switch( args[0].t ) {
-			case TSampler2D, TChannel(_):
+			case TSampler(_,false), TChannel(_):
 				decl("vec2 _textureSize(sampler2D sampler, int lod) { return vec2(textureSize(sampler, lod)); }");
-			case TSamplerCube:
-				decl("vec2 _textureSize(samplerCube sampler, int lod) { return vec2(textureSize(sampler, lod)); }");
-			case TSampler2DArray:
-				decl("vec3 _textureSize(sampler2DArray sampler, int lod) { return vec3(textureSize(sampler, lod)); }");
+			case TSampler(dim,true):
+				var t = getSamplerType(dim, true);
+				decl("vec3 _textureSize("+t+" sampler, int lod) { return vec3(textureSize(sampler, lod)); }");
+			case TRWTexture(_,arr,_):
+				var size = arr ? "vec3" : "vec2";
+				return size+"(imageSize";
 			default:
 			}
 			return "_textureSize";
@@ -435,6 +442,19 @@ class GlslOut {
 				add(",");
 				addValue(e2, tabs);
 				add("))");
+			case [OpAssign, _, _] if( e1.e.match(TArray({ t : TRWTexture(_) },_)) ):
+				add("imageStore(");
+				switch( e1.e ) {
+				case TArray(tex,uv):
+					addValue(tex, tabs);
+					add(",");
+					addValue(uv, tabs);
+					add(",");
+					addValue(e2, tabs);
+					add(")");
+				default:
+					throw "assert";
+				}
 			default:
 				addValue(e1, tabs);
 				add(" ");
@@ -461,6 +481,21 @@ class GlslOut {
 			} else {
 				add("/*var*/");
 			}
+		case TCall( { e : TGlobal(ComputeVar) }, [{ e : TConst(CInt(i)) }]):
+			switch( ComputeVar.createByIndex(i,[]) ) {
+			case LocalInvocation:
+				add("ivec3(gl_LocalInvocationID)");
+			case LocalInvocationIndex:
+				add("int(gl_LocalInvocationIndex)");
+			case GlobalInvocation:
+				add("ivec3(gl_GlobalInvocationID)");
+			case NumWorkGroups:
+				add("ivec3(gl_NumWorkGroups)");
+			case WorkGroup:
+				add("ivec3(gl_WorkGroup)");
+			case WorkGroupSize:
+				add("ivec3(gl_WorkGroupSize)");
+			}
 		case TCall( { e : TGlobal(SetLayout) }, _):
 			// nothing
 		case TCall( { e : TGlobal(Saturate) }, [e]):
@@ -485,11 +520,13 @@ class GlslOut {
 			add(getFunName(g,args,e.t));
 			add("(");
 			addValue(args[0], tabs);
-			if ( args.length != 1 ) {
+			if( args.length != 1 ) {
 				// with LOD argument
 				add(", ");
 				addValue(args[1], tabs);
 				add(")");
+			} else if( args[0].t.match(TRWTexture(_)) ) {
+				add("))");
 			} else {
 				add(", 0)");
 			}
@@ -679,6 +716,9 @@ class GlslOut {
 				case RW:
 					add("buffer ");
 				}
+			case TArray(TRWTexture(_, _, chans), _):
+				var format = "rgba".substr(0, chans);
+				add('layout(${format}32f) uniform ');
 			default:
 				add("uniform ");
 			}
@@ -754,7 +794,9 @@ class GlslOut {
 		isVertex = f.kind == Vertex;
 		isCompute = f.kind == Main;
 
-		if (isVertex || isCompute)
+		if( isCompute ) {
+			// no prec
+		} else if( isVertex )
 			decl("precision highp float;");
 		else
 			decl("precision mediump float;");

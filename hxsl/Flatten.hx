@@ -26,6 +26,7 @@ class Flatten {
 	var params : Array<TVar>;
 	var outVars : Array<TVar>;
 	var varMap : Map<TVar,Alloc>;
+	var textureFormats : Array<{ dim : TexDimension, arr : Bool, rw : Int }>;
 	public var allocData : Map< TVar, Array<Alloc> >;
 
 	public function new() {
@@ -35,6 +36,7 @@ class Flatten {
 		globals = [];
 		params = [];
 		outVars = [];
+		textureFormats = [];
 		varMap = new Map();
 		allocData = new Map();
 		for( v in s.vars )
@@ -48,9 +50,12 @@ class Flatten {
 		pack(prefix + "Globals", Global, globals, VFloat);
 		pack(prefix + "Params", Param, params, VFloat);
 		var allVars = globals.concat(params);
-		var textures = packTextures(prefix + "Textures", allVars, TSampler2D)
-			.concat(packTextures(prefix+"TexturesCube", allVars, TSamplerCube))
-			.concat(packTextures(prefix+"TexturesArray", allVars, TSampler2DArray));
+		for( t in textureFormats ) {
+			var name = t.dim == T2D ? "" : t.dim.getName().substr(1);
+			if( t.rw > 0 ) name = "RW"+name+t.rw;
+			if( t.arr ) name += "Array";
+			packTextures(prefix + "Textures" + name, allVars, t.rw == 0 ? TSampler(t.dim, t.arr) : TRWTexture(t.dim, t.arr, t.rw));
+		}
 		packBuffers("buffers", allVars, Uniform);
 		packBuffers("rwbuffers", allVars, RW);
 		var funs = [for( f in s.funs ) mapFun(f, mapExpr)];
@@ -79,13 +84,13 @@ class Flatten {
 				e
 			else
 				access(a, v.type, e.p, AIndex(a));
-		case TArray( { e : TVar(v), p : vp }, eindex) if( !eindex.e.match(TConst(CInt(_))) ):
+		case TArray( { e : TVar(v), p : vp }, eindex) if( !eindex.e.match(TConst(CInt(_))) && !v.type.match(TRWTexture(_)) ):
 			var a = varMap.get(v);
 			if( a == null )
 				e
 			else {
 				switch( v.type ) {
-				case TArray(t, _) if( t.isSampler() ):
+				case TArray(t, _) if( t.isTexture() ):
 					eindex = toInt(mapExpr(eindex));
 					access(a, t, vp, AOffset(a,1,eindex));
 				case TArray(t, _):
@@ -147,7 +152,7 @@ class Flatten {
 			var earr = [for( i in 0...len ) { var a = new Alloc(a.g, a.t, a.pos + stride * i, stride); access(a, t, pos, AIndex(a)); }];
 			return { e : TArrayDecl(earr), t : t, p : pos };
 		default:
-			if( t.isSampler() ) {
+			if( t.isTexture() ) {
 				var e = read(0, pos);
 				e.t = t;
 				return e;
@@ -222,9 +227,9 @@ class Flatten {
 		var samplers = [];
 		for( v in vars ) {
 			var count = 1;
-			if( v.type != t ) {
+			if( !v.type.equals(t) ) {
 				switch( v.type ) {
-				case TChannel(_) if( t == TSampler2D ):
+				case TChannel(_) if( t.match(TSampler(T2D,false)) ):
 				case TArray(t2,SConst(n)) if( t2 == t ):
 					count = n;
 				default:
@@ -291,10 +296,10 @@ class Flatten {
 			kind : kind,
 		};
 		for( v in vars ) {
-			if( v.type.isSampler() || v.type.match(TBuffer(_)) )
+			if( v.type.isTexture() || v.type.match(TBuffer(_)) )
 				continue;
 			switch( v.type ) {
-			case TArray(t,_) if( t.isSampler() ): continue;
+			case TArray(t,_) if( t.isTexture() ): continue;
 			default:
 			}
 			var size = varSize(v.type, t);
@@ -358,18 +363,32 @@ class Flatten {
 		case TStruct(vl):
 			for( v in vl )
 				gatherVar(v);
-		default:
-			switch( v.kind ) {
-			case Global:
-				if( v.hasQualifier(PerObject) )
-					params.push(v);
-				else
-					globals.push(v);
-			case Param:
-				params.push(v);
-			default:
-				outVars.push(v);
+			return;
+		case TSampler(dim, arr), TRWTexture(dim, arr, _):
+			var rw = switch( v.type ) {
+			case TRWTexture(_,_,chans): chans;
+			default: 0;
 			}
+			var found = false;
+			for( f in textureFormats )
+				if( f.dim == dim && f.arr == arr && f.rw == rw ) {
+					found = true;
+					break;
+				}
+			if( !found )
+				textureFormats.push({ dim : dim, arr : arr, rw : rw });
+		default:
+		}
+		switch( v.kind ) {
+		case Global:
+			if( v.hasQualifier(PerObject) )
+				params.push(v);
+			else
+				globals.push(v);
+		case Param:
+			params.push(v);
+		default:
+			outVars.push(v);
 		}
 	}
 

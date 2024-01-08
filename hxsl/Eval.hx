@@ -78,17 +78,17 @@ class Eval {
 		return v2;
 	}
 
-	function checkSamplerRec(t:Type) {
-		if( t.isSampler() )
+	function checkTextureRec(t:Type) {
+		if( t.isTexture() )
 			return true;
 		switch( t ) {
 		case TStruct(vl):
 			for( v in vl )
-				if( checkSamplerRec(v.type) )
+				if( checkTextureRec(v.type) )
 					return true;
 			return false;
 		case TArray(t, _):
-			return checkSamplerRec(t);
+			return checkTextureRec(t);
 		case TBuffer(_):
 			return true;
 		default:
@@ -98,7 +98,7 @@ class Eval {
 
 	function needsInline(f:TFunction) {
 		for( a in f.args )
-			if( checkSamplerRec(a.type) )
+			if( checkTextureRec(a.type) )
 				return true;
 		return false;
 	}
