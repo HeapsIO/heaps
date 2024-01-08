@@ -764,13 +764,19 @@ class Library {
 		if (materialContainer == null)
 			materialContainer = new h3d.scene.Mesh(null, mat, null);
 
-        var ctx = new hrt.prefab.Context();
-		ctx.shared = new ContextShared(loadTexture, null);
+	#if prefab2
+		var shared = new ContextShared(loadTexture, null);
 
         materialContainer.material = mat;
-        ctx.local3d = materialContainer;
-        m.make(ctx);
+        m.make(materialContainer,shared);
+	#else
+		var ctx = new hrt.prefab.Context();
+		ctx.shared = new ContextShared(loadTexture, null);
 
+		materialContainer.material = mat;
+		ctx.local3d = materialContainer;
+		m.make(ctx);
+	#end
         // Ensure there is no leak with this
 		materialContainer.material = null;
 
