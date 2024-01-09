@@ -25,7 +25,6 @@ class Checker {
 	static var ivec2 = TVec(2, VInt);
 	static var ivec3 = TVec(3, VInt);
 	static var ivec4 = TVec(4, VInt);
-	static var anyRWT = TRWTexture(T1D,false,-1);
 
 	var vars : Map<String,TVar>;
 	var globals : Map<String,{ g : TGlobal, t : Type }>;
@@ -56,9 +55,9 @@ class Checker {
 			{ dim : TCube, arr : false, uv : vec3, iuv : ivec3 },
 			{ dim : T1D, arr : true, uv : vec2, iuv : ivec2 },
 			{ dim : T2D, arr : true, uv : vec3, iuv : ivec3 },
-			{ dim : T3D, arr : false, uv : vec4, iuv : ivec4 },
-			{ dim : TCube, arr : false, uv : vec4, iuv : ivec4 },
+			{ dim : TCube, arr : true, uv : vec4, iuv : ivec4 },
 		];
+		var gvars = new Map();
 		for( g in Ast.TGlobal.createAll() ) {
 			var def = switch( g ) {
 			case Vec2, Vec3, Vec4, Mat2, Mat3, Mat3x4, Mat4, IVec2, IVec3, IVec4, BVec2, BVec3, BVec4: [];
@@ -84,10 +83,7 @@ class Checker {
 			case Texel:
 				[for( t in texDefs ) { args : [{ name : "tex", type : TSampler(t.dim,t.arr) }, { name : "pos", type : t.iuv }], ret : vec4 }];
 			case TextureSize:
-				var arr = [for( t in texDefs ) { args : [{ name : "tex", type : TSampler(t.dim,t.arr) }], ret : vec2 }].concat(
-				[for( t in texDefs ) { args : [{ name : "tex", type : TSampler(t.dim,t.arr) },{ name : "lod", type : TInt }], ret : vec2 }]);
-				arr.push({ args : [{name : "tex", type : TRWTexture(T2D,false,-1)}], ret : vec2 });
-				arr;
+				[];
 			case ToInt:
 				[for( t in baseType ) { args : [ { name : "value", type : t } ], ret : TInt } ];
 			case ToFloat:
@@ -184,10 +180,34 @@ class Checker {
 				[for( i => t in genType ) { args : [ { name: "x", type: genIType[i] } ], ret: t }];
 			case SetLayout:
 				[{ args : [{ name : "x", type : TInt },{ name : "y", type : TInt },{ name : "z", type : TInt }], ret : TVoid }];
-			case ComputeVar:
+			case ImageStore:
 				[];
 			case VertexID, InstanceID, FragCoord, FrontFacing:
 				null;
+			case _ if( g.getName().indexOf("_") > 0 ):
+				var name = g.getName();
+				var idx = name.indexOf("_");
+				var vname = name.substr(0, idx);
+				vname = vname.charAt(0).toLowerCase() + vname.substr(1);
+				var vl = gvars.get(vname);
+				if( vl == null ) {
+					vl = [];
+					gvars.set(vname, vl);
+				}
+				var vt = switch( g ) {
+				case ComputeVar_GlobalInvocation, ComputeVar_LocalInvocation, ComputeVar_NumWorkGroups, ComputeVar_WorkGroup, ComputeVar_WorkGroupSize:
+					ivec3;
+				case ComputeVar_LocalInvocationIndex:
+					TInt;
+				default:
+					throw "Unknown type for global var "+g;
+				}
+				var fname = name.substr(idx+1);
+				fname = fname.charAt(0).toLowerCase() + fname.substr(1);
+				vl.push({ name : fname, type : vt });
+				null;
+			default:
+				throw "Unsupported global "+g;
 			}
 			if( def != null )
 				globals.set(g.toString(), { t : TFun(def), g : g } );
@@ -196,6 +216,16 @@ class Checker {
 		globals.set("instanceID", { t : TInt, g : InstanceID });
 		globals.set("fragCoord", { t : vec4, g : FragCoord });
 		globals.set("frontFacing", { t : TBool, g : FrontFacing });
+		for( gname => vl in gvars )
+			globals.set(gname, { t : TStruct([
+				for( v in vl )
+					{
+						name: v.name,
+						kind : Global,
+						type : v.type,
+						id : 0
+					}
+			]), g : null });
 		globals.set("int", globals.get("toInt"));
 		globals.set("float", globals.get("toFloat"));
 		globals.set("reflect", globals.get("lReflect"));
@@ -339,7 +369,7 @@ class Checker {
 		case [TSampler(dim1, arr1), TSampler(dim2, arr2)]:
 			return dim1 == dim2 && arr1 == arr2;
 		case [TRWTexture(dim1, arr1, chans1), TRWTexture(dim2, arr2, chans2)]:
-			return dim1 == dim2 && arr1 == arr2 && (chans1 == chans2 || chans2 == -1);
+			return dim1 == dim2 && arr1 == arr2 && chans1 == chans2;
 		default:
 		}
 		return false;
@@ -474,7 +504,7 @@ class Checker {
 				TVar(v);
 			} else {
 				var g = globals.get(name);
-				if( g != null ) {
+				if( g != null && g.g != null ) {
 					type = g.t;
 					TGlobal(g.g);
 				} else {
@@ -486,6 +516,18 @@ class Checker {
 						error("Unknown identifier '" + name + "'", e.pos);
 					}
 				}
+			}
+		case EField({ expr : EIdent(name) }, f) if( vars.get(name) == null && globals.get(name) != null && globals.get(name).g == null ):
+			switch( globals.get(name).t ) {
+			case TStruct(vl):
+				for( v in vl )
+					if( v.name == f ) {
+						var g = name.charAt(0).toUpperCase()+name.substr(1)+"_"+f.charAt(0).toUpperCase()+f.substr(1);
+						return { e : TGlobal(Ast.TGlobal.createByName(g)), t : v.type, p : e.pos };
+					}
+				error(name+" field should be "+[for( v in vl ) v.name].join("|"), e.pos);
+			default:
+				throw "assert";
 			}
 		case EField(e1, f):
 			var e1 = typeExpr(e1, Value);
@@ -501,21 +543,6 @@ class Checker {
 			}
 		case ECall(e1, args):
 			function makeCall(e1) {
-				switch( e1.e ) {
-				case TGlobal(ComputeVar) if( args.length <= 1 ):
-					switch( args[0] ) {
-					case { expr : EIdent(name) }:
-						var v = try ComputeVar.createByName(name,[]) catch( e : Dynamic ) null;
-						if( v != null ) {
-							type = v == LocalInvocationIndex ? TInt : ivec3;
-							return TCall(e1,[{ e : TConst(CInt(v.getIndex())), t : TInt, p : e.pos }]);
-						}
-					case null:
-					default:
-					}
-					error("computeVar() argument should be "+ComputeVar.createAll().join("|"), e.pos);
-				default:
-				}
 				return switch( e1.t ) {
 				case TFun(variants):
 					var e = unifyCallParams(e1, args, variants, e.pos);
@@ -673,17 +700,8 @@ class Checker {
 			TBreak;
 		case EArray(e1, e2):
 			var e1 = typeExpr(e1, Value);
-			var indexType = switch( e1.t ) {
-			case TRWTexture(dim, arr, _):
-				var count = dim.getIndex() + 1;
-				if( count >= 3 ) count = 3;
-				if( arr ) count++;
-				count == 1 ? TInt : TVec(count,VInt);
-			default:
-				TInt;
-			}
-			var e2 = typeExpr(e2, With(indexType));
-			unify(e2.t, indexType, e2.p);
+			var e2 = typeExpr(e2, With(TInt));
+			unify(e2.t, TInt, e2.p);
 			switch( e1.t ) {
 			case TArray(t, size), TBuffer(t,size,_):
 				switch( [size, e2.e] ) {
@@ -700,14 +718,6 @@ class Checker {
 				type = vec3;
 			case TMat4, TMat3x4:
 				type = vec4;
-			case TRWTexture(_, _, chans):
-				type = switch(chans) {
-				case 2: vec2;
-				case 3: vec3;
-				case 4: vec4;
-				default:
-					TFloat;
-				}
 			default:
 				error("Cannot index " + e1.t.toString() + " : should be an array", e.pos);
 			}
@@ -778,6 +788,12 @@ class Checker {
 				var v = makeVar(v, e.pos);
 				if( isImport && v.kind == Param )
 					continue;
+
+				switch( v.type ) {
+				case TSampler(T3D, true), TRWTexture(T3D, true, _), TRWTexture(_,_,3):
+					error("Unsupported texture type", e.pos);
+				default:
+				}
 				if( einit != null )
 					inits.push({ v : v, e : einit });
 				else if( v.qualifiers != null && v.qualifiers.indexOf(Final) >= 0 )
@@ -999,6 +1015,7 @@ class Checker {
 			case ["fetch"|"fetchLod", TChannel(_)]: ChannelFetch;
 			case ["size", TSampler(_) | TRWTexture(_)]: TextureSize;
 			case ["size", TChannel(_)]: ChannelTextureSize;
+			case ["store", TRWTexture(_)]: ImageStore;
 			default: null;
 			}
 			if( gl != null ) {
@@ -1016,8 +1033,6 @@ class Checker {
 					args.shift();
 					sel.push({ args : args, ret : v.ret });
 				}
-				if( f == "get" )
-					trace(variants, sel);
 				if( sel.length > 0 || variants.length == 0 )
 					return FGlobal(g.g, e, sel);
 			default:
@@ -1056,6 +1071,16 @@ class Checker {
 			return FField( { e : TSwiz(e, out), t: out.length == 1 ? stype.toType() : TVec(out.length,stype), p:pos } );
 		}
 		return null;
+	}
+
+	function getSizeType(size,vtype) {
+		return switch( size ) {
+		case 1: vtype == VInt ? TInt : TFloat;
+		case 2: vtype == VInt ? ivec2 : vec2;
+		case 3: vtype == VInt ? ivec3 : vec3;
+		case 4: vtype == VInt ? ivec4 : vec4;
+		default: throw "assert";
+		}
 	}
 
 	function specialGlobal( g : TGlobal, e : TExpr, args : Array<TExpr>, pos : Position ) : TExpr {
@@ -1150,6 +1175,26 @@ class Checker {
 			}
 		case Trace:
 			type = TVoid;
+		case ImageStore:
+			switch( ([for( a in args ) a.t]) ) {
+			case [TRWTexture(dim,arr,chans), uv, color]:
+				var szt = getSizeType(Tools.getDimSize(dim,arr),VInt);
+				unify(uv, szt, args[1].p);
+				unify(color, chans == 1 ? TFloat : TVec(chans,VFloat), args[2].p);
+				type = TVoid;
+			default:
+				error("Cannot apply " + g.toString() + " to these parameters", pos);
+			}
+		case TextureSize:
+			if( args.length != 1 )
+				error("TextureSize() requires one single argument", pos);
+			switch( args[0].t ) {
+			case TSampler(dim,arr), TRWTexture(dim,arr,_):
+				type = getSizeType(Tools.getDimSize(dim,arr),VFloat);
+			default:
+				unify(args[0].t, TSampler(T2D,false), args[0].p);
+				type = vec2;
+			}
 		default:
 		}
 		if( type == null )

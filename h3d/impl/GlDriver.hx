@@ -627,9 +627,33 @@ class GlDriver extends Driver {
 
 				if( pt.u == null ) continue;
 
-				if( pt.t.match(TRWTexture(_)) ) {
-					gl.bindImageTexture(i, cast t.t.t, 0, false, 0, GL.READ_WRITE, GL.RGBA8);
+				switch( pt.t ) {
+				case TRWTexture(dim,arr,chans):
+					var tdim : hxsl.Ast.TexDimension = t.flags.has(Cube) ? TCube : T2D;
+					var fmt;
+					if( (arr != t.flags.has(IsArray)) || dim != tdim )
+						fmt = 0;
+					else {
+						// we suppose it's possible to map from one pixel format to shader declared 32f
+						fmt = switch( [chans,t.format] ) {
+						case [1, R8]: GL.R8;
+						case [2, RG8]: GL.RG8;
+						case [4, RGBA]: GL.RGBA8;
+						case [1, R16F]: GL.R16F;
+						case [2, RG16F]: GL.RG16F;
+						case [4, RGBA16F]: GL.RGBA16F;
+						case [1, R32F]: GL.R32F;
+						case [2, RG32F]: GL.RG32F;
+						case [4, RGBA32F]: GL.RGBA32F;
+						default: 0;
+						}
+					}
+					if( fmt == 0 )
+						throw "Texture format does not match: "+t+"["+t.format+"] should be "+hxsl.Ast.Tools.toString(pt.t);
+					gl.bindImageTexture(i, cast t.t.t, 0, false, 0, GL.READ_WRITE, fmt);
+					boundTextures[i] = null;
 					continue;
+				default:
 				}
 
 				var idx = s.kind == Fragment ? curShader.vertex.textures.length + i : i;

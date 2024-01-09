@@ -202,15 +202,6 @@ enum FunctionKind {
 	Main;
 }
 
-enum ComputeVar {
-	GlobalInvocation;
-	LocalInvocation;
-	NumWorkGroups;
-	WorkGroup;
-	WorkGroupSize;
-	LocalInvocationIndex;
-}
-
 enum TGlobal {
 	Radians;
 	Degrees;
@@ -304,7 +295,13 @@ enum TGlobal {
 	RoundEven;
 	// compute
 	SetLayout;
-	ComputeVar;
+	ImageStore;
+	ComputeVar_GlobalInvocation;
+	ComputeVar_LocalInvocation;
+	ComputeVar_NumWorkGroups;
+	ComputeVar_WorkGroup;
+	ComputeVar_WorkGroupSize;
+	ComputeVar_LocalInvocationIndex;
 }
 
 enum Component {
@@ -337,6 +334,26 @@ class Tools {
 		#else
 		return ++UID;
 		#end
+	}
+
+	public static function getTexUVSize( dim : TexDimension, arr = false ) {
+		var size = switch( dim ) {
+		case T1D: 1;
+		case T2D: 2;
+		case T3D, TCube: 3;
+		}
+		if( arr ) size++;
+		return size;
+	}
+
+	public static function getDimSize( dim : TexDimension, arr = false ) {
+		var size = switch( dim ){
+		case T1D: 1;
+		case T2D, TCube: 2;
+		case T3D: 3;
+		}
+		if( arr ) size++;
+		return size;
 	}
 
 	public static function getName( v : TVar ) {
@@ -437,16 +454,16 @@ class Tools {
 		case TVec(size, t):
 			var prefix = switch( t ) {
 			case VFloat: "";
-			case VInt: "I";
-			case VBool: "B";
+			case VInt: "i";
+			case VBool: "b";
 			}
-			prefix + "Vec" + size;
+			prefix + "vec" + size;
 		case TStruct(vl):"{" + [for( v in vl ) v.name + " : " + toString(v.type)].join(",") + "}";
 		case TArray(t, s): toString(t) + "[" + (switch( s ) { case SConst(i): "" + i; case SVar(v): v.name; } ) + "]";
 		case TBuffer(t, s, k):
 			var prefix = switch( k ) {
-			case Uniform: "buffer";
-			case RW: "rwbuffer";
+			case Uniform: "Buffer";
+			case RW: "RWBuffer";
 			};
 			prefix+" "+toString(t) + "[" + (switch( s ) { case SConst(i): "" + i; case SVar(v): v.name; } ) + "]";
 		case TBytes(n): "Bytes" + n;
@@ -494,8 +511,11 @@ class Tools {
 		case TCall({ e : TGlobal(SetLayout) },_):
 			return true;
 		case TCall(e, pl):
-			if( !e.e.match(TGlobal(_)) )
+			switch( e.e ) {
+			case TGlobal(g) if( g != ImageStore ):
+			default:
 				return true;
+			}
 			for( p in pl )
 				if( hasSideEffect(p) )
 					return true;

@@ -71,6 +71,14 @@ class GlslOut {
 		set(FrontFacing, "gl_FrontFacing");
 		set(FloatBitsToUint, "_floatBitsToUint");
 		set(UintBitsToFloat, "_uintBitsToFloat");
+
+		set(ComputeVar_LocalInvocation, "ivec3(gl_LocalInvocationID)");
+		set(ComputeVar_GlobalInvocation, "ivec3(gl_GlobalInvocationID)");
+		set(ComputeVar_LocalInvocationIndex, "int(gl_LocalInvocationIndex)");
+		set(ComputeVar_NumWorkGroups, "ivec3(gl_NumWorkGroups)");
+		set(ComputeVar_WorkGroup, "ivec3(gl_WorkGroup)");
+		set(ComputeVar_WorkGroupSize, "ivec3(gl_WorkGroupSize)");
+
 		for( g in gl )
 			KWDS.set(g, true);
 		gl;
@@ -323,14 +331,15 @@ class GlslOut {
 				return "texelFetch";
 		case TextureSize:
 			switch( args[0].t ) {
-			case TSampler(_,false), TChannel(_):
+			case TChannel(_):
 				decl("vec2 _textureSize(sampler2D sampler, int lod) { return vec2(textureSize(sampler, lod)); }");
-			case TSampler(dim,true):
-				var t = getSamplerType(dim, true);
-				decl("vec3 _textureSize("+t+" sampler, int lod) { return vec3(textureSize(sampler, lod)); }");
-			case TRWTexture(_,arr,_):
-				var size = arr ? "vec3" : "vec2";
-				return size+"(imageSize";
+			case TSampler(dim,arr):
+				var size = Tools.getDimSize(dim,arr);
+				var t = "sampler"+dim.getName().substr(1)+(arr?"Array":"");
+				decl('vec$size _textureSize($t sampler, int lod) { return vec$size(textureSize(sampler, lod)); }');
+			case TRWTexture(dim,arr,_):
+				var size = Tools.getDimSize(dim,arr);
+				return "vec"+size+"(imageSize";
 			default:
 			}
 			return "_textureSize";
@@ -442,19 +451,6 @@ class GlslOut {
 				add(",");
 				addValue(e2, tabs);
 				add("))");
-			case [OpAssign, _, _] if( e1.e.match(TArray({ t : TRWTexture(_) },_)) ):
-				add("imageStore(");
-				switch( e1.e ) {
-				case TArray(tex,uv):
-					addValue(tex, tabs);
-					add(",");
-					addValue(uv, tabs);
-					add(",");
-					addValue(e2, tabs);
-					add(")");
-				default:
-					throw "assert";
-				}
 			default:
 				addValue(e1, tabs);
 				add(" ");
@@ -480,21 +476,6 @@ class GlslOut {
 				addValue(init, tabs);
 			} else {
 				add("/*var*/");
-			}
-		case TCall( { e : TGlobal(ComputeVar) }, [{ e : TConst(CInt(i)) }]):
-			switch( ComputeVar.createByIndex(i,[]) ) {
-			case LocalInvocation:
-				add("ivec3(gl_LocalInvocationID)");
-			case LocalInvocationIndex:
-				add("int(gl_LocalInvocationIndex)");
-			case GlobalInvocation:
-				add("ivec3(gl_GlobalInvocationID)");
-			case NumWorkGroups:
-				add("ivec3(gl_NumWorkGroups)");
-			case WorkGroup:
-				add("ivec3(gl_WorkGroup)");
-			case WorkGroupSize:
-				add("ivec3(gl_WorkGroupSize)");
 			}
 		case TCall( { e : TGlobal(SetLayout) }, _):
 			// nothing
@@ -530,6 +511,21 @@ class GlslOut {
 			} else {
 				add(", 0)");
 			}
+		case TCall({ e : TGlobal(ImageStore) }, [tex, uv, color]):
+			var chans = switch( tex.t ) {
+			case TRWTexture(_, _, chans): chans;
+			default: throw "assert";
+			}
+			// we can use function decl because of some GLSL compiler bug
+			add("imageStore(");
+			addValue(tex, tabs);
+			add(",");
+			addValue(uv, tabs);
+			add(",");
+			if( chans != 4 ) add("(");
+			addValue(color, tabs);
+			if( chans != 4 ) add(")"+(chans == 1 ? ".xx" : ".xyyy"));
+			add(")");
 		case TCall(v, args):
 			switch( v.e ) {
 			case TGlobal(g):

@@ -149,7 +149,7 @@ class Dce {
 			check(i, writeTo, isAffected);
 			check(e, writeTo, isAffected);
 			writeTo.pop();
-			if ( isAffected.indexOf(v) < 0 )
+			if( isAffected.indexOf(v) < 0 )
 				isAffected.push(v);
 		case TBlock(el):
 			var noWrite = [];
@@ -197,6 +197,14 @@ class Dce {
 			} else {
 				link(channelVars[cid], writeTo);
 			}
+		case TCall({ e : TGlobal(ImageStore)}, [{ e : TVar(v) }, uv, val]):
+			var v = get(v);
+			writeTo.push(v);
+			check(uv, writeTo, isAffected);
+			check(val, writeTo, isAffected);
+			writeTo.pop();
+			if( isAffected.indexOf(v) < 0 )
+				isAffected.push(v);
 		default:
 			e.iter(check.bind(_, writeTo, isAffected));
 		}
