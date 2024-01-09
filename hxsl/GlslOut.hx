@@ -75,9 +75,7 @@ class GlslOut {
 		set(ComputeVar_LocalInvocation, "ivec3(gl_LocalInvocationID)");
 		set(ComputeVar_GlobalInvocation, "ivec3(gl_GlobalInvocationID)");
 		set(ComputeVar_LocalInvocationIndex, "int(gl_LocalInvocationIndex)");
-		set(ComputeVar_NumWorkGroups, "ivec3(gl_NumWorkGroups)");
 		set(ComputeVar_WorkGroup, "ivec3(gl_WorkGroup)");
-		set(ComputeVar_WorkGroupSize, "ivec3(gl_WorkGroupSize)");
 
 		for( g in gl )
 			KWDS.set(g, true);
@@ -770,6 +768,10 @@ class GlslOut {
 		case TGlobal(g): m.set(g,true);
 		case TCall({ e : TGlobal(SetLayout) }, [{ e : TConst(CInt(x)) }, { e : TConst(CInt(y)) }, { e : TConst(CInt(z)) }]):
 			computeLayout = [x,y,z];
+		case TCall({ e : TGlobal(SetLayout) }, [{ e : TConst(CInt(x)) }, { e : TConst(CInt(y)) }]):
+			computeLayout = [x,y,1];
+		case TCall({ e : TGlobal(SetLayout) }, [{ e : TConst(CInt(x)) }]):
+			computeLayout = [x,1,1];
 		default: hxsl.Tools.iter(e,collectGlobals.bind(m));
 		}
 	}

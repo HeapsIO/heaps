@@ -298,10 +298,10 @@ enum TGlobal {
 	ImageStore;
 	ComputeVar_GlobalInvocation;
 	ComputeVar_LocalInvocation;
-	ComputeVar_NumWorkGroups;
 	ComputeVar_WorkGroup;
-	ComputeVar_WorkGroupSize;
 	ComputeVar_LocalInvocationIndex;
+	//ComputeVar_NumWorkGroups - no DirectX support
+	//ComputeVar_WorkGroupSize - no DirectX support
 }
 
 enum Component {

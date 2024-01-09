@@ -179,7 +179,11 @@ class Checker {
 			case IntBitsToFloat, UintBitsToFloat:
 				[for( i => t in genType ) { args : [ { name: "x", type: genIType[i] } ], ret: t }];
 			case SetLayout:
-				[{ args : [{ name : "x", type : TInt },{ name : "y", type : TInt },{ name : "z", type : TInt }], ret : TVoid }];
+				[
+					{ args : [{ name : "x", type : TInt },{ name : "y", type : TInt },{ name : "z", type : TInt }], ret : TVoid },
+					{ args : [{ name : "x", type : TInt },{ name : "y", type : TInt }], ret : TVoid },
+					{ args : [{ name : "x", type : TInt }], ret : TVoid }
+				];
 			case ImageStore:
 				[];
 			case VertexID, InstanceID, FragCoord, FrontFacing:
@@ -195,7 +199,7 @@ class Checker {
 					gvars.set(vname, vl);
 				}
 				var vt = switch( g ) {
-				case ComputeVar_GlobalInvocation, ComputeVar_LocalInvocation, ComputeVar_NumWorkGroups, ComputeVar_WorkGroup, ComputeVar_WorkGroupSize:
+				case ComputeVar_GlobalInvocation, ComputeVar_LocalInvocation, ComputeVar_WorkGroup:
 					ivec3;
 				case ComputeVar_LocalInvocationIndex:
 					TInt;
