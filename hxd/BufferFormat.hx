@@ -109,12 +109,30 @@ abstract BufferMapping(Int) {
 class BufferFormat {
 
 	static var _UID = 0;
+	static var COMPRESSED_CONFIG(get,null) : BufferFormat;
+	static function get_COMPRESSED_CONFIG() {
+		if( COMPRESSED_CONFIG == null ) {
+			COMPRESSED_CONFIG = make([
+				// First is first to be compressed
+				{ name : "data", 		type : DVec4, precision : F16 },
+				{ name : "color", 		type : DVec4, precision : F16 },
+				{ name : "position", 	type : DVec2, precision : F16 },
+				{ name : "normal", 		type : DVec3, precision : S8 },
+				{ name : "uv", 			type : DVec2, precision : F16 },
+				{ name : "position", 	type : DVec3, precision : F16 }
+			]);
+			COMPRESSED_CONFIG.compressed = COMPRESSED_CONFIG;
+		}
+
+		return COMPRESSED_CONFIG;
+	}
 	public var uid(default,null) : Int;
 	public var stride(default,null) : Int;
 	public var strideBytes(default,null) : Int;
 	public var hasLowPrecision(default,null) : Bool;
 	var inputs : Array<BufferInput>;
 	var mappings : Array<Array<BufferMapping>>;
+	var compressed : BufferFormat;
 
 	function new( inputs : Array<BufferInput> ) {
 		uid = _UID++;
@@ -138,6 +156,84 @@ class BufferFormat {
 				return i;
 		return null;
 	}
+
+	public function getCompressed() : BufferFormat {
+		if ( compressed != null )
+			return compressed;
+
+		var compressedInputs = new Array<BufferInput>();
+		var lookupIndices = new Array<{ compressedIndex : Int, index : Int}>();
+
+		compressedInputs.resize(inputs.length);
+		lookupIndices.resize(inputs.length);
+
+		// Find all compressed version of the inputs and compute the minimum strideBytes
+		var minStrideBytes = 0;
+		for ( index => input in inputs ) {
+			var found : Bool = false;
+			for ( compressedIndex => compressedInput in COMPRESSED_CONFIG.inputs) {
+				if ( input.type == compressedInput.type && ( Reflect.compare( input.name, compressedInput.name ) == 0 ) ) {
+					minStrideBytes += compressedInput.getBytesSize();
+					if( minStrideBytes & 3 != 0 )
+						minStrideBytes += 4 - (minStrideBytes & 3);
+					compressedInputs[index] = { name : compressedInput.name, type : compressedInput.type, precision : compressedInput.precision };
+					lookupIndices[index] = { compressedIndex : compressedIndex, index : index };
+					found = true;
+					break;
+				}
+			}
+			if ( !found ) {
+				minStrideBytes += input.getBytesSize();
+				if( minStrideBytes & 3 != 0 )
+					minStrideBytes += 4 - (minStrideBytes & 3);
+				compressedInputs[index] =  { name : input.name, type : input.type, precision : input.precision };
+				lookupIndices[index] = { compressedIndex : -1, index : index };
+			}
+		}
+
+		var maxStrideBytes = minStrideBytes;
+		if( maxStrideBytes & 7 != 0 )
+			maxStrideBytes += 8 - (maxStrideBytes & 7);
+
+		// Do we have unused memory ?
+		if ( maxStrideBytes != minStrideBytes ) {
+			// Try to reduce compression to fill the unused memory
+			// Reduce compression for lowest priority first
+			lookupIndices.sort( ( o1, o2 ) -> o2.compressedIndex - o1.compressedIndex );
+			for ( indices in lookupIndices) {
+				var currentInput = compressedInputs[indices.index];
+
+				var inputStrideBytes = currentInput.getBytesSize();
+				if( inputStrideBytes & 3 != 0 )
+					inputStrideBytes += 4 - (inputStrideBytes & 3);
+				var strideBytesMinusInput = minStrideBytes - inputStrideBytes;
+
+				var previousCurrentStrideBytes = minStrideBytes, currentStrideBytes = minStrideBytes;
+				while ( currentStrideBytes < maxStrideBytes && currentInput.precision.toInt() > 0) {
+					previousCurrentStrideBytes = currentStrideBytes;
+					@:privateAccess currentInput.precision = Precision.fromInt(currentInput.precision.toInt() - 1);
+					currentStrideBytes = strideBytesMinusInput + currentInput.getBytesSize();
+					if( currentStrideBytes & 3 != 0 )
+						currentStrideBytes += 4 - (currentStrideBytes & 3);
+				}
+
+				if (currentStrideBytes > maxStrideBytes) {
+					@:privateAccess currentInput.precision = Precision.fromInt(currentInput.precision.toInt() + 1);
+					currentStrideBytes = previousCurrentStrideBytes;
+				}
+				compressedInputs[indices.index] = currentInput;
+
+				minStrideBytes = currentStrideBytes;
+				if (minStrideBytes == maxStrideBytes)
+					break;
+			}
+		}
+
+		compressed = make(compressedInputs);
+		compressed.compressed = compressed;
+		return compressed;
+	}
+
 
 	public function calculateInputOffset( name : String ) {
 		var offset = 0;
