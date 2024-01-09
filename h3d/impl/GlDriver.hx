@@ -344,17 +344,22 @@ class GlDriver extends Driver {
 				name = switch( tt ) {
 				case TSampler(dim,arr):
 					mode = switch( [dim, arr] ) {
-					case [T1D, false]: GL.TEXTURE_1D;
 					case [T2D, false]: GL.TEXTURE_2D;
 					case [T3D, false]: GL.TEXTURE_3D;
 					case [TCube, false]: GL.TEXTURE_CUBE_MAP;
-					case [T1D, true]: GL.TEXTURE_1D_ARRAY;
 					case [T2D, true]: GL.TEXTURE_2D_ARRAY;
+					#if hl
+					case [T1D, false]: GL.TEXTURE_1D;
+					case [T1D, true]: GL.TEXTURE_1D_ARRAY;
 					case [TCube, true]: GL.TEXTURE_CUBE_MAP_ARRAY;
+					#end
 					default: throw "Texture not supported "+tt;
 					}
 					"Textures" + (dim == T2D ? "" : dim.getName().substr(1))+(arr ? "Array" : "");
 				case TRWTexture(dim, arr, chans):
+					#if js
+					throw "Texture not supported "+tt;
+					#else
 					mode = switch( [dim, arr] ) {
 					case [T1D, false]: GL.IMAGE_1D;
 					case [T2D, false]: GL.IMAGE_2D;
@@ -366,6 +371,7 @@ class GlDriver extends Driver {
 					default: throw "Texture not supported "+tt;
 					};
 					"TexturesRW" + (dim == T2D ? "" : dim.getName().substr(1))+chans+(arr ? "Array" : "");
+					#end
 				default: throw "Unsupported texture type "+tt;
 				}
 				index = 0;
@@ -627,6 +633,7 @@ class GlDriver extends Driver {
 
 				if( pt.u == null ) continue;
 
+				#if !js
 				switch( pt.t ) {
 				case TRWTexture(dim,arr,chans):
 					var tdim : hxsl.Ast.TexDimension = t.flags.has(Cube) ? TCube : T2D;
@@ -655,6 +662,7 @@ class GlDriver extends Driver {
 					continue;
 				default:
 				}
+				#end
 
 				var idx = s.kind == Fragment ? curShader.vertex.textures.length + i : i;
 				if( boundTextures[idx] != t.t ) {
@@ -962,7 +970,7 @@ class GlDriver extends Driver {
 	function getBindType( t : h3d.mat.Texture ) {
 		var isArray = t.flags.has(IsArray);
 		if( t.flags.has(Cube) )
-			return isArray ? GL.TEXTURE_CUBE_MAP_ARRAY : GL.TEXTURE_CUBE_MAP;
+			return #if hl isArray ? GL.TEXTURE_CUBE_MAP_ARRAY : #end GL.TEXTURE_CUBE_MAP;
 		return isArray ? GL.TEXTURE_2D_ARRAY : GL.TEXTURE_2D;
 	}
 

@@ -97,8 +97,8 @@ class ShaderRegisters {
 	public var textures : Int;
 	public var samplers : Int;
 	public var texturesCount : Int;
-	public var textures2DCount : Int;
 	public var bufferTypes : Array<hxsl.Ast.BufferKind>;
+	public var texturesTypes : Array<hxsl.Ast.Type>;
 	public function new() {
 	}
 }
@@ -1048,11 +1048,14 @@ class DX12Driver extends h3d.impl.Driver {
 			if( sh.texturesCount > 0 ) {
 				regs.texturesCount = sh.texturesCount;
 				regs.textures = paramsCount;
+				regs.texturesTypes = [];
 
 				var p = sh.textures;
 				while( p != null ) {
 					switch( p.type ) {
-					case TArray( TSampler2D , SConst(n) ): regs.textures2DCount = n;
+					case TArray( t = TSampler(_) | TRWTexture(_) , SConst(n) ):
+						for( i in 0...n )
+							regs.texturesTypes.push(t);
 					default:
 					}
 					p = p.next;
@@ -1597,13 +1600,16 @@ class DX12Driver extends h3d.impl.Driver {
 				var sampler = frame.samplerViews.alloc(regs.texturesCount);
 				for( i in 0...regs.texturesCount ) {
 					var t = buf.tex[i];
-
+					var pt = regs.texturesTypes[i];
 					if( t == null || t.isDisposed() ) {
-						if( i < regs.textures2DCount ) {
+						switch( pt ) {
+						case TSampler(TCube, false):
+							t = h3d.mat.Texture.defaultCubeTexture();
+						case TSampler(_, false):
 							var color = h3d.mat.Defaults.loadingTextureColor;
 							t = h3d.mat.Texture.fromColor(color, (color >>> 24) / 255);
-						} else {
-							t = h3d.mat.Texture.defaultCubeTexture();
+						default:
+							throw "Missing texture";
 						}
 					}
 					if( t != null && t.t == null && t.realloc != null ) {
