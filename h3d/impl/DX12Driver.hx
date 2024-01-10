@@ -99,6 +99,11 @@ class ShaderRegisters {
 	public var texturesCount : Int;
 	public var textures2DCount : Int;
 	public var bufferTypes : Array<hxsl.Ast.BufferKind>;
+	public var srv : Address;
+	public var samplersView : Address;
+	public var lastHeapCount : Int;
+	public var lastTextures : Array<h3d.mat.Texture> = [];
+	public var lastTexturesBits : Array<Int>= [];
 	public function new() {
 	}
 }
@@ -338,6 +343,7 @@ class DX12Driver extends h3d.impl.Driver {
 	var rtHeight : Int;
 	var frameCount : Int;
 	var tsFreq : haxe.Int64;
+	var heapCount : Int;
 
 	public static var INITIAL_RT_COUNT = 1024;
 	public static var BUFFER_COUNT = 2;
@@ -406,6 +412,7 @@ class DX12Driver extends h3d.impl.Driver {
 
 	function beginFrame() {
 		frameCount = hxd.Timer.frameCount;
+		heapCount++;
 		currentFrame = Driver.getCurrentBackBufferIndex();
 		var prevFrame = frame;
 		frame = frames[currentFrame];
@@ -1526,7 +1533,7 @@ class DX12Driver extends h3d.impl.Driver {
 		return sz;
  	}
 
-	function allocDynamicBuffer( data : hl.Bytes, dataSize : Int ) {
+	function allocDynamicBuffer( data : hl.Bytes, dataSize : Int ) : GpuResource {
 		var b = frame.availableBuffers, prev = null;
 		var tmpBuf = null;
 		var size = calcCBVSize(dataSize);
@@ -1561,6 +1568,18 @@ class DX12Driver extends h3d.impl.Driver {
 		return tmpBuf;
 	}
 
+	function hasBuffersTexturesChanged ( buf : h3d.shader.Buffers.ShaderBuffers, regs : ShaderRegisters ) : Bool {
+		var changed = regs.lastHeapCount != heapCount;
+		if( !changed ) {
+			for( i in 0...regs.texturesCount )
+				if( regs.lastTextures[i] != buf.tex[i] || regs.lastTexturesBits[i] != (buf.tex[i] != null ? buf.tex[i].bits : -1 ) ) {
+					changed = true;
+					break;
+				}
+		}
+		return changed;
+	}
+	
 	function uploadBuffers( buffers : h3d.shader.Buffers, buf : h3d.shader.Buffers.ShaderBuffers, which:h3d.shader.Buffers.BufferKind, shader : hxsl.RuntimeShader.RuntimeShaderData, regs : ShaderRegisters ) {
 		switch( which ) {
 		case Params:
@@ -1593,90 +1612,101 @@ class DX12Driver extends h3d.impl.Driver {
 			}
 		case Textures:
 			if( regs.texturesCount > 0 ) {
-				var srv = frame.shaderResourceViews.alloc(regs.texturesCount);
-				var sampler = frame.samplerViews.alloc(regs.texturesCount);
-				for( i in 0...regs.texturesCount ) {
-					var t = buf.tex[i];
+				if ( hasBuffersTexturesChanged(buf, regs) ) {
+					regs.lastHeapCount = heapCount;
+					regs.srv = frame.shaderResourceViews.alloc(regs.texturesCount);
+					regs.samplersView = frame.samplerViews.alloc(regs.texturesCount);
+					if ( regs.lastTextures.length < regs.texturesCount ) {
+						regs.lastTextures.resize(regs.texturesCount);
+						regs.lastTexturesBits.resize(regs.texturesCount);
+					}
+					
+					for( i in 0...regs.texturesCount ) {
+						var t = buf.tex[i];
+	
+						if( t == null || t.isDisposed() ) {
+							if( i < regs.textures2DCount ) {
+								var color = h3d.mat.Defaults.loadingTextureColor;
+								t = h3d.mat.Texture.fromColor(color, (color >>> 24) / 255);
+							} else {
+								t = h3d.mat.Texture.defaultCubeTexture();
+							}
+						}
+						if( t != null && t.t == null && t.realloc != null ) {
+							var s = currentShader;
+							t.alloc();
+							t.realloc();
+							if( hasDeviceError ) return;
+							if( s != currentShader ) {
+								// realloc triggered a shader change !
+								// we need to reset the original shader and reupload everything
+								currentShader = null;
+								selectShader(s.shader);
+								uploadShaderBuffers(buffers,Globals);
+								uploadShaderBuffers(buffers,Params);
+								uploadShaderBuffers(buffers,Textures);
+								return;
+							}
+						}
 
-					if( t == null || t.isDisposed() ) {
-						if( i < regs.textures2DCount ) {
-							var color = h3d.mat.Defaults.loadingTextureColor;
-							t = h3d.mat.Texture.fromColor(color, (color >>> 24) / 255);
+						regs.lastTextures[i] = buf.tex[i];
+						regs.lastTexturesBits[i] = buf.tex[i] != null ? buf.tex[i].bits : -1;
+
+						var tdesc : ShaderResourceViewDesc;
+						if( t.flags.has(Cube) ) {
+							var desc = tmp.texCubeSRV;
+							desc.format = t.t.format;
+							desc.mostDetailedMip = t.startingMip;
+							tdesc = desc;
+						} else if( t.flags.has(IsArray) ) {
+							var desc = tmp.tex2DArraySRV;
+							desc.format = t.t.format;
+							desc.arraySize = t.layerCount;
+							desc.mostDetailedMip = t.startingMip;
+							tdesc = desc;
+						} else if ( t.isDepth() ) {
+							var desc = tmp.tex2DSRV;
+							desc.format = R24_UNORM_X8_TYPELESS;
+							desc.mostDetailedMip = t.startingMip;
+							tdesc = desc;
 						} else {
-							t = h3d.mat.Texture.defaultCubeTexture();
+							var desc = tmp.tex2DSRV;
+							desc.format = t.t.format;
+							desc.mostDetailedMip = t.startingMip;
+							tdesc = desc;
 						}
-					}
-					if( t != null && t.t == null && t.realloc != null ) {
-						var s = currentShader;
-						t.alloc();
-						t.realloc();
-						if( hasDeviceError ) return;
-						if( s != currentShader ) {
-							// realloc triggered a shader change !
-							// we need to reset the original shader and reupload everything
-							currentShader = null;
-							selectShader(s.shader);
-							uploadShaderBuffers(buffers,Globals);
-							uploadShaderBuffers(buffers,Params);
-							uploadShaderBuffers(buffers,Textures);
-							return;
+						t.lastFrame = frameCount;
+						var state = if ( t.isDepth() )
+							DEPTH_READ;
+						else if ( shader.kind == Fragment )
+							PIXEL_SHADER_RESOURCE;
+						else
+							NON_PIXEL_SHADER_RESOURCE;
+						transition(t.t, state);
+						Driver.createShaderResourceView(t.t.res, tdesc, regs.srv.offset(i * frame.shaderResourceViews.stride));
+
+						var desc = tmp.samplerDesc;
+						desc.filter = switch( [t.filter, t.mipMap] ) {
+							case [Nearest, None|Nearest]: MIN_MAG_MIP_POINT;
+							case [Nearest, Linear]: MIN_MAG_POINT_MIP_LINEAR;
+							case [Linear, None|Nearest]: MIN_MAG_LINEAR_MIP_POINT;
+							case [Linear, Linear]: MIN_MAG_MIP_LINEAR;
 						}
+						desc.addressU = desc.addressV = desc.addressW = switch( t.wrap ) {
+							case Clamp: CLAMP;
+							case Repeat: WRAP;
+						}
+						desc.mipLODBias = t.lodBias;
+						Driver.createSampler(desc, regs.samplersView.offset(i * frame.samplerViews.stride));
 					}
-
-					var tdesc : ShaderResourceViewDesc;
-					if( t.flags.has(Cube) ) {
-						var desc = tmp.texCubeSRV;
-						desc.format = t.t.format;
-						desc.mostDetailedMip = t.startingMip;
-						tdesc = desc;
-					} else if( t.flags.has(IsArray) ) {
-						var desc = tmp.tex2DArraySRV;
-						desc.format = t.t.format;
-						desc.arraySize = t.layerCount;
-						desc.mostDetailedMip = t.startingMip;
-						tdesc = desc;
-					} else if ( t.isDepth() ) {
-						var desc = tmp.tex2DSRV;
-						desc.format = R24_UNORM_X8_TYPELESS;
-						desc.mostDetailedMip = t.startingMip;
-						tdesc = desc;
-					} else {
-						var desc = tmp.tex2DSRV;
-						desc.format = t.t.format;
-						desc.mostDetailedMip = t.startingMip;
-						tdesc = desc;
-					}
-					t.lastFrame = frameCount;
-					var state = if ( t.isDepth() )
-						DEPTH_READ;
-					else if ( shader.kind == Fragment )
-						PIXEL_SHADER_RESOURCE;
-					else
-						NON_PIXEL_SHADER_RESOURCE;
-					transition(t.t, state);
-					Driver.createShaderResourceView(t.t.res, tdesc, srv.offset(i * frame.shaderResourceViews.stride));
-
-					var desc = tmp.samplerDesc;
-					desc.filter = switch( [t.filter, t.mipMap] ) {
-					case [Nearest, None|Nearest]: MIN_MAG_MIP_POINT;
-					case [Nearest, Linear]: MIN_MAG_POINT_MIP_LINEAR;
-					case [Linear, None|Nearest]: MIN_MAG_LINEAR_MIP_POINT;
-					case [Linear, Linear]: MIN_MAG_MIP_LINEAR;
-					}
-					desc.addressU = desc.addressV = desc.addressW = switch( t.wrap ) {
-					case Clamp: CLAMP;
-					case Repeat: WRAP;
-					}
-					desc.mipLODBias = t.lodBias;
-					Driver.createSampler(desc, sampler.offset(i * frame.samplerViews.stride));
 				}
 
 				if( currentShader.isCompute ) {
-					frame.commandList.setComputeRootDescriptorTable(regs.textures, frame.shaderResourceViews.toGPU(srv));
-					frame.commandList.setComputeRootDescriptorTable(regs.samplers, frame.samplerViews.toGPU(sampler));
+					frame.commandList.setComputeRootDescriptorTable(regs.textures, frame.shaderResourceViews.toGPU(regs.srv));
+					frame.commandList.setComputeRootDescriptorTable(regs.samplers, frame.samplerViews.toGPU(regs.samplersView));
 				} else {
-					frame.commandList.setGraphicsRootDescriptorTable(regs.textures, frame.shaderResourceViews.toGPU(srv));
-					frame.commandList.setGraphicsRootDescriptorTable(regs.samplers, frame.samplerViews.toGPU(sampler));
+					frame.commandList.setGraphicsRootDescriptorTable(regs.textures, frame.shaderResourceViews.toGPU(regs.srv));
+					frame.commandList.setGraphicsRootDescriptorTable(regs.samplers, frame.samplerViews.toGPU(regs.samplersView));
 				}
 			}
 		case Buffers:
@@ -1707,7 +1737,7 @@ class DX12Driver extends h3d.impl.Driver {
 						frame.commandList.setComputeRootDescriptorTable(regs.buffers + i, frame.shaderResourceViews.toGPU(srv));
 					else
 						frame.commandList.setGraphicsRootDescriptorTable(regs.buffers + i, frame.shaderResourceViews.toGPU(srv));
-			}
+				}
 			}
 		}
 	}
@@ -2044,6 +2074,7 @@ class DX12Driver extends h3d.impl.Driver {
 		if( frame.shaderResourceViews.available < 128 || frame.samplerViews.available < 64 ) {
 			frame.shaderResourceViews = frame.shaderResourceCache.next();
 			frame.samplerViews = frame.samplerCache.next();
+			heapCount++;
 			var arr = tmp.descriptors2;
 			arr[0] = @:privateAccess frame.shaderResourceViews.heap;
 			arr[1] = @:privateAccess frame.samplerViews.heap;
