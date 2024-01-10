@@ -547,87 +547,146 @@ class Writer {
 			o.follow = obj.follow;
 			o.followPositionOnly = obj.followPositionOnly;
 			o.visible = obj.visible;
-			if( obj.defaultTransform != null )
-				o.defaultTransform = obj.defaultTransform.clone();
+			if( obj.defaultTransform != null ) {
+				if (o.defaultTransform != null)
+					o.defaultTransform = o.defaultTransform.multiplied(obj.defaultTransform.clone());
+				else
+					o.defaultTransform = obj.defaultTransform.clone();
+			}
 			return o;
+		}
+
+		function deepClone(m : h3d.scene.Mesh, ?parent : h3d.scene.Mesh) {
+			var copy = clone(m);
+
+			if (parent != null)
+				parent.addChild(copy);
+
+			for (child in @:privateAccess m.children) {
+				var childMesh = Std.downcast(child, h3d.scene.Mesh);
+
+				if (childMesh != null)
+					deepClone(childMesh, copy);
+			}
+
+			return copy;
+		}
+
+		function applyInverseDefaultTransform(obj : h3d.scene.Object, defaultTransform : h3d.Matrix) {
+			if (defaultTransform != null) {
+				var t = obj.getTransform().multiplied(defaultTransform.getInverse());
+				obj.x = t.getPosition().x;
+				obj.y = t.getPosition().y;
+				obj.z = t.getPosition().z;
+
+				var q : h3d.Quat = new h3d.Quat();
+				q.initRotation(t.getEulerAngles().x, t.getEulerAngles().y, t.getEulerAngles().z);
+				@:privateAccess obj.qRot.w = q.w;
+				@:privateAccess obj.qRot.x = q.x;
+				@:privateAccess obj.qRot.y = q.y;
+				@:privateAccess obj.qRot.z = q.z;
+
+				obj.scaleX = t.getScale().x;
+				obj.scaleY = t.getScale().y;
+				obj.scaleZ = t.getScale().z;
+			}
 		}
 
 		var roots : Array<h3d.scene.Mesh> = [];
 		function extractMeshes( o : h3d.scene.Object, ?parent : h3d.scene.Mesh) {
 			var m = Std.downcast(o, h3d.scene.Mesh);
 
+			// If this object isn't a mesh, we have to find into his children which mesh(s)
+			// is/are associated to it
 			if (m == null) {
-				for( c in @:privateAccess o.children ) {
-					var m2 = Std.downcast(c, h3d.scene.Mesh);
-					if (c.name == "root") {
-						if( m2 != null) {
-							var mesh = clone(m2);
+				var associatedMesh : h3d.scene.Object = null;
 
-							// Since it's the parent object that is holding informations
-							// apply it on mesh object
-							clone(o, mesh);
+				for (c in @:privateAccess o.children)
+					if (c.name == "root") // Associated mesh is named root (see makeInstance() of Model)
+						associatedMesh = c;
+
+				if (associatedMesh != null) {
+					var m2 = Std.downcast(associatedMesh, h3d.scene.Mesh);
+					var alreadyExtracted = new Array<h3d.scene.Object>();
+
+					if (m2 != null) {
+						// Single mesh object
+						var mesh = clone(m2);
+
+						// Since it's the parent object that is holding informations
+						// apply it on mesh object
+						clone(o, mesh);
+
+						if (parent == null)
+							roots.push(mesh);
+						else {
+							parent.addChild(mesh);
+							applyInverseDefaultTransform(mesh, parent.defaultTransform);
+						}
+
+						parent = cast mesh;
+						alreadyExtracted.push(m2);
+					}
+					else {
+						// Multiple mesh object
+						var randomRootMesh : h3d.scene.Mesh = null;
+						for (c in @:privateAccess associatedMesh.children) {
+							var mesh = Std.downcast(c, h3d.scene.Mesh);
+
+							if (mesh != null) {
+								var copy = deepClone(mesh);
+								clone(o, copy);
+
+								if (parent == null)
+									roots.push(copy);
+								else {
+									parent.addChild(copy);
+									applyInverseDefaultTransform(copy, parent.defaultTransform);
+								}
+								randomRootMesh = copy;
+							}
+						}
+
+						parent = randomRootMesh;
+						alreadyExtracted.push(associatedMesh);
+					}
+
+					// Continue to extract meshes on other objects
+					for (c in @:privateAccess o.children) {
+						if (alreadyExtracted.contains(c))
+							continue;
+
+						extractMeshes(c, parent);
+					}
+				}
+				else {
+					// We're in the case where there is multiple meshes
+					// and no children
+					for (c in @:privateAccess o.children) {
+						var mesh = Std.downcast(c, h3d.scene.Mesh);
+
+						if (mesh != null) {
+							var copy = deepClone(mesh);
+							clone(o, copy);
 
 							if (parent == null)
-								roots.push(mesh);
-
-							if (parent != null) {
-								parent.addChild(mesh);
-
-								if (parent.defaultTransform != null) {
-									var t = mesh.getTransform().multiplied(parent.defaultTransform.getInverse());
-									mesh.x = t.getPosition().x;
-									mesh.y = t.getPosition().y;
-									mesh.z = t.getPosition().z;
-
-									var q : h3d.Quat = new h3d.Quat();
-									q.initRotation(t.getEulerAngles().x, t.getEulerAngles().y, t.getEulerAngles().z);
-									@:privateAccess mesh.qRot.w = q.w;
-									@:privateAccess mesh.qRot.x = q.x;
-									@:privateAccess mesh.qRot.y = q.y;
-									@:privateAccess mesh.qRot.z = q.z;
-
-									mesh.scaleX = t.getScale().x;
-									mesh.scaleY = t.getScale().y;
-									mesh.scaleZ = t.getScale().z;
-								}
+								roots.push(copy);
+							else {
+								parent.addChild(copy);
+								applyInverseDefaultTransform(copy, parent.defaultTransform);
 							}
-
-							parent = cast mesh;
 						}
 					}
 				}
 			}
-			else if (m.name != "root") {
-				var mesh = clone(m);
-				if (parent == null) {
-					roots.push(mesh);
-					parent = cast mesh;
-				}
+			else {
+				var copy = clone(m);
+				if (parent == null)
+					roots.push(copy);
 				else {
-					parent.addChild(mesh);
-
-					if (parent.defaultTransform != null) {
-						var t = mesh.getTransform().multiplied(parent.defaultTransform.getInverse());
-						mesh.x = t.getPosition().x;
-						mesh.y = t.getPosition().y;
-						mesh.z = t.getPosition().z;
-
-						var q : h3d.Quat = new h3d.Quat();
-						q.initRotation(t.getEulerAngles().x, t.getEulerAngles().y, t.getEulerAngles().z);
-						@:privateAccess mesh.qRot.w = q.w;
-						@:privateAccess mesh.qRot.x = q.x;
-						@:privateAccess mesh.qRot.y = q.y;
-						@:privateAccess mesh.qRot.z = q.z;
-
-						mesh.scaleX = t.getScale().x;
-						mesh.scaleY = t.getScale().y;
-						mesh.scaleZ = t.getScale().z;
-					}
+					parent.addChild(copy);
+					applyInverseDefaultTransform(copy, parent.defaultTransform);
 				}
-			}
-
-			for( c in @:privateAccess o.children ) {
-				extractMeshes(c, parent);
 			}
 		}
 
