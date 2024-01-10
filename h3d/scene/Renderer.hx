@@ -192,4 +192,8 @@ class Renderer extends hxd.impl.AnyProps {
 			passObjects.set(p.name, null);
 	}
 
+	public function computeDispatch( shader, x = 1, y = 1, z = 1 ) {
+		ctx.computeDispatch(shader, x, y, z);
+	}
+
 }

@@ -46,6 +46,7 @@ private class CompiledShader {
 	public var params : Uniform;
 	public var textures : Array<{ u : Uniform, t : hxsl.Ast.Type, mode : Int }>;
 	public var buffers : Array<Int>;
+	public var bufferTypes : Array<hxsl.Ast.BufferKind>;
 	public var shader : hxsl.RuntimeShader.RuntimeShaderData;
 	public function new(s,kind,shader) {
 		this.s = s;
@@ -217,6 +218,12 @@ class GlDriver extends Driver {
 		gl.pixelStorei(GL.UNPACK_ALIGNMENT, 1);
 	}
 
+	#if hlsdl
+	public static function enableComputeShaders() {
+		sdl.Sdl.setGLVersion(4, 3);
+	}
+	#end
+
 	override function setRenderFlag( r : RenderFlag, value : Int ) {
 		switch( r ) {
 		case CameraHandness:
@@ -259,6 +266,8 @@ class GlDriver extends Driver {
 		inline function compile(sh) {
 			return makeCompiler().run(sh);
 		}
+		if( shader.mode == Compute )
+			return "// compute:\n" + compile(shader.compute.data);
 		return "// vertex:\n" + compile(shader.vertex.data) + "// fragment:\n" + compile(shader.fragment.data);
 	}
 
@@ -275,7 +284,16 @@ class GlDriver extends Driver {
 	}
 
 	function compileShader( glout : ShaderCompiler, shader : hxsl.RuntimeShader.RuntimeShaderData ) {
-		var type = shader.kind == Vertex ? GL.VERTEX_SHADER : GL.FRAGMENT_SHADER;
+		var type = switch( shader.kind ) {
+		case Vertex: GL.VERTEX_SHADER;
+		case Fragment: GL.FRAGMENT_SHADER;
+		#if js
+		case Main: throw "Compute shader is not supported";
+		#else
+		case Main: GL.COMPUTE_SHADER;
+		#end
+		default: throw "assert";
+		};
 		var s = gl.createShader(type);
 		if( shader.code == null ){
 			shader.code = glout.run(shader.data);
@@ -300,7 +318,11 @@ class GlDriver extends Driver {
 	}
 
 	function initShader( p : CompiledProgram, s : CompiledShader, shader : hxsl.RuntimeShader.RuntimeShaderData, rt : hxsl.RuntimeShader ) {
-		var prefix = s.kind == Vertex ? "vertex" : "fragment";
+		var prefix = switch( s.kind ) {
+		case Vertex: "vertex";
+		case Fragment: "fragment";
+		default: "compute";
+		}
 		s.globals = gl.getUniformLocation(p.p, prefix + "Globals");
 		s.params = gl.getUniformLocation(p.p, prefix + "Params");
 		s.textures = [];
@@ -346,11 +368,41 @@ class GlDriver extends Driver {
 			t = t.next;
 		}
 		if( shader.bufferCount > 0 ) {
-			s.buffers = [for( i in 0...shader.bufferCount ) gl.getUniformBlockIndex(p.p,(shader.kind==Vertex?"vertex_":"")+"uniform_buffer"+i)];
+			s.bufferTypes = [];
+			var bp = s.shader.buffers;
+			while( bp != null ) {
+				var kind = switch( bp.type ) {
+				case TBuffer(_,_,kind): kind;
+				default: throw "assert";
+				}
+				s.bufferTypes.push(kind);
+				bp = bp.next;
+			}
+			s.buffers = [for( i in 0...shader.bufferCount ) {
+				switch( s.bufferTypes[i] ) {
+				case RW:
+					#if js
+					throw "RW buffer not supported in WebGL";
+					#elseif (hl_ver < version("1.15.0"))
+					throw "RW buffer support requires -D hl-ver=1.15.0";
+					#else
+					gl.getProgramResourceIndex(p.p,GL.SHADER_STORAGE_BLOCK, "rw_uniform_buffer"+i);
+					#end
+				case Uniform:
+					gl.getUniformBlockIndex(p.p,(shader.kind==Vertex?"vertex_":"")+"uniform_buffer"+i);
+				}
+			}];
 			var start = 0;
 			if( s.kind == Fragment ) start = rt.vertex.bufferCount;
 			for( i in 0...shader.bufferCount )
-				gl.uniformBlockBinding(p.p,s.buffers[i],i + start);
+				switch( s.bufferTypes[i] ) {
+				case Uniform:
+					gl.uniformBlockBinding(p.p,s.buffers[i],i + start);
+				case RW:
+					#if (hl_ver >= version("1.15.0"))
+					gl.shaderStorageBlockBinding(p.p,s.buffers[i], i + start);
+					#end
+				}
 		}
 	}
 
@@ -360,11 +412,12 @@ class GlDriver extends Driver {
 			p = new CompiledProgram();
 			var glout = makeCompiler();
 			p.vertex = compileShader(glout,shader.vertex);
-			p.fragment = compileShader(glout,shader.fragment);
+			if( shader.fragment != null )
+				p.fragment = compileShader(glout,shader.fragment);
 
 			p.p = gl.createProgram();
 			#if ((hlsdl || usegl) && !hlmesa)
-			if( glES == null ) {
+			if( glES == null && shader.fragment != null ) {
 				var outCount = 0;
 				for( v in shader.fragment.data.vars )
 					switch( v.kind ) {
@@ -375,7 +428,8 @@ class GlDriver extends Driver {
 			}
 			#end
 			gl.attachShader(p.p, p.vertex.s);
-			gl.attachShader(p.p, p.fragment.s);
+			if( p.fragment != null )
+				gl.attachShader(p.p, p.fragment.s);
 			var log = null;
 			try {
 				gl.linkProgram(p.p);
@@ -385,7 +439,8 @@ class GlDriver extends Driver {
 				throw "Shader linkage error: "+Std.string(e)+" ("+getDriverName(false)+")";
 			}
 			gl.deleteShader(p.vertex.s);
-			gl.deleteShader(p.fragment.s);
+			if( p.fragment != null )
+				gl.deleteShader(p.fragment.s);
 			if( log != null ) {
 				#if js
 				gl.deleteProgram(p.p);
@@ -399,11 +454,12 @@ class GlDriver extends Driver {
 					return selectShader(shader);
 				}
 				#end
-				throw "Program linkage failure: "+log+"\nVertex=\n"+shader.vertex.code+"\n\nFragment=\n"+shader.fragment.code;
+				throw "Program linkage failure: "+log+"\nVertex=\n"+shader.vertex.code+(shader.fragment == null ? "" : "\n\nFragment=\n"+shader.fragment.code);
 			}
 			firstShader = false;
 			initShader(p, p.vertex, shader.vertex, shader);
-			initShader(p, p.fragment, shader.fragment, shader);
+			if( p.fragment != null )
+				initShader(p, p.fragment, shader.fragment, shader);
 			p.attribs = [];
 			p.hasAttribIndex = 0;
 			var format : Array<hxd.BufferFormat.BufferInput> = [];
@@ -479,7 +535,8 @@ class GlDriver extends Driver {
 
 	override function uploadShaderBuffers( buf : h3d.shader.Buffers, which : h3d.shader.Buffers.BufferKind ) {
 		uploadBuffer(buf, curShader.vertex, buf.vertex, which);
-		uploadBuffer(buf, curShader.fragment, buf.fragment, which);
+		if( curShader.fragment != null )
+			uploadBuffer(buf, curShader.fragment, buf.fragment, which);
 	}
 
 	function uploadBuffer( buffer : h3d.shader.Buffers, s : CompiledShader, buf : h3d.shader.Buffers.ShaderBuffers, which : h3d.shader.Buffers.BufferKind ) {
@@ -508,7 +565,12 @@ class GlDriver extends Driver {
 				if( s.kind == Fragment && curShader.vertex.buffers != null )
 					start = curShader.vertex.buffers.length;
 				for( i in 0...s.buffers.length )
-					gl.bindBufferBase(GL.UNIFORM_BUFFER, i + start, buf.buffers[i].vbuf);
+					switch( s.bufferTypes[i] ) {
+					case Uniform:
+						gl.bindBufferBase(GL.UNIFORM_BUFFER, i + start, buf.buffers[i].vbuf);
+					case RW:
+						gl.bindBufferBase(0x90D2 /*GL.SHADER STORAGE BUFFER*/, i + start, buf.buffers[i].vbuf);
+					}
 			}
 		case Textures:
 			var tcount = s.textures.length;
@@ -1778,6 +1840,10 @@ class GlDriver extends Driver {
 	}
 
 	#if hl
+
+	override function computeDispatch(x:Int = 1, y:Int = 1, z:Int = 1) {
+		GL.dispatchCompute(x,y,z);
+	}
 
 	override function allocQuery(kind:QueryKind) {
 		return { q : GL.createQuery(), kind : kind };

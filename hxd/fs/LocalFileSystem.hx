@@ -329,6 +329,10 @@ class LocalFileSystem implements FileSystem {
 		}
 	}
 
+	public function removePathFromCache(path : String) {
+		fileCache.remove(path);
+	}
+
 	public function exists( path : String ) {
 		var f = open(path);
 		return f != null;

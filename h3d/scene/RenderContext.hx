@@ -12,8 +12,8 @@ private class SharedGlobal {
 @:build(hxsl.Macros.buildGlobals())
 class RenderContext extends h3d.impl.RenderContext {
 
-	public var camera : h3d.Camera;
-	public var scene : Scene;
+	public var camera(default,null) : h3d.Camera;
+	public var scene(default,null) : Scene;
 	public var drawPass : h3d.pass.PassObject;
 	public var pbrLightPass : h3d.mat.Pass;
 	public var computingStatic : Bool;
@@ -23,7 +23,6 @@ class RenderContext extends h3d.impl.RenderContext {
 	public var visibleFlag : Bool;
 	public var debugCulling : Bool;
 	public var wasContextLost : Bool;
-	public var shaderBuffers : h3d.shader.Buffers;
 	public var cullingCollider : h3d.col.Collider;
 
 	@global("camera.view") var cameraView : h3d.Matrix;
@@ -42,20 +41,23 @@ class RenderContext extends h3d.impl.RenderContext {
 
 	var allocPool : h3d.pass.PassObject;
 	var allocFirst : h3d.pass.PassObject;
+	var computeLink = new hxsl.ShaderList(null,null);
 	var cachedShaderList : Array<hxsl.ShaderList>;
 	var cachedPassObjects : Array<Renderer.PassObjects>;
 	var cachedPos : Int;
 	var passes : Array<h3d.pass.PassObject>;
 	var lights : Light;
 
-	public function new() {
+	public function new(scene) {
 		super();
+		this.scene = scene;
 		cachedShaderList = [];
 		cachedPassObjects = [];
 		initGlobals();
 	}
 
 	public function setCamera( cam : h3d.Camera ) {
+		camera = cam;
 		cameraView = cam.mcam;
 		cameraNear = cam.zNear;
 		cameraFar = cam.zFar;
@@ -95,9 +97,10 @@ class RenderContext extends h3d.impl.RenderContext {
 		time += elapsedTime;
 		frame++;
 		setCurrent();
+		engine = h3d.Engine.getCurrent();
 		globalTime = time;
 		pixelSize = getCurrentPixelSize();
-		setCamera(camera);
+		setCamera(scene.camera);
 	}
 
 	public inline function nextPass() {
@@ -141,6 +144,36 @@ class RenderContext extends h3d.impl.RenderContext {
 		sl.s = s;
 		sl.next = next;
 		return sl;
+	}
+
+	public function computeDispatch( shader : hxsl.Shader, x = 1, y = 1, z = 1 ) {
+
+		var prev = h3d.impl.RenderContext.get();
+		if( prev != this )
+			start();
+
+		// compile shader
+		globals.resetChannels();
+		shader.updateConstants(globals);
+		computeLink.s = shader;
+		var rt = hxsl.Cache.get().link(computeLink, Compute);
+		// upload buffers
+		engine.driver.selectShader(rt);
+		var buf = shaderBuffers;
+		buf.grow(rt);
+		fillGlobals(buf, rt);
+		engine.uploadShaderBuffers(buf, Globals);
+		fillParams(buf, rt, computeLink);
+		engine.uploadShaderBuffers(buf, Params);
+		engine.uploadShaderBuffers(buf, Textures);
+		engine.uploadShaderBuffers(buf, Buffers);
+		engine.driver.computeDispatch(x,y,z);
+		computeLink.s = null;
+
+		if( prev != this ) {
+			done();
+			if( prev != null ) prev.setCurrent();
+		}
 	}
 
 	public function emitLight( l : Light ) {

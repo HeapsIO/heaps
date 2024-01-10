@@ -3,6 +3,7 @@ package h3d.scene;
 typedef WorldData = {
 	var x : Int;
 	var y : Int;
+	var subdivPow : Float;
 	var size : Int;
 	var depth : Int;
 	var maxDepth : Int;
@@ -82,8 +83,12 @@ class HierarchicalWorld extends Object {
 			data.onCreate(this);
 	}
 
+	final function isLeaf() {
+		return data.depth == data.maxDepth;
+	}
+
 	function canSubdivide() {
-		return data.depth < data.maxDepth;
+		return true;
 	}
 
 	function createNode(parent, data) {
@@ -91,7 +96,7 @@ class HierarchicalWorld extends Object {
 	}
 
 	function subdivide() {
-		if ( subdivided )
+		if ( subdivided || isLeaf() )
 			return;
 		subdivided = true;
 		var childSize = data.size >> 1;
@@ -100,6 +105,7 @@ class HierarchicalWorld extends Object {
 				var halfChildSize = childSize >> 1;
 				var childData : WorldData = {
 					size : childSize,
+					subdivPow : data.subdivPow,
 					x : i * childSize - halfChildSize,
 					y : j * childSize - halfChildSize,
 					depth : data.depth + 1,
@@ -136,9 +142,11 @@ class HierarchicalWorld extends Object {
 		}
 
 		culled = !bounds.inFrustum(ctx.camera.frustum);
-		if ( canSubdivide() ) {
-			if ( FULL || calcDist(ctx) < data.size * 2.0 ) {
-				subdivide();
+		if ( !isLeaf() ) {
+			if ( FULL || calcDist(ctx) < data.size * data.subdivPow ) {
+				if ( canSubdivide() ) {
+					subdivide();
+				}
 			} else if ( !locked ) {
 				removeSubdivisions();
 			}
@@ -167,13 +175,24 @@ class HierarchicalWorld extends Object {
 			return;
 		if ( lock )
 			locked = true;
-		if ( canSubdivide() )
-			subdivide();
+		subdivide();
 		for ( c in children ) {
 			var node = Std.downcast(c, HierarchicalWorld);
 			if ( node == null )
 				continue;
 			node.requestCreateAt(x, y, lock);
+		}
+	}
+
+	public function lockAt(x : Float, y : Float) {
+		if ( !bounds.contains(new h3d.col.Point(x, y, 0.0)) )
+			return;
+		locked = true;
+		for ( c in children ) {
+			var node = Std.downcast(c, HierarchicalWorld);
+			if ( node == null )
+				continue;
+			node.lockAt(x, y);
 		}
 	}
 
@@ -186,6 +205,16 @@ class HierarchicalWorld extends Object {
 			if ( node == null )
 				continue;
 			node.unlockAt(x, y);
+		}
+	}
+
+	public function unlockAll() {
+		locked = false;
+		for ( c in children ) {
+			var node = Std.downcast(c, HierarchicalWorld);
+			if ( node == null )
+				continue;
+			node.unlockAll();
 		}
 	}
 

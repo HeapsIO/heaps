@@ -1,3 +1,16 @@
+## 2.0 (January 1, 2024)
+
+* changed h3d.Vector to be a 3 component vector (alias to h3d.col.Point), added h3d.Vector4
+* unified all buffers (index, vertex, managedbuffer) into a single h3d.Buffer object and add a specific format to it
+* unified DepthBuffer and Texture
+* added ability to change vertex buffer attributes precision as part of buffer format and HMD convert
+* added unified cache system with Driver.setShaderCache
+* lots of graphics improvements and fixes by @clementlandrin
+* fixes and improvements for DX12 driver which is now production ready
+* cleanup of old deprecated code (flash, haxe3, etc.)
+* compatibility with HashLink 1.14
+* ... and many many other improvements
+
 ## 1.10.0 (February 19, 2023)
 
 Graphics:

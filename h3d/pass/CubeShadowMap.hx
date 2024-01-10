@@ -175,11 +175,9 @@ class CubeShadowMap extends Shadows {
 
 		var prevFar = @:privateAccess ctx.cameraFar;
 		var prevPos = @:privateAccess ctx.cameraPos;
-		@:privateAccess ctx.cameraFar = lightCamera.zFar;
-		@:privateAccess ctx.cameraPos = lightCamera.pos;
+		var prevViewProj = @:privateAccess ctx.cameraViewProj;
 
 		for( i in 0...6 ) {
-
 			// Shadows on the current face is disabled
 			if( !faceMask.has(CubeFaceFlag.createByIndex(i)) ) {
 				clear(texture, i);
@@ -199,6 +197,11 @@ class CubeShadowMap extends Shadows {
 
 			ctx.engine.pushTarget(texture, i);
 			format == RGBA ? ctx.engine.clear(0xFFFFFF, i) : ctx.engine.clearF(clearDepthColor, 1);
+
+			@:privateAccess ctx.cameraViewProj = getShadowProj();
+			@:privateAccess ctx.cameraFar = lightCamera.zFar;
+			@:privateAccess ctx.cameraPos = lightCamera.pos;
+
 			super.draw(passes,sort);
 			passes.load(save);
 			ctx.engine.popTarget();
@@ -206,6 +209,7 @@ class CubeShadowMap extends Shadows {
 
 		@:privateAccess ctx.cameraFar = prevFar;
 		@:privateAccess ctx.cameraPos = prevPos;
+		@:privateAccess ctx.cameraViewProj = prevViewProj;
 
 		// Blur is applied even if there's no shadows - TO DO : remove the useless blur pass
 		if( blur.radius > 0 )
@@ -215,6 +219,7 @@ class CubeShadowMap extends Shadows {
 			syncShader(merge(texture));
 		else
 			syncShader(texture);
+
 	}
 
 	function merge( dynamicTex : h3d.mat.Texture ) : h3d.mat.Texture{

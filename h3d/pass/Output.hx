@@ -98,10 +98,7 @@ class Output {
 				} else {
 					ctx.engine.selectShader(p.shader);
 				}
-				if( buf == null )
-					buf = ctx.shaderBuffers = new h3d.shader.Buffers(p.shader);
-				else
-					buf.grow(p.shader);
+				buf.grow(p.shader);
 				ctx.fillGlobals(buf, p.shader);
 				ctx.engine.uploadShaderBuffers(buf, Globals);
 			}

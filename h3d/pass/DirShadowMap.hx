@@ -269,7 +269,7 @@ class DirShadowMap extends Shadows {
 		}
 		else {
 			ctx.engine.pushTarget(tex);
-			ctx.engine.clear(0xFFFFFF);
+			ctx.engine.clear(0xFFFFFF, 1.0);
 		}
 		super.draw(passes, sort);
 

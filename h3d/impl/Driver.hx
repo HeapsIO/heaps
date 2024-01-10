@@ -298,7 +298,7 @@ class Driver {
 	// --- COMPUTE
 
 	public function computeDispatch( x : Int = 1, y : Int = 1, z : Int = 1 ) {
-		throw "Not implemented";
+		throw "Compute shaders are not implemented on this platform";
 	}
 
 }

@@ -274,6 +274,32 @@ class Checker {
 		for( i in 0...tfuns.length )
 			typeFun(tfuns[i], funs[i].f.expr);
 
+		var localInits = [];
+		for( i in inits.copy() ) {
+			if( i.v.kind == Local ) {
+				localInits.push({ e : TBinop(OpAssign,{ e : TVar(i.v), p : i.e.p, t : i.v.type },i.e), p : i.e.p, t : i.v.type });
+				inits.remove(i);
+			}
+		}
+		if( localInits.length > 0 ) {
+			var fv : TVar = {
+				id : Tools.allocVarId(),
+				name : "__init__consts__",
+				kind : Function,
+				type : TFun([{ args : [], ret : TVoid }]),
+			};
+			if( vars.exists(fv.name) )
+				error("assert", localInits[0].p);
+			vars.set(fv.name, fv);
+			tfuns.push({
+				kind : Init,
+				ref : fv,
+				args : [],
+				ret : TVoid,
+				expr : { e : TBlock(localInits), p : localInits[0].p, t : TVoid },
+			});
+		}
+
 		var vars = Lambda.array(vars);
 		vars.sort(function(v1, v2) return (v1.id < 0 ? -v1.id : v1.id) - (v2.id < 0 ? -v2.id : v2.id));
 		return {
@@ -338,7 +364,9 @@ class Checker {
 		switch( e.e ) {
 		case TVar(v):
 			switch( v.kind ) {
-			case Local, Var, Output:
+			case Var, Output:
+				return;
+			case Local if( v.qualifiers == null || v.qualifiers.indexOf(Final) < 0 ):
 				return;
 			case Param if( v.type.match(TBuffer(_,_,RW)) ):
 				return;
@@ -706,8 +734,8 @@ class Checker {
 				}
 				var einit = null;
 				if( v.expr != null ) {
-					if( v.kind != Param )
-						error("Cannot initialize variable declaration if not @param", v.expr.pos);
+					if( v.kind != Param && v.kind != Local )
+						error("Cannot initialize variable declaration if not @param or local", v.expr.pos);
 					var e = typeExpr(v.expr, v.type == null ? Value : With(v.type));
 					if( v.type == null )
 						v.type = e.t;
@@ -723,6 +751,8 @@ class Checker {
 					continue;
 				if( einit != null )
 					inits.push({ v : v, e : einit });
+				else if( v.qualifiers != null && v.qualifiers.indexOf(Final) >= 0 )
+					error("Final variable needs initializer", e.pos);
 				vars.set(v.name, v);
 			}
 		case ECall( { expr : EIdent("import") }, [e]):
@@ -767,6 +797,8 @@ class Checker {
 		case TParenthesis(e): checkConst(e);
 		case TCall({ e : TGlobal(Vec2 | Vec3 | Vec4 | IVec2 | IVec3 | IVec4) }, args):
 			for( a in args ) checkConst(a);
+		case TArrayDecl(el):
+			for( e in el ) checkConst(e);
 		default:
 			error("This expression should be constant", e.p);
 		}
@@ -806,6 +838,7 @@ class Checker {
 						p = p.parent;
 					}
 					if( tv.kind != Global && tv.kind != Param ) error("@const only allowed on parameter or global", pos);
+				case Final: if( tv.kind != Local ) error("final only allowed on local", pos);
 				case PerObject: if( tv.kind != Global ) error("@perObject only allowed on global", pos);
 				case PerInstance(_): if( tv.kind != Input && tv.kind != Param && (tv.kind != Global || v.qualifiers.indexOf(PerObject) < 0) ) error("@perInstance only allowed on input/param", pos);
 				case Nullable: if( tv.kind != Param ) error("@nullable only allowed on parameter or global", pos);
@@ -957,6 +990,11 @@ class Checker {
 				}
 				if( sel.length > 0 || variants.length == 0 )
 					return FGlobal(g.g, e, sel);
+			default:
+			}
+			switch( [g.g, e.t] ) {
+			case [Length, TArray(_)]:
+				return FField({ e : TCall({ e : TGlobal(Length), t : TVoid, p : pos },[e]), t : TInt, p : pos });
 			default:
 			}
 		}

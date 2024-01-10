@@ -244,6 +244,8 @@ class Splitter {
 						kind : v.kind,
 						type : v.type,
 					};
+					if( v.qualifiers != null && v.qualifiers.indexOf(Final) >= 0 )
+						nv.qualifiers = [Final];
 					uniqueName(nv);
 				}
 				varMap.set(v,nv);
