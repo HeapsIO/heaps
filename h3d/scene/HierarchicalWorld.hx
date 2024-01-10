@@ -170,8 +170,12 @@ class HierarchicalWorld extends Object {
 			(Math.floor(y / chunkSize) + 0.5) * chunkSize);
 	}
 
+	public function containsAt(x : Float, y : Float) {
+		return bounds.contains(new h3d.col.Point(x, y, 0.0));
+	}
+
 	public function requestCreateAt(x : Float, y : Float, lock : Bool) {
-		if ( !bounds.contains(new h3d.col.Point(x, y, 0.0)) )
+		if ( !containsAt(x, y) )
 			return;
 		if ( lock )
 			locked = true;
@@ -185,7 +189,7 @@ class HierarchicalWorld extends Object {
 	}
 
 	public function lockAt(x : Float, y : Float) {
-		if ( !bounds.contains(new h3d.col.Point(x, y, 0.0)) )
+		if ( !containsAt(x, y) )
 			return;
 		locked = true;
 		for ( c in children ) {
@@ -197,7 +201,7 @@ class HierarchicalWorld extends Object {
 	}
 
 	public function unlockAt(x : Float, y : Float) {
-		if ( !bounds.contains(new h3d.col.Point(x, y, 0.0)) )
+		if ( !containsAt(x, y) )
 			return;
 		locked = false;
 		for ( c in children ) {
