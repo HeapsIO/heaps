@@ -159,11 +159,11 @@ class Writer {
 		var properties : FbxNode = { name:"Properties70", props: null, childs: [
 			{ name: "P", props: [PString("UpAxis"), PString("int"), PString("Integer"), PString(""), PInt(2) ], childs:null },
 			{ name: "P", props: [PString("UpAxisSign"), PString("int"), PString("Integer"), PString(""), PInt(1) ], childs:null },
-			{ name: "P", props: [PString("FrontAxis"), PString("int"), PString("Integer"), PString(""), PInt(1) ], childs:null },
-			{ name: "P", props: [PString("FrontAxisSign"), PString("int"), PString("Integer"), PString(""), PInt(1) ], childs:null },
-			{ name: "P", props: [PString("CoordAxis"), PString("int"), PString("Integer"), PString(""), PInt(0) ], childs:null },
+			{ name: "P", props: [PString("FrontAxis"), PString("int"), PString("Integer"), PString(""), PInt(0) ], childs:null },
+			{ name: "P", props: [PString("FrontAxisSign"), PString("int"), PString("Integer"), PString(""), PInt(-1) ], childs:null },
+			{ name: "P", props: [PString("CoordAxis"), PString("int"), PString("Integer"), PString(""), PInt(1) ], childs:null },
 			{ name: "P", props: [PString("CoordAxisSign"), PString("int"), PString("Integer"), PString(""), PInt(-1) ], childs:null },
-			{ name: "P", props: [PString("OriginalUpAxis"), PString("int"), PString("Integer"), PString(""), PInt(2) ], childs:null },
+			{ name: "P", props: [PString("OriginalUpAxis"), PString("int"), PString("Integer"), PString(""), PInt(-1) ], childs:null },
 			{ name: "P", props: [PString("OriginalUpAxisSign"), PString("int"), PString("Integer"), PString(""), PInt(1) ], childs:null },
 			{ name: "P", props: [PString("UnitScaleFactor"), PString("double"), PString("Number"), PString(""), PInt(100) ], childs:null },
 			{ name: "P", props: [PString("OriginalUnitScaleFactor"), PString("double"), PString("Number"), PString(""), PInt(1) ], childs:null },
@@ -429,22 +429,23 @@ class Writer {
 				]}
 			] };
 
-			@:privateAccess var objectRot = object.qRot.toMatrix();
-			objectRot._12 = -objectRot._12;
-			objectRot._13 = -objectRot._13;
-			objectRot._21 = -objectRot._21;
-			objectRot._31 = -objectRot._31;
-			objectRot._41 = -objectRot._41;
+			var t = object.getTransform();
+			t = object.defaultTransform.multiplied(t);
 
-			var rot = objectRot.getEulerAngles() * (180.0 / Math.PI);
+			t._12 = -t._12;
+			t._13 = -t._13;
+			t._21 = -t._21;
+			t._31 = -t._31;
+			t._41 = -t._41;
+
 			var model : FbxNode = { name:"Model", props: [PInt(modelId), PString('Model::${mesh.name}'), PString("Mesh")], childs:[
 				{ name:"Version", props:[ PInt(232)], childs:null },
 				{ name:"Properties70", props: null, childs: [
 					{ name:"P", props:[PString("InheritType"), PString("enum"), PString(""), PString(""), PInt(1)], childs: null },
 					{ name:"P", props:[PString("DefaultAttributeIndex"), PString("int"), PString("Integer"), PString(""), PInt(0)], childs: null },
-					{ name:"P", props:[PString("Lcl Translation"), PString("Lcl Translation"), PString(""), PString("A"), PFloat(-object.x), PFloat(object.y), PFloat(object.z)], childs: null },
-					{ name:"P", props:[PString("Lcl Rotation"), PString("Lcl Rotation"), PString(""), PString("A"), PFloat(rot.x), PFloat(rot.y), PFloat(rot.z)], childs: null },
-					{ name:"P", props:[PString("Lcl Scaling"), PString("Lcl Scaling"), PString(""), PString("A"), PFloat(object.scaleX), PFloat(object.scaleY), PFloat(object.scaleZ)], childs: null },
+					{ name:"P", props:[PString("Lcl Translation"), PString("Lcl Translation"), PString(""), PString("A"), PFloat(t.getPosition().x), PFloat(t.getPosition().y), PFloat(t.getPosition().z)], childs: null },
+					{ name:"P", props:[PString("Lcl Rotation"), PString("Lcl Rotation"), PString(""), PString("A"), PFloat(Math.radToDeg(t.getEulerAngles().x)), PFloat(Math.radToDeg(t.getEulerAngles().y)), PFloat(Math.radToDeg(t.getEulerAngles().z))], childs: null },
+					{ name:"P", props:[PString("Lcl Scaling"), PString("Lcl Scaling"), PString(""), PString("A"), PFloat(t.getScale().x), PFloat(t.getScale().y), PFloat(t.getScale().z)], childs: null },
 				]}
 			] };
 
@@ -552,49 +553,89 @@ class Writer {
 		}
 
 		var roots : Array<h3d.scene.Mesh> = [];
-		var root : h3d.scene.Mesh = null;
 		function extractMeshes( o : h3d.scene.Object, ?parent : h3d.scene.Mesh) {
 			var m = Std.downcast(o, h3d.scene.Mesh);
 
 			if (m == null) {
 				for( c in @:privateAccess o.children ) {
 					var m2 = Std.downcast(c, h3d.scene.Mesh);
-					if( m2 != null && m2.name == "root") {
-						var mesh = clone(m2);
+					if (c.name == "root") {
+						if( m2 != null) {
+							var mesh = clone(m2);
 
-						// Since it's the parent object that is holding informations
-						// apply it on mesh object
-						clone(o, mesh);
+							// Since it's the parent object that is holding informations
+							// apply it on mesh object
+							clone(o, mesh);
 
-						if (root == null)
-							root = cast mesh;
+							if (parent == null)
+								roots.push(mesh);
 
-						if (parent != null)
-							parent.addChild(mesh);
+							if (parent != null) {
+								parent.addChild(mesh);
 
-						parent = cast mesh;
+								if (parent.defaultTransform != null) {
+									var t = mesh.getTransform().multiplied(parent.defaultTransform.getInverse());
+									mesh.x = t.getPosition().x;
+									mesh.y = t.getPosition().y;
+									mesh.z = t.getPosition().z;
+
+									var q : h3d.Quat = new h3d.Quat();
+									q.initRotation(t.getEulerAngles().x, t.getEulerAngles().y, t.getEulerAngles().z);
+									@:privateAccess mesh.qRot.w = q.w;
+									@:privateAccess mesh.qRot.x = q.x;
+									@:privateAccess mesh.qRot.y = q.y;
+									@:privateAccess mesh.qRot.z = q.z;
+
+									mesh.scaleX = t.getScale().x;
+									mesh.scaleY = t.getScale().y;
+									mesh.scaleZ = t.getScale().z;
+								}
+							}
+
+							parent = cast mesh;
+						}
 					}
 				}
 			}
 			else if (m.name != "root") {
-				if (root == null)
-					root = cast clone(m);
+				var mesh = clone(m);
+				if (parent == null) {
+					roots.push(mesh);
+					parent = cast mesh;
+				}
+				else {
+					parent.addChild(mesh);
 
-				if (parent == null)
-					parent = cast clone(m);
-				else
-					parent.addChild(clone(m));
+					if (parent.defaultTransform != null) {
+						var t = mesh.getTransform().multiplied(parent.defaultTransform.getInverse());
+						mesh.x = t.getPosition().x;
+						mesh.y = t.getPosition().y;
+						mesh.z = t.getPosition().z;
+
+						var q : h3d.Quat = new h3d.Quat();
+						q.initRotation(t.getEulerAngles().x, t.getEulerAngles().y, t.getEulerAngles().z);
+						@:privateAccess mesh.qRot.w = q.w;
+						@:privateAccess mesh.qRot.x = q.x;
+						@:privateAccess mesh.qRot.y = q.y;
+						@:privateAccess mesh.qRot.z = q.z;
+
+						mesh.scaleX = t.getScale().x;
+						mesh.scaleY = t.getScale().y;
+						mesh.scaleZ = t.getScale().z;
+					}
+				}
 			}
 
-			for( c in @:privateAccess o.children )
+			for( c in @:privateAccess o.children ) {
 				extractMeshes(c, parent);
+			}
 		}
 
-		for (o in objects) {
-			root = null;
+		// We have to extract meshes object from the incomming objects to remove
+		// non-needed parent objects that are created in hide in make instance
+		// of model
+		for (o in objects)
 			extractMeshes(o);
-			roots.push(root);
-		}
 
 		writeHeader();
 		writeNode(buildGlobalSettings());
