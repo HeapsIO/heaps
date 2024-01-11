@@ -18,6 +18,8 @@ class MemoryManager {
 	var quadIndexes32 : Indexes;
 	public var usedMemory(default, null) : Float = 0;
 	public var texMemory(default, null) : Float = 0;
+	public var autoDisposeCooldown : Int = 60;
+	var lastAutoDispose = 0;
 
 	public function new(driver) {
 		this.driver = driver;
@@ -173,7 +175,11 @@ class MemoryManager {
 	@:allow(h3d.mat.Texture.alloc)
 	function allocTexture( t : h3d.mat.Texture ) {
 		while( true ) {
-			var free = cleanTextures(false);
+			var free = true;
+			if ( hxd.Timer.frameCount > lastAutoDispose + autoDisposeCooldown ) {
+				free = cleanTextures(false);
+				lastAutoDispose = hxd.Timer.frameCount;
+			}
 			t.t = driver.allocTexture(t);
 			if( t.t != null ) break;
 
