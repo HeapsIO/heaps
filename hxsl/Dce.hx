@@ -11,10 +11,12 @@ private class VarDeps {
 	public var keep : Bool;
 	public var used : Bool;
 	public var deps : Map<Int,VarDeps>;
+	public var adeps : Array<VarDeps>;
 	public function new(v) {
 		this.v = v;
 		used = false;
 		deps = new Map();
+		adeps = [];
 	}
 }
 
@@ -111,7 +113,7 @@ class Dce {
 		if( v.used ) return;
 		debug(v.v.name+" is used");
 		v.used = true;
-		for( d in v.deps )
+		for( d in v.adeps )
 			markRec(d);
 	}
 
@@ -127,8 +129,11 @@ class Dce {
 				}
 				continue;
 			}
-			debug(w.v.name+" depends on "+vd.v.name);
-			w.deps.set(v.id, vd);
+			if( !w.deps.exists(v.id) ) {
+				debug(w.v.name+" depends on "+vd.v.name);
+				w.deps.set(v.id, vd);
+				w.adeps.push(vd);
+			}
 		}
 	}
 
