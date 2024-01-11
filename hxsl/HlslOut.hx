@@ -809,12 +809,13 @@ class HlslOut {
 	function initParams( s : ShaderData ) {
 		var textures = [];
 		var buffers = [];
+		var uavs = [];
 		add('cbuffer _params : register(b${baseRegister+1}) {\n');
 		for( v in s.vars )
 			if( v.kind == Param ) {
 				switch( v.type ) {
 				case TArray(TRWTexture(_), _):
-					buffers.push(v);
+					uavs.push(v);
 					continue;
 				case TArray(t, _) if( t.isTexture() ):
 					textures.push(v);
@@ -834,20 +835,19 @@ class HlslOut {
 			}
 		add("};\n\n");
 
-		var bufCount = 0;
-		for( b in buffers ) {
+		var regCount = baseRegister + 2;
+		for( b in buffers.concat(uavs) ) {
 			switch( b.type ) {
 			case TBuffer(t, size, Uniform):
-				add('cbuffer _buffer$bufCount : register(b${bufCount+baseRegister+2}) { ');
+				add('cbuffer _buffer$regCount : register(b${regCount++}) { ');
 				addVar(b);
 				add("; };\n");
 			default:
 				addVar(b);
-				add(' : register(u${bufCount+baseRegister+2});\n');
+				add(' : register(u${regCount++});\n');
 			}
-			bufCount++;
 		}
-		if( bufCount > 0 ) add("\n");
+		if( buffers.length + uavs.length > 0 ) add("\n");
 
 		var ctx = new Samplers();
 		var texCount = 0;
