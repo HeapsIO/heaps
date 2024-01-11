@@ -275,37 +275,6 @@ class Writer {
 			] }
 		] };
 
-		var materialCount = meshCount;
-		var defMaterial : FbxNode = { name:"ObjectType", props:[PString("Material")], childs: [
-			{ name: "Count", props: [PInt(materialCount)], childs: null },
-			{ name: "PropertyTemplate", props: [PString("FbxSurfacePhong")], childs: [
-					{ name:"Properties70", props: null, childs: [
-					{ name: "P", props: [PString("ShadingModel"), PString("KString"), PString(""), PString(""), PString("Phong")], childs: null },
-					{ name: "P", props: [PString("MultiLayer"), PString("bool"), PString(""), PString(""), PInt(0)], childs: null },
-					{ name: "P", props: [PString("EmissiveColor"), PString("Color"), PString(""), PString("A"), PInt(0), PInt(0), PInt(0)], childs: null },
-					{ name: "P", props: [PString("EmissiveFactor"), PString("Number"), PString(""), PString("A"), PInt(1)], childs: null },
-					{ name: "P", props: [PString("AmbientColor"), PString("Color"), PString(""), PString("A"), PFloat(0.2), PFloat(0.2), PFloat(0.2)], childs: null },
-					{ name: "P", props: [PString("AmbientFactor"), PString("Number"), PString(""), PString("A"), PInt(1)], childs: null },
-					{ name: "P", props: [PString("DiffuseColor"), PString("Color"), PString(""), PString("A"), PFloat(0.8), PFloat(0.8), PFloat(0.8)], childs: null },
-					{ name: "P", props: [PString("DiffuseFactor"), PString("Number"), PString(""), PString("A"), PInt(1)], childs: null },
-					{ name: "P", props: [PString("Bump"), PString("Vector3D"), PString("Vector"), PString(""), PInt(0), PInt(0), PInt(0)], childs: null },
-					{ name: "P", props: [PString("NormalMap"), PString("Vector3D"), PString("Vector"), PString(""), PInt(0), PInt(0), PInt(0)], childs: null },
-					{ name: "P", props: [PString("BumpFactor"), PString("double"), PString("Number"), PString(""), PInt(1)], childs: null },
-					{ name: "P", props: [PString("TransparentColor"), PString("Color"), PString(""), PString("A"), PInt(0), PInt(0), PInt(0)], childs: null },
-					{ name: "P", props: [PString("TransparencyFactor"), PString("Number"), PString(""), PString("A"), PInt(0)], childs: null },
-					{ name: "P", props: [PString("DisplacementColor"), PString("ColorRGB"), PString("Color"), PString(""), PInt(0), PInt(0), PInt(0)], childs: null },
-					{ name: "P", props: [PString("DisplacementFactor"), PString("double"), PString("Number"), PString(""), PInt(1)], childs: null },
-					{ name: "P", props: [PString("VectorDisplacementColor"), PString("ColorRGB"), PString("Color"), PString(""), PInt(0), PInt(0), PInt(0)], childs: null },
-					{ name: "P", props: [PString("VectorDisplacementFactor"), PString("double"), PString("Number"), PString(""), PInt(1)], childs: null },
-					{ name: "P", props: [PString("SpecularColor"), PString("Color"), PString(""), PString("A"), PFloat(0.2), PFloat(0.2), PFloat(0.2)], childs: null },
-					{ name: "P", props: [PString("SpecularFactor"), PString("Number"), PString(""), PString("A"), PInt(1)], childs: null },
-					{ name: "P", props: [PString("ShininessExponent"), PString("Number"), PString(""), PString("A"), PInt(20)], childs: null },
-					{ name: "P", props: [PString("ReflectionColor"), PString("Color"), PString(""), PString("A"), PInt(0), PInt(0), PInt(0)], childs: null },
-					{ name: "P", props: [PString("ReflectionFactor"), PString("Number"), PString(""), PString("A"), PInt(1)], childs: null },
-				]}
-			] },
-		] };
-
 		var geometryCount = meshCount;
 		var defGeometry : FbxNode = { name:"ObjectType", props:[PString("Geometry")], childs: [
 			{ name: "Count", props: [PInt(geometryCount)], childs: null },
@@ -321,71 +290,111 @@ class Writer {
 			] }
 		] };
 
-		var defCount = modelCount + materialCount + geometryCount + 1;
+		var defCount = modelCount + geometryCount + 1;
 		var definitions : FbxNode = { name:"Definitions", props: null, childs: [
 			{ name: "Version", props: [PInt(100)], childs: null },
 			{ name: "Count", props: [PInt(defCount)], childs: null },
 			defGlobalSettings,
 			defModel,
-			defMaterial,
 			defGeometry
 		]};
 
 		return definitions;
 	}
 
-	function buildObjects(objects: Array<h3d.scene.Object>, objectTreeRoot : Dynamic) {
+	function buildObjects(objects: Array<h3d.scene.Object>, objectTreeRoot : Dynamic, params : Dynamic) {
 		var objectsNode : FbxNode = { name: "Objects", props: null, childs: [] };
 		var input = { objectsNode : objectsNode, nextFreeId : 1 };
 
-		function buildObject(object : h3d.scene.Object, input : Dynamic) {
+		function buildObject(object : h3d.scene.Object, input : Dynamic, isRoot : Bool, params : Dynamic) {
 			// Define uniques ids for representing model, geometry and material node
 			var modelId = input.nextFreeId;
 			var geometryId = input.nextFreeId + 1;
-			var materialId = input.nextFreeId + 2;
 
-			input.nextFreeId += 3;
+			input.nextFreeId += 2;
 
 			var mesh = Std.downcast(object, h3d.scene.Mesh);
-			var hmdModel = Std.downcast(mesh.primitive, h3d.prim.HMDModel);
-			var bufs = @:privateAccess hmdModel.getDataBuffers(hmdModel.data.vertexFormat);
-
 			var vertices = new Array<Float>();
 			var normals = new Array<Float>();
 			var uvs = new Array<Float>();
-
-			var idxVertex = 0;
-			while (idxVertex < bufs.vertexes.length) {
-				vertices.push(-bufs.vertexes[idxVertex]); // Change left hand to right hand
-				vertices.push(bufs.vertexes[idxVertex + 1]);
-				vertices.push(bufs.vertexes[idxVertex + 2]);
-
-				normals.push(-bufs.vertexes[idxVertex + 3]);
-				normals.push(bufs.vertexes[idxVertex + 4]);
-				normals.push(bufs.vertexes[idxVertex + 5]);
-
-				uvs.push(bufs.vertexes[idxVertex + 6]);
-				uvs.push(bufs.vertexes[idxVertex + 7]);
-
-				@:privateAccess idxVertex += hmdModel.data.vertexFormat.stride;
-			}
-
 			var indexes = new Array<Int>();
-			var idxIndex = 0;
-			while (idxIndex < bufs.indexes.length) {
-				// We have to flip the order of vertex to change the facing direction of the triangle (because we swapped x axis
-				// earlier to change from left hand to right hand)
-				indexes.push(bufs.indexes[idxIndex + 1]);
-				indexes.push(bufs.indexes[idxIndex]);
 
-				// This is because the last index that close the polygon (in our case, we work with triangles, so the third)
-				// need to be increased by one and then set to negative.
-				// (This is because original index is XOR'ed with -1.)
-				// We also need to keep indexes in range of vertices length
-				indexes.push( -1 * (bufs.indexes[idxIndex + 2] + 1));
+			if (mesh != null) {
+				var hmdModel = Std.downcast(mesh.primitive, h3d.prim.HMDModel);
+				var bufs = @:privateAccess hmdModel.getDataBuffers(hmdModel.data.vertexFormat);
 
-				idxIndex += 3;
+				var idxVertex = 0;
+				while (idxVertex < bufs.vertexes.length) {
+					vertices.push(-bufs.vertexes[idxVertex]); // Change left hand to right hand
+					vertices.push(bufs.vertexes[idxVertex + 1]);
+					vertices.push(bufs.vertexes[idxVertex + 2]);
+
+					normals.push(-bufs.vertexes[idxVertex + 3]);
+					normals.push(bufs.vertexes[idxVertex + 4]);
+					normals.push(bufs.vertexes[idxVertex + 5]);
+
+					uvs.push(bufs.vertexes[idxVertex + 6]);
+					uvs.push(bufs.vertexes[idxVertex + 7]);
+
+					@:privateAccess idxVertex += hmdModel.data.vertexFormat.stride;
+				}
+
+				var idxIndex = 0;
+				while (idxIndex < bufs.indexes.length) {
+					// We have to flip the order of vertex to change the facing direction of the triangle (because we swapped x axis
+					// earlier to change from left hand to right hand)
+					indexes.push(bufs.indexes[idxIndex + 1]);
+					indexes.push(bufs.indexes[idxIndex]);
+
+					// This is because the last index that close the polygon (in our case, we work with triangles, so the third)
+					// need to be increased by one and then set to negative.
+					// (This is because original index is XOR'ed with -1.)
+					// We also need to keep indexes in range of vertices length
+					indexes.push( -1 * (bufs.indexes[idxIndex + 2] + 1));
+
+					idxIndex += 3;
+				}
 			}
+
+			var t = object.getTransform();
+
+			if (isRoot) {
+				var r = new h3d.Quat();
+
+				if (params.forward == "0" && params.forwardSign== "1" && params.up == "2" && params.upSign == "1")
+					r.initRotation(0,0,0);
+				else if (params.forward == "0" && params.forwardSign== "-1" && params.up == "2" && params.upSign == "1")
+					r.initRotation(0,0,Math.degToRad(90));
+				else
+					throw "Export params not yet implemented";
+
+				t = t.multiplied(r.toMatrix());
+			}
+
+			if (object.defaultTransform != null)
+				t = object.defaultTransform.multiplied(t);
+
+			t._12 = -t._12;
+			t._13 = -t._13;
+			t._21 = -t._21;
+			t._31 = -t._31;
+			t._41 = -t._41;
+
+			var model : FbxNode = { name:"Model", props: [PInt(modelId), PString('Model::${object.name}'), PString("Mesh")], childs:[
+				{ name:"Version", props:[ PInt(232)], childs:null },
+				{ name:"Properties70", props: null, childs: [
+					{ name:"P", props:[PString("InheritType"), PString("enum"), PString(""), PString(""), PInt(1)], childs: null },
+					{ name:"P", props:[PString("DefaultAttributeIndex"), PString("int"), PString("Integer"), PString(""), PInt(0)], childs: null },
+					{ name:"P", props:[PString("Lcl Translation"), PString("Lcl Translation"), PString(""), PString("A"), PFloat(t.getPosition().x), PFloat(t.getPosition().y), PFloat(t.getPosition().z)], childs: null },
+					{ name:"P", props:[PString("Lcl Rotation"), PString("Lcl Rotation"), PString(""), PString("A"), PFloat(Math.radToDeg(t.getEulerAngles().x)), PFloat(Math.radToDeg(t.getEulerAngles().y)), PFloat(Math.radToDeg(t.getEulerAngles().z))], childs: null },
+					{ name:"P", props:[PString("Lcl Scaling"), PString("Lcl Scaling"), PString(""), PString("A"), PFloat(t.getScale().x), PFloat(t.getScale().y), PFloat(t.getScale().z)], childs: null },
+				]}
+			] };
+
+			input.objectsNode.childs.push(model);
+
+			if (mesh == null)
+				return;
 
 			var geometry : FbxNode = { name:"Geometry", props: [PInt(geometryId), PString('Geometry::${mesh.name}'), PString("Mesh")], childs:[
 				{ name:"Vertices", props: [PFloats(vertices)], childs: null},
@@ -429,68 +438,21 @@ class Writer {
 				]}
 			] };
 
-			var t = object.getTransform();
-			t = object.defaultTransform.multiplied(t);
-
-			t._12 = -t._12;
-			t._13 = -t._13;
-			t._21 = -t._21;
-			t._31 = -t._31;
-			t._41 = -t._41;
-
-			var model : FbxNode = { name:"Model", props: [PInt(modelId), PString('Model::${mesh.name}'), PString("Mesh")], childs:[
-				{ name:"Version", props:[ PInt(232)], childs:null },
-				{ name:"Properties70", props: null, childs: [
-					{ name:"P", props:[PString("InheritType"), PString("enum"), PString(""), PString(""), PInt(1)], childs: null },
-					{ name:"P", props:[PString("DefaultAttributeIndex"), PString("int"), PString("Integer"), PString(""), PInt(0)], childs: null },
-					{ name:"P", props:[PString("Lcl Translation"), PString("Lcl Translation"), PString(""), PString("A"), PFloat(t.getPosition().x), PFloat(t.getPosition().y), PFloat(t.getPosition().z)], childs: null },
-					{ name:"P", props:[PString("Lcl Rotation"), PString("Lcl Rotation"), PString(""), PString("A"), PFloat(Math.radToDeg(t.getEulerAngles().x)), PFloat(Math.radToDeg(t.getEulerAngles().y)), PFloat(Math.radToDeg(t.getEulerAngles().z))], childs: null },
-					{ name:"P", props:[PString("Lcl Scaling"), PString("Lcl Scaling"), PString(""), PString("A"), PFloat(t.getScale().x), PFloat(t.getScale().y), PFloat(t.getScale().z)], childs: null },
-				]}
-			] };
-
-			var material : FbxNode = { name:"Material", props: [PInt(materialId), PString("Material::Material"), PString("")], childs:[
-				{ name: "Version", props: [PInt(102)], childs: null },
-				{ name: "ShadingModel", props: [PString("phong")], childs: null },
-				{ name: "MultiLayer", props: [PInt(0)], childs: null },
-				{ name: "Properties70", props: null, childs: [
-					{ name:"P", props: [PString("EmissiveColor"), PString("Color"), PString(""), PString("A"), PInt(1), PInt(1), PInt(1)], childs: null },
-					{ name:"P", props: [PString("EmissiveFactor"), PString("Number"), PString(""), PString("A"), PInt(0)], childs: null },
-					{ name:"P", props: [PString("AmbientColor"), PString("Color"), PString(""), PString("A"), PFloat(0.5), PFloat(0.5), PFloat(0.5)], childs: null },
-					{ name:"P", props: [PString("AmbientFactor"), PString("Number"), PString(""), PString("A"), PInt(0)], childs: null },
-					{ name:"P", props: [PString("DiffuseColor"), PString("Color"), PString(""), PString("A"), PFloat(0.8), PFloat(0.8), PFloat(0.8)], childs: null },
-					{ name:"P", props: [PString("BumpFactor"), PString("double"), PString("Number"), PString(""), PInt(0)], childs: null },
-					{ name:"P", props: [PString("SpecularColor"), PString("Color"), PString(""), PString("A"), PFloat(0.8), PFloat(0.8), PFloat(0.8)], childs: null },
-					{ name:"P", props: [PString("SpecularFactor"), PString("Number"), PString(""), PString("A"), PInt(25)], childs: null },
-					{ name:"P", props: [PString("ShininessExponent"), PString("Number"), PString(""), PString("A"), PInt(25)], childs: null },
-					{ name:"P", props: [PString("ReflectionColor"), PString("Color"), PString(""), PString("A"), PFloat(0.8), PFloat(0.8), PFloat(0.8)], childs: null },
-					{ name:"P", props: [PString("ReflectionFactor"), PString("Number"), PString(""), PString("A"), PInt(0)], childs: null },
-					{ name:"P", props: [PString("Shininess"), PString("Number"), PString(""), PString("A"), PInt(25)], childs: null },
-					{ name:"P", props: [PString("Emissive"), PString("Vector3D"), PString("Vector"), PString(""), PInt(0), PInt(0), PInt(0)], childs: null },
-					{ name:"P", props: [PString("Ambient"), PString("Vector3D"), PString("Vector"), PString(""), PInt(0), PInt(0), PInt(0)], childs: null },
-					{ name:"P", props: [PString("Diffuse"), PString("Vector3D"), PString("Vector"), PString(""), PFloat(0.8), PFloat(0.8), PFloat(0.8)], childs: null },
-					{ name:"P", props: [PString("Specular"), PString("Vector3D"), PString("Vector"), PString(""), PFloat(0.2), PFloat(0.2), PFloat(0.2)], childs: null },
-					{ name:"P", props: [PString("Opacity"), PString("double"), PString("Number"), PString(""), PInt(1)], childs: null },
-					{ name:"P", props: [PString("Reflectivity"), PString("double"), PString("Number"), PString(""), PInt(0)], childs: null }
-				] },
-			] };
-
 			input.objectsNode.childs.push(geometry);
-			input.objectsNode.childs.push(model);
-			input.objectsNode.childs.push(material);
+
 		}
 
 		function build(objects: Array<h3d.scene.Object>, input : Dynamic, parent : Dynamic) {
 			for (o in objects) {
 				// We're not supporting anything except meshes for now
-				var mesh = Std.downcast(o, h3d.scene.Mesh);
-				if (mesh == null)
-					continue;
+				// var mesh = Std.downcast(o, h3d.scene.Mesh);
+				// if (mesh == null)
+				// 	continue;
 
 				var objectLeaf = { id: input.nextFreeId, children : [] };
 				parent.children.push(objectLeaf);
 
-				buildObject(o, input);
+				buildObject(o, input, parent.id == 0, params);
 				build(@:privateAccess o.children, input, objectLeaf);
 			}
 		}
@@ -510,7 +472,6 @@ class Writer {
 			if (objectTree.id != 0) {
 				connections.childs.push({ name:"C", props: [ PString("OO"), PInt(objectTree.id), PInt(parentId) ], childs: null });
 				connections.childs.push({ name:"C", props: [ PString("OO"), PInt(objectTree.id + 1), PInt(objectTree.id) ], childs: null });
-				connections.childs.push({ name:"C", props: [ PString("OO"), PInt(objectTree.id + 2), PInt(objectTree.id) ], childs: null });
 			}
 
 			for (idx in 0...objectTree.children.length)
@@ -521,187 +482,17 @@ class Writer {
 		return connections;
 	}
 
-	public function write(objects: Array<h3d.scene.Object>) {
+	public function write(objects: Array<h3d.scene.Object>, ?params : Dynamic) {
 		var old = out;
 		var header = new haxe.io.BytesOutput();
 		out = header;
 
-		function clone(obj : h3d.scene.Object, ?into : h3d.scene.Mesh) : h3d.scene.Mesh {
-			var o : h3d.scene.Mesh = null;
-			if (into != null) {
-				o = into;
-			}
-			else {
-				var m = Std.downcast(obj, h3d.scene.Mesh);
-				o = new h3d.scene.Mesh(m.primitive, m.material, null);
-			}
-
-			o.x = obj.x;
-			o.y = obj.y;
-			o.z = obj.z;
-			o.scaleX = obj.scaleX;
-			o.scaleY = obj.scaleY;
-			o.scaleZ = obj.scaleZ;
-			@:privateAccess o.qRot.load(obj.qRot);
-			o.name = obj.name;
-			o.follow = obj.follow;
-			o.followPositionOnly = obj.followPositionOnly;
-			o.visible = obj.visible;
-			if( obj.defaultTransform != null ) {
-				if (o.defaultTransform != null)
-					o.defaultTransform = o.defaultTransform.multiplied(obj.defaultTransform.clone());
-				else
-					o.defaultTransform = obj.defaultTransform.clone();
-			}
-			return o;
-		}
-
-		function deepClone(m : h3d.scene.Mesh, ?parent : h3d.scene.Mesh) {
-			var copy = clone(m);
-
-			if (parent != null)
-				parent.addChild(copy);
-
-			for (child in @:privateAccess m.children) {
-				var childMesh = Std.downcast(child, h3d.scene.Mesh);
-
-				if (childMesh != null)
-					deepClone(childMesh, copy);
-			}
-
-			return copy;
-		}
-
-		function applyInverseDefaultTransform(obj : h3d.scene.Object, defaultTransform : h3d.Matrix) {
-			if (defaultTransform != null) {
-				var t = obj.getTransform().multiplied(defaultTransform.getInverse());
-				obj.x = t.getPosition().x;
-				obj.y = t.getPosition().y;
-				obj.z = t.getPosition().z;
-
-				var q : h3d.Quat = new h3d.Quat();
-				q.initRotation(t.getEulerAngles().x, t.getEulerAngles().y, t.getEulerAngles().z);
-				@:privateAccess obj.qRot.w = q.w;
-				@:privateAccess obj.qRot.x = q.x;
-				@:privateAccess obj.qRot.y = q.y;
-				@:privateAccess obj.qRot.z = q.z;
-
-				obj.scaleX = t.getScale().x;
-				obj.scaleY = t.getScale().y;
-				obj.scaleZ = t.getScale().z;
-			}
-		}
-
-		var roots : Array<h3d.scene.Mesh> = [];
-		function extractMeshes( o : h3d.scene.Object, ?parent : h3d.scene.Mesh) {
-			var m = Std.downcast(o, h3d.scene.Mesh);
-
-			// If this object isn't a mesh, we have to find into his children which mesh(s)
-			// is/are associated to it
-			if (m == null) {
-				var associatedMesh : h3d.scene.Object = null;
-
-				for (c in @:privateAccess o.children)
-					if (c.name == "root") // Associated mesh is named root (see makeInstance() of Model)
-						associatedMesh = c;
-
-				if (associatedMesh != null) {
-					var m2 = Std.downcast(associatedMesh, h3d.scene.Mesh);
-					var alreadyExtracted = new Array<h3d.scene.Object>();
-
-					if (m2 != null) {
-						// Single mesh object
-						var mesh = clone(m2);
-
-						// Since it's the parent object that is holding informations
-						// apply it on mesh object
-						clone(o, mesh);
-
-						if (parent == null)
-							roots.push(mesh);
-						else {
-							parent.addChild(mesh);
-							applyInverseDefaultTransform(mesh, parent.defaultTransform);
-						}
-
-						parent = cast mesh;
-						alreadyExtracted.push(m2);
-					}
-					else {
-						// Multiple mesh object
-						var randomRootMesh : h3d.scene.Mesh = null;
-						for (c in @:privateAccess associatedMesh.children) {
-							var mesh = Std.downcast(c, h3d.scene.Mesh);
-
-							if (mesh != null) {
-								var copy = deepClone(mesh);
-								clone(o, copy);
-
-								if (parent == null)
-									roots.push(copy);
-								else {
-									parent.addChild(copy);
-									applyInverseDefaultTransform(copy, parent.defaultTransform);
-								}
-								randomRootMesh = copy;
-							}
-						}
-
-						parent = randomRootMesh;
-						alreadyExtracted.push(associatedMesh);
-					}
-
-					// Continue to extract meshes on other objects
-					for (c in @:privateAccess o.children) {
-						if (alreadyExtracted.contains(c))
-							continue;
-
-						extractMeshes(c, parent);
-					}
-				}
-				else {
-					// We're in the case where there is multiple meshes
-					// and no children
-					for (c in @:privateAccess o.children) {
-						var mesh = Std.downcast(c, h3d.scene.Mesh);
-
-						if (mesh != null) {
-							var copy = deepClone(mesh);
-							clone(o, copy);
-
-							if (parent == null)
-								roots.push(copy);
-							else {
-								parent.addChild(copy);
-								applyInverseDefaultTransform(copy, parent.defaultTransform);
-							}
-						}
-					}
-				}
-			}
-			else {
-				var copy = clone(m);
-				if (parent == null)
-					roots.push(copy);
-				else {
-					parent.addChild(copy);
-					applyInverseDefaultTransform(copy, parent.defaultTransform);
-				}
-			}
-		}
-
-		// We have to extract meshes object from the incomming objects to remove
-		// non-needed parent objects that are created in hide in make instance
-		// of model
-		for (o in objects)
-			extractMeshes(o);
-
 		writeHeader();
 		writeNode(buildGlobalSettings());
-		writeNode(buildDefinitions(cast roots));
+		writeNode(buildDefinitions(cast objects));
 
 		var objectTreeRoot = { id: 0, children: [] };
-		writeNode(buildObjects(cast roots, objectTreeRoot));
+		writeNode(buildObjects(cast objects, objectTreeRoot, params));
 		writeNode(buildConnections(objectTreeRoot));
 
 		var bytes = header.getBytes();
