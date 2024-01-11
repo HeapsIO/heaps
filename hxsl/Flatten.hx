@@ -230,7 +230,7 @@ class Flatten {
 			if( !v.type.equals(t) ) {
 				switch( v.type ) {
 				case TChannel(_) if( t.match(TSampler(T2D,false)) ):
-				case TArray(t2,SConst(n)) if( t2 == t ):
+				case TArray(t2,SConst(n)) if( t2.equals(t) ):
 					count = n;
 				default:
 					continue;
@@ -358,6 +358,13 @@ class Flatten {
 		}
 	}
 
+	function addTextureFormat(dim,arr,rw=0) {
+		for( f in textureFormats )
+			if( f.dim == dim && f.arr == arr && f.rw == rw )
+				return;
+		textureFormats.push({ dim : dim, arr : arr, rw : rw });
+	}
+
 	function gatherVar( v : TVar ) {
 		switch( v.type ) {
 		case TStruct(vl):
@@ -369,14 +376,9 @@ class Flatten {
 			case TRWTexture(_,_,chans): chans;
 			default: 0;
 			}
-			var found = false;
-			for( f in textureFormats )
-				if( f.dim == dim && f.arr == arr && f.rw == rw ) {
-					found = true;
-					break;
-				}
-			if( !found )
-				textureFormats.push({ dim : dim, arr : arr, rw : rw });
+			addTextureFormat(dim,arr,rw);
+		case TChannel(_):
+			addTextureFormat(T2D,false);
 		default:
 		}
 		switch( v.kind ) {
