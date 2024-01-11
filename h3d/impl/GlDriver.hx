@@ -220,7 +220,11 @@ class GlDriver extends Driver {
 
 	#if hlsdl
 	public static function enableComputeShaders() {
+		#if (hlsdl >= version("1.15.0"))
 		sdl.Sdl.setGLVersion(4, 3);
+		#else
+		throw "enableComputeShaders() requires hlsdl 1.15+";
+		#end
 	}
 	#end
 
@@ -348,7 +352,7 @@ class GlDriver extends Driver {
 					case [T3D, false]: GL.TEXTURE_3D;
 					case [TCube, false]: GL.TEXTURE_CUBE_MAP;
 					case [T2D, true]: GL.TEXTURE_2D_ARRAY;
-					#if hl
+					#if (hlsdl > version("1.15.0"))
 					case [T1D, false]: GL.TEXTURE_1D;
 					case [T1D, true]: GL.TEXTURE_1D_ARRAY;
 					case [TCube, true]: GL.TEXTURE_CUBE_MAP_ARRAY;
@@ -357,7 +361,7 @@ class GlDriver extends Driver {
 					}
 					"Textures" + (dim == T2D ? "" : dim.getName().substr(1))+(arr ? "Array" : "");
 				case TRWTexture(dim, arr, chans):
-					#if js
+					#if (js || hlsdl < version("1.15.0"))
 					throw "Texture not supported "+tt;
 					#else
 					mode = switch( [dim, arr] ) {
@@ -657,7 +661,11 @@ class GlDriver extends Driver {
 					}
 					if( fmt == 0 )
 						throw "Texture format does not match: "+t+"["+t.format+"] should be "+hxsl.Ast.Tools.toString(pt.t);
+					#if (hlsdl < version("1.15.0"))
+					throw "RWTextures support requires hlsdl 1.15+";
+					#else
 					gl.bindImageTexture(i, cast t.t.t, 0, false, 0, GL.READ_WRITE, fmt);
+					#end
 					boundTextures[i] = null;
 					continue;
 				default:
@@ -970,7 +978,7 @@ class GlDriver extends Driver {
 	function getBindType( t : h3d.mat.Texture ) {
 		var isArray = t.flags.has(IsArray);
 		if( t.flags.has(Cube) )
-			return #if hl isArray ? GL.TEXTURE_CUBE_MAP_ARRAY : #end GL.TEXTURE_CUBE_MAP;
+			return #if (hlsdl > version("1.15.0")) isArray ? GL.TEXTURE_CUBE_MAP_ARRAY : #end GL.TEXTURE_CUBE_MAP;
 		return isArray ? GL.TEXTURE_2D_ARRAY : GL.TEXTURE_2D;
 	}
 
