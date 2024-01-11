@@ -650,7 +650,7 @@ class DX12Driver extends h3d.impl.Driver {
 		var depths = tmp.depthStencils;
 		depths[0] = depthView;
 		depthEnabled = true;
-		if ( depthBuffer != null )
+		if ( depthBuffer != null && (depthBuffer.t.state & ( DEPTH_READ | DEPTH_WRITE ) == COMMON) )
 			transition(depthBuffer.t, readOnly ? DEPTH_READ : DEPTH_WRITE);
 		return depths;
 	}
@@ -1677,7 +1677,10 @@ class DX12Driver extends h3d.impl.Driver {
 						}
 						t.lastFrame = frameCount;
 						var state = if ( t.isDepth() )
-							DEPTH_READ;
+							if ( t.t.state & ( DEPTH_READ | DEPTH_WRITE ) == COMMON ) 
+								DEPTH_READ;
+							else
+								t.t.state;
 						else if ( shader.kind == Fragment )
 							PIXEL_SHADER_RESOURCE;
 						else
