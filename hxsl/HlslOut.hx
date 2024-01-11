@@ -468,7 +468,12 @@ class HlslOut {
 			add("))");
 		case TCall(e = { e : TGlobal(g) }, args):
 			declGlobal(g, args);
-			addValue(e,tabs);
+			switch( [g,args] ) {
+			case [Vec2|Vec3|Vec4, [{ t : TFloat }]]:
+				add(g.getName().toLowerCase());
+			default:
+				addValue(e,tabs);
+			}
 			add("(");
 			var first = true;
 			for( e in args ) {
@@ -772,7 +777,12 @@ class HlslOut {
 			var sv = getSVName(g);
 			if( sv == null ) continue;
 			add("\t");
-			addType(foundGlobals.get(g));
+			switch( g ) {
+			case InstanceID:
+				add("uint");
+			default:
+				addType(foundGlobals.get(g));
+			}
 			var name = g.getName().split("_").pop();
 			name = name.charAt(0).toLowerCase()+name.substr(1);
 			add(" "+name);
