@@ -129,7 +129,9 @@ class HierarchicalWorld extends Object {
 	}
 
 	function calcDist(ctx : h3d.scene.RenderContext) {
-		return ctx.camera.pos.distance(getAbsPos().getPosition());
+		var camPos = new h2d.col.Point(ctx.camera.pos.x, ctx.camera.pos.y);
+		var chunkPos = getAbsPos().getPosition();
+		return camPos.distance(new h2d.col.Point(chunkPos.x, chunkPos.y));
 	}
 
 	override function syncRec(ctx : h3d.scene.RenderContext) {
