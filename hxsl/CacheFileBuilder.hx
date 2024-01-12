@@ -196,7 +196,7 @@ class CacheFileBuilder {
 			var tmpSrc = tmpFile + ".hlsl";
 			var tmpOut = tmpFile + ".sb";
 			var sign = @:privateAccess dx12Driver.computeRootSignature(r);
-			out.baseRegister = (rd.kind == Vertex) ? 0 : sign.fragmentRegStart;
+			out.baseRegister = (rd.kind == Vertex) ? 0 : sign.registers[1].start;
 			var code = out.run(rd.data);
 			var serializeRootSignature = @:privateAccess dx12Driver.stringifyRootSignature(sign.sign, "ROOT_SIGNATURE", sign.params, sign.paramsCount);
 			code = serializeRootSignature + code;
