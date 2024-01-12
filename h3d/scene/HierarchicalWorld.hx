@@ -39,6 +39,9 @@ class HierarchicalWorld extends Object {
 		return data.maxDepth - data.depth;
 	}
 
+	var stateAccu = 0.0;
+	var stateCooldown = 0.1;
+
 	function updateGraphics() {
 		if ( debugGraphics == null )
 			return;
@@ -149,11 +152,16 @@ class HierarchicalWorld extends Object {
 
 		culled = !bounds.inFrustum(ctx.camera.frustum);
 		if ( !isLeaf() ) {
-			if ( FULL || calcDist(ctx) < data.size * data.subdivPow ) {
-				if ( canSubdivide() ) {
+			var isClose = calcDist(ctx) < data.size * data.subdivPow;
+			if ( (isClose && stateAccu < 0.0) || (!isClose && stateAccu > 0.0) )
+				stateAccu = 0.0;
+			stateAccu += isClose ? ctx.elapsedTime : -ctx.elapsedTime;
+			if ( FULL || stateAccu > stateCooldown ) {
+				stateAccu = 0.0;
+				if ( canSubdivide() )
 					subdivide();
-				}
-			} else if ( !locked ) {
+			} else if ( !locked && -stateAccu > stateCooldown) {
+				stateAccu = 0.0;
 				removeSubdivisions();
 			}
 		}
