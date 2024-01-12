@@ -234,4 +234,14 @@ class HierarchicalWorld extends Object {
 			root = root.parent;
 		return cast root;
 	}
+
+	public function refresh() {
+		subdivided = false;
+		var i = children.length;
+		while ( i-- > 0 ) {
+			var node = Std.downcast(children[i], h3d.scene.HierarchicalWorld);
+			if ( node != null )
+				node.remove();
+		}
+	}
 }
