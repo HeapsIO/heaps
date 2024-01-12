@@ -303,7 +303,7 @@ class DX12Driver extends h3d.impl.Driver {
 	static inline var PSIGN_STENCIL_MASK = PSIGN_UNUSED + 1;
 	static inline var PSIGN_STENCIL_OPS = PSIGN_STENCIL_MASK + 2;
 	static inline var PSIGN_RENDER_TARGETS = PSIGN_STENCIL_OPS + 4;
-	static inline var PSIGN_LAYOUT = PSIGN_RENDER_TARGETS + 8;
+	static inline var PSIGN_LAYOUT = PSIGN_RENDER_TARGETS + 1;
 
 	var pipelineSignature = new hl.Bytes(64);
 	var adlerOut = new hl.Bytes(4);
@@ -599,22 +599,25 @@ class DX12Driver extends h3d.impl.Driver {
 
 
 	function getRTBits( tex : h3d.mat.Texture ) {
+		// 1 bit depth (set later), 5 bits format, 2 bits channels
 		inline function mk(channels,format) {
-			return ((channels - 1) << 2) | (format + 1);
+			return (format << 2) | (channels - 1);
 		}
 		return switch( tex.format ) {
-		case RGBA: mk(4,0);
-		case R8: mk(1, 0);
-		case RG8: mk(2, 0);
-		case RGB8: mk(3, 0);
-		case R16F: mk(1,1);
-		case RG16F: mk(2,1);
-		case RGB16F: mk(3,1);
-		case RGBA16F: mk(4,1);
-		case R32F: mk(1,2);
-		case RG32F: mk(2,2);
-		case RGB32F: mk(3,2);
-		case RGBA32F: mk(4,2);
+		case R8: 		mk(1, 0);
+		case RG8: 		mk(2, 0);
+		case RGB8: 		mk(3, 0);
+		case RGBA: 		mk(4, 0);
+		case R16F: 		mk(1, 1);
+		case RG16F: 	mk(2, 1);
+		case RGB16F: 	mk(3, 1);
+		case RGBA16F: 	mk(4, 1);
+		case R32F: 		mk(1, 2);
+		case RG32F: 	mk(2, 2);
+		case RGB32F: 	mk(3, 2);
+		case RGBA32F: 	mk(4, 2);
+		case RG11B10UF: mk(2, 3);
+		case RGB10A2: 	mk(3, 4);
 		default: throw "Unsupported RT format "+tex.format;
 		}
 	}
@@ -727,7 +730,7 @@ class DX12Driver extends h3d.impl.Driver {
 		if( w == 0 ) w = 1;
 		if( h == 0 ) h = 1;
 		initViewport(w, h);
-		pipelineSignature.setI32(PSIGN_RENDER_TARGETS, tex == null ? 0 : getRTBits(tex) | (depthEnabled ? 0x80000000 : 0));
+		pipelineSignature.setUI8(PSIGN_RENDER_TARGETS, tex == null ? 0 : getRTBits(tex) | (depthEnabled ? 0x80 : 0));
 		needPipelineFlush = true;
 	}
 
@@ -765,7 +768,7 @@ class DX12Driver extends h3d.impl.Driver {
 		frame.commandList.omSetRenderTargets(textures.length, tmp.renderTargets, true, depthEnabled ? getDepthViewFromTexture(t0, depthBinding == ReadOnly) : null);
 		initViewport(t0.width, t0.height);
 
-		pipelineSignature.setI32(PSIGN_RENDER_TARGETS, bits | (depthEnabled ? 0x80000000 : 0));
+		pipelineSignature.setUI8(PSIGN_RENDER_TARGETS, bits | (depthEnabled ? 0x80 : 0));
 		needPipelineFlush = true;
 	}
 
@@ -778,7 +781,7 @@ class DX12Driver extends h3d.impl.Driver {
 
 		initViewport(depthBuffer.width, depthBuffer.height);
 
-		pipelineSignature.setI32(PSIGN_RENDER_TARGETS, 0x80000000);
+		pipelineSignature.setUI8(PSIGN_RENDER_TARGETS, 0x80);
 		needPipelineFlush = true;
 	}
 
@@ -1579,7 +1582,7 @@ class DX12Driver extends h3d.impl.Driver {
 		}
 		return changed;
 	}
-	
+
 	function uploadBuffers( buffers : h3d.shader.Buffers, buf : h3d.shader.Buffers.ShaderBuffers, which:h3d.shader.Buffers.BufferKind, shader : hxsl.RuntimeShader.RuntimeShaderData, regs : ShaderRegisters ) {
 		switch( which ) {
 		case Params:
@@ -1620,10 +1623,10 @@ class DX12Driver extends h3d.impl.Driver {
 						regs.lastTextures.resize(regs.texturesCount);
 						regs.lastTexturesBits.resize(regs.texturesCount);
 					}
-					
+
 					for( i in 0...regs.texturesCount ) {
 						var t = buf.tex[i];
-	
+
 						if( t == null || t.isDisposed() ) {
 							if( i < regs.textures2DCount ) {
 								var color = h3d.mat.Defaults.loadingTextureColor;
@@ -1949,7 +1952,7 @@ class DX12Driver extends h3d.impl.Driver {
 				return;
 			}
 		}
-		var signatureBytes = @:privateAccess new haxe.io.Bytes(pipelineSignature, signatureSize);
+
 		if( insert < 0 ) {
 			var pipes2 = new hl.NativeArray(pipes.length + 1);
 			pipes2.blit(0, pipes, 0, insert);
