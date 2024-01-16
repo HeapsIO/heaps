@@ -218,8 +218,7 @@ class CameraController extends h3d.scene.Object {
 			if( expectedDist > maxDistance ) {
 				targetPos.x = maxDistance * targetOffset.w;
 			}
-		} else
-			pan( 0, 0, dist * (1 - Math.pow(zoomAmount, delta)) );
+		}
 	}
 
 	function rot(dx, dy) {
@@ -245,8 +244,8 @@ class CameraController extends h3d.scene.Object {
 			distance * Math.cos(phi) + cam.target.z
 		);
 		if( !lockZPlanes ) {
-			cam.zNear = distance * 0.01;
-			cam.zFar = distance * 100;
+			cam.zNear = Math.max(distance * 0.01, 0.1);
+			cam.zFar = Math.max(distance * 100, 1000);
 		}
 		cam.fovY = curOffset.w;
 		cam.update();
