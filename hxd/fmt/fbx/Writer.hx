@@ -360,27 +360,46 @@ class Writer {
 			var mesh = Std.downcast(object, h3d.scene.Mesh);
 			var vertices = new Array<Float>();
 			var normals = new Array<Float>();
-			var uvs = new Array<Float>();
+			var uvs = new Array<Array<Float>>();
 			var indexes = new Array<Int>();
 
 			if (mesh != null) {
 				var hmdModel = Std.downcast(mesh.primitive, h3d.prim.HMDModel);
-				var bufs = @:privateAccess hmdModel.getDataBuffers(hmdModel.data.vertexFormat);
-
+				var vertexFormat = @:privateAccess hmdModel.data.vertexFormat;
+				var bufs = hmdModel.getDataBuffers(vertexFormat);
 				var idxVertex = 0;
 				while (idxVertex < bufs.vertexes.length) {
-					vertices.push(-bufs.vertexes[idxVertex]); // Change left hand to right hand
-					vertices.push(bufs.vertexes[idxVertex + 1]);
-					vertices.push(bufs.vertexes[idxVertex + 2]);
+					var curIndex = idxVertex;
+					vertices.push(-bufs.vertexes[curIndex]); // Change left hand to right hand
+					vertices.push(bufs.vertexes[curIndex + 1]);
+					vertices.push(bufs.vertexes[curIndex + 2]);
+					curIndex += 3;
 
-					normals.push(-bufs.vertexes[idxVertex + 3]);
-					normals.push(bufs.vertexes[idxVertex + 4]);
-					normals.push(bufs.vertexes[idxVertex + 5]);
+					if (vertexFormat.hasInput("normal")) {
+						normals.push(-bufs.vertexes[curIndex]);
+						normals.push(bufs.vertexes[curIndex + 1]);
+						normals.push(bufs.vertexes[curIndex + 2]);
+						curIndex += 3;
+					}
 
-					uvs.push(bufs.vertexes[idxVertex + 6]);
-					uvs.push(bufs.vertexes[idxVertex + 7]);
+					// Nothing to do with tangent for now
+					if (vertexFormat.hasInput("tangent"))
+						curIndex += 3;
 
-					@:privateAccess idxVertex += hmdModel.data.vertexFormat.stride;
+					var uvIdx = 0;
+					var uvInput = 'uv${ uvIdx == 0 ? "" : '${uvIdx + 1}'}';
+					while(vertexFormat.hasInput(uvInput)) {
+						if (uvs.length < uvIdx + 1)
+							uvs.push(new Array<Float>());
+
+						uvs[uvIdx].push(bufs.vertexes[curIndex]);
+						uvs[uvIdx].push(1 - bufs.vertexes[curIndex + 1]);
+						curIndex += 2;
+						uvIdx++;
+						uvInput = 'uv${ uvIdx == 0 ? "" : '${uvIdx + 1}'}';
+					}
+
+					idxVertex += vertexFormat.stride;
 				}
 
 				var idxIndex = 0;
@@ -506,20 +525,30 @@ class Writer {
 					{ name: "ReferenceInformationType", props: [ PString("Direct") ], childs: null },
 					{ name: "Normals", props: [ PFloats(normals) ], childs: null },
 				]},
-				{ name:"LayerElementUV", props: [PInt(0)], childs: [
-					{ name: "Version", props: [ PInt(101) ], childs: null },
-					{ name: "Name", props: [ PString("UVMap") ], childs: null },
-					{ name: "MappingInformationType", props: [ PString("ByVertice") ], childs: null },
-					{ name: "ReferenceInformationType", props: [ PString("Direct") ], childs: null },
-					{ name: "UV", props: [ PFloats(uvs) ], childs: null },
-				]},
 				{ name:"LayerElementMaterial", props: [PInt(0)], childs: [
 					{ name: "Version", props: [ PInt(101) ], childs: null },
 					{ name: "Name", props: [ PString("") ], childs: null },
 					{ name: "MappingInformationType", props: [ PString("ByPolygon") ], childs: null },
 					{ name: "ReferenceInformationType", props: [ PString("IndexToDirect") ], childs: null },
 					{ name: "Materials", props: [ PInts(mats) ], childs: null },
-				]},
+				]}
+			] };
+
+			// Add all uv maps in layer elements
+			for (idx => uv in uvs) {
+				geometry.childs.push(
+					{ name:"LayerElementUV", props: [PInt(idx)], childs: [
+						{ name: "Version", props: [ PInt(101) ], childs: null },
+						{ name: "Name", props: [ PString("UVMap"+idx) ], childs: null },
+						{ name: "MappingInformationType", props: [ PString("ByVertice") ], childs: null },
+						{ name: "ReferenceInformationType", props: [ PString("Direct") ], childs: null },
+						{ name: "UV", props: [ PFloats(uv) ], childs: null },
+					]}
+				);
+			}
+
+			// Build all layers (we're currently building several layers only to support several uvs maps)
+			geometry.childs.push(
 				{ name:"Layer", props: [PInt(0)], childs: [
 					{ name: "Version", props: [ PInt(100) ], childs: null },
 					{ name: "LayerElement", props: null, childs: [
@@ -535,17 +564,28 @@ class Writer {
 						{ name: "TypedIndex", props: [ PInt(0) ], childs: null },
 					] },
 				]}
-			] };
+			);
+
+			for (idx => uv in uvs) {
+				if (idx == 0)
+					continue;
+
+				geometry.childs.push(
+					{ name:"Layer", props: [PInt(idx)], childs: [
+						{ name: "Version", props: [ PInt(100) ], childs: null },
+						{ name: "LayerElement", props: null, childs: [
+							{ name: "Type", props: [ PString("LayerElementUV") ], childs: null },
+							{ name: "TypedIndex", props: [ PInt(idx) ], childs: null },
+						] },
+					]}
+				);
+			}
 
 			input.objectsNode.childs.push(geometry);
 		}
 
 		function build(objects: Array<h3d.scene.Object>, input : Dynamic, parent : Dynamic) {
 			for (o in objects) {
-				// We're not supporting anything except meshes for now
-				// var mesh = Std.downcast(o, h3d.scene.Mesh);
-				// if (mesh == null)
-				// 	continue;
 
 				var objectLeaf = { id: input.nextFreeId, children : []};
 				parent.children.push(objectLeaf);
