@@ -4,8 +4,7 @@ import hxd.fmt.fbx.Data;
 import hxd.fmt.hmd.Data;
 
 class Writer {
-	var out:haxe.io.Output;
-	var version:Int;
+	var out: haxe.io.Output;
 
 	public function new(out) {
 		this.out = out;
@@ -81,118 +80,97 @@ class Writer {
 	}
 
 	function writeHeader() {
+		// This header is mandatory for most importers to define the fbx version
+		// of the file
 		var fbxVersion = "7.3.0";
 		out.writeString('; FBX ${fbxVersion} project file\n');
 		out.writeString('; Copyright (C) 1997-2010 Autodesk Inc. and/or its licensors.\n');
 		out.writeString('; All rights reserved.\n');
 		out.writeString('; ----------------------------------------------------\n');
 		out.writeString('\n');
-
-		writeNode(buildHeaderNode());
 	}
 
-	function buildTimeStampNode() : FbxNode{
+	function buildHeaderExtension() : FbxNode {
 		var date = Date.now();
-		var tsVersion : FbxNode = {name: "Version", props:[PInt(1000)], childs:null};
-		var tsYear : FbxNode = {name: "Year", props:[PInt(date.getFullYear())], childs:null};
-		var tsMonth : FbxNode = {name: "Month", props:[PInt(date.getMonth())], childs:null};
-		var tsDay : FbxNode = {name: "Day", props:[PInt(date.getDay())], childs:null};
-		var tsHour : FbxNode = {name: "Hour", props:[PInt(date.getHours())], childs:null};
-		var tsMinutes : FbxNode = {name: "Minute", props:[PInt(date.getMinutes())], childs:null};
-		var tsSeconds : FbxNode = {name: "Second", props:[PInt(date.getSeconds())], childs:null};
-		var tsMilliseconds : FbxNode = {name: "Millisecond", props:[PInt(0)], childs:null};
-		var ts : FbxNode = {name: "CreationTimeStamp", props:null, childs:[tsVersion, tsYear, tsMonth, tsDay, tsHour, tsMinutes, tsSeconds, tsMilliseconds]};
-		return ts;
-	}
+		var header : FbxNode = { name: "FBXHeaderExtension", props: null, childs: [
+			{ name: "FBXHeaderVersion", props: [PInt(1003)], childs: null },
+			{ name: "FBXVersion", props: [PInt(7003)], childs: null },
+			{ name: "CreationTimeStamp", props: null, childs:[
+				{ name: "Version", props:[PInt(1000)], childs:null },
+				{ name: "Year", props:[PInt(date.getFullYear())], childs:null },
+				{ name: "Month", props:[PInt(date.getMonth())], childs:null },
+				{ name: "Day", props:[PInt(date.getDay())], childs:null },
+				{ name: "Hour", props:[PInt(date.getHours())], childs:null },
+				{ name: "Minute", props:[PInt(date.getMinutes())], childs:null },
+				{ name: "Second", props:[PInt(date.getSeconds())], childs:null },
+				{ name: "Millisecond", props:[PInt(0)], childs:null}
+			] },
+			{ name: "Creator", props: [PString("")], childs: null },
+			{ name: "SceneInfo", props: [PString("SceneInfo::GlobalInfo"), PString("UserData")], childs: [
+				{ name : "Type", props: [PString("UserData")], childs: null },
+				{ name : "Version", props: [PInt(100)], childs: null },
+				{ name:"MetaData", props:null, childs: [
+					{ name:"Version", props:[PInt(100)], childs: [] },
+					{ name:"Title", props:[PString("")], childs: [] },
+					{ name:"Subject", props:[PString("")], childs: [] },
+					{ name:"Author", props:[PString("")], childs: [] },
+					{ name:"Keywords", props:[PString("")], childs: [] },
+					{ name:"Revision", props:[PString("")], childs: [] },
+					{ name:"Comment", props:[PString("")], childs: [] }
+				] },
+				{ name:"Properties70", props: null, childs:[
+					{ name:"P", props:[PString("DocumentUrl"), PString("KString"), PString("Url"), PString(""), PString("C:\\")], childs:null },
+					{ name:"P", props:[PString("SrcDocumentUrl"), PString("KString"), PString("Url"), PString(""), PString("C:\\")], childs:null },
+					{ name:"P", props:[PString("Original"), PString("Compound"), PString(""), PString("")], childs:null },
+					{ name:"P", props:[PString("Original|ApplicationVendor"), PString("KString"), PString(""), PString(""), PString("")], childs:null },
+					{ name:"P", props:[PString("Original|ApplicationName"), PString("KString"), PString(""), PString(""), PString("")], childs:null },
+					{ name:"P", props:[PString("Original|ApplicationVersion"), PString("KString"), PString(""), PString(""), PString("")], childs:null },
+					{ name:"P", props:[PString("Original|DateTime_GMT"), PString("DateTime"), PString(""), PString(""), PString("01/01/1970 00:00:00.000")], childs:null },
+					{ name:"P", props:[PString("Original|FileName"), PString("KString"), PString(""), PString(""), PString("/foobar.fbx")], childs:null },
+					{ name:"P", props:[PString("LastSaved"), PString("Compound"), PString(""), PString("")], childs:null },
+					{ name:"P", props:[PString("LastSaved|ApplicationVendor"), PString("KString"), PString(""), PString(""), PString("")], childs:null },
+					{ name:"P", props:[PString("LastSaved|ApplicationVersion"), PString("KString"), PString(""), PString(""), PString("")], childs:null },
+					{ name:"P", props:[PString("LastSaved|DateTime_GMT"), PString("DateTime"), PString(""), PString(""), PString("01/01/1970 00:00:00.000")], childs:null },
+					{ name:"P", props:[PString("Original|ApplicationNativeFile"), PString("KString"), PString(""), PString(""), PString("")], childs:null },
+				] }
+			] } ]
+		};
 
-	function buildSceneInfoMetaDataNode() : FbxNode {
-		var version : FbxNode = {name:"Version", props:[PInt(100)], childs: []};
-		var title : FbxNode = {name:"Title", props:[PString("")], childs: []};
-		var subject : FbxNode = {name:"Subject", props:[PString("")], childs: []};
-		var author : FbxNode = {name:"Author", props:[PString("")], childs: []};
-		var keywords : FbxNode = {name:"Keywords", props:[PString("")], childs: []};
-		var revision : FbxNode = {name:"Revision", props:[PString("")], childs: []};
-		var comment : FbxNode = {name:"Comment", props:[PString("")], childs: []};
-
-		var metadata : FbxNode = {name:"MetaData", props:null, childs: [version, title, subject, author, keywords, revision, comment]};
-		return metadata;
-	}
-
-	function buildSceneInfoPropertiesNode() : FbxNode {
-		var properties : FbxNode = {name:"Properties70", props: null, childs:[
-			{name:"P", props:[PString("DocumentUrl"), PString("KString"), PString("Url"), PString(""), PString("C:\\")], childs:null},
-			{name:"P", props:[PString("SrcDocumentUrl"), PString("KString"), PString("Url"), PString(""), PString("C:\\")], childs:null},
-			{name:"P", props:[PString("Original"), PString("Compound"), PString(""), PString("")], childs:null},
-			{name:"P", props:[PString("Original|ApplicationVendor"), PString("KString"), PString(""), PString(""), PString("")], childs:null},
-			{name:"P", props:[PString("Original|ApplicationName"), PString("KString"), PString(""), PString(""), PString("")], childs:null},
-			{name:"P", props:[PString("Original|ApplicationVersion"), PString("KString"), PString(""), PString(""), PString("")], childs:null},
-			{name:"P", props:[PString("Original|DateTime_GMT"), PString("DateTime"), PString(""), PString(""), PString("01/01/1970 00:00:00.000")], childs:null},
-			{name:"P", props:[PString("Original|FileName"), PString("KString"), PString(""), PString(""), PString("/foobar.fbx")], childs:null},
-			{name:"P", props:[PString("LastSaved"), PString("Compound"), PString(""), PString("")], childs:null},
-			{name:"P", props:[PString("LastSaved|ApplicationVendor"), PString("KString"), PString(""), PString(""), PString("")], childs:null},
-			{name:"P", props:[PString("LastSaved|ApplicationVersion"), PString("KString"), PString(""), PString(""), PString("")], childs:null},
-			{name:"P", props:[PString("LastSaved|DateTime_GMT"), PString("DateTime"), PString(""), PString(""), PString("01/01/1970 00:00:00.000")], childs:null},
-			{name:"P", props:[PString("Original|ApplicationNativeFile"), PString("KString"), PString(""), PString(""), PString("")], childs:null},
-		]};
-
-		return properties;
-	}
-
-	function buildSceneInfoNode() : FbxNode {
-		var type : FbxNode = {name : "Type", props: [PString("UserData")], childs: null};
-		var version : FbxNode = {name : "Version", props: [PInt(100)], childs: null};
-
-		var sceneInfo : FbxNode = {name: "SceneInfo", props:[PString("SceneInfo::GlobalInfo"), PString("UserData")], childs: [type, version, buildSceneInfoMetaDataNode(), buildSceneInfoPropertiesNode()]};
-		return sceneInfo;
-	}
-
-	function buildHeaderNode() : FbxNode {
-		var headerVersion : FbxNode = {name:"FBXHeaderVersion", props: [PInt(1003)], childs: null};
-		var version : FbxNode = {name:"FBXVersion", props: [PInt(7003)], childs: null};
-		var creator : FbxNode = {name:"Creator", props: [PString("")], childs: null};
-
-		var header : FbxNode = {name:"FBXHeaderExtension", props: null, childs: [headerVersion, version, buildTimeStampNode(), creator, buildSceneInfoNode()]};
 		return header;
 	}
 
-	function buildProperties() {
-		var properties : FbxNode = { name:"Properties70", props: null, childs: [
-			{ name: "P", props: [PString("UpAxis"), PString("int"), PString("Integer"), PString(""), PInt(2) ], childs:null },
-			{ name: "P", props: [PString("UpAxisSign"), PString("int"), PString("Integer"), PString(""), PInt(1) ], childs:null },
-			{ name: "P", props: [PString("FrontAxis"), PString("int"), PString("Integer"), PString(""), PInt(0) ], childs:null },
-			{ name: "P", props: [PString("FrontAxisSign"), PString("int"), PString("Integer"), PString(""), PInt(-1) ], childs:null },
-			{ name: "P", props: [PString("CoordAxis"), PString("int"), PString("Integer"), PString(""), PInt(1) ], childs:null },
-			{ name: "P", props: [PString("CoordAxisSign"), PString("int"), PString("Integer"), PString(""), PInt(-1) ], childs:null },
-			{ name: "P", props: [PString("OriginalUpAxis"), PString("int"), PString("Integer"), PString(""), PInt(-1) ], childs:null },
-			{ name: "P", props: [PString("OriginalUpAxisSign"), PString("int"), PString("Integer"), PString(""), PInt(1) ], childs:null },
-			{ name: "P", props: [PString("UnitScaleFactor"), PString("double"), PString("Number"), PString(""), PInt(100) ], childs:null },
-			{ name: "P", props: [PString("OriginalUnitScaleFactor"), PString("double"), PString("Number"), PString(""), PInt(1) ], childs:null },
-			{ name: "P", props: [PString("AmbientColor"), PString("ColorRGB"), PString("Color"), PString(""), PInt(0), PInt(0), PInt(0) ], childs:null },
-			{ name: "P", props: [PString("DefaultCamera"), PString("KString"), PString(""), PString(""), PString("Producer Perspective") ], childs:null },
-			{ name: "P", props: [PString("TimeMode"), PString("enum"), PString(""), PString(""), PInt(11) ], childs:null },
-			{ name: "P", props: [PString("TimeSpanStart"), PString("Ktime"), PString("Time"), PString(""), PInt(0) ], childs:null },
-			{ name: "P", props: [PString("TimeSpanStop"), PString("Ktime"), PString("Time"), PString(""), PInt(0) ], childs:null },
-			{ name: "P", props: [PString("CustomFrameRate"), PString("double"), PString("Number"), PString(""), PInt(24) ], childs:null },
-		] };
-		return properties;
-	}
-
 	function buildGlobalSettings() {
-		var version : FbxNode = {name:"Version", props: [PInt(1000)], childs: null};
-		var properties : FbxNode = buildProperties();
+		var globalSettings : FbxNode = { name:"GlobalSettings", props: null, childs: [
+			{ name:"Version", props: [PInt(1000)], childs: null },
+			{ name:"Properties70", props: null, childs: [
+				{ name: "P", props: [PString("UpAxis"), PString("int"), PString("Integer"), PString(""), PInt(2) ], childs:null },
+				{ name: "P", props: [PString("UpAxisSign"), PString("int"), PString("Integer"), PString(""), PInt(1) ], childs:null },
+				{ name: "P", props: [PString("FrontAxis"), PString("int"), PString("Integer"), PString(""), PInt(0) ], childs:null },
+				{ name: "P", props: [PString("FrontAxisSign"), PString("int"), PString("Integer"), PString(""), PInt(-1) ], childs:null },
+				{ name: "P", props: [PString("CoordAxis"), PString("int"), PString("Integer"), PString(""), PInt(1) ], childs:null },
+				{ name: "P", props: [PString("CoordAxisSign"), PString("int"), PString("Integer"), PString(""), PInt(-1) ], childs:null },
+				{ name: "P", props: [PString("OriginalUpAxis"), PString("int"), PString("Integer"), PString(""), PInt(-1) ], childs:null },
+				{ name: "P", props: [PString("OriginalUpAxisSign"), PString("int"), PString("Integer"), PString(""), PInt(1) ], childs:null },
+				{ name: "P", props: [PString("UnitScaleFactor"), PString("double"), PString("Number"), PString(""), PInt(100) ], childs:null },
+				{ name: "P", props: [PString("OriginalUnitScaleFactor"), PString("double"), PString("Number"), PString(""), PInt(1) ], childs:null },
+				{ name: "P", props: [PString("AmbientColor"), PString("ColorRGB"), PString("Color"), PString(""), PInt(0), PInt(0), PInt(0) ], childs:null },
+				{ name: "P", props: [PString("DefaultCamera"), PString("KString"), PString(""), PString(""), PString("Producer Perspective") ], childs:null },
+				{ name: "P", props: [PString("TimeMode"), PString("enum"), PString(""), PString(""), PInt(11) ], childs:null },
+				{ name: "P", props: [PString("TimeSpanStart"), PString("Ktime"), PString("Time"), PString(""), PInt(0) ], childs:null },
+				{ name: "P", props: [PString("TimeSpanStop"), PString("Ktime"), PString("Time"), PString(""), PInt(0) ], childs:null },
+				{ name: "P", props: [PString("CustomFrameRate"), PString("double"), PString("Number"), PString(""), PInt(24) ], childs:null },
+			] }
+		] };
 
-		var globalSettings : FbxNode = {name:"GlobalSettings", props: null, childs: [version, properties]};
 		return globalSettings;
 	}
 
 	function buildDefinitions(objects: Array<h3d.scene.Object>) {
-		var defGlobalSettings : FbxNode = { name:"ObjectType", props:[PString("GlobalSettings")], childs: [
-			{ name: "Count", props: [PInt(1)], childs: null }
-		] };
-
-		var meshCount = 0;
 		var materialsIds = new Array<String>();
+		var defCount = 1;
+		var meshCount = 0;
 		var materialCount = 0;
+		var textureCount = 0;
 
 		var meshes = [];
 		for (o in objects) {
@@ -205,8 +183,22 @@ class Writer {
 
 				materialsIds.push(m.name);
 				materialCount += m.getMaterials().length;
+
+				if (m.material.texture != null)
+					textureCount++;
+
+				if (m.material.normalMap != null)
+					textureCount++;
+
+				if (m.material.specularTexture != null)
+					textureCount++;
 			}
 		}
+
+		var defGlobalSettings : FbxNode = { name:"ObjectType", props:[PString("GlobalSettings")], childs: [
+			{ name: "Count", props: [PInt(1)], childs: null }
+		] };
+		defCount += 1;
 
 		var modelCount = meshCount;
 		var defModel : FbxNode = { name:"ObjectType", props:[PString("Model")], childs: [
@@ -287,6 +279,7 @@ class Writer {
 				] }
 			] }
 		] };
+		defCount += modelCount;
 
 		var geometryCount = meshCount;
 		var defGeometry : FbxNode = { name:"ObjectType", props:[PString("Geometry")], childs: [
@@ -302,6 +295,7 @@ class Writer {
 				] }
 			] }
 		] };
+		defCount += geometryCount;
 
 		var defMaterial : FbxNode = { name:"ObjectType", props:[PString("Material")], childs: [
 			{ name: "Count", props: [PInt(materialCount)], childs: null },
@@ -332,8 +326,8 @@ class Writer {
 				]}
 			] },
 		] };
+		defCount += materialCount;
 
-		var defCount = modelCount + geometryCount + materialCount + 1;
 		var definitions : FbxNode = { name:"Definitions", props: null, childs: [
 			{ name: "Version", props: [PInt(100)], childs: null },
 			{ name: "Count", props: [PInt(defCount)], childs: null },
@@ -342,6 +336,61 @@ class Writer {
 			defGeometry,
 			defMaterial
 		]};
+
+		if ( textureCount != 0 ) {
+			var defTexture : FbxNode = { name:"ObjectType", props:[PString("Texture")], childs: [
+				{ name: "Count", props: [PInt(textureCount)], childs: null },
+				{ name: "PropertyTemplate", props: [PString("FbxFileTexture")], childs: [
+						{ name:"Properties70", props: null, childs: [
+						{ name: "P", props: [PString("TextureTypeUse"), PString("enum"), PString(""), PString(""), PInt(0)], childs: null },
+						{ name: "P", props: [PString("Texture alpha"), PString("Number"), PString(""), PString("A"), PFloat(1)], childs: null },
+						{ name: "P", props: [PString("CurrentMappingType"), PString("enum"), PString(""), PString(""), PInt(0)], childs: null },
+						{ name: "P", props: [PString("WrapModeU"), PString("enum"), PString(""), PString(""), PInt(0)], childs: null },
+						{ name: "P", props: [PString("WrapModeV"), PString("enum"), PString(""), PString(""), PInt(0)], childs: null },
+						{ name: "P", props: [PString("UVSwap"), PString("bool"), PString(""), PString(""), PInt(0)], childs: null },
+						{ name: "P", props: [PString("PremultiplyAlpha"), PString("bool"), PString(""), PString(""), PInt(1)], childs: null },
+						{ name: "P", props: [PString("Translation"), PString("Vector"), PString(""), PString("A"), PFloat(0), PFloat(0), PFloat(0)], childs: null },
+						{ name: "P", props: [PString("Rotation"), PString("Vector"), PString(""), PString("A"), PFloat(0), PFloat(0), PFloat(0)], childs: null },
+						{ name: "P", props: [PString("Scaling"), PString("Vector"), PString(""), PString("A"), PFloat(1), PFloat(1), PFloat(1)], childs: null },
+						{ name: "P", props: [PString("TextureRotationPivot"), PString("Vector3D"), PString("Vector"), PString(""), PFloat(0), PFloat(0), PFloat(0)], childs: null },
+						{ name: "P", props: [PString("TextureScalingPivot"), PString("Vector3D"), PString("Vector"), PString(""), PFloat(0), PFloat(0), PFloat(0)], childs: null },
+						{ name: "P", props: [PString("CurrentTextureBlendMode"), PString("enum"), PString(""), PString(""), PInt(1)], childs: null },
+						{ name: "P", props: [PString("UVSet"), PString("KString"), PString(""), PString(""), PString("default")], childs: null },
+						{ name: "P", props: [PString("UseMaterial"), PString("bool"), PString(""), PString(""), PInt(0)], childs: null },
+						{ name: "P", props: [PString("UseMipMap"), PString("bool"), PString(""), PString(""), PInt(0)], childs: null },
+					]}
+				] },
+			] };
+			defCount += textureCount;
+
+			var videoCount = textureCount;
+			var defVideo : FbxNode = { name:"ObjectType", props:[PString("FbxVideo")], childs: [
+				{ name: "Count", props: [PInt(videoCount)], childs: null },
+				{ name: "PropertyTemplate", props: [PString("FbxFileTexture")], childs: [
+						{ name:"Properties70", props: null, childs: [
+						{ name: "P", props: [PString("ImageSequence"), PString("bool"), PString(""), PString(""), PInt(0)], childs: null },
+						{ name: "P", props: [PString("ImageSequenceOffset"), PString("int"), PString("Integer"), PString(""), PInt(0)], childs: null },
+						{ name: "P", props: [PString("FrameRate"), PString("double"), PString("Number"), PString(""), PInt(0)], childs: null },
+						{ name: "P", props: [PString("LastFrame"), PString("int"), PString("Integer"), PString(""), PInt(0)], childs: null },
+						{ name: "P", props: [PString("Width"), PString("int"), PString("Integer"), PString(""), PInt(0)], childs: null },
+						{ name: "P", props: [PString("Height"), PString("int"), PString("Integer"), PString(""), PInt(0)], childs: null },
+						{ name: "P", props: [PString("Path"), PString("KString"), PString("XRefUrl"), PString(""), PString("")], childs: null },
+						{ name: "P", props: [PString("StartFrame"), PString("int"), PString("Integer"), PString(""), PInt(0)], childs: null },
+						{ name: "P", props: [PString("StopFrame"), PString("int"), PString("Integer"), PString(""), PInt(0)], childs: null },
+						{ name: "P", props: [PString("PlaySpeed"), PString("double"), PString("Number"), PString(""), PInt(0)], childs: null },
+						{ name: "P", props: [PString("Offset"), PString("Ktime"), PString("Time"), PString(""), PInt(0)], childs: null },
+						{ name: "P", props: [PString("InterlaceMode"), PString("enum"), PString(""), PString(""), PInt(0)], childs: null },
+						{ name: "P", props: [PString("FreeRunning"), PString("bool"), PString(""), PString(""), PInt(0)], childs: null },
+						{ name: "P", props: [PString("Loop"), PString("bool"), PString(""), PString(""), PInt(0)], childs: null },
+						{ name: "P", props: [PString("AccessMode"), PString("bool"), PString(""), PString(""), PInt(0)], childs: null },
+					]}
+				] },
+			] };
+			defCount += videoCount;
+
+			definitions.childs.push(defTexture);
+			definitions.childs.push(defVideo);
+		}
 
 		return definitions;
 	}
@@ -596,7 +645,7 @@ class Writer {
 		}
 
 		build(objects, input, objectTreeRoot);
-		return input.objectsNode;
+		return objectsNode;
 	}
 
 	function buildConnections(objectTree : Dynamic, usedMaterials : Array<Dynamic>) {
@@ -618,6 +667,7 @@ class Writer {
 
 		addConnexion(-1, objectTree);
 
+		// Build all materials connections
 		for (idx in 0...usedMaterials.length)
 			connections.childs.push({ name:"C", props: [ PString("OO"), PInt(usedMaterials[idx].matId), PInt(usedMaterials[idx].parentModelId) ], childs: null });
 
@@ -630,12 +680,13 @@ class Writer {
 		out = header;
 
 		writeHeader();
+		writeNode(buildHeaderExtension());
 		writeNode(buildGlobalSettings());
-		writeNode(buildDefinitions(cast objects));
+		writeNode(buildDefinitions(objects));
 
 		var objectTreeRoot = { id: 0, children: [] };
 		var usedMaterials = new Array<Dynamic>();
-		writeNode(buildObjects(cast objects, objectTreeRoot, params, usedMaterials));
+		writeNode(buildObjects(objects, objectTreeRoot, params, usedMaterials));
 		writeNode(buildConnections(objectTreeRoot, usedMaterials));
 
 		var bytes = header.getBytes();
