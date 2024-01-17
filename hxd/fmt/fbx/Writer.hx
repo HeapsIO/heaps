@@ -10,6 +10,37 @@ class Writer {
 		this.out = out;
 	}
 
+	function resolvePathImpl( modelPath : String, filePath : String ) {
+		#if editor
+		inline function exists(path) return File.exists(path);
+		var fullPath = hide.Ide.inst.getPath(filePath);
+		if( exists(fullPath) )
+			return fullPath;
+
+		// swap drive letter
+		if( fullPath.charAt(1) == ":" && fullPath.charAt(0) != hide.Ide.inst.projectDir.charAt(0) ) {
+			fullPath = hide.Ide.inst.projectDir.charAt(0) + fullPath.substr(1);
+			if( exists(fullPath) )
+				return fullPath;
+		}
+
+		if( modelPath == null )
+			return null;
+
+		filePath = filePath.split("\\").join("/");
+		modelPath = hide.Ide.inst.getPath(modelPath);
+
+		var path = modelPath.split("/");
+		path.pop();
+		var relToModel = path.join("/") + "/" + filePath.split("/").pop();
+		if( exists(relToModel) )
+			return relToModel;
+
+		return null;
+		#end
+		return filePath;
+	}
+
 	function getTabFormat(depth:Int) {
 		return '${StringTools.rpad("", '\t', depth)}';
 	}
@@ -386,6 +417,7 @@ class Writer {
 					]}
 				] },
 			] };
+
 			defCount += videoCount;
 
 			definitions.childs.push(defTexture);
@@ -397,14 +429,14 @@ class Writer {
 
 	function buildObjects(objects: Array<h3d.scene.Object>, params : Dynamic, objectRegistry : Array<Dynamic>) {
 		var objectsNode : FbxNode = { name: "Objects", props: null, childs: [] };
-		var input = { objectsNode : objectsNode, nextFreeId : 1, objectRegistry : objectRegistry };
+		var nextFreeId = 1;
 
 		function getUniqueId() {
-			input.nextFreeId++;
-			return input.nextFreeId - 1;
+			nextFreeId++;
+			return nextFreeId - 1;
 		}
 
-		function buildObject(object : h3d.scene.Object, input : Dynamic, params : Dynamic, isRoot : Bool) {
+		function buildObject(object : h3d.scene.Object, params : Dynamic, isRoot : Bool) {
 			var modelId = getUniqueId();
 			var modelTransform = object.getTransform();
 
@@ -447,7 +479,7 @@ class Writer {
 				]}
 			] };
 
-			input.objectsNode.childs.push(model);
+			objectsNode.childs.push(model);
 
 			var mesh = Std.downcast(object, h3d.scene.Mesh);
 			if (mesh == null)
@@ -520,9 +552,9 @@ class Writer {
 				var materialId = -1;
 
 				// Only write material once in the fbx file
-				for (i in 0...input.objectRegistry.length) {
-					if (input.objectRegistry[i].name == mat.name) {
-						materialId = input.objectRegistry[i].id;
+				for (i in 0...objectRegistry.length) {
+					if (objectRegistry[i].name == "__mat"+mat.name) {
+						materialId = objectRegistry[i].id;
 						break;
 					}
 				}
@@ -556,14 +588,78 @@ class Writer {
 						] },
 					] };
 
-					input.objectsNode.childs.push(material);
+					objectsNode.childs.push(material);
 				}
 
-				objectRegistry.push({ name: mat.name, type: "O", id: materialId, parentId: modelId, property: null });
+				objectRegistry.push({ name: "__mat"+mat.name, type: "O", id: materialId, parentId: modelId, property: null });
 
 				var matIndexes = hmdModel.getMaterialIndexes(idx);
 				for (i in 0...Std.int(matIndexes.count / 3))
 					mats.push(idx);
+
+				// Building mat textures
+				var textures = new Array<Dynamic>();
+				for (matData in @:privateAccess hmdModel.lib.header.materials) {
+					if (matData.name == mat.name) {
+						if (matData.diffuseTexture != null)
+							@:privateAccess textures.push({ name: matData.diffuseTexture.substr(matData.diffuseTexture.lastIndexOf("/") + 1), path: resolvePathImpl(hmdModel.lib.resource.entry.path ,matData.diffuseTexture), property: "DiffuseColor" });
+						if (matData.normalMap != null)
+							@:privateAccess textures.push({ name: matData.normalMap.substr(matData.normalMap.lastIndexOf("/") + 1), path: resolvePathImpl(hmdModel.lib.resource.entry.path ,matData.normalMap), property: "NormalMap" });
+						if (matData.specularTexture != null)
+							@:privateAccess textures.push({ name : matData.specularTexture.substr(matData.specularTexture.lastIndexOf("/") + 1), path: resolvePathImpl(hmdModel.lib.resource.entry.path ,matData.specularTexture), property: "SpecularFactor" });
+					}
+				}
+
+				for (t in textures) {
+					var textureId = getUniqueId();
+					var textureProperty = '${ t.property == "DiffuseColor" ? "base_color_texture" : (t.property == "NormalMap" ? "normalmap_texture" : "specular_texture") }';
+					var texture : FbxNode = { name:"Texture", props: [PInt(textureId), PString('Texture::${textureProperty}'), PString("Clip")], childs:[
+						{ name: "Type", props: [PString("TextureVideoClip")], childs: null },
+						{ name: "Version", props: [PInt(202)], childs: null },
+						{ name: "TextureName", props: [PString('Texture::${textureProperty}')], childs: null },
+						{ name: "Properties70", props: null, childs: [
+							{ name:"P", props: [PString("UseMaterial"), PString("bool"), PString(""), PString(""), PInt(1)], childs: null },
+							{ name:"P", props: [PString("AlphaSource"), PString("enum"), PString(""), PString(""), PInt(2)], childs: null },
+						] },
+						{ name: "Media", props: [PString('Video::${t.name}')], childs: null },
+						{ name: "Filename", props: [PString(t.path)], childs: null },
+						{ name: "RelativeFilename", props: [PString("")], childs: null },
+						{ name: "ModelUVTranslation", props: [PFloat(0), PFloat(0)], childs: null },
+						{ name: "ModelUVScaling", props: [PFloat(1), PFloat(1)], childs: null },
+						{ name: "Texture_Alpha_Source", props: [PString("None")], childs: null },
+						{ name: "Cropping", props: [PInt(0), PInt(0), PInt(0), PInt(0)], childs: null },
+					] };
+
+
+					objectsNode.childs.push(texture);
+					objectRegistry.push({ name: "texture_"+t.name, type: "P", id: textureId, parentId: materialId, property: t.property });
+
+					// If texture isn't registered in fbx file, we should add it (it is registered as "Video" object)
+					var videoId = -1;
+					for (idx in 0...objectRegistry.length) {
+						if (objectRegistry[idx].name == "__video"+t.name) {
+							videoId = objectRegistry[idx].id;
+							break;
+						}
+					}
+
+					if (videoId == -1) {
+						videoId = getUniqueId();
+						var video : FbxNode = { name:"Video", props: [PInt(videoId), PString('Video::${t.name}'), PString("Clip")], childs:[
+							{ name: "Type", props: [PString("Clip")], childs: null },
+							{ name: "Properties70", props: null, childs: [
+								{ name:"P", props: [PString("KString"), PString("XRefUrl"), PString(""), PString(t.path)], childs: null },
+							] },
+							{ name: "UseMipMap", props: [PInt(0)], childs: null },
+							{ name: "Filename", props: [PString(t.path)], childs: null },
+							{ name: "RelativeFilename", props: [PString("")], childs: null },
+						] };
+
+						objectsNode.childs.push(video);
+					}
+
+					objectRegistry.push({ name: "__video"+t.name, type: "O", id: videoId, parentId: textureId, property: null });
+				}
 			}
 
 			var geometryId = getUniqueId();
@@ -634,32 +730,38 @@ class Writer {
 				);
 			}
 
-			input.objectsNode.childs.push(geometry);
+			objectsNode.childs.push(geometry);
 			objectRegistry.push({ name: "geometry" ,type: "O", id: geometryId, parentId: modelId, property: null });
 		}
 
-		function build(objects: Array<h3d.scene.Object>, input : Dynamic, parentId : Int) {
+		function build(objects: Array<h3d.scene.Object>, parentId : Int) {
 			for (o in objects) {
-				var objectId = input.nextFreeId;
+				var objectId = nextFreeId;
 
 				// Register object in object registry for future usage (add connections for example)
-				objectRegistry.push({ name: o.name, type : "O", id: input.nextFreeId, parentId: parentId, property: null });
+				objectRegistry.push({ name: o.name, type : "O", id: nextFreeId, parentId: parentId, property: null });
 
 				// Build current object and his children recusively
-				buildObject(o, input, params, parentId == 0);
-				build(@:privateAccess o.children, input, objectId);
+				buildObject(o, params, parentId == 0);
+				build(@:privateAccess o.children, objectId);
 			}
 		}
 
-		build(objects, input, 0);
+		build(objects, 0);
 		return objectsNode;
 	}
 
 	function buildConnections(objectRegistry : Array<Dynamic>) {
 		var connections : FbxNode = { name:"Connections", props: null, childs: [] };
 
-		for (o in objectRegistry)
-			connections.childs.push({ name:"C", props: [ PString("O"+o.type), PInt(o.id), PInt(o.parentId) ], childs: null });
+		for (o in objectRegistry) {
+			var connection = { name:"C", props: [ PString("O"+o.type), PInt(o.id), PInt(o.parentId) ], childs: null };
+
+			if (o.property != null)
+				connection.props.push(PString(o.property));
+
+			connections.childs.push(connection);
+		}
 
 		return connections;
 	}
