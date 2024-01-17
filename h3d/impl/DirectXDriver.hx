@@ -877,6 +877,8 @@ class DirectXDriver extends h3d.impl.Driver {
 			case TArray( t = TSampler(_) | TRWTexture(_) , SConst(n) ):
 				for( i in 0...n )
 					ctx.texturesTypes.push(t);
+			case TSampler(_), TRWTexture(_):
+				ctx.texturesTypes.push(p.type);
 			default:
 			}
 			p = p.next;
