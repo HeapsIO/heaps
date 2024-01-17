@@ -874,10 +874,10 @@ class DirectXDriver extends h3d.impl.Driver {
 		var p = shader.textures;
 		while( p != null ) {
 			switch( p.type ) {
-			case TArray( t = TSampler(_) | TRWTexture(_) , SConst(n) ):
+			case TArray( t = TSampler(_) | TRWTexture(_) | TChannel(_), SConst(n) ):
 				for( i in 0...n )
 					ctx.texturesTypes.push(t);
-			case TSampler(_), TRWTexture(_):
+			case TSampler(_), TRWTexture(_), TChannel(_):
 				ctx.texturesTypes.push(p.type);
 			default:
 			}

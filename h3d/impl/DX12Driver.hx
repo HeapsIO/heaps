@@ -1063,8 +1063,6 @@ class DX12Driver extends h3d.impl.Driver {
 							for( i in 0...n )
 								allocConsts(1, vis, UAV);
 						}
-					case TSampler(_), TRWTexture(_):
-						regs.texturesTypes.push(v.type);
 					default:
 					}
 				}
