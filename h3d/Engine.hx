@@ -278,7 +278,7 @@ class Engine {
 		if( !driver.isDisposed() ) driver.resize(width, height);
 	}
 
-	public function begin() {
+	public function begin(preventClear = false) {
 		if( driver.isDisposed() )
 			return false;
 		// init
@@ -292,7 +292,8 @@ class Engine {
 		haxe.System.beginFrame();
 		#end
 		driver.begin(hxd.Timer.frameCount);
-		if( backgroundColor != null ) clear(backgroundColor, 1, 0);
+		if( backgroundColor != null && !preventClear )
+			clear(backgroundColor, 1, 0);
 		return true;
 	}
 

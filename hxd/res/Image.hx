@@ -8,6 +8,7 @@ enum abstract ImageFormat(Int) {
 	var Dds = 4;
 	var Raw = 5;
 	var Hdr = 6;
+	var Basis = 7;
 
 	/*
 		Tells if we might not be able to directly decode the image without going through a loadBitmap async call.
@@ -35,6 +36,7 @@ enum abstract ImageFormat(Int) {
 			case Dds: "DDS";
 			case Raw: "RAW";
 			case Hdr: "HDR";
+			case Basis: "BASIS";
 		};
 	}
 }
@@ -126,7 +128,7 @@ class Image extends Resource {
 						var colbits = f.readByte();
 						var colType = f.readByte();
 						inf.pixelFormat = switch ([colbits, colType]) {
-							case [8, _]: BGRA; // TODO : grayscale png image
+							case [4, _], [8, _]: BGRA; // TODO : grayscale png image
 							case [16, 0]: R16U;
 							case [16, 2]: RGBA16U; // RGB16U is not supported on DirectX !
 							case [16, 4]: RG16U; // gray + alpha
@@ -241,7 +243,14 @@ class Image extends Resource {
 						fid = "" + fourCC;
 					throw entry.path + " has unsupported 4CC " + fid;
 				}
-
+			case 0x4273:
+				inf.dataFormat = Basis;
+				f.skip(63);
+				inf.pixelFormat = BGRA;
+				var slicesPos = f.readInt32();
+				f.skip(slicesPos-42);
+				inf.width = f.readUInt16();
+				inf.height = f.readUInt16();
 			case 0x3F23: // HDR RADIANCE
 
 				inf.dataFormat = Hdr;
@@ -435,6 +444,21 @@ class Image extends Resource {
 			case Hdr:
 				var data = hxd.fmt.hdr.Reader.decode(entry.getBytes(), false);
 				pixels = new hxd.Pixels(data.width, data.height, data.bytes, inf.pixelFormat);
+			case Basis:
+				#if js
+				var bytes = entry.getBytes();
+				var driver:h3d.impl.GlDriver = cast h3d.Engine.getCurrent().driver;
+				var f = switch(driver.checkTextureSupport()) {
+					case hxd.PixelFormat.S3TC(_): hxd.PixelFormat.S3TC(0);
+					case hxd.PixelFormat.ETC(_): hxd.PixelFormat.ETC(0);
+					case hxd.PixelFormat.ASTC(_): hxd.PixelFormat.ASTC(10);
+					case hxd.PixelFormat.PVRTC(_): hxd.PixelFormat.PVRTC(9);
+					default: throw 'Unsupported basis texture';
+				}
+				pixels = new hxd.Pixels(inf.width, inf.height, bytes, f);
+				#else
+				throw 'Basis only supported on js target';
+				#end
 		}
 		if (fmt != null)
 			pixels.convert(fmt);

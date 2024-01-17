@@ -94,6 +94,7 @@ class GlslOut {
 	public var varNames : Map<Int,String>;
 	public var glES : Null<Float>;
 	public var version : Null<Int>;
+	public var precision : String = 'mediump';
 
 	/*
 		Intel HD driver fix:
