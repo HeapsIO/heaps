@@ -395,138 +395,140 @@ class Writer {
 		return definitions;
 	}
 
-	function buildObjects(objects: Array<h3d.scene.Object>, objectTreeRoot : Dynamic, params : Dynamic, usedMaterials : Array<Dynamic>) {
+	function buildObjects(objects: Array<h3d.scene.Object>, params : Dynamic, objectRegistry : Array<Dynamic>) {
 		var objectsNode : FbxNode = { name: "Objects", props: null, childs: [] };
-		var input = { objectsNode : objectsNode, nextFreeId : 1, usedMaterials : usedMaterials};
+		var input = { objectsNode : objectsNode, nextFreeId : 1, objectRegistry : objectRegistry };
 
-		function buildObject(object : h3d.scene.Object, input : Dynamic, isRoot : Bool, params : Dynamic) {
-			// Define uniques ids for representing model, geometry and material node
-			var modelId = input.nextFreeId;
-			var geometryId = input.nextFreeId + 1;
+		function getUniqueId() {
+			input.nextFreeId++;
+			return input.nextFreeId - 1;
+		}
 
-			input.nextFreeId += 2;
+		function buildObject(object : h3d.scene.Object, input : Dynamic, params : Dynamic, isRoot : Bool) {
+			var modelId = getUniqueId();
+			var modelTransform = object.getTransform();
 
-			var mesh = Std.downcast(object, h3d.scene.Mesh);
-			var vertices = new Array<Float>();
-			var normals = new Array<Float>();
-			var uvs = new Array<Array<Float>>();
-			var indexes = new Array<Int>();
-
-			if (mesh != null) {
-				var hmdModel = Std.downcast(mesh.primitive, h3d.prim.HMDModel);
-				var vertexFormat = @:privateAccess hmdModel.data.vertexFormat;
-				var bufs = hmdModel.getDataBuffers(vertexFormat);
-				var idxVertex = 0;
-				while (idxVertex < bufs.vertexes.length) {
-					var curIndex = idxVertex;
-					vertices.push(-bufs.vertexes[curIndex]); // Change left hand to right hand
-					vertices.push(bufs.vertexes[curIndex + 1]);
-					vertices.push(bufs.vertexes[curIndex + 2]);
-					curIndex += 3;
-
-					if (vertexFormat.hasInput("normal")) {
-						normals.push(-bufs.vertexes[curIndex]);
-						normals.push(bufs.vertexes[curIndex + 1]);
-						normals.push(bufs.vertexes[curIndex + 2]);
-						curIndex += 3;
-					}
-
-					// Nothing to do with tangent for now
-					if (vertexFormat.hasInput("tangent"))
-						curIndex += 3;
-
-					var uvIdx = 0;
-					var uvInput = 'uv${ uvIdx == 0 ? "" : '${uvIdx + 1}'}';
-					while(vertexFormat.hasInput(uvInput)) {
-						if (uvs.length < uvIdx + 1)
-							uvs.push(new Array<Float>());
-
-						uvs[uvIdx].push(bufs.vertexes[curIndex]);
-						uvs[uvIdx].push(1 - bufs.vertexes[curIndex + 1]);
-						curIndex += 2;
-						uvIdx++;
-						uvInput = 'uv${ uvIdx == 0 ? "" : '${uvIdx + 1}'}';
-					}
-
-					idxVertex += vertexFormat.stride;
-				}
-
-				var idxIndex = 0;
-				while (idxIndex < bufs.indexes.length) {
-					// We have to flip the order of vertex to change the facing direction of the triangle (because we swapped x axis
-					// earlier to change from left hand to right hand)
-					indexes.push(bufs.indexes[idxIndex + 1]);
-					indexes.push(bufs.indexes[idxIndex]);
-
-					// This is because the last index that close the polygon (in our case, we work with triangles, so the third)
-					// need to be increased by one and then set to negative.
-					// (This is because original index is XOR'ed with -1.)
-					// We also need to keep indexes in range of vertices length
-					indexes.push( -1 * (bufs.indexes[idxIndex + 2] + 1));
-
-					idxIndex += 3;
-				}
-			}
-
-			var t = object.getTransform();
-
+			// We add some extra rotations to the default transform to handle
+			// the export on different axis
 			if (isRoot) {
-				var r = new h3d.Quat();
+				var q = new h3d.Quat();
 
 				if (params.forward == "0" && params.forwardSign== "1" && params.up == "2" && params.upSign == "1")
-					r.initRotation(0,0,0);
+					q.initRotation(0,0,0);
 				else if (params.forward == "0" && params.forwardSign== "-1" && params.up == "2" && params.upSign == "1")
-					r.initRotation(0,0,Math.degToRad(90));
+					q.initRotation(0,0,Math.degToRad(90));
 				else
 					throw "Export params not yet implemented";
 
-				t = t.multiplied(r.toMatrix());
+				modelTransform = modelTransform.multiplied(q.toMatrix());
 			}
 
+			// Apply the default transform of the mode on the current transform to
+			// get the real transform
 			if (object.defaultTransform != null)
-				t = object.defaultTransform.multiplied(t);
+				modelTransform = object.defaultTransform.multiplied(modelTransform);
 
-			t._12 = -t._12;
-			t._13 = -t._13;
-			t._21 = -t._21;
-			t._31 = -t._31;
-			t._41 = -t._41;
+			// Convert left hand matrix to right hand matrix
+			modelTransform._12 = -modelTransform._12;
+			modelTransform._13 = -modelTransform._13;
+			modelTransform._21 = -modelTransform._21;
+			modelTransform._31 = -modelTransform._31;
+			modelTransform._41 = -modelTransform._41;
 
+			// The model node is used for every object, not only those we have mesh
 			var model : FbxNode = { name:"Model", props: [PInt(modelId), PString('Model::${object.name}'), PString("Mesh")], childs:[
 				{ name:"Version", props:[ PInt(232)], childs:null },
 				{ name:"Properties70", props: null, childs: [
 					{ name:"P", props:[PString("InheritType"), PString("enum"), PString(""), PString(""), PInt(1)], childs: null },
 					{ name:"P", props:[PString("DefaultAttributeIndex"), PString("int"), PString("Integer"), PString(""), PInt(0)], childs: null },
-					{ name:"P", props:[PString("Lcl Translation"), PString("Lcl Translation"), PString(""), PString("A"), PFloat(t.getPosition().x), PFloat(t.getPosition().y), PFloat(t.getPosition().z)], childs: null },
-					{ name:"P", props:[PString("Lcl Rotation"), PString("Lcl Rotation"), PString(""), PString("A"), PFloat(Math.radToDeg(t.getEulerAngles().x)), PFloat(Math.radToDeg(t.getEulerAngles().y)), PFloat(Math.radToDeg(t.getEulerAngles().z))], childs: null },
-					{ name:"P", props:[PString("Lcl Scaling"), PString("Lcl Scaling"), PString(""), PString("A"), PFloat(t.getScale().x), PFloat(t.getScale().y), PFloat(t.getScale().z)], childs: null },
+					{ name:"P", props:[PString("Lcl Translation"), PString("Lcl Translation"), PString(""), PString("A"), PFloat(modelTransform.getPosition().x), PFloat(modelTransform.getPosition().y), PFloat(modelTransform.getPosition().z)], childs: null },
+					{ name:"P", props:[PString("Lcl Rotation"), PString("Lcl Rotation"), PString(""), PString("A"), PFloat(Math.radToDeg(modelTransform.getEulerAngles().x)), PFloat(Math.radToDeg(modelTransform.getEulerAngles().y)), PFloat(Math.radToDeg(modelTransform.getEulerAngles().z))], childs: null },
+					{ name:"P", props:[PString("Lcl Scaling"), PString("Lcl Scaling"), PString(""), PString("A"), PFloat(modelTransform.getScale().x), PFloat(modelTransform.getScale().y), PFloat(modelTransform.getScale().z)], childs: null },
 				]}
 			] };
 
 			input.objectsNode.childs.push(model);
 
+			var mesh = Std.downcast(object, h3d.scene.Mesh);
 			if (mesh == null)
 				return;
+
+			var vertices = new Array<Float>();
+			var normals = new Array<Float>();
+			var uvs = new Array<Array<Float>>();
+			var indexes = new Array<Int>();
+
+			var hmdModel = Std.downcast(mesh.primitive, h3d.prim.HMDModel);
+			var vertexFormat = @:privateAccess hmdModel.data.vertexFormat;
+			var bufs = hmdModel.getDataBuffers(vertexFormat);
+			var idxVertex = 0;
+
+			// Fill mesh informations that will be required in the fbx file
+			while (idxVertex < bufs.vertexes.length) {
+				var curIndex = idxVertex;
+				vertices.push(-bufs.vertexes[curIndex]); // Convert left hand X coordinate to right hand X coordinate
+				vertices.push(bufs.vertexes[curIndex + 1]);
+				vertices.push(bufs.vertexes[curIndex + 2]);
+				curIndex += 3;
+
+				if (vertexFormat.hasInput("normal")) {
+					normals.push(-bufs.vertexes[curIndex]); // Convert left hand X coordinate to right hand X coordinate
+					normals.push(bufs.vertexes[curIndex + 1]);
+					normals.push(bufs.vertexes[curIndex + 2]);
+					curIndex += 3;
+				}
+
+				// Tangent export isn't supported at the moment
+				if (vertexFormat.hasInput("tangent"))
+					curIndex += 3;
+
+				var uvIdx = 0;
+				var uvInput = 'uv${ uvIdx == 0 ? "" : '${uvIdx + 1}'}';
+				while(vertexFormat.hasInput(uvInput)) {
+					if (uvs.length < uvIdx + 1)
+						uvs.push(new Array<Float>());
+
+					uvs[uvIdx].push(bufs.vertexes[curIndex]);
+					uvs[uvIdx].push(1 - bufs.vertexes[curIndex + 1]);
+					curIndex += 2;
+					uvIdx++;
+					uvInput = 'uv${ uvIdx == 0 ? "" : '${uvIdx + 1}'}';
+				}
+
+				idxVertex += vertexFormat.stride;
+			}
+
+			var idxIndex = 0;
+			while (idxIndex < bufs.indexes.length) {
+				// We have to flip the order of vertex to change the facing direction of the triangle (because we changed X axis
+				// sign earlier to change from left hand to right hand)
+
+				// /!\ Last vertex index This is because the last index that close the polygon (in our case, we work with triangles, so the third)
+				// need to be increased by one and then set to negative.
+				// (This is because original index is XOR'ed with -1.)
+				indexes.push(bufs.indexes[idxIndex + 1]);
+				indexes.push(bufs.indexes[idxIndex]);
+				indexes.push( -1 * (bufs.indexes[idxIndex + 2] + 1));
+
+				idxIndex += 3;
+			}
 
 			var meshMaterials = mesh.getMaterials();
 			var mats = new Array<Int>();
 			for (idx => mat in meshMaterials ) {
 				var hmdModel = Std.downcast(mesh.primitive, h3d.prim.HMDModel);
-				var materialId = input.nextFreeId;
+				var materialId = -1;
 
 				// Only write material once in the fbx file
-				var matId = -1;
-				for (i in 0...input.usedMaterials.length)
-					if (input.usedMaterials[i].matName == mat.name) {
-						matId = input.usedMaterials[i].matId;
+				for (i in 0...input.objectRegistry.length) {
+					if (input.objectRegistry[i].name == mat.name) {
+						materialId = input.objectRegistry[i].id;
 						break;
 					}
-
-				if (matId != -1) {
-					materialId = matId;
 				}
-				else {
-					input.nextFreeId += 1;
+
+				if (materialId == -1) {
+					materialId = getUniqueId();
 
 					var material : FbxNode = { name:"Material", props: [PInt(materialId), PString('Material::${mat.name}'), PString("")], childs:[
 						{ name: "Version", props: [PInt(102)], childs: null },
@@ -557,12 +559,14 @@ class Writer {
 					input.objectsNode.childs.push(material);
 				}
 
-				input.usedMaterials.push( { matName : mat.name, matId : materialId, parentModelId : modelId} );
+				objectRegistry.push({ name: mat.name, type: "O", id: materialId, parentId: modelId, property: null });
+
 				var matIndexes = hmdModel.getMaterialIndexes(idx);
 				for (i in 0...Std.int(matIndexes.count / 3))
 					mats.push(idx);
 			}
 
+			var geometryId = getUniqueId();
 			var geometry : FbxNode = { name:"Geometry", props: [PInt(geometryId), PString('Geometry::${mesh.name}'), PString("Mesh")], childs:[
 				{ name:"Vertices", props: [PFloats(vertices)], childs: null},
 				{ name:"PolygonVertexIndex", props: [PInts(indexes)], childs: null},
@@ -631,45 +635,31 @@ class Writer {
 			}
 
 			input.objectsNode.childs.push(geometry);
+			objectRegistry.push({ name: "geometry" ,type: "O", id: geometryId, parentId: modelId, property: null });
 		}
 
-		function build(objects: Array<h3d.scene.Object>, input : Dynamic, parent : Dynamic) {
+		function build(objects: Array<h3d.scene.Object>, input : Dynamic, parentId : Int) {
 			for (o in objects) {
+				var objectId = input.nextFreeId;
 
-				var objectLeaf = { id: input.nextFreeId, children : []};
-				parent.children.push(objectLeaf);
+				// Register object in object registry for future usage (add connections for example)
+				objectRegistry.push({ name: o.name, type : "O", id: input.nextFreeId, parentId: parentId, property: null });
 
-				buildObject(o, input, parent.id == 0, params);
-				build(@:privateAccess o.children, input, objectLeaf);
+				// Build current object and his children recusively
+				buildObject(o, input, params, parentId == 0);
+				build(@:privateAccess o.children, input, objectId);
 			}
 		}
 
-		build(objects, input, objectTreeRoot);
+		build(objects, input, 0);
 		return objectsNode;
 	}
 
-	function buildConnections(objectTree : Dynamic, usedMaterials : Array<Dynamic>) {
-		// C stands for "Connection"
-		// OO stands for "Object to Object" meaning the connection is between two objects
-		// Then there's ids of object that are linked
+	function buildConnections(objectRegistry : Array<Dynamic>) {
+		var connections : FbxNode = { name:"Connections", props: null, childs: [] };
 
-		var connections : FbxNode = { name:"Connections", props: null, childs: []};
-
-		function addConnexion(parentId : Int, objectTree : Dynamic) {
-			if (objectTree.id != 0) {
-				connections.childs.push({ name:"C", props: [ PString("OO"), PInt(objectTree.id), PInt(parentId) ], childs: null });
-				connections.childs.push({ name:"C", props: [ PString("OO"), PInt(objectTree.id + 1), PInt(objectTree.id) ], childs: null });
-			}
-
-			for (idx in 0...objectTree.children.length)
-				addConnexion(objectTree.id, objectTree.children[idx]);
-		}
-
-		addConnexion(-1, objectTree);
-
-		// Build all materials connections
-		for (idx in 0...usedMaterials.length)
-			connections.childs.push({ name:"C", props: [ PString("OO"), PInt(usedMaterials[idx].matId), PInt(usedMaterials[idx].parentModelId) ], childs: null });
+		for (o in objectRegistry)
+			connections.childs.push({ name:"C", props: [ PString("O"+o.type), PInt(o.id), PInt(o.parentId) ], childs: null });
 
 		return connections;
 	}
@@ -679,15 +669,14 @@ class Writer {
 		var header = new haxe.io.BytesOutput();
 		out = header;
 
+		var objectRegistry = new Array<Dynamic>();
+
 		writeHeader();
 		writeNode(buildHeaderExtension());
 		writeNode(buildGlobalSettings());
 		writeNode(buildDefinitions(objects));
-
-		var objectTreeRoot = { id: 0, children: [] };
-		var usedMaterials = new Array<Dynamic>();
-		writeNode(buildObjects(objects, objectTreeRoot, params, usedMaterials));
-		writeNode(buildConnections(objectTreeRoot, usedMaterials));
+		writeNode(buildObjects(objects, params, objectRegistry));
+		writeNode(buildConnections(objectRegistry));
 
 		var bytes = header.getBytes();
 		out = old;
