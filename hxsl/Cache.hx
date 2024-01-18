@@ -507,7 +507,22 @@ class Cache {
 		}
 		if( textures.length > 0 ) {
 			// relink in order based on type
-			textures.sort(function(t1,t2) return t1.t.getIndex() - t2.t.getIndex());
+			textures.sort(function(t1,t2) {
+				return switch ( [t1.t, t2.t] ) {
+				case [TSampler(t1, a1), TSampler(t2, a2)]: 
+					if ( a1 != a2 ) 
+						a1 ? 1 : -1;
+					else
+						t1.getIndex() - t2.getIndex();
+				case [TRWTexture(t1, a1, _), TRWTexture(t2, a2, _)]: 
+					if ( a1 != a2 ) 
+						a1 ? 1 : -1;
+					else
+						t1.getIndex() - t2.getIndex();
+				default :
+					t1.t.getIndex() - t2.t.getIndex();
+				}
+			});
 			c.textures = textures[0].all[0];
 			for( i in 1...textures.length ) {
 				var prevAll = textures[i-1].all;
