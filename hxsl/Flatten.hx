@@ -50,6 +50,13 @@ class Flatten {
 		pack(prefix + "Globals", Global, globals, VFloat);
 		pack(prefix + "Params", Param, params, VFloat);
 		var allVars = globals.concat(params);
+		textureFormats.sort(function(t1,t2) {
+			if ( t1.rw != t2.rw )
+				return t1.rw - t2.rw;
+			if ( t1.arr != t2.arr )
+				return t1.arr ? 1 : -1;
+			return t1.dim.getIndex() - t2.dim.getIndex();
+		});
 		for( t in textureFormats ) {
 			var name = t.dim == T2D ? "" : t.dim.getName().substr(1);
 			if( t.rw > 0 ) name = "RW"+name+t.rw;
