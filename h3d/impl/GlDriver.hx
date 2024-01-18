@@ -343,7 +343,7 @@ class GlDriver extends Driver {
 			case TArray(t,SConst(n)): tt = t; count = n;
 			default:
 			}
-			if( tt != curT ) {
+			if( !tt.equals(curT) ) {
 				curT = tt;
 				name = switch( tt ) {
 				case TSampler(dim,arr):
