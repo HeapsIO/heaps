@@ -511,12 +511,12 @@ class Cache {
 				return switch ( [t1.t, t2.t] ) {
 				case [TSampler(t1, a1), TSampler(t2, a2)]: 
 					if ( a1 != a2 ) 
-						a1 ? 1 : -1;
+						a1 ? -1 : 1;
 					else
 						t1.getIndex() - t2.getIndex();
 				case [TRWTexture(t1, a1, _), TRWTexture(t2, a2, _)]: 
 					if ( a1 != a2 ) 
-						a1 ? 1 : -1;
+						a1 ? -1 : 1;
 					else
 						t1.getIndex() - t2.getIndex();
 				default :
