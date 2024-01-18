@@ -15,7 +15,7 @@ package h2d.filter;
 	For optimization purposes, rendering boundaries are clipped by scene viewport and nothing will be rendered offscreen.
 **/
 class Filter {
-
+	public var clipBounds = true;
 	/**
 		When enabled, rendering bounds of the filter will be expanded by `Filter.boundsExtend` in all directions.
 		Otherwise filter should provide custom bounds through `Filter.getBounds` call.
