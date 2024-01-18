@@ -747,6 +747,7 @@ class ScaleGridComp extends DrawableComp implements domkit.Component.ComponentDe
 	@:p var ignoreScale : Bool;
 	@:p var borderScale : Float;
 	@:p var tileBorders : Bool;
+	@:p var tileCenter : Bool;
 	@:p var width : Float;
 	@:p var height : Float;
 
@@ -764,6 +765,10 @@ class ScaleGridComp extends DrawableComp implements domkit.Component.ComponentDe
 
 	static function set_tileBorders(o : h2d.ScaleGrid, v) {
 		o.tileBorders = v;
+	}
+
+	static function set_tileCenter(o : h2d.ScaleGrid, v) {
+		o.tileCenter = v;
 	}
 
 	static function set_width( o : h2d.ScaleGrid, v : Float ) {
@@ -791,6 +796,7 @@ class FlowComp extends ObjectComp implements domkit.Component.ComponentDecl<h2d.
 	@:p var backgroundTilePosY : Null<Int>;
 	@:p var backgroundAlpha : Float = 1;
 	@:p(auto) var backgroundSmooth : Null<Bool>;
+	@:p var backgroundRepeat : Bool;
 	@:p var debug : Bool;
 	@:p var layout : h2d.Flow.FlowLayout;
 	@:p var vertical : Bool;
@@ -866,6 +872,11 @@ class FlowComp extends ObjectComp implements domkit.Component.ComponentDecl<h2d.
 
 	static function set_backgroundTile( o : h2d.Flow, t ) {
 		o.backgroundTile = t;
+	}
+
+	static function set_backgroundRepeat( o : h2d.Flow, v ) {
+		@:privateAccess if( o.background != null )
+			o.background.tileBorders = o.background.tileCenter = v;
 	}
 
 	static function set_backgroundTilePos( o : h2d.Flow, pos ) {
