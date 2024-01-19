@@ -600,6 +600,8 @@ class GlDriver extends Driver {
 					case Uniform:
 						gl.bindBufferBase(GL.UNIFORM_BUFFER, i + start, buf.buffers[i].vbuf);
 					case RW:
+						if ( !buf.buffers[i].flags.has(ReadWriteBuffer) )
+							throw "Buffer was allocated without ReadWriteBuffer flag";
 						gl.bindBufferBase(0x90D2 /*GL.SHADER STORAGE BUFFER*/, i + start, buf.buffers[i].vbuf);
 					}
 			}
