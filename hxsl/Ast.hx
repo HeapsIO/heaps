@@ -5,6 +5,13 @@ enum BufferKind {
 	RW;
 }
 
+enum TexDimension {
+	T1D;
+	T2D;
+	T3D;
+	TCube;
+}
+
 enum Type {
 	TVoid;
 	TInt;
@@ -16,15 +23,14 @@ enum Type {
 	TMat4;
 	TMat3x4;
 	TBytes( size : Int );
-	TSampler2D;
-	TSampler2DArray;
-	TSamplerCube;
+	TSampler( dim : TexDimension, isArray : Bool );
+	TRWTexture( dim : TexDimension, isArray : Bool, channels : Int );
+	TMat2;
 	TStruct( vl : Array<TVar> );
 	TFun( variants : Array<FunType> );
 	TArray( t : Type, size : SizeDecl );
 	TBuffer( t : Type, size : SizeDecl, kind : BufferKind );
 	TChannel( size : Int );
-	TMat2;
 }
 
 enum VecType {
@@ -289,6 +295,13 @@ enum TGlobal {
 	RoundEven;
 	// compute
 	SetLayout;
+	ImageStore;
+	ComputeVar_GlobalInvocation;
+	ComputeVar_LocalInvocation;
+	ComputeVar_WorkGroup;
+	ComputeVar_LocalInvocationIndex;
+	//ComputeVar_NumWorkGroups - no DirectX support
+	//ComputeVar_WorkGroupSize - no DirectX support
 }
 
 enum Component {
@@ -321,6 +334,26 @@ class Tools {
 		#else
 		return ++UID;
 		#end
+	}
+
+	public static function getTexUVSize( dim : TexDimension, arr = false ) {
+		var size = switch( dim ) {
+		case T1D: 1;
+		case T2D: 2;
+		case T3D, TCube: 3;
+		}
+		if( arr ) size++;
+		return size;
+	}
+
+	public static function getDimSize( dim : TexDimension, arr = false ) {
+		var size = switch( dim ){
+		case T1D: 1;
+		case T2D, TCube: 2;
+		case T3D: 3;
+		}
+		if( arr ) size++;
+		return size;
 	}
 
 	public static function getName( v : TVar ) {
@@ -407,9 +440,9 @@ class Tools {
 		return false;
 	}
 
-	public static function isSampler( t : Type ) {
+	public static function isTexture( t : Type ) {
 		return switch( t ) {
-		case TSampler2D, TSamplerCube, TSampler2DArray, TChannel(_):
+		case TSampler(_), TChannel(_), TRWTexture(_):
 			true;
 		default:
 			false;
@@ -421,19 +454,23 @@ class Tools {
 		case TVec(size, t):
 			var prefix = switch( t ) {
 			case VFloat: "";
-			case VInt: "I";
-			case VBool: "B";
+			case VInt: "i";
+			case VBool: "b";
 			}
-			prefix + "Vec" + size;
+			prefix + "vec" + size;
 		case TStruct(vl):"{" + [for( v in vl ) v.name + " : " + toString(v.type)].join(",") + "}";
 		case TArray(t, s): toString(t) + "[" + (switch( s ) { case SConst(i): "" + i; case SVar(v): v.name; } ) + "]";
 		case TBuffer(t, s, k):
 			var prefix = switch( k ) {
-			case Uniform: "buffer";
-			case RW: "rwbuffer";
+			case Uniform: "Buffer";
+			case RW: "RWBuffer";
 			};
 			prefix+" "+toString(t) + "[" + (switch( s ) { case SConst(i): "" + i; case SVar(v): v.name; } ) + "]";
 		case TBytes(n): "Bytes" + n;
+		case TSampler(dim, arr):
+			"Sampler"+dim.getName().substr(1)+(arr ? "Array":"");
+		case TRWTexture(dim, arr,dims):
+			"RWTexture"+dim.getName().substr(1)+(arr ? "Array":"")+"<"+(dims == 1 ? "Float" : "Vec"+dims)+">";
 		default: t.getName().substr(1);
 		}
 	}
@@ -474,8 +511,11 @@ class Tools {
 		case TCall({ e : TGlobal(SetLayout) },_):
 			return true;
 		case TCall(e, pl):
-			if( !e.e.match(TGlobal(_)) )
+			switch( e.e ) {
+			case TGlobal(g) if( g != ImageStore ):
+			default:
 				return true;
+			}
 			for( p in pl )
 				if( hasSideEffect(p) )
 					return true;
@@ -560,7 +600,7 @@ class Tools {
 		case TMat4: 16;
 		case TMat3x4: 12;
 		case TBytes(s): s;
-		case TBool, TString, TSampler2D, TSampler2DArray, TSamplerCube, TFun(_): 0;
+		case TBool, TString, TSampler(_), TRWTexture(_), TFun(_): 0;
 		case TArray(t, SConst(v)), TBuffer(t, SConst(v),_): size(t) * v;
 		case TArray(_, SVar(_)), TBuffer(_): 0;
 		}

@@ -11,12 +11,12 @@ private class ShaderContext {
 	public var globalsSize : Int;
 	public var paramsSize : Int;
 	public var texturesCount : Int;
-	public var textures2DCount : Int;
 	public var bufferCount : Int;
 	public var paramsContent : hl.Bytes;
 	public var globals : dx.Resource;
 	public var params : dx.Resource;
 	public var samplersMap : Array<Int>;
+	public var texturesTypes : Array<hxsl.Ast.Type>;
 	#if debug
 	public var debugSource : String;
 	#end
@@ -869,11 +869,16 @@ class DirectXDriver extends h3d.impl.Driver {
 		ctx.paramsContent = new hl.Bytes(shader.paramsSize * 16);
 		ctx.paramsContent.fill(0, shader.paramsSize * 16, 0xDD);
 		ctx.texturesCount = shader.texturesCount;
+		ctx.texturesTypes = [];
 
 		var p = shader.textures;
 		while( p != null ) {
 			switch( p.type ) {
-			case TArray( TSampler2D , SConst(n) ): ctx.textures2DCount = n;
+			case TArray( t = TSampler(_) | TRWTexture(_) | TChannel(_), SConst(n) ):
+				for( i in 0...n )
+					ctx.texturesTypes.push(t);
+			case TSampler(_), TRWTexture(_), TChannel(_):
+				ctx.texturesTypes.push(p.type);
 			default:
 			}
 			p = p.next;
@@ -1289,12 +1294,16 @@ class DirectXDriver extends h3d.impl.Driver {
 			var sstart = -1, smax = -1;
 			for( i in 0...shader.texturesCount ) {
 				var t = buffers.tex[i];
+				var tt = shader.texturesTypes[i];
 				if( t == null || t.isDisposed() ) {
-					if( i < shader.textures2DCount ) {
+					switch( tt ) {
+					case TSampler(T2D,_):
 						var color = h3d.mat.Defaults.loadingTextureColor;
 						t = h3d.mat.Texture.fromColor(color, (color >>> 24) / 255);
-					} else {
+					case TSampler(TCube,_):
 						t = h3d.mat.Texture.defaultCubeTexture();
+					default:
+						throw "Missing texture";
 					}
 				}
 				if( t != null && t.t == null && t.realloc != null ) {

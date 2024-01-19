@@ -26,6 +26,7 @@ class Flatten {
 	var params : Array<TVar>;
 	var outVars : Array<TVar>;
 	var varMap : Map<TVar,Alloc>;
+	var textureFormats : Array<{ dim : TexDimension, arr : Bool, rw : Int }>;
 	public var allocData : Map< TVar, Array<Alloc> >;
 
 	public function new() {
@@ -35,6 +36,7 @@ class Flatten {
 		globals = [];
 		params = [];
 		outVars = [];
+		textureFormats = [];
 		varMap = new Map();
 		allocData = new Map();
 		for( v in s.vars )
@@ -48,9 +50,19 @@ class Flatten {
 		pack(prefix + "Globals", Global, globals, VFloat);
 		pack(prefix + "Params", Param, params, VFloat);
 		var allVars = globals.concat(params);
-		var textures = packTextures(prefix + "Textures", allVars, TSampler2D)
-			.concat(packTextures(prefix+"TexturesCube", allVars, TSamplerCube))
-			.concat(packTextures(prefix+"TexturesArray", allVars, TSampler2DArray));
+		textureFormats.sort(function(t1,t2) {
+			if ( t1.rw != t2.rw )
+				return t1.rw - t2.rw;
+			if ( t1.arr != t2.arr )
+				return t1.arr ? 1 : -1;
+			return t1.dim.getIndex() - t2.dim.getIndex();
+		});
+		for( t in textureFormats ) {
+			var name = t.dim == T2D ? "" : t.dim.getName().substr(1);
+			if( t.rw > 0 ) name = "RW"+name+t.rw;
+			if( t.arr ) name += "Array";
+			packTextures(prefix + "Textures" + name, allVars, t.rw == 0 ? TSampler(t.dim, t.arr) : TRWTexture(t.dim, t.arr, t.rw));
+		}
 		packBuffers("buffers", allVars, Uniform);
 		packBuffers("rwbuffers", allVars, RW);
 		var funs = [for( f in s.funs ) mapFun(f, mapExpr)];
@@ -79,13 +91,13 @@ class Flatten {
 				e
 			else
 				access(a, v.type, e.p, AIndex(a));
-		case TArray( { e : TVar(v), p : vp }, eindex) if( !eindex.e.match(TConst(CInt(_))) ):
+		case TArray( { e : TVar(v), p : vp }, eindex) if( !eindex.e.match(TConst(CInt(_))) && !v.type.match(TRWTexture(_)) ):
 			var a = varMap.get(v);
 			if( a == null )
 				e
 			else {
 				switch( v.type ) {
-				case TArray(t, _) if( t.isSampler() ):
+				case TArray(t, _) if( t.isTexture() ):
 					eindex = toInt(mapExpr(eindex));
 					access(a, t, vp, AOffset(a,1,eindex));
 				case TArray(t, _):
@@ -147,7 +159,7 @@ class Flatten {
 			var earr = [for( i in 0...len ) { var a = new Alloc(a.g, a.t, a.pos + stride * i, stride); access(a, t, pos, AIndex(a)); }];
 			return { e : TArrayDecl(earr), t : t, p : pos };
 		default:
-			if( t.isSampler() ) {
+			if( t.isTexture() ) {
 				var e = read(0, pos);
 				e.t = t;
 				return e;
@@ -222,10 +234,10 @@ class Flatten {
 		var samplers = [];
 		for( v in vars ) {
 			var count = 1;
-			if( v.type != t ) {
+			if( !v.type.equals(t) ) {
 				switch( v.type ) {
-				case TChannel(_) if( t == TSampler2D ):
-				case TArray(t2,SConst(n)) if( t2 == t ):
+				case TChannel(_) if( t.match(TSampler(T2D,false)) ):
+				case TArray(t2,SConst(n)) if( t2.equals(t) ):
 					count = n;
 				default:
 					continue;
@@ -291,10 +303,10 @@ class Flatten {
 			kind : kind,
 		};
 		for( v in vars ) {
-			if( v.type.isSampler() || v.type.match(TBuffer(_)) )
+			if( v.type.isTexture() || v.type.match(TBuffer(_)) )
 				continue;
 			switch( v.type ) {
-			case TArray(t,_) if( t.isSampler() ): continue;
+			case TArray(t,_) if( t.isTexture() ): continue;
 			default:
 			}
 			var size = varSize(v.type, t);
@@ -353,23 +365,47 @@ class Flatten {
 		}
 	}
 
+	function addTextureFormat(dim,arr,rw=0) {
+		for( f in textureFormats )
+			if( f.dim == dim && f.arr == arr && f.rw == rw )
+				return;
+		textureFormats.push({ dim : dim, arr : arr, rw : rw });
+	}
+
 	function gatherVar( v : TVar ) {
 		switch( v.type ) {
 		case TStruct(vl):
 			for( v in vl )
 				gatherVar(v);
-		default:
-			switch( v.kind ) {
-			case Global:
-				if( v.hasQualifier(PerObject) )
-					params.push(v);
-				else
-					globals.push(v);
-			case Param:
-				params.push(v);
-			default:
-				outVars.push(v);
+			return;
+		case TSampler(dim, arr), TRWTexture(dim, arr, _):
+			var rw = switch( v.type ) {
+			case TRWTexture(_,_,chans): chans;
+			default: 0;
 			}
+			addTextureFormat(dim,arr,rw);
+		case TChannel(_):
+			addTextureFormat(T2D,false);
+		case TArray(type, _):
+			switch ( type ) {
+			case TSampler(dim, arr):
+				addTextureFormat(dim, arr, 0);
+			case TRWTexture(dim, arr, chans):
+				addTextureFormat(dim, arr, chans);
+			default:
+			}
+		default:
+		}
+		switch( v.kind ) {
+		case Global:
+			if( v.hasQualifier(PerObject) )
+				params.push(v);
+			else
+				globals.push(v);
+		case Param:
+			params.push(v);
+		default:
+			outVars.push(v);
 		}
 	}
 

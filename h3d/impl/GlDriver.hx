@@ -220,7 +220,11 @@ class GlDriver extends Driver {
 
 	#if hlsdl
 	public static function enableComputeShaders() {
+		#if (hlsdl >= version("1.15.0"))
 		sdl.Sdl.setGLVersion(4, 3);
+		#else
+		throw "enableComputeShaders() requires hlsdl 1.15+";
+		#end
 	}
 	#end
 
@@ -267,7 +271,7 @@ class GlDriver extends Driver {
 			return makeCompiler().run(sh);
 		}
 		if( shader.mode == Compute )
-			return "// compute:\n" + compile(shader.compute.data);
+			return compile(shader.compute.data);
 		return "// vertex:\n" + compile(shader.vertex.data) + "// fragment:\n" + compile(shader.fragment.data);
 	}
 
@@ -335,16 +339,43 @@ class GlDriver extends Driver {
 			var tt = t.type;
 			var count = 1;
 			switch( tt ) {
-			case TChannel(_): tt = TSampler2D;
+			case TChannel(_): tt = TSampler(T2D,false);
 			case TArray(t,SConst(n)): tt = t; count = n;
 			default:
 			}
-			if( tt != curT ) {
+			if( !tt.equals(curT) ) {
 				curT = tt;
 				name = switch( tt ) {
-				case TSampler2D: mode = GL.TEXTURE_2D; "Textures";
-				case TSamplerCube: mode = GL.TEXTURE_CUBE_MAP; "TexturesCube";
-				case TSampler2DArray: mode = GL.TEXTURE_2D_ARRAY; "TexturesArray";
+				case TSampler(dim,arr):
+					mode = switch( [dim, arr] ) {
+					case [T2D, false]: GL.TEXTURE_2D;
+					case [T3D, false]: GL.TEXTURE_3D;
+					case [TCube, false]: GL.TEXTURE_CUBE_MAP;
+					case [T2D, true]: GL.TEXTURE_2D_ARRAY;
+					#if (hlsdl > version("1.15.0"))
+					case [T1D, false]: GL.TEXTURE_1D;
+					case [T1D, true]: GL.TEXTURE_1D_ARRAY;
+					case [TCube, true]: GL.TEXTURE_CUBE_MAP_ARRAY;
+					#end
+					default: throw "Texture not supported "+tt;
+					}
+					"Textures" + (dim == T2D ? "" : dim.getName().substr(1))+(arr ? "Array" : "");
+				case TRWTexture(dim, arr, chans):
+					#if (js || hlsdl < version("1.15.0"))
+					throw "Texture not supported "+tt;
+					#else
+					mode = switch( [dim, arr] ) {
+					case [T1D, false]: GL.IMAGE_1D;
+					case [T2D, false]: GL.IMAGE_2D;
+					case [T3D, false]: GL.IMAGE_3D;
+					case [TCube, false]: GL.IMAGE_CUBE;
+					case [T1D, true]: GL.IMAGE_1D_ARRAY;
+					case [T2D, true]: GL.IMAGE_2D_ARRAY;
+					case [TCube, true]: GL.IMAGE_CUBE_MAP_ARRAY;
+					default: throw "Texture not supported "+tt;
+					};
+					"TexturesRW" + (dim == T2D ? "" : dim.getName().substr(1))+chans+(arr ? "Array" : "");
+					#end
 				default: throw "Unsupported texture type "+tt;
 				}
 				index = 0;
@@ -579,11 +610,11 @@ class GlDriver extends Driver {
 				var pt = s.textures[i];
 				if( t == null || t.isDisposed() ) {
 					switch( pt.t ) {
-					case TSampler2D:
+					case TSampler(TCube, false):
+						t = h3d.mat.Texture.defaultCubeTexture();
+					case TSampler(_, false):
 						var color = h3d.mat.Defaults.loadingTextureColor;
 						t = h3d.mat.Texture.fromColor(color, (color >>> 24) / 255);
-					case TSamplerCube:
-						t = h3d.mat.Texture.defaultCubeTexture();
 					default:
 						throw "Missing texture";
 					}
@@ -605,6 +636,41 @@ class GlDriver extends Driver {
 				t.lastFrame = frame;
 
 				if( pt.u == null ) continue;
+
+				#if !js
+				switch( pt.t ) {
+				case TRWTexture(dim,arr,chans):
+					var tdim : hxsl.Ast.TexDimension = t.flags.has(Cube) ? TCube : T2D;
+					var fmt;
+					if( (arr != t.flags.has(IsArray)) || dim != tdim )
+						fmt = 0;
+					else {
+						// we suppose it's possible to map from one pixel format to shader declared 32f
+						fmt = switch( [chans,t.format] ) {
+						case [1, R8]: GL.R8;
+						case [2, RG8]: GL.RG8;
+						case [4, RGBA]: GL.RGBA8;
+						case [1, R16F]: GL.R16F;
+						case [2, RG16F]: GL.RG16F;
+						case [4, RGBA16F]: GL.RGBA16F;
+						case [1, R32F]: GL.R32F;
+						case [2, RG32F]: GL.RG32F;
+						case [4, RGBA32F]: GL.RGBA32F;
+						default: 0;
+						}
+					}
+					if( fmt == 0 )
+						throw "Texture format does not match: "+t+"["+t.format+"] should be "+hxsl.Ast.Tools.toString(pt.t);
+					#if (hlsdl < version("1.15.0"))
+					throw "RWTextures support requires hlsdl 1.15+";
+					#else
+					gl.bindImageTexture(i, cast t.t.t, 0, false, 0, GL.READ_WRITE, fmt);
+					#end
+					boundTextures[i] = null;
+					continue;
+				default:
+				}
+				#end
 
 				var idx = s.kind == Fragment ? curShader.vertex.textures.length + i : i;
 				if( boundTextures[idx] != t.t ) {
@@ -910,9 +976,10 @@ class GlDriver extends Driver {
 	}
 
 	function getBindType( t : h3d.mat.Texture ) {
-		var isCube = t.flags.has(Cube);
 		var isArray = t.flags.has(IsArray);
-		return isCube ? GL.TEXTURE_CUBE_MAP : isArray ? GL.TEXTURE_2D_ARRAY : GL.TEXTURE_2D;
+		if( t.flags.has(Cube) )
+			return #if (hlsdl > version("1.15.0")) isArray ? GL.TEXTURE_CUBE_MAP_ARRAY : #end GL.TEXTURE_CUBE_MAP;
+		return isArray ? GL.TEXTURE_2D_ARRAY : GL.TEXTURE_2D;
 	}
 
 	override function allocTexture( t : h3d.mat.Texture ) : Texture {
