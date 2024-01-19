@@ -75,7 +75,7 @@ class GlslOut {
 		set(ComputeVar_LocalInvocation, "ivec3(gl_LocalInvocationID)");
 		set(ComputeVar_GlobalInvocation, "ivec3(gl_GlobalInvocationID)");
 		set(ComputeVar_LocalInvocationIndex, "int(gl_LocalInvocationIndex)");
-		set(ComputeVar_WorkGroup, "ivec3(gl_WorkGroup)");
+		set(ComputeVar_WorkGroup, "ivec3(gl_WorkGroupID)");
 
 		for( g in gl )
 			KWDS.set(g, true);
