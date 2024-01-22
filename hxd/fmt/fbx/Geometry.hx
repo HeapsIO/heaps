@@ -90,7 +90,7 @@ class Geometry {
 		var uv = getUVs();
 		var uv2 = g.getUVs();
 		if( uv.length != uv2.length )
-			throw "Different UV layer (" + uv2.length + " should be " + uv.length + ")";
+			throw "Different UV layer (" + uv2.length + " should be " + uv.length + ")" + "in file " + lib.fileName;
 		for( i in 0...uv.length ) {
 			var uv = uv[i];
 			var uv2 = uv2[i];
