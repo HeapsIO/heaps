@@ -181,7 +181,8 @@ class ModelCache {
 		} else {
 			local3d = new h3d.scene.Object();
 		}
-		var ctx2 = p.make(local3d);
+		var sh = new hrt.prefab.ContextShared(res, p?.findFirstLocal2d(), local3d);
+		var ctx2 = p.make(sh);
 		if( parent != null ) {
 			// only return object if a single child was added
 			// if not - multiple children were added and cannot be returned as a single object
