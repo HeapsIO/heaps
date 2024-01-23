@@ -31,6 +31,7 @@ class Checker {
 	var curFun : TFunction;
 	var inLoop : Bool;
 	var inWhile : Bool;
+	var inCompute : Bool;
 	public var inits : Array<{ v : TVar, e : TExpr }>;
 
 	public function new() {
@@ -281,6 +282,7 @@ class Checker {
 			case "main": Main;
 			default: StringTools.startsWith(f.name,"__init__") ? Init : Helper;
 			}
+			inCompute = kind == Main;
 			if( args.length != 0 && kind != Helper )
 				error(kind+" function should have no argument", pos);
 			var fv : TVar = {
@@ -1024,6 +1026,7 @@ class Checker {
 			}
 			if( gl != null ) {
 				if( f == "get" && inWhile ) error("Cannot use .get() in while loop, use .getLod instead", pos);
+				if( f == "get" && inCompute ) error("Cannot use .get() in a compute shader, use .getLod instead", pos);
 				g = globals.get(gl.toString());
 			}
 		}
