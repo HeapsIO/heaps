@@ -244,7 +244,7 @@ class Macros {
 			case TInt:
 				exprs.push(macro {
 					var v : Int = $p;
-					if( v >>> $v{ c.bits } != 0 ) throw $v{ c.v.name } +" is out of range " + v + ">" + $v{ (1 << c.bits) - 1 };
+					if( v >>> $v{ c.bits } != 0 ) throw $v{ c.v.name } +" is out of range " + v + ">" + $v{ (1 << c.bits) - 1 } + ", consider using @const(MAX_VALUE)";
 					constBits |= v << $v{ c.pos };
 				});
 			case TBool:
