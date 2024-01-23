@@ -8,6 +8,7 @@ class Joint extends Object {
 		super(null);
 		name = j.name;
 		this.skin = skin;
+		lastFrame = -1; // force first sync
 		// fake parent
 		this.parent = skin;
 		this.index = j.index;
