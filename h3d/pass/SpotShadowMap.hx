@@ -4,7 +4,6 @@ class SpotShadowMap extends Shadows {
 
 	var depth : h3d.mat.Texture;
 	var sshader : h3d.shader.SpotShadow;
-	var border : Border;
 	var mergePass = new h3d.pass.ScreenFx(new h3d.shader.MinMaxShader());
 
 	public function new( light : h3d.scene.Light ) {
@@ -14,7 +13,6 @@ class SpotShadowMap extends Shadows {
 		lightCamera.screenRatio = 1.0;
 		lightCamera.zNear = 0.01;
 		shader = sshader = new h3d.shader.SpotShadow();
-		border = new Border(size, size);
 	}
 
 	override function set_mode(m:Shadows.RenderMode) {
@@ -27,14 +25,6 @@ class SpotShadowMap extends Shadows {
 		return enabled = b;
 	}
 
-	override function set_size(s) {
-		if( border != null && size != s ) {
-			border.dispose();
-			border = new Border(s, s);
-		}
-		return super.set_size(s);
-	}
-
 	override function isUsingWorldDist(){
 		return false;
 	}
@@ -42,7 +32,6 @@ class SpotShadowMap extends Shadows {
 	override function dispose() {
 		super.dispose();
 		if( depth != null ) depth.dispose();
-		border.dispose();
 	}
 
 	public override function getShadowTex() {
@@ -124,6 +113,13 @@ class SpotShadowMap extends Shadows {
 		updateCamera();
 		cullPasses(passes, function(col) return col.inFrustum(lightCamera.frustum));
 
+		var prevFar = @:privateAccess ctx.cameraFar;
+		var prevPos = @:privateAccess ctx.cameraPos;
+		var prevViewProj = @:privateAccess ctx.cameraViewProj;
+		@:privateAccess ctx.cameraViewProj = getShadowProj();
+		@:privateAccess ctx.cameraFar = lightCamera.zFar;
+		@:privateAccess ctx.cameraPos = lightCamera.pos;
+
 		var texture = ctx.computingStatic ? createStaticTexture() : ctx.textures.allocTarget("spotShadowMap", size, size, false, format);
 		if( depth == null || depth.width != texture.width || depth.height != texture.height || depth.isDisposed() ) {
 			if( depth != null ) depth.dispose();
@@ -134,7 +130,6 @@ class SpotShadowMap extends Shadows {
 		ctx.engine.pushTarget(texture);
 		ctx.engine.clear(0xFFFFFF, 1);
 		super.draw(passes, sort);
-		if( border != null ) border.render();
 		ctx.engine.popTarget();
 
 		if( blur.radius > 0 )
@@ -143,16 +138,16 @@ class SpotShadowMap extends Shadows {
 		var validBakedTexture = (staticTexture != null && staticTexture.width == texture.width);
 		if( mode == Mixed && !ctx.computingStatic && validBakedTexture ) {
 			var merge = ctx.textures.allocTarget("mergedSpotShadowMap", size, size, false, format);
-			var prev = @:privateAccess ctx.cameraViewProj;
-			@:privateAccess ctx.cameraViewProj = getShadowProj();
 			mergePass.shader.texA = texture;
 			mergePass.shader.texB = staticTexture;
 			ctx.engine.pushTarget(merge);
 			mergePass.render();
 			ctx.engine.popTarget();
 			texture = merge;
-			@:privateAccess ctx.cameraViewProj = prev;
 		}
+		@:privateAccess ctx.cameraFar = prevFar;
+		@:privateAccess ctx.cameraPos = prevPos;
+		@:privateAccess ctx.cameraViewProj = prevViewProj;
 
 		syncShader(texture);
 	}
