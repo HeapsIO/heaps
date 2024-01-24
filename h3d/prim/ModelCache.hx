@@ -181,7 +181,7 @@ class ModelCache {
 		} else {
 			local3d = new h3d.scene.Object();
 		}
-		var sh = new hrt.prefab.ContextShared(res, p?.findFirstLocal2d(), local3d);
+		var sh = new hrt.prefab.ContextShared(res.entry.path, p?.findFirstLocal2d(), local3d);
 		var ctx2 = p.make(sh);
 		if( parent != null ) {
 			// only return object if a single child was added

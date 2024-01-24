@@ -20,7 +20,7 @@ private class ContextShared extends hrt.prefab.ContextShared {
 
 	public function new(loadTexture : String -> h3d.mat.Texture, ?res : hxd.res.Resource, ?root2d: h2d.Object = null, ?root3d: h3d.scene.Object = null) {
 		#if prefab2
-		super(res, root2d, root3d);
+		super(res.entry.path, root2d, root3d);
 		#else
 		super(res);
 		#end
