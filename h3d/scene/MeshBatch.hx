@@ -46,8 +46,6 @@ class MeshBatch extends MultiMaterial {
 	var instanced : h3d.prim.Instanced;
 	var dataPasses : BatchData;
 	var needUpload = false;
-	var MVOffset : Int;
-	var stride : Int;
 
 	/**
 		Set if shader list or shader constants has changed, before calling begin()
