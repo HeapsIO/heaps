@@ -15,6 +15,7 @@ private class BatchData {
 	public var params : hxsl.RuntimeShader.AllocParam;
 	public var shader : hxsl.BatchShader;
 	public var shaders : Array<hxsl.Shader>;
+	public var modelViewPos : Int;
 	public var pass : h3d.mat.Pass;
 	public var next : BatchData;
 
@@ -45,6 +46,8 @@ class MeshBatch extends MultiMaterial {
 	var instanced : h3d.prim.Instanced;
 	var dataPasses : BatchData;
 	var needUpload = false;
+	var MVOffset : Int;
+	var stride : Int;
 
 	/**
 		Set if shader list or shader constants has changed, before calling begin()
@@ -72,6 +75,12 @@ class MeshBatch extends MultiMaterial {
 		If set, exact bounds will be recalculated during emitInstance (default true)
 	**/
 	public var calcBounds = true;
+
+	/**
+	 	Tells the per instance buffer to support gpu write using comptue shaders.
+	**/
+	public var allowGpuUpdate : Bool = false;
+
 
 	var instancedParams : hxsl.Cache.BatchInstanceParams;
 
@@ -218,6 +227,7 @@ class MeshBatch extends MultiMaterial {
 			}
 			if( p.perObjectGlobal != null ) {
 				if( p.perObjectGlobal.gid == modelViewID ) {
+					batch.modelViewPos = pos - startPos;
 					addMatrix(worldPosition != null ? worldPosition : absPos);
 				} else if( p.perObjectGlobal.gid == modelViewInverseID ) {
 					if( worldPosition == null )
@@ -346,7 +356,8 @@ class MeshBatch extends MultiMaterial {
 				if( count > p.maxInstance )
 					count = p.maxInstance;
 				if( buf == null || buf.isDisposed() ) {
-					buf = alloc.allocBuffer(MAX_BUFFER_ELEMENTS,hxd.BufferFormat.VEC4_DATA,UniformDynamic);
+					var bufferFlags : hxd.impl.Allocator.BufferFlags = allowGpuUpdate ? UniformReadWrite : UniformDynamic;
+					buf = alloc.allocBuffer(MAX_BUFFER_ELEMENTS,hxd.BufferFormat.VEC4_DATA,bufferFlags);
 					p.buffers[index] = buf;
 					upload = true;
 				}
