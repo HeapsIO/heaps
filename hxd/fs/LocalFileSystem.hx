@@ -245,7 +245,7 @@ class LocalFileSystem implements FileSystem {
 	static var isWindows = Sys.systemName() == "Windows";
 	public static var FILES_CHECK_MAX = 5;
 
-	public function new( dir : String, configuration : String ) {
+	public function new( dir : String, configuration : String, ?storagePath ) {
 		baseDir = dir;
 		if( configuration == null )
 			configuration = "default";
@@ -253,7 +253,7 @@ class LocalFileSystem implements FileSystem {
 		#if macro
 		var exePath = null;
 		#else
-		var pr = Sys.programPath();
+		var pr = storagePath != null ? storagePath : Sys.programPath();
 		var exePath = pr == null ? null : pr.split("\\").join("/").split("/");
 		#end
 
