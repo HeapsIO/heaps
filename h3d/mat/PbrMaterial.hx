@@ -508,7 +508,7 @@ class PbrMaterial extends Material {
 		return m;
 	}
 
-	#if editor
+	#if (editor && js)
 	override function editProps() {
 		var props : PbrProps = props;
 		var layers : Array< { name : String, value : Int }> = hide.Ide.inst.currentConfig.get("material.drawOrder", []);
