@@ -707,7 +707,7 @@ class GlslOut {
 		case Param, Global:
 			switch( v.type ) {
 			case TBuffer(_, _, kind):
-				add("layout(packed) ");
+				add("layout(std140) ");
 				switch( kind ) {
 				case Uniform:
 					add("uniform ");
