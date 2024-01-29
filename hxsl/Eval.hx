@@ -543,6 +543,8 @@ class Eval {
 				e2 = evalExpr(e, isVal);
 			}
 			TMeta(name, args, e2);
+		case TField(e, name):
+			TField(evalExpr(e), name);
 		};
 		return { e : d, t : e.t, p : e.p }
 	}

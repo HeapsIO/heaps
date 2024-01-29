@@ -83,6 +83,29 @@ class Flatten {
 		};
 	}
 
+	static var SWIZ = [X,Y,Z,W];
+
+	function mkOp(e:TExpr,by:Int,f:Int->Int->Int,binop,pos) {
+		switch( e.e ) {
+		case TConst(CInt(i)):
+			return { e : TConst(CInt(f(i,by))), t : TInt, p : pos };
+		default:
+		}
+		return { e : TBinop(binop,e,mkInt(by,pos)), t : TInt, p : pos };
+	}
+
+	function mkAdd(e,offset,pos) {
+		if( offset == 0 )
+			return e;
+		return mkOp(e,offset,(x,y) -> x + y,OpAdd,pos);
+	}
+
+	function mkMult( e : TExpr, by : Int, pos ) {
+		if( by == 1 )
+			return e;
+		return mkOp(e,by,(x,y) -> x * y,OpMult,pos);
+	}
+
 	function mapExpr( e : TExpr ) : TExpr {
 		e = switch( e.e ) {
 		case TVar(v):
@@ -91,24 +114,76 @@ class Flatten {
 				e
 			else
 				access(a, v.type, e.p, AIndex(a));
-		case TArray( { e : TVar(v), p : vp }, eindex) if( !eindex.e.match(TConst(CInt(_))) && !v.type.match(TRWTexture(_)) ):
+		case TArray( { e : TVar(v), p : vp }, eindex):
 			var a = varMap.get(v);
-			if( a == null )
-				e
+			if( a == null || (v.type.match(TArray(_)) && eindex.e.match(TConst(CInt(_)))) )
+				e.map(mapExpr);
 			else {
 				switch( v.type ) {
 				case TArray(t, _) if( t.isTexture() ):
 					eindex = toInt(mapExpr(eindex));
 					access(a, t, vp, AOffset(a,1,eindex));
-				case TArray(t, _):
+				case TArray(t, _), TBuffer(t, _):
 					var stride = varSize(t, a.t);
-					if( stride == 0 || stride & 3 != 0 ) throw new Error("Dynamic access to an Array which size is not 4 components-aligned is not allowed", e.p);
-					stride >>= 2;
+					if( stride == 0 || (v.type.match(TArray(_)) && stride & 3 != 0) ) throw new Error("Dynamic access to an Array which size is not 4 components-aligned is not allowed", e.p);
+					stride = (stride + 3) >> 2;
 					eindex = toInt(mapExpr(eindex));
-					access(a, t, vp, AOffset(a,stride, stride == 1 ? eindex : { e : TBinop(OpMult,eindex,mkInt(stride,vp)), t : TInt, p : vp }));
+					access(a, t, vp, AOffset(a,stride, mkMult(eindex,stride,vp)));
 				default:
 					throw "assert";
 				}
+			}
+		case TVarDecl(v, init) if( v.type.match(TStruct(_))):
+			var size = Math.ceil(v.type.size() / 4);
+			var v2 : TVar = {
+				id : Tools.allocVarId(),
+				name : v.name,
+				type : TArray(TVec(4,VFloat),SConst(size)),
+				kind : v.kind,
+			};
+			var a = new Alloc(v2,VFloat,0,0);
+			a.v = v;
+			varMap.set(v, a);
+			{ e : TVarDecl(v2, init == null ? null : mapExpr(init)), t : TVoid, p : e.p }
+		case TField(expr, name):
+			var pos = -1;
+			switch( expr.t ) {
+			case TStruct(vl):
+				var cur = 0;
+				for( v in vl ) {
+					if( v.name == name ) {
+						pos = cur;
+						break;
+					}
+					cur += v.type.size();
+				}
+			default:
+			}
+			if( pos < 0 ) throw "assert";
+			var expr = mapExpr(expr);
+			function read(pos, size) {
+				var idx = pos >> 2;
+				var sw = SWIZ.slice(pos&3,(pos&3) + size);
+				var arr : TExpr = optimize({ e : TArray(expr,{ e : TConst(CInt(idx)), p : e.p, t : TInt }), p : e.p, t : TVec(4,VFloat) });
+				return { e : TSwiz(arr,sw), t : size == 1 ? TFloat : TVec(size,VFloat), p : e.p }
+			}
+			switch( e.t ) {
+			case TFloat:
+				read(pos, 1);
+			case TVec(size,VFloat):
+				var idx = pos >> 2;
+				var idx2 = ((pos + size - 1) >> 2);
+				if( idx == idx2 )
+					read(pos, size);
+				else {
+					var k = 4 - (idx & 3);
+					{ e : TCall({ e : TGlobal(Vec4), p : e.p, t : TVoid },[
+						read(pos, k),
+						read(pos + k, size - k)
+					]), t : e.t, p : e.p }
+				}
+			default:
+				throw "Unsupported type "+e.t.toString();
 			}
 		default:
 			e.map(mapExpr);
@@ -127,7 +202,7 @@ class Flatten {
 
 	inline function readOffset( a : Alloc, stride : Int, delta : TExpr, index : Int, pos ) : TExpr {
 		var index = (a.t == null ? a.pos : a.pos >> 2) + index;
-		var offset : TExpr = index == 0 ? delta : { e : TBinop(OpAdd, delta, mkInt(index, pos)), t : TInt, p : pos };
+		var offset : TExpr = mkAdd(delta,index,pos);
 		return { e : TArray({ e : TVar(a.g), t : a.g.type, p : pos }, offset), t : TVec(4,a.t), p:pos };
 	}
 
@@ -158,12 +233,20 @@ class Flatten {
 			var stride = Std.int(a.size / len);
 			var earr = [for( i in 0...len ) { var a = new Alloc(a.g, a.t, a.pos + stride * i, stride); access(a, t, pos, AIndex(a)); }];
 			return { e : TArrayDecl(earr), t : t, p : pos };
+		case TBuffer(_):
+			return { e : TVar(a.g), t : t, p : pos };
+		case TStruct(vl):
+			var size = 0;
+			for( v in vl )
+				size += varSize(v.type, a.t);
+			var stride = Math.ceil(size/4);
+			var earr = [for( i in 0...stride ) read(i, pos)];
+			return { e : TArrayDecl(earr), t : TArray(TVec(4,VFloat),SConst(stride)), p : pos };
+		case t if( t.isTexture() ):
+			var e = read(0, pos);
+			e.t = t;
+			return e;
 		default:
-			if( t.isTexture() ) {
-				var e = read(0, pos);
-				e.t = t;
-				return e;
-			}
 			var size = varSize(t, a.t);
 			if( size > 4 )
 				return Error.t("Access not supported for " + t.toString(), null);
@@ -283,11 +366,20 @@ class Flatten {
 		};
 		for( v in vars )
 			switch( v.type ) {
-			case TBuffer(_,_,k) if( kind == k ):
-				var a = new Alloc(g, null, alloc.length, 1);
+			case TBuffer(t,SConst(size),k) if( kind == k ):
+				var stride = Math.ceil(t.size()/4);
+				var buf4 : TVar = {
+					id : Tools.allocVarId(),
+					name : v.name,
+					type : TBuffer(TVec(4,VFloat),SConst(size * stride),k),
+					kind : Param,
+				};
+				var a = new Alloc(buf4, null, alloc.length, 1);
+				a.t = VFloat;
 				a.v = v;
 				alloc.push(a);
-				outVars.push(v);
+				varMap.set(v, a);
+				outVars.push(buf4);
 			default:
 			}
 		g.type = TArray(TBuffer(TVoid,SConst(0),kind),SConst(alloc.length));
@@ -360,6 +452,11 @@ class Flatten {
 		case TMat4 if( t == VFloat ): 16;
 		case TMat3, TMat3x4 if( t == VFloat ): 12;
 		case TArray(at, SConst(n)): varSize(at, t) * n;
+		case TStruct(vl):
+			var size = 0;
+			for( v in vl )
+				size += varSize(v.type, t);
+			size;
 		default:
 			throw v.toString() + " size unknown for type " + t;
 		}

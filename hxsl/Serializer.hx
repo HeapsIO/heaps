@@ -320,6 +320,9 @@ class Serializer {
 			writeString(m);
 			writeArr(args, writeConst);
 			writeExpr(e);
+		case TField(e,name):
+			writeExpr(e);
+			writeString(name);
 		}
 		writeType(e.t);
 		// no position
@@ -387,6 +390,7 @@ class Serializer {
 				}), readExpr());
 		case 19: TWhile(readExpr(), readExpr(), input.readByte() != 0);
 		case 20: TMeta(readString(), readArr(readConst), readExpr());
+		case 21: TField(readExpr(), readString());
 		default: throw "assert";
 		}
 		return {

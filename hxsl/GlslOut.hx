@@ -646,6 +646,10 @@ class GlslOut {
 			add(")");
 		case TMeta(_, _, e):
 			addExpr(e, tabs);
+		case TField(val, name):
+			addExpr(val, tabs);
+			add(".");
+			add(name);
 		}
 	}
 
@@ -703,7 +707,7 @@ class GlslOut {
 		case Param, Global:
 			switch( v.type ) {
 			case TBuffer(_, _, kind):
-				add("layout(std140) ");
+				add("layout(packed) ");
 				switch( kind ) {
 				case Uniform:
 					add("uniform ");

@@ -941,8 +941,6 @@ class Checker {
 			switch( t ) {
 			case TArray(_):
 				error("Multidimentional arrays are not allowed", pos);
-			case TStruct(_):
-				error("Array of structures are not allowed", pos);
 			default:
 			}
 			var s = switch( size ) {
@@ -992,6 +990,19 @@ class Checker {
 		}
 	}
 
+	function isParentArray( v : TVar ) {
+		if( v.parent == null )
+			return false;
+		switch( v.parent.type ) {
+		case TStruct(_):
+			return isParentArray(v.parent);
+		case TBuffer(_), TArray(_):
+			return true;
+		default:
+			return false;
+		}
+	}
+
 	function fieldAccess( e : TExpr, f : String, with : WithType, pos : Position ) : FieldAccess {
 		var ef = switch( e.t ) {
 		case TStruct(vl):
@@ -1003,6 +1014,8 @@ class Checker {
 				}
 			if( found == null )
 				null;
+			else if( isParentArray(found) )
+				{ e : TField(e,f), t : found.type, p : pos };
 			else
 				{ e : TVar(found), t : found.type, p : pos };
 		default:

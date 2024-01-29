@@ -175,6 +175,7 @@ enum TExprDef {
 	TSwitch( e : TExpr, cases : Array<{ values : Array<TExpr>, expr:TExpr }>, def : Null<TExpr> );
 	TWhile( e : TExpr, loop : TExpr, normalWhile : Bool );
 	TMeta( m : String, args : Array<Const>, e : TExpr );
+	TField( e : TExpr, name : String );
 }
 
 typedef TVar = {
@@ -532,6 +533,8 @@ class Tools {
 			return hasSideEffect(e) || hasSideEffect(loop);
 		case TMeta(_, _, e):
 			return hasSideEffect(e);
+		case TField(e,_):
+			return hasSideEffect(e);
 		}
 	}
 
@@ -561,6 +564,7 @@ class Tools {
 			f(loop);
 		case TConst(_), TVar(_), TGlobal(_), TDiscard, TContinue, TBreak:
 		case TMeta(_, _, e): f(e);
+		case TField(e, _): f(e);
 		}
 	}
 
@@ -582,6 +586,7 @@ class Tools {
 		case TWhile(e, loop, normalWhile): TWhile(f(e), f(loop), normalWhile);
 		case TConst(_), TVar(_), TGlobal(_), TDiscard, TContinue, TBreak: e.e;
 		case TMeta(m, args, e): TMeta(m, args, f(e)); // don't map args
+		case TField(e, name): TField(f(e), name);
 		}
 		return { e : ed, t : e.t, p : e.p };
 	}

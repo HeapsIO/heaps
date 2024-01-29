@@ -695,6 +695,10 @@ class HlslOut {
 			}
 		case TMeta(m, args, e):
 			handleMeta(m, args, addExpr, e, tabs);
+		case TField(e, f):
+			addValue(e, tabs);
+			add(".");
+			add(f);
 		}
 	}
 
