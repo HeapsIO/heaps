@@ -442,6 +442,7 @@ class Cache {
 		data = hl.Api.compact(data, null, 0, null);
 		#end
 		var textures = [];
+		var buffers = [];
 		c.texturesCount = 0;
 		for( g in flat.allocData.keys() ) {
 			var alloc = flat.allocData.get(g);
@@ -479,16 +480,9 @@ class Cache {
 				case TArray(TVec(4, VFloat), SConst(size)):
 					c.params = out[0];
 					c.paramsSize = size;
-				case TArray(TBuffer(_), _):
-					if( c.buffers == null ) {
-						c.buffers = out[0];
-						c.bufferCount = out.length;
-					} else {
-						var p = c.buffers;
-						while( p.next != null ) p = p.next;
-						p.next = out[0];
-						c.bufferCount += out.length;
-					}
+				case TArray(TBuffer(_, _, kind), _):
+					if ( out[0] != null )
+						buffers.push(out[0]);
 				default: throw "assert";
 				}
 			case Global:
@@ -509,13 +503,13 @@ class Cache {
 			// relink in order based on type
 			textures.sort(function(t1,t2) {
 				return switch ( [t1.t, t2.t] ) {
-				case [TSampler(t1, a1), TSampler(t2, a2)]: 
-					if ( a1 != a2 ) 
+				case [TSampler(t1, a1), TSampler(t2, a2)]:
+					if ( a1 != a2 )
 						a1 ? 1 : -1;
 					else
 						t1.getIndex() - t2.getIndex();
-				case [TRWTexture(t1, a1, _), TRWTexture(t2, a2, _)]: 
-					if ( a1 != a2 ) 
+				case [TRWTexture(t1, a1, _), TRWTexture(t2, a2, _)]:
+					if ( a1 != a2 )
 						a1 ? 1 : -1;
 					else
 						t1.getIndex() - t2.getIndex();
@@ -530,12 +524,31 @@ class Cache {
 				prev.next = textures[i].all[0];
 			}
 		}
+		if ( buffers.length > 0 ) {
+			buffers.sort(function(b1, b2) {
+				return switch ( [b1.type, b2.type] ) {
+				case [TBuffer(_, _, k1), TBuffer(_, _, k2)]:
+					k1.getIndex() - k2.getIndex();
+				default:
+					b1.type.getIndex() - b2.type.getIndex();
+				}
+			});
+		}
+		var p = null;
+		for ( b in buffers ) {
+			if ( c.buffers == null ) {
+				c.buffers = b;
+				p = c.buffers;
+			} else {
+				p.next = b;
+				p = p.next;
+			}
+		}
+		c.bufferCount = buffers.length;
 		if( c.globals == null )
 			c.globalsSize = 0;
 		if( c.params == null )
 			c.paramsSize = 0;
-		if( c.buffers == null )
-			c.bufferCount = 0;
 		c.data = data;
 		return c;
 	}
