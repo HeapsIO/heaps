@@ -421,6 +421,8 @@ class GlDriver extends Driver {
 					#end
 				case Uniform:
 					gl.getUniformBlockIndex(p.p,(shader.kind==Vertex?"vertex_":"")+"uniform_buffer"+i);
+				default:
+					throw "assert";
 				}
 			}];
 			var start = 0;
@@ -433,6 +435,8 @@ class GlDriver extends Driver {
 					#if (hl_ver >= version("1.15.0"))
 					gl.shaderStorageBlockBinding(p.p,s.buffers[i], i + start);
 					#end
+				default:
+					throw "assert";
 				}
 		}
 	}
@@ -603,6 +607,8 @@ class GlDriver extends Driver {
 						if ( !buf.buffers[i].flags.has(ReadWriteBuffer) )
 							throw "Buffer was allocated without ReadWriteBuffer flag";
 						gl.bindBufferBase(0x90D2 /*GL.SHADER STORAGE BUFFER*/, i + start, buf.buffers[i].vbuf);
+					default:
+						throw "assert";
 					}
 			}
 		case Textures:

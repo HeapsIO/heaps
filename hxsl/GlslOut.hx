@@ -225,8 +225,8 @@ class GlslOut {
 			add("]");
 		case TBuffer(t, size, kind):
 			switch( kind ) {
-			case Uniform:
-			case RW:
+			case Uniform, Partial:
+			case RW, RWPartial:
 				add("rw_");
 			}
 			add((isVertex ? "vertex_" : "") + "uniform_buffer"+(uniformBuffer++));
@@ -709,9 +709,9 @@ class GlslOut {
 			case TBuffer(_, _, kind):
 				add("layout(std140) ");
 				switch( kind ) {
-				case Uniform:
+				case Uniform, Partial:
 					add("uniform ");
-				case RW:
+				case RW, RWPartial:
 					add("buffer ");
 				}
 			case TArray(TRWTexture(_, _, chans), _):

@@ -404,7 +404,7 @@ class Checker {
 				return;
 			case Local if( v.qualifiers == null || v.qualifiers.indexOf(Final) < 0 ):
 				return;
-			case Param, Local if( v.type.match(TBuffer(_,_,RW) | TRWTexture(_)) ):
+			case Param, Local if( v.type.match(TBuffer(_,_,RW|RWPartial) | TRWTexture(_)) ):
 				return;
 			default:
 			}

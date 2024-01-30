@@ -261,6 +261,13 @@ class Macros {
 					if( $p == null ) $psel = Unknown else if( $psel == Unknown ) $defFormat;
 					constBits |= ((globals.allocChannelID($p) << 3) | Type.enumIndex($psel)) << $v{ c.pos };
 				});
+			case TBuffer(_,_,Partial|RWPartial):
+				var psel = getPath(c.v,"Format");
+				exprs.push(macro {
+					if( $p == null ) throw "Partial buffer is not set";
+					if( $p.format.uid >>> hxsl.Ast.Tools.MAX_PARTIAL_MAPPINGS_BITS != 0 ) throw "Buffer format is out of range";
+					constBits |= $p.format.uid << $v{ c.pos };
+				});
 			default:
 				throw "assert";
 			}

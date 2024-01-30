@@ -163,8 +163,10 @@ class Flatten {
 			var expr = mapExpr(expr);
 			function read(pos, size) {
 				var idx = pos >> 2;
-				var sw = SWIZ.slice(pos&3,(pos&3) + size);
 				var arr : TExpr = optimize({ e : TArray(expr,{ e : TConst(CInt(idx)), p : e.p, t : TInt }), p : e.p, t : TVec(4,VFloat) });
+				if( size == 4 && pos & 3 == 0 )
+					return arr;
+				var sw = SWIZ.slice(pos&3,(pos&3) + size);
 				return { e : TSwiz(arr,sw), t : size == 1 ? TFloat : TVec(size,VFloat), p : e.p }
 			}
 			switch( e.t ) {
@@ -182,6 +184,19 @@ class Flatten {
 						read(pos + k, size - k)
 					]), t : e.t, p : e.p }
 				}
+			case TMat4:
+				{ e : TCall({ e : TGlobal(Mat4), p : e.p, t : TVoid },[
+					read(pos, 4),
+					read(pos + 4, 4),
+					read(pos + 8, 4),
+					read(pos + 12, 4),
+				]), t : e.t, p : e.p }
+			case TMat3x4:
+				{ e : TCall({ e : TGlobal(Mat3x4), p : e.p, t : TVoid },[
+					read(pos, 4),
+					read(pos + 4, 4),
+					read(pos + 8, 4),
+				]), t : e.t, p : e.p }
 			default:
 				throw "Unsupported type "+e.t.toString();
 			}

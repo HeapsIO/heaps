@@ -371,6 +371,15 @@ class BufferFormat {
 	}
 
 	static var ALL_FORMATS = new Map<String,Array<BufferFormat>>();
+
+	public static function fromID( uid : Int ) {
+		for( fl in ALL_FORMATS )
+			for( f in fl )
+				if( f.uid == uid )
+					return f;
+		return null;
+	}
+
 	public static function make( inputs : Array<BufferInput> ) {
 		var names = [];
 		for( b in inputs )

@@ -69,15 +69,96 @@ class SharedShader {
 		return if( i == null ) makeInstance(constBits) else i;
 	}
 
+	function makeBufferType( v : TVar, tbuf : hxsl.Ast.Type, fmt : hxd.BufferFormat ) : hxsl.Ast.Type {
+		var name = v.name;
+		switch( tbuf ) {
+		case TStruct(vl):
+			var inputs = [for( i in fmt.getInputs() ) i];
+			var vli : Array<TVar> = [];
+			var p = 0;
+			while( p < inputs.length ) {
+				var i = inputs[p++];
+				var name = i.name;
+				var t = switch( i.type ) {
+				case DVec2: TVec(2,VFloat);
+				case DVec3: TVec(3,VFloat);
+				case DVec4: TVec(4,VFloat);
+				case DFloat: TFloat;
+				case DBytes4: TBytes(4);
+				}
+				if( StringTools.endsWith(i.name,"__m0") ) {
+					var h = i.type.getSize();
+					var w = 2;
+					while( inputs[p+w-1] != null && StringTools.endsWith(inputs[p+w-1].name,"__m"+w) )
+						w++;
+					t = switch( [w,h] ) {
+					case [2,2]: TMat2;
+					case [3,3]: TMat3;
+					case [3,4]: TMat3x4;
+					case [4,4]: TMat4;
+					default: throw "Unsupported matrix format";
+					}
+					name = i.name.substr(0,-4);
+					p += w - 1;
+				}
+				vli.push({
+					id : Tools.allocVarId(),
+					name : name,
+					type : t,
+					kind : v.kind,
+					parent : v,
+				});
+			}
+			for( v in vl ) {
+				var found = false;
+				for( v2 in vli )
+					if( v.name == v2.name ) {
+						switch( [v.type, v2.type] ) {
+						case [TFloat, TFloat]:
+						case [TVec(a,VFloat), TVec(b,VFloat)] if( a <= b ):
+						default:
+							if( !v.type.equals(v2.type) )
+								throw "Buffer "+data.name+"."+v.name+":"+v.type.toString()+" should be "+v2.type.toString();
+						}
+						found = true;
+						break;
+					}
+				if( !found )
+					throw "Buffer is missing "+data.name+"."+v.name+":"+v.type.toString();
+			}
+			return TStruct(vli);
+		default:
+			throw "assert";
+		}
+	}
+
 	function makeInstance( constBits : Int )  {
 		var eval = new hxsl.Eval();
 		var c = consts;
 		while( c != null ) {
-			eval.setConstant(c.v, switch( c.v.type ) {
-			case TBool: CBool((constBits >>> c.pos) & 1 != 0);
-			case TInt, TChannel(_): CInt((constBits >>> c.pos) & ((1 << c.bits) - 1));
+			switch( c.v.type ) {
+			case TBool:
+				eval.setConstant(c.v, CBool((constBits >>> c.pos) & 1 != 0));
+			case TInt, TChannel(_):
+				eval.setConstant(c.v, CInt((constBits >>> c.pos) & ((1 << c.bits) - 1)));
+			case TBuffer(t,size,kind):
+				var bits = (constBits >>> c.pos) & ((1 << c.bits) - 1);
+				var fmt = hxd.BufferFormat.fromID(bits);
+				var v : TVar = {
+					id : c.v.id,
+					name : c.v.name,
+					kind : c.v.kind,
+					type : null,
+				};
+				var fullT = makeBufferType(v, t, fmt);
+				v.type = TBuffer(fullT, size, switch( kind ) {
+					case Partial: Uniform;
+					case RWPartial: RW;
+					default: throw "assert";
+				});
+				eval.varMap.set(c.v, v);
 			default: throw "assert";
-			});
+			}
 			c = c.next;
 		}
 		eval.inlineCalls = true;

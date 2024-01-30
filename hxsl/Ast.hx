@@ -3,6 +3,8 @@ package hxsl;
 enum BufferKind {
 	Uniform;
 	RW;
+	Partial;
+	RWPartial;
 }
 
 enum TexDimension {
@@ -326,6 +328,7 @@ class Tools {
 
 	public static var SWIZ = Component.createAll();
 	public static var MAX_CHANNELS_BITS = 3;
+	public static var MAX_PARTIAL_MAPPINGS_BITS = 7;
 
 	public static function allocVarId() {
 		// in order to prevent compile time ids to conflict with runtime allocated ones
@@ -398,13 +401,15 @@ class Tools {
 				}
 		case TChannel(_):
 			return 3 + MAX_CHANNELS_BITS;
+		case TBuffer(_, _, Partial|RWPartial):
+			return MAX_PARTIAL_MAPPINGS_BITS;
 		default:
 		}
 		return 0;
 	}
 
 	public static function isConst( v : TVar ) {
-		if( v.type.match(TChannel(_)) )
+		if( v.type.match(TChannel(_)|TBuffer(_,_,Partial|RWPartial)) )
 			return true;
 		if( v.qualifiers != null )
 			for( q in v.qualifiers )
@@ -465,6 +470,8 @@ class Tools {
 			var prefix = switch( k ) {
 			case Uniform: "Buffer";
 			case RW: "RWBuffer";
+			case Partial: "PartialBuffer";
+			case RWPartial: "RWPartialBuffer";
 			};
 			prefix+" "+toString(t) + "[" + (switch( s ) { case SConst(i): "" + i; case SVar(v): v.name; } ) + "]";
 		case TBytes(n): "Bytes" + n;

@@ -261,6 +261,7 @@ class Eval {
 	}
 
 	function evalExpr( e : TExpr, isVal = true ) : TExpr {
+		var t = e.t;
 		var d : TExprDef = switch( e.e ) {
 		case TGlobal(_), TConst(_): e.e;
 		case TVar(v):
@@ -269,6 +270,7 @@ class Eval {
 				c;
 			else {
 				var v2 = mapVar(v);
+				t = v2.type;
 				TVar(v2);
 			}
 		case TVarDecl(v, init):
@@ -280,6 +282,10 @@ class Eval {
 			case [TArrayDecl(el),TConst(CInt(i))] if( i >= 0 && i < el.length ):
 				el[i].e;
 			default:
+				switch( e1.t ) {
+				case TArray(at, _), TBuffer(at,_,_): t = at;
+				default:
+				}
 				TArray(e1, e2);
 			}
 		case TSwiz(e, r):
@@ -546,7 +552,7 @@ class Eval {
 		case TField(e, name):
 			TField(evalExpr(e), name);
 		};
-		return { e : d, t : e.t, p : e.p }
+		return { e : d, t : t, p : e.p }
 	}
 
 }

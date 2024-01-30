@@ -147,7 +147,7 @@ class MacroParser {
 			var t = getTexDim(name.substr(9), (dim,arr) -> TRWTexture(dim,arr,chans));
 			if( t != null )
 				return t;
-		case TPath( { pack : [], name : name = ("Array"|"Buffer"|"RWBuffer"), sub : null, params : [t, size] } ):
+		case TPath( { pack : [], name : name = ("Array"|"Buffer"|"RWBuffer"|"PartialBuffer"|"RWPartialBuffer"), sub : null, params : [t, size] } ):
 			var t = switch( t ) {
 			case TPType(t): parseType(t, pos);
 			default: null;
@@ -165,6 +165,8 @@ class MacroParser {
 				case "Array": TArray(t, size);
 				case "Buffer": TBuffer(t,size,Uniform);
 				case "RWBuffer": TBuffer(t,size,RW);
+				case "PartialBuffer": TBuffer(t,size,Partial);
+				case "RWPartialBuffer": TBuffer(t,size,RWPartial);
 				default: throw "assert";
 				}
 		case TAnonymous(fl):
