@@ -116,7 +116,7 @@ class Flatten {
 				access(a, v.type, e.p, AIndex(a));
 		case TArray( { e : TVar(v), p : vp }, eindex):
 			var a = varMap.get(v);
-			if( a == null || (v.type.match(TArray(_)) && eindex.e.match(TConst(CInt(_)))) )
+			if( a == null || (!v.type.match(TBuffer(_)) && eindex.e.match(TConst(CInt(_)))) )
 				e.map(mapExpr);
 			else {
 				switch( v.type ) {
