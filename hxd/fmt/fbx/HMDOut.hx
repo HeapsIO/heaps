@@ -40,7 +40,7 @@ class HMDOut extends BaseLibrary {
 		var index = geom.getIndexes();
 
 		if ( index.vidx.length > 0 && uvs[0] == null ) @:privateAccess
-			throw "Need UVs to build tangents" + geom.lib != null ? ' in ${geom.lib.fileName}' : '';
+			throw "Need UVs to build tangents" + (geom.lib != null ? ' in ${geom.lib.fileName}' : '');
 
 		#if (hl && !hl_disable_mikkt)
 		var m = new hl.Format.Mikktspace();
