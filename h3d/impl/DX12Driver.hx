@@ -1053,6 +1053,7 @@ class DX12Driver extends h3d.impl.Driver {
 					allocConsts(1, vis, switch( kind ) {
 					case Uniform: CBV;
 					case RW: UAV;
+					default: throw "assert";
 					});
 					p = p.next;
 				}
@@ -1795,6 +1796,8 @@ class DX12Driver extends h3d.impl.Driver {
 						desc.numElements = b.vertices;
 						desc.structureSizeInBytes = b.format.strideBytes;
 						Driver.createUnorderedAccessView(cbv.res, null, desc, srv);
+					default:
+						throw "assert";
 					}
 					if( currentShader.isCompute )
 						frame.commandList.setComputeRootDescriptorTable(regs.buffers + i, frame.shaderResourceViews.toGPU(srv));
