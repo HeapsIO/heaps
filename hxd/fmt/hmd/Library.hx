@@ -18,9 +18,9 @@ private class FormatMap {
 private class ContextShared extends hrt.prefab.ContextShared {
 	var customLoadTexture : String -> h3d.mat.Texture;
 
-	public function new(loadTexture : String -> h3d.mat.Texture, ?root2d: h2d.Object = null, ?root3d: h3d.scene.Object = null) {
+	public function new(loadTexture : String -> h3d.mat.Texture, ?root3d: h3d.scene.Object = null) {
 		#if prefab2
-		super(root2d, root3d);
+		super(root3d);
 		#else
 		super();
 		#end
