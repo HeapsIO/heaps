@@ -20,7 +20,7 @@ class AlphaMSDF extends hxsl.Shader {
 		}
 
 		function fragment() {
-				var sample = texture.get(calculatedUV);
+			var sample = texture.get(calculatedUV);
 			var sd = median(sample.r, sample.g, sample.b);
     		var screenPxDistance = screenPxRange(calculatedUV)*(sd - 0.5);
     		pixelColor.a = clamp(screenPxDistance + 0.5, 0.0, 1.0);
