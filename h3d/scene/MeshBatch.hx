@@ -181,6 +181,8 @@ class MeshBatch extends MultiMaterial {
 							curPos += fmt[i].getBytesSize() >> 2;
 					}
 					b.bufferFormat = hxd.BufferFormat.make(fmt);
+					if( b.bufferFormat.stride & 3 != 0 )
+						throw "assert";
 				}
 
 				b.next = dataPasses;
@@ -396,7 +398,7 @@ class MeshBatch extends MultiMaterial {
 					count = p.maxInstance;
 				if( buf == null || buf.isDisposed() ) {
 					var bufferFlags : hxd.impl.Allocator.BufferFlags = allowGpuUpdate ? UniformReadWrite : UniformDynamic;
-					buf = alloc.allocBuffer(MAX_BUFFER_ELEMENTS,p.bufferFormat,bufferFlags);
+					buf = alloc.allocBuffer(Std.int(MAX_BUFFER_ELEMENTS * (4 / p.bufferFormat.stride)),p.bufferFormat,bufferFlags);
 					p.buffers[index] = buf;
 					upload = true;
 				}
