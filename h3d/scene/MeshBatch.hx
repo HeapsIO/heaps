@@ -403,7 +403,7 @@ class MeshBatch extends MultiMaterial {
 					upload = true;
 				}
 				if( upload )
-					buf.uploadFloats(p.data, start * p.paramsCount * 4, count * p.paramsCount);
+					buf.uploadFloats(p.data, start * p.paramsCount * 4, Std.int(count * 4 * p.paramsCount / p.bufferFormat.stride));
 				if( psBytes != null ) {
 					if( p.instanceBuffers == null ) p.instanceBuffers = [];
 					var buf = p.instanceBuffers[index];
