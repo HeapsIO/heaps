@@ -397,4 +397,13 @@ class ConvertBinJSON extends Convert {
 
 	static var _ = [Convert.register(new ConvertBinJSON("json,prefab,l3d", "hbson"))];
 }
+
+class ConvertSVGToMSDF extends Convert {
+	override function convert() {
+		var size = hasParam("size") ? getParam("size") : 128;
+		command("msdfgen.exe", ["-svg", srcPath, "-size", '$size', '$size', "-autoframe", "-o", dstPath]);
+	}
+
+	static var _ = Convert.register(new ConvertSVGToMSDF("svg", "png"));
+}
 #end

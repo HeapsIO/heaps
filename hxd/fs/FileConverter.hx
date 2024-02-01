@@ -68,7 +68,8 @@ class FileConverter {
 		var defaultCfg : Dynamic = {
 			"fs.convert" : {
 				"fbx" : { "convert" : "hmd", "priority" : -1 },
-				"fnt" : { "convert" : "bfnt", "priority" : -1 }
+				"fnt" : { "convert" : "bfnt", "priority" : -1 },
+				"svg" : { "convert" : "png", "priority" : -1 }
 			}
 		};
 		for ( conf in extraConfigs ) {
