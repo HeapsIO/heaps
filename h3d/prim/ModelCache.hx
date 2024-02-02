@@ -50,7 +50,7 @@ class ModelCache {
 
 	public function loadModel( res : hxd.res.Model ) : h3d.scene.Object {
 		var m = loadLibraryData(res);
-		return m.lib.makeObject(loadTexture.bind(res));
+		return m.lib.makeObject(texturePath -> loadTexture(res, texturePath));
 	}
 
 	public function loadCollider( res : hxd.res.Model ) {
