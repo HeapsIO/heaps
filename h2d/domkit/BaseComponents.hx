@@ -352,7 +352,7 @@ class CustomParser extends domkit.CssValue.ValueParser {
 	}
 
 	public function transitionColorAdjust(col1: h3d.Matrix.ColorAdjust, col2: h3d.Matrix.ColorAdjust, t: Float) {
-		function defaultValues(col: h3d.Matrix.ColorAdjust) {
+		inline function defaultValues(col: h3d.Matrix.ColorAdjust) {
 			var c : h3d.Matrix.ColorAdjust = { saturation: 0, lightness: 0,	hue: 0,	contrast: 0, gain: { color: 0, alpha: 0 } };
 			if (col != null) {
 				if (col.saturation != null) c.saturation = col.saturation;
