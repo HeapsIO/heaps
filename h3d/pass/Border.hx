@@ -22,7 +22,7 @@ class Border extends ScreenFx<BorderShader> {
 		super(new BorderShader());
 		this.width = width;
 		this.height = height;
-		this.size = height;
+		this.size = size;
 		shader.color.set(1,1,1,1);
 	}
 
