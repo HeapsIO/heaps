@@ -308,11 +308,13 @@ class DX12Driver extends h3d.impl.Driver {
 
 	static inline var PSIGN_MATID = 0;
 	static inline var PSIGN_COLOR_MASK = PSIGN_MATID + 4;
-	static inline var PSIGN_UNUSED = PSIGN_COLOR_MASK + 1;
-	static inline var PSIGN_STENCIL_MASK = PSIGN_UNUSED + 1;
+	static inline var PSIGN_DEPTH_BIAS = PSIGN_COLOR_MASK + 4;
+	static inline var PSIGN_SLOPE_SCALED_DEPTH_BIAS = PSIGN_DEPTH_BIAS + 4;
+	static inline var PSIGN_STENCIL_MASK = PSIGN_SLOPE_SCALED_DEPTH_BIAS + 4;
 	static inline var PSIGN_STENCIL_OPS = PSIGN_STENCIL_MASK + 2;
 	static inline var PSIGN_RENDER_TARGETS = PSIGN_STENCIL_OPS + 4;
-	static inline var PSIGN_LAYOUT = PSIGN_RENDER_TARGETS + 1;
+	static inline var PSIGN_DEPTH_TARGET_FORMAT = PSIGN_RENDER_TARGETS + 1;
+	static inline var PSIGN_LAYOUT = PSIGN_DEPTH_TARGET_FORMAT + 4;
 
 	var pipelineSignature = new hl.Bytes(64);
 	var adlerOut = new hl.Bytes(4);
@@ -388,7 +390,7 @@ class DX12Driver extends h3d.impl.Driver {
 			f.allocator = new CommandAllocator(DIRECT);
 			f.commandList = new CommandList(DIRECT, f.allocator, null);
 			f.commandList.close();
-			f.shaderResourceCache = new ManagedHeapArray(CBV_SRV_UAV, 1024);
+			f.shaderResourceCache = new ManagedHeapArray(CBV_SRV_UAV, 32784);
 			f.samplerCache = new ManagedHeapArray(SAMPLER, 1024);
 			frames.push(f);
 		}
@@ -704,7 +706,7 @@ class DX12Driver extends h3d.impl.Driver {
 		viewDesc.arraySize = 1;
 		viewDesc.mipSlice = 0;
 		viewDesc.firstArraySlice = 0;
-		viewDesc.format = D24_UNORM_S8_UINT;
+		viewDesc.format = (depthBuffer == null) ? D24_UNORM_S8_UINT : toDxgiDepthFormat(depthBuffer.format);
 		viewDesc.viewDimension = TEXTURE2D;
 		if ( readOnly ) {
 			viewDesc.flags.set(READ_ONLY_DEPTH);
@@ -792,8 +794,26 @@ class DX12Driver extends h3d.impl.Driver {
 		if( w == 0 ) w = 1;
 		if( h == 0 ) h = 1;
 		initViewport(w, h);
-		pipelineSignature.setUI8(PSIGN_RENDER_TARGETS, tex == null ? 0 : getRTBits(tex) | (depthEnabled ? 0x80 : 0));
+		pipelineSignature.setUI8(PSIGN_RENDER_TARGETS, tex == null ? 0 : getRTBits(tex));
+		var depthBufferIsNotNull = tex != null && tex.depthBuffer != null;
+		var depthFormat = depthEnabled ? ( depthBufferIsNotNull ? toDxgiDepthFormat(tex.depthBuffer.format) : D24_UNORM_S8_UINT ) : dx.DxgiFormat.UNKNOWN;
+		pipelineSignature.setI32(PSIGN_DEPTH_TARGET_FORMAT, depthFormat.toInt());
+		pipelineSignature.setI32(PSIGN_DEPTH_BIAS, depthBufferIsNotNull ? Std.int(tex.depthBuffer.depthBias) : 0);
+		pipelineSignature.setF32(PSIGN_SLOPE_SCALED_DEPTH_BIAS, depthBufferIsNotNull ? tex.depthBuffer.slopeScaledBias : 0);
 		needPipelineFlush = true;
+	}
+
+	function toDxgiDepthFormat( format : hxd.PixelFormat ) {
+		switch( format ) {
+			case Depth16:
+				return  D16_UNORM;
+			case Depth24Stencil8, Depth24:
+				return  D24_UNORM_S8_UINT;
+			case Depth32:
+				return  D32_FLOAT;
+			default:
+				throw "Unsupported depth format "+ format;
+		}
 	}
 
 	override function setRenderTargets(textures:Array<h3d.mat.Texture>, depthBinding : h3d.Engine.DepthBinding = ReadWrite) {
@@ -832,7 +852,13 @@ class DX12Driver extends h3d.impl.Driver {
 		frame.commandList.omSetRenderTargets(textures.length, tmp.renderTargets, true, depthEnabled ? getDepthViewFromTexture(t0, depthBinding == ReadOnly) : null);
 		initViewport(t0.width, t0.height);
 
-		pipelineSignature.setUI8(PSIGN_RENDER_TARGETS, bits | (depthEnabled ? 0x80 : 0));
+		pipelineSignature.setUI8(PSIGN_RENDER_TARGETS, bits);
+		var depthBufferIsNotNull = ( t0 != null && t0.depthBuffer != null );
+		var depthFormat = depthEnabled ? ( depthBufferIsNotNull ? toDxgiDepthFormat(t0.depthBuffer.format) : D24_UNORM_S8_UINT ) : dx.DxgiFormat.UNKNOWN;
+		pipelineSignature.setI32(PSIGN_DEPTH_TARGET_FORMAT, depthFormat.toInt());
+		pipelineSignature.setI32(PSIGN_DEPTH_BIAS, depthEnabled && depthBufferIsNotNull ? Std.int(t0.depthBuffer.depthBias) : 0);
+		pipelineSignature.setF32(PSIGN_SLOPE_SCALED_DEPTH_BIAS, depthEnabled && depthBufferIsNotNull ? cast(t0.depthBuffer.slopeScaledBias) : 0);
+
 		needPipelineFlush = true;
 	}
 
@@ -846,7 +872,11 @@ class DX12Driver extends h3d.impl.Driver {
 
 		initViewport(depthBuffer.width, depthBuffer.height);
 
-		pipelineSignature.setUI8(PSIGN_RENDER_TARGETS, 0x80);
+		pipelineSignature.setUI8(PSIGN_RENDER_TARGETS, 0);
+		var depthFormat = ( depthBuffer != null ) ? toDxgiDepthFormat(depthBuffer.format) : D24_UNORM_S8_UINT;
+		pipelineSignature.setI32(PSIGN_DEPTH_TARGET_FORMAT, depthFormat.toInt());
+		pipelineSignature.setI32(PSIGN_DEPTH_BIAS, ( depthEnabled && (depthBuffer != null) ) ? Std.int(depthBuffer.depthBias) : 0);
+		pipelineSignature.setF32(PSIGN_SLOPE_SCALED_DEPTH_BIAS, ( depthEnabled && (depthBuffer != null) ) ? depthBuffer.slopeScaledBias : 0);
 		needPipelineFlush = true;
 	}
 
@@ -1515,14 +1545,14 @@ class DX12Driver extends h3d.impl.Driver {
 		desc.depthOrArraySize = 1;
 		desc.mipLevels = 1;
 		desc.sampleDesc.count = 1;
-		desc.format = R24G8_TYPELESS;
+		desc.format = toDxgiDepthFormat(b.format);
 		desc.flags.set(ALLOW_DEPTH_STENCIL);
 		#if console
 		desc.flags = new haxe.EnumFlags<ResourceFlag>( desc.flags.toInt() | 0x00800000 ); // FORCE_TEXTURE_COMPATIBILITY
 		#end
 		tmp.heap.type = DEFAULT;
 
-		tmp.clearValue.format = D24_UNORM_S8_UINT;
+		tmp.clearValue.format = desc.format;
 		tmp.clearValue.depth = 1;
 		tmp.clearValue.stencil= 0;
 		td.state = td.targetState = DEPTH_WRITE;
@@ -1723,7 +1753,16 @@ class DX12Driver extends h3d.impl.Driver {
 			var desc = srvArgs.resourceDesc;
 			desc.dimension = TEXTURE2D;
 			desc.mipLevels = -1;
-			desc.format = R24_UNORM_X8_TYPELESS;
+			switch (t.format) {
+				case Depth16:
+					desc.format = R16_UNORM;
+				case Depth24, Depth24Stencil8:
+					desc.format = R24_UNORM_X8_TYPELESS;
+				case Depth32:
+					desc.format = R32_FLOAT;
+				default:
+					throw "Unsupported depth format "+ t.format;
+			}
 			desc.mostDetailedMip = t.startingMip;
 			desc.shader4ComponentMapping = ShaderComponentMapping.DEFAULT;
 		} else {
@@ -2027,6 +2066,8 @@ class DX12Driver extends h3d.impl.Driver {
 		var p = shader.pipeline;
 		var passBits = pipelineSignature.getI32(PSIGN_MATID);
 		var colorMask = pipelineSignature.getUI8(PSIGN_COLOR_MASK);
+		var depthBias = pipelineSignature.getI32(PSIGN_DEPTH_BIAS);
+		var slopeScaledDepthBias = pipelineSignature.getF32(PSIGN_SLOPE_SCALED_DEPTH_BIAS);
 		var stencilMask = pipelineSignature.getUI16(PSIGN_STENCIL_MASK);
 		var stencilOp = pipelineSignature.getI32(PSIGN_STENCIL_OPS);
 
@@ -2048,6 +2089,8 @@ class DX12Driver extends h3d.impl.Driver {
 		p.numRenderTargets = rtCount;
 		p.rasterizerState.cullMode = CULL[cull];
 		p.rasterizerState.fillMode = wire == 0 ? SOLID : WIREFRAME;
+		p.rasterizerState.depthBias = depthBias;
+		p.rasterizerState.slopeScaledDepthBias = slopeScaledDepthBias;
 		p.depthStencilDesc.depthEnable = cmp != 0;
 		p.depthStencilDesc.depthWriteMask = dw == 0 || !depthEnabled ? ZERO : ALL;
 		p.depthStencilDesc.depthFunc = COMP[cmp];
@@ -2067,7 +2110,7 @@ class DX12Driver extends h3d.impl.Driver {
 			var t = currentRenderTargets[i];
 			p.rtvFormats[i] = t == null ? R8G8B8A8_UNORM : t.t.format;
 		}
-		p.dsvFormat = depthEnabled ? D24_UNORM_S8_UINT : UNKNOWN;
+		p.dsvFormat = cast pipelineSignature.getI32(PSIGN_DEPTH_TARGET_FORMAT);
 
 		for( i in 0...shader.inputCount ) {
 			var d = shader.inputLayout[i];

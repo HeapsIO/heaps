@@ -2,6 +2,8 @@ package h3d.pass;
 
 typedef CascadeParams = {
 	var bias : Float;
+	var depthBias : Float;
+	var slopeBias : Float;
 }
 
 class CascadeShadowMap extends DirShadowMap {
@@ -186,16 +188,20 @@ class CascadeShadowMap extends DirShadowMap {
 			}
 			texture.depthBuffer = depth;
 			#else
-			var texture = ctx.textures.allocTarget("cascadeShadowMap_"+i, size, size, false, Depth24Stencil8);
+			var texture = ctx.textures.allocTarget("cascadeShadowMap_"+i, size, size, false, Depth16);
 			#end
+			// Bilinear depth only make sense if we use sample compare to get weighted shadow occlusion which we doesn't support yet.
+			texture.filter = Nearest;
 
 			currentCascadeIndex = i;
 			var p = passes.save();
 			cullPasses(passes,function(col) return col.inFrustum(lightCameras[i].frustum));
+			var param = params[cascade - 1 - i];			
+			texture.depthBias = (param != null) ? param.depthBias : 0;
+			texture.slopeScaledBias = (param != null) ? param.slopeBias : 0;			
 			texture = processShadowMap( passes, texture, sort);
 			textures.push(texture);
 			passes.load(p);
-
 		}
 		syncCascadeShader(textures);
 

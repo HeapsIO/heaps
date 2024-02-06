@@ -42,6 +42,8 @@ class Texture {
 	public var startingMip : Int = 0;
 	public var lodBias : Float = 0.;
 	public var mipLevels(get, never) : Int;
+	public var depthBias : Float = 0.;
+	public var slopeScaledBias : Float = 0.;
 	var customMipLevels : Int;
 
 	/**
@@ -510,7 +512,7 @@ class Texture {
 
 	public function isDepth() {
 		return switch( format ) {
-		case Depth16, Depth24, Depth24Stencil8: true;
+		case Depth16, Depth24, Depth24Stencil8, Depth32: true;
 		default: false;
 		}
 	}

@@ -1157,6 +1157,8 @@ class GlDriver extends Driver {
 			tt.internalFmt = GL.DEPTH24_STENCIL8;
 			tt.pixelFmt = GL.UNSIGNED_INT_24_8;
 			fmt = GL.DEPTH_STENCIL;
+		case Depth32:
+			tt.internalFmt = GL.DEPTH_COMPONENT32F;
 		default:
 			throw "Unsupported depth format "+	t.format;
 		}
@@ -1693,6 +1695,8 @@ class GlDriver extends Driver {
 		else
 			gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0, tex.flags.has(Cube) ? CUBE_FACES[layer] : GL.TEXTURE_2D, tex.t.t, mipLevel);
 
+		setPolygonOffset( tex.depthBuffer );
+
 		if( tex.depthBuffer != null && depthBinding != NotBound ) {
 			// Depthbuffer and stencilbuffer are combined in one buffer, created with GL.DEPTH_STENCIL
 			if(tex.depthBuffer.hasStencil() && tex.depthBuffer.format == Depth24Stencil8) {
@@ -1770,6 +1774,8 @@ class GlDriver extends Driver {
 
 		gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0, GL.TEXTURE_2D, null, 0);
 
+		setPolygonOffset( depthBuffer );
+
 		if(depthBuffer.hasStencil() && depthBuffer.format == Depth24Stencil8) {
 			gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.DEPTH_STENCIL_ATTACHMENT, GL.TEXTURE_2D,@:privateAccess depthBuffer.t.t, 0);
 		} else {
@@ -1796,6 +1802,15 @@ class GlDriver extends Driver {
 				throw "Invalid frame buffer: "+code;
 		}
 		#end
+	}
+
+	function setPolygonOffset( depthTexture : h3d.mat.Texture ) {
+		if ( depthTexture != null && ( depthTexture.depthBias != 0 || depthTexture.slopeScaledBias != 0 ) ) {
+			gl.enable(GL.POLYGON_OFFSET_FILL);
+			gl.polygonOffset(depthTexture.slopeScaledBias, depthTexture.depthBias);
+		}
+		else
+			gl.disable(GL.POLYGON_OFFSET_FILL);
 	}
 
 	override function init( onCreate : Bool -> Void, forceSoftware = false ) {
