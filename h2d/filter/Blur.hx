@@ -36,7 +36,6 @@ class Blur extends Filter {
 	**/
 	public function new( radius = 1., gain = 1., quality = 1., linear = 0. ) {
 		super();
-		smooth = true;
 		pass = new h3d.pass.Blur(radius, gain, linear, quality);
 	}
 

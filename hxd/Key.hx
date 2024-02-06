@@ -194,27 +194,15 @@ class Key {
 		initDone = true;
 		keyPressed = [];
 		Window.getInstance().addEventTarget(onEvent);
-		#if flash
-		flash.Lib.current.stage.addEventListener(flash.events.Event.DEACTIVATE, onDeactivate);
-		#end
 	}
 
 	public static function dispose() {
 		if( initDone ) {
 			Window.getInstance().removeEventTarget(onEvent);
-			#if flash
-			flash.Lib.current.stage.removeEventListener(flash.events.Event.DEACTIVATE, onDeactivate);
-			#end
 			initDone = false;
 			keyPressed = [];
 		}
 	}
-
-	#if flash
-	static function onDeactivate(_) {
-		keyPressed = [];
-	}
-	#end
 
 	static function onEvent( e : Event ) {
 		switch( e.kind ) {
@@ -272,7 +260,7 @@ class Key {
 		case QWERTY_MINUS: "Minus";
 		case QWERTY_EQUALS: "Equals";
 		case QWERTY_BRACKET_LEFT: "BracketLeft";
-		case QWERTY_BRACKET_RIGHT: "BacketRight";
+		case QWERTY_BRACKET_RIGHT: "BracketRight";
 		case QWERTY_SEMICOLON: "Semicolon";
 		case QWERTY_QUOTE: "Quote";
 		case QWERTY_BACKSLASH: "Backslash";

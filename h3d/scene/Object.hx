@@ -386,17 +386,19 @@ class Object {
 	}
 
 	/**
-		Return the bounds of this object and all its children, in absolute global coordinates.
+		Return the bounds of this object and all its children, in absolute global coordinates or relative to the
+		object being used as parameter.
 	**/
-	final public function getBounds( ?b : h3d.col.Bounds ) {
+	final public function getBounds( ?b : h3d.col.Bounds, ?relativeTo : Object ) {
 		if( b == null )
 			b = new h3d.col.Bounds();
-		if( parent != null )
+		if( parent != null && parent != relativeTo )
 			parent.syncPos();
-		return getBoundsRec(b);
+		addBoundsRec(b, relativeTo == null ? null : relativeTo.getInvPos());
+		return b;
 	}
 
-	function getBoundsRec( b : h3d.col.Bounds ) {
+	function addBoundsRec( b : h3d.col.Bounds, relativeTo : h3d.Matrix ) {
 		if( posChanged ) {
 			for( c in children )
 				c.posChanged = true;
@@ -404,8 +406,7 @@ class Object {
 			calcAbsPos();
 		}
 		for( c in children )
-			c.getBoundsRec(b);
-		return b;
+			c.addBoundsRec(b, relativeTo);
 	}
 
 	/**
@@ -413,7 +414,7 @@ class Object {
 	**/
 	public function getMeshes( ?out : Array<Mesh> ) {
 		if( out == null ) out = [];
-		var m = hxd.impl.Api.downcast(this, Mesh);
+		var m = Std.downcast(this, Mesh);
 		if( m != null ) out.push(m);
 		for( c in children )
 			c.getMeshes(out);
@@ -424,7 +425,7 @@ class Object {
 		Search for an mesh recursively by name, return null if not found.
 	**/
 	public function getMeshByName( name : String) {
-		return hxd.impl.Api.downcast(getObjectByName(name), Mesh);
+		return Std.downcast(getObjectByName(name), Mesh);
 	}
 
 	/**
@@ -515,7 +516,7 @@ class Object {
 		if( !visible || (culled && inheritCulled) )
 			return;
 		if( !culled ) {
-			var m = hxd.impl.Api.downcast(this, Mesh);
+			var m = Std.downcast(this, Mesh);
 			if( m != null ) callb(m);
 		}
 		for( o in children )
@@ -575,7 +576,7 @@ class Object {
 	public function getScene() {
 		var p = this;
 		while( p.parent != null ) p = p.parent;
-		return hxd.impl.Api.downcast(p, Scene);
+		return Std.downcast(p, Scene);
 	}
 
 	/**
@@ -602,14 +603,14 @@ class Object {
 		Tell if the object is a Mesh.
 	**/
 	public inline function isMesh() {
-		return hxd.impl.Api.downcast(this, Mesh) != null;
+		return Std.downcast(this, Mesh) != null;
 	}
 
 	/**
 		If the object is a Mesh, return the corresponding Mesh. If not, throw an exception.
 	**/
 	public function toMesh() : Mesh {
-		var m = hxd.impl.Api.downcast(this, Mesh);
+		var m = Std.downcast(this, Mesh);
 		if( m != null )
 			return m;
 		throw this + " is not a Mesh";
@@ -629,7 +630,7 @@ class Object {
 		for( obj in children ) {
 			var c = obj.getCollider();
 			if( c == null ) continue;
-			var cgrp = hxd.impl.Api.downcast(c, h3d.col.Collider.GroupCollider);
+			var cgrp = Std.downcast(c, h3d.col.Collider.GroupCollider);
 			if( cgrp != null ) {
 				for( c in cgrp.colliders )
 					colliders.push(c);
@@ -785,7 +786,7 @@ class Object {
 		#if sceneprof h3d.impl.SceneProf.mark(this); #end
 
 		if( !visible || (culled && inheritCulled && !ctx.computingStatic) )
-			return;		
+			return;
 
 		// fallback in case the object was added during a sync() event and we somehow didn't update it
 		if( posChanged ) {
@@ -890,8 +891,8 @@ class Object {
 	/**
 		Rotate around the current rotation axis by the specified angles (in radian).
 	**/
-	public function rotate( rx : Float, ry : Float, rz : Float ) {
-		var qTmp = new h3d.Quat();
+	public function rotate( rx : Float, ry : Float, rz : Float, ?qTmp : h3d.Quat ) {
+		if ( qTmp == null ) qTmp = new h3d.Quat();
 		qTmp.initRotation(rx, ry, rz);
 		qRot.multiply(qTmp,qRot);
 		posChanged = true;
@@ -916,8 +917,8 @@ class Object {
 	/**
 		Set the rotation using the specified look at direction
 	**/
-	public function setDirection( v : h3d.Vector ) {
-		qRot.initDirection(v);
+	public function setDirection( v : h3d.Vector, ?up ) {
+		qRot.initDirection(v, up);
 		posChanged = true;
 	}
 

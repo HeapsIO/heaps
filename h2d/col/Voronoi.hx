@@ -1522,7 +1522,7 @@ class Voronoi {
 							if ( lastBorderSegment ) { break; }
 							va = vb;
 							// fall through
-						} 
+						}
 
 						if (this.equalWithepsilon(va.y,yb) && this.lessThanWithepsilon(va.x,xr)) {
 							lastBorderSegment = this.equalWithepsilon(vz.y,yb);
@@ -1534,7 +1534,7 @@ class Voronoi {
 							if ( lastBorderSegment ) { break; }
 							va = vb;
 							// fall through
-						} 
+						}
 
 						if (this.equalWithepsilon(va.x,xr) && this.greaterThanWithepsilon(va.y,yt)) {
 							lastBorderSegment = this.equalWithepsilon(vz.x,xr);
@@ -1546,7 +1546,7 @@ class Voronoi {
 							if ( lastBorderSegment ) { break; }
 							va = vb;
 							// fall through
-						} 
+						}
 
 						if (this.equalWithepsilon(va.y,yt) && this.greaterThanWithepsilon(va.x,xl)) {
 							lastBorderSegment = this.equalWithepsilon(vz.y,yt);

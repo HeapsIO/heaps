@@ -159,7 +159,7 @@ class Emitter extends Particles implements Randomized {
 		initPosDir(p);
 		if( !state.emitLocal ) {
 			var pos = new h3d.Vector(p.x, p.y, p.z);
-			pos.transform3x4(absPos);
+			pos.transform(absPos);
 			p.x = pos.x;
 			p.y = pos.y;
 			p.z = pos.z;

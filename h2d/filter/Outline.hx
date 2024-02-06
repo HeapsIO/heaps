@@ -41,7 +41,6 @@ class Outline extends Filter {
 	**/
 	public function new(size = 4.0, color = 0x000000, quality = 0.3, multiplyAlpha = true) {
 		super();
-		smooth = true;
 		pass = new h3d.pass.Outline(size, color, quality, multiplyAlpha);
 	}
 

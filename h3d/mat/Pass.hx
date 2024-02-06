@@ -13,8 +13,13 @@ class Pass {
 	var bits : Int = 0;
 	var parentPass : Pass;
 	var parentShaders : hxsl.ShaderList;
+	var selfShaders(default, null) : hxsl.ShaderList;
+	var selfShadersChanged(default, null) : Bool;
+	var selfShadersCache : hxsl.ShaderList;
 	var shaders : hxsl.ShaderList;
 	var nextPass : Pass;
+	var culled : Bool = false;
+	var rendererFlags : Int = 0;
 
 	@:bits(flags) public var enableLights : Bool;
 	/**
@@ -155,10 +160,31 @@ class Pass {
 		}
 	}
 
+	public function setColorMaski(r, g, b, a, i) {
+		if ( i > 8 )
+			throw "Color mask i supports 8 Render target";
+		var mask = (r?1:0) | (g?2:0) | (b?4:0) | (a?8:0);
+		mask = mask << (i * 4);
+		this.colorMask = this.colorMask | mask;
+	}
+
+	function resetRendererFlags() {
+		rendererFlags = 0;
+	}
+
 	public function addShader<T:hxsl.Shader>(s:T) : T {
 		// throwing an exception will require NG GameServer review
 		if( s == null ) return null;
 		shaders = hxsl.ShaderList.addSort(s, shaders);
+		resetRendererFlags();
+		return s;
+	}
+
+	function addSelfShader<T:hxsl.Shader>(s:T) : T {
+		if ( s == null ) return null;
+		selfShadersChanged = true;
+		selfShaders = hxsl.ShaderList.addSort(s, selfShaders);
+		resetRendererFlags();
 		return s;
 	}
 
@@ -195,8 +221,27 @@ class Pass {
 		var sl = shaders, prev = null;
 		while( sl != null ) {
 			if( sl.s == s ) {
+				resetRendererFlags();
+				if ( selfShadersCache == sl )
+					selfShadersCache = selfShadersCache.next;
 				if( prev == null )
 					shaders = sl.next;
+				else
+					prev.next = sl.next;
+				return true;
+			}
+			prev = sl;
+			sl = sl.next;
+		}
+		sl = selfShaders;
+		prev = null;
+		while ( sl != null ) {
+			if ( sl.s == s ) {
+				resetRendererFlags();
+				if ( selfShadersCache == sl )
+					selfShadersCache = selfShadersCache.next;
+				if ( prev == null )
+					selfShaders = sl.next;
 				else
 					prev.next = sl.next;
 				return true;
@@ -208,11 +253,31 @@ class Pass {
 	}
 
 	public function removeShaders< T:hxsl.Shader >(t:Class<T>) {
-		var sl = shaders, prev = null;
+		var sl = shaders;
+		var prev = null;
 		while( sl != null ) {
-			if( hxd.impl.Api.isOfType(sl.s, t) ) {
+			if( Std.isOfType(sl.s, t) ) {
+				resetRendererFlags();
+				if ( selfShadersCache == sl )
+					selfShadersCache = selfShadersCache.next;
 				if( prev == null )
 					shaders = sl.next;
+				else
+					prev.next = sl.next;
+			}
+			else
+				prev = sl;
+			sl = sl.next;
+		}
+		sl = selfShaders;
+		prev = null;
+		while( sl != null ) {
+			if( Std.isOfType(sl.s, t) ) {
+				resetRendererFlags();
+				if ( selfShadersCache == sl )
+					selfShadersCache = selfShadersCache.next;
+				if( prev == null )
+					selfShaders = sl.next;
 				else
 					prev.next = sl.next;
 			}
@@ -223,9 +288,13 @@ class Pass {
 	}
 
 	public function getShader< T:hxsl.Shader >(t:Class<T>) : T {
-		var s = shaders;
-		while( s != parentShaders ) {
-			var sh = hxd.impl.Api.downcast(s.s, t);
+		var s = _getShader(t, shaders);
+		return s != null ? s : _getShader(t, selfShaders);
+	}
+
+	function _getShader< T:hxsl.Shader >(t:Class<T>, s : hxsl.ShaderList) : T {
+		while( s != null && s != parentShaders ) {
+			var sh = Std.downcast(s.s, t);
 			if( sh != null )
 				return sh;
 			s = s.next;
@@ -234,11 +303,15 @@ class Pass {
 	}
 
 	public function getShaderByName( name : String ) : hxsl.Shader {
-		var s = shaders;
-		while( s != parentShaders ) {
-			if( @:privateAccess s.s.shader.data.name == name )
-				return s.s;
-			s = s.next;
+		var s = _getShaderByName(name, shaders);
+		return s != null ? s : _getShaderByName(name, selfShaders);
+	}
+
+	function _getShaderByName( name : String, sl : hxsl.ShaderList ) : hxsl.Shader {
+		while( sl != null && sl != parentShaders ) {
+			if( @:privateAccess sl.s.shader.data.name == name )
+				return sl.s;
+			sl = sl.next;
 		}
 		return null;
 	}
@@ -247,9 +320,40 @@ class Pass {
 		return shaders.iterateTo(parentShaders);
 	}
 
-	function getShadersRec() {
-		if( parentPass == null || parentShaders == parentPass.shaders )
+	function checkInfiniteLoop() {
+		var shaderList = [];
+		var s = selfShaders;
+		while ( s != null ) {
+			for ( already in shaderList )
+				if ( already == s )
+					throw "infinite loop";
+			shaderList.push(s);
+			s = s.next;
+		}
+	}
+
+	function selfShadersRec(rebuild : Bool) {
+		if ( selfShaders == null )
 			return shaders;
+		if ( !selfShadersChanged && !rebuild && shaders == selfShadersCache )
+			return selfShaders;
+		var sl = selfShaders, prev = null;
+		while ( sl != null && sl != selfShadersCache ) {
+			prev = sl;
+			sl = sl.next;
+		}
+		selfShadersCache = shaders;
+		if ( prev != null )
+			prev.next = selfShadersCache;
+		else
+			selfShaders = shaders;
+		return selfShaders;
+	}
+
+	function getShadersRec() {
+		if( parentPass == null || parentShaders == parentPass.shaders ) {
+			return selfShadersRec(false);
+		}
 		// relink to our parent shader list
 		var s = shaders, prev = null;
 		while( s != null && s != parentShaders ) {
@@ -261,27 +365,16 @@ class Pass {
 			shaders = parentShaders;
 		else
 			prev.next = parentShaders;
-		return shaders;
+		return selfShadersRec(true);
 	}
 
 	public function clone() {
 		var p = new Pass(name, shaders.clone());
+		p.selfShaders = selfShaders;
 		p.bits = bits;
 		p.enableLights = enableLights;
 		if (stencil != null) p.stencil = stencil.clone();
 		return p;
 	}
-
-	#if !macro
-	public function getDebugShaderCode( scene : h3d.scene.Scene, toHxsl = true ) {
-		var shader = scene.renderer.debugCompileShader(this);
-		if( toHxsl ) {
-			var toString = hxsl.Printer.shaderToString.bind(_, true);
-			return "// vertex:\n" + toString(shader.vertex.data) + "\n\nfragment:\n" + toString(shader.fragment.data);
-		} else {
-			return h3d.Engine.getCurrent().driver.getNativeShaderCode(shader);
-		}
-	}
-	#end
 
 }

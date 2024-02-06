@@ -1,6 +1,6 @@
 package h3d.col;
 
-class ObjectCollider implements Collider {
+class ObjectCollider extends Collider {
 
 	public var obj : h3d.scene.Object;
 	public var collider : Collider;
@@ -67,10 +67,8 @@ class ObjectCollider implements Collider {
 	#if !macro
 	public function makeDebugObj() : h3d.scene.Object {
 		var ret = collider.makeDebugObj();
-		if( ret != null ) {
-			ret.ignoreParentTransform = true;
+		if( ret != null )
 			ret.follow = obj;
-		}
 		return ret;
 	}
 	#end

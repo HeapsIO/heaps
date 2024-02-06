@@ -2,7 +2,7 @@ package h2d.col;
 /**
 	A simple triangle collider.
 **/
-class Triangle implements Collider {
+class Triangle extends Collider {
 
 	static inline var UNDEF = 1.1315e-17;
 
@@ -82,6 +82,14 @@ class Triangle implements Collider {
 		var s = area * (a.y * c.x - a.x * c.y + (c.y - a.y) * p.x + (a.x - c.x) * p.y);
 		var t = area * (a.x * b.y - a.y * b.x + (a.y - b.y) * p.x + (b.x - a.x) * p.y);
 		return s >= 0 && t >= 0 && s + t < 1;
+	}
+
+	public function collideCircle( c : Circle ) : Bool {
+		throw "Not implemented";
+	}
+
+	public function collideBounds( b : Bounds ) : Bool {
+		throw "Not implemented";
 	}
 
 }

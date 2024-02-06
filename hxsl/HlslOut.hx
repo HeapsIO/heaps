@@ -74,12 +74,17 @@ class HlslOut {
 		m.set(InstanceID,"_in.instanceID");
 		m.set(IVec2, "int2");
 		m.set(IVec3, "int3");
-		m.set(IVec4, "int3");
+		m.set(IVec4, "int4");
 		m.set(BVec2, "bool2");
 		m.set(BVec3, "bool3");
 		m.set(BVec4, "bool4");
 		m.set(FragCoord,"_in.__pos__");
 		m.set(FrontFacing, "_in.isFrontFace");
+		m.set(FloatBitsToInt, "asint");
+		m.set(FloatBitsToUint, "asuint");
+		m.set(IntBitsToFloat, "asfloat");
+		m.set(UintBitsToFloat, "_uintBitsToFloat");
+		m.set(RoundEven, "round");
 		for( g in m )
 			KWDS.set(g, true);
 		m;
@@ -91,18 +96,25 @@ class HlslOut {
 	var SV_InstanceID = "SV_InstanceID";
 	var SV_IsFrontFace = "SV_IsFrontFace";
 	var STATIC = "static ";
+	var CONST = "const ";
 	var buf : StringBuf;
 	var exprIds = 0;
 	var exprValues : Array<String>;
 	var locals : Map<Int,TVar>;
 	var decls : Array<String>;
-	var isVertex : Bool;
+	var kind : FunctionKind;
 	var allNames : Map<String, Int>;
 	var samplers : Map<Int, Array<Int>>;
+	var computeLayout = [1,1,1];
 	public var varNames : Map<Int,String>;
 	public var baseRegister : Int = 0;
 
 	var varAccess : Map<Int,String>;
+	var isVertex(get,never) : Bool;
+	var isCompute(get,never) : Bool;
+
+	inline function get_isCompute() return kind == Main;
+	inline function get_isVertex() return kind == Vertex;
 
 	public function new() {
 		varNames = new Map();
@@ -170,7 +182,7 @@ class HlslOut {
 			add(" }");
 		case TFun(_):
 			add("function");
-		case TArray(t, size), TBuffer(t,size):
+		case TArray(t, size), TBuffer(t,size,_):
 			addType(t);
 			add("[");
 			switch( size ) {
@@ -196,7 +208,7 @@ class HlslOut {
 
 	function addVar( v : TVar ) {
 		switch( v.type ) {
-		case TArray(t, size), TBuffer(t,size):
+		case TArray(t, size), TBuffer(t,size,_):
 			addVar({
 				id : v.id,
 				name : v.name,
@@ -293,6 +305,8 @@ class HlslOut {
 			var acc = varAccess.get(v.id);
 			if( acc != null ) add(acc);
 			ident(v);
+		case TCall({ e : TGlobal(SetLayout) },_):
+			// ignore
 		case TCall({ e : TGlobal(g = (Texture | TextureLod)) }, args):
 			addValue(args[0], tabs);
 			switch( g ) {
@@ -424,6 +438,11 @@ class HlslOut {
 				decl("float dFdy( float v ) { return ddy(v); }");
 				decl("float2 dFdy( float2 v ) { return ddy(v); }");
 				decl("float3 dFdy( float3 v ) { return ddy(v); }");
+			case UintBitsToFloat:
+				decl("float _uintBitsToFloat( int v ) { return asfloat(asuint(v)); }");
+				decl("float2 _uintBitsToFloat( int2 v ) { return asfloat(asuint(v)); }");
+				decl("float3 _uintBitsToFloat( int3 v ) { return asfloat(asuint(v)); }");
+				decl("float4 _uintBitsToFloat( int4 v ) { return asfloat(asuint(v)); }");
 			default:
 			}
 			add(GLOBALS.get(g));
@@ -449,7 +468,10 @@ class HlslOut {
 				add(i);
 				add("] = ");
 				addExpr(el[i], tabs);
-				newLine(el[i]);
+				if( i < el.length - 1 ) {
+					newLine(el[i]);
+					add(tabs);
+				}
 			}
 		case TBinop(OpAssign,evar = { e : TVar(_) },{ e : TArrayDecl(el) }):
 			for( i in 0...el.length ) {
@@ -458,6 +480,10 @@ class HlslOut {
 				add(i);
 				add("] = ");
 				addExpr(el[i], tabs);
+				if( i < el.length - 1 ) {
+					newLine(el[i]);
+					add(tabs);
+				}
 			}
 		case TArrayDecl(el):
 			add("{");
@@ -677,6 +703,8 @@ class HlslOut {
 	function collectGlobals( m : Map<TGlobal,Bool>, e : TExpr ) {
 		switch( e.e )  {
 		case TGlobal(g): m.set(g,true);
+		case TCall({ e : TGlobal(SetLayout) }, [{ e : TConst(CInt(x)) }, { e : TConst(CInt(y)) }, { e : TConst(CInt(z)) }]):
+			computeLayout = [x,y,z];
 		default: e.iter(collectGlobals.bind(m));
 		}
 	}
@@ -699,7 +727,7 @@ class HlslOut {
 			collectGlobals(foundGlobals, f.expr);
 
 		add("struct s_input {\n");
-		if( !isVertex )
+		if( kind == Fragment )
 			add("\tfloat4 __pos__ : "+SV_POSITION+";\n");
 		for( v in s.vars )
 			if( v.kind == Input || (v.kind == Var && !isVertex) )
@@ -712,14 +740,16 @@ class HlslOut {
 			add("\tbool isFrontFace : "+SV_IsFrontFace+";\n");
 		add("};\n\n");
 
-		add("struct s_output {\n");
-		for( v in s.vars )
-			if( v.kind == Output )
-				declVar("_out.", v);
-		for( v in s.vars )
-			if( v.kind == Var && isVertex )
-				declVar("_out.", v);
-		add("};\n\n");
+		if( !isCompute ) {
+			add("struct s_output {\n");
+			for( v in s.vars )
+				if( v.kind == Output )
+					declVar("_out.", v);
+			for( v in s.vars )
+				if( v.kind == Var && isVertex )
+					declVar("_out.", v);
+			add("};\n\n");
+		}
 	}
 
 	function initGlobals( s : ShaderData ) {
@@ -760,10 +790,25 @@ class HlslOut {
 
 		var bufCount = 0;
 		for( b in buffers ) {
-			add('cbuffer _buffer$bufCount : register(b${bufCount+baseRegister+2}) { ');
-			addVar(b);
-			add("; };\n");
-			bufCount++;
+			switch( b.type ) {
+			case TBuffer(t, size, kind):
+				switch( kind ) {
+				case Uniform:
+					add('cbuffer _buffer$bufCount : register(b${bufCount+baseRegister+2}) { ');
+					addVar(b);
+					add("; };\n");
+					bufCount++;
+				case RW:
+					add('RWStructuredBuffer<');
+					addType(t);
+					add('> ');
+					ident(b);
+					add(' : register(u${bufCount+baseRegister+2});');
+					bufCount++;
+				}
+			default:
+				throw "assert";
+			}
 		}
 		if( bufCount > 0 ) add("\n");
 
@@ -785,24 +830,59 @@ class HlslOut {
 
 	function initStatics( s : ShaderData ) {
 		add(STATIC + "s_input _in;\n");
-		add(STATIC + "s_output _out;\n");
+		if( !isCompute )
+			add(STATIC + "s_output _out;\n");
 
 		add("\n");
 		for( v in s.vars )
 			if( v.kind == Local ) {
+				var isConst = v.qualifiers != null && v.qualifiers.indexOf(Final) >= 0;
 				add(STATIC);
+				if( isConst )
+					add(CONST);
 				addVar(v);
+				if( isConst ) {
+					var found = null;
+					for( f in s.funs ) {
+						switch( f.expr.e ) {
+						case TBlock(el):
+							for( e in el ) {
+								switch( e.e ) {
+								case TBinop(OpAssign, { e : TVar(v2) }, einit) if( v2 == v ):
+									found = einit;
+									break;
+								default:
+								}
+							}
+						default:
+						}
+					}
+					if( found == null )
+						throw "Constant variable "+v.name+" is missing initializer";
+					add(" = ");
+					addExpr(found,"");
+				}
 				add(";\n");
 			}
 		add("\n");
 	}
 
 	function emitMain( expr : TExpr ) {
-		add("s_output main( s_input __in ) {\n");
+		if( isCompute )
+			add('[numthreads(${computeLayout[0]},${computeLayout[1]},${computeLayout[2]})] void ');
+		else
+			add('s_output ');
+		add("main( s_input __in ) {\n");
 		add("\t_in = __in;\n");
 		switch( expr.e ) {
 		case TBlock(el):
 			for( e in el ) {
+				switch( e.e ) {
+				case TBinop(OpAssign,evar = { e : TVar(v) },_) if( v.qualifiers != null && v.qualifiers.indexOf(Final) >= 0 ):
+					// ignore (is a static const)
+					continue;
+				default:
+				}
 				add("\t");
 				addExpr(e, "\t");
 				newLine(e);
@@ -810,7 +890,8 @@ class HlslOut {
 		default:
 			addExpr(expr, "");
 		}
-		add("\treturn _out;\n");
+		if( !isCompute )
+			add("\treturn _out;\n");
 		add("}");
 	}
 
@@ -838,8 +919,7 @@ class HlslOut {
 
 		if( s.funs.length != 1 ) throw "assert";
 		var f = s.funs[0];
-		isVertex = f.kind == Vertex;
-
+		kind = f.kind;
 		varAccess = new Map();
 		samplers = new Map();
 		initVars(s);

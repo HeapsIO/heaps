@@ -34,8 +34,8 @@ class MaterialSetup {
 		return database.loadMatProps(material, this);
 	}
 
-	public function saveMaterialProps( material : Material ) {
-		database.saveMatProps(material, this);
+	public function saveMaterialProps( material : Material, ?defaultProps : Any ) {
+		database.saveMatProps(material, this, defaultProps);
 	}
 
 	/*

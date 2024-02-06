@@ -2,8 +2,7 @@ package h3d.pass;
 
 class DirShadowMap extends Shadows {
 
-	var customDepth : Bool;
-	var depth : h3d.mat.DepthBuffer;
+	var depth : h3d.mat.Texture;
 	var dshader : h3d.shader.DirShadow;
 	var border : Border;
 	var mergePass = new h3d.pass.ScreenFx(new h3d.shader.MinMaxShader());
@@ -32,8 +31,6 @@ class DirShadowMap extends Shadows {
 		lightCamera.orthoBounds = new h3d.col.Bounds();
 		shader = dshader = new h3d.shader.DirShadow();
 		border = new Border(size, size);
-		customDepth = h3d.Engine.getCurrent().driver.hasFeature(AllocDepthBuffer);
-		if( !customDepth ) depth = h3d.mat.DepthBuffer.getDefault();
 	}
 
 	override function set_mode(m:Shadows.RenderMode) {
@@ -56,8 +53,8 @@ class DirShadowMap extends Shadows {
 
 	override function dispose() {
 		super.dispose();
-		if( customDepth && depth != null ) depth.dispose();
-		border.dispose();
+		if( depth != null ) depth.dispose();
+		if ( border != null ) border.dispose();
 	}
 
 	public override function getShadowTex() {
@@ -78,7 +75,7 @@ class DirShadowMap extends Shadows {
 				var b = m.primitive.getBounds();
 				if( b.xMin > b.xMax ) return;
 
-				var absPos = Std.isOfType(m.primitive, h3d.prim.Instanced) ? identity : m.getAbsPos();
+				var absPos = m.primitive is h3d.prim.Instanced ? identity : m.getAbsPos();
 				if( autoZPlanes ) {
 					btmp.load(b);
 					btmp.transform(absPos);
@@ -189,11 +186,6 @@ class DirShadowMap extends Shadows {
 		bounds.scaleCenter(1.01);
 	}
 
-	override function setGlobals() {
-		super.setGlobals();
-		cameraViewProj = getShadowProj();
-	}
-
 	override function syncShader(texture) {
 		dshader.shadowMap = texture;
 		dshader.shadowMapChannel = format == h3d.mat.Texture.nativeFormat ? PackedFloat : R;
@@ -269,8 +261,16 @@ class DirShadowMap extends Shadows {
 	}
 
 	function processShadowMap( passes, tex, ?sort) {
-		ctx.engine.pushTarget(tex);
-		ctx.engine.clear(0xFFFFFF, 1);
+		var prevViewProj = @:privateAccess ctx.cameraViewProj;
+		@:privateAccess ctx.cameraViewProj = getShadowProj();
+		if ( tex.isDepth() ) {
+			ctx.engine.pushDepth(tex);
+			ctx.engine.clear(null, 1.0);
+		}
+		else {
+			ctx.engine.pushTarget(tex);
+			ctx.engine.clear(0xFFFFFF, 1.0);
+		}
 		super.draw(passes, sort);
 
 		var doBlur = blur.radius > 0 && (mode != Mixed || !ctx.computingStatic);
@@ -291,6 +291,11 @@ class DirShadowMap extends Shadows {
 		}
 
 		if( doBlur ) {
+			if ( tex.isDepth() ) {
+				var tmp = ctx.textures.allocTarget("dirShadowMapFloat", size, size, false, format);
+				h3d.pass.Copy.run(tex, tmp);
+				tex = tmp;
+			}
 			blur.apply(ctx, tex);
 			if( border != null ) {
 				ctx.engine.pushTarget(tex);
@@ -298,6 +303,10 @@ class DirShadowMap extends Shadows {
 				ctx.engine.popTarget();
 			}
 		}
+
+		@:privateAccess ctx.cameraViewProj = prevViewProj;
+
+		return tex;
 	}
 
 	var g : h3d.scene.Graphics;
@@ -332,14 +341,20 @@ class DirShadowMap extends Shadows {
 
 		cullPasses(passes,function(col) return col.inFrustum(lightCamera.frustum));
 
+		#if js
 		var texture = ctx.textures.allocTarget("dirShadowMap", size, size, false, format);
-		if( customDepth && (depth == null || depth.width != size || depth.height != size || depth.isDisposed()) ) {
+		if( depth == null || depth.width != size || depth.height != size || depth.isDisposed() ) {
 			if( depth != null ) depth.dispose();
-			depth = new h3d.mat.DepthBuffer(size, size);
+			depth = new h3d.mat.Texture(size, size, Depth24Stencil8);
+			depth.name = "dirShadowMapDepth";
 		}
 		texture.depthBuffer = depth;
+		#else
+		depth = ctx.textures.allocTarget("dirShadowMap", size, size, false, Depth24Stencil8);
+		var texture = depth;
+		#end
 
-		processShadowMap(passes, texture, sort);
+		texture = processShadowMap(passes, texture, sort);
 
 		syncShader(texture);
 

@@ -53,32 +53,6 @@ typedef PadConfig = {
 
 class Pad {
 
-	#if flash
-	public static var CONFIG_XBOX = {
-		analogX : 0,
-		analogY : 1,
-		ranalogX : 2,
-		ranalogY : 3,
-		A : 4,
-		B : 5,
-		X : 6,
-		Y : 7,
-		LB : 8,
-		RB : 9,
-		LT : 10,
-		RT : 11,
-		back : 12,
-		start : 13,
-		analogClick : 14,
-		ranalogClick : 15,
-		dpadUp : 16,
-		dpadDown : 17,
-		dpadLeft : 18,
-		dpadRight : 19,
-		names : ["LX","LY","RX","RY","A","B","X","Y","LB","RB","LT","RT","Back","Start","LCLK","RCLK","DUp","DDown","DLeft","DRight"],
-	};
-	#end
-
 	#if hlsdl
 	/**
 		Works with both DualShock and XBox controllers
@@ -212,7 +186,6 @@ class Pad {
 
 	public static var DEFAULT_CONFIG : PadConfig =
 		#if hlsdl CONFIG_SDL
-		#elseif flash CONFIG_XBOX
 		#elseif (hldx || usesys) GameController.CONFIG
 		#elseif js  CONFIG_JS_STD
 		#else ({}:Dynamic) #end;
@@ -228,6 +201,7 @@ class Pad {
 	public var axisDeadZone : Float = 0.1;
 	public var buttons : Array<Bool> = [];
 	public var values : Array<Float> = [];
+	public var prevValues : Array<Float> = [];
 	var prevButtons : Array<Bool> = [];
 	var rawXAxis : Float = 0.;
 	var rawYAxis : Float = 0.;
@@ -275,6 +249,7 @@ class Pad {
 		for( i in 0...buttons.length ) buttons[i] = false;
 		for( i in 0...buttons.length ) prevButtons[i] = false;
 		for( i in 0...values.length ) values[i] = 0;
+		for( i in 0...values.length ) prevValues[i] = 0;
 	}
 
 	public function rumble( strength : Float, time_s : Float ){
@@ -308,7 +283,7 @@ class Pad {
 
 	function get_name() {
 		if( index < 0 ) return "Dummy GamePad";
-		#if (flash || hldx || hlsdl || usesys)
+		#if (hldx || hlsdl || usesys)
 		return d.name;
 		#elseif js
 		return d.id;
@@ -329,11 +304,7 @@ class Pad {
 	static var waitPad : Pad -> Void;
 	static var initDone = false;
 
-	#if flash
-	var d : flash.ui.GameInputDevice;
-	static var inst : flash.ui.GameInput;
-	static var pads : Array<hxd.Pad> = [];
-	#elseif js
+	#if js
 	var d : js.html.Gamepad;
 	static var pads : Map<Int, hxd.Pad> = new Map();
 	#elseif (hldx || hlsdl || usesys)
@@ -350,83 +321,7 @@ class Pad {
 			return;
 		#end
 		waitPad = onPad;
-		#if flash
-		if( !initDone ) {
-			initDone = true;
-			inst = new flash.ui.GameInput();
-			inst.addEventListener(flash.events.GameInputEvent.DEVICE_ADDED, function(e:flash.events.GameInputEvent) {
-				var p = new Pad();
-				pads.push( p );
-				p.d = e.device;
-				//trace(p.d.name, p.d.id);
-				for( i in 0...flash.ui.GameInput.numDevices )
-					if( p.d == flash.ui.GameInput.getDeviceAt(i) )
-						p.index = i;
-				p.d.enabled = true;
-				var axisCount = 0;
-				var axisX = 0, axisY = 1;
-				var raxisX = 2, raxisY = 3;
-				for( i in 0...p.d.numControls ) {
-					var c = p.d.getControlAt(i);
-					var cid = c.id;
-					var valID = p.values.length;
-					var min = c.minValue, max = c.maxValue;
-					p.values.push(0.);
-					if( StringTools.startsWith(c.id, "AXIS_") ) {
-						var axisID = axisCount++;
-						c.addEventListener(flash.events.Event.CHANGE, function(_) {
-							var v = (c.value - min) * 2 / (max - min) - 1;
-							//if( Math.abs(p.values[valID] - v) > 0.1 ) trace(valID, v);
-							p.values[valID] = v;
-							if( axisID == axisX )
-								p.rawXAxis = v;
-							else if( axisID == axisY )
-								p.rawYAxis = -v;
-							else if( axisID == raxisX)
-								p.rawRXAxis = v;
-							else if( axisID == raxisY)
-								p.rawRYAxis = -v;
-						});
-					} else if( StringTools.startsWith(c.id, "BUTTON_") ) {
-						c.addEventListener(flash.events.Event.CHANGE, function(_) {
-							var v = (c.value - min) / (max - min);
-							//if( Math.abs(p.values[valID] - v) > 0.1 ) trace(valID, v);
-							p.values[valID] = v;
-							p.buttons[valID] = v > 0.5;
-						});
-					}
-				}
-
-				if( waitPad != null ) waitPad(p);
-			});
-			inst.addEventListener(flash.events.GameInputEvent.DEVICE_REMOVED, function(e:flash.events.GameInputEvent) {
-				for( p in pads )
-					if( p.d.id == e.device.id ){
-						pads.remove( p );
-						p.d.enabled = false;
-						p.connected = false;
-						p.onDisconnect();
-						break;
-					}
-			});
-			inst.addEventListener(flash.events.GameInputEvent.DEVICE_UNUSABLE, function(e:flash.events.GameInputEvent) {
-				for( p in pads )
-					if( p.d.id == e.device.id ){
-						pads.remove( p );
-						p.d.enabled = false;
-						p.connected = false;
-						p.onDisconnect();
-						break;
-					}
-			});
-			flash.Lib.current.addEventListener(flash.events.Event.EXIT_FRAME, function(_){
-				for( p in pads )
-					for( i in 0...p.buttons.length )
-						p.prevButtons[i] = p.buttons[i];
-			});
-			var count = flash.ui.GameInput.numDevices; // necessary to trigger added
-		}
-		#elseif hlsdl
+		#if hlsdl
 		if( !initDone ) {
 			initDone = true;
 			var c = @:privateAccess GameController.gctrlCount();
@@ -511,6 +406,13 @@ class Pad {
 		var p = new hxd.Pad();
 		p.index = sp.id;
 		p.d = sp;
+		var prev = pads.get( p.index );
+		if (prev != null) {
+			pads.remove( p.index );
+			prev.d.close();
+			prev.connected = false;
+			prev.onDisconnect();
+		}
 		pads.set( p.index, p );
 		for( axis in 0...6 )
 			p._setAxis( axis, sp.getAxis(axis) );
@@ -523,15 +425,8 @@ class Pad {
 		var p = pads.get( e.controller );
 		switch( e.type ){
 			case GControllerAdded:
-				if( initDone ){
-					if( p != null ){
-						pads.remove( p.index );
-						p.d.close();
-						p.connected = false;
-						p.onDisconnect();
-					}
+				if( initDone )
 					initPad(e.controller);
-				}
 			case GControllerRemoved:
 				if( p != null ){
 					pads.remove( p.index );
@@ -553,9 +448,12 @@ class Pad {
 	}
 
 	static function syncPads(){
-		for( p in pads )
+		for( p in pads ) {
 			for( i in 0...p.buttons.length )
 				p.prevButtons[i] = p.buttons[i];
+			for( i in 0...p.values.length )
+				p.prevValues[i] = p.values[i];
+		}
 	}
 
 	#elseif (hldx || usesys)
@@ -567,6 +465,7 @@ class Pad {
 			var k = p.d.getButtons();
 			for( i in 0...GameController.NUM_BUTTONS ){
 				p.prevButtons[i] = p.buttons[i];
+				p.prevValues[i] = p.values[i];
 				p._setButton(i, k & (1 << i) != 0);
 			}
 
@@ -575,6 +474,7 @@ class Pad {
 				var v = p.d.getAxis(i);
 				p.prevButtons[ii] = p.buttons[ii];
 				p._detectAnalogButton(ii, v);
+				p.prevValues[ii] = p.values[ii];
 				p.values[ii] = v;
 				if( ii == GameController.CONFIG.analogX )
 					p.rawXAxis = v;
@@ -623,13 +523,17 @@ class Pad {
 			for( i in 0...p.d.buttons.length ) {
 				p.prevButtons[i] = p.buttons[i];
 				p.buttons[i] = p.d.buttons[i].pressed;
+				p.prevValues[i] = p.values[i];
 				p.values[i] = p.d.buttons[i].value;
 			}
 			for( i in 0...p.d.axes.length >> 1 ) {
 				var x = p.d.axes[i << 1];
 				var y = p.d.axes[(i << 1) + 1]; // y neg !;
-				p.values[(i << 1) + p.d.buttons.length] = x;
-				p.values[(i << 1) + p.d.buttons.length + 1] = -y;
+				var ii = (i << 1) + p.d.buttons.length;
+				p.prevValues[ii] = p.values[ii];
+				p.prevValues[ii + 1] = p.values[ii + 1];
+				p.values[ii] = x;
+				p.values[ii + 1] = -y;
 				if( i == 0 ) {
 					p.rawXAxis = x;
 					p.rawYAxis = y;

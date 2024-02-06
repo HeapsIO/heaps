@@ -223,7 +223,7 @@ class DefaultForward extends hxsl.Shader {
 				lightAccumulation += indirectLighting();
 
 			// Emissive Pass
-			lightAccumulation += emissive * emissivePower;
+			lightAccumulation += emissive * emissivePower * pixelColor.rgb;
 
 			return lightAccumulation;
 		}

@@ -1,6 +1,7 @@
 package hxsl;
 
 typedef Vec = h3d.Vector;
+typedef Vec4 = h3d.Vector4;
 typedef IVec = Array<Int>;
 typedef BVec = Array<Bool>;
 typedef Matrix = h3d.Matrix;

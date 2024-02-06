@@ -1,11 +1,16 @@
 package h3d.pass;
 
+typedef CascadeParams = {
+	var bias : Float;
+}
+
 class CascadeShadowMap extends DirShadowMap {
 
 	var cshader : h3d.shader.CascadeShadow;
 	var lightCameras : Array<h3d.Camera> = [];
 	var currentCascadeIndex = 0;
 
+	public var params : Array<CascadeParams> = [];
 	public var pow : Float = 1.0;
 	public var firstCascadeSize : Float = 10.0;
 	public var castingMaxDist : Float = 0.0;
@@ -57,8 +62,8 @@ class CascadeShadowMap extends DirShadowMap {
 		var corners = lightCamera.getFrustumCorners();
 		for ( corner in corners ) {
 			corner.transform(ctx.camera.mcam);
-			shadowNear = hxd.Math.min(shadowNear, corner.z / corner.w);
-			shadowFar = hxd.Math.max(shadowFar, corner.z / corner.w);
+			shadowNear = hxd.Math.min(shadowNear, corner.z);
+			shadowFar = hxd.Math.max(shadowFar, corner.z);
 		}
 		for ( i in 0...cascade - 1 ) {
 			var cascadeBounds = new h3d.col.Bounds();
@@ -85,11 +90,6 @@ class CascadeShadowMap extends DirShadowMap {
 		lightCameras[cascade - 1].orthoBounds = lightCamera.orthoBounds.clone();
 	}
 
-	override function setGlobals() {
-		super.setGlobals();
-		cameraViewProj = getCascadeProj(currentCascadeIndex);
-	}
-
 	function getCascadeProj(i:Int) {
 		return lightCameras[i].m;
 	}
@@ -101,8 +101,8 @@ class CascadeShadowMap extends DirShadowMap {
 			cshader.cascadeShadowMaps[c] = textures[i];
 			cshader.cascadeProjs[c] = lightCameras[i].m;
 			if ( debugShader )
-				cshader.cascadeDebugs[c] = h3d.Vector.fromColor(debugColors[i]);
-			cshader.cascadeBias[c] = Math.pow(computeNearFar(i).far / computeNearFar(0).far, 1.2) * bias;
+				cshader.cascadeDebugs[c] = h3d.Vector4.fromColor(debugColors[i]);
+			cshader.cascadeBias[c] = params[c] != null ? params[c].bias : 0.001;
 		}
 		cshader.CASCADE_COUNT = cascade;
 		cshader.shadowBias = bias;
@@ -118,6 +118,10 @@ class CascadeShadowMap extends DirShadowMap {
 		cshader.shadowRes.set(textures[0].width,textures[0].height);
 		cshader.pcfScale = pcfScale;
 		cshader.pcfQuality = pcfQuality;
+	}
+
+	override function getShadowProj():Matrix {
+		return getCascadeProj(currentCascadeIndex);
 	}
 
 	override function draw( passes, ?sort ) {
@@ -159,12 +163,10 @@ class CascadeShadowMap extends DirShadowMap {
 			lightCamera.orthoBounds.empty();
 			for ( lC in lightCameras ) lC.orthoBounds.empty();
 			if( !passes.isEmpty() ) calcShadowBounds(lightCamera);
-			if ( castingMaxDist > 0.0 ) {
-				var pt = ctx.camera.pos.clone();
-				pt.transform(lightCamera.mcam);
-				lightCamera.orthoBounds.zMax = pt.z + castingMaxDist; 
-				lightCamera.orthoBounds.zMin = pt.z - castingMaxDist;
-			} 
+			var pt = ctx.camera.pos.clone();
+			pt.transform(lightCamera.mcam);
+			lightCamera.orthoBounds.zMax = pt.z + (castingMaxDist > 0.0 ? castingMaxDist : maxDist < 0.0 ? ctx.camera.zFar : maxDist);
+			lightCamera.orthoBounds.zMin = pt.z - (castingMaxDist > 0.0 ? castingMaxDist : maxDist < 0.0 ? ctx.camera.zFar : maxDist);
 			lightCamera.update();
 		}
 
@@ -175,18 +177,23 @@ class CascadeShadowMap extends DirShadowMap {
 
 		var textures = [];
 		for (i in 0...cascade) {
-			var texture = ctx.textures.allocTarget("cascadeShadowMap", size, size, false, format);
-			if( customDepth && (depth == null || depth.width != size || depth.height != size || depth.isDisposed()) ) {
+			#if js
+			var texture = ctx.textures.allocTarget("cascadeShadowMap_"+i, size, size, false, format);
+			if( depth == null || depth.width != size || depth.height != size || depth.isDisposed() ) {
 				if( depth != null ) depth.dispose();
-				depth = new h3d.mat.DepthBuffer(size, size);
+				depth = new h3d.mat.Texture(size, size, Depth24Stencil8);
+				depth.name = "dirShadowMapDepth";
 			}
 			texture.depthBuffer = depth;
-			textures.push(texture);
+			#else
+			var texture = ctx.textures.allocTarget("cascadeShadowMap_"+i, size, size, false, Depth24Stencil8);
+			#end
 
 			currentCascadeIndex = i;
 			var p = passes.save();
 			cullPasses(passes,function(col) return col.inFrustum(lightCameras[i].frustum));
-			processShadowMap( passes, texture, sort);
+			texture = processShadowMap( passes, texture, sort);
+			textures.push(texture);
 			passes.load(p);
 
 		}

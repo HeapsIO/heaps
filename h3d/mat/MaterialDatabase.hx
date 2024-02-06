@@ -8,7 +8,9 @@ class MaterialDatabase {
 	}
 
 	function getFilePath( model : hxd.res.Resource ) {
-		return model.entry.directory+"/materials.props";
+		var dir = model.entry.directory;
+		var filename = "materials.props";
+		return dir == null || dir == "" ? filename : model.entry.directory + "/" + filename;
 	}
 
 	public function getModelData( model : hxd.res.Resource ) {
@@ -26,7 +28,7 @@ class MaterialDatabase {
 	function saveData( model : hxd.res.Resource, data : Dynamic ) {
 		var file = getFilePath(model);
 		#if ((sys || nodejs) && !usesys)
-		var fs = hxd.impl.Api.downcast(hxd.res.Loader.currentInstance.fs, hxd.fs.LocalFileSystem);
+		var fs = Std.downcast(hxd.res.Loader.currentInstance.fs, hxd.fs.LocalFileSystem);
 		if( fs != null && !haxe.io.Path.isAbsolute(file) )
 			file = fs.baseDir + file;
 		if( data == null )
@@ -45,10 +47,14 @@ class MaterialDatabase {
 		if( p == null ) return p;
 		p = Reflect.field(p, setup.name);
 		if( p == null ) return p;
+		if ( material.model != null ) {
+			var specData = Reflect.field(p, material.name + "/" + material.model.name);
+			if ( specData != null ) return specData;
+		}
 		return Reflect.field(p, material.name);
 	}
 
-	public function saveMatProps( material : Material, setup : MaterialSetup ) {
+	public function saveMatProps( material : Material, setup : MaterialSetup, ?defaultProps : Any ) {
 		var path = ["materials", setup.name, material.name];
 		var root : Dynamic = getModelData(material.model);
 		if( root == null )
@@ -64,11 +70,16 @@ class MaterialDatabase {
 			prevs.push(root);
 			root = next;
 		}
-		var name = path.pop();
-		Reflect.deleteField(root, name);
 
 		var currentProps = material.props;
-		var defaultProps = material.getDefaultProps();
+		var modelSpec = (currentProps:Dynamic).__refMode == "modelSpec";
+		var name = path.pop();
+		if ( !modelSpec )
+			Reflect.deleteField(root, name);
+		var specName = name + "/" + (material.model != null ? material.model.name : "");
+		Reflect.deleteField(root, specName);
+
+		if ( defaultProps == null ) defaultProps = material.getDefaultProps();
 		if( currentProps == null || Std.string(defaultProps) == Std.string(currentProps) ) {
 			// cleanup
 			while( path.length > 0 ) {
@@ -79,7 +90,7 @@ class MaterialDatabase {
 				Reflect.deleteField(root, name);
 			}
 		} else {
-			Reflect.setField(root, name, currentProps);
+			Reflect.setField(root, modelSpec ? specName : name, currentProps);
 		}
 
 		var file = getFilePath(material.model);

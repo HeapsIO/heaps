@@ -1,6 +1,6 @@
 package h3d.col;
 
-class Capsule implements Collider {
+class Capsule extends Collider {
 
 	public var a : Point;
 	public var b : Point;

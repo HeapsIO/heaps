@@ -26,7 +26,7 @@ class Primitive {
 		The number of triangles the primitive has.
 	**/
 	public function triCount() {
-		return if( indexes != null ) Std.int(indexes.count / 3) else if( buffer == null ) 0 else Std.int(buffer.totalVertices() / 3);
+		return if( indexes != null ) Std.int(indexes.count / 3) else if( buffer == null ) 0 else Std.int(buffer.vertices / 3);
 	}
 
 	/**
@@ -103,12 +103,9 @@ class Primitive {
 	**/
 	public function render( engine : h3d.Engine ) {
 		if( buffer == null || buffer.isDisposed() ) alloc(engine);
-		if( indexes == null ) {
-			if( buffer.flags.has(Quads) )
-				engine.renderQuadBuffer(buffer);
-			else
-				engine.renderTriBuffer(buffer);
-		} else
+		if( indexes == null )
+			engine.renderTriBuffer(buffer);
+		else
 			engine.renderIndexed(buffer,indexes);
 	}
 

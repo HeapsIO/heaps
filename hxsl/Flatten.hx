@@ -26,47 +26,15 @@ class Flatten {
 	var params : Array<TVar>;
 	var outVars : Array<TVar>;
 	var varMap : Map<TVar,Alloc>;
-	var econsts : TExpr;
-	public var consts : Array<Float>;
 	public var allocData : Map< TVar, Array<Alloc> >;
 
 	public function new() {
 	}
 
-	public function flatten( s : ShaderData, kind : FunctionKind, constsToGlobal : Bool ) : ShaderData {
+	public function flatten( s : ShaderData, kind : FunctionKind ) : ShaderData {
 		globals = [];
 		params = [];
 		outVars = [];
-		if( constsToGlobal ) {
-			consts = [];
-			var p = s.funs[0].expr.p;
-			var gc : TVar = {
-				id : Tools.allocVarId(),
-				name : "__consts__",
-				kind : Global,
-				type : null,
-			};
-			econsts = {
-				e : TVar(gc),
-				t : null,
-				p : p,
-			};
-			s = {
-				name : s.name,
-				vars : s.vars.copy(),
-				funs : [for( f in s.funs ) mapFun(f, mapConsts)],
-			};
-			for( v in s.vars )
-				switch( v.type ) {
-				case TBytes(_):
-					allocConst(255, p);
-				default:
-				}
-			if( consts.length > 0 ) {
-				gc.type = econsts.t = TArray(TFloat, SConst(consts.length));
-				s.vars.push(gc);
-			}
-		}
 		varMap = new Map();
 		allocData = new Map();
 		for( v in s.vars )
@@ -74,6 +42,7 @@ class Flatten {
 		var prefix = switch( kind ) {
 		case Vertex: "vertex";
 		case Fragment: "fragment";
+		case Main: "compute";
 		default: throw "assert";
 		}
 		pack(prefix + "Globals", Global, globals, VFloat);
@@ -82,7 +51,8 @@ class Flatten {
 		var textures = packTextures(prefix + "Textures", allVars, TSampler2D)
 			.concat(packTextures(prefix+"TexturesCube", allVars, TSamplerCube))
 			.concat(packTextures(prefix+"TexturesArray", allVars, TSampler2DArray));
-		packBuffers(allVars);
+		packBuffers("buffers", allVars, Uniform);
+		packBuffers("rwbuffers", allVars, RW);
 		var funs = [for( f in s.funs ) mapFun(f, mapExpr)];
 		return {
 			name : s.name,
@@ -132,119 +102,6 @@ class Flatten {
 			e.map(mapExpr);
 		};
 		return optimize(e);
-	}
-
-	function mapConsts( e : TExpr ) : TExpr {
-		switch( e.e ) {
-		case TArray(ea, eindex = { e : TConst(CInt(_)) } ):
-			return { e : TArray(mapConsts(ea), eindex), t : e.t, p : e.p };
-		case TBinop(OpMult, _, { t : TMat3x4 } ):
-			allocConst(1, e.p); // pre-alloc
-		case TArray(ea, eindex):
-			switch( ea.t ) {
-			case TArray(t, _):
-				var stride = varSize(t, VFloat) >> 2;
-				allocConst(stride, e.p); // pre-alloc
-			default:
-			}
-		case TConst(c):
-			switch( c ) {
-			case CFloat(v):
-				return allocConst(v, e.p);
-			case CInt(v):
-				return allocConst(v, e.p);
-			default:
-				return e;
-			}
-		case TGlobal(g):
-			switch( g ) {
-			case Pack:
-				allocConsts([1, 255, 255 * 255, 255 * 255 * 255], e.p);
-				allocConsts([1/255, 1/255, 1/255, 0], e.p);
-			case Unpack:
-				allocConsts([1, 1 / 255, 1 / (255 * 255), 1 / (255 * 255 * 255)], e.p);
-			case Radians:
-				allocConst(Math.PI / 180, e.p);
-			case Degrees:
-				allocConst(180 / Math.PI, e.p);
-			case Log:
-				allocConst(0.6931471805599453, e.p);
-			case Exp:
-				allocConst(1.4426950408889634, e.p);
-			case Mix:
-				allocConst(1, e.p);
-			case UnpackNormal:
-				allocConst(0.5, e.p);
-			case PackNormal:
-				allocConst(1, e.p);
-				allocConst(0.5, e.p);
-			case ScreenToUv:
-				allocConsts([0.5,0.5], e.p);
-				allocConsts([0.5,-0.5], e.p);
-			case UvToScreen:
-				allocConsts([2,-2], e.p);
-				allocConsts([-1,1], e.p);
-			case Smoothstep:
-				allocConst(2.0, e.p);
-				allocConst(3.0, e.p);
-			default:
-			}
-		case TCall( { e : TGlobal(Vec4) }, [ { e : TVar( { kind : Global | Param | Input | Var } ), t : TVec(3, VFloat) }, { e : TConst(CInt(1)) } ]):
-			// allow var expansion without relying on a constant
-			return e;
-		default:
-		}
-		return e.map(mapConsts);
-	}
-
-	function allocConst( v : Float, p ) : TExpr {
-		var index = consts.indexOf(v);
-		if( index < 0 ) {
-			index = consts.length;
-			consts.push(v);
-		}
-		return { e : TArray(econsts, { e : TConst(CInt(index)), t : TInt, p : p } ), t : TFloat, p : p };
-	}
-
-	function allocConsts( va : Array<Float>, p ) : TExpr {
-		var pad = (va.length - 1) & 3;
-		var index = -1;
-		for( i in 0...consts.length - (va.length - 1) ) {
-			if( (i >> 2) != (i + pad) >> 2 ) continue;
-			var found = true;
-			for( j in 0...va.length )
-				if( consts[i + j] != va[j] ) {
-					found = false;
-					break;
-				}
-			if( found ) {
-				index = i;
-				break;
-			}
-		}
-		if( index < 0 ) {
-			// pad
-			while( consts.length >> 2 != (consts.length + pad) >> 2 )
-				consts.push(0);
-			index = consts.length;
-			for( v in va )
-				consts.push(v);
-		}
-		inline function get(i) : TExpr {
-			return { e : TArray(econsts, { e : TConst(CInt(index+i)), t : TInt, p : p } ), t : TFloat, p : p };
-		}
-		switch( va.length ) {
-		case 1:
-			return get(0);
-		case 2:
-			return { e : TCall( { e : TGlobal(Vec2), t : TVoid, p : p }, [get(0), get(1)]), t : TVec(2, VFloat), p : p };
-		case 3:
-			return { e : TCall( { e : TGlobal(Vec3), t : TVoid, p : p }, [get(0), get(1), get(2)]), t : TVec(3, VFloat), p : p };
-		case 4:
-			return { e : TCall( { e : TGlobal(Vec4), t : TVoid, p : p }, [get(0), get(1), get(3), get(4)]), t : TVec(4, VFloat), p : p };
-		default:
-			throw "assert";
-		}
 	}
 
 	inline function mkInt(v:Int,pos) {
@@ -404,22 +261,24 @@ class Flatten {
 		return alloc;
 	}
 
-	function packBuffers( vars : Array<TVar> ) {
+	function packBuffers( name : String, vars : Array<TVar>, kind ) {
 		var alloc = new Array<Alloc>();
 		var g : TVar = {
 			id : Tools.allocVarId(),
-			name : "buffers",
+			name : name,
 			type : TVoid,
 			kind : Param,
 		};
 		for( v in vars )
-			if( v.type.match(TBuffer(_)) ) {
+			switch( v.type ) {
+			case TBuffer(_,_,k) if( kind == k ):
 				var a = new Alloc(g, null, alloc.length, 1);
 				a.v = v;
 				alloc.push(a);
 				outVars.push(v);
+			default:
 			}
-		g.type = TArray(TBuffer(TVoid,SConst(0)),SConst(alloc.length));
+		g.type = TArray(TBuffer(TVoid,SConst(0),kind),SConst(alloc.length));
 		allocData.set(g, alloc);
 	}
 

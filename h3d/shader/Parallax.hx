@@ -2,14 +2,16 @@ package h3d.shader;
 
 class Parallax extends hxsl.Shader {
 
+	public static final MIN_LAYERS = 6;
+	public static final MAX_LAYERS = 24;
 	static var SRC = {
 
 		@param var amount : Float;
 		@param var heightMap : Channel;
 		@:import BaseMesh;
 
-		@const var minLayers : Int = 6;
-		@const var maxLayers : Int = 24;
+		@const var minLayers : Int;
+		@const var maxLayers : Int;
 
 		var vertexTransformedNormal : Vec3;
 		var transformedTangent : Vec4;
@@ -50,5 +52,9 @@ class Parallax extends hxsl.Shader {
 		}
 	}
 
-
+	public function new() {
+		super();
+		maxLayers = MAX_LAYERS;
+		minLayers = MIN_LAYERS;
+	}
 }

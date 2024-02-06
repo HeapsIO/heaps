@@ -86,7 +86,14 @@ class Serializer {
 				writeArr(vl,writeVar);
 		case TFun(variants):
 			// not serialized
-		case TArray(t, size), TBuffer(t, size):
+		case TArray(t, size), TBuffer(t, size, Uniform):
+			writeType(t);
+			switch (size) {
+			case SConst(v): out.addByte(0); writeVarInt(v);
+			case SVar(v): writeVar(v);
+			}
+		case TBuffer(t, size, kind):
+			out.addByte(kind.getIndex() + 0x80);
 			writeType(t);
 			switch (size) {
 			case SConst(v): out.addByte(0); writeVarInt(v);
@@ -136,9 +143,15 @@ class Serializer {
 			var v = readVar();
 			TArray(t, v == null ? SConst(readVarInt()) : SVar(v));
 		case 16:
+			var tag = input.readByte();
+			var kind = Uniform;
+			if( tag & 0x80 == 0 )
+				input.position--;
+			else
+				kind = BufferKind.createByIndex(tag & 0x7F);
 			var t = readType();
 			var v = readVar();
-			TBuffer(t, v == null ? SConst(readVarInt()) : SVar(v));
+			TBuffer(t, v == null ? SConst(readVarInt()) : SVar(v), kind);
 		case 17:
 			TChannel(input.readByte());
 		case 18: TMat2;
@@ -178,7 +191,7 @@ class Serializer {
 			for( q in v.qualifiers ) {
 				out.addByte(q.getIndex());
 				switch (q) {
-				case Private, Nullable, PerObject, Shared, Ignore:
+				case Private, Nullable, PerObject, Shared, Ignore, Final:
 				case Const(max): out.addInt32(max == null ? 0 : max);
 				case Name(n): writeString(n);
 				case Precision(p): out.addByte(p.getIndex());
@@ -403,6 +416,7 @@ class Serializer {
 				case 10: Doc(readString());
 				case 11: Borrow(readString());
 				case 12: Sampler(readString());
+				case 13: Final;
 				default: throw "assert";
 				}
 				v.qualifiers.push(q);

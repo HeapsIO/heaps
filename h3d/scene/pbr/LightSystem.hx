@@ -13,7 +13,7 @@ class LightSystem extends h3d.scene.LightSystem {
 	}
 
 	override function computeLight( obj : h3d.scene.Object, shaders : hxsl.ShaderList ) : hxsl.ShaderList {
-		var light = hxd.impl.Api.downcast(obj, h3d.scene.pbr.Light);
+		var light = Std.downcast(obj, h3d.scene.pbr.Light);
 		if( light != null ) {
 			shaders = ctx.allocShaderList(light.shader, shaders);
 			if( light.shadows.shader != null && light.shadows.mode != None )
@@ -48,7 +48,7 @@ class LightSystem extends h3d.scene.LightSystem {
 		var width = currentTarget == null ? ctx.engine.width : currentTarget.width;
 		var height = currentTarget == null ? ctx.engine.height : currentTarget.height;
 		while( plight != null ) {
-			var light = hxd.impl.Api.downcast(plight, h3d.scene.pbr.Light);
+			var light = Std.downcast(plight, h3d.scene.pbr.Light);
 			if( light != null && light.primitive == null ) {
 				if( light.shadows.shader != null && shadows) lightPass.addShader(light.shadows.shader);
 				lightPass.addShader(light.shader);

@@ -1,6 +1,8 @@
 package hxsl;
 import hxsl.Ast.Tools;
 
+#if (sys || nodejs)
+
 private class NullShader extends hxsl.Shader {
 	static var SRC = {
 		var output : {
@@ -31,7 +33,7 @@ class CacheFile extends Cache {
 	var shaders : Map<String,{ shader : SharedShader, version : String }> = new Map();
 	var runtimeShaders : Array<RuntimeShader> = [];
 	var linkers : Array<{ shader : Shader, vars : Array<hxsl.Output> }> = [];
-	var batchers : Array<{ shader : SharedShader, rt : RuntimeShader, instance : Array<{shader:String,params:Array<String>}> }> = [];
+	var batchers : Array<{ shader : SharedShader, rt : RuntimeShader, params : hxsl.Cache.BatchInstanceParams }> = [];
 
 	// sources
 	var compiledSources : Map<String,{ vertex : String, fragment : String }> = new Map();
@@ -53,8 +55,12 @@ class CacheFile extends Cache {
 		return Sys.systemName().toLowerCase();
 		#elseif hlsdl
 		return "gl";
+		#elseif (hldx && dx12)
+		return "dx12";
 		#elseif hldx
 		return "dx";
+		#elseif hlnx
+		return "nx";
 		#else
 		return "unk";
 		#end
@@ -69,9 +75,9 @@ class CacheFile extends Cache {
 		return shader;
 	}
 
-	override function createBatchShader( rt, shaders, perInstance, sign ) {
-		var b = super.createBatchShader(rt, shaders, perInstance, sign);
-		batchers.push({ rt : rt, shader : b.shader, instance : perInstance });
+	override function createBatchShader( rt, shaders, params ) {
+		var b = super.createBatchShader(rt, shaders, params);
+		batchers.push({ rt : rt, shader : b.shader, params : params });
 		return b;
 	}
 
@@ -99,7 +105,7 @@ class CacheFile extends Cache {
 		} else if( !allowCompile )
 			throw "Missing " + file;
 		if( linkCache.linked == null ) {
-			var rt = link(makeDefaultShader(), false);
+			var rt = link(makeDefaultShader(), Default);
 			linkCache.linked = rt;
 			if( rt.vertex.code == null || rt.fragment.code == null ) {
 				wait.push(rt);
@@ -196,16 +202,18 @@ class CacheFile extends Cache {
 
 		batchers = [];
 		var batchMap = new Map();
+		var alreadySkipped = false;
 		while( true ) {
-			skip();
+			if ( !alreadySkipped ) skip();
 			var name = readString();
 			if( name == null ) break;
 			var rt = readString();
 			var str = readStringOpt();
-			var inst = null;
+			alreadySkipped = str == null;
+			var params = null;
 			if( str != null )
-				inst = [for( s in str.split(";") ) { var v = s.split("="); { shader : v[0], params : v[1].split(",") }}];
-			batchMap.set(name, { rt : rt, inst : inst });
+				params = new hxsl.Cache.BatchInstanceParams([for( s in str.split(";") ) { var v = s.split("="); { shader : v[0], params : v[1].split(",") }}]);
+			batchMap.set(name, { rt : rt, params : params });
 		}
 
 		shaders = new Map();
@@ -263,7 +271,7 @@ class CacheFile extends Cache {
 
 			for( r in runtimes ) {
 				var shaderList = null;
-				var batchMode = false;
+				var mode : RuntimeShader.LinkMode = Default;
 				r.inst.reverse();
 				for( i in r.inst ) {
 					var s = Type.createEmptyInstance(hxsl.Shader);
@@ -274,9 +282,9 @@ class CacheFile extends Cache {
 								r = null; // was modified
 								break;
 							}
-							var sh = makeBatchShader(rt.rt, rt.shaders, i.batch.inst);
+							var sh = makeBatchShader(rt.rt, rt.shaders.next, i.batch.params);
 							i.shader = { version : null, shader : sh.shader };
-							batchMode = true;
+							mode = Batch;
 						}
 						s.constBits = i.bits;
 						s.shader = i.shader.shader;
@@ -287,7 +295,7 @@ class CacheFile extends Cache {
 				}
 				if( r == null ) continue;
 				//log("Recompile "+[for( s in shaderList ) shaderName(s)]);
-				var rt = link(shaderList, batchMode); // will compile + update linkMap
+				var rt = link(shaderList, mode); // will compile + update linkMap
 				if( rt.spec.signature != r.specSign ) {
 					var signParts = [for( i in rt.spec.instances ) i.shader.data.name+"_" + i.bits + "_" + i.index];
 					throw "assert";
@@ -314,6 +322,7 @@ class CacheFile extends Cache {
 				if( spec == null )
 					continue;
 
+				r.mode = Default;
 				r.signature = spec.signature;
 				var shaderList = null;
 				spec.inst.reverse();
@@ -326,9 +335,9 @@ class CacheFile extends Cache {
 								r = null; // was modified
 								break;
 							}
-							var sh = makeBatchShader(rt.rt, rt.shaders, i.batch.inst);
+							var sh = makeBatchShader(rt.rt, rt.shaders.next, i.batch.params);
 							i.shader = { version : null, shader : sh.shader };
-							r.batchMode = true;
+							r.mode = Batch;
 						}
 						// pseudo instance
 						var scache = i.shader.shader.instanceCache;
@@ -488,8 +497,8 @@ class CacheFile extends Cache {
 			separator();
 			writeString(@:privateAccess b.shader.data.name);
 			writeString(@:privateAccess b.rt.spec.signature);
-			if( b.instance != null )
-				writeString([for( s in b.instance ) s.shader+"="+s.params.join(",")].join(";"), true);
+			if( b.params != null )
+				writeString([for( s in @:privateAccess b.params.forcedPerInstance ) s.shader+"="+s.params.join(",")].join(";"), true);
 		}
 		separator();
 		writeString(null);
@@ -580,14 +589,14 @@ class CacheFile extends Cache {
 
 	function cleanRuntimeData(r:hxsl.RuntimeShader.RuntimeShaderData) {
 		var rc = new hxsl.RuntimeShader.RuntimeShaderData();
-		rc.vertex = r.vertex;
+		rc.kind = r.kind;
 		rc.data = {
 			name : null,
 			vars : [],
 			funs : null,
 		};
 		for( v in r.data.vars )
-			if( v.kind == (r.vertex ? Input : Output) ) {
+			if( v.kind == (r.kind == Vertex ? Input : Output) ) {
 				rc.data.vars.push({
 					id : v.id,
 					name : v.name,
@@ -640,8 +649,8 @@ class CacheFile extends Cache {
 	}
 
 	function sortBySpec( r1 : RuntimeShader, r2 : RuntimeShader ) {
-		if( r1.batchMode != r2.batchMode )
-			return r1.batchMode ? 1 : -1;
+		if( r1.mode != r2.mode )
+			return r1.mode.getIndex() - r2.mode.getIndex();
 		var minLen = hxd.Math.imin(r1.spec.instances.length, r2.spec.instances.length);
 		for( i in 0...minLen ) {
 			var i1 = r1.spec.instances[i];
@@ -700,7 +709,7 @@ class CacheFile extends Cache {
 
 	public dynamic function onMissingShader(shaders:hxsl.ShaderList) {
 		log("Missing shader " + [for( s in shaders ) shaderName(s)]);
-		return link(null, false); // default fallback
+		return link(null, Default); // default fallback
 	}
 
 	public dynamic function onNewShader(r:RuntimeShader) {
@@ -732,7 +741,7 @@ class CacheFile extends Cache {
 		for( i in s.spec.instances ) {
 			var inst = shaders.get(i.shader.data.name);
 			if( inst == null ) {
-				if( s.batchMode && StringTools.startsWith(i.shader.data.name,"batchShader_") )
+				if( s.mode == Batch && StringTools.startsWith(i.shader.data.name,"batchShader_") )
 					continue;
 				var version = getShaderVersion(i.shader);
 				inst = { shader : i.shader, version : version };
@@ -774,3 +783,5 @@ class CacheFile extends Cache {
 	}
 
 }
+
+#end

@@ -51,6 +51,13 @@ class TextInput extends Text {
 	**/
 	public var backgroundColor(get, set) : Null<Int>;
 
+	/**
+		When disabled, showSoftwareKeyboard will not be called.
+	**/
+	public var useSoftwareKeyboard : Bool = true;
+	public static dynamic function showSoftwareKeyboard(target:TextInput) {}
+	public static dynamic function hideSoftwareKeyboard(target:TextInput) {}
+
 	var interactive : h2d.Interactive;
 	var cursorText : String;
 	var cursorX : Float;
@@ -121,9 +128,15 @@ class TextInput extends Text {
 			onTextInput(e);
 			handleKey(e);
 		};
+		interactive.onFocus = function(e) {
+			onFocus(e);
+			if ( useSoftwareKeyboard && canEdit )
+				showSoftwareKeyboard(this);
+		}
 		interactive.onFocusLost = function(e) {
 			cursorIndex = -1;
 			selectionRange = null;
+			hideSoftwareKeyboard(this);
 			onFocusLost(e);
 		};
 
@@ -142,7 +155,6 @@ class TextInput extends Text {
 
 		interactive.onKeyUp = function(e) onKeyUp(e);
 		interactive.onRelease = function(e) onRelease(e);
-		interactive.onFocus = function(e) onFocus(e);
 		interactive.onKeyUp = function(e) onKeyUp(e);
 		interactive.onMove = function(e) onMove(e);
 		interactive.onOver = function(e) onOver(e);
@@ -388,7 +400,7 @@ class TextInput extends Text {
 		}
 		return '';
 	}
-	
+
 	function getCursorXOffset() {
 		var lines = getAllLines();
 		var offset = cursorIndex;
@@ -522,11 +534,11 @@ class TextInput extends Text {
 
 				var selStart = Math.floor(Math.max(0, selectionRange.start - lineOffset));
 				var selEnd = Math.floor(Math.min(line.length - selStart, selectionRange.length + selectionRange.start - lineOffset - selStart));
-				
+
 				selectionPos = calcTextWidth(line.substr(0, selStart));
 				selectionSize = calcTextWidth(line.substr(selStart, selEnd));
 				if( selectionRange.start + selectionRange.length == text.length ) selectionSize += cursorTile.width; // last pixel
-	
+
 				selectionTile.dx += selectionPos;
 				selectionTile.dy += i * font.lineHeight;
 				selectionTile.width += selectionSize;
@@ -650,10 +662,17 @@ class TextInput extends Text {
 
 	override function drawRec(ctx:RenderContext) {
 		var old = interactive.visible;
+		var oldC = interactive.parentContainer;
+		// workaround @:bypassAccessor not working by setting parentContainer=null
+		// prevent domkit style to be updated
+		interactive.parentContainer = null;
 		interactive.visible = false;
+		interactive.parentContainer = oldC;
 		interactive.draw(ctx);
 		super.drawRec(ctx);
+		interactive.parentContainer = null;
 		interactive.visible = old;
+		interactive.parentContainer = oldC;
 	}
 
 	function get_backgroundColor() return interactive.backgroundColor;

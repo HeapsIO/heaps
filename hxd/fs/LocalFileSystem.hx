@@ -112,7 +112,7 @@ class LocalEntry extends FileEntry {
 	static var tmpDir : String = null;
 
 	inline function getModifTime(){
-		return sys.FileSystem.stat(originalFile != null ? originalFile : file).mtime.getTime();
+		return try sys.FileSystem.stat(originalFile != null ? originalFile : file).mtime.getTime() catch( e : Dynamic ) 0;
 	}
 
 	#if hl
@@ -217,7 +217,21 @@ class LocalEntry extends FileEntry {
 		#else
 		watchTime = getModifTime();
 		#end
-		watchCallback = function() { fs.convert.run(this); onChanged(); }
+
+		if (watchOnChangedHistory == null)
+			watchOnChangedHistory = new Array<Null<Void -> Void>>();
+
+		watchOnChangedHistory.push(onChanged);
+		watchCallback = function() {
+			fs.convert.run(this);
+
+			var idx = watchOnChangedHistory.length -1;
+			while (idx >= 0) {
+				if (watchOnChangedHistory[idx] != null)
+					watchOnChangedHistory[idx]();
+				idx--;
+			}
+		}
 	}
 
 }
@@ -236,13 +250,11 @@ class LocalFileSystem implements FileSystem {
 		if( configuration == null )
 			configuration = "default";
 
-		#if (macro && haxe_ver >= 4.0)
+		#if macro
 		var exePath = null;
-		#elseif (haxe_ver >= 3.3)
+		#else
 		var pr = Sys.programPath();
 		var exePath = pr == null ? null : pr.split("\\").join("/").split("/");
-		#else
-		var exePath = Sys.executablePath().split("\\").join("/").split("/");
 		#end
 
 		if( exePath != null ) exePath.pop();
@@ -317,6 +329,10 @@ class LocalFileSystem implements FileSystem {
 		}
 	}
 
+	public function removePathFromCache(path : String) {
+		fileCache.remove(path);
+	}
+
 	public function exists( path : String ) {
 		var f = open(path);
 		return f != null;
@@ -352,10 +368,6 @@ class LocalFileSystem implements FileSystem {
 	public var baseDir(default,null) : String;
 
 	public function new( dir : String ) {
-		#if flash
-		if( flash.system.Capabilities.playerType == "Desktop" )
-			throw "Please compile with -lib air3";
-		#end
 		throw "Local file system is not supported for this platform";
 	}
 

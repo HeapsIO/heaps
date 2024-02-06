@@ -34,18 +34,7 @@ class BytesFileEntry extends FileEntry {
 	}
 
 	override function loadBitmap( onLoaded : LoadedBitmap -> Void ) : Void {
-		#if flash
-		var loader = new flash.display.Loader();
-		loader.contentLoaderInfo.addEventListener(flash.events.IOErrorEvent.IO_ERROR, function(e:flash.events.IOErrorEvent) {
-			throw Std.string(e) + " while loading " + fullPath;
-		});
-		loader.contentLoaderInfo.addEventListener(flash.events.Event.COMPLETE, function(_) {
-			var content : flash.display.Bitmap = cast loader.content;
-			onLoaded(new hxd.fs.LoadedBitmap(content.bitmapData));
-			loader.unload();
-		});
-		loader.loadBytes(bytes.getData());
-		#elseif js
+		#if js
 		var mime = switch fullPath.extension().toLowerCase() {
 			case 'jpg' | 'jpeg': 'image/jpeg';
 			case 'png': 'image/png';

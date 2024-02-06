@@ -64,8 +64,8 @@ class App implements h3d.IDrawable {
 		If you call disposePrevious, it will call dispose() on the previous scene.
 	**/
 	public function setScene( scene : hxd.SceneEvents.InteractiveScene, disposePrevious = true ) {
-		var new2D = hxd.impl.Api.downcast(scene, h2d.Scene);
-		var new3D = hxd.impl.Api.downcast(scene, h3d.scene.Scene);
+		var new2D = Std.downcast(scene, h2d.Scene);
+		var new3D = Std.downcast(scene, h3d.scene.Scene);
 		if( new2D != null ) {
 			sevents.removeScene(s2d);
 			sevents.addScene(scene, 0);

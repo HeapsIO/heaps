@@ -126,6 +126,10 @@ enum TextureFlags {
 		Allows the texture to be loaded asynchronously (requires initializating hxd.res.Image.ASYNC_LOADER)
 	**/
 	AsyncLoading;
+	/**
+		By default, the texture are loaded from images when created. If this flag is enabled, the texture will be loaded from disk when first used.
+	**/
+	LazyLoading;
 }
 
 typedef TextureFormat = hxd.PixelFormat;

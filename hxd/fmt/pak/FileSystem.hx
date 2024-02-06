@@ -1,8 +1,6 @@
 package hxd.fmt.pak;
 import hxd.fs.FileEntry;
-#if air3
-import hxd.impl.Air3File;
-#elseif (sys || nodejs)
+#if (sys || nodejs)
 import sys.io.File;
 import sys.io.FileInput;
 typedef FileSeekMode = sys.io.FileSeek;
@@ -132,33 +130,6 @@ private class PakEntry extends FileEntry {
 		return new hxd.impl.ArrayIterator<FileEntry>(cast subs);
 	}
 
-	override function loadBitmap( onLoaded ) {
-		#if flash
-		if( openedBytes != null ) throw "Must close() before loadBitmap";
-		open();
-		var old = openedBytes;
-		var loader = new flash.display.Loader();
-		loader.contentLoaderInfo.addEventListener(flash.events.IOErrorEvent.IO_ERROR, function(e:flash.events.IOErrorEvent) {
-			throw Std.string(e) + " while loading " + path;
-		});
-		loader.contentLoaderInfo.addEventListener(flash.events.Event.COMPLETE, function(_) {
-			if( openedBytes == null ) {
-				openedBytes = old;
-				close();
-			}
-			var content : flash.display.Bitmap = cast loader.content;
-			onLoaded(new hxd.fs.LoadedBitmap(content.bitmapData));
-			loader.unload();
-		});
-		var ctx = new flash.system.LoaderContext();
-		ctx.imageDecodingPolicy = ON_LOAD;
-		loader.loadBytes(openedBytes.getData(), ctx);
-		openedBytes = null;
-		#else
-		super.loadBitmap(onLoaded);
-		#end
-	}
-
 }
 
 class FileSystem implements hxd.fs.FileSystem {
@@ -204,12 +175,9 @@ class FileSystem implements hxd.fs.FileSystem {
 
 		This method is intended to be used with single-threaded environment such as HTML5 target,
 		as it doesn't have access to sys package.
-		
-		Use with multi-threaded environment at your own risk with `-D heaps_add_pak_multithreaded` flag.
+
+		Use with multi-threaded environment at your own risk.
 	**/
-	#if (target.threaded && !heaps_add_pak_multithreaded)
-	@:deprecated("addPak method is not designed to work in multi-threaded environment, avoid or use -D heaps_add_pak_multithreaded")
-	#end
 	public function addPak( file : FileInput, ?path : String ) {
 		var index = files.length;
 		var info = { path: path, inputs: [] };
@@ -251,7 +219,7 @@ class FileSystem implements hxd.fs.FileSystem {
 		var id = getThreadID();
 		var input = f.inputs[id];
 		if( input == null ) {
-			#if (air3 || sys || nodejs)
+			#if (sys || nodejs)
 			input = File.read(f.path);
 			#else
 			throw "File.read not implemented";

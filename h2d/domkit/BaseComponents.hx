@@ -4,7 +4,7 @@ import domkit.CssValue;
 
 typedef FlowBg = { tile : #if macro Bool #else h2d.Tile #end, borderL : Int, borderT : Int, borderR : Int, borderB : Int, ?color : Int }
 
-class CustomParser extends CssValue.ValueParser {
+class CustomParser extends domkit.CssValue.ValueParser {
 
 	public function new() {
 		super();
@@ -45,14 +45,14 @@ class CustomParser extends CssValue.ValueParser {
 	}
 
 
-	function transitionColorF( v1 : h3d.Vector, v2 : h3d.Vector, t : Float ) : h3d.Vector {
-		var v = new h3d.Vector();
+	function transitionColorF( v1 : h3d.Vector4, v2 : h3d.Vector4, t : Float ) : h3d.Vector4 {
+		var v = new h3d.Vector4();
 		v.lerp(v1,v2,t);
 		return v;
 	}
 
-	function parseColorF( v : CssValue ) : h3d.Vector {
-		var f = new h3d.Vector();
+	function parseColorF( v : CssValue ) : h3d.Vector4 {
+		var f = new h3d.Vector4();
 		switch( v ) {
 		case VInt(i):
 			f.r = f.g = f.b = i;
@@ -282,7 +282,8 @@ class CustomParser extends CssValue.ValueParser {
 	public function parseFilter(value) : #if macro Bool #else h2d.filter.Filter #end {
 		return switch( value ) {
 		case VIdent("none"): #if macro true #else null #end;
-		case VCall("grayscale",[]): #if macro true #else h2d.filter.ColorMatrix.grayed() #end;
+		case VIdent("nothing"): #if macro true #else new h2d.filter.Nothing() #end;
+		case VIdent("grayscale"), VCall("grayscale",[]): #if macro true #else h2d.filter.ColorMatrix.grayed() #end;
 		case VCall("grayscale",[v]):
 			var v = parseFloatPercent(v);
 			#if macro
@@ -400,6 +401,7 @@ class ObjectComp implements h2d.domkit.Object implements domkit.Component.Compon
 	@:p var scaleY : Float;
 	@:p var blend : h2d.BlendMode = Alpha;
 	@:p(filter) var filter : h2d.filter.Filter;
+	@:p var filterSmooth : Bool;
 
 	// flow properties
 	@:p(box) var margin : { left : Int, top : Int, right : Int, bottom : Int };
@@ -418,6 +420,8 @@ class ObjectComp implements h2d.domkit.Object implements domkit.Component.Compon
 	@:p(none) var minHeight : Null<Int>;
 	@:p var forceLineBreak : Bool;
 	@:p(none) var autoSize : Null<Float>;
+	@:p(none) var autoSizeWidth : Null<Float>;
+	@:p(none) var autoSizeHeight : Null<Float>;
 
 
 	static function set_rotation(o:h2d.Object, v:Float) {
@@ -442,12 +446,16 @@ class ObjectComp implements h2d.domkit.Object implements domkit.Component.Compon
 		o.filter = f;
 	}
 
+	static function set_filterSmooth(o:h2d.Object, b:Bool) {
+		if( o.filter != null ) o.filter.smooth = b;
+	}
+
 	static function set_blend(o:h2d.Object, b:h2d.BlendMode) {
 		o.blendMode = b;
 	}
 
 	static function getFlowProps( o : h2d.Object ) {
-		var p = hxd.impl.Api.downcast(o.parent, h2d.Flow);
+		var p = Std.downcast(o.parent, h2d.Flow);
 		return p == null ? null : p.getProperties(o);
 	}
 
@@ -538,7 +546,18 @@ class ObjectComp implements h2d.domkit.Object implements domkit.Component.Compon
 
 	static function set_autoSize(o:h2d.Object,v) {
 		var p = getFlowProps(o);
-		if( p != null ) p.autoSize = v;
+		if( p != null ) {
+			p.autoSizeWidth = v;
+			p.autoSizeHeight = v;
+		}
+	}
+	static function set_autoSizeWidth(o:h2d.Object,v) {
+		var p = getFlowProps(o);
+		if( p != null ) p.autoSizeWidth = v;
+	}
+	static function set_autoSizeHeight(o:h2d.Object,v) {
+		var p = getFlowProps(o);
+		if( p != null ) p.autoSizeHeight = v;
 	}
 
 	static function set_forceLineBreak(o:h2d.Object,v) {
@@ -547,7 +566,7 @@ class ObjectComp implements h2d.domkit.Object implements domkit.Component.Compon
 	}
 
 	static function updateComponentId(p:domkit.Properties<Dynamic>) {
-		cast(p.obj,h2d.Object).name = p.id;
+		cast(p.obj,h2d.Object).name = p.id.toString();
 	}
 
 	@:keep static var _ = { @:privateAccess domkit.Properties.updateComponentId = updateComponentId; true; }
@@ -557,7 +576,7 @@ class ObjectComp implements h2d.domkit.Object implements domkit.Component.Compon
 @:uiComp("drawable") @:domkitDecl
 class DrawableComp extends ObjectComp implements domkit.Component.ComponentDecl<h2d.Drawable> {
 
-	@:p(colorF) @:t(colorF) #if domkit_drawable_color var color #else var tint #end : h3d.Vector;
+	@:p(colorF) @:t(colorF) #if domkit_drawable_color var color #else var tint #end : h3d.Vector4;
 	@:p(auto) var smooth : Null<Bool>;
 	@:p(colorAdjust) var colorAdjust : Null<h3d.Matrix.ColorAdjust>;
 	@:p var tileWrap : Bool;
@@ -707,9 +726,18 @@ class TextComp extends DrawableComp implements domkit.Component.ComponentDecl<h2
 @:uiComp("html-text") @:domkitDecl
 class HtmlTextComp extends TextComp implements domkit.Component.ComponentDecl<h2d.HtmlText> {
 	@:p var condenseWhite : Bool;
+	@:p var propagateInteractiveNode: Bool;
 
 	static function create( parent : h2d.Object ) {
 		return new h2d.HtmlText(hxd.res.DefaultFont.get(),parent);
+	}
+
+	static function set_condenseWhite(o : h2d.HtmlText, v) {
+		o.condenseWhite = v;
+	}
+
+	static function set_propagateInteractiveNode(o : h2d.HtmlText, v) {
+		o.propagateInteractiveNode = v;
 	}
 }
 

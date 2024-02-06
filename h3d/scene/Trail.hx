@@ -30,7 +30,7 @@ class Trail extends Mesh {
 	var pending = new TrailElement(); // tmp
 
 	public function new(?parent) {
-		dprim = new h3d.prim.DynamicPrimitive(8);
+		dprim = new h3d.prim.DynamicPrimitive(hxd.BufferFormat.POS3D_NORMAL_UV);
 		super(dprim, null, parent);
 		material.props = getMaterialProps();
 		material.mainPass.dynamicParameters = true;

@@ -78,6 +78,7 @@ typedef PbrProps = {
 	@:optional var alphaKill : Bool;
 	@:optional var emissive : Float;
 	@:optional var parallax : Float;
+	@:optional var parallaxSteps : Int;
 	@:optional var textureWrap : Bool;
 
 	var enableStencil : Bool;
@@ -212,7 +213,7 @@ class PbrMaterial extends Material {
 		mainPass.enableLights = true;
 
 		// Backward compatibility
-		if(Std.isOfType((props:Dynamic).culling, Bool))
+		if( (props:Dynamic).culling is Bool )
 			props.culling = (props:Dynamic).culling ? Back : None;
 		#if editor
 		if( (props:Dynamic).colorMask == null ) props.colorMask = 15;
@@ -237,6 +238,8 @@ class PbrMaterial extends Material {
 		 	Reflect.deleteField(props, "depthWrite");
 		if ( !props.useChecker )
 			Reflect.deleteField(props, "useChecker");
+		if ( props.parallaxSteps == h3d.shader.Parallax.MAX_LAYERS || props.parallaxSteps == 0 )
+			Reflect.deleteField(props, "parallaxSteps");
 		#end
 	}
 
@@ -367,6 +370,10 @@ class PbrMaterial extends Material {
 				ps = new h3d.shader.Parallax();
 				mainPass.addShader(ps);
 			}
+			if ( props.parallaxSteps != null )
+				ps.maxLayers = props.parallaxSteps;
+			else
+				ps.maxLayers = h3d.shader.Parallax.MAX_LAYERS;
 			ps.amount = props.parallax;
 			ps.heightMap = specularTexture;
 			ps.heightMapChannel = A;
@@ -391,7 +398,7 @@ class PbrMaterial extends Material {
 		} else {
 			var s = mainPass.getShader(h3d.shader.Checker);
 			if ( s != null )
-				mainPass.removeShader(s); 
+				mainPass.removeShader(s);
 		}
 	}
 
@@ -556,6 +563,7 @@ class PbrMaterial extends Material {
 				</dd>
 				<dt>Emissive</dt><dd><input type="range" min="0" max="10" field="emissive"/></dd>
 				<dt>Parallax</dt><dd><input type="range" min="0" max="1" field="parallax"/></dd>
+				<dt>Parallax steps</dt><dd><input type="range" min="0" max="255" step="1" field="parallaxSteps"/></dd>
 				<dt>Shadows</dt><dd><input type="checkbox" field="shadows"/></dd>
 				<dt>Culling</dt>
 				<dd>

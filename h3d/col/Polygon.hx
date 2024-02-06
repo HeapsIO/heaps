@@ -1,7 +1,7 @@
 package h3d.col;
 
 @:allow(h3d.col.Polygon)
-class TriPlane implements Collider {
+class TriPlane extends Collider {
 
 	public var next : TriPlane = null;
 
@@ -159,7 +159,7 @@ class TriPlane implements Collider {
 }
 
 
-class Polygon implements Collider {
+class Polygon extends Collider {
 
 	var triPlanes : TriPlane;
 

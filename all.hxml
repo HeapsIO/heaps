@@ -3,8 +3,8 @@
 -lib hxbit
 --macro include('h3d')
 --macro include('h2d',true,['h2d.domkit'])
---macro include('hxsl',true,['hxsl.Macros','hxsl.CacheFile','hxsl.CacheFileBuilder','hxsl.Checker'])
---macro include('hxd',true,['hxd.res.FileTree','hxd.Res','hxd.impl.BitsBuilder','hxd.impl.Air3File','hxd.fmt.pak.Build','hxd.net.SteamHost','hxd.snd.efx','hxd.snd.openal','hxd.res.Config'])
+--macro include('hxsl',true,['hxsl.Macros','hxsl.CacheFileBuilder','hxsl.Checker'])
+--macro include('hxd',true,['hxd.res.FileTree','hxd.Res','hxd.impl.BitsBuilder','hxd.fmt.pak.Build','hxd.snd.openal','hxd.res.Config'])
 --no-output
 -D apicheck
 --each
@@ -18,6 +18,7 @@
 -lib hlsdl
 -lib hlopenal
 -xml heaps_hl.xml
+hxsl.CacheFileBuilder
 
 --next
 
@@ -25,3 +26,12 @@
 -lib hldx
 -lib hlopenal
 -xml heaps_hldx.xml
+
+--next
+
+-hl heaps.hl
+-lib hldx
+-lib hlopenal
+-D dx12
+-xml heaps_hldx12.xml
+-D hl-ver=1.14.0

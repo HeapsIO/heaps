@@ -3,9 +3,6 @@ package hxd.net;
 class BinaryLoader {
 
 	public var url(default, null) : String;
-	#if flash
-	var loader : flash.net.URLLoader;
-	#end
 
 	public function new( url : String ) {
 		this.url = url;
@@ -22,16 +19,7 @@ class BinaryLoader {
 	}
 
 	public function load(raw = false) {
-		#if flash
-
-		loader = new flash.net.URLLoader();
-		loader.dataFormat = flash.net.URLLoaderDataFormat.BINARY;
-		loader.addEventListener(flash.events.IOErrorEvent.IO_ERROR, function(e:flash.events.IOErrorEvent) onError(e.text));
-		loader.addEventListener(flash.events.Event.COMPLETE, function(_) onLoaded(haxe.io.Bytes.ofData(loader.data)));
-		loader.addEventListener(flash.events.ProgressEvent.PROGRESS, function(e:flash.events.ProgressEvent) onProgress(Std.int(e.bytesLoaded), Std.int(e.bytesTotal)));
-		loader.load(new flash.net.URLRequest(url));
-
-		#elseif js
+		#if js
 
 		var xhr = new js.html.XMLHttpRequest();
 		xhr.open('GET', url, true);
@@ -48,11 +36,7 @@ class BinaryLoader {
 		}
 
 		xhr.onprogress = function(e) {
-			#if (haxe_ver >= 4)
 			onProgress(Std.int(js.Syntax.code("{0}.loaded || {0}.position", e)), Std.int(js.Syntax.code("{0}.total || {0}.totalSize", e)));
-			#else
-			onProgress(Std.int(untyped __js__("{0}.loaded || {0}.position", e)), Std.int(untyped __js__("{0}.total || {0}.totalSize", e)));
-			#end
 		}
 		xhr.send();
 

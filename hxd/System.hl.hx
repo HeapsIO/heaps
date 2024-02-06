@@ -131,7 +131,7 @@ class System {
 
 	static function runMainLoop() {
 		#if (haxe_ver >= 4.1)
-		var reportError = function(e:Dynamic) reportError(Std.isOfType(e,haxe.Exception)?e:new haxe.Exception(Std.string(e),null,e));
+		var reportError = function(e:Dynamic) reportError((e is haxe.Exception)?e:new haxe.Exception(Std.string(e),null,e));
 		#else
 		var reportError = function(e) reportError(e);
 		#end
@@ -442,7 +442,7 @@ class System {
 	}
 
 	static function get_allowTimeout() @:privateAccess {
-		#if (usesys || (haxe_ver < 4))
+		#if usesys
 		return false;
 		#else
 		return !sentinel.pause;
@@ -450,7 +450,7 @@ class System {
 	}
 
 	static function set_allowTimeout(b) @:privateAccess {
-		#if (usesys || (haxe_ver < 4))
+		#if usesys
 		return false;
 		#else
 		return sentinel.pause = !b;
@@ -469,8 +469,8 @@ class System {
 
 	#if (hlsdl || hldx)
 	@:keep static var _ = {
-		haxe.MainLoop.add(timeoutTick, -1) #if (haxe_ver >= 4) .isBlocking = false #end;
-		haxe.MainLoop.add(updateCursor, -1) #if (haxe_ver >= 4) .isBlocking = false #end;
+		haxe.MainLoop.add(timeoutTick, -1).isBlocking = false;
+		haxe.MainLoop.add(updateCursor, -1).isBlocking = false;
 	}
 	#end
 

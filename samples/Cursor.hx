@@ -13,7 +13,7 @@ class Cursor extends SampleApp {
 		bmp.line(31, 0, 31, 31, 0xFF00FF00);
 
 		var animationSupported = false;
-		#if (flash || js || hldx || hlsdl)
+		#if (js || hldx || hlsdl)
 		animationSupported = true;
 		#end
 

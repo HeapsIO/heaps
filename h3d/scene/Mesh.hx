@@ -37,14 +37,19 @@ class Mesh extends Object {
 		return [material];
 	}
 
-	override function getBoundsRec( b : h3d.col.Bounds ) {
-		b = super.getBoundsRec(b);
+
+	static var tmpMat = new h3d.Matrix();
+	override function addBoundsRec( b : h3d.col.Bounds, relativeTo : h3d.Matrix ) {
+		super.addBoundsRec(b, relativeTo);
 		if( primitive == null || flags.has(FIgnoreBounds) )
-			return b;
-		var tmp = primitive.getBounds().clone();
-		tmp.transform(absPos);
-		b.add(tmp);
-		return b;
+			return;
+		var bounds = primitive.getBounds();
+		if( relativeTo == null ) {
+			b.addTransform(bounds,absPos);
+		} else {
+			tmpMat.multiply(absPos, relativeTo);
+			b.addTransform(bounds,tmpMat);
+		}
 	}
 
 	override function clone( ?o : Object ) : Object {

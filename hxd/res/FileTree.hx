@@ -161,26 +161,10 @@ class FileTree {
 			var fullPath = fs.getAbsolutePath(f);
 
 			switch( file.ext ) {
-			case "ttf" if( Config.platform == JS || Config.platform == Flash ):
+			case "ttf" if( Config.platform == JS ):
 				Embed.doEmbedFont(name, fullPath, options.fontsChars);
 				embedTypes.push("hxd._res." + name);
 				continue;
-			case _ if( Config.platform == Flash ):
-				Context.defineType( {
-					params : [],
-					pack : ["hxd","_res"],
-					name : name,
-					pos : pos,
-					isExtern : false,
-					fields : [],
-					meta : [
-						{ name : ":native", params : [{ expr : EConst(CString("_"+name)), pos : pos }], pos : pos },
-						{ name : ":keep", params : [], pos : pos },
-						{ name : ":file", params : [ { expr : EConst(CString(fullPath)), pos : pos } ], pos : pos },
-					],
-					kind : TDClass({ pack : ["flash","utils"], name : "ByteArray", params : [] }),
-				});
-				embedTypes.push("hxd._res." + name);
 			default:
 				Context.addResource(name, sys.io.File.getBytes(fullPath));
 			}
@@ -279,8 +263,8 @@ class FileTree {
 					ret : field.t,
 					expr : { expr : EMeta({ name : ":privateAccess", params : [], pos : pos }, { expr : EReturn(field.e), pos : pos }), pos : pos },
 				}),
-				meta : [ { name:"extern", pos:pos, params:[] } ],
-				access : [AStatic, AInline, APrivate],
+				meta : [],
+				access : [AExtern, AStatic, AInline, APrivate],
 			};
 			var field : Field = {
 				name : fname,

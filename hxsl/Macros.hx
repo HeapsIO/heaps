@@ -8,10 +8,10 @@ class Macros {
 	static function makeType( t : Type ) : ComplexType {
 		return switch( t ) {
 		case TVoid: macro : Void;
-		case TVec(_, t):
+		case TVec(n, t):
 			switch( t ) {
 			case VFloat:
-				macro : hxsl.Types.Vec;
+				n == 4 ? (macro : hxsl.Types.Vec4) : (macro : hxsl.Types.Vec);
 			case VInt:
 				macro : hxsl.Types.IVec;
 			case VBool:
@@ -57,10 +57,10 @@ class Macros {
 	static function makeDef( t : Type, pos : Position ) : haxe.macro.Expr {
 		return switch( t ) {
 		case TFloat, TInt: macro 0;
-		case TVec(_, t):
+		case TVec(n, t):
 			switch( t ) {
 			case VFloat:
-				macro new hxsl.Types.Vec();
+				n == 4 ? macro new hxsl.Types.Vec4() : macro new hxsl.Types.Vec();
 			case VInt:
 				macro new hxsl.Types.IVec();
 			case VBool:
@@ -99,7 +99,12 @@ class Macros {
 					default: throw "assert";
 				};
 			{
-				expr : ENew({ pack : ["h3d"], name : "Vector" }, [for( a in args ) makeInit(a)]),
+				expr : ENew({ pack : ["hxsl"], name : "Types", sub : (g == Vec4 ? "Vec4" : "Vec") }, [for( a in args ) makeInit(a)]),
+				pos : e.p,
+			}
+		case TArrayDecl(el):
+			{
+				expr : EArrayDecl([for( e in el ) makeInit(e)]),
 				pos : e.p,
 			}
 		default:
@@ -447,7 +452,6 @@ class Macros {
 	public static function buildGlobals() {
 		var fields = Context.getBuildFields();
 		var globals = [];
-		var sets = [];
 		for( f in fields ) {
 			if( f.meta == null ) continue;
 			for( m in f.meta ) {
@@ -484,7 +488,7 @@ class Macros {
 						});
 						globals.push(macro $i{id} = new hxsl.Globals.GlobalSlot($v{ name }));
 						if( set != null )
-							sets.push(macro $i{f.name} = $set);
+							Context.error("Value ignored", set.pos);
 					default:
 					}
 			}
@@ -495,15 +499,6 @@ class Macros {
 			kind : FFun({
 				ret : null,
 				expr : { expr : EBlock(globals), pos : p },
-				args : [],
-			}),
-			pos : p,
-		});
-		fields.push({
-			name : "setGlobals",
-			kind : FFun({
-				ret : null,
-				expr : { expr : EBlock(sets), pos : p },
 				args : [],
 			}),
 			pos : p,

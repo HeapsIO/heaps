@@ -6,22 +6,6 @@ enum BufferFlag {
 	**/
 	Dynamic;
 	/**
-		The buffer contains only triangles. Imply Managed. Make sure the position is aligned on 3 vertices multiples.
-	**/
-	Triangles;
-	/**
-		The buffer contains only quads. Imply Managed. Make sure the position is aligned on 4 vertices multiples.
-	**/
-	Quads;
-	/**
-		Will allocate the memory as part of an shared buffer pool, preventing a lot of small GPU buffers to be allocated.
-	**/
-	Managed;
-	/**
-		Directly map the buffer content to the shader inputs, without assuming [pos:vec3,normal:vec3,uv:vec2] default prefix.
-	**/
-	RawFormat;
-	/**
 		Used internaly
 	**/
 	NoAlloc;
@@ -30,11 +14,16 @@ enum BufferFlag {
 	**/
 	UniformBuffer;
 	/**
-		Use to allow to alloc buffers with >64K vertices (requires 32 bit indexes)
+		Can be written
 	**/
-	LargeBuffer;
+	ReadWriteBuffer;
+	/**
+		Used as index buffer
+	**/
+	IndexBuffer;
 }
 
+@:allow(h3d.impl.MemoryManager)
 class Buffer {
 	public static var GUID = 0;
 	public var id : Int;
@@ -42,16 +31,17 @@ class Buffer {
 	var allocPos : hxd.impl.AllocPos;
 	var allocNext : Buffer;
 	#end
+	var engine : h3d.Engine;
 
-	public var buffer(default,null) : h3d.impl.ManagedBuffer;
-	public var position(default,null) : Int;
+	@:allow(h3d.impl.Driver) var vbuf : h3d.impl.Driver.GPUBuffer;
 	public var vertices(default,null) : Int;
-	public var next(default,null) : Buffer;
+	public var format(default,null) : hxd.BufferFormat;
 	public var flags(default, null) : haxe.EnumFlags<BufferFlag>;
 
-	public function new(vertices, stride, ?flags : Array<BufferFlag> ) {
+	public function new(vertices, format : hxd.BufferFormat, ?flags : Array<BufferFlag> ) {
 		id = GUID++;
 		this.vertices = vertices;
+		this.format = format;
 		this.flags = new haxe.EnumFlags();
 		#if track_alloc
 		this.allocPos = new hxd.impl.AllocPos();
@@ -59,137 +49,101 @@ class Buffer {
 		if( flags != null )
 			for( f in flags )
 				this.flags.set(f);
-		#if flash
-		// flash strictly requires indexes to be within the bounds of the buffer
-		// so we cannot use quad/triangle indexes unless the buffer is large enough
-		if( this.flags.has(Quads) || this.flags.has(Triangles) )
-			this.flags.set(Managed);
-		#end
+		engine = h3d.Engine.getCurrent();
 		if( !this.flags.has(NoAlloc) )
-			h3d.Engine.getCurrent().mem.allocBuffer(this, stride);
+			@:privateAccess engine.mem.allocBuffer(this);
+	}
+
+	public inline function getMemSize() {
+		return vertices * format.strideBytes;
 	}
 
 	public inline function isDisposed() {
-		return buffer == null || buffer.isDisposed();
+		return vbuf == null;
 	}
 
 	public function dispose() {
-		if( buffer != null ) {
-			buffer.freeBuffer(this);
-			buffer = null;
-			if( next != null ) next.dispose();
+		if( vbuf != null ) {
+			@:privateAccess engine.mem.freeBuffer(this);
+			vbuf = null;
 		}
 	}
 
-	/**
-		Returns the total number of vertices including the potential next buffers if it is split.
-	**/
-	public function totalVertices() {
-		var count = 0;
-		var b = this;
-		while( b != null ) {
-			count += b.vertices;
-			b = b.next;
-		}
-		return count;
-	}
+	public function uploadFloats( buf : hxd.FloatBuffer, bufPos : Int, vertices : Int, startVertice = 0 ) {
+		if( startVertice < 0 || vertices < 0 || startVertice + vertices > this.vertices )
+			throw "Invalid vertices count";
+		if( vertices == 0 )
+			return;
+		if( format.hasLowPrecision ) {
+			var bytes = haxe.io.Bytes.alloc(vertices * format.strideBytes);
+			var bytesPos : Int = 0;
+			var index : Int = bufPos;
 
-	public function uploadVector( buf : hxd.FloatBuffer, bufPos : Int, vertices : Int, startVertice = 0 ) {
-		var cur = this;
-		while( cur != null && startVertice >= cur.vertices ) {
-			startVertice -= cur.vertices;
-			cur = cur.next;
+			for ( i in 0...vertices ) {
+				for ( input in format.getInputs() ) {
+					var elementCount = input.type.getSize();
+					var step = 0;
+					switch ( input.precision ) {
+						case F32 :
+							for ( i in 0...elementCount ) {
+								bytes.setFloat( bytesPos + step, buf[index++] );
+								step += 4;
+							}
+						case F16 :
+							for ( i in 0...elementCount ) {
+								var f = hxd.BufferFormat.float32to16(buf[index++]);
+								bytes.setUInt16( bytesPos + step, f );
+								step += 2;
+							}
+						case U8 :
+							for ( i in 0...elementCount ) {
+								var f = hxd.BufferFormat.float32toU8(buf[index++]);
+								bytes.set( bytesPos + step, f );
+								step++;
+							}
+						case S8 :
+							for ( i in 0...elementCount ) {
+								var f = hxd.BufferFormat.float32toS8(buf[index++]);
+								bytes.set( bytesPos + step, f );
+								step++;
+							}
+					}
+					// 4 bytes align
+					bytesPos += input.getBytesSize();
+					if ( bytesPos & 3 != 0 ) bytesPos += ( 4 - (bytesPos & 3) );
+				}
+			}
+			uploadBytes(bytes, 0, vertices);
+			return;
 		}
-		while( vertices > 0 ) {
-			if( cur == null ) throw "Too many vertices";
-			var count = vertices + startVertice > cur.vertices ? cur.vertices - startVertice : vertices;
-			cur.buffer.uploadVertexBuffer(cur.position + startVertice, count, buf, bufPos);
-			startVertice = 0;
-			bufPos += count * buffer.stride;
-			vertices -= count;
-			cur = cur.next;
-		}
+		engine.driver.uploadBufferData(this, startVertice, vertices, buf, bufPos);
 	}
 
 	public function uploadBytes( data : haxe.io.Bytes, dataPos : Int, vertices : Int ) {
-		var cur = this;
-		while( vertices > 0 ) {
-			if( cur == null ) throw "Too many vertices";
-			var count = vertices > cur.vertices ? cur.vertices : vertices;
-			cur.buffer.uploadVertexBytes(cur.position, count, data, dataPos);
-			dataPos += count * buffer.stride * 4;
-			vertices -= count;
-			cur = cur.next;
-		}
+		if( vertices < 0 || vertices > this.vertices )
+			throw "Invalid vertices count";
+		if( vertices == 0 )
+			return;
+		engine.driver.uploadBufferBytes(this, 0, vertices, data, dataPos);
 	}
 
 	public function readBytes( bytes : haxe.io.Bytes, bytesPosition : Int, vertices : Int,  startVertice : Int = 0 ) {
-		var cur = this;
-		while( cur != null && startVertice >= cur.vertices ) {
-			startVertice -= cur.vertices;
-			cur = cur.next;
-		}
-		while( vertices > 0 ) {
-			if( cur == null ) throw "Too many vertices";
-			var count = vertices + startVertice > cur.vertices ? cur.vertices - startVertice : vertices;
-			cur.buffer.readVertexBytes(cur.position + startVertice, count, bytes, bytesPosition);
-			startVertice = 0;
-			bytesPosition += count * buffer.stride * 4;
-			vertices -= count;
-			cur = cur.next;
-		}
+		if( startVertice < 0 || vertices < 0 || startVertice + vertices > this.vertices )
+			throw "Invalid vertices count";
+		engine.driver.readBufferBytes(this, startVertice, vertices, bytes, bytesPosition);
 	}
 
-	public static function ofFloats( v : hxd.FloatBuffer, stride : Int, ?flags ) {
-		var nvert = Std.int(v.length / stride);
-		var b = new Buffer(nvert, stride, flags);
-		b.uploadVector(v, 0, nvert);
+	public static function ofFloats( v : hxd.FloatBuffer, format : hxd.BufferFormat, ?flags ) {
+		var nvert = Std.int(v.length / format.stride);
+		var b = new Buffer(nvert, format, flags);
+		b.uploadFloats(v, 0, nvert);
 		return b;
 	}
 
-	public static function ofSubFloats( v : hxd.FloatBuffer, stride : Int, vertices : Int, ?flags ) {
-		var b = new Buffer(vertices, stride, flags);
-		b.uploadVector(v, 0, vertices);
+	public static function ofSubFloats( v : hxd.FloatBuffer, vertices : Int, format : hxd.BufferFormat, ?flags ) {
+		var b = new Buffer(vertices, format, flags);
+		b.uploadFloats(v, 0, vertices);
 		return b;
 	}
 
-}
-
-class BufferOffset {
-	#if flash
-	static var UID = 0;
-	public var id : Int;
-	#end
-
-	public var buffer : Buffer;
-	public var offset : Int;
-
-	/*
-		This is used to return a list of BufferOffset without allocating an array
-	*/
-	public var next : BufferOffset;
-
-	public function new(buffer, offset) {
-		#if flash
-		this.id = UID++;
-		#end
-		this.buffer = buffer;
-		this.offset = offset;
-	}
-
-	public inline function clone() {
-		var b = new BufferOffset(buffer,offset);
-		#if flash
-		b.id = id;
-		#end
-		return b;
-	}
-
-	public function dispose() {
-		if( buffer != null ) {
-			buffer.dispose();
-			buffer = null;
-		}
-		next = null;
-	}
 }

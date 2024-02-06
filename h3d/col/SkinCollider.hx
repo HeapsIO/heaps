@@ -2,7 +2,7 @@ package h3d.col;
 
 @:access(h3d.col.PolygonBuffer)
 @:access(h3d.scene.Skin)
-class SkinCollider implements Collider {
+class SkinCollider extends Collider {
 
 	var obj : h3d.scene.Skin;
 	var col : PolygonBuffer;
@@ -59,7 +59,7 @@ class SkinCollider implements Collider {
 		lastBoundsFrame = obj.lastFrame;
 		obj.syncJoints();
 		currentBounds.empty();
-		obj.getBoundsRec(currentBounds);
+		obj.addBoundsRec(currentBounds,null);
 	}
 
 	function applyTransform() {
@@ -93,9 +93,7 @@ class SkinCollider implements Collider {
 
 	#if !macro
 	public function makeDebugObj() : h3d.scene.Object {
-		var ret = new SkinColliderDebugObj(this);
-		ret.ignoreParentTransform = true;
-		return ret;
+		return new SkinColliderDebugObj(this);
 	}
 	#end
 

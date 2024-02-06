@@ -10,6 +10,11 @@ class ToneMapping extends ScreenShader {
 		@const var isSRBG : Bool;
 		@const var mode : Int;
 		@param var invGamma : Float;
+		@param var a : Float;
+		@param var b : Float;
+		@param var c : Float;
+		@param var d : Float;
+		@param var e : Float;
 
 		var hdrColor : Vec4;
 
@@ -27,6 +32,9 @@ class ToneMapping extends ScreenShader {
 			case 1:
 				// reinhard
 				color.rgb = color.rgb / (color.rgb + vec3(1.));
+			case 2:
+				// filmic
+				color.rgb = saturate((color.rgb*(a*color.rgb+b))/(color.rgb*(c*color.rgb+d)+e));
 			}
 			// gamma correct
 			if( !isSRBG )
@@ -42,6 +50,11 @@ class ToneMapping extends ScreenShader {
 		super();
 		exposure = 0;
 		gamma = 2.0;
+		a = 2.51;
+		b = 0.03;
+		c = 2.43;
+		d = 0.59;
+		e = 0.14;
 	}
 
 	function set_exposure(v) {

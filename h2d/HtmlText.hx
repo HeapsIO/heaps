@@ -71,6 +71,12 @@ class HtmlText extends Text {
 		If not set, uncondensed whitespace is left as is, as well as line-breaks.
 	**/
 	public var condenseWhite(default,set) : Bool = true;
+
+	/**
+		When enabled, nodes that create interactives will propagate events
+	**/
+	public var propagateInteractiveNode(default,set) : Bool = false;
+
 	/**
 		The spacing after `<img>` tags in pixels.
 	**/
@@ -105,9 +111,11 @@ class HtmlText extends Text {
 			var oldX = absX, oldY = absY;
 			absX += dropShadow.dx * matA + dropShadow.dy * matC;
 			absY += dropShadow.dx * matB + dropShadow.dy * matD;
-			if( dropMatrix == null )
+			if( dropMatrix == null ) {
 				dropMatrix = new h3d.shader.ColorMatrix();
-			addShader(dropMatrix);
+				addShader(dropMatrix);
+			}
+			dropMatrix.enabled = true;
 			var m = dropMatrix.matrix;
 			m.zero();
 			m._41 = ((dropShadow.color >> 16) & 0xFF) / 255;
@@ -115,12 +123,26 @@ class HtmlText extends Text {
 			m._43 = (dropShadow.color & 0xFF) / 255;
 			m._44 = dropShadow.alpha;
 			glyphs.drawWith(ctx, this);
-			removeShader(dropMatrix);
+			dropMatrix.enabled = false;
 			absX = oldX;
 			absY = oldY;
-		} else
+		} else {
+			removeShader(dropMatrix);
 			dropMatrix = null;
+		}
 		glyphs.drawWith(ctx,this);
+	}
+
+	override function getShader< T:hxsl.Shader >( stype : Class<T> ) : T {
+		if (shaders != null) for( s in shaders ) {
+			var c = Std.downcast(s, h3d.shader.ColorMatrix);
+			if ( c != null && !c.enabled )
+				continue;
+			var s = Std.downcast(s, stype);
+			if( s != null )
+				return s;
+		}
+		return null;
 	}
 
 	/**
@@ -152,6 +174,16 @@ class HtmlText extends Text {
 		Called on a <a> tag click
 	**/
 	public dynamic function onHyperlink(url:String) : Void {
+	}
+	/**
+		Called on a <a> tag over
+	**/
+	public dynamic function onOverHyperlink(url:String) : Void {
+	}
+	/**
+		Called on a <a> tag out
+	**/
+	public dynamic function onOutHyperlink(url:String) : Void {
 	}
 
 	/**
@@ -572,13 +604,20 @@ class HtmlText extends Text {
 	}
 
 	function addNode( e : Xml, font : Font, align : Align, rebuild : Bool, metrics : Array<LineInfo> ) {
-		inline function createInteractive() {
+		function createInteractive() {
 			if(aHrefs == null || aHrefs.length == 0)
 				return;
-			aInteractive = new Interactive(0, metrics[sizePos].height, this);
+			aInteractive = new Interactive(0, metrics[sizePos].baseLine, this);
+			aInteractive.propagateEvents = propagateInteractiveNode;
 			var href = aHrefs[aHrefs.length-1];
 			aInteractive.onClick = function(event) {
 				onHyperlink(href);
+			}
+			aInteractive.onOver = function(event) {
+				onOverHyperlink(href);
+			}
+			aInteractive.onOut = function(event) {
+				onOutHyperlink(href);
 			}
 			aInteractive.x = xPos;
 			aInteractive.y = yPos;
@@ -785,6 +824,14 @@ class HtmlText extends Text {
 		return value;
 	}
 
+	function set_propagateInteractiveNode(value: Bool) {
+		if ( this.propagateInteractiveNode != value ) {
+			this.propagateInteractiveNode = value;
+			rebuild();
+		}
+		return value;
+	}
+
 	function set_imageVerticalAlign(align) {
 		if ( this.imageVerticalAlign != align ) {
 			this.imageVerticalAlign = align;
@@ -804,7 +851,7 @@ class HtmlText extends Text {
 	override function getBoundsRec( relativeTo : Object, out : h2d.col.Bounds, forSize : Bool ) {
 		if( forSize )
 			for( i in elements )
-				if( hxd.impl.Api.isOfType(i,h2d.Bitmap) )
+				if( i is h2d.Bitmap || i is h2d.Interactive )
 					i.visible = false;
 		super.getBoundsRec(relativeTo, out, forSize);
 		if( forSize )

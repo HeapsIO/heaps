@@ -50,7 +50,7 @@ class Plane {
 	}
 
 	inline function transformInverseTranspose(m:h3d.Matrix) {
-		var v = new h3d.Vector(nx, ny, nz, -d);
+		var v = new h3d.Vector4(nx, ny, nz, -d);
 		v.transform(m);
 		nx = v.x;
 		ny = v.y;

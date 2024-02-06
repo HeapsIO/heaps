@@ -37,7 +37,7 @@ class Ray {
 	function normalize() {
 		var l = lx * lx + ly * ly + lz * lz;
 		if( l == 1. ) return;
-		if( l < Math.EPSILON ) l = 0 else l = Math.invSqrt(l);
+		if( l < Math.EPSILON2 ) l = 0 else l = Math.invSqrt(l);
 		lx *= l;
 		ly *= l;
 		lz *= l;
@@ -45,7 +45,7 @@ class Ray {
 
 	public inline function transform( m : h3d.Matrix ) {
 		var p = new h3d.Vector(px, py, pz);
-		p.transform3x4(m);
+		p.transform(m);
 		px = p.x;
 		py = p.y;
 		pz = p.z;

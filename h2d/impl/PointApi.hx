@@ -25,8 +25,7 @@ interface GenPointApi<Point,Unit> {
 	/**
 		Returns a new Point with the position of this Point multiplied by scalar `v`.
 	**/
-	function multiply( v : Unit ) : Point;
-
+	function scaled( v : Unit ) : Point;
 	/**
 		Multiplies position of this Point by scalar `v`.
 	**/

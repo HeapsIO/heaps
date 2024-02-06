@@ -1,5 +1,10 @@
 package hxsl;
 
+enum BufferKind {
+	Uniform;
+	RW;
+}
+
 enum Type {
 	TVoid;
 	TInt;
@@ -17,7 +22,7 @@ enum Type {
 	TStruct( vl : Array<TVar> );
 	TFun( variants : Array<FunType> );
 	TArray( t : Type, size : SizeDecl );
-	TBuffer( t : Type, size : SizeDecl );
+	TBuffer( t : Type, size : SizeDecl, kind : BufferKind );
 	TChannel( size : Int );
 	TMat2;
 }
@@ -86,6 +91,7 @@ enum VarQualifier {
 	Doc( s : String );
 	Borrow( source : String );
 	Sampler( name : String );
+	Final;
 }
 
 enum Prec {
@@ -141,6 +147,30 @@ enum ExprDef {
 	EMeta( name : String, args : Array<Expr>, e : Expr );
 }
 
+enum TExprDef {
+	TConst( c : Const );
+	TVar( v : TVar );
+	TGlobal( g : TGlobal );
+	TParenthesis( e : TExpr );
+	TBlock( el : Array<TExpr> );
+	TBinop( op : Binop, e1 : TExpr, e2 : TExpr );
+	TUnop( op : Unop, e1 : TExpr );
+	TVarDecl( v : TVar, ?init : TExpr );
+	TCall( e : TExpr, args : Array<TExpr> );
+	TSwiz( e : TExpr, regs : Array<Component> );
+	TIf( econd : TExpr, eif : TExpr, eelse : Null<TExpr> );
+	TDiscard;
+	TReturn( ?e : TExpr );
+	TFor( v : TVar, it : TExpr, loop : TExpr );
+	TContinue;
+	TBreak;
+	TArray( e : TExpr, index : TExpr );
+	TArrayDecl( el : Array<TExpr> );
+	TSwitch( e : TExpr, cases : Array<{ values : Array<TExpr>, expr:TExpr }>, def : Null<TExpr> );
+	TWhile( e : TExpr, loop : TExpr, normalWhile : Bool );
+	TMeta( m : String, args : Array<Const>, e : TExpr );
+}
+
 typedef TVar = {
 	var id : Int;
 	var name : String;
@@ -163,6 +193,7 @@ enum FunctionKind {
 	Fragment;
 	Init;
 	Helper;
+	Main;
 }
 
 enum TGlobal {
@@ -250,6 +281,14 @@ enum TGlobal {
 	// gl globals
 	FragCoord;
 	FrontFacing;
+	// bit casting
+	FloatBitsToInt;
+	FloatBitsToUint;
+	IntBitsToFloat;
+	UintBitsToFloat;
+	RoundEven;
+	// compute
+	SetLayout;
 }
 
 enum Component {
@@ -257,30 +296,6 @@ enum Component {
 	Y;
 	Z;
 	W;
-}
-
-enum TExprDef {
-	TConst( c : Const );
-	TVar( v : TVar );
-	TGlobal( g : TGlobal );
-	TParenthesis( e : TExpr );
-	TBlock( el : Array<TExpr> );
-	TBinop( op : Binop, e1 : TExpr, e2 : TExpr );
-	TUnop( op : Unop, e1 : TExpr );
-	TVarDecl( v : TVar, ?init : TExpr );
-	TCall( e : TExpr, args : Array<TExpr> );
-	TSwiz( e : TExpr, regs : Array<Component> );
-	TIf( econd : TExpr, eif : TExpr, eelse : Null<TExpr> );
-	TDiscard;
-	TReturn( ?e : TExpr );
-	TFor( v : TVar, it : TExpr, loop : TExpr );
-	TContinue;
-	TBreak;
-	TArray( e : TExpr, index : TExpr );
-	TArrayDecl( el : Array<TExpr> );
-	TSwitch( e : TExpr, cases : Array<{ values : Array<TExpr>, expr:TExpr }>, def : Null<TExpr> );
-	TWhile( e : TExpr, loop : TExpr, normalWhile : Bool );
-	TMeta( m : String, args : Array<Const>, e : TExpr );
 }
 
 typedef TExpr = { e : TExprDef, t : Type, p : Position }
@@ -412,7 +427,12 @@ class Tools {
 			prefix + "Vec" + size;
 		case TStruct(vl):"{" + [for( v in vl ) v.name + " : " + toString(v.type)].join(",") + "}";
 		case TArray(t, s): toString(t) + "[" + (switch( s ) { case SConst(i): "" + i; case SVar(v): v.name; } ) + "]";
-		case TBuffer(t, s): "buffer "+toString(t) + "[" + (switch( s ) { case SConst(i): "" + i; case SVar(v): v.name; } ) + "]";
+		case TBuffer(t, s, k):
+			var prefix = switch( k ) {
+			case Uniform: "buffer";
+			case RW: "rwbuffer";
+			};
+			prefix+" "+toString(t) + "[" + (switch( s ) { case SConst(i): "" + i; case SVar(v): v.name; } ) + "]";
 		case TBytes(n): "Bytes" + n;
 		default: t.getName().substr(1);
 		}
@@ -451,6 +471,8 @@ class Tools {
 			return hasSideEffect(e) || hasSideEffect(index);
 		case TConst(_), TVar(_), TGlobal(_):
 			return false;
+		case TCall({ e : TGlobal(SetLayout) },_):
+			return true;
 		case TCall(e, pl):
 			if( !e.e.match(TGlobal(_)) )
 				return true;
@@ -539,7 +561,7 @@ class Tools {
 		case TMat3x4: 12;
 		case TBytes(s): s;
 		case TBool, TString, TSampler2D, TSampler2DArray, TSamplerCube, TFun(_): 0;
-		case TArray(t, SConst(v)), TBuffer(t, SConst(v)): size(t) * v;
+		case TArray(t, SConst(v)), TBuffer(t, SConst(v),_): size(t) * v;
 		case TArray(_, SVar(_)), TBuffer(_): 0;
 		}
 	}
@@ -555,11 +577,16 @@ class Tools {
 			case CFloat(f): f;
 			case CString(s): s;
 			}
-		case TCall({ e : TGlobal(Vec2 | Vec3 | Vec4) }, args):
+		case TCall({ e : TGlobal(Vec4) }, args):
 			var vals = [for( a in args ) evalConst(a)];
 			if( vals.length == 1 )
-				return new Types.Vec(vals[0], vals[0], vals[0], vals[0]);
-			return new Types.Vec(vals[0], vals[1], vals[2], vals[3]);
+				return new Types.Vec4(vals[0], vals[0], vals[0], vals[0]);
+			return new Types.Vec4(vals[0], vals[1], vals[2], vals[3]);
+		case TCall({ e : TGlobal(Vec2 | Vec3) }, args):
+			var vals = [for( a in args ) evalConst(a)];
+			if( vals.length == 1 )
+				return new Types.Vec(vals[0], vals[0], vals[0]);
+			return new Types.Vec(vals[0], vals[1], vals[2]);
 		default:
 			throw "Unhandled constant init " + Printer.toString(e);
 		}

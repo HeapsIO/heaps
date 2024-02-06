@@ -19,7 +19,7 @@ class IPoint #if apicheck implements h2d.impl.PointApi.IPointApi<IPoint> #end {
 		return 'IPoint{$x,$y,$z}';
 	}
 
-	public inline function multiply( v : Int ) {
+	public inline function scaled( v : Int ) {
 		return new IPoint(x * v, y * v, z * v);
 	}
 

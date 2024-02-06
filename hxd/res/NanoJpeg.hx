@@ -606,19 +606,10 @@ class NanoJpeg {
 		var out = alloc(c.width * c.height);
 		var lin = new FastBytes(c.pixels);
 		var pout = 0;
-		#if flash
-		var dat = out.getData();
-		if( dat.length < 1024 ) dat.length = 1024;
-		flash.Memory.select(dat);
-		inline function write(pos, v) {
-			flash.Memory.setByte(pos, v);
-		}
-		#else
 		var lout = new FastBytes(out);
 		inline function write(pos, v) {
 			lout[pos] = v;
 		}
-		#end
 		for( y in 0...c.height ) {
 			var pin = (y >> yshift) * c.stride;
 			for( x in 0...c.width )
@@ -650,19 +641,10 @@ class NanoJpeg {
 			var py = new FastBytes(comps[0].pixels);
 			var pcb = new FastBytes(comps[1].pixels);
 			var pcr = new FastBytes(comps[2].pixels);
-			#if flash
-			var dat = pixels.getData();
-			if( dat.length < 1024 ) dat.length = 1024;
-			flash.Memory.select(dat);
-			inline function write(out, c) {
-				flash.Memory.setByte(out, c);
-			}
-			#else
 			var pix = new FastBytes(pixels);
 			inline function write(out, c) {
 				pix[out] = c;
 			}
-			#end
 			var k1 = 0, k2 = 0, k3 = 0, out = 0;
 			for( yy in 0...height ) {
 				for( x in 0...width ) {

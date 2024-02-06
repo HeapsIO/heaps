@@ -43,6 +43,7 @@ class Checker {
 		if( GLOBALS != null ) return GLOBALS;
 		var globals = new Map();
 		var genType = [TFloat, vec2, vec3, vec4];
+		var genIType = [TInt, ivec2, ivec3, ivec4];
 		var baseType = [TFloat, TBool, TInt];
 		var genFloat = [for( t in genType ) { args : [ { name : "value", type : t } ], ret : t } ];
 		var genFloat2 = [for( t in genType ) { args : [ { name : "a", type : t }, { name : "b", type : t } ], ret : t } ];
@@ -50,7 +51,7 @@ class Checker {
 		for( g in Ast.TGlobal.createAll() ) {
 			var def = switch( g ) {
 			case Vec2, Vec3, Vec4, Mat2, Mat3, Mat3x4, Mat4, IVec2, IVec3, IVec4, BVec2, BVec3, BVec4: [];
-			case Radians, Degrees, Cos, Sin, Tan, Asin, Acos, Exp, Log, Exp2, Log2, Sqrt, Inversesqrt, Abs, Sign, Floor, Ceil, Fract, Saturate: genFloat;
+			case Radians, Degrees, Cos, Sin, Tan, Asin, Acos, Exp, Log, Exp2, Log2, Sqrt, Inversesqrt, Abs, Sign, Floor, Ceil, RoundEven, Fract, Saturate: genFloat;
 			case Atan: genFloat.concat(genFloat2);
 			case Pow: genFloat2;
 			case LReflect:
@@ -183,6 +184,12 @@ class Checker {
 				[{ args : [{ name : "uv", type : vec2 }], ret : vec2 }];
 			case Trace:
 				[];
+			case FloatBitsToInt, FloatBitsToUint:
+				[for( i => t in genType ) { args : [ { name: "x", type: t } ], ret: genIType[i] }];
+			case IntBitsToFloat, UintBitsToFloat:
+				[for( i => t in genType ) { args : [ { name: "x", type: genIType[i] } ], ret: t }];
+			case SetLayout:
+				[{ args : [{ name : "x", type : TInt },{ name : "y", type : TInt },{ name : "z", type : TInt }], ret : TVoid }];
 			case VertexID, InstanceID, FragCoord, FrontFacing:
 				null;
 			}
@@ -241,8 +248,8 @@ class Checker {
 			var kind = switch( f.name ) {
 			case "vertex":  Vertex;
 			case "fragment": Fragment;
-			case "__init__", "__init__vertex", "__init__fragment": Init;
-			default: Helper;
+			case "main": Main;
+			default: StringTools.startsWith(f.name,"__init__") ? Init : Helper;
 			}
 			if( args.length != 0 && kind != Helper )
 				error(kind+" function should have no argument", pos);
@@ -266,6 +273,32 @@ class Checker {
 		}
 		for( i in 0...tfuns.length )
 			typeFun(tfuns[i], funs[i].f.expr);
+
+		var localInits = [];
+		for( i in inits.copy() ) {
+			if( i.v.kind == Local ) {
+				localInits.push({ e : TBinop(OpAssign,{ e : TVar(i.v), p : i.e.p, t : i.v.type },i.e), p : i.e.p, t : i.v.type });
+				inits.remove(i);
+			}
+		}
+		if( localInits.length > 0 ) {
+			var fv : TVar = {
+				id : Tools.allocVarId(),
+				name : "__init__consts__",
+				kind : Function,
+				type : TFun([{ args : [], ret : TVoid }]),
+			};
+			if( vars.exists(fv.name) )
+				error("assert", localInits[0].p);
+			vars.set(fv.name, fv);
+			tfuns.push({
+				kind : Init,
+				ref : fv,
+				args : [],
+				ret : TVoid,
+				expr : { e : TBlock(localInits), p : localInits[0].p, t : TVoid },
+			});
+		}
 
 		var vars = Lambda.array(vars);
 		vars.sort(function(v1, v2) return (v1.id < 0 ? -v1.id : v1.id) - (v2.id < 0 ? -v2.id : v2.id));
@@ -331,11 +364,18 @@ class Checker {
 		switch( e.e ) {
 		case TVar(v):
 			switch( v.kind ) {
-			case Local, Var, Output:
+			case Var, Output:
+				return;
+			case Local if( v.qualifiers == null || v.qualifiers.indexOf(Final) < 0 ):
+				return;
+			case Param if( v.type.match(TBuffer(_,_,RW)) ):
 				return;
 			default:
 			}
 		case TSwiz(e, _):
+			checkWrite(e);
+			return;
+		case TArray(e, _):
 			checkWrite(e);
 			return;
 		default:
@@ -424,11 +464,12 @@ class Checker {
 		case EIdent(name):
 			var v = vars.get(name);
 			if( v != null ) {
-				switch( name ) {
-				case "vertex", "fragment", "__init__", "__init__vertex", "__init__fragment":
-					error("Function cannot be accessed", e.pos);
-				default:
+				var canCall =  switch( name ) {
+				case "vertex", "fragment": false;
+				default: !StringTools.startsWith(name,"__init__");
 				}
+				if( !canCall )
+					error("Function cannot be accessed", e.pos);
 				type = v.type;
 				TVar(v);
 			} else {
@@ -623,7 +664,7 @@ class Checker {
 			default: unify(e2.t, TInt, e2.p);
 			}
 			switch( e1.t ) {
-			case TArray(t, size), TBuffer(t,size):
+			case TArray(t, size), TBuffer(t,size,_):
 				switch( [size, e2.e] ) {
 				case [SConst(v), TConst(CInt(i))] if( i >= v ):
 					error("Indexing outside array bounds", e.pos);
@@ -693,8 +734,8 @@ class Checker {
 				}
 				var einit = null;
 				if( v.expr != null ) {
-					if( v.kind != Param )
-						error("Cannot initialize variable declaration if not @param", v.expr.pos);
+					if( v.kind != Param && v.kind != Local )
+						error("Cannot initialize variable declaration if not @param or local", v.expr.pos);
 					var e = typeExpr(v.expr, v.type == null ? Value : With(v.type));
 					if( v.type == null )
 						v.type = e.t;
@@ -710,6 +751,8 @@ class Checker {
 					continue;
 				if( einit != null )
 					inits.push({ v : v, e : einit });
+				else if( v.qualifiers != null && v.qualifiers.indexOf(Final) >= 0 )
+					error("Final variable needs initializer", e.pos);
 				vars.set(v.name, v);
 			}
 		case ECall( { expr : EIdent("import") }, [e]):
@@ -754,6 +797,8 @@ class Checker {
 		case TParenthesis(e): checkConst(e);
 		case TCall({ e : TGlobal(Vec2 | Vec3 | Vec4 | IVec2 | IVec3 | IVec4) }, args):
 			for( a in args ) checkConst(a);
+		case TArrayDecl(el):
+			for( e in el ) checkConst(e);
 		default:
 			error("This expression should be constant", e.p);
 		}
@@ -793,6 +838,7 @@ class Checker {
 						p = p.parent;
 					}
 					if( tv.kind != Global && tv.kind != Param ) error("@const only allowed on parameter or global", pos);
+				case Final: if( tv.kind != Local ) error("final only allowed on local", pos);
 				case PerObject: if( tv.kind != Global ) error("@perObject only allowed on global", pos);
 				case PerInstance(_): if( tv.kind != Input && tv.kind != Param && (tv.kind != Global || v.qualifiers.indexOf(PerObject) < 0) ) error("@perInstance only allowed on input/param", pos);
 				case Nullable: if( tv.kind != Param ) error("@nullable only allowed on parameter or global", pos);
@@ -841,7 +887,7 @@ class Checker {
 				vl[i] = makeVar( { type : v.type, qualifiers : v.qualifiers, name : v.name, kind : v.kind, expr : null }, pos, parent);
 			}
 			return parent.type;
-		case TArray(t, size), TBuffer(t,size):
+		case TArray(t, size), TBuffer(t,size,_):
 			switch( t ) {
 			case TArray(_):
 				error("Multidimentional arrays are not allowed", pos);
@@ -886,7 +932,11 @@ class Checker {
 				SVar(v2);
 			}
 			t = makeVarType(t,parent,pos);
-			return vt.match(TArray(_)) ? TArray(t, s) : TBuffer(t,s);
+			return switch( vt ) {
+			case TArray(_): TArray(t, s);
+			case TBuffer(_,_,kind): TBuffer(t,s,kind);
+			default: throw "assert";
+			}
 		default:
 			return vt;
 		}
@@ -940,6 +990,11 @@ class Checker {
 				}
 				if( sel.length > 0 || variants.length == 0 )
 					return FGlobal(g.g, e, sel);
+			default:
+			}
+			switch( [g.g, e.t] ) {
+			case [Length, TArray(_)]:
+				return FField({ e : TCall({ e : TGlobal(Length), t : TVoid, p : pos },[e]), t : TInt, p : pos });
 			default:
 			}
 		}

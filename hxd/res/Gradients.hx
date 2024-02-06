@@ -58,13 +58,13 @@ class Gradients extends Resource {
 	}
 
 	static function appendPixels(pixels : hxd.Pixels, dat : Gradient, wid : Int, hei : Int, yoff : Int) {
-		var colors = new Array<{value : h3d.Vector, loc : Int}>();
+		var colors = new Array<{value : h3d.Vector4, loc : Int}>();
 
 		{	// preprocess gradient data
 			for (cs in dat.gradientStops) {
-				var color : h3d.Vector;
+				var color : h3d.Vector4;
 				switch(cs.colorStop.color) {
-					case RGB(r, g, b): color = new h3d.Vector(r / 255, g / 255, b / 255);
+					case RGB(r, g, b): color = new h3d.Vector4(r / 255, g / 255, b / 255);
 					case HSB(h, s, b): color = HSVtoRGB(h, s / 100, b / 100);
 					default : throw "unhandled color type";
 				}
@@ -82,7 +82,7 @@ class Gradients extends Resource {
 		{	// create gradient pixels
 			var px = 0;
 			var ci = 0; // color index
-			var tmpCol = new h3d.Vector();
+			var tmpCol = new h3d.Vector4();
 
 			while (px < wid) {
 				var prevLoc = colors[ci    ].loc;
@@ -101,12 +101,12 @@ class Gradients extends Resource {
 		}
 	}
 
-	static function HSVtoRGB(h : Float, s : Float, v : Float) : h3d.Vector
+	static function HSVtoRGB(h : Float, s : Float, v : Float) : h3d.Vector4
 	{
 		var i : Int;
 		var f : Float; var p : Float; var q : Float; var t : Float;
 		if( s == 0 )
-			return new h3d.Vector(v, v, v);
+			return new h3d.Vector4(v, v, v);
 		h /= 60;
 		i = Math.floor( h );
 		f = h - i;
@@ -114,12 +114,12 @@ class Gradients extends Resource {
 		q = v * ( 1 - s * f );
 		t = v * ( 1 - s * ( 1 - f ) );
 		switch( i ) {
-			case 0 : return new h3d.Vector(v, t, p);
-			case 1 : return new h3d.Vector(q, v, p);
-			case 2 : return new h3d.Vector(p, v, t);
-			case 3 : return new h3d.Vector(p, q, v);
-			case 4 : return new h3d.Vector(t, p, v);
-			default: return new h3d.Vector(v, p, q);
+			case 0 : return new h3d.Vector4(v, t, p);
+			case 1 : return new h3d.Vector4(q, v, p);
+			case 2 : return new h3d.Vector4(p, v, t);
+			case 3 : return new h3d.Vector4(p, q, v);
+			case 4 : return new h3d.Vector4(t, p, v);
+			default: return new h3d.Vector4(v, p, q);
 		}
 	}
 

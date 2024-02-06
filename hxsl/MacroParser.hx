@@ -115,7 +115,7 @@ class MacroParser {
 			case "Channel3": return TChannel(3);
 			case "Channel4": return TChannel(4);
 			}
-		case TPath( { pack : [], name : name = ("Array"|"Buffer"), sub : null, params : [t, size] } ):
+		case TPath( { pack : [], name : name = ("Array"|"Buffer"|"RWBuffer"), sub : null, params : [t, size] } ):
 			var t = switch( t ) {
 			case TPType(t): parseType(t, pos);
 			default: null;
@@ -129,7 +129,12 @@ class MacroParser {
 			default: null;
 			}
 			if( t != null && size != null )
-				return name == "Array" ? TArray(t, size) : TBuffer(t,size);
+				return switch( name ) {
+				case "Array": TArray(t, size);
+				case "Buffer": TBuffer(t,size,Uniform);
+				case "RWBuffer": TBuffer(t,size,RW);
+				default: throw "assert";
+				}
 		case TAnonymous(fl):
 			return TStruct([for( f in fl ) {
 				switch( f.kind ) {
@@ -183,14 +188,10 @@ class MacroParser {
 					expr : v.expr == null ? null : parseExpr(v.expr),
 					type : v.type == null ? null : parseType(v.type, e.pos),
 					kind : null,
-					qualifiers : [],
+					qualifiers : v.isFinal ? [Final] : [],
 				}
 			}]);
-		#if haxe4
 		case EFunction(FNamed(name,_),f) if( f.expr != null ):
-		#else
-		case EFunction(name, f) if( name != null && f.expr != null ):
-		#end
 			EFunction({
 				name : name,
 				ret : f.ret == null ? null : (switch( f.ret ) {
@@ -243,11 +244,7 @@ class MacroParser {
 			EParenthesis(parseExpr(e));
 		case EIf(cond, eif, eelse), ETernary(cond, eif, eelse):
 			EIf(parseExpr(cond), parseExpr(eif), eelse == null ? null : parseExpr(eelse));
-		#if (haxe_ver >= 4)
 		case EFor({ expr : EBinop(OpIn,{ expr : EConst(CIdent(n)) }, eloop) },eblock):
-		#else
-		case EFor( { expr : EIn( { expr : EConst(CIdent(n)) }, eloop) }, eblock):
-		#end
 			EFor(n, parseExpr(eloop), parseExpr(eblock));
 		case EReturn(e):
 			EReturn(e == null ? null : parseExpr(e));

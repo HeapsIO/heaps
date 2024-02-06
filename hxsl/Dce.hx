@@ -11,10 +11,12 @@ private class VarDeps {
 	public var keep : Bool;
 	public var used : Bool;
 	public var deps : Map<Int,VarDeps>;
+	public var adeps : Array<VarDeps>;
 	public function new(v) {
 		this.v = v;
 		used = false;
 		deps = new Map();
+		adeps = [];
 	}
 }
 
@@ -34,30 +36,27 @@ class Dce {
 		#end
 	}
 
-	public function dce( vertex : ShaderData, fragment : ShaderData ) {
+	public function dce( shaders : Array<ShaderData> ) {
 		// collect vars dependencies
 		used = new Map();
 		channelVars = [];
 
 		var inputs = [];
-		for( v in vertex.vars ) {
-			var i = get(v);
-			if( v.kind == Input )
-				inputs.push(i);
-			if( v.kind == Output )
-				i.keep = true;
-		}
-		for( v in fragment.vars ) {
-			var i = get(v);
-			if( v.kind == Output )
-				i.keep = true;
+		for( s in shaders ) {
+			for( v in s.vars ) {
+				var i = get(v);
+				if( v.kind == Input )
+					inputs.push(i);
+				if( v.kind == Output || v.type.match(TBuffer(_,_,RW)) )
+					i.keep = true;
+			}
 		}
 
 		// collect dependencies
-		for( f in vertex.funs )
-			check(f.expr, [], []);
-		for( f in fragment.funs )
-			check(f.expr, [], []);
+		for( s in shaders ) {
+			for( f in s.funs )
+				check(f.expr, [], []);
+		}
 
 		var outExprs = [];
 		while( true ) {
@@ -74,10 +73,10 @@ class Dce {
 				markRec(v);
 
 			outExprs = [];
-			for( f in vertex.funs )
-				outExprs.push(mapExpr(f.expr, false));
-			for( f in fragment.funs )
-				outExprs.push(mapExpr(f.expr, false));
+			for( s in shaders ) {
+				for( f in s.funs )
+					outExprs.push(mapExpr(f.expr, false));
+			}
 
 			// post add conditional branches
 			markAsKeep = false;
@@ -86,22 +85,19 @@ class Dce {
 			if( !markAsKeep ) break;
 		}
 
-		for( f in vertex.funs )
-			f.expr = outExprs.shift();
-		for( f in fragment.funs )
-			f.expr = outExprs.shift();
+		for( s in shaders ) {
+			for( f in s.funs )
+				f.expr = outExprs.shift();
+		}
 
 		for( v in used ) {
 			if( v.used ) continue;
 			if( v.v.kind == VarKind.Input) continue;
-			vertex.vars.remove(v.v);
-			fragment.vars.remove(v.v);
+			for( s in shaders )
+				s.vars.remove(v.v);
 		}
 
-		return {
-			fragment : fragment,
-			vertex : vertex,
-		}
+		return shaders.copy();
 	}
 
 	function get( v : TVar ) {
@@ -117,7 +113,7 @@ class Dce {
 		if( v.used ) return;
 		debug(v.v.name+" is used");
 		v.used = true;
-		for( d in v.deps )
+		for( d in v.adeps )
 			markRec(d);
 	}
 
@@ -133,8 +129,11 @@ class Dce {
 				}
 				continue;
 			}
-			debug(w.v.name+" depends on "+vd.v.name);
-			w.deps.set(v.id, vd);
+			if( !w.deps.exists(v.id) ) {
+				debug(w.v.name+" depends on "+vd.v.name);
+				w.deps.set(v.id, vd);
+				w.adeps.push(vd);
+			}
 		}
 	}
 
@@ -148,6 +147,14 @@ class Dce {
 			check(e, writeTo, isAffected);
 			writeTo.pop();
 			if( isAffected.indexOf(v) < 0 )
+				isAffected.push(v);
+		case TBinop(OpAssign | OpAssignOp(_), { e : TArray({ e: TVar(v) }, i) }, e):
+			var v = get(v);
+			writeTo.push(v);
+			check(i, writeTo, isAffected);
+			check(e, writeTo, isAffected);
+			writeTo.pop();
+			if ( isAffected.indexOf(v) < 0 )
 				isAffected.push(v);
 		case TBlock(el):
 			var noWrite = [];
@@ -224,7 +231,7 @@ class Dce {
 				count++;
 			}
 			return { e : TBlock(out), p : e.p, t : e.t };
-		case TVarDecl(v,_) | TBinop(OpAssign | OpAssignOp(_), { e : (TVar(v) | TSwiz( { e : TVar(v) }, _)) }, _) if( !get(v).used ):
+		case TVarDecl(v,_) | TBinop(OpAssign | OpAssignOp(_), { e : (TVar(v) | TSwiz( { e : TVar(v) }, _) | TArray( { e : TVar(v) }, _)) }, _) if( !get(v).used ):
 			return { e : TConst(CNull), t : e.t, p : e.p };
 		case TCall({ e : TGlobal(ChannelRead) }, [_, uv, { e : TConst(CInt(cid)) }]):
 			var c = channelVars[cid];

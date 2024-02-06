@@ -2,6 +2,26 @@ package hxsl;
 using hxsl.Ast;
 import hxsl.RuntimeShader;
 
+class BatchInstanceParams {
+
+	var forcedPerInstance : Array<{ shader : String, params : Array<String> }>;
+	var cachedSignature : String;
+
+	public function new( forcedPerInstance ) {
+		this.forcedPerInstance = forcedPerInstance;
+	}
+
+	public function getSignature() {
+		if( cachedSignature == null ) {
+			for( fp in forcedPerInstance )
+				fp.params.sort(Reflect.compare);
+			cachedSignature = haxe.crypto.Md5.encode([for( s in forcedPerInstance ) s.shader+"="+s.params.join(",")].join(";")).substr(0,8);
+		}
+		return cachedSignature;
+	}
+
+}
+
 class SearchMap {
 	public var linked : RuntimeShader;
 	var nexts : Array<SearchMap> = [];
@@ -42,15 +62,15 @@ class Cache {
 
 	var linkCache : SearchMap;
 	var linkShaders : Map<String, Shader>;
-	var batchShaders : Map<RuntimeShader, Map<String,{ shader : SharedShader, params : RuntimeShader.AllocParam, size : Int }>>;
+	var batchShaders : Map<RuntimeShader, { shader : SharedShader, params : RuntimeShader.AllocParam, size : Int }>;
 	var byID : Map<String, RuntimeShader>;
-	public var constsToGlobal : Bool;
+	var batchShadersParams : Map<String, Map<RuntimeShader, { shader : SharedShader, params : RuntimeShader.AllocParam, size : Int }>>;
 
 	function new() {
-		constsToGlobal = false;
 		linkCache = new SearchMap();
 		linkShaders = new Map();
 		batchShaders = new Map();
+		batchShadersParams = new Map();
 		byID = new Map();
 	}
 
@@ -175,7 +195,7 @@ class Cache {
 	}
 
 	@:noDebug
-	public function link( shaders : hxsl.ShaderList, batchMode : Bool ) {
+	public function link( shaders : hxsl.ShaderList, mode : LinkMode ) {
 		var c = linkCache;
 		for( s in shaders ) {
 			var i = @:privateAccess s.instance;
@@ -187,11 +207,11 @@ class Cache {
 			c = cs;
 		}
 		if( c.linked == null )
-			c.linked = compileRuntimeShader(shaders, batchMode);
+			c.linked = compileRuntimeShader(shaders, mode);
 		return c.linked;
 	}
 
-	function compileRuntimeShader( shaders : hxsl.ShaderList, batchMode : Bool ) {
+	function compileRuntimeShader( shaders : hxsl.ShaderList, mode : LinkMode ) {
 		var shaderDatas = [];
 		var index = 0;
 		for( s in shaders ) {
@@ -242,14 +262,14 @@ class Cache {
 		//TRACE = shaderId == 0;
 		#end
 
-		var linker = new hxsl.Linker(batchMode);
+		var linker = new hxsl.Linker(mode);
 		var s = try linker.link([for( s in shaderDatas ) s.inst.shader]) catch( e : Error ) {
 			var shaders = [for( s in shaderDatas ) Printer.shaderToString(s.inst.shader)];
 			e.msg += "\n\nin\n\n" + shaders.join("\n-----\n");
 			throw e;
 		}
 
-		if( batchMode ) {
+		if( mode == Batch ) {
 			function checkRec( v : TVar ) {
 				if( v.qualifiers != null && v.qualifiers.indexOf(PerObject) >= 0 ) {
 					if( v.qualifiers.length == 1 ) v.qualifiers = null else {
@@ -282,7 +302,7 @@ class Cache {
 
 		var prev = s;
 		var splitter = new hxsl.Splitter();
-		var s = try splitter.split(s) catch( e : Error ) { e.msg += "\n\nin\n\n"+Printer.shaderToString(s); throw e; };
+		var sl = try splitter.split(s) catch( e : Error ) { e.msg += "\n\nin\n\n"+Printer.shaderToString(s); throw e; };
 
 		// params tracking
 		var paramVars = new Map();
@@ -299,41 +319,42 @@ class Cache {
 
 
 		#if debug
-		Printer.check(s.vertex,[prev]);
-		Printer.check(s.fragment,[prev]);
+		for( s in sl )
+			Printer.check(s,[prev]);
 		#end
 
 		#if shader_debug_dump
 		if( dbg != null ) {
 			dbg.writeString("----- SPLIT ----\n\n");
-			dbg.writeString(Printer.shaderToString(s.vertex, DEBUG_IDS) + "\n\n");
-			dbg.writeString(Printer.shaderToString(s.fragment, DEBUG_IDS) + "\n\n");
+			for( s in sl )
+				dbg.writeString(Printer.shaderToString(s, DEBUG_IDS) + "\n\n");
 		}
 		#end
 
-		var prev = s;
-		var s = new hxsl.Dce().dce(s.vertex, s.fragment);
+		var prev = sl;
+		var sl = new hxsl.Dce().dce(sl);
 
 		#if debug
-		Printer.check(s.vertex,[prev.vertex]);
-		Printer.check(s.fragment,[prev.fragment]);
+		for( i => s in sl )
+			Printer.check(s,[prev[i]]);
 		#end
 
 		#if shader_debug_dump
 		if( dbg != null ) {
 			dbg.writeString("----- DCE ----\n\n");
-			dbg.writeString(Printer.shaderToString(s.vertex, DEBUG_IDS) + "\n\n");
-			dbg.writeString(Printer.shaderToString(s.fragment, DEBUG_IDS) + "\n\n");
+			for( s in sl )
+				dbg.writeString(Printer.shaderToString(s, DEBUG_IDS) + "\n\n");
 		}
 		#end
 
-		var r = buildRuntimeShader(s.vertex, s.fragment, paramVars);
+		var r = buildRuntimeShader(sl, paramVars);
+		r.mode = mode;
 
 		#if shader_debug_dump
 		if( dbg != null ) {
 			dbg.writeString("----- FLATTEN ----\n\n");
-			dbg.writeString(Printer.shaderToString(r.vertex.data, DEBUG_IDS) + "\n\n");
-			dbg.writeString(Printer.shaderToString(r.fragment.data,DEBUG_IDS)+"\n\n");
+			for( s in r.getShaders() )
+				dbg.writeString(Printer.shaderToString(s.data, DEBUG_IDS) + "\n\n");
 		}
 		#end
 
@@ -346,9 +367,7 @@ class Cache {
 
 		var signParts = [for( i in r.spec.instances ) i.shader.data.name+"_" + i.bits + "_" + i.index];
 		r.spec.signature = haxe.crypto.Md5.encode(signParts.join(":"));
-		r.signature = haxe.crypto.Md5.encode(Printer.shaderToString(r.vertex.data) + Printer.shaderToString(r.fragment.data));
-		r.batchMode = batchMode;
-
+		r.signature = haxe.crypto.Md5.encode([for( s in r.getShaders() ) Printer.shaderToString(s.data)].join(""));
 		var r2 = byID.get(r.signature);
 		if( r2 != null )
 			r.id = r2.id; // same id but different variable mapping
@@ -365,19 +384,33 @@ class Cache {
 		return r;
 	}
 
-	function buildRuntimeShader( vertex : ShaderData, fragment : ShaderData, paramVars ) {
+	function buildRuntimeShader( shaders : Array<ShaderData>, paramVars ) {
 		var r = new RuntimeShader();
-		r.vertex = flattenShader(vertex, Vertex, paramVars);
-		r.vertex.vertex = true;
-		r.fragment = flattenShader(fragment, Fragment, paramVars);
 		r.globals = new Map();
-		initGlobals(r, r.vertex);
-		initGlobals(r, r.fragment);
-
-		#if debug
-		Printer.check(r.vertex.data,[vertex]);
-		Printer.check(r.fragment.data,[fragment]);
-		#end
+		for( s in shaders ) {
+			var kind = switch( s.name ) {
+			case "vertex": Vertex;
+			case "fragment": Fragment;
+			case "main": Main;
+			default: throw "assert";
+			}
+			var fl = flattenShader(s, kind, paramVars);
+			fl.kind = kind;
+			switch( kind ) {
+			case Vertex:
+				r.vertex = fl;
+			case Fragment:
+				r.fragment = fl;
+			case Main:
+				r.compute = fl;
+			default:
+				throw "assert";
+			}
+			initGlobals(r, fl);
+			#if debug
+			Printer.check(fl.data,[s]);
+			#end
+		}
 		return r;
 	}
 
@@ -404,12 +437,11 @@ class Cache {
 	function flattenShader( s : ShaderData, kind : FunctionKind, params : Map<Int,{ instance:Int, index:Int }> ) {
 		var flat = new Flatten();
 		var c = new RuntimeShaderData();
-		var data = flat.flatten(s, kind, constsToGlobal);
+		var data = flat.flatten(s, kind);
 		#if (hl && heaps_compact_mem)
 		data = hl.Api.compact(data, null, 0, null);
 		#end
 		var textures = [];
-		c.consts = flat.consts;
 		c.texturesCount = 0;
 		for( g in flat.allocData.keys() ) {
 			var alloc = flat.allocData.get(g);
@@ -448,8 +480,15 @@ class Cache {
 					c.params = out[0];
 					c.paramsSize = size;
 				case TArray(TBuffer(_), _):
-					c.buffers = out[0];
-					c.bufferCount = out.length;
+					if( c.buffers == null ) {
+						c.buffers = out[0];
+						c.bufferCount = out.length;
+					} else {
+						var p = c.buffers;
+						while( p.next != null ) p = p.next;
+						p.next = out[0];
+						c.bufferCount += out.length;
+					}
 				default: throw "assert";
 				}
 			case Global:
@@ -486,21 +525,21 @@ class Cache {
 		return c;
 	}
 
-	public function makeBatchShader( rt : RuntimeShader, shaders, forcedPerInstance : Array<{ shader : String, params : Array<String> }> ) : BatchShader {
-		var msh = batchShaders.get(rt); // don't use rt.id to avoid collisions on identical signatures
-		if( msh == null ) {
-			msh = new Map();
-			batchShaders.set(rt, msh);
+	public function makeBatchShader( rt : RuntimeShader, shaders, params : BatchInstanceParams ) : BatchShader {
+		var batchMap;
+		if( params == null )
+			batchMap = batchShaders;
+		else {
+			batchMap = batchShadersParams.get(params.getSignature());
+			if( batchMap == null ) {
+				batchMap = new Map();
+				batchShadersParams.set(params.getSignature(),batchMap);
+			}
 		}
-		if( forcedPerInstance != null ) {
-			for( fp in forcedPerInstance )
-				fp.params.sort(Reflect.compare);
-		}
-		var sign = forcedPerInstance == null ? "" : haxe.crypto.Md5.encode([for( s in forcedPerInstance ) s.shader+"="+s.params.join(",")].join(";")).substr(0,8);
-		var sh = msh.get(sign);
+		var sh = batchMap.get(rt); // don't use rt.id to avoid collisions on identical signatures
 		if( sh == null ) {
-			sh = createBatchShader(rt, shaders, forcedPerInstance, forcedPerInstance == null ? null : sign);
-			msh.set(sign,sh);
+			sh = createBatchShader(rt, shaders, params);
+			batchMap.set(rt,  sh);
 		}
 		var shader = std.Type.createEmptyInstance(BatchShader);
 		@:privateAccess shader.shader = sh.shader;
@@ -518,9 +557,9 @@ class Cache {
 		return false;
 	}
 
-	function createBatchShader( rt : RuntimeShader, shaders : hxsl.ShaderList, forcedPerInstance : Array<{ shader : String, params : Array<String> }>, extraSign : String ) : { shader : SharedShader, params : RuntimeShader.AllocParam, size : Int } {
+	function createBatchShader( rt : RuntimeShader, shaders : hxsl.ShaderList, params : BatchInstanceParams ) : { shader : SharedShader, params : RuntimeShader.AllocParam, size : Int } {
 		var s = new hxsl.SharedShader("");
-		var id = (extraSign == null ? rt.spec.signature : haxe.crypto.Md5.encode(rt.spec.signature + extraSign)).substr(0, 8);
+		var id = (params == null ? rt.spec.signature : haxe.crypto.Md5.encode(rt.spec.signature + params.getSignature())).substr(0, 8);
 
 		function declVar( name, t, kind ) : TVar {
 			return {
@@ -532,7 +571,8 @@ class Cache {
 		}
 
 		var instancedParams = [];
-		if( forcedPerInstance != null ) {
+		if( params != null ) {
+			var forcedPerInstance = @:privateAccess params.forcedPerInstance;
 			var instanceIndex = 1;
 			var forcedIndex = forcedPerInstance.length - 1;
 			var s = shaders;
@@ -554,7 +594,7 @@ class Cache {
 		inputOffset.qualifiers = [PerInstance(1)];
 
 		var vcount = declVar("Batch_Count",TInt,Param);
-		var vbuffer = declVar("Batch_Buffer",TBuffer(TVec(4,VFloat),SVar(vcount)),Param);
+		var vbuffer = declVar("Batch_Buffer",TBuffer(TVec(4,VFloat),SVar(vcount),Uniform),Param);
 		var voffset = declVar("Batch_Offset", TInt, Local);
 		var ebuffer = { e : TVar(vbuffer), p : pos, t : vbuffer.type };
 		var eoffset = { e : TVar(voffset), p : pos, t : voffset.type };
@@ -667,9 +707,9 @@ class Cache {
 			params = p2;
 		}
 
-		inline function isPerInstance(p:RuntimeShader.AllocParam,v) {
+		inline function isPerInstance(p:RuntimeShader.AllocParam,v:TVar) {
 			var params = instancedParams[p.instance];
-			if( params != null && params.indexOf(p.name) >= 0 )
+			if( params != null && params.indexOf(v.name) >= 0 )
 				return true;
 			if( this.isPerInstance(v) )
 				return true;

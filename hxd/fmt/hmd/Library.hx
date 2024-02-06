@@ -4,15 +4,30 @@ import hxd.fmt.hmd.Data;
 private class FormatMap {
 	public var size : Int;
 	public var offset : Int;
-	public var def : h3d.Vector;
-	public var next : FormatMap;
-	public function new(size, offset, def, next) {
+	public var precision : hxd.BufferFormat.Precision;
+	public var def : h3d.Vector4;
+	public function new(size, offset, def, prec) {
 		this.size = size;
 		this.offset = offset;
+		this.precision = prec;
 		this.def = def;
-		this.next = next;
 	}
 }
+
+#if hide
+private class ContextShared extends hrt.prefab.ContextShared {
+	var customLoadTexture : String -> h3d.mat.Texture;
+
+	public function new(loadTexture : String -> h3d.mat.Texture, ?res : hxd.res.Resource) {
+		super(res);
+		this.customLoadTexture = loadTexture;
+	}
+
+	override function loadTexture(path:String, async:Bool = false):h3d.mat.Texture {
+			return customLoadTexture(path);
+	}
+}
+#end
 
 class GeometryBuffer {
 	public var vertexes : haxe.ds.Vector<hxd.impl.Float32>;
@@ -63,18 +78,16 @@ class Library {
 		}
 		if( stride > 11 )
 			throw "Unsupported stride";
-		return { format : format, defs : defs };
+		return { format : hxd.BufferFormat.make(format), defs : defs };
 	}
 
-	public function load( format : Array<GeometryFormat>, ?defaults : Array<h3d.Vector>, modelIndex = -1 ) {
+	public function load( format : hxd.BufferFormat, ?defaults : Array<h3d.Vector4>, modelIndex = -1 ) {
 		var vtmp = new h3d.Vector();
 		var models = modelIndex < 0 ? header.models : [header.models[modelIndex]];
 		var outVertex = new hxd.FloatBuffer();
 		var outIndex = new hxd.IndexBuffer();
-		var stride = 0;
+		var stride = format.stride;
 		var mid = -1;
-		for( f in format )
-			stride += f.format.getSize();
 		for( m in models ) {
 			var geom = header.geometries[m.geometry];
 			if( geom == null ) continue;
@@ -90,7 +103,7 @@ class Library {
 				vtmp.x = data.vertexes[p++];
 				vtmp.y = data.vertexes[p++];
 				vtmp.z = data.vertexes[p++];
-				vtmp.transform3x4(pos);
+				vtmp.transform(pos);
 				outVertex.push(vtmp.x);
 				outVertex.push(vtmp.y);
 				outVertex.push(vtmp.z);
@@ -104,41 +117,49 @@ class Library {
 	}
 
 	@:noDebug
-	public function getBuffers( geom : Geometry, format : Array<GeometryFormat>, ?defaults : Array<h3d.Vector>, ?material : Int ) {
+	public function getBuffers( geom : Geometry, format : hxd.BufferFormat, ?defaults : Array<h3d.Vector4>, ?material : Int ) {
 
 		if( material == 0 && geom.indexCounts.length == 1 )
 			material = null;
 
-		var map = null, stride = 0;
-		for( i in 0...format.length ) {
-			var i = format.length - 1 - i;
-			var f = format[i];
-			var size  = f.format.getSize();
-			var offset = 0;
-			var found = false;
-			for( f2 in geom.vertexFormat ) {
-				if( f2.name == f.name ) {
-					if( f2.format.getSize() < size )
-						throw 'Requested ${f.name} data has only ${f2.format.getSize()} regs instead of $size';
-					found = true;
-					break;
-				}
-				offset += f2.format.getSize();
-			}
-			if( found ) {
-				map = new FormatMap(size, offset, null, map);
-			} else {
-				var def = defaults == null ? null : defaults[i];
+		var maps = [];
+		var index = 0, stride = 0, lowPrec = false;
+		for( i in format.getInputs() ) {
+			var i2 = geom.vertexFormat.getInput(i.name);
+			var map;
+			if( i2 == null ) {
+				var def = defaults == null ? null : defaults[index];
 				if( def == null )
-					throw 'Missing required ${f.name}';
-				map = new FormatMap(size, 0, def, map);
+					throw 'Missing required ${i.name}';
+				map = new FormatMap(i.type.getSize(), 0, def, F32);
+			} else {
+				if( i2.type != i.type )
+					throw 'Requested ${i.name} ${i.type} but found ${i2.type}';
+				map = new FormatMap(i.type.getSize(), geom.vertexFormat.calculateInputOffset(i2.name), null, i2.precision);
+				if( i2.precision != F32 ) lowPrec = true;
 			}
-			stride += size;
+			maps.push(map);
+			stride += i.type.getSize();
+			index++;
 		}
 
-		var vsize = geom.vertexCount * geom.vertexStride * 4;
+		var geomStride = geom.vertexFormat.strideBytes;
+		var vsize = geom.vertexCount * geomStride;
 		var vbuf = haxe.io.Bytes.alloc(vsize);
 		var entry = resource.entry;
+
+		inline function readBuffer( vid : Int, index : Int, map : FormatMap ) {
+			if( lowPrec ) {
+				return switch( map.precision ) {
+				case F32: vbuf.getFloat(vid * geomStride + (index<<2) + map.offset);
+				case F16: hxd.BufferFormat.float16to32(vbuf.getUInt16(vid * geomStride + (index<<1) + map.offset));
+				case S8: hxd.BufferFormat.floatS8to32(vbuf.get(vid * geomStride + index + map.offset));
+				case U8: hxd.BufferFormat.floatU8to32(vbuf.get(vid * geomStride + index + map.offset));
+				}
+			} else {
+				return vbuf.getFloat(vid * geomStride + (index<<2) + map.offset);
+			}
+		}
 
 		entry.readFull(vbuf, header.dataPosition + geom.vertexPosition, vsize);
 
@@ -165,12 +186,10 @@ class Library {
 			buf.indexes = new haxe.ds.Vector(geom.indexCount);
 			var w = 0;
 			for( vid in 0...geom.vertexCount ) {
-				var m = map;
-				while( m != null ) {
+				for( m in maps ) {
 					if( m.def == null ) {
-						var r = vid * geom.vertexStride;
 						for( i in 0...m.size )
-							buf.vertexes[w++] = vbuf.getFloat((r + m.offset + i) << 2);
+							buf.vertexes[w++] = readBuffer(vid,i,m);
 					} else {
 						switch( m.size ) {
 						case 1:
@@ -189,7 +208,6 @@ class Library {
 							buf.vertexes[w++] = m.def.w;
 						}
 					}
-					m = m.next;
 				}
 			}
 			if( isSmall ) {
@@ -212,12 +230,10 @@ class Library {
 				if( rid == 0 ) {
 					rid = ++vcount;
 					vmap[vid] = rid;
-					var m = map;
-					while( m != null ) {
+					for( m in maps ) {
 						if( m.def == null ) {
-							var r = vid * geom.vertexStride;
 							for( i in 0...m.size )
-								vertexes.push(vbuf.getFloat((r + m.offset + i) << 2));
+								vertexes.push(readBuffer(vid,i,m));
 						} else {
 							switch( m.size ) {
 							case 1:
@@ -236,7 +252,6 @@ class Library {
 								vertexes.push(m.def.w);
 							}
 						}
-						m = m.next;
 					}
 				}
 				buf.indexes[i] = rid - 1;
@@ -278,7 +293,7 @@ class Library {
 		#if hide
 		if( (props:Dynamic).__ref != null ) {
 			try {
-				if ( setupMaterialLibrary(mat, hxd.res.Loader.currentInstance.load((props:Dynamic).__ref).toPrefab(), (props:Dynamic).name) )
+				if ( setupMaterialLibrary(loadTexture, mat, hxd.res.Loader.currentInstance.load((props:Dynamic).__ref).toPrefab(), (props:Dynamic).name) )
 					return mat;
 			} catch( e : Dynamic ) {
 			}
@@ -593,14 +608,12 @@ class Library {
 		@:privateAccess skin.vertexCount = geom.vertexCount;
 
 		// Only 3 weights are necessary even in fourBonesByVertex since they sum-up to 1
-		var format = [
+		var format = hxd.BufferFormat.make([
 			new hxd.fmt.hmd.Data.GeometryFormat("position",DVec3),
 			new hxd.fmt.hmd.Data.GeometryFormat("weights",DVec3),
-			new hxd.fmt.hmd.Data.GeometryFormat("indexes",DBytes4)];
+			new hxd.fmt.hmd.Data.GeometryFormat("indexes",DBytes4)]);
 		var data = getBuffers(geom, format);
-		var formatStride = 0;
-		for(f in format)
-			formatStride += f.format.getSize();
+		var formatStride = format.stride;
 
 		skin.vertexWeights = new haxe.ds.Vector(skin.vertexCount * bonesPerVertex);
 		skin.vertexJoints = new haxe.ds.Vector(skin.vertexCount * bonesPerVertex);
@@ -742,25 +755,36 @@ class Library {
 	}
 
 	#if hide
-	public dynamic static function setupMaterialLibrary( mat : h3d.mat.Material, lib : hrt.prefab.Resource, name : String ) {
-		var m  = lib.load().getOpt(hrt.prefab.Material,name);
-		if ( m == null )
-			return false;
-		@:privateAccess m.update(mat, m.renderProps(),
-		function loadTexture ( path : String ) {
-			return hxd.res.Loader.currentInstance.load(path).toTexture();
-		});
-		for ( c in m.children ) {
-			var shader = Std.downcast(c, hrt.prefab.Shader);
-			if ( shader == null )
-				continue;
-			shader.clone();
-			var ctx = new hrt.prefab.Context();
-			var s = shader.makeShader(ctx);
-			@:privateAccess shader.applyShader(null, mat, s);
-		}
-		return true;
-	}
+	static var materialContainer : h3d.scene.Mesh;
+    public dynamic static function setupMaterialLibrary( loadTexture : String -> h3d.mat.Texture, mat : h3d.mat.Material, lib : hrt.prefab.Resource, name : String ) {
+        var m  = lib.load().getOpt(hrt.prefab.Material,name);
+        if ( m == null )
+            return false;
+
+		if (materialContainer == null)
+			materialContainer = new h3d.scene.Mesh(null, mat, null);
+
+	#if prefab2
+		var shared = new ContextShared(loadTexture, null);
+
+        materialContainer.material = mat;
+        m.make(materialContainer,shared);
+	#else
+		var ctx = new hrt.prefab.Context();
+		ctx.shared = new ContextShared(loadTexture, null);
+
+		materialContainer.material = mat;
+		ctx.local3d = materialContainer;
+		m.make(ctx);
+	#end
+        // Ensure there is no leak with this
+		materialContainer.material = null;
+
+		while (materialContainer.numChildren > 0)
+			@:privateAccess materialContainer.children[materialContainer.numChildren - 1].remove();
+
+        return true;
+    }
 	#end
 
 }

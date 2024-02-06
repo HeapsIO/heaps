@@ -1,8 +1,6 @@
 package hxd.fs;
 
-#if flash
-typedef LoadedBitmapData = flash.display.BitmapData;
-#elseif js
+#if js
 typedef LoadedBitmapData = js.html.Image;
 #else
 typedef LoadedBitmapData = hxd.BitmapData;
@@ -15,9 +13,7 @@ abstract LoadedBitmap(LoadedBitmapData) {
 	}
 
 	public function toBitmap() : hxd.BitmapData {
-		#if flash
-		return hxd.BitmapData.fromNative(this);
-		#elseif js
+		#if js
 		var bmp = new hxd.BitmapData(this.width, this.height);
 		@:privateAccess bmp.ctx.drawImage(this, 0, 0);
 		return bmp;

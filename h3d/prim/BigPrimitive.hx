@@ -6,8 +6,7 @@ package h3d.prim;
 **/
 class BigPrimitive extends Primitive {
 
-	var isRaw : Bool;
-	var stride : Int;
+	public var format(default,null) : hxd.BufferFormat;
 	var buffers : Array<Buffer>;
 	var allIndexes : Array<Indexes>;
 	var tmpBuf : hxd.FloatBuffer;
@@ -29,14 +28,13 @@ class BigPrimitive extends Primitive {
 	static var PREV_BUFFER : hxd.FloatBuffer;
 	static var PREV_INDEX : hxd.IndexBuffer;
 
-	public function new(stride, isRaw=false, ?alloc) {
-		this.isRaw = isRaw;
+	public function new(format, ?alloc) {
+		this.format = format;
 		buffers = [];
 		allIndexes = [];
 		bounds = new h3d.col.Bounds();
 		this.allocator = alloc;
-		this.stride = stride;
-		if( stride < 3 ) throw "Minimum stride = 3";
+		if( format.stride < 3 ) throw "Minimum stride = 3";
 		#if track_alloc
 		allocPos = new hxd.impl.AllocPos();
 		#end
@@ -47,7 +45,7 @@ class BigPrimitive extends Primitive {
 		The count value is the number of vertexes you will add, it will automatically flush() if it doesn't fit into the current buffer.
 	**/
 	public function begin(vcount,icount) {
-		startIndex = Std.int(bufPos / stride);
+		startIndex = Std.int(bufPos / format.stride);
 		if( startIndex + vcount >= 65535 ) {
 			if( vcount >= 65535 ) throw "Too many vertices in begin()";
 			flush();
@@ -59,10 +57,10 @@ class BigPrimitive extends Primitive {
 			else
 				PREV_BUFFER = null;
 			if( isStatic )
-				tmpBuf.grow(65535 * stride);
+				tmpBuf.grow(65535 * format.stride);
 		}
 		if( !isStatic )
-			tmpBuf.grow(vcount * stride + bufPos);
+			tmpBuf.grow(vcount * format.stride + bufPos);
 		if( tmpIdx == null ) {
 			tmpIdx = PREV_INDEX;
 			if( tmpIdx == null )
@@ -112,7 +110,7 @@ class BigPrimitive extends Primitive {
 		var count = 0;
 		for( b in buffers )
 			count += b.vertices;
-		count += Std.int(bufPos / stride);
+		count += Std.int(bufPos / format.stride);
 		return count;
 	}
 
@@ -126,11 +124,9 @@ class BigPrimitive extends Primitive {
 				flushing = true;
 				var b : h3d.Buffer;
 				if(allocator != null)
-					b = allocator.ofSubFloats(tmpBuf, stride, Std.int(bufPos / stride), isRaw ? RawFormat : Dynamic);
-				else {
-					b = h3d.Buffer.ofSubFloats(tmpBuf, stride, Std.int(bufPos / stride));
-					if( isRaw ) b.flags.set(RawFormat);
-				}
+					b = allocator.ofSubFloats(tmpBuf, Std.int(bufPos / format.stride), format);
+				else
+					b = h3d.Buffer.ofSubFloats(tmpBuf, Std.int(bufPos / format.stride), format);
 
 				buffers.push(b);
 				var idx = if(allocator != null)
@@ -194,7 +190,7 @@ class BigPrimitive extends Primitive {
 		See addSub for complete documentation.
 	**/
 	public function add( buf : hxd.FloatBuffer, idx : hxd.IndexBuffer, dx : Float = 0. , dy : Float = 0., dz : Float = 0., rotation = 0., scale = 1., stride = -1 ) {
-		return addSub(buf, idx, 0, 0, Std.int(buf.length / (stride < 0 ? this.stride : stride)), Std.int(idx.length / 3), dx, dy, dz, rotation, scale, stride);
+		return addSub(buf, idx, 0, 0, Std.int(buf.length / (stride < 0 ? format.stride : stride)), Std.int(idx.length / 3), dx, dy, dz, rotation, scale, stride);
 	}
 	/**
 		Adds a buffer to the primitive, with custom position,scale,rotation.
@@ -206,8 +202,8 @@ class BigPrimitive extends Primitive {
 	**/
 	@:noDebug
 	public function addSub( buf : hxd.FloatBuffer, idx : hxd.IndexBuffer, startVert, startTri, nvert, triCount, dx : Float = 0. , dy : Float = 0., dz : Float = 0., rotation = 0., scale = 1., stride = -1, deltaU = 0., deltaV = 0., color = 1., mat : h3d.Matrix = null) {
-		if( stride < 0 ) stride = this.stride;
-		if( stride < this.stride ) throw "only stride >= " + this.stride+" allowed";
+		if( stride < 0 ) stride = format.stride;
+		if( stride < format.stride ) throw "only stride >= " + format.stride+" allowed";
 		begin(nvert, triCount*3);
 		var start = startIndex;
 		var cr = Math.cos(rotation);
@@ -246,7 +242,8 @@ class BigPrimitive extends Primitive {
 				bounds.addPos(vx, vy, vz);
 			}
 
-			if(this.stride >= 6) {
+			var stride = format.stride;
+			if(stride >= 6) {
 				var nx = buf[p++];
 				var ny = buf[p++];
 				var nz = buf[p++];
@@ -268,7 +265,6 @@ class BigPrimitive extends Primitive {
 				}
 			}
 
-			var stride = this.stride;
 			if( hasTangents ) {
 				var tx = buf[p++];
 				var ty = buf[p++];

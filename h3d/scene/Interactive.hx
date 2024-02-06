@@ -47,13 +47,17 @@ class Interactive extends Object implements hxd.SceneEvents.Interactive {
 	**/
 	public var showDebug(get, set) : Bool;
 
+	/**
+	 *  Tells if our shape is in absolute space (for example ObjectCollider) or relative to the interactive transform.
+	 */
+	public var isAbsoluteShape : Bool = false;
 
 	var scene : Scene;
 	var mouseDownButton : Int = -1;
 	var lastClickFrame : Int = -1;
 
 	@:allow(h3d.scene.Scene)
-	var hitPoint = new h3d.Vector();
+	var hitPoint = new h3d.Vector4();
 
 	public function new(shape, ?parent) {
 		super(parent);
@@ -61,6 +65,19 @@ class Interactive extends Object implements hxd.SceneEvents.Interactive {
 		cursor = Button;
 	}
 
+	public function getPoint( ray : h3d.col.Ray, bestMatch : Bool ) {
+		var rold = ray.clone();
+		ray.transform(getInvPos());
+		var d = shape.rayIntersection(ray, bestMatch);
+		if( d < 0 ) {
+			ray.load(rold);
+			return null;
+		}
+		var pt = ray.getPoint(d);
+		pt.transform(getAbsPos());
+		ray.load(rold);
+		return pt;
+	}
 
 	inline function get_showDebug() return debugObj != null;
 
@@ -76,8 +93,7 @@ class Interactive extends Object implements hxd.SceneEvents.Interactive {
 		debugObj = shape.makeDebugObj();
 		if( debugObj != null ) {
 			setupDebugMaterial(debugObj);
-
-			debugObj.ignoreParentTransform = true;
+			debugObj.ignoreParentTransform = isAbsoluteShape;
 			this.addChild(debugObj);
 		}
 		return debugObj != null;

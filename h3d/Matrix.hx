@@ -9,8 +9,7 @@ typedef ColorAdjust = {
 	?gain : { color : Int, alpha : Float },
 };
 
-@:noDebug
-class Matrix {
+class MatrixImpl {
 
 	static var tmp = new Matrix();
 
@@ -231,7 +230,7 @@ class Matrix {
 
 	public inline function getPosition() {
 		var v = new Vector();
-		v.set(_41,_42,_43,_44);
+		v.set(_41,_42,_43);
 		return v;
 	}
 
@@ -239,7 +238,6 @@ class Matrix {
 		_41 = v.x;
 		_42 = v.y;
 		_43 = v.z;
-		_44 = v.w;
 	}
 
 	public function prependTranslation( x = 0., y = 0., z = 0. ) {
@@ -783,6 +781,21 @@ class Matrix {
 		return m;
 	}
 
+}
+
+
+@:forward abstract Matrix(MatrixImpl) from MatrixImpl to MatrixImpl {
+
+	public inline function new() {
+		this = new MatrixImpl();
+	}
+
+	@:op(a * b) public inline function multiplied( m : Matrix ) {
+		var mout = new Matrix();
+		mout.multiply(this, m);
+		return mout;
+	}
+
 	// STATICS
 
 	public static function I() {
@@ -823,7 +836,7 @@ class Matrix {
 		if( m == null ) m = new Matrix();
 		var ax = dir.normalized();
 		var ay = up.cross(ax).normalized();
-		if( ay.lengthSq() < Math.EPSILON ) {
+		if( ay.lengthSq() < Math.EPSILON2 ) {
 			ay.x = ax.y;
 			ay.y = ax.z;
 			ay.z = ax.x;
@@ -847,4 +860,5 @@ class Matrix {
 		m._44 = 1;
 		return m;
 	}
+
 }

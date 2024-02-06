@@ -45,7 +45,7 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 		var engine = h3d.Engine.getCurrent();
 		if( engine != null )
 			camera.screenRatio = engine.width / engine.height;
-		ctx = new RenderContext();
+		ctx = new RenderContext(this);
 		if( createRenderer ) renderer = h3d.mat.MaterialSetup.current.createRenderer();
 		if( createLightSystem ) lightSystem = h3d.mat.MaterialSetup.current.createLightSystem();
 	}
@@ -137,8 +137,10 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 					p = p.parent;
 				if( p != null ) continue;
 
-				var minv = i.getInvPos();
-				r.transform(minv);
+				if( !i.isAbsoluteShape ) {
+					var minv = i.getInvPos();
+					r.transform(minv);
+				}
 
 				// check for NaN
 				if( r.lx != r.lx ) {
@@ -242,10 +244,6 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 	public function dispose() {
 		if ( allocated )
 			onRemove();
-		if( hardwarePass != null ) {
-			hardwarePass.dispose();
-			hardwarePass = null;
-		}
 		ctx.dispose();
 		if(renderer != null) {
 			renderer.dispose();
@@ -275,67 +273,6 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 		ctx.elapsedTime = elapsedTime;
 	}
 
-	var hardwarePass : h3d.pass.HardwarePick;
-
-	/**
-		Use GPU rendering to pick a model at the given pixel position.
-		hardwarePick() will check all scene visible meshes bounds against a ray cast with current camera, then draw them into a 1x1 pixel texture with a specific shader.
-		The texture will then be read and the color will identify the object that was rendered at this pixel.
-		This is a very precise way of doing scene picking since it performs exactly the same transformations (skinning, custom shaders, etc.) but might be more costly than using CPU colliders.
-		Please note that when done during/after rendering, this might clear the screen on some platforms so it should always be done before rendering.
-	**/
-	public function hardwarePick( pixelX : Float, pixelY : Float) {
-		var engine = h3d.Engine.getCurrent();
-		camera.screenRatio = engine.width / engine.height;
-		camera.update();
-		ctx.camera = camera;
-		ctx.engine = engine;
-		ctx.scene = this;
-		ctx.start();
-
-		var ray = camera.rayFromScreen(pixelX, pixelY);
-		var savedRay = ray.clone();
-
-		iterVisibleMeshes(function(m) {
-			if( m.primitive == null ) return;
-			ray.transform(m.getInvPos());
-			if( m.primitive.getBounds().rayIntersection(ray,false) >= 0 )
-				ctx.emitPass(m.material.mainPass, m);
-			ray.load(savedRay);
-		});
-
-		ctx.lightSystem = null;
-
-		var found = null;
-		for ( passes in @:privateAccess ctx.passes ) {
-			if ( found != null )
-				break;
-			var passList = new h3d.pass.PassList(passes);
-			if( !passList.isEmpty() ) {
-				var p = hardwarePass;
-				if( p == null )
-					hardwarePass = p = new h3d.pass.HardwarePick();
-				ctx.setGlobal("depthMap", { texture : h3d.mat.Texture.fromColor(0xFF00000, 0) });
-				p.pickX = pixelX;
-				p.pickY = pixelY;
-				p.setContext(ctx);
-				p.draw(passList);
-				if( p.pickedIndex >= 0 )
-					for( po in passList )
-						if( p.pickedIndex-- == 0 ) {
-							found = po.obj;
-							break;
-						}
-			}
-		}
-
-		ctx.done();
-		ctx.camera = null;
-		ctx.engine = null;
-		ctx.scene = null;
-		return found;
-	}
-
 	/**
 		Synchronize the scene without rendering, updating all objects and animations by the given amount of time, in seconds.
 	**/
@@ -348,14 +285,9 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 		else
 			camera.screenRatio = t.width / t.height;
 		camera.update();
-		ctx.camera = camera;
-		ctx.engine = engine;
-		ctx.scene = this;
 		ctx.start();
 		syncRec(ctx);
-		ctx.camera = null;
-		ctx.engine = null;
-		ctx.scene = null;
+		ctx.done();
 	}
 
 	/**
@@ -397,9 +329,6 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 		if( camera.rightHanded )
 			engine.driver.setRenderFlag(CameraHandness,1);
 
-		ctx.camera = camera;
-		ctx.engine = engine;
-		ctx.scene = this;
 		ctx.start();
 		renderer.start();
 
@@ -448,9 +377,6 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 
 		ctx.done();
 		ctx.wasContextLost = false;
-		ctx.scene = null;
-		ctx.camera = null;
-		ctx.engine = null;
 		for( i in 0...passIndex ) {
 			var p = ctx.cachedPassObjects[i];
 			p.name = null;
@@ -458,11 +384,11 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 		}
 	}
 
-	var prevDB : h3d.mat.DepthBuffer;
+	var prevDB : h3d.mat.Texture;
 	var prevEngine = null;
-	/** 
+	/**
 		Temporarily overrides the output render target. This is useful for picture-in-picture rendering,
-		where the output render target has a different size from the window. 
+		where the output render target has a different size from the window.
 		`tex` must have a matching depthBuffer attached.
 		Call `setOutputTarget()` after `render()` has been called.
 	**/

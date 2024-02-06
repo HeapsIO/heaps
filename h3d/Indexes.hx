@@ -1,52 +1,30 @@
 package h3d;
 
-@:allow(h3d.impl.MemoryManager)
-@:allow(h3d.Engine)
-class Indexes {
+@:forward(isDisposed, dispose, uploadBytes)
+abstract Indexes(Buffer) to Buffer {
 
-	var mem : h3d.impl.MemoryManager;
-	var ibuf : h3d.impl.Driver.IndexBuffer;
-	public var is32(default,null) : Bool;
-	public var count(default,null) : Int;
-	#if track_alloc
-	var allocPos : hxd.impl.AllocPos;
-	#end
+	public var count(get,never) : Int;
 
-	public function new(count,is32=false) {
-		this.mem = h3d.Engine.getCurrent().mem;
-		this.count = count;
-		this.is32 = is32;
-		mem.allocIndexes(this);
-		#if track_alloc
-		allocPos = new hxd.impl.AllocPos();
-		#end
+	public function new(count:Int,is32=false) {
+		this = new Buffer(count,is32 ? hxd.BufferFormat.INDEX32 : hxd.BufferFormat.INDEX16, [IndexBuffer]);
 	}
 
-	public function isDisposed() {
-		return ibuf == null;
+	public function uploadIndexes( ibuf : hxd.IndexBuffer, bufPos : Int, indices : Int, startIndice = 0 ) {
+		if( startIndice < 0 || indices < 0 || startIndice + indices > this.vertices )
+			throw "Invalid indices count";
+		if( @:privateAccess this.format.inputs[0].precision != F16 )
+			throw "Can't upload indexes on a 32-bit buffer";
+		if( indices == 0 )
+			return;
+		h3d.Engine.getCurrent().driver.uploadIndexData(this, startIndice, indices, ibuf, bufPos);
 	}
 
-	public function upload( indexes : hxd.IndexBuffer, pos : Int, count : Int, bufferPos = 0 ) {
-		mem.driver.uploadIndexBuffer(this.ibuf, pos, count, indexes, bufferPos);
-	}
+	inline function get_count() return this.vertices;
 
-	public function uploadBytes( bytes : haxe.io.Bytes, dataPos : Int, indices : Int ) {
-		mem.driver.uploadIndexBytes(this.ibuf, 0, indices, bytes, dataPos);
-	}
-
-	public function readBytes( bytes : haxe.io.Bytes, bytesPosition : Int, indices : Int, startIndice : Int = 0 ) {
-		mem.driver.readIndexBytes(this.ibuf, startIndice, indices, bytes, bytesPosition);
-	}
-
-	public function dispose() {
-		if( ibuf != null )
-			mem.deleteIndexes(this);
-	}
-
-	public static function alloc( i : hxd.IndexBuffer, startPos = 0, length = -1 ) {
+	public static function alloc( i : hxd.IndexBuffer, startPos = 0, length = -1 ) : Indexes {
 		if( length < 0 ) length = i.length;
-		var idx = new Indexes( length );
-		idx.upload(i, 0, length);
+		var idx = new Indexes(length);
+		idx.uploadIndexes(i, 0, length);
 		return idx;
 	}
 

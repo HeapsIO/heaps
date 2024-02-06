@@ -7,12 +7,21 @@ private class TargetTmp {
 	public var next : TargetTmp;
 	public var layer : Int;
 	public var mipLevel : Int;
-	public function new(t, n, l, m) {
+	public var depthBinding : DepthBinding;
+	public function new(t, n, l, m, db) {
 		this.t = t;
 		this.next = n;
 		this.layer = l;
 		this.mipLevel = m;
+		this.depthBinding = db;
 	}
+}
+
+enum DepthBinding {
+	ReadWrite;
+	ReadOnly;
+	DepthOnly;
+	NotBound;
 }
 
 class Engine {
@@ -39,7 +48,7 @@ class Engine {
 	var realFps : Float;
 	var lastTime : Float;
 	var antiAlias : Int;
-	var tmpVector = new h3d.Vector();
+	var tmpVector = new h3d.Vector4();
 	var window : hxd.Window;
 
 	var targetTmp : TargetTmp;
@@ -47,6 +56,7 @@ class Engine {
 	var currentTargetTex : h3d.mat.Texture;
 	var currentTargetLayer : Int;
 	var currentTargetMip : Int;
+	var currentDepthBinding : DepthBinding;
 	var needFlushTarget : Bool;
 	var nullTexture : h3d.mat.Texture;
 	var textureColorCache = new Map<Int,h3d.mat.Texture>();
@@ -80,8 +90,6 @@ class Engine {
 		#else
 		driver = new h3d.impl.GlDriver(antiAlias);
 		#end
-		#elseif flash
-		driver = new h3d.impl.Stage3dDriver(antiAlias);
 		#elseif (hldx && dx12)
 		driver = new h3d.impl.DX12Driver();
 		#elseif hldx
@@ -90,8 +98,6 @@ class Engine {
 		driver = new haxe.GraphicsDriver(antiAlias);
 		#else
 		#if sys Sys.println #else trace #end("No output driver available." #if hl + " Compile with -lib hlsdl or -lib hldx" #end);
-		driver = new h3d.impl.LogDriver(new h3d.impl.NullDriver());
-		driver.logEnable = true;
 		#end
 		setCurrent();
 	}
@@ -142,87 +148,65 @@ class Engine {
 	}
 
 	public inline function renderTriBuffer( b : Buffer, start = 0, max = -1 ) {
-		return renderBuffer(b, mem.triIndexes, 3, start, max);
+		return renderBuffer(b, mem.getTriIndexes(b.vertices), 3, start, max);
 	}
 
 	public inline function renderQuadBuffer( b : Buffer, start = 0, max = -1 ) {
-		return renderBuffer(b, mem.quadIndexes, 2, start, max);
+		return renderBuffer(b, mem.getQuadIndexes(b.vertices), 2, start, max);
 	}
 
 	// we use preallocated indexes so all the triangles are stored inside our buffers
 	function renderBuffer( b : Buffer, indexes : Indexes, vertPerTri : Int, startTri = 0, drawTri = -1 ) {
 		if( indexes.isDisposed() )
 			return;
-		do {
-			var ntri = Std.int(b.vertices / vertPerTri);
-			var pos = Std.int(b.position / vertPerTri);
-			if( startTri > 0 ) {
-				if( startTri >= ntri ) {
-					startTri -= ntri;
-					b = b.next;
-					continue;
-				}
-				pos += startTri;
-				ntri -= startTri;
-				startTri = 0;
-			}
-			if( drawTri >= 0 ) {
-				if( drawTri == 0 ) return;
-				drawTri -= ntri;
-				if( drawTri < 0 ) {
-					ntri += drawTri;
-					drawTri = 0;
-				}
-			}
-			if( ntri > 0 && selectBuffer(b) ) {
-				// *3 because it's the position in indexes which are always by 3
-				driver.draw(indexes.ibuf, pos * 3, ntri);
-				drawTriangles += ntri;
-				drawCalls++;
-			}
-			b = b.next;
-		} while( b != null );
+		var ntri = Std.int(b.vertices / vertPerTri);
+		if( drawTri < 0 )
+			drawTri = ntri - startTri;
+		if( startTri < 0 || drawTri < 0 || startTri + drawTri > ntri )
+			throw "Invalid vertices count";
+		if( drawTri > 0 && selectBuffer(b) ) {
+			// *3 because it's the position in indexes which are always by 3
+			driver.draw(indexes, startTri * 3, drawTri);
+			drawTriangles += drawTri;
+			drawCalls++;
+		}
 	}
 
 	// we use custom indexes, so the number of triangles is the number of indexes/3
 	public function renderIndexed( b : Buffer, indexes : Indexes, startTri = 0, drawTri = -1 ) {
-		if( b.next != null )
-			throw "Buffer is split";
 		if( indexes.isDisposed() )
 			return;
 		var maxTri = Std.int(indexes.count / 3);
 		if( drawTri < 0 ) drawTri = maxTri - startTri;
 		if( drawTri > 0 && selectBuffer(b) ) {
 			// *3 because it's the position in indexes which are always by 3
-			driver.draw(indexes.ibuf, startTri * 3, drawTri);
+			driver.draw(indexes, startTri * 3, drawTri);
 			drawTriangles += drawTri;
 			drawCalls++;
 		}
 	}
 
-	public function renderMultiBuffers( buffers : Buffer.BufferOffset, indexes : Indexes, startTri = 0, drawTri = -1 ) {
+	public function renderMultiBuffers( format : hxd.BufferFormat.MultiFormat, buffers : Array<Buffer>, indexes : Indexes, startTri = 0, drawTri = -1 ) {
 		var maxTri = Std.int(indexes.count / 3);
 		if( maxTri <= 0 ) return;
 		flushTarget();
-		driver.selectMultiBuffers(buffers);
+		driver.selectMultiBuffers(format, buffers);
 		if( indexes.isDisposed() )
 			return;
 		if( drawTri < 0 ) drawTri = maxTri - startTri;
 		if( drawTri > 0 ) {
 			// render
-			driver.draw(indexes.ibuf, startTri * 3, drawTri);
+			driver.draw(indexes, startTri * 3, drawTri);
 			drawTriangles += drawTri;
 			drawCalls++;
 		}
 	}
 
-	public function renderInstanced( buffers : Buffer.BufferOffset, indexes : Indexes, commands : h3d.impl.InstanceBuffer ) {
-		flushTarget();
-		driver.selectMultiBuffers(buffers);
+	public function renderInstanced( indexes : Indexes, commands : h3d.impl.InstanceBuffer ) {
 		if( indexes.isDisposed() )
 			return;
 		if( commands.commandCount > 0 ) {
-			driver.drawInstanced(indexes.ibuf, commands);
+			driver.drawInstanced(indexes, commands);
 			drawTriangles += commands.triCount;
 			drawCalls++;
 		}
@@ -326,16 +310,17 @@ class Engine {
 		return targetStack == null ? null : targetStack.t == nullTexture ? targetStack.textures[0] : targetStack.t;
 	}
 
-	public function pushTarget( tex : h3d.mat.Texture, layer = 0, mipLevel = 0 ) {
+	public function pushTarget( tex : h3d.mat.Texture, layer = 0, mipLevel = 0, depthBinding = ReadWrite ) {
 		var c = targetTmp;
 		if( c == null )
-			c = new TargetTmp(tex, targetStack, layer, mipLevel);
+			c = new TargetTmp(tex, targetStack, layer, mipLevel, depthBinding);
 		else {
 			targetTmp = c.next;
 			c.t = tex;
 			c.next = targetStack;
 			c.mipLevel = mipLevel;
 			c.layer = layer;
+			c.depthBinding = depthBinding;
 		}
 		targetStack = c;
 		updateNeedFlush();
@@ -346,13 +331,17 @@ class Engine {
 		if( t == null )
 			needFlushTarget = currentTargetTex != null;
 		else
-			needFlushTarget = currentTargetTex != t.t || currentTargetLayer != t.layer || currentTargetMip != t.mipLevel || t.textures != null;
+			needFlushTarget = currentTargetTex != t.t || currentTargetLayer != t.layer || currentTargetMip != t.mipLevel || t.textures != null || currentDepthBinding != t.depthBinding;
 	}
 
-	public function pushTargets( textures : Array<h3d.mat.Texture> ) {
-		pushTarget(nullTexture);
+	public function pushTargets( textures : Array<h3d.mat.Texture>, depthBinding = ReadWrite ) {
+		pushTarget(nullTexture, depthBinding);
 		targetStack.textures = textures;
 		needFlushTarget = true;
+	}
+
+	public function pushDepth( depthBuffer : h3d.mat.Texture ) {
+		pushTarget(depthBuffer, DepthOnly);
 	}
 
 	public function popTarget() {
@@ -378,18 +367,21 @@ class Engine {
 			driver.setRenderTarget(null);
 			currentTargetTex = null;
 		} else {
-			if( t.textures != null )
-				driver.setRenderTargets(t.textures);
+			if ( t.depthBinding == DepthOnly )
+				driver.setDepth(t.t);
+			else if( t.textures != null )
+				driver.setRenderTargets(t.textures, t.depthBinding);
 			else
-				driver.setRenderTarget(t.t, t.layer, t.mipLevel);
+				driver.setRenderTarget(t.t, t.layer, t.mipLevel, t.depthBinding);
 			currentTargetTex = t.t;
 			currentTargetLayer = t.layer;
 			currentTargetMip = t.mipLevel;
+			currentDepthBinding = t.depthBinding;
 		}
 		needFlushTarget = false;
 	}
 
-	public function clearF( color : h3d.Vector, ?depth : Float, ?stencil : Int ) {
+	public function clearF( color : h3d.Vector4, ?depth : Float, ?stencil : Int ) {
 		flushTarget();
 		driver.clear(color, depth, stencil);
 	}

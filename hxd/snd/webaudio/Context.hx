@@ -24,11 +24,7 @@ class Context {
 				ctx = new js.html.audio.AudioContext();
 			} catch( e : Dynamic ) try {
 				// Fallback to Chrome webkit prefix.
-				#if (haxe_ver >= 4)
 				ctx = js.Syntax.code('new window.webkitAudioContext()');
-				#else
-				ctx = untyped __js__('new window.webkitAudioContext()');
-				#end
 			} catch( e : Dynamic ) {
 				ctx = null;
 			}

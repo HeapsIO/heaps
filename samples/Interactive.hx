@@ -66,7 +66,7 @@ class Interactive extends SampleApp {
 
 			m.material.shadows = true;
 			var c = 0.3 + rnd.rand() * 0.3;
-			var color = new h3d.Vector(c, c * 0.6, c * 0.6);
+			var color = new h3d.Vector4(c, c * 0.6, c * 0.6);
 			m.material.color.load(color);
 
 			var interact = new h3d.scene.Interactive(m.getCollider(), s3d);
@@ -89,7 +89,7 @@ class Interactive extends SampleApp {
 
 			m.material.shadows = true;
 			var c = 0.3 + rnd.rand() * 0.3;
-			var color = new h3d.Vector(c, c * 0.6, c * 0.6);
+			var color = new h3d.Vector4(c, c * 0.6, c * 0.6);
 			m.material.color.load(color);
 
 			var p1 = new h3d.col.Point(0, 0, cheight);
@@ -113,7 +113,7 @@ class Interactive extends SampleApp {
 
 			m.material.shadows = true;
 			var c = 0.3 + rnd.rand() * 0.3;
-			var color = new h3d.Vector(c, c * 0.6, c * 0.6);
+			var color = new h3d.Vector4(c, c * 0.6, c * 0.6);
 			m.material.color.load(color);
 
 			var col = m.getBounds();

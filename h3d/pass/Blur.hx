@@ -7,7 +7,7 @@ class Blur extends ScreenFx<h3d.shader.Blur> {
 					h3d.Matrix.L([0,0,1,0, 0,-1,0,0, -1,0,0,0]),
 	 				h3d.Matrix.L([1,0,0,0, 0,0,1,0, 0,1,0,0]),
 	 				h3d.Matrix.L([1,0,0,0, 0,0,-1,0, 0,-1,0,0]),
-				 	h3d.Matrix.L([1,0,0,0, 0,-1,0,0, 0,1,0,0]),
+				 	h3d.Matrix.L([1,0,0,0, 0,-1,0,0, 0,0,1,0]),
 				 	h3d.Matrix.L([-1,0,0,0, 0,-1,0,0, 0,0,-1,0]) ];
 
 	/**
@@ -135,7 +135,7 @@ class Blur extends ScreenFx<h3d.shader.Blur> {
 
 		var isCube = src.flags.has(Cube);
 		var faceCount = isCube ? 6 : 1;
-		var tmp = ctx.textures.allocTarget(src.name+"BlurTmp", src.width, src.height, false, src.format, isCube);
+		var tmp = ctx.textures.allocTarget(src.name+"BlurTmp", src.width, src.height, false, src.format, isCube ? [Cube] : null);
 
 		shader.Quality = values.length;
 		shader.values = values;

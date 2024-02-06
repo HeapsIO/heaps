@@ -9,6 +9,10 @@ class AnimatedTexture extends hxsl.Shader {
 			var uv : Vec2;
 		};
 
+		@const @param var useSourceUVs : Bool = true;
+		@const @param var blendBetweenFrames : Bool = true;
+
+
 		@param var texture : Sampler2D;
 		var pixelColor : Vec4;
 
@@ -28,6 +32,8 @@ class AnimatedTexture extends hxsl.Shader {
 		@private var blendFactor : Float;
 
 		var textureColor : Vec4;
+		var calculatedUV : Vec2;
+
 
 		function vertex() {
 			var frame = (global.time - startTime) * speed + float(int(startFrame));
@@ -37,13 +43,13 @@ class AnimatedTexture extends hxsl.Shader {
 			var nextFrame = if( loop ) (frame + 1) % totalFrames else min(frame + 1, totalFrames - 1);
 
 			var delta = vec2( frame % frameDivision.x, float(int(frame / frameDivision.x)) );
-			animatedUV = (input.uv + delta) / frameDivision;
+			animatedUV = (delta) / frameDivision;
 			var delta = vec2( nextFrame % frameDivision.x, float(int(nextFrame / frameDivision.x)) );
-			animatedUV2 = (input.uv + delta) / frameDivision;
+			animatedUV2 = (delta) / frameDivision;
 		}
 
 		function __init__fragment() {
-			textureColor = mix( texture.get(animatedUV) , texture.get(animatedUV2), blendFactor);
+			textureColor = mix( texture.get((useSourceUVs ? input.uv : calculatedUV) / frameDivision + animatedUV) , texture.get((useSourceUVs ? input.uv : calculatedUV) / frameDivision + animatedUV2), blendBetweenFrames ? blendFactor : 0.0);
 		}
 
 		function fragment() {

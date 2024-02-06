@@ -2,8 +2,7 @@ package h3d.pass;
 
 class SpotShadowMap extends Shadows {
 
-	var customDepth : Bool;
-	var depth : h3d.mat.DepthBuffer;
+	var depth : h3d.mat.Texture;
 	var sshader : h3d.shader.SpotShadow;
 	var border : Border;
 	var mergePass = new h3d.pass.ScreenFx(new h3d.shader.MinMaxShader());
@@ -16,8 +15,6 @@ class SpotShadowMap extends Shadows {
 		lightCamera.zNear = 0.01;
 		shader = sshader = new h3d.shader.SpotShadow();
 		border = new Border(size, size);
-		customDepth = h3d.Engine.getCurrent().driver.hasFeature(AllocDepthBuffer);
-		if( !customDepth ) depth = h3d.mat.DepthBuffer.getDefault();
 	}
 
 	override function set_mode(m:Shadows.RenderMode) {
@@ -44,17 +41,12 @@ class SpotShadowMap extends Shadows {
 
 	override function dispose() {
 		super.dispose();
-		if( customDepth && depth != null ) depth.dispose();
+		if( depth != null ) depth.dispose();
 		border.dispose();
 	}
 
 	public override function getShadowTex() {
 		return sshader.shadowMap;
-	}
-
-	override function setGlobals() {
-		super.setGlobals();
-		cameraViewProj = getShadowProj();
 	}
 
 	override function syncShader(texture) {
@@ -133,9 +125,9 @@ class SpotShadowMap extends Shadows {
 		cullPasses(passes, function(col) return col.inFrustum(lightCamera.frustum));
 
 		var texture = ctx.computingStatic ? createStaticTexture() : ctx.textures.allocTarget("spotShadowMap", size, size, false, format);
-		if( customDepth && (depth == null || depth.width != texture.width || depth.height != texture.height || depth.isDisposed()) ) {
+		if( depth == null || depth.width != texture.width || depth.height != texture.height || depth.isDisposed() ) {
 			if( depth != null ) depth.dispose();
-			depth = new h3d.mat.DepthBuffer(texture.width, texture.height);
+			depth = new h3d.mat.Texture(texture.width, texture.height, Depth24Stencil8);
 		}
 		texture.depthBuffer = depth;
 
@@ -151,12 +143,15 @@ class SpotShadowMap extends Shadows {
 		var validBakedTexture = (staticTexture != null && staticTexture.width == texture.width);
 		if( mode == Mixed && !ctx.computingStatic && validBakedTexture ) {
 			var merge = ctx.textures.allocTarget("mergedSpotShadowMap", size, size, false, format);
+			var prev = @:privateAccess ctx.cameraViewProj;
+			@:privateAccess ctx.cameraViewProj = getShadowProj();
 			mergePass.shader.texA = texture;
 			mergePass.shader.texB = staticTexture;
 			ctx.engine.pushTarget(merge);
 			mergePass.render();
 			ctx.engine.popTarget();
 			texture = merge;
+			@:privateAccess ctx.cameraViewProj = prev;
 		}
 
 		syncShader(texture);

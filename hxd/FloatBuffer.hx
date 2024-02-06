@@ -1,7 +1,7 @@
 package hxd;
 import hxd.impl.TypedArray;
 
-private typedef InnerData = #if flash flash.Vector<Float> #elseif js Float32Expand #else Array<hxd.impl.Float32> #end
+private typedef InnerData = #if js Float32Expand #else Array<hxd.impl.Float32> #end
 
 #if js
 private abstract Float32Expand({ pos : Int, array : hxd.impl.TypedArray.Float32Array }) {
@@ -65,7 +65,7 @@ abstract FloatBuffer(InnerData) {
 	public var length(get, never) : Int;
 
 	public inline function new(length = 0) {
-		#if (flash || js)
+		#if js
 		this = new InnerData(length);
 		#else
 		this = new InnerData();
@@ -74,17 +74,11 @@ abstract FloatBuffer(InnerData) {
 	}
 
 	public inline function push( v : hxd.impl.Float32 ) {
-		#if flash
-		this[this.length] = v;
-		#else
 		this.push(v);
-		#end
 	}
 
 	public inline function grow( v : Int ) {
-		#if flash
-		if( v > this.length ) this.length = v;
-		#elseif js
+		#if js
 		for( i in this.length...v )
 			this.push(0.);
 		#else
@@ -93,7 +87,7 @@ abstract FloatBuffer(InnerData) {
 	}
 
 	public inline function resize( v : Int ) {
-		#if (flash||js)
+		#if js
 		this.length = v;
 		#else
 		if( this.length > v ) this.splice(v, this.length - v) else grow(v);

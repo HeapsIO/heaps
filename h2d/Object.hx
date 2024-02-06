@@ -386,7 +386,7 @@ class Object #if (domkit && !domkit_heaps) implements domkit.Model<h2d.Object> #
 	public function getScene() : Scene {
 		var p = this;
 		while( p.parent != null ) p = p.parent;
-		return hxd.impl.Api.downcast(p, Scene);
+		return Std.downcast(p, Scene);
 	}
 
 	function set_visible(b) {
@@ -495,7 +495,7 @@ class Object #if (domkit && !domkit_heaps) implements domkit.Model<h2d.Object> #
 	}
 
 	/**
-		Populates Matrix with current absolute object transform values. See `Object.getAbsPos` for up-to-date values.
+		Populates `m` with current absolute object transform values. See `Object.getAbsPos` for up-to-date values.
 	**/
 	@:dox(show)
 	function getMatrix( m : h2d.col.Matrix ) {
@@ -691,6 +691,7 @@ class Object #if (domkit && !domkit_heaps) implements domkit.Model<h2d.Object> #
 	function emitTile( ctx : RenderContext, tile : h2d.Tile ) {
 		if( nullDrawable == null )
 			nullDrawable = @:privateAccess new h2d.Drawable(null);
+		nullDrawable.smooth = filter != null && filter.smooth ? true : null;
 		if( !ctx.hasBuffering() ) {
 			nullDrawable.absX = absX;
 			nullDrawable.absY = absY;
