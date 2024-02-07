@@ -523,8 +523,12 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	@:dox(hide) @:noCompletion
 	public function handleEvent( event : hxd.Event, last : hxd.SceneEvents.Interactive ) : hxd.SceneEvents.Interactive {
 		screenToViewport(event);
-		var ex = event.relX;
-		var ey = event.relY;
+		
+		// Convert window position to scene position
+		// (support for Scene scaling modes)
+		var ex = event.relX / window.width * width;
+		var ey = event.relY / window.height * height;
+
 		var index = last == null ? 0 : interactive.indexOf(cast last) + 1;
 		var pt = shapePoint;
 		for( idx in index...interactive.length ) {
@@ -539,6 +543,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 
 			var dx = ex - i.absX;
 			var dy = ey - i.absY;
+
 			var rx = (dx * i.matD - dy * i.matC) * i.invDet;
 			var ry = (dy * i.matA - dx * i.matB) * i.invDet;
 
