@@ -11,7 +11,6 @@ class VolumeDecal extends hxsl.Shader {
 		@param var scale : Vec2;
 		@param var normal : Vec3;
 		@param var tangent : Vec3;
-		@param var zCutoff : Float;
 		@const var isCentered : Bool = true;
 		var calculatedUV : Vec2;
 		var transformedTangent : Vec4;
@@ -36,9 +35,8 @@ class VolumeDecal extends hxsl.Shader {
 			if( isCentered ) calculatedUV += 0.5;
 			if( min(min(calculatedUV.x, calculatedUV.y), min(1 - calculatedUV.x, 1 - calculatedUV.y)) < 0 )
 				discard;
-			if (pixelTransformedPosition.z < zCutoff)
-				discard;
 		}
+
 	};
 
 	public function new( objectWidth : Float, objectHeight : Float ) {
@@ -46,6 +44,6 @@ class VolumeDecal extends hxsl.Shader {
 		normal.set(0, 0, 1);
 		tangent.set(1, 0, 0);
 		scale.set(1/objectWidth, 1/objectHeight);
-		zCutoff = -9999; // Low enough so that it doens't affect rendering if not set
 	}
+
 }
