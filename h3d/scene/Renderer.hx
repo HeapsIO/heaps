@@ -18,9 +18,9 @@ enum RenderMode{
 @:allow(h3d.pass.Shadows)
 class Renderer extends hxd.impl.AnyProps {
 
-	var defaultPass : h3d.pass.Base;
+	var defaultPass : h3d.pass.Output;
 	var passObjects : Map<String,PassObjects>;
-	var allPasses : Array<h3d.pass.Base>;
+	var allPasses : Array<h3d.pass.Output>;
 	var emptyPasses = new h3d.pass.PassList();
 	var ctx : RenderContext;
 	var hasSetTarget = false;
@@ -70,9 +70,9 @@ class Renderer extends hxd.impl.AnyProps {
 	public function addShader( s : hxsl.Shader ) {
 	}
 
-	public function getPass<T:h3d.pass.Base>( c : Class<T> ) : T {
+	public function getPass<T:h3d.pass.Output>( c : Class<T> ) : T {
 		for( p in allPasses )
-			if( hxd.impl.Api.isOfType(p, c) )
+			if( Std.isOfType(p, c) )
 				return cast p;
 		return null;
 	}
@@ -82,13 +82,6 @@ class Renderer extends hxd.impl.AnyProps {
 			if( p.name == name )
 				return p;
 		return null;
-	}
-
-	public function debugCompileShader( pass : h3d.mat.Pass ) {
-		var p = getPassByName(pass.name);
-		if( p == null ) p = defaultPass;
-		p.setContext(ctx);
-		return p.compileShader(pass);
 	}
 
 	function hasFeature(f) {
@@ -197,6 +190,10 @@ class Renderer extends hxd.impl.AnyProps {
 		resetTarget();
 		for( p in passes )
 			passObjects.set(p.name, null);
+	}
+
+	public function computeDispatch( shader, x = 1, y = 1, z = 1 ) {
+		ctx.computeDispatch(shader, x, y, z);
 	}
 
 }

@@ -81,7 +81,7 @@ class BufferAnimation extends Animation {
 		if( a == null )
 			a = new BufferAnimation(name, frameCount, sampling);
 		super.clone(a);
-		var la = hxd.impl.Api.downcast(a, BufferAnimation);
+		var la = Std.downcast(a, BufferAnimation);
 		la.setData(data, stride);
 		return a;
 	}

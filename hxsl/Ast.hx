@@ -1,5 +1,19 @@
 package hxsl;
 
+enum BufferKind {
+	Uniform;
+	RW;
+	Partial;
+	RWPartial;
+}
+
+enum TexDimension {
+	T1D;
+	T2D;
+	T3D;
+	TCube;
+}
+
 enum Type {
 	TVoid;
 	TInt;
@@ -11,15 +25,14 @@ enum Type {
 	TMat4;
 	TMat3x4;
 	TBytes( size : Int );
-	TSampler2D;
-	TSampler2DArray;
-	TSamplerCube;
+	TSampler( dim : TexDimension, isArray : Bool );
+	TRWTexture( dim : TexDimension, isArray : Bool, channels : Int );
+	TMat2;
 	TStruct( vl : Array<TVar> );
 	TFun( variants : Array<FunType> );
 	TArray( t : Type, size : SizeDecl );
-	TBuffer( t : Type, size : SizeDecl );
+	TBuffer( t : Type, size : SizeDecl, kind : BufferKind );
 	TChannel( size : Int );
-	TMat2;
 }
 
 enum VecType {
@@ -86,6 +99,7 @@ enum VarQualifier {
 	Doc( s : String );
 	Borrow( source : String );
 	Sampler( name : String );
+	Final;
 }
 
 enum Prec {
@@ -163,6 +177,7 @@ enum TExprDef {
 	TSwitch( e : TExpr, cases : Array<{ values : Array<TExpr>, expr:TExpr }>, def : Null<TExpr> );
 	TWhile( e : TExpr, loop : TExpr, normalWhile : Bool );
 	TMeta( m : String, args : Array<Const>, e : TExpr );
+	TField( e : TExpr, name : String );
 }
 
 typedef TVar = {
@@ -187,6 +202,7 @@ enum FunctionKind {
 	Fragment;
 	Init;
 	Helper;
+	Main;
 }
 
 enum TGlobal {
@@ -280,6 +296,15 @@ enum TGlobal {
 	IntBitsToFloat;
 	UintBitsToFloat;
 	RoundEven;
+	// compute
+	SetLayout;
+	ImageStore;
+	ComputeVar_GlobalInvocation;
+	ComputeVar_LocalInvocation;
+	ComputeVar_WorkGroup;
+	ComputeVar_LocalInvocationIndex;
+	//ComputeVar_NumWorkGroups - no DirectX support
+	//ComputeVar_WorkGroupSize - no DirectX support
 }
 
 enum Component {
@@ -303,6 +328,7 @@ class Tools {
 
 	public static var SWIZ = Component.createAll();
 	public static var MAX_CHANNELS_BITS = 3;
+	public static var MAX_PARTIAL_MAPPINGS_BITS = 7;
 
 	public static function allocVarId() {
 		// in order to prevent compile time ids to conflict with runtime allocated ones
@@ -312,6 +338,26 @@ class Tools {
 		#else
 		return ++UID;
 		#end
+	}
+
+	public static function getTexUVSize( dim : TexDimension, arr = false ) {
+		var size = switch( dim ) {
+		case T1D: 1;
+		case T2D: 2;
+		case T3D, TCube: 3;
+		}
+		if( arr ) size++;
+		return size;
+	}
+
+	public static function getDimSize( dim : TexDimension, arr = false ) {
+		var size = switch( dim ){
+		case T1D: 1;
+		case T2D, TCube: 2;
+		case T3D: 3;
+		}
+		if( arr ) size++;
+		return size;
 	}
 
 	public static function getName( v : TVar ) {
@@ -355,13 +401,15 @@ class Tools {
 				}
 		case TChannel(_):
 			return 3 + MAX_CHANNELS_BITS;
+		case TBuffer(_, _, Partial|RWPartial):
+			return MAX_PARTIAL_MAPPINGS_BITS;
 		default:
 		}
 		return 0;
 	}
 
 	public static function isConst( v : TVar ) {
-		if( v.type.match(TChannel(_)) )
+		if( v.type.match(TChannel(_)|TBuffer(_,_,Partial|RWPartial)) )
 			return true;
 		if( v.qualifiers != null )
 			for( q in v.qualifiers )
@@ -398,9 +446,9 @@ class Tools {
 		return false;
 	}
 
-	public static function isSampler( t : Type ) {
+	public static function isTexture( t : Type ) {
 		return switch( t ) {
-		case TSampler2D, TSamplerCube, TSampler2DArray, TChannel(_):
+		case TSampler(_), TChannel(_), TRWTexture(_):
 			true;
 		default:
 			false;
@@ -412,14 +460,25 @@ class Tools {
 		case TVec(size, t):
 			var prefix = switch( t ) {
 			case VFloat: "";
-			case VInt: "I";
-			case VBool: "B";
+			case VInt: "i";
+			case VBool: "b";
 			}
-			prefix + "Vec" + size;
+			prefix + "vec" + size;
 		case TStruct(vl):"{" + [for( v in vl ) v.name + " : " + toString(v.type)].join(",") + "}";
 		case TArray(t, s): toString(t) + "[" + (switch( s ) { case SConst(i): "" + i; case SVar(v): v.name; } ) + "]";
-		case TBuffer(t, s): "buffer "+toString(t) + "[" + (switch( s ) { case SConst(i): "" + i; case SVar(v): v.name; } ) + "]";
+		case TBuffer(t, s, k):
+			var prefix = switch( k ) {
+			case Uniform: "Buffer";
+			case RW: "RWBuffer";
+			case Partial: "PartialBuffer";
+			case RWPartial: "RWPartialBuffer";
+			};
+			prefix+" "+toString(t) + "[" + (switch( s ) { case SConst(i): "" + i; case SVar(v): v.name; } ) + "]";
 		case TBytes(n): "Bytes" + n;
+		case TSampler(dim, arr):
+			"Sampler"+dim.getName().substr(1)+(arr ? "Array":"");
+		case TRWTexture(dim, arr,dims):
+			"RWTexture"+dim.getName().substr(1)+(arr ? "Array":"")+"<"+(dims == 1 ? "Float" : "Vec"+dims)+">";
 		default: t.getName().substr(1);
 		}
 	}
@@ -457,9 +516,14 @@ class Tools {
 			return hasSideEffect(e) || hasSideEffect(index);
 		case TConst(_), TVar(_), TGlobal(_):
 			return false;
+		case TCall({ e : TGlobal(SetLayout) },_):
+			return true;
 		case TCall(e, pl):
-			if( !e.e.match(TGlobal(_)) )
+			switch( e.e ) {
+			case TGlobal(g) if( g != ImageStore ):
+			default:
 				return true;
+			}
 			for( p in pl )
 				if( hasSideEffect(p) )
 					return true;
@@ -475,6 +539,8 @@ class Tools {
 		case TWhile(e, loop, _):
 			return hasSideEffect(e) || hasSideEffect(loop);
 		case TMeta(_, _, e):
+			return hasSideEffect(e);
+		case TField(e,_):
 			return hasSideEffect(e);
 		}
 	}
@@ -505,6 +571,7 @@ class Tools {
 			f(loop);
 		case TConst(_), TVar(_), TGlobal(_), TDiscard, TContinue, TBreak:
 		case TMeta(_, _, e): f(e);
+		case TField(e, _): f(e);
 		}
 	}
 
@@ -526,6 +593,7 @@ class Tools {
 		case TWhile(e, loop, normalWhile): TWhile(f(e), f(loop), normalWhile);
 		case TConst(_), TVar(_), TGlobal(_), TDiscard, TContinue, TBreak: e.e;
 		case TMeta(m, args, e): TMeta(m, args, f(e)); // don't map args
+		case TField(e, name): TField(f(e), name);
 		}
 		return { e : ed, t : e.t, p : e.p };
 	}
@@ -544,8 +612,8 @@ class Tools {
 		case TMat4: 16;
 		case TMat3x4: 12;
 		case TBytes(s): s;
-		case TBool, TString, TSampler2D, TSampler2DArray, TSamplerCube, TFun(_): 0;
-		case TArray(t, SConst(v)), TBuffer(t, SConst(v)): size(t) * v;
+		case TBool, TString, TSampler(_), TRWTexture(_), TFun(_): 0;
+		case TArray(t, SConst(v)), TBuffer(t, SConst(v),_): size(t) * v;
 		case TArray(_, SVar(_)), TBuffer(_): 0;
 		}
 	}
@@ -561,11 +629,16 @@ class Tools {
 			case CFloat(f): f;
 			case CString(s): s;
 			}
-		case TCall({ e : TGlobal(Vec2 | Vec3 | Vec4) }, args):
+		case TCall({ e : TGlobal(Vec4) }, args):
 			var vals = [for( a in args ) evalConst(a)];
 			if( vals.length == 1 )
-				return new Types.Vec(vals[0], vals[0], vals[0], vals[0]);
-			return new Types.Vec(vals[0], vals[1], vals[2], vals[3]);
+				return new Types.Vec4(vals[0], vals[0], vals[0], vals[0]);
+			return new Types.Vec4(vals[0], vals[1], vals[2], vals[3]);
+		case TCall({ e : TGlobal(Vec2 | Vec3) }, args):
+			var vals = [for( a in args ) evalConst(a)];
+			if( vals.length == 1 )
+				return new Types.Vec(vals[0], vals[0], vals[0]);
+			return new Types.Vec(vals[0], vals[1], vals[2]);
 		default:
 			throw "Unhandled constant init " + Printer.toString(e);
 		}

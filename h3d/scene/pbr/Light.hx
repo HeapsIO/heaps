@@ -12,7 +12,7 @@ class Light extends h3d.scene.Light {
 
 	function new(shader,?parent) {
 		super(shader,parent);
-		_color = new h3d.Vector(1,1,1,1);
+		_color = new h3d.Vector(1,1,1);
 		if( shadows == null ) shadows = new h3d.pass.Shadows(this);
 	}
 

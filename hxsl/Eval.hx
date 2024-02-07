@@ -52,36 +52,44 @@ class Eval {
 		switch( v2.type ) {
 		case TStruct(vl):
 			v2.type = TStruct([for( v in vl ) mapVar(v)]);
-		case TArray(t, SVar(vs)), TBuffer(t, SVar(vs)):
+		case TArray(t, SVar(vs)), TBuffer(t, SVar(vs), _):
 			var c = constants.get(vs.id);
 			if( c != null )
 				switch( c ) {
 				case TConst(CInt(v)):
-					v2.type = v2.type.match(TArray(_)) ? TArray(t, SConst(v)) : TBuffer(t, SConst(v));
+					v2.type = switch( v2.type ) {
+					case TArray(_): TArray(t, SConst(v));
+					case TBuffer(_,_,kind): TBuffer(t, SConst(v), kind);
+					default: throw "assert";
+					};
 				default:
 					Error.t("Integer value expected for array size constant " + vs.name, null);
 				}
 			else {
 				var vs2 = mapVar(vs);
-				v2.type = v2.type.match(TArray(_)) ? TArray(t, SVar(vs2)) : TBuffer(t, SVar(vs2));
+				v2.type = switch( v2.type ) {
+				case TArray(_): TArray(t, SVar(vs2));
+				case TBuffer(_,_,kind): TBuffer(t, SVar(vs2), kind);
+				default: throw "assert";
+				}
 			}
 		default:
 		}
 		return v2;
 	}
 
-	function checkSamplerRec(t:Type) {
-		if( t.isSampler() )
+	function checkTextureRec(t:Type) {
+		if( t.isTexture() )
 			return true;
 		switch( t ) {
 		case TStruct(vl):
 			for( v in vl )
-				if( checkSamplerRec(v.type) )
+				if( checkTextureRec(v.type) )
 					return true;
 			return false;
 		case TArray(t, _):
-			return checkSamplerRec(t);
-		case TBuffer(_, size):
+			return checkTextureRec(t);
+		case TBuffer(_):
 			return true;
 		default:
 		}
@@ -90,7 +98,7 @@ class Eval {
 
 	function needsInline(f:TFunction) {
 		for( a in f.args )
-			if( checkSamplerRec(a.type) )
+			if( checkTextureRec(a.type) )
 				return true;
 		return false;
 	}
@@ -189,6 +197,13 @@ class Eval {
 			for( a in args )
 				haxe.Log.trace(Printer.toString(a), { fileName : #if macro haxe.macro.Context.getPosInfos(a.p).file #else a.p.file #end, lineNumber : 0, className : null, methodName : null });
 			TBlock([]);
+		case [Length, [{ e : TVar(v) }]]:
+			switch( v.type ) {
+			case TArray(_, SConst(v)):
+				TConst(CInt(v));
+			default:
+				null;
+			}
 		case [ChannelRead|ChannelReadLod, _]:
 			var i = switch( args[0].e ) { case TConst(CInt(i)): i; default: Error.t("Cannot eval complex channel " + Printer.toString(args[0],true)+" "+constantsToString(), pos); throw "assert"; };
 			var channel = oldArgs[0];
@@ -246,6 +261,7 @@ class Eval {
 	}
 
 	function evalExpr( e : TExpr, isVal = true ) : TExpr {
+		var t = e.t;
 		var d : TExprDef = switch( e.e ) {
 		case TGlobal(_), TConst(_): e.e;
 		case TVar(v):
@@ -254,6 +270,7 @@ class Eval {
 				c;
 			else {
 				var v2 = mapVar(v);
+				t = v2.type;
 				TVar(v2);
 			}
 		case TVarDecl(v, init):
@@ -265,6 +282,10 @@ class Eval {
 			case [TArrayDecl(el),TConst(CInt(i))] if( i >= 0 && i < el.length ):
 				el[i].e;
 			default:
+				switch( e1.t ) {
+				case TArray(at, _), TBuffer(at,_,_): t = at;
+				default:
+				}
 				TArray(e1, e2);
 			}
 		case TSwiz(e, r):
@@ -528,8 +549,10 @@ class Eval {
 				e2 = evalExpr(e, isVal);
 			}
 			TMeta(name, args, e2);
+		case TField(e, name):
+			TField(evalExpr(e), name);
 		};
-		return { e : d, t : e.t, p : e.p }
+		return { e : d, t : t, p : e.p }
 	}
 
 }

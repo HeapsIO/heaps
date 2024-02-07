@@ -26,47 +26,17 @@ class Flatten {
 	var params : Array<TVar>;
 	var outVars : Array<TVar>;
 	var varMap : Map<TVar,Alloc>;
-	var econsts : TExpr;
-	public var consts : Array<Float>;
+	var textureFormats : Array<{ dim : TexDimension, arr : Bool, rw : Int }>;
 	public var allocData : Map< TVar, Array<Alloc> >;
 
 	public function new() {
 	}
 
-	public function flatten( s : ShaderData, kind : FunctionKind, constsToGlobal : Bool ) : ShaderData {
+	public function flatten( s : ShaderData, kind : FunctionKind ) : ShaderData {
 		globals = [];
 		params = [];
 		outVars = [];
-		if( constsToGlobal ) {
-			consts = [];
-			var p = s.funs[0].expr.p;
-			var gc : TVar = {
-				id : Tools.allocVarId(),
-				name : "__consts__",
-				kind : Global,
-				type : null,
-			};
-			econsts = {
-				e : TVar(gc),
-				t : null,
-				p : p,
-			};
-			s = {
-				name : s.name,
-				vars : s.vars.copy(),
-				funs : [for( f in s.funs ) mapFun(f, mapConsts)],
-			};
-			for( v in s.vars )
-				switch( v.type ) {
-				case TBytes(_):
-					allocConst(255, p);
-				default:
-				}
-			if( consts.length > 0 ) {
-				gc.type = econsts.t = TArray(TFloat, SConst(consts.length));
-				s.vars.push(gc);
-			}
-		}
+		textureFormats = [];
 		varMap = new Map();
 		allocData = new Map();
 		for( v in s.vars )
@@ -74,15 +44,27 @@ class Flatten {
 		var prefix = switch( kind ) {
 		case Vertex: "vertex";
 		case Fragment: "fragment";
+		case Main: "compute";
 		default: throw "assert";
 		}
 		pack(prefix + "Globals", Global, globals, VFloat);
 		pack(prefix + "Params", Param, params, VFloat);
 		var allVars = globals.concat(params);
-		var textures = packTextures(prefix + "Textures", allVars, TSampler2D)
-			.concat(packTextures(prefix+"TexturesCube", allVars, TSamplerCube))
-			.concat(packTextures(prefix+"TexturesArray", allVars, TSampler2DArray));
-		packBuffers(allVars);
+		textureFormats.sort(function(t1,t2) {
+			if ( t1.rw != t2.rw )
+				return t1.rw - t2.rw;
+			if ( t1.arr != t2.arr )
+				return t1.arr ? 1 : -1;
+			return t1.dim.getIndex() - t2.dim.getIndex();
+		});
+		for( t in textureFormats ) {
+			var name = t.dim == T2D ? "" : t.dim.getName().substr(1);
+			if( t.rw > 0 ) name = "RW"+name+t.rw;
+			if( t.arr ) name += "Array";
+			packTextures(prefix + "Textures" + name, allVars, t.rw == 0 ? TSampler(t.dim, t.arr) : TRWTexture(t.dim, t.arr, t.rw));
+		}
+		packBuffers("buffers", allVars, Uniform);
+		packBuffers("rwbuffers", allVars, RW);
 		var funs = [for( f in s.funs ) mapFun(f, mapExpr)];
 		return {
 			name : s.name,
@@ -101,6 +83,29 @@ class Flatten {
 		};
 	}
 
+	static var SWIZ = [X,Y,Z,W];
+
+	function mkOp(e:TExpr,by:Int,f:Int->Int->Int,binop,pos) {
+		switch( e.e ) {
+		case TConst(CInt(i)):
+			return { e : TConst(CInt(f(i,by))), t : TInt, p : pos };
+		default:
+		}
+		return { e : TBinop(binop,e,mkInt(by,pos)), t : TInt, p : pos };
+	}
+
+	function mkAdd(e,offset,pos) {
+		if( offset == 0 )
+			return e;
+		return mkOp(e,offset,(x,y) -> x + y,OpAdd,pos);
+	}
+
+	function mkMult( e : TExpr, by : Int, pos ) {
+		if( by == 1 )
+			return e;
+		return mkOp(e,by,(x,y) -> x * y,OpMult,pos);
+	}
+
 	function mapExpr( e : TExpr ) : TExpr {
 		e = switch( e.e ) {
 		case TVar(v):
@@ -109,142 +114,96 @@ class Flatten {
 				e
 			else
 				access(a, v.type, e.p, AIndex(a));
-		case TArray( { e : TVar(v), p : vp }, eindex) if( !eindex.e.match(TConst(CInt(_))) ):
+		case TArray( { e : TVar(v), p : vp }, eindex):
 			var a = varMap.get(v);
-			if( a == null )
-				e
+			if( a == null || (!v.type.match(TBuffer(_)) && eindex.e.match(TConst(CInt(_)))) )
+				e.map(mapExpr);
 			else {
 				switch( v.type ) {
-				case TArray(t, _) if( t.isSampler() ):
+				case TArray(t, _) if( t.isTexture() ):
 					eindex = toInt(mapExpr(eindex));
 					access(a, t, vp, AOffset(a,1,eindex));
-				case TArray(t, _):
+				case TArray(t, _), TBuffer(t, _):
 					var stride = varSize(t, a.t);
-					if( stride == 0 || stride & 3 != 0 ) throw new Error("Dynamic access to an Array which size is not 4 components-aligned is not allowed", e.p);
-					stride >>= 2;
+					if( stride == 0 || (v.type.match(TArray(_)) && stride & 3 != 0) ) throw new Error("Dynamic access to an Array which size is not 4 components-aligned is not allowed", e.p);
+					stride = (stride + 3) >> 2;
 					eindex = toInt(mapExpr(eindex));
-					access(a, t, vp, AOffset(a,stride, stride == 1 ? eindex : { e : TBinop(OpMult,eindex,mkInt(stride,vp)), t : TInt, p : vp }));
+					access(a, t, vp, AOffset(a,stride, mkMult(eindex,stride,vp)));
 				default:
 					throw "assert";
 				}
+			}
+		case TVarDecl(v, init) if( v.type.match(TStruct(_))):
+			var size = Math.ceil(v.type.size() / 4);
+			var v2 : TVar = {
+				id : Tools.allocVarId(),
+				name : v.name,
+				type : TArray(TVec(4,VFloat),SConst(size)),
+				kind : v.kind,
+			};
+			var a = new Alloc(v2,VFloat,0,0);
+			a.v = v;
+			varMap.set(v, a);
+			{ e : TVarDecl(v2, init == null ? null : mapExpr(init)), t : TVoid, p : e.p }
+		case TField(expr, name):
+			var pos = -1;
+			switch( expr.t ) {
+			case TStruct(vl):
+				var cur = 0;
+				for( v in vl ) {
+					if( v.name == name ) {
+						pos = cur;
+						break;
+					}
+					cur += v.type.size();
+				}
+			default:
+			}
+			if( pos < 0 ) throw "assert";
+			var expr = mapExpr(expr);
+			function read(pos, size) {
+				var idx = pos >> 2;
+				var arr : TExpr = optimize({ e : TArray(expr,{ e : TConst(CInt(idx)), p : e.p, t : TInt }), p : e.p, t : TVec(4,VFloat) });
+				if( size == 4 && pos & 3 == 0 )
+					return arr;
+				var sw = SWIZ.slice(pos&3,(pos&3) + size);
+				return { e : TSwiz(arr,sw), t : size == 1 ? TFloat : TVec(size,VFloat), p : e.p }
+			}
+			switch( e.t ) {
+			case TFloat:
+				read(pos, 1);
+			case TVec(size,VFloat):
+				var idx = pos >> 2;
+				var idx2 = ((pos + size - 1) >> 2);
+				if( idx == idx2 )
+					read(pos, size);
+				else {
+					var k = 4 - (idx & 3);
+					{ e : TCall({ e : TGlobal(Vec4), p : e.p, t : TVoid },[
+						read(pos, k),
+						read(pos + k, size - k)
+					]), t : e.t, p : e.p }
+				}
+			case TMat4:
+				{ e : TCall({ e : TGlobal(Mat4), p : e.p, t : TVoid },[
+					read(pos, 4),
+					read(pos + 4, 4),
+					read(pos + 8, 4),
+					read(pos + 12, 4),
+				]), t : e.t, p : e.p }
+			case TMat3x4:
+				{ e : TCall({ e : TGlobal(Mat3x4), p : e.p, t : TVoid },[
+					read(pos, 4),
+					read(pos + 4, 4),
+					read(pos + 8, 4),
+				]), t : e.t, p : e.p }
+			default:
+				throw "Unsupported type "+e.t.toString();
 			}
 		default:
 			e.map(mapExpr);
 		};
 		return optimize(e);
-	}
-
-	function mapConsts( e : TExpr ) : TExpr {
-		switch( e.e ) {
-		case TArray(ea, eindex = { e : TConst(CInt(_)) } ):
-			return { e : TArray(mapConsts(ea), eindex), t : e.t, p : e.p };
-		case TBinop(OpMult, _, { t : TMat3x4 } ):
-			allocConst(1, e.p); // pre-alloc
-		case TArray(ea, eindex):
-			switch( ea.t ) {
-			case TArray(t, _):
-				var stride = varSize(t, VFloat) >> 2;
-				allocConst(stride, e.p); // pre-alloc
-			default:
-			}
-		case TConst(c):
-			switch( c ) {
-			case CFloat(v):
-				return allocConst(v, e.p);
-			case CInt(v):
-				return allocConst(v, e.p);
-			default:
-				return e;
-			}
-		case TGlobal(g):
-			switch( g ) {
-			case Pack:
-				allocConsts([1, 255, 255 * 255, 255 * 255 * 255], e.p);
-				allocConsts([1/255, 1/255, 1/255, 0], e.p);
-			case Unpack:
-				allocConsts([1, 1 / 255, 1 / (255 * 255), 1 / (255 * 255 * 255)], e.p);
-			case Radians:
-				allocConst(Math.PI / 180, e.p);
-			case Degrees:
-				allocConst(180 / Math.PI, e.p);
-			case Log:
-				allocConst(0.6931471805599453, e.p);
-			case Exp:
-				allocConst(1.4426950408889634, e.p);
-			case Mix:
-				allocConst(1, e.p);
-			case UnpackNormal:
-				allocConst(0.5, e.p);
-			case PackNormal:
-				allocConst(1, e.p);
-				allocConst(0.5, e.p);
-			case ScreenToUv:
-				allocConsts([0.5,0.5], e.p);
-				allocConsts([0.5,-0.5], e.p);
-			case UvToScreen:
-				allocConsts([2,-2], e.p);
-				allocConsts([-1,1], e.p);
-			case Smoothstep:
-				allocConst(2.0, e.p);
-				allocConst(3.0, e.p);
-			default:
-			}
-		case TCall( { e : TGlobal(Vec4) }, [ { e : TVar( { kind : Global | Param | Input | Var } ), t : TVec(3, VFloat) }, { e : TConst(CInt(1)) } ]):
-			// allow var expansion without relying on a constant
-			return e;
-		default:
-		}
-		return e.map(mapConsts);
-	}
-
-	function allocConst( v : Float, p ) : TExpr {
-		var index = consts.indexOf(v);
-		if( index < 0 ) {
-			index = consts.length;
-			consts.push(v);
-		}
-		return { e : TArray(econsts, { e : TConst(CInt(index)), t : TInt, p : p } ), t : TFloat, p : p };
-	}
-
-	function allocConsts( va : Array<Float>, p ) : TExpr {
-		var pad = (va.length - 1) & 3;
-		var index = -1;
-		for( i in 0...consts.length - (va.length - 1) ) {
-			if( (i >> 2) != (i + pad) >> 2 ) continue;
-			var found = true;
-			for( j in 0...va.length )
-				if( consts[i + j] != va[j] ) {
-					found = false;
-					break;
-				}
-			if( found ) {
-				index = i;
-				break;
-			}
-		}
-		if( index < 0 ) {
-			// pad
-			while( consts.length >> 2 != (consts.length + pad) >> 2 )
-				consts.push(0);
-			index = consts.length;
-			for( v in va )
-				consts.push(v);
-		}
-		inline function get(i) : TExpr {
-			return { e : TArray(econsts, { e : TConst(CInt(index+i)), t : TInt, p : p } ), t : TFloat, p : p };
-		}
-		switch( va.length ) {
-		case 1:
-			return get(0);
-		case 2:
-			return { e : TCall( { e : TGlobal(Vec2), t : TVoid, p : p }, [get(0), get(1)]), t : TVec(2, VFloat), p : p };
-		case 3:
-			return { e : TCall( { e : TGlobal(Vec3), t : TVoid, p : p }, [get(0), get(1), get(2)]), t : TVec(3, VFloat), p : p };
-		case 4:
-			return { e : TCall( { e : TGlobal(Vec4), t : TVoid, p : p }, [get(0), get(1), get(3), get(4)]), t : TVec(4, VFloat), p : p };
-		default:
-			throw "assert";
-		}
 	}
 
 	inline function mkInt(v:Int,pos) {
@@ -258,7 +217,7 @@ class Flatten {
 
 	inline function readOffset( a : Alloc, stride : Int, delta : TExpr, index : Int, pos ) : TExpr {
 		var index = (a.t == null ? a.pos : a.pos >> 2) + index;
-		var offset : TExpr = index == 0 ? delta : { e : TBinop(OpAdd, delta, mkInt(index, pos)), t : TInt, p : pos };
+		var offset : TExpr = mkAdd(delta,index,pos);
 		return { e : TArray({ e : TVar(a.g), t : a.g.type, p : pos }, offset), t : TVec(4,a.t), p:pos };
 	}
 
@@ -289,12 +248,20 @@ class Flatten {
 			var stride = Std.int(a.size / len);
 			var earr = [for( i in 0...len ) { var a = new Alloc(a.g, a.t, a.pos + stride * i, stride); access(a, t, pos, AIndex(a)); }];
 			return { e : TArrayDecl(earr), t : t, p : pos };
+		case TBuffer(_):
+			return { e : TVar(a.g), t : t, p : pos };
+		case TStruct(vl):
+			var size = 0;
+			for( v in vl )
+				size += varSize(v.type, a.t);
+			var stride = Math.ceil(size/4);
+			var earr = [for( i in 0...stride ) read(i, pos)];
+			return { e : TArrayDecl(earr), t : TArray(TVec(4,VFloat),SConst(stride)), p : pos };
+		case t if( t.isTexture() ):
+			var e = read(0, pos);
+			e.t = t;
+			return e;
 		default:
-			if( t.isSampler() ) {
-				var e = read(0, pos);
-				e.t = t;
-				return e;
-			}
 			var size = varSize(t, a.t);
 			if( size > 4 )
 				return Error.t("Access not supported for " + t.toString(), null);
@@ -365,10 +332,10 @@ class Flatten {
 		var samplers = [];
 		for( v in vars ) {
 			var count = 1;
-			if( v.type != t ) {
+			if( !v.type.equals(t) ) {
 				switch( v.type ) {
-				case TChannel(_) if( t == TSampler2D ):
-				case TArray(t2,SConst(n)) if( t2 == t ):
+				case TChannel(_) if( t.match(TSampler(T2D,false)) ):
+				case TArray(t2,SConst(n)) if( t2.equals(t) ):
 					count = n;
 				default:
 					continue;
@@ -404,22 +371,33 @@ class Flatten {
 		return alloc;
 	}
 
-	function packBuffers( vars : Array<TVar> ) {
+	function packBuffers( name : String, vars : Array<TVar>, kind ) {
 		var alloc = new Array<Alloc>();
 		var g : TVar = {
 			id : Tools.allocVarId(),
-			name : "buffers",
+			name : name,
 			type : TVoid,
 			kind : Param,
 		};
 		for( v in vars )
-			if( v.type.match(TBuffer(_)) ) {
-				var a = new Alloc(g, null, alloc.length, 1);
+			switch( v.type ) {
+			case TBuffer(t,SConst(size),k) if( kind == k ):
+				var stride = Math.ceil(t.size()/4);
+				var buf4 : TVar = {
+					id : Tools.allocVarId(),
+					name : v.name,
+					type : TBuffer(TVec(4,VFloat),SConst(size * stride),k),
+					kind : Param,
+				};
+				var a = new Alloc(buf4, null, alloc.length, 1);
+				a.t = VFloat;
 				a.v = v;
 				alloc.push(a);
-				outVars.push(v);
+				varMap.set(v, a);
+				outVars.push(buf4);
+			default:
 			}
-		g.type = TArray(TBuffer(TVoid,SConst(0)),SConst(alloc.length));
+		g.type = TArray(TBuffer(TVoid,SConst(0),kind),SConst(alloc.length));
 		allocData.set(g, alloc);
 	}
 
@@ -432,10 +410,10 @@ class Flatten {
 			kind : kind,
 		};
 		for( v in vars ) {
-			if( v.type.isSampler() || v.type.match(TBuffer(_)) )
+			if( v.type.isTexture() || v.type.match(TBuffer(_)) )
 				continue;
 			switch( v.type ) {
-			case TArray(t,_) if( t.isSampler() ): continue;
+			case TArray(t,_) if( t.isTexture() ): continue;
 			default:
 			}
 			var size = varSize(v.type, t);
@@ -489,9 +467,21 @@ class Flatten {
 		case TMat4 if( t == VFloat ): 16;
 		case TMat3, TMat3x4 if( t == VFloat ): 12;
 		case TArray(at, SConst(n)): varSize(at, t) * n;
+		case TStruct(vl):
+			var size = 0;
+			for( v in vl )
+				size += varSize(v.type, t);
+			size;
 		default:
 			throw v.toString() + " size unknown for type " + t;
 		}
+	}
+
+	function addTextureFormat(dim,arr,rw=0) {
+		for( f in textureFormats )
+			if( f.dim == dim && f.arr == arr && f.rw == rw )
+				return;
+		textureFormats.push({ dim : dim, arr : arr, rw : rw });
 	}
 
 	function gatherVar( v : TVar ) {
@@ -499,18 +489,35 @@ class Flatten {
 		case TStruct(vl):
 			for( v in vl )
 				gatherVar(v);
-		default:
-			switch( v.kind ) {
-			case Global:
-				if( v.hasQualifier(PerObject) )
-					params.push(v);
-				else
-					globals.push(v);
-			case Param:
-				params.push(v);
-			default:
-				outVars.push(v);
+			return;
+		case TSampler(dim, arr), TRWTexture(dim, arr, _):
+			var rw = switch( v.type ) {
+			case TRWTexture(_,_,chans): chans;
+			default: 0;
 			}
+			addTextureFormat(dim,arr,rw);
+		case TChannel(_):
+			addTextureFormat(T2D,false);
+		case TArray(type, _):
+			switch ( type ) {
+			case TSampler(dim, arr):
+				addTextureFormat(dim, arr, 0);
+			case TRWTexture(dim, arr, chans):
+				addTextureFormat(dim, arr, chans);
+			default:
+			}
+		default:
+		}
+		switch( v.kind ) {
+		case Global:
+			if( v.hasQualifier(PerObject) )
+				params.push(v);
+			else
+				globals.push(v);
+		case Param:
+			params.push(v);
+		default:
+			outVars.push(v);
 		}
 	}
 

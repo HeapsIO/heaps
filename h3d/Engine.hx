@@ -48,7 +48,7 @@ class Engine {
 	var realFps : Float;
 	var lastTime : Float;
 	var antiAlias : Int;
-	var tmpVector = new h3d.Vector();
+	var tmpVector = new h3d.Vector4();
 	var window : hxd.Window;
 
 	var targetTmp : TargetTmp;
@@ -90,8 +90,6 @@ class Engine {
 		#else
 		driver = new h3d.impl.GlDriver(antiAlias);
 		#end
-		#elseif flash
-		driver = new h3d.impl.Stage3dDriver(antiAlias);
 		#elseif (hldx && dx12)
 		driver = new h3d.impl.DX12Driver();
 		#elseif hldx
@@ -168,7 +166,7 @@ class Engine {
 			throw "Invalid vertices count";
 		if( drawTri > 0 && selectBuffer(b) ) {
 			// *3 because it's the position in indexes which are always by 3
-			driver.draw(indexes.ibuf, startTri * 3, drawTri);
+			driver.draw(indexes, startTri * 3, drawTri);
 			drawTriangles += drawTri;
 			drawCalls++;
 		}
@@ -182,7 +180,7 @@ class Engine {
 		if( drawTri < 0 ) drawTri = maxTri - startTri;
 		if( drawTri > 0 && selectBuffer(b) ) {
 			// *3 because it's the position in indexes which are always by 3
-			driver.draw(indexes.ibuf, startTri * 3, drawTri);
+			driver.draw(indexes, startTri * 3, drawTri);
 			drawTriangles += drawTri;
 			drawCalls++;
 		}
@@ -198,7 +196,7 @@ class Engine {
 		if( drawTri < 0 ) drawTri = maxTri - startTri;
 		if( drawTri > 0 ) {
 			// render
-			driver.draw(indexes.ibuf, startTri * 3, drawTri);
+			driver.draw(indexes, startTri * 3, drawTri);
 			drawTriangles += drawTri;
 			drawCalls++;
 		}
@@ -208,7 +206,7 @@ class Engine {
 		if( indexes.isDisposed() )
 			return;
 		if( commands.commandCount > 0 ) {
-			driver.drawInstanced(indexes.ibuf, commands);
+			driver.drawInstanced(indexes, commands);
 			drawTriangles += commands.triCount;
 			drawCalls++;
 		}
@@ -382,7 +380,7 @@ class Engine {
 		needFlushTarget = false;
 	}
 
-	public function clearF( color : h3d.Vector, ?depth : Float, ?stencil : Int ) {
+	public function clearF( color : h3d.Vector4, ?depth : Float, ?stencil : Int ) {
 		flushTarget();
 		driver.clear(color, depth, stencil);
 	}

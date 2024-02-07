@@ -643,7 +643,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		var f = events.getFocus();
 		if( f == null )
 			return null;
-		var i = hxd.impl.Api.downcast(f, h2d.Interactive);
+		var i = Std.downcast(f, h2d.Interactive);
 		if( i == null )
 			return null;
 		return interactive[interactive.indexOf(i)];
@@ -739,21 +739,24 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		var inRender = @:privateAccess ctx.engine.inRender;
 		ctx.engine.backgroundColor = null; // prevent clear bg
 		ctx.globalAlpha = alpha;
+		var prevCtx = h3d.impl.RenderContext.get();
 		if( !inRender ) { // don't reset current tex stack
 			ctx.engine.begin();
 			ctx.begin();
 		} else if( @:privateAccess ctx.targetFlipY == 0 )
 			ctx.begin(); // ctx was never init, most likely a new scene
 		ctx.pushTargets(texs);
-		if( outputs != null ) @:privateAccess ctx.manager.setOutput(outputs);
+		if( outputs != null ) @:privateAccess ctx.output.setOutput(outputs);
 		s.drawRec(ctx);
-		if( outputs != null ) @:privateAccess ctx.manager.setOutput();
+		if( outputs != null ) @:privateAccess ctx.output.setOutput();
 		ctx.popTarget();
 		ctx.engine.backgroundColor = oldBG;
 		if( !inRender ) {
 			ctx.end();
 			ctx.engine.end();
 		}
+		if( prevCtx != null )
+			prevCtx.setCurrent();
 	}
 
 	/**

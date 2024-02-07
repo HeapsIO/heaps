@@ -1,7 +1,6 @@
 package hxd.res;
 
 enum Platform {
-	Flash;
 	HL;
 	JS;
 	Unknown;
@@ -27,7 +26,8 @@ class Config {
 		"atlas" => "hxd.res.Atlas",
 		"grd" => "hxd.res.Gradients",
 		#if hide
-		"prefab,fx,fx2d,l3d" => "hxd.res.Prefab"
+		"prefab,fx,fx2d,l3d" => "hxd.res.Prefab",
+		"world" => "hxd.res.World"
 		#end
 	];
 
@@ -69,9 +69,9 @@ class Config {
 	];
 
 	public static function addPairedExtension( main, shadow) {
-		if (pairedExtensions.exists(main)) 
+		if (pairedExtensions.exists(main))
 			pairedExtensions.set(main, pairedExtensions.get(main) + "," + shadow);
-		else 
+		else
 			pairedExtensions.set(main, shadow);
 	}
 
@@ -81,7 +81,6 @@ class Config {
 
 	static function init() {
 		var pf =
-			if( defined("flash") ) Flash else
 			if( defined("js") ) JS else
 			if( defined("hl") ) HL else
 			Unknown;

@@ -83,6 +83,21 @@ class MacroParser {
 		}
 	}
 
+	function getTexDim( n : String, f : Ast.TexDimension -> Bool -> Ast.Type ) {
+		var arr = false;
+		if( StringTools.endsWith(n,"Array") ) {
+			arr = true;
+			n = n.substr(0,-5);
+		}
+		return switch( n ) {
+		case "1D": f(T1D,arr);
+		case "2D": f(T2D,arr);
+		case "3D": f(T3D,arr);
+		case "Cube": f(TCube,arr);
+		default: null;
+		}
+	}
+
 	public function parseType( t : ComplexType, pos : Position ) : Ast.Type {
 		switch( t ) {
 		case TPath( { pack : [], name : name, sub : null, params : [] } ):
@@ -104,9 +119,6 @@ class MacroParser {
 			case "Mat3x4": return TMat3x4;
 			case "Mat2": return TMat2;
 			case "String": return TString;
-			case "Sampler2D": return TSampler2D;
-			case "Sampler2DArray": return TSampler2DArray;
-			case "SamplerCube": return TSamplerCube;
 			case "Bytes2": return TBytes(2);
 			case "Bytes3": return TBytes(3);
 			case "Bytes4": return TBytes(4);
@@ -114,8 +126,28 @@ class MacroParser {
 			case "Channel2": return TChannel(2);
 			case "Channel3": return TChannel(3);
 			case "Channel4": return TChannel(4);
+			case _ if( StringTools.startsWith(name,"Sampler") ):
+				var t = getTexDim(name.substr(7), (d,arr) -> TSampler(d,arr));
+				if( t != null ) return t;
 			}
-		case TPath( { pack : [], name : name = ("Array"|"Buffer"), sub : null, params : [t, size] } ):
+		case TPath( { pack : [], name : name, sub : null, params : pl } ) if( StringTools.startsWith(name,"RWTexture") ):
+			var chans = switch( pl[0] ) {
+			case TPType(TPath({ pack : [], name : n, sub : null, params : [] })):
+				switch( n ) {
+				case "Float": 1;
+				case "Vec2": 2;
+				case "Vec3": 3;
+				case "Vec4": 4;
+				default: 0;
+				}
+			case null, _: 0;
+			}
+			if( chans == 0 )
+				error("Unsupported RWTexture parameter, should be Float|Vec2|Vec3|Vec4", pos);
+			var t = getTexDim(name.substr(9), (dim,arr) -> TRWTexture(dim,arr,chans));
+			if( t != null )
+				return t;
+		case TPath( { pack : [], name : name = ("Array"|"Buffer"|"RWBuffer"|"PartialBuffer"|"RWPartialBuffer"), sub : null, params : [t, size] } ):
 			var t = switch( t ) {
 			case TPType(t): parseType(t, pos);
 			default: null;
@@ -129,7 +161,14 @@ class MacroParser {
 			default: null;
 			}
 			if( t != null && size != null )
-				return name == "Array" ? TArray(t, size) : TBuffer(t,size);
+				return switch( name ) {
+				case "Array": TArray(t, size);
+				case "Buffer": TBuffer(t,size,Uniform);
+				case "RWBuffer": TBuffer(t,size,RW);
+				case "PartialBuffer": TBuffer(t,size,Partial);
+				case "RWPartialBuffer": TBuffer(t,size,RWPartial);
+				default: throw "assert";
+				}
 		case TAnonymous(fl):
 			return TStruct([for( f in fl ) {
 				switch( f.kind ) {
@@ -183,14 +222,10 @@ class MacroParser {
 					expr : v.expr == null ? null : parseExpr(v.expr),
 					type : v.type == null ? null : parseType(v.type, e.pos),
 					kind : null,
-					qualifiers : [],
+					qualifiers : v.isFinal ? [Final] : [],
 				}
 			}]);
-		#if haxe4
 		case EFunction(FNamed(name,_),f) if( f.expr != null ):
-		#else
-		case EFunction(name, f) if( name != null && f.expr != null ):
-		#end
 			EFunction({
 				name : name,
 				ret : f.ret == null ? null : (switch( f.ret ) {
@@ -243,11 +278,7 @@ class MacroParser {
 			EParenthesis(parseExpr(e));
 		case EIf(cond, eif, eelse), ETernary(cond, eif, eelse):
 			EIf(parseExpr(cond), parseExpr(eif), eelse == null ? null : parseExpr(eelse));
-		#if (haxe_ver >= 4)
 		case EFor({ expr : EBinop(OpIn,{ expr : EConst(CIdent(n)) }, eloop) },eblock):
-		#else
-		case EFor( { expr : EIn( { expr : EConst(CIdent(n)) }, eloop) }, eblock):
-		#end
 			EFor(n, parseExpr(eloop), parseExpr(eblock));
 		case EReturn(e):
 			EReturn(e == null ? null : parseExpr(e));

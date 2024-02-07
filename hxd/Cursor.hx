@@ -26,10 +26,6 @@ class CustomCursor {
 	var alloc : Array<sdl.Cursor>;
 	#elseif hldx
 	var alloc : Array<dx.Cursor>;
-	#elseif flash
-	static var UID = 0;
-	var name : String;
-	var alloc : flash.ui.MouseCursorData;
 	#elseif js
 	var alloc : Array<String>;
 	#else
@@ -48,9 +44,6 @@ class CustomCursor {
 		this.speed = speed;
 		this.offsetX = offsetX;
 		this.offsetY = offsetY;
-		#if flash
-		name = "custom_" + UID++;
-		#end
 		#if (hlsdl || hldx || js)
 		frameDelay = 1 / speed;
 		frameTime = 0;
@@ -92,8 +85,6 @@ class CustomCursor {
 			for (cur in alloc) {
 				cur.free();
 			}
-			#elseif flash
-			flash.ui.Mouse.unregisterCursor(name);
 			#elseif hldx
 			for (cur in alloc) {
 				cur.destroy();

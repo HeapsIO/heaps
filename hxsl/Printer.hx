@@ -64,6 +64,7 @@ class Printer {
 				case Doc(s): "doc(\"" + StringTools.replace(s, '"', '\\"') + "\")";
 				case Borrow(s): "borrow(" + s + ")";
 				case Sampler(s): "sampler("+ s + ")";
+				case Final: "final";
 				}) + " ");
 		}
 		if( v.kind != defKind )
@@ -298,6 +299,10 @@ class Printer {
 			}
 			add(" ");
 			addExpr(e, tabs);
+		case TField(e, name):
+			addExpr(e, tabs);
+			add(".");
+			add(name);
 		}
 
 	}

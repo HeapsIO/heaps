@@ -94,21 +94,21 @@ class Atlas extends Resource {
 					case "rotate":
 						if( v == "true" ) throw "Rotation not supported in atlas";
 					case "xy":
-						var vals = v.split(", ");
+						var vals = v.split(",");
 						tileX = Std.parseInt(vals[0]);
-						tileY = Std.parseInt(vals[1]);
+						tileY = Std.parseInt(StringTools.trim(vals[1]));
 					case "size":
-						var vals = v.split(", ");
+						var vals = v.split(",");
 						tileW = Std.parseInt(vals[0]);
-						tileH = Std.parseInt(vals[1]);
+						tileH = Std.parseInt(StringTools.trim(vals[1]));
 					case "offset":
-						var vals = v.split(", ");
+						var vals = v.split(",");
 						tileDX = Std.parseInt(vals[0]);
-						tileDY = Std.parseInt(vals[1]);
+						tileDY = Std.parseInt(StringTools.trim(vals[1]));
 					case "orig":
-						var vals = v.split(", ");
+						var vals = v.split(",");
 						origW = Std.parseInt(vals[0]);
-						origH = Std.parseInt(vals[1]);
+						origH = Std.parseInt(StringTools.trim(vals[1]));
 					case "index":
 						index = Std.parseInt(v);
 						if( index < 0 ) index = 0;

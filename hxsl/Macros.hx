@@ -8,10 +8,10 @@ class Macros {
 	static function makeType( t : Type ) : ComplexType {
 		return switch( t ) {
 		case TVoid: macro : Void;
-		case TVec(_, t):
+		case TVec(n, t):
 			switch( t ) {
 			case VFloat:
-				macro : hxsl.Types.Vec;
+				n == 4 ? (macro : hxsl.Types.Vec4) : (macro : hxsl.Types.Vec);
 			case VInt:
 				macro : hxsl.Types.IVec;
 			case VBool:
@@ -23,15 +23,13 @@ class Macros {
 			for( v in vl ) {
 				fields.push({ pos : pos, name : v.name, kind : FVar(makeType(v.type)) });
 				if( v.type.match(TChannel(_)) )
-				fields.push({ pos : pos, name : v.name+"Channel", kind : FVar(macro : hxsl.Channel) });
+					fields.push({ pos : pos, name : v.name+"Channel", kind : FVar(macro : hxsl.Channel) });
 			}
 			TAnonymous(fields);
-		case TSampler2D:
-			macro : hxsl.Types.Sampler2D;
-		case TSampler2DArray:
-			macro : hxsl.Types.Sampler2DArray;
-		case TSamplerCube:
-			macro : hxsl.Types.SamplerCube;
+		case TSampler(_, false), TRWTexture(_,false,_):
+			macro : hxsl.Types.Texture;
+		case TSampler(_, true), TRWTexture(_,true,_):
+			macro : hxsl.Types.TextureArray;
 		case TMat2, TMat3, TMat3x4, TMat4:
 			macro : hxsl.Types.Matrix;
 		case TString:
@@ -46,7 +44,7 @@ class Macros {
 			var t = makeType(t);
 			macro : Array<$t>;
 		case TChannel(_):
-			macro : hxsl.Types.ChannelTextureType;
+			macro : hxsl.Types.TextureChannel;
 		case TFun(_):
 			throw "assert";
 		case TBuffer(_):
@@ -57,10 +55,10 @@ class Macros {
 	static function makeDef( t : Type, pos : Position ) : haxe.macro.Expr {
 		return switch( t ) {
 		case TFloat, TInt: macro 0;
-		case TVec(_, t):
+		case TVec(n, t):
 			switch( t ) {
 			case VFloat:
-				macro new hxsl.Types.Vec();
+				n == 4 ? macro new hxsl.Types.Vec4() : macro new hxsl.Types.Vec();
 			case VInt:
 				macro new hxsl.Types.IVec();
 			case VBool:
@@ -99,7 +97,12 @@ class Macros {
 					default: throw "assert";
 				};
 			{
-				expr : ENew({ pack : ["h3d"], name : "Vector" }, [for( a in args ) makeInit(a)]),
+				expr : ENew({ pack : ["hxsl"], name : "Types", sub : (g == Vec4 ? "Vec4" : "Vec") }, [for( a in args ) makeInit(a)]),
+				pos : e.p,
+			}
+		case TArrayDecl(el):
+			{
+				expr : EArrayDecl([for( e in el ) makeInit(e)]),
 				pos : e.p,
 			}
 		default:
@@ -241,7 +244,7 @@ class Macros {
 			case TInt:
 				exprs.push(macro {
 					var v : Int = $p;
-					if( v >>> $v{ c.bits } != 0 ) throw $v{ c.v.name } +" is out of range " + v + ">" + $v{ (1 << c.bits) - 1 };
+					if( v >>> $v{ c.bits } != 0 ) throw $v{ c.v.name } +" is out of range " + v + ">" + $v{ (1 << c.bits) - 1 } + ", consider using @const(MAX_VALUE)";
 					constBits |= v << $v{ c.pos };
 				});
 			case TBool:
@@ -257,6 +260,13 @@ class Macros {
 				exprs.push(macro {
 					if( $p == null ) $psel = Unknown else if( $psel == Unknown ) $defFormat;
 					constBits |= ((globals.allocChannelID($p) << 3) | Type.enumIndex($psel)) << $v{ c.pos };
+				});
+			case TBuffer(_,_,Partial|RWPartial):
+				var psel = getPath(c.v,"Format");
+				exprs.push(macro {
+					if( $p == null ) throw "Partial buffer is not set";
+					if( $p.format.uid >>> hxsl.Ast.Tools.MAX_PARTIAL_MAPPINGS_BITS != 0 ) throw "Buffer format is out of range";
+					constBits |= $p.format.uid << $v{ c.pos };
 				});
 			default:
 				throw "assert";
@@ -447,7 +457,6 @@ class Macros {
 	public static function buildGlobals() {
 		var fields = Context.getBuildFields();
 		var globals = [];
-		var sets = [];
 		for( f in fields ) {
 			if( f.meta == null ) continue;
 			for( m in f.meta ) {
@@ -484,7 +493,7 @@ class Macros {
 						});
 						globals.push(macro $i{id} = new hxsl.Globals.GlobalSlot($v{ name }));
 						if( set != null )
-							sets.push(macro $i{f.name} = $set);
+							Context.error("Value ignored", set.pos);
 					default:
 					}
 			}
@@ -495,15 +504,6 @@ class Macros {
 			kind : FFun({
 				ret : null,
 				expr : { expr : EBlock(globals), pos : p },
-				args : [],
-			}),
-			pos : p,
-		});
-		fields.push({
-			name : "setGlobals",
-			kind : FFun({
-				ret : null,
-				expr : { expr : EBlock(sets), pos : p },
 				args : [],
 			}),
 			pos : p,

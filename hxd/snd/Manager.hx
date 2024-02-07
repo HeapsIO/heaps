@@ -148,7 +148,7 @@ class Manager {
 		if( instance == null ) {
 			instance = new Manager();
 			instance.updateEvent = haxe.MainLoop.add(instance.update);
-			#if (haxe_ver >= 4) instance.updateEvent.isBlocking = false; #end
+			instance.updateEvent.isBlocking = false;
 		}
 		return instance;
 	}

@@ -400,7 +400,7 @@ class TextInput extends Text {
 		}
 		return '';
 	}
-	
+
 	function getCursorXOffset() {
 		var lines = getAllLines();
 		var offset = cursorIndex;
@@ -534,11 +534,11 @@ class TextInput extends Text {
 
 				var selStart = Math.floor(Math.max(0, selectionRange.start - lineOffset));
 				var selEnd = Math.floor(Math.min(line.length - selStart, selectionRange.length + selectionRange.start - lineOffset - selStart));
-				
+
 				selectionPos = calcTextWidth(line.substr(0, selStart));
 				selectionSize = calcTextWidth(line.substr(selStart, selEnd));
 				if( selectionRange.start + selectionRange.length == text.length ) selectionSize += cursorTile.width; // last pixel
-	
+
 				selectionTile.dx += selectionPos;
 				selectionTile.dy += i * font.lineHeight;
 				selectionTile.width += selectionSize;
@@ -662,10 +662,17 @@ class TextInput extends Text {
 
 	override function drawRec(ctx:RenderContext) {
 		var old = interactive.visible;
+		var oldC = interactive.parentContainer;
+		// workaround @:bypassAccessor not working by setting parentContainer=null
+		// prevent domkit style to be updated
+		interactive.parentContainer = null;
 		interactive.visible = false;
+		interactive.parentContainer = oldC;
 		interactive.draw(ctx);
 		super.drawRec(ctx);
+		interactive.parentContainer = null;
 		interactive.visible = old;
+		interactive.parentContainer = oldC;
 	}
 
 	function get_backgroundColor() return interactive.backgroundColor;

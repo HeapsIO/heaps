@@ -68,7 +68,8 @@ class FileConverter {
 		var defaultCfg : Dynamic = {
 			"fs.convert" : {
 				"fbx" : { "convert" : "hmd", "priority" : -1 },
-				"fnt" : { "convert" : "bfnt", "priority" : -1 }
+				"fnt" : { "convert" : "bfnt", "priority" : -1 },
+				"svg" : { "convert" : "png", "priority" : -1 }
 			}
 		};
 		for ( conf in extraConfigs ) {
@@ -92,7 +93,7 @@ class FileConverter {
 			var cmd = makeCommmand(Reflect.field(merge,f));
 			var pt = if( f.charCodeAt(0) == "^".code ) {
 				f = f.split("\\/").join("/").split("/").join("\\/");
-				Regexp(new EReg(f,""));
+				Regexp(new EReg(f,"i"));
 			} else if( ~/^[a-zA-Z0-9,]+$/.match(f) ) {
 				var el = f.toLowerCase().split(",");
 				el.length == 1 ? Ext(el[0]) : Exts(el);
@@ -120,7 +121,7 @@ class FileConverter {
 	}
 
 	function makeCommmand( obj : Dynamic ) : { cmd : ConvertCommand, priority : Int } {
-		if( hxd.impl.Api.isOfType(obj,String) )
+		if( obj is String )
 			return { cmd : { conv : loadConvert(obj) }, priority : 0 };
 		if( obj.convert == null )
 			throw "Missing 'convert' in "+obj;
@@ -145,9 +146,9 @@ class FileConverter {
 	function formatValue( v : Dynamic ) : String {
 		if( !Reflect.isObject(v) )
 			return Std.string(v);
-		if( Std.isOfType(v,String) )
+		if( v is String )
 			return v;
-		if( Std.isOfType(v,Array) ) {
+		if( v is Array ) {
 			var a : Array<Dynamic> = v;
 			return [for( v in a ) formatValue(v)].toString();
 		}

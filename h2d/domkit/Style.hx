@@ -11,23 +11,33 @@ class Style extends domkit.CssStyle {
 	public var inspectKeyCode : Int = 0;
 	public var inspectDetailsKeyCode : Int = hxd.Key.CTRL;
 	public var s3d : h3d.scene.Scene;
+	public var cssParser : domkit.CssParser;
 
 	public function new() {
 		super();
+		cssParser = new domkit.CssParser();
 	}
 
 	public function load( r : hxd.res.Resource, watchChanges = true ) {
 		if( watchChanges ) r.watch(function() {
 			#if (sys || nodejs)
-			var fs = hxd.impl.Api.downcast(hxd.res.Loader.currentInstance.fs, hxd.fs.LocalFileSystem);
+			var fs = Std.downcast(hxd.res.Loader.currentInstance.fs, hxd.fs.LocalFileSystem);
 			if( fs != null ) fs.clearCache();
 			#end
 			onChange();
 		});
 		resources.push(r);
-		add(new domkit.CssParser().parseSheet(r.entry.getText()));
+		var variables = cssParser.variables.copy();
+		add(cssParser.parseSheet(r.entry.getText()));
+		cssParser.variables = variables;
 		for( o in currentObjects )
 			o.dom.applyStyle(this);
+	}
+
+	public function unload( r : hxd.res.Resource ) {
+		r.watch(null);
+		resources.remove(r);
+		onChange();
 	}
 
 	override function clear() {
@@ -79,19 +89,22 @@ class Style extends domkit.CssStyle {
 		data.rules = [];
 		for( r in resources ) {
 			var txt = try r.entry.getText() catch( e : Dynamic ) { haxe.Timer.delay(onChange.bind(ntry),100); data.rules = oldRules; return; }
-			var parser = new domkit.CssParser();
 			try {
-				data.add(parser.parseSheet(txt));
+				data.add(cssParser.parseSheet(txt));
 			} catch( e : domkit.Error ) {
-				parser.warnings.push({ msg : e.message, pmin : e.pmin, pmax : e.pmax });
+				cssParser.warnings.push({ msg : e.message, pmin : e.pmin, pmax : e.pmax });
 			}
-			for( w in parser.warnings ) {
+			for( w in cssParser.warnings ) {
 				var line = txt.substr(0,w.pmin).split("\n").length;
 				errors.push(r.entry.path+":"+line+": " + w.msg);
 		 	}
 		}
 		for( o in currentObjects )
 			o.dom.applyStyle(this);
+		refreshErrors();
+	}
+
+	function refreshErrors( ?scene ) {
 		if( errors.length == 0 ) {
 			if( errorsText != null ) {
 				errorsText.parent.remove();
@@ -99,22 +112,23 @@ class Style extends domkit.CssStyle {
 			}
 		} else {
 			if( errorsText == null ) {
-				if( currentObjects.length == 0 ) return;
-				var scene = currentObjects[0].getScene();
-				if( scene == null ) {
-					for( o in currentObjects ) {
-						scene = o.getScene();
-						if( scene != null ) break;
+				if( scene == null && currentObjects.length > 0 ) {
+					scene = currentObjects[0].getScene();
+					if( scene == null ) {
+						for( o in currentObjects ) {
+							scene = o.getScene();
+							if( scene != null ) break;
+						}
 					}
-					if( scene == null ) return;
 				}
+				if( scene == null ) return;
 				var fl = new h2d.Flow();
 				scene.add(fl,100);
 				fl.backgroundTile = h2d.Tile.fromColor(0x400000,0.9);
 				fl.padding = 10;
 				errorsText = new h2d.Text(hxd.res.DefaultFont.get(), fl);
 			}
-			var fl = hxd.impl.Api.downcast(errorsText.parent, h2d.Flow);
+			var fl = Std.downcast(errorsText.parent, h2d.Flow);
 			var sc = fl.getScene();
 			fl.maxWidth = sc.width;
 			errorsText.text = errors.join("\n");
@@ -383,7 +397,7 @@ class Style extends domkit.CssStyle {
 		var dom = obj.dom;
 		if(dom != null) {
 			for( s in dom.style ) {
-				if( s.p.name == "text" || hxd.impl.Api.isOfType(s.value,h2d.Tile) ) continue;
+				if( s.p.name == "text" || Std.isOfType(s.value,h2d.Tile) ) continue;
 				lines.push(' <font color="#D0D0D0"> ${s.p.name}</font> <font color="#808080">${s.value}</font><font color="#606060"> (style)</font>');
 			}
 			for( i in 0...dom.currentSet.length ) {

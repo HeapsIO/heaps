@@ -20,11 +20,6 @@ class Pbr extends SampleApp {
 
 		new h3d.scene.CameraController(5.5, s3d);
 
-		#if flash
-		new h2d.Text(getFont(), s2d).text = "Not supported on this platform (requires render to mipmap target and fragment textureCubeLod support)";
-		return;
-		#end
-
 		#if js
 		if( !engine.driver.hasFeature(ShaderModel3) ) {
 			new h2d.Text(getFont(), s2d).text = "WebGL 2.0 support required and not available on this browser.";
@@ -156,7 +151,7 @@ class Pbr extends SampleApp {
 
 		if( grid == null ) return;
 
-		var color = new h3d.Vector(1, 0, 0);
+		var color = new h3d.Vector4(1, 0, 0, 1);
 		var m = new h3d.Matrix();
 		m.identity();
 		m.colorSaturate(saturation - 1);

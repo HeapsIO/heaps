@@ -50,7 +50,7 @@ class ModelCache {
 
 	public function loadModel( res : hxd.res.Model ) : h3d.scene.Object {
 		var m = loadLibraryData(res);
-		return m.lib.makeObject(loadTexture.bind(res));
+		return m.lib.makeObject(texturePath -> loadTexture(res, texturePath));
 	}
 
 	public function loadCollider( res : hxd.res.Model ) {
@@ -181,7 +181,8 @@ class ModelCache {
 		} else {
 			local3d = new h3d.scene.Object();
 		}
-		var ctx2 = p.make(local3d);
+		var sh = new hrt.prefab.ContextShared(res.entry.path, p?.findFirstLocal2d(), local3d);
+		var ctx2 = p.make(sh);
 		if( parent != null ) {
 			// only return object if a single child was added
 			// if not - multiple children were added and cannot be returned as a single object

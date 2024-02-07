@@ -68,7 +68,7 @@ class TileLayerContent extends h3d.prim.Primitive {
 		@param color An RGBA vector used for tinting.
 		@param t The Tile to draw.
 	**/
-	public inline function addColor( x : Float, y : Float, color : h3d.Vector, t : Tile ) {
+	public inline function addColor( x : Float, y : Float, color : h3d.Vector4, t : Tile ) {
 		add(x, y, color.r, color.g, color.b, color.a, t);
 	}
 
@@ -140,7 +140,7 @@ class TileLayerContent extends h3d.prim.Primitive {
 		@param c An RGBA vector used for tinting.
 		@param t The Tile to draw.
 	**/
-	public function addTransform( x : Float, y : Float, sx : Float, sy : Float, r : Float, c : h3d.Vector, t : Tile ) {
+	public function addTransform( x : Float, y : Float, sx : Float, sy : Float, r : Float, c : h3d.Vector4, t : Tile ) {
 
 		var ca = Math.cos(r), sa = Math.sin(r);
 		var hx = t.width, hy = t.height;
@@ -559,7 +559,7 @@ class TileLayerContent extends h3d.prim.Primitive {
 class TileGroup extends Drawable {
 
 	var content : TileLayerContent;
-	var curColor : h3d.Vector;
+	var curColor : h3d.Vector4;
 
 	/**
 		The reference tile used as a Texture source to draw.
@@ -583,7 +583,7 @@ class TileGroup extends Drawable {
 		super(parent);
 		tile = t;
 		rangeMin = rangeMax = -1;
-		curColor = new h3d.Vector(1, 1, 1, 1);
+		curColor = new h3d.Vector4(1, 1, 1, 1);
 		content = new TileLayerContent();
 	}
 

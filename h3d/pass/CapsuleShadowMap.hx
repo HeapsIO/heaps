@@ -50,7 +50,7 @@ class CapsuleShadowMap extends CubeShadowMap {
 		return new h3d.col.Sphere(absPos.tx, absPos.ty, absPos.tz, capsuleLight.range + capsuleLight.length * 0.5);
 	}
 
-	override function cull(lightCollider, col) {
+	override function cull(lightCollider : h3d.col.Collider, col : h3d.col.Collider ) {
 		var sphere = cast(lightCollider, h3d.col.Sphere);
 		return col.inSphere(sphere);
 	}

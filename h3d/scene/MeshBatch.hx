@@ -11,10 +11,12 @@ private class BatchData {
 	public var indexStart : Int;
 	public var instanceBuffers : Array<h3d.impl.InstanceBuffer>;
 	public var buffers : Array<h3d.Buffer> = [];
+	public var bufferFormat : hxd.BufferFormat;
 	public var data : hxd.FloatBuffer;
 	public var params : hxsl.RuntimeShader.AllocParam;
 	public var shader : hxsl.BatchShader;
 	public var shaders : Array<hxsl.Shader>;
+	public var modelViewPos : Int;
 	public var pass : h3d.mat.Pass;
 	public var next : BatchData;
 
@@ -73,6 +75,12 @@ class MeshBatch extends MultiMaterial {
 	**/
 	public var calcBounds = true;
 
+	/**
+	 	Tells the per instance buffer to support gpu write using comptue shaders.
+	**/
+	public var allowGpuUpdate : Bool = false;
+
+
 	var instancedParams : hxsl.Cache.BatchInstanceParams;
 
 	public function new( primitive, ?material, ?parent ) {
@@ -119,17 +127,18 @@ class MeshBatch extends MultiMaterial {
 				var ctx = scene.renderer.getPassByName(p.name);
 				if( ctx == null ) throw "Could't find renderer pass "+p.name;
 
-				var manager = cast(ctx,h3d.pass.Default).manager;
+				var output = ctx.output;
 				var shaders = p.getShadersRec();
-				var rt = manager.compileShaders(shaders, false);
-				var shader = manager.shaderCache.makeBatchShader(rt, shaders, instancedParams);
+				var rt = output.compileShaders(scene.ctx.globals, shaders, Default);
+				var shader = output.shaderCache.makeBatchShader(rt, shaders, instancedParams);
 
 				var b = new BatchData();
 				b.indexCount = matInfo.count;
 				b.indexStart = matInfo.start;
 				b.paramsCount = shader.paramsSize;
 				b.maxInstance = Std.int(MAX_BUFFER_ELEMENTS / b.paramsCount);
-				 if ( b.maxInstance <= 0 )
+				b.bufferFormat = hxd.BufferFormat.VEC4_DATA;
+				if( b.maxInstance <= 0 )
 					throw "Mesh batch shaders needs at least one perInstance parameter";
 				b.params = shader.params;
 				b.shader = shader;
@@ -138,6 +147,43 @@ class MeshBatch extends MultiMaterial {
 				b.shaders = [null/*link shader*/];
 				p.dynamicParameters = true;
 				p.batchMode = true;
+
+				if( allowGpuUpdate ) {
+					var pl = [];
+					var p = b.params;
+					while( p != null ) {
+						pl.push(p);
+						p = p.next;
+					}
+					pl.sort(function(p1,p2) return p1.pos - p2.pos);
+					var fmt : Array<hxd.BufferFormat.BufferInput> = [];
+					var curPos = 0;
+					for( p in pl ) {
+						if( curPos != p.pos )
+							throw "Buffer has padding";
+						var name = p.name;
+						var prev = fmt.length;
+						switch( p.type ) {
+						case TMat3:
+							for( i in 0...3 )
+								fmt.push(new hxd.BufferFormat.BufferInput(name+"__m"+i,DVec3));
+						case TMat3x4:
+							for( i in 0...3 )
+								fmt.push(new hxd.BufferFormat.BufferInput(name+"__m"+i,DVec4));
+						case TMat4:
+							for( i in 0...4 )
+								fmt.push(new hxd.BufferFormat.BufferInput(name+"__m"+i,DVec4));
+						default:
+							var t = hxd.BufferFormat.InputFormat.fromHXSL(p.type);
+							fmt.push(new hxd.BufferFormat.BufferInput(p.name,t));
+						}
+						for( i in prev...fmt.length )
+							curPos += fmt[i].getBytesSize() >> 2;
+					}
+					b.bufferFormat = hxd.BufferFormat.make(fmt);
+					if( b.bufferFormat.stride & 3 != 0 )
+						throw "assert";
+				}
 
 				b.next = dataPasses;
 				dataPasses = b;
@@ -218,6 +264,7 @@ class MeshBatch extends MultiMaterial {
 			}
 			if( p.perObjectGlobal != null ) {
 				if( p.perObjectGlobal.gid == modelViewID ) {
+					batch.modelViewPos = pos - startPos;
 					addMatrix(worldPosition != null ? worldPosition : absPos);
 				} else if( p.perObjectGlobal.gid == modelViewInverseID ) {
 					if( worldPosition == null )
@@ -237,21 +284,22 @@ class MeshBatch extends MultiMaterial {
 			}
 			var curShader = shaders[p.instance];
 			switch( p.type ) {
+			case TVec(4, _):
+				var v : h3d.Vector4 = curShader.getParamValue(p.index);
+				buf[pos++] = v.x;
+				buf[pos++] = v.y;
+				buf[pos++] = v.z;
+				buf[pos++] = v.w;
 			case TVec(size, _):
 				var v : h3d.Vector = curShader.getParamValue(p.index);
 				switch( size ) {
 				case 2:
 					buf[pos++] = v.x;
 					buf[pos++] = v.y;
-				case 3:
-					buf[pos++] = v.x;
-					buf[pos++] = v.y;
-					buf[pos++] = v.z;
 				default:
 					buf[pos++] = v.x;
 					buf[pos++] = v.y;
 					buf[pos++] = v.z;
-					buf[pos++] = v.w;
 				}
 			case TFloat:
 				buf[pos++] = curShader.getParamFloatValue(p.index);
@@ -327,12 +375,15 @@ class MeshBatch extends MultiMaterial {
 		}
 	}
 
-	static var VEC4_FMT = hxd.BufferFormat.make([{ name : "data", type : DVec4 }]);
 	static var BATCH_START_FMT = hxd.BufferFormat.make([{ name : "Batch_Start", type : DFloat }]);
 
 	override function sync(ctx:RenderContext) {
 		super.sync(ctx);
 		if( instanceCount == 0 ) return;
+		flush();
+	}
+
+	public function flush() {
 		var p = dataPasses;
 		var alloc = hxd.impl.Allocator.get();
 		var psBytes = primitiveSubBytes;
@@ -346,12 +397,13 @@ class MeshBatch extends MultiMaterial {
 				if( count > p.maxInstance )
 					count = p.maxInstance;
 				if( buf == null || buf.isDisposed() ) {
-					buf = alloc.allocBuffer(MAX_BUFFER_ELEMENTS,VEC4_FMT,UniformDynamic);
+					var bufferFlags : hxd.impl.Allocator.BufferFlags = allowGpuUpdate ? UniformReadWrite : UniformDynamic;
+					buf = alloc.allocBuffer(Std.int(MAX_BUFFER_ELEMENTS * (4 / p.bufferFormat.stride)),p.bufferFormat,bufferFlags);
 					p.buffers[index] = buf;
 					upload = true;
 				}
 				if( upload )
-					buf.uploadFloats(p.data, start * p.paramsCount * 4, count * p.paramsCount);
+					buf.uploadFloats(p.data, start * p.paramsCount * 4, Std.int(count * 4 * p.paramsCount / p.bufferFormat.stride));
 				if( psBytes != null ) {
 					if( p.instanceBuffers == null ) p.instanceBuffers = [];
 					var buf = p.instanceBuffers[index];

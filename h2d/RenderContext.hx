@@ -80,9 +80,8 @@ class RenderContext extends h3d.impl.RenderContext {
 	public var tmpBounds = new h2d.col.Bounds();
 	var texture : h3d.mat.Texture;
 	var baseShader : h3d.shader.Base2d;
-	var manager : h3d.pass.ShaderManager;
+	var output : h3d.pass.OutputShader;
 	var compiledShader : hxsl.RuntimeShader;
-	var buffers : h3d.shader.Buffers;
 	var fixedBuffer : h3d.Buffer;
 	var pass : h3d.mat.Pass;
 	var currentShaders : hxsl.ShaderList;
@@ -128,7 +127,7 @@ class RenderContext extends h3d.impl.RenderContext {
 		if( BUFFERING )
 			buffer = new hxd.FloatBuffer();
 		bufPos = 0;
-		manager = new h3d.pass.ShaderManager();
+		output = new h3d.pass.OutputShader();
 		pass = new h3d.mat.Pass("",null);
 		pass.depth(true, Always);
 		pass.culling = None;
@@ -173,14 +172,13 @@ class RenderContext extends h3d.impl.RenderContext {
 		viewD = scene.viewportD;
 		viewX = scene.viewportX;
 		viewY = scene.viewportY;
-
+		setCurrent();
 		targetFlipY = engine.driver.hasFeature(BottomLeftCoords) ? -1 : 1;
 		baseFlipY = engine.getCurrentTarget() != null ? targetFlipY : 1;
 		inFilter = null;
-		manager.globals.set("time", time);
-		manager.globals.set("global.time", time);
-		// todo : we might prefer to auto-detect this by running a test and capturing its output
-		baseShader.pixelAlign = #if flash true #else false #end;
+		globals.set("time", time);
+		globals.set("global.time", time);
+		baseShader.pixelAlign = false;
 		baseShader.halfPixelInverse.set(0.5 / engine.width, 0.5 / engine.height);
 		baseShader.viewportA.set(scene.viewportA, 0, scene.viewportX);
 		baseShader.viewportB.set(0, scene.viewportD * -baseFlipY, scene.viewportY * -baseFlipY);
@@ -211,12 +209,10 @@ class RenderContext extends h3d.impl.RenderContext {
 
 	function initShaders( shaders ) {
 		currentShaders = shaders;
-		compiledShader = manager.compileShaders(shaders);
-		if( buffers == null )
-			buffers = new h3d.shader.Buffers(compiledShader);
-		else
-			buffers.grow(compiledShader);
-		manager.fillGlobals(buffers, compiledShader);
+		compiledShader = output.compileShaders(globals, shaders);
+		var buffers = shaderBuffers;
+		buffers.grow(compiledShader);
+		fillGlobals(buffers, compiledShader);
 		engine.selectShader(compiledShader);
 		engine.uploadShaderBuffers(buffers, Globals);
 	}
@@ -231,6 +227,7 @@ class RenderContext extends h3d.impl.RenderContext {
 		texture = null;
 		currentObj = null;
 		baseShaderList.next = null;
+		clearCurrent();
 		if ( targetsStackIndex != 0 ) throw "Missing popTarget()";
 		if ( cameraStackIndex != 0 ) throw "Missing popCamera()";
 	}
@@ -604,10 +601,6 @@ class RenderContext extends h3d.impl.RenderContext {
 		if( blend != currentBlend ) {
 			currentBlend = blend;
 			pass.setBlendMode(blend);
-			#if flash
-			// flash does not allow blend separate operations
-			// this will get us good color but wrong alpha
-			#else
 			// accumulate correctly alpha values
 			if( blend == Alpha || blend == Add ) {
 				pass.blendAlphaSrc = One;
@@ -615,9 +608,9 @@ class RenderContext extends h3d.impl.RenderContext {
 				if( inFilterBlend != null )
 					pass.blendSrc = One;
 			}
-			#end
 		}
-		manager.fillParams(buffers, compiledShader, currentShaders);
+		var buffers = shaderBuffers;
+		fillParams(buffers, compiledShader, currentShaders);
 		engine.selectMaterial(pass);
 		engine.uploadShaderBuffers(buffers, Params);
 		engine.uploadShaderBuffers(buffers, Textures);
@@ -779,7 +772,7 @@ class RenderContext extends h3d.impl.RenderContext {
 			var prevInst = @:privateAccess t.instance;
 			if( s != t )
 				paramsChanged = true;
-			s.updateConstants(manager.globals);
+			s.updateConstants(globals);
 			if( @:privateAccess s.instance != prevInst )
 				shaderChanged = true;
 		}
@@ -790,7 +783,7 @@ class RenderContext extends h3d.impl.RenderContext {
 			baseShader.hasUVPos = hasUVPos;
 			baseShader.isRelative = isRelative;
 			baseShader.killAlpha = killAlpha;
-			baseShader.updateConstants(manager.globals);
+			baseShader.updateConstants(globals);
 			baseShaderList.next = obj.shaders;
 			initShaders(baseShaderList);
 		} else if( paramsChanged ) {

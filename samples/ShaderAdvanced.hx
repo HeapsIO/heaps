@@ -86,7 +86,7 @@ class ShaderAdvanced extends hxd.App {
 			try {
 				var t = new h3d.mat.Texture(1,1,[Target],fmt);
 				d.setRenderTarget(t);
-				d.clear(new h3d.Vector(1,0.5,0.25,0.125));
+				d.clear(new h3d.Vector4(1,0.5,0.25,0.125));
 				d.setRenderTarget(null);
 				var pix = t.capturePixels();
 				var hex = pix.bytes.toHex();
@@ -95,7 +95,7 @@ class ShaderAdvanced extends hxd.App {
 					throw hex+" should be "+values.get(fmt);
 
 				d.setRenderTarget(t);
-				d.clear(new h3d.Vector(0,0,0,0));
+				d.clear(new h3d.Vector4(0,0,0,0));
 				d.setRenderTarget(null);
 
 				t.uploadPixels(pix);
@@ -111,7 +111,7 @@ class ShaderAdvanced extends hxd.App {
 		// uniform buffer
 		var bmp = new h2d.Bitmap(h2d.Tile.fromColor(0xFF0000,128,128),s2d);
 		var ubuffer = bmp.addShader(new TestUniformBuffer());
-		ubuffer.colorMatrix = new h3d.Buffer(4,4,[UniformBuffer,Dynamic]);
+		ubuffer.colorMatrix = new h3d.Buffer(4,hxd.BufferFormat.VEC4_DATA,[UniformBuffer,Dynamic]);
 		var hue : Float = 0.;
 		updates.push(function(dt) {
 			hue += dt * 6;
@@ -122,7 +122,7 @@ class ShaderAdvanced extends hxd.App {
 			var buf = new hxd.FloatBuffer();
 			for( v in m.getFloats() )
 				buf.push(v);
-			ubuffer.colorMatrix.uploadVector(buf, 0, 4);
+			ubuffer.colorMatrix.uploadFloats(buf, 0, 4);
 		});
 
 		// texture array
@@ -155,8 +155,8 @@ class ShaderAdvanced extends hxd.App {
 			buf.push(i * 0.4);
 			buf.push(i * 0.2);
 		}
-		var instanceBuffer = h3d.Buffer.ofFloats(buf,2);
-		prim.addBuffer("offset",instanceBuffer);
+		var instanceBuffer = h3d.Buffer.ofFloats(buf,hxd.BufferFormat.make([{name : "offset",type:DVec2}]));
+		cube.addBuffer(instanceBuffer);
 
 		var m = new h3d.scene.Mesh(prim, s3d);
 		m.material.mainPass.addShader(new InstancedOffsetShader());

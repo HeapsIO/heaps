@@ -1,8 +1,6 @@
 package hxd.fmt.pak;
 import hxd.fs.FileEntry;
-#if air3
-import hxd.impl.Air3File;
-#elseif (sys || nodejs)
+#if (sys || nodejs)
 import sys.io.File;
 import sys.io.FileInput;
 typedef FileSeekMode = sys.io.FileSeek;
@@ -132,33 +130,6 @@ private class PakEntry extends FileEntry {
 		return new hxd.impl.ArrayIterator<FileEntry>(cast subs);
 	}
 
-	override function loadBitmap( onLoaded ) {
-		#if flash
-		if( openedBytes != null ) throw "Must close() before loadBitmap";
-		open();
-		var old = openedBytes;
-		var loader = new flash.display.Loader();
-		loader.contentLoaderInfo.addEventListener(flash.events.IOErrorEvent.IO_ERROR, function(e:flash.events.IOErrorEvent) {
-			throw Std.string(e) + " while loading " + path;
-		});
-		loader.contentLoaderInfo.addEventListener(flash.events.Event.COMPLETE, function(_) {
-			if( openedBytes == null ) {
-				openedBytes = old;
-				close();
-			}
-			var content : flash.display.Bitmap = cast loader.content;
-			onLoaded(new hxd.fs.LoadedBitmap(content.bitmapData));
-			loader.unload();
-		});
-		var ctx = new flash.system.LoaderContext();
-		ctx.imageDecodingPolicy = ON_LOAD;
-		loader.loadBytes(openedBytes.getData(), ctx);
-		openedBytes = null;
-		#else
-		super.loadBitmap(onLoaded);
-		#end
-	}
-
 }
 
 class FileSystem implements hxd.fs.FileSystem {
@@ -248,7 +219,7 @@ class FileSystem implements hxd.fs.FileSystem {
 		var id = getThreadID();
 		var input = f.inputs[id];
 		if( input == null ) {
-			#if (air3 || sys || nodejs)
+			#if (sys || nodejs)
 			input = File.read(f.path);
 			#else
 			throw "File.read not implemented";

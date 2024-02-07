@@ -2,6 +2,8 @@ package h3d.pass;
 
 typedef CascadeParams = {
 	var bias : Float;
+	var depthBias : Float;
+	var slopeBias : Float;
 }
 
 class CascadeShadowMap extends DirShadowMap {
@@ -62,8 +64,8 @@ class CascadeShadowMap extends DirShadowMap {
 		var corners = lightCamera.getFrustumCorners();
 		for ( corner in corners ) {
 			corner.transform(ctx.camera.mcam);
-			shadowNear = hxd.Math.min(shadowNear, corner.z / corner.w);
-			shadowFar = hxd.Math.max(shadowFar, corner.z / corner.w);
+			shadowNear = hxd.Math.min(shadowNear, corner.z);
+			shadowFar = hxd.Math.max(shadowFar, corner.z);
 		}
 		for ( i in 0...cascade - 1 ) {
 			var cascadeBounds = new h3d.col.Bounds();
@@ -90,11 +92,6 @@ class CascadeShadowMap extends DirShadowMap {
 		lightCameras[cascade - 1].orthoBounds = lightCamera.orthoBounds.clone();
 	}
 
-	override function setGlobals() {
-		super.setGlobals();
-		cameraViewProj = getCascadeProj(currentCascadeIndex);
-	}
-
 	function getCascadeProj(i:Int) {
 		return lightCameras[i].m;
 	}
@@ -106,7 +103,7 @@ class CascadeShadowMap extends DirShadowMap {
 			cshader.cascadeShadowMaps[c] = textures[i];
 			cshader.cascadeProjs[c] = lightCameras[i].m;
 			if ( debugShader )
-				cshader.cascadeDebugs[c] = h3d.Vector.fromColor(debugColors[i]);
+				cshader.cascadeDebugs[c] = h3d.Vector4.fromColor(debugColors[i]);
 			cshader.cascadeBias[c] = params[c] != null ? params[c].bias : 0.001;
 		}
 		cshader.CASCADE_COUNT = cascade;
@@ -123,6 +120,10 @@ class CascadeShadowMap extends DirShadowMap {
 		cshader.shadowRes.set(textures[0].width,textures[0].height);
 		cshader.pcfScale = pcfScale;
 		cshader.pcfQuality = pcfQuality;
+	}
+
+	override function getShadowProj():Matrix {
+		return getCascadeProj(currentCascadeIndex);
 	}
 
 	override function draw( passes, ?sort ) {
@@ -166,7 +167,7 @@ class CascadeShadowMap extends DirShadowMap {
 			if( !passes.isEmpty() ) calcShadowBounds(lightCamera);
 			var pt = ctx.camera.pos.clone();
 			pt.transform(lightCamera.mcam);
-			lightCamera.orthoBounds.zMax = pt.z + (castingMaxDist > 0.0 ? castingMaxDist : maxDist < 0.0 ? ctx.camera.zFar : maxDist); 
+			lightCamera.orthoBounds.zMax = pt.z + (castingMaxDist > 0.0 ? castingMaxDist : maxDist < 0.0 ? ctx.camera.zFar : maxDist);
 			lightCamera.orthoBounds.zMin = pt.z - (castingMaxDist > 0.0 ? castingMaxDist : maxDist < 0.0 ? ctx.camera.zFar : maxDist);
 			lightCamera.update();
 		}
@@ -187,16 +188,20 @@ class CascadeShadowMap extends DirShadowMap {
 			}
 			texture.depthBuffer = depth;
 			#else
-			var texture = ctx.textures.allocTarget("cascadeShadowMap_"+i, size, size, false, Depth24Stencil8);
+			var texture = ctx.textures.allocTarget("cascadeShadowMap_"+i, size, size, false, Depth16);
 			#end
+			// Bilinear depth only make sense if we use sample compare to get weighted shadow occlusion which we doesn't support yet.
+			texture.filter = Nearest;
 
 			currentCascadeIndex = i;
 			var p = passes.save();
 			cullPasses(passes,function(col) return col.inFrustum(lightCameras[i].frustum));
+			var param = params[cascade - 1 - i];			
+			texture.depthBias = (param != null) ? param.depthBias : 0;
+			texture.slopeScaledBias = (param != null) ? param.slopeBias : 0;			
 			texture = processShadowMap( passes, texture, sort);
 			textures.push(texture);
 			passes.load(p);
-
 		}
 		syncCascadeShader(textures);
 

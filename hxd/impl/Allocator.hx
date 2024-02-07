@@ -4,6 +4,7 @@ enum abstract BufferFlags(Int) {
 	public var Dynamic = 0;
 	public var Static = 1;
 	public var UniformDynamic = 2;
+	public var UniformReadWrite = 3;
 	public inline function toInt() : Int {
 		return this;
 	}
@@ -22,6 +23,7 @@ class Allocator {
 			case Static: null;
 			case Dynamic: [Dynamic];
 			case UniformDynamic: [UniformBuffer,Dynamic];
+			case UniformReadWrite: [UniformBuffer, ReadWriteBuffer];
 			});
 	}
 
@@ -47,7 +49,7 @@ class Allocator {
 	public function ofIndexes( ib: hxd.IndexBuffer, length = -1) {
 		if( length < 0 && ib != null ) length = ib.length;
 		var idx = allocIndexBuffer( length );
-		idx.upload(ib, 0, length);
+		idx.uploadIndexes(ib, 0, length);
 		return idx;
 	}
 

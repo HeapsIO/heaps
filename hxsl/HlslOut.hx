@@ -14,8 +14,8 @@ class Samplers {
 	public function make( v : TVar, arr : Array<Int> ) : Array<Int> {
 
 		var ntex = switch( v.type ) {
-		case TArray(t, SConst(k)) if( t.isSampler() ): k;
-		case t if( t.isSampler() ): 1;
+		case TArray(t, SConst(k)) if( t.isTexture() ): k;
+		case t if( t.isTexture() ): 1;
 		default:
 			return null;
 		}
@@ -70,8 +70,6 @@ class HlslOut {
 		m.set(Fract, "frac");
 		m.set(Mix, "lerp");
 		m.set(Inversesqrt, "rsqrt");
-		m.set(VertexID,"_in.vertexID");
-		m.set(InstanceID,"_in.instanceID");
 		m.set(IVec2, "int2");
 		m.set(IVec3, "int3");
 		m.set(IVec4, "int4");
@@ -79,7 +77,6 @@ class HlslOut {
 		m.set(BVec3, "bool3");
 		m.set(BVec4, "bool4");
 		m.set(FragCoord,"_in.__pos__");
-		m.set(FrontFacing, "_in.isFrontFace");
 		m.set(FloatBitsToInt, "asint");
 		m.set(FloatBitsToUint, "asuint");
 		m.set(IntBitsToFloat, "asfloat");
@@ -92,26 +89,43 @@ class HlslOut {
 
 	var SV_POSITION = "SV_POSITION";
 	var SV_TARGET = "SV_TARGET";
-	var SV_VertexID = "SV_VertexID";
-	var SV_InstanceID = "SV_InstanceID";
-	var SV_IsFrontFace = "SV_IsFrontFace";
 	var STATIC = "static ";
+	var CONST = "const ";
 	var buf : StringBuf;
 	var exprIds = 0;
 	var exprValues : Array<String>;
 	var locals : Map<Int,TVar>;
 	var decls : Array<String>;
-	var isVertex : Bool;
+	var kind : FunctionKind;
 	var allNames : Map<String, Int>;
 	var samplers : Map<Int, Array<Int>>;
+	var computeLayout = [1,1,1];
 	public var varNames : Map<Int,String>;
 	public var baseRegister : Int = 0;
 
 	var varAccess : Map<Int,String>;
+	var isVertex(get,never) : Bool;
+	var isCompute(get,never) : Bool;
+
+	inline function get_isCompute() return kind == Main;
+	inline function get_isVertex() return kind == Vertex;
 
 	public function new() {
 		varNames = new Map();
 		allNames = new Map();
+	}
+
+	function getSVName( g : TGlobal ) {
+		return switch( g ) {
+		case VertexID: "SV_VertexID";
+		case InstanceID: "SV_InstanceID";
+		case FrontFacing: "SV_IsFrontFace";
+		case ComputeVar_GlobalInvocation: "SV_DispatchThreadID";
+		case ComputeVar_LocalInvocation: "SV_GroupThreadID";
+		case ComputeVar_WorkGroup: "SV_GroupID";
+		case ComputeVar_LocalInvocationIndex: "SV_GroupIndex";
+		default: null;
+		}
 	}
 
 	inline function add( v : Dynamic ) {
@@ -160,12 +174,8 @@ class HlslOut {
 			add("float4x4");
 		case TMat3x4:
 			add("float4x3");
-		case TSampler2D:
-			add("Texture2D");
-		case TSamplerCube:
-			add("TextureCube");
-		case TSampler2DArray:
-			add("Texture2DArray");
+		case TSampler(_), TRWTexture(_):
+			add(getTexType(t));
 		case TStruct(vl):
 			add("struct { ");
 			for( v in vl ) {
@@ -175,7 +185,7 @@ class HlslOut {
 			add(" }");
 		case TFun(_):
 			add("function");
-		case TArray(t, size), TBuffer(t,size):
+		case TArray(t, size), TBuffer(t,size,_):
 			addType(t);
 			add("[");
 			switch( size ) {
@@ -201,7 +211,7 @@ class HlslOut {
 
 	function addVar( v : TVar ) {
 		switch( v.type ) {
-		case TArray(t, size), TBuffer(t,size):
+		case TArray(t, size), TBuffer(t,size,Uniform):
 			addVar({
 				id : v.id,
 				name : v.name,
@@ -209,6 +219,11 @@ class HlslOut {
 				kind : v.kind,
 			});
 			addArraySize(size);
+		case TBuffer(t, size, RW):
+			add('RWStructuredBuffer<');
+			addType(t);
+			add('> ');
+			ident(v);
 		default:
 			addType(v.type);
 			add(" ");
@@ -280,6 +295,102 @@ class HlslOut {
 		decl("float4 mod(float4 x, float4 y) { return x - y * floor(x/y); }");
 	}
 
+	function getTexType( t : Type ) {
+		return switch( t ) {
+		case TSampler(dim, arr): "Texture"+dim.getName().substr(1)+(arr?"Array":"");
+		case TRWTexture(dim, arr, chans): "RWTexture"+dim.getName().substr(1)+(arr?"Array":"")+"<"+(chans==1?"float":"float"+chans)+">";
+		default: throw "assert";
+		}
+	}
+
+	function declGlobal( g : TGlobal, args : Array<TExpr> ) {
+		switch( g ) {
+		case Mat3x4:
+			// float4x3 constructor uses row-order, we want column order here
+			decl("float4x3 mat3x4( float4 a, float4 b, float4 c ) { float4x3 m; m._m00_m10_m20_m30 = a; m._m01_m11_m21_m31 = b; m._m02_m12_m22_m32 = c; return m; }");
+			decl("float4x3 mat3x4( float4x4 m ) { float4x3 m2; m2._m00_m10_m20_m30 = m._m00_m10_m20_m30; m2._m01_m11_m21_m31 = m._m01_m11_m21_m31; m2._m02_m12_m22_m32 = m._m02_m12_m22_m32; return m2; }");
+		case Mat4:
+			decl("float4x4 mat4( float4 a, float4 b, float4 c, float4 d ) { float4x4 m; m._m00_m10_m20_m30 = a; m._m01_m11_m21_m31 = b; m._m02_m12_m22_m32 = c; m._m03_m13_m23_m33 = d; return m; }");
+		case Mat3:
+			decl("float3x3 mat3( float4x4 m ) { return (float3x3)m; }");
+			decl("float3x3 mat3( float4x3 m ) { return (float3x3)m; }");
+			decl("float3x3 mat3( float3 a, float3 b, float3 c ) { float3x3 m; m._m00_m10_m20 = a; m._m01_m11_m21 = b; m._m02_m12_m22 = c; return m; }");
+			decl("float3x3 mat3( float c00, float c01, float c02, float c10, float c11, float c12, float c20, float c21, float c22 ) { float3x3 m = { c00, c10, c20, c01, c11, c21, c02, c12, c22 }; return m; }");
+		case Mat2:
+			decl("float2x2 mat2( float4x4 m ) { return (float2x2)m; }");
+			decl("float2x2 mat2( float4x3 m ) { return (float2x2)m; }");
+			decl("float2x2 mat2( float3x3 m ) { return (float2x2)m; }");
+			decl("float2x2 mat2( float2 a, float2 b ) { float2x2 m; m._m00_m10 = a; m._m01_m11 = b; return m; }");
+			decl("float2x2 mat2( float c00, float c01, float c10, float c11 ) { float2x2 m = { c00, c10, c01, c11 }; return m; }");
+		case Mod:
+			declMods();
+		case Pow:
+			// negative power might not work
+			decl("#pragma warning(disable:3571)");
+		case Pack:
+			decl("float4 pack( float v ) { float4 color = frac(v * float4(1, 255, 255.*255., 255.*255.*255.)); return color - color.yzww * float4(1. / 255., 1. / 255., 1. / 255., 0.); }");
+		case Unpack:
+			decl("float unpack( float4 color ) { return dot(color,float4(1., 1. / 255., 1. / (255. * 255.), 1. / (255. * 255. * 255.))); }");
+		case PackNormal:
+			decl("float4 packNormal( float3 n ) { return float4((n + 1.) * 0.5,1.); }");
+		case UnpackNormal:
+			decl("float3 unpackNormal( float4 p ) { return normalize(p.xyz * 2. - 1.); }");
+		case Atan:
+			decl("float atan( float y, float x ) { return atan2(y,x); }");
+		case ScreenToUv:
+			decl("float2 screenToUv( float2 v ) { return v * float2(0.5, -0.5) + float2(0.5,0.5); }");
+		case UvToScreen:
+			decl("float2 uvToScreen( float2 v ) { return v * float2(2.,-2.) + float2(-1., 1.); }");
+		case DFdx:
+			decl("float dFdx( float v ) { return ddx(v); }");
+			decl("float2 dFdx( float2 v ) { return ddx(v); }");
+			decl("float3 dFdx( float3 v ) { return ddx(v); }");
+		case DFdy:
+			decl("float dFdy( float v ) { return ddy(v); }");
+			decl("float2 dFdy( float2 v ) { return ddy(v); }");
+			decl("float3 dFdy( float3 v ) { return ddy(v); }");
+		case UintBitsToFloat:
+			decl("float _uintBitsToFloat( int v ) { return asfloat(asuint(v)); }");
+			decl("float2 _uintBitsToFloat( int2 v ) { return asfloat(asuint(v)); }");
+			decl("float3 _uintBitsToFloat( int3 v ) { return asfloat(asuint(v)); }");
+			decl("float4 _uintBitsToFloat( int4 v ) { return asfloat(asuint(v)); }");
+		case TextureSize:
+			var tt = args[0].t;
+			var tstr = getTexType(tt);
+			switch( tt ) {
+			case TSampler(dim, arr) if( args.length > 1 ):
+				var size = Tools.getDimSize(dim, arr);
+				switch( size ) {
+				case 1:
+					decl('float textureSize($tstr tex, int lod) { float w; float levels; tex.GetDimensions((uint)lod,w,levels); return w; }');
+				case 2:
+					decl('float2 textureSize($tstr tex, int lod) { float w; float h; float levels; tex.GetDimensions((uint)lod,w,h,levels); return float2(w, h); }');
+				case 3:
+					decl('float3 textureSize($tstr tex, int lod) { float w; float h; float els; float levels; tex.GetDimensions((uint)lod,w,h,els,levels); return float3(w, h, els); }');
+				}
+			case TSampler(dim,arr), TRWTexture(dim, arr, _):
+				var size = Tools.getDimSize(dim, arr);
+				switch( size ) {
+				case 1:
+					decl('float textureSize($tstr tex) { float w; tex.GetDimensions(w); return w; }');
+				case 2:
+					decl('float2 textureSize($tstr tex) { float w; float h; tex.GetDimensions(w,h); return float2(w, h); }');
+				case 3:
+					decl('float3 textureSize($tstr tex) { float w; float h; float els; tex.GetDimensions(w,h,els); return float3(w, h, els); }');
+				}
+			default:
+				throw "assert";
+			}
+		case Vec2 if( args.length == 1 && args[0].t == TFloat ):
+			decl("float2 vec2( float v ) { return float2(v,v); }");
+		case Vec3 if( args.length == 1 && args[0].t == TFloat ):
+			decl("float3 vec3( float v ) { return float3(v,v,v); }");
+		case Vec4 if( args.length == 1 && args[0].t == TFloat ):
+			decl("float4 vec4( float v ) { return float4(v,v,v,v); }");
+		default:
+		}
+	}
+
 	function addExpr( e : TExpr, tabs : String ) {
 		switch( e.e ) {
 		case TConst(c):
@@ -298,6 +409,8 @@ class HlslOut {
 			var acc = varAccess.get(v.id);
 			if( acc != null ) add(acc);
 			ident(v);
+		case TCall({ e : TGlobal(SetLayout) },_):
+			// ignore
 		case TCall({ e : TGlobal(g = (Texture | TextureLod)) }, args):
 			addValue(args[0], tabs);
 			switch( g ) {
@@ -328,16 +441,21 @@ class HlslOut {
 			if( g == Texture && isVertex )
 				add(",0");
 			add(")");
+		case TCall({ e : TGlobal(ImageStore) }, [tex,uv,color]):
+			addValue(tex, tabs);
+			add("[");
+			addValue(uv, tabs);
+			add("] = ");
+			addValue(color, tabs);
 		case TCall({ e : TGlobal(g = (Texel)) }, args):
 			addValue(args[0], tabs);
 			add(".Load(");
-			switch ( args[1].t ) {
-				case TSampler2D:
-					add("int3(");
-				case TSampler2DArray:
-					add("int4(");
-				default:
-					throw "assert";
+			switch( args[1].t ) {
+			case TSampler(dim,arr):
+				var size = Tools.getDimSize(dim, arr) + 1;
+				add("int"+size+"(");
+			default:
+				throw "assert";
 			}
 			addValue(args[1],tabs);
 			if ( args.length != 2 ) {
@@ -348,31 +466,11 @@ class HlslOut {
 				add(", 0");
 			}
 			add("))");
-		case TCall({ e : TGlobal(g = (TextureSize)) }, args):
-			decl("float2 textureSize(Texture2D tex, int lod) { float w; float h; float levels; tex.GetDimensions((uint)lod,w,h,levels); return float2(w, h); }");
-			decl("float3 textureSize(Texture2DArray tex, int lod) { float w; float h; float els; float levels; tex.GetDimensions((uint)lod,w,h,els,levels); return float3(w, h, els); }");
-			decl("float2 textureSize(TextureCube tex, int lod) { float w; float h; float levels; tex.GetDimensions((uint)lod,w,h,levels); return float2(w, h); }");
-			add("textureSize(");
-			addValue(args[0], tabs);
-			if (args.length != 1) {
-				// With LOD argument
-				add(", ");
-				addValue(args[1],tabs);
-			} else {
-				add(", 0");
-			}
-			add(")");
 		case TCall(e = { e : TGlobal(g) }, args):
-			switch( [g,args.length] ) {
-			case [Vec2, 1] if( args[0].t == TFloat ):
-				decl("float2 vec2( float v ) { return float2(v,v); }");
-				add("vec2");
-			case [Vec3, 1] if( args[0].t == TFloat ):
-				decl("float3 vec3( float v ) { return float3(v,v,v); }");
-				add("vec3");
-			case [Vec4, 1] if( args[0].t == TFloat ):
-				decl("float4 vec4( float v ) { return float4(v,v,v,v); }");
-				add("vec4");
+			declGlobal(g, args);
+			switch( [g,args] ) {
+			case [Vec2|Vec3|Vec4, [{ t : TFloat }]]:
+				add(g.getName().toLowerCase());
 			default:
 				addValue(e,tabs);
 			}
@@ -384,58 +482,6 @@ class HlslOut {
 			}
 			add(")");
 		case TGlobal(g):
-			switch( g ) {
-			case Mat3x4:
-				// float4x3 constructor uses row-order, we want column order here
-				decl("float4x3 mat3x4( float4 a, float4 b, float4 c ) { float4x3 m; m._m00_m10_m20_m30 = a; m._m01_m11_m21_m31 = b; m._m02_m12_m22_m32 = c; return m; }");
-				decl("float4x3 mat3x4( float4x4 m ) { float4x3 m2; m2._m00_m10_m20_m30 = m._m00_m10_m20_m30; m2._m01_m11_m21_m31 = m._m01_m11_m21_m31; m2._m02_m12_m22_m32 = m._m02_m12_m22_m32; return m2; }");
-			case Mat4:
-				decl("float4x4 mat4( float4 a, float4 b, float4 c, float4 d ) { float4x4 m; m._m00_m10_m20_m30 = a; m._m01_m11_m21_m31 = b; m._m02_m12_m22_m32 = c; m._m03_m13_m23_m33 = d; return m; }");
-			case Mat3:
-				decl("float3x3 mat3( float4x4 m ) { return (float3x3)m; }");
-				decl("float3x3 mat3( float4x3 m ) { return (float3x3)m; }");
-				decl("float3x3 mat3( float3 a, float3 b, float3 c ) { float3x3 m; m._m00_m10_m20 = a; m._m01_m11_m21 = b; m._m02_m12_m22 = c; return m; }");
-				decl("float3x3 mat3( float c00, float c01, float c02, float c10, float c11, float c12, float c20, float c21, float c22 ) { float3x3 m = { c00, c10, c20, c01, c11, c21, c02, c12, c22 }; return m; }");
-			case Mat2:
-				decl("float2x2 mat2( float4x4 m ) { return (float2x2)m; }");
-				decl("float2x2 mat2( float4x3 m ) { return (float2x2)m; }");
-				decl("float2x2 mat2( float3x3 m ) { return (float2x2)m; }");
-				decl("float2x2 mat2( float2 a, float2 b ) { float2x2 m; m._m00_m10 = a; m._m01_m11 = b; return m; }");
-				decl("float2x2 mat2( float c00, float c01, float c10, float c11 ) { float2x2 m = { c00, c10, c01, c11 }; return m; }");
-			case Mod:
-				declMods();
-			case Pow:
-				// negative power might not work
-				decl("#pragma warning(disable:3571)");
-			case Pack:
-				decl("float4 pack( float v ) { float4 color = frac(v * float4(1, 255, 255.*255., 255.*255.*255.)); return color - color.yzww * float4(1. / 255., 1. / 255., 1. / 255., 0.); }");
-			case Unpack:
-				decl("float unpack( float4 color ) { return dot(color,float4(1., 1. / 255., 1. / (255. * 255.), 1. / (255. * 255. * 255.))); }");
-			case PackNormal:
-				decl("float4 packNormal( float3 n ) { return float4((n + 1.) * 0.5,1.); }");
-			case UnpackNormal:
-				decl("float3 unpackNormal( float4 p ) { return normalize(p.xyz * 2. - 1.); }");
-			case Atan:
-				decl("float atan( float y, float x ) { return atan2(y,x); }");
-			case ScreenToUv:
-				decl("float2 screenToUv( float2 v ) { return v * float2(0.5, -0.5) + float2(0.5,0.5); }");
-			case UvToScreen:
-				decl("float2 uvToScreen( float2 v ) { return v * float2(2.,-2.) + float2(-1., 1.); }");
-			case DFdx:
-				decl("float dFdx( float v ) { return ddx(v); }");
-				decl("float2 dFdx( float2 v ) { return ddx(v); }");
-				decl("float3 dFdx( float3 v ) { return ddx(v); }");
-			case DFdy:
-				decl("float dFdy( float v ) { return ddy(v); }");
-				decl("float2 dFdy( float2 v ) { return ddy(v); }");
-				decl("float3 dFdy( float3 v ) { return ddy(v); }");
-			case UintBitsToFloat:
-				decl("float _uintBitsToFloat( int v ) { return asfloat(asuint(v)); }");
-				decl("float2 _uintBitsToFloat( int2 v ) { return asfloat(asuint(v)); }");
-				decl("float3 _uintBitsToFloat( int3 v ) { return asfloat(asuint(v)); }");
-				decl("float4 _uintBitsToFloat( int4 v ) { return asfloat(asuint(v)); }");
-			default:
-			}
 			add(GLOBALS.get(g));
 		case TParenthesis(e):
 			add("(");
@@ -459,7 +505,10 @@ class HlslOut {
 				add(i);
 				add("] = ");
 				addExpr(el[i], tabs);
-				newLine(el[i]);
+				if( i < el.length - 1 ) {
+					newLine(el[i]);
+					add(tabs);
+				}
 			}
 		case TBinop(OpAssign,evar = { e : TVar(_) },{ e : TArrayDecl(el) }):
 			for( i in 0...el.length ) {
@@ -468,6 +517,10 @@ class HlslOut {
 				add(i);
 				add("] = ");
 				addExpr(el[i], tabs);
+				if( i < el.length - 1 ) {
+					newLine(el[i]);
+					add(tabs);
+				}
 			}
 		case TArrayDecl(el):
 			add("{");
@@ -642,6 +695,10 @@ class HlslOut {
 			}
 		case TMeta(m, args, e):
 			handleMeta(m, args, addExpr, e, tabs);
+		case TField(e, f):
+			addValue(e, tabs);
+			add(".");
+			add(f);
 		}
 	}
 
@@ -684,9 +741,15 @@ class HlslOut {
 		}
 	}
 
-	function collectGlobals( m : Map<TGlobal,Bool>, e : TExpr ) {
+	function collectGlobals( m : Map<TGlobal,Type>, e : TExpr ) {
 		switch( e.e )  {
-		case TGlobal(g): m.set(g,true);
+		case TGlobal(g): m.set(g,e.t);
+		case TCall({ e : TGlobal(SetLayout) }, [{ e : TConst(CInt(x)) }, { e : TConst(CInt(y)) }, { e : TConst(CInt(z)) }]):
+			computeLayout = [x,y,z];
+		case TCall({ e : TGlobal(SetLayout) }, [{ e : TConst(CInt(x)) }, { e : TConst(CInt(y)) }]):
+			computeLayout = [x,y,1];
+		case TCall({ e : TGlobal(SetLayout) }, [{ e : TConst(CInt(x)) }]):
+			computeLayout = [x,1,1];
 		default: e.iter(collectGlobals.bind(m));
 		}
 	}
@@ -709,27 +772,41 @@ class HlslOut {
 			collectGlobals(foundGlobals, f.expr);
 
 		add("struct s_input {\n");
-		if( !isVertex )
+		if( kind == Fragment )
 			add("\tfloat4 __pos__ : "+SV_POSITION+";\n");
 		for( v in s.vars )
 			if( v.kind == Input || (v.kind == Var && !isVertex) )
 				declVar("_in.", v);
-		if( foundGlobals.exists(VertexID) )
-			add("\tuint vertexID : "+SV_VertexID+";\n");
-		if( foundGlobals.exists(InstanceID) )
-			add("\tuint instanceID : "+SV_InstanceID+";\n");
-		if( foundGlobals.exists(FrontFacing) )
-			add("\tbool isFrontFace : "+SV_IsFrontFace+";\n");
+		for( g in foundGlobals.keys() ) {
+			var sv = getSVName(g);
+			if( sv == null ) continue;
+			add("\t");
+			switch( g ) {
+			case InstanceID:
+				add("uint");
+			default:
+				addType(foundGlobals.get(g));
+			}
+			var name = g.getName().split("_").pop();
+			name = name.charAt(0).toLowerCase()+name.substr(1);
+			add(" "+name);
+			add(" : ");
+			add(sv);
+			add(";\n");
+			GLOBALS.set(g, "_in."+name);
+		}
 		add("};\n\n");
 
-		add("struct s_output {\n");
-		for( v in s.vars )
-			if( v.kind == Output )
-				declVar("_out.", v);
-		for( v in s.vars )
-			if( v.kind == Var && isVertex )
-				declVar("_out.", v);
-		add("};\n\n");
+		if( !isCompute ) {
+			add("struct s_output {\n");
+			for( v in s.vars )
+				if( v.kind == Output )
+					declVar("_out.", v);
+			for( v in s.vars )
+				if( v.kind == Var && isVertex )
+					declVar("_out.", v);
+			add("};\n\n");
+		}
 	}
 
 	function initGlobals( s : ShaderData ) {
@@ -746,18 +823,22 @@ class HlslOut {
 	function initParams( s : ShaderData ) {
 		var textures = [];
 		var buffers = [];
+		var uavs = [];
 		add('cbuffer _params : register(b${baseRegister+1}) {\n');
 		for( v in s.vars )
 			if( v.kind == Param ) {
 				switch( v.type ) {
-				case TArray(t, _) if( t.isSampler() ):
+				case TArray(TRWTexture(_), _):
+					uavs.push(v);
+					continue;
+				case TArray(t, _) if( t.isTexture() ):
 					textures.push(v);
 					continue;
 				case TBuffer(_):
 					buffers.push(v);
 					continue;
 				default:
-					if( v.type.isSampler() ) {
+					if( v.type.isTexture() ) {
 						textures.push(v);
 						continue;
 					}
@@ -768,14 +849,19 @@ class HlslOut {
 			}
 		add("};\n\n");
 
-		var bufCount = 0;
-		for( b in buffers ) {
-			add('cbuffer _buffer$bufCount : register(b${bufCount+baseRegister+2}) { ');
-			addVar(b);
-			add("; };\n");
-			bufCount++;
+		var regCount = baseRegister + 2;
+		for( b in buffers.concat(uavs) ) {
+			switch( b.type ) {
+			case TBuffer(t, size, Uniform):
+				add('cbuffer _buffer$regCount : register(b${regCount++}) { ');
+				addVar(b);
+				add("; };\n");
+			default:
+				addVar(b);
+				add(' : register(u${regCount++});\n');
+			}
 		}
-		if( bufCount > 0 ) add("\n");
+		if( buffers.length + uavs.length > 0 ) add("\n");
 
 		var ctx = new Samplers();
 		var texCount = 0;
@@ -795,24 +881,59 @@ class HlslOut {
 
 	function initStatics( s : ShaderData ) {
 		add(STATIC + "s_input _in;\n");
-		add(STATIC + "s_output _out;\n");
+		if( !isCompute )
+			add(STATIC + "s_output _out;\n");
 
 		add("\n");
 		for( v in s.vars )
 			if( v.kind == Local ) {
+				var isConst = v.qualifiers != null && v.qualifiers.indexOf(Final) >= 0;
 				add(STATIC);
+				if( isConst )
+					add(CONST);
 				addVar(v);
+				if( isConst ) {
+					var found = null;
+					for( f in s.funs ) {
+						switch( f.expr.e ) {
+						case TBlock(el):
+							for( e in el ) {
+								switch( e.e ) {
+								case TBinop(OpAssign, { e : TVar(v2) }, einit) if( v2 == v ):
+									found = einit;
+									break;
+								default:
+								}
+							}
+						default:
+						}
+					}
+					if( found == null )
+						throw "Constant variable "+v.name+" is missing initializer";
+					add(" = ");
+					addExpr(found,"");
+				}
 				add(";\n");
 			}
 		add("\n");
 	}
 
 	function emitMain( expr : TExpr ) {
-		add("s_output main( s_input __in ) {\n");
+		if( isCompute )
+			add('[numthreads(${computeLayout[0]},${computeLayout[1]},${computeLayout[2]})] void ');
+		else
+			add('s_output ');
+		add("main( s_input __in ) {\n");
 		add("\t_in = __in;\n");
 		switch( expr.e ) {
 		case TBlock(el):
 			for( e in el ) {
+				switch( e.e ) {
+				case TBinop(OpAssign,evar = { e : TVar(v) },_) if( v.qualifiers != null && v.qualifiers.indexOf(Final) >= 0 ):
+					// ignore (is a static const)
+					continue;
+				default:
+				}
 				add("\t");
 				addExpr(e, "\t");
 				newLine(e);
@@ -820,7 +941,8 @@ class HlslOut {
 		default:
 			addExpr(expr, "");
 		}
-		add("\treturn _out;\n");
+		if( !isCompute )
+			add("\treturn _out;\n");
 		add("}");
 	}
 
@@ -848,8 +970,7 @@ class HlslOut {
 
 		if( s.funs.length != 1 ) throw "assert";
 		var f = s.funs[0];
-		isVertex = f.kind == Vertex;
-
+		kind = f.kind;
 		varAccess = new Map();
 		samplers = new Map();
 		initVars(s);

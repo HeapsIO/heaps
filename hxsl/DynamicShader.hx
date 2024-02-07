@@ -59,6 +59,8 @@ class DynamicShader extends Shader {
 		}
 		var value : Dynamic = null;
 		switch( v.type ) {
+		case TVec(4,_):
+			value = new h3d.Vector4();
 		case TVec(_):
 			value = new h3d.Vector();
 		case TMat3, TMat4, TMat3x4:

@@ -5,7 +5,7 @@ private class FormatMap {
 	public var size : Int;
 	public var offset : Int;
 	public var precision : hxd.BufferFormat.Precision;
-	public var def : h3d.Vector;
+	public var def : h3d.Vector4;
 	public function new(size, offset, def, prec) {
 		this.size = size;
 		this.offset = offset;
@@ -13,6 +13,25 @@ private class FormatMap {
 		this.def = def;
 	}
 }
+
+#if hide
+private class ContextShared extends hrt.prefab.ContextShared {
+	var customLoadTexture : String -> h3d.mat.Texture;
+
+	public function new(loadTexture : String -> h3d.mat.Texture, ?root3d: h3d.scene.Object = null) {
+		#if prefab2
+		super(root3d);
+		#else
+		super();
+		#end
+		this.customLoadTexture = loadTexture;
+	}
+
+	override function loadTexture(path:String, async:Bool = false):h3d.mat.Texture {
+			return customLoadTexture(path);
+	}
+}
+#end
 
 class GeometryBuffer {
 	public var vertexes : haxe.ds.Vector<hxd.impl.Float32>;
@@ -66,7 +85,7 @@ class Library {
 		return { format : hxd.BufferFormat.make(format), defs : defs };
 	}
 
-	public function load( format : hxd.BufferFormat, ?defaults : Array<h3d.Vector>, modelIndex = -1 ) {
+	public function load( format : hxd.BufferFormat, ?defaults : Array<h3d.Vector4>, modelIndex = -1 ) {
 		var vtmp = new h3d.Vector();
 		var models = modelIndex < 0 ? header.models : [header.models[modelIndex]];
 		var outVertex = new hxd.FloatBuffer();
@@ -88,7 +107,7 @@ class Library {
 				vtmp.x = data.vertexes[p++];
 				vtmp.y = data.vertexes[p++];
 				vtmp.z = data.vertexes[p++];
-				vtmp.transform3x4(pos);
+				vtmp.transform(pos);
 				outVertex.push(vtmp.x);
 				outVertex.push(vtmp.y);
 				outVertex.push(vtmp.z);
@@ -102,7 +121,7 @@ class Library {
 	}
 
 	@:noDebug
-	public function getBuffers( geom : Geometry, format : hxd.BufferFormat, ?defaults : Array<h3d.Vector>, ?material : Int ) {
+	public function getBuffers( geom : Geometry, format : hxd.BufferFormat, ?defaults : Array<h3d.Vector4>, ?material : Int ) {
 
 		if( material == 0 && geom.indexCounts.length == 1 )
 			material = null;
@@ -278,7 +297,7 @@ class Library {
 		#if hide
 		if( (props:Dynamic).__ref != null ) {
 			try {
-				if ( setupMaterialLibrary(mat, hxd.res.Loader.currentInstance.load((props:Dynamic).__ref).toPrefab(), (props:Dynamic).name) )
+				if ( setupMaterialLibrary(loadTexture, mat, hxd.res.Loader.currentInstance.load((props:Dynamic).__ref).toPrefab(), (props:Dynamic).name) )
 					return mat;
 			} catch( e : Dynamic ) {
 			}
@@ -740,29 +759,35 @@ class Library {
 	}
 
 	#if hide
-	public dynamic static function setupMaterialLibrary( mat : h3d.mat.Material, lib : hrt.prefab.Resource, name : String ) {
-		var m  = lib.load().getOpt(hrt.prefab.Material,name);
-		if ( m == null )
-			return false;
-		@:privateAccess m.update(mat, m.renderProps(),
-		function loadTexture ( path : String ) {
-			return hxd.res.Loader.currentInstance.load(path).toTexture();
-		});
-		for ( c in m.children ) {
-			var shader = Std.downcast(c, hrt.prefab.Shader);
-			if ( shader == null )
-				continue;
-			#if prefab2
-			var s = shader.make().shader;
-			#else
-			shader.clone();
-			var ctx = new hrt.prefab.Context();
-			var s = shader.makeShader(ctx);
-			#end
-			@:privateAccess shader.applyShader(null, mat, s);
-		}
-		return true;
-	}
+	static var materialContainer : h3d.scene.Mesh;
+    public dynamic static function setupMaterialLibrary( loadTexture : String -> h3d.mat.Texture, mat : h3d.mat.Material, lib : hrt.prefab.Resource, name : String ) {
+        var m  = lib.load().getOpt(hrt.prefab.Material,name);
+        if ( m == null )
+            return false;
+
+		if (materialContainer == null)
+			materialContainer = new h3d.scene.Mesh(null, mat, null);
+
+	#if prefab2
+		var shared = new ContextShared(loadTexture, materialContainer);
+        materialContainer.material = mat;
+        m.make(shared);
+	#else
+		var ctx = new hrt.prefab.Context();
+		ctx.shared = new ContextShared(loadTexture);
+
+		materialContainer.material = mat;
+		ctx.local3d = materialContainer;
+		m.make(ctx);
+	#end
+        // Ensure there is no leak with this
+		materialContainer.material = null;
+
+		while (materialContainer.numChildren > 0)
+			@:privateAccess materialContainer.children[materialContainer.numChildren - 1].remove();
+
+        return true;
+    }
 	#end
 
 }

@@ -1,6 +1,6 @@
 package hxd;
 
-private typedef InnerData = #if flash flash.Vector<UInt> #else Array<hxd.impl.UInt16> #end
+private typedef InnerData = Array<hxd.impl.UInt16>;
 
 private class InnerIterator {
 	var b : InnerData;
@@ -25,9 +25,7 @@ abstract IndexBuffer(InnerData) {
 
 	public inline function new(length = 0) {
 		#if js
-		this = #if (haxe_ver >= 4) js.Syntax.construct #else untyped __new__ #end(Array, length);
-		#elseif flash
-		this = new InnerData(length);
+		this = js.Syntax.construct(Array, length);
 		#else
 		this = new InnerData();
 		if( length > 0 ) grow(length);
@@ -35,17 +33,11 @@ abstract IndexBuffer(InnerData) {
 	}
 
 	public inline function push( v : Int ) {
-		#if flash
-		this[this.length] = v;
-		#else
 		this.push(v);
-		#end
 	}
 
 	public inline function grow( v : Int ) {
-		#if flash
-		if( v > this.length ) this.length = v;
-		#elseif js
+		#if js
 		while( this.length < v ) this.push(0);
 		#else
 		if( v > this.length ) this[v - 1] = 0;

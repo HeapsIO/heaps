@@ -46,7 +46,7 @@ class Lights extends SampleApp {
 		for( i in 0...50 ) {
 			var m = new h3d.scene.Mesh(box, s3d);
 			m.material.color.set(Math.random(), Math.random(), Math.random());
-			m.material.color.normalize();
+			m.material.color.normalize3();
 			m.scale(1 + Math.random() * 10);
 			m.z = m.scaleX * 0.5;
 			m.setRotation(0,0,Math.random() * Math.PI * 2);
@@ -65,7 +65,7 @@ class Lights extends SampleApp {
 		for( i in 0...20 ) {
 			var m = new h3d.scene.Mesh(sp, s3d);
 			m.material.color.set(Math.random(), Math.random(), Math.random());
-			m.material.color.normalize();
+			m.material.color.normalize3();
 			m.scale(0.5 + Math.random() * 4);
 			m.z = 2 + Math.random() * 5;
 			var cx = (Math.random() - 0.5) * 20;
@@ -80,14 +80,14 @@ class Lights extends SampleApp {
 		var pt = new h3d.scene.pbr.PointLight(s3d);
 		pt.setPosition(0,0,15);
 		pt.range = 40;
-		pt.color.scale3(20);
+		pt.color.scale(20);
 
 		var sp = new h3d.scene.pbr.SpotLight(s3d);
 		sp.setPosition(-30,-30,30);
 		sp.setDirection(new h3d.Vector(1,2,-5));
 		sp.range = 70;
 		sp.angle = 70;
-		sp.color.scale3(10);
+		sp.color.scale(10);
 
 		lights = [
 			new h3d.scene.pbr.DirLight(new h3d.Vector(1,2,-5), s3d),
@@ -141,7 +141,7 @@ class Lights extends SampleApp {
 			m.m.x = m.cx + Math.cos(m.pos) * m.ray;
 			m.m.y = m.cy + Math.sin(m.pos) * m.ray;
 
-			var cc = hxd.impl.Api.downcast(m.m.cullingCollider, h3d.col.Sphere);
+			var cc = Std.downcast(m.m.cullingCollider, h3d.col.Sphere);
 			if( cc != null ) {
 				var absPos = m.m.getAbsPos();
 				cc.x = absPos.tx;

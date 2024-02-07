@@ -86,7 +86,7 @@ class LightBuffer {
 		b[i+0] = v.r;
 		b[i+1] = v.g;
 		b[i+2] = v.b;
-		b[i+3] = v.a;
+		b[i+3] = 1;
 	}
 
 	function sortingCriteria ( l1 : Light, l2 : Light, cameraTarget : Vector ) {

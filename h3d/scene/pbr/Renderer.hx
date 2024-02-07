@@ -135,7 +135,7 @@ class Renderer extends h3d.scene.Renderer {
 	public function new(?env) {
 		super();
 		this.env = env;
-		defaultPass = new h3d.pass.Default("color");
+		defaultPass = new h3d.pass.Output("color");
 		slides.addShader(pbrProps);
 		pbrOut.addShader(pbrIndirect);
 		pbrOut.addShader(pbrProps);
@@ -163,12 +163,7 @@ class Renderer extends h3d.scene.Renderer {
 	inline function get_exposure() return tonemap.shader.exposure;
 	inline function set_exposure(v:Float) return tonemap.shader.exposure = v;
 
-	override function debugCompileShader(pass:h3d.mat.Pass) {
-		output.setContext(this.ctx);
-		return output.compileShader(pass);
-	}
-
-	override function getPassByName(name:String):h3d.pass.Base {
+	override function getPassByName(name:String):h3d.pass.Output {
 		switch( name ) {
 		case "overlay", "beforeTonemapping", "beforeTonemappingAlpha", "albedo", "afterTonemapping", "forward", "forwardAlpha", "distortion":
 			return defaultPass;
@@ -221,7 +216,7 @@ class Renderer extends h3d.scene.Renderer {
 		passes.reset();
 	}
 
-	function renderPass(p:h3d.pass.Base, passes, ?sort) {
+	function renderPass(p:h3d.pass.Output, passes, ?sort) {
 		cullPasses(passes, function(col) return col.inFrustum(ctx.camera.frustum));
 		p.draw(passes, sort);
 		passes.reset();
@@ -230,7 +225,7 @@ class Renderer extends h3d.scene.Renderer {
 	function lighting() {
 
 		begin(Shadows);
-		var ls = hxd.impl.Api.downcast(getLightSystem(), h3d.scene.pbr.LightSystem);
+		var ls = Std.downcast(getLightSystem(), h3d.scene.pbr.LightSystem);
 		var count = ctx.engine.drawCalls;
 		if( ls != null ) drawShadows(ls);
 		if( ctx.lightSystem != null ) ctx.lightSystem.drawPasses = ctx.engine.drawCalls - count;
@@ -246,7 +241,7 @@ class Renderer extends h3d.scene.Renderer {
 
 		begin(Lighting);
 		if ( displayMode == Performance ) {
-			var ls = hxd.impl.Api.downcast(getLightSystem(), h3d.scene.pbr.LightSystem);
+			var ls = Std.downcast(getLightSystem(), h3d.scene.pbr.LightSystem);
 			var s = new h3d.shader.pbr.Light.Performance();
 			performance.shader.gradient = getLightingPerformanceGradient();
 			s.maxLights = performance.shader.gradient.width - 1;
@@ -330,7 +325,7 @@ class Renderer extends h3d.scene.Renderer {
 		var light = @:privateAccess ctx.lights;
 		var passes = get("shadow");
 		while( light != null ) {
-			var plight = hxd.impl.Api.downcast(light, h3d.scene.pbr.Light);
+			var plight = Std.downcast(light, h3d.scene.pbr.Light);
 			if( plight != null ) {
 				if( !shadows ) passes.clear();
 				ls.drawShadows(plight, passes);
@@ -377,7 +372,7 @@ class Renderer extends h3d.scene.Renderer {
 		if (!shadows)
 			passes.clear();
 		while( light != null ) {
-			var plight = hxd.impl.Api.downcast(light, h3d.scene.pbr.Light);
+			var plight = Std.downcast(light, h3d.scene.pbr.Light);
 			if( plight != null ) {
 				plight.shadows.setContext(ctx);
 				plight.shadows.computeStatic(passes);
@@ -539,7 +534,7 @@ class Renderer extends h3d.scene.Renderer {
 	override function render() {
 		beginPbr();
 		setTarget(textures.depth);
-		ctx.engine.clearF(new h3d.Vector(1));
+		ctx.engine.clearF(new h3d.Vector4(1));
 
 		setTargets(getPbrRenderTargets(false));
 		clear(0, 1, 0);
@@ -564,7 +559,7 @@ class Renderer extends h3d.scene.Renderer {
 		lighting();
 
 		begin(Forward);
-		var ls = hxd.impl.Api.downcast(getLightSystem(), h3d.scene.pbr.LightSystem);
+		var ls = Std.downcast(getLightSystem(), h3d.scene.pbr.LightSystem);
 		ls.forwardMode = true;
 		setTargets([textures.hdr, getPbrDepth()]);
 		renderPass(colorDepthOutput, get("forward"));

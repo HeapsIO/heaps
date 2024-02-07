@@ -333,16 +333,6 @@ class Tile {
 	function upload( bmp:hxd.BitmapData ) : Void {
 		var w = innerTex.width;
 		var h = innerTex.height;
-		#if flash
-		if( w != bmp.width || h != bmp.height ) {
-			var bmp2 = new flash.display.BitmapData(w, h, true, 0);
-			var p0 = new flash.geom.Point(0, 0);
-			var bmp = bmp.toNative();
-			bmp2.copyPixels(bmp, bmp.rect, p0, bmp, p0, true);
-			innerTex.uploadBitmap(hxd.BitmapData.fromNative(bmp2));
-			bmp2.dispose();
-		} else
-		#end
 		innerTex.uploadBitmap(bmp);
 	}
 

@@ -87,7 +87,7 @@ class AbstractMask extends Filter {
 		mask = m;
 		if( m != null && bindCount > 0 ) {
 			if( m.filter != null ) {
-				if( hxd.impl.Api.isOfType(m.filter,Hide) ) throw "Same mask can't be part of several filters";
+				if( m.filter is Hide ) throw "Same mask can't be part of several filters";
 				throw "Can't set mask with filter "+m.filter;
 			}
 			m.filter = hide;

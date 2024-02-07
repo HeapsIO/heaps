@@ -131,13 +131,13 @@ class CacheFileBuilder {
 			}
 			var out = new HlslOut();
 			var code = out.run(rd.data);
-			var bytes = dx.Driver.compileShader(code, "", "main", (rd.vertex?"vs_":"ps_") + dxShaderVersion, OptimizationLevel3);
+			var bytes = dx.Driver.compileShader(code, "", "main", ((rd.kind == Vertex)?"vs_":"ps_") + dxShaderVersion, OptimizationLevel3);
 			return { code : code, bytes : bytes };
 			#else
 			throw "DirectX compilation requires -lib hldx without -D dx12";
 			#end
 		case OpenGL:
-			if( rd.vertex ) {
+			if( rd.kind == Vertex ) {
 				// both vertex and fragment needs to be compiled with the same GlslOut !
 				glout = new GlslOut();
 				glout.version = 150;
@@ -151,7 +151,7 @@ class CacheFileBuilder {
 			var tmpSrc = tmpFile + ".pssl";
 			var tmpOut = tmpFile + ".sb";
 			sys.io.File.saveContent(tmpSrc, code);
-			var args = ["-profile", rd.vertex ? "sce_vs_vs_orbis" : "sce_ps_orbis", "-o", tmpOut, tmpSrc];
+			var args = ["-profile", (rd.kind == Vertex) ? "sce_vs_vs_orbis" : "sce_ps_orbis", "-o", tmpOut, tmpSrc];
 			var p = new sys.io.Process("orbis-wave-psslc.exe", args);
 			var error = p.stderr.readAll().toString();
 			var ecode = p.exitCode();
@@ -172,7 +172,7 @@ class CacheFileBuilder {
 			var tmpSrc = tmpFile + ".hlsl";
 			var tmpOut = tmpFile + ".sb";
 			sys.io.File.saveContent(tmpSrc, code);
-			var args = ["-T", (rd.vertex ? "vs_" : "ps_") + dxShaderVersion,"-O3","-Fo", tmpOut, tmpSrc];
+			var args = ["-T", (rd.kind == Vertex ? "vs_" : "ps_") + dxShaderVersion,"-O3","-Fo", tmpOut, tmpSrc];
 			var p = new sys.io.Process(Sys.getEnv("XboxOneXDKLatest")+ "xdk\\FXC\\amd64\\fxc.exe", args);
 			var error = p.stderr.readAll().toString();
 			var ecode = p.exitCode();
@@ -196,12 +196,12 @@ class CacheFileBuilder {
 			var tmpSrc = tmpFile + ".hlsl";
 			var tmpOut = tmpFile + ".sb";
 			var sign = @:privateAccess dx12Driver.computeRootSignature(r);
-			out.baseRegister = rd.vertex ? 0 : sign.fragmentRegStart;
+			out.baseRegister = (rd.kind == Vertex) ? 0 : sign.registers[1].start;
 			var code = out.run(rd.data);
-			var serializeRootSignature = @:privateAccess dx12Driver.stringifyRootSignature(sign.sign, "ROOT_SIGNATURE", sign.params);
+			var serializeRootSignature = @:privateAccess dx12Driver.stringifyRootSignature(sign.sign, "ROOT_SIGNATURE", sign.params, sign.paramsCount);
 			code = serializeRootSignature + code;
 			sys.io.File.saveContent(tmpSrc, code);
-			var args = ["-rootsig-define", "ROOT_SIGNATURE", "-T", (rd.vertex ? "vs_" : "ps_") + dxcShaderVersion,"-O3","-Fo", tmpOut, tmpSrc];
+			var args = ["-rootsig-define", "ROOT_SIGNATURE", "-T", ( (rd.kind == Vertex) ? "vs_" : "ps_") + dxcShaderVersion,"-O3","-Fo", tmpOut, tmpSrc];
 			var p = new sys.io.Process(Sys.getEnv("GXDKLatest")+ "bin\\Scarlett\\dxc.exe", args);
 			var error = p.stderr.readAll().toString();
 			var ecode = p.exitCode();
@@ -216,13 +216,12 @@ class CacheFileBuilder {
 			throw "-lib hldx and -D dx12 are required to generate binaries for XBoxSeries";
 			#end
 		case NX:
-			if( rd.vertex )
+			if( rd.kind == Vertex )
 				glout = new hxsl.NXGlslOut();
 			return { code : glout.run(rd.data), bytes : null };
 		case NXBinaries:
-			if( rd.vertex )
+			if( rd.kind == Vertex ) {
 				glout = new hxsl.NXGlslOut();
-			if ( rd.vertex ) {
 				vertexOut = glout.run(rd.data);
 				return { code : vertexOut, bytes : null }; // binary is in fragment.code
 			}

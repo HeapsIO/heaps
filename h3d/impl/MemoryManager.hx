@@ -9,7 +9,6 @@ class MemoryManager {
 	@:allow(h3d)
 	var driver : Driver;
 	var buffers : Array<Buffer>;
-	var indexes : Array<Indexes>;
 	var textures : Array<h3d.mat.Texture>;
 	var depths : Array<h3d.mat.Texture>;
 
@@ -19,13 +18,14 @@ class MemoryManager {
 	var quadIndexes32 : Indexes;
 	public var usedMemory(default, null) : Float = 0;
 	public var texMemory(default, null) : Float = 0;
+	public var autoDisposeCooldown : Int = 60;
+	var lastAutoDispose = 0;
 
 	public function new(driver) {
 		this.driver = driver;
 	}
 
 	public function init() {
-		indexes = new Array();
 		textures = new Array();
 		buffers = new Array();
 		depths = new Array();
@@ -133,24 +133,6 @@ class MemoryManager {
 			usedMemory -= b.getMemSize();
 	}
 
-	// ------------------------------------- INDEXES ------------------------------------------
-
-	@:allow(h3d.Indexes)
-	function deleteIndexes( i : Indexes ) {
-		indexes.remove(i);
-		driver.disposeIndexes(i.ibuf);
-		i.ibuf = null;
-		usedMemory -= i.count * (i.is32 ? 4 : 2);
-	}
-
-	@:allow(h3d.Indexes)
-	function allocIndexes( i : Indexes ) {
-		i.ibuf = driver.allocIndexes(i.count,i.is32);
-		indexes.push(i);
-		usedMemory += i.count * (i.is32 ? 4 : 2);
-	}
-
-
 	// ------------------------------------- TEXTURES ------------------------------------------
 
 	function memSize( t : h3d.mat.Texture ) {
@@ -193,7 +175,11 @@ class MemoryManager {
 	@:allow(h3d.mat.Texture.alloc)
 	function allocTexture( t : h3d.mat.Texture ) {
 		while( true ) {
-			var free = cleanTextures(false);
+			var free = true;
+			if ( hxd.Timer.frameCount > lastAutoDispose + autoDisposeCooldown ) {
+				free = cleanTextures(false);
+				lastAutoDispose = hxd.Timer.frameCount;
+			}
 			t.t = driver.allocTexture(t);
 			if( t.t != null ) break;
 
@@ -251,10 +237,7 @@ class MemoryManager {
 			b.dispose();
 		for( b in buffers.copy() )
 			b.dispose();
-		for( i in indexes.copy() )
-			i.dispose();
 		buffers = [];
-		indexes = [];
 		textures = [];
 		usedMemory = 0;
 		texMemory = 0;

@@ -95,13 +95,8 @@ class Network extends hxd.App {
 		host = new hxd.net.SocketHost();
 		host.setLogger(function(msg) log(msg));
 
-		if( !hxd.net.Socket.ALLOW_BIND ) {
-			#if flash
-			log("Using network with flash requires compiling with -lib air3 and running through AIR");
-			#else
+		if( !hxd.net.Socket.ALLOW_BIND )
 			log("Server not allowed on this platform");
-			#end
-		}
 
 		try {
 			host.wait(HOST, PORT, function(c) {
@@ -155,9 +150,6 @@ class Network extends hxd.App {
 
 	public static var inst : Network;
 	static function main() {
-		#if air3
-		@:privateAccess hxd.Stage.getInstance().multipleWindowsSupport = true;
-		#end
 		inst = new Network();
 	}
 

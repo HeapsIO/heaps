@@ -80,7 +80,7 @@ class ReverbDriver extends hxd.snd.Driver.EffectDriver<Reverb> {
 	}
 
 	override function apply(e : Reverb, s : SourceHandle) : Void {
-		var e = hxd.impl.Api.downcast(e, hxd.snd.effect.Reverb);
+		var e = Std.downcast(e, hxd.snd.effect.Reverb);
 		var send = s.getAuxiliarySend(e);
 		AL.source3i(s.inst, EFX.AUXILIARY_SEND_FILTER, slot.toInt(), send, EFX.FILTER_NULL);
 	}

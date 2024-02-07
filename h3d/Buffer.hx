@@ -13,6 +13,14 @@ enum BufferFlag {
 		Used for shader input buffer
 	**/
 	UniformBuffer;
+	/**
+		Can be written
+	**/
+	ReadWriteBuffer;
+	/**
+		Used as index buffer
+	**/
+	IndexBuffer;
 }
 
 @:allow(h3d.impl.MemoryManager)
@@ -64,10 +72,50 @@ class Buffer {
 	public function uploadFloats( buf : hxd.FloatBuffer, bufPos : Int, vertices : Int, startVertice = 0 ) {
 		if( startVertice < 0 || vertices < 0 || startVertice + vertices > this.vertices )
 			throw "Invalid vertices count";
-		if( format.hasLowPrecision )
-			throw "Can't upload floats on low precision buffer";
 		if( vertices == 0 )
 			return;
+		if( format.hasLowPrecision ) {
+			var bytes = haxe.io.Bytes.alloc(vertices * format.strideBytes);
+			var bytesPos : Int = 0;
+			var index : Int = bufPos;
+
+			for ( i in 0...vertices ) {
+				for ( input in format.getInputs() ) {
+					var elementCount = input.type.getSize();
+					var step = 0;
+					switch ( input.precision ) {
+						case F32 :
+							for ( i in 0...elementCount ) {
+								bytes.setFloat( bytesPos + step, buf[index++] );
+								step += 4;
+							}
+						case F16 :
+							for ( i in 0...elementCount ) {
+								var f = hxd.BufferFormat.float32to16(buf[index++]);
+								bytes.setUInt16( bytesPos + step, f );
+								step += 2;
+							}
+						case U8 :
+							for ( i in 0...elementCount ) {
+								var f = hxd.BufferFormat.float32toU8(buf[index++]);
+								bytes.set( bytesPos + step, f );
+								step++;
+							}
+						case S8 :
+							for ( i in 0...elementCount ) {
+								var f = hxd.BufferFormat.float32toS8(buf[index++]);
+								bytes.set( bytesPos + step, f );
+								step++;
+							}
+					}
+					// 4 bytes align
+					bytesPos += input.getBytesSize();
+					if ( bytesPos & 3 != 0 ) bytesPos += ( 4 - (bytesPos & 3) );
+				}
+			}
+			uploadBytes(bytes, 0, vertices);
+			return;
+		}
 		engine.driver.uploadBufferData(this, startVertice, vertices, buf, bufPos);
 	}
 

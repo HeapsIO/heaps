@@ -1,16 +1,6 @@
 package h3d.impl;
 
-#if (hldx && haxe_ver < 4)
-
-class DirectXDriver extends h3d.impl.Driver {
-
-	public function new() {
-		throw "HL DirectX support requires Haxe 4.0+";
-	}
-
-}
-
-#elseif (hldx && !dx12)
+#if (hldx && !dx12)
 
 import h3d.impl.Driver;
 import dx.Driver;
@@ -21,12 +11,12 @@ private class ShaderContext {
 	public var globalsSize : Int;
 	public var paramsSize : Int;
 	public var texturesCount : Int;
-	public var textures2DCount : Int;
 	public var bufferCount : Int;
 	public var paramsContent : hl.Bytes;
 	public var globals : dx.Resource;
 	public var params : dx.Resource;
 	public var samplersMap : Array<Int>;
+	public var texturesTypes : Array<hxsl.Ast.Type>;
 	#if debug
 	public var debugSource : String;
 	#end
@@ -86,7 +76,7 @@ class DirectXDriver extends h3d.impl.Driver {
 	var strides : Array<Int> = [];
 	var offsets : Array<Int> = [];
 	var currentShader : CompiledShader;
-	var currentIndex : IndexBuffer;
+	var currentIndex : h3d.Buffer;
 	var currentDepth : Texture;
 	var currentLayout : Layout;
 	var currentTargets = new hl.NativeArray<RenderTargetView>(16);
@@ -286,10 +276,12 @@ class DirectXDriver extends h3d.impl.Driver {
 		haxe.Timer.delay(onCreate.bind(false), 1);
 	}
 
-	override function clear(?color:h3d.Vector, ?depth:Float, ?stencil:Int) {
+	override function clear(?color:h3d.Vector4, ?depth:Float, ?stencil:Int) {
 		if( color != null ) {
 			for( i in 0...targetsCount )
 				Driver.clearColor(currentTargets[i], color.r, color.g, color.b, color.a);
+			if (targetsCount == 0)
+				Driver.clearColor(defaultTarget, color.r, color.g, color.b, color.a);
 		}
 		if( currentDepth != null && (depth != null || stencil != null) )
 			Driver.clearDepthStencilView(currentDepth.depthView, depth, stencil);
@@ -336,16 +328,10 @@ class DirectXDriver extends h3d.impl.Driver {
 
 	override function allocBuffer(b:Buffer):GPUBuffer {
 		var size = b.getMemSize();
-		var res = b.flags.has(UniformBuffer) ? dx.Driver.createBuffer(size, Dynamic, ConstantBuffer, CpuWrite, None, 0, null) : dx.Driver.createBuffer(size, Default, VertexBuffer, None, None, 0, null);
+		var res = b.flags.has(UniformBuffer) ? dx.Driver.createBuffer(size, Dynamic, ConstantBuffer, CpuWrite, None, 0, null) :
+				dx.Driver.createBuffer(size, Default, b.flags.has(IndexBuffer) ? IndexBuffer : VertexBuffer, None, None, 0, null);
 		if( res == null ) return null;
 		return res;
-	}
-
-	override function allocIndexes( count : Int, is32 : Bool ) : IndexBuffer {
-		var bits = is32 ? 2 : 1;
-		var res = dx.Driver.createBuffer(count << bits, Default, IndexBuffer, None, None, 0, null);
-		if( res == null ) return null;
-		return { res : res, count : count, bits : bits  };
 	}
 
 	override function allocDepthBuffer( b : h3d.mat.Texture ) : Texture {
@@ -507,10 +493,6 @@ class DirectXDriver extends h3d.impl.Driver {
 		b.vbuf.release();
 	}
 
-	override function disposeIndexes(i:IndexBuffer) {
-		i.res.release();
-	}
-
 	override function generateMipMaps(texture:h3d.mat.Texture) {
 		if( hasDeviceError ) return;
 		Driver.generateMips(texture.t.view);
@@ -527,14 +509,10 @@ class DirectXDriver extends h3d.impl.Driver {
 		updateResCount++;
 	}
 
-	override function uploadIndexBuffer(i:IndexBuffer, startIndice:Int, indiceCount:Int, buf:hxd.IndexBuffer, bufPos:Int) {
+	override function uploadIndexData(i:Buffer, startIndice:Int, indiceCount:Int, buf:hxd.IndexBuffer, bufPos:Int) {
 		if( hasDeviceError ) return;
-		updateBuffer(i.res, hl.Bytes.getArray(buf.getNative()).offset(bufPos << i.bits), startIndice << i.bits, indiceCount << i.bits);
-	}
-
-	override function uploadIndexBytes(i:IndexBuffer, startIndice:Int, indiceCount:Int, buf:haxe.io.Bytes, bufPos:Int) {
-		if( hasDeviceError ) return;
-		updateBuffer(i.res, @:privateAccess buf.b.offset(bufPos << i.bits), startIndice << i.bits, indiceCount << i.bits);
+		var bits = i.format.strideBytes >> 1;
+		updateBuffer(i.vbuf, hl.Bytes.getArray(buf.getNative()).offset(bufPos << bits), startIndice << bits, indiceCount << bits);
 	}
 
 	override function uploadBufferData(b:Buffer, startVertex:Int, vertexCount:Int, buf:hxd.FloatBuffer, bufPos:Int) {
@@ -562,21 +540,6 @@ class DirectXDriver extends h3d.impl.Driver {
 			return;
 		}
 		updateBuffer(b.vbuf, @:privateAccess buf.b.offset(bufPos), startVertex * b.format.strideBytes, vertexCount * b.format.strideBytes);
-	}
-
-	override function readIndexBytes(v:IndexBuffer, startIndice:Int, indiceCount:Int, buf:haxe.io.Bytes, bufPos:Int) {
-		var tmp = dx.Driver.createBuffer(indiceCount << v.bits, Staging, None, CpuRead | CpuWrite, None, 0, null);
-		box.left = startIndice << v.bits;
-		box.top = 0;
-		box.front = 0;
-		box.right = (startIndice + indiceCount) << v.bits;
-		box.bottom = 1;
-		box.back = 1;
-		tmp.copySubresourceRegion(0, 0, 0, 0, v.res, 0, box);
-		var ptr = tmp.map(0, Read, true, null);
-		@:privateAccess buf.b.blit(bufPos, ptr, 0, indiceCount << v.bits);
-		tmp.unmap(0);
-		tmp.release();
 	}
 
 	override function readBufferBytes(b:Buffer, startVertex:Int, vertexCount:Int, buf:haxe.io.Bytes, bufPos:Int) {
@@ -849,9 +812,13 @@ class DirectXDriver extends h3d.impl.Driver {
 		if( shaderCache != null ) {
 			var bytes = shaderCache.resolveShaderBinary(code, shaderVersion);
 			if( bytes != null ) {
-				var sh = vertex ? Driver.createVertexShader(bytes) : Driver.createPixelShader(bytes);
-				// shader can't be compiled !
-				if( sh == null )
+				try {
+					var sh = vertex ? Driver.createVertexShader(bytes) : Driver.createPixelShader(bytes);
+					// shader can't be compiled !
+					if( sh == null )
+						return null;
+				}
+				catch( d : Dynamic)
 					return null;
 				return bytes;
 			}
@@ -871,9 +838,9 @@ class DirectXDriver extends h3d.impl.Driver {
 			shader.data.funs = null;
 			#end
 		}
-		var bytes = getBinaryPayload(shader.vertex, shader.code);
+		var bytes = getBinaryPayload(shader.kind == Vertex, shader.code);
 		if( bytes == null ) {
-			bytes = try dx.Driver.compileShader(shader.code, "", "main", (shader.vertex?"vs_":"ps_") + shaderVersion, OptimizationLevel3) catch( err : String ) {
+			bytes = try dx.Driver.compileShader(shader.code, "", "main", (shader.kind==Vertex?"vs_":"ps_") + shaderVersion, OptimizationLevel3) catch( err : String ) {
 				err = ~/^\(([0-9]+),([0-9]+)-([0-9]+)\)/gm.map(err, function(r) {
 					var line = Std.parseInt(r.matched(1));
 					var char = Std.parseInt(r.matched(2));
@@ -887,7 +854,7 @@ class DirectXDriver extends h3d.impl.Driver {
 		}
 		if( compileOnly )
 			return { s : null, bytes : bytes };
-		var s = shader.vertex ? Driver.createVertexShader(bytes) : Driver.createPixelShader(bytes);
+		var s = shader.kind == Vertex ? Driver.createVertexShader(bytes) : Driver.createPixelShader(bytes);
 		if( s == null ) {
 			if( hasDeviceError ) return null;
 			throw "Failed to create shader\n" + shader.code;
@@ -902,11 +869,16 @@ class DirectXDriver extends h3d.impl.Driver {
 		ctx.paramsContent = new hl.Bytes(shader.paramsSize * 16);
 		ctx.paramsContent.fill(0, shader.paramsSize * 16, 0xDD);
 		ctx.texturesCount = shader.texturesCount;
+		ctx.texturesTypes = [];
 
 		var p = shader.textures;
 		while( p != null ) {
 			switch( p.type ) {
-			case TArray( TSampler2D , SConst(n) ): ctx.textures2DCount = n;
+			case TArray( t = TSampler(_) | TRWTexture(_) | TChannel(_), SConst(n) ):
+				for( i in 0...n )
+					ctx.texturesTypes.push(t);
+			case TSampler(_), TRWTexture(_), TChannel(_):
+				ctx.texturesTypes.push(p.type);
 			default:
 			}
 			p = p.next;
@@ -1322,12 +1294,16 @@ class DirectXDriver extends h3d.impl.Driver {
 			var sstart = -1, smax = -1;
 			for( i in 0...shader.texturesCount ) {
 				var t = buffers.tex[i];
+				var tt = shader.texturesTypes[i];
 				if( t == null || t.isDisposed() ) {
-					if( i < shader.textures2DCount ) {
+					switch( tt ) {
+					case TSampler(T2D,_):
 						var color = h3d.mat.Defaults.loadingTextureColor;
 						t = h3d.mat.Texture.fromColor(color, (color >>> 24) / 255);
-					} else {
+					case TSampler(TCube,_):
 						t = h3d.mat.Texture.defaultCubeTexture();
+					default:
+						throw "Missing texture";
 					}
 				}
 				if( t != null && t.t == null && t.realloc != null ) {
@@ -1413,12 +1389,12 @@ class DirectXDriver extends h3d.impl.Driver {
 		}
 	}
 
-	override function draw(ibuf:IndexBuffer, startIndex:Int, ntriangles:Int) {
+	override function draw(ibuf:Buffer, startIndex:Int, ntriangles:Int) {
 		if( !allowDraw )
 			return;
 		if( currentIndex != ibuf ) {
 			currentIndex = ibuf;
-			dx.Driver.iaSetIndexBuffer(ibuf.res,ibuf.bits == 2,0);
+			dx.Driver.iaSetIndexBuffer(ibuf.vbuf,ibuf.format.strideBytes == 4,0);
 		}
 		dx.Driver.drawIndexed(ntriangles * 3, startIndex, 0);
 	}
@@ -1432,12 +1408,12 @@ class DirectXDriver extends h3d.impl.Driver {
 		b.data = null;
 	}
 
-	override function drawInstanced(ibuf:IndexBuffer, commands:InstanceBuffer) {
+	override function drawInstanced(ibuf:Buffer, commands:InstanceBuffer) {
 		if( !allowDraw )
 			return;
 		if( currentIndex != ibuf ) {
 			currentIndex = ibuf;
-			dx.Driver.iaSetIndexBuffer(ibuf.res,ibuf.bits == 2,0);
+			dx.Driver.iaSetIndexBuffer(ibuf.vbuf,ibuf.format.strideBytes == 4,0);
 		}
 		if( commands.data == null ) {
 			#if( (hldx == "1.8.0") || (hldx == "1.9.0") )
