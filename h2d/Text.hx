@@ -323,7 +323,10 @@ class Text extends Drawable {
 			else
 				maxWidth = Math.POSITIVE_INFINITY;
 		}
-		if ( font == null ) font = this.font;
+
+		if ( font == null ) 
+			font = this.font;
+
 		var lines = [], restPos = 0;
 		var x = leftMargin;
 		for( i in 0...text.length ) {
@@ -332,6 +335,7 @@ class Text extends Drawable {
 			var newline = cc == '\n'.code;
 			var esize = e.width + e.getKerningOffset(prevChar);
 			var nc = text.charCodeAt(i+1);
+
 			if( font.charset.isBreakChar(cc) && (nc == null || !font.charset.isComplementChar(nc)) ) {
 				if( lines.length == 0 && leftMargin > 0 && x > maxWidth ) {
 					lines.push("");
@@ -365,6 +369,37 @@ class Text extends Drawable {
 					restPos = i + 1;
 				}
 			}
+			else{ 
+				var ne = font.getChar(nc);
+				var nesize = ne.width + ne.getKerningOffset(cc); 
+				if (x + esize + nesize + letterSpacing * 2 > maxWidth){ // Check if current word is longer than maxWidth
+					var cWci = i - 1; 
+					var cWcc = text.charCodeAt(cWci);
+					while (!font.charset.isBreakChar(cWcc) && cWci >= 0){ // Get the start index of the word
+						cWci--;
+						cWcc = text.charCodeAt(cWci);
+					}	
+					cWci++;
+					cWcc = text.charCodeAt(cWci);
+					var prevWcc: Null<Int> = null;
+					var wordWidth = 0.;
+					while (!font.charset.isBreakChar(cWcc) && cWci < text.length){ // Compute the total width of the word
+						var cwc = font.getChar(cWcc);
+						var charSize = cwc.width + cwc.getKerningOffset(prevWcc);
+						wordWidth += charSize;
+						if (wordWidth > maxWidth){ // The word is longer than the maxWidth, we need to split it
+							newline = true;
+							lines.push(text.substr(restPos, i - restPos));
+							restPos = i + 1;
+							break;
+						}
+						prevWcc = cWcc;
+						cWci++;
+						cWcc = text.charCodeAt(cWci);
+					}
+				}
+			}
+
 			if( e != null && cc != '\n'.code )
 				x += esize + letterSpacing;
 			if( newline ) {
@@ -374,6 +409,7 @@ class Text extends Drawable {
 			} else
 				prevChar = cc;
 		}
+
 		if( restPos < text.length ) {
 			if( lines.length == 0 && leftMargin > 0 && x + afterData - letterSpacing > maxWidth ) {
 				lines.push("");
@@ -383,6 +419,7 @@ class Text extends Drawable {
 			lines.push(text.substr(restPos, text.length - restPos));
 			if ( sizes != null ) sizes.push(x);
 		}
+
 		return lines.join("\n");
 	}
 
