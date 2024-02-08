@@ -177,6 +177,10 @@ class TextInput extends Text {
 		var oldText = text;
 
 		switch( e.keyCode ) {
+		case K.UP if( multiline ):
+			cursorIndex = getMatchingIndexOneLineUp();
+		case K.DOWN if( multiline ):
+			cursorIndex = getMatchingIndexOneLineDown();
 		case K.LEFT if (K.isDown(K.CTRL)):
 			cursorIndex = getWordStart();
 		case K.LEFT:
@@ -346,6 +350,94 @@ class TextInput extends Text {
 		while (ret > 0 && charset.isSpace(StringTools.fastCodeAt(text, ret - 1))) ret--;
 		while (ret > 0 && !charset.isSpace(StringTools.fastCodeAt(text, ret - 1))) ret--;
 		return ret;
+	}
+
+	function getMatchingIndexOneLineUp(){
+		var lines = getAllLines();
+		var firstLine = lines[0];
+		if( cursorIndex > firstLine.length ){
+			var prevIndex = 0, currIndex = firstLine.length;
+			for( i in 1...lines.length ) {
+				var line = lines[i];
+				var newCurrIndex = currIndex + line.length;
+				if( cursorIndex > newCurrIndex ) {
+					prevIndex = currIndex;
+					currIndex = newCurrIndex;
+					continue;
+				}
+				var xOffset = 0.;
+				var prevCC: Null<Int> = null;
+				var cI = 0;
+				while( currIndex + cI < cursorIndex) {
+					var cc = line.charCodeAt(cI);
+					var c = font.getChar(cc);
+					xOffset += c.width + c.getKerningOffset(prevCC) + letterSpacing;
+					prevCC = cc;
+					cI++;
+				}
+				var currOffset = 0.;
+				var prevLine = lines[i - 1];
+				prevCC = null;
+				for( cI in 0...prevLine.length ) {
+					var cc = prevLine.charCodeAt(cI);
+					var c = font.getChar(cc);
+					var newCurrOffset = currOffset + c.width + c.getKerningOffset(prevCC) + letterSpacing;
+					if( newCurrOffset > xOffset ) {
+						var out = prevIndex + cI + 1;
+						if( xOffset - currOffset < newCurrOffset - xOffset )
+							out--;
+						return out;
+					}
+					currOffset = newCurrOffset;
+					prevCC = cc;
+				}
+				return currIndex - 1;
+			}
+		}
+		return cursorIndex;
+	}
+
+	function getMatchingIndexOneLineDown(){
+		var lines = getAllLines();
+		if( lines.length > 2 ) {
+			var currIndex = 0;
+			for( i in 0...lines.length - 1 ) {
+				var line = lines[i];
+				var newCurrIndex = currIndex + line.length;
+				if( cursorIndex > newCurrIndex ) {
+					currIndex = newCurrIndex;
+					continue;
+				}
+				var xOffset = 0.;
+				var prevCC: Null<Int> = null;
+				var cI = 0;
+				while( currIndex + cI <= cursorIndex) {
+					var cc = line.charCodeAt(cI);
+					var c = font.getChar(cc);
+					xOffset += c.width + c.getKerningOffset(prevCC) + letterSpacing;
+					prevCC = cc;
+					cI++;
+				}
+				var currOffset = 0.;
+				var nextLine = lines[i + 1];
+				prevCC = null;
+				for( cI in 0...nextLine.length ) {
+					var cc = nextLine.charCodeAt(cI);
+					var c = font.getChar(cc);
+					var newCurrOffset = currOffset + c.width + c.getKerningOffset(prevCC) + letterSpacing;
+					if( newCurrOffset > xOffset ) {
+						var out = newCurrIndex + cI;
+						if( xOffset - currOffset < newCurrOffset - xOffset )
+							out--;
+						return out;
+					}
+					currOffset = newCurrOffset;
+					prevCC = cc;
+				}
+				return newCurrIndex + nextLine.length - 1;
+			}
+		}
+		return cursorIndex;
 	}
 
 	function setState(h:TextHistoryElement) {
