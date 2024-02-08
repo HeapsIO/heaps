@@ -145,6 +145,25 @@ class SceneProf {
 				cat : "__metadata",
 				name : "thread_name",
 				args : { name : "CrBrowserMain" }
+			},
+			{
+				args: {
+					data: {
+						frameTreeNodeId: 0,
+						frames: [
+							{
+								processId: 0,
+								url: "http://x"
+							}
+						],
+						persistentIds: true
+					}
+				},
+				cat: "disabled-by-default-devtools.timeline",
+				name: "TracingStartedInBrowser",
+				pid: 0,
+				tid: 0,
+				ts: 0
 			}
 		];
 
@@ -175,21 +194,16 @@ class SceneProf {
 
 		for( f in frames ) {
 			if( f.samples.length == 0 ) continue;
+			var ts = timeStamp(f.startTime);
+			var tend = timeStamp(f.samples[f.samples.length-1].time);
 			json.push({
 				pid : 0,
 				tid : tid,
-				ts : timeStamp(f.startTime),
-				ph : "B",
-				cat : "devtools.timeline",
-				name : "FunctionCall",
-			});
-			json.push({
-				pid : 0,
-				tid : tid,
-				ts : timeStamp(f.samples[f.samples.length-1].time),
-				ph : "E",
-				cat : "devtools.timeline",
-				name : "FunctionCall"
+				ts : ts,
+				dur : tend - ts,
+				ph : "X",
+				cat : "disabled-by-default-devtools.timeline",
+				name : "RunTask",
 			});
 		}
 		for( f in frames ) {
