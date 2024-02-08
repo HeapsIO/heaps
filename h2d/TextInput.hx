@@ -178,9 +178,9 @@ class TextInput extends Text {
 
 		switch( e.keyCode ) {
 		case K.UP if( multiline ):
-			cursorIndex = getMatchingIndexOneLineUp();
+			moveCursorVertically(-1);
 		case K.DOWN if( multiline ):
-			cursorIndex = getMatchingIndexOneLineDown();
+			moveCursorVertically(1);
 		case K.LEFT if (K.isDown(K.CTRL)):
 			cursorIndex = getWordStart();
 		case K.LEFT:
@@ -192,9 +192,15 @@ class TextInput extends Text {
 			if( cursorIndex < text.length )
 				cursorIndex++;
 		case K.HOME:
-			cursorIndex = 0;
+			if( multiline ) {
+				var currentLine = getCurrentLine();
+				cursorIndex = currentLine.startIndex;
+			} else cursorIndex = 0;
 		case K.END:
-			cursorIndex = text.length;
+			if( multiline ) {
+				var currentLine = getCurrentLine();
+				cursorIndex = currentLine.startIndex + currentLine.value.length - 1;
+			} else cursorIndex = text.length;
 		case K.BACKSPACE, K.DELETE if( selectionRange != null ):
 			if( !canEdit ) return;
 			beforeChange();
@@ -352,92 +358,52 @@ class TextInput extends Text {
 		return ret;
 	}
 
-	function getMatchingIndexOneLineUp(){
-		var lines = getAllLines();
-		var firstLine = lines[0];
-		if( cursorIndex > firstLine.length ){
-			var prevIndex = 0, currIndex = firstLine.length;
-			for( i in 1...lines.length ) {
-				var line = lines[i];
-				var newCurrIndex = currIndex + line.length;
-				if( cursorIndex > newCurrIndex ) {
-					prevIndex = currIndex;
-					currIndex = newCurrIndex;
-					continue;
-				}
-				var xOffset = 0.;
-				var prevCC: Null<Int> = null;
-				var cI = 0;
-				while( currIndex + cI < cursorIndex) {
-					var cc = line.charCodeAt(cI);
-					var c = font.getChar(cc);
-					xOffset += c.width + c.getKerningOffset(prevCC) + letterSpacing;
-					prevCC = cc;
-					cI++;
-				}
-				var currOffset = 0.;
-				var prevLine = lines[i - 1];
-				prevCC = null;
-				for( cI in 0...prevLine.length ) {
-					var cc = prevLine.charCodeAt(cI);
-					var c = font.getChar(cc);
-					var newCurrOffset = currOffset + c.width + c.getKerningOffset(prevCC) + letterSpacing;
-					if( newCurrOffset > xOffset ) {
-						var out = prevIndex + cI + 1;
-						if( xOffset - currOffset < newCurrOffset - xOffset )
-							out--;
-						return out;
-					}
-					currOffset = newCurrOffset;
-					prevCC = cc;
-				}
-				return currIndex - 1;
-			}
+	function moveCursorVertically(yDiff: Int){
+		if( !multiline || yDiff == 0)
+			return;
+		var lines = [];
+		var cursorLineIndex = -1, currLineIndex = 0, currIndex = 0;
+		for( line in getAllLines() ) {
+			lines.push( { line: line, startIndex: currIndex } );
+			var prevIndex = currIndex;
+			currIndex += line.length;
+			if( cursorIndex > prevIndex && cursorIndex < currIndex ) 
+				cursorLineIndex = currLineIndex;
+			currLineIndex++;
 		}
-		return cursorIndex;
-	}
-
-	function getMatchingIndexOneLineDown(){
-		var lines = getAllLines();
-		if( lines.length > 2 ) {
-			var currIndex = 0;
-			for( i in 0...lines.length - 1 ) {
-				var line = lines[i];
-				var newCurrIndex = currIndex + line.length;
-				if( cursorIndex > newCurrIndex ) {
-					currIndex = newCurrIndex;
-					continue;
-				}
-				var xOffset = 0.;
-				var prevCC: Null<Int> = null;
-				var cI = 0;
-				while( currIndex + cI <= cursorIndex) {
-					var cc = line.charCodeAt(cI);
-					var c = font.getChar(cc);
-					xOffset += c.width + c.getKerningOffset(prevCC) + letterSpacing;
-					prevCC = cc;
-					cI++;
-				}
-				var currOffset = 0.;
-				var nextLine = lines[i + 1];
-				prevCC = null;
-				for( cI in 0...nextLine.length ) {
-					var cc = nextLine.charCodeAt(cI);
-					var c = font.getChar(cc);
-					var newCurrOffset = currOffset + c.width + c.getKerningOffset(prevCC) + letterSpacing;
-					if( newCurrOffset > xOffset ) {
-						var out = newCurrIndex + cI;
-						if( xOffset - currOffset < newCurrOffset - xOffset )
-							out--;
-						return out;
-					}
-					currOffset = newCurrOffset;
-					prevCC = cc;
-				}
-				return newCurrIndex + nextLine.length - 1;
-			}
+		if (cursorLineIndex == -1)
+			return;
+		var destinationIndex = hxd.Math.iclamp(cursorLineIndex + yDiff, 0, lines.length);
+		if (destinationIndex == cursorLineIndex)
+			return;
+		var current = lines[cursorLineIndex];
+		var xOffset = 0.;
+		var prevCC: Null<Int> = null;
+		var cI = 0;
+		while( current.startIndex + cI < cursorIndex) {
+			var cc = current.line.charCodeAt(cI);
+			var c = font.getChar(cc);
+			xOffset += c.width + c.getKerningOffset(prevCC) + letterSpacing;
+			prevCC = cc;
+			cI++;
 		}
-		return cursorIndex;
+		var destination = lines[destinationIndex];
+		var currOffset = 0.;
+		prevCC = null;
+		for( cI in 0...destination.line.length ) {
+			var cc = destination.line.charCodeAt(cI);
+			var c = font.getChar(cc);
+			var newCurrOffset = currOffset + c.width + c.getKerningOffset(prevCC) + letterSpacing;
+			if( newCurrOffset > xOffset ) {
+				cursorIndex = destination.startIndex + cI + 1;
+				if( xOffset - currOffset < newCurrOffset - xOffset )
+					cursorIndex--;
+				return;
+			}
+			currOffset = newCurrOffset;
+			prevCC = cc;
+		}
+		cursorIndex = destination.startIndex + destination.line.length;
 	}
 
 	function setState(h:TextHistoryElement) {
@@ -480,23 +446,22 @@ class TextInput extends Text {
 		return finalLines;
 	}
 
-	function getCurrentLine() : String {
+	function getCurrentLine() : {value: String, startIndex: Int} {
 		var lines = getAllLines();
 		var currIndex = 0;
-
-		for(i in 0...lines.length) {
-			currIndex += lines[i].length;
-			if(cursorIndex < currIndex) {
-				return lines[i];
-			}
+		for( i in 0...lines.length ) {
+			var newCurrIndex = currIndex + lines[i].length;
+			if( cursorIndex < newCurrIndex ) 
+				return { value: lines[i], startIndex: currIndex };		
+			currIndex = newCurrIndex;
 		}
-		return '';
+		return { value: '', startIndex: -1 };
 	}
 
 	function getCursorXOffset() {
 		var lines = getAllLines();
 		var offset = cursorIndex;
-		var currLine = getCurrentLine();
+		var currLine = getCurrentLine().value;
 		var currIndex = 0;
 
 		for(i in 0...lines.length) {
