@@ -156,6 +156,10 @@ class TriPlane extends Collider {
 	}
 	#end
 
+	public function dimension() {
+		throw "Not implemented";
+		return 0.0;
+	}
 }
 
 
@@ -263,6 +267,10 @@ class Polygon extends Collider {
 	public function inSphere( s : Sphere ) {
 		throw "Not implemented";
 		return false;
+	}
+
+	inline public function dimension() {
+		return getBounds().dimension();
 	}
 
 	#if !macro

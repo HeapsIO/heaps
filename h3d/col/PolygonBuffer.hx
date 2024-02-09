@@ -84,6 +84,10 @@ class PolygonBuffer extends Collider {
 		return false;
 	}
 
+	public function dimension() {
+		return getBounds().dimension();
+	}
+
 	// Möller–Trumbore intersection
 	public function rayIntersection( r : Ray, bestMatch : Bool ) : Float {
 		var i = startIndex;
