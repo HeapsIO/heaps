@@ -296,6 +296,11 @@ class BaseLibrary {
 						var v = p.props[idx].toFloat();
 						p.props[idx] = PFloat(v / scaleFactor);
 					}
+				case "GeometricTranslation":
+					for( idx in [4,5,6] ) {
+						var v = p.props[idx].toFloat();
+						p.props[idx] = PFloat(v / scaleFactor);
+					}
 				default:
 				}
 		}
