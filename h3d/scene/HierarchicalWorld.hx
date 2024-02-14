@@ -202,6 +202,29 @@ class HierarchicalWorld extends Object {
 		}
 	}
 
+	// Get the chunk at the given position, creating it if it doesn't exist
+	public function getChunkAtLock(x: Float, y: Float) : HierarchicalWorld {
+		requestCreateAt(x,y, true);
+
+		function rec(chunk: HierarchicalWorld, x:Float,y:Float) : HierarchicalWorld {
+			if (!chunk.containsAt(x,y))
+				return null;
+			if (chunk.isLeaf())
+				return chunk;
+			for ( c in chunk.children ) {
+				var node = Std.downcast(c, HierarchicalWorld);
+				if ( node == null )
+					continue;
+				var r = rec(node,x,y);
+				if (r != null)
+					return r;
+			}
+			return null;
+		}
+
+		return rec(this,x,y);
+	}
+
 	public function lockAt(x : Float, y : Float) {
 		if ( !containsAt(x, y) )
 			return;
