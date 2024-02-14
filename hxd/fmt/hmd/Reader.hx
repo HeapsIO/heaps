@@ -142,17 +142,21 @@ class Reader {
 			i = new haxe.io.BytesInput(i.read(d.dataPosition-12));
 		d.props = readProps();
 
-		for( k in 0...i.readInt32() ) {
-			var g = new Geometry();
-			g.props = readProps();
-			g.vertexCount = i.readInt32();
+		inline function makeFormat() {
 			var stride = i.readByte();
-			g.vertexFormat = hxd.BufferFormat.make([for( k in 0...i.readByte() ) {
+			var format = hxd.BufferFormat.make([for( k in 0...i.readByte() ) {
 				var name = readCachedName();
 				var type = i.readByte();
 				new GeometryFormat(name, @:privateAccess GeometryDataFormat.fromInt(type&15), @:privateAccess hxd.BufferFormat.Precision.fromInt(type>>4));
 			}]);
-			if( stride != g.vertexFormat.stride ) throw "assert";
+			if ( stride != format.stride ) throw "assert";
+			return format;
+		}
+		for( k in 0...i.readInt32() ) {
+			var g = new Geometry();
+			g.props = readProps();
+			g.vertexCount = i.readInt32();
+			g.vertexFormat = makeFormat();
 			g.vertexPosition = i.readInt32();
 			var subCount = i.readByte();
 			if( subCount == 0xFF ) subCount = i.readInt32();
@@ -228,6 +232,25 @@ class Reader {
 			}
 			d.animations.push(a);
 		}
+
+		if ( d.version >= 4 ) {
+			var shapeLength : Int;
+			shapeLength = i.readInt32();
+			d.shapes = [];
+			for ( k in 0...shapeLength ) {
+				var s = new BlendShape();
+				s.name = readName();
+				s.geom = i.readInt32() - 1;
+				s.vertexCount = i.readInt32();
+				s.vertexFormat = makeFormat();
+				s.vertexPosition = i.readInt32();
+				s.indexCount = i.readInt32();
+				s.indexPosition = i.readInt32();
+				s.remapPosition = i.readInt32();
+				d.shapes.push(s);
+			}
+		}
+
 
 		return d;
 	}

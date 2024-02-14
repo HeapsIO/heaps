@@ -78,6 +78,19 @@ class Geometry {
 	}
 }
 
+class BlendShape {
+	public var name : String;
+	public var geom : Index<Geometry>;
+	public var vertexCount : Int;
+	public var vertexFormat : hxd.BufferFormat;
+	public var vertexPosition : DataPosition;
+	public var indexCount : DataPosition;
+	public var indexPosition : DataPosition;
+	public var remapPosition : DataPosition;
+	public function new() {
+	}
+}
+
 class Material {
 
 	public var name : String;
@@ -183,7 +196,7 @@ class Animation {
 
 class Data {
 
-	public static inline var CURRENT_VERSION = 3;
+	public static inline var CURRENT_VERSION = 4;
 
 	public var version : Int;
 	public var props : Properties;
@@ -191,6 +204,7 @@ class Data {
 	public var materials : Array<Material>;
 	public var models : Array<Model>;
 	public var animations : Array<Animation>;
+	public var shapes : Array<BlendShape>;
 	public var dataPosition : Int;
 	public var data : haxe.io.Bytes;
 

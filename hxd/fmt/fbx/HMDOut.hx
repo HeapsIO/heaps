@@ -220,6 +220,7 @@ class HMDOut extends BaseLibrary {
 		var uvs = geom.getUVs();
 		var colors = geom.getColors();
 		var mats = geom.getMaterials();
+		var index = geom.getPolygons();
 
 		// remove empty color data
 		if( colors != null ) {
@@ -284,11 +285,20 @@ class HMDOut extends BaseLibrary {
 				ibufs.push([]);
 		}
 
+		var shapes = geom.getRoot().getAll("Shape");
+		var shapeIndexes = []; // Indexes of vertex used in blendshapes
+		var remappedShapes = [];
+		for ( sIdx => s in shapes ) {
+			shapeIndexes.push(s.get("Indexes").getInts());
+			remappedShapes.push([]);
+			for (i in 0...shapeIndexes[sIdx].length)
+				remappedShapes[remappedShapes.length - 1].push([]);
+		}
+
 		g.bounds = new h3d.col.Bounds();
 		var stride = g.vertexFormat.stride;
 		var tmpBuf = new hxd.impl.TypedArray.Float32Array(stride);
 		var vertexRemap = new Array<Int>();
-		var index = geom.getPolygons();
 		var count = 0, matPos = 0, stri = 0;
 		var lookup = new Map();
 		var tmp = new h3d.col.Point();
@@ -381,17 +391,26 @@ class HMDOut extends BaseLibrary {
 					vids = [];
 					lookup.set(itotal, vids);
 				}
-				for( vid in vids ) {
-					var same = true;
-					var p = vid * stride;
-					for( i in 0...stride )
-						if( vbuf[p++] != tmpBuf[i] ) {
-							same = false;
+				var inBlendShape = false;
+				for ( s in shapeIndexes ) {
+					if ( s.contains(vidx) ) {
+						inBlendShape = true;
+						break;
+					}
+				}
+				if ( !inBlendShape ) { // vertices referenced by blend shapes can't be merged
+					for( vid in vids ) {
+						var same = true;
+						var p = vid * stride;
+						for( i in 0...stride )
+							if( vbuf[p++] != tmpBuf[i] ) {
+								same = false;
+								break;
+							}
+						if( same ) {
+							found = vid;
 							break;
 						}
-					if( same ) {
-						found = vid;
-						break;
 					}
 				}
 				if( found == null ) {
@@ -401,7 +420,16 @@ class HMDOut extends BaseLibrary {
 						vbuf.push(tmpBuf[i]);
 					vids.push(found);
 				}
+
 				vertexRemap.push(found);
+
+				for ( s in 0...shapeIndexes.length ) {
+					for (idx in 0...shapeIndexes[s].length) {
+						if (shapeIndexes[s][idx] == vidx) {
+							remappedShapes[s][idx].push(found);
+						}
+					}
+				}
 			}
 
 			// by-skin-group index
@@ -518,6 +546,117 @@ class HMDOut extends BaseLibrary {
 		if( skin != null && skin.isSplit() )
 			matMap = null;
 
+		for ( i in 0...shapes.length ) {
+			var remapped = remappedShapes[i];
+			var s = shapes[i];
+			var shape = new BlendShape();
+			shape.name = s.name;
+			var indexes = s.get("Indexes").getFloats();//shapeIndexes[i];
+			var verts = s.get("Vertices").getFloats();
+			var normals = s.get("Normals").getFloats();
+			var uvs = s.get("UVs", true)?.getFloats();
+			var colors = s.get("Colors", true)?.getFloats();
+			format = [];
+			addFormat("position", DVec3, ppos);
+			if( normals != null )
+				addFormat("normal", DVec3, pnormal);
+			if( tangents != null )
+				addFormat("tangent", DVec3, pnormal);
+			if( uvs != null )
+				addFormat("uv", DVec2, puv);
+			if( colors != null )
+				addFormat("color", DVec3, pcolor);
+			shape.indexCount = remapped.length;
+			shape.vertexCount = indexes.length;
+			shape.vertexFormat = hxd.BufferFormat.make(format);
+			shape.vertexPosition = dataOut.length;
+
+			vbuf = new hxd.FloatBuffer();
+			for ( i in 0...shape.vertexCount ) {
+				vbuf.push(verts[i * 3]);
+				vbuf.push(verts[i * 3 + 1]);
+				vbuf.push(verts[i * 3 + 2]);
+				if ( normals != null ) {
+					vbuf.push(normals[i * 3]);
+					vbuf.push(normals[i * 3 + 1]);
+					vbuf.push(normals[i * 3 + 2]);
+				}
+				if ( uvs != null ) {
+					vbuf.push(uvs[i * 2]);
+					vbuf.push(uvs[i * 2 + 1]);
+				}
+				if ( colors != null ) {
+					vbuf.push(colors[i * 3]);
+					vbuf.push(colors[i * 3 + 1]);
+					vbuf.push(colors[i * 3 + 1]);
+				}
+			}
+			if( lowPrecConfig == null ) {
+				for( i in 0...vbuf.length )
+					writeFloat(vbuf[i]);
+			} else {
+				for( index in 0...Std.int(vbuf.length / stride) ) {
+					var i = index * stride;
+					writePrec(vbuf[i++], ppos);
+					writePrec(vbuf[i++], ppos);
+					writePrec(vbuf[i++], ppos);
+					flushPrec(ppos,3);
+					if( normals != null ) {
+						writePrec(vbuf[i++], pnormal);
+						writePrec(vbuf[i++], pnormal);
+						writePrec(vbuf[i++], pnormal);
+						flushPrec(pnormal,3);
+					}
+					if( tangents != null ) {
+						writePrec(vbuf[i++], pnormal);
+						writePrec(vbuf[i++], pnormal);
+						writePrec(vbuf[i++], pnormal);
+						flushPrec(pnormal,3);
+					}
+					for( k in 0...uvs.length ) {
+						writePrec(vbuf[i++], puv);
+						writePrec(vbuf[i++], puv);
+						flushPrec(puv,2);
+					}
+					if( colors != null ) {
+						writePrec(vbuf[i++], pcolor);
+						writePrec(vbuf[i++], pcolor);
+						writePrec(vbuf[i++], pcolor);
+						flushPrec(pcolor,3);
+					}
+					if( i != (index + 1) * stride )
+						throw "assert";
+				}
+			}
+
+			shape.indexPosition = dataOut.length;
+			if( is32 ) {
+				for( index in shapeIndexes[i] )
+					dataOut.writeInt32(index);
+			} else {
+				for( index in shapeIndexes[i] )
+					dataOut.writeUInt16(index);
+			}
+
+			shape.remapPosition = dataOut.length;
+			for ( i in 0...remapped.length ) {
+				for (j in 0...remapped[i].length) {
+					var toWrite = remapped[i][j];
+
+					// We don't support models vertex count > 2^32 - 1 because we use
+					// the 32th bit for a flag to indicate that it is the last index
+					// affected by this offset
+					if (toWrite > Math.pow(2, 32) - 1)
+						throw ("Not supported, too much vertex");
+
+					if (j == remapped[i].length -1)
+						toWrite = toWrite | (1 << 31);
+
+					dataOut.writeInt32(toWrite);
+				}
+			}
+			d.shapes.push(shape);
+		}
 		return { g : g, materials : matMap };
 	}
 
@@ -778,6 +917,8 @@ class HMDOut extends BaseLibrary {
 				gdata = { gid : d.geometries.length, materials : geom.materials };
 				d.geometries.push(geom.g);
 				hgeom.set(g.getId(), gdata);
+				for ( s in d.shapes )
+					s.geom = gdata.gid;
 			}
 			model.geometry = gdata.gid;
 
@@ -1029,6 +1170,7 @@ class HMDOut extends BaseLibrary {
 		d.materials = [];
 		d.models = [];
 		d.animations = [];
+		d.shapes = [];
 
 		dataOut = new haxe.io.BytesOutput();
 
