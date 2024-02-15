@@ -207,7 +207,6 @@ class Writer {
 			writeFormat(s.vertexFormat);
 			out.writeInt32(s.vertexPosition);
 			out.writeInt32(s.indexCount);
-			out.writeInt32(s.indexPosition);
 			out.writeInt32(s.remapPosition);
 		}
 

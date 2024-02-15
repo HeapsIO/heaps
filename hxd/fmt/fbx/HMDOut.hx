@@ -629,15 +629,6 @@ class HMDOut extends BaseLibrary {
 				}
 			}
 
-			shape.indexPosition = dataOut.length;
-			if( is32 ) {
-				for( index in shapeIndexes[i] )
-					dataOut.writeInt32(index);
-			} else {
-				for( index in shapeIndexes[i] )
-					dataOut.writeUInt16(index);
-			}
-
 			shape.remapPosition = dataOut.length;
 			for ( i in 0...remapped.length ) {
 				for (j in 0...remapped[i].length) {

@@ -245,7 +245,6 @@ class Reader {
 				s.vertexFormat = makeFormat();
 				s.vertexPosition = i.readInt32();
 				s.indexCount = i.readInt32();
-				s.indexPosition = i.readInt32();
 				s.remapPosition = i.readInt32();
 				d.shapes.push(s);
 			}

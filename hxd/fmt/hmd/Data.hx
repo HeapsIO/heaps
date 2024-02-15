@@ -85,7 +85,6 @@ class BlendShape {
 	public var vertexFormat : hxd.BufferFormat;
 	public var vertexPosition : DataPosition;
 	public var indexCount : DataPosition;
-	public var indexPosition : DataPosition;
 	public var remapPosition : DataPosition;
 	public function new() {
 	}

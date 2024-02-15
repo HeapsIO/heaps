@@ -24,20 +24,16 @@ class Blendshape {
 
 		for ( s in 0...shapes.length ) {
 			var s = shapes[s];
-			var size = s.vertexCount * s.vertexFormat.strideBytes;
 
+			var size = s.vertexCount * s.vertexFormat.strideBytes;
 			var vertexBytes = haxe.io.Bytes.alloc(size);
 			hmdModel.lib.resource.entry.readBytes(vertexBytes, 0, hmdModel.dataPosition + s.vertexPosition, size);
-			size = s.vertexCount << (is32 ? 2 : 1);
 
-			var indexBytes = haxe.io.Bytes.alloc(size);
-			hmdModel.lib.resource.entry.readBytes(indexBytes, 0, hmdModel.dataPosition + s.indexPosition, size);
 			size = hmdModel.data.vertexCount << 2;
-
 			var remapBytes = haxe.io.Bytes.alloc(size);
 			hmdModel.lib.resource.entry.readBytes(remapBytes, 0, hmdModel.dataPosition + s.remapPosition, size);
-			shapesBytes.push({ vertexBytes : vertexBytes, indexBytes : indexBytes, remapBytes : remapBytes});
 
+			shapesBytes.push({ vertexBytes : vertexBytes, remapBytes : remapBytes});
 			inputMapping.push(new Map());
 		}
 
@@ -54,6 +50,10 @@ class Blendshape {
 		}
 	}
 
+	public function getBlendshapePrimitive() : HMDModel {
+		return null;
+	}
+
 	public function setBlendshapeAmount(blendshapeIdx: Int, amount: Float) {
 		this.index = blendshapeIdx;
 		this.amount = amount;
@@ -61,17 +61,21 @@ class Blendshape {
 		uploadBlendshapeBytes();
 	}
 
-	public function getBlendshapeCount() {
+	public function cacheBlendshapePrimitive() {
+
+	}
+
+	private function getBlendshapeCount() {
 		if (hmdModel.lib.header.shapes == null)
 			return 0;
 
 		return hmdModel.lib.header.shapes.length;
 	}
 
-	public function uploadBlendshapeBytes() {
+	private function uploadBlendshapeBytes() {
 		var is32 = hmdModel.data.vertexCount > 0x10000;
 		var vertexFormat = hmdModel.data.vertexFormat;
-		hmdModel.buffer = new h3d.Buffer(hmdModel.data.vertexCount, vertexFormat);
+		//hmdModel.buffer = new h3d.Buffer(hmdModel.data.vertexCount, vertexFormat);
 
 		var size = hmdModel.data.vertexCount * vertexFormat.strideBytes;
 		var originalBytes = haxe.io.Bytes.alloc(size);
@@ -142,7 +146,7 @@ class Blendshape {
 			hmdModel.indexCount += n;
 		}
 
-		hmdModel.indexes = new h3d.Indexes(hmdModel.indexCount, is32);
+		//hmdModel.indexes = new h3d.Indexes(hmdModel.indexCount, is32);
 		var size = (is32 ? 4 : 2) * hmdModel.indexCount;
 		var bytes = hmdModel.lib.resource.entry.fetchBytes(hmdModel.dataPosition + hmdModel.data.indexPosition, size);
 		hmdModel.indexes.uploadBytes(bytes, 0, hmdModel.indexCount);
