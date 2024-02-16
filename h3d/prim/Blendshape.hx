@@ -57,14 +57,14 @@ class Blendshape {
 		uploadBlendshapeBytes();
 	}
 
-	private function getBlendshapeCount() {
+	function getBlendshapeCount() {
 		if (hmdModel.lib.header.shapes == null)
 			return 0;
 
 		return hmdModel.lib.header.shapes.length;
 	}
 
-	private function uploadBlendshapeBytes() {
+	function uploadBlendshapeBytes() {
 		var is32 = hmdModel.data.vertexCount > 0x10000;
 		var vertexFormat = hmdModel.data.vertexFormat;
 
