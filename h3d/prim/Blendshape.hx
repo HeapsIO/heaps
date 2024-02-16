@@ -4,9 +4,7 @@ package h3d.prim;
 class Blendshape {
 
 	var hmdModel : HMDModel;
-	var weights : Array<Float> = [];
-	var index : Int = 0;
-	var amount : Float = 0;
+	var weights : Array<Float>;
 	var inputMapping : Array<Map<String, Int>> = [];
 	var shapesBytes = [];
 
@@ -22,6 +20,8 @@ class Blendshape {
 		var size = hmdModel.data.vertexCount * vertexFormat.strideBytes;
 		var shapes = hmdModel.lib.header.shapes;
 
+		weights = [];
+
 		for ( s in 0...shapes.length ) {
 			var s = shapes[s];
 
@@ -35,6 +35,8 @@ class Blendshape {
 
 			shapesBytes.push({ vertexBytes : vertexBytes, remapBytes : remapBytes});
 			inputMapping.push(new Map());
+
+			weights.push(0.0);
 		}
 
 		// We want to remap inputs since inputs can be not exactly in the same
@@ -51,9 +53,10 @@ class Blendshape {
 	}
 
 	public function setBlendshapeAmount(blendshapeIdx: Int, amount: Float) {
-		this.index = blendshapeIdx;
-		this.amount = amount;
+		if (blendshapeIdx >= this.weights.length)
+			throw 'Blendshape at index ${blendshapeIdx} doesn\'t exist (there is only ${this.weights.length} blendshapes).';
 
+		this.weights[blendshapeIdx] = amount;
 		uploadBlendshapeBytes();
 	}
 
@@ -65,6 +68,9 @@ class Blendshape {
 	}
 
 	function uploadBlendshapeBytes() {
+		if (hmdModel.buffer == null || hmdModel.buffer.isDisposed())
+			hmdModel.alloc(Engine.getCurrent());
+
 		var is32 = hmdModel.data.vertexCount > 0x10000;
 		var vertexFormat = hmdModel.data.vertexFormat;
 
@@ -72,21 +78,14 @@ class Blendshape {
 		var originalBytes = haxe.io.Bytes.alloc(size);
 		hmdModel.lib.resource.entry.readBytes(originalBytes, 0, hmdModel.dataPosition + hmdModel.data.vertexPosition, size);
 
-		var shapes = hmdModel.lib.header.shapes;
-		weights = [];
-
-		for ( s in 0...shapes.length )
-			weights[s] = s == index ? amount : 0.0;
-
 		var flagOffset = 31;
-		var bytes = haxe.io.Bytes.alloc(originalBytes.length);
-		bytes.blit(0, originalBytes, 0, originalBytes.length);
+		var shapes = hmdModel.lib.header.shapes;
+
+		var bytesOffset = haxe.io.Bytes.alloc(originalBytes.length);
+		bytesOffset.fill(0, originalBytes.length, 0);
 
 		// Apply blendshapes offsets to original vertex
 		for (sIdx in 0...shapes.length) {
-			if (sIdx != index)
-				continue;
-
 			var sp = shapesBytes[sIdx];
 			var offsetIdx = 0;
 			var idx = 0;
@@ -110,8 +109,10 @@ class Blendshape {
 							var original = originalBytes.getFloat(affectedVId * vertexFormat.stride + inputMapping[sIdx][input.name] + sizeIdx << 2);
 							var offset = sp.vertexBytes.getFloat(offsetIdx * shapes[sIdx].vertexFormat.stride + offsetInput + sizeIdx << 2);
 
-							var res = hxd.Math.lerp(original, original + offset, weights[sIdx]);
-							bytes.setFloat(affectedVId * vertexFormat.stride + inputMapping[sIdx][input.name] + sizeIdx << 2, res);
+							var res = hxd.Math.lerp(original, original + offset, weights[sIdx]) - original;
+
+							var bytePos = affectedVId * vertexFormat.stride + inputMapping[sIdx][input.name] + sizeIdx << 2;
+							bytesOffset.setFloat(bytePos, bytesOffset.getFloat(bytePos) + res);
 						}
 
 						offsetInput += input.type.getSize();
@@ -127,6 +128,12 @@ class Blendshape {
 				offsetIdx++;
 			}
 		}
+
+		var bytes = haxe.io.Bytes.alloc(originalBytes.length);
+		bytes.blit(0, originalBytes, 0, originalBytes.length);
+
+		for (i in 0...(Std.int(bytesOffset.length / 4.0)))
+			bytes.setFloat(i << 2, bytes.getFloat(i << 2) + bytesOffset.getFloat(i << 2));
 
 		// Send bytes to buffer for rendering
 		hmdModel.buffer.uploadBytes(bytes, 0, hmdModel.data.vertexCount);
