@@ -50,19 +50,11 @@ class Blendshape {
 		}
 	}
 
-	public function getBlendshapePrimitive() : HMDModel {
-		return null;
-	}
-
 	public function setBlendshapeAmount(blendshapeIdx: Int, amount: Float) {
 		this.index = blendshapeIdx;
 		this.amount = amount;
 
 		uploadBlendshapeBytes();
-	}
-
-	public function cacheBlendshapePrimitive() {
-
 	}
 
 	private function getBlendshapeCount() {
@@ -75,7 +67,6 @@ class Blendshape {
 	private function uploadBlendshapeBytes() {
 		var is32 = hmdModel.data.vertexCount > 0x10000;
 		var vertexFormat = hmdModel.data.vertexFormat;
-		//hmdModel.buffer = new h3d.Buffer(hmdModel.data.vertexCount, vertexFormat);
 
 		var size = hmdModel.data.vertexCount * vertexFormat.strideBytes;
 		var originalBytes = haxe.io.Bytes.alloc(size);
@@ -146,7 +137,7 @@ class Blendshape {
 			hmdModel.indexCount += n;
 		}
 
-		//hmdModel.indexes = new h3d.Indexes(hmdModel.indexCount, is32);
+
 		var size = (is32 ? 4 : 2) * hmdModel.indexCount;
 		var bytes = hmdModel.lib.resource.entry.fetchBytes(hmdModel.dataPosition + hmdModel.data.indexPosition, size);
 		hmdModel.indexes.uploadBytes(bytes, 0, hmdModel.indexCount);
