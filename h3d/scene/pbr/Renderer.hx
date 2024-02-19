@@ -303,17 +303,25 @@ class Renderer extends h3d.scene.Renderer {
 			performance.shader.hdrMap = perf;
 		}
 
+		beforeIndirect();
 		mark("Indirect Lighting");
-		if( !renderLightProbes() && indirectEnv  && env != null && env.power > 0.0 ) {
+		indirectLighting();
+		afterIndirect();
+
+		end();
+	}
+
+	function indirectLighting() {
+		if( !renderLightProbes() && indirectEnv && env != null && env.power > 0.0 ) {
 			pbrProps.isScreen = true;
 			pbrIndirect.drawIndirectDiffuse = true;
 			pbrIndirect.drawIndirectSpecular = true;
 			pbrOut.render();
 		}
-
-		end();
 	}
 
+	function beforeIndirect() {}
+	function afterIndirect() {}
 	function beforeFullScreenLights() {}
 	function afterFullScreenLights() {}
 
