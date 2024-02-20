@@ -9,7 +9,6 @@ class FileEntry {
 	public var size(get, never) : Int;
 	public var isDirectory(get, never) : Bool;
 	public var isAvailable(get, never) : Bool;
-	var watchOnChangedHistory : Array<Null<Void -> Void>>;
 
 	public function getBytes() : haxe.io.Bytes return null;
 	public function readBytes( out : haxe.io.Bytes, outPos : Int, pos : Int, len : Int ) : Int { throw "readBytes() not implemented"; }
