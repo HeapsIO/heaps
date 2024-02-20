@@ -305,13 +305,13 @@ class Renderer extends h3d.scene.Renderer {
 
 		beforeIndirect();
 		mark("Indirect Lighting");
-		indirectLighting();
+		doIndirectLighting();
 		afterIndirect();
 
 		end();
 	}
 
-	function indirectLighting() {
+	function doIndirectLighting() {
 		if( !renderLightProbes() && indirectEnv && env != null && env.power > 0.0 ) {
 			pbrProps.isScreen = true;
 			pbrIndirect.drawIndirectDiffuse = true;
