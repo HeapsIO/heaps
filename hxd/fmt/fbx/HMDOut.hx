@@ -772,6 +772,11 @@ class HMDOut extends BaseLibrary {
 			var ref = o.skin == null ? o : o.skin;
 
 			model.name = o.model == null ? null : o.model.getName();
+			if (model.name != null) {
+				var lodNameIdx = model.name.indexOf("_LOD");
+				if (lodNameIdx > 0)
+					trace(model.name.substr(0, lodNameIdx));
+			}
 			model.parent = o.parent == null || o.parent.isJoint ? -1 : o.parent.index;
 			model.follow = o.parent != null && o.parent.isJoint ? o.parent.model.getName() : null;
 			var m = ref.model == null ? new hxd.fmt.fbx.BaseLibrary.DefaultMatrixes() : getDefaultMatrixes(ref.model);
@@ -1162,6 +1167,7 @@ class HMDOut extends BaseLibrary {
 		d.models = [];
 		d.animations = [];
 		d.shapes = [];
+		d.lods = [];
 
 		dataOut = new haxe.io.BytesOutput();
 
