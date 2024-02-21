@@ -210,6 +210,26 @@ class Writer {
 			out.writeInt32(s.remapPosition);
 		}
 
+		out.writeInt32(d.lods.length);
+		for (lod in d.lods) {
+			writeName(lod.name);
+			out.writeInt32(lod.idx);
+			
+			writeProps(lod.geom.props);
+			out.writeInt32(lod.geom.vertexCount);
+			writeFormat(lod.geom.vertexFormat);
+			out.writeInt32(lod.geom.vertexPosition);
+			if( lod.geom.indexCounts.length >= 0xFF ) {
+				out.writeByte(0xFF);
+				out.writeInt32(lod.geom.indexCounts.length);
+			} else
+				out.writeByte(lod.geom.indexCounts.length);
+			for( i in lod.geom.indexCounts )
+				out.writeInt32(i);
+			out.writeInt32(lod.geom.indexPosition);
+			writeBounds(lod.geom.bounds);
+		}
+
 		var bytes = header.getBytes();
 		out = old;
 

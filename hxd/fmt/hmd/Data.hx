@@ -91,9 +91,11 @@ class BlendShape {
 }
 
 class Lod {
-	public var name : Int;
-	public var idx : Int;
-	public var geometry : Index<Geometry>;
+	public var name:String;
+	public var idx:Int;
+	public var geom:Geometry;
+
+	public function new() {}
 }
 
 class Material {

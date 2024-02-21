@@ -771,12 +771,27 @@ class HMDOut extends BaseLibrary {
 			var model = new Model();
 			var ref = o.skin == null ? o : o.skin;
 
-			model.name = o.model == null ? null : o.model.getName();
-			if (model.name != null) {
-				var lodNameIdx = model.name.indexOf("_LOD");
-				if (lodNameIdx > 0)
-					trace(model.name.substr(0, lodNameIdx));
+			var modelName = o.model == null ? null : o.model.getName();
+			if (modelName != null) {
+				var lodNameIdx = modelName.indexOf("_LOD");
+				if (lodNameIdx > 0) {
+					var lodIdx = Std.parseInt(modelName.substr(lodNameIdx + 4));
+					modelName = modelName.substr(0, lodNameIdx);
+
+					if (lodIdx != 0) {
+						var g = getChild(o.model, "Geometry");
+
+						var lod = new Lod();
+						lod.name = '${modelName}_LOD${lodIdx}';
+						lod.idx = lodIdx;
+						lod.geom = buildGeom(new hxd.fmt.fbx.Geometry(this, g), null, dataOut, false).g;
+						d.lods.push(lod);
+						continue;
+					}
+				}
 			}
+			
+			model.name = modelName;
 			model.parent = o.parent == null || o.parent.isJoint ? -1 : o.parent.index;
 			model.follow = o.parent != null && o.parent.isJoint ? o.parent.model.getName() : null;
 			var m = ref.model == null ? new hxd.fmt.fbx.BaseLibrary.DefaultMatrixes() : getDefaultMatrixes(ref.model);
