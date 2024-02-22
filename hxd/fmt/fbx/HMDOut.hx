@@ -773,24 +773,36 @@ class HMDOut extends BaseLibrary {
 
 			var modelName = o.model == null ? null : o.model.getName();
 			if (modelName != null) {
-				var lodNameIdx = modelName.indexOf("_LOD");
-				if (lodNameIdx > 0) {
-					var lodIdx = Std.parseInt(modelName.substr(lodNameIdx + 4));
-					modelName = modelName.substr(0, lodNameIdx);
+				var lodNameIdx = modelName.indexOf("LOD");
+				if (lodNameIdx >= 0) {
+					if (modelName.indexOf("LOD") + 3 > modelName.length)
+						throw 'Missing LOD index for model ${modelName}';
 
-					if (lodIdx != 0) {
-						var g = getChild(o.model, "Geometry");
+					var idx = modelName.indexOf("LOD") + 3;
+					while (idx < modelName.length && Std.parseInt(modelName.substr(idx, 1)) != null)
+						idx++;
 
-						var lod = new Lod();
-						lod.name = '${modelName}_LOD${lodIdx}';
-						lod.idx = lodIdx;
-						lod.geom = buildGeom(new hxd.fmt.fbx.Geometry(this, g), null, dataOut, false).g;
-						d.lods.push(lod);
+					var lodIdx = Std.parseInt(modelName.substr(lodNameIdx + 3, idx));
+
+					if (modelName.charAt(lodNameIdx - 1)  == '_')
+						lodNameIdx--;
+					if (modelName.charAt(idx) == '_')
+						idx++;
+
+					modelName = StringTools.replace(modelName, modelName.substr(lodNameIdx, idx), "");
+
+					var g = getChild(o.model, "Geometry");
+					var lod = new Lod();
+					lod.name = '${modelName}_LOD${lodIdx}';
+					lod.idx = lodIdx;
+					lod.geom = buildGeom(new hxd.fmt.fbx.Geometry(this, g), null, dataOut, false).g;
+					d.lods.push(lod);
+
+					if (lodIdx != 0)
 						continue;
-					}
 				}
 			}
-			
+
 			model.name = modelName;
 			model.parent = o.parent == null || o.parent.isJoint ? -1 : o.parent.index;
 			model.follow = o.parent != null && o.parent.isJoint ? o.parent.model.getName() : null;
