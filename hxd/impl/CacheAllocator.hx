@@ -34,7 +34,6 @@ private class Cache<T> {
 		if( b == null ) b = disposed.pop();
 		if( b == null ) return false;
 		if( onDispose != null ) onDispose(b);
-		lastUse += 1;
 		return true;
 	}
 }
