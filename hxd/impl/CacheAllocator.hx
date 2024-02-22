@@ -1,9 +1,10 @@
 package hxd.impl;
 import hxd.impl.Allocator;
 
+@:allow(hxd.impl.CacheAllocator)
 private class Cache<T> {
-	public var available : Array<T> = [];
-	public var disposed : Array<T> = [];
+	var available : Array<T> = [];
+	var disposed : Array<T> = [];
 	public var lastUse : Float = haxe.Timer.stamp();
 	public var onDispose : T -> Void;
 
