@@ -28,7 +28,9 @@ class Style extends domkit.CssStyle {
 		});
 		resources.push(r);
 		var variables = cssParser.variables.copy();
-		add(cssParser.parseSheet(r.entry.getText()));
+		var txt = r.entry.getText();
+		styleText = txt;
+		add(cssParser.parseSheet(txt));
 		cssParser.variables = variables;
 		for( o in currentObjects )
 			o.dom.applyStyle(this);
@@ -81,6 +83,16 @@ class Style extends domkit.CssStyle {
 		}
 	}
 
+	function countChar(str: String, until = -1, code = "\n".code) {
+		var ret = 1;
+		if (until < 0)
+			until = str.length;
+		for( i in 0...until ) {
+			if( StringTools.fastCodeAt(str, i) == code )
+				ret++;
+		}
+		return ret;
+	}
 	function onChange( ntry : Int = 0 ) {
 		if( ntry >= 10 ) return;
 		ntry++;
@@ -89,13 +101,14 @@ class Style extends domkit.CssStyle {
 		data.rules = [];
 		for( r in resources ) {
 			var txt = try r.entry.getText() catch( e : Dynamic ) { haxe.Timer.delay(onChange.bind(ntry),100); data.rules = oldRules; return; }
+			styleText = txt;
 			try {
 				data.add(cssParser.parseSheet(txt));
 			} catch( e : domkit.Error ) {
 				cssParser.warnings.push({ msg : e.message, pmin : e.pmin, pmax : e.pmax });
 			}
 			for( w in cssParser.warnings ) {
-				var line = txt.substr(0,w.pmin).split("\n").length;
+				var line = countChar(txt, w.pmin);
 				errors.push(r.entry.path+":"+line+": " + w.msg);
 		 	}
 		}
@@ -145,6 +158,7 @@ class Style extends domkit.CssStyle {
 	var inspectPreview : h2d.Object;
 	var inspectPreviewObjects : Array<h2d.Object>;
 
+	var styleText: String = null;
 	function set_allowInspect(b) {
 		if( allowInspect == b )
 			return b;
@@ -396,16 +410,32 @@ class Style extends domkit.CssStyle {
 		lines.push("");
 		var dom = obj.dom;
 		if(dom != null) {
+			lines.push('<font color="#707070"> line</font>');
 			for( s in dom.style ) {
 				if( s.p.name == "text" || Std.isOfType(s.value,h2d.Tile) ) continue;
 				lines.push(' <font color="#D0D0D0"> ${s.p.name}</font> <font color="#808080">${s.value}</font><font color="#606060"> (style)</font>');
 			}
+			var lineDigits = Std.int(Math.log(countChar(styleText)) / Math.log(10));
+			var emptyDigits = "";
+			for (i in 0...lineDigits)
+				emptyDigits += " ";
 			for( i in 0...dom.currentSet.length ) {
 				var p = dom.currentSet[i];
 				if( p.name == "text" ) continue;
 				var v = dom.currentValues == null ? null : dom.currentValues[i];
+				var vs = dom.currentValues == null ? null : dom.currentRuleStyles[i];
+				var lStr = emptyDigits;
+				if (vs != null) {
+					v = vs.value;
+					var count = countChar(styleText, vs.pos.pmin);
+					var s = "" + count;
+					for (i in Std.int(Math.log(count) / Math.log(10))...lineDigits) {
+						s += " ";
+					}
+					lStr = '<font color="#707070">' + s + '</font>';
+				}
 				var vstr = v == null ? "???" : StringTools.htmlEscape(domkit.CssParser.valueStr(v));
-				lines.push(' <font color="#D0D0D0"> ${p.name}</font> <font color="#808080">$vstr</font>');
+				lines.push(' $lStr  <font color="#D0D0D0"> ${p.name}</font> <font color="#808080">$vstr</font>');
 			}
 			previewText.text = lines.join("<br/>");
 		}
