@@ -28,9 +28,7 @@ class Style extends domkit.CssStyle {
 		});
 		resources.push(r);
 		var variables = cssParser.variables.copy();
-		var txt = r.entry.getText();
-		styleText = txt;
-		add(cssParser.parseSheet(txt));
+		add(cssParser.parseSheet(r.entry.getText(), r.name));
 		cssParser.variables = variables;
 		for( o in currentObjects )
 			o.dom.applyStyle(this);
@@ -101,9 +99,8 @@ class Style extends domkit.CssStyle {
 		data.rules = [];
 		for( r in resources ) {
 			var txt = try r.entry.getText() catch( e : Dynamic ) { haxe.Timer.delay(onChange.bind(ntry),100); data.rules = oldRules; return; }
-			styleText = txt;
 			try {
-				data.add(cssParser.parseSheet(txt));
+				data.add(cssParser.parseSheet(txt, r.name));
 			} catch( e : domkit.Error ) {
 				cssParser.warnings.push({ msg : e.message, pmin : e.pmin, pmax : e.pmax });
 			}
@@ -158,7 +155,6 @@ class Style extends domkit.CssStyle {
 	var inspectPreview : h2d.Object;
 	var inspectPreviewObjects : Array<h2d.Object>;
 
-	var styleText: String = null;
 	function set_allowInspect(b) {
 		if( allowInspect == b )
 			return b;
@@ -187,9 +183,11 @@ class Style extends domkit.CssStyle {
 		return allowInspect = b;
 	}
 
+	var lastFrame = -1;
 	function onWindowEvent( e : hxd.Event ) {
 		switch( e.kind ) {
 		case EPush if( inspectKeyCode == 0 || hxd.Key.isDown(inspectKeyCode) ):
+			lastFrame = -1;
 			if( e.button == hxd.Key.MOUSE_MIDDLE ) {
 				if(hxd.Key.isDown(inspectDetailsKeyCode)) {
 					inspectModeActive = true;
@@ -213,8 +211,20 @@ class Style extends domkit.CssStyle {
 				}
 			}
 		case EMove:
-			if( inspectModeActive && !inspectModeDetails) updatePreview(e);
+			if( inspectModeActive && !inspectModeDetails ) {
+				var anyScene = null;
+				for( o in currentObjects ) {
+					anyScene = o.getScene();
+					if( anyScene != null ) break;
+				}
+				if( anyScene == null || lastFrame < anyScene.renderer.frame ) {
+					if( anyScene != null )
+						lastFrame = anyScene.renderer.frame;
+					updatePreview(e);
+				}
+			}
 		case EWheel if( inspectKeyCode == 0 || hxd.Key.isDown(inspectKeyCode) ):
+			lastFrame = -1;
 			if( inspectPreviewObjects != null ) {
 				if( e.wheelDelta > 0 ) {
 					var p = inspectPreviewObjects[0].parent;
@@ -409,13 +419,41 @@ class Style extends domkit.CssStyle {
 		lines.push(getDisplayInfo(obj));
 		lines.push("");
 		var dom = obj.dom;
+
+		inline function find<T>( it : Array<T>, f : T -> Bool ) : Null<T> {
+			var ret = null;
+			for( v in it ) {
+				if(f(v)) {
+					ret = v;
+					break;
+				}
+			}
+			return ret;
+		}
+
 		if(dom != null) {
-			lines.push('<font color="#707070"> line</font>');
+
+			var files: Array<{ name: String, txt: String }> = [];
+			var lineDigits = 0;
+			for( i in 0...dom.currentSet.length ) {
+				if( dom.currentRuleStyles == null || dom.currentRuleStyles[i] == null )
+					continue;
+				var vs = dom.currentRuleStyles[i];
+				if (find(files, f -> f.name == vs.pos.file) != null)
+					continue;
+				var r = find(resources, r -> r.name == vs.pos.file);
+				if (r != null) {
+					var txt = r.entry.getText();
+					files.push({ name: vs.pos.file, txt: txt });
+					lineDigits = hxd.Math.imax(lineDigits, Std.int(Math.log(countChar(txt)) / Math.log(10)));
+				}
+			}
+
+			lines.push('<font color="#707070"> line' + (files.length == 1 ? ' (${files[0].name})' : "") + '</font>');
 			for( s in dom.style ) {
 				if( s.p.name == "text" || Std.isOfType(s.value,h2d.Tile) ) continue;
 				lines.push(' <font color="#D0D0D0"> ${s.p.name}</font> <font color="#808080">${s.value}</font><font color="#606060"> (style)</font>');
 			}
-			var lineDigits = Std.int(Math.log(countChar(styleText)) / Math.log(10));
 			var emptyDigits = "";
 			for (i in 0...lineDigits)
 				emptyDigits += " ";
@@ -423,16 +461,20 @@ class Style extends domkit.CssStyle {
 				var p = dom.currentSet[i];
 				if( p.name == "text" ) continue;
 				var v = dom.currentValues == null ? null : dom.currentValues[i];
-				var vs = dom.currentValues == null ? null : dom.currentRuleStyles[i];
+				var vs = dom.currentRuleStyles == null ? null : dom.currentRuleStyles[i];
 				var lStr = emptyDigits;
 				if (vs != null) {
 					v = vs.value;
-					var count = countChar(styleText, vs.pos.pmin);
+					var f = find(files, f -> f.name == vs.pos.file);
+					var count = countChar(f.txt, vs.pos.pmin);
 					var s = "" + count;
 					for (i in Std.int(Math.log(count) / Math.log(10))...lineDigits) {
 						s += " ";
 					}
-					lStr = '<font color="#707070">' + s + '</font>';
+					if (files.length == 1)
+						lStr = '<font color="#707070">$s</font>';
+					else
+						lStr = '<font color="#707070">${f.name}:$s</font>';
 				}
 				var vstr = v == null ? "???" : StringTools.htmlEscape(domkit.CssParser.valueStr(v));
 				lines.push(' $lStr  <font color="#D0D0D0"> ${p.name}</font> <font color="#808080">$vstr</font>');
