@@ -466,15 +466,17 @@ class Style extends domkit.CssStyle {
 				if (vs != null) {
 					v = vs.value;
 					var f = find(files, f -> f.name == vs.pos.file);
-					var count = countChar(f.txt, vs.pos.pmin);
-					var s = "" + count;
-					for (i in Std.int(Math.log(count) / Math.log(10))...lineDigits) {
-						s += " ";
+					if (f != null) {
+						var count = countChar(f.txt, vs.pos.pmin);
+						var s = "" + count;
+						for (i in Std.int(Math.log(count) / Math.log(10))...lineDigits) {
+							s += " ";
+						}
+						if (files.length == 1)
+							lStr = '<font color="#707070">$s</font>';
+						else
+							lStr = '<font color="#707070">${f.name}:$s</font>';
 					}
-					if (files.length == 1)
-						lStr = '<font color="#707070">$s</font>';
-					else
-						lStr = '<font color="#707070">${f.name}:$s</font>';
 				}
 				var vstr = v == null ? "???" : StringTools.htmlEscape(domkit.CssParser.valueStr(v));
 				lines.push(' $lStr  <font color="#D0D0D0"> ${p.name}</font> <font color="#808080">$vstr</font>');
