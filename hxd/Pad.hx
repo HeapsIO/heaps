@@ -396,7 +396,7 @@ class Pad {
 
 	#if hlsdl
 
-	inline function _setAxis( axisId : Int, value : Int ){
+	inline function _setAxis( axisId : Int, value : Int ) : Float{
 		var v = value / 0x7FFF;
 
 		_detectAnalogButton(axisId, v);
@@ -415,6 +415,8 @@ class Pad {
 			rawRXAxis = v;
 		else if( axisId == 3 )
 			rawRYAxis = v;
+
+		return values[ axisId ];
 	}
 
 	static function initPad( index ){
@@ -470,9 +472,9 @@ class Pad {
 				}
 			case GControllerAxis:
 				if( p != null && e.button > -1 && e.button < 6 ) {
-					p._setAxis( e.button, e.value );
+					var value = p._setAxis( e.button, e.value );
 					if (p.onPadEvent != null)
-						p.onPadEvent( { kind: EPadAxis, axis: e.button, value: e.value, pad: p } );
+						p.onPadEvent( { kind: EPadAxis, axis: e.button, value: value, pad: p } );
 				}
 			default:
 		}
