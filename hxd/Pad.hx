@@ -51,6 +51,23 @@ typedef PadConfig = {
 	names : Array<String>,
 }
 
+enum abstract PadEventKind(Int) from Int to Int {
+	var EPadConnect;
+	var EPadDisconnect;
+	var EPadPush;
+	var EPadRelease;
+	var EPadAxis;
+}
+
+@:structInit
+class PadEvent {
+	public var kind : PadEventKind;
+	public var button : Int = 0;
+	public var value : Float = 0.0;
+	public var axis : Int = 0;
+	public var pad : Pad;
+}
+
 class Pad {
 
 	#if hlsdl
@@ -230,6 +247,7 @@ class Pad {
 
 	public dynamic function onDisconnect(){
 	}
+	public var onPadEvent : (event : PadEvent) -> Void;
 
 	public function isDown( button : Int ) {
 		return buttons[button];
@@ -419,6 +437,8 @@ class Pad {
 		for( button in 0...15 )
 			p._setButton( button + 6, sp.getButton(button) );
 		waitPad( p );
+		if (p.onPadEvent != null)
+			p.onPadEvent( { kind: EPadConnect, pad:p } );
 	}
 
 	static function onEvent( e : Event ){
@@ -429,20 +449,31 @@ class Pad {
 					initPad(e.controller);
 			case GControllerRemoved:
 				if( p != null ){
+					if (p.onPadEvent != null)
+						p.onPadEvent( { kind: EPadDisconnect, pad:p } );
 					pads.remove( p.index );
 					p.d.close();
 					p.connected = false;
 					p.onDisconnect();
 				}
 			case GControllerDown:
-				if( p != null && e.button > -1 )
+				if( p != null && e.button > -1 ) {
 					p._setButton( e.button + 6, true );
+					if (p.onPadEvent != null)
+						p.onPadEvent( { kind: EPadPush, button: e.button + 6, value: 1, pad: p } );
+				}
 			case GControllerUp:
-				if( p != null && e.button > -1 )
+				if( p != null && e.button > -1 ) {
 					p._setButton( e.button + 6, false );
+					if (p.onPadEvent != null)
+						p.onPadEvent( { kind: EPadRelease, button: e.button + 6, value: 0, pad: p } );
+				}
 			case GControllerAxis:
-				if( p != null && e.button > -1 && e.button < 6 )
+				if( p != null && e.button > -1 && e.button < 6 ) {
 					p._setAxis( e.button, e.value );
+					if (p.onPadEvent != null)
+						p.onPadEvent( { kind: EPadAxis, axis: e.button, value: e.value, pad: p } );
+				}
 			default:
 		}
 	}
