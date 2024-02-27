@@ -18,6 +18,9 @@ class HierarchicalWorld extends Object {
 	static inline final UNLOCK_COLOR = 0xFFFFFF;
 	static inline final LOCK_COLOR = 0xFF0000;
 
+	static var loadingQueue : Array<Void -> Void> = [];
+	var loading : Bool = false;
+
 	public var data : WorldData;
 	var bounds : h3d.col.Bounds;
 	var subdivided(default, set) = false;
@@ -100,6 +103,12 @@ class HierarchicalWorld extends Object {
 	}
 
 	function subdivide() {
+		if ( !loading ) {
+			loading = true;
+			loadingQueue.insert(0, subdivide);
+			return;
+		}
+		loading = false;
 		subdivided = true;
 		var childSize = data.size >> 1;
 		for ( i in 0...2 ) {
@@ -137,6 +146,10 @@ class HierarchicalWorld extends Object {
 	}
 
 	override function syncRec(ctx : h3d.scene.RenderContext) {
+		if ( data.depth == 0 && loadingQueue.length > 0 ) {
+			var load = loadingQueue.pop();
+			load();
+		}
 
 		if ( debugGraphics == null && DEBUG ) {
 			createGraphics();
@@ -183,7 +196,10 @@ class HierarchicalWorld extends Object {
 			return;
 		if ( lock )
 			locked = true;
-		subdivide();
+		if ( canSubdivide() ) {
+			loading = true;
+			subdivide();
+		}
 		for ( c in children ) {
 			var node = Std.downcast(c, HierarchicalWorld);
 			if ( node == null )
@@ -264,5 +280,11 @@ class HierarchicalWorld extends Object {
 			if ( node != null )
 				node.remove();
 		}
+	}
+
+	override function onRemove() {
+		if ( data.depth == 0 )
+			loadingQueue = [];
+		super.onRemove();
 	}
 }
