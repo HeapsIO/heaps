@@ -643,7 +643,7 @@ class DX12Driver extends h3d.impl.Driver {
 				if (res.res == null)
 					continue;
 
-				var b = unsafeCastTo(tmp.barriers[totalBarrier], ResourceBarrier);
+				var b = tmp.barriers[totalBarrier];
 				b.resource = res.res;
 				b.stateBefore = res.state;
 				b.stateAfter = res.targetState;
@@ -1076,11 +1076,14 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	inline function unsafeCastTo<T,R>( v : T, c : Class<R> ) : R {
+		#if (hl_ver < version("1.14.0"))
 		var arr = new hl.NativeArray<T>(1);
 		arr[0] = v;
 		return (cast arr : hl.NativeArray<R>)[0];
+		#else
+		return hl.Api.unsafeCast(v);
+		#end
 	}
-
 
 	function computeRootSignature( shader : hxsl.RuntimeShader ) {
 		var allocatedParams = 16;

@@ -97,6 +97,10 @@ class Sphere extends Collider {
 		return "Sphere{" + getCenter()+","+ hxd.Math.fmt(r) + "}";
 	}
 
+	public inline function dimension() {
+		return r;
+	}
+
 	#if !macro
 	public function makeDebugObj() : h3d.scene.Object {
 		var prim = new h3d.prim.Sphere(r, 20, 15);

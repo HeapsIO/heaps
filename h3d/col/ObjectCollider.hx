@@ -64,6 +64,11 @@ class ObjectCollider extends Collider {
 		return res;
 	}
 
+	inline public function dimension() {
+		var scale = obj.getAbsPos().getScale();
+		return collider.dimension() * Math.max(Math.max(scale.x, scale.y), scale.z);
+	}
+
 	#if !macro
 	public function makeDebugObj() : h3d.scene.Object {
 		var ret = collider.makeDebugObj();

@@ -138,6 +138,7 @@ class BigPrimitive extends Primitive {
 				flushing = false;
 				#if track_alloc
 				@:privateAccess b.allocPos = allocPos;
+				var idx : h3d.Buffer = idx;
 				@:privateAccess idx.allocPos = allocPos;
 				#end
 			}

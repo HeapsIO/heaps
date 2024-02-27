@@ -10,11 +10,15 @@ class HMDModel extends MeshPrimitive {
 	var curMaterial : Int;
 	var collider : h3d.col.Collider;
 	var normalsRecomputed : String;
+	var blendshape : Blendshape;
 
 	public function new(data, dataPos, lib) {
 		this.data = data;
 		this.dataPosition = dataPos;
 		this.lib = lib;
+
+		if (lib.header.shapes != null && lib.header.shapes.length > 0)
+			this.blendshape = new Blendshape(this);
 	}
 
 	override function hasInput( name : String ) {
@@ -224,5 +228,4 @@ class HMDModel extends MeshPrimitive {
 		initCollider(poly);
 		return collider;
 	}
-
 }

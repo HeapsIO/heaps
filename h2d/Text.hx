@@ -326,6 +326,7 @@ class Text extends Drawable {
 		if ( font == null ) font = this.font;
 		var lines = [], restPos = 0;
 		var x = leftMargin;
+		var wLastSep = 0.;
 		for( i in 0...text.length ) {
 			var cc = text.charCodeAt(i);
 			var e = font.getChar(cc);
@@ -364,12 +365,19 @@ class Text extends Drawable {
 					}
 					restPos = i + 1;
 				}
+				else wLastSep = size;
+			}
+			else if( (x + esize + letterSpacing) - wLastSep > maxWidth ) {
+				newline = true;
+				lines.push(text.substr(restPos, i - restPos));
+				restPos = i + 1;
 			}
 			if( e != null && cc != '\n'.code )
 				x += esize + letterSpacing;
 			if( newline ) {
 				if ( sizes != null ) sizes.push(x);
 				x = 0;
+				wLastSep = 0.;
 				prevChar = -1;
 			} else
 				prevChar = cc;

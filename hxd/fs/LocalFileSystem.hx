@@ -99,6 +99,17 @@ class LocalEntry extends FileEntry {
 	}
 
 	var watchCallback : Void -> Void;
+
+	/*
+	When a resource is load, we add a watcher on it and wtih callback to call
+	when this resource is modified. The problem is that in editor, several engine works
+	in parallel, and if the same resource is load by different engine, we have
+	to reload this resource for each engine when the file is modified (resulting
+	in one file watcher with multiple callback). This problem occures only in editor (because
+	games contains only one engine) so this feature is editor only.
+	*/
+	#if editor var watchOnChangedHistory : Array<Null<Void -> Void>>; #end
+
 	#if (hl && (hl_ver >= version("1.12.0")) && !usesys)
 	var watchHandle : hl.uv.Fs;
 	var lastChanged : Float = 0;
@@ -168,11 +179,13 @@ class LocalEntry extends FileEntry {
 			if( watchCallback != null ) {
 				WATCH_LIST.remove(this);
 				watchCallback = null;
+				#if editor watchOnChangedHistory = null; #end
 				#if (hl && (hl_ver >= version("1.12.0")) && !usesys)
 				watchHandle.close();
 				watchHandle = null;
 				#end
 			}
+
 			return;
 		}
 		if( watchCallback == null ) {
@@ -193,6 +206,11 @@ class LocalEntry extends FileEntry {
 					#end
 					w.watchCallback = null;
 					WATCH_LIST.remove(w);
+
+					#if editor
+					if (w.watchOnChangedHistory != null)
+						this.watchOnChangedHistory = w.watchOnChangedHistory.copy();
+					#end
 				}
 			WATCH_LIST.push(this);
 		}
@@ -218,22 +236,31 @@ class LocalEntry extends FileEntry {
 		watchTime = getModifTime();
 		#end
 
+		#if editor
 		if (watchOnChangedHistory == null)
-			watchOnChangedHistory = new Array<Null<Void -> Void>>();
+			watchOnChangedHistory = [ onChanged ];
+		else
+			watchOnChangedHistory.push(onChanged);
+		#end
 
-		watchOnChangedHistory.push(onChanged);
 		watchCallback = function() {
 			fs.convert.run(this);
 
-			var idx = watchOnChangedHistory.length -1;
+			#if editor
+			if (watchOnChangedHistory == null)
+				return;
+
+			var idx = watchOnChangedHistory.length - 1;
 			while (idx >= 0) {
 				if (watchOnChangedHistory[idx] != null)
 					watchOnChangedHistory[idx]();
 				idx--;
 			}
+			#else
+			onChanged();
+			#end
 		}
 	}
-
 }
 
 class LocalFileSystem implements FileSystem {

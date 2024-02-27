@@ -78,6 +78,11 @@ class TransformCollider extends Collider {
 		return res;
 	}
 
+	public function dimension() {
+		throw "Not implemented";
+		return 0.0;
+	}
+
 	#if !macro
 	public function makeDebugObj() : h3d.scene.Object {
 		var obj = collider.makeDebugObj();

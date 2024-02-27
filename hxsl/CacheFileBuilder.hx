@@ -256,8 +256,10 @@ class CacheFileBuilder {
 			case "-lib":
 				var lib = new format.hl.Reader().read(new haxe.io.BytesInput(sys.io.File.getBytes(getArg())));
 				for( s in lib.strings ) {
-					if( !StringTools.startsWith(s,"HXSL") ) continue;
+					if( !StringTools.startsWith(s,"HXS") ) continue;
 					var data = try haxe.crypto.Base64.decode(s) catch( e : Dynamic ) continue;
+					if (data.length < 4 )
+						continue;
 					var len = data.get(3);
 					var name = data.getString(4,len);
 					builder.shaderLib.set(name, s);
