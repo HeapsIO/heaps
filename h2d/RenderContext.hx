@@ -86,6 +86,7 @@ class RenderContext extends h3d.impl.RenderContext {
 	var pass : h3d.mat.Pass;
 	var currentShaders : hxsl.ShaderList;
 	var baseShaderList : hxsl.ShaderList;
+	var needInitShaders : Bool;
 	var currentObj : Drawable;
 	var stride : Int;
 	var targetsStack : Array<TargetStackEntry>;
@@ -208,6 +209,7 @@ class RenderContext extends h3d.impl.RenderContext {
 	}
 
 	function initShaders( shaders ) {
+		needInitShaders = false;
 		currentShaders = shaders;
 		compiledShader = output.compileShaders(globals, shaders);
 		var buffers = shaderBuffers;
@@ -761,7 +763,7 @@ class RenderContext extends h3d.impl.RenderContext {
 		var stride = 8;
 		if( hasBuffering() && currentObj != null && (texture != this.texture || stride != this.stride || obj.blendMode != currentObj.blendMode || obj.filter != currentObj.filter) )
 			flush();
-		var shaderChanged = false, paramsChanged = false;
+		var shaderChanged = needInitShaders, paramsChanged = false;
 		var objShaders = obj.shaders;
 		var curShaders = currentShaders.next;
 		while( objShaders != null && curShaders != null ) {
@@ -800,4 +802,8 @@ class RenderContext extends h3d.impl.RenderContext {
 		return true;
 	}
 
+	override function setCurrent() {
+		super.setCurrent();
+		needInitShaders = true;
+	}
 }
