@@ -103,11 +103,13 @@ class HierarchicalWorld extends Object {
 	}
 
 	function subdivide() {
-		if ( !loading ) {
-			loading = true;
-			loadingQueue.insert(0, subdivide);
+		if ( subdivided )
 			return;
-		}
+		// if ( !loading ) {
+		// 	loading = true;
+		// 	loadingQueue.insert(0, subdivide);
+		// 	return;
+		// }
 		loading = false;
 		subdivided = true;
 		var childSize = data.size >> 1;
