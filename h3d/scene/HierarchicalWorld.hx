@@ -80,9 +80,8 @@ class HierarchicalWorld extends Object {
 		bounds.addPoint(new h3d.col.Point(halfSize,halfSize, pseudoInfinity));
 		bounds.transform(absPos);
 
-		if ( data.depth != 0 && data.onCreate != null ) {
+		if ( data.depth != 0 && data.onCreate != null )
 			data.onCreate(this);
-		}
 	}
 
 	function init() {
@@ -103,13 +102,13 @@ class HierarchicalWorld extends Object {
 	}
 
 	function subdivide() {
-		if ( subdivided )
+		if ( subdivided || getScene() == null ) // parent has been removed during dequeuing.
 			return;
-		// if ( !loading ) {
-		// 	loading = true;
-		// 	loadingQueue.insert(0, subdivide);
-		// 	return;
-		// }
+		if ( !loading && data.depth > 0 ) {
+			loading = true;
+			loadingQueue.insert(0, subdivide);
+			return;
+		}
 		loading = false;
 		subdivided = true;
 		var childSize = data.size >> 1;
@@ -148,11 +147,6 @@ class HierarchicalWorld extends Object {
 	}
 
 	override function syncRec(ctx : h3d.scene.RenderContext) {
-		if ( data.depth == 0 && loadingQueue.length > 0 ) {
-			var load = loadingQueue.pop();
-			load();
-		}
-
 		if ( debugGraphics == null && DEBUG ) {
 			createGraphics();
 		} else if ( debugGraphics != null && !DEBUG ) {
@@ -164,13 +158,18 @@ class HierarchicalWorld extends Object {
 		if ( !isLeaf() ) {
 			var isClose = calcDist(ctx) < data.size * data.subdivPow;
 			if ( FULL || isClose ) {
-				if ( canSubdivide() )
+				if ( canSubdivide() && !loading )
 					subdivide();
 			} else if ( !locked && !isClose ) {
 				removeSubdivisions();
 			}
 		}
 		super.syncRec(ctx);
+
+		if ( data.depth == 0 && loadingQueue.length > 0 ) {
+			var load = loadingQueue.pop();
+			load();
+		}
 	}
 
 	override function emitRec(ctx : h3d.scene.RenderContext) {
