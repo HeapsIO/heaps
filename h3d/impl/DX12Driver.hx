@@ -1714,16 +1714,19 @@ class DX12Driver extends h3d.impl.Driver {
 		return (srvHead + (~(srvTail - 1 ) & 0xFF)) & 0xFF;
 	}
 
+	inline function processSRV() {
+		var index = (srvTail + 1) & 0xFF;
+		var args = srvRingBuf[index];
+		Driver.createShaderResourceView(args.res, args.resourceDesc, args.srvAddr);
+		Driver.createSampler(args.samplerDesc, args.samplerAddr);
+		srvTail = index;
+	}
+
 	function runThread() {
 		while(true) {
 			// Check if ring buffer is empty
-			if ( computeSRVBufferDistance() != 1 ) {
-				var index = (srvTail + 1) & 0xFF;
-				var args = srvRingBuf[index];
-				Driver.createShaderResourceView(args.res, args.resourceDesc, args.srvAddr);
-				Driver.createSampler(args.samplerDesc, args.samplerAddr);
-				srvTail = index;
-			}
+			if ( computeSRVBufferDistance() != 1 )
+				processSRV();
 			else
 				Sys.sleep(0);
 		}
@@ -1812,10 +1815,7 @@ class DX12Driver extends h3d.impl.Driver {
 		srvHead = (srvHead + 1) & 0xFF;
 
 		#if console
-		var args = srvRingBuf[(srvTail + 1) & 0xFF];
-		Driver.createShaderResourceView(args.res, args.resourceDesc, args.srvAddr);
-		Driver.createSampler(args.samplerDesc, args.samplerAddr);
-		srvTail = (srvTail + 1) & 0xFF;
+		processSRV();
 		#end
 	}
 
