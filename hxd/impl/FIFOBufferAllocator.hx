@@ -1,11 +1,11 @@
 package hxd.impl;
 import hxd.impl.Allocator;
 
-@:access(hxd.impl.CacheAllocator)
-@:allow(hxd.impl.CacheAllocator)
+@:access(hxd.impl.FIFOBufferAllocator)
+@:allow(hxd.impl.FIFOBufferAllocator)
 @:access(h3d.Buffer)
 private class Cache<T:h3d.Buffer> {
-	var allocator : CacheAllocator;
+	var allocator : FIFOBufferAllocator;
 	var maxKeepFrame : Int;
 	var available : Array<T> = [];
 	var disposed : Array<T> = [];
@@ -50,7 +50,7 @@ private class Cache<T:h3d.Buffer> {
 	}
 }
 
-class CacheAllocator extends Allocator {
+class FIFOBufferAllocator extends Allocator {
 
 	public var currentFrame = -1;
 	var buffers = new Map<Int,Cache<h3d.Buffer>>();
