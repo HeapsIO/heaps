@@ -1729,7 +1729,9 @@ class DX12Driver extends h3d.impl.Driver {
 		if (!srvThreadLaunched) {
 			srvThreadLaunched = true;
 			srvRingBuf = hl.CArray.alloc(SrvArgs, 256);
+			#if !console
 			sys.thread.Thread.create(runThread);
+			#end
 		}
 
 		// Check if ring buffer is full
@@ -1796,6 +1798,13 @@ class DX12Driver extends h3d.impl.Driver {
 		srvArgs.srvAddr = srvAddr;
 		srvArgs.samplerAddr = samplerAddr;
 		srvHead = (srvHead + 1) & 0xFF;
+
+		#if console
+		var args = srvRingBuf[(srvTail + 1) & 0xFF];
+		Driver.createShaderResourceView(args.res, args.resourceDesc, args.srvAddr);
+		Driver.createSampler(args.samplerDesc, args.samplerAddr);
+		srvTail = (srvTail + 1) & 0xFF;
+		#end
 	}
 
 	function uploadBuffers( buffers : h3d.shader.Buffers, buf : h3d.shader.Buffers.ShaderBuffers, which:h3d.shader.Buffers.BufferKind, shader : hxsl.RuntimeShader.RuntimeShaderData, regs : ShaderRegisters ) {
