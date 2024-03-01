@@ -18,7 +18,7 @@ class HierarchicalWorld extends Object {
 	static inline final UNLOCK_COLOR = 0xFFFFFF;
 	static inline final LOCK_COLOR = 0xFF0000;
 
-	static var loadingQueue : Array<Void -> Void> = [];
+	static var loadingQueue : Array<h3d.scene.RenderContext -> Bool> = [];
 	var loading : Bool = false;
 
 	public var data : WorldData;
@@ -101,14 +101,16 @@ class HierarchicalWorld extends Object {
 		return new HierarchicalWorld(parent, data);
 	}
 
-	function subdivide() {
+	function subdivide(ctx : h3d.scene.RenderContext) {
 		if ( subdivided || getScene() == null ) // parent has been removed during dequeuing.
-			return;
+			return false;
 		if ( !loading && data.depth > 0 ) {
 			loading = true;
 			loadingQueue.insert(0, subdivide);
-			return;
+			return false;
 		}
+		if ( !locked && !isClose(ctx) )
+			return false;
 		loading = false;
 		subdivided = true;
 		var childSize = data.size >> 1;
@@ -127,6 +129,7 @@ class HierarchicalWorld extends Object {
 				var node = createNode(this, childData);
 			}
 		}
+		return true;
 	}
 
 	function removeSubdivisions() {
@@ -146,6 +149,10 @@ class HierarchicalWorld extends Object {
 		return camPos.distance(new h2d.col.Point(chunkPos.x, chunkPos.y));
 	}
 
+	function isClose(ctx : h3d.scene.RenderContext) {
+		return calcDist(ctx) < data.size * data.subdivPow;
+	}
+
 	override function syncRec(ctx : h3d.scene.RenderContext) {
 		if ( debugGraphics == null && DEBUG ) {
 			createGraphics();
@@ -156,19 +163,22 @@ class HierarchicalWorld extends Object {
 
 		culled = !bounds.inFrustum(ctx.camera.frustum);
 		if ( !isLeaf() ) {
-			var isClose = calcDist(ctx) < data.size * data.subdivPow;
-			if ( FULL || isClose ) {
+			var close = isClose(ctx);
+			if ( FULL || close ) {
 				if ( canSubdivide() && !loading )
-					subdivide();
-			} else if ( !locked && !isClose ) {
+					subdivide(ctx);
+			} else if ( !locked && !close ) {
 				removeSubdivisions();
 			}
 		}
 		super.syncRec(ctx);
 
-		if ( data.depth == 0 && loadingQueue.length > 0 ) {
-			var load = loadingQueue.pop();
-			load();
+		if ( data.depth == 0 ) {
+			while ( loadingQueue.length > 0 ) {
+				var load = loadingQueue.pop();
+				if ( load(ctx) )
+					break;
+			}
 		}
 	}
 
@@ -199,7 +209,7 @@ class HierarchicalWorld extends Object {
 			locked = true;
 		if ( canSubdivide() ) {
 			loading = true;
-			subdivide();
+			subdivide(null);
 		}
 		for ( c in children ) {
 			var node = Std.downcast(c, HierarchicalWorld);
