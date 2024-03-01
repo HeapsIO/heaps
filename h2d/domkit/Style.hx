@@ -413,11 +413,16 @@ class Style extends domkit.CssStyle {
 		prevFlow.backgroundTile = h2d.Tile.fromColor(0,0.8);
 		prevFlow.padding = 7;
 		prevFlow.paddingTop = 4;
+		prevFlow.layout = Vertical;
+		prevFlow.verticalSpacing = 16;
 
-		var previewText = new h2d.HtmlText(hxd.res.DefaultFont.get(), prevFlow);
-		var lines = [];
-		lines.push(getDisplayInfo(obj));
-		lines.push("");
+		var previewTitle = new h2d.HtmlText(hxd.res.DefaultFont.get(), prevFlow);
+
+		var propsFlow = new h2d.Flow(prevFlow);
+		var propsLineText = new h2d.HtmlText(hxd.res.DefaultFont.get(), propsFlow);
+		var propsValueText = new h2d.HtmlText(hxd.res.DefaultFont.get(), propsFlow);
+
+		previewTitle.text = getDisplayInfo(obj);
 		var dom = obj.dom;
 
 		inline function find<T>( it : Array<T>, f : T -> Bool ) : Null<T> {
@@ -432,8 +437,9 @@ class Style extends domkit.CssStyle {
 		}
 
 		if(dom != null) {
-
-			var files: Array<{ name: String, txt: String }> = [];
+			var posLines = [];
+			var valueLines = [];
+			var files: Array<{ name: String, txt: String, #if sourcemap sourceMap: SourceMap #end }> = [];
 			var lineDigits = 0;
 			for( i in 0...dom.currentSet.length ) {
 				if( dom.currentRuleStyles == null || dom.currentRuleStyles[i] == null )
@@ -444,15 +450,30 @@ class Style extends domkit.CssStyle {
 				var r = find(resources, r -> r.name == vs.pos.file);
 				if (r != null) {
 					var txt = r.entry.getText();
-					files.push({ name: vs.pos.file, txt: txt });
+
+					#if sourcemap
+					var mapFile = r.entry.path + ".map";
+					var sourceMap: SourceMap = null;
+					if( hxd.res.Loader.currentInstance.exists(mapFile) ) {
+						var mapContent = hxd.res.Loader.currentInstance.load(mapFile).toText();
+						sourceMap = new SourceMap(mapContent);
+					}
+					#end
+
+					files.push({
+						name: vs.pos.file,
+						txt: txt,
+						#if sourcemap
+						sourceMap: sourceMap,
+						#end
+					});
 					lineDigits = hxd.Math.imax(lineDigits, Std.int(Math.log(countChar(txt)) / Math.log(10)));
 				}
 			}
 
-			lines.push('<font color="#707070"> line' + (files.length == 1 ? ' (${files[0].name})' : "") + '</font>');
 			for( s in dom.style ) {
 				if( s.p.name == "text" || Std.isOfType(s.value,h2d.Tile) ) continue;
-				lines.push(' <font color="#D0D0D0"> ${s.p.name}</font> <font color="#808080">${s.value}</font><font color="#606060"> (style)</font>');
+				valueLines.push(' <font color="#D0D0D0"> ${s.p.name}</font> <font color="#808080">${s.value}</font><font color="#606060"> (style)</font>');
 			}
 			var emptyDigits = "";
 			for (i in 0...lineDigits)
@@ -468,20 +489,31 @@ class Style extends domkit.CssStyle {
 					var f = find(files, f -> f.name == vs.pos.file);
 					if (f != null) {
 						var count = countChar(f.txt, vs.pos.pmin);
-						var s = "" + count;
-						for (i in Std.int(Math.log(count) / Math.log(10))...lineDigits) {
+						var line = count;
+						var file = files.length == 1 ? null : f.name;
+						#if sourcemap
+						if (f.sourceMap != null) {
+							var pos = f.sourceMap.originalPositionFor(count, 100000);
+							file = pos.source;
+							line = pos.originalLine;
+						}
+						#end
+						var s = "" + line;
+						for (i in Std.int(Math.log(Math.max(count, 1)) / Math.log(10))...lineDigits) {
 							s += " ";
 						}
-						if (files.length == 1)
+						if (file == null)
 							lStr = '<font color="#707070">$s</font>';
 						else
-							lStr = '<font color="#707070">${f.name}:$s</font>';
+							lStr = '<font color="#707070">${file}:$s</font>';
 					}
 				}
 				var vstr = v == null ? "???" : StringTools.htmlEscape(domkit.CssParser.valueStr(v));
-				lines.push(' $lStr  <font color="#D0D0D0"> ${p.name}</font> <font color="#808080">$vstr</font>');
+				posLines.push(lStr);
+				valueLines.push('<font color="#D0D0D0"> ${p.name}</font> <font color="#808080">$vstr</font>');
 			}
-			previewText.text = lines.join("<br/>");
+			propsLineText.text = posLines.join("<br/>");
+			propsValueText.text = valueLines.join("<br/>");
 		}
 
 		var size = prevFlow.getBounds();
