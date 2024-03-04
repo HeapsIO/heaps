@@ -81,14 +81,21 @@ class Style extends domkit.CssStyle {
 		}
 	}
 
-	function countChar(str: String, until = -1, code = "\n".code) {
-		var ret = 1;
+	inline function countLines(str: String, until = -1, code = "\n".code) {
+		var ret = {
+			line: 1,
+			col: 0,
+		}
 		if (until < 0)
 			until = str.length;
+		var lastFound = 0;
 		for( i in 0...until ) {
-			if( StringTools.fastCodeAt(str, i) == code )
-				ret++;
+			if( StringTools.fastCodeAt(str, i) == code ) {
+				ret.line++;
+				lastFound = i;
+			}
 		}
+		ret.col = until - lastFound;
 		return ret;
 	}
 	function onChange( ntry : Int = 0 ) {
@@ -105,7 +112,7 @@ class Style extends domkit.CssStyle {
 				cssParser.warnings.push({ msg : e.message, pmin : e.pmin, pmax : e.pmax });
 			}
 			for( w in cssParser.warnings ) {
-				var line = countChar(txt, w.pmin);
+				var line = countLines(txt, w.pmin).line;
 				errors.push(r.entry.path+":"+line+": " + w.msg);
 		 	}
 		}
@@ -467,7 +474,7 @@ class Style extends domkit.CssStyle {
 						sourceMap: sourceMap,
 						#end
 					});
-					lineDigits = hxd.Math.imax(lineDigits, Std.int(Math.log(countChar(txt)) / Math.log(10)));
+					lineDigits = hxd.Math.imax(lineDigits, Std.int(Math.log(countLines(txt).line) / Math.log(10)));
 				}
 			}
 
@@ -488,20 +495,19 @@ class Style extends domkit.CssStyle {
 					v = vs.value;
 					var f = find(files, f -> f.name == vs.pos.file);
 					if (f != null) {
-						var count = countChar(f.txt, vs.pos.pmin);
-						var line = count;
+						var count = countLines(f.txt, vs.pos.pmin);
+						var line = count.line;
+						var col = count.col;
 						var file = files.length == 1 ? null : f.name;
 						#if sourcemap
 						if (f.sourceMap != null) {
-							var pos = f.sourceMap.originalPositionFor(count, 100000);
+							var pos = f.sourceMap.originalPositionFor(count.line, count.col);
 							file = pos.source;
 							line = pos.originalLine;
+							col = pos.originalColumn;
 						}
 						#end
 						var s = "" + line;
-						for (i in Std.int(Math.log(Math.max(count, 1)) / Math.log(10))...lineDigits) {
-							s += " ";
-						}
 						if (file == null)
 							lStr = '<font color="#707070">$s</font>';
 						else
