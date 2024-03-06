@@ -606,7 +606,7 @@ class Writer {
 						if (matData.normalMap != null)
 							@:privateAccess textures.push({ name: matData.normalMap.substr(matData.normalMap.lastIndexOf("/") + 1), path: resolvePathImpl(hmdModel.lib.resource.entry.path ,matData.normalMap), property: "NormalMap" });
 						if (matData.specularTexture != null)
-							@:privateAccess textures.push({ name : matData.specularTexture.substr(matData.specularTexture.lastIndexOf("/") + 1), path: resolvePathImpl(hmdModel.lib.resource.entry.path ,matData.specularTexture), property: "SpecularFactor" });
+							@:privateAccess textures.push({ name : matData.specularTexture.substr(matData.specularTexture.lastIndexOf("/") + 1), path: resolvePathImpl(hmdModel.lib.resource.entry.path ,matData.specularTexture), property: "SpecularColor" });
 					}
 				}
 
