@@ -370,7 +370,12 @@ class Renderer extends h3d.scene.Renderer {
 	}
 
 	function begin( step : h3d.impl.RendererFX.Step ) {
-		mark(step.getName());
+		switch (step) {
+		case Custom(n):
+			mark(n);
+		default:
+			mark(step.getName());
+		}
 
 		for( f in effects )
 			if( f.enabled )
