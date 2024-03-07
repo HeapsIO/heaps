@@ -61,13 +61,13 @@ class System {
 	static function mainLoop() : Bool {
 		// process events
 		#if usesys
-		if( !haxe.System.emitEvents(@:privateAccess hxd.Window.inst.event) )
+		if( !haxe.System.emitEvents(@:privateAccess hxd.Window.dispatchEvent) )
 			return false;
 		#elseif hldx
-		if( !dx.Loop.processEvents(@:privateAccess hxd.Window.inst.onEvent) )
+		if( !dx.Loop.processEvents(@:privateAccess hxd.Window.dispatchEvent) )
 			return false;
 		#elseif hlsdl
-		if( !sdl.Sdl.processEvents(@:privateAccess hxd.Window.inst.onEvent) )
+		if( !sdl.Sdl.processEvents(@:privateAccess hxd.Window.dispatchEvent) )
 			return false;
 		#end
 
@@ -166,7 +166,9 @@ class System {
 			if( check_reload() ) onReload();
 			#end
 		}
+		#if !multidriver
 		Sys.exit(0);
+		#end
 	}
 
 	#if hot_reload

@@ -39,11 +39,14 @@ private class NativeDroppedFile extends hxd.DropFileEvent.DroppedFile {
 //@:coreApi
 class Window {
 
+	static var WINDOWS : Array<Window> = [];
+
 	var resizeEvents : List<Void -> Void>;
 	var eventTargets : List<Event -> Void>;
 	var dropTargets : List<DropFileEvent -> Void>;
 	var dropFiles : Array<hxd.DropFileEvent.DroppedFile>;
 
+	public var id : Int;
 	public var width(get, never) : Int;
 	public var height(get, never) : Int;
 	public var mouseX(get, never) : Int;
@@ -113,6 +116,10 @@ class Window {
 		final dxFlags = if (!fixed) dx.Window.RESIZABLE else 0;
 		window = new dx.Window(title, width, height, dx.Window.CW_USEDEFAULT, dx.Window.CW_USEDEFAULT, dxFlags);
 		#end
+		WINDOWS.push(this);
+		#if (hlsdl && multidriver)
+		id = window.id;
+		#end
 	}
 
 	public dynamic function onClose() : Bool {
@@ -121,6 +128,12 @@ class Window {
 
 	public dynamic function onMouseModeChange( from : MouseMode, to : MouseMode ) : Null<MouseMode> {
 		return null;
+	}
+
+	public function close() {
+		#if hlsdl
+		window.destroy();
+		#end
 	}
 
 	public function event( e : hxd.Event ) : Void {
@@ -305,7 +318,7 @@ class Window {
 
 		startMouseX = curMouseX;
 		startMouseY = curMouseY;
-		
+
 		return mouseMode = v;
 	}
 
@@ -363,6 +376,8 @@ class Window {
 				event(new Event(EOver));
 			case Leave:
 				event(new Event(EOut));
+			case Close:
+				return onCloseEvent();
 			default:
 			}
 		case MouseDown if (!hxd.System.getValue(IsTouch)):
@@ -474,7 +489,7 @@ class Window {
 			#end
 			eh = new Event(ERelease, e.mouseX, e.mouseY);
 			eh.touchId = e.fingerId;
-		
+
 		#elseif hldx
 		case KeyDown:
 			eh = new Event(EKeyDown);
@@ -516,11 +531,22 @@ class Window {
 			dropFiles = null;
 		#end
 		case Quit:
-			return onClose();
+			return onCloseEvent();
 		default:
 		}
 		if( eh != null ) event(eh);
 		return true;
+	}
+
+	function onCloseEvent() {
+		var ret = onClose();
+		if( ret ) {
+			close();
+			WINDOWS.remove(this);
+			if( WINDOWS.length == 0 )
+				Sys.exit(0);
+		}
+		return ret;
 	}
 
 	static function initChars() : Void {
@@ -801,8 +827,28 @@ class Window {
 		return "";
 	}
 
+	public function setCurrent() {
+		inst = this;
+		#if hlsdl
+		window.renderTo();
+		#end
+	}
+
 	static var inst : Window = null;
 	public static function getInstance() : Window {
 		return inst;
 	}
+
+	static function dispatchEvent( e ) {
+		#if multidriver
+		if( false ) @:privateAccess WINDOWS[0].onEvent(e); // typing
+		for( w in WINDOWS )
+			if( e.value == w.id )
+				return w.onEvent(e);
+		return true;
+		#else
+		return inst.onEvent(e);
+		#end
+	}
+
 }
