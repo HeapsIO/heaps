@@ -247,11 +247,13 @@ class RenderContext {
 			while( p != null ) {
 				var v : Dynamic;
 				if( p.perObjectGlobal == null ) {
-					if( p.type == TFloat || p.type == TInt ) {
+					switch( p.type ) {
+					case TFloat, TInt:
 						var i = getInstance(p.instance);
 						ptr[p.pos] = i.getParamFloatValue(p.index);
 						p = p.next;
 						continue;
+					default:
 					}
 					v = getInstance(p.instance).getParamValue(p.index);
 					if( v == null ) throw "Missing param value " + curInstanceValue + "." + p.name;
