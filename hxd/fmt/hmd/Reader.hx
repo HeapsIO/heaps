@@ -248,6 +248,27 @@ class Reader {
 				s.remapPosition = i.readInt32();
 				d.shapes.push(s);
 			}
+
+			var lodLength = i.readInt32();
+			d.lods = [];
+			for (k in 0...lodLength) {
+				var lod = new Lod();
+				lod.name = readName();
+				lod.idx = i.readInt32();
+
+				lod.geom = new Geometry();
+				lod.geom.props = readProps();
+				lod.geom.vertexCount = i.readInt32();
+				lod.geom.vertexFormat = makeFormat();
+				lod.geom.vertexPosition = i.readInt32();
+				var subCount = i.readByte();
+				if( subCount == 0xFF ) subCount = i.readInt32();
+				lod.geom.indexCounts = [for( k in 0...subCount ) i.readInt32()];
+				lod.geom.indexPosition = i.readInt32();
+				lod.geom.bounds = readBounds();
+
+				d.lods.push(lod);
+			}
 		}
 
 

@@ -90,6 +90,14 @@ class BlendShape {
 	}
 }
 
+class Lod {
+	public var name:String;
+	public var idx:Int;
+	public var geom:Geometry;
+
+	public function new() {}
+}
+
 class Material {
 
 	public var name : String;
@@ -204,6 +212,7 @@ class Data {
 	public var models : Array<Model>;
 	public var animations : Array<Animation>;
 	public var shapes : Array<BlendShape>;
+	public var lods : Array<Lod>;
 	public var dataPosition : Int;
 	public var data : haxe.io.Bytes;
 
