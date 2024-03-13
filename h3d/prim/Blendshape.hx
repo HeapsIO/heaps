@@ -4,6 +4,7 @@ package h3d.prim;
 class Blendshape {
 
 	var hmdModel : HMDModel;
+	var shapes : Array<hxd.fmt.hmd.Data.BlendShape>;
 	var weights : Array<Float>;
 	var inputMapping : Array<Map<String, Int>> = [];
 	var shapesBytes = [];
@@ -18,7 +19,13 @@ class Blendshape {
 		var is32 = hmdModel.data.vertexCount > 0x10000;
 		var vertexFormat = hmdModel.data.vertexFormat;
 		var size = hmdModel.data.vertexCount * vertexFormat.strideBytes;
-		var shapes = hmdModel.lib.header.shapes;
+
+		var geoId = 0;
+		for (gIdx => g in hmdModel.lib.header.geometries)
+			if (g == hmdModel.data)
+				geoId = gIdx;
+
+		shapes = [ for(s in hmdModel.lib.header.shapes) if (s.geom == geoId) s];
 
 		weights = [];
 
@@ -64,7 +71,7 @@ class Blendshape {
 		if (hmdModel.lib.header.shapes == null)
 			return 0;
 
-		return hmdModel.lib.header.shapes.length;
+		return shapes.length;
 	}
 
 	function uploadBlendshapeBytes() {
@@ -79,7 +86,6 @@ class Blendshape {
 		hmdModel.lib.resource.entry.readBytes(originalBytes, 0, hmdModel.dataPosition + hmdModel.data.vertexPosition, size);
 
 		var flagOffset = 31;
-		var shapes = hmdModel.lib.header.shapes;
 
 		var bytesOffset = haxe.io.Bytes.alloc(originalBytes.length);
 		bytesOffset.fill(0, originalBytes.length, 0);
