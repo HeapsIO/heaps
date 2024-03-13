@@ -104,6 +104,10 @@ class DynamicShader extends Shader {
 		}
 	}
 
+	override function getParamIntValue(index:Int):Int {
+		return getParamValue(index);
+	}
+
 	override function getParamFloatValue(index:Int):Float {
 		var a = accesses[index];
 		if( a.kind != Float )
