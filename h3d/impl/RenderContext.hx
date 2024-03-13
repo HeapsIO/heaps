@@ -247,15 +247,9 @@ class RenderContext {
 			while( p != null ) {
 				var v : Dynamic;
 				if( p.perObjectGlobal == null ) {
-					if( p.type == TFloat ) {
+					if( p.type == TFloat || p.type == TInt ) {
 						var i = getInstance(p.instance);
 						ptr[p.pos] = i.getParamFloatValue(p.index);
-						p = p.next;
-						continue;
-					}
-					if( p.type == TInt ) {
-						var i = getInstance(p.instance);
-						ptr[p.pos] = i.getParamIntValue(p.index);
 						p = p.next;
 						continue;
 					}

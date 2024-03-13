@@ -46,16 +46,11 @@ class Shader {
 		return null;
 	}
 
-	public function getParamIntValue( index : Int ) : Int {
-		throw "assert"; // will be subclassed in sub shaders
-		return 0;
-	}
-
 	public function getParamFloatValue( index : Int ) : Float {
 		throw "assert"; // will be subclassed in sub shaders
 		return 0.;
 	}
-
+	
 	public function setParamIndexValue( index : Int, val : Dynamic ) {
 		throw "assert"; // will be subclassed in sub shaders
 	}

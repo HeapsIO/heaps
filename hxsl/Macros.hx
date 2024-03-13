@@ -304,22 +304,6 @@ class Macros {
 			access : [AOverride],
 		});
 		fields.push( {
-			name : "getParamIntValue",
-			pos : pos,
-			kind : FFun( {
-				ret : macro : Int,
-				args : [ { name : "index", type : macro : Int } ],
-				expr : {
-					expr : EBlock([
-						{ expr : ESwitch(macro index, [for( i in 0...tparams.length ) if( tparams[i] == TInt ) { values : [macro $v{i}], expr : macro return ${eparams[i]} }], macro {}), pos : pos },
-						macro return 0,
-					]),
-					pos : pos,
-				},
-			}),
-			access : [AOverride],
-		});
-		fields.push( {
 			name : "getParamFloatValue",
 			pos : pos,
 			kind : FFun( {
@@ -327,7 +311,7 @@ class Macros {
 				args : [ { name : "index", type : macro : Int } ],
 				expr : {
 					expr : EBlock([
-						{ expr : ESwitch(macro index, [for( i in 0...tparams.length ) if( tparams[i] == TFloat ) { values : [macro $v{i}], expr : macro return ${eparams[i]} }], macro {}), pos : pos },
+						{ expr : ESwitch(macro index, [for( i in 0...tparams.length ) if( tparams[i] == TFloat || tparams[i] == TInt ) { values : [macro $v{i}], expr : macro return ${eparams[i]} }], macro {}), pos : pos },
 						macro return 0.,
 					]),
 					pos : pos,
@@ -437,7 +421,6 @@ class Macros {
 							shader = { expr : EBlock([ { expr : ECall( { expr : EIdent("extends"), pos : pos }, [ { expr : EConst(CString(sup)), pos : pos } ]), pos : pos }, shader]), pos : pos };
 							supFields.remove("updateConstants");
 							supFields.remove("getParamValue");
-							supFields.remove("getParamIntValue");
 							supFields.remove("getParamFloatValue");
 							supFields.remove("setParamValue");
 							supFields.remove("setParamFloatValue");
