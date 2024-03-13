@@ -772,39 +772,7 @@ class HMDOut extends BaseLibrary {
 			var model = new Model();
 			var ref = o.skin == null ? o : o.skin;
 
-			var modelName = o.model == null ? null : o.model.getName();
-			if (modelName != null) {
-				var lodNameIdx = modelName.indexOf("LOD");
-				if (lodNameIdx >= 0) {
-					if (modelName.indexOf("LOD") + 3 > modelName.length)
-						throw 'Missing LOD index for model ${modelName}';
-
-					var idx = modelName.indexOf("LOD") + 3;
-					while (idx < modelName.length && Std.parseInt(modelName.substr(idx, 1)) != null)
-						idx++;
-
-					var lodIdx = Std.parseInt(modelName.substr(lodNameIdx + 3, idx));
-
-					if (modelName.charAt(lodNameIdx - 1)  == '_')
-						lodNameIdx--;
-					if (modelName.charAt(idx) == '_')
-						idx++;
-
-					modelName = StringTools.replace(modelName, modelName.substr(lodNameIdx, idx), "");
-
-					var g = getChild(o.model, "Geometry");
-					var lod = new Lod();
-					lod.name = '${modelName}_LOD${lodIdx}';
-					lod.idx = lodIdx;
-					lod.geom = buildGeom(new hxd.fmt.fbx.Geometry(this, g), null, dataOut, false).g;
-					d.lods.push(lod);
-
-					if (lodIdx != 0)
-						continue;
-				}
-			}
-
-			model.name = modelName;
+			model.name = o.model == null ? null : o.model.getName();
 			model.parent = o.parent == null || o.parent.isJoint ? -1 : o.parent.index;
 			model.follow = o.parent != null && o.parent.isJoint ? o.parent.model.getName() : null;
 			var m = ref.model == null ? new hxd.fmt.fbx.BaseLibrary.DefaultMatrixes() : getDefaultMatrixes(ref.model);
@@ -1197,7 +1165,6 @@ class HMDOut extends BaseLibrary {
 		d.models = [];
 		d.animations = [];
 		d.shapes = [];
-		d.lods = [];
 
 		dataOut = new haxe.io.BytesOutput();
 
