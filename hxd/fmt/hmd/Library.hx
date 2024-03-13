@@ -266,10 +266,16 @@ class Library {
 		return buf;
 	}
 
-	function makePrimitive( id : Int ) {
+	function makePrimitive( model : Model ) {
+		var id : Int = model.geometry;
 		var p = cachedPrimitives[id];
 		if( p != null ) return p;
-		p = new h3d.prim.HMDModel(header.geometries[id], header.dataPosition, this);
+
+		var lods : Array<Geometry> = findLODs(model);
+		if (lods == null)
+			return null;
+
+		p = new h3d.prim.HMDModel(header.geometries[id], header.dataPosition, this, lods);
 		p.incref(); // Prevent from auto-disposing
 		cachedPrimitives[id] = p;
 		return p;
@@ -363,6 +369,65 @@ class Library {
 		return def;
 	}
 
+	function findLODs(model : Model) : Array<Geometry> {
+		var modelName : String = model.name;
+		if (modelName == null)
+			return [];
+
+		var keyword = "LOD";
+
+		var startCursor : Int = modelName.indexOf(keyword);
+		if ( startCursor < 0 )
+			return [];
+		startCursor += keyword.length;
+		if ( startCursor > modelName.length )
+			throw 'Missing LOD index for model ${modelName}';
+
+		var endCursor : Int = startCursor;
+		while (endCursor < modelName.length && Std.parseInt(modelName.substr(endCursor, 1)) != null)
+			endCursor++;
+
+		var lodLevel : Int = Std.parseInt(modelName.substr(startCursor, endCursor));
+		if (lodLevel > 0)
+			return null;
+
+		modelName = modelName.substr(0, startCursor) + modelName.substr(endCursor);
+
+		var lods : Array<Geometry> = [];
+		for ( curModel in header.models ) {
+			if (curModel.name == null || curModel == model)
+				continue;
+
+			var curModelName : String = curModel.name;
+
+			startCursor = curModelName.indexOf(keyword);
+			if (startCursor > curModelName.length)
+				continue;
+			startCursor += keyword.length;
+			if ( startCursor > curModelName.length )
+				throw 'Missing LOD index for model ${curModelName}';
+
+			endCursor = startCursor;
+			while (endCursor < curModelName.length && Std.parseInt(curModelName.substr(endCursor, 1)) != null)
+				endCursor++;
+
+			var curLodLevel : Int = Std.parseInt(curModelName.substr(startCursor, endCursor));
+			if (curLodLevel == 0)
+				continue;
+
+			curModelName = curModelName.substr(0, startCursor) + curModelName.substr(endCursor);
+
+			if ( curModelName == modelName ) {
+				var capacityNeeded = curLodLevel;
+				if (capacityNeeded > lods.length)
+					lods.resize(capacityNeeded);
+				lods[curLodLevel-1] = header.geometries[curModel.geometry];
+			}
+		}
+
+		return lods;
+	}
+
 	#if !dataOnly
 	public function makeObject( ?loadTexture : String -> h3d.mat.Texture ) : h3d.scene.Object {
 		if( loadTexture == null )
@@ -375,7 +440,9 @@ class Library {
 			if( m.geometry < 0 ) {
 				obj = new h3d.scene.Object();
 			} else {
-				var prim = makePrimitive(m.geometry);
+				var prim = makePrimitive(m);
+				if (prim == null)
+					continue;
 				if( m.skin != null ) {
 					var skinData = makeSkin(m.skin, header.geometries[m.geometry]);
 					skinData.primitive = prim;

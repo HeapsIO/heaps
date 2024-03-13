@@ -201,7 +201,7 @@ class CacheFileBuilder {
 			var serializeRootSignature = @:privateAccess dx12Driver.stringifyRootSignature(sign.sign, "ROOT_SIGNATURE", sign.params, sign.paramsCount);
 			code = serializeRootSignature + code;
 			sys.io.File.saveContent(tmpSrc, code);
-			var args = ["-rootsig-define", "ROOT_SIGNATURE", "-T", ( (rd.kind == Vertex) ? "vs_" : "ps_") + dxcShaderVersion,"-O3","-Fo", tmpOut, tmpSrc];
+			var args = ["-rootsig-define", "ROOT_SIGNATURE", "-T", ( (rd.kind == Vertex) ? "vs_" : "ps_") + dxcShaderVersion,"-O3","-Zi", "-Fd", "C:\\Projects\\ShadersPDB\\","-Fo", tmpOut, tmpSrc];
 			var p = new sys.io.Process(Sys.getEnv("GXDKLatest")+ "bin\\Scarlett\\dxc.exe", args);
 			var error = p.stderr.readAll().toString();
 			var ecode = p.exitCode();

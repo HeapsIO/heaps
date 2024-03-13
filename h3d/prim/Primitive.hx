@@ -83,7 +83,7 @@ class Primitive {
 	/**
 		Select the specified sub material before drawin. Used for internal usage.
 	**/
-	public function selectMaterial( material : Int ) {
+	public function selectMaterial( material : Int, lod : Int ) {
 	}
 
 	/**
@@ -128,6 +128,17 @@ class Primitive {
 	**/
 	public function toString() {
 		return Type.getClassName(Type.getClass(this)).split(".").pop();
+	}
+
+	/**
+	 	Return the LOD count.
+	**/
+	public function lodCount() {
+		return 1;
+	}
+
+	public function screenRatioToLod ( screenRatio : Float ) : Int {
+		return 0;
 	}
 
 }

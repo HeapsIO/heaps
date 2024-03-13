@@ -17,6 +17,11 @@ class Mesh extends Object {
 	public var material : h3d.mat.Material;
 
 	/**
+		When enabled, the lod level is inherited by children objects.
+	**/
+	public var inheritLod : Bool = false;
+
+	/**
 		Creates a new mesh with given primitive, material and parent object.
 		If material is not specified, a new default material is created for the current renderer.
 	**/
@@ -36,7 +41,6 @@ class Mesh extends Object {
 	public function getMeshMaterials() {
 		return [material];
 	}
-
 
 	static var tmpMat = new h3d.Matrix();
 	override function addBoundsRec( b : h3d.col.Bounds, relativeTo : h3d.Matrix ) {
@@ -64,11 +68,52 @@ class Mesh extends Object {
 		return primitive.getCollider();
 	}
 
+	var curScreenRatio : Float = 1.0;
 	override function draw( ctx : RenderContext ) {
+		primitive.selectMaterial(0,	primitive.screenRatioToLod(curScreenRatio));
 		primitive.render(ctx.engine);
 	}
 
+	function calcScreenRatio( ctx : RenderContext ) {
+		if ( primitive.lodCount() < 2 ) {
+			curScreenRatio = 1.0;
+			return;
+		}
+
+		if ( ctx.forcedScreenRatio >= 0.0 ) {
+			curScreenRatio = ctx.forcedScreenRatio;
+			return;
+		}
+
+		var bounds = primitive.getBounds();
+		if ( bounds == null ) {
+			curScreenRatio = 1.0;
+			return;
+		}
+
+		var worldRadius = bounds.dimension() / 3.0;
+		var worldCenter = getAbsPos().getPosition();
+
+		var cameraForward = ( ctx.camera.target - ctx.camera.pos ).normalized();
+		var cameraRight = ctx.camera.up.cross(cameraForward).normalized();
+		var cameraUp = cameraForward.cross(cameraRight);
+		var cameraTopLeft = cameraUp - cameraRight;
+		var worldTopLeft = worldCenter + ( cameraTopLeft - cameraForward ) * worldRadius;
+		var worldBottomRight = worldCenter + ( cameraTopLeft.scaled(-1) - cameraForward ) * worldRadius;
+
+		var screenTopLeft = ctx.camera.project( worldTopLeft.x, worldTopLeft.y, worldTopLeft.z, 1.0, 1.0, false );
+		var screenBottomRight = ctx.camera.project( worldBottomRight.x, worldBottomRight.y, worldBottomRight.z, 1.0, 1.0, false );
+
+		var screenArea = hxd.Math.max( screenBottomRight.x - screenTopLeft.x, screenBottomRight.y - screenTopLeft.y );
+
+		curScreenRatio = screenArea * screenArea;
+
+		if ( inheritLod )
+			ctx.forcedScreenRatio = curScreenRatio;
+	}
+
 	override function emit( ctx : RenderContext ) {
+		calcScreenRatio(ctx);
 		ctx.emit(material, this);
 	}
 
