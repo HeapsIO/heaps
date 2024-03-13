@@ -35,7 +35,10 @@ class DynamicShader extends Shader {
 	function addVarIndex(v:hxsl.Ast.TVar, ?access : Access, ?defObj : Dynamic ) {
 		if( v.kind != Param )
 			return;
-		var isFloat = v.type == TFloat && access == null;
+		var isFloat = switch(v.type) {
+			case TFloat, TInt: access == null;
+			default: false;
+		}
 		var vid = isFloat ? floats.length : values.length;
 		if( access != null )
 			access = new Access(Structure, access.index, access.fields.copy());
