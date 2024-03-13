@@ -253,6 +253,12 @@ class RenderContext {
 						p = p.next;
 						continue;
 					}
+					if( p.type == TInt ) {
+						var i = getInstance(p.instance);
+						ptr[p.pos] = i.getParamIntValue(p.index);
+						p = p.next;
+						continue;
+					}
 					v = getInstance(p.instance).getParamValue(p.index);
 					if( v == null ) throw "Missing param value " + curInstanceValue + "." + p.name;
 				} else
