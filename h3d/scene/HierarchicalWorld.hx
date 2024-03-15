@@ -8,6 +8,7 @@ typedef WorldData = {
 	var depth : Int;
 	var maxDepth : Int;
 	var onCreate : HierarchicalWorld -> Void;
+	var root : HierarchicalWorld;
 }
 
 class HierarchicalWorld extends Object {
@@ -18,7 +19,7 @@ class HierarchicalWorld extends Object {
 	static inline final UNLOCK_COLOR = 0xFFFFFF;
 	static inline final LOCK_COLOR = 0xFF0000;
 
-	static var loadingQueue : Array<h3d.scene.RenderContext -> Bool> = [];
+	var loadingQueue : Array<h3d.scene.RenderContext -> Bool>;
 	var loading : Bool = false;
 
 	public var data : WorldData;
@@ -80,6 +81,10 @@ class HierarchicalWorld extends Object {
 		bounds.addPoint(new h3d.col.Point(halfSize,halfSize, pseudoInfinity));
 		bounds.transform(absPos);
 
+		if ( data.depth == 0 ) {
+			data.root = this;
+			loadingQueue = [];
+		}
 		if ( data.depth != 0 && data.onCreate != null )
 			data.onCreate(this);
 	}
@@ -106,7 +111,7 @@ class HierarchicalWorld extends Object {
 			return false;
 		if ( !loading && data.depth > 0 ) {
 			loading = true;
-			loadingQueue.insert(0, subdivide);
+			getRoot().loadingQueue.insert(0, subdivide);
 			return false;
 		}
 		if ( !locked && !isClose(ctx) )
@@ -124,7 +129,8 @@ class HierarchicalWorld extends Object {
 					y : j * childSize - halfChildSize,
 					depth : data.depth + 1,
 					maxDepth : data.maxDepth,
-					onCreate : data.onCreate
+					onCreate : data.onCreate,
+					root : data.root,
 				};
 				var node = createNode(this, childData);
 			}
@@ -173,7 +179,7 @@ class HierarchicalWorld extends Object {
 		}
 		super.syncRec(ctx);
 
-		if ( data.depth == 0 ) {
+		if ( loadingQueue != null ) {
 			while ( loadingQueue.length > 0 ) {
 				var load = loadingQueue.pop();
 				if ( load(ctx) )
@@ -277,10 +283,7 @@ class HierarchicalWorld extends Object {
 	}
 
 	public function getRoot() : h3d.scene.HierarchicalWorld {
-		var root : h3d.scene.Object = this;
-		while ( Std.isOfType(root.parent, HierarchicalWorld) )
-			root = root.parent;
-		return cast root;
+		return data.root;
 	}
 
 	public function refresh() {
