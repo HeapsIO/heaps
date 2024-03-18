@@ -94,9 +94,9 @@ class Mesh extends Object {
 		var worldRadius = bounds.dimension() / 3.0;
 		var worldCenter = getAbsPos().getPosition();
 
-		var cameraForward = ( ctx.camera.target - ctx.camera.pos ).normalized();
-		var cameraRight = ctx.camera.up.cross(cameraForward).normalized();
-		var cameraUp = cameraForward.cross(cameraRight);
+		var cameraForward = ctx.camera.getForward();
+		var cameraRight = ctx.camera.getRight();
+		var cameraUp = ctx.camera.getUp();
 		var cameraTopLeft = cameraUp - cameraRight;
 		var worldTopLeft = worldCenter + ( cameraTopLeft - cameraForward ) * worldRadius;
 		var worldBottomRight = worldCenter + ( cameraTopLeft.scaled(-1) - cameraForward ) * worldRadius;
