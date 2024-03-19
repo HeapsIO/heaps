@@ -75,10 +75,8 @@ class Mesh extends Object {
 	}
 
 	function calcScreenRatio( ctx : RenderContext ) {
-		if ( primitive.lodCount() < 2 ) {
-			curScreenRatio = 1.0;
+		if ( primitive.lodCount() == 1 )
 			return;
-		}
 
 		if ( ctx.forcedScreenRatio >= 0.0 ) {
 			curScreenRatio = ctx.forcedScreenRatio;
@@ -91,15 +89,16 @@ class Mesh extends Object {
 			return;
 		}
 
-		var worldRadius = bounds.dimension() / 3.0;
-		var worldCenter = getAbsPos().getPosition();
+		var absPos = getAbsPos();
+		var worldCenter = absPos.getPosition();
+		var worldScale = absPos.getScale(); 
+		var worldRadius = bounds.dimension() * hxd.Math.max( worldScale.x, hxd.Math.max(worldScale.y, worldScale.z) ) / 2.0;
 
-		var cameraForward = ctx.camera.getForward();
 		var cameraRight = ctx.camera.getRight();
 		var cameraUp = ctx.camera.getUp();
-		var cameraTopLeft = cameraUp - cameraRight;
-		var worldTopLeft = worldCenter + ( cameraTopLeft - cameraForward ) * worldRadius;
-		var worldBottomRight = worldCenter + ( cameraTopLeft.scaled(-1) - cameraForward ) * worldRadius;
+		var cameraTopLeft = (cameraUp - cameraRight).normalized();
+		var worldTopLeft = worldCenter + cameraTopLeft * worldRadius;
+		var worldBottomRight = worldCenter - cameraTopLeft * worldRadius;
 
 		var screenTopLeft = ctx.camera.project( worldTopLeft.x, worldTopLeft.y, worldTopLeft.z, 1.0, 1.0, false );
 		var screenBottomRight = ctx.camera.project( worldBottomRight.x, worldBottomRight.y, worldBottomRight.z, 1.0, 1.0, false );

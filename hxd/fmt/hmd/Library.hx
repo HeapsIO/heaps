@@ -1,4 +1,5 @@
 package hxd.fmt.hmd;
+import h3d.prim.HMDModel;
 import hxd.fmt.hmd.Data;
 
 private class FormatMap {
@@ -271,10 +272,15 @@ class Library {
 		var p = cachedPrimitives[id];
 		if( p != null ) return p;
 
-		var lods : Array<Geometry> = findLODs(model);
-		if (lods == null)
+		var lodModelName : String = "";
+		var lodLevel = getLODLevel( model, lodModelName ) ;
+		if ( lodLevel > 0)
 			return null;
 
+		var lods : Array<Geometry> = null;
+		if (lodLevel == 0 )
+			lods = findLODs( lodModelName );
+		
 		p = new h3d.prim.HMDModel(header.geometries[id], header.dataPosition, this, lods);
 		p.incref(); // Prevent from auto-disposing
 		cachedPrimitives[id] = p;
@@ -369,59 +375,53 @@ class Library {
 		return def;
 	}
 
-	function findLODs(model : Model) : Array<Geometry> {
+	function getLODLevel( model : Model, ?outModelName : String ) : Int {
 		var modelName : String = model.name;
-		if (modelName == null)
-			return [];
+		var keyword = h3d.prim.HMDModel.lodExportKeyword;
+		if (modelName == null || modelName.length <= keyword.length)
+			return -1;
+	
+		// Test prefix
+		if ( modelName.substr(0, keyword.length) == keyword) {
+			var parsedInt = Std.parseInt(modelName.substr( keyword.length, 1 ));
+			if (parsedInt != null) {
+				if ( Std.parseInt( modelName.substr( keyword.length + 1, 1 ) ) != null )
+					throw 'Did not expect a second number after LOD in ${modelName}';
+				outModelName = modelName.substr(keyword.length);
+				return parsedInt;
+			}
+		}
 
-		var keyword = "LOD";
+		// Test suffix
+		var maxCursor = modelName.length - keyword.length - 1;
+		if ( modelName.substr( maxCursor, keyword.length ) == keyword ) {
+			var parsedInt = Std.parseInt( modelName.charAt( modelName.length - 1) );
+			if ( parsedInt != null ) {
+				outModelName = modelName.substr( 0, maxCursor );
+				return parsedInt;
+			}
+		}
 
-		var startCursor : Int = modelName.indexOf(keyword);
-		if ( startCursor < 0 )
-			return [];
-		startCursor += keyword.length;
-		if ( startCursor > modelName.length )
-			throw 'Missing LOD index for model ${modelName}';
+		return -1;
+	}
 
-		var endCursor : Int = startCursor;
-		while (endCursor < modelName.length && Std.parseInt(modelName.substr(endCursor, 1)) != null)
-			endCursor++;
-
-		var lodLevel : Int = Std.parseInt(modelName.substr(startCursor, endCursor));
-		if (lodLevel > 0)
+	function findLODs( modelName : String ) : Array<Geometry> {
+		if ( modelName == null )
 			return null;
 
-		modelName = modelName.substr(0, startCursor) + modelName.substr(endCursor);
-
 		var lods : Array<Geometry> = [];
-		for ( curModel in header.models ) {
-			if (curModel.name == null || curModel == model)
-				continue;
-
-			var curModelName : String = curModel.name;
-
-			startCursor = curModelName.indexOf(keyword);
-			if (startCursor > curModelName.length)
-				continue;
-			startCursor += keyword.length;
-			if ( startCursor > curModelName.length )
-				throw 'Missing LOD index for model ${curModelName}';
-
-			endCursor = startCursor;
-			while (endCursor < curModelName.length && Std.parseInt(curModelName.substr(endCursor, 1)) != null)
-				endCursor++;
-
-			var curLodLevel : Int = Std.parseInt(curModelName.substr(startCursor, endCursor));
-			if (curLodLevel == 0)
-				continue;
-
-			curModelName = curModelName.substr(0, startCursor) + curModelName.substr(endCursor);
-
+		for ( curModel in header.models ) {			
+			var curModelName : String = "";
+			var lodLevel = getLODLevel(curModel, curModelName);
+			if ( lodLevel < 1 )
+				continue;	
 			if ( curModelName == modelName ) {
-				var capacityNeeded = curLodLevel;
-				if (capacityNeeded > lods.length)
+				var capacityNeeded = lodLevel;
+				if ( capacityNeeded > lods.length )
 					lods.resize(capacityNeeded);
-				lods[curLodLevel-1] = header.geometries[curModel.geometry];
+				if ( lods[lodLevel - 1] != null )
+					throw 'Multiple LODs with the same level : ${curModel.name}';
+				lods[lodLevel - 1] = header.geometries[curModel.geometry];
 			}
 		}
 

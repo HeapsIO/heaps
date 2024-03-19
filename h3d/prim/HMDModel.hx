@@ -61,7 +61,7 @@ class HMDModel extends MeshPrimitive {
 		dispose();
 
 		var vertexCount : Int = 0;
-		var vertexFormat : hxd.BufferFormat = lods[0].vertexFormat;
+		var vertexFormat : hxd.BufferFormat = data.vertexFormat;
 		indexCount = 0;
 		indexesTriPos = [];
 		for ( lod in lods ) {
@@ -83,6 +83,9 @@ class HMDModel extends MeshPrimitive {
 		var curIndexCount : Int = 0;
 		
 		for ( lod in lods ) {
+			if (lod.vertexFormat != vertexFormat)
+				throw "LOD has a different vertex format";
+			
 			var size = lod.vertexCount * vertexFormat.strideBytes;
 			var bytes = entry.fetchBytes(dataPosition + lod.vertexPosition, size);			
 			engine.driver.uploadBufferBytes(buffer, curVertexCount, lod.vertexCount, bytes, 0);
@@ -230,8 +233,8 @@ class HMDModel extends MeshPrimitive {
 			return;
 		}
 
-		var materialCount = lods[0].indexCounts.length;
-		var lodLevel = Std.int(curMaterial / lods[0].indexCounts.length);
+		var materialCount = data.indexCounts.length;
+		var lodLevel = Std.int(curMaterial / data.indexCounts.length);
 
 		if( indexes == null || indexes.isDisposed() )
 			alloc(engine);
@@ -272,6 +275,7 @@ class HMDModel extends MeshPrimitive {
 		return lods.length;
 	}
 	
+	public static var lodExportKeyword : String = "LOD";
 	static var lodConfig : Array<Float> = [0.02, 0.002, 0.0002];
 	public static function loadLodConfig( config : Array<Float> ) {
 		lodConfig = config;
@@ -280,7 +284,7 @@ class HMDModel extends MeshPrimitive {
 	override public function screenRatioToLod( screenRatio : Float ) : Int {
 		var lodCount = lodCount();
 
-		if ( lodCount < 2 )
+		if ( lodCount == 1 )
 			return 0;
 
 		if ( lodConfig != null && lodConfig.length >= lodCount - 1) {
