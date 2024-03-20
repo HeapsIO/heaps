@@ -24,6 +24,7 @@ class RenderContext extends h3d.impl.RenderContext {
 	public var debugCulling : Bool;
 	public var wasContextLost : Bool;
 	public var cullingCollider : h3d.col.Collider;
+	public var forcedScreenRatio : Float = -1;	
 
 	@global("camera.view") var cameraView : h3d.Matrix;
 	@global("camera.zNear") var cameraNear : Float;
@@ -94,6 +95,7 @@ class RenderContext extends h3d.impl.RenderContext {
 		lights = null;
 		cachedPos = 0;
 		visibleFlag = true;
+		forcedScreenRatio = -1;
 		time += elapsedTime;
 		frame++;
 		setCurrent();

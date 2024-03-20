@@ -1,4 +1,5 @@
 package hxd.fmt.hmd;
+import h3d.prim.HMDModel;
 import hxd.fmt.hmd.Data;
 
 private class FormatMap {
@@ -266,10 +267,21 @@ class Library {
 		return buf;
 	}
 
-	function makePrimitive( id : Int ) {
+	function makePrimitive( model : Model ) {
+		var id : Int = model.geometry;
 		var p = cachedPrimitives[id];
 		if( p != null ) return p;
-		p = new h3d.prim.HMDModel(header.geometries[id], header.dataPosition, this);
+
+		var lodModelName : String = "";
+		var lodLevel = getLODLevel( model, lodModelName ) ;
+		if ( lodLevel > 0)
+			return null;
+
+		var lods : Array<Geometry> = null;
+		if (lodLevel == 0 )
+			lods = findLODs( lodModelName );
+		
+		p = new h3d.prim.HMDModel(header.geometries[id], header.dataPosition, this, lods);
 		p.incref(); // Prevent from auto-disposing
 		cachedPrimitives[id] = p;
 		return p;
@@ -363,6 +375,59 @@ class Library {
 		return def;
 	}
 
+	function getLODLevel( model : Model, ?outModelName : String ) : Int {
+		var modelName : String = model.name;
+		var keyword = h3d.prim.HMDModel.lodExportKeyword;
+		if (modelName == null || modelName.length <= keyword.length)
+			return -1;
+	
+		// Test prefix
+		if ( modelName.substr(0, keyword.length) == keyword) {
+			var parsedInt = Std.parseInt(modelName.substr( keyword.length, 1 ));
+			if (parsedInt != null) {
+				if ( Std.parseInt( modelName.substr( keyword.length + 1, 1 ) ) != null )
+					throw 'Did not expect a second number after LOD in ${modelName}';
+				outModelName = modelName.substr(keyword.length);
+				return parsedInt;
+			}
+		}
+
+		// Test suffix
+		var maxCursor = modelName.length - keyword.length - 1;
+		if ( modelName.substr( maxCursor, keyword.length ) == keyword ) {
+			var parsedInt = Std.parseInt( modelName.charAt( modelName.length - 1) );
+			if ( parsedInt != null ) {
+				outModelName = modelName.substr( 0, maxCursor );
+				return parsedInt;
+			}
+		}
+
+		return -1;
+	}
+
+	function findLODs( modelName : String ) : Array<Geometry> {
+		if ( modelName == null )
+			return null;
+
+		var lods : Array<Geometry> = [];
+		for ( curModel in header.models ) {			
+			var curModelName : String = "";
+			var lodLevel = getLODLevel(curModel, curModelName);
+			if ( lodLevel < 1 )
+				continue;	
+			if ( curModelName == modelName ) {
+				var capacityNeeded = lodLevel;
+				if ( capacityNeeded > lods.length )
+					lods.resize(capacityNeeded);
+				if ( lods[lodLevel - 1] != null )
+					throw 'Multiple LODs with the same level : ${curModel.name}';
+				lods[lodLevel - 1] = header.geometries[curModel.geometry];
+			}
+		}
+
+		return lods;
+	}
+
 	#if !dataOnly
 	public function makeObject( ?loadTexture : String -> h3d.mat.Texture ) : h3d.scene.Object {
 		if( loadTexture == null )
@@ -375,7 +440,9 @@ class Library {
 			if( m.geometry < 0 ) {
 				obj = new h3d.scene.Object();
 			} else {
-				var prim = makePrimitive(m.geometry);
+				var prim = makePrimitive(m);
+				if (prim == null)
+					continue;
 				if( m.skin != null ) {
 					var skinData = makeSkin(m.skin, header.geometries[m.geometry]);
 					skinData.primitive = prim;

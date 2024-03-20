@@ -60,6 +60,9 @@ class ModelCache {
 			var colliders = [];
 			for( m in lib.header.models ) {
 				if( m.geometry < 0 ) continue;
+				var prim = @:privateAccess lib.makePrimitive(m);
+				if (prim == null)
+					continue;
 				var pos = m.position.toMatrix();
 				var parent = lib.header.models[m.parent];
 				while( parent != null ) {
@@ -67,7 +70,6 @@ class ModelCache {
 					pos.multiply3x4(pos, pp);
 					parent = lib.header.models[parent.parent];
 				}
-				var prim = @:privateAccess lib.makePrimitive(m.geometry);
 				var col = cast(prim.getCollider(), h3d.col.Collider.OptimizedCollider);
 				colliders.push(new h3d.col.TransformCollider(pos,col));
 			}

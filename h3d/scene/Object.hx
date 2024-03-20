@@ -797,11 +797,14 @@ class Object {
 			for( c in children )
 				c.posChanged = true;
 		}
+
+		var prevForcedScreenRatio : Float = ctx.forcedScreenRatio;
 		if( !culled || ctx.computingStatic )
 			emit(ctx);
 
 		for( c in children )
 			c.emitRec(ctx);
+		ctx.forcedScreenRatio = prevForcedScreenRatio;
 	}
 
 	inline function set_x(v) {
