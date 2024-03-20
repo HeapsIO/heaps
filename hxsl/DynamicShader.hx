@@ -92,6 +92,10 @@ class DynamicShader extends Shader {
 		accesses.push(access == null ? new Access(isFloat?Float:Dynamic,vid,null) : access);
 	}
 
+	public function getParamIndex( p : hxsl.Ast.TVar ) : Int {
+		return varIndexes.get(p.id);
+	}
+
 	override function getParamValue(index:Int) : Dynamic {
 		var a = accesses[index];
 		switch( a.kind ) {
