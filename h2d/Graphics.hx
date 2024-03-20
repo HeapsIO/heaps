@@ -466,7 +466,7 @@ class Graphics extends Drawable {
 		Position a virtual tile at the given position and scale. Every draw will display a part of this tile relative
 		to these coordinates.
 
-		Note that in by default, Tile is not wrapped, and in order to render tiling texture, `Drawable.tileWrap` have to be set.
+		Note that in by default, Tile is not wrapped, and in order to render a tiling texture, `Drawable.tileWrap` has to be set.
 		Additionally, both `Tile.dx` and `Tile.dy` are ignored (use `dx`/`dy` arguments instead)
 		as well as tile defined size of the tile through `Tile.width` and `Tile.height` (use `scaleX`/`scaleY` relative to texture size).
 
