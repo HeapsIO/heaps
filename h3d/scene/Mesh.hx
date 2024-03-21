@@ -75,7 +75,7 @@ class Mesh extends Object {
 	}
 
 	function calcScreenRatio( ctx : RenderContext ) {
-		if ( primitive.lodCount() == 1 )
+		if ( primitive == null || primitive.lodCount() == 1 )
 			return;
 
 		if ( ctx.forcedScreenRatio >= 0.0 ) {
