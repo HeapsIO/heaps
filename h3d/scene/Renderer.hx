@@ -28,6 +28,11 @@ class Renderer extends hxd.impl.AnyProps {
 	var backToFront : h3d.pass.PassList -> Void;
 	var debugging = false;
 
+	#if editor
+	public var showEditorGuides = false;
+	public var showEditorOutlines = true;
+	#end
+
 	public var effects : Array<h3d.impl.RendererFX> = [];
 
 	public var renderMode : RenderMode = Default;
