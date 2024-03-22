@@ -196,9 +196,14 @@ class CascadeShadowMap extends DirShadowMap {
 			currentCascadeIndex = i;
 			var p = passes.save();
 			cullPasses(passes,function(col) return col.inFrustum(lightCameras[i].frustum));
-			var param = params[cascade - 1 - i];			
+			var param = params[cascade - 1 - i];
+			#if js
+			depth.depthBias = (param != null) ? param.depthBias : 0;
+			depth.slopeScaledBias = (param != null) ? param.slopeBias : 0;
+			#else	
 			texture.depthBias = (param != null) ? param.depthBias : 0;
-			texture.slopeScaledBias = (param != null) ? param.slopeBias : 0;			
+			texture.slopeScaledBias = (param != null) ? param.slopeBias : 0;
+			#end
 			texture = processShadowMap( passes, texture, sort);
 			textures.push(texture);
 			passes.load(p);
