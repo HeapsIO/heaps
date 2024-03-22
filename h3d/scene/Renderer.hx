@@ -107,7 +107,6 @@ class Renderer extends hxd.impl.AnyProps {
 		}
 		if( frontToBack )
 			passes.sort(function(p1, p2) return p1.pass.layer == p2.pass.layer ? (p1.depth > p2.depth ? 1 : -1) : p1.pass.layer - p2.pass.layer);
-
 		else
 			passes.sort(function(p1, p2) return p1.pass.layer == p2.pass.layer ? (p1.depth > p2.depth ? -1 : 1) : p1.pass.layer - p2.pass.layer);
 	}
