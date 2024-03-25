@@ -91,7 +91,7 @@ typedef PbrProps = {
 	@:optional var stencilReadMask : Int;
 
 	@:optional var drawOrder : String;
-	@:optional var useChecker : Bool;
+	@:optional var depthPrepass : Bool;
 }
 
 class PbrMaterial extends Material {
@@ -236,8 +236,8 @@ class PbrMaterial extends Material {
 			Reflect.deleteField(props,"drawOrder");
 		if( props.depthWrite == Default )
 		 	Reflect.deleteField(props, "depthWrite");
-		if ( !props.useChecker )
-			Reflect.deleteField(props, "useChecker");
+		if ( !props.depthPrepass )
+			Reflect.deleteField(props, "depthPrepass");
 		if ( props.parallaxSteps == h3d.shader.Parallax.MAX_LAYERS || props.parallaxSteps == 0 )
 			Reflect.deleteField(props, "parallaxSteps");
 		#end
@@ -393,12 +393,34 @@ class PbrMaterial extends Material {
 			p = p.nextPass;
 		}
 
-		if ( texture != null && props.useChecker ) {
-			mainPass.addShader(new h3d.shader.Checker());
-		} else {
-			var s = mainPass.getShader(h3d.shader.Checker);
-			if ( s != null )
-				mainPass.removeShader(s);
+		if ( props.depthPrepass ) {
+			var passName = switch (props.mode) {
+			case PBR:
+				"depthPrepass";
+			case BeforeTonemapping:
+				"beforeTonemappingDepthPrepass";
+			default:
+				null;
+			}
+			if ( passName != null ) {
+				mainPass.depthTest = switch ( mainPass.depthTest ) {
+				case Less:
+					LessEqual;
+				case Greater:
+					GreaterEqual;
+				default:
+					mainPass.depthTest;
+				}
+
+				var p = allocPass(passName);
+				var killAlpha = new h3d.shader.KillAlpha();
+				killAlpha.threshold = 0.5;
+				p.addShader(killAlpha);
+				p.depthWrite = true;
+				p.depthTest = Less;
+				p.culling = mainPass.culling;
+				p.setBlendMode(None);
+			}
 		}
 	}
 
@@ -583,7 +605,7 @@ class PbrMaterial extends Material {
 						${[for( i in 0...layers.length ) '<option value="${layers[i].value}">${layers[i].name}</option>'].join("")}
 					</select>
 				</dd>
-				<dt>Checker</dt><dd><input type="checkbox" field="useChecker"/></dd>
+				<dt>Depth prepass</dt><dd><input type="checkbox" field="depthPrepass"/></dd>
 			</dl>
 		');
 	}
