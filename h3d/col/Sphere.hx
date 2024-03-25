@@ -69,7 +69,7 @@ class Sphere extends Collider {
 		y = v.y;
 		z = v.z;
 		var scale = m.getScale();
-		r *= Math.max(Math.max(scale.x, scale.y), scale.z);
+		r *= Math.abs(Math.max(Math.max(scale.x, scale.y), scale.z));
 		var res = f.hasSphere(this);
 		x = oldX;
 		y = oldY;
