@@ -101,6 +101,15 @@ class Sphere extends Collider {
 		return r;
 	}
 
+	public inline function clone() {
+		var s = new Sphere();
+		s.x = x;
+		s.y = y;
+		s.z = z;
+		s.r = r;
+		return s;
+	}
+
 	#if !macro
 	public function makeDebugObj() : h3d.scene.Object {
 		var prim = new h3d.prim.Sphere(r, 20, 15);
