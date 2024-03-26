@@ -15,6 +15,7 @@ class TextInput extends Text {
 		When TextInput is not focused value is -1.
 	**/
 	public var cursorIndex : Int = -1;
+
 	/**
 		The Tile used to render the input cursor.
 	**/
@@ -63,6 +64,7 @@ class TextInput extends Text {
 	var cursorX : Float;
 	var cursorXIndex : Int;
 	var cursorY : Float;
+	var prevCursorYIndex : Int;
 	var cursorYIndex : Int;
 	var cursorBlink = 0.;
 	var cursorScroll = 0;
@@ -95,8 +97,9 @@ class TextInput extends Text {
 					interactive.focus();
 				}
 				cursorBlink = 0;
-				var startIndex = textPos(e.relX, e.relY);
-				cursorIndex = startIndex;
+				var startPos = textPos(e.relX, e.relY);
+				cursorIndex = startPos.cursorIndex;
+				cursorYIndex = startPos.lineIndex;
 				selectionRange = null;
 
 				var pt = new h2d.col.Point();
@@ -106,15 +109,16 @@ class TextInput extends Text {
 					pt.x = e.relX;
 					pt.y = e.relY;
 					globalToLocal(pt);
-					var index = textPos(pt.x, pt.y);
-					if( index == startIndex )
+					var pos = textPos(pt.x, pt.y);
+					if( pos.cursorIndex == startPos.cursorIndex )
 						selectionRange = null;
-					else if( index < startIndex )
-						selectionRange = { start : index, length : startIndex - index };
+					else if( pos.cursorIndex < startPos.cursorIndex )
+						selectionRange = { start : pos.cursorIndex, length : startPos.cursorIndex - pos.cursorIndex };
 					else
-						selectionRange = { start : startIndex, length : index - startIndex };
+						selectionRange = { start : startPos.cursorIndex, length : pos.cursorIndex - startPos.cursorIndex };
 					selectionSize = 0;
-					cursorIndex = index;
+					cursorIndex = pos.cursorIndex;
+					cursorYIndex = pos.lineIndex;
 					if( e.kind == ERelease || getScene() != scene )
 						scene.stopCapture();
 				});
@@ -149,6 +153,7 @@ class TextInput extends Text {
 				selectionRange = { start : 0, length : text.length };
 				selectionSize = 0;
 				cursorIndex = text.length;
+				cursorYIndex = getAllLines().length - 1;
 			}
 			lastClick = t;
 		};
@@ -182,15 +187,51 @@ class TextInput extends Text {
 		case K.DOWN if( multiline ):
 			moveCursorVertically(1);
 		case K.LEFT if (K.isDown(K.CTRL)):
-			cursorIndex = getWordStart();
+			var ncIdx = getWordStart();
+			var nYIdx = resolveYIndex(ncIdx);
+			if (cursorYIndex > nYIdx){
+				var cL = getCurrentLine();
+				// Only go to the end of the upper line if we're not going to the start of the current one
+				if (ncIdx != cL.startIndex)
+					cursorYIndex = nYIdx;
+			}
+			cursorIndex = ncIdx;
 		case K.LEFT:
-			if( cursorIndex > 0 )
-				cursorIndex--;
+			if( cursorIndex > 0 ){
+				var ncIdx = cursorIndex - 1;
+				var cL = getCurrentLine();
+				if (cursorIndex == cL.startIndex && cursorYIndex > 0){
+					// We go to the end of the upper line
+					cursorYIndex--;
+					if (text.charCodeAt(cursorIndex - 1) == '\n'.code)
+						cursorIndex--;
+				}
+				else {
+					cursorIndex = ncIdx;	
+					if (text.charCodeAt(cursorIndex) == '\n'.code)
+						cursorIndex--;
+				}					
+			}
 		case K.RIGHT if (K.isDown(K.CTRL)):
 			cursorIndex = getWordEnd();
+			cursorYIndex = resolveYIndex(cursorIndex);
 		case K.RIGHT:
-			if( cursorIndex < text.length )
-				cursorIndex++;
+			if( cursorIndex < text.length ){
+				var ncIdx = cursorIndex + 1;
+				var yIdx = resolveYIndex(cursorIndex);
+				var cL = getCurrentLine();
+				if (cursorIndex == cL.startIndex + cL.value.length && cursorYIndex == yIdx){
+					// We go to the start of the next line
+					var lines = getAllLines();
+					if (cursorYIndex < lines.length - 1)
+						cursorYIndex++;					
+				}
+				else {
+					if (text.charCodeAt(cursorIndex) == '\n'.code)
+						cursorYIndex++;		
+					cursorIndex = ncIdx;																
+				}
+			}
 		case K.HOME:
 			if( multiline ) {
 				var currentLine = getCurrentLine();
@@ -199,7 +240,7 @@ class TextInput extends Text {
 		case K.END:
 			if( multiline ) {
 				var currentLine = getCurrentLine();
-				cursorIndex = currentLine.startIndex + currentLine.value.length - 1;
+				cursorIndex = currentLine.startIndex + currentLine.value.length;
 			} else cursorIndex = text.length;
 		case K.BACKSPACE, K.DELETE if( selectionRange != null ):
 			if( !canEdit ) return;
@@ -218,7 +259,10 @@ class TextInput extends Text {
 				beforeChange();
 				var end = cursorIndex;
 				cursorIndex = K.isDown(K.CTRL) ? getWordStart() : cursorIndex - 1;
+				if (text.charCodeAt(cursorIndex) == '\n'.code)
+					cursorIndex--;
 				text = text.substr(0, cursorIndex) + text.substr(end);
+				cursorYIndex = resolveYIndex(cursorIndex);
 				onChange();
 			}
 		case K.ESCAPE:
@@ -236,6 +280,7 @@ class TextInput extends Text {
 					cutSelection();
 				text = text.substr(0, cursorIndex) + '\n' + text.substr(cursorIndex);
 				cursorIndex++;
+				cursorYIndex++;
 				onChange();
 			}
 		case K.Z if( K.isDown(K.CTRL) ):
@@ -255,6 +300,7 @@ class TextInput extends Text {
 		case K.A if (K.isDown(K.CTRL)):
 			if (text != "") {
 				cursorIndex = text.length;
+				cursorYIndex = getAllLines().length - 1;
 				selectionRange = {start: 0, length: text.length};
 				selectionSize = 0;
 			}
@@ -295,6 +341,7 @@ class TextInput extends Text {
 					cutSelection();
 				text = text.substr(0, cursorIndex) + String.fromCharCode(e.charCode) + text.substr(cursorIndex);
 				cursorIndex++;
+				cursorYIndex = resolveYIndex(cursorIndex);
 				onChange();
 			}
 		}
@@ -329,6 +376,7 @@ class TextInput extends Text {
 	function cutSelection() {
 		if(selectionRange == null) return false;
 		cursorIndex = selectionRange.start;
+		cursorYIndex = resolveYIndex(cursorIndex);
 		var end = cursorIndex + selectionRange.length;
 		text = text.substr(0, cursorIndex) + text.substr(end);
 		selectionRange = null;
@@ -362,21 +410,15 @@ class TextInput extends Text {
 		if( !multiline || yDiff == 0)
 			return;
 		var lines = [];
-		var cursorLineIndex = -1, currLineIndex = 0, currIndex = 0;
+		var currIndex = 0;
 		for( line in getAllLines() ) {
 			lines.push( { line: line, startIndex: currIndex } );
-			var prevIndex = currIndex;
 			currIndex += line.length;
-			if( cursorIndex > prevIndex && cursorIndex < currIndex ) 
-				cursorLineIndex = currLineIndex;
-			currLineIndex++;
 		}
-		if (cursorLineIndex == -1)
+		var destinationIndex = hxd.Math.iclamp(cursorYIndex + yDiff, 0, lines.length - 1);
+		if (destinationIndex == cursorYIndex)
 			return;
-		var destinationIndex = hxd.Math.iclamp(cursorLineIndex + yDiff, 0, lines.length);
-		if (destinationIndex == cursorLineIndex)
-			return;
-		var current = lines[cursorLineIndex];
+		var current = lines[cursorYIndex];
 		var xOffset = 0.;
 		var prevCC: Null<Int> = null;
 		var cI = 0;
@@ -390,12 +432,18 @@ class TextInput extends Text {
 		var destination = lines[destinationIndex];
 		var currOffset = 0.;
 		prevCC = null;
+		function setCursorAt(index: Int){
+			cursorIndex = index;
+			if (cursorIndex > 0 && text.charCodeAt(cursorIndex - 1) == '\n'.code)
+				cursorIndex--;
+			cursorYIndex = destinationIndex;
+		}
 		for( cI in 0...destination.line.length ) {
 			var cc = destination.line.charCodeAt(cI);
 			var c = font.getChar(cc);
 			var newCurrOffset = currOffset + c.width + c.getKerningOffset(prevCC) + letterSpacing;
 			if( newCurrOffset > xOffset ) {
-				cursorIndex = destination.startIndex + cI + 1;
+				setCursorAt(destination.startIndex + cI + 1);
 				if( xOffset - currOffset < newCurrOffset - xOffset )
 					cursorIndex--;
 				return;
@@ -403,7 +451,7 @@ class TextInput extends Text {
 			currOffset = newCurrOffset;
 			prevCC = cc;
 		}
-		cursorIndex = destination.startIndex + destination.line.length;
+		setCursorAt(destination.startIndex + destination.line.length);
 	}
 
 	function setState(h:TextHistoryElement) {
@@ -412,6 +460,7 @@ class TextInput extends Text {
 		selectionRange = h.sel;
 		if( selectionRange != null )
 			cursorIndex = selectionRange.start + selectionRange.length;
+		cursorYIndex = resolveYIndex(cursorIndex);
 	}
 
 	function curHistoryState() : TextHistoryElement {
@@ -434,14 +483,13 @@ class TextInput extends Text {
 		var lines = this.text.split('\n');
 		var finalLines : Array<String> = [];
 
-		for(l in lines) {
-			var splitText = splitText(l).split('\n');
+		for (i in 0...lines.length - 1){
+			var splitText = splitText(lines[i]).split('\n');
+			splitText[splitText.length - 1] += '\n';
 			finalLines = finalLines.concat(splitText);
 		}
-
-		for(i in 0...finalLines.length) {
-			finalLines[i] += '\n';
-		}
+		var splitText = splitText(lines[lines.length - 1]).split('\n');
+		finalLines = finalLines.concat(splitText);
 
 		return finalLines;
 	}
@@ -450,47 +498,41 @@ class TextInput extends Text {
 		var lines = getAllLines();
 		var currIndex = 0;
 		for( i in 0...lines.length ) {
-			var newCurrIndex = currIndex + lines[i].length;
-			if( cursorIndex < newCurrIndex ) 
-				return { value: lines[i], startIndex: currIndex };		
-			currIndex = newCurrIndex;
+			if (i == cursorYIndex)
+				return { value: lines[i], startIndex: currIndex };	
+			currIndex += lines[i].length;
 		}
 		return { value: '', startIndex: -1 };
 	}
 
-	function getCursorXOffset() {
+	/**
+		Returns the line index on which the given character index is on.
+		When the index matches both the end of one line & the start of the next one, the first option is returned. 
+	**/
+	function resolveYIndex(index: Int) : Int {
 		var lines = getAllLines();
-		var offset = cursorIndex;
-		var currLine = getCurrentLine().value;
 		var currIndex = 0;
-
-		for(i in 0...lines.length) {
-			currIndex += lines[i].length;
-			if(cursorIndex < currIndex) {
-				break;
-			} else {
-				offset -= lines[i].length;
-			}
+		for( i in 0...lines.length ) {
+			var newCurrIndex = currIndex + lines[i].length;
+			if( index <= newCurrIndex ) 
+				return i;	
+			currIndex = newCurrIndex;
 		}
+		return -1;
+	}
 
-		return calcTextWidth(currLine.substr(0, offset));
+	function getCursorXOffset() {
+		var currLineIndex = resolveYIndex(cursorIndex);
+		if (cursorYIndex > currLineIndex)
+			return 0.;
+		else {
+			var currLine = getCurrentLine();
+			return calcTextWidth(currLine.value.substr(0, cursorIndex - currLine.startIndex));
+		}
 	}
 
 	function getCursorYOffset() {
-		// return 0.0;
-		var lines = getAllLines();
-		var currIndex = 0;
-		var lineNum = 0;
-
-		for(i in 0...lines.length) {
-			currIndex += lines[i].length;
-			if(cursorIndex < currIndex) {
-				lineNum = i;
-				break;
-			}
-		}
-
-		return lineNum * font.lineHeight;
+		return cursorYIndex * font.lineHeight;
 	}
 
 	/**
@@ -502,7 +544,10 @@ class TextInput extends Text {
 
 	override function set_text(t:String) {
 		super.set_text(t);
-		if( cursorIndex > t.length ) cursorIndex = t.length;
+		if( cursorIndex > t.length ) {
+			cursorIndex = t.length;
+			cursorYIndex = getAllLines().length - 1;
+		}
 		return t;
 	}
 
@@ -522,7 +567,7 @@ class TextInput extends Text {
 		}
 	}
 
-	function textPos( x : Float, y : Float ) {
+	function textPos( x : Float, y : Float ) : {lineIndex: Int, cursorIndex: Int} {
 		x += scrollX;
 		var lineIndex = Math.floor(y / font.lineHeight);
 		var lines = getAllLines();
@@ -535,14 +580,14 @@ class TextInput extends Text {
 
 		var linePos = 0;
 		while( linePos < selectedLine.length ) {
-			if( calcTextWidth(selectedLine.substr(0,linePos+1)) > x ) {
-				pos++;
+			if( calcTextWidth(selectedLine.substr(0,linePos+1)) > x ) 
+				break;		
+			if ( selectedLine.charCodeAt(linePos) == '\n'.code)
 				break;
-			}
 			pos++;
 			linePos++;
 		}
-		return pos - 1;
+		return {lineIndex: lineIndex, cursorIndex: pos};
 	}
 
 	override function sync(ctx) {
@@ -558,10 +603,14 @@ class TextInput extends Text {
 			ctx.clipRenderZone(absX, absY, h.x - absX, h.y - absY);
 		}
 
-		if( cursorIndex >= 0 && (text != cursorText || cursorIndex != cursorXIndex) ) {
-			if( cursorIndex > text.length ) cursorIndex = text.length;
+		if( cursorIndex >= 0 && (text != cursorText || cursorIndex != cursorXIndex || prevCursorYIndex != cursorYIndex) ) {
+			if( cursorIndex > text.length ) {
+				cursorIndex = text.length;
+				cursorYIndex = getAllLines().length - 1;
+			}
 			cursorText = text;
 			cursorXIndex = cursorIndex;
+			prevCursorYIndex = cursorYIndex;
 			cursorX = getCursorXOffset();
 			cursorY = getCursorYOffset();
 			if( inputWidth != null && cursorX - scrollX >= inputWidth )
@@ -634,6 +683,7 @@ class TextInput extends Text {
 		interactive.focus();
 		if( cursorIndex < 0 ) {
 			cursorIndex = 0;
+			cursorYIndex = 0;
 			if( text != "" ) selectionRange = { start : 0, length : text.length };
 		}
 	}
@@ -734,5 +784,4 @@ class TextInput extends Text {
 
 	function get_backgroundColor() return interactive.backgroundColor;
 	function set_backgroundColor(v) return interactive.backgroundColor = v;
-
 }

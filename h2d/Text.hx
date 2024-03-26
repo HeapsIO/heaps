@@ -357,20 +357,20 @@ class Text extends Drawable {
 				}
 				if( lineBreak && (size > maxWidth || (!breakFound && size + afterData > maxWidth)) ) {
 					newline = true;
-					if( font.charset.isSpace(cc) ){
-						lines.push(text.substr(restPos, i - restPos));
-						e = null;
-					}else{
-						lines.push(text.substr(restPos, i + 1 - restPos));
-					}
+					lines.push(text.substr(restPos, i + 1 - restPos));
 					restPos = i + 1;
 				}
 				else wLastSep = size;
 			}
-			else if( (x + esize + letterSpacing) - wLastSep > maxWidth ) {
-				newline = true;
-				lines.push(text.substr(restPos, i - restPos));
-				restPos = i + 1;
+			else if (i < text.length - 1){
+				var nc = text.charCodeAt(i + 1);
+				var ne = font.getChar(nc);
+				var nesize = ne.width + ne.getKerningOffset(cc);
+				if( (x + esize + nesize + letterSpacing * 2) - wLastSep > maxWidth ) {
+					newline = true;
+					lines.push(text.substr(restPos, i + 1 - restPos));
+					restPos = i + 1;
+				}
 			}
 			if( e != null && cc != '\n'.code )
 				x += esize + letterSpacing;
