@@ -245,7 +245,7 @@ class GlslOut {
 	function addValue( e : TExpr, tabs : String ) {
 		switch( e.e ) {
 		case TBlock(el):
-			var name = "val" + (exprIds++);
+			var name = "_val" + (exprIds++);
 			var tmp = buf;
 			buf = new StringBuf();
 			addType(e.t);

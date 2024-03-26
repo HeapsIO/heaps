@@ -49,7 +49,7 @@ class Samplers {
 class HlslOut {
 
 	static var KWD_LIST = [
-		"s_input", "s_output", "_in", "_out", "in", "out", "mul", "matrix", "vector", "export", "half", "float", "double", "line", "linear", "point", "precise",
+		"s_input", "s_output", "_in", "_out", "in", "out", "mul", "matrix", "vector", "export", "half", "half2", "half3", "half4", "float", "double", "line", "linear", "point", "precise",
 		"sample" // pssl
 	];
 	static var KWDS = [for( k in KWD_LIST ) k => true];
@@ -234,7 +234,7 @@ class HlslOut {
 	function addValue( e : TExpr, tabs : String ) {
 		switch( e.e ) {
 		case TBlock(el):
-			var name = "val" + (exprIds++);
+			var name = "_val" + (exprIds++);
 			var tmp = buf;
 			buf = new StringBuf();
 			addType(e.t);
