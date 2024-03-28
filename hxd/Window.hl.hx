@@ -651,6 +651,11 @@ class Window {
 	}
 
 	function get_isFocused() : Bool return true;
+	
+	function onEvent( e : Event ) : Bool {
+		event(e);
+		return true;
+	}
 
 	#else
 
@@ -661,6 +666,11 @@ class Window {
 	}
 
 	function get_isFocused() : Bool return false;
+
+	function onEvent( e : Event ) : Bool {
+		event(e);
+		return true;
+	}
 
 	#end
 
