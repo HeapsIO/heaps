@@ -341,7 +341,7 @@ class Text extends Drawable {
 				}
 				var size = x + esize + letterSpacing; /* TODO : no letter spacing */
 				var k = i + 1, max = text.length;
-				var prevChar = prevChar;
+				var prevChar = cc;
 				var breakFound = false;
 				while( size <= maxWidth && k < max ) {
 					var cc = text.charCodeAt(k++);
@@ -352,7 +352,7 @@ class Text extends Drawable {
 					var e = font.getChar(cc);
 					size += e.width + letterSpacing + e.getKerningOffset(prevChar);
 					prevChar = cc;
-					var nc = text.charCodeAt(k+1);
+					var nc = text.charCodeAt(k);
 					if( font.charset.isBreakChar(cc) && (nc == null || !font.charset.isComplementChar(nc)) ) break;
 				}
 				if( lineBreak && (size > maxWidth || (!breakFound && size + afterData > maxWidth)) ) {
