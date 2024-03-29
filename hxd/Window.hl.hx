@@ -324,7 +324,22 @@ class Window {
 		return mouseMode = v;
 	}
 
-	#if (hldx||hlsdl)
+	#if usesys
+
+		function get_vsync() : Bool return haxe.System.vsync;
+
+		function set_vsync( b : Bool ) : Bool {
+			return haxe.System.vsync = b;
+		}
+
+		function get_isFocused() : Bool return true;
+
+		function onEvent( e : Event ) : Bool {
+			event(e);
+			return true;
+		}
+
+	#elseif (hldx||hlsdl)
 
 	function get_vsync() : Bool return window.vsync;
 
@@ -640,21 +655,6 @@ class Window {
 		];
 		for( sdl in keys.keys() )
 			addKey(sdl, keys.get(sdl));
-	}
-
-	#elseif usesys
-
-	function get_vsync() : Bool return haxe.System.vsync;
-
-	function set_vsync( b : Bool ) : Bool {
-		return haxe.System.vsync = b;
-	}
-
-	function get_isFocused() : Bool return true;
-	
-	function onEvent( e : Event ) : Bool {
-		event(e);
-		return true;
 	}
 
 	#else
