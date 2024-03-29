@@ -1,5 +1,6 @@
 package hxd.impl;
 
+#if hl
 /**
 	Create an app context to allow multiple apps to run in parallel.
 	Requires compilation with -D multidriver
@@ -62,3 +63,4 @@ class AppContext {
 	}
 
 }
+#end
