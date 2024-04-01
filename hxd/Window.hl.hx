@@ -126,6 +126,9 @@ class Window {
 		return true;
 	}
 
+	public dynamic function onMove() : Void {
+	}
+
 	public dynamic function onMouseModeChange( from : MouseMode, to : MouseMode ) : Null<MouseMode> {
 		return null;
 	}
@@ -395,6 +398,9 @@ class Window {
 				event(new Event(EOut));
 			case Close:
 				return onCloseEvent();
+			case Move:
+				if( onMove != null )
+					onMove();
 			default:
 			}
 		case MouseDown if (!hxd.System.getValue(IsTouch)):
