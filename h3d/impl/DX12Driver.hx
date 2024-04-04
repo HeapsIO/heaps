@@ -1720,7 +1720,7 @@ class DX12Driver extends h3d.impl.Driver {
 		var changed = regs.lastHeapCount != heapCount;
 		if( !changed ) {
 			for( i in 0...regs.texturesCount )
-				if( regs.lastTextures[i] != buf.tex[i].t || regs.lastTexturesBits[i] != (buf.tex[i] != null ? buf.tex[i].bits : -1 ) ) {
+				if( regs.lastTextures[i] != ( buf.tex[i] != null ? buf.tex[i].t : null ) || regs.lastTexturesBits[i] != ( buf.tex[i] != null ? buf.tex[i].bits : -1 ) ) {
 					changed = true;
 					break;
 				}
