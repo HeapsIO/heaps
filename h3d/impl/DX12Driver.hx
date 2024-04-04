@@ -241,13 +241,6 @@ class ManagedHeap {
 		return d <= 0 ? size + d : d;
 	}
 
-	public inline function grow( onFree ) {
-		var prev = heap;
-		allocHeap((size*3)>>1);
-		onFree(prev);
-		return heap;
-	}
-
 	public function clear() {
 		limit = cursor = start = 0;
 	}
@@ -2413,6 +2406,7 @@ class DX12Driver extends h3d.impl.Driver {
 
 	override function computeDispatch( x : Int = 1, y : Int = 1, z : Int = 1 ) {
 		frame.commandList.dispatch(x,y,z);
+		flushResources();
 	}
 
 }
