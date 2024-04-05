@@ -280,7 +280,9 @@ class DirShadowMap extends Shadows {
 
 		ctx.engine.popTarget();
 
-		if( mode == Mixed && !ctx.computingStatic ) {
+		if( mode == Mixed && !ctx.computingStatic && staticTexture != null && !staticTexture.isDisposed() ) {
+			if ( staticTexture.width != tex.width )
+				throw "Static shadow map doesnt match dynamic shadow map";
 			var merge = ctx.textures.allocTarget("mergedDirShadowMap", size, size, false, format);
 			mergePass.shader.texA = tex;
 			mergePass.shader.texB = staticTexture;
