@@ -716,9 +716,9 @@ class BitmapComp extends DrawableComp implements domkit.Component.ComponentDecl<
 
 	static function setTileFlipX(t : h2d.Tile, b : Bool) {
 		if (t == null) return null;
-		t = t.clone();
 		var xFlip = t.u2 < t.u;
 		if (xFlip != b) {
+			t = t.clone();
 			var tmp = t.u;
 			t.u = t.u2;
 			t.u2 = tmp;
@@ -728,9 +728,9 @@ class BitmapComp extends DrawableComp implements domkit.Component.ComponentDecl<
 
 	static function setTileFlipY(t : h2d.Tile, b : Bool) {
 		if (t == null) return null;
-		t = t.clone();
 		var yFlip = t.v2 < t.v;
 		if (yFlip != b) {
+			t = t.clone();
 			var tmp = t.v;
 			t.v = t.v2;
 			t.v2 = tmp;
