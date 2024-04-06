@@ -666,16 +666,17 @@ class TileGroup extends Drawable {
 	}
 
 	/**
-		Adds a Tile at specified position with provided transform. Tile is tinted by the current default color.
+		Adds a Tile at specified position with provided transform. Tile is tinted by the current default color, unless c is specified.
 		@param x X position of the tile relative to the TileGroup.
 		@param y Y position of the tile relative to the TileGroup.
 		@param sx X-axis scaling factor of the Tile.
 		@param sy Y-axis scaling factor of the Tile.
 		@param r Rotation (in radians) of the Tile.
+		@param c Optional RGBA vector color of the Tile.
 		@param t The Tile to draw.
 	**/
-	public inline function addTransform(x : Float, y : Float, sx : Float, sy : Float, r : Float, t : Tile) {
-		content.addTransform(x, y, sx, sy, r, curColor, t);
+	public inline function addTransform(x : Float, y : Float, sx : Float, sy : Float, r : Float, ?c:h3d.Vector, t : Tile) {
+		content.addTransform(x, y, sx, sy, r, c != null ? c : curColor, t);
 	}
 
 	override function draw(ctx:RenderContext) {
