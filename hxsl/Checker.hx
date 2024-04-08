@@ -1039,7 +1039,7 @@ class Checker {
 			}
 			if( gl != null ) {
 				if( f == "get" && inWhile ) error("Cannot use .get() in while loop, use .getLod instead", pos);
-				if( f == "get" && inCompute ) error("Cannot use .get() in a compute shader, use .getLod instead", pos);
+				if( f == "get" && inCompute ) warning("Cannot use .get() in a compute shader, use .getLod instead", pos);
 				g = globals.get(gl.toString());
 			}
 		}
