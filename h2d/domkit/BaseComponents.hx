@@ -333,6 +333,18 @@ class CustomParser extends domkit.CssValue.ValueParser {
 			#else
 				new h2d.filter.Glow(c, a, r, g, q, b);
 			#end
+		case VCall("glow",[VIdent("none"), r, g, q]):
+			var r = parseFloat(r);
+			var g = parseFloat(g);
+			var q = parseFloat(q);
+			#if macro
+				true;
+			#else
+				var glow = new h2d.filter.Glow(0xFFFFFF, 0., r, g, q);
+				// since 'hasFixedColor' is set to false, alpha will be ignored.
+				@:privateAccess glow.pass.shader.hasFixedColor = false;
+				glow;
+			#end
 		case VCall("blur",[r]):
 			var r = parseFloat(r);
 			#if macro
