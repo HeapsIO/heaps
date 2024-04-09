@@ -148,7 +148,7 @@ class Dce {
 			writeTo.pop();
 			if( isAffected.indexOf(v) < 0 )
 				isAffected.push(v);
-		case TBinop(OpAssign | OpAssignOp(_), { e : (TArray({ e: TVar(v) }, i) | TSwiz({ e : TArray({ e : TVar(v) }, i) },_)) }, e):
+		case TBinop(OpAssign | OpAssignOp(_), { e : (TArray({ e: TVar(v) }, i) | TSwiz({ e : TArray({ e : TVar(v) }, i) },_) | TField({e : TArray({ e : TVar(v) }, i) }, _)) }, e):
 			var v = get(v);
 			writeTo.push(v);
 			check(i, writeTo, isAffected);
