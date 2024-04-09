@@ -706,6 +706,8 @@ class GlslOut {
 		switch( v.kind ) {
 		case Param, Global:
 			switch( v.type ) {
+			case TBuffer(TInt|TFloat, _, RW|RWPartial):
+				add("layout(std430) buffer ");
 			case TBuffer(_, _, kind):
 				add("layout(std140) ");
 				switch( kind ) {

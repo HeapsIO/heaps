@@ -123,7 +123,7 @@ class Flatten {
 				case TArray(t, _) if( t.isTexture() ):
 					eindex = toInt(mapExpr(eindex));
 					access(a, t, vp, AOffset(a,1,eindex));
-				case TBuffer(TInt|TFloat,_):
+				case TBuffer(TInt|TFloat, _, RW|RWPartial):
 					e.map(mapExpr);
 				case TArray(t, _), TBuffer(t, _):
 					var stride = varSize(t, a.t);
@@ -386,7 +386,7 @@ class Flatten {
 			case TBuffer(t,SConst(size),k) if( kind == k ):
 				var stride = Math.ceil(t.size()/4);
 				var bt = switch( t ) {
-				case TInt|TFloat:
+				case TInt|TFloat if( kind.match( RW|RWPartial ) ) :
 					v.type;
 				default:
 					// for buffers of complex types, let's perform our own remaping
