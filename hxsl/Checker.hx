@@ -406,7 +406,7 @@ class Checker {
 				return;
 			default:
 			}
-		case TSwiz(e, _):
+		case TSwiz(e, _), TField(e, _):
 			checkWrite(e);
 			return;
 		case TArray(e, _):
