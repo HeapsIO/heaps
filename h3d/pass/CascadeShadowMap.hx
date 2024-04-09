@@ -17,6 +17,7 @@ class CascadeShadowMap extends DirShadowMap {
 	public var firstCascadeSize : Float = 10.0;
 	public var castingMaxDist : Float = 0.0;
 	public var cascade(default, set) = 1;
+	public var highPrecision : Bool = false;
 	public function set_cascade(v) {
 		cascade = v;
 		lightCameras = [];
@@ -188,7 +189,7 @@ class CascadeShadowMap extends DirShadowMap {
 			}
 			texture.depthBuffer = depth;
 			#else
-			var texture = ctx.textures.allocTarget("cascadeShadowMap_"+i, size, size, false, Depth16);
+			var texture = ctx.textures.allocTarget("cascadeShadowMap_"+i, size, size, false, highPrecision ? Depth32 : Depth16);
 			#end
 			// Bilinear depth only make sense if we use sample compare to get weighted shadow occlusion which we doesn't support yet.
 			texture.filter = Nearest;

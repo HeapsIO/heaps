@@ -104,6 +104,10 @@ class Shadows extends Output {
 		return tex;
 	}
 
+	function syncEarlyExit() {
+		syncShader(staticTexture == null ? createDefaultShadowMap() : staticTexture);	
+	}
+
 	function syncShader( texture : h3d.mat.Texture ) {
 	}
 
@@ -115,14 +119,10 @@ class Shadows extends Output {
 				case Dynamic:
 					return true;
 				case Mixed:
-					if( staticTexture == null || staticTexture.isDisposed() )
-						staticTexture = createDefaultShadowMap();
 					passes.filter(function(p) return p.pass.isStatic == false);
 					return true;
 				case Static:
-					if( staticTexture == null || staticTexture.isDisposed() )
-						staticTexture = createDefaultShadowMap();
-					syncShader(staticTexture);
+					syncEarlyExit();
 					return false;
 			}
 		}

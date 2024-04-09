@@ -1,9 +1,12 @@
 package h2d;
 
-private typedef CameraStackEntry = {
+private typedef ViewportStackEntry = {
 	va : Float, vb : Float, vc : Float, vd : Float, vx : Float, vy : Float
 };
-private typedef TargetStackEntry = CameraStackEntry & {
+private typedef CameraStackEntry = ViewportStackEntry & {
+	camera: h2d.Camera
+};
+private typedef TargetStackEntry = ViewportStackEntry & {
 	t : h3d.mat.Texture, hasRZ : Bool, rzX:Float, rzY:Float, rzW:Float, rzH:Float
 };
 
@@ -78,6 +81,12 @@ class RenderContext extends h3d.impl.RenderContext {
 	**/
 	@:dox(hide)
 	public var tmpBounds = new h2d.col.Bounds();
+
+	/**
+		The camera instance that is currently being rendered, if present, `null` otherwise.
+	**/
+	public var currentCamera(default, null): Null<h2d.Camera> = null;
+
 	var texture : h3d.mat.Texture;
 	var baseShader : h3d.shader.Base2d;
 	var output : h3d.pass.OutputShader;
@@ -244,7 +253,7 @@ class RenderContext extends h3d.impl.RenderContext {
 	public function pushCamera( cam : h2d.Camera ) {
 		var entry = cameraStack[cameraStackIndex++];
 		if ( entry == null ) {
-			entry = { va: 0, vb: 0, vc: 0, vd: 0, vx: 0, vy: 0 };
+			entry = { va: 0, vb: 0, vc: 0, vd: 0, vx: 0, vy: 0, camera: null };
 			cameraStack.push(entry);
 		}
 		var tmpA = viewA;
@@ -258,6 +267,9 @@ class RenderContext extends h3d.impl.RenderContext {
 		entry.vd = tmpD;
 		entry.vx = viewX;
 		entry.vy = viewY;
+
+		entry.camera = currentCamera;
+		currentCamera = cam;
 
 		viewA = cam.matA * tmpA + cam.matB * tmpC;
 		viewB = cam.matA * tmpB + cam.matB * tmpD;
@@ -284,6 +296,10 @@ class RenderContext extends h3d.impl.RenderContext {
 		viewD = inf.vd;
 		viewX = inf.vx;
 		viewY = inf.vy;
+
+		currentCamera = inf.camera;
+		inf.camera = null;
+
 		var flipY = curTarget != null ? -targetFlipY : -baseFlipY;
 		baseShader.viewportA.set(viewA, viewC, viewX);
 		baseShader.viewportB.set(viewB * flipY, viewD * flipY, viewY * flipY);
