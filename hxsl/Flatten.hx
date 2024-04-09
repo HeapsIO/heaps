@@ -123,6 +123,8 @@ class Flatten {
 				case TArray(t, _) if( t.isTexture() ):
 					eindex = toInt(mapExpr(eindex));
 					access(a, t, vp, AOffset(a,1,eindex));
+				case TBuffer(TInt|TFloat,_):
+					e.map(mapExpr);
 				case TArray(t, _), TBuffer(t, _):
 					var stride = varSize(t, a.t);
 					if( stride == 0 || (v.type.match(TArray(_)) && stride & 3 != 0) ) throw new Error("Dynamic access to an Array which size is not 4 components-aligned is not allowed", e.p);
@@ -383,18 +385,28 @@ class Flatten {
 			switch( v.type ) {
 			case TBuffer(t,SConst(size),k) if( kind == k ):
 				var stride = Math.ceil(t.size()/4);
-				var buf4 : TVar = {
+				var bt = switch( t ) {
+				case TInt|TFloat:
+					v.type;
+				default:
+					// for buffers of complex types, let's perform our own remaping
+					// this ensure that there's no difference between buffer layout
+					// depending on the platform or compiler
+					TBuffer(TVec(4,VFloat),SConst(size * stride),k);
+				}
+				var vbuf : TVar = {
 					id : Tools.allocVarId(),
 					name : v.name,
-					type : TBuffer(TVec(4,VFloat),SConst(size * stride),k),
+					type : bt,
 					kind : Param,
 				};
-				var a = new Alloc(buf4, null, alloc.length, 1);
+				// register an allocation that is required for filling the buffers
+				var a = new Alloc(vbuf, null, alloc.length, 1);
 				a.t = VFloat;
 				a.v = v;
 				alloc.push(a);
 				varMap.set(v, a);
-				outVars.push(buf4);
+				outVars.push(vbuf);
 			default:
 			}
 		g.type = TArray(TBuffer(TVoid,SConst(0),kind),SConst(alloc.length));
