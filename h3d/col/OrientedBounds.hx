@@ -238,7 +238,21 @@ class OrientedBounds extends Collider {
 	}
 
 	public function contains(p:Point):Bool {
-		throw new haxe.exceptions.NotImplementedException();
+		var dx = p.x - centerX;
+		var dy = p.y - centerY;
+		var dz = p.z - centerZ;
+
+		var rpx = dx * xx + dy * xy + dz * xz;
+		var rpy = dx * yx + dy * yy + dz * yz;
+		var rpz = dx * zx + dy * zy + dz * zz;
+
+		trace(hxd.Math.abs(hx) - hxd.Math.abs(rpx), hxd.Math.abs(hy) - hxd.Math.abs(rpy), hxd.Math.abs(hz) - hxd.Math.abs(rpz));
+
+		return (
+			(hxd.Math.abs(hx) - hxd.Math.abs(rpx) > -hxd.Math.EPSILON) &&
+			(hxd.Math.abs(hy) - hxd.Math.abs(rpy) > -hxd.Math.EPSILON) &&
+			(hxd.Math.abs(hz) - hxd.Math.abs(rpz) > -hxd.Math.EPSILON)
+		);
 	}
 
 	public function inFrustum(f:Frustum, ?localMatrix:Matrix):Bool {
