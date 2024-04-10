@@ -499,7 +499,7 @@ class Checker {
 			var v = vars.get(name);
 			if( v != null ) {
 				var canCall =  switch( name ) {
-				case "vertex", "fragment": false;
+				case "vertex", "fragment", "main": false;
 				default: !StringTools.startsWith(name,"__init__");
 				}
 				if( !canCall )
