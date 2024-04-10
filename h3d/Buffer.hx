@@ -32,6 +32,7 @@ class Buffer {
 	var allocNext : Buffer;
 	#end
 	var engine : h3d.Engine;
+	var lastFrame : Int;
 
 	@:allow(h3d.impl.Driver) var vbuf : h3d.impl.Driver.GPUBuffer;
 	public var vertices(default,null) : Int;

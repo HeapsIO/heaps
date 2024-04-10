@@ -135,13 +135,14 @@ class SharedShader {
 	function makeInstance( constBits : Int )  {
 		var eval = new hxsl.Eval();
 		var c = consts;
+		var buffers : Array<TVar> = [];
 		while( c != null ) {
 			switch( c.v.type ) {
 			case TBool:
 				eval.setConstant(c.v, CBool((constBits >>> c.pos) & 1 != 0));
 			case TInt, TChannel(_):
 				eval.setConstant(c.v, CInt((constBits >>> c.pos) & ((1 << c.bits) - 1)));
-			case TBuffer(t,size,kind):
+			case TBuffer(t, size, kind):
 				var bits = (constBits >>> c.pos) & ((1 << c.bits) - 1);
 				var fmt = hxd.BufferFormat.fromID(bits);
 				var v : TVar = {
@@ -157,10 +158,25 @@ class SharedShader {
 					default: throw "assert";
 				});
 				eval.varMap.set(c.v, v);
+				buffers.push(v);
 			default: throw "assert";
 			}
 			c = c.next;
 		}
+		for ( v in buffers ) {
+			switch ( v.type ) {
+			case TBuffer(t, SVar(vs), kind):
+				var c = @:privateAccess eval.constants.get(vs.id);
+				if ( c != null ) {
+					switch ( c ) {
+					case TConst(CInt(i)):
+						v.type = TBuffer(t, SConst(i), kind);
+					default:
+					}
+				}
+			default:
+			}
+		} 
 		eval.inlineCalls = true;
 		eval.unrollLoops = UNROLL_LOOPS;
 		var edata = eval.eval(data);

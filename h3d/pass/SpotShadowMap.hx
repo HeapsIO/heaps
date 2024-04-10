@@ -135,8 +135,9 @@ class SpotShadowMap extends Shadows {
 		if( blur.radius > 0 )
 			blur.apply(ctx, texture);
 
-		var validBakedTexture = (staticTexture != null && staticTexture.width == texture.width);
-		if( mode == Mixed && !ctx.computingStatic && validBakedTexture ) {
+		if( mode == Mixed && !ctx.computingStatic && staticTexture != null && !staticTexture.isDisposed() ) {
+			if ( staticTexture.width != texture.width )
+				throw "Static shadow map doesnt match dynamic shadow map";
 			var merge = ctx.textures.allocTarget("mergedSpotShadowMap", size, size, false, format);
 			mergePass.shader.texA = texture;
 			mergePass.shader.texB = staticTexture;

@@ -69,9 +69,8 @@ class App implements h3d.IDrawable {
 		if( new2D != null ) {
 			sevents.removeScene(s2d);
 			sevents.addScene(scene, 0);
-		} else {
-			if( new3D != null )
-				sevents.removeScene(s3d);
+		} else if( new3D != null ) {
+			sevents.removeScene(s3d);
 			sevents.addScene(scene);
 		}
 		if( disposePrevious ) {

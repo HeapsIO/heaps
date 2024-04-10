@@ -28,6 +28,11 @@ class Renderer extends hxd.impl.AnyProps {
 	var backToFront : h3d.pass.PassList -> Void;
 	var debugging = false;
 
+	#if editor
+	public var showEditorGuides = false;
+	public var showEditorOutlines = true;
+	#end
+
 	public var effects : Array<h3d.impl.RendererFX> = [];
 
 	public var renderMode : RenderMode = Default;
@@ -102,7 +107,6 @@ class Renderer extends hxd.impl.AnyProps {
 		}
 		if( frontToBack )
 			passes.sort(function(p1, p2) return p1.pass.layer == p2.pass.layer ? (p1.depth > p2.depth ? 1 : -1) : p1.pass.layer - p2.pass.layer);
-
 		else
 			passes.sort(function(p1, p2) return p1.pass.layer == p2.pass.layer ? (p1.depth > p2.depth ? -1 : 1) : p1.pass.layer - p2.pass.layer);
 	}

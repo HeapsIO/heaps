@@ -58,17 +58,14 @@ class System {
 		loopFunc = f;
 	}
 
-	static function mainLoop() : Bool {
+	static function mainLoop() {
 		// process events
 		#if usesys
-		if( !haxe.System.emitEvents(@:privateAccess hxd.Window.inst.event) )
-			return false;
+		haxe.System.emitEvents(@:privateAccess hxd.Window.dispatchEvent);
 		#elseif hldx
-		if( !dx.Loop.processEvents(@:privateAccess hxd.Window.inst.onEvent) )
-			return false;
+		dx.Loop.processEvents(@:privateAccess hxd.Window.dispatchEvent);
 		#elseif hlsdl
-		if( !sdl.Sdl.processEvents(@:privateAccess hxd.Window.inst.onEvent) )
-			return false;
+		sdl.Sdl.processEvents(@:privateAccess hxd.Window.dispatchEvent);
 		#end
 
 		// loop
@@ -87,7 +84,6 @@ class System {
 			hl.Profile.event(-2); // resume
 			#end
 		}
-		return true;
 	}
 
 	public static function start( init : Void -> Void ) : Void {
@@ -128,6 +124,14 @@ class System {
 		timeoutTick();
 		haxe.Timer.delay(runMainLoop, 0);
 	}
+	
+	static function isAlive() {
+		#if usesys
+		return true;
+		#else
+		return hxd.Window.hasWindow();
+		#end
+	}
 
 	static function runMainLoop() {
 		#if (haxe_ver >= 4.1)
@@ -138,7 +142,7 @@ class System {
 		#if ( target.threaded && (haxe_ver >= 4.2) && heaps_unsafe_events)
 		var eventRecycle = [];
 		#end
-		while( true ) {
+		while( isAlive() ) {
 			#if !heaps_no_error_trap
 			try {
 				hl.Api.setErrorHandler(reportError); // set exception trap
@@ -156,7 +160,7 @@ class System {
 				@:privateAccess haxe.MainLoop.tick();
 				#end
 
-				if( !mainLoop() ) break;
+				mainLoop();
 			#if !heaps_no_error_trap
 			} catch( e : Dynamic ) {
 				hl.Api.setErrorHandler(null);

@@ -298,7 +298,7 @@ class HtmlText extends Text {
 			var str = splitNode.node.nodeValue;
 			var info = metrics[metrics.length - 1];
 			var w = info.width;
-			var cc = str.charCodeAt(splitNode.pos);
+			var cc = StringTools.fastCodeAt(str, splitNode.pos);
 			// Restore line metrics to ones before split.
 			// Potential bug: `Text<split> [Image] text<split>text` - third line will use metrics as if image is present in the line.
 			info.width = splitNode.width;
@@ -421,12 +421,12 @@ class HtmlText extends Text {
 			var x = leftMargin;
 			var breakChars = 0;
 			for ( i in 0...text.length ) {
-				var cc = text.charCodeAt(i);
+				var cc = StringTools.fastCodeAt(text, i);
 				var g = font.getChar(cc);
 				var newline = cc == '\n'.code;
 				var esize = g.width + g.getKerningOffset(prevChar);
-				var nc = text.charCodeAt(i+1);
-				if ( font.charset.isBreakChar(cc) && (nc == null || !font.charset.isComplementChar(nc) )) {
+				var isComplement = (i < text.length - 1 && font.charset.isComplementChar(StringTools.fastCodeAt(text, i + 1)));
+				if ( font.charset.isBreakChar(cc) && !isComplement) {
 					// Case: Very first word in text makes the line too long hence we want to start it off on a new line.
 					if (x > maxWidth && textSplit.length == 0 && splitNode.node != null) {
 						metrics.push(makeLineInfo(x, info.height, info.baseLine));
@@ -437,13 +437,17 @@ class HtmlText extends Text {
 					var k = i + 1, max = text.length;
 					var prevChar = cc;
 					while ( size <= maxWidth && k < max ) {
-						var cc = text.charCodeAt(k++);
+						var cc = StringTools.fastCodeAt(text, k++);
 						if ( lineBreak && (font.charset.isSpace(cc) || cc == '\n'.code ) ) break;
 						var e = font.getChar(cc);
 						size += e.width + letterSpacing + e.getKerningOffset(prevChar);
 						prevChar = cc;
-						var nc = text.charCodeAt(k);
-						if ( font.charset.isBreakChar(cc) && (nc == null || !font.charset.isComplementChar(nc)) ) break;
+						if ( font.charset.isBreakChar(cc) ) {
+							if ( k >= text.length )
+								break;
+							var nc = StringTools.fastCodeAt(text, k);
+							if ( !font.charset.isComplementChar(nc) ) break;
+						}
 					}
 					// Avoid empty line when last char causes line-break while being CJK
 					if ( lineBreak && size > maxWidth && i != max - 1 ) {
@@ -557,7 +561,7 @@ class HtmlText extends Text {
 				var startI = 0;
 				var index = Lambda.indexOf(e.parent, e);
 				for (i in 0...text.length) {
-					if (text.charCodeAt(i) == '\n'.code) {
+					if (StringTools.fastCodeAt(text, i) == '\n'.code) {
 						var pre = text.substring(startI, i);
 						if (pre != "") e.parent.insertChild(Xml.createPCData(pre), index++);
 						e.parent.insertChild(Xml.createElement("br"),index++);
@@ -671,7 +675,7 @@ class HtmlText extends Text {
 					switch( a.toLowerCase() ) {
 					case "color":
 						if( prevColor == null ) prevColor = @:privateAccess glyphs.curColor.clone();
-						if( v.charCodeAt(0) == '#'.code && v.length == 4 )
+						if( v.length == 4 && StringTools.fastCodeAt(v, 0) == '#'.code )
 							v = "#" + v.charAt(1) + v.charAt(1) + v.charAt(2) + v.charAt(2) + v.charAt(3) + v.charAt(3);
 						glyphs.setDefaultColor(Std.parseInt("0x" + v.substr(1)));
 					case "opacity":
@@ -781,7 +785,7 @@ class HtmlText extends Text {
 			var t = e.nodeValue;
 			var dy = metrics[sizePos].baseLine - font.baseLine;
 			for( i in 0...t.length ) {
-				var cc = t.charCodeAt(i);
+				var cc = StringTools.fastCodeAt(t, i);
 				if( cc == "\n".code ) {
 					makeLineBreak();
 					dy = metrics[sizePos].baseLine - font.baseLine;

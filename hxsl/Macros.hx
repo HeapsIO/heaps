@@ -311,7 +311,7 @@ class Macros {
 				args : [ { name : "index", type : macro : Int } ],
 				expr : {
 					expr : EBlock([
-						{ expr : ESwitch(macro index, [for( i in 0...tparams.length ) if( tparams[i] == TFloat ) { values : [macro $v{i}], expr : macro return ${eparams[i]} }], macro {}), pos : pos },
+						{ expr : ESwitch(macro index, [for( i in 0...tparams.length ) if( tparams[i] == TFloat || tparams[i] == TInt ) { values : [macro $v{i}], expr : macro return ${eparams[i]} }], macro {}), pos : pos },
 						macro return 0.,
 					]),
 					pos : pos,

@@ -372,7 +372,7 @@ class Texture {
 	/**
 		Creates a 1x1 texture using the RGB color passed as parameter.
 	**/
-	public static function fromColor( color : Int, ?alpha = 1. ) {
+	public static function fromColor( color : Int, alpha = 1. ) {
 		var engine = h3d.Engine.getCurrent();
 		var aval = Std.int(alpha * 255);
 		if( aval < 0 ) aval = 0 else if( aval > 255 ) aval = 255;

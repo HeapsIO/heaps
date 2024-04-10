@@ -551,6 +551,7 @@ class HMDOut extends BaseLibrary {
 			var s = shapes[i];
 			var shape = new BlendShape();
 			shape.name = s.name;
+			shape.geom = -1;
 			var indexes = s.get("Indexes").getFloats();//shapeIndexes[i];
 			var verts = s.get("Vertices").getFloats();
 			var normals = s.get("Normals").getFloats();
@@ -908,8 +909,10 @@ class HMDOut extends BaseLibrary {
 				gdata = { gid : d.geometries.length, materials : geom.materials };
 				d.geometries.push(geom.g);
 				hgeom.set(g.getId(), gdata);
-				for ( s in d.shapes )
-					s.geom = gdata.gid;
+				for ( s in d.shapes ) {
+					if (s.geom == -1)
+						s.geom = gdata.gid;
+				}
 			}
 			model.geometry = gdata.gid;
 

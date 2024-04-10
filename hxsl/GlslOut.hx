@@ -245,7 +245,7 @@ class GlslOut {
 	function addValue( e : TExpr, tabs : String ) {
 		switch( e.e ) {
 		case TBlock(el):
-			var name = "val" + (exprIds++);
+			var name = "_val" + (exprIds++);
 			var tmp = buf;
 			buf = new StringBuf();
 			addType(e.t);
@@ -706,6 +706,8 @@ class GlslOut {
 		switch( v.kind ) {
 		case Param, Global:
 			switch( v.type ) {
+			case TBuffer(TInt|TFloat, _, RW|RWPartial):
+				add("layout(std430) buffer ");
 			case TBuffer(_, _, kind):
 				add("layout(std140) ");
 				switch( kind ) {

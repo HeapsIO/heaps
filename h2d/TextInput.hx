@@ -367,7 +367,7 @@ class TextInput extends Text {
 			lines.push( { line: line, startIndex: currIndex } );
 			var prevIndex = currIndex;
 			currIndex += line.length;
-			if( cursorIndex > prevIndex && cursorIndex < currIndex ) 
+			if( cursorIndex > prevIndex && cursorIndex < currIndex )
 				cursorLineIndex = currLineIndex;
 			currLineIndex++;
 		}
@@ -391,7 +391,7 @@ class TextInput extends Text {
 		var currOffset = 0.;
 		prevCC = null;
 		for( cI in 0...destination.line.length ) {
-			var cc = destination.line.charCodeAt(cI);
+			var cc = StringTools.fastCodeAt(destination.line, cI);
 			var c = font.getChar(cc);
 			var newCurrOffset = currOffset + c.width + c.getKerningOffset(prevCC) + letterSpacing;
 			if( newCurrOffset > xOffset ) {
@@ -451,8 +451,8 @@ class TextInput extends Text {
 		var currIndex = 0;
 		for( i in 0...lines.length ) {
 			var newCurrIndex = currIndex + lines[i].length;
-			if( cursorIndex < newCurrIndex ) 
-				return { value: lines[i], startIndex: currIndex };		
+			if( cursorIndex < newCurrIndex )
+				return { value: lines[i], startIndex: currIndex };
 			currIndex = newCurrIndex;
 		}
 		return { value: '', startIndex: -1 };

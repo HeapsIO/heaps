@@ -15,6 +15,7 @@ class Eval {
 	var constants : Map<Int,TExprDef>;
 	var funMap : Map<TVar,TFunction>;
 	var curFun : TFunction;
+	var mapped : Array<TVar> = [];
 
 	public function new() {
 		varMap = new Map();
@@ -26,16 +27,16 @@ class Eval {
 		constants.set(v.id, TConst(c));
 	}
 
-	function mapVar( v : TVar ) {
+	function mapVar( v : TVar, isLocal : Bool ) {
 		var v2 = varMap.get(v);
 		if( v2 != null )
-			return v == v2 ? v2 : mapVar(v2);
+			return v2;
 
 		if( v.parent != null ) {
-			mapVar(v.parent); // always map parent first
+			mapVar(v.parent, isLocal); // always map parent first
 			v2 = varMap.get(v);
 			if( v2 != null )
-				return v == v2 ? v2 : mapVar(v2);
+				return v == v2 ? v2 : mapVar(v2, isLocal);
 		}
 
 		v2 = {
@@ -45,13 +46,15 @@ class Eval {
 			kind : v.kind,
 		};
 
-		if( v.parent != null ) v2.parent = mapVar(v.parent);
+		if( v.parent != null ) v2.parent = mapVar(v.parent, isLocal);
 		if( v.qualifiers != null ) v2.qualifiers = v.qualifiers.copy();
 		varMap.set(v, v2);
 		varMap.set(v2, v2); // make it safe to have multiple eval
+		if (isLocal)
+			mapped.push(v);
 		switch( v2.type ) {
 		case TStruct(vl):
-			v2.type = TStruct([for( v in vl ) mapVar(v)]);
+			v2.type = TStruct([for( v in vl ) mapVar(v, isLocal)]);
 		case TArray(t, SVar(vs)), TBuffer(t, SVar(vs), _):
 			var c = constants.get(vs.id);
 			if( c != null )
@@ -66,7 +69,7 @@ class Eval {
 					Error.t("Integer value expected for array size constant " + vs.name, null);
 				}
 			else {
-				var vs2 = mapVar(vs);
+				var vs2 = mapVar(vs, isLocal);
 				v2.type = switch( v2.type ) {
 				case TArray(_): TArray(t, SVar(vs2));
 				case TBuffer(_,_,kind): TBuffer(t, SVar(vs2), kind);
@@ -108,8 +111,8 @@ class Eval {
 		for( f in s.funs ) {
 			var f2 : TFunction = {
 				kind : f.kind,
-				ref : mapVar(f.ref),
-				args : [for( a in f.args ) mapVar(a)],
+				ref : mapVar(f.ref, false),
+				args : [for( a in f.args ) mapVar(a, false)],
 				ret : f.ret,
 				expr : f.expr,
 			};
@@ -124,7 +127,7 @@ class Eval {
 		}
 		return {
 			name : s.name,
-			vars : [for( v in s.vars ) mapVar(v)],
+			vars : [for( v in s.vars ) mapVar(v, false)],
 			funs : funs,
 		};
 	}
@@ -208,7 +211,7 @@ class Eval {
 			var i = switch( args[0].e ) { case TConst(CInt(i)): i; default: Error.t("Cannot eval complex channel " + Printer.toString(args[0],true)+" "+constantsToString(), pos); throw "assert"; };
 			var channel = oldArgs[0];
 			channel = { e : switch( channel.e ) {
-			case TVar(v): TVar(mapVar(v));
+			case TVar(v): TVar(mapVar(v, false));
 			default: throw "assert";
 			}, t : channel.t, p : channel.p };
 			var count = switch( channel.t ) { case TChannel(i): i; default: throw "assert"; };
@@ -269,12 +272,12 @@ class Eval {
 			if( c != null )
 				c;
 			else {
-				var v2 = mapVar(v);
+				var v2 = mapVar(v, false);
 				t = v2.type;
 				TVar(v2);
 			}
 		case TVarDecl(v, init):
-			TVarDecl(mapVar(v), init == null ? null : evalExpr(init));
+			TVarDecl(mapVar(v, true), init == null ? null : evalExpr(init));
 		case TArray(e1, e2):
 			var e1 = evalExpr(e1);
 			var e2 = evalExpr(e2);
@@ -319,7 +322,7 @@ class Eval {
 							varMap.remove(v);
 							undo.push(function() varMap.set(v, old));
 						}
-						var v2 = mapVar(v);
+						var v2 = mapVar(v, false);
 						outExprs.push( { e : TVarDecl(v2, e), t : TVoid, p : e.p } );
 					}
 				}
@@ -339,6 +342,7 @@ class Eval {
 				Error.t("Cannot eval non-static call expresssion '" + new Printer().exprString(c)+"'", c.p);
 			}
 		case TBlock(el):
+			var index = mapped.length;
 			var out = [];
 			var last = el.length - 1;
 			for( i in 0...el.length ) {
@@ -348,6 +352,15 @@ class Eval {
 				case TConst(_), TVar(_) if( !isVal ):
 				default:
 					out.push(e);
+				}
+			}
+			// unmap previous vars
+			while( mapped.length > index ) {
+				var v = mapped.pop();
+				var v2 = varMap.get(v);
+				if (v2 != null ) {
+					varMap.remove(v);
+					varMap.remove(v2);
 				}
 			}
 			if( out.length == 1 && curFun.kind != Init )
@@ -481,7 +494,7 @@ class Eval {
 		case TDiscard:
 			TDiscard;
 		case TFor(v, it, loop):
-			var v2 = mapVar(v);
+			var v2 = mapVar(v, true);
 			var it = evalExpr(it);
 			var e = switch( it.e ) {
 			case TBinop(OpInterval, { e : TConst(CInt(start)) }, { e : TConst(CInt(len)) } ) if( unrollLoops ):

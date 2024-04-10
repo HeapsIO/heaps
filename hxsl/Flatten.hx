@@ -107,6 +107,31 @@ class Flatten {
 	}
 
 	function mapExpr( e : TExpr ) : TExpr {
+		inline function getFieldPos(expr, name) {
+			var pos = -1;
+			switch( expr.t ) {
+			case TStruct(vl):
+				var cur = 0;
+				for( v in vl ) {
+					if( v.name == name ) {
+						pos = cur;
+						break;
+					}
+					cur += v.type.size();
+				}
+			default:
+			}
+			if( pos < 0 ) throw "assert";
+			return pos;
+		}
+		inline function readField(expr, pos, size) {
+			var idx = pos >> 2;
+			var arr : TExpr = optimize({ e : TArray(expr,{ e : TConst(CInt(idx)), p : e.p, t : TInt }), p : e.p, t : TVec(4,VFloat) });
+			if( size == 4 && pos & 3 == 0 )
+				return arr;
+			var sw = SWIZ.slice(pos&3,(pos&3) + size);
+			return { e : TSwiz(arr,sw), t : size == 1 ? TFloat : TVec(size,VFloat), p : e.p }
+		}
 		e = switch( e.e ) {
 		case TVar(v):
 			var a = varMap.get(v);
@@ -123,6 +148,8 @@ class Flatten {
 				case TArray(t, _) if( t.isTexture() ):
 					eindex = toInt(mapExpr(eindex));
 					access(a, t, vp, AOffset(a,1,eindex));
+				case TBuffer(TInt|TFloat,_):
+					e.map(mapExpr);
 				case TArray(t, _), TBuffer(t, _):
 					var stride = varSize(t, a.t);
 					if( stride == 0 || (v.type.match(TArray(_)) && stride & 3 != 0) ) throw new Error("Dynamic access to an Array which size is not 4 components-aligned is not allowed", e.p);
@@ -146,59 +173,57 @@ class Flatten {
 			varMap.set(v, a);
 			{ e : TVarDecl(v2, init == null ? null : mapExpr(init)), t : TVoid, p : e.p }
 		case TField(expr, name):
-			var pos = -1;
-			switch( expr.t ) {
-			case TStruct(vl):
-				var cur = 0;
-				for( v in vl ) {
-					if( v.name == name ) {
-						pos = cur;
-						break;
-					}
-					cur += v.type.size();
-				}
-			default:
-			}
-			if( pos < 0 ) throw "assert";
+			var pos = getFieldPos(expr, name);
 			var expr = mapExpr(expr);
-			function read(pos, size) {
-				var idx = pos >> 2;
-				var arr : TExpr = optimize({ e : TArray(expr,{ e : TConst(CInt(idx)), p : e.p, t : TInt }), p : e.p, t : TVec(4,VFloat) });
-				if( size == 4 && pos & 3 == 0 )
-					return arr;
-				var sw = SWIZ.slice(pos&3,(pos&3) + size);
-				return { e : TSwiz(arr,sw), t : size == 1 ? TFloat : TVec(size,VFloat), p : e.p }
-			}
 			switch( e.t ) {
 			case TFloat:
-				read(pos, 1);
+				readField(expr, pos, 1);
 			case TVec(size,VFloat):
 				var idx = pos >> 2;
 				var idx2 = ((pos + size - 1) >> 2);
 				if( idx == idx2 )
-					read(pos, size);
+					readField(expr, pos, size);
 				else {
 					var k = 4 - (idx & 3);
 					{ e : TCall({ e : TGlobal(Vec4), p : e.p, t : TVoid },[
-						read(pos, k),
-						read(pos + k, size - k)
+						readField(expr, pos, k),
+						readField(expr, pos + k, size - k)
 					]), t : e.t, p : e.p }
 				}
 			case TMat4:
 				{ e : TCall({ e : TGlobal(Mat4), p : e.p, t : TVoid },[
-					read(pos, 4),
-					read(pos + 4, 4),
-					read(pos + 8, 4),
-					read(pos + 12, 4),
+					readField(expr, pos, 4),
+					readField(expr, pos + 4, 4),
+					readField(expr, pos + 8, 4),
+					readField(expr, pos + 12, 4),
 				]), t : e.t, p : e.p }
 			case TMat3x4:
 				{ e : TCall({ e : TGlobal(Mat3x4), p : e.p, t : TVoid },[
-					read(pos, 4),
-					read(pos + 4, 4),
-					read(pos + 8, 4),
+					readField(expr, pos, 4),
+					readField(expr, pos + 4, 4),
+					readField(expr, pos + 8, 4),
 				]), t : e.t, p : e.p }
 			default:
 				throw "Unsupported type "+e.t.toString();
+			}
+		case TBinop(OpAssign, e1, e2) if ( e.t.match(TMat4) && e1.e.match(TField(_,_))):
+			var v = null;
+			switch ( e2.e ) {
+			case TVar(v2):
+				v = v2;
+			default: throw "Not yet implemented";
+			}
+			switch ( e1 ) {
+			case {e : TField(expr, name), t : TMat4}:
+				var pos = getFieldPos(expr, name);
+				var expr = mapExpr(expr);
+				{e : TBlock([
+					{e : TBinop(OpAssign, readField(expr, pos, 4), {e : TArray(e2, {e : TConst(CInt(0)), t : TInt, p : null}), t : TVec(4, VFloat), p : null}), t : e.t, p : e.p},
+					{e : TBinop(OpAssign, readField(expr, pos + 4, 4), {e : TArray(e2, {e : TConst(CInt(1)), t : TInt, p : null}), t : TVec(4, VFloat), p : null}), t : e.t, p : e.p},
+					{e : TBinop(OpAssign, readField(expr, pos + 8, 4), {e : TArray(e2, {e : TConst(CInt(2)), t : TInt, p : null}), t : TVec(4, VFloat), p : null}), t : e.t, p : e.p},
+					{e : TBinop(OpAssign, readField(expr, pos + 12, 4), {e : TArray(e2, {e : TConst(CInt(3)), t : TInt, p : null}), t : TVec(4, VFloat), p : null}), t : e.t, p : e.p},
+				]), t : e.t, p : e.p}
+			default : throw "assert";
 			}
 		default:
 			e.map(mapExpr);
@@ -383,18 +408,28 @@ class Flatten {
 			switch( v.type ) {
 			case TBuffer(t,SConst(size),k) if( kind == k ):
 				var stride = Math.ceil(t.size()/4);
-				var buf4 : TVar = {
+				var bt = switch( t ) {
+				case TInt|TFloat if( kind.match( RW|RWPartial ) ) :
+					v.type;
+				default:
+					// for buffers of complex types, let's perform our own remaping
+					// this ensure that there's no difference between buffer layout
+					// depending on the platform or compiler
+					TBuffer(TVec(4,VFloat),SConst(size * stride),k);
+				}
+				var vbuf : TVar = {
 					id : Tools.allocVarId(),
 					name : v.name,
-					type : TBuffer(TVec(4,VFloat),SConst(size * stride),k),
+					type : bt,
 					kind : Param,
 				};
-				var a = new Alloc(buf4, null, alloc.length, 1);
+				// register an allocation that is required for filling the buffers
+				var a = new Alloc(vbuf, null, alloc.length, 1);
 				a.t = VFloat;
 				a.v = v;
 				alloc.push(a);
 				varMap.set(v, a);
-				outVars.push(buf4);
+				outVars.push(vbuf);
 			default:
 			}
 		g.type = TArray(TBuffer(TVoid,SConst(0),kind),SConst(alloc.length));
