@@ -24,6 +24,33 @@ class OrientedBounds extends Collider {
 	public function new() {
 	}
 
+	public function setMatrix(m: h3d.Matrix) {
+		var s = inline m.getScale();
+		var isx = 1.0/s.x;
+		var isy = 1.0/s.y;
+		var isz = 1.0/s.z;
+
+		centerX = m.tx;
+		centerY = m.ty;
+		centerZ = m.tz;
+
+		hx = s.x / 2.0;
+		hy = s.y / 2.0;
+		hz = s.z / 2.0;
+
+		xx = m._11 * isx;
+		xy = m._12 * isx;
+		xz = m._13 * isx;
+
+		yx = m._21 * isy;
+		yy = m._22 * isy;
+		yz = m._23 * isy;
+
+		zx = m._31 * isz;
+		zy = m._32 * isz;
+		zz = m._33 * isz;
+	}
+
 	public function setEulerAngles(x: Float, y: Float, z: Float) {
 		var cx = hxd.Math.cos(x); var sx = hxd.Math.sin(x);
 		var cy = hxd.Math.cos(y); var sy = hxd.Math.sin(y);
@@ -174,7 +201,7 @@ class OrientedBounds extends Collider {
 		var rlz = r.lx * zx + r.ly * zy + r.lz * zz;
 
 		var tmin = 0.0;
-		var tmax = 100000000.0;
+		var tmax = hxd.Math.POSITIVE_INFINITY;
 
 		if (hxd.Math.abs(rlx) < hxd.Math.EPSILON) {
 			if (rpx < -hx || rpx > hx) return -1.0;
@@ -246,8 +273,6 @@ class OrientedBounds extends Collider {
 		var rpy = dx * yx + dy * yy + dz * yz;
 		var rpz = dx * zx + dy * zy + dz * zz;
 
-		trace(hxd.Math.abs(hx) - hxd.Math.abs(rpx), hxd.Math.abs(hy) - hxd.Math.abs(rpy), hxd.Math.abs(hz) - hxd.Math.abs(rpz));
-
 		return (
 			(hxd.Math.abs(hx) - hxd.Math.abs(rpx) > -hxd.Math.EPSILON) &&
 			(hxd.Math.abs(hy) - hxd.Math.abs(rpy) > -hxd.Math.EPSILON) &&
@@ -256,33 +281,47 @@ class OrientedBounds extends Collider {
 	}
 
 	public function inFrustum(f:Frustum, ?localMatrix:Matrix):Bool {
-		throw new haxe.exceptions.NotImplementedException();
+		for (i in 0...8) {
+			var v = inline getVertice(i);
+			if (f.hasPoint(v)) return true;
+		}
+		return false;
 	}
 
 	public function inSphere(s:Sphere):Bool {
-		throw new haxe.exceptions.NotImplementedException();
+		var sp = inline s.getCenter();
+		var rr = s.r * s.r;
+		for (i in 0...8) {
+			var v = inline getVertice(i);
+			if (v.distanceSq(sp) > rr) return false;
+		}
+		return true;
 	}
 
 	public function dimension():Float {
-		throw new haxe.exceptions.NotImplementedException();
+		return 2.0 * hxd.Math.max(hx, hxd.Math.max(hy, hz));
+	}
+
+	inline public function getVertice(i: Int) : h3d.Vector {
+		var sx = (i & 1) * 2 - 1;
+		var sy = ((i >> 1) & 1) * 2 - 1;
+		var sz = ((i >> 2) & 1) * 2 - 1;
+		var ax = inline new h3d.Vector(xx,xy,xz);
+		var ay = inline new h3d.Vector(yx,yy,yz);
+		var az = inline new h3d.Vector(zx,zy,zz);
+		var c = inline new h3d.Vector(centerX,centerY,centerZ);
+
+		ax.scale(sx * hx);
+		ay.scale(sy * hy);
+		az.scale(sz * hz);
+
+		return c+ax+ay+az;
 	}
 
 	public function getVertices(?out:Array<Vector>) : Array<Vector> {
 		out = out ?? [];
 		for (i in 0...8) {
-			var sx = (i & 1) * 2 - 1;
-			var sy = ((i >> 1) & 1) * 2 - 1;
-			var sz = ((i >> 2) & 1) * 2 - 1;
-			var ax = inline new h3d.Vector(xx,xy,xz);
-			var ay = inline new h3d.Vector(yx,yy,yz);
-			var az = inline new h3d.Vector(zx,zy,zz);
-			var c = inline new h3d.Vector(centerX,centerY,centerZ);
-
-			ax.scale(sx * hx);
-			ay.scale(sy * hy);
-			az.scale(sz * hz);
-
-			out.push(c+ax+ay+az);
+			out.push(getVertice(i));
 		}
 
 		return out;
