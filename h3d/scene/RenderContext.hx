@@ -42,7 +42,8 @@ class RenderContext extends h3d.impl.RenderContext {
 
 	var allocPool : h3d.pass.PassObject;
 	var allocFirst : h3d.pass.PassObject;
-	var computeLink = new hxsl.ShaderList(null,null);
+	var tmpComputeLink = new hxsl.ShaderList(null,null);
+	var computeLink : hxsl.ShaderList;
 	var cachedShaderList : Array<hxsl.ShaderList>;
 	var cachedPassObjects : Array<Renderer.PassObjects>;
 	var cachedPos : Int;
@@ -148,16 +149,25 @@ class RenderContext extends h3d.impl.RenderContext {
 		return sl;
 	}
 
-	public function computeDispatch( shader : hxsl.Shader, x = 1, y = 1, z = 1 ) {
+	public function computeList(list : hxsl.ShaderList) {
+		if ( computeLink != null )
+			throw "Use computeDispatch to dispatch computeList";
+		computeLink = list;
+	}
 
+	public function computeDispatch( ?shader : hxsl.Shader, x = 1, y = 1, z = 1 ) {
 		var prev = h3d.impl.RenderContext.get();
 		if( prev != this )
 			start();
 
 		// compile shader
 		globals.resetChannels();
-		shader.updateConstants(globals);
-		computeLink.s = shader;
+		if ( shader != null ) {
+			tmpComputeLink.s = shader;
+			computeLink = tmpComputeLink;
+		}
+		for ( s in computeLink )
+			s.updateConstants(globals);
 		var rt = hxsl.Cache.get().link(computeLink, Compute);
 		// upload buffers
 		engine.driver.selectShader(rt);
@@ -165,12 +175,14 @@ class RenderContext extends h3d.impl.RenderContext {
 		buf.grow(rt);
 		fillGlobals(buf, rt);
 		engine.uploadShaderBuffers(buf, Globals);
-		fillParams(buf, rt, computeLink);
+		fillParams(buf, rt, computeLink, true);
 		engine.uploadShaderBuffers(buf, Params);
 		engine.uploadShaderBuffers(buf, Textures);
 		engine.uploadShaderBuffers(buf, Buffers);
 		engine.driver.computeDispatch(x,y,z);
-		computeLink.s = null;
+		if ( computeLink == tmpComputeLink )
+			tmpComputeLink.s = null;
+		computeLink = null;
 
 		if( prev != this ) {
 			done();

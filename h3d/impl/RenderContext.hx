@@ -217,7 +217,7 @@ class RenderContext {
 		if( s.fragment != null ) fill(buf.fragment, s.fragment);
 	}
 
-	public function fillParams( buf : h3d.shader.Buffers, s : hxsl.RuntimeShader, shaders : hxsl.ShaderList ) {
+	public function fillParams( buf : h3d.shader.Buffers, s : hxsl.RuntimeShader, shaders : hxsl.ShaderList, compute : Bool = false ) {
 		var curInstance = -1;
 		var curInstanceValue = null;
 		inline function getInstance( index : Int ) {
@@ -225,6 +225,8 @@ class RenderContext {
 				return curInstanceValue;
 			var si = shaders;
 			curInstance = index;
+			// Compute list has no linker shader.
+			if ( compute ) index++;
 			while( --index > 0 ) si = si.next;
 			curInstanceValue = si.s;
 			return curInstanceValue;
