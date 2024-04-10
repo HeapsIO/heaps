@@ -165,73 +165,74 @@ class OrientedBounds extends Collider {
 		var dy = r.py - centerY;
 		var dz = r.pz - centerZ;
 
-		var rox = dx * xx + dy * xy + dz * xz;
-		var roy = dx * yx + dy * yy + dz * yz;
-		var roz = dx * zx + dy * zy + dz * zz;
+		var rpx = dx * xx + dy * xy + dz * xz;
+		var rpy = dx * yx + dy * yy + dz * yz;
+		var rpz = dx * zx + dy * zy + dz * zz;
 
 		var rlx = r.lx * xx + r.ly * xy + r.lz * xz;
 		var rly = r.lx * yx + r.ly * yy + r.lz * yz;
 		var rlz = r.lx * zx + r.ly * zy + r.lz * zz;
 
-		inline function half(i:Int) {
-			return switch(i) {
-				case 0:
-					hx;
-				case 1:
-					hy;
-				case 2:
-					hz;
-				default: throw "unreachable";
-			}
-		}
-
-		inline function o(i:Int) {
-			return switch(i) {
-				case 0:
-					rox;
-				case 1:
-					roy;
-				case 2:
-					roz;
-				default: throw "unreachable";
-			}
-		}
-
-		inline function l(i:Int) {
-			return switch(i) {
-				case 0:
-					rlx;
-				case 1:
-					rly;
-				case 2:
-					rlz;
-				default: throw "unreachable";
-			}
-		}
-
 		var tmin = 0.0;
 		var tmax = 100000000.0;
 
-		for (i in 0...3) {
-			if (hxd.Math.abs(l(i)) < hxd.Math.EPSILON) {
-				if (o(i) < -half(i) || o(i) > half(i)) return -1.0;
-			} else {
-				var ood = 1.0 / l(i);
-				var t1 = (-half(i) - o(i)) * ood;
-				var t2 = (half(i) - o(i)) * ood;
+		if (hxd.Math.abs(rlx) < hxd.Math.EPSILON) {
+			if (rpx < -hx || rpx > hx) return -1.0;
+		} else {
+			var ood = 1.0 / rlx;
+			var t1 = (-hx - rpx) * ood;
+			var t2 = (hx - rpx) * ood;
 
-				if (t1 > t2) {
-					var tmp = t2;
-					t2 = t1;
-					t1 = tmp;
-				}
-
-				if (t1 > tmin) tmin = t1;
-				if (t2 < tmax) tmax = t2;
-
-				if (tmin > tmax) return -1.0;
+			if (t1 > t2) {
+				var tmp = t2;
+				t2 = t1;
+				t1 = tmp;
 			}
+
+			if (t1 > tmin) tmin = t1;
+			if (t2 < tmax) tmax = t2;
+
+			if (tmin > tmax) return -1.0;
 		}
+
+		if (hxd.Math.abs(rly) < hxd.Math.EPSILON) {
+			if (rpy < -hy || rpy > hy) return -1.0;
+		} else {
+			var ood = 1.0 / rly;
+			var t1 = (-hy - rpy) * ood;
+			var t2 = (hy - rpy) * ood;
+
+			if (t1 > t2) {
+				var tmp = t2;
+				t2 = t1;
+				t1 = tmp;
+			}
+
+			if (t1 > tmin) tmin = t1;
+			if (t2 < tmax) tmax = t2;
+
+			if (tmin > tmax) return -1.0;
+		}
+
+		if (hxd.Math.abs(rlz) < hxd.Math.EPSILON) {
+			if (rpz < -hz || rpz > hz) return -1.0;
+		} else {
+			var ood = 1.0 / rlz;
+			var t1 = (-hz - rpz) * ood;
+			var t2 = (hz - rpz) * ood;
+
+			if (t1 > t2) {
+				var tmp = t2;
+				t2 = t1;
+				t1 = tmp;
+			}
+
+			if (t1 > tmin) tmin = t1;
+			if (t2 < tmax) tmax = t2;
+
+			if (tmin > tmax) return -1.0;
+		}
+
 
 		return tmin;
 	}
