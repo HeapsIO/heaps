@@ -30,7 +30,7 @@ class Eval {
 	function mapVar( v : TVar, isLocal : Bool ) {
 		var v2 = varMap.get(v);
 		if( v2 != null )
-			return v == v2 ? v2 : mapVar(v2, isLocal);
+			return v2;
 
 		if( v.parent != null ) {
 			mapVar(v.parent, isLocal); // always map parent first
