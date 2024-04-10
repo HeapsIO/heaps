@@ -363,6 +363,7 @@ class Linker {
 			init : [-3000],
 			vert : [-2000],
 			frag : [-1000],
+			main : [-2500],
 		};
 		for( s in shadersData ) {
 			for( f in s.funs ) {
@@ -382,6 +383,7 @@ class Linker {
 					var status : Null<Bool> = switch( f.ref.name ) {
 					case "__init__vertex": prio = initPrio.vert; true;
 					case "__init__fragment": prio = initPrio.frag; false;
+					case "__init__main": prio = initPrio.main; false;
 					default: prio = initPrio.init; null;
 					}
 					switch( f.expr.e ) {
