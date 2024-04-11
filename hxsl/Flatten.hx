@@ -148,7 +148,7 @@ class Flatten {
 				case TArray(t, _) if( t.isTexture() ):
 					eindex = toInt(mapExpr(eindex));
 					access(a, t, vp, AOffset(a,1,eindex));
-				case TBuffer(TInt|TFloat,_):
+				case TBuffer(TInt|TFloat,_), TVec(_, VFloat|VInt):
 					e.map(mapExpr);
 				case TArray(t, _), TBuffer(t, _):
 					var stride = varSize(t, a.t);
