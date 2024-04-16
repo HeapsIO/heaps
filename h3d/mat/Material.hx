@@ -124,7 +124,7 @@ class Material extends BaseMaterial {
 			m.textureShader.killAlpha = textureShader.killAlpha;
 			m.textureShader.killAlphaThreshold = textureShader.killAlphaThreshold;
 		}
-		m.color = color;
+		m.color = color.clone();
 		m.blendMode = blendMode;
 		return m;
 	}
