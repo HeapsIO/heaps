@@ -1415,7 +1415,7 @@ class DX12Driver extends h3d.impl.Driver {
 	function updateBuffer( b : BufferData, bytes : hl.Bytes, startByte : Int, bytesCount : Int ) {
 		var tmpBuf;
 		if( b.uploaded )
-			tmpBuf = allocDynamicBuffer(bytes.offset(startByte), bytesCount);
+			tmpBuf = allocDynamicBuffer(bytes, bytesCount);
 		else {
 			var size = calcCBVSize(bytesCount);
 			tmpBuf = allocGPU(size, UPLOAD, GENERIC_READ);
@@ -2405,6 +2405,7 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	override function computeDispatch( x : Int = 1, y : Int = 1, z : Int = 1 ) {
+		flushTransitions();
 		frame.commandList.dispatch(x,y,z);
 		flushResources();
 	}
