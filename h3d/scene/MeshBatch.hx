@@ -181,8 +181,6 @@ class MeshBatch extends MultiMaterial {
 							curPos += fmt[i].getBytesSize() >> 2;
 					}
 					b.bufferFormat = hxd.BufferFormat.make(fmt);
-					if( b.bufferFormat.stride & 3 != 0 )
-						throw "assert";
 				}
 
 				b.next = dataPasses;
@@ -471,8 +469,9 @@ class MeshBatch extends MultiMaterial {
 			// check that the pass is still enable
 			var material = materials[p.matIndex];
 			if( material != null && material.getPass(pass.name) != null ) {
-				for( i in 0...p.buffers.length )
+				for( i in 0...p.buffers.length ) {
 					ctx.emitPass(pass, this).index = i | (p.matIndex << 16);
+				}
 			}
 			p = p.next;
 		}
