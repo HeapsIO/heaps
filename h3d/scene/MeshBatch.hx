@@ -18,7 +18,8 @@ private class BatchData {
 	public var shaders : Array<hxsl.Shader>;
 	public var modelViewPos : Int;
 	public var pass : h3d.mat.Pass;
-	public var computeShaders : Array<ComputeIndirect>;
+	public var compute : ComputeIndirect;
+	public var commandBuffers : Array<h3d.Buffer>;
 	public var next : BatchData;
 
 	public function new() {
@@ -130,9 +131,9 @@ class MeshBatch extends MultiMaterial {
 	var needUpload = false;
 
 	public var meshBatchFlags(default, null) : haxe.EnumFlags<MeshBatchFlag>;
-	var enableLOD(get, null) : Bool;
+	var enableLOD(get, never) : Bool;
 	function get_enableLOD() return meshBatchFlags.has( EnableLOD );
-	var enableGPUCulling(get, null) : Bool;
+	var enableGPUCulling(get, never) : Bool;
 	function get_enableGPUCulling() return meshBatchFlags.has( EnableGPUCulling ); 
 	
 	var matInfos : h3d.Buffer;
@@ -193,13 +194,12 @@ class MeshBatch extends MultiMaterial {
 			for( b in dataPasses.buffers )
 				alloc.disposeBuffer(b);
 
-			if ( dataPasses.computeShaders != null && dataPasses.computeShaders.length > 0 ) {
+			if ( dataPasses.commandBuffers != null && dataPasses.commandBuffers.length > 0 ) {
 				@:privateAccess instanced.commands.data = null;
-				for ( compute in dataPasses.computeShaders) {
-					alloc.disposeBuffer(compute.commandBuffer);
-					compute.commandBuffer = null;
-				}
-				dataPasses.computeShaders.resize(0);
+				for ( buf in dataPasses.commandBuffers )
+					alloc.disposeBuffer(buf);
+				dataPasses.commandBuffers.resize(0);
+				dataPasses.compute.commandBuffer = null;
 			}
 
 			if( dataPasses.instanceBuffers != null ) {
@@ -536,72 +536,75 @@ class MeshBatch extends MultiMaterial {
 				}
 
 				if ( ( enableLOD || enableGPUCulling ) ) {
-					if( p.computeShaders == null )
-						p.computeShaders = [];
-
-					var compute = p.computeShaders[index];
-
-					if( compute == null ) {
-						compute = new ComputeIndirect();
-						compute.MAX_INSTANCE = p.maxInstance;
-						compute.ENABLE_LOD = enableLOD;
-						compute.ENABLE_CULLING = enableGPUCulling;
-						p.computeShaders[index] = compute;
-						compute.commandBuffer = alloc.allocBuffer( count, INDIRECT_DRAW_ARGUMENTS_FMT, UniformReadWrite );
-
-						var prim = @:privateAccess instanced.primitive;
-						var bounds = prim.getBounds();
-						compute.radius = bounds.dimension();
-
-						var lodCount = ( enableLOD ) ? prim.lodCount() : 1;
-						if ( matInfos == null ) {
-							if ( enableLOD ) {
-								var hmd : h3d.prim.HMDModel = cast prim;
-								var lodConfig = @:privateAccess h3d.prim.HMDModel.lodConfig;
-								var materialCount = materials.length;
-								var tmpMatInfos = haxe.io.Bytes.alloc( 16 * materialCount * lodCount );
-								compute.matInfos = alloc.allocBuffer( materialCount * lodCount, hxd.BufferFormat.VEC4_DATA, Uniform );
-								var pos : Int = 0;
-								var startIndex : Int = 0;
-								for ( i => lod in @:privateAccess hmd.lods ) {
-									for ( j in 0...materials.length ) {
-										var indexCount = lod.indexCounts[j % materialCount];
-										tmpMatInfos.setInt32( pos, indexCount );
-										tmpMatInfos.setInt32( pos + 4, startIndex );
-										tmpMatInfos.setFloat( pos + 8, ( i < lodConfig.length ) ? lodConfig[i] : 0.0 );
-										startIndex += indexCount;
-										pos += 16;
-									}
-								}
-								compute.matInfos.uploadBytes( tmpMatInfos, 0, materialCount * lodCount );
-							}
-							else {
-								var materialCount = materials.length;
-								var tmpMatInfos = haxe.io.Bytes.alloc(16 * materialCount);
-								compute.matInfos = alloc.allocBuffer( materialCount, hxd.BufferFormat.VEC4_DATA, Uniform );
-								var pos : Int = 0;
-								for ( i in 0...materials.length ) {
-									var matInfo = prim.getMaterialIndexes(i);
-									tmpMatInfos.setInt32( pos, matInfo.count );
-									tmpMatInfos.setInt32( pos + 4, matInfo.start );
-									pos += 16;
-								}
-								compute.matInfos.uploadBytes( tmpMatInfos, 0, materialCount );
-							}
-						}
-						compute.lodCount = lodCount;
-
-						if ( enableGPUCulling )
-							compute.frustum = ctx.getCameraFrustumBuffer();
+					if ( p.commandBuffers == null)
+						p.commandBuffers = [];
+					var buf = p.commandBuffers[index];
+					if ( buf == null ) {
+						buf = alloc.allocBuffer( count, INDIRECT_DRAW_ARGUMENTS_FMT, UniformReadWrite );
+						p.commandBuffers[index] = buf;
 					}
-					else if ( compute.commandBuffer.vertices != count ) {
-						if ( compute.commandBuffer != null )
-							alloc.disposeBuffer( compute.commandBuffer );
-						compute.commandBuffer = alloc.allocBuffer( count, INDIRECT_DRAW_ARGUMENTS_FMT, UniformReadWrite );
+					else if ( buf.vertices != count ) {
+						alloc.disposeBuffer( buf );
+						buf = alloc.allocBuffer( count, INDIRECT_DRAW_ARGUMENTS_FMT, UniformReadWrite );
 					}
 				}
 				start += count;
 				index++;
+			}
+			if ( ( enableLOD || enableGPUCulling ) ) {
+				if( p.compute == null ) {
+					var compute = new ComputeIndirect();
+					compute.MAX_INSTANCE = p.maxInstance;
+					compute.ENABLE_LOD = enableLOD;
+					compute.ENABLE_CULLING = enableGPUCulling;
+					p.compute = compute;
+
+					var prim = @:privateAccess instanced.primitive;
+					var bounds = prim.getBounds();
+					compute.radius = bounds.dimension();
+
+					var lodCount = ( enableLOD ) ? prim.lodCount() : 1;
+					if ( matInfos == null ) {
+						if ( enableLOD ) {
+							var hmd : h3d.prim.HMDModel = cast prim;
+							var lodConfig = @:privateAccess h3d.prim.HMDModel.lodConfig;
+							var materialCount = materials.length;
+							var tmpMatInfos = haxe.io.Bytes.alloc( 16 * materialCount * lodCount );
+							matInfos = alloc.allocBuffer( materialCount * lodCount, hxd.BufferFormat.VEC4_DATA, Uniform );
+							var pos : Int = 0;
+							var startIndex : Int = 0;
+							for ( i => lod in @:privateAccess hmd.lods ) {
+								for ( j in 0...materials.length ) {
+									var indexCount = lod.indexCounts[j % materialCount];
+									tmpMatInfos.setInt32( pos, indexCount );
+									tmpMatInfos.setInt32( pos + 4, startIndex );
+									tmpMatInfos.setFloat( pos + 8, ( i < lodConfig.length ) ? lodConfig[i] : 0.0 );
+									startIndex += indexCount;
+									pos += 16;
+								}
+							}
+							matInfos.uploadBytes( tmpMatInfos, 0, materialCount * lodCount );
+						}
+						else {
+							var materialCount = materials.length;
+							var tmpMatInfos = haxe.io.Bytes.alloc(16 * materialCount);
+							matInfos = alloc.allocBuffer( materialCount, hxd.BufferFormat.VEC4_DATA, Uniform );
+							var pos : Int = 0;
+							for ( i in 0...materials.length ) {
+								var matInfo = prim.getMaterialIndexes(i);
+								tmpMatInfos.setInt32( pos, matInfo.count );
+								tmpMatInfos.setInt32( pos + 4, matInfo.start );
+								pos += 16;
+							}
+							matInfos.uploadBytes( tmpMatInfos, 0, materialCount );
+						}
+					}
+					compute.matInfos = matInfos;
+					compute.lodCount = lodCount;
+
+					if ( enableGPUCulling )
+						compute.frustum = ctx.getCameraFrustumBuffer();
+				}
 			}
 			while( p.buffers.length > index )
 				alloc.disposeBuffer( p.buffers.pop() );
@@ -634,8 +637,8 @@ class MeshBatch extends MultiMaterial {
 				if( p.instanceBuffers == null ) {
 					var count = instanceCount - p.maxInstance * bufferIndex;
 					instanced.commands.setCommand(count,p.indexCount,p.indexStart);
-					if ( p.computeShaders != null && p.computeShaders.length > 0 )
-						@:privateAccess instanced.commands.data = p.computeShaders[bufferIndex].commandBuffer.vbuf;
+					if ( p.commandBuffers != null && p.commandBuffers.length > 0 )
+						@:privateAccess instanced.commands.data = p.commandBuffers[bufferIndex].vbuf;
 				} else
 					instanced.commands = p.instanceBuffers[bufferIndex];
 				break;
@@ -664,12 +667,13 @@ class MeshBatch extends MultiMaterial {
 			if( material != null && material.getPass(pass.name) != null ) {
 				for( i => buf in p.buffers ) {
 					ctx.emitPass(pass, this).index = i | (p.matIndex << 16);
-					if ( p.computeShaders != null && p.computeShaders.length > 0 ) {
-						var compute = p.computeShaders[i];
+					if ( p.commandBuffers != null && p.commandBuffers.length > 0 ) {
+						var commandBuffer = p.commandBuffers[i];
 						var count = instanceCount - p.maxInstance * i;
-						compute.instanceData = buf;
-						compute.matIndex = p.matIndex;
-						ctx.computeDispatch( compute, count );
+						p.compute.instanceData = buf;
+						p.compute.matIndex = p.matIndex;
+						p.compute.commandBuffer = commandBuffer;
+						ctx.computeDispatch( p.compute, count );
 					}
 				}
 			}
