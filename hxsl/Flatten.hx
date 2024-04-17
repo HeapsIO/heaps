@@ -295,7 +295,6 @@ class Flatten {
 				// 0 size array : return vec4(0.)
 				if( a.pos == -1 )
 					return { e : TCall({ e : TGlobal(Vec4), t : TFun([]), p : pos },[{ e : TConst(CFloat(0)), t : TFloat, p : pos }]), t : TVec(4,VFloat), p : pos };
-				if( a.pos & 3 != 0 ) throw "assert";
 			} else {
 				var sw = [];
 				for( i in 0...size )

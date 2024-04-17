@@ -390,7 +390,7 @@ class DX12Driver extends h3d.impl.Driver {
 			f.allocator = new CommandAllocator(DIRECT);
 			f.commandList = new CommandList(DIRECT, f.allocator, null);
 			f.commandList.close();
-			f.shaderResourceCache = new ManagedHeapArray(CBV_SRV_UAV, 32784);
+			f.shaderResourceCache = new ManagedHeapArray(CBV_SRV_UAV, 1024);
 			f.samplerCache = new ManagedHeapArray(SAMPLER, 1024);
 			frames.push(f);
 		}
@@ -1390,16 +1390,11 @@ class DX12Driver extends h3d.impl.Driver {
 
 	override function allocInstanceBuffer(b:InstanceBuffer, bytes:haxe.io.Bytes) {
 		var dataSize = b.commandCount * 5 * 4;
-		var buf = allocGPU(dataSize, DEFAULT, COMMON);
+		var buf = new VertexBufferData();
+		buf.res = allocGPU(dataSize, DEFAULT, COMMON);
 		var tmpBuf = allocDynamicBuffer(bytes, dataSize);
-		frame.commandList.copyBufferRegion(buf, 0, tmpBuf, 0, dataSize);
+		frame.commandList.copyBufferRegion(buf.res, 0, tmpBuf, 0, dataSize);
 		b.data = buf;
-
-		var b = tmp.barrier;
-		b.resource = buf;
-		b.stateBefore = COPY_DEST;
-		b.stateAfter = INDIRECT_ARGUMENT;
-		frame.commandList.resourceBarrier(b);
 	}
 
 	override function disposeBuffer(v:Buffer) {
@@ -1407,7 +1402,7 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	override function disposeInstanceBuffer(b:InstanceBuffer) {
-		frame.toRelease.push((b.data:GpuResource));
+		frame.toRelease.push((b.data.res:GpuResource));
 		// disposeResource(b.data);
 		b.data = null;
 	}
@@ -2342,7 +2337,9 @@ class DX12Driver extends h3d.impl.Driver {
 		}
 		if( commands.data != null ) {
 			flushSRV();
-			frame.commandList.executeIndirect(indirectCommand, commands.commandCount, commands.data, 0, null, 0);
+			transition(commands.data, INDIRECT_ARGUMENT);
+			flushTransitions();
+			frame.commandList.executeIndirect(indirectCommand, commands.commandCount, commands.data.res, 0, null, 0);
 		} else {
 			frame.commandList.drawIndexedInstanced(commands.indexCount, commands.commandCount, commands.startIndex, 0, 0);
 		}

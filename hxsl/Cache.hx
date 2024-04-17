@@ -481,8 +481,9 @@ class Cache {
 					c.params = out[0];
 					c.paramsSize = size;
 				case TArray(TBuffer(_, _, kind), _):
-					if ( out[0] != null )
-						buffers.push(out[0]);
+					for( outBuf in out )
+						if ( outBuf != null )
+							buffers.push(outBuf);
 				default: throw "assert";
 				}
 			case Global:

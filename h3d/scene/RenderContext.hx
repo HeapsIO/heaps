@@ -50,6 +50,9 @@ class RenderContext extends h3d.impl.RenderContext {
 	var passes : Array<h3d.pass.PassObject>;
 	var lights : Light;
 
+	var cameraFrustumBuffer : h3d.Buffer = null;
+	var cameraFrustumUploaded : Bool = false;
+
 	public function new(scene) {
 		super();
 		this.scene = scene;
@@ -195,6 +198,34 @@ class RenderContext extends h3d.impl.RenderContext {
 		lights = l;
 	}
 
+	public function getCameraFrustumBuffer() {
+		if ( cameraFrustumBuffer == null )
+			cameraFrustumBuffer = hxd.impl.Allocator.get().allocBuffer( 6, hxd.BufferFormat.VEC4_DATA, UniformDynamic );		
+
+		if ( !cameraFrustumUploaded ) {
+			inline function fillBytesWithPlane( buffer : haxe.io.Bytes, startPos : Int, plane : h3d.col.Plane ) {
+				buffer.setFloat( startPos, 			@:privateAccess plane.nx );
+				buffer.setFloat( startPos + 4, 		@:privateAccess plane.ny );
+				buffer.setFloat( startPos + 8, 		@:privateAccess plane.nz );
+				buffer.setFloat( startPos + 12, 	@:privateAccess plane.d	);
+			}
+
+			var tmp = haxe.io.Bytes.alloc( 16 * 6 );
+			var frustum = camera.frustum;
+			fillBytesWithPlane( tmp, 0, 	frustum.pleft 	);
+			fillBytesWithPlane( tmp, 16, 	frustum.pright 	);
+			fillBytesWithPlane( tmp, 32, 	frustum.ptop 	);
+			fillBytesWithPlane( tmp, 48, 	frustum.pbottom );
+			fillBytesWithPlane( tmp, 64, 	frustum.pfar 	);
+			fillBytesWithPlane( tmp, 80, 	frustum.pnear 	);
+
+			cameraFrustumBuffer.uploadBytes(tmp, 0, 6);
+			cameraFrustumUploaded = true;
+		}
+
+		return cameraFrustumBuffer;
+	}
+
 	public function uploadParams() {
 		fillParams(shaderBuffers, drawPass.shader, drawPass.shaders);
 		engine.uploadShaderBuffers(shaderBuffers, Params);
@@ -226,7 +257,16 @@ class RenderContext extends h3d.impl.RenderContext {
 		}
 		passes = [];
 		lights = null;
+
+		cameraFrustumUploaded = false;
+
 		clearCurrent();
+	}
+
+	override public function dispose() {
+		super.dispose();
+		if ( cameraFrustumBuffer != null )
+			hxd.impl.Allocator.get().disposeBuffer( cameraFrustumBuffer );
 	}
 
 }
