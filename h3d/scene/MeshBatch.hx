@@ -37,9 +37,10 @@ class MeshBatchPart {
 }
 
 enum MeshBatchFlag {
-	EnableGPUCulling;
-	EnableLOD;
+	EnableGpuCulling;
+	EnableLod;
 	EnableResizeDown;
+	EnableGpuUpdate;
 }
 
 class ComputeIndirect extends hxsl.Shader {
@@ -132,9 +133,9 @@ class MeshBatch extends MultiMaterial {
 
 	public var meshBatchFlags(default, null) : haxe.EnumFlags<MeshBatchFlag>;
 	var enableLOD(get, never) : Bool;
-	function get_enableLOD() return meshBatchFlags.has( EnableLOD );
+	function get_enableLOD() return meshBatchFlags.has( EnableLod );
 	var enableGPUCulling(get, never) : Bool;
-	function get_enableGPUCulling() return meshBatchFlags.has( EnableGPUCulling ); 
+	function get_enableGPUCulling() return meshBatchFlags.has( EnableGpuCulling ); 
 	
 	var matInfos : h3d.Buffer;
 
@@ -164,12 +165,6 @@ class MeshBatch extends MultiMaterial {
 		If set, exact bounds will be recalculated during emitInstance (default true)
 	**/
 	public var calcBounds = true;
-
-	/**
-	 	Tells the per instance buffer to support gpu write using comptue shaders.
-	**/
-	public var allowGpuUpdate : Bool = false;
-
 
 	var instancedParams : hxsl.Cache.BatchInstanceParams;
 
@@ -251,7 +246,7 @@ class MeshBatch extends MultiMaterial {
 				p.dynamicParameters = true;
 				p.batchMode = true;
 
-				if( allowGpuUpdate || enableGPUCulling || enableLOD ) {
+				if( meshBatchFlags.has(EnableGpuUpdate) || enableGPUCulling || enableLOD ) {
 					var pl = [];
 					var p = b.params;
 					while( p != null ) {
@@ -314,13 +309,13 @@ class MeshBatch extends MultiMaterial {
 			meshBatchFlags.setTo(EnableResizeDown, flags.has(EnableResizeDown));
 			#if !js
 			// TODO : Add LOD and GPU Culling support for mesh batch using sub parts
-			var allowedLOD = flags.has(EnableLOD) && primitiveSubPart == null && Std.isOfType(@:privateAccess instanced.primitive, h3d.prim.HMDModel);
-			var allowedGPUCulling = flags.has(EnableGPUCulling) && primitiveSubPart == null;
+			var allowedLOD = flags.has(EnableLod) && primitiveSubPart == null && Std.isOfType(@:privateAccess instanced.primitive, h3d.prim.HMDModel);
+			var allowedGPUCulling = flags.has(EnableGpuCulling) && primitiveSubPart == null;
 
-			if ( meshBatchFlags.has(EnableLOD) != allowedLOD || meshBatchFlags.has(EnableGPUCulling) != allowedGPUCulling ) {
+			if ( meshBatchFlags.has(EnableLod) != allowedLOD || meshBatchFlags.has(EnableGpuCulling) != allowedGPUCulling ) {
 				shadersChanged = true;
-				meshBatchFlags.setTo(EnableLOD, allowedLOD);
-				meshBatchFlags.setTo(EnableGPUCulling, allowedGPUCulling);
+				meshBatchFlags.setTo(EnableLod, allowedLOD);
+				meshBatchFlags.setTo(EnableGpuCulling, allowedGPUCulling);
 			}
 			#end
 		}
@@ -514,7 +509,7 @@ class MeshBatch extends MultiMaterial {
 				if( count > p.maxInstance )
 					count = p.maxInstance;
 				if( buf == null || buf.isDisposed() ) {
-					var bufferFlags : hxd.impl.Allocator.BufferFlags = allowGpuUpdate ? UniformReadWrite : UniformDynamic;
+					var bufferFlags : hxd.impl.Allocator.BufferFlags = meshBatchFlags.has(EnableGpuUpdate) ? UniformReadWrite : UniformDynamic;
 					buf = alloc.allocBuffer(Std.int(MAX_BUFFER_ELEMENTS * (4 / p.bufferFormat.stride)),p.bufferFormat,bufferFlags);
 					p.buffers[index] = buf;
 					upload = true;
@@ -535,7 +530,7 @@ class MeshBatch extends MultiMaterial {
 					}
 				}
 
-				if ( ( enableLOD || enableGPUCulling ) ) {
+				if ( enableLOD || enableGPUCulling ) {
 					if ( p.commandBuffers == null)
 						p.commandBuffers = [];
 					var buf = p.commandBuffers[index];
