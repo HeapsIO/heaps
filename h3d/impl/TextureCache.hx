@@ -1,7 +1,7 @@
 package h3d.impl;
 
 class TextureCache {
-
+	static var checkFlags : Int = -1;
 	var cache : Array<h3d.mat.Texture>;
 	var position : Int = 0;
 	var defaultDepthBuffer : h3d.mat.Texture;
@@ -12,6 +12,13 @@ class TextureCache {
 		var engine = h3d.Engine.getCurrent();
 		defaultFormat = h3d.mat.Texture.nativeFormat;
 		defaultDepthBuffer = h3d.mat.Texture.getDefaultDepth();
+		if ( checkFlags < 0 ) {
+			var flags = new haxe.EnumFlags<h3d.mat.Data.TextureFlags>();
+			var flagsArray : Array<h3d.mat.Data.TextureFlags> = [Cube, MipMapped, ManualMipMapGen, Dynamic, IsArray];
+			for ( f in flagsArray )
+				flags.set(f);
+			checkFlags = flags.toInt();
+		}
 	}
 
 	public inline function get( index = 0 ) {
@@ -38,23 +45,23 @@ class TextureCache {
 		position = 0;
 	}
 
+	inline function matchTargetFlags(t : h3d.mat.Texture, flags : Array<h3d.mat.Data.TextureFlags>) {
+		var enumFlags = new haxe.EnumFlags<h3d.mat.Data.TextureFlags>();
+		if ( flags != null ) {
+			for ( f in flags )
+				enumFlags.set(f);
+		}
+		return (t.flags.toInt() & checkFlags) == (enumFlags.toInt() & checkFlags);
+	}
+
 	function lookupTarget( name, width, height, format, flags : Array<h3d.mat.Data.TextureFlags> ) {
 		var t = cache[position];
 		// look for a suitable candidate
 		for( i in position+1...cache.length ) {
 			var t2 = cache[i];
 			if( t2 != null && !t2.isDisposed() && t2.width == width && t2.height == height && t2.format == format ) {
-				if ( flags != null ) {
-					var fitFlags = true;
-					for ( f in flags ) {
-						if ( !t2.flags.has(f) ) {
-							fitFlags = false;
-							break;
-						}
-					}
-					if ( !fitFlags )
-						continue;
-				}
+				if ( !matchTargetFlags(t2, flags) )
+					continue;
 				// swap
 				cache[position] = t2;
 				cache[i] = t;
@@ -66,7 +73,8 @@ class TextureCache {
 			t.dispose();
 			t = null;
 		}
-		if ( flags == null ) flags = [];
+		if ( flags == null )
+			flags = [];
 		if ( !flags.contains(Target) )
 			flags.push(Target);
 		var newt = new h3d.mat.Texture(width, height, flags, format);
@@ -85,14 +93,8 @@ class TextureCache {
 		var alloc = false;
 		if( t == null || t.isDisposed() || t.width != width || t.height != height || t.format != format )
 			alloc = true;
-		if ( !alloc && flags != null ) {
-			for ( f in flags ) {
-				if ( !t.flags.has(f) ) {
-					alloc = true;
-					break;
-				}
-			}
-		}
+		else
+			alloc = !matchTargetFlags(t, flags);
 		if ( alloc )
 			t = lookupTarget(name,width,height,format,flags);
 		t.depthBuffer = defaultDepth ? defaultDepthBuffer : null;
