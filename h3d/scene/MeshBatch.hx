@@ -38,6 +38,7 @@ class MeshBatchPart {
 enum MeshBatchFlag {
 	EnableGPUCulling;
 	EnableLOD;
+	EnableResizeDown;
 }
 
 class ComputeIndirect extends hxsl.Shader {
@@ -308,22 +309,21 @@ class MeshBatch extends MultiMaterial {
 		}
 	}
 
-	public function begin( emitCountTip = -1, resizeDown = false, ?flags : haxe.EnumFlags<MeshBatchFlag> ) {
-		#if !js
-		// TODO : Add LOD and GPU Culling support for mesh batch using sub parts
+	public function begin( emitCountTip = -1, ?flags : haxe.EnumFlags<MeshBatchFlag> ) {
 		if ( flags != null ) {
+			meshBatchFlags.setTo(EnableResizeDown, flags.has(EnableResizeDown));
+			#if !js
+			// TODO : Add LOD and GPU Culling support for mesh batch using sub parts
 			var allowedLOD = flags.has(EnableLOD) && primitiveSubPart == null && Std.isOfType(@:privateAccess instanced.primitive, h3d.prim.HMDModel);
-			flags.setTo(EnableLOD, allowedLOD);
 			var allowedGPUCulling = flags.has(EnableGPUCulling) && primitiveSubPart == null;
-			flags.setTo(EnableGPUCulling, allowedGPUCulling);
 
 			if ( meshBatchFlags.has(EnableLOD) != allowedLOD || meshBatchFlags.has(EnableGPUCulling) != allowedGPUCulling ) {
 				shadersChanged = true;
 				meshBatchFlags.setTo(EnableLOD, allowedLOD);
 				meshBatchFlags.setTo(EnableGPUCulling, allowedGPUCulling);
 			}
+			#end
 		}
-		#end
 
 		instanceCount = 0;
 		instanced.initBounds();
@@ -338,7 +338,7 @@ class MeshBatch extends MultiMaterial {
 		var alloc = hxd.impl.Allocator.get();
 		while( p != null ) {
 			var size = emitCountTip * p.paramsCount * 4;
-			if( p.data == null || p.data.length < size || (resizeDown && p.data.length > size << 1) ) {
+			if( p.data == null || p.data.length < size || ( meshBatchFlags.has(EnableResizeDown) && p.data.length > size << 1) ) {
 				if( p.data != null ) alloc.disposeFloats(p.data);
 				p.data = alloc.allocFloats(size);
 			}
