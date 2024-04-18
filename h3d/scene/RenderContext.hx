@@ -24,7 +24,7 @@ class RenderContext extends h3d.impl.RenderContext {
 	public var debugCulling : Bool;
 	public var wasContextLost : Bool;
 	public var cullingCollider : h3d.col.Collider;
-	public var forcedScreenRatio : Float = -1;	
+	public var forcedScreenRatio : Float = -1;
 
 	@global("camera.view") var cameraView : h3d.Matrix;
 	@global("camera.zNear") var cameraNear : Float;
@@ -183,6 +183,7 @@ class RenderContext extends h3d.impl.RenderContext {
 		engine.uploadShaderBuffers(buf, Textures);
 		engine.uploadShaderBuffers(buf, Buffers);
 		engine.driver.computeDispatch(x,y,z);
+		@:privateAccess engine.dispatches++;
 		if ( computeLink == tmpComputeLink )
 			tmpComputeLink.s = null;
 		computeLink = null;
@@ -200,7 +201,7 @@ class RenderContext extends h3d.impl.RenderContext {
 
 	public function getCameraFrustumBuffer() {
 		if ( cameraFrustumBuffer == null )
-			cameraFrustumBuffer = hxd.impl.Allocator.get().allocBuffer( 6, hxd.BufferFormat.VEC4_DATA, UniformDynamic );		
+			cameraFrustumBuffer = hxd.impl.Allocator.get().allocBuffer( 6, hxd.BufferFormat.VEC4_DATA, UniformDynamic );
 
 		if ( !cameraFrustumUploaded ) {
 			inline function fillBytesWithPlane( buffer : haxe.io.Bytes, startPos : Int, plane : h3d.col.Plane ) {
