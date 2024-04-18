@@ -630,7 +630,7 @@ class MeshBatch extends MultiMaterial {
 				var bufferIndex = ctx.drawPass.index & 0xFFFF;
 				p.shader.Batch_Buffer = p.buffers[bufferIndex];
 				if( p.instanceBuffers == null ) {
-					var count = instanceCount - p.maxInstance * bufferIndex;
+					var count = hxd.Math.imin( instanceCount - p.maxInstance * bufferIndex, p.maxInstance );
 					instanced.commands.setCommand(count,p.indexCount,p.indexStart);
 					if ( p.commandBuffers != null && p.commandBuffers.length > 0 )
 						@:privateAccess instanced.commands.data = p.commandBuffers[bufferIndex].vbuf;
@@ -664,7 +664,7 @@ class MeshBatch extends MultiMaterial {
 					ctx.emitPass(pass, this).index = i | (p.matIndex << 16);
 					if ( p.commandBuffers != null && p.commandBuffers.length > 0 ) {
 						var commandBuffer = p.commandBuffers[i];
-						var count = instanceCount - p.maxInstance * i;
+						var count = hxd.Math.imin( instanceCount - p.maxInstance * i, p.maxInstance);
 						p.compute.instanceData = buf;
 						p.compute.matIndex = p.matIndex;
 						p.compute.commandBuffer = commandBuffer;
