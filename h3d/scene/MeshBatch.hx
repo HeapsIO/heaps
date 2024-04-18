@@ -475,14 +475,23 @@ class MeshBatch extends MultiMaterial {
 		instanceCount++;
 	}
 
-	public function disposeBuffers() {
+	public function disposeBuffers( useAllocator : Bool = true ) {
 		if( instanceCount == 0 ) return;
 		var p = dataPasses;
-		var alloc = hxd.impl.Allocator.get();
-		while( p != null ) {
-			for ( b in p.buffers )
-				alloc.disposeBuffer(b);
-			p = p.next;
+		if ( useAllocator ) {
+			var alloc = hxd.impl.Allocator.get();
+			while( p != null ) {
+				for ( b in p.buffers )
+					alloc.disposeBuffer(b);
+				p.buffers.resize(0);
+				p = p.next;
+			}
+		} else {
+			while( p != null ) {
+				for ( b in p.buffers )
+					b.dispose();
+				p = p.next;
+			}
 		}
 	}
 
