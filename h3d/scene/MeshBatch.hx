@@ -18,7 +18,7 @@ private class BatchData {
 	public var shaders : Array<hxsl.Shader>;
 	public var modelViewPos : Int;
 	public var pass : h3d.mat.Pass;
-	public var compute : ComputeIndirect;
+	public var computePass : h3d.mat.Pass;
 	public var commandBuffers : Array<h3d.Buffer>;
 	public var next : BatchData;
 
@@ -66,10 +66,15 @@ class ComputeIndirect extends hxsl.Shader {
 		@const var ENABLE_LOD : Bool;
 		@param var lodCount : Float = 1;
 
+
+		var modelView : Mat4;
+		function __init__() {
+			modelView = instanceData[computeVar.globalInvocation.x].modelView;
+		}
+
 		function main() {
 			var invocID = computeVar.globalInvocation.x;
 			var lod : Int = 0;
-			var modelView = instanceData[invocID].modelView;
 			var pos = vec3(0) * modelView.mat3x4();
 			var vScale = vec3(1) * modelView.mat3x4() - pos;
 			var scaledRadius = max(max(vScale.x, vScale.y), vScale.z) * radius;
@@ -194,7 +199,7 @@ class MeshBatch extends MultiMaterial {
 				for ( buf in dataPasses.commandBuffers )
 					alloc.disposeBuffer(buf);
 				dataPasses.commandBuffers.resize(0);
-				dataPasses.compute.commandBuffer = null;
+				dataPasses.computePass = null;
 			}
 
 			if( dataPasses.instanceBuffers != null ) {
@@ -556,16 +561,18 @@ class MeshBatch extends MultiMaterial {
 				index++;
 			}
 			if ( ( enableLOD || enableGPUCulling ) ) {
-				if( p.compute == null ) {
-					var compute = new ComputeIndirect();
-					compute.MAX_INSTANCE = p.maxInstance;
-					compute.ENABLE_LOD = enableLOD;
-					compute.ENABLE_CULLING = enableGPUCulling;
-					p.compute = compute;
+				if( p.computePass == null ) {
+					var computePass = new h3d.mat.Pass("batchUpdate");
+					var computeShader = new ComputeIndirect();
+					computePass.addShader(computeShader);
+					computeShader.MAX_INSTANCE = p.maxInstance;
+					computeShader.ENABLE_LOD = enableLOD;
+					computeShader.ENABLE_CULLING = enableGPUCulling;
+					p.computePass = computePass;
 
 					var prim = @:privateAccess instanced.primitive;
 					var bounds = prim.getBounds();
-					compute.radius = bounds.dimension();
+					computeShader.radius = bounds.dimension();
 
 					var lodCount = ( enableLOD ) ? prim.lodCount() : 1;
 					if ( matInfos == null ) {
@@ -603,11 +610,11 @@ class MeshBatch extends MultiMaterial {
 							matInfos.uploadBytes( tmpMatInfos, 0, materialCount );
 						}
 					}
-					compute.matInfos = matInfos;
-					compute.lodCount = lodCount;
+					computeShader.matInfos = matInfos;
+					computeShader.lodCount = lodCount;
 
 					if ( enableGPUCulling )
-						compute.frustum = ctx.getCameraFrustumBuffer();
+						computeShader.frustum = ctx.getCameraFrustumBuffer();
 				}
 			}
 			while( p.buffers.length > index )
@@ -674,10 +681,12 @@ class MeshBatch extends MultiMaterial {
 					if ( p.commandBuffers != null && p.commandBuffers.length > 0 ) {
 						var commandBuffer = p.commandBuffers[i];
 						var count = hxd.Math.imin( instanceCount - p.maxInstance * i, p.maxInstance);
-						p.compute.instanceData = buf;
-						p.compute.matIndex = p.matIndex;
-						p.compute.commandBuffer = commandBuffer;
-						ctx.computeDispatch( p.compute, count );
+						var computeShader = p.computePass.getShader(ComputeIndirect);
+						computeShader.instanceData = buf;
+						computeShader.matIndex = p.matIndex;
+						computeShader.commandBuffer = commandBuffer;
+						ctx.computeList(@:privateAccess p.computePass.shaders);
+						ctx.computeDispatch(count);
 					}
 				}
 			}
