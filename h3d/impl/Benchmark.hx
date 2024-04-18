@@ -68,6 +68,7 @@ class Benchmark extends h2d.Graphics {
 	public var smoothTime = 0.95;
 
 	public var measureCpu = false;
+	public var displayTriangleCount = true;
 
 	var tip : h2d.Text;
 	var tipCurrent : StatsObject;
@@ -156,7 +157,9 @@ class Benchmark extends h2d.Graphics {
 			return i != 0 ? (i + " dispatches ") : "";
 		}
 		if( s == null ) {
-			tip.text = "total "+engine.drawCalls+" draws "+ dispatchS(engine.dispatches) + hxd.Math.fmt(engine.drawTriangles/1000000)+" Mtri";
+			tip.text = "total "+engine.drawCalls+" draws "+ dispatchS(engine.dispatches);
+			if ( displayTriangleCount )
+				tip.text += hxd.Math.fmt(engine.drawTriangles/1000000)+" Mtri";
 		}
 		else
 			tip.text = s.name+"( " + Std.int(s.time / 1e6) + "." + StringTools.lpad(""+(Std.int(s.time/1e4)%100),"0",2) + " ms " + s.drawCalls + " draws "+ dispatchS(s.dispatches) + ")";
