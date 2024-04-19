@@ -286,6 +286,8 @@ class MeshBatch extends MultiMaterial {
 						for( i in prev...fmt.length )
 							curPos += fmt[i].getBytesSize() >> 2;
 					}
+					if ( curPos & 3 != 0)
+						throw "Buffer has padding";
 					b.bufferFormat = hxd.BufferFormat.make(fmt);
 				}
 
@@ -538,13 +540,13 @@ class MeshBatch extends MultiMaterial {
 
 				var maxVertexCount = (computeBufferFormat) ? p.maxInstance : MAX_BUFFER_ELEMENTS;
 				var vertexCount = Std.int( count * (( 4 * p.paramsCount ) / p.bufferFormat.stride) );
-				var vertexCountAllocated = hxd.Math.imin( nextPowerOfTwo( vertexCount ), maxVertexCount );
+				var vertexCountAllocated = #if js Std.int( MAX_BUFFER_ELEMENTS * 4 / p.bufferFormat.stride ) #else hxd.Math.imin( nextPowerOfTwo( vertexCount ), maxVertexCount ) #end;
 
-				if( buf == null || buf.isDisposed() || buf.vertices < vertexCount ) {
+				if( buf == null || buf.isDisposed() || buf.vertices < vertexCountAllocated ) {
 					var bufferFlags : hxd.impl.Allocator.BufferFlags = meshBatchFlags.has(EnableGpuUpdate) ? UniformReadWrite : UniformDynamic;
 					if ( buf != null )
 						alloc.disposeBuffer(buf);
-					buf = alloc.allocBuffer( vertexCountAllocated, p.bufferFormat,bufferFlags);
+					buf = alloc.allocBuffer( vertexCountAllocated, p.bufferFormat,bufferFlags );
 					p.buffers[index] = buf;
 					upload = true;
 				}
