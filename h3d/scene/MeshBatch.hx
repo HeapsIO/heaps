@@ -105,9 +105,9 @@ class ComputeIndirect extends hxsl.Shader {
 			}
 
 			if ( !culled ) {
-				commandBuffer[ invocID * 5 ] = floatBitsToInt(matInfos[ int(matIndex) + lod * MATERIAL_COUNT ].x) ;
+				commandBuffer[ invocID * 5 ] = int(matInfos[ int(matIndex) + lod * MATERIAL_COUNT ].x) ;
 				commandBuffer[ invocID * 5 + 1] = 1;
-				commandBuffer[ invocID * 5 + 2] = floatBitsToInt(matInfos[ int(matIndex) + lod * MATERIAL_COUNT ].y);
+				commandBuffer[ invocID * 5 + 2] = int(matInfos[ int(matIndex) + lod * MATERIAL_COUNT ].y);
 				commandBuffer[ invocID * 5 + 3] = 0;
 				commandBuffer[ invocID * 5 + 4] = invocID;
 			}
@@ -141,6 +141,9 @@ class MeshBatch extends MultiMaterial {
 	function get_enableLOD() return meshBatchFlags.has( EnableLod );
 	var enableGPUCulling(get, never) : Bool;
 	function get_enableGPUCulling() return meshBatchFlags.has( EnableGpuCulling ); 
+	
+	var computeBufferFormat(get, never) : Bool;
+	function get_computeBufferFormat() return meshBatchFlags.has(EnableGpuUpdate) || enableGPUCulling || enableLOD;
 	
 	var matInfos : h3d.Buffer;
 
@@ -251,7 +254,7 @@ class MeshBatch extends MultiMaterial {
 				p.dynamicParameters = true;
 				p.batchMode = true;
 
-				if( meshBatchFlags.has(EnableGpuUpdate) || enableGPUCulling || enableLOD ) {
+				if( computeBufferFormat ) {
 					var pl = [];
 					var p = b.params;
 					while( p != null ) {
@@ -314,7 +317,7 @@ class MeshBatch extends MultiMaterial {
 			meshBatchFlags.setTo(EnableResizeDown, flags.has(EnableResizeDown));
 			#if !js
 			// TODO : Add LOD and GPU Culling support for mesh batch using sub parts
-			var allowedLOD = flags.has(EnableLod) && primitiveSubPart == null && Std.isOfType(@:privateAccess instanced.primitive, h3d.prim.HMDModel);
+			var allowedLOD = flags.has(EnableLod) && primitiveSubPart == null && @:privateAccess instanced.primitive.lodCount() > 1;
 			var allowedGPUCulling = flags.has(EnableGpuCulling) && primitiveSubPart == null;
 
 			if ( meshBatchFlags.has(EnableLod) != allowedLOD || meshBatchFlags.has(EnableGpuCulling) != allowedGPUCulling ) {
@@ -522,14 +525,31 @@ class MeshBatch extends MultiMaterial {
 				var count = instanceCount - start;
 				if( count > p.maxInstance )
 					count = p.maxInstance;
-				if( buf == null || buf.isDisposed() ) {
+
+				inline function nextPowerOfTwo( n : Int) {
+					--n;
+  	  				n |= n >> 1;
+  	  				n |= n >> 2;
+  	  				n |= n >> 4;
+  	  				n |= n >> 8;
+  	  				n |= n >> 16;
+    				return n + 1;
+				}
+
+				var maxVertexCount = (computeBufferFormat) ? p.maxInstance : MAX_BUFFER_ELEMENTS;
+				var vertexCount = Std.int( count * (( 4 * p.paramsCount ) / p.bufferFormat.stride) );
+				var vertexCountAllocated = hxd.Math.imin( nextPowerOfTwo( vertexCount ), maxVertexCount );
+
+				if( buf == null || buf.isDisposed() || buf.vertices < vertexCount ) {
 					var bufferFlags : hxd.impl.Allocator.BufferFlags = meshBatchFlags.has(EnableGpuUpdate) ? UniformReadWrite : UniformDynamic;
-					buf = alloc.allocBuffer(Std.int(MAX_BUFFER_ELEMENTS * (4 / p.bufferFormat.stride)),p.bufferFormat,bufferFlags);
+					if ( buf != null )
+						alloc.disposeBuffer(buf);
+					buf = alloc.allocBuffer( vertexCountAllocated, p.bufferFormat,bufferFlags);
 					p.buffers[index] = buf;
 					upload = true;
 				}
 				if( upload )
-					buf.uploadFloats(p.data, start * p.paramsCount * 4, Std.int(count * 4 * p.paramsCount / p.bufferFormat.stride));
+					buf.uploadFloats(p.data, start * p.paramsCount * 4, vertexCount);
 				if( psBytes != null ) {
 					if( p.instanceBuffers == null )
 						p.instanceBuffers = [];
@@ -544,17 +564,20 @@ class MeshBatch extends MultiMaterial {
 					}
 				}
 
+				var commandCountAllocated = hxd.Math.imin( nextPowerOfTwo( count ), p.maxInstance );
+
 				if ( enableLOD || enableGPUCulling ) {
 					if ( p.commandBuffers == null)
 						p.commandBuffers = [];
 					var buf = p.commandBuffers[index];
 					if ( buf == null ) {
-						buf = alloc.allocBuffer( count, INDIRECT_DRAW_ARGUMENTS_FMT, UniformReadWrite );
+						buf = alloc.allocBuffer( commandCountAllocated, INDIRECT_DRAW_ARGUMENTS_FMT, UniformReadWrite );
 						p.commandBuffers[index] = buf;
 					}
-					else if ( buf.vertices != count ) {
+					else if ( buf.vertices < commandCountAllocated ) {
 						alloc.disposeBuffer( buf );
-						buf = alloc.allocBuffer( count, INDIRECT_DRAW_ARGUMENTS_FMT, UniformReadWrite );
+						buf = alloc.allocBuffer( commandCountAllocated, INDIRECT_DRAW_ARGUMENTS_FMT, UniformReadWrite );
+						p.commandBuffers[index] = buf;
 					}
 				}
 				start += count;
@@ -580,34 +603,36 @@ class MeshBatch extends MultiMaterial {
 							var hmd : h3d.prim.HMDModel = cast prim;
 							var lodConfig = @:privateAccess h3d.prim.HMDModel.lodConfig;
 							var materialCount = materials.length;
-							var tmpMatInfos = haxe.io.Bytes.alloc( 16 * materialCount * lodCount );
+							var tmpMatInfos = alloc.allocFloats( 4 * materialCount * lodCount );
 							matInfos = alloc.allocBuffer( materialCount * lodCount, hxd.BufferFormat.VEC4_DATA, Uniform );
 							var pos : Int = 0;
 							var startIndex : Int = 0;
 							for ( i => lod in @:privateAccess hmd.lods ) {
 								for ( j in 0...materials.length ) {
 									var indexCount = lod.indexCounts[j % materialCount];
-									tmpMatInfos.setInt32( pos, indexCount );
-									tmpMatInfos.setInt32( pos + 4, startIndex );
-									tmpMatInfos.setFloat( pos + 8, ( i < lodConfig.length ) ? lodConfig[i] : 0.0 );
+									tmpMatInfos[pos++] = indexCount;
+									tmpMatInfos[pos++] = startIndex;
+									tmpMatInfos[pos++] = ( i < lodConfig.length ) ? lodConfig[i] : 0.0;
 									startIndex += indexCount;
-									pos += 16;
+									pos++;
 								}
 							}
-							matInfos.uploadBytes( tmpMatInfos, 0, materialCount * lodCount );
+							matInfos.uploadFloats( tmpMatInfos, 0, materialCount * lodCount );
+							alloc.disposeFloats( tmpMatInfos );
 						}
 						else {
 							var materialCount = materials.length;
-							var tmpMatInfos = haxe.io.Bytes.alloc(16 * materialCount);
+							var tmpMatInfos = alloc.allocFloats( 4 * materialCount );
 							matInfos = alloc.allocBuffer( materialCount, hxd.BufferFormat.VEC4_DATA, Uniform );
 							var pos : Int = 0;
 							for ( i in 0...materials.length ) {
 								var matInfo = prim.getMaterialIndexes(i);
-								tmpMatInfos.setInt32( pos, matInfo.count );
-								tmpMatInfos.setInt32( pos + 4, matInfo.start );
-								pos += 16;
+								tmpMatInfos[pos++] = matInfo.count;
+								tmpMatInfos[pos++] = matInfo.start;
+								pos += 2;
 							}
-							matInfos.uploadBytes( tmpMatInfos, 0, materialCount );
+							matInfos.uploadFloats( tmpMatInfos, 0, materialCount );
+							alloc.disposeFloats( tmpMatInfos );
 						}
 					}
 					computeShader.matInfos = matInfos;
