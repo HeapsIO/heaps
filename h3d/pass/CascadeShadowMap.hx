@@ -14,6 +14,8 @@ class CascadeShadowMap extends DirShadowMap {
 
 	public var params : Array<CascadeParams> = [];
 	public var pow : Float = 1.0;
+	// minimum count of pixels in ratio of texture width for an object to be drawn in cascade
+	public var minPixelRatio : Float = 0.05;
 	public var firstCascadeSize : Float = 10.0;
 	public var castingMaxDist : Float = 0.0;
 	public var cascade(default, set) = 1;
@@ -127,6 +129,22 @@ class CascadeShadowMap extends DirShadowMap {
 		return getCascadeProj(currentCascadeIndex);
 	}
 
+	inline function cullPassesSize( passes : h3d.pass.PassList, frustum : h3d.col.Frustum, minSize : Float ) {
+		passes.filter(function(p) {
+			var mb = Std.downcast(p.obj, h3d.scene.MeshBatch);
+			if ( mb != null ) {
+				if ( @:privateAccess mb.instanced.getBounds().dimension() < minSize )
+					return false;
+			}
+			var col = p.obj.cullingCollider;
+			if( col == null )
+				return true;
+			if ( col.dimension() < minSize )
+				return false;
+			return col.inFrustum(frustum);
+		});
+	}
+
 	override function draw( passes, ?sort ) {
 		if( !enabled )
 			return;
@@ -180,6 +198,8 @@ class CascadeShadowMap extends DirShadowMap {
 
 		var textures = [];
 		for (i in 0...cascade) {
+			currentCascadeIndex = i;
+
 			#if js
 			var texture = ctx.textures.allocTarget("cascadeShadowMap_"+i, size, size, false, format);
 			if( depth == null || depth.width != size || depth.height != size || depth.isDisposed() ) {
@@ -194,19 +214,28 @@ class CascadeShadowMap extends DirShadowMap {
 			// Bilinear depth only make sense if we use sample compare to get weighted shadow occlusion which we doesn't support yet.
 			texture.filter = Nearest;
 
-			currentCascadeIndex = i;
-			var p = passes.save();
-			cullPasses(passes,function(col) return col.inFrustum(lightCameras[i].frustum));
 			var param = params[cascade - 1 - i];
 			#if js
 			depth.depthBias = (param != null) ? param.depthBias : 0;
 			depth.slopeScaledBias = (param != null) ? param.slopeBias : 0;
-			#else	
+			#else
 			texture.depthBias = (param != null) ? param.depthBias : 0;
 			texture.slopeScaledBias = (param != null) ? param.slopeBias : 0;
 			#end
-			texture = processShadowMap( passes, texture, sort);
-			textures.push(texture);
+
+			var lc = lightCameras[i];
+			var dimension = Math.max(lc.orthoBounds.xMax - lc.orthoBounds.xMin,
+				lc.orthoBounds.yMax - lc.orthoBounds.yMin);
+			dimension = dimension / size * hxd.Math.clamp(minPixelRatio * size, 1, size);
+			// first cascade draw all objects
+			if ( i == 0 )
+				dimension = 0.0;
+			var p = passes.save();
+			if ( dimension > 0.0 )
+				cullPassesSize(passes, lightCameras[i].frustum, dimension);
+			else
+				cullPasses(passes, function(col) return col.inFrustum(lightCameras[i].frustum));
+			textures[i] = processShadowMap( passes, texture, sort);
 			passes.load(p);
 		}
 		syncCascadeShader(textures);
