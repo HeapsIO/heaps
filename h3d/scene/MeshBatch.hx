@@ -316,18 +316,20 @@ class MeshBatch extends MultiMaterial {
 
 	public function begin( emitCountTip = -1, ?flags : haxe.EnumFlags<MeshBatchFlag> ) {
 		if ( flags != null ) {
-			meshBatchFlags.setTo(EnableResizeDown, flags.has(EnableResizeDown));
 			#if !js
 			// TODO : Add LOD and GPU Culling support for mesh batch using sub parts
 			var allowedLOD = flags.has(EnableLod) && primitiveSubPart == null && @:privateAccess instanced.primitive.lodCount() > 1;
+			flags.setTo(EnableLod, allowedLOD);
 			var allowedGPUCulling = flags.has(EnableGpuCulling) && primitiveSubPart == null;
+			flags.setTo(EnableGpuCulling, allowedGPUCulling);
 
-			if ( meshBatchFlags.has(EnableLod) != allowedLOD || meshBatchFlags.has(EnableGpuCulling) != allowedGPUCulling ) {
+			if ( meshBatchFlags.has(EnableLod) != allowedLOD || meshBatchFlags.has(EnableGpuCulling) != allowedGPUCulling )
 				shadersChanged = true;
-				meshBatchFlags.setTo(EnableLod, allowedLOD);
-				meshBatchFlags.setTo(EnableGpuCulling, allowedGPUCulling);
-			}
+			#else
+			flags.setTo(EnableLod, false);
+			flags.setTo(EnableGpuCulling, false);
 			#end
+			meshBatchFlags = flags;
 		}
 
 		instanceCount = 0;
