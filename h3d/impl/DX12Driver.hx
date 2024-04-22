@@ -357,7 +357,7 @@ class DX12Driver extends h3d.impl.Driver {
 	var heapCount : Int;
 
 	public static var INITIAL_RT_COUNT = 1024;
-	public static var BUFFER_COUNT = 2;
+	public static var BUFFER_COUNT = #if console 3 #else 2 #end;
 	public static var DEVICE_NAME = null;
 	public static var DEBUG = false; // requires dxil.dll when set to true
 
