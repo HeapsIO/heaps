@@ -1,6 +1,6 @@
 package hxd;
 
-#if !macro
+#if (!macro && !heaps_disable_res_completion)
 @:build(hxd.res.FileTree.build())
 #end
 class Res {
@@ -9,6 +9,19 @@ class Res {
 	public static function load(name:String) {
 		return loader.load(name);
 	}
+	
+	#if heaps_disable_res_completion
+	public static var loader( get, set ): hxd.res.Loader;
+	static function get_loader() {
+		var l = hxd.res.Loader.currentInstance;
+		if( l == null ) throw "Resource loader not initialized: call to hxd.Res.initXXX() required";
+		return l;
+	}
+	static function set_loader(l) {
+		return hxd.res.Loader.currentInstance = l;
+	}
+	#end
+	
 	#end
 
 	public static macro function initEmbed(?options:haxe.macro.Expr.ExprOf<hxd.res.EmbedOptions>) {
