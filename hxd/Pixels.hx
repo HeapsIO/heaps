@@ -452,7 +452,7 @@ class Pixels {
 		}
 	}
 
-	public function getPixelF(x, y, ?v:h3d.Vector4) {
+	public function getPixelF(x, y, ?v:h3d.Vector4) : h3d.Vector4 {
 		if( v == null )
 			v = new h3d.Vector4();
 		var p = ((x + y * width) * bytesPerPixel) + offset;
