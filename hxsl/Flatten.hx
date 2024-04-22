@@ -178,16 +178,22 @@ class Flatten {
 			switch( e.t ) {
 			case TFloat:
 				readField(expr, pos, 1);
-			case TVec(size,VFloat):
+			case TVec(size,VFloat), TBytes(size):
 				var idx = pos >> 2;
 				var idx2 = ((pos + size - 1) >> 2);
 				if( idx == idx2 )
 					readField(expr, pos, size);
 				else {
-					var k = 4 - (idx & 3);
-					{ e : TCall({ e : TGlobal(Vec4), p : e.p, t : TVoid },[
+					var k = 4 - pos;
+					var type = switch(size) {
+					case 2: Vec2;
+					case 3: Vec3;
+					case 4: Vec4;
+					default: throw "assert";
+					}
+					{ e : TCall({ e : TGlobal(type), p : e.p, t : TVoid },[
 						readField(expr, pos, k),
-						readField(expr, pos + k, size - k)
+						readField(expr, pos + 1, size - k)
 					]), t : e.t, p : e.p }
 				}
 			case TMat4:
@@ -207,12 +213,6 @@ class Flatten {
 				throw "Unsupported type "+e.t.toString();
 			}
 		case TBinop(OpAssign, e1, e2) if ( e.t.match(TMat4) && e1.e.match(TField(_,_))):
-			var v = null;
-			switch ( e2.e ) {
-			case TVar(v2):
-				v = v2;
-			default: throw "Not yet implemented";
-			}
 			switch ( e1 ) {
 			case {e : TField(expr, name), t : TMat4}:
 				var pos = getFieldPos(expr, name);
@@ -498,6 +498,7 @@ class Flatten {
 		return switch( v ) {
 		case TFloat, TInt if( t == VFloat ): 1;
 		case TVec(n, t2) if( t == t2 ): n;
+		case TBytes(n): n; 
 		case TMat4 if( t == VFloat ): 16;
 		case TMat3, TMat3x4 if( t == VFloat ): 12;
 		case TArray(at, SConst(n)): varSize(at, t) * n;
