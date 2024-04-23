@@ -193,24 +193,13 @@ class TextInput extends Text {
 				cursorIndex++;
 		case K.HOME:
 			if( multiline ) {
-				// In multiine, we may have word wrapped our line so keep rolling back until
-				// we find a hard return, or the beginning of the string.
-				while( cursorIndex > 0 ) {
-					var char = text.charAt(cursorIndex - 1);
-					if( char == "\n")
-						break;
-					cursorIndex--;
-				}
+				var currentLine = getCurrentLine();
+				cursorIndex = currentLine.startIndex;
 			} else cursorIndex = 0;
 		case K.END:
 			if( multiline ) {
-				do {
-					var char = text.charAt(cursorIndex);
-					if( char == "\n")
-						break;
-					cursorIndex++;
-				}
-				while( cursorIndex < text.length );
+				var currentLine = getCurrentLine();
+				cursorIndex = currentLine.startIndex + currentLine.value.length - 1;
 			} else cursorIndex = text.length;
 		case K.BACKSPACE, K.DELETE if( selectionRange != null ):
 			if( !canEdit ) return;
