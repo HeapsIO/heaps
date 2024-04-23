@@ -95,7 +95,8 @@ class CascadeShadowMap extends DirShadowMap {
 		lightCameras[cascade - 1].orthoBounds = lightCamera.orthoBounds.clone();
 	}
 
-	function getCascadeProj(i:Int) {
+	public function getCascadeProj(i:Int) {
+		var i = hxd.Math.imin(i, lightCameras.length - 1);
 		return lightCameras[i].m;
 	}
 
