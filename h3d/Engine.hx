@@ -89,6 +89,9 @@ class Engine {
 		#if js
 		driver = js.Browser.supported ? new h3d.impl.GlDriver(antiAlias) : new h3d.impl.NullDriver();
 		#else
+		#if compute
+		h3d.impl.GlDriver.enableComputeShaders();
+		#end
 		driver = new h3d.impl.GlDriver(antiAlias);
 		#end
 		#elseif (hldx && dx12)
