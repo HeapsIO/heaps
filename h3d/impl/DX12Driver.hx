@@ -1062,7 +1062,7 @@ class DX12Driver extends h3d.impl.Driver {
 						s += 'DescriptorTable(Sampler(s${baseShaderRegister}, space=${descRange.registerSpace}, numDescriptors = ${descRange.numDescriptors}), visibility = ${vis}),';
 					case UAV:
 						var reg = descRange.baseShaderRegister;
-						s += 'UAV(u${reg}, visibility = ${vis})';
+						s += 'UAV(u${reg}, visibility = ${vis}),';
 					}
 				} catch ( e : Dynamic ) {
 					continue;
