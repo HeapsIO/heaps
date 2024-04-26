@@ -140,6 +140,11 @@ class GlDriver extends Driver {
 	public static var outOfMemoryCheck = #if js false #else true #end;
 
 	public function new(antiAlias=0) {
+		#if (hlsdl >= version("1.15.0"))
+		if ( computeEnabled )
+			sdl.Sdl.setGLVersion(4, 3);
+		#end
+
 		#if js
 		canvas = @:privateAccess hxd.Window.getInstance().canvas;
 		var options = {alpha:false,stencil:true,antialias:antiAlias>0};
@@ -195,6 +200,11 @@ class GlDriver extends Driver {
 			shaderVersion = Math.round( Std.parseFloat(reg.matched(0)) * 100 );
 		}
 
+		#if (hlsdl >= version("1.15.0"))
+		if ( computeEnabled )
+			shaderVersion = 430;
+		#end
+
 		drawMode = GL.TRIANGLES;
 
 		#if js
@@ -219,9 +229,10 @@ class GlDriver extends Driver {
 	}
 
 	#if hlsdl
+	static var computeEnabled : Bool = false;
 	public static function enableComputeShaders() {
 		#if (hlsdl >= version("1.15.0"))
-		sdl.Sdl.setGLVersion(4, 3);
+		computeEnabled = true;
 		#else
 		throw "enableComputeShaders() requires hlsdl 1.15+";
 		#end

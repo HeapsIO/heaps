@@ -27,7 +27,7 @@ class CascadeShadow extends DirShadow {
 				var texelSize = 1.0/shadowRes;
 				@unroll for ( c in 0...CASCADE_COUNT ) {
 					var shadowPos = transformedPosition * cascadeProjs[c];
-					
+
 					if ( inside(shadowPos) ) {
 						shadow = 1.0;
 						var zMax = shadowPos.z.saturate();
@@ -43,13 +43,13 @@ class CascadeShadow extends DirShadow {
 								var offset = poissonDisk[i].xy * offScale;
 								offset = vec2(cosR * offset.x - sinR * offset.y, cosR * offset.y + sinR * offset.x);
 								var depth = cascadeShadowMaps[c].getLod(shadowUv + offset, 0).r;
-								shadow  -= (zMax - bias > depth) ? sampleStrength : 0.0;
+								shadow -= (zMax - bias > depth) ? sampleStrength : 0.0;
 							}
 						}
 						else if( USE_ESM ) {
 							var depth = cascadeShadowMaps[c].get(shadowUv).r;
 							var delta = (depth + bias).min(zMax) - zMax;
-							shadow = exp(shadowPower * delta).saturate();		
+							shadow = exp(shadowPower * delta).saturate();
 						}
 						else {
 							var depth = cascadeShadowMaps[c].get(shadowUv).r;

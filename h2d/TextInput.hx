@@ -373,7 +373,7 @@ class TextInput extends Text {
 		}
 		if (cursorLineIndex == -1)
 			return;
-		var destinationIndex = hxd.Math.iclamp(cursorLineIndex + yDiff, 0, lines.length);
+		var destinationIndex = hxd.Math.iclamp(cursorLineIndex + yDiff, 0, lines.length - 1);
 		if (destinationIndex == cursorLineIndex)
 			return;
 		var current = lines[cursorLineIndex];

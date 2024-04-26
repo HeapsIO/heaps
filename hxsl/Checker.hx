@@ -722,6 +722,10 @@ class Checker {
 				type = vec3;
 			case TMat4, TMat3x4:
 				type = vec4;
+			case TVec(_, VFloat):
+				type = TFloat;
+			case TVec(_, VInt):
+				type = TInt;
 			default:
 				error("Cannot index " + e1.t.toString() + " : should be an array", e.pos);
 			}

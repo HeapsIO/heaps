@@ -8,6 +8,7 @@ private class QueryObject {
 	public var value : Float;
 	public var name : String;
 	public var drawCalls : Int;
+	public var dispatches : Int;
 	public var next : QueryObject;
 
 	public function new() {
@@ -34,6 +35,7 @@ private class StatsObject {
 	public var name : String;
 	public var time : Float;
 	public var drawCalls : Int;
+	public var dispatches : Int;
 	public var next : StatsObject;
 	public var xPos : Int;
 	public var xSize : Int;
@@ -66,6 +68,7 @@ class Benchmark extends h2d.Graphics {
 	public var smoothTime = 0.95;
 
 	public var measureCpu = false;
+	public var displayTriangleCount = true;
 
 	var tip : h2d.Text;
 	var tipCurrent : StatsObject;
@@ -150,10 +153,16 @@ class Benchmark extends h2d.Graphics {
 	}
 
 	function syncTip(s:StatsObject) {
-		if( s == null )
-			tip.text = "total "+engine.drawCalls+" draws "+hxd.Math.fmt(engine.drawTriangles/1000000)+" Mtri";
+		inline function dispatchS(i : Int) {
+			return i != 0 ? (i + " dispatches ") : "";
+		}
+		if( s == null ) {
+			tip.text = "total "+engine.drawCalls+" draws "+ dispatchS(engine.dispatches);
+			if ( displayTriangleCount )
+				tip.text += hxd.Math.fmt(engine.drawTriangles/1000000)+" Mtri";
+		}
 		else
-			tip.text = s.name+"( " + Std.int(s.time / 1e6) + "." + StringTools.lpad(""+(Std.int(s.time/1e4)%100),"0",2) + " ms " + s.drawCalls + " draws )";
+			tip.text = s.name+"( " + Std.int(s.time / 1e6) + "." + StringTools.lpad(""+(Std.int(s.time/1e4)%100),"0",2) + " ms " + s.drawCalls + " draws "+ dispatchS(s.dispatches) + ")";
 		var tw = tip.textWidth + 10;
 		var tx = s == null ? curWidth : s.xPos + ((s.xSize - tw) * .5);
 		if( tx + tw > curWidth ) tx = curWidth - tw;
@@ -205,6 +214,8 @@ class Benchmark extends h2d.Graphics {
 					totalTime += dt;
 					s.drawCalls = prev.drawCalls - q.drawCalls;
 					if( s.drawCalls < 0 ) s.drawCalls = 0;
+					s.dispatches = prev.dispatches - q.dispatches;
+					if ( s.dispatches < 0 ) s.dispatches = 0;
 				}
 				// recycle
 				var n = q.next;
@@ -223,12 +234,14 @@ class Benchmark extends h2d.Graphics {
 						if( vst > 0 ) {
 							var s = allocStat("vsync", vst);
 							s.drawCalls = 0;
+							s.dispatches = 0;
 							waitT -= vst;
 						}
 					}
 					if( waitT > 0.5e6 /* 0.5 ms */ ) {
 						var s = allocStat(measureCpu ? "gpuwait" : "cpuwait", waitT);
 						s.drawCalls = 0;
+						s.dispatches = 0;
 					}
 				}
 			}
@@ -380,6 +393,7 @@ class Benchmark extends h2d.Graphics {
 		var q = allocQuery();
 		q.name = name;
 		q.drawCalls = engine.drawCalls;
+		q.dispatches = engine.dispatches;
 		q.next = currentFrame;
 		currentFrame = q;
 		engine.driver.endQuery(q.q);

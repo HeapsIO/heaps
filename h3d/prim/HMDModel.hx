@@ -91,17 +91,24 @@ class HMDModel extends MeshPrimitive {
 			engine.driver.uploadBufferBytes(buffer, curVertexCount, lod.vertexCount, bytes, 0);
 
 			var indexCount = lod.indexCount;
-			size = indexStride * indexCount;
-			var bytes = entry.fetchBytes(dataPosition + lod.indexPosition, size);
-			if ( curIndexCount != 0 ) {
-				if (is32)
-					for ( i in 0...indexCount )
-						bytes.setInt32(i << 2, bytes.getInt32(i << 2) + curVertexCount);
-				else 
-					for ( i in 0...indexCount )
-						bytes.setUInt16(i << 1, bytes.getUInt16(i << 1) + curVertexCount);
-			}
-			engine.driver.uploadBufferBytes(indexes, curIndexCount, indexCount, bytes, 0);
+			var lodIs32 = ( lod.vertexCount > 0x10000 );
+			size = ( lodIs32 ? 4 : 2 ) * indexCount;
+
+			var inBytes = entry.fetchBytes(dataPosition + lod.indexPosition, size);
+			var outBytes = ( is32 != lodIs32 ) ? haxe.io.Bytes.alloc( indexCount * indexStride ) : inBytes;
+			if (is32)
+				for ( i in 0...indexCount )
+					if ( lodIs32 )
+						outBytes.setInt32(i << 2, inBytes.getInt32(i << 2) + curVertexCount);
+					else 
+						outBytes.setInt32(i << 2, inBytes.getUInt16(i << 1) + curVertexCount);
+			else 
+				for ( i in 0...indexCount )
+					if ( lodIs32 )
+						outBytes.setUInt16(i << 1, inBytes.getInt32(i << 2) + curVertexCount);
+					else
+						outBytes.setUInt16(i << 1, inBytes.getUInt16(i << 1) + curVertexCount);
+			engine.driver.uploadBufferBytes(indexes, curIndexCount, indexCount, outBytes, 0);
 
 			curVertexCount += lod.vertexCount;
 			curIndexCount += indexCount;
