@@ -338,7 +338,7 @@ class MeshBatch extends MultiMaterial {
 			if ( meshBatchFlags != flags )
 				shadersChanged = true;
 			meshBatchFlags = flags;
-			meshBatchFlags.setTo( EnableStorageBuffer, enableLOD || enableGPUCulling || useStorageBuffer );
+			meshBatchFlags.setTo( EnableStorageBuffer, mustCalcBufferFormat || useStorageBuffer );
 		}
 
 		instanceCount = 0;
