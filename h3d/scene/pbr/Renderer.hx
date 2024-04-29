@@ -267,17 +267,14 @@ class Renderer extends h3d.scene.Renderer {
 		if( ctx.lightSystem != null ) ctx.lightSystem.drawPasses = ctx.engine.drawCalls - count;
 		end();
 
-		var pbrLightSystem : h3d.scene.pbr.LightSystem = cast ctx.lightSystem;
-		if (pbrLightSystem != null) {
-			while (pbrLightSystem.lightingShaders.length != 0) {
-				pbrLightSystem.lightingShaders.pop();
-			}
-			pbrLightSystem.lightBuffer.sync(ctx);
+		if (ls != null) {
+			while (ls.lightingShaders.length != 0)
+				ls.lightingShaders.pop();
+			ls.lightBuffer.sync(ctx);
 		}
 
 		begin(Lighting);
 		if ( displayMode == Performance ) {
-			var ls = Std.downcast(getLightSystem(), h3d.scene.pbr.LightSystem);
 			var s = new h3d.shader.pbr.Light.Performance();
 			performance.shader.gradient = getLightingPerformanceGradient();
 			s.maxLights = performance.shader.gradient.width - 1;
