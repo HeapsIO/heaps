@@ -446,7 +446,7 @@ class Style extends domkit.CssStyle {
 		if(dom != null) {
 			var posLines = [];
 			var valueLines = [];
-			var files: Array<{ name: String, txt: String, #if format sourceMap: format.map.Data #end }> = [];
+			var files: Array<{ name: String, txt: String, #if (format >= version("3.7.1")) sourceMap: format.map.Data #end }> = [];
 			var lineDigits = 0;
 			for( i in 0...dom.currentSet.length ) {
 				if( dom.currentRuleStyles == null || dom.currentRuleStyles[i] == null )
@@ -458,7 +458,7 @@ class Style extends domkit.CssStyle {
 				if (r != null) {
 					var txt = r.entry.getText();
 
-					#if format
+					#if (format >= version("3.7.1"))
 					var mapFile = r.entry.path + ".map";
 					var sourceMap: format.map.Data = null;
 					if( hxd.res.Loader.currentInstance.exists(mapFile) ) {
@@ -470,7 +470,7 @@ class Style extends domkit.CssStyle {
 					files.push({
 						name: vs.pos.file,
 						txt: txt,
-						#if format
+						#if (format >= version("3.7.1"))
 						sourceMap: sourceMap,
 						#end
 					});
@@ -499,7 +499,7 @@ class Style extends domkit.CssStyle {
 						var line = count.line;
 						var col = count.col;
 						var file = files.length == 1 ? null : f.name;
-						#if format
+						#if (format >= version("3.7.1"))
 						if (f.sourceMap != null) {
 							var pos = f.sourceMap.originalPositionFor(count.line, count.col);
 							file = pos.source;
