@@ -51,8 +51,8 @@ class ComputeIndirect extends hxsl.Shader {
 			var position : Vec3;
 		}
 
-		@param var commandBuffer : RWBuffer<Int, 65535>;
-		@param var instanceData : RWPartialBuffer<{ modelView : Mat4}, 65535>;
+		@param var commandBuffer : RWBuffer<Int>;
+		@param var instanceData : RWPartialBuffer<{ modelView : Mat4 }>;
 		@param var radius : Float;
 
 		@const(16) var MATERIAL_COUNT : Int = 1;
