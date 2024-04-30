@@ -1,5 +1,11 @@
 package h2d.domkit;
 
+typedef SourceFile = {
+	name: String,
+	txt: String,
+	#if (format >= version("3.7.1")) sourceMap: format.map.Data, #end
+}
+
 class Style extends domkit.CssStyle {
 
 	var currentObjects : Array<h2d.Object> = [];
@@ -77,10 +83,26 @@ class Style extends domkit.CssStyle {
 				ee = ee.parent;
 			}
 			if( msg == null ) msg = "Invalid property value '"+(domkit.CssParser.valueStr(s.value))+"'";
-			errors.push(msg+" for " + path);
+			var posStr = "";
+			var f = find(sourceFiles, f -> f.name == s.pos.file);
+			if (s.pos != null && f != null) {
+				var pos = getPos(f, s.pos.pmin);
+				posStr = pos.file+":"+pos.line+": ";
+			}
+			errors.push(posStr+msg+" for " + path);
 		}
 	}
 
+	inline function find<T>( it : Array<T>, f : T -> Bool ) : Null<T> {
+		var ret = null;
+		for( v in it ) {
+			if(f(v)) {
+				ret = v;
+				break;
+			}
+		}
+		return ret;
+	}
 	inline function countLines(str: String, until = -1, code = "\n".code) {
 		var ret = {
 			line: 1,
@@ -98,27 +120,71 @@ class Style extends domkit.CssStyle {
 		ret.col = until - lastFound;
 		return ret;
 	}
+	inline function getPos(f: SourceFile, pmin) {
+		var count = countLines(f.txt, pmin);
+		var line = count.line;
+		var col = count.col;
+		var file = f.name;
+		#if (format >= version("3.7.1"))
+		if (f.sourceMap != null) {
+			var pos = f.sourceMap.originalPositionFor(count.line, count.col);
+			file = pos.source;
+			line = pos.originalLine;
+			col = pos.originalColumn;
+		}
+		#end
+		return {
+			line: line,
+			count: count,
+			file: file,
+		};
+	}
+
+	#if (format >= version("3.7.1"))
+	function getSourceMapFor(r: hxd.res.Resource) {
+		var mapFile = r.entry.path + ".map";
+		if( hxd.res.Loader.currentInstance.exists(mapFile) ) {
+			var mapContent = hxd.res.Loader.currentInstance.load(mapFile).toText();
+			try {
+				return new format.map.Reader().parse(mapContent);
+			} catch(e) {}
+		}
+		return null;
+	}
+	#end
+	var sourceFiles: Array<SourceFile> = [];
+
 	function onChange( ntry : Int = 0 ) {
 		if( ntry >= 10 ) return;
 		ntry++;
 		var oldRules = data.rules;
 		errors = [];
 		data.rules = [];
+		sourceFiles = [];
 		for( r in resources ) {
 			var txt = try r.entry.getText() catch( e : Dynamic ) { haxe.Timer.delay(onChange.bind(ntry),100); data.rules = oldRules; return; }
+			var curFile = {
+				name: r.entry.name,
+				txt: txt,
+				#if (format >= version("3.7.1"))
+				sourceMap: getSourceMapFor(r),
+				#end
+			};
+			sourceFiles.push(curFile);
 			try {
 				data.add(cssParser.parseSheet(txt, r.name));
 			} catch( e : domkit.Error ) {
 				cssParser.warnings.push({ msg : e.message, pmin : e.pmin, pmax : e.pmax });
 			}
 			for( w in cssParser.warnings ) {
-				var line = countLines(txt, w.pmin).line;
-				errors.push(r.entry.path+":"+line+": " + w.msg);
+				var pos = getPos(curFile, w.pmin);
+				errors.push(pos.file+":"+pos.line+": " + w.msg);
 		 	}
 		}
 		for( o in currentObjects )
 			o.dom.applyStyle(this);
 		refreshErrors();
+		sourceFiles = [];
 	}
 
 	function refreshErrors( ?scene ) {
@@ -432,21 +498,10 @@ class Style extends domkit.CssStyle {
 		previewTitle.text = getDisplayInfo(obj);
 		var dom = obj.dom;
 
-		inline function find<T>( it : Array<T>, f : T -> Bool ) : Null<T> {
-			var ret = null;
-			for( v in it ) {
-				if(f(v)) {
-					ret = v;
-					break;
-				}
-			}
-			return ret;
-		}
-
 		if(dom != null) {
 			var posLines = [];
 			var valueLines = [];
-			var files: Array<{ name: String, txt: String, #if (format >= version("3.7.1")) sourceMap: format.map.Data #end }> = [];
+			var files: Array<SourceFile> = [];
 			var lineDigits = 0;
 			for( i in 0...dom.currentSet.length ) {
 				if( dom.currentRuleStyles == null || dom.currentRuleStyles[i] == null )
@@ -457,21 +512,11 @@ class Style extends domkit.CssStyle {
 				var r = find(resources, r -> r.name == vs.pos.file);
 				if (r != null) {
 					var txt = r.entry.getText();
-
-					#if (format >= version("3.7.1"))
-					var mapFile = r.entry.path + ".map";
-					var sourceMap: format.map.Data = null;
-					if( hxd.res.Loader.currentInstance.exists(mapFile) ) {
-						var mapContent = hxd.res.Loader.currentInstance.load(mapFile).toText();
-						sourceMap = new format.map.Reader().parse(mapContent);
-					}
-					#end
-
 					files.push({
 						name: vs.pos.file,
 						txt: txt,
 						#if (format >= version("3.7.1"))
-						sourceMap: sourceMap,
+						sourceMap: getSourceMapFor(r),
 						#end
 					});
 					lineDigits = hxd.Math.imax(lineDigits, Std.int(Math.log(countLines(txt).line) / Math.log(10)));
@@ -495,23 +540,12 @@ class Style extends domkit.CssStyle {
 					v = vs.value;
 					var f = find(files, f -> f.name == vs.pos.file);
 					if (f != null) {
-						var count = countLines(f.txt, vs.pos.pmin);
-						var line = count.line;
-						var col = count.col;
-						var file = files.length == 1 ? null : f.name;
-						#if (format >= version("3.7.1"))
-						if (f.sourceMap != null) {
-							var pos = f.sourceMap.originalPositionFor(count.line, count.col);
-							file = pos.source;
-							line = pos.originalLine;
-							col = pos.originalColumn;
-						}
-						#end
-						var s = "" + line;
-						if (file == null)
+						var pos = getPos(f, vs.pos.pmin);
+						var s = "" + pos.line;
+						if (pos.file == null || (pos.file == f.name && files.length == 1))
 							lStr = '<font color="#707070">$s</font>';
 						else
-							lStr = '<font color="#707070">${file}:$s</font>';
+							lStr = '<font color="#707070">${pos.file}:$s</font>';
 					}
 				}
 				var vstr = v == null ? "???" : StringTools.htmlEscape(domkit.CssParser.valueStr(v));
