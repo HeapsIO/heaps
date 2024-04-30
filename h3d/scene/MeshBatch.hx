@@ -131,7 +131,7 @@ class MeshBatch extends MultiMaterial {
 	static var modelViewID = hxsl.Globals.allocID("global.modelView");
 	static var modelViewInverseID = hxsl.Globals.allocID("global.modelViewInverse");
 	static var MAX_BUFFER_ELEMENTS = 4096;
-	static var MAX_STORAGE_BUFFER_ELEMENTS = 65535;
+	static var MAX_STORAGE_BUFFER_ELEMENTS = 128 * 1024 * 1024 >> 2;
 
 	var instanced : h3d.prim.Instanced;
 	var dataPasses : BatchData;

@@ -625,7 +625,7 @@ class Cache {
 		var useStorage = declVar("Batch_UseStorage",TBool,Param);
 		var vcount = declVar("Batch_Count",TInt,Param);
 		var vuniformBuffer = declVar("Batch_Buffer",TBuffer(TVec(4,VFloat),SVar(vcount),Uniform),Param);
-		var vstorageBuffer = declVar("Batch_StorageBuffer",TBuffer(TVec(4,VFloat),SConst(65535),RW),Param);
+		var vstorageBuffer = declVar("Batch_StorageBuffer",TBuffer(TVec(4,VFloat),SConst(128 * 1024 * 1024 >> 2),RW),Param);
 		var voffset = declVar("Batch_Offset", TInt, Local);
 		var euniformBuffer = { e : TVar(vuniformBuffer), p : pos, t : vuniformBuffer.type };
 		var estorageBuffer = { e : TVar(vstorageBuffer), p : pos, t : vstorageBuffer.type };
