@@ -196,6 +196,7 @@ class GlslOut {
 			switch( size ) {
 			case SVar(v):
 				ident(v);
+			case SConst(0):
 			case SConst(1) if( intelDriverFix ):
 				add(2);
 			case SConst(v):
@@ -219,6 +220,7 @@ class GlslOut {
 			add("[");
 			switch( size ) {
 			case SVar(v): ident(v);
+			case SConst(0):
 			case SConst(1) if( intelDriverFix ): add(2);
 			case SConst(n): add(n);
 			}
