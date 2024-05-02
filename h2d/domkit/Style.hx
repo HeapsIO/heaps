@@ -128,9 +128,11 @@ class Style extends domkit.CssStyle {
 		#if (format >= version("3.7.1"))
 		if (f.sourceMap != null) {
 			var pos = f.sourceMap.originalPositionFor(count.line, count.col);
-			file = pos.source;
-			line = pos.originalLine;
-			col = pos.originalColumn;
+			if (pos != null) {
+				file = pos.source;
+				line = pos.originalLine;
+				col = pos.originalColumn;
+			}
 		}
 		#end
 		return {
@@ -243,7 +245,10 @@ class Style extends domkit.CssStyle {
 				if( s == null || scenes.indexOf(s) >= 0 ) continue;
 				scenes.push(s);
 				function scanRec(o:h2d.Object) {
-					if( o.dom != null ) @:privateAccess o.dom.currentValues = null;
+					if( o.dom != null ) {
+						@:privateAccess o.dom.currentValues = null;
+						@:privateAccess o.dom.currentRuleStyles = null;
+					}
 					for( o in o ) scanRec(o);
 				}
 				scanRec(s);
@@ -542,7 +547,7 @@ class Style extends domkit.CssStyle {
 					if (f != null) {
 						var pos = getPos(f, vs.pos.pmin);
 						var s = "" + pos.line;
-						if (pos.file == null || (pos.file == f.name && files.length == 1))
+						if (pos.file == null)
 							lStr = '<font color="#707070">$s</font>';
 						else
 							lStr = '<font color="#707070">${pos.file}:$s</font>';
