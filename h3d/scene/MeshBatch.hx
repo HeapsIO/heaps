@@ -51,8 +51,8 @@ class ComputeIndirect extends hxsl.Shader {
 			var position : Vec3;
 		}
 
-		@param var commandBuffer : RWBuffer<Int, 65535>;
-		@param var instanceData : RWPartialBuffer<{ modelView : Mat4}, 65535>;
+		@param var commandBuffer : RWBuffer<Int>;
+		@param var instanceData : RWPartialBuffer<{ modelView : Mat4 }>;
 		@param var radius : Float;
 
 		@const(16) var MATERIAL_COUNT : Int = 1;
@@ -131,7 +131,7 @@ class MeshBatch extends MultiMaterial {
 	static var modelViewID = hxsl.Globals.allocID("global.modelView");
 	static var modelViewInverseID = hxsl.Globals.allocID("global.modelViewInverse");
 	static var MAX_BUFFER_ELEMENTS = 4096;
-	static var MAX_STORAGE_BUFFER_ELEMENTS = 65535;
+	static var MAX_STORAGE_BUFFER_ELEMENTS = 128 * 1024 * 1024 >> 2;
 
 	var instanced : h3d.prim.Instanced;
 	var dataPasses : BatchData;

@@ -436,8 +436,8 @@ class ObjectComp implements h2d.domkit.Object implements domkit.Component.Compon
 	@:p var rotation : Float;
 	@:p var visible : Bool = true;
 	@:p(scale) var scale : { x : Float, y : Float };
-	@:p var scaleX : Float;
-	@:p var scaleY : Float;
+	@:p var scaleX : Float = 1;
+	@:p var scaleY : Float = 1;
 	@:p var blend : h2d.BlendMode = Alpha;
 	@:p(filter) var filter : h2d.filter.Filter;
 	@:p var filterSmooth : Bool;

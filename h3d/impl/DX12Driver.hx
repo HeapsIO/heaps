@@ -1245,6 +1245,8 @@ class DX12Driver extends h3d.impl.Driver {
 		sign.flags.set(DENY_HULL_SHADER_ROOT_ACCESS);
 		sign.flags.set(DENY_DOMAIN_SHADER_ROOT_ACCESS);
 		sign.flags.set(DENY_GEOMETRY_SHADER_ROOT_ACCESS);
+		sign.flags.set(DENY_AMPLIFICATION_SHADER_ROOT_ACCESS);
+		sign.flags.set(DENY_MESH_SHADER_ROOT_ACCESS);
 		sign.numParameters = paramsCount;
 		sign.parameters = cast params;
 

@@ -187,14 +187,7 @@ class HlslOut {
 			add("function");
 		case TArray(t, size), TBuffer(t,size,_):
 			addType(t);
-			add("[");
-			switch( size ) {
-			case SVar(v):
-				ident(v);
-			case SConst(v):
-				add(v);
-			}
-			add("]");
+			addArraySize(size);
 		case TChannel(n):
 			add("channel" + n);
 		}
@@ -204,6 +197,7 @@ class HlslOut {
 		add("[");
 		switch( size ) {
 		case SVar(v): ident(v);
+		case SConst(0):
 		case SConst(n): add(n);
 		}
 		add("]");
