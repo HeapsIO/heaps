@@ -3,7 +3,7 @@ package h2d.domkit;
 typedef SourceFile = {
 	name: String,
 	txt: String,
-	#if (format >= version("3.7.1")) sourceMap: format.map.Data, #end
+	#if (format >= version("3.8.0")) sourceMap: format.map.Data, #end
 }
 
 class Style extends domkit.CssStyle {
@@ -125,7 +125,7 @@ class Style extends domkit.CssStyle {
 		var line = count.line;
 		var col = count.col;
 		var file = f.name;
-		#if (format >= version("3.7.1"))
+		#if (format >= version("3.8.0"))
 		if (f.sourceMap != null) {
 			var pos = f.sourceMap.originalPositionFor(count.line, count.col);
 			if (pos != null) {
@@ -142,7 +142,7 @@ class Style extends domkit.CssStyle {
 		};
 	}
 
-	#if (format >= version("3.7.1"))
+	#if (format >= version("3.8.0"))
 	function getSourceMapFor(r: hxd.res.Resource) {
 		var mapFile = r.entry.path + ".map";
 		if( hxd.res.Loader.currentInstance.exists(mapFile) ) {
@@ -168,7 +168,7 @@ class Style extends domkit.CssStyle {
 			var curFile = {
 				name: r.entry.name,
 				txt: txt,
-				#if (format >= version("3.7.1"))
+				#if (format >= version("3.8.0"))
 				sourceMap: getSourceMapFor(r),
 				#end
 			};
@@ -520,7 +520,7 @@ class Style extends domkit.CssStyle {
 					files.push({
 						name: vs.pos.file,
 						txt: txt,
-						#if (format >= version("3.7.1"))
+						#if (format >= version("3.8.0"))
 						sourceMap: getSourceMapFor(r),
 						#end
 					});
