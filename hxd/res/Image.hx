@@ -559,7 +559,7 @@ class Image extends Resource {
 		}
 
 		function load() {
-			if ((enableAsyncLoading || tex.flags.has(AsyncLoading)) && asyncData == null && ASYNC_LOADER.isSupported(this))
+			if ((enableAsyncLoading || tex.flags.has(AsyncLoading)) && asyncData == null && ASYNC_LOADER != null && ASYNC_LOADER.isSupported(this))
 				@:privateAccess {
 				tex.dispose();
 				tex.format = RGBA;
