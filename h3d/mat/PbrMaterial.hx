@@ -92,6 +92,7 @@ typedef PbrProps = {
 
 	@:optional var drawOrder : String;
 	@:optional var depthPrepass : Bool;
+	@:optional var flipBackFaceNormal : Bool;
 }
 
 class PbrMaterial extends Material {
@@ -238,6 +239,8 @@ class PbrMaterial extends Material {
 		 	Reflect.deleteField(props, "depthWrite");
 		if ( !props.depthPrepass )
 			Reflect.deleteField(props, "depthPrepass");
+		if ( !props.flipBackFaceNormal )
+			Reflect.deleteField(props, "flipBackFaceNormal");
 		if ( props.parallaxSteps == h3d.shader.Parallax.MAX_LAYERS || props.parallaxSteps == 0 )
 			Reflect.deleteField(props, "parallaxSteps");
 		#end
@@ -422,6 +425,12 @@ class PbrMaterial extends Material {
 				p.setBlendMode(None);
 			}
 		}
+
+		var sh = mainPass.getShader(h3d.shader.FlipBackFaceNormal);
+		if ( props.flipBackFaceNormal && sh == null )
+			mainPass.addShader(new h3d.shader.FlipBackFaceNormal());
+		else if ( !props.flipBackFaceNormal && sh != null )
+			mainPass.removeShader(sh); 
 	}
 
 	function setColorMask() {
@@ -606,6 +615,7 @@ class PbrMaterial extends Material {
 					</select>
 				</dd>
 				<dt>Depth prepass</dt><dd><input type="checkbox" field="depthPrepass"/></dd>
+				<dt>Flip back face normal</dt><dd><input type="checkbox" field="flipBackFaceNormal"/></dd>
 			</dl>
 		');
 	}
