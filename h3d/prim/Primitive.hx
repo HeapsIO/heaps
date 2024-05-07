@@ -16,6 +16,13 @@ class Primitive {
 	**/
 	public var indexes : Indexes;
 
+	#if editor
+	/**
+		Allow user to force a specific lod index. If set to -1, forced lod will be ignored.
+	**/
+	public var forcedLod : Int = -1;
+	#end
+
 	/**
 		Current amount of references to this Primitive.
 		Use `incref` and `decref` methods to affect this value. If it reaches 0, it will be atuomatically disposed.
