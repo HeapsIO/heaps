@@ -323,17 +323,6 @@ class LightBuffer {
 			var cascadeShadow = cast(cascadeLight.shadows, CascadeShadowMap);
 			var shadowMaps = cascadeShadow.getShadowTextures();
 			s.CASCADE_COUNT = cascadeShadow.cascade;
-			var bias = [];
-			for ( index in 0...cascadeShadow.cascade ) {
-				s.cascadeShadowMaps[index] = shadowMaps[index];
-				var mat = cascadeShadow.getCascadeProj(cascadeShadow.cascade - 1 - index);
-				var i = offset + 8 + index * 12;
-				fillFloats(lightInfos, mat._11, mat._21, mat._31, mat._41, i);
-				fillFloats(lightInfos, mat._12, mat._22, mat._32, mat._42, i+4);
-				fillFloats(lightInfos, mat._13, mat._23, mat._33, mat._43, i+8);
-				bias.push(cascadeShadow.params[index].bias);
-			}
-			fillFloats(lightInfos, bias[0], bias[1], bias[2], bias[3], offset + 8 + MAX_CASCADE_COUNT * 12);
 		}
 
 		s.dirLightCount = dirLights.length;

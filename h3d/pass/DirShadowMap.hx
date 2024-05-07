@@ -390,13 +390,19 @@ class DirShadowMap extends Shadows {
 			return;
 		g.clear();
 
-		drawBounds(lightCamera, 0xffffff);
+		drawBounds(lightCamera.getInverseViewProj(), 0xffffff);
 	}
 
-	function drawBounds(camera : h3d.Camera, color : Int) {
+	function drawBounds(invViewModel : h3d.Matrix, color : Int) {
 
-		var nearPlaneCorner = [camera.unproject(-1, 1, 0), camera.unproject(1, 1, 0), camera.unproject(1, -1, 0), camera.unproject(-1, -1, 0)];
-		var farPlaneCorner = [camera.unproject(-1, 1, 1), camera.unproject(1, 1, 1), camera.unproject(1, -1, 1), camera.unproject(-1, -1, 1)];
+		inline function unproject(screenX, screenY, camZ) {
+			var p = new h3d.Vector(screenX, screenY, camZ);
+			p.project(invViewModel);
+			return p;
+		}
+
+		var nearPlaneCorner = [unproject(-1, 1, 0), unproject(1, 1, 0), unproject(1, -1, 0), unproject(-1, -1, 0)];
+		var farPlaneCorner = [unproject(-1, 1, 1), unproject(1, 1, 1), unproject(1, -1, 1), unproject(-1, -1, 1)];
 
 		g.lineStyle(1, color);
 
