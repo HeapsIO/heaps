@@ -54,14 +54,13 @@ class CascadeShadowMap extends DirShadowMap {
 	}
 
 	function computeNearFar( i : Int ) {
-		var min = minDist < 0.0 ? ctx.camera.zNear : minDist;
+		if ( i == 0 )
+			return {near : 0.0, far : firstCascadeSize};
+
 		var max = maxDist < 0.0 ? ctx.camera.zFar : maxDist;
-		if ( i == 0 ) {
-			return {near : min, far : min + firstCascadeSize};
-		}
-		var step = (max - min - firstCascadeSize) / (cascade - 1);
-		var near = min + firstCascadeSize + hxd.Math.pow((i - 1) / (cascade - 1), pow) * step;
-		var far = min + firstCascadeSize + hxd.Math.pow(i / (cascade - 1), pow) * step;
+		var step = (max - firstCascadeSize) / (cascade - 1);
+		var near = firstCascadeSize + hxd.Math.pow((i - 1) / (cascade - 1), pow) * step;
+		var far = firstCascadeSize + hxd.Math.pow(i / (cascade - 1), pow) * step;
 		return {near : near, far : far};
 	}
 
@@ -127,6 +126,7 @@ class CascadeShadowMap extends DirShadowMap {
 			proj._11 = 2 * invD;
 			proj._22 = 2 * invD;
 			proj._33 = 1 / (cascadeBounds.zMax - cascadeBounds.zMin);
+			proj._34 = -0.00000190734; // 2^-19 depth offset;
 			proj._44 = 1;
 
 			lightCameras[i].viewProj.multiply(view, proj);
