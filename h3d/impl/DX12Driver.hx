@@ -1025,7 +1025,7 @@ class DX12Driver extends h3d.impl.Driver {
 		return vsSource+"\n\n\n\n"+psSource;
 	}
 
-	function stringifyRootSignature( sign : RootSignatureDesc, name : String, params : hl.CArray<RootParameterConstants>, paramsCount : Int ) : String {
+	function stringifyRootSignature( sign : RootSignatureDesc, name : String, params : hl.CArray<RootParameterDescriptorTable>, paramsCount : Int ) : String {
 		var s = '#define ${name} "RootFlags(';
 		if ( sign.flags.toInt() == 0 )
 			s += '0'; // no flags
@@ -1044,12 +1044,13 @@ class DX12Driver extends h3d.impl.Driver {
 			var param = params[i];
 			var vis = "SHADER_VISIBILITY_"+switch( param.shaderVisibility ) { case VERTEX: "VERTEX"; case PIXEL: "PIXEL"; default: "ALL"; };
 			if ( param.parameterType == CONSTANTS ) {
-				var shaderRegister = param.shaderRegister;
-				s += 'RootConstants(num32BitConstants=${param.num32BitValues},b${shaderRegister}, visibility=${vis}),';
+				var p = unsafeCastTo(param, RootParameterConstants);
+				var shaderRegister = p.shaderRegister;
+				s += 'RootConstants(num32BitConstants=${p.num32BitValues},b${shaderRegister}, visibility=${vis}),';
 			} else {
 				try {
-					var p = unsafeCastTo(param, RootParameterDescriptorTable);
-					if( p == null || p.descriptorRanges == null ) continue;
+					var p = param;
+					if( p.descriptorRanges == null ) continue;
 					var descRange = p.descriptorRanges[0];
 					var baseShaderRegister = descRange.baseShaderRegister;
 					switch ( descRange.rangeType) {
@@ -1086,14 +1087,14 @@ class DX12Driver extends h3d.impl.Driver {
 
 	function computeRootSignature( shader : hxsl.RuntimeShader ) {
 		var allocatedParams = 16;
-		var params = hl.CArray.alloc(RootParameterConstants,allocatedParams);
+		var params = hl.CArray.alloc(RootParameterDescriptorTable,allocatedParams);
 		var paramsCount = 0, regCount = 0;
 		var texDescs = [];
 		var vertexParamsCBV = false;
 		var fragmentParamsCBV = false;
 
 		function allocDescTable(vis) {
-			var p = unsafeCastTo(params[paramsCount++], RootParameterDescriptorTable);
+			var p = params[paramsCount++];
 			p.parameterType = DESCRIPTOR_TABLE;
 			p.numDescriptorRanges = 1;
 			var rangeArr = hl.CArray.alloc(DescriptorRange,1);
@@ -1119,7 +1120,7 @@ class DX12Driver extends h3d.impl.Driver {
 			}
 
 			var pid = paramsCount++;
-			var p = params[pid];
+			var p = unsafeCastTo(params[pid], RootParameterConstants);
 			p.parameterType = CONSTANTS;
 			p.shaderRegister = reg;
 			p.shaderVisibility = vis;
