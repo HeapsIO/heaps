@@ -18,6 +18,7 @@ private class VarProps {
 class Splitter {
 
 	var vars : Map<Int,VarProps>;
+	var avars : Array<VarProps>;
 	var varNames : Map<String,TVar>;
 	var varMap : Map<TVar,TVar>;
 
@@ -25,8 +26,8 @@ class Splitter {
 	}
 
 	public function split( s : ShaderData ) : Array<ShaderData> {
-		var vfun = null, vvars = new Map();
-		var ffun = null, fvars = new Map();
+		var vfun = null, vvars = new Map(), avvars = [];
+		var ffun = null, fvars = new Map(), afvars = [];
 		var isCompute = false;
 		varNames = new Map();
 		varMap = new Map();
@@ -34,11 +35,13 @@ class Splitter {
 			switch( f.kind ) {
 			case Vertex, Main:
 				vars = vvars;
+				avars = avvars;
 				vfun = f;
 				checkExpr(f.expr);
 				if( f.kind == Main ) isCompute = true;
 			case Fragment:
 				vars = fvars;
+				avars = afvars;
 				ffun = f;
 				checkExpr(f.expr);
 			default:
@@ -46,7 +49,9 @@ class Splitter {
 			}
 
 		var vafterMap = [];
-		for( inf in Lambda.array(vvars) ) {
+		var length = avvars.length;
+		for( i in 0...length ) {
+			var inf = avvars[i];
 			var v = inf.v;
 			if( inf.local ) continue;
 			switch( v.kind ) {
@@ -97,7 +102,7 @@ class Splitter {
 
 		var finits = [];
 		var todo = [];
-		for( inf in fvars ) {
+		for( inf in afvars ) {
 			var v = inf.v;
 			switch( v.kind ) {
 			case Input:
@@ -168,8 +173,14 @@ class Splitter {
 		var fvars = [for( v in fvars ) if( !v.local ) v];
 		// make sure we sort the inputs the same way they were sent in
 		inline function getId(v:VarProps) return v.origin == null ? v.v.id : v.origin.id;
-		vvars.sort(function(v1, v2) return getId(v1) - getId(v2));
-		fvars.sort(function(v1, v2) return getId(v1) - getId(v2));
+		inline function compare(v1:VarProps, v2:VarProps) {
+			var result = getId(v1) - getId(v2);
+			if ( result != 0 )
+				return result;
+			return v1.v.id - v2.v.id;
+		}
+		vvars.sort(function(v1, v2) return compare(v1, v2));
+		fvars.sort(function(v1, v2) return compare(v1, v2));
 
 		return isCompute ? [
 			{
@@ -253,6 +264,7 @@ class Splitter {
 			i = new VarProps(nv);
 			i.origin = v;
 			vars.set(v.id, i);
+			avars.push(i);
 		}
 		return i;
 	}
