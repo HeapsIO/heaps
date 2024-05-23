@@ -627,6 +627,7 @@ class DX12Driver extends h3d.impl.Driver {
 			tmp.resourcesToTransition.resize(tmp.maxBarriers);
 		}
 
+		// If state is different from targetState, a barrier has already been requested so we just have to udpate the targetState
 		if (res.state == res.targetState)
 			tmp.resourcesToTransition[tmp.barrierCount++] = res;
 		res.targetState = to;
@@ -1396,6 +1397,7 @@ class DX12Driver extends h3d.impl.Driver {
 	override function allocInstanceBuffer(b:InstanceBuffer, bytes:haxe.io.Bytes) {
 		var dataSize = b.commandCount * 5 * 4;
 		var buf = new VertexBufferData();
+		buf.state = buf.targetState = COPY_DEST;
 		buf.res = allocGPU(dataSize, DEFAULT, COMMON);
 		var tmpBuf = allocDynamicBuffer(bytes, dataSize);
 		frame.commandList.copyBufferRegion(buf.res, 0, tmpBuf, 0, dataSize);
