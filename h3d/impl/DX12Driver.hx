@@ -627,7 +627,7 @@ class DX12Driver extends h3d.impl.Driver {
 			tmp.resourcesToTransition.resize(tmp.maxBarriers);
 		}
 
-		// If state is different from targetState, a barrier has already been requested so we just have to udpate the targetState
+		// If state is different from targetState, a barrier has already been requested so we just have to update the targetState
 		if (res.state == res.targetState)
 			tmp.resourcesToTransition[tmp.barrierCount++] = res;
 		res.targetState = to;
