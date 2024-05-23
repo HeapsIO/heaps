@@ -363,6 +363,10 @@ class CustomParser extends domkit.CssValue.ValueParser {
 		}
 	}
 
+	public function transitionVisible(col1: Bool, col2: Bool, t: Float) : Bool {
+		return t < 1 ? col1 : col2;
+	}
+
 	public function transitionColorAdjust(col1: h3d.Matrix.ColorAdjust, col2: h3d.Matrix.ColorAdjust, t: Float) {
 		inline function defaultValues(col: h3d.Matrix.ColorAdjust) {
 			var c : h3d.Matrix.ColorAdjust = { saturation: 0, lightness: 0,	hue: 0,	contrast: 0, gain: { color: 0, alpha: 0 } };
@@ -434,7 +438,7 @@ class ObjectComp implements h2d.domkit.Object implements domkit.Component.Compon
 	@:p var y : Float;
 	@:p var alpha : Float = 1;
 	@:p var rotation : Float;
-	@:p var visible : Bool = true;
+	@:p @:t(visible) var visible : Bool = true;
 	@:p(scale) var scale : { x : Float, y : Float };
 	@:p var scaleX : Float = 1;
 	@:p var scaleY : Float = 1;
