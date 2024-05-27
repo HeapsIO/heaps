@@ -1707,6 +1707,7 @@ class GlDriver extends Driver {
 			gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0, tex.flags.has(Cube) ? CUBE_FACES[layer] : GL.TEXTURE_2D, tex.t.t, mipLevel);
 
 		setPolygonOffset( tex.depthBuffer );
+		setDepthClamp( tex.depthBuffer );
 
 		if( tex.depthBuffer != null && depthBinding != NotBound ) {
 			// Depthbuffer and stencilbuffer are combined in one buffer, created with GL.DEPTH_STENCIL
@@ -1786,6 +1787,7 @@ class GlDriver extends Driver {
 		gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0, GL.TEXTURE_2D, null, 0);
 
 		setPolygonOffset( depthBuffer );
+		setDepthClamp( depthBuffer );
 
 		if(depthBuffer.hasStencil() && depthBuffer.format == Depth24Stencil8) {
 			gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.DEPTH_STENCIL_ATTACHMENT, GL.TEXTURE_2D,@:privateAccess depthBuffer.t.t, 0);
@@ -1822,6 +1824,15 @@ class GlDriver extends Driver {
 		}
 		else
 			gl.disable(GL.POLYGON_OFFSET_FILL);
+	}
+
+	function setDepthClamp( dephTexture : h3d.mat.Texture ) {
+		#if !js
+		if ( dephTexture != null && dephTexture.depthClamp )
+			gl.enable(GL.DEPTH_CLAMP);
+		else
+			gl.disable(GL.DEPTH_CLAMP);
+		#end
 	}
 
 	override function init( onCreate : Bool -> Void, forceSoftware = false ) {

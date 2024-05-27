@@ -44,6 +44,7 @@ class Texture {
 	public var mipLevels(get, never) : Int;
 	public var depthBias : Float = 0.;
 	public var slopeScaledBias : Float = 0.;
+	public var depthClamp : Bool = false;
 	var customMipLevels : Int;
 
 	/**

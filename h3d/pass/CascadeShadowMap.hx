@@ -74,26 +74,28 @@ class CascadeShadowMap extends DirShadowMap {
 			var cascadeBounds = lightCameras[i].orthoBounds;
 			cascadeBounds.empty();
 
-			inline function addCorner(x : Float, y : Float, d : Float, i : Int) {
-				var pt = tmpCorners[i];
+			inline function computeCorner(x : Float, y : Float, d : Float, pt : h3d.Vector) {
 				pt.set( x * (d * sInvG), y * ( d * invG ), d );
+			}
+			inline function computeCorners(d, i) {
+				computeCorner(-1.0, -1.0, d, tmpCorners[i]);
+				computeCorner(-1.0,  1.0, d, tmpCorners[i + 1]);
+				computeCorner( 1.0, -1.0, d, tmpCorners[i + 2]);
+				computeCorner( 1.0,  1.0, d, tmpCorners[i + 3]);
+			}
+
+			var nearFar = computeNearFar(i);
+			computeCorners(nearFar.near, 0);
+			computeCorners(nearFar.far, 4);
+
+			var d = hxd.Math.ceil( hxd.Math.max( tmpCorners[0].distance(tmpCorners[7]), tmpCorners[4].distance(tmpCorners[7]) ) );
+
+			for ( pt in tmpCorners ) {
 				pt.transform( invCamera );
 				pt.transform( lightCamera.mcam );
 				cascadeBounds.addPos(pt.x, pt.y, pt.z);
 			}
-			inline function addCorners(d, i) {
-				addCorner(-1.0, -1.0, d, i);
-				addCorner(-1.0,  1.0, d, i + 1);
-				addCorner( 1.0, -1.0, d, i + 2);
-				addCorner( 1.0,  1.0, d, i + 3);
-			}
 
-			var nearFar = computeNearFar(i);
-			addCorners(nearFar.near, 0);
-			addCorners(nearFar.far, 4);
-			cascadeBounds.zMin = cascadeBounds.zMax - maxDist;
-
-			var d = hxd.Math.ceil( hxd.Math.max( tmpCorners[0].distance(tmpCorners[7]), tmpCorners[4].distance(tmpCorners[7]) ) );
 			var t = d / size;
 			var t2 = t * 2.0;
 			var lightPos = new h3d.Vector(
@@ -225,6 +227,7 @@ class CascadeShadowMap extends DirShadowMap {
 			var param = params[cascade - 1 - i];
 			texture.depthBias = (param != null) ? param.depthBias : 0;
 			texture.slopeScaledBias = (param != null) ? param.slopeBias : 0;
+			texture.depthClamp = true;
 
 			var lc = lightCameras[i];
 			var dimension = Math.max(lc.orthoBounds.xMax - lc.orthoBounds.xMin,	lc.orthoBounds.yMax - lc.orthoBounds.yMin);
@@ -234,6 +237,7 @@ class CascadeShadowMap extends DirShadowMap {
 				dimension = 0.0;
 			var p = passes.save();
 			tmpFrustum.loadMatrix(lc.viewProj);
+			tmpFrustum.checkNearFar = false;
 			if ( dimension > 0.0 )
 				cullPassesSize(passes, tmpFrustum, dimension);
 			else

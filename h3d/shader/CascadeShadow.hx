@@ -13,7 +13,7 @@ class CascadeShadow extends DirShadow {
 		@param var cascadeDebugs : Array<Vec4, CASCADE_COUNT>;
 
 		function inside(pos : Vec3) : Bool {
-			if ( abs(pos.x) < 1.0 && abs(pos.y) < 1.0 && abs(pos.z) < 1.0 ) {
+			if ( abs(pos.x) < 1.0 && abs(pos.y) < 1.0 && ( pos.z < 1.0 && pos.z > 0.0 ) ) {
 				return true;
 			} else {
 				return false;

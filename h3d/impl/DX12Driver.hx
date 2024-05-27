@@ -310,7 +310,8 @@ class DX12Driver extends h3d.impl.Driver {
 	static inline var PSIGN_COLOR_MASK = PSIGN_MATID + 4;
 	static inline var PSIGN_DEPTH_BIAS = PSIGN_COLOR_MASK + 4;
 	static inline var PSIGN_SLOPE_SCALED_DEPTH_BIAS = PSIGN_DEPTH_BIAS + 4;
-	static inline var PSIGN_STENCIL_MASK = PSIGN_SLOPE_SCALED_DEPTH_BIAS + 4;
+	static inline var PSIGN_DEPTH_CLIP = PSIGN_SLOPE_SCALED_DEPTH_BIAS + 4;
+	static inline var PSIGN_STENCIL_MASK = PSIGN_DEPTH_CLIP + 1;
 	static inline var PSIGN_STENCIL_OPS = PSIGN_STENCIL_MASK + 2;
 	static inline var PSIGN_RENDER_TARGETS = PSIGN_STENCIL_OPS + 4;
 	static inline var PSIGN_DEPTH_TARGET_FORMAT = PSIGN_RENDER_TARGETS + 1;
@@ -800,6 +801,7 @@ class DX12Driver extends h3d.impl.Driver {
 		pipelineSignature.setI32(PSIGN_DEPTH_TARGET_FORMAT, depthFormat.toInt());
 		pipelineSignature.setI32(PSIGN_DEPTH_BIAS, depthBufferIsNotNull ? Std.int(tex.depthBuffer.depthBias) : 0);
 		pipelineSignature.setF32(PSIGN_SLOPE_SCALED_DEPTH_BIAS, depthBufferIsNotNull ? tex.depthBuffer.slopeScaledBias : 0);
+		pipelineSignature.setUI8(PSIGN_DEPTH_CLIP, depthBufferIsNotNull ? ( tex.depthBuffer.depthClamp ? 0 : 1 ) : 1 );
 		needPipelineFlush = true;
 	}
 
@@ -858,6 +860,7 @@ class DX12Driver extends h3d.impl.Driver {
 		pipelineSignature.setI32(PSIGN_DEPTH_TARGET_FORMAT, depthFormat.toInt());
 		pipelineSignature.setI32(PSIGN_DEPTH_BIAS, depthEnabled && depthBufferIsNotNull ? Std.int(t0.depthBuffer.depthBias) : 0);
 		pipelineSignature.setF32(PSIGN_SLOPE_SCALED_DEPTH_BIAS, depthEnabled && depthBufferIsNotNull ? cast(t0.depthBuffer.slopeScaledBias) : 0);
+		pipelineSignature.setUI8(PSIGN_DEPTH_CLIP, depthEnabled && depthBufferIsNotNull ? ( t0.depthBuffer.depthClamp ? 0 : 1 ) : 1 );
 
 		needPipelineFlush = true;
 	}
@@ -877,6 +880,7 @@ class DX12Driver extends h3d.impl.Driver {
 		pipelineSignature.setI32(PSIGN_DEPTH_TARGET_FORMAT, depthFormat.toInt());
 		pipelineSignature.setI32(PSIGN_DEPTH_BIAS, ( depthEnabled && (depthBuffer != null) ) ? Std.int(depthBuffer.depthBias) : 0);
 		pipelineSignature.setF32(PSIGN_SLOPE_SCALED_DEPTH_BIAS, ( depthEnabled && (depthBuffer != null) ) ? depthBuffer.slopeScaledBias : 0);
+		pipelineSignature.setUI8(PSIGN_DEPTH_CLIP, ( depthEnabled && (depthBuffer != null) ) ? ( depthBuffer.depthClamp ? 0 : 1 ) : 1 );
 		needPipelineFlush = true;
 	}
 
@@ -2110,6 +2114,7 @@ class DX12Driver extends h3d.impl.Driver {
 		var colorMask = pipelineSignature.getUI8(PSIGN_COLOR_MASK);
 		var depthBias = pipelineSignature.getI32(PSIGN_DEPTH_BIAS);
 		var slopeScaledDepthBias = pipelineSignature.getF32(PSIGN_SLOPE_SCALED_DEPTH_BIAS);
+		var depthClip = pipelineSignature.getUI8(PSIGN_DEPTH_CLIP) > 0;
 		var stencilMask = pipelineSignature.getUI16(PSIGN_STENCIL_MASK);
 		var stencilOp = pipelineSignature.getI32(PSIGN_STENCIL_OPS);
 
@@ -2133,6 +2138,7 @@ class DX12Driver extends h3d.impl.Driver {
 		p.rasterizerState.fillMode = wire == 0 ? SOLID : WIREFRAME;
 		p.rasterizerState.depthBias = depthBias;
 		p.rasterizerState.slopeScaledDepthBias = slopeScaledDepthBias;
+		p.rasterizerState.depthClipEnable = depthClip;
 		p.depthStencilDesc.depthEnable = cmp != 0;
 		p.depthStencilDesc.depthWriteMask = dw == 0 || !depthEnabled ? ZERO : ALL;
 		p.depthStencilDesc.depthFunc = COMP[cmp];
