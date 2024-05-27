@@ -66,7 +66,7 @@ class CascadeShadowMap extends DirShadowMap {
 
 	public function calcCascadeMatrices() {
 		var invCamera = ctx.camera.getInverseView();
-		var invG = hxd.Math.tan(ctx.camera.fovY / 2.0);
+		var invG = hxd.Math.tan(hxd.Math.degToRad( ctx.camera.fovY ) / 2.0);
 		var sInvG = ctx.camera.screenRatio * invG;
 		var invLight = lightCamera.getInverseView();
 
