@@ -272,6 +272,11 @@ class Dce {
 			if( !loop.hasSideEffect() )
 				return { e : TConst(CNull), t : e.t, p : e.p };
 			return { e : TFor(v, it, loop), p : e.p, t : e.t };
+		case TMeta(m, args, em):
+			var em = mapExpr(em, isVar);
+			if( !isVar && !em.hasSideEffect() )
+				return { e : TConst(CNull), t : e.t, p : e.p };
+			return { e : TMeta(m, args, em), t : e.t, p : e.p };
 		default:
 			return e.map(function(e) return mapExpr(e,true));
 		}
