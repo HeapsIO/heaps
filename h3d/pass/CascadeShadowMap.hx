@@ -7,12 +7,15 @@ typedef CascadeParams = {
 
 typedef CascadeCamera = {
 	var viewProj : h3d.Matrix;
+	var scale : h3d.Vector4;
+	var offset : h3d.Vector4;
 	var orthoBounds : h3d.col.Bounds;
 }
 
 class CascadeShadowMap extends DirShadowMap {
 
 	var cshader : h3d.shader.CascadeShadow;
+	var cascadeViewProj = new h3d.Matrix();
 	var lightCameras : Array<CascadeCamera> = [];
 	var currentCascadeIndex = 0;
 	var tmpCorners : Array<h3d.Vector> = [for (i in 0...8) new h3d.Vector()];
@@ -26,13 +29,14 @@ class CascadeShadowMap extends DirShadowMap {
 	public var minPixelRatio : Float = 0.05;
 	public var firstCascadeSize : Float = 10.0;
 	public var castingMaxDist : Float = 0.0;
+	public var transitionFraction : Float = 0.15;
 	public var cascade(default, set) = 1;
 	public var highPrecision : Bool = false;
 	public function set_cascade(v) {
 		cascade = v;
 		lightCameras = [];
 		for ( i in 0...cascade )
-			lightCameras.push({ viewProj : new h3d.Matrix(), orthoBounds : new h3d.col.Bounds() });
+			lightCameras.push({ viewProj : new h3d.Matrix(), scale : new h3d.Vector4(), offset : new h3d.Vector4(), orthoBounds : new h3d.col.Bounds() });
 		return cascade;
 	}
 	public var debugShader : Bool = false;
@@ -53,14 +57,15 @@ class CascadeShadowMap extends DirShadowMap {
 		return cshader.cascadeShadowMaps;
 	}
 
-	function computeNearFar( i : Int ) {
-		if ( i == 0 )
-			return {near : 0.0, far : firstCascadeSize};
-
+	function computeNearFar( i : Int, previousFar : Float ) {
 		var max = maxDist < 0.0 ? ctx.camera.zFar : maxDist;
 		var step = (max - firstCascadeSize) / (cascade - 1);
-		var near = firstCascadeSize + hxd.Math.pow((i - 1) / (cascade - 1), pow) * step;
-		var far = firstCascadeSize + hxd.Math.pow(i / (cascade - 1), pow) * step;
+		var near = ( i == 0 ) ? 0.0 : previousFar - previousFar * transitionFraction;
+		var far = ( i == 0 ) ? firstCascadeSize : firstCascadeSize + hxd.Math.pow(i / (cascade - 1), pow) * step;
+
+		// Not related to scale but let's pack it here to save memory
+		lightCameras[i].scale.w = far;
+
 		return {near : near, far : far};
 	}
 
@@ -69,65 +74,122 @@ class CascadeShadowMap extends DirShadowMap {
 		var invG = hxd.Math.tan(hxd.Math.degToRad( ctx.camera.fovY ) / 2.0);
 		var sInvG = ctx.camera.screenRatio * invG;
 		var invLight = lightCamera.getInverseView();
+		var camToLight = invCamera.multiplied( lightCamera.mcam );
 
-		for ( i in 0...cascade ) {
-			var cascadeBounds = lightCameras[i].orthoBounds;
-			cascadeBounds.empty();
+		inline function computeLightPos( bounds : h3d.col.Bounds, d : Float ) {
+			var t = d / size;
+			var t2 = t * 2.0;
+			return new h3d.Vector(
+				hxd.Math.floor((bounds.xMax + bounds.xMin) / t2) * t,
+				hxd.Math.floor((bounds.yMax + bounds.yMin) / t2) * t,
+				bounds.zMin
+			);
+		}
 
-			inline function computeCorner(x : Float, y : Float, d : Float, pt : h3d.Vector) {
-				pt.set( x * (d * sInvG), y * ( d * invG ), d );
+		inline function computeCorner(x : Float, y : Float, d : Float, pt : h3d.Vector) {
+			pt.set( x * (d * sInvG), y * ( d * invG ), d );
+		}
+
+		inline function computeCorners(d, i) {
+			computeCorner(-1.0, -1.0, d, tmpCorners[i]);
+			computeCorner(-1.0,  1.0, d, tmpCorners[i + 1]);
+			computeCorner( 1.0, -1.0, d, tmpCorners[i + 2]);
+			computeCorner( 1.0,  1.0, d, tmpCorners[i + 3]);
+		}
+
+		inline function computeBounds( bounds : h3d.col.Bounds ) {
+			bounds.empty();
+			for ( pt in tmpCorners ) {
+				pt.transform( camToLight );
+				bounds.addPos(pt.x, pt.y, pt.z);
 			}
-			inline function computeCorners(d, i) {
-				computeCorner(-1.0, -1.0, d, tmpCorners[i]);
-				computeCorner(-1.0,  1.0, d, tmpCorners[i + 1]);
-				computeCorner( 1.0, -1.0, d, tmpCorners[i + 2]);
-				computeCorner( 1.0,  1.0, d, tmpCorners[i + 3]);
-			}
+		}
 
-			var nearFar = computeNearFar(i);
+		var nearFar = computeNearFar(0, 0);
+		computeCorners(nearFar.near, 0);
+		computeCorners(nearFar.far, 4);
+
+		var d0 = hxd.Math.ceil( hxd.Math.max( tmpCorners[0].distance(tmpCorners[7]), tmpCorners[4].distance(tmpCorners[7]) ) );
+		var cascadeBounds0 = lightCameras[0].orthoBounds;
+		computeBounds( cascadeBounds0 );
+		var lightPos0 = computeLightPos(cascadeBounds0, d0);
+
+		var view = tmpView;
+		view._11 = invLight._11;
+		view._12 = invLight._21;
+		view._13 = invLight._31;
+		view._14 = 0;
+		view._21 = invLight._12;
+		view._22 = invLight._22;
+		view._23 = invLight._32;
+		view._24 = 0;
+		view._31 = invLight._13;
+		view._32 = invLight._23;
+		view._33 = invLight._33;
+		view._34 = 0;
+		view._41 = -lightPos0.x;
+		view._42 = -lightPos0.y;
+		view._43 = -lightPos0.z;
+		view._44 = 1;
+
+		var invD0 = 1 / d0;
+		var zDist0 = cascadeBounds0.zMax - cascadeBounds0.zMin;
+
+		var proj = tmpProj;
+		proj.zero();
+		proj._11 = invD0;
+		proj._22 = invD0;
+		proj._33 = 1 / (zDist0);
+		proj._34 = -0.00000190734; // 2^-19 depth offset;
+		proj._41 = 0.5;
+		proj._42 = 0.5;
+		proj._44 = 1;
+
+		cascadeViewProj.multiply(view, proj);
+
+		var invD02 = 2.0 * invD0;
+		proj._11 = invD02;
+		proj._22 = invD02;
+		proj._41 = 0;
+		proj._42 = 0;
+
+		lightCameras[0].viewProj.multiply(view, proj);
+
+		for ( i in 1...cascade ) {
+			nearFar = computeNearFar(i, nearFar.far);
 			computeCorners(nearFar.near, 0);
 			computeCorners(nearFar.far, 4);
 
 			var d = hxd.Math.ceil( hxd.Math.max( tmpCorners[0].distance(tmpCorners[7]), tmpCorners[4].distance(tmpCorners[7]) ) );
+			var cascadeBounds = lightCameras[i].orthoBounds;
+			computeBounds( cascadeBounds );
+			var lightPos = computeLightPos(cascadeBounds, d);
 
-			for ( pt in tmpCorners ) {
-				pt.transform( invCamera );
-				pt.transform( lightCamera.mcam );
-				cascadeBounds.addPos(pt.x, pt.y, pt.z);
-			}
+			var invD = 1 / d;
+			var d0InvD = d0 * invD;
+			var zDist = ( cascadeBounds.zMax - cascadeBounds.zMin );
+			var invZDist = 1 / zDist;
+			var halfMinusD0Inv2D = 0.5 - ( d0 / ( 2 * d ) );
 
-			var t = d / size;
-			var t2 = t * 2.0;
-			var lightPos = new h3d.Vector(
-				hxd.Math.floor((cascadeBounds.xMax + cascadeBounds.xMin) / t2) * t,
-				hxd.Math.floor((cascadeBounds.yMax + cascadeBounds.yMin) / t2) * t,
-				cascadeBounds.zMin
-			);
+			lightCameras[i].scale.x = d0InvD;
+			lightCameras[i].scale.y = d0InvD;
+			lightCameras[i].scale.z = zDist0 * invZDist;
+
+			lightCameras[i].offset.x = ( lightPos0.x - lightPos.x ) * invD + halfMinusD0Inv2D;
+			lightCameras[i].offset.y = ( lightPos0.y - lightPos.y ) * invD + halfMinusD0Inv2D;
+			lightCameras[i].offset.z = ( lightPos0.z - lightPos.z ) * invZDist;
 
 			var view = tmpView;
-			view._11 = invLight._11;
-			view._12 = invLight._21;
-			view._13 = invLight._31;
-			view._14 = 0;
-			view._21 = invLight._12;
-			view._22 = invLight._22;
-			view._23 = invLight._32;
-			view._24 = 0;
-			view._31 = invLight._13;
-			view._32 = invLight._23;
-			view._33 = invLight._33;
-			view._34 = 0;
 			view._41 = -lightPos.x;
 			view._42 = -lightPos.y;
 			view._43 = -lightPos.z;
-			view._44 = 1;
 
 			var proj = tmpProj;
 			proj.zero();
-			var invD = 1 / d;
-			proj._11 = 2 * invD;
-			proj._22 = 2 * invD;
-			proj._33 = 1 / (cascadeBounds.zMax - cascadeBounds.zMin);
+			var invD2 = 2.0 * invD;
+			proj._11 = invD2;
+			proj._22 = invD2;
+			proj._33 = invZDist;
 			proj._34 = -0.00000190734; // 2^-19 depth offset;
 			proj._44 = 1;
 
@@ -142,14 +204,17 @@ class CascadeShadowMap extends DirShadowMap {
 
 	function syncCascadeShader(textures : Array<h3d.mat.Texture>) {
 		cshader.DEBUG = debugShader;
+		cshader.cascadeViewProj = cascadeViewProj;
+		cshader.cascadeTransitionFraction = transitionFraction;
 		for ( i in 0...cascade ) {
-			var c = cascade - 1 - i;
-			cshader.cascadeShadowMaps[c] = textures[i];
-			cshader.cascadeProjs[c] = lightCameras[i].viewProj;
+			cshader.cascadeShadowMaps[i] = textures[i];
+			cshader.cascadeOffsets[i] = lightCameras[i].offset;
+			cshader.cascadeScales[i] = lightCameras[i].scale;
 			if ( debugShader )
-				cshader.cascadeDebugs[c] = h3d.Vector4.fromColor(debugColors[i]);
+				cshader.cascadeDebugs[i] = h3d.Vector4.fromColor(debugColors[i]);
 		}
 		cshader.CASCADE_COUNT = cascade;
+		cshader.BLEND = transitionFraction > 0.0;
 		cshader.shadowBias = bias;
 		cshader.shadowPower = power;
 		cshader.shadowProj = getShadowProj();
