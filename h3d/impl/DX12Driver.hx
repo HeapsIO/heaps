@@ -1596,23 +1596,24 @@ class DX12Driver extends h3d.impl.Driver {
 		// Todo : optimize for video, currently allocating a new tmpBuf every frame.
 		if ( uploadBuffer == null ) {
 			uploadBuffer = t.t.uploadBuffer = new TextureUploadBuffer();
-			uploadBuffer.lastMipMapUploadPerSide = new hl.Bytes(8 * t.layerCount);
+			uploadBuffer.lastMipMapUploadPerSide = new hl.Bytes(4 * t.layerCount);
+			uploadBuffer.lastMipMapUploadPerSide.fill(0, 4 * t.layerCount, 0);
 			frame.tmpBufToNullify.push(t.t);
 			var nbRes = t.mipLevels * t.layerCount;
 			var tmpSize = t.t.res.getRequiredIntermediateSize(0, nbRes).low;
 			uploadBuffer.tmpBuf = allocGPU(tmpSize, UPLOAD, GENERIC_READ);
 			frame.tmpBufToRelease.push(uploadBuffer.tmpBuf);
 		}
-		else if ( uploadBuffer.lastMipMapUploadPerSide.getI32(side) & (1 << mipLevel) != 0 ) {
-			uploadBuffer.lastMipMapUploadPerSide.fill(0, 8 * t.layerCount, 0);
+		else if ( uploadBuffer.lastMipMapUploadPerSide.getI32(4 * side) & (1 << mipLevel) != 0 ) {
+			uploadBuffer.lastMipMapUploadPerSide.fill(0, 4 * t.layerCount, 0);
 			var nbRes = t.mipLevels * t.layerCount;
 			var tmpSize = t.t.res.getRequiredIntermediateSize(0, nbRes).low;
 			uploadBuffer.tmpBuf = allocGPU(tmpSize, UPLOAD, GENERIC_READ);
 			frame.tmpBufToRelease.push(uploadBuffer.tmpBuf);
 		}
 
-		var mipMapMask = uploadBuffer.lastMipMapUploadPerSide.getI32(side);
-		uploadBuffer.lastMipMapUploadPerSide.setI32(side, mipMapMask | (1 << mipLevel));
+		var mipMapMask = uploadBuffer.lastMipMapUploadPerSide.getI32(4 * side);
+		uploadBuffer.lastMipMapUploadPerSide.setI32(4 * side, mipMapMask | (1 << mipLevel));
 
 		var previousSize : hl.BytesAccess<Int64> = new hl.Bytes(8);
 		Driver.getCopyableFootprints(makeTextureDesc(t), 0, subRes, 0, null, null, null, previousSize);
