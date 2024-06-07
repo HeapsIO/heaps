@@ -57,7 +57,7 @@ class HierarchicalWorld extends Object {
 	function createGraphics() {
 		if ( debugGraphics != null )
 			throw "??";
-		var b = objectBounds.clone();
+		var b = logicBounds.clone();
 		b.transform(getAbsPos().getInverse());
 		b.zMin = 0.0;
 		b.zMax = 0.1;
