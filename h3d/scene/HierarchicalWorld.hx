@@ -23,7 +23,8 @@ class HierarchicalWorld extends Object {
 	var loading : Bool = false;
 
 	public var data : WorldData;
-	var bounds : h3d.col.Bounds;
+	var logicBounds : h3d.col.Bounds;
+	var objectBounds : h3d.col.Bounds;
 	var subdivided(default, set) = false;
 	function set_subdivided(v : Bool) {
 		subdivided = v;
@@ -56,7 +57,7 @@ class HierarchicalWorld extends Object {
 	function createGraphics() {
 		if ( debugGraphics != null )
 			throw "??";
-		var b = bounds.clone();
+		var b = objectBounds.clone();
 		b.transform(getAbsPos().getInverse());
 		b.zMin = 0.0;
 		b.zMax = 0.1;
@@ -73,13 +74,16 @@ class HierarchicalWorld extends Object {
 		this.x = data.x;
 		this.y = data.y;
 		calcAbsPos();
-		bounds = new h3d.col.Bounds();
+		logicBounds = new h3d.col.Bounds();
 		// TBD : z bounds? Negative & positive infinity causes debug bounds bugs.
-		// bounds is twice larger than needed so object chunks can be predicted using position and bounds only
 		var pseudoInfinity = 1e10;
-		bounds.addPoint(new h3d.col.Point(-data.size, -data.size, -pseudoInfinity));
-		bounds.addPoint(new h3d.col.Point(data.size,data.size, pseudoInfinity));
-		bounds.transform(absPos);
+		var halfSize = data.size >> 1;
+		logicBounds.addPoint(new h3d.col.Point(-halfSize, -halfSize, -pseudoInfinity));
+		logicBounds.addPoint(new h3d.col.Point(halfSize,halfSize, pseudoInfinity));
+		logicBounds.transform(absPos);
+		// bounds is twice larger than needed so object levels can be predicted using position and bounds only
+		objectBounds = logicBounds.clone();
+		objectBounds.scaleCenter(2.0);
 
 		if ( data.depth == 0 ) {
 			data.root = this;
@@ -167,7 +171,7 @@ class HierarchicalWorld extends Object {
 			debugGraphics = null;
 		}
 
-		culled = !bounds.inFrustum(ctx.camera.frustum);
+		culled = !objectBounds.inFrustum(ctx.camera.frustum);
 		if ( !isLeaf() ) {
 			var close = isClose(ctx);
 			if ( FULL || close ) {
@@ -205,7 +209,7 @@ class HierarchicalWorld extends Object {
 	}
 
 	public function containsAt(x : Float, y : Float) {
-		return bounds.contains(new h3d.col.Point(x, y, 0.0));
+		return logicBounds.contains(new h3d.col.Point(x, y, 0.0));
 	}
 
 	public function requestCreateAt(x : Float, y : Float, lock : Bool) {
