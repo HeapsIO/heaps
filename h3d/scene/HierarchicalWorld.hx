@@ -74,11 +74,11 @@ class HierarchicalWorld extends Object {
 		this.y = data.y;
 		calcAbsPos();
 		bounds = new h3d.col.Bounds();
-		var halfSize = data.size >> 1;
-		// TBD : z bounds? Negative & positive infinity causes bounds to break.
+		// TBD : z bounds? Negative & positive infinity causes debug bounds bugs.
+		// bounds is twice larger than needed so object chunks can be predicted using position and bounds only
 		var pseudoInfinity = 1e10;
-		bounds.addPoint(new h3d.col.Point(-halfSize, -halfSize, -pseudoInfinity));
-		bounds.addPoint(new h3d.col.Point(halfSize,halfSize, pseudoInfinity));
+		bounds.addPoint(new h3d.col.Point(-data.size, -data.size, -pseudoInfinity));
+		bounds.addPoint(new h3d.col.Point(data.size,data.size, pseudoInfinity));
 		bounds.transform(absPos);
 
 		if ( data.depth == 0 ) {
