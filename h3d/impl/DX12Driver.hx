@@ -1599,15 +1599,13 @@ class DX12Driver extends h3d.impl.Driver {
 			uploadBuffer.lastMipMapUploadPerSide = new hl.Bytes(4 * t.layerCount);
 			uploadBuffer.lastMipMapUploadPerSide.fill(0, 4 * t.layerCount, 0);
 			frame.tmpBufToNullify.push(t.t);
-			var nbRes = t.mipLevels * t.layerCount;
-			var tmpSize = t.t.res.getRequiredIntermediateSize(0, nbRes).low;
+			var tmpSize = t.t.res.getRequiredIntermediateSize(0, t.mipLevels).low * t.layerCount;
 			uploadBuffer.tmpBuf = allocGPU(tmpSize, UPLOAD, GENERIC_READ);
 			frame.tmpBufToRelease.push(uploadBuffer.tmpBuf);
 		}
 		else if ( uploadBuffer.lastMipMapUploadPerSide.getI32(4 * side) & (1 << mipLevel) != 0 ) {
 			uploadBuffer.lastMipMapUploadPerSide.fill(0, 4 * t.layerCount, 0);
-			var nbRes = t.mipLevels * t.layerCount;
-			var tmpSize = t.t.res.getRequiredIntermediateSize(0, nbRes).low;
+			var tmpSize = t.t.res.getRequiredIntermediateSize(0, t.mipLevels).low * t.layerCount;
 			uploadBuffer.tmpBuf = allocGPU(tmpSize, UPLOAD, GENERIC_READ);
 			frame.tmpBufToRelease.push(uploadBuffer.tmpBuf);
 		}
@@ -1615,9 +1613,11 @@ class DX12Driver extends h3d.impl.Driver {
 		var mipMapMask = uploadBuffer.lastMipMapUploadPerSide.getI32(4 * side);
 		uploadBuffer.lastMipMapUploadPerSide.setI32(4 * side, mipMapMask | (1 << mipLevel));
 
-		var previousSize : hl.BytesAccess<Int64> = new hl.Bytes(8);
-		Driver.getCopyableFootprints(makeTextureDesc(t), 0, subRes, 0, null, null, null, previousSize);
-		var offsetAligned = ((previousSize[0] + 512 - 1) / 512) * 512;
+		var offset : Int64 = 0;
+		if ( mipLevel != 0 )
+			offset += t.t.res.getRequiredIntermediateSize( 0, mipLevel );
+		if ( side != 0 )
+			offset += t.t.res.getRequiredIntermediateSize( 0, t.mipLevels ) * side;
 
 		var upd = new SubResourceData();
 		var stride = @:privateAccess pixels.stride;
@@ -1631,7 +1631,7 @@ class DX12Driver extends h3d.impl.Driver {
 
 		transition(t.t, COPY_DEST);
 		flushTransitions();
-		if( !Driver.updateSubResource(frame.commandList, t.t.res, uploadBuffer.tmpBuf, offsetAligned, subRes, 1, upd) )
+		if( !Driver.updateSubResource(frame.commandList, t.t.res, uploadBuffer.tmpBuf, offset, subRes, 1, upd) )
 			throw "Failed to update sub resource";
 		transition(t.t, PIXEL_SHADER_RESOURCE);
 
