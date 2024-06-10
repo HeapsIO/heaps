@@ -525,6 +525,8 @@ class MeshBatch extends MultiMaterial {
 		flush(ctx);
 	}
 
+	function addComputeShaders( pass : h3d.mat.Pass ) {}
+
 	public function flush(ctx:RenderContext) {
 		var p = dataPasses;
 		var alloc = hxd.impl.Allocator.get();
@@ -603,6 +605,7 @@ class MeshBatch extends MultiMaterial {
 					computePass.addShader(computeShader);
 					computeShader.ENABLE_LOD = enableLOD;
 					computeShader.ENABLE_CULLING = enableGPUCulling;
+					addComputeShaders(computePass);
 					p.computePass = computePass;
 
 					var prim = @:privateAccess instanced.primitive;
