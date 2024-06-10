@@ -737,12 +737,10 @@ class Renderer extends h3d.scene.Renderer {
 
 		case Performance:
 			if( enableFXAA ) {
-					mark("FXAA");
+				mark("FXAA");
 				fxaa.apply(ldr);
-			}
-			else {
+			} else
 				copy(ldr, null);
-			}
 			performance.render();
 		}
 		if( debugging && displayMode != Debug ) {
