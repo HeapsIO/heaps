@@ -66,6 +66,8 @@ class ComputeIndirect extends hxsl.Shader {
 		@const var ENABLE_LOD : Bool;
 		@param var lodCount : Float = 1;
 
+		@const var ENABLE_DISTANCE_CLIPPING : Bool;
+		@param var maxDistance : Float = -1;
 
 		var modelView : Mat4;
 		function __init__() {
@@ -91,6 +93,10 @@ class ComputeIndirect extends hxsl.Shader {
 						break;
 					}
 				}
+			}
+
+			if ( ENABLE_DISTANCE_CLIPPING ) {
+				culled = distToCam > maxDistance;
 			}
 
 			if ( ENABLE_LOD ) {
@@ -140,6 +146,8 @@ class MeshBatch extends MultiMaterial {
 	public var meshBatchFlags(default, null) : haxe.EnumFlags<MeshBatchFlag>;
 	var enableLOD(get, never) : Bool;
 	function get_enableLOD() return meshBatchFlags.has( EnableLod );
+
+	public var maxDistance : Float = -1;
 	var enableGPUCulling(get, never) : Bool;
 	function get_enableGPUCulling() return meshBatchFlags.has( EnableGpuCulling );
 
@@ -605,6 +613,8 @@ class MeshBatch extends MultiMaterial {
 					computePass.addShader(computeShader);
 					computeShader.ENABLE_LOD = enableLOD;
 					computeShader.ENABLE_CULLING = enableGPUCulling;
+					computeShader.ENABLE_DISTANCE_CLIPPING = maxDistance >= 0;
+					computeShader.maxDistance = maxDistance;
 					addComputeShaders(computePass);
 					p.computePass = computePass;
 
