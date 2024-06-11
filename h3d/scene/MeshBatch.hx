@@ -96,7 +96,7 @@ class ComputeIndirect extends hxsl.Shader {
 			}
 
 			if ( ENABLE_DISTANCE_CLIPPING ) {
-				culled = distToCam > maxDistance;
+				culled = culled || distToCam > maxDistance;
 			}
 
 			if ( ENABLE_LOD ) {
