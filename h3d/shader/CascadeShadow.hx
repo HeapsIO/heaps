@@ -71,10 +71,10 @@ class CascadeShadow extends DirShadow {
 				var vPos = vec4(transformedPosition, 1.0) * camera.view;
 				vPos /= vPos.w;
 
-				var cascadeFound = false;
+				var found = false;
 				@unroll for ( i in 0...CASCADE_COUNT ) {
-					if ( !cascadeFound && vPos.z <= cascadeScales[i].w ) {
-						cascadeFound = true;
+					if ( !found && vPos.z <= cascadeScales[i].w ) {
+						found = true;
 
 						var shadowPos0 = transformedPosition * cascadeViewProj;
 						var shadowPos = ( i == 0 ) ? shadowPos0 : shadowPos0 * cascadeScales[i].xyz + cascadeOffsets[i].xyz;

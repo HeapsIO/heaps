@@ -4,6 +4,12 @@ class DefaultForward extends hxsl.Shader {
 
 	static var SRC = {
 
+		@global var camera : {
+			var view : Mat4;
+			var position : Vec3;
+			var inverseViewProj : Mat4;
+		}
+
 		@const(4) var CASCADE_COUNT:Int;
 		@const(2) var DIR_SHADOW_COUNT:Int;
 		@const(16) var POINT_SHADOW_COUNT:Int;
@@ -211,19 +217,19 @@ class DefaultForward extends hxsl.Shader {
 
 		function evaluateCascadeShadow() : Float {
 			var i = dirLightStride + pointLightStride + spotLightStride;
-			var bias = lightInfos[i + 2 + 3 * 4];
-			var bias = [bias.x, bias.y, bias.z, bias.w];
 			var shadow = 1.0;
+			var shadowProj = mat3x4(lightInfos[i + 2], lightInfos[i + 3], lightInfos[i + 4]);
+
 			@unroll for ( c in 0...CASCADE_COUNT ) {
-				var offset = i + 2 + 3 * c;
-				var shadowProj = mat3x4(lightInfos[offset], lightInfos[offset+1], lightInfos[offset+2]);
-				var shadowPos = transformedPosition * shadowProj;
+				var cascadeScale = lightInfos[i + 5 + 2 * c];
+				var shadowPos0 = transformedPosition * shadowProj;
+				var shadowPos = i == 0 ? shadowPos0 : shadowPos0 * cascadeScale.xyz + lightInfos[i + 6 + 2 * c].xyz;
 				if ( inside(shadowPos) ) {
-					shadow = 1.0;
 					var zMax = saturate(shadowPos.z);
-					var shadowUv = screenToUv(shadowPos.xy);
+					var shadowUv = shadowPos.xy;
+					shadowUv.y = 1.0 - shadowUv.y;
 					var depth = cascadeShadowMaps[c].get(shadowUv.xy).r;
-					shadow -= (zMax - bias[c] > depth) ? 1.0 : 0.0;
+					shadow -= zMax > depth ? 1.0 : 0.0;
 				}
 			}
 			return saturate(shadow);

@@ -26,7 +26,7 @@ class LightBuffer {
 	final POINT_LIGHT_INFO_SIZE = 3;
 	final SPOT_LIGHT_INFO_SIZE = 8;
 	final DIR_LIGHT_INFO_SIZE = 5;
-	final CASCADE_SHADOW_INFO_SIZE = 15;
+	final CASCADE_SHADOW_INFO_SIZE = 13;
 
 
 	public function new() {
@@ -323,6 +323,15 @@ class LightBuffer {
 			var cascadeShadow = cast(cascadeLight.shadows, CascadeShadowMap);
 			var shadowMaps = cascadeShadow.getShadowTextures();
 			s.CASCADE_COUNT = cascadeShadow.cascade;
+			var mat = cascadeShadow.cascadeViewProj;
+			fillFloats(lightInfos, mat._11, mat._21, mat._31, mat._41, i+8);
+			fillFloats(lightInfos, mat._12, mat._22, mat._32, mat._42, i+12);
+			fillFloats(lightInfos, mat._13, mat._23, mat._33, mat._43, i+16);
+			for ( index in 0...cascadeShadow.cascade ) {
+				s.cascadeShadowMaps[index] = shadowMaps[index];
+				fillVector(lightInfos, cascadeShadow.getCascadeScale(index).toVector(), i + 20 + index * 8);
+				fillVector(lightInfos, cascadeShadow.getCascadeOffset(index).toVector(), i + 24 + index * 8);
+			}
 		}
 
 		s.dirLightCount = dirLights.length;

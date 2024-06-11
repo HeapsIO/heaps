@@ -15,7 +15,6 @@ typedef CascadeCamera = {
 class CascadeShadowMap extends DirShadowMap {
 
 	var cshader : h3d.shader.CascadeShadow;
-	var cascadeViewProj = new h3d.Matrix();
 	var lightCameras : Array<CascadeCamera> = [];
 	var currentCascadeIndex = 0;
 	var tmpCorners : Array<h3d.Vector> = [for (i in 0...8) new h3d.Vector()];
@@ -23,6 +22,7 @@ class CascadeShadowMap extends DirShadowMap {
 	var tmpProj = new h3d.Matrix();
 	var tmpFrustum = new h3d.col.Frustum();
 
+	public var cascadeViewProj = new h3d.Matrix();
 	public var params : Array<CascadeParams> = [];
 	public var pow : Float = 1.0;
 	// minimum count of pixels in ratio of texture width for an object to be drawn in cascade
@@ -200,6 +200,16 @@ class CascadeShadowMap extends DirShadowMap {
 	public function getCascadeProj(i:Int) {
 		var i = hxd.Math.imin(i, lightCameras.length - 1);
 		return lightCameras[i].viewProj;
+	}
+
+	public function getCascadeOffset(i:Int) {
+		var i = hxd.Math.imin(i, lightCameras.length - 1);
+		return lightCameras[i].offset;
+	}
+
+	public function getCascadeScale(i:Int) {
+		var i = hxd.Math.imin(i, lightCameras.length - 1);
+		return lightCameras[i].scale;
 	}
 
 	function syncCascadeShader(textures : Array<h3d.mat.Texture>) {
