@@ -118,9 +118,9 @@ class HierarchicalWorld extends Object {
 			getRoot().loadingQueue.insert(0, subdivide);
 			return false;
 		}
+		loading = false;
 		if ( !locked && !isClose(ctx) )
 			return false;
-		loading = false;
 		subdivided = true;
 		var childSize = data.size >> 1;
 		for ( i in 0...2 ) {
