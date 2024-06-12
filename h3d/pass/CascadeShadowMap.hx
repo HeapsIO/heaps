@@ -140,9 +140,9 @@ class CascadeShadowMap extends DirShadowMap {
 		proj._11 = invD0;
 		proj._22 = invD0;
 		proj._33 = 1 / (zDist0);
-		proj._34 = -0.00000190734; // 2^-19 depth offset;
 		proj._41 = 0.5;
 		proj._42 = 0.5;
+		proj._43 = 0.00000190734; // 2^-19 depth offset;
 		proj._44 = 1;
 
 		cascadeViewProj.multiply(view, proj);
@@ -190,7 +190,7 @@ class CascadeShadowMap extends DirShadowMap {
 			proj._11 = invD2;
 			proj._22 = invD2;
 			proj._33 = invZDist;
-			proj._34 = -0.00000190734; // 2^-19 depth offset;
+			proj._43 = 0.00000190734; // 2^-19 depth offset;
 			proj._44 = 1;
 
 			lightCameras[i].viewProj.multiply(view, proj);
