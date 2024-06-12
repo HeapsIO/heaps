@@ -31,9 +31,6 @@ class SAO extends ScreenShader {
 		@ignore @param var screenRatio : Vec2;
 		@ignore @param var fovTan : Float;
 
-		@ignore @param var microOcclusion : Channel;
-		@param var microOcclusionIntensity : Float;
-
 		@param var fadeStart : Float;
 		@param var fadeEnd : Float;
 
@@ -95,7 +92,6 @@ class SAO extends ScreenShader {
 				var dist = distance(origin, camera.position);
 				occlusion = mix(occlusion, 1.0, saturate((dist - fadeStart) / (fadeEnd - fadeStart)));
 			}
-			occlusion *= mix(1, microOcclusion.get(vUV).r, microOcclusionIntensity);
 
 			output.color = vec4(occlusion.xxx, 1.);
 		}
