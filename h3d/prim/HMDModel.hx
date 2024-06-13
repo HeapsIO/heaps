@@ -82,14 +82,14 @@ class HMDModel extends MeshPrimitive {
 		var curVertexCount : Int = 0;
 		var curIndexCount : Int = 0;
 
-		for ( lod in lods ) {
+		for ( i => lod in lods ) {
 			if (lod.vertexFormat != vertexFormat) {
-				var error = "LOD has a different vertex format, has ";
-				for ( i in lod.vertexFormat.getInputs() )
-					error += i.name + " ";
+				var error = 'LOD${i} has a different vertex format, has ';
+				for ( input in lod.vertexFormat.getInputs() )
+					error += input.name + " ";
 				error += ", wants ";
-				for ( i in vertexFormat.getInputs() )
-					error += i.name + " ";
+				for ( input in vertexFormat.getInputs() )
+					error += input.name + " ";
 				throw error;
 			}
 
