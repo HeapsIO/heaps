@@ -1095,6 +1095,7 @@ class DX12Driver extends h3d.impl.Driver {
 		var params = hl.CArray.alloc(RootParameterDescriptorTable,allocatedParams);
 		var paramsCount = 0, regCount = 0;
 		var texDescs = [];
+		var globalsParamsCBV = false;
 		var vertexParamsCBV = false;
 		var fragmentParamsCBV = false;
 
@@ -1141,7 +1142,7 @@ class DX12Driver extends h3d.impl.Driver {
 			default: ALL;
 			}
 			var regs = new ShaderRegisters();
-			regs.globals = allocConsts(sh.globalsSize, vis, null);
+			regs.globals = allocConsts(sh.globalsSize, vis, globalsParamsCBV ? CBV : null);
 			regs.params = allocConsts(sh.paramsSize, vis, (sh.kind == Fragment ? fragmentParamsCBV : vertexParamsCBV) ? CBV : null);
 			regs.buffers = paramsCount;
 			if( sh.bufferCount > 0 ) {
@@ -1232,8 +1233,9 @@ class DX12Driver extends h3d.impl.Driver {
 				fragmentParamsCBV = true;
 				total = total - fragmentParamSizeCost + 1;
 			}
-			if( total > 64 )
-				throw "Too many globals";
+			if( total > 64 ) {
+				globalsParamsCBV = true;
+			}
 		}
 
 		var regs = [];
@@ -1867,10 +1869,24 @@ class DX12Driver extends h3d.impl.Driver {
 			}
 		case Globals:
 			if( shader.globalsSize > 0 ) {
-				if( currentShader.isCompute )
-					frame.commandList.setComputeRoot32BitConstants(regs.globals, shader.globalsSize << 2, hl.Bytes.getArray(buf.globals.toData()), 0);
+				var data = hl.Bytes.getArray(buf.globals.toData());
+				var dataSize = shader.globalsSize << 4;
+				if( regs.globals & 0x100 != 0 ) {
+					// update CBV
+					var srv = frame.shaderResourceViews.alloc(1);
+					var cbv = allocDynamicBuffer(data,dataSize);
+					var desc = tmp.cbvDesc;
+					desc.bufferLocation = cbv.getGpuVirtualAddress();
+					desc.sizeInBytes = calcCBVSize(dataSize);
+					Driver.createConstantBufferView(desc, srv);
+					if( currentShader.isCompute )
+						frame.commandList.setComputeRootDescriptorTable(regs.globals & 0xFF, frame.shaderResourceViews.toGPU(srv));
+					else
+						frame.commandList.setGraphicsRootDescriptorTable(regs.globals & 0xFF, frame.shaderResourceViews.toGPU(srv));
+				} else if( currentShader.isCompute )
+					frame.commandList.setComputeRoot32BitConstants(regs.globals, dataSize >> 2, data, 0);
 				else
-					frame.commandList.setGraphicsRoot32BitConstants(regs.globals, shader.globalsSize << 2, hl.Bytes.getArray(buf.globals.toData()), 0);
+					frame.commandList.setGraphicsRoot32BitConstants(regs.globals, dataSize >> 2, data, 0);
 			}
 		case Textures:
 			if( shader.texturesCount > 0 ) {
