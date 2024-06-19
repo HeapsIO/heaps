@@ -287,6 +287,10 @@ class Library {
 		p = new h3d.prim.HMDModel(header.geometries[id], header.dataPosition, this, lods);
 		p.incref(); // Prevent from auto-disposing
 		cachedPrimitives[id] = p;
+
+		if (lodInfos.lodLevel == 0)
+			h3d.prim.ModelDatabase.current.loadModelProps(model.name, p);
+
 		return p;
 	}
 

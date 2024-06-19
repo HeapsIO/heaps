@@ -13,6 +13,9 @@ class HMDModel extends MeshPrimitive {
 	var collider : h3d.col.Collider;
 	var normalsRecomputed : String;
 	var blendshape : Blendshape;
+	var lodConfig : Array<Float> = null;
+
+	public static var lodExportKeyword : String = "LOD";
 
 	public function new( data : hxd.fmt.hmd.Data.Geometry, dataPos, lib, lods = null ) {
 		this.lods = [data];
@@ -289,12 +292,6 @@ class HMDModel extends MeshPrimitive {
 		return lods.length;
 	}
 
-	public static var lodExportKeyword : String = "LOD";
-	static var lodConfig : Array<Float> = [0.02, 0.002, 0.0002];
-	public static function loadLodConfig( config : Array<Float> ) {
-		lodConfig = config;
-	}
-
 	override public function screenRatioToLod( screenRatio : Float ) : Int {
 		var lodCount = lodCount();
 
@@ -306,6 +303,7 @@ class HMDModel extends MeshPrimitive {
 		if ( lodCount == 1 )
 			return 0;
 
+		var lodConfig = getLodConfig();
 		if ( lodConfig != null && lodConfig.length >= lodCount - 1) {
 			var lodLevel : Int = 0;
 			var maxIter = ( ( lodConfig.length > lodCount - 1 ) ? lodCount - 1: lodConfig.length );
@@ -319,5 +317,12 @@ class HMDModel extends MeshPrimitive {
 		}
 
 		return 0;
+	}
+
+	public function getLodConfig() {
+		if (lodConfig != null)
+			return lodConfig;
+
+		return @:privateAccess ModelDatabase.defaultLodConfig;
 	}
 }

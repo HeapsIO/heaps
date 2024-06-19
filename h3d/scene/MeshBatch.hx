@@ -626,7 +626,7 @@ class MeshBatch extends MultiMaterial {
 					if ( matInfos == null ) {
 						if ( enableLOD ) {
 							var hmd : h3d.prim.HMDModel = cast prim;
-							var lodConfig = @:privateAccess h3d.prim.HMDModel.lodConfig;
+							var lodConfig = hmd.getLodConfig();
 							var materialCount = materials.length;
 							var tmpMatInfos = alloc.allocFloats( 4 * materialCount * lodCount );
 							matInfos = alloc.allocBuffer( materialCount * lodCount, hxd.BufferFormat.VEC4_DATA, Uniform );
