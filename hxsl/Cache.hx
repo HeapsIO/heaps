@@ -688,12 +688,13 @@ class Cache {
 
 		var params = null;
 		var used = [];
-		var added = new Map<String, AllocParam>();
+		var added = [];
 
 		function addParam(p:RuntimeShader.AllocParam) {
-			if ( added.get(p.name) != null )
-				return;
-			added.set(p.name, p);
+			var pid = p.perObjectGlobal != null ? -p.perObjectGlobal.gid : p.instance * 1024 + p.index;
+            if( added.indexOf(pid) >= 0 )
+                return;
+            added.push(pid);
 			var size = switch( p.type ) {
 				case TMat4: 4 * 4;
 				case TVec(n,VFloat): n;
