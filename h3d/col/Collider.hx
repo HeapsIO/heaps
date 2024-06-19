@@ -30,7 +30,7 @@ class OptimizedCollider extends Collider {
 	}
 
 	public function rayIntersection( r : Ray, bestMatch : Bool ) : Float {
-		if( a.rayIntersection(r, bestMatch) < 0 ) {
+		if( a.rayIntersection(r, false) < 0 ) {
 			if( !checkInside )
 				return -1;
 			if( !a.contains(r.getPoint(0)) )
