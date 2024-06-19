@@ -302,7 +302,7 @@ class Cache {
 
 		var prev = s;
 		var splitter = new hxsl.Splitter();
-		var sl = try splitter.split(s) catch( e : Error ) { e.msg += "\n\nin\n\n"+Printer.shaderToString(s); throw e; };
+		var sl = try splitter.split(s, mode == Batch ) catch( e : Error ) { e.msg += "\n\nin\n\n"+Printer.shaderToString(s); throw e; };
 
 		// params tracking
 		var paramVars = new Map();

@@ -22,10 +22,13 @@ class Splitter {
 	var varNames : Map<String,TVar>;
 	var varMap : Map<TVar,TVar>;
 
+	var isBatchShader : Bool;
+
 	public function new() {
 	}
 
-	public function split( s : ShaderData ) : Array<ShaderData> {
+	public function split( s : ShaderData, isBatchShader : Bool  ) : Array<ShaderData> {
+		this.isBatchShader = isBatchShader;
 		var vfun = null, vvars = new Map(), avvars = [];
 		var ffun = null, fvars = new Map(), afvars = [];
 		var isCompute = false;
@@ -214,7 +217,8 @@ class Splitter {
 	function checkVar( v : VarProps, vertex : Bool, vvars : Map<Int,VarProps>, p ) {
 		switch( v.v.kind ) {
 		case Local if( v.requireInit ):
-			throw new Error("Variable " + v.v.name + " is used without being initialized", p);
+			if ( v.origin.parent.name != "global" && !isBatchShader )
+				throw new Error("Variable " + v.v.name + " is used without being initialized", p);
 		case Var:
 			if( !vertex ) {
 				var i = vvars.get(v.origin.id);
