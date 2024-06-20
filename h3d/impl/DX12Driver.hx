@@ -1210,7 +1210,10 @@ class DX12Driver extends h3d.impl.Driver {
 		// Root Constants cost 1 per 32-bit value
 		function calcSize( sh : hxsl.RuntimeShader.RuntimeShaderData ) {
 			var s = (sh.globalsSize + sh.paramsSize) << 2;
-			s += sh.texturesCount;
+			// 1 descriptor table for all textures and 1 descriptor table for all samplers
+			s += ( sh.texturesCount > 0 ) ? 2 : 0;
+			// 1 descriptor table for all buffers
+			s += ( sh.bufferCount > 0 ) ? 1 : 0;
 			return s;
 		}
 
