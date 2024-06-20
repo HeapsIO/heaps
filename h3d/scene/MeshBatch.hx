@@ -404,11 +404,10 @@ class MeshBatch extends MultiMaterial {
 				buf[pos++] = m._44;
 			}
 			if( p.perObjectGlobal != null ) {
-				switch ( p.perObjectGlobal.gid ) {
-				case p.perObjectGlobal.gid == modelViewID :
+				if ( p.perObjectGlobal.gid == modelViewID ) {
 					batch.modelViewPos = pos - startPos;
 					addMatrix(worldPosition != null ? worldPosition : absPos);
-				case p.perObjectGlobal.gid == modelViewInverseID :
+				} else if ( p.perObjectGlobal.gid == modelViewInverseID ) {				
 					if( worldPosition == null )
 						addMatrix(getInvPos());
 					else {
@@ -419,11 +418,10 @@ class MeshBatch extends MultiMaterial {
 						}
 						addMatrix(invWorldPosition);
 					}
-				case p.perObjectGlobal.gid == previousModelViewID :
+				} else if ( p.perObjectGlobal.gid == previousModelViewID )
 					addMatrix( worldPosition != null ? worldPosition : absPos );
-				default:
-					throw "Unsupported global param "+p.perObjectGlobal.path;
-				}
+				else
+					throw "Unsupported global param "+p.perObjectGlobal.path;							
 				p = p.next;
 				continue;
 			}
