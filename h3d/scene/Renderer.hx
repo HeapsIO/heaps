@@ -180,6 +180,12 @@ class Renderer extends hxd.impl.AnyProps {
 	public function start() {
 	}
 
+	public function startEffects() {
+		for ( e in effects )
+			if ( e.enabled )
+				e.start(this);
+	}
+
 	public function process( passes : Array<PassObjects> ) {
 		hasSetTarget = false;
 		for( p in allPasses )
