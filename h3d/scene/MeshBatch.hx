@@ -78,7 +78,7 @@ class ComputeIndirect extends hxsl.Shader {
 			var invocID = computeVar.globalInvocation.x;
 			var lod : Int = 0;
 			var pos = vec3(0) * modelView.mat3x4();
-			var vScale = vec3(1) * modelView.mat3x4() - pos;
+			var vScale = abs(vec3(1) * modelView.mat3x4() - pos);
 			var scaledRadius = max(max(vScale.x, vScale.y), vScale.z) * radius;
 			var toCam = camera.position - pos.xyz;
 			var distToCam = length(toCam);
@@ -407,7 +407,7 @@ class MeshBatch extends MultiMaterial {
 				if ( p.perObjectGlobal.gid == modelViewID ) {
 					batch.modelViewPos = pos - startPos;
 					addMatrix(worldPosition != null ? worldPosition : absPos);
-				} else if ( p.perObjectGlobal.gid == modelViewInverseID ) {				
+				} else if ( p.perObjectGlobal.gid == modelViewInverseID ) {
 					if( worldPosition == null )
 						addMatrix(getInvPos());
 					else {
@@ -421,7 +421,7 @@ class MeshBatch extends MultiMaterial {
 				} else if ( p.perObjectGlobal.gid == previousModelViewID )
 					addMatrix( worldPosition != null ? worldPosition : absPos );
 				else
-					throw "Unsupported global param "+p.perObjectGlobal.path;							
+					throw "Unsupported global param "+p.perObjectGlobal.path;
 				p = p.next;
 				continue;
 			}
