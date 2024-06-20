@@ -1240,7 +1240,7 @@ class DX12Driver extends h3d.impl.Driver {
 				globalsParamsCBV = true;
 				var withoutGlobal = total - (shader.vertex.globalsSize << 2) - (shader.fragment.globalsSize << 2) + 2;
 				if ( withoutGlobal > 64 )
-					throw "Too many params. Use less textures or improve descriptor table packing";
+					throw "Too many params. Should not be possible if every params fall into descriptor table.";
 			}
 		}
 
