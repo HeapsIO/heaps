@@ -75,6 +75,8 @@ class RenderContext extends h3d.impl.RenderContext {
 		cameraProjDiag = new h3d.Vector4(cam.mproj._11,cam.mproj._22,cam.mproj._33,cam.mproj._44);
 		if ( cameraPreviousViewProj == null )
 			cameraPreviousViewProj = cam.m.clone();
+		if (cameraJitterOffsets == null)
+			cameraJitterOffsets = new h3d.Vector4( 0.0, 0.0, 0.0, 0.0 );
 		cameraViewProj = cam.m;
 		cameraInverseViewProj = camera.getInverseViewProj();
 	}
