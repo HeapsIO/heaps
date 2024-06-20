@@ -331,6 +331,7 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 
 		ctx.start();
 		renderer.start();
+		renderer.startEffects();
 
 		#if sceneprof h3d.impl.SceneProf.begin("sync", ctx.frame); #end
 		@:privateAccess renderer.mark("sync");
