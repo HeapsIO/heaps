@@ -1228,7 +1228,7 @@ class DX12Driver extends h3d.impl.Driver {
 			// Remove the size cost of the root constant and add one descriptor table.
 			var withoutVP = total - vertexParamSizeCost + 1;
 			var withoutFP = total - fragmentParamSizeCost + 1;
-			if( withoutVP < 64 || ( withoutFP > 64 && withoutVP > 64 ) ) {
+			if( withoutVP <= 64 || ( withoutFP > 64 && withoutVP > 64 ) ) {
 				vertexParamsCBV = true;
 				total = withoutVP;
 			}
