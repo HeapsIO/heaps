@@ -88,6 +88,7 @@ class Renderer extends h3d.scene.Renderer {
 		depth : (null:h3d.mat.Texture),
 		hdr : (null:h3d.mat.Texture),
 		ldr : (null:h3d.mat.Texture),
+		velocity : (null:h3d.mat.Texture),
 	};
 
 	public var skyMode : SkyMode = Hide;
@@ -112,7 +113,8 @@ class Renderer extends h3d.scene.Renderer {
 		#else
 		Vec4([Value("output.metalness"), Value("output.roughness"), Value("output.emissive"), ALPHA]),
 		#end
-		Vec4([Value("output.depth"),Const(0), Const(0), ALPHA /* ? */])
+		Vec4([Value("output.depth"),Const(0), Const(0), ALPHA /* ? */]),
+		Vec4([Value("output.velocity", 2), Const(0), Const(0)])
 	]);
 	var decalsOutput = new h3d.pass.Output("decals",[
 		Vec4([Swiz(Value("output.color"),[X,Y,Z]), Value("output.albedoStrength",1)]),
@@ -137,6 +139,11 @@ class Renderer extends h3d.scene.Renderer {
 		Value("output.color"),
 		Vec4([Value("output.depth"),Const(0),Const(0),h3d.scene.pbr.Renderer.ALPHA])
 	]);
+	var colorDepthVelocityOutput = new h3d.pass.Output("colorDepthVelocityOutput",[
+		Value("output.color"),
+		Vec4([Value("output.depth"),Const(0),Const(0),h3d.scene.pbr.Renderer.ALPHA]),
+		Vec4([Value("output.velocity", 2), Const(0), Const(0)])
+	]);
 
 	public function new(?env) {
 		super();
@@ -153,6 +160,7 @@ class Renderer extends h3d.scene.Renderer {
 		allPasses.push(defaultPass);
 		allPasses.push(decalsOutput);
 		allPasses.push(colorDepthOutput);
+		allPasses.push(colorDepthVelocityOutput);
 		allPasses.push(emissiveDecalsOutput);
 		allPasses.push(new h3d.pass.Shadows(null));
 		refreshProps();
@@ -467,6 +475,7 @@ class Renderer extends h3d.scene.Renderer {
 		textures.depth = allocTarget("depth", true, 1., R32F);
 		textures.hdr = allocTarget("hdrOutput", true, 1, #if MRT_low RGB10A2 #else RGBA16F #end);
 		textures.ldr = allocTarget("ldrOutput");
+		textures.velocity = allocTarget("velocity", true, 1., RG16F );
 	}
 
 	public function getPbrDepth() {
@@ -480,6 +489,7 @@ class Renderer extends h3d.scene.Renderer {
 		ctx.setGlobal("occlusionMap", { texture : textures.pbr, channel : hxsl.Channel.B });
 		ctx.setGlobal("hdrMap", textures.hdr);
 		ctx.setGlobal("ldrMap", textures.ldr);
+		ctx.setGlobal("velocity", textures.velocity);
 		ctx.setGlobal("global.time", ctx.time);
 		ctx.setGlobal("camera.position", ctx.camera.pos);
 		ctx.setGlobal("camera.inverseViewProj", ctx.camera.getInverseViewProj());
@@ -602,8 +612,8 @@ class Renderer extends h3d.scene.Renderer {
 
 	function getPbrRenderTargets( depth : Bool ) {
 		if ( depth )
-			return [textures.albedo, textures.normal, textures.pbr #if !MRT_low , textures.other #end, getPbrDepth()];
-		return [textures.albedo, textures.normal, textures.pbr #if !MRT_low , textures.other #end];
+			return [textures.albedo, textures.normal, textures.pbr #if !MRT_low , textures.other #end, getPbrDepth(), textures.velocity];
+		return [textures.albedo, textures.normal, textures.pbr #if !MRT_low , textures.other #end, textures.velocity];
 	}
 
 	override function render() {

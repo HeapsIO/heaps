@@ -17,6 +17,7 @@ class RenderContext extends h3d.impl.RenderContext {
 	public var drawPass : h3d.pass.PassObject;
 	public var pbrLightPass : h3d.mat.Pass;
 	public var computingStatic : Bool;
+	public var computeVelocity : Bool;
 
 	public var lightSystem : h3d.scene.LightSystem;
 	public var extraShaders : hxsl.ShaderList;
@@ -35,10 +36,13 @@ class RenderContext extends h3d.impl.RenderContext {
 	@global("camera.projFlip") var cameraProjFlip : Float;
 	@global("camera.viewProj") var cameraViewProj : h3d.Matrix;
 	@global("camera.inverseViewProj") var cameraInverseViewProj : h3d.Matrix;
+	@global("camera.previousViewProj") var cameraPreviousViewProj : h3d.Matrix;
+	@global("camera.jitterOffsets") var cameraJitterOffsets : h3d.Vector4;
 	@global("global.time") var globalTime : Float;
 	@global("global.pixelSize") var pixelSize : h3d.Vector;
 	@global("global.modelView") var globalModelView : h3d.Matrix;
 	@global("global.modelViewInverse") var globalModelViewInverse : h3d.Matrix;
+	@global("global.previousModelView") var globalPreviousModelView : h3d.Matrix;
 
 	var allocPool : h3d.pass.PassObject;
 	var allocFirst : h3d.pass.PassObject;
@@ -69,6 +73,8 @@ class RenderContext extends h3d.impl.RenderContext {
 		cameraProj = cam.mproj;
 		cameraPos = cam.pos;
 		cameraProjDiag = new h3d.Vector4(cam.mproj._11,cam.mproj._22,cam.mproj._33,cam.mproj._44);
+		if ( cameraPreviousViewProj == null )
+			cameraPreviousViewProj = cam.m.clone();
 		cameraViewProj = cam.m;
 		cameraInverseViewProj = camera.getInverseViewProj();
 	}
@@ -260,6 +266,9 @@ class RenderContext extends h3d.impl.RenderContext {
 		lights = null;
 
 		cameraFrustumUploaded = false;
+		
+		cameraPreviousViewProj.load(cameraViewProj);
+		computeVelocity = false;
 
 		clearCurrent();
 	}

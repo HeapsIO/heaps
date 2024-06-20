@@ -182,6 +182,8 @@ class Object {
 	var cullingColliderInherited(get, set) : Bool;
 
 	var absPos : h3d.Matrix;
+	var prevAbsPos : h3d.Matrix;
+	var nextPrevAbsPos : h3d.Matrix;
 	var invPos : h3d.Matrix;
 	var qRot : h3d.Quat;
 	var posChanged(get,set) : Bool;
@@ -706,8 +708,23 @@ class Object {
 	function sync( ctx : RenderContext ) {
 	}
 
+	function computePrevAbsPos() {
+		if ( prevAbsPos == null )
+			return;
+		prevAbsPos.load(nextPrevAbsPos);
+		nextPrevAbsPos.load(absPos);
+	}
+
 	function syncRec( ctx : RenderContext ) {
 		#if sceneprof h3d.impl.SceneProf.mark(this); #end
+		if ( !ctx.computeVelocity ) {
+			prevAbsPos = null;
+			nextPrevAbsPos = null;
+		} else if ( prevAbsPos == null ) {
+			prevAbsPos = absPos.clone();
+			nextPrevAbsPos = absPos.clone();
+		}
+
 		if( currentAnimation != null ) {
 			var old = parent;
 			var dt = ctx.elapsedTime;
@@ -741,6 +758,7 @@ class Object {
 			if( flags.has(FFixedPositionSynced) && !changed && !ctx.wasContextLost ) {
 				ctx.visibleFlag = old;
 				ctx.cullingCollider = prevCollider;
+				computePrevAbsPos();
 				return;
 			}
 			flags.set(FFixedPositionSynced, true);
@@ -767,6 +785,7 @@ class Object {
 		}
 		ctx.visibleFlag = old;
 		ctx.cullingCollider = prevCollider;
+		computePrevAbsPos();
 	}
 
 	function syncPos() {

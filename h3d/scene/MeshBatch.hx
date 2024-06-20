@@ -136,6 +136,7 @@ class MeshBatch extends MultiMaterial {
 
 	static var modelViewID = hxsl.Globals.allocID("global.modelView");
 	static var modelViewInverseID = hxsl.Globals.allocID("global.modelViewInverse");
+	static var previousModelViewID = hxsl.Globals.allocID("global.previousModelView");
 	static var MAX_BUFFER_ELEMENTS = 4096;
 	static var MAX_STORAGE_BUFFER_ELEMENTS = 128 * 1024 * 1024 >> 2;
 
@@ -403,10 +404,11 @@ class MeshBatch extends MultiMaterial {
 				buf[pos++] = m._44;
 			}
 			if( p.perObjectGlobal != null ) {
-				if( p.perObjectGlobal.gid == modelViewID ) {
+				switch ( p.perObjectGlobal.gid ) {
+				case p.perObjectGlobal.gid == modelViewID :
 					batch.modelViewPos = pos - startPos;
 					addMatrix(worldPosition != null ? worldPosition : absPos);
-				} else if( p.perObjectGlobal.gid == modelViewInverseID ) {
+				case p.perObjectGlobal.gid == modelViewInverseID :
 					if( worldPosition == null )
 						addMatrix(getInvPos());
 					else {
@@ -417,8 +419,11 @@ class MeshBatch extends MultiMaterial {
 						}
 						addMatrix(invWorldPosition);
 					}
-				} else
+				case p.perObjectGlobal.gid == previousModelViewID :
+					addMatrix( worldPosition != null ? worldPosition : absPos );
+				default:
 					throw "Unsupported global param "+p.perObjectGlobal.path;
+				}
 				p = p.next;
 				continue;
 			}

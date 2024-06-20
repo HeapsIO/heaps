@@ -43,6 +43,9 @@ class Camera {
 
 	public var frustum(default, null) : h3d.col.Frustum;
 
+	public var jitterOffsetX : Float = 0.;
+	public var jitterOffsetY : Float = 0.;
+
 	var minv : Matrix;
 	var mcamInv : Matrix;
 	var mprojInv : Matrix;
@@ -425,6 +428,9 @@ class Camera {
 		m._22 += viewY * m._24;
 		m._32 += viewY * m._34;
 		m._42 += viewY * m._44;
+
+		m._31 += jitterOffsetX;
+		m._32 += jitterOffsetY;
 
 		// our z is negative in that case
 		if( rightHanded ) {
