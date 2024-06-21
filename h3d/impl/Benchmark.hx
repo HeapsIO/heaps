@@ -155,18 +155,18 @@ class Benchmark extends h2d.Graphics {
 	}
 
 	function syncTip(s:StatsObject) {
-		inline function dispatchS(i : Int) {
-			return i != 0 ? (i + " dispatches ") : "";
+		inline function fmt(i : Int, n : String) {
+			return i != 0 ? (i + ' ${n} ') : "";
 		}
 		if( s == null ) {
-			tip.text = "total "+engine.drawCalls+" draws "+ dispatchS(engine.dispatches);
+			tip.text = "total "+fmt(engine.drawCalls,"draws")+ fmt(engine.dispatches, "dispatches");
 			if ( displayTriangleCount )
 				tip.text += hxd.Math.fmt(engine.drawTriangles/1000000)+" Mtri";
 		}
 		else {
 			var t = s.name + "( " + Std.int(s.time / 1e6) + "." + StringTools.lpad(""+(Std.int(s.time/1e4)%100),"0",2) + " ms";
 			if (measureCpuThread == null) {
-				t += " " + s.drawCalls + " draws "+ dispatchS(s.dispatches);
+				t += " " + fmt(s.drawCalls, "draws")+ fmt(s.dispatches, "dispatches");
 			}
 			t += ")";
 
