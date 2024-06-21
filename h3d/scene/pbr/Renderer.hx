@@ -166,10 +166,6 @@ class Renderer extends h3d.scene.Renderer {
 		refreshProps();
 	}
 
-	override function dispose() {
-		super.dispose();
-	}
-
 	override function addShader(s:hxsl.Shader) {
 		tonemap.addShader(s);
 	}
