@@ -2183,7 +2183,7 @@ class DX12Driver extends h3d.impl.Driver {
 		}
 		p.dsvFormat = cast pipelineSignature.getI32(PSIGN_DEPTH_TARGET_FORMAT);
 		for ( i in rtCount...8 )
-			p.rtvFormats[i] = DxgiFormat.UNKOWN;
+			p.rtvFormats[i] = DxgiFormat.UNKNOWN;
 
 		for( i in 0...shader.inputCount ) {
 			var d = shader.inputLayout[i];
