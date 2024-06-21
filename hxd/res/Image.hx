@@ -349,10 +349,12 @@ class Image extends Resource {
 			case Tga:
 				var bytes = entry.getBytes();
 				var r = new format.tga.Reader(new haxe.io.BytesInput(bytes)).read();
-				if (r.header.imageType != UncompressedTrueColor || r.header.bitsPerPixel != 32)
+				if (r.header.bitsPerPixel != 32 && r.header.bitsPerPixel != 24)
 					throw "Not supported TGA " + r.header.imageType + "/" + r.header.bitsPerPixel;
 				var w = r.header.width;
 				var h = r.header.height;
+				var a = r.header.bitsPerPixel == 24 ? 0xFF000000 : 0;
+
 				if (fmt == RGBA) {
 					pixels = hxd.Pixels.alloc(w, h, RGBA);
 					var bytes = pixels.bytes;
@@ -366,7 +368,7 @@ class Image extends Resource {
 					#end
 					for (i in 0...w * h) {
 						var c = r.imageData[i];
-						c = (c >>> 24) | (c << 8);
+						c = ( c & 0xFF00FF00 ) | ( ( c & 0xFF0000 ) >> 16 ) | ( ( c & 0xFF ) << 16 ) | a;
 						set(i, c);
 					}
 				} else {
@@ -375,7 +377,7 @@ class Image extends Resource {
 					var p = 0;
 					for (y in 0...h) {
 						for (x in 0...w) {
-							var c = r.imageData[p++];
+							var c = r.imageData[p++] | a;
 							access.setPixel(x, y, c);
 						}
 					}
