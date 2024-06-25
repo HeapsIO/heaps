@@ -463,7 +463,12 @@ class System {
 
 	static function __init__() {
 		#if !usesys
-		hl.Api.setErrorHandler(function(e) reportError(e)); // initialization error
+		#if (haxe_ver >= 4.1)
+		var reportError = function(e:Dynamic) reportError((e is haxe.Exception)?e:new haxe.Exception(Std.string(e),null,e));
+		#else
+		var reportError = function(e) reportError(e);
+		#end
+		hl.Api.setErrorHandler(reportError); // initialization error
 		sentinel = new hl.UI.Sentinel(30, function() throw "Program timeout (infinite loop?)");
 		#end
 		#if ( target.threaded && (haxe_ver >= 4.2) )
