@@ -77,7 +77,12 @@ class FIFOBufferAllocator extends Allocator {
 	public var maxMemSize : Int = 512 * 1024 * 1024;
 
 	override function allocBuffer(vertices:Int, format:hxd.BufferFormat, flags:BufferFlags=Dynamic):h3d.Buffer {
-		if( vertices >= 65536 ) throw "assert";
+		if( vertices >= 65536 ) {
+			switch ( flags ) {
+			case UniformReadWrite:
+			default: throw "assert";
+			}
+		}
 		checkFrame();
 		var id = flags.toInt() | (format.uid << 3) | (vertices << 16);
 		var c = buffers.get(id);
