@@ -413,7 +413,7 @@ class Renderer extends h3d.scene.Renderer {
 		#if editor
 			switch( currentStep ) {
 				case MainDraw:
-				case AfterTonemapping:
+				case BeforeTonemapping:
 					if (showEditorGuides) {
 						renderPass(defaultPass, get("debuggeom"), backToFront);
 						renderPass(defaultPass, get("debuggeom_alpha"), backToFront);
