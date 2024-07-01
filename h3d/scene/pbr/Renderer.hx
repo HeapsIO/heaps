@@ -471,7 +471,8 @@ class Renderer extends h3d.scene.Renderer {
 		textures.depth = allocTarget("depth", true, 1., R32F);
 		textures.hdr = allocTarget("hdrOutput", true, 1, #if MRT_low RGB10A2 #else RGBA16F #end);
 		textures.ldr = allocTarget("ldrOutput");
-		textures.velocity = allocTarget("velocity", true, 1., RG16F );
+		if ( ctx.computeVelocity )
+			textures.velocity = allocTarget("velocity", true, 1., RG16F );
 	}
 
 	public function getPbrDepth() {
@@ -607,9 +608,12 @@ class Renderer extends h3d.scene.Renderer {
 	}
 
 	function getPbrRenderTargets( depth : Bool ) {
+		var targets = [textures.albedo, textures.normal, textures.pbr #if !MRT_low , textures.other #end];
 		if ( depth )
-			return [textures.albedo, textures.normal, textures.pbr #if !MRT_low , textures.other #end, getPbrDepth(), textures.velocity];
-		return [textures.albedo, textures.normal, textures.pbr #if !MRT_low , textures.other #end, textures.velocity];
+			targets.push(getPbrDepth());
+		if ( ctx.computeVelocity )
+			targets.push(textures.velocity);
+		return targets;
 	}
 
 	override function render() {
