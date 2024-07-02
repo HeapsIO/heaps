@@ -351,6 +351,7 @@ class DX12Driver extends h3d.impl.Driver {
 	var defaultDepth : h3d.mat.Texture;
 	var depthEnabled = true;
 	var curStencilRef : Int = -1;
+	var lastRtvDesc : RenderTargetViewDesc;
 	var rtWidth : Int;
 	var rtHeight : Int;
 	var frameCount : Int;
@@ -494,19 +495,23 @@ class DX12Driver extends h3d.impl.Driver {
 			clear.b = color.b;
 			clear.a = color.a;
 			var count = currentRenderTargets.length;
+			var needRebind = false;
 			for( i in 0...count ) {
 				var tex = currentRenderTargets[i];
 				if( tex != null && tex.t.setClearColor(color) ) {
+					needRebind = true;
 					// update texture to use another clear value
 					var prev = tex.t;
 					tex.t = allocTexture(tex);
 					@:privateAccess tex.t.clearColorChanges = prev.clearColorChanges;
 					frame.toRelease.push(prev.res);
-					Driver.createRenderTargetView(tex.t.res, null, tmp.renderTargets[i]);
+					Driver.createRenderTargetView(tex.t.res, lastRtvDesc, tmp.renderTargets[i]);
 				}
 				tex.flags.set(WasCleared);
 				frame.commandList.clearRenderTargetView(tmp.renderTargets[i], clear);
 			}
+			if ( needRebind )
+				frame.commandList.omSetRenderTargets(count, tmp.renderTargets, true, depthEnabled ? getDepthViewFromTexture(currentRenderTargets[0], currentRenderTargets[0].depthBuffer.t.state & DEPTH_WRITE == COMMON ) : null);
 			// clear backbuffer
 			if( count == 0 )
 				frame.commandList.clearRenderTargetView(frame.backBufferView, clear);
@@ -767,6 +772,7 @@ class DX12Driver extends h3d.impl.Driver {
 				desc.planeSlice = 0;
 			}
 		}
+		lastRtvDesc = desc;
 		if (tex != null) {
 			var texView = renderTargetViews.alloc(1);
 			Driver.createRenderTargetView(tex.t.res, desc, texView);
@@ -824,6 +830,8 @@ class DX12Driver extends h3d.impl.Driver {
 			currentRenderTargets.pop();
 
 		depthEnabled = depthBinding != NotBound;
+
+		lastRtvDesc = null;
 
 		var t0 = textures[0];
 		var texViews = renderTargetViews.alloc(textures.length);
