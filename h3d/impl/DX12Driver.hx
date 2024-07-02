@@ -504,6 +504,7 @@ class DX12Driver extends h3d.impl.Driver {
 					frame.toRelease.push(prev.res);
 					Driver.createRenderTargetView(tex.t.res, null, tmp.renderTargets[i]);
 				}
+				tex.flags.set(WasCleared);
 				frame.commandList.clearRenderTargetView(tmp.renderTargets[i], clear);
 			}
 			// clear backbuffer
