@@ -211,14 +211,14 @@ abstract Polygon(Array<Point>) from Array<Point> to Array<Point> {
 	}
 
 	/**
-		Returns transformed Polygon points by the provided matrix.
+		Returns a new transformed Polygon points by the provided matrix.
 	**/
 	public function transformed(mat: h2d.col.Matrix) {
 		var ret = points.copy();
 		for( i in 0...ret.length ) {
 			ret[i] = ret[i].transformed(mat);
 		}
-		return ret;
+		return new Polygon(ret);
 	}
 
 	/**
