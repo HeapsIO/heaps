@@ -202,12 +202,23 @@ abstract Polygon(Array<Point>) from Array<Point> to Array<Point> {
 	}
 
 	/**
-		Transforms Polygon points by provided matrix.
+		Transforms Polygon points by the provided matrix.
 	**/
 	public function transform(mat: h2d.col.Matrix) {
 		for( i in 0...points.length ) {
 			points[i].transform(mat);
 		}
+	}
+
+	/**
+		Returns transformed Polygon points by the provided matrix.
+	**/
+	public function transformed(mat: h2d.col.Matrix) {
+		var ret = points.copy();
+		for( i in 0...ret.length ) {
+			ret[i] = ret[i].transformed(mat);
+		}
+		return ret;
 	}
 
 	/**
