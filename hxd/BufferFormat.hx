@@ -440,8 +440,11 @@ class BufferFormat {
 		return i >= 0 ? i : (0x7F + i) | 0x80;
 	}
 
-	public static function floatS8to32( v : Int ) {
-		return (v & 0x80 != 0 ? -1 : 1) * ((v&0x7F)/127);
+	public static function floatS8to32( v : Int ) : Float {
+		if ( v & 0x80 != 0 )
+			return -1*(0x7F-(v&0x7F))/128;
+		else
+			return (v&0x7F)/128;
 	}
 
 	public static function float32toU8( v : Float ) : Int {
