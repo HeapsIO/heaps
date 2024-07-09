@@ -409,32 +409,44 @@ class Renderer extends h3d.scene.Renderer {
 		}
 	}
 
+	function renderEditorOutline() {
+		#if editor
+		if (showEditorGuides) {
+			renderPass(defaultPass, get("debuggeom"), backToFront);
+			renderPass(defaultPass, get("debuggeom_alpha"), backToFront);
+		}
+
+		if (showEditorOutlines) {
+			var outlineTex = allocTarget("outline", true);
+			ctx.engine.pushTarget(outlineTex);
+			clear(0);
+			draw("highlightBack");
+			draw("highlight");
+			ctx.engine.popTarget();
+			var outlineBlurTex = allocTarget("outlineBlur", false);
+			outline.pass.setBlendMode(Alpha);
+			outlineBlur.apply(ctx, outlineTex, outlineBlurTex);
+			outline.shader.texture = outlineBlurTex;
+			outline.render();
+		}
+		#end
+	}
+
+	function renderEditorOverlay() {
+		#if editor
+		renderPass(defaultPass, get("overlay"), backToFront);
+		renderPass(defaultPass, get("ui"), backToFront);
+		#end
+	}
+
 	function end() {
 		#if editor
 			switch( currentStep ) {
 				case MainDraw:
 				case BeforeTonemapping:
-					if (showEditorGuides) {
-						renderPass(defaultPass, get("debuggeom"), backToFront);
-						renderPass(defaultPass, get("debuggeom_alpha"), backToFront);
-					}
-
-					if (showEditorOutlines) {
-						var outlineTex = allocTarget("outline", true);
-						ctx.engine.pushTarget(outlineTex);
-						clear(0);
-						draw("highlightBack");
-						draw("highlight");
-						ctx.engine.popTarget();
-						var outlineBlurTex = allocTarget("outlineBlur", false);
-						outline.pass.setBlendMode(Alpha);
-						outlineBlur.apply(ctx, outlineTex, outlineBlurTex);
-						outline.shader.texture = outlineBlurTex;
-						outline.render();
-					}
+					renderEditorOutline();
 				case Overlay:
-					renderPass(defaultPass, get("overlay"), backToFront);
-					renderPass(defaultPass, get("ui"), backToFront);
+					renderEditorOverlay();
 				default:
 			}
 		#end
@@ -744,7 +756,8 @@ class Renderer extends h3d.scene.Renderer {
 				debugging = true;
 				hxd.Window.getInstance().addEventTarget(onEvent);
 			}
-
+			renderEditorOutline();
+			renderEditorOverlay();
 		case Performance:
 			if( enableFXAA ) {
 				mark("FXAA");
@@ -752,6 +765,8 @@ class Renderer extends h3d.scene.Renderer {
 			} else
 				copy(ldr, null);
 			performance.render();
+			renderEditorOutline();
+			renderEditorOverlay();
 		}
 		if( debugging && displayMode != Debug ) {
 			debugging = false;
