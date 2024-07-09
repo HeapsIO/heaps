@@ -65,7 +65,20 @@ class ModelDatabase {
 			Reflect.setField(root, "lodConfig", lodConfigObj);
 		}
 
-		if (@:privateAccess hmd.lodConfig != null)
+		var isDefaultConfig = true;
+		var defaultConfig = getDefaultLodConfig(@:privateAccess hmd.lib.resource.entry.directory);
+
+		if (defaultConfig.length != @:privateAccess hmd.lodConfig.length)
+			isDefaultConfig = false;
+
+		for (idx in 0...@:privateAccess hmd.lodConfig.length) {
+			if (defaultConfig[idx] != @:privateAccess hmd.lodConfig[idx]) {
+				isDefaultConfig = false;
+				break;
+			}
+		}
+
+		if (!isDefaultConfig)
 			Reflect.setField(lodConfigObj, name, @:privateAccess hmd.lodConfig);
 		else
 			Reflect.deleteField(lodConfigObj, name);
