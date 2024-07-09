@@ -182,11 +182,17 @@ class FileConverter {
 	}
 
 	function loadConfig( dir : String ) : ConvertConfig {
-		var c = configs.get(dir);
+		return getConfig(configs, defaultConfig, dir, function(fullObj) {
+			return makeConfig(fullObj);
+		});
+	}
+
+	function getConfig(cachedConfigs : Map<String, Dynamic>, defaultConfig : Dynamic, dir : String, makeConfig : Dynamic -> Dynamic) : Dynamic {
+		var c = cachedConfigs.get(dir);
 		if( c != null ) return c;
 		var dirPos = dir.lastIndexOf("/");
-		var parent = dir == "" ? defaultConfig : loadConfig(dirPos < 0 ? "" : dir.substr(0,dirPos));
-		var propsFile = (dir == "" ? baseDir : baseDir + dir + "/")+"props.json";
+		var parent = dir == "" ? defaultConfig : getConfig(cachedConfigs, defaultConfig, dirPos < 0 ? "" : dir.substr(0,dirPos), (fullObj) -> makeConfig(fullObj));
+		var propsFile = (dir == "" ? baseDir : baseDir + dir + "/") +"props.json";
 		if( !sys.FileSystem.exists(propsFile) ) {
 			c = parent;
 		} else {
@@ -195,7 +201,7 @@ class FileConverter {
 			var fullObj = mergeRec(parent.obj, obj);
 			c = makeConfig(fullObj);
 		}
-		configs.set(dir, c);
+		cachedConfigs.set(dir, c);
 		return c;
 	}
 

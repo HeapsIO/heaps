@@ -5,7 +5,7 @@ class ModelDatabase {
 	public static var db : Map<String,{ v : Dynamic }> = new Map();
 
 	static var defaultLodConfigs : Map<String, Array<Float>> = new Map();
-	static var baseLodConfig = [ 0.3, 0.2, 0.1];
+	static var baseLodConfig = [ 0.5, 0.2, 0.01];
 
 	static var filename = "model.props";
 
@@ -77,25 +77,14 @@ class ModelDatabase {
 	}
 
 	public function getDefaultLodConfig( dir : String ) : Array<Float> {
-		var c = defaultLodConfigs.get(dir);
-		if( c != null ) return c;
+		var fs = Std.downcast(hxd.res.Loader.currentInstance.fs, hxd.fs.LocalFileSystem);
+		var c = @:privateAccess fs.convert.getConfig(defaultLodConfigs, baseLodConfig, dir, function(fullObj) {
+			if (Reflect.hasField(fullObj, "lods.screenRatio"))
+				return Reflect.field(fullObj, "lods.screenRatio");
 
-		var dirPos = dir.lastIndexOf("/");
-		var parent = dir == "" ? baseLodConfig : getDefaultLodConfig(dirPos < 0 ? "" : dir.substr(0,dirPos));
-		var propsFile = (dir == "" ? baseDir : baseDir + dir + "/")+"props.json";
-		if( !hxd.res.Loader.currentInstance.exists(propsFile) ) {
-			c = parent;
-		} else {
-			var content = hxd.res.Loader.currentInstance.load(propsFile).toText();
-			var obj = try haxe.Json.parse(content) catch( e : Dynamic ) throw "Failed to parse "+propsFile+"("+e+")";
+			return baseLodConfig;
+		});
 
-			if (Reflect.hasField(obj, "lods.screenRatio"))
-				c = Reflect.field(obj, "lods.screenRatio");
-			else
-				c = parent;
-		}
-
-		defaultLodConfigs.set(dir, c);
 		return c;
 	}
 
