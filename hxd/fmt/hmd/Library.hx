@@ -724,7 +724,7 @@ class Library {
 				var vidx = data.indexes[idx];
 				var p = vidx * formatStride;
 				var x = vbuf[p];
-				if( x != x ) {
+				if( Math.isNaN(x) ) {
 					// already processed
 					continue;
 				}
