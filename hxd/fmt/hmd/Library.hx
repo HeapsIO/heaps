@@ -314,8 +314,8 @@ class Library {
 			try {
 				if ( setupMaterialLibrary(loadTexture, mat, hxd.res.Loader.currentInstance.load((props:Dynamic).__ref).toPrefab(), (props:Dynamic).name) )
 					return mat;
-			} catch( e : Dynamic ) {
-			}
+			} catch( e : Dynamic ) {}
+			props = mat.getDefaultModelProps();
 		}
 		#end
 		if( m.diffuseTexture != null ) {
