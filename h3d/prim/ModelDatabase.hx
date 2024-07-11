@@ -68,13 +68,15 @@ class ModelDatabase {
 		var isDefaultConfig = true;
 		var defaultConfig = getDefaultLodConfig(@:privateAccess hmd.lib.resource.entry.directory);
 
-		if (defaultConfig.length != @:privateAccess hmd.lodConfig.length)
-			isDefaultConfig = false;
-
-		for (idx in 0...@:privateAccess hmd.lodConfig.length) {
-			if (defaultConfig[idx] != @:privateAccess hmd.lodConfig[idx]) {
+		if (@:privateAccess hmd.lodConfig != null) {
+			if (defaultConfig.length != @:privateAccess hmd.lodConfig.length)
 				isDefaultConfig = false;
-				break;
+
+			for (idx in 0...@:privateAccess hmd.lodConfig.length) {
+				if (defaultConfig[idx] != @:privateAccess hmd.lodConfig[idx]) {
+					isDefaultConfig = false;
+					break;
+				}
 			}
 		}
 
