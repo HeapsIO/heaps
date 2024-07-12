@@ -76,7 +76,7 @@ class HierarchicalWorld extends Object {
 		calcAbsPos();
 		logicBounds = new h3d.col.Bounds();
 		// TBD : z bounds? Negative & positive infinity causes debug bounds bugs.
-		var pseudoInfinity = 1e10;
+		var pseudoInfinity = 1e4;
 		var halfSize = data.size >> 1;
 		logicBounds.addPoint(new h3d.col.Point(-halfSize, -halfSize, -pseudoInfinity));
 		logicBounds.addPoint(new h3d.col.Point(halfSize,halfSize, pseudoInfinity));
@@ -91,6 +91,7 @@ class HierarchicalWorld extends Object {
 		}
 		if ( data.depth != 0 && data.onCreate != null )
 			data.onCreate(this);
+		inheritCulled = true;
 	}
 
 	function init() {
