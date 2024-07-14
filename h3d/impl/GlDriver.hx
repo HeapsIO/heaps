@@ -1803,11 +1803,6 @@ class GlDriver extends Driver {
 		for( i in 0...boundTextures.length )
 			boundTextures[i] = null;
 
-		// if( !tex.flags.has(WasCleared) ) {
-		// 	tex.flags.set(WasCleared); // once we draw to, do not clear again
-		// 	clear(BLACK);
-		// }
-
 		#if js
 		if( glDebug ) {
 			var code = gl.checkFramebufferStatus(GL.FRAMEBUFFER);

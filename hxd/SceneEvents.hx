@@ -360,6 +360,7 @@ class SceneEvents {
 					e.relY = oy;
 					if( !e.propagate )
 						continue;
+					e.propagate = false;
 				}
 
 				emitEvent(e);

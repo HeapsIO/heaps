@@ -417,6 +417,9 @@ class Camera {
 			m._33 = zFar / (zFar - zNear);
 			m._34 = 1;
 			m._43 = -(zNear * zFar) / (zFar - zNear);
+
+			m._31 = jitterOffsetX;
+			m._32 = jitterOffsetY;
 		}
 
 		m._11 += viewX * m._14;
@@ -428,9 +431,6 @@ class Camera {
 		m._22 += viewY * m._24;
 		m._32 += viewY * m._34;
 		m._42 += viewY * m._44;
-
-		m._31 += jitterOffsetX;
-		m._32 += jitterOffsetY;
 
 		// our z is negative in that case
 		if( rightHanded ) {

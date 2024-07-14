@@ -166,10 +166,6 @@ class Renderer extends h3d.scene.Renderer {
 		refreshProps();
 	}
 
-	override function dispose() {
-		super.dispose();
-	}
-
 	override function addShader(s:hxsl.Shader) {
 		tonemap.addShader(s);
 	}
@@ -413,32 +409,44 @@ class Renderer extends h3d.scene.Renderer {
 		}
 	}
 
+	function renderEditorOutline() {
+		#if editor
+		if (showEditorGuides) {
+			renderPass(defaultPass, get("debuggeom"), backToFront);
+			renderPass(defaultPass, get("debuggeom_alpha"), backToFront);
+		}
+
+		if (showEditorOutlines) {
+			var outlineTex = allocTarget("outline", true);
+			ctx.engine.pushTarget(outlineTex);
+			clear(0);
+			draw("highlightBack");
+			draw("highlight");
+			ctx.engine.popTarget();
+			var outlineBlurTex = allocTarget("outlineBlur", false);
+			outline.pass.setBlendMode(Alpha);
+			outlineBlur.apply(ctx, outlineTex, outlineBlurTex);
+			outline.shader.texture = outlineBlurTex;
+			outline.render();
+		}
+		#end
+	}
+
+	function renderEditorOverlay() {
+		#if editor
+		renderPass(defaultPass, get("overlay"), backToFront);
+		renderPass(defaultPass, get("ui"), backToFront);
+		#end
+	}
+
 	function end() {
 		#if editor
 			switch( currentStep ) {
 				case MainDraw:
-				case AfterTonemapping:
-					if (showEditorGuides) {
-						renderPass(defaultPass, get("debuggeom"), backToFront);
-						renderPass(defaultPass, get("debuggeom_alpha"), backToFront);
-					}
-
-					if (showEditorOutlines) {
-						var outlineTex = allocTarget("outline", true);
-						ctx.engine.pushTarget(outlineTex);
-						clear(0);
-						draw("highlightBack");
-						draw("highlight");
-						ctx.engine.popTarget();
-						var outlineBlurTex = allocTarget("outlineBlur", false);
-						outline.pass.setBlendMode(Alpha);
-						outlineBlur.apply(ctx, outlineTex, outlineBlurTex);
-						outline.shader.texture = outlineBlurTex;
-						outline.render();
-					}
+				case BeforeTonemapping:
+					renderEditorOutline();
 				case Overlay:
-					renderPass(defaultPass, get("overlay"), backToFront);
-					renderPass(defaultPass, get("ui"), backToFront);
+					renderEditorOverlay();
 				default:
 			}
 		#end
@@ -475,7 +483,8 @@ class Renderer extends h3d.scene.Renderer {
 		textures.depth = allocTarget("depth", true, 1., R32F);
 		textures.hdr = allocTarget("hdrOutput", true, 1, #if MRT_low RGB10A2 #else RGBA16F #end);
 		textures.ldr = allocTarget("ldrOutput");
-		textures.velocity = allocTarget("velocity", true, 1., RG16F );
+		if ( ctx.computeVelocity )
+			textures.velocity = allocTarget("velocity", true, 1., RG16F );
 	}
 
 	public function getPbrDepth() {
@@ -611,9 +620,12 @@ class Renderer extends h3d.scene.Renderer {
 	}
 
 	function getPbrRenderTargets( depth : Bool ) {
+		var targets = [textures.albedo, textures.normal, textures.pbr #if !MRT_low , textures.other #end];
 		if ( depth )
-			return [textures.albedo, textures.normal, textures.pbr #if !MRT_low , textures.other #end, getPbrDepth(), textures.velocity];
-		return [textures.albedo, textures.normal, textures.pbr #if !MRT_low , textures.other #end, textures.velocity];
+			targets.push(getPbrDepth());
+		if ( ctx.computeVelocity )
+			targets.push(textures.velocity);
+		return targets;
 	}
 
 	override function render() {
@@ -744,7 +756,8 @@ class Renderer extends h3d.scene.Renderer {
 				debugging = true;
 				hxd.Window.getInstance().addEventTarget(onEvent);
 			}
-
+			renderEditorOutline();
+			renderEditorOverlay();
 		case Performance:
 			if( enableFXAA ) {
 				mark("FXAA");
@@ -752,6 +765,8 @@ class Renderer extends h3d.scene.Renderer {
 			} else
 				copy(ldr, null);
 			performance.render();
+			renderEditorOutline();
+			renderEditorOverlay();
 		}
 		if( debugging && displayMode != Debug ) {
 			debugging = false;

@@ -303,7 +303,7 @@ class HMDModel extends MeshPrimitive {
 		if ( lodCount == 1 )
 			return 0;
 
-		var lodConfig = getLodConfig();
+		lodConfig = getLodConfig();
 		if ( lodConfig != null && lodConfig.length >= lodCount - 1) {
 			var lodLevel : Int = 0;
 			var maxIter = ( ( lodConfig.length > lodCount - 1 ) ? lodCount - 1: lodConfig.length );

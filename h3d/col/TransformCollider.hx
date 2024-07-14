@@ -79,8 +79,9 @@ class TransformCollider extends Collider {
 	}
 
 	public function dimension() {
-		throw "Not implemented";
-		return 0.0;
+		var scale = mat.getScale();
+		var scaleMax = Math.max(scale.x, Math.max(scale.y, scale.z));
+		return collider.dimension() * scaleMax;
 	}
 
 	#if !macro

@@ -85,6 +85,9 @@ class ComputeIndirect extends hxsl.Shader {
 
 			var culled = false;
 
+			if ( dot(scaledRadius, scaledRadius) < 1e-6 )
+				culled = true;
+
 			if ( ENABLE_CULLING ) {
 				for ( i  in 0...6 ) {
 					var plane = frustum[i];
@@ -116,8 +119,7 @@ class ComputeIndirect extends hxsl.Shader {
 				commandBuffer[ invocID * 5 + 2] = int(matInfos[ int(matIndex) + lod * MATERIAL_COUNT ].y);
 				commandBuffer[ invocID * 5 + 3] = 0;
 				commandBuffer[ invocID * 5 + 4] = invocID;
-			}
-			else {
+			} else {
 				commandBuffer[ invocID * 5 ] = 0;
 				commandBuffer[ invocID * 5 + 1] = 0;
 				commandBuffer[ invocID * 5 + 2] = 0;

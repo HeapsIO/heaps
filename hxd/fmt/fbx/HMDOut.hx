@@ -181,16 +181,16 @@ class HMDOut extends BaseLibrary {
 		}
 	}
 
-	inline function writePrec( v : Float, p : Precision ) {
+	public static inline function writePrec( d : haxe.io.BytesOutput, v : Float, p : Precision ) {
 		switch( p ) {
-		case F32: writeFloat(v);
-		case F16: dataOut.writeUInt16(hxd.BufferFormat.float32to16(v,true));
-		case S8: dataOut.writeByte(hxd.BufferFormat.float32toS8(v));
-		case U8: dataOut.writeByte(BufferFormat.float32toU8(v));
+		case F32: writeFloat(d, v);
+		case F16: d.writeUInt16(hxd.BufferFormat.float32to16(v,true));
+		case S8: d.writeByte(hxd.BufferFormat.float32toS8(v));
+		case U8: d.writeByte(BufferFormat.float32toU8(v));
 		}
 	}
 
-	inline function precisionSize(p:Precision) {
+	public static inline function precisionSize(p:Precision) {
 		return switch( p ) {
 		case F32: 4;
 		case F16: 2;
@@ -198,18 +198,26 @@ class HMDOut extends BaseLibrary {
 		}
 	}
 
-	inline function flushPrec( p : Precision, count : Int ) {
+	public static inline function flushPrec( d : haxe.io.BytesOutput, p : Precision, count : Int ) {
 		var b = (count * precisionSize(p)) & 3;
 		switch( b ) {
 		case 0:
 		case 1:
-			dataOut.writeUInt16(0);
-			dataOut.writeByte(0);
+			d.writeUInt16(0);
+			d.writeByte(0);
 		case 2:
-			dataOut.writeUInt16(0);
+			d.writeUInt16(0);
 		case 3:
-			dataOut.writeByte(0);
+			d.writeByte(0);
 		}
+	}
+
+	public static function remapPrecision(inputName : String) {
+		if ( inputName == "tangent" )
+			return "normal";
+		if ( inputName.indexOf("uv") == 0 )
+			return "uv";
+		return inputName;
 	}
 
 	function buildGeom( geom : hxd.fmt.fbx.Geometry, skin : h3d.anim.Skin, dataOut : haxe.io.BytesOutput, genTangents : Bool ) {
@@ -473,49 +481,49 @@ class HMDOut extends BaseLibrary {
 		g.vertexPosition = dataOut.length;
 		if( lowPrecConfig == null ) {
 			for( i in 0...vbuf.length )
-				writeFloat(vbuf[i]);
+				writeFloat(dataOut, vbuf[i]);
 		} else {
 			for( index in 0...Std.int(vbuf.length / stride) ) {
 				var i = index * stride;
-				writePrec(vbuf[i++], ppos);
-				writePrec(vbuf[i++], ppos);
-				writePrec(vbuf[i++], ppos);
-				flushPrec(ppos,3);
+				writePrec(dataOut, vbuf[i++], ppos);
+				writePrec(dataOut, vbuf[i++], ppos);
+				writePrec(dataOut, vbuf[i++], ppos);
+				flushPrec(dataOut, ppos,3);
 				if( normals != null ) {
-					writePrec(vbuf[i++], pnormal);
-					writePrec(vbuf[i++], pnormal);
-					writePrec(vbuf[i++], pnormal);
-					flushPrec(pnormal,3);
+					writePrec(dataOut, vbuf[i++], pnormal);
+					writePrec(dataOut, vbuf[i++], pnormal);
+					writePrec(dataOut, vbuf[i++], pnormal);
+					flushPrec(dataOut, pnormal,3);
 				}
 				if( tangents != null ) {
-					writePrec(vbuf[i++], pnormal);
-					writePrec(vbuf[i++], pnormal);
-					writePrec(vbuf[i++], pnormal);
-					flushPrec(pnormal,3);
+					writePrec(dataOut, vbuf[i++], pnormal);
+					writePrec(dataOut, vbuf[i++], pnormal);
+					writePrec(dataOut, vbuf[i++], pnormal);
+					flushPrec(dataOut, pnormal,3);
 				}
 				for( k in 0...uvs.length ) {
-					writePrec(vbuf[i++], puv);
-					writePrec(vbuf[i++], puv);
-					flushPrec(puv,2);
+					writePrec(dataOut, vbuf[i++], puv);
+					writePrec(dataOut, vbuf[i++], puv);
+					flushPrec(dataOut, puv,2);
 				}
 				if( colors != null ) {
-					writePrec(vbuf[i++], pcolor);
-					writePrec(vbuf[i++], pcolor);
-					writePrec(vbuf[i++], pcolor);
-					flushPrec(pcolor,3);
+					writePrec(dataOut, vbuf[i++], pcolor);
+					writePrec(dataOut, vbuf[i++], pcolor);
+					writePrec(dataOut, vbuf[i++], pcolor);
+					flushPrec(dataOut, pcolor,3);
 				}
 				if( skin != null ) {
-					writePrec(vbuf[i++], pweight);
-					writePrec(vbuf[i++], pweight);
-					writePrec(vbuf[i++], pweight);
-					flushPrec(pweight,3);
-					writeFloat(vbuf[i++]);
+					writePrec(dataOut, vbuf[i++], pweight);
+					writePrec(dataOut, vbuf[i++], pweight);
+					writePrec(dataOut, vbuf[i++], pweight);
+					flushPrec(dataOut, pweight,3);
+					writeFloat(dataOut, vbuf[i++]);
 				}
 				if( generateNormals ) {
-					writePrec(vbuf[i++], pnormal);
-					writePrec(vbuf[i++], pnormal);
-					writePrec(vbuf[i++], pnormal);
-					flushPrec(pnormal,3);
+					writePrec(dataOut, vbuf[i++], pnormal);
+					writePrec(dataOut, vbuf[i++], pnormal);
+					writePrec(dataOut, vbuf[i++], pnormal);
+					flushPrec(dataOut, pnormal,3);
 				}
 				if( i != (index + 1) * stride )
 					throw "assert";
@@ -594,36 +602,36 @@ class HMDOut extends BaseLibrary {
 			}
 			if( lowPrecConfig == null ) {
 				for( i in 0...vbuf.length )
-					writeFloat(vbuf[i]);
+					writeFloat(dataOut, vbuf[i]);
 			} else {
 				for( index in 0...Std.int(vbuf.length / stride) ) {
 					var i = index * stride;
-					writePrec(vbuf[i++], ppos);
-					writePrec(vbuf[i++], ppos);
-					writePrec(vbuf[i++], ppos);
-					flushPrec(ppos,3);
+					writePrec(dataOut, vbuf[i++], ppos);
+					writePrec(dataOut, vbuf[i++], ppos);
+					writePrec(dataOut, vbuf[i++], ppos);
+					flushPrec(dataOut, ppos,3);
 					if( normals != null ) {
-						writePrec(vbuf[i++], pnormal);
-						writePrec(vbuf[i++], pnormal);
-						writePrec(vbuf[i++], pnormal);
-						flushPrec(pnormal,3);
+						writePrec(dataOut, vbuf[i++], pnormal);
+						writePrec(dataOut, vbuf[i++], pnormal);
+						writePrec(dataOut, vbuf[i++], pnormal);
+						flushPrec(dataOut, pnormal,3);
 					}
 					if( tangents != null ) {
-						writePrec(vbuf[i++], pnormal);
-						writePrec(vbuf[i++], pnormal);
-						writePrec(vbuf[i++], pnormal);
-						flushPrec(pnormal,3);
+						writePrec(dataOut, vbuf[i++], pnormal);
+						writePrec(dataOut, vbuf[i++], pnormal);
+						writePrec(dataOut, vbuf[i++], pnormal);
+						flushPrec(dataOut, pnormal,3);
 					}
 					for( k in 0...uvs.length ) {
-						writePrec(vbuf[i++], puv);
-						writePrec(vbuf[i++], puv);
-						flushPrec(puv,2);
+						writePrec(dataOut, vbuf[i++], puv);
+						writePrec(dataOut, vbuf[i++], puv);
+						flushPrec(dataOut, puv,2);
 					}
 					if( colors != null ) {
-						writePrec(vbuf[i++], pcolor);
-						writePrec(vbuf[i++], pcolor);
-						writePrec(vbuf[i++], pcolor);
-						flushPrec(pcolor,3);
+						writePrec(dataOut, vbuf[i++], pcolor);
+						writePrec(dataOut, vbuf[i++], pcolor);
+						writePrec(dataOut, vbuf[i++], pcolor);
+						flushPrec(dataOut, pcolor,3);
 					}
 					if( i != (index + 1) * stride )
 						throw "assert";
@@ -1011,8 +1019,8 @@ class HMDOut extends BaseLibrary {
 		return p;
 	}
 
-	inline function writeFloat( f : Float ) {
-		dataOut.writeFloat( f == 0 ? 0 : f ); // prevent negative zero
+	public static inline function writeFloat(d : haxe.io.BytesOutput, f : Float ) {
+		d.writeFloat( f == 0 ? 0 : f ); // prevent negative zero
 	}
 
 	function writeFrame( o : h3d.anim.LinearAnimation.LinearObject, fid : Int ) {
@@ -1020,31 +1028,31 @@ class HMDOut extends BaseLibrary {
 		if( o.frames != null ) {
 			var f = o.frames[fid];
 			if( o.hasPosition ) {
-				writeFloat(f.tx);
-				writeFloat(f.ty);
-				writeFloat(f.tz);
+				writeFloat(dataOut, f.tx);
+				writeFloat(dataOut, f.ty);
+				writeFloat(dataOut, f.tz);
 			}
 			if( o.hasRotation ) {
 				var ql = Math.sqrt(f.qx * f.qx + f.qy * f.qy + f.qz * f.qz + f.qw * f.qw);
 				if( ql * f.qw < 0 ) ql = -ql; // make sure normalized qw > 0
-				writeFloat(round(f.qx / ql));
-				writeFloat(round(f.qy / ql));
-				writeFloat(round(f.qz / ql));
+				writeFloat(dataOut, round(f.qx / ql));
+				writeFloat(dataOut, round(f.qy / ql));
+				writeFloat(dataOut, round(f.qz / ql));
 			}
 			if( o.hasScale ) {
-				writeFloat(f.sx);
-				writeFloat(f.sy);
-				writeFloat(f.sz);
+				writeFloat(dataOut, f.sx);
+				writeFloat(dataOut, f.sy);
+				writeFloat(dataOut, f.sz);
 			}
 		}
 		if( o.uvs != null ) {
-			writeFloat(o.uvs[fid<<1]);
-			writeFloat(o.uvs[(fid<<1)+1]);
+			writeFloat(dataOut, o.uvs[fid<<1]);
+			writeFloat(dataOut, o.uvs[(fid<<1)+1]);
 		}
 		if( o.alphas != null )
-			writeFloat(o.alphas[fid]);
+			writeFloat(dataOut, o.alphas[fid]);
 		if( o.propValues != null )
-			writeFloat(o.propValues[fid]);
+			writeFloat(dataOut, o.propValues[fid]);
 	}
 
 	function makeAnimation( anim : h3d.anim.Animation ) {
@@ -1079,21 +1087,21 @@ class HMDOut extends BaseLibrary {
 				if( d.version < 3 ) {
 					for( f in obj.frames ) {
 						if( o.flags.has(HasPosition) ) {
-							writeFloat(f.tx);
-							writeFloat(f.ty);
-							writeFloat(f.tz);
+							writeFloat(dataOut, f.tx);
+							writeFloat(dataOut, f.ty);
+							writeFloat(dataOut, f.tz);
 						}
 						if( o.flags.has(HasRotation) ) {
 							var ql = Math.sqrt(f.qx * f.qx + f.qy * f.qy + f.qz * f.qz + f.qw * f.qw);
 							if( f.qw < 0 ) ql = -ql;
-							writeFloat(round(f.qx / ql));
-							writeFloat(round(f.qy / ql));
-							writeFloat(round(f.qz / ql));
+							writeFloat(dataOut, round(f.qx / ql));
+							writeFloat(dataOut, round(f.qy / ql));
+							writeFloat(dataOut, round(f.qz / ql));
 						}
 						if( o.flags.has(HasScale) ) {
-							writeFloat(f.sx);
-							writeFloat(f.sy);
-							writeFloat(f.sz);
+							writeFloat(dataOut, f.sx);
+							writeFloat(dataOut, f.sy);
+							writeFloat(dataOut, f.sz);
 						}
 					}
 				}
@@ -1103,14 +1111,14 @@ class HMDOut extends BaseLibrary {
 				if( count == 0 ) count = obj.uvs.length>>1 else if( count != obj.uvs.length>>1 ) throw "assert";
 				if( d.version < 3 )
 					for( f in obj.uvs )
-						writeFloat(f);
+						writeFloat(dataOut, f);
 				}
 			if( obj.alphas != null ) {
 				o.flags.set(HasAlpha);
 				if( count == 0 ) count = obj.alphas.length else if( count != obj.alphas.length ) throw "assert";
 				if( d.version < 3 )
 					for( f in obj.alphas )
-						writeFloat(f);
+						writeFloat(dataOut, f);
 			}
 			if( obj.propValues != null ) {
 				o.flags.set(HasProps);
@@ -1118,7 +1126,7 @@ class HMDOut extends BaseLibrary {
 				if( count == 0 ) count = obj.propValues.length else if( count != obj.propValues.length ) throw "assert";
 				if( d.version < 3 )
 					for( f in obj.propValues )
-						writeFloat(f);
+						writeFloat(dataOut, f);
 			}
 			if( count == 0 )
 				throw "assert"; // no data ?

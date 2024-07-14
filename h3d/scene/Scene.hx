@@ -334,13 +334,13 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 		renderer.startEffects();
 
 		#if sceneprof h3d.impl.SceneProf.begin("sync", ctx.frame); #end
-		@:privateAccess renderer.mark("sync");
+		mark("sync");
 		syncRec(ctx);
 		#if sceneprof
 		h3d.impl.SceneProf.end();
 		h3d.impl.SceneProf.begin("emit", ctx.frame);
 		#end
-		@:privateAccess renderer.mark("emit");
+		mark("emit");
 		emitRec(ctx);
 		#if sceneprof h3d.impl.SceneProf.end(); #end
 
@@ -368,7 +368,7 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 		renderer.process(passes);
 
 		// check that passes have been rendered
-		#if debug
+		#if (debug && !editor)
 		if( !ctx.computingStatic && checkPasses)
 			for( p in passes )
 				if( !p.rendered )
@@ -385,6 +385,10 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 			p.name = null;
 			p.passes.init(null);
 		}
+	}
+
+	public dynamic function mark(name : String) {
+		@:privateAccess renderer.mark(name);
 	}
 
 	var prevDB : h3d.mat.Texture;

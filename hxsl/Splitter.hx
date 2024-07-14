@@ -217,7 +217,7 @@ class Splitter {
 	function checkVar( v : VarProps, vertex : Bool, vvars : Map<Int,VarProps>, p ) {
 		switch( v.v.kind ) {
 		case Local if( v.requireInit ):
-			if ( v.origin.parent.name != "global" && !isBatchShader )
+			if ( v.origin.parent == null || (v.origin.parent.name != "global" && !isBatchShader) )
 				throw new Error("Variable " + v.v.name + " is used without being initialized", p);
 		case Var:
 			if( !vertex ) {

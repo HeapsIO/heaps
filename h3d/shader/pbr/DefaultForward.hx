@@ -242,8 +242,12 @@ class DefaultForward extends hxsl.Shader {
 			F0 = mix(pbrSpecularColor, albedoGamma, metalness);
 
 			// Dir Light With Shadow
-			@unroll for( l in 0 ... DIR_SHADOW_COUNT )
-				lightAccumulation += evaluateDirLight(l) * evaluateDirShadow(l);
+			@unroll for( l in 0 ... DIR_SHADOW_COUNT ) {
+				var c = evaluateDirLight(l);
+				if ( dot(c, c) > 1e-6 )
+					c *= evaluateDirShadow(l);
+				lightAccumulation += c;
+			}
 			// Dir Light
 			var start = DIR_SHADOW_COUNT;
 			if ( CASCADE_COUNT > 0 )
@@ -252,22 +256,34 @@ class DefaultForward extends hxsl.Shader {
 				lightAccumulation += evaluateDirLight(l);
 
 			// Point Light With Shadow
-			@unroll for( l in 0 ... POINT_SHADOW_COUNT )
-				lightAccumulation += evaluatePointLight(l) * evaluatePointShadow(l);
+			@unroll for( l in 0 ... POINT_SHADOW_COUNT ) {
+				var c = evaluatePointLight(l);
+				if ( dot(c, c) > 1e-6 )
+					c *= evaluatePointShadow(l);
+				lightAccumulation += c;
+			}
 			// Point Light
 			@unroll for( l in POINT_SHADOW_COUNT ... pointLightCount + POINT_SHADOW_COUNT )
 				lightAccumulation += evaluatePointLight(l);
 
 			// Spot Light With Shadow
-			@unroll for( l in 0 ... SPOT_SHADOW_COUNT )
-				lightAccumulation += evaluateSpotLight(l) * evaluateSpotShadow(l);
+			@unroll for( l in 0 ... SPOT_SHADOW_COUNT ) {
+				var c = evaluateSpotLight(l);
+				if ( dot(c, c) > 1e-6 )
+					c *= evaluateSpotShadow(l);
+				lightAccumulation += c;
+			}
 			// Spot Light
 			@unroll for( l in SPOT_SHADOW_COUNT ... spotLightCount + SPOT_SHADOW_COUNT )
 				lightAccumulation += evaluateSpotLight(l);
 
 			// Cascade shadows
-			if ( CASCADE_COUNT > 0 )
-				lightAccumulation += evaluateCascadeLight() * evaluateCascadeShadow();
+			if ( CASCADE_COUNT > 0 ) {
+				var c = evaluateCascadeLight();
+				if ( dot(c, c) > 1e-6 )
+					c *= evaluateCascadeShadow();
+				lightAccumulation += c;
+			}
 
 			// Indirect only support the main env from the scene at the moment
 			if( USE_INDIRECT )
