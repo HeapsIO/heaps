@@ -135,6 +135,8 @@ class CascadeShadowMap extends DirShadowMap {
 		var invD0 = 1 / d0;
 		var zDist0 = cascadeBounds0.zMax - cascadeBounds0.zMin;
 
+		var depthBiasFactor = (params[0] != null ) ? params[0].depthBias : 1.0;
+
 		var proj = tmpProj;
 		proj.zero();
 		proj._11 = invD0;
@@ -142,7 +144,7 @@ class CascadeShadowMap extends DirShadowMap {
 		proj._33 = 1 / (zDist0);
 		proj._41 = 0.5;
 		proj._42 = 0.5;
-		proj._43 = 0.00000190734; // 2^-19 depth offset;
+		proj._43 = 0.00000190734 * depthBiasFactor; // 2^-19 depth offset;
 		proj._44 = 1;
 
 		cascadeViewProj.multiply(view, proj);
@@ -187,10 +189,13 @@ class CascadeShadowMap extends DirShadowMap {
 			var proj = tmpProj;
 			proj.zero();
 			var invD2 = 2.0 * invD;
+
+			var depthBiasFactor = (params[i] != null ) ? params[i].depthBias : 1.0;
+
 			proj._11 = invD2;
 			proj._22 = invD2;
 			proj._33 = invZDist;
-			proj._43 = 0.00000190734; // 2^-19 depth offset;
+			proj._43 = 0.0000190734 * depthBiasFactor; // 2^-19 depth offset;
 			proj._44 = 1;
 
 			lightCameras[i].viewProj.multiply(view, proj);
@@ -299,8 +304,7 @@ class CascadeShadowMap extends DirShadowMap {
 			// Bilinear depth only make sense if we use sample compare to get weighted shadow occlusion which we doesn't support yet.
 			texture.filter = Nearest;
 
-			var param = params[cascade - 1 - i];
-			texture.depthBias = (param != null) ? param.depthBias : 0;
+			var param = params[i];
 			texture.slopeScaledBias = (param != null) ? param.slopeBias : 0;
 			texture.depthClamp = true;
 
