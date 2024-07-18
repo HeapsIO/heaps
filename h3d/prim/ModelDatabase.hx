@@ -93,6 +93,8 @@ class ModelDatabase {
 
 	public function getDefaultLodConfig( dir : String ) : Array<Float> {
 		var fs = Std.downcast(hxd.res.Loader.currentInstance.fs, hxd.fs.LocalFileSystem);
+		if (fs == null)
+			return baseLodConfig;
 		var c = @:privateAccess fs.convert.getConfig(defaultLodConfigs, baseLodConfig, dir, function(fullObj) {
 			if (Reflect.hasField(fullObj, "lods.screenRatio"))
 				return Reflect.field(fullObj, "lods.screenRatio");
