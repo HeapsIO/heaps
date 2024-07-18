@@ -622,9 +622,10 @@ class MeshBatch extends MultiMaterial {
 					computeShader.ENABLE_CULLING = enableGPUCulling;
 					computeShader.ENABLE_DISTANCE_CLIPPING = maxDistance >= 0;
 					var materialCount = materials.length;
+					var lodCount = ( enableLOD ) ? prim.lodCount() : 1;
 					computeShader.materialCount = materialCount;
 					computeShader.MAX_MATERIAL_COUNT = 16;
-					while ( materialCount > computeShader.MAX_MATERIAL_COUNT )
+					while ( materialCount * lodCount > computeShader.MAX_MATERIAL_COUNT )
 						computeShader.MAX_MATERIAL_COUNT = computeShader.MAX_MATERIAL_COUNT + 16;
 					computeShader.maxDistance = maxDistance;
 					addComputeShaders(computePass);
@@ -634,7 +635,6 @@ class MeshBatch extends MultiMaterial {
 					var bounds = prim.getBounds();
 					computeShader.radius = bounds.dimension();
 
-					var lodCount = ( enableLOD ) ? prim.lodCount() : 1;
 					if ( matInfos == null ) {
 						if ( enableLOD ) {
 							var hmd : h3d.prim.HMDModel = cast prim;
