@@ -19,6 +19,7 @@ class CameraController extends h3d.scene.Object {
 	public var maxDistance : Float = 1e20;
 
 	public var lockZPlanes = false;
+	public var enableZoom = true;
 
 	var scene : h3d.scene.Scene;
 	var pushing = -1;
@@ -208,16 +209,20 @@ class CameraController extends h3d.scene.Object {
 	}
 
 	function zoom(delta : Float) {
-		var dist = targetDistance;
-		if( (dist > minDistance && delta < 0) || (dist < maxDistance && delta > 0) ) {
-			targetPos.x *= Math.pow(zoomAmount, delta);
-			var expectedDist = targetDistance;
-			if( expectedDist < minDistance ) {
-				targetPos.x = minDistance * targetOffset.w;
+		if ( enableZoom ) {
+			var dist = targetDistance;
+			if( (dist > minDistance && delta < 0) || (dist < maxDistance && delta > 0) ) {
+				targetPos.x *= Math.pow(zoomAmount, delta);
+				var expectedDist = targetDistance;
+				if( expectedDist < minDistance ) {
+					targetPos.x = minDistance * targetOffset.w;
+				}
+				if( expectedDist > maxDistance ) {
+					targetPos.x = maxDistance * targetOffset.w;
+				}
 			}
-			if( expectedDist > maxDistance ) {
-				targetPos.x = maxDistance * targetOffset.w;
-			}
+		} else {
+			pan(0.0, 0.0, -panSpeed * delta);
 		}
 	}
 
