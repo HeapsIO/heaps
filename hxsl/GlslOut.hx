@@ -330,19 +330,21 @@ class GlslOut {
 			// else
 				return "texelFetch";
 		case TextureSize:
+			var sufix = "";
 			switch( args[0].t ) {
 			case TChannel(_):
 				decl("vec2 _textureSize(sampler2D sampler, int lod) { return vec2(textureSize(sampler, lod)); }");
 			case TSampler(dim,arr):
 				var size = Tools.getDimSize(dim,arr);
-				var t = "sampler"+dim.getName().substr(1)+(arr?"Array":"");
-				decl('vec$size _textureSize($t sampler, int lod) { return vec$size(textureSize(sampler, lod)); }');
+				sufix = (arr?"Array":"");
+				var t = "sampler"+dim.getName().substr(1)+sufix;
+				decl('vec$size _texture${sufix}Size($t sampler, int lod) { return vec$size(textureSize(sampler, lod)); }');
 			case TRWTexture(dim,arr,_):
 				var size = Tools.getDimSize(dim,arr);
 				return "vec"+size+"(imageSize";
 			default:
 			}
-			return "_textureSize";
+			return '_texture${sufix}Size';
 		case Mod if( rt == TInt && isES ):
 			decl("int _imod( int x, int y ) { return int(mod(float(x),float(y))); }");
 			return "_imod";
