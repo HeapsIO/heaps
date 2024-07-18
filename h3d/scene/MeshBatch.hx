@@ -55,10 +55,12 @@ class ComputeIndirect extends hxsl.Shader {
 		@param var instanceData : RWPartialBuffer<{ modelView : Mat4 }>;
 		@param var radius : Float;
 
-		@const(16) var MATERIAL_COUNT : Int = 1;
+		// 16 by default because 16 * 4 floats = 256 bytes and cbuffer are aligned to 256 bytes
+		@const var MAX_MATERIAL_COUNT : Int = 16;
+		@param var materialCount : Int;
 		@param var matIndex : Float;
 		// x : indexCount, y : startIndex, z : minScreenRatio, w : unused
-		@param var matInfos : Buffer<Vec4, MATERIAL_COUNT>;
+		@param var matInfos : Buffer<Vec4, MAX_MATERIAL_COUNT>;
 
 		@const var ENABLE_CULLING : Bool;
 		@param var frustum : Buffer<Vec4, 6>;
@@ -105,7 +107,7 @@ class ComputeIndirect extends hxsl.Shader {
 			if ( ENABLE_LOD ) {
 				var screenRatio = scaledRadius / distToCam;
 				for ( i in 0...int(lodCount) ) {
-					var minScreenRatio = matInfos[i *  MATERIAL_COUNT].z;
+					var minScreenRatio = matInfos[i *  materialCount].z;
 					if (  screenRatio > minScreenRatio )
 						break;
 					lod++;
@@ -114,9 +116,9 @@ class ComputeIndirect extends hxsl.Shader {
 			}
 
 			if ( !culled ) {
-				commandBuffer[ invocID * 5 ] = int(matInfos[ int(matIndex) + lod * MATERIAL_COUNT ].x) ;
+				commandBuffer[ invocID * 5 ] = int(matInfos[ int(matIndex) + lod * materialCount ].x) ;
 				commandBuffer[ invocID * 5 + 1] = 1;
-				commandBuffer[ invocID * 5 + 2] = int(matInfos[ int(matIndex) + lod * MATERIAL_COUNT ].y);
+				commandBuffer[ invocID * 5 + 2] = int(matInfos[ int(matIndex) + lod * materialCount ].y);
 				commandBuffer[ invocID * 5 + 3] = 0;
 				commandBuffer[ invocID * 5 + 4] = invocID;
 			} else {
@@ -619,6 +621,11 @@ class MeshBatch extends MultiMaterial {
 					computeShader.ENABLE_LOD = enableLOD;
 					computeShader.ENABLE_CULLING = enableGPUCulling;
 					computeShader.ENABLE_DISTANCE_CLIPPING = maxDistance >= 0;
+					var materialCount = materials.length;
+					computeShader.materialCount = materialCount;
+					computeShader.MAX_MATERIAL_COUNT = 16;
+					while ( materialCount > computeShader.MAX_MATERIAL_COUNT )
+						computeShader.MAX_MATERIAL_COUNT = computeShader.MAX_MATERIAL_COUNT + 16;
 					computeShader.maxDistance = maxDistance;
 					addComputeShaders(computePass);
 					p.computePass = computePass;
@@ -632,7 +639,6 @@ class MeshBatch extends MultiMaterial {
 						if ( enableLOD ) {
 							var hmd : h3d.prim.HMDModel = cast prim;
 							var lodConfig = hmd.getLodConfig();
-							var materialCount = materials.length;
 							var tmpMatInfos = alloc.allocFloats( 4 * materialCount * lodCount );
 							matInfos = alloc.allocBuffer( materialCount * lodCount, hxd.BufferFormat.VEC4_DATA, Uniform );
 							var pos : Int = 0;
