@@ -139,6 +139,12 @@ class CacheFile extends Cache {
 	}
 
 	function resolveShader( name : String ) : hxsl.Shader {
+		if ( StringTools.endsWith(name, ".shgraph") ) {
+			var shgraph : hrt.shgraph.ShaderGraph = try cast hxd.res.Loader.currentInstance.load(name).toPrefab().load() catch( e : hxd.res.NotFound ) null;
+			if (shgraph == null)
+				return null;
+			return shgraph.makeShaderInstance();
+		}
 		var cl = Type.resolveClass(name);
 		if( cl == null )
 			return null;
