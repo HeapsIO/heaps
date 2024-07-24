@@ -36,6 +36,8 @@ enum abstract ObjectFlags(Int) {
 class Object {
 
 	static inline var ROT2RAD = -0.017453292519943295769236907684886;
+	static inline var NO_VELOCITY = -1;
+	static inline var VELOCITY = 0;
 
 	var flags : ObjectFlags;
 	var lastFrame : Int;
@@ -183,7 +185,7 @@ class Object {
 
 	var absPos : h3d.Matrix;
 	var prevAbsPos : h3d.Matrix;
-	var nextPrevAbsPos : h3d.Matrix;
+	var prevAbsPosFrame : Int = NO_VELOCITY;
 	var invPos : h3d.Matrix;
 	var qRot : h3d.Quat;
 	var posChanged(get,set) : Bool;
@@ -673,6 +675,15 @@ class Object {
 	}
 
 	function calcAbsPos() {
+		if ( prevAbsPosFrame == NO_VELOCITY )
+			prevAbsPos = null;
+		else if ( prevAbsPosFrame < hxd.Timer.frameCount ) {
+			prevAbsPosFrame = hxd.Timer.frameCount;
+			if ( prevAbsPos == null )
+				prevAbsPos = absPos.clone();
+			else
+				prevAbsPos.load(absPos);
+		}
 		qRot.toMatrix(absPos);
 		// prepend scale
 		absPos._11 *= scaleX;
@@ -708,22 +719,8 @@ class Object {
 	function sync( ctx : RenderContext ) {
 	}
 
-	function computePrevAbsPos() {
-		if ( prevAbsPos == null )
-			return;
-		prevAbsPos.load(nextPrevAbsPos);
-		nextPrevAbsPos.load(absPos);
-	}
-
 	function syncRec( ctx : RenderContext ) {
 		#if sceneprof h3d.impl.SceneProf.mark(this); #end
-		if ( !ctx.computeVelocity ) {
-			prevAbsPos = null;
-			nextPrevAbsPos = null;
-		} else if ( prevAbsPos == null ) {
-			prevAbsPos = absPos.clone();
-			nextPrevAbsPos = absPos.clone();
-		}
 
 		if( currentAnimation != null ) {
 			var old = parent;
@@ -758,7 +755,6 @@ class Object {
 			if( flags.has(FFixedPositionSynced) && !changed && !ctx.wasContextLost ) {
 				ctx.visibleFlag = old;
 				ctx.cullingCollider = prevCollider;
-				computePrevAbsPos();
 				return;
 			}
 			flags.set(FFixedPositionSynced, true);
@@ -785,7 +781,6 @@ class Object {
 		}
 		ctx.visibleFlag = old;
 		ctx.cullingCollider = prevCollider;
-		computePrevAbsPos();
 	}
 
 	function syncPos() {
@@ -818,6 +813,10 @@ class Object {
 		}
 
 		var prevForcedScreenRatio : Float = ctx.forcedScreenRatio;
+		if ( !ctx.computeVelocity || fixedPosition || culled )
+			prevAbsPosFrame = NO_VELOCITY;
+		else if ( prevAbsPosFrame == NO_VELOCITY )
+			prevAbsPosFrame = VELOCITY;
 		if( !culled || ctx.computingStatic )
 			emit(ctx);
 
