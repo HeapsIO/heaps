@@ -64,6 +64,7 @@ class Output {
 	function drawObject( p : h3d.pass.PassObject ) {
 		ctx.drawPass = p;
 		ctx.engine.selectMaterial(p.pass);
+		p.obj.drawn = true;
 		@:privateAccess p.obj.draw(ctx);
 	}
 

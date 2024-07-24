@@ -17,6 +17,7 @@ enum abstract ObjectFlags(Int) {
 	public var FFixedPosition = 0x2000;
 	public var FFixedPositionSynced = 0x4000;
 	public var FAlwaysSync = 0x8000;
+	public var FDrawn = 0x10000;
 	public inline function new(value) {
 		this = value;
 	}
@@ -168,6 +169,11 @@ class Object {
 	public var alwaysSync(get, set) : Bool;
 
 	/**
+		When set, the object has been drawn during previous frame. Useful for temporal effects such as temporal antialiasing.
+	**/
+	public var drawn(get, set) : Bool;
+
+	/**
 		When set, collider shape will be used for automatic frustum culling.
 		If `inheritCulled` is true, collider will be inherited to children unless they have their own collider set.
 	**/
@@ -221,6 +227,7 @@ class Object {
 	inline function get_cullingColliderInherited() return flags.has(FCullingColliderInherited);
 	inline function get_fixedPosition() return flags.has(FFixedPosition);
 	inline function get_alwaysSync() return flags.has(FAlwaysSync);
+	inline function get_drawn() return flags.has(FDrawn);
 	inline function set_posChanged(b) return flags.set(FPosChanged, b || follow != null);
 	inline function set_culled(b) return flags.set(FCulled, b);
 	inline function set_visible(b) return flags.set(FVisible,b);
@@ -236,6 +243,7 @@ class Object {
 	inline function set_cullingColliderInherited(b) return flags.set(FCullingColliderInherited, b);
 	inline function set_fixedPosition(b) return flags.set(FFixedPosition, b);
 	inline function set_alwaysSync(b) return flags.set(FAlwaysSync, b);
+	inline function set_drawn(b) return flags.set(FDrawn, b);
 
 	/**
 		Create an animation instance bound to the object, set it as currentAnimation and play it.
@@ -813,12 +821,14 @@ class Object {
 		}
 
 		var prevForcedScreenRatio : Float = ctx.forcedScreenRatio;
-		if ( !ctx.computeVelocity || fixedPosition || culled )
+		if ( !drawn || !ctx.computeVelocity || fixedPosition || culled  )
 			prevAbsPosFrame = NO_VELOCITY;
 		else if ( prevAbsPosFrame == NO_VELOCITY )
 			prevAbsPosFrame = VELOCITY;
-		if( !culled || ctx.computingStatic )
+		if( !culled || ctx.computingStatic ) {
 			emit(ctx);
+			drawn = false;
+		}
 
 		for( c in children )
 			c.emitRec(ctx);
