@@ -382,7 +382,7 @@ class Library {
 		return def;
 	}
 
-	function getLODInfos( model : Model ) : { lodLevel : Int , modelName : String } {
+	public function getLODInfos( model : Model ) : { lodLevel : Int , modelName : String } {
 		var modelName : String = model.name;
 		var keyword = h3d.prim.HMDModel.lodExportKeyword;
 		if ( modelName == null || modelName.length <= keyword.length )
@@ -410,7 +410,7 @@ class Library {
 		return { lodLevel : -1, modelName : null };
 	}
 
-	function findLODs( modelName : String ) : Array<Geometry> {
+	public function findLODs( modelName : String ) : Array<Geometry> {
 		if ( modelName == null )
 			return null;
 

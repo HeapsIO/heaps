@@ -30,9 +30,24 @@ private class BatchData {
 class MeshBatchPart {
 	public var indexStart : Int;
 	public var indexCount : Int;
+	public var lodIndexStart : Array<Int>;
+	public var lodIndexCount : Array<Int>;
+	public var lodConfig : Array<Float>;
 	public var baseVertex : Int;
 	public var bounds : h3d.col.Bounds;
 	public function new() {
+	}
+
+	public function clone() {
+		var cl = new MeshBatchPart();
+		cl.indexStart = indexStart;
+		cl.indexCount = indexCount;
+		cl.lodIndexStart = lodIndexStart;
+		cl.lodIndexCount = lodIndexCount;
+		cl.lodConfig = lodConfig;
+		cl.baseVertex = baseVertex;
+		cl.bounds = bounds;
+		return cl;
 	}
 }
 
@@ -51,14 +66,23 @@ class ComputeIndirect extends hxsl.Shader {
 			var position : Vec3;
 		}
 
+		// n : material offset, n + 1 : subPart ID
+		@param var instanceOffsets: RWBuffer<Int>;
 		@param var commandBuffer : RWBuffer<Int>;
 		@param var instanceData : RWPartialBuffer<{ modelView : Mat4 }>;
 		@param var radius : Float;
 
+		@const var USING_SUB_PART : Bool = false;
+		@const var MAX_SUB_PART_BUFFER_ELEMENT_COUNT : Int = 16;
+		@param var subPartCount : Int;
+		@param var startInstanceOffset : Int;
+		// x : lodCount, y : radius,
+		@param var subPartInfos : Buffer<Vec4, MAX_SUB_PART_BUFFER_ELEMENT_COUNT>;
+
 		// 16 by default because 16 * 4 floats = 256 bytes and cbuffer are aligned to 256 bytes
 		@const var MAX_MATERIAL_COUNT : Int = 16;
 		@param var materialCount : Int;
-		@param var matIndex : Float;
+		@param var matIndex : Int;
 		// x : indexCount, y : startIndex, z : minScreenRatio, w : unused
 		@param var matInfos : Buffer<Vec4, MAX_MATERIAL_COUNT>;
 
@@ -66,7 +90,7 @@ class ComputeIndirect extends hxsl.Shader {
 		@param var frustum : Buffer<Vec4, 6>;
 
 		@const var ENABLE_LOD : Bool;
-		@param var lodCount : Float = 1;
+		@param var lodCount : Int = 1;
 
 		@const var ENABLE_DISTANCE_CLIPPING : Bool;
 		@param var maxDistance : Float = -1;
@@ -81,10 +105,26 @@ class ComputeIndirect extends hxsl.Shader {
 			var lod : Int = 0;
 			var pos = vec3(0) * modelView.mat3x4();
 			var vScale = abs(vec3(1) * modelView.mat3x4() - pos);
-			var scaledRadius = max(max(vScale.x, vScale.y), vScale.z) * radius;
+			var scaledRadius = max(max(vScale.x, vScale.y), vScale.z);
 			var toCam = camera.position - pos.xyz;
 			var distToCam = length(toCam);
 
+			var radius = radius;
+			var matOffset = matIndex * lodCount;
+			var lodCount = lodCount;
+
+			if ( USING_SUB_PART ) {
+				var id = (invocID + startInstanceOffset) * 2;
+				matOffset = instanceOffsets[id];
+				var subPartID = instanceOffsets[id + 1];
+				var subPartInfo = subPartInfos[subPartID / 2];
+
+				var packedID = (subPartID & 1) << 1;
+				lodCount = int(subPartInfo[packedID]);
+				radius = subPartInfo[packedID + 1];
+			}
+
+			scaledRadius *= radius;
 			var culled = false;
 
 			if ( dot(scaledRadius, scaledRadius) < 1e-6 )
@@ -106,8 +146,8 @@ class ComputeIndirect extends hxsl.Shader {
 
 			if ( ENABLE_LOD ) {
 				var screenRatio = scaledRadius / distToCam;
-				for ( i in 0...int(lodCount) ) {
-					var minScreenRatio = matInfos[i *  materialCount].z;
+				for ( i in 0...lodCount ) {
+					var minScreenRatio = matInfos[i + matOffset].z;
 					if (  screenRatio > minScreenRatio )
 						break;
 					lod++;
@@ -116,9 +156,9 @@ class ComputeIndirect extends hxsl.Shader {
 			}
 
 			if ( !culled ) {
-				commandBuffer[ invocID * 5 ] = int(matInfos[ int(matIndex) + lod * materialCount ].x) ;
+				commandBuffer[ invocID * 5 ] = int(matInfos[ lod + matOffset ].x) ;
 				commandBuffer[ invocID * 5 + 1] = 1;
-				commandBuffer[ invocID * 5 + 2] = int(matInfos[ int(matIndex) + lod * materialCount ].y);
+				commandBuffer[ invocID * 5 + 2] = int(matInfos[ lod + matOffset ].y);
 				commandBuffer[ invocID * 5 + 3] = 0;
 				commandBuffer[ invocID * 5 + 4] = invocID;
 			} else {
@@ -192,6 +232,12 @@ class MeshBatch extends MultiMaterial {
 	public var calcBounds = true;
 
 	var instancedParams : hxsl.Cache.BatchInstanceParams;
+	var emittedSubParts : Array<MeshBatchPart>;
+	var currentSubParts : Int;
+	var currentMaterialOffset : Int;
+	var instanceOffsetsCpu : haxe.io.Bytes;
+	var instanceOffsetsGpu : h3d.Buffer;
+	var subPartsInfos : h3d.Buffer;
 
 	public function new( primitive, ?material, ?parent ) {
 		instanced = new h3d.prim.Instanced();
@@ -235,6 +281,16 @@ class MeshBatch extends MultiMaterial {
 		}
 		if( instanced.commands != null )
 			instanced.commands.dispose();
+
+		if ( subPartsInfos != null )
+			alloc.disposeBuffer(subPartsInfos);
+
+		if ( instanceOffsetsGpu != null )
+			alloc.disposeBuffer(instanceOffsetsGpu);
+		instanceOffsetsCpu = null;
+
+		primitiveSubBytes = null;
+		emittedSubParts = null;
 		shadersChanged = true;
 	}
 
@@ -335,13 +391,8 @@ class MeshBatch extends MultiMaterial {
 	public function begin( emitCountTip = -1, ?flags : haxe.EnumFlags<MeshBatchFlag> ) {
 		if ( flags != null ) {
 			#if (!js && !(hldx && !dx12))
-			// TODO : Add LOD and GPU Culling support for mesh batch using sub parts
-			var allowedLOD = flags.has(EnableLod) && primitiveSubPart == null && @:privateAccess instanced.primitive.lodCount() > 1;
+			var allowedLOD = flags.has(EnableLod) && ( primitiveSubPart != null || @:privateAccess instanced.primitive.lodCount() > 1 );
 			flags.setTo(EnableLod, allowedLOD);
-			var allowedGPUCulling = flags.has(EnableGpuCulling) && primitiveSubPart == null;
-			flags.setTo(EnableGpuCulling, allowedGPUCulling);
-			var allowedStorageBuffer = flags.has(EnableStorageBuffer) && primitiveSubPart == null;
-			flags.setTo(EnableStorageBuffer, allowedStorageBuffer);
 			#else
 			flags.setTo(EnableLod, false);
 			flags.setTo(EnableGpuCulling, false);
@@ -372,6 +423,10 @@ class MeshBatch extends MultiMaterial {
 				p.data = alloc.allocFloats(size);
 			}
 			p = p.next;
+		}
+		if ( primitiveSubPart != null && ( enableGPUCulling || enableLOD ) && instanceOffsetsCpu == null ) {
+			var size = emitCountTip * 2 * 4;
+			instanceOffsetsCpu = haxe.io.Bytes.alloc(size);
 		}
 	}
 
@@ -485,23 +540,56 @@ class MeshBatch extends MultiMaterial {
 				instanced.tmpBounds.transform(worldPosition == null ? absPos : worldPosition);
 				instanced.bounds.add(instanced.tmpBounds);
 			}
-
-			if( primitiveSubBytes == null ) {
-				primitiveSubBytes = haxe.io.Bytes.alloc(128);
-				instanced.commands = null;
+			if ( enableLOD || enableGPUCulling ) {
+				if (emittedSubParts == null) {
+					currentSubParts = 0;
+					currentMaterialOffset = 0;
+					emittedSubParts = [ primitiveSubPart.clone() ];
+				} else {
+					var currentIndexStart = emittedSubParts[currentSubParts].indexStart;
+					if ( currentIndexStart != primitiveSubPart.indexStart  ) {
+						currentSubParts = -1;
+						currentIndexStart = primitiveSubPart.indexStart;
+						currentMaterialOffset = 0;
+						for ( i => part in emittedSubParts ) {
+							if ( part.indexStart == currentIndexStart ) {
+								currentSubParts = i;
+								break;
+							}
+							currentMaterialOffset += part.lodIndexCount.length + 1;
+						}
+						if ( currentSubParts < 0 ) {
+							currentSubParts = emittedSubParts.length;
+							emittedSubParts.push( primitiveSubPart.clone() );
+						}
+					}
+				}
+				var maxInstanceID = ( instanceCount + 1 ) * 2;
+				if ( instanceOffsetsCpu.length < maxInstanceID * 4 ) {
+					var next = haxe.io.Bytes.alloc(Std.int(instanceOffsetsCpu.length*3/2));
+					next.blit(0, instanceOffsetsCpu, 0, instanceOffsetsCpu.length);
+					instanceOffsetsCpu = next;
+				}
+				instanceOffsetsCpu.setInt32((instanceCount * 2 + 0) * 4, currentMaterialOffset);
+				instanceOffsetsCpu.setInt32((instanceCount * 2 + 1) * 4, currentSubParts);
+			} else {
+				if( primitiveSubBytes == null ) {
+					primitiveSubBytes = haxe.io.Bytes.alloc(128);
+					instanced.commands = null;
+				}
+				if( primitiveSubBytes.length < (instanceCount+1) * 20 ) {
+					var next = haxe.io.Bytes.alloc(Std.int(primitiveSubBytes.length*3/2));
+					next.blit(0, primitiveSubBytes, 0, instanceCount * 20);
+					primitiveSubBytes = next;
+				}
+				var p = instanceCount * 20;
+				primitiveSubBytes.setInt32(p, ps.indexCount);
+				primitiveSubBytes.setInt32(p + 4, 1);
+				primitiveSubBytes.setInt32(p + 8, ps.indexStart);
+				primitiveSubBytes.setInt32(p + 12, ps.baseVertex);
+				primitiveSubBytes.setInt32(p + 16, 0);
 			}
-			if( primitiveSubBytes.length < (instanceCount+1) * 20 ) {
-				var next = haxe.io.Bytes.alloc(Std.int(primitiveSubBytes.length*3/2));
-				next.blit(0, primitiveSubBytes, 0, instanceCount * 20);
-				primitiveSubBytes = next;
-			}
-			var p = instanceCount * 20;
-			primitiveSubBytes.setInt32(p, ps.indexCount);
-			primitiveSubBytes.setInt32(p + 4, 1);
-			primitiveSubBytes.setInt32(p + 8, ps.indexStart);
-			primitiveSubBytes.setInt32(p + 12, ps.baseVertex);
-			primitiveSubBytes.setInt32(p + 16, 0);
-		} else if(calcBounds)
+		} else if (calcBounds)
 			instanced.addInstanceBounds(worldPosition == null ? absPos : worldPosition);
 		var p = dataPasses;
 		while( p != null ) {
@@ -533,6 +621,7 @@ class MeshBatch extends MultiMaterial {
 
 	static var BATCH_START_FMT = hxd.BufferFormat.make([{ name : "Batch_Start", type : DFloat }]);
 	static var INDIRECT_DRAW_ARGUMENTS_FMT = hxd.BufferFormat.make([{ name : "", type : DVec4 }, { name : "", type : DFloat }]);
+	static var INSTANCE_OFFSETS_FMT = hxd.BufferFormat.make([{ name : "", type : DFloat }]);
 
 	override function sync(ctx:RenderContext) {
 		super.sync(ctx);
@@ -546,6 +635,91 @@ class MeshBatch extends MultiMaterial {
 		var p = dataPasses;
 		var alloc = hxd.impl.Allocator.get();
 		var psBytes = primitiveSubBytes;
+
+		var prim = @:privateAccess instanced.primitive;
+		var hmd = Std.downcast(prim, h3d.prim.HMDModel);
+		var materialCount = materials.length;
+		var lodCount = ( enableLOD ) ? prim.lodCount() : 1;
+
+		if ( enableLOD || enableGPUCulling ) {
+			if ( emittedSubParts != null ) {
+				var upload = needUpload;
+				var vertex = instanceCount * 2;
+				if ( instanceOffsetsGpu == null || instanceOffsetsGpu.isDisposed() || vertex > instanceOffsetsGpu.vertices ) {
+					if ( instanceOffsetsGpu != null)
+						alloc.disposeBuffer( instanceOffsetsGpu );
+					instanceOffsetsGpu = alloc.allocBuffer( vertex, INSTANCE_OFFSETS_FMT, UniformReadWrite );
+					upload = true;
+				}
+				if ( upload )
+					instanceOffsetsGpu.uploadBytes( instanceOffsetsCpu, 0, vertex );
+
+				if ( matInfos == null ) {
+					materialCount = 0;
+					var tmpSubPartInfos = alloc.allocFloats( 2 * emittedSubParts.length );
+					var pos = 0;
+					for ( subPart in emittedSubParts ) {
+						var lodCount = subPart.lodIndexCount.length + 1;
+						tmpSubPartInfos[pos++] = lodCount;
+						tmpSubPartInfos[pos++] = subPart.bounds.dimension();
+						materialCount += lodCount;
+					}
+					subPartsInfos = alloc.ofFloats( tmpSubPartInfos, hxd.BufferFormat.VEC4_DATA, Uniform );
+					alloc.disposeFloats(tmpSubPartInfos);
+
+					var tmpMatInfos = alloc.allocFloats( 4 * ( materialCount + emittedSubParts.length ) );
+					pos = 0;
+					for ( subPart in emittedSubParts ) {
+						var lodConfig = subPart.lodConfig;
+						tmpMatInfos[pos++] = subPart.indexCount;
+						tmpMatInfos[pos++] = subPart.indexStart;
+						tmpMatInfos[pos++] = ( 0 < lodConfig.length ) ? lodConfig[0] : 0.0;
+						pos++;
+						for ( i in 0...subPart.lodIndexCount.length ) {
+							tmpMatInfos[pos++] = subPart.lodIndexCount[i];
+							tmpMatInfos[pos++] = subPart.lodIndexStart[i];
+							tmpMatInfos[pos++] = ( i + 1 < lodConfig.length ) ? lodConfig[i + 1] : 0.0;
+							pos++;
+						}
+					}
+
+					matInfos = alloc.ofFloats( tmpMatInfos, hxd.BufferFormat.VEC4_DATA, Uniform );
+					alloc.disposeFloats(tmpMatInfos);
+				}
+			} else if ( matInfos == null ) {
+				if ( enableLOD ) {
+					var tmpMatInfos = alloc.allocFloats( 4 * materialCount * lodCount );
+					matInfos = alloc.allocBuffer( materialCount * lodCount, hxd.BufferFormat.VEC4_DATA, Uniform );
+					var lodConfig = hmd.getLodConfig();
+					var startIndex : Int = 0;
+					for ( i => lod in @:privateAccess hmd.lods ) {
+						for ( j in 0...materialCount ) {
+							var indexCount = lod.indexCounts[j];
+							var matIndex = i + j * lodCount;
+							tmpMatInfos[matIndex * 4 + 0] = indexCount;
+							tmpMatInfos[matIndex * 4 + 1] = startIndex;
+							tmpMatInfos[matIndex * 4 + 2] = ( i < lodConfig.length ) ? lodConfig[i] : 0.0;
+							startIndex += indexCount;
+						}
+					}
+					matInfos.uploadFloats( tmpMatInfos, 0, materialCount * lodCount );
+					alloc.disposeFloats( tmpMatInfos );
+				} else {
+					var tmpMatInfos = alloc.allocFloats( 4 * materialCount );
+					matInfos = alloc.allocBuffer( materialCount, hxd.BufferFormat.VEC4_DATA, Uniform );
+					var pos : Int = 0;
+					for ( i in 0...materials.length ) {
+						var matInfo = prim.getMaterialIndexes(i);
+						tmpMatInfos[pos++] = matInfo.count;
+						tmpMatInfos[pos++] = matInfo.start;
+						pos += 2;
+					}
+					matInfos.uploadFloats( tmpMatInfos, 0, materialCount );
+					alloc.disposeFloats( tmpMatInfos );
+				}
+			}
+		}
+
 		while( p != null ) {
 			var index = 0;
 			var start = 0;
@@ -584,7 +758,11 @@ class MeshBatch extends MultiMaterial {
 					if( p.instanceBuffers == null )
 						p.instanceBuffers = [];
 					var buf = p.instanceBuffers[index];
-					if( buf == null /*|| buf.isDisposed()*/ ) {
+					if ( buf != null && buf.commandCount != count ) {
+						buf.dispose();
+						buf = null;
+					}
+					if( buf == null ) {
 						buf = new h3d.impl.InstanceBuffer();
 						var sub = psBytes.sub(start*20,count*20);
 						for( i in 0...count )
@@ -614,69 +792,43 @@ class MeshBatch extends MultiMaterial {
 				index++;
 			}
 			if ( ( enableLOD || enableGPUCulling ) ) {
+				var computeShader;
 				if( p.computePass == null ) {
+					computeShader = new ComputeIndirect();
 					var computePass = new h3d.mat.Pass("batchUpdate");
-					var computeShader = new ComputeIndirect();
 					computePass.addShader(computeShader);
-					computeShader.ENABLE_LOD = enableLOD;
-					computeShader.ENABLE_CULLING = enableGPUCulling;
-					computeShader.ENABLE_DISTANCE_CLIPPING = maxDistance >= 0;
-					var materialCount = materials.length;
-					var prim = @:privateAccess instanced.primitive;
-					var lodCount = ( enableLOD ) ? prim.lodCount() : 1;
-					computeShader.materialCount = materialCount;
-					computeShader.MAX_MATERIAL_COUNT = 16;
-					while ( materialCount * lodCount > computeShader.MAX_MATERIAL_COUNT )
-						computeShader.MAX_MATERIAL_COUNT = computeShader.MAX_MATERIAL_COUNT + 16;
-					computeShader.maxDistance = maxDistance;
 					addComputeShaders(computePass);
 					p.computePass = computePass;
-
-					var bounds = prim.getBounds();
-					computeShader.radius = bounds.dimension();
-
-					if ( matInfos == null ) {
-						if ( enableLOD ) {
-							var hmd : h3d.prim.HMDModel = cast prim;
-							var lodConfig = hmd.getLodConfig();
-							var tmpMatInfos = alloc.allocFloats( 4 * materialCount * lodCount );
-							matInfos = alloc.allocBuffer( materialCount * lodCount, hxd.BufferFormat.VEC4_DATA, Uniform );
-							var pos : Int = 0;
-							var startIndex : Int = 0;
-							for ( i => lod in @:privateAccess hmd.lods ) {
-								for ( j in 0...materials.length ) {
-									var indexCount = lod.indexCounts[j % materialCount];
-									tmpMatInfos[pos++] = indexCount;
-									tmpMatInfos[pos++] = startIndex;
-									tmpMatInfos[pos++] = ( i < lodConfig.length ) ? lodConfig[i] : 0.0;
-									startIndex += indexCount;
-									pos++;
-								}
-							}
-							matInfos.uploadFloats( tmpMatInfos, 0, materialCount * lodCount );
-							alloc.disposeFloats( tmpMatInfos );
-						}
-						else {
-							var materialCount = materials.length;
-							var tmpMatInfos = alloc.allocFloats( 4 * materialCount );
-							matInfos = alloc.allocBuffer( materialCount, hxd.BufferFormat.VEC4_DATA, Uniform );
-							var pos : Int = 0;
-							for ( i in 0...materials.length ) {
-								var matInfo = prim.getMaterialIndexes(i);
-								tmpMatInfos[pos++] = matInfo.count;
-								tmpMatInfos[pos++] = matInfo.start;
-								pos += 2;
-							}
-							matInfos.uploadFloats( tmpMatInfos, 0, materialCount );
-							alloc.disposeFloats( tmpMatInfos );
-						}
-					}
-					computeShader.matInfos = matInfos;
-					computeShader.lodCount = lodCount;
-
-					if ( enableGPUCulling )
-						computeShader.frustum = ctx.getCameraFrustumBuffer();
+				} else {
+					computeShader = p.computePass.getShader(ComputeIndirect);
 				}
+
+				computeShader.ENABLE_LOD = enableLOD;
+				computeShader.ENABLE_CULLING = enableGPUCulling;
+				computeShader.ENABLE_DISTANCE_CLIPPING = maxDistance >= 0;
+				computeShader.radius = prim.getBounds().dimension();
+				computeShader.maxDistance = maxDistance;
+				computeShader.matInfos = matInfos;
+				computeShader.lodCount = lodCount;
+				computeShader.materialCount = materialCount;
+				computeShader.MAX_MATERIAL_COUNT = 16;
+				while ( materialCount * lodCount > computeShader.MAX_MATERIAL_COUNT )
+					computeShader.MAX_MATERIAL_COUNT = computeShader.MAX_MATERIAL_COUNT + 16;
+
+				if ( emittedSubParts != null ) {
+					computeShader.USING_SUB_PART = true;
+					computeShader.subPartCount = emittedSubParts.length;
+					computeShader.subPartInfos = subPartsInfos;
+					computeShader.instanceOffsets = instanceOffsetsGpu;
+					computeShader.MAX_SUB_PART_BUFFER_ELEMENT_COUNT = 16;
+					var maxSubPartsElement = hxd.Math.ceil( emittedSubParts.length / 2 );
+					while ( maxSubPartsElement > computeShader.MAX_SUB_PART_BUFFER_ELEMENT_COUNT )
+						computeShader.MAX_SUB_PART_BUFFER_ELEMENT_COUNT = computeShader.MAX_SUB_PART_BUFFER_ELEMENT_COUNT + 16;
+				}
+
+				if ( enableGPUCulling )
+					computeShader.frustum = ctx.getCameraFrustumBuffer();
+
 			}
 			while( p.buffers.length > index )
 				alloc.disposeBuffer( p.buffers.pop() );
@@ -740,6 +892,7 @@ class MeshBatch extends MultiMaterial {
 			// check that the pass is still enable
 			var material = materials[p.matIndex];
 			if( material != null && material.getPass(pass.name) != null ) {
+				var emittedCount = 0;
 				for( i => buf in p.buffers ) {
 					ctx.emitPass(pass, this).index = i | (p.matIndex << 16);
 					if ( p.commandBuffers != null && p.commandBuffers.length > 0 ) {
@@ -749,8 +902,10 @@ class MeshBatch extends MultiMaterial {
 						computeShader.instanceData = buf;
 						computeShader.matIndex = p.matIndex;
 						computeShader.commandBuffer = commandBuffer;
+						computeShader.startInstanceOffset = emittedCount;
 						ctx.computeList(@:privateAccess p.computePass.shaders);
 						ctx.computeDispatch(count);
+						emittedCount += count;
 					}
 				}
 			}
