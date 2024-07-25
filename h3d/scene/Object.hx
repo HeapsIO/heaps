@@ -682,7 +682,7 @@ class Object {
 		return follow = v;
 	}
 
-	function calcAbsPos() {
+	function calcPrevAbsPos() {
 		if ( prevAbsPosFrame == NO_VELOCITY )
 			prevAbsPos = null;
 		else if ( prevAbsPosFrame < hxd.Timer.frameCount ) {
@@ -692,6 +692,11 @@ class Object {
 			else
 				prevAbsPos.load(absPos);
 		}
+	}
+
+	function calcAbsPos() {
+		calcPrevAbsPos();
+
 		qRot.toMatrix(absPos);
 		// prepend scale
 		absPos._11 *= scaleX;
@@ -824,7 +829,9 @@ class Object {
 		if ( !drawn || !ctx.computeVelocity || fixedPosition || culled  )
 			prevAbsPosFrame = NO_VELOCITY;
 		else if ( prevAbsPosFrame == NO_VELOCITY )
-			prevAbsPosFrame = VELOCITY;
+				prevAbsPosFrame = VELOCITY;
+		calcPrevAbsPos();
+
 		if( !culled || ctx.computingStatic ) {
 			emit(ctx);
 			drawn = false;
