@@ -305,6 +305,8 @@ enum TGlobal {
 	ComputeVar_LocalInvocationIndex;
 	//ComputeVar_NumWorkGroups - no DirectX support
 	//ComputeVar_WorkGroupSize - no DirectX support
+	AtomicAdd;
+	GroupMemoryBarrier;
 }
 
 enum Component {
@@ -520,7 +522,9 @@ class Tools {
 			return true;
 		case TCall(e, pl):
 			switch( e.e ) {
-			case TGlobal(g) if( g != ImageStore ):
+			case TGlobal( ImageStore | AtomicAdd | GroupMemoryBarrier ):
+				return true;
+			case TGlobal(g):
 			default:
 				return true;
 			}

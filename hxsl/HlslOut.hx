@@ -82,6 +82,7 @@ class HlslOut {
 		m.set(IntBitsToFloat, "asfloat");
 		m.set(UintBitsToFloat, "_uintBitsToFloat");
 		m.set(RoundEven, "round");
+		m.set(GroupMemoryBarrier, "GroupMemoryBarrier");
 		for( g in m )
 			KWDS.set(g, true);
 		m;
@@ -348,6 +349,8 @@ class HlslOut {
 			decl("float2 _uintBitsToFloat( int2 v ) { return asfloat(asuint(v)); }");
 			decl("float3 _uintBitsToFloat( int3 v ) { return asfloat(asuint(v)); }");
 			decl("float4 _uintBitsToFloat( int4 v ) { return asfloat(asuint(v)); }");
+		case AtomicAdd:
+			decl("int atomicAdd( RWStructuredBuffer<int> buf, int index, int data ) { int val; InterlockedAdd(buf[index], data, val); return val; }");
 		case TextureSize:
 			var tt = args[0].t;
 			var tstr = getTexType(tt);

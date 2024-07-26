@@ -485,6 +485,14 @@ class GlslOut {
 			add("clamp(");
 			addValue(e, tabs);
 			add(", 0., 1.)");
+		case TCall( { e : TGlobal(AtomicAdd) }, args):			
+			add("atomicAdd(");
+			addValue(args[0], tabs);
+			add("[");
+			addValue(args[1], tabs);
+			add("],");
+			addValue(args[2], tabs);
+			add(")");
 		case TCall({ e : TGlobal(g = Texel) }, args):
 			add(getFunName(g,args,e.t));
 			add("(");

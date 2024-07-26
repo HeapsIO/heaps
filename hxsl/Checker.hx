@@ -172,7 +172,7 @@ class Checker {
 				[{ args : [{ name : "screenPos", type : vec2 }], ret : vec2 }];
 			case UvToScreen:
 				[{ args : [{ name : "uv", type : vec2 }], ret : vec2 }];
-			case Trace:
+			case Trace, GroupMemoryBarrier:
 				[];
 			case FloatBitsToInt, FloatBitsToUint:
 				[for( i => t in genType ) { args : [ { name: "x", type: t } ], ret: genIType[i] }];
@@ -188,6 +188,8 @@ class Checker {
 				[];
 			case VertexID, InstanceID, FragCoord, FrontFacing:
 				null;
+			case AtomicAdd:
+				[{ args : [{ name : "buf", type : TBuffer(TInt, SConst(0), RW) },{ name : "index", type : TInt }, { name : "data", type : TInt }], ret : TInt }];
 			case _ if( g.getName().indexOf("_") > 0 ):
 				var name = g.getName();
 				var idx = name.indexOf("_");
@@ -356,7 +358,7 @@ class Checker {
 	}
 
 	function tryUnify( t1 : Type, t2 : Type ) {
-		if( t1 == t2 )
+		if( t1.equals(t2) )
 			return true;
 		switch( [t1, t2] ) {
 		case [TVec(s1, t1), TVec(s2, t2)] if( s1 == s2 && t1 == t2 ):
@@ -707,7 +709,7 @@ class Checker {
 			var e2 = typeExpr(e2, With(TInt));
 			unify(e2.t, TInt, e2.p);
 			switch( e1.t ) {
-			case TArray(t, size), TBuffer(t,size,_):
+			case TArray(t, size), TBuffer(t,size, Uniform), TBuffer(t,size, Partial):
 				switch( [size, e2.e] ) {
 				case [SConst(v), TConst(CInt(i))] if( i >= v ):
 					error("Indexing outside array bounds", e.pos);
@@ -715,6 +717,8 @@ class Checker {
 					error("Cannot index with negative value", e.pos);
 				default:
 				}
+				type = t;
+			case TBuffer(t, size, _):
 				type = t;
 			case TMat2:
 				type = vec2;
