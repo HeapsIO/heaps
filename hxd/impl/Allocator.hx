@@ -30,7 +30,7 @@ class Allocator {
 	}
 
 	public function ofFloats( v : hxd.FloatBuffer, format : hxd.BufferFormat, flags : BufferFlags = Dynamic ) {
-		var nvert = Std.int(v.length / format.stride);
+		var nvert = Math.ceil(v.length / format.stride);
 		return ofSubFloats(v, nvert, format, flags);
 	}
 

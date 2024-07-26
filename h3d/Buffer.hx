@@ -135,7 +135,7 @@ class Buffer {
 	}
 
 	public static function ofFloats( v : hxd.FloatBuffer, format : hxd.BufferFormat, ?flags ) {
-		var nvert = Std.int(v.length / format.stride);
+		var nvert = Math.ceil(v.length / format.stride);
 		var b = new Buffer(nvert, format, flags);
 		b.uploadFloats(v, 0, nvert);
 		return b;
