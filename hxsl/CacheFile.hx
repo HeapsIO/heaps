@@ -83,7 +83,7 @@ class CacheFile extends Cache {
 
 	static var HEX = "0123456789abcdef";
 
-	function load() {
+	function load(showProgress=false) {
 		isLoading = true;
 		var t0 = haxe.Timer.stamp();
 		var wait = [];
@@ -113,12 +113,20 @@ class CacheFile extends Cache {
 			}
 		}
 		if( wait.length > 0 ) {
+			var fullCount = wait.length;
 			waitCount += wait.length;
 			#if hlmulti
 			for( r in wait ) {
+				if (showProgress && (waitCount % 5 == 0 || waitCount <= 1)) {
+					var progress = Std.int((1 - (waitCount / fullCount)) * 1000) / 10;
+					Sys.print('$progress%\t(${fullCount - waitCount}/$fullCount)  \r');
+				}
+
 				addNewShader(r);
 				hxd.System.timeoutTick();
 			}
+			if (showProgress)
+				Sys.println("");
 			#else
 			haxe.Timer.delay(function() {
 				for( r in wait ) {

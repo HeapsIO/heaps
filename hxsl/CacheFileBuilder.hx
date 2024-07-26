@@ -21,9 +21,9 @@ private class CustomCacheFile extends CacheFile {
 		super(true, true);
 	}
 
-	override function load() {
+	override function load(showProgress=true) {
 		allowSave = true;
-		super.load();
+		super.load(showProgress);
 	}
 
 	override function addSource(r:RuntimeShader) {
@@ -108,7 +108,6 @@ class CacheFileBuilder {
 
 	public function compileShader( r : RuntimeShader, rd : RuntimeShader.RuntimeShaderData ) : String {
 		hasCompiled = true;
-		Sys.print(".");
 		var s = generateShader(r, rd);
 		if( s == null )
 			return null;
