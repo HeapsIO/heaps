@@ -57,6 +57,85 @@ class ManagedHeapArray {
 
 }
 
+@:struct class BumpAllocation {
+	public var resource : GpuResource = null;
+	public var cpuAdress : hl.Bytes = null;
+	public var offset : Int = 0;
+	public var byteSize : Int = 0;
+	public function new() {
+	}
+}
+
+class BumpAllocator {
+	var resource : GpuResource;
+	var capacity : Int;
+	var cpuAdress : hl.Bytes;
+	var heap : HeapProperties;
+	var offset : Int = 0;
+	var next : BumpAllocator;
+
+	public function new( size : Int ) {
+		this.capacity = size;
+		heap = new HeapProperties();
+		var desc = new ResourceDesc();
+		var flags = new haxe.EnumFlags();
+		desc.dimension = BUFFER;
+		desc.width = capacity;
+		desc.height = 1;
+		desc.depthOrArraySize = 1;
+		desc.mipLevels = 1;
+		desc.sampleDesc.count = 1;
+		desc.layout = ROW_MAJOR;
+		heap.type = UPLOAD;
+		resource = Driver.createCommittedResource(heap, flags, desc, GENERIC_READ, null);
+		cpuAdress = resource.map(0, null);
+	}
+
+	public function reset() {
+		offset = 0;
+		if ( next != null) {
+			next.release();
+			next = null;
+		}
+	}
+
+	public function release() {
+		resource.release();
+		resource = null;
+		offset = 0;
+		capacity = 0;
+		heap = null;
+		cpuAdress = null;
+		if ( next != null) {
+			next.release();
+			next = null;
+		}
+	}
+
+	public inline function alloc( size : Int, ?allocation : BumpAllocation ) {
+		var sz = size & ~0xFF;
+		if( sz != size ) sz += 0x100;
+		if ( allocation == null )
+			allocation = new BumpAllocation();
+		return tryAlloc(sz, allocation);
+	}
+
+	function tryAlloc( size, allocation : BumpAllocation ) {
+		var newOffset = size + offset;
+		if ( newOffset > capacity ) {
+			if ( next == null )
+				next = new BumpAllocator(hxd.Math.imax(h3d.impl.DX12Driver.INITIAL_BUMP_ALLOCATOR_SIZE, size));
+			return next.tryAlloc(size, allocation);
+		}
+		allocation.byteSize = size;
+		allocation.offset = offset;
+		allocation.cpuAdress = cpuAdress.offset(offset);
+		allocation.resource = resource;
+		offset = newOffset;
+		return allocation;
+	}
+}
+
 class DxFrame {
 	public var backBuffer : ResourceData;
 	public var backBufferView : Address;
@@ -78,6 +157,7 @@ class DxFrame {
 	public var queryCurrentHeap : Int;
 	public var queryHeapOffset : Int;
 	public var queryBuffer : GpuResource;
+	public var bumpAllocator : BumpAllocator;
 	public function new() {
 	}
 }
@@ -154,6 +234,8 @@ class CompiledShader {
 	@:packed public var rtvDesc(default,null) : RenderTargetViewDesc;
 	@:packed public var uavDesc(default,null) : UAVBufferViewDesc;
 	@:packed public var wtexDesc(default,null) : UAVTextureViewDesc;
+	@:packed public var subResourceData(default, null) : SubResourceData;
+	@:packed public var bumpAllocation(default,null) : BumpAllocation;
 
 	public var pass : h3d.mat.Pass;
 
@@ -184,9 +266,7 @@ class ManagedHeap {
 
 	public var stride(default,null) : Int;
 	var size : Int;
-	var start : Int;
 	var cursor : Int;
-	var limit : Int;
 	var type : DescriptorHeapType;
 	var heap : DescriptorHeap;
 	var address : Address;
@@ -207,7 +287,7 @@ class ManagedHeap {
 		if( type == CBV_SRV_UAV || type == SAMPLER )
 			desc.flags = SHADER_VISIBLE;
 		heap = new DescriptorHeap(desc);
-		limit = cursor = start = 0;
+		cursor = 0;
 		this.size = size;
 		address = heap.getHandle(false);
 		cpuToGpu = desc.flags == SHADER_VISIBLE ? ( heap.getHandle(true).value - address.value ) : 0;
@@ -218,15 +298,8 @@ class ManagedHeap {
 	}
 
 	public function alloc( count : Int ) {
-		if( cursor >= limit && cursor + count > size ) {
+		if( cursor + count > size ) {
 			cursor = 0;
-			if( limit == 0 ) {
-				var prev = heap;
-				allocHeap((size * 3) >> 1);
-				onFree(prev);
-			}
-		}
-		if( cursor < limit && cursor + count >= limit ) {
 			var prev = heap;
 			allocHeap((size * 3) >> 1);
 			onFree(prev);
@@ -237,17 +310,11 @@ class ManagedHeap {
 	}
 
 	inline function get_available() {
-		var d = limit - cursor;
-		return d <= 0 ? size + d : d;
+		return size - cursor;
 	}
 
 	public function clear() {
-		limit = cursor = start = 0;
-	}
-
-	public function next() {
-		limit = start;
-		start = cursor;
+		cursor = 0;
 	}
 
 	public inline function toGPU( address : Address ) : Address {
@@ -359,6 +426,7 @@ class DX12Driver extends h3d.impl.Driver {
 	var heapCount : Int;
 
 	public static var INITIAL_RT_COUNT = 1024;
+	public static var INITIAL_BUMP_ALLOCATOR_SIZE = 2 * 1024 * 1024;
 	public static var BUFFER_COUNT = #if console 3 #else 2 #end;
 	public static var DEVICE_NAME = null;
 	public static var DEBUG = false; // requires dxil.dll when set to true
@@ -394,6 +462,9 @@ class DX12Driver extends h3d.impl.Driver {
 			f.commandList.close();
 			f.shaderResourceCache = new ManagedHeapArray(CBV_SRV_UAV, 1024);
 			f.samplerCache = new ManagedHeapArray(SAMPLER, 1024);
+			if ( f.bumpAllocator != null )
+				f.bumpAllocator.release();
+			f.bumpAllocator = new BumpAllocator(INITIAL_BUMP_ALLOCATOR_SIZE);
 			frames.push(f);
 		}
 		fence = new Fence(0, NONE);
@@ -432,6 +503,7 @@ class DX12Driver extends h3d.impl.Driver {
 		defaultDepth.t.res = frame.depthBuffer;
 		frame.allocator.reset();
 		frame.commandList.reset(frame.allocator, null);
+		frame.bumpAllocator.reset();
 		while( frame.toRelease.length > 0 )
 			frame.toRelease.pop().release();
 		while( frame.tmpBufToRelease.length > 0 ) {
@@ -467,8 +539,8 @@ class DX12Driver extends h3d.impl.Driver {
 		transition(frame.backBuffer, RENDER_TARGET);
 		frame.commandList.iaSetPrimitiveTopology(TRIANGLELIST);
 
-		renderTargetViews.next();
-		depthStenciViews.next();
+		renderTargetViews.clear();
+		depthStenciViews.clear();
 		curStencilRef = -1;
 		currentIndex = null;
 
@@ -1420,8 +1492,8 @@ class DX12Driver extends h3d.impl.Driver {
 		var buf = new VertexBufferData();
 		buf.state = buf.targetState = COPY_DEST;
 		buf.res = allocGPU(dataSize, DEFAULT, COMMON);
-		var tmpBuf = allocDynamicBuffer(bytes, dataSize);
-		frame.commandList.copyBufferRegion(buf.res, 0, tmpBuf, 0, dataSize);
+		var alloc = allocDynamicBuffer(bytes, dataSize);
+		frame.commandList.copyBufferRegion(buf.res, 0, alloc.resource, alloc.offset, dataSize);
 		b.data = buf;
 	}
 
@@ -1436,21 +1508,8 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	function updateBuffer( b : BufferData, bytes : hl.Bytes, startByte : Int, bytesCount : Int ) {
-		var tmpBuf;
-		if( b.uploaded )
-			tmpBuf = allocDynamicBuffer(bytes, bytesCount);
-		else {
-			var size = calcCBVSize(bytesCount);
-			tmpBuf = allocGPU(size, UPLOAD, GENERIC_READ);
-			var ptr = tmpBuf.map(0, null);
-			ptr.blit(0, bytes, 0, bytesCount);
-			tmpBuf.unmap(0,null);
-		}
-		frame.commandList.copyBufferRegion(b.res, startByte, tmpBuf, 0, bytesCount);
-		if( !b.uploaded ) {
-			frame.toRelease.push(tmpBuf);
-			b.uploaded = true;
-		}
+		var alloc = allocDynamicBuffer(bytes, bytesCount);
+		frame.commandList.copyBufferRegion(b.res, startByte, alloc.resource, alloc.offset, bytesCount);
 	}
 
 	override function uploadIndexData(i:Buffer, startIndice:Int, indiceCount:Int, buf:hxd.IndexBuffer, bufPos:Int) {
@@ -1605,50 +1664,30 @@ class DX12Driver extends h3d.impl.Driver {
 		pixels.convert(t.format);
 		if( mipLevel >= t.mipLevels ) throw "Mip level outside texture range : " + mipLevel + " (max = " + (t.mipLevels - 1) + ")";
 
-		tmp.heap.type = UPLOAD;
-		var subRes = mipLevel + side * t.mipLevels;
-
-		var uploadBuffer = t.t.uploadBuffer;
-
-		// Todo : optimize for video, currently allocating a new tmpBuf every frame.
-		if ( uploadBuffer == null ) {
-			uploadBuffer = t.t.uploadBuffer = new TextureUploadBuffer();
-			uploadBuffer.lastMipMapUploadPerSide = new hl.Bytes(4 * t.layerCount);
-			uploadBuffer.lastMipMapUploadPerSide.fill(0, 4 * t.layerCount, 0);
-			frame.tmpBufToNullify.push(t.t);
-			var tmpSize = t.t.res.getRequiredIntermediateSize(0, t.mipLevels).low * t.layerCount;
-			uploadBuffer.tmpBuf = allocGPU(tmpSize, UPLOAD, GENERIC_READ);
-			frame.tmpBufToRelease.push(uploadBuffer.tmpBuf);
-		}
-		else if ( uploadBuffer.lastMipMapUploadPerSide.getI32(4 * side) & (1 << mipLevel) != 0 ) {
-			uploadBuffer.lastMipMapUploadPerSide.fill(0, 4 * t.layerCount, 0);
-			var tmpSize = t.t.res.getRequiredIntermediateSize(0, t.mipLevels).low * t.layerCount;
-			uploadBuffer.tmpBuf = allocGPU(tmpSize, UPLOAD, GENERIC_READ);
-			frame.tmpBufToRelease.push(uploadBuffer.tmpBuf);
-		}
-
-		var mipMapMask = uploadBuffer.lastMipMapUploadPerSide.getI32(4 * side);
-		uploadBuffer.lastMipMapUploadPerSide.setI32(4 * side, mipMapMask | (1 << mipLevel));
-
 		var offset : Int64 = 0;
 		if ( mipLevel != 0 )
 			offset += t.t.res.getRequiredIntermediateSize( 0, mipLevel );
 		if ( side != 0 )
 			offset += t.t.res.getRequiredIntermediateSize( 0, t.mipLevels ) * side;
 
-		var upd = new SubResourceData();
 		var stride = @:privateAccess pixels.stride;
 		switch( t.format ) {
 		case S3TC(n): stride = pixels.width * ((n == 1 || n == 4) ? 2 : 4); // "uncompressed" stride ?
 		default:
 		}
+
+		var upd = tmp.subResourceData;
 		upd.data = (pixels.bytes:hl.Bytes).offset(pixels.offset);
 		upd.rowPitch = stride;
 		upd.slicePitch = pixels.dataSize;
 
+		var subRes = mipLevel + side * t.mipLevels;
+		var tmpSize = t.t.res.getRequiredIntermediateSize(subRes, 1).low;
+		var allocation = frame.bumpAllocator.alloc(tmpSize, tmp.bumpAllocation);
+
 		transition(t.t, COPY_DEST);
 		flushTransitions();
-		if( !Driver.updateSubResource(frame.commandList, t.t.res, uploadBuffer.tmpBuf, offset, subRes, 1, upd) )
+		if( !Driver.updateSubResource(frame.commandList, t.t.res, allocation.resource, allocation.offset, subRes, 1, upd) )
 			throw "Failed to update sub resource";
 		transition(t.t, PIXEL_SHADER_RESOURCE);
 
@@ -1698,39 +1737,10 @@ class DX12Driver extends h3d.impl.Driver {
 		return sz;
  	}
 
-	function allocDynamicBuffer( data : hl.Bytes, dataSize : Int ) : GpuResource {
-		var b = frame.availableBuffers, prev = null;
-		var tmpBuf = null;
-		var size = calcCBVSize(dataSize);
-		if ( size == 0 ) size = 1;
-		while( b != null ) {
-			if( b.size >= size && b.size < size << 1 ) {
-				tmpBuf = b.buffer;
-				if( prev == null )
-					frame.availableBuffers = b.next;
-				else
-					prev.next = b.next;
-				b.lastUse = frameCount;
-				b.next = frame.usedBuffers;
-				frame.usedBuffers = b;
-				break;
-			}
-			prev = b;
-			b = b.next;
-		}
-		if( tmpBuf == null ) {
-			tmpBuf = allocGPU(size, UPLOAD, GENERIC_READ);
-			var b = new TempBuffer();
-			b.buffer = tmpBuf;
-			b.size = size;
-			b.lastUse = frameCount;
-			b.next = frame.usedBuffers;
-			frame.usedBuffers = b;
-		}
-		var ptr = tmpBuf.map(0, null);
-		ptr.blit(0, data, 0, dataSize);
-		tmpBuf.unmap(0,null);
-		return tmpBuf;
+	function allocDynamicBuffer( data : hl.Bytes, dataSize : Int ) : BumpAllocation {
+		var allocation = frame.bumpAllocator.alloc(dataSize, tmp.bumpAllocation);
+		allocation.cpuAdress.blit(0, data, 0, dataSize);
+		return allocation;
 	}
 
 	function hasBuffersTexturesChanged ( buf : h3d.shader.Buffers.ShaderBuffers, regs : ShaderRegisters ) : Bool {
@@ -1868,10 +1878,10 @@ class DX12Driver extends h3d.impl.Driver {
 				if( regs.params & 0x100 != 0 ) {
 					// update CBV
 					var srv = frame.shaderResourceViews.alloc(1);
-					var cbv = allocDynamicBuffer(data,dataSize);
+					var alloc = allocDynamicBuffer(data,dataSize);
 					var desc = tmp.cbvDesc;
-					desc.bufferLocation = cbv.getGpuVirtualAddress();
-					desc.sizeInBytes = calcCBVSize(dataSize);
+					desc.bufferLocation = alloc.resource.getGpuVirtualAddress() + alloc.offset;
+					desc.sizeInBytes = alloc.byteSize;
 					Driver.createConstantBufferView(desc, srv);
 					if( currentShader.isCompute )
 						frame.commandList.setComputeRootDescriptorTable(regs.params & 0xFF, frame.shaderResourceViews.toGPU(srv));
@@ -1889,10 +1899,10 @@ class DX12Driver extends h3d.impl.Driver {
 				if( regs.globals & 0x100 != 0 ) {
 					// update CBV
 					var srv = frame.shaderResourceViews.alloc(1);
-					var cbv = allocDynamicBuffer(data,dataSize);
+					var alloc = allocDynamicBuffer(data,dataSize);
 					var desc = tmp.cbvDesc;
-					desc.bufferLocation = cbv.getGpuVirtualAddress();
-					desc.sizeInBytes = calcCBVSize(dataSize);
+					desc.bufferLocation = alloc.resource.getGpuVirtualAddress() + alloc.offset;
+					desc.sizeInBytes = alloc.byteSize;
 					Driver.createConstantBufferView(desc, srv);
 					if( currentShader.isCompute )
 						frame.commandList.setComputeRootDescriptorTable(regs.globals & 0xFF, frame.shaderResourceViews.toGPU(srv));
