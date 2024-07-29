@@ -271,7 +271,7 @@ class MeshBatch extends MultiMaterial {
 	inline function isCountBufferAllowed() {
 		#if hlsdl
 		return h3d.impl.GlDriver.hasMultiIndirectCount;
-		#else		
+		#else
 		return true;
 		#end
 	}
@@ -935,8 +935,10 @@ class MeshBatch extends MultiMaterial {
 						computeShader.instanceData = buf;
 						computeShader.matIndex = p.matIndex;
 						computeShader.commandBuffer = p.commandBuffers[i];
-						countBytes = haxe.io.Bytes.alloc(4*4);
-						countBytes.setInt32(0, 0);
+						if ( countBytes == null ) {
+							countBytes = haxe.io.Bytes.alloc(4*4);
+							countBytes.setInt32(0, 0);
+						}
 						p.countBuffers[i].uploadBytes(countBytes, 0, 1);
 						computeShader.countBuffer = p.countBuffers[i];
 						computeShader.startInstanceOffset = emittedCount;
