@@ -128,6 +128,8 @@ class GlDriver extends Driver {
 	var hasMultiIndirect = false;
 	var maxCompressedTexturesSupport = 0;
 
+	public static var hasMultiIndirectCount = false;
+
 	var drawMode : Int;
 	var isIntelGpu : Bool;
 
@@ -172,6 +174,10 @@ class GlDriver extends Driver {
 		maxCompressedTexturesSupport = 7;
 		var driver = getDriverName(false).toLowerCase();
 		isIntelGpu = ~/intel.*graphics/.match(driver);
+		#end
+
+		#if (hlsdl >= version("1.15.0"))
+		hasMultiIndirectCount = gl.hasExtension("GL_ARB_indirect_parameters");
 		#end
 
 		#if hlmesa
@@ -1557,6 +1563,12 @@ class GlDriver extends Driver {
 		#if !js
 		if( hasMultiIndirect && commands.data != null ) {
 			gl.bindBuffer(GL.DRAW_INDIRECT_BUFFER, commands.data);
+			#if (hlsdl >= version("1.15.0"))
+			if ( commands.countBuffer != null && hasMultiIndirectCount ) {
+				gl.bindBuffer(GL.PARAMETER_BUFFER, commands.countBuffer);
+				gl.multiDrawElementsIndirectCount(drawMode, kind, null, null, commands.commandCount, 0);
+			} else
+			#end
 			gl.multiDrawElementsIndirect(drawMode, kind, null, commands.commandCount, 0);
 			gl.bindBuffer(GL.DRAW_INDIRECT_BUFFER, null);
 			return;

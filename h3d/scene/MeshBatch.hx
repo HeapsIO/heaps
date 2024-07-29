@@ -20,6 +20,7 @@ private class BatchData {
 	public var pass : h3d.mat.Pass;
 	public var computePass : h3d.mat.Pass;
 	public var commandBuffers : Array<h3d.Buffer>;
+	public var countBuffers : Array<h3d.Buffer>;
 	public var next : BatchData;
 
 	public function new() {
@@ -67,6 +68,8 @@ class ComputeIndirect extends hxsl.Shader {
 		}
 
 		// n : material offset, n + 1 : subPart ID
+		@const var ENABLE_COUNT_BUFFER : Bool;
+		@param var countBuffer : RWBuffer<Int>;
 		@param var instanceOffsets: RWBuffer<Int>;
 		@param var commandBuffer : RWBuffer<Int>;
 		@param var instanceData : RWPartialBuffer<{ modelView : Mat4 }>;
@@ -155,18 +158,29 @@ class ComputeIndirect extends hxsl.Shader {
 				lod = clamp(lod, 0, int(lodCount) - 1);
 			}
 
-			if ( !culled ) {
-				commandBuffer[ invocID * 5 ] = int(matInfos[ lod + matOffset ].x) ;
-				commandBuffer[ invocID * 5 + 1] = 1;
-				commandBuffer[ invocID * 5 + 2] = int(matInfos[ lod + matOffset ].y);
-				commandBuffer[ invocID * 5 + 3] = 0;
-				commandBuffer[ invocID * 5 + 4] = invocID;
+			if ( ENABLE_COUNT_BUFFER ) {
+				if ( !culled ) {
+					var id = atomicAdd( countBuffer, 0, 1);
+					commandBuffer[ id * 5 ] = int(matInfos[ lod + matOffset ].x) ;
+					commandBuffer[ id * 5 + 1] = 1;
+					commandBuffer[ id * 5 + 2] = int(matInfos[ lod + matOffset ].y);
+					commandBuffer[ id * 5 + 3] = 0;
+					commandBuffer[ id * 5 + 4] = invocID;
+				}
 			} else {
-				commandBuffer[ invocID * 5 ] = 0;
-				commandBuffer[ invocID * 5 + 1] = 0;
-				commandBuffer[ invocID * 5 + 2] = 0;
-				commandBuffer[ invocID * 5 + 3] = 0;
-				commandBuffer[ invocID * 5 + 4] = 0;
+				if ( !culled ) {
+					commandBuffer[ invocID * 5 ] = int(matInfos[ lod + matOffset ].x) ;
+					commandBuffer[ invocID * 5 + 1] = 1;
+					commandBuffer[ invocID * 5 + 2] = int(matInfos[ lod + matOffset ].y);
+					commandBuffer[ invocID * 5 + 3] = 0;
+					commandBuffer[ invocID * 5 + 4] = invocID;
+				} else {
+					commandBuffer[ invocID * 5 ] = int(matInfos[ lod + matOffset ].x) ;
+					commandBuffer[ invocID * 5 + 1] = 1;
+					commandBuffer[ invocID * 5 + 2] = int(matInfos[ lod + matOffset ].y);
+					commandBuffer[ invocID * 5 + 3] = 0;
+					commandBuffer[ invocID * 5 + 4] = invocID;
+				}
 			}
 		}
 	}
@@ -238,6 +252,7 @@ class MeshBatch extends MultiMaterial {
 	var instanceOffsetsCpu : haxe.io.Bytes;
 	var instanceOffsetsGpu : h3d.Buffer;
 	var subPartsInfos : h3d.Buffer;
+	var countBytes : haxe.io.Bytes;
 
 	public function new( primitive, ?material, ?parent ) {
 		instanced = new h3d.prim.Instanced();
@@ -253,6 +268,14 @@ class MeshBatch extends MultiMaterial {
 		cleanPasses();
 	}
 
+	inline function isCountBufferAllowed() {
+		#if hlsdl
+		return h3d.impl.GlDriver.hasMultiIndirectCount;
+		#else		
+		return true;
+		#end
+	}
+
 	function cleanPasses() {
 		var alloc = hxd.impl.Allocator.get();
 		while( dataPasses != null ) {
@@ -265,6 +288,9 @@ class MeshBatch extends MultiMaterial {
 				for ( buf in dataPasses.commandBuffers )
 					alloc.disposeBuffer(buf);
 				dataPasses.commandBuffers.resize(0);
+				for ( buf in dataPasses.countBuffers )
+					alloc.disposeBuffer(buf);
+				dataPasses.countBuffers.resize(0);
 				dataPasses.computePass = null;
 			}
 
@@ -291,6 +317,7 @@ class MeshBatch extends MultiMaterial {
 
 		primitiveSubBytes = null;
 		emittedSubParts = null;
+		countBytes = null;
 		shadersChanged = true;
 	}
 
@@ -775,12 +802,17 @@ class MeshBatch extends MultiMaterial {
 				var commandCountAllocated = hxd.Math.imin( nextPowerOfTwo( count ), p.maxInstance );
 
 				if ( enableLOD || enableGPUCulling ) {
-					if ( p.commandBuffers == null)
+					if ( p.commandBuffers == null) {
 						p.commandBuffers = [];
+						p.countBuffers = [];
+					}
 					var buf = p.commandBuffers[index];
+					var cbuf = p.countBuffers[index];
 					if ( buf == null ) {
 						buf = alloc.allocBuffer( commandCountAllocated, INDIRECT_DRAW_ARGUMENTS_FMT, UniformReadWrite );
+						cbuf = alloc.allocBuffer( 1, hxd.BufferFormat.VEC4_DATA, UniformReadWrite );
 						p.commandBuffers[index] = buf;
+						p.countBuffers[index] = cbuf;
 					}
 					else if ( buf.vertices < commandCountAllocated ) {
 						alloc.disposeBuffer( buf );
@@ -864,8 +896,10 @@ class MeshBatch extends MultiMaterial {
 				if( p.instanceBuffers == null ) {
 					var count = hxd.Math.imin( instanceCount - p.maxInstance * bufferIndex, p.maxInstance );
 					instanced.commands.setCommand(count,p.indexCount,p.indexStart);
-					if ( p.commandBuffers != null && p.commandBuffers.length > 0 )
+					if ( p.commandBuffers != null && p.commandBuffers.length > 0 ) {
 						@:privateAccess instanced.commands.data = p.commandBuffers[bufferIndex].vbuf;
+						@:privateAccess instanced.commands.countBuffer = p.countBuffers[bufferIndex].vbuf;
+					}
 				} else
 					instanced.commands = p.instanceBuffers[bufferIndex];
 				break;
@@ -896,13 +930,17 @@ class MeshBatch extends MultiMaterial {
 				for( i => buf in p.buffers ) {
 					ctx.emitPass(pass, this).index = i | (p.matIndex << 16);
 					if ( p.commandBuffers != null && p.commandBuffers.length > 0 ) {
-						var commandBuffer = p.commandBuffers[i];
 						var count = hxd.Math.imin( instanceCount - p.maxInstance * i, p.maxInstance);
 						var computeShader = p.computePass.getShader(ComputeIndirect);
 						computeShader.instanceData = buf;
 						computeShader.matIndex = p.matIndex;
-						computeShader.commandBuffer = commandBuffer;
+						computeShader.commandBuffer = p.commandBuffers[i];
+						countBytes = haxe.io.Bytes.alloc(4*4);
+						countBytes.setInt32(0, 0);
+						p.countBuffers[i].uploadBytes(countBytes, 0, 1);
+						computeShader.countBuffer = p.countBuffers[i];
 						computeShader.startInstanceOffset = emittedCount;
+						computeShader.ENABLE_COUNT_BUFFER = isCountBufferAllowed();
 						ctx.computeList(@:privateAccess p.computePass.shaders);
 						ctx.computeDispatch(count);
 						emittedCount += count;
