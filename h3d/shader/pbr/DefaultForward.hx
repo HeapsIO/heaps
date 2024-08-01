@@ -6,6 +6,7 @@ class DefaultForward extends hxsl.Shader {
 
 		@global var camera : {
 			var view : Mat4;
+			var viewProj : Mat4;
 			var position : Vec3;
 			var inverseViewProj : Mat4;
 		}
