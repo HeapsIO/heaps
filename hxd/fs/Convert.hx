@@ -16,6 +16,10 @@ class Convert {
 	public var dstPath:String;
 	public var originalFilename:String;
 	public var srcBytes:haxe.io.Bytes;
+	/*
+		The calculated hash for the input source file content.
+	*/
+	public var hash : String;
 
 	public function new(sourceExts, destExt) {
 		this.sourceExts = sourceExts == null ? null : sourceExts.split(",");
