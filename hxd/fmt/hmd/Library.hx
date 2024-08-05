@@ -257,7 +257,7 @@ class Library {
 				}
 				buf.indexes[i] = rid - 1;
 			}
-			#if neko
+			#if (neko || (hl && haxe_ver >= 5.0))
 			buf.vertexes = haxe.ds.Vector.fromArrayCopy(vertexes.getNative());
 			#else
 			buf.vertexes = haxe.ds.Vector.fromData(vertexes.getNative());
