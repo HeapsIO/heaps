@@ -2393,7 +2393,6 @@ class DX12Driver extends h3d.impl.Driver {
 			frame.commandList.iaSetIndexBuffer(ibuf.vbuf.iview);
 		}
 		if( commands.data != null ) {
-			flushSRV();
 			transition(commands.data, INDIRECT_ARGUMENT);
 			if ( commands.countBuffer != null )
 				transition(commands.countBuffer, INDIRECT_ARGUMENT);
