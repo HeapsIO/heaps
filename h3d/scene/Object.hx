@@ -230,11 +230,7 @@ class Object {
 	inline function get_drawn() return flags.has(FDrawn);
 	inline function set_posChanged(b) return flags.set(FPosChanged, b || follow != null);
 	inline function set_culled(b) return flags.set(FCulled, b);
-	function set_visible(b) {
-		if (this.name == "light")
-			trace(b);
-		return flags.set(FVisible,b);
-	};
+	inline function set_visible(b) return flags.set(FVisible,b);
 	inline function set_allocated(b) return flags.set(FAllocated, b);
 	inline function set_followPositionOnly(b) return flags.set(FFollowPositionOnly, b);
 	inline function set_lightCameraCenter(b) return flags.set(FLightCameraCenter, b);
