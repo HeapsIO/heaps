@@ -3,6 +3,14 @@ package hxd.fmt.fbx;
 import hxd.fmt.fbx.Data;
 import hxd.fmt.hmd.Data;
 
+typedef ExportParams = {
+	forward: Int,
+	forwardSign: Int,
+	up: Int,
+	upSign: Int,
+}
+
+
 class Writer {
 	var out: haxe.io.Output;
 
@@ -784,5 +792,65 @@ class Writer {
 		out = old;
 
 		out.write(bytes);
+	}
+
+	public function export(toExport: Array<h3d.scene.Object>, destinationPath: String, callb : Void -> Void, ?params : ExportParams) {
+		if (this.out == null)
+			this.out = new haxe.io.BytesOutput();
+
+		function clean( obj : h3d.scene.Object ) : h3d.scene.Object {
+			if (Std.downcast(obj, h3d.scene.Interactive) != null)
+				return null;
+
+			var o = new h3d.scene.Object();
+			var multiMat = Std.downcast(obj, h3d.scene.MultiMaterial);
+			if (multiMat != null)
+				o = new h3d.scene.MultiMaterial(multiMat.primitive, multiMat.materials);
+			else {
+				var m = Std.downcast(obj, h3d.scene.Mesh);
+				if (m != null)
+					o = new h3d.scene.Mesh(m.primitive, m.material);
+			}
+
+			o.x = obj.x;
+			o.y = obj.y;
+			o.z = obj.z;
+			o.scaleX = obj.scaleX;
+			o.scaleY = obj.scaleY;
+			o.scaleZ = obj.scaleZ;
+			@:privateAccess o.qRot.load(@:privateAccess obj.qRot);
+			o.name = obj.name;
+			o.follow = obj.follow;
+			o.followPositionOnly = obj.followPositionOnly;
+			o.visible = obj.visible;
+			if( obj.defaultTransform != null )
+				o.defaultTransform = obj.defaultTransform.clone();
+			for( c in @:privateAccess obj.children ) {
+				var c2 = clean(c);
+				if (c2 == null)
+					continue;
+				@:privateAccess c2.parent = o;
+				@:privateAccess o.children.push(c2);
+			}
+
+			return o;
+		}
+
+		// Clean a bit the object hierarchy to remove non-needed objects
+		// (Interactibles for example)
+		var roots = new Array<h3d.scene.Object>();
+		for (o in toExport) {
+			var t = clean(o);
+			if (t != null)
+				roots.push(t);
+		}
+
+		// Handle the export of selection into a fbx file
+		if (destinationPath != null) {
+			var out = new haxe.io.BytesOutput();
+			new hxd.fmt.fbx.Writer(out).write(roots, params);
+			sys.io.File.saveBytes(destinationPath, out.getBytes());
+			callb();
+		}
 	}
 }
