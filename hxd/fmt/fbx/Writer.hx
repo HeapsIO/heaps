@@ -4,10 +4,10 @@ import hxd.fmt.fbx.Data;
 import hxd.fmt.hmd.Data;
 
 typedef ExportParams = {
-	forward: Int,
-	forwardSign: Int,
-	up: Int,
-	upSign: Int,
+	forward: String,
+	forwardSign: String,
+	up: String,
+	upSign: String,
 }
 
 
@@ -89,28 +89,30 @@ class Writer {
 
 			case PInts(v):
 				{
-					var res = '*${v.length} {\n';
-					res += '${getTabFormat(depth + 1)}a: ';
+					var strBuf : StringBuf = new StringBuf();
+					strBuf.add('*${v.length} {\n');
+					strBuf.add('${getTabFormat(depth + 1)}a: ');
 
 					for (idx => i in v) {
-						res += '${idx != 0 ? ',' : ''}${i}';
+						strBuf.add('${idx != 0 ? ',' : ''}${i}');
 					}
 
-					res += '\n${getTabFormat(depth)}}';
-					return res;
+					strBuf.add('\n${getTabFormat(depth)}}');
+					return strBuf.toString();
 				}
 
 			case PFloats(v):
 				{
-					var res = '*${v.length} {\n';
-					res += '${getTabFormat(depth + 1)}a: ';
+					var strBuf : StringBuf = new StringBuf();
+					strBuf.add('*${v.length} {\n');
+					strBuf.add('${getTabFormat(depth + 1)}a: ');
 
 					for (idx => i in v) {
-						res += '${idx != 0 ? ',' : ''}${i}';
+						strBuf.add('${idx != 0 ? ',' : ''}${i}');
 					}
 
-					res += '\n${getTabFormat(depth)}}';
-					return res;
+					strBuf.add('\n${getTabFormat(depth)}}');
+					return strBuf.toString();
 				}
 
 			default:
@@ -808,7 +810,9 @@ class Writer {
 				o = new h3d.scene.MultiMaterial(multiMat.primitive, multiMat.materials);
 			else {
 				var m = Std.downcast(obj, h3d.scene.Mesh);
-				if (m != null)
+				var hmd = Std.downcast(m?.primitive, h3d.prim.HMDModel);
+
+				if (hmd != null)
 					o = new h3d.scene.Mesh(m.primitive, m.material);
 			}
 
