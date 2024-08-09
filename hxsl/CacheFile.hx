@@ -119,7 +119,7 @@ class CacheFile extends Cache {
 			for( r in wait ) {
 				if (showProgress && (waitCount % 5 == 0 || waitCount <= 1)) {
 					var progress = Std.int((1 - (waitCount / fullCount)) * 1000) / 10;
-					Sys.print('$progress%\t(${fullCount - waitCount}/$fullCount)  \r');
+					Sys.print('$progress%  \t(${fullCount - waitCount}/$fullCount)  \r');
 				}
 
 				addNewShader(r);
