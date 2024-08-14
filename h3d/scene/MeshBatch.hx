@@ -757,19 +757,9 @@ class MeshBatch extends MultiMaterial {
 				if( count > p.maxInstance )
 					count = p.maxInstance;
 
-				inline function nextPowerOfTwo( n : Int) {
-					--n;
-  	  				n |= n >> 1;
-  	  				n |= n >> 2;
-  	  				n |= n >> 4;
-  	  				n |= n >> 8;
-  	  				n |= n >> 16;
-    				return n + 1;
-				}
-
 				var maxVertexCount = ( mustCalcBufferFormat ) ? p.maxInstance : ( useStorageBuffer ? MAX_STORAGE_BUFFER_ELEMENTS : MAX_BUFFER_ELEMENTS );
 				var vertexCount = Std.int( count * (( 4 * p.paramsCount ) / p.bufferFormat.stride) );
-				var vertexCountAllocated = #if js Std.int( MAX_BUFFER_ELEMENTS * 4 / p.bufferFormat.stride ) #else hxd.Math.imin( nextPowerOfTwo( vertexCount ), maxVertexCount ) #end;
+				var vertexCountAllocated = #if js Std.int( MAX_BUFFER_ELEMENTS * 4 / p.bufferFormat.stride ) #else hxd.Math.imin( hxd.Math.nextPOT( vertexCount ), maxVertexCount ) #end;
 
 				if( buf == null || buf.isDisposed() || buf.vertices < vertexCountAllocated ) {
 					var bufferFlags : hxd.impl.Allocator.BufferFlags = useStorageBuffer ? UniformReadWrite : UniformDynamic;
@@ -799,7 +789,7 @@ class MeshBatch extends MultiMaterial {
 					}
 				}
 
-				var commandCountAllocated = hxd.Math.imin( nextPowerOfTwo( count ), p.maxInstance );
+				var commandCountAllocated = hxd.Math.imin( hxd.Math.nextPOT( count ), p.maxInstance );
 
 				if ( enableLOD || enableGPUCulling ) {
 					if ( p.commandBuffers == null) {
