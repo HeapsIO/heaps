@@ -282,7 +282,7 @@ class Library {
 
 		var lods : Array<Geometry> = null;
 		if (lodInfos.lodLevel == 0 )
-			lods = findLODs( lodInfos.modelName );
+			lods = findLODs( lodInfos.modelName, model.materials.length );
 
 		p = new h3d.prim.HMDModel(header.geometries[id], header.dataPosition, this, lods);
 		p.incref(); // Prevent from auto-disposing
@@ -410,7 +410,7 @@ class Library {
 		return { lodLevel : -1, modelName : null };
 	}
 
-	public function findLODs( modelName : String ) : Array<Geometry> {
+	public function findLODs( modelName : String, materialCount : Int ) : Array<Geometry> {
 		if ( modelName == null )
 			return null;
 
@@ -420,11 +420,17 @@ class Library {
 			if ( lodInfos.lodLevel < 1 )
 				continue;
 			if ( lodInfos.modelName == modelName ) {
-				var capacityNeeded = lodInfos.lodLevel;
-				if ( capacityNeeded > lods.length )
-					lods.resize(capacityNeeded);
 				if ( lods[lodInfos.lodLevel - 1] != null )
 					throw 'Multiple LODs with the same level : ${curModel.name}';
+				var geom = header.geometries[curModel.geometry];
+				if ( geom.indexCounts.length != materialCount ) {
+					var indexCounts = [];					
+					for ( i in 0...materialCount )
+						indexCounts[i] = 0;
+					for ( i => m in curModel.materials )
+						indexCounts[m] = geom.indexCounts[i];
+					geom.indexCounts = indexCounts;
+				}
 				lods[lodInfos.lodLevel - 1] = header.geometries[curModel.geometry];
 			}
 		}
