@@ -801,7 +801,8 @@ class Writer {
 			this.out = new haxe.io.BytesOutput();
 
 		function clean( obj : h3d.scene.Object ) : h3d.scene.Object {
-			if (Std.downcast(obj, h3d.scene.Interactive) != null)
+			if (Std.downcast(obj, h3d.scene.Interactive) != null ||
+				Std.downcast(obj, hrt.prefab.fx.Emitter.EmitterObject) != null)
 				return null;
 
 			var o = new h3d.scene.Object();
