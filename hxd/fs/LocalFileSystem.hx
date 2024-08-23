@@ -92,7 +92,9 @@ class LocalEntry extends FileEntry {
 			case ".tmp" if( this == fs.root ):
 				continue;
 			default:
-				arr.push(fs.open(relPath == null ? f : relPath + "/" + f,false));
+				var entry = fs.open(relPath == null ? f : relPath + "/" + f,false);
+				if( entry != null )
+					arr.push(entry);
 			}
 		}
 		return new hxd.impl.ArrayIterator(arr);
