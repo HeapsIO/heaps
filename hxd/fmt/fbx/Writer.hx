@@ -545,7 +545,7 @@ class Writer {
 				// We have to flip the order of vertex to change the facing direction of the triangle (because we changed X axis
 				// sign earlier to change from left hand to right hand)
 
-				// /!\ Last vertex index This is because the last index that close the polygon (in our case, we work with triangles, so the third)
+				// /!\ This is because the last index that close the polygon (in our case, we work with triangles, so the third)
 				// need to be increased by one and then set to negative.
 				// (This is because original index is XOR'ed with -1.)
 				indexes.push(bufs.indexes[idxIndex + 1]);
@@ -558,7 +558,6 @@ class Writer {
 			var meshMaterials = mesh.getMaterials();
 			var mats = new Array<Int>();
 			for (idx => mat in meshMaterials ) {
-				var hmdModel = Std.downcast(mesh.primitive, h3d.prim.HMDModel);
 				var materialId = -1;
 
 				// Only write material once in the fbx file
@@ -801,8 +800,8 @@ class Writer {
 			this.out = new haxe.io.BytesOutput();
 
 		function clean( obj : h3d.scene.Object ) : h3d.scene.Object {
-			if (Std.downcast(obj, h3d.scene.Interactive) != null ||
-				Std.downcast(obj, hrt.prefab.fx.Emitter.EmitterObject) != null)
+			if (Std.isOfType(obj, h3d.scene.Interactive) ||
+				Std.isOfType(obj, hrt.prefab.fx.Emitter.EmitterObject))
 				return null;
 
 			var o = new h3d.scene.Object();
