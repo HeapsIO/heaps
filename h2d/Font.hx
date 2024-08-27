@@ -210,10 +210,9 @@ class Font {
 		SDF Field type used when generating.
 	**/
 	public var fieldType:String;
-
-	var glyphs:Map<Int, FontChar>;
-	var nullChar:FontChar;
-	var defaultChar:FontChar;
+	var glyphs : Map<Int,FontChar>;
+	var nullChar : FontChar;
+	var defaultChar : FontChar;
 	var initSize:Int;
 	var offsetX:Float = 0;
 	var offsetY:Float = 0;
