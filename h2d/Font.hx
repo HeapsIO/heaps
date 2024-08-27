@@ -199,21 +199,18 @@ class Font {
 		Font charset allows to resolve specific char codes that are not directly present in glyph map as well as detect spaces.
 		Defaults to `hxd.Charset.getDefault()`.
 	**/
-	public var charset:hxd.Charset;
-
+	public var charset : hxd.Charset;
 	/**
-		Distance range used to generate SDF Font and useful for some implementations of SDF Font rendering.
+		Distance range used to generate SDF Font and usefull for some implementations of SDF Font rendering.
 	**/
 	public var distanceRange:Int;
-
 	/**
 		SDF Field type used when generating.
 	**/
 	public var fieldType:String;
-
-	var glyphs:Map<Int, FontChar>;
-	var nullChar:FontChar;
-	var defaultChar:FontChar;
+	var glyphs : Map<Int,FontChar>;
+	var nullChar : FontChar;
+	var defaultChar : FontChar;
 	var initSize:Int;
 	var offsetX:Float = 0;
 	var offsetY:Float = 0;
