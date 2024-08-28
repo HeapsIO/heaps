@@ -95,14 +95,19 @@ class ModelDatabase {
 		var fs = Std.downcast(hxd.res.Loader.currentInstance.fs, hxd.fs.LocalFileSystem);
 		if (fs == null)
 			return baseLodConfig;
-		var c = @:privateAccess fs.convert.getConfig(defaultLodConfigs, baseLodConfig, dir, function(fullObj) {
-			if (Reflect.hasField(fullObj, "lods.screenRatio"))
-				return Reflect.field(fullObj, "lods.screenRatio");
 
+		#if (sys || nodejs)
+			var c = @:privateAccess fs.convert.getConfig(defaultLodConfigs, baseLodConfig, dir, function(fullObj) {
+				if (Reflect.hasField(fullObj, "lods.screenRatio"))
+					return Reflect.field(fullObj, "lods.screenRatio");
+
+				return baseLodConfig;
+			});
+			return c;
+		#else
 			return baseLodConfig;
-		});
+		#end
 
-		return c;
 	}
 
 	public static var current = new ModelDatabase();

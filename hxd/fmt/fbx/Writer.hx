@@ -801,7 +801,7 @@ class Writer {
 
 		function clean( obj : h3d.scene.Object ) : h3d.scene.Object {
 			if (Std.isOfType(obj, h3d.scene.Interactive) ||
-				Std.isOfType(obj, hrt.prefab.fx.Emitter.EmitterObject) ||
+				#if hide Std.isOfType(obj, hrt.prefab.fx.Emitter.EmitterObject) || #end
 				!obj.visible)
 				return null;
 
@@ -854,7 +854,11 @@ class Writer {
 		if (destinationPath != null) {
 			var out = new haxe.io.BytesOutput();
 			new hxd.fmt.fbx.Writer(out).write(roots, params);
-			sys.io.File.saveBytes(destinationPath, out.getBytes());
+			#if js
+				hxd.File.saveBytes(destinationPath, out.getBytes());
+			#else
+				sys.io.File.saveBytes(destinationPath, out.getBytes());
+			#end
 			callb();
 		}
 	}

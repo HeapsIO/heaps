@@ -70,7 +70,7 @@ class Benchmark extends h2d.Graphics {
 	public var measureCpu = false;
 	public var displayTriangleCount = true;
 
-	public var measureCpuThread: sys.thread.Thread = null;
+	#if target.threaded public var measureCpuThread: sys.thread.Thread = null; #end
 
 	var tip : h2d.Text;
 	var tipCurrent : StatsObject;
@@ -165,9 +165,11 @@ class Benchmark extends h2d.Graphics {
 		}
 		else {
 			var t = s.name + "( " + Std.int(s.time / 1e6) + "." + StringTools.lpad(""+(Std.int(s.time/1e4)%100),"0",2) + " ms";
+			#if target.threaded
 			if (measureCpuThread == null) {
 				t += " " + fmt(s.drawCalls, "draws")+ fmt(s.dispatches, "dispatches");
 			}
+			#end
 			t += ")";
 
 			tip.text = t;
@@ -199,8 +201,10 @@ class Benchmark extends h2d.Graphics {
 		var changed = false;
 		while( waitFrames.length > 0 ) {
 			var q = waitFrames[0];
+			#if target.threaded
 			if( measureCpuThread == null && !q.isAvailable() )
 				break;
+			#end
 			waitFrames.shift();
 
 			// recycle previous stats
@@ -344,11 +348,13 @@ class Benchmark extends h2d.Graphics {
 		time.textColor = 0xFFFFFF;
 		var timeMs = totalTime / 1e6;
 		var totalName = measureCpu ? "cpu" : "gpu";
+		#if target.threaded
 		if (measureCpuThread != null) {
 			var n = measureCpuThread.getName();
 			if (n != null)
 				totalName = n;
 		}
+		#end
 		time.text = Std.int(timeMs) + "." + Std.int((timeMs * 10) % 10) + " " + totalName;
 
 		while( labels.length > count )
@@ -407,8 +413,10 @@ class Benchmark extends h2d.Graphics {
 		if( !enable ) return;
 		if( currentFrame != null && currentFrame.name == name )
 			return;
+		#if target.threaded
 		if( measureCpuThread != null && sys.thread.Thread.current() != measureCpuThread )
 			return;
+		#end
 		var q = allocQuery();
 		q.name = name;
 		q.drawCalls = engine.drawCalls;
