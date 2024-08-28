@@ -801,7 +801,8 @@ class Writer {
 
 		function clean( obj : h3d.scene.Object ) : h3d.scene.Object {
 			if (Std.isOfType(obj, h3d.scene.Interactive) ||
-				Std.isOfType(obj, hrt.prefab.fx.Emitter.EmitterObject))
+				Std.isOfType(obj, hrt.prefab.fx.Emitter.EmitterObject) ||
+				!obj.visible)
 				return null;
 
 			var o = new h3d.scene.Object();
