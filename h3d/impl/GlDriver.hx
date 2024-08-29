@@ -596,7 +596,8 @@ class GlDriver extends Driver {
 		case Globals:
 			if( s.globals != null ) {
 				#if hl
-				gl.uniform4fv(s.globals, streamData(hl.Bytes.getArray(buf.globals.toData()), 0, s.shader.globalsSize * 16), 0, s.shader.globalsSize * 4);
+				var bytes = #if (haxe_ver < 5.0) hl.Bytes.getArray(buf.globals.toData()) #else buf.globals.toData().getBytes() #end;
+				gl.uniform4fv(s.globals, streamData(bytes, 0, s.shader.globalsSize * 16), 0, s.shader.globalsSize * 4);
 				#else
 				var a = buf.globals.subarray(0, s.shader.globalsSize * 4);
 				gl.uniform4fv(s.globals, a);
@@ -605,7 +606,8 @@ class GlDriver extends Driver {
 		case Params:
 			if( s.params != null ) {
 				#if hl
-				gl.uniform4fv(s.params, streamData(hl.Bytes.getArray(buf.params.toData()), 0, s.shader.paramsSize * 16), 0, s.shader.paramsSize * 4);
+				var bytes = #if (haxe_ver < 5.0) hl.Bytes.getArray(buf.params.toData()) #else buf.params.toData().getBytes() #end;
+				gl.uniform4fv(s.params, streamData(bytes, 0, s.shader.paramsSize * 16), 0, s.shader.paramsSize * 4);
 				#else
 				var a = buf.params.subarray(0, s.shader.paramsSize * 4);
 				gl.uniform4fv(s.params, a);
