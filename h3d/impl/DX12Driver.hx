@@ -1873,7 +1873,7 @@ class DX12Driver extends h3d.impl.Driver {
 		switch( which ) {
 		case Params:
 			if( shader.paramsSize > 0 ) {
-				var data = hl.Bytes.getArray(buf.params.toData());
+				var data = #if (haxe_ver < 5.0) hl.Bytes.getArray(buf.params.toData()) #else buf.params.toData().getBytes() #end;
 				var dataSize = shader.paramsSize << 4;
 				if( regs.params & 0x100 != 0 ) {
 					// update CBV
@@ -1894,7 +1894,7 @@ class DX12Driver extends h3d.impl.Driver {
 			}
 		case Globals:
 			if( shader.globalsSize > 0 ) {
-				var data = hl.Bytes.getArray(buf.globals.toData());
+				var data = #if (haxe_ver < 5.0) hl.Bytes.getArray(buf.globals.toData()) #else buf.globals.toData().getBytes() #end;
 				var dataSize = shader.globalsSize << 4;
 				if( regs.globals & 0x100 != 0 ) {
 					// update CBV
