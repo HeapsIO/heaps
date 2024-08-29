@@ -1228,7 +1228,7 @@ class DirectXDriver extends h3d.impl.Driver {
 
 	function uploadShaderBuffer( sbuffer : dx.Resource, buffer : haxe.ds.Vector<hxd.impl.Float32>, size : Int, prevContent : hl.Bytes ) {
 		if( size == 0 ) return;
-		var data = hl.Bytes.getArray(buffer.toData());
+		var data = #if (haxe_ver < 5.0) hl.Bytes.getArray(buffer.toData()) #else buffer.toData().getBytes() #end;
 		var bytes = size << 4;
 		if( prevContent != null ) {
 			if( prevContent.compare(0, data, 0, bytes) == 0 )
