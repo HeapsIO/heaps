@@ -287,7 +287,7 @@ class Font {
 		@param size The new font size.
 	**/
 	public function resizeTo( size : Int ) {
-		var ratio = size / this.size;
+		var ratio = size / initSize;
 		for( c in glyphs ) {
 			c.width *= ratio;
 			c.t.scaleToSize(c.t.width * ratio, c.t.height * ratio);
