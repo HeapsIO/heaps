@@ -166,10 +166,9 @@ class Benchmark extends h2d.Graphics {
 		else {
 			var t = s.name + "( " + Std.int(s.time / 1e6) + "." + StringTools.lpad(""+(Std.int(s.time/1e4)%100),"0",2) + " ms";
 			#if target.threaded
-			if (measureCpuThread == null) {
-				t += " " + fmt(s.drawCalls, "draws")+ fmt(s.dispatches, "dispatches");
-			}
+			if (measureCpuThread == null)
 			#end
+				t += " " + fmt(s.drawCalls, "draws")+ fmt(s.dispatches, "dispatches");
 			t += ")";
 
 			tip.text = t;
@@ -201,10 +200,8 @@ class Benchmark extends h2d.Graphics {
 		var changed = false;
 		while( waitFrames.length > 0 ) {
 			var q = waitFrames[0];
-			#if target.threaded
-			if( measureCpuThread == null && !q.isAvailable() )
+			if( #if target.threaded measureCpuThread == null && #end !q.isAvailable() )
 				break;
-			#end
 			waitFrames.shift();
 
 			// recycle previous stats
