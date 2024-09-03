@@ -116,6 +116,7 @@ class CacheFile extends Cache {
 			var fullCount = wait.length;
 			waitCount += wait.length;
 			#if hlmulti
+			var t1 = haxe.Timer.stamp();
 			for( r in wait ) {
 				if (showProgress && (waitCount % 5 == 0 || waitCount <= 1)) {
 					var progress = Std.int((1 - (waitCount / fullCount)) * 1000) / 10;
@@ -125,8 +126,13 @@ class CacheFile extends Cache {
 				addNewShader(r);
 				hxd.System.timeoutTick();
 			}
-			if (showProgress)
-				Sys.println("");
+			if (showProgress) {
+				log("");
+				var t = haxe.Timer.stamp() - t1;
+				var m = hxd.Math.round(t / 60);
+				var s = t - m * 60;
+				log('$waitCount generated in ${m}m ${hxd.Math.fmt(s)}s');
+			}
 			#else
 			haxe.Timer.delay(function() {
 				for( r in wait ) {
