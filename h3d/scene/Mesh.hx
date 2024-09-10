@@ -100,8 +100,8 @@ class Mesh extends Object {
 		var worldTopLeft = worldCenter + cameraTopLeft * worldRadius;
 		var worldBottomRight = worldCenter - cameraTopLeft * worldRadius;
 
-		var screenTopLeft = ctx.camera.project( worldTopLeft.x, worldTopLeft.y, worldTopLeft.z, 1.0, 1.0, false );
-		var screenBottomRight = ctx.camera.project( worldBottomRight.x, worldBottomRight.y, worldBottomRight.z, 1.0, 1.0, false );
+		var screenTopLeft = ctx.camera.projectInline( worldTopLeft.x, worldTopLeft.y, worldTopLeft.z, 1.0, 1.0, false );
+		var screenBottomRight = ctx.camera.projectInline( worldBottomRight.x, worldBottomRight.y, worldBottomRight.z, 1.0, 1.0, false );
 
 		var screenArea = hxd.Math.max( screenBottomRight.x - screenTopLeft.x, screenBottomRight.y - screenTopLeft.y );
 
