@@ -32,6 +32,10 @@ class MemoryManager {
 		initIndexes();
 	}
 
+	public static function enableTrackAlloc(?b : Bool) {
+		@:privateAccess hxd.impl.AllocPos.ENABLED = b != null ? b : true; 
+	}
+
 	function initIndexes() {
 		var indices = new hxd.IndexBuffer();
 		for( i in 0...SIZE ) indices.push(i);
@@ -263,9 +267,6 @@ class MemoryManager {
 	 */
 	@:access(h3d.Buffer)
 	public function allocStats() : Array<{ position : String, count : Int, tex : Bool, size : Int, stacks : Array<{ stack : String, count : Int, size : Int }> }> {
-		#if !track_alloc
-		return [];
-		#else
 		var h = new Map();
 		var all = [];
 		inline function addStack( a : hxd.impl.AllocPos, stacks : Array<{ stack : String, count : Int, size : Int }>, size : Int ) {
@@ -280,6 +281,8 @@ class MemoryManager {
 				stacks.push({ stack : stackStr, count : 1, size : size });
 		}
 		for( t in textures ) {
+			if ( t.allocPos == null )
+				continue;
 			var key = "$"+t.allocPos.position;
 			var inf = h.get(key);
 			if( inf == null ) {
@@ -293,7 +296,9 @@ class MemoryManager {
 			addStack(t.allocPos, inf.stacks, size);
 		}
 		for( b in buffers ) {
-			var key = b.allocPos == null ? "null" : b.allocPos.position;
+			if ( b.allocPos == null )
+				continue;
+			var key = b.allocPos.position;
 			var inf = h.get(key);
 			if( inf == null ) {
 				inf = { position : key, count : 0, size : 0, tex : false, stacks : [] };
@@ -307,8 +312,5 @@ class MemoryManager {
 		}
 		all.sort(function(a, b) return b.size - a.size);
 		return all;
-		#end
 	}
-
-
 }

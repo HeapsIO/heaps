@@ -27,10 +27,7 @@ enum BufferFlag {
 class Buffer {
 	public static var GUID = 0;
 	public var id : Int;
-	#if track_alloc
 	var allocPos : hxd.impl.AllocPos;
-	var allocNext : Buffer;
-	#end
 	var engine : h3d.Engine;
 	var lastFrame : Int;
 
@@ -44,9 +41,7 @@ class Buffer {
 		this.vertices = vertices;
 		this.format = format;
 		this.flags = new haxe.EnumFlags();
-		#if track_alloc
-		this.allocPos = new hxd.impl.AllocPos();
-		#end
+		this.allocPos = hxd.impl.AllocPos.make();
 		if( flags != null )
 			for( f in flags )
 				this.flags.set(f);
