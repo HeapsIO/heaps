@@ -178,10 +178,8 @@ class RenderContext {
 	}
 
 	inline function getPtr( data : h3d.shader.Buffers.ShaderBufferData ) {
-		#if (hl && haxe_ver < 5.0)
+		#if hl
 		return (hl.Bytes.getArray((cast data : Array<Single>)) : hl.BytesAccess<hl.F32>);
-		#elseif hl
-		return (data.toData().getBytes() : hl.BytesAccess<hl.F32>);
 		#else
 		return data;
 		#end
