@@ -76,7 +76,6 @@ class Renderer extends h3d.scene.Renderer {
 	var currentStep : h3d.impl.RendererFX.Step;
 	var performance = new h3d.pass.ScreenFx(new h3d.shader.pbr.PerformanceViewer());
 	var indirectEnv = true;
-	var cullingDistanceFactor : Float = 0.0;
 
 	var textures = {
 		albedo : (null:h3d.mat.Texture),
@@ -91,6 +90,7 @@ class Renderer extends h3d.scene.Renderer {
 		velocity : (null:h3d.mat.Texture),
 	};
 
+	public var cullingDistanceFactor : Float = 0.0;
 	public var skyMode : SkyMode = Hide;
 	public var toneMode : TonemapMap = Reinhard;
 	public var displayMode : DisplayMode = Pbr;
@@ -164,6 +164,9 @@ class Renderer extends h3d.scene.Renderer {
 		allPasses.push(emissiveDecalsOutput);
 		allPasses.push(new h3d.pass.Shadows(null));
 		refreshProps();
+		#if editor
+		cullingDistanceFactor = hide.Ide.inst.ideConfig.cullingDistanceFactor;
+		#end
 	}
 
 	override function addShader(s:hxsl.Shader) {
