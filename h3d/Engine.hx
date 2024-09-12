@@ -424,6 +424,8 @@ class Engine {
 	public function dispose() {
 		driver.dispose();
 		window.removeResizeEvent(onWindowResize);
+		if ( mem != null )
+			mem.dispose();
 	}
 
 	function get_fps() {
