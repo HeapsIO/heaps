@@ -3,10 +3,7 @@ package h3d.shader;
 class DepthAwareUpsampling extends ScreenShader {
 	static var SRC = {
 
-		@global var camera : {
-			var inverseViewProj : Mat4;
-		}
-
+        @param var inverseProj : Mat4;
 		@param var source : Sampler2D;
 		@param var sourceDepth : Sampler2D;
 		@param var destDepth : Sampler2D;
@@ -14,7 +11,7 @@ class DepthAwareUpsampling extends ScreenShader {
 
 		function getPosition( uv : Vec2, depthTexture : Sampler2D ) : Vec3 {
 			var depth = unpack(depthTexture.get(uv));
-			var temp = vec4(uvToScreen(uv), depth, 1) * camera.inverseViewProj;
+			var temp = vec4(uvToScreen(uv), depth, 1) * inverseProj;
 			var originWS = temp.xyz / temp.w;
 			return originWS;
 		}
