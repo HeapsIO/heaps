@@ -364,9 +364,23 @@ class MeshBatch extends MultiMaterial {
 					pl.sort(function(p1,p2) return p1.pos - p2.pos);
 					var fmt : Array<hxd.BufferFormat.BufferInput> = [];
 					var curPos = 0;
+					var paddingIndex = 0;
 					for( p in pl ) {
-						if( curPos != p.pos )
-							throw "Buffer has padding";
+						var paddingSize = p.pos - curPos;
+						if ( paddingSize > 0 ) {
+							var paddingType : hxsl.Ast.Type = switch ( paddingSize ) {
+							case 0:
+								TFloat;
+							case 1,2,3:
+								TVec(paddingSize, VFloat);
+							default:
+								throw "Buffer has padding";
+							}
+							var t = hxd.BufferFormat.InputFormat.fromHXSL(paddingType);
+							fmt.push(new hxd.BufferFormat.BufferInput("padding_"+paddingIndex,t));
+							paddingIndex++;
+							curPos = p.pos;
+						}
 						var name = p.name;
 						var prev = fmt.length;
 						switch( p.type ) {
