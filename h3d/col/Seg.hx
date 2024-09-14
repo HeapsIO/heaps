@@ -20,7 +20,7 @@ class Seg {
 		else if( t > 1 ) {
 			p.distanceSq(p2);
 		} else
-			p.distanceSq(new Point(p1.x + t * (p2.x - p1.x), p1.y + t * (p2.y - p1.y)));
+			p.distanceSq(new Point(p1.x + t * (p2.x - p1.x), p1.y + t * (p2.y - p1.y), p1.z + t * (p2.z - p1.z)));
 	}
 
 	public inline function distance( p : Point ) {
