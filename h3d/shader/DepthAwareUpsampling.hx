@@ -3,11 +3,16 @@ package h3d.shader;
 class DepthAwareUpsampling extends ScreenShader {
 	static var SRC = {
 
-        @param var inverseProj : Mat4;
+		@param var inverseProj : Mat4;
 		@param var source : Sampler2D;
 		@param var sourceDepth : Sampler2D;
 		@param var destDepth : Sampler2D;
 		@param var depthThreshold : Float = 1.0;
+
+		final offsets : Array<Vec2, 4> = [
+			vec2(-1,  0), vec2(0, -1), 
+			vec2( 1,  0), vec2(0,  1)
+		];
 
 		function getPosition( uv : Vec2, depthTexture : Sampler2D ) : Vec3 {
 			var depth = unpack(depthTexture.get(uv));
@@ -19,22 +24,21 @@ class DepthAwareUpsampling extends ScreenShader {
 		function fragment() {
 			var invDimensions = 1 / sourceDepth.size();
 			var pcur = getPosition(calculatedUV, destDepth);
-			var minDistance = 100000.0;
+			var p = getPosition(calculatedUV, sourceDepth);
+			var minDistance = abs(pcur.z - p.z);
 
 			var nearestUV = calculatedUV;
-			var isEdge = false;
+			var isEdge = minDistance > depthThreshold;
 
-			for ( y in -2...2 ) {
-				for ( x in -2...2 ) {
-					var uv = calculatedUV + vec2(x, y) * invDimensions;
-					var p = getPosition(uv, sourceDepth);
-					var distance = abs(pcur.z - p.z); 
-					if ( distance < minDistance) {
-						minDistance = distance;
-						nearestUV = uv;
-					}
-					isEdge = isEdge || distance > depthThreshold;
+			for ( i in 0...offsets.length ) {
+				var uv = calculatedUV + offsets[i] * invDimensions;
+				p = getPosition(uv, sourceDepth);
+				var distance = abs(pcur.z - p.z); 
+				if ( distance < minDistance) {
+					minDistance = distance;
+					nearestUV = uv;
 				}
+				isEdge = isEdge || distance > depthThreshold;
 			}
 
 			if ( isEdge )
