@@ -564,8 +564,9 @@ class Pixels {
 			if( n == 1 || n == 4 )
 				return blocks << 1;
 			return blocks << 2;
-		case Depth16, Depth24, Depth24Stencil8, Depth32:
-			throw "Not a pixel format";
+		case Depth16: 2;
+		case Depth24: 3;
+		case Depth24Stencil8, Depth32: 4;
 		}
 	}
 

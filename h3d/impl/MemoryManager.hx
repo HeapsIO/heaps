@@ -10,7 +10,6 @@ class MemoryManager {
 	var driver : Driver;
 	var buffers : Array<Buffer>;
 	var textures : Array<h3d.mat.Texture>;
-	var depths : Array<h3d.mat.Texture>;
 
 	var triIndexes16 : Indexes;
 	var quadIndexes16 : Indexes;
@@ -28,7 +27,6 @@ class MemoryManager {
 	public function init() {
 		textures = new Array();
 		buffers = new Array();
-		depths = new Array();
 		initIndexes();
 	}
 
@@ -184,7 +182,7 @@ class MemoryManager {
 				free = cleanTextures(false);
 				lastAutoDispose = hxd.Timer.frameCount;
 			}
-			t.t = driver.allocTexture(t);
+			t.t = t.isDepth() ? driver.allocDepthBuffer(t) : driver.allocTexture(t);
 			if( t.t != null ) break;
 
 			if( driver.isDisposed() ) return;
@@ -194,29 +192,6 @@ class MemoryManager {
 		}
 		textures.push(t);
 		texMemory += memSize(t);
-	}
-
-	@:allow(h3d.mat.Texture.alloc)
-	function allocDepth( b : h3d.mat.Texture ) {
-		while( true ) {
-			var free = cleanTextures(false);
-			b.t = driver.allocDepthBuffer(b);
-			if( b.t != null ) break;
-
-			if( driver.isDisposed() ) return;
-			while( cleanTextures(false) ) {} // clean all old textures
-			if( !free && !cleanTextures(true) )
-				throw "Maximum texture memory reached";
-		}
-		depths.push(b);
-		texMemory += b.width * b.height * 4;
-	}
-
-	@:allow(h3d.mat.Texture.dispose)
-	function deleteDepth( b : h3d.mat.Texture ) {
-		if( !depths.remove(b) ) return;
-		driver.disposeDepthBuffer(b);
-		texMemory -= b.width * b.height * 4;
 	}
 
 	// ------------------------------------- DISPOSE ------------------------------------------
@@ -237,8 +212,6 @@ class MemoryManager {
 		quadIndexes32 = null;
 		for( t in textures.copy() )
 			t.dispose();
-		for( b in depths.copy() )
-			b.dispose();
 		for( b in buffers.copy() )
 			b.dispose();
 		buffers = [];

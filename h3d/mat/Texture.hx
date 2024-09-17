@@ -114,7 +114,7 @@ class Texture {
 		this.wrap = DEFAULT_WRAP;
 		bits &= 0x7FFF;
 		this.allocPos = hxd.impl.AllocPos.make();
-		if( !this.flags.has(NoAlloc) && (!isDepth() || width > 0) ) alloc();
+		if( !this.flags.has(NoAlloc) && width > 0 ) alloc();
 	}
 
 	function get_layerCount() {
@@ -122,9 +122,7 @@ class Texture {
 	}
 
 	public function alloc() {
-		if ( isDepth() )
-			mem.allocDepth(this);
-		else if( t == null )
+		if ( t == null )
 			mem.allocTexture(this);
 	}
 
@@ -215,7 +213,7 @@ class Texture {
 	}
 
 	public inline function isDisposed() {
-		return isDepth() ? t == null : t == null && realloc == null;
+		return t == null && realloc == null;
 	}
 
 	public function resize(width, height) {
@@ -330,12 +328,8 @@ class Texture {
 	}
 
 	public function dispose() {
-		if( t != null ) {
-			if ( isDepth() )
-				mem.deleteDepth(this);
-			else
-				mem.deleteTexture(this);
-		}
+		if( t != null )
+			mem.deleteTexture(this);
 	}
 
 	/**
