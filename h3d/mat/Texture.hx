@@ -93,12 +93,10 @@ class Texture {
 			for( f in flags )
 				this.flags.set(f);
 
-		if ( !isDepth() ) {
-			#if !noEngine
-			var engine = h3d.Engine.getCurrent();
-			this.mem = engine.mem;
-			#end
-		}
+		#if !noEngine
+		var engine = h3d.Engine.getCurrent();
+		this.mem = engine.mem;
+		#end
 
 		var tw = 1, th = 1;
 		while( tw < w ) tw <<= 1;
@@ -125,7 +123,7 @@ class Texture {
 
 	public function alloc() {
 		if ( isDepth() )
-			h3d.Engine.getCurrent().mem.allocDepth(this);
+			mem.allocDepth(this);
 		else if( t == null )
 			mem.allocTexture(this);
 	}
@@ -334,7 +332,7 @@ class Texture {
 	public function dispose() {
 		if( t != null ) {
 			if ( isDepth() )
-				h3d.Engine.getCurrent().mem.deleteDepth(this);
+				mem.deleteDepth(this);
 			else
 				mem.deleteTexture(this);
 		}
