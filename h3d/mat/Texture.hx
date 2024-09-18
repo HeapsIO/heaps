@@ -213,7 +213,8 @@ class Texture {
 	}
 
 	public inline function isDisposed() {
-		return t == null && realloc == null;
+		// realloc unsupported on depth buffers.
+		return t == null && (isDepth() || realloc == null);
 	}
 
 	public function resize(width, height) {
