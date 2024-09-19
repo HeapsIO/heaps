@@ -115,7 +115,7 @@ class HMDOut extends BaseLibrary {
 		var ret = try Sys.command("mikktspace",[fileName,outFile]) catch( e : Dynamic ) -1;
 		if( ret != 0 ) {
 			sys.FileSystem.deleteFile(fileName);
-			throw "Failed to call 'mikktspace' executable required to generate tangent data. Please ensure it's in your PATH";
+			throw "Failed to call 'mikktspace' executable required to generate tangent data. Please ensure it's in your PATH"+(filePath == null ? "" : ' ($filePath)');
 		}
 		var bytes = sys.io.File.getBytes(outFile);
 		var size = index.vidx.length*4;
