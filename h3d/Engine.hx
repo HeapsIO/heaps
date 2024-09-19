@@ -78,6 +78,7 @@ class Engine {
 		realFps = hxd.System.getDefaultFrameRate();
 		lastTime = haxe.Timer.stamp();
 		window.addResizeEvent(onWindowResize);
+		setCurrent();
 		#if macro
 		driver = new h3d.impl.NullDriver();
 		#elseif (js || hlsdl || usegl)
@@ -100,7 +101,6 @@ class Engine {
 		#else
 		#if sys Sys.println #else trace #end("No output driver available." #if hl + " Compile with -lib hlsdl or -lib hldx" #end);
 		#end
-		setCurrent();
 	}
 
 	static var CURRENT : Engine = null;
