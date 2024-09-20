@@ -408,24 +408,30 @@ class DirShadowMap extends Shadows {
 
 		// Near Plane
 		var last = nearPlaneCorner[nearPlaneCorner.length - 1];
-		g.moveTo(last.x,last.y,last.z);
+		inline function moveTo(x : Float, y : Float, z : Float) {
+			g.moveTo(x - ctx.scene.x, y - ctx.scene.y, z - ctx.scene.z);
+		}
+		inline function lineTo(x : Float, y : Float, z : Float) {
+			g.lineTo(x - ctx.scene.x, y - ctx.scene.y, z - ctx.scene.z);
+		}
+		moveTo(last.x,last.y,last.z);
 		for( fc in nearPlaneCorner ) {
-			g.lineTo(fc.x, fc.y, fc.z);
+			lineTo(fc.x, fc.y, fc.z);
 		}
 
 		// Far Plane
 		var last = farPlaneCorner[farPlaneCorner.length - 1];
-		g.moveTo(last.x,last.y,last.z);
+		moveTo(last.x,last.y,last.z);
 		for( fc in farPlaneCorner ) {
-			g.lineTo(fc.x, fc.y, fc.z);
+			lineTo(fc.x, fc.y, fc.z);
 		}
 
 		// Connections
 		for( i in 0 ... 4 ) {
 			var np = nearPlaneCorner[i];
 			var fp = farPlaneCorner[i];
-			g.moveTo(np.x, np.y, np.z);
-			g.lineTo(fp.x, fp.y, fp.z);
+			moveTo(np.x, np.y, np.z);
+			lineTo(fp.x, fp.y, fp.z);
 		}
 	}
 }
