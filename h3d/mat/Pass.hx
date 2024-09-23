@@ -219,6 +219,7 @@ class Pass {
 
 	public function removeShader(s) {
 		var sl = shaders, prev = null;
+		var shaderFound = false;
 		while( sl != null ) {
 			if( sl.s == s ) {
 				resetRendererFlags();
@@ -228,7 +229,8 @@ class Pass {
 					shaders = sl.next;
 				else
 					prev.next = sl.next;
-				return true;
+				shaderFound = true;
+				break;
 			}
 			prev = sl;
 			sl = sl.next;
@@ -249,7 +251,7 @@ class Pass {
 			prev = sl;
 			sl = sl.next;
 		}
-		return false;
+		return shaderFound;
 	}
 
 	public function removeShaders< T:hxsl.Shader >(t:Class<T>) {
