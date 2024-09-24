@@ -8,7 +8,7 @@ class Joint extends Object {
 		super(null);
 		name = j.name;
 		this.skin = skin;
-		lastFrame = -1; // force first sync
+		lastFrame = -2; // force first sync
 		// fake parent
 		this.parent = skin;
 		this.index = j.index;
@@ -33,39 +33,31 @@ class Joint extends Object {
 		return null;
 	}
 
+	public function forceRecompute() {
+
+	}
+
 	@:access(h3d.scene.Skin)
 	override function syncPos() {
 		// check if one of our parents has changed
 		// we don't have a posChanged flag since the Joint
 		// is not actualy part of the hierarchy
-		if (skin.jointsAbsPosRef == null) {
-			var p : h3d.scene.Object = skin;
-			while( p != null ) {
-				if( p.posChanged ) {
-					// save the inverse absPos that was used to build the joints absPos
-					if( skin.jointsAbsPosInv == null ) {
-						skin.jointsAbsPosInv = new h3d.Matrix();
-						skin.jointsAbsPosInv.zero();
-					}
-					if( skin.jointsAbsPosInv._44 == 0 ) {
-						skin.jointsAbsPosInv.inverse3x4(p.absPos);
-					}
-					skin.jointsAbsPosRef = p;
-					this.lastFrame = -1;
-					break;
-				}
-				p = p.parent;
+		var p : h3d.scene.Object = skin;
+		while( p != null ) {
+			// if the mesh is in follow mode, posChanged will be always true and we don't want to force
+			// the computation each time a joint needs to compute it's position.
+			if( p.posChanged && skin.lastFrame == lastFrame) {
+				skin.lastFrame = -1;
+				skin.getAbsPos();
+				skin.syncJoints();
+				break;
 			}
+			p = p.parent;
 		}
 
-
-		if( lastFrame != skin.lastFrame || skin.jointsAbsPosRef != null) {
+		if( lastFrame != skin.lastFrame) {
 			lastFrame = skin.lastFrame;
 			absPos.load(skin.currentAbsPose[index]);
-			if(skin.jointsAbsPosInv != null && skin.jointsAbsPosInv._44 != 0) {
-				absPos.multiply3x4(absPos, skin.jointsAbsPosInv);
-				absPos.multiply3x4(absPos, skin.jointsAbsPosRef.getAbsPos());
-			}
 		}
 	}
 }
@@ -78,8 +70,6 @@ class Skin extends MultiMaterial {
 	var currentPalette : Array<h3d.Matrix>;
 	var splitPalette : Array<Array<h3d.Matrix>>;
 	var jointsUpdated : Bool;
-	var jointsAbsPosInv : h3d.Matrix;
-	var jointsAbsPosRef : h3d.scene.Object;
 	var paletteChanged : Bool;
 	var skinShader : h3d.shader.SkinBase;
 	var jointsGraphics : Graphics;
@@ -253,8 +243,6 @@ class Skin extends MultiMaterial {
 				currentPalette[bid].multiply3x4inline(j.transPos, m);
 		}
 		skinShader.bonesMatrixes = currentPalette;
-		if( jointsAbsPosInv != null ) jointsAbsPosInv._44 = 0; // mark as invalid
-		if (jointsAbsPosRef != null) jointsAbsPosRef = null;
 		jointsUpdated = false;
 	}
 
