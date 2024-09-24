@@ -46,10 +46,8 @@ class Joint extends Object {
 		while( p != null ) {
 			// if the mesh is in follow mode, posChanged will be always true and we don't want to force
 			// the computation each time a joint needs to compute it's position.
-			if( p.posChanged && skin.lastFrame == lastFrame) {
-				skin.lastFrame = -1;
-				skin.getAbsPos();
-				skin.syncJoints();
+			if( p.posChanged && skin.lastFrame != skin.lastSyncFrame) {
+				update();
 				break;
 			}
 			p = p.parent;
@@ -59,6 +57,17 @@ class Joint extends Object {
 			lastFrame = skin.lastFrame;
 			absPos.load(skin.currentAbsPose[index]);
 		}
+	}
+
+	/**
+		Force the update of the position of this bone
+	**/
+	@:access(h3d.scene.Skin)
+	public function update() {
+		skin.lastSyncFrame = -1;
+		skin.getAbsPos();
+		skin.syncJoints();
+		lastFrame = -1;
 	}
 }
 
@@ -73,6 +82,8 @@ class Skin extends MultiMaterial {
 	var paletteChanged : Bool;
 	var skinShader : h3d.shader.SkinBase;
 	var jointsGraphics : Graphics;
+
+	var lastSyncFrame : Int = -2;
 
 	public var showJoints : Bool;
 	public var enableRetargeting : Bool = true;
@@ -227,6 +238,7 @@ class Skin extends MultiMaterial {
 	@:noDebug
 	function syncJoints() {
 		if( !jointsUpdated ) return;
+		if (lastSyncFrame == lastFrame) return;
 		var tmpMat = TMP_MAT;
 		for( j in skinData.allJoints ) {
 			if ( j.follow != null ) continue;
@@ -244,6 +256,7 @@ class Skin extends MultiMaterial {
 		}
 		skinShader.bonesMatrixes = currentPalette;
 		jointsUpdated = false;
+		lastSyncFrame = lastFrame;
 	}
 
 	override function emit( ctx : RenderContext ) {
