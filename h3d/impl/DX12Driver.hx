@@ -475,10 +475,15 @@ class DX12Driver extends h3d.impl.Driver {
 		depthStenciViews = new ManagedHeap(DSV, INITIAL_RT_COUNT);
 		renderTargetViews.onFree = function(prev) frame.toRelease.push(prev);
 		depthStenciViews.onFree = function(prev) frame.toRelease.push(prev);
-		defaultDepth = new h3d.mat.Texture(0,0, Depth24Stencil8);
-		defaultDepth.t = new TextureData();
-		defaultDepth.t.state = defaultDepth.t.targetState = DEPTH_WRITE;
-		defaultDepth.name = "defaultDepth";
+		if ( h3d.Engine.getCurrent() != null ) {
+			defaultDepth = new h3d.mat.Texture(0,0, Depth24Stencil8);
+			defaultDepth.t = new TextureData();
+
+			defaultDepth.t.state = defaultDepth.t.targetState = DEPTH_WRITE;
+			defaultDepth.name = "defaultDepth";
+		}
+		
+		
 
 		var desc = new CommandSignatureDesc();
 		var adesc = hl.CArray.alloc(IndirectArgumentDesc, 1);
@@ -601,7 +606,7 @@ class DX12Driver extends h3d.impl.Driver {
 
 	override function resize(width:Int, height:Int)  {
 
-		if( currentWidth == width && currentHeight == height )
+		if( defaultDepth == null || (currentWidth == width && currentHeight == height) )
 			return;
 
 		currentWidth = rtWidth = width;
