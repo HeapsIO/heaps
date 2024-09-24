@@ -407,10 +407,6 @@ class BaseLibrary {
 				convertPoints(v.getFloats());
 			for( v in g.getAll("LayerElementNormal.Normals") )
 				convertPoints(v.getFloats());
-			for( v in g.getAll("LayerElementTangent.Tangents") )
-				convertPoints(v.getFloats());
-			for( v in g.getAll("LayerElementBinormal.Binormals") )
-				convertPoints(v.getFloats());
 		}
 		for ( s in root.getAll("Objects.Geometry.Shape") ) {
 			for ( v in s.getAll("Vertices") )
