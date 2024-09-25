@@ -253,16 +253,11 @@ class CascadeShadowMap extends DirShadowMap {
 	inline function cullPassesSize( passes : h3d.pass.PassList, frustum : h3d.col.Frustum, minSize : Float ) {
 		passes.filter(function(p) {
 			var mb = Std.downcast(p.obj, h3d.scene.MeshBatch);
-			if ( mb != null ) {
-				if ( @:privateAccess mb.instanced.getBounds().dimension() < minSize )
-					return false;
-			}
 			var col = p.obj.cullingCollider;
-			if( col == null )
-				return true;
-			if ( col.dimension() < minSize )
-				return false;
-			return col.inFrustum(frustum);
+			return if( mb != null && @:privateAccess mb.instanced.getBounds().dimension() < minSize ) false;
+				else if( col == null ) true;
+				else if ( col.dimension() < minSize ) false;
+				else col.inFrustum(frustum);
 		});
 	}
 
