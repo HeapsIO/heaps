@@ -62,6 +62,9 @@ class DepthCopy extends h3d.shader.ScreenShader {
 }
 
 class Renderer extends h3d.scene.Renderer {
+
+	public static final LIGHTMAP_STENCIL = 0x80;
+
 	var slides = new h3d.pass.ScreenFx(new h3d.shader.pbr.Slides());
 	var pbrOut = new h3d.pass.ScreenFx(new h3d.shader.ScreenShader());
 	var tonemap = new h3d.pass.ScreenFx(new h3d.shader.pbr.ToneMapping());
@@ -155,7 +158,7 @@ class Renderer extends h3d.scene.Renderer {
 		pbrOut.pass.setBlendMode(Add);
 		pbrOut.pass.stencil = new h3d.mat.Stencil();
 		pbrOut.pass.stencil.setOp(Keep, Keep, Keep);
-		pbrOut.pass.stencil.setFunc(NotEqual, 0x80, 0x80, 0x80); // ignore already drawn volumetricLightMap areas
+		pbrOut.pass.stencil.setFunc(NotEqual, LIGHTMAP_STENCIL, LIGHTMAP_STENCIL, LIGHTMAP_STENCIL); // ignore already drawn volumetricLightMap areas
 		allPasses.push(output);
 		allPasses.push(defaultPass);
 		allPasses.push(decalsOutput);
