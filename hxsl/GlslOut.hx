@@ -177,7 +177,7 @@ class GlslOut {
 		case TSampler(dim,arr):
 			var name = getSamplerType(dim,arr);
 			add(name);
-			if( isES && arr )
+			if( isES && (arr || dim == T3D) )
 				decl("precision lowp "+name+";");
 		case TRWTexture(dim, arr, chans):
 			add("image"+dim.getName().substr(1)+(arr?"Array":""));

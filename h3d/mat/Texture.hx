@@ -190,7 +190,11 @@ class Texture {
 			str = "Texture_" + id;
 			if( allocPos != null ) str += "(" + allocPos.position + ")";
 		}
-		return str+"("+width+"x"+height+")";
+		if ( flags.has(Is3D) )
+			str += "("+width+"x"+height+"x"+layerCount+")";
+		else
+			str += "("+width+"x"+height+")";
+		return str;
 	}
 
 	public function setName(n) {
