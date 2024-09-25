@@ -324,7 +324,6 @@ class GlDriver extends Driver {
 		}
 		gl.shaderSource(s, shader.code);
 		gl.compileShader(s);
-		var log = gl.getShaderInfoLog(s);
 		if ( gl.getShaderParameter(s, GL.COMPILE_STATUS) != cast 1 ) {
 			var log = gl.getShaderInfoLog(s);
 			var lid = Std.parseInt(log.substr(9));
