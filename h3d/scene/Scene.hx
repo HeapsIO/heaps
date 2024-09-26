@@ -20,6 +20,11 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 	**/
 	public var renderer(default,set) : Renderer;
 
+	public var offsetX : Float;
+	public var offsetY : Float;
+	public var width : Float;
+	public var height : Float;
+
 	var ctx : RenderContext;
 	var interactives : Array<Interactive>;
 	@:allow(h3d.scene.Interactive)
@@ -119,9 +124,12 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 			return null;
 
 		if( hitInteractives.length == 0 ) {
+			var x = event.relX - offsetX;
+			var y = event.relY - offsetY;
 
-			var screenX = (event.relX / window.width - 0.5) * 2;
-			var screenY = -(event.relY / window.height - 0.5) * 2;
+			var screenX = (x / width - 0.5) * 2;
+			var screenY = -(y / height - 0.5) * 2;
+
 			var p0 = camera.unproject(screenX, screenY, 0);
 			var p1 = camera.unproject(screenX, screenY, 1);
 			var r = h3d.col.Ray.fromPoints(p0.toPoint(), p1.toPoint());
