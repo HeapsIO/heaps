@@ -33,10 +33,6 @@ class Joint extends Object {
 		return null;
 	}
 
-	public function forceRecompute() {
-
-	}
-
 	@:access(h3d.scene.Skin)
 	override function syncPos() {
 		// check if one of our parents has changed
