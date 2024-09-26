@@ -8,7 +8,7 @@ class Joint extends Object {
 		super(null);
 		name = j.name;
 		this.skin = skin;
-		lastFrame = -1; // force first sync
+		lastFrame = -2; // force first sync
 		// fake parent
 		this.parent = skin;
 		this.index = j.index;
@@ -38,30 +38,32 @@ class Joint extends Object {
 		// check if one of our parents has changed
 		// we don't have a posChanged flag since the Joint
 		// is not actualy part of the hierarchy
-		var p = parent;
+		var p : h3d.scene.Object = skin;
 		while( p != null ) {
-			if( p.posChanged ) {
-				// save the inverse absPos that was used to build the joints absPos
-				if( skin.jointsAbsPosInv == null ) {
-					skin.jointsAbsPosInv = new h3d.Matrix();
-					skin.jointsAbsPosInv.zero();
-				}
-				if( skin.jointsAbsPosInv._44 == 0 )
-					skin.jointsAbsPosInv.inverse3x4(parent.absPos);
-				parent.syncPos();
-				lastFrame = -1;
+			// if the mesh is in follow mode, posChanged will be always true and we don't want to force
+			// the computation each time a joint needs to compute it's position.
+			if( p.posChanged && ( p.follow == null || skin.lastFrame != skin.lastSyncFrame )) {
+				update();
 				break;
 			}
 			p = p.parent;
 		}
-		if( lastFrame != skin.lastFrame ) {
+
+		if( lastFrame != skin.lastFrame) {
 			lastFrame = skin.lastFrame;
 			absPos.load(skin.currentAbsPose[index]);
-			if( skin.jointsAbsPosInv != null && skin.jointsAbsPosInv._44 != 0 ) {
-				absPos.multiply3x4(absPos, skin.jointsAbsPosInv);
-				absPos.multiply3x4(absPos, parent.absPos);
-			}
 		}
+	}
+
+	/**
+		Force the update of the position of this joint
+	**/
+	@:access(h3d.scene.Skin)
+	public function update() {
+		skin.lastSyncFrame = -1;
+		skin.getAbsPos();
+		skin.syncJoints();
+		lastFrame = -1;
 	}
 }
 
@@ -73,10 +75,11 @@ class Skin extends MultiMaterial {
 	var currentPalette : Array<h3d.Matrix>;
 	var splitPalette : Array<Array<h3d.Matrix>>;
 	var jointsUpdated : Bool;
-	var jointsAbsPosInv : h3d.Matrix;
 	var paletteChanged : Bool;
 	var skinShader : h3d.shader.SkinBase;
 	var jointsGraphics : Graphics;
+
+	var lastSyncFrame : Int = -2;
 
 	public var showJoints : Bool;
 	public var enableRetargeting : Bool = true;
@@ -231,6 +234,7 @@ class Skin extends MultiMaterial {
 	@:noDebug
 	function syncJoints() {
 		if( !jointsUpdated ) return;
+		if (lastSyncFrame == lastFrame) return;
 		var tmpMat = TMP_MAT;
 		for( j in skinData.allJoints ) {
 			if ( j.follow != null ) continue;
@@ -247,8 +251,8 @@ class Skin extends MultiMaterial {
 				currentPalette[bid].multiply3x4inline(j.transPos, m);
 		}
 		skinShader.bonesMatrixes = currentPalette;
-		if( jointsAbsPosInv != null ) jointsAbsPosInv._44 = 0; // mark as invalid
 		jointsUpdated = false;
+		lastSyncFrame = lastFrame;
 	}
 
 	override function emit( ctx : RenderContext ) {
