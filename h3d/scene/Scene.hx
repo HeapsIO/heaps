@@ -20,10 +20,10 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 	**/
 	public var renderer(default,set) : Renderer;
 
-	public var offsetX : Float;
-	public var offsetY : Float;
-	public var width : Float;
-	public var height : Float;
+	public var offsetX : Float = 0;
+	public var offsetY : Float = 0;
+	public var ratioX : Float = 1;
+	public var ratioY : Float = 1;
 
 	var ctx : RenderContext;
 	var interactives : Array<Interactive>;
@@ -127,6 +127,8 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 			var x = event.relX - offsetX;
 			var y = event.relY - offsetY;
 
+			var width = ratioX * window.width;
+			var height = ratioY * window.height;
 			var screenX = (x / width - 0.5) * 2;
 			var screenY = -(y / height - 0.5) * 2;
 
