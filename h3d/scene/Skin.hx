@@ -42,7 +42,7 @@ class Joint extends Object {
 		while( p != null ) {
 			// if the mesh is in follow mode, posChanged will be always true and we don't want to force
 			// the computation each time a joint needs to compute it's position.
-			if( p.posChanged && skin.lastFrame != skin.lastSyncFrame) {
+			if( p.posChanged && ( p.follow == null || skin.lastFrame != skin.lastSyncFrame )) {
 				update();
 				break;
 			}
@@ -56,7 +56,7 @@ class Joint extends Object {
 	}
 
 	/**
-		Force the update of the position of this bone
+		Force the update of the position of this joint
 	**/
 	@:access(h3d.scene.Skin)
 	public function update() {
