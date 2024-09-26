@@ -331,10 +331,31 @@ class Texture {
 		flags.set(WasCleared);
 		checkMipMapGen(mipLevel, layer);
 	}
-
+	
 	public function dispose() {
 		if( t != null )
 			mem.deleteTexture(this);
+	}
+
+	public function hasStencil() {
+		return switch( format ) {
+		case Depth24Stencil8: true;
+		default: false;
+		}
+	}
+
+	public function isDepth() {
+		return switch( format ) {
+		case Depth16, Depth24, Depth24Stencil8, Depth32: true;
+		default: false;
+		}
+	}
+
+	/**
+		This will return the default depth buffer, which is automatically resized to the screen size.
+	**/
+	public static function getDefaultDepth() {
+		return h3d.Engine.getCurrent().driver.getDefaultDepthBuffer();
 	}
 
 	/**
@@ -493,26 +514,5 @@ class Texture {
 			}
 		t.uploadBitmap(b);
 		b.dispose();
-	}
-
-	public function hasStencil() {
-		return switch( format ) {
-		case Depth24Stencil8: true;
-		default: false;
-		}
-	}
-
-	public function isDepth() {
-		return switch( format ) {
-		case Depth16, Depth24, Depth24Stencil8, Depth32: true;
-		default: false;
-		}
-	}
-
-	/**
-		This will return the default depth buffer, which is automatically resized to the screen size.
-	**/
-	public static function getDefaultDepth() {
-		return h3d.Engine.getCurrent().driver.getDefaultDepthBuffer();
 	}
 }
