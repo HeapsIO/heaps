@@ -114,9 +114,11 @@ class Skin extends MultiMaterial {
 			var pt = j.offsets.getMin();
 			if ( m != null ) {
 				pt.transform(m);
+				if( relativeTo != null ) pt.transform(relativeTo);
 				b.addSpherePos(pt.x, pt.y, pt.z, j.offsetRay * scale);
 				var pt = j.offsets.getMax();
 				pt.transform(m);
+				if( relativeTo != null ) pt.transform(relativeTo);
 				b.addSpherePos(pt.x, pt.y, pt.z, j.offsetRay * scale);
 			}
 		}
