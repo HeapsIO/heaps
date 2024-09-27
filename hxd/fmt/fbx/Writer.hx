@@ -12,6 +12,11 @@ typedef ExportParams = {
 
 
 class Writer {
+	static var unsuported : Array<Dynamic> = [
+		h3d.scene.Interactive,
+		#if hide hrt.prefab.fx.Emitter.EmitterObject #end
+	];
+
 	var out: haxe.io.Output;
 
 	public function new(out) {
@@ -602,9 +607,17 @@ class Writer {
 
 				objectRegistry.push({ name: "__mat"+mat.name, type: "O", id: materialId, parentId: modelId, property: null });
 
+				var tmpAlloc = false;
+				if (@:privateAccess hmdModel.indexesTriPos == null) {
+					hmdModel.alloc(h3d.Engine.getCurrent());
+					tmpAlloc = true;
+				}
 				var matIndexes = hmdModel.getMaterialIndexes(idx);
 				for (i in 0...Std.int(matIndexes.count / 3))
 					mats.push(idx);
+
+				if (tmpAlloc)
+					hmdModel.dispose();
 
 				// Building mat textures
 				var textures = new Array<Dynamic>();
@@ -800,9 +813,15 @@ class Writer {
 			this.out = new haxe.io.BytesOutput();
 
 		function clean( obj : h3d.scene.Object ) : h3d.scene.Object {
-			if (Std.isOfType(obj, h3d.scene.Interactive) ||
-				#if hide Std.isOfType(obj, hrt.prefab.fx.Emitter.EmitterObject) || #end
-				!obj.visible)
+			var supported = true;
+			for (c in unsuported) {
+				if (Std.isOfType(obj, c)) {
+					supported = false;
+					break;
+				}
+			}
+
+			if (!supported || !obj.visible)
 				return null;
 
 			var o = new h3d.scene.Object();
