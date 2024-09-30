@@ -40,8 +40,6 @@ class Joint extends Object {
 		// is not actualy part of the hierarchy
 		var p : h3d.scene.Object = skin;
 		while( p != null ) {
-			// if the mesh is in follow mode, posChanged will be always true and we don't want to force
-			// the computation each time a joint needs to compute it's position.
 			if( p.posChanged) {
 				update();
 				break;
