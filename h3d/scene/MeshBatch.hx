@@ -144,11 +144,12 @@ class ComputeIndirect extends hxsl.Shader {
 			}
 
 			if ( ENABLE_DISTANCE_CLIPPING ) {
-				culled = culled || distToCam > maxDistance;
+				culled = culled || distToCam > maxDistance + scaledRadius;
 			}
 
 			if ( ENABLE_LOD ) {
 				var screenRatio = scaledRadius / distToCam;
+				screenRatio = screenRatio * screenRatio;
 				for ( i in 0...lodCount ) {
 					var minScreenRatio = matInfos[i + matOffset].z;
 					if (  screenRatio > minScreenRatio )
@@ -702,7 +703,7 @@ class MeshBatch extends MultiMaterial {
 					for ( subPart in emittedSubParts ) {
 						var lodCount = subPart.lodIndexCount.length + 1;
 						tmpSubPartInfos[pos++] = lodCount;
-						tmpSubPartInfos[pos++] = subPart.bounds.dimension();
+						tmpSubPartInfos[pos++] = subPart.bounds.dimension() * 0.5;
 						materialCount += lodCount;
 					}
 					subPartsInfos = alloc.ofFloats( tmpSubPartInfos, hxd.BufferFormat.VEC4_DATA, Uniform );
@@ -842,7 +843,7 @@ class MeshBatch extends MultiMaterial {
 				computeShader.ENABLE_LOD = enableLOD;
 				computeShader.ENABLE_CULLING = enableGPUCulling;
 				computeShader.ENABLE_DISTANCE_CLIPPING = maxDistance >= 0;
-				computeShader.radius = prim.getBounds().dimension();
+				computeShader.radius = prim.getBounds().dimension() * 0.5;
 				computeShader.maxDistance = maxDistance;
 				computeShader.matInfos = matInfos;
 				computeShader.lodCount = lodCount;
