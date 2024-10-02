@@ -176,11 +176,11 @@ class ComputeIndirect extends hxsl.Shader {
 					commandBuffer[ invocID * 5 + 3] = 0;
 					commandBuffer[ invocID * 5 + 4] = invocID;
 				} else {
-					commandBuffer[ invocID * 5 ] = int(matInfos[ lod + matOffset ].x) ;
-					commandBuffer[ invocID * 5 + 1] = 1;
-					commandBuffer[ invocID * 5 + 2] = int(matInfos[ lod + matOffset ].y);
+					commandBuffer[ invocID * 5 ] = 0;
+					commandBuffer[ invocID * 5 + 1] = 0;
+					commandBuffer[ invocID * 5 + 2] = 0;
 					commandBuffer[ invocID * 5 + 3] = 0;
-					commandBuffer[ invocID * 5 + 4] = invocID;
+					commandBuffer[ invocID * 5 + 4] = 0;
 				}
 			}
 		}
