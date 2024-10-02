@@ -112,24 +112,26 @@ class BumpAllocator {
 		}
 	}
 
-	public inline function alloc( size : Int, ?allocation : BumpAllocation ) {
-		var sz = size & ~0xFF;
-		if( sz != size ) sz += 0x100;
+	public inline function alloc( size : Int, alignment = 256, ?allocation : BumpAllocation ) {
+		var sz = size & ~(alignment - 1);
+		if( sz != size ) sz += alignment;
 		if ( allocation == null )
 			allocation = new BumpAllocation();
-		return tryAlloc(sz, allocation);
+		return tryAlloc(sz, alignment, allocation);
 	}
 
-	function tryAlloc( size, allocation : BumpAllocation ) {
-		var newOffset = size + offset;
+	function tryAlloc( size, alignment = 256, allocation : BumpAllocation ) {
+		var offsetAligned = offset & ~(alignment - 1);
+		if( offsetAligned != offset ) offsetAligned += alignment;
+		var newOffset = size + offsetAligned;
 		if ( newOffset > capacity ) {
 			if ( next == null )
 				next = new BumpAllocator(hxd.Math.imax(h3d.impl.DX12Driver.INITIAL_BUMP_ALLOCATOR_SIZE, size));
-			return next.tryAlloc(size, allocation);
+			return next.tryAlloc(size, alignment, allocation);
 		}
 		allocation.byteSize = size;
-		allocation.offset = offset;
-		allocation.cpuAdress = cpuAdress.offset(offset);
+		allocation.offset = offsetAligned;
+		allocation.cpuAdress = cpuAdress.offset(offsetAligned);
 		allocation.resource = resource;
 		offset = newOffset;
 		return allocation;
@@ -482,8 +484,8 @@ class DX12Driver extends h3d.impl.Driver {
 			defaultDepth.t.state = defaultDepth.t.targetState = DEPTH_WRITE;
 			defaultDepth.name = "defaultDepth";
 		}
-		
-		
+
+
 
 		var desc = new CommandSignatureDesc();
 		var adesc = hl.CArray.alloc(IndirectArgumentDesc, 1);
@@ -1688,7 +1690,7 @@ class DX12Driver extends h3d.impl.Driver {
 
 		var subRes = mipLevel + side * t.mipLevels;
 		var tmpSize = t.t.res.getRequiredIntermediateSize(subRes, 1).low;
-		var allocation = frame.bumpAllocator.alloc(tmpSize, tmp.bumpAllocation);
+		var allocation = frame.bumpAllocator.alloc(tmpSize, 512, tmp.bumpAllocation);
 
 		transition(t.t, COPY_DEST);
 		flushTransitions();
