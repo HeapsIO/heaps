@@ -384,6 +384,12 @@ class HlslOut {
 			decl("float3 vec3( float v ) { return float3(v,v,v); }");
 		case Vec4 if( args.length == 1 && args[0].t == TFloat ):
 			decl("float4 vec4( float v ) { return float4(v,v,v,v); }");
+		case IVec2 if( args.length == 1 && args[0].t.match(TInt | TFloat)):
+			decl("int2 ivec2( int v ) { return int2(v,v); }");
+		case IVec3 if( args.length == 1 && args[0].t.match(TInt | TFloat)):
+			decl("int3 ivec3( int v ) { return int3(v,v,v); }");
+		case IVec4 if( args.length == 1 && args[0].t.match(TInt | TFloat)):
+			decl("int4 ivec4( int v ) { return int4(v,v,v,v); }");
 		default:
 		}
 	}
@@ -467,6 +473,8 @@ class HlslOut {
 			declGlobal(g, args);
 			switch( [g,args] ) {
 			case [Vec2|Vec3|Vec4, [{ t : TFloat }]]:
+				add(g.getName().toLowerCase());
+			case [IVec2|IVec3|IVec4, [{ t : TInt }]|[{ t : TFloat }]]:
 				add(g.getName().toLowerCase());
 			default:
 				addValue(e,tabs);
