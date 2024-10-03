@@ -25,8 +25,8 @@ class CascadeShadowMap extends DirShadowMap {
 	public var cascadeViewProj = new h3d.Matrix();
 	public var params : Array<CascadeParams> = [];
 	public var pow : Float = 1.0;
-	// minimum count of pixels in ratio of texture width for an object to be drawn in cascade
-	public var minPixelRatio : Float = 0.05;
+	// minimum count of pixels for an object to be drawn in cascade
+	public var minPixelSize : Int = 1;
 	public var firstCascadeSize : Float = 10.0;
 	public var castingMaxDist : Float = 0.0;
 	public var transitionFraction : Float = 0.15;
@@ -306,7 +306,7 @@ class CascadeShadowMap extends DirShadowMap {
 
 			var lc = lightCameras[i];
 			var dimension = Math.max(lc.orthoBounds.xMax - lc.orthoBounds.xMin,	lc.orthoBounds.yMax - lc.orthoBounds.yMin);
-			dimension = ( dimension * hxd.Math.clamp(minPixelRatio * size, 1, size) ) / size;
+			dimension = ( dimension * hxd.Math.clamp(minPixelSize, 0, size) ) / size;
 			// first cascade draw all objects
 			if ( i == 0 )
 				dimension = 0.0;
