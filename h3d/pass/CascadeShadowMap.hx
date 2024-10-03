@@ -254,7 +254,7 @@ class CascadeShadowMap extends DirShadowMap {
 		passes.filter(function(p) {
 			var mb = Std.downcast(p.obj, h3d.scene.MeshBatch);
 			var col = p.obj.cullingCollider;
-			return if( mb != null && @:privateAccess mb.instanced.getBounds().dimension() < minSize ) false;
+			return if( mb != null && @:privateAccess mb.instanced.primitive.getBounds().dimension() < minSize ) false;
 				else if( col == null ) true;
 				else if ( col.dimension() < minSize ) false;
 				else col.inFrustum(frustum);
