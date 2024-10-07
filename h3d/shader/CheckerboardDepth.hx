@@ -22,7 +22,7 @@ class CheckerboardDepth extends h3d.shader.ScreenShader {
             #if js
 			if ( mod(pixels.x, 2) != mod(pixels.y, 2) )
             #else
-			if ( int(pixels.x) & 1 != int(pixels.y) & 1 )
+			if ( (int(pixels.x) & 1) != (int(pixels.y) & 1) )
             #end
 				pixelColor = max(s00, max(s01, max(s10, s11)));
 			else
