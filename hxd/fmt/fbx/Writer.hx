@@ -14,6 +14,7 @@ typedef ExportParams = {
 class Writer {
 	static var unsuported : Array<Dynamic> = [
 		h3d.scene.Interactive,
+		h3d.scene.Box,
 		#if hide hrt.prefab.fx.Emitter.EmitterObject #end
 	];
 
@@ -754,15 +755,18 @@ class Writer {
 					{ name: "MappingInformationType", props: [ PString("ByVertice") ], childs: null },
 					{ name: "ReferenceInformationType", props: [ PString("Direct") ], childs: null },
 					{ name: "Normals", props: [ PFloats(normals) ], childs: null },
-				]},
-				{ name:"LayerElementMaterial", props: [PInt(0)], childs: [
+				]}
+			] };
+
+			if (mats.length > 0) {
+				geometry.childs.push({ name:"LayerElementMaterial", props: [PInt(0)], childs: [
 					{ name: "Version", props: [ PInt(101) ], childs: null },
 					{ name: "Name", props: [ PString("") ], childs: null },
 					{ name: "MappingInformationType", props: [ PString("ByPolygon") ], childs: null },
 					{ name: "ReferenceInformationType", props: [ PString("IndexToDirect") ], childs: null },
 					{ name: "Materials", props: [ PInts(mats) ], childs: null },
-				]}
-			] };
+				]});
+			}
 
 			// Add all uv maps in layer elements
 			for (idx => uv in uvs) {
