@@ -23,6 +23,76 @@ class Writer {
 		this.out = out;
 	}
 
+	function getPrimitiveInfos(prim : h3d.prim.Primitive) @:privateAccess {
+		var infos : {
+			?vertexFormat : BufferFormat,
+			?vertexBuffer : Array<Float>,
+			?indexesBuffer : Array<Int>,
+			?lib : hxd.fmt.hmd.Library
+		};
+
+		infos = {};
+
+		var hmd = Std.downcast(prim, h3d.prim.HMDModel);
+		if (hmd != null) {
+			infos.vertexFormat = @:privateAccess hmd.data.vertexFormat;
+			var bufs = hmd.getDataBuffers(infos.vertexFormat);
+			infos.indexesBuffer = [for (i in 0...bufs.indexes.length) bufs.indexes[i]];
+			infos.vertexBuffer = [for (i in 0...bufs.vertexes.length) bufs.vertexes[i]];
+			infos.lib = hmd.lib;
+			return infos;
+		}
+
+		var polyPrim = Std.downcast(prim, h3d.prim.Polygon);
+		if (polyPrim != null) {
+			var format = hxd.BufferFormat.POS3D;
+			if( polyPrim.normals != null )
+				format = format.append("normal", DVec3);
+			if( polyPrim.tangents != null )
+				format = format.append("tangent", DVec3);
+			if( polyPrim.uvs != null )
+				format = format.append("uv", DVec2);
+
+			infos.vertexFormat = format;
+
+			var buf = new Array<Float>();
+			for (k in 0...polyPrim.points.length) {
+				var p = polyPrim.points[k];
+				buf.push(p.x);
+				buf.push(p.y);
+				buf.push(p.z);
+				if( polyPrim.normals != null ) {
+					var n = polyPrim.normals[k];
+					buf.push(n.x);
+					buf.push(n.y);
+					buf.push(n.z);
+				}
+				if( polyPrim.tangents != null ) {
+					var t = polyPrim.tangents[k];
+					buf.push(t.x);
+					buf.push(t.y);
+					buf.push(t.z);
+				}
+				if( polyPrim.uvs != null ) {
+					var t = polyPrim.uvs[k];
+					buf.push(t.u);
+					buf.push(t.v);
+				}
+			}
+
+			infos.vertexBuffer = buf;
+
+			if (polyPrim.idx != null)
+				infos.indexesBuffer = [for (i in 0...polyPrim.indexes.count) polyPrim.idx[i]];
+			else
+				infos.indexesBuffer = [for(i in 0...polyPrim.points.length) i];
+
+			return infos;
+		}
+
+		return null;
+	}
+
 	function resolvePathImpl( modelPath : String, filePath : String ) {
 		#if editor
 		inline function exists(path) return File.exists(path);
@@ -505,57 +575,55 @@ class Writer {
 			var uvs = new Array<Array<Float>>();
 			var indexes = new Array<Int>();
 
-			var hmdModel = Std.downcast(mesh.primitive, h3d.prim.HMDModel);
-			var vertexFormat = @:privateAccess hmdModel.data.vertexFormat;
-			var bufs = hmdModel.getDataBuffers(vertexFormat);
+			var infos = getPrimitiveInfos(mesh.primitive);
 			var idxVertex = 0;
 
 			// Fill mesh informations that will be required in the fbx file
-			while (idxVertex < bufs.vertexes.length) {
+			while (idxVertex < infos.vertexBuffer.length) {
 				var curIndex = idxVertex;
-				vertices.push(-bufs.vertexes[curIndex]); // Convert left hand X coordinate to right hand X coordinate
-				vertices.push(bufs.vertexes[curIndex + 1]);
-				vertices.push(bufs.vertexes[curIndex + 2]);
+				vertices.push(-infos.vertexBuffer[curIndex]); // Convert left hand X coordinate to right hand X coordinate
+				vertices.push(infos.vertexBuffer[curIndex + 1]);
+				vertices.push(infos.vertexBuffer[curIndex + 2]);
 				curIndex += 3;
 
-				if (vertexFormat.hasInput("normal")) {
-					normals.push(-bufs.vertexes[curIndex]); // Convert left hand X coordinate to right hand X coordinate
-					normals.push(bufs.vertexes[curIndex + 1]);
-					normals.push(bufs.vertexes[curIndex + 2]);
+				if (infos.vertexFormat.hasInput("normal")) {
+					normals.push(-infos.vertexBuffer[curIndex]); // Convert left hand X coordinate to right hand X coordinate
+					normals.push(infos.vertexBuffer[curIndex + 1]);
+					normals.push(infos.vertexBuffer[curIndex + 2]);
 					curIndex += 3;
 				}
 
 				// Tangent export isn't supported at the moment
-				if (vertexFormat.hasInput("tangent"))
+				if (infos.vertexFormat.hasInput("tangent"))
 					curIndex += 3;
 
 				var uvIdx = 0;
 				var uvInput = 'uv${ uvIdx == 0 ? "" : '${uvIdx + 1}'}';
-				while(vertexFormat.hasInput(uvInput)) {
+				while(infos.vertexFormat.hasInput(uvInput)) {
 					if (uvs.length < uvIdx + 1)
 						uvs.push(new Array<Float>());
 
-					uvs[uvIdx].push(bufs.vertexes[curIndex]);
-					uvs[uvIdx].push(1 - bufs.vertexes[curIndex + 1]);
+					uvs[uvIdx].push(infos.vertexBuffer[curIndex]);
+					uvs[uvIdx].push(1 - infos.vertexBuffer[curIndex + 1]);
 					curIndex += 2;
 					uvIdx++;
 					uvInput = 'uv${ uvIdx == 0 ? "" : '${uvIdx + 1}'}';
 				}
 
-				idxVertex += vertexFormat.stride;
+				idxVertex += infos.vertexFormat.stride;
 			}
 
 			var idxIndex = 0;
-			while (idxIndex < bufs.indexes.length) {
+			while (idxIndex < infos.indexesBuffer.length) {
 				// We have to flip the order of vertex to change the facing direction of the triangle (because we changed X axis
 				// sign earlier to change from left hand to right hand)
 
 				// /!\ This is because the last index that close the polygon (in our case, we work with triangles, so the third)
 				// need to be increased by one and then set to negative.
 				// (This is because original index is XOR'ed with -1.)
-				indexes.push(bufs.indexes[idxIndex + 1]);
-				indexes.push(bufs.indexes[idxIndex]);
-				indexes.push( -1 * (bufs.indexes[idxIndex + 2] + 1));
+				indexes.push(infos.indexesBuffer[idxIndex + 1]);
+				indexes.push(infos.indexesBuffer[idxIndex]);
+				indexes.push( -1 * (infos.indexesBuffer[idxIndex + 2] + 1));
 
 				idxIndex += 3;
 			}
@@ -607,28 +675,19 @@ class Writer {
 
 				objectRegistry.push({ name: "__mat"+mat.name, type: "O", id: materialId, parentId: modelId, property: null });
 
-				var tmpAlloc = false;
-				if (@:privateAccess hmdModel.indexesTriPos == null) {
-					hmdModel.alloc(h3d.Engine.getCurrent());
-					tmpAlloc = true;
-				}
-				var matIndexes = hmdModel.getMaterialIndexes(idx);
-				for (i in 0...Std.int(matIndexes.count / 3))
-					mats.push(idx);
-
-				if (tmpAlloc)
-					hmdModel.dispose();
+				if (infos.lib == null)
+					continue;
 
 				// Building mat textures
 				var textures = new Array<Dynamic>();
-				for (matData in @:privateAccess hmdModel.lib.header.materials) {
+				for (matData in infos.lib.header.materials) {
 					if (matData.name == mat.name) {
 						if (matData.diffuseTexture != null)
-							@:privateAccess textures.push({ name: matData.diffuseTexture.substr(matData.diffuseTexture.lastIndexOf("/") + 1), path: resolvePathImpl(hmdModel.lib.resource.entry.path ,matData.diffuseTexture), property: "DiffuseColor" });
+							@:privateAccess textures.push({ name: matData.diffuseTexture.substr(matData.diffuseTexture.lastIndexOf("/") + 1), path: resolvePathImpl(infos.lib.resource.entry.path ,matData.diffuseTexture), property: "DiffuseColor" });
 						if (matData.normalMap != null)
-							@:privateAccess textures.push({ name: matData.normalMap.substr(matData.normalMap.lastIndexOf("/") + 1), path: resolvePathImpl(hmdModel.lib.resource.entry.path ,matData.normalMap), property: "NormalMap" });
+							@:privateAccess textures.push({ name: matData.normalMap.substr(matData.normalMap.lastIndexOf("/") + 1), path: resolvePathImpl(infos.lib.resource.entry.path ,matData.normalMap), property: "NormalMap" });
 						if (matData.specularTexture != null)
-							@:privateAccess textures.push({ name : matData.specularTexture.substr(matData.specularTexture.lastIndexOf("/") + 1), path: resolvePathImpl(hmdModel.lib.resource.entry.path ,matData.specularTexture), property: "SpecularColor" });
+							@:privateAccess textures.push({ name : matData.specularTexture.substr(matData.specularTexture.lastIndexOf("/") + 1), path: resolvePathImpl(infos.lib.resource.entry.path ,matData.specularTexture), property: "SpecularColor" });
 					}
 				}
 
@@ -830,9 +889,7 @@ class Writer {
 				o = new h3d.scene.MultiMaterial(multiMat.primitive, multiMat.materials);
 			else {
 				var m = Std.downcast(obj, h3d.scene.Mesh);
-				var hmd = Std.downcast(m?.primitive, h3d.prim.HMDModel);
-
-				if (hmd != null)
+				if (Std.isOfType(m?.primitive, h3d.prim.HMDModel) || Std.isOfType(m?.primitive, h3d.prim.Cube))
 					o = new h3d.scene.Mesh(m.primitive, m.material);
 			}
 
