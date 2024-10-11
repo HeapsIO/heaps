@@ -78,6 +78,7 @@ class Skin extends MultiMaterial {
 
 	public var showJoints : Bool;
 	public var enableRetargeting : Bool = true;
+	public var prevEnableRetargeting : Bool = true;
 
 	public function new(s, ?mat, ?parent) {
 		super(null, mat, parent);
@@ -248,6 +249,7 @@ class Skin extends MultiMaterial {
 		}
 		skinShader.bonesMatrixes = currentPalette;
 		jointsUpdated = false;
+		prevEnableRetargeting = enableRetargeting;
 	}
 
 	override function emit( ctx : RenderContext ) {
