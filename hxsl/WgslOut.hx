@@ -607,6 +607,7 @@ class WgslOut {
 		var locals = Lambda.array(locals);
 		locals.sort(function(v1, v2) return Reflect.compare(v1.name, v2.name));
 		for( v in locals ) {
+			add("var<private> ");
 			addVar(v);
 			add(";\n");
 		}

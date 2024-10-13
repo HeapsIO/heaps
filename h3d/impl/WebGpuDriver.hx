@@ -316,7 +316,9 @@ class WebGpuDriver extends h3d.impl.Driver {
 	}
 
 	override function uploadTextureBitmap(t:h3d.mat.Texture, bmp:hxd.BitmapData, mipLevel:Int, side:Int) {
-		throw "Not implemented";
+		var pixels = bmp.getPixels();
+		uploadTexturePixels(t, pixels, mipLevel, side);
+		pixels.dispose();
 	}
 
 	override function uploadTexturePixels(t:h3d.mat.Texture, pixels:hxd.Pixels, mipLevel:Int, side:Int) {
@@ -504,16 +506,20 @@ class WebGpuDriver extends h3d.impl.Driver {
 			var group = device.createBindGroup({
 				layout : currentShader.groups[index],
 				entries: [
-					for( i in 0...buffers.tex.length ) {
+					for( i in 0...sh.texturesCount ) {
 						binding : i,
-						resource : buffers.tex[i].t.view,
+						resource : {
+							var t = buffers.tex[i];
+							if( t.t == null && t.realloc != null ) t.realloc();
+							t.t.view;
+						}
 					}
 				]
 			});
 			var samplers = device.createBindGroup({
 				layout : currentShader.groups[index+1],
 				entries: [
-					for( i in 0...buffers.tex.length ) {
+					for( i in 0...sh.texturesCount ) {
 						binding : i,
 						resource : createSampler(buffers.tex[i]),
 					}
