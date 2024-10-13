@@ -3,6 +3,7 @@ package h3d.impl;
 import h3d.impl.Driver;
 import h3d.impl.WebGpuApi;
 import h3d.mat.Pass;
+using hxsl.Ast;
 
 class WebGpuSubShader {
 	public var kind : GPUShaderStage;
@@ -11,6 +12,8 @@ class WebGpuSubShader {
 	public var globalsBufferSize : Int = 0;
 	public var paramsGroup : Int = 0;
 	public var globalsGroup : Int = 0;
+	public var texturesGroup : Int = 0;
+	public var texturesCount : Int;
 	public function new() {
 	}
 }
@@ -237,6 +240,19 @@ class WebGpuDriver extends h3d.impl.Driver {
 		return _allocBuffer(VERTEX,b.vertices,b.format.strideBytes);
 	}
 
+	override function allocTexture(t:h3d.mat.Texture):Texture {
+		var tex = device.createTexture({
+			size : { width : t.width, height : t.height },
+			mipLevelCount : t.mipLevels,
+			format : switch( t.format ) {
+			case RGBA: Rgba8unorm;
+			default: throw "Unsupported texture format "+t.format;
+			},
+			usage : TEXTURE_BINDING | COPY_DST,
+		});
+		return { tex : tex, view : tex.createView() };
+	}
+
 	override function allocIndexes(count:Int, is32:Bool):IndexBuffer {
 		var stride = is32?4:2;
 		var buf = _allocBuffer(INDEX,count,stride);
@@ -299,40 +315,95 @@ class WebGpuDriver extends h3d.impl.Driver {
 		buf.unmap();
 	}
 
-	function compile( parent : WebGpuShader, shader : hxsl.RuntimeShader.RuntimeShaderData, kind ) {
+	override function uploadTextureBitmap(t:h3d.mat.Texture, bmp:hxd.BitmapData, mipLevel:Int, side:Int) {
+		throw "Not implemented";
+	}
+
+	override function uploadTexturePixels(t:h3d.mat.Texture, pixels:hxd.Pixels, mipLevel:Int, side:Int) {
+		var bpp = hxd.Pixels.calcStride(pixels.width,pixels.format);
+		device.queue.writeTexture({ texture : t.t.tex, mipLevel : mipLevel, origin : side == 0 ? js.Lib.undefined : { z : side } }, pixels.bytes.getData(), { bytesPerRow : bpp }, { width : pixels.width, height : pixels.height });
+	}
+
+	function isSampler(t) {
+		return switch( t ) {
+		case TArray(t,_) if( t.isSampler() ): true;
+		default: t.isSampler();
+		}
+	}
+
+	function compileShaderPart( shader : hxsl.RuntimeShader.RuntimeShaderData, groups : Array<Array<GPUBindGroupLayoutEntry>>, kind ) {
 		var comp = new hxsl.WgslOut();
 		var sh = new WebGpuSubShader();
+		var textures = [];
 		sh.kind = kind;
 		for( v in shader.data.vars ) {
 			switch( v.kind ) {
 			case Param, Global:
+				switch(v.type) {
+				case TArray(t, SConst(n)) if( t.isSampler() ):
+					for( i in 0...n )
+						textures.push(t);
+					continue;
+				case t if( t.isSampler() ):
+					textures.push(t);
+					continue;
+				default:
+				}
+				var index = groups.length;
 				var size = hxsl.Ast.Tools.size(v.type) * 4;
-				var index = parent.groups.length;
-				var g = device.createBindGroupLayout({ entries : [{
-					binding: index,
+				groups.push([{
+					binding: 0,
 					visibility : kind,
 					buffer : {
 						type : Uniform,
 						hasDynamicOffset : false,
 						minBindingSize: size,
 					}
-				}]});
+				}]);
 				switch( v.kind ) {
 				case Param:
 					sh.paramsBufferSize = size;
 					sh.paramsGroup = index;
-					comp.paramsBinding = comp.paramsGroup = index;
+					comp.paramsGroup = index;
 				case Global:
 					sh.globalsBufferSize = size;
 					sh.globalsGroup = index;
-					comp.globalsBinding = comp.globalsGroup = index;
+					comp.globalsGroup = index;
 				default:
 				}
-				parent.groups.push(g);
 			default:
 			}
 		}
+
+		if( textures.length > 0 ) {
+			var index = groups.length;
+			groups.push([
+				for( t in textures ) {
+					binding : 0,
+					visibility : kind,
+					texture: {
+						sampleType : Float,
+						viewDimension : D2,
+					}
+				}
+			]);
+			groups.push([
+				for( t in textures ) {
+					binding : 0,
+					visibility : kind,
+					sampler: {
+						type : Filtering,
+					}
+				}
+			]);
+			sh.texturesGroup = comp.texturesGroup = index;
+		}
+		sh.texturesCount = textures.length;
+
 		var source = comp.run(shader.data);
+		#if debug_shaders
+		trace(source);
+		#end
 		sh.module = device.createShaderModule({ code : source });
 		return sh;
 	}
@@ -348,10 +419,14 @@ class WebGpuDriver extends h3d.impl.Driver {
 			default:
 			}
 		}
-		sh.groups = [];
+		var groupsDecls = [];
 		sh.format = hxd.BufferFormat.make(format);
-		sh.vertex = compile(sh,shader.vertex,VERTEX);
-		sh.fragment = compile(sh,shader.fragment,FRAGMENT);
+		sh.vertex = compileShaderPart(shader.vertex,groupsDecls,VERTEX);
+		sh.fragment = compileShaderPart(shader.fragment,groupsDecls,FRAGMENT);
+		#if debug_shaders
+		trace(groupsDecls);
+		#end
+		sh.groups = [for( g in groupsDecls ) device.createBindGroupLayout({ entries: g })];
 		sh.layout = device.createPipelineLayout({ bindGroupLayouts: sh.groups });
 		sh.inputCount = format.length;
 		return sh;
@@ -393,6 +468,10 @@ class WebGpuDriver extends h3d.impl.Driver {
 		_uploadShaderBuffers(buffers.fragment, which, currentShader.fragment);
 	}
 
+	function createSampler( t : h3d.mat.Texture ) {
+		return device.createSampler();
+	}
+
 	function _uploadShaderBuffers(buffers:h3d.shader.Buffers.ShaderBuffers, which:h3d.shader.Buffers.BufferKind, sh:WebGpuSubShader) {
 		switch( which ) {
 		case Globals, Params:
@@ -411,7 +490,7 @@ class WebGpuDriver extends h3d.impl.Driver {
 			var group = device.createBindGroup({
 				layout : currentShader.groups[index],
 				entries: [{
-					binding: index,
+					binding: 0,
 					resource: {
 						buffer : buffer,
 					}
@@ -419,9 +498,29 @@ class WebGpuDriver extends h3d.impl.Driver {
 			});
 			renderPass.setBindGroup(index, group);
 		case Textures:
-			if( buffers.tex.length == 0 )
+			if( sh.texturesCount == 0 )
 				return;
-			throw "TODO";
+			var index = sh.texturesGroup;
+			var group = device.createBindGroup({
+				layout : currentShader.groups[index],
+				entries: [
+					for( i in 0...buffers.tex.length ) {
+						binding : i,
+						resource : buffers.tex[i].t.view,
+					}
+				]
+			});
+			var samplers = device.createBindGroup({
+				layout : currentShader.groups[index+1],
+				entries: [
+					for( i in 0...buffers.tex.length ) {
+						binding : i,
+						resource : createSampler(buffers.tex[i]),
+					}
+				]
+			});
+			renderPass.setBindGroup(index, group);
+			renderPass.setBindGroup(index+1, samplers);
 		case Buffers:
 			if( buffers.buffers == null || buffers.buffers.length == 0 )
 				return;

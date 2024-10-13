@@ -26,10 +26,9 @@ class WgslOut {
 	var allNames : Map<String, Int>;
 	var hasVarying : Bool;
 	public var varNames : Map<Int,String>;
-	public var paramsGroup : Int = 0;
-	public var paramsBinding : Int = 0;
-	public var globalsGroup : Int = 0;
-	public var globalsBinding : Int = 0;
+	public var paramsGroup : Int = -1;
+	public var globalsGroup : Int = -1;
+	public var texturesGroup : Int = -1;
 
 	var varAccess : Map<Int,String>;
 
@@ -86,11 +85,11 @@ class WgslOut {
 		case TMat3x4:
 			add("mat3x4f");
 		case TSampler2D:
-			add("Texture2D");
+			add("texture_2d<f32>");
 		case TSamplerCube:
-			add("TextureCube");
+			add("texture_cube<f32>");
 		case TSampler2DArray:
-			add("Texture2DArray");
+			add("texture_2d_array<f32>");
 		case TStruct(vl):
 			add("struct { ");
 			for( v in vl ) {
@@ -275,6 +274,27 @@ class WgslOut {
 			} else {
 				add("/*var*/");
 			}
+		case TCall({ e : TGlobal(g) },args):
+			switch( [g,args] ) {
+			case [Texture,[t,uv]]:
+				add("textureSample(");
+				addExpr(t, tabs);
+				add(",");
+				addExpr(t, tabs);
+				add("__sampler");
+				add(",");
+				addExpr(uv, tabs);
+				add(")");
+			default:
+				add(GLOBALS.get(g));
+				add("(");
+				var first = true;
+				for( e in args ) {
+					if( first ) first = false else add(", ");
+					addValue(e, tabs);
+				}
+				add(")");
+			}
 		case TCall(e, args):
 			addValue(e, tabs);
 			add("(");
@@ -346,7 +366,10 @@ class WgslOut {
 		case TBreak:
 			add("break");
 		case TArray(e, index):
-			switch( e.t ) {
+			switch( [e.t, index.e] ) {
+			case [TArray(et,_),TConst(CInt(idx))] if( et.isSampler() ):
+				addValue(e, tabs);
+				add(idx);
 			default:
 				addValue(e, tabs);
 				add("[");
@@ -458,11 +481,13 @@ class WgslOut {
 		if( !found )
 			return;
 
+		var globals = 0;
 		for( v in s.vars )
 			if( v.kind == Global ) {
-				add('@group(${globalsGroup}) @binding(${globalsBinding}) var<uniform> ');
+				add('@group(${globalsGroup}) @binding($globals) var<uniform> ');
 				addVar(v);
 				add(";\n");
+				globals++;
 			}
 	}
 
@@ -478,6 +503,7 @@ class WgslOut {
 
 		var textures = [];
 		var buffers = [];
+		var params = 0;
 		for( v in s.vars )
 			if( v.kind == Param ) {
 				switch( v.type ) {
@@ -493,9 +519,10 @@ class WgslOut {
 						continue;
 					}
 				}
-				add('@group($paramsGroup) @binding($paramsBinding) var<uniform> ');
+				add('@group($paramsGroup) @binding($params) var<uniform> ');
 				addVar(v);
 				add(";\n");
+				params++;
 			}
 
 		var bufCount = 0;
@@ -509,11 +536,32 @@ class WgslOut {
 
 		var texCount = 0;
 		for( v in textures ) {
-			addVar(v);
-			add(' : register(t${texCount});\n');
 			switch( v.type ) {
-			case TArray(_,SConst(n)): texCount += n;
-			default: texCount++;
+			case TArray(t,SConst(n)):
+				// array of textures not supported in WSGL (so annoying...)
+				for( i in 0...n ) {
+					add('@group($texturesGroup) @binding($texCount) var ');
+					add(v.name+i);
+					add(" : ");
+					addType(t);
+					add(";\n");
+
+					add('@group(${texturesGroup+1}) @binding($texCount) var ');
+					add(v.name+i+"__sampler");
+					add(" : sampler");
+					add(";\n");
+					texCount++;
+				}
+			default:
+				add('@group($texturesGroup) @binding($texCount) var ');
+				addVar(v);
+				add(";\n");
+
+				add('@group(${texturesGroup+1}) @binding($texCount) var ');
+				add(v.name+"__sampler");
+				add(" : sampler");
+				add(";\n");
+				texCount++;
 			}
 		}
 	}
