@@ -58,6 +58,7 @@ class WebGpuDriver extends h3d.impl.Driver {
 	var frameCount : Int = 0;
 	var pipelineBuilder = new PipelineCache.PipelineBuilder();
 	var curStencilRef : Int;
+	var currentRenderTargets : Array<h3d.mat.Texture>;
 
 	public function new() {
 		inst = this;
@@ -122,10 +123,20 @@ class WebGpuDriver extends h3d.impl.Driver {
 		beginFrame();
 	}
 
+	function createTexView( t : h3d.mat.Texture, layer, mip ) {
+		var index = layer + mip * t.layerCount;
+		if( t.t.views == null ) t.t.views = [];
+		if( t.t.views[index] == null ) t.t.views[index] = t.t.tex.createView({ baseMipLevel : mip, mipLevelCount : 1, baseArrayLayer : layer, arrayLayerCount : 1 });
+		return t.t.views[index];
+	}
+
 	override function setRenderTarget(tex:Null<h3d.mat.Texture>, layer:Int = 0, mipLevel:Int = 0, depthBinding : h3d.Engine.DepthBinding = ReadWrite ) {
 		flushPass();
+		if( tex != null && tex.depthBuffer == null )
+			depthBinding = NotBound;
 		pipelineBuilder.setRenderTarget(tex, depthBinding != NotBound);
 		if( tex == null ) {
+			currentRenderTargets = null;
 			renderPassDesc = {
 				colorAttachments : [{
 					view : frame.colorView,
@@ -142,11 +153,46 @@ class WebGpuDriver extends h3d.impl.Driver {
 			};
 			return;
 		}
-		throw "TODO";
+		currentRenderTargets = [tex];
+		renderPassDesc = {
+			colorAttachments : [{
+				view : layer == 0 && mipLevel == 0 ? tex.t.view : createTexView(tex,layer,mipLevel),
+				loadOp : Load,
+				storeOp: Store
+			}],
+		};
+		if( tex.depthBuffer != null && depthBinding != NotBound )
+			renderPassDesc.depthStencilAttachment = {
+				view : tex.depthBuffer.t.view,
+				depthLoadOp: Load,
+				depthStoreOp: Store,
+				stencilLoadOp: Load,
+				stencilStoreOp: Store,
+			};
 	}
 
 	override function setRenderTargets(textures:Array<h3d.mat.Texture>, depthBinding:h3d.Engine.DepthBinding = ReadWrite) {
+		flushPass();
+		var tex = textures[0];
+		if( tex != null && tex.depthBuffer == null )
+			depthBinding = NotBound;
 		pipelineBuilder.setRenderTargets(textures, depthBinding != NotBound);
+		currentRenderTargets = textures.copy();
+		renderPassDesc = {
+			colorAttachments : [for( t in textures ) {
+				view : t.t.view,
+				loadOp : Load,
+				storeOp: Store
+			}],
+		};
+		if( tex.depthBuffer != null && depthBinding != NotBound )
+			renderPassDesc.depthStencilAttachment = {
+				view : tex.depthBuffer.t.view,
+				depthLoadOp: Load,
+				depthStoreOp: Store,
+				stencilLoadOp: Load,
+				stencilStoreOp: Store,
+			};
 	}
 
 	function beginFrame() {
@@ -178,6 +224,7 @@ class WebGpuDriver extends h3d.impl.Driver {
 	}
 
 	function flushPass() {
+		var isClear = needClear;
 		if( needClear ) {
 			if( renderPass != null ) throw "assert";
 			beginPass();
@@ -240,17 +287,25 @@ class WebGpuDriver extends h3d.impl.Driver {
 		return _allocBuffer(VERTEX,b.vertices,b.format.strideBytes);
 	}
 
+	function getTexFormat( t : h3d.mat.Texture ) : GPUTextureFormat {
+		return switch( t.format ) {
+		case RGBA: Rgba8unorm;
+		default: throw "Unsupported texture format "+t.format;
+		}
+	}
+
 	override function allocTexture(t:h3d.mat.Texture):Texture {
+		var flags : GPUTextureUsageFlags = TEXTURE_BINDING | COPY_DST;
+		if( t.flags.has(Target) )
+			flags |= RENDER_ATTACHMENT;
 		var tex = device.createTexture({
-			size : { width : t.width, height : t.height },
+			size : { width : t.width, height : t.height, depthOrArrayLayers : t.layerCount },
 			mipLevelCount : t.mipLevels,
-			format : switch( t.format ) {
-			case RGBA: Rgba8unorm;
-			default: throw "Unsupported texture format "+t.format;
-			},
-			usage : TEXTURE_BINDING | COPY_DST,
+			format : getTexFormat(t),
+			dimension : D2,
+			usage : flags,
 		});
-		return { tex : tex, view : tex.createView() };
+		return { tex : tex, view : tex.createView({ dimension: t.flags.has(Cube) ? Cube : (t.layerCount > 1 ? D2_array : D2) }) };
 	}
 
 	override function allocIndexes(count:Int, is32:Bool):IndexBuffer {
@@ -289,22 +344,6 @@ class WebGpuDriver extends h3d.impl.Driver {
 	}
 
 	function uploadBuffer(buf:GPU_Buffer,stride:Int,start:Int,count:Int,data:Dynamic,bufPos:Int) {
-		/*
-		var size = ((count * stride) + 3) & ~3;
-		var tmpBuf = device.createBuffer({
-			size : size,
-			usage : (MAP_WRITE:GPUBufferUsageFlags) | COPY_SRC,
-			mappedAtCreation : true,
-		});
-		new js.lib.Uint8Array(tmpBuf.getMappedRange()).set(data, bufPos);
-		tmpBuf.unmap();
-		// copy
-		if( commandUpload == null )
-			commandUpload = device.createCommandEncoder();
-		commandUpload.copyBufferToBuffer(tmpBuf,0,buf,start*stride,size);
-		// delete later
-		frame.toDelete.push(tmpBuf);
-		*/
 		var map = buf.getMappedRange();
 		if( data is js.lib.Uint16Array )
 			new js.lib.Uint16Array(map).set(data,bufPos);
@@ -385,7 +424,12 @@ class WebGpuDriver extends h3d.impl.Driver {
 					visibility : kind,
 					texture: {
 						sampleType : Float,
-						viewDimension : D2,
+						viewDimension : switch( t ) {
+						case TSampler2D: D2;
+						case TSamplerCube: Cube;
+						case TSampler2DArray: D2_array;
+						default: throw "Unsupported texture type "+t;
+						},
 					}
 				}
 			]);
@@ -441,6 +485,7 @@ class WebGpuDriver extends h3d.impl.Driver {
 			curStencilRef = st.reference;
 			renderPass.setStencilReference(st.reference);
 		}
+		beginPass();
 	}
 
 	override function selectShader( shader : hxsl.RuntimeShader ) {
@@ -562,8 +607,23 @@ class WebGpuDriver extends h3d.impl.Driver {
 	function makePipeline( sh : WebGpuShader ) {
 		var buffers : Array<GPUVertexBufferLayout> = [];
 		var pass = pipelineBuilder.getCurrentPass();
-		var targets = [{
+		var targets = currentRenderTargets == null ? [{
 			format : Bgra8unorm,
+			writeMask : pass.colorMask,
+			blend : {
+				color : {
+					operation : OP[pass.blendOp.getIndex()],
+					srcFactor : BLEND[pass.blendSrc.getIndex()],
+					dstFactor : BLEND[pass.blendDst.getIndex()],
+				},
+				alpha : {
+					operation : OP[pass.blendAlphaOp.getIndex()],
+					srcFactor : BLEND[pass.blendAlphaSrc.getIndex()],
+					dstFactor : BLEND[pass.blendAlphaDst.getIndex()],
+				},
+			},
+		}] : [for( t in currentRenderTargets ) {
+			format : getTexFormat(t),
 			writeMask : pass.colorMask,
 			blend : {
 				color : {
@@ -601,11 +661,11 @@ class WebGpuDriver extends h3d.impl.Driver {
 			vertex : { module : sh.vertex.module, entryPoint : "main", buffers : buffers },
 			fragment : { module : sh.fragment.module, entryPoint : "main", targets : targets },
 			primitive : { frontFace : CW, cullMode : switch( pass.culling ) { case None, Both: None; case Back: Back; case Front: Front; }, topology : Triangle_list },
-			depthStencil : {
+			depthStencil : currentRenderTargets == null || pipelineBuilder.getDepthEnabled() ? {
 				depthWriteEnabled: pass.depthWrite,
 				depthCompare: COMPARE[pass.depthTest.getIndex()],
 				format: Depth24plus_stencil8
-			}
+			} : js.Lib.undefined,
 		});
 		return pipeline;
 	}

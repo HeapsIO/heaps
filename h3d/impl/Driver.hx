@@ -8,7 +8,7 @@ typedef Query = {};
 #elseif (js && webgpu)
 typedef IndexBuffer = { buf : WebGpuApi.GPU_Buffer, stride : Int };
 typedef GPUBuffer = WebGpuApi.GPU_Buffer;
-typedef Texture = { tex : WebGpuApi.GPUTexture, view : WebGpuApi.GPUTextureView };
+typedef Texture = { tex : WebGpuApi.GPUTexture, view : WebGpuApi.GPUTextureView, ?views : Array<WebGpuApi.GPUTextureView> };
 typedef DepthBuffer = {};
 typedef Query = {};
 #elseif js

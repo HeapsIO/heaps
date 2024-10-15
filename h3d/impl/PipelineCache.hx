@@ -115,6 +115,10 @@ class PipelineBuilder {
 		needFlush = true;
 	}
 
+	public function getDepthEnabled() {
+		return signature.getI32(PSIGN_RENDER_TARGETS) & 0x80000000 != 0;
+	}
+
 	public function setDepth( depth : h3d.mat.Texture ) {
 		signature.setI32(PSIGN_RENDER_TARGETS, 0x80000000);
 		needFlush = true;

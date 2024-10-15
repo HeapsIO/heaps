@@ -8,8 +8,14 @@ class WgslOut {
 	static var GLOBALS = {
 		var m = new Map();
 		for( g in hxsl.Ast.TGlobal.createAll() ) {
-			var n = "" + g;
-			n = n.charAt(0).toLowerCase() + n.substr(1);
+			var n = switch( g ) {
+			case Mat4: "mat4x4";
+			case Mat3: "mat3x3";
+			case Mat2: "mat2x2";
+			default:
+				var n = "" + g;
+				n = n.charAt(0).toLowerCase() + n.substr(1);
+			}
 			m.set(g, n);
 		}
 		for( g in m )
@@ -136,10 +142,10 @@ class WgslOut {
 			var name = "val" + (exprIds++);
 			var tmp = buf;
 			buf = new StringBuf();
-			addType(e.t);
-			add(" ");
+			add("fn ");
 			add(name);
-			add("(void)");
+			add("() -> ");
+			addType(e.t);
 			var el2 = el.copy();
 			var last = el2[el2.length - 1];
 			el2[el2.length - 1] = { e : TReturn(last), t : e.t, p : last.p };
@@ -246,8 +252,13 @@ class WgslOut {
 				addValue(e,tabs);
 			}
 			add("}");
+		case TBinop(OpMult,e1 = { t : TVec(3,_) },e2 = { t : TMat3x4 }):
+			add("vec4(");
+			addValue(e1,tabs);
+			add(",1) * ");
+			addValue(e2,tabs);
 		case TBinop(op = OpAssign|OpAssignOp(_), { e : TSwiz(e,regs) }, e2) if( regs.length > 1 ):
-			// WSGL does not support swizzle writing outside of a single component (wth) 
+			// WSGL does not support swizzle writing outside of a single component (wth)
 			addValue(e, tabs);
 			add(" = ");
 			var size = switch(e.t) {
@@ -310,9 +321,15 @@ class WgslOut {
 				add("/*var*/");
 			}
 		case TCall({ e : TGlobal(g) },args):
+			var name = GLOBALS.get(g);
 			switch( [g,args] ) {
 			case [Texture,[t,uv]]:
-				add("textureSample(");
+				if( t.t == TSampler2DArray ) {
+					decl("fn textureSampleArr( t : texture_2d_array<f32>, s : sampler, uv : vec3<f32> ) -> vec4<f32> { return textureSample(t,s,uv.xy,i32(round(uv.z))); } ");
+					add("textureSampleArr");
+				} else
+					add("textureSample");
+				add("(");
 				addExpr(t, tabs);
 				add(",");
 				addExpr(t, tabs);
@@ -320,16 +337,20 @@ class WgslOut {
 				add(",");
 				addExpr(uv, tabs);
 				add(")");
+				return;
+			case [Mat3, [m = { t : TMat4 }]]:
+				decl("fn mat4to3( m : mat4x4<f32> ) -> mat3x3<f32> { return mat3x3(m[0].xyz,m[1].xyz,m[2].xyz); }");
+				name = "mat4to3";
 			default:
-				add(GLOBALS.get(g));
-				add("(");
-				var first = true;
-				for( e in args ) {
-					if( first ) first = false else add(", ");
-					addValue(e, tabs);
-				}
-				add(")");
 			}
+			add(name);
+			add("(");
+			var first = true;
+			for( e in args ) {
+				if( first ) first = false else add(", ");
+				addValue(e, tabs);
+			}
+			add(")");
 		case TCall(e, args):
 			addValue(e, tabs);
 			add("(");
