@@ -246,15 +246,50 @@ class WgslOut {
 				addValue(e,tabs);
 			}
 			add("}");
-		case TBinop(op, e1, e2):
-			switch( [op, e1.t, e2.t] ) {
-			default:
-				addValue(e1, tabs);
-				add(" ");
-				add(Printer.opStr(op));
-				add(" ");
-				addValue(e2, tabs);
+		case TBinop(op = OpAssign|OpAssignOp(_), { e : TSwiz(e,regs) }, e2) if( regs.length > 1 ):
+			// WSGL does not support swizzle writing outside of a single component (wth) 
+			addValue(e, tabs);
+			add(" = ");
+			var size = switch(e.t) {
+			case TVec(size, _): size;
+			default: throw "assert";
 			}
+			add("vec"+size+"(");
+			for( i in 0...size ) {
+				if( i > 0 ) add(",");
+				var found = false;
+				for( j => r in regs ) {
+					if( r.getIndex() == i ) {
+						found = true;
+						addValue(e2,tabs);
+						add(".");
+						add("xyzw".charAt(j));
+						switch( op ) {
+						case OpAssignOp(op):
+							add(" ");
+							add(Printer.opStr(op));
+							add("  ");
+							addValue(e,tabs);
+							add(".");
+							add("xyzw".charAt(j));
+						default:
+						}
+						break;
+					}
+				}
+				if( !found ) {
+					addValue(e,tabs);
+					add(".");
+					add("xyzw".charAt(i));
+				}
+			}
+			add(")");
+		case TBinop(op, e1, e2):
+			addValue(e1, tabs);
+			add(" ");
+			add(Printer.opStr(op));
+			add(" ");
+			addValue(e2, tabs);
 		case TUnop(op, e1):
 			add(switch(op) {
 			case OpNot: "!";
