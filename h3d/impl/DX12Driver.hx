@@ -841,6 +841,8 @@ class DX12Driver extends h3d.impl.Driver {
 
 	function toDxgiDepthFormat( format : hxd.PixelFormat ) {
 		switch( format ) {
+			case null:
+				return cast 0;
 			case Depth16:
 				return  D16_UNORM;
 			case Depth24Stencil8, Depth24:
