@@ -471,7 +471,24 @@ class WebGpuDriver extends h3d.impl.Driver {
 	}
 
 	function createSampler( t : h3d.mat.Texture ) {
-		return device.createSampler();
+		var mode : GPUAddressMode = switch( t.wrap ) {
+		case Clamp: Clamp_to_edge;
+		case Repeat: Repeat;
+		}
+		var filter : GPUFilterMode = switch( t.filter ) {
+		case Nearest: Nearest;
+		case Linear: Linear;
+		};
+		// no lod bias support !
+		return device.createSampler({
+			addressModeU : mode,
+			addressModeV : mode,
+			addressModeW : mode,
+			magFilter : filter,
+			minFilter : filter,
+			mipmapFilter: t.mipLevels > 1 && t.mipMap == Linear ? Linear : Nearest,
+			lodMinClamp: t.startingMip,
+		});
 	}
 
 	function _uploadShaderBuffers(buffers:h3d.shader.Buffers.ShaderBuffers, which:h3d.shader.Buffers.BufferKind, sh:WebGpuSubShader) {
