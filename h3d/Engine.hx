@@ -434,6 +434,14 @@ class Engine {
 		window.removeResizeEvent(onWindowResize);
 		if ( mem != null )
 			mem.dispose();
+		#if multidriver
+		for ( r in resCache ) {
+			var resource = Std.downcast(r, hxd.res.Resource);
+			if ( resource != null ) {
+				resource.entry.unwatch(id);
+			}
+		}
+		#end
 	}
 
 	function get_fps() {
