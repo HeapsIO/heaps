@@ -508,10 +508,16 @@ class Image extends Resource {
 	}
 
 	function watchCallb() {
-		var w = inf.width, h = inf.height;
+		var prevInfo = inf;
 		inf = null;
+		try {
+			getInfo();
+		} catch ( e : Dynamic ) {
+			inf = prevInfo;
+			return;
+		}
 		var s = getSize();
-		if (w != s.width || h != s.height)
+		if (prevInfo.width != s.width || prevInfo.height != s.height)
 			tex.resize(s.width, s.height);
 		tex.realloc = null;
 		loadTexture();
