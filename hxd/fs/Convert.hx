@@ -309,7 +309,9 @@ class CompressIMG extends Convert {
 			command("texconv", args);
 			sys.FileSystem.deleteFile(tmpFile);
 			tmpPath.ext = "tmp.DDS";
-			sys.FileSystem.rename(tmpPath.toString(), dstPath);
+			var p = tmpPath.toString();
+			if ( sys.FileSystem.exists(p) )
+				sys.FileSystem.rename(p, dstPath);
 			return;
 		}
 		var path = new haxe.io.Path(srcPath);
