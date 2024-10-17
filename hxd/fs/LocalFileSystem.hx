@@ -246,7 +246,9 @@ class LocalEntry extends FileEntry {
 		#if multidriver
 		if (watchByEngine == null)
 			watchByEngine = [];
-		watchByEngine[h3d.Engine.getCurrent().id] = onChanged;
+		var engine = h3d.Engine.getCurrent();
+		if ( engine != null )
+			watchByEngine[engine.id] = onChanged;
 		#end
 
 		watchCallback = function() {
