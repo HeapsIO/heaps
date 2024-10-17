@@ -263,7 +263,6 @@ class LocalEntry extends FileEntry {
 				watchTime = -1;
 				return;
 			}
-			hide.Ide.inst.quickMessage('Succeeded convert for ${name}');
 			#end
 
 			#if editor
