@@ -252,7 +252,19 @@ class LocalEntry extends FileEntry {
 		#end
 
 		watchCallback = function() {
-			fs.convert.run(this);
+			#if editor
+			try {
+			#end
+				fs.convert.run(this);
+			#if editor
+			} catch ( e : Dynamic ) {
+				hide.Ide.inst.quickMessage('Failed convert for ${name}, trying again');
+				// Convert failed, let's mark this watch as not performed.
+				watchTime = -1;
+				return;
+			}
+			hide.Ide.inst.quickMessage('Succeeded convert for ${name}');
+			#end
 
 			#if editor
 			if (watchOnChangedHistory == null)
