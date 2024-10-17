@@ -173,8 +173,8 @@ class LocalEntry extends FileEntry {
 					return;
 				#end
 			}catch( e : Dynamic ) return;
-			#end
 		}
+		#end
 
 		w.watchTime = t;
 		w.watchCallback();
