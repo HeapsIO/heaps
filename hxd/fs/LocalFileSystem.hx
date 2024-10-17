@@ -158,18 +158,24 @@ class LocalEntry extends FileEntry {
 		}
 		var lockFile = tmpDir+"/"+w.file.split("/").pop()+".lock";
 		if( sys.FileSystem.exists(lockFile) ) return;
-		if( !w.isDirectory )
-		try {
-			#if nodejs
-			var cst = js.node.Fs.constants;
-			var fid = js.node.Fs.openSync(w.file, cast (cst.O_RDONLY | cst.O_EXCL | 0x10000000));
-			js.node.Fs.closeSync(fid);
-			#elseif hl
-			if( fileIsLocked(@:privateAccess Sys.getPath(w.file)) )
-				return;
+		if( !w.isDirectory ) {
+			try {
+				#if nodejs
+				var cst = js.node.Fs.constants;
+				var path = w.file;
+				#if editor
+				// Fix searching path in hide/bin folder
+				path = hide.Ide.inst.getPath(path);
+				#end
+				var fid = js.node.Fs.openSync(path, cast (cst.O_RDONLY | cst.O_EXCL | 0x10000000));
+				js.node.Fs.closeSync(fid);
+				#elseif hl
+				if( fileIsLocked(@:privateAccess Sys.getPath(w.file)) )
+					return;
+				#end
+			}catch( e : Dynamic ) return;
 			#end
-		}catch( e : Dynamic ) return;
-		#end
+		}
 
 		w.watchTime = t;
 		w.watchCallback();
