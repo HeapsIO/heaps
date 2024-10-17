@@ -167,7 +167,7 @@ class LocalEntry extends FileEntry {
 				// Fix searching path in hide/bin folder
 				path = hide.Ide.inst.getPath(path);
 				#end
-				var fid = js.node.Fs.openSync(path, cast (cst.O_RDONLY | cst.O_EXCL | 0x10000000));
+				var fid = js.node.Fs.openSync(path, cast (cst.O_APPEND | 0x10000000));
 				js.node.Fs.closeSync(fid);
 				#elseif hl
 				if( fileIsLocked(@:privateAccess Sys.getPath(w.file)) )
