@@ -25,6 +25,10 @@ enum DepthBinding {
 }
 
 class Engine {
+	#if multidriver
+	static var ID = 0;
+	public var id(default, null) : Int;
+	#end
 
 	public var driver(default,null) : h3d.impl.Driver;
 
@@ -70,6 +74,10 @@ class Engine {
 
 	@:access(hxd.Window)
 	function new() {
+		#if multidriver
+		this.id = ID;
+		ID++;
+		#end
 		this.hardware = !SOFTWARE_DRIVER;
 		this.antiAlias = ANTIALIASING;
 		this.autoResize = true;
