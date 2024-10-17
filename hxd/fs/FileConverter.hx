@@ -311,7 +311,7 @@ class FileConverter {
 
 		if( !sys.FileSystem.exists(fullPath) ) throw "Missing "+fullPath;
 
-		var time = std.Math.floor(getFileTime(fullPath));
+		var time = std.Math.floor(getFileTime(fullPath) / 1000);
 		var alreadyGen = sys.FileSystem.exists(fullOutPath) && match.ver == conv.version #if disable_res_cache && false #end;
 
 		if( alreadyGen && match.time == time )
