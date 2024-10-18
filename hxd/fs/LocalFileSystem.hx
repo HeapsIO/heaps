@@ -117,6 +117,7 @@ class LocalEntry extends FileEntry {
 	var onChangedDelay : haxe.Timer;
 	#else
 	var watchTime : Float;
+	var lastCheck : { fileTime : Float, stampTime : Float };
 	#end
 
 	static var WATCH_INDEX = 0;
@@ -175,6 +176,14 @@ class LocalEntry extends FileEntry {
 			}catch( e : Dynamic ) return;
 		}
 		#end
+
+		var stampTime = haxe.Timer.stamp();
+		if ( w.lastCheck == null || w.lastCheck.fileTime != t ) {
+			w.lastCheck = { fileTime : t, stampTime : stampTime };
+			return;
+		}
+		if ( stampTime < w.lastCheck.stampTime + FileConverter.FILE_TIME_PRECISION * 0.001 )
+			return;
 
 		w.watchTime = t;
 		w.watchCallback();
@@ -259,6 +268,7 @@ class LocalEntry extends FileEntry {
 				hide.Ide.inst.quickMessage('Failed convert for ${name}, trying again');
 				// Convert failed, let's mark this watch as not performed.
 				watchTime = -1;
+				lastCheck = null;
 				return;
 			}
 			#else
