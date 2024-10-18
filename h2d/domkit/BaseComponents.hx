@@ -1112,6 +1112,7 @@ class InputComp extends TextComp implements domkit.Component.ComponentDecl<h2d.T
 	@:p(tile) var selection : h2d.Tile;
 	@:p var edit : Bool;
 	@:p(color) @:t(color) var backgroundColor : Null<Int>;
+	@:p var multiline : Bool;
 
 	static function create( parent : h2d.Object ) {
 		return new h2d.TextInput(hxd.res.DefaultFont.get(),parent);
@@ -1135,6 +1136,10 @@ class InputComp extends TextComp implements domkit.Component.ComponentDecl<h2d.T
 
 	static function set_backgroundColor( o : h2d.TextInput, col ) {
 		o.backgroundColor = col;
+	}
+
+	static function set_multiline( o : h2d.TextInput, b ) {
+		o.multiline = b;
 	}
 
 }
