@@ -1,5 +1,7 @@
 package h3d.impl;
 
+#if !js
+
 #if hl
 @:forward(setI32,setUI8,setUI16,getUI8,getUI16,getI32,setF32,getF32,sub)
 private abstract Bytes(hl.Bytes) from hl.Bytes to hl.Bytes {
@@ -290,3 +292,4 @@ class PipelineBuilder {
 
 
 }
+#end
