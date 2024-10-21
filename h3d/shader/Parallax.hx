@@ -33,15 +33,13 @@ class Parallax extends hxsl.Shader {
 			if( maxLayers == 0 )
 				calculatedUV += viewNS.xy * heightMap.get(calculatedUV) * amount;
 			else {
-				var numLayers = int(mix(float(maxLayers), float(minLayers), abs(viewNS.z)));
+				var numLayers = mix(float(maxLayers), float(minLayers), saturate(abs(viewNS.z)));
 				var layerDepth = 1 / numLayers;
 				var curLayerDepth = 0.;
 				var delta = (viewNS.xy / viewNS.z) * amount / numLayers;
 				var curUV = calculatedUV;
 				var curDepth = heightMap.getLod(curUV,0.);
-			    for (i in 0...numLayers) {
-					if (curLayerDepth < curDepth)
-						break;
+			    while( curLayerDepth < curDepth ) {
 			        curUV += delta;
 			        curDepth = heightMap.getLod(curUV,0.);
 			        curLayerDepth += layerDepth;
