@@ -2095,7 +2095,7 @@ class DX12Driver extends h3d.impl.Driver {
 		p.depthStencilDesc.depthFunc = COMP[pass.depthTest.getIndex()];
 		p.rasterizerState.depthBias = Std.int(depth.bias);
 		p.rasterizerState.slopeScaledDepthBias = depth.slopeScaledBias;
-		p.rasterizerState.depthClipEnable = depth.clamp;
+		p.rasterizerState.depthClipEnable = !depth.clamp;
 
 		var bl = p.blendState;
 		for( i in 0...rtCount ) {
