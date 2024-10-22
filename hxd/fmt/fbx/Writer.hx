@@ -630,7 +630,7 @@ class Writer {
 			}
 
 			var meshMaterials = mesh.getMaterials();
-			var mats = new Array<Int>();
+			var materialIndexes = [];
 			for (idx => mat in meshMaterials ) {
 				var materialId = -1;
 
@@ -678,6 +678,13 @@ class Writer {
 
 				if (infos.lib == null)
 					continue;
+
+				var hmd = Std.downcast(mesh.primitive, h3d.prim.HMDModel);
+				if (hmd != null) {
+					var materials = hmd.getMaterialIndexes(idx);
+					for (i in 0...Std.int(materials.count / 3))
+						materialIndexes.push(idx);
+				}
 
 				// Building mat textures
 				var textures = new Array<Dynamic>();
@@ -758,13 +765,13 @@ class Writer {
 				]}
 			] };
 
-			if (mats.length > 0) {
+			if (materialIndexes.length > 0) {
 				geometry.childs.push({ name:"LayerElementMaterial", props: [PInt(0)], childs: [
 					{ name: "Version", props: [ PInt(101) ], childs: null },
 					{ name: "Name", props: [ PString("") ], childs: null },
 					{ name: "MappingInformationType", props: [ PString("ByPolygon") ], childs: null },
 					{ name: "ReferenceInformationType", props: [ PString("IndexToDirect") ], childs: null },
-					{ name: "Materials", props: [ PInts(mats) ], childs: null },
+					{ name: "Materials", props: [ PInts(materialIndexes) ], childs: null },
 				]});
 			}
 
