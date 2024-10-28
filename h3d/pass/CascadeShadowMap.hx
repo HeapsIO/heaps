@@ -59,7 +59,7 @@ class CascadeShadowMap extends DirShadowMap {
 
 	function computeNearFar( i : Int, previousFar : Float ) {
 		var max = maxDist < 0.0 ? ctx.camera.zFar : maxDist;
-		var step = (max - firstCascadeSize) / (cascade - 1);
+		var step = max - firstCascadeSize;
 		var near = ( i == 0 ) ? 0.0 : previousFar - previousFar * transitionFraction;
 		var far = ( i == 0 ) ? firstCascadeSize : firstCascadeSize + hxd.Math.pow(i / (cascade - 1), pow) * step;
 
@@ -287,12 +287,13 @@ class CascadeShadowMap extends DirShadowMap {
 			lightCamera.update();
 		}
 
-		cullPasses(passes,function(col) return col.inFrustum(lightCamera.frustum));
+		cullPasses(passes, function(col) return col.inFrustum(lightCamera.frustum));
 
 		calcCascadeMatrices();
 
 		var textures = [];
 		for (i in 0...cascade) {
+			var i = cascade - 1 - i;
 			currentCascadeIndex = i;
 
 			var texture = ctx.textures.allocTarget("cascadeShadowMap_"+i, size, size, false, #if js Depth24Stencil8 #else highPrecision ? Depth32 : Depth16 #end );
@@ -310,7 +311,6 @@ class CascadeShadowMap extends DirShadowMap {
 			// first cascade draw all objects
 			if ( i == 0 )
 				dimension = 0.0;
-			var p = passes.save();
 			tmpFrustum.loadMatrix(lc.viewProj);
 			tmpFrustum.checkNearFar = false;
 			if ( dimension > 0.0 )
@@ -318,7 +318,6 @@ class CascadeShadowMap extends DirShadowMap {
 			else
 				cullPasses(passes, function(col) return col.inFrustum(tmpFrustum));
 			textures[i] = processShadowMap( passes, texture, sort);
-			passes.load(p);
 		}
 		syncCascadeShader(textures);
 
