@@ -48,7 +48,7 @@ class Interactive extends Object implements hxd.SceneEvents.Interactive {
 	public var showDebug(get, set) : Bool;
 
 	/**
-	 *  Tells if our shape is in absolute space (for example ObjectCollider) or relative to the interactive transform.
+	 *  Tells if our shapes are in absolute space (for example ObjectCollider) or relative to the interactive transform.
 	 */
 	public var isAbsoluteShape : Bool = false;
 

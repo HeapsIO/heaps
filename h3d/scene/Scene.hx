@@ -189,9 +189,10 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 					var wfactor = 0.;
 
 					// adjust result with better precision
-					if( i.preciseShape != null ) {
-						r.transform(m);
-						var hit = i.preciseShape.rayIntersection(r, i.bestMatch);
+					if( i.preciseShape != null || !i.bestMatch ) {
+						if( !i.isAbsoluteShape )
+							r.transform(m);
+						var hit = (i.preciseShape ?? i.shape).rayIntersection(r, true);
 						if( hit > 0 ) {
 							var hitPoint = r.getPoint(hit);
 							i.hitPoint.x = hitPoint.x;
@@ -204,7 +205,8 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 
 					var p = i.hitPoint.clone();
 					p.w = 1;
-					p.transform3x4(i.absPos);
+					if( !i.isAbsoluteShape )
+						p.transform3x4(i.absPos);
 					p.project(camera.m);
 					i.hitPoint.w = p.z + wfactor;
 				}
