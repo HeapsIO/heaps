@@ -18,7 +18,6 @@ class Pass {
 	var selfShadersCache : hxsl.ShaderList;
 	var shaders : hxsl.ShaderList;
 	var nextPass : Pass;
-	var culled : Bool = false;
 	var rendererFlags : Int = 0;
 
 	@:bits(flags) public var enableLights : Bool;
@@ -46,6 +45,7 @@ class Pass {
 	@:bits(bits) public var blendOp : Operation;
 	@:bits(bits) public var blendAlphaOp : Operation;
 	@:bits(bits) public var wireframe : Bool;
+	@:bits(bits) public var culled : Bool;
 	public var colorMask : Int;
 	public var layer : Int = 0;
 
