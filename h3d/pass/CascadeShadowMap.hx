@@ -144,18 +144,18 @@ class CascadeShadowMap extends DirShadowMap {
 		proj.zero();
 		proj._11 = invD0;
 		proj._22 = invD0;
-		proj._33 = 1 / (zDist0);
+		proj._33 = 1.0 / (zDist0);
 		proj._41 = 0.5;
 		proj._42 = 0.5;
-		proj._44 = 1;
+		proj._44 = 1.0;
 
 		cascadeViewProj.multiply(view, proj);
 
 		var invD02 = 2.0 * invD0;
 		proj._11 = invD02;
 		proj._22 = invD02;
-		proj._41 = 0;
-		proj._42 = 0;
+		proj._41 = 0.0;
+		proj._42 = 0.0;
 		proj._43 = getBias(0);
 
 		lightCameras[0].viewProj.multiply(view, proj);
@@ -170,11 +170,11 @@ class CascadeShadowMap extends DirShadowMap {
 			computeBounds( cascadeBounds );
 			var lightPos = computeLightPos(cascadeBounds, d);
 
-			var invD = 1 / d;
+			var invD = 1.0 / d;
 			var d0InvD = d0 * invD;
 			var zDist = ( cascadeBounds.zMax - cascadeBounds.zMin );
-			var invZDist = 1 / zDist;
-			var halfMinusD0Inv2D = 0.5 - ( d0 / ( 2 * d ) );
+			var invZDist = 1.0 / zDist;
+			var halfMinusD0Inv2D = 0.5 - ( d0 / ( 2.0 * d ) );
 
 			lightCameras[i].scale.x = d0InvD;
 			lightCameras[i].scale.y = d0InvD;
@@ -197,7 +197,7 @@ class CascadeShadowMap extends DirShadowMap {
 			proj._22 = invD2;
 			proj._33 = invZDist;
 			proj._43 = getBias(i);
-			proj._44 = 1;
+			proj._44 = 1.0;
 
 			lightCameras[i].viewProj.multiply(view, proj);
 		}
@@ -268,32 +268,34 @@ class CascadeShadowMap extends DirShadowMap {
 		if( !filterPasses(passes) )
 			return;
 
-		if( mode != Mixed || ctx.computingStatic ) {
-			var slight = light == null ? ctx.lightSystem.shadowLight : light;
-			var ldir = slight == null ? null : @:privateAccess slight.getShadowDirection();
-			if( ldir == null )
-				lightCamera.target.set(0, 0, -1);
-			else {
-				lightCamera.target.set(ldir.x, ldir.y, ldir.z);
-				lightCamera.target.normalize();
-			}
-			lightCamera.pos.set();
-			lightCamera.orthoBounds.empty();
-			if( !passes.isEmpty() ) calcShadowBounds(lightCamera);
-			var pt = ctx.camera.pos.clone();
-			pt.transform(lightCamera.mcam);
-			lightCamera.orthoBounds.zMax = pt.z + (castingMaxDist > 0.0 ? castingMaxDist : maxDist < 0.0 ? ctx.camera.zFar : maxDist);
-			lightCamera.orthoBounds.zMin = pt.z - (castingMaxDist > 0.0 ? castingMaxDist : maxDist < 0.0 ? ctx.camera.zFar : maxDist);
-			lightCamera.update();
+		var slight = light == null ? ctx.lightSystem.shadowLight : light;
+		var ldir = slight == null ? null : @:privateAccess slight.getShadowDirection();
+		if( ldir == null )
+			lightCamera.target.set(0, 0, -1);
+		else {
+			lightCamera.target.set(ldir.x, ldir.y, ldir.z);
+			lightCamera.target.normalize();
 		}
-
-		cullPasses(passes, function(col) return col.inFrustum(lightCamera.frustum));
+		lightCamera.pos.set();
+		lightCamera.orthoBounds.empty();
+		lightCamera.update();
 
 		calcCascadeMatrices();
 
+		for (i in 0...cascade)
+			lightCamera.orthoBounds.add(lightCameras[i].orthoBounds);
+		var zDist = (castingMaxDist > 0.0 ? castingMaxDist : maxDist < 0.0 ? ctx.camera.zFar : maxDist);
+		lightCamera.orthoBounds.zMax += zDist;
+		lightCamera.orthoBounds.zMin -= zDist;
+		lightCamera.update();
+
+		cullPasses(passes, function(col) return col.inFrustum(lightCamera.frustum));
+		var p = passes.save();
+
+		var prevCheckNearFar = lightCamera.frustum.checkNearFar;
+		lightCamera.frustum.checkNearFar = false;
 		var textures = [];
 		for (i in 0...cascade) {
-			var i = cascade - 1 - i;
 			currentCascadeIndex = i;
 
 			var texture = ctx.textures.allocTarget("cascadeShadowMap_"+i, size, size, false, #if js Depth24Stencil8 #else highPrecision ? Depth32 : Depth16 #end );
@@ -311,15 +313,17 @@ class CascadeShadowMap extends DirShadowMap {
 			// first cascade draw all objects
 			if ( i == 0 )
 				dimension = 0.0;
-			tmpFrustum.loadMatrix(lc.viewProj);
-			tmpFrustum.checkNearFar = false;
+			lightCamera.orthoBounds = lc.orthoBounds;
+			lightCamera.update();
 			if ( dimension > 0.0 )
-				cullPassesSize(passes, tmpFrustum, dimension);
+				cullPassesSize(passes, lightCamera.frustum, dimension);
 			else
-				cullPasses(passes, function(col) return col.inFrustum(tmpFrustum));
+				cullPasses(passes, function(col) return col.inFrustum(lightCamera.frustum));
 			textures[i] = processShadowMap( passes, texture, sort);
+			passes.load(p);
 		}
 		syncCascadeShader(textures);
+		lightCamera.frustum.checkNearFar = prevCheckNearFar;
 
 		#if editor
 		drawDebug();
