@@ -224,8 +224,8 @@ class Camera {
 				matC = scaleY * -sr;
 				matD = scaleY * cr;
 			}
-			absX = Math.round(-(x * matA + y * matC) + (scene.width * anchorX * viewW) + scene.width * viewX);
-			absY = Math.round(-(x * matB + y * matD) + (scene.height * anchorY * viewH) + scene.height * viewY);
+			absX = (-(x * matA + y * matC) + (scene.width * anchorX * viewW) + scene.width * viewX);
+			absY = (-(x * matB + y * matD) + (scene.height * anchorY * viewH) + scene.height * viewY);
 			invDet = 1 / (matA * matD - matB * matC);
 			posChanged = false;
 		}
