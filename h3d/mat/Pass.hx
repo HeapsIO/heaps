@@ -362,6 +362,8 @@ class Pass {
 			prev = s;
 			s = s.next;
 		}
+		if ( s != parentShaders )
+			prev = null;
 		parentShaders = parentPass.shaders;
 		if( prev == null )
 			shaders = parentShaders;
