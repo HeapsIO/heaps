@@ -17,10 +17,12 @@ class HMDModel extends MeshPrimitive {
 
 	public static var lodExportKeyword : String = "LOD";
 
-	public function new( data : hxd.fmt.hmd.Data.Geometry, dataPos, lib, lods = null ) {
+	public function new( data : hxd.fmt.hmd.Data.Geometry, dataPos, lib, lods : Array<hxd.fmt.hmd.Data.Model> = null ) {
 		this.lods = [data];
-		if (lods != null)
-			this.lods = this.lods.concat(lods);
+		if (lods != null) {
+			for (lod in lods)
+				this.lods.push(lib.header.geometries[lod.geometry]);
+		}
 		this.dataPosition = dataPos;
 		this.lib = lib;
 

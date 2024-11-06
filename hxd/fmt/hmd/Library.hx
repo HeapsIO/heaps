@@ -280,9 +280,11 @@ class Library {
 			throw "No LOD0 found for " + lodInfos.modelName + " in " + resource.name;
 		}
 
-		var lods : Array<Geometry> = null;
-		if (lodInfos.lodLevel == 0 )
-			lods = findLODs( lodInfos.modelName, model.materials.length );
+		var lods : Array<Model> = null;
+		if (lodInfos.lodLevel == 0 ) {
+			lods = findLODs( lodInfos.modelName, model );
+			patchLodsMaterials(model, lods);
+		}
 
 		p = new h3d.prim.HMDModel(header.geometries[id], header.dataPosition, this, lods);
 		p.incref(); // Prevent from auto-disposing
@@ -410,11 +412,10 @@ class Library {
 		return { lodLevel : -1, modelName : null };
 	}
 
-	public function findLODs( modelName : String, materialCount : Int ) : Array<Geometry> {
+	public function findLODs( modelName : String, lod0 : Model ) : Array<Model> {
 		if ( modelName == null )
 			return null;
-
-		var lods : Array<Geometry> = [];
+		var lods : Array<Model> = [];
 		for ( curModel in header.models ) {
 			var lodInfos = getLODInfos( curModel );
 			if ( lodInfos.lodLevel < 1 )
@@ -422,20 +423,35 @@ class Library {
 			if ( lodInfos.modelName == modelName ) {
 				if ( lods[lodInfos.lodLevel - 1] != null )
 					throw 'Multiple LODs with the same level : ${curModel.name}';
-				var geom = header.geometries[curModel.geometry];
-				if ( geom.indexCounts.length != materialCount ) {
-					var indexCounts = [];					
-					for ( i in 0...materialCount )
-						indexCounts[i] = 0;
-					for ( i => m in curModel.materials )
-						indexCounts[m] = geom.indexCounts[i];
-					geom.indexCounts = indexCounts;
-				}
-				lods[lodInfos.lodLevel - 1] = header.geometries[curModel.geometry];
+				lods[lodInfos.lodLevel - 1] = curModel;
 			}
 		}
 
 		return lods;
+	}
+
+	public function patchLodsMaterials( lod0 : Model, lods : Array<Model>) {
+		for (model in lods) {
+			for (m in model.materials) {
+				if (lod0.materials.contains(m))
+					continue;
+				throw 'Model ${model.name} has a material that isn\'t used by ${lod0.name}. This is not supported.';
+			}
+
+			// Patch materials when lods have different materials, otherwise some indexCounts will be null
+			var geom = header.geometries[model.geometry];
+			var indexCounts = [];
+			var j = 0;
+			for ( i in 0...lod0.materials.length ) {
+				if (lod0.materials[i] == model.materials[j]) {
+					indexCounts[i] = geom.indexCounts[j];
+					j++;
+				}
+				else
+					indexCounts[i] = 0;
+			}
+			geom.indexCounts = indexCounts;
+		}
 	}
 
 	#if !dataOnly
