@@ -6,7 +6,9 @@ enum abstract PbrMode(String) {
 	var Overlay = "Overlay";
 	var Decal = "Decal";
 	var BeforeTonemapping = "BeforeTonemapping";
+	var BeforeTonemappingDecal = "BeforeTonemappingDecal";
 	var AfterTonemapping = "AfterTonemapping";
+	var AfterTonemappingDecal = "AfterTonemappingDecal";
 	var Distortion = "Distortion";
 	var DecalPass = "DecalPass";
 	var TerrainPass = "TerrainPass";
@@ -256,8 +258,11 @@ class PbrMaterial extends Material {
 			// pass name set below (in set_blendMode)
 		case Forward:
 			mainPass.setPassName("forward");
-		case BeforeTonemapping:
-			mainPass.setPassName("beforeTonemapping");
+		case BeforeTonemapping, BeforeTonemappingDecal:
+			if ( props.mode == BeforeTonemappingDecal )
+				mainPass.setPassName("beforeTonemappingDecal");
+			else
+				mainPass.setPassName("beforeTonemapping");
 			var gc = mainPass.getShader(h3d.shader.pbr.GammaCorrect);
 			if( gc == null ) {
 				gc = new h3d.shader.pbr.GammaCorrect();
@@ -267,6 +272,8 @@ class PbrMaterial extends Material {
 			}
 		case AfterTonemapping:
 			mainPass.setPassName("afterTonemapping");
+		case AfterTonemappingDecal:
+			mainPass.setPassName("afterTonemappingDecal");
 		case Distortion:
 			mainPass.setPassName("distortion");
 			mainPass.depthWrite = false;
@@ -551,7 +558,9 @@ class PbrMaterial extends Material {
 						<option value="PBR">PBR</option>
 						<option value="Forward">Forward PBR</option>
 						<option value="BeforeTonemapping">Before Tonemapping</option>
+						<option value="BeforeTonemappingDecal">Before Tonemapping Decal</option>
 						<option value="AfterTonemapping">After Tonemapping</option>
+						<option value="AfterTonemappingDecal">After Tonemapping Decal</option>
 						<option value="Overlay">Overlay</option>
 						<option value="Distortion">Distortion</option>
 						<option value="Decal">Decal</option>
