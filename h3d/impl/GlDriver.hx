@@ -1835,10 +1835,14 @@ class GlDriver extends Driver {
 		#end
 	}
 
-	function setPolygonOffset( depthTexture : h3d.mat.Texture ) {
-		if ( depthTexture != null && ( depthTexture.depthBias != 0 || depthTexture.slopeScaledBias != 0 ) ) {
+	override function onTextureBiasChanged( t : h3d.mat.Texture ) {
+		setPolygonOffset(t);
+	}
+
+	function setPolygonOffset( depthBuffer : h3d.mat.Texture ) {
+		if ( depthBuffer != null && ( depthBuffer.depthBias != 0 || depthBuffer.slopeScaledBias != 0 ) ) {
 			gl.enable(GL.POLYGON_OFFSET_FILL);
-			gl.polygonOffset(depthTexture.slopeScaledBias, depthTexture.depthBias);
+			gl.polygonOffset(depthBuffer.slopeScaledBias, depthBuffer.depthBias);
 		}
 		else
 			gl.disable(GL.POLYGON_OFFSET_FILL);

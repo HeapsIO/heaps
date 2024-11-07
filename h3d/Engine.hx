@@ -429,6 +429,12 @@ class Engine {
 		return true;
 	}
 
+	public function onTextureBiasChanged(t : h3d.mat.Texture) {
+		if ( !t.isDepth() )
+			throw "Can change texture bias on depth buffer only";
+		driver.onTextureBiasChanged(t);
+	}
+
 	public function dispose() {
 		driver.dispose();
 		window.removeResizeEvent(onWindowResize);

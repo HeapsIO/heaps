@@ -265,6 +265,9 @@ class Driver {
 		throw "Driver does not allow to read vertex bytes";
 	}
 
+	public function onTextureBiasChanged( t : h3d.mat.Texture ) {
+	}
+
 	/**
 		Returns true if we could copy the texture, false otherwise (not supported by driver or mismatch in size/format)
 	**/
