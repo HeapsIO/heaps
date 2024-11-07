@@ -33,6 +33,11 @@ class Camera {
 	public var m : Matrix;
 
 	public var pos : Vector;
+	/**
+		up is used for the lookAt matrix.
+		it is not the actual up axis of the camera.
+		use getUp instead.
+	**/
 	public var up : Vector;
 	public var target : Vector;
 
