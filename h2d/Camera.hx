@@ -224,8 +224,13 @@ class Camera {
 				matC = scaleY * -sr;
 				matD = scaleY * cr;
 			}
+			#if heaps_h2d_enable_camera_rounding
+			absX = Math.round((-(x * matA + y * matC) + (scene.width * anchorX * viewW) + scene.width * viewX));
+			absY = Math.round((-(x * matB + y * matD) + (scene.height * anchorY * viewH) + scene.height * viewY));
+			#else
 			absX = (-(x * matA + y * matC) + (scene.width * anchorX * viewW) + scene.width * viewX);
 			absY = (-(x * matB + y * matD) + (scene.height * anchorY * viewH) + scene.height * viewY);
+			#end
 			invDet = 1 / (matA * matD - matB * matC);
 			posChanged = false;
 		}
