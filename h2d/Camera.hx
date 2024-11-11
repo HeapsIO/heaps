@@ -94,6 +94,12 @@ class Camera {
 	**/
 	public var followRotation : Bool = false;
 
+	/**
+		Round the camera position?
+		Setting to false allows the camera to have a sub-pixel accurate position.
+	**/
+	public var enableCameraRounding : Bool = true;
+
 	var posChanged : Bool;
 
 	var viewX : Float;
@@ -224,13 +230,13 @@ class Camera {
 				matC = scaleY * -sr;
 				matD = scaleY * cr;
 			}
-			#if heaps_h2d_enable_camera_rounding
-			absX = Math.round((-(x * matA + y * matC) + (scene.width * anchorX * viewW) + scene.width * viewX));
-			absY = Math.round((-(x * matB + y * matD) + (scene.height * anchorY * viewH) + scene.height * viewY));
-			#else
-			absX = (-(x * matA + y * matC) + (scene.width * anchorX * viewW) + scene.width * viewX);
-			absY = (-(x * matB + y * matD) + (scene.height * anchorY * viewH) + scene.height * viewY);
-			#end
+			if (this.enableCameraRounding) {
+				absX = Math.round((-(x * matA + y * matC) + (scene.width * anchorX * viewW) + scene.width * viewX));
+				absY = Math.round((-(x * matB + y * matD) + (scene.height * anchorY * viewH) + scene.height * viewY));
+			} else {
+				absX = -(x * matA + y * matC) + (scene.width * anchorX * viewW) + scene.width * viewX;
+				absY = -(x * matB + y * matD) + (scene.height * anchorY * viewH) + scene.height * viewY;
+			}
 			invDet = 1 / (matA * matD - matB * matC);
 			posChanged = false;
 		}
