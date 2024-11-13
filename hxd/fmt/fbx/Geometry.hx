@@ -191,8 +191,30 @@ class Geometry {
 		return points;
 	}
 
-	public function getNormals() {
-		return processVectors("LayerElementNormal", "Normals");
+	public function getNormals(?matrix) {
+		if( matrix == null ) matrix = getGeomMatrix();
+		if( matrix != null && matrix.isIdentity() ) matrix = null;
+		var normals = processVectors("LayerElementNormal", "Normals");
+		var outNormals = [];
+		var tmp = new h3d.Vector();
+		for( i in 0...Std.int(normals.length/3) ) {
+			var x = normals[i*3];
+			var y = normals[i*3+1];
+			var z = normals[i*3+2];
+			if( matrix != null ) {
+				tmp.set(x,y,z);
+				tmp.transform3x3(matrix);
+				tmp.normalize();
+				x = tmp.x;
+				y = tmp.y;
+				z = tmp.z;
+			}
+			outNormals.push(x);
+			outNormals.push(y);
+			outNormals.push(z);
+		}
+
+		return outNormals;
 	}
 
 	function processVectors( layer, name, opt = false ) {
@@ -259,7 +281,7 @@ class Geometry {
 			case "GeometricTranslation":
 				trans = new h3d.col.Point(p.props[4].toFloat() * (lib.leftHand ? -1 : 1), p.props[5].toFloat(), p.props[6].toFloat());
 			case "GeometricRotation":
-				rot = new h3d.col.Point(p.props[4].toFloat() * Math.PI / 180, p.props[5].toFloat() * Math.PI / 180, p.props[6].toFloat() * Math.PI / 180);
+				rot = new h3d.col.Point(p.props[4].toFloat() * Math.PI / 180, p.props[5].toFloat() * Math.PI / 180, (p.props[6].toFloat() * Math.PI / 180) * (lib.leftHand ? -1 : 1));
 			default:
 			}
 		if( rot == null && trans == null )
@@ -276,5 +298,4 @@ class Geometry {
 		}
 		return m;
 	}
-
 }
