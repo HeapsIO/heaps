@@ -4,8 +4,7 @@ class Blur extends ScreenShader {
 
 	static var SRC = {
 
-		@param var cameraInverseViewProj : Mat4;
-
+		@param var inverseProj : Mat4;
 		@param var texture : Sampler2D;
 		@param var depthTexture : Sampler2D;
 		@param @const var Quality : Int;
@@ -19,8 +18,7 @@ class Blur extends ScreenShader {
 		@param var fixedColor : Vec4;
 
 		@param @const var isDepthDependant : Bool;
-		@param @const var hasNormal : Bool;
-		@param var normalTexture : Sampler2D;
+		@param var depthThreshold : Float = 1.0;
 
 		@param @const var isCube : Bool;
 		@param var cubeTexture : SamplerCube;
@@ -28,19 +26,32 @@ class Blur extends ScreenShader {
 
 		function fragment() {
 			if( isDepthDependant ) {
-				var pcur = getPosition(input.uv);
-				var ccur = texture.get(input.uv);
+				var dimensions = texture.size();
+				var invDimensions = 1.0 / dimensions;
+				var coord = fragCoord.xy;
+				var fragUV = coord.xy * invDimensions;
+				var p = getViewPosition(fragUV);
+				var c = texture.get(fragUV);
 				var color = vec4(0, 0, 0, 0);
-				var ncur = unpackNormal(normalTexture.get(input.uv));
-				@unroll for( i in -Quality + 1...Quality ) {
-					var uv = input.uv + pixel * offsets[i < 0 ? -i : i];
-					var c = texture.get(uv);
-					var p = getPosition(uv);
-					var d = (p - pcur).dot(p - pcur);
-					var n = unpackNormal(normalTexture.get(uv));
 
-					c = mix(ccur, c, ncur.dot(n));
-					c = mix(c, ccur, ((d - 0.001).max(0.) * 100000).min(1.));
+				var isEdge = false;
+
+				@unroll for( i in -Quality...Quality + 1 ) {
+					var curCoord = floor(coord + ( pixel * dimensions ) * vec2(1.0) * i) + vec2(0.5);
+					var nearestUV = curCoord * invDimensions;
+					var pcur = getViewPosition(nearestUV);
+					var d = abs(pcur.z - p.z);
+					isEdge = isEdge || ( d > depthThreshold );
+				}
+
+				@unroll for( i in -Quality + 1...Quality ) {
+					var curCoord = floor(coord + ( pixel * dimensions ) * offsets[i < 0 ? -i : i] * i) + vec2(0.5);
+					var nearestUV = curCoord * invDimensions;
+					var uv = fragUV + pixel * offsets[i < 0 ? -i : i] * i;
+					var ccur = texture.get( ( isEdge ) ? nearestUV : uv );
+					var pcur = getViewPosition(nearestUV);
+					var d = abs(pcur.z - p.z);
+					c = ( d > depthThreshold ) ? c : ccur;
 					color += c * values[i < 0 ? -i : i];
 				}
 				pixelColor = color;
@@ -69,9 +80,9 @@ class Blur extends ScreenShader {
 			}
 		}
 
-		function getPosition( uv : Vec2 ) : Vec3 {
-			var depth = unpack(depthTexture.get(uv));
-			var temp = vec4(uvToScreen(uv), depth, 1) * cameraInverseViewProj;
+		function getViewPosition( uv : Vec2 ) : Vec3 {
+			var depth = depthTexture.get(uv).r;
+			var temp = vec4(uvToScreen(uv), depth, 1) * inverseProj;
 			var originWS = temp.xyz / temp.w;
 			return originWS;
 		}

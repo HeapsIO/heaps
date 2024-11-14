@@ -124,7 +124,7 @@ class Material extends BaseMaterial {
 			m.textureShader.killAlpha = textureShader.killAlpha;
 			m.textureShader.killAlphaThreshold = textureShader.killAlphaThreshold;
 		}
-		m.color = color;
+		m.color = color.clone();
 		m.blendMode = blendMode;
 		return m;
 	}
@@ -283,7 +283,7 @@ class Material extends BaseMaterial {
 			getPass("shadow").culling = mainPass.culling;
 	}
 
-	#if editor
+	#if (editor && js)
 	override function editProps() {
 		return new js.jquery.JQuery('
 			<dl>

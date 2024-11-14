@@ -177,6 +177,10 @@ class TextInput extends Text {
 		var oldText = text;
 
 		switch( e.keyCode ) {
+		case K.UP if( multiline ):
+			moveCursorVertically(-1);
+		case K.DOWN if( multiline ):
+			moveCursorVertically(1);
 		case K.LEFT if (K.isDown(K.CTRL)):
 			cursorIndex = getWordStart();
 		case K.LEFT:
@@ -188,9 +192,15 @@ class TextInput extends Text {
 			if( cursorIndex < text.length )
 				cursorIndex++;
 		case K.HOME:
-			cursorIndex = 0;
+			if( multiline ) {
+				var currentLine = getCurrentLine();
+				cursorIndex = currentLine.startIndex;
+			} else cursorIndex = 0;
 		case K.END:
-			cursorIndex = text.length;
+			if( multiline ) {
+				var currentLine = getCurrentLine();
+				cursorIndex = currentLine.startIndex + currentLine.value.length - 1;
+			} else cursorIndex = text.length;
 		case K.BACKSPACE, K.DELETE if( selectionRange != null ):
 			if( !canEdit ) return;
 			beforeChange();
@@ -348,6 +358,68 @@ class TextInput extends Text {
 		return ret;
 	}
 
+	function moveCursorVertically(yDiff: Int){
+		if( !multiline || yDiff == 0)
+			return;
+		var lines = [];
+		var cursorLineIndex = -1, currLineIndex = 0, currIndex = 0;
+		for( line in getAllLines() ) {
+			lines.push( { line: line, startIndex: currIndex } );
+			var prevIndex = currIndex;
+			currIndex += line.length;
+			if( cursorIndex >= prevIndex && cursorIndex < currIndex )
+				cursorLineIndex = currLineIndex;
+			currLineIndex++;
+		}
+		if (cursorLineIndex == -1)
+			return;
+		var destinationIndex = hxd.Math.iclamp(cursorLineIndex + yDiff, -1, lines.length);
+		if (destinationIndex == cursorLineIndex)
+			return;
+		// We're moving down from the last line, move to the end of the line
+		if( destinationIndex == lines.length) {
+			cursorIndex = text.length;
+			return;
+		}
+		// We're moving up from the first line, snap to beginning
+		if( destinationIndex == -1 ) {
+			cursorIndex = 0;
+			return;
+		}
+		var current = lines[cursorLineIndex];
+		var xOffset = 0.;
+		var prevCC: Null<Int> = null;
+		var cI = 0;
+		while( current.startIndex + cI < cursorIndex) {
+			var cc = current.line.charCodeAt(cI);
+			var c = font.getChar(cc);
+			xOffset += c.width + c.getKerningOffset(prevCC) + letterSpacing;
+			prevCC = cc;
+			cI++;
+		}
+		var destination = lines[destinationIndex];
+		var currOffset = 0.;
+		prevCC = null;
+		for( cI in 0...destination.line.length ) {
+			var cc = StringTools.fastCodeAt(destination.line, cI);
+			var c = font.getChar(cc);
+			var newCurrOffset = currOffset + c.width + c.getKerningOffset(prevCC) + letterSpacing;
+			if( newCurrOffset > xOffset ) {
+				cursorIndex = destination.startIndex + cI + 1;
+				if( xOffset - currOffset < newCurrOffset - xOffset )
+					cursorIndex--;
+				return;
+			}
+			currOffset = newCurrOffset;
+			prevCC = cc;
+		}
+		cursorIndex = destination.startIndex + destination.line.length;
+		// The last character in this line may be the \n, check for this and move back by one.
+		// we can't just assume this because the last line typically won't end with a newline.
+		if( destination.line.charAt(destination.line.length-1) == "\n")
+			cursorIndex--;
+	}
+
 	function setState(h:TextHistoryElement) {
 		text = h.t;
 		cursorIndex = h.c;
@@ -388,23 +460,22 @@ class TextInput extends Text {
 		return finalLines;
 	}
 
-	function getCurrentLine() : String {
+	function getCurrentLine() : {value: String, startIndex: Int} {
 		var lines = getAllLines();
 		var currIndex = 0;
-
-		for(i in 0...lines.length) {
-			currIndex += lines[i].length;
-			if(cursorIndex < currIndex) {
-				return lines[i];
-			}
+		for( i in 0...lines.length ) {
+			var newCurrIndex = currIndex + lines[i].length;
+			if( cursorIndex < newCurrIndex )
+				return { value: lines[i], startIndex: currIndex };
+			currIndex = newCurrIndex;
 		}
-		return '';
+		return { value: '', startIndex: -1 };
 	}
 
 	function getCursorXOffset() {
 		var lines = getAllLines();
 		var offset = cursorIndex;
-		var currLine = getCurrentLine();
+		var currLine = getCurrentLine().value;
 		var currIndex = 0;
 
 		for(i in 0...lines.length) {

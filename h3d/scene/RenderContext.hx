@@ -17,6 +17,7 @@ class RenderContext extends h3d.impl.RenderContext {
 	public var drawPass : h3d.pass.PassObject;
 	public var pbrLightPass : h3d.mat.Pass;
 	public var computingStatic : Bool;
+	public var computeVelocity : Bool;
 
 	public var lightSystem : h3d.scene.LightSystem;
 	public var extraShaders : hxsl.ShaderList;
@@ -24,6 +25,7 @@ class RenderContext extends h3d.impl.RenderContext {
 	public var debugCulling : Bool;
 	public var wasContextLost : Bool;
 	public var cullingCollider : h3d.col.Collider;
+	public var forcedScreenRatio : Float = -1;
 
 	@global("camera.view") var cameraView : h3d.Matrix;
 	@global("camera.zNear") var cameraNear : Float;
@@ -34,19 +36,26 @@ class RenderContext extends h3d.impl.RenderContext {
 	@global("camera.projFlip") var cameraProjFlip : Float;
 	@global("camera.viewProj") var cameraViewProj : h3d.Matrix;
 	@global("camera.inverseViewProj") var cameraInverseViewProj : h3d.Matrix;
+	@global("camera.previousViewProj") var cameraPreviousViewProj : h3d.Matrix;
+	@global("camera.jitterOffsets") var cameraJitterOffsets : h3d.Vector4;
 	@global("global.time") var globalTime : Float;
 	@global("global.pixelSize") var pixelSize : h3d.Vector;
 	@global("global.modelView") var globalModelView : h3d.Matrix;
 	@global("global.modelViewInverse") var globalModelViewInverse : h3d.Matrix;
+	@global("global.previousModelView") var globalPreviousModelView : h3d.Matrix;
 
 	var allocPool : h3d.pass.PassObject;
 	var allocFirst : h3d.pass.PassObject;
-	var computeLink = new hxsl.ShaderList(null,null);
+	var tmpComputeLink = new hxsl.ShaderList(null,null);
+	var computeLink : hxsl.ShaderList;
 	var cachedShaderList : Array<hxsl.ShaderList>;
 	var cachedPassObjects : Array<Renderer.PassObjects>;
 	var cachedPos : Int;
 	var passes : Array<h3d.pass.PassObject>;
 	var lights : Light;
+
+	var cameraFrustumBuffer : h3d.Buffer = null;
+	var cameraFrustumUploaded : Bool = false;
 
 	public function new(scene) {
 		super();
@@ -64,6 +73,10 @@ class RenderContext extends h3d.impl.RenderContext {
 		cameraProj = cam.mproj;
 		cameraPos = cam.pos;
 		cameraProjDiag = new h3d.Vector4(cam.mproj._11,cam.mproj._22,cam.mproj._33,cam.mproj._44);
+		if ( cameraPreviousViewProj == null )
+			cameraPreviousViewProj = cam.m.clone();
+		if (cameraJitterOffsets == null)
+			cameraJitterOffsets = new h3d.Vector4( 0.0, 0.0, 0.0, 0.0 );
 		cameraViewProj = cam.m;
 		cameraInverseViewProj = camera.getInverseViewProj();
 	}
@@ -94,6 +107,7 @@ class RenderContext extends h3d.impl.RenderContext {
 		lights = null;
 		cachedPos = 0;
 		visibleFlag = true;
+		forcedScreenRatio = -1;
 		time += elapsedTime;
 		frame++;
 		setCurrent();
@@ -146,16 +160,25 @@ class RenderContext extends h3d.impl.RenderContext {
 		return sl;
 	}
 
-	public function computeDispatch( shader : hxsl.Shader, x = 1, y = 1, z = 1 ) {
+	public function computeList(list : hxsl.ShaderList) {
+		if ( computeLink != null )
+			throw "Use computeDispatch to dispatch computeList";
+		computeLink = list;
+	}
 
+	public function computeDispatch( ?shader : hxsl.Shader, x = 1, y = 1, z = 1 ) {
 		var prev = h3d.impl.RenderContext.get();
 		if( prev != this )
 			start();
 
 		// compile shader
 		globals.resetChannels();
-		shader.updateConstants(globals);
-		computeLink.s = shader;
+		if ( shader != null ) {
+			tmpComputeLink.s = shader;
+			computeLink = tmpComputeLink;
+		}
+		for ( s in computeLink )
+			s.updateConstants(globals);
 		var rt = hxsl.Cache.get().link(computeLink, Compute);
 		// upload buffers
 		engine.driver.selectShader(rt);
@@ -163,12 +186,15 @@ class RenderContext extends h3d.impl.RenderContext {
 		buf.grow(rt);
 		fillGlobals(buf, rt);
 		engine.uploadShaderBuffers(buf, Globals);
-		fillParams(buf, rt, computeLink);
+		fillParams(buf, rt, computeLink, true);
 		engine.uploadShaderBuffers(buf, Params);
 		engine.uploadShaderBuffers(buf, Textures);
 		engine.uploadShaderBuffers(buf, Buffers);
 		engine.driver.computeDispatch(x,y,z);
-		computeLink.s = null;
+		@:privateAccess engine.dispatches++;
+		if ( computeLink == tmpComputeLink )
+			tmpComputeLink.s = null;
+		computeLink = null;
 
 		if( prev != this ) {
 			done();
@@ -179,6 +205,34 @@ class RenderContext extends h3d.impl.RenderContext {
 	public function emitLight( l : Light ) {
 		l.next = lights;
 		lights = l;
+	}
+
+	public function getCameraFrustumBuffer() {
+		if ( cameraFrustumBuffer == null )
+			cameraFrustumBuffer = hxd.impl.Allocator.get().allocBuffer( 6, hxd.BufferFormat.VEC4_DATA, UniformDynamic );
+
+		if ( !cameraFrustumUploaded ) {
+			inline function fillBytesWithPlane( buffer : haxe.io.Bytes, startPos : Int, plane : h3d.col.Plane ) {
+				buffer.setFloat( startPos, 			@:privateAccess plane.nx );
+				buffer.setFloat( startPos + 4, 		@:privateAccess plane.ny );
+				buffer.setFloat( startPos + 8, 		@:privateAccess plane.nz );
+				buffer.setFloat( startPos + 12, 	@:privateAccess plane.d	);
+			}
+
+			var tmp = haxe.io.Bytes.alloc( 16 * 6 );
+			var frustum = camera.frustum;
+			fillBytesWithPlane( tmp, 0, 	frustum.pleft 	);
+			fillBytesWithPlane( tmp, 16, 	frustum.pright 	);
+			fillBytesWithPlane( tmp, 32, 	frustum.ptop 	);
+			fillBytesWithPlane( tmp, 48, 	frustum.pbottom );
+			fillBytesWithPlane( tmp, 64, 	frustum.pfar 	);
+			fillBytesWithPlane( tmp, 80, 	frustum.pnear 	);
+
+			cameraFrustumBuffer.uploadBytes(tmp, 0, 6);
+			cameraFrustumUploaded = true;
+		}
+
+		return cameraFrustumBuffer;
 	}
 
 	public function uploadParams() {
@@ -212,7 +266,19 @@ class RenderContext extends h3d.impl.RenderContext {
 		}
 		passes = [];
 		lights = null;
+
+		cameraFrustumUploaded = false;
+		
+		cameraPreviousViewProj.load(cameraViewProj);
+		computeVelocity = false;
+
 		clearCurrent();
+	}
+
+	override public function dispose() {
+		super.dispose();
+		if ( cameraFrustumBuffer != null )
+			hxd.impl.Allocator.get().disposeBuffer( cameraFrustumBuffer );
 	}
 
 }

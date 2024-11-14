@@ -26,13 +26,16 @@ typedef ConvertCommand = {
 
 class FileConverter {
 
+	// Date implementation has a second resolution on some platforms.
+	public static final FILE_TIME_PRECISION = 1000;
+
 	public var configuration(default,null) : String;
 
 	var baseDir : String;
 	var tmpDir : String;
 	var configs : Map<String,ConvertConfig> = new Map();
 	var defaultConfig : ConvertConfig;
-	var cache : Map<String,Array<{ out : String, time : Int, hash : String, ver : Null<Int> }>>;
+	var cache : Map<String,Array<{ out : String, time : Int, hash : String, ver : Null<Int>, milliseconds : Null<Int> }>>;
 	var cacheTime : Float;
 
 	static var extraConfigs:Array<Dynamic> = [];
@@ -68,7 +71,8 @@ class FileConverter {
 		var defaultCfg : Dynamic = {
 			"fs.convert" : {
 				"fbx" : { "convert" : "hmd", "priority" : -1 },
-				"fnt" : { "convert" : "bfnt", "priority" : -1 }
+				"fnt" : { "convert" : "bfnt", "priority" : -1 },
+				"svg" : { "convert" : "png", "priority" : -1 }
 			}
 		};
 		for ( conf in extraConfigs ) {
@@ -181,11 +185,17 @@ class FileConverter {
 	}
 
 	function loadConfig( dir : String ) : ConvertConfig {
-		var c = configs.get(dir);
+		return getConfig(configs, defaultConfig, dir, function(fullObj) {
+			return makeConfig(fullObj);
+		});
+	}
+
+	function getConfig(cachedConfigs : Map<String, Dynamic>, defaultConfig : Dynamic, dir : String, makeConfig : Dynamic -> Dynamic) : Dynamic {
+		var c = cachedConfigs.get(dir);
 		if( c != null ) return c;
 		var dirPos = dir.lastIndexOf("/");
-		var parent = dir == "" ? defaultConfig : loadConfig(dirPos < 0 ? "" : dir.substr(0,dirPos));
-		var propsFile = (dir == "" ? baseDir : baseDir + dir + "/")+"props.json";
+		var parent = dir == "" ? defaultConfig : getConfig(cachedConfigs, defaultConfig, dirPos < 0 ? "" : dir.substr(0,dirPos), (fullObj) -> makeConfig(fullObj));
+		var propsFile = (dir == "" ? baseDir : baseDir + dir + "/") +"props.json";
 		if( !sys.FileSystem.exists(propsFile) ) {
 			c = parent;
 		} else {
@@ -194,7 +204,7 @@ class FileConverter {
 			var fullObj = mergeRec(parent.obj, obj);
 			c = makeConfig(fullObj);
 		}
-		configs.set(dir, c);
+		cachedConfigs.set(dir, c);
 		return c;
 	}
 
@@ -296,6 +306,7 @@ class FileConverter {
 				time : 0,
 				hash : "",
 				ver: conv.version,
+				milliseconds : #if js 0 #else null #end
 			};
 			entry.push(match);
 		}
@@ -304,16 +315,23 @@ class FileConverter {
 
 		if( !sys.FileSystem.exists(fullPath) ) throw "Missing "+fullPath;
 
-		var time = std.Math.floor(getFileTime(fullPath) / 1000);
+		var fileTime = getFileTime(fullPath);
+		var time = std.Math.floor(fileTime / FILE_TIME_PRECISION);
+		#if js
+		var milliseconds = std.Math.floor(fileTime) - time * FILE_TIME_PRECISION;
+		#else
+		var milliseconds = null;
+		#end
 		var alreadyGen = sys.FileSystem.exists(fullOutPath) && match.ver == conv.version #if disable_res_cache && false #end;
 
-		if( alreadyGen && match.time == time )
+		if( alreadyGen && match.time == time #if js && (match.milliseconds == null || match.milliseconds == milliseconds ) #end )
 			return; // not changed (time stamp)
 
 		var content = hxd.File.getBytes(fullPath);
 		var hash = haxe.crypto.Sha1.make(content).toHex();
 		if( alreadyGen && match.hash == hash ) {
 			match.time = time;
+			match.milliseconds = milliseconds;
 			saveCache();
 			return; // not changed (hash)
 		}
@@ -325,27 +343,31 @@ class FileConverter {
 		conv.srcBytes = content;
 		conv.originalFilename = e.name;
 		conv.params = params;
+		conv.hash = hash;
 		onConvert(conv);
-		var prev = hxd.System.allowTimeout;
-		hxd.System.allowTimeout = false;
-		conv.convert();
-		if( prev ) hxd.System.timeoutTick();
-		hxd.System.allowTimeout = prev;
+		executeConvert(conv);
+		conv.hash = null;
 		conv.srcPath = null;
 		conv.dstPath = null;
 		conv.srcBytes = null;
 		conv.originalFilename = null;
-		#if !macro
-		hxd.System.timeoutTick();
-		#end
 
 		if( !sys.FileSystem.exists(fullOutPath) )
 			throw "Converted output file "+fullOutPath+" was not created";
 
 		match.ver = conv.version;
 		match.time = time;
+		match.milliseconds = milliseconds;
 		match.hash = hash;
 		saveCache();
+	}
+
+	dynamic function executeConvert( conv : Convert ) {
+		var prev = hxd.System.allowTimeout;
+		hxd.System.allowTimeout = false;
+		conv.convert();
+		if( prev ) hxd.System.timeoutTick();
+		hxd.System.allowTimeout = prev;
 	}
 
 }

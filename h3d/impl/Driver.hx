@@ -10,7 +10,7 @@ typedef Texture = { t : js.html.webgl.Texture, width : Int, height : Int, intern
 typedef Query = {};
 #elseif hlsdl
 typedef GPUBuffer = sdl.GL.Buffer;
-typedef Texture = { t : sdl.GL.Texture, width : Int, height : Int, internalFmt : Int, pixelFmt : Int, bits : Int, bind : Int, bias : Float, startMip : Int };
+typedef Texture = { t : sdl.GL.Texture, width : Int, height : Int, internalFmt : Int, pixelFmt : Int, bits : Int, bind : Int, bias : Float, startMip : Int #if multidriver, driver : Driver #end };
 typedef Query = { q : sdl.GL.Query, kind : QueryKind };
 #elseif usegl
 typedef GPUBuffer = haxe.GLTypes.Buffer;
@@ -263,6 +263,9 @@ class Driver {
 
 	public function readBufferBytes( b : Buffer, startVertex : Int, vertexCount : Int, buf : haxe.io.Bytes, bufPos : Int ) {
 		throw "Driver does not allow to read vertex bytes";
+	}
+
+	public function onTextureBiasChanged( t : h3d.mat.Texture ) {
 	}
 
 	/**

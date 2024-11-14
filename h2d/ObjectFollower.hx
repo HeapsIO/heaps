@@ -55,6 +55,11 @@ class ObjectFollower extends Object {
 	**/
 	public var cameraRelative : Bool = false;
 
+	/**
+		If enabled, the ObjectFollower will remove itself if the object followed is null or removed.
+	**/
+	public var autoRemove : Bool = false;
+
 	var zValue : Float = 0.;
 	var outputScale : Float = 1.;
 	var tmpPos = new h3d.Vector();
@@ -71,11 +76,17 @@ class ObjectFollower extends Object {
 	}
 
 	function followObject() {
-		if( follow == null )
+		if( follow == null ) {
+			if ( autoRemove )
+				remove();		
 			return;
+		}
 		var scene = @:privateAccess follow.getScene();
-		if( scene == null )
+		if( scene == null ) {
+			if ( autoRemove )
+				remove();
 			return;
+		}
 		var s2d = getScene();
 		var width = s2d == null ? h3d.Engine.getCurrent().width : s2d.width;
 		var height = s2d == null ? h3d.Engine.getCurrent().height : s2d.height;

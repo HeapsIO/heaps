@@ -275,6 +275,28 @@ class Vector4Impl /*#if apicheck implements h2d.impl.PointApi<Vector4,Matrix> #e
 		return new h3d.Vector4(h, s, l, a);
 	}
 
+	public function toColorHSV() {
+	    var max = hxd.Math.max(hxd.Math.max(r, g), b);
+		var min = hxd.Math.min(hxd.Math.min(r, g), b);
+		var h, s, v = max;
+
+		if(max == min)
+			h = s = 0.0; // achromatic
+		else {
+			var d = max - min;
+			s = (max + min) > 1.0 ? d / (2 - max - min) : d / (max + min);
+			if(max == r)
+				h = (g - b) / d + (g < b ? 6.0 : 0.0);
+			else if(max == g)
+				h = (b - r) / d + 2.0;
+			else
+				h = (r - g) / d + 4.0;
+			h *= Math.PI / 3.0;
+		}
+
+		return new h3d.Vector4(h, s, v, a);
+	}
+
 }
 
 

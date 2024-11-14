@@ -296,21 +296,6 @@ class Linker {
 		s.deps = new Map();
 		for( r in s.readVars )
 			buildDependency(s, r, s.writeMap.exists(r.id));
-		// propagate fragment flag
-		if( s.vertex == null )
-			for( d in s.deps.keys() )
-				if( d.vertex == false ) {
-					debug(s.name + " marked as fragment because of " + d.name);
-					s.vertex = false;
-					break;
-				}
-		// propagate vertex flag
-		if( s.vertex )
-			for( d in s.deps.keys() )
-				if( d.vertex == null ) {
-					debug(d.name + " marked as vertex because of " + s.name);
-					d.vertex = true;
-				}
 	}
 
 	function collect( cur : ShaderInfos, out : Array<ShaderInfos>, vertex : Bool ) {
@@ -378,6 +363,7 @@ class Linker {
 			init : [-3000],
 			vert : [-2000],
 			frag : [-1000],
+			main : [-2500],
 		};
 		for( s in shadersData ) {
 			for( f in s.funs ) {
@@ -397,6 +383,7 @@ class Linker {
 					var status : Null<Bool> = switch( f.ref.name ) {
 					case "__init__vertex": prio = initPrio.vert; true;
 					case "__init__fragment": prio = initPrio.frag; false;
+					case "__init__main": prio = initPrio.main; false;
 					default: prio = initPrio.init; null;
 					}
 					switch( f.expr.e ) {
@@ -448,9 +435,29 @@ class Linker {
 					break;
 				}
 			if( onlyParams ) {
-				debug("Force " + s.name+" into fragment since it only reads params");
+				debug("Force " + s.name + " into fragment since it only reads params");
 				s.vertex = false;
 			}
+		}
+
+		for( s in shaders ) {
+			if ( s.deps == null)
+				continue;
+			// propagate fragment flag
+			if( s.vertex == null )
+				for( d in s.deps.keys() )
+					if( d.vertex == false ) {
+						debug(s.name + " marked as fragment because of " + d.name);
+						s.vertex = false;
+						break;
+					}
+			// propagate vertex flag
+			if( s.vertex )
+				for( d in s.deps.keys() )
+					if( d.vertex == null ) {
+						debug(d.name + " marked as vertex because of " + s.name);
+						d.vertex = true;
+					}
 		}
 
 		// collect needed dependencies

@@ -1,15 +1,20 @@
 package hxd.impl;
 
-typedef AllocPos = #if track_alloc AllocPosImpl #else {} #end
+class AllocPos {
 
-#if track_alloc
-class AllocPosImpl {
+	static var ENABLED : Bool = false;
 
 	public var position : String;
 	public var stack : Array<String> = [];
 	public static var ENGINE_PACKAGES = ["h3d","hxd","h2d","haxe","sys","hrt" /* HIDE */];
 
-	public function new() {
+	public static function make() {
+		if ( !ENABLED )
+			return null;
+		return new AllocPos();
+	}
+	
+	function new() {
 		var curStack = haxe.CallStack.callStack();
 		curStack.shift();
 		for( s in curStack ) {
@@ -35,4 +40,3 @@ class AllocPosImpl {
 	}
 
 }
-#end

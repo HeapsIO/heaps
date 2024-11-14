@@ -333,6 +333,18 @@ class CustomParser extends domkit.CssValue.ValueParser {
 			#else
 				new h2d.filter.Glow(c, a, r, g, q, b);
 			#end
+		case VCall("glow",[VIdent("none"), r, g, q]):
+			var r = parseFloat(r);
+			var g = parseFloat(g);
+			var q = parseFloat(q);
+			#if macro
+				true;
+			#else
+				var glow = new h2d.filter.Glow(0xFFFFFF, 0., r, g, q);
+				// since 'hasFixedColor' is set to false, alpha will be ignored.
+				@:privateAccess glow.pass.shader.hasFixedColor = false;
+				glow;
+			#end
 		case VCall("blur",[r]):
 			var r = parseFloat(r);
 			#if macro
@@ -349,6 +361,33 @@ class CustomParser extends domkit.CssValue.ValueParser {
 			#end
 		default: invalidProp();
 		}
+	}
+
+	public function transitionColorAdjust(col1: h3d.Matrix.ColorAdjust, col2: h3d.Matrix.ColorAdjust, t: Float) {
+		inline function defaultValues(col: h3d.Matrix.ColorAdjust) {
+			var c : h3d.Matrix.ColorAdjust = { saturation: 0, lightness: 0,	hue: 0,	contrast: 0, gain: { color: 0, alpha: 0 } };
+			if (col != null) {
+				if (col.saturation != null) c.saturation = col.saturation;
+				if (col.lightness != null) c.lightness = col.lightness;
+				if (col.hue != null) c.hue = col.hue;
+				if (col.contrast != null) c.contrast = col.contrast;
+				if (col.gain != null) c.gain = col.gain;
+			}
+			return c;
+		}
+
+		var col1 = defaultValues(col1);
+		var col2 = defaultValues(col2);
+		return {
+			saturation: hxd.Math.lerp(col1.saturation, col2.saturation, t),
+			lightness: hxd.Math.lerp(col1.lightness, col2.lightness, t),
+			hue: hxd.Math.lerp(col1.hue, col2.hue, t),
+			contrast: hxd.Math.lerp(col1.contrast, col2.contrast, t),
+			gain: {
+				color: transitionColor(col1.gain.color, col2.gain.color, t),
+				alpha: hxd.Math.lerp(col1.gain.alpha, col2.gain.alpha, t)
+			}
+		};
 	}
 
 	public function parseColorAdjust(value:CssValue) : h3d.Matrix.ColorAdjust {
@@ -385,6 +424,30 @@ class CustomParser extends domkit.CssValue.ValueParser {
 		return adj;
 	}
 
+	public function parseAngleRad(value:CssValue) : Float {
+		return switch(value) {
+			case VUnit(v, "rad"):
+				v;
+			case VUnit(v, "deg"):
+				hxd.Math.degToRad(v);
+			default:
+				parseFloat(value);
+		}
+		return 0.;
+	}
+
+	public function parseAngleDeg(value:CssValue) : Float {
+		return switch(value) {
+			case VUnit(v, "rad"):
+				hxd.Math.radToDeg(v);
+			case VUnit(v, "deg"):
+				v;
+			default:
+				parseFloat(value);
+		}
+		return 0.;
+	}
+
 }
 
 #if !macro
@@ -394,11 +457,11 @@ class ObjectComp implements h2d.domkit.Object implements domkit.Component.Compon
 	@:p var x : Float;
 	@:p var y : Float;
 	@:p var alpha : Float = 1;
-	@:p var rotation : Float;
+	@:p(angleRad) var rotation : Float;
 	@:p var visible : Bool = true;
 	@:p(scale) var scale : { x : Float, y : Float };
-	@:p var scaleX : Float;
-	@:p var scaleY : Float;
+	@:p var scaleX : Float = 1;
+	@:p var scaleY : Float = 1;
 	@:p var blend : h2d.BlendMode = Alpha;
 	@:p(filter) var filter : h2d.filter.Filter;
 	@:p var filterSmooth : Bool;
@@ -578,7 +641,7 @@ class DrawableComp extends ObjectComp implements domkit.Component.ComponentDecl<
 
 	@:p(colorF) @:t(colorF) #if domkit_drawable_color var color #else var tint #end : h3d.Vector4;
 	@:p(auto) var smooth : Null<Bool>;
-	@:p(colorAdjust) var colorAdjust : Null<h3d.Matrix.ColorAdjust>;
+	@:p(colorAdjust) @:t(colorAdjust) var colorAdjust : Null<h3d.Matrix.ColorAdjust>;
 	@:p var tileWrap : Bool;
 
 	static function #if domkit_drawable_color set_color #else set_tint #end( o : h2d.Drawable, v ) {
@@ -626,6 +689,8 @@ class BitmapComp extends DrawableComp implements domkit.Component.ComponentDecl<
 
 	@:p(tile) var src : h2d.Tile;
 	@:p(tilePos) var srcPos : { p : Int, ?y : Int };
+	@:p var srcFlipX : Null<Bool>;
+	@:p var srcFlipY : Null<Bool>;
 	@:p var srcPosX : Null<Int>;
 	@:p var srcPosY : Null<Int>;
 	@:p(auto) var width : Null<Float>;
@@ -651,6 +716,14 @@ class BitmapComp extends DrawableComp implements domkit.Component.ComponentDecl<
 		o.tile = setTilePosY(o.tile, y);
 	}
 
+	static function set_srcFlipX( o : h2d.Bitmap, b: Bool ) {
+		o.tile = setTileFlipX(o.tile, b);
+	}
+
+	static function set_srcFlipY( o : h2d.Bitmap, b: Bool ) {
+		o.tile = setTileFlipY(o.tile, b);
+	}
+
 	static function setTilePos( t : h2d.Tile, pos : Null<{ p : Int, ?y : Int }> ) {
 		if( t == null ) return null;
 		if( pos == null ) pos = {p:0};
@@ -674,6 +747,30 @@ class BitmapComp extends DrawableComp implements domkit.Component.ComponentDecl<
 		if( t == null ) return null;
 		t = t.clone();
 		t.setPosition(t.ix, y * t.iheight);
+		return t;
+	}
+
+	static function setTileFlipX(t : h2d.Tile, b : Bool) {
+		if (t == null) return null;
+		var xFlip = t.u2 < t.u;
+		if (xFlip != b) {
+			t = t.clone();
+			var tmp = t.u;
+			t.u = t.u2;
+			t.u2 = tmp;
+		}
+		return t;
+	}
+
+	static function setTileFlipY(t : h2d.Tile, b : Bool) {
+		if (t == null) return null;
+		var yFlip = t.v2 < t.v;
+		if (yFlip != b) {
+			t = t.clone();
+			var tmp = t.v;
+			t.v = t.v2;
+			t.v2 = tmp;
+		}
 		return t;
 	}
 
@@ -747,6 +844,7 @@ class ScaleGridComp extends DrawableComp implements domkit.Component.ComponentDe
 	@:p var ignoreScale : Bool;
 	@:p var borderScale : Float;
 	@:p var tileBorders : Bool;
+	@:p var tileCenter : Bool;
 	@:p var width : Float;
 	@:p var height : Float;
 
@@ -764,6 +862,10 @@ class ScaleGridComp extends DrawableComp implements domkit.Component.ComponentDe
 
 	static function set_tileBorders(o : h2d.ScaleGrid, v) {
 		o.tileBorders = v;
+	}
+
+	static function set_tileCenter(o : h2d.ScaleGrid, v) {
+		o.tileCenter = v;
 	}
 
 	static function set_width( o : h2d.ScaleGrid, v : Float ) {
@@ -791,6 +893,7 @@ class FlowComp extends ObjectComp implements domkit.Component.ComponentDecl<h2d.
 	@:p var backgroundTilePosY : Null<Int>;
 	@:p var backgroundAlpha : Float = 1;
 	@:p(auto) var backgroundSmooth : Null<Bool>;
+	@:p var backgroundRepeat : Bool;
 	@:p var debug : Bool;
 	@:p var layout : h2d.Flow.FlowLayout;
 	@:p var vertical : Bool;
@@ -866,6 +969,11 @@ class FlowComp extends ObjectComp implements domkit.Component.ComponentDecl<h2d.
 
 	static function set_backgroundTile( o : h2d.Flow, t ) {
 		o.backgroundTile = t;
+	}
+
+	static function set_backgroundRepeat( o : h2d.Flow, v ) {
+		@:privateAccess if( o.background != null )
+			o.background.tileBorders = o.background.tileCenter = v;
 	}
 
 	static function set_backgroundTilePos( o : h2d.Flow, pos ) {
@@ -1004,6 +1112,7 @@ class InputComp extends TextComp implements domkit.Component.ComponentDecl<h2d.T
 	@:p(tile) var selection : h2d.Tile;
 	@:p var edit : Bool;
 	@:p(color) @:t(color) var backgroundColor : Null<Int>;
+	@:p var multiline : Bool;
 
 	static function create( parent : h2d.Object ) {
 		return new h2d.TextInput(hxd.res.DefaultFont.get(),parent);
@@ -1027,6 +1136,10 @@ class InputComp extends TextComp implements domkit.Component.ComponentDecl<h2d.T
 
 	static function set_backgroundColor( o : h2d.TextInput, col ) {
 		o.backgroundColor = col;
+	}
+
+	static function set_multiline( o : h2d.TextInput, b ) {
+		o.multiline = b;
 	}
 
 }

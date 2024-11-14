@@ -12,6 +12,7 @@ class Skin extends SkinBase {
 		};
 
 		var transformedTangent : Vec4;
+		var previousTransformedPosition : Vec3;
 
 		function vertex() {
 			transformedPosition =
@@ -29,6 +30,7 @@ class Skin extends SkinBase {
 				transformedNormal += (input.normal * mat3(bonesMatrixes[int(input.indexes.z)])) * w4;
 			}
 			
+			previousTransformedPosition = transformedPosition;
 			transformedNormal = normalize(transformedNormal);
 		}
 

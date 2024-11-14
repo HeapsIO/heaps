@@ -57,7 +57,7 @@ class Instanced extends Primitive {
 	}
 
 	override function render( engine : h3d.Engine ) {
-		if( primitive.indexes == null || primitive.buffer.isDisposed() )
+		if( primitive.buffer == null || primitive.buffer.isDisposed() )
 			primitive.alloc(engine);
 		@:privateAccess engine.flushTarget();
 		@:privateAccess if( primitive.buffers == null )

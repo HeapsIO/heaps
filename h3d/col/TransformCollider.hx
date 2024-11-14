@@ -78,6 +78,12 @@ class TransformCollider extends Collider {
 		return res;
 	}
 
+	public function dimension() {
+		var scale = mat.getScale();
+		var scaleMax = Math.max(scale.x, Math.max(scale.y, scale.z));
+		return collider.dimension() * scaleMax;
+	}
+
 	#if !macro
 	public function makeDebugObj() : h3d.scene.Object {
 		var obj = collider.makeDebugObj();

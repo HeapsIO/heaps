@@ -326,13 +326,14 @@ class Text extends Drawable {
 		if ( font == null ) font = this.font;
 		var lines = [], restPos = 0;
 		var x = leftMargin;
+		var wLastSep = 0.;
 		for( i in 0...text.length ) {
-			var cc = text.charCodeAt(i);
+			var cc = StringTools.fastCodeAt(text, i);
 			var e = font.getChar(cc);
 			var newline = cc == '\n'.code;
 			var esize = e.width + e.getKerningOffset(prevChar);
-			var nc = text.charCodeAt(i+1);
-			if( font.charset.isBreakChar(cc) && (nc == null || !font.charset.isComplementChar(nc)) ) {
+			var isComplement = (i < text.length - 1 && font.charset.isComplementChar(StringTools.fastCodeAt(text, i + 1)));
+			if( font.charset.isBreakChar(cc) && !isComplement ) {
 				if( lines.length == 0 && leftMargin > 0 && x > maxWidth ) {
 					lines.push("");
 					if ( sizes != null ) sizes.push(leftMargin);
@@ -340,10 +341,10 @@ class Text extends Drawable {
 				}
 				var size = x + esize + letterSpacing; /* TODO : no letter spacing */
 				var k = i + 1, max = text.length;
-				var prevChar = prevChar;
+				var prevChar = cc;
 				var breakFound = false;
 				while( size <= maxWidth && k < max ) {
-					var cc = text.charCodeAt(k++);
+					var cc = StringTools.fastCodeAt(text, k++);
 					if( lineBreak && (font.charset.isSpace(cc) || cc == '\n'.code ) ) {
 						breakFound = true;
 						break;
@@ -351,8 +352,12 @@ class Text extends Drawable {
 					var e = font.getChar(cc);
 					size += e.width + letterSpacing + e.getKerningOffset(prevChar);
 					prevChar = cc;
-					var nc = text.charCodeAt(k+1);
-					if( font.charset.isBreakChar(cc) && (nc == null || !font.charset.isComplementChar(nc)) ) break;
+					if ( font.charset.isBreakChar(cc) ) {
+						if ( k >= text.length )
+							break;
+						var nc = StringTools.fastCodeAt(text, k);
+						if ( !font.charset.isComplementChar(nc) ) break;
+					}
 				}
 				if( lineBreak && (size > maxWidth || (!breakFound && size + afterData > maxWidth)) ) {
 					newline = true;
@@ -364,12 +369,19 @@ class Text extends Drawable {
 					}
 					restPos = i + 1;
 				}
+				else wLastSep = size;
+			}
+			else if( (x + esize + letterSpacing) - wLastSep > maxWidth ) {
+				newline = true;
+				lines.push(text.substr(restPos, i - restPos));
+				restPos = i + 1;
 			}
 			if( e != null && cc != '\n'.code )
 				x += esize + letterSpacing;
 			if( newline ) {
 				if ( sizes != null ) sizes.push(x);
 				x = 0;
+				wLastSep = 0.;
 				prevChar = -1;
 			} else
 				prevChar = cc;
@@ -421,7 +433,7 @@ class Text extends Drawable {
 		}
 
 		for( i in 0...t.length ) {
-			var cc = t.charCodeAt(i);
+			var cc = StringTools.fastCodeAt(t, i);
 			var e = font.getChar(cc);
 			var offs = e.getKerningOffset(prevChar);
 			var esize = e.width + offs;

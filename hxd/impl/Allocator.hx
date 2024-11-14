@@ -4,6 +4,8 @@ enum abstract BufferFlags(Int) {
 	public var Dynamic = 0;
 	public var Static = 1;
 	public var UniformDynamic = 2;
+	public var UniformReadWrite = 3;
+	public var Uniform = 4;
 	public inline function toInt() : Int {
 		return this;
 	}
@@ -22,11 +24,13 @@ class Allocator {
 			case Static: null;
 			case Dynamic: [Dynamic];
 			case UniformDynamic: [UniformBuffer,Dynamic];
+			case UniformReadWrite: [UniformBuffer, ReadWriteBuffer];
+			case Uniform: [UniformBuffer];
 			});
 	}
 
 	public function ofFloats( v : hxd.FloatBuffer, format : hxd.BufferFormat, flags : BufferFlags = Dynamic ) {
-		var nvert = Std.int(v.length / format.stride);
+		var nvert = Math.ceil(v.length / format.stride);
 		return ofSubFloats(v, nvert, format, flags);
 	}
 

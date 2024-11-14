@@ -69,9 +69,8 @@ class App implements h3d.IDrawable {
 		if( new2D != null ) {
 			sevents.removeScene(s2d);
 			sevents.addScene(scene, 0);
-		} else {
-			if( new3D != null )
-				sevents.removeScene(s3d);
+		} else if( new3D != null ) {
+			sevents.removeScene(s3d);
 			sevents.addScene(scene);
 		}
 		if( disposePrevious ) {
@@ -114,6 +113,7 @@ class App implements h3d.IDrawable {
 		if( disposePrevious )
 			this.s2d.dispose();
 		this.s2d = s2d;
+		s2d.mark = mark;
 	}
 
 	function setScene3D( s3d : h3d.scene.Scene, disposePrevious = true ) {
@@ -129,6 +129,10 @@ class App implements h3d.IDrawable {
 		s2d.render(e);
 	}
 
+	function mark(name : String) {
+		s3d.mark(name);
+	}
+
 	function setup() {
 		var initDone = false;
 		engine.onReady = staticHandler;
@@ -140,6 +144,7 @@ class App implements h3d.IDrawable {
 		};
 		s3d = new h3d.scene.Scene();
 		s2d = new h2d.Scene();
+		s2d.mark = mark;
 		sevents = new hxd.SceneEvents();
 		sevents.addScene(s2d);
 		sevents.addScene(s3d);

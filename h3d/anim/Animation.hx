@@ -102,6 +102,15 @@ class Animation {
 			events[frame].push(data);
 	}
 
+	public function removeEvent(frame : Int, data : String) {
+		if (events == null || events[frame] == null || !events[frame].contains(data))
+			throw 'Can\'t delete event $data because it doesn\'t exist at frame $frame';
+
+		events[frame].remove(data);
+		if (events[frame].length == 0)
+			events[frame] = null;
+	}
+
 	public function getEvents() return events;
 
 	public function getObjects() return objects;

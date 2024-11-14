@@ -16,9 +16,7 @@ class BigPrimitive extends Primitive {
 	var idxPos : Int = 0;
 	var startIndex : Int = 0;
 	var flushing : Bool;
-	#if track_alloc
 	var allocPos : hxd.impl.AllocPos;
-	#end
 
 	var allocator : hxd.impl.Allocator;
 
@@ -35,9 +33,7 @@ class BigPrimitive extends Primitive {
 		bounds = new h3d.col.Bounds();
 		this.allocator = alloc;
 		if( format.stride < 3 ) throw "Minimum stride = 3";
-		#if track_alloc
-		allocPos = new hxd.impl.AllocPos();
-		#end
+		allocPos = hxd.impl.AllocPos.make();
 	}
 
 	/**
@@ -136,10 +132,9 @@ class BigPrimitive extends Primitive {
 
 				allIndexes.push(idx);
 				flushing = false;
-				#if track_alloc
 				@:privateAccess b.allocPos = allocPos;
+				var idx : h3d.Buffer = idx;
 				@:privateAccess idx.allocPos = allocPos;
-				#end
 			}
 			if( PREV_BUFFER == null || PREV_BUFFER.length < tmpBuf.length )
 				PREV_BUFFER = tmpBuf;

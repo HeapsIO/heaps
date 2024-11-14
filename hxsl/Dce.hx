@@ -47,7 +47,7 @@ class Dce {
 				var i = get(v);
 				if( v.kind == Input )
 					inputs.push(i);
-				if( v.kind == Output || v.type.match(TBuffer(_,_,RW)) )
+				if( v.kind == Output || v.type.match(TBuffer(_,_,RW) | TRWTexture(_)) )
 					i.keep = true;
 			}
 		}
@@ -148,13 +148,13 @@ class Dce {
 			writeTo.pop();
 			if( isAffected.indexOf(v) < 0 )
 				isAffected.push(v);
-		case TBinop(OpAssign | OpAssignOp(_), { e : TArray({ e: TVar(v) }, i) }, e):
+		case TBinop(OpAssign | OpAssignOp(_), { e : (TArray({ e: TVar(v) }, i) | TSwiz({ e : TArray({ e : TVar(v) }, i) },_) | TField({e : TArray({ e : TVar(v) }, i) }, _)) }, e):
 			var v = get(v);
 			writeTo.push(v);
 			check(i, writeTo, isAffected);
 			check(e, writeTo, isAffected);
 			writeTo.pop();
-			if ( isAffected.indexOf(v) < 0 )
+			if( isAffected.indexOf(v) < 0 )
 				isAffected.push(v);
 		case TBlock(el):
 			var noWrite = [];
@@ -202,6 +202,14 @@ class Dce {
 			} else {
 				link(channelVars[cid], writeTo);
 			}
+		case TCall({ e : TGlobal(ImageStore)}, [{ e : TVar(v) }, uv, val]):
+			var v = get(v);
+			writeTo.push(v);
+			check(uv, writeTo, isAffected);
+			check(val, writeTo, isAffected);
+			writeTo.pop();
+			if( isAffected.indexOf(v) < 0 )
+				isAffected.push(v);
 		default:
 			e.iter(check.bind(_, writeTo, isAffected));
 		}
@@ -264,6 +272,11 @@ class Dce {
 			if( !loop.hasSideEffect() )
 				return { e : TConst(CNull), t : e.t, p : e.p };
 			return { e : TFor(v, it, loop), p : e.p, t : e.t };
+		case TMeta(m, args, em):
+			var em = mapExpr(em, isVar);
+			if( !isVar && !em.hasSideEffect() )
+				return { e : TConst(CNull), t : e.t, p : e.p };
+			return { e : TMeta(m, args, em), t : e.t, p : e.p };
 		default:
 			return e.map(function(e) return mapExpr(e,true));
 		}

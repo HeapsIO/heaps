@@ -11,6 +11,7 @@ class Serializer {
 	var types : Array<Type>;
 	var uid = 1;
 	var tid = 1;
+	var version : Int;
 
 	public function new() {
 	}
@@ -76,7 +77,7 @@ class Serializer {
 
 	function writeType( t : Type ) {
 		out.addByte(t.getIndex());
-		switch (t) {
+		switch( t ) {
 		case TVec(size, t):
 			out.addByte(size | (t.getIndex() << 3));
 		case TBytes(size):
@@ -101,11 +102,18 @@ class Serializer {
 			}
 		case TChannel(size):
 			out.addByte(size);
-		case TVoid, TInt, TBool, TFloat, TString, TMat2, TMat3, TMat4, TMat3x4, TSampler2D, TSampler2DArray, TSamplerCube:
+		case TSampler(dim, arr):
+			out.addByte((dim.getIndex() << 1) | (arr ? 1 : 0));
+		case TRWTexture(dim, arr, chans):
+			out.addByte((dim.getIndex() << 3) | (arr ? 1 : 0) | ((chans - 1) << 1));
+		case TVoid, TInt, TBool, TFloat, TString, TMat2, TMat3, TMat4, TMat3x4:
+		case __TUnused:
+			throw "assert";
 		}
 	}
 
 	static var TVECS = new Map();
+	static var TDIMS = hxsl.Ast.TexDimension.createAll();
 
 	function readType() : Type {
 		return switch( input.readByte() ) {
@@ -126,9 +134,20 @@ class Serializer {
 		case 7: TMat4;
 		case 8: TMat3x4;
 		case 9: TBytes(input.readInt32());
-		case 10: TSampler2D;
-		case 11: TSampler2DArray;
-		case 12: TSamplerCube;
+		case 10 if( version == 0 ): TSampler(T2D, false);
+		case 11 if( version == 0 ): TSampler(T2D, true);
+		case 12 if( version == 0 ): TSampler(TCube, false);
+		case 18 if( version == 0 ): TMat2;
+		case 10:
+			var b = input.readByte();
+			var dim = TDIMS[b>>1];
+			TSampler(dim, b & 1 != 0);
+		case 11:
+			var b = input.readByte();
+			var dim = TDIMS[b>>3];
+			TRWTexture(dim, b & 1 != 0, ((b>>1)&3) + 1);
+		case 12:
+			TMat2;
 		case 13:
 			var id = readVarInt();
 			var t = types[id];
@@ -154,7 +173,6 @@ class Serializer {
 			TBuffer(t, v == null ? SConst(readVarInt()) : SVar(v), kind);
 		case 17:
 			TChannel(input.readByte());
-		case 18: TMat2;
 		default:
 			throw "assert";
 		}
@@ -302,6 +320,9 @@ class Serializer {
 			writeString(m);
 			writeArr(args, writeConst);
 			writeExpr(e);
+		case TField(e,name):
+			writeExpr(e);
+			writeString(name);
 		}
 		writeType(e.t);
 		// no position
@@ -369,6 +390,7 @@ class Serializer {
 				}), readExpr());
 		case 19: TWhile(readExpr(), readExpr(), input.readByte() != 0);
 		case 20: TMeta(readString(), readArr(readConst), readExpr());
+		case 21: TField(readExpr(), readString());
 		default: throw "assert";
 		}
 		return {
@@ -437,11 +459,14 @@ class Serializer {
 		};
 	}
 
-	static var SIGN = 0x8B741D; // will be encoded to HXSL
+	static var SIGN = 0x8C741D; // will be encoded to HXSL
 
 	public function unserialize( data : String ) : ShaderData {
 		input = new haxe.io.BytesInput(haxe.crypto.Base64.decode(data,false));
-		if( input.readByte() != (SIGN & 0xFF) || input.readByte() != (SIGN >> 8) & 0xFF || input.readByte() != (SIGN >> 16) & 0xFF )
+		if( input.readByte() != (SIGN & 0xFF) || input.readByte() != (SIGN >> 8) & 0xFF )
+			throw "Invalid HXSL data";
+		version = input.readByte() - 0x8B;
+		if( version < 0 || version > 1 )
 			throw "Invalid HXSL data";
 		varMap = new Map();
 		types = [];

@@ -150,7 +150,6 @@ class DecalPBR extends BaseDecal {
 
 		@param var albedoTexture : Sampler2D;
 		@param var normalTexture : Sampler2D;
-		@param var pbrTexture : Sampler2D;
 
 
 		function __init__vertex() {
