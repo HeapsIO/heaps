@@ -48,9 +48,11 @@ class Interactive extends Object implements hxd.SceneEvents.Interactive {
 	public var showDebug(get, set) : Bool;
 
 	/**
-	 *  Tells if our shape is in absolute space (for example ObjectCollider) or relative to the interactive transform.
+	 *  Tells if our shapes are in absolute space (for example ObjectCollider) or relative to the interactive transform.
 	 */
 	public var isAbsoluteShape : Bool = false;
+
+	public var emittedLastFrame : Bool = false;
 
 	var scene : Scene;
 	var mouseDownButton : Int = -1;
@@ -125,6 +127,16 @@ class Interactive extends Object implements hxd.SceneEvents.Interactive {
 			scene = null;
 		}
 		super.onRemove();
+	}
+
+	override function sync(ctx){
+		super.sync(ctx);
+		emittedLastFrame = false;
+	}
+
+	override function emit(ctx){
+		super.emit(ctx);
+		emittedLastFrame = true;
 	}
 
 	/**

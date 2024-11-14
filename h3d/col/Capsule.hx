@@ -105,6 +105,10 @@ class Capsule extends Collider {
 		return "Capsule{" + a + "," + b + "," + hxd.Math.fmt(r) + "}";
 	}
 
+	public function dimension() {
+		return a.distance(b) + 2 * r;
+	}
+
 	#if !macro
 	public function makeDebugObj() : h3d.scene.Object {
 		var obj = new h3d.scene.Object();

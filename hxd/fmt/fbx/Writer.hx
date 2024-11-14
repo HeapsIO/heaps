@@ -3,12 +3,126 @@ package hxd.fmt.fbx;
 import hxd.fmt.fbx.Data;
 import hxd.fmt.hmd.Data;
 
+typedef ExportParams = {
+	forward: String,
+	forwardSign: String,
+	up: String,
+	upSign: String,
+}
+
+
 class Writer {
-	var out:haxe.io.Output;
-	var version:Int;
+	static var unsuported : Array<Dynamic> = [
+		h3d.scene.Interactive,
+		h3d.scene.Box,
+		#if hide hrt.prefab.fx.Emitter.EmitterObject #end
+	];
+
+	var out: haxe.io.Output;
 
 	public function new(out) {
 		this.out = out;
+	}
+
+	function getPrimitiveInfos(prim : h3d.prim.Primitive) @:privateAccess {
+		var infos : {
+			?vertexFormat : BufferFormat,
+			?vertexBuffer : Array<Float>,
+			?indexesBuffer : Array<Int>,
+			?lib : hxd.fmt.hmd.Library
+		};
+
+		infos = {};
+
+		var hmd = Std.downcast(prim, h3d.prim.HMDModel);
+		if (hmd != null) {
+			infos.vertexFormat = @:privateAccess hmd.data.vertexFormat;
+			var bufs = hmd.getDataBuffers(infos.vertexFormat);
+			infos.indexesBuffer = [for (i in 0...bufs.indexes.length) bufs.indexes[i]];
+			infos.vertexBuffer = [for (i in 0...bufs.vertexes.length) bufs.vertexes[i]];
+			infos.lib = hmd.lib;
+			return infos;
+		}
+
+		var polyPrim = Std.downcast(prim, h3d.prim.Polygon);
+		if (polyPrim != null) {
+			var format = hxd.BufferFormat.POS3D;
+			if( polyPrim.normals != null )
+				format = format.append("normal", DVec3);
+			if( polyPrim.tangents != null )
+				format = format.append("tangent", DVec3);
+			if( polyPrim.uvs != null )
+				format = format.append("uv", DVec2);
+
+			infos.vertexFormat = format;
+
+			var buf = new Array<Float>();
+			for (k in 0...polyPrim.points.length) {
+				var p = polyPrim.points[k];
+				buf.push(p.x);
+				buf.push(p.y);
+				buf.push(p.z);
+				if( polyPrim.normals != null ) {
+					var n = polyPrim.normals[k];
+					buf.push(n.x);
+					buf.push(n.y);
+					buf.push(n.z);
+				}
+				if( polyPrim.tangents != null ) {
+					var t = polyPrim.tangents[k];
+					buf.push(t.x);
+					buf.push(t.y);
+					buf.push(t.z);
+				}
+				if( polyPrim.uvs != null ) {
+					var t = polyPrim.uvs[k];
+					buf.push(t.u);
+					buf.push(t.v);
+				}
+			}
+
+			infos.vertexBuffer = buf;
+
+			if (polyPrim.idx != null)
+				infos.indexesBuffer = [for (i in 0...polyPrim.indexes.count) polyPrim.idx[i]];
+			else
+				infos.indexesBuffer = [for(i in 0...polyPrim.points.length) i];
+
+			return infos;
+		}
+
+		return null;
+	}
+
+	function resolvePathImpl( modelPath : String, filePath : String ) {
+		#if editor
+		inline function exists(path) return File.exists(path);
+		var fullPath = hide.Ide.inst.getPath(filePath);
+		if( exists(fullPath) )
+			return fullPath;
+
+		// swap drive letter
+		if( fullPath.charAt(1) == ":" && fullPath.charAt(0) != hide.Ide.inst.projectDir.charAt(0) ) {
+			fullPath = hide.Ide.inst.projectDir.charAt(0) + fullPath.substr(1);
+			if( exists(fullPath) )
+				return fullPath;
+		}
+
+		if( modelPath == null )
+			return null;
+
+		filePath = filePath.split("\\").join("/");
+		modelPath = hide.Ide.inst.getPath(modelPath);
+
+		var path = modelPath.split("/");
+		path.pop();
+		var relToModel = path.join("/") + "/" + filePath.split("/").pop();
+		if( exists(relToModel) )
+			return relToModel;
+
+		return null;
+		#end
+		return filePath;
 	}
 
 	function getTabFormat(depth:Int) {
@@ -51,28 +165,30 @@ class Writer {
 
 			case PInts(v):
 				{
-					var res = '*${v.length} {\n';
-					res += '${getTabFormat(depth + 1)}a: ';
+					var strBuf : StringBuf = new StringBuf();
+					strBuf.add('*${v.length} {\n');
+					strBuf.add('${getTabFormat(depth + 1)}a: ');
 
 					for (idx => i in v) {
-						res += '${idx != 0 ? ',' : ''}${i}';
+						strBuf.add('${idx != 0 ? ',' : ''}${i}');
 					}
 
-					res += '\n${getTabFormat(depth)}}';
-					return res;
+					strBuf.add('\n${getTabFormat(depth)}}');
+					return strBuf.toString();
 				}
 
 			case PFloats(v):
 				{
-					var res = '*${v.length} {\n';
-					res += '${getTabFormat(depth + 1)}a: ';
+					var strBuf : StringBuf = new StringBuf();
+					strBuf.add('*${v.length} {\n');
+					strBuf.add('${getTabFormat(depth + 1)}a: ');
 
 					for (idx => i in v) {
-						res += '${idx != 0 ? ',' : ''}${i}';
+						strBuf.add('${idx != 0 ? ',' : ''}${i}');
 					}
 
-					res += '\n${getTabFormat(depth)}}';
-					return res;
+					strBuf.add('\n${getTabFormat(depth)}}');
+					return strBuf.toString();
 				}
 
 			default:
@@ -81,118 +197,97 @@ class Writer {
 	}
 
 	function writeHeader() {
+		// This header is mandatory for most importers to define the fbx version
+		// of the file
 		var fbxVersion = "7.3.0";
 		out.writeString('; FBX ${fbxVersion} project file\n');
 		out.writeString('; Copyright (C) 1997-2010 Autodesk Inc. and/or its licensors.\n');
 		out.writeString('; All rights reserved.\n');
 		out.writeString('; ----------------------------------------------------\n');
 		out.writeString('\n');
-
-		writeNode(buildHeaderNode());
 	}
 
-	function buildTimeStampNode() : FbxNode{
+	function buildHeaderExtension() : FbxNode {
 		var date = Date.now();
-		var tsVersion : FbxNode = {name: "Version", props:[PInt(1000)], childs:null};
-		var tsYear : FbxNode = {name: "Year", props:[PInt(date.getFullYear())], childs:null};
-		var tsMonth : FbxNode = {name: "Month", props:[PInt(date.getMonth())], childs:null};
-		var tsDay : FbxNode = {name: "Day", props:[PInt(date.getDay())], childs:null};
-		var tsHour : FbxNode = {name: "Hour", props:[PInt(date.getHours())], childs:null};
-		var tsMinutes : FbxNode = {name: "Minute", props:[PInt(date.getMinutes())], childs:null};
-		var tsSeconds : FbxNode = {name: "Second", props:[PInt(date.getSeconds())], childs:null};
-		var tsMilliseconds : FbxNode = {name: "Millisecond", props:[PInt(0)], childs:null};
-		var ts : FbxNode = {name: "CreationTimeStamp", props:null, childs:[tsVersion, tsYear, tsMonth, tsDay, tsHour, tsMinutes, tsSeconds, tsMilliseconds]};
-		return ts;
-	}
+		var header : FbxNode = { name: "FBXHeaderExtension", props: null, childs: [
+			{ name: "FBXHeaderVersion", props: [PInt(1003)], childs: null },
+			{ name: "FBXVersion", props: [PInt(7003)], childs: null },
+			{ name: "CreationTimeStamp", props: null, childs:[
+				{ name: "Version", props:[PInt(1000)], childs:null },
+				{ name: "Year", props:[PInt(date.getFullYear())], childs:null },
+				{ name: "Month", props:[PInt(date.getMonth())], childs:null },
+				{ name: "Day", props:[PInt(date.getDay())], childs:null },
+				{ name: "Hour", props:[PInt(date.getHours())], childs:null },
+				{ name: "Minute", props:[PInt(date.getMinutes())], childs:null },
+				{ name: "Second", props:[PInt(date.getSeconds())], childs:null },
+				{ name: "Millisecond", props:[PInt(0)], childs:null}
+			] },
+			{ name: "Creator", props: [PString("")], childs: null },
+			{ name: "SceneInfo", props: [PString("SceneInfo::GlobalInfo"), PString("UserData")], childs: [
+				{ name : "Type", props: [PString("UserData")], childs: null },
+				{ name : "Version", props: [PInt(100)], childs: null },
+				{ name:"MetaData", props:null, childs: [
+					{ name:"Version", props:[PInt(100)], childs: [] },
+					{ name:"Title", props:[PString("")], childs: [] },
+					{ name:"Subject", props:[PString("")], childs: [] },
+					{ name:"Author", props:[PString("")], childs: [] },
+					{ name:"Keywords", props:[PString("")], childs: [] },
+					{ name:"Revision", props:[PString("")], childs: [] },
+					{ name:"Comment", props:[PString("")], childs: [] }
+				] },
+				{ name:"Properties70", props: null, childs:[
+					{ name:"P", props:[PString("DocumentUrl"), PString("KString"), PString("Url"), PString(""), PString("C:\\")], childs:null },
+					{ name:"P", props:[PString("SrcDocumentUrl"), PString("KString"), PString("Url"), PString(""), PString("C:\\")], childs:null },
+					{ name:"P", props:[PString("Original"), PString("Compound"), PString(""), PString("")], childs:null },
+					{ name:"P", props:[PString("Original|ApplicationVendor"), PString("KString"), PString(""), PString(""), PString("")], childs:null },
+					{ name:"P", props:[PString("Original|ApplicationName"), PString("KString"), PString(""), PString(""), PString("")], childs:null },
+					{ name:"P", props:[PString("Original|ApplicationVersion"), PString("KString"), PString(""), PString(""), PString("")], childs:null },
+					{ name:"P", props:[PString("Original|DateTime_GMT"), PString("DateTime"), PString(""), PString(""), PString("01/01/1970 00:00:00.000")], childs:null },
+					{ name:"P", props:[PString("Original|FileName"), PString("KString"), PString(""), PString(""), PString("/foobar.fbx")], childs:null },
+					{ name:"P", props:[PString("LastSaved"), PString("Compound"), PString(""), PString("")], childs:null },
+					{ name:"P", props:[PString("LastSaved|ApplicationVendor"), PString("KString"), PString(""), PString(""), PString("")], childs:null },
+					{ name:"P", props:[PString("LastSaved|ApplicationVersion"), PString("KString"), PString(""), PString(""), PString("")], childs:null },
+					{ name:"P", props:[PString("LastSaved|DateTime_GMT"), PString("DateTime"), PString(""), PString(""), PString("01/01/1970 00:00:00.000")], childs:null },
+					{ name:"P", props:[PString("Original|ApplicationNativeFile"), PString("KString"), PString(""), PString(""), PString("")], childs:null },
+				] }
+			] } ]
+		};
 
-	function buildSceneInfoMetaDataNode() : FbxNode {
-		var version : FbxNode = {name:"Version", props:[PInt(100)], childs: []};
-		var title : FbxNode = {name:"Title", props:[PString("")], childs: []};
-		var subject : FbxNode = {name:"Subject", props:[PString("")], childs: []};
-		var author : FbxNode = {name:"Author", props:[PString("")], childs: []};
-		var keywords : FbxNode = {name:"Keywords", props:[PString("")], childs: []};
-		var revision : FbxNode = {name:"Revision", props:[PString("")], childs: []};
-		var comment : FbxNode = {name:"Comment", props:[PString("")], childs: []};
-
-		var metadata : FbxNode = {name:"MetaData", props:null, childs: [version, title, subject, author, keywords, revision, comment]};
-		return metadata;
-	}
-
-	function buildSceneInfoPropertiesNode() : FbxNode {
-		var properties : FbxNode = {name:"Properties70", props: null, childs:[
-			{name:"P", props:[PString("DocumentUrl"), PString("KString"), PString("Url"), PString(""), PString("C:\\")], childs:null},
-			{name:"P", props:[PString("SrcDocumentUrl"), PString("KString"), PString("Url"), PString(""), PString("C:\\")], childs:null},
-			{name:"P", props:[PString("Original"), PString("Compound"), PString(""), PString("")], childs:null},
-			{name:"P", props:[PString("Original|ApplicationVendor"), PString("KString"), PString(""), PString(""), PString("")], childs:null},
-			{name:"P", props:[PString("Original|ApplicationName"), PString("KString"), PString(""), PString(""), PString("")], childs:null},
-			{name:"P", props:[PString("Original|ApplicationVersion"), PString("KString"), PString(""), PString(""), PString("")], childs:null},
-			{name:"P", props:[PString("Original|DateTime_GMT"), PString("DateTime"), PString(""), PString(""), PString("01/01/1970 00:00:00.000")], childs:null},
-			{name:"P", props:[PString("Original|FileName"), PString("KString"), PString(""), PString(""), PString("/foobar.fbx")], childs:null},
-			{name:"P", props:[PString("LastSaved"), PString("Compound"), PString(""), PString("")], childs:null},
-			{name:"P", props:[PString("LastSaved|ApplicationVendor"), PString("KString"), PString(""), PString(""), PString("")], childs:null},
-			{name:"P", props:[PString("LastSaved|ApplicationVersion"), PString("KString"), PString(""), PString(""), PString("")], childs:null},
-			{name:"P", props:[PString("LastSaved|DateTime_GMT"), PString("DateTime"), PString(""), PString(""), PString("01/01/1970 00:00:00.000")], childs:null},
-			{name:"P", props:[PString("Original|ApplicationNativeFile"), PString("KString"), PString(""), PString(""), PString("")], childs:null},
-		]};
-
-		return properties;
-	}
-
-	function buildSceneInfoNode() : FbxNode {
-		var type : FbxNode = {name : "Type", props: [PString("UserData")], childs: null};
-		var version : FbxNode = {name : "Version", props: [PInt(100)], childs: null};
-
-		var sceneInfo : FbxNode = {name: "SceneInfo", props:[PString("SceneInfo::GlobalInfo"), PString("UserData")], childs: [type, version, buildSceneInfoMetaDataNode(), buildSceneInfoPropertiesNode()]};
-		return sceneInfo;
-	}
-
-	function buildHeaderNode() : FbxNode {
-		var headerVersion : FbxNode = {name:"FBXHeaderVersion", props: [PInt(1003)], childs: null};
-		var version : FbxNode = {name:"FBXVersion", props: [PInt(7003)], childs: null};
-		var creator : FbxNode = {name:"Creator", props: [PString("")], childs: null};
-
-		var header : FbxNode = {name:"FBXHeaderExtension", props: null, childs: [headerVersion, version, buildTimeStampNode(), creator, buildSceneInfoNode()]};
 		return header;
 	}
 
-	function buildProperties() {
-		var properties : FbxNode = { name:"Properties70", props: null, childs: [
-			{ name: "P", props: [PString("UpAxis"), PString("int"), PString("Integer"), PString(""), PInt(2) ], childs:null },
-			{ name: "P", props: [PString("UpAxisSign"), PString("int"), PString("Integer"), PString(""), PInt(1) ], childs:null },
-			{ name: "P", props: [PString("FrontAxis"), PString("int"), PString("Integer"), PString(""), PInt(0) ], childs:null },
-			{ name: "P", props: [PString("FrontAxisSign"), PString("int"), PString("Integer"), PString(""), PInt(-1) ], childs:null },
-			{ name: "P", props: [PString("CoordAxis"), PString("int"), PString("Integer"), PString(""), PInt(1) ], childs:null },
-			{ name: "P", props: [PString("CoordAxisSign"), PString("int"), PString("Integer"), PString(""), PInt(-1) ], childs:null },
-			{ name: "P", props: [PString("OriginalUpAxis"), PString("int"), PString("Integer"), PString(""), PInt(-1) ], childs:null },
-			{ name: "P", props: [PString("OriginalUpAxisSign"), PString("int"), PString("Integer"), PString(""), PInt(1) ], childs:null },
-			{ name: "P", props: [PString("UnitScaleFactor"), PString("double"), PString("Number"), PString(""), PInt(100) ], childs:null },
-			{ name: "P", props: [PString("OriginalUnitScaleFactor"), PString("double"), PString("Number"), PString(""), PInt(1) ], childs:null },
-			{ name: "P", props: [PString("AmbientColor"), PString("ColorRGB"), PString("Color"), PString(""), PInt(0), PInt(0), PInt(0) ], childs:null },
-			{ name: "P", props: [PString("DefaultCamera"), PString("KString"), PString(""), PString(""), PString("Producer Perspective") ], childs:null },
-			{ name: "P", props: [PString("TimeMode"), PString("enum"), PString(""), PString(""), PInt(11) ], childs:null },
-			{ name: "P", props: [PString("TimeSpanStart"), PString("Ktime"), PString("Time"), PString(""), PInt(0) ], childs:null },
-			{ name: "P", props: [PString("TimeSpanStop"), PString("Ktime"), PString("Time"), PString(""), PInt(0) ], childs:null },
-			{ name: "P", props: [PString("CustomFrameRate"), PString("double"), PString("Number"), PString(""), PInt(24) ], childs:null },
-		] };
-		return properties;
-	}
-
 	function buildGlobalSettings() {
-		var version : FbxNode = {name:"Version", props: [PInt(1000)], childs: null};
-		var properties : FbxNode = buildProperties();
+		var globalSettings : FbxNode = { name:"GlobalSettings", props: null, childs: [
+			{ name:"Version", props: [PInt(1000)], childs: null },
+			{ name:"Properties70", props: null, childs: [
+				{ name: "P", props: [PString("UpAxis"), PString("int"), PString("Integer"), PString(""), PInt(2) ], childs:null },
+				{ name: "P", props: [PString("UpAxisSign"), PString("int"), PString("Integer"), PString(""), PInt(1) ], childs:null },
+				{ name: "P", props: [PString("FrontAxis"), PString("int"), PString("Integer"), PString(""), PInt(0) ], childs:null },
+				{ name: "P", props: [PString("FrontAxisSign"), PString("int"), PString("Integer"), PString(""), PInt(-1) ], childs:null },
+				{ name: "P", props: [PString("CoordAxis"), PString("int"), PString("Integer"), PString(""), PInt(1) ], childs:null },
+				{ name: "P", props: [PString("CoordAxisSign"), PString("int"), PString("Integer"), PString(""), PInt(-1) ], childs:null },
+				{ name: "P", props: [PString("OriginalUpAxis"), PString("int"), PString("Integer"), PString(""), PInt(-1) ], childs:null },
+				{ name: "P", props: [PString("OriginalUpAxisSign"), PString("int"), PString("Integer"), PString(""), PInt(1) ], childs:null },
+				{ name: "P", props: [PString("UnitScaleFactor"), PString("double"), PString("Number"), PString(""), PInt(100) ], childs:null },
+				{ name: "P", props: [PString("OriginalUnitScaleFactor"), PString("double"), PString("Number"), PString(""), PInt(1) ], childs:null },
+				{ name: "P", props: [PString("AmbientColor"), PString("ColorRGB"), PString("Color"), PString(""), PInt(0), PInt(0), PInt(0) ], childs:null },
+				{ name: "P", props: [PString("DefaultCamera"), PString("KString"), PString(""), PString(""), PString("Producer Perspective") ], childs:null },
+				{ name: "P", props: [PString("TimeMode"), PString("enum"), PString(""), PString(""), PInt(11) ], childs:null },
+				{ name: "P", props: [PString("TimeSpanStart"), PString("Ktime"), PString("Time"), PString(""), PInt(0) ], childs:null },
+				{ name: "P", props: [PString("TimeSpanStop"), PString("Ktime"), PString("Time"), PString(""), PInt(0) ], childs:null },
+				{ name: "P", props: [PString("CustomFrameRate"), PString("double"), PString("Number"), PString(""), PInt(24) ], childs:null },
+			] }
+		] };
 
-		var globalSettings : FbxNode = {name:"GlobalSettings", props: null, childs: [version, properties]};
 		return globalSettings;
 	}
 
 	function buildDefinitions(objects: Array<h3d.scene.Object>) {
-		var defGlobalSettings : FbxNode = { name:"ObjectType", props:[PString("GlobalSettings")], childs: [
-			{ name: "Count", props: [PInt(1)], childs: null }
-		] };
-
-		var meshCount = 0;
 		var materialsIds = new Array<String>();
+		var defCount = 1;
+		var meshCount = 0;
 		var materialCount = 0;
+		var textureCount = 0;
 
 		var meshes = [];
 		for (o in objects) {
@@ -205,8 +300,22 @@ class Writer {
 
 				materialsIds.push(m.name);
 				materialCount += m.getMaterials().length;
+
+				if (m.material.texture != null)
+					textureCount++;
+
+				if (m.material.normalMap != null)
+					textureCount++;
+
+				if (m.material.specularTexture != null)
+					textureCount++;
 			}
 		}
+
+		var defGlobalSettings : FbxNode = { name:"ObjectType", props:[PString("GlobalSettings")], childs: [
+			{ name: "Count", props: [PInt(1)], childs: null }
+		] };
+		defCount += 1;
 
 		var modelCount = meshCount;
 		var defModel : FbxNode = { name:"ObjectType", props:[PString("Model")], childs: [
@@ -287,6 +396,7 @@ class Writer {
 				] }
 			] }
 		] };
+		defCount += modelCount;
 
 		var geometryCount = meshCount;
 		var defGeometry : FbxNode = { name:"ObjectType", props:[PString("Geometry")], childs: [
@@ -302,6 +412,7 @@ class Writer {
 				] }
 			] }
 		] };
+		defCount += geometryCount;
 
 		var defMaterial : FbxNode = { name:"ObjectType", props:[PString("Material")], childs: [
 			{ name: "Count", props: [PInt(materialCount)], childs: null },
@@ -332,8 +443,8 @@ class Writer {
 				]}
 			] },
 		] };
+		defCount += materialCount;
 
-		var defCount = modelCount + geometryCount + materialCount + 1;
 		var definitions : FbxNode = { name:"Definitions", props: null, childs: [
 			{ name: "Version", props: [PInt(100)], childs: null },
 			{ name: "Count", props: [PInt(defCount)], childs: null },
@@ -343,122 +454,196 @@ class Writer {
 			defMaterial
 		]};
 
+		if ( textureCount != 0 ) {
+			var defTexture : FbxNode = { name:"ObjectType", props:[PString("Texture")], childs: [
+				{ name: "Count", props: [PInt(textureCount)], childs: null },
+				{ name: "PropertyTemplate", props: [PString("FbxFileTexture")], childs: [
+						{ name:"Properties70", props: null, childs: [
+						{ name: "P", props: [PString("TextureTypeUse"), PString("enum"), PString(""), PString(""), PInt(0)], childs: null },
+						{ name: "P", props: [PString("Texture alpha"), PString("Number"), PString(""), PString("A"), PFloat(1)], childs: null },
+						{ name: "P", props: [PString("CurrentMappingType"), PString("enum"), PString(""), PString(""), PInt(0)], childs: null },
+						{ name: "P", props: [PString("WrapModeU"), PString("enum"), PString(""), PString(""), PInt(0)], childs: null },
+						{ name: "P", props: [PString("WrapModeV"), PString("enum"), PString(""), PString(""), PInt(0)], childs: null },
+						{ name: "P", props: [PString("UVSwap"), PString("bool"), PString(""), PString(""), PInt(0)], childs: null },
+						{ name: "P", props: [PString("PremultiplyAlpha"), PString("bool"), PString(""), PString(""), PInt(1)], childs: null },
+						{ name: "P", props: [PString("Translation"), PString("Vector"), PString(""), PString("A"), PFloat(0), PFloat(0), PFloat(0)], childs: null },
+						{ name: "P", props: [PString("Rotation"), PString("Vector"), PString(""), PString("A"), PFloat(0), PFloat(0), PFloat(0)], childs: null },
+						{ name: "P", props: [PString("Scaling"), PString("Vector"), PString(""), PString("A"), PFloat(1), PFloat(1), PFloat(1)], childs: null },
+						{ name: "P", props: [PString("TextureRotationPivot"), PString("Vector3D"), PString("Vector"), PString(""), PFloat(0), PFloat(0), PFloat(0)], childs: null },
+						{ name: "P", props: [PString("TextureScalingPivot"), PString("Vector3D"), PString("Vector"), PString(""), PFloat(0), PFloat(0), PFloat(0)], childs: null },
+						{ name: "P", props: [PString("CurrentTextureBlendMode"), PString("enum"), PString(""), PString(""), PInt(1)], childs: null },
+						{ name: "P", props: [PString("UVSet"), PString("KString"), PString(""), PString(""), PString("default")], childs: null },
+						{ name: "P", props: [PString("UseMaterial"), PString("bool"), PString(""), PString(""), PInt(0)], childs: null },
+						{ name: "P", props: [PString("UseMipMap"), PString("bool"), PString(""), PString(""), PInt(0)], childs: null },
+					]}
+				] },
+			] };
+			defCount += textureCount;
+
+			var videoCount = textureCount;
+			var defVideo : FbxNode = { name:"ObjectType", props:[PString("FbxVideo")], childs: [
+				{ name: "Count", props: [PInt(videoCount)], childs: null },
+				{ name: "PropertyTemplate", props: [PString("FbxFileTexture")], childs: [
+						{ name:"Properties70", props: null, childs: [
+						{ name: "P", props: [PString("ImageSequence"), PString("bool"), PString(""), PString(""), PInt(0)], childs: null },
+						{ name: "P", props: [PString("ImageSequenceOffset"), PString("int"), PString("Integer"), PString(""), PInt(0)], childs: null },
+						{ name: "P", props: [PString("FrameRate"), PString("double"), PString("Number"), PString(""), PInt(0)], childs: null },
+						{ name: "P", props: [PString("LastFrame"), PString("int"), PString("Integer"), PString(""), PInt(0)], childs: null },
+						{ name: "P", props: [PString("Width"), PString("int"), PString("Integer"), PString(""), PInt(0)], childs: null },
+						{ name: "P", props: [PString("Height"), PString("int"), PString("Integer"), PString(""), PInt(0)], childs: null },
+						{ name: "P", props: [PString("Path"), PString("KString"), PString("XRefUrl"), PString(""), PString("")], childs: null },
+						{ name: "P", props: [PString("StartFrame"), PString("int"), PString("Integer"), PString(""), PInt(0)], childs: null },
+						{ name: "P", props: [PString("StopFrame"), PString("int"), PString("Integer"), PString(""), PInt(0)], childs: null },
+						{ name: "P", props: [PString("PlaySpeed"), PString("double"), PString("Number"), PString(""), PInt(0)], childs: null },
+						{ name: "P", props: [PString("Offset"), PString("Ktime"), PString("Time"), PString(""), PInt(0)], childs: null },
+						{ name: "P", props: [PString("InterlaceMode"), PString("enum"), PString(""), PString(""), PInt(0)], childs: null },
+						{ name: "P", props: [PString("FreeRunning"), PString("bool"), PString(""), PString(""), PInt(0)], childs: null },
+						{ name: "P", props: [PString("Loop"), PString("bool"), PString(""), PString(""), PInt(0)], childs: null },
+						{ name: "P", props: [PString("AccessMode"), PString("bool"), PString(""), PString(""), PInt(0)], childs: null },
+					]}
+				] },
+			] };
+
+			defCount += videoCount;
+
+			definitions.childs.push(defTexture);
+			definitions.childs.push(defVideo);
+		}
+
 		return definitions;
 	}
 
-	function buildObjects(objects: Array<h3d.scene.Object>, objectTreeRoot : Dynamic, params : Dynamic, usedMaterials : Array<Dynamic>) {
+	function buildObjects(objects: Array<h3d.scene.Object>, params : Dynamic, objectRegistry : Array<Dynamic>) {
 		var objectsNode : FbxNode = { name: "Objects", props: null, childs: [] };
-		var input = { objectsNode : objectsNode, nextFreeId : 1, usedMaterials : usedMaterials};
+		var nextFreeId = 1;
 
-		function buildObject(object : h3d.scene.Object, input : Dynamic, isRoot : Bool, params : Dynamic) {
-			// Define uniques ids for representing model, geometry and material node
-			var modelId = input.nextFreeId;
-			var geometryId = input.nextFreeId + 1;
+		function getUniqueId() {
+			nextFreeId++;
+			return nextFreeId - 1;
+		}
 
-			input.nextFreeId += 2;
+		function buildObject(object : h3d.scene.Object, params : Dynamic, isRoot : Bool) {
+			var modelId = getUniqueId();
+			var modelTransform = object.getTransform();
 
-			var mesh = Std.downcast(object, h3d.scene.Mesh);
-			var vertices = new Array<Float>();
-			var normals = new Array<Float>();
-			var uvs = new Array<Float>();
-			var indexes = new Array<Int>();
-
-			if (mesh != null) {
-				var hmdModel = Std.downcast(mesh.primitive, h3d.prim.HMDModel);
-				var bufs = @:privateAccess hmdModel.getDataBuffers(hmdModel.data.vertexFormat);
-
-				var idxVertex = 0;
-				while (idxVertex < bufs.vertexes.length) {
-					vertices.push(-bufs.vertexes[idxVertex]); // Change left hand to right hand
-					vertices.push(bufs.vertexes[idxVertex + 1]);
-					vertices.push(bufs.vertexes[idxVertex + 2]);
-
-					normals.push(-bufs.vertexes[idxVertex + 3]);
-					normals.push(bufs.vertexes[idxVertex + 4]);
-					normals.push(bufs.vertexes[idxVertex + 5]);
-
-					uvs.push(bufs.vertexes[idxVertex + 6]);
-					uvs.push(bufs.vertexes[idxVertex + 7]);
-
-					@:privateAccess idxVertex += hmdModel.data.vertexFormat.stride;
-				}
-
-				var idxIndex = 0;
-				while (idxIndex < bufs.indexes.length) {
-					// We have to flip the order of vertex to change the facing direction of the triangle (because we swapped x axis
-					// earlier to change from left hand to right hand)
-					indexes.push(bufs.indexes[idxIndex + 1]);
-					indexes.push(bufs.indexes[idxIndex]);
-
-					// This is because the last index that close the polygon (in our case, we work with triangles, so the third)
-					// need to be increased by one and then set to negative.
-					// (This is because original index is XOR'ed with -1.)
-					// We also need to keep indexes in range of vertices length
-					indexes.push( -1 * (bufs.indexes[idxIndex + 2] + 1));
-
-					idxIndex += 3;
-				}
-			}
-
-			var t = object.getTransform();
-
+			// We add some extra rotations to the default transform to handle
+			// the export on different axis
 			if (isRoot) {
-				var r = new h3d.Quat();
+				var q = new h3d.Quat();
 
 				if (params.forward == "0" && params.forwardSign== "1" && params.up == "2" && params.upSign == "1")
-					r.initRotation(0,0,0);
+					q.initRotation(0,0,0);
 				else if (params.forward == "0" && params.forwardSign== "-1" && params.up == "2" && params.upSign == "1")
-					r.initRotation(0,0,Math.degToRad(90));
+					q.initRotation(0,0,Math.degToRad(90));
 				else
 					throw "Export params not yet implemented";
 
-				t = t.multiplied(r.toMatrix());
+				modelTransform = modelTransform.multiplied(q.toMatrix());
 			}
 
+			// Apply the default transform of the mode on the current transform to
+			// get the real transform
 			if (object.defaultTransform != null)
-				t = object.defaultTransform.multiplied(t);
+				modelTransform = object.defaultTransform.multiplied(modelTransform);
 
-			t._12 = -t._12;
-			t._13 = -t._13;
-			t._21 = -t._21;
-			t._31 = -t._31;
-			t._41 = -t._41;
+			// Convert left hand matrix to right hand matrix
+			modelTransform._12 = -modelTransform._12;
+			modelTransform._13 = -modelTransform._13;
+			modelTransform._21 = -modelTransform._21;
+			modelTransform._31 = -modelTransform._31;
+			modelTransform._41 = -modelTransform._41;
 
+			// The model node is used for every object, not only those we have mesh
 			var model : FbxNode = { name:"Model", props: [PInt(modelId), PString('Model::${object.name}'), PString("Mesh")], childs:[
 				{ name:"Version", props:[ PInt(232)], childs:null },
 				{ name:"Properties70", props: null, childs: [
 					{ name:"P", props:[PString("InheritType"), PString("enum"), PString(""), PString(""), PInt(1)], childs: null },
 					{ name:"P", props:[PString("DefaultAttributeIndex"), PString("int"), PString("Integer"), PString(""), PInt(0)], childs: null },
-					{ name:"P", props:[PString("Lcl Translation"), PString("Lcl Translation"), PString(""), PString("A"), PFloat(t.getPosition().x), PFloat(t.getPosition().y), PFloat(t.getPosition().z)], childs: null },
-					{ name:"P", props:[PString("Lcl Rotation"), PString("Lcl Rotation"), PString(""), PString("A"), PFloat(Math.radToDeg(t.getEulerAngles().x)), PFloat(Math.radToDeg(t.getEulerAngles().y)), PFloat(Math.radToDeg(t.getEulerAngles().z))], childs: null },
-					{ name:"P", props:[PString("Lcl Scaling"), PString("Lcl Scaling"), PString(""), PString("A"), PFloat(t.getScale().x), PFloat(t.getScale().y), PFloat(t.getScale().z)], childs: null },
+					{ name:"P", props:[PString("Lcl Translation"), PString("Lcl Translation"), PString(""), PString("A"), PFloat(modelTransform.getPosition().x), PFloat(modelTransform.getPosition().y), PFloat(modelTransform.getPosition().z)], childs: null },
+					{ name:"P", props:[PString("Lcl Rotation"), PString("Lcl Rotation"), PString(""), PString("A"), PFloat(Math.radToDeg(modelTransform.getEulerAngles().x)), PFloat(Math.radToDeg(modelTransform.getEulerAngles().y)), PFloat(Math.radToDeg(modelTransform.getEulerAngles().z))], childs: null },
+					{ name:"P", props:[PString("Lcl Scaling"), PString("Lcl Scaling"), PString(""), PString("A"), PFloat(modelTransform.getScale().x), PFloat(modelTransform.getScale().y), PFloat(modelTransform.getScale().z)], childs: null },
 				]}
 			] };
 
-			input.objectsNode.childs.push(model);
+			objectsNode.childs.push(model);
 
+			var mesh = Std.downcast(object, h3d.scene.Mesh);
 			if (mesh == null)
 				return;
 
+			var vertices = new Array<Float>();
+			var normals = new Array<Float>();
+			var uvs = new Array<Array<Float>>();
+			var indexes = new Array<Int>();
+
+			var infos = getPrimitiveInfos(mesh.primitive);
+			var idxVertex = 0;
+
+			// Fill mesh informations that will be required in the fbx file
+			while (idxVertex < infos.vertexBuffer.length) {
+				var curIndex = idxVertex;
+				vertices.push(-infos.vertexBuffer[curIndex]); // Convert left hand X coordinate to right hand X coordinate
+				vertices.push(infos.vertexBuffer[curIndex + 1]);
+				vertices.push(infos.vertexBuffer[curIndex + 2]);
+				curIndex += 3;
+
+				if (infos.vertexFormat.hasInput("normal")) {
+					normals.push(-infos.vertexBuffer[curIndex]); // Convert left hand X coordinate to right hand X coordinate
+					normals.push(infos.vertexBuffer[curIndex + 1]);
+					normals.push(infos.vertexBuffer[curIndex + 2]);
+					curIndex += 3;
+				}
+
+				// Tangent export isn't supported at the moment
+				if (infos.vertexFormat.hasInput("tangent"))
+					curIndex += 3;
+
+				var uvIdx = 0;
+				var uvInput = 'uv${ uvIdx == 0 ? "" : '${uvIdx + 1}'}';
+				while(infos.vertexFormat.hasInput(uvInput)) {
+					if (uvs.length < uvIdx + 1)
+						uvs.push(new Array<Float>());
+
+					uvs[uvIdx].push(infos.vertexBuffer[curIndex]);
+					uvs[uvIdx].push(1 - infos.vertexBuffer[curIndex + 1]);
+					curIndex += 2;
+					uvIdx++;
+					uvInput = 'uv${ uvIdx == 0 ? "" : '${uvIdx + 1}'}';
+				}
+
+				idxVertex += infos.vertexFormat.stride;
+			}
+
+			var idxIndex = 0;
+			while (idxIndex < infos.indexesBuffer.length) {
+				// We have to flip the order of vertex to change the facing direction of the triangle (because we changed X axis
+				// sign earlier to change from left hand to right hand)
+
+				// /!\ This is because the last index that close the polygon (in our case, we work with triangles, so the third)
+				// need to be increased by one and then set to negative.
+				// (This is because original index is XOR'ed with -1.)
+				indexes.push(infos.indexesBuffer[idxIndex + 1]);
+				indexes.push(infos.indexesBuffer[idxIndex]);
+				indexes.push( -1 * (infos.indexesBuffer[idxIndex + 2] + 1));
+
+				idxIndex += 3;
+			}
+
 			var meshMaterials = mesh.getMaterials();
-			var mats = new Array<Int>();
+			var materialIndexes = [];
 			for (idx => mat in meshMaterials ) {
-				var hmdModel = Std.downcast(mesh.primitive, h3d.prim.HMDModel);
-				var materialId = input.nextFreeId;
+				var materialId = -1;
 
 				// Only write material once in the fbx file
-				var matId = -1;
-				for (i in 0...input.usedMaterials.length)
-					if (input.usedMaterials[i].matName == mat.name) {
-						matId = input.usedMaterials[i].matId;
+				for (i in 0...objectRegistry.length) {
+					if (objectRegistry[i].name == "__mat"+mat.name) {
+						materialId = objectRegistry[i].id;
 						break;
 					}
-
-				if (matId != -1) {
-					materialId = matId;
 				}
-				else {
-					input.nextFreeId += 1;
+
+				if (materialId == -1) {
+					materialId = getUniqueId();
 
 					var material : FbxNode = { name:"Material", props: [PInt(materialId), PString('Material::${mat.name}'), PString("")], childs:[
 						{ name: "Version", props: [PInt(102)], childs: null },
@@ -486,15 +671,87 @@ class Writer {
 						] },
 					] };
 
-					input.objectsNode.childs.push(material);
+					objectsNode.childs.push(material);
 				}
 
-				input.usedMaterials.push( { matName : mat.name, matId : materialId, parentModelId : modelId} );
-				var matIndexes = hmdModel.getMaterialIndexes(idx);
-				for (i in 0...Std.int(matIndexes.count / 3))
-					mats.push(idx);
+				objectRegistry.push({ name: "__mat"+mat.name, type: "O", id: materialId, parentId: modelId, property: null });
+
+				if (infos.lib == null)
+					continue;
+
+				var hmd = Std.downcast(mesh.primitive, h3d.prim.HMDModel);
+				if (hmd != null) {
+					var materials = hmd.getMaterialIndexes(idx);
+					for (i in 0...Std.int(materials.count / 3))
+						materialIndexes.push(idx);
+				}
+
+				// Building mat textures
+				var textures = new Array<Dynamic>();
+				for (matData in infos.lib.header.materials) {
+					if (matData.name == mat.name) {
+						if (matData.diffuseTexture != null)
+							@:privateAccess textures.push({ name: matData.diffuseTexture.substr(matData.diffuseTexture.lastIndexOf("/") + 1), path: resolvePathImpl(infos.lib.resource.entry.path ,matData.diffuseTexture), property: "DiffuseColor" });
+						if (matData.normalMap != null)
+							@:privateAccess textures.push({ name: matData.normalMap.substr(matData.normalMap.lastIndexOf("/") + 1), path: resolvePathImpl(infos.lib.resource.entry.path ,matData.normalMap), property: "NormalMap" });
+						if (matData.specularTexture != null)
+							@:privateAccess textures.push({ name : matData.specularTexture.substr(matData.specularTexture.lastIndexOf("/") + 1), path: resolvePathImpl(infos.lib.resource.entry.path ,matData.specularTexture), property: "SpecularColor" });
+					}
+				}
+
+				for (t in textures) {
+					var textureId = getUniqueId();
+					var textureProperty = '${ t.property == "DiffuseColor" ? "base_color_texture" : (t.property == "NormalMap" ? "normalmap_texture" : "specular_texture") }';
+					var texture : FbxNode = { name:"Texture", props: [PInt(textureId), PString('Texture::${textureProperty}'), PString("Clip")], childs:[
+						{ name: "Type", props: [PString("TextureVideoClip")], childs: null },
+						{ name: "Version", props: [PInt(202)], childs: null },
+						{ name: "TextureName", props: [PString('Texture::${textureProperty}')], childs: null },
+						{ name: "Properties70", props: null, childs: [
+							{ name:"P", props: [PString("UseMaterial"), PString("bool"), PString(""), PString(""), PInt(1)], childs: null },
+							{ name:"P", props: [PString("AlphaSource"), PString("enum"), PString(""), PString(""), PInt(2)], childs: null },
+						] },
+						{ name: "Media", props: [PString('Video::${t.name}')], childs: null },
+						{ name: "Filename", props: [PString(t.path)], childs: null },
+						{ name: "RelativeFilename", props: [PString("")], childs: null },
+						{ name: "ModelUVTranslation", props: [PFloat(0), PFloat(0)], childs: null },
+						{ name: "ModelUVScaling", props: [PFloat(1), PFloat(1)], childs: null },
+						{ name: "Texture_Alpha_Source", props: [PString("None")], childs: null },
+						{ name: "Cropping", props: [PInt(0), PInt(0), PInt(0), PInt(0)], childs: null },
+					] };
+
+
+					objectsNode.childs.push(texture);
+					objectRegistry.push({ name: "texture_"+t.name, type: "P", id: textureId, parentId: materialId, property: t.property });
+
+					// If texture isn't registered in fbx file, we should add it (it is registered as "Video" object)
+					var videoId = -1;
+					for (idx in 0...objectRegistry.length) {
+						if (objectRegistry[idx].name == "__video"+t.name) {
+							videoId = objectRegistry[idx].id;
+							break;
+						}
+					}
+
+					if (videoId == -1) {
+						videoId = getUniqueId();
+						var video : FbxNode = { name:"Video", props: [PInt(videoId), PString('Video::${t.name}'), PString("Clip")], childs:[
+							{ name: "Type", props: [PString("Clip")], childs: null },
+							{ name: "Properties70", props: null, childs: [
+								{ name:"P", props: [PString("KString"), PString("XRefUrl"), PString(""), PString(t.path)], childs: null },
+							] },
+							{ name: "UseMipMap", props: [PInt(0)], childs: null },
+							{ name: "Filename", props: [PString(t.path)], childs: null },
+							{ name: "RelativeFilename", props: [PString("")], childs: null },
+						] };
+
+						objectsNode.childs.push(video);
+					}
+
+					objectRegistry.push({ name: "__video"+t.name, type: "O", id: videoId, parentId: textureId, property: null });
+				}
 			}
 
+			var geometryId = getUniqueId();
 			var geometry : FbxNode = { name:"Geometry", props: [PInt(geometryId), PString('Geometry::${mesh.name}'), PString("Mesh")], childs:[
 				{ name:"Vertices", props: [PFloats(vertices)], childs: null},
 				{ name:"PolygonVertexIndex", props: [PInts(indexes)], childs: null},
@@ -505,21 +762,34 @@ class Writer {
 					{ name: "MappingInformationType", props: [ PString("ByVertice") ], childs: null },
 					{ name: "ReferenceInformationType", props: [ PString("Direct") ], childs: null },
 					{ name: "Normals", props: [ PFloats(normals) ], childs: null },
-				]},
-				{ name:"LayerElementUV", props: [PInt(0)], childs: [
-					{ name: "Version", props: [ PInt(101) ], childs: null },
-					{ name: "Name", props: [ PString("UVMap") ], childs: null },
-					{ name: "MappingInformationType", props: [ PString("ByVertice") ], childs: null },
-					{ name: "ReferenceInformationType", props: [ PString("Direct") ], childs: null },
-					{ name: "UV", props: [ PFloats(uvs) ], childs: null },
-				]},
-				{ name:"LayerElementMaterial", props: [PInt(0)], childs: [
+				]}
+			] };
+
+			if (materialIndexes.length > 0) {
+				geometry.childs.push({ name:"LayerElementMaterial", props: [PInt(0)], childs: [
 					{ name: "Version", props: [ PInt(101) ], childs: null },
 					{ name: "Name", props: [ PString("") ], childs: null },
 					{ name: "MappingInformationType", props: [ PString("ByPolygon") ], childs: null },
 					{ name: "ReferenceInformationType", props: [ PString("IndexToDirect") ], childs: null },
-					{ name: "Materials", props: [ PInts(mats) ], childs: null },
-				]},
+					{ name: "Materials", props: [ PInts(materialIndexes) ], childs: null },
+				]});
+			}
+
+			// Add all uv maps in layer elements
+			for (idx => uv in uvs) {
+				geometry.childs.push(
+					{ name:"LayerElementUV", props: [PInt(idx)], childs: [
+						{ name: "Version", props: [ PInt(101) ], childs: null },
+						{ name: "Name", props: [ PString("UVMap"+idx) ], childs: null },
+						{ name: "MappingInformationType", props: [ PString("ByVertice") ], childs: null },
+						{ name: "ReferenceInformationType", props: [ PString("Direct") ], childs: null },
+						{ name: "UV", props: [ PFloats(uv) ], childs: null },
+					]}
+				);
+			}
+
+			// Build all layers (we're currently building several layers only to support several uvs maps)
+			geometry.childs.push(
 				{ name:"Layer", props: [PInt(0)], childs: [
 					{ name: "Version", props: [ PInt(100) ], childs: null },
 					{ name: "LayerElement", props: null, childs: [
@@ -535,51 +805,55 @@ class Writer {
 						{ name: "TypedIndex", props: [ PInt(0) ], childs: null },
 					] },
 				]}
-			] };
+			);
 
-			input.objectsNode.childs.push(geometry);
+			for (idx => uv in uvs) {
+				if (idx == 0)
+					continue;
+
+				geometry.childs.push(
+					{ name:"Layer", props: [PInt(idx)], childs: [
+						{ name: "Version", props: [ PInt(100) ], childs: null },
+						{ name: "LayerElement", props: null, childs: [
+							{ name: "Type", props: [ PString("LayerElementUV") ], childs: null },
+							{ name: "TypedIndex", props: [ PInt(idx) ], childs: null },
+						] },
+					]}
+				);
+			}
+
+			objectsNode.childs.push(geometry);
+			objectRegistry.push({ name: "geometry" ,type: "O", id: geometryId, parentId: modelId, property: null });
 		}
 
-		function build(objects: Array<h3d.scene.Object>, input : Dynamic, parent : Dynamic) {
+		function build(objects: Array<h3d.scene.Object>, parentId : Int) {
 			for (o in objects) {
-				// We're not supporting anything except meshes for now
-				// var mesh = Std.downcast(o, h3d.scene.Mesh);
-				// if (mesh == null)
-				// 	continue;
+				var objectId = nextFreeId;
 
-				var objectLeaf = { id: input.nextFreeId, children : []};
-				parent.children.push(objectLeaf);
+				// Register object in object registry for future usage (add connections for example)
+				objectRegistry.push({ name: o.name, type : "O", id: nextFreeId, parentId: parentId, property: null });
 
-				buildObject(o, input, parent.id == 0, params);
-				build(@:privateAccess o.children, input, objectLeaf);
+				// Build current object and his children recusively
+				buildObject(o, params, parentId == 0);
+				build(@:privateAccess o.children, objectId);
 			}
 		}
 
-		build(objects, input, objectTreeRoot);
-		return input.objectsNode;
+		build(objects, 0);
+		return objectsNode;
 	}
 
-	function buildConnections(objectTree : Dynamic, usedMaterials : Array<Dynamic>) {
-		// C stands for "Connection"
-		// OO stands for "Object to Object" meaning the connection is between two objects
-		// Then there's ids of object that are linked
+	function buildConnections(objectRegistry : Array<Dynamic>) {
+		var connections : FbxNode = { name:"Connections", props: null, childs: [] };
 
-		var connections : FbxNode = { name:"Connections", props: null, childs: []};
+		for (o in objectRegistry) {
+			var connection = { name:"C", props: [ PString("O"+o.type), PInt(o.id), PInt(o.parentId) ], childs: null };
 
-		function addConnexion(parentId : Int, objectTree : Dynamic) {
-			if (objectTree.id != 0) {
-				connections.childs.push({ name:"C", props: [ PString("OO"), PInt(objectTree.id), PInt(parentId) ], childs: null });
-				connections.childs.push({ name:"C", props: [ PString("OO"), PInt(objectTree.id + 1), PInt(objectTree.id) ], childs: null });
-			}
+			if (o.property != null)
+				connection.props.push(PString(o.property));
 
-			for (idx in 0...objectTree.children.length)
-				addConnexion(objectTree.id, objectTree.children[idx]);
+			connections.childs.push(connection);
 		}
-
-		addConnexion(-1, objectTree);
-
-		for (idx in 0...usedMaterials.length)
-			connections.childs.push({ name:"C", props: [ PString("OO"), PInt(usedMaterials[idx].matId), PInt(usedMaterials[idx].parentModelId) ], childs: null });
 
 		return connections;
 	}
@@ -589,18 +863,90 @@ class Writer {
 		var header = new haxe.io.BytesOutput();
 		out = header;
 
-		writeHeader();
-		writeNode(buildGlobalSettings());
-		writeNode(buildDefinitions(cast objects));
+		var objectRegistry = new Array<Dynamic>();
 
-		var objectTreeRoot = { id: 0, children: [] };
-		var usedMaterials = new Array<Dynamic>();
-		writeNode(buildObjects(cast objects, objectTreeRoot, params, usedMaterials));
-		writeNode(buildConnections(objectTreeRoot, usedMaterials));
+		writeHeader();
+		writeNode(buildHeaderExtension());
+		writeNode(buildGlobalSettings());
+		writeNode(buildDefinitions(objects));
+		writeNode(buildObjects(objects, params, objectRegistry));
+		writeNode(buildConnections(objectRegistry));
 
 		var bytes = header.getBytes();
 		out = old;
 
 		out.write(bytes);
+	}
+
+	public function export(toExport: Array<h3d.scene.Object>, destinationPath: String, callb : Void -> Void, ?params : ExportParams) {
+		if (this.out == null)
+			this.out = new haxe.io.BytesOutput();
+
+		function clean( obj : h3d.scene.Object ) : h3d.scene.Object {
+			var supported = true;
+			for (c in unsuported) {
+				if (Std.isOfType(obj, c)) {
+					supported = false;
+					break;
+				}
+			}
+
+			if (!supported || !obj.visible)
+				return null;
+
+			var o = new h3d.scene.Object();
+			var multiMat = Std.downcast(obj, h3d.scene.MultiMaterial);
+			if (multiMat != null)
+				o = new h3d.scene.MultiMaterial(multiMat.primitive, multiMat.materials);
+			else {
+				var m = Std.downcast(obj, h3d.scene.Mesh);
+				if (Std.isOfType(m?.primitive, h3d.prim.HMDModel) || Std.isOfType(m?.primitive, h3d.prim.Cube))
+					o = new h3d.scene.Mesh(m.primitive, m.material);
+			}
+
+			o.x = obj.x;
+			o.y = obj.y;
+			o.z = obj.z;
+			o.scaleX = obj.scaleX;
+			o.scaleY = obj.scaleY;
+			o.scaleZ = obj.scaleZ;
+			@:privateAccess o.qRot.load(@:privateAccess obj.qRot);
+			o.name = obj.name;
+			o.follow = obj.follow;
+			o.followPositionOnly = obj.followPositionOnly;
+			o.visible = obj.visible;
+			if( obj.defaultTransform != null )
+				o.defaultTransform = obj.defaultTransform.clone();
+			for( c in @:privateAccess obj.children ) {
+				var c2 = clean(c);
+				if (c2 == null)
+					continue;
+				@:privateAccess c2.parent = o;
+				@:privateAccess o.children.push(c2);
+			}
+
+			return o;
+		}
+
+		// Clean a bit the object hierarchy to remove non-needed objects
+		// (Interactibles for example)
+		var roots = new Array<h3d.scene.Object>();
+		for (o in toExport) {
+			var t = clean(o);
+			if (t != null)
+				roots.push(t);
+		}
+
+		// Handle the export of selection into a fbx file
+		if (destinationPath != null) {
+			var out = new haxe.io.BytesOutput();
+			new hxd.fmt.fbx.Writer(out).write(roots, params);
+			#if js
+				hxd.File.saveBytes(destinationPath, out.getBytes());
+			#else
+				sys.io.File.saveBytes(destinationPath, out.getBytes());
+			#end
+			callb();
+		}
 	}
 }

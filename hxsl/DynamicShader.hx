@@ -35,7 +35,10 @@ class DynamicShader extends Shader {
 	function addVarIndex(v:hxsl.Ast.TVar, ?access : Access, ?defObj : Dynamic ) {
 		if( v.kind != Param )
 			return;
-		var isFloat = v.type == TFloat && access == null;
+		var isFloat = switch(v.type) {
+			case TFloat, TInt: access == null;
+			default: false;
+		}
 		var vid = isFloat ? floats.length : values.length;
 		if( access != null )
 			access = new Access(Structure, access.index, access.fields.copy());
@@ -87,6 +90,10 @@ class DynamicShader extends Shader {
 		var vidx = accesses.length;
 		varIndexes.set(v.id, vidx);
 		accesses.push(access == null ? new Access(isFloat?Float:Dynamic,vid,null) : access);
+	}
+
+	public function getParamIndex( p : hxsl.Ast.TVar ) : Int {
+		return varIndexes.get(p.id);
 	}
 
 	override function getParamValue(index:Int) : Dynamic {
@@ -161,6 +168,24 @@ class DynamicShader extends Shader {
 			c = c.next;
 		}
 		updateConstantsFinal(globals);
+	}
+
+	public function getVariable( name : String ) {
+		var vid = varNames.get(name);
+		if( vid == null )
+			return null;
+		return vid < 0 ? floats[-vid-1] : values[vid];
+	}
+
+	public function setVariable( name : String, value : Dynamic ) {
+		var vid = varNames.get(name);
+		if( vid == null )
+			return false;
+		if( vid < 0 )
+			floats[-vid-1] = value;
+		else
+			values[vid] = value;
+		return true;
 	}
 
 	@:keep public function hscriptGet( field : String ) : Dynamic {

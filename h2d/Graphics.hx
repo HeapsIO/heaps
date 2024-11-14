@@ -36,16 +36,12 @@ private class GraphicsContent extends h3d.prim.Primitive {
 	var buffers : Array<{ buf : hxd.FloatBuffer, vbuf : h3d.Buffer, idx : hxd.IndexBuffer, ibuf : h3d.Indexes, state : BatchDrawState }>;
 	var bufferDirty : Bool;
 	var indexDirty : Bool;
-	#if track_alloc
 	var allocPos : hxd.impl.AllocPos;
-	#end
 
 	public function new() {
 		buffers = [];
 		state = new BatchDrawState();
-		#if track_alloc
-		this.allocPos = new hxd.impl.AllocPos();
-		#end
+		this.allocPos = hxd.impl.AllocPos.make();
 	}
 
 	public inline function addIndex(i) {
@@ -88,9 +84,7 @@ private class GraphicsContent extends h3d.prim.Primitive {
 		if (index.length <= 0) return ;
 		var alloc = Allocator.get();
 		buffer = alloc.ofFloats(tmp, hxd.BufferFormat.H2D);
-		#if track_alloc
 		@:privateAccess buffer.allocPos = allocPos;
-		#end
 		indexes = alloc.ofIndexes(index);
 		for( b in buffers ) {
 			if( b.vbuf == null || b.vbuf.isDisposed() ) b.vbuf = alloc.ofFloats(b.buf, hxd.BufferFormat.H2D);
@@ -466,7 +460,7 @@ class Graphics extends Drawable {
 		Position a virtual tile at the given position and scale. Every draw will display a part of this tile relative
 		to these coordinates.
 
-		Note that in by default, Tile is not wrapped, and in order to render tiling texture, `Drawable.tileWrap` have to be set.
+		Note that in by default, Tile is not wrapped, and in order to render a tiling texture, `Drawable.tileWrap` has to be set.
 		Additionally, both `Tile.dx` and `Tile.dy` are ignored (use `dx`/`dy` arguments instead)
 		as well as tile defined size of the tile through `Tile.width` and `Tile.height` (use `scaleX`/`scaleY` relative to texture size).
 

@@ -68,9 +68,14 @@ class GlslOut {
 		set(BVec4, "bvec4");
 		set(FragCoord, "gl_FragCoord");
 		set(FrontFacing, "gl_FrontFacing");
-		set(FrontFacing, "gl_FrontFacing");
 		set(FloatBitsToUint, "_floatBitsToUint");
 		set(UintBitsToFloat, "_uintBitsToFloat");
+
+		set(ComputeVar_LocalInvocation, "ivec3(gl_LocalInvocationID)");
+		set(ComputeVar_GlobalInvocation, "ivec3(gl_GlobalInvocationID)");
+		set(ComputeVar_LocalInvocationIndex, "int(gl_LocalInvocationIndex)");
+		set(ComputeVar_WorkGroup, "ivec3(gl_WorkGroupID)");
+
 		for( g in gl )
 			KWDS.set(g, true);
 		gl;
@@ -131,6 +136,12 @@ class GlslOut {
 			decls.push(s);
 	}
 
+	function getSamplerType(dim:TexDimension,arr) {
+		var name = "sampler" + dim.getName().substr(1);
+		if( arr ) name += "Array";
+		return name;
+	}
+
 	function addType( t : Type ) {
 		switch( t ) {
 		case TVoid:
@@ -163,14 +174,13 @@ class GlslOut {
 		case TMat3x4:
 			decl(MAT34);
 			add("_mat3x4");
-		case TSampler2D:
-			add("sampler2D");
-		case TSampler2DArray:
-			add("sampler2DArray");
-			if( isES )
-				decl("precision lowp sampler2DArray;");
-		case TSamplerCube:
-			add("samplerCube");
+		case TSampler(dim,arr):
+			var name = getSamplerType(dim,arr);
+			add(name);
+			if( isES && (arr || dim == T3D) )
+				decl("precision lowp "+name+";");
+		case TRWTexture(dim, arr, chans):
+			add("image"+dim.getName().substr(1)+(arr?"Array":""));
 		case TStruct(vl):
 			add("struct { ");
 			for( v in vl ) {
@@ -186,6 +196,7 @@ class GlslOut {
 			switch( size ) {
 			case SVar(v):
 				ident(v);
+			case SConst(0):
 			case SConst(1) if( intelDriverFix ):
 				add(2);
 			case SConst(v):
@@ -209,14 +220,15 @@ class GlslOut {
 			add("[");
 			switch( size ) {
 			case SVar(v): ident(v);
+			case SConst(0):
 			case SConst(1) if( intelDriverFix ): add(2);
 			case SConst(n): add(n);
 			}
 			add("]");
 		case TBuffer(t, size, kind):
 			switch( kind ) {
-			case Uniform:
-			case RW:
+			case Uniform, Partial:
+			case RW, RWPartial:
 				add("rw_");
 			}
 			add((isVertex ? "vertex_" : "") + "uniform_buffer"+(uniformBuffer++));
@@ -235,7 +247,7 @@ class GlslOut {
 	function addValue( e : TExpr, tabs : String ) {
 		switch( e.e ) {
 		case TBlock(el):
-			var name = "val" + (exprIds++);
+			var name = "_val" + (exprIds++);
 			var tmp = buf;
 			buf = new StringBuf();
 			addType(e.t);
@@ -295,18 +307,18 @@ class GlslOut {
 			decl("vec3 unpackNormal( vec4 v ) { return normalize((v.xyz - vec3(0.5)) * vec3(2.)); }");
 		case Texture:
 			switch( args[0].t ) {
-			case TSampler2D, TSampler2DArray, TChannel(_) if( isES2 ):
+			case TSampler(T2D,_), TChannel(_) if( isES2 ):
 				return "texture2D";
-			case TSamplerCube if( isES2 ):
+			case TSampler(TCube,_) if( isES2 ):
 				return "textureCube";
 			default:
 			}
 		case TextureLod:
 			switch( args[0].t ) {
-			case TSampler2D, TSampler2DArray, TChannel(_) if( isES2 ):
+			case TSampler(T2D,_), TChannel(_) if( isES2 ):
 				decl("#extension GL_EXT_shader_texture_lod : enable");
 				return "texture2DLodEXT";
-			case TSamplerCube if( isES2 ):
+			case TSampler(TCube,_) if( isES2 ):
 				decl("#extension GL_EXT_shader_texture_lod : enable");
 				return "textureCubeLodEXT";
 			default:
@@ -318,16 +330,21 @@ class GlslOut {
 			// else
 				return "texelFetch";
 		case TextureSize:
+			var sufix = "";
 			switch( args[0].t ) {
-			case TSampler2D, TChannel(_):
+			case TChannel(_):
 				decl("vec2 _textureSize(sampler2D sampler, int lod) { return vec2(textureSize(sampler, lod)); }");
-			case TSamplerCube:
-				decl("vec2 _textureSize(samplerCube sampler, int lod) { return vec2(textureSize(sampler, lod)); }");
-			case TSampler2DArray:
-				decl("vec3 _textureSize(sampler2DArray sampler, int lod) { return vec3(textureSize(sampler, lod)); }");
+			case TSampler(dim,arr):
+				var size = Tools.getDimSize(dim,arr);
+				sufix = (arr?"Array":"");
+				var t = "sampler"+dim.getName().substr(1)+sufix;
+				decl('vec$size _texture${sufix}Size($t sampler, int lod) { return vec$size(textureSize(sampler, lod)); }');
+			case TRWTexture(dim,arr,_):
+				var size = Tools.getDimSize(dim,arr);
+				return "vec"+size+"(imageSize";
 			default:
 			}
-			return "_textureSize";
+			return '_texture${sufix}Size';
 		case Mod if( rt == TInt && isES ):
 			decl("int _imod( int x, int y ) { return int(mod(float(x),float(y))); }");
 			return "_imod";
@@ -468,6 +485,14 @@ class GlslOut {
 			add("clamp(");
 			addValue(e, tabs);
 			add(", 0., 1.)");
+		case TCall( { e : TGlobal(AtomicAdd) }, args):			
+			add("atomicAdd(");
+			addValue(args[0], tabs);
+			add("[");
+			addValue(args[1], tabs);
+			add("],");
+			addValue(args[2], tabs);
+			add(")");
 		case TCall({ e : TGlobal(g = Texel) }, args):
 			add(getFunName(g,args,e.t));
 			add("(");
@@ -486,14 +511,31 @@ class GlslOut {
 			add(getFunName(g,args,e.t));
 			add("(");
 			addValue(args[0], tabs);
-			if ( args.length != 1 ) {
+			if( args.length != 1 ) {
 				// with LOD argument
 				add(", ");
 				addValue(args[1], tabs);
 				add(")");
+			} else if( args[0].t.match(TRWTexture(_)) ) {
+				add("))");
 			} else {
 				add(", 0)");
 			}
+		case TCall({ e : TGlobal(ImageStore) }, [tex, uv, color]):
+			var chans = switch( tex.t ) {
+			case TRWTexture(_, _, chans): chans;
+			default: throw "assert";
+			}
+			// we can use function decl because of some GLSL compiler bug
+			add("imageStore(");
+			addValue(tex, tabs);
+			add(",");
+			addValue(uv, tabs);
+			add(",");
+			if( chans != 4 ) add("(");
+			addValue(color, tabs);
+			if( chans != 4 ) add(")"+(chans == 1 ? ".xx" : ".xyyy"));
+			add(")");
 		case TCall(v, args):
 			switch( v.e ) {
 			case TGlobal(g):
@@ -616,6 +658,10 @@ class GlslOut {
 			add(")");
 		case TMeta(_, _, e):
 			addExpr(e, tabs);
+		case TField(val, name):
+			addExpr(val, tabs);
+			add(".");
+			add(name);
 		}
 	}
 
@@ -672,14 +718,19 @@ class GlslOut {
 		switch( v.kind ) {
 		case Param, Global:
 			switch( v.type ) {
+			case TBuffer(_, _, RW|RWPartial):
+				add("layout(std430) buffer ");
 			case TBuffer(_, _, kind):
 				add("layout(std140) ");
 				switch( kind ) {
-				case Uniform:
+				case Uniform, Partial:
 					add("uniform ");
-				case RW:
+				case RW, RWPartial:
 					add("buffer ");
 				}
+			case TArray(TRWTexture(_, _, chans), _):
+				var format = "rgba".substr(0, chans);
+				add('layout(${format}32f) uniform ');
 			default:
 				add("uniform ");
 			}
@@ -735,6 +786,10 @@ class GlslOut {
 		case TGlobal(g): m.set(g,true);
 		case TCall({ e : TGlobal(SetLayout) }, [{ e : TConst(CInt(x)) }, { e : TConst(CInt(y)) }, { e : TConst(CInt(z)) }]):
 			computeLayout = [x,y,z];
+		case TCall({ e : TGlobal(SetLayout) }, [{ e : TConst(CInt(x)) }, { e : TConst(CInt(y)) }]):
+			computeLayout = [x,y,1];
+		case TCall({ e : TGlobal(SetLayout) }, [{ e : TConst(CInt(x)) }]):
+			computeLayout = [x,1,1];
 		default: hxsl.Tools.iter(e,collectGlobals.bind(m));
 		}
 	}
@@ -755,7 +810,9 @@ class GlslOut {
 		isVertex = f.kind == Vertex;
 		isCompute = f.kind == Main;
 
-		if (isVertex || isCompute)
+		if( isCompute ) {
+			// no prec
+		} else if( isVertex )
 			decl("precision highp float;");
 		else
 			decl("precision mediump float;");
@@ -806,7 +863,7 @@ class GlslOut {
 
 		if( isES )
 			decl("#version " + (version < 100 ? 100 : version) + (version > 150 ? " es" : ""));
-		else if( isCompute )
+		else if( isCompute || version >= 430 )
 			decl("#version 430");
 		else if( version != null )
 			decl("#version " + (version > 150 ? 150 : version));

@@ -299,6 +299,10 @@ class Printer {
 			}
 			add(" ");
 			addExpr(e, tabs);
+		case TField(e, name):
+			addExpr(e, tabs);
+			add(".");
+			add(name);
 		}
 
 	}

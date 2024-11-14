@@ -3,6 +3,7 @@ package h3d.impl;
 @:allow(h3d.impl.Driver)
 class InstanceBuffer {
 
+	var countBuffer : Dynamic;
 	var data : Dynamic;
 	var driver : h3d.impl.Driver;
 	var indexCount : Int;

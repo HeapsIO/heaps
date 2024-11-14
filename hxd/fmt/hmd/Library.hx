@@ -1,4 +1,5 @@
 package hxd.fmt.hmd;
+import h3d.prim.HMDModel;
 import hxd.fmt.hmd.Data;
 
 private class FormatMap {
@@ -18,8 +19,8 @@ private class FormatMap {
 private class ContextShared extends hrt.prefab.ContextShared {
 	var customLoadTexture : String -> h3d.mat.Texture;
 
-	public function new(loadTexture : String -> h3d.mat.Texture, ?res : hxd.res.Resource) {
-		super(res);
+	public function new(loadTexture : String -> h3d.mat.Texture, ?root3d: h3d.scene.Object = null) {
+		super(root3d);
 		this.customLoadTexture = loadTexture;
 	}
 
@@ -266,12 +267,32 @@ class Library {
 		return buf;
 	}
 
-	function makePrimitive( id : Int ) {
+	function makePrimitive( model : Model ) {
+		var id : Int = model.geometry;
 		var p = cachedPrimitives[id];
 		if( p != null ) return p;
-		p = new h3d.prim.HMDModel(header.geometries[id], header.dataPosition, this);
+
+		var lodInfos = getLODInfos( model );
+		if ( lodInfos.lodLevel > 0) {
+			for ( m in header.models )
+				if ( m.name != null && StringTools.contains(m.name, lodInfos.modelName) && StringTools.contains(m.name, "LOD0"))
+					return null;
+			throw "No LOD0 found for " + lodInfos.modelName + " in " + resource.name;
+		}
+
+		var lods : Array<Model> = null;
+		if (lodInfos.lodLevel == 0 ) {
+			lods = findLODs( lodInfos.modelName, model );
+			patchLodsMaterials(model, lods);
+		}
+
+		p = new h3d.prim.HMDModel(header.geometries[id], header.dataPosition, this, lods);
 		p.incref(); // Prevent from auto-disposing
 		cachedPrimitives[id] = p;
+
+		if (lodInfos.lodLevel == 0)
+			h3d.prim.ModelDatabase.current.loadModelProps(model.name, p);
+
 		return p;
 	}
 
@@ -295,8 +316,8 @@ class Library {
 			try {
 				if ( setupMaterialLibrary(loadTexture, mat, hxd.res.Loader.currentInstance.load((props:Dynamic).__ref).toPrefab(), (props:Dynamic).name) )
 					return mat;
-			} catch( e : Dynamic ) {
-			}
+			} catch( e : Dynamic ) {}
+			props = mat.getDefaultModelProps();
 		}
 		#end
 		if( m.diffuseTexture != null ) {
@@ -363,6 +384,76 @@ class Library {
 		return def;
 	}
 
+	public function getLODInfos( model : Model ) : { lodLevel : Int , modelName : String } {
+		var modelName : String = model.name;
+		var keyword = h3d.prim.HMDModel.lodExportKeyword;
+		if ( modelName == null || modelName.length <= keyword.length )
+			return { lodLevel : -1, modelName : null };
+
+		// Test prefix
+		if ( modelName.substr(0, keyword.length) == keyword) {
+			var parsedInt = Std.parseInt(modelName.substr( keyword.length, 1 ));
+			if (parsedInt != null) {
+				if ( Std.parseInt( modelName.substr( keyword.length + 1, 1 ) ) != null )
+					throw 'Did not expect a second number after LOD in ${modelName}';
+				return { lodLevel : parsedInt, modelName : modelName.substr(keyword.length) };
+			}
+		}
+
+		// Test suffix
+		var maxCursor = modelName.length - keyword.length - 1;
+		if ( modelName.substr( maxCursor, keyword.length ) == keyword ) {
+			var parsedInt = Std.parseInt( modelName.charAt( modelName.length - 1) );
+			if ( parsedInt != null ) {
+				return { lodLevel : parsedInt, modelName : modelName.substr( 0, maxCursor ) };
+			}
+		}
+
+		return { lodLevel : -1, modelName : null };
+	}
+
+	public function findLODs( modelName : String, lod0 : Model ) : Array<Model> {
+		if ( modelName == null )
+			return null;
+		var lods : Array<Model> = [];
+		for ( curModel in header.models ) {
+			var lodInfos = getLODInfos( curModel );
+			if ( lodInfos.lodLevel < 1 )
+				continue;
+			if ( lodInfos.modelName == modelName ) {
+				if ( lods[lodInfos.lodLevel - 1] != null )
+					throw 'Multiple LODs with the same level : ${curModel.name}';
+				lods[lodInfos.lodLevel - 1] = curModel;
+			}
+		}
+
+		return lods;
+	}
+
+	public function patchLodsMaterials( lod0 : Model, lods : Array<Model>) {
+		for (model in lods) {
+			for (m in model.materials) {
+				if (lod0.materials.contains(m))
+					continue;
+				throw 'Model ${model.name} has a material that isn\'t used by ${lod0.name}. This is not supported.';
+			}
+
+			// Patch materials when lods have different materials, otherwise some indexCounts will be null
+			var geom = header.geometries[model.geometry];
+			var indexCounts = [];
+			var j = 0;
+			for ( i in 0...lod0.materials.length ) {
+				if (lod0.materials[i] == model.materials[j]) {
+					indexCounts[i] = geom.indexCounts[j];
+					j++;
+				}
+				else
+					indexCounts[i] = 0;
+			}
+			geom.indexCounts = indexCounts;
+		}
+	}
+
 	#if !dataOnly
 	public function makeObject( ?loadTexture : String -> h3d.mat.Texture ) : h3d.scene.Object {
 		if( loadTexture == null )
@@ -375,7 +466,9 @@ class Library {
 			if( m.geometry < 0 ) {
 				obj = new h3d.scene.Object();
 			} else {
-				var prim = makePrimitive(m.geometry);
+				var prim = makePrimitive(m);
+				if (prim == null)
+					continue;
 				if( m.skin != null ) {
 					var skinData = makeSkin(m.skin, header.geometries[m.geometry]);
 					skinData.primitive = prim;
@@ -653,7 +746,7 @@ class Library {
 				var vidx = data.indexes[idx];
 				var p = vidx * formatStride;
 				var x = vbuf[p];
-				if( x != x ) {
+				if( Math.isNaN(x) ) {
 					// already processed
 					continue;
 				}
@@ -764,19 +857,9 @@ class Library {
 		if (materialContainer == null)
 			materialContainer = new h3d.scene.Mesh(null, mat, null);
 
-	#if prefab2
-		var shared = new ContextShared(loadTexture, null);
-
+		var shared = new ContextShared(loadTexture, materialContainer);
         materialContainer.material = mat;
-        m.make(materialContainer,shared);
-	#else
-		var ctx = new hrt.prefab.Context();
-		ctx.shared = new ContextShared(loadTexture, null);
-
-		materialContainer.material = mat;
-		ctx.local3d = materialContainer;
-		m.make(ctx);
-	#end
+        m.make(shared);
         // Ensure there is no leak with this
 		materialContainer.material = null;
 

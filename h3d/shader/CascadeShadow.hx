@@ -6,70 +6,112 @@ class CascadeShadow extends DirShadow {
 
 		var pixelColor : Vec4;
 
-		@const(5) var CASCADE_COUNT:Int;
-		@const var DEBUG : Bool;
-		@param var cascadeShadowMaps : Array<Sampler2D, CASCADE_COUNT>;
-		@param var cascadeProjs : Array<Mat3x4, CASCADE_COUNT>;
-		@param var cascadeDebugs : Array<Vec4, CASCADE_COUNT>;
-		@param var cascadeBias : Array<Float, CASCADE_COUNT>;
+		@global var camera : {
+			var view : Mat4;
+		}
 
-		function inside(pos : Vec3) : Bool {
-			if ( abs(pos.x) < 1.0 && abs(pos.y) < 1.0 && abs(pos.z) < 1.0 ) {
-				return true;
-			} else {
-				return false;
+		@const(5) var CASCADE_COUNT : Int;
+		@const var DEBUG : Bool;
+		@const var BLEND : Bool;
+		@param var cascadeShadowMaps : Array<Sampler2D, CASCADE_COUNT>;
+		@param var cascadeViewProj : Mat3x4;
+		@param var cascadeTransitionFraction : Float;
+		@param var cascadeScales : Array<Vec4, CASCADE_COUNT>;
+		@param var cascadeOffsets : Array<Vec4, CASCADE_COUNT>;
+		@param var cascadeDebugs : Array<Vec4, CASCADE_COUNT>;
+
+		var texelSize : Vec2;
+
+		function shadowPCF( shadowUv : Vec2, zMax : Float, c : Int ) : Float {
+			var shadow = 1.0;
+			var rot = rand(transformedPosition.x + transformedPosition.y + transformedPosition.z) * 3.14 * 2;
+			var cosR = cos(rot);
+			var sinR = sin(rot);
+			var sampleStrength = 1.0 / PCF_SAMPLES;
+			var offScale = texelSize * pcfScale;
+			for(i in 0...PCF_SAMPLES) {
+				var offset = poissonDisk[i].xy * offScale;
+				offset = vec2(cosR * offset.x - sinR * offset.y, cosR * offset.y + sinR * offset.x);
+				var depth = cascadeShadowMaps[c].getLod(shadowUv + offset, 0).r;
+				shadow -= (zMax > depth) ? sampleStrength : 0.0;
 			}
+			return shadow;
+		}
+
+		function shadowESM( shadowUv : Vec2, zMax : Float, c : Int ) : Float {
+			var depth = cascadeShadowMaps[c].get(shadowUv).r;
+			var delta = depth.min(zMax) - zMax;
+			return exp(shadowPower * delta).saturate();
+		}
+
+		function shadowBase( shadowUv : Vec2, zMax : Float, c : Int ) : Float {
+			var depth = cascadeShadowMaps[c].get(shadowUv).r;
+			return zMax > depth ? 0 : 1;
+		}
+
+		function sampleShadow( shadowPos : Vec3, c : Int) : Float {
+			var zMax = shadowPos.z.saturate();
+			var shadowUv = shadowPos.xy;
+			shadowUv.y = 1.0 - shadowUv.y;
+
+			if( USE_PCF )
+				return shadowPCF(shadowUv, zMax, c);
+			else if( USE_ESM )
+				return shadowESM(shadowUv, zMax, c);
+			else
+				return shadowBase(shadowUv, zMax, c);
 		}
 
 		function fragment() {
-			if( enable ) {
-				shadow = 1.0;
-				var texelSize = 1.0/shadowRes;
-				@unroll for ( c in 0...CASCADE_COUNT ) {
-					var shadowPos = transformedPosition * cascadeProjs[c];
-					
-					if ( inside(shadowPos) ) {
-						shadow = 1.0;
-						var zMax = shadowPos.z.saturate();
-						var shadowUv = screenToUv(shadowPos.xy);
-						var bias = cascadeBias[c];
-						if( USE_PCF ) {
-							var rot = rand(transformedPosition.x + transformedPosition.y + transformedPosition.z) * 3.14 * 2;
-							var cosR = cos(rot);
-							var sinR = sin(rot);
-							var sampleStrength = 1.0 / PCF_SAMPLES;
-							var offScale = texelSize * pcfScale;
-							for(i in 0...PCF_SAMPLES) {
-								var offset = poissonDisk[i].xy * offScale;
-								offset = vec2(cosR * offset.x - sinR * offset.y, cosR * offset.y + sinR * offset.x);
-								var depth = cascadeShadowMaps[c].getLod(shadowUv + offset, 0).r;
-								shadow  -= (zMax - bias > depth) ? sampleStrength : 0.0;
+			if ( enable ) {
+				var shadowValue = 1.0;
+				var color = vec3(0);
+				texelSize = 1.0 / shadowRes;
+
+				var vPos = vec4(transformedPosition, 1.0) * camera.view;
+				vPos /= vPos.w;
+
+				var found = false;
+				@unroll for ( i in 0...CASCADE_COUNT ) {
+					if ( !found && vPos.z <= cascadeScales[i].w ) {
+						found = true;
+
+						var shadowPos0 = transformedPosition * cascadeViewProj;
+						var shadowPos = ( i == 0 ) ? shadowPos0 : shadowPos0 * cascadeScales[i].xyz + cascadeOffsets[i].xyz;
+						shadowValue = sampleShadow(shadowPos, i);
+						color = cascadeDebugs[i].rgb;
+
+						if ( BLEND ) {
+							var blendEnd = cascadeScales[i].w;
+							var blendSize = blendEnd * cascadeTransitionFraction;
+							var blendStart = blendEnd - blendSize;
+							var blendFactor = ( vPos.z - blendStart ) / blendSize;
+
+							if (  blendFactor > 0.0 ) {
+								if ( i != CASCADE_COUNT - 1 ) {
+									var nextShadowPos = shadowPos0 * cascadeScales[i + 1].xyz + cascadeOffsets[i + 1].xyz;
+									var nextShadow = sampleShadow(nextShadowPos, i + 1);
+									shadowValue = nextShadow * blendFactor + shadowValue * (1 - blendFactor);
+
+									var nextColor = cascadeDebugs[i + 1].rgb;
+									color = nextColor * blendFactor + color * (1 - blendFactor);
+
+								} else {
+									shadowValue = blendFactor + shadowValue * (1 - blendFactor);
+									color = color * (1 - blendFactor);
+								}
 							}
 						}
-						else if( USE_ESM ) {
-							var depth = cascadeShadowMaps[c].get(shadowUv).r;
-							var delta = (depth + bias).min(zMax) - zMax;
-							shadow = exp(shadowPower * delta).saturate();		
-						}
-						else {
-							var depth = cascadeShadowMaps[c].get(shadowUv).r;
-							shadow -= zMax - bias > depth ? 1 : 0;
-						}
 					}
 				}
-			}
 
-			if ( DEBUG ) {
-				pixelColor = vec4(0.0, 0.0, 0.0, 1.0);
-				@unroll for ( c in 0...CASCADE_COUNT ) {
-					var shadowPos = transformedPosition * cascadeProjs[c];
-					if ( inside(shadowPos) ) {
-						pixelColor.rgb = cascadeDebugs[c].rgb;
-					}
+				if ( DEBUG )
+					pixelColor = vec4(color, 1.0);
+				else {
+					shadow = shadowValue;
+					dirShadow = shadow;
 				}
 			}
-			shadow = saturate(shadow);
-			dirShadow = shadow;
 		}
 	}
 }

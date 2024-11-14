@@ -9,7 +9,6 @@ class FileEntry {
 	public var size(get, never) : Int;
 	public var isDirectory(get, never) : Bool;
 	public var isAvailable(get, never) : Bool;
-	var watchOnChangedHistory : Array<Null<Void -> Void>>;
 
 	public function getBytes() : haxe.io.Bytes return null;
 	public function readBytes( out : haxe.io.Bytes, outPos : Int, pos : Int, len : Int ) : Int { throw "readBytes() not implemented"; }
@@ -51,6 +50,9 @@ class FileEntry {
 	public function load( ?onReady : Void -> Void ) : Void { if( !isAvailable ) throw "load() not implemented"; else if( onReady != null ) onReady(); }
 	public function loadBitmap( onLoaded : LoadedBitmap -> Void ) : Void { throw "loadBitmap() not implemented"; }
 	public function watch( onChanged : Null<Void -> Void> ) { }
+	#if multidriver
+	public function unwatch( id : Int ) { }
+	#end
 	public function exists( name : String ) : Bool return false;
 	public function get( name : String ) : FileEntry return null;
 

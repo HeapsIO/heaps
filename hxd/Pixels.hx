@@ -455,7 +455,7 @@ class Pixels {
 		}
 	}
 
-	public function getPixelF(x, y, ?v:h3d.Vector4) {
+	public function getPixelF(x, y, ?v:h3d.Vector4) : h3d.Vector4 {
 		if( v == null )
 			v = new h3d.Vector4();
 		var p = ((x + y * width) * bytesPerPixel) + offset;
@@ -568,8 +568,9 @@ class Pixels {
 			if( n == 1 || n == 4 )
 				return blocks << 1;
 			return blocks << 2;
-		case Depth16, Depth24, Depth24Stencil8:
-			throw "Not a pixel format";
+		case Depth16: 2;
+		case Depth24: 3;
+		case Depth24Stencil8, Depth32: 4;
 		}
 	}
 
@@ -608,7 +609,7 @@ class Pixels {
 			channel.toInt() * 4;
 		case RGB10A2, RG11B10UF:
 			throw "Bit packed format";
-		case S3TC(_), ASTC(_), ETC(_), PVRTC(_), Depth16, Depth24, Depth24Stencil8:
+		case S3TC(_), ASTC(_), ETC(_), PVRTC(_), Depth16, Depth24, Depth24Stencil8, Depth32:
 			throw "Not supported";
 		}
 	}

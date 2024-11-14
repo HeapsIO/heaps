@@ -4,7 +4,15 @@ class DefaultForward extends hxsl.Shader {
 
 	static var SRC = {
 
-		@const(16) var DIR_SHADOW_COUNT:Int;
+		@global var camera : {
+			var view : Mat4;
+			var viewProj : Mat4;
+			var position : Vec3;
+			var inverseViewProj : Mat4;
+		}
+
+		@const(4) var CASCADE_COUNT:Int;
+		@const(2) var DIR_SHADOW_COUNT:Int;
 		@const(16) var POINT_SHADOW_COUNT:Int;
 		@const(16) var SPOT_SHADOW_COUNT:Int;
 
@@ -23,8 +31,10 @@ class DefaultForward extends hxsl.Shader {
 		@param var spotLightCount : Int;
 		@param var dirLightStride : Int;
 		@param var pointLightStride : Int;
+		@param var spotLightStride : Int;
 
 		// ShadowMaps
+		@param var cascadeShadowMaps : Array<Sampler2D, CASCADE_COUNT>;
 		@param var dirShadowMaps : Array<Sampler2D, DIR_SHADOW_COUNT>;
 		@param var pointShadowMaps : Array<SamplerCube, POINT_SHADOW_COUNT>;
 		@param var spotShadowMaps : Array<Sampler2D, SPOT_SHADOW_COUNT>;
@@ -191,6 +201,41 @@ class DefaultForward extends hxsl.Shader {
 			return directLighting(fallOff * lightColor * fallOffInfoAngle, delta.normalize());
 		}
 
+		function evaluateCascadeLight() : Vec3 {
+			var i = dirLightStride + pointLightStride + spotLightStride;
+			var lightColor = lightInfos[i].rgb;
+			var lightDir = lightInfos[i+1].xyz;
+
+			return directLighting(lightColor, lightDir);
+		}
+
+		function inside(pos : Vec3) : Bool {
+			if ( abs(pos.x) < 1.0 && abs(pos.y) < 1.0 && abs(pos.z) < 1.0 )
+				return true;
+			else
+				return false;
+		}
+
+		function evaluateCascadeShadow() : Float {
+			var i = dirLightStride + pointLightStride + spotLightStride;
+			var shadow = 1.0;
+			var shadowProj = mat3x4(lightInfos[i + 2], lightInfos[i + 3], lightInfos[i + 4]);
+
+			@unroll for ( c in 0...CASCADE_COUNT ) {
+				var cascadeScale = lightInfos[i + 5 + 2 * c];
+				var shadowPos0 = transformedPosition * shadowProj;
+				var shadowPos = i == 0 ? shadowPos0 : shadowPos0 * cascadeScale.xyz + lightInfos[i + 6 + 2 * c].xyz;
+				if ( inside(shadowPos) ) {
+					var zMax = saturate(shadowPos.z);
+					var shadowUv = shadowPos.xy;
+					shadowUv.y = 1.0 - shadowUv.y;
+					var depth = cascadeShadowMaps[c].get(shadowUv.xy).r;
+					shadow -= zMax > depth ? 1.0 : 0.0;
+				}
+			}
+			return saturate(shadow);
+		}
+
 		function evaluateLighting() : Vec3 {
 
 			var lightAccumulation = vec3(0);
@@ -198,25 +243,48 @@ class DefaultForward extends hxsl.Shader {
 			F0 = mix(pbrSpecularColor, albedoGamma, metalness);
 
 			// Dir Light With Shadow
-			@unroll for( l in 0 ... DIR_SHADOW_COUNT )
-				lightAccumulation += evaluateDirLight(l) * evaluateDirShadow(l);
+			@unroll for( l in 0 ... DIR_SHADOW_COUNT ) {
+				var c = evaluateDirLight(l);
+				if ( dot(c, c) > 1e-6 )
+					c *= evaluateDirShadow(l);
+				lightAccumulation += c;
+			}
 			// Dir Light
-			@unroll for( l in DIR_SHADOW_COUNT ... dirLightCount + DIR_SHADOW_COUNT )
+			var start = DIR_SHADOW_COUNT;
+			if ( CASCADE_COUNT > 0 )
+				start++;
+			@unroll for( l in start ... dirLightCount + DIR_SHADOW_COUNT )
 				lightAccumulation += evaluateDirLight(l);
 
 			// Point Light With Shadow
-			@unroll for( l in 0 ... POINT_SHADOW_COUNT )
-				lightAccumulation += evaluatePointLight(l) * evaluatePointShadow(l);
+			@unroll for( l in 0 ... POINT_SHADOW_COUNT ) {
+				var c = evaluatePointLight(l);
+				if ( dot(c, c) > 1e-6 )
+					c *= evaluatePointShadow(l);
+				lightAccumulation += c;
+			}
 			// Point Light
 			@unroll for( l in POINT_SHADOW_COUNT ... pointLightCount + POINT_SHADOW_COUNT )
 				lightAccumulation += evaluatePointLight(l);
 
 			// Spot Light With Shadow
-			@unroll for( l in 0 ... SPOT_SHADOW_COUNT )
-				lightAccumulation += evaluateSpotLight(l) * evaluateSpotShadow(l);
+			@unroll for( l in 0 ... SPOT_SHADOW_COUNT ) {
+				var c = evaluateSpotLight(l);
+				if ( dot(c, c) > 1e-6 )
+					c *= evaluateSpotShadow(l);
+				lightAccumulation += c;
+			}
 			// Spot Light
 			@unroll for( l in SPOT_SHADOW_COUNT ... spotLightCount + SPOT_SHADOW_COUNT )
 				lightAccumulation += evaluateSpotLight(l);
+
+			// Cascade shadows
+			if ( CASCADE_COUNT > 0 ) {
+				var c = evaluateCascadeLight();
+				if ( dot(c, c) > 1e-6 )
+					c *= evaluateCascadeShadow();
+				lightAccumulation += c;
+			}
 
 			// Indirect only support the main env from the scene at the moment
 			if( USE_INDIRECT )

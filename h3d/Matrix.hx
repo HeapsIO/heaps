@@ -831,9 +831,8 @@ class MatrixImpl {
 	/**
 		Build a rotation Matrix so the X axis will look at the given direction, and the Z axis will be the Up vector ([0,0,1] by default)
 	**/
-	public static function lookAtX( dir : Vector, ?up : Vector, ?m : Matrix ) {
-		if( up == null ) up = new Vector(0, 0, 1);
-		if( m == null ) m = new Matrix();
+
+	public static inline function lookAtXInline( dir : Vector, up : Vector, m : Matrix ) {
 		var ax = dir.normalized();
 		var ay = up.cross(ax).normalized();
 		if( ay.lengthSq() < Math.EPSILON2 ) {
@@ -859,6 +858,12 @@ class MatrixImpl {
 		m._43 = 0;
 		m._44 = 1;
 		return m;
+	}
+
+	public static function lookAtX( dir : Vector, ?up : Vector, ?m : Matrix ) {
+		if( up == null ) up = new Vector(0, 0, 1);
+		if( m == null ) m = new Matrix();
+		return lookAtXInline(dir, up, m);
 	}
 
 }

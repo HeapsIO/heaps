@@ -23,15 +23,13 @@ class Macros {
 			for( v in vl ) {
 				fields.push({ pos : pos, name : v.name, kind : FVar(makeType(v.type)) });
 				if( v.type.match(TChannel(_)) )
-				fields.push({ pos : pos, name : v.name+"Channel", kind : FVar(macro : hxsl.Channel) });
+					fields.push({ pos : pos, name : v.name+"Channel", kind : FVar(macro : hxsl.Channel) });
 			}
 			TAnonymous(fields);
-		case TSampler2D:
-			macro : hxsl.Types.Sampler2D;
-		case TSampler2DArray:
-			macro : hxsl.Types.Sampler2DArray;
-		case TSamplerCube:
-			macro : hxsl.Types.SamplerCube;
+		case TSampler(_, false), TRWTexture(_,false,_):
+			macro : hxsl.Types.Texture;
+		case TSampler(_, true), TRWTexture(_,true,_):
+			macro : hxsl.Types.TextureArray;
 		case TMat2, TMat3, TMat3x4, TMat4:
 			macro : hxsl.Types.Matrix;
 		case TString:
@@ -46,7 +44,7 @@ class Macros {
 			var t = makeType(t);
 			macro : Array<$t>;
 		case TChannel(_):
-			macro : hxsl.Types.ChannelTextureType;
+			macro : hxsl.Types.TextureChannel;
 		case TFun(_):
 			throw "assert";
 		case TBuffer(_):
@@ -246,7 +244,7 @@ class Macros {
 			case TInt:
 				exprs.push(macro {
 					var v : Int = $p;
-					if( v >>> $v{ c.bits } != 0 ) throw $v{ c.v.name } +" is out of range " + v + ">" + $v{ (1 << c.bits) - 1 };
+					if( v >>> $v{ c.bits } != 0 ) throw $v{ c.v.name } +" is out of range " + v + ">" + $v{ (1 << c.bits) - 1 } + ", consider using @const(MAX_VALUE)";
 					constBits |= v << $v{ c.pos };
 				});
 			case TBool:
@@ -262,6 +260,13 @@ class Macros {
 				exprs.push(macro {
 					if( $p == null ) $psel = Unknown else if( $psel == Unknown ) $defFormat;
 					constBits |= ((globals.allocChannelID($p) << 3) | Type.enumIndex($psel)) << $v{ c.pos };
+				});
+			case TBuffer(_,_,Partial|RWPartial):
+				var psel = getPath(c.v,"Format");
+				exprs.push(macro {
+					if( $p == null ) throw "Partial buffer is not set";
+					if( $p.format.uid >>> hxsl.Ast.Tools.MAX_PARTIAL_MAPPINGS_BITS != 0 ) throw "Buffer format is out of range";
+					constBits |= $p.format.uid << $v{ c.pos };
 				});
 			default:
 				throw "assert";
@@ -306,7 +311,7 @@ class Macros {
 				args : [ { name : "index", type : macro : Int } ],
 				expr : {
 					expr : EBlock([
-						{ expr : ESwitch(macro index, [for( i in 0...tparams.length ) if( tparams[i] == TFloat ) { values : [macro $v{i}], expr : macro return ${eparams[i]} }], macro {}), pos : pos },
+						{ expr : ESwitch(macro index, [for( i in 0...tparams.length ) if( tparams[i] == TFloat || tparams[i] == TInt ) { values : [macro $v{i}], expr : macro return ${eparams[i]} }], macro {}), pos : pos },
 						macro return 0.,
 					]),
 					pos : pos,

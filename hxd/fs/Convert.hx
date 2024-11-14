@@ -16,6 +16,10 @@ class Convert {
 	public var dstPath:String;
 	public var originalFilename:String;
 	public var srcBytes:haxe.io.Bytes;
+	/*
+		The calculated hash for the input source file content.
+	*/
+	public var hash : String;
 
 	public function new(sourceExts, destExt) {
 		this.sourceExts = sourceExts == null ? null : sourceExts.split(",");
@@ -305,7 +309,9 @@ class CompressIMG extends Convert {
 			command("texconv", args);
 			sys.FileSystem.deleteFile(tmpFile);
 			tmpPath.ext = "tmp.DDS";
-			sys.FileSystem.rename(tmpPath.toString(), dstPath);
+			var p = tmpPath.toString();
+			if ( sys.FileSystem.exists(p) )
+				sys.FileSystem.rename(p, dstPath);
 			return;
 		}
 		var path = new haxe.io.Path(srcPath);
@@ -396,5 +402,14 @@ class ConvertBinJSON extends Convert {
 	}
 
 	static var _ = [Convert.register(new ConvertBinJSON("json,prefab,l3d", "hbson"))];
+}
+
+class ConvertSVGToMSDF extends Convert {
+	override function convert() {
+		var size = hasParam("size") ? getParam("size") : 128;
+		command("msdfgen.exe", ["-svg", srcPath, "-size", '$size', '$size', "-autoframe", "-o", dstPath]);
+	}
+
+	static var _ = Convert.register(new ConvertSVGToMSDF("svg", "png"));
 }
 #end

@@ -33,6 +33,11 @@ class Camera {
 	public var m : Matrix;
 
 	public var pos : Vector;
+	/**
+		up is used for the lookAt matrix.
+		it is not the actual up axis of the camera.
+		use getUp instead.
+	**/
 	public var up : Vector;
 	public var target : Vector;
 
@@ -43,10 +48,14 @@ class Camera {
 
 	public var frustum(default, null) : h3d.col.Frustum;
 
+	public var jitterOffsetX : Float = 0.;
+	public var jitterOffsetY : Float = 0.;
+
 	var minv : Matrix;
 	var mcamInv : Matrix;
 	var mprojInv : Matrix;
 	var needInv : Bool;
+	var directions : Matrix;
 
 	public function new( fovY = 25., zoom = 1., screenRatio = 1.333333, zNear = 0.02, zFar = 4000., rightHanded = false ) {
 		this.fovY = fovY;
@@ -130,6 +139,86 @@ class Camera {
 		return mcamInv;
 	}
 
+	function calcDirections() {
+		var cameraForward = ( target - pos ).normalized();
+		var cameraRight = up.cross(cameraForward).normalized();
+		var cameraUp = cameraForward.cross(cameraRight);
+
+		directions._11 = cameraForward.x;
+		directions._12 = cameraForward.y;
+		directions._13 = cameraForward.z;
+
+		directions._21 = cameraRight.x;
+		directions._22 = cameraRight.y;
+		directions._23 = cameraRight.z;
+
+		directions._31 = cameraUp.x;
+		directions._32 = cameraUp.y;
+		directions._33 = cameraUp.z;
+
+		directions._44 = 1;
+	}
+
+	/**
+		Returns the forward of the camera. Cache the result until the next update().
+	**/
+
+	inline public function getForward() : h3d.Vector {
+		var forward = new h3d.Vector();
+		if ( directions == null ) {
+			directions = new h3d.Matrix();
+			directions._44 = 0;
+		}
+		if ( directions._44 == 0 )
+			calcDirections();
+
+		forward.x = directions._11;
+		forward.y = directions._12;
+		forward.z = directions._13;
+
+		return forward;
+	}
+
+	/**
+		Returns the right of the camera. Cache the result until the next update().
+	**/
+
+	inline public function getRight() : h3d.Vector {
+		var right = new h3d.Vector();
+		if ( directions == null ) {
+			directions = new h3d.Matrix();
+			directions._44 = 0;
+		}
+		if ( directions._44 == 0 )
+			calcDirections();
+
+		right.x = directions._21;
+		right.y = directions._22;
+		right.z = directions._23;
+
+		return right;
+	}
+
+	/**
+		Returns the up of the camera. Cache the result until the next update().
+	**/
+
+	inline public function getUp() : h3d.Vector {
+		var up = new h3d.Vector(); 
+		if ( directions == null ) {
+			directions = new h3d.Matrix();
+			directions._44 = 0;
+		}
+		if ( directions._44 == 0 )
+			calcDirections();
+		
+		up.x = directions._31;
+		up.y = directions._32;
+		up.z = directions._33;
+
+		return up;
+	}
+
 	/**
 		Setup camera for cubemap rendering on the given face.
 	**/
@@ -199,6 +288,7 @@ class Camera {
 		needInv = true;
 		if( mcamInv != null ) mcamInv._44 = 0;
 		if( mprojInv != null ) mprojInv._44 = 0;
+		if( directions != null ) directions._44 = 0;
 
 		frustum.loadMatrix(m);
 	}
@@ -331,6 +421,9 @@ class Camera {
 			m._33 = zFar / (zFar - zNear);
 			m._34 = 1;
 			m._43 = -(zNear * zFar) / (zFar - zNear);
+
+			m._31 = jitterOffsetX;
+			m._32 = jitterOffsetY;
 		}
 
 		m._11 += viewX * m._14;
@@ -353,6 +446,20 @@ class Camera {
 	/**
 		Project a 3D point into the 2D screen. Make sure to update() the camera if it's been moved before using that.
 	**/
+
+	inline public function projectInline( x : Float, y : Float, z : Float, screenWidth : Float, screenHeight : Float, snapToPixel = true ) {
+		var p = new h3d.Vector();
+		p.set(x, y, z);
+		p.project(m);
+		p.x = (p.x + 1) * 0.5 * screenWidth;
+		p.y = (-p.y + 1) * 0.5 * screenHeight;
+		if( snapToPixel ) {
+			p.x = Math.round(p.x);
+			p.y = Math.round(p.y);
+		}
+		return p;
+	}
+
 	public function project( x : Float, y : Float, z : Float, screenWidth : Float, screenHeight : Float, snapToPixel = true, ?p: h3d.Vector) {
 		if(p == null)
 			p = new h3d.Vector();

@@ -33,12 +33,12 @@ class NXGlslOut extends hxsl.GlslOut {
 				hasGlobals = true;
 			case Param:
 				switch( v.type ) {
-				case TArray(t, _) if( t.isSampler() ):
+				case TArray(t, _) if( t.isTexture() ):
 					super.initVar(v);
 				default:
 					hasParams = true;
 				}
-			case Output: 
+			case Output:
 				if( !isVertex ) add('layout(location=${outIndex++}) ');
 				super.initVar(v);
 			default:
@@ -55,7 +55,7 @@ class NXGlslOut extends hxsl.GlslOut {
 			if( v.kind == Param ){
 				switch( v.type ) {
 				case TBuffer(_):
-				case TArray(t, _) if( t.isSampler() ):
+				case TArray(t, _) if( t.isTexture() ):
 				default:
 					add("\t");
 					super.initVar(v);

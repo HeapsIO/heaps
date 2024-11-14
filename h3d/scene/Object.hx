@@ -17,6 +17,7 @@ enum abstract ObjectFlags(Int) {
 	public var FFixedPosition = 0x2000;
 	public var FFixedPositionSynced = 0x4000;
 	public var FAlwaysSync = 0x8000;
+	public var FDrawn = 0x10000;
 	public inline function new(value) {
 		this = value;
 	}
@@ -36,9 +37,14 @@ enum abstract ObjectFlags(Int) {
 class Object {
 
 	static inline var ROT2RAD = -0.017453292519943295769236907684886;
+	static inline var NO_VELOCITY = -1;
+	static inline var VELOCITY = 0;
 
 	var flags : ObjectFlags;
 	var lastFrame : Int;
+
+	public var currentAnimation(default, null) : h3d.anim.Animation;
+
 	var children : Array<Object>;
 
 	/**
@@ -52,64 +58,11 @@ class Object {
 	public var numChildren(get, never) : Int;
 
 	/**
-		The name of the object, can be used to retrieve an object within a tree by using `getObjectByName` (default null)
-	**/
-	public var name : Null<String>;
-
-	/**
-		The x position of the object relative to its parent.
-	**/
-	public var x(default,set) : Float;
-
-	/**
-		The y position of the object relative to its parent.
-	**/
-	public var y(default, set) : Float;
-
-	/**
-		The z position of the object relative to its parent.
-	**/
-	public var z(default, set) : Float;
-
-	/**
-		The amount of scaling along the X axis of this object (default 1.0)
-	**/
-	public var scaleX(default,set) : Float;
-
-	/**
-		The amount of scaling along the Y axis of this object (default 1.0)
-	**/
-	public var scaleY(default, set) : Float;
-
-	/**
-		The amount of scaling along the Z axis of this object (default 1.0)
-	**/
-	public var scaleZ(default,set) : Float;
-
-
-	/**
 		Is the object and its children are displayed on screen (default true).
 	**/
 	public var visible(get, set) : Bool;
 
 	var allocated(get,set) : Bool;
-
-	/**
-		Follow a given object or joint as if it was our parent. Ignore defaultTransform when set.
-	**/
-	public var follow(default, set) : Object;
-
-	/**
-		When follow is set, only follow the position and ignore both scale and rotation.
-	**/
-	public var followPositionOnly(get, set) : Bool;
-
-	/**
-		This is an additional optional transformation that is performed before other local transformations.
-		It is used by the animation system.
-	**/
-	public var defaultTransform(default, set) : h3d.Matrix;
-	public var currentAnimation(default, null) : h3d.anim.Animation;
 
 	/**
 		Inform that the object is not to be displayed and his animation doesn't have to be sync. Unlike visible, this doesn't apply to children unless inheritCulled is set to true.
@@ -166,6 +119,11 @@ class Object {
 	public var alwaysSync(get, set) : Bool;
 
 	/**
+		When set, the object has been drawn during previous frame. Useful for temporal effects such as temporal antialiasing.
+	**/
+	public var drawn(get, set) : Bool;
+
+	/**
 		When set, collider shape will be used for automatic frustum culling.
 		If `inheritCulled` is true, collider will be inherited to children unless they have their own collider set.
 	**/
@@ -181,10 +139,63 @@ class Object {
 	**/
 	var cullingColliderInherited(get, set) : Bool;
 
+	/**
+		The x position of the object relative to its parent.
+	**/
+	public var x(default,set) : Float;
+
+	/**
+		The y position of the object relative to its parent.
+	**/
+	public var y(default, set) : Float;
+
+	/**
+		The z position of the object relative to its parent.
+	**/
+	public var z(default, set) : Float;
+
+	/**
+		The amount of scaling along the X axis of this object (default 1.0)
+	**/
+	public var scaleX(default,set) : Float;
+
+	/**
+		The amount of scaling along the Y axis of this object (default 1.0)
+	**/
+	public var scaleY(default, set) : Float;
+
+	/**
+		The amount of scaling along the Z axis of this object (default 1.0)
+	**/
+	public var scaleZ(default,set) : Float;
+
 	var absPos : h3d.Matrix;
+	var prevAbsPos : h3d.Matrix;
+	var prevAbsPosFrame : Int = NO_VELOCITY;
 	var invPos : h3d.Matrix;
 	var qRot : h3d.Quat;
 	var posChanged(get,set) : Bool;
+
+	/**
+		Follow a given object or joint as if it was our parent. Ignore defaultTransform when set.
+	**/
+	public var follow(default, set) : Object;
+
+	/**
+		When follow is set, only follow the position and ignore both scale and rotation.
+	**/
+	public var followPositionOnly(get, set) : Bool;
+
+	/**
+		This is an additional optional transformation that is performed before other local transformations.
+		It is used by the animation system.
+	**/
+	public var defaultTransform(default, set) : h3d.Matrix;
+
+	/**
+		The name of the object, can be used to retrieve an object within a tree by using `getObjectByName` (default null)
+	**/
+	public var name : Null<String>;
 
 	/**
 		Create a new empty object, and adds it to the parent object if not null.
@@ -217,6 +228,7 @@ class Object {
 	inline function get_cullingColliderInherited() return flags.has(FCullingColliderInherited);
 	inline function get_fixedPosition() return flags.has(FFixedPosition);
 	inline function get_alwaysSync() return flags.has(FAlwaysSync);
+	inline function get_drawn() return flags.has(FDrawn);
 	inline function set_posChanged(b) return flags.set(FPosChanged, b || follow != null);
 	inline function set_culled(b) return flags.set(FCulled, b);
 	inline function set_visible(b) return flags.set(FVisible,b);
@@ -232,6 +244,7 @@ class Object {
 	inline function set_cullingColliderInherited(b) return flags.set(FCullingColliderInherited, b);
 	inline function set_fixedPosition(b) return flags.set(FFixedPosition, b);
 	inline function set_alwaysSync(b) return flags.set(FAlwaysSync, b);
+	inline function set_drawn(b) return flags.set(FDrawn, b);
 
 	/**
 		Create an animation instance bound to the object, set it as currentAnimation and play it.
@@ -670,7 +683,21 @@ class Object {
 		return follow = v;
 	}
 
+	function calcPrevAbsPos() {
+		if ( prevAbsPosFrame == NO_VELOCITY )
+			prevAbsPos = null;
+		else if ( prevAbsPosFrame < hxd.Timer.frameCount ) {
+			prevAbsPosFrame = hxd.Timer.frameCount;
+			if ( prevAbsPos == null )
+				prevAbsPos = absPos.clone();
+			else
+				prevAbsPos.load(absPos);
+		}
+	}
+
 	function calcAbsPos() {
+		calcPrevAbsPos();
+
 		qRot.toMatrix(absPos);
 		// prepend scale
 		absPos._11 *= scaleX;
@@ -708,6 +735,7 @@ class Object {
 
 	function syncRec( ctx : RenderContext ) {
 		#if sceneprof h3d.impl.SceneProf.mark(this); #end
+		#if heaps_prefetch untyped $prefetch(children.length, 2); #end
 		if( currentAnimation != null ) {
 			var old = parent;
 			var dt = ctx.elapsedTime;
@@ -755,6 +783,7 @@ class Object {
 				break;
 			if( c.lastFrame != ctx.frame ) {
 				if( changed ) c.posChanged = true;
+				#if heaps_prefetch untyped $prefetch(children[p+1], 2); #end
 				c.syncRec(ctx);
 			}
 			// if the object was removed, let's restart again.
@@ -797,11 +826,22 @@ class Object {
 			for( c in children )
 				c.posChanged = true;
 		}
-		if( !culled || ctx.computingStatic )
+
+		var prevForcedScreenRatio : Float = ctx.forcedScreenRatio;
+		if ( !drawn || !ctx.computeVelocity || fixedPosition || culled  )
+			prevAbsPosFrame = NO_VELOCITY;
+		else if ( prevAbsPosFrame == NO_VELOCITY )
+				prevAbsPosFrame = VELOCITY;
+		calcPrevAbsPos();
+
+		if( !culled || ctx.computingStatic ) {
 			emit(ctx);
+			drawn = false;
+		}
 
 		for( c in children )
 			c.emitRec(ctx);
+		ctx.forcedScreenRatio = prevForcedScreenRatio;
 	}
 
 	inline function set_x(v) {

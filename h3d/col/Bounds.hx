@@ -389,6 +389,10 @@ class Bounds extends Collider {
 		return new Sphere((xMin + xMax) * 0.5, (yMin + yMax) * 0.5, (zMin + zMax) * 0.5, Math.sqrt(dx * dx + dy * dy + dz * dz) * 0.5);
 	}
 
+	public inline function dimension() {
+		return Math.max(xSize, Math.max(ySize, zSize));
+	}
+
 	public static inline function fromPoints( min : Point, max : Point ) {
 		var b = new Bounds();
 		b.setMin(min);

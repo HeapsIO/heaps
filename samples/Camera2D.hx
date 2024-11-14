@@ -1,3 +1,7 @@
+import h2d.col.Point;
+import h2d.Tile;
+import h2d.RenderContext;
+import h2d.Object;
 import h3d.Engine;
 import h2d.TextInput;
 import h2d.Camera;
@@ -13,6 +17,7 @@ class Camera2D extends SampleApp {
 
 	var followCamera : Camera;
 	var followPoint : Graphics;
+	var car : Car;
 
 	var sliderAnchorX : h2d.Slider;
 	var sliderCamAnchorX : h2d.Slider;
@@ -101,13 +106,14 @@ class Camera2D extends SampleApp {
 			}
 		}
 
-		addText("User arrow keys to move the green arrow");
-		followPoint = new Graphics(s2d);
+		addText("Use arrow keys to move the green arrow");
+		followPoint = new Graphics();
 		followPoint.beginFill(0xff00);
 		followPoint.moveTo(0, -5);
 		followPoint.lineTo(5, 5);
 		followPoint.lineTo(-5, 5);
 		followPoint.setPosition(followX, followY);
+		s2d.add(followPoint, 0);
 
 		// Anchor allows to adjust the position of camera target relative to it's top-left corner in scene viewport ratio.
 		// 0.5 would ensure that whatever position camera points at would at the center of it's viewport.
@@ -122,20 +128,29 @@ class Camera2D extends SampleApp {
 		followCamera.follow = followPoint;
 		followCamera.followRotation = true;
 
-		// Scene.camera proeprty provides an alias to `Scene.cameras[0]`.
+		// Scene.camera property provides an alias to `Scene.cameras[0]`.
 		camera = s2d.camera;
 		camera.setAnchor(0.5, 0.5);
 		camera.setPosition(s2d.width * .5, s2d.height * .5);
 		camera.layerVisible = (idx) -> idx == 0;
 
 		// Marker for primary camera position
-		cameraPositionMarker = new h2d.Graphics(s2d);
+		cameraPositionMarker = new h2d.Graphics();
 		cameraPositionMarker.x= camera.x;
 		cameraPositionMarker.y= camera.y;
 		cameraPositionMarker.beginFill(0xff0000,0.5);
 		cameraPositionMarker.drawRect(-10, -1, 20, 2);
 		cameraPositionMarker.drawRect(-1, -10, 2, 20);
 		cameraPositionMarker.endFill();
+		s2d.add(cameraPositionMarker, 0);
+
+		// Note that despite being on layer 0, and thus visible to both cameras
+		// car is visible only on the first camera, due to it not rendering
+		// to cameras other than the one assigned to it.
+		car = new Car(camera);
+		car.offsetX = followX - tmx.width * (tileSize / 2);
+		car.offsetY = followY - tmx.height * (tileSize / 2);
+		s2d.add(car, 0);
 
 		addText("Camera controls");
 		sliderCamAnchorX=addSlider("Anchor X", function() { return camera.anchorX; }, function(v) { camera.anchorX = v; onCameraParameterChanged();}, 0, 1);
@@ -147,6 +162,7 @@ class Camera2D extends SampleApp {
 		sliderCamScaleX=addSlider("Scale X", function() { return camera.scaleX; }, function(v) { camera.scaleX = v; onCameraParameterChanged();}, 0, 5);
 		sliderCamScaleY=addSlider("Scale Y", function() { return camera.scaleY; }, function(v) { camera.scaleY = v; onCameraParameterChanged();}, 0, 5);
 
+		addButton("Swap car camera", () -> car.camera = car.camera == followCamera ? camera : followCamera);
 	}
 
 	override function render(e:Engine) {
@@ -183,4 +199,73 @@ class Camera2D extends SampleApp {
 		new Camera2D();
 	}
 
+}
+
+// An example of alternative way to hide/show objects on camera by checking `RenderContext.currentCamera`
+class Car extends h2d.Bitmap {
+
+	public var camera : Camera;
+
+	var sprites : Array<Tile>;
+	var path : Array<Point> = [
+		new Point(3.8 * 16, 0),
+		new Point(3.8 * 16, 8.1 * 16),
+		new Point(16.8 * 16, 8.1 * 16),
+		new Point(16.8 * 16, 20.6 * 16),
+		new Point(0, 20.6 * 16),
+	];
+	var pathPos = 0;
+	public var offsetX: Float = 0;
+	public var offsetY: Float = 0;
+
+	public function new( camera : Camera, ?parent : Object ) {
+		var tileset = Res.tiles.toTile();
+		sprites = [
+			tileset.sub(336, 236, 16, 20).center(), // down
+			tileset.sub(352, 236, 16, 20).center(), // up
+			tileset.sub(341, 256, 22, 16).center(), // left
+			tileset.sub(341, 272, 22, 16).center(), // right
+		];
+		super(sprites[0], parent);
+		this.camera = camera;
+	}
+
+	override function drawRec( ctx : RenderContext ) {
+		// By checking `ctx.currentCamera` we can conditionally render parts of the object tree
+		// This allows for more flexibility compared to layer filtering, as it's possible
+		// to hide objects that are nested deep in the object tree.
+		if ( ctx.currentCamera != camera ) return;
+		super.drawRec(ctx);
+	}
+
+	override function onAdd() {
+		super.onAdd();
+		setPosition(path[0].x + offsetX, path[0].y + offsetY);
+		next();
+	}
+
+	function next() {
+		this.pathPos++;
+		if ( this.pathPos == this.path.length ) {
+			setPosition(path[0].x + offsetX, path[0].y + offsetY);
+			this.pathPos = 1;
+		}
+		var prev = path[this.pathPos-1];
+		var next = path[this.pathPos];
+		this.tile = if ( prev.x == next.x ) {
+			if ( next.y < prev.y ) sprites[1];
+			else sprites[0];
+		} else {
+			if ( next.x < prev.x ) sprites[2];
+			else sprites[3];
+		}
+	}
+
+	override function sync( ctx : RenderContext ) {
+		var target = this.path[this.pathPos];
+		this.x = hxd.Math.valueMove(this.x, target.x + offsetX, 64*ctx.elapsedTime);
+		this.y = hxd.Math.valueMove(this.y, target.y + offsetY, 64*ctx.elapsedTime);
+		if ( this.x == target.x+offsetX && this.y == target.y+offsetY ) next();
+		super.sync(ctx);
+	}
 }

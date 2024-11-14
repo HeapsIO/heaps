@@ -63,14 +63,23 @@ class Quat {
 		normalize();
 	}
 
-	public function initNormal( dir : h3d.col.Point ) {
+	public function initNormal( dir : h3d.col.Point, rotate : Float = 0.0 ) {
 		var dir = dir.normalized();
 		if( dir.x*dir.x+dir.y*dir.y < Math.EPSILON2 )
 			initDirection(new h3d.Vector(1,0,0));
 		else {
 			var ay = new h3d.col.Point(dir.x, dir.y, 0).normalized();
 			var az = dir.cross(ay);
-			initDirection(dir.cross(az).toVector());
+			var ax = dir.cross(az).toVector();
+			if (dir.z < 0.0) 
+				initDirection(ax, new Vector(0.0, 0.0, -1.0));
+			else 
+				initDirection(ax);
+		}
+		if ( rotate != 0.0) {
+			var quat = new Quat();
+			quat.initRotateAxis(dir.x, dir.y, dir.z, rotate);
+			multiply(quat, this);
 		}
 	}
 
