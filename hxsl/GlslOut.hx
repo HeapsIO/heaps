@@ -814,8 +814,10 @@ class GlslOut {
 			// no prec
 		} else if( isVertex )
 			decl("precision highp float;");
+			decl("precision highp int;");
 		else
 			decl("precision mediump float;");
+			decl("precision mediump int;");
 
 		initVars(s);
 
