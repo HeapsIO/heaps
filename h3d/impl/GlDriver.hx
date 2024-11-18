@@ -89,8 +89,6 @@ class GlDriver extends Driver {
 	static var UID = 0;
 	public var gl : GL;
 	public static var ALLOW_WEBGL2 = true;
-	// Set to 'mediump' to avoid high precision. Can give better performance, but will can mess up shadows for example.
-	public static var MAX_PRECISION = 'highp';
 	public var textureSupport:hxd.PixelFormat;
 	#end
 
@@ -1920,17 +1918,6 @@ class GlDriver extends Driver {
 	}
 
 	#if js
-	/**
-		Get the max supported precision to use for shaders
-		Limited by MAX_PRECISION value.
-	**/
-	public function getMaxPrecision() {
-		if ( gl.getShaderPrecisionFormat( RenderingContext.VERTEX_SHADER, RenderingContext.HIGH_FLOAT ).precision > 0 &&
-			gl.getShaderPrecisionFormat( RenderingContext.FRAGMENT_SHADER, RenderingContext.HIGH_FLOAT ).precision > 0 ) {
-			return MAX_PRECISION;
-		}
-		return 'mediump';
-	}
 
 	public function checkTextureSupport():hxd.PixelFormat {
 		var astcSupported = gl.getExtension('WEBGL_compressed_texture_astc') != null;
