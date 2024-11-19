@@ -184,7 +184,7 @@ class Flatten {
 				if( idx == idx2 )
 					readField(expr, pos, size);
 				else {
-					var k = 4 - pos;
+					var k = (idx2 << 2) - pos;
 					var type = switch(size) {
 					case 2: Vec2;
 					case 3: Vec3;
@@ -193,7 +193,7 @@ class Flatten {
 					}
 					{ e : TCall({ e : TGlobal(type), p : e.p, t : TVoid },[
 						readField(expr, pos, k),
-						readField(expr, pos + 1, size - k)
+						readField(expr, pos + k, size - k)
 					]), t : e.t, p : e.p }
 				}
 			case TMat4:
