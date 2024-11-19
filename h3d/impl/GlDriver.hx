@@ -8,6 +8,8 @@ import h3d.mat.Stencil;
 
 #if js
 import hxd.impl.TypedArray;
+import js.html.webgl.RenderingContext;
+
 private typedef GL = js.html.webgl.GL2;
 private typedef Uniform = js.html.webgl.UniformLocation;
 private typedef Program = js.html.webgl.Program;
@@ -88,6 +90,7 @@ class GlDriver extends Driver {
 	public var gl : GL;
 	public static var ALLOW_WEBGL2 = true;
 	public static var MAX_PRECISION = null;
+	public var textureSupport:hxd.PixelFormat;
 	#end
 
 	#if (hlsdl||usegl)
@@ -987,7 +990,10 @@ class GlDriver extends Driver {
 		case GL.RED, GL.R8, GL.R16F, GL.R32F, 0x822A: GL.RED;
 		case GL.RG, GL.RG8, GL.RG16F, GL.RG32F, 0x822C: GL.RG;
 		case GL.RGB16F, GL.RGB32F, 0x8054, 0x8E8F: GL.RGB;
-		case 0x83F1, 0x83F2, 0x83F3, 0x805B, 0x8E8C: GL.RGBA;
+		case hxd.PixelFormat.DXT_FORMAT.RGBA_DXT1,hxd.PixelFormat.DXT_FORMAT.RGBA_DXT3,
+		hxd.PixelFormat.DXT_FORMAT.RGBA_DXT5,hxd.PixelFormat.ASTC_FORMAT.RGBA_4x4,
+		hxd.PixelFormat.PVRTC_FORMAT.RGBA_4BPPV1, 0x805B, 0x8E8C : GL.RGBA;
+		case hxd.PixelFormat.PVRTC_FORMAT.RGB_4BPPV1, hxd.PixelFormat.ETC_FORMAT.RGB_ETC1: GL.RGB;
 		default: throw "Invalid format " + t.internalFmt;
 		}
 	}
@@ -999,6 +1005,7 @@ class GlDriver extends Driver {
 		case SRGB, SRGB_ALPHA: hasFeature(SRGBTextures);
 		case R8, RG8, RGB8, R16F, RG16F, RGB16F, R32F, RG32F, RGB32F, RG11B10UF, RGB10A2: #if js glES >= 3 #else true #end;
 		case S3TC(n): n <= maxCompressedTexturesSupport;
+		case ASTC(_), ETC(_), PVRTC(_): #if js true #else false #end;
 		default: false;
 		}
 	}
@@ -1077,14 +1084,32 @@ class GlDriver extends Driver {
 			tt.internalFmt = GL.R11F_G11F_B10F;
 			tt.pixelFmt = GL.UNSIGNED_INT_10F_11F_11F_REV;
 		case S3TC(n) if( n <= maxCompressedTexturesSupport ):
-			if( t.width&3 != 0 || t.height&3 != 0 )
-				throw "Compressed texture "+t+" has size "+t.width+"x"+t.height+" - must be a multiple of 4";
+			checkMult4(t);
 			switch( n ) {
-			case 1: tt.internalFmt = 0x83F1; // COMPRESSED_RGBA_S3TC_DXT1_EXT
-			case 2:	tt.internalFmt = 0x83F2; // COMPRESSED_RGBA_S3TC_DXT3_EXT
-			case 3: tt.internalFmt = 0x83F3; // COMPRESSED_RGBA_S3TC_DXT5_EXT
+			case 1: tt.internalFmt = hxd.PixelFormat.DXT_FORMAT.RGBA_DXT1;
+			case 2:	tt.internalFmt = hxd.PixelFormat.DXT_FORMAT.RGBA_DXT3;
+			case 3: tt.internalFmt = hxd.PixelFormat.DXT_FORMAT.RGBA_DXT5;
 			case 6: tt.internalFmt = 0x8E8F; // COMPRESSED_RGB_BPTC_UNSIGNED_FLOAT
 			case 7: tt.internalFmt = 0x8E8C; // COMPRESSED_RGBA_BPTC_UNORM
+			default: throw "Unsupported texture format "+t.format;
+			}
+		case ASTC(n):
+			checkMult4(t);
+			switch( n ) {
+			case 10: tt.internalFmt = hxd.PixelFormat.ASTC_FORMAT.RGBA_4x4;
+			default: throw "Unsupported texture format "+t.format;
+			}
+		case ETC(n):
+			checkMult4(t);
+			switch( n ) {
+			case 0: tt.internalFmt = hxd.PixelFormat.ETC_FORMAT.RGB_ETC1;
+			default: throw "Unsupported texture format "+t.format;
+			}
+		case PVRTC(n):
+			checkMult4(t);
+			switch(n) {
+			case 8: tt.internalFmt = hxd.PixelFormat.PVRTC_FORMAT.RGB_4BPPV1;
+			case 9: tt.internalFmt = hxd.PixelFormat.PVRTC_FORMAT.RGBA_4BPPV1;
 			default: throw "Unsupported texture format "+t.format;
 			}
 		default:
@@ -1147,6 +1172,9 @@ class GlDriver extends Driver {
 				gl.texImage3D(bind, mip, tt.internalFmt, w, h, d, 0, getChannels(tt), tt.pixelFmt, null);
 				checkError();
 			} else {
+				#if js
+				if( !t.format.match(S3TC(_)) && !t.format.match(ETC(_)) && !t.format.match(ASTC(_)) && !t.format.match(PVRTC(_))) 
+				#end
 				gl.texImage2D(bind, mip, tt.internalFmt, w, h, 0, getChannels(tt), tt.pixelFmt, null);
 				checkError();
 			}
@@ -1161,6 +1189,11 @@ class GlDriver extends Driver {
 		}
 
 		return tt;
+	}
+
+	inline function checkMult4(t:h3d.mat.Texture) {
+		if( t.width&3 != 0 || t.height&3 != 0 )
+			throw "Compressed texture "+t+" has size "+t.width+"x"+t.height+" - must be a multiple of 4";
 	}
 
 	function restoreBind() {
@@ -1403,16 +1436,18 @@ class GlDriver extends Driver {
 		case RGB10A2, RG11B10UF: new Uint32Array(@:privateAccess pixels.bytes.b.buffer, pixels.offset, dataLen>>2);
 		default: new Uint8Array(@:privateAccess pixels.bytes.b.buffer, pixels.offset, dataLen);
 		}
-		if( t.format.match(S3TC(_)) ) {
-			if( t.flags.has(IsArray) || t.flags.has(Is3D) )
-				gl.compressedTexSubImage3D(face, mipLevel, 0, 0, side, pixels.width, pixels.height, 1, t.t.internalFmt, buffer);
-			else
-				gl.compressedTexSubImage2D(face, mipLevel, 0, 0, pixels.width, pixels.height, t.t.internalFmt, buffer);
-		} else {
-			if( t.flags.has(IsArray) || t.flags.has(Is3D) )
-				gl.texSubImage3D(face, mipLevel, 0, 0, side, pixels.width, pixels.height, 1, getChannels(t.t), t.t.pixelFmt, buffer);
-			else
-				gl.texSubImage2D(face, mipLevel, 0, 0, pixels.width, pixels.height, getChannels(t.t), t.t.pixelFmt, buffer);
+
+		switch (t.format) {
+			case S3TC(_), ASTC(_), PVRTC(_), ETC(_):
+				if( t.flags.has(IsArray) || t.flags.has(Is3D)  )
+					gl.compressedTexSubImage3D(face, mipLevel, 0, 0, side, pixels.width, pixels.height, 1, t.t.internalFmt, buffer);
+				else
+					gl.compressedTexSubImage2D(face, mipLevel, 0, 0, pixels.width, pixels.height, t.t.internalFmt, buffer);
+			default:
+				if( t.flags.has(IsArray)  || t.flags.has(Is3D) )
+					gl.texSubImage3D(face, mipLevel, 0, 0, side, pixels.width, pixels.height, 1, getChannels(t.t), t.t.pixelFmt, buffer);
+				else
+					gl.texSubImage2D(face, mipLevel, 0, 0, pixels.width, pixels.height, getChannels(t.t), t.t.pixelFmt, buffer);
 		}
 		#else
 		throw "Not implemented";
@@ -1887,15 +1922,40 @@ class GlDriver extends Driver {
 	}
 
 	#if js
+
+	public function checkTextureSupport():hxd.PixelFormat {
+		var astcSupported = gl.getExtension('WEBGL_compressed_texture_astc') != null;
+		var dxtSupported = gl.getExtension('WEBGL_compressed_texture_s3tc') != null;
+		var pvrtcSupported = gl.getExtension('WEBGL_compressed_texture_pvrtc') != null
+			|| gl.getExtension('WEBKIT_WEBGL_compressed_texture_pvrtc') != null;
+		var etcSupported = gl.getExtension('WEBGL_compressed_texture_etc1') != null;
+		return if(astcSupported) {
+			hxd.PixelFormat.ASTC();
+		} else if(dxtSupported){
+			hxd.PixelFormat.S3TC();
+		} else  if(pvrtcSupported){
+			hxd.PixelFormat.PVRTC();
+		} else if(etcSupported){
+			hxd.PixelFormat.ETC();
+		} else {
+			null;
+		}
+	}
 	var features : Map<Feature,Bool> = new Map();
 	var has16Bits : Bool;
 	function makeFeatures() {
 		for( f in Type.allEnums(Feature) )
 			features.set(f,checkFeature(f));
-		if( gl.getExtension("WEBGL_compressed_texture_s3tc") != null ) {
-			maxCompressedTexturesSupport = 3;
-			if( gl.getExtension("EXT_texture_compression_bptc") != null )
-				maxCompressedTexturesSupport = 7;
+		textureSupport = checkTextureSupport();
+		maxCompressedTexturesSupport = switch (textureSupport) {
+			case hxd.PixelFormat.ASTC(_), hxd.PixelFormat.ETC(_), hxd.PixelFormat.PVRTC(_): 3;
+			case hxd.PixelFormat.S3TC(_) : 
+				if( gl.getExtension("EXT_texture_compression_bptc") != null ) {
+					7;
+				} else {
+					3;
+				}
+			default: 0;
 		}
 		if( glES < 3 )
 			gl.getExtension("WEBGL_depth_texture");

@@ -1,10 +1,14 @@
 {
-	"name" : "heaps",
-	"url" : "http://heaps.io",
-	"license" : "BSD",
-    "description" : "The GPU Game Framework",
-    "version" : "2.0.0",
-	"releasenote" : "See CHANGELOG.md",
-	"contributors" : ["ncannasse"],
-	"dependencies" : { "format" : "" }
+	"name": "heaps",
+	"url": "http://heaps.io",
+	"license": "BSD",
+	"description": "The GPU Game Framework",
+	"version": "2.0.4",
+	"releasenote": "See CHANGELOG.md",
+	"contributors": [
+		"ncannasse"
+	],
+	"dependencies": {
+		"format": ""
+	}
 }

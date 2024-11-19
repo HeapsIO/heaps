@@ -8,7 +8,9 @@ bin
 /hxd/net/inspect.min.css
 /hxd/inspect/inspect.min.css
 /samples/build
+/node_modules
 /*.xml
 .vscode
 /tools/mikktspace/out
 *.exe
+.history
