@@ -1,8 +1,8 @@
 package h3d.impl;
 import h3d.impl.Driver;
+import h3d.mat.Data;
 import h3d.mat.Pass;
 import h3d.mat.Stencil;
-import h3d.mat.Data;
 
 #if (js||hlsdl||usegl)
 
@@ -87,6 +87,7 @@ class GlDriver extends Driver {
 	static var UID = 0;
 	public var gl : GL;
 	public static var ALLOW_WEBGL2 = true;
+	public static var MAX_PRECISION = null;
 	#end
 
 	#if (hlsdl||usegl)
@@ -277,6 +278,9 @@ class GlDriver extends Driver {
 		var glout = new ShaderCompiler();
 		glout.glES = glES;
 		glout.version = shaderVersion;
+		#if js
+		glout.precision = MAX_PRECISION;
+		#end
 		#if !usegl
 		@:privateAccess glout.intelDriverFix = isIntelGpu;
 		#end
