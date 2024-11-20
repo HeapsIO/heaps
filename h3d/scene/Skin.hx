@@ -171,6 +171,14 @@ class Skin extends MultiMaterial {
 		return skinData;
 	}
 
+	public function getJointRelPosition( name : String, additive = false ) : Null<h3d.Matrix> {
+		var j = skinData.namedJoints.get(name);
+		if( j == null ) return null;
+		if( additive )
+			return additivePose == null ? null : additivePose[j.index];
+		return currentRelPose[j.index];
+	}
+
 	public function setJointRelPosition( name : String, pos : h3d.Matrix, additive = false ) {
 		var j = skinData.namedJoints.get(name);
 		if( j == null ) return;
