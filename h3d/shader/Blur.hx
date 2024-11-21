@@ -19,10 +19,18 @@ class Blur extends ScreenShader {
 
 		@param @const var isDepthDependant : Bool;
 		@param var depthThreshold : Float = 1.0;
+		@param var depthThresholdMaxDist : Float = 0.0;
 
 		@param @const var isCube : Bool;
 		@param var cubeTexture : SamplerCube;
 		@param var cubeDir : Mat3;
+
+		function scaleThreshold(z : Float) : Float {
+			var t = depthThreshold;
+			if ( depthThresholdMaxDist > 0.0 )
+				t *= 1.0 + max(z - depthThresholdMaxDist, 0.0);
+			return t;
+		}
 
 		function fragment() {
 			if( isDepthDependant ) {
@@ -31,6 +39,7 @@ class Blur extends ScreenShader {
 				var coord = fragCoord.xy;
 				var fragUV = coord.xy * invDimensions;
 				var p = getViewPosition(fragUV);
+				var minZ = p.z;
 				var c = texture.get(fragUV);
 				var color = vec4(0, 0, 0, 0);
 
@@ -41,7 +50,7 @@ class Blur extends ScreenShader {
 					var nearestUV = curCoord * invDimensions;
 					var pcur = getViewPosition(nearestUV);
 					var d = abs(pcur.z - p.z);
-					isEdge = isEdge || ( d > depthThreshold );
+					isEdge = isEdge || ( d > scaleThreshold(min(pcur.z, p.z)) );
 				}
 
 				@unroll for( i in -Quality + 1...Quality ) {
@@ -51,7 +60,7 @@ class Blur extends ScreenShader {
 					var ccur = texture.get( ( isEdge ) ? nearestUV : uv );
 					var pcur = getViewPosition(nearestUV);
 					var d = abs(pcur.z - p.z);
-					c = ( d > depthThreshold ) ? c : ccur;
+					c = ( d > scaleThreshold(min(pcur.z, p.z)) ) ? c : ccur;
 					color += c * values[i < 0 ? -i : i];
 				}
 				pixelColor = color;
