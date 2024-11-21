@@ -176,7 +176,7 @@ class Skin extends MultiMaterial {
 		if( j == null ) return null;
 		if( additive )
 			return additivePose == null ? null : additivePose[j.index];
-		return currentRelPose[j.index];
+		return currentRelPose[j.index] ?? j.defMat;
 	}
 
 	public function setJointRelPosition( name : String, pos : h3d.Matrix, additive = false ) {
