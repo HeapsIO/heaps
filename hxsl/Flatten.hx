@@ -151,7 +151,7 @@ class Flatten {
 				case TBuffer(TInt|TFloat,_), TVec(_, VFloat|VInt):
 					e.map(mapExpr);
 				case TArray(t, _), TBuffer(t, _):
-					var stride = varSize(t, a.t);
+					var stride = varSize4Bytes(t, a.t);
 					if( stride == 0 || (v.type.match(TArray(_)) && stride & 3 != 0) ) throw new Error("Dynamic access to an Array which size is not 4 components-aligned is not allowed", e.p);
 					stride = (stride + 3) >> 2;
 					eindex = toInt(mapExpr(eindex));
@@ -178,7 +178,11 @@ class Flatten {
 			switch( e.t ) {
 			case TFloat:
 				readField(expr, pos, 1);
-			case TVec(size,VFloat), TBytes(size):
+			case TBytes(size):
+				{ e : TCall({ e : TGlobal(UnpackSnorm4x8), p : e.p, t : TVec(size, VFloat) }, [
+					floatBitsToUint(readField(expr, pos, 1))
+				]), t : e.t, p : e.p }
+			case TVec(size,VFloat):
 				var idx = pos >> 2;
 				var idx2 = ((pos + size - 1) >> 2);
 				if( idx == idx2 )
@@ -312,6 +316,10 @@ class Flatten {
 			}
 			return e;
 		}
+	}
+
+	function floatBitsToUint( e : TExpr ) {
+		return { e : TCall({ e : TGlobal(FloatBitsToUint), t : TFun([]), p : e.p }, [e]), t : TInt, p : e.p };
 	}
 
 	function toInt( e : TExpr ) {
@@ -498,7 +506,7 @@ class Flatten {
 		return switch( v ) {
 		case TFloat, TInt if( t == VFloat ): 1;
 		case TVec(n, t2) if( t == t2 ): n;
-		case TBytes(n): n; 
+		case TBytes(n): n;
 		case TMat4 if( t == VFloat ): 16;
 		case TMat3, TMat3x4 if( t == VFloat ): 12;
 		case TArray(at, SConst(n)): varSize(at, t) * n;
@@ -509,6 +517,21 @@ class Flatten {
 			size;
 		default:
 			throw v.toString() + " size unknown for type " + t;
+		}
+	}
+
+	function varSize4Bytes( v : Type, t : VecType ) {
+		return switch ( v ) {
+		case TBytes(4): 1;
+		case TBytes(_): throw v.toString() + " 4 bytes size unknown for type" + t;
+		case TArray(at, SConst(n)): varSize4Bytes(at, t) * n;
+		case TStruct(vl):
+			var size = 0;
+			for( v in vl )
+				size += varSize4Bytes(v.type, t);
+			size;
+		default:
+			varSize(v, t);
 		}
 	}
 

@@ -307,6 +307,8 @@ enum TGlobal {
 	//ComputeVar_WorkGroupSize - no DirectX support
 	AtomicAdd;
 	GroupMemoryBarrier;
+	UnpackSnorm4x8;
+	UnpackUnorm4x8;
 }
 
 enum Component {

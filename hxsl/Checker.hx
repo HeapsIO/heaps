@@ -212,6 +212,10 @@ class Checker {
 				fname = fname.charAt(0).toLowerCase() + fname.substr(1);
 				vl.push({ name : fname, type : vt });
 				null;
+			case UnpackSnorm4x8:
+				[ { args : [ { name : "value", type : TInt } ], ret : vec4 } ];
+			case UnpackUnorm4x8:
+				[ { args : [ { name : "value", type : TInt } ], ret : vec4 } ];
 			default:
 				throw "Unsupported global "+g;
 			}
