@@ -77,7 +77,14 @@ class Vector4Impl /*#if apicheck implements h2d.impl.PointApi<Vector4,Matrix> #e
 		y *= f;
 		z *= f;
 	}
-	
+
+	public inline function scale4( f : Float ) {
+		x *= f;
+		y *= f;
+		z *= f;
+		w *= f;
+	}
+
 	public inline function sub( v : Vector4 ) {
 		return new Vector4(x - v.x, y - v.y, z - v.z, w - v.w);
 	}
