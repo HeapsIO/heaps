@@ -393,6 +393,30 @@ abstract Polygon(Array<Point>) from Array<Point> to Array<Point> {
 	}
 
 	/**
+		get intersection point between ab and cd
+	**/
+	function getIntersectionPoint(a : h2d.col.Point, b : h2d.col.Point, c : h2d.col.Point, d : h2d.col.Point) : h2d.col.Point {
+		if (!intersect(a, b, c, d))
+			return null;
+
+		var a1 = b.y - a.y;
+   	 	var b1 = a.x - b.x;
+   	 	var c1 = a1 * a.x + b1 * a.y;
+
+		var a2 = d.y - c.y;
+		var b2 = c.x - d.x;
+		var c2 = a2 * c.x + b2 * c.y;
+
+		var determinant = a1 * b2 - a2 * b1;
+		if (determinant == 0)
+			return null;
+
+		var x = (b2 * c1 - b1 * c2) / determinant;
+        var y = (a1 * c2 - a2 * c1) / determinant;
+        return new h2d.col.Point(x, y);
+	}
+
+	/**
 		Check if polygon self-intersect
 	**/
 	public function selfIntersecting() {
