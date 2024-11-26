@@ -128,18 +128,12 @@ class ComputeIndirect extends hxsl.Shader {
 			}
 
 			scaledRadius *= radius;
-			var culled = false;
-
-			if ( dot(scaledRadius, scaledRadius) < 1e-6 )
-				culled = true;
+			var culled = dot(scaledRadius, scaledRadius) < 1e-6;
 
 			if ( ENABLE_CULLING ) {
-				for ( i  in 0...6 ) {
+				@unroll for ( i  in 0...6 ) {
 					var plane = frustum[i];
-					if ( plane.x * pos.x + plane.y * pos.y + plane.z * pos.z - plane.w < -scaledRadius ) {
-						culled = true;
-						break;
-					}
+					culled = culled || plane.x * pos.x + plane.y * pos.y + plane.z * pos.z - plane.w < -scaledRadius;
 				}
 			}
 
