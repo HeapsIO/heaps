@@ -192,6 +192,7 @@ class Geometry {
 	}
 
 	public function getNormals(?matrix) {
+		return processVectors("LayerElementNormal", "Normals");
 		if( matrix == null ) matrix = getGeomMatrix();
 		if( matrix != null && matrix.isIdentity() ) matrix = null;
 		var normals = processVectors("LayerElementNormal", "Normals");
