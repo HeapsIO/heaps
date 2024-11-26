@@ -167,6 +167,9 @@ class RenderContext extends h3d.impl.RenderContext {
 	}
 
 	public function computeDispatch( ?shader : hxsl.Shader, x = 1, y = 1, z = 1 ) {
+		if ( x <= 0 || y <= 0 || z <= 0 )
+			throw "Can't use zero or negative work groups count";
+
 		var prev = h3d.impl.RenderContext.get();
 		if( prev != this )
 			start();
@@ -268,7 +271,7 @@ class RenderContext extends h3d.impl.RenderContext {
 		lights = null;
 
 		cameraFrustumUploaded = false;
-		
+
 		cameraPreviousViewProj.load(cameraViewProj);
 		computeVelocity = false;
 
