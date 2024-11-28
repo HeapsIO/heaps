@@ -183,10 +183,14 @@ class Style extends domkit.CssStyle {
 				errors.push(pos.file+":"+pos.line+": " + w.msg);
 		 	}
 		}
+		onReload();
 		for( o in currentObjects )
 			o.dom.applyStyle(this);
 		refreshErrors();
 		sourceFiles = [];
+	}
+
+	public dynamic function onReload() {
 	}
 
 	function refreshErrors( ?scene ) {
