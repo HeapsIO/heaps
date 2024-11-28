@@ -448,6 +448,28 @@ class CustomParser extends domkit.CssValue.ValueParser {
 		return 0.;
 	}
 
+	function parseTagDefinition(value:CssValue) : {name:String,?font:String,?color:Int} {
+		return switch( value ) {
+		case VCall(id,[VString(font)]):
+			{name:id,font:font};
+		case VCall(id,[v = VIdent(c)]):
+			try {name:id,color:parseColor(v)} catch( e : InvalidProperty ) {name:id,font:c};
+		case VCall(id,[v]):
+			{name:id,color:parseColor(v)};
+		case VCall(id,[VString(font)|VIdent(font),col]):
+			{name:id,font:font,color:parseColor(col)};
+		default:
+			invalidProp();
+		}
+	}
+
+	public function parseTagDefinitions(value:CssValue) {
+		return switch(value) {
+		case VGroup(values): [for( v in values ) parseTagDefinition(v)];
+		default: [parseTagDefinition(value)];
+		}
+	}
+
 }
 
 #if !macro
@@ -824,6 +846,7 @@ class TextComp extends DrawableComp implements domkit.Component.ComponentDecl<h2
 class HtmlTextComp extends TextComp implements domkit.Component.ComponentDecl<h2d.HtmlText> {
 	@:p var condenseWhite : Bool;
 	@:p var propagateInteractiveNode: Bool;
+	@:p(tagDefinitions) var tags : Array<{name:String,font:String,color:Int}>;
 
 	static function create( parent : h2d.Object ) {
 		return new h2d.HtmlText(hxd.res.DefaultFont.get(),parent);
@@ -836,6 +859,11 @@ class HtmlTextComp extends TextComp implements domkit.Component.ComponentDecl<h2
 	static function set_propagateInteractiveNode(o : h2d.HtmlText, v) {
 		o.propagateInteractiveNode = v;
 	}
+
+	static function set_tags( o : h2d.HtmlText, tags:Array<{name:String,font:String,color:Int}>) {
+		o.defineHtmlTags(tags);
+	}
+
 }
 
 @:uiComp("scale-grid") @:domkitDecl

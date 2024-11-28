@@ -557,6 +557,34 @@ class Style extends domkit.CssStyle {
 				posLines.push(lStr);
 				valueLines.push('<font color="#D0D0D0"> ${p.name}</font> <font color="#808080">$vstr</font>');
 			}
+			var txt = Std.downcast(obj, h2d.HtmlText);
+			if( txt != null ) {
+				// if the text has custom nodes, display them in CSS
+				var x = try @:privateAccess txt.parseText(txt.text) catch( e : Dynamic ) null;
+				var nodes = new Map();
+				function gatherRec(x:Xml) {
+					switch( x.nodeType ) {
+					case Element:
+						nodes.set(x.nodeName.toLowerCase(), true);
+						for( c in x )
+							gatherRec(c);
+					case Document:
+						for( c in x )
+							gatherRec(c);
+					default:
+					}
+				}
+				gatherRec(x);
+				nodes.remove("font");
+				nodes.remove("br");
+				nodes.remove("img");
+				var nodes = [for( k in nodes.keys() ) k];
+				nodes.sort(Reflect.compare);
+				if( nodes.length > 0 ) {
+					posLines.push("");
+					valueLines.push('<font color="#D0D0D0"> text-tags</font> <font color="#808080">${nodes.join(',')}</font>');
+				}
+			}
 			propsLineText.text = posLines.join("<br/>");
 			propsValueText.text = valueLines.join("<br/>");
 		}
