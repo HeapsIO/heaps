@@ -28,12 +28,10 @@ class MaterialDatabase {
 				db.set(model.entry.directory, { v : value });
 			});
 			#end
-			var value : Dynamic = haxe.Json.parse(res.toText());
-			value;
+			haxe.Json.parse(res.toText());
 		} catch (e : hxd.res.NotFound) {
-			var value = {};
-			value;
-		};
+			{};
+		}
 		db.set(model.entry.directory, {v: value});
 		return value;
 	}
