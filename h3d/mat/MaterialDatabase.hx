@@ -20,8 +20,21 @@ class MaterialDatabase {
 		if( cached != null )
 			return cached.v;
 		var file = getFilePath(model);
-		var value = try haxe.Json.parse(hxd.res.Loader.currentInstance.load(file).toText()) catch( e : hxd.res.NotFound ) {};
-		db.set(model.entry.directory, { v : value });
+		var value = try {
+			var res = hxd.res.Loader.currentInstance.load(file);
+			#if editor
+			res.watch(() -> {
+				var value = haxe.Json.parse(res.toText());
+				db.set(model.entry.directory, { v : value });
+			});
+			#end
+			var value : Dynamic = haxe.Json.parse(res.toText());
+			value;
+		} catch (e : hxd.res.NotFound) {
+			var value = {};
+			value;
+		};
+		db.set(model.entry.directory, {v: value});
 		return value;
 	}
 
