@@ -57,6 +57,8 @@ class CascadeShadowMap extends DirShadowMap {
 		return cshader.cascadeShadowMaps;
 	}
 
+	override function needStaticUpdate() { }
+
 	function computeNearFar( i : Int, previousFar : Float ) {
 		var max = maxDist < 0.0 ? ctx.camera.zFar : maxDist;
 		var step = max - firstCascadeSize;

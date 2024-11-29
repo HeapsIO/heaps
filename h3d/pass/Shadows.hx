@@ -19,6 +19,7 @@ class Shadows extends Output {
 	var format : hxd.PixelFormat;
 	var staticTexture : h3d.mat.Texture;
 	var light : h3d.scene.Light;
+	var updateStatic : Bool = false;
 	public var enabled(default,set) : Bool = true;
 	public var mode(default,set) : RenderMode = None;
 	public var size(default,set) : Int = 1024;
@@ -98,6 +99,17 @@ class Shadows extends Output {
 		throw "Not implemented";
 	}
 
+	/**
+	 * Triggers update of static part of shadows (if any).
+	**/ 
+	public function needStaticUpdate() {
+		switch ( mode ) {
+		case Mixed, Static:
+			updateStatic = true;
+		case None, Dynamic:
+		}
+	}
+
 	function createDefaultShadowMap() {
 		var tex = h3d.mat.Texture.fromColor(0xFFFFFF);
 		tex.name = "defaultShadowMap";
@@ -105,39 +117,38 @@ class Shadows extends Output {
 	}
 
 	function syncEarlyExit() {
-		syncShader(staticTexture == null ? createDefaultShadowMap() : staticTexture);	
+		syncShader(staticTexture == null ? createDefaultShadowMap() : staticTexture);
 	}
 
 	function syncShader( texture : h3d.mat.Texture ) {
 	}
 
 	function filterPasses( passes : h3d.pass.PassList ) {
-		if( !ctx.computingStatic ) {
+		if ( ctx.computingStatic || updateStatic ) {
 			switch( mode ) {
-				case None:
-					return false;
-				case Dynamic:
-					return true;
-				case Mixed:
-					passes.filter(function(p) return p.pass.isStatic == false);
-					return true;
-				case Static:
-					syncEarlyExit();
-					return false;
+			case None:
+				return false;
+			case Dynamic:
+				return false;
+			case Mixed:
+				passes.filter(function(p) return p.pass.isStatic == true);
+				return true;
+			case Static:
+				passes.filter(function(p) return p.pass.isStatic == true);
+				return true;
 			}
-		}
-		else {
+		} else {
 			switch( mode ) {
-				case None:
-					return false;
-				case Dynamic:
-					return false;
-				case Mixed:
-					passes.filter(function(p) return p.pass.isStatic == true);
-					return true;
-				case Static:
-					passes.filter(function(p) return p.pass.isStatic == true);
-					return true;
+			case None:
+				return false;
+			case Dynamic:
+				return true;
+			case Mixed:
+				passes.filter(function(p) return p.pass.isStatic == false);
+				return true;
+			case Static:
+				syncEarlyExit();
+				return false;
 			}
 		}
 	}
@@ -156,5 +167,4 @@ class Shadows extends Output {
 			return prevResult;
 		});
 	}
-
 }

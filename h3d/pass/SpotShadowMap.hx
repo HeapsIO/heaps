@@ -120,7 +120,9 @@ class SpotShadowMap extends Shadows {
 		@:privateAccess ctx.cameraFar = lightCamera.zFar;
 		@:privateAccess ctx.cameraPos = lightCamera.pos;
 
-		var texture = ctx.computingStatic ? createStaticTexture() : ctx.textures.allocTarget("spotShadowMap", size, size, false, format);
+		var computingStatic = ctx.computingStatic || updateStatic;
+
+		var texture = computingStatic ? createStaticTexture() : ctx.textures.allocTarget("spotShadowMap", size, size, false, format);
 		if( depth == null || depth.width != texture.width || depth.height != texture.height || depth.isDisposed() ) {
 			if( depth != null ) depth.dispose();
 			depth = new h3d.mat.Texture(texture.width, texture.height, Depth24Stencil8);
@@ -135,7 +137,7 @@ class SpotShadowMap extends Shadows {
 		if( blur.radius > 0 )
 			blur.apply(ctx, texture);
 
-		if( mode == Mixed && !ctx.computingStatic && staticTexture != null && !staticTexture.isDisposed() ) {
+		if( mode == Mixed && !computingStatic && staticTexture != null && !staticTexture.isDisposed() ) {
 			if ( staticTexture.width != texture.width )
 				throw "Static shadow map doesnt match dynamic shadow map";
 			var merge = ctx.textures.allocTarget("mergedSpotShadowMap", size, size, false, format);
@@ -151,6 +153,8 @@ class SpotShadowMap extends Shadows {
 		@:privateAccess ctx.cameraViewProj = prevViewProj;
 
 		syncShader(texture);
+
+		updateStatic = false;
 	}
 
 	function updateCamera(){

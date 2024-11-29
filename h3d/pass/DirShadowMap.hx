@@ -273,14 +273,16 @@ class DirShadowMap extends Shadows {
 		}
 		super.draw(passes, sort);
 
-		var doBlur = blur.radius > 0 && (mode != Mixed || !ctx.computingStatic);
+		var computingStatic = ctx.computingStatic || updateStatic;
+
+		var doBlur = blur.radius > 0 && (mode != Mixed || !computingStatic);
 
 		if( border != null && !doBlur )
 			border.render();
 
 		ctx.engine.popTarget();
 
-		if( mode == Mixed && !ctx.computingStatic && staticTexture != null && !staticTexture.isDisposed() ) {
+		if( mode == Mixed && !computingStatic && staticTexture != null && !staticTexture.isDisposed() ) {
 			if ( staticTexture.width != tex.width )
 				throw "Static shadow map doesnt match dynamic shadow map";
 			var merge = ctx.textures.allocTarget("mergedDirShadowMap", size, size, false, format);
@@ -320,7 +322,9 @@ class DirShadowMap extends Shadows {
 		if( !filterPasses(passes) )
 			return;
 
-		if( mode != Mixed || ctx.computingStatic ) {
+		var computingStatic = ctx.computingStatic || updateStatic;
+
+		if( mode != Mixed || computingStatic ) {
 			var ct = ctx.camera.target;
 			var slight = light == null ? ctx.lightSystem.shadowLight : light;
 			var ldir = slight == null ? null : @:privateAccess slight.getShadowDirection();
@@ -360,6 +364,8 @@ class DirShadowMap extends Shadows {
 
 		syncShader(texture);
 
+		updateStatic = false;
+		
 		#if editor
 		drawDebug();
 		#end
