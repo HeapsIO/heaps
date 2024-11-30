@@ -4,11 +4,11 @@ HASHLINK=/usr/local/include
 endif
 
 ifndef HASHLINK_BIN
-HASHLINK=/usr/local/lib
+HASHLINK_BIN=/usr/local/lib
 endif
 
 all: codegen
-	gcc -I $HASHLINK -I out out/main.c -lhl -L${HASHLINK_BIN}/fmt.hdll -o mikktspace
+	gcc -I ${HASHLINK} -I out out/main.c ${HASHLINK_BIN}/libhl.dylib ${HASHLINK_BIN}/fmt.hdll -o mikktspace
 
 codegen:
 	haxe mikktspace.hxml -D no-compilation
