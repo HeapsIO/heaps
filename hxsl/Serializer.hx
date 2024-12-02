@@ -345,7 +345,7 @@ class Serializer {
 		ops;
 	};
 	static var UNOPS = Unop.createAll();
-	static var TGLOBALS = hxsl.TGlobal.createAll();
+	static var TGLOBALS = hxsl.Ast.TGlobal.createAll();
 	static var TSWIZ = new Map();
 	static var REGS = [X,Y,Z,W];
 
