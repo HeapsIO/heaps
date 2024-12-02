@@ -162,7 +162,7 @@ class Linker {
 			}
 		}
 		var v2 : TVar = {
-			id : hxsl.Tools.allocVarId(),
+			id : Tools.allocVarId(),
 			name : vname,
 			type : v.type,
 			kind : v.kind,
