@@ -2,7 +2,7 @@ package h3d.scene;
 
 import hxsl.ShaderList;
 
-private class BatchData {
+class BatchData {
 
 	public var paramsCount : Int;
 	public var maxInstance : Int;
@@ -667,12 +667,12 @@ class MeshBatch extends MultiMaterial {
 	override function sync(ctx:RenderContext) {
 		super.sync(ctx);
 		if( instanceCount == 0 ) return;
-		flush(ctx);
+		flush();
 	}
 
 	function addComputeShaders( pass : h3d.mat.Pass ) {}
 
-	public function flush(ctx:RenderContext) {
+	public function flush() {
 		var p = dataPasses;
 		var alloc = hxd.impl.Allocator.get();
 		var psBytes = primitiveSubBytes;
@@ -861,10 +861,6 @@ class MeshBatch extends MultiMaterial {
 					while ( maxSubPartsElement > computeShader.MAX_SUB_PART_BUFFER_ELEMENT_COUNT )
 						computeShader.MAX_SUB_PART_BUFFER_ELEMENT_COUNT = computeShader.MAX_SUB_PART_BUFFER_ELEMENT_COUNT + 16;
 				}
-
-				if ( enableGPUCulling )
-					computeShader.frustum = ctx.getCameraFrustumBuffer();
-
 			}
 			while( p.buffers.length > index )
 				alloc.disposeBuffer( p.buffers.pop() );
@@ -923,10 +919,6 @@ class MeshBatch extends MultiMaterial {
 		while( p != null ) {
 			var pass = p.pass;
 
-			// Triggers upload
-			if ( enableGPUCulling )
-				ctx.getCameraFrustumBuffer();
-
 			// check that the pass is still enable
 			var material = materials[p.matIndex];
 			if( material != null && material.getPass(pass.name) != null ) {
@@ -936,6 +928,8 @@ class MeshBatch extends MultiMaterial {
 					if ( p.commandBuffers != null && p.commandBuffers.length > 0 ) {
 						var count = hxd.Math.imin( instanceCount - p.maxInstance * i, p.maxInstance);
 						var computeShader = p.computePass.getShader(ComputeIndirect);
+						if ( enableGPUCulling )
+							computeShader.frustum = ctx.getCameraFrustumBuffer();
 						computeShader.instanceData = buf;
 						computeShader.matIndex = p.matIndex;
 						computeShader.commandBuffer = p.commandBuffers[i];
