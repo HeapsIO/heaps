@@ -718,6 +718,8 @@ class GlslOut {
 		case Param, Global:
 			switch( v.type ) {
 			case TBuffer(_, _, RW|RWPartial):
+				if ( version < 430 )
+					throw "SSBO are available since version 4.3";
 				add("layout(std430) buffer ");
 			case TBuffer(_, _, kind):
 				add("layout(std140) ");
@@ -725,6 +727,8 @@ class GlslOut {
 				case Uniform, Partial:
 					add("uniform ");
 				case RW, RWPartial:
+					if ( version < 430 )
+						throw "SSBO are available since version 4.3";
 					add("buffer ");
 				}
 			case TArray(TRWTexture(_, _, chans), _):
