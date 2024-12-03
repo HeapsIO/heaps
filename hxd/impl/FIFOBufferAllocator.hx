@@ -60,7 +60,7 @@ class FIFOBufferAllocator extends Allocator {
 	var curMemory : Int = 0;
 
 	/**
-	 * How long do we keep some buffer than hasn't been used in memory (in frames, default 60 * 60)
+	 * How long do we keep some buffer than hasn't been used in memory (in frames)
 	**/
 	public var maxKeepFrame(default, set) : Int = 60 * 10;
 	public function set_maxKeepFrame(v) {
