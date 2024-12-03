@@ -793,7 +793,7 @@ class GlslOut {
 			computeLayout = [x,y,1];
 		case TCall({ e : TGlobal(SetLayout) }, [{ e : TConst(CInt(x)) }]):
 			computeLayout = [x,1,1];
-		default: hxsl.Tools.iter(e,collectGlobals.bind(m));
+		default: Tools.iter(e,collectGlobals.bind(m));
 		}
 	}
 
