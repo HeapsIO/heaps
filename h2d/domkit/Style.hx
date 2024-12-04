@@ -18,6 +18,7 @@ class Style extends domkit.CssStyle {
 	public var inspectDetailsKeyCode : Int = hxd.Key.CTRL;
 	public var s3d : h3d.scene.Scene;
 	public var cssParser : domkit.CssParser;
+	public var onInspectHyperlink : (String) -> Void = null;
 
 	public function new() {
 		super();
@@ -131,7 +132,10 @@ class Style extends domkit.CssStyle {
 			if (pos != null) {
 				file = pos.source;
 				line = pos.originalLine;
-				col = pos.originalColumn;
+				if (pos.originalColumn == null)
+					col = -1;
+				else
+					col = pos.originalColumn;
 			}
 		}
 		#end
@@ -139,6 +143,7 @@ class Style extends domkit.CssStyle {
 			line: line,
 			count: count,
 			file: file,
+			col: col,
 		};
 	}
 
@@ -504,6 +509,9 @@ class Style extends domkit.CssStyle {
 		var propsLineText = new h2d.HtmlText(hxd.res.DefaultFont.get(), propsFlow);
 		var propsValueText = new h2d.HtmlText(hxd.res.DefaultFont.get(), propsFlow);
 
+		if (onInspectHyperlink != null)
+			propsLineText.onHyperlink = onInspectHyperlink;
+
 		previewTitle.text = getDisplayInfo(obj);
 		var dom = obj.dom;
 
@@ -512,6 +520,13 @@ class Style extends domkit.CssStyle {
 			var valueLines = [];
 			var files: Array<SourceFile> = [];
 			var lineDigits = 0;
+			var resourcePath = "";
+			if (onInspectHyperlink != null && resources.length > 0 && resources[0].entry is hxd.fs.LocalFileSystem.LocalEntry) {
+				var entry = Std.downcast(resources[0].entry, hxd.fs.LocalFileSystem.LocalEntry);
+				var idx = @:privateAccess entry.file.lastIndexOf("/");
+				if (idx >= 0) resourcePath = @:privateAccess entry.file.substr(0, idx);
+			}
+
 			for( i in 0...dom.currentSet.length ) {
 				if( dom.currentRuleStyles == null || dom.currentRuleStyles[i] == null )
 					continue;
@@ -553,8 +568,14 @@ class Style extends domkit.CssStyle {
 						var s = "" + pos.line;
 						if (pos.file == null)
 							lStr = '<font color="#707070">$s</font>';
-						else
-							lStr = '<font color="#707070">${pos.file}:$s</font>';
+						else {
+							var posStr = '${pos.file}:$s';
+							if (onInspectHyperlink != null && resourcePath != null) {
+								var colStr = pos.col >= 0 ? (":" + pos.col) : "";
+								posStr = '<a href="$resourcePath/$posStr$colStr">$posStr</a>';
+							}
+							lStr = '<font color="#707070">$posStr</font>';
+						}
 					}
 				}
 				var vstr = v == null ? "???" : StringTools.htmlEscape(domkit.CssParser.valueStr(v));
