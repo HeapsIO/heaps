@@ -1,3 +1,6 @@
+## 2.0.1 (December, 3, 2024)
+* fix h2d.Object.move method to perform local movement as intended
+
 ## 2.0 (January 1, 2024)
 
 * changed h3d.Vector to be a 3 component vector (alias to h3d.col.Point), added h3d.Vector4
