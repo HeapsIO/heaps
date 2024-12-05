@@ -403,6 +403,7 @@ class DX12Driver extends h3d.impl.Driver {
 	var frameCount : Int;
 	var tsFreq : haxe.Int64;
 	var heapCount : Int;
+	var currentPipelineState : PipelineState;
 
 	public static var INITIAL_RT_COUNT = 1024;
 	public static var INITIAL_BUMP_ALLOCATOR_SIZE = 2 * 1024 * 1024;
@@ -2094,7 +2095,10 @@ class DX12Driver extends h3d.impl.Driver {
 		pipelineBuilder.setShader(shader);
 		if( sh.isCompute ) {
 			frame.commandList.setComputeRootSignature(currentShader.rootSignature);
-			frame.commandList.setPipelineState(currentShader.computePipeline);
+			if ( currentPipelineState != currentShader.computePipeline ) {
+				frame.commandList.setPipelineState(currentShader.computePipeline);
+				currentPipelineState = currentShader.computePipeline;
+			}
 		} else {
 			frame.commandList.setGraphicsRootSignature(currentShader.rootSignature);
 		}
@@ -2250,7 +2254,10 @@ class DX12Driver extends h3d.impl.Driver {
 		var cache = pipelineBuilder.lookup(currentShader.pipelines, currentShader.inputCount);
 		if( cache.pipeline == null )
 			cache.pipeline = makePipeline(currentShader);
-		frame.commandList.setPipelineState(cache.pipeline);
+		if ( currentPipelineState != cache.pipeline ) {
+			frame.commandList.setPipelineState(cache.pipeline);
+			currentPipelineState = cache.pipeline;
+		}
 	}
 
 	// QUERIES
@@ -2387,6 +2394,7 @@ class DX12Driver extends h3d.impl.Driver {
 		frame.commandList.close();
 		flushSRV();
 		frame.commandList.execute();
+		currentPipelineState = null;
 		currentShader = null;
 		Driver.flushMessages();
 		frame.fenceValue = fenceValue++;
