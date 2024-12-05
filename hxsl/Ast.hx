@@ -2,8 +2,10 @@ package hxsl;
 
 enum BufferKind {
 	Uniform;
+	Storage;
 	RW;
 	Partial;
+	StoragePartial;
 	RWPartial;
 }
 
@@ -405,7 +407,7 @@ class Tools {
 				}
 		case TChannel(_):
 			return 3 + MAX_CHANNELS_BITS;
-		case TBuffer(_, _, Partial|RWPartial):
+		case TBuffer(_, _, Partial|StoragePartial|RWPartial):
 			return MAX_PARTIAL_MAPPINGS_BITS;
 		default:
 		}
@@ -413,7 +415,7 @@ class Tools {
 	}
 
 	public static function isConst( v : TVar ) {
-		if( v.type.match(TChannel(_)|TBuffer(_,_,Partial|RWPartial)) )
+		if( v.type.match(TChannel(_)|TBuffer(_,_,Partial|StoragePartial|RWPartial)) )
 			return true;
 		if( v.qualifiers != null )
 			for( q in v.qualifiers )
@@ -473,8 +475,10 @@ class Tools {
 		case TBuffer(t, s, k):
 			var prefix = switch( k ) {
 			case Uniform: "Buffer";
+			case Storage: "StorageBuffer";
 			case RW: "RWBuffer";
 			case Partial: "PartialBuffer";
+			case StoragePartial: "StoragePartialBuffer";
 			case RWPartial: "RWPartialBuffer";
 			};
 			prefix+" "+toString(t) + "[" + (switch( s ) { case SConst(i): "" + i; case SVar(v): v.name; } ) + "]";

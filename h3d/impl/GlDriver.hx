@@ -427,6 +427,14 @@ class GlDriver extends Driver {
 			}
 			s.buffers = [for( i in 0...shader.bufferCount ) {
 				switch( s.bufferTypes[i] ) {
+				case Storage:
+					#if js
+					throw "Storage buffer not supported in WebGL";
+					#elseif (hl_ver < version("1.15.0"))
+					throw "Storage buffer support requires -D hl-ver=1.15.0";
+					#else
+					gl.getProgramResourceIndex(p.p,GL.SHADER_STORAGE_BLOCK, "storage_uniform_buffer"+i);
+					#end
 				case RW:
 					#if js
 					throw "RW buffer not supported in WebGL";
@@ -447,7 +455,7 @@ class GlDriver extends Driver {
 				switch( s.bufferTypes[i] ) {
 				case Uniform:
 					gl.uniformBlockBinding(p.p,s.buffers[i],i + start);
-				case RW:
+				case RW, Storage:
 					#if (hl_ver >= version("1.15.0"))
 					gl.shaderStorageBlockBinding(p.p,s.buffers[i], i + start);
 					#end
@@ -619,6 +627,8 @@ class GlDriver extends Driver {
 					switch( s.bufferTypes[i] ) {
 					case Uniform:
 						gl.bindBufferBase(GL.UNIFORM_BUFFER, i + start, buf.buffers[i].vbuf);
+					case Storage:
+						gl.bindBufferBase(0x90D2 /*GL.SHADER STORAGE BUFFER*/, i + start, buf.buffers[i].vbuf);
 					case RW:
 						if ( !buf.buffers[i].flags.has(ReadWriteBuffer) )
 							throw "Buffer was allocated without ReadWriteBuffer flag";

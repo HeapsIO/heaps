@@ -70,9 +70,9 @@ class ComputeIndirect extends hxsl.Shader {
 		// n : material offset, n + 1 : subPart ID
 		@const var ENABLE_COUNT_BUFFER : Bool;
 		@param var countBuffer : RWBuffer<Int>;
-		@param var instanceOffsets: RWBuffer<Int>;
+		@param var instanceOffsets: StorageBuffer<Int>;
 		@param var commandBuffer : RWBuffer<Int>;
-		@param var instanceData : RWPartialBuffer<{ modelView : Mat4 }>;
+		@param var instanceData : StoragePartialBuffer<{ modelView : Mat4 }>;
 		@param var radius : Float;
 
 		@const var USING_SUB_PART : Bool = false;

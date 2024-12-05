@@ -154,6 +154,7 @@ class SharedShader {
 				var fullT = makeBufferType(v, t, fmt);
 				v.type = TBuffer(fullT, size, switch( kind ) {
 					case Partial: Uniform;
+					case StoragePartial: Storage;
 					case RWPartial: RW;
 					default: throw "assert";
 				});

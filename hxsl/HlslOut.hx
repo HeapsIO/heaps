@@ -214,6 +214,11 @@ class HlslOut {
 				kind : v.kind,
 			});
 			addArraySize(size);
+		case TBuffer(t, size, Storage):
+			add('StructuredBuffer<');
+			addType(t);
+			add('> ');
+			ident(v);
 		case TBuffer(t, size, RW):
 			add('RWStructuredBuffer<');
 			addType(t);
@@ -855,12 +860,16 @@ class HlslOut {
 		add("};\n\n");
 
 		var regCount = baseRegister + 2;
+		var storageRegister = 0;
 		for( b in buffers.concat(uavs) ) {
 			switch( b.type ) {
 			case TBuffer(t, size, Uniform):
 				add('cbuffer _buffer$regCount : register(b${regCount++}) { ');
 				addVar(b);
 				add("; };\n");
+			case TBuffer(t, size, Storage):
+				addVar(b);
+				add(' : register(t${storageRegister++});\n');
 			default:
 				addVar(b);
 				add(' : register(u${regCount++});\n');
@@ -869,7 +878,7 @@ class HlslOut {
 		if( buffers.length + uavs.length > 0 ) add("\n");
 
 		var ctx = new Samplers();
-		var texCount = 0;
+		var texCount = storageRegister;
 		for( v in textures ) {
 			addVar(v);
 			add(' : register(t${texCount});\n');

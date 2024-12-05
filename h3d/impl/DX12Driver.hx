@@ -169,6 +169,7 @@ class ShaderRegisters {
 	public var params : Int;
 	public var buffers : Int;
 	public var cbvCount : Int;
+	public var storageCount : Int;
 	public var textures : Int;
 	public var samplers : Int;
 	public var texturesCount : Int;
@@ -326,11 +327,7 @@ class ResourceData {
 	}
 }
 
-class BufferData extends ResourceData {
-	public var uploaded : Bool;
-}
-
-class VertexBufferData extends BufferData {
+class VertexBufferData extends ResourceData {
 	public var view : dx.Dx12.VertexBufferView;
 	public var iview : dx.Dx12.IndexBufferView;
 	public var size : Int;
@@ -1084,15 +1081,15 @@ class DX12Driver extends h3d.impl.Driver {
 						var baseShaderRegister = descRange.baseShaderRegister;
 						switch ( descRange.rangeType) {
 							case CBV:
-								s += 'CBV(b${baseShaderRegister}, numDescriptors = ${descRange.numDescriptors},';
+								s += 'CBV(b${baseShaderRegister}, numDescriptors = ${descRange.numDescriptors}),';
 							case SRV:
-								s += 'SRV(t${baseShaderRegister}, numDescriptors = ${descRange.numDescriptors},';
+								s += 'SRV(t${baseShaderRegister}, numDescriptors = ${descRange.numDescriptors}),';
 							case SAMPLER:
 								var baseShaderRegister = descRange.baseShaderRegister;
-								s += 'Sampler(s${baseShaderRegister}, space=${descRange.registerSpace}, numDescriptors = ${descRange.numDescriptors},';
+								s += 'Sampler(s${baseShaderRegister}, space=${descRange.registerSpace}, numDescriptors = ${descRange.numDescriptors}),';
 							case UAV:
 								var reg = descRange.baseShaderRegister;
-								s += 'UAV(u${reg}, numDescriptors = ${descRange.numDescriptors},';
+								s += 'UAV(u${reg}, numDescriptors = ${descRange.numDescriptors}),';
 						}
 					}
 					s += 'visibility = ${vis}),';
@@ -1188,14 +1185,24 @@ class DX12Driver extends h3d.impl.Driver {
 					default: throw "assert";
 					}
 					regs.bufferTypes.push(kind);
-					if ( kind == Uniform )
-						regs.cbvCount += 1;
-					else
-						uavCount += 1;
+					switch ( kind ) {
+						case Uniform, Partial:
+							regs.cbvCount++;
+						case Storage, StoragePartial:
+							regs.storageCount++;
+						case RW, RWPartial:
+							uavCount++;
+						default:
+							throw "assert";
+					}
 					p = p.next;
 				}
 
-				var rangArr = allocDescTable(vis, regs.cbvCount > 0 && uavCount > 0 ? 2 : 1);
+				var rangeCount = 0;
+				rangeCount += regs.cbvCount > 0 ? 1 : 0;
+				rangeCount += regs.storageCount > 0 ? 1 : 0;
+				rangeCount += uavCount > 0 ? 1 : 0;
+				var rangArr = allocDescTable(vis, rangeCount);
 				var i = 0;
 				if ( regs.cbvCount > 0 ) {
 					var r = rangArr[i];
@@ -1204,6 +1211,14 @@ class DX12Driver extends h3d.impl.Driver {
 					r.registerSpace = 0;
 					r.numDescriptors = regs.cbvCount;
 					regCount += regs.cbvCount;
+					i++;
+				}
+				if ( regs.storageCount > 0 ) {
+					var r = rangArr[i];
+					r.rangeType = SRV;
+					r.baseShaderRegister = regs.texturesCount;
+					r.registerSpace = 0;
+					r.numDescriptors = regs.storageCount;
 					i++;
 				}
 				if ( uavCount > 0 ) {
@@ -1217,8 +1232,8 @@ class DX12Driver extends h3d.impl.Driver {
 				}
 			}
 			if( sh.texturesCount > 0 ) {
-				regs.texturesCount = 0;
 				regs.texturesTypes = [];
+				var uavCount = 0;
 
 				var p = sh.data.vars;
 				for( v in sh.data.vars ) {
@@ -1229,21 +1244,26 @@ class DX12Driver extends h3d.impl.Driver {
 						if( t.match(TSampler(_)) )
 							regs.texturesCount += n;
 						else {
-							for( i in 0...n )
-								allocConsts(1, vis, UAV);
+							uavCount += n;
 						}
 					default:
 					}
 				}
 
+				regs.textures = paramsCount;
+				var rangeCount = 0;
+				rangeCount += regs.texturesCount > 0 ? 1 : 0;
+				rangeCount += uavCount > 0 ? 1 : 0;
+				var rangeArr = allocDescTable(vis, rangeCount);
+				var i = 0;
 				if( regs.texturesCount > 0 ) {
-					regs.textures = paramsCount;
 
-					var r = allocDescTable(vis)[0];
+					var r = rangeArr[i];
 					r.rangeType = SRV;
-					r.baseShaderRegister = 0;
+					r.baseShaderRegister = regs.storageCount;
 					r.registerSpace = 0;
 					r.numDescriptors = regs.texturesCount;
+					i++;
 
 					regs.samplers = paramsCount;
 					var r = allocDescTable(vis)[0];
@@ -1251,6 +1271,16 @@ class DX12Driver extends h3d.impl.Driver {
 					r.baseShaderRegister = 0;
 					r.registerSpace = 0;
 					r.numDescriptors = regs.texturesCount;
+				}
+
+				if ( uavCount > 0 ) {
+					var r = rangeArr[i];
+					r.rangeType = UAV;
+					r.baseShaderRegister = regCount;
+					r.registerSpace = 0;
+					r.numDescriptors = uavCount;
+					regCount += uavCount;
+					i++;
 				}
 			}
 			return regs;
@@ -1456,7 +1486,6 @@ class DX12Driver extends h3d.impl.Driver {
 			buf.view = view;
 		}
 		buf.size = bufSize;
-		buf.uploaded = m.flags.has(Dynamic);
 		return buf;
 	}
 
@@ -1480,7 +1509,7 @@ class DX12Driver extends h3d.impl.Driver {
 		b.data = null;
 	}
 
-	function updateBuffer( b : BufferData, bytes : hl.Bytes, startByte : Int, bytesCount : Int ) {
+	function updateBuffer( b : ResourceData, bytes : hl.Bytes, startByte : Int, bytesCount : Int ) {
 		var alloc = allocDynamicBuffer(bytes, bytesCount);
 		frame.commandList.copyBufferRegion(b.res, startByte, alloc.resource, alloc.offset, bytesCount);
 	}
@@ -1896,13 +1925,14 @@ class DX12Driver extends h3d.impl.Driver {
 				if ( hasBuffersTexturesChanged(buf, regs) ) {
 					regs.lastHeapCount = heapCount;
 					regs.srv = frame.shaderResourceViews.alloc(shader.texturesCount);
-					regs.samplersView = frame.samplerViews.alloc(shader.texturesCount);
+					regs.samplersView = frame.samplerViews.alloc(regs.texturesCount);
 					if ( regs.lastTextures.length < shader.texturesCount ) {
 						regs.lastTextures.resize(shader.texturesCount);
 						regs.lastTexturesBits.resize(shader.texturesCount);
 					}
 					var regIndex = regs.buffers + shader.bufferCount;
-					var outIndex = 0;
+					var textureIndex = 0;
+					var uavIndex = regs.texturesCount;
 					for( i in 0...shader.texturesCount ) {
 						var t = buf.tex[i];
 						var pt = regs.texturesTypes[i];
@@ -1963,54 +1993,52 @@ class DX12Driver extends h3d.impl.Driver {
 								desc.firstArraySlice = 0;
 								desc.arraySize = 1;
 							}
-							Driver.createUnorderedAccessView(t.t.res, null, desc, srv);
-							if( currentShader.isCompute )
-								frame.commandList.setComputeRootDescriptorTable(regIndex++, frame.shaderResourceViews.toGPU(srv));
-							else
-								frame.commandList.setGraphicsRootDescriptorTable(regIndex++, frame.shaderResourceViews.toGPU(srv));
+							Driver.createUnorderedAccessView(t.t.res, null, desc, regs.srv.offset(uavIndex * frame.shaderResourceViews.stride));
+							uavIndex++;
 							continue;
 						default:
+							t.lastFrame = frameCount;
+							var state = if ( shader.kind == Fragment )
+								PIXEL_SHADER_RESOURCE;
+							else
+								NON_PIXEL_SHADER_RESOURCE;
+							transition(t.t, state);
+							createSRV(t, regs.srv.offset(textureIndex * frame.shaderResourceViews.stride), regs.samplersView.offset(textureIndex * frame.samplerViews.stride));
+							textureIndex++;
 						}
-
-						t.lastFrame = frameCount;
-						var state = if ( shader.kind == Fragment )
-							PIXEL_SHADER_RESOURCE;
-						else
-							NON_PIXEL_SHADER_RESOURCE;
-						transition(t.t, state);
-						createSRV(t, regs.srv.offset(outIndex * frame.shaderResourceViews.stride), regs.samplersView.offset(outIndex * frame.samplerViews.stride));
-						outIndex++;
 					}
-				}
-				else {
-					for( i in 0...regs.texturesCount ) {
+				} else {
+					for( i in 0...shader.texturesCount ) {
 						var t = buf.tex[i];
 						if (t == null || t.t == null)
 							continue;
-
-						var state = if ( shader.kind == Fragment )
-							PIXEL_SHADER_RESOURCE;
-						else
-							NON_PIXEL_SHADER_RESOURCE;
+						var pt = regs.texturesTypes[i];
+						var state = switch( pt ) {
+						case TRWTexture(_,_,_):
+							UNORDERED_ACCESS;
+						default:
+							(shader.kind == Fragment ? PIXEL_SHADER_RESOURCE : NON_PIXEL_SHADER_RESOURCE);
+						}
 						transition(t.t, state);
 					}
 				}
 
-				if( regs.texturesCount > 0 ) {
-					if( currentShader.isCompute ) {
-						frame.commandList.setComputeRootDescriptorTable(regs.textures, frame.shaderResourceViews.toGPU(regs.srv));
+				if( currentShader.isCompute ) {
+					frame.commandList.setComputeRootDescriptorTable(regs.textures, frame.shaderResourceViews.toGPU(regs.srv));
+					if ( regs.texturesCount > 0 )
 						frame.commandList.setComputeRootDescriptorTable(regs.samplers, frame.samplerViews.toGPU(regs.samplersView));
-					} else {
-						frame.commandList.setGraphicsRootDescriptorTable(regs.textures, frame.shaderResourceViews.toGPU(regs.srv));
+				} else {
+					frame.commandList.setGraphicsRootDescriptorTable(regs.textures, frame.shaderResourceViews.toGPU(regs.srv));
+					if ( regs.texturesCount > 0 )
 						frame.commandList.setGraphicsRootDescriptorTable(regs.samplers, frame.samplerViews.toGPU(regs.samplersView));
-					}
 				}
 			}
 		case Buffers:
 			if( shader.bufferCount > 0 ) {
 				var srv = frame.shaderResourceViews.alloc(shader.bufferCount);
-				var uavIndex = regs.cbvCount;
 				var cbvIndex = 0;
+				var storageIndex = regs.cbvCount;
+				var uavIndex = regs.cbvCount + regs.storageCount;
 				for( i in 0...shader.bufferCount ) {
 					var b = buf.buffers[i];
 					var cbv = b.vbuf;
@@ -2024,6 +2052,15 @@ class DX12Driver extends h3d.impl.Driver {
 						desc.sizeInBytes = cbv.size;
 						Driver.createConstantBufferView(desc, srv.offset(cbvIndex * frame.shaderResourceViews.stride));
 						cbvIndex++;
+					case Storage:
+						var state = shader.kind == Fragment ? PIXEL_SHADER_RESOURCE : NON_PIXEL_SHADER_RESOURCE;
+						transition(cbv, state);
+						var desc = tmp.bufferSRV;
+						desc.numElements = b.vertices;
+						desc.structureByteStride = b.format.strideBytes;
+						desc.flags = NONE;
+						Driver.createShaderResourceView(cbv.res, desc, srv.offset(storageIndex * frame.shaderResourceViews.stride));
+						storageIndex++;
 					case RW:
 						if( !b.flags.has(ReadWriteBuffer) )
 							throw "Buffer was allocated without ReadWriteBuffer flag";

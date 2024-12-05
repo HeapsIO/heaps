@@ -64,6 +64,7 @@ class Flatten {
 			packTextures(prefix + "Textures" + name, allVars, t.rw == 0 ? TSampler(t.dim, t.arr) : TRWTexture(t.dim, t.arr, t.rw));
 		}
 		packBuffers("buffers", allVars, Uniform);
+		packBuffers("storagebuffers", allVars, Storage);
 		packBuffers("rwbuffers", allVars, RW);
 		var funs = [for( f in s.funs ) mapFun(f, mapExpr)];
 		return {
@@ -416,7 +417,7 @@ class Flatten {
 			case TBuffer(t,SConst(size),k) if( kind == k ):
 				var stride = Math.ceil(t.size()/4);
 				var bt = switch( t ) {
-				case TInt|TFloat if( kind.match( RW|RWPartial ) ) :
+				case TInt|TFloat if( kind.match( Storage|RW|StoragePartial|RWPartial ) ) :
 					v.type;
 				default:
 					// for buffers of complex types, let's perform our own remaping

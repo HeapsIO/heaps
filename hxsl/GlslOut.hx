@@ -227,6 +227,8 @@ class GlslOut {
 		case TBuffer(t, size, kind):
 			switch( kind ) {
 			case Uniform, Partial:
+			case Storage, StoragePartial:
+				add("storage_");
 			case RW, RWPartial:
 				add("rw_");
 			}
@@ -484,7 +486,7 @@ class GlslOut {
 			add("clamp(");
 			addValue(e, tabs);
 			add(", 0., 1.)");
-		case TCall( { e : TGlobal(AtomicAdd) }, args):			
+		case TCall( { e : TGlobal(AtomicAdd) }, args):
 			add("atomicAdd(");
 			addValue(args[0], tabs);
 			add("[");
@@ -717,6 +719,10 @@ class GlslOut {
 		switch( v.kind ) {
 		case Param, Global:
 			switch( v.type ) {
+			case TBuffer(_, _, Storage|StoragePartial):
+				if ( version < 430 )
+					throw "SSBO are available since version 4.3";
+				add("layout(std430) readonly buffer ");
 			case TBuffer(_, _, RW|RWPartial):
 				if ( version < 430 )
 					throw "SSBO are available since version 4.3";
@@ -726,10 +732,8 @@ class GlslOut {
 				switch( kind ) {
 				case Uniform, Partial:
 					add("uniform ");
-				case RW, RWPartial:
-					if ( version < 430 )
-						throw "SSBO are available since version 4.3";
-					add("buffer ");
+				default:
+					throw "assert";
 				}
 			case TArray(TRWTexture(_, _, chans), _):
 				var format = "rgba".substr(0, chans);
