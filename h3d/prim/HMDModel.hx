@@ -303,7 +303,7 @@ class HMDModel extends MeshPrimitive {
 		if ( lodCount == 1 )
 			return 0;
 
-		lodConfig = getLodConfig();
+		var lodConfig = getLodConfig();
 		if ( lodConfig != null && lodConfig.length >= lodCount - 1) {
 			var lodLevel : Int = 0;
 			var maxIter = ( ( lodConfig.length > lodCount - 1 ) ? lodCount - 1: lodConfig.length );
@@ -324,6 +324,7 @@ class HMDModel extends MeshPrimitive {
 			return lodConfig;
 
 		var d = lib.resource.entry.directory;
-		return @:privateAccess ModelDatabase.current.getDefaultLodConfig(d);
+		lodConfig = @:privateAccess ModelDatabase.current.getDefaultLodConfig(d);
+		return lodConfig;
 	}
 }
