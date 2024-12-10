@@ -1,5 +1,25 @@
 package h3d.impl;
 
+typedef StackStats = {
+	var stats: Array<TextureStat>;
+	var stack : String;
+	var count : Int;
+	var size : Int;
+}
+
+typedef AllocStats = {
+	var position : String;
+	var count : Int;
+	var tex : Bool;
+	var size : Int;
+	var stacks : Array<StackStats>;
+}
+
+typedef TextureStat = {
+	var name: String;
+	var size: Int;
+}
+
 class MemoryManager {
 
 	static inline var MAX_MEMORY = 4096 * (1024. * 1024.); // MB
@@ -31,7 +51,7 @@ class MemoryManager {
 	}
 
 	public static function enableTrackAlloc(?b : Bool) {
-		@:privateAccess hxd.impl.AllocPos.ENABLED = b != null ? b : true; 
+		@:privateAccess hxd.impl.AllocPos.ENABLED = b != null ? b : true;
 	}
 
 	function initIndexes() {
@@ -239,19 +259,20 @@ class MemoryManager {
 	 * Return statistics for currently allocated buffers and textures. Requires -D track-alloc compilation flag
 	 */
 	@:access(h3d.Buffer)
-	public function allocStats() : Array<{ position : String, count : Int, tex : Bool, size : Int, stacks : Array<{ stack : String, count : Int, size : Int }> }> {
+	public function allocStats() : Array<AllocStats> {
 		var h = new Map();
 		var all = [];
-		inline function addStack( a : hxd.impl.AllocPos, stacks : Array<{ stack : String, count : Int, size : Int }>, size : Int ) {
+		inline function addStack( name: String, a : hxd.impl.AllocPos, stacks : Array<StackStats>, size : Int ) {
 			var stackStr = a.stack.join("\n");
 			for( s in stacks )
 				if( s.stack == stackStr ) {
 					s.size += size;
 					s.count++;
+					s.stats.push({{name: name, size: size}});
 					stackStr = null;
 				}
 			if( stackStr != null )
-				stacks.push({ stack : stackStr, count : 1, size : size });
+				stacks.push({ stats: [{name: name, size: size}], stack : stackStr, count : 1, size : size });
 		}
 		for( t in textures ) {
 			if ( t.allocPos == null )
@@ -266,7 +287,7 @@ class MemoryManager {
 			inf.count++;
 			var size = memSize(t);
 			inf.size += size;
-			addStack(t.allocPos, inf.stacks, size);
+			addStack(t.name, t.allocPos, inf.stacks, size);
 		}
 		for( b in buffers ) {
 			if ( b.allocPos == null )
@@ -281,7 +302,7 @@ class MemoryManager {
 			inf.count++;
 			var size = b.vertices * b.format.stride * 4;
 			inf.size += size;
-			addStack(b.allocPos, inf.stacks, size);
+			addStack("buffer", b.allocPos, inf.stacks, size);
 		}
 		all.sort(function(a, b) return b.size - a.size);
 		return all;
