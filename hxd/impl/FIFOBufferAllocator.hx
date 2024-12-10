@@ -96,9 +96,7 @@ class FIFOBufferAllocator extends Allocator {
 
 	override function disposeBuffer(b:h3d.Buffer) {
 		if( b.isDisposed() ) return;
-		var f = b.flags;
-		var flags = f.has(UniformBuffer) ? UniformDynamic : (f.has(Dynamic) ? Dynamic : Static);
-		var id = flags.toInt() | (b.format.uid << 3) | (b.vertices << 16);
+		var id = fromBufferFlags(b.flags).toInt() | (b.format.uid << 3) | (b.vertices << 16);
 		var c = buffers.get(id);
 		if( c == null ) {
 			c = new Cache(this, maxKeepFrame, function(b:h3d.Buffer) b.dispose());
