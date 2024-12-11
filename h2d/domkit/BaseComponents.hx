@@ -215,8 +215,10 @@ class CustomParser extends domkit.CssValue.ValueParser {
 			fnt = res.to(hxd.res.BitmapFont).toSdfFont(sdf.size, sdf.channel, sdf.cutoff, sdf.smooth);
 		else
 			fnt = res.to(hxd.res.BitmapFont).toFont();
-		if( offset != 0 )
-			@:privateAccess fnt.baseLine = fnt.calcBaseLine() - offset;
+		if( offset != 0 ) {
+			fnt.setOffset(0,offset);
+			@:privateAccess fnt.baseLine = fnt.calcBaseLine();
+		}
 		return fnt;
 		#end
 	}
