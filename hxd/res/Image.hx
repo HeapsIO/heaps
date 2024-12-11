@@ -444,7 +444,7 @@ class Image extends Resource {
 	#if hl
 	static function decodeJPG(src:haxe.io.Bytes, width:Int, height:Int, requestedFmt:hxd.PixelFormat) {
 		var outFmt = requestedFmt;
-		var ifmt:hl.Format.PixelFormat = switch (requestedFmt) {
+		var ifmt:format.hl.Native.PixelFormat = switch (requestedFmt) {
 			case RGBA: RGBA;
 			case BGRA: BGRA;
 			case ARGB: ARGB;
@@ -453,7 +453,7 @@ class Image extends Resource {
 				BGRA;
 		};
 		var dst = haxe.io.Bytes.alloc(width * height * 4);
-		if (!hl.Format.decodeJPG(src.getData(), src.length, dst.getData(), width, height, width * 4, ifmt, 0))
+		if (!format.hl.Native.decodeJPG(src.getData(), src.length, dst.getData(), width, height, width * 4, ifmt, 0))
 			return null;
 		var pix = new hxd.Pixels(width, height, dst, outFmt);
 		return pix;
@@ -461,7 +461,7 @@ class Image extends Resource {
 
 	static function decodePNG(src:haxe.io.Bytes, width:Int, height:Int, requestedFmt:hxd.PixelFormat) {
 		var outFmt = requestedFmt;
-		var ifmt:hl.Format.PixelFormat = switch (requestedFmt) {
+		var ifmt:format.hl.Native.PixelFormat = switch (requestedFmt) {
 			case RGBA: RGBA;
 			case BGRA: BGRA;
 			case ARGB: ARGB;
@@ -491,7 +491,7 @@ class Image extends Resource {
 			default:
 		}
 		var dst = haxe.io.Bytes.alloc(width * height * pxsize);
-		if (!hl.Format.decodePNG(src.getData(), src.length, dst.getData(), width, height, width * stride, ifmt, 0))
+		if (!format.hl.Native.decodePNG(src.getData(), src.length, dst.getData(), width, height, width * stride, ifmt, 0))
 			return null;
 		var pix = new hxd.Pixels(width, height, dst, outFmt);
 		return pix;
