@@ -33,9 +33,9 @@ class Allocator {
 			return Static;
 		if ( flags == Dynamic )
 			return Dynamic;
-		if ( flags == UniformBuffer | Dynamic )
+		if ( flags == haxe.EnumFlags.ofInt(h3d.Buffer.BufferFlag.UniformBuffer.getIndex() | h3d.Buffer.BufferFlag.Dynamic.getIndex()) )
 			return UniformDynamic;
-		if ( flags == UniformBuffer | ReadWriteBuffer )
+		if ( flags == haxe.EnumFlags.ofInt(h3d.Buffer.BufferFlag.UniformBuffer.getIndex() | h3d.Buffer.BufferFlag.ReadWriteBuffer.getIndex()) )
 			return UniformReadWrite;
 		if ( flags == UniformBuffer )
 			return Uniform;
