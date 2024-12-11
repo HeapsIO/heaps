@@ -76,7 +76,8 @@ class Buffer {
 			var index : Int = bufPos;
 
 			var inputs = format.getInputs();
-			for ( i in 0...vertices ) {
+			for ( _ in 0...vertices ) {
+				@:privateAccess inputs.current = 0;
 				for ( input in inputs ) {
 					var elementCount = input.type.getSize();
 					var step = 0;
