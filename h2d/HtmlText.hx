@@ -336,8 +336,8 @@ class HtmlText extends Text {
 		var y = yPos;
 		calcXMin = xMin;
 		calcWidth = xMax - xMin;
-		calcHeight = y + metrics[sizePos].height;
-		calcSizeHeight = y + metrics[sizePos].baseLine;//(font.baseLine > 0 ? font.baseLine : font.lineHeight);
+		calcHeight = y + metrics[sizePos].height - calcYMin;
+		calcSizeHeight = y + metrics[sizePos].baseLine;
 		calcDone = true;
 		if ( rebuild ) needsRebuild = false;
 	}
