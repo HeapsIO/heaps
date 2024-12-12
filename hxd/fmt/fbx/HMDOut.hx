@@ -43,7 +43,7 @@ class HMDOut extends BaseLibrary {
 			throw "Need UVs to build tangents" + (geom.lib != null ? ' in ${geom.lib.fileName}' : '');
 
 		#if (hl && !hl_disable_mikkt)
-		var m = new hl.Format.Mikktspace();
+		var m = new hxd.tools.Mikktspace();
 		m.buffer = new hl.Bytes(8 * 4 * index.vidx.length);
 		m.stride = 8;
 		m.xPos = 0;
