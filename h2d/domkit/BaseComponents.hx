@@ -177,12 +177,18 @@ class CustomParser extends domkit.CssValue.ValueParser {
 	public function parseFont( value : CssValue ) {
 		var path = null;
 		var sdf = null;
-		var offset = 0;
+		var offset = 0, offsetChar = 0;
 		switch(value) {
 			case VGroup(args):
 				var args = args.copy();
 				path = parsePath(args[0]);
 				switch( args[1] ) {
+				case VCall("offset", [VIdent("auto")]):
+					offsetChar = -1;
+					args.splice(1,1);
+				case VCall("offset", [VString(c)]) if( c.length == 1 ):
+					offsetChar = c.charCodeAt(0);
+					args.splice(1,1);
 				case VCall("offset", [v]):
 					offset = parseInt(v);
 					args.splice(1,1);
@@ -215,8 +221,13 @@ class CustomParser extends domkit.CssValue.ValueParser {
 			fnt = res.to(hxd.res.BitmapFont).toSdfFont(sdf.size, sdf.channel, sdf.cutoff, sdf.smooth);
 		else
 			fnt = res.to(hxd.res.BitmapFont).toFont();
+		if( offsetChar != 0 ) {
+			var c = offsetChar < 0 ? fnt.getChar("A".code) ?? fnt.getChar("0".code) ?? fnt.getChar("a".code) : fnt.getChar(offsetChar);
+			if( c != null ) offset = -Math.ceil(c.t.dy);
+		}
 		if( offset != 0 ) {
 			fnt.setOffset(0,offset);
+			@:privateAccess fnt.lineHeight += offset;
 			@:privateAccess fnt.baseLine = fnt.calcBaseLine();
 		}
 		return fnt;
