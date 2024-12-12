@@ -304,10 +304,12 @@ class HMDModel extends MeshPrimitive {
 			return 0;
 
 		var lodConfig = getLodConfig();
-		if ( lodConfig != null && lodConfig.length >= lodCount - 1) {
+		if ( lodConfig != null ) {
 			var lodLevel : Int = 0;
 			var maxIter = ( ( lodConfig.length > lodCount - 1 ) ? lodCount - 1: lodConfig.length );
 			for ( i in 0...maxIter ) {
+				if ( lodConfig[i] == 0.0 )
+					return lodLevel;
 				if ( lodConfig[i] > screenRatio )
 					lodLevel++;
 				else

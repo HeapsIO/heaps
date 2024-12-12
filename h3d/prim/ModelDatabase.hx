@@ -80,8 +80,15 @@ class ModelDatabase {
 			}
 		}
 
-		if (!isDefaultConfig)
-			Reflect.setField(lodConfigObj, name, @:privateAccess hmd.lodConfig);
+		if (!isDefaultConfig) {
+			var c = [];
+			for (idx in 0...hmd.lodCount()) {
+				c[idx] = @:privateAccess hmd.lodConfig[idx];
+				if (c[idx] == null)
+					c[idx] = 0;
+			}
+			Reflect.setField(lodConfigObj, name, c);
+		}
 		else
 			Reflect.deleteField(lodConfigObj, name);
 
