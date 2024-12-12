@@ -32,16 +32,16 @@ abstract Pointer(haxe.Int64) from haxe.Int64 to haxe.Int64 {}
 	var _unused0 : Pointer = 0;
 	var _unused1 : Pointer = 0;
 	var _unused2 : Pointer = 0;
-	public var maxConvexHulls : Int = 64;						// The maximum number of convex hulls to produce
-	public var maxResolution : Int = 400000;					// The voxel resolution to use
-	public var minimumVolumePercentErrorAllowed : Float = 1;	// if the voxels are within 1% of the volume of the hull, we consider this a close enough approximation
-	public var maxRecursionDepth : Int = 10;					// The maximum recursion depth
-	public var shrinkWrap : Bool = true;						// Whether or not to shrinkwrap the voxel positions to the source mesh on output
-	public var fillMode : FillMode = FLOOD_FILL;				// How to fill the interior of the voxelized mesh
-	public var maxNumVerticesPerCH : Int = 64;					// The maximum number of vertices allowed in any output convex hull
-	public var asyncACD : Bool = false;							// Whether or not to run asynchronously, taking advantage of additional cores
-	public var minEdgeLength : Int = 2;							// Once a voxel patch has an edge length of less than 4 on all 3 sides, we don't keep recursing
-	public var findBestPlane : Bool = false;					// Whether or not to attempt to split planes along the best location. Experimental feature. False by default.
+	public var maxConvexHulls : Int = 64;                       // The maximum number of convex hulls to produce
+	public var maxResolution : Int = 400000;                    // The voxel resolution to use
+	public var minimumVolumePercentErrorAllowed : Float = 1;    // if the voxels are within 1% of the volume of the hull, we consider this a close enough approximation
+	public var maxRecursionDepth : Int = 10;                    // The maximum recursion depth
+	public var shrinkWrap : Bool = true;                        // Whether or not to shrinkwrap the voxel positions to the source mesh on output
+	public var fillMode : FillMode = FLOOD_FILL;                // How to fill the interior of the voxelized mesh
+	public var maxNumVerticesPerCH : Int = 64;                  // The maximum number of vertices allowed in any output convex hull
+	public var asyncACD : Bool = false;                         // Whether or not to run asynchronously, taking advantage of additional cores
+	public var minEdgeLength : Int = 2;                         // Once a voxel patch has an edge length of less than 4 on all 3 sides, we don't keep recursing
+	public var findBestPlane : Bool = false;                    // Whether or not to attempt to split planes along the best location. Experimental feature. False by default.
 	public function new() {
 	}
 }

@@ -8,7 +8,8 @@ HASHLINK=/usr/local/lib
 endif
 
 all: codegen
-	gcc -I $HASHLINK -I out out/main.c -L${HASHLINK_BIN}/heaps.hdll -o meshtools
+	gcc -I $HASHLINK -I out out/main.c -lhl -L${HASHLINK_BIN}/heaps.hdll -o meshtools
 
 codegen:
 	haxe meshtools.hxml -D no-compilation
+
