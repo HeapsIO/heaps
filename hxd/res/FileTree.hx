@@ -95,6 +95,8 @@ class FileTree {
 		Context.registerModuleDependency(currentModule, dir);
 		for( f in sys.FileSystem.readDirectory(dir) ) {
 			var path = dir + "/" + f;
+			if( f.indexOf("~") >= 0 )
+				continue;
 			if( sys.FileSystem.isDirectory(path) ) {
 				if( Config.ignoredDirs.exists(f) )
 					continue;
