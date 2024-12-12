@@ -82,10 +82,11 @@ class ModelDatabase {
 
 		if (!isDefaultConfig) {
 			var c = [];
-			for (idx in 0...hmd.lodCount()) {
-				c[idx] = @:privateAccess hmd.lodConfig[idx];
-				if (c[idx] == null)
-					c[idx] = 0;
+			for (idx in 0...hmd.lodCount()) @:privateAccess {
+				if (idx >= hmd.lodConfig.length)
+					c[idx] = 0.;
+				else
+					c[idx] = hmd.lodConfig[idx];
 			}
 			Reflect.setField(lodConfigObj, name, c);
 		}
