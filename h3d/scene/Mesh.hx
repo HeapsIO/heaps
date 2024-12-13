@@ -91,7 +91,7 @@ class Mesh extends Object {
 
 		var absPos = getAbsPos();
 		var worldCenter = absPos.getPosition();
-		var worldScale = absPos.getScale(); 
+		var worldScale = absPos.getScale();
 		var worldRadius = bounds.dimension() * hxd.Math.max( worldScale.x, hxd.Math.max(worldScale.y, worldScale.z) ) / 2.0;
 
 		var cameraRight = ctx.camera.getRight();
@@ -128,14 +128,12 @@ class Mesh extends Object {
 		return super.getMaterials(a, recursive);
 	}
 
-	override private function onAdd()
-	{
+	override private function onAdd() {
 		super.onAdd();
 		if ( primitive != null ) primitive.incref();
 	}
 
-	override private function onRemove()
-	{
+	override private function onRemove() {
 		if ( primitive != null ) primitive.decref();
 		super.onRemove();
 	}
