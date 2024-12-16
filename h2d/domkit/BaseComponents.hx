@@ -177,7 +177,7 @@ class CustomParser extends domkit.CssValue.ValueParser {
 	public function parseFont( value : CssValue ) {
 		var path = null;
 		var sdf = null;
-		var offset = 0, offsetChar = 0;
+		var offset = 0, offsetChar = 0, lineHeight : Null<Float> = null;
 		switch(value) {
 			case VGroup(args):
 				var args = args.copy();
@@ -192,6 +192,14 @@ class CustomParser extends domkit.CssValue.ValueParser {
 				case VCall("offset", [v]):
 					offset = parseInt(v);
 					args.splice(1,1);
+				case null:
+				default:
+				}
+				switch( args[1] ) {
+				case VCall("line-height", [v]):
+					lineHeight = parseFloat(v);
+					args.splice(1,1);
+				case null:
 				default:
 				}
 				if( args[1] != null ) {
@@ -221,14 +229,16 @@ class CustomParser extends domkit.CssValue.ValueParser {
 			fnt = res.to(hxd.res.BitmapFont).toSdfFont(sdf.size, sdf.channel, sdf.cutoff, sdf.smooth);
 		else
 			fnt = res.to(hxd.res.BitmapFont).toFont();
-		if( offsetChar != 0 ) {
-			var c = offsetChar < 0 ? fnt.getChar("A".code) ?? fnt.getChar("0".code) ?? fnt.getChar("a".code) : fnt.getChar(offsetChar);
-			if( c != null ) offset = -Math.ceil(c.t.dy);
-		}
+		var defChar = offsetChar <= 0 ? fnt.getChar("A".code) ?? fnt.getChar("0".code) ?? fnt.getChar("a".code) : fnt.getChar(offsetChar);
+		if( offsetChar != 0 && defChar != null )
+			offset = -Math.ceil(defChar.t.dy);
 		if( offset != 0 ) {
 			fnt.setOffset(0,offset);
 			@:privateAccess fnt.lineHeight += offset;
 			@:privateAccess fnt.baseLine = fnt.calcBaseLine();
+		}
+		if( lineHeight != null && defChar != null ) {
+			@:privateAccess fnt.lineHeight = Math.ceil(defChar.t.height * lineHeight);
 		}
 		return fnt;
 		#end
