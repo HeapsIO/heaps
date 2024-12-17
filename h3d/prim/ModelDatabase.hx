@@ -54,7 +54,7 @@ class ModelDatabase {
 		@:privateAccess hmd.lodConfig = Reflect.field(lodConfigs, name);
 	}
 
-	public function saveModelProps( name : String, hmd : HMDModel, defaultProps : Any = null ) {
+	public function saveModelProps( name : String, hmd : HMDModel) {
 		var root : Dynamic = getModelData(@:privateAccess hmd.lib.resource);
 		if( root == null )
 			return;
