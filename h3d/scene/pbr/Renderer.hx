@@ -508,6 +508,7 @@ class Renderer extends h3d.scene.Renderer {
 		ctx.setGlobal("global.time", ctx.time);
 		ctx.setGlobal("camera.position", ctx.camera.pos);
 		ctx.setGlobal("camera.inverseViewProj", ctx.camera.getInverseViewProj());
+		ctx.setGlobal("camera.inverseView", ctx.camera.getInverseView());
 	}
 
 	function beginPbr() {
