@@ -254,6 +254,8 @@ class HMDModel extends MeshPrimitive {
 
 		var materialCount = data.indexCounts.length;
 		var lodLevel = Std.int(curMaterial / data.indexCounts.length);
+		if ( lodLevel >= lodCount() )
+			return;
 
 		if( indexes == null || indexes.isDisposed() )
 			alloc(engine);
@@ -306,7 +308,7 @@ class HMDModel extends MeshPrimitive {
 		var lodConfig = getLodConfig();
 		if ( lodConfig != null ) {
 			var lodLevel : Int = 0;
-			var maxIter = ( ( lodConfig.length > lodCount - 1 ) ? lodCount - 1: lodConfig.length );
+			var maxIter = ( ( lodConfig.length > lodCount ) ? lodCount : lodConfig.length );
 			for ( i in 0...maxIter ) {
 				if ( lodConfig[i] == 0.0 )
 					return lodLevel;
