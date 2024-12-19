@@ -233,8 +233,9 @@ class CustomParser extends domkit.CssValue.ValueParser {
 		if( offsetChar != 0 && defChar != null )
 			offset = -Math.ceil(defChar.t.dy);
 		if( offset != 0 ) {
+			var prev = @:privateAccess fnt.offsetY;
 			fnt.setOffset(0,offset);
-			@:privateAccess fnt.lineHeight += offset;
+			@:privateAccess fnt.lineHeight += offset - prev;
 			@:privateAccess fnt.baseLine = fnt.calcBaseLine();
 		}
 		if( lineHeight != null && defChar != null ) {
