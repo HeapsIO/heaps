@@ -25,6 +25,11 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 	public var ratioX : Float = 1;
 	public var ratioY : Float = 1;
 
+	/**
+		Adjust the position of the ray used to handle interactives.
+	**/
+	public var interactiveOffset : Float = 0;
+
 	var ctx : RenderContext;
 	var interactives : Array<Interactive>;
 	@:allow(h3d.scene.Interactive)
@@ -135,6 +140,11 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 			var p0 = camera.unproject(screenX, screenY, 0);
 			var p1 = camera.unproject(screenX, screenY, 1);
 			var r = h3d.col.Ray.fromPoints(p0.toPoint(), p1.toPoint());
+			if( interactiveOffset != 0 ) {
+				r.px += r.lx * interactiveOffset;
+				r.py += r.ly * interactiveOffset;
+				r.pz += r.lz * interactiveOffset;
+			}
 			var saveR = r.clone();
 			var priority = 0x80000000;
 
