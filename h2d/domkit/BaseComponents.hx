@@ -177,30 +177,28 @@ class CustomParser extends domkit.CssValue.ValueParser {
 	public function parseFont( value : CssValue ) {
 		var path = null;
 		var sdf = null;
-		var offset = 0, offsetChar = 0, lineHeight : Null<Float> = null;
+		var offset: Null<Int> = null, offsetChar = 0;
+		var lineHeight : Null<Float> = null, baseLine: Null<Int> = null;
 		switch(value) {
 			case VGroup(args):
 				var args = args.copy();
 				path = parsePath(args[0]);
-				switch( args[1] ) {
-				case VCall("offset", [VIdent("auto")]):
-					offsetChar = -1;
+				while (args[1] != null && args[1].match(VCall(_))) {
+					switch( args[1] ) {
+					case VCall("offset", [VIdent("auto")]):
+						offsetChar = -1;
+					case VCall("offset", [VString(c)]) if( c.length == 1 ):
+						offsetChar = c.charCodeAt(0);
+					case VCall("offset", [v]):
+						offset = parseInt(v);
+					case VCall("line-height", [v]):
+						lineHeight = parseFloat(v);
+					case VCall("base-line", [v]):
+						baseLine = parseInt(v);
+					default:
+						break;
+					}
 					args.splice(1,1);
-				case VCall("offset", [VString(c)]) if( c.length == 1 ):
-					offsetChar = c.charCodeAt(0);
-					args.splice(1,1);
-				case VCall("offset", [v]):
-					offset = parseInt(v);
-					args.splice(1,1);
-				case null:
-				default:
-				}
-				switch( args[1] ) {
-				case VCall("line-height", [v]):
-					lineHeight = parseFloat(v);
-					args.splice(1,1);
-				case null:
-				default:
 				}
 				if( args[1] != null ) {
 					sdf = {
@@ -232,11 +230,11 @@ class CustomParser extends domkit.CssValue.ValueParser {
 		var defChar = offsetChar <= 0 ? fnt.getChar("A".code) ?? fnt.getChar("0".code) ?? fnt.getChar("a".code) : fnt.getChar(offsetChar);
 		if( offsetChar != 0 && defChar != null )
 			offset = -Math.ceil(defChar.t.dy);
-		if( offset != 0 ) {
+		if( offset != null || baseLine != null) {
 			var prev = @:privateAccess fnt.offsetY;
 			fnt.setOffset(0,offset);
 			@:privateAccess fnt.lineHeight += offset - prev;
-			@:privateAccess fnt.baseLine = fnt.calcBaseLine();
+			@:privateAccess fnt.baseLine = fnt.calcBaseLine() + baseLine;
 		}
 		if( lineHeight != null && defChar != null ) {
 			@:privateAccess fnt.lineHeight = Math.ceil(defChar.t.height * lineHeight);
