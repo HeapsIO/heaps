@@ -229,7 +229,7 @@ class CustomParser extends domkit.CssValue.ValueParser {
 			fnt = res.to(hxd.res.BitmapFont).toFont();
 		var defChar = offsetChar <= 0 ? fnt.getChar("A".code) ?? fnt.getChar("0".code) ?? fnt.getChar("a".code) : fnt.getChar(offsetChar);
 		if( offsetChar != 0 && defChar != null )
-			offset = -Math.ceil(defChar.t.dy);
+			offset = -Math.ceil(defChar.t.dy) + Std.int(@:privateAccess fnt.offsetY);
 		if( offset != null || baseLine != null) {
 			var prev = @:privateAccess fnt.offsetY;
 			fnt.setOffset(0,offset);
