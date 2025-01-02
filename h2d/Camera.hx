@@ -309,6 +309,9 @@ class Camera {
 		Requires Camera being attached to a Scene.
 	**/
 	inline function screenXToCamera( mx : Float, my : Float ) : Float {
+		mx *= scene.engineScaleX;
+		my *= scene.engineScaleY;
+
 		return sceneXToCamera((mx - scene.offsetX) / scene.viewportScaleX, (my - scene.offsetY) / scene.viewportScaleY);
 	}
 
@@ -318,25 +321,28 @@ class Camera {
 		Requires Camera being attached to a Scene.
 	**/
 	inline function screenYToCamera( mx : Float, my : Float ) : Float {
+		mx *= scene.engineScaleX;
+		my *= scene.engineScaleY;
+
 		return sceneYToCamera((mx - scene.offsetX) / scene.viewportScaleX, (my - scene.offsetY) / scene.viewportScaleY);
 	}
 
 	/**
-		Convert local camera position to absolute screen position.
+		Convert local camera position to absolute screen (engine) position.
 
 		Requires Camera being attached to a Scene.
 	**/
 	inline function cameraXToScreen( mx : Float, my : Float ) : Float {
-		return cameraXToScene(mx, my) * scene.viewportScaleX + scene.offsetX;
+		return (cameraXToScene(mx, my) * scene.viewportScaleX + scene.offsetX) * scene.engineScaleX;
 	}
 
 	/**
-		Convert local camera position to absolute screen position.
+		Convert local camera position to absolute screen (engine) position.
 
 		Requires Camera being attached to a Scene.
 	**/
 	inline function cameraYToScreen( mx : Float, my : Float ) : Float {
-		return cameraYToScene(mx, my) * scene.viewportScaleY + scene.offsetY;
+		return (cameraYToScene(mx, my) * scene.viewportScaleY + scene.offsetY) * scene.engineScaleY;
 	}
 
 	// Scene <-> Camera
@@ -380,8 +386,8 @@ class Camera {
 	@:dox(hide) @:noCompletion public function eventToCamera( e : hxd.Event ) {
 		var x = (e.relX - scene.offsetX) / scene.viewportScaleX - absX;
 		var y = (e.relY - scene.offsetY) / scene.viewportScaleY - absY;
-		e.relX = (x * matD - y * matC) * invDet;
-		e.relY = (-x * matB + y * matA) * invDet;
+		e.relX = (x * matD - y * matC) * invDet * scene.engineScaleX;
+		e.relY = (-x * matB + y * matA) * invDet * scene.engineScaleY;
 	}
 
 	/**
@@ -393,8 +399,8 @@ class Camera {
 		checkScene();
 		var x = (pt.x - scene.offsetX) / scene.viewportScaleX - absX;
 		var y = (pt.y - scene.offsetY) / scene.viewportScaleY - absY;
-		pt.x = (x * matD - y * matC) * invDet;
-		pt.y = (-x * matB + y * matA) * invDet;
+		pt.x = (x * matD - y * matC) * invDet * scene.engineScaleX;
+		pt.y = (-x * matB + y * matA) * invDet * scene.engineScaleY;
 	}
 
 	/**
