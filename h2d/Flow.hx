@@ -1310,7 +1310,7 @@ class Flow extends Object {
 					case Left:
 						c.x = startX + dx;
 					case Middle:
-						c.x = startX + Std.int((endX - startX - p.calculatedWidth) * 0.5) + dx + startX;
+						c.x = startX + Std.int((endX - startX - p.calculatedWidth) * 0.5) + dx;
 					default:
 					}
 					continue;
@@ -1478,7 +1478,7 @@ class Flow extends Object {
 					case Top:
 						c.y = startY + dy;
 					case Middle:
-						c.y = startY + Std.int((endY - startY - p.calculatedHeight) * 0.5) + startY + dy;
+						c.y = startY + Std.int((endY - startY - p.calculatedHeight) * 0.5) + dy;
 					default:
 					}
 					continue;
