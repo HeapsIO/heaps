@@ -36,6 +36,7 @@ enum abstract ImageFormat(Int) {
 			case Dds: "DDS";
 			case Raw: "RAW";
 			case Hdr: "HDR";
+			case Ktx2: "KTX2";
 		};
 	}
 }

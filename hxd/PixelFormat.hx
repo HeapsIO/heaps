@@ -32,6 +32,10 @@ enum PixelFormat {
 	Depth32;
 }
 
+enum abstract ASTC_FORMAT(Int) from Int to Int {
+	final RGBA_4x4 = 0x93B0;
+}
+
 enum abstract DXT_FORMAT(Int) from Int to Int {
 	final RGB_DXT1 = 0x83F0;
 	final RGBA_DXT1 = 0x83F1;
@@ -41,9 +45,5 @@ enum abstract DXT_FORMAT(Int) from Int to Int {
 
 enum abstract ETC_FORMAT(Int) from Int to Int {
 	final RGB_ETC1 = 0x8D64;
-}
-enum abstract PVRTC_FORMAT(Int) from Int to Int {
-	final RGB_4BPPV1 = 0x8C00;
-	final RGBA_4BPPV1 = 0x8C02;
 	final RGBA_ETC2 = 0x9278;
 }

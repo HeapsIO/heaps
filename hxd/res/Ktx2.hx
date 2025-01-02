@@ -281,11 +281,8 @@ class Ktx2Decoder {
 				});
 			default: throw 'Unsupported colorModel in ktx2 file ${ktx.dfd.colorModel}';
 		}
-		trace('detectSupport');
-
 		_workerConfig = detectSupport(transcodeTarget);
 		getWorker().then(task -> {
-			trace('got worker');
 			final worker = task.worker;
 			final taskID = _workerNextTaskID++;
 	

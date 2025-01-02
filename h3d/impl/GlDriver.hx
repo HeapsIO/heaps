@@ -1,8 +1,8 @@
 package h3d.impl;
 import h3d.impl.Driver;
+import h3d.mat.Data;
 import h3d.mat.Pass;
 import h3d.mat.Stencil;
-import h3d.mat.Data;
 
 #if (js||hlsdl||usegl)
 
@@ -1085,8 +1085,7 @@ class GlDriver extends Driver {
 			tt.internalFmt = GL.R11F_G11F_B10F;
 			tt.pixelFmt = GL.UNSIGNED_INT_10F_11F_11F_REV;
 		case S3TC(n) if( n <= maxCompressedTexturesSupport ):
-			if( t.width&3 != 0 || t.height&3 != 0 )
-				throw "Compressed texture "+t+" has size "+t.width+"x"+t.height+" - must be a multiple of 4";
+			checkMult4(t);
 			switch( n ) {
 			case 1: tt.internalFmt = 0x83F1; // COMPRESSED_RGBA_S3TC_DXT1_EXT
 			case 2:	tt.internalFmt = 0x83F2; // COMPRESSED_RGBA_S3TC_DXT3_EXT
@@ -1186,6 +1185,11 @@ class GlDriver extends Driver {
 		return tt;
 	}
 
+	inline function checkMult4(t:h3d.mat.Texture) {
+		if( t.width&3 != 0 || t.height&3 != 0 )
+			throw "Compressed texture "+t+" has size "+t.width+"x"+t.height+" - must be a multiple of 4";
+	}
+	
 	function restoreBind() {
 		var t = boundTextures[lastActiveIndex];
 		if( t == null )
@@ -1396,7 +1400,7 @@ class GlDriver extends Driver {
 		var dataLen = pixels.dataSize;
 		#if hl
 		var stream = streamData(pixels.bytes.getData(),pixels.offset,dataLen);
-		if( t.format.match(S3TC(_)) ) {
+		if( t.format.match(S3TC(_)) || t.format.match(ASTC(_)) || t.format.match(ETC(_))) {
 			if( t.flags.has(IsArray) || t.flags.has(Is3D) )
 				#if (hlsdl >= version("1.12.0"))
 				gl.compressedTexSubImage3D(face, mipLevel, 0, 0, side, pixels.width, pixels.height, 1, t.t.internalFmt, dataLen, stream);
@@ -1426,12 +1430,13 @@ class GlDriver extends Driver {
 		case RGB10A2, RG11B10UF: new Uint32Array(@:privateAccess pixels.bytes.b.buffer, pixels.offset, dataLen>>2);
 		default: new Uint8Array(@:privateAccess pixels.bytes.b.buffer, pixels.offset, dataLen);
 		}
-		if( t.format.match(S3TC(_)) ) {
+		switch (t.format) {
+		case S3TC(_), ASTC(_), ETC(_):
 			if( t.flags.has(IsArray) || t.flags.has(Is3D) )
 				gl.compressedTexSubImage3D(face, mipLevel, 0, 0, side, pixels.width, pixels.height, 1, t.t.internalFmt, buffer);
 			else
 				gl.compressedTexSubImage2D(face, mipLevel, 0, 0, pixels.width, pixels.height, t.t.internalFmt, buffer);
-		} else {
+		default:
 			if( t.flags.has(IsArray) || t.flags.has(Is3D) )
 				gl.texSubImage3D(face, mipLevel, 0, 0, side, pixels.width, pixels.height, 1, getChannels(t.t), t.t.pixelFmt, buffer);
 			else
@@ -1930,6 +1935,7 @@ class GlDriver extends Driver {
 	function makeFeatures() {
 		for( f in Type.allEnums(Feature) )
 			features.set(f,checkFeature(f));
+		textureSupport = checkTextureSupport();
 		maxCompressedTexturesSupport = if (textureSupport.dxt || textureSupport.etc1 || textureSupport.etc2 || textureSupport.astc) {
 			gl.getExtension("EXT_texture_compression_bptc") != null ? 7 : 3;
 		} else {

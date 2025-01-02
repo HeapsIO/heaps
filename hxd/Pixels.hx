@@ -577,7 +577,7 @@ class Pixels {
 		case RG11B10UF: 4;
 		case S3TC(n):
 			final blocks = (width + 3) >> 2;
-			if( n == 1 || n == 4 )
+			if( n == 1 || n == 4 ) {
 				blocks << 1;
 			} else {
 				blocks << 2;
@@ -634,7 +634,7 @@ class Pixels {
 			channel.toInt() * 4;
 		case RGB10A2, RG11B10UF:
 			throw "Bit packed format";
-		case S3TC(_), ASTC(_), ETC(_), Depth16, Depth24, Depth24Stencil8:
+		case S3TC(_), ASTC(_), ETC(_), Depth16, Depth24, Depth24Stencil8, Depth32:
 			throw "Not supported";
 		}
 	}
