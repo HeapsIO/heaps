@@ -8,6 +8,7 @@ enum abstract ImageFormat(Int) {
 	var Dds = 4;
 	var Raw = 5;
 	var Hdr = 6;
+	var Ktx2 = 7;
 
 	/*
 		Tells if we might not be able to directly decode the image without going through a loadBitmap async call.
@@ -241,7 +242,22 @@ class Image extends Resource {
 						fid = "" + fourCC;
 					throw entry.path + " has unsupported 4CC " + fid;
 				}
+			#if js
+			case 0x4273:
+				throw 'Use .ktx2 files for GPU compressed textures instead of .basis';
+			case 0x4BAB:
+				final ktx2 = hxd.res.Ktx2.readFile(new haxe.io.BytesInput(@:privateAccess f.cache));
+				inf.pixelFormat = switch ktx2.dfd.colorModel {
+					case hxd.res.Ktx2.DFDModel.ETC1S: ETC(hxd.res.Ktx2.TranscoderFormat.ETC1);
+					case hxd.res.Ktx2.DFDModel.UASTC: ASTC(hxd.res.Ktx2.TranscoderFormat.ASTC_4x4);
+					default: throw 'Unsupported colorModel in ktx2 file ${ktx2.dfd.colorModel}';
+				}
+				inf.mipLevels = ktx2.header.levelCount;
 
+				inf.width = ktx2.header.pixelWidth;
+				inf.height = ktx2.header.pixelHeight;
+				inf.dataFormat = Ktx2;
+			#end
 			case 0x3F23: // HDR RADIANCE
 
 				inf.dataFormat = Hdr;
@@ -435,6 +451,9 @@ class Image extends Resource {
 			case Hdr:
 				var data = hxd.fmt.hdr.Reader.decode(entry.getBytes(), false);
 				pixels = new hxd.Pixels(data.width, data.height, data.bytes, inf.pixelFormat);
+			case Ktx2:
+				var bytes = entry.getBytes();
+				pixels = new hxd.Pixels(inf.width, inf.height, bytes, inf.pixelFormat);
 		}
 		if (fmt != null)
 			pixels.convert(fmt);
@@ -610,6 +629,15 @@ class Image extends Resource {
 							pos += size;
 						}
 					}
+				case Ktx2:
+					throw 'Ktx2 loading using heaps resource system not implemented';
+					#if js
+					// TODO: Need to handle async loading of compressed textures
+					// var bytes = asyncData == null ? entry.getBytes() : asyncData;
+					// hxd.res.Ktx2.Ktx2Decoder.getTexture(new haxe.io.BytesInput(bytes), texture ->  {
+					//	tex = texture;
+					// });
+					#end
 				default:
 					for (layer in 0...tex.layerCount) {
 						for (mip in 0...inf.mipLevels) {

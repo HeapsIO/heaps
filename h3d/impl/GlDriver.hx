@@ -87,6 +87,7 @@ class GlDriver extends Driver {
 	static var UID = 0;
 	public var gl : GL;
 	public static var ALLOW_WEBGL2 = true;
+	public var textureSupport:{astc:Bool, astcHDR:Bool, etc1:Bool, etc2:Bool, dxt:Bool, bptc:Bool};
 	#end
 
 	#if (hlsdl||usegl)
@@ -992,8 +993,8 @@ class GlDriver extends Driver {
 		case GL.RGB10_A2: GL.RGBA;
 		case GL.RED, GL.R8, GL.R16F, GL.R32F, 0x822A: GL.RED;
 		case GL.RG, GL.RG8, GL.RG16F, GL.RG32F, 0x822C: GL.RG;
-		case GL.RGB16F, GL.RGB32F, 0x8054, 0x8E8F: GL.RGB;
-		case 0x83F1, 0x83F2, 0x83F3, 0x805B, 0x8E8C: GL.RGBA;
+		case GL.RGB16F, GL.RGB32F, 0x8054, 0x8E8F, hxd.PixelFormat.ETC_FORMAT.RGB_ETC1: GL.RGB;
+		case hxd.PixelFormat.DXT_FORMAT.RGBA_DXT1, hxd.PixelFormat.DXT_FORMAT.RGBA_DXT3, hxd.PixelFormat.DXT_FORMAT.RGBA_DXT5, hxd.PixelFormat.ASTC_FORMAT.RGBA_4x4, 0x805B, 0x8E8C : GL.RGBA;
 		default: throw "Invalid format " + t.internalFmt;
 		}
 	}
@@ -1005,6 +1006,7 @@ class GlDriver extends Driver {
 		case SRGB, SRGB_ALPHA: hasFeature(SRGBTextures);
 		case R8, RG8, RGB8, R16F, RG16F, RGB16F, R32F, RG32F, RGB32F, RG11B10UF, RGB10A2: #if js glES >= 3 #else true #end;
 		case S3TC(n): n <= maxCompressedTexturesSupport;
+		case ASTC(_), ETC(_): #if js true #else false #end;
 		default: false;
 		}
 	}
@@ -1093,6 +1095,18 @@ class GlDriver extends Driver {
 			case 7: tt.internalFmt = 0x8E8C; // COMPRESSED_RGBA_BPTC_UNORM
 			default: throw "Unsupported texture format "+t.format;
 			}
+		case ASTC(n):
+			checkMult4(t);
+			switch( n ) {
+			case 10: tt.internalFmt = hxd.PixelFormat.ASTC_FORMAT.RGBA_4x4;
+			default: throw "Unsupported texture format "+t.format;
+			}
+		case ETC(n):
+			checkMult4(t);
+			switch( n ) {
+			case 0: tt.internalFmt = hxd.PixelFormat.ETC_FORMAT.RGB_ETC1;
+			case 1: tt.internalFmt = hxd.PixelFormat.ETC_FORMAT.RGBA_ETC2;
+			}
 		default:
 			throw "Unsupported texture format "+t.format;
 		}
@@ -1153,6 +1167,9 @@ class GlDriver extends Driver {
 				gl.texImage3D(bind, mip, tt.internalFmt, w, h, d, 0, getChannels(tt), tt.pixelFmt, null);
 				checkError();
 			} else {
+				#if js
+				if( !t.format.match(S3TC(_)) && !t.format.match(ETC(_)) && !t.format.match(ASTC(_)))) 
+				#end
 				gl.texImage2D(bind, mip, tt.internalFmt, w, h, 0, getChannels(tt), tt.pixelFmt, null);
 				checkError();
 			}
@@ -1893,15 +1910,30 @@ class GlDriver extends Driver {
 	}
 
 	#if js
+	public function checkTextureSupport() {
+		final checkExtension = ext -> {
+			gl.getExtension(ext) != null;
+		}
+		return {
+			astc: checkExtension('WEBGL_compressed_texture_astc'),
+			astcHDR: checkExtension( 'WEBGL_compressed_texture_astc' )
+					&& gl.getExtension( 'WEBGL_compressed_texture_astc' ).getSupportedProfiles().includes( 'hdr' ),
+			etc1: false, // Not supported on WebGL2  (https://registry.khronos.org/OpenGL-Refpages/es3/html/glCompressedTexSubImage2D.xhtml); checkExtension('WEBGL_compressed_texture_etc1'),
+			etc2: checkExtension('WEBGL_compressed_texture_etc'),
+			dxt: checkExtension('WEBGL_compressed_texture_s3tc'),
+			bptc: checkExtension('EXT_texture_compression_bptc'),
+		}
+	}
+
 	var features : Map<Feature,Bool> = new Map();
 	var has16Bits : Bool;
 	function makeFeatures() {
 		for( f in Type.allEnums(Feature) )
 			features.set(f,checkFeature(f));
-		if( gl.getExtension("WEBGL_compressed_texture_s3tc") != null ) {
-			maxCompressedTexturesSupport = 3;
-			if( gl.getExtension("EXT_texture_compression_bptc") != null )
-				maxCompressedTexturesSupport = 7;
+		maxCompressedTexturesSupport = if (textureSupport.dxt || textureSupport.etc1 || textureSupport.etc2 || textureSupport.astc) {
+			gl.getExtension("EXT_texture_compression_bptc") != null ? 7 : 3;
+		} else {
+			3;
 		}
 		if( glES < 3 )
 			gl.getExtension("WEBGL_depth_texture");
