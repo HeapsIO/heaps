@@ -1302,14 +1302,15 @@ class Flow extends Object {
 				var c = childAt(i);
 				if( !c.visible ) continue;
 				if( p.isAbsolute ) {
+					var dx = p.paddingLeft + p.offsetX;
 					switch( p.horizontalAlign ) {
 					case null:
 					case Right:
-						c.x = endX - p.calculatedWidth + p.offsetX;
+						c.x = endX - p.calculatedWidth + dx;
 					case Left:
-						c.x = startX + p.offsetX;
+						c.x = startX + dx;
 					case Middle:
-						c.x = startX + Std.int((endX - startX - p.calculatedWidth) * 0.5) + p.offsetX + startX;
+						c.x = startX + Std.int((endX - startX - p.calculatedWidth) * 0.5) + dx;
 					default:
 					}
 					continue;
@@ -1347,7 +1348,6 @@ class Flow extends Object {
 					xmin += p.calculatedWidth + horizontalSpacing;
 				}
 				c.x = px + p.offsetX + p.paddingLeft;
-				if( p.isAbsolute ) xmin = px;
 			}
 
 		case Vertical:
@@ -1470,14 +1470,15 @@ class Flow extends Object {
 				if( !c.visible )
 					continue;
 				if( p.isAbsolute ) {
+					var dy = p.paddingTop + p.offsetY;
 					switch( p.verticalAlign ) {
 					case null:
 					case Bottom:
-						c.y = endY - p.calculatedHeight + p.offsetY;
+						c.y = endY - p.calculatedHeight + dy;
 					case Top:
-						c.y = startY + p.offsetY;
+						c.y = startY + dy;
 					case Middle:
-						c.y = startY + Std.int((endY - startY - p.calculatedHeight) * 0.5) + p.offsetY + startY;
+						c.y = startY + Std.int((endY - startY - p.calculatedHeight) * 0.5) + dy;
 					default:
 					}
 					continue;
