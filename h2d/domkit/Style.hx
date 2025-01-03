@@ -25,7 +25,7 @@ class Style extends domkit.CssStyle {
 		cssParser = new domkit.CssParser();
 	}
 
-	public function load( r : hxd.res.Resource, watchChanges = true ) {
+	public function load( r : hxd.res.Resource, watchChanges = true, isVariablesDef = false ) {
 		if( watchChanges ) r.watch(function() {
 			#if (sys || nodejs)
 			var fs = Std.downcast(hxd.res.Loader.currentInstance.fs, hxd.fs.LocalFileSystem);
@@ -35,10 +35,15 @@ class Style extends domkit.CssStyle {
 		});
 		resources.push(r);
 		var variables = cssParser.variables.copy();
-		add(cssParser.parseSheet(r.entry.getText(), r.name));
-		cssParser.variables = variables;
+		add(cssParser.parseSheet(loadData(r), r.name));
+		if( !isVariablesDef )
+			cssParser.variables = variables;
 		for( o in currentObjects )
 			o.dom.applyStyle(this);
+	}
+
+	function loadData( r : hxd.res.Resource ) {
+		return r.entry.getText();
 	}
 
 	public function unload( r : hxd.res.Resource ) {
@@ -169,7 +174,7 @@ class Style extends domkit.CssStyle {
 		data.rules = [];
 		sourceFiles = [];
 		for( r in resources ) {
-			var txt = try r.entry.getText() catch( e : Dynamic ) { haxe.Timer.delay(onChange.bind(ntry),100); data.rules = oldRules; return; }
+			var txt = try loadData(r) catch( e : Dynamic ) { haxe.Timer.delay(onChange.bind(ntry),100); data.rules = oldRules; return; }
 			var curFile = {
 				name: r.entry.name,
 				txt: txt,
@@ -535,7 +540,7 @@ class Style extends domkit.CssStyle {
 					continue;
 				var r = find(resources, r -> r.name == vs.pos.file);
 				if (r != null) {
-					var txt = r.entry.getText();
+					var txt = loadData(r);
 					files.push({
 						name: vs.pos.file,
 						txt: txt,
