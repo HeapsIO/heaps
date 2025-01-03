@@ -704,8 +704,8 @@ class Image extends Resource {
 	}
 
 	public function toTile():h2d.Tile {
-		getInfo();
-		return h2d.Tile.fromTexture(toTexture()).sub(0, 0, inf.width, inf.height);
+		final tex = toTexture();
+		return h2d.Tile.fromTexture(tex).sub(0, 0, tex.width, tex.height);
 	}
 
 	public static dynamic function setupTextureFlags(tex:h3d.mat.Texture) {}
