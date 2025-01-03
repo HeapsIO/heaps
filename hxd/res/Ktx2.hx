@@ -216,11 +216,12 @@ class Ktx2Decoder {
 
 	static function detectSupport(fmt:KtxTranscodeTarget) {
 		final driver:h3d.impl.GlDriver = cast h3d.Engine.getCurrent().driver;
-		return 		{
+		return {
 			astcSupported: driver.textureSupport.astc,
 			etc1Supported: driver.textureSupport.etc1,
 			etc2Supported: driver.textureSupport.etc2,
 			dxtSupported: driver.textureSupport.dxt,
+			bptcSupported: driver.textureSupport.bptc,
 		}
 	}
 
@@ -305,7 +306,6 @@ class Ktx2Decoder {
 
 				final w = message.data.width;
 				final h = message.data.height;
-
 				final create = (fmt:hxd.PixelFormat) -> {
 					if(ktx.header.faceCount > 1 || ktx.header.layerCount > 1) {
 						// TODO: Handle cube texture

@@ -254,7 +254,6 @@ class Image extends Resource {
 					default: throw 'Unsupported colorModel in ktx2 file ${ktx2.dfd.colorModel}';
 				}
 				inf.mipLevels = ktx2.header.levelCount;
-
 				inf.width = ktx2.header.pixelWidth;
 				inf.height = ktx2.header.pixelHeight;
 				inf.dataFormat = Ktx2;
@@ -634,10 +633,10 @@ class Image extends Resource {
 					throw 'Ktx2 loading using heaps resource system not implemented';
 					#if js
 					// TODO: Need to handle async loading of compressed textures
-					// var bytes = asyncData == null ? entry.getBytes() : asyncData;
-					// hxd.res.Ktx2.Ktx2Decoder.getTexture(new haxe.io.BytesInput(bytes), texture ->  {
-					//	tex = texture;
-					// });
+					 var bytes = asyncData == null ? entry.getBytes() : asyncData;
+					 hxd.res.Ktx2.Ktx2Decoder.getTexture(new haxe.io.BytesInput(bytes), texture ->  {
+						tex = texture;
+					 });
 					#end
 				default:
 					for (layer in 0...tex.layerCount) {
@@ -687,7 +686,15 @@ class Image extends Resource {
 		if (DEFAULT_FILTER != Linear)
 			tex.filter = DEFAULT_FILTER;
 		tex.setName(entry.path);
+		//setupTextureFlags = t -> switch fmt {
+		//	case S3TC(_), ASTC(_), ETC(_): 
+		//		t.flags.set(AsyncLoading);
+		//		t.flags.set(Loading);
+		//		t.flags.set(NoAlloc);
+		//	default:
+		//}
 		setupTextureFlags(tex);
+		//tex.flags.set(LazyLoading);
 		// DirectX12 texture array triggers an access violation.
 		if (tex.flags.has(IsArray) || !tex.flags.has(LazyLoading))
 			loadTexture();
