@@ -258,7 +258,10 @@ class CustomParser extends domkit.CssValue.ValueParser {
 		}
 	}
 
+	static var NULL_BG : FlowBg = { color : 0xFFFFFF, borderL : 0, borderR : 0, borderT : 0, borderB : 0, tile : null };
 	function transitionFlowBackground( bg1 : FlowBg, bg2 : FlowBg, v : Float ) : FlowBg {
+		if( bg1 == null ) bg1 = NULL_BG;
+		if( bg2 == null ) bg2 = NULL_BG;
 		var color = transitionColor(bg1.color, bg2.color, v);
 		return {
 			tile : #if macro true #else h2d.Tile.fromColor(color&0xFFFFFF,(color>>>24)/255) #end,
