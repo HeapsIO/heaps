@@ -18,6 +18,8 @@ enum abstract ObjectFlags(Int) {
 	public var FFixedPositionSynced = 0x4000;
 	public var FAlwaysSync = 0x8000;
 	public var FDrawn = 0x10000;
+	public var FInSync = 0x20000;
+	public var FPosChangedInSync = 0x40000;
 	public inline function new(value) {
 		this = value;
 	}
@@ -109,6 +111,7 @@ class Object {
 	/**
 		When set, the object and all its children will not sync() unless this root object position has been changed.
 		This allows to optimize cpu cost of static objects having many children.
+		When set, changes on position during sync() won't be applied.
 	**/
 	public var fixedPosition(get, set) : Bool;
 
@@ -229,7 +232,12 @@ class Object {
 	inline function get_fixedPosition() return flags.has(FFixedPosition);
 	inline function get_alwaysSync() return flags.has(FAlwaysSync);
 	inline function get_drawn() return flags.has(FDrawn);
-	inline function set_posChanged(b) return flags.set(FPosChanged, b || follow != null);
+	inline function set_posChanged(b) {
+		var c = flags.set(FPosChanged, b || follow != null);
+		if ( c && flags.has(FInSync) )
+			flags.set(FPosChangedInSync, true);
+		return c;
+	};
 	inline function set_culled(b) return flags.set(FCulled, b);
 	inline function set_visible(b) return flags.set(FVisible,b);
 	inline function set_allocated(b) return flags.set(FAllocated, b);
@@ -764,6 +772,7 @@ class Object {
 			ctx.cullingCollider = cullingCollider;
 
 		var changed = posChanged;
+		// absPos up to date during sync
 		if( changed ) calcAbsPos();
 		if( fixedPosition ) {
 			if( flags.has(FFixedPositionSynced) && !changed && !ctx.wasContextLost ) {
@@ -773,7 +782,13 @@ class Object {
 			}
 			flags.set(FFixedPositionSynced, true);
 		}
+		flags.set(FPosChangedInSync, false);
+		flags.set(FInSync, true);
 		sync(ctx);
+		flags.set(FInSync, false);
+		changed = changed || flags.has(FPosChangedInSync);
+		// we want to calcAbsPos here only if pos has changed during sync
+		if ( flags.has(FPosChangedInSync) ) calcAbsPos();
 		posChanged = false;
 		lastFrame = ctx.frame;
 		var p = 0, len = children.length;
