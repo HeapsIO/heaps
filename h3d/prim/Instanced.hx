@@ -56,6 +56,19 @@ class Instanced extends Primitive {
 		return bounds;
 	}
 
+	override function screenRatioToLod( screenRatio : Float ) {
+		return primitive.screenRatioToLod(screenRatio);
+	}
+
+	public function setCommand( material : Int, lod : Int, count : Int ) {
+		if ( lod > primitive.lodCount() - 1) {
+			commands.setCommand(0, 0, 0);
+			return;
+		}
+		var infos = primitive.getMaterialIndexes(material, lod);
+		commands.setCommand(count, infos.count, infos.start);
+	}
+
 	override function render( engine : h3d.Engine ) {
 		if( primitive.buffer == null || primitive.buffer.isDisposed() )
 			primitive.alloc(engine);
