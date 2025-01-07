@@ -25,7 +25,7 @@ enum PixelFormat {
 	RGBA16U;
 	ASTC( ?v : Int );
 	ETC( ?v : Int );
-	S3TC( v : Int );
+	S3TC( ?v : Int );
 	Depth16;
 	Depth24;
 	Depth24Stencil8;
@@ -47,3 +47,9 @@ enum abstract ETC_FORMAT(Int) from Int to Int {
 	final RGB_ETC1 = 0x8D64;
 	final RGBA_ETC2 = 0x9278;
 }
+
+enum abstract BPTC_FORMAT(Int) from Int to Int {
+	final RGB_BPTC_UNSIGNED = 0x8E8F;
+	final RGBA_BPTC = 0x8E8C;
+}
+

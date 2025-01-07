@@ -538,8 +538,17 @@ class Pixels {
 
 	public static function calcDataSize( width : Int, height : Int, format : PixelFormat ) {
 		return switch( format ) {
-		case S3TC(_):
-			(((height + 3) >> 2) << 2) * calcStride(width, format);
+		case S3TC(n):
+			var w = ((width + 3) >> 2) << 2; // Round up width to next multiple of 4
+			var h = ((height + 3) >> 2) << 2; // Round up height to next multiple of 4
+			var blocks = (w >> 2) * (h >> 2); // Total number of blocks
+			if (n == 3) { // DXT5
+				blocks * 16; // 16 bytes per block
+			} else if (n == 1 || n == 4) {
+				blocks * 8; // DXT1 or BC4, 8 bytes per block
+			} else { 
+				blocks * 16; // DXT3 or BC5, 16 bytes per block, but handling like DXT5 for simplicity
+			}
 		case ASTC(n):
 			var w = ((width + 3) >> 2) << 2;
 			var h = ((height + 3) >> 2) << 2;
@@ -577,15 +586,8 @@ class Pixels {
 		case RGB32F: 12;
 		case RGB10A2: 4;
 		case RG11B10UF: 4;
-		case S3TC(n):
-			final blocks = (width + 3) >> 2;
-			if( n == 1 || n == 4 ) {
-				blocks << 1;
-			} else {
-				blocks << 2;
-			}
 		case ASTC(n): 
-			final blocks = ((width + 3) >> 2) * 16;
+			var blocks = ((width + 3) >> 2) * 16;
 			blocks << 4;
 		case ETC(n):
 			if (n == 0) { // ETC1 and ETC2 RGB
@@ -594,6 +596,15 @@ class Pixels {
 				((width + 3) >> 2) << 4;
 			} else {
 				throw "Unsupported ETC format";
+			}
+		case S3TC(n):
+			var blocks = (width + 3) >> 2;
+			if (n == 3) { // DXT5
+				blocks << 4; // 16 bytes per block
+			} else if (n == 1 || n == 4) { 
+				blocks << 1; // DXT1 or BC4, 8 bytes per block
+			} else { 
+				blocks << 2; // DXT3 or BC5, 16 bytes per block, but handling like DXT5 for simplicity
 			}
 		case Depth16: 2;
 		case Depth24: 3;
@@ -642,7 +653,7 @@ class Pixels {
 	}
 
 	public static function alloc( width, height, format : PixelFormat ) {
-		return new Pixels(width, height, haxe.io.Bytes.alloc(calcDataSize(width, height, format)), format);
+		return new Pixels(width, height, haxe.io.Bytes.alloc(calcDataSize(width, height, format)), format); 
 	}
 
 	/**

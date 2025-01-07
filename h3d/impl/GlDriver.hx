@@ -994,7 +994,8 @@ class GlDriver extends Driver {
 		case GL.RED, GL.R8, GL.R16F, GL.R32F, 0x822A: GL.RED;
 		case GL.RG, GL.RG8, GL.RG16F, GL.RG32F, 0x822C: GL.RG;
 		case GL.RGB16F, GL.RGB32F, 0x8054, 0x8E8F, hxd.PixelFormat.ETC_FORMAT.RGB_ETC1: GL.RGB;
-		case hxd.PixelFormat.DXT_FORMAT.RGBA_DXT1, hxd.PixelFormat.DXT_FORMAT.RGBA_DXT3, hxd.PixelFormat.DXT_FORMAT.RGBA_DXT5, hxd.PixelFormat.ASTC_FORMAT.RGBA_4x4, 0x805B, 0x8E8C : GL.RGBA;
+		case 0x805B, hxd.PixelFormat.DXT_FORMAT.RGBA_DXT1,hxd.PixelFormat.DXT_FORMAT.RGBA_DXT3,
+		hxd.PixelFormat.DXT_FORMAT.RGBA_DXT5,hxd.PixelFormat.ASTC_FORMAT.RGBA_4x4, hxd.PixelFormat.BPTC_FORMAT.RGBA_BPTC : GL.RGBA;
 		default: throw "Invalid format " + t.internalFmt;
 		}
 	}
@@ -1400,7 +1401,7 @@ class GlDriver extends Driver {
 		var dataLen = pixels.dataSize;
 		#if hl
 		var stream = streamData(pixels.bytes.getData(),pixels.offset,dataLen);
-		if( t.format.match(S3TC(_)) || t.format.match(ASTC(_)) || t.format.match(ETC(_))) {
+		if( t.format.match(S3TC(_))) {
 			if( t.flags.has(IsArray) || t.flags.has(Is3D) )
 				#if (hlsdl >= version("1.12.0"))
 				gl.compressedTexSubImage3D(face, mipLevel, 0, 0, side, pixels.width, pixels.height, 1, t.t.internalFmt, dataLen, stream);
@@ -1936,11 +1937,7 @@ class GlDriver extends Driver {
 		for( f in Type.allEnums(Feature) )
 			features.set(f,checkFeature(f));
 		textureSupport = checkTextureSupport();
-		maxCompressedTexturesSupport = if (textureSupport.dxt || textureSupport.etc1 || textureSupport.etc2 || textureSupport.astc) {
-			gl.getExtension("EXT_texture_compression_bptc") != null ? 7 : 3;
-		} else {
-			3;
-		}
+		maxCompressedTexturesSupport = textureSupport.bptc ? 7 : 3;
 		if( glES < 3 )
 			gl.getExtension("WEBGL_depth_texture");
 		has16Bits = gl.getExtension("EXT_texture_norm16") != null; // 16 bit textures

@@ -566,8 +566,8 @@ class Image extends Resource {
 			entry.loadBitmap(function(bmp) {
 				var bmp = bmp.toBitmap();
 				tex.alloc();
-				tex.uploadBitmap(bmp);
-				bmp.dispose();
+					tex.uploadBitmap(bmp);
+					bmp.dispose();
 				tex.realloc = () -> loadTexture();
 				tex.flags.unset(Loading);
 				@:privateAccess if (tex.waitLoads != null) {
@@ -586,19 +586,19 @@ class Image extends Resource {
 		function load() {
 			if ((enableAsyncLoading || tex.flags.has(AsyncLoading)) && asyncData == null && ASYNC_LOADER != null && ASYNC_LOADER.isSupported(this))
 				@:privateAccess {
-				tex.dispose();
-				tex.format = RGBA;
-				tex.width = 1;
-				tex.height = 1;
-				tex.customMipLevels = 1;
-				tex.flags.set(Loading);
-				tex.alloc();
-				tex.uploadPixels(BLACK_1x1);
-				tex.width = inf.width;
-				tex.height = inf.height;
-				ASYNC_LOADER.load(this);
+					tex.dispose();
+					tex.format = RGBA;
+					tex.width = 1;
+					tex.height = 1;
+					tex.customMipLevels = 1;
+					tex.flags.set(Loading);
+					tex.alloc();
+					tex.uploadPixels(BLACK_1x1);
+					tex.width = inf.width;
+					tex.height = inf.height;
+					ASYNC_LOADER.load(this);
 				tex.realloc = () -> loadTexture();
-				return;
+					return;
 			}
 			var t0 = haxe.Timer.stamp();
 			// immediately loading the PNG is faster than going through loadBitmap
@@ -633,10 +633,10 @@ class Image extends Resource {
 					throw 'Ktx2 loading using heaps resource system not implemented';
 					#if js
 					// TODO: Need to handle async loading of compressed textures
-					 var bytes = asyncData == null ? entry.getBytes() : asyncData;
-					 hxd.res.Ktx2.Ktx2Decoder.getTexture(new haxe.io.BytesInput(bytes), texture ->  {
+					var bytes = asyncData == null ? entry.getBytes() : asyncData;
+					hxd.res.Ktx2.Ktx2Decoder.getTexture(new haxe.io.BytesInput(bytes), texture ->  {
 						tex = texture;
-					 });
+					});
 					#end
 				default:
 					for (layer in 0...tex.layerCount) {
@@ -686,15 +686,7 @@ class Image extends Resource {
 		if (DEFAULT_FILTER != Linear)
 			tex.filter = DEFAULT_FILTER;
 		tex.setName(entry.path);
-		//setupTextureFlags = t -> switch fmt {
-		//	case S3TC(_), ASTC(_), ETC(_): 
-		//		t.flags.set(AsyncLoading);
-		//		t.flags.set(Loading);
-		//		t.flags.set(NoAlloc);
-		//	default:
-		//}
 		setupTextureFlags(tex);
-		//tex.flags.set(LazyLoading);
 		// DirectX12 texture array triggers an access violation.
 		if (tex.flags.has(IsArray) || !tex.flags.has(LazyLoading))
 			loadTexture();

@@ -29,13 +29,6 @@ class Ktx2 {
 		return file;
 	}
 
-	/**
-		Read ktx2 header
-
-		@param bytes BytesInput containing ktx2 file data
-
-		@return Parsed ktx2 file header
-	**/
 	public static function readHeader(bytes:haxe.io.BytesInput):KTX2Header {
 		final ktx2Id = [
 			// '´', 'K', 'T', 'X', '2', '0', 'ª', '\r', '\n', '\x1A', '\n'
@@ -188,11 +181,6 @@ class Ktx2 {
 	}
 }
 
-/**
-	Ktx2 File decoder.
-	
-	Handles transcoding of ktx2 file data to sutiable compressed textutre format
-**/
 class Ktx2Decoder {
 	public static var mscTranscoder:Dynamic;
 	public static var workerLimit = 4;
@@ -204,12 +192,6 @@ class Ktx2Decoder {
 	static var _transcoderPending:js.lib.Promise<Dynamic>;
 	static var _transcoderBinary:haxe.io.Bytes;
 
-	/**
-		Get texture from ktx2 file
-
-		@param bytes BytesInput containing ktx2 file data
-		@param cb Callback invoked when transcoding of texture is complete
-	**/
 	public static function getTexture(bytes:haxe.io.BytesInput, cb:(texture:h3d.mat.Texture) -> Void) {
 		createTexture(bytes, cb);
 	}
@@ -330,7 +312,11 @@ class Ktx2Decoder {
 				final texture = switch message.data.format {
 					case EngineFormat.RGBA_ASTC_4x4_Format:
 						create(hxd.PixelFormat.ASTC(10));
-					case EngineFormat.RGB_BPTC_UNSIGNED_Format, EngineFormat.RGBA_BPTC_Format, EngineFormat.RGBA_S3TC_DXT5_Format:
+					case EngineFormat.RGB_BPTC_UNSIGNED_Format:
+						create(hxd.PixelFormat.S3TC(6));
+					case EngineFormat.RGBA_BPTC_Format:
+						create(hxd.PixelFormat.S3TC(7));
+					case EngineFormat.RGBA_S3TC_DXT5_Format:
 						create(hxd.PixelFormat.S3TC(3));
 					case EngineFormat.RGB_ETC1_Format:
 						create(hxd.PixelFormat.ETC(0));
@@ -603,8 +589,8 @@ class EngineFormat {
     public static final R8Format = 0x8229;
     public static final RG8Format = 0x822b;
 	public static final RGBA_ASTC_4x4_Format = PixelFormat.ASTC_FORMAT.RGBA_4x4;
-	public static final RGB_BPTC_UNSIGNED_Format = 0x8e8f;
-	public static final RGBA_BPTC_Format =0x8e8c;
+	public static final RGB_BPTC_UNSIGNED_Format = PixelFormat.BPTC_FORMAT.RGB_BPTC_UNSIGNED;
+	public static final RGBA_BPTC_Format = PixelFormat.BPTC_FORMAT.RGBA_BPTC;
 	public static final RGB_S3TC_DXT1_Format = PixelFormat.DXT_FORMAT.RGB_DXT1;
 	public static final RGBA_S3TC_DXT1_Format = PixelFormat.DXT_FORMAT.RGBA_DXT1;
 	public static final RGBA_S3TC_DXT5_Format = PixelFormat.DXT_FORMAT.RGBA_DXT5;
@@ -959,6 +945,8 @@ function basisWorker() {
 			const transcoderFormat = opt.transcoderFormat[ hasAlpha ? 1 : 0 ];
 			const engineFormat = opt.engineFormat[ hasAlpha ? 1 : 0 ];
 			const engineType = opt.engineType[ 0 ];
+			console.log(`opt: ${JSON.stringify(opt)}`);
+
 			return { transcoderFormat, engineFormat, engineType };
 		}
 		throw new Error( 'KTX2Loader: Failed to identify transcoding target.' );
