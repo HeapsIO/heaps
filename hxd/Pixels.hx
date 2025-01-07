@@ -539,9 +539,9 @@ class Pixels {
 	public static function calcDataSize( width : Int, height : Int, format : PixelFormat ) {
 		return switch( format ) {
 		case S3TC(n):
-			var w = ((width + 3) >> 2) << 2; // Round up width to next multiple of 4
-			var h = ((height + 3) >> 2) << 2; // Round up height to next multiple of 4
-			var blocks = (w >> 2) * (h >> 2); // Total number of blocks
+			var w = (width + 3) >> 2; 
+			var h = (height + 3) >> 2;
+			var blocks = w * h; // Total number of blocks
 			if (n == 3) { // DXT5
 				blocks * 16; // 16 bytes per block
 			} else if (n == 1 || n == 4) {
@@ -550,18 +550,18 @@ class Pixels {
 				blocks * 16; // DXT3 or BC5, 16 bytes per block, but handling like DXT5 for simplicity
 			}
 		case ASTC(n):
-			var w = ((width + 3) >> 2) << 2;
-			var h = ((height + 3) >> 2) << 2;
-			(w >> 2) * (h >> 2) * 16;
+			var w = (width + 3) >> 2;
+			var h = (height + 3) >> 2;
+			w * h * 16;
 		case ETC(n):
 			if (n == 0) { // RGB_ETC1_Format or RGB_ETC2_Format
-				var w = ((width + 3) >> 2) << 2;
-				var h = ((height + 3) >> 2) << 2;
-				(w >> 2) * (h >> 2) * 8;
+				var w = (width + 3) >> 2;
+				var h = (height + 3) >> 2;
+				w * h * 8;
 			} else if (n == 1 || n == 2) { // RGBA_ETC2_EAC_Format
-				var w = ((width + 3) >> 2) << 2;
-				var h = ((height + 3) >> 2) << 2;
-				(w >> 2) * (h >> 2) * 16;
+				var w = (width + 3) >> 2;
+				var h = (height + 3) >> 2;
+				w * h * 16;
 			} else {
 				throw "Unsupported ETC format";
 			}

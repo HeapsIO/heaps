@@ -588,14 +588,14 @@ class EngineFormat {
 	public static final RGBA8Format = 0x8058;
     public static final R8Format = 0x8229;
     public static final RG8Format = 0x822b;
-	public static final RGBA_ASTC_4x4_Format = PixelFormat.ASTC_FORMAT.RGBA_4x4;
-	public static final RGB_BPTC_UNSIGNED_Format = PixelFormat.BPTC_FORMAT.RGB_BPTC_UNSIGNED;
-	public static final RGBA_BPTC_Format = PixelFormat.BPTC_FORMAT.RGBA_BPTC;
-	public static final RGB_S3TC_DXT1_Format = PixelFormat.DXT_FORMAT.RGB_DXT1;
-	public static final RGBA_S3TC_DXT1_Format = PixelFormat.DXT_FORMAT.RGBA_DXT1;
-	public static final RGBA_S3TC_DXT5_Format = PixelFormat.DXT_FORMAT.RGBA_DXT5;
-	public static final RGB_ETC1_Format =  PixelFormat.ETC_FORMAT.RGB_ETC1;
-	public static final RGBA_ETC2_EAC_Format = PixelFormat.ETC_FORMAT.RGBA_ETC2;
+	public static final RGBA_ASTC_4x4_Format = CompressedTextureFormat.ASTC_FORMAT.RGBA_4x4;
+	public static final RGB_BPTC_UNSIGNED_Format = CompressedTextureFormat.BPTC_FORMAT.RGB_BPTC_UNSIGNED;
+	public static final RGBA_BPTC_Format = CompressedTextureFormat.BPTC_FORMAT.RGBA_BPTC;
+	public static final RGB_S3TC_DXT1_Format = CompressedTextureFormat.DXT_FORMAT.RGB_DXT1;
+	public static final RGBA_S3TC_DXT1_Format = CompressedTextureFormat.DXT_FORMAT.RGBA_DXT1;
+	public static final RGBA_S3TC_DXT5_Format = CompressedTextureFormat.DXT_FORMAT.RGBA_DXT5;
+	public static final RGB_ETC1_Format =  CompressedTextureFormat.ETC_FORMAT.RGB_ETC1;
+	public static final RGBA_ETC2_EAC_Format = CompressedTextureFormat.ETC_FORMAT.RGBA_ETC2;
 	public static final RGB_ETC2_Format = 0x9274;
 }
 
