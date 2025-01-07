@@ -113,6 +113,46 @@ class TriPlane extends Collider {
 		return false;
 	}
 
+	public function closestPoint( p : Point ) {
+		var p0 = new Point(p0x, p0y, p0z);
+
+		if ( isPointInTriangle(p.x, p.y, p.z) ) {
+			var d = p.sub(p0);
+			var n = new Point(nx, ny, nz);
+			n.normalize();
+			var dProj = d.sub(n.scaled(d.dot(n)));
+			return p0.add(dProj);
+		}
+		
+		inline function closestPointLine(start : Point, d : Point) {
+			var t = p.sub(start).dot(d) / d.dot(d);
+			t = hxd.Math.clamp(t);
+			return start.add(d.scaled(t));
+		}
+		var d1 = new Point(d1x, d1y, d1z);
+		var d2 = new Point(d2x, d2y, d2z);
+		var p1 = new Point(p0x, p0y, p0z).add(d1);
+		var c1 = closestPointLine(p0, d1);
+		var c2 = closestPointLine(p1, d2.sub(d1));
+		var c3 = closestPointLine(p0, d2);
+
+		var mag1 = p.sub(c1).lengthSq();
+		var mag2 = p.sub(c2).lengthSq();
+		var mag3 = p.sub(c3).lengthSq();
+
+		var min = mag1;
+		var c = c1;
+		if ( mag2 < min ) {
+			min = mag2;
+			c = c2;
+		}
+		if ( mag3 < min ) {
+			min = mag3;
+			c = c3;
+		}
+		return c;
+	}
+
 	inline public function rayIntersection( r : Ray, bestMatch : Bool ) @:privateAccess {
 		var dr = r.lx * nx + r.ly * ny + r.lz * nz;
 		if( dr >= 0 && oriented ) // backface culling
@@ -272,6 +312,22 @@ class Polygon extends Collider {
 	public function inSphere( s : Sphere ) {
 		throw "Not implemented";
 		return false;
+	}
+
+	public function closestPoint( p : h3d.col.Point ) {
+		var t = triPlanes;
+		var minDistSq = hxd.Math.POSITIVE_INFINITY;
+		var closest = null;
+		while( t != null ) {
+			var c = t.closestPoint(p);
+			var distSq = p.distanceSq(c);
+			if ( distSq < minDistSq ) {
+				minDistSq = distSq;
+				closest = c;
+			}
+			t = t.next;
+		}
+		return closest;
 	}
 
 	inline public function dimension() {

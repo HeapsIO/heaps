@@ -11,6 +11,7 @@ abstract class Collider {
 	public abstract function inFrustum( f : Frustum, ?localMatrix : h3d.Matrix ) : Bool;
 	public abstract function inSphere( s : Sphere ) : Bool;
 	public abstract function dimension() : Float;
+	public abstract function closestPoint( p : Point) : Point;
 
 	#if !macro
 	public abstract function makeDebugObj() : h3d.scene.Object;
@@ -53,6 +54,10 @@ class OptimizedCollider extends Collider {
 
 	public function dimension() {
 		return Math.max(a.dimension(), b.dimension());
+	}
+
+	public function closestPoint( p : h3d.col.Point ) {
+		return b.closestPoint(p);
 	}
 
 	#if !macro
@@ -120,6 +125,21 @@ class GroupCollider extends Collider {
 		}
 		return d;
 	}
+
+	public function closestPoint( p : h3d.col.Point ) {
+		var result = null;
+		var lengthSq = Math.POSITIVE_INFINITY;
+		for ( c in colliders ) {
+			var closest = c.closestPoint(p);
+			var lSq = closest.distanceSq(p);
+			if ( lSq < lengthSq ) {
+				result = closest;
+				lengthSq = lSq;
+			}
+		}
+		return result;
+	}
+
 	#if !macro
 	public function makeDebugObj() : h3d.scene.Object {
 		var ret : h3d.scene.Object = null;

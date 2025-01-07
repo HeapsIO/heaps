@@ -35,6 +35,27 @@ class FPoint {
 		return x * p.x + y * p.y + z * p.z;
 	}
 
+	public inline function distanceSq( v : FPoint ) {
+		var dx = v.x - x;
+		var dy = v.y - y;
+		var dz = v.z - z;
+		return dx * dx + dy * dy + dz * dz;
+	}
+
+	public inline function lengthSq() {
+		return x * x + y * y + z * z;
+	}
+
+	public inline function normalized() {
+		var k = lengthSq();
+		if ( k < hxd.Math.EPSILON2 ) k = 0 else k = k.invSqrt();
+		return new FPoint(x * k, y * k, z * k);
+	}
+
+	public inline function scaled(v : Float) {
+		return new FPoint(x * v, y * v, z * v);
+	}
+
 	public function toString() {
 		return 'FPoint{${x.fmt()},${y.fmt()},${z.fmt()}}';
 	}

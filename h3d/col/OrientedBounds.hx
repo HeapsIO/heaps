@@ -327,6 +327,11 @@ class OrientedBounds extends Collider {
 		return out;
 	}
 
+	public function closestPoint(p : Point) {
+		throw "not implemented";
+		return new Point();
+	}
+
 	public function makeDebugObj():h3d.scene.Object {
 		var g = new h3d.scene.Graphics();
 

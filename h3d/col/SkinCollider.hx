@@ -95,6 +95,11 @@ class SkinCollider extends Collider {
 		}
 	}
 
+	public function closestPoint( p : h3d.col.Point ) {
+		throw "Not implemented";
+		return new h3d.col.Point();
+	}
+
 	#if !macro
 	public function makeDebugObj() : h3d.scene.Object {
 		return new SkinColliderDebugObj(this);

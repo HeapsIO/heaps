@@ -101,6 +101,11 @@ class Sphere extends Collider {
 		return r;
 	}
 
+	public inline function closestPoint( p : h3d.col.Point ) {
+		var d = p.sub(getCenter()).normalized().scaled(r);
+		return d.add(getCenter());
+	}
+
 	public inline function clone() {
 		var s = new Sphere();
 		s.x = x;

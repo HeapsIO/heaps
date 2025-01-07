@@ -393,6 +393,11 @@ class Bounds extends Collider {
 		return Math.max(xSize, Math.max(ySize, zSize));
 	}
 
+	public function closestPoint( p : h3d.col.Point ) {
+		throw "Not implemented";
+		return new h3d.col.Point();
+	}
+	
 	public static inline function fromPoints( min : Point, max : Point ) {
 		var b = new Bounds();
 		b.setMin(min);
