@@ -1,7 +1,0 @@
-node_modules
-.gitlab-ci.yml
-.idea
-*.iml
-bin
-.history
-.haxelib
