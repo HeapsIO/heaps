@@ -272,25 +272,35 @@ class Library {
 		var p = cachedPrimitives[id];
 		if( p != null ) return p;
 
-		var lodInfos = getLODInfos( model );
-		if ( lodInfos.lodLevel > 0) {
-			for ( m in header.models )
-				if ( m.name != null && StringTools.contains(m.name, lodInfos.modelName) && StringTools.contains(m.name, "LOD0"))
-					return null;
-			throw "No LOD0 found for " + lodInfos.modelName + " in " + resource.name;
-		}
-
 		var lods : Array<Model> = null;
-		if (lodInfos.lodLevel == 0 ) {
-			lods = findLODs( lodInfos.modelName, model );
+		var hasLod = model.lods != null;
+		if ( hasLod ) {
+			var isLod = model.name.indexOf("LOD0") < 0;
+			if ( isLod )
+				return null;
+			lods = [for ( lod in model.lods) header.models[lod]];
 			patchLodsMaterials(model, lods);
+		} else {
+			var lodInfos = getLODInfos( model );
+			if ( lodInfos.lodLevel > 0) {
+				for ( m in header.models )
+					if ( m.name != null && StringTools.contains(m.name, lodInfos.modelName) && StringTools.contains(m.name, "LOD0"))
+						return null;
+				throw "No LOD0 found for " + lodInfos.modelName + " in " + resource.name;
+			}
+
+			if (lodInfos.lodLevel == 0 ) {
+				lods = findLODs( lodInfos.modelName, model );
+				patchLodsMaterials(model, lods);
+				hasLod = true;
+			}
 		}
 
 		p = new h3d.prim.HMDModel(header.geometries[id], header.dataPosition, this, lods);
 		p.incref(); // Prevent from auto-disposing
 		cachedPrimitives[id] = p;
 
-		if (lodInfos.lodLevel == 0)
+		if ( hasLod )
 			h3d.prim.ModelDatabase.current.loadModelProps(model.name, p);
 
 		return p;

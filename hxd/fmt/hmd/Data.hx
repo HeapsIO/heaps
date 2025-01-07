@@ -11,6 +11,7 @@ enum Property<T> {
 	Unused_HasMaterialFlags; // TODO: Removing this will offset property indices
 	HasExtraTextures;
 	FourBonesByVertex;
+	HasLod;
 }
 
 typedef Properties = Null<Array<Property<Dynamic>>>;
@@ -139,6 +140,7 @@ class Model {
 	public var geometry : Index<Geometry>;
 	public var materials : Null<Array<Index<Material>>>;
 	public var skin : Null<Skin>;
+	public var lods : Array<Index<Model>>;
 	public function new() {
 	}
 }

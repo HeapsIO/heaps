@@ -23,6 +23,8 @@ class Reader {
 			return HasExtraTextures;
 		case 3:
 			return FourBonesByVertex;
+		case 4:
+			return HasLod;
 		case unk:
 			throw "Unknown property #" + unk;
 		}
@@ -125,6 +127,11 @@ class Reader {
 		return s;
 	}
 
+	function readLods() {
+		var lodCount = i.readInt32();
+		return [for (_ in 0...lodCount) i.readInt32()];
+	}
+
 	public function readHeader( fast = false ) : Data {
 		var d = new Data();
 		var h = i.readString(3);
@@ -199,6 +206,8 @@ class Reader {
 			for( k in 0...matCount )
 				m.materials.push(i.readInt32());
 			m.skin = readSkin();
+			if ( m.props != null )
+				m.lods = m.props.indexOf(HasLod) >= 0 ? readLods() : null;
 		}
 
 		d.animations = [];

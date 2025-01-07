@@ -101,6 +101,12 @@ class ConvertFBX2HMD extends Convert {
 						case x: throw "Invalid precision '" + x + "' should be u8|s8|f16";
 					});
 			}
+			if ( params.optimizeMesh != null )
+				hmdout.optimizeMesh = params.optimizeMesh;
+			if (params.lodsDecimation != null) {
+				var config: Array<Float> = params.lodsDecimation;
+				hmdout.lodsDecimation = [for(lod in config) lod];
+			}
 		}
 		hmdout.load(fbx);
 		var isAnim = StringTools.startsWith(originalFilename, "Anim_") || originalFilename.toLowerCase().indexOf("_anim_") > 0;

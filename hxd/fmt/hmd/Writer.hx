@@ -18,6 +18,7 @@ class Writer {
 		case Unused_HasMaterialFlags:
 		case HasExtraTextures:
 		case FourBonesByVertex:
+		case HasLod:
 		}
 	}
 
@@ -169,6 +170,11 @@ class Writer {
 				writeName(null);
 			else
 				writeSkin(m.skin);
+			if ( m.lods != null ) {
+				out.writeInt32(m.lods.length);
+				for ( lod in m.lods )
+					out.writeInt32(lod);
+			}
 		}
 
 		out.writeInt32(d.animations.length);

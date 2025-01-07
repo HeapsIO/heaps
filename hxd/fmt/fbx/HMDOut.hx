@@ -5,6 +5,7 @@ import hxd.fmt.hmd.Data;
 import hxd.BufferFormat;
 
 class HMDOut extends BaseLibrary {
+	public static var lodExportKeyword : String = "LOD";
 
 	var d : Data;
 	var dataOut : haxe.io.BytesOutput;
@@ -13,9 +14,11 @@ class HMDOut extends BaseLibrary {
 	var midsSortRemap : Map<Int, Int>;
 	public var absoluteTexturePath : Bool;
 	public var optimizeSkin = true;
+	public var optimizeMesh = false;
 	public var generateNormals = false;
 	public var generateTangents = false;
 	public var lowPrecConfig : Map<String,Precision>;
+	public var lodsDecimation : Array<Float>;
 
 	function int32tof( v : Int ) : Float {
 		tmp.set(0, v & 0xFF);
@@ -113,7 +116,7 @@ class HMDOut extends BaseLibrary {
 		for( i in 0...index.vidx.length )
 			outputData.addInt32(i);
 		sys.io.File.saveBytes(fileName, outputData.getBytes());
-		var ret = try Sys.command("mikktspace",[fileName,outFile]) catch( e : Dynamic ) -1;
+		var ret = try Sys.command("meshTools",["mikktspace",fileName,outFile]) catch( e : Dynamic ) -1;
 		if( ret != 0 ) {
 			sys.FileSystem.deleteFile(fileName);
 			throw "Failed to call 'mikktspace' executable required to generate tangent data. Please ensure it's in your PATH"+(filePath == null ? "" : ' ($filePath)');
@@ -221,7 +224,91 @@ class HMDOut extends BaseLibrary {
 		return inputName;
 	}
 
-	function buildGeom( geom : hxd.fmt.fbx.Geometry, skin : h3d.anim.Skin, dataOut : haxe.io.BytesOutput, genTangents : Bool ) {
+	function optimize( vbuf : hxd.FloatBuffer, vertexFormat : hxd.BufferFormat, ibuf : Array<Int>, startIndex : Int, decimationFactor : Float ) {
+		var optimizedVbuf : hxd.FloatBuffer;
+		decimationFactor = hxd.Math.clamp(decimationFactor);
+
+		#if ( hl && hl_ver >= version("1.15.0") )
+		var vertexSize = vertexFormat.stride << 2;
+		var vertexCount = Std.int(vbuf.length / vertexFormat.stride);
+		var vertices = new hl.Bytes(vertexCount * vertexSize);
+		for ( i in 0...vbuf.length )
+			vertices.setF32(i << 2, cast(vbuf[i], Single));
+		var indexCount = ibuf.length;
+		var indices = new hl.Bytes(indexCount * 4);
+		for ( i => idx in ibuf )
+			indices.setI32(i << 2, idx);
+
+		var remap = new hl.Bytes(vertexCount * 4);
+		var uniqueVertexCount = hxd.tools.MeshOptimizer.generateVertexRemap(remap, indices, indexCount, vertices, vertexCount, vertexSize);
+		hxd.tools.MeshOptimizer.remapIndexBuffer(indices, indices, indexCount, remap);
+		hxd.tools.MeshOptimizer.remapVertexBuffer(vertices, vertices, vertexCount, vertexSize, remap);
+		vertexCount = uniqueVertexCount;
+		if ( decimationFactor > 0.0 )
+			indexCount = hxd.tools.MeshOptimizer.simplify(indices, indices, indexCount, vertices, vertexCount, vertexSize, Std.int(indexCount * (1.0 - decimationFactor)), 0.05, 0, null);
+		hxd.tools.MeshOptimizer.optimizeVertexCache(indices, indices, indexCount, vertexCount);
+		hxd.tools.MeshOptimizer.optimizeOverdraw(indices, indices, indexCount, vertices, vertexCount, vertexSize, 1.05);
+		vertexCount = hxd.tools.MeshOptimizer.optimizeVertexFetch(vertices, indices, indexCount, vertices, vertexCount, vertexSize);
+
+		optimizedVbuf = new hxd.FloatBuffer();
+		optimizedVbuf.resize(vertexCount * vertexFormat.stride);
+		for ( i in 0...vertexCount * vertexFormat.stride )
+			optimizedVbuf[i] = vertices.getF32(i << 2);
+		ibuf.resize(indexCount);
+		for ( i in 0...indexCount )
+			ibuf[i] = indices.getI32(i << 2) + startIndex;
+
+		#elseif (sys || nodejs)
+		var tmp = Sys.getEnv("TMPDIR");
+		if( tmp == null ) tmp = Sys.getEnv("TMP");
+		if( tmp == null ) tmp = Sys.getEnv("TEMP");
+		if( tmp == null ) tmp = ".";
+		var fileName = tmp+"/meshTools_data"+Date.now().getTime()+"_"+Std.random(0x1000000)+".bin";
+		var outFile = fileName+".out";
+
+		var vertexSize = vertexFormat.stride << 2;
+		var vertexCount = Std.int(vbuf.length / vertexFormat.stride);
+
+		var outputData = new haxe.io.BytesBuffer();
+		outputData.addInt32(vertexCount);
+		outputData.addInt32(vertexSize);
+		for( v in vbuf )
+			outputData.addFloat(v);
+		var indexCount = ibuf.length;
+		outputData.addInt32(indexCount);
+		for( i in ibuf )
+			outputData.addInt32(i);
+		sys.io.File.saveBytes(fileName, outputData.getBytes());
+		var ret = if (decimationFactor > 0.0)
+			try Sys.command("meshTools",["simplify",fileName,outFile,'${Std.int(indexCount * (1.0 - decimationFactor))}','${decimationFactor}']) catch( e : Dynamic ) -1;
+		else
+			try Sys.command("meshTools",["optimize",fileName,outFile]) catch( e : Dynamic ) -1;
+
+		if( ret != 0 ) {
+			sys.FileSystem.deleteFile(fileName);
+			throw "Failed to call 'meshTools' executable required to generate optimized mesh. Please ensure it's in your PATH"+(filePath == null ? "" : ' ($filePath)');
+		}
+		var input = sys.io.File.getBytes(outFile);
+		var pos = 1;
+		vertexCount = input.getInt32(0);
+		optimizedVbuf = new hxd.FloatBuffer();
+		optimizedVbuf.resize(vertexCount * vertexFormat.stride);
+		for ( i in 0...vertexCount * vertexFormat.stride )
+			optimizedVbuf[i] = input.getFloat(4 * pos++);
+		indexCount = input.getInt32(4 * pos++);
+		ibuf.resize(indexCount);
+		for ( i in 0...indexCount )
+			ibuf[i] = input.getInt32(4 * pos++) + startIndex;
+		sys.FileSystem.deleteFile(fileName);
+		sys.FileSystem.deleteFile(outFile);
+		#else
+		optimizedVbuf = vbuf;
+		#end
+
+		return optimizedVbuf;
+	}
+
+	function buildGeom( geom : hxd.fmt.fbx.Geometry, skin : h3d.anim.Skin, dataOut : haxe.io.BytesOutput, genTangents : Bool, decimationFactor : Float = 0.0 ) {
 		var g = new Geometry();
 
 		var verts = geom.getVertices();
@@ -478,6 +565,24 @@ class HMDOut extends BaseLibrary {
 		if( generateNormals )
 			updateNormals(g,vbuf,ibufs);
 
+		if ( optimizeMesh || decimationFactor > 0.0 ) {
+			var optimizedVbuf = new hxd.FloatBuffer();
+			for( idx in ibufs ) {
+				if ( idx == null )
+					continue;
+				var start = optimizedVbuf.length;
+				var buf = optimize(vbuf, g.vertexFormat, idx, Std.int(start / g.vertexFormat.stride), decimationFactor );
+				var length = buf.length;
+				optimizedVbuf.resize(start + length);
+				for ( i in 0...length )
+					optimizedVbuf[start + i] = buf[i];
+			}
+			vbuf = optimizedVbuf;
+			g.vertexCount = Std.int(optimizedVbuf.length / g.vertexFormat.stride);
+			if ( g.vertexCount == 0 )
+				return null;
+		}
+
 		// write data
 		g.vertexPosition = dataOut.length;
 		if( lowPrecConfig == null ) {
@@ -661,6 +766,34 @@ class HMDOut extends BaseLibrary {
 		return { g : g, materials : matMap };
 	}
 
+	function getLODInfos( modelName : String ) : { lodLevel : Int , modelName : String } {
+
+		var keyword = lodExportKeyword;
+		if ( modelName == null || modelName.length <= keyword.length )
+			return { lodLevel : -1, modelName : null };
+
+		// Test prefix
+		if ( modelName.substr(0, keyword.length) == keyword ) {
+			var parsedInt = Std.parseInt(modelName.charAt( keyword.length ));
+			if (parsedInt != null) {
+				if ( Std.parseInt( modelName.charAt( keyword.length + 1 ) ) != null )
+					throw 'Did not expect a second number after LOD in ${modelName}';
+				return { lodLevel : parsedInt, modelName : modelName.substr(keyword.length) };
+			}
+		}
+
+		// Test suffix
+		var maxCursor = modelName.length - keyword.length - 1;
+		if ( modelName.substr( maxCursor, keyword.length ) == keyword ) {
+			var parsedInt = Std.parseInt( modelName.charAt( modelName.length - 1) );
+			if ( parsedInt != null ) {
+				return { lodLevel : parsedInt, modelName : modelName.substr( 0, maxCursor ) };
+			}
+		}
+
+		return { lodLevel : -1, modelName : null };
+	}
+
 	function addModels(includeGeometry) {
 
 		var root = buildHierarchy().root;
@@ -773,6 +906,7 @@ class HMDOut extends BaseLibrary {
 
 		var hgeom = new Map();
 		var hmat = new Map<Int,Int>();
+		var hlods = new Map<String, Array<Index<Model>>>();
 		var index = 0;
 		for( o in objects ) {
 
@@ -944,6 +1078,49 @@ class HMDOut extends BaseLibrary {
 				model.materials = mids;
 			else
 				model.materials = [for( id in gdata.materials ) mids[id]];
+
+			var lodsInfos = getLODInfos(model.name);
+			var lodIndex = lodsInfos.lodLevel;
+			var key = lodsInfos.modelName;
+			if ( lodIndex >= 0 ) {
+				var lods = hlods.get(key);
+				if ( lods == null ) {
+					lods = [];
+					hlods.set(key, lods);
+				}
+				if ( lodIndex > 0 ) {
+					lods[lodIndex - 1] = d.models.length-1;
+					model.lods = [];
+				} else {
+					model.lods = lods;
+				}
+				if( model.props == null ) model.props = [];
+				model.props.push(HasLod);
+			} else if ( lodsDecimation != null && model.skin == null ) {
+				var modelName = model.name;
+				model.name = modelName + "LOD0";
+				if( model.props == null ) model.props = [];
+				model.props.push(HasLod);
+				model.lods = [];
+				for ( i => lods in lodsDecimation ) {
+					var geom = buildGeom(new hxd.fmt.fbx.Geometry(this, g), skin, dataOut, hasNormalMap || generateTangents, lods);
+					if ( geom == null )
+						continue;
+					var lodModel = new Model();
+					lodModel.name = modelName + 'LOD${i}';
+					lodModel.props = model.props;
+					lodModel.parent = model.parent;
+					lodModel.follow = model.follow;
+					lodModel.position = model.position;
+					lodModel.materials = model.materials;
+					lodModel.skin = model.skin;
+					lodModel.lods = [];
+					lodModel.geometry = d.geometries.length;
+					d.geometries.push(geom.g);
+					model.lods.push(d.models.length);
+					d.models.push(lodModel);
+				}
+			}
 		}
 	}
 
