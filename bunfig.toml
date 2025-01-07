@@ -1,0 +1,2 @@
+[install]
+registry = { url = "https://hacksawgaming-281033247142.d.codeartifact.eu-west-1.amazonaws.com/npm/hacksaw-client-artifacts/:_authToken=$CODEARTIFACT_AUTH_TOKEN" }

@@ -128,7 +128,7 @@ class Image extends Resource {
 						var colbits = f.readByte();
 						var colType = f.readByte();
 						inf.pixelFormat = switch ([colbits, colType]) {
-							case [8, _]: BGRA; // TODO : grayscale png image
+							case [4, _], [8, _]: BGRA; // TODO : grayscale png image
 							case [16, 0]: R16U;
 							case [16, 2]: RGBA16U; // RGB16U is not supported on DirectX !
 							case [16, 4]: RG16U; // gray + alpha

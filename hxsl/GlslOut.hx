@@ -99,6 +99,7 @@ class GlslOut {
 	public var varNames : Map<Int,String>;
 	public var glES : Null<Float>;
 	public var version : Null<Int>;
+	public var precision : Null<String> = null;
 
 	/*
 		Intel HD driver fix:
@@ -818,11 +819,21 @@ class GlslOut {
 		isCompute = f.kind == Main;
 
 		if( isCompute ) {
-			// no prec
-		} else if( isVertex )
+			// No precision qualifiers needed for compute shaders
+		} else if( isVertex ) {
+			#if js
+			if( precision != null ) {
+				decl('precision $precision float;');
+				decl('precision $precision int;');
+			} else {
+				decl("precision highp float;");
+			}
+			#else
 			decl("precision highp float;");
-		else
+			#end
+		} else {
 			decl("precision mediump float;");
+		}
 
 		initVars(s);
 

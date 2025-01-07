@@ -8,6 +8,8 @@ import h3d.mat.Stencil;
 
 #if js
 import hxd.impl.TypedArray;
+import js.html.webgl.RenderingContext;
+
 private typedef GL = js.html.webgl.GL2;
 private typedef Uniform = js.html.webgl.UniformLocation;
 private typedef Program = js.html.webgl.Program;
@@ -278,6 +280,9 @@ class GlDriver extends Driver {
 		var glout = new ShaderCompiler();
 		glout.glES = glES;
 		glout.version = shaderVersion;
+		#if js
+		glout.precision = MAX_PRECISION;
+		#end
 		#if !usegl
 		@:privateAccess glout.intelDriverFix = isIntelGpu;
 		#end
@@ -1088,9 +1093,9 @@ class GlDriver extends Driver {
 		case S3TC(n) if( n <= maxCompressedTexturesSupport ):
 			checkMult4(t);
 			switch( n ) {
-			case 1: tt.internalFmt = 0x83F1; // COMPRESSED_RGBA_S3TC_DXT1_EXT
-			case 2:	tt.internalFmt = 0x83F2; // COMPRESSED_RGBA_S3TC_DXT3_EXT
-			case 3: tt.internalFmt = 0x83F3; // COMPRESSED_RGBA_S3TC_DXT5_EXT
+			case 1: tt.internalFmt = hxd.PixelFormat.DXT_FORMAT.RGBA_DXT1;
+			case 2:	tt.internalFmt = hxd.PixelFormat.DXT_FORMAT.RGBA_DXT3;
+			case 3: tt.internalFmt = hxd.PixelFormat.DXT_FORMAT.RGBA_DXT5;
 			case 6: tt.internalFmt = 0x8E8F; // COMPRESSED_RGB_BPTC_UNSIGNED_FLOAT
 			case 7: tt.internalFmt = 0x8E8C; // COMPRESSED_RGBA_BPTC_UNORM
 			default: throw "Unsupported texture format "+t.format;
@@ -1167,6 +1172,9 @@ class GlDriver extends Driver {
 				gl.texImage3D(bind, mip, tt.internalFmt, w, h, d, 0, getChannels(tt), tt.pixelFmt, null);
 				checkError();
 			} else {
+				#if js
+				if( !t.format.match(S3TC(_)) && !t.format.match(ETC(_)) && !t.format.match(ASTC(_)) && !t.format.match(PVRTC(_))) 
+				#end
 				gl.texImage2D(bind, mip, tt.internalFmt, w, h, 0, getChannels(tt), tt.pixelFmt, null);
 				checkError();
 			}
@@ -1187,7 +1195,7 @@ class GlDriver extends Driver {
 		if( t.width&3 != 0 || t.height&3 != 0 )
 			throw "Compressed texture "+t+" has size "+t.width+"x"+t.height+" - must be a multiple of 4";
 	}
-	
+
 	function restoreBind() {
 		var t = boundTextures[lastActiveIndex];
 		if( t == null )
