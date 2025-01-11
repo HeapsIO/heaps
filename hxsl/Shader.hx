@@ -28,7 +28,7 @@ class Shader {
 				throw std.Type.getClassName(cl) + " has no shader source";
 			shader = curClass._SHADER;
 			if( shader == null ) {
-				shader = new SharedShader(curClass.SRC);
+				shader = new SharedShader(curClass.SRC,curClass._MODULE);
 				curClass._SHADER = shader;
 			}
 		}
@@ -50,7 +50,7 @@ class Shader {
 		throw "assert"; // will be subclassed in sub shaders
 		return 0.;
 	}
-	
+
 	public function setParamIndexValue( index : Int, val : Dynamic ) {
 		throw "assert"; // will be subclassed in sub shaders
 	}
