@@ -268,14 +268,13 @@ class SharedShader {
 	function initLiveReload() {
 		if( module == null )
 			return;
-		if( hxd.fs.SourceLoader.isActive() )
-			SHADER_RESOLVE.set(data.name, this);
+		if( !hxd.fs.SourceLoader.isActive() )
+			return;
+		SHADER_RESOLVE.set(data.name, this);
 		var path = module.split(".").join("/")+".hx";
 		file = hxd.fs.SourceLoader.resolve(path);
 		if( file != null )
 			file.watch(onFileReload);
-		else
-			trace("Could not live reload shader "+data.name);
 	}
 
 	function onFileReload() {
