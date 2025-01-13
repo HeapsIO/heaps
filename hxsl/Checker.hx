@@ -799,11 +799,12 @@ class Checker {
 					checkConst(e);
 					einit = e;
 				}
-				if( v.type == null ) error("Type required for variable declaration", e.pos);
-				if( vars.exists(v.name) ) error("Duplicate var decl '" + v.name + "'", e.pos);
-				var v = makeVar(v, e.pos);
+				if( v.type == null ) error("Type required for variable declaration", e.pos);				
 				if( isImport && v.kind == Param )
 					continue;
+
+				if( vars.exists(v.name) ) error("Duplicate var decl '" + v.name + "'", e.pos);
+				var v = makeVar(v, e.pos);
 
 				switch( v.type ) {
 				case TSampler(T3D, true), TRWTexture(T3D, true, _), TRWTexture(_,_,3):
