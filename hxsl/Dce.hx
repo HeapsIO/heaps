@@ -156,10 +156,14 @@ class Dce {
 		return str;
 	}
 
+	function varName( v : TVar, bits = 15 ) {
+		return v.name+swizStr(bits)+(hxsl.Cache.DEBUG_IDS?"@"+v.id:"");
+	}
+
 	function markRec( v : VarDeps, bits : Int ) {
 		if( v.used & bits == bits ) return;
 		bits &= ~v.used;
-		debug(v.v.name+swizStr(bits)+" is used");
+		debug(varName(v.v,bits)+" is used");
 		v.used |= bits;
 		for( d in v.adeps ) {
 			var mask = makeFieldsBits(15, bits);
@@ -173,7 +177,7 @@ class Dce {
 	}
 
 	function makeFieldsBits( read : Int, write : Int ) {
-		return write * ((read & 1) + ((read & 2) << 3) + ((read & 4) << 6) + ((read & 8) << 9));
+		return read * ((write & 1) + ((write & 2) << 3) + ((write & 4) << 6) + ((write & 8) << 9));
 	}
 
 	function link( v : TVar, writeTo : WriteTo, bits = 15 ) {
@@ -182,7 +186,7 @@ class Dce {
 			if( w == null ) {
 				// mark for conditional
 				if( vd.keep == 0 ) {
-					debug("Force keep "+vd.v.name);
+					debug("Force keep "+varName(vd.v));
 					vd.keep = 15;
 					markAsKeep = true;
 				}
@@ -197,7 +201,7 @@ class Dce {
 			var fields = makeFieldsBits(bits, writeTo.bits[i]);
 			if( d.fields & fields != fields ) {
 				d.fields |= fields;
-				debug(w.v.name+swizStr(writeTo.bits[i])+" depends on "+vd.v.name+swizStr(bits));
+				debug(varName(w.v,writeTo.bits[i])+" depends on "+varName(vd.v,bits));
 			}
 		}
 	}
