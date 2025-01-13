@@ -1,5 +1,6 @@
 package hxsl;
 using hxsl.Ast;
+import hxsl.Debug.traceDepth in debug;
 
 private class AllocatedVar {
 	public var id : Int;
@@ -60,14 +61,6 @@ class Linker {
 
 	public function new(mode) {
 		this.mode = mode;
-	}
-
-	inline function debug( msg : String, ?pos : haxe.PosInfos ) {
-		#if shader_debug_dump
-		if( Cache.TRACE ) {
-			for( i in 0...debugDepth ) msg = "    " + msg; haxe.Log.trace(msg, pos);
-		}
-		#end
 	}
 
 	function error( msg : String, p : Position ) : Dynamic {

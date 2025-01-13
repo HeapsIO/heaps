@@ -55,11 +55,6 @@ class SearchMap {
 
 class Cache {
 
-	#if shader_debug_dump
-	public static var DEBUG_IDS = false;
-	public static var TRACE = true;
-	#end
-
 	var linkCache : SearchMap;
 	var linkShaders : Map<String, Shader>;
 	var batchShaders : Map<RuntimeShader, { shader : SharedShader, params : RuntimeShader.AllocParam, size : Int }>;
@@ -256,7 +251,7 @@ class Cache {
 			dbg.writeString("----- DATAS ----\n\n");
 			for( s in shaderDatas ) {
 				dbg.writeString("\t\t**** " + s.inst.shader.name + (s.p == 0 ? "" : " P="+s.p)+ " *****\n");
-				dbg.writeString(Printer.shaderToString(s.inst.shader,DEBUG_IDS)+"\n\n");
+				dbg.writeString(Printer.shaderToString(s.inst.shader,Debug.VAR_IDS)+"\n\n");
 			}
 		}
 		//TRACE = shaderId == 0;
@@ -289,15 +284,15 @@ class Cache {
 				checkRec(v);
 		}
 
-		#if debug
-		Printer.check(s,[for( s in shaderDatas ) s.inst.shader]);
-		#end
-
 		#if shader_debug_dump
 		if( dbg != null ) {
 			dbg.writeString("----- LINK ----\n\n");
-			dbg.writeString(Printer.shaderToString(s,DEBUG_IDS)+"\n\n");
+			dbg.writeString(Printer.shaderToString(s,Debug.VAR_IDS)+"\n\n");
 		}
+		#end
+
+		#if debug
+		Printer.check(s,[for( s in shaderDatas ) s.inst.shader]);
 		#end
 
 		var prev = s;
@@ -318,33 +313,33 @@ class Cache {
 			}
 
 
+		#if shader_debug_dump
+		if( dbg != null ) {
+			dbg.writeString("----- SPLIT ----\n\n");
+			for( s in sl )
+				dbg.writeString(Printer.shaderToString(s, Debug.VAR_IDS) + "\n\n");
+		}
+		#end
+
 		#if debug
 		for( s in sl )
 			Printer.check(s,[prev]);
 		#end
 
-		#if shader_debug_dump
-		if( dbg != null ) {
-			dbg.writeString("----- SPLIT ----\n\n");
-			for( s in sl )
-				dbg.writeString(Printer.shaderToString(s, DEBUG_IDS) + "\n\n");
-		}
-		#end
-
 		var prev = sl;
 		var sl = new hxsl.Dce().dce(sl);
-
-		#if debug
-		for( i => s in sl )
-			Printer.check(s,[prev[i]]);
-		#end
 
 		#if shader_debug_dump
 		if( dbg != null ) {
 			dbg.writeString("----- DCE ----\n\n");
 			for( s in sl )
-				dbg.writeString(Printer.shaderToString(s, DEBUG_IDS) + "\n\n");
+				dbg.writeString(Printer.shaderToString(s, Debug.VAR_IDS) + "\n\n");
 		}
+		#end
+
+		#if debug
+		for( i => s in sl )
+			Printer.check(s,[prev[i]]);
 		#end
 
 		var r = buildRuntimeShader(sl, paramVars);
@@ -354,7 +349,7 @@ class Cache {
 		if( dbg != null ) {
 			dbg.writeString("----- FLATTEN ----\n\n");
 			for( s in r.getShaders() )
-				dbg.writeString(Printer.shaderToString(s.data, DEBUG_IDS) + "\n\n");
+				dbg.writeString(Printer.shaderToString(s.data, Debug.VAR_IDS) + "\n\n");
 		}
 		#end
 

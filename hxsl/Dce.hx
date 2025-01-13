@@ -1,5 +1,6 @@
 package hxsl;
 using hxsl.Ast;
+import hxsl.Debug.trace in debug;
 
 private class Exit {
 	public function new() {
@@ -63,13 +64,6 @@ class Dce {
 	var markAsKeep : Bool;
 
 	public function new() {
-	}
-
-	inline function debug( msg : String, ?pos : haxe.PosInfos ) {
-		#if shader_debug_dump
-		if( Cache.TRACE )
-			haxe.Log.trace(msg, pos);
-		#end
 	}
 
 	public function dce( shaders : Array<ShaderData> ) {
@@ -145,19 +139,8 @@ class Dce {
 		return vd;
 	}
 
-	function swizStr( bits : Int ) {
-		if( bits == 15 )
-			return "";
-		var str = ".";
-		if( bits & 1 != 0 ) str += "x";
-		if( bits & 2 != 0 ) str += "y";
-		if( bits & 4 != 0 ) str += "z";
-		if( bits & 8 != 0 ) str += "w";
-		return str;
-	}
-
 	function varName( v : TVar, bits = 15 ) {
-		return v.name+swizStr(bits) #if shader_debug_dump +(hxsl.Cache.DEBUG_IDS?"@"+v.id:"") #end;
+		return Debug.varName(v, bits);
 	}
 
 	function markRec( v : VarDeps, bits : Int ) {
