@@ -2,8 +2,8 @@ package hxsl;
 
 class Debug {
 
-	public static var VAR_IDS = true;
-	public static var TRACE = true;
+	public static var VAR_IDS = #if shader_debug_var_ids true #else false #end;
+	public static var TRACE = #if shader_debug_dump true #else false #end;
 
 	public static macro function trace(str) {
 		return macro if( hxsl.Debug.TRACE ) trace($str);
