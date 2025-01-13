@@ -157,7 +157,7 @@ class Dce {
 	}
 
 	function varName( v : TVar, bits = 15 ) {
-		return v.name+swizStr(bits)+(hxsl.Cache.DEBUG_IDS?"@"+v.id:"");
+		return v.name+swizStr(bits) #if shader_debug_dump +(hxsl.Cache.DEBUG_IDS?"@"+v.id:"") #end;
 	}
 
 	function markRec( v : VarDeps, bits : Int ) {
