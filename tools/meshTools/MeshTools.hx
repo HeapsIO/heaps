@@ -119,6 +119,12 @@ class MeshTools {
 		var triangles = hl.Bytes.fromBytes(input.read(triangleCount * dataSize));
 		var vhacdInstance = new hxd.tools.VHACD();
 		var params = new hxd.tools.VHACD.Parameters();
+		if ( args.length >= 4 ) {
+			params.maxConvexHulls = Std.parseInt(args[3]);
+		}
+		if ( args.length >= 5 ) {
+			params.maxResolution = Std.parseInt(args[4]);
+		}
 		if ( !vhacdInstance.compute(points, pointCount, triangles, triangleCount, params) ) {
 			Sys.println("Failed to compute convex hulls");
 			Sys.exit(1);
@@ -131,13 +137,15 @@ class MeshTools {
 			vhacdInstance.getConvexHull(i, convexHull);
 			var pointCount = convexHull.pointCount;
 			outputData.addInt32(pointCount);
-			outputData.add(haxe.io.Bytes.ofData(new haxe.io.BytesData(convexHull.points, pointCount * dataSize)));
+			outputData.add(haxe.io.Bytes.ofData(new haxe.io.BytesData(convexHull.points, pointCount * dataSize << 1)));
 			var triangleCount = convexHull.triangleCount;
 			outputData.addInt32(triangleCount);
 			outputData.add(haxe.io.Bytes.ofData(new haxe.io.BytesData(convexHull.triangles, triangleCount * dataSize)));
 		}
 		vhacdInstance.clean();
 		vhacdInstance.release();
+
+		sys.io.File.saveBytes(args[2], outputData.getBytes());
 	}
 
 	static function exit() {
