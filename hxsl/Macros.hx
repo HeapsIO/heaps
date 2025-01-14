@@ -403,11 +403,12 @@ class Macros {
 				case FVar(_, expr) if( expr != null ):
 					var pos = expr.pos;
 					if( !Lambda.has(f.access, AStatic) ) f.access.push(AStatic);
-					Context.getLocalClass().get().meta.add(":src", [expr], pos);
+					var cl = Context.getLocalClass();
+					var c = cl.get();
+					c.meta.add(":src", [expr], pos);
 					try {
 						var shader = new MacroParser().parseExpr(expr);
-						var c = Context.getLocalClass();
-						var csup = c.get().superClass;
+						var csup = c.superClass;
 						var supFields = new Map();
 						// add auto extends
 						do {
@@ -427,13 +428,12 @@ class Macros {
 							supFields.remove("clone");
 							csup = tsup.superClass;
 						} while( true);
-						var name = Std.string(c);
-						var check = new Checker();
+						var className = Std.string(cl);						var check = new Checker();
 						check.loadShader = loadShader;
 						check.warning = function(msg,pos) {
 							haxe.macro.Context.warning(msg, pos);
 						};
-						var shader = check.check(name, shader);
+						var shader = check.check(className, shader);
 						//Printer.check(shader);
 						var str = Context.defined("display") ? "" : Serializer.run(shader);
 						f.kind = FVar(null, { expr : EConst(CString(str)), pos : pos } );
@@ -444,6 +444,15 @@ class Macros {
 						for( f in buildFields(shader, check.inits, pos) )
 							if( !supFields.exists(f.name) )
 								fields.push(f);
+
+						fields.push( {
+							name : "_MODULE",
+							kind : FVar(null, macro $v{c.module}),
+							pos : pos,
+							access : [AStatic],
+							meta : [{ name : ":keep", pos : pos }],
+						});
+
 					} catch( e : Ast.Error ) {
 						fields.remove(f);
 						Context.error(e.msg, e.pos);

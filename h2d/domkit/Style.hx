@@ -525,12 +525,6 @@ class Style extends domkit.CssStyle {
 			var valueLines = [];
 			var files: Array<SourceFile> = [];
 			var lineDigits = 0;
-			var resourcePath = "";
-			if (onInspectHyperlink != null && resources.length > 0 && resources[0].entry is hxd.fs.LocalFileSystem.LocalEntry) {
-				var entry = Std.downcast(resources[0].entry, hxd.fs.LocalFileSystem.LocalEntry);
-				var idx = @:privateAccess entry.file.lastIndexOf("/");
-				if (idx >= 0) resourcePath = @:privateAccess entry.file.substr(0, idx);
-			}
 
 			for( i in 0...dom.currentSet.length ) {
 				if( dom.currentRuleStyles == null || dom.currentRuleStyles[i] == null )
@@ -569,15 +563,21 @@ class Style extends domkit.CssStyle {
 					v = vs.value;
 					var f = find(files, f -> f.name == vs.pos.file);
 					if (f != null) {
+						var res = find(resources, r -> r.name == f.name);
+						var entry = Std.downcast(res?.entry, hxd.fs.LocalFileSystem.LocalEntry);
+						var resDir = "";
+						if (entry != null && @:privateAccess entry.file.lastIndexOf("/") > 0) {
+							resDir = @:privateAccess entry.file.substr(0, entry.file.lastIndexOf("/"));
+						}
 						var pos = getPos(f, vs.pos.pmin);
 						var s = "" + pos.line;
 						if (pos.file == null)
 							lStr = '<font color="#707070">$s</font>';
 						else {
 							var posStr = '${pos.file}:$s';
-							if (onInspectHyperlink != null && resourcePath != null) {
+							if (onInspectHyperlink != null && resDir != null) {
 								var colStr = pos.col >= 0 ? (":" + pos.col) : "";
-								posStr = '<a href="$resourcePath/$posStr$colStr">$posStr</a>';
+								posStr = '<a href="$resDir/$posStr$colStr">$posStr</a>';
 							}
 							lStr = '<font color="#707070">$posStr</font>';
 						}
