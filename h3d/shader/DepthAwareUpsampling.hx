@@ -23,9 +23,8 @@ class DepthAwareUpsampling extends ScreenShader {
 
 		function fragment() {
 			var destDimensions = destDepth.size();
-			var destInvDimensions = 1 / destDimensions;
 			var pixels = fragCoord.xy;
-			var curDepth = destDepth.get(pixels * destInvDimensions).r;
+			var curDepth = destDepth.fetch(ivec2(pixels.xy)).r;
 			var pcur = getPosition(calculatedUV, curDepth);
 			var minDepthDist = 2.0;
 
