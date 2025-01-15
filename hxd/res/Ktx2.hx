@@ -191,6 +191,8 @@ class Ktx2Decoder {
 	static var _workerPool:Array<WorkerTask> = [];
 	static var _transcoderPending:js.lib.Promise<Dynamic>;
 	static var _transcoderBinary:haxe.io.Bytes;
+	static var _transcoderScript:String;
+	static var _transcoderLoading:js.lib.Promise<{script:String, wasm:haxe.io.Bytes}>;
 
 	public static function getTexture(bytes:haxe.io.BytesInput, cb:(texture:h3d.mat.Texture) -> Void) {
 		createTexture(bytes, cb);
@@ -338,7 +340,7 @@ class Ktx2Decoder {
 	}
 
 	static function initTranscoder() {
-		if (_transcoderBinary == null) {
+		_transcoderLoading = if (_transcoderLoading == null) {
 			// Load transcoder wrapper.
 			final jsLoader = new hxd.net.BinaryLoader('vendor/basis_transcoder.js');
 			final jsContent = new js.lib.Promise((resolve, reject) -> {
@@ -353,32 +355,32 @@ class Ktx2Decoder {
 				binaryLoader.onError = reject;
 				binaryLoader.load(true);
 			});
-
-			
-			_transcoderPending = js.lib.Promise.all([jsContent, binaryContent]).then(arr -> {
-				final transcoder = arr[0].toString();
-				final wasm = arr[1];
-				final transcoderFormat = Type.getClassFields(TranscoderFormat).map(f -> '"$f": ${Reflect.field(TranscoderFormat, f)},\n').fold((curr, acc) -> '$acc\t$curr', '{\n') + '}';
-				final basisFormat = Type.allEnums(BasisFormat).fold((curr, acc) -> '$acc\t"${curr.getName()}": ${curr.getIndex()},\n', '{\n') + '}';
-				final engineFormat = Type.getClassFields(EngineFormat).map(f -> '"$f": ${Reflect.field(EngineFormat, f)},\n').fold((curr, acc) -> '$acc\t$curr', '{\n') + '}';
-				final engineType = Type.getClassFields(EngineType).map(f -> '"$f": ${Reflect.field(EngineType, f)},\n').fold((curr, acc) -> '$acc\t$curr', '{\n') + '}';
-				var body = [
-					'/* constants */',
-					'let _EngineFormat = $engineFormat',
-					'let _EngineType = $engineType',
-					'let _TranscoderFormat = $transcoderFormat',
-					'let _BasisFormat = $basisFormat',
-					'/* basis_transcoder.js */',
-					transcoder,
-					'/* worker */',
-					basisWorker()
-				].join('\n');
-
-				_workerSourceURL = js.html.URL.createObjectURL(new js.html.Blob([body]));
-				_transcoderBinary = wasm;
-			});
-
+			js.lib.Promise.all([jsContent, binaryContent]).then(arr -> {script:arr[0].toString(), wasm:arr[1]});
+		} else {
+			_transcoderLoading;
 		}
+		
+		_transcoderPending = _transcoderLoading.then(o -> {
+			_transcoderScript = o.script;
+			_transcoderBinary = o.wasm;
+			final transcoderFormat = Type.getClassFields(TranscoderFormat).map(f -> '"$f": ${Reflect.field(TranscoderFormat, f)},\n').fold((curr, acc) -> '$acc\t$curr', '{\n') + '}';
+			final basisFormat = Type.allEnums(BasisFormat).fold((curr, acc) -> '$acc\t"${curr.getName()}": ${curr.getIndex()},\n', '{\n') + '}';
+			final engineFormat = Type.getClassFields(EngineFormat).map(f -> '"$f": ${Reflect.field(EngineFormat, f)},\n').fold((curr, acc) -> '$acc\t$curr', '{\n') + '}';
+			final engineType = Type.getClassFields(EngineType).map(f -> '"$f": ${Reflect.field(EngineType, f)},\n').fold((curr, acc) -> '$acc\t$curr', '{\n') + '}';
+			final body = [
+				'/* constants */',
+				'let _EngineFormat = $engineFormat',
+				'let _EngineType = $engineType',
+				'let _TranscoderFormat = $transcoderFormat',
+				'let _BasisFormat = $basisFormat',
+				'/* basis_transcoder.js */',
+				_transcoderScript,
+				'/* worker */',
+				basisWorker()
+			].join('\n');
+
+			_workerSourceURL = js.html.URL.createObjectURL(new js.html.Blob([body]));
+		});
 		return _transcoderPending;
 	}
 }
