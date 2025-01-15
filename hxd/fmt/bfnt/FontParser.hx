@@ -62,17 +62,10 @@ class FontParser {
 					font.lineHeight = Std.parseInt(xml.node.common.att.lineHeight);
 					font.baseLine = Std.parseInt(xml.node.common.att.base);
 
-				// This node contains SDF Metadata
-				if(xml.hasNode.distanceField) {
-				   font.distanceRange = Std.parseInt(xml.node.distanceField.att.distanceRange);
-				   font.fieldType = Std.string(xml.node.distanceField.att.fieldType);
-				}
-
-				for ( p in xml.node.pages.elements ) {
-					if ( p.att.id == "0" ) {
-						resolveTileWithFallback(p.att.file);
-					} else {
-						trace("Warning: BMF format only supports one page at the moment.");
+					// This node contains SDF Metadata
+					if (xml.hasNode.distanceField) {
+						font.distanceRange = Std.parseInt(xml.node.distanceField.att.distanceRange);
+						font.fieldType = Std.string(xml.node.distanceField.att.fieldType);
 					}
 
 					for (p in xml.node.pages.elements) {
