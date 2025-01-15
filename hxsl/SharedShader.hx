@@ -346,7 +346,11 @@ class SharedShader {
 		#else
 		var parser = new hscript.Parser();
 		var m = try parser.parseModule(text,fs.path) catch( e : hscript.Expr.Error ) {
+			#if hscriptPos
 			Sys.println(e.toString());
+			#else
+			Sys.println(hscript.Printer.errorToString(e));
+			#end
 			return null;
 		}
 		var clName = name.split(".").pop();
