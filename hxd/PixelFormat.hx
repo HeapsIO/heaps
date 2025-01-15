@@ -23,9 +23,12 @@ enum PixelFormat {
 	RG16U;
 	RGB16U;
 	RGBA16U;
+	ASTC( v : Int );
+	ETC( v : Int );
 	S3TC( v : Int );
 	Depth16;
 	Depth24;
 	Depth24Stencil8;
 	Depth32;
 }
+
