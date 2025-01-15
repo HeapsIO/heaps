@@ -14,6 +14,7 @@ class HMDModel extends MeshPrimitive {
 	var normalsRecomputed : String;
 	var blendshape : Blendshape;
 	var lodConfig : Array<Float> = null;
+	var colliderData : Collider;
 
 	public static var lodExportKeyword : String = "LOD";
 
@@ -28,6 +29,8 @@ class HMDModel extends MeshPrimitive {
 
 		if (lib.header.shapes != null && lib.header.shapes.length > 0)
 			this.blendshape = new Blendshape(this);
+		if ( lib.header.colliders != null && lib.header.colliders.length > 0 )
+			this.colliderData = Collider.fromHmd(this);
 	}
 
 	override function hasInput( name : String ) {
@@ -267,11 +270,24 @@ class HMDModel extends MeshPrimitive {
 	}
 
 	function initCollider( poly : h3d.col.PolygonBuffer ) {
-		var buf= lib.getBuffers(data, hxd.BufferFormat.POS3D);
-		poly.setData(buf.vertexes, buf.indexes);
-		if( collider == null ) {
-			var sphere = data.bounds.toSphere();
-			collider = new h3d.col.Collider.OptimizedCollider(sphere, poly);
+		var sphere = data.bounds.toSphere();
+		if ( colliderData == null ) {
+			var buf = lib.getBuffers(data, hxd.BufferFormat.POS3D);
+			poly.setData(buf.vertexes, buf.indexes);
+			if( collider == null )
+				collider = new h3d.col.Collider.OptimizedCollider(sphere, poly);
+		} else {
+			var buffers = colliderData.getBuffers();
+			var hulls : Array<h3d.col.Collider> = [];
+			hulls.resize(buffers.length);
+			for ( i => buf in buffers ) {
+				var p = new h3d.col.PolygonBuffer();
+				p.source = poly.source;
+				p.setData(buf.vertexes, buf.indexes);
+				hulls[i] = p;
+			}
+			var convexHulls = new h3d.col.Collider.GroupCollider(hulls);
+			collider = new h3d.col.Collider.OptimizedCollider(sphere, convexHulls);
 		}
 	}
 

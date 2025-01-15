@@ -90,6 +90,13 @@ class ConvertFBX2HMD extends Convert {
 				hmdout.maxBonesPerSkin = params.maxBones;
 			if (params.tangents != null)
 				hmdout.generateTangents = true;
+			if (params.collide != null) {
+				var collide = params.collide;
+				hmdout.generateCollides = { precision : collide.precision,
+					maxConvexHulls : collide.maxConvexHulls,
+					maxSubdiv : collide.maxSubdiv
+				};
+			}
 			if (params.lowp != null) {
 				var m:haxe.DynamicAccess<String> = params.lowp;
 				hmdout.lowPrecConfig = [];

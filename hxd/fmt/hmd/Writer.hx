@@ -19,6 +19,7 @@ class Writer {
 		case HasExtraTextures:
 		case FourBonesByVertex:
 		case HasLod:
+		case HasCollider:
 		}
 	}
 
@@ -37,6 +38,8 @@ class Writer {
 	}
 
 	function writeName( name : String ) {
+		if ( name == "" )
+			throw "?";
 		if( name == null ) {
 			out.writeByte(0xFF);
 			return;
@@ -175,6 +178,8 @@ class Writer {
 				for ( lod in m.lods )
 					out.writeInt32(lod);
 			}
+			if ( m.collider != null && m.collider >= 0 )
+				out.writeInt32(m.collider);
 		}
 
 		out.writeInt32(d.animations.length);
@@ -214,6 +219,21 @@ class Writer {
 			out.writeInt32(s.vertexPosition);
 			out.writeInt32(s.indexCount);
 			out.writeInt32(s.remapPosition);
+		}
+
+		if ( d.colliders != null ) {
+			out.writeInt32(d.colliders.length);
+			for ( c in d.colliders ) {
+				out.writeInt32(c.vertexCounts.length);
+				for ( v in c.vertexCounts )
+					out.writeInt32(v);
+				out.writeInt32(c.vertexPosition);
+				if ( c.indexCounts.length != c.vertexCounts.length )
+					throw "assert";
+				for ( i in c.indexCounts )
+					out.writeInt32(i);
+				out.writeInt32(c.indexPosition);
+			}
 		}
 
 		var bytes = header.getBytes();
