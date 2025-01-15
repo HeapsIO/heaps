@@ -243,8 +243,17 @@ class Cache {
 
 		#if shader_debug_dump
 		var shaderId = @:privateAccess RuntimeShader.UID;
+		#if ( js && !sys )
+		if( shaderId == 0 ) js.Syntax.code("window.shaders = [];");
+		js.Syntax.code("window.shaders[{0}] = '';", shaderId);
+		var dbg: { writeString: String->Void, close:Void->Void } = {
+			writeString: (str: String) -> { js.Syntax.code("window.shaders[{0}] += {1}", shaderId, str); },
+			close: () -> {}
+		};
+		#else
 		if( shaderId == 0 ) try sys.FileSystem.createDirectory("shaders") catch( e : Dynamic ) {};
 		var dbg = sys.io.File.write("shaders/"+shaderId+"_dump.c");
+		#end
 		var oldTrace = haxe.Log.trace;
 		haxe.Log.trace = function(msg,?pos) dbg.writeString(haxe.Log.formatOutput(msg,pos)+"\n");
 		if( dbg != null ) {
