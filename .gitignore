@@ -12,3 +12,4 @@ bin
 .vscode
 /tools/meshtools/out
 *.exe
+/node_modules
