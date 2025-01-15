@@ -185,6 +185,14 @@ class Font {
 		Defaults to `hxd.Charset.getDefault()`.
 	**/
 	public var charset : hxd.Charset;
+	/**
+		Distance range used to generate SDF Font and usefull for some implementations of SDF Font rendering.
+	**/
+	public var distanceRange:Int;
+	/**
+		SDF Field type used when generating.
+	**/
+	public var fieldType:String;
 	var glyphs : Map<Int,FontChar>;
 	var nullChar : FontChar;
 	var defaultChar : FontChar;
