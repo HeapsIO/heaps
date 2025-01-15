@@ -1,44 +1,7 @@
 package hxd.res;
-
-import haxe.io.UInt8Array;
-
-using Lambda;
-
 #if js
-typedef Promise<T> = js.lib.Promise<T>;
-typedef ImageData = js.html.ImageData;
-typedef Uint8Array = js.lib.Uint8Array;
-typedef Worker = js.html.Worker;
-#else
-// TODO: Add support for native targets, just dummy typing for now...
-class Promise<T> {
-	public function new(cb:(resolve:T, reject:T) -> Void) {}
-
-	public function then<T>(cb:(message:T) -> Void) {};
-
-	static function resolve<T>(thenable:Dynamic<T>):Promise<T> {
-		return null;
-	};
-
-	static function reject<T>(?reason:Dynamic):Promise<T> {
-		return null;
-	};
-}
-
-typedef ImageData = Dynamic;
-typedef Uint8Array = UInt8Array;
-
-class Worker {
-	public var index:Int;
-
-	public function new(url:String) {}
-
-	public function postMessage(message:Dynamic, ?transfer:Array<Dynamic>) {}
-
-	dynamic public function onmessage(e:{data:{type:String, id:Int}}) {};
-}
-#end
-
+import haxe.io.UInt8Array;
+using Lambda;
 /**
 	Ktx2 file parser.
 **/
