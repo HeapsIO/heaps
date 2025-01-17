@@ -192,7 +192,7 @@ class Checker {
 				];
 			case ImageStore:
 				[];
-			case VertexID, InstanceID, FragCoord, FrontFacing:
+			case VertexID, InstanceID, FragCoord, FrontFacing,FragDepth:
 				null;
 			case AtomicAdd:
 				[{ args : [{ name : "buf", type : TBuffer(TInt, SConst(0), RW) },{ name : "index", type : TInt }, { name : "data", type : TInt }], ret : TInt }];
@@ -231,6 +231,7 @@ class Checker {
 		globals.set("vertexID", { t : TInt, g : VertexID });
 		globals.set("instanceID", { t : TInt, g : InstanceID });
 		globals.set("fragCoord", { t : vec4, g : FragCoord });
+		globals.set("fragDepth", { t : TFloat, g : FragDepth });
 		globals.set("frontFacing", { t : TBool, g : FrontFacing });
 		for( gname => vl in gvars )
 			globals.set(gname, { t : TStruct([
@@ -424,7 +425,13 @@ class Checker {
 		case TArray(e, _):
 			checkWrite(e);
 			return;
-		default:
+		case TGlobal(g):
+			switch(g) {
+				case FragDepth:
+					return;
+				default:
+			}
+			default:
 		}
 		error("This expression cannot be assigned", e.p);
 	}
