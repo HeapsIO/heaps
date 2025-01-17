@@ -59,10 +59,9 @@ class JsonFontParser {
 
         font.lineHeight = data.metrics.lineHeight * data.atlas.size * 0.5;
 
-		for(glyph in data.glyphs)
-		{
+		for(glyph in data.glyphs) {
 			final xadvance = data.atlas.size * glyph.advance;
-			if(glyph.atlasBounds != null && glyph.planeBounds != null) {
+			if( glyph.atlasBounds != null && glyph.planeBounds != null ) {
 				final x = glyph.atlasBounds.left;
 				final y = data.atlas.height - glyph.atlasBounds.top;
 				final width = glyph.atlasBounds.right - glyph.atlasBounds.left;
