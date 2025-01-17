@@ -77,6 +77,7 @@ class HlslOut {
 		m.set(BVec3, "bool3");
 		m.set(BVec4, "bool4");
 		m.set(FragCoord,"_in.__pos__");
+		m.set(FragDepth,"SV_Depth");
 		m.set(FloatBitsToInt, "asint");
 		m.set(FloatBitsToUint, "asuint");
 		m.set(IntBitsToFloat, "asfloat");
@@ -458,7 +459,7 @@ class HlslOut {
 		case TCall({ e : TGlobal(g = (Texel)) }, args):
 			addValue(args[0], tabs);
 			add(".Load(");
-			switch( args[0].t ) {
+			switch( args[1].t ) {
 			case TSampler(dim,arr):
 				var size = Tools.getDimSize(dim, arr) + 1;
 				add("int"+size+"(");

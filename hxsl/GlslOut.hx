@@ -67,6 +67,7 @@ class GlslOut {
 		set(BVec3, "bvec3");
 		set(BVec4, "bvec4");
 		set(FragCoord, "gl_FragCoord");
+		set(FragDepth, "gl_FragDepth");
 		set(FrontFacing, "gl_FrontFacing");
 		set(FloatBitsToUint, "_floatBitsToUint");
 		set(UintBitsToFloat, "_uintBitsToFloat");

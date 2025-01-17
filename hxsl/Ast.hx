@@ -291,6 +291,7 @@ enum TGlobal {
 	InstanceID;
 	// gl globals
 	FragCoord;
+	FragDepth;
 	FrontFacing;
 	// bit casting
 	FloatBitsToInt;

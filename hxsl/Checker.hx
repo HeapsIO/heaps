@@ -186,7 +186,7 @@ class Checker {
 				];
 			case ImageStore:
 				[];
-			case VertexID, InstanceID, FragCoord, FrontFacing:
+			case VertexID, InstanceID, FragCoord, FrontFacing,FragDepth:
 				null;
 			case AtomicAdd:
 				[{ args : [{ name : "buf", type : TBuffer(TInt, SConst(0), RW) },{ name : "index", type : TInt }, { name : "data", type : TInt }], ret : TInt }];
@@ -225,6 +225,7 @@ class Checker {
 		globals.set("vertexID", { t : TInt, g : VertexID });
 		globals.set("instanceID", { t : TInt, g : InstanceID });
 		globals.set("fragCoord", { t : vec4, g : FragCoord });
+		globals.set("fragDepth", { t : TFloat, g : FragDepth });
 		globals.set("frontFacing", { t : TBool, g : FrontFacing });
 		for( gname => vl in gvars )
 			globals.set(gname, { t : TStruct([
@@ -418,7 +419,13 @@ class Checker {
 		case TArray(e, _):
 			checkWrite(e);
 			return;
-		default:
+		case TGlobal(g):
+			switch(g) {
+				case FragDepth:
+					return;
+				default:
+			}
+			default:
 		}
 		error("This expression cannot be assigned", e.p);
 	}
@@ -799,12 +806,11 @@ class Checker {
 					checkConst(e);
 					einit = e;
 				}
-				if( v.type == null ) error("Type required for variable declaration", e.pos);				
-				if( isImport && v.kind == Param )
-					continue;
-
+				if( v.type == null ) error("Type required for variable declaration", e.pos);
 				if( vars.exists(v.name) ) error("Duplicate var decl '" + v.name + "'", e.pos);
 				var v = makeVar(v, e.pos);
+				if( isImport && v.kind == Param )
+					continue;
 
 				switch( v.type ) {
 				case TSampler(T3D, true), TRWTexture(T3D, true, _), TRWTexture(_,_,3):
