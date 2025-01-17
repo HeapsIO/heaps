@@ -29,9 +29,9 @@ abstract Instance(hl.Abstract<"vhacd">) {
 abstract Pointer(haxe.Int64) from haxe.Int64 to haxe.Int64 {}
 
 @:struct class Parameters {
-	var _unused0 : Pointer = 0;
-	var _unused1 : Pointer = 0;
-	var _unused2 : Pointer = 0;
+	var _unused0 : Pointer;
+	var _unused1 : Pointer;
+	var _unused2 : Pointer;
 	public var maxConvexHulls : Int = 64;                       // The maximum number of convex hulls to produce
 	public var maxResolution : Int = 400000;                    // The voxel resolution to use
 	public var minimumVolumePercentErrorAllowed : Float = 1;    // if the voxels are within 1% of the volume of the hull, we consider this a close enough approximation
