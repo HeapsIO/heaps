@@ -43,11 +43,13 @@ class FontParser {
 				resolveTileSameName();
 				return hxd.fmt.bfnt.JsonFontParser.parse(bytes,tile);
 		}
-	
 
 		switch( bytes.getInt32(0) ) {
 		case 0x544E4642: // Internal BFNT
-			return hxd.fmt.bfnt.Reader.parse(bytes, function( tp : String ) { resolveTileWithFallback(tp); return tile; });
+			return hxd.fmt.bfnt.Reader.parse(bytes, function( tp : String ) { 
+				resolveTileWithFallback(tp); 
+				return tile;
+			});
 
 			case 0x6D783F3C, // <?xml : XML file
 				0x6E6F663C: // <font>
