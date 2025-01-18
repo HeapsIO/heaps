@@ -425,13 +425,9 @@ class Checker {
 		case TArray(e, _):
 			checkWrite(e);
 			return;
-		case TGlobal(g):
-			switch(g) {
-				case FragDepth:
-					return;
-				default:
-			}
-			default:
+		case TGlobal(FragDepth):
+			return;
+		default:
 		}
 		error("This expression cannot be assigned", e.p);
 	}
@@ -839,8 +835,6 @@ class Checker {
 				if( v.type == null ) error("Type required for variable declaration", e.pos);
 				if( vars.exists(v.name) ) error("Duplicate var decl '" + v.name + "'", e.pos);
 				var v = makeVar(v, e.pos);
-				if( isImport && v.kind == Param )
-					continue;
 
 				switch( v.type ) {
 				case TSampler(T3D, true), TRWTexture(T3D, true, _), TRWTexture(_,_,3):

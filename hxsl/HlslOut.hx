@@ -479,7 +479,7 @@ class HlslOut {
 		case TCall({ e : TGlobal(g = (Texel)) }, args):
 			addValue(args[0], tabs);
 			add(".Load(");
-			switch( args[1].t ) {
+			switch( args[0].t ) {
 			case TSampler(dim,arr):
 				var size = Tools.getDimSize(dim, arr) + 1;
 				add("int"+size+"(");
