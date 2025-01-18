@@ -832,7 +832,7 @@ class Checker {
 					checkConst(e);
 					einit = e;
 				}
-				if( v.type == null ) error("Type required for variable declaration", e.pos);
+				if( v.type == null ) error("Type required for variable declaration", e.pos);				
 				if( isImport && v.kind == Param )
 					continue;
 
