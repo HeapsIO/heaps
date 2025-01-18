@@ -425,13 +425,9 @@ class Checker {
 		case TArray(e, _):
 			checkWrite(e);
 			return;
-		case TGlobal(g):
-			switch(g) {
-				case FragDepth:
-					return;
-				default:
-			}
-			default:
+		case TGlobal(FragDepth):
+			return;
+		default:
 		}
 		error("This expression cannot be assigned", e.p);
 	}
