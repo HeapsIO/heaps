@@ -32,6 +32,7 @@ private class ShaderInfos {
 	public var onStack : Bool;
 	public var hasDiscard : Bool;
 	public var isCompute : Bool;
+	public var hasSyntax : Bool;
 	public var marked : Null<Bool>;
 	public function new(n, v) {
 		this.name = n;
@@ -235,9 +236,43 @@ class Linker {
 			locals.set(v.id, true);
 		case TFor(v, _, _):
 			locals.set(v.id, true);
+		case TSyntax(target, code, args):
+			var mappedArgs: Array<SyntaxArg> = [];
+			for ( arg in args ) {
+				var e = switch ( arg.access ) {
+					case Read:
+						mapExprVar(arg.e);
+					case Write:
+						var e = curShader != null ? mapSyntaxWrite(arg.e) : arg.e;
+						mapExprVar(e);
+					case ReadWrite:
+						// Make sure syntax writes are appended after reads.
+						var e = mapExprVar(arg.e);
+						if (curShader != null) e = mapSyntaxWrite(e);
+						e;
+				}
+				mappedArgs.push({ e: e, access: arg.access });
+			}
+			if ( curShader != null ) curShader.hasSyntax = true;
+			return { e : TSyntax(target, code, mappedArgs), t : e.t, p : e.p };
 		default:
 		}
 		return e.map(mapExprVar);
+	}
+
+	function mapSyntaxWrite( e : TExpr ) {
+		switch ( e.e ) {
+			case TVar(v):
+				var v = allocVar(v, e.p);
+				if( !curShader.writeMap.exists(v.id) ) {
+					debug(curShader.name + " syntax write " + v.path);
+					curShader.writeMap.set(v.id, v);
+					curShader.writeVars.push(v);
+				}
+				return { e : TVar(v.v), t : v.v.type, p : e.p };
+			default:
+				return e.map(mapSyntaxWrite);
+		}
 	}
 
 	function addShader( name : String, vertex : Null<Bool>, e : TExpr, p : Int ) {
@@ -414,7 +449,7 @@ class Linker {
 
 		// force shaders containing discard to be included
 		for( s in shaders )
-			if( s.hasDiscard || s.isCompute ) {
+			if( s.hasDiscard || s.isCompute || s.hasSyntax ) {
 				initDependencies(s);
 				entry.deps.set(s, true);
 			}
