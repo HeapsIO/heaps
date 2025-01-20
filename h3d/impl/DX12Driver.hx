@@ -1303,27 +1303,30 @@ class DX12Driver extends h3d.impl.Driver {
 		}
 
 		var totalVertex = calcSize(shader.vertex);
-		var totalFragment = shader.mode == Compute ? 0 : calcSize(shader.fragment);
+		var isCompute = shader.mode == Compute;
+		var totalFragment = isCompute ? 0 : calcSize(shader.fragment);
 		var total = totalVertex + totalFragment;
 
 		if( total > 64 ) {
-			var vertexParamSizeCost = (shader.vertex.paramsSize << 2);
-			var fragmentParamSizeCost = (shader.fragment.paramsSize << 2);
+			var vertexParamCostGain = 1 - (shader.vertex.paramsSize << 2);
+			var fragmentParamCostGain = isCompute ? 0 : 1 - (shader.fragment.paramsSize << 2);
 
 			// Remove the size cost of the root constant and add one descriptor table.
-			var withoutVP = total - vertexParamSizeCost + 1;
-			var withoutFP = total - fragmentParamSizeCost + 1;
+			var withoutVP = total + vertexParamCostGain;
+			var withoutFP = total + fragmentParamCostGain;
 			if( withoutVP <= 64 || ( withoutFP > 64 && withoutVP > 64 ) ) {
 				vertexParamsCBV = true;
 				total = withoutVP;
 			}
-			if( total > 64 ) {
+			if( total > 64 && !isCompute ) {
 				fragmentParamsCBV = true;
-				total = total - fragmentParamSizeCost + 1;
+				total = total + fragmentParamCostGain;
 			}
 			if( total > 64 ) {
 				globalsParamsCBV = true;
-				var withoutGlobal = total - (shader.vertex.globalsSize << 2) - (shader.fragment.globalsSize << 2) + 2;
+				var vertexGlobalCostGain = 1 - (shader.vertex.globalsSize << 2);
+				var fragmentGlobalCostGain = isCompute ? 0 : 1 - (shader.fragment.globalsSize << 2);
+				var withoutGlobal = total + vertexGlobalCostGain + fragmentGlobalCostGain;
 				if ( withoutGlobal > 64 )
 					throw "Too many params. Should not be possible if every params fall into descriptor table.";
 			}
