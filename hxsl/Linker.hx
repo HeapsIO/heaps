@@ -1,6 +1,6 @@
 package hxsl;
-using hxsl.Ast;
 import hxsl.Debug.traceDepth in debug;
+using hxsl.Ast;
 
 private class AllocatedVar {
 	public var id : Int;
@@ -31,6 +31,7 @@ private class ShaderInfos {
 	public var vertex : Null<Bool>;
 	public var onStack : Bool;
 	public var hasDiscard : Bool;
+	public var hasFragDepth : Bool;
 	public var isCompute : Bool;
 	public var hasSyntax : Bool;
 	public var marked : Null<Bool>;
@@ -202,6 +203,11 @@ class Linker {
 			return { e : TVar(v.v), t : v.v.type, p : e.p };
 		case TBinop(op, e1, e2):
 			switch( [op, e1.e] ) {
+			case [OpAssign, TGlobal(FragDepth)]:
+				if( curShader != null ) {
+					curShader.hasFragDepth = true;
+				}
+				return { e : TBinop(op, { e : TGlobal(FragDepth),t : TFloat, p : e.p }, e2), t : e.t, p : e.p };
 			case [OpAssign, TVar(v)] if( !locals.exists(v.id) ):
 				var e2 = mapExprVar(e2);
 				var v = allocVar(v, e1.p);
@@ -458,7 +464,7 @@ class Linker {
 
 		// force shaders containing discard to be included
 		for( s in shaders )
-			if( s.hasDiscard || s.isCompute || s.hasSyntax ) {
+			if( s.hasDiscard || s.isCompute || s.hasFragDepth) {
 				initDependencies(s);
 				entry.deps.set(s, true);
 			}
