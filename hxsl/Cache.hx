@@ -243,11 +243,11 @@ class Cache {
 
 		#if shader_debug_dump
 		var shaderId = @:privateAccess RuntimeShader.UID;
-		#if ( js && !sys )
-		if( shaderId == 0 ) js.Syntax.code("window.shaders = [];");
-		js.Syntax.code("window.shaders[{0}] = '';", shaderId);
+		#if ( js && !sys && !hxnodejs )
+		if( shaderId == 0 ) js.Syntax.code("window.shaders_debug_dump = [];");
+		js.Syntax.code("window.shaders_debug_dump[{0}] = '';", shaderId);
 		var dbg: { writeString: String->Void, close:Void->Void } = {
-			writeString: (str: String) -> { js.Syntax.code("window.shaders[{0}] += {1}", shaderId, str); },
+			writeString: (str: String) -> { js.Syntax.code("window.shaders_debug_dump[{0}] += {1}", shaderId, str); },
 			close: () -> {}
 		};
 		#else
