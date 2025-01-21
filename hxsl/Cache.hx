@@ -247,7 +247,7 @@ class Cache {
 		if( shaderId == 0 ) js.Syntax.code("window.shaders = [];");
 		js.Syntax.code("window.shaders[{0}] = '';", shaderId);
 		var dbg: { writeString: String->Void, close:Void->Void } = {
-			writeString: (str: String) -> { js.Syntax.code("window.shaders_debug_dump[{0}] += {1}", shaderId, str); },
+			writeString: (str: String) -> { js.Syntax.code("window.shaders[{0}] += {1}", shaderId, str); },
 			close: () -> {}
 		};
 		#else
