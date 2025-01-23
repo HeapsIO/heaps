@@ -202,10 +202,22 @@ class Linker {
 			return { e : TVar(v.v), t : v.v.type, p : e.p };
 		case TBinop(op, e1, e2):
 			switch( [op, e1.e] ) {
-			case [OpAssign, TGlobal(FragDepth)]:
+			case [OpAssign | OpAssignOp(_), TGlobal(FragDepth)]:
 				if( curShader != null ) {
 					curShader.hasFragDepth = true;
 				}
+				
+				var e2 = mapExprVar(e2);
+				switch(e2.e) {
+					case TVar(v2):
+						var v2 = allocVar(v2,e2.p);
+						if( !curShader.readMap.exists(v2.id) ) {
+							curShader.readMap.set(v2.id, v2);
+							curShader.readVars.push(v2);
+						}
+					default:
+				}
+
 				return { e : TBinop(op, { e : TGlobal(FragDepth),t : TFloat, p : e.p }, e2), t : e.t, p : e.p };
 			case [OpAssign, TVar(v)] if( !locals.exists(v.id) ):
 				var e2 = mapExprVar(e2);
