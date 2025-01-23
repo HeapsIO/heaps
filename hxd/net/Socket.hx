@@ -41,7 +41,7 @@ class Socket {
 	public var out(default, null) : SocketOutput;
 	public var input(default, null) : SocketInput;
 	public var timeout(default, set) : Null<Float>;
-	
+
 	public static inline var ALLOW_BIND = #if (hl || (nodejs && hxnodejs)) true #else false #end;
 
 	public function new() {
@@ -67,6 +67,16 @@ class Socket {
 			out = new HLSocketOutput(this);
 			input = new HLSocketInput(this);
 			onConnect();
+		});
+		#elseif (nodejs && hxnodejs)
+		s = js.node.Net.connect(port, host, function() {
+			out = new NodeSocketOutput(this);
+			input = new NodeSocketInput(this);
+			onConnect();
+		});
+		s.on('error', function() {
+			close();
+			onError("Connection closed");
 		});
 		#else
 		throw "Not implemented";
@@ -98,6 +108,10 @@ class Socket {
 		js.node.Net.createServer(function(sock) {
 			var s = new Socket();
 			s.s = sock;
+			s.s.on('error', function(e) {
+				s.close();
+				s.onError("Connection closed");
+			});
 			s.out = new NodeSocketOutput(s);
 			s.input = new NodeSocketInput(s);
 			openedSocks.push(s);
@@ -243,15 +257,7 @@ class NodeSocketOutput extends SocketOutput {
 	public function new(s) {
 		super();
 		this.s = s;
-		@:privateAccess s.s.on('error', () -> writeResult(false));
 		@:privateAccess s.s.on('end', () -> s.close());
-	}
-
-	function writeResult(b) {
-		if( !b ) {
-			s.close();
-			s.onError("Failed to write data");
-		}
 	}
 
 	override function writeByte(c:Int) {
