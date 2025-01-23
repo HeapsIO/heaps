@@ -233,6 +233,7 @@ enum TGlobal {
 	Max;
 	Clamp;
 	Mix;
+	InvLerp;
 	Step;
 	Smoothstep;
 	Length;

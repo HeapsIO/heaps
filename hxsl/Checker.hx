@@ -106,6 +106,8 @@ class Checker {
 						r.push( { args : [ { name : "x", type : t }, { name : "y", type : t }, { name : "a", type : TFloat } ], ret : t } );
 				}
 				r;
+			case InvLerp:
+				[ { args : [{ name : "a", type : TFloat }, { name : "x", type : TFloat }, { name : "y", type : TFloat } ], ret : TFloat } ];
 			case Step:
 				var r = [];
 				for( t in genType ) {

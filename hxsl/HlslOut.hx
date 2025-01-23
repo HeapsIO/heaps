@@ -374,6 +374,8 @@ class HlslOut {
 			 }");
 		case AtomicAdd:
 			decl("int atomicAdd( RWStructuredBuffer<int> buf, int index, int data ) { int val; InterlockedAdd(buf[index], data, val); return val; }");
+		case InvLerp: 
+			decl("float invLerp(float v, float a, float b) { return saturate((v - a) / (b - a)); }");
 		case TextureSize:
 			var tt = args[0].t;
 			var tstr = getTexType(tt);
