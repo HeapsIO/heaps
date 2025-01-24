@@ -118,7 +118,7 @@ class Socket {
 			onConnect(s);
 		}).on('error', function(e) {
 			close();
-			throw e;
+			onError(e);
 		}).listen(port, host, listenCount);
 		#else
 		throw "Not implemented";
