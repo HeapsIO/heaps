@@ -1262,10 +1262,13 @@ class HMDOut extends BaseLibrary {
 			}
 
 			// Reorder materials to unsure there are in the same order for lods
-			midsSortRemap = new Map<Int, Int>();
-			for (idx in 0...mids.length) {
-				midsSortRemap.set(idx, mids[idx]);
-				mids[idx] = idx;
+			var lodsInfos = getLODInfos(model.name);
+			if (lodsInfos.lodLevel != -1) {
+				midsSortRemap = new Map<Int, Int>();
+				for (idx in 0...mids.length) {
+					midsSortRemap.set(idx, mids[idx]);
+					mids[idx] = idx;
+				}
 			}
 
 			var gdata = hgeom.get(g.getId());
