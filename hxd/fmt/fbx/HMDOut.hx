@@ -1265,9 +1265,10 @@ class HMDOut extends BaseLibrary {
 			var lodsInfos = getLODInfos(model.name);
 			if (lodsInfos.lodLevel != -1) {
 				midsSortRemap = new Map<Int, Int>();
+				var start = d.materials.length - mids.length;
 				for (idx in 0...mids.length) {
 					midsSortRemap.set(idx, mids[idx]);
-					mids[idx] = idx;
+					mids[idx + start] = start + idx;
 				}
 			}
 
