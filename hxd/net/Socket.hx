@@ -37,6 +37,7 @@ class Socket {
 	var s : hl.uv.Stream;
 	#elseif (nodejs && hxnodejs)
 	var s : js.node.net.Socket;
+	var srv : js.node.net.Server;
 	#end
 	public var out(default, null) : SocketOutput;
 	public var input(default, null) : SocketInput;
@@ -105,7 +106,7 @@ class Socket {
 			throw e;
 		}
 		#elseif (nodejs && hxnodejs)
-		js.node.Net.createServer(function(sock) {
+		srv = js.node.Net.createServer(function(sock) {
 			var s = new Socket();
 			s.s = sock;
 			s.s.on('error', function(e) {
@@ -119,7 +120,8 @@ class Socket {
 		}).on('error', function(e) {
 			close();
 			onError(e);
-		}).listen(port, host, listenCount);
+		});
+		srv.listen(port, host, listenCount);
 		#else
 		throw "Not implemented";
 		#end
@@ -138,6 +140,10 @@ class Socket {
 			s.destroy();
 			out = new SocketOutput();
 			s = null;
+		}
+		if( srv != null ) {
+			srv.close();
+			srv = null;
 		}
 		#end
 	}
