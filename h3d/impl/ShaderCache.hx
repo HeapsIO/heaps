@@ -11,7 +11,7 @@ class ShaderCache {
 
 	public function new( file : String, ?outputFile : String ) {
 		this.file = file;
-		this.outputFile = outputFile ?? file;
+		this.outputFile = outputFile == null ? file : outputFile;
 		sourceFile = file + ".source";
 	}
 
