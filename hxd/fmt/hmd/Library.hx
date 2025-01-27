@@ -352,8 +352,23 @@ class Library {
 		s.allJoints = [];
 		s.boundJoints = [];
 		s.rootJoints = [];
+
+		function isDynamic(dynName : String, j : SkinJoint) {
+			if (j.name.indexOf(dynName) >= 0)
+				return true;
+
+			var parent = j.parent >= 0 ? s.allJoints[j.parent] : null;
+			while(parent != null) {
+				if (parent.name.indexOf(dynName) >= 0)
+					return true;
+				parent = parent.parent;
+			}
+
+			return false;
+		}
+
 		for( joint in skin.joints ) {
-			var j = new h3d.anim.Skin.Joint();
+			var j = isDynamic('B_Tail02', joint) ? new h3d.anim.Skin.DynamicJoint() : new h3d.anim.Skin.Joint();
 			j.name = joint.name;
 			j.index = s.allJoints.length;
 			j.defMat = joint.position.toMatrix();

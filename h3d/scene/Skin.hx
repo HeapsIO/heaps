@@ -1,5 +1,8 @@
 package h3d.scene;
 
+import haxe.Timer;
+import h3d.anim.Skin.DynamicJoint;
+
 class Joint extends Object {
 	public var skin : Skin;
 	public var index : Int;
@@ -69,6 +72,11 @@ class Skin extends MultiMaterial {
 	var skinData : h3d.anim.Skin;
 	var currentRelPose : Array<h3d.Matrix>;
 	var currentAbsPose : Array<h3d.Matrix>;
+	var initialAbsPos : Array<h3d.Matrix> = [];
+	var dirsToParent : Array<h3d.Vector> = [];
+	var tmpCurrentAbsPose : Array<h3d.Matrix>;
+	var tmp2CurrentAbsPose : Array<h3d.Matrix>;
+	var tmp3CurrentAbsPose : Array<h3d.Matrix>;
 	var currentPalette : Array<h3d.Matrix>;
 	var splitPalette : Array<Array<h3d.Matrix>>;
 	var jointsUpdated : Bool;
@@ -76,6 +84,7 @@ class Skin extends MultiMaterial {
 	var skinShader : h3d.shader.SkinBase;
 	var jointsGraphics : Graphics;
 	var additivePose : Array<h3d.Matrix>;
+	var g : Graphics;
 
 	public var showJoints : Bool;
 	public var enableRetargeting : Bool = true;
@@ -250,30 +259,153 @@ class Skin extends MultiMaterial {
 	static var TMP_MAT = new h3d.Matrix();
 
 	@:noDebug
+	var init = false;
 	function syncJoints() {
 		if( !jointsUpdated ) return;
 		var tmpMat = TMP_MAT;
+
+		// TODO
+		tmpCurrentAbsPose = [];
+		for (tmp in currentAbsPose) {
+			var tmp2 = new h3d.Matrix();
+			tmp2.load(tmp);
+			tmpCurrentAbsPose.push(tmp2);
+		}
+
 		for( j in skinData.allJoints ) {
 			if ( j.follow != null ) continue;
 			var id = j.index;
 			var m = currentAbsPose[id];
 			var r = currentRelPose[id];
 			var bid = j.bindIndex;
-			if( r == null ) r = j.defMat else if( j.retargetAnim && enableRetargeting ) { tmpMat.load(r); r = tmpMat; r._41 = j.defMat._41; r._42 = j.defMat._42; r._43 = j.defMat._43; }
+			if( r == null )
+				r = j.defMat
+			else if( j.retargetAnim && enableRetargeting ) {
+				tmpMat.load(r);
+				r = tmpMat;
+				r._41 = j.defMat._41;
+				r._42 = j.defMat._42;
+				r._43 = j.defMat._43;
+			}
+			var dyn = Std.downcast(j, DynamicJoint);
+			if (dyn != null)
+				dyn.relPos = r;
 			if( j.parent == null )
 				m.multiply3x4inline(r, absPos);
-			else
+			else {
 				m.multiply3x4inline(r, currentAbsPose[j.parent.index]);
+			}
 			if( additivePose != null ) {
 				var a = additivePose[id];
 				if( a != null ) m.multiply3x4inline(a, m);
 			}
+
 			if( bid >= 0 )
 				currentPalette[bid].multiply3x4inline(j.transPos, m);
 		}
+
 		skinShader.bonesMatrixes = currentPalette;
 		jointsUpdated = false;
 		prevEnableRetargeting = enableRetargeting;
+
+		if (!init) {
+			tmpCurrentAbsPose = [];
+			for (tmp in currentAbsPose) {
+				var tmp2 = new h3d.Matrix();
+				tmp2.load(tmp);
+				tmpCurrentAbsPose.push(tmp2);
+			}
+
+			for( j in skinData.allJoints ) {
+				initialAbsPos[j.index] = currentAbsPose[j.index].clone();
+				if (j.parent == null) continue;
+				dirsToParent[j.index] = currentAbsPose[j.parent.index].getPosition() - currentAbsPose[j.index].getPosition();
+			}
+		}
+
+		tmp2CurrentAbsPose = [];
+		for (tmp in currentAbsPose) {
+			var tmp2 = new h3d.Matrix();
+			tmp2.load(tmp);
+			tmp2CurrentAbsPose.push(tmp2);
+		}
+
+		tmp3CurrentAbsPose = [];
+		for (tmp in currentAbsPose) {
+			var tmp2 = new h3d.Matrix();
+			tmp2.load(tmp);
+			tmp3CurrentAbsPose.push(tmp2);
+		}
+
+		// !---  DYNAMIC BONES
+		var deltaTime = Timer.stamp() - DynamicJoint.STAMP;
+		DynamicJoint.STAMP = Timer.stamp();
+
+		// if (g== null) {
+		// 	g = new Graphics(this.getScene());
+		// 	g.material.mainPass.setPassName("overlay");
+		// 	g.lineStyle(1, 0xFFFFFF, 1);
+		// }
+
+		// g.clear();
+
+		function convertVec(v : h3d.Vector) {
+			return new h3d.Vector(Math.round(v.x * 100) / 100,  Math.round(v.z * 100) / 100, Math.round(-v.y * 100) / 100);
+		}
+
+		for( j in skinData.allJoints ) {
+			if ( j.follow != null ) continue;
+			if (j.index >= currentPalette.length) continue;
+
+			var dynJoint = Std.downcast(j, h3d.anim.Skin.DynamicJoint);
+			if (dynJoint == null) continue;
+			var worldPos = tmpCurrentAbsPose[j.index];
+
+			var newWorldPos = worldPos.getPosition().clone();
+			var expectedPos = worldPos.getPosition().clone();
+			var oldWorldPos = worldPos.getPosition().clone();
+
+			// // Resistance (force resistance)
+			// var globalForce = new h3d.Vector(0, 0, 0);
+			// dynJoint.speed += globalForce * (1.0 - dynJoint.resistance);
+
+			// // Damping (inertia attenuation)
+			// dynJoint.speed *= 1.0 - dynJoint.damping;
+			// if (dynJoint.speed.lengthSq() > DynamicJoint.SLEEP_THRESHOLD) {
+			// 	newWorldPos += dynJoint.speed * deltaTime;
+			// }
+
+			// Stiffness (shape keeper)
+			var parentMovement =  tmp2CurrentAbsPose[j.parent.index].getPosition() - tmp3CurrentAbsPose[j.parent.index].getPosition();
+            expectedPos = dynJoint.relPos.multiplied(tmp3CurrentAbsPose[j.parent.index]).getPosition() + parentMovement;
+            newWorldPos.lerp(newWorldPos, expectedPos, dynJoint.stiffness);
+
+			// Slackness (length keeper)
+			var dirToParent = (newWorldPos - tmp2CurrentAbsPose[j.parent.index].getPosition()).normalized();
+			if (parentMovement.length() != 0) {
+
+			}
+			trace(dynJoint.name + " " + convertVec(dirToParent));
+			// var tmp = new h3d.Matrix();
+			// tmp.multiply3x4(dynJoint.relPos, tmp3CurrentAbsPose[j.parent.index]);
+            // var lengthToParent = tmp.getPosition().length();
+
+            // expectedPos = currentAbsPose[j.parent.index].getPosition() - dirToParent * lengthToParent;
+			// // if (j.name == "B_Tail02")
+			// // 	trace(lengthToParent);
+			// newWorldPos.lerp(expectedPos, newWorldPos, dynJoint.slackness);
+
+			// Collision
+			// TODO
+
+			// dynJoint.speed = (dynJoint.speed + (newWorldPos - oldWorldPos) * (1.0 / deltaTime)) * 0.5;
+			currentAbsPose[j.index].setPosition(newWorldPos);
+			tmp2CurrentAbsPose[j.index].setPosition(newWorldPos);
+
+			if( dynJoint.bindIndex >= 0 )
+				currentPalette[dynJoint.bindIndex].multiply3x4inline(j.transPos, currentAbsPose[j.index]);
+		}
+		init = true;
 	}
 
 	override function emit( ctx : RenderContext ) {

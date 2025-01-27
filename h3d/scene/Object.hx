@@ -771,6 +771,7 @@ class Object {
 		if(inheritCulled)
 			ctx.cullingCollider = cullingCollider;
 
+		posChanged = true;
 		var changed = posChanged;
 		// absPos up to date during sync
 		if( changed ) calcAbsPos();

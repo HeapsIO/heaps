@@ -1042,10 +1042,24 @@ class HMDOut extends BaseLibrary {
 		}
 		indexRec(root);
 
+		function isDynamic(dynName : String, j : TmpObject) {
+			if (j.model.getName().indexOf(dynName) >= 0)
+				return true;
+
+			var parent = j.parent;
+			while(parent != null) {
+				if (parent.model.getName().indexOf(dynName) >= 0)
+					return true;
+				parent = parent.parent;
+			}
+
+			return false;
+		}
+
 		// create joints
 		for( o in joints ) {
 			if( o.isMesh ) throw "assert";
-			var j = new h3d.anim.Skin.Joint();
+			var j = isDynamic('B_Tail02', o) ? new h3d.anim.Skin.DynamicJoint() : new h3d.anim.Skin.Joint();
 			getDefaultMatrixes(o.model); // store for later usage in animation
 			j.index = o.model.getId();
 			j.name = o.model.getName();
