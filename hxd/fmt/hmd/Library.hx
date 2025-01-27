@@ -368,7 +368,7 @@ class Library {
 		}
 
 		for( joint in skin.joints ) {
-			var j = isDynamic('B_Tail02', joint) ? new h3d.anim.Skin.DynamicJoint() : new h3d.anim.Skin.Joint();
+			var j = isDynamic('B_Cape02', joint) ? new h3d.anim.Skin.DynamicJoint() : new h3d.anim.Skin.Joint();
 			j.name = joint.name;
 			j.index = s.allJoints.length;
 			j.defMat = joint.position.toMatrix();

@@ -42,9 +42,9 @@ class DynamicJoint extends Joint {
 	public var speed : h3d.Vector;
 	public var radius : Float = 0.0;
 	public var damping : Float = 0.4;
-	public var stiffness : Float = 0.05;
+	public var stiffness : Float = 0.1;
 	public var resistance : Float = 0.9;
-	public var slackness : Float = 0.1;
+	public var slackness : Float = 0.01;
 
 	public function new() {
 		super();

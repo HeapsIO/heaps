@@ -355,7 +355,6 @@ class Skin extends MultiMaterial {
 
 		for( j in skinData.allJoints ) {
 			if ( j.follow != null ) continue;
-			if (j.index >= currentPalette.length) continue;
 
 			var dynJoint = Std.downcast(j, h3d.anim.Skin.DynamicJoint);
 			if (dynJoint == null) continue;
@@ -369,7 +368,7 @@ class Skin extends MultiMaterial {
 			// var globalForce = new h3d.Vector(0, 0, 0);
 			// dynJoint.speed += globalForce * (1.0 - dynJoint.resistance);
 
-			// // Damping (inertia attenuation)
+			// Damping (inertia attenuation)
 			// dynJoint.speed *= 1.0 - dynJoint.damping;
 			// if (dynJoint.speed.lengthSq() > DynamicJoint.SLEEP_THRESHOLD) {
 			// 	newWorldPos += dynJoint.speed * deltaTime;
@@ -382,18 +381,9 @@ class Skin extends MultiMaterial {
 
 			// Slackness (length keeper)
 			var dirToParent = (newWorldPos - tmp2CurrentAbsPose[j.parent.index].getPosition()).normalized();
-			if (parentMovement.length() != 0) {
-
-			}
-			trace(dynJoint.name + " " + convertVec(dirToParent));
-			// var tmp = new h3d.Matrix();
-			// tmp.multiply3x4(dynJoint.relPos, tmp3CurrentAbsPose[j.parent.index]);
-            // var lengthToParent = tmp.getPosition().length();
-
-            // expectedPos = currentAbsPose[j.parent.index].getPosition() - dirToParent * lengthToParent;
-			// // if (j.name == "B_Tail02")
-			// // 	trace(lengthToParent);
-			// newWorldPos.lerp(expectedPos, newWorldPos, dynJoint.slackness);
+            var lengthToParent = dynJoint.relPos.getPosition().length();
+            expectedPos = tmp2CurrentAbsPose[j.parent.index].getPosition() + dirToParent * lengthToParent;
+			newWorldPos.lerp(expectedPos, newWorldPos, dynJoint.slackness);
 
 			// Collision
 			// TODO

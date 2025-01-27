@@ -1059,7 +1059,7 @@ class HMDOut extends BaseLibrary {
 		// create joints
 		for( o in joints ) {
 			if( o.isMesh ) throw "assert";
-			var j = isDynamic('B_Tail02', o) ? new h3d.anim.Skin.DynamicJoint() : new h3d.anim.Skin.Joint();
+			var j = isDynamic('_Cape', o) ? new h3d.anim.Skin.DynamicJoint() : new h3d.anim.Skin.Joint();
 			getDefaultMatrixes(o.model); // store for later usage in animation
 			j.index = o.model.getId();
 			j.name = o.model.getName();
