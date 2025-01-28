@@ -425,4 +425,46 @@ class ConvertSVGToMSDF extends Convert {
 
 	static var _ = Convert.register(new ConvertSVGToMSDF("svg", "png"));
 }
+
+class ConvertPngToKtx2 extends hxd.fs.Convert {
+	override function convert() {
+		final format = params.dataFormat ?? 'R8G8B8A8_SRGB';
+		final oetf = params.assignOetf ?? 'srgb';
+		final primaries = params.assignPrimaries ?? 'bt709';
+		final cmd = if ( params.format == 'etc1s' ) {
+			final clevel = params.clevel ?? 3;
+			final qlevel = params.qlevel ?? 128;
+			'ktx create --encode basis-lz --format ${format} --assign-oetf ${oetf} --clevel ${clevel} --qlevel ${qlevel} --warn-on-color-conversions --compare-psnr ${srcPath} ${dstPath}';
+
+		} else {
+			final quality = params.quality ?? 2;
+			'ktx create --encode uastc --zstd 18 --format ${format} --assign-oetf ${oetf} --uastc-quality ${quality} --warn-on-color-conversions --compare-psnr ${srcPath} ${dstPath}';
+		}
+		final scProcess = new sys.io.Process(cmd);
+		final errorMsg = 'Error compressing $srcPath to ktx2: ${scProcess.stderr.readAll().toString()}';
+		if ( scProcess.exitCode() != 0 ) {
+			throw errorMsg;
+		} 
+		final regexp = ~/PSNR Max: (.+)/;
+		final result = scProcess.stdout.readAll().toString();
+		final snr = regexp.match(result) ? regexp.matched(1) : null;
+		#if log_ktx2_snr Sys.println('        Converted ${haxe.io.Path.withoutDirectory(srcPath)} with PSNR Max: ${snr}'); #end
+		if ( params.snrThreshold != null && params.format == 'etc1s' ) {
+			if ( Std.parseFloat(snr) < params.snrThreshold ) {
+				params.format = 'uastc';
+				// If signal to noise ratio is too low, discard ETC1S and use UASTC encoding instead
+				sys.FileSystem.deleteFile(dstPath);
+				trace('⚠️⚠️⚠️  Low signal to noise ratio when encoding $srcPath as ETC1S. Will fall back to using UASTC with default settings. Update props.json to use "uastc" as format, or ajust or remove "snrThreshold" to make it pass verification. ⚠️⚠️⚠️');
+				final process = new sys.io.Process('ktx create --encode uastc --zstd 18 --format ${format} --assign-oetf ${oetf} --uastc-quality 2 --warn-on-color-conversions ${srcPath} ${dstPath}');
+				if ( process.exitCode() != 0 ) {
+					throw errorMsg;
+				}
+			}
+		}
+		
+	}
+
+	// register the convert so it can be found
+	static var _ = hxd.fs.Convert.register(new ConvertPngToKtx2('png', 'ktx2'));
+}
 #end
