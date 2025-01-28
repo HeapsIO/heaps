@@ -623,9 +623,12 @@ class Image extends Resource {
 			});
 			return;
 		}
-
+		switch (inf.dataFormat) {
+			case Ktx2ETC1S, Ktx2UASTC:
+				tex.flags.set(AsyncLoading);
+			default:
+		}
 		function load() {
-			tex.flags.set(AsyncLoading); // TODO: Set when loading ktx2
 			if ((enableAsyncLoading || tex.flags.has(AsyncLoading)) && asyncData == null && asyncMessage == null && ASYNC_LOADER != null && ASYNC_LOADER.isSupported(this)) {
 				
 				tex.dispose();
