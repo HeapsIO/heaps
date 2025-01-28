@@ -192,11 +192,12 @@ class Build {
 		f.close();
 	}
 
-	public static function make( dir = "res", out = "res", ?pakDiff ) {
+	public static function make( dir = "res", out = "res", ?pakDiff, ?config ) {
 		var b = new Build();
 		b.resPath = dir;
-		b.outPrefix = out;
+		b.outPrefix = config != null ? '$out.$config' : out;
 		b.pakDiff = pakDiff;
+		b.configuration = config;
 		b.makePak();
 	}
 
