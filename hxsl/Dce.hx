@@ -211,7 +211,6 @@ class Dce {
 				kind: Global,
 			};
 			var v = get(v);
-			
 			switch(op) {
 				// Last assign will always clear all other dependencies
 				case OpAssign:
@@ -219,16 +218,12 @@ class Dce {
 					v.deps.clear();
 				case OpAssignOp(_):
 				default:
-					// FragDepth is writeonly
 					return;
 			}
-
 			v.keep = 15;
-
 			writeTo.push(v, 15);
 			check(e2, writeTo, isAffected);
 			writeTo.pop();
-
 		case TBinop(OpAssign | OpAssignOp(_), { e : TVar(v) }, e):
 			var v = get(v);
 			writeTo.push(v,15);
