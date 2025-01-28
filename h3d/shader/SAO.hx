@@ -16,6 +16,7 @@ class SAO extends ScreenShader {
 		@range(1,10) @const(16) var numSpiralTurns : Int;
 		@const var useWorldUV : Bool;
 		@const var USE_FADE : Bool = false;
+		@const var USE_SCALABLE_BIAS : Bool = false;
 
 		@ignore @param var depthTexture : Channel;
 		@ignore @param var normalTexture : Channel3;
@@ -43,13 +44,18 @@ class SAO extends ScreenShader {
 			var unitOffset = vec2(cos(angle), sin(angle));
 			var targetUV = uv + radiusSS * alpha * unitOffset * screenRatio;
 			var Q = getPosition(targetUV);
+			var radius = sampleRadius;
+			if (USE_SCALABLE_BIAS) {
+				var vQ = Q * cameraView;
+				radius *= log(1.0 + vQ.z) + 1;
+			}
 			var v = Q - position;
 
 			var vv = dot(v, v);
-			var vn = dot(v, normal) - (bias * sampleRadius);
+			var vn = dot(v, normal) - bias * radius;
 
 			// Smoother transition to zero (lowers contrast, smoothing out corners). [Recommended]
-			var radius2 = sampleRadius * sampleRadius;
+			var radius2 = radius * radius;
 			var f = max(radius2 - vv, 0.0) / radius2;
 			var epsilon = 0.01;
 			return f * f * f * max(vn / (epsilon + vv), 0.0);
