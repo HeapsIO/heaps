@@ -1,6 +1,6 @@
 package hxsl;
-using hxsl.Ast;
 import hxsl.Debug.trace in debug;
+using hxsl.Ast;
 
 private class Exit {
 	public function new() {
@@ -203,27 +203,29 @@ class Dce {
 			link(v, writeTo);
 		case TSwiz({ e : TVar(v) }, swiz):
 			link(v, writeTo, swizBits(swiz));
-		case TBinop(op, { e : TGlobal(FragDepth) }, e2 ):
+		case TBinop(OpAssign | OpAssignOp(_), { e : TGlobal(FragDepth) }, e2 ):
 			var v:TVar = {
 				id: fragDepthId,
 				name: "FragDepth",
 				type: TFloat,
 				kind: Global,
 			};
+
 			var v = get(v);
-			switch(op) {
+			v.keep = 15;
+
+			switch(e.e) {
 				// Last assign will always clear all other dependencies
-				case OpAssign:
+				case TBinop(OpAssign,_,_):
 					v.adeps = [];
 					v.deps.clear();
-				case OpAssignOp(_):
 				default:
-					return;
 			}
-			v.keep = 15;
+
 			writeTo.push(v, 15);
 			check(e2, writeTo, isAffected);
 			writeTo.pop();
+
 		case TBinop(OpAssign | OpAssignOp(_), { e : TVar(v) }, e):
 			var v = get(v);
 			writeTo.push(v,15);
