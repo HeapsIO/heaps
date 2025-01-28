@@ -203,24 +203,27 @@ class Dce {
 			link(v, writeTo);
 		case TSwiz({ e : TVar(v) }, swiz):
 			link(v, writeTo, swizBits(swiz));
-		case TBinop(OpAssign | OpAssignOp(_), { e : TGlobal(FragDepth) }, e2 ):
+		case TBinop(op, { e : TGlobal(FragDepth) }, e2 ):
 			var v:TVar = {
 				id: fragDepthId,
 				name: "FragDepth",
 				type: TFloat,
 				kind: Global,
 			};
-
 			var v = get(v);
-			v.keep = 15;
-
-			switch(e.e) {
+			
+			switch(op) {
 				// Last assign will always clear all other dependencies
-				case TBinop(OpAssign,_,_):
+				case OpAssign:
 					v.adeps = [];
 					v.deps.clear();
+				case OpAssignOp(_):
 				default:
+					// FragDepth is writeonly
+					return;
 			}
+
+			v.keep = 15;
 
 			writeTo.push(v, 15);
 			check(e2, writeTo, isAffected);
