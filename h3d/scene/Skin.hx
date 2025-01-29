@@ -288,7 +288,7 @@ class Skin extends MultiMaterial {
 				r._43 = j.defMat._43;
 			}
 			var dyn = Std.downcast(j, DynamicJoint);
-			if (dyn != null)
+			if (dyn != null && dyn.relPos == null)
 				dyn.relPos = r;
 			if( j.parent == null )
 				m.multiply3x4inline(r, absPos);
@@ -323,13 +323,6 @@ class Skin extends MultiMaterial {
 			}
 		}
 
-		tmp2CurrentAbsPose = [];
-		for (tmp in currentAbsPose) {
-			var tmp2 = new h3d.Matrix();
-			tmp2.load(tmp);
-			tmp2CurrentAbsPose.push(tmp2);
-		}
-
 		tmp3CurrentAbsPose = [];
 		for (tmp in currentAbsPose) {
 			var tmp2 = new h3d.Matrix();
@@ -341,18 +334,6 @@ class Skin extends MultiMaterial {
 		var deltaTime = Timer.stamp() - DynamicJoint.STAMP;
 		DynamicJoint.STAMP = Timer.stamp();
 
-		// if (g== null) {
-		// 	g = new Graphics(this.getScene());
-		// 	g.material.mainPass.setPassName("overlay");
-		// 	g.lineStyle(1, 0xFFFFFF, 1);
-		// }
-
-		// g.clear();
-
-		function convertVec(v : h3d.Vector) {
-			return new h3d.Vector(Math.round(v.x * 100) / 100,  Math.round(v.z * 100) / 100, Math.round(-v.y * 100) / 100);
-		}
-
 		for( j in skinData.allJoints ) {
 			if ( j.follow != null ) continue;
 
@@ -362,7 +343,6 @@ class Skin extends MultiMaterial {
 
 			var newWorldPos = worldPos.getPosition().clone();
 			var expectedPos = worldPos.getPosition().clone();
-			var oldWorldPos = worldPos.getPosition().clone();
 
 			// // Resistance (force resistance)
 			// var globalForce = new h3d.Vector(0, 0, 0);
@@ -375,26 +355,69 @@ class Skin extends MultiMaterial {
 			// }
 
 			// Stiffness (shape keeper)
-			var parentMovement =  tmp2CurrentAbsPose[j.parent.index].getPosition() - tmp3CurrentAbsPose[j.parent.index].getPosition();
+			var parentMovement =  currentAbsPose[j.parent.index].getPosition() - tmp3CurrentAbsPose[j.parent.index].getPosition();
             expectedPos = dynJoint.relPos.multiplied(tmp3CurrentAbsPose[j.parent.index]).getPosition() + parentMovement;
             newWorldPos.lerp(newWorldPos, expectedPos, dynJoint.stiffness);
 
 			// Slackness (length keeper)
-			var dirToParent = (newWorldPos - tmp2CurrentAbsPose[j.parent.index].getPosition()).normalized();
+			var dirToParent = (newWorldPos - currentAbsPose[j.parent.index].getPosition()).normalized();
             var lengthToParent = dynJoint.relPos.getPosition().length();
-            expectedPos = tmp2CurrentAbsPose[j.parent.index].getPosition() + dirToParent * lengthToParent;
+            expectedPos = currentAbsPose[j.parent.index].getPosition() + dirToParent * lengthToParent;
 			newWorldPos.lerp(expectedPos, newWorldPos, dynJoint.slackness);
 
 			// Collision
 			// TODO
 
+			// Apply computed position to joint
 			// dynJoint.speed = (dynJoint.speed + (newWorldPos - oldWorldPos) * (1.0 / deltaTime)) * 0.5;
 			currentAbsPose[j.index].setPosition(newWorldPos);
-			tmp2CurrentAbsPose[j.index].setPosition(newWorldPos);
 
 			if( dynJoint.bindIndex >= 0 )
 				currentPalette[dynJoint.bindIndex].multiply3x4inline(j.transPos, currentAbsPose[j.index]);
 		}
+
+		function recomputeAbsPosFrom(dynJoint: DynamicJoint) {
+			currentAbsPose[dynJoint.index] = new Matrix();
+			currentAbsPose[dynJoint.index].identity();
+			currentAbsPose[dynJoint.index].multiply3x4inline(dynJoint.relPos, currentAbsPose[dynJoint.parent.index]);
+
+			if( dynJoint.bindIndex >= 0 )
+				currentPalette[dynJoint.bindIndex].multiply3x4inline(dynJoint.transPos, currentAbsPose[dynJoint.index]);
+
+			if (dynJoint.subs != null) {
+				for (s in dynJoint.subs)
+					recomputeAbsPosFrom(cast s);
+			}
+		}
+
+		for( j in skinData.allJoints ) {
+			if ( j.follow != null ) continue;
+
+			var dynJoint = Std.downcast(j, h3d.anim.Skin.DynamicJoint);
+			if (dynJoint == null) continue;
+			if (dynJoint.subs.length != 1) continue;
+
+			var child = Std.downcast(dynJoint.subs[0], DynamicJoint);
+
+			var p = currentAbsPose[dynJoint.index].getPosition();
+			currentAbsPose[dynJoint.index].load(tmp3CurrentAbsPose[dynJoint.index]);
+			currentAbsPose[dynJoint.index].setPosition(p);
+
+			var q = new Quat();
+			var offset = currentAbsPose[child.index].getPosition() - currentAbsPose[dynJoint.index].getPosition();
+			offset.transform3x3(currentAbsPose[dynJoint.index].getInverse());
+			q.initMoveTo(child.relPos.getPosition().normalized(), offset.normalized());
+
+			currentAbsPose[dynJoint.index].multiply(q.toMatrix(), currentAbsPose[dynJoint.index]);
+
+			if( dynJoint.bindIndex >= 0 )
+				currentPalette[dynJoint.bindIndex].multiply3x4inline(j.transPos, currentAbsPose[dynJoint.index]);
+
+			for (s in dynJoint.subs) {
+				recomputeAbsPosFrom(cast s);
+			}
+		}
+
 		init = true;
 	}
 
