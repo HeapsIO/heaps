@@ -2,69 +2,100 @@ package h3d.prim;
 
 class ModelDatabase {
 
-	public static var db : Map<String,{ v : Dynamic }> = new Map();
+	public static var db : Map<String, Dynamic> = new Map();
+	var baseDir(get, never) : String;
+
+	static var FILE_NAME = "model.props";
+
+	static var LOD_CONFIG = "lodConfig";
+	static var DYN_BONES_CONFIG = "dynamicBones";
 
 	static var defaultLodConfigs : Map<String, Array<Float>> = new Map();
 	static var baseLodConfig = [ 0.5, 0.2, 0.01];
 
-	static var filename = "model.props";
-
-	var baseDir(get, never) : String;
-
-	public function new() {
+	function new() {
 	}
 
 	function get_baseDir() return '';
-	function getFilePath( model : hxd.res.Resource ) {
-		var dir = model.entry.directory;
-		return dir == null || dir == "" ? filename : model.entry.directory + "/" + filename;
+
+	function getFilePath( directory : String ) {
+		return directory == null || directory == "" ? FILE_NAME : directory + "/" + FILE_NAME;
 	}
 
-	public function getModelData( model : hxd.res.Resource ) {
-		if( model == null )
+
+	function getRootData( directory : String ) {
+		if( directory == null )
 			return null;
-		var cached = ModelDatabase.db.get(model.entry.directory);
+		var cached = ModelDatabase.db.get(directory);
 		if( cached != null )
-			return cached.v;
-		var file = getFilePath(model);
+			return cached;
+		var file = getFilePath(directory);
 		var value = try haxe.Json.parse(hxd.res.Loader.currentInstance.load(file).toText()) catch( e : hxd.res.NotFound ) {};
-		ModelDatabase.db.set(model.entry.directory, { v : value });
+		ModelDatabase.db.set(directory, value);
 		return value;
 	}
 
-	function saveData( model : hxd.res.Resource, data : Dynamic ) {
-		var file = getFilePath(model);
+	function getModelData( directory : String, key : String ) {
+		var rootData = getRootData(directory);
+		cleanOldModelData(rootData, key);
+		return Reflect.field(rootData, key);
+	}
+
+	function saveModelData( directory : String, key : String, data : Dynamic ) {
+		var file = getFilePath(directory);
+
+		var rootData = getRootData(directory);
+		if (data == null || Reflect.fields(data).length == 0)
+			Reflect.deleteField(rootData, key);
+		else
+			Reflect.setField(rootData, key, data);
+
 		#if ((sys || nodejs) && !usesys)
 		var fs = Std.downcast(hxd.res.Loader.currentInstance.fs, hxd.fs.LocalFileSystem);
 		if( fs != null && !haxe.io.Path.isAbsolute(file) )
 			file = fs.baseDir + file;
-		if( data == null || Reflect.fields(data).length == 0 )
+		if( rootData == null || Reflect.fields(rootData).length == 0 )
 			(try sys.FileSystem.deleteFile(file) catch( e : Dynamic ) {});
 		else
-			sys.io.File.saveContent(file, haxe.Json.stringify(data, "\t"));
+			sys.io.File.saveContent(file, haxe.Json.stringify(rootData, "\t"));
 		#else
 		throw "Can't save model props database " + file;
 		#end
 	}
 
-	public function loadModelProps( name : String, hmd : HMDModel) {
-		var p : Dynamic = getModelData(@:privateAccess hmd.lib.resource);
 
-		var lodConfigs = Reflect.field(p, "lodConfig");
-		@:privateAccess hmd.lodConfig = Reflect.field(lodConfigs, name);
+	public function loadModelProps( objectName : String, hmd : HMDModel ) {
+		var key = @:privateAccess hmd.lib.resource.name + "/" + objectName;
+		var modelData : Dynamic = getModelData(@:privateAccess hmd.lib.resource.entry.directory, key);
+
+		loadLodConfig(modelData, hmd);
+		loadDynamicBonesConfig(modelData, hmd);
 	}
 
-	public function saveModelProps( name : String, hmd : HMDModel) {
-		var root : Dynamic = getModelData(@:privateAccess hmd.lib.resource);
-		if( root == null )
-			return;
+	public function saveModelProps( objectName : String, hmd : HMDModel ) {
+		var key = @:privateAccess hmd.lib.resource.name + "/" + objectName;
+		var data : Dynamic = getModelData(@:privateAccess hmd.lib.resource.entry.directory, key);
+		if( data == null )
+			data = {};
 
-		var lodConfigObj = Reflect.field(root, "lodConfig");
-		if (lodConfigObj == null) {
-			lodConfigObj = {};
-			Reflect.setField(root, "lodConfig", lodConfigObj);
-		}
+		saveLodConfig(data, hmd);
+		saveDynamicBonesConfig(data, hmd);
 
+		saveModelData(@:privateAccess hmd.lib.resource.entry.directory, @:privateAccess hmd.lib.resource.name + "/" + objectName, data);
+	}
+
+
+	function loadLodConfig( modelData : Dynamic, hmd : HMDModel ) {
+		var lodConfigs = Reflect.field(modelData, LOD_CONFIG);
+		@:privateAccess hmd.lodConfig = lodConfigs;
+	}
+
+	function loadDynamicBonesConfig( modelData : Dynamic, hmd : HMDModel ) {
+		// TODO
+	}
+
+
+	function saveLodConfig( data : Dynamic, hmd : HMDModel ) {
 		var isDefaultConfig = true;
 		var defaultConfig = getDefaultLodConfig(@:privateAccess hmd.lib.resource.entry.directory);
 
@@ -88,18 +119,18 @@ class ModelDatabase {
 				else
 					c[idx] = hmd.lodConfig[idx];
 			}
-			Reflect.setField(lodConfigObj, name, c);
+			Reflect.setField(data, LOD_CONFIG, c);
 		}
 		else
-			Reflect.deleteField(lodConfigObj, name);
-
-		if (Reflect.fields(lodConfigObj).length <= 0)
-			Reflect.deleteField(root, "lodConfig");
-
-		saveData(@:privateAccess hmd.lib.resource, root);
+			Reflect.deleteField(data, LOD_CONFIG);
 	}
 
-	public function getDefaultLodConfig( dir : String ) : Array<Float> {
+	function saveDynamicBonesConfig( data : Dynamic, hmd : HMDModel ) {
+		// TODO
+	}
+
+
+	function getDefaultLodConfig( dir : String ) : Array<Float> {
 		var fs = Std.downcast(hxd.res.Loader.currentInstance.fs, hxd.fs.LocalFileSystem);
 		if (fs == null)
 			return baseLodConfig;
@@ -116,6 +147,29 @@ class ModelDatabase {
 			return baseLodConfig;
 		#end
 
+	}
+
+	// Used to clean previous version of modelDatabase, should be removed after some time
+	function cleanOldModelData( rootData : Dynamic, key : String) {
+		var oldLodConfig = Reflect.field(rootData, LOD_CONFIG);
+		if (oldLodConfig != null) {
+			for (f in Reflect.fields(oldLodConfig)) {
+				if (key.indexOf(f) < 0)
+					continue;
+
+				var c = Reflect.field(oldLodConfig, f);
+
+				var newData = { "lodConfig" : c };
+				Reflect.setField(rootData, key, newData);
+
+				// Remove old entry
+				Reflect.deleteField(oldLodConfig, f);
+				Reflect.setField(rootData, LOD_CONFIG, oldLodConfig);
+			}
+
+			if (oldLodConfig == null || Reflect.fields(oldLodConfig).length == 0)
+				Reflect.deleteField(rootData, LOD_CONFIG);
+		}
 	}
 
 	public static var current = new ModelDatabase();

@@ -252,15 +252,18 @@ class CascadeShadowMap extends DirShadowMap {
 		return getCascadeProj(currentCascadeIndex);
 	}
 
-	inline function cullPassesSize( passes : h3d.pass.PassList, frustum : h3d.col.Frustum, minSize : Float ) {
-		passes.filter(function(p) {
-			var mb = Std.downcast(p.obj, h3d.scene.MeshBatch);
-			var col = p.obj.cullingCollider;
-			return if( mb != null && @:privateAccess mb.instanced.primitive.getBounds().dimension() < minSize ) false;
-				else if( col == null ) true;
-				else if ( col.dimension() < minSize ) false;
-				else col.inFrustum(frustum);
-		});
+	public dynamic function customCullPasses(passes : h3d.pass.PassList, frustum : h3d.col.Frustum, i : Int, minSize : Float) {
+		if ( minSize > 0.0 && i > 0 ) {
+			passes.filter(function(p) {
+				var mb = Std.downcast(p.obj, h3d.scene.MeshBatch);
+				var col = p.obj.cullingCollider;
+				return if( mb != null && @:privateAccess mb.instanced.primitive.getBounds().dimension() < minSize ) false;
+					else if( col == null ) true;
+					else if ( col.dimension() < minSize ) false;
+					else col.inFrustum(frustum);
+			});
+		} else
+			cullPasses(passes, function(col) return col.inFrustum(lightCamera.frustum));
 	}
 
 	override function draw( passes, ?sort ) {
@@ -312,15 +315,9 @@ class CascadeShadowMap extends DirShadowMap {
 			var lc = lightCameras[i];
 			var dimension = Math.max(lc.orthoBounds.xMax - lc.orthoBounds.xMin,	lc.orthoBounds.yMax - lc.orthoBounds.yMin);
 			dimension = ( dimension * hxd.Math.clamp(minPixelSize, 0, size) ) / size;
-			// first cascade draw all objects
-			if ( i == 0 )
-				dimension = 0.0;
 			lightCamera.orthoBounds = lc.orthoBounds;
 			lightCamera.update();
-			if ( dimension > 0.0 )
-				cullPassesSize(passes, lightCamera.frustum, dimension);
-			else
-				cullPasses(passes, function(col) return col.inFrustum(lightCamera.frustum));
+			customCullPasses(passes, lightCamera.frustum, i, dimension);
 			textures[i] = processShadowMap( passes, texture, sort);
 			passes.load(p);
 		}

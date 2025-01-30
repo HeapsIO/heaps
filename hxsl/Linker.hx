@@ -360,6 +360,10 @@ class Linker {
 			frag : [-1000],
 			main : [-2500],
 		};
+		var shaderOffset = {
+			vert : -1500,
+			frag : -500,
+		}
 		for( s in shadersData ) {
 			for( f in s.funs ) {
 				var v = allocVar(f.ref, f.expr.p);
@@ -368,7 +372,8 @@ class Linker {
 				case Vertex, Fragment:
 					if( mode == Compute )
 						throw "Unexpected "+v.kind.getName().toLowerCase()+"() function in compute shader";
-					addShader(s.name + "." + (v.kind == Vertex ? "vertex" : "fragment"), v.kind == Vertex, f.expr, priority);
+					var offset = v.kind == Vertex ? shaderOffset.vert : shaderOffset.frag;
+					addShader(s.name + "." + (v.kind == Vertex ? "vertex" : "fragment"), v.kind == Vertex, f.expr, priority + offset);
 				case Main:
 					if( mode != Compute )
 						throw "Unexpected main() outside compute shader";

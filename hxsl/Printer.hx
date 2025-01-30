@@ -65,6 +65,7 @@ class Printer {
 				case Borrow(s): "borrow(" + s + ")";
 				case Sampler(s): "sampler("+ s + ")";
 				case Final: "final";
+				case Flat: "flat";
 				}) + " ");
 		}
 		if( v.kind != defKind )
