@@ -746,6 +746,8 @@ class GlslOut {
 		case Input:
 			add( isES2 ? "attribute " : "in ");
 		case Var:
+			if ( Tools.hasQualifier(v, Flat) )
+				add("flat ");
 			add( isES2 ? "varying " : (isVertex ? "out " : "in "));
 		case Output:
 			if( isES2 ) {

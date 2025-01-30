@@ -78,6 +78,8 @@ class MacroParser {
 			v.qualifiers.push(Ignore);
 		case "perInstance":
 			v.qualifiers.push(PerInstance(1));
+		case "flat":
+			v.qualifiers.push(Flat);
 		default:
 			error("Unsupported qualifier " + m.name, m.pos);
 		}
