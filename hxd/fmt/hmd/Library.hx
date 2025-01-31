@@ -300,9 +300,6 @@ class Library {
 		p.incref(); // Prevent from auto-disposing
 		cachedPrimitives[id] = p;
 
-		if ( hasLod )
-			h3d.prim.ModelDatabase.current.loadModelProps(model.name, p);
-
 		return p;
 	}
 
@@ -353,22 +350,8 @@ class Library {
 		s.boundJoints = [];
 		s.rootJoints = [];
 
-		function isDynamic(dynName : String, j : SkinJoint) {
-			if (j.name.indexOf(dynName) >= 0)
-				return true;
-
-			var parent = j.parent >= 0 ? s.allJoints[j.parent] : null;
-			while(parent != null) {
-				if (parent.name.indexOf(dynName) >= 0)
-					return true;
-				parent = parent.parent;
-			}
-
-			return false;
-		}
-
 		for( joint in skin.joints ) {
-			var j = isDynamic('DYN', joint) ? new h3d.anim.Skin.DynamicJoint() : new h3d.anim.Skin.Joint();
+			var j = new h3d.anim.Skin.Joint();
 			j.name = joint.name;
 			j.index = s.allJoints.length;
 			j.defMat = joint.position.toMatrix();
@@ -508,7 +491,18 @@ class Library {
 			objs.push(obj);
 			var p = objs[m.parent];
 			if( p != null ) p.addChild(obj);
+
+			var modelData : h3d.prim.ModelDatabase.ModelDataInput = {
+				resourceDirectory : resource.entry.directory,
+				resourceName : resource.name,
+				objectName : obj.name,
+				hmd : Std.downcast(Std.downcast(obj, h3d.scene.Mesh)?.primitive, h3d.prim.HMDModel),
+				skin : Std.downcast(obj, h3d.scene.Skin)
+			}
+
+			h3d.prim.ModelDatabase.current.loadModelProps(modelData);
 		}
+
 		var o = objs[0];
 		if( o != null ) o.modelRoot = true;
 		return o;

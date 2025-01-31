@@ -1,5 +1,13 @@
 package h3d.prim;
 
+typedef ModelDataInput = {
+	var resourceDirectory : String;
+	var resourceName : String;
+	var objectName : String;
+	var hmd : HMDModel;
+	var skin : h3d.scene.Skin;
+}
+
 class ModelDatabase {
 
 	public static var db : Map<String, Dynamic> = new Map();
@@ -22,7 +30,6 @@ class ModelDatabase {
 		return directory == null || directory == "" ? FILE_NAME : directory + "/" + FILE_NAME;
 	}
 
-
 	function getRootData( directory : String ) {
 		if( directory == null )
 			return null;
@@ -35,16 +42,18 @@ class ModelDatabase {
 		return value;
 	}
 
-	function getModelData( directory : String, key : String ) {
+	public function getModelData( directory : String, resourceName : String, modelName : String ) {
+		var key = resourceName + "/" + modelName;
 		var rootData = getRootData(directory);
 		cleanOldModelData(rootData, key);
 		return Reflect.field(rootData, key);
 	}
 
-	function saveModelData( directory : String, key : String, data : Dynamic ) {
+	function saveModelData( directory : String, resourceName : String, modelName : String, data : Dynamic ) {
 		var file = getFilePath(directory);
 
 		var rootData = getRootData(directory);
+		var key = resourceName + "/" + modelName;
 		if (data == null || Reflect.fields(data).length == 0)
 			Reflect.deleteField(rootData, key);
 		else
@@ -62,73 +71,6 @@ class ModelDatabase {
 		throw "Can't save model props database " + file;
 		#end
 	}
-
-
-	public function loadModelProps( objectName : String, hmd : HMDModel ) {
-		var key = @:privateAccess hmd.lib.resource.name + "/" + objectName;
-		var modelData : Dynamic = getModelData(@:privateAccess hmd.lib.resource.entry.directory, key);
-
-		loadLodConfig(modelData, hmd);
-		loadDynamicBonesConfig(modelData, hmd);
-	}
-
-	public function saveModelProps( objectName : String, hmd : HMDModel ) {
-		var key = @:privateAccess hmd.lib.resource.name + "/" + objectName;
-		var data : Dynamic = getModelData(@:privateAccess hmd.lib.resource.entry.directory, key);
-		if( data == null )
-			data = {};
-
-		saveLodConfig(data, hmd);
-		saveDynamicBonesConfig(data, hmd);
-
-		saveModelData(@:privateAccess hmd.lib.resource.entry.directory, @:privateAccess hmd.lib.resource.name + "/" + objectName, data);
-	}
-
-
-	function loadLodConfig( modelData : Dynamic, hmd : HMDModel ) {
-		var lodConfigs = Reflect.field(modelData, LOD_CONFIG);
-		@:privateAccess hmd.lodConfig = lodConfigs;
-	}
-
-	function loadDynamicBonesConfig( modelData : Dynamic, hmd : HMDModel ) {
-		// TODO
-	}
-
-
-	function saveLodConfig( data : Dynamic, hmd : HMDModel ) {
-		var isDefaultConfig = true;
-		var defaultConfig = getDefaultLodConfig(@:privateAccess hmd.lib.resource.entry.directory);
-
-		if (@:privateAccess hmd.lodConfig != null) {
-			if (defaultConfig.length != @:privateAccess hmd.lodConfig.length)
-				isDefaultConfig = false;
-
-			for (idx in 0...@:privateAccess hmd.lodConfig.length) {
-				if (defaultConfig[idx] != @:privateAccess hmd.lodConfig[idx]) {
-					isDefaultConfig = false;
-					break;
-				}
-			}
-		}
-
-		if (!isDefaultConfig) {
-			var c = [];
-			for (idx in 0...hmd.lodCount()) @:privateAccess {
-				if (idx >= hmd.lodConfig.length)
-					c[idx] = 0.;
-				else
-					c[idx] = hmd.lodConfig[idx];
-			}
-			Reflect.setField(data, LOD_CONFIG, c);
-		}
-		else
-			Reflect.deleteField(data, LOD_CONFIG);
-	}
-
-	function saveDynamicBonesConfig( data : Dynamic, hmd : HMDModel ) {
-		// TODO
-	}
-
 
 	function getDefaultLodConfig( dir : String ) : Array<Float> {
 		var fs = Std.downcast(hxd.res.Loader.currentInstance.fs, hxd.fs.LocalFileSystem);
@@ -170,6 +112,132 @@ class ModelDatabase {
 			if (oldLodConfig == null || Reflect.fields(oldLodConfig).length == 0)
 				Reflect.deleteField(rootData, LOD_CONFIG);
 		}
+	}
+
+
+	function loadLodConfig( input : ModelDataInput, data : Dynamic ) {
+		var c = Reflect.field(data, LOD_CONFIG);
+		if (c == null || input.hmd == null)
+			return;
+		@:privateAccess input.hmd.lodConfig = c;
+	}
+
+	function loadDynamicBonesConfig( input : ModelDataInput, data : Dynamic) {
+		var c : Array<Dynamic> = Reflect.field(data, DYN_BONES_CONFIG);
+		if (c == null || input.skin == null)
+			return;
+
+		function getJointConf(j: h3d.anim.Skin.Joint) {
+			for (jConf in c)
+				if (jConf.name == j.name)
+					return jConf;
+
+			return null;
+		}
+
+		var skinData = input.skin.getSkinData();
+		for (j in skinData.allJoints) {
+			var jConf = getJointConf(j);
+			if (jConf == null)
+				continue;
+
+			var newJ = new h3d.anim.Skin.DynamicJoint();
+			newJ.index = j.index;
+			newJ.name = j.name;
+			newJ.bindIndex = j.bindIndex;
+			newJ.splitIndex = j.splitIndex;
+			newJ.defMat = j.defMat;
+			newJ.transPos = j.transPos;
+			newJ.parent = j.parent;
+			newJ.follow = j.follow;
+			newJ.subs = j.subs;
+			newJ.worldPos = j.worldPos;
+			newJ.offsets = j.offsets;
+			newJ.offsetRay = j.offsetRay;
+			newJ.retargetAnim = j.retargetAnim;
+			newJ.damping = jConf.damping;
+			newJ.resistance = jConf.resistance;
+			newJ.slackness = jConf.slackness;
+			newJ.stiffness = jConf.stiffness;
+			skinData.allJoints[j.index] = newJ;
+
+			j.parent?.subs.remove(j);
+			j.parent?.subs.push(newJ);
+		}
+
+		input.skin.setSkinData(skinData);
+	}
+
+	function saveLodConfig( input : ModelDataInput, data : Dynamic ) @:privateAccess {
+		var isDefaultConfig = true;
+		var defaultConfig = getDefaultLodConfig(input.resourceDirectory);
+
+		if (input.hmd.lodConfig != null) {
+			if (defaultConfig.length != input.hmd.lodConfig.length)
+				isDefaultConfig = false;
+
+			for (idx in 0...input.hmd.lodConfig.length) {
+				if (defaultConfig[idx] != input.hmd.lodConfig[idx]) {
+					isDefaultConfig = false;
+					break;
+				}
+			}
+		}
+
+		if (!isDefaultConfig) {
+			var c = [];
+			for (idx in 0...input.hmd.lodCount()) {
+				if (idx >= input.hmd.lodConfig.length)
+					c[idx] = 0.;
+				else
+					c[idx] = input.hmd.lodConfig[idx];
+			}
+			Reflect.setField(data, LOD_CONFIG, c);
+		}
+		else
+			Reflect.deleteField(data, LOD_CONFIG);
+	}
+
+	function saveDynamicBonesConfig( input : ModelDataInput, data : Dynamic ) {
+		if (input.skin == null)
+			return;
+
+		var dynamicJoints = [];
+		for (j in input.skin.getSkinData().allJoints) {
+			var dynJ = Std.downcast(j, h3d.anim.Skin.DynamicJoint);
+			if (dynJ == null)
+				continue;
+
+			dynamicJoints.push({ name: dynJ.name, slackness: dynJ.slackness, stiffness: dynJ.stiffness, resistance: dynJ.resistance, damping: dynJ.damping });
+		}
+
+		if (dynamicJoints.length == 0) {
+			Reflect.deleteField(data, DYN_BONES_CONFIG);
+			return;
+		}
+
+		Reflect.setField(data, DYN_BONES_CONFIG, dynamicJoints);
+	}
+
+
+	public function loadModelProps( input : ModelDataInput ) {
+		var data : Dynamic = getModelData(input.resourceDirectory, input.resourceName, input.objectName);
+		if (data == null)
+			return;
+
+		loadLodConfig(input, data);
+		loadDynamicBonesConfig(input, data);
+	}
+
+	public function saveModelProps( input : ModelDataInput ) {
+		var data : Dynamic = getModelData(input.resourceDirectory, input.resourceName, input.objectName);
+		if( data == null )
+			data = {};
+
+		saveLodConfig(input, data);
+		saveDynamicBonesConfig(input, data);
+
+		saveModelData(input.resourceDirectory, input.resourceName, input.objectName, data);
 	}
 
 	public static var current = new ModelDatabase();
