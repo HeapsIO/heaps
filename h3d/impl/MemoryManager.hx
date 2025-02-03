@@ -256,7 +256,8 @@ class MemoryManager {
 	}
 
 	/**
-	 * Return statistics for currently allocated buffers and textures. Requires -D track-alloc compilation flag
+	 * Return statistics for currently allocated buffers and textures.
+	 * Requires call `MemoryManager.enableTrackAlloc()` before allocations.
 	 */
 	@:access(h3d.Buffer)
 	public function allocStats() : Array<AllocStats> {
