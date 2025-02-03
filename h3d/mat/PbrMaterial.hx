@@ -95,6 +95,7 @@ typedef PbrProps = {
 	@:optional var drawOrder : String;
 	@:optional var depthPrepass : Bool;
 	@:optional var flipBackFaceNormal : Bool;
+	@:optional var ignoreCollide : Bool;
 }
 
 class PbrMaterial extends Material {
@@ -437,7 +438,7 @@ class PbrMaterial extends Material {
 		if ( props.flipBackFaceNormal && sh == null )
 			mainPass.addShader(new h3d.shader.FlipBackFaceNormal());
 		else if ( !props.flipBackFaceNormal && sh != null )
-			mainPass.removeShader(sh); 
+			mainPass.removeShader(sh);
 	}
 
 	function setColorMask() {
@@ -625,6 +626,7 @@ class PbrMaterial extends Material {
 				</dd>
 				<dt>Depth prepass</dt><dd><input type="checkbox" field="depthPrepass"/></dd>
 				<dt>Flip back face normal</dt><dd><input type="checkbox" field="flipBackFaceNormal"/></dd>
+				<dt>Ignore collide</dt><dd><input type="checkbox" field="ignoreCollide"/></dd>
 			</dl>
 		');
 	}
