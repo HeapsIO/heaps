@@ -35,7 +35,7 @@ class FileConverter {
 	var tmpDir : String;
 	var configs : Map<String,ConvertConfig> = new Map();
 	var defaultConfig : ConvertConfig;
-	var cache : Map<String,Array<{ out : String, time : Int, hash : String, ver : Null<Int>, milliseconds : Null<Int> }>>;
+	var cache : Map<String,Array<{ out : String, time : Int, hash : String, ver : Null<Int>, milliseconds : Null<Int>, localParamsHash : Null<String> }>>;
 	var cacheTime : Float;
 
 	static var extraConfigs:Array<Dynamic> = [];
@@ -306,7 +306,8 @@ class FileConverter {
 				time : 0,
 				hash : "",
 				ver: conv.version,
-				milliseconds : #if js 0 #else null #end
+				milliseconds : #if js 0 #else null #end,
+				localParamsHash: null
 			};
 			entry.push(match);
 		}
@@ -324,12 +325,27 @@ class FileConverter {
 		#end
 		var alreadyGen = sys.FileSystem.exists(fullOutPath) && match.ver == conv.version #if disable_res_cache && false #end;
 
-		if( alreadyGen && match.time == time #if js && (match.milliseconds == null || match.milliseconds == milliseconds ) #end )
+		conv.params = params;
+		conv.srcPath = fullPath;
+		conv.dstPath = fullOutPath;
+		conv.baseDir = baseDir;
+		conv.originalFilename = e.name;
+		var hasLocalParams = conv.hasLocalParams();
+
+		if( alreadyGen && !hasLocalParams && match.time == time #if js && (match.milliseconds == null || match.milliseconds == milliseconds ) #end ) {
+			conv.cleanup();
 			return; // not changed (time stamp)
+		}
 
 		var content = hxd.File.getBytes(fullPath);
 		var hash = haxe.crypto.Sha1.make(content).toHex();
-		if( alreadyGen && match.hash == hash ) {
+		conv.srcBytes = content;
+		conv.hash = hash;
+		var localParams = hasLocalParams ? conv.computeLocalParams() : null;
+		conv.localParams = localParams;
+		var localParamsHash = localParams == null ? null : haxe.crypto.Sha1.make(haxe.io.Bytes.ofString(formatValue(localParams))).toHex();
+		if( alreadyGen && match.hash == hash && match.localParamsHash == localParamsHash ) {
+			conv.cleanup();
 			match.time = time;
 			match.milliseconds = milliseconds;
 			saveCache();
@@ -338,19 +354,9 @@ class FileConverter {
 
 		sys.FileSystem.createDirectory(fullOutPath.substr(0, fullOutPath.lastIndexOf("/")));
 
-		conv.srcPath = fullPath;
-		conv.dstPath = fullOutPath;
-		conv.srcBytes = content;
-		conv.originalFilename = e.name;
-		conv.params = params;
-		conv.hash = hash;
 		onConvert(conv);
 		executeConvert(conv);
-		conv.hash = null;
-		conv.srcPath = null;
-		conv.dstPath = null;
-		conv.srcBytes = null;
-		conv.originalFilename = null;
+		conv.cleanup();
 
 		if( !sys.FileSystem.exists(fullOutPath) )
 			throw "Converted output file "+fullOutPath+" was not created";
@@ -359,6 +365,7 @@ class FileConverter {
 		match.time = time;
 		match.milliseconds = milliseconds;
 		match.hash = hash;
+		match.localParamsHash = localParamsHash;
 		saveCache();
 	}
 
