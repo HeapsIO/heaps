@@ -334,6 +334,7 @@ class Skin extends MultiMaterial {
 		var deltaTime = Timer.stamp() - DynamicJoint.STAMP;
 		DynamicJoint.STAMP = Timer.stamp();
 
+		var newWorldPoses = [];
 		for( j in skinData.allJoints ) {
 			if ( j.follow != null ) continue;
 
@@ -343,19 +344,20 @@ class Skin extends MultiMaterial {
 
 			var newWorldPos = worldPos.getPosition().clone();
 			var expectedPos = worldPos.getPosition().clone();
+			var oldWorldPos = worldPos.getPosition().clone();
 
-			// // Resistance (force resistance)
-			// var globalForce = new h3d.Vector(0, 0, 0);
-			// dynJoint.speed += globalForce * (1.0 - dynJoint.resistance);
+			// Resistance (force resistance)
+			var globalForce = new h3d.Vector(0, 0, 0);
+			dynJoint.speed += globalForce * (1.0 - dynJoint.resistance);
 
 			// Damping (inertia attenuation)
-			// dynJoint.speed *= 1.0 - dynJoint.damping;
-			// if (dynJoint.speed.lengthSq() > DynamicJoint.SLEEP_THRESHOLD) {
-			// 	newWorldPos += dynJoint.speed * deltaTime;
-			// }
+			dynJoint.speed *= 1.0 - dynJoint.damping;
+			if (dynJoint.speed.lengthSq() > DynamicJoint.SLEEP_THRESHOLD) {
+				newWorldPos += dynJoint.speed * deltaTime;
+			}
 
 			// Stiffness (shape keeper)
-			var parentMovement =  currentAbsPose[j.parent.index].getPosition() - tmp3CurrentAbsPose[j.parent.index].getPosition();
+			var parentMovement = currentAbsPose[j.parent.index].getPosition() - tmp3CurrentAbsPose[j.parent.index].getPosition();
             expectedPos = dynJoint.relPos.multiplied(tmp3CurrentAbsPose[j.parent.index]).getPosition() + parentMovement;
             newWorldPos.lerp(newWorldPos, expectedPos, dynJoint.stiffness);
 
@@ -365,12 +367,10 @@ class Skin extends MultiMaterial {
             expectedPos = currentAbsPose[j.parent.index].getPosition() + dirToParent * lengthToParent;
 			newWorldPos.lerp(expectedPos, newWorldPos, dynJoint.slackness);
 
-			// Collision
-			// TODO
-
 			// Apply computed position to joint
-			// dynJoint.speed = (dynJoint.speed + (newWorldPos - oldWorldPos) * (1.0 / deltaTime)) * 0.5;
+			dynJoint.speed = (dynJoint.speed + (newWorldPos - oldWorldPos) * (1.0 / deltaTime)) * 0.5;
 			currentAbsPose[j.index].setPosition(newWorldPos);
+			newWorldPoses[j.index] = newWorldPos;
 
 			if( dynJoint.bindIndex >= 0 )
 				currentPalette[dynJoint.bindIndex].multiply3x4inline(j.transPos, currentAbsPose[j.index]);
@@ -396,15 +396,13 @@ class Skin extends MultiMaterial {
 			var dynJoint = Std.downcast(j, h3d.anim.Skin.DynamicJoint);
 			if (dynJoint == null) continue;
 			if (dynJoint.subs.length != 1) continue;
-
 			var child = Std.downcast(dynJoint.subs[0], DynamicJoint);
 
-			var p = currentAbsPose[dynJoint.index].getPosition();
 			currentAbsPose[dynJoint.index].load(tmp3CurrentAbsPose[dynJoint.index]);
-			currentAbsPose[dynJoint.index].setPosition(p);
+			currentAbsPose[dynJoint.index].setPosition(newWorldPoses[dynJoint.index]);
 
 			var q = new Quat();
-			var offset = currentAbsPose[child.index].getPosition() - currentAbsPose[dynJoint.index].getPosition();
+			var offset = newWorldPoses[child.index] - newWorldPoses[dynJoint.index];
 			offset.transform3x3(currentAbsPose[dynJoint.index].getInverse());
 			q.initMoveTo(child.relPos.getPosition().normalized(), offset.normalized());
 
