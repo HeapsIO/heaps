@@ -709,7 +709,7 @@ class HlslOut {
 			addValue(e, tabs);
 			add(".");
 			add(f);
-		case TSyntax(Code | Hlsl, code, args):
+		case TSyntax("code" | "hlsl", code, args):
 			var pos = 0;
 			var argRegex = ~/{(\d+)}/g;
 			while ( argRegex.matchSub(code, pos) ) {

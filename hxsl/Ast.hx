@@ -180,7 +180,7 @@ enum TExprDef {
 	TWhile( e : TExpr, loop : TExpr, normalWhile : Bool );
 	TMeta( m : String, args : Array<Const>, e : TExpr );
 	TField( e : TExpr, name : String );
-	TSyntax(target: SyntaxTarget, code : String, args : Array<SyntaxArg> );
+	TSyntax(target : String, code : String, args : Array<SyntaxArg> ); // target = "code" should be treated as "insert regardless of target"
 }
 
 typedef TVar = {
@@ -323,13 +323,6 @@ enum SyntaxArgAccess {
 typedef SyntaxArg = {
 	e: TExpr,
 	access: SyntaxArgAccess,
-}
-
-enum SyntaxTarget {
-	/** Applies to any target language **/
-	Code;
-	Glsl;
-	Hlsl;
 }
 
 enum Component {

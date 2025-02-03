@@ -324,7 +324,7 @@ class Serializer {
 			writeExpr(e);
 			writeString(name);
 		case TSyntax(target, code, args):
-			out.addByte(target.getIndex());
+			writeString(target);
 			writeString(code);
 			writeArr(args, (arg) -> {
 				writeExpr(arg.e);
@@ -398,7 +398,7 @@ class Serializer {
 		case 19: TWhile(readExpr(), readExpr(), input.readByte() != 0);
 		case 20: TMeta(readString(), readArr(readConst), readExpr());
 		case 21: TField(readExpr(), readString());
-		case 22: TSyntax(Ast.SyntaxTarget.createByIndex(input.readByte()), readString(), readArr(() -> {
+		case 22: TSyntax(readString(), readString(), readArr(() -> {
 			return {
 				e: readExpr(),
 				access: Ast.SyntaxArgAccess.createByIndex(input.readByte()),

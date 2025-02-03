@@ -663,7 +663,7 @@ class GlslOut {
 			addExpr(val, tabs);
 			add(".");
 			add(name);
-		case TSyntax(Code | Glsl, code, args):
+		case TSyntax("code" | "glsl", code, args):
 			var pos = 0;
 			var argRegex = ~/{(\d+)}/g;
 			while ( argRegex.matchSub(code, pos) ) {

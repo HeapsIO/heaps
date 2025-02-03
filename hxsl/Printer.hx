@@ -305,7 +305,7 @@ class Printer {
 			add(name);
 		case TSyntax(target, code, args):
 			add("Syntax.");
-			add(target.getName().toLowerCase());
+			add(target);
 			add("(");
 			addConst(CString(code));
 			for ( arg in args ) {
