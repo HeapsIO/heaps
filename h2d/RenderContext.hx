@@ -333,7 +333,7 @@ class RenderContext extends h3d.impl.RenderContext {
 		var hd = baseShaderList;
 		while ( hd != baseShaderListTail.next ) {
 			if ( hd.s == shader ) {
-				prev?.next = hd.next;
+				if ( prev != null ) prev.next = hd.next;
 				needInitShaders = true;
 				if ( hd == baseShaderListTail ) {
 					baseShaderListTail = prev;
