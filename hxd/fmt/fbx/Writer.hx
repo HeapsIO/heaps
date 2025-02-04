@@ -681,8 +681,8 @@ class Writer {
 
 				var hmd = Std.downcast(mesh.primitive, h3d.prim.HMDModel);
 				if (hmd != null) {
-					var materials = hmd.getMaterialIndexes(idx);
-					for (i in 0...Std.int(materials.count / 3))
+					var count = hmd.getMaterialIndexCount(idx);
+					for (i in 0...Std.int(count / 3))
 						materialIndexes.push(idx);
 				}
 

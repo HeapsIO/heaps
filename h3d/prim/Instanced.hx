@@ -65,8 +65,7 @@ class Instanced extends Primitive {
 			commands.setCommand(0, 0, 0);
 			return;
 		}
-		var infos = primitive.getMaterialIndexes(material, lod);
-		commands.setCommand(count, infos.count, infos.start);
+		commands.setCommand(count, primitive.getMaterialIndexStart(material, lod), primitive.getMaterialIndexCount(material, lod));
 	}
 
 	override function render( engine : h3d.Engine ) {

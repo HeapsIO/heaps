@@ -96,7 +96,15 @@ class Primitive {
 	**/
 	public function getMaterialIndexes( material : Int, lod : Int = 0 ) : { count : Int, start : Int } {
 		if ( lod != 0 ) return { start : 0, count : 0 };
-		return { start : 0, count : indexes == null ? triCount() * 3 : indexes.count };
+		return { start : getMaterialIndexStart(material, lod), count : getMaterialIndexCount(material, lod) };
+	}
+
+	public function getMaterialIndexStart( material : Int, lod : Int = 0 ) : Int {
+		return 0;
+	}
+
+	public function getMaterialIndexCount( material : Int, lod : Int = 0 ) : Int {
+		return indexes == null ? triCount() * 3 : indexes.count;
 	}
 
 	@:noCompletion public function buildNormalsDisplay() : Primitive {
