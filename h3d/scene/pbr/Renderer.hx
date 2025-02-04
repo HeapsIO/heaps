@@ -386,12 +386,13 @@ class Renderer extends h3d.scene.Renderer {
 	}
 
 	function begin( step : h3d.impl.RendererFX.Step ) {
-		switch (step) {
+		var stepName = switch (step) {
 		case Custom(n):
-			mark(n);
+			n;
 		default:
-			mark(step.getName());
+			step.getName();
 		}
+		mark(stepName);
 
 		for( f in effects )
 			if( f.enabled )
@@ -413,6 +414,8 @@ class Renderer extends h3d.scene.Renderer {
 				ctx.engine.popTarget();
 			}
 		}
+
+		mark(stepName);
 	}
 
 	function renderEditorOutline() {
