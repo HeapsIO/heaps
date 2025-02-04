@@ -151,7 +151,6 @@ class ModelDatabase {
 			newJ.parent = j.parent;
 			newJ.follow = j.follow;
 			newJ.subs = j.subs;
-			newJ.worldPos = j.worldPos;
 			newJ.offsets = j.offsets;
 			newJ.offsetRay = j.offsetRay;
 			newJ.retargetAnim = j.retargetAnim;

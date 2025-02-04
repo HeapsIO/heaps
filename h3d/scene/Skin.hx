@@ -72,11 +72,6 @@ class Skin extends MultiMaterial {
 	var skinData : h3d.anim.Skin;
 	var currentRelPose : Array<h3d.Matrix>;
 	var currentAbsPose : Array<h3d.Matrix>;
-	var initialAbsPos : Array<h3d.Matrix> = [];
-	var dirsToParent : Array<h3d.Vector> = [];
-	var tmpCurrentAbsPose : Array<h3d.Matrix>;
-	var tmp2CurrentAbsPose : Array<h3d.Matrix>;
-	var tmp3CurrentAbsPose : Array<h3d.Matrix>;
 	var currentPalette : Array<h3d.Matrix>;
 	var splitPalette : Array<Array<h3d.Matrix>>;
 	var jointsUpdated : Bool;
@@ -259,19 +254,9 @@ class Skin extends MultiMaterial {
 	static var TMP_MAT = new h3d.Matrix();
 
 	@:noDebug
-	var init = false;
 	function syncJoints() {
 		if( !jointsUpdated ) return;
 		var tmpMat = TMP_MAT;
-
-		// TODO
-		tmpCurrentAbsPose = [];
-		for (tmp in currentAbsPose) {
-			var tmp2 = new h3d.Matrix();
-			tmp2.load(tmp);
-			tmpCurrentAbsPose.push(tmp2);
-		}
-
 		for( j in skinData.allJoints ) {
 			if ( j.follow != null ) continue;
 			var id = j.index;
@@ -299,52 +284,29 @@ class Skin extends MultiMaterial {
 				var a = additivePose[id];
 				if( a != null ) m.multiply3x4inline(a, m);
 			}
-
 			if( bid >= 0 )
 				currentPalette[bid].multiply3x4inline(j.transPos, m);
 		}
-
 		skinShader.bonesMatrixes = currentPalette;
 		jointsUpdated = false;
 		prevEnableRetargeting = enableRetargeting;
 
-		if (!init) {
-			tmpCurrentAbsPose = [];
-			for (tmp in currentAbsPose) {
-				var tmp2 = new h3d.Matrix();
-				tmp2.load(tmp);
-				tmpCurrentAbsPose.push(tmp2);
-			}
+		syncDynamicJoints();
+	}
 
-			for( j in skinData.allJoints ) {
-				initialAbsPos[j.index] = currentAbsPose[j.index].clone();
-				if (j.parent == null) continue;
-				dirsToParent[j.index] = currentAbsPose[j.parent.index].getPosition() - currentAbsPose[j.index].getPosition();
-			}
-		}
-
-		tmp3CurrentAbsPose = [];
-		for (tmp in currentAbsPose) {
-			var tmp2 = new h3d.Matrix();
-			tmp2.load(tmp);
-			tmp3CurrentAbsPose.push(tmp2);
-		}
-
-		// !---  DYNAMIC BONES
+	function syncDynamicJoints() {
 		var deltaTime = Timer.stamp() - DynamicJoint.STAMP;
 		DynamicJoint.STAMP = Timer.stamp();
 
-		var newWorldPoses = [];
+		// Update dynamic joints
 		for( j in skinData.allJoints ) {
 			if ( j.follow != null ) continue;
-
 			var dynJoint = Std.downcast(j, h3d.anim.Skin.DynamicJoint);
 			if (dynJoint == null) continue;
-			var worldPos = tmpCurrentAbsPose[j.index];
 
-			var newWorldPos = worldPos.getPosition().clone();
-			var expectedPos = worldPos.getPosition().clone();
-			var oldWorldPos = worldPos.getPosition().clone();
+			var absPos = dynJoint.absPos == null ? currentAbsPose[dynJoint.index] : dynJoint.absPos;
+			var newWorldPos = absPos.getPosition().clone();
+			var expectedPos = absPos.getPosition().clone();
 
 			// Resistance (force resistance)
 			var globalForce = new h3d.Vector(0, 0, 0);
@@ -357,8 +319,8 @@ class Skin extends MultiMaterial {
 			}
 
 			// Stiffness (shape keeper)
-			var parentMovement = currentAbsPose[j.parent.index].getPosition() - tmp3CurrentAbsPose[j.parent.index].getPosition();
-            expectedPos = dynJoint.relPos.multiplied(tmp3CurrentAbsPose[j.parent.index]).getPosition() + parentMovement;
+			var parentMovement = currentAbsPose[j.parent.index].getPosition() - currentAbsPose[dynJoint.parent.index].getPosition();
+            expectedPos = dynJoint.relPos.multiplied(currentAbsPose[dynJoint.parent.index]).getPosition() + parentMovement;
             newWorldPos.lerp(newWorldPos, expectedPos, dynJoint.stiffness);
 
 			// Slackness (length keeper)
@@ -368,14 +330,16 @@ class Skin extends MultiMaterial {
 			newWorldPos.lerp(expectedPos, newWorldPos, dynJoint.slackness);
 
 			// Apply computed position to joint
-			dynJoint.speed = (dynJoint.speed + (newWorldPos - oldWorldPos) * (1.0 / deltaTime)) * 0.5;
+			dynJoint.speed = (dynJoint.speed + (newWorldPos - absPos.getPosition()) * (1.0 / deltaTime)) * 0.5;
 			currentAbsPose[j.index].setPosition(newWorldPos);
-			newWorldPoses[j.index] = newWorldPos;
+			dynJoint.absPos = currentAbsPose[j.index];
 
 			if( dynJoint.bindIndex >= 0 )
 				currentPalette[dynJoint.bindIndex].multiply3x4inline(j.transPos, currentAbsPose[j.index]);
 		}
 
+
+		// Update transforms
 		function recomputeAbsPosFrom(dynJoint: DynamicJoint) {
 			currentAbsPose[dynJoint.index] = new Matrix();
 			currentAbsPose[dynJoint.index].identity();
@@ -398,11 +362,10 @@ class Skin extends MultiMaterial {
 			if (dynJoint.subs.length != 1) continue;
 			var child = Std.downcast(dynJoint.subs[0], DynamicJoint);
 
-			currentAbsPose[dynJoint.index].load(tmp3CurrentAbsPose[dynJoint.index]);
-			currentAbsPose[dynJoint.index].setPosition(newWorldPoses[dynJoint.index]);
+			currentAbsPose[dynJoint.index].load(dynJoint.absPos);
 
 			var q = new Quat();
-			var offset = newWorldPoses[child.index] - newWorldPoses[dynJoint.index];
+			var offset = child.absPos.getPosition() - dynJoint.absPos.getPosition();
 			offset.transform3x3(currentAbsPose[dynJoint.index].getInverse());
 			q.initMoveTo(child.relPos.getPosition().normalized(), offset.normalized());
 
@@ -415,8 +378,6 @@ class Skin extends MultiMaterial {
 				recomputeAbsPosFrom(cast s);
 			}
 		}
-
-		init = true;
 	}
 
 	override function emit( ctx : RenderContext ) {
