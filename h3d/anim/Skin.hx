@@ -29,15 +29,14 @@ class Joint {
 }
 
 class DynamicJoint extends Joint {
-	public static var STAMP : Float = 0.0;
 	public static var SLEEP_THRESHOLD : Float = 0.05;
-
 
 	public var absPos : h3d.Matrix; // Abs pos of the joint computed each frame
 	public var relPos : h3d.Matrix; // Initial relative pos before joint get moved by animation / dynamic system
 
-	// Parameters
 	public var speed : h3d.Vector;
+	
+	// Parameters
 	public var radius : Float = 0.0;
 	public var damping : Float = 0.4;
 	public var stiffness : Float = 0.5;

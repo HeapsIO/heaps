@@ -80,6 +80,7 @@ class Skin extends MultiMaterial {
 	var jointsGraphics : Graphics;
 	var additivePose : Array<h3d.Matrix>;
 	var g : Graphics;
+	var dynUpdated : Bool = false;
 
 	public var showJoints : Bool;
 	public var enableRetargeting : Bool = true;
@@ -252,7 +253,7 @@ class Skin extends MultiMaterial {
 	}
 
 	override function syncRec( ctx : RenderContext ) {
-		posChanged = true;
+		posChanged = posChanged || dynUpdated;
 		super.syncRec(ctx);
 	}
 
@@ -300,17 +301,12 @@ class Skin extends MultiMaterial {
 	}
 
 	function syncDynamicJoints() {
-		var deltaTime = Timer.stamp() - DynamicJoint.STAMP;
-		DynamicJoint.STAMP = Timer.stamp();
-
 		// Update dynamic joints
-		var shouldUpdate = false;
 		for( j in skinData.allJoints ) {
 			if ( j.follow != null ) continue;
 			var dynJoint = Std.downcast(j, h3d.anim.Skin.DynamicJoint);
 			if (dynJoint == null) continue;
-
-			shouldUpdate = true;
+		
 			var absPos = dynJoint.absPos == null ? currentAbsPose[dynJoint.index] : dynJoint.absPos;
 			var newWorldPos = absPos.getPosition().clone();
 			var expectedPos = absPos.getPosition().clone();
@@ -321,9 +317,8 @@ class Skin extends MultiMaterial {
 
 			// Damping (inertia attenuation)
 			dynJoint.speed *= 1.0 - dynJoint.damping;
-			if (dynJoint.speed.lengthSq() > DynamicJoint.SLEEP_THRESHOLD) {
-				newWorldPos += dynJoint.speed * deltaTime;
-			}
+			if (dynJoint.speed.lengthSq() > DynamicJoint.SLEEP_THRESHOLD)
+				newWorldPos += dynJoint.speed * hxd.Timer.dt;
 
 			// Stiffness (shape keeper)
 			var parentMovement = currentAbsPose[j.parent.index].getPosition() - currentAbsPose[dynJoint.parent.index].getPosition();
@@ -337,14 +332,17 @@ class Skin extends MultiMaterial {
 			newWorldPos.lerp(expectedPos, newWorldPos, dynJoint.slackness);
 
 			// Apply computed position to joint
-			dynJoint.speed = (dynJoint.speed + (newWorldPos - absPos.getPosition()) * (1.0 / deltaTime)) * 0.5;
+			dynJoint.speed = (dynJoint.speed + (newWorldPos - absPos.getPosition()) * (1.0 / hxd.Timer.dt)) * 0.5;
 			currentAbsPose[j.index].setPosition(newWorldPos);
 			dynJoint.absPos = currentAbsPose[j.index];
+
+			var offset = absPos.getPosition() - newWorldPos;
+			if (Math.abs(offset.length()) >= DynamicJoint.SLEEP_THRESHOLD)
+				dynUpdated = true;
 
 			if( dynJoint.bindIndex >= 0 )
 				currentPalette[dynJoint.bindIndex].multiply3x4inline(j.transPos, currentAbsPose[j.index]);
 		}
-
 
 		// Update transforms
 		function recomputeAbsPosFrom(dynJoint: DynamicJoint) {
