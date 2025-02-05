@@ -29,7 +29,7 @@ class Joint {
 }
 
 class DynamicJoint extends Joint {
-	public static var SLEEP_THRESHOLD : Float = 0.05;
+	public static var SLEEP_THRESHOLD : Float = 0.001;
 
 	public var absPos : h3d.Matrix; // Abs pos of the joint computed each frame
 	public var relPos : h3d.Matrix; // Initial relative pos before joint get moved by animation / dynamic system

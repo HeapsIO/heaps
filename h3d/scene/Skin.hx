@@ -252,11 +252,6 @@ class Skin extends MultiMaterial {
 		syncJoints();
 	}
 
-	override function syncRec( ctx : RenderContext ) {
-		posChanged = posChanged || dynUpdated;
-		super.syncRec(ctx);
-	}
-
 	static var TMP_MAT = new h3d.Matrix();
 
 	@:noDebug
@@ -293,15 +288,15 @@ class Skin extends MultiMaterial {
 			if( bid >= 0 )
 				currentPalette[bid].multiply3x4inline(j.transPos, m);
 		}
+
 		skinShader.bonesMatrixes = currentPalette;
 		jointsUpdated = false;
 		prevEnableRetargeting = enableRetargeting;
-
-		syncDynamicJoints();
 	}
 
 	function syncDynamicJoints() {
 		// Update dynamic joints
+		dynUpdated = false;
 		for( j in skinData.allJoints ) {
 			if ( j.follow != null ) continue;
 			var dynJoint = Std.downcast(j, h3d.anim.Skin.DynamicJoint);
@@ -317,8 +312,10 @@ class Skin extends MultiMaterial {
 
 			// Damping (inertia attenuation)
 			dynJoint.speed *= 1.0 - dynJoint.damping;
-			if (dynJoint.speed.lengthSq() > DynamicJoint.SLEEP_THRESHOLD)
+			if (dynJoint.speed.lengthSq() > DynamicJoint.SLEEP_THRESHOLD) {
 				newWorldPos += dynJoint.speed * hxd.Timer.dt;
+				dynUpdated = true;
+			}
 
 			// Stiffness (shape keeper)
 			var parentMovement = currentAbsPose[j.parent.index].getPosition() - currentAbsPose[dynJoint.parent.index].getPosition();
@@ -336,12 +333,10 @@ class Skin extends MultiMaterial {
 			currentAbsPose[j.index].setPosition(newWorldPos);
 			dynJoint.absPos = currentAbsPose[j.index];
 
-			var offset = absPos.getPosition() - newWorldPos;
-			if (Math.abs(offset.length()) >= DynamicJoint.SLEEP_THRESHOLD)
-				dynUpdated = true;
-
 			if( dynJoint.bindIndex >= 0 )
 				currentPalette[dynJoint.bindIndex].multiply3x4inline(j.transPos, currentAbsPose[j.index]);
+
+			skinShader.bonesMatrixes = currentPalette;
 		}
 
 		// Update transforms
@@ -383,11 +378,17 @@ class Skin extends MultiMaterial {
 				recomputeAbsPosFrom(cast s);
 			}
 		}
+
+		if (dynUpdated)
+			jointsUpdated = true;
+
+		skinShader.bonesMatrixes = currentPalette;
 	}
 
 	override function emit( ctx : RenderContext ) {
 		calcScreenRatio(ctx);
 		syncJoints(); // In case sync was not called because of culling (eg fixedPosition)
+		syncDynamicJoints();
 		if( splitPalette == null )
 			super.emit(ctx);
 		else {
