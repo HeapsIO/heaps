@@ -251,6 +251,11 @@ class Skin extends MultiMaterial {
 		syncJoints();
 	}
 
+	override function syncRec( ctx : RenderContext ) {
+		posChanged = true;
+		super.syncRec(ctx);
+	}
+
 	static var TMP_MAT = new h3d.Matrix();
 
 	@:noDebug
@@ -299,11 +304,13 @@ class Skin extends MultiMaterial {
 		DynamicJoint.STAMP = Timer.stamp();
 
 		// Update dynamic joints
+		var shouldUpdate = false;
 		for( j in skinData.allJoints ) {
 			if ( j.follow != null ) continue;
 			var dynJoint = Std.downcast(j, h3d.anim.Skin.DynamicJoint);
 			if (dynJoint == null) continue;
 
+			shouldUpdate = true;
 			var absPos = dynJoint.absPos == null ? currentAbsPose[dynJoint.index] : dynJoint.absPos;
 			var newWorldPos = absPos.getPosition().clone();
 			var expectedPos = absPos.getPosition().clone();
