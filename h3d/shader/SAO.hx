@@ -47,7 +47,7 @@ class SAO extends ScreenShader {
 			var radius = sampleRadius;
 			if (USE_SCALABLE_BIAS) {
 				var vQ = Q * cameraView;
-				radius *= log(1.0 + vQ.z) + 1;
+				radius *= max(0.0, log(1.0 + vQ.z)) + 1;
 			}
 			var v = Q - position;
 
