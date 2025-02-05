@@ -134,7 +134,7 @@ class HlslOut {
 	}
 
 	inline function ident( v : TVar ) {
-		add(varName(v));
+		add(varName(v, varNames, allNames));
 	}
 
 	function decl( s : String ) {
@@ -732,7 +732,7 @@ class HlslOut {
 		}
 	}
 
-	function varName( v : TVar ) {
+	public static function varName(v : TVar, varNames : Map<Int, String>, allNames : Map<String, Int>) : String {
 		var n = varNames.get(v.id);
 		if( n != null )
 			return n;
@@ -792,7 +792,7 @@ class HlslOut {
 			if( v.kind == Output )
 				add(" : " + (isVertex ? SV_POSITION : SV_TARGET + (index++)));
 			else
-				add(" : " + semanticName(v.name));
+				add(" : " + semanticName(varNames.get(v.id)));
 			add(";\n");
 			varAccess.set(v.id, prefix);
 		}
@@ -801,6 +801,8 @@ class HlslOut {
 		for( f in s.funs )
 			collectGlobals(foundGlobals, f.expr);
 
+		var oldAllNames = allNames;
+		allNames = new Map();
 		add("struct s_input {\n");
 		if( kind == Fragment )
 			add("\tfloat4 __pos__ : "+SV_POSITION+";\n");
@@ -828,6 +830,7 @@ class HlslOut {
 		add("};\n\n");
 
 		if( !isCompute ) {
+			allNames = new Map();
 			add("struct s_output {\n");
 			for( v in s.vars )
 				if( v.kind == Output )
@@ -837,6 +840,8 @@ class HlslOut {
 					declVar("_out.", v);
 			add("};\n\n");
 		}
+
+		allNames = oldAllNames;
 	}
 
 	function initGlobals( s : ShaderData ) {
