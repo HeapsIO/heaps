@@ -147,18 +147,20 @@ class MacroParser {
 			var t = getTexDim(name.substr(9), (dim,arr) -> TRWTexture(dim,arr,chans));
 			if( t != null )
 				return t;
-		case TPath( { pack : [], name : name = ("RWBuffer"|"RWPartialBuffer"), sub : null, params : [t] } ):
+		case TPath( { pack : [], name : name = ("StorageBuffer"|"RWBuffer"|"StoragePartialBuffer"|"RWPartialBuffer"), sub : null, params : [t] } ):
 			var t = switch( t ) {
 				case TPType(t): parseType(t, pos);
 				default: null;
 				}
 			if( t != null )
 				return switch( name ) {
+				case "StorageBuffer" : TBuffer(t, SConst(0), Storage);
 				case "RWBuffer": TBuffer(t,SConst(0),RW);
+				case "StoragePartialBuffer" : TBuffer(t, SConst(0), StoragePartial);
 				case "RWPartialBuffer": TBuffer(t,SConst(0),RWPartial);
 				default: throw "assert";
 				}
-		case TPath( { pack : [], name : name = ("Array"|"Buffer"|"RWBuffer"|"PartialBuffer"|"RWPartialBuffer"), sub : null, params : [t, size] } ):
+		case TPath( { pack : [], name : name = ("Array"|"Buffer"|"StorageBuffer"|"RWBuffer"|"PartialBuffer"|"StoragePartialBuffer"|"RWPartialBuffer"), sub : null, params : [t, size] } ):
 			var t = switch( t ) {
 			case TPType(t): parseType(t, pos);
 			default: null;
@@ -175,8 +177,10 @@ class MacroParser {
 				return switch( name ) {
 				case "Array": TArray(t, size);
 				case "Buffer": TBuffer(t,size,Uniform);
+				case "StorageBuffer": TBuffer(t,size,Storage);
 				case "RWBuffer": TBuffer(t,size,RW);
 				case "PartialBuffer": TBuffer(t,size,Partial);
+				case "StoragePartialBuffer": TBuffer(t,size,StoragePartial);
 				case "RWPartialBuffer": TBuffer(t,size,RWPartial);
 				default: throw "assert";
 				}

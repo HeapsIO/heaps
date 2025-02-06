@@ -8,7 +8,7 @@ class Joint extends Object {
 		super(null);
 		name = j.name;
 		this.skin = skin;
-		lastFrame = -1; // force first sync
+		lastFrame = -2; // force first sync
 		// fake parent
 		this.parent = skin;
 		this.index = j.index;
@@ -38,30 +38,29 @@ class Joint extends Object {
 		// check if one of our parents has changed
 		// we don't have a posChanged flag since the Joint
 		// is not actualy part of the hierarchy
-		var p = parent;
+		var p : h3d.scene.Object = skin;
 		while( p != null ) {
-			if( p.posChanged ) {
-				// save the inverse absPos that was used to build the joints absPos
-				if( skin.jointsAbsPosInv == null ) {
-					skin.jointsAbsPosInv = new h3d.Matrix();
-					skin.jointsAbsPosInv.zero();
-				}
-				if( skin.jointsAbsPosInv._44 == 0 )
-					skin.jointsAbsPosInv.inverse3x4(parent.absPos);
-				parent.syncPos();
-				lastFrame = -1;
+			if( p.posChanged) {
+				update();
 				break;
 			}
 			p = p.parent;
 		}
-		if( lastFrame != skin.lastFrame ) {
+
+		if( lastFrame != skin.lastFrame) {
 			lastFrame = skin.lastFrame;
 			absPos.load(skin.currentAbsPose[index]);
-			if( skin.jointsAbsPosInv != null && skin.jointsAbsPosInv._44 != 0 ) {
-				absPos.multiply3x4(absPos, skin.jointsAbsPosInv);
-				absPos.multiply3x4(absPos, parent.absPos);
-			}
 		}
+	}
+
+	/**
+		Force the update of the position of this joint
+	**/
+	@:access(h3d.scene.Skin)
+	public function update() {
+		skin.getAbsPos();
+		skin.syncJoints();
+		lastFrame = -1;
 	}
 }
 
@@ -73,13 +72,14 @@ class Skin extends MultiMaterial {
 	var currentPalette : Array<h3d.Matrix>;
 	var splitPalette : Array<Array<h3d.Matrix>>;
 	var jointsUpdated : Bool;
-	var jointsAbsPosInv : h3d.Matrix;
 	var paletteChanged : Bool;
 	var skinShader : h3d.shader.SkinBase;
 	var jointsGraphics : Graphics;
+	var additivePose : Array<h3d.Matrix>;
 
 	public var showJoints : Bool;
 	public var enableRetargeting : Bool = true;
+	public var prevEnableRetargeting : Bool = true;
 
 	public function new(s, ?mat, ?parent) {
 		super(null, mat, parent);
@@ -114,9 +114,11 @@ class Skin extends MultiMaterial {
 			var pt = j.offsets.getMin();
 			if ( m != null ) {
 				pt.transform(m);
+				if( relativeTo != null ) pt.transform(relativeTo);
 				b.addSpherePos(pt.x, pt.y, pt.z, j.offsetRay * scale);
 				var pt = j.offsets.getMax();
 				pt.transform(m);
+				if( relativeTo != null ) pt.transform(relativeTo);
 				b.addSpherePos(pt.x, pt.y, pt.z, j.offsetRay * scale);
 			}
 		}
@@ -167,6 +169,25 @@ class Skin extends MultiMaterial {
 
 	public function getSkinData() {
 		return skinData;
+	}
+
+	public function getJointRelPosition( name : String, additive = false ) : Null<h3d.Matrix> {
+		var j = skinData.namedJoints.get(name);
+		if( j == null ) return null;
+		if( additive )
+			return additivePose == null ? null : additivePose[j.index];
+		return currentRelPose[j.index] ?? j.defMat;
+	}
+
+	public function setJointRelPosition( name : String, pos : h3d.Matrix, additive = false ) {
+		var j = skinData.namedJoints.get(name);
+		if( j == null ) return;
+		if( additive ) {
+			if( additivePose == null ) additivePose = [];
+			additivePose[j.index] = pos;
+		} else
+			currentRelPose[j.index] = pos;
+		jointsUpdated = true;
 	}
 
 	public function setSkinData( s, shaderInit = true ) {
@@ -243,12 +264,16 @@ class Skin extends MultiMaterial {
 				m.multiply3x4inline(r, absPos);
 			else
 				m.multiply3x4inline(r, currentAbsPose[j.parent.index]);
+			if( additivePose != null ) {
+				var a = additivePose[id];
+				if( a != null ) m.multiply3x4inline(a, m);
+			}
 			if( bid >= 0 )
 				currentPalette[bid].multiply3x4inline(j.transPos, m);
 		}
 		skinShader.bonesMatrixes = currentPalette;
-		if( jointsAbsPosInv != null ) jointsAbsPosInv._44 = 0; // mark as invalid
 		jointsUpdated = false;
+		prevEnableRetargeting = enableRetargeting;
 	}
 
 	override function emit( ctx : RenderContext ) {

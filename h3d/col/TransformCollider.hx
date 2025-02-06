@@ -84,6 +84,14 @@ class TransformCollider extends Collider {
 		return collider.dimension() * scaleMax;
 	}
 
+	public function closestPoint(p : Point) {
+		var localp = p.clone();
+		localp.transform(invMat);
+		var c = collider.closestPoint(localp);
+		c.transform(mat);
+		return c;
+	}
+
 	#if !macro
 	public function makeDebugObj() : h3d.scene.Object {
 		var obj = collider.makeDebugObj();

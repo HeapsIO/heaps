@@ -16,12 +16,10 @@ class Primitive {
 	**/
 	public var indexes : Indexes;
 
-	#if editor
 	/**
 		Allow user to force a specific lod index. If set to -1, forced lod will be ignored.
 	**/
 	public var forcedLod : Int = -1;
-	#end
 
 	/**
 		Current amount of references to this Primitive.
@@ -96,7 +94,8 @@ class Primitive {
 	/**
 		Returns the number and offset of indexes for the specified material
 	**/
-	public function getMaterialIndexes( material : Int ) : { count : Int, start : Int } {
+	public function getMaterialIndexes( material : Int, lod : Int = 0 ) : { count : Int, start : Int } {
+		if ( lod != 0 ) return { start : 0, count : 0 };
 		return { start : 0, count : indexes == null ? triCount() * 3 : indexes.count };
 	}
 

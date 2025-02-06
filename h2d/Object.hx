@@ -1015,8 +1015,8 @@ class Object #if (domkit && !domkit_heaps) implements domkit.Model<h2d.Object> #
 		Move the object by the specified amount along its current direction (`Object.rotation` angle).
 	**/
 	public function move( dx : Float, dy : Float ) {
-		x += dx * Math.cos(rotation);
-		y += dy * Math.sin(rotation);
+		x += dx * Math.cos(rotation) - dy * Math.sin(rotation);
+		y += dx * Math.sin(rotation) + dy * Math.cos(rotation);
 	}
 
 	/**

@@ -391,13 +391,15 @@ class Pixels {
 			this.bytes = nbytes;
 
 		case [S3TC(a),S3TC(b)] if( a == b ):
+		case [ASTC(a),ASTC(b)] if( a == b ):
+		case [ETC(a),ETC(b)] if( a == b ):
 			// nothing
 
 		#if (hl && hl_ver >= "1.10")
 		case [S3TC(ver),_]:
 			if( (width|height)&3 != 0 ) throw "Texture size should be 4x4 multiple";
 			var out = haxe.io.Bytes.alloc(width * height * 4);
-			if( !hl.Format.decodeDXT((this.bytes:hl.Bytes).offset(this.offset), out, width, height, ver) )
+			if( !std.format.hl.Native.decodeDXT((this.bytes:hl.Bytes).offset(this.offset), out, width, height, ver) )
 				throw "Failed to decode DDS";
 			offset = 0;
 			this.bytes = out;
@@ -536,8 +538,33 @@ class Pixels {
 
 	public static function calcDataSize( width : Int, height : Int, format : PixelFormat ) {
 		return switch( format ) {
-		case S3TC(_):
-			(((height + 3) >> 2) << 2) * calcStride(width, format);
+			case S3TC(n):
+				var w = (width + 3) >> 2; 
+				var h = (height + 3) >> 2;
+				var blocks = w * h; // Total number of blocks
+				if( n == 3 ) { // DXT5
+					blocks * 16; // 16 bytes per block
+				} else if( n == 1 || n == 4 ) {
+					blocks * 8; // DXT1 or BC4, 8 bytes per block
+				} else { 
+					blocks * 16; // DXT3 or BC5, 16 bytes per block, but handling like DXT5 for simplicity
+				}
+			case ASTC(n):
+				var w = (width + 3) >> 2;
+				var h = (height + 3) >> 2;
+				w * h * 16;
+			case ETC(n):
+				if( n == 0 ) { // RGB_ETC1_Format or RGB_ETC2_Format
+					var w = (width + 3) >> 2;
+					var h = (height + 3) >> 2;
+					w * h * 8;
+				} else if( n == 1 || n == 2 ) { // RGBA_ETC2_EAC_Format
+					var w = (width + 3) >> 2;
+					var h = (height + 3) >> 2;
+					w * h * 16;
+				} else {
+					throw "Unsupported ETC format";
+				}
 		default:
 			height * calcStride(width, format);
 		}
@@ -559,13 +586,29 @@ class Pixels {
 		case RGB32F: 12;
 		case RGB10A2: 4;
 		case RG11B10UF: 4;
+		case ASTC(n): 
+			var blocks = ((width + 3) >> 2) * 16;
+			blocks << 4;
+		case ETC(n):
+			if( n == 0 ) { // ETC1 and ETC2 RGB
+				((width + 3) >> 2) << 3;
+			} else if( n == 1 ) {  // ETC2 EAC RGBA
+				((width + 3) >> 2) << 4;
+			} else {
+				throw "Unsupported ETC format";
+			}
 		case S3TC(n):
 			var blocks = (width + 3) >> 2;
-			if( n == 1 || n == 4 )
-				return blocks << 1;
-			return blocks << 2;
-		case Depth16, Depth24, Depth24Stencil8, Depth32:
-			throw "Not a pixel format";
+			if( n == 3 ) { // DXT5
+				blocks << 4; // 16 bytes per block
+			} else if( n == 1 || n == 4 ) { 
+				blocks << 1; // DXT1 or BC4, 8 bytes per block
+			} else { 
+				blocks << 2; // DXT3 or BC5, 16 bytes per block, but handling like DXT5 for simplicity
+			}
+		case Depth16: 2;
+		case Depth24: 3;
+		case Depth24Stencil8, Depth32: 4;
 		}
 	}
 
@@ -604,7 +647,7 @@ class Pixels {
 			channel.toInt() * 4;
 		case RGB10A2, RG11B10UF:
 			throw "Bit packed format";
-		case S3TC(_), Depth16, Depth24, Depth24Stencil8, Depth32:
+		case S3TC(_), ASTC(_), ETC(_), Depth16, Depth24, Depth24Stencil8, Depth32:
 			throw "Not supported";
 		}
 	}

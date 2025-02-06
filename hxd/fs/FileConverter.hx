@@ -26,13 +26,16 @@ typedef ConvertCommand = {
 
 class FileConverter {
 
+	// Date implementation has a second resolution on some platforms.
+	public static final FILE_TIME_PRECISION = 1000;
+
 	public var configuration(default,null) : String;
 
 	var baseDir : String;
 	var tmpDir : String;
 	var configs : Map<String,ConvertConfig> = new Map();
 	var defaultConfig : ConvertConfig;
-	var cache : Map<String,Array<{ out : String, time : Int, hash : String, ver : Null<Int> }>>;
+	var cache : Map<String,Array<{ out : String, time : Int, hash : String, ver : Null<Int>, milliseconds : Null<Int> }>>;
 	var cacheTime : Float;
 
 	static var extraConfigs:Array<Dynamic> = [];
@@ -303,6 +306,7 @@ class FileConverter {
 				time : 0,
 				hash : "",
 				ver: conv.version,
+				milliseconds : #if js 0 #else null #end
 			};
 			entry.push(match);
 		}
@@ -311,16 +315,23 @@ class FileConverter {
 
 		if( !sys.FileSystem.exists(fullPath) ) throw "Missing "+fullPath;
 
-		var time = std.Math.floor(getFileTime(fullPath) / 1000);
+		var fileTime = getFileTime(fullPath);
+		var time = std.Math.floor(fileTime / FILE_TIME_PRECISION);
+		#if js
+		var milliseconds = std.Math.floor(fileTime) - time * FILE_TIME_PRECISION;
+		#else
+		var milliseconds = null;
+		#end
 		var alreadyGen = sys.FileSystem.exists(fullOutPath) && match.ver == conv.version #if disable_res_cache && false #end;
 
-		if( alreadyGen && match.time == time )
+		if( alreadyGen && match.time == time #if js && (match.milliseconds == null || match.milliseconds == milliseconds ) #end )
 			return; // not changed (time stamp)
 
 		var content = hxd.File.getBytes(fullPath);
 		var hash = haxe.crypto.Sha1.make(content).toHex();
 		if( alreadyGen && match.hash == hash ) {
 			match.time = time;
+			match.milliseconds = milliseconds;
 			saveCache();
 			return; // not changed (hash)
 		}
@@ -346,6 +357,7 @@ class FileConverter {
 
 		match.ver = conv.version;
 		match.time = time;
+		match.milliseconds = milliseconds;
 		match.hash = hash;
 		saveCache();
 	}

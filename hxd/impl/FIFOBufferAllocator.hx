@@ -60,7 +60,7 @@ class FIFOBufferAllocator extends Allocator {
 	var curMemory : Int = 0;
 
 	/**
-	 * How long do we keep some buffer than hasn't been used in memory (in frames, default 60 * 60)
+	 * How long do we keep some buffer than hasn't been used in memory (in frames)
 	**/
 	public var maxKeepFrame(default, set) : Int = 60 * 10;
 	public function set_maxKeepFrame(v) {
@@ -96,9 +96,7 @@ class FIFOBufferAllocator extends Allocator {
 
 	override function disposeBuffer(b:h3d.Buffer) {
 		if( b.isDisposed() ) return;
-		var f = b.flags;
-		var flags = f.has(UniformBuffer) ? UniformDynamic : (f.has(Dynamic) ? Dynamic : Static);
-		var id = flags.toInt() | (b.format.uid << 3) | (b.vertices << 16);
+		var id = fromBufferFlags(b.flags).toInt() | (b.format.uid << 3) | (b.vertices << 16);
 		var c = buffers.get(id);
 		if( c == null ) {
 			c = new Cache(this, maxKeepFrame, function(b:h3d.Buffer) b.dispose());

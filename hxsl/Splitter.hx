@@ -222,8 +222,10 @@ class Splitter {
 		case Var:
 			if( !vertex ) {
 				var i = vvars.get(v.origin.id);
-				if( i != null && i.v.kind == Input ) return;
-				if( i == null || i.write == 0 ) throw new Error("Varying " + v.v.name + " is not written by vertex shader",p);
+				if( i != null && i.v.kind == Input )
+					return;
+				if( v.requireInit && ( i == null || i.write == 0 ) )
+					throw new Error("Varying " + v.v.name + " is not written by vertex shader",p);
 			}
 		default:
 		}

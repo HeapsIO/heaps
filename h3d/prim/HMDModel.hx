@@ -14,18 +14,23 @@ class HMDModel extends MeshPrimitive {
 	var normalsRecomputed : String;
 	var blendshape : Blendshape;
 	var lodConfig : Array<Float> = null;
+	var colliderData : Collider;
 
 	public static var lodExportKeyword : String = "LOD";
 
-	public function new( data : hxd.fmt.hmd.Data.Geometry, dataPos, lib, lods = null ) {
+	public function new( data : hxd.fmt.hmd.Data.Geometry, dataPos, lib, lods : Array<hxd.fmt.hmd.Data.Model> = null ) {
 		this.lods = [data];
-		if (lods != null)
-			this.lods = this.lods.concat(lods);
+		if (lods != null) {
+			for (lod in lods)
+				this.lods.push(lib.header.geometries[lod.geometry]);
+		}
 		this.dataPosition = dataPos;
 		this.lib = lib;
 
 		if (lib.header.shapes != null && lib.header.shapes.length > 0)
 			this.blendshape = new Blendshape(this);
+		if ( lib.header.colliders != null && lib.header.colliders.length > 0 )
+			this.colliderData = Collider.fromHmd(this);
 	}
 
 	override function hasInput( name : String ) {
@@ -48,8 +53,8 @@ class HMDModel extends MeshPrimitive {
 		curMaterial = material + lod * data.indexCounts.length;
 	}
 
-	override function getMaterialIndexes(material:Int):{count:Int, start:Int} {
-		return { start : indexesTriPos[material]*3, count : data.indexCounts[material] };
+	override function getMaterialIndexes(material:Int, lod:Int=0):{count:Int, start:Int} {
+		return { start : indexesTriPos[material + lod * data.indexCounts.length]*3, count : lods[lod].indexCounts[material] };
 	}
 
 	public function getDataBuffers(fmt, ?defaults,?material) {
@@ -252,6 +257,8 @@ class HMDModel extends MeshPrimitive {
 
 		var materialCount = data.indexCounts.length;
 		var lodLevel = Std.int(curMaterial / data.indexCounts.length);
+		if ( lodLevel >= lodCount() )
+			return;
 
 		if( indexes == null || indexes.isDisposed() )
 			alloc(engine);
@@ -263,11 +270,24 @@ class HMDModel extends MeshPrimitive {
 	}
 
 	function initCollider( poly : h3d.col.PolygonBuffer ) {
-		var buf= lib.getBuffers(data, hxd.BufferFormat.POS3D);
-		poly.setData(buf.vertexes, buf.indexes);
-		if( collider == null ) {
-			var sphere = data.bounds.toSphere();
-			collider = new h3d.col.Collider.OptimizedCollider(sphere, poly);
+		var sphere = data.bounds.toSphere();
+		if ( colliderData == null ) {
+			var buf = lib.getBuffers(data, hxd.BufferFormat.POS3D);
+			poly.setData(buf.vertexes, buf.indexes);
+			if( collider == null )
+				collider = new h3d.col.Collider.OptimizedCollider(sphere, poly);
+		} else {
+			var buffers = colliderData.getBuffers();
+			var hulls : Array<h3d.col.Collider> = [];
+			hulls.resize(buffers.length);
+			for ( i => buf in buffers ) {
+				var p = new h3d.col.PolygonBuffer();
+				p.source = poly.source;
+				p.setData(buf.vertexes, buf.indexes);
+				hulls[i] = p;
+			}
+			var convexHulls = new h3d.col.Collider.GroupCollider(hulls);
+			collider = new h3d.col.Collider.OptimizedCollider(sphere, convexHulls);
 		}
 	}
 
@@ -295,19 +315,23 @@ class HMDModel extends MeshPrimitive {
 	override public function screenRatioToLod( screenRatio : Float ) : Int {
 		var lodCount = lodCount();
 
-		#if editor
 		if (forcedLod >= 0)
 			return hxd.Math.imin(forcedLod, lodCount);
-		#end
 
 		if ( lodCount == 1 )
 			return 0;
 
-		lodConfig = getLodConfig();
-		if ( lodConfig != null && lodConfig.length >= lodCount - 1) {
+		var lodConfig = getLodConfig();
+		if ( lodConfig != null ) {
+			var lodConfigHasCulling = lodConfig.length > lodCount - 1;
+			if ( lodConfigHasCulling && screenRatio < lodConfig[lodConfig.length - 1] )
+				return lodCount;
+
 			var lodLevel : Int = 0;
-			var maxIter = ( ( lodConfig.length > lodCount - 1 ) ? lodCount - 1: lodConfig.length );
+			var maxIter = lodConfigHasCulling ? lodCount - 1 : lodConfig.length;
 			for ( i in 0...maxIter ) {
+				if ( lodConfig[i] == 0.0 )
+					return lodLevel;
 				if ( lodConfig[i] > screenRatio )
 					lodLevel++;
 				else
@@ -324,6 +348,7 @@ class HMDModel extends MeshPrimitive {
 			return lodConfig;
 
 		var d = lib.resource.entry.directory;
-		return @:privateAccess ModelDatabase.current.getDefaultLodConfig(d);
+		lodConfig = @:privateAccess ModelDatabase.current.getDefaultLodConfig(d);
+		return lodConfig;
 	}
 }

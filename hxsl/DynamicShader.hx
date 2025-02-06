@@ -170,6 +170,24 @@ class DynamicShader extends Shader {
 		updateConstantsFinal(globals);
 	}
 
+	public function getVariable( name : String ) {
+		var vid = varNames.get(name);
+		if( vid == null )
+			return null;
+		return vid < 0 ? floats[-vid-1] : values[vid];
+	}
+
+	public function setVariable( name : String, value : Dynamic ) {
+		var vid = varNames.get(name);
+		if( vid == null )
+			return false;
+		if( vid < 0 )
+			floats[-vid-1] = value;
+		else
+			values[vid] = value;
+		return true;
+	}
+
 	@:keep public function hscriptGet( field : String ) : Dynamic {
 		var vid = varNames.get(field);
 		if( vid == null )

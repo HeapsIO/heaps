@@ -1,5 +1,6 @@
 package hxsl;
 using hxsl.Ast;
+import hxsl.Debug.traceDepth in debug;
 
 private class AllocatedVar {
 	public var id : Int;
@@ -30,6 +31,7 @@ private class ShaderInfos {
 	public var vertex : Null<Bool>;
 	public var onStack : Bool;
 	public var hasDiscard : Bool;
+	public var hasFragDepth : Bool;
 	public var isCompute : Bool;
 	public var marked : Null<Bool>;
 	public function new(n, v) {
@@ -60,14 +62,6 @@ class Linker {
 
 	public function new(mode) {
 		this.mode = mode;
-	}
-
-	inline function debug( msg : String, ?pos : haxe.PosInfos ) {
-		#if shader_debug_dump
-		if( Cache.TRACE ) {
-			for( i in 0...debugDepth ) msg = "    " + msg; haxe.Log.trace(msg, pos);
-		}
-		#end
 	}
 
 	function error( msg : String, p : Position ) : Dynamic {
@@ -124,7 +118,8 @@ class Linker {
 				case Name(n): key = n;
 				default:
 				}
-		var v2 = varMap.get(key);
+		var ukey = key.toLowerCase();
+		var v2 = varMap.get(ukey);
 		var vname = v.name;
 		if( v2 != null ) {
 			for( vm in v2.merged )
@@ -137,7 +132,7 @@ class Linker {
 				// allocate a new unique name in the shader if already in use
 				var k = 2;
 				while( true ) {
-					var a = varMap.get(key + k);
+					var a = varMap.get(ukey + k);
 					if( a == null ) break;
 					for( vm in a.merged )
 						if( vm == v )
@@ -146,13 +141,14 @@ class Linker {
 				}
 				if( v.kind == Input ) {
 					// it's not allowed to rename an input var, let's rename existing var instead
-					varMap.remove(key);
-					varMap.set(key + k, v2);
+					varMap.remove(ukey);
+					varMap.set(ukey + k, v2);
 					v2.v.name += k;
 					v2.path += k;
 				} else {
 					vname += k;
 					key += k;
+					ukey += k;
 				}
 			} else {
 				v2.merged.push(v);
@@ -162,7 +158,7 @@ class Linker {
 			}
 		}
 		var v2 : TVar = {
-			id : hxsl.Tools.allocVarId(),
+			id : Tools.allocVarId(),
 			name : vname,
 			type : v.type,
 			kind : v.kind,
@@ -178,7 +174,7 @@ class Linker {
 		a.instanceIndex = curInstance;
 		a.rootShaderName = shaderName;
 		allVars.push(a);
-		varMap.set(key, a);
+		varMap.set(ukey, a);
 		switch( v2.type ) {
 		case TStruct(vl):
 			v2.type = TStruct([for( v in vl ) allocVar(v, p, shaderName, key, a).v]);
@@ -206,6 +202,23 @@ class Linker {
 			return { e : TVar(v.v), t : v.v.type, p : e.p };
 		case TBinop(op, e1, e2):
 			switch( [op, e1.e] ) {
+			case [OpAssign | OpAssignOp(_), TGlobal(FragDepth)]:
+				if( curShader != null ) {
+					curShader.hasFragDepth = true;
+				}
+				
+				var e2 = mapExprVar(e2);
+				switch(e2.e) {
+					case TVar(v2):
+						var v2 = allocVar(v2,e2.p);
+						if( !curShader.readMap.exists(v2.id) ) {
+							curShader.readMap.set(v2.id, v2);
+							curShader.readVars.push(v2);
+						}
+					default:
+				}
+
+				return { e : TBinop(op, { e : TGlobal(FragDepth),t : TFloat, p : e.p }, e2), t : e.t, p : e.p };
 			case [OpAssign, TVar(v)] if( !locals.exists(v.id) ):
 				var e2 = mapExprVar(e2);
 				var v = allocVar(v, e1.p);
@@ -419,7 +432,7 @@ class Linker {
 
 		// force shaders containing discard to be included
 		for( s in shaders )
-			if( s.hasDiscard || s.isCompute ) {
+			if( s.hasDiscard || s.isCompute || s.hasFragDepth) {
 				initDependencies(s);
 				entry.deps.set(s, true);
 			}

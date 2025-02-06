@@ -62,6 +62,9 @@ class DepthCopy extends h3d.shader.ScreenShader {
 }
 
 class Renderer extends h3d.scene.Renderer {
+
+	public static final LIGHTMAP_STENCIL = 0x80;
+
 	var slides = new h3d.pass.ScreenFx(new h3d.shader.pbr.Slides());
 	var pbrOut = new h3d.pass.ScreenFx(new h3d.shader.ScreenShader());
 	var tonemap = new h3d.pass.ScreenFx(new h3d.shader.pbr.ToneMapping());
@@ -76,7 +79,6 @@ class Renderer extends h3d.scene.Renderer {
 	var currentStep : h3d.impl.RendererFX.Step;
 	var performance = new h3d.pass.ScreenFx(new h3d.shader.pbr.PerformanceViewer());
 	var indirectEnv = true;
-	var cullingDistanceFactor : Float = 0.0;
 
 	var textures = {
 		albedo : (null:h3d.mat.Texture),
@@ -91,6 +93,7 @@ class Renderer extends h3d.scene.Renderer {
 		velocity : (null:h3d.mat.Texture),
 	};
 
+	public var cullingDistanceFactor : Float = 0.0;
 	public var skyMode : SkyMode = Hide;
 	public var toneMode : TonemapMap = Reinhard;
 	public var displayMode : DisplayMode = Pbr;
@@ -155,7 +158,7 @@ class Renderer extends h3d.scene.Renderer {
 		pbrOut.pass.setBlendMode(Add);
 		pbrOut.pass.stencil = new h3d.mat.Stencil();
 		pbrOut.pass.stencil.setOp(Keep, Keep, Keep);
-		pbrOut.pass.stencil.setFunc(NotEqual, 0x80, 0x80, 0x80); // ignore already drawn volumetricLightMap areas
+		pbrOut.pass.stencil.setFunc(NotEqual, LIGHTMAP_STENCIL, LIGHTMAP_STENCIL, LIGHTMAP_STENCIL); // ignore already drawn volumetricLightMap areas
 		allPasses.push(output);
 		allPasses.push(defaultPass);
 		allPasses.push(decalsOutput);
@@ -164,6 +167,9 @@ class Renderer extends h3d.scene.Renderer {
 		allPasses.push(emissiveDecalsOutput);
 		allPasses.push(new h3d.pass.Shadows(null));
 		refreshProps();
+		#if editor
+		cullingDistanceFactor = hide.Ide.inst.ideConfig.cullingDistanceFactor;
+		#end
 	}
 
 	override function addShader(s:hxsl.Shader) {
@@ -502,6 +508,7 @@ class Renderer extends h3d.scene.Renderer {
 		ctx.setGlobal("global.time", ctx.time);
 		ctx.setGlobal("camera.position", ctx.camera.pos);
 		ctx.setGlobal("camera.inverseViewProj", ctx.camera.getInverseViewProj());
+		ctx.setGlobal("camera.inverseView", ctx.camera.getInverseView());
 	}
 
 	function beginPbr() {

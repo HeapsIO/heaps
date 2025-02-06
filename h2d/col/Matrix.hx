@@ -123,7 +123,7 @@ class Matrix {
 		var a = m.a, b = m.b;
 		var c = m.c, d = m.d;
 		var x = m.x, y = m.y;
-		var invDet = 1 / getDeterminant();
+		var invDet = 1 / m.getDeterminant();
 		this.a = d * invDet;
 		this.b = -b * invDet;
 		this.c = -c * invDet;

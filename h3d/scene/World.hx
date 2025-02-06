@@ -211,6 +211,21 @@ class World extends Object {
 	*/
 	public var specularInAlpha = false;
 
+	public var wrap(default, set) : h3d.mat.Data.Wrap = Clamp;
+	public function set_wrap(v : h3d.mat.Data.Wrap) {
+		wrap = v;
+		inline function bigTextureWrap(t : h3d.mat.BigTexture) {
+			if ( t != null && t.tex != null )
+				t.tex.wrap = wrap;
+		}
+		for ( b in bigTextures ) {
+			bigTextureWrap(b.diffuse);
+			bigTextureWrap(b.normal);
+			bigTextureWrap(b.spec);
+		}
+		return wrap;
+	}
+
 	var bigTextureSize = 2048;
 	var defaultDiffuseBG = 0;
 	var defaultNormalBG = 0x8080FF;
@@ -321,6 +336,7 @@ class World extends Object {
 		}
 		if( t == null ) {
 			var b = new h3d.mat.BigTexture(bigTextures.length, bigTextureSize, defaultDiffuseBG);
+			b.tex.wrap = wrap;
 			btex = { diffuse : b, spec : null, normal : null };
 			bigTextures.unshift( btex );
 			t = b.add(rt);
@@ -331,7 +347,7 @@ class World extends Object {
 			if(res != null) {
 				var size = res.getSize();
 				if(size.width != t.width || size.height != t.height)
-					throw 'Texture ${res.entry.path} has different size from diffuse (${size.width}x${size.height})';
+					throw 'Texture ${res.entry.path} has different size ${size.width}x${size.height} from diffuse ${t.width}x${t.height}';
 			}
 		}
 
@@ -345,8 +361,10 @@ class World extends Object {
 					specTex = t;
 				}
 			} else {
-				if( btex.spec == null )
+				if( btex.spec == null ) {
 					btex.spec = new h3d.mat.BigTexture(-1, bigTextureSize, defaultSpecularBG);
+					btex.spec.tex.wrap = wrap;
+				}
 				if( res != null )
 					specTex = btex.spec.add(res);
 				else
@@ -358,8 +376,10 @@ class World extends Object {
 		if( enableNormalMaps ) {
 			var res = resolveNormalMap(texturePath, mat);
 			checkSize(res);
-			if( btex.normal == null )
+			if( btex.normal == null ) {
 				btex.normal = new h3d.mat.BigTexture(-1, bigTextureSize, defaultNormalBG);
+				btex.normal.tex.wrap = wrap;
+			}
 			if( res != null )
 				normalMap = btex.normal.add(res);
 			else

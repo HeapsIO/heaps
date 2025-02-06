@@ -189,8 +189,10 @@ class Window {
 	public function dispose() {
 		if( inst == this ) inst = null;
 		if ((js.Browser.window:Dynamic).ResizeObserver != null) {
-			observer.disconnect();
-			observer = null;
+			if (observer != null) {
+				observer.disconnect();
+				observer = null;
+			}
 		}
 	}
 
@@ -284,7 +286,7 @@ class Window {
 		else
 			doc.exitFullscreen();
 	}
-	
+
 
 	public function setCursorPos( x : Int, y : Int, emitEvent : Bool = false ) : Void {
 		if ( mouseMode == Absolute ) throw "setCursorPos only allowed in relative mouse modes on this platform.";

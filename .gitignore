@@ -10,5 +10,6 @@ bin
 /samples/build
 /*.xml
 .vscode
-/tools/mikktspace/out
+/tools/meshtools/out
 *.exe
+/node_modules

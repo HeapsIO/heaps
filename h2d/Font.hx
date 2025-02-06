@@ -186,7 +186,7 @@ class Font {
 	**/
 	public var charset : hxd.Charset;
 	/**
-		Distance range used to generate SDF Font and usefull for some implementations of SDF Font rendering.
+		Distance range used to generate SDF Font and useful for some implementations of SDF Font rendering.
 	**/
 	public var distanceRange:Int;
 	/**

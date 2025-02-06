@@ -407,10 +407,6 @@ class BaseLibrary {
 				convertPoints(v.getFloats());
 			for( v in g.getAll("LayerElementNormal.Normals") )
 				convertPoints(v.getFloats());
-			for( v in g.getAll("LayerElementTangent.Tangents") )
-				convertPoints(v.getFloats());
-			for( v in g.getAll("LayerElementBinormal.Binormals") )
-				convertPoints(v.getFloats());
 		}
 		for ( s in root.getAll("Objects.Geometry.Shape") ) {
 			for ( v in s.getAll("Vertices") )
@@ -1405,7 +1401,7 @@ class BaseLibrary {
 	}
 
 	function round(v:Float) {
-		if( v != v ) throw "NaN found (could be multiple skin mesh, currently not supported)";
+		if( v != v ) throw '${fileName} : NaN found (could be multiple skin mesh, currently not supported)';
 		return highPrecision ? v : std.Math.fround(v * 131072) / 131072;
 	}
 

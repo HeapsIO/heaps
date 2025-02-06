@@ -69,6 +69,11 @@ class ObjectCollider extends Collider {
 		return collider.dimension() * Math.max(Math.max(scale.x, scale.y), scale.z);
 	}
 
+	public function closestPoint( p : h3d.col.Point ) {
+		throw "Not implemented";
+		return new h3d.col.Point();
+	}
+
 	#if !macro
 	public function makeDebugObj() : h3d.scene.Object {
 		var ret = collider.makeDebugObj();

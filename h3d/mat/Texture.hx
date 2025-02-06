@@ -22,9 +22,7 @@ class Texture {
 
 	var t : h3d.impl.Driver.Texture;
 	var mem : h3d.impl.MemoryManager;
-	#if track_alloc
 	var allocPos : hxd.impl.AllocPos;
-	#end
 	public var id(default, null) : Int;
 	public var name(default, null) : String;
 	public var width(default, null) : Int;
@@ -42,8 +40,8 @@ class Texture {
 	public var startingMip : Int = 0;
 	public var lodBias : Float = 0.;
 	public var mipLevels(get, never) : Int;
-	public var depthBias : Float = 0.;
-	public var slopeScaledBias : Float = 0.;
+	public var depthBias(default, set) : Float = 0.;
+	public var slopeScaledBias(default, set) : Float = 0.;
 	public var depthClamp : Bool = false;
 	var customMipLevels : Int;
 
@@ -95,12 +93,10 @@ class Texture {
 			for( f in flags )
 				this.flags.set(f);
 
-		if ( !isDepth() ) {
-			#if !noEngine
-			var engine = h3d.Engine.getCurrent();
-			this.mem = engine.mem;
-			#end
-		}
+		#if !noEngine
+		var engine = h3d.Engine.getCurrent();
+		this.mem = engine.mem;
+		#end
 
 		var tw = 1, th = 1;
 		while( tw < w ) tw <<= 1;
@@ -117,10 +113,8 @@ class Texture {
 		this.filter = Linear;
 		this.wrap = DEFAULT_WRAP;
 		bits &= 0x7FFF;
-		#if track_alloc
-		this.allocPos = new hxd.impl.AllocPos();
-		#end
-		if( !this.flags.has(NoAlloc) && (!isDepth() || width > 0) ) alloc();
+		this.allocPos = hxd.impl.AllocPos.make();
+		if( !this.flags.has(NoAlloc) && width > 0 ) alloc();
 	}
 
 	function get_layerCount() {
@@ -128,9 +122,7 @@ class Texture {
 	}
 
 	public function alloc() {
-		if ( isDepth() )
-			h3d.Engine.getCurrent().mem.allocDepth(this);
-		else if( t == null )
+		if ( t == null )
 			mem.allocTexture(this);
 	}
 
@@ -196,15 +188,33 @@ class Texture {
 		var str = name;
 		if( name == null ) {
 			str = "Texture_" + id;
-			#if track_alloc
 			if( allocPos != null ) str += "(" + allocPos.position + ")";
-			#end
 		}
-		return str+"("+width+"x"+height+")";
+		if ( flags.has(Is3D) )
+			str += "("+width+"x"+height+"x"+layerCount+")";
+		else
+			str += "("+width+"x"+height+")";
+		return str;
 	}
 
 	public function setName(n) {
 		name = n;
+	}
+
+	public function set_depthBias(v : Float) {
+		if ( v != depthBias ) {
+			depthBias = v;
+			h3d.Engine.getCurrent().onTextureBiasChanged(this);
+		}
+		return depthBias;
+	}
+
+	public function set_slopeScaledBias(v : Float) {
+		if ( v != slopeScaledBias ) {
+			slopeScaledBias = v;
+			h3d.Engine.getCurrent().onTextureBiasChanged(this);
+		}
+		return slopeScaledBias;
 	}
 
 	function set_mipMap(m:MipMap) {
@@ -223,7 +233,8 @@ class Texture {
 	}
 
 	public inline function isDisposed() {
-		return isDepth() ? t == null : t == null && realloc == null;
+		// realloc unsupported on depth buffers.
+		return t == null && (isDepth() || realloc == null);
 	}
 
 	public function resize(width, height) {
@@ -338,12 +349,29 @@ class Texture {
 	}
 
 	public function dispose() {
-		if( t != null ) {
-			if ( isDepth() )
-				h3d.Engine.getCurrent().mem.deleteDepth(this);
-			else
-				mem.deleteTexture(this);
+		if( t != null )
+			mem.deleteTexture(this);
+	}
+
+	public function hasStencil() {
+		return switch( format ) {
+		case Depth24Stencil8: true;
+		default: false;
 		}
+	}
+
+	public function isDepth() {
+		return switch( format ) {
+		case Depth16, Depth24, Depth24Stencil8, Depth32: true;
+		default: false;
+		}
+	}
+
+	/**
+		This will return the default depth buffer, which is automatically resized to the screen size.
+	**/
+	public static function getDefaultDepth() {
+		return h3d.Engine.getCurrent().driver.getDefaultDepthBuffer();
 	}
 
 	/**
@@ -502,26 +530,5 @@ class Texture {
 			}
 		t.uploadBitmap(b);
 		b.dispose();
-	}
-
-	public function hasStencil() {
-		return switch( format ) {
-		case Depth24Stencil8: true;
-		default: false;
-		}
-	}
-
-	public function isDepth() {
-		return switch( format ) {
-		case Depth16, Depth24, Depth24Stencil8, Depth32: true;
-		default: false;
-		}
-	}
-
-	/**
-		This will return the default depth buffer, which is automatically resized to the screen size.
-	**/
-	public static function getDefaultDepth() {
-		return h3d.Engine.getCurrent().driver.getDefaultDepthBuffer();
 	}
 }

@@ -90,6 +90,13 @@ class ConvertFBX2HMD extends Convert {
 				hmdout.maxBonesPerSkin = params.maxBones;
 			if (params.tangents != null)
 				hmdout.generateTangents = true;
+			if (params.collide != null) {
+				var collide = params.collide;
+				hmdout.generateCollides = { precision : collide.precision,
+					maxConvexHulls : collide.maxConvexHulls,
+					maxSubdiv : collide.maxSubdiv
+				};
+			}
 			if (params.lowp != null) {
 				var m:haxe.DynamicAccess<String> = params.lowp;
 				hmdout.lowPrecConfig = [];
@@ -100,6 +107,12 @@ class ConvertFBX2HMD extends Convert {
 						case "s8": S8;
 						case x: throw "Invalid precision '" + x + "' should be u8|s8|f16";
 					});
+			}
+			if ( params.optimizeMesh != null )
+				hmdout.optimizeMesh = params.optimizeMesh;
+			if (params.lodsDecimation != null) {
+				var config: Array<Float> = params.lodsDecimation;
+				hmdout.lodsDecimation = [for(lod in config) lod];
 			}
 		}
 		hmdout.load(fbx);
@@ -309,7 +322,9 @@ class CompressIMG extends Convert {
 			command("texconv", args);
 			sys.FileSystem.deleteFile(tmpFile);
 			tmpPath.ext = "tmp.DDS";
-			sys.FileSystem.rename(tmpPath.toString(), dstPath);
+			var p = tmpPath.toString();
+			if ( sys.FileSystem.exists(p) )
+				sys.FileSystem.rename(p, dstPath);
 			return;
 		}
 		var path = new haxe.io.Path(srcPath);

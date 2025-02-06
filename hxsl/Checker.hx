@@ -186,7 +186,7 @@ class Checker {
 				];
 			case ImageStore:
 				[];
-			case VertexID, InstanceID, FragCoord, FrontFacing:
+			case VertexID, InstanceID, FragCoord, FrontFacing,FragDepth:
 				null;
 			case AtomicAdd:
 				[{ args : [{ name : "buf", type : TBuffer(TInt, SConst(0), RW) },{ name : "index", type : TInt }, { name : "data", type : TInt }], ret : TInt }];
@@ -212,6 +212,10 @@ class Checker {
 				fname = fname.charAt(0).toLowerCase() + fname.substr(1);
 				vl.push({ name : fname, type : vt });
 				null;
+			case UnpackSnorm4x8:
+				[ { args : [ { name : "value", type : TInt } ], ret : vec4 } ];
+			case UnpackUnorm4x8:
+				[ { args : [ { name : "value", type : TInt } ], ret : vec4 } ];
 			default:
 				throw "Unsupported global "+g;
 			}
@@ -221,6 +225,7 @@ class Checker {
 		globals.set("vertexID", { t : TInt, g : VertexID });
 		globals.set("instanceID", { t : TInt, g : InstanceID });
 		globals.set("fragCoord", { t : vec4, g : FragCoord });
+		globals.set("fragDepth", { t : TFloat, g : FragDepth });
 		globals.set("frontFacing", { t : TBool, g : FrontFacing });
 		for( gname => vl in gvars )
 			globals.set(gname, { t : TStruct([
@@ -413,6 +418,8 @@ class Checker {
 			return;
 		case TArray(e, _):
 			checkWrite(e);
+			return;
+		case TGlobal(FragDepth):
 			return;
 		default:
 		}
@@ -795,11 +802,12 @@ class Checker {
 					checkConst(e);
 					einit = e;
 				}
-				if( v.type == null ) error("Type required for variable declaration", e.pos);
-				if( vars.exists(v.name) ) error("Duplicate var decl '" + v.name + "'", e.pos);
-				var v = makeVar(v, e.pos);
+				if( v.type == null ) error("Type required for variable declaration", e.pos);				
 				if( isImport && v.kind == Param )
 					continue;
+
+				if( vars.exists(v.name) ) error("Duplicate var decl '" + v.name + "'", e.pos);
+				var v = makeVar(v, e.pos);
 
 				switch( v.type ) {
 				case TSampler(T3D, true), TRWTexture(T3D, true, _), TRWTexture(_,_,3):

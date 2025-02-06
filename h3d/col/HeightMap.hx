@@ -38,6 +38,10 @@ abstract class HeightMap extends Collider {
 		throw "Not implemented : is infinite";
 	}
 
+	public function closestPoint( sp : Point ) : Point {
+		throw "Not implemented";
+	}
+
 	public function rayIntersection( r : Ray, bestMatch : Bool ) : Float {
 		var px = r.px, py = r.py, pz = r.pz;
 		var lx = r.lx, ly = r.ly, lz = r.lz;

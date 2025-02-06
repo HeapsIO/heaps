@@ -23,6 +23,10 @@ class Reader {
 			return HasExtraTextures;
 		case 3:
 			return FourBonesByVertex;
+		case 4:
+			return HasLod;
+		case 5:
+			return HasCollider;
 		case unk:
 			throw "Unknown property #" + unk;
 		}
@@ -125,6 +129,11 @@ class Reader {
 		return s;
 	}
 
+	function readLods() {
+		var lodCount = i.readInt32();
+		return [for (_ in 0...lodCount) i.readInt32()];
+	}
+
 	public function readHeader( fast = false ) : Data {
 		var d = new Data();
 		var h = i.readString(3);
@@ -183,6 +192,7 @@ class Reader {
 		}
 
 		d.models = [];
+		var hasCollider = false;
 		for( k in 0...i.readInt32() ) {
 			var m = new Model();
 			m.props = readProps();
@@ -199,6 +209,13 @@ class Reader {
 			for( k in 0...matCount )
 				m.materials.push(i.readInt32());
 			m.skin = readSkin();
+			if ( m.props != null ) {
+				m.lods = m.props.contains(HasLod) ? readLods() : null;
+				if ( m.props.contains(HasCollider) ) {
+					m.collider = i.readInt32();
+					hasCollider = true;
+				}
+			}
 		}
 
 		d.animations = [];
@@ -234,8 +251,7 @@ class Reader {
 		}
 
 		if ( d.version >= 4 ) {
-			var shapeLength : Int;
-			shapeLength = i.readInt32();
+			var shapeLength = i.readInt32();
 			d.shapes = [];
 			for ( k in 0...shapeLength ) {
 				var s = new BlendShape();
@@ -250,6 +266,19 @@ class Reader {
 			}
 		}
 
+		if ( hasCollider ) {
+			d.colliders = [];
+			var colliderLength = i.readInt32();
+			for ( k in 0...colliderLength ) {
+				var c = new Collider();
+				var n = i.readInt32();
+				c.vertexCounts = [for ( v in 0...n) i.readInt32()];
+				c.vertexPosition = i.readInt32();
+				c.indexCounts = [for ( v in 0...n) i.readInt32()];
+				c.indexPosition = i.readInt32();
+				d.colliders.push(c);
+			}
+		}
 
 		return d;
 	}

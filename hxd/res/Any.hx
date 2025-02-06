@@ -55,6 +55,10 @@ class Any extends Resource {
 		return loader.loadCache(entry.path, hxd.res.Prefab);
 	}
 
+	public function toAnimGraph() {
+		return loader.loadCache(entry.path, hxd.res.AnimGraph);
+	}
+
 	public function to<T:hxd.res.Resource>( c : Class<T> ) : T {
 		return loader.loadCache(entry.path, c);
 	}

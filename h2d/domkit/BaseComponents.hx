@@ -177,16 +177,28 @@ class CustomParser extends domkit.CssValue.ValueParser {
 	public function parseFont( value : CssValue ) {
 		var path = null;
 		var sdf = null;
-		var offset = 0;
+		var offset: Null<Int> = null, offsetChar = 0;
+		var lineHeight : Null<Float> = null, baseLine: Null<Int> = null;
 		switch(value) {
 			case VGroup(args):
 				var args = args.copy();
 				path = parsePath(args[0]);
-				switch( args[1] ) {
-				case VCall("offset", [v]):
-					offset = parseInt(v);
+				while (args[1] != null && args[1].match(VCall(_))) {
+					switch( args[1] ) {
+					case VCall("offset", [VIdent("auto")]):
+						offsetChar = -1;
+					case VCall("offset", [VString(c)]) if( c.length == 1 ):
+						offsetChar = c.charCodeAt(0);
+					case VCall("offset", [v]):
+						offset = parseInt(v);
+					case VCall("line-height", [v]):
+						lineHeight = parseFloat(v);
+					case VCall("base-line", [v]):
+						baseLine = parseInt(v);
+					default:
+						break;
+					}
 					args.splice(1,1);
-				default:
 				}
 				if( args[1] != null ) {
 					sdf = {
@@ -215,8 +227,18 @@ class CustomParser extends domkit.CssValue.ValueParser {
 			fnt = res.to(hxd.res.BitmapFont).toSdfFont(sdf.size, sdf.channel, sdf.cutoff, sdf.smooth);
 		else
 			fnt = res.to(hxd.res.BitmapFont).toFont();
-		if( offset != 0 )
-			@:privateAccess fnt.baseLine = fnt.calcBaseLine() - offset;
+		var defChar = offsetChar <= 0 ? fnt.getChar("A".code) ?? fnt.getChar("0".code) ?? fnt.getChar("a".code) : fnt.getChar(offsetChar);
+		if( offsetChar != 0 && defChar != null )
+			offset = -Math.ceil(defChar.t.dy) + Std.int(@:privateAccess fnt.offsetY);
+		if( offset != null || baseLine != null) {
+			var prev = @:privateAccess fnt.offsetY;
+			fnt.setOffset(0,offset);
+			@:privateAccess fnt.lineHeight += offset - prev;
+			@:privateAccess fnt.baseLine = fnt.calcBaseLine() + baseLine;
+		}
+		if( lineHeight != null && defChar != null ) {
+			@:privateAccess fnt.lineHeight = Math.ceil(defChar.t.height * lineHeight);
+		}
 		return fnt;
 		#end
 	}
@@ -236,7 +258,10 @@ class CustomParser extends domkit.CssValue.ValueParser {
 		}
 	}
 
+	static var NULL_BG : FlowBg = { color : 0xFFFFFF, borderL : 0, borderR : 0, borderT : 0, borderB : 0, tile : null };
 	function transitionFlowBackground( bg1 : FlowBg, bg2 : FlowBg, v : Float ) : FlowBg {
+		if( bg1 == null ) bg1 = NULL_BG;
+		if( bg2 == null ) bg2 = NULL_BG;
 		var color = transitionColor(bg1.color, bg2.color, v);
 		return {
 			tile : #if macro true #else h2d.Tile.fromColor(color&0xFFFFFF,(color>>>24)/255) #end,
@@ -424,6 +449,52 @@ class CustomParser extends domkit.CssValue.ValueParser {
 		return adj;
 	}
 
+	public function parseAngleRad(value:CssValue) : Float {
+		return switch(value) {
+			case VUnit(v, "rad"):
+				v;
+			case VUnit(v, "deg"):
+				hxd.Math.degToRad(v);
+			default:
+				parseFloat(value);
+		}
+		return 0.;
+	}
+
+	public function parseAngleDeg(value:CssValue) : Float {
+		return switch(value) {
+			case VUnit(v, "rad"):
+				hxd.Math.radToDeg(v);
+			case VUnit(v, "deg"):
+				v;
+			default:
+				parseFloat(value);
+		}
+		return 0.;
+	}
+
+	function parseTagDefinition(value:CssValue) : {name:String,?font:String,?color:Int} {
+		return switch( value ) {
+		case VCall(id,[VString(font)]):
+			{name:id,font:font};
+		case VCall(id,[v = VIdent(c)]):
+			try {name:id,color:parseColor(v)} catch( e : InvalidProperty ) {name:id,font:c};
+		case VCall(id,[v]):
+			{name:id,color:parseColor(v)};
+		case VCall(id,[VString(font)|VIdent(font),col]):
+			{name:id,font:font,color:parseColor(col)};
+		default:
+			invalidProp();
+		}
+	}
+
+	public function parseTagDefinitions(value:CssValue) {
+		return switch(value) {
+		case VGroup(values): [for( v in values ) parseTagDefinition(v)];
+		default: [parseTagDefinition(value)];
+		}
+	}
+
 }
 
 #if !macro
@@ -433,7 +504,7 @@ class ObjectComp implements h2d.domkit.Object implements domkit.Component.Compon
 	@:p var x : Float;
 	@:p var y : Float;
 	@:p var alpha : Float = 1;
-	@:p var rotation : Float;
+	@:p(angleRad) var rotation : Float;
 	@:p var visible : Bool = true;
 	@:p(scale) var scale : { x : Float, y : Float };
 	@:p var scaleX : Float = 1;
@@ -800,6 +871,7 @@ class TextComp extends DrawableComp implements domkit.Component.ComponentDecl<h2
 class HtmlTextComp extends TextComp implements domkit.Component.ComponentDecl<h2d.HtmlText> {
 	@:p var condenseWhite : Bool;
 	@:p var propagateInteractiveNode: Bool;
+	@:p(tagDefinitions) var tags : Array<{name:String,font:String,color:Int}>;
 
 	static function create( parent : h2d.Object ) {
 		return new h2d.HtmlText(hxd.res.DefaultFont.get(),parent);
@@ -812,6 +884,11 @@ class HtmlTextComp extends TextComp implements domkit.Component.ComponentDecl<h2
 	static function set_propagateInteractiveNode(o : h2d.HtmlText, v) {
 		o.propagateInteractiveNode = v;
 	}
+
+	static function set_tags( o : h2d.HtmlText, tags:Array<{name:String,font:String,color:Int}>) {
+		o.defineHtmlTags(tags);
+	}
+
 }
 
 @:uiComp("scale-grid") @:domkitDecl
@@ -1088,6 +1165,7 @@ class InputComp extends TextComp implements domkit.Component.ComponentDecl<h2d.T
 	@:p(tile) var selection : h2d.Tile;
 	@:p var edit : Bool;
 	@:p(color) @:t(color) var backgroundColor : Null<Int>;
+	@:p var multiline : Bool;
 
 	static function create( parent : h2d.Object ) {
 		return new h2d.TextInput(hxd.res.DefaultFont.get(),parent);
@@ -1111,6 +1189,10 @@ class InputComp extends TextComp implements domkit.Component.ComponentDecl<h2d.T
 
 	static function set_backgroundColor( o : h2d.TextInput, col ) {
 		o.backgroundColor = col;
+	}
+
+	static function set_multiline( o : h2d.TextInput, b ) {
+		o.multiline = b;
 	}
 
 }

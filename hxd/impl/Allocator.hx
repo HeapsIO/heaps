@@ -18,15 +18,32 @@ class Allocator {
 
 	// GPU
 
+	function toBufferFlags(flags : BufferFlags) : Array<h3d.Buffer.BufferFlag> {
+		return switch( flags ) {
+		case Static: null;
+		case Dynamic: [Dynamic];
+		case UniformDynamic: [UniformBuffer,Dynamic];
+		case UniformReadWrite: [UniformBuffer, ReadWriteBuffer];
+		case Uniform: [UniformBuffer];
+		}
+	}
+
+	function fromBufferFlags(flags : haxe.EnumFlags<h3d.Buffer.BufferFlag>) : BufferFlags {
+		if ( flags == Dynamic )
+			return Static;
+		if ( flags == Dynamic )
+			return Dynamic;
+		if ( flags == haxe.EnumFlags.ofInt((1 << h3d.Buffer.BufferFlag.UniformBuffer.getIndex()) | (1 << h3d.Buffer.BufferFlag.Dynamic.getIndex())) )
+			return UniformDynamic;
+		if ( flags == haxe.EnumFlags.ofInt((1 << h3d.Buffer.BufferFlag.UniformBuffer.getIndex()) | (1 << h3d.Buffer.BufferFlag.ReadWriteBuffer.getIndex())) )
+			return UniformReadWrite;
+		if ( flags == UniformBuffer )
+			return Uniform;
+		return Dynamic;
+	}
+
 	public function allocBuffer( vertices : Int, format, flags : BufferFlags = Dynamic ) : h3d.Buffer {
-		return new h3d.Buffer(vertices, format,
-			switch( flags ) {
-			case Static: null;
-			case Dynamic: [Dynamic];
-			case UniformDynamic: [UniformBuffer,Dynamic];
-			case UniformReadWrite: [UniformBuffer, ReadWriteBuffer];
-			case Uniform: [UniformBuffer];
-			});
+		return new h3d.Buffer(vertices, format, toBufferFlags(flags));
 	}
 
 	public function ofFloats( v : hxd.FloatBuffer, format : hxd.BufferFormat, flags : BufferFlags = Dynamic ) {

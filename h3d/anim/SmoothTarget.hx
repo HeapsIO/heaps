@@ -36,6 +36,7 @@ class SmoothTarget extends Animation {
 		initObjects();
 	}
 
+	static var tmpMat : Matrix = new h3d.Matrix();
 	function initObjects() {
 		objects = [];
 		for( o in target.getObjects() ) {
@@ -45,8 +46,19 @@ class SmoothTarget extends Animation {
 			s.targetSkin = o.targetSkin;
 			s.targetJoint = o.targetJoint;
 			objects.push(s);
-			if( o.targetSkin != null )
+			if( o.targetSkin != null ) {
 				mat = @:privateAccess o.targetSkin.currentRelPose[o.targetJoint];
+				if ( mat != null && o.targetSkin.prevEnableRetargeting ) {
+					var j = @:privateAccess o.targetSkin.skinData.allJoints[o.targetJoint];
+					if ( j != null && j.retargetAnim ) {
+						tmpMat.load(mat);
+						mat = tmpMat;
+						mat._41 = j.defMat._41;
+						mat._42 = j.defMat._42;
+						mat._43 = j.defMat._43;
+					}
+				}
+			}
 			else if( o.targetObject != null )
 				mat = o.targetObject.defaultTransform;
 			if( mat == null )

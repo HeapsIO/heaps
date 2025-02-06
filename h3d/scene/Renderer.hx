@@ -103,12 +103,28 @@ class Renderer extends hxd.impl.AnyProps {
 		for( p in passes ) {
 			var z = p.obj.absPos._41 * cam._13 + p.obj.absPos._42 * cam._23 + p.obj.absPos._43 * cam._33 + cam._43;
 			var w = p.obj.absPos._41 * cam._14 + p.obj.absPos._42 * cam._24 + p.obj.absPos._43 * cam._34 + cam._44;
-			p.depth = z / w;
+			p.depth = w > 0.0 ? z / w : - z / w;
 		}
 		if( frontToBack )
-			passes.sort(function(p1, p2) return p1.pass.layer == p2.pass.layer ? (p1.depth > p2.depth ? 1 : -1) : p1.pass.layer - p2.pass.layer);
+			passes.sort(
+				function(p1, p2) {
+					if ( p1.pass.layer != p2.pass.layer )
+						return p1.pass.layer - p2.pass.layer;
+					if ( p1.depth == p2.depth )
+						return 0;
+					return p1.depth > p2.depth ? 1 : -1;
+				}
+			);
 		else
-			passes.sort(function(p1, p2) return p1.pass.layer == p2.pass.layer ? (p1.depth > p2.depth ? -1 : 1) : p1.pass.layer - p2.pass.layer);
+			passes.sort(
+				function(p1, p2) {
+					if ( p1.pass.layer != p2.pass.layer )
+						return p1.pass.layer - p2.pass.layer;
+					if ( p1.depth == p2.depth )
+						return 0;
+					return p1.depth < p2.depth ? 1 : -1;
+				}
+			);
 	}
 
 	inline function clear( ?color, ?depth, ?stencil ) {

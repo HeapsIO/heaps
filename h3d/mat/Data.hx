@@ -134,6 +134,10 @@ enum TextureFlags {
 		Texture can be written in shaders using RWTexture
 	**/
 	Writable;
+	/**
+		Tells if it's a 3D texture
+	**/
+	Is3D;
 }
 
 typedef TextureFormat = hxd.PixelFormat;

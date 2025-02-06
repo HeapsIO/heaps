@@ -11,6 +11,8 @@ enum Property<T> {
 	Unused_HasMaterialFlags; // TODO: Removing this will offset property indices
 	HasExtraTextures;
 	FourBonesByVertex;
+	HasLod;
+	HasCollider;
 }
 
 typedef Properties = Null<Array<Property<Dynamic>>>;
@@ -90,6 +92,15 @@ class BlendShape {
 	}
 }
 
+class Collider {
+	public var vertexCounts : Array<Int>;
+	public var vertexPosition : DataPosition;
+	public var indexCounts : Array<Int>;
+	public var indexPosition : DataPosition;
+	public function new() {
+	}
+}
+
 class Material {
 
 	public var name : String;
@@ -139,6 +150,8 @@ class Model {
 	public var geometry : Index<Geometry>;
 	public var materials : Null<Array<Index<Material>>>;
 	public var skin : Null<Skin>;
+	public var lods : Array<Index<Model>>;
+	public var collider : Null<Index<Collider>>;
 	public function new() {
 	}
 }
@@ -204,6 +217,7 @@ class Data {
 	public var models : Array<Model>;
 	public var animations : Array<Animation>;
 	public var shapes : Array<BlendShape>;
+	public var colliders : Array<Collider>;
 	public var dataPosition : Int;
 	public var data : haxe.io.Bytes;
 

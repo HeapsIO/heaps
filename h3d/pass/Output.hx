@@ -74,7 +74,9 @@ class Output {
 	public function draw( passes : h3d.pass.PassList, ?sort : h3d.pass.PassList -> Void ) {
 		if( passes.isEmpty() )
 			return;
-		#if sceneprof h3d.impl.SceneProf.begin("draw", ctx.frame); #end
+		#if sceneprof
+		h3d.impl.SceneProf.begin('draw_${@:privateAccess passes.current.pass.name}', ctx.frame);
+		#end
 		ctx.setupTarget();
 		setupShaders(passes);
 		if( sort == null )

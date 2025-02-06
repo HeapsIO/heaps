@@ -18,6 +18,8 @@ enum abstract ObjectFlags(Int) {
 	public var FFixedPositionSynced = 0x4000;
 	public var FAlwaysSync = 0x8000;
 	public var FDrawn = 0x10000;
+	public var FInSync = 0x20000;
+	public var FPosChangedInSync = 0x40000;
 	public inline function new(value) {
 		this = value;
 	}
@@ -42,6 +44,9 @@ class Object {
 
 	var flags : ObjectFlags;
 	var lastFrame : Int;
+
+	public var currentAnimation(default, null) : h3d.anim.Animation;
+
 	var children : Array<Object>;
 
 	/**
@@ -55,64 +60,11 @@ class Object {
 	public var numChildren(get, never) : Int;
 
 	/**
-		The name of the object, can be used to retrieve an object within a tree by using `getObjectByName` (default null)
-	**/
-	public var name : Null<String>;
-
-	/**
-		The x position of the object relative to its parent.
-	**/
-	public var x(default,set) : Float;
-
-	/**
-		The y position of the object relative to its parent.
-	**/
-	public var y(default, set) : Float;
-
-	/**
-		The z position of the object relative to its parent.
-	**/
-	public var z(default, set) : Float;
-
-	/**
-		The amount of scaling along the X axis of this object (default 1.0)
-	**/
-	public var scaleX(default,set) : Float;
-
-	/**
-		The amount of scaling along the Y axis of this object (default 1.0)
-	**/
-	public var scaleY(default, set) : Float;
-
-	/**
-		The amount of scaling along the Z axis of this object (default 1.0)
-	**/
-	public var scaleZ(default,set) : Float;
-
-
-	/**
 		Is the object and its children are displayed on screen (default true).
 	**/
 	public var visible(get, set) : Bool;
 
 	var allocated(get,set) : Bool;
-
-	/**
-		Follow a given object or joint as if it was our parent. Ignore defaultTransform when set.
-	**/
-	public var follow(default, set) : Object;
-
-	/**
-		When follow is set, only follow the position and ignore both scale and rotation.
-	**/
-	public var followPositionOnly(get, set) : Bool;
-
-	/**
-		This is an additional optional transformation that is performed before other local transformations.
-		It is used by the animation system.
-	**/
-	public var defaultTransform(default, set) : h3d.Matrix;
-	public var currentAnimation(default, null) : h3d.anim.Animation;
 
 	/**
 		Inform that the object is not to be displayed and his animation doesn't have to be sync. Unlike visible, this doesn't apply to children unless inheritCulled is set to true.
@@ -159,6 +111,7 @@ class Object {
 	/**
 		When set, the object and all its children will not sync() unless this root object position has been changed.
 		This allows to optimize cpu cost of static objects having many children.
+		When set, changes on position during sync() won't be applied.
 	**/
 	public var fixedPosition(get, set) : Bool;
 
@@ -189,12 +142,63 @@ class Object {
 	**/
 	var cullingColliderInherited(get, set) : Bool;
 
+	/**
+		The x position of the object relative to its parent.
+	**/
+	public var x(default,set) : Float;
+
+	/**
+		The y position of the object relative to its parent.
+	**/
+	public var y(default, set) : Float;
+
+	/**
+		The z position of the object relative to its parent.
+	**/
+	public var z(default, set) : Float;
+
+	/**
+		The amount of scaling along the X axis of this object (default 1.0)
+	**/
+	public var scaleX(default,set) : Float;
+
+	/**
+		The amount of scaling along the Y axis of this object (default 1.0)
+	**/
+	public var scaleY(default, set) : Float;
+
+	/**
+		The amount of scaling along the Z axis of this object (default 1.0)
+	**/
+	public var scaleZ(default,set) : Float;
+
 	var absPos : h3d.Matrix;
 	var prevAbsPos : h3d.Matrix;
 	var prevAbsPosFrame : Int = NO_VELOCITY;
 	var invPos : h3d.Matrix;
 	var qRot : h3d.Quat;
 	var posChanged(get,set) : Bool;
+
+	/**
+		Follow a given object or joint as if it was our parent. Ignore defaultTransform when set.
+	**/
+	public var follow(default, set) : Object;
+
+	/**
+		When follow is set, only follow the position and ignore both scale and rotation.
+	**/
+	public var followPositionOnly(get, set) : Bool;
+
+	/**
+		This is an additional optional transformation that is performed before other local transformations.
+		It is used by the animation system.
+	**/
+	public var defaultTransform(default, set) : h3d.Matrix;
+
+	/**
+		The name of the object, can be used to retrieve an object within a tree by using `getObjectByName` (default null)
+	**/
+	public var name : Null<String>;
 
 	/**
 		Create a new empty object, and adds it to the parent object if not null.
@@ -228,7 +232,12 @@ class Object {
 	inline function get_fixedPosition() return flags.has(FFixedPosition);
 	inline function get_alwaysSync() return flags.has(FAlwaysSync);
 	inline function get_drawn() return flags.has(FDrawn);
-	inline function set_posChanged(b) return flags.set(FPosChanged, b || follow != null);
+	inline function set_posChanged(b) {
+		var c = flags.set(FPosChanged, b || follow != null);
+		if ( c && flags.has(FInSync) )
+			flags.set(FPosChangedInSync, true);
+		return c;
+	};
 	inline function set_culled(b) return flags.set(FCulled, b);
 	inline function set_visible(b) return flags.set(FVisible,b);
 	inline function set_allocated(b) return flags.set(FAllocated, b);
@@ -734,7 +743,7 @@ class Object {
 
 	function syncRec( ctx : RenderContext ) {
 		#if sceneprof h3d.impl.SceneProf.mark(this); #end
-
+		#if heaps_prefetch untyped $prefetch(children.length, 2); #end
 		if( currentAnimation != null ) {
 			var old = parent;
 			var dt = ctx.elapsedTime;
@@ -763,6 +772,7 @@ class Object {
 			ctx.cullingCollider = cullingCollider;
 
 		var changed = posChanged;
+		// absPos up to date during sync
 		if( changed ) calcAbsPos();
 		if( fixedPosition ) {
 			if( flags.has(FFixedPositionSynced) && !changed && !ctx.wasContextLost ) {
@@ -772,7 +782,13 @@ class Object {
 			}
 			flags.set(FFixedPositionSynced, true);
 		}
+		flags.set(FPosChangedInSync, false);
+		flags.set(FInSync, true);
 		sync(ctx);
+		flags.set(FInSync, false);
+		changed = changed || flags.has(FPosChangedInSync);
+		// we want to calcAbsPos here only if pos has changed during sync
+		if ( flags.has(FPosChangedInSync) ) calcAbsPos();
 		posChanged = false;
 		lastFrame = ctx.frame;
 		var p = 0, len = children.length;
@@ -782,6 +798,7 @@ class Object {
 				break;
 			if( c.lastFrame != ctx.frame ) {
 				if( changed ) c.posChanged = true;
+				#if heaps_prefetch untyped $prefetch(children[p+1], 2); #end
 				c.syncRec(ctx);
 			}
 			// if the object was removed, let's restart again.

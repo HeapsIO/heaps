@@ -109,6 +109,11 @@ class Capsule extends Collider {
 		return a.distance(b) + 2 * r;
 	}
 
+	public function closestPoint(p : Point) {
+		throw "not implemented";
+		return new h3d.col.Point();
+	}
+
 	#if !macro
 	public function makeDebugObj() : h3d.scene.Object {
 		var obj = new h3d.scene.Object();

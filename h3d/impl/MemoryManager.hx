@@ -1,5 +1,25 @@
 package h3d.impl;
 
+typedef StackStats = {
+	var stats: Array<TextureStat>;
+	var stack : String;
+	var count : Int;
+	var size : Int;
+}
+
+typedef AllocStats = {
+	var position : String;
+	var count : Int;
+	var tex : Bool;
+	var size : Int;
+	var stacks : Array<StackStats>;
+}
+
+typedef TextureStat = {
+	var name: String;
+	var size: Int;
+}
+
 class MemoryManager {
 
 	static inline var MAX_MEMORY = 4096 * (1024. * 1024.); // MB
@@ -10,7 +30,6 @@ class MemoryManager {
 	var driver : Driver;
 	var buffers : Array<Buffer>;
 	var textures : Array<h3d.mat.Texture>;
-	var depths : Array<h3d.mat.Texture>;
 
 	var triIndexes16 : Indexes;
 	var quadIndexes16 : Indexes;
@@ -28,8 +47,11 @@ class MemoryManager {
 	public function init() {
 		textures = new Array();
 		buffers = new Array();
-		depths = new Array();
 		initIndexes();
+	}
+
+	public static function enableTrackAlloc(?b : Bool) {
+		@:privateAccess hxd.impl.AllocPos.ENABLED = b != null ? b : true;
 	}
 
 	function initIndexes() {
@@ -180,7 +202,7 @@ class MemoryManager {
 				free = cleanTextures(false);
 				lastAutoDispose = hxd.Timer.frameCount;
 			}
-			t.t = driver.allocTexture(t);
+			t.t = t.isDepth() ? driver.allocDepthBuffer(t) : driver.allocTexture(t);
 			if( t.t != null ) break;
 
 			if( driver.isDisposed() ) return;
@@ -190,29 +212,6 @@ class MemoryManager {
 		}
 		textures.push(t);
 		texMemory += memSize(t);
-	}
-
-	@:allow(h3d.mat.Texture.alloc)
-	function allocDepth( b : h3d.mat.Texture ) {
-		while( true ) {
-			var free = cleanTextures(false);
-			b.t = driver.allocDepthBuffer(b);
-			if( b.t != null ) break;
-
-			if( driver.isDisposed() ) return;
-			while( cleanTextures(false) ) {} // clean all old textures
-			if( !free && !cleanTextures(true) )
-				throw "Maximum texture memory reached";
-		}
-		depths.push(b);
-		texMemory += b.width * b.height * 4;
-	}
-
-	@:allow(h3d.mat.Texture.dispose)
-	function deleteDepth( b : h3d.mat.Texture ) {
-		if( !depths.remove(b) ) return;
-		driver.disposeDepthBuffer(b);
-		texMemory -= b.width * b.height * 4;
 	}
 
 	// ------------------------------------- DISPOSE ------------------------------------------
@@ -233,8 +232,6 @@ class MemoryManager {
 		quadIndexes32 = null;
 		for( t in textures.copy() )
 			t.dispose();
-		for( b in depths.copy() )
-			b.dispose();
 		for( b in buffers.copy() )
 			b.dispose();
 		buffers = [];
@@ -262,24 +259,24 @@ class MemoryManager {
 	 * Return statistics for currently allocated buffers and textures. Requires -D track-alloc compilation flag
 	 */
 	@:access(h3d.Buffer)
-	public function allocStats() : Array<{ position : String, count : Int, tex : Bool, size : Int, stacks : Array<{ stack : String, count : Int, size : Int }> }> {
-		#if !track_alloc
-		return [];
-		#else
+	public function allocStats() : Array<AllocStats> {
 		var h = new Map();
 		var all = [];
-		inline function addStack( a : hxd.impl.AllocPos, stacks : Array<{ stack : String, count : Int, size : Int }>, size : Int ) {
+		inline function addStack( name: String, a : hxd.impl.AllocPos, stacks : Array<StackStats>, size : Int ) {
 			var stackStr = a.stack.join("\n");
 			for( s in stacks )
 				if( s.stack == stackStr ) {
 					s.size += size;
 					s.count++;
+					s.stats.push({{name: name, size: size}});
 					stackStr = null;
 				}
 			if( stackStr != null )
-				stacks.push({ stack : stackStr, count : 1, size : size });
+				stacks.push({ stats: [{name: name, size: size}], stack : stackStr, count : 1, size : size });
 		}
 		for( t in textures ) {
+			if ( t.allocPos == null )
+				continue;
 			var key = "$"+t.allocPos.position;
 			var inf = h.get(key);
 			if( inf == null ) {
@@ -290,10 +287,12 @@ class MemoryManager {
 			inf.count++;
 			var size = memSize(t);
 			inf.size += size;
-			addStack(t.allocPos, inf.stacks, size);
+			addStack(t.name, t.allocPos, inf.stacks, size);
 		}
 		for( b in buffers ) {
-			var key = b.allocPos == null ? "null" : b.allocPos.position;
+			if ( b.allocPos == null )
+				continue;
+			var key = b.allocPos.position;
 			var inf = h.get(key);
 			if( inf == null ) {
 				inf = { position : key, count : 0, size : 0, tex : false, stacks : [] };
@@ -303,12 +302,9 @@ class MemoryManager {
 			inf.count++;
 			var size = b.vertices * b.format.stride * 4;
 			inf.size += size;
-			addStack(b.allocPos, inf.stacks, size);
+			addStack("buffer", b.allocPos, inf.stacks, size);
 		}
 		all.sort(function(a, b) return b.size - a.size);
 		return all;
-		#end
 	}
-
-
 }

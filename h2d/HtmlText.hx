@@ -66,6 +66,15 @@ class HtmlText extends Text {
 		return text;
 	}
 
+	static var defaultHtmlTags : Map<String,{color:Int,font:String}>;
+	/**
+		Associate a custom html tag to a specific font and color.
+	**/
+	public static function defineDefaultHtmlTag( name : String, ?fontColor : Int, ?fontName : String ) {
+		if( defaultHtmlTags == null ) defaultHtmlTags = [];
+		defaultHtmlTags.set(name,{color:fontColor,font:fontName});
+	}
+
 	/**
 		When enabled, condenses extra spaces (carriage-return, line-feed, tabulation and space character) to one space.
 		If not set, uncondensed whitespace is left as is, as well as line-breaks.
@@ -105,6 +114,7 @@ class HtmlText extends Text {
 	var newLine : Bool;
 	var aHrefs : Array<String>;
 	var aInteractive : Interactive;
+	var htmlTags : Map<String,{?color:Int,?font:String}>;
 
 	override function draw(ctx:RenderContext) {
 		if( dropShadow != null ) {
@@ -193,6 +203,31 @@ class HtmlText extends Text {
 		return defaultFormatText(text);
 	}
 
+	/**
+		Define a custom html tag to be displayed with specific font and color.
+	**/
+	public function defineHtmlTag( name : String, ?fontColor : Int, ?fontName : String ) {
+		if( htmlTags == null ) htmlTags = [];
+		htmlTags.set(name,{color:fontColor,font:fontName});
+		rebuild();
+	}
+
+	/**
+		Define or reset a set of custom html tags to be displayed with specific font and color.
+	**/
+	public function defineHtmlTags( tags : Array<{ name : String, ?color : Int, ?font : String }> ) {
+		if( tags == null ) {
+			if( htmlTags == null )
+				return;
+			htmlTags = null;
+		} else {
+			htmlTags = [];
+			for( t in tags )
+				htmlTags.set(t.name,{color:t.color,font:t.font});
+		}
+		rebuild();
+	}
+
 	override function set_text(t : String) {
 		super.set_text(formatText(t));
 		return t;
@@ -211,21 +246,36 @@ class HtmlText extends Text {
 		validateNodes(textXml);
 	}
 
+	function resolveHtmlTag( name : String ) {
+		if( htmlTags != null ) {
+			var t = htmlTags.get(name);
+			if( t != null ) return t;
+		}
+		if( defaultHtmlTags != null ) {
+			var t = defaultHtmlTags.get(name);
+			if( t != null ) return t;
+		}
+		return null;
+	}
+
 	function validateNodes( xml : Xml ) {
 		switch( xml.nodeType ) {
 		case Element:
 			var nodeName = xml.nodeName.toLowerCase();
-			switch ( nodeName ) {
-				case "img":
-					loadImage(xml.get("src"));
-				case "font":
-					if (xml.exists("face")) {
-						loadFont(xml.get("face"));
-					}
-				case "b", "bold":
-					loadFont("bold");
-				case "i", "italic":
-					loadFont("italic");
+			var t = resolveHtmlTag(nodeName);
+			if( t?.font != null ) loadFont(t.font);
+			switch( nodeName ) {
+			case "img":
+				loadImage(xml.get("src"));
+			case "font":
+				if (xml.exists("face")) {
+					loadFont(xml.get("face"));
+				}
+			case "b", "bold":
+				if( t?.font == null ) loadFont("bold");
+			case "i", "italic":
+				if( t?.font == null ) loadFont("italic");
+			default:
 			}
 			for( child in xml )
 				validateNodes(child);
@@ -286,8 +336,8 @@ class HtmlText extends Text {
 		var y = yPos;
 		calcXMin = xMin;
 		calcWidth = xMax - xMin;
-		calcHeight = y + metrics[sizePos].height;
-		calcSizeHeight = y + metrics[sizePos].baseLine;//(font.baseLine > 0 ? font.baseLine : font.lineHeight);
+		calcHeight = y + metrics[sizePos].height - calcYMin;
+		calcSizeHeight = y + metrics[sizePos].baseLine;
 		calcDone = true;
 		if ( rebuild ) needsRebuild = false;
 	}
@@ -330,6 +380,9 @@ class HtmlText extends Text {
 			}
 
 			var nodeName = e.nodeName.toLowerCase();
+			var tag = resolveHtmlTag(nodeName);
+			if( tag?.font != null )
+				font = loadFont(tag.font);
 			switch( nodeName ) {
 			case "p":
 				if ( !newLine ) {
@@ -396,9 +449,11 @@ class HtmlText extends Text {
 					}
 				}
 			case "b", "bold":
-				font = loadFont("bold");
+				if( tag?.font == null )
+					font = loadFont("bold");
 			case "i", "italic":
-				font = loadFont("italic");
+				if( tag?.font == null )
+					font = loadFont("italic");
 			default:
 			}
 			for( child in e )
@@ -668,6 +723,14 @@ class HtmlText extends Text {
 				@:privateAccess glyphs.curColor.load(prev.curColor);
 				elements.push(glyphs);
 			}
+			var tag = resolveHtmlTag(nodeName);
+			if( tag != null ) {
+				if( tag.font != null ) setFont(tag.font);
+				if( tag.color != null ) {
+					if( prevColor == null ) prevColor = @:privateAccess glyphs.curColor.clone();
+					glyphs.setDefaultColor(tag.color);
+				}
+			}
 			switch( nodeName ) {
 			case "font":
 				for( a in e.attributes() ) {
@@ -716,9 +779,9 @@ class HtmlText extends Text {
 					nextLine(align, metrics[sizePos].width);
 				}
 			case "b","bold":
-				setFont("bold");
+				if( tag?.font == null ) setFont("bold");
 			case "i","italic":
-				setFont("italic");
+				if( tag?.font == null ) setFont("italic");
 			case "br":
 				makeLineBreak();
 				newLine = true;

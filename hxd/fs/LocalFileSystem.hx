@@ -104,13 +104,12 @@ class LocalEntry extends FileEntry {
 
 	/*
 	When a resource is load, we add a watcher on it and wtih callback to call
-	when this resource is modified. The problem is that in editor, several engine works
-	in parallel, and if the same resource is load by different engine, we have
+	when this resource is modified. The problem is that in case several engine works
+	in parallel, and if the same resource is loaded by different engine, we have
 	to reload this resource for each engine when the file is modified (resulting
-	in one file watcher with multiple callback). This problem occures only in editor (because
-	games contains only one engine) so this feature is editor only.
+	in one file watcher with multiple callback).
 	*/
-	#if editor var watchOnChangedHistory : Array<Null<Void -> Void>>; #end
+	#if multidriver var watchByEngine : Array<Null<Void -> Void>>; #end
 
 	#if (hl && (hl_ver >= version("1.12.0")) && !usesys)
 	var watchHandle : hl.uv.Fs;
@@ -118,6 +117,7 @@ class LocalEntry extends FileEntry {
 	var onChangedDelay : haxe.Timer;
 	#else
 	var watchTime : Float;
+	var lastCheck : { fileTime : Float, stampTime : Float };
 	#end
 
 	static var WATCH_INDEX = 0;
@@ -158,18 +158,32 @@ class LocalEntry extends FileEntry {
 		}
 		var lockFile = tmpDir+"/"+w.file.split("/").pop()+".lock";
 		if( sys.FileSystem.exists(lockFile) ) return;
-		if( !w.isDirectory )
-		try {
-			#if nodejs
-			var cst = js.node.Fs.constants;
-			var fid = js.node.Fs.openSync(w.file, cast (cst.O_RDONLY | cst.O_EXCL | 0x10000000));
-			js.node.Fs.closeSync(fid);
-			#elseif hl
-			if( fileIsLocked(@:privateAccess Sys.getPath(w.file)) )
-				return;
-			#end
-		}catch( e : Dynamic ) return;
+		if( !w.isDirectory ) {
+			try {
+				#if nodejs
+				var cst = js.node.Fs.constants;
+				var path = w.file;
+				#if (multidriver && !macro) // Hide
+				// Fix searching path in hide/bin folder
+				path = hide.Ide.inst.getPath(path);
+				#end
+				var fid = js.node.Fs.openSync(path, cast (cst.O_APPEND | 0x10000000));
+				js.node.Fs.closeSync(fid);
+				#elseif hl
+				if( fileIsLocked(@:privateAccess Sys.getPath(w.file)) )
+					return;
+				#end
+			}catch( e : Dynamic ) return;
+		}
 		#end
+
+		var stampTime = haxe.Timer.stamp();
+		if ( w.lastCheck == null || w.lastCheck.fileTime != t ) {
+			w.lastCheck = { fileTime : t, stampTime : stampTime };
+			return;
+		}
+		if ( stampTime < w.lastCheck.stampTime + FileConverter.FILE_TIME_PRECISION * 0.001 )
+			return;
 
 		w.watchTime = t;
 		w.watchCallback();
@@ -181,7 +195,7 @@ class LocalEntry extends FileEntry {
 			if( watchCallback != null ) {
 				WATCH_LIST.remove(this);
 				watchCallback = null;
-				#if editor watchOnChangedHistory = null; #end
+				#if multidriver watchByEngine = null; #end
 				#if (hl && (hl_ver >= version("1.12.0")) && !usesys)
 				watchHandle.close();
 				watchHandle = null;
@@ -209,9 +223,9 @@ class LocalEntry extends FileEntry {
 					w.watchCallback = null;
 					WATCH_LIST.remove(w);
 
-					#if editor
-					if (w.watchOnChangedHistory != null)
-						this.watchOnChangedHistory = w.watchOnChangedHistory.copy();
+					#if multidriver
+					if (w.watchByEngine != null)
+						this.watchByEngine = w.watchByEngine.copy();
 					#end
 				}
 			WATCH_LIST.push(this);
@@ -238,24 +252,37 @@ class LocalEntry extends FileEntry {
 		watchTime = getModifTime();
 		#end
 
-		#if editor
-		if (watchOnChangedHistory == null)
-			watchOnChangedHistory = [ onChanged ];
-		else
-			watchOnChangedHistory.push(onChanged);
+		#if multidriver
+		if (watchByEngine == null)
+			watchByEngine = [];
+		var engine = h3d.Engine.getCurrent();
+		if ( engine != null )
+			watchByEngine[engine.id] = onChanged;
 		#end
 
 		watchCallback = function() {
+			#if (js && multidriver && !macro)
+			try {
+				fs.convert.run(this);
+			} catch ( e : Dynamic ) {
+				hide.Ide.inst.quickMessage('Failed convert for ${name}, trying again');
+				// Convert failed, let's mark this watch as not performed.
+				watchTime = -1;
+				lastCheck = null;
+				return;
+			}
+			#else
 			fs.convert.run(this);
+			#end
 
-			#if editor
-			if (watchOnChangedHistory == null)
+			#if multidriver
+			if (watchByEngine == null)
 				return;
 
-			var idx = watchOnChangedHistory.length - 1;
+			var idx = watchByEngine.length - 1;
 			while (idx >= 0) {
-				if (watchOnChangedHistory[idx] != null)
-					watchOnChangedHistory[idx]();
+				if (watchByEngine[idx] != null)
+					watchByEngine[idx]();
 				idx--;
 			}
 			#else
@@ -263,6 +290,21 @@ class LocalEntry extends FileEntry {
 			#end
 		}
 	}
+
+	#if multidriver
+	override function unwatch(id : Int) {
+		if ( watchByEngine == null || watchByEngine.length <= id )
+			return;
+		watchByEngine[id] = null;
+		var i = watchByEngine.length;
+		while ( i > 0 ) {
+			if ( watchByEngine[i-1] != null )
+				break;
+			i--;
+		}
+		watchByEngine.resize(i);
+	}
+	#end
 }
 
 class LocalFileSystem implements FileSystem {
