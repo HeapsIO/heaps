@@ -80,7 +80,6 @@ class Skin extends MultiMaterial {
 	var jointsGraphics : Graphics;
 	var additivePose : Array<h3d.Matrix>;
 	var g : Graphics;
-	var dynUpdated : Bool = false;
 
 	public var showJoints : Bool;
 	public var enableRetargeting : Bool = true;
@@ -296,12 +295,11 @@ class Skin extends MultiMaterial {
 
 	function syncDynamicJoints() {
 		// Update dynamic joints
-		dynUpdated = false;
 		for( j in skinData.allJoints ) {
 			if ( j.follow != null ) continue;
 			var dynJoint = Std.downcast(j, h3d.anim.Skin.DynamicJoint);
 			if (dynJoint == null) continue;
-		
+
 			var absPos = dynJoint.absPos == null ? currentAbsPose[dynJoint.index] : dynJoint.absPos;
 			var newWorldPos = absPos.getPosition().clone();
 			var expectedPos = absPos.getPosition().clone();
@@ -312,10 +310,8 @@ class Skin extends MultiMaterial {
 
 			// Damping (inertia attenuation)
 			dynJoint.speed *= 1.0 - dynJoint.damping;
-			if (dynJoint.speed.lengthSq() > DynamicJoint.SLEEP_THRESHOLD) {
+			if (dynJoint.speed.lengthSq() > DynamicJoint.SLEEP_THRESHOLD)
 				newWorldPos += dynJoint.speed * hxd.Timer.dt;
-				dynUpdated = true;
-			}
 
 			// Stiffness (shape keeper)
 			var parentMovement = currentAbsPose[j.parent.index].getPosition() - currentAbsPose[dynJoint.parent.index].getPosition();
@@ -331,27 +327,7 @@ class Skin extends MultiMaterial {
 			// Apply computed position to joint
 			dynJoint.speed = (dynJoint.speed + (newWorldPos - absPos.getPosition()) * (1.0 / hxd.Timer.dt)) * 0.5;
 			currentAbsPose[j.index].setPosition(newWorldPos);
-			dynJoint.absPos = currentAbsPose[j.index];
-
-			if( dynJoint.bindIndex >= 0 )
-				currentPalette[dynJoint.bindIndex].multiply3x4inline(j.transPos, currentAbsPose[j.index]);
-
-			skinShader.bonesMatrixes = currentPalette;
-		}
-
-		// Update transforms
-		function recomputeAbsPosFrom(dynJoint: DynamicJoint) {
-			currentAbsPose[dynJoint.index] = new Matrix();
-			currentAbsPose[dynJoint.index].identity();
-			currentAbsPose[dynJoint.index].multiply3x4inline(dynJoint.relPos, currentAbsPose[dynJoint.parent.index]);
-
-			if( dynJoint.bindIndex >= 0 )
-				currentPalette[dynJoint.bindIndex].multiply3x4inline(dynJoint.transPos, currentAbsPose[dynJoint.index]);
-
-			if (dynJoint.subs != null) {
-				for (s in dynJoint.subs)
-					recomputeAbsPosFrom(cast s);
-			}
+			dynJoint.absPos = currentAbsPose[dynJoint.index].clone();
 		}
 
 		for( j in skinData.allJoints ) {
@@ -359,28 +335,25 @@ class Skin extends MultiMaterial {
 
 			var dynJoint = Std.downcast(j, h3d.anim.Skin.DynamicJoint);
 			if (dynJoint == null) continue;
-			if (dynJoint.subs.length != 1) continue;
-			var child = Std.downcast(dynJoint.subs[0], DynamicJoint);
+			if (dynJoint.subs.length == 1) {
+				var child = Std.downcast(dynJoint.subs[0], DynamicJoint);
 
-			currentAbsPose[dynJoint.index].load(dynJoint.absPos);
+				var q = new Quat();
+				var offset = currentAbsPose[child.index].getPosition() - currentAbsPose[dynJoint.index].getPosition();
+				offset.transform3x3(currentAbsPose[dynJoint.index].getInverse());
+				q.initMoveTo(child.relPos.getPosition().normalized(), offset.normalized());
 
-			var q = new Quat();
-			var offset = child.absPos.getPosition() - dynJoint.absPos.getPosition();
-			offset.transform3x3(currentAbsPose[dynJoint.index].getInverse());
-			q.initMoveTo(child.relPos.getPosition().normalized(), offset.normalized());
+				currentAbsPose[dynJoint.index].multiply(q.toMatrix(), currentAbsPose[dynJoint.index]);
+				if( dynJoint.bindIndex >= 0 )
+					currentPalette[dynJoint.bindIndex].multiply3x4inline(j.transPos, currentAbsPose[dynJoint.index]);
 
-			currentAbsPose[dynJoint.index].multiply(q.toMatrix(), currentAbsPose[dynJoint.index]);
-
-			if( dynJoint.bindIndex >= 0 )
-				currentPalette[dynJoint.bindIndex].multiply3x4inline(j.transPos, currentAbsPose[dynJoint.index]);
-
-			for (s in dynJoint.subs) {
-				recomputeAbsPosFrom(cast s);
+				currentAbsPose[dynJoint.index].load(dynJoint.absPos);
+			}
+			else {
+				if( dynJoint.bindIndex >= 0 )
+					currentPalette[dynJoint.bindIndex].multiply3x4inline(j.transPos, currentAbsPose[dynJoint.index]);
 			}
 		}
-
-		if (dynUpdated)
-			jointsUpdated = true;
 
 		skinShader.bonesMatrixes = currentPalette;
 	}
