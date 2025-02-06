@@ -291,6 +291,7 @@ enum TGlobal {
 	InstanceID;
 	// gl globals
 	FragCoord;
+	FragDepth;
 	FrontFacing;
 	// bit casting
 	FloatBitsToInt;
@@ -522,6 +523,8 @@ class Tools {
 			return hasSideEffect(it) || hasSideEffect(loop);
 		case TArray(e, index):
 			return hasSideEffect(e) || hasSideEffect(index);
+		case TGlobal(FragDepth):
+			return true;
 		case TConst(_), TVar(_), TGlobal(_):
 			return false;
 		case TCall({ e : TGlobal(SetLayout) },_):
