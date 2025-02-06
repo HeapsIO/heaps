@@ -35,7 +35,10 @@ class DynamicJoint extends Joint {
 	public var relPos : h3d.Matrix; // Initial relative pos before joint get moved by animation / dynamic system
 
 	public var speed : h3d.Vector;
-	
+
+	// Global parameters
+	public var globalForce : Vector = new Vector(0.0, 0.0, 0.0);
+
 	// Parameters
 	public var radius : Float = 0.0;
 	public var damping : Float = 0.4;

@@ -249,6 +249,7 @@ class Skin extends MultiMaterial {
 		if( !ctx.visibleFlag && !alwaysSyncAnimation )
 			return;
 		syncJoints();
+		syncDynamicJoints();
 	}
 
 	static var TMP_MAT = new h3d.Matrix();
