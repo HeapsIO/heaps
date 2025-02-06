@@ -106,6 +106,8 @@ class Checker {
 						r.push( { args : [ { name : "x", type : t }, { name : "y", type : t }, { name : "a", type : TFloat } ], ret : t } );
 				}
 				r;
+			case InvLerp:
+				[ { args : [{ name : "a", type : TFloat }, { name : "x", type : TFloat }, { name : "y", type : TFloat } ], ret : TFloat } ];
 			case Step:
 				var r = [];
 				for( t in genType ) {
@@ -802,7 +804,7 @@ class Checker {
 					checkConst(e);
 					einit = e;
 				}
-				if( v.type == null ) error("Type required for variable declaration", e.pos);				
+				if( v.type == null ) error("Type required for variable declaration", e.pos);
 				if( isImport && v.kind == Param )
 					continue;
 
@@ -875,6 +877,7 @@ class Checker {
 			name : v.name,
 			kind : v.kind,
 			type : v.type,
+			qualifiers : v.qualifiers
 		};
 		if( parent != null )
 			tv.parent = parent;
@@ -933,6 +936,7 @@ class Checker {
 					default: error("Sampler should be on sampler type or sampler array", pos);
 					}
 				case Ignore, Doc(_):
+				case Flat: if( tv.kind != Local ) error("flat only allowed on local", pos);
 				}
 		}
 		if( tv.type != null )

@@ -53,8 +53,12 @@ class HMDModel extends MeshPrimitive {
 		curMaterial = material + lod * data.indexCounts.length;
 	}
 
-	override function getMaterialIndexes(material:Int, lod:Int=0):{count:Int, start:Int} {
-		return { start : indexesTriPos[material + lod * data.indexCounts.length]*3, count : lods[lod].indexCounts[material] };
+	override function getMaterialIndexStart( material : Int, lod : Int = 0 ) : Int {
+		return indexesTriPos[material + lod * data.indexCounts.length]*3;
+	}
+
+	override function getMaterialIndexCount( material : Int, lod : Int = 0 ) : Int {
+		return lods[lod].indexCounts[material];
 	}
 
 	public function getDataBuffers(fmt, ?defaults,?material) {

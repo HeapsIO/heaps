@@ -168,6 +168,7 @@ class Flatten {
 				name : v.name,
 				type : TArray(TVec(4,VFloat),SConst(size)),
 				kind : v.kind,
+				qualifiers : v.qualifiers
 			};
 			var a = new Alloc(v2,VFloat,0,0);
 			a.v = v;

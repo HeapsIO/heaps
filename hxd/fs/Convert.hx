@@ -11,9 +11,11 @@ class Convert {
 	public var version(default, null):Int;
 
 	public var params:Dynamic;
+	public var localParams:Dynamic;
 
 	public var srcPath:String;
 	public var dstPath:String;
+	public var baseDir:String;
 	public var originalFilename:String;
 	public var srcBytes:haxe.io.Bytes;
 	/*
@@ -21,14 +23,37 @@ class Convert {
 	*/
 	public var hash : String;
 
-	public function new(sourceExts, destExt) {
+	public function new(sourceExts:String, destExt:String) {
 		this.sourceExts = sourceExts == null ? null : sourceExts.split(",");
 		this.destExt = destExt;
 		this.version = 0;
 	}
 
+	public function cleanup() {
+		params = null;
+		localParams = null;
+		srcPath = null;
+		dstPath = null;
+		baseDir = null;
+		originalFilename = null;
+		srcBytes = null;
+		hash = null;
+	}
+
 	public function convert() {
 		throw "Not implemented";
+	}
+
+	/**
+		A function that should return quickly if the convert might have local params or not.
+		Do not have access to: srcBytes, hash.
+	**/
+	public function hasLocalParams():Bool {
+		return false;
+	}
+
+	public function computeLocalParams():Dynamic {
+		return null;
 	}
 
 	function hasParam(name:String) {
@@ -72,12 +97,81 @@ class Convert {
 
 #if (sys || nodejs)
 class ConvertFBX2HMD extends Convert {
+	var fbx : hxd.fmt.fbx.Data.FbxNode;
+
 	public function new() {
 		super("fbx", "hmd");
 	}
 
+	override function cleanup() {
+		super.cleanup();
+		fbx = null;
+	}
+
+	override function hasLocalParams():Bool {
+		return (params != null && params.collide != null);
+	}
+
+	override function computeLocalParams():Dynamic {
+		// Parse fbx to find used materials
+		fbx = try hxd.fmt.fbx.Parser.parse(srcBytes) catch (e:Dynamic) throw Std.string(e) + " in " + srcPath;
+		var matNodes = hxd.fmt.fbx.Data.FbxTools.getAll(fbx, "Objects.Material");
+		var matNames = [];
+		for( o in matNodes ) {
+			var name = hxd.fmt.fbx.Data.FbxTools.getName(o);
+			matNames.push(name);
+		}
+		// Parse material.props to find material config
+		var ignoredMaterials = [];
+		var dirPath = srcPath.substring(0, srcPath.lastIndexOf("/"));
+		var matPropsPath = dirPath + "/materials.props";
+		var matProps = null;
+		try {
+			var res = hxd.File.getBytes(matPropsPath).toString();
+			matProps = haxe.Json.parse(res).materials;
+		} catch( e ) {
+		}
+		if( matProps == null )
+			return null;
+		var modelLibCache = new Map<String, Array<Dynamic>>();
+		for( config in Reflect.fields(matProps) ) {
+			var configProps = Reflect.field(matProps, config);
+			for( matName in matNames ) {
+				var m = Reflect.field(configProps, matName);
+				if( m == null )
+					continue;
+				if( m.ignoreCollide == true ) {
+					ignoredMaterials.push(matName);
+					continue;
+				}
+				// Parse model library
+				if( m.__ref != null && m.name != null ) {
+					var libchildren = modelLibCache.get(m.__ref);
+					if( libchildren == null ) {
+						var lib = try haxe.Json.parse(hxd.File.getBytes(baseDir + m.__ref).toString()) catch( e ) null;
+						if( lib == null || lib.children == null )
+							continue;
+						libchildren = lib.children;
+						modelLibCache.set(m.__ref, libchildren);
+					}
+					for( c in libchildren ) {
+						if( c.type == "material" && c.name == m.name ) {
+							if( c.props?.PBR?.ignoreCollide == true ) {
+								ignoredMaterials.push(matName);
+							}
+							break;
+						}
+					}
+				}
+			}
+		}
+		return { ignoreCollideMaterials : ignoredMaterials };
+	}
+
 	override function convert() {
-		var fbx = try hxd.fmt.fbx.Parser.parse(srcBytes) catch (e:Dynamic) throw Std.string(e) + " in " + srcPath;
+		if( fbx == null ) {
+			fbx = try hxd.fmt.fbx.Parser.parse(srcBytes) catch (e:Dynamic) throw Std.string(e) + " in " + srcPath;
+		}
 		var hmdout = new hxd.fmt.fbx.HMDOut(srcPath);
 		if (params != null) {
 			if (params.normals)
@@ -113,6 +207,11 @@ class ConvertFBX2HMD extends Convert {
 			if (params.lodsDecimation != null) {
 				var config: Array<Float> = params.lodsDecimation;
 				hmdout.lodsDecimation = [for(lod in config) lod];
+			}
+		}
+		if( localParams != null ) {
+			if( localParams.ignoreCollideMaterials != null ) {
+				hmdout.ignoreCollides = localParams.ignoreCollideMaterials;
 			}
 		}
 		hmdout.load(fbx);

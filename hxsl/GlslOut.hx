@@ -375,6 +375,8 @@ class GlslOut {
 			decl("vec2 _uintBitsToFloat( ivec2 v ) { return uintBitsToFloat(uvec2(v)); }");
 			decl("vec3 _uintBitsToFloat( ivec3 v ) { return uintBitsToFloat(uvec3(v)); }");
 			decl("vec4 _uintBitsToFloat( ivec4 v ) { return uintBitsToFloat(uvec4(v)); }");
+		case InvLerp:
+			decl("float invLerp(float v, float a, float b) { return clamp((v - a) / (b - a), 0.0, 1.0); }");
 		default:
 		}
 		return GLOBALS[g.getIndex()];
@@ -745,6 +747,8 @@ class GlslOut {
 		case Input:
 			add( isES2 ? "attribute " : "in ");
 		case Var:
+			if ( Tools.hasQualifier(v, Flat) )
+				add("flat ");
 			add( isES2 ? "varying " : (isVertex ? "out " : "in "));
 		case Output:
 			if( isES2 ) {

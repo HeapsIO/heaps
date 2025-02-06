@@ -226,6 +226,8 @@ class CompiledShader {
 	@:packed public var rect(default,null) : Rect;
 	@:packed public var bufferSRV(default,null) : BufferSRV;
 	@:packed public var samplerDesc(default,null) : SamplerDesc;
+	@:packed public var vertexGlobalDesc(default,null) : ConstantBufferViewDesc;
+	@:packed public var fragmentGlobalDesc(default,null) : ConstantBufferViewDesc;
 	@:packed public var cbvDesc(default,null) : ConstantBufferViewDesc;
 	@:packed public var rtvDesc(default,null) : RenderTargetViewDesc;
 	@:packed public var uavDesc(default,null) : UAVBufferViewDesc;
@@ -404,6 +406,8 @@ class DX12Driver extends h3d.impl.Driver {
 	var tsFreq : haxe.Int64;
 	var heapCount : Int;
 	var currentPipelineState : PipelineState;
+	var lastVertexGlobalBind : Int = -1;
+	var lastFragmentGlobalBind : Int = -1;
 
 	public static var INITIAL_RT_COUNT = 1024;
 	public static var INITIAL_BUMP_ALLOCATOR_SIZE = 2 * 1024 * 1024;
@@ -1303,27 +1307,30 @@ class DX12Driver extends h3d.impl.Driver {
 		}
 
 		var totalVertex = calcSize(shader.vertex);
-		var totalFragment = shader.mode == Compute ? 0 : calcSize(shader.fragment);
+		var isCompute = shader.mode == Compute;
+		var totalFragment = isCompute ? 0 : calcSize(shader.fragment);
 		var total = totalVertex + totalFragment;
 
 		if( total > 64 ) {
-			var vertexParamSizeCost = (shader.vertex.paramsSize << 2);
-			var fragmentParamSizeCost = (shader.fragment.paramsSize << 2);
+			var vertexParamCostGain = 1 - (shader.vertex.paramsSize << 2);
+			var fragmentParamCostGain = isCompute ? 0 : 1 - (shader.fragment.paramsSize << 2);
 
 			// Remove the size cost of the root constant and add one descriptor table.
-			var withoutVP = total - vertexParamSizeCost + 1;
-			var withoutFP = total - fragmentParamSizeCost + 1;
+			var withoutVP = total + vertexParamCostGain;
+			var withoutFP = total + fragmentParamCostGain;
 			if( withoutVP <= 64 || ( withoutFP > 64 && withoutVP > 64 ) ) {
 				vertexParamsCBV = true;
 				total = withoutVP;
 			}
-			if( total > 64 ) {
+			if( total > 64 && !isCompute ) {
 				fragmentParamsCBV = true;
-				total = total - fragmentParamSizeCost + 1;
+				total = total + fragmentParamCostGain;
 			}
 			if( total > 64 ) {
 				globalsParamsCBV = true;
-				var withoutGlobal = total - (shader.vertex.globalsSize << 2) - (shader.fragment.globalsSize << 2) + 2;
+				var vertexGlobalCostGain = 1 - (shader.vertex.globalsSize << 2);
+				var fragmentGlobalCostGain = isCompute ? 0 : 1 - (shader.fragment.globalsSize << 2);
+				var withoutGlobal = total + vertexGlobalCostGain + fragmentGlobalCostGain;
 				if ( withoutGlobal > 64 )
 					throw "Too many params. Should not be possible if every params fall into descriptor table.";
 			}
@@ -1394,6 +1401,10 @@ class DX12Driver extends h3d.impl.Driver {
 
 		var inputLayout = hl.CArray.alloc(InputElementDesc, inputs.length);
 		var format : Array<hxd.BufferFormat.BufferInput> = [];
+		var allNames = new Map();
+		var varNames = new Map();
+		for ( i => v in inputs)
+			hxsl.HlslOut.varName(v, varNames, allNames);
 		for( i => v in inputs ) {
 			var d = inputLayout[i];
 			var perInst = 0;
@@ -1403,7 +1414,7 @@ class DX12Driver extends h3d.impl.Driver {
 					case PerInstance(k): perInst = k;
 					default:
 					}
-			d.semanticName = @:privateAccess hxsl.HlslOut.semanticName(v.name).toUtf8();
+			d.semanticName = @:privateAccess hxsl.HlslOut.semanticName(varNames.get(v.id)).toUtf8();
 			d.inputSlot = i;
 			format.push({ name : v.name, type : hxd.BufferFormat.InputFormat.fromHXSL(v.type) });
 			if( perInst > 0 ) {
@@ -1901,6 +1912,8 @@ class DX12Driver extends h3d.impl.Driver {
 					frame.commandList.setGraphicsRoot32BitConstants(regs.params, dataSize >> 2, data, 0);
 			}
 		case Globals:
+			var isFragment = shader.kind == Fragment;
+			var bind = -1;
 			if( shader.globalsSize > 0 ) {
 				var data = hl.Bytes.getArray(buf.globals.toData());
 				var dataSize = shader.globalsSize << 4;
@@ -1908,19 +1921,25 @@ class DX12Driver extends h3d.impl.Driver {
 					// update CBV
 					var srv = frame.shaderResourceViews.alloc(1);
 					var alloc = allocDynamicBuffer(data,dataSize);
-					var desc = tmp.cbvDesc;
+					var desc = isFragment ? tmp.fragmentGlobalDesc : tmp.vertexGlobalDesc;
 					desc.bufferLocation = alloc.resource.getGpuVirtualAddress() + alloc.offset;
 					desc.sizeInBytes = alloc.byteSize;
 					Driver.createConstantBufferView(desc, srv);
+					bind = regs.globals & 0xFF;
 					if( currentShader.isCompute )
-						frame.commandList.setComputeRootDescriptorTable(regs.globals & 0xFF, frame.shaderResourceViews.toGPU(srv));
+						frame.commandList.setComputeRootDescriptorTable(bind, frame.shaderResourceViews.toGPU(srv));
 					else
-						frame.commandList.setGraphicsRootDescriptorTable(regs.globals & 0xFF, frame.shaderResourceViews.toGPU(srv));
+						frame.commandList.setGraphicsRootDescriptorTable(bind, frame.shaderResourceViews.toGPU(srv));
 				} else if( currentShader.isCompute )
 					frame.commandList.setComputeRoot32BitConstants(regs.globals, dataSize >> 2, data, 0);
 				else
 					frame.commandList.setGraphicsRoot32BitConstants(regs.globals, dataSize >> 2, data, 0);
 			}
+			if ( isFragment )
+				lastFragmentGlobalBind = bind;
+			else
+				lastVertexGlobalBind = bind;
+
 		case Textures:
 			if( shader.texturesCount > 0 ) {
 				if ( hasBuffersTexturesChanged(buf, regs) ) {
@@ -2382,6 +2401,18 @@ class DX12Driver extends h3d.impl.Driver {
 			arr[0] = @:privateAccess frame.shaderResourceViews.heap;
 			arr[1] = @:privateAccess frame.samplerViews.heap;
 			frame.commandList.setDescriptorHeaps(arr);
+			inline function rebindGlobal(bindSlot, desc) {
+				var srv = frame.shaderResourceViews.alloc(1);
+				Driver.createConstantBufferView(desc, srv);
+				if( currentShader.isCompute )
+					frame.commandList.setComputeRootDescriptorTable(bindSlot, frame.shaderResourceViews.toGPU(srv));
+				else
+					frame.commandList.setGraphicsRootDescriptorTable(bindSlot, frame.shaderResourceViews.toGPU(srv));
+			}
+			if ( lastVertexGlobalBind >= 0 )
+				rebindGlobal(lastVertexGlobalBind, tmp.vertexGlobalDesc);
+			if ( lastFragmentGlobalBind >= 0 )
+				rebindGlobal(lastFragmentGlobalBind, tmp.fragmentGlobalDesc);
 		}
 	}
 

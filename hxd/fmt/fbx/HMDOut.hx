@@ -24,6 +24,8 @@ class HMDOut extends BaseLibrary {
 	public var generateNormals = false;
 	public var generateTangents = false;
 	public var generateCollides : CollideParams;
+	public var ignoreCollides : Array<String>;
+	var ignoreCollidesCache : Map<Int,Bool> = [];
 	public var lowPrecConfig : Map<String,Precision>;
 	public var lodsDecimation : Array<Float>;
 
@@ -845,9 +847,18 @@ class HMDOut extends BaseLibrary {
 			}
 			var triangleCount = 0;
 			for ( i in 0...Std.int(index.length / 3) ) {
-				var mat = mats == null ? 0 : mats[i];
+				var mat = (mats == null || i >= mats.length) ? 0 : mats[i];
 				if ( mat >= d.materials.length )
 					continue;
+				if( ignoreCollides != null ) {
+					var b = ignoreCollidesCache.get(mat);
+					if( b == null ) {
+						b = ignoreCollides.contains(d.materials[mat].name);
+						ignoreCollidesCache.set(mat, b);
+					}
+					if( b == true )
+						continue;
+				}
 				cb(unpackIndex(index[3*i]));
 				cb(unpackIndex(index[3*i+1]));
 				cb(unpackIndex(index[3*i+2]));
@@ -1262,10 +1273,14 @@ class HMDOut extends BaseLibrary {
 			}
 
 			// Reorder materials to unsure there are in the same order for lods
-			midsSortRemap = new Map<Int, Int>();
-			for (idx in 0...mids.length) {
-				midsSortRemap.set(idx, mids[idx]);
-				mids[idx] = idx;
+			var lodsInfos = getLODInfos(model.name);
+			if (lodsInfos.lodLevel != -1) {
+				midsSortRemap = new Map<Int, Int>();
+				var start = d.materials.length - mids.length;
+				for (idx in 0...mids.length) {
+					midsSortRemap.set(idx, mids[idx]);
+					mids[idx + start] = start + idx;
+				}
 			}
 
 			var gdata = hgeom.get(g.getId());

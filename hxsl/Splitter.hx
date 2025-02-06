@@ -261,8 +261,17 @@ class Splitter {
 						kind : v.kind,
 						type : v.type,
 					};
-					if( v.qualifiers != null && v.qualifiers.indexOf(Final) >= 0 )
-						nv.qualifiers = [Final];
+					if( v.qualifiers != null ) {
+						for ( q in v.qualifiers ) {
+							switch (q) {
+							case Final, Flat:
+								if ( nv.qualifiers == null )
+									nv.qualifiers = [];
+								nv.qualifiers.push(q);
+							case Const(_), Private, Nullable, PerObject, Name(_), Shared, Precision(_), Range(_,_), Ignore, PerInstance(_), Doc(_), Borrow(_), Sampler(_):
+							}
+						}
+					}
 					uniqueName(nv);
 				}
 				varMap.set(v,nv);

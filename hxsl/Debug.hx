@@ -12,7 +12,7 @@ class Debug {
 	public static function varName( v : Ast.TVar, swizBits = 15 ) {
 		var name = v.name;
 		if( swizBits != 15 ) name += swizStr(swizBits);
-		return VAR_IDS ? v.name+"@"+v.id : v.name;
+		return VAR_IDS ? name+"@"+v.id : name;
 	}
 
 	static function swizStr( bits : Int ) {

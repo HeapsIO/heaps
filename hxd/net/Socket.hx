@@ -37,11 +37,12 @@ class Socket {
 	var s : hl.uv.Stream;
 	#elseif (nodejs && hxnodejs)
 	var s : js.node.net.Socket;
+	var srv : js.node.net.Server;
 	#end
 	public var out(default, null) : SocketOutput;
 	public var input(default, null) : SocketInput;
 	public var timeout(default, set) : Null<Float>;
-	
+
 	public static inline var ALLOW_BIND = #if (hl || (nodejs && hxnodejs)) true #else false #end;
 
 	public function new() {
@@ -67,6 +68,16 @@ class Socket {
 			out = new HLSocketOutput(this);
 			input = new HLSocketInput(this);
 			onConnect();
+		});
+		#elseif (nodejs && hxnodejs)
+		s = js.node.Net.connect(port, host, function() {
+			out = new NodeSocketOutput(this);
+			input = new NodeSocketInput(this);
+			onConnect();
+		});
+		s.on('error', function() {
+			close();
+			onError("Connection closed");
 		});
 		#else
 		throw "Not implemented";
@@ -95,17 +106,22 @@ class Socket {
 			throw e;
 		}
 		#elseif (nodejs && hxnodejs)
-		js.node.Net.createServer(function(sock) {
+		srv = js.node.Net.createServer(function(sock) {
 			var s = new Socket();
 			s.s = sock;
+			s.s.on('error', function(e) {
+				s.close();
+				s.onError("Connection closed");
+			});
 			s.out = new NodeSocketOutput(s);
 			s.input = new NodeSocketInput(s);
 			openedSocks.push(s);
 			onConnect(s);
 		}).on('error', function(e) {
 			close();
-			throw e;
-		}).listen(port, host, listenCount);
+			onError(e);
+		});
+		srv.listen(port, host, listenCount);
 		#else
 		throw "Not implemented";
 		#end
@@ -124,6 +140,10 @@ class Socket {
 			s.destroy();
 			out = new SocketOutput();
 			s = null;
+		}
+		if( srv != null ) {
+			srv.close();
+			srv = null;
 		}
 		#end
 	}
@@ -243,15 +263,7 @@ class NodeSocketOutput extends SocketOutput {
 	public function new(s) {
 		super();
 		this.s = s;
-		@:privateAccess s.s.on('error', () -> writeResult(false));
 		@:privateAccess s.s.on('end', () -> s.close());
-	}
-
-	function writeResult(b) {
-		if( !b ) {
-			s.close();
-			s.onError("Failed to write data");
-		}
 	}
 
 	override function writeByte(c:Int) {

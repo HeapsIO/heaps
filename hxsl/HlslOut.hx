@@ -134,7 +134,7 @@ class HlslOut {
 	}
 
 	inline function ident( v : TVar ) {
-		add(varName(v));
+		add(varName(v, varNames, allNames));
 	}
 
 	function decl( s : String ) {
@@ -354,8 +354,28 @@ class HlslOut {
 			decl("float2 _uintBitsToFloat( int2 v ) { return asfloat(asuint(v)); }");
 			decl("float3 _uintBitsToFloat( int3 v ) { return asfloat(asuint(v)); }");
 			decl("float4 _uintBitsToFloat( int4 v ) { return asfloat(asuint(v)); }");
+		case UnpackSnorm4x8:
+			decl("float4 unpackSnorm4x8( int v ) {
+				float4 unpack;
+				unpack.x = clamp(((asuint(v) & asuint(0xff000000)) >> 24) / 127.0, -1.0, 1.0);
+				unpack.y = clamp(((asuint(v) & asuint(0x00ff0000)) >> 16) / 127.0, -1.0, 1.0);
+				unpack.z = clamp(((asuint(v) & asuint(0x0000ff00)) >> 8) / 127.0, -1.0, 1.0);
+				unpack.w = clamp(((asuint(v) & asuint(0x000000ff)) >> 0) / 127.0, -1.0, 1.0);
+				return unpack;
+			 }");
+		case UnpackUnorm4x8:
+			decl("float4 unpackUnorm4x8( int v ) {
+				float4 unpack;
+				unpack.x = ((asuint(v) & asuint(0xff000000)) >> 24) / 255.0;
+				unpack.y = ((asuint(v) & asuint(0x00ff0000)) >> 16) / 255.0;
+				unpack.z = ((asuint(v) & asuint(0x0000ff00)) >> 8) / 255.0;
+				unpack.w = ((asuint(v) & asuint(0x000000ff)) >> 0) / 255.0;
+				return unpack;
+			 }");
 		case AtomicAdd:
 			decl("int atomicAdd( RWStructuredBuffer<int> buf, int index, int data ) { int val; InterlockedAdd(buf[index], data, val); return val; }");
+		case InvLerp: 
+			decl("float invLerp(float v, float a, float b) { return saturate((v - a) / (b - a)); }");
 		case TextureSize:
 			var tt = args[0].t;
 			var tstr = getTexType(tt);
@@ -712,7 +732,7 @@ class HlslOut {
 		}
 	}
 
-	function varName( v : TVar ) {
+	public static function varName(v : TVar, varNames : Map<Int, String>, allNames : Map<String, Int>) : String {
 		var n = varNames.get(v.id);
 		if( n != null )
 			return n;
@@ -772,7 +792,7 @@ class HlslOut {
 			if( v.kind == Output )
 				add(" : " + (isVertex ? SV_POSITION : SV_TARGET + (index++)));
 			else
-				add(" : " + semanticName(v.name));
+				add(" : " + semanticName(varNames.get(v.id)));
 			add(";\n");
 			varAccess.set(v.id, prefix);
 		}
@@ -781,6 +801,8 @@ class HlslOut {
 		for( f in s.funs )
 			collectGlobals(foundGlobals, f.expr);
 
+		var oldAllNames = allNames;
+		allNames = new Map();
 		add("struct s_input {\n");
 		if( kind == Fragment )
 			add("\tfloat4 __pos__ : "+SV_POSITION+";\n");
@@ -808,6 +830,7 @@ class HlslOut {
 		add("};\n\n");
 
 		if( !isCompute ) {
+			allNames = new Map();
 			add("struct s_output {\n");
 			for( v in s.vars )
 				if( v.kind == Output )
@@ -817,6 +840,8 @@ class HlslOut {
 					declVar("_out.", v);
 			add("};\n\n");
 		}
+
+		allNames = oldAllNames;
 	}
 
 	function initGlobals( s : ShaderData ) {

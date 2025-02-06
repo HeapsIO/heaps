@@ -102,6 +102,7 @@ enum VarQualifier {
 	Borrow( source : String );
 	Sampler( name : String );
 	Final;
+	Flat;
 }
 
 enum Prec {
@@ -233,6 +234,7 @@ enum TGlobal {
 	Max;
 	Clamp;
 	Mix;
+	InvLerp;
 	Step;
 	Smoothstep;
 	Length;
