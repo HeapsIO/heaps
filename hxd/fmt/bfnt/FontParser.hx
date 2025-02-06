@@ -64,8 +64,8 @@ class FontParser {
 
 				// This node contains SDF Metadata
 				if(xml.hasNode.distanceField) {
-					font.distanceRange = Std.parseInt(xml.node.distanceField.att.distanceRange);
-					font.fieldType = Std.string(xml.node.distanceField.att.fieldType);
+				   font.distanceRange = Std.parseInt(xml.node.distanceField.att.distanceRange);
+				   font.fieldType = Std.string(xml.node.distanceField.att.fieldType);
 				}
 
 				for ( p in xml.node.pages.elements ) {
