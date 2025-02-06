@@ -77,7 +77,6 @@ class HlslOut {
 		m.set(BVec3, "bool3");
 		m.set(BVec4, "bool4");
 		m.set(FragCoord,"_in.__pos__");
-		m.set(FragDepth,"SV_Depth");
 		m.set(FloatBitsToInt, "asint");
 		m.set(FloatBitsToUint, "asuint");
 		m.set(IntBitsToFloat, "asfloat");
