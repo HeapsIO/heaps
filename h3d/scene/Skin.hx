@@ -331,6 +331,18 @@ class Skin extends MultiMaterial {
 			dynJoint.absPos = currentAbsPose[dynJoint.index].clone();
 		}
 
+
+		function recomputeAbsPos(dynJoint : DynamicJoint) {
+			var m = currentAbsPose[dynJoint.index];
+			m.multiply3x4inline(dynJoint.relPos, currentAbsPose[dynJoint.parent.index]);
+
+			if (dynJoint.subs == null)
+				return;
+
+			for (s in dynJoint.subs)
+				recomputeAbsPos(cast s);
+		}
+
 		for( j in skinData.allJoints ) {
 			if ( j.follow != null ) continue;
 
@@ -340,11 +352,17 @@ class Skin extends MultiMaterial {
 				var child = Std.downcast(dynJoint.subs[0], DynamicJoint);
 
 				var q = new Quat();
-				var offset = currentAbsPose[child.index].getPosition() - currentAbsPose[dynJoint.index].getPosition();
+				var offset = child.absPos.getPosition() - dynJoint.absPos.getPosition();
 				offset.transform3x3(currentAbsPose[dynJoint.index].getInverse());
 				q.initMoveTo(child.relPos.getPosition().normalized(), offset.normalized());
 
 				currentAbsPose[dynJoint.index].multiply(q.toMatrix(), currentAbsPose[dynJoint.index]);
+
+				if (dynJoint.subs != null) {
+					for (s in dynJoint.subs)
+						recomputeAbsPos(cast s);
+				}
+
 				if( dynJoint.bindIndex >= 0 )
 					currentPalette[dynJoint.bindIndex].multiply3x4inline(j.transPos, currentAbsPose[dynJoint.index]);
 
