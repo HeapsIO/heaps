@@ -158,6 +158,7 @@ class ModelDatabase {
 			newJ.resistance = jConf.resistance;
 			newJ.slackness = jConf.slackness;
 			newJ.stiffness = jConf.stiffness;
+			newJ.globalForce = jConf.globalForce;
 			skinData.allJoints[j.index] = newJ;
 
 			j.parent?.subs.remove(j);
@@ -207,7 +208,7 @@ class ModelDatabase {
 			if (dynJ == null)
 				continue;
 
-			dynamicJoints.push({ name: dynJ.name, slackness: dynJ.slackness, stiffness: dynJ.stiffness, resistance: dynJ.resistance, damping: dynJ.damping });
+			dynamicJoints.push({ name: dynJ.name, slackness: dynJ.slackness, stiffness: dynJ.stiffness, resistance: dynJ.resistance, damping: dynJ.damping, globalForce: dynJ.globalForce });
 		}
 
 		if (dynamicJoints.length == 0) {

@@ -306,7 +306,7 @@ class Skin extends MultiMaterial {
 			var expectedPos = absPos.getPosition().clone();
 
 			// Resistance (force resistance)
-			var globalForce = new h3d.Vector(0, 0, 0);
+			var globalForce = dynJoint.globalForce;
 			dynJoint.speed += globalForce * (1.0 - dynJoint.resistance);
 
 			// Damping (inertia attenuation)
