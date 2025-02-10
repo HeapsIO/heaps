@@ -300,8 +300,8 @@ class Skin extends MultiMaterial {
 			if (dynJoint == null) continue;
 
 			var absPos = dynJoint.absPos == null ? currentAbsPose[dynJoint.index] : dynJoint.absPos;
-			var newWorldPos = absPos.getPosition().clone();
-			var expectedPos = absPos.getPosition().clone();
+			var newWorldPos = absPos.getPosition();
+			var expectedPos = absPos.getPosition();
 
 			// Resistance (force resistance)
 			var globalForce = dynJoint.globalForce;
