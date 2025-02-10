@@ -226,6 +226,8 @@ class CompiledShader {
 	@:packed public var rect(default,null) : Rect;
 	@:packed public var bufferSRV(default,null) : BufferSRV;
 	@:packed public var samplerDesc(default,null) : SamplerDesc;
+	@:packed public var vertexGlobalDesc(default,null) : ConstantBufferViewDesc;
+	@:packed public var fragmentGlobalDesc(default,null) : ConstantBufferViewDesc;
 	@:packed public var cbvDesc(default,null) : ConstantBufferViewDesc;
 	@:packed public var rtvDesc(default,null) : RenderTargetViewDesc;
 	@:packed public var uavDesc(default,null) : UAVBufferViewDesc;
@@ -404,6 +406,8 @@ class DX12Driver extends h3d.impl.Driver {
 	var tsFreq : haxe.Int64;
 	var heapCount : Int;
 	var currentPipelineState : PipelineState;
+	var lastVertexGlobalBind : Int = -1;
+	var lastFragmentGlobalBind : Int = -1;
 
 	public static var INITIAL_RT_COUNT = 1024;
 	public static var INITIAL_BUMP_ALLOCATOR_SIZE = 2 * 1024 * 1024;
@@ -1397,6 +1401,10 @@ class DX12Driver extends h3d.impl.Driver {
 
 		var inputLayout = hl.CArray.alloc(InputElementDesc, inputs.length);
 		var format : Array<hxd.BufferFormat.BufferInput> = [];
+		var allNames = new Map();
+		var varNames = new Map();
+		for ( i => v in inputs)
+			hxsl.HlslOut.varName(v, varNames, allNames);
 		for( i => v in inputs ) {
 			var d = inputLayout[i];
 			var perInst = 0;
@@ -1406,7 +1414,7 @@ class DX12Driver extends h3d.impl.Driver {
 					case PerInstance(k): perInst = k;
 					default:
 					}
-			d.semanticName = @:privateAccess hxsl.HlslOut.semanticName(v.name).toUtf8();
+			d.semanticName = @:privateAccess hxsl.HlslOut.semanticName(varNames.get(v.id)).toUtf8();
 			d.inputSlot = i;
 			format.push({ name : v.name, type : hxd.BufferFormat.InputFormat.fromHXSL(v.type) });
 			if( perInst > 0 ) {
@@ -1904,6 +1912,8 @@ class DX12Driver extends h3d.impl.Driver {
 					frame.commandList.setGraphicsRoot32BitConstants(regs.params, dataSize >> 2, data, 0);
 			}
 		case Globals:
+			var isFragment = shader.kind == Fragment;
+			var bind = -1;
 			if( shader.globalsSize > 0 ) {
 				var data = hl.Bytes.getArray(buf.globals.toData());
 				var dataSize = shader.globalsSize << 4;
@@ -1911,19 +1921,25 @@ class DX12Driver extends h3d.impl.Driver {
 					// update CBV
 					var srv = frame.shaderResourceViews.alloc(1);
 					var alloc = allocDynamicBuffer(data,dataSize);
-					var desc = tmp.cbvDesc;
+					var desc = isFragment ? tmp.fragmentGlobalDesc : tmp.vertexGlobalDesc;
 					desc.bufferLocation = alloc.resource.getGpuVirtualAddress() + alloc.offset;
 					desc.sizeInBytes = alloc.byteSize;
 					Driver.createConstantBufferView(desc, srv);
+					bind = regs.globals & 0xFF;
 					if( currentShader.isCompute )
-						frame.commandList.setComputeRootDescriptorTable(regs.globals & 0xFF, frame.shaderResourceViews.toGPU(srv));
+						frame.commandList.setComputeRootDescriptorTable(bind, frame.shaderResourceViews.toGPU(srv));
 					else
-						frame.commandList.setGraphicsRootDescriptorTable(regs.globals & 0xFF, frame.shaderResourceViews.toGPU(srv));
+						frame.commandList.setGraphicsRootDescriptorTable(bind, frame.shaderResourceViews.toGPU(srv));
 				} else if( currentShader.isCompute )
 					frame.commandList.setComputeRoot32BitConstants(regs.globals, dataSize >> 2, data, 0);
 				else
 					frame.commandList.setGraphicsRoot32BitConstants(regs.globals, dataSize >> 2, data, 0);
 			}
+			if ( isFragment )
+				lastFragmentGlobalBind = bind;
+			else
+				lastVertexGlobalBind = bind;
+
 		case Textures:
 			if( shader.texturesCount > 0 ) {
 				if ( hasBuffersTexturesChanged(buf, regs) ) {
@@ -2385,6 +2401,18 @@ class DX12Driver extends h3d.impl.Driver {
 			arr[0] = @:privateAccess frame.shaderResourceViews.heap;
 			arr[1] = @:privateAccess frame.samplerViews.heap;
 			frame.commandList.setDescriptorHeaps(arr);
+			inline function rebindGlobal(bindSlot, desc) {
+				var srv = frame.shaderResourceViews.alloc(1);
+				Driver.createConstantBufferView(desc, srv);
+				if( currentShader.isCompute )
+					frame.commandList.setComputeRootDescriptorTable(bindSlot, frame.shaderResourceViews.toGPU(srv));
+				else
+					frame.commandList.setGraphicsRootDescriptorTable(bindSlot, frame.shaderResourceViews.toGPU(srv));
+			}
+			if ( lastVertexGlobalBind >= 0 )
+				rebindGlobal(lastVertexGlobalBind, tmp.vertexGlobalDesc);
+			if ( lastFragmentGlobalBind >= 0 )
+				rebindGlobal(lastFragmentGlobalBind, tmp.fragmentGlobalDesc);
 		}
 	}
 
