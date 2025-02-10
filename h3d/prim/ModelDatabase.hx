@@ -42,7 +42,7 @@ class ModelDatabase {
 		return value;
 	}
 
-	public function getModelData( directory : String, resourceName : String, modelName : String ) {
+	function getModelData( directory : String, resourceName : String, modelName : String ) {
 		var key = resourceName + "/" + modelName;
 		var rootData = getRootData(directory);
 		cleanOldModelData(rootData, key);

@@ -79,7 +79,6 @@ class Skin extends MultiMaterial {
 	var skinShader : h3d.shader.SkinBase;
 	var jointsGraphics : Graphics;
 	var additivePose : Array<h3d.Matrix>;
-	var g : Graphics;
 
 	public var showJoints : Bool;
 	public var enableRetargeting : Bool = true;
@@ -278,9 +277,8 @@ class Skin extends MultiMaterial {
 				dyn.relPos = r;
 			if( j.parent == null )
 				m.multiply3x4inline(r, absPos);
-			else {
+			else
 				m.multiply3x4inline(r, currentAbsPose[j.parent.index]);
-			}
 			if( additivePose != null ) {
 				var a = additivePose[id];
 				if( a != null ) m.multiply3x4inline(a, m);
