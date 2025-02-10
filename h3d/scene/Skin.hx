@@ -1,5 +1,8 @@
 package h3d.scene;
 
+import haxe.Timer;
+import h3d.anim.Skin.DynamicJoint;
+
 class Joint extends Object {
 	public var skin : Skin;
 	public var index : Int;
@@ -245,6 +248,7 @@ class Skin extends MultiMaterial {
 		if( !ctx.visibleFlag && !alwaysSyncAnimation )
 			return;
 		syncJoints();
+		syncDynamicJoints();
 	}
 
 	static var TMP_MAT = new h3d.Matrix();
@@ -259,7 +263,18 @@ class Skin extends MultiMaterial {
 			var m = currentAbsPose[id];
 			var r = currentRelPose[id];
 			var bid = j.bindIndex;
-			if( r == null ) r = j.defMat else if( j.retargetAnim && enableRetargeting ) { tmpMat.load(r); r = tmpMat; r._41 = j.defMat._41; r._42 = j.defMat._42; r._43 = j.defMat._43; }
+			if( r == null )
+				r = j.defMat
+			else if( j.retargetAnim && enableRetargeting ) {
+				tmpMat.load(r);
+				r = tmpMat;
+				r._41 = j.defMat._41;
+				r._42 = j.defMat._42;
+				r._43 = j.defMat._43;
+			}
+			var dyn = Std.downcast(j, DynamicJoint);
+			if (dyn != null && dyn.relPos == null)
+				dyn.relPos = r;
 			if( j.parent == null )
 				m.multiply3x4inline(r, absPos);
 			else
@@ -271,14 +286,99 @@ class Skin extends MultiMaterial {
 			if( bid >= 0 )
 				currentPalette[bid].multiply3x4inline(j.transPos, m);
 		}
+
 		skinShader.bonesMatrixes = currentPalette;
 		jointsUpdated = false;
 		prevEnableRetargeting = enableRetargeting;
 	}
 
+	function syncDynamicJoints() {
+		// Update dynamic joints
+		for( j in skinData.allJoints ) {
+			if ( j.follow != null ) continue;
+			var dynJoint = Std.downcast(j, h3d.anim.Skin.DynamicJoint);
+			if (dynJoint == null) continue;
+
+			var absPos = dynJoint.absPos == null ? currentAbsPose[dynJoint.index] : dynJoint.absPos;
+			var newWorldPos = absPos.getPosition().clone();
+			var expectedPos = absPos.getPosition().clone();
+
+			// Resistance (force resistance)
+			var globalForce = dynJoint.globalForce;
+			dynJoint.speed += globalForce * (1.0 - dynJoint.resistance);
+
+			// Damping (inertia attenuation)
+			dynJoint.speed *= 1.0 - dynJoint.damping;
+			if (dynJoint.speed.lengthSq() > DynamicJoint.SLEEP_THRESHOLD)
+				newWorldPos += dynJoint.speed * hxd.Timer.dt;
+
+			// Stiffness (shape keeper)
+			var parentMovement = currentAbsPose[j.parent.index].getPosition() - currentAbsPose[dynJoint.parent.index].getPosition();
+            expectedPos = dynJoint.relPos.multiplied(currentAbsPose[dynJoint.parent.index]).getPosition() + parentMovement;
+            newWorldPos.lerp(newWorldPos, expectedPos, dynJoint.stiffness);
+
+			// Slackness (length keeper)
+			var dirToParent = (newWorldPos - currentAbsPose[j.parent.index].getPosition()).normalized();
+            var lengthToParent = dynJoint.relPos.getPosition().length();
+            expectedPos = currentAbsPose[j.parent.index].getPosition() + dirToParent * lengthToParent;
+			newWorldPos.lerp(expectedPos, newWorldPos, dynJoint.slackness);
+
+			// Apply computed position to joint
+			dynJoint.speed = (dynJoint.speed + (newWorldPos - absPos.getPosition()) * (1.0 / hxd.Timer.dt)) * 0.5;
+			currentAbsPose[j.index].setPosition(newWorldPos);
+			dynJoint.absPos = currentAbsPose[dynJoint.index].clone();
+		}
+
+
+		function recomputeAbsPos(dynJoint : DynamicJoint) {
+			var m = currentAbsPose[dynJoint.index];
+			m.multiply3x4inline(dynJoint.relPos, currentAbsPose[dynJoint.parent.index]);
+
+			if (dynJoint.subs == null)
+				return;
+
+			for (s in dynJoint.subs)
+				recomputeAbsPos(cast s);
+		}
+
+		for( j in skinData.allJoints ) {
+			if ( j.follow != null ) continue;
+
+			var dynJoint = Std.downcast(j, h3d.anim.Skin.DynamicJoint);
+			if (dynJoint == null) continue;
+			if (dynJoint.subs.length == 1) {
+				var child = Std.downcast(dynJoint.subs[0], DynamicJoint);
+
+				var q = new Quat();
+				var offset = child.absPos.getPosition() - dynJoint.absPos.getPosition();
+				offset.transform3x3(currentAbsPose[dynJoint.index].getInverse());
+				q.initMoveTo(child.relPos.getPosition().normalized(), offset.normalized());
+
+				currentAbsPose[dynJoint.index].multiply(q.toMatrix(), currentAbsPose[dynJoint.index]);
+
+				if (dynJoint.subs != null) {
+					for (s in dynJoint.subs)
+						recomputeAbsPos(cast s);
+				}
+
+				if( dynJoint.bindIndex >= 0 )
+					currentPalette[dynJoint.bindIndex].multiply3x4inline(j.transPos, currentAbsPose[dynJoint.index]);
+
+				currentAbsPose[dynJoint.index].load(dynJoint.absPos);
+			}
+			else {
+				if( dynJoint.bindIndex >= 0 )
+					currentPalette[dynJoint.bindIndex].multiply3x4inline(j.transPos, currentAbsPose[dynJoint.index]);
+			}
+		}
+
+		skinShader.bonesMatrixes = currentPalette;
+	}
+
 	override function emit( ctx : RenderContext ) {
 		calcScreenRatio(ctx);
 		syncJoints(); // In case sync was not called because of culling (eg fixedPosition)
+		syncDynamicJoints();
 		if( splitPalette == null )
 			super.emit(ctx);
 		else {
