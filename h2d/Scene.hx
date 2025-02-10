@@ -905,11 +905,12 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 			var tex = new h3d.mat.Texture(width, height, [Target]);
 			target = new Tile(tex,0, 0, width, height);
 		}
+		
+		var tex = target.getTexture();
 		engine.begin();
+		engine.pushTarget(tex);
 		engine.setRenderZone(Std.int(target.x), Std.int(target.y), hxd.Math.ceil(target.width), hxd.Math.ceil(target.height));
 
-		var tex = target.getTexture();
-		engine.pushTarget(tex);
 		var ow = width, oh = height, ova = viewportA, ovd = viewportD, ovx = viewportX, ovy = viewportY;
 		width = tex.width;
 		height = tex.height;
