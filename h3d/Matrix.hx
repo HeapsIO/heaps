@@ -781,6 +781,65 @@ class MatrixImpl {
 		return m;
 	}
 
+
+	// ----- h3d.anim Helpers ------
+
+	/**
+		Extract the rotation from `inMatrix` and stores it as a quaternion inside the [m12,m13,m21,m23] component
+		instead of the rotation being mixed with the scale.
+	**/
+	public function decomposeMatrix(inMatrix: h3d.Matrix) {
+		this.load(inMatrix);
+		var scale = inline this.getScale();
+		this.prependScale(1.0/scale.x, 1.0/scale.y, 1.0/scale.z);
+		var quat = inline new h3d.Quat();
+		inline quat.initRotateMatrix(this);
+
+		this._11 = scale.x;
+		this._12 = quat.x;
+		this._13 = quat.y;
+		this._14 = 0.0;
+
+		this._21 = quat.z;
+		this._22 = scale.y;
+		this._23 = quat.w;
+		this._24 = 0.0;
+
+		this._31 = 0.0;
+		this._32 = 0.0;
+		this._33 = scale.z;
+		this._34 = 0.0;
+
+		this.tx = inMatrix.tx;
+		this.ty = inMatrix.ty;
+		this.tz = inMatrix.tz;
+		this._44 = 1.0;
+	}
+
+	/**
+		Inverts the operation of `decomposeMatrix`, giving back a normal transformation matrix from a decomposed one
+	**/
+	public function recomposeMatrix(inMatrix: h3d.Matrix) {
+		var copy = inline new h3d.Matrix(); // copy to avoid aliasing this and inMatrix
+		inline copy.load(inMatrix);
+
+		var quat = inline new h3d.Quat(inMatrix._12, inMatrix._13, inMatrix._21, inMatrix._23);
+		inline quat.toMatrix(this);
+
+		this._11 *= copy._11;
+		this._12 *= copy._11;
+		this._13 *= copy._11;
+		this._21 *= copy._22;
+		this._22 *= copy._22;
+		this._23 *= copy._22;
+		this._31 *= copy._33;
+		this._32 *= copy._33;
+		this._33 *= copy._33;
+
+		this._41 = copy._41;
+		this._42 = copy._42;
+		this._43 = copy._43;
+	}
 }
 
 
@@ -866,4 +925,10 @@ class MatrixImpl {
 		return lookAtXInline(dir, up, m);
 	}
 
+	public static final IDENTITY_DECOMPOSED = h3d.Matrix.L([
+		1, 0, 0, 0,
+		0, 1, 1, 0,
+		0, 0, 1, 0,
+		0, 0, 0, 1,
+	]);
 }
