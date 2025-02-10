@@ -158,7 +158,7 @@ class ModelDatabase {
 			newJ.resistance = jConf.resistance;
 			newJ.slackness = jConf.slackness;
 			newJ.stiffness = jConf.stiffness;
-			newJ.globalForce = jConf.globalForce;
+			newJ.globalForce = new Vector(jConf.globalForce.x, jConf.globalForce.y, jConf.globalForce.z);
 			skinData.allJoints[j.index] = newJ;
 
 			j.parent?.subs.remove(j);
