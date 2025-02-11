@@ -343,32 +343,32 @@ class Skin extends MultiMaterial {
 
 		for( j in skinData.allJoints ) {
 			if ( j.follow != null ) continue;
-
-			var dynJoint = Std.downcast(j, h3d.anim.Skin.DynamicJoint);
-			if (dynJoint == null) continue;
-			if (dynJoint.subs.length == 1) {
-				var child = Std.downcast(dynJoint.subs[0], DynamicJoint);
+			if (j.subs.length == 1) {
+				var child = Std.downcast(j.subs[0], DynamicJoint);
+				if (child == null) continue;
+				var dynJoint = Std.downcast(j, DynamicJoint);
 
 				var q = new Quat();
-				var offset = child.absPos.getPosition() - dynJoint.absPos.getPosition();
-				offset.transform3x3(currentAbsPose[dynJoint.index].getInverse());
+				var offset = child.absPos.getPosition() - (dynJoint != null ? dynJoint.absPos.getPosition() : currentAbsPose[j.index].getPosition());
+				offset.transform3x3(currentAbsPose[j.index].getInverse());
 				q.initMoveTo(child.relPos.getPosition().normalized(), offset.normalized());
 
-				currentAbsPose[dynJoint.index].multiply(q.toMatrix(), currentAbsPose[dynJoint.index]);
+				currentAbsPose[j.index].multiply(q.toMatrix(), currentAbsPose[j.index]);
 
-				if (dynJoint.subs != null) {
-					for (s in dynJoint.subs)
+				if (j.subs != null) {
+					for (s in j.subs)
 						recomputeAbsPos(cast s);
 				}
 
-				if( dynJoint.bindIndex >= 0 )
-					currentPalette[dynJoint.bindIndex].multiply3x4inline(j.transPos, currentAbsPose[dynJoint.index]);
+				if( j.bindIndex >= 0 )
+					currentPalette[j.bindIndex].multiply3x4inline(j.transPos, currentAbsPose[j.index]);
 
-				currentAbsPose[dynJoint.index].load(dynJoint.absPos);
+				if (dynJoint != null)
+					currentAbsPose[j.index].load(dynJoint.absPos);
 			}
 			else {
-				if( dynJoint.bindIndex >= 0 )
-					currentPalette[dynJoint.bindIndex].multiply3x4inline(j.transPos, currentAbsPose[dynJoint.index]);
+				if( j.bindIndex >= 0 )
+					currentPalette[j.bindIndex].multiply3x4inline(j.transPos, currentAbsPose[j.index]);
 			}
 		}
 
