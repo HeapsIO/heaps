@@ -313,8 +313,7 @@ class Skin extends MultiMaterial {
 				newWorldPos += dynJoint.speed * hxd.Timer.dt;
 
 			// Stiffness (shape keeper)
-			var parentMovement = currentAbsPose[j.parent.index].getPosition() - currentAbsPose[dynJoint.parent.index].getPosition();
-            expectedPos = dynJoint.relPos.multiplied(currentAbsPose[dynJoint.parent.index]).getPosition() + parentMovement;
+            expectedPos = dynJoint.relPos.multiplied(currentAbsPose[dynJoint.parent.index]).getPosition();
             newWorldPos.lerp(newWorldPos, expectedPos, dynJoint.stiffness);
 
 			// Slackness (length keeper)

@@ -123,6 +123,9 @@ class ModelDatabase {
 	}
 
 	function loadDynamicBonesConfig( input : ModelDataInput, data : Dynamic) {
+		//! Temp disable dynamic joints
+		return;
+
 		var c : Array<Dynamic> = Reflect.field(data, DYN_BONES_CONFIG);
 		if (c == null || input.skin == null)
 			return;
