@@ -1,5 +1,9 @@
 package hxd.res;
 
+import hxd.res.Ktx2.BasisFormat;
+import hxd.res.Ktx2.BasisWorkerMessageData;
+import hxd.res.Ktx2.TranscoderFormat;
+
 enum abstract ImageFormat(Int) {
 	var Jpg = 0;
 	var Png = 1;
@@ -8,7 +12,8 @@ enum abstract ImageFormat(Int) {
 	var Dds = 4;
 	var Raw = 5;
 	var Hdr = 6;
-	var Ktx2 = 7;
+	var Ktx2ETC1S = 7;
+	var Ktx2UASTC = 8;
 
 	/*
 		Tells if we might not be able to directly decode the image without going through a loadBitmap async call.
@@ -36,7 +41,8 @@ enum abstract ImageFormat(Int) {
 			case Dds: "DDS";
 			case Raw: "RAW";
 			case Hdr: "HDR";
-			case Ktx2: "KTX2";
+			case Ktx2ETC1S: "KTX2ETC1S";
+			case Ktx2UASTC: "KTX2UASTC";
 		};
 	}
 }
@@ -249,15 +255,29 @@ class Image extends Resource {
 				throw 'Use .ktx2 files for GPU compressed textures instead of .basis';
 			case 0x4BAB:
 				final ktx2 = hxd.res.Ktx2.readFile(new haxe.io.BytesInput(@:privateAccess f.cache));
-				inf.pixelFormat = switch ktx2.dfd.colorModel {
-					case hxd.res.Ktx2.DFDModel.ETC1S: ETC(hxd.res.Ktx2.TranscoderFormat.ETC1);
-					case hxd.res.Ktx2.DFDModel.UASTC: ASTC(hxd.res.Ktx2.TranscoderFormat.ASTC_4x4);
-					default: throw 'Unsupported colorModel in ktx2 file ${ktx2.dfd.colorModel}';
+				final basisFormat = switch ktx2.dfd.colorModel {
+					case hxd.res.Ktx2.DFDModel.ETC1S: BasisFormat.ETC1S;
+					case hxd.res.Ktx2.DFDModel.UASTC: BasisFormat.UASTC;
+					default: throw 'Unsupported colorModel in ktx2 file: ${ktx2.dfd.colorModel}';
+				}
+				final formatInfo = hxd.res.Ktx2.Ktx2Decoder.getTranscoderFormat(basisFormat, ktx2.header.pixelWidth, ktx2.header.pixelHeight, ktx2.dfd.hasAlpha());
+				inf.pixelFormat = switch formatInfo.transcoderFormat {
+					case TranscoderFormat.ASTC_4x4: hxd.PixelFormat.ASTC(10);
+					case TranscoderFormat.BC7_M5: hxd.PixelFormat.S3TC(7);
+					case TranscoderFormat.BC3: hxd.PixelFormat.S3TC(3);
+					case TranscoderFormat.ETC1: hxd.PixelFormat.ETC(0);
+					case TranscoderFormat.ETC2: hxd.PixelFormat.ETC(1);
+					default:
+						throw 'Unsupported transcoder format: ${formatInfo.transcoderFormat}';
 				}
 				inf.mipLevels = ktx2.header.levelCount;
 				inf.width = ktx2.header.pixelWidth;
 				inf.height = ktx2.header.pixelHeight;
-				inf.dataFormat = Ktx2;
+				inf.dataFormat = switch ktx2.dfd.colorModel {
+					case hxd.res.Ktx2.DFDModel.ETC1S: Ktx2ETC1S;
+					case hxd.res.Ktx2.DFDModel.UASTC: Ktx2UASTC;
+					default: throw 'Unsupported colorModel in ktx2 file ${ktx2.dfd.colorModel}';
+				}
 			#end
 
 			case 0x3F23: // HDR RADIANCE
@@ -453,7 +473,7 @@ class Image extends Resource {
 			case Hdr:
 				var data = hxd.fmt.hdr.Reader.decode(entry.getBytes(), false);
 				pixels = new hxd.Pixels(data.width, data.height, data.bytes, inf.pixelFormat);
-			case Ktx2:
+			case Ktx2ETC1S, Ktx2UASTC:
 				var bytes = entry.getBytes();
 				pixels = new hxd.Pixels(inf.width, inf.height, bytes, inf.pixelFormat);
 		}
@@ -551,17 +571,33 @@ class Image extends Resource {
 	function asyncLoad(data:haxe.io.Bytes) {
 		if (tex == null || tex.isDisposed())
 			return;
-		tex.dispose();
-		tex.flags.unset(Loading);
-		@:privateAccess {
-			tex.format = inf.pixelFormat;
-			tex.width = inf.width;
-			tex.height = inf.height;
+		switch (inf.dataFormat) {
+		case Ktx2ETC1S, Ktx2UASTC:
+			final reader =  new haxe.io.BytesInput(data);
+			hxd.res.Ktx2.Ktx2Decoder.getTranscodedData(reader, (data, header) -> {
+				tex.dispose();
+				tex.flags.unset(Loading);
+				@:privateAccess {
+					tex.format = inf.pixelFormat;
+					tex.width = inf.width;
+					tex.height = inf.height;
+				}
+				loadTexture(null, data);
+			});
+		default:
+			tex.dispose();
+			tex.flags.unset(Loading);
+			@:privateAccess {
+				tex.format = inf.pixelFormat;
+				tex.width = inf.width;
+				tex.height = inf.height;
+			}
+			loadTexture(data);
 		}
-		loadTexture(data);
+
 	}
 
-	function loadTexture(?asyncData:haxe.io.Bytes) {
+	function loadTexture(?asyncData:haxe.io.Bytes, ?asyncMessage:BasisWorkerMessageData) {
 		if (getFormat().useLoadBitmap) {
 			// use native decoding
 			tex.flags.set(Loading);
@@ -584,20 +620,28 @@ class Image extends Resource {
 			});
 			return;
 		}
-
+		switch (inf.dataFormat) {
+			case Ktx2ETC1S, Ktx2UASTC:
+				tex.flags.set(AsyncLoading);
+			default:
+		}
 		function load() {
-			if ((enableAsyncLoading || tex.flags.has(AsyncLoading)) && asyncData == null && ASYNC_LOADER != null && ASYNC_LOADER.isSupported(this))
-				@:privateAccess {
+			if ((enableAsyncLoading || tex.flags.has(AsyncLoading)) && asyncData == null && asyncMessage == null && ASYNC_LOADER != null && ASYNC_LOADER.isSupported(this)) {
+				
 				tex.dispose();
-				tex.format = RGBA;
-				tex.width = 1;
-				tex.height = 1;
-				tex.customMipLevels = 1;
+				@:privateAccess tex.customMipLevels = 1;
 				tex.flags.set(Loading);
-				tex.alloc();
-				tex.uploadPixels(BLACK_1x1);
-				tex.width = inf.width;
-				tex.height = inf.height;
+
+				if(tex.format.match(S3TC(_) | ASTC(_) | ETC(_))){
+					tex.uploadPixels(Pixels.alloc(inf.width, inf.height, RGBA));
+				} else {
+					@:privateAccess tex.format = RGBA;
+					@:privateAccess tex.width = 1;
+					@:privateAccess tex.height = 1;
+					tex.uploadPixels(BLACK_1x1);
+					@:privateAccess tex.width = inf.width;
+					@:privateAccess tex.height = inf.height;
+				}
 				ASYNC_LOADER.load(this);
 				tex.realloc = () -> loadTexture();
 				return;
@@ -607,7 +651,7 @@ class Image extends Resource {
 			@:privateAccess tex.customMipLevels = inf.mipLevels;
 			tex.alloc();
 			switch (inf.dataFormat) {
-				case Dds:
+			case Dds:
 					var pos = 128;
 					if (inf.flags.has(Dxt10Header))
 						pos += 20;
@@ -631,16 +675,30 @@ class Image extends Resource {
 							pos += size;
 						}
 					}
-				case Ktx2:
-					throw 'Ktx2 loading using heaps resource system not implemented';
-				default:
-					for (layer in 0...tex.layerCount) {
-						for (mip in 0...inf.mipLevels) {
-							var pixels = getPixels(tex.format, layer * inf.mipLevels + mip);
-							tex.uploadPixels(pixels, mip, layer);
-							pixels.dispose();
+			case Ktx2ETC1S, Ktx2UASTC:
+				for (layer in 0...asyncMessage.faces.length) {
+					final face = asyncMessage.faces[layer];
+					for (mip in 0...face.mipmaps.length) {
+						final w = inf.width >> mip;
+						final h = inf.height >> mip;
+						inf.pixelFormat = switch face.format {
+							case hxd.CompressedTextureFormat.BPTC_FORMAT.RGBA_BPTC: hxd.PixelFormat.S3TC(7);
+							case hxd.CompressedTextureFormat.ASTC_FORMAT.RGBA_4x4: hxd.PixelFormat.ASTC(10);
+							default: throw 'No compressed texture format found for ${StringTools.hex(face.format)}';
 						}
+						final pixels = new hxd.Pixels(w, h, haxe.io.Bytes.ofData(face.mipmaps[mip].data.buffer), inf.pixelFormat, 0);
+						tex.uploadPixels(pixels, mip, layer);
+						pixels.dispose();
 					}
+				}
+			default:
+				for (layer in 0...tex.layerCount) {
+					for (mip in 0...inf.mipLevels) {
+						var pixels = getPixels(tex.format, layer * inf.mipLevels + mip);
+						tex.uploadPixels(pixels, mip, layer);
+						pixels.dispose();
+					}
+				}
 			}
 			if (LOG_TEXTURE_LOAD && asyncData == null) {
 				var time = (haxe.Timer.stamp() - t0) * 1000.0;

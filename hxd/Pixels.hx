@@ -390,10 +390,10 @@ class Pixels {
 				nbytes.setFloat(i << 2, this.bytes.getFloat(i << 4));
 			this.bytes = nbytes;
 
-		case [S3TC(a),S3TC(b)] if( a == b ):
-		case [ASTC(a),ASTC(b)] if( a == b ):
-		case [ETC(a),ETC(b)] if( a == b ):
-			// nothing
+		case [S3TC(a),S3TC(b)] if( a == b ): // nothing
+		case [ASTC(a),ASTC(b)] if( a == b ): // Ktx2 will handle conversion
+		case [ETC(a),ETC(b)] if( a == b ): // Ktx2 will handle conversion 
+		case [RGBA,_]: // With ktx2/basis textures, temp RGBA texture will be assigned before transcoding
 
 		#if (hl && hl_ver >= "1.10")
 		case [S3TC(ver),_]:
@@ -407,7 +407,6 @@ class Pixels {
 			convert(target);
 			return;
 		#end
-
 		default:
 			throw "Cannot convert from " + format + " to " + target;
 		}
@@ -538,33 +537,33 @@ class Pixels {
 
 	public static function calcDataSize( width : Int, height : Int, format : PixelFormat ) {
 		return switch( format ) {
-			case S3TC(n):
-				var w = (width + 3) >> 2; 
+		case S3TC(n):
+			var w = (width + 3) >> 2; 
+			var h = (height + 3) >> 2;
+			var blocks = w * h; // Total number of blocks
+			if( n == 3 ) { // DXT5
+				blocks * 16; // 16 bytes per block
+			} else if( n == 1 || n == 4 ) {
+				blocks * 8; // DXT1 or BC4, 8 bytes per block
+			} else { 
+				blocks * 16; // DXT3 or BC5, 16 bytes per block, but handling like DXT5 for simplicity
+			}
+		case ASTC(n):
+			var w = (width + 3) >> 2;
+			var h = (height + 3) >> 2;
+			w * h * 16;
+		case ETC(n):
+			if( n == 0 ) { // RGB_ETC1_Format or RGB_ETC2_Format
+				var w = (width + 3) >> 2;
 				var h = (height + 3) >> 2;
-				var blocks = w * h; // Total number of blocks
-				if( n == 3 ) { // DXT5
-					blocks * 16; // 16 bytes per block
-				} else if( n == 1 || n == 4 ) {
-					blocks * 8; // DXT1 or BC4, 8 bytes per block
-				} else { 
-					blocks * 16; // DXT3 or BC5, 16 bytes per block, but handling like DXT5 for simplicity
-				}
-			case ASTC(n):
+				w * h * 8;
+			} else if( n == 1 || n == 2 ) { // RGBA_ETC2_EAC_Format
 				var w = (width + 3) >> 2;
 				var h = (height + 3) >> 2;
 				w * h * 16;
-			case ETC(n):
-				if( n == 0 ) { // RGB_ETC1_Format or RGB_ETC2_Format
-					var w = (width + 3) >> 2;
-					var h = (height + 3) >> 2;
-					w * h * 8;
-				} else if( n == 1 || n == 2 ) { // RGBA_ETC2_EAC_Format
-					var w = (width + 3) >> 2;
-					var h = (height + 3) >> 2;
-					w * h * 16;
-				} else {
-					throw "Unsupported ETC format";
-				}
+			} else {
+				throw "Unsupported ETC format";
+			}
 		default:
 			height * calcStride(width, format);
 		}
