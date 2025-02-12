@@ -729,6 +729,22 @@ class HlslOut {
 			addValue(e, tabs);
 			add(".");
 			add(f);
+		case TSyntax("code" | "hlsl", code, args):
+			var pos = 0;
+			var argRegex = ~/{(\d+)}/g;
+			while ( argRegex.matchSub(code, pos) ) {
+				var matchPos = argRegex.matchedPos();
+				add(code.substring(pos, matchPos.pos));
+				var index = Std.parseInt(argRegex.matched(1));
+				// if (index >= args.length) throw "Attempting to use substitution index of " + index + ", which is out of bounds of argument list";
+				if ( index < args.length )
+					addValue(args[index].e, tabs);
+
+				pos = matchPos.pos + matchPos.len;
+			}
+			add(code.substr(pos));
+		case TSyntax(_, _, _):
+			// Do nothing: Code for other language
 		}
 	}
 

@@ -553,6 +553,30 @@ class Checker {
 				// not closure support
 				error("Global function must be called immediately", e.pos);
 			}
+		case ECall({ expr: EField({ expr: EIdent("Syntax") }, target) }, args):
+			if ( args.length == 0 )
+				error("Syntax." + target + " should have a string as first argument", e.pos);
+			var code = switch ( args[0].expr ) {
+				case EConst(CString(code)): code;
+				default: error("Syntax." + target + " should have a string as first argument", args[0].pos);
+			}
+			var sargs: Array<Ast.SyntaxArg> = [];
+			for ( i in 1...args.length ) {
+				var arg = args[i];
+				switch ( arg.expr ) {
+					case EMeta(flags = ("rw"|"r"|"w"), _, flaggedArg):
+						sargs.push({ e : typeExpr(flaggedArg, Value), access : switch( flags ) {
+								case "r": Read;
+								case "w": Write;
+								case "rw": ReadWrite;
+								default: throw "assert";
+							}
+						});
+					default:
+						error("Syntax." + target + " arguments should have an access meta of @r, @w or @rw", arg.pos);
+				}
+			}
+			return { e: TSyntax(target, code, sargs), t: TVoid, p: e.pos };
 		case ECall(e1, args):
 			function makeCall(e1) {
 				return switch( e1.t ) {

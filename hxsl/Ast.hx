@@ -181,6 +181,7 @@ enum TExprDef {
 	TWhile( e : TExpr, loop : TExpr, normalWhile : Bool );
 	TMeta( m : String, args : Array<Const>, e : TExpr );
 	TField( e : TExpr, name : String );
+	TSyntax(target : String, code : String, args : Array<SyntaxArg> ); // target = "code" should be treated as "insert regardless of target"
 }
 
 typedef TVar = {
@@ -313,6 +314,17 @@ enum TGlobal {
 	GroupMemoryBarrier;
 	UnpackSnorm4x8;
 	UnpackUnorm4x8;
+}
+
+enum SyntaxArgAccess {
+	Read;
+	Write;
+	ReadWrite;
+}
+
+typedef SyntaxArg = {
+	e: TExpr,
+	access: SyntaxArgAccess,
 }
 
 enum Component {
@@ -540,7 +552,7 @@ class Tools {
 				if( hasSideEffect(p) )
 					return true;
 			return false;
-		case TVarDecl(_), TDiscard, TContinue, TBreak, TReturn(_):
+		case TVarDecl(_), TDiscard, TContinue, TBreak, TReturn(_), TSyntax(_, _, _):
 			return true;
 		case TSwitch(e, cases, def):
 			for( c in cases ) {
@@ -584,6 +596,7 @@ class Tools {
 		case TConst(_), TVar(_), TGlobal(_), TDiscard, TContinue, TBreak:
 		case TMeta(_, _, e): f(e);
 		case TField(e, _): f(e);
+		case TSyntax(_, _, args): for (arg in args) f(arg.e);
 		}
 	}
 
@@ -606,6 +619,7 @@ class Tools {
 		case TConst(_), TVar(_), TGlobal(_), TDiscard, TContinue, TBreak: e.e;
 		case TMeta(m, args, e): TMeta(m, args, f(e)); // don't map args
 		case TField(e, name): TField(f(e), name);
+		case TSyntax(target, code, args): TSyntax(target, code, [for (arg in args) ({ e : f(arg.e), access : arg.access })]);
 		}
 		return { e : ed, t : e.t, p : e.p };
 	}
