@@ -7,7 +7,7 @@ using thx.Arrays;
 typedef JsonFontAtlas = {
 	var type:String;
 	var distanceRange:Int;
-    var size:Int;
+	var size:Int;
 	var width:Int;
 	var height:Int;
 }
@@ -46,18 +46,18 @@ typedef JsonFontFormat = {
 class JsonFontParser {
 
 	public static inline function parse(bytes : haxe.io.Bytes,tile) : h2d.Font {
-        final font = new h2d.Font(null,0);
-        final glyphs = font.glyphs;
-        font.tile = tile;
+		final font = new h2d.Font(null,0);
+		final glyphs = font.glyphs;
+		font.tile = tile;
 
-        final data:JsonFontFormat = Json.parse(bytes.getString(0,bytes.length));
+		final data:JsonFontFormat = Json.parse(bytes.getString(0,bytes.length));
 
-        font.size = data.atlas.size;
+		font.size = data.atlas.size;
 		font.initSize = font.size;
-        font.distanceRange = data.atlas.distanceRange;
-        font.fieldType = data.atlas.type;
+		font.distanceRange = data.atlas.distanceRange;
+		font.fieldType = data.atlas.type;
 
-        font.lineHeight = data.metrics.lineHeight * data.atlas.size * 0.5;
+		font.lineHeight = data.metrics.lineHeight * font.size;
 
 		for(glyph in data.glyphs) {
 			final xadvance = data.atlas.size * glyph.advance;
