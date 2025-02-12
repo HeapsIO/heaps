@@ -261,8 +261,6 @@ class HMDModel extends MeshPrimitive {
 
 		var materialCount = data.indexCounts.length;
 		var lodLevel = Std.int(curMaterial / data.indexCounts.length);
-		if ( lodLevel >= lodCount() )
-			return;
 
 		if( indexes == null || indexes.isDisposed() )
 			alloc(engine);
