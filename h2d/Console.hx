@@ -248,6 +248,30 @@ class Console #if !macro extends h2d.Object #end {
 		}
 	}
 
+	function getHelpStr( cmdName : String ) {
+		var c = commands.get(cmdName);
+		var str = String.fromCharCode(shortKeyChar) + cmdName;
+		for( a in aliases.keys() )
+			if( aliases.get(a) == cmdName )
+				str += "|" + a;
+		for( a in c.args ) {
+			var astr = a.name;
+			switch( a.t ) {
+			case AInt, AFloat, AArray(_):
+				astr += ":"+a.t.getName().substr(1);
+			case AString:
+				// nothing
+			case AEnum(values):
+				astr += "=" + values.join("|");
+			case ABool:
+				astr += "=0|1";
+			}
+			str += " " + (a.opt?"["+astr+"]":astr);
+		}
+		if( c.help != "" )
+			str += " : " + c.help;
+		return str;
+	}
 	function showHelp( ?command : String ) {
 		var all;
 		if( command == null ) {
@@ -262,28 +286,7 @@ class Console #if !macro extends h2d.Object #end {
 			all = [command];
 		}
 		for( cmdName in all ) {
-			var c = commands.get(cmdName);
-			var str = String.fromCharCode(shortKeyChar) + cmdName;
-			for( a in aliases.keys() )
-				if( aliases.get(a) == cmdName )
-					str += "|" + a;
-			for( a in c.args ) {
-				var astr = a.name;
-				switch( a.t ) {
-				case AInt, AFloat, AArray(_):
-					astr += ":"+a.t.getName().substr(1);
-				case AString:
-					// nothing
-				case AEnum(values):
-					astr += "=" + values.join("|");
-				case ABool:
-					astr += "=0|1";
-				}
-				str += " " + (a.opt?"["+astr+"]":astr);
-			}
-			if( c.help != "" )
-				str += " : " + c.help;
-			log(str);
+			log(getHelpStr(cmdName));
 		}
 	}
 
