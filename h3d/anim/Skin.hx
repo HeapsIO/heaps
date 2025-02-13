@@ -26,29 +26,30 @@ class Joint {
 		splitIndex = -1;
 		subs = [];
 	}
+
+	public function makeRuntimeData() {
+		return new h3d.scene.Skin.JointData();
+	}
 }
 
 class DynamicJoint extends Joint {
 	public static var SLEEP_THRESHOLD : Float = 0.0001;
 
-	public var absPos : h3d.Matrix; // Abs pos of the joint computed each frame
-	public var relPos : h3d.Matrix; // Initial relative pos before joint get moved by animation / dynamic system
-
-	public var speed : h3d.Vector;
-
 	// Global parameters
 	public var globalForce : Vector = new Vector(0.0, 0.0, 0.0);
 
 	// Parameters
-	public var radius : Float = 0.0;
-	public var damping : Float = 0.4;
-	public var stiffness : Float = 0.5;
-	public var resistance : Float = 0.9;
-	public var slackness : Float = 0.1;
+	public var damping : Float = 1;
+	public var stiffness : Float = 1;
+	public var resistance : Float = 1;
+	public var slackness : Float = 0;
 
 	public function new() {
 		super();
-		speed = new h3d.Vector(0.0, 0.0, 0.0);
+	}
+
+	public override function makeRuntimeData() {
+		return new h3d.scene.Skin.DynamicJointData();
 	}
 }
 

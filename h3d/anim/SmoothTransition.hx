@@ -97,14 +97,14 @@ class SmoothTransition extends Transition {
 		for( o in objects ) {
 			if( !o.isAnim1 )
 				continue;
-			o.tmpMatrix = if( o.targetSkin != null ) o.targetSkin.currentRelPose[o.targetJoint] else o.targetObject.defaultTransform;
+			o.tmpMatrix = if( o.targetSkin != null ) o.targetSkin.jointsData[o.targetJoint].currentRelPose else o.targetObject.defaultTransform;
 		}
 		anim2.sync(true);
 		var a = 1 - blendFactor, b = blendFactor;
 		var q1 = new h3d.Quat(), q2 = new h3d.Quat(), qout = new h3d.Quat();
 		for( o in objects ) {
 			var m1 = o.tmpMatrix;
-			var m2 = if( !o.isAnim2 ) o.def else if( o.targetSkin != null ) o.targetSkin.currentRelPose[o.targetJoint] else o.targetObject.defaultTransform;
+			var m2 = if( !o.isAnim2 ) o.def else if( o.targetSkin != null ) o.targetSkin.jointsData[o.targetJoint].currentRelPose else o.targetObject.defaultTransform;
 			var m = o.outMatrix;
 			// interpolate rotation
 			q1.set(m1._12, m1._13, m1._21, m1._23);
@@ -131,7 +131,7 @@ class SmoothTransition extends Transition {
 			m._42 = m1._42 * a + m2._42 * b;
 			m._43 = m1._43 * a + m2._43 * b;
 			// save matrix
-			if( o.targetSkin != null ) o.targetSkin.currentRelPose[o.targetJoint] = m else o.targetObject.defaultTransform = m;
+			if( o.targetSkin != null ) o.targetSkin.jointsData[o.targetJoint].currentRelPose = m else o.targetObject.defaultTransform = m;
 		}
 	}
 

@@ -47,7 +47,7 @@ class SmoothTarget extends Animation {
 			s.targetJoint = o.targetJoint;
 			objects.push(s);
 			if( o.targetSkin != null ) {
-				mat = @:privateAccess o.targetSkin.currentRelPose[o.targetJoint];
+				mat = @:privateAccess o.targetSkin.jointsData[o.targetJoint].currentRelPose;
 				if ( mat != null && o.targetSkin.prevEnableRetargeting ) {
 					var j = @:privateAccess o.targetSkin.skinData.allJoints[o.targetJoint];
 					if ( j != null && j.retargetAnim ) {
@@ -115,7 +115,7 @@ class SmoothTarget extends Animation {
 		var blend = hxd.Math.easeFactor(blend, easing);
 
 		for( o in objects ) {
-			var m = @:privateAccess if( o.targetSkin != null ) o.targetSkin.currentRelPose[o.targetJoint] else if( o.targetObject != null ) o.targetObject.defaultTransform else null;
+			var m = @:privateAccess if( o.targetSkin != null ) o.targetSkin.jointsData[o.targetJoint].currentRelPose else if( o.targetObject != null ) o.targetObject.defaultTransform else null;
 
 			if( m == null ) continue;
 
@@ -176,7 +176,7 @@ class SmoothTarget extends Animation {
 					mout.tz = lerp(o.tz, m.tz, blend);
 				}
 
-				@:privateAccess if( o.targetSkin != null ) o.targetSkin.currentRelPose[o.targetJoint] = mout else o.targetObject.defaultTransform = mout;
+				@:privateAccess if( o.targetSkin != null ) o.targetSkin.jointsData[o.targetJoint].currentRelPose = mout else o.targetObject.defaultTransform = mout;
 			}
 		}
 	}

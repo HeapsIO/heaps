@@ -267,7 +267,7 @@ class BufferAnimation extends Animation {
 				}
 
 				if( o.targetSkin != null ) {
-					o.targetSkin.currentRelPose[o.targetJoint] = m;
+					o.targetSkin.jointsData[o.targetJoint].currentRelPose = m;
 					o.targetSkin.jointsUpdated = true;
 				} else
 					o.targetObject.defaultTransform = m;
