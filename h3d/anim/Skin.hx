@@ -27,9 +27,11 @@ class Joint {
 		subs = [];
 	}
 
+	#if !macro
 	public function makeRuntimeData() {
 		return new h3d.scene.Skin.JointData();
 	}
+	#end
 }
 
 class DynamicJoint extends Joint {
@@ -48,9 +50,11 @@ class DynamicJoint extends Joint {
 		super();
 	}
 
+	#if !macro
 	public override function makeRuntimeData() {
 		return new h3d.scene.Skin.DynamicJointData();
 	}
+	#end
 }
 
 private class Permut {
