@@ -27,6 +27,10 @@ class Joint {
 		subs = [];
 	}
 
+	public function shouldReceiveAnimation() {
+		return true;
+	}
+
 	#if !macro
 	public function makeRuntimeData() {
 		return new h3d.scene.Skin.JointData();
@@ -41,6 +45,7 @@ class DynamicJoint extends Joint {
 	public var globalForce : Vector = new Vector(0.0, 0.0, 0.0);
 
 	// Parameters
+	public var additive : Bool = false;
 	public var damping : Float = 1;
 	public var stiffness : Float = 1;
 	public var resistance : Float = 1;
@@ -48,6 +53,10 @@ class DynamicJoint extends Joint {
 
 	public function new() {
 		super();
+	}
+
+	public override function shouldReceiveAnimation() {
+		return additive;
 	}
 
 	#if !macro

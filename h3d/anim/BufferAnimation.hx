@@ -164,7 +164,8 @@ class BufferAnimation extends Animation {
 			}
 
 			var m = o.matrix;
-			if( m != null ) {
+			var skinData = o.targetSkin?.skinData;
+			if( m != null && !(skinData != null && !skinData.allJoints[o.targetJoint].shouldReceiveAnimation())) {
 				if( layout.has(Position) ) {
 					m._41 = lerpValue();
 					m._42 = lerpValue();
