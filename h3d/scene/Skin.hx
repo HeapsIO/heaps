@@ -109,6 +109,7 @@ class DynamicJointData extends JointData {
 
 	static var newWorldPos = new Vector(0, 0, 0);
 	static var expectedPos = new Vector(0, 0, 0);
+	static var tmpQ = new Quat();
 
 	var f = -1;
 	var initialState : DynamicJointData;
@@ -195,8 +196,12 @@ class DynamicJointData extends JointData {
 		// Apply computed position to joint
 		jData.speed = (jData.speed + (newWorldPos - absPos.getPosition()) * (1.0 / hxd.Timer.dt)) * 0.5;
 		jData.currentAbsPose.setPosition(newWorldPos);
-		jData.absPos = jData.currentAbsPose.clone();
-		jData.currentRelPose = relPos.clone();
+		if (jData.absPos == null)
+			jData.absPos = new h3d.Matrix();
+		jData.absPos.load(jData.currentAbsPose.clone());
+		if (jData.currentRelPose == null)
+			jData.currentRelPose = new Matrix();
+		jData.currentRelPose.load(relPos);
 
 		if( j.bindIndex >= 0 )
 			skin.currentPalette[j.bindIndex].multiply3x4inline(j.transPos, jData.currentAbsPose);
@@ -218,12 +223,12 @@ class DynamicJointData extends JointData {
 		if (dynJoint != null)
 			Skin.TMP_MAT.load(jDynData.absPos);
 
-		var q = new Quat();
 		var offset = Std.downcast(skin.jointsData[child.index], DynamicJointData).absPos.getPosition() - Skin.TMP_MAT.getPosition();
 		offset.transform3x3(jData.currentAbsPose.getInverse());
-		q.initMoveTo(Std.downcast(skin.jointsData[child.index], DynamicJointData).currentRelPose.getPosition().normalized(), offset.normalized());
+		tmpQ.initMoveTo(Std.downcast(skin.jointsData[child.index], DynamicJointData).currentRelPose.getPosition().normalized(), offset.normalized());
+		tmpQ.toMatrix(Skin.TMP_MAT);
 
-		jData.currentAbsPose.multiply(q.toMatrix(), jData.currentAbsPose);
+		jData.currentAbsPose.multiply(Skin.TMP_MAT, jData.currentAbsPose);
 
 		if (j.subs != null) {
 			for (s in j.subs)
