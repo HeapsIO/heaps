@@ -149,6 +149,10 @@ class Particles extends h3d.scene.Mesh {
 		return new ParticleIterator(head);
 	}
 
+	override function emit( ctx : h3d.scene.RenderContext ) {
+		ctx.emit(material, this);
+	}
+
 	@:access(h2d.Tile)
 	@:noDebug
 	override function draw( ctx : h3d.scene.RenderContext ) {
