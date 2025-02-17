@@ -162,8 +162,12 @@ class ModelDatabase {
 			newJ.globalForce = new Vector(jConf.globalForce.x, jConf.globalForce.y, jConf.globalForce.z);
 			skinData.allJoints[j.index] = newJ;
 
-			j.parent?.subs.remove(j);
 			j.parent?.subs.push(newJ);
+			j.parent?.subs.remove(j);
+			if (newJ.subs != null) {
+				for (s in newJ.subs)
+					s.parent = newJ;
+			}
 		}
 
 		input.skin.setSkinData(skinData);
