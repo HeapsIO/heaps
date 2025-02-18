@@ -3,6 +3,8 @@ import h3d.impl.Driver;
 import h3d.mat.Pass;
 import h3d.mat.Stencil;
 import h3d.mat.Data;
+import hxd.res.Ktx2.EngineFormat;
+import hxd.res.Ktx2.InternalFormat;
 
 #if (js||hlsdl||usegl)
 
@@ -1003,7 +1005,8 @@ class GlDriver extends Driver {
 		case GL.RG, GL.RG8, GL.RG16F, GL.RG32F, 0x822C: GL.RG;
 		case GL.RGB16F, GL.RGB32F, 0x8054, hxd.CompressedTextureFormat.BPTC_FORMAT.RGB_BPTC_UNSIGNED, hxd.CompressedTextureFormat.ETC_FORMAT.RGB_ETC1: GL.RGB;
 		case 0x805B, hxd.CompressedTextureFormat.DXT_FORMAT.RGBA_DXT1,hxd.CompressedTextureFormat.DXT_FORMAT.RGBA_DXT3,
-		hxd.CompressedTextureFormat.DXT_FORMAT.RGBA_DXT5,hxd.CompressedTextureFormat.ASTC_FORMAT.RGBA_4x4, hxd.CompressedTextureFormat.BPTC_FORMAT.RGBA_BPTC : GL.RGBA;		default: throw "Invalid format " + t.internalFmt;
+		hxd.CompressedTextureFormat.DXT_FORMAT.RGBA_DXT5,hxd.CompressedTextureFormat.ASTC_FORMAT.RGBA_4x4, hxd.CompressedTextureFormat.BPTC_FORMAT.RGBA_BPTC : GL.RGBA;
+		default: throw "Invalid format " + t.internalFmt;
 		}
 	}
 
@@ -1031,7 +1034,7 @@ class GlDriver extends Driver {
 		discardError();
 		var tt = gl.createTexture();
 		var bind = getBindType(t);
-		var tt : Texture = { t : tt, width : t.width, height : t.height, internalFmt : GL.RGBA, pixelFmt : GL.UNSIGNED_BYTE, bits : -1, bind : bind, bias : 0, startMip : t.startingMip #if multidriver, driver : this #end };
+				var tt : Texture = { t : tt, width : t.width, height : t.height, internalFmt : GL.RGBA, pixelFmt : GL.UNSIGNED_BYTE, bits : -1, bind : bind, bias : 0, startMip : t.startingMip #if multidriver, driver : this #end };
 		switch( t.format ) {
 		case RGBA:
 			// default
@@ -1145,7 +1148,7 @@ class GlDriver extends Driver {
 
 		#if js
 		// Modern texture allocation that supports both compressed and uncompressed texture in WebGL
-		// texStorate2D/3D is only defined in OpenGL 4.2 but is defined in openGL ES 3 which the js target targets
+		// texStorage2D/3D is only defined in OpenGL 4.2 but is defined in openGL ES 3 which the js target targets
 
 		// Patch RGBA to be RGBA8 because texStorage expect a "Sized Internal Format"
 		var sizedFormat = tt.internalFmt == GL.RGBA ? GL.RGBA8 : tt.internalFmt;
@@ -1243,7 +1246,7 @@ class GlDriver extends Driver {
 	}
 
 	var defaultDepth : h3d.mat.Texture;
-
+	
 	override function getDefaultDepthBuffer() : h3d.mat.Texture {
 		// Unfortunately there is no way to bind the depth buffer of the default frame buffer to a frame buffer object.
 		if( defaultDepth != null )
@@ -1758,7 +1761,7 @@ class GlDriver extends Driver {
 			throw "Invalid texture context";
 		#end
 		gl.bindFramebuffer(GL.FRAMEBUFFER, commonFB);
-
+		
 		if( tex.flags.has(IsArray) )
 			gl.framebufferTextureLayer(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0, tex.t.t, mipLevel, layer);
 		else
