@@ -336,7 +336,7 @@ class Image extends Resource {
 	public static dynamic function customCheckInfo(i:Image) {}
 
 	public function getPixels(?fmt:PixelFormat, ?index:Int) {
-		var pixels:hxd.Pixels;
+				var pixels:hxd.Pixels;
 		if (index == null)
 			index = 0;
 		switch (getInfo().dataFormat) {
