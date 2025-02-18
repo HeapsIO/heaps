@@ -389,12 +389,11 @@ class Pixels {
 			for( i in 0 ... this.width * this.height )
 				nbytes.setFloat(i << 2, this.bytes.getFloat(i << 4));
 			this.bytes = nbytes;
-
+		#if js
 		case [S3TC(a),S3TC(b)] if( a == b ): // nothing
 		case [ASTC(a),ASTC(b)] if( a == b ): // Ktx2 will handle conversion
 		case [ETC(a),ETC(b)] if( a == b ): // Ktx2 will handle conversion 
-		case [RGBA,_]: // With ktx2/basis textures, temp RGBA texture will be assigned before transcoding
-
+		#end
 		#if (hl && hl_ver >= "1.10")
 		case [S3TC(ver),_]:
 			if( (width|height)&3 != 0 ) throw "Texture size should be 4x4 multiple";
