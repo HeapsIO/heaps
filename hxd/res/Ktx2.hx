@@ -240,18 +240,6 @@ class Ktx2Decoder {
 	static var _transcoderScript : String;
 	static var _transcoderLoading : Promise<{ script : String, wasm : haxe.io.Bytes }>;
 
-	/**
-		Get transcoded texture
-
-		@param bytes Texture data as BytesInput
-		@param cb Callback invoked when transcoding is done passing the transcoded texture.
-	**/
-	public static function getTexture(bytes : haxe.io.BytesInput, cb : (texture : h3d.mat.Texture, header:KTX2Header) -> Void) {
-		getTranscodedData(bytes, (data, header) -> {
-			cb(createTexture(data, header), header);
-		});
-	}
-
 	static function detectSupport() {
 		#if js
 		final driver : h3d.impl.GlDriver = cast h3d.Engine.getCurrent().driver;
@@ -355,39 +343,6 @@ class Ktx2Decoder {
 		});
 	}
 
-	static function createTexture( data : BasisWorkerMessageData, header:KTX2Header ) {
-		final create = (fmt:hxd.PixelFormat) -> {
-			if( header.faceCount > 1 || header.layerCount > 1 ) {
-				// TODO: Handle cube texture
-				throw 'Multi texture ktx2 files not supported';
-			}
-			final face = data.faces[0];
-			final mipmaps:Array<ImageData> = face.mipmaps;
-			final texture = new h3d.mat.Texture(data.width, data.height, null, fmt);
-			var level = 0;
-			for ( mipmap in mipmaps ) {
-				final bytes = haxe.io.Bytes.ofData(cast mipmap.data);
-				final pixels = new hxd.Pixels(mipmap.width, mipmap.height, bytes, fmt);
-				texture.uploadPixels(pixels, level);
-				level++;
-			}
-			if( mipmaps.length>1 ) {
-				texture.flags.set(MipMapped);
-				texture.mipMap = Linear;
-			}
-			texture;
-		}
-		final texture = switch (data.format) {
-		case EngineFormat.RGBA_ASTC_4x4_Format: create(hxd.PixelFormat.ASTC(10));
-		case EngineFormat.RGBA_BPTC_Format: create(hxd.PixelFormat.S3TC(7));
-		case EngineFormat.RGBA_S3TC_DXT5_Format: create(hxd.PixelFormat.S3TC(3));
-		case EngineFormat.RGB_ETC1_Format: create(hxd.PixelFormat.ETC(0));
-		case EngineFormat.RGBA_ETC2_EAC_Format: create(hxd.PixelFormat.ETC(1));
-		default:
-			throw 'Ktx2Loader: No supported format available.';
-		}
-		return texture;
-	}
 	#if js
 	static function initTranscoder() {
 		_transcoderLoading = if (_transcoderLoading == null) {
