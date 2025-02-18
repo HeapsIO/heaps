@@ -337,7 +337,7 @@ class Image extends Resource {
 	public static dynamic function customCheckInfo(i:Image) {}
 
 	public function getPixels(?fmt:PixelFormat, ?index:Int) {
-		var pixels:hxd.Pixels;
+				var pixels:hxd.Pixels;
 		if (index == null)
 			index = 0;
 		switch (getInfo().dataFormat) {
@@ -636,7 +636,7 @@ class Image extends Resource {
 				tex.flags.set(Loading);
 
 				if(tex.format.match(S3TC(_) | ASTC(_) | ETC(_))){
-					tex.uploadPixels(Pixels.alloc(inf.width, inf.height, RGBA));
+					tex.uploadPixels(Pixels.alloc(inf.width, inf.height, tex.format));
 				} else {
 					@:privateAccess tex.format = RGBA;
 					@:privateAccess tex.width = 1;
