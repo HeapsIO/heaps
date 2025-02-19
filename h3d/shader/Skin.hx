@@ -11,8 +11,8 @@ class Utils  extends hxsl.Shader {
 
 		function applySkinPoint(p : Vec3) : Vec3 {
 			var transformed = (p * boneMatrixX) * skinWeights.x +
-					          (p * boneMatrixY) * skinWeights.y +
-				              (p * boneMatrixZ) * skinWeights.z;
+							  (p * boneMatrixY) * skinWeights.y +
+							  (p * boneMatrixZ) * skinWeights.z;
 			if(skinWeights.w > 0.0) {
 				transformed += (p * boneMatrixW) * skinWeights.w;
 			}
@@ -21,8 +21,8 @@ class Utils  extends hxsl.Shader {
 
 		function applySkinVec(v : Vec3) : Vec3 {
 			var transformed = (v * mat3(boneMatrixX)) * skinWeights.x +
-			                  (v * mat3(boneMatrixY)) * skinWeights.y +
-				   			  (v * mat3(boneMatrixZ)) * skinWeights.z;
+							  (v * mat3(boneMatrixY)) * skinWeights.y +
+							  (v * mat3(boneMatrixZ)) * skinWeights.z;
 			if(skinWeights.w > 0.0) {
 				transformed += (v * mat3(boneMatrixW)) * skinWeights.w;
 			}
