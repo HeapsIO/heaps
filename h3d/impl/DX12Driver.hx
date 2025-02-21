@@ -59,7 +59,7 @@ class ManagedHeapArray {
 
 @:struct class BumpAllocation {
 	public var resource : GpuResource = null;
-	public var cpuAdress : hl.Bytes = null;
+	public var cpuAddress : hl.Bytes = null;
 	public var offset : Int = 0;
 	public var byteSize : Int = 0;
 	public function new() {
@@ -69,7 +69,7 @@ class ManagedHeapArray {
 class BumpAllocator {
 	var resource : GpuResource;
 	var capacity : Int;
-	var cpuAdress : hl.Bytes;
+	var cpuAddress : hl.Bytes;
 	var heap : HeapProperties;
 	var offset : Int = 0;
 	var next : BumpAllocator;
@@ -88,7 +88,7 @@ class BumpAllocator {
 		desc.layout = ROW_MAJOR;
 		heap.type = UPLOAD;
 		resource = Driver.createCommittedResource(heap, flags, desc, GENERIC_READ, null);
-		cpuAdress = resource.map(0, null);
+		cpuAddress = resource.map(0, null);
 	}
 
 	public function reset() {
@@ -105,18 +105,16 @@ class BumpAllocator {
 		offset = 0;
 		capacity = 0;
 		heap = null;
-		cpuAdress = null;
+		cpuAddress = null;
 		if ( next != null) {
 			next.release();
 			next = null;
 		}
 	}
 
-	public inline function alloc( size : Int, alignment = 256, ?allocation : BumpAllocation ) {
+	public inline function alloc( size : Int, alignment = 256, allocation : BumpAllocation ) {
 		var sz = size & ~(alignment - 1);
 		if( sz != size ) sz += alignment;
-		if ( allocation == null )
-			allocation = new BumpAllocation();
 		return tryAlloc(sz, alignment, allocation);
 	}
 
@@ -126,12 +124,12 @@ class BumpAllocator {
 		var newOffset = size + offsetAligned;
 		if ( newOffset > capacity ) {
 			if ( next == null )
-				next = new BumpAllocator(hxd.Math.imax(h3d.impl.DX12Driver.INITIAL_BUMP_ALLOCATOR_SIZE, size));
+				next = new BumpAllocator(Std.int(capacity*3/2));
 			return next.tryAlloc(size, alignment, allocation);
 		}
 		allocation.byteSize = size;
 		allocation.offset = offsetAligned;
-		allocation.cpuAdress = cpuAdress.offset(offsetAligned);
+		allocation.cpuAddress = cpuAddress.offset(offsetAligned);
 		allocation.resource = resource;
 		offset = newOffset;
 		return allocation;
@@ -1758,7 +1756,7 @@ class DX12Driver extends h3d.impl.Driver {
 
 	function allocDynamicBuffer( data : hl.Bytes, dataSize : Int ) : BumpAllocation {
 		var allocation = frame.bumpAllocator.alloc(dataSize, tmp.bumpAllocation);
-		allocation.cpuAdress.blit(0, data, 0, dataSize);
+		allocation.cpuAddress.blit(0, data, 0, dataSize);
 		return allocation;
 	}
 
@@ -2144,7 +2142,6 @@ class DX12Driver extends h3d.impl.Driver {
 			v.bufferLocation = bview.bufferLocation;
 			v.sizeInBytes = bview.sizeInBytes;
 			v.strideInBytes = bview.strideInBytes;
-			if( inf.offset >= 256 ) throw "assert";
 			pipelineBuilder.setBuffer(i, inf, v.strideInBytes);
 		}
 		flushTransitions();
@@ -2163,6 +2160,7 @@ class DX12Driver extends h3d.impl.Driver {
 			v.strideInBytes = bview.strideInBytes;
 			pipelineBuilder.setBuffer(i, inf, v.strideInBytes);
 		}
+		flushTransitions();
 		frame.commandList.iaSetVertexBuffers(0, map.length, views[0]);
 	}
 
