@@ -433,7 +433,7 @@ class GlDriver extends Driver {
 					#elseif (hl_ver < version("1.15.0"))
 					throw "Storage buffer support requires -D hl-ver=1.15.0";
 					#else
-					gl.getProgramResourceIndex(p.p,GL.SHADER_STORAGE_BLOCK, "storage_uniform_buffer"+i);
+					gl.getProgramResourceIndex(p.p,GL.SHADER_STORAGE_BLOCK,(shader.kind==Vertex?"storage_vertex_":"storage_")+"uniform_buffer"+i);
 					#end
 				case RW:
 					#if js
@@ -441,7 +441,7 @@ class GlDriver extends Driver {
 					#elseif (hl_ver < version("1.15.0"))
 					throw "RW buffer support requires -D hl-ver=1.15.0";
 					#else
-					gl.getProgramResourceIndex(p.p,GL.SHADER_STORAGE_BLOCK, "rw_uniform_buffer"+i);
+					gl.getProgramResourceIndex(p.p,GL.SHADER_STORAGE_BLOCK,(shader.kind==Vertex?"rw_vertex_":"rw_")+"uniform_buffer"+i);
 					#end
 				case Uniform:
 					gl.getUniformBlockIndex(p.p,(shader.kind==Vertex?"vertex_":"")+"uniform_buffer"+i);
