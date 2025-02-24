@@ -2,6 +2,7 @@ package h3d.impl;
 import h3d.impl.Driver;
 import h3d.mat.Data;
 import h3d.mat.Data;
+import h3d.mat.Data;
 import h3d.mat.Pass;
 import h3d.mat.Stencil;
 import hxd.CompressedTextureFormat;
@@ -1132,6 +1133,10 @@ class GlDriver extends Driver {
 			switch (n) {
 			case 0: tt.internalFmt = ETC_FORMAT.RGB_ETC1;
 			case 1: tt.internalFmt = ETC_FORMAT.RGBA_ETC2;
+			}
+		default:
+			throw "Unsupported texture format "+t.format;
+		}
 
 		#if js
 		if( tt.pixelFmt == GL.UNSIGNED_SHORT && !has16Bits )
