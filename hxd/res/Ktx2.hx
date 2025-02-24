@@ -8,29 +8,33 @@ typedef Promise<T> = js.lib.Promise<T>;
 typedef ImageData = js.html.ImageData;
 typedef Uint8Array = js.lib.Uint8Array;
 typedef Worker = js.html.Worker;
-#else 
+#else
 // TODO: Add support for native targets, just dummy typing for now...
 class Promise<T> {
 	public function new(cb:(resolve:T, reject:T) -> Void) {}
+
 	public function then<T>(cb:(message:T) -> Void) {};
+
 	static function resolve<T>(thenable:Dynamic<T>):Promise<T> {
 		return null;
 	};
+
 	static function reject<T>(?reason:Dynamic):Promise<T> {
 		return null;
-		
 	};
-} 
+}
+
 typedef ImageData = Dynamic;
 typedef Uint8Array = UInt8Array;
+
 class Worker {
 	public var index:Int;
-	public function new(url:String) {
-		
-	}
+
+	public function new(url:String) {}
 
 	public function postMessage(message:Dynamic, ?transfer:Array<Dynamic>) {}
-	dynamic public function onmessage(e : { data : { type : String, id : Int } }) {};
+
+	dynamic public function onmessage(e:{data:{type:String, id:Int}}) {};
 }
 #end
 
@@ -232,17 +236,79 @@ class Ktx2Decoder {
 	public static var workerLimit = 4;
 
 	static var _workerNextTaskID = 1;
-	static var _workerSourceURL : String;
-	static var _workerConfig : BasisWorkerConfig;
-	static var _workerPool : Array<WorkerTask> = [];
-	static var _transcoderPending : Promise<Dynamic>;
-	static var _transcoderBinary : haxe.io.Bytes;
-	static var _transcoderScript : String;
-	static var _transcoderLoading : Promise<{ script : String, wasm : haxe.io.Bytes }>;
+	static var _workerSourceURL:String;
+	static var _workerConfig:BasisWorkerConfig;
+	static var _workerPool:Array<WorkerTask> = [];
+	static var _transcoderPending:Promise<Dynamic>;
+	static var _transcoderBinary:haxe.io.Bytes;
+	static var _transcoderScript:String;
+	static var _transcoderLoading:Promise<{script:String, wasm:haxe.io.Bytes}>;
+
+	/**
+		Transcode and get the texture data.
+
+		@param bytes Texture data as BytesInput
+		@param cb Callback invoked when transcoding is done, passing the transcoded texture data.
+
+	**/
+	public static function getTranscodedData(buffer:haxe.io.BytesInput, cb:(data:BasisWorkerMessageData, header:KTX2Header) -> Void) {
+		_workerConfig ??= detectSupport();
+		if (_workerConfig == null) {
+			throw "Not implemented: Ktx2 only supported on js target";
+		}
+
+		final ktx2File = Ktx2.readFile(buffer);
+		// Determine basis format
+		final basisFormat = if (ktx2File.header.vkFormat == 0) {
+			if (ktx2File.dfd.colorModel == Ktx2.DFDModel.ETC1S)
+				ETC1S
+			else if (ktx2File.dfd.colorModel == Ktx2.DFDModel.UASTC)
+				UASTC
+			else if (ktx2File.dfd.transferFunction == Ktx2.DFDTransferFunction.LINEAR)
+				UASTC_HDR
+			else
+				throw "KTX2Loader: Unknown Basis encoding";
+		} else {
+			throw "KTX2Loader: Non-zero vkFormat not supported";
+		};
+
+		// Get transcoder format
+		final formatInfo = getTranscoderFormat(basisFormat, ktx2File.header.pixelWidth, ktx2File.header.pixelHeight, ktx2File.dfd.hasAlpha());
+		getWorker().then((task:WorkerTask) -> {
+			final worker = task.worker;
+			final taskID = _workerNextTaskID++;
+
+			final textureDone = new Promise((resolve, reject) -> {
+				task.callbacks.set(taskID, {
+					resolve: resolve,
+					reject: reject,
+				});
+				task.taskCosts.set(taskID, buffer.length);
+				task.taskLoad += task.taskCosts.get(taskID);
+				buffer.position = 0;
+				final bytes = buffer.readAll().getData();
+				worker.postMessage({
+					type: 'transcode',
+					id: taskID,
+					buffer: bytes,
+					formatInfo: formatInfo,
+				}, [bytes]);
+			});
+
+			textureDone.then((message:BasisWorkerMessage) -> {
+				if (message.type == 'error') {
+					throw 'Unable to decode ktx2 file: ${message.error}';
+				}
+				buffer.position = 0;
+				final header = Ktx2.readFile(buffer).header;
+				cb(message.data, header);
+			});
+		});
+	}
 
 	static function detectSupport() {
 		#if js
-		final driver : h3d.impl.GlDriver = cast h3d.Engine.getCurrent().driver;
+		final driver:h3d.impl.GlDriver = cast h3d.Engine.getCurrent().driver;
 		return {
 			astcSupported: driver.textureSupport.astc,
 			etc1Supported: driver.textureSupport.etc1,
@@ -255,11 +321,61 @@ class Ktx2Decoder {
 		#end
 	}
 
+	#if non_res_ktx2
+	/**
+		Get transcoded texture. 
+
+		Used in combination with "non_res_ktx2" flag when handling loading of ktx2 outside of heaps res system.
+
+		@param bytes Texture data as BytesInput
+		@param cb Callback invoked when transcoding is done, passing the transcoded texture.
+	**/
+	public static function getTexture(bytes:haxe.io.BytesInput, cb:(texture:h3d.mat.Texture, header:KTX2Header) -> Void) {
+		getTranscodedData(bytes, (data, header) -> {
+			cb(createTexture(data, header), header);
+		});
+	}
+
+	static function createTexture(data:BasisWorkerMessageData, header:KTX2Header) {
+		final create = (fmt:hxd.PixelFormat) -> {
+			if (header.faceCount > 1 || header.layerCount > 1) {
+				// TODO: Handle cube texture
+				throw 'Multi texture ktx2 files not supported';
+			}
+			final face = data.faces[0];
+			final mipmaps:Array<ImageData> = face.mipmaps;
+			final texture = new h3d.mat.Texture(data.width, data.height, null, fmt);
+			var level = 0;
+			for (mipmap in mipmaps) {
+				final bytes = haxe.io.Bytes.ofData(cast mipmap.data);
+				final pixels = new hxd.Pixels(mipmap.width, mipmap.height, bytes, fmt);
+				texture.uploadPixels(pixels, level);
+				level++;
+			}
+			if (mipmaps.length > 1) {
+				texture.flags.set(MipMapped);
+				texture.mipMap = Linear;
+			}
+			texture;
+		}
+		final texture = switch (data.format) {
+			case EngineFormat.RGBA_ASTC_4x4_Format: create(hxd.PixelFormat.ASTC(10));
+			case EngineFormat.RGBA_BPTC_Format: create(hxd.PixelFormat.S3TC(7));
+			case EngineFormat.RGBA_S3TC_DXT5_Format: create(hxd.PixelFormat.S3TC(3));
+			case EngineFormat.RGB_ETC1_Format: create(hxd.PixelFormat.ETC(0));
+			case EngineFormat.RGBA_ETC2_EAC_Format: create(hxd.PixelFormat.ETC(1));
+			default:
+				throw 'Ktx2Loader: No supported format available.';
+		}
+		return texture;
+	}
+	#end
+
 	static function getWorker():Promise<WorkerTask> {
 		return initTranscoder().then(val -> {
-			if( _workerPool.length < workerLimit ) {
+			if (_workerPool.length < workerLimit) {
 				final worker = new Worker(_workerSourceURL);
-				final workerTask : WorkerTask = {
+				final workerTask:WorkerTask = {
 					worker: worker,
 					callbacks: new haxe.ds.IntMap(),
 					taskCosts: new haxe.ds.IntMap(),
@@ -291,58 +407,6 @@ class Ktx2Decoder {
 		});
 	}
 
-	public static function getTranscodedData(buffer:haxe.io.BytesInput, cb:(data:BasisWorkerMessageData, header:KTX2Header) -> Void) {
-		_workerConfig ??= detectSupport();
-		if ( _workerConfig == null ) {
-			throw "Not implemented: Ktx2 only supported on js target";
-		}
-		
-		final ktx2File = Ktx2.readFile(buffer);
-		
-		// Determine basis format
-		final basisFormat = if ( ktx2File.header.vkFormat == 0 ) {
-			if ( ktx2File.dfd.colorModel == Ktx2.DFDModel.ETC1S ) ETC1S 
-			else if ( ktx2File.dfd.colorModel == Ktx2.DFDModel.UASTC ) UASTC
-			else if ( ktx2File.dfd.transferFunction == Ktx2.DFDTransferFunction.LINEAR ) UASTC_HDR
-			else throw "KTX2Loader: Unknown Basis encoding";
-		} else {
-			throw "KTX2Loader: Non-zero vkFormat not supported";
-		};
-	
-		// Get transcoder format
-		final formatInfo = getTranscoderFormat(basisFormat, ktx2File.header.pixelWidth, ktx2File.header.pixelHeight, ktx2File.dfd.hasAlpha());
-		getWorker().then((task:WorkerTask) -> {
-			final worker = task.worker;
-			final taskID = _workerNextTaskID++;
-	
-			final textureDone = new Promise((resolve, reject) -> {
-				task.callbacks.set(taskID, {
-					resolve: resolve,
-					reject: reject,
-				});
-				task.taskCosts.set(taskID, buffer.length);
-				task.taskLoad += task.taskCosts.get(taskID);
-				buffer.position = 0;
-				final bytes = buffer.readAll().getData();
-				worker.postMessage({
-					type: 'transcode', 
-					id: taskID, 
-					buffer: bytes, 
-					formatInfo: formatInfo,
-				}, [bytes]);
-			});
-	
-			textureDone.then((message:BasisWorkerMessage) -> {
-				if (message.type == 'error') {
-					throw 'Unable to decode ktx2 file: ${message.error}';
-				}
-				buffer.position = 0;
-				final header = Ktx2.readFile(buffer).header;
-				cb(message.data, header);
-			});
-		});
-	}
-
 	#if js
 	static function initTranscoder() {
 		_transcoderLoading = if (_transcoderLoading == null) {
@@ -360,7 +424,7 @@ class Ktx2Decoder {
 				binaryLoader.onError = reject;
 				binaryLoader.load(true);
 			});
-			Promise.all([jsContent, binaryContent]).then(arr -> {script:arr[0].toString(), wasm:arr[1]});
+			Promise.all([jsContent, binaryContent]).then(arr -> {script: arr[0].toString(), wasm: arr[1]});
 		} else {
 			_transcoderLoading;
 		}
@@ -504,8 +568,8 @@ class Ktx2Decoder {
 			}
 		';
 
-		final blob = new js.html.Blob([workerScript], {type: "text/javascript"});
-		_workerSourceURL = js.Syntax.code("URL.createObjectURL({0})", blob);
+			final blob = new js.html.Blob([workerScript], {type: "text/javascript"});
+			_workerSourceURL = js.Syntax.code("URL.createObjectURL({0})", blob);
 		});
 		return _transcoderPending;
 	}
@@ -514,58 +578,59 @@ class Ktx2Decoder {
 		return null;
 	}
 	#end
-    public static function getTranscoderFormat(basisFormat:BasisFormat, width:Int, height:Int, hasAlpha:Bool):{ transcoderFormat:Int, engineFormat:Int, engineType:Int } {
-        _workerConfig ??= detectSupport();
+
+	public static function getTranscoderFormat(basisFormat:BasisFormat, width:Int, height:Int,
+			hasAlpha:Bool):{transcoderFormat:Int, engineFormat:Int, engineType:Int} {
+		_workerConfig ??= detectSupport();
 		final caps = _workerConfig;
 		return switch basisFormat {
-            case BasisFormat.ETC1S if(hasAlpha && caps.etc2Supported):
-                { transcoderFormat: TranscoderFormat.ETC2, engineFormat: EngineFormat.RGBA_ETC2_EAC_Format, engineType: EngineType.UnsignedByteType };
-            case BasisFormat.ETC1S if(!hasAlpha && (caps.etc1Supported || caps.etc2Supported)):
-                { transcoderFormat: TranscoderFormat.ETC1, engineFormat: EngineFormat.RGB_ETC1_Format, engineType: EngineType.UnsignedByteType };
-            case BasisFormat.ETC1S if(caps.bptcSupported):
-                { transcoderFormat: TranscoderFormat.BC7_M5, engineFormat: EngineFormat.RGBA_BPTC_Format, engineType: EngineType.UnsignedByteType };
-            case BasisFormat.ETC1S if(hasAlpha && caps.dxtSupported):
-                { transcoderFormat: TranscoderFormat.BC3, engineFormat: EngineFormat.RGBA_S3TC_DXT5_Format, engineType: EngineType.UnsignedByteType };
-            case BasisFormat.ETC1S if(!hasAlpha && caps.dxtSupported):
-                { transcoderFormat: TranscoderFormat.BC1, engineFormat: EngineFormat.RGB_S3TC_DXT1_Format, engineType: EngineType.UnsignedByteType };
-            case BasisFormat.ETC1S:
-                { transcoderFormat: TranscoderFormat.RGBA32, engineFormat: EngineFormat.RGBAFormat, engineType: EngineType.UnsignedByteType };
-            
-            case BasisFormat.UASTC if(caps.astcSupported):
-                { transcoderFormat: TranscoderFormat.ASTC_4x4, engineFormat: EngineFormat.RGBA_ASTC_4x4_Format, engineType: EngineType.UnsignedByteType };
-            case BasisFormat.UASTC if(caps.bptcSupported):
-                { transcoderFormat: TranscoderFormat.BC7_M5, engineFormat: EngineFormat.RGBA_BPTC_Format, engineType: EngineType.UnsignedByteType };
-            case BasisFormat.UASTC if(hasAlpha && caps.etc2Supported):
-                { transcoderFormat: TranscoderFormat.ETC2, engineFormat: EngineFormat.RGBA_ETC2_EAC_Format, engineType: EngineType.UnsignedByteType };
-            case BasisFormat.UASTC if((!hasAlpha && caps.etc2Supported) || caps.etc1Supported):
-                { transcoderFormat: TranscoderFormat.ETC1, engineFormat: EngineFormat.RGB_ETC1_Format, engineType: EngineType.UnsignedByteType };
-            case BasisFormat.UASTC if(hasAlpha && caps.dxtSupported):
-                { transcoderFormat: TranscoderFormat.BC3, engineFormat: EngineFormat.RGBA_S3TC_DXT5_Format, engineType: EngineType.UnsignedByteType };
-            case BasisFormat.UASTC if(!hasAlpha && caps.dxtSupported):
-                { transcoderFormat: TranscoderFormat.BC1, engineFormat: EngineFormat.RGB_S3TC_DXT1_Format, engineType: EngineType.UnsignedByteType };
-            case BasisFormat.UASTC:
-                { transcoderFormat: TranscoderFormat.RGBA32, engineFormat: EngineFormat.RGBAFormat, engineType: EngineType.UnsignedByteType };
-            
-            case BasisFormat.UASTC_HDR:
-                { transcoderFormat: TranscoderFormat.RGBA_HALF, engineFormat: EngineFormat.RGBAFormat, engineType: EngineType.HalfFloatType };
-            
-            case _:
-                throw 'KTX2Loader: Failed to identify transcoding target.';
-        }
-    }
+			case BasisFormat.ETC1S if (hasAlpha && caps.etc2Supported):
+				{transcoderFormat: TranscoderFormat.ETC2, engineFormat: EngineFormat.RGBA_ETC2_EAC_Format, engineType: EngineType.UnsignedByteType};
+			case BasisFormat.ETC1S if (!hasAlpha && (caps.etc1Supported || caps.etc2Supported)):
+				{transcoderFormat: TranscoderFormat.ETC1, engineFormat: EngineFormat.RGB_ETC1_Format, engineType: EngineType.UnsignedByteType};
+			case BasisFormat.ETC1S if (caps.bptcSupported):
+				{transcoderFormat: TranscoderFormat.BC7_M5, engineFormat: EngineFormat.RGBA_BPTC_Format, engineType: EngineType.UnsignedByteType};
+			case BasisFormat.ETC1S if (hasAlpha && caps.dxtSupported):
+				{transcoderFormat: TranscoderFormat.BC3, engineFormat: EngineFormat.RGBA_S3TC_DXT5_Format, engineType: EngineType.UnsignedByteType};
+			case BasisFormat.ETC1S if (!hasAlpha && caps.dxtSupported):
+				{transcoderFormat: TranscoderFormat.BC1, engineFormat: EngineFormat.RGB_S3TC_DXT1_Format, engineType: EngineType.UnsignedByteType};
+			case BasisFormat.ETC1S:
+				{transcoderFormat: TranscoderFormat.RGBA32, engineFormat: EngineFormat.RGBAFormat, engineType: EngineType.UnsignedByteType};
 
-    static function isPowerOfTwo(value:Int):Bool {
-        return value > 0 && (value & (value - 1)) == 0;
-    }
-	
+			case BasisFormat.UASTC if (caps.astcSupported):
+				{transcoderFormat: TranscoderFormat.ASTC_4x4, engineFormat: EngineFormat.RGBA_ASTC_4x4_Format, engineType: EngineType.UnsignedByteType};
+			case BasisFormat.UASTC if (caps.bptcSupported):
+				{transcoderFormat: TranscoderFormat.BC7_M5, engineFormat: EngineFormat.RGBA_BPTC_Format, engineType: EngineType.UnsignedByteType};
+			case BasisFormat.UASTC if (hasAlpha && caps.etc2Supported):
+				{transcoderFormat: TranscoderFormat.ETC2, engineFormat: EngineFormat.RGBA_ETC2_EAC_Format, engineType: EngineType.UnsignedByteType};
+			case BasisFormat.UASTC if ((!hasAlpha && caps.etc2Supported) || caps.etc1Supported):
+				{transcoderFormat: TranscoderFormat.ETC1, engineFormat: EngineFormat.RGB_ETC1_Format, engineType: EngineType.UnsignedByteType};
+			case BasisFormat.UASTC if (hasAlpha && caps.dxtSupported):
+				{transcoderFormat: TranscoderFormat.BC3, engineFormat: EngineFormat.RGBA_S3TC_DXT5_Format, engineType: EngineType.UnsignedByteType};
+			case BasisFormat.UASTC if (!hasAlpha && caps.dxtSupported):
+				{transcoderFormat: TranscoderFormat.BC1, engineFormat: EngineFormat.RGB_S3TC_DXT1_Format, engineType: EngineType.UnsignedByteType};
+			case BasisFormat.UASTC:
+				{transcoderFormat: TranscoderFormat.RGBA32, engineFormat: EngineFormat.RGBAFormat, engineType: EngineType.UnsignedByteType};
+
+			case BasisFormat.UASTC_HDR:
+				{transcoderFormat: TranscoderFormat.RGBA_HALF, engineFormat: EngineFormat.RGBAFormat, engineType: EngineType.HalfFloatType};
+
+			case _:
+				throw 'KTX2Loader: Failed to identify transcoding target.';
+		}
+	}
+
+	static function isPowerOfTwo(value:Int):Bool {
+		return value > 0 && (value & (value - 1)) == 0;
+	}
 }
 
 typedef Ktx2File = {
-	header : KTX2Header,
-	levels : Array<KTX2Level>,
-	dfd : KTX2DFD,
-	data : Uint8Array,
-	supercompressionGlobalData : KTX2SupercompressionGlobalData,
+	header:KTX2Header,
+	levels:Array<KTX2Level>,
+	dfd:KTX2DFD,
+	data:Uint8Array,
+	supercompressionGlobalData:KTX2SupercompressionGlobalData,
 }
 
 enum abstract SuperCompressionScheme(Int) from Int to Int {
@@ -615,63 +680,77 @@ enum abstract SupercompressionScheme(Int) from Int to Int {
 	/**
 		Vulkan format. Will be 0 for universal texture formats.
 	**/
-	public final vkFormat : Int;
+	public final vkFormat:Int;
+
 	/**
 		Size of data type in bytes used to upload data to a graphics API.
 	**/
-	public final typeSize : Int;
+	public final typeSize:Int;
+
 	/**
 		The width of texture image for level 0, in pixels.
 	**/
-	public final pixelWidth : Int;
+	public final pixelWidth:Int;
+
 	/**
 		The height of texture image for level 0, in pixels.
 	**/
-	public final pixelHeight : Int;
+	public final pixelHeight:Int;
+
 	/**
 		The depth of texture image for level 0, in pixels.
 	**/
-	public final pixelDepth : Int;
+	public final pixelDepth:Int;
+
 	/**
 		Number of array elements. If texture is not an array texture, layerCount must equal 0.
 	**/
-	public final layerCount : Int;
+	public final layerCount:Int;
+
 	/**
 		Number of cubemap faces. For cubemaps and cubemap arrays this must be 6. For non cubemaps this must be 1.
 	**/
-	public final faceCount : Int;
+	public final faceCount:Int;
+
 	/**
 		Specifies number of mip levels.
 	**/
-	public final levelCount : Int;
+	public final levelCount:Int;
+
 	/***
 		Indicates if supercompression scheme has been applied. 0=None, 1=BasisLZ, 2=Zstandard, 3=ZLIB
 	**/
-	public final supercompressionScheme : Int;
+	public final supercompressionScheme:Int;
+
 	/**
 		Offset from start of file for dfdTotalSize field in Data Format Descriptor
 	**/
-	public final dfdByteOffset : Int;
+	public final dfdByteOffset:Int;
+
 	/**
 		Total number of bytes in the Data Format Descriptor, including dfdTotalSize field.
 	**/
-	public final dfdByteLength : Int;
+	public final dfdByteLength:Int;
+
 	/**
 		Offset of key/value pair data
 	**/
-	public final kvdByteOffset : Int;
+	public final kvdByteOffset:Int;
+
 	/**
 		Total number of bytes of key/value data
 	**/
-	public final kvdByteLength : Int;
+	public final kvdByteLength:Int;
+
 	/**
 		The offset from the start of the file of supercompressionGlobalData.
 	**/
-	public final sgdByteOffset : Int;
+	public final sgdByteOffset:Int;
+
 	/**
 		Number of bytes of supercompressionGlobalData. 
 	**/
-	public final sgdByteLength : Int;
+	public final sgdByteLength:Int;
 
 	public function needZSTDDecoder() {
 		return supercompressionScheme == SupercompressionScheme.ZStandard;
@@ -700,60 +779,71 @@ typedef KTX2Sample = {
 }
 
 /** Ktx2 Document Format Description */
-@:structInit class KTX2DFD  {
+@:structInit class KTX2DFD {
 	/**
 		Defined as 0 in spec
 	**/
-	public final vendorId : Int;
+	public final vendorId:Int;
+
 	/**
 		Defined as 0 in spec
 	**/
-	public final descriptorType : Int;
+	public final descriptorType:Int;
+
 	/**
 		Defined as 2 in spec for ktx2
 	**/
-	public final versionNumber : Int;
+	public final versionNumber:Int;
+
 	/**
 		Size in bytes of this Descriptor Block
 	**/
-	public final descriptorBlockSize : Int;
+	public final descriptorBlockSize:Int;
+
 	/**
 		Color model for encoded data (ETC1S=163, UASTC=166)
 	**/
-	public final colorModel : Int;
+	public final colorModel:Int;
+
 	/**
 		Color primaries used when encoding. BT709/SRGB (1) recommended for standard dynamic range, standard gamut images. See KHR_DF_PRIMARIES in khr_df.h for other values.
 	**/
-	public final colorPrimaries : Int;
+	public final colorPrimaries:Int;
+
 	/**
 		Encoding curve used to map luminance, with values like KHR_DF_TRANSFER_LINEAR, KHR_DF_TRANSFER_SRGB, or KHR_DF_TRANSFER_ST2084 for HDR. See KHR_DF_TRANSFER in khr_df.h for other values.
 	**/
-	public final transferFunction : Int;
+	public final transferFunction:Int;
+
 	/**
 		Indicates if premultiplied aplha should be used. KHR_DF_FLAG_ALPHA_PREMULTIPLIED (1) for PMA, or KHR_DF_FLAG_ALPHA_STRAIGHT (0) for non-PMA.
 	**/
-	public final flags : Int;
+	public final flags:Int;
+
 	/**
-		 Integer bound on range of coordinates covered by repeating block described by samples. Four separate values, represented as unsigned 8-bit integers, are supported, corresponding to successive dimensions.
+		Integer bound on range of coordinates covered by repeating block described by samples. Four separate values, represented as unsigned 8-bit integers, are supported, corresponding to successive dimensions.
 	**/
-	public final texelBlockDimension : {
-		 x : Int,
-		 y : Int,
-		 z : Int,
-		 w : Int,
+	public final texelBlockDimension:{
+		x:Int,
+		y:Int,
+		z:Int,
+		w:Int,
 	};
+
 	/**
 		Number of bytes which a plane contributes to the format.
 	**/
-	public final bytesPlane : Array<Int>;
+	public final bytesPlane:Array<Int>;
+
 	/**
 		Number of samples present in the format.
 	**/
-	public final numSamples : Int;
+	public final numSamples:Int;
+
 	/**
 		Samples data
 	**/
-	public final samples : Array<KTX2Sample>;
+	public final samples:Array<KTX2Sample>;
 
 	/**
 		Check if texture data has alpha channel
@@ -897,37 +987,43 @@ class InternalFormat {
 	/**
 	 * The height of the mipmap level
 	 */
-	public final height : Int;
+	public final height:Int;
 }
 
 typedef WorkerTask = {
-	worker : Worker,
-	callbacks : haxe.ds.IntMap<{ resolve : (value : Dynamic) -> Void, reject : (reason : Dynamic) -> Void }>,
-	taskCosts : haxe.ds.IntMap<Int>,
-	taskLoad : Int,
+	worker:Worker,
+	callbacks:haxe.ds.IntMap<{resolve:(value:Dynamic) -> Void, reject:(reason:Dynamic) -> Void}>,
+	taskCosts:haxe.ds.IntMap<Int>,
+	taskLoad:Int,
 }
 
 typedef BasisWorkerConfig = {
-	astcSupported : Bool,
-	etc1Supported : Bool,
-	etc2Supported : Bool,
-	dxtSupported : Bool,
-	bptcSupported : Bool,
+	astcSupported:Bool,
+	etc1Supported:Bool,
+	etc2Supported:Bool,
+	dxtSupported:Bool,
+	bptcSupported:Bool,
 }
 
 @:structInit class BasisWorkerMessage {
 	public final id:String;
 	public final type = 'transcode';
-	public final data : BasisWorkerMessageData;
-	public final error : String = null;
+	public final data:BasisWorkerMessageData;
+	public final error:String = null;
 }
 
 typedef BasisWorkerMessageData = {
-	faces : Array<{ mipmaps : Array<ImageData>, width : Int, height : Int, format : Int, type : Int }>,
-	width : Int,
-	height : Int,
-	hasAlpha : Bool,
-	format : Int,
-	type : Int,
-	dfdFlags : Int,
+	faces:Array<{
+		mipmaps:Array<ImageData>,
+		width:Int,
+		height:Int,
+		format:Int,
+		type:Int
+	}>,
+	width:Int,
+	height:Int,
+	hasAlpha:Bool,
+	format:Int,
+	type:Int,
+	dfdFlags:Int,
 }
