@@ -3,6 +3,7 @@ import h3d.impl.Driver;
 import h3d.mat.Pass;
 import h3d.mat.Stencil;
 import h3d.mat.Data;
+import hxd.CompressedTextureFormat;
 import hxd.res.Ktx2.EngineFormat;
 import hxd.res.Ktx2.InternalFormat;
 
@@ -1097,24 +1098,24 @@ class GlDriver extends Driver {
 		case S3TC(n) if( n <= maxCompressedTexturesSupport ):
 			checkMult4(t);
 			switch( n ) {
-			case 1: tt.internalFmt = 0x83F1; // COMPRESSED_RGBA_S3TC_DXT1_EXT
-			case 2:	tt.internalFmt = 0x83F2; // COMPRESSED_RGBA_S3TC_DXT3_EXT
-			case 3: tt.internalFmt = 0x83F3; // COMPRESSED_RGBA_S3TC_DXT5_EXT
-			case 6: tt.internalFmt = 0x8E8F; // COMPRESSED_RGB_BPTC_UNSIGNED_FLOAT
-			case 7: tt.internalFmt = 0x8E8C; // COMPRESSED_RGBA_BPTC_UNORM
+			case 1: tt.internalFmt = DXT_FORMAT.RGBA_DXT1;
+			case 2:	tt.internalFmt = DXT_FORMAT.RGBA_DXT3;
+			case 3: tt.internalFmt = DXT_FORMAT.RGBA_DXT5;
+			case 6: tt.internalFmt = BPTC_FORMAT.RGB_BPTC_UNSIGNED;
+			case 7: tt.internalFmt = BPTC_FORMAT.RGBA_BPTC;
 			default: throw "Unsupported texture format "+t.format;
 			}
 		case ASTC(n):
 			checkMult4(t);
 			switch (n) {
-			case 10: tt.internalFmt = hxd.CompressedTextureFormat.ASTC_FORMAT.RGBA_4x4;
+			case 10: tt.internalFmt = ASTC_FORMAT.RGBA_4x4;
 			default: throw "Unsupported texture format " + t.format;
 			}
 		case ETC(n):
 			checkMult4(t);
 			switch (n) {
-			case 0: tt.internalFmt = hxd.CompressedTextureFormat.ETC_FORMAT.RGB_ETC1;
-			case 1: tt.internalFmt = hxd.CompressedTextureFormat.ETC_FORMAT.RGBA_ETC2;
+			case 0: tt.internalFmt = ETC_FORMAT.RGB_ETC1;
+			case 1: tt.internalFmt = ETC_FORMAT.RGBA_ETC2;
 			}
 		default:
 			throw "Unsupported texture format "+t.format;
