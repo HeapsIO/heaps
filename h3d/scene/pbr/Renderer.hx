@@ -116,7 +116,7 @@ class Renderer extends h3d.scene.Renderer {
 		#else
 		Vec4([Value("output.metalness"), Value("output.roughness"), Value("output.emissive"), ALPHA]),
 		#end
-		Vec4([Value("output.depth"),Const(0), Const(0), ALPHA /* ? */]),
+		Vec4([Value("output.depth"),Const(0), Const(0), Const(0)]),
 		Vec4([Value("output.velocity", 2), Const(0), Const(0)])
 	]);
 	var decalsOutput = new h3d.pass.Output("decals",[
@@ -140,11 +140,11 @@ class Renderer extends h3d.scene.Renderer {
 	]);
 	var colorDepthOutput = new h3d.pass.Output("colorDepth",[
 		Value("output.color"),
-		Vec4([Value("output.depth"),Const(0),Const(0),h3d.scene.pbr.Renderer.ALPHA])
+		Vec4([Value("output.depth"),Const(0),Const(0),Const(0)])
 	]);
 	var colorDepthVelocityOutput = new h3d.pass.Output("colorDepthVelocityOutput",[
 		Value("output.color"),
-		Vec4([Value("output.depth"),Const(0),Const(0),h3d.scene.pbr.Renderer.ALPHA]),
+		Vec4([Value("output.depth"),Const(0),Const(0),Const(0)]),
 		Vec4([Value("output.velocity", 2), Const(0), Const(0)])
 	]);
 
