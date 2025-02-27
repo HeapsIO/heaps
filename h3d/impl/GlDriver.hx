@@ -824,8 +824,23 @@ class GlDriver extends Driver {
 			gl.polygonMode(GL.FRONT_AND_BACK, GL.FILL);
 		}
 		#else
-		// Not entirely accurate wireframe, but the best possible on WebGL.
-		drawMode = wireframe ? GL.LINE_STRIP : GL.TRIANGLES;
+
+		var fallback = true;
+		#if (haxe >= version("5.0.0-alpha.1"))
+		var extension:js.html.webgl.extension.WEBGLPolygonMode =  cast gl.getExtension("WEBGL_polygon_mode");
+		if(extension != null) {
+			if(wireframe) {
+				extension.polygonModeWEBGL(GL.FRONT_AND_BACK, js.html.webgl.extension.WEBGLPolygonMode.LINE_WEBGL);
+			} else {
+				extension.polygonModeWEBGL(GL.FRONT_AND_BACK, js.html.webgl.extension.WEBGLPolygonMode.FILL_WEBGL);
+			}
+			fallback = false;
+		}
+		#end
+
+		if(fallback) {
+			drawMode = wireframe ? GL.LINE_STRIP : GL.TRIANGLES;
+		}
 		#end
 
 		if( diff & Pass.culling_mask != 0 ) {
