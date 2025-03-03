@@ -195,6 +195,21 @@ class DynamicJointData extends JointData {
 		expectedPos.load(skin.jointsData[j.parent.index].currentAbsPose.getPosition() + dirToParent * lengthToParent);
 		newWorldPos.lerp(expectedPos, newWorldPos, j.slackness);
 
+		// Apply lock axis
+		skin.jointsData[j.parent.index].currentAbsPose.getInverse(Skin.TMP_MAT);
+		tmpVec.load(newWorldPos);
+		tmpVec.transform(Skin.TMP_MAT);
+		tmpVec2.load(jData.currentAbsPose.getPosition());
+		tmpVec2.transform(Skin.TMP_MAT);
+		if (j.lockAxis.x > 0.0)
+			tmpVec.x = tmpVec2.x;
+		if (j.lockAxis.y > 0.0)
+			tmpVec.y = tmpVec2.y;
+		if (j.lockAxis.z > 0.0)
+			tmpVec.z = tmpVec2.z;
+		tmpVec.transform(skin.jointsData[j.parent.index].currentAbsPose);
+		newWorldPos.load(tmpVec);
+
 		// Apply computed position to joint
 		jData.speed.load((jData.speed + (newWorldPos - absPos.getPosition()) * (1.0 / hxd.Timer.dt)) * 0.5);
 		jData.currentAbsPose.setPosition(newWorldPos);

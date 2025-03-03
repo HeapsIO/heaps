@@ -46,6 +46,7 @@ class DynamicJoint extends Joint {
 
 	// Parameters
 	public var additive : Bool = false;
+	public var lockAxis : h3d.Vector = new Vector(0, 0, 0);
 	public var damping : Float = 1;
 	public var stiffness : Float = 1;
 	public var resistance : Float = 1;

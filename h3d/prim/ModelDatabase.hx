@@ -159,6 +159,7 @@ class ModelDatabase {
 			newJ.slackness = jConf.slackness;
 			newJ.stiffness = jConf.stiffness;
 			newJ.additive = jConf.additive;
+			newJ.lockAxis = jConf.lockAxis == null ? new Vector(0, 0, 0): new Vector(jConf.lockAxis?.x, jConf.lockAxis?.y, jConf.lockAxis?.z);
 			newJ.globalForce = new Vector(jConf.globalForce.x, jConf.globalForce.y, jConf.globalForce.z);
 			skinData.allJoints[j.index] = newJ;
 
@@ -213,7 +214,15 @@ class ModelDatabase {
 			if (dynJ == null)
 				continue;
 
-			dynamicJoints.push({ name: dynJ.name, slackness: dynJ.slackness, stiffness: dynJ.stiffness, resistance: dynJ.resistance, damping: dynJ.damping, additive: dynJ.additive, globalForce: dynJ.globalForce });
+			dynamicJoints.push({
+				name: dynJ.name,
+				slackness: dynJ.slackness,
+				stiffness: dynJ.stiffness,
+				resistance: dynJ.resistance,
+				damping: dynJ.damping,
+				additive: dynJ.additive,
+				globalForce: dynJ.globalForce,
+				lockAxis: dynJ.lockAxis });
 		}
 
 		if (dynamicJoints.length == 0) {
