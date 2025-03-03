@@ -409,8 +409,7 @@ class Skin extends MultiMaterial {
 		jointsData = [];
 		currentPalette = [];
 		paletteChanged = true;
-		for( j in skinData.allJoints )
-			jointsData[j.index] = j.makeRuntimeData();
+		makeJointsData();
 		for( i in 0...skinData.boundJoints.length )
 			currentPalette.push(h3d.Matrix.I());
 		if( skinData.splitJoints != null ) {
@@ -419,6 +418,11 @@ class Skin extends MultiMaterial {
 				splitPalette.push([for( j in a.joints ) currentPalette[j.bindIndex]]);
 		} else
 			splitPalette = null;
+	}
+
+	function makeJointsData() {
+		for( j in skinData.allJoints )
+			jointsData[j.index] = j.makeRuntimeData();
 	}
 
 	override function sync( ctx : RenderContext ) {
