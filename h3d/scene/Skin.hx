@@ -181,8 +181,15 @@ class DynamicJointData extends JointData {
 
 		// Damping (inertia attenuation)
 		jData.speed *= 1.0 - j.damping;
+
 		if (jData.speed.lengthSq() > DynamicJoint.SLEEP_THRESHOLD)
-			newWorldPos.load(newWorldPos + jData.speed * hxd.Timer.dt);
+			newWorldPos.load(newWorldPos + jData.speed * hxd.Math.clamp(hxd.Timer.dt, 0, hxd.Timer.maxDeltaTime));
+
+		if (jData.speed.lengthSq() > DynamicJoint.MAX_THRESHOLD) {
+			newWorldPos.load(jData.currentAbsPose.getPosition());
+			absPos.load(jData.currentAbsPose);
+			jData.speed.set(0, 0, 0);
+		}
 
 		// Stiffness (shape keeper)
 		Skin.TMP_MAT.multiply(relPos, skin.jointsData[j.parent.index].currentAbsPose);

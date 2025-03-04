@@ -40,6 +40,7 @@ class Joint {
 
 class DynamicJoint extends Joint {
 	public static var SLEEP_THRESHOLD : Float = 0.0001;
+	public static var MAX_THRESHOLD : Float = 1 * 10e5;
 
 	// Global parameters
 	public var globalForce : Vector = new Vector(0.0, 0.0, 0.0);
