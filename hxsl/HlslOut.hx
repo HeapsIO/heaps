@@ -225,6 +225,8 @@ class HlslOut {
 			add('> ');
 			ident(v);
 		default:
+			if ( Tools.hasQualifier(v, Flat) )
+				add("nointerpolation ");
 			addType(v.type);
 			add(" ");
 			ident(v);
