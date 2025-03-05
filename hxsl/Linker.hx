@@ -376,8 +376,12 @@ class Linker {
 			isBatchShader = mode == Batch && StringTools.startsWith(s.name,"batchShader_");
 			for( v in s.vars ) {
 				var v2 = allocVar(v, null, s.name);
-				if( isBatchShader && v2.v.kind == Param && !StringTools.startsWith(v2.path,"Batch_") )
+				if( isBatchShader && v2.v.kind == Param && !StringTools.startsWith(v2.path,"Batch_") ) {
 					v2.v.kind = Local;
+					if ( v2.v.qualifiers == null )
+						v2.v.qualifiers = [];
+					v2.v.qualifiers.push(Flat);
+				}
 				if( v.kind == Output ) outVars.push(v);
 			}
 			for( f in s.funs ) {

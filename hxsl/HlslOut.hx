@@ -225,8 +225,6 @@ class HlslOut {
 			add('> ');
 			ident(v);
 		default:
-			if ( Tools.hasQualifier(v, Flat) )
-				add("nointerpolation ");
 			addType(v.type);
 			add(" ");
 			ident(v);
@@ -376,7 +374,7 @@ class HlslOut {
 			 }");
 		case AtomicAdd:
 			decl("int atomicAdd( RWStructuredBuffer<int> buf, int index, int data ) { int val; InterlockedAdd(buf[index], data, val); return val; }");
-		case InvLerp: 
+		case InvLerp:
 			decl("float invLerp(float v, float a, float b) { return saturate((v - a) / (b - a)); }");
 		case TextureSize:
 			var tt = args[0].t;
@@ -806,6 +804,8 @@ class HlslOut {
 		var index = 0;
 		function declVar(prefix:String, v : TVar ) {
 			add("\t");
+			if ( Tools.hasQualifier(v, Flat) )
+				add("nointerpolation ");
 			addVar(v);
 			if( v.kind == Output )
 				add(" : " + (isVertex ? SV_POSITION : SV_TARGET + (index++)));
