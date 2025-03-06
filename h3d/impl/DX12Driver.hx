@@ -173,6 +173,7 @@ class ShaderRegisters {
 	public var texturesCount : Int;
 	public var texturesTypes : Array<hxsl.Ast.Type>;
 	public var bufferTypes : Array<hxsl.Ast.BufferKind>;
+	public var bufferStrides : Array<Int>;
 	public var srv : Address;
 	public var samplersView : Address;
 	public var lastHeapCount : Int;
@@ -1185,21 +1186,24 @@ class DX12Driver extends h3d.impl.Driver {
 			regs.buffers = paramsCount;
 			if( sh.bufferCount > 0 ) {
 				regs.bufferTypes = [];
+				regs.bufferStrides = [];
 				var uavCount = 0;
 				var p = sh.buffers;
 				while( p != null ) {
-					var kind = switch( p.type ) {
-					case TBuffer(_,_,kind): kind;
-					default: throw "assert";
-					}
-					regs.bufferTypes.push(kind);
-					switch ( kind ) {
-						case Uniform, Partial:
-							regs.cbvCount++;
-						case Storage, StoragePartial:
-							regs.storageCount++;
-						case RW, RWPartial:
-							uavCount++;
+					switch( p.type ) {
+						case TBuffer(type,_,kind):
+							regs.bufferTypes.push(kind);
+							regs.bufferStrides.push(hxsl.Ast.Tools.size(type) << 2);
+							switch ( kind ) {
+								case Uniform, Partial:
+									regs.cbvCount++;
+								case Storage, StoragePartial:
+									regs.storageCount++;
+								case RW, RWPartial:
+									uavCount++;
+								default:
+									throw "assert";
+							}
 						default:
 							throw "assert";
 					}
@@ -2108,8 +2112,9 @@ class DX12Driver extends h3d.impl.Driver {
 						var state = shader.kind == Fragment ? PIXEL_SHADER_RESOURCE : NON_PIXEL_SHADER_RESOURCE;
 						transition(cbv, state);
 						var desc = tmp.bufferSRV;
-						desc.numElements = b.vertices;
-						desc.structureByteStride = b.format.strideBytes;
+						var stride = regs.bufferStrides[i];
+						desc.numElements = Std.int(cbv.size / stride);
+						desc.structureByteStride = stride;
 						desc.flags = NONE;
 						Driver.createShaderResourceView(cbv.res, desc, srv.offset(storageIndex * frame.shaderResourceViews.stride));
 						storageIndex++;
@@ -2118,8 +2123,9 @@ class DX12Driver extends h3d.impl.Driver {
 							throw "Buffer was allocated without ReadWriteBuffer flag";
 						transition(cbv, UNORDERED_ACCESS);
 						var desc = tmp.uavDesc;
-						desc.numElements = b.vertices;
-						desc.structureSizeInBytes = b.format.strideBytes;
+						var stride = regs.bufferStrides[i];
+						desc.numElements = Std.int(cbv.size / stride);
+						desc.structureSizeInBytes = stride;
 						Driver.createUnorderedAccessView(cbv.res, null, desc, srv.offset(uavIndex * frame.shaderResourceViews.stride));
 						uavIndex++;
 					default:
