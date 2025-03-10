@@ -158,6 +158,15 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	public var viewportScaleY(default, null) : Float;
 
 	/**
+		Ratio of the engine-to-screen X mismatch in case of manual Engine.resize() calls.
+	**/
+	public var engineScaleX(default, null): Float;
+	/**
+		Ratio of the engine-to-screen Y mismatch in case of manual Engine.resize() calls.
+	**/
+	public var engineScaleY(default, null): Float;
+
+	/**
 		The current mouse X coordinates (in pixels) relative to the current `Scene.interactiveCamera`.
 	**/
 	public var mouseX(get, null) : Float;
@@ -251,6 +260,8 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		eventListeners = new Array();
 		shapePoint = new h2d.col.Point();
 		window = hxd.Window.getInstance();
+		engineScaleX = e.width / window.width;
+		engineScaleY = e.height / window.height;
 		posChanged = true;
 	}
 
@@ -333,6 +344,9 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	public function checkResize() {
 		var engine = h3d.Engine.getCurrent();
 		if (engine == null) return;
+
+		engineScaleX = engine.width / window.width;
+		engineScaleY = engine.height / window.height;
 
 		inline function setSceneSize( w : Int, h : Int ) {
 			if ( w != this.width || h != this.height ) {
@@ -523,8 +537,10 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	@:dox(hide) @:noCompletion
 	public function handleEvent( event : hxd.Event, last : hxd.SceneEvents.Interactive ) : hxd.SceneEvents.Interactive {
 		screenToViewport(event);
+		
 		var ex = event.relX;
 		var ey = event.relY;
+
 		var index = last == null ? 0 : interactive.indexOf(cast last) + 1;
 		var pt = shapePoint;
 		for( idx in index...interactive.length ) {
@@ -539,6 +555,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 
 			var dx = ex - i.absX;
 			var dy = ey - i.absY;
+
 			var rx = (dx * i.matD - dy * i.matC) * i.invDet;
 			var ry = (dy * i.matA - dx * i.matB) * i.invDet;
 
