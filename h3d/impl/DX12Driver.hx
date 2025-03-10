@@ -1113,7 +1113,7 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	inline function unsafeCastTo<T,R>( v : T, c : Class<R> ) : R {
-		#if (haxe < version("5.0.0-alpha.1"))
+		#if (haxe_ver < 5)
 		var arr = new hl.NativeArray<T>(1);
 		arr[0] = v;
 		return (cast arr : hl.NativeArray<R>)[0];
