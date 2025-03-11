@@ -730,6 +730,7 @@ class Pixels {
 				case 1: 71;
 				case 2: 74;
 				case 3: 77;
+				case 7: 98;
 				default: throw "Unnsupported format "+fmt;
 				});
 			default:
