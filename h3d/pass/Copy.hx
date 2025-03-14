@@ -86,7 +86,7 @@ class Copy extends ScreenFx<CopyShader> {
 
 	public function apply( from, to, ?blend : h3d.mat.BlendMode, ?customPass : h3d.mat.Pass, ?layer :Int) {
 		if( to != null )
-			engine.pushTarget(to, layer != null ? layer : 0);
+			engine.pushTarget(to, layer != null ? layer : 0, NotBound);
 		shader.texture = from;
 		if( customPass != null ) {
 			if( blend != null ) customPass.setBlendMode(blend);
