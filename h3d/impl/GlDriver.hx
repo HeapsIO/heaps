@@ -826,7 +826,7 @@ class GlDriver extends Driver {
 		#else
 
 		var fallback = true;
-		#if (haxe_ver >= 5)
+		#if (js && haxe_ver >= 5)
 		var extension:js.html.webgl.extension.WEBGLPolygonMode =  cast gl.getExtension("WEBGL_polygon_mode");
 		if(extension != null) {
 			if(wireframe) {
