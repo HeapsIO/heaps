@@ -124,7 +124,7 @@ class System {
 		timeoutTick();
 		haxe.Timer.delay(runMainLoop, 0);
 	}
-	
+
 	static function isAlive() {
 		#if usesys
 		return true;
@@ -204,17 +204,28 @@ class System {
 		if( dismissErrors )
 			return;
 
+		#if (hlsdl && !multidriver)
+		// New UI window does not force SDL leave relative mouse mode, do it manually
+		var prevMouseMode = hxd.Window.getInstance().mouseMode;
+		hxd.Window.getInstance().mouseMode = Absolute;
+		#end
 		var f = new hl.UI.WinLog("Uncaught Exception", 500, 400);
 		f.setTextContent(err+"\n"+stack);
 		var but = new hl.UI.Button(f, "Continue");
 		but.onClick = function() {
 			hl.UI.stopLoop();
+			#if (hlsdl && !multidriver)
+			hxd.Window.getInstance().mouseMode = prevMouseMode;
+			#end
 		};
 
 		var but = new hl.UI.Button(f, "Dismiss all");
 		but.onClick = function() {
 			dismissErrors = true;
 			hl.UI.stopLoop();
+			#if (hlsdl && !multidriver)
+			hxd.Window.getInstance().mouseMode = prevMouseMode;
+			#end
 		};
 
 		var but = new hl.UI.Button(f, "Exit");
