@@ -11,8 +11,6 @@ typedef CollideParams = {
 }
 
 class HMDOut extends BaseLibrary {
-	public static var lodExportKeyword : String = "LOD";
-
 	var d : Data;
 	var dataOut : haxe.io.BytesOutput;
 	var filePath : String;
@@ -778,7 +776,7 @@ class HMDOut extends BaseLibrary {
 
 	function getLODInfos( modelName : String ) : { lodLevel : Int , modelName : String } {
 
-		var keyword = lodExportKeyword;
+		var keyword = "LOD";
 		if ( modelName == null || modelName.length <= keyword.length )
 			return { lodLevel : -1, modelName : null };
 

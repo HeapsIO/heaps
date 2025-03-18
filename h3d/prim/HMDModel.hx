@@ -16,8 +16,6 @@ class HMDModel extends MeshPrimitive {
 	var lodConfig : Array<Float> = null;
 	var colliderData : Collider;
 
-	public static var lodExportKeyword : String = "LOD";
-
 	public function new( data : hxd.fmt.hmd.Data.Geometry, dataPos, lib, lods : Array<hxd.fmt.hmd.Data.Model> = null ) {
 		this.lods = [data];
 		if (lods != null) {

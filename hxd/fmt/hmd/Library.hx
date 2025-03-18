@@ -394,7 +394,7 @@ class Library {
 
 	public function getLODInfos( model : Model ) : { lodLevel : Int , modelName : String } {
 		var modelName : String = model.name;
-		var keyword = h3d.prim.HMDModel.lodExportKeyword;
+		var keyword = "LOD";
 		if ( modelName == null || modelName.length <= keyword.length )
 			return { lodLevel : -1, modelName : null };
 
