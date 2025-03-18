@@ -17,74 +17,35 @@ class Capsule extends Collider {
 		return new Seg(a, b).distanceSq(p) < r*r;
 	}
 
+	/* https://iquilezles.org/articles/intersectors/ */
 	public function rayIntersection( r : Ray, bestMatch : Bool ) : Float {
-		// computing  t'  =  (t * AB.RD + AB.AO) / AB.AB  =  t * m + n
-		var AB = new h3d.col.Point(b.x-a.x, b.y-a.y, b.z-a.z);
-		var o = r.getPos();
-		var AO = new h3d.col.Point(o.x-a.x, o.y-a.y, o.z-a.z);
-
-		var RD = r.getDir();
-
-		var ABdotAB = AB.dot(AB);
-
-		if (ABdotAB == 0) {
-			tmpSphere.load(this.a.x, this.a.y, this.a.z, this.r);
-			return tmpSphere.rayIntersection(r, bestMatch);
-		}
-
-		var m = AB.dot(RD) / ABdotAB;
-		var n = AB.dot(AO) / ABdotAB;
-
-		// using |PK| = r to solve t
-		var Q = new h3d.col.Point(RD.x-(AB.x*m), RD.y-(AB.y*m), RD.z-(AB.z*m)); // RD - (AB * m)
-		var R = new h3d.col.Point(AO.x-(AB.x*n), AO.y-(AB.y*n), AO.z-(AB.z*n)); // AO - (AB * n);
-
-		var coefA = Q.dot(Q);
-		var coefB = 2.0 * Q.dot(R);
-		var coefC = R.dot(R) - (this.r * this.r);
-
-		if (coefA == 0.0) { // if parallel
-			tmpSphere.load(this.a.x, this.a.y, this.a.z, this.r);
-			var intersectSphereA = tmpSphere.rayIntersection(r, bestMatch);
-			tmpSphere.load(this.b.x, this.b.y, this.b.z, this.r);
-			var intersectSphereB = tmpSphere.rayIntersection(r, bestMatch);
-
-			if (intersectSphereA < 0 && intersectSphereB < 0) {
-				return -1;
-			}
-
-			if (intersectSphereB < intersectSphereA) {
-				return intersectSphereB;
-			}
-
-			if (intersectSphereA < intersectSphereB) {
-				return intersectSphereA;
-			}
-		}
-
-		var discriminant = coefB * coefB - 4.0 * coefA * coefC;
-
-		if (discriminant < 0.0) {
-			return -1;
-		}
-		var discriminantSqrt = Math.sqrt(discriminant);
-
-		var t1 = (- coefB - discriminantSqrt) / (2.0 * coefA);
-		var t2 = (- coefB + discriminantSqrt) / (2.0 * coefA);
-
-		var tMin = (t1 < t2) ? t1 : t2;
-
-		var tPrimeMin = tMin * m + n;
-
-		if (tPrimeMin < 0.0) {
-			tmpSphere.load(this.a.x, this.a.y, this.a.z, this.r);
-			return tmpSphere.rayIntersection(r, bestMatch);
-		} else if (tPrimeMin > 1.0) {
-			tmpSphere.load(this.b.x, this.b.y, this.b.z, this.r);
-			return tmpSphere.rayIntersection(r, bestMatch);
-		} else {
-			var intersection = new Point(o.x + (RD.x * tMin), o.y + (RD.y * tMin), o.z + (RD.z * tMin));
-			return o.distance(intersection);
+		var ro = r.getPos();
+		var rd = r.getDir();
+		var ra = this.r;
+		var pa = a;
+		var pb = b;
+		var ba = pb - pa;
+		var oa = ro - pa;
+		var baba = ba.dot(ba);
+		var bard = ba.dot(rd);
+		var baoa = ba.dot(oa);
+		var rdoa = rd.dot(oa);
+		var oaoa = oa.dot(oa);
+		var a = baba - bard * bard;
+		var b = baba * rdoa - baoa * bard;
+		var c = baba * oaoa - baoa * baoa - ra * ra * baba;
+		var h = b * b - a * c;
+		if ( h >= 0.0 ) {
+			var t = (-b- hxd.Math.sqrt(h))/a;
+			var y = baoa + t * bard;
+			if ( y > 0.0 && y < baba )
+				return t;
+			var oc = y <= 0.0 ? oa : ro - pb;
+			b = rd.dot(oc);
+			c = oc.dot(oc) - ra * ra;
+			h = b*b - c;
+			if( h > 0.0 )
+				return -b - hxd.Math.sqrt(h);
 		}
 		return -1;
 	}
