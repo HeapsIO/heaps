@@ -1277,6 +1277,8 @@ class HMDOut extends BaseLibrary {
 				var start = d.materials.length - mids.length;
 				for (idx in 0...mids.length) {
 					midsSortRemap.set(idx, mids[idx]);
+					if (idx + start < 0)
+						continue;
 					mids[idx + start] = start + idx;
 				}
 			}
