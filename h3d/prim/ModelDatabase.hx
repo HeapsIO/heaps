@@ -18,6 +18,7 @@ class ModelDatabase {
 	static var LOD_CONFIG = "lodConfig";
 	static var DYN_BONES_CONFIG = "dynamicBones";
 
+	static var defaultLodConfigs : Map<String, Array<Float>> = new Map();
 	static var baseLodConfig = [ 0.5, 0.2, 0.01];
 
 	function new() {
@@ -77,10 +78,15 @@ class ModelDatabase {
 			return baseLodConfig;
 
 		#if (sys || nodejs)
-		var c = hide.Ide.inst.currentConfig.getLocal("lods.screenRatio", baseLodConfig);
-		return c;
+			var c = @:privateAccess fs.convert.getConfig(defaultLodConfigs, baseLodConfig, dir, function(fullObj) {
+				if (Reflect.hasField(fullObj, "lods.screenRatio"))
+					return Reflect.field(fullObj, "lods.screenRatio");
+
+				return baseLodConfig;
+			});
+			return c;
 		#else
-		return baseLodConfig;
+			return baseLodConfig;
 		#end
 	}
 
