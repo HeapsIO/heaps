@@ -446,6 +446,9 @@ class Flow extends Object {
 	**/
 	public var innerHeight(get, never) : Int;
 
+	// does not do a reflow on get
+	var scrollInnerHeight(get, never) : Int;
+
 	/**
 		Flow total width. Compared to `Flow.innerWidth`, it also includes paddings and, if enabled, borders (see `Flow.borderWidth`).
 
@@ -628,14 +631,14 @@ class Flow extends Object {
 			enableInteractive = true;
 			if( scrollBar == null ) {
 				scrollBar = makeScrollBar();
-				addChild(scrollBar);
+				addChildAt(scrollBar, 0);
 				scrollBar.verticalAlign = Top;
 				scrollBar.enableInteractive = true;
 
 				function setCursor( e : hxd.Event) {
 					var cursorY = e.relY - scrollBarCursor.minHeight * 0.5;
 					if( cursorY < 0 ) cursorY = 0;
-					scrollPosY = (cursorY / (scrollBar.minHeight - scrollBarCursor.minHeight)) * (contentHeight - calculatedHeight);
+					scrollPosY = (cursorY / (scrollBar.minHeight - scrollBarCursor.minHeight)) * (contentHeight - scrollInnerHeight);
 				}
 
 				var pushed = false;
@@ -740,7 +743,7 @@ class Flow extends Object {
 		if( scrollBarCursor == null ) return;
 		var prev = needReflow;
 		var p = scrollBar.getProperties(scrollBarCursor);
-		p.paddingTop = Std.int( scrollPosY * (calculatedHeight - scrollBarCursor.minHeight) / (contentHeight - calculatedHeight) );
+		p.paddingTop = Std.int( scrollPosY * (scrollInnerHeight - scrollBarCursor.minHeight) / (contentHeight - calculatedHeight) );
 		needReflow = prev;
 	}
 
@@ -773,6 +776,10 @@ class Flow extends Object {
 
 	function get_innerHeight() {
 		if( needReflow ) reflow();
+		return flowCeil(calculatedHeight) - (paddingTop + paddingBottom #if flow_border + (borderTop + borderBottom) #end);
+	}
+
+	function get_scrollInnerHeight() {
 		return flowCeil(calculatedHeight) - (paddingTop + paddingBottom #if flow_border + (borderTop + borderBottom) #end);
 	}
 
@@ -1128,6 +1135,23 @@ class Flow extends Object {
 		onBeforeReflow();
 		syncPos();
 
+		var c = null;
+		if (dom?.hasClass("align-test-parent"))
+			c = "align-test-parent";
+		if (dom?.hasClass("align-test"))
+			c = "align-test";
+		if (dom?.hasClass("align-test-child1"))
+			c = "align-test-child1";
+		if (dom?.hasClass("align-test-child2"))
+			c = "align-test-child2";
+		var deb = c != null;
+		var a = 0;
+		if (deb) {
+			if (a == c.length) {
+				trace("hello break please");
+			}
+		}
+
 		if( !isConstraint && (fillWidth || fillHeight) ) {
 			var scene = getScene();
 			var cw = fillWidth ? scene.width : -1;
@@ -1216,6 +1240,9 @@ class Flow extends Object {
 						c.y += height - Std.int(p.calculatedHeight);
 					case Middle:
 						c.y += Std.int((height - p.calculatedHeight) * 0.5);
+					case Top:
+						if( p.isAbsolute )
+							c.y = paddingTop + borderTop + p.offsetY + p.paddingTop;
 					default:
 					}
 				}
@@ -1381,6 +1408,9 @@ class Flow extends Object {
 						c.x += width - p.calculatedWidth;
 					case Middle:
 						c.x += Std.int((width - p.calculatedWidth) * 0.5);
+					case Left:
+						if( p.isAbsolute )
+							c.x = paddingLeft + borderLeft + p.offsetX + p.paddingLeft;
 					default:
 					}
 				}
@@ -1632,8 +1662,8 @@ class Flow extends Object {
 				scrollBar.visible = false;
 			else {
 				scrollBar.visible = true;
-				scrollBar.minHeight = flowCeil(calculatedHeight);
-				scrollBarCursor.minHeight = hxd.Math.imax(1, Std.int(calculatedHeight * (1 - (contentHeight - calculatedHeight)/contentHeight)));
+				scrollBar.minHeight = scrollInnerHeight;
+				scrollBarCursor.minHeight = hxd.Math.imax(1, Std.int(scrollInnerHeight * (1 - (contentHeight - scrollInnerHeight)/contentHeight)));
 				updateScrollCursor();
 			}
 		}
