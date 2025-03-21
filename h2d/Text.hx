@@ -382,10 +382,11 @@ class Text extends Drawable {
 				}
 				else wLastSep = size;
 			}
-			else if( (x + esize + letterSpacing) - wLastSep > maxWidth && wordWrap ) {
+			else if( (x + esize + letterSpacing) - wLastSep > (maxWidth-esize) && wordWrap ) {
 				newline = true;
 				lines.push(text.substr(restPos, i - restPos));
 				restPos = i;
+				x -= esize + letterSpacing;
 			}
 			if( e != null && cc != '\n'.code )
 				x += esize + letterSpacing;
@@ -447,7 +448,7 @@ class Text extends Drawable {
 			var cc = StringTools.fastCodeAt(t, i);
 			var e = font.getChar(cc);
 			var offs = e.getKerningOffset(prevChar);
-			var esize = e.t.dx + e.width + offs;
+			var esize = e.width + offs;
 			// if the next word goes past the max width, change it into a newline
 
 			if( cc == '\n'.code ) {
