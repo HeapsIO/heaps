@@ -1034,7 +1034,6 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	function compileSource( sh : hxsl.RuntimeShader.RuntimeShaderData, profile, baseRegister, rootStr = "" ) {
-		var args = [];
 		var out = new hxsl.HlslOut();
 		out.baseRegister = baseRegister;
 		if( sh.code == null ) {
@@ -1043,7 +1042,9 @@ class DX12Driver extends h3d.impl.Driver {
 		}
 		var bytes = getBinaryPayload(sh.code);
 		if( bytes == null ) {
-			return compiler.compile(sh.code, profile, args);
+			bytes = compiler.compile(sh.code, profile, []);
+			if( shaderCache != null )
+				shaderCache.saveCompiledShader(sh.code, bytes, profile);
 		}
 		return bytes;
 	}
