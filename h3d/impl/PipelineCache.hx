@@ -102,7 +102,7 @@ class PipelineBuilder {
 
 	static function getRTBits( tex : h3d.mat.Texture ) {
 		inline function mk(channels,format) {
-			return ((channels - 1) << 2) | (format + 1);
+			return ((format + 1) << 2) | (channels - 1);
 		}
 		return switch( tex.format ) {
 		case RGBA: mk(4,0);
@@ -119,6 +119,10 @@ class PipelineBuilder {
 		case RGBA32F: mk(4,2);
 		case RG11B10UF: mk(2, 3);
 		case RGB10A2: mk(3, 4);
+		case R16U: mk(1,5);
+		case RG16U: mk(2,5);
+		case RGB16U: mk(3,5);
+		case RGBA16U: mk(4,5);
 		default: throw "Unsupported RT format "+tex.format;
 		}
 	}
