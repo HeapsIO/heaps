@@ -170,6 +170,10 @@ class Model {
 		return name != null && StringTools.contains(name, modelName) && StringTools.contains(name, "LOD0");
 	}
 
+	public function toLODName(i : Int) {
+		return name + "LOD" + i;
+	}
+
 	public function getLODInfos() : { lodLevel : Int , modelName : String } {
 		var keyword = "LOD";
 		if ( name == null || name.length <= keyword.length )

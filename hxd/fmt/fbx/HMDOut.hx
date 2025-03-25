@@ -1345,7 +1345,7 @@ class HMDOut extends BaseLibrary {
 				model.props.push(HasLod);
 			} else if ( lodsDecimation != null && model.skin == null ) {
 				var modelName = model.name;
-				model.name = modelName + "LOD0";
+				model.name = model.toLODName(0);
 				if( model.props == null ) model.props = [];
 				model.props.push(HasLod);
 				model.lods = [];
