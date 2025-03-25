@@ -13,7 +13,6 @@ class BatchData {
 	public var params : hxsl.RuntimeShader.AllocParam;
 	public var shader : hxsl.BatchShader;
 	public var shaders : Array<hxsl.Shader>;
-	public var modelViewPos : Int;
 	public var pass : h3d.mat.Pass;
 	public var computePass : h3d.mat.Pass;
 	public var commandBuffers : Array<h3d.Buffer>;
@@ -509,7 +508,6 @@ class MeshBatch extends MultiMaterial {
 			}
 			if( p.perObjectGlobal != null ) {
 				if ( p.perObjectGlobal.gid == modelViewID ) {
-					batch.modelViewPos = pos - startPos;
 					addMatrix(worldPosition != null ? worldPosition : absPos);
 				} else if ( p.perObjectGlobal.gid == modelViewInverseID ) {
 					if( worldPosition == null )
