@@ -124,7 +124,7 @@ class BumpAllocator {
 		var newOffset = size + offsetAligned;
 		if ( newOffset > capacity ) {
 			if ( next == null )
-				next = new BumpAllocator(Std.int(capacity*3/2));
+				next = new BumpAllocator(hxd.Math.imax(Std.int(capacity*3/2), size));
 			return next.tryAlloc(size, alignment, allocation);
 		}
 		allocation.byteSize = size;
