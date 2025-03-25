@@ -12,6 +12,7 @@ class Build {
 	public var excludedNames : Array<String> = [];
 	public var excludePath : Array<String> = [];
 	public var includePath : Array<String> = [];
+	public var specialPath : Array<String> = [".baked"]; // file & directory starting with "." are ignored
 	public var resPath : String = "res";
 	public var outPrefix : String;
 	public var align : Int = 0;
@@ -49,7 +50,7 @@ class Build {
 				if( excludedNames.indexOf(name)>=0 )
 					continue;
 				var fpath = path == "" ? name : path+"/"+name;
-				if( name.charCodeAt(0) == ".".code )
+				if( name.charCodeAt(0) == ".".code && specialPath.indexOf(name) < 0 )
 					continue;
 				var s = buildRec(fpath);
 				if( s != null ) f.content.push(s);
@@ -208,6 +209,10 @@ class Build {
 				args.unshift(f.substr(pos + 1));
 				f = f.substr(0, pos);
 			}
+			inline function parseParams( params : String, output : Array<String> ) {
+				for( p in params.split(",") )
+					output.push(p);
+			}
 			switch( f ) {
 			case "-x" if( args.length > 0 ):
 				var pakFile = args.shift();
@@ -239,17 +244,15 @@ class Build {
 			case "-out" if( args.length > 0 ):
 				b.outPrefix = args.shift();
 			case "-exclude" if( args.length > 0 ):
-				for( ext in args.shift().split(",") )
-					b.excludedExt.push(ext);
+				parseParams(args.shift(), b.excludedExt);
 			case "-exclude-names" if( args.length > 0 ):
-				for( ext in args.shift().split(",") )
-					b.excludedNames.push(ext);
+				parseParams(args.shift(), b.excludedNames);
 			case "-exclude-path" if( args.length > 0 ):
-				for( p in args.shift().split(",") )
-					b.excludePath.push(p);
+				parseParams(args.shift(), b.excludePath);
 			case "-include-path" if( args.length > 0 ):
-				for( p in args.shift().split(",") )
-					b.includePath.push(p);
+				parseParams(args.shift(), b.includePath);
+			case "-special-path" if( args.length > 0 ):
+				parseParams(args.shift(), b.specialPath);
 			case "-check-ogg":
 				b.checkOGG = true;
 			case "-config" if( args.length > 0 ):
