@@ -1021,7 +1021,7 @@ class DX12Driver extends h3d.impl.Driver {
 
 	static var VERTEX_FORMATS = [null,null,R32G32_FLOAT,R32G32B32_FLOAT,R32G32B32A32_FLOAT];
 
-	function getBinaryPayload( code : String ) {
+	function getBinaryPayload( code : String, profile ) {
 		var bin = code.indexOf("//BIN=");
 		if( bin >= 0 ) {
 			var end = code.indexOf("#", bin);
@@ -1029,7 +1029,7 @@ class DX12Driver extends h3d.impl.Driver {
 				return haxe.crypto.Base64.decode(code.substr(bin + 6, end - bin - 6));
 		}
 		if( shaderCache != null )
-			return shaderCache.resolveShaderBinary(code);
+			return shaderCache.resolveShaderBinary(code, profile);
 		return null;
 	}
 
@@ -1040,7 +1040,7 @@ class DX12Driver extends h3d.impl.Driver {
 			sh.code = out.run(sh.data);
 			sh.code = rootStr + sh.code;
 		}
-		var bytes = getBinaryPayload(sh.code);
+		var bytes = getBinaryPayload(sh.code, profile);
 		if( bytes == null ) {
 			bytes = compiler.compile(sh.code, profile, []);
 			if( shaderCache != null )
