@@ -67,12 +67,13 @@ class MeshBatch extends MultiMaterial {
 	static var previousModelViewID = hxsl.Globals.allocID("global.previousModelView");
 	static var MAX_BUFFER_ELEMENTS = 4096;
 	static var MAX_STORAGE_BUFFER_ELEMENTS = 128 * 1024 * 1024 >> 2;
+	static var BATCH_START_FMT = hxd.BufferFormat.make([{ name : "Batch_Start", type : DFloat }]);
+	static var INDIRECT_DRAW_ARGUMENTS_FMT = hxd.BufferFormat.make([{ name : "", type : DVec4 }, { name : "", type : DFloat }]);
+	static var INSTANCE_OFFSETS_FMT = hxd.BufferFormat.make([{ name : "", type : DFloat }]);
 
 	var instanced : h3d.prim.Instanced;
 	var dataPasses : BatchData;
 	var needUpload = false;
-
-	public var lodDistance : Float;
 
 	public var meshBatchFlags(default, null) : haxe.EnumFlags<MeshBatchFlag>;
 	var enableLOD(get, never) : Bool;
@@ -117,6 +118,11 @@ class MeshBatch extends MultiMaterial {
 	**/
 	public var calcBounds = true;
 
+	/**
+	 * If set, this distance is used to compute screen ratio and lod on all the instances this frame
+	 */
+	public var lodDistance : Float;
+
 	var instancedParams : hxsl.Cache.BatchInstanceParams;
 	var emittedSubParts : Array<MeshBatchPart>;
 	var currentSubParts : Int;
@@ -135,62 +141,46 @@ class MeshBatch extends MultiMaterial {
 			@:privateAccess p.batchMode = true;
 	}
 
-	override function onRemove() {
-		super.onRemove();
-		cleanPasses();
-	}
+	public function begin( emitCountTip = -1, ?flags : haxe.EnumFlags<MeshBatchFlag> ) {
+		if ( flags != null ) {
+			#if (!js && !(hldx && !dx12))
+			var allowedLOD = flags.has(EnableLod) && ( primitiveSubPart != null || @:privateAccess instanced.primitive.lodCount() > 1 );
+			flags.setTo(EnableLod, allowedLOD);
+			#else
+			flags.setTo(EnableLod, false);
+			flags.setTo(EnableGpuCulling, false);
+			#end
+			// Set flags non-related to shaders
+			meshBatchFlags.setTo( EnableResizeDown, flags.has(EnableResizeDown) );
+			if ( meshBatchFlags != flags )
+				shadersChanged = true;
+			meshBatchFlags = flags;
+			meshBatchFlags.setTo( EnableStorageBuffer, mustCalcBufferFormat || useStorageBuffer );
+		}
 
-	inline function isCountBufferAllowed() {
-		#if hlsdl
-		return h3d.impl.GlDriver.hasMultiIndirectCount;
-		#else
-		return true;
-		#end
-	}
+		instanceCount = 0;
+		instanced.initBounds();
+		if( shadersChanged ) {
+			initShadersMapping();
+			shadersChanged = false;
+		}
 
-	function cleanPasses() {
+		if( emitCountTip < 0 )
+			emitCountTip = 128;
+		var p = dataPasses;
 		var alloc = hxd.impl.Allocator.get();
-		while( dataPasses != null ) {
-			dataPasses.pass.removeShader(dataPasses.shader);
-			for( b in dataPasses.buffers )
-				alloc.disposeBuffer(b);
-
-			if ( dataPasses.commandBuffers != null && dataPasses.commandBuffers.length > 0 ) {
-				@:privateAccess instanced.commands.data = null;
-				for ( buf in dataPasses.commandBuffers )
-					alloc.disposeBuffer(buf);
-				dataPasses.commandBuffers.resize(0);
-				for ( buf in dataPasses.countBuffers )
-					alloc.disposeBuffer(buf);
-				dataPasses.countBuffers.resize(0);
-				dataPasses.computePass = null;
+		while( p != null ) {
+			var size = emitCountTip * p.paramsCount * 4;
+			if( p.data == null || p.data.length < size || ( meshBatchFlags.has(EnableResizeDown) && p.data.length > size << 1) ) {
+				if( p.data != null ) alloc.disposeFloats(p.data);
+				p.data = alloc.allocFloats(size);
 			}
-
-			if( dataPasses.instanceBuffers != null ) {
-				for( b in dataPasses.instanceBuffers )
-					b.dispose();
-			}
-			alloc.disposeFloats(dataPasses.data);
-			dataPasses = dataPasses.next;
+			p = p.next;
 		}
-		if ( matInfos != null ) {
-			alloc.disposeBuffer(matInfos);
-			matInfos = null;
+		if ( primitiveSubPart != null && ( enableGPUCulling || enableLOD ) && instanceOffsetsCpu == null ) {
+			var size = emitCountTip * 2 * 4;
+			instanceOffsetsCpu = haxe.io.Bytes.alloc(size);
 		}
-		if( instanced.commands != null )
-			instanced.commands.dispose();
-
-		if ( subPartsInfos != null )
-			alloc.disposeBuffer(subPartsInfos);
-
-		if ( instanceOffsetsGpu != null )
-			alloc.disposeBuffer(instanceOffsetsGpu);
-		instanceOffsetsCpu = null;
-
-		primitiveSubBytes = null;
-		emittedSubParts = null;
-		countBytes = null;
-		shadersChanged = true;
 	}
 
 	function initShadersMapping() {
@@ -302,149 +292,6 @@ class MeshBatch extends MultiMaterial {
 		}
 	}
 
-	public function begin( emitCountTip = -1, ?flags : haxe.EnumFlags<MeshBatchFlag> ) {
-		if ( flags != null ) {
-			#if (!js && !(hldx && !dx12))
-			var allowedLOD = flags.has(EnableLod) && ( primitiveSubPart != null || @:privateAccess instanced.primitive.lodCount() > 1 );
-			flags.setTo(EnableLod, allowedLOD);
-			#else
-			flags.setTo(EnableLod, false);
-			flags.setTo(EnableGpuCulling, false);
-			#end
-			// Set flags non-related to shaders
-			meshBatchFlags.setTo( EnableResizeDown, flags.has(EnableResizeDown) );
-			if ( meshBatchFlags != flags )
-				shadersChanged = true;
-			meshBatchFlags = flags;
-			meshBatchFlags.setTo( EnableStorageBuffer, mustCalcBufferFormat || useStorageBuffer );
-		}
-
-		instanceCount = 0;
-		instanced.initBounds();
-		if( shadersChanged ) {
-			initShadersMapping();
-			shadersChanged = false;
-		}
-
-		if( emitCountTip < 0 )
-			emitCountTip = 128;
-		var p = dataPasses;
-		var alloc = hxd.impl.Allocator.get();
-		while( p != null ) {
-			var size = emitCountTip * p.paramsCount * 4;
-			if( p.data == null || p.data.length < size || ( meshBatchFlags.has(EnableResizeDown) && p.data.length > size << 1) ) {
-				if( p.data != null ) alloc.disposeFloats(p.data);
-				p.data = alloc.allocFloats(size);
-			}
-			p = p.next;
-		}
-		if ( primitiveSubPart != null && ( enableGPUCulling || enableLOD ) && instanceOffsetsCpu == null ) {
-			var size = emitCountTip * 2 * 4;
-			instanceOffsetsCpu = haxe.io.Bytes.alloc(size);
-		}
-	}
-
-	function syncData( batch : BatchData ) {
-
-		var startPos = batch.paramsCount * instanceCount << 2;
-		// in case we are bigger than emitCountTip
-		if( startPos + (batch.paramsCount<<2) > batch.data.length )
-			batch.data.grow(batch.data.length << 1);
-
-		var p = batch.params;
-		var buf = batch.data;
-		var shaders = batch.shaders;
-
-		var calcInv = false;
-		while( p != null ) {
-			var pos = startPos + p.pos;
-			inline function addMatrix(m:h3d.Matrix) {
-				buf[pos++] = m._11;
-				buf[pos++] = m._21;
-				buf[pos++] = m._31;
-				buf[pos++] = m._41;
-				buf[pos++] = m._12;
-				buf[pos++] = m._22;
-				buf[pos++] = m._32;
-				buf[pos++] = m._42;
-				buf[pos++] = m._13;
-				buf[pos++] = m._23;
-				buf[pos++] = m._33;
-				buf[pos++] = m._43;
-				buf[pos++] = m._14;
-				buf[pos++] = m._24;
-				buf[pos++] = m._34;
-				buf[pos++] = m._44;
-			}
-			if( p.perObjectGlobal != null ) {
-				if ( p.perObjectGlobal.gid == modelViewID ) {
-					addMatrix(worldPosition != null ? worldPosition : absPos);
-				} else if ( p.perObjectGlobal.gid == modelViewInverseID ) {
-					if( worldPosition == null )
-						addMatrix(getInvPos());
-					else {
-						if( !calcInv ) {
-							calcInv = true;
-							if( invWorldPosition == null ) invWorldPosition = new h3d.Matrix();
-							invWorldPosition.initInverse(worldPosition);
-						}
-						addMatrix(invWorldPosition);
-					}
-				} else if ( p.perObjectGlobal.gid == previousModelViewID )
-					addMatrix( worldPosition != null ? worldPosition : absPos );
-				else
-					throw "Unsupported global param "+p.perObjectGlobal.path;
-				p = p.next;
-				continue;
-			}
-			var curShader = shaders[p.instance];
-			switch( p.type ) {
-			case TVec(size, _):
-				switch( size ) {
-				case 2:
-					var v : h3d.Vector = curShader.getParamValue(p.index);
-					buf[pos++] = v.x;
-					buf[pos++] = v.y;
-				case 3:
-					var v : h3d.Vector = curShader.getParamValue(p.index);
-					buf[pos++] = v.x;
-					buf[pos++] = v.y;
-					buf[pos++] = v.z;
-				case 4:
-					var v : h3d.Vector4 = curShader.getParamValue(p.index);
-					buf[pos++] = v.x;
-					buf[pos++] = v.y;
-					buf[pos++] = v.z;
-					buf[pos++] = v.w;
-				}
-			case TFloat:
-				buf[pos++] = curShader.getParamFloatValue(p.index);
-			case TMat4:
-				var m : h3d.Matrix = curShader.getParamValue(p.index);
-				addMatrix(m);
-			default:
-				throw "Unsupported batch type "+p.type;
-			}
-			p = p.next;
-		}
-		needUpload = true;
-	}
-
-	override function addBoundsRec( b : h3d.col.Bounds, relativeTo: h3d.Matrix ) {
-		var old = primitive;
-		primitive = null;
-		super.addBoundsRec(b, relativeTo);
-		primitive = old;
-		if( primitive == null || flags.has(FIgnoreBounds) )
-			return;
-		// already transformed in absolute
-		var bounds = primitive.getBounds();
-		if( relativeTo == null )
-			b.add(bounds);
-		else
-			b.addTransform(bounds, relativeTo);
-	}
-
 	public function emitInstance() {
 		if( worldPosition == null ) syncPos();
 		var ps = primitiveSubPart;
@@ -513,37 +360,11 @@ class MeshBatch extends MultiMaterial {
 		instanceCount++;
 	}
 
-	public function disposeBuffers( useAllocator : Bool = true ) {
-		if( instanceCount == 0 ) return;
-		var p = dataPasses;
-		if ( useAllocator ) {
-			var alloc = hxd.impl.Allocator.get();
-			while( p != null ) {
-				for ( b in p.buffers )
-					alloc.disposeBuffer(b);
-				p.buffers.resize(0);
-				p = p.next;
-			}
-		} else {
-			while( p != null ) {
-				for ( b in p.buffers )
-					b.dispose();
-				p = p.next;
-			}
-		}
-	}
-
-	static var BATCH_START_FMT = hxd.BufferFormat.make([{ name : "Batch_Start", type : DFloat }]);
-	static var INDIRECT_DRAW_ARGUMENTS_FMT = hxd.BufferFormat.make([{ name : "", type : DVec4 }, { name : "", type : DFloat }]);
-	static var INSTANCE_OFFSETS_FMT = hxd.BufferFormat.make([{ name : "", type : DFloat }]);
-
 	override function sync(ctx:RenderContext) {
 		super.sync(ctx);
 		if( instanceCount == 0 ) return;
 		flush();
 	}
-
-	function addComputeShaders( pass : h3d.mat.Pass ) {}
 
 	public function flush() {
 		var p = dataPasses;
@@ -760,37 +581,90 @@ class MeshBatch extends MultiMaterial {
 		needUpload = false;
 	}
 
-	override function calcScreenRatio(ctx:RenderContext) {
-		curScreenRatio = @:privateAccess instanced.primitive.getBounds().dimension() / ( 2.0 * hxd.Math.max(lodDistance, 0.0001) );
-	}
+	function syncData( batch : BatchData ) {
 
-	override function draw(ctx:RenderContext) {
-		var p = dataPasses;
-		while( true ) {
-			if( p.pass == ctx.drawPass.pass ) {
-				var bufferIndex = ctx.drawPass.index & 0xFFFF;
-				if ( useStorageBuffer )
-					p.shader.Batch_StorageBuffer = p.buffers[bufferIndex];
-				else
-					p.shader.Batch_Buffer = p.buffers[bufferIndex];
-				if( p.instanceBuffers == null ) {
-					var count = hxd.Math.imin( instanceCount - p.maxInstance * bufferIndex, p.maxInstance );
-					instanced.setCommand(p.matIndex, instanced.screenRatioToLod(curScreenRatio), count);
-					if ( p.commandBuffers != null && p.commandBuffers.length > 0 ) {
-						@:privateAccess instanced.commands.data = p.commandBuffers[bufferIndex].vbuf;
-						@:privateAccess instanced.commands.countBuffer = p.countBuffers[bufferIndex].vbuf;
+		var startPos = batch.paramsCount * instanceCount << 2;
+		// in case we are bigger than emitCountTip
+		if( startPos + (batch.paramsCount<<2) > batch.data.length )
+			batch.data.grow(batch.data.length << 1);
+
+		var p = batch.params;
+		var buf = batch.data;
+		var shaders = batch.shaders;
+
+		var calcInv = false;
+		while( p != null ) {
+			var pos = startPos + p.pos;
+			inline function addMatrix(m:h3d.Matrix) {
+				buf[pos++] = m._11;
+				buf[pos++] = m._21;
+				buf[pos++] = m._31;
+				buf[pos++] = m._41;
+				buf[pos++] = m._12;
+				buf[pos++] = m._22;
+				buf[pos++] = m._32;
+				buf[pos++] = m._42;
+				buf[pos++] = m._13;
+				buf[pos++] = m._23;
+				buf[pos++] = m._33;
+				buf[pos++] = m._43;
+				buf[pos++] = m._14;
+				buf[pos++] = m._24;
+				buf[pos++] = m._34;
+				buf[pos++] = m._44;
+			}
+			if( p.perObjectGlobal != null ) {
+				if ( p.perObjectGlobal.gid == modelViewID ) {
+					addMatrix(worldPosition != null ? worldPosition : absPos);
+				} else if ( p.perObjectGlobal.gid == modelViewInverseID ) {
+					if( worldPosition == null )
+						addMatrix(getInvPos());
+					else {
+						if( !calcInv ) {
+							calcInv = true;
+							if( invWorldPosition == null ) invWorldPosition = new h3d.Matrix();
+							invWorldPosition.initInverse(worldPosition);
+						}
+						addMatrix(invWorldPosition);
 					}
-				} else
-					instanced.commands = p.instanceBuffers[bufferIndex];
-				break;
+				} else if ( p.perObjectGlobal.gid == previousModelViewID )
+					addMatrix( worldPosition != null ? worldPosition : absPos );
+				else
+					throw "Unsupported global param "+p.perObjectGlobal.path;
+				p = p.next;
+				continue;
+			}
+			var curShader = shaders[p.instance];
+			switch( p.type ) {
+			case TVec(size, _):
+				switch( size ) {
+				case 2:
+					var v : h3d.Vector = curShader.getParamValue(p.index);
+					buf[pos++] = v.x;
+					buf[pos++] = v.y;
+				case 3:
+					var v : h3d.Vector = curShader.getParamValue(p.index);
+					buf[pos++] = v.x;
+					buf[pos++] = v.y;
+					buf[pos++] = v.z;
+				case 4:
+					var v : h3d.Vector4 = curShader.getParamValue(p.index);
+					buf[pos++] = v.x;
+					buf[pos++] = v.y;
+					buf[pos++] = v.z;
+					buf[pos++] = v.w;
+				}
+			case TFloat:
+				buf[pos++] = curShader.getParamFloatValue(p.index);
+			case TMat4:
+				var m : h3d.Matrix = curShader.getParamValue(p.index);
+				addMatrix(m);
+			default:
+				throw "Unsupported batch type "+p.type;
 			}
 			p = p.next;
 		}
-		ctx.uploadParams();
-		var prev = ctx.drawPass.index;
-		ctx.drawPass.index >>= 16;
-		super.draw(ctx);
-		ctx.drawPass.index = prev;
+		needUpload = true;
 	}
 
 	override function emit(ctx:RenderContext) {
@@ -832,4 +706,111 @@ class MeshBatch extends MultiMaterial {
 		}
 	}
 
+	override function draw(ctx:RenderContext) {
+		var p = dataPasses;
+		while( true ) {
+			if( p.pass == ctx.drawPass.pass ) {
+				var bufferIndex = ctx.drawPass.index & 0xFFFF;
+				if ( useStorageBuffer )
+					p.shader.Batch_StorageBuffer = p.buffers[bufferIndex];
+				else
+					p.shader.Batch_Buffer = p.buffers[bufferIndex];
+				if( p.instanceBuffers == null ) {
+					var count = hxd.Math.imin( instanceCount - p.maxInstance * bufferIndex, p.maxInstance );
+					instanced.setCommand(p.matIndex, instanced.screenRatioToLod(curScreenRatio), count);
+					if ( p.commandBuffers != null && p.commandBuffers.length > 0 ) {
+						@:privateAccess instanced.commands.data = p.commandBuffers[bufferIndex].vbuf;
+						@:privateAccess instanced.commands.countBuffer = p.countBuffers[bufferIndex].vbuf;
+					}
+				} else
+					instanced.commands = p.instanceBuffers[bufferIndex];
+				break;
+			}
+			p = p.next;
+		}
+		ctx.uploadParams();
+		var prev = ctx.drawPass.index;
+		ctx.drawPass.index >>= 16;
+		super.draw(ctx);
+		ctx.drawPass.index = prev;
+	}
+
+	override function calcScreenRatio(ctx:RenderContext) {
+		curScreenRatio = @:privateAccess instanced.primitive.getBounds().dimension() / ( 2.0 * hxd.Math.max(lodDistance, 0.0001) );
+	}
+
+	override function addBoundsRec( b : h3d.col.Bounds, relativeTo: h3d.Matrix ) {
+		var old = primitive;
+		primitive = null;
+		super.addBoundsRec(b, relativeTo);
+		primitive = old;
+		if( primitive == null || flags.has(FIgnoreBounds) )
+			return;
+		// already transformed in absolute
+		var bounds = primitive.getBounds();
+		if( relativeTo == null )
+			b.add(bounds);
+		else
+			b.addTransform(bounds, relativeTo);
+	}
+
+	function addComputeShaders( pass : h3d.mat.Pass ) {}
+
+	inline function isCountBufferAllowed() {
+		#if hlsdl
+		return h3d.impl.GlDriver.hasMultiIndirectCount;
+		#else
+		return true;
+		#end
+	}
+
+	function cleanPasses() {
+		var alloc = hxd.impl.Allocator.get();
+		while( dataPasses != null ) {
+			dataPasses.pass.removeShader(dataPasses.shader);
+			for( b in dataPasses.buffers )
+				alloc.disposeBuffer(b);
+
+			if ( dataPasses.commandBuffers != null && dataPasses.commandBuffers.length > 0 ) {
+				@:privateAccess instanced.commands.data = null;
+				for ( buf in dataPasses.commandBuffers )
+					alloc.disposeBuffer(buf);
+				dataPasses.commandBuffers.resize(0);
+				for ( buf in dataPasses.countBuffers )
+					alloc.disposeBuffer(buf);
+				dataPasses.countBuffers.resize(0);
+				dataPasses.computePass = null;
+			}
+
+			if( dataPasses.instanceBuffers != null ) {
+				for( b in dataPasses.instanceBuffers )
+					b.dispose();
+			}
+			alloc.disposeFloats(dataPasses.data);
+			dataPasses = dataPasses.next;
+		}
+		if ( matInfos != null ) {
+			alloc.disposeBuffer(matInfos);
+			matInfos = null;
+		}
+		if( instanced.commands != null )
+			instanced.commands.dispose();
+
+		if ( subPartsInfos != null )
+			alloc.disposeBuffer(subPartsInfos);
+
+		if ( instanceOffsetsGpu != null )
+			alloc.disposeBuffer(instanceOffsetsGpu);
+		instanceOffsetsCpu = null;
+
+		primitiveSubBytes = null;
+		emittedSubParts = null;
+		countBytes = null;
+		shadersChanged = true;
+	}
+
+	override function onRemove() {
+		super.onRemove();
+		cleanPasses();
+	}
 }
