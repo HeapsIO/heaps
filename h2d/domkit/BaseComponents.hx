@@ -69,7 +69,13 @@ class CustomParser extends domkit.CssValue.ValueParser {
 		// TODO : compile-time path check?
 		return true;
 		#else
-		return try hxd.res.Loader.currentInstance.load(path) catch( e : hxd.res.NotFound ) invalidProp("Resource not found "+path);
+		return try {
+			var f = hxd.res.Loader.currentInstance.load(path);
+			if( f.entry.isDirectory ) invalidProp("Resource should be a file "+path);
+			return f;
+		} catch( e : hxd.res.NotFound ) {
+			invalidProp("Resource not found "+path);
+		}
 		#end
 	}
 
