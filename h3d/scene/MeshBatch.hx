@@ -74,9 +74,10 @@ class MeshBatch extends MultiMaterial {
 	var instanced : h3d.prim.Instanced;
 	var dataPasses : BatchData;
 	var needUpload = false;
-	var matInfos : h3d.Buffer;
-
 	var instancedParams : hxsl.Cache.BatchInstanceParams;
+
+	// used if gpu lod or gpu culling
+	var matInfos : h3d.Buffer;
 	var emittedSubParts : Array<MeshBatchPart>;
 	var currentSubParts : Int;
 	var currentMaterialOffset : Int;
@@ -84,7 +85,7 @@ class MeshBatch extends MultiMaterial {
 	var instanceOffsetsGpu : h3d.Buffer;
 	var subPartsInfos : h3d.Buffer;
 	var countBytes : haxe.io.Bytes;
-	
+
 	/**
 		Set if shader list or shader constants has changed, before calling begin()
 	**/
