@@ -74,22 +74,17 @@ class MeshBatch extends MultiMaterial {
 	var instanced : h3d.prim.Instanced;
 	var dataPasses : BatchData;
 	var needUpload = false;
-
-	public var meshBatchFlags(default, null) : haxe.EnumFlags<MeshBatchFlag>;
-	var enableLOD(get, never) : Bool;
-	function get_enableLOD() return meshBatchFlags.has( EnableLod );
-
-	var enableGPUCulling(get, never) : Bool;
-	function get_enableGPUCulling() return meshBatchFlags.has( EnableGpuCulling );
-
-	var mustCalcBufferFormat(get, never) : Bool;
-	function get_mustCalcBufferFormat() return meshBatchFlags.has(EnableGpuUpdate) || enableGPUCulling || enableLOD;
-
-	var useStorageBuffer(get, never) : Bool;
-	function get_useStorageBuffer() return meshBatchFlags.has(EnableStorageBuffer);
-
 	var matInfos : h3d.Buffer;
 
+	var instancedParams : hxsl.Cache.BatchInstanceParams;
+	var emittedSubParts : Array<MeshBatchPart>;
+	var currentSubParts : Int;
+	var currentMaterialOffset : Int;
+	var instanceOffsetsCpu : haxe.io.Bytes;
+	var instanceOffsetsGpu : h3d.Buffer;
+	var subPartsInfos : h3d.Buffer;
+	var countBytes : haxe.io.Bytes;
+	
 	/**
 		Set if shader list or shader constants has changed, before calling begin()
 	**/
@@ -127,14 +122,7 @@ class MeshBatch extends MultiMaterial {
 	 */
 	public var maxDistance : Float = -1;
 
-	var instancedParams : hxsl.Cache.BatchInstanceParams;
-	var emittedSubParts : Array<MeshBatchPart>;
-	var currentSubParts : Int;
-	var currentMaterialOffset : Int;
-	var instanceOffsetsCpu : haxe.io.Bytes;
-	var instanceOffsetsGpu : h3d.Buffer;
-	var subPartsInfos : h3d.Buffer;
-	var countBytes : haxe.io.Bytes;
+	public var meshBatchFlags(default, null) : haxe.EnumFlags<MeshBatchFlag>;
 
 	public function new( primitive, ?material, ?parent ) {
 		instanced = new h3d.prim.Instanced();
@@ -144,6 +132,11 @@ class MeshBatch extends MultiMaterial {
 		for( p in this.material.getPasses() )
 			@:privateAccess p.batchMode = true;
 	}
+
+	function gpuLodEnabled() return meshBatchFlags.has(EnableLod);
+	function gpuCullingEnabled() return meshBatchFlags.has(EnableGpuCulling);
+	function storageBufferEnabled() return meshBatchFlags.has(EnableStorageBuffer);
+	function mustCalcBufferFormat() return meshBatchFlags.has(EnableGpuUpdate) || gpuCullingEnabled() || gpuLodEnabled();
 
 	public function begin( emitCountTip = -1, ?flags : haxe.EnumFlags<MeshBatchFlag> ) {
 		if ( flags != null ) {
@@ -159,7 +152,7 @@ class MeshBatch extends MultiMaterial {
 			if ( meshBatchFlags != flags )
 				shadersChanged = true;
 			meshBatchFlags = flags;
-			meshBatchFlags.setTo( EnableStorageBuffer, mustCalcBufferFormat || useStorageBuffer );
+			meshBatchFlags.setTo( EnableStorageBuffer, mustCalcBufferFormat() || storageBufferEnabled() );
 		}
 
 		instanceCount = 0;
@@ -181,7 +174,7 @@ class MeshBatch extends MultiMaterial {
 			}
 			p = p.next;
 		}
-		if ( primitiveSubPart != null && ( enableGPUCulling || enableLOD ) && instanceOffsetsCpu == null ) {
+		if ( primitiveSubPart != null && ( gpuCullingEnabled() || gpuLodEnabled() ) && instanceOffsetsCpu == null ) {
 			var size = emitCountTip * 2 * 4;
 			instanceOffsetsCpu = haxe.io.Bytes.alloc(size);
 		}
@@ -209,7 +202,7 @@ class MeshBatch extends MultiMaterial {
 				b.indexCount = matCount;
 				b.indexStart = matStart;
 				b.paramsCount = shader.paramsSize;
-				b.maxInstance = Std.int( ( useStorageBuffer ? MAX_STORAGE_BUFFER_ELEMENTS : MAX_BUFFER_ELEMENTS ) / b.paramsCount);
+				b.maxInstance = Std.int( ( storageBufferEnabled() ? MAX_STORAGE_BUFFER_ELEMENTS : MAX_BUFFER_ELEMENTS ) / b.paramsCount);
 				b.bufferFormat = hxd.BufferFormat.VEC4_DATA;
 				if( b.maxInstance <= 0 )
 					throw "Mesh batch shaders needs at least one perInstance parameter";
@@ -221,7 +214,7 @@ class MeshBatch extends MultiMaterial {
 				p.dynamicParameters = true;
 				p.batchMode = true;
 
-				if( mustCalcBufferFormat ) {
+				if( mustCalcBufferFormat() ) {
 					var pl = [];
 					var p = b.params;
 					while( p != null ) {
@@ -280,9 +273,9 @@ class MeshBatch extends MultiMaterial {
 					b.shaders.push(sl.s);
 					sl = sl.next;
 				}
-				shader.Batch_UseStorage = useStorageBuffer;
-				shader.Batch_Count = useStorageBuffer ? 0 : b.maxInstance * b.paramsCount;
-				shader.Batch_HasOffset = primitiveSubPart != null || enableLOD || enableGPUCulling;
+				shader.Batch_UseStorage = storageBufferEnabled();
+				shader.Batch_Count = storageBufferEnabled() ? 0 : b.maxInstance * b.paramsCount;
+				shader.Batch_HasOffset = primitiveSubPart != null || gpuLodEnabled() || gpuCullingEnabled();
 				shader.constBits = (shader.Batch_Count << 2) | (shader.Batch_UseStorage ? ( 1 << 1 ) : 0) | (shader.Batch_HasOffset ? 1 : 0);
 				shader.updateConstants(null);
 			}
@@ -305,7 +298,7 @@ class MeshBatch extends MultiMaterial {
 				instanced.tmpBounds.transform(worldPosition == null ? absPos : worldPosition);
 				instanced.bounds.add(instanced.tmpBounds);
 			}
-			if ( enableLOD || enableGPUCulling ) {
+			if ( gpuLodEnabled() || gpuCullingEnabled() ) {
 				if (emittedSubParts == null) {
 					currentSubParts = 0;
 					currentMaterialOffset = 0;
@@ -378,9 +371,9 @@ class MeshBatch extends MultiMaterial {
 		var prim = @:privateAccess instanced.primitive;
 		var hmd = Std.downcast(prim, h3d.prim.HMDModel);
 		var materialCount = materials.length;
-		var lodCount = ( enableLOD ) ? prim.lodCount() : 1;
+		var lodCount = ( gpuLodEnabled() ) ? prim.lodCount() : 1;
 
-		if ( enableLOD || enableGPUCulling ) {
+		if ( gpuLodEnabled() || gpuCullingEnabled() ) {
 			if ( emittedSubParts != null ) {
 				var upload = needUpload;
 				var vertex = instanceCount * 2;
@@ -427,7 +420,7 @@ class MeshBatch extends MultiMaterial {
 					alloc.disposeFloats(tmpMatInfos);
 				}
 			} else if ( matInfos == null ) {
-				if ( enableLOD ) {
+				if ( gpuLodEnabled() ) {
 					var tmpMatInfos = alloc.allocFloats( 4 * materialCount * lodCount );
 					matInfos = alloc.allocBuffer( materialCount * lodCount, hxd.BufferFormat.VEC4_DATA, Uniform );
 					var lodConfig = hmd.getLodConfig();
@@ -472,12 +465,12 @@ class MeshBatch extends MultiMaterial {
 				if( count > p.maxInstance )
 					count = p.maxInstance;
 
-				var maxVertexCount = ( mustCalcBufferFormat ) ? p.maxInstance : ( useStorageBuffer ? MAX_STORAGE_BUFFER_ELEMENTS : MAX_BUFFER_ELEMENTS );
+				var maxVertexCount = ( mustCalcBufferFormat() ) ? p.maxInstance : ( storageBufferEnabled() ? MAX_STORAGE_BUFFER_ELEMENTS : MAX_BUFFER_ELEMENTS );
 				var vertexCount = Std.int( count * (( 4 * p.paramsCount ) / p.bufferFormat.stride) );
 				var vertexCountAllocated = #if js Std.int( MAX_BUFFER_ELEMENTS * 4 / p.bufferFormat.stride ) #else hxd.Math.imin( hxd.Math.nextPOT( vertexCount ), maxVertexCount ) #end;
 
 				if( buf == null || buf.isDisposed() || buf.vertices < vertexCountAllocated ) {
-					var bufferFlags : hxd.impl.Allocator.BufferFlags = useStorageBuffer ? UniformReadWrite : UniformDynamic;
+					var bufferFlags : hxd.impl.Allocator.BufferFlags = storageBufferEnabled() ? UniformReadWrite : UniformDynamic;
 					if ( buf != null )
 						alloc.disposeBuffer(buf);
 					buf = alloc.allocBuffer( vertexCountAllocated, p.bufferFormat,bufferFlags );
@@ -506,7 +499,7 @@ class MeshBatch extends MultiMaterial {
 
 				var commandCountAllocated = hxd.Math.imin( hxd.Math.nextPOT( count ), p.maxInstance );
 
-				if ( enableLOD || enableGPUCulling ) {
+				if ( gpuLodEnabled() || gpuCullingEnabled() ) {
 					if ( p.commandBuffers == null) {
 						p.commandBuffers = [];
 						p.countBuffers = [];
@@ -528,7 +521,7 @@ class MeshBatch extends MultiMaterial {
 				start += count;
 				index++;
 			}
-			if ( ( enableLOD || enableGPUCulling ) ) {
+			if ( ( gpuLodEnabled() || gpuCullingEnabled() ) ) {
 				var computeShader;
 				if( p.computePass == null ) {
 					computeShader = new h3d.shader.InstanceIndirect();
@@ -540,8 +533,8 @@ class MeshBatch extends MultiMaterial {
 					computeShader = p.computePass.getShader(h3d.shader.InstanceIndirect);
 				}
 
-				computeShader.ENABLE_LOD = enableLOD;
-				computeShader.ENABLE_CULLING = enableGPUCulling;
+				computeShader.ENABLE_LOD = gpuLodEnabled();
+				computeShader.ENABLE_CULLING = gpuCullingEnabled();
 				computeShader.ENABLE_DISTANCE_CLIPPING = maxDistance >= 0;
 				computeShader.radius = prim.getBounds().dimension() * 0.5;
 				computeShader.maxDistance = maxDistance;
@@ -567,7 +560,7 @@ class MeshBatch extends MultiMaterial {
 				alloc.disposeBuffer( p.buffers.pop() );
 			p = p.next;
 		}
-		if( psBytes != null || enableLOD || enableGPUCulling ) {
+		if( psBytes != null || gpuLodEnabled() || gpuCullingEnabled() ) {
 			var offsets = @:privateAccess instanced.primitive.resolveBuffer("Batch_Start");
 			if( offsets == null || offsets.vertices < instanceCount || offsets.isDisposed() ) {
 				if( offsets != null ) {
@@ -687,7 +680,7 @@ class MeshBatch extends MultiMaterial {
 					if ( p.commandBuffers != null && p.commandBuffers.length > 0 ) {
 						var count = hxd.Math.imin( instanceCount - p.maxInstance * i, p.maxInstance);
 						var computeShader = p.computePass.getShader(h3d.shader.InstanceIndirect);
-						if ( enableGPUCulling )
+						if ( gpuCullingEnabled() )
 							computeShader.frustum = ctx.getCameraFrustumBuffer();
 						computeShader.instanceData = buf;
 						computeShader.matIndex = p.matIndex;
@@ -715,7 +708,7 @@ class MeshBatch extends MultiMaterial {
 		while( true ) {
 			if( p.pass == ctx.drawPass.pass ) {
 				var bufferIndex = ctx.drawPass.index & 0xFFFF;
-				if ( useStorageBuffer )
+				if ( storageBufferEnabled() )
 					p.shader.Batch_StorageBuffer = p.buffers[bufferIndex];
 				else
 					p.shader.Batch_Buffer = p.buffers[bufferIndex];
