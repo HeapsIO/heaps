@@ -79,7 +79,6 @@ class MeshBatch extends MultiMaterial {
 	var enableLOD(get, never) : Bool;
 	function get_enableLOD() return meshBatchFlags.has( EnableLod );
 
-	public var maxDistance : Float = -1;
 	var enableGPUCulling(get, never) : Bool;
 	function get_enableGPUCulling() return meshBatchFlags.has( EnableGpuCulling );
 
@@ -122,6 +121,11 @@ class MeshBatch extends MultiMaterial {
 	 * If set, this distance is used to compute screen ratio and lod on all the instances this frame
 	 */
 	public var lodDistance : Float;
+
+	/**
+	 * If set, and gpu update is enabled, clip all instanced behind this distance.
+	 */
+	public var maxDistance : Float = -1;
 
 	var instancedParams : hxsl.Cache.BatchInstanceParams;
 	var emittedSubParts : Array<MeshBatchPart>;
