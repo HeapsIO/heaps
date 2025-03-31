@@ -68,8 +68,6 @@ class MeshBatch extends MultiMaterial {
 	static var MAX_BUFFER_ELEMENTS = 4096;
 	static var MAX_STORAGE_BUFFER_ELEMENTS = 128 * 1024 * 1024 >> 2;
 	static var BATCH_START_FMT = hxd.BufferFormat.make([{ name : "Batch_Start", type : DFloat }]);
-	static var INDIRECT_DRAW_ARGUMENTS_FMT = hxd.BufferFormat.make([{ name : "", type : DVec4 }, { name : "", type : DFloat }]);
-	static var INSTANCE_OFFSETS_FMT = hxd.BufferFormat.make([{ name : "", type : DFloat }]);
 
 	var instanced : h3d.prim.Instanced;
 	var dataPasses : BatchData;
@@ -77,6 +75,9 @@ class MeshBatch extends MultiMaterial {
 	var instancedParams : hxsl.Cache.BatchInstanceParams;
 
 	// used if gpu lod or gpu culling
+	static var INDIRECT_DRAW_ARGUMENTS_FMT = hxd.BufferFormat.make([{ name : "", type : DVec4 }, { name : "", type : DFloat }]);
+	static var INSTANCE_OFFSETS_FMT = hxd.BufferFormat.make([{ name : "", type : DFloat }]);
+	
 	var matInfos : h3d.Buffer;
 	var emittedSubParts : Array<MeshBatchPart>;
 	var currentSubParts : Int;
@@ -356,26 +357,6 @@ class MeshBatch extends MultiMaterial {
 			p = p.next;
 		}
 		instanceCount++;
-	}
-
-	public function disposeBuffers( useAllocator : Bool = true ) {
-		if( instanceCount == 0 ) return;
-		var p = dataPasses;
-		if ( useAllocator ) {
-			var alloc = hxd.impl.Allocator.get();
-			while( p != null ) {
-				for ( b in p.buffers )
-					alloc.disposeBuffer(b);
-				p.buffers.resize(0);
-				p = p.next;
-			}
-		} else {
-			while( p != null ) {
-				for ( b in p.buffers )
-					b.dispose();
-				p = p.next;
-			}
-		}
 	}
 
 	override function sync(ctx:RenderContext) {
@@ -782,6 +763,23 @@ class MeshBatch extends MultiMaterial {
 		#end
 	}
 
+	override function onRemove() {
+		super.onRemove();
+		cleanPasses();
+	}
+
+	public function disposeBuffers() {
+		if( instanceCount == 0 ) return;
+		var p = dataPasses;
+		var alloc = hxd.impl.Allocator.get();
+		while( p != null ) {
+			for ( b in p.buffers )
+				alloc.disposeBuffer(b);
+			p.buffers.resize(0);
+			p = p.next;
+		}
+	}
+
 	function cleanPasses() {
 		var alloc = hxd.impl.Allocator.get();
 		while( dataPasses != null ) {
@@ -825,10 +823,5 @@ class MeshBatch extends MultiMaterial {
 		emittedSubParts = null;
 		countBytes = null;
 		shadersChanged = true;
-	}
-
-	override function onRemove() {
-		super.onRemove();
-		cleanPasses();
 	}
 }
