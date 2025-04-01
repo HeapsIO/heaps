@@ -53,7 +53,7 @@ class Skin extends SkinBase {
 			boneMatrixW = bonesMatrixes[int(input.indexes.w)];
 			skinWeights = vec4(input.weights, 0.0);
 			if(fourBonesByVertex) {
-				skinWeights.z = 1 - (input.weights.x + input.weights.y + input.weights.z);
+				skinWeights.w = 1 - (input.weights.x + input.weights.y + input.weights.z);
 			}
 
 			transformedPosition = applySkinPoint(relativePosition);
