@@ -524,6 +524,8 @@ class Flow extends Object {
 	**/
 	public var scrollPosY(default, set) : Float = 0.;
 
+	public static var PADDING_IGNORE_PARENT = 0x800000CC;
+
 	var background : h2d.ScaleGrid;
 	var debugGraphics : h2d.Graphics;
 	var properties : Array<FlowProperties> = [];
@@ -1190,6 +1192,10 @@ class Flow extends Object {
 			}
 		}
 
+		inline function getPad(v:Int,def:Int) {
+			return v == PADDING_IGNORE_PARENT ? -def : v;
+		}
+
 		var cw, ch;
 		switch(layout) {
 		case Horizontal:
@@ -1216,7 +1222,7 @@ class Flow extends Object {
 					var c = childAt(i);
 					if( !c.visible ) continue;
 					var a = p.verticalAlign != null ? p.verticalAlign : valign;
-					c.y = y + p.offsetY + p.paddingTop;
+					c.y = y + p.offsetY + getPad(p.paddingTop,paddingTop);
 					var height = p.isAbsolute ? absHeight : maxLineHeight;
 					switch( a ) {
 					case Bottom:
@@ -1225,7 +1231,7 @@ class Flow extends Object {
 						c.y += Std.int((height - p.calculatedHeight) * 0.5);
 					case Top:
 						if( p.isAbsolute )
-							c.y = paddingTop + borderTop + p.offsetY + p.paddingTop;
+							c.y = paddingTop + borderTop + p.offsetY + getPad(p.paddingTop,paddingTop);
 					default:
 					}
 				}
@@ -1247,8 +1253,8 @@ class Flow extends Object {
 			var autoSum = 0.0;
 
 			inline function calcSize(p : FlowProperties, c : h2d.Object) {
-				var pw = p.paddingLeft + p.paddingRight;
-				var ph = p.paddingTop + p.paddingBottom;
+				var pw = getPad(p.paddingLeft,paddingLeft) + getPad(p.paddingRight,paddingRight);
+				var ph = getPad(p.paddingTop,paddingTop) + getPad(p.paddingBottom,paddingBottom);
 				if( !p.isAbsolute )
 					c.constraintSize(
 						isConstraintWidth && p.constraint ? ((p.autoSizeWidth != null ? flowFloor(autoWidth * p.autoSizeWidth / autoSum) : maxInWidth) - pw) / Math.abs(c.scaleX) : -1,
@@ -1312,7 +1318,7 @@ class Flow extends Object {
 				var c = childAt(i);
 				if( !c.visible ) continue;
 				if( p.isAbsolute ) {
-					var dx = p.paddingLeft + p.offsetX;
+					var dx = getPad(p.paddingLeft,paddingLeft) + p.offsetX;
 					switch( p.horizontalAlign ) {
 					case null:
 					case Right:
@@ -1357,7 +1363,7 @@ class Flow extends Object {
 					px = xmin;
 					xmin += p.calculatedWidth + horizontalSpacing;
 				}
-				c.x = px + p.offsetX + p.paddingLeft;
+				c.x = px + p.offsetX + getPad(p.paddingLeft,paddingLeft);
 			}
 
 		case Vertical:
@@ -1384,7 +1390,7 @@ class Flow extends Object {
 					var c = childAt(i);
 					if( !c.visible ) continue;
 					var a = p.horizontalAlign != null ? p.horizontalAlign : halign;
-					c.x = x + p.offsetX + p.paddingLeft;
+					c.x = x + p.offsetX + getPad(p.paddingLeft,paddingLeft);
 					var width = p.isAbsolute ? absWidth : maxColWidth;
 					switch( a ) {
 					case Right:
@@ -1393,7 +1399,7 @@ class Flow extends Object {
 						c.x += Std.int((width - p.calculatedWidth) * 0.5);
 					case Left:
 						if( p.isAbsolute )
-							c.x = paddingLeft + borderLeft + p.offsetX + p.paddingLeft;
+							c.x = paddingLeft + borderLeft + p.offsetX + getPad(p.paddingLeft,paddingLeft);
 					default:
 					}
 				}
@@ -1415,8 +1421,8 @@ class Flow extends Object {
 			var autoSum = 0.0;
 
 			inline function calcSize(p : FlowProperties, c : h2d.Object) {
-				var pw = p.paddingLeft + p.paddingRight;
-				var ph = p.paddingTop + p.paddingBottom;
+				var pw = getPad(p.paddingLeft,paddingLeft) + getPad(p.paddingRight,paddingRight);
+				var ph = getPad(p.paddingTop,paddingTop) + getPad(p.paddingBottom,paddingBottom);
 				if( !p.isAbsolute )
 					c.constraintSize(
 						isConstraintWidth && p.constraint ? ((p.autoSizeWidth != null ? hxd.Math.imax(maxColWidth, minColWidth) * p.autoSizeWidth : maxInWidth) - pw) / Math.abs(c.scaleX) : -1,
@@ -1459,7 +1465,7 @@ class Flow extends Object {
 						y = startY;
 					}
 					p.isBreak = br;
-					c.y = y + p.offsetY + p.paddingTop;
+					c.y = y + p.offsetY + getPad(p.paddingTop,paddingTop);
 					y += p.calculatedHeight;
 					if( y > ch ) ch = y;
 					y += verticalSpacing;
@@ -1483,7 +1489,7 @@ class Flow extends Object {
 				if( !c.visible )
 					continue;
 				if( p.isAbsolute ) {
-					var dy = p.paddingTop + p.offsetY;
+					var dy = getPad(p.paddingTop,paddingTop) + p.offsetY;
 					switch( p.verticalAlign ) {
 					case null:
 					case Bottom:
@@ -1528,7 +1534,7 @@ class Flow extends Object {
 					py = ymin;
 					ymin += p.calculatedHeight + verticalSpacing;
 				}
-				c.y = py + p.offsetY + p.paddingTop;
+				c.y = py + p.offsetY + getPad(p.paddingTop,paddingTop);
 			}
 		case Stack:
 			var halign = horizontalAlign == null ? Left : horizontalAlign;
@@ -1544,8 +1550,8 @@ class Flow extends Object {
 				var isAbs = p.isAbsolute;
 				if( isAbs && p.verticalAlign == null && p.horizontalAlign == null ) continue;
 
-				var pw = p.paddingLeft + p.paddingRight;
-				var ph = p.paddingTop + p.paddingBottom;
+				var pw = getPad(p.paddingLeft,paddingLeft) + getPad(p.paddingRight,paddingRight);
+				var ph = getPad(p.paddingTop,paddingTop) + getPad(p.paddingBottom,paddingBottom);
 				if( !isAbs )
 					c.constraintSize(
 						isConstraintWidth && p.constraint ? (maxInWidth - pw) / Math.abs(c.scaleX) : -1,
@@ -1600,9 +1606,9 @@ class Flow extends Object {
 				}
 
 				if( !isAbs || p.horizontalAlign != null )
-					c.x = px + p.offsetX + p.paddingLeft;
+					c.x = px + p.offsetX + getPad(p.paddingLeft,paddingLeft);
 				if( !isAbs || p.verticalAlign != null )
-					c.y = py + p.offsetY + p.paddingTop;
+					c.y = py + p.offsetY + getPad(p.paddingTop,paddingTop);
 			}
 		}
 
@@ -1669,7 +1675,7 @@ class Flow extends Object {
 				var p = propAt(i);
 				var c = childAt(i);
 				if( p.isAbsolute || !c.visible ) continue;
-				debugGraphics.drawRect(c.x - p.offsetX - p.paddingLeft, c.y - p.offsetY - p.paddingTop, p.calculatedWidth, p.calculatedHeight);
+				debugGraphics.drawRect(c.x - p.offsetX - getPad(p.paddingLeft,paddingLeft), c.y - p.offsetY - getPad(p.paddingTop,paddingTop), p.calculatedWidth, p.calculatedHeight);
 			}
 			debugGraphics.lineStyle(1, 0xFF0000);
 			debugGraphics.drawRect(0, 0, cw, ch);
