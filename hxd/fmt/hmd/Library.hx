@@ -275,16 +275,15 @@ class Library {
 		var lods : Array<Model> = null;
 		var hasLod = model.lods != null;
 		if ( hasLod ) {
-			var isLod = model.name.indexOf("LOD0") < 0;
-			if ( isLod )
+			if ( model.isLOD() )
 				return null;
 			lods = [for ( lod in model.lods) header.models[lod]];
 			patchLodsMaterials(model, lods);
 		} else {
-			var lodInfos = getLODInfos( model );
+			var lodInfos = model.getLODInfos();
 			if ( lodInfos.lodLevel > 0) {
 				for ( m in header.models )
-					if ( m.name != null && StringTools.contains(m.name, lodInfos.modelName) && StringTools.contains(m.name, "LOD0"))
+					if ( m.isLOD0(lodInfos.modelName) )
 						return null;
 				throw "No LOD0 found for " + lodInfos.modelName + " in " + resource.name;
 			}
@@ -299,9 +298,6 @@ class Library {
 		p = new h3d.prim.HMDModel(header.geometries[id], header.dataPosition, this, lods);
 		p.incref(); // Prevent from auto-disposing
 		cachedPrimitives[id] = p;
-
-		if ( hasLod )
-			h3d.prim.ModelDatabase.current.loadModelProps(model.name, p);
 
 		return p;
 	}
@@ -352,6 +348,7 @@ class Library {
 		s.allJoints = [];
 		s.boundJoints = [];
 		s.rootJoints = [];
+
 		for( joint in skin.joints ) {
 			var j = new h3d.anim.Skin.Joint();
 			j.name = joint.name;
@@ -394,40 +391,12 @@ class Library {
 		return def;
 	}
 
-	public function getLODInfos( model : Model ) : { lodLevel : Int , modelName : String } {
-		var modelName : String = model.name;
-		var keyword = h3d.prim.HMDModel.lodExportKeyword;
-		if ( modelName == null || modelName.length <= keyword.length )
-			return { lodLevel : -1, modelName : null };
-
-		// Test prefix
-		if ( modelName.substr(0, keyword.length) == keyword) {
-			var parsedInt = Std.parseInt(modelName.substr( keyword.length, 1 ));
-			if (parsedInt != null) {
-				if ( Std.parseInt( modelName.substr( keyword.length + 1, 1 ) ) != null )
-					throw 'Did not expect a second number after LOD in ${modelName}';
-				return { lodLevel : parsedInt, modelName : modelName.substr(keyword.length) };
-			}
-		}
-
-		// Test suffix
-		var maxCursor = modelName.length - keyword.length - 1;
-		if ( modelName.substr( maxCursor, keyword.length ) == keyword ) {
-			var parsedInt = Std.parseInt( modelName.charAt( modelName.length - 1) );
-			if ( parsedInt != null ) {
-				return { lodLevel : parsedInt, modelName : modelName.substr( 0, maxCursor ) };
-			}
-		}
-
-		return { lodLevel : -1, modelName : null };
-	}
-
 	public function findLODs( modelName : String, lod0 : Model ) : Array<Model> {
 		if ( modelName == null )
 			return null;
 		var lods : Array<Model> = [];
 		for ( curModel in header.models ) {
-			var lodInfos = getLODInfos( curModel );
+			var lodInfos = curModel.getLODInfos();
 			if ( lodInfos.lodLevel < 1 )
 				continue;
 			if ( lodInfos.modelName == modelName ) {
@@ -436,7 +405,6 @@ class Library {
 				lods[lodInfos.lodLevel - 1] = curModel;
 			}
 		}
-
 		return lods;
 	}
 
@@ -488,12 +456,23 @@ class Library {
 				else
 					obj = new h3d.scene.MultiMaterial(prim, [for( mat in m.materials ) makeMaterial(m, mat, loadTexture)]);
 			}
-			obj.name = m.name;
+			obj.name = m.getObjectName();
 			obj.defaultTransform = m.position.toMatrix();
 			objs.push(obj);
 			var p = objs[m.parent];
 			if( p != null ) p.addChild(obj);
+
+			var modelData : h3d.prim.ModelDatabase.ModelDataInput = {
+				resourceDirectory : resource.entry.directory,
+				resourceName : resource.name,
+				objectName : obj.name,
+				hmd : Std.downcast(Std.downcast(obj, h3d.scene.Mesh)?.primitive, h3d.prim.HMDModel),
+				skin : Std.downcast(obj, h3d.scene.Skin)
+			}
+
+			h3d.prim.ModelDatabase.current.loadModelProps(modelData);
 		}
+
 		var o = objs[0];
 		if( o != null ) o.modelRoot = true;
 		return o;

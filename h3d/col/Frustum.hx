@@ -131,4 +131,21 @@ class Frustum {
 		return true;
 	}
 
+	public function hasOrientedBounds( b : OrientedBounds ) @:privateAccess {
+		if( b.testPlane(pleft) < 0 )
+			return false;
+		if( b.testPlane(pright) < 0 )
+			return false;
+		if( b.testPlane(ptop) < 0 )
+			return false;
+		if( b.testPlane(pbottom) < 0 )
+			return false;
+		if ( checkNearFar ) {
+			if( b.testPlane(pnear) < 0 )
+				return false;
+			if( b.testPlane(pfar) < 0 )
+				return false;
+		}
+		return true;
+	}
 }

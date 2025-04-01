@@ -71,9 +71,9 @@ class Quat {
 			var ay = new h3d.col.Point(dir.x, dir.y, 0).normalized();
 			var az = dir.cross(ay);
 			var ax = dir.cross(az).toVector();
-			if (dir.z < 0.0) 
+			if (dir.z < 0.0)
 				initDirection(ax, new Vector(0.0, 0.0, -1.0));
-			else 
+			else
 				initDirection(ax);
 		}
 		if ( rotate != 0.0) {
@@ -341,6 +341,41 @@ class Quat {
 
 	public function toString() {
 		return '{${x.fmt()},${y.fmt()},${z.fmt()},${w.fmt()}}';
+	}
+
+	/**
+		Blends the sourceQuats together with the given weights and store the result in `this`.
+		ReferenceQuat is the default rotation to use as the base for the blend
+		(for example the default rotation of a bone in a skeletal mesh)
+	**/
+	public function weightedBlend(sourceQuats: Array<Quat>, weights: Array<Float>, referenceQuat: Quat) {
+		// Algorithm from https://theorangeduck.com/page/quaternion-weighted-average
+		this.set(0,0,0,0);
+
+		var mulRes = inline new h3d.Quat();
+
+		var invRef = inline referenceQuat.clone();
+		inline invRef.conjugate();
+
+		for (index => rotation in sourceQuats) {
+			var weight = weights[index];
+
+			inline mulRes.multiply(invRef, rotation);
+			if (mulRes.w < 0) inline mulRes.negate();
+			mulRes.w *= weight;
+			mulRes.x *= weight;
+			mulRes.y *= weight;
+			mulRes.z *= weight;
+
+			this.w += mulRes.w;
+			this.x += mulRes.x;
+			this.y += mulRes.y;
+			this.z += mulRes.z;
+		}
+
+		inline this.normalize();
+		inline this.multiply(referenceQuat, this);
+		if (this.w < 0) inline this.negate();
 	}
 
 }

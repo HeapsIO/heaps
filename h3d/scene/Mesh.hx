@@ -113,6 +113,8 @@ class Mesh extends Object {
 
 	override function emit( ctx : RenderContext ) {
 		calcScreenRatio(ctx);
+		if ( primitive.screenRatioToLod(curScreenRatio) >= primitive.lodCount() )
+			return;
 		ctx.emit(material, this);
 	}
 

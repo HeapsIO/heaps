@@ -564,6 +564,8 @@ class Eval {
 			TMeta(name, args, e2);
 		case TField(e, name):
 			TField(evalExpr(e), name);
+		case TSyntax(target, code, args):
+			TSyntax(target, code, [for ( arg in args ) ({ e : evalExpr(arg.e), access : arg.access })]);
 		};
 		return { e : d, t : t, p : e.p }
 	}

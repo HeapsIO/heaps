@@ -27,6 +27,45 @@ class Joint {
 		subs = [];
 	}
 
+	public function shouldReceiveAnimation() {
+		return true;
+	}
+
+	#if !macro
+	public function makeRuntimeData() {
+		return new h3d.scene.Skin.JointData();
+	}
+	#end
+}
+
+class DynamicJoint extends Joint {
+	public static var SLEEP_THRESHOLD : Float = 0.0001;
+	public static var MAX_THRESHOLD : Float = 1 * 10e5;
+
+	// Global parameters
+	public var globalForce : Vector = new Vector(0.0, 0.0, 0.0);
+
+	// Parameters
+	public var additive : Bool = false;
+	public var lockAxis : h3d.Vector = new Vector(0, 0, 0);
+	public var damping : Float = 1;
+	public var stiffness : Float = 1;
+	public var resistance : Float = 1;
+	public var slackness : Float = 0;
+
+	public function new() {
+		super();
+	}
+
+	public override function shouldReceiveAnimation() {
+		return additive;
+	}
+
+	#if !macro
+	public override function makeRuntimeData() {
+		return new h3d.scene.Skin.DynamicJointData();
+	}
+	#end
 }
 
 private class Permut {

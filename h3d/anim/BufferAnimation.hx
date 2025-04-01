@@ -164,47 +164,99 @@ class BufferAnimation extends Animation {
 			}
 
 			var m = o.matrix;
-			if( m != null ) {
+			if( m != null) {
+				var skinData = o.targetSkin?.skinData;
+				if (!(skinData != null && !skinData.allJoints[o.targetJoint].shouldReceiveAnimation())) {
+					if( layout.has(Position) ) {
+						m._41 = lerpValue();
+						m._42 = lerpValue();
+						m._43 = lerpValue();
+					} else {
+						m._41 = m._14;
+						m._42 = m._24;
+						m._43 = m._34;
+					}
 
-				if( layout.has(Position) ) {
-					m._41 = lerpValue();
-					m._42 = lerpValue();
-					m._43 = lerpValue();
-				} else {
-					m._41 = m._14;
-					m._42 = m._24;
-					m._43 = m._34;
-				}
+					if( layout.has(Rotation) ) {
+						var q1x : Float32 = data[offset1++];
+						var q1y : Float32 = data[offset1++];
+						var q1z : Float32 = data[offset1++];
+						var q1w : Float32 = Math.sqrt(hxd.Math.abs(1 - (q1x*q1x+q1y*q1y+q1z*q1z)));
+						var q2x : Float32 = data[offset2++];
+						var q2y : Float32 = data[offset2++];
+						var q2z : Float32 = data[offset2++];
+						var q2w : Float32 = Math.sqrt(hxd.Math.abs(1 - (q2x*q2x+q2y*q2y+q2z*q2z)));
 
-				if( layout.has(Rotation) ) {
-					var q1x : Float32 = data[offset1++];
-					var q1y : Float32 = data[offset1++];
-					var q1z : Float32 = data[offset1++];
-					var q1w : Float32 = Math.sqrt(hxd.Math.abs(1 - (q1x*q1x+q1y*q1y+q1z*q1z)));
-					var q2x : Float32 = data[offset2++];
-					var q2y : Float32 = data[offset2++];
-					var q2z : Float32 = data[offset2++];
-					var q2w : Float32 = Math.sqrt(hxd.Math.abs(1 - (q2x*q2x+q2y*q2y+q2z*q2z)));
+						// qlerp nearest
+						var dot = q1x * q2x + q1y * q2y + q1z * q2z + q1w * q2w;
+						var q2 = dot < 0 ? -k2 : k2;
+						var qx = q1x * k1 + q2x * q2;
+						var qy = q1y * k1 + q2y * q2;
+						var qz = q1z * k1 + q2z * q2;
+						var qw = q1w * k1 + q2w * q2;
+						// make sure the resulting quaternion is normalized
+						var ql = 1 / Math.sqrt(qx * qx + qy * qy + qz * qz + qw * qw);
+						qx *= ql;
+						qy *= ql;
+						qz *= ql;
+						qw *= ql;
 
-					// qlerp nearest
-					var dot = q1x * q2x + q1y * q2y + q1z * q2z + q1w * q2w;
-					var q2 = dot < 0 ? -k2 : k2;
-					var qx = q1x * k1 + q2x * q2;
-					var qy = q1y * k1 + q2y * q2;
-					var qz = q1z * k1 + q2z * q2;
-					var qw = q1w * k1 + q2w * q2;
-					// make sure the resulting quaternion is normalized
-					var ql = 1 / Math.sqrt(qx * qx + qy * qy + qz * qz + qw * qw);
-					qx *= ql;
-					qy *= ql;
-					qz *= ql;
-					qw *= ql;
+						if( decompose ) {
+							m._12 = qx;
+							m._13 = qy;
+							m._21 = qz;
+							m._23 = qw;
+							if( layout.has(Scale) ) {
+								m._11 = lerpValue();
+								m._22 = lerpValue();
+								m._33 = lerpValue();
+							} else {
+								m._11 = 1;
+								m._22 = 1;
+								m._33 = 1;
+							}
+						} else {
+							// quaternion to matrix
+							var xx = qx * qx;
+							var xy = qx * qy;
+							var xz = qx * qz;
+							var xw = qx * qw;
+							var yy = qy * qy;
+							var yz = qy * qz;
+							var yw = qy * qw;
+							var zz = qz * qz;
+							var zw = qz * qw;
+							m._11 = 1 - 2 * ( yy + zz );
+							m._12 = 2 * ( xy + zw );
+							m._13 = 2 * ( xz - yw );
+							m._21 = 2 * ( xy - zw );
+							m._22 = 1 - 2 * ( xx + zz );
+							m._23 = 2 * ( yz + xw );
+							m._31 = 2 * ( xz + yw );
+							m._32 = 2 * ( yz - xw );
+							m._33 = 1 - 2 * ( xx + yy );
+							if( layout.has(Scale) ) {
+								var sx = lerpValue();
+								var sy = lerpValue();
+								var sz = lerpValue();
+								m._11 *= sx;
+								m._12 *= sx;
+								m._13 *= sx;
+								m._21 *= sy;
+								m._22 *= sy;
+								m._23 *= sy;
+								m._31 *= sz;
+								m._32 *= sz;
+								m._33 *= sz;
+							}
+						}
 
-					if( decompose ) {
-						m._12 = qx;
-						m._13 = qy;
-						m._21 = qz;
-						m._23 = qw;
+					} else {
+						m._12 = 0;
+						m._13 = 0;
+						m._21 = 0;
+						m._23 = decompose ? 1 : 0;
+
 						if( layout.has(Scale) ) {
 							m._11 = lerpValue();
 							m._22 = lerpValue();
@@ -214,61 +266,11 @@ class BufferAnimation extends Animation {
 							m._22 = 1;
 							m._33 = 1;
 						}
-					} else {
-						// quaternion to matrix
-						var xx = qx * qx;
-						var xy = qx * qy;
-						var xz = qx * qz;
-						var xw = qx * qw;
-						var yy = qy * qy;
-						var yz = qy * qz;
-						var yw = qy * qw;
-						var zz = qz * qz;
-						var zw = qz * qw;
-						m._11 = 1 - 2 * ( yy + zz );
-						m._12 = 2 * ( xy + zw );
-						m._13 = 2 * ( xz - yw );
-						m._21 = 2 * ( xy - zw );
-						m._22 = 1 - 2 * ( xx + zz );
-						m._23 = 2 * ( yz + xw );
-						m._31 = 2 * ( xz + yw );
-						m._32 = 2 * ( yz - xw );
-						m._33 = 1 - 2 * ( xx + yy );
-						if( layout.has(Scale) ) {
-							var sx = lerpValue();
-							var sy = lerpValue();
-							var sz = lerpValue();
-							m._11 *= sx;
-							m._12 *= sx;
-							m._13 *= sx;
-							m._21 *= sy;
-							m._22 *= sy;
-							m._23 *= sy;
-							m._31 *= sz;
-							m._32 *= sz;
-							m._33 *= sz;
-						}
-					}
-
-				} else {
-					m._12 = 0;
-					m._13 = 0;
-					m._21 = 0;
-					m._23 = decompose ? 1 : 0;
-
-					if( layout.has(Scale) ) {
-						m._11 = lerpValue();
-						m._22 = lerpValue();
-						m._33 = lerpValue();
-					} else {
-						m._11 = 1;
-						m._22 = 1;
-						m._33 = 1;
 					}
 				}
 
 				if( o.targetSkin != null ) {
-					o.targetSkin.currentRelPose[o.targetJoint] = m;
+					o.targetSkin.jointsData[o.targetJoint].currentRelPose = m;
 					o.targetSkin.jointsUpdated = true;
 				} else
 					o.targetObject.defaultTransform = m;

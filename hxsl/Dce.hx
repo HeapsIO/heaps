@@ -288,6 +288,29 @@ class Dce {
 			check(val, writeTo, isAffected);
 			writeTo.pop();
 			isAffected.append(v,15);
+		case TSyntax(_, _, args):
+			for ( arg in args ) {
+				if ( arg.access != Read ) {
+					var tvars : Array<VarDeps> = [];
+					function findTVars( e : TExpr ) {
+						switch ( e.e ) {
+							case TVar(v): tvars.push(get(v));
+							default: e.iter(findTVars);
+						}
+					}
+					findTVars(arg.e);
+					for ( v in tvars ) {
+						writeTo.push(v, 15);
+						for ( arg2 in args ) {
+							if ( arg2.access != Write ) check(arg2.e, writeTo, isAffected);
+						}
+						writeTo.pop();
+						isAffected.append(v, 15);
+					}
+				} else {
+					check(arg.e, writeTo, isAffected);
+				}
+			}
 		default:
 			e.iter(check.bind(_, writeTo, isAffected));
 		}

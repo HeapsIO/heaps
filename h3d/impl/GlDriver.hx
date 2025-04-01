@@ -445,7 +445,7 @@ class GlDriver extends Driver {
 					#elseif (hl_ver < version("1.15.0"))
 					throw "Storage buffer support requires -D hl-ver=1.15.0";
 					#else
-					gl.getProgramResourceIndex(p.p,GL.SHADER_STORAGE_BLOCK, "storage_uniform_buffer"+i);
+					gl.getProgramResourceIndex(p.p,GL.SHADER_STORAGE_BLOCK,(shader.kind==Vertex?"storage_vertex_":"storage_")+"uniform_buffer"+i);
 					#end
 				case RW:
 					#if js
@@ -453,7 +453,7 @@ class GlDriver extends Driver {
 					#elseif (hl_ver < version("1.15.0"))
 					throw "RW buffer support requires -D hl-ver=1.15.0";
 					#else
-					gl.getProgramResourceIndex(p.p,GL.SHADER_STORAGE_BLOCK, "rw_uniform_buffer"+i);
+					gl.getProgramResourceIndex(p.p,GL.SHADER_STORAGE_BLOCK,(shader.kind==Vertex?"rw_vertex_":"rw_")+"uniform_buffer"+i);
 					#end
 				case Uniform:
 					gl.getUniformBlockIndex(p.p,(shader.kind==Vertex?"vertex_":"")+"uniform_buffer"+i);
@@ -836,8 +836,23 @@ class GlDriver extends Driver {
 			gl.polygonMode(GL.FRONT_AND_BACK, GL.FILL);
 		}
 		#else
-		// Not entirely accurate wireframe, but the best possible on WebGL.
-		drawMode = wireframe ? GL.LINE_STRIP : GL.TRIANGLES;
+
+		var fallback = true;
+		#if (js && haxe_ver >= 5)
+		var extension:js.html.webgl.extension.WEBGLPolygonMode =  cast gl.getExtension("WEBGL_polygon_mode");
+		if(extension != null) {
+			if(wireframe) {
+				extension.polygonModeWEBGL(GL.FRONT_AND_BACK, js.html.webgl.extension.WEBGLPolygonMode.LINE_WEBGL);
+			} else {
+				extension.polygonModeWEBGL(GL.FRONT_AND_BACK, js.html.webgl.extension.WEBGLPolygonMode.FILL_WEBGL);
+			}
+			fallback = false;
+		}
+		#end
+
+		if(fallback) {
+			drawMode = wireframe ? GL.LINE_STRIP : GL.TRIANGLES;
+		}
 		#end
 
 		if( diff & Pass.culling_mask != 0 ) {
@@ -2033,6 +2048,7 @@ class GlDriver extends Driver {
 
 	override function computeDispatch(x:Int = 1, y:Int = 1, z:Int = 1) {
 		GL.dispatchCompute(x,y,z);
+		GL.memoryBarrier(GL.BUFFER_UPDATE_BARRIER_BIT);
 	}
 
 	override function allocQuery(kind:QueryKind) {

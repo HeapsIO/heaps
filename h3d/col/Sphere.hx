@@ -39,21 +39,18 @@ class Sphere extends Collider {
 	}
 
 	public function rayIntersection( r : Ray, bestMatch : Bool ) : Float {
-		var r2 = this.r * this.r;
-		var px = r.px + r.lx;
-		var py = r.py + r.ly;
-		var pz = r.pz + r.lz;
-
-		var a = r.lx * r.lx + r.ly * r.ly + r.lz * r.lz;
-		var b = 2 * r.lx * (x - px) +  2 * r.ly * (y - py) +  2 * r.lz * (z - pz);
-		var c = (x * x + y * y + z * z) + (px * px + py * py + pz * pz) - 2 * (x * px + y * py + z * pz) - r2;
-
-		var d = b * b - 4 * a * c;
-		if( d < 0 )	return -1;
-
-		d = Math.sqrt(d);
-		var t = ( -b + d) / (2 * a);
-		return 1 - t;
+		var mx = r.px - x;
+		var my = r.py - y;
+		var mz = r.pz - z;
+		var b = mx * r.lx + my * r.ly + mz * r.lz;
+		var c = mx * mx + my * my + mz * mz - this.r * this.r;
+		if ( c > 0.0 && b > 0.0 )
+			return -1;
+		var d = b * b - c;
+		if ( d < 0.0 )
+			return -1;
+		var t = -b - Math.sqrt(d);
+		return t < 0.0 ? 0.0 : t;
 	}
 
 	public inline function inFrustum( f : Frustum, ?m : h3d.Matrix ) {

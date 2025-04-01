@@ -280,12 +280,10 @@ class OrientedBounds extends Collider {
 		);
 	}
 
-	public function inFrustum(f:Frustum, ?localMatrix:Matrix):Bool {
-		for (i in 0...8) {
-			var v = inline getVertice(i);
-			if (f.hasPoint(v)) return true;
-		}
-		return false;
+	public function inFrustum(f:Frustum, ?m:Matrix) : Bool {
+		if( m != null )
+			throw "Not implemented";
+		return f.hasOrientedBounds(this);
 	}
 
 	public function inSphere(s:Sphere):Bool {
@@ -332,7 +330,22 @@ class OrientedBounds extends Collider {
 		return new Point();
 	}
 
-	public function makeDebugObj():h3d.scene.Object {
+	inline function testPlane( p : Plane ) {
+		var n = new h3d.Vector(p.nx, p.ny, p.nz);
+		var ax = new h3d.Vector(xx, xy, xz);
+		var ay = new h3d.Vector(yx, yy, yz);
+		var az = new h3d.Vector(zx, zy, zz);
+		var c = new h3d.Vector(centerX, centerY, centerZ);
+
+		var r = hx * hxd.Math.abs(n.dot(ax)) +
+				hy * hxd.Math.abs(n.dot(ay)) +
+				hz * hxd.Math.abs(n.dot(az));
+		var s = n.dot(c) - p.d;
+		return s + r;
+	}
+
+	#if !macro
+	public function makeDebugObj() : h3d.scene.Graphics {
 		var g = new h3d.scene.Graphics();
 
 		var verts : Array<Vector> = getVertices();
@@ -354,4 +367,5 @@ class OrientedBounds extends Collider {
 
 		return g;
 	}
+	#end
 }

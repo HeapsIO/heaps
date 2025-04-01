@@ -351,12 +351,12 @@ class DirShadowMap extends Shadows {
 		var texture = ctx.textures.allocTarget("dirShadowMap", size, size, false, format);
 		if( depth == null || depth.width != size || depth.height != size || depth.isDisposed() ) {
 			if( depth != null ) depth.dispose();
-			depth = new h3d.mat.Texture(size, size, Depth24Stencil8);
+			depth = new h3d.mat.Texture(size, size, hxd.PixelFormat.Depth24Stencil8);
 			depth.name = "dirShadowMapDepth";
 		}
 		texture.depthBuffer = depth;
 		#else
-		depth = ctx.textures.allocTarget("dirShadowMap", size, size, false, Depth24Stencil8);
+		depth = ctx.textures.allocTarget("dirShadowMap", size, size, false, hxd.PixelFormat.Depth24Stencil8);
 		var texture = depth;
 		#end
 

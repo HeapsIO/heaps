@@ -25,6 +25,8 @@ class MultiMaterial extends Mesh {
 
 	override function emit( ctx : RenderContext ) {
 		calcScreenRatio(ctx);
+		if ( primitive.screenRatioToLod(curScreenRatio) >= primitive.lodCount() )
+			return;
 		for( i in 0...materials.length ) {
 			var m = materials[i];
 			if( m != null )
