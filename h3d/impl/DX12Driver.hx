@@ -124,7 +124,7 @@ class BumpAllocator {
 		var newOffset = size + offsetAligned;
 		if ( newOffset > capacity ) {
 			if ( next == null )
-				next = new BumpAllocator(Std.int(capacity*3/2));
+				next = new BumpAllocator(hxd.Math.imax(Std.int(capacity*3/2), size));
 			return next.tryAlloc(size, alignment, allocation);
 		}
 		allocation.byteSize = size;
@@ -1021,7 +1021,7 @@ class DX12Driver extends h3d.impl.Driver {
 
 	static var VERTEX_FORMATS = [null,null,R32G32_FLOAT,R32G32B32_FLOAT,R32G32B32A32_FLOAT];
 
-	function getBinaryPayload( code : String ) {
+	function getBinaryPayload( code : String, profile ) {
 		var bin = code.indexOf("//BIN=");
 		if( bin >= 0 ) {
 			var end = code.indexOf("#", bin);
@@ -1029,21 +1029,22 @@ class DX12Driver extends h3d.impl.Driver {
 				return haxe.crypto.Base64.decode(code.substr(bin + 6, end - bin - 6));
 		}
 		if( shaderCache != null )
-			return shaderCache.resolveShaderBinary(code);
+			return shaderCache.resolveShaderBinary(code, profile);
 		return null;
 	}
 
 	function compileSource( sh : hxsl.RuntimeShader.RuntimeShaderData, profile, baseRegister, rootStr = "" ) {
-		var args = [];
 		var out = new hxsl.HlslOut();
 		out.baseRegister = baseRegister;
 		if( sh.code == null ) {
 			sh.code = out.run(sh.data);
 			sh.code = rootStr + sh.code;
 		}
-		var bytes = getBinaryPayload(sh.code);
+		var bytes = getBinaryPayload(sh.code, profile);
 		if( bytes == null ) {
-			return compiler.compile(sh.code, profile, args);
+			bytes = compiler.compile(sh.code, profile, []);
+			if( shaderCache != null )
+				shaderCache.saveCompiledShader(sh.code, bytes, profile);
 		}
 		return bytes;
 	}

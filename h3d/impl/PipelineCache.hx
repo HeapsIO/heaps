@@ -74,13 +74,13 @@ class PipelineBuilder {
 
 	static inline var PSIGN_MATID = 0;
 	static inline var PSIGN_COLOR_MASK = PSIGN_MATID + 4;
-	static inline var PSIGN_DEPTH_BIAS = PSIGN_COLOR_MASK + 4;
+	static inline var PSIGN_DEPTH_BIAS = PSIGN_COLOR_MASK + 1;
 	static inline var PSIGN_SLOPE_SCALED_DEPTH_BIAS = PSIGN_DEPTH_BIAS + 4;
 	static inline var PSIGN_DEPTH_CLAMP = PSIGN_SLOPE_SCALED_DEPTH_BIAS + 4;
 	static inline var PSIGN_STENCIL_MASK = PSIGN_DEPTH_CLAMP + 1;
 	static inline var PSIGN_STENCIL_OPS = PSIGN_STENCIL_MASK + 2;
 	static inline var PSIGN_RENDER_TARGETS = PSIGN_STENCIL_OPS + 4;
-	static inline var PSIGN_DEPTH_TARGET_FORMAT = PSIGN_RENDER_TARGETS + 1;
+	static inline var PSIGN_DEPTH_TARGET_FORMAT = PSIGN_RENDER_TARGETS + 8;
 	static inline var PSIGN_LAYOUT = PSIGN_DEPTH_TARGET_FORMAT + 4;
 
 	static inline var MAX_BUFFERS = 8;
@@ -102,23 +102,27 @@ class PipelineBuilder {
 
 	static function getRTBits( tex : h3d.mat.Texture ) {
 		inline function mk(channels,format) {
-			return ((channels - 1) << 2) | (format + 1);
+			return ((format + 1) << 2) | (channels - 1);
 		}
 		return switch( tex.format ) {
-		case RGBA: mk(4,0);
-		case R8: mk(1, 0);
-		case RG8: mk(2, 0);
-		case RGB8: mk(3, 0);
-		case R16F: mk(1,1);
-		case RG16F: mk(2,1);
-		case RGB16F: mk(3,1);
-		case RGBA16F: mk(4,1);
-		case R32F: mk(1,2);
-		case RG32F: mk(2,2);
-		case RGB32F: mk(3,2);
-		case RGBA32F: mk(4,2);
-		case RG11B10UF: mk(2, 3);
-		case RGB10A2: mk(3, 4);
+		case R8:         mk(1, 0);
+		case RG8:        mk(2, 0);
+		case RGB8:       mk(3, 0);
+		case RGBA:       mk(4, 0);
+		case R16F:       mk(1, 1);
+		case RG16F:      mk(2, 1);
+		case RGB16F:     mk(3, 1);
+		case RGBA16F:    mk(4, 1);
+		case R32F:       mk(1, 2);
+		case RG32F:      mk(2, 2);
+		case RGB32F:     mk(3, 2);
+		case RGBA32F:    mk(4, 2);
+		case R16U:       mk(1, 3);
+		case RG16U:      mk(2, 3);
+		case RGB16U:     mk(3, 3);
+		case RGBA16U:    mk(4, 3);
+		case RG11B10UF:  mk(2, 4);
+		case RGB10A2:    mk(3, 4);
 		default: throw "Unsupported RT format "+tex.format;
 		}
 	}
@@ -130,12 +134,12 @@ class PipelineBuilder {
 	function setDepthProps( depth : h3d.mat.Texture ) {
 		if( depth == null ) {
 			signature.setI32(PSIGN_DEPTH_TARGET_FORMAT,0);
-			signature.setI32(PSIGN_DEPTH_BIAS,0);
+			signature.setF32(PSIGN_DEPTH_BIAS,0);
 			signature.setF32(PSIGN_SLOPE_SCALED_DEPTH_BIAS,0);
 			signature.setUI8(PSIGN_DEPTH_CLAMP,0);
 		} else {
 			signature.setI32(PSIGN_DEPTH_TARGET_FORMAT, depth.format.getIndex());
-			signature.setI32(PSIGN_DEPTH_BIAS, Std.int(depth.depthBias));
+			signature.setF32(PSIGN_DEPTH_BIAS, depth.depthBias);
 			signature.setF32(PSIGN_SLOPE_SCALED_DEPTH_BIAS, depth.slopeScaledBias);
 			signature.setUI8(PSIGN_DEPTH_CLAMP, depth.depthClamp ? 1 : 0);
 		}
@@ -152,25 +156,27 @@ class PipelineBuilder {
 		static var FORMATS = initFormats();
 		var d = tmpDepth;
 		d.format = FORMATS[signature.getI32(PSIGN_DEPTH_TARGET_FORMAT)];
-		d.bias = signature.getI32(PSIGN_DEPTH_BIAS);
+		d.bias = signature.getF32(PSIGN_DEPTH_BIAS);
 		d.clamp = signature.getUI8(PSIGN_DEPTH_CLAMP) != 0;
 		d.slopeScaledBias = signature.getF32(PSIGN_SLOPE_SCALED_DEPTH_BIAS);
 		return d;
 	}
 
 	public function setRenderTarget( tex : h3d.mat.Texture, depthEnabled : Bool ) {
-		signature.setI32(PSIGN_RENDER_TARGETS, (tex == null ? 0 : getRTBits(tex)) | (depthEnabled ? 0x80000000 : 0));
+		signature.setI32(PSIGN_RENDER_TARGETS, tex == null ? 0 : getRTBits(tex));
+		signature.setI32(PSIGN_RENDER_TARGETS + 4, 0);
 		var depth = tex == null || !depthEnabled ? null : tex.depthBuffer;
 		setDepthProps(depth);
 		needFlush = true;
 	}
 
 	public function getDepthEnabled() {
-		return signature.getI32(PSIGN_RENDER_TARGETS) & 0x80000000 != 0;
+		return signature.getI32(PSIGN_DEPTH_TARGET_FORMAT) != 0;
 	}
 
 	public function setDepth( depth : h3d.mat.Texture ) {
-		signature.setI32(PSIGN_RENDER_TARGETS, 0x80000000);
+		signature.setI32(PSIGN_RENDER_TARGETS, 0);
+		signature.setI32(PSIGN_RENDER_TARGETS + 4, 0);
 		setDepthProps(depth);
 		needFlush = true;
 	}
@@ -178,8 +184,9 @@ class PipelineBuilder {
 	public function setRenderTargets( textures : Array<h3d.mat.Texture>, depthEnabled : Bool ) {
 		var bits = 0;
 		for( i => t in textures )
-			bits |= getRTBits(t) << (i << 2);
-		signature.setI32(PSIGN_RENDER_TARGETS, bits | (depthEnabled ? 0x80000000 : 0));
+			signature.setUI8(PSIGN_RENDER_TARGETS + i, getRTBits(t));
+		for ( i in textures.length...8)
+			signature.setUI8(PSIGN_RENDER_TARGETS + i, 0);
 		var tex = textures[0];
 		var depth = tex == null || !depthEnabled ? null : tex.depthBuffer;
 		setDepthProps(depth);

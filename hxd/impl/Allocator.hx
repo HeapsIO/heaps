@@ -29,7 +29,7 @@ class Allocator {
 	}
 
 	function fromBufferFlags(flags : haxe.EnumFlags<h3d.Buffer.BufferFlag>) : BufferFlags {
-		if ( flags == Dynamic )
+		if ( flags.toInt() == 0 )
 			return Static;
 		if ( flags == Dynamic )
 			return Dynamic;

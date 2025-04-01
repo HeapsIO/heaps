@@ -88,7 +88,6 @@ class ModelDatabase {
 		#else
 			return baseLodConfig;
 		#end
-
 	}
 
 	// Used to clean previous version of modelDatabase, should be removed after some time

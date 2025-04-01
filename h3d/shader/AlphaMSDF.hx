@@ -1,7 +1,7 @@
 package h3d.shader;
 
 class AlphaMSDF extends hxsl.Shader {
-    static var SRC = {  
+	static var SRC = {
 		
 		var calculatedUV : Vec2;
 		var pixelColor : Vec4;
@@ -14,7 +14,7 @@ class AlphaMSDF extends hxsl.Shader {
 		@param var color : Vec3;
 
 		function median(r : Float, g : Float, b : Float) : Float {
-		    return max(min(r, g), min(max(r, g), b));
+			return max(min(r, g), min(max(r, g), b));
 		}
 
 		function screenPxRange( uv : Vec2 ) : Float {
@@ -27,10 +27,10 @@ class AlphaMSDF extends hxsl.Shader {
 			var uv = useSourceUVs ? input.uv : calculatedUV;
 			var sample = texture.get(uv);
 			var sd = median(sample.r, sample.g, sample.b);
-    		var screenPxDistance = screenPxRange(uv)*(sd - 0.5);
-    		pixelColor.a = clamp(screenPxDistance + 0.5, 0.0, 1.0);
+			var screenPxDistance = screenPxRange(uv)*(sd - 0.5);
+			pixelColor.a = clamp(screenPxDistance + 0.5, 0.0, 1.0);
 			if (useColor)
 				pixelColor.rgb = color;
 		}
-    }
+	}
 }

@@ -1,7 +1,6 @@
 package hxd.res;
 
 import haxe.io.UInt8Array;
-
 using Lambda;
 
 #if js

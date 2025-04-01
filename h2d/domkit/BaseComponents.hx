@@ -69,7 +69,13 @@ class CustomParser extends domkit.CssValue.ValueParser {
 		// TODO : compile-time path check?
 		return true;
 		#else
-		return try hxd.res.Loader.currentInstance.load(path) catch( e : hxd.res.NotFound ) invalidProp("Resource not found "+path);
+		return try {
+			var f = hxd.res.Loader.currentInstance.load(path);
+			if( f.entry.isDirectory ) invalidProp("Resource should be a file "+path);
+			return f;
+		} catch( e : hxd.res.NotFound ) {
+			invalidProp("Resource not found "+path);
+		}
 		#end
 	}
 
@@ -495,6 +501,17 @@ class CustomParser extends domkit.CssValue.ValueParser {
 		}
 	}
 
+	public function parseMargin(value:CssValue) {
+		return switch(value) {
+		case VIdent("ignore-parent"): #if macro 0 #else h2d.Flow.PADDING_IGNORE_PARENT #end;
+		default: parseInt(value);
+		}
+	}
+
+	public function parseMarginBox( v : CssValue ) {
+		return parseGenBox(v,parseMargin);
+	}
+
 }
 
 #if !macro
@@ -514,11 +531,11 @@ class ObjectComp implements h2d.domkit.Object implements domkit.Component.Compon
 	@:p var filterSmooth : Bool;
 
 	// flow properties
-	@:p(box) var margin : { left : Int, top : Int, right : Int, bottom : Int };
-	@:p var marginLeft = 0;
-	@:p var marginRight = 0;
-	@:p var marginTop = 0;
-	@:p var marginBottom = 0;
+	@:p(marginBox) var margin : { left : Int, top : Int, right : Int, bottom : Int };
+	@:p(margin) var marginLeft = 0;
+	@:p(margin) var marginRight = 0;
+	@:p(margin) var marginTop = 0;
+	@:p(margin) var marginBottom = 0;
 	@:p(align) var align : { v : h2d.Flow.FlowAlign, h : h2d.Flow.FlowAlign };
 	@:p(hAlign) var halign : h2d.Flow.FlowAlign;
 	@:p(vAlign) var valign : h2d.Flow.FlowAlign;

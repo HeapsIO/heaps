@@ -1,6 +1,6 @@
 package hxsl;
-using hxsl.Ast;
 import hxsl.Debug.trace in debug;
+using hxsl.Ast;
 
 private class Exit {
 	public function new() {
