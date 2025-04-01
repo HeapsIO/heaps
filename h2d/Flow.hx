@@ -178,14 +178,6 @@ class FlowProperties {
 	public var lineBreak = false;
 
 	/**
-		Will constraint the element size through `Object.constraintSize` if the Flow have a set maximum size.
-
-		@see `Flow.maxWidth`
-		@see `Flow.maxHeight`
-	**/
-	public var constraint = true;
-
-	/**
 		When set, element will use the maximum size of non-autoSize elements as size constraint instead of current constraint on the parent flow.
 	**/
 	public var autoSize(never, set) : Null<Float>;
@@ -1257,8 +1249,8 @@ class Flow extends Object {
 				var ph = getPad(p.paddingTop,paddingTop) + getPad(p.paddingBottom,paddingBottom);
 				if( !p.isAbsolute )
 					c.constraintSize(
-						isConstraintWidth && p.constraint ? ((p.autoSizeWidth != null ? flowFloor(autoWidth * p.autoSizeWidth / autoSum) : maxInWidth) - pw) / Math.abs(c.scaleX) : -1,
-						isConstraintHeight && p.constraint ? ((p.autoSizeHeight != null ? hxd.Math.imax(maxLineHeight, minLineHeight) * p.autoSizeHeight : maxInHeight) - ph) / Math.abs(c.scaleY) : -1
+						isConstraintWidth ? ((p.autoSizeWidth != null ? flowFloor(autoWidth * p.autoSizeWidth / autoSum) : maxInWidth) - pw) / Math.abs(c.scaleX) : -1,
+						isConstraintHeight ? ((p.autoSizeHeight != null ? hxd.Math.imax(maxLineHeight, minLineHeight) * p.autoSizeHeight : maxInHeight) - ph) / Math.abs(c.scaleY) : -1
 					);
 
 				var b = getSize(c);
@@ -1425,8 +1417,8 @@ class Flow extends Object {
 				var ph = getPad(p.paddingTop,paddingTop) + getPad(p.paddingBottom,paddingBottom);
 				if( !p.isAbsolute )
 					c.constraintSize(
-						isConstraintWidth && p.constraint ? ((p.autoSizeWidth != null ? hxd.Math.imax(maxColWidth, minColWidth) * p.autoSizeWidth : maxInWidth) - pw) / Math.abs(c.scaleX) : -1,
-						isConstraintHeight && p.constraint ? ((p.autoSizeHeight != null ? flowFloor(autoHeight * p.autoSizeHeight / autoSum) : maxInHeight) - ph) / Math.abs(c.scaleY) : -1
+						isConstraintWidth ? ((p.autoSizeWidth != null ? hxd.Math.imax(maxColWidth, minColWidth) * p.autoSizeWidth : maxInWidth) - pw) / Math.abs(c.scaleX) : -1,
+						isConstraintHeight ? ((p.autoSizeHeight != null ? flowFloor(autoHeight * p.autoSizeHeight / autoSum) : maxInHeight) - ph) / Math.abs(c.scaleY) : -1
 					);
 
 				var b = getSize(c);
@@ -1554,8 +1546,8 @@ class Flow extends Object {
 				var ph = getPad(p.paddingTop,paddingTop) + getPad(p.paddingBottom,paddingBottom);
 				if( !isAbs )
 					c.constraintSize(
-						isConstraintWidth && p.constraint ? (maxInWidth - pw) / Math.abs(c.scaleX) : -1,
-						isConstraintHeight && p.constraint ? (maxInHeight - ph) / Math.abs(c.scaleY) : -1
+						isConstraintWidth ? (maxInWidth - pw) / Math.abs(c.scaleX) : -1,
+						isConstraintHeight ? (maxInHeight - ph) / Math.abs(c.scaleY) : -1
 					);
 
 				var b = getSize(c);
