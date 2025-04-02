@@ -1354,7 +1354,7 @@ class HMDOut extends BaseLibrary {
 					if ( geom == null )
 						continue;
 					var lodModel = new Model();
-					lodModel.name = modelName + 'LOD${i}';
+					lodModel.name = modelName + 'LOD${i+1}';
 					lodModel.props = model.props;
 					lodModel.parent = model.parent;
 					lodModel.follow = model.follow;
