@@ -541,7 +541,6 @@ class MeshBatch extends MultiMaterial {
 	}
 
 	function cleanPasses() {
-		var alloc = hxd.impl.Allocator.get();
 		while( dataPasses != null ) {
 			dataPasses.clean();
 			dataPasses = dataPasses.next;
