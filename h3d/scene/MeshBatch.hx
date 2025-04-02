@@ -58,6 +58,11 @@ class MeshBatch extends MultiMaterial {
 	 */
 	public var lodDistance : Float;
 
+	/**
+	 * If set, use this lod in emitInstance()
+	 */
+	public var curLod : Int = -1;
+
 	public function new( primitive, ?material, ?parent ) {
 		instanced = new h3d.prim.Instanced();
 		instanced.commands = new h3d.impl.InstanceBuffer();
@@ -542,10 +547,8 @@ class MeshBatch extends MultiMaterial {
 			dataPasses = dataPasses.next;
 		}
 
-		if( instanced.commands != null ) {
+		if( instanced.commands != null )
 			instanced.commands.dispose();
-			@:privateAccess instanced.commands.data = null;
-		}
 
 		primitiveSubBytes = null;
 		shadersChanged = true;

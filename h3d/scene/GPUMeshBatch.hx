@@ -311,6 +311,9 @@ class GPUMeshBatch extends MeshBatch {
 	}
 
 	override function cleanPasses() {
+		if ( instanced.commands != null )
+			@:privateAccess instanced.commands.data = null;
+
 		super.cleanPasses();
 
 		var alloc = hxd.impl.Allocator.get();
@@ -336,7 +339,7 @@ class GPUBatchData extends BatchData {
 	public var commandBuffers : Array<h3d.Buffer>;
 	public var countBuffers : Array<h3d.Buffer>;
 
-	override function clean() {
+	override function clean() {		
 		super.clean();
 
 		var alloc = hxd.impl.Allocator.get();
