@@ -83,7 +83,7 @@ class MeshBatch extends MultiMaterial {
 		meshBatchFlags.set(EnableStorageBuffer);
 	}
 
-	function hasOffset() return primitiveSubPart != null;
+	function hasOffset() return primitiveSubBytes != null;
 	function getPrimitive() return @:privateAccess instanced.primitive;
 	function storageBufferEnabled() return meshBatchFlags.has(EnableStorageBuffer);
 	function gpuUpdateEnabled() return meshBatchFlags.has(EnableGpuUpdate);
