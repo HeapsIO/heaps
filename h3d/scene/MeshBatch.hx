@@ -19,6 +19,7 @@ class MeshBatch extends MultiMaterial {
 	static var MAX_BUFFER_ELEMENTS = 4096;
 	static var MAX_STORAGE_BUFFER_ELEMENTS = 128 * 1024 * 1024 >> 2;
 	static var BATCH_START_FMT = hxd.BufferFormat.make([{ name : "Batch_Start", type : DFloat }]);
+	static var INDIRECT_DRAW_ARGUMENTS_FMT = hxd.BufferFormat.make([{ name : "", type : DVec4 }, { name : "", type : DFloat }]);
 
 	var instanced : h3d.prim.Instanced;
 	var dataPasses : BatchData;
@@ -94,6 +95,7 @@ class MeshBatch extends MultiMaterial {
 	function gpuUpdateEnabled() return meshBatchFlags.has(EnableGpuUpdate);
 	function getMaxElements() return storageBufferEnabled() ? MAX_STORAGE_BUFFER_ELEMENTS : MAX_BUFFER_ELEMENTS;
 	function hasPrimitiveOffset() return meshBatchFlags.has(HasPrimitiveOffset);
+	function useCommandBuffer() return false;
 
 	public function begin( emitCountTip = -1 ) : Int {
 		instanceCount = 0;
@@ -332,7 +334,26 @@ class MeshBatch extends MultiMaterial {
 					}
 				}
 
-				onFlushBuffer(p, index, count);
+				if ( useCommandBuffer() ) {
+					var commandCountAllocated = hxd.Math.imin( hxd.Math.nextPOT( count ), p.maxInstance );
+					if ( p.commandBuffers == null) {
+						p.commandBuffers = [];
+						p.countBuffers = [];
+					}
+					var buf = p.commandBuffers[index];
+					var cbuf = p.countBuffers[index];
+					if ( buf == null ) {
+						buf = alloc.allocBuffer( commandCountAllocated, INDIRECT_DRAW_ARGUMENTS_FMT, UniformReadWrite );
+						cbuf = alloc.allocBuffer( 1, hxd.BufferFormat.VEC4_DATA, UniformReadWrite );
+						p.commandBuffers[index] = buf;
+						p.countBuffers[index] = cbuf;
+					}
+					else if ( buf.vertices < commandCountAllocated ) {
+						alloc.disposeBuffer( buf );
+						buf = alloc.allocBuffer( commandCountAllocated, INDIRECT_DRAW_ARGUMENTS_FMT, UniformReadWrite );
+						p.commandBuffers[index] = buf;
+					}
+				}
 
 				start += count;
 				index++;
@@ -361,8 +382,6 @@ class MeshBatch extends MultiMaterial {
 		}
 		needUpload = false;
 	}
-
-	function onFlushBuffer(p : BatchData, index : Int, count : Int) {}
 
 	function onFlushPass(p : BatchData) {}
 
@@ -483,9 +502,14 @@ class MeshBatch extends MultiMaterial {
 				else
 					p.shader.Batch_Buffer = p.buffers[bufferIndex];
 
-				if( p.instanceBuffers == null )
-					setPassCommand(p, bufferIndex);
-				else
+				if( p.instanceBuffers == null ) {
+					var count = hxd.Math.imin( instanceCount - p.maxInstance * bufferIndex, p.maxInstance );
+					instanced.setCommand(p.matIndex, instanced.screenRatioToLod(curScreenRatio), count);
+					if ( p.commandBuffers != null && p.commandBuffers.length > 0 ) {
+						@:privateAccess instanced.commands.data = p.commandBuffers[bufferIndex].vbuf;
+						@:privateAccess instanced.commands.countBuffer = p.countBuffers[bufferIndex].vbuf;
+					}
+				} else
 					instanced.commands = p.instanceBuffers[bufferIndex];
 
 				break;
@@ -497,11 +521,6 @@ class MeshBatch extends MultiMaterial {
 		ctx.drawPass.index >>= 16;
 		super.draw(ctx);
 		ctx.drawPass.index = prev;
-	}
-
-	function setPassCommand(p : BatchData, bufferIndex : Int) {
-		var count = hxd.Math.imin( instanceCount - p.maxInstance * bufferIndex, p.maxInstance );
-		instanced.setCommand(p.matIndex, instanced.screenRatioToLod(curScreenRatio), count);
 	}
 
 	override function calcScreenRatio(ctx:RenderContext) {
@@ -569,6 +588,8 @@ class BatchData {
 	public var shader : hxsl.BatchShader;
 	public var shaders : Array<hxsl.Shader>;
 	public var pass : h3d.mat.Pass;
+	public var commandBuffers : Array<h3d.Buffer>;
+	public var countBuffers : Array<h3d.Buffer>;
 	public var next : BatchData;
 
 	public function new() {
@@ -576,6 +597,14 @@ class BatchData {
 
 	public function clean() {
 		var alloc = hxd.impl.Allocator.get();
+		if ( commandBuffers != null && commandBuffers.length > 0 ) {
+			for ( buf in commandBuffers )
+				alloc.disposeBuffer(buf);
+			commandBuffers.resize(0);
+			for ( buf in countBuffers )
+				alloc.disposeBuffer(buf);
+			countBuffers.resize(0);
+		}
 
 		pass.removeShader(shader);
 		for( b in buffers )
