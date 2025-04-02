@@ -53,7 +53,7 @@ class GPUMeshBatch extends MeshBatch {
 	}
 
 	function getLodCount() return gpuLodEnabled ? getPrimitive().lodCount() : 1;
-	override function hasOffset() return true;
+	override function updateHasPrimitiveOffset() meshBatchFlags.set(HasPrimitiveOffset);
 
 	override function begin( emitCountTip = -1) {
 		if ( !gpuLodEnabled && !gpuCullingEnabled )

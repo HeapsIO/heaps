@@ -4,6 +4,7 @@ enum MeshBatchFlag {
 	EnableResizeDown;
 	EnableGpuUpdate;
 	EnableStorageBuffer;
+	HasPrimitiveOffset;
 }
 
 /**
@@ -83,11 +84,11 @@ class MeshBatch extends MultiMaterial {
 		meshBatchFlags.set(EnableStorageBuffer);
 	}
 
-	function hasOffset() return primitiveSubBytes != null;
 	function getPrimitive() return @:privateAccess instanced.primitive;
 	function storageBufferEnabled() return meshBatchFlags.has(EnableStorageBuffer);
 	function gpuUpdateEnabled() return meshBatchFlags.has(EnableGpuUpdate);
 	function getMaxElements() return storageBufferEnabled() ? MAX_STORAGE_BUFFER_ELEMENTS : MAX_BUFFER_ELEMENTS;
+	function hasPrimitiveOffset() return meshBatchFlags.has(HasPrimitiveOffset);
 
 	public function begin( emitCountTip = -1 ) : Int {
 		instanceCount = 0;
@@ -117,6 +118,7 @@ class MeshBatch extends MultiMaterial {
 		var scene = getScene();
 		if( scene == null ) return;
 		cleanPasses();
+		updateHasPrimitiveOffset();
 		for( index in 0...materials.length ) {
 			var mat = materials[index];
 			if( mat == null ) continue;
@@ -161,7 +163,7 @@ class MeshBatch extends MultiMaterial {
 				}
 				shader.Batch_UseStorage = storageBufferEnabled();
 				shader.Batch_Count = storageBufferEnabled() ? 0 : b.maxInstance * b.paramsCount;
-				shader.Batch_HasOffset = hasOffset();
+				shader.Batch_HasOffset = hasPrimitiveOffset();
 				shader.constBits = (shader.Batch_Count << 2) | (shader.Batch_UseStorage ? ( 1 << 1 ) : 0) | (shader.Batch_HasOffset ? 1 : 0);
 				shader.updateConstants(null);
 			}
@@ -174,6 +176,8 @@ class MeshBatch extends MultiMaterial {
 			p = p.next;
 		}
 	}
+
+	function updateHasPrimitiveOffset() meshBatchFlags.setTo(HasPrimitiveOffset, primitiveSubPart != null);
 
 	function createBatchData() {
 		return new BatchData();
@@ -335,7 +339,7 @@ class MeshBatch extends MultiMaterial {
 				alloc.disposeBuffer( p.buffers.pop() );
 			p = p.next;
 		}
-		if( hasOffset() ) {
+		if( hasPrimitiveOffset() ) {
 			var offsets = prim.resolveBuffer("Batch_Start");
 			if( offsets == null || offsets.vertices < instanceCount || offsets.isDisposed() ) {
 				if( offsets != null ) {
