@@ -505,7 +505,7 @@ class MeshBatch extends MultiMaterial {
 				if( p.instanceBuffers == null ) {
 					var count = hxd.Math.imin( instanceCount - p.maxInstance * bufferIndex, p.maxInstance );
 					instanced.setCommand(p.matIndex, instanced.screenRatioToLod(curScreenRatio), count);
-					if ( p.commandBuffers != null && p.commandBuffers.length > 0 ) {
+					if ( useCommandBuffer() ) {
 						@:privateAccess instanced.commands.data = p.commandBuffers[bufferIndex].vbuf;
 						@:privateAccess instanced.commands.countBuffer = p.countBuffers[bufferIndex].vbuf;
 					}
