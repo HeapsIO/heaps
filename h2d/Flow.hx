@@ -1254,11 +1254,11 @@ class Flow extends Object {
 				inline function scaleY(v:Float) return (v - ph) / Math.abs(c.scaleY);
 
 				var ccw = -1., cch = -1.;
-				if( p.autoSizeWidth != null )
+				if( p.autoSizeWidth != null && (isConstraintWidth || p.isAbsolute) )
 					ccw = scaleX(flowFloor(p.isAbsolute ? cw * p.autoSizeWidth : autoWidth * p.autoSizeWidth / autoSum));
 				else if( isConstraintWidth && !p.isAbsolute )
 					ccw = scaleX(maxInWidth);
-				if( p.autoSizeHeight != null )
+				if( p.autoSizeHeight != null && (isConstraintHeight || p.isAbsolute) )
 					cch = scaleY(p.isAbsolute ? ch * p.autoSizeHeight : hxd.Math.imax(maxLineHeight, minLineHeight) * p.autoSizeHeight);
 				else if( isConstraintHeight && !p.isAbsolute )
 					cch = scaleY(maxInHeight);
