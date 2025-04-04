@@ -903,6 +903,20 @@ class Flow extends Object {
 		s.setParentContainer(this);
 	}
 
+	#if domkit
+	override function getChildRefPosition( first : Bool ) {
+		if( !first ) {
+			var index = children.length - 1;
+			if( scrollBar != null ) index--;
+			return index;
+		}
+		var index = 0;
+		if( background != null ) index++;
+		if( interactive != null ) index++;
+		return index;
+	}
+	#end
+
 	override public function removeChild(s:Object) {
 		var index = getChildIndex(s);
 		super.removeChild(s);
