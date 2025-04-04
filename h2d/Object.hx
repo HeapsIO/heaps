@@ -517,7 +517,7 @@ class Object #if (domkit && !domkit_heaps) implements domkit.Model<h2d.Object> #
 			if( s.parentContainer != null ) s.setParentContainer(null);
 			s.posChanged = true;
 			#if domkit
-			if( s.dom != null ) s.dom.onParentChanged();
+			if( s.dom != null ) s.dom.onParentChanged(dom);
 			#end
 			onContentChanged();
 		}
