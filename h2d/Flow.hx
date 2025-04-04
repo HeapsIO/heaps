@@ -624,8 +624,9 @@ class Flow extends Object {
 		if( v == Scroll ) {
 			enableInteractive = true;
 			if( scrollBar == null ) {
-				scrollBar = makeScrollBar();
-				addChildAt(scrollBar, 0);
+				var s = makeScrollBar();
+				addChild(s);
+				scrollBar = s;
 				scrollBar.verticalAlign = Top;
 				scrollBar.enableInteractive = true;
 
