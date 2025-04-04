@@ -566,11 +566,13 @@ class Style extends domkit.CssStyle {
 					var f = find(files, f -> f.name == vs.pos.file);
 					if (f != null) {
 						var res = find(resources, r -> r.name == f.name);
-						var entry = Std.downcast(res?.entry, hxd.fs.LocalFileSystem.LocalEntry);
 						var resDir = "";
+						#if (sys || nodejs)
+						var entry = Std.downcast(res?.entry, hxd.fs.LocalFileSystem.LocalEntry);
 						if (entry != null && @:privateAccess entry.file.lastIndexOf("/") > 0) {
 							resDir = @:privateAccess entry.file.substr(0, entry.file.lastIndexOf("/"));
 						}
+						#end
 						var pos = getPos(f, vs.pos.pmin);
 						var s = "" + pos.line;
 						if (pos.file == null)
