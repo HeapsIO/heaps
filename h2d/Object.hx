@@ -97,8 +97,8 @@ class Object #if (domkit && !domkit_heaps) implements domkit.Model<h2d.Object> #
 
 	#if domkit
 	public var dom : domkit.Properties<h2d.Object>;
-	@:dox(hide) @:noCompletion inline function getChildren() return children;
-	@:dox(hide) @:noCompletion function getChildRefPosition( first : Bool ) return first ? 0 : children.length - 1;
+	@:dox(hide) @:noCompletion #if !domkit_heaps public #end inline function getChildren() return children;
+	@:dox(hide) @:noCompletion #if !domkit_heaps public #end function getChildRefPosition( first : Bool ) return first ? 0 : children.length - 1;
 	#end
 
 	var matA : Float;
