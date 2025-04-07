@@ -521,7 +521,7 @@ class ObjectComp implements h2d.domkit.Object implements domkit.Component.Compon
 	@:p var x : Float;
 	@:p var y : Float;
 	@:p var alpha : Float = 1;
-	@:p(angleRad) var rotation : Float;
+	@:p(angleDeg) var rotation : Float;
 	@:p var visible : Bool = true;
 	@:p(scale) var scale : { x : Float, y : Float };
 	@:p var scaleX : Float = 1;
