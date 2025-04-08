@@ -8,6 +8,7 @@ on:
 
 jobs:
   synchronize:
+    if: github.repository_owner == 'HeapsIO'
     runs-on: ubuntu-latest
     permissions:
       contents: write
