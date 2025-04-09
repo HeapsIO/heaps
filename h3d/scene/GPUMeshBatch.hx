@@ -54,6 +54,13 @@ class GPUMeshBatch extends MeshBatch {
 	function getLodCount() return gpuLodEnabled ? getPrimitive().lodCount() : 1;
 	override function updateHasPrimitiveOffset() meshBatchFlags.set(HasPrimitiveOffset);
 	override function useCommandBuffer() return true;
+	override function useCountBuffer() {
+		#if hlsdl
+		return h3d.impl.GlDriver.hasMultiIndirectCount;
+		#else
+		return true;
+		#end
+	}
 
 	override function begin( emitCountTip = -1) {
 		if ( !gpuLodEnabled && !gpuCullingEnabled )
@@ -261,20 +268,12 @@ class GPUMeshBatch extends MeshBatch {
 				p.countBuffers[i].uploadBytes(countBytes, 0, 1);
 				computeShader.countBuffer = p.countBuffers[i];
 				computeShader.startInstanceOffset = emittedCount;
-				computeShader.ENABLE_COUNT_BUFFER = isCountBufferAllowed();
+				computeShader.ENABLE_COUNT_BUFFER = useCountBuffer();
 				ctx.computeList(@:privateAccess p.computePass.shaders);
 				ctx.computeDispatch(count);
 				emittedCount += count;
 			}
 		}
-	}
-
-	inline function isCountBufferAllowed() {
-		#if hlsdl
-		return h3d.impl.GlDriver.hasMultiIndirectCount;
-		#else
-		return true;
-		#end
 	}
 
 	override function cleanPasses() {

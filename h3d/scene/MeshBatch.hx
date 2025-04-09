@@ -96,6 +96,7 @@ class MeshBatch extends MultiMaterial {
 	function getMaxElements() return storageBufferEnabled() ? MAX_STORAGE_BUFFER_ELEMENTS : MAX_BUFFER_ELEMENTS;
 	function hasPrimitiveOffset() return meshBatchFlags.has(HasPrimitiveOffset);
 	function useCommandBuffer() return false;
+	function useCountBuffer() return false;
 
 	public function begin( emitCountTip = -1 ) : Int {
 		instanceCount = 0;
@@ -338,15 +339,15 @@ class MeshBatch extends MultiMaterial {
 					var commandCountAllocated = hxd.Math.imin( hxd.Math.nextPOT( count ), p.maxInstance );
 					if ( p.commandBuffers == null) {
 						p.commandBuffers = [];
-						p.countBuffers = [];
+						if ( useCountBuffer() )
+							p.countBuffers = [];
 					}
 					var buf = p.commandBuffers[index];
-					var cbuf = p.countBuffers[index];
 					if ( buf == null ) {
 						buf = alloc.allocBuffer( commandCountAllocated, INDIRECT_DRAW_ARGUMENTS_FMT, UniformReadWrite );
-						cbuf = alloc.allocBuffer( 1, hxd.BufferFormat.VEC4_DATA, UniformReadWrite );
 						p.commandBuffers[index] = buf;
-						p.countBuffers[index] = cbuf;
+						if ( useCountBuffer() )
+							p.countBuffers[index] = alloc.allocBuffer( 1, hxd.BufferFormat.VEC4_DATA, UniformReadWrite );
 					}
 					else if ( buf.vertices < commandCountAllocated ) {
 						alloc.disposeBuffer( buf );
@@ -507,7 +508,8 @@ class MeshBatch extends MultiMaterial {
 					instanced.setCommand(p.matIndex, instanced.screenRatioToLod(curScreenRatio), count);
 					if ( useCommandBuffer() ) {
 						@:privateAccess instanced.commands.data = p.commandBuffers[bufferIndex].vbuf;
-						@:privateAccess instanced.commands.countBuffer = p.countBuffers[bufferIndex].vbuf;
+						if ( useCountBuffer() )
+							@:privateAccess instanced.commands.countBuffer = p.countBuffers[bufferIndex].vbuf;
 					}
 				} else
 					instanced.commands = p.instanceBuffers[bufferIndex];
@@ -597,13 +599,15 @@ class BatchData {
 
 	public function clean() {
 		var alloc = hxd.impl.Allocator.get();
-		if ( commandBuffers != null && commandBuffers.length > 0 ) {
+		if ( commandBuffers != null ) {
 			for ( buf in commandBuffers )
 				alloc.disposeBuffer(buf);
-			commandBuffers.resize(0);
+			commandBuffers = null;
+		}
+		if ( countBuffers != null ) {
 			for ( buf in countBuffers )
 				alloc.disposeBuffer(buf);
-			countBuffers.resize(0);
+			countBuffers = null;
 		}
 
 		pass.removeShader(shader);
