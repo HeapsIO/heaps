@@ -2,7 +2,6 @@ package hxd.fmt.bfnt;
 
 import h2d.Font.FontChar;
 import haxe.Json;
-using thx.Arrays;
 
 typedef JsonFontAtlas = {
 	var type:String;
