@@ -53,7 +53,7 @@ class Slides extends ScreenShader {
 				if ( x < 1 )
 					color = vec3(emissive, custom1, custom2);
 				else if ( x < 2 ) {
-					var uv = vec2(x,y) - 3;
+					var uv = vec2(x-1,y-2);
 					if( shadowIsCube ) {
 						var phi = (1 - uv.x)*3.1415*2;
 						var theta = (-uv.y+0.5)*3.1415;
