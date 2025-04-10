@@ -96,25 +96,8 @@ class MeshBatch extends MultiMaterial {
 		var lodCount = prim.lodCount();
 		if ( lodCount <= 1 )
 			return;
-		var prim = Std.downcast(prim, h3d.prim.HMDModel);
-		if ( prim == null )
-			return;
-		if ( primitiveSubParts == null ) {
-			primitiveSubParts = [];
-			for ( m in 0...materials.length ) {
-				var primitiveSubPart = new MeshBatchPart();
-				primitiveSubPart.indexStart = prim.getMaterialIndexStart(m, 0);
-				primitiveSubPart.indexCount = prim.getMaterialIndexCount(m, 0);
-				primitiveSubPart.lodIndexCount = [for (i in 0...prim.lodCount() ) prim.getMaterialIndexCount(m, i)];
-				primitiveSubPart.lodIndexStart = [for (i in 0...prim.lodCount() ) prim.getMaterialIndexStart(m, i) ];
-				primitiveSubPart.lodConfig = prim.getLodConfig();
-				primitiveSubPart.baseVertex = 0;
-				primitiveSubPart.bounds = prim.getBounds();
-
-				primitiveSubParts.push(primitiveSubPart);
-			}
-		}
-		meshBatchFlags.set(EnableCpuLod);
+		if ( partsFromPrimitive(prim) )
+			meshBatchFlags.set(EnableCpuLod);
 	}
 
 	function getPrimitive() return @:privateAccess instanced.primitive;
@@ -548,6 +531,28 @@ class MeshBatch extends MultiMaterial {
 	function setPassCommand(p : BatchData, bufferIndex : Int) {
 		var count = hxd.Math.imin( instanceCount - p.maxInstance * bufferIndex, p.maxInstance );
 		instanced.setCommand(p.matIndex, instanced.screenRatioToLod(curScreenRatio), count);
+	}
+
+	function partsFromPrimitive(prim : h3d.prim.MeshPrimitive) {
+		var hmd = Std.downcast(prim, h3d.prim.HMDModel);
+		if ( hmd == null )
+			return false;
+		if ( primitiveSubParts == null ) {
+			primitiveSubParts = [];
+			for ( m in 0...materials.length ) {
+				var primitiveSubPart = new MeshBatchPart();
+				primitiveSubPart.indexStart = hmd.getMaterialIndexStart(m, 0);
+				primitiveSubPart.indexCount = hmd.getMaterialIndexCount(m, 0);
+				primitiveSubPart.lodIndexCount = [for (i in 0...hmd.lodCount() ) hmd.getMaterialIndexCount(m, i)];
+				primitiveSubPart.lodIndexStart = [for (i in 0...hmd.lodCount() ) hmd.getMaterialIndexStart(m, i) ];
+				primitiveSubPart.lodConfig = hmd.getLodConfig();
+				primitiveSubPart.baseVertex = 0;
+				primitiveSubPart.bounds = hmd.getBounds();
+
+				primitiveSubParts.push(primitiveSubPart);
+			}
+		}
+		return true;
 	}
 
 	override function calcScreenRatio(ctx:RenderContext) {
