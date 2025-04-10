@@ -41,7 +41,7 @@ class GPUMeshBatch extends MeshBatch {
 	 * Has effects only if a lod is available in the primitive.
 	 */
 	public function enableGpuLod() {
-		gpuLodEnabled = primitiveSubPart != null || getPrimitive().lodCount() > 1;
+		gpuLodEnabled = primitiveSubParts != null || getPrimitive().lodCount() > 1;
 		return gpuLodEnabled;
 	}
 
@@ -61,7 +61,7 @@ class GPUMeshBatch extends MeshBatch {
 
 		emitCountTip = super.begin(emitCountTip);
 
-		if ( primitiveSubPart != null && ( gpuCullingEnabled || gpuLodEnabled ) && instanceOffsetsCpu == null ) {
+		if ( primitiveSubParts != null && ( gpuCullingEnabled || gpuLodEnabled ) && instanceOffsetsCpu == null ) {
 			var size = emitCountTip * 2 * 4;
 			instanceOffsetsCpu = haxe.io.Bytes.alloc(size);
 		}
@@ -73,7 +73,10 @@ class GPUMeshBatch extends MeshBatch {
 		return new GPUBatchData();
 	}
 
-	override function emitPrimitiveSubPart() {
+	override function emitPrimitiveSubParts() {
+		if ( primitiveSubParts.length > 1 )
+			throw "Multi material with gpu instancing is not supported";
+		var primitiveSubPart = primitiveSubParts[0];
 		if (emittedSubParts == null) {
 			currentSubParts = 0;
 			currentMaterialOffset = 0;
@@ -339,7 +342,7 @@ class GPUBatchData extends BatchData {
 	public var commandBuffers : Array<h3d.Buffer>;
 	public var countBuffers : Array<h3d.Buffer>;
 
-	override function clean() {		
+	override function clean() {
 		super.clean();
 
 		var alloc = hxd.impl.Allocator.get();

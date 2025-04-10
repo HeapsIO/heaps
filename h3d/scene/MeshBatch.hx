@@ -43,10 +43,11 @@ class MeshBatch extends MultiMaterial {
 	var invWorldPosition : Matrix;
 
 	/**
-		Tells the mesh batch to draw only a subpart of the primitive
+		Tells the mesh batch to draw only a subpart of the primitive.
+		One primitiveSubPart per material.
 	**/
-	public var primitiveSubPart : MeshBatchPart;
-	var primitiveSubBytes : haxe.io.Bytes;
+	public var primitiveSubParts : Array<MeshBatchPart>;
+	var primitiveSubBytes : Array<haxe.io.Bytes>;
 
 	/**
 		If set, exact bounds will be recalculated during emitInstance (default true)
@@ -182,7 +183,7 @@ class MeshBatch extends MultiMaterial {
 		}
 	}
 
-	function updateHasPrimitiveOffset() meshBatchFlags.setTo(HasPrimitiveOffset, primitiveSubPart != null);
+	function updateHasPrimitiveOffset() meshBatchFlags.setTo(HasPrimitiveOffset, primitiveSubParts != null);
 
 	function createBatchData() {
 		return new BatchData();
@@ -241,8 +242,8 @@ class MeshBatch extends MultiMaterial {
 
 	public function emitInstance() {
 		if( worldPosition == null ) syncPos();
-		if( primitiveSubPart != null )
-			emitPrimitiveSubPart();
+		if( primitiveSubParts != null )
+			emitPrimitiveSubParts();
 		else if (calcBounds)
 			instanced.addInstanceBounds(worldPosition == null ? absPos : worldPosition);
 
@@ -254,28 +255,39 @@ class MeshBatch extends MultiMaterial {
 		instanceCount++;
 	}
 
-	function emitPrimitiveSubPart() {
+	function emitPrimitiveSubParts() {
 		if(calcBounds) @:privateAccess {
-			instanced.tmpBounds.load(primitiveSubPart.bounds);
-			instanced.tmpBounds.transform(worldPosition == null ? absPos : worldPosition);
-			instanced.bounds.add(instanced.tmpBounds);
+			for ( primitiveSubPart in primitiveSubParts ) {
+				instanced.tmpBounds.load(primitiveSubPart.bounds);
+				instanced.tmpBounds.transform(worldPosition == null ? absPos : worldPosition);
+				instanced.bounds.add(instanced.tmpBounds);
+			}
 		}
 
 		if( primitiveSubBytes == null ) {
-			primitiveSubBytes = haxe.io.Bytes.alloc(128);
+			if ( primitiveSubParts.length != materials.length )
+				throw "Instancing using primitive sub parts must match material count";
+			primitiveSubBytes = [for ( i in 0...primitiveSubParts.length ) haxe.io.Bytes.alloc(128)];
 			instanced.commands = null;
 		}
-		if( primitiveSubBytes.length < (instanceCount+1) * 20 ) {
-			var next = haxe.io.Bytes.alloc(Std.int(primitiveSubBytes.length*3/2));
-			next.blit(0, primitiveSubBytes, 0, instanceCount * 20);
-			primitiveSubBytes = next;
+		for ( i in 0...primitiveSubBytes.length ) {
+			if( primitiveSubBytes[i].length < (instanceCount+1) * 20 ) {
+				var next = haxe.io.Bytes.alloc(Std.int(primitiveSubBytes[i].length*3/2));
+				next.blit(0, primitiveSubBytes[i], 0, instanceCount * 20);
+				primitiveSubBytes[i] = next;
+			}
 		}
 		var p = instanceCount * 20;
-		primitiveSubBytes.setInt32(p, primitiveSubPart.indexCount);
-		primitiveSubBytes.setInt32(p + 4, 1);
-		primitiveSubBytes.setInt32(p + 8, primitiveSubPart.indexStart);
-		primitiveSubBytes.setInt32(p + 12, primitiveSubPart.baseVertex);
-		primitiveSubBytes.setInt32(p + 16, 0);
+		for ( mid => psBytes in primitiveSubBytes ) {
+			var primitiveSubPart = primitiveSubParts[mid];
+			var indexCount = primitiveSubPart.indexCount;
+			var indexStart = primitiveSubPart.indexStart;
+			psBytes.setInt32(p, indexCount);
+			psBytes.setInt32(p + 4, 1);
+			psBytes.setInt32(p + 8, indexStart);
+			psBytes.setInt32(p + 12, primitiveSubPart.baseVertex);
+			psBytes.setInt32(p + 16, 0);
+		}
 	}
 
 	override function sync(ctx:RenderContext) {
@@ -324,7 +336,7 @@ class MeshBatch extends MultiMaterial {
 					}
 					if( buf == null ) {
 						buf = new h3d.impl.InstanceBuffer();
-						var sub = primitiveSubBytes.sub(start*20,count*20);
+						var sub = primitiveSubBytes[p.matIndex].sub(start*20,count*20);
 						for( i in 0...count )
 							sub.setInt32(i*20+16, i);
 						buf.setBuffer(count, sub);
@@ -592,7 +604,6 @@ class BatchData {
 class MeshBatchPart {
 	public var indexStart : Int;
 	public var indexCount : Int;
-	// TODO : remove lod here
 	public var lodIndexStart : Array<Int>;
 	public var lodIndexCount : Array<Int>;
 	public var lodConfig : Array<Float>;
