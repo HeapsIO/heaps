@@ -5,6 +5,7 @@ import h3d.scene.MeshBatch.MeshBatchPart;
 
 class GPUMeshBatch extends MeshBatch {
 
+	static var INDIRECT_DRAW_ARGUMENTS_FMT = hxd.BufferFormat.make([{ name : "", type : DVec4 }, { name : "", type : DFloat }]);
 	static var INSTANCE_OFFSETS_FMT = hxd.BufferFormat.make([{ name : "", type : DFloat }]);
 
 	var matInfos : h3d.Buffer;
@@ -53,14 +54,6 @@ class GPUMeshBatch extends MeshBatch {
 
 	function getLodCount() return gpuLodEnabled ? getPrimitive().lodCount() : 1;
 	override function updateHasPrimitiveOffset() meshBatchFlags.set(HasPrimitiveOffset);
-	override function useCommandBuffer() return true;
-	override function useCountBuffer() {
-		#if hlsdl
-		return h3d.impl.GlDriver.hasMultiIndirectCount;
-		#else
-		return true;
-		#end
-	}
 
 	override function begin( emitCountTip = -1) {
 		if ( !gpuLodEnabled && !gpuCullingEnabled )
@@ -206,6 +199,30 @@ class GPUMeshBatch extends MeshBatch {
 		materialCount = 0;
 	}
 
+	override function onFlushBuffer(p : BatchData, index : Int, count : Int) {
+		var p = cast(p, GPUBatchData);
+		var alloc = hxd.impl.Allocator.get();
+
+		var commandCountAllocated = hxd.Math.imin( hxd.Math.nextPOT( count ), p.maxInstance );
+		if ( p.commandBuffers == null) {
+			p.commandBuffers = [];
+			p.countBuffers = [];
+		}
+		var buf = p.commandBuffers[index];
+		var cbuf = p.countBuffers[index];
+		if ( buf == null ) {
+			buf = alloc.allocBuffer( commandCountAllocated, INDIRECT_DRAW_ARGUMENTS_FMT, UniformReadWrite );
+			cbuf = alloc.allocBuffer( 1, hxd.BufferFormat.VEC4_DATA, UniformReadWrite );
+			p.commandBuffers[index] = buf;
+			p.countBuffers[index] = cbuf;
+		}
+		else if ( buf.vertices < commandCountAllocated ) {
+			alloc.disposeBuffer( buf );
+			buf = alloc.allocBuffer( commandCountAllocated, INDIRECT_DRAW_ARGUMENTS_FMT, UniformReadWrite );
+			p.commandBuffers[index] = buf;
+		}
+	}
+
 	override function onFlushPass(p : BatchData) {
 		var p = cast(p, GPUBatchData);
 		var prim = getPrimitive();
@@ -268,12 +285,29 @@ class GPUMeshBatch extends MeshBatch {
 				p.countBuffers[i].uploadBytes(countBytes, 0, 1);
 				computeShader.countBuffer = p.countBuffers[i];
 				computeShader.startInstanceOffset = emittedCount;
-				computeShader.ENABLE_COUNT_BUFFER = useCountBuffer();
+				computeShader.ENABLE_COUNT_BUFFER = isCountBufferAllowed();
 				ctx.computeList(@:privateAccess p.computePass.shaders);
 				ctx.computeDispatch(count);
 				emittedCount += count;
 			}
 		}
+	}
+
+	override function setPassCommand(p : BatchData, bufferIndex : Int) {
+		super.setPassCommand(p, bufferIndex);
+		var p = cast(p, GPUBatchData);
+		if ( p.commandBuffers != null && p.commandBuffers.length > 0 ) {
+			@:privateAccess instanced.commands.data = p.commandBuffers[bufferIndex].vbuf;
+			@:privateAccess instanced.commands.countBuffer = p.countBuffers[bufferIndex].vbuf;
+		}
+	}
+
+	inline function isCountBufferAllowed() {
+		#if hlsdl
+		return h3d.impl.GlDriver.hasMultiIndirectCount;
+		#else
+		return true;
+		#end
 	}
 
 	override function cleanPasses() {
@@ -302,10 +336,20 @@ class GPUMeshBatch extends MeshBatch {
 
 class GPUBatchData extends BatchData {
 	public var computePass : h3d.mat.Pass;
+	public var commandBuffers : Array<h3d.Buffer>;
+	public var countBuffers : Array<h3d.Buffer>;
 
-	override function clean() {
+	override function clean() {		
 		super.clean();
 
-		computePass = null;
+		var alloc = hxd.impl.Allocator.get();
+		if ( commandBuffers != null && commandBuffers.length > 0 ) {
+			for ( buf in commandBuffers )
+				alloc.disposeBuffer(buf);
+			commandBuffers.resize(0);
+			for ( buf in countBuffers )
+				alloc.disposeBuffer(buf);
+			countBuffers.resize(0);
+		}
 	}
 }
