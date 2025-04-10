@@ -5,6 +5,7 @@ enum MeshBatchFlag {
 	EnableGpuUpdate;
 	EnableStorageBuffer;
 	HasPrimitiveOffset;
+	EnableCpuLod;
 }
 
 /**
@@ -90,11 +91,38 @@ class MeshBatch extends MultiMaterial {
 		meshBatchFlags.set(EnableStorageBuffer);
 	}
 
+	public function enableCpuLod() {
+		var prim = getPrimitive();
+		var lodCount = prim.lodCount();
+		if ( lodCount <= 1 )
+			return;
+		var prim = Std.downcast(prim, h3d.prim.HMDModel);
+		if ( prim == null )
+			return;
+		if ( primitiveSubParts == null ) {
+			primitiveSubParts = [];
+			for ( m in 0...materials.length ) {
+				var primitiveSubPart = new MeshBatchPart();
+				primitiveSubPart.indexStart = prim.getMaterialIndexStart(m, 0);
+				primitiveSubPart.indexCount = prim.getMaterialIndexCount(m, 0);
+				primitiveSubPart.lodIndexCount = [for (i in 0...prim.lodCount() ) prim.getMaterialIndexCount(m, i)];
+				primitiveSubPart.lodIndexStart = [for (i in 0...prim.lodCount() ) prim.getMaterialIndexStart(m, i) ];
+				primitiveSubPart.lodConfig = prim.getLodConfig();
+				primitiveSubPart.baseVertex = 0;
+				primitiveSubPart.bounds = prim.getBounds();
+
+				primitiveSubParts.push(primitiveSubPart);
+			}
+		}
+		meshBatchFlags.set(EnableCpuLod);
+	}
+
 	function getPrimitive() return @:privateAccess instanced.primitive;
 	function storageBufferEnabled() return meshBatchFlags.has(EnableStorageBuffer);
 	function gpuUpdateEnabled() return meshBatchFlags.has(EnableGpuUpdate);
 	function getMaxElements() return storageBufferEnabled() ? MAX_STORAGE_BUFFER_ELEMENTS : MAX_BUFFER_ELEMENTS;
 	function hasPrimitiveOffset() return meshBatchFlags.has(HasPrimitiveOffset);
+	function cpuLodEnabled() return meshBatchFlags.has(EnableCpuLod);
 
 	public function begin( emitCountTip = -1 ) : Int {
 		instanceCount = 0;
@@ -282,6 +310,10 @@ class MeshBatch extends MultiMaterial {
 			var primitiveSubPart = primitiveSubParts[mid];
 			var indexCount = primitiveSubPart.indexCount;
 			var indexStart = primitiveSubPart.indexStart;
+			if ( curLod >= 0 && cpuLodEnabled() ) {
+				indexStart = primitiveSubPart.lodIndexStart[curLod];
+				indexCount = primitiveSubPart.lodIndexCount[curLod];
+			}
 			psBytes.setInt32(p, indexCount);
 			psBytes.setInt32(p + 4, 1);
 			psBytes.setInt32(p + 8, indexStart);
@@ -329,18 +361,20 @@ class MeshBatch extends MultiMaterial {
 				if( primitiveSubBytes != null ) {
 					if( p.instanceBuffers == null )
 						p.instanceBuffers = [];
-					var buf = p.instanceBuffers[index];
-					if ( buf != null && buf.commandCount != count ) {
-						buf.dispose();
-						buf = null;
+					var ibuf = p.instanceBuffers[index];
+					if ( ibuf != null && ibuf.commandCount != count ) {
+						ibuf.dispose();
+						ibuf = null;
 					}
-					if( buf == null ) {
-						buf = new h3d.impl.InstanceBuffer();
+					var ibufUpload = needUpload || ibuf == null;
+					if ( ibuf == null )
+						ibuf = new h3d.impl.InstanceBuffer();
+					if ( ibufUpload ) {
 						var sub = primitiveSubBytes[p.matIndex].sub(start*20,count*20);
 						for( i in 0...count )
 							sub.setInt32(i*20+16, i);
-						buf.setBuffer(count, sub);
-						p.instanceBuffers[index] = buf;
+						ibuf.setBuffer(count, sub);
+						p.instanceBuffers[index] = ibuf;
 					}
 				}
 
