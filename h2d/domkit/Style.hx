@@ -37,7 +37,8 @@ class Style extends domkit.CssStyle {
 			return;
 		resources.push(r);
 		var variables = cssParser.variables.copy();
-		add(cssParser.parseSheet(loadData(r), r.name));
+		var data = loadData(r);
+		add( try cssParser.parseSheet(data, r.name) catch( e : domkit.Error ) throw r.entry.path+":"+data.substr(0,e.pmin).split("\n").length+": "+e.message );
 		if( !isVariablesDef )
 			cssParser.variables = variables;
 		for( o in currentObjects )
