@@ -2,7 +2,7 @@ package h3d;
 using hxd.Math;
 
 /**
-	A 4 floats vector. Everytime a Vector is returned, it means a copy is created.
+	A 3 floats vector. Everytime a Vector is returned, it means a copy is created.
 **/
 class VectorImpl #if apicheck implements h2d.impl.PointApi<Vector,Matrix> #end {
 
@@ -38,7 +38,6 @@ class VectorImpl #if apicheck implements h2d.impl.PointApi<Vector,Matrix> #end {
 	}
 
 	public inline function scaled( v : Float ) {
-		// see scale
 		return new Vector(x * v, y * v, z * v);
 	}
 
@@ -109,10 +108,6 @@ class VectorImpl #if apicheck implements h2d.impl.PointApi<Vector,Matrix> #end {
 	}
 
 	public inline function scale( f : Float ) {
-		/*
-			The scale of a vector represents its length and thus
-			only x/y/z should be affected by scaling
-		*/
 		x *= f;
 		y *= f;
 		z *= f;
@@ -292,9 +287,7 @@ class VectorImpl #if apicheck implements h2d.impl.PointApi<Vector,Matrix> #end {
 
 
 /**
-	A 4 floats vector. Everytime a Vector is returned, it means a copy is created.
-	For function manipulating the length (length, normalize, dot, scale, etc.), the Vector
-	acts like a Point in the sense only the X/Y/Z components will be affected.
+	A 3 floats vector. Everytime a Vector is returned, it means a copy is created.
 **/
 @:forward abstract Vector(VectorImpl) from VectorImpl to VectorImpl {
 
