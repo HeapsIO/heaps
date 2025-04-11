@@ -13,3 +13,4 @@ bin
 /tools/meshtools/out
 *.exe
 /shaders
+/node_modules
