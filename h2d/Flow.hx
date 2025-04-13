@@ -177,6 +177,8 @@ class FlowProperties {
 	**/
 	public var lineBreak = false;
 
+	var calcPadding : Float;
+
 	/**
 		When set, element will use the maximum size of non-autoSize elements as size constraint instead of current constraint on the parent flow.
 	**/
@@ -1136,6 +1138,88 @@ class Flow extends Object {
 		return borderBottom = v;
 	}
 
+	inline function propAt(i: Int) {
+		return properties[ reverse ? children.length - i - 1 : i ];
+	}
+
+	function onBorderLR(p : FlowProperties, dir : FlowAlign) {
+		var halign = horizontalAlign ?? Left;
+		var align = p.horizontalAlign ?? halign;
+		var ok = true;
+		if( align == Middle ) {
+			// middle : should not have any on that dir
+			for( p2 in properties ) {
+				if( !p2.isAbsolute && p != p2 && (p2.horizontalAlign ?? halign) == dir ) {
+					ok = false;
+					break;
+				}
+			}
+		} else if( align != dir ) {
+			// should not have other align
+			for( p2 in properties ) {
+				if( !p2.isAbsolute && p != p2 && (p2.horizontalAlign ?? halign) != align ) {
+					ok = false;
+					break;
+				}
+			}
+		}
+		if( !ok )
+			return false;
+		// should be first/last of that align
+		var isLeft = dir == Left;
+		for( i in 0...children.length ) {
+			var p2 = propAt(isLeft ? i : children.length - 1 - i);
+			if( p2 == p )
+				break;
+			if( p2.isAbsolute ) continue;
+			var al = p2.horizontalAlign ?? halign;
+			if( al == align ) {
+				ok = false;
+				break;
+			}
+		}
+		return ok;
+	}
+
+	function onBorderTB(p : FlowProperties, dir : FlowAlign) {
+		var valign = verticalAlign ?? Bottom;
+		var align = p.verticalAlign ?? valign;
+		var ok = true;
+		if( align == Middle ) {
+			// middle : should not have any on that dir
+			for( p2 in properties ) {
+				if( !p2.isAbsolute && p != p2 && (p2.verticalAlign ?? valign) == dir ) {
+					ok = false;
+					break;
+				}
+			}
+		} else if( align != dir ) {
+			// should not have other align
+			for( p2 in properties ) {
+				if( !p2.isAbsolute && p != p2 && (p2.verticalAlign ?? valign) != align ) {
+					ok = false;
+					break;
+				}
+			}
+		}
+		if( !ok )
+			return false;
+		// should be first/last of that align
+		var isTop = dir == Top;
+		for( i in 0...children.length ) {
+			var p2 = propAt(isTop ? i : children.length - 1 - i);
+			if( p2 == p )
+				break;
+			if( p2.isAbsolute ) continue;
+			var al = p2.verticalAlign ?? valign;
+			if( al == align ) {
+				ok = false;
+				break;
+			}
+		}
+		return ok;
+	}
+
 	/**
 		Call to force all flowed elements position to be updated.
 		See `Flow.needReflow` for more information.
@@ -1185,9 +1269,6 @@ class Flow extends Object {
 		inline function childAt(i: Int) {
 			return children[ reverse ? children.length - i - 1 : i ];
 		}
-		inline function propAt(i: Int) {
-			return properties[ reverse ? children.length - i - 1 : i ];
-		}
 
 		inline function forChildren(func : Int->FlowProperties->h2d.Object->Void, absolute=false) {
 			for( i in 0...children.length ) {
@@ -1209,6 +1290,11 @@ class Flow extends Object {
 			if( realMinWidth >= 0 && cw < realMinWidth ) cw = realMinWidth;
 			if( realMinHeight >= 0 && ch < realMinHeight ) ch = realMinHeight;
 		}
+
+		var paddingLeft = getPad(paddingLeft,0);
+		var paddingRight = getPad(paddingRight,0);
+		var paddingTop = getPad(paddingTop,0);
+		var paddingBottom = getPad(paddingBottom,0);
 
 		switch(layout) {
 		case Horizontal:
@@ -1262,20 +1348,34 @@ class Flow extends Object {
 			var autoWidth = maxInWidth;
 			var autoSum = 0.0;
 
-			inline function calcSize(p : FlowProperties, c : h2d.Object) {
-				var pw = getPad(p.paddingLeft,paddingLeft) + getPad(p.paddingRight,paddingRight);
+			inline function calcSize(p : FlowProperties, c : h2d.Object, isAbsolute=false) {
 				var ph = getPad(p.paddingTop,paddingTop) + getPad(p.paddingBottom,paddingBottom);
+				var pw;
+				if( isAbsolute )
+					pw = getPad(p.paddingLeft,paddingLeft) + getPad(p.paddingRight,paddingRight);
+				else {
+					pw = 0;
+					if( p.paddingLeft != PADDING_IGNORE_PARENT )
+						pw += p.paddingLeft;
+					else if( onBorderLR(p,Left) )
+						pw -= paddingLeft;
+					p.calcPadding = pw;
+					if( p.paddingRight != PADDING_IGNORE_PARENT )
+						pw += p.paddingRight;
+					else if( onBorderLR(p,Right) )
+						pw -= paddingRight;
+				}
 				inline function scaleX(v:Float) return (v - pw) / Math.abs(c.scaleX);
 				inline function scaleY(v:Float) return (v - ph) / Math.abs(c.scaleY);
 
 				var ccw = -1., cch = -1.;
-				if( p.autoSizeWidth != null && (isConstraintWidth || p.isAbsolute) )
+				if( p.autoSizeWidth != null && (isConstraintWidth || isAbsolute) )
 					ccw = scaleX(flowFloor(p.isAbsolute ? cw * p.autoSizeWidth : autoWidth * p.autoSizeWidth / autoSum));
 				else if( isConstraintWidth && !p.isAbsolute )
 					ccw = scaleX(maxInWidth);
-				if( p.autoSizeHeight != null && (isConstraintHeight || p.isAbsolute) )
+				if( p.autoSizeHeight != null && (isConstraintHeight || isAbsolute) )
 					cch = scaleY(p.isAbsolute ? ch * p.autoSizeHeight : hxd.Math.imax(maxLineHeight, minLineHeight) * p.autoSizeHeight);
-				else if( isConstraintHeight && !p.isAbsolute )
+				else if( isConstraintHeight && !isAbsolute )
 					cch = scaleY(maxInHeight);
 				c.constraintSize(ccw, cch);
 
@@ -1304,7 +1404,7 @@ class Flow extends Object {
 
 			// position all not absolute nodes
 			forChildren(function(i, p, c) {
-				if( p.autoSizeWidth != null || p.autoSizeHeight != null )
+				if( p.autoSizeWidth != null )
 					calcSize(p, c);
 				var br = false;
 				if( ((multiline && x - startX + p.calculatedWidth > maxInWidth) || p.lineBreak) && x - startX > 0 ) {
@@ -1315,7 +1415,7 @@ class Flow extends Object {
 					x = startX;
 				}
 				p.isBreak = br;
-				c.x = x + p.offsetY + getPad(p.paddingLeft,paddingLeft);
+				c.x = x + p.offsetY + p.calcPadding;
 				x += p.calculatedWidth;
 				if( x > cw ) cw = x;
 				x += horizontalSpacing;
@@ -1329,7 +1429,7 @@ class Flow extends Object {
 			applyMinMax();
 
 			// update size of absolute nodes before alignment
-			forChildren(function(i, p, c) if( p.autoSizeWidth != null || p.autoSizeHeight != null || p.horizontalAlign != null || p.verticalAlign != null ) calcSize(p, c), true);
+			forChildren(function(i, p, c) if( p.autoSizeWidth != null || p.autoSizeHeight != null || p.horizontalAlign != null || p.verticalAlign != null ) calcSize(p, c, true), true);
 
 			// align absolutes based on entire size
 			lastIndex = 0;
@@ -1392,7 +1492,7 @@ class Flow extends Object {
 					px = xmin;
 					xmin += p.calculatedWidth + horizontalSpacing;
 				}
-				c.x = px + p.offsetX + getPad(p.paddingLeft,paddingLeft);
+				c.x = px + p.offsetX + p.calcPadding;
 			}
 
 		case Vertical:
@@ -1446,20 +1546,34 @@ class Flow extends Object {
 			var autoHeight = maxInHeight;
 			var autoSum = 0.0;
 
-			inline function calcSize(p : FlowProperties, c : h2d.Object) {
+			inline function calcSize(p : FlowProperties, c : h2d.Object, isAbsolute=false) {
 				var pw = getPad(p.paddingLeft,paddingLeft) + getPad(p.paddingRight,paddingRight);
-				var ph = getPad(p.paddingTop,paddingTop) + getPad(p.paddingBottom,paddingBottom);
+				var ph;
+				if( isAbsolute )
+					ph = getPad(p.paddingTop,paddingTop) + getPad(p.paddingBottom,paddingBottom);
+				else {
+					ph = 0;
+					if( p.paddingTop != PADDING_IGNORE_PARENT )
+						ph += p.paddingTop;
+					else if( onBorderTB(p,Top) )
+						ph -= paddingTop;
+					p.calcPadding = ph;
+					if( p.paddingBottom != PADDING_IGNORE_PARENT )
+						ph += p.paddingBottom;
+					else if( onBorderTB(p,Bottom) )
+						ph -= paddingBottom;
+				}
 				inline function scaleX(v:Float) return (v - pw) / Math.abs(c.scaleX);
 				inline function scaleY(v:Float) return (v - ph) / Math.abs(c.scaleY);
 
 				var ccw = -1., cch = -1.;
 				if( p.autoSizeWidth != null )
-					ccw = scaleX(p.isAbsolute ? cw * p.autoSizeWidth : hxd.Math.imax(maxColWidth, minColWidth) * p.autoSizeWidth);
-				else if( isConstraintWidth && !p.isAbsolute )
+					ccw = scaleX(isAbsolute ? cw * p.autoSizeWidth : hxd.Math.imax(maxColWidth, minColWidth) * p.autoSizeWidth);
+				else if( isConstraintWidth && !isAbsolute )
 					ccw = scaleX(maxInWidth);
 				if( p.autoSizeHeight != null )
 					cch = scaleY(flowFloor(p.isAbsolute ? ch * p.autoSizeHeight : autoHeight * p.autoSizeHeight / autoSum));
-				else if( isConstraintHeight && !p.isAbsolute )
+				else if( isConstraintHeight && !isAbsolute )
 					cch = scaleY(maxInHeight);
 				c.constraintSize(ccw, cch);
 
@@ -1488,7 +1602,7 @@ class Flow extends Object {
 
 			// position all not absolute nodes
 			forChildren(function(i, p, c) {
-				if( p.autoSizeWidth != null || p.autoSizeHeight != null )
+				if( p.autoSizeHeight != null )
 					calcSize(p, c);
 				var br = false;
 				if( ((multiline && y - startY + p.calculatedHeight > maxInHeight) || p.lineBreak) && y - startY > 0 ) {
@@ -1499,7 +1613,7 @@ class Flow extends Object {
 					y = startY;
 				}
 				p.isBreak = br;
-				c.y = y + p.offsetY + getPad(p.paddingTop,paddingTop);
+				c.y = y + p.offsetY + p.calcPadding;
 				y += p.calculatedHeight;
 				if( y > ch ) ch = y;
 				y += verticalSpacing;
@@ -1513,7 +1627,7 @@ class Flow extends Object {
 			applyMinMax();
 
 			// update size of absolute nodes before alignment
-			forChildren(function(i, p, c) if( p.autoSizeWidth != null || p.autoSizeHeight != null || p.horizontalAlign != null || p.verticalAlign != null ) calcSize(p, c), true);
+			forChildren(function(i, p, c) if( p.autoSizeWidth != null || p.autoSizeHeight != null || p.horizontalAlign != null || p.verticalAlign != null ) calcSize(p, c, true), true);
 
 			// align absolutes based on entire size
 			lastIndex = 0;
@@ -1577,7 +1691,7 @@ class Flow extends Object {
 					py = ymin;
 					ymin += p.calculatedHeight + verticalSpacing;
 				}
-				c.y = py + p.offsetY + getPad(p.paddingTop,paddingTop);
+				c.y = py + p.offsetY + p.calcPadding;
 			}
 		case Stack:
 			var halign = horizontalAlign == null ? Left : horizontalAlign;
