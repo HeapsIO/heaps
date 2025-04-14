@@ -21,26 +21,26 @@ class FxView extends hxd.App {
 		var prefab = hxd.Res.hideEffect.load();
 		var unk = prefab.getOpt(hrt.prefab.Unknown);
 		if( unk != null )
-			throw "Prefab "+unk.getPrefabType()+" was not compiled";
+			throw "Prefab "+unk.type+" was not compiled";
 
-		var ctx = new hrt.prefab.Context();
-		var shared = new hrt.prefab.ContextShared();
-		ctx.shared = shared;
-		shared.root2d = s2d;
-		shared.root3d = s3d;
-		ctx.init();
+		var ctx = new hrt.prefab.ContextShared(s2d, s3d);
 
 		function play() {
 			var i = prefab.make(ctx);
-			var fx = cast(i.local3d, hrt.prefab.fx.FX.FXAnimation);
-			fx.onEnd = function() {
-				fx.remove();
-				play();
-			};
+			var obj = i.to(hrt.prefab.Object3D);
+			if( obj != null ) {
+				var fx = cast(obj.local3d, hrt.prefab.fx.FX.FXAnimation);
+				fx.onEnd = function() {
+					fx.remove();
+					play();
+				};
+			}
 		}
 		play();
 
 		new h3d.scene.CameraController(20,s3d);
+		var text = new h2d.Text(hxd.res.DefaultFont.get(), s2d);
+		text.text = "Drag and move with your mouse!";
 
 	}
 

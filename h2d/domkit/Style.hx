@@ -37,7 +37,8 @@ class Style extends domkit.CssStyle {
 			return;
 		resources.push(r);
 		var variables = cssParser.variables.copy();
-		add(cssParser.parseSheet(loadData(r), r.name));
+		var data = loadData(r);
+		add( try cssParser.parseSheet(data, r.name) catch( e : domkit.Error ) throw r.entry.path+":"+data.substr(0,e.pmin).split("\n").length+": "+e.message );
 		if( !isVariablesDef )
 			cssParser.variables = variables;
 		for( o in currentObjects )
@@ -566,11 +567,13 @@ class Style extends domkit.CssStyle {
 					var f = find(files, f -> f.name == vs.pos.file);
 					if (f != null) {
 						var res = find(resources, r -> r.name == f.name);
-						var entry = Std.downcast(res?.entry, hxd.fs.LocalFileSystem.LocalEntry);
 						var resDir = "";
+						#if (sys || nodejs)
+						var entry = Std.downcast(res?.entry, hxd.fs.LocalFileSystem.LocalEntry);
 						if (entry != null && @:privateAccess entry.file.lastIndexOf("/") > 0) {
 							resDir = @:privateAccess entry.file.substr(0, entry.file.lastIndexOf("/"));
 						}
+						#end
 						var pos = getPos(f, vs.pos.pmin);
 						var s = "" + pos.line;
 						if (pos.file == null)

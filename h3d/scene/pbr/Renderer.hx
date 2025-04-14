@@ -760,6 +760,7 @@ class Renderer extends h3d.scene.Renderer {
 			slides.shader.shadowMapCube = shadowMap;
 			slides.shader.shadowIsCube = shadowMap.flags.has(Cube);
 			slides.shader.shadowMapChannel = R;
+			slides.shader.velocity = textures.velocity;
 			pbrProps.isScreen = true;
 			slides.render();
 			if( !debugging ) {
@@ -792,20 +793,22 @@ class Renderer extends h3d.scene.Renderer {
 		var win = hxd.Window.getInstance();
 
 		if( e.kind == ERelease && e.button == 2 && hxd.Math.distance(e.relX-debugPushPos.x,e.relY-debugPushPos.y) < 10 ) {
-			var x = Std.int((e.relX / win.width) * 4);
-			var y = Std.int((e.relY / win.height) * 4);
+			var x = Std.int((e.relX / win.width) * 3);
+			var y = Std.int((e.relY / win.height) * 3);
 			if( slides.shader.mode != Full ) {
 				slides.shader.mode = Full;
 			} else {
 				var a : Array<h3d.shader.pbr.Slides.DebugMode>;
-				if( y == 3 )
-					a = [Emmissive,Depth,AO,Shadow];
+				if( y == 0 )
+					a = [Albedo,Normal,Depth];
+				else if ( y == 1 ) 
+					a = [Metalness,Roughness,AO];
 				else
-					a = [Albedo,Normal,Roughness,Metalness];
+					a = [Emissive,Shadow,Velocity];
 				slides.shader.mode = a[x];
 			}
 		}
-		if( e.kind == EWheel && (slides.shader.mode == Shadow || (slides.shader.mode == Full && e.relX > win.width/4 && e.relY > win.height/4)) )
+		if( e.kind == EWheel && (slides.shader.mode == Shadow || (slides.shader.mode == Full && e.relX > win.width/3 && e.relY > win.height/3)) )
 			debugShadowMapIndex += e.wheelDelta > 0 ? 1 : -1;
 	}
 

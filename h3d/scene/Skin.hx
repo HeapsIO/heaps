@@ -269,7 +269,10 @@ class Skin extends MultiMaterial {
 	var jointsData : Array<JointData>; // Runtime data
 
 	var currentPalette : Array<h3d.Matrix>;
+	var prevPalette : Array<h3d.Matrix>;
 	var splitPalette : Array<Array<h3d.Matrix>>;
+	var prevSplitPalette : Array<Array<h3d.Matrix>>;
+	var prevJointsFrame : Int = -1;
 	var forceJointsUpdateOnFrame : Int = -1;
 	var jointsUpdated : Bool;
 	var paletteChanged : Bool;
@@ -430,6 +433,8 @@ class Skin extends MultiMaterial {
 
 		jointsData = [];
 		currentPalette = [];
+		prevPalette = null;
+		prevSplitPalette = null;
 		paletteChanged = true;
 		makeJointsData();
 		for( i in 0...skinData.boundJoints.length )
@@ -457,7 +462,19 @@ class Skin extends MultiMaterial {
 
 	@:noDebug
 	function syncJoints() {
-		if( !jointsUpdated && forceJointsUpdateOnFrame != hxd.Timer.frameCount ) return;
+		if( !jointsUpdated && forceJointsUpdateOnFrame != hxd.Timer.frameCount )
+			return;
+
+		if ( computeVelocity() ) {
+			syncPrevJoints();
+			skinShader.calcPrevPos = true;
+		} else {
+			prevSplitPalette = null;
+			prevPalette = null;
+			skinShader.calcPrevPos = false;
+		}
+
+		skinShader.calcPrevPos = computeVelocity();
 
 		for( j in skinData.allJoints )
 			jointsData[j.index].sync(this, j);
@@ -465,6 +482,26 @@ class Skin extends MultiMaterial {
 		skinShader.bonesMatrixes = currentPalette;
 		jointsUpdated = false;
 		prevEnableRetargeting = enableRetargeting;
+	}
+
+	function syncPrevJoints() {
+		if ( prevJointsFrame == hxd.Timer.frameCount )
+			return;
+		prevJointsFrame = hxd.Timer.frameCount;
+		
+		if ( prevPalette == null ) {
+			prevPalette = [];
+			for ( _ in 0...currentPalette.length )
+				prevPalette.push(h3d.Matrix.I());
+			if ( splitPalette != null ) {
+				prevSplitPalette = [];
+				for ( a in skinData.splitJoints )
+					prevSplitPalette.push([for ( j in a.joints ) prevPalette[j.bindIndex]]);
+			}
+		}
+		for ( i => m in currentPalette )
+			prevPalette[i].load(m);
+		skinShader.prevBonesMatrixes = prevPalette;
 	}
 
 	override function emit( ctx : RenderContext ) {
@@ -511,6 +548,8 @@ class Skin extends MultiMaterial {
 		} else {
 			var i = ctx.drawPass.index;
 			skinShader.bonesMatrixes = splitPalette[i];
+			if ( prevSplitPalette != null )
+				skinShader.prevBonesMatrixes = prevSplitPalette[i];
 			primitive.selectMaterial(i, primitive.screenRatioToLod(curScreenRatio));
 			ctx.uploadParams();
 			primitive.render(ctx.engine);

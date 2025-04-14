@@ -13,9 +13,9 @@ class Video extends hxd.App {
 		};
 		function start() {
 			#if hl
-			video.load("testVideo.avi");
+			video.loadFile("testVideo.avi");
 			#elseif js
-			video.load("testVideo.mp4");
+			video.loadFile("testVideo.mp4");
 			#end
 		}
 		video.onEnd = start;

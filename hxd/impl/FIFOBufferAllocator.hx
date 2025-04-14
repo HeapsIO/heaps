@@ -77,18 +77,18 @@ class FIFOBufferAllocator extends Allocator {
 	public var maxMemSize : Int = 512 * 1024 * 1024;
 
 	override function allocBuffer(vertices:Int, format:hxd.BufferFormat, flags:BufferFlags=Dynamic):h3d.Buffer {
-		if( vertices >= 65536 ) {
-			switch ( flags ) {
-			case UniformReadWrite:
-			default: throw "assert";
-			}
-		}
+		if( vertices >= 65536 )
+			return super.allocBuffer(vertices, format, flags);
 		checkFrame();
 		var id = flags.toInt() | (format.uid << 3) | (vertices << 16);
 		var c = buffers.get(id);
 		if( c != null ) {
 			var b = c.get();
-			if( b != null ) return b;
+			if( b != null ) {
+				if ( b.vertices != vertices )
+					throw "Buffer signature mismatch";
+				return b;
+			}
 		}
 		checkGC();
 		return super.allocBuffer(vertices,format,flags);
@@ -96,6 +96,10 @@ class FIFOBufferAllocator extends Allocator {
 
 	override function disposeBuffer(b:h3d.Buffer) {
 		if( b.isDisposed() ) return;
+		if ( b.vertices >= 65536 ) {
+			b.dispose();
+			return;
+		}
 		var id = fromBufferFlags(b.flags).toInt() | (b.format.uid << 3) | (b.vertices << 16);
 		var c = buffers.get(id);
 		if( c == null ) {

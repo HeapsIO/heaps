@@ -215,7 +215,7 @@ class CompiledShader {
 	public var vertexViews : hl.CArray<VertexBufferView>;
 	public var descriptors2 : hl.NativeArray<DescriptorHeap>;
 	public var barriers : hl.CArray<ResourceBarrier>;
-	public var resourcesToTransition : Array<ResourceData>;
+	public var resourcesToTransition : hl.NativeArray<ResourceData>;
 	public var maxBarriers : Int;
 	public var barrierCount : Int;
 	@:packed public var heap(default,null) : HeapProperties;
@@ -246,8 +246,10 @@ class CompiledShader {
 		vertexViews = hl.CArray.alloc(VertexBufferView, 16);
 		maxBarriers = 100;
 		barriers = hl.CArray.alloc( ResourceBarrier, maxBarriers );
-		resourcesToTransition = new Array<ResourceData>();
-		resourcesToTransition.resize(maxBarriers);
+		var allSubresource = #if (hldx >= version("1.16.0")) Driver.getConstant(RESOURCE_BARRIER_ALL_SUBRESOURCES) #else 0xffffffff #end;
+		for ( i in 0...maxBarriers )
+			barriers[i].subResource = allSubresource;
+		resourcesToTransition = new hl.NativeArray(maxBarriers);
 		barrierCount = 0;
 		pass = new h3d.mat.Pass("default");
 		pass.stencil = new h3d.mat.Stencil();
@@ -694,8 +696,10 @@ class DX12Driver extends h3d.impl.Driver {
 			flushTransitions();
 			tmp.maxBarriers += 100;
 			tmp.barriers = hl.CArray.alloc(ResourceBarrier, tmp.maxBarriers);
-			tmp.resourcesToTransition = new Array<ResourceData>();
-			tmp.resourcesToTransition.resize(tmp.maxBarriers);
+			var allSubresource = #if (hldx >= version("1.16.0")) Driver.getConstant(RESOURCE_BARRIER_ALL_SUBRESOURCES) #else 0xffffffff #end;
+			for ( i in 0...tmp.maxBarriers )
+				tmp.barriers[i].subResource = allSubresource;
+			tmp.resourcesToTransition = new hl.NativeArray<ResourceData>(tmp.maxBarriers);
 		}
 
 		// If state is different from targetState, a barrier has already been requested so we just have to update the targetState
@@ -1686,12 +1690,6 @@ class DX12Driver extends h3d.impl.Driver {
 		pixels.convert(t.format);
 		if( mipLevel >= t.mipLevels ) throw "Mip level outside texture range : " + mipLevel + " (max = " + (t.mipLevels - 1) + ")";
 
-		var offset : Int64 = 0;
-		if ( mipLevel != 0 )
-			offset += t.t.res.getRequiredIntermediateSize( 0, mipLevel );
-		if ( side != 0 )
-			offset += t.t.res.getRequiredIntermediateSize( 0, t.mipLevels ) * side;
-
 		var is3d = t.flags.has(Is3D);
 		var subRes = is3d ? mipLevel : mipLevel + side * t.mipLevels;
 		var tmpSize = t.t.res.getRequiredIntermediateSize(subRes, 1).low;
@@ -1743,7 +1741,7 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	override function copyTexture(from:h3d.mat.Texture, to:h3d.mat.Texture):Bool {
-		if( from.t == null || from.format != to.format || from.width != to.width || from.height != to.height || from.layerCount != to.layerCount )
+		if( from.t == null || from.format != to.format || from.width != to.width || from.height != to.height || from.layerCount != to.layerCount || from.mipLevels != to.mipLevels )
 			return false;
 		if( to.t == null ) {
 			var prev = from.lastFrame;
@@ -1759,18 +1757,20 @@ class DX12Driver extends h3d.impl.Driver {
 		var dst = tmp.dstTextureLocation;
 		var src = tmp.srcTextureLocation;
 		dst.res = to.t.res;
-		dst.type = SUBRESOURCE_INDEX;
-		dst.subResourceIndex = 0;
 		src.res = from.t.res;
+		dst.type = SUBRESOURCE_INDEX;
 		src.type = SUBRESOURCE_INDEX;
-		src.subResourceIndex = 0;
-		frame.commandList.copyTextureRegion(dst, 0, 0, 0, src, null);
+		var is3d = to.flags.has(Is3D);
+		var subResCount = is3d ? to.mipLevels : to.layerCount * to.mipLevels;
+		for ( i in 0...subResCount ) {
+			dst.subResourceIndex = i;
+			src.subResourceIndex = i;
+			frame.commandList.copyTextureRegion(dst, 0, 0, 0, src, null);
+		}
 		to.flags.set(WasCleared);
 		for( t in currentRenderTargets )
-			if( t == to || t == from ) {
+			if( t == to || t == from )
 				transition( t.t, RENDER_TARGET );
-				break;
-			}
 		return true;
 	}
 
