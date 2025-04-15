@@ -20,6 +20,9 @@ class ModelDatabase {
 
 	static var defaultLodConfigs : Map<String, Array<Float>> = new Map();
 	static var baseLodConfig = [ 0.5, 0.2, 0.01];
+	public static dynamic function customizeLodConfig(c : Array<Float>) {
+		return c;
+	}
 
 	function new() {
 	}
@@ -74,20 +77,19 @@ class ModelDatabase {
 
 	function getDefaultLodConfig( dir : String ) : Array<Float> {
 		var fs = Std.downcast(hxd.res.Loader.currentInstance.fs, hxd.fs.LocalFileSystem);
-		if (fs == null)
-			return baseLodConfig;
-
+		var c = baseLodConfig;
 		#if (sys || nodejs)
-			var c = @:privateAccess fs.convert.getConfig(defaultLodConfigs, baseLodConfig, dir, function(fullObj) {
+		if (fs != null) {
+			c = @:privateAccess fs.convert.getConfig(defaultLodConfigs, baseLodConfig, dir, function(fullObj) {
 				if (Reflect.hasField(fullObj, "lods.screenRatio"))
 					return Reflect.field(fullObj, "lods.screenRatio");
 
 				return baseLodConfig;
 			});
-			return c;
-		#else
-			return baseLodConfig;
+		}
 		#end
+		c = customizeLodConfig(c);
+		return c;
 	}
 
 	// Used to clean previous version of modelDatabase, should be removed after some time
