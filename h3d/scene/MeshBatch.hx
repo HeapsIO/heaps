@@ -301,7 +301,7 @@ class MeshBatch extends MultiMaterial {
 			psBytes.setInt32(p + 4, 1);
 			psBytes.setInt32(p + 8, indexStart);
 			psBytes.setInt32(p + 12, primitiveSubPart.baseVertex);
-			psBytes.setInt32(p + 16, 0);
+			psBytes.setInt32(p + 16, instanceCount);
 		}
 	}
 
@@ -353,10 +353,13 @@ class MeshBatch extends MultiMaterial {
 					if ( ibuf == null )
 						ibuf = new h3d.impl.InstanceBuffer();
 					if ( ibufUpload ) {
-						var sub = primitiveSubBytes[p.matIndex].sub(start*20,count*20);
-						for( i in 0...count )
-							sub.setInt32(i*20+16, i);
-						ibuf.setBuffer(count, sub);
+						var psBytes = primitiveSubBytes[p.matIndex];
+						if ( start > 0 && count < instanceCount ) {
+							psBytes = psBytes.sub(start*20,count*20);
+							for( i in 0...count )
+								psBytes.setInt32(i*20+16, i);
+						}
+						ibuf.setBuffer(count, psBytes);
 						p.instanceBuffers[index] = ibuf;
 					}
 				}
