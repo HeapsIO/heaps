@@ -1579,6 +1579,33 @@ class GlDriver extends Driver {
 		b.data = data;
 	}
 
+	// override function uploadBufferBytes( b : h3d.Buffer, startVertex : Int, vertexCount : Int, buf : haxe.io.Bytes, bufPos : Int ) {
+	// 	var stride = b.format.strideBytes;
+	// 	var type = b.flags.has(IndexBuffer) ? GL.ELEMENT_ARRAY_BUFFER : GL.ARRAY_BUFFER;
+	// 	gl.bindBuffer(type, b.vbuf);
+	// 	#if hl
+	// 	gl.bufferSubData(type, startVertex * stride, streamData(buf.getData(),bufPos,vertexCount * stride), bufPos * STREAM_POS, vertexCount * stride);
+	// 	#else
+	// 	var sub = new Uint8Array(buf.getData(), bufPos, vertexCount * stride);
+	// 	gl.bufferSubData(type, startVertex * stride, sub);
+	// 	#end
+	// 	gl.bindBuffer(type, null);
+	// 	if( b.flags.has(IndexBuffer) ) curIndexBuffer = null;
+	// }
+
+	override function uploadInstanceBufferBytes(b : InstanceBuffer, startVertex : Int, vertexCount : Int, buf : haxe.io.Bytes, bufPos : Int ) {
+		var stride = 5*4;
+		var type = GL.DRAW_INDIRECT_BUFFER;
+		#if hl
+		gl.bindBuffer(type, b.data);
+		gl.bufferSubData(type, startVertex * stride, streamData(buf.getData(),bufPos,vertexCount * stride), bufPos * STREAM_POS, vertexCount * stride);
+		#else
+	 	var sub = new Uint8Array(buf.getData(), bufPos, vertexCount * stride);
+	 	gl.bufferSubData(type, startVertex * stride, sub);
+		#end
+		gl.bindBuffer(type, null);
+	}
+
 	override function disposeInstanceBuffer(b:InstanceBuffer) {
 		b.data = null;
 	}

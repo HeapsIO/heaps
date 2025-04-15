@@ -21,6 +21,17 @@ class InstanceBuffer {
 		this.startIndex = startIndex;
 	}
 
+	function updateTriCount(commandCount : Int, bytes : haxe.io.Bytes)
+	{
+		triCount = 0;
+		for( i in 0...commandCount ) {
+			var idxCount = bytes.getInt32(i * 20);
+			var instCount = bytes.getInt32(i * 20 + 4);
+			var tri = Std.int((idxCount * instCount) / 3);
+			triCount += tri;
+		}
+	}
+
 	/**
 		Bytes are structures of 5 i32 with the following values:
 		- indexCount : number of indexes per instance
@@ -30,19 +41,22 @@ class InstanceBuffer {
 		- startInstanceLocation : offset in per instance buffer
 	**/
 	public function setBuffer( commandCount : Int, bytes : haxe.io.Bytes ) {
-		dispose();
+		if(commandCount > this.commandCount){
+			dispose();
 
-		for( i in 0...commandCount ) {
-			var idxCount = bytes.getInt32(i * 20);
-			var instCount = bytes.getInt32(i * 20 + 4);
-			var tri = Std.int((idxCount * instCount) / 3);
-			triCount += tri;
+			updateTriCount(commandCount, bytes);
+			this.commandCount = commandCount;
+			this.indexCount = 0;
+			driver = h3d.Engine.getCurrent().driver;
+			driver.allocInstanceBuffer(this, bytes);
+		} else {
+
+			updateTriCount(commandCount, bytes);
+			this.commandCount = commandCount;
+			this.indexCount = 0;
+			driver = h3d.Engine.getCurrent().driver;
+			driver.uploadInstanceBufferBytes(this, 0, commandCount, bytes, 0);
 		}
-
-		this.commandCount = commandCount;
-		this.indexCount = 0;
-		driver = h3d.Engine.getCurrent().driver;
-		driver.allocInstanceBuffer(this, bytes);
 	}
 
 	public function dispose() {

@@ -1523,6 +1523,13 @@ class DX12Driver extends h3d.impl.Driver {
 		b.data = buf;
 	}
 
+	override function uploadInstanceBufferBytes(b : InstanceBuffer, startVertex : Int, vertexCount : Int, buf : haxe.io.Bytes, bufPos : Int ) {
+		transition(b.data, COPY_DEST);
+		flushTransitions();
+		var strideBytes = 5 * 4;
+		updateBuffer(b.data, @:privateAccess buf.b.offset(bufPos), startVertex * strideBytes, vertexCount * strideBytes);
+	}
+
 	override function disposeBuffer(v:Buffer) {
 		disposeResource(v.vbuf);
 	}

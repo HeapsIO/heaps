@@ -1403,6 +1403,12 @@ class DirectXDriver extends h3d.impl.Driver {
 		b.data = dx.Driver.createBuffer(b.commandCount * 5 * 4, Default, UnorderedAccess, None, DrawIndirectArgs, 4, buf);
 	}
 
+	override function uploadInstanceBufferBytes(b : InstanceBuffer, startVertex : Int, vertexCount : Int, buf : haxe.io.Bytes, bufPos : Int ) {
+		if( hasDeviceError ) return;
+		var strideBytes = 5 * 4;
+		updateBuffer(b.data, @:privateAccess buf.b.offset(bufPos), startVertex * strideBytes, vertexCount * strideBytes);
+	}
+
 	override function disposeInstanceBuffer(b:InstanceBuffer) {
 		(b.data : dx.Resource).release();
 		b.data = null;
