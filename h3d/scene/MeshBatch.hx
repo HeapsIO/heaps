@@ -281,14 +281,15 @@ class MeshBatch extends MultiMaterial {
 			primitiveSubBytes = [for ( i in 0...primitiveSubParts.length ) haxe.io.Bytes.alloc(128)];
 			instanced.commands = null;
 		}
+		var instance_size = h3d.impl.InstanceBuffer.ELEMENT_SIZE;
 		for ( i in 0...primitiveSubBytes.length ) {
-			if( primitiveSubBytes[i].length < (instanceCount+1) * 20 ) {
+			if( primitiveSubBytes[i].length < (instanceCount+1) * instance_size ) {
 				var next = haxe.io.Bytes.alloc(Std.int(primitiveSubBytes[i].length*3/2));
-				next.blit(0, primitiveSubBytes[i], 0, instanceCount * 20);
+				next.blit(0, primitiveSubBytes[i], 0, instanceCount * instance_size);
 				primitiveSubBytes[i] = next;
 			}
 		}
-		var p = instanceCount * 20;
+		var p = instanceCount * instance_size;
 		for ( mid => psBytes in primitiveSubBytes ) {
 			var primitiveSubPart = primitiveSubParts[mid];
 			var indexCount = primitiveSubPart.indexCount;
@@ -316,6 +317,7 @@ class MeshBatch extends MultiMaterial {
 		var alloc = hxd.impl.Allocator.get();
 
 		var prim = getPrimitive();
+		var instance_size = h3d.impl.InstanceBuffer.ELEMENT_SIZE;
 
 		while( p != null ) {
 			var index = 0;
@@ -355,11 +357,16 @@ class MeshBatch extends MultiMaterial {
 					if ( ibufUpload ) {
 						var psBytes = primitiveSubBytes[p.matIndex];
 						if ( start > 0 && count < instanceCount ) {
-							psBytes = psBytes.sub(start*20,count*20);
+							psBytes = psBytes.sub(start*instance_size,count*instance_size);
 							for( i in 0...count )
-								psBytes.setInt32(i*20+16, i);
+								psBytes.setInt32(i*instance_size+16, i);
 						}
-						ibuf.setBuffer(count, psBytes);
+
+						if(count < ibuf.commandCount && meshBatchFlags.has(EnableResizeDown)){
+							ibuf.uploadBytes(count, psBytes);
+						} else {
+							ibuf.allocFromBytes(count, psBytes);
+						}
 						p.instanceBuffers[index] = ibuf;
 					}
 				}
