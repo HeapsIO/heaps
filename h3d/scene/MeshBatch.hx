@@ -281,15 +281,15 @@ class MeshBatch extends MultiMaterial {
 			primitiveSubBytes = [for ( i in 0...primitiveSubParts.length ) haxe.io.Bytes.alloc(128)];
 			instanced.commands = null;
 		}
-		var instance_size = h3d.impl.InstanceBuffer.ELEMENT_SIZE;
+		var instanceSize = h3d.impl.InstanceBuffer.ELEMENT_SIZE;
 		for ( i in 0...primitiveSubBytes.length ) {
-			if( primitiveSubBytes[i].length < (instanceCount+1) * instance_size ) {
+			if( primitiveSubBytes[i].length < (instanceCount+1) * instanceSize ) {
 				var next = haxe.io.Bytes.alloc(Std.int(primitiveSubBytes[i].length*3/2));
-				next.blit(0, primitiveSubBytes[i], 0, instanceCount * instance_size);
+				next.blit(0, primitiveSubBytes[i], 0, instanceCount * instanceSize);
 				primitiveSubBytes[i] = next;
 			}
 		}
-		var p = instanceCount * instance_size;
+		var p = instanceCount * instanceSize;
 		for ( mid => psBytes in primitiveSubBytes ) {
 			var primitiveSubPart = primitiveSubParts[mid];
 			var indexCount = primitiveSubPart.indexCount;
@@ -317,7 +317,7 @@ class MeshBatch extends MultiMaterial {
 		var alloc = hxd.impl.Allocator.get();
 
 		var prim = getPrimitive();
-		var instance_size = h3d.impl.InstanceBuffer.ELEMENT_SIZE;
+		var instanceSize = h3d.impl.InstanceBuffer.ELEMENT_SIZE;
 
 		while( p != null ) {
 			var index = 0;
@@ -357,12 +357,12 @@ class MeshBatch extends MultiMaterial {
 					if ( ibufUpload ) {
 						var psBytes = primitiveSubBytes[p.matIndex];
 						if ( start > 0 && count < instanceCount ) {
-							psBytes = psBytes.sub(start*instance_size,count*instance_size);
+							psBytes = psBytes.sub(start*instanceSize,count*instanceSize);
 							for( i in 0...count )
-								psBytes.setInt32(i*instance_size+16, i);
+								psBytes.setInt32(i*instanceSize+16, i);
 						}
 
-						if(count < ibuf.commandCount && meshBatchFlags.has(EnableResizeDown)){
+						if(count <= ibuf.commandCount && !meshBatchFlags.has(EnableResizeDown)){
 							ibuf.uploadBytes(count, psBytes);
 						} else {
 							ibuf.allocFromBytes(count, psBytes);
