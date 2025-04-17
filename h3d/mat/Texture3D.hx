@@ -19,7 +19,7 @@ class Texture3D extends Texture {
 	override function clone() {
 		var old = lastFrame;
 		preventAutoDispose();
-		var t = new TextureArray(width, height, depth, null, format);
+		var t = new Texture3D(width, height, depth, null, format);
 		h3d.pass.Copy.run(this, t);
 		lastFrame = old;
 		return t;
