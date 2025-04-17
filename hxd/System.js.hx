@@ -149,7 +149,7 @@ class System {
 
 	public static function setClipboardText(text:String) : Bool {
 		#if (hide && editor)
-		nw.Clipboard.get().set(text, Text);
+		nw.Clipboard.get().set({ data: text, type: nw.Clipboard.ClipboardType.Text });
 		return true;
 		#end
 		return false;
