@@ -2,15 +2,16 @@ package h3d.mat.noise;
 
 class WorleyNoise {
 
-	public static function generate(texRes : Int = 64, gridSize : Int = 5) {
+	public static function generate(texRes : Int = 64, gridSize : Int = 5, seed : Int = 0) {
 
 		var points = [];
 		var ratio = gridSize / texRes;
 
+		var rnd = new hxd.Rand(seed);
 		for ( k in 0...gridSize ) {
 			for ( j in 0...gridSize ) {
 				for ( i in 0...gridSize ) {
-					var p = new h3d.col.Point(hxd.Math.random(), hxd.Math.random(), Math.random());
+					var p = new h3d.col.Point(rnd.rand(), rnd.rand(), rnd.rand());
 					p.scale(1.0 / gridSize);
 					p.x += i / gridSize;
 					p.y += j / gridSize;
@@ -49,7 +50,7 @@ class WorleyNoise {
 			return points[idx.x + idx.y * gridSize + idx.z * gridSize * gridSize].add(pointOffset);
 		}
 
-		var offsets : Array<h3d.col.IPoint> = [		
+		var offsets : Array<h3d.col.IPoint> = [
 			new h3d.col.IPoint(-1, 0, 0), new h3d.col.IPoint(1, 0, 0),
 			new h3d.col.IPoint(0, -1, 0), new h3d.col.IPoint(0, 1, 0),
 			new h3d.col.IPoint(1, 1, 0), new h3d.col.IPoint(-1, 1, 0),
