@@ -159,7 +159,7 @@ class Tile {
 	}
 
 	/**
-		Returns a new Tile with shifting origin point (`dx` and `dy`) to the tile center.
+		Returns a **new Tile** with shifting origin point (`dx` and `dy`) to the tile center.
 
 		To modify this Tile origin point, use `Tile.setCenterRatio`.
 	**/
@@ -169,32 +169,39 @@ class Tile {
 
 	/**
 		Sets `dx` / `dy` as origin point dictated by `px` / `py` with a default being center.
+		@returns This tile instance
 	**/
-	public inline function setCenterRatio(?px:Float=0.5, ?py:Float=0.5) : Void {
+	public inline function setCenterRatio(?px:Float=0.5, ?py:Float=0.5) : Tile {
 		dx = -(px*width);
 		dy = -(py*height);
+		return this;
 	}
 
 	/**
 		Flips the Tile horizontally. Note that `dx` is flipped as well.
+		@returns This tile instance
 	**/
-	public function flipX() : Void {
+	public function flipX() : Tile {
 		var tmp = u; u = u2; u2 = tmp;
 		dx = -dx - width;
+		return this;
 	}
 
 	/**
 		Flips the Tile vertically. Note that `dy` is flipped as well.
+		@returns This tile instance
 	**/
-	public function flipY() : Void {
+	public function flipY() : Tile {
 		var tmp = v; v = v2; v2 = tmp;
 		dy = -dy - height;
+		return this;
 	}
 
 	/**
 		Set the Tile position in the texture to the specified coordinate.
+		@returns This tile instance
 	**/
-	public function setPosition(x : Float, y : Float) : Void {
+	public function setPosition(x : Float, y : Float) : Tile {
 		this.x = x;
 		this.y = y;
 		var tex = innerTex;
@@ -204,12 +211,14 @@ class Tile {
 			u2 = (x + width) / tex.width;
 			v2 = (y + height) / tex.height;
 		}
+		return this;
 	}
 
 	/**
 		Set the Tile size in the texture to the specified dimensions.
+		@returns This tile instance
 	**/
-	public function setSize(w : Float, h : Float) : Void {
+	public function setSize(w : Float, h : Float) : Tile {
 		this.width = w;
 		this.height = h;
 		var tex = innerTex;
@@ -217,6 +226,7 @@ class Tile {
 			u2 = (x + w) / tex.width;
 			v2 = (y + h) / tex.height;
 		}
+		return this;
 	}
 
 	/**
@@ -225,16 +235,19 @@ class Tile {
 		Using this method allows to upscale/downscale Tiles, but creates a mismatch between the tile uv and width/height values.
 		Due to that, using any methods that modify the uv value will cause the new uv to treat scaled width and height as true dimensions
 		and can lead to unexpected results if not accounted for.
+		@returns This tile instance
 	**/
-	public function scaleToSize( w : Float, h : Float ) : Void {
+	public function scaleToSize( w : Float, h : Float ) : Tile {
 		this.width = w;
 		this.height = h;
+		return this;
 	}
 
 	/**
 		Scrolls the texture position by specified amount.
+		@returns This tile instance
 	**/
-	public function scrollDiscrete( dx : Float, dy : Float ) : Void {
+	public function scrollDiscrete( dx : Float, dy : Float ) : Tile {
 		var tex = innerTex;
 		u += dx / tex.width;
 		v -= dy / tex.height;
@@ -242,6 +255,7 @@ class Tile {
 		v2 -= dy / tex.height;
 		x = u * tex.width;
 		y = v * tex.height;
+		return this;
 	}
 
 	/**
