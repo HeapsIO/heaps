@@ -316,6 +316,7 @@ class Text extends Drawable {
 	**/
 	@:dox(show)
 	function splitRawText( text : String, leftMargin = 0., afterData = 0., ?font : Font, ?sizes:Array<Float>, ?prevChar:Int = -1 ) {
+		var prevChar = prevChar ?? -1;
 		var maxWidth = realMaxWidth;
 		if( maxWidth < 0 ) {
 			if ( sizes == null )
