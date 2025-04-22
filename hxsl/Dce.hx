@@ -319,10 +319,10 @@ class Dce {
 				count++;
 			}
 			return { e : TBlock(out), p : e.p, t : e.t };
-		case TVarDecl(v,_) | TBinop(OpAssign | OpAssignOp(_), { e : (TVar(v) | TSwiz( { e : TVar(v) }, _) | TArray( { e : TVar(v) }, _)) }, _) if( get(v).used == 0 ):
-			return { e : TConst(CNull), t : e.t, p : e.p };
-		case TBinop(OpAssign | OpAssignOp(_), { e : TSwiz( { e : TVar(v) }, swiz) }, _) if( get(v).used & swizBits(swiz) == 0 ):
-			return { e : TConst(CNull), t : e.t, p : e.p };
+		case TVarDecl(v,e2) | TBinop(OpAssign | OpAssignOp(_), { e : (TVar(v) | TSwiz( { e : TVar(v) }, _) | TArray( { e : TVar(v) }, _)) }, e2) if( get(v).used == 0 ):
+			return (e2 != null && e2.hasSideEffect()) ? mapExpr(e2, false) : { e : TConst(CNull), t : e.t, p : e.p };
+		case TBinop(OpAssign | OpAssignOp(_), { e : TSwiz( { e : TVar(v) }, swiz) }, e2) if( get(v).used & swizBits(swiz) == 0 ):
+			return  e2.hasSideEffect() ? mapExpr(e2, false) : { e : TConst(CNull), t : e.t, p : e.p };
 		case TCall({ e : TGlobal(ChannelRead) }, [_, uv, { e : TConst(CInt(cid)) }]):
 			var c = channelVars[cid];
 			return { e : TCall({ e : TGlobal(Texture), p : e.p, t : TVoid }, [{ e : TVar(c), t : c.type, p : e.p }, mapExpr(uv,true)]), t : TVoid, p : e.p };
