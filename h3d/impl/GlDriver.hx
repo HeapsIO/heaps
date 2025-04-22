@@ -1470,6 +1470,15 @@ class GlDriver extends Driver {
 		if( b.flags.has(IndexBuffer) ) curIndexBuffer = null;
 	}
 
+	override function readBufferBytes(b:h3d.Buffer, startVertex:Int, vertexCount:Int, buf:haxe.io.Bytes, bufPos:Int) {
+		var stride = b.format.strideBytes;
+		var totalSize = vertexCount*stride;
+		var type = b.flags.has(IndexBuffer) ? GL.ELEMENT_ARRAY_BUFFER : GL.ARRAY_BUFFER;
+		gl.bindBuffer(type, b.vbuf);
+		gl.getBufferSubData(type, startVertex*stride, @:privateAccess buf.b, bufPos*STREAM_POS, totalSize);
+		gl.bindBuffer(type, null);
+	}
+
 	override function uploadIndexData( i : h3d.Buffer, startIndice : Int, indiceCount : Int, buf : hxd.IndexBuffer, bufPos : Int ) {
 		var bits = i.format.strideBytes >> 1;
 		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, i.vbuf);

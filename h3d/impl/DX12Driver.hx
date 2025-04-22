@@ -1568,6 +1568,38 @@ class DX12Driver extends h3d.impl.Driver {
 		transition(b.vbuf, b.flags.has(IndexBuffer) ? INDEX_BUFFER : ((b.flags.has(ReadWriteBuffer)) ? UNORDERED_ACCESS : VERTEX_AND_CONSTANT_BUFFER));
 	}
 
+	override function readBufferBytes(b:Buffer, startVertex:Int, vertexCount:Int, buf:haxe.io.Bytes, bufPos:Int) {
+		var stride = b.format.strideBytes;
+
+		var totalSize = vertexCount*stride;
+
+		var desc = new ResourceDesc();
+		var flags = new haxe.EnumFlags();
+		desc.dimension = BUFFER;
+		desc.width = totalSize;
+		desc.height = 1;
+		desc.depthOrArraySize = 1;
+		desc.mipLevels = 1;
+		desc.sampleDesc.count = 1;
+		desc.layout = ROW_MAJOR;
+		tmp.heap.type = READBACK;
+		var tmpBuf = Driver.createCommittedResource(tmp.heap, flags, desc, COPY_DEST, null);
+
+		transition(b.vbuf, COPY_SOURCE);
+		flushTransitions();
+
+		frame.commandList.copyBufferRegion(tmpBuf, 0, b.vbuf.res, startVertex*stride, totalSize);
+
+		flushFrame();
+		waitGpu();
+
+		var output = tmpBuf.map(0, null);
+		@:privateAccess buf.b.blit(bufPos, output, 0, totalSize);
+		tmpBuf.release();
+
+		beginFrame();
+	}
+
 	// ------------ TEXTURES -------
 
 	function getTextureFormat( t : h3d.mat.Texture ) : DxgiFormat {
