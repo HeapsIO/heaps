@@ -1620,21 +1620,24 @@ class GlDriver extends Driver {
 			size = 2;
 		}
 		#if !js
-		inline function unsafeCastTo<T,R>( v : T, c : Class<R> ) : R {
-			#if (haxe_ver < 5)
-			var arr = new hl.NativeArray<T>(1);
-			arr[0] = v;
-			return (cast arr : hl.NativeArray<R>)[0];
-			#else
-			return hl.Api.unsafeCast(v);
-			#end
-		}
 		if( hasMultiIndirect && commands.data != null ) {
-			var commandOffset = unsafeCastTo(commands.offset * InstanceBuffer.ELEMENT_SIZE, hl.Bytes);
+			#if (haxe_ver < 5)
+				var arr = new hl.NativeArray<Int>(1);
+				arr[0] = commands.offset * InstanceBuffer.ELEMENT_SIZE;
+				var commandOffset : hl.Bytes = (cast arr : hl.NativeArray<hl.Bytes>)[0];
+			#else
+				var commandOffset : hl.Bytes = hl.Api.unsafeCast(commands.offset * InstanceBuffer.ELEMENT_SIZE);
+			#end
 			gl.bindBuffer(GL.DRAW_INDIRECT_BUFFER, commands.data);
 			#if (hlsdl >= version("1.15.0"))
 			if ( commands.countBuffer != null && hasMultiIndirectCount ) {
-				var countOffset = unsafeCastTo(commands.countOffset * 4, hl.Bytes);
+				#if (haxe_ver < 5)
+					var arr = new hl.NativeArray<Int>(1);
+					arr[0] = commands.countOffset * 4;
+					var countOffset : hl.Bytes = (cast arr : hl.NativeArray<hl.Bytes>)[0];
+				#else
+					var countOffset : hl.Bytes = hl.Api.unsafeCast(commands.countOffset * 4);
+				#end
 				gl.bindBuffer(GL.PARAMETER_BUFFER, commands.countBuffer);
 				gl.multiDrawElementsIndirectCount(drawMode, kind, commandOffset, countOffset, commands.commandCount, 0);
 			} else
