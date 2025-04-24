@@ -477,8 +477,9 @@ class Flow extends Object {
 		* Red box around the flow
 		* Green box for the client space.
 		* Blue boxes for each element.
+		When set to false, this will disable the ability to debug the flow.
 	**/
-	public var debug(default, set) : Bool;
+	public var debug(default, set) : Null<Bool>;
 
 	/**
 		When set to true, uses specified lineHeight/colWidth instead of maxWidth/maxHeight for alignment.

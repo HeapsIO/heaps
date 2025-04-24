@@ -246,6 +246,7 @@ class Style extends domkit.CssStyle {
 	var inspectModeDetailsRight = -1;
 	var inspectPreview : h2d.Object;
 	var inspectPreviewObjects : Array<h2d.Object>;
+	var prevDebug : Null<Bool>;
 
 	function set_allowInspect(b) {
 		if( allowInspect == b )
@@ -348,7 +349,7 @@ class Style extends domkit.CssStyle {
 		if( inspectPreview == null ) return;
 		var obj = inspectPreviewObjects[0];
 		var flow = Std.downcast(obj, h2d.Flow);
-		if( flow != null ) flow.debug = false;
+		if( flow != null ) flow.debug = prevDebug;
 		inspectPreview.remove();
 		inspectPreview = null;
 		inspectPreviewObjects = null;
@@ -374,6 +375,9 @@ class Style extends domkit.CssStyle {
 	function lookupRec( obj : h2d.Object, e : hxd.Event ) {
 		if( !obj.visible || obj.alpha <= 0 )
 			return false;
+		var fl = Std.downcast(obj, h2d.Flow);
+		if( fl != null && fl.debug == false )
+			return false;
 		var ch = @:privateAccess obj.children;
 		for( i in 0...ch.length ) {
 			if( lookupRec(ch[ch.length-1-i], e) )
@@ -381,13 +385,12 @@ class Style extends domkit.CssStyle {
 		}
 		if( obj.dom == null )
 			return false;
+		if( fl != null && fl.backgroundTile == null && fl.interactive == null )
+			return false;
 		var b = obj.getBounds();
 		if( !b.contains(new h2d.col.Point(e.relX,e.relY)) )
 			return false;
 		if( Type.getClass(obj) == h2d.Object ) // objects containing transparent flow?
-			return false;
-		var fl = Std.downcast(obj, h2d.Flow);
-		if( fl != null && fl.backgroundTile == null && fl.interactive == null )
 			return false;
 		setPreview(obj);
 		return true;
@@ -491,9 +494,10 @@ class Style extends domkit.CssStyle {
 		p.x = Math.round(b.xMin);
 		p.y = Math.round(b.yMin);
 		var flow = Std.downcast(obj, h2d.Flow);
-		if( flow != null )
+		if( flow != null ) {
+			prevDebug = flow.debug;
 			flow.debug = true;
-		else {
+		} else {
 			var w = p.tile.iwidth;
 			var h = p.tile.iheight;
 			var horiz = h2d.Tile.fromColor(0xFF0000, w, 1);
