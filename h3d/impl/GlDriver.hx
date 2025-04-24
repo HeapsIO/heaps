@@ -1621,14 +1621,16 @@ class GlDriver extends Driver {
 		}
 		#if !js
 		if( hasMultiIndirect && commands.data != null ) {
+			var commandOffset : hl.Bytes = hl.Api.unsafeCast(commands.offset * InstanceBuffer.ELEMENT_SIZE);
 			gl.bindBuffer(GL.DRAW_INDIRECT_BUFFER, commands.data);
 			#if (hlsdl >= version("1.15.0"))
 			if ( commands.countBuffer != null && hasMultiIndirectCount ) {
+				var countOffset : hl.Bytes = hl.Api.unsafeCast(commands.countOffset * 4);
 				gl.bindBuffer(GL.PARAMETER_BUFFER, commands.countBuffer);
-				gl.multiDrawElementsIndirectCount(drawMode, kind, null, null, commands.commandCount, 0);
+				gl.multiDrawElementsIndirectCount(drawMode, kind, commandOffset, countOffset, commands.commandCount, 0);
 			} else
 			#end
-			gl.multiDrawElementsIndirect(drawMode, kind, null, commands.commandCount, 0);
+			gl.multiDrawElementsIndirect(drawMode, kind, commandOffset, commands.commandCount, 0);
 			gl.bindBuffer(GL.DRAW_INDIRECT_BUFFER, null);
 			return;
 		}

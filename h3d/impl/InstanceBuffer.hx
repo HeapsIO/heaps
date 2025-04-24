@@ -16,6 +16,10 @@ class InstanceBuffer {
 	var countBuffer : Dynamic;
 	var data : Dynamic;
 	var driver : h3d.impl.Driver;
+
+	var offset : Int = 0;
+	var countOffset : Int;
+
 	var indexCount : Int;
 	var startIndex : Int;
 	public var triCount(default,null) : Int = 0;
