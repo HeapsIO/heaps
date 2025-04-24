@@ -525,6 +525,8 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		screenToViewport(event);
 		var ex = event.relX;
 		var ey = event.relY;
+		if( ex < 0 || ey < 0 || ex >= width || ey >= height )
+			return null;
 		var index = last == null ? 0 : interactive.indexOf(cast last) + 1;
 		var pt = shapePoint;
 		for( idx in index...interactive.length ) {
@@ -905,7 +907,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 			var tex = new h3d.mat.Texture(width, height, [Target]);
 			target = new Tile(tex,0, 0, width, height);
 		}
-		
+
 		var tex = target.getTexture();
 		engine.begin();
 		engine.pushTarget(tex);
