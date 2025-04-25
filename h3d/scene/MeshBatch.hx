@@ -406,7 +406,6 @@ class MeshBatch extends MultiMaterial {
 	function onFlushPass(p : BatchData) {}
 
 	function syncData( batch : BatchData ) {
-
 		var startPos = batch.paramsCount * instanceCount << 2;
 		// in case we are bigger than emitCountTip
 		if( startPos + (batch.paramsCount<<2) > batch.data.length )
@@ -418,41 +417,23 @@ class MeshBatch extends MultiMaterial {
 
 		var calcInv = false;
 		while( p != null ) {
-			var pos = startPos + p.pos;
-			inline function addMatrix(m:h3d.Matrix) {
-				buf[pos++] = m._11;
-				buf[pos++] = m._21;
-				buf[pos++] = m._31;
-				buf[pos++] = m._41;
-				buf[pos++] = m._12;
-				buf[pos++] = m._22;
-				buf[pos++] = m._32;
-				buf[pos++] = m._42;
-				buf[pos++] = m._13;
-				buf[pos++] = m._23;
-				buf[pos++] = m._33;
-				buf[pos++] = m._43;
-				buf[pos++] = m._14;
-				buf[pos++] = m._24;
-				buf[pos++] = m._34;
-				buf[pos++] = m._44;
-			}
+			var bufLoader = new hxd.FloatBufferLoader(buf, startPos + p.pos);
 			if( p.perObjectGlobal != null ) {
 				if ( p.perObjectGlobal.gid == modelViewID ) {
-					addMatrix(worldPosition != null ? worldPosition : absPos);
+					bufLoader.loadMatrix(worldPosition != null ? worldPosition : absPos);
 				} else if ( p.perObjectGlobal.gid == modelViewInverseID ) {
 					if( worldPosition == null )
-						addMatrix(getInvPos());
+						bufLoader.loadMatrix(getInvPos());
 					else {
 						if( !calcInv ) {
 							calcInv = true;
 							if( invWorldPosition == null ) invWorldPosition = new h3d.Matrix();
 							invWorldPosition.initInverse(worldPosition);
 						}
-						addMatrix(invWorldPosition);
+						bufLoader.loadMatrix(invWorldPosition);
 					}
 				} else if ( p.perObjectGlobal.gid == previousModelViewID )
-					addMatrix( worldPosition != null ? worldPosition : absPos );
+					bufLoader.loadMatrix(worldPosition != null ? worldPosition : absPos );
 				else
 					throw "Unsupported global param "+p.perObjectGlobal.path;
 				p = p.next;
@@ -464,25 +445,19 @@ class MeshBatch extends MultiMaterial {
 				switch( size ) {
 				case 2:
 					var v : h3d.Vector = curShader.getParamValue(p.index);
-					buf[pos++] = v.x;
-					buf[pos++] = v.y;
+					bufLoader.loadVec2(v);
 				case 3:
 					var v : h3d.Vector = curShader.getParamValue(p.index);
-					buf[pos++] = v.x;
-					buf[pos++] = v.y;
-					buf[pos++] = v.z;
+					bufLoader.loadVec3(v);
 				case 4:
 					var v : h3d.Vector4 = curShader.getParamValue(p.index);
-					buf[pos++] = v.x;
-					buf[pos++] = v.y;
-					buf[pos++] = v.z;
-					buf[pos++] = v.w;
+					bufLoader.loadVec4(v);
 				}
 			case TFloat:
-				buf[pos++] = curShader.getParamFloatValue(p.index);
+				bufLoader.loadFloat(curShader.getParamFloatValue(p.index));
 			case TMat4:
 				var m : h3d.Matrix = curShader.getParamValue(p.index);
-				addMatrix(m);
+				bufLoader.loadMatrix(m);
 			default:
 				throw "Unsupported batch type "+p.type;
 			}
