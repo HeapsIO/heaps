@@ -1759,18 +1759,12 @@ class DX12Driver extends h3d.impl.Driver {
 		var rowSizeInBytes : hl.BytesAccess<Int64> = tmp.copyableInfosBytes.offset(8);
 		Driver.getCopyableFootprints(dstDesc, subRes, 1, allocation.offset, src.placedFootprint, numRow, rowSizeInBytes, null);
 
-		var stride = @:privateAccess pixels.stride;
-		switch( t.format ) {
-		case S3TC(n): stride = pixels.width * ((n == 1 || n == 4) ? 2 : 4); // "uncompressed" stride ?
-		default:
-		}
 		var rowPitch = src.placedFootprint.footprint.rowPitch;
-		var offset = src.placedFootprint.offset.low - allocation.offset;
 		var data = (pixels.bytes:hl.Bytes).offset(pixels.offset);
 		var numRow = numRow[0].low;
 		var rowSizeInBytes = rowSizeInBytes[0].low;
 		for ( i in 0...numRow)
-			allocation.cpuAddress.blit(rowPitch * i + offset, data, stride * i, rowSizeInBytes);
+			allocation.cpuAddress.blit(rowPitch * i, data, rowSizeInBytes * i, rowSizeInBytes);
 
 		src.placedFootprint.footprint.depth = 1;
 		frame.commandList.copyTextureRegion(dst, 0, 0, is3d ? side : 0, src, null);
