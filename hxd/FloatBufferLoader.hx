@@ -1,7 +1,7 @@
 package hxd;
 
 class FloatBufferLoader {
-	public var buf : FloatBuffer;
+	public var buf(default, null) : FloatBuffer;
 	public var pos : Int;
 
 	public inline function new(b : FloatBuffer, p : Int){
