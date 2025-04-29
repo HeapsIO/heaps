@@ -201,6 +201,10 @@ class ScaleGrid extends h2d.TileGroup {
 	}
 
 	function updateContent() {
+
+		if( tile != null && tile.width == 1 && tile.height == 1 )
+			return;
+
 		var bt = borderTop, bb = borderBottom, bl = borderLeft, br = borderRight;
 		var unscaledBl : Float = bl * borderScale,
 			unscaledBr : Float = br * borderScale,
@@ -351,6 +355,20 @@ class ScaleGrid extends h2d.TileGroup {
 				content.addColor(unscaledBl + rw * unscaledInnerTileWidth, unscaledBt + rh * unscaledInnerTileHeight, curColor, t);
 			}
 		}
+	}
+
+	override function draw(ctx:RenderContext) {
+		if( tile != null && tile.width == 1 && tile.height == 1 ) @:privateAccess {
+			var ow = tile.width;
+			var oh = tile.height;
+			tile.width = width;
+			tile.height = height;
+			emitTile(ctx,tile);
+			tile.width = ow;
+			tile.height = oh;
+			return;
+		}
+		super.draw(ctx);
 	}
 
 	override function sync( ctx : RenderContext ) {
