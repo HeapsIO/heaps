@@ -204,7 +204,7 @@ class Object {
 		Create a new empty object, and adds it to the parent object if not null.
 	**/
 	public function new( ?parent : Object ) {
-		flags = new ObjectFlags(0x8000);
+		flags = new ObjectFlags(FAlwaysSync.toInt());
 		absPos = new h3d.Matrix();
 		absPos.identity();
 		x = 0; y = 0; z = 0; scaleX = 1; scaleY = 1; scaleZ = 1;
