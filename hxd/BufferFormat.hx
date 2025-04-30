@@ -43,7 +43,7 @@ enum abstract InputFormat(Int) {
 	}
 
 	public inline function getSize() {
-		return this & 7;
+		return this == cast (DBytes4,Int) ? 1 : this;
 	}
 
 	public inline function toInt() {
