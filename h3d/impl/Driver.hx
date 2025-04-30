@@ -265,7 +265,6 @@ class Driver {
 	}
 
 	public function readBufferBytes( b : Buffer, startVertex : Int, vertexCount : Int, buf : haxe.io.Bytes, bufPos : Int ) {
-		throw "Driver does not allow to read vertex bytes";
 	}
 
 	public function onTextureBiasChanged( t : h3d.mat.Texture ) {
