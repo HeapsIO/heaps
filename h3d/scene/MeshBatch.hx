@@ -362,6 +362,7 @@ class MeshBatch extends MultiMaterial {
 								psBytes.setInt32(i*instanceSize+16, i);
 						}
 
+						var ibufMaxCommandCount = ibuf.maxCommandCount;
 						if ( shouldResizeDown(ibufMaxCommandCount, count) || count > ibufMaxCommandCount) {
 							ibuf.allocFromBytes(count, psBytes);
 						} else {
