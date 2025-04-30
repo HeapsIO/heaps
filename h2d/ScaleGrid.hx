@@ -176,6 +176,8 @@ class ScaleGrid extends h2d.TileGroup {
 	override function getBoundsRec(relativeTo, out, forSize) {
 		checkUpdate();
 		super.getBoundsRec(relativeTo, out, forSize);
+		if( tile != null && tile.width == 1 && tile.height == 1 )
+			addBounds(relativeTo, out, 0, 0, width, height);
 	}
 
 	function checkUpdate() {
