@@ -1771,16 +1771,6 @@ class Flow extends Object {
 			}
 		}
 
-		if( scrollPosY != 0 ) {
-			var i = 0;
-			var sy = Std.int(scrollPosY);
-			for( c in children ) {
-				var p = properties[i++];
-				if( p.isAbsolute ) continue;
-				c.y -= sy;
-			}
-		}
-
 		contentWidth = cw;
 		contentHeight = ch;
 
@@ -1801,6 +1791,21 @@ class Flow extends Object {
 
 		calculatedWidth = cw;
 		calculatedHeight = ch;
+
+		if( scrollPosY != 0 ) {
+
+			var maxScroll = Std.int(contentHeight - calculatedHeight);
+			if( maxScroll < 0 ) maxScroll = 0;
+			if( scrollPosY > maxScroll ) @:bypassAccessor scrollPosY = maxScroll;
+
+			var i = 0;
+			var sy = Std.int(scrollPosY);
+			for( c in children ) {
+				var p = properties[i++];
+				if( p.isAbsolute ) continue;
+				c.y -= sy;
+			}
+		}
 
 		if( scrollBar != null ) {
 			if( contentHeight <= calculatedHeight )
