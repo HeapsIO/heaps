@@ -24,6 +24,7 @@ class InstanceBuffer {
 	var startIndex : Int;
 	public var triCount(default,null) : Int = 0;
 	public var commandCount(default, null) : Int;
+	public var maxCommandCount(default, null) : Int;
 
 	public function new() {
 	}
@@ -58,7 +59,7 @@ class InstanceBuffer {
 		dispose();
 
 		updateTriCount(commandCount, bytes);
-		this.commandCount = commandCount;
+		this.commandCount = this.maxCommandCount = commandCount;
 		this.indexCount = 0;
 		driver = h3d.Engine.getCurrent().driver;
 		driver.allocInstanceBuffer(this, bytes);

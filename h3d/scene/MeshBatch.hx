@@ -107,6 +107,10 @@ class MeshBatch extends MultiMaterial {
 	function hasPrimitiveOffset() return meshBatchFlags.has(HasPrimitiveOffset);
 	function cpuLodEnabled() return meshBatchFlags.has(EnableCpuLod);
 
+	inline function shouldResizeDown( currentSize : Int, minSize : Int ) : Bool {
+		return meshBatchFlags.has(EnableResizeDown) && currentSize > minSize << 1;
+	}
+
 	public function begin( emitCountTip = -1 ) : Int {
 		instanceCount = 0;
 		instanced.initBounds();
@@ -121,7 +125,7 @@ class MeshBatch extends MultiMaterial {
 		var alloc = hxd.impl.Allocator.get();
 		while( p != null ) {
 			var size = emitCountTip * p.paramsCount * 4;
-			if( p.data == null || p.data.length < size || ( meshBatchFlags.has(EnableResizeDown) && p.data.length > size << 1) ) {
+			if( p.data == null || p.data.length < size || shouldResizeDown(p.data.length, size) ) {
 				if( p.data != null ) alloc.disposeFloats(p.data);
 				p.data = alloc.allocFloats(size);
 			}
@@ -347,13 +351,9 @@ class MeshBatch extends MultiMaterial {
 					if( p.instanceBuffers == null )
 						p.instanceBuffers = [];
 					var ibuf = p.instanceBuffers[index];
-					if ( ibuf != null && ibuf.commandCount != count ) {
-						ibuf.dispose();
-						ibuf = null;
-					}
-					var ibufUpload = needUpload || ibuf == null;
 					if ( ibuf == null )
 						ibuf = new h3d.impl.InstanceBuffer();
+					var ibufUpload = needUpload || ibuf.commandCount != count;
 					if ( ibufUpload ) {
 						var psBytes = primitiveSubBytes[p.matIndex];
 						if ( start > 0 && count < instanceCount ) {
@@ -362,10 +362,10 @@ class MeshBatch extends MultiMaterial {
 								psBytes.setInt32(i*instanceSize+16, i);
 						}
 
-						if(count <= ibuf.commandCount && !meshBatchFlags.has(EnableResizeDown)){
-							ibuf.uploadBytes(count, psBytes);
-						} else {
+						if ( shouldResizeDown(ibufMaxCommandCount, count) || count > ibufMaxCommandCount) {
 							ibuf.allocFromBytes(count, psBytes);
+						} else {
+							ibuf.uploadBytes(count, psBytes);
 						}
 						p.instanceBuffers[index] = ibuf;
 					}
