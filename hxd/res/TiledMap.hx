@@ -5,7 +5,14 @@ typedef TiledMapLayer = {
 	var data : Array<Int>;
 	var name : String;
 	var opacity : Float;
-	var objects : Array<{ x: Int, y : Int, name : String, type : String }>;
+	var objects : Array<{
+		x : Float,
+		y : Float,
+		height : Float,
+		width : Float,
+		name : String,
+		type : String
+	}>;
 }
 
 typedef TiledMapData = {
