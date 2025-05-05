@@ -456,7 +456,7 @@ class GlDriver extends Driver {
 				case Uniform:
 					gl.uniformBlockBinding(p.p,s.buffers[i],i + start);
 				case RW, Storage:
-					#if (hl_ver >= version("1.15.0"))
+					#if (hl && hl_ver >= version("1.15.0"))
 					gl.shaderStorageBlockBinding(p.p,s.buffers[i], i + start);
 					#end
 				default:
@@ -774,7 +774,7 @@ class GlDriver extends Driver {
 			gl.colorMask(m & 1 != 0, m & 2 != 0, m & 4 != 0, m & 8 != 0);
 			var mi = m >> 4;
 			if ( mi > 0 ) {
-				#if (hl_ver >= version("1.14.0"))
+				#if (hl && hl_ver >= version("1.14.0"))
 				var i = 1;
 				do {
 					if ( mi & 15 > 0 ) {
