@@ -22,7 +22,10 @@ class SceneInspectorBaseDynComp extends h2d.Flow implements h2d.domkit.Object {
 }
 
 class SceneInspectorButtonComp extends SceneInspectorBaseComp {
-	static var SRC = <scene-inspector-button-comp content-align="middle">
+	static var SRC = <scene-inspector-button-comp
+		content-align="middle"
+		background="#4287f5"
+	>
 		<text text={text}/>
 	</scene-inspector-button-comp>
 
@@ -59,20 +62,11 @@ class SceneInspectorObjectComp extends SceneInspectorBaseDynComp {
 		<flow class="obj-header" layout="horizontal" padding="5" hspacing="5"
 			alpha={isVisible() ? 1 : 0.5}
 		>
-			<scene-inspector-button-comp(expanded ? "-" : "+")
-				class="expand-btn" width="20" background="#4287f5"
-				onClick={toggleExpand}
-			/>
-			<text class="obj-name" text={getName()}/>
-			<text class="obj-desc" text={getDesc()}/>
-			<scene-inspector-button-comp("visible")
-				class="visible-btn" background="#4287f5"
-				onClick={toggleVisibility}
-			/>
-			<scene-inspector-button-comp("teleport")
-				class="teleport-btn" background="#4287f5"
-				onClick={teleportTo}
-			if(is3d)/>
+			<scene-inspector-button-comp(expanded ? "-" : "+") min-width="20" onClick={toggleExpand}/>
+			<text text={getName()}/>
+			<text text={getDesc()}/>
+			<scene-inspector-button-comp("visible") onClick={toggleVisibility} />
+			<scene-inspector-button-comp("teleport") onClick={teleportTo} if(is3d)/>
 		</flow>
 	</scene-inspector-object-comp>
 
@@ -114,8 +108,6 @@ class SceneInspectorObjectComp extends SceneInspectorBaseDynComp {
 class SceneInspectorObject2dComp extends SceneInspectorObjectComp {
 	static var SRC = <scene-inspector-object2d-comp layout="vertical">
 		${if( expanded ){
-			<flow class="obj-details" layout="vertical">
-			</flow>
 			<flow class="child-list" layout="vertical" padding-left="20">
 				for( child in obj ) {
 					<scene-inspector-object2d-comp(inspector, child)/>
@@ -180,17 +172,11 @@ class SceneInspectorObject2dComp extends SceneInspectorObjectComp {
 class SceneInspectorObject3dComp extends SceneInspectorObjectComp {
 	static var SRC = <scene-inspector-object3d-comp layout="vertical">
 		${if( expanded ){
-			<flow class="obj-details" layout="vertical">
-				<text class="obj-props" text={getProps()}/>
-				<flow class="obj-details-btns" layout="horizontal" hspacing="5">
-					<scene-inspector-button-comp("collider")
-						class="collider-btn" background="#4287f5"
-						onClick={toggleDebugCollider}
-					/>
-					<scene-inspector-button-comp("culling")
-						class="culling-btn" background="#4287f5"
-						onClick={toggleDebugCulling}
-					/>
+			<flow class="obj-details" layout="vertical" vspacing="5">
+				<text text={getProps()}/>
+				<flow layout="horizontal" hspacing="5">
+					<scene-inspector-button-comp("collider") onClick={toggleDebugCollider}/>
+					<scene-inspector-button-comp("culling") onClick={toggleDebugCulling}/>
 				</flow>
 			</flow>
 			<flow class="child-list" layout="vertical" padding-left="20">
@@ -362,10 +348,13 @@ class SceneInspector {
 
 	public function toggle3dDebug( obj : h3d.scene.Object, debugObj : Null<h3d.scene.Object>, mode : SceneInspectorDebugMode ) {
 		if( debugObj == null ) {
-			var collider = switch( mode ) {
+			var collider = try switch( mode ) {
 				case Collider: obj.getCollider();
 				case Culling: obj.cullingCollider;
 				case _: null;
+			} catch( e ) {
+				trace("Can't get collider: " + e);
+				null;
 			};
 			if( collider != null ) {
 				debugObj = collider.makeDebugObj();
