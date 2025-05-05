@@ -251,7 +251,7 @@ class SceneInspectorObject3dComp extends SceneInspectorObjectComp {
 		if( expanded ) {
 			detailsText.text = getProps();
 			if( SceneInspector.REFRESH_DEBUG_OBJ && debugObjMode != None ) {
-				// force regen
+				// force regenerate
 				debugObj = inspector.toggle3dDebug(obj, debugObj, debugObjMode);
 				debugObj = inspector.toggle3dDebug(obj, debugObj, debugObjMode);
 			}
@@ -379,25 +379,16 @@ class SceneInspector {
 		parent = null;
 		s3d = null;
 		s2d = null;
-		rootComp = null;
 		refreshFuncs = [];
 		for( obj in debug3dObjs ) {
 			obj.remove();
 		}
 		debug3dObjs = [];
+		rootComp = null;
 		teleportTo = function(obj) {};
 	}
 
 	public dynamic function teleportTo( obj : h3d.scene.Object ) {
-	}
-
-	// ----- Functions for components -----
-
-	public function registerRefresh( comp : SceneInspectorObjectComp, f : Null<Void -> Void> ) {
-		if( f == null )
-			refreshFuncs.remove(comp);
-		else
-			refreshFuncs.set(comp, f);
 	}
 
 	public function refreshAll() {
@@ -406,6 +397,17 @@ class SceneInspector {
 		}
 	}
 
+	// ----- Functions for components -----
+
+	@:noCompletion
+	public function registerRefresh( comp : SceneInspectorObjectComp, f : Null<Void -> Void> ) {
+		if( f == null )
+			refreshFuncs.remove(comp);
+		else
+			refreshFuncs.set(comp, f);
+	}
+
+	@:noCompletion
 	public function toggle3dDebug( obj : h3d.scene.Object, debugObj : Null<h3d.scene.Object>, mode : SceneInspectorDebugMode ) {
 		if( debugObj == null ) {
 			var collider = try switch( mode ) {
