@@ -175,6 +175,7 @@ class SceneInspectorObject3dComp extends SceneInspectorObjectComp {
 			<flow class="obj-details" layout="vertical" vspacing="5">
 				<text text={getProps()}/>
 				<flow layout="horizontal" hspacing="5">
+					<scene-inspector-button-comp("bounds") onClick={toggleDebugBounds}/>
 					<scene-inspector-button-comp("collider") onClick={toggleDebugCollider}/>
 					<scene-inspector-button-comp("culling") onClick={toggleDebugCulling}/>
 				</flow>
@@ -243,6 +244,9 @@ class SceneInspectorObject3dComp extends SceneInspectorObjectComp {
 			+ 'flags:$flags';
 	}
 
+	function toggleDebugBounds() {
+		debugObj = inspector.toggle3dDebug(obj, debugObj, Bounds);
+	}
 
 	function toggleDebugCollider() {
 		debugObj = inspector.toggle3dDebug(obj, debugObj, Collider);
@@ -299,6 +303,7 @@ class SceneInspectorComp extends SceneInspectorBaseComp {
 }
 
 enum SceneInspectorDebugMode {
+	Bounds;
 	Collider;
 	Culling;
 }
@@ -349,6 +354,7 @@ class SceneInspector {
 	public function toggle3dDebug( obj : h3d.scene.Object, debugObj : Null<h3d.scene.Object>, mode : SceneInspectorDebugMode ) {
 		if( debugObj == null ) {
 			var collider = try switch( mode ) {
+				case Bounds: obj.getBounds(null, obj);
 				case Collider: obj.getCollider();
 				case Culling: obj.cullingCollider;
 				case _: null;
@@ -360,10 +366,14 @@ class SceneInspector {
 				debugObj = collider.makeDebugObj();
 				if( debugObj != null ) {
 					// restore relative position in case that the obj move
-					debugObj.x -= obj.x;
-					debugObj.y -= obj.y;
-					debugObj.z -= obj.z;
+					if( !mode.match(Bounds) ) {
+						debugObj.x -= obj.x;
+						debugObj.y -= obj.y;
+						debugObj.z -= obj.z;
+					}
 					debugObj.follow = obj;
+					debugObj.ignoreBounds = true;
+					debugObj.ignoreCollide = true;
 					h3d.scene.Interactive.setupDebugMaterial(debugObj);
 					s3d.addChild(debugObj);
 					debug3dObjs.push(debugObj);
