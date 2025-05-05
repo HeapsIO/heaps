@@ -250,6 +250,11 @@ class SceneInspectorObject3dComp extends SceneInspectorObjectComp {
 	function refresh() {
 		if( expanded ) {
 			detailsText.text = getProps();
+			if( SceneInspector.REFRESH_DEBUG_OBJ && debugObjMode != None ) {
+				// force regen
+				debugObj = inspector.toggle3dDebug(obj, debugObj, debugObjMode);
+				debugObj = inspector.toggle3dDebug(obj, debugObj, debugObjMode);
+			}
 		}
 	}
 
@@ -331,7 +336,8 @@ enum SceneInspectorDebugMode {
 	Inspect `h3d.scene.Object` (usually `s3d`) and `h2d.Object` (usually `s2d`) with domkit-based UI.
 **/
 class SceneInspector {
-	public static var AUTO_REFRESH_S : Float = 0.5;
+	public static var REFRESH_PERIOD_S : Float = 0.5;
+	public static var REFRESH_DEBUG_OBJ : Bool = true;
 
 	public var style(default, null) : h2d.domkit.Style;
 	public var parent(default, null) : h2d.Object;
@@ -356,9 +362,9 @@ class SceneInspector {
 	}
 
 	public function update( dt : Float ) {
-		if( AUTO_REFRESH_S > 0 ) {
+		if( REFRESH_PERIOD_S > 0 ) {
 			var t = haxe.Timer.stamp();
-			if( t - lastRefresh > AUTO_REFRESH_S ) {
+			if( t - lastRefresh > REFRESH_PERIOD_S ) {
 				refreshAll();
 				lastRefresh = t;
 			}
@@ -414,13 +420,15 @@ class SceneInspector {
 			if( collider != null ) {
 				debugObj = collider.makeDebugObj();
 				if( debugObj != null ) {
-					// restore relative position in case that the obj move
-					if( !mode.match(Bounds) ) {
+					if( mode.match(Culling) ) {
+						// restore relative position in case that the obj move
 						debugObj.x -= obj.x;
 						debugObj.y -= obj.y;
 						debugObj.z -= obj.z;
 					}
-					debugObj.follow = obj;
+					if( mode.match(Bounds|Culling) ) {
+						debugObj.follow = obj;
+					}
 					debugObj.ignoreBounds = true;
 					debugObj.ignoreCollide = true;
 					h3d.scene.Interactive.setupDebugMaterial(debugObj);
