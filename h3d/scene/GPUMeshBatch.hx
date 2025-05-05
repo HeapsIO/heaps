@@ -18,6 +18,10 @@ class GPUMeshBatch extends MeshBatch {
 	var countBytes : haxe.io.Bytes;
 	var materialCount : Int;
 
+	public var computePass : h3d.mat.Pass;
+	public var commandBuffer : h3d.Buffer;
+	public var countBuffer : h3d.Buffer;
+
 	var gpuLodEnabled : Bool;
 	var gpuCullingEnabled : Bool;
 
@@ -67,10 +71,6 @@ class GPUMeshBatch extends MeshBatch {
 		}
 
 		return emitCountTip;
-	}
-
-	override function createBatchData() {
-		return new GPUBatchData();
 	}
 
 	override function emitPrimitiveSubParts() {
@@ -199,63 +199,27 @@ class GPUMeshBatch extends MeshBatch {
 
 		super.flush();
 
-		materialCount = 0;
-	}
-
-	override function onFlushBuffer(p : BatchData, index : Int, count : Int) {
-		var p = cast(p, GPUBatchData);
-		var alloc = hxd.impl.Allocator.get();
-
-		var commandCountAllocated = hxd.Math.imin( hxd.Math.nextPOT( count ), p.maxInstance );
-		if ( p.commandBuffers == null) {
-			p.commandBuffers = [];
-			p.countBuffers = [];
-		}
-		var buf = p.commandBuffers[index];
-		var cbuf = p.countBuffers[index];
-		if ( buf == null ) {
-			buf = alloc.allocBuffer( commandCountAllocated, INDIRECT_DRAW_ARGUMENTS_FMT, UniformReadWrite );
-			cbuf = alloc.allocBuffer( 1, hxd.BufferFormat.VEC4_DATA, UniformReadWrite );
-			p.commandBuffers[index] = buf;
-			p.countBuffers[index] = cbuf;
-		}
-		else if ( buf.vertices < commandCountAllocated ) {
-			alloc.disposeBuffer( buf );
-			buf = alloc.allocBuffer( commandCountAllocated, INDIRECT_DRAW_ARGUMENTS_FMT, UniformReadWrite );
-			p.commandBuffers[index] = buf;
-		}
-	}
-
-	override function onFlushPass(p : BatchData) {
-		var p = cast(p, GPUBatchData);
-		var prim = getPrimitive();
-		var lodCount = getLodCount();
-
-		var computeShader;
-		if( p.computePass == null ) {
-			computeShader = new h3d.shader.InstanceIndirect();
-			var computePass = new h3d.mat.Pass("batchUpdate");
+		var computeShader : h3d.shader.InstanceIndirect.InstanceIndirectBase;
+		if( computePass == null ) {
+			computeShader = emittedSubParts != null ? new h3d.shader.InstanceIndirect.SubPartInstanceIndirect() : new h3d.shader.InstanceIndirect();
+			computePass = new h3d.mat.Pass("batchUpdate");
 			computePass.addShader(computeShader);
 			addComputeShaders(computePass);
-			p.computePass = computePass;
 		} else {
-			computeShader = p.computePass.getShader(h3d.shader.InstanceIndirect);
+			computeShader = computePass.getShader(h3d.shader.InstanceIndirect.InstanceIndirectBase);
 		}
 
 		computeShader.ENABLE_LOD = gpuLodEnabled;
 		computeShader.ENABLE_CULLING = gpuCullingEnabled;
 		computeShader.ENABLE_DISTANCE_CLIPPING = maxDistance >= 0;
-		computeShader.radius = prim.getBounds().dimension() * 0.5;
 		computeShader.maxDistance = maxDistance;
-		computeShader.matInfos = matInfos;
-		computeShader.lodCount = lodCount;
-		computeShader.materialCount = materialCount;
 		computeShader.MAX_MATERIAL_COUNT = 16;
 		while ( materialCount * lodCount > computeShader.MAX_MATERIAL_COUNT )
 			computeShader.MAX_MATERIAL_COUNT = computeShader.MAX_MATERIAL_COUNT + 16;
+		computeShader.matInfos = matInfos;
 
 		if ( emittedSubParts != null ) {
-			computeShader.USING_SUB_PART = true;
+			var computeShader : h3d.shader.InstanceIndirect.SubPartInstanceIndirect = cast computeShader;
 			computeShader.subPartCount = emittedSubParts.length;
 			computeShader.subPartInfos = subPartsInfos;
 			computeShader.instanceOffsets = instanceOffsetsGpu;
@@ -263,45 +227,61 @@ class GPUMeshBatch extends MeshBatch {
 			var maxSubPartsElement = hxd.Math.ceil( emittedSubParts.length / 2 );
 			while ( maxSubPartsElement > computeShader.MAX_SUB_PART_BUFFER_ELEMENT_COUNT )
 				computeShader.MAX_SUB_PART_BUFFER_ELEMENT_COUNT = computeShader.MAX_SUB_PART_BUFFER_ELEMENT_COUNT + 16;
+		} else {
+			var computeShader : h3d.shader.InstanceIndirect = cast computeShader;
+			computeShader.instanceCount = instanceCount;
+			computeShader.radius = prim.getBounds().dimension() * 0.5;
+			computeShader.lodCount = lodCount;
+			computeShader.materialCount = materialCount;
+			computeShader.instanceCount = instanceCount;
 		}
+
+		var alloc = hxd.impl.Allocator.get();
+		var commandCountAllocated = hxd.Math.nextPOT( instanceCount * materialCount );
+		if ( commandBuffer == null ) {
+			commandBuffer = alloc.allocBuffer( commandCountAllocated, INDIRECT_DRAW_ARGUMENTS_FMT, UniformReadWrite );
+			countBuffer = alloc.allocBuffer( 1, hxd.BufferFormat.VEC4_DATA, UniformReadWrite );
+			if ( countBytes == null ) {
+				countBytes = haxe.io.Bytes.alloc(4*4);
+				countBytes.setInt32(0, 0);
+			}
+		} else if ( commandBuffer.vertices < commandCountAllocated ) {
+			alloc.disposeBuffer( commandBuffer );
+			commandBuffer = alloc.allocBuffer( commandCountAllocated, INDIRECT_DRAW_ARGUMENTS_FMT, UniformReadWrite );
+		}
+
+		materialCount = 0;
 	}
 
 	function addComputeShaders( pass : h3d.mat.Pass ) {}
 
-	override function emitPass(ctx : RenderContext, p : BatchData) {
-		var p = cast(p, GPUBatchData);
-		var emittedCount = 0;
-		for( i => buf in p.buffers ) {
-			ctx.emitPass(p.pass, this).index = i | (p.matIndex << 16);
-			if ( p.commandBuffers != null && p.commandBuffers.length > 0 ) {
-				var count = hxd.Math.imin( instanceCount - p.maxInstance * i, p.maxInstance);
-				var computeShader = p.computePass.getShader(h3d.shader.InstanceIndirect);
-				if ( gpuCullingEnabled )
-					computeShader.frustum = ctx.getCameraFrustumBuffer();
-				computeShader.instanceData = buf;
-				computeShader.matIndex = p.matIndex;
-				computeShader.commandBuffer = p.commandBuffers[i];
-				if ( countBytes == null ) {
-					countBytes = haxe.io.Bytes.alloc(4*4);
-					countBytes.setInt32(0, 0);
-				}
-				p.countBuffers[i].uploadBytes(countBytes, 0, 1);
-				computeShader.countBuffer = p.countBuffers[i];
-				computeShader.startInstanceOffset = emittedCount;
-				computeShader.ENABLE_COUNT_BUFFER = isCountBufferAllowed();
-				ctx.computeList(@:privateAccess p.computePass.shaders);
-				ctx.computeDispatch(count);
-				emittedCount += count;
-			}
+	override function emit(ctx:RenderContext) {
+		super.emit(ctx);
+		if ( commandBuffer != null && instanceCount > 0) {
+			var computeShader = computePass.getShader(h3d.shader.InstanceIndirect.InstanceIndirectBase);
+			if ( gpuCullingEnabled )
+				computeShader.frustum = ctx.getCameraFrustumBuffer();
+			computeShader.instanceData = dataPasses.buffers[0];
+			computeShader.commandBuffer = commandBuffer;
+			countBuffer.uploadBytes(countBytes, 0, 1);
+			computeShader.countBuffer = countBuffer;
+			computeShader.ENABLE_COUNT_BUFFER = isCountBufferAllowed();
+			ctx.computeList(@:privateAccess computePass.shaders);
+			ctx.computeDispatch(instanceCount);
 		}
+	}
+
+	override function emitPass(ctx : RenderContext, p : BatchData) {
+		ctx.emitPass(p.pass, this).index = p.matIndex << 16;
 	}
 
 	override function setPassCommand(p : BatchData, bufferIndex : Int) {
 		super.setPassCommand(p, bufferIndex);
-		var p = cast(p, GPUBatchData);
-		if ( p.commandBuffers != null && p.commandBuffers.length > 0 ) {
-			@:privateAccess instanced.commands.data = p.commandBuffers[bufferIndex].vbuf;
-			@:privateAccess instanced.commands.countBuffer = p.countBuffers[bufferIndex].vbuf;
+		if ( commandBuffer != null ) {
+			@:privateAccess instanced.commands.data = commandBuffer.vbuf;
+			@:privateAccess instanced.commands.countBuffer = countBuffer.vbuf;
+			@:privateAccess instanced.commands.offset = p.matIndex * instanceCount;
+			@:privateAccess instanced.commands.countOffset = 0;
 		}
 	}
 
@@ -332,27 +312,12 @@ class GPUMeshBatch extends MeshBatch {
 			alloc.disposeBuffer(instanceOffsetsGpu);
 		instanceOffsetsCpu = null;
 
+		if ( commandBuffer != null )
+			alloc.disposeBuffer(commandBuffer);
+		if ( countBuffer != null )
+			alloc.disposeBuffer(countBuffer);
+
 		emittedSubParts = null;
 		countBytes = null;
-	}
-}
-
-class GPUBatchData extends BatchData {
-	public var computePass : h3d.mat.Pass;
-	public var commandBuffers : Array<h3d.Buffer>;
-	public var countBuffers : Array<h3d.Buffer>;
-
-	override function clean() {
-		super.clean();
-
-		var alloc = hxd.impl.Allocator.get();
-		if ( commandBuffers != null && commandBuffers.length > 0 ) {
-			for ( buf in commandBuffers )
-				alloc.disposeBuffer(buf);
-			commandBuffers.resize(0);
-			for ( buf in countBuffers )
-				alloc.disposeBuffer(buf);
-			countBuffers.resize(0);
-		}
 	}
 }
