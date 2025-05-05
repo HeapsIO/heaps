@@ -29,6 +29,31 @@ enum abstract ObjectFlags(Int) {
 		if( b ) this |= f.toInt() else this &= ~f.toInt();
 		return b;
 	}
+	public inline function toString() {
+		var s = "";
+		if( has(FPosChanged) ) s += " | FPosChanged";
+		if( has(FVisible) ) s += " | FVisible";
+		if( has(FCulled) ) s += " | FCulled";
+		if( has(FFollowPositionOnly) ) s += " | FFollowPositionOnly";
+		if( has(FLightCameraCenter) ) s += " | FLightCameraCenter";
+		if( has(FAllocated) ) s += " | FAllocated";
+		if( has(FAlwaysSyncAnimation) ) s += " | FAlwaysSyncAnimation";
+		if( has(FInheritCulled) ) s += " | FInheritCulled";
+		if( has(FModelRoot) ) s += " | FModelRoot";
+		if( has(FIgnoreBounds) ) s += " | FIgnoreBounds";
+		if( has(FIgnoreCollide) ) s += " | FIgnoreCollide";
+		if( has(FIgnoreParentTransform) ) s += " | FIgnoreParentTransform";
+		if( has(FCullingColliderInherited) ) s += " | FCullingColliderInherited";
+		if( has(FFixedPosition) ) s += " | FFixedPosition";
+		if( has(FFixedPositionSynced) ) s += " | FFixedPositionSynced";
+		if( has(FAlwaysSync) ) s += " | FAlwaysSync";
+		if( has(FDrawn) ) s += " | FDrawn";
+		if( has(FInSync) ) s += " | FInSync";
+		if( has(FPosChangedInSync) ) s += " | FPosChangedInSync";
+		if( s.length > 0 )
+			s = s.substr(3);
+		return s;
+	}
 }
 
 /**

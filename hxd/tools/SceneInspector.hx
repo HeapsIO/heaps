@@ -63,10 +63,8 @@ class SceneInspectorObjectComp extends SceneInspectorBaseDynComp {
 				class="expand-btn" width="20" background="#4287f5"
 				onClick={toggleExpand}
 			/>
-			<flow class="obj-line" hspacing="5">
-				<text class="obj-name" text={getName()}/>
-				<text class="obj-desc" text={getDesc()}/>
-			</flow>
+			<text class="obj-name" text={getName()}/>
+			<text class="obj-desc" text={getDesc()}/>
 			<scene-inspector-button-comp("visible")
 				class="visible-btn" background="#4287f5"
 				onClick={toggleVisibility}
@@ -84,6 +82,7 @@ class SceneInspectorObjectComp extends SceneInspectorBaseDynComp {
 
 	public function new( inspector : SceneInspector, ?parent ){
 		this.inspector = inspector;
+		this.expanded = false;
 		super(parent);
 	}
 
@@ -115,6 +114,8 @@ class SceneInspectorObjectComp extends SceneInspectorBaseDynComp {
 class SceneInspectorObject2dComp extends SceneInspectorObjectComp {
 	static var SRC = <scene-inspector-object2d-comp layout="vertical">
 		${if( expanded ){
+			<flow class="obj-details" layout="vertical">
+			</flow>
 			<flow class="child-list" layout="vertical" padding-left="20">
 				for( child in obj ) {
 					<scene-inspector-object2d-comp(inspector, child)/>
@@ -127,7 +128,6 @@ class SceneInspectorObject2dComp extends SceneInspectorObjectComp {
 
 	public function new( inspector : SceneInspector, obj : h2d.Object, ?parent ){
 		this.obj = obj;
-		this.expanded = obj.numChildren == 0;
 		this.is3d = false;
 		super(inspector, parent);
 	}
@@ -145,7 +145,7 @@ class SceneInspectorObject2dComp extends SceneInspectorObjectComp {
 
 	override function toggleExpand() {
 		// prevent expand self
-		if( obj == @:privateAccess inspector.rootComp )
+		if( obj == inspector.rootComp )
 			return;
 		super.toggleExpand();
 	}
@@ -162,7 +162,7 @@ class SceneInspectorObject2dComp extends SceneInspectorObjectComp {
 
 	override function toggleVisibility() {
 		// do not make parent or self invisible
-		@:privateAccess if( obj == inspector.parent || obj == inspector.rootComp )
+		if( obj == inspector.parent || obj == inspector.rootComp )
 			return;
 		obj.visible = !obj.visible;
 		// update might changes visible flag
@@ -180,6 +180,19 @@ class SceneInspectorObject2dComp extends SceneInspectorObjectComp {
 class SceneInspectorObject3dComp extends SceneInspectorObjectComp {
 	static var SRC = <scene-inspector-object3d-comp layout="vertical">
 		${if( expanded ){
+			<flow class="obj-details" layout="vertical">
+				<text class="obj-props" text={getProps()}/>
+				<flow class="obj-details-btns" layout="horizontal" hspacing="5">
+					<scene-inspector-button-comp("collider")
+						class="collider-btn" background="#4287f5"
+						onClick={toggleDebugCollider}
+					/>
+					<scene-inspector-button-comp("culling")
+						class="culling-btn" background="#4287f5"
+						onClick={toggleDebugCulling}
+					/>
+				</flow>
+			</flow>
 			<flow class="child-list" layout="vertical" padding-left="20">
 				for( child in obj ) {
 					<scene-inspector-object3d-comp(inspector, child)/>
@@ -189,12 +202,20 @@ class SceneInspectorObject3dComp extends SceneInspectorObjectComp {
 	</scene-inspector-object3d-comp>
 
 	var obj : h3d.scene.Object;
+	var debugObj : h3d.scene.Object;
 
 	public function new( inspector : SceneInspector, obj : h3d.scene.Object, ?parent ){
 		this.obj = obj;
-		this.expanded = obj.numChildren == 0;
 		this.is3d = true;
 		super(inspector, parent);
+	}
+
+	override function onRemove() {
+		if( debugObj != null ) {
+			debugObj.remove();
+			debugObj = null;
+		}
+		super.onRemove();
 	}
 
 	override function getName() {
@@ -221,12 +242,28 @@ class SceneInspectorObject3dComp extends SceneInspectorObjectComp {
 
 	override function toggleVisibility() {
 		obj.visible = !obj.visible;
-		// setter might changes visible flag
+		// update might changes visible flag
 		haxe.Timer.delay(() -> rebuild(), 0);
 	}
 
 	override function teleportTo() {
 		inspector.teleportTo(obj);
+	}
+
+	function getProps() {
+		var position = obj.getAbsPos().getPosition();
+		var flags = @:privateAccess obj.flags.toString();
+		return 'absPos:$position\n'
+			+ 'flags:$flags';
+	}
+
+
+	function toggleDebugCollider() {
+		debugObj = inspector.toggle3dDebug(obj, debugObj, Collider);
+	}
+
+	function toggleDebugCulling() {
+		debugObj = inspector.toggle3dDebug(obj, debugObj, Culling);
 	}
 
 	static function getChildCountRec( obj : h3d.scene.Object ) : Int{
@@ -236,18 +273,18 @@ class SceneInspectorObject3dComp extends SceneInspectorObjectComp {
 		return obj.numChildren + count;
 	}
 
-	static function getVisibleMeshes( obj: h3d.scene.Object, ?out : Array<h3d.scene.Mesh> ){
+	static function getVisibleMeshes( obj: h3d.scene.Object, ?out : Array<h3d.scene.Mesh> ) {
 		if( out == null ) out = [];
 		if( obj.visible ){
 			var m = Std.downcast(obj, h3d.scene.Mesh);
 			if( m != null ) out.push(m);
-			for( c in @:privateAccess obj.children )
+			for( c in obj )
 				getVisibleMeshes(c, out);
 		}
 		return out;
 	}
 
-	static function getTriangleCount( obj: h3d.scene.Object ) : Int{
+	static function getTriangleCount( obj: h3d.scene.Object ) : Int {
 		var tri = 0;
 		for( m in getVisibleMeshes(obj) ){
 			tri += m.primitive.triCount();
@@ -275,6 +312,11 @@ class SceneInspectorComp extends SceneInspectorBaseComp {
 	}
 }
 
+enum SceneInspectorDebugMode {
+	Collider;
+	Culling;
+}
+
 /**
 	Requires:
 	`-lib domkit --macro domkit.Macros.registerComponentsPath("$")`.
@@ -283,16 +325,18 @@ class SceneInspectorComp extends SceneInspectorBaseComp {
 **/
 class SceneInspector {
 	public var style(default, null) : h2d.domkit.Style;
-	var parent : h2d.Object;
+	public var parent(default, null) : h2d.Object;
 	var s3d : h3d.scene.Object;
 	var s2d : h2d.Object;
-	var rootComp : SceneInspectorComp;
+	var debug3dObjs : Array<h3d.scene.Object>;
+	public var rootComp(default, null) : SceneInspectorComp;
 
 	public function new( parent : h2d.Object, s3d : h3d.scene.Object, ?s2d : h2d.Object ) {
 		style = new h2d.domkit.Style();
 		this.parent = parent;
 		this.s3d = s3d;
 		this.s2d = s2d;
+		debug3dObjs = [];
 		rootComp = new SceneInspectorComp(this, s3d, s2d, parent);
 		style.addObject(rootComp);
 	}
@@ -306,10 +350,43 @@ class SceneInspector {
 		s3d = null;
 		s2d = null;
 		rootComp = null;
+		for( obj in debug3dObjs ) {
+			obj.remove();
+		}
+		debug3dObjs = [];
 		teleportTo = function(obj) {};
 	}
 
 	public dynamic function teleportTo( obj : h3d.scene.Object ) {
 	}
+
+	public function toggle3dDebug( obj : h3d.scene.Object, debugObj : Null<h3d.scene.Object>, mode : SceneInspectorDebugMode ) {
+		if( debugObj == null ) {
+			var collider = switch( mode ) {
+				case Collider: obj.getCollider();
+				case Culling: obj.cullingCollider;
+				case _: null;
+			};
+			if( collider != null ) {
+				debugObj = collider.makeDebugObj();
+				if( debugObj != null ) {
+					// restore relative position in case that the obj move
+					debugObj.x -= obj.x;
+					debugObj.y -= obj.y;
+					debugObj.z -= obj.z;
+					debugObj.follow = obj;
+					h3d.scene.Interactive.setupDebugMaterial(debugObj);
+					s3d.addChild(debugObj);
+					debug3dObjs.push(debugObj);
+				}
+			}
+		} else {
+			debug3dObjs.remove(debugObj);
+			debugObj.remove();
+			debugObj = null;
+		}
+		return debugObj;
+	}
+
 }
 #end
