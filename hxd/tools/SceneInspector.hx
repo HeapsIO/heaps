@@ -173,7 +173,7 @@ class SceneInspectorObject3dComp extends SceneInspectorObjectComp {
 	static var SRC = <scene-inspector-object3d-comp layout="vertical">
 		${if( expanded ){
 			<flow class="obj-details" layout="vertical" vspacing="5">
-				<text text={getProps()}/>
+				<text text={getProps()} id="detailsText"/>
 				<flow layout="horizontal" hspacing="5">
 					<scene-inspector-button-comp("bounds") onClick={toggleDebugBounds}/>
 					<scene-inspector-button-comp("collider") onClick={toggleDebugCollider}/>
@@ -194,6 +194,7 @@ class SceneInspectorObject3dComp extends SceneInspectorObjectComp {
 	public function new( inspector : SceneInspector, obj : h3d.scene.Object, ?parent ){
 		this.obj = obj;
 		this.is3d = true;
+		inspector.registerRefresh(this, refresh);
 		super(inspector, parent);
 	}
 
@@ -202,6 +203,7 @@ class SceneInspectorObject3dComp extends SceneInspectorObjectComp {
 			debugObj.remove();
 			debugObj = null;
 		}
+		inspector.registerRefresh(this, null);
 		super.onRemove();
 	}
 
@@ -242,6 +244,12 @@ class SceneInspectorObject3dComp extends SceneInspectorObjectComp {
 		var flags = @:privateAccess obj.flags.toString();
 		return 'absPos:$position\n'
 			+ 'flags:$flags';
+	}
+
+	function refresh() {
+		if( expanded ) {
+			detailsText.text = getProps();
+		}
 	}
 
 	function toggleDebugBounds() {
@@ -289,6 +297,9 @@ class SceneInspectorComp extends SceneInspectorBaseComp {
 	 	padding="5" max-height="720"
 		background="#555555" background-alpha="0.8"
 	>
+		<flow layout="horizontal" hspacing="5">
+			<scene-inspector-button-comp("refresh all") onClick={inspector.refreshAll}/>
+		</flow>
 		<scene-inspector-object3d-comp(inspector, root3d)/>
 		<scene-inspector-object2d-comp(inspector, root2d) if(root2d != null)/>
 	</scene-inspector-comp>
@@ -315,11 +326,16 @@ enum SceneInspectorDebugMode {
 	Inspect `h3d.scene.Object` (usually `s3d`) and `h2d.Object` (usually `s2d`) with domkit-based UI.
 **/
 class SceneInspector {
+	public static var AUTO_REFRESH_S : Float = 0.5;
+
 	public var style(default, null) : h2d.domkit.Style;
 	public var parent(default, null) : h2d.Object;
 	var s3d : h3d.scene.Object;
 	var s2d : h2d.Object;
+	var refreshFuncs : Map<SceneInspectorObjectComp, Void->Void>;
 	var debug3dObjs : Array<h3d.scene.Object>;
+	var lastRefresh : Float = 0;
+
 	public var rootComp(default, null) : SceneInspectorComp;
 
 	public function new( parent : h2d.Object, s3d : h3d.scene.Object, ?s2d : h2d.Object ) {
@@ -327,9 +343,21 @@ class SceneInspector {
 		this.parent = parent;
 		this.s3d = s3d;
 		this.s2d = s2d;
+		refreshFuncs = [];
 		debug3dObjs = [];
+		// init rootComp after all other variables ready
 		rootComp = new SceneInspectorComp(this, s3d, s2d, parent);
 		style.addObject(rootComp);
+	}
+
+	public function update( dt : Float ) {
+		if( AUTO_REFRESH_S > 0 ) {
+			var t = haxe.Timer.stamp();
+			if( t - lastRefresh > AUTO_REFRESH_S ) {
+				refreshAll();
+				lastRefresh = t;
+			}
+		}
 	}
 
 	public function dispose() {
@@ -341,6 +369,7 @@ class SceneInspector {
 		s3d = null;
 		s2d = null;
 		rootComp = null;
+		refreshFuncs = [];
 		for( obj in debug3dObjs ) {
 			obj.remove();
 		}
@@ -349,6 +378,21 @@ class SceneInspector {
 	}
 
 	public dynamic function teleportTo( obj : h3d.scene.Object ) {
+	}
+
+	// ----- Functions for components -----
+
+	public function registerRefresh( comp : SceneInspectorObjectComp, f : Null<Void -> Void> ) {
+		if( f == null )
+			refreshFuncs.remove(comp);
+		else
+			refreshFuncs.set(comp, f);
+	}
+
+	public function refreshAll() {
+		for( k=>f in refreshFuncs ) {
+			f();
+		}
 	}
 
 	public function toggle3dDebug( obj : h3d.scene.Object, debugObj : Null<h3d.scene.Object>, mode : SceneInspectorDebugMode ) {
