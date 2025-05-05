@@ -190,6 +190,7 @@ class SceneInspectorObject3dComp extends SceneInspectorObjectComp {
 
 	var obj : h3d.scene.Object;
 	var debugObj : h3d.scene.Object;
+	var debugObjMode : SceneInspectorDebugMode = None;
 
 	public function new( inspector : SceneInspector, obj : h3d.scene.Object, ?parent ){
 		this.obj = obj;
@@ -253,15 +254,18 @@ class SceneInspectorObject3dComp extends SceneInspectorObjectComp {
 	}
 
 	function toggleDebugBounds() {
-		debugObj = inspector.toggle3dDebug(obj, debugObj, Bounds);
+		debugObjMode = Bounds;
+		debugObj = inspector.toggle3dDebug(obj, debugObj, debugObjMode);
 	}
 
 	function toggleDebugCollider() {
-		debugObj = inspector.toggle3dDebug(obj, debugObj, Collider);
+		debugObjMode = Collider;
+		debugObj = inspector.toggle3dDebug(obj, debugObj, debugObjMode);
 	}
 
 	function toggleDebugCulling() {
-		debugObj = inspector.toggle3dDebug(obj, debugObj, Culling);
+		debugObjMode = Culling;
+		debugObj = inspector.toggle3dDebug(obj, debugObj, debugObjMode);
 	}
 
 	static function getChildCountRec( obj : h3d.scene.Object ) : Int{
@@ -314,6 +318,7 @@ class SceneInspectorComp extends SceneInspectorBaseComp {
 }
 
 enum SceneInspectorDebugMode {
+	None;
 	Bounds;
 	Collider;
 	Culling;
