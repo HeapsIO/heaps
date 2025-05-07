@@ -2455,7 +2455,7 @@ class DX12Driver extends h3d.impl.Driver {
 			if ( commands.countBuffer != null )
 				transition(commands.countBuffer, INDIRECT_ARGUMENT);
 			flushTransitions();
-			frame.commandList.executeIndirect(indirectCommand, commands.commandCount, commands.data.res, commands.offset, commands.countBuffer != null ? commands.countBuffer.res : null, commands.countOffset);
+			frame.commandList.executeIndirect(indirectCommand, commands.commandCount, commands.data.res, commands.offset * InstanceBuffer.ELEMENT_SIZE, commands.countBuffer != null ? commands.countBuffer.res : null, commands.countOffset * 4);
 		} else {
 			flushTransitions();
 			frame.commandList.drawIndexedInstanced(commands.indexCount, commands.commandCount, commands.startIndex, 0, 0);
