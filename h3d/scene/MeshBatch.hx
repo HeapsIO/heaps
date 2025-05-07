@@ -56,12 +56,8 @@ class MeshBatch extends MultiMaterial {
 	public var calcBounds = true;
 
 	/**
-	 * If set, this distance is used to compute screen ratio and lod on all the instances this frame
-	 */
-	public var lodDistance : Float;
-
-	/**
-	 * If set, use this lod in emitInstance()
+	 	With EnableCpuLod, set the lod of the next emitInstance.
+		Without EnableCpuLod and not using primitiveSubParts, set the lod of the whole batch.
 	 */
 	public var curLod : Int = -1;
 
@@ -469,7 +465,6 @@ class MeshBatch extends MultiMaterial {
 
 	override function emit(ctx:RenderContext) {
 		if( instanceCount == 0 ) return;
-		calcScreenRatio(ctx);
 		var p = dataPasses;
 		while( p != null ) {
 			var pass = p.pass;
@@ -516,7 +511,7 @@ class MeshBatch extends MultiMaterial {
 
 	function setPassCommand(p : BatchData, bufferIndex : Int) {
 		var count = hxd.Math.imin( instanceCount - p.maxInstance * bufferIndex, p.maxInstance );
-		instanced.setCommand(p.matIndex, instanced.screenRatioToLod(curScreenRatio), count);
+		instanced.setCommand(p.matIndex, curLod >= 0 ? curLod : 0, count);
 	}
 
 	function partsFromPrimitive(prim : h3d.prim.MeshPrimitive) {
@@ -539,10 +534,6 @@ class MeshBatch extends MultiMaterial {
 			}
 		}
 		return true;
-	}
-
-	override function calcScreenRatio(ctx:RenderContext) {
-		curScreenRatio = getPrimitive().getBounds().dimension() / ( 2.0 * hxd.Math.max(lodDistance, 0.0001) );
 	}
 
 	override function addBoundsRec( b : h3d.col.Bounds, relativeTo: h3d.Matrix ) {
