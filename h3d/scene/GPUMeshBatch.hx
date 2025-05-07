@@ -233,7 +233,6 @@ class GPUMeshBatch extends MeshBatch {
 			computeShader.radius = prim.getBounds().dimension() * 0.5;
 			computeShader.lodCount = lodCount;
 			computeShader.materialCount = materialCount;
-			computeShader.instanceCount = instanceCount;
 		}
 
 		var alloc = hxd.impl.Allocator.get();
