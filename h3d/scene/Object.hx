@@ -31,25 +31,25 @@ enum abstract ObjectFlags(Int) {
 	}
 	public inline function toString() {
 		var s = "";
-		if( has(FPosChanged) ) s += " | FPosChanged";
-		if( has(FVisible) ) s += " | FVisible";
-		if( has(FCulled) ) s += " | FCulled";
-		if( has(FFollowPositionOnly) ) s += " | FFollowPositionOnly";
-		if( has(FLightCameraCenter) ) s += " | FLightCameraCenter";
-		if( has(FAllocated) ) s += " | FAllocated";
-		if( has(FAlwaysSyncAnimation) ) s += " | FAlwaysSyncAnimation";
-		if( has(FInheritCulled) ) s += " | FInheritCulled";
-		if( has(FModelRoot) ) s += " | FModelRoot";
-		if( has(FIgnoreBounds) ) s += " | FIgnoreBounds";
-		if( has(FIgnoreCollide) ) s += " | FIgnoreCollide";
-		if( has(FIgnoreParentTransform) ) s += " | FIgnoreParentTransform";
-		if( has(FCullingColliderInherited) ) s += " | FCullingColliderInherited";
-		if( has(FFixedPosition) ) s += " | FFixedPosition";
-		if( has(FFixedPositionSynced) ) s += " | FFixedPositionSynced";
-		if( has(FAlwaysSync) ) s += " | FAlwaysSync";
-		if( has(FDrawn) ) s += " | FDrawn";
-		if( has(FInSync) ) s += " | FInSync";
-		if( has(FPosChangedInSync) ) s += " | FPosChangedInSync";
+		if( has(FPosChanged) ) s += " | PosChanged";
+		if( has(FVisible) ) s += " | Visible";
+		if( has(FCulled) ) s += " | Culled";
+		if( has(FFollowPositionOnly) ) s += " | FollowPositionOnly";
+		if( has(FLightCameraCenter) ) s += " | LightCameraCenter";
+		if( has(FAllocated) ) s += " | Allocated";
+		if( has(FAlwaysSyncAnimation) ) s += " | AlwaysSyncAnimation";
+		if( has(FInheritCulled) ) s += " | InheritCulled";
+		if( has(FModelRoot) ) s += " | ModelRoot";
+		if( has(FIgnoreBounds) ) s += " | IgnoreBounds";
+		if( has(FIgnoreCollide) ) s += " | IgnoreCollide";
+		if( has(FIgnoreParentTransform) ) s += " | IgnoreParentTransform";
+		if( has(FCullingColliderInherited) ) s += " | CullingColliderInherited";
+		if( has(FFixedPosition) ) s += " | FixedPosition";
+		if( has(FFixedPositionSynced) ) s += " | FixedPositionSynced";
+		if( has(FAlwaysSync) ) s += " | AlwaysSync";
+		if( has(FDrawn) ) s += " | Drawn";
+		if( has(FInSync) ) s += " | InSync";
+		if( has(FPosChangedInSync) ) s += " | PosChangedInSync";
 		if( s.length > 0 )
 			s = s.substr(3);
 		return s;
