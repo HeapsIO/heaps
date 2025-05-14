@@ -199,7 +199,8 @@ class DynamicJointData extends JointData {
 		// Slackness (length keeper)
 		var dirToParent = (newWorldPos - skin.jointsData[j.parent.index].currentAbsPose.getPosition()).normalized();
 		var lengthToParent = relPos.getPosition().length();
-		expectedPos.load(skin.jointsData[j.parent.index].currentAbsPose.getPosition() + dirToParent * lengthToParent);
+		var scale = skin.jointsData[j.parent.index].currentAbsPose.getScale(); //! Non uniform scale won't work
+		expectedPos.load(skin.jointsData[j.parent.index].currentAbsPose.getPosition() + (dirToParent * lengthToParent * scale.x));
 		newWorldPos.lerp(expectedPos, newWorldPos, j.slackness);
 
 		// Apply lock axis
@@ -488,7 +489,7 @@ class Skin extends MultiMaterial {
 		if ( prevJointsFrame == hxd.Timer.frameCount )
 			return;
 		prevJointsFrame = hxd.Timer.frameCount;
-		
+
 		if ( prevPalette == null ) {
 			prevPalette = [];
 			for ( _ in 0...currentPalette.length )
