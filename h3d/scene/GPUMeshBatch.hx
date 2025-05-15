@@ -15,12 +15,11 @@ class GPUMeshBatch extends MeshBatch {
 	var instanceOffsetsCpu : haxe.io.Bytes;
 	var instanceOffsetsGpu : h3d.Buffer;
 	var subPartsInfos : h3d.Buffer;
-	var countBytes : haxe.io.Bytes;
 	var materialCount : Int;
 
 	public var computePass : h3d.mat.Pass;
 	public var commandBuffer : h3d.Buffer;
-	public var countBuffer : h3d.Buffer;
+	public var gpuCounter : h3d.GPUCounter;
 
 	var gpuLodEnabled : Bool;
 	var gpuCullingEnabled : Bool;
@@ -239,11 +238,7 @@ class GPUMeshBatch extends MeshBatch {
 		var commandCountAllocated = hxd.Math.nextPOT( instanceCount * materialCount );
 		if ( commandBuffer == null ) {
 			commandBuffer = alloc.allocBuffer( commandCountAllocated, INDIRECT_DRAW_ARGUMENTS_FMT, UniformReadWrite );
-			countBuffer = alloc.allocBuffer( 1, hxd.BufferFormat.VEC4_DATA, UniformReadWrite );
-			if ( countBytes == null ) {
-				countBytes = haxe.io.Bytes.alloc(4*4);
-				countBytes.setInt32(0, 0);
-			}
+			gpuCounter = new h3d.GPUCounter();
 		} else if ( commandBuffer.vertices < commandCountAllocated ) {
 			alloc.disposeBuffer( commandBuffer );
 			commandBuffer = alloc.allocBuffer( commandCountAllocated, INDIRECT_DRAW_ARGUMENTS_FMT, UniformReadWrite );
@@ -262,8 +257,8 @@ class GPUMeshBatch extends MeshBatch {
 				computeShader.frustum = ctx.getCameraFrustumBuffer();
 			computeShader.instanceData = dataPasses.buffers[0];
 			computeShader.commandBuffer = commandBuffer;
-			countBuffer.uploadBytes(countBytes, 0, 1);
-			computeShader.countBuffer = countBuffer;
+			gpuCounter.reset();
+			computeShader.countBuffer = gpuCounter.buffer;
 			computeShader.ENABLE_COUNT_BUFFER = isCountBufferAllowed();
 			ctx.computeList(@:privateAccess computePass.shaders);
 			ctx.computeDispatch(instanceCount);
@@ -278,7 +273,7 @@ class GPUMeshBatch extends MeshBatch {
 		super.setPassCommand(p, bufferIndex);
 		if ( commandBuffer != null ) {
 			@:privateAccess instanced.commands.data = commandBuffer.vbuf;
-			@:privateAccess instanced.commands.countBuffer = countBuffer.vbuf;
+			@:privateAccess instanced.commands.countBuffer = gpuCounter.buffer.vbuf;
 			@:privateAccess instanced.commands.offset = p.matIndex * instanceCount;
 			@:privateAccess instanced.commands.countOffset = 0;
 		}
@@ -313,10 +308,9 @@ class GPUMeshBatch extends MeshBatch {
 
 		if ( commandBuffer != null )
 			alloc.disposeBuffer(commandBuffer);
-		if ( countBuffer != null )
-			alloc.disposeBuffer(countBuffer);
+		if( gpuCounter != null )
+			gpuCounter.dispose();
 
 		emittedSubParts = null;
-		countBytes = null;
 	}
 }

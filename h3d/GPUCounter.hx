@@ -5,12 +5,14 @@ class GPUCounter {
 	var accessor : haxe.io.Bytes;
 
 	public function new() {
-		buffer = new h3d.Buffer(1,hxd.BufferFormat.INDEX32, [ReadWriteBuffer]);
+		var alloc = hxd.impl.Allocator.get();
+		buffer = alloc.allocBuffer(1,hxd.BufferFormat.INDEX32, UniformReadWrite);
 		accessor = haxe.io.Bytes.alloc(4);
 	}
 
 	public function dispose(){
-		buffer.dispose();
+		var alloc = hxd.impl.Allocator.get();
+		alloc.disposeBuffer(buffer);
 	}
 
 	public function get() : Int {
