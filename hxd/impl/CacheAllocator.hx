@@ -82,8 +82,8 @@ class CacheAllocator extends Allocator {
 		checkGC();
 	}
 
-	override function allocIndexBuffer( count : Int ) {
-		var id = count;
+	override function allocIndexBuffer( count : Int, is32 : Bool = false ) {
+		var id = count << 1 + (is32 ? 1 : 0);
 		checkFrame();
 		var c = indexBuffers.get(id);
 		if( c != null ) {
@@ -91,12 +91,13 @@ class CacheAllocator extends Allocator {
 			if( i != null ) return i;
 		}
 		checkGC();
-		return super.allocIndexBuffer(count);
+		return super.allocIndexBuffer(count, is32);
 	}
 
 	override function disposeIndexBuffer( i : h3d.Indexes ) {
 		if( i.isDisposed() ) return;
-		var id = i.count;
+		var is32 = cast(i, h3d.Buffer).format.strideBytes == 4;
+		var id = i.count << 1 + (is32 ? 1 : 0);
 		var c = indexBuffers.get(id);
 		if( c == null ) {
 			c = new Cache(function(i:h3d.Indexes) i.dispose());
