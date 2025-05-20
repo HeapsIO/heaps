@@ -250,6 +250,8 @@ class GPUMeshBatch extends MeshBatch {
 	function addComputeShaders( pass : h3d.mat.Pass ) {}
 
 	override function emit(ctx:RenderContext) {
+		if ( cullingCollider != null && !cullingCollider.inFrustum(ctx.camera.frustum) )
+			return;
 		super.emit(ctx);
 		if ( commandBuffer != null && instanceCount > 0) {
 			var computeShader = computePass.getShader(h3d.shader.InstanceIndirect.InstanceIndirectBase);
