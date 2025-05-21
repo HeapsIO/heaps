@@ -97,7 +97,7 @@ class IrradShader extends IrradBase {
 				var amount = n.dot(l).saturate();
 				if( amount > 0 ) {
 					var envColor = gammaCorrect(min(envMap.get(l).rgb, hdrMax));
-					color += envColor * amount;
+					color += envColor * (isSpecular ? amount : 1.0);
 					totalWeight += amount;
 				}
 			}
