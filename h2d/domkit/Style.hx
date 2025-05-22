@@ -19,6 +19,7 @@ class Style extends domkit.CssStyle {
 	public var s3d : h3d.scene.Scene;
 	public var cssParser : domkit.CssParser;
 	public var onInspectHyperlink : (String) -> Void = null;
+	public var inspectModeActive(default,null) = false;
 
 	public function new() {
 		super();
@@ -241,7 +242,6 @@ class Style extends domkit.CssStyle {
 
 	// ------ inspector -----
 
-	var inspectModeActive = false;
 	var inspectModeDetails = false;
 	var inspectModeDetailsRight = -1;
 	var inspectPreview : h2d.Object;
