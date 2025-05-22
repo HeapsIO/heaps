@@ -47,5 +47,10 @@ class ColorSpaces extends hxsl.Shader {
 		function int2rgba( c : Int ) : Vec4 {
 			return vec4((c >> 16) & 0xFF, (c >> 8) & 0xFF, c & 0xFF, (c >> 24) & 0xFF) * (1.0 / float(0xFF));
 		}
+
+		function rgba2int( c : Vec4 ) : Int {
+			var cInt = ivec4(saturate(c) * 255 + 0.499);
+			return cInt.a << 24 | cInt.r << 16 | cInt.g << 8 | cInt.b;
+		}
     }
 }
