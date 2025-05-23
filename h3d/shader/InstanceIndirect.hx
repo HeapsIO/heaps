@@ -11,6 +11,7 @@ class InstanceIndirectBase extends hxsl.Shader {
 		@param var countBuffer : RWBuffer<Int>;
 		@param var commandBuffer : RWBuffer<Int>;
 		@param var instanceData : StoragePartialBuffer<{ modelView : Mat4 }>;
+		@param var instanceCount : Int;
 
 		// 16 by default because 16 * 4 floats = 256 bytes and cbuffer are aligned to 256 bytes
 		@const var MAX_MATERIAL_COUNT : Int = 16;
@@ -28,8 +29,13 @@ class InstanceIndirectBase extends hxsl.Shader {
 		var matID : Int = 0;
 
 		var modelView : Mat4;
+		var invocID : Int;
 		function __init__() {
-			modelView = instanceData[computeVar.globalInvocation.x].modelView;
+			{
+				setLayout(64, 1, 1);
+				invocID = computeVar.workGroup.x * 64 + computeVar.localInvocationIndex;
+			}
+			modelView = instanceData[invocID].modelView;
 		}
 
 		function emitInstance(instanceID : Int, indexCount : Int, instanceCount : Int, startIndex : Int, startVertex : Int, baseInstance : Int ) {
@@ -110,44 +116,45 @@ class SubPartInstanceIndirect extends InstanceIndirectBase {
 		}
 
 		function main() {
-			var invocID = computeVar.globalInvocation.x;
-			var pos = vec3(0) * modelView.mat3x4();
-			var vScale = abs(vec3(1) * modelView.mat3x4() - pos);
-			var scaledRadius = max(max(vScale.x, vScale.y), vScale.z);
-			var toCam = camera.position - pos.xyz;
-			var distToCam = length(toCam);
+			if ( invocID < instanceCount ) {
+				var pos = vec3(0) * modelView.mat3x4();
+				var vScale = abs(vec3(1) * modelView.mat3x4() - pos);
+				var scaledRadius = max(max(vScale.x, vScale.y), vScale.z);
+				var toCam = camera.position - pos.xyz;
+				var distToCam = length(toCam);
 
-			var id = invocID * 2;
-			matID = instanceOffsets[id];
-			var subPartID = instanceOffsets[id + 1];
-			var subPartInfo = subPartInfos[subPartID / 2];
+				var id = invocID * 2;
+				matID = instanceOffsets[id];
+				var subPartID = instanceOffsets[id + 1];
+				var subPartInfo = subPartInfos[subPartID / 2];
 
-			var packedID = (subPartID & 1) << 1;
-			lodCount = int(subPartInfo[packedID]);
-			var radius = subPartInfo[packedID + 1];
+				var packedID = (subPartID & 1) << 1;
+				lodCount = int(subPartInfo[packedID]);
+				var radius = subPartInfo[packedID + 1];
 
-			scaledRadius *= radius;
-			var culled = dot(scaledRadius, scaledRadius) < 1e-6;
+				scaledRadius *= radius;
+				var culled = dot(scaledRadius, scaledRadius) < 1e-6;
 
-			culled = culled || frustumCulling(pos, scaledRadius);
-			culled = culled || distanceClipping(distToCam, scaledRadius);
-			var computeScreenRatio = computeScreenRatio(distToCam, scaledRadius);
-			culled = culled || screenRatioCulling(computeScreenRatio);
+				culled = culled || frustumCulling(pos, scaledRadius);
+				culled = culled || distanceClipping(distToCam, scaledRadius);
+				var computeScreenRatio = computeScreenRatio(distToCam, scaledRadius);
+				culled = culled || screenRatioCulling(computeScreenRatio);
 
-			if ( ENABLE_COUNT_BUFFER ) {
-				if ( !culled ) {
-					var id = atomicAdd( countBuffer, 0, 1);
-					var lod = selectLod(computeScreenRatio, lodCount);
-					var matInfo = ivec4(matInfos[lod + matID]);
-					emitInstance( id, matInfo.x, 1, matInfo.y, 0, invocID );
-				}
-			} else {
-				if ( !culled ) {
-					var lod = selectLod(computeScreenRatio, lodCount);
-					var matInfo = ivec4(matInfos[lod + matID]);
-					emitInstance( invocID, matInfo.x, 1, matInfo.y, 0, invocID );
+				if ( ENABLE_COUNT_BUFFER ) {
+					if ( !culled ) {
+						var id = atomicAdd( countBuffer, 0, 1);
+						var lod = selectLod(computeScreenRatio, lodCount);
+						var matInfo = ivec4(matInfos[lod + matID]);
+						emitInstance( id, matInfo.x, 1, matInfo.y, 0, invocID );
+					}
 				} else {
-					emitInstance( invocID, 0, 0, 0, 0, 0 );
+					if ( !culled ) {
+						var lod = selectLod(computeScreenRatio, lodCount);
+						var matInfo = ivec4(matInfos[lod + matID]);
+						emitInstance( invocID, matInfo.x, 1, matInfo.y, 0, invocID );
+					} else {
+						emitInstance( invocID, 0, 0, 0, 0, 0 );
+					}
 				}
 			}
 		}
@@ -157,7 +164,6 @@ class SubPartInstanceIndirect extends InstanceIndirectBase {
 class InstanceIndirect extends InstanceIndirectBase {
 	static var SRC = {
 		@param var radius : Float;
-		@param var instanceCount : Int;
 		@param var materialCount : Int;
 		@param var lodCount : Int = 1;
 
@@ -166,45 +172,46 @@ class InstanceIndirect extends InstanceIndirectBase {
 		}
 
 		function main() {
-			var invocID = computeVar.globalInvocation.x;
-			var pos = vec3(0) * modelView.mat3x4();
-			var vScale = abs(vec3(1) * modelView.mat3x4() - pos);
-			var scaledRadius = max(max(vScale.x, vScale.y), vScale.z);
-			var toCam = camera.position - pos.xyz;
-			var distToCam = length(toCam);
+			if ( invocID < instanceCount ) {
+				var pos = vec3(0) * modelView.mat3x4();
+				var vScale = abs(vec3(1) * modelView.mat3x4() - pos);
+				var scaledRadius = max(max(vScale.x, vScale.y), vScale.z);
+				var toCam = camera.position - pos.xyz;
+				var distToCam = length(toCam);
 
-			scaledRadius *= radius;
-			var culled = dot(scaledRadius, scaledRadius) < 1e-6;
+				scaledRadius *= radius;
+				var culled = dot(scaledRadius, scaledRadius) < 1e-6;
 
-			culled = culled || frustumCulling(pos, scaledRadius);
-			culled = culled || distanceClipping(distToCam, scaledRadius);
-			var computeScreenRatio = computeScreenRatio(distToCam, scaledRadius);
-			culled = culled || screenRatioCulling(computeScreenRatio);
+				culled = culled || frustumCulling(pos, scaledRadius);
+				culled = culled || distanceClipping(distToCam, scaledRadius);
+				var computeScreenRatio = computeScreenRatio(distToCam, scaledRadius);
+				culled = culled || screenRatioCulling(computeScreenRatio);
 
-			if ( ENABLE_COUNT_BUFFER ) {
-				if ( !culled ) {
-					var id = atomicAdd( countBuffer, 0, 1);
-					for ( i in 0...materialCount ) {
-						matID = i * lodCount;
-						var lod = selectLod(computeScreenRatio, lodCount);
-						var matInfo = ivec4(matInfos[lod + matID]);
-						var instanceID = id + i * instanceCount;
-						emitInstance( instanceID, matInfo.x, 1, matInfo.y, 0, invocID );
-					}
-				}
-			} else {
-				if ( !culled ) {
-					for ( i in 0...materialCount ) {
-						matID = i * lodCount;
-						var lod = selectLod(computeScreenRatio, lodCount);
-						var matInfo = ivec4(matInfos[lod + matID]);
-						var instanceID = invocID + i * instanceCount;
-						emitInstance( instanceID, matInfo.x, 1, matInfo.y, 0, invocID );
+				if ( ENABLE_COUNT_BUFFER ) {
+					if ( !culled ) {
+						var id = atomicAdd( countBuffer, 0, 1);
+						for ( i in 0...materialCount ) {
+							matID = i * lodCount;
+							var lod = selectLod(computeScreenRatio, lodCount);
+							var matInfo = ivec4(matInfos[lod + matID]);
+							var instanceID = id + i * instanceCount;
+							emitInstance( instanceID, matInfo.x, 1, matInfo.y, 0, invocID );
+						}
 					}
 				} else {
-					for ( i in 0...materialCount ) {
-						var instanceID = invocID + i * instanceCount;
-						emitInstance( instanceID, 0, 0, 0, 0, 0 );
+					if ( !culled ) {
+						for ( i in 0...materialCount ) {
+							matID = i * lodCount;
+							var lod = selectLod(computeScreenRatio, lodCount);
+							var matInfo = ivec4(matInfos[lod + matID]);
+							var instanceID = invocID + i * instanceCount;
+							emitInstance( instanceID, matInfo.x, 1, matInfo.y, 0, invocID );
+						}
+					} else {
+						for ( i in 0...materialCount ) {
+							var instanceID = invocID + i * instanceCount;
+							emitInstance( instanceID, 0, 0, 0, 0, 0 );
+						}
 					}
 				}
 			}

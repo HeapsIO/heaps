@@ -216,6 +216,7 @@ class GPUMeshBatch extends MeshBatch {
 		while ( materialCount * lodCount > computeShader.MAX_MATERIAL_COUNT )
 			computeShader.MAX_MATERIAL_COUNT = computeShader.MAX_MATERIAL_COUNT + 16;
 		computeShader.matInfos = matInfos;
+		computeShader.instanceCount = instanceCount;
 
 		if ( emittedSubParts != null ) {
 			var computeShader : h3d.shader.InstanceIndirect.SubPartInstanceIndirect = cast computeShader;
@@ -228,7 +229,6 @@ class GPUMeshBatch extends MeshBatch {
 				computeShader.MAX_SUB_PART_BUFFER_ELEMENT_COUNT = computeShader.MAX_SUB_PART_BUFFER_ELEMENT_COUNT + 16;
 		} else {
 			var computeShader : h3d.shader.InstanceIndirect = cast computeShader;
-			computeShader.instanceCount = instanceCount;
 			computeShader.radius = prim.getBounds().dimension() * 0.5;
 			computeShader.lodCount = lodCount;
 			computeShader.materialCount = materialCount;
@@ -263,7 +263,7 @@ class GPUMeshBatch extends MeshBatch {
 			computeShader.countBuffer = gpuCounter.buffer;
 			computeShader.ENABLE_COUNT_BUFFER = isCountBufferAllowed();
 			ctx.computeList(@:privateAccess computePass.shaders);
-			ctx.computeDispatch(instanceCount);
+			ctx.computeDispatch(hxd.Math.ceil(instanceCount/64.0));
 		}
 	}
 
