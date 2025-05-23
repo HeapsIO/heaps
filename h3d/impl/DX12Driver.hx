@@ -2534,7 +2534,15 @@ class DX12Driver extends h3d.impl.Driver {
 	override function computeDispatch( x : Int = 1, y : Int = 1, z : Int = 1 ) {
 		flushTransitions();
 		frame.commandList.dispatch(x,y,z);
+		uavBarrier();
 		flushResources();
+	}
+
+	function uavBarrier() {
+		var barrier = tmp.barrier;
+		barrier.resource = null;
+		@:privateAccess barrier.type = UAV;
+		frame.commandList.resourceBarrier(barrier);
 	}
 
 }
