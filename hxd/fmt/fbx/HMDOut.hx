@@ -1355,7 +1355,12 @@ class HMDOut extends BaseLibrary {
 						continue;
 					var lodModel = new Model();
 					lodModel.name = modelName + 'LOD${i+1}';
-					lodModel.props = model.props;
+					lodModel.props = model.props != null ? model.props.copy() : null;
+					if ( lodModel.props != null ) {
+						lodModel.props.remove(HasCollider);
+						if ( lodModel.props.length == 0 )
+							lodModel.props = [];
+					}
 					lodModel.parent = model.parent;
 					lodModel.follow = model.follow;
 					lodModel.position = model.position;
