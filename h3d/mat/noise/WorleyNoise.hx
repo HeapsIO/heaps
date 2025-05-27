@@ -70,7 +70,7 @@ class WorleyNoise {
 			new h3d.col.IPoint(0, 0, -1),
 		];
 
-		var tex = new h3d.mat.Texture3D(texRes, texRes, texRes);
+		var tex = new h3d.mat.Texture3D(texRes, texRes, texRes, null, R8);
 
 		var pixels = hxd.Pixels.alloc(texRes, texRes, tex.format);
 		for ( k in 0...texRes ) {
@@ -85,12 +85,74 @@ class WorleyNoise {
 						if ( distance < closestDistance )
 							closestDistance = distance;
 					}
-					pixels.setPixelF(i, j, new h3d.Vector4(closestDistance * texRes / gridSize / Math.sqrt(3.0)));
+					var d = closestDistance * texRes / gridSize / (0.5 * Math.sqrt(3.0));
+					pixels.setPixel(i, j, hxd.Math.imin(Std.int(d * 255), 255));
 				}
 			}
 			tex.uploadPixels(pixels, 0, k);
 		}
 
 		return tex;
+	}
+
+	public static function generateOctave(engine : h3d.Engine, size : Int, gridSize : Int, octaves : Int, seed : Int = 0, threshold : Float = 0.3) {
+		var tmp = generate(size, gridSize, seed);
+		tmp.wrap = Repeat;
+
+		var shader = new OctaveShader();
+		shader.texture = tmp;
+		shader.threshold = threshold;
+		shader.octaves = octaves;
+		var pass = new h3d.pass.ScreenFx(new h3d.shader.ScreenShader());
+		pass.pass.addShader(shader);
+
+		var tex = new h3d.mat.Texture3D(size, size, size, [Target], tmp.format);
+		for ( i in 0...size ) {
+			engine.pushTarget(tex,i);
+			shader.layer = i;
+			pass.render();
+			engine.popTarget();
+		}
+
+		tmp.dispose();
+		return tex;
+	}
+}
+
+class OctaveShader extends hxsl.Shader {
+
+	static var SRC = {
+
+		@global var time : Float;
+
+		@const var octaves : Int;
+
+		@param var layer : Float;
+		@param var threshold : Float;
+		@param var texture : Sampler3D;
+
+		var pixelColor : Vec4;
+		var calculatedUV : Vec2;
+
+		function fragment() {
+			pixelColor = vec4(0.0, 0.0, 0.0, 1.0);
+
+			var w = layer / texture.size().x;
+			var uvw = vec3(calculatedUV, w);
+
+			var tot = 0.0;
+			var k = 1.0;
+			@unroll for (i in 0...octaves) {
+				var value = 1.0 - texture.get(uvw).r;
+				value = (value - threshold) / (1.0 - threshold);
+
+				pixelColor.r += value * k;
+				tot += k;
+				k *= 0.5;
+				uvw *= 2.0;
+			}
+
+			pixelColor.r /= tot;
+		}
 	}
 }
