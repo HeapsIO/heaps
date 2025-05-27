@@ -123,6 +123,7 @@ class ConvertFBX2HMD extends Convert {
 		}
 		// Parse material.props to find material config
 		var ignoredMaterials = [];
+		var filePath = srcPath.substring(srcPath.lastIndexOf("/") + 1);
 		var dirPath = srcPath.substring(0, srcPath.lastIndexOf("/"));
 		var matPropsPath = dirPath + "/materials.props";
 		var matProps = null;
@@ -137,7 +138,9 @@ class ConvertFBX2HMD extends Convert {
 		for( config in Reflect.fields(matProps) ) {
 			var configProps = Reflect.field(matProps, config);
 			for( matName in matNames ) {
-				var m = Reflect.field(configProps, matName);
+				var m = Reflect.field(configProps, matName + "/" + filePath);
+				if( m == null )
+					m = Reflect.field(configProps, matName);
 				if( m == null )
 					continue;
 				if( m.ignoreCollide == true ) {
