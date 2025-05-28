@@ -348,9 +348,6 @@ class MeshBatch extends MultiMaterial {
 				if( buf == null || buf.isDisposed() || buf.vertices < vertexCountAllocated ) {
 					var bufferFlags : hxd.impl.Allocator.BufferFlags = storageBufferEnabled() ? UniformReadWrite : UniformDynamic;
 
-					if(gpuUpdateForced() &&  buf != null && buf.vertices > 0) {
-						var prevBuf = buf;
-					}
 					if ( buf != null )
 						alloc.disposeBuffer(buf);
 					buf = alloc.allocBuffer( vertexCountAllocated, p.bufferFormat,bufferFlags );
