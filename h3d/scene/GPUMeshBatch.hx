@@ -125,9 +125,8 @@ class GPUMeshBatch extends MeshBatch {
 				instanceOffsetsGpu = alloc.allocBuffer( vertex, INSTANCE_OFFSETS_FMT, UniformReadWrite );
 				upload = true;
 			}
-			if ( upload && !gpuUpdateForced())
+			if ( upload )
 				instanceOffsetsGpu.uploadBytes( instanceOffsetsCpu, 0, vertex );
-
 			if ( matInfos == null ) {
 				materialCount = 0;
 				var tmpSubPartInfos = alloc.allocFloats( 2 * emittedSubParts.length );
@@ -253,7 +252,7 @@ class GPUMeshBatch extends MeshBatch {
 		if ( instanceCount == 0 || (cullingCollider != null && !cullingCollider.inFrustum(ctx.camera.frustum)) )
 			return;
 		super.emit(ctx);
-		if ( commandBuffer != null && instanceCount > 0) {
+		if ( commandBuffer != null ) {
 			var computeShader = computePass.getShader(h3d.shader.InstanceIndirect.InstanceIndirectBase);
 			if ( gpuCullingEnabled )
 				computeShader.frustum = ctx.getCameraFrustumBuffer();

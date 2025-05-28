@@ -264,17 +264,22 @@ class MeshBatch extends MultiMaterial {
 	}
 
 	public function emitInstance() {
-		if( worldPosition == null ) syncPos();
 		if( primitiveSubParts != null )
 			emitPrimitiveSubParts();
-		else if (calcBounds)
-			instanced.addInstanceBounds(worldPosition == null ? absPos : worldPosition);
 
-		var p = dataPasses;
-		while( p != null ) {
-			syncData(p);
-			p = p.next;
+		if(!gpuUpdateForced()){
+			if( worldPosition == null ) syncPos();
+
+			if (primitiveSubParts == null && calcBounds)
+				instanced.addInstanceBounds(worldPosition == null ? absPos : worldPosition);
+
+			var p = dataPasses;
+			while( p != null ) {
+				syncData(p);
+				p = p.next;
+			}
 		}
+
 		instanceCount++;
 	}
 
