@@ -72,36 +72,36 @@ class WorleyNoise {
 
 		var tex = new h3d.mat.Texture3D(texRes, texRes, texRes, null, R8);
 
+		var cellSize = 1.0 / gridSize;
+		var maxDist = 0.0;
 		var pixels = hxd.Pixels.alloc(texRes, texRes, tex.format);
 		for ( k in 0...texRes ) {
 			for ( j in 0...texRes ) {
 				for ( i in 0...texRes ) {
 					var position = new h3d.col.Point(i / texRes, j / texRes, k / texRes);
-					var closestDistance = hxd.Math.POSITIVE_INFINITY;
+					var closestDistanceSq = hxd.Math.POSITIVE_INFINITY;
 					var idx = new h3d.col.IPoint(Math.floor(i * ratio), Math.floor(j * ratio), Math.floor(k * ratio));
 					for ( offset in offsets ) {
 						var p = getPointTiling(idx.add(offset));
-						var distance = position.distance(p);
-						if ( distance < closestDistance )
-							closestDistance = distance;
+						var distance = position.distanceSq(p);
+						closestDistanceSq = hxd.Math.min(distance, closestDistanceSq);
 					}
-					var d = closestDistance * texRes / gridSize / (0.5 * Math.sqrt(3.0));
-					pixels.setPixel(i, j, hxd.Math.imin(Std.int(d * 255), 255));
+					var closestDistance = Math.sqrt(closestDistanceSq);
+					var normDistance = 1.0 - closestDistance / cellSize;
+					pixels.setPixel(i, j, hxd.Math.iclamp(Std.int(normDistance * 255), 0, 255));
 				}
 			}
 			tex.uploadPixels(pixels, 0, k);
 		}
-
 		return tex;
 	}
 
-	public static function generateOctave(engine : h3d.Engine, size : Int, gridSize : Int, octaves : Int, seed : Int = 0, threshold : Float = 0.3) {
+	public static function generateOctave(engine : h3d.Engine, size : Int, gridSize : Int, octaves : Int, seed : Int = 0) {
 		var tmp = generate(size, gridSize, seed);
 		tmp.wrap = Repeat;
 
 		var shader = new OctaveShader();
 		shader.texture = tmp;
-		shader.threshold = threshold;
 		shader.octaves = octaves;
 		var pass = new h3d.pass.ScreenFx(new h3d.shader.ScreenShader());
 		pass.pass.addShader(shader);
@@ -128,7 +128,6 @@ class OctaveShader extends hxsl.Shader {
 		@const var octaves : Int;
 
 		@param var layer : Float;
-		@param var threshold : Float;
 		@param var texture : Sampler3D;
 
 		var pixelColor : Vec4;
@@ -143,8 +142,7 @@ class OctaveShader extends hxsl.Shader {
 			var tot = 0.0;
 			var k = 1.0;
 			@unroll for (i in 0...octaves) {
-				var value = 1.0 - texture.get(uvw).r;
-				value = (value - threshold) / (1.0 - threshold);
+				var value = texture.get(uvw).r;
 
 				pixelColor.r += value * k;
 				tot += k;
