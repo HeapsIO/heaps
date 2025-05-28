@@ -6,6 +6,7 @@ enum MeshBatchFlag {
 	EnableStorageBuffer;
 	HasPrimitiveOffset;
 	EnableCpuLod;
+	ForceGpuUpdate;
 }
 
 /**
@@ -87,6 +88,16 @@ class MeshBatch extends MultiMaterial {
 		meshBatchFlags.set(EnableStorageBuffer);
 	}
 
+	/**
+	 * Force PerInstance to be setup by a compute shader.
+	 * Don't support without Storage Buffer to simplify implementation.
+	 */
+	public function forceGpuUpdate() {
+		meshBatchFlags.set(EnableGpuUpdate);
+		meshBatchFlags.set(EnableStorageBuffer);
+		meshBatchFlags.set(ForceGpuUpdate);
+	}
+
 	public function enableCpuLod() {
 		var prim = getPrimitive();
 		var lodCount = prim.lodCount();
@@ -99,6 +110,7 @@ class MeshBatch extends MultiMaterial {
 	function getPrimitive() return @:privateAccess instanced.primitive;
 	function storageBufferEnabled() return meshBatchFlags.has(EnableStorageBuffer);
 	function gpuUpdateEnabled() return meshBatchFlags.has(EnableGpuUpdate);
+	function gpuUpdateForced() return meshBatchFlags.has(ForceGpuUpdate);
 	function getMaxElements() return storageBufferEnabled() ? MAX_STORAGE_BUFFER_ELEMENTS : MAX_BUFFER_ELEMENTS;
 	function hasPrimitiveOffset() return meshBatchFlags.has(HasPrimitiveOffset);
 	function cpuLodEnabled() return meshBatchFlags.has(EnableCpuLod);
@@ -335,13 +347,17 @@ class MeshBatch extends MultiMaterial {
 
 				if( buf == null || buf.isDisposed() || buf.vertices < vertexCountAllocated ) {
 					var bufferFlags : hxd.impl.Allocator.BufferFlags = storageBufferEnabled() ? UniformReadWrite : UniformDynamic;
+
+					if(gpuUpdateForced() &&  buf != null && buf.vertices > 0) {
+						var prevBuf = buf;
+					}
 					if ( buf != null )
 						alloc.disposeBuffer(buf);
 					buf = alloc.allocBuffer( vertexCountAllocated, p.bufferFormat,bufferFlags );
 					p.buffers[index] = buf;
 					upload = true;
 				}
-				if( upload )
+				if( upload && !gpuUpdateForced())
 					buf.uploadFloats(p.data, start * p.paramsCount * 4, vertexCount);
 				if( primitiveSubBytes != null ) {
 					if( p.instanceBuffers == null )

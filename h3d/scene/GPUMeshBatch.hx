@@ -125,7 +125,7 @@ class GPUMeshBatch extends MeshBatch {
 				instanceOffsetsGpu = alloc.allocBuffer( vertex, INSTANCE_OFFSETS_FMT, UniformReadWrite );
 				upload = true;
 			}
-			if ( upload )
+			if ( upload && !gpuUpdateForced())
 				instanceOffsetsGpu.uploadBytes( instanceOffsetsCpu, 0, vertex );
 
 			if ( matInfos == null ) {
@@ -250,7 +250,7 @@ class GPUMeshBatch extends MeshBatch {
 	function addComputeShaders( pass : h3d.mat.Pass ) {}
 
 	override function emit(ctx:RenderContext) {
-		if ( cullingCollider != null && !cullingCollider.inFrustum(ctx.camera.frustum) )
+		if ( instanceCount == 0 || (cullingCollider != null && !cullingCollider.inFrustum(ctx.camera.frustum)) )
 			return;
 		super.emit(ctx);
 		if ( commandBuffer != null && instanceCount > 0) {
