@@ -243,8 +243,12 @@ class FileConverter {
 			outFile += e.path.substr(0, -(ext.length + 1));
 		else
 			outFile += e.path;
-		if( cmd.paramsStr != null )
-			outFile += "."+cmd.paramsStr;
+		if( cmd.paramsStr != null ) {
+			var paramsStr = cmd.paramsStr;
+			if( paramsStr.length > 40 )
+				paramsStr = haxe.crypto.Sha1.make(haxe.io.Bytes.ofString(paramsStr)).toHex();
+			outFile += "." + paramsStr;
+		}
 		var conv = null;
 		for( c in cmd.conv )
 			if( c.sourceExts == null || c.sourceExts.indexOf(ext) >= 0 ) {
