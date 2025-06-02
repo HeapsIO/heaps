@@ -24,8 +24,8 @@ class Slides extends ScreenShader {
 		var roughness : Float;
 		var occlusion : Float;
 		var emissive : Float;
-		var custom1 : Float;
-		var custom2 : Float;
+		var custom1 : Float = 0.0;
+		var custom2 : Float = 0.0;
 
 		@param var shadowMap : Channel;
 		@param var shadowMapCube : SamplerCube;
