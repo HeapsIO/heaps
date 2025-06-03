@@ -24,7 +24,7 @@ class Writer {
 		this.out = out;
 	}
 
-	function getPrimitiveInfos(prim : h3d.prim.Primitive) @:privateAccess {
+	public static function getPrimitiveInfos(prim : h3d.prim.Primitive, ?format: BufferFormat, ?lodIdx : Int = 0) @:privateAccess {
 		var infos : {
 			?vertexFormat : BufferFormat,
 			?vertexBuffer : Array<Float>,
@@ -36,8 +36,12 @@ class Writer {
 
 		var hmd = Std.downcast(prim, h3d.prim.HMDModel);
 		if (hmd != null) {
-			infos.vertexFormat = @:privateAccess hmd.data.vertexFormat;
-			var bufs = hmd.getDataBuffers(infos.vertexFormat);
+			if (format == null) {
+				infos.vertexFormat = @:privateAccess hmd.lods[lodIdx].vertexFormat;
+				format = infos.vertexFormat;
+			}
+			infos.vertexFormat = format;
+			var bufs = hmd.getLodBuffers(format, lodIdx);
 			infos.indexesBuffer = [for (i in 0...bufs.indexes.length) bufs.indexes[i]];
 			infos.vertexBuffer = [for (i in 0...bufs.vertexes.length) bufs.vertexes[i]];
 			infos.lib = hmd.lib;
@@ -711,7 +715,7 @@ class Writer {
 							{ name:"P", props: [PString("AlphaSource"), PString("enum"), PString(""), PString(""), PInt(2)], childs: null },
 						] },
 						{ name: "Media", props: [PString('Video::${t.name}')], childs: null },
-						{ name: "Filename", props: [PString(t.path)], childs: null },
+						{ name: "FileName", props: [PString(t.path)], childs: null },
 						{ name: "RelativeFilename", props: [PString("")], childs: null },
 						{ name: "ModelUVTranslation", props: [PFloat(0), PFloat(0)], childs: null },
 						{ name: "ModelUVScaling", props: [PFloat(1), PFloat(1)], childs: null },
@@ -740,7 +744,7 @@ class Writer {
 								{ name:"P", props: [PString("KString"), PString("XRefUrl"), PString(""), PString(t.path)], childs: null },
 							] },
 							{ name: "UseMipMap", props: [PInt(0)], childs: null },
-							{ name: "Filename", props: [PString(t.path)], childs: null },
+							{ name: "FileName", props: [PString(t.path)], childs: null },
 							{ name: "RelativeFilename", props: [PString("")], childs: null },
 						] };
 

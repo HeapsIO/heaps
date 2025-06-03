@@ -59,8 +59,12 @@ class HMDModel extends MeshPrimitive {
 		return lods[lod].indexCounts[material];
 	}
 
-	public function getDataBuffers(fmt, ?defaults,?material) {
-		return lib.getBuffers(data, fmt, defaults, material);
+	public function getDataBuffers(fmt, ?defaults, ?material) {
+		return getLodBuffers(fmt, 0, defaults, material);
+	}
+
+	public function getLodBuffers(fmt, lodIdx, ?defaults, ?material) {
+		return lib.getBuffers(lods[lodIdx], fmt, defaults, material);
 	}
 
 	public function loadSkin(skin) {
