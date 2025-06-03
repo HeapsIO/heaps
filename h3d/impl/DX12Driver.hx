@@ -807,12 +807,19 @@ class DX12Driver extends h3d.impl.Driver {
 		depthEnabled = depthBinding != NotBound;
 
 		var isArr = tex != null && (tex.flags.has(IsArray) || tex.flags.has(Cube));
+		var is3D = tex != null && tex.flags.has(Is3D);
 		var desc = null;
-		if( layer != 0 || mipLevel != 0 || isArr ) {
+		if( layer != 0 || mipLevel != 0 || isArr || is3D ) {
 			desc = tmp.rtvDesc;
 			desc.format = tex.t.format;
 			if( isArr ) {
 				desc.viewDimension = TEXTURE2DARRAY;
+				desc.mipSlice = mipLevel;
+				desc.firstArraySlice = layer;
+				desc.arraySize = 1;
+				desc.planeSlice = 0;
+			} else if ( is3D ) {
+				desc.viewDimension = TEXTURE3D;
 				desc.mipSlice = mipLevel;
 				desc.firstArraySlice = layer;
 				desc.arraySize = 1;
