@@ -244,6 +244,8 @@ class PbrMaterial extends Material {
 			Reflect.deleteField(props, "depthPrepass");
 		if ( !props.flipBackFaceNormal )
 			Reflect.deleteField(props, "flipBackFaceNormal");
+		if ( !props.ignoreCollide )
+			Reflect.deleteField(props, "ignoreCollide");
 		if ( props.parallaxSteps == h3d.shader.Parallax.MAX_LAYERS || props.parallaxSteps == 0 )
 			Reflect.deleteField(props, "parallaxSteps");
 		#end
