@@ -36,13 +36,21 @@ class Math {
 			neg = 1.0;
 		if( std.Math.isNaN(v) || !std.Math.isFinite(v) )
 			return v;
-		var digits = Std.int(4 - std.Math.log(v) / std.Math.log(10));
+		var digits = Std.int(4 - logBase(v, 10));
 		if( digits < 1 )
 			digits = 1;
 		else if( digits >= 10 )
 			return 0.;
 		var exp = pow(10,digits);
 		return std.Math.ffloor(v * exp + .49999) * neg / exp;
+	}
+
+	public static inline function log( f : Float ) {
+		return std.Math.log(f);
+	}
+
+	public static inline function logBase( f : Float, base : Float ) {
+		return log(f) / log(base);
 	}
 
 	public static inline function floor( f : Float ) {
