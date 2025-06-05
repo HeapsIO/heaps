@@ -93,7 +93,6 @@ class Renderer extends h3d.scene.Renderer {
 		velocity : (null:h3d.mat.Texture),
 	};
 
-	public var cullingDistanceFactor : Float = 0.0;
 	public var skyMode : SkyMode = Hide;
 	public var toneMode : TonemapMap = Reinhard;
 	public var displayMode : DisplayMode = Pbr;
@@ -157,9 +156,6 @@ class Renderer extends h3d.scene.Renderer {
 		allPasses.push(colorDepthVelocityOutput);
 		allPasses.push(new h3d.pass.Shadows(null));
 		refreshProps();
-		#if editor
-		cullingDistanceFactor = hide.Ide.inst.ideConfig.cullingDistanceFactor;
-		#end
 	}
 
 	override function addShader(s:hxsl.Shader) {
@@ -219,41 +215,15 @@ class Renderer extends h3d.scene.Renderer {
 		});
 	}
 
-	inline function cullPassesWithDistance( passes : h3d.pass.PassList, f : h3d.col.Collider -> Bool ) {
-		var prevCollider = null;
-		var prevResult = true;
-		passes.filter(function(p) {
-			var col = p.obj.cullingCollider;
-			if( col == null )
-				return true;
-			if( col != prevCollider ) {
-				prevCollider = col;
-				prevResult = f(col);
-				if ( prevResult ) {
-					var dim = col.dimension() * cullingDistanceFactor;
-					dim = dim * dim;
-					prevResult = dim > ctx.camera.pos.distanceSq(p.obj.getAbsPos().getPosition());
-				}
-			}
-			return prevResult;
-		});
-	}
-
 	override function draw( name : String ) {
 		var passes = get(name);
-		if ( cullingDistanceFactor > 0.0 )
-			cullPassesWithDistance(passes, function(col) return col.inFrustum(ctx.camera.frustum));
-		else
-			cullPasses(passes, function(col) return col.inFrustum(ctx.camera.frustum));
+		cullPasses(passes, function(col) return col.inFrustum(ctx.camera.frustum));
 		defaultPass.draw(passes);
 		passes.reset();
 	}
 
 	function renderPass(p:h3d.pass.Output, passes, ?sort) {
-		if ( cullingDistanceFactor > 0.0 )
-			cullPassesWithDistance(passes, function(col) return col.inFrustum(ctx.camera.frustum));
-		else
-			cullPasses(passes, function(col) return col.inFrustum(ctx.camera.frustum));
+		cullPasses(passes, function(col) return col.inFrustum(ctx.camera.frustum));
 		p.draw(passes, sort);
 		passes.reset();
 	}
