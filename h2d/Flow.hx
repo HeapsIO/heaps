@@ -1135,23 +1135,6 @@ class Flow extends Object {
 		onBeforeReflow();
 		syncPos();
 
-		var c = null;
-		if (dom?.hasClass("align-test-parent"))
-			c = "align-test-parent";
-		if (dom?.hasClass("align-test"))
-			c = "align-test";
-		if (dom?.hasClass("align-test-child1"))
-			c = "align-test-child1";
-		if (dom?.hasClass("align-test-child2"))
-			c = "align-test-child2";
-		var deb = c != null;
-		var a = 0;
-		if (deb) {
-			if (a == c.length) {
-				trace("hello break please");
-			}
-		}
-
 		if( !isConstraint && (fillWidth || fillHeight) ) {
 			var scene = getScene();
 			var cw = fillWidth ? scene.width : -1;
