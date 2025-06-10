@@ -18,4 +18,5 @@ interface RendererFX {
 	public function begin( r : h3d.scene.Renderer, step : Step ) : Void;
 	public function end( r : h3d.scene.Renderer, step : Step ) : Void;
 	public function dispose() : Void;
+	public function transition( r1 : RendererFX, r2 : RendererFX, t : Float ) : RendererFX;
 }

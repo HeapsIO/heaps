@@ -34,6 +34,8 @@ class Renderer extends hxd.impl.AnyProps {
 	#end
 
 	public var effects : Array<h3d.impl.RendererFX> = [];
+	public var volumeEffects : Array<h3d.impl.RendererFXVolume> = [];
+	var toRemove : Array<h3d.impl.RendererFX> = [];
 
 	public var renderMode : RenderMode = Default;
 
@@ -61,6 +63,9 @@ class Renderer extends hxd.impl.AnyProps {
 			p.dispose();
 		for( f in effects )
 			f.dispose();
+		for( v in volumeEffects )
+			for (e in v.effects)
+				e.dispose();
 		if ( ctx.lightSystem != null )
 			ctx.lightSystem.dispose();
 		passObjects = new Map();
