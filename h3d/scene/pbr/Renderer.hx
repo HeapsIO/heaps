@@ -711,6 +711,7 @@ class Renderer extends h3d.scene.Renderer {
 			slides.shader.shadowMapCube = shadowMap;
 			slides.shader.shadowIsCube = shadowMap.flags.has(Cube);
 			slides.shader.shadowMapChannel = R;
+			slides.shader.HAS_VELOCITY = textures.velocity != null;
 			slides.shader.velocity = textures.velocity;
 			pbrProps.isScreen = true;
 			slides.render();

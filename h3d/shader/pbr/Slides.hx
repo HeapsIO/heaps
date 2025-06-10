@@ -32,6 +32,7 @@ class Slides extends ScreenShader {
 		@param var velocity : Sampler2D;
 		@const var shadowIsCube : Bool;
 		@const var smode : Int;
+		@const var HAS_VELOCITY : Bool;
 
 		function getColor(x:Float,y:Float) : Vec3 {
 			var color : Vec3;
@@ -61,7 +62,7 @@ class Slides extends ScreenShader {
 						color = shadowMapCube.get(dir).xxx;
 					} else
 						color = shadowMap.get(uv).xxx;
-				} else {
+				} else if (HAS_VELOCITY) {
 					color = packNormal(velocity.get(input.uv).xyz * 100.0).xyz;
 				}
 			}
