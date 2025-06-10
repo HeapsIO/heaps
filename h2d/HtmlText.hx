@@ -237,8 +237,8 @@ class HtmlText extends Text {
 		return try Xml.parse(text) catch( e : Dynamic ) throw "Could not parse " + text + " (" + e +")";
 	}
 
-	inline function makeLineInfo( width : Float, height : Float, baseLine : Float ) : LineInfo {
-		return { width: width, height: height, baseLine: baseLine };
+	inline function makeLineInfo( width : Float, height : Float, baseLine : Float, offset = 0. ) : LineInfo {
+		return { width: width, height: height, baseLine: baseLine, baseLineOffset : offset };
 	}
 
 	override function validateText() {
@@ -312,7 +312,7 @@ class HtmlText extends Text {
 		newLine = true;
 		var splitNode : SplitNode = {
 			node: null, pos: 0, font: font, prevChar: -1,
-			width: 0, height: 0, baseLine: 0
+			width: 0, height: 0, baseLine: 0, baseLineOffset: 0,
 		};
 		for( e in doc )
 			buildSizes(e, font, metrics, splitNode);
@@ -354,6 +354,7 @@ class HtmlText extends Text {
 			info.width = splitNode.width;
 			info.height = splitNode.height;
 			info.baseLine = splitNode.baseLine;
+			info.baseLineOffset = splitNode.baseLineOffset;
  			var char = fnt.getChar(cc);
 			if (lineBreak && fnt.charset.isSpace(cc)) {
 				// Space characters are converted to \n
@@ -408,34 +409,33 @@ class HtmlText extends Text {
 								var grow = i.height - i.dy - info.baseLine;
 								var h = info.height;
 								var bl = info.baseLine;
+								var offset = info.baseLineOffset;
 								if (grow > 0) {
 									h += grow;
 									bl += grow;
 								}
-								metrics.push(makeLineInfo(size, Math.max(h, bl + i.dy), bl));
+								metrics.push(makeLineInfo(size, Math.max(h, bl + i.dy), bl, offset));
 							default:
-								metrics.push(makeLineInfo(size, info.height, info.baseLine));
+								metrics.push(makeLineInfo(size, info.height, info.baseLine, info.baseLineOffset));
 						}
 					}
 				} else {
 					var info = metrics[metrics.length - 1];
 					info.width = size;
-					if ( lineHeightMode == Accurate ) {
-						var grow = i.height - i.dy - info.baseLine;
-						if(grow > 0) {
-							switch(imageVerticalAlign) {
-								case Top:
-									info.height += grow;
-								case Bottom:
-									info.baseLine += grow;
-									info.height += grow;
-								case Middle:
-									info.height += grow;
-									info.baseLine += Std.int(grow/2);
+					if( lineHeightMode == Accurate ) {
+						var grow = (i.height - i.dy) - info.height;
+						if( grow > 0 ) {
+							info.height += grow;
+							if( imageVerticalAlign == Middle ) {
+								info.baseLine += grow * 0.5;
+								info.baseLineOffset += grow * 0.5;
 							}
 						}
-						grow = info.baseLine + i.dy;
-						if ( info.height < grow ) info.height = grow;
+						if( imageVerticalAlign == Bottom ) {
+							var grow = (i.height - i.dy) - info.baseLine;
+							if(grow > 0)
+								info.baseLine += grow;
+						}
 					}
 				}
 				newLine = false;
@@ -484,7 +484,7 @@ class HtmlText extends Text {
 				if ( font.charset.isBreakChar(cc) && !isComplement) {
 					// Case: Very first word in text makes the line too long hence we want to start it off on a new line.
 					if (x > maxWidth && textSplit.length == 0 && splitNode.node != null) {
-						metrics.push(makeLineInfo(x, info.height, info.baseLine));
+						metrics.push(makeLineInfo(x, info.height, info.baseLine, info.baseLineOffset));
 						x = wordSplit();
 					}
 
@@ -524,13 +524,14 @@ class HtmlText extends Text {
 						splitNode.width = x;
 						splitNode.height = info.height;
 						splitNode.baseLine = info.baseLine;
+						splitNode.baseLineOffset = info.baseLineOffset;
 						splitNode.font = font;
 					}
 				}
 				if ( g != null && cc != '\n'.code )
 					x += esize + letterSpacing;
 				if ( newline ) {
-					metrics.push(makeLineInfo(x, info.height, info.baseLine));
+					metrics.push(makeLineInfo(x, info.height, info.baseLine, info.baseLineOffset));
 					info.height = fontInfo.lineHeight;
 					info.baseLine = fontInfo.baseLine;
 					x = 0;
@@ -545,12 +546,12 @@ class HtmlText extends Text {
 			if ( restPos < text.length ) {
 				if (x > maxWidth) {
 					if ( splitNode.node != null && splitNode.node != e ) {
-						metrics.push(makeLineInfo(x, info.height, info.baseLine));
+						metrics.push(makeLineInfo(x, info.height, info.baseLine, info.baseLineOffset));
 						x = wordSplit();
 					}
 				}
 				textSplit.push(text.substr(restPos));
-				metrics.push(makeLineInfo(x, info.height, info.baseLine));
+				metrics.push(makeLineInfo(x, info.height, info.baseLine, info.baseLineOffset));
 			}
 
 			if (newLine || metrics.length == 0) {
@@ -599,7 +600,7 @@ class HtmlText extends Text {
 			with all sizes and word breaks so analysis is much more easy.
 		*/
 
-		var splitNode : SplitNode = { node: null, font: font, width: 0, height: 0, baseLine: 0, pos: 0, prevChar: -1 };
+		var splitNode : SplitNode = { node: null, font: font, width: 0, height: 0, baseLine: 0, baseLineOffset: 0, pos: 0, prevChar: -1 };
 		var metrics = [makeLineInfo(0, font.lineHeight, font.baseLine)];
 		prevChar = -1;
 		newLine = true;
@@ -794,7 +795,7 @@ class HtmlText extends Text {
 					case Bottom:
 						py += metrics[sizePos].baseLine - i.height;
 					case Middle:
-						py += metrics[sizePos].baseLine - i.height/2;
+						py += ((metrics[sizePos].baseLine + metrics[sizePos].baseLineOffset) - i.height)/2;
 					case Top:
 				}
 				if( py + i.dy < calcYMin )
@@ -932,6 +933,7 @@ private typedef LineInfo = {
 	var width : Float;
 	var height : Float;
 	var baseLine : Float;
+	var baseLineOffset : Float;
 }
 
 private typedef SplitNode = {
@@ -941,5 +943,6 @@ private typedef SplitNode = {
 	var width : Float;
 	var height : Float;
 	var baseLine : Float;
+	var baseLineOffset : Float;
 	var font : h2d.Font;
 }
