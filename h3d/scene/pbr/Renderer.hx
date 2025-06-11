@@ -257,7 +257,7 @@ class Renderer extends h3d.scene.Renderer {
 					continue;
 
 				for (e2 in volume2.effects) {
-					var newEffect = isR1toR2 ? e1.transition(e1, e2, volume2.getFactor()) :  e2.transition(e2, e1, volume1.getFactor());
+					var newEffect = e1.transition(e1, e2, volume2.getFactor());
 					if (newEffect != null) {
 						this.toRemove.push(newEffect);
 						this.effects.push(newEffect);
