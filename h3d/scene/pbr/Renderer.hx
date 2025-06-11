@@ -203,8 +203,11 @@ class Renderer extends h3d.scene.Renderer {
 	override function startEffects() {
 		if (volumeEffects.length == 1) {
 			for (e in volumeEffects[0].effects) {
-				toRemove.push(e);
-				this.effects.push(e);
+				var newEffect = e.modulate(volumeEffects[0].getFactor());
+				if (newEffect == null)
+					continue;
+				toRemove.push(newEffect);
+				this.effects.push(newEffect);
 			}
 		}
 		else if (volumeEffects.length >= 2) {
