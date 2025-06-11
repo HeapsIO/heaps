@@ -213,11 +213,12 @@ class Renderer extends h3d.scene.Renderer {
 			var r1 = volumeEffects[0];
 			var r2 = volumeEffects[1];
 			for (idx => v in volumeEffects) {
-				if (volumeEffects[idx].priority > hxd.Math.min(r1.priority, r2.priority)) {
-					if (r1.priority < volumeEffects[idx].priority)
-						r1 = volumeEffects[idx];
+				var v = volumeEffects[idx];
+				if (v.priority > hxd.Math.min(r1.priority, r2.priority) && r1 != v && r2 != v) {
+					if (r1.priority < v.priority)
+						r1 = v;
 					else
-						r2 = volumeEffects[idx];
+						r2 = v;
 				}
 			}
 
