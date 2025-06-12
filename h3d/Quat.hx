@@ -265,7 +265,7 @@ class Quat {
 		// ln()
 		var r = Math.sqrt(x*x+y*y+z*z);
 		var t = r > Math.EPSILON ? Math.atan2(r,w)/r : 0;
-		w = 0.5 * std.Math.log(w*w+x*x+y*y+z*z);
+		w = 0.5 * hxd.Math.log(w*w+x*x+y*y+z*z);
 		x *= t;
 		y *= t;
 		z *= t;
@@ -276,7 +276,7 @@ class Quat {
 		w *= v;
 		// exp
 		var r = Math.sqrt(x*x+y*y+z*z);
-		var et = std.Math.exp(w);
+		var et = hxd.Math.exp(w);
 		var s = r > Math.EPSILON ? et *Math.sin(r)/r : 0;
 		w = et * Math.cos(r);
 		x *= s;

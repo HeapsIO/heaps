@@ -321,9 +321,9 @@ class FileConverter {
 		if( !sys.FileSystem.exists(fullPath) ) throw "Missing "+fullPath;
 
 		var fileTime = getFileTime(fullPath);
-		var time = std.Math.floor(fileTime / FILE_TIME_PRECISION);
+		var time = hxd.Math.floor(fileTime / FILE_TIME_PRECISION);
 		#if js
-		var milliseconds = std.Math.floor(fileTime) - time * FILE_TIME_PRECISION;
+		var milliseconds = hxd.Math.floor(fileTime) - time * FILE_TIME_PRECISION;
 		#else
 		var milliseconds = null;
 		#end
