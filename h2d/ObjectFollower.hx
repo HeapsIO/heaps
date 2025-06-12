@@ -181,7 +181,7 @@ class ObjectFollower extends Object {
 			}
 		}
 
-		if( !depthMask ) {
+		if( !depthMask ) @:privateAccess {
 			var prev = ctx.baseShader.zValue;
 			ctx.baseShader.zValue = zValue;
 			super.drawRec(ctx);
