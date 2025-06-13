@@ -181,6 +181,11 @@ class Renderer extends h3d.scene.Renderer {
 		return super.getPassByName(name);
 	}
 
+	override function startEffects() {
+		processVolumetricEffects();
+		super.startEffects();
+	}
+
 	override function start() {
 		if( pbrLightPass == null ) {
 			pbrLightPass = new h3d.mat.Pass("lights");
@@ -198,75 +203,6 @@ class Renderer extends h3d.scene.Renderer {
 			pbrLightPass.enableLights = true;
 		}
 		ctx.pbrLightPass = pbrLightPass;
-	}
-
-	override function startEffects() {
-		if (volumeEffects.length == 1) {
-			for (e in volumeEffects[0].effects) {
-				var newEffect = e.modulate(volumeEffects[0].getFactor());
-				if (newEffect == null)
-					continue;
-				toRemove.push(newEffect);
-				this.effects.push(newEffect);
-			}
-		}
-		else if (volumeEffects.length >= 2) {
-			// When there is more than 2 active volume effects, we take the top 2 prios and
-			// blend them (because blend with more than 2 values isn't commutative)
-			var r1 = volumeEffects[0];
-			var r2 = volumeEffects[1];
-			for (idx => v in volumeEffects) {
-				var v = volumeEffects[idx];
-				if (v.priority > hxd.Math.min(r1.priority, r2.priority) && r1 != v && r2 != v) {
-					if (r1.priority < v.priority)
-						r1 = v;
-					else
-						r2 = v;
-				}
-			}
-
-			function containsEffectType(volume : h3d.impl.RendererFXVolume, e : h3d.impl.RendererFX) {
-				var cl = Type.getClass(e);
-				for (effect in volume.effects)
-					if (Std.isOfType(effect, cl))
-						return true;
-				return false;
-			}
-
-			// Push unique renderer FX from volume 1 and volume 2
-			for (e in r1.effects) {
-				if (!containsEffectType(r2, e)) {
-					this.toRemove.push(e);
-					this.effects.push(e);
-				}
-			}
-			for (e in r2.effects) {
-				if (!containsEffectType(r1, e)) {
-					this.toRemove.push(e);
-					this.effects.push(e);
-				}
-			}
-
-			// Manage blending of renderer FX that are in volume 1 and volume 2
-			// Look for which direction the blend should be (r1 -> r2 or r2 -> r1)
-			var isR1toR2 = r1.priority < r2.priority;
-			var volume1 = isR1toR2 ? r1 : r2;
-			var volume2 = isR1toR2 ? r2 : r1;
-			for (e1 in volume1.effects) {
-				if (!containsEffectType(volume2, e1))
-					continue;
-
-				for (e2 in volume2.effects) {
-					var newEffect = e1.transition(e1, e2, volume2.getFactor());
-					if (newEffect != null) {
-						this.toRemove.push(newEffect);
-						this.effects.push(newEffect);
-					}
-				}
-			}
-		}
-
-		super.startEffects();
 	}
 
 	inline function cullPasses( passes : h3d.pass.PassList, f : h3d.col.Collider -> Bool ) {
@@ -805,9 +741,7 @@ class Renderer extends h3d.scene.Renderer {
 			hxd.Window.getInstance().removeEventTarget(onEvent);
 		}
 		mark("vsync");
-
-		for (e in toRemove)
-			effects.remove(e);
+		removeVolumetricEffects();
 	}
 
 	var debugPushPos : { x : Float, y : Float }
