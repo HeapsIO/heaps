@@ -74,10 +74,14 @@ class PointLight extends Light {
 		s.z = absPos._43;
 		s.r = range;
 
-		if( !ctx.camera.frustum.hasSphere(s) )
+		if( !inFrustum(ctx.camera.frustum) )
 			return;
 
 		super.emit(ctx);
 		ctx.emitPass(ctx.pbrLightPass, this);
+	}
+
+	override function inFrustum(frustum : h3d.col.Frustum) {
+		return frustum.hasSphere(s);
 	}
 }
