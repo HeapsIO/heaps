@@ -558,7 +558,7 @@ class Writer {
 			modelTransform._41 = -modelTransform._41;
 
 			// The model node is used for every object, not only those we have mesh
-			var model : FbxNode = { name:"Model", props: [PInt(modelId), PString('Model::${object.name}'), PString("Mesh")], childs:[
+			var model : FbxNode = { name:"Model", props: [PInt(modelId), PString('Model::${object.name}'), PString(object.isMesh() ? "Mesh" : "Null")], childs:[
 				{ name:"Version", props:[ PInt(232)], childs:null },
 				{ name:"Properties70", props: null, childs: [
 					{ name:"P", props:[PString("InheritType"), PString("enum"), PString(""), PString(""), PInt(1)], childs: null },
