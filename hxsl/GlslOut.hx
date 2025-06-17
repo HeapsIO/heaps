@@ -537,7 +537,7 @@ class GlslOut {
 			add(",");
 			if( chans != 4 ) add("(");
 			addValue(color, tabs);
-			if( chans != 4 ) add(")"+(chans == 1 ? ".xx" : ".xyyy"));
+			if( chans != 4 ) add(")"+(chans == 1 ? ".xxxx" : chans == 2 ? ".xyyy" : ".xyzz"));
 			add(")");
 		case TCall(v, args):
 			switch( v.e ) {

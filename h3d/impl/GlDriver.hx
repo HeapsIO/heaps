@@ -674,7 +674,7 @@ class GlDriver extends Driver {
 				#if !js
 				switch( pt.t ) {
 				case TRWTexture(dim,arr,chans):
-					var tdim : hxsl.Ast.TexDimension = t.flags.has(Cube) ? TCube : T2D;
+					var tdim : hxsl.Ast.TexDimension = t.flags.has(Cube) ? TCube : dim;
 					var fmt;
 					if( (arr != t.flags.has(IsArray)) || dim != tdim )
 						fmt = 0;
