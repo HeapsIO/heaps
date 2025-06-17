@@ -621,6 +621,7 @@ class Renderer extends h3d.scene.Renderer {
 		clear(0);
 		lighting();
 
+		#if !editor
 		begin(Forward);
 		var ls = Std.downcast(getLightSystem(), h3d.scene.pbr.LightSystem);
 		ls.forwardMode = true;
@@ -630,6 +631,7 @@ class Renderer extends h3d.scene.Renderer {
 		renderPass(defaultPass, get("forwardAlpha"), backToFront);
 		ls.forwardMode = false;
 		end();
+		#end
 
 		if( renderMode == LightProbe ) {
 			resetTarget();
@@ -859,7 +861,7 @@ class Renderer extends h3d.scene.Renderer {
 								<option value="CustomColor">Custom Color</option>
 							</select>
 						</dd>
-						'+(skyMode==CustomColor?'<dt>Sky Color</dt><dd><input type="color" field="skyColor"/></dd>':'')+'
+						dt>Sky Color</dt><dd><input type="color" field="skyColor"/></dd>
 					<dt>Force direct discard</dt><dd><input type="checkbox" field="forceDirectDiscard"></dd>
 				</div>
 

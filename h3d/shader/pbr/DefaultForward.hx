@@ -11,33 +11,23 @@ class DefaultForward extends hxsl.Shader {
 			var inverseViewProj : Mat4;
 		}
 
-		@const(4) var CASCADE_COUNT:Int;
-		@const(2) var DIR_SHADOW_COUNT:Int;
-		@const(16) var POINT_SHADOW_COUNT:Int;
-		@const(16) var SPOT_SHADOW_COUNT:Int;
-
 		@:import h3d.shader.pbr.Light.LightEvaluation;
 		@:import h3d.shader.pbr.BDRF;
 
 		// Import pbr info
 		var output : {color : Vec4, metalness : Float, roughness : Float, occlusion : Float, emissive : Float, depth : Float };
 
-		@const(256) var BUFFER_SIZE : Int = 1;
-		@param var lightInfos : Buffer<Vec4, BUFFER_SIZE>;
+		@param var lightInfos : RWBuffer<Vec4>;
 
 		// Buffer Info
-		@param var dirLightCount : Int;
-		@param var pointLightCount : Int;
-		@param var spotLightCount : Int;
+		@param var dirLightPerTile : Int;
+		@param var pointLightPerTile : Int;
+		@param var spotLightPerTile : Int;
 		@param var dirLightStride : Int;
 		@param var pointLightStride : Int;
 		@param var spotLightStride : Int;
-
-		// ShadowMaps
-		@param var cascadeShadowMaps : Array<Sampler2D, CASCADE_COUNT>;
-		@param var dirShadowMaps : Array<Sampler2D, DIR_SHADOW_COUNT>;
-		@param var pointShadowMaps : Array<SamplerCube, POINT_SHADOW_COUNT>;
-		@param var spotShadowMaps : Array<Sampler2D, SPOT_SHADOW_COUNT>;
+		@param var gridSize : Int;
+		@param var tileStride : Int;
 
 		// Direct Lighting
 		@param var cameraPosition : Vec3;
@@ -67,6 +57,8 @@ class DefaultForward extends hxsl.Shader {
 		var transformedPosition : Vec3;
 		var pixelColor : Vec4;
 		var depth : Float;
+		var screenUV : Vec2;
+		var bufferOffset : Int;
 
 		function rotateNormal( n : Vec3 ) : Vec3 {
 			return vec3(n.x * irrRotation.x - n.y * irrRotation.y, n.x * irrRotation.y + n.y * irrRotation.x, n.z);
@@ -116,75 +108,27 @@ class DefaultForward extends hxsl.Shader {
 			NdV = transformedNormal.dot(view).max(0.);
 		}
 
-		function evaluateDirShadow( index : Int ) : Float {
-			var i = index * 5;
-
-			var shadow = 1.0;
-			if (lightInfos[i].a > 0) {
-				var shadowBias = lightInfos[i+1].a;
-				var shadowProj = mat3x4(lightInfos[i+2], lightInfos[i+3], lightInfos[i+4]);
-				var shadowPos = transformedPosition * shadowProj;
-				var shadowUv = screenToUv(shadowPos.xy);
-				var depth = dirShadowMaps[index].get(shadowUv.xy).r;
-				shadow = (shadowPos.z - shadowBias > depth) ? 0.0 : 1.0;
-			}
-			return shadow;
-		}
-
 		function evaluateDirLight( index : Int ) : Vec3 {
-			var i = index * 5;
+			var i = index * dirLightStride + bufferOffset;
 			var lightColor = lightInfos[i].rgb;
 			var lightDir = lightInfos[i+1].xyz;
 
 			return directLighting(lightColor, lightDir);
 		}
 
-		function evaluatePointShadow( index : Int ) : Float {
-			var i = index * 3 + dirLightStride;
-
-			var shadow = 1.0;
-			if (lightInfos[i+2].g > 0) {
-				var lightPos = lightInfos[i+1].rgb;
-				var range = lightInfos[i+2].r;
-				var shadowBias = lightInfos[i+2].b;
-				var posToLight = transformedPosition.xyz - lightPos;
-				var dir = normalize(posToLight.xyz);
-				var depth = pointShadowMaps[index].getLod(dir, 0).r * range;
-				var zMax = length(posToLight);
-				shadow = (zMax - shadowBias > depth) ? 0.0 : 1.0;
-			}
-			return shadow;
-		}
-
 		function evaluatePointLight( index : Int ) : Vec3 {
-			var i = index * 3 + dirLightStride;
+			var i = index * pointLightStride + dirLightStride * dirLightPerTile + bufferOffset;
 			var lightColor = lightInfos[i].rgb;
 			var size = lightInfos[i].a;
 			var lightPos = lightInfos[i+1].rgb;
 			var invRange4 = lightInfos[i+1].a;
 			var delta = lightPos - transformedPosition;
 
-			return directLighting(pointLightIntensity(delta, size, invRange4) * lightColor, delta.normalize());
-		}
-
-		function evaluateSpotShadow( index : Int ) : Float {
-			var i = index * 8 + dirLightStride + pointLightStride;
-
-			var shadow = 1.0;
-			if (lightInfos[i+3].b > 0) {
-				var shadowBias = lightInfos[i+3].a;
-				var shadowProj = mat4(lightInfos[i+4], lightInfos[i+5], lightInfos[i+6], lightInfos[i+7]);
-				var shadowPos = vec4(transformedPosition, 1.0) * shadowProj;
-				shadowPos.xyz /= shadowPos.w;
-				var shadowUv = screenToUv(shadowPos.xy);
-				var depth = spotShadowMaps[index].get(shadowUv.xy).r;
-				shadow = (shadowPos.z - shadowBias > depth) ? 0.0 : 1.0;
-			}
-			return shadow;
+			return directLighting(pointLightIntensity(delta, size, invRange4) * lightColor, delta.normalize()) * 1000.0;
 		}
 
 		function evaluateSpotLight( index : Int ) : Vec3 {
-			var i = index * 8 + dirLightStride + pointLightStride;
+			var i = index * spotLightStride + dirLightStride * dirLightPerTile + pointLightStride * pointLightPerTile + bufferOffset;
 			var lightColor = lightInfos[i].rgb;
 			var range = lightInfos[i].a;
 			var lightPos = lightInfos[i+1].xyz;
@@ -201,14 +145,6 @@ class DefaultForward extends hxsl.Shader {
 			return directLighting(fallOff * lightColor * fallOffInfoAngle, delta.normalize());
 		}
 
-		function evaluateCascadeLight() : Vec3 {
-			var i = dirLightStride + pointLightStride + spotLightStride;
-			var lightColor = lightInfos[i].rgb;
-			var lightDir = lightInfos[i+1].xyz;
-
-			return directLighting(lightColor, lightDir);
-		}
-
 		function inside(pos : Vec3) : Bool {
 			if ( abs(pos.x) < 1.0 && abs(pos.y) < 1.0 && abs(pos.z) < 1.0 )
 				return true;
@@ -216,82 +152,28 @@ class DefaultForward extends hxsl.Shader {
 				return false;
 		}
 
-		function evaluateCascadeShadow() : Float {
-			var i = dirLightStride + pointLightStride + spotLightStride;
-			var shadow = 1.0;
-			var shadowProj = mat3x4(lightInfos[i + 2], lightInfos[i + 3], lightInfos[i + 4]);
-
-			@unroll for ( c in 0...CASCADE_COUNT ) {
-				var cascadeScale = lightInfos[i + 5 + 2 * c];
-				var shadowPos0 = transformedPosition * shadowProj;
-				var shadowPos = c == 0 ? shadowPos0 : shadowPos0 * cascadeScale.xyz + lightInfos[i + 6 + 2 * c].xyz;
-				if ( inside(shadowPos) ) {
-					var zMax = saturate(shadowPos.z);
-					var shadowUv = shadowPos.xy;
-					shadowUv.y = 1.0 - shadowUv.y;
-					var depth = cascadeShadowMaps[c].get(shadowUv.xy).r;
-					shadow -= zMax > depth ? 1.0 : 0.0;
-				}
-			}
-			return saturate(shadow);
-		}
-
 		function evaluateLighting() : Vec3 {
+			bufferOffset = (int(screenUV.x * gridSize) + int(screenUV.y * gridSize) * gridSize) * tileStride;
 
 			var lightAccumulation = vec3(0);
 
 			F0 = mix(pbrSpecularColor, albedoGamma, metalness);
 
-			// Dir Light With Shadow
-			@unroll for( l in 0 ... DIR_SHADOW_COUNT ) {
-				var c = evaluateDirLight(l);
-				if ( dot(c, c) > 1e-6 )
-					c *= evaluateDirShadow(l);
-				lightAccumulation += c;
-			}
-			// Dir Light
-			var start = DIR_SHADOW_COUNT;
-			if ( CASCADE_COUNT > 0 )
-				start++;
-			@unroll for( l in start ... dirLightCount + DIR_SHADOW_COUNT )
+			for( l in 0 ...dirLightPerTile )
 				lightAccumulation += evaluateDirLight(l);
 
-			// Point Light With Shadow
-			@unroll for( l in 0 ... POINT_SHADOW_COUNT ) {
-				var c = evaluatePointLight(l);
-				if ( dot(c, c) > 1e-6 )
-					c *= evaluatePointShadow(l);
-				lightAccumulation += c;
-			}
-			// Point Light
-			@unroll for( l in POINT_SHADOW_COUNT ... pointLightCount + POINT_SHADOW_COUNT )
+			for( l in 0 ...pointLightPerTile )
 				lightAccumulation += evaluatePointLight(l);
 
-			// Spot Light With Shadow
-			@unroll for( l in 0 ... SPOT_SHADOW_COUNT ) {
-				var c = evaluateSpotLight(l);
-				if ( dot(c, c) > 1e-6 )
-					c *= evaluateSpotShadow(l);
-				lightAccumulation += c;
-			}
-			// Spot Light
-			@unroll for( l in SPOT_SHADOW_COUNT ... spotLightCount + SPOT_SHADOW_COUNT )
+			for( l in 0 ...spotLightPerTile )
 				lightAccumulation += evaluateSpotLight(l);
 
-			// Cascade shadows
-			if ( CASCADE_COUNT > 0 ) {
-				var c = evaluateCascadeLight();
-				if ( dot(c, c) > 1e-6 )
-					c *= evaluateCascadeShadow();
-				lightAccumulation += c;
-			}
-
 			// Indirect only support the main env from the scene at the moment
-			if( USE_INDIRECT )
-				lightAccumulation += indirectLighting();
+			// if( USE_INDIRECT )
+			// 	lightAccumulation += indirectLighting();
 
 			// Emissive Pass
-			lightAccumulation += emissive * emissivePower * pixelColor.rgb;
+			// lightAccumulation += emissive * emissivePower * pixelColor.rgb;
 
 			return lightAccumulation;
 		}
