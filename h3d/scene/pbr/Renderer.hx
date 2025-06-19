@@ -480,6 +480,13 @@ class Renderer extends h3d.scene.Renderer {
 	}
 
 	function beginPbr() {
+		#if render_graph
+		if ( dumpFrame == hxd.Timer.frameCount ) {
+			h3d.impl.RenderGraph.start();
+			dumpFrame = -1;
+		}
+		#end
+
 		var props : RenderProps = props;
 		// reset tonemap shaders
 		var s = @:privateAccess tonemap.pass.shaders;
@@ -742,6 +749,15 @@ class Renderer extends h3d.scene.Renderer {
 		}
 		mark("vsync");
 		removeVolumetricEffects();
+		#if render_graph
+		h3d.impl.RenderGraph.end();
+		#end
+	}
+
+	override function mark(step : String) {
+		#if render_graph
+		h3d.impl.RenderGraph.mark(step);
+		#end
 	}
 
 	var debugPushPos : { x : Float, y : Float }
@@ -810,6 +826,13 @@ class Renderer extends h3d.scene.Renderer {
 		toneMode = props.tone;
 		exposure = props.exposure;
 	}
+
+	#if render_graph
+	var dumpFrame = -1;
+	public function dump() {
+		dumpFrame = hxd.Timer.frameCount+1;
+	}
+	#end
 
 	#if editor
 	override function editProps() {
