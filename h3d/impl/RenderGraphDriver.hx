@@ -41,7 +41,6 @@ class RenderGraphDriver extends Driver {
 	}
 
 	override function captureRenderBuffer( pixels : hxd.Pixels ) {
-		// TODO
 		d.captureRenderBuffer(pixels);
 	}
 
@@ -57,7 +56,6 @@ class RenderGraphDriver extends Driver {
 	}
 
 	override function resize( width : Int, height : Int ) {
-		// TODO
 		d.resize(width, height);
 	}
 
@@ -71,7 +69,6 @@ class RenderGraphDriver extends Driver {
 	}
 
 	override function selectMaterial( pass : h3d.mat.Pass ) {
-		// TODO
 		d.selectMaterial(pass);
 	}
 
@@ -87,7 +84,6 @@ class RenderGraphDriver extends Driver {
 		case Globals:
 		case Params:
 		case Buffers:
-			// TODO
 		case Textures:
 			inline function logVars( s : hxsl.RuntimeShader.RuntimeShaderData, buf : h3d.shader.Buffers.ShaderBuffers ) {
 				var t = s.textures;
@@ -110,7 +106,6 @@ class RenderGraphDriver extends Driver {
 	}
 
 	override function draw( ibuf : h3d.Buffer, startIndex : Int, ntriangles : Int ) {
-		// TODO
 		d.draw(ibuf, startIndex, ntriangles);
 	}
 
@@ -134,12 +129,10 @@ class RenderGraphDriver extends Driver {
 	}
 
 	override function end() {
-		// TODO
 		d.end();
 	}
 
 	override function present() {
-		// TODO
 		d.present();
 	}
 
@@ -148,22 +141,18 @@ class RenderGraphDriver extends Driver {
 	}
 
 	override function allocTexture( t : h3d.mat.Texture ) : Texture {
-		// TODO
 		return d.allocTexture(t);
 	}
 
 	override function allocBuffer( b : Buffer ) : GPUBuffer {
-		// TODO
 		return d.allocBuffer(b);
 	}
 
 	override function disposeTexture( t : h3d.mat.Texture ) {
-		// TODO
 		d.disposeTexture(t);
 	}
 
 	override function disposeBuffer( b : h3d.Buffer ) {
-		// TODO
 		d.disposeBuffer(b);
 	}
 
@@ -180,7 +169,6 @@ class RenderGraphDriver extends Driver {
 	}
 
 	override function uploadTexturePixels( t : h3d.mat.Texture, pixels : hxd.Pixels, mipLevel : Int, side : Int ) {
-		// TODO
 		d.uploadTexturePixels(t, pixels, mipLevel, side);
 	}
 }
