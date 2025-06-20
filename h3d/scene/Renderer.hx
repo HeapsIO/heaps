@@ -230,7 +230,7 @@ class Renderer extends hxd.impl.AnyProps {
 	public function processVolumetricEffects() {
 		if (volumeEffects.length == 1) {
 			for (e in volumeEffects[0].effects) {
-				var newEffect = e.modulate(volumeEffects[0].getFactor());
+				var newEffect = e.modulate(volumeEffects[0].getFactor(ctx.camera.pos));
 				if (newEffect == null)
 					continue;
 				toRemove.push(newEffect);
@@ -284,7 +284,7 @@ class Renderer extends hxd.impl.AnyProps {
 					continue;
 
 				for (e2 in volume2.effects) {
-					var newEffect = e1.transition(e1, e2, volume2.getFactor());
+					var newEffect = e1.transition(e1, e2, volume2.getFactor(ctx.camera.pos));
 					if (newEffect != null) {
 						this.toRemove.push(newEffect);
 						this.effects.push(newEffect);
