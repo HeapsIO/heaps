@@ -30,7 +30,7 @@ class RendererFXVolume extends h3d.scene.Object {
 		if (factor > 0 && !renderer.volumeEffects.contains(this))
 			renderer.volumeEffects.push(this);
 
-		if (factor <= 0 && !renderer.volumeEffects.contains(this))
+		if (factor <= 0 && renderer.volumeEffects.contains(this))
 			renderer.volumeEffects.remove(this);
 		#end
 	}
