@@ -63,7 +63,13 @@ class Output {
 
 	function drawObject( p : h3d.pass.PassObject ) {
 		ctx.drawPass = p;
-		ctx.engine.selectMaterial(p.pass);
+		if( ctx.useReverseDepth ) {
+			p.pass.reverseDepthTest();
+			ctx.engine.selectMaterial(p.pass);
+			p.pass.reverseDepthTest();
+		} else {
+			ctx.engine.selectMaterial(p.pass);
+		}
 		p.obj.drawn = true;
 		@:privateAccess p.obj.draw(ctx);
 	}

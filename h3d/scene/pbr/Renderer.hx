@@ -234,14 +234,15 @@ class Renderer extends h3d.scene.Renderer {
 	}
 
 	function lighting() {
-
+		var oldReverseDepth = ctx.useReverseDepth;
+		ctx.useReverseDepth = false;
 		begin(Shadows);
 		var ls = Std.downcast(getLightSystem(), h3d.scene.pbr.LightSystem);
 		var count = ctx.engine.drawCalls;
 		if( ls != null ) drawShadows(ls);
 		if( ctx.lightSystem != null ) ctx.lightSystem.drawPasses = ctx.engine.drawCalls - count;
 		end();
-
+		ctx.useReverseDepth = oldReverseDepth;
 		if (ls != null) {
 			while (ls.lightingShaders.length != 0)
 				ls.lightingShaders.pop();
