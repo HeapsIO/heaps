@@ -17,7 +17,6 @@ class LightBuffer {
 	var dirLights : Array<DirLight> = [];
 
 	var allLightsInfos : hxd.FloatBuffer;
-	var lightInfos : hxd.FloatBuffer;
 	final POINT_LIGHT_INFO_SIZE = 3;
 	final SPOT_LIGHT_INFO_SIZE = 8;
 	final DIR_LIGHT_INFO_SIZE = 5;
@@ -25,7 +24,7 @@ class LightBuffer {
 	var allLightsBuffer : h3d.Buffer;
 
 	var shaderList = new h3d.mat.Pass("lightBuffer");
-	var shader = new LightBufferShader();
+	var shader = new h3d.shader.pbr.LightBufferShader();
 
 	public function new() {
 		shaderList.addShader(shader);
@@ -37,11 +36,11 @@ class LightBuffer {
 		var size = 0;
 		var tileCount = GRID_SIZE * GRID_SIZE;
 
-		var tileStride = DIR_LIGHT_PER_TILE * DIR_LIGHT_INFO_SIZE;
-		tileStride += POINT_LIGHT_PER_TILE * POINT_LIGHT_INFO_SIZE;
-		tileStride += SPOT_LIGHT_PER_TILE * SPOT_LIGHT_INFO_SIZE;
+		var tileStride = DIR_LIGHT_PER_TILE;
+		tileStride += POINT_LIGHT_PER_TILE;
+		tileStride += SPOT_LIGHT_PER_TILE;
 
-		size = tileStride * tileCount;
+		size = tileCount * tileStride;
 		size = hxd.Math.imax(1, size); // Avoid empty buffer
 		
 		var allLightsSize = MAX_DIR_LIGHT * DIR_LIGHT_INFO_SIZE;
@@ -52,10 +51,10 @@ class LightBuffer {
 			allLightsBuffer.dispose();
 		allLightsBuffer = new h3d.Buffer(allLightsSize, hxd.BufferFormat.VEC4_DATA, [ReadWriteBuffer, Dynamic]);
 		
-		lightInfos = new hxd.FloatBuffer(size * stride * 4);
-		if ( defaultForwardShader.lightInfos != null )
-			defaultForwardShader.lightInfos.dispose();
-		defaultForwardShader.lightInfos = new h3d.Buffer(size, hxd.BufferFormat.VEC4_DATA, [ReadWriteBuffer, Dynamic]);
+		if ( defaultForwardShader.tileBuffer != null )
+			defaultForwardShader.tileBuffer.dispose();
+		defaultForwardShader.tileBuffer = new h3d.Buffer(size, hxd.BufferFormat.make([{ name : "", type : DFloat }]), [ReadWriteBuffer, Dynamic]);
+		defaultForwardShader.allLights = allLightsBuffer;
 		defaultForwardShader.pointLightStride = POINT_LIGHT_INFO_SIZE;
 		defaultForwardShader.spotLightStride = SPOT_LIGHT_INFO_SIZE;
 		defaultForwardShader.dirLightStride = DIR_LIGHT_INFO_SIZE;
@@ -64,11 +63,14 @@ class LightBuffer {
 		defaultForwardShader.pointLightPerTile = POINT_LIGHT_PER_TILE;
 		defaultForwardShader.spotLightPerTile = SPOT_LIGHT_PER_TILE;
 		defaultForwardShader.dirLightPerTile = DIR_LIGHT_PER_TILE;
+		defaultForwardShader.maxDirLight = MAX_DIR_LIGHT;
+		defaultForwardShader.maxSpotLight = MAX_SPOT_LIGHT;
+		defaultForwardShader.maxPointLight = MAX_POINT_LIGHT;
 
 		shader.gridSize = GRID_SIZE;
 		shader.tileStride = tileStride;
 		shader.allLights = allLightsBuffer;
-		shader.tileBuffer = defaultForwardShader.lightInfos;
+		shader.tileBuffer = defaultForwardShader.tileBuffer;
 		shader.MAX_DIR_LIGHT = MAX_DIR_LIGHT;
 		shader.MAX_POINT_LIGHT = MAX_POINT_LIGHT;
 		shader.MAX_SPOT_LIGHT = MAX_SPOT_LIGHT;
@@ -81,7 +83,8 @@ class LightBuffer {
 	}
 
 	public function setBuffers( s : h3d.shader.pbr.DefaultForward ) {
-		s.lightInfos = defaultForwardShader.lightInfos;
+		s.tileBuffer = defaultForwardShader.tileBuffer;
+		s.allLights = defaultForwardShader.allLights;
 		s.dirLightStride = defaultForwardShader.dirLightStride;
 		s.pointLightStride = defaultForwardShader.pointLightStride;
 		s.spotLightStride = defaultForwardShader.spotLightStride;
@@ -93,6 +96,10 @@ class LightBuffer {
 		s.pointLightPerTile = defaultForwardShader.pointLightPerTile;
 		s.spotLightPerTile = defaultForwardShader.spotLightPerTile;
 		s.dirLightPerTile = defaultForwardShader.dirLightPerTile;
+
+		s.maxPointLight = defaultForwardShader.maxPointLight;
+		s.maxSpotLight = defaultForwardShader.maxSpotLight;
+		s.maxDirLight = defaultForwardShader.maxDirLight;
 
 		s.USE_INDIRECT = defaultForwardShader.USE_INDIRECT;
 		if( s.USE_INDIRECT ) {
@@ -208,7 +215,7 @@ class LightBuffer {
 	}
 
 	public function sync( ctx : h3d.scene.RenderContext ) {
-		if (defaultForwardShader.lightInfos.isDisposed())
+		if (defaultForwardShader.tileBuffer.isDisposed())
 			createBuffers();
 
 		var r = @:privateAccess ctx.scene.renderer;
@@ -219,10 +226,6 @@ class LightBuffer {
 
 		s.cameraPosition = ctx.camera.pos;
 		s.emissivePower = p.emissive * p.emissive;
-
-		// Safe Reset
-		for( i in 0 ... lightInfos.length )
-			lightInfos[i] = 1.0;
 
 		var lights = sortLights(ctx);
 		fillLights(lights, pbrRenderer.shadows);
@@ -239,7 +242,6 @@ class LightBuffer {
 		var p1 = ctx.camera.unproject(1.0, -1.0, 1.0);
 		var p2 = ctx.camera.unproject(-1.0, 1.0, 1.0);
 		var p3 = ctx.camera.unproject(1.0, 1.0, 1.0);
-		trace(p0, p1, p2, p3);
 		#end
 
 		var pbrIndirect = @:privateAccess pbrRenderer.pbrIndirect;
@@ -325,6 +327,6 @@ class LightBuffer {
 	}
 
 	public function dispose() {
-		defaultForwardShader.lightInfos.dispose();
+		defaultForwardShader.tileBuffer.dispose();
 	}
 }

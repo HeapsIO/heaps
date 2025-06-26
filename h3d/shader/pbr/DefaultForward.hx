@@ -17,12 +17,16 @@ class DefaultForward extends hxsl.Shader {
 		// Import pbr info
 		var output : {color : Vec4, metalness : Float, roughness : Float, occlusion : Float, emissive : Float, depth : Float };
 
-		@param var lightInfos : RWBuffer<Vec4>;
+		@param var tileBuffer : RWBuffer<Int>;
+		@param var allLights : RWBuffer<Vec4>;
 
 		// Buffer Info
 		@param var dirLightPerTile : Int;
 		@param var pointLightPerTile : Int;
 		@param var spotLightPerTile : Int;
+		@param var maxDirLight : Int;
+		@param var maxPointLight : Int;
+		@param var maxSpotLight : Int;
 		@param var dirLightStride : Int;
 		@param var pointLightStride : Int;
 		@param var spotLightStride : Int;
@@ -109,47 +113,53 @@ class DefaultForward extends hxsl.Shader {
 		}
 
 		function evaluateDirLight( index : Int ) : Vec3 {
-			var i = index * dirLightStride + bufferOffset;
-			var lightColor = lightInfos[i].rgb;
-			var lightDir = lightInfos[i+1].xyz;
-
-			return directLighting(lightColor, lightDir);
+			var index = tileBuffer[index + bufferOffset];
+			var light = vec3(0.0);
+			if ( index >= 0 ) {
+				var i = index * dirLightStride;
+				var lightColor = allLights[i].rgb;
+				var lightDir = allLights[i+1].xyz;
+				light = directLighting(lightColor, lightDir);
+			}
+			return light;
 		}
 
 		function evaluatePointLight( index : Int ) : Vec3 {
-			var i = index * pointLightStride + dirLightStride * dirLightPerTile + bufferOffset;
-			var lightColor = lightInfos[i].rgb;
-			var size = lightInfos[i].a;
-			var lightPos = lightInfos[i+1].rgb;
-			var invRange4 = lightInfos[i+1].a;
-			var delta = lightPos - transformedPosition;
-
-			return directLighting(pointLightIntensity(delta, size, invRange4) * lightColor, delta.normalize()) * 1000.0;
+			var index = tileBuffer[index + bufferOffset + dirLightPerTile];
+			var light = vec3(0.0);
+			if ( index >= 0 ) {
+				var i = index * pointLightStride + dirLightStride * maxDirLight;
+				var lightColor = allLights[i].rgb;
+				var size = allLights[i].a;
+				var lightPos = allLights[i+1].rgb;
+				var invRange4 = allLights[i+1].a;
+				var delta = lightPos - transformedPosition;
+				light = directLighting(pointLightIntensity(delta, size, invRange4) * lightColor, delta.normalize());
+			}
+			return light;
 		}
 
 		function evaluateSpotLight( index : Int ) : Vec3 {
-			var i = index * spotLightStride + dirLightStride * dirLightPerTile + pointLightStride * pointLightPerTile + bufferOffset;
-			var lightColor = lightInfos[i].rgb;
-			var range = lightInfos[i].a;
-			var lightPos = lightInfos[i+1].xyz;
-			var invRange4 = lightInfos[i+1].a;
-			var lightDir = lightInfos[i+2].xyz;
-			var angle = lightInfos[i+3].r;
-			var fallOff = lightInfos[i+3].g;
-			var delta = lightPos - transformedPosition;
+			var index = tileBuffer[index];
+			var light = vec3(0.0);
+			if ( index >= 0 ) {
+				var i = index * spotLightStride + dirLightStride * maxDirLight + pointLightStride * maxPointLight;
+				var lightColor = allLights[i].rgb;
+				var range = allLights[i].a;
+				var lightPos = allLights[i+1].xyz;
+				var invRange4 = allLights[i+1].a;
+				var lightDir = allLights[i+2].xyz;
+				var angle = allLights[i+3].r;
+				var fallOff = allLights[i+3].g;
+				var delta = lightPos - transformedPosition;
 
-			var fallOffInfo = spotLightIntensity(delta, lightDir, range, invRange4, fallOff, angle);
-			var fallOff = fallOffInfo.x;
-			var fallOffInfoAngle = fallOffInfo.y;
+				var fallOffInfo = spotLightIntensity(delta, lightDir, range, invRange4, fallOff, angle);
+				var fallOff = fallOffInfo.x;
+				var fallOffInfoAngle = fallOffInfo.y;
 
-			return directLighting(fallOff * lightColor * fallOffInfoAngle, delta.normalize());
-		}
-
-		function inside(pos : Vec3) : Bool {
-			if ( abs(pos.x) < 1.0 && abs(pos.y) < 1.0 && abs(pos.z) < 1.0 )
-				return true;
-			else
-				return false;
+				light = directLighting(fallOff * lightColor * fallOffInfoAngle, delta.normalize());
+			}
+			return light;
 		}
 
 		function evaluateLighting() : Vec3 {
@@ -159,13 +169,13 @@ class DefaultForward extends hxsl.Shader {
 
 			F0 = mix(pbrSpecularColor, albedoGamma, metalness);
 
-			for( l in 0 ...dirLightPerTile )
+			@unroll for( l in 0 ...dirLightPerTile )
 				lightAccumulation += evaluateDirLight(l);
 
-			for( l in 0 ...pointLightPerTile )
+			@unroll for( l in 0 ...pointLightPerTile )
 				lightAccumulation += evaluatePointLight(l);
 
-			for( l in 0 ...spotLightPerTile )
+			@unroll for( l in 0 ...spotLightPerTile )
 				lightAccumulation += evaluateSpotLight(l);
 
 			// Indirect only support the main env from the scene at the moment

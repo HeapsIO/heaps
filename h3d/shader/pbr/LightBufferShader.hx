@@ -1,4 +1,4 @@
-package h3d.scene.pbr;
+package h3d.shader.pbr;
 
 class LightBufferShader extends hxsl.Shader {
 	static var SRC = {
@@ -29,8 +29,7 @@ class LightBufferShader extends hxsl.Shader {
 		@param var screenSize : Vec2;
 
 		@param var allLights : RWBuffer<Vec4>;
-		// TODO : do not copy but indirection
-		@param var tileBuffer : RWBuffer<Vec4>;
+		@param var tileBuffer : RWBuffer<Int>;
 
 		@param var MAX_DIR_LIGHT : Int;
 		@param var MAX_SPOT_LIGHT : Int;
@@ -164,14 +163,14 @@ class LightBufferShader extends hxsl.Shader {
 			var X = computeVar.globalInvocation.x;
 			var Y = computeVar.globalInvocation.y;
 			var tileIdx = X + Y * gridSize;
-			var tileStartVec4 = tileIdx * tileStride;
+			var tileStart = tileIdx * tileStride;
 
 			var viewProj = camera.viewProj;
 
 			computeTileFrustum();
 			
 			for ( i in 0...tileStride ) {
-				tileBuffer[tileStartVec4 + i] = vec4(0.0);
+				tileBuffer[tileStart + i] = -1;
 			}
 
 			var dirLightCount = 0;
@@ -184,9 +183,8 @@ class LightBufferShader extends hxsl.Shader {
 				var v2 = allLights[lightStart + 1];
 				var lightDir = v2.xyz;
 				if ( !cullDirLight() ) {
-					var lightStartTile = tileStartVec4 + dirLightCount * dirLightStride;
-					for ( j in 0...dirLightStride )
-						tileBuffer[lightStartTile + j] = allLights[lightStart + j];
+					var lightStartTile = tileStart + dirLightCount;
+					tileBuffer[lightStartTile] = i;
 					dirLightCount++;
 				}
 			}
@@ -199,9 +197,8 @@ class LightBufferShader extends hxsl.Shader {
 				var pos = allLights[lightStart + 1].xyz;
 				var range = allLights[lightStart + 2].x;
 				if ( !cullPointLight(pos, range) ) {
-					var lightStartTile = tileStartVec4 + dirLightPerTile * dirLightStride + pointLightCount * pointLightStride;
-					for ( j in 0...pointLightStride )
-						tileBuffer[lightStartTile + j] = allLights[lightStart + j];
+					var lightStartTile = tileStart + dirLightPerTile + pointLightCount;
+					tileBuffer[lightStartTile] = i;
 					pointLightCount++;
 				}
 			}
@@ -215,9 +212,8 @@ class LightBufferShader extends hxsl.Shader {
 				var pos = v1.xyz;
 				var range = v1.w;
 				if ( !cullSpotLight(pos, range) ) {
-					var lightStartTile = tileStartVec4 + dirLightPerTile * dirLightStride + pointLightPerTile * pointLightStride + spotLightCount * spotLightStride;
-					for ( j in 0...spotLightStride )
-						tileBuffer[lightStartTile + j] = allLights[lightStart + j];
+					var lightStartTile = tileStart + dirLightPerTile + pointLightPerTile + spotLightCount;
+					tileBuffer[lightStartTile] = i;
 					spotLightCount++;
 				}
 			}
