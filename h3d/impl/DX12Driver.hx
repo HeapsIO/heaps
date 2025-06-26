@@ -2060,7 +2060,7 @@ class DX12Driver extends h3d.impl.Driver {
 
 						switch( pt ) {
 						case TRWTexture(dim,arr,chans):
-							var tdim : hxsl.Ast.TexDimension = t.flags.has(Cube) ? TCube : T2D;
+							var tdim : hxsl.Ast.TexDimension = t.flags.has(Cube) ? TCube : dim;
 							var fmt;
 							if( (arr != t.flags.has(IsArray)) || dim != tdim )
 								throw "Texture format does not match: "+t+"["+t.format+"] should be "+hxsl.Ast.Tools.toString(pt);
@@ -2080,6 +2080,9 @@ class DX12Driver extends h3d.impl.Driver {
 							}
 							desc.mipSlice = 0;
 							desc.planeSlice = 0;
+							if(t.flags.has(Is3D)){
+								desc.wSlice = t.get_layerCount();
+							}
 							if( arr ) {
 								desc.firstArraySlice = 0;
 								desc.arraySize = 1;

@@ -230,7 +230,7 @@ class Renderer extends hxd.impl.AnyProps {
 	public function processVolumetricEffects() {
 		if (volumeEffects.length == 1) {
 			for (e in volumeEffects[0].effects) {
-				var newEffect = e.modulate(volumeEffects[0].getFactor());
+				var newEffect = e.modulate(volumeEffects[0].getFactor(ctx.camera.pos));
 				if (newEffect == null)
 					continue;
 				toRemove.push(newEffect);
@@ -238,19 +238,20 @@ class Renderer extends hxd.impl.AnyProps {
 			}
 		}
 		else if (volumeEffects.length >= 2) {
-			// When there is more than 2 active volume effects, we take the top 2 prios and
-			// blend them (because blend with more than 2 values isn't commutative)
+			// When there is more than 2 active volume effects, we take the top 2 prios and closer distance and
+			// blend them
+			volumeEffects.sort((a, b) -> {
+				if (a.priority != b.priority)
+					return a.priority > b.priority ? -1 : 1;
+
+				var pos = ctx.camera.pos;
+				var aDist = (a.getAbsPos().getPosition() - pos).length();
+				var bDist = (b.getAbsPos().getPosition() - pos).length();
+				return aDist < bDist ? -1 : 1;
+			});
+
 			var r1 = volumeEffects[0];
 			var r2 = volumeEffects[1];
-			for (idx => v in volumeEffects) {
-				var v = volumeEffects[idx];
-				if (v.priority > hxd.Math.min(r1.priority, r2.priority) && r1 != v && r2 != v) {
-					if (r1.priority < v.priority)
-						r1 = v;
-					else
-						r2 = v;
-				}
-			}
 
 			function containsEffectType(volume : h3d.impl.RendererFXVolume, e : h3d.impl.RendererFX) {
 				var cl = Type.getClass(e);
@@ -284,7 +285,7 @@ class Renderer extends hxd.impl.AnyProps {
 					continue;
 
 				for (e2 in volume2.effects) {
-					var newEffect = e1.transition(e1, e2, volume2.getFactor());
+					var newEffect = e1.transition(e1, e2, volume2.getFactor(ctx.camera.pos));
 					if (newEffect != null) {
 						this.toRemove.push(newEffect);
 						this.effects.push(newEffect);

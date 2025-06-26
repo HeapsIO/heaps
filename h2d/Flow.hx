@@ -1073,20 +1073,27 @@ class Flow extends Object {
 		}
 	}
 
+	public function makeBackground(tile) {
+		return new h2d.ScaleGrid(tile, borderLeft, borderTop, borderRight, borderBottom);
+	}
+
+	function buildBackground(tile) {
+		var background = makeBackground(tile);
+		addChildAt(background, 0);
+		getProperties(background).isAbsolute = true;
+		this.background = background;
+		if( !needReflow ) {
+			background.width = flowCeil(calculatedWidth);
+			background.height = flowCeil(calculatedHeight);
+		}
+	}
+
 	function set_backgroundTile(t) {
 		if( backgroundTile == t )
 			return t;
 		if( t != null ) {
-			if( background == null ) {
-				var background = new h2d.ScaleGrid(t, borderLeft, borderTop, borderRight, borderBottom);
-				addChildAt(background, 0);
-				getProperties(background).isAbsolute = true;
-				this.background = background;
-				if( !needReflow ) {
-					background.width = flowCeil(calculatedWidth);
-					background.height = flowCeil(calculatedHeight);
-				}
-			}
+			if( background == null )
+				buildBackground(t);
 			background.tile = t;
 		} else {
 			if( background != null ) {

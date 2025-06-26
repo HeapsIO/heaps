@@ -43,6 +43,7 @@ class RenderContext extends h3d.impl.RenderContext {
 	@global("global.modelView") var globalModelView : h3d.Matrix;
 	@global("global.modelViewInverse") var globalModelViewInverse : h3d.Matrix;
 	@global("global.previousModelView") var globalPreviousModelView : h3d.Matrix;
+	@global("global.frame") var globalFrame : Int;
 
 	var allocPool : h3d.pass.PassObject;
 	var allocFirst : h3d.pass.PassObject;
@@ -113,6 +114,7 @@ class RenderContext extends h3d.impl.RenderContext {
 		setCurrent();
 		engine = h3d.Engine.getCurrent();
 		globalTime = time;
+		globalFrame = frame;
 		pixelSize = getCurrentPixelSize();
 		setCamera(scene.camera);
 	}

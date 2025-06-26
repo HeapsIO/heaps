@@ -674,7 +674,7 @@ class GlDriver extends Driver {
 				#if !js
 				switch( pt.t ) {
 				case TRWTexture(dim,arr,chans):
-					var tdim : hxsl.Ast.TexDimension = t.flags.has(Cube) ? TCube : T2D;
+					var tdim : hxsl.Ast.TexDimension = t.flags.has(Cube) ? TCube : dim;
 					var fmt;
 					if( (arr != t.flags.has(IsArray)) || dim != tdim )
 						fmt = 0;
@@ -2057,6 +2057,8 @@ class GlDriver extends Driver {
 			throw "use endQuery() for timestamp queries";
 		case Samples:
 			GL.beginQuery(GL.SAMPLES_PASSED, q.q);
+		case TimeElapsed:
+			GL.beginQuery(GL.TIME_ELAPSED, q.q);
 		}
 	}
 
@@ -2066,6 +2068,8 @@ class GlDriver extends Driver {
 			GL.queryCounter(q.q, GL.TIMESTAMP);
 		case Samples:
 			GL.endQuery(GL.SAMPLES_PASSED);
+		case TimeElapsed:
+			GL.endQuery(GL.TIME_ELAPSED);
 		}
 	}
 

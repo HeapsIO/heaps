@@ -92,6 +92,10 @@ enum QueryKind {
 		The result will give the number of samples that passes the depth buffer between beginQuery/endQuery range
 	**/
 	Samples;
+	/**
+		The result will give the GPU elapsed time (in nanoseconds, 1e-9 seconds) between beginQuery/endQuery range
+	**/
+	TimeElapsed;
 }
 
 enum RenderFlag {

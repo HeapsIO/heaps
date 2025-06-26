@@ -474,12 +474,21 @@ class Renderer extends h3d.scene.Renderer {
 		ctx.setGlobal("ldrMap", textures.ldr);
 		ctx.setGlobal("velocity", textures.velocity);
 		ctx.setGlobal("global.time", ctx.time);
-		ctx.setGlobal("camera.position", ctx.camera.pos);
-		ctx.setGlobal("camera.inverseViewProj", ctx.camera.getInverseViewProj());
-		ctx.setGlobal("camera.inverseView", ctx.camera.getInverseView());
+		if(ctx.camera != null){
+			ctx.setGlobal("camera.position", ctx.camera.pos);
+			ctx.setGlobal("camera.inverseViewProj", ctx.camera.getInverseViewProj());
+			ctx.setGlobal("camera.inverseView", ctx.camera.getInverseView());
+		}
 	}
 
 	function beginPbr() {
+		#if render_graph
+		if ( dumpFrame == hxd.Timer.frameCount ) {
+			h3d.impl.RenderGraph.start();
+			dumpFrame = -1;
+		}
+		#end
+
 		var props : RenderProps = props;
 		// reset tonemap shaders
 		var s = @:privateAccess tonemap.pass.shaders;
@@ -744,6 +753,15 @@ class Renderer extends h3d.scene.Renderer {
 		}
 		mark("vsync");
 		removeVolumetricEffects();
+		#if render_graph
+		h3d.impl.RenderGraph.end();
+		#end
+	}
+
+	override function mark(step : String) {
+		#if render_graph
+		h3d.impl.RenderGraph.mark(step);
+		#end
 	}
 
 	var debugPushPos : { x : Float, y : Float }
@@ -812,6 +830,13 @@ class Renderer extends h3d.scene.Renderer {
 		toneMode = props.tone;
 		exposure = props.exposure;
 	}
+
+	#if render_graph
+	var dumpFrame = -1;
+	public function dump() {
+		dumpFrame = hxd.Timer.frameCount+1;
+	}
+	#end
 
 	#if editor
 	override function editProps() {

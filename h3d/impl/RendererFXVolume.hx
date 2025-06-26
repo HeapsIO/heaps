@@ -11,7 +11,6 @@ class RendererFXVolume extends h3d.scene.Object {
 	public var outerShape : Shape;
 	public var effects : Array<h3d.impl.RendererFX> = [];
 
-	var renderer : h3d.scene.Renderer;
 	var factor : Float = 0.;
 	var cam : h3d.Camera;
 
@@ -25,31 +24,26 @@ class RendererFXVolume extends h3d.scene.Object {
 		super.sync(ctx);
 
 		#if !editor
-		if (renderer == null)
-			this.renderer = ctx.scene.renderer;
-
 		if (effects == null) return;
-		var newFactor = getFactor();
-		if (factor <= 0 && newFactor > 0)
-			this.renderer.volumeEffects.push(this);
+		factor = getFactor(ctx.camera.pos);
+		var renderer = ctx.scene.renderer;
+		if (factor > 0 && !renderer.volumeEffects.contains(this))
+			renderer.volumeEffects.push(this);
 
-		if (factor > 0 && newFactor <= 0)
-			this.renderer.volumeEffects.remove(this);
-
-		factor = newFactor;
+		if (factor <= 0 && renderer.volumeEffects.contains(this))
+			renderer.volumeEffects.remove(this);
 		#end
 	}
 
 	override function onRemove() {
 		super.onRemove();
-		if (this.renderer == null) return;
-		this.renderer.volumeEffects.remove(this);
+		var renderer = getScene().renderer;
+		if (renderer == null) return;
+		renderer.volumeEffects.remove(this);
 	}
 
-	public function getFactor() : Float {
-		if (cam == null)
-			cam = getScene().camera;
-		var distance = (getAbsPos().getPosition() - cam.pos).length();
+	public function getFactor(pos : h3d.col.Point) : Float {
+		var distance = (getAbsPos().getPosition() - pos).length();
 
 		switch ([innerShape, outerShape]) {
 			case [Sphere(r1), Sphere(r2)]:
