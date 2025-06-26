@@ -206,8 +206,10 @@ class System {
 
 		#if (hlsdl && !multidriver)
 		// New UI window does not force SDL leave relative mouse mode, do it manually
-		var prevMouseMode = hxd.Window.getInstance().mouseMode;
-		hxd.Window.getInstance().mouseMode = Absolute;
+		var window = hxd.Window.getInstance();
+		var prevMouseMode = window?.mouseMode;
+		if (window != null)
+			window.mouseMode = Absolute;
 		#end
 		var f = new hl.UI.WinLog("Uncaught Exception", 500, 400);
 		f.setTextContent(err+"\n"+stack);
@@ -215,7 +217,8 @@ class System {
 		but.onClick = function() {
 			hl.UI.stopLoop();
 			#if (hlsdl && !multidriver)
-			hxd.Window.getInstance().mouseMode = prevMouseMode;
+			if (prevMouseMode != null)
+				hxd.Window.getInstance().mouseMode = prevMouseMode;
 			#end
 		};
 
@@ -224,7 +227,8 @@ class System {
 			dismissErrors = true;
 			hl.UI.stopLoop();
 			#if (hlsdl && !multidriver)
-			hxd.Window.getInstance().mouseMode = prevMouseMode;
+			if (prevMouseMode != null)
+				hxd.Window.getInstance().mouseMode = prevMouseMode;
 			#end
 		};
 
