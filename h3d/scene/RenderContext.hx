@@ -246,6 +246,10 @@ class RenderContext extends h3d.impl.RenderContext {
 		return cameraFrustumBuffer;
 	}
 
+	public function getDepthClearValue() {
+		return useReverseDepth ? 0 : 1;
+	}
+
 	public function uploadParams() {
 		fillParams(shaderBuffers, drawPass.shader, drawPass.shaders);
 		engine.uploadShaderBuffers(shaderBuffers, Params);

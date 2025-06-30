@@ -103,7 +103,7 @@ class Renderer extends hxd.impl.AnyProps {
 	}
 
 	function getDepthClearValue() {
-		return ctx.useReverseDepth ? 0 : 1;
+		return ctx.getDepthClearValue();
 	}
 
 	@:access(h3d.scene.Object)
