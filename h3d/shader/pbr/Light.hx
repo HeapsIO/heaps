@@ -36,8 +36,6 @@ class LightEvaluation extends hxsl.Shader {
 
 			return vec2(falloff, angleFalloff);
 		}
-
-
 	};
 }
 
@@ -90,7 +88,7 @@ class SpotLight extends Light {
 				pbrLightColor *= cookie.rgb * cookie.a;
 			}
 			else
-				pbrLightColor *= fallOffInfoAngle;
+			pbrLightColor *= fallOffInfoAngle;
 		}
 	}
 }
@@ -151,13 +149,6 @@ class CapsuleLight extends Light {
 		@param var halfLength : Float;
 		@param var left : Vec3;
 
-
-		function closestPointOnLine(a : Vec3, b : Vec3 , c : Vec3) : Vec3 {
-			var ab = b - a;
-			var t = dot(c - a, ab) / dot(ab, ab);
-			return a + t * ab ;
-		}
-
 		function closestPointOnSegment( a : Vec3, b : Vec3, c : Vec3) : Vec3 {
 			var ab = b - a;
 			var t = dot(c - a, ab) / dot(ab, ab);
@@ -196,4 +187,106 @@ class CapsuleLight extends Light {
 			pbrOcclusionFactor = occlusionFactor;
 		}
 	};
+}
+
+class RectangleLight extends Light {
+	static var SRC = {
+		@param var lightDir : Vec3;
+		@param var lightPos : Vec3;
+		@param var p0 : Vec3;
+		@param var p1 : Vec3;
+		@param var p2 : Vec3;
+		@param var p3 : Vec3;
+		@param var width : Float;
+		@param var height : Float;
+		@param var horizontalAngle : Float;
+		@param var verticalAngle : Float;
+		@param var verticalFallOff : Float;
+		@param var horizontalFallOff : Float;
+		@param var range : Float;
+		@param var invLightRange4 : Float; // 1 / range^4
+
+		var view : Vec3;
+		var normal : Vec3;
+
+		function getIntersectionPoint(rayOrigin : Vec3, rayDirection : Vec3, p0 : Vec3, p1 : Vec3, p2 : Vec3) : Vec3 {
+			var planeNormal = cross(p1 - p0, p2 - p1).normalize();
+			return tracePlane(rayOrigin, rayDirection, p0, planeNormal);
+		}
+
+		function closestPointOnSegment( a : Vec3, b : Vec3, c : Vec3) : Vec3 {
+			var ab = b - a;
+			var t = dot(c - a, ab) / dot(ab, ab);
+			return a + saturate(t) * ab;
+		}
+
+		function tracePlane(rayOrigin : Vec3, rayDirection : Vec3, planeOrigin : Vec3, planeNormal : Vec3) : Vec3 {
+			var distanceToPlane = dot(planeNormal, (planeOrigin - rayOrigin) / dot(planeNormal, rayDirection));
+			return rayOrigin + rayDirection * distanceToPlane;
+		}
+
+		function traceTriangle(rayOrigin : Vec3, rayDirection : Vec3, p0 : Vec3, p1 : Vec3, p2 : Vec3) : Bool {
+			var p = getIntersectionPoint(rayOrigin, rayDirection, p0, p1, p2);
+			var n1 = cross(p1 - p0, p - p1).normalize();
+			var n2 = cross(p2 - p1, p - p2).normalize();
+			var n3 = cross(p0 - p2, p - p0).normalize();
+			var d0 = dot(n1, n2);
+			var d1 = dot(n2, n3);
+			return (d0 > 0.1) && (d1 > 0.1);
+		}
+
+		function getClosestPointOnRectangle(rayOrigin : Vec3, rayDirection : Vec3, p0 : Vec3, p1 : Vec3, p2 : Vec3, p3 : Vec3) : Vec3 {
+			var int = getIntersectionPoint(rayOrigin, rayDirection, p0, p1, p3);
+			var closestPoint = vec3(0, 0, 0);
+			if (traceTriangle(rayOrigin, rayDirection, p0, p3, p2)) {
+				closestPoint = getIntersectionPoint(rayOrigin, rayDirection, p0, p3, p2);
+			}
+			else if (traceTriangle(rayOrigin, rayDirection, p0, p1, p3)) {
+				closestPoint = getIntersectionPoint(rayOrigin, rayDirection, p0, p1, p3);
+			}
+			else {
+				var p = int - lightPos;
+				var right = (p1 - p0).normalize();
+				var up = (p2 - p0).normalize();
+				var intRight = clamp(dot(p, right), -width * 0.5, width * 0.5) * right;
+				var intUp = clamp(dot(p, up), -height * 0.5, height * 0.5) * up;
+				closestPoint = lightPos + intRight + intUp;
+			}
+
+			return closestPoint;
+		}
+
+		function fragment() {
+			pbrOcclusionFactor = occlusionFactor;
+
+			var right = (p1 - p0).normalize();
+			var up = (p2 - p0).normalize();
+			var invLightDir = -lightDir;
+
+			// Diffuse
+			var closestPointDiffuse = getClosestPointOnRectangle(transformedPosition, normal, p0, p1, p2, p3);
+			var delta = closestPointDiffuse - transformedPosition;
+			var epsilon = horizontalFallOff - horizontalAngle;
+			pbrLightDirection = normalize(delta);
+
+			var xyLightDir = invLightDir - dot(invLightDir, up) * up;
+			var xyDelta = delta - dot(delta, up) * up;
+			var xyTheta = dot(xyDelta.normalize(), xyLightDir.normalize());
+			var horizontalFalloff = clamp((xyTheta - horizontalAngle) / epsilon, 0.0, 1.0);
+
+			var xzLightDir = invLightDir - dot(invLightDir, right) * right;
+			var xzDelta = delta - dot(delta, right) * right;
+			var xzTheta = dot(xzDelta.normalize(), xzLightDir.normalize());
+			var verticalFalloff = clamp((xzTheta - verticalAngle) / epsilon, 0.0, 1.0);
+
+			var falloff = verticalFalloff * horizontalFalloff * pointLightIntensity(delta, range, invLightRange4);
+			pbrLightColor = falloff * lightColor;
+
+			// Specular
+			var r = reflect(-view, normal);
+			var closestPointSpec = getClosestPointOnRectangle(transformedPosition, r, p0, p1, p2, p3);
+			var delta = normalize(closestPointSpec - transformedPosition);
+			pbrSpecularLightDirection = delta;
+		}
+	}
 }
