@@ -21,6 +21,14 @@ enum SystemValue {
 	IsMobile;
 }
 
+enum KeyboardLayout {
+	QWERTY;
+	AZERTY;
+	QWERTZ;
+	QZERTY;
+	Unknown;
+}
+
 //@:coreApi
 class System {
 
@@ -417,6 +425,29 @@ class System {
 		}
 		return _loc;
 	}
+
+	/**
+		The value isn't reliable on SDL when used without a window.
+	**/
+	public static function getKeyboardLayout() : KeyboardLayout {
+		var layoutStr = null;
+		#if hlsdl
+		layoutStr = sdl.Sdl.detectKeyboardLayout();
+		#elseif (hldx >= version("1.16.0"))
+		layoutStr = dx.Window.detectKeyboardLayout();
+		#elseif (hldx && !dx12)
+		layoutStr = dx.Driver.detectKeyboardLayout();
+		#end
+		return switch(layoutStr) {
+			case "qwerty": QWERTY;
+			case "azerty": AZERTY;
+			case "qwertz": QWERTZ;
+			case "qzerty": QZERTY;
+			case null, _: Unknown;
+		};
+	}
+
+	public static dynamic function onKeyboardLayoutChange() : Void {}
 
 	// getters
 
