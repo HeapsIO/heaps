@@ -555,7 +555,7 @@ class Window {
 		#end
 		#if (hlsdl >= version("1.16.0") || hldx >= version("1.16.0"))
 		case KeyMapChanged:
-			System.onKeyboardLayoutChange();
+			hxd.System.onKeyboardLayoutChange();
 		#end
 		#if !hlsdl // hlsdl post both Close+Quit
 		case Quit:

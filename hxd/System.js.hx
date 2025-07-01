@@ -15,6 +15,14 @@ enum SystemValue {
 	IsMobile;
 }
 
+enum KeyboardLayout {
+	QWERTY;
+	AZERTY;
+	QWERTZ;
+	QZERTY;
+	Unknown;
+}
+
 class System {
 
 	public static var width(get,never) : Int;
@@ -158,6 +166,12 @@ class System {
 	public static function getLocale() : String {
 		return js.Browser.navigator.language + "_" + js.Browser.navigator.language.toUpperCase();
 	}
+
+	public static function getKeyboardLayout() : KeyboardLayout {
+		return Unknown;
+	}
+
+	public static dynamic function onKeyboardLayoutChange() : Void {}
 
 	// getters
 

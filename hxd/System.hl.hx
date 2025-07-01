@@ -427,7 +427,7 @@ class System {
 	}
 
 	/**
-		The value isn't reliable when used without a window.
+		The value isn't reliable on SDL when used without a window.
 	**/
 	public static function getKeyboardLayout() : KeyboardLayout {
 		var layoutStr = null;
@@ -447,8 +447,7 @@ class System {
 		};
 	}
 
-	public static dynamic function onKeyboardLayoutChange() {}
-
+	public static dynamic function onKeyboardLayoutChange() : Void {}
 
 	// getters
 
