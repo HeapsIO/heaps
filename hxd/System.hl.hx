@@ -433,7 +433,7 @@ class System {
 		var layoutStr = null;
 		#if hlsdl
 		layoutStr = sdl.Sdl.detectKeyboardLayout();
-		#elseif (hldx && hl_ver >= version("1.16.0"))
+		#elseif (hldx >= version("1.16.0"))
 		layoutStr = dx.Window.detectKeyboardLayout();
 		#elseif (hldx && !dx12)
 		layoutStr = dx.Driver.detectKeyboardLayout();
