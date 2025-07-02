@@ -68,16 +68,20 @@ class RectangleLight extends Light {
 	override function sync(ctx) {
 		super.sync(ctx);
 
+		inline function getPoint(signY : Float, signZ : Float) : h3d.col.Point {
+			return new h3d.col.Point(0, (width / 2) * signY, (height / 2) * signZ).transformed(getAbsPos());
+		}
+
 		pbr.lightColor.load(_color);
 		var power = power;
 		pbr.lightColor.scale(power * power);
 		pbr.lightPos.set(absPos.tx, absPos.ty, absPos.tz);
 		pbr.width = width;
 		pbr.height = height;
-		pbr.p0.load(new h3d.Vector(0, -width / 2, -height / 2).transformed(getAbsPos()));
-		pbr.p1.load(new h3d.Vector(0, width / 2, -height / 2).transformed(getAbsPos()));
-		pbr.p2.load(new h3d.Vector(0, -width / 2, height / 2).transformed(getAbsPos()));
-		pbr.p3.load(new h3d.Vector(0, width / 2, height / 2).transformed(getAbsPos()));
+		pbr.p0.load(getPoint(-1, -1));
+		pbr.p1.load(getPoint(1, -1));
+		pbr.p2.load(getPoint(-1, 1));
+		pbr.p3.load(getPoint(1, 1));
 		pbr.lightDir.load(absPos.front());
 		pbr.verticalAngle = hxd.Math.cos(hxd.Math.degToRad(verticalAngle/2.0));
 		pbr.verticalFallOff = hxd.Math.cos(hxd.Math.degToRad(hxd.Math.min(verticalAngle/2.0, fallOff)));

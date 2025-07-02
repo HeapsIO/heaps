@@ -88,7 +88,7 @@ class SpotLight extends Light {
 				pbrLightColor *= cookie.rgb * cookie.a;
 			}
 			else
-			pbrLightColor *= fallOffInfoAngle;
+				pbrLightColor *= fallOffInfoAngle;
 		}
 	}
 }
@@ -266,18 +266,19 @@ class RectangleLight extends Light {
 			// Diffuse
 			var closestPointDiffuse = getClosestPointOnRectangle(transformedPosition, normal, p0, p1, p2, p3);
 			var delta = closestPointDiffuse - transformedPosition;
-			var epsilon = horizontalFallOff - horizontalAngle;
 			pbrLightDirection = normalize(delta);
 
+			var xyEpsilon = horizontalFallOff - horizontalAngle;
 			var xyLightDir = invLightDir - dot(invLightDir, up) * up;
 			var xyDelta = delta - dot(delta, up) * up;
 			var xyTheta = dot(xyDelta.normalize(), xyLightDir.normalize());
-			var horizontalFalloff = clamp((xyTheta - horizontalAngle) / epsilon, 0.0, 1.0);
+			var horizontalFalloff = saturate((xyTheta - horizontalAngle) / xyEpsilon);
 
+			var xzEpsilon = verticalFallOff - verticalAngle;
 			var xzLightDir = invLightDir - dot(invLightDir, right) * right;
 			var xzDelta = delta - dot(delta, right) * right;
 			var xzTheta = dot(xzDelta.normalize(), xzLightDir.normalize());
-			var verticalFalloff = clamp((xzTheta - verticalAngle) / epsilon, 0.0, 1.0);
+			var verticalFalloff = saturate((xzTheta - verticalAngle) / xzEpsilon);
 
 			var falloff = verticalFalloff * horizontalFalloff * pointLightIntensity(delta, range, invLightRange4);
 			pbrLightColor = falloff * lightColor;
