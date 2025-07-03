@@ -1832,7 +1832,7 @@ class DX12Driver extends h3d.impl.Driver {
 	function hasBuffersTexturesChanged ( buf : h3d.shader.Buffers.ShaderBuffers, regs : ShaderRegisters ) : Bool {
 		var changed = regs.lastHeapCount != heapCount;
 		if( !changed ) {
-			for( i in 0...regs.texturesCount )
+			for( i in 0...regs.texturesTypes.length )
 				if( regs.lastTextures[i] != ( buf.tex[i] != null ? buf.tex[i].t : null ) || regs.lastTexturesBits[i] != ( buf.tex[i] != null ? buf.tex[i].bits : -1 ) ) {
 					changed = true;
 					break;
