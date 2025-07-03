@@ -186,6 +186,9 @@ class Driver {
 	public function uploadShaderBuffers( buffers : h3d.shader.Buffers, which : h3d.shader.Buffers.BufferKind ) {
 	}
 
+	public function flushShaderBuffers() {
+	}
+
 	public function selectBuffer( buffer : Buffer ) {
 	}
 

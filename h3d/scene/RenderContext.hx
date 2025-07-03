@@ -198,9 +198,7 @@ class RenderContext extends h3d.impl.RenderContext {
 		fillGlobals(buf, rt);
 		engine.uploadShaderBuffers(buf, Globals);
 		fillParams(buf, rt, computeLink, true);
-		engine.uploadShaderBuffers(buf, Params);
-		engine.uploadShaderBuffers(buf, Textures);
-		engine.uploadShaderBuffers(buf, Buffers);
+		engine.uploadInstanceShaderBuffers(buf);
 		engine.driver.computeDispatch(x,y,z);
 		@:privateAccess engine.dispatches++;
 		if ( computeLink == tmpComputeLink )
@@ -252,9 +250,7 @@ class RenderContext extends h3d.impl.RenderContext {
 
 	public function uploadParams() {
 		fillParams(shaderBuffers, drawPass.shader, drawPass.shaders);
-		engine.uploadShaderBuffers(shaderBuffers, Params);
-		engine.uploadShaderBuffers(shaderBuffers, Textures);
-		engine.uploadShaderBuffers(shaderBuffers, Buffers);
+		engine.uploadInstanceShaderBuffers(shaderBuffers);
 	}
 
 	public function done() {

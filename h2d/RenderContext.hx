@@ -631,9 +631,7 @@ class RenderContext extends h3d.impl.RenderContext {
 		var buffers = shaderBuffers;
 		fillParams(buffers, compiledShader, currentShaders);
 		engine.selectMaterial(pass);
-		engine.uploadShaderBuffers(buffers, Params);
-		engine.uploadShaderBuffers(buffers, Textures);
-		engine.uploadShaderBuffers(buffers, Buffers);
+		engine.uploadInstanceShaderBuffers(buffers);
 	}
 
 	inline function setupColor( obj : h2d.Drawable ) {
