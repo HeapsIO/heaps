@@ -1359,6 +1359,7 @@ class Checker {
 			case [_, TInt, TFloat]: toFloat(e1); TFloat;
 			case [_, TFloat, TInt]: toFloat(e2); TFloat;
 			case [_, TVec(a,VFloat), TVec(b,VFloat)] if( a == b ): TVec(a,VFloat);
+			case [_, TVec(a,VInt), TVec(b,VInt)] if( a == b ): TVec(a,VInt);
 			case [_, TFloat, TVec(_,VFloat)]: e2.t;
 			case [_, TVec(_,VFloat), TFloat]: e1.t;
 			case [_, TInt, TVec(_, VFloat)]: toFloat(e1); e2.t;
