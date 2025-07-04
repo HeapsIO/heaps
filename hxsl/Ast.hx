@@ -243,6 +243,7 @@ enum TGlobal {
 	Dot;
 	Cross;
 	Normalize;
+	Transpose;
 	//Faceforward;
 	LReflect;
 	//Refract;
