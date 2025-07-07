@@ -2039,7 +2039,7 @@ class GlDriver extends Driver {
 
 	override function computeDispatch(x:Int = 1, y:Int = 1, z:Int = 1) {
 		GL.dispatchCompute(x,y,z);
-		GL.memoryBarrier(GL.BUFFER_UPDATE_BARRIER_BIT);// | GL.TEXTURE_UPDATE_BARRIER_BIT | GL.ALL_BARRIER_BITS);
+		GL.memoryBarrier(GL.BUFFER_UPDATE_BARRIER_BIT);
 	}
 
 	override function allocQuery(kind:QueryKind) {
