@@ -161,7 +161,7 @@ class BitmapData {
 				clip_y0 = 0;
 				clip_y1 = height-1;
 			} else {
-				if ( y1>=width || y0<0 ) return;
+				if ( y1>=height || y0<0 ) return;
 				sy = -1;
 				y1 = -y1;
 				y0 = -y0;
