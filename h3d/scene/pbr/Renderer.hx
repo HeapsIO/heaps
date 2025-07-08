@@ -434,6 +434,8 @@ class Renderer extends h3d.scene.Renderer {
 
 	override function computeStatic() {
 		var light = @:privateAccess ctx.lights;
+		var oldReverseDepth = ctx.useReverseDepth;
+		ctx.useReverseDepth = false;
 		var passes = get("shadow");
 		if (!shadows)
 			passes.clear();
@@ -446,6 +448,7 @@ class Renderer extends h3d.scene.Renderer {
 			}
 			light = light.next;
 		}
+		ctx.useReverseDepth = oldReverseDepth;
 	}
 
 	function initTextures() {
