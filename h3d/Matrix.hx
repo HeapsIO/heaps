@@ -839,6 +839,10 @@ class MatrixImpl {
 		this._41 = copy._41;
 		this._42 = copy._42;
 		this._43 = copy._43;
+
+		this._14 = copy._14;
+		this._24 = copy._24;
+		this._34 = copy._34;
 	}
 }
 
