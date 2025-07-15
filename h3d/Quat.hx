@@ -55,7 +55,6 @@ class Quat {
 		var hx = from.x + to.x;
 		var hy = from.y + to.y;
 		var hz = from.z + to.z;
-		var h = Math.invSqrt(hx * hx + hy * hy + hz * hz);
 		x = from.y * hz - from.z * hy;
 		y = from.z * hx - from.x * hz;
 		z = from.x * hy - from.y * hx;
