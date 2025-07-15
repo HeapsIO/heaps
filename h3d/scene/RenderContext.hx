@@ -18,6 +18,7 @@ class RenderContext extends h3d.impl.RenderContext {
 	public var pbrLightPass : h3d.mat.Pass;
 	public var computingStatic : Bool;
 	public var computeVelocity : Bool;
+	public var useReverseDepth : Bool;
 
 	public var lightSystem : h3d.scene.LightSystem;
 	public var extraShaders : hxsl.ShaderList;
@@ -34,6 +35,7 @@ class RenderContext extends h3d.impl.RenderContext {
 	@global("camera.position") var cameraPos : h3d.Vector;
 	@global("camera.projDiag") var cameraProjDiag : h3d.Vector4;
 	@global("camera.projFlip") var cameraProjFlip : Float;
+	@global("camera.projDepth") var cameraProjDepth : Float;
 	@global("camera.viewProj") var cameraViewProj : h3d.Matrix;
 	@global("camera.inverseViewProj") var cameraInverseViewProj : h3d.Matrix;
 	@global("camera.previousViewProj") var cameraPreviousViewProj : h3d.Matrix;
@@ -61,25 +63,29 @@ class RenderContext extends h3d.impl.RenderContext {
 	public function new(scene) {
 		super();
 		this.scene = scene;
+		camera = new h3d.Camera();
 		cachedShaderList = [];
 		cachedPassObjects = [];
 		initGlobals();
 	}
 
 	public function setCamera( cam : h3d.Camera ) {
-		camera = cam;
-		cameraView = cam.mcam;
-		cameraNear = cam.zNear;
-		cameraFar = cam.zFar;
-		cameraProj = cam.mproj;
-		cameraPos = cam.pos;
-		cameraProjDiag = new h3d.Vector4(cam.mproj._11,cam.mproj._22,cam.mproj._33,cam.mproj._44);
+		camera.load(cam);
+		camera.reverseDepth = useReverseDepth;
+		camera.update();
+		cameraView = camera.mcam;
+		cameraNear = camera.zNear;
+		cameraFar = camera.zFar;
+		cameraProj = camera.mproj;
+		cameraPos = camera.pos;
+		cameraProjDiag = new h3d.Vector4(camera.mproj._11,camera.mproj._22,camera.mproj._33,camera.mproj._44);
 		if ( cameraPreviousViewProj == null )
-			cameraPreviousViewProj = cam.m.clone();
+			cameraPreviousViewProj = camera.m.clone();
 		if (cameraJitterOffsets == null)
 			cameraJitterOffsets = new h3d.Vector4( 0.0, 0.0, 0.0, 0.0 );
-		cameraViewProj = cam.m;
+		cameraViewProj = camera.m;
 		cameraInverseViewProj = camera.getInverseViewProj();
+		cameraProjDepth = useReverseDepth ? -1.0 : 1.0;
 	}
 
 	public function setupTarget() {
@@ -192,9 +198,7 @@ class RenderContext extends h3d.impl.RenderContext {
 		fillGlobals(buf, rt);
 		engine.uploadShaderBuffers(buf, Globals);
 		fillParams(buf, rt, computeLink, true);
-		engine.uploadShaderBuffers(buf, Params);
-		engine.uploadShaderBuffers(buf, Textures);
-		engine.uploadShaderBuffers(buf, Buffers);
+		engine.uploadInstanceShaderBuffers(buf);
 		engine.driver.computeDispatch(x,y,z);
 		@:privateAccess engine.dispatches++;
 		if ( computeLink == tmpComputeLink )
@@ -240,11 +244,13 @@ class RenderContext extends h3d.impl.RenderContext {
 		return cameraFrustumBuffer;
 	}
 
+	public function getDepthClearValue() {
+		return useReverseDepth ? 0 : 1;
+	}
+
 	public function uploadParams() {
 		fillParams(shaderBuffers, drawPass.shader, drawPass.shaders);
-		engine.uploadShaderBuffers(shaderBuffers, Params);
-		engine.uploadShaderBuffers(shaderBuffers, Textures);
-		engine.uploadShaderBuffers(shaderBuffers, Buffers);
+		engine.uploadInstanceShaderBuffers(shaderBuffers);
 	}
 
 	public function done() {

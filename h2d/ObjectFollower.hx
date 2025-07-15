@@ -87,6 +87,7 @@ class ObjectFollower extends Object {
 				remove();
 			return;
 		}
+		var camera = scene.getRenderCamera();
 		var s2d = getScene();
 		var width = s2d == null ? h3d.Engine.getCurrent().width : s2d.width;
 		var height = s2d == null ? h3d.Engine.getCurrent().height : s2d.height;
@@ -94,7 +95,7 @@ class ObjectFollower extends Object {
 		var pos = new h3d.Vector();
 		if( cameraRelative ) {
 			var m = new h3d.Matrix();
-			inline m.load(scene.camera.mcam);
+			inline m.load(camera.mcam);
 			inline m.transpose();
 			var tmp = new h3d.Vector(offsetX, offsetZ, offsetY);
 			tmp.transform3x3(m);
@@ -102,7 +103,7 @@ class ObjectFollower extends Object {
 		} else {
 			pos.set(absPos._41 + offsetX, absPos._42 + offsetY, absPos._43 + offsetZ);
 		}
-		var p = scene.camera.project(pos.x, pos.y, pos.z, width * outputScale, height * outputScale, tmpPos);
+		var p = camera.project(pos.x, pos.y, pos.z, width * outputScale, height * outputScale, tmpPos);
 		zValue = p.z;
 
 		if( horizontalAlign != Left || verticalAlign != Top ) {
@@ -134,11 +135,11 @@ class ObjectFollower extends Object {
 		y = p.y;
 
 		if( depthBias != 0 ) {
-			var move = scene.camera.pos.sub(pos).normalized();
+			var move = camera.pos.sub(pos).normalized();
 			pos.x += move.x * depthBias;
 			pos.y += move.y * depthBias;
 			pos.z += move.z * depthBias;
-			var p2 = scene.camera.project(pos.x, pos.y, pos.z, width, height, tmpPos);
+			var p2 = camera.project(pos.x, pos.y, pos.z, width, height, tmpPos);
 			zValue = p2.z;
 		}
 	}
@@ -190,16 +191,19 @@ class ObjectFollower extends Object {
 		}
 
 		@:privateAccess {
+			var scene = follow.getScene();
+			var camera = scene.getRenderCamera();
+			var wantedMode : h3d.mat.Data.Compare = camera.reverseDepth ? GreaterEqual : LessEqual;
 			var prev = ctx.baseShader.zValue;
 			var prevMode = ctx.pass.depthTest, prevWrite = ctx.pass.depthWrite;
-			if( prevMode != LessEqual ) {
-				ctx.pass.depth(true, LessEqual);
+			if( prevMode != wantedMode ) {
+				ctx.pass.depth(true, wantedMode);
 				ctx.engine.selectMaterial(ctx.pass);
 			}
 			ctx.baseShader.zValue = zValue;
 			super.drawRec(ctx);
 			ctx.baseShader.zValue = prev;
-			if( prevMode != LessEqual ) {
+			if( prevMode != wantedMode ) {
 				ctx.pass.depth(prevWrite, prevMode);
 				ctx.engine.selectMaterial(ctx.pass);
 			}

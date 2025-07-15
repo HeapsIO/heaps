@@ -516,7 +516,7 @@ class ConvertBinJSON extends Convert {
 		save(out.getBytes());
 	}
 
-	static var _ = [Convert.register(new ConvertBinJSON("json,prefab,l3d", "hbson"))];
+	static var _ = [Convert.register(new ConvertBinJSON("json,prefab,l3d,fx,shgraph", "hbson"))];
 }
 
 class ConvertSVGToMSDF extends Convert {

@@ -76,7 +76,7 @@ class InstanceIndirectBase extends hxsl.Shader {
 		}
 
 		function getMinScreenRatio() : Float {
-			return ENABLE_LOD ? matInfos[0].w : 0.0;
+			return ENABLE_LOD ? matInfos[matID].w : 0.0;
 		}
 
 		function computeScreenRatio( distToCam : Float, radius : Float ) : Float {

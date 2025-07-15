@@ -145,6 +145,13 @@ class Engine {
 		driver.selectMaterial(pass);
 	}
 
+	public function uploadInstanceShaderBuffers(buffers) {
+		driver.flushShaderBuffers();
+		driver.uploadShaderBuffers(buffers, Params);
+		driver.uploadShaderBuffers(buffers, Textures);
+		driver.uploadShaderBuffers(buffers, Buffers);
+	}
+
 	public function uploadShaderBuffers(buffers, which) {
 		driver.uploadShaderBuffers(buffers, which);
 	}

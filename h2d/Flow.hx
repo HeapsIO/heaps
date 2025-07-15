@@ -1412,7 +1412,7 @@ class Flow extends Object {
 
 			// position all not absolute nodes
 			forChildren(function(i, p, c) {
-				if( p.autoSizeWidth != null )
+				if( p.autoSizeWidth != null || p.autoSizeHeight != null )
 					calcSize(p, c);
 				var br = false;
 				if( ((multiline && x - startX + p.calculatedWidth > maxInWidth) || p.lineBreak) && x - startX > 0 ) {
@@ -1610,7 +1610,7 @@ class Flow extends Object {
 
 			// position all not absolute nodes
 			forChildren(function(i, p, c) {
-				if( p.autoSizeHeight != null )
+				if( p.autoSizeWidth != null || p.autoSizeHeight != null )
 					calcSize(p, c);
 				var br = false;
 				if( ((multiline && y - startY + p.calculatedHeight > maxInHeight) || p.lineBreak) && y - startY > 0 ) {

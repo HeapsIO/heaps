@@ -638,7 +638,7 @@ class GlDriver extends Driver {
 					}
 			}
 		case Textures:
-			var tcount = s.textures.length;
+			var imageBindingIdx = 0;
 			for( i in 0...s.textures.length ) {
 				var t = buf.tex[i];
 				var pt = s.textures[i];
@@ -698,7 +698,7 @@ class GlDriver extends Driver {
 					#if (hlsdl < version("1.15.0"))
 					throw "RWTextures support requires hlsdl 1.15+";
 					#else
-					gl.bindImageTexture(i, cast t.t.t, 0, false, 0, GL.READ_WRITE, fmt);
+					gl.bindImageTexture(imageBindingIdx++, cast t.t.t, 0, false, 0, GL.READ_WRITE, fmt);
 					#end
 					boundTextures[i] = null;
 					continue;

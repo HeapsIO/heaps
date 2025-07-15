@@ -234,14 +234,15 @@ class Renderer extends h3d.scene.Renderer {
 	}
 
 	function lighting() {
-
+		var oldReverseDepth = ctx.useReverseDepth;
+		ctx.useReverseDepth = false;
 		begin(Shadows);
 		var ls = Std.downcast(getLightSystem(), h3d.scene.pbr.LightSystem);
 		var count = ctx.engine.drawCalls;
 		if( ls != null ) drawShadows(ls);
 		if( ctx.lightSystem != null ) ctx.lightSystem.drawPasses = ctx.engine.drawCalls - count;
 		end();
-
+		ctx.useReverseDepth = oldReverseDepth;
 		if (ls != null) {
 			while (ls.lightingShaders.length != 0)
 				ls.lightingShaders.pop();
@@ -433,6 +434,8 @@ class Renderer extends h3d.scene.Renderer {
 
 	override function computeStatic() {
 		var light = @:privateAccess ctx.lights;
+		var oldReverseDepth = ctx.useReverseDepth;
+		ctx.useReverseDepth = false;
 		var passes = get("shadow");
 		if (!shadows)
 			passes.clear();
@@ -445,6 +448,7 @@ class Renderer extends h3d.scene.Renderer {
 			}
 			light = light.next;
 		}
+		ctx.useReverseDepth = oldReverseDepth;
 	}
 
 	function initTextures() {
@@ -607,10 +611,10 @@ class Renderer extends h3d.scene.Renderer {
 	override function render() {
 		beginPbr();
 		setTarget(textures.depth);
-		ctx.engine.clearF(new h3d.Vector4(1));
+		ctx.engine.clearF(new h3d.Vector4(getDepthClearValue()));
 
 		setTargets(getPbrRenderTargets(false));
-		clear(0, 1, 0);
+		clear(0, getDepthClearValue(), 0);
 
 		setTargets(getPbrRenderTargets(true));
 

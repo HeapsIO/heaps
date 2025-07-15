@@ -372,6 +372,16 @@ class Pass {
 		return selfShadersRec(true);
 	}
 
+	function reverseDepthTest() {
+		depthTest = switch( depthTest ) {
+			case Greater: Less;
+			case GreaterEqual: LessEqual;
+			case Less: Greater;
+			case LessEqual: GreaterEqual;
+			default: depthTest;
+		};
+	}
+
 	public function clone() {
 		var p = new Pass(name, shaders.clone());
 		p.selfShaders = selfShaders;

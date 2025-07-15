@@ -1832,7 +1832,7 @@ class DX12Driver extends h3d.impl.Driver {
 	function hasBuffersTexturesChanged ( buf : h3d.shader.Buffers.ShaderBuffers, regs : ShaderRegisters ) : Bool {
 		var changed = regs.lastHeapCount != heapCount;
 		if( !changed ) {
-			for( i in 0...regs.texturesCount )
+			for( i in 0...regs.texturesTypes.length )
 				if( regs.lastTextures[i] != ( buf.tex[i] != null ? buf.tex[i].t : null ) || regs.lastTexturesBits[i] != ( buf.tex[i] != null ? buf.tex[i].bits : -1 ) ) {
 					changed = true;
 					break;
@@ -2450,7 +2450,6 @@ class DX12Driver extends h3d.impl.Driver {
 		}
 		flushTransitions();
 		frame.commandList.drawIndexedInstanced(ntriangles * 3,1,startIndex,0,0);
-		flushResources();
 	}
 
 	override function drawInstanced(ibuf:Buffer, commands:InstanceBuffer) {
@@ -2470,10 +2469,9 @@ class DX12Driver extends h3d.impl.Driver {
 			flushTransitions();
 			frame.commandList.drawIndexedInstanced(commands.indexCount, commands.commandCount, commands.startIndex, 0, 0);
 		}
-		flushResources();
 	}
 
-	function flushResources() {
+	override function flushShaderBuffers() {
 		if( frame.shaderResourceViews.available < 128 || frame.samplerViews.available < 64 ) {
 			frame.shaderResourceViews = frame.shaderResourceCache.next();
 			frame.samplerViews = frame.samplerCache.next();
@@ -2483,17 +2481,18 @@ class DX12Driver extends h3d.impl.Driver {
 			arr[1] = @:privateAccess frame.samplerViews.heap;
 			frame.commandList.setDescriptorHeaps(arr);
 			inline function rebindGlobal(bindSlot, desc) {
-				var srv = frame.shaderResourceViews.alloc(1);
-				Driver.createConstantBufferView(desc, srv);
-				if( currentShader.isCompute )
-					frame.commandList.setComputeRootDescriptorTable(bindSlot, frame.shaderResourceViews.toGPU(srv));
-				else
-					frame.commandList.setGraphicsRootDescriptorTable(bindSlot, frame.shaderResourceViews.toGPU(srv));
+				if ( bindSlot >= 0 ) {
+					var srv = frame.shaderResourceViews.alloc(1);
+					Driver.createConstantBufferView(desc, srv);
+					if( currentShader.isCompute )
+						frame.commandList.setComputeRootDescriptorTable(bindSlot, frame.shaderResourceViews.toGPU(srv));
+					else
+						frame.commandList.setGraphicsRootDescriptorTable(bindSlot, frame.shaderResourceViews.toGPU(srv));
+				}
 			}
-			if ( lastVertexGlobalBind >= 0 )
-				rebindGlobal(lastVertexGlobalBind, tmp.vertexGlobalDesc);
-			if ( lastFragmentGlobalBind >= 0 )
-				rebindGlobal(lastFragmentGlobalBind, tmp.fragmentGlobalDesc);
+
+			rebindGlobal(lastVertexGlobalBind, tmp.vertexGlobalDesc);
+			rebindGlobal(lastFragmentGlobalBind, tmp.fragmentGlobalDesc);
 		}
 	}
 
@@ -2545,7 +2544,6 @@ class DX12Driver extends h3d.impl.Driver {
 		flushTransitions();
 		frame.commandList.dispatch(x,y,z);
 		uavBarrier();
-		flushResources();
 	}
 
 	function uavBarrier() {
