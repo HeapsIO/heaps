@@ -227,9 +227,9 @@ class MeshBatch extends MultiMaterial {
 			var paddingSize = p.pos - curPos;
 			if ( paddingSize > 0 ) {
 				var paddingType : hxsl.Ast.Type = switch ( paddingSize ) {
-				case 0:
+				case 1:
 					TFloat;
-				case 1,2,3:
+				case 2,3:
 					TVec(paddingSize, VFloat);
 				default:
 					throw "Buffer has padding";
@@ -258,8 +258,19 @@ class MeshBatch extends MultiMaterial {
 			for( i in prev...fmt.length )
 				curPos += fmt[i].getBytesSize() >> 2;
 		}
-		if ( curPos & 3 != 0)
-			throw "Buffer has padding";
+		if ( curPos & 3 != 0) {
+			var paddingSize = 4 - (curPos & 3);
+			var paddingType : hxsl.Ast.Type = switch ( paddingSize ) {
+			case 1:
+				TFloat;
+			case 2,3:
+				TVec(paddingSize, VFloat);
+			default:
+				throw "Buffer has padding";
+			}
+			var t = hxd.BufferFormat.InputFormat.fromHXSL(paddingType);
+			fmt.push(new hxd.BufferFormat.BufferInput("padding_"+paddingIndex,t));
+		}
 		b.bufferFormat = hxd.BufferFormat.make(fmt);
 	}
 
