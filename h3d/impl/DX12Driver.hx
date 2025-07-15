@@ -415,6 +415,8 @@ class DX12Driver extends h3d.impl.Driver {
 	var lastFragmentGlobalBind : Int = -1;
 
 	public static var INITIAL_RT_COUNT = 1024;
+	public static var INITIAL_SRV_COUNT = 1024;
+	public static var INITIAL_SAMPLER_COUNT = 1024;
 	public static var INITIAL_BUMP_ALLOCATOR_SIZE = 2 * 1024 * 1024;
 	public static var BUFFER_COUNT = #if console 3 #else 2 #end;
 	public static var DEVICE_NAME = null;
@@ -449,8 +451,8 @@ class DX12Driver extends h3d.impl.Driver {
 			f.allocator = new CommandAllocator(DIRECT);
 			f.commandList = new CommandList(DIRECT, f.allocator, null);
 			f.commandList.close();
-			f.shaderResourceCache = new ManagedHeapArray(CBV_SRV_UAV, 1024);
-			f.samplerCache = new ManagedHeapArray(SAMPLER, 1024);
+			f.shaderResourceCache = new ManagedHeapArray(CBV_SRV_UAV, INITIAL_SRV_COUNT);
+			f.samplerCache = new ManagedHeapArray(SAMPLER, INITIAL_SAMPLER_COUNT);
 			if ( f.bumpAllocator != null )
 				f.bumpAllocator.release();
 			f.bumpAllocator = new BumpAllocator(INITIAL_BUMP_ALLOCATOR_SIZE);
