@@ -249,7 +249,21 @@ class ConvertWAV2MP3 extends Convert {
 	}
 
 	override function convert() {
-		command("lame", ["--resample", "44100", "--silent", "-h", srcPath, dstPath]);
+        var args = ["--silent"];
+        var sampleRate = 44100;
+        var bitRate = 128;
+        if(params != null) {
+          if(hasParam("samplerate")) {
+            sampleRate = getParam("samplerate");
+          }
+          if(hasParam("bitrate")) {
+            bitRate = getParam("bitrate");
+          }
+        }
+        args = args.concat(["--resample", Std.string(sampleRate)]);
+        args = args.concat(["-b", Std.string(bitRate)]);
+        args = args.concat([srcPath, dstPath]);
+        command("lame", args);
 	}
 
 	static var _ = Convert.register(new ConvertWAV2MP3());
@@ -262,16 +276,29 @@ class ConvertWAV2OGG extends Convert {
 
 	override function convert() {
 		var cmd = "oggenc";
-		var args = ["--resample", "44100", "-Q", srcPath, "-o", dstPath];
 		if (Sys.systemName() == "Windows")
 			cmd = "oggenc2";
+        var args = ["--quiet"];
+        var sampleRate = 44100;
+        var bitRate = 128;
+        if(hasParam("samplerate")) {
+          sampleRate = getParam("samplerate");
+        }
+        if(hasParam("bitrate")) {
+          bitRate = getParam("bitrate");
+        }
 		if (hasParam("mono")) {
 			var f = sys.io.File.read(srcPath);
 			var wav = new format.wav.Reader(f).read();
 			f.close();
-			if (wav.header.channels >= 2)
+			if (wav.header.channels >= 2) {
 				args.push("--downmix");
+                if(bitRate > 160) bitRate = 160;
+            }
 		}
+        args = args.concat(["--resample", Std.string(sampleRate)]);
+        args = args.concat(["-b", Std.string(bitRate)]);
+        args = args.concat([srcPath, "-o", dstPath]);
 		command(cmd, args);
 	}
 
