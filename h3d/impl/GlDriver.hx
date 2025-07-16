@@ -738,6 +738,7 @@ class GlDriver extends Driver {
 					var w = TWRAP[wrap];
 					gl.texParameteri(mode, GL.TEXTURE_WRAP_S, w);
 					gl.texParameteri(mode, GL.TEXTURE_WRAP_T, w);
+					gl.texParameteri(mode, GL.TEXTURE_WRAP_R, w);
 				}
 				if( t.t.startMip != t.startingMip ) {
 					gl.texParameteri(pt.mode, GL.TEXTURE_BASE_LEVEL, t.startingMip);
