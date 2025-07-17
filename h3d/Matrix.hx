@@ -134,7 +134,7 @@ class MatrixImpl {
 		_41 = 0.0; _42 = 0.0; _43 = 0.0; _44 = 1.0;
 	}
 
-	public function initRotationAxis( axis : Vector, angle : Float ) {
+	public inline function initRotationAxis( axis : Vector, angle : Float ) {
 		var cos = Math.cos(angle), sin = Math.sin(angle);
 		var cos1 = 1 - cos;
 		var x = -axis.x, y = -axis.y, z = -axis.z;
