@@ -698,7 +698,7 @@ class GlDriver extends Driver {
 					#if (hlsdl < version("1.15.0"))
 					throw "RWTextures support requires hlsdl 1.15+";
 					#else
-					gl.bindImageTexture(imageBindingIdx++, cast t.t.t, 0, false, 0, GL.READ_WRITE, fmt);
+					gl.bindImageTexture(imageBindingIdx++, cast t.t.t, 0, tdim == T3D ? true : false, 0, GL.READ_WRITE, fmt);
 					#end
 					boundTextures[i] = null;
 					continue;
