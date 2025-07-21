@@ -465,7 +465,7 @@ class Window {
 		case GControllerAdded, GControllerRemoved, GControllerUp, GControllerDown, GControllerAxis:
 			@:privateAccess hxd.Pad.onEvent( e );
 		case KeyDown:
-			eh = new Event(EKeyDown);
+			eh = new Event(EKeyDown, mouseX, mouseY);
 			if( e.keyCode & (1 << 30) != 0 ) e.keyCode = (e.keyCode & ((1 << 30) - 1)) + 1000;
 			eh.keyCode = CODEMAP[e.keyCode];
 			if( eh.keyCode & (K.LOC_LEFT | K.LOC_RIGHT) != 0 ) {
@@ -473,7 +473,7 @@ class Window {
 				onEvent(e);
 			}
 		case KeyUp:
-			eh = new Event(EKeyUp);
+			eh = new Event(EKeyUp, mouseX, mouseY);
 			if( e.keyCode & (1 << 30) != 0 ) e.keyCode = (e.keyCode & ((1 << 30) - 1)) + 1000;
 			eh.keyCode = CODEMAP[e.keyCode];
 			if( eh.keyCode & (K.LOC_LEFT | K.LOC_RIGHT) != 0 ) {
