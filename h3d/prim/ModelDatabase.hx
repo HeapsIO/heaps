@@ -16,9 +16,13 @@ class ModelDatabase {
 	static var FILE_NAME = "model.props";
 
 	static var LOD_CONFIG = "lodConfig";
+	static var LOD_CONFIG_FIELD = "lods.screenRatio";
 	static var DYN_BONES_CONFIG = "dynamicBones";
 
-	static var defaultLodConfigs : Map<String, Array<Float>> = new Map();
+	#if (sys || nodejs)
+	static var defaultLodConfigs : Map<String, hxd.fs.FileConverter.ConvertConfig> = new Map();
+	#end
+
 	static var baseLodConfig = [ 0.5, 0.2, 0.01];
 	public static dynamic function customizeLodConfig(c : Array<Float>) {
 		return c;
@@ -80,12 +84,19 @@ class ModelDatabase {
 		var c = baseLodConfig;
 		#if (sys || nodejs)
 		if (fs != null) {
-			c = @:privateAccess fs.convert.getConfig(defaultLodConfigs, baseLodConfig, dir, function(fullObj) {
-				if (Reflect.hasField(fullObj, "lods.screenRatio"))
-					return Reflect.field(fullObj, "lods.screenRatio");
+			var conf : hxd.fs.FileConverter.ConvertConfig = null;
 
-				return baseLodConfig;
+			function getConvertConf(obj : Dynamic) : hxd.fs.FileConverter.ConvertConfig {
+				var defObj = {};
+				Reflect.setField(defObj, LOD_CONFIG_FIELD, obj);
+				return @:privateAccess fs.convert.makeConfig(defObj);
+			}
+
+			conf = @:privateAccess fs.convert.getConfig(defaultLodConfigs, getConvertConf(baseLodConfig), dir, function(fullObj) {
+				return fs.convert.makeConfig(fullObj);
 			});
+
+			c = Reflect.field(conf.obj, LOD_CONFIG_FIELD);
 		}
 		#end
 		c = customizeLodConfig(c);
