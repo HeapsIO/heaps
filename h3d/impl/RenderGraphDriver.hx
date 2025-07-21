@@ -45,7 +45,7 @@ class RenderGraphDriver extends Driver {
 	}
 
 	override function getDriverName( details : Bool ) {
-		return d.getDriverName(details);
+		return "RenderGraphDriver " + d.getDriverName(details);
 	}
 
 	override function init( onCreate : Bool -> Void, forceSoftware = false ) {
@@ -109,6 +109,14 @@ class RenderGraphDriver extends Driver {
 		d.draw(ibuf, startIndex, ntriangles);
 	}
 
+	override function drawInstanced( ibuf, commands ) {
+		d.drawInstanced(ibuf, commands);
+	}
+
+	override function flushShaderBuffers() {
+		d.flushShaderBuffers();
+	}
+
 	override function setRenderZone( x : Int, y : Int, width : Int, height : Int ) {
 		d.setRenderZone(x, y, width, height);
 	}
@@ -144,16 +152,40 @@ class RenderGraphDriver extends Driver {
 		return d.allocTexture(t);
 	}
 
+	override function allocDepthBuffer( t : h3d.mat.Texture ) : Texture {
+		return d.allocDepthBuffer(t);
+	}
+
 	override function allocBuffer( b : Buffer ) : GPUBuffer {
 		return d.allocBuffer(b);
+	}
+
+	override function allocInstanceBuffer(b, bytes) {
+		d.allocInstanceBuffer(b, bytes);
+	}
+
+	override function uploadInstanceBufferBytes(b, startVertex, vertexCount, buf, bufPos) {
+		d.uploadInstanceBufferBytes(b, startVertex, vertexCount, buf, bufPos);
 	}
 
 	override function disposeTexture( t : h3d.mat.Texture ) {
 		d.disposeTexture(t);
 	}
 
+	override function disposeDepthBuffer(t : h3d.mat.Texture ) {
+		d.disposeDepthBuffer(t);
+	}
+
 	override function disposeBuffer( b : h3d.Buffer ) {
 		d.disposeBuffer(b);
+	}
+
+	override function disposeInstanceBuffer(b) {
+		d.disposeInstanceBuffer(b);
+	}
+
+	override function uploadIndexData(i, startIndice, indiceCount, buf, bufPos) {
+		d.uploadIndexData(i, startIndice, indiceCount, buf, bufPos);
 	}
 
 	override function uploadBufferData( b : h3d.Buffer, startVertex : Int, vertexCount : Int, buf : hxd.FloatBuffer, bufPos : Int ) {
@@ -164,12 +196,56 @@ class RenderGraphDriver extends Driver {
 		d.uploadBufferBytes(b, startVertex, vertexCount, buf, bufPos);
 	}
 
+	override function readBufferBytes( b : h3d.Buffer, startVertex : Int, vertexCount : Int, buf : haxe.io.Bytes, bufPos : Int ) {
+		d.readBufferBytes(b, startVertex, vertexCount, buf, bufPos);
+	}
+
 	override function uploadTextureBitmap( t : h3d.mat.Texture, bmp : hxd.BitmapData, mipLevel : Int, side : Int ) {
 		d.uploadTextureBitmap(t, bmp, mipLevel, side);
 	}
 
 	override function uploadTexturePixels( t : h3d.mat.Texture, pixels : hxd.Pixels, mipLevel : Int, side : Int ) {
 		d.uploadTexturePixels(t, pixels, mipLevel, side);
+	}
+
+	override function computeDispatch( x : Int = 1, y : Int = 1, z : Int = 1 ) {
+		d.computeDispatch(x,y,z);
+	}
+
+	override function getDefaultDepthBuffer() {
+		return d.getDefaultDepthBuffer();
+	}
+
+	override function capturePixels(tex, layer, mipLevel, ?region) {
+		return d.capturePixels(tex, layer, mipLevel, region);
+	}
+
+	override function copyTexture(from, to) {
+		return d.copyTexture(from, to);
+	}
+
+	override function allocQuery(queryKind) {
+		return d.allocQuery(queryKind);
+	}
+
+	override function deleteQuery(q) {
+		d.deleteQuery(q);
+	}
+
+	override function beginQuery(q : Query) {
+		d.beginQuery(q);
+	}
+
+	override function endQuery(q) {
+		d.endQuery(q);
+	}
+
+	override function queryResultAvailable(q) {
+		return d.queryResultAvailable(q);
+	}
+
+	override function queryResult( q : Query ) {
+		return d.queryResult(q);
 	}
 }
 #end

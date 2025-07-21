@@ -119,10 +119,8 @@ class Frame {
 	public function getCurTargetSection() {
 		var curSection = getCurSection();
 		var curTargetSection = curSection.getCurSection();
-		if ( curTargetSection == null ) {
-			// fallback if mark occurs without setRenderTarget
-			return sections[sections.length - 2 ].getCurSection();
-		}
+		if ( curTargetSection == null )
+			curSection.setTargetSection(new TargetSection(h3d.Engine.getCurrent().getCurrentTarget(), 0, 0, NotBound));
 		return curSection.getCurSection();
 	}
 
