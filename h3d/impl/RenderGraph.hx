@@ -46,7 +46,7 @@ class RenderGraph {
 	}
 
 	public static function save(outFile: String) {
-		if ( !enable ) return;
+		if ( frame == null ) return;
 		var content = frame.dump();
 		sys.io.File.saveContent(outFile, haxe.Json.stringify(content, "\t"));
 	}
