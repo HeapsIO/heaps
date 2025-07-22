@@ -515,14 +515,14 @@ class Window {
 
 		#elseif hldx
 		case KeyDown:
-			eh = new Event(EKeyDown);
+			eh = new Event(EKeyDown, curMouseX, curMouseY);
 			eh.keyCode = e.keyCode;
 			if( eh.keyCode & (K.LOC_LEFT | K.LOC_RIGHT) != 0 ) {
 				e.keyCode = eh.keyCode & 0xFF;
 				onEvent(e);
 			}
 		case KeyUp:
-			eh = new Event(EKeyUp);
+			eh = new Event(EKeyUp, curMouseX, curMouseY);
 			eh.keyCode = CODEMAP[e.keyCode];
 			if( eh.keyCode & (K.LOC_LEFT | K.LOC_RIGHT) != 0 ) {
 				e.keyCode = eh.keyCode & 0xFF;
