@@ -457,15 +457,6 @@ class Engine {
 		#end
 	}
 
-	public function cacheImage(res : hxd.res.Image) : h3d.mat.Texture {
-		var t : h3d.mat.Texture = resCache.get(res);
-		if ( t != null )
-			return t;
-		t = res.toTexture();
-		resCache.set(res, t);
-		return t;
-	}
-
 	function get_fps() {
 		return Math.ceil(realFps * 100) / 100;
 	}
