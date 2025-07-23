@@ -646,6 +646,8 @@ class GlDriver extends Driver {
 					switch( pt.t ) {
 					case TSampler(TCube, false):
 						t = h3d.mat.Texture.defaultCubeTexture();
+					case TSampler(T3D, false):
+						t = h3d.mat.Texture3D.default3DTexture();
 					case TSampler(_, false):
 						var color = h3d.mat.Defaults.loadingTextureColor;
 						t = h3d.mat.Texture.fromColor(color, (color >>> 24) / 255);
@@ -2040,7 +2042,7 @@ class GlDriver extends Driver {
 
 	override function computeDispatch(x:Int = 1, y:Int = 1, z:Int = 1) {
 		GL.dispatchCompute(x,y,z);
-		GL.memoryBarrier(GL.BUFFER_UPDATE_BARRIER_BIT);
+		GL.memoryBarrier(GL.BUFFER_UPDATE_BARRIER_BIT | GL.TEXTURE_FETCH_BARRIER_BIT);
 	}
 
 	override function allocQuery(kind:QueryKind) {

@@ -29,4 +29,17 @@ class Texture3D extends Texture {
 		return super.toString()+"x("+depth+")";
 	}
 
+	/**
+		Returns a default 1x1x1 black 3D texture
+	**/
+	public static function default3DTexture() {
+		var engine = h3d.Engine.getCurrent();
+		var t : h3d.mat.Texture3D = @:privateAccess engine.resCache.get(Texture3D);
+		if( t != null )
+			return t;
+		t = new Texture3D(1, 1, 1, hxd.PixelFormat.R8);
+		@:privateAccess engine.resCache.set(Texture,t);
+		return t;
+	}
+
 }
