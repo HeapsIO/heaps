@@ -38,7 +38,8 @@ class Texture3D extends Texture {
 		if( t != null )
 			return t;
 		t = new Texture3D(1, 1, 1, hxd.PixelFormat.R8);
-		@:privateAccess engine.resCache.set(Texture,t);
+		t.setName("default3DTexture");
+		@:privateAccess engine.resCache.set(Texture3D,t);
 		return t;
 	}
 

@@ -644,15 +644,15 @@ class GlDriver extends Driver {
 				var pt = s.textures[i];
 				if( t == null || t.isDisposed() ) {
 					switch( pt.t ) {
-					case TSampler(TCube, false):
-						t = h3d.mat.Texture.defaultCubeTexture();
-					case TSampler(T3D, false):
-						t = h3d.mat.Texture3D.default3DTexture();
-					case TSampler(_, false):
-						var color = h3d.mat.Defaults.loadingTextureColor;
-						t = h3d.mat.Texture.fromColor(color, (color >>> 24) / 255);
-					default:
-						throw "Missing texture";
+						case TSampler(TCube, false):
+							t = h3d.mat.Texture.defaultCubeTexture();
+						case TSampler(T3D, false):
+							t = h3d.mat.Texture3D.default3DTexture();
+						case TSampler(_, false):
+							var color = h3d.mat.Defaults.loadingTextureColor;
+							t = h3d.mat.Texture.fromColor(color, (color >>> 24) / 255);
+						default:
+							throw "Missing texture";
 					}
 				}
 				if( t != null && t.t == null && t.realloc != null ) {
