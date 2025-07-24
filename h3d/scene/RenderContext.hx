@@ -174,7 +174,11 @@ class RenderContext extends h3d.impl.RenderContext {
 		computeLink = list;
 	}
 
-	public function computeDispatch( ?shader : hxsl.Shader, x = 1, y = 1, z = 1 ) {
+	public function memoryBarrier(){
+		engine.driver.memoryBarrier();
+	}
+
+	public function computeDispatch( ?shader : hxsl.Shader, x = 1, y = 1, z = 1, barrier : Bool = true) {
 		if ( x <= 0 || y <= 0 || z <= 0 )
 			throw "Can't use zero or negative work groups count";
 
@@ -199,7 +203,7 @@ class RenderContext extends h3d.impl.RenderContext {
 		engine.uploadShaderBuffers(buf, Globals);
 		fillParams(buf, rt, computeLink, true);
 		engine.uploadInstanceShaderBuffers(buf);
-		engine.driver.computeDispatch(x,y,z);
+		engine.driver.computeDispatch(x,y,z, barrier);
 		@:privateAccess engine.dispatches++;
 		if ( computeLink == tmpComputeLink )
 			tmpComputeLink.s = null;

@@ -2040,8 +2040,13 @@ class GlDriver extends Driver {
 
 	#if hl
 
-	override function computeDispatch(x:Int = 1, y:Int = 1, z:Int = 1) {
+	override function computeDispatch(x:Int = 1, y:Int = 1, z:Int = 1, barrier:Bool = true) {
 		GL.dispatchCompute(x,y,z);
+		if( barrier )
+			memoryBarrier();
+	}
+
+	override function memoryBarrier(){
 		GL.memoryBarrier(GL.BUFFER_UPDATE_BARRIER_BIT | GL.TEXTURE_FETCH_BARRIER_BIT);
 	}
 
