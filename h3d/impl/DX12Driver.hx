@@ -413,6 +413,7 @@ class DX12Driver extends h3d.impl.Driver {
 	var currentPipelineState : PipelineState;
 	var lastVertexGlobalBind : Int = -1;
 	var lastFragmentGlobalBind : Int = -1;
+	var useDepthClamp : Bool = false;
 
 	public static var INITIAL_RT_COUNT = 1024;
 	public static var INITIAL_SRV_COUNT = 1024;
@@ -926,6 +927,14 @@ class DX12Driver extends h3d.impl.Driver {
 
 		initViewport(depthBuffer.width, depthBuffer.height);
 		pipelineBuilder.setDepth(depthBuffer);
+	}
+
+	override function setDepthClamp( enabled : Bool ) {
+		useDepthClamp = enabled;
+	}
+
+	override function setDepthBias( depthBias : Float, slopeScaledBias : Float ) {
+		pipelineBuilder.setDepthBias(depthBias, slopeScaledBias);
 	}
 
 	override function setRenderZone(x:Int, y:Int, width:Int, height:Int) {
@@ -2208,7 +2217,10 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	override function selectMaterial( pass : h3d.mat.Pass ) @:privateAccess {
+		var depthClamp = pass.depthClamp;
+		pass.depthClamp = depthClamp || useDepthClamp;
 		pipelineBuilder.selectMaterial(pass);
+		pass.depthClamp = depthClamp;
 		var st = pass.stencil;
 		if( st != null && curStencilRef != st.reference ) {
 			curStencilRef = st.reference;
@@ -2279,9 +2291,9 @@ class DX12Driver extends h3d.impl.Driver {
 		p.depthStencilDesc.depthEnable = pass.depthTest != Always;
 		p.depthStencilDesc.depthWriteMask = !pass.depthWrite || !depthEnabled ? ZERO : ALL;
 		p.depthStencilDesc.depthFunc = COMP[pass.depthTest.getIndex()];
+		p.rasterizerState.depthClipEnable = !pass.depthClamp;
 		p.rasterizerState.depthBias = Std.int(depth.bias);
 		p.rasterizerState.slopeScaledDepthBias = depth.slopeScaledBias;
-		p.rasterizerState.depthClipEnable = !depth.clamp;
 
 		var bl = p.blendState;
 		for( i in 0...rtCount ) {

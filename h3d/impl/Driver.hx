@@ -213,6 +213,12 @@ class Driver {
 	public function setDepth( tex : Null<h3d.mat.Texture> ) {
 	}
 
+	public function setDepthClamp( enabled : Bool ) {
+	}
+
+	public function setDepthBias( depthBias : Float,  slopeScaledBias : Float ) {
+	}
+
 	public function allocDepthBuffer( b : h3d.mat.Texture ) : Texture {
 		return null;
 	}
@@ -272,9 +278,6 @@ class Driver {
 	}
 
 	public function readBufferBytes( b : Buffer, startVertex : Int, vertexCount : Int, buf : haxe.io.Bytes, bufPos : Int ) {
-	}
-
-	public function onTextureBiasChanged( t : h3d.mat.Texture ) {
 	}
 
 	/**

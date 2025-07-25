@@ -300,6 +300,7 @@ class CascadeShadowMap extends DirShadowMap {
 		var prevCheckNearFar = lightCamera.frustum.checkNearFar;
 		lightCamera.frustum.checkNearFar = false;
 		var textures = [];
+		ctx.engine.setDepthClamp(true);
 		for (i in 0...cascade) {
 			currentCascadeIndex = i;
 
@@ -309,8 +310,8 @@ class CascadeShadowMap extends DirShadowMap {
 			texture.filter = Nearest;
 
 			var param = params[i];
-			texture.slopeScaledBias = (param != null) ? param.slopeBias : 0;
-			texture.depthClamp = true;
+			var slopeScaledBias = (param != null) ? param.slopeBias : 0;
+			ctx.engine.setDepthBias(0, slopeScaledBias);
 
 			var lc = lightCameras[i];
 			var dimension = Math.max(lc.orthoBounds.xMax - lc.orthoBounds.xMin,	lc.orthoBounds.yMax - lc.orthoBounds.yMin);
@@ -321,6 +322,7 @@ class CascadeShadowMap extends DirShadowMap {
 			textures[i] = processShadowMap( passes, texture, sort);
 			passes.load(p);
 		}
+		ctx.engine.setDepthClamp(false);
 		syncCascadeShader(textures);
 		lightCamera.frustum.checkNearFar = prevCheckNearFar;
 

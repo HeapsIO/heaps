@@ -109,6 +109,7 @@ class GlDriver extends Driver {
 	var lastActiveIndex : Int = 0;
 	var curColorMask = -1;
 	var currentDivisor : Array<Int> = [for( i in 0...32 ) 0];
+	var useDepthClamp = false;
 
 	var bufferWidth : Int;
 	var bufferHeight : Int;
@@ -893,6 +894,16 @@ class GlDriver extends Driver {
 				gl.depthFunc(COMPARE[cmp]);
 			}
 		}
+
+		#if !js
+		if ( (!useDepthClamp && diff & Pass.depthClamp_mask != 0) ) {
+			if ( Pass.getDepthClamp(bits) != 0 )
+				gl.enable(GL.DEPTH_CLAMP);
+			else
+				gl.disable(GL.DEPTH_CLAMP);
+		}
+		#end
+
 		curMatBits = bits;
 	}
 
@@ -1794,9 +1805,6 @@ class GlDriver extends Driver {
 		else
 			gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0, tex.flags.has(Cube) ? CUBE_FACES[layer] : GL.TEXTURE_2D, tex.t.t, mipLevel);
 
-		setPolygonOffset( tex.depthBuffer );
-		setDepthClamp( tex.depthBuffer );
-
 		if( tex.depthBuffer != null && depthBinding != NotBound ) {
 			// Depthbuffer and stencilbuffer are combined in one buffer, created with GL.DEPTH_STENCIL
 			if(tex.depthBuffer.hasStencil() && tex.depthBuffer.format == Depth24Stencil8) {
@@ -1874,9 +1882,6 @@ class GlDriver extends Driver {
 
 		gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0, GL.TEXTURE_2D, null, 0);
 
-		setPolygonOffset( depthBuffer );
-		setDepthClamp( depthBuffer );
-
 		if(depthBuffer.hasStencil() && depthBuffer.format == Depth24Stencil8) {
 			gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.DEPTH_STENCIL_ATTACHMENT, GL.TEXTURE_2D,@:privateAccess depthBuffer.t.t, 0);
 		} else {
@@ -1900,26 +1905,22 @@ class GlDriver extends Driver {
 		#end
 	}
 
-	override function onTextureBiasChanged( t : h3d.mat.Texture ) {
-		setPolygonOffset(t);
-	}
-
-	function setPolygonOffset( depthBuffer : h3d.mat.Texture ) {
-		if ( depthBuffer != null && ( depthBuffer.depthBias != 0 || depthBuffer.slopeScaledBias != 0 ) ) {
-			gl.enable(GL.POLYGON_OFFSET_FILL);
-			gl.polygonOffset(depthBuffer.slopeScaledBias, depthBuffer.depthBias);
-		}
-		else
-			gl.disable(GL.POLYGON_OFFSET_FILL);
-	}
-
-	function setDepthClamp( dephTexture : h3d.mat.Texture ) {
+	override function setDepthClamp( enabled : Bool ) {
 		#if !js
-		if ( dephTexture != null && dephTexture.depthClamp )
+		useDepthClamp = enabled;
+		if ( useDepthClamp )
 			gl.enable(GL.DEPTH_CLAMP);
 		else
 			gl.disable(GL.DEPTH_CLAMP);
 		#end
+	}
+
+	override function setDepthBias( depthBias : Float, slopeScaledBias : Float ) {
+		if ( depthBias != 0 || slopeScaledBias != 0 ) {
+			gl.enable(GL.POLYGON_OFFSET_FILL);
+			gl.polygonOffset(slopeScaledBias, depthBias);
+		} else
+			gl.disable(GL.POLYGON_OFFSET_FILL);
 	}
 
 	override function init( onCreate : Bool -> Void, forceSoftware = false ) {

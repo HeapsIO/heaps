@@ -195,16 +195,16 @@ class ObjectFollower extends Object {
 			var camera = scene.getRenderCamera();
 			var wantedMode : h3d.mat.Data.Compare = camera.reverseDepth ? GreaterEqual : LessEqual;
 			var prev = ctx.baseShader.zValue;
-			var prevMode = ctx.pass.depthTest, prevWrite = ctx.pass.depthWrite;
+			var prevMode = ctx.pass.depthTest, prevWrite = ctx.pass.depthWrite, prevClamp = ctx.pass.depthClamp;
 			if( prevMode != wantedMode ) {
-				ctx.pass.depth(true, wantedMode);
+				ctx.pass.depth(true, wantedMode, prevClamp);
 				ctx.engine.selectMaterial(ctx.pass);
 			}
 			ctx.baseShader.zValue = zValue;
 			super.drawRec(ctx);
 			ctx.baseShader.zValue = prev;
 			if( prevMode != wantedMode ) {
-				ctx.pass.depth(prevWrite, prevMode);
+				ctx.pass.depth(prevWrite, prevMode, prevClamp);
 				ctx.engine.selectMaterial(ctx.pass);
 			}
 		}
