@@ -962,6 +962,7 @@ class DX12Driver extends h3d.impl.Driver {
 
 	override function capturePixels(tex:h3d.mat.Texture, layer:Int, mipLevel:Int, ?region:h2d.col.IBounds):hxd.Pixels {
 		var pixels : hxd.Pixels;
+		var oldRTs = [for ( rt in currentRenderTargets) rt];
 		if (region != null) {
 			if (region.xMax > tex.width) region.xMax = tex.width;
 			if (region.yMax > tex.height) region.yMax = tex.height;
@@ -981,6 +982,9 @@ class DX12Driver extends h3d.impl.Driver {
 			pixels = hxd.Pixels.alloc(w, h, tex.format);
 			captureTexPixels(pixels, tex, layer, mipLevel);
 		}
+
+		setRenderTargets(oldRTs);
+
 		return pixels;
 	}
 
