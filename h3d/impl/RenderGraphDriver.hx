@@ -208,8 +208,8 @@ class RenderGraphDriver extends Driver {
 		d.uploadTexturePixels(t, pixels, mipLevel, side);
 	}
 
-	override function computeDispatch( x : Int = 1, y : Int = 1, z : Int = 1 ) {
-		d.computeDispatch(x,y,z);
+	override function computeDispatch( x : Int = 1, y : Int = 1, z : Int = 1, barrier : Bool = true ) {
+		d.computeDispatch(x, y, z, barrier);
 	}
 
 	override function getDefaultDepthBuffer() {
