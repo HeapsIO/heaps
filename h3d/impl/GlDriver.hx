@@ -1273,7 +1273,10 @@ class GlDriver extends Driver {
 		gl.bindBuffer(type, vb);
 		if( b.vertices * b.format.stride == 0 ) throw "assert";
 		#if js
-		gl.bufferData(type, b.getMemSize(), b.flags.has(Dynamic) ? GL.DYNAMIC_DRAW : GL.STATIC_DRAW);
+		var size = b.getMemSize();
+		if ( b.flags.has(UniformBuffer) )
+			hxd.Math.imin(1024, size);
+		gl.bufferData(type, size, b.flags.has(Dynamic) ? GL.DYNAMIC_DRAW : GL.STATIC_DRAW);
 		#elseif hl
 		gl.bufferDataSize(type, b.getMemSize(), b.flags.has(Dynamic) ? GL.DYNAMIC_DRAW : GL.STATIC_DRAW);
 		#else
