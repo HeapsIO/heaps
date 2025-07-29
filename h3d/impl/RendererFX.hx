@@ -12,6 +12,11 @@ enum Step {
 	Custom( name : String );
 }
 
+typedef RFXTransition = {
+	var effect : RendererFX;
+	var setFactor : (t : Float) -> Void;
+}
+
 interface RendererFX {
 	public var enabled : Bool;
 	public function start( r : h3d.scene.Renderer ) : Void;
@@ -21,5 +26,5 @@ interface RendererFX {
 
 	// Volumetric RFX
 	public function modulate( t : Float ) : RendererFX;
-	public function transition( r1 : RendererFX, r2 : RendererFX, t : Float ) : RendererFX;
+	public function transition( r1 : RendererFX, r2 : RendererFX ) : RFXTransition;
 }

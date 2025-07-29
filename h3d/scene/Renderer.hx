@@ -289,10 +289,11 @@ class Renderer extends hxd.impl.AnyProps {
 					continue;
 
 				for (e2 in volume2.effects) {
-					var newEffect = e1.transition(e1, e2, volume2.getFactor(ctx.camera.pos));
-					if (newEffect != null) {
-						this.toRemove.push(newEffect);
-						this.effects.push(newEffect);
+					var transition = e1.transition(e1, e2);
+					transition.setFactor(volume2.getFactor(ctx.camera.pos));
+					if (transition != null) {
+						this.toRemove.push(transition.effect);
+						this.effects.push(transition.effect);
 					}
 				}
 			}
@@ -300,7 +301,10 @@ class Renderer extends hxd.impl.AnyProps {
 	}
 
 	public function removeVolumetricEffects() {
-		for (e in toRemove)
+		for (e in toRemove) {
 			effects.remove(e);
+			toRemove.remove(e);
+			e.dispose();
+		}
 	}
 }
