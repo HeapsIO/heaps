@@ -983,7 +983,9 @@ class DX12Driver extends h3d.impl.Driver {
 			captureTexPixels(pixels, tex, layer, mipLevel);
 		}
 
-		setRenderTargets(oldRTs);
+		if(oldRTs.length > 0){
+			setRenderTargets(oldRTs);
+		}
 
 		return pixels;
 	}
