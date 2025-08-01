@@ -39,7 +39,7 @@ class Engine {
 	public var height(default, null) : Int;
 	public var debug(default, set) : Bool;
 
-	public var drawTriangles(default, null) : Int;
+	public var drawTriangles(default, null) : Float;
 	public var drawCalls(default, null) : Int;
 	public var dispatches(default, null) : Int;
 	public var shaderSwitches(default, null) : Int;
