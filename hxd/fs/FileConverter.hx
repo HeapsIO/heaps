@@ -35,7 +35,7 @@ class FileConverter {
 	var tmpDir : String;
 	var configs : Map<String,ConvertConfig> = new Map();
 	var defaultConfig : ConvertConfig;
-	var cache : Map<String,Array<{ out : String, time : Int, hash : String, ver : Null<Int>, milliseconds : Null<Int>, localParamsHash : Null<String> }>>;
+	var cache : Map<String,Array<{ out : String, time : Int, hash : String, ver : Null<Int>, milliseconds : Null<Int>, localParamsHash : Null<String>, localContextJson : Null<String> }>>;
 	var cacheTime : Float;
 
 	static var extraConfigs:Array<Dynamic> = [];
@@ -311,7 +311,8 @@ class FileConverter {
 				hash : "",
 				ver: conv.version,
 				milliseconds : #if js 0 #else null #end,
-				localParamsHash: null
+				localParamsHash: null,
+				localContextJson: null,
 			};
 			entry.push(match);
 		}
@@ -345,13 +346,20 @@ class FileConverter {
 		var hash = haxe.crypto.Sha1.make(content).toHex();
 		conv.srcBytes = content;
 		conv.hash = hash;
-		var localParams = hasLocalParams ? conv.computeLocalParams() : null;
+		var localContext : Dynamic = null;
+		if( match.ver == conv.version && match.hash == hash && match.localContextJson != null ) {
+			localContext = try { haxe.Json.parse(match.localContextJson); } catch(e) { null; }
+		}
+		var localParams = hasLocalParams ? conv.computeLocalParams(localContext) : null;
 		conv.localParams = localParams;
 		var localParamsHash = localParams == null ? null : haxe.crypto.Sha1.make(haxe.io.Bytes.ofString(formatValue(localParams))).toHex();
+		localContext = conv.getLocalContext();
+		var localContextJson = localContext == null ? null : haxe.Json.stringify(localContext);
 		if( alreadyGen && match.hash == hash && match.localParamsHash == localParamsHash ) {
 			conv.cleanup();
 			match.time = time;
 			match.milliseconds = milliseconds;
+			match.localContextJson = localContextJson;
 			saveCache();
 			return; // not changed (hash)
 		}
@@ -370,6 +378,8 @@ class FileConverter {
 		match.milliseconds = milliseconds;
 		match.hash = hash;
 		match.localParamsHash = localParamsHash;
+		match.localContextJson = localContextJson;
+
 		saveCache();
 	}
 

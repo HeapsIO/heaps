@@ -52,7 +52,15 @@ class Convert {
 		return false;
 	}
 
-	public function computeLocalParams():Dynamic {
+	/**
+		Context will be cached and passed to computeLocalParams next time if file hash has not changed.
+		This function will be called after each call to computeLocalParams for refresh the cache.
+	**/
+	public function getLocalContext():Dynamic {
+		return null;
+	}
+
+	public function computeLocalParams(context:Dynamic):Dynamic {
 		return null;
 	}
 
@@ -98,6 +106,7 @@ class Convert {
 #if (sys || nodejs)
 class ConvertFBX2HMD extends Convert {
 	var fbx : hxd.fmt.fbx.Data.FbxNode;
+	var matNames : Array<String>;
 
 	public function new() {
 		super("fbx", "hmd");
@@ -106,20 +115,30 @@ class ConvertFBX2HMD extends Convert {
 	override function cleanup() {
 		super.cleanup();
 		fbx = null;
+		matNames = null;
 	}
 
 	override function hasLocalParams():Bool {
 		return (params != null && params.collide != null);
 	}
 
-	override function computeLocalParams():Dynamic {
+	override function getLocalContext():Dynamic {
+		return { matNames : matNames };
+	}
+
+	override function computeLocalParams(context:Dynamic):Dynamic {
 		// Parse fbx to find used materials
-		fbx = try hxd.fmt.fbx.Parser.parse(srcBytes) catch (e:Dynamic) throw Std.string(e) + " in " + srcPath;
-		var matNodes = hxd.fmt.fbx.Data.FbxTools.getAll(fbx, "Objects.Material");
-		var matNames = [];
-		for( o in matNodes ) {
-			var name = hxd.fmt.fbx.Data.FbxTools.getName(o);
-			matNames.push(name);
+		if( context != null && context.matNames != null && Std.isOfType(context.matNames, Array) ) {
+			matNames = context.matNames;
+		}
+		if( matNames == null ) {
+			fbx = try hxd.fmt.fbx.Parser.parse(srcBytes) catch (e:Dynamic) throw Std.string(e) + " in " + srcPath;
+			var matNodes = hxd.fmt.fbx.Data.FbxTools.getAll(fbx, "Objects.Material");
+			matNames = [];
+			for( o in matNodes ) {
+				var name = hxd.fmt.fbx.Data.FbxTools.getName(o);
+				matNames.push(name);
+			}
 		}
 		// Parse material.props to find material config
 		var ignoredMaterials = [];
