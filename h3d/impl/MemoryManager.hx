@@ -22,7 +22,7 @@ typedef TextureStat = {
 
 class MemoryManager {
 
-	static inline var MAX_MEMORY = 4096 * (1024. * 1024.); // MB
+	static inline var MAX_MEMORY = 6144 * (1024. * 1024.); // MB
 	static inline var SIZE = 65532;
 	static var ALL_FLAGS = Type.allEnums(Buffer.BufferFlag);
 
