@@ -156,7 +156,7 @@ class MeshBatch extends MultiMaterial {
 			var matStart = prim.getMaterialIndexStart(index);
 			for( p in mat.getPasses() ) @:privateAccess {
 				var ctx = scene.renderer.getPassByName(p.name);
-				if( ctx == null ) throw "Could't find renderer pass "+p.name;
+				if( ctx == null ) continue;
 
 				var output = ctx.output;
 				var shaders = p.getShadersRec();
