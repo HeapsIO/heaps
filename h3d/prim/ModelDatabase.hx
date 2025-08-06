@@ -108,7 +108,7 @@ class ModelDatabase {
 		var oldLodConfig = Reflect.field(rootData, LOD_CONFIG);
 		if (oldLodConfig != null) {
 			for (f in Reflect.fields(oldLodConfig)) {
-				if (key.indexOf(f) < 0)
+				if (key.indexOf(f) < 0 && '${key}_LOD0'.indexOf(f) < 0)
 					continue;
 
 				var c = Reflect.field(oldLodConfig, f);
