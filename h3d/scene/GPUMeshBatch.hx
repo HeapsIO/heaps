@@ -217,7 +217,9 @@ class GPUMeshBatch extends MeshBatch {
 		computeShader.matInfos = matInfos;
 		computeShader.instanceCount = instanceCount;
 
+		var commandCountNeeded : Int
 		if ( emittedSubParts != null ) {
+			commandCountNeeded = instanceCount;
 			var computeShader : h3d.shader.InstanceIndirect.SubPartInstanceIndirect = cast computeShader;
 			computeShader.subPartCount = emittedSubParts.length;
 			computeShader.subPartInfos = subPartsInfos;
@@ -227,6 +229,7 @@ class GPUMeshBatch extends MeshBatch {
 			while ( maxSubPartsElement > computeShader.MAX_SUB_PART_BUFFER_ELEMENT_COUNT )
 				computeShader.MAX_SUB_PART_BUFFER_ELEMENT_COUNT = computeShader.MAX_SUB_PART_BUFFER_ELEMENT_COUNT + 16;
 		} else {
+			commandCountNeeded = instanceCount * materialCount;
 			var computeShader : h3d.shader.InstanceIndirect = cast computeShader;
 			computeShader.radius = prim.getBounds().dimension() * 0.5;
 			computeShader.lodCount = lodCount;
@@ -234,7 +237,7 @@ class GPUMeshBatch extends MeshBatch {
 		}
 
 		var alloc = hxd.impl.Allocator.get();
-		var commandCountAllocated = hxd.Math.nextPOT( instanceCount * materialCount );
+		var commandCountAllocated = hxd.Math.nextPOT( commandCountNeeded );
 		if ( commandBuffer == null ) {
 			commandBuffer = alloc.allocBuffer( commandCountAllocated, INDIRECT_DRAW_ARGUMENTS_FMT, UniformReadWrite );
 			gpuCounter = new h3d.GPUCounter();
