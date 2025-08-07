@@ -217,7 +217,7 @@ class GPUMeshBatch extends MeshBatch {
 		computeShader.matInfos = matInfos;
 		computeShader.instanceCount = instanceCount;
 
-		var commandCountNeeded : Int
+		var commandCountNeeded : Int;
 		if ( emittedSubParts != null ) {
 			commandCountNeeded = instanceCount;
 			var computeShader : h3d.shader.InstanceIndirect.SubPartInstanceIndirect = cast computeShader;
