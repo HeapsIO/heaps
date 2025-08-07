@@ -105,10 +105,12 @@ class ModelDatabase {
 
 	// Used to clean previous version of modelDatabase, should be removed after some time
 	function cleanOldModelData( rootData : Dynamic, key : String) {
+		var oldKey = '${key}_LOD0';
+
 		var oldLodConfig = Reflect.field(rootData, LOD_CONFIG);
 		if (oldLodConfig != null) {
 			for (f in Reflect.fields(oldLodConfig)) {
-				if (key.indexOf(f) < 0 && '${key}_LOD0'.indexOf(f) < 0)
+				if (key.indexOf(f) < 0 && oldKey.indexOf(f) < 0)
 					continue;
 
 				var c = Reflect.field(oldLodConfig, f);
@@ -123,6 +125,12 @@ class ModelDatabase {
 
 			if (oldLodConfig == null || Reflect.fields(oldLodConfig).length == 0)
 				Reflect.deleteField(rootData, LOD_CONFIG);
+		}
+
+		oldLodConfig = Reflect.field(rootData, oldKey);
+		if (oldLodConfig != null) {
+			Reflect.deleteField(rootData, oldKey);
+			Reflect.setField(rootData, key, oldLodConfig);
 		}
 	}
 
