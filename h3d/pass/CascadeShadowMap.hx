@@ -323,6 +323,7 @@ class CascadeShadowMap extends DirShadowMap {
 			passes.load(p);
 		}
 		ctx.engine.setDepthClamp(false);
+		ctx.engine.setDepthBias(0, 0);
 		syncCascadeShader(textures);
 		lightCamera.frustum.checkNearFar = prevCheckNearFar;
 
