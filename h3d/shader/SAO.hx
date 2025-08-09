@@ -18,6 +18,7 @@ class SAO extends ScreenShader {
 		@const var USE_START_FADE : Bool = false;
 		@const var USE_FADE : Bool = false;
 		@const var USE_SCALABLE_BIAS : Bool = false;
+		@const var ORTHO : Bool = false;
 
 		@ignore @param var depthTexture : Channel;
 		@ignore @param var normalTexture : Channel3;
@@ -32,6 +33,7 @@ class SAO extends ScreenShader {
 
 		@ignore @param var screenRatio : Vec2;
 		@ignore @param var fovTan : Float;
+		@ignore @param var invOrthoHeight : Float;
 
 		@param var startFadeStart : Float;
 		@param var startFadeEnd : Float;
@@ -90,7 +92,11 @@ class SAO extends ScreenShader {
 			var randomPatternRotationAngle = 2.0 * PI * sampleNoise;
 
 			// change from WS to DepthUV space
-			var radiusSS = (sampleRadius * fovTan) / (origin * cameraView).z;
+			var radiusSS = 0.0;
+			if ( ORTHO )
+				radiusSS = sampleRadius * invOrthoHeight;
+			else
+				radiusSS = (sampleRadius * fovTan) / (origin * cameraView).z;
 
 			for( i in 0...numSamples )
 				occlusion += sampleAO(vUV, origin, normal, radiusSS, i, randomPatternRotationAngle);
