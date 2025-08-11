@@ -208,7 +208,7 @@ class DynamicJointData extends JointData {
 		jData.speed *= 1.0 - j.damping;
 
 		if (jData.speed.lengthSq() > DynamicJoint.SLEEP_THRESHOLD)
-			newWorldPos.load(newWorldPos + jData.speed * hxd.Math.clamp(hxd.Timer.dt, 0, hxd.Timer.maxDeltaTime));
+			newWorldPos.load(newWorldPos + jData.speed * hxd.Math.clamp(Skin.FIXED_DT, 0, hxd.Timer.maxDeltaTime));
 
 		if (jData.speed.lengthSq() > DynamicJoint.MAX_THRESHOLD) {
 			jData.speed.set(0, 0, 0);
