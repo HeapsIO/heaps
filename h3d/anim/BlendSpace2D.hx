@@ -104,7 +104,7 @@ class BlendSpace2D extends h3d.anim.Animation {
 			// copy modified matrices references
 			@:privateAccess
 			for (object in point.objects) {
-				object.matrices[ptIndex] = (if( object.targetSkin != null ) object.targetSkin.jointsData[object.targetJoint].currentRelPose else object.targetObject?.defaultTransform) ?? object.matrices[ptIndex];
+				object.matrices[ptIndex] = (if( object.targetSkin != null ) object.targetSkin.jointsData[object.targetJoint].currentRelPos else object.targetObject?.defaultTransform) ?? object.matrices[ptIndex];
 			}
 		}
 
@@ -164,7 +164,7 @@ class BlendSpace2D extends h3d.anim.Animation {
 			}
 
 			@:privateAccess if( object.targetSkin != null )
-				object.targetSkin.jointsData[object.targetJoint].currentRelPose = outMatrix;
+				object.targetSkin.jointsData[object.targetJoint].currentRelPos = outMatrix;
 			else if( object.targetObject != null )
 				object.targetObject.defaultTransform = outMatrix;
 		}
