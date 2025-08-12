@@ -299,9 +299,14 @@ class Style extends domkit.CssStyle {
 				if( inspectModeActive && s3d != null && @:privateAccess s3d.renderer.debugging )
 					inspectModeActive = false;
 
-				if( inspectModeActive )
+				if( inspectModeActive ) {
 					updatePreview(e);
-				else {
+					if( inspectModeDetails && inspectPreview == null ) {
+						inspectModeActive = false;
+						inspectModeDetails = false;
+					}
+				}
+				if( !inspectModeActive ) {
 					clearPreview();
 					hxd.System.setNativeCursor(Default);
 				}
