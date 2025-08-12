@@ -73,8 +73,8 @@ class JointData {
 	public var currentAbsPos : h3d.Matrix;
 	public var additivePose : h3d.Matrix;
 
-	var targetMat : h3d.Matrix = new h3d.Matrix();
-	var originMat : h3d.Matrix = new h3d.Matrix();
+	var targetMat : h3d.Matrix = h3d.Matrix.I();
+	var originMat : h3d.Matrix = h3d.Matrix.I();
 
 	public function new() {
 		this.currentAbsPos = h3d.Matrix.I();
@@ -208,7 +208,7 @@ class DynamicJointData extends JointData {
 		jData.speed *= 1.0 - j.damping;
 
 		if (jData.speed.lengthSq() > DynamicJoint.SLEEP_THRESHOLD)
-			newWorldPos.load(newWorldPos + jData.speed * hxd.Math.clamp(Skin.FIXED_DT, 0, hxd.Timer.maxDeltaTime));
+			newWorldPos.load(newWorldPos + jData.speed * hxd.Math.clamp(hxd.Timer.dt, 0, hxd.Timer.maxDeltaTime));
 
 		if (jData.speed.lengthSq() > DynamicJoint.MAX_THRESHOLD) {
 			jData.speed.set(0, 0, 0);
@@ -289,7 +289,9 @@ class DynamicJointData extends JointData {
 		var scaleB = b.getScale();
 
 		tmpQ.initRotateMatrix(a);
+		tmpQ.normalize();
 		tmpQ2.initRotateMatrix(b);
+		tmpQ2.normalize();
 
 		tmpVec.lerp(posA, posB, t);
 		tmpVec2.lerp(scaleA, scaleB, t);
@@ -305,7 +307,7 @@ class DynamicJointData extends JointData {
 
 class Skin extends MultiMaterial {
 	public static var FIXED_DT = 1. / 60.;
-	public var accumulator = 0.;
+	public var accumulator = hxd.Math.POSITIVE_INFINITY;
 
 	var skinData : h3d.anim.Skin;
 	var jointsData : Array<JointData>; // Runtime data
