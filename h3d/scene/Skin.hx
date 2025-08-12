@@ -190,6 +190,9 @@ class DynamicJointData extends JointData {
 			lerpMatrix(jParentData.originMat, jParentData.targetMat, alpha, Skin.TMP_MAT);
 			skin.currentPalette[j.parent.bindIndex].multiply3x4inline(j.parent.transPos, Skin.TMP_MAT);
 		}
+
+		if (jData.speed.length() != 0.)
+			skin.forceJointsUpdateOnFrame = hxd.Timer.frameCount + 1;
 	}
 
 	function computeDyn(skin: h3d.scene.Skin, j: h3d.anim.Skin.Joint) {
@@ -208,7 +211,7 @@ class DynamicJointData extends JointData {
 		jData.speed *= 1.0 - j.damping;
 
 		if (jData.speed.lengthSq() > DynamicJoint.SLEEP_THRESHOLD)
-			newWorldPos.load(newWorldPos + jData.speed * hxd.Math.clamp(hxd.Timer.dt, 0, hxd.Timer.maxDeltaTime));
+			newWorldPos.load(newWorldPos + jData.speed * Skin.FIXED_DT);
 
 		if (jData.speed.lengthSq() > DynamicJoint.MAX_THRESHOLD) {
 			jData.speed.set(0, 0, 0);
@@ -254,9 +257,6 @@ class DynamicJointData extends JointData {
 		jData.relPos.multiply(jData.absPos, Skin.TMP_MAT);
 
 		jData.targetMat.load(jData.currentAbsPos);
-
-		if (jData.speed.length() != 0.)
-			skin.forceJointsUpdateOnFrame = hxd.Timer.frameCount + 1;
 	}
 
 	function computeRotationDyn(skin: h3d.scene.Skin, j: h3d.anim.Skin.Joint) {
@@ -307,7 +307,7 @@ class DynamicJointData extends JointData {
 
 class Skin extends MultiMaterial {
 	public static var FIXED_DT = 1. / 60.;
-	public var accumulator = hxd.Math.POSITIVE_INFINITY;
+	public var accumulator = FIXED_DT;
 
 	var skinData : h3d.anim.Skin;
 	var jointsData : Array<JointData>; // Runtime data
@@ -506,7 +506,7 @@ class Skin extends MultiMaterial {
 
 	@:noDebug
 	function syncJoints() {
-		if( !jointsUpdated && forceJointsUpdateOnFrame != hxd.Timer.frameCount )
+		if( !jointsUpdated && forceJointsUpdateOnFrame >= hxd.Timer.frameCount )
 			return;
 
 		if ( computeVelocity() ) {
