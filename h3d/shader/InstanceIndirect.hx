@@ -117,7 +117,7 @@ class SubPartInstanceIndirect extends InstanceIndirectBase {
 
 		function main() {
 			if ( invocID < instanceCount ) {
-				var pos = vec3(0) * modelView.mat3x4();
+				var pos = vec3(modelView[0].w, modelView[1].w, modelView[2].w);
 				var vScale = abs(vec3(1) * modelView.mat3x4() - pos);
 				var scaledRadius = max(max(vScale.x, vScale.y), vScale.z);
 				var toCam = camera.position - pos.xyz;
@@ -173,7 +173,7 @@ class InstanceIndirect extends InstanceIndirectBase {
 
 		function main() {
 			if ( invocID < instanceCount ) {
-				var pos = vec3(0) * modelView.mat3x4();
+				var pos = vec3(modelView[0].w, modelView[1].w, modelView[2].w);
 				var vScale = abs(vec3(1) * modelView.mat3x4() - pos);
 				var scaledRadius = max(max(vScale.x, vScale.y), vScale.z);
 				var toCam = camera.position - pos.xyz;
