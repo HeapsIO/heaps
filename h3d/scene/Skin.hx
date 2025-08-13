@@ -113,6 +113,7 @@ class DynamicJointData extends JointData {
 
 	static var newWorldPos = new Vector(0, 0, 0);
 	static var expectedPos = new Vector(0, 0, 0);
+
 	static var tmpVec = new Vector(0, 0, 0);
 	static var tmpVec2 = new Vector(0, 0, 0);
 	static var tmpQ = new Quat();
@@ -182,12 +183,12 @@ class DynamicJointData extends JointData {
 		var alpha = hxd.Math.clamp(skin.accumulator / Skin.FIXED_DT);
 
 		if( j.bindIndex >= 0 ) {
-			lerpMatrix(jData.originMat, jData.targetMat, alpha, Skin.TMP_MAT);
+			lerpMatrixTerms(jData.originMat, jData.targetMat, alpha, Skin.TMP_MAT);
 			skin.currentPalette[j.bindIndex].multiply3x4inline(j.transPos, Skin.TMP_MAT);
 		}
 
 		if( j.parent.bindIndex >= 0 && jParentData != null) {
-			lerpMatrix(jParentData.originMat, jParentData.targetMat, alpha, Skin.TMP_MAT);
+			lerpMatrixTerms(jParentData.originMat, jParentData.targetMat, alpha, Skin.TMP_MAT);
 			skin.currentPalette[j.parent.bindIndex].multiply3x4inline(j.parent.transPos, Skin.TMP_MAT);
 		}
 
@@ -282,26 +283,24 @@ class DynamicJointData extends JointData {
 			jData.targetMat.load(jData.currentAbsPos);
 	}
 
-	function lerpMatrix(a: h3d.Matrix, b: h3d.Matrix, t: Float, out: h3d.Matrix) : h3d.Matrix {
-		var posA = a.getPosition();
-		var posB = b.getPosition();
-		var scaleA = a.getScale();
-		var scaleB = b.getScale();
-
-		tmpQ.initRotateMatrix(a);
-		tmpQ.normalize();
-		tmpQ2.initRotateMatrix(b);
-		tmpQ2.normalize();
-
-		tmpVec.lerp(posA, posB, t);
-		tmpVec2.lerp(scaleA, scaleB, t);
-
-		tmpQ.lerp(tmpQ, tmpQ2, t, true);
-
-		tmpQ.toMatrix(out);
-		out.scale(tmpVec2.x, tmpVec2.y, tmpVec2.z);
-		out.setPosition(tmpVec);
-		return out;
+	function lerpMatrixTerms(a: h3d.Matrix, b: h3d.Matrix, t: Float, out: h3d.Matrix): h3d.Matrix {
+		out._11 = hxd.Math.lerp(a._11, b._11, t);
+		out._12 = hxd.Math.lerp(a._12, b._12, t);
+		out._13 = hxd.Math.lerp(a._13, b._13, t);
+		out._14 = hxd.Math.lerp(a._14, b._14, t);
+		out._21 = hxd.Math.lerp(a._21, b._21, t);
+		out._22 = hxd.Math.lerp(a._22, b._22, t);
+		out._23 = hxd.Math.lerp(a._23, b._23, t);
+		out._24 = hxd.Math.lerp(a._24, b._24, t);
+		out._31 = hxd.Math.lerp(a._31, b._31, t);
+		out._32 = hxd.Math.lerp(a._32, b._32, t);
+		out._33 = hxd.Math.lerp(a._33, b._33, t);
+		out._34 = hxd.Math.lerp(a._34, b._34, t);
+		out._41 = hxd.Math.lerp(a._41, b._41, t);
+		out._42 = hxd.Math.lerp(a._42, b._42, t);
+		out._43 = hxd.Math.lerp(a._43, b._43, t);
+		out._44 = hxd.Math.lerp(a._44, b._44, t);
+    	return out;
 	}
 }
 
