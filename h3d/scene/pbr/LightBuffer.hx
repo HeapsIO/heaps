@@ -8,7 +8,7 @@ class LightBuffer {
 
 	var MAX_DIR_LIGHT = 2;
 	var MAX_SPOT_LIGHT = 10;
-	var MAX_POINT_LIGHT = 10;
+	var MAX_POINT_LIGHT = 25;
 	var MAX_DIR_SHADOW = 1;
 	var MAX_SPOT_SHADOW = 2;
 	var MAX_POINT_SHADOW = 2;
