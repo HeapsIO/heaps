@@ -352,11 +352,6 @@ class HMDModel extends MeshPrimitive {
 	}
 
 	public function getLodConfig() {
-		if (lodConfig != null)
-			return lodConfig;
-
-		var d = lib.resource.entry.directory;
-		lodConfig = @:privateAccess ModelDatabase.current.getDefaultLodConfig(d);
 		return lodConfig;
 	}
 }

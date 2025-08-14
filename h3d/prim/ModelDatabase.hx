@@ -19,11 +19,6 @@ class ModelDatabase {
 	static var LOD_CONFIG_FIELD = "lods.screenRatio";
 	static var DYN_BONES_CONFIG = "dynamicBones";
 
-	#if (sys || nodejs)
-	static var defaultLodConfigs : Map<String, hxd.fs.FileConverter.ConvertConfig> = new Map();
-	#end
-
-	static var baseLodConfig = [ 0.5, 0.2, 0.01];
 	public static dynamic function customizeLodConfig(c : Array<Float>) {
 		return c;
 	}
@@ -79,29 +74,6 @@ class ModelDatabase {
 		#end
 	}
 
-	function getDefaultLodConfig( dir : String ) : Array<Float> {
-		var fs = Std.downcast(hxd.res.Loader.currentInstance.fs, hxd.fs.LocalFileSystem);
-		var c = baseLodConfig;
-		#if (sys || nodejs)
-		if (fs != null) {
-			var conf : hxd.fs.FileConverter.ConvertConfig = null;
-
-			function getConvertConf(obj : Dynamic) : hxd.fs.FileConverter.ConvertConfig {
-				var defObj = {};
-				Reflect.setField(defObj, LOD_CONFIG_FIELD, obj);
-				return @:privateAccess fs.convert.makeConfig(defObj);
-			}
-
-			conf = @:privateAccess fs.convert.getConfig(defaultLodConfigs, getConvertConf(baseLodConfig), dir, function(fullObj) {
-				return fs.convert.makeConfig(fullObj);
-			});
-
-			c = Reflect.field(conf.obj, LOD_CONFIG_FIELD);
-		}
-		#end
-		c = customizeLodConfig(c);
-		return c;
-	}
 
 	// Used to clean previous version of modelDatabase, should be removed after some time
 	function cleanOldModelData( rootData : Dynamic, key : String) {
@@ -196,7 +168,7 @@ class ModelDatabase {
 
 	function saveLodConfig( input : ModelDataInput, data : Dynamic ) @:privateAccess {
 		var isDefaultConfig = true;
-		var defaultConfig = getDefaultLodConfig(input.resourceDirectory);
+		var defaultConfig = hxd.fmt.hmd.Library.getDefaultLodConfig(input.resourceDirectory);
 
 		if (input.hmd.lodConfig != null) {
 			if (defaultConfig.length != input.hmd.lodConfig.length)
