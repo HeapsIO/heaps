@@ -600,6 +600,7 @@ class Graphics extends Drawable {
 		if (radius <= 0) {
 			return drawRect(x, y, w, h);
 		}
+		radius = Math.min(radius, Math.min(w * 0.5, h * 0.5));
 		x += radius;
 		y += radius;
 		w -= radius * 2;
@@ -608,22 +609,34 @@ class Graphics extends Drawable {
 		if( nsegments == 0 )
 			nsegments = Math.ceil(Math.abs(radius * hxd.Math.degToRad(90) / 4));
 		if( nsegments < 3 ) nsegments = 3;
-		var angle = hxd.Math.degToRad(90) / (nsegments - 1);
+		var angle = hxd.Math.degToRad(90) / nsegments;
 		inline function corner(x, y, angleStart) {
-		for ( i in 0...nsegments) {
-			var a = i * angle + hxd.Math.degToRad(angleStart);
+		for ( i in 0...nsegments-1) {
+			var a = (i + 1) * angle + hxd.Math.degToRad(angleStart);
 			lineTo(x + Math.cos(a) * radius, y + Math.sin(a) * radius);
 		}
 		}
 		lineTo(x, y - radius);
-		lineTo(x + w, y - radius);
+		if (w != 0) {
+			lineTo(x + w, y - radius);
+		}
 		corner(x + w, y, 270);
-		lineTo(x + w + radius, y + h);
+		lineTo(x + w + radius, y);
+		if (h != 0) {
+			lineTo(x + w + radius, y + h);
+		}
 		corner(x + w, y + h, 0);
-		lineTo(x, y + h + radius);
+		lineTo(x + w, y + h + radius);
+		if (w != 0) {
+			lineTo(x, y + h + radius);
+		}
 		corner(x, y + h, 90);
-		lineTo(x - radius, y);
+		lineTo(x - radius, y + h);
+		if (h != 0) {
+			lineTo(x - radius, y);
+		}
 		corner(x, y, 180);
+		lineTo(x, y - radius);
 		flush();
 	}
 
@@ -663,12 +676,18 @@ class Graphics extends Drawable {
 		if( nsegments < 3 ) nsegments = 3;
 		var angle = Math.PI * 2 / nsegments;
 		var x1, y1;
-		for( i in 0...nsegments + 1 ) {
+		x1 = Math.cos(rotationAngle) * radiusX;
+		y1 = Math.sin(rotationAngle) * radiusX;
+		lineTo(cx + x1, cy + y1);
+		for( i in 1...nsegments ) {
 			var a = i * angle;
 			x1 = Math.cos(a) * Math.cos(rotationAngle) * radiusX - Math.sin(a) * Math.sin(rotationAngle) * radiusY;
 			y1 = Math.cos(rotationAngle) * Math.sin(a) * radiusY + Math.cos(a) * Math.sin(rotationAngle) * radiusX;
 			lineTo(cx + x1, cy + y1);
 		}
+		x1 = Math.cos(rotationAngle) * radiusX;
+		y1 = Math.sin(rotationAngle) * radiusX;
+		lineTo(cx + x1, cy + y1);
 		flush();
 	}
 
