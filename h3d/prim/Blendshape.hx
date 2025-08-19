@@ -59,11 +59,18 @@ class Blendshape {
 		}
 	}
 
-	public function setBlendshapeAmount(blendshapeIdx: Int, amount: Float) {
+	public function setBlendshapeAmountByIndex(blendshapeIdx: Int, amount: Float) {
 		if (blendshapeIdx >= this.weights.length)
 			throw 'Blendshape at index ${blendshapeIdx} doesn\'t exist (there is only ${this.weights.length} blendshapes).';
 
 		this.weights[blendshapeIdx] = amount;
+		uploadBlendshapeBytes();
+	}
+
+	public function setBlendShapeAmountByName(name: String, amount: Float) {
+		for (s in shapes)
+			if (s.name == name)
+				this.weights[shapes.indexOf(s)] = amount;
 		uploadBlendshapeBytes();
 	}
 

@@ -684,7 +684,7 @@ class HMDOut extends BaseLibrary {
 			var remapped = remappedShapes[i];
 			var s = shapes[i];
 			var shape = new BlendShape();
-			shape.name = s.name;
+			shape.name = s.props != null && s.props.length > 0 ? s.props[0].toString() : s.name;
 			shape.geom = -1;
 			var indexes = s.get("Indexes").getFloats();
 			var verts = s.get("Vertices").getFloats();
