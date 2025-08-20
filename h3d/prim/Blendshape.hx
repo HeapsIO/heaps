@@ -59,19 +59,26 @@ class Blendshape {
 		}
 	}
 
-	public function setBlendshapeAmountByIndex(blendshapeIdx: Int, amount: Float) {
+	public function setBlendshapeAmountByIndex(blendshapeIdx: Int, amount: Float, uploadBytes : Bool = true) {
 		if (blendshapeIdx >= this.weights.length)
 			throw 'Blendshape at index ${blendshapeIdx} doesn\'t exist (there is only ${this.weights.length} blendshapes).';
 
 		this.weights[blendshapeIdx] = amount;
-		uploadBlendshapeBytes();
+
+		if (uploadBytes)
+			uploadBlendshapeBytes();
 	}
 
-	public function setBlendShapeAmountByName(name: String, amount: Float) {
-		for (s in shapes)
-			if (s.name == name)
+	public function setBlendShapeAmountByName(name: String, amount: Float, uploadBytes : Bool = true) {
+		for (s in shapes) {
+			if (s.name == name) {
 				this.weights[shapes.indexOf(s)] = amount;
-		uploadBlendshapeBytes();
+				break;
+			}
+		}
+
+		if (uploadBytes)
+			uploadBlendshapeBytes();
 	}
 
 	function getBlendshapeCount() {
@@ -81,7 +88,7 @@ class Blendshape {
 		return shapes.length;
 	}
 
-	function uploadBlendshapeBytes() {
+	public function uploadBlendshapeBytes() {
 		if (hmdModel.buffer == null || hmdModel.buffer.isDisposed())
 			hmdModel.alloc(Engine.getCurrent());
 
