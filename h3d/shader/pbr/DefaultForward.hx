@@ -17,7 +17,7 @@ class DefaultForward extends hxsl.Shader {
 		@const(16) var SPOT_SHADOW_COUNT:Int;
 
 		@:import h3d.shader.pbr.Light.LightEvaluation;
-		@:import h3d.shader.pbr.BDRF;
+		@:import h3d.shader.pbr.BRDF;
 
 		// Import pbr info
 		var output : {color : Vec4, metalness : Float, roughness : Float, occlusion : Float, emissive : Float, depth : Float };

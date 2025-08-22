@@ -4,7 +4,7 @@ class Indirect extends PropsDefinition {
 
 	static var SRC = {
 
-		@:import h3d.shader.pbr.BDRF;
+		@:import h3d.shader.pbr.BRDF;
 
 		// Flags
 		@const var drawIndirectDiffuse : Bool;
@@ -102,7 +102,7 @@ class Direct extends PropsDefinition {
 
 	static var SRC = {
 
-		@:import h3d.shader.pbr.BDRF;
+		@:import h3d.shader.pbr.BRDF;
 
 		var pbrLightDirection : Vec3;
 		var pbrSpecularLightDirection : Vec3;
