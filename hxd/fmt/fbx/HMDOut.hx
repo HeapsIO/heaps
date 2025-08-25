@@ -22,6 +22,7 @@ class HMDOut extends BaseLibrary {
 	public var generateNormals = false;
 	public var generateTangents = false;
 	public var generateCollides : CollideParams;
+	public var modelCollides : Map<String, CollideParams> = [];
 	public var ignoreCollides : Array<String>;
 	var ignoreCollidesCache : Map<Int,Bool> = [];
 	public var lowPrecConfig : Map<String,Precision>;
@@ -814,13 +815,11 @@ class HMDOut extends BaseLibrary {
 		return { lodLevel : -1, modelName : null };
 	}
 
-	function buildColliders(g : hxd.fmt.hmd.Data, model : Model, geom : hxd.fmt.fbx.Geometry, bounds : h3d.col.Bounds) {
+	function buildColliders(g : hxd.fmt.hmd.Data, model : Model, geom : hxd.fmt.fbx.Geometry, bounds : h3d.col.Bounds, generateCollides : Dynamic ) {
 		var maxConvexHulls = generateCollides.maxConvexHulls;
 		var dim = bounds.dimension();
-		if ( dim <= generateCollides.precision )
-			return null;
-
-		var subdiv = Math.ceil(dim / generateCollides.precision);
+		var prec = Math.min(dim, generateCollides.precision);
+		var subdiv = Math.ceil(dim / prec);
 		subdiv = Math.imin(subdiv, generateCollides.maxSubdiv);
 		var maxResolution = subdiv * subdiv * subdiv;
 
@@ -1300,8 +1299,13 @@ class HMDOut extends BaseLibrary {
 				var geomData = new hxd.fmt.fbx.Geometry(this, g);
 
 				var geom = buildGeom(geomData, skin, dataOut, hasNormalMap || generateTangents);
-				if ( generateCollides != null )
-					buildColliders(d, model, geomData, geom.g.bounds);
+
+				if ( lodsInfos.lodLevel <= 0 ) {
+					var mname = model.getObjectName();
+					var collidersParams = modelCollides.exists(mname) ? modelCollides.get(mname) : generateCollides;
+					if ( collidersParams != null )
+						buildColliders(d, model, geomData, geom.g.bounds, collidersParams);
+				}
 
 				gdata = { gid : d.geometries.length, materials : geom.materials };
 				d.geometries.push(geom.g);

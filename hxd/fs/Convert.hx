@@ -119,7 +119,22 @@ class ConvertFBX2HMD extends Convert {
 	}
 
 	override function hasLocalParams():Bool {
-		return (params != null && params.collide != null);
+		var filePath = srcPath.substring(srcPath.lastIndexOf("/") + 1);
+		var dirPath = srcPath.substring(0, srcPath.lastIndexOf("/"));
+		var modelPropsPath = dirPath + "/model.props";
+		var foundModelProps = false;
+		try {
+			var res = hxd.File.getBytes(modelPropsPath).toString();
+			var modelProps = haxe.Json.parse(res);
+			for( mp in Reflect.fields(modelProps) ) {
+				if( mp.substring(0, mp.lastIndexOf("/")) == filePath && Reflect.field(modelProps, mp).collide != null ) {
+					foundModelProps = true;
+					break;
+				}
+			}
+		} catch( e ) {
+		}
+		return (params != null && params.collide != null) || foundModelProps;
 	}
 
 	override function getLocalContext():Dynamic {
@@ -127,6 +142,29 @@ class ConvertFBX2HMD extends Convert {
 	}
 
 	override function computeLocalParams(context:Dynamic):Dynamic {
+		var filePath = srcPath.substring(srcPath.lastIndexOf("/") + 1);
+		var dirPath = srcPath.substring(0, srcPath.lastIndexOf("/"));
+		// Parse model.props to find model config
+		var modelCollides : Map<String, hxd.fmt.fbx.HMDOut.CollideParams> = [];
+		var modelPropsPath = dirPath + "/model.props";
+		var foundModelProps = false;
+		var modelProps = null;
+		try {
+			var res = hxd.File.getBytes(modelPropsPath).toString();
+			modelProps = haxe.Json.parse(res);
+		} catch( e ) {
+		}
+		if( modelProps != null ) {
+			for( mp in Reflect.fields(modelProps) ) {
+				var mpFile = mp.substring(0, mp.lastIndexOf("/"));
+				if( mpFile == filePath ) {
+					var mpModel = mp.substring(mp.lastIndexOf("/") + 1);
+					var collide = Reflect.field(modelProps, mp).collide;
+					modelCollides.set(mpModel, collide);
+					foundModelProps = true;
+				}
+			}
+		}
 		// Parse fbx to find used materials
 		if( context != null && context.matNames != null && Std.isOfType(context.matNames, Array) ) {
 			matNames = context.matNames;
@@ -142,8 +180,6 @@ class ConvertFBX2HMD extends Convert {
 		}
 		// Parse material.props to find material config
 		var ignoredMaterials = [];
-		var filePath = srcPath.substring(srcPath.lastIndexOf("/") + 1);
-		var dirPath = srcPath.substring(0, srcPath.lastIndexOf("/"));
 		var matPropsPath = dirPath + "/materials.props";
 		var matProps = null;
 		try {
@@ -151,43 +187,48 @@ class ConvertFBX2HMD extends Convert {
 			matProps = haxe.Json.parse(res).materials;
 		} catch( e ) {
 		}
-		if( matProps == null )
-			return null;
-		var modelLibCache = new Map<String, Array<Dynamic>>();
-		for( config in Reflect.fields(matProps) ) {
-			var configProps = Reflect.field(matProps, config);
-			for( matName in matNames ) {
-				var m = Reflect.field(configProps, matName + "/" + filePath);
-				if( m == null )
-					m = Reflect.field(configProps, matName);
-				if( m == null )
-					continue;
-				if( m.ignoreCollide == true ) {
-					ignoredMaterials.push(matName);
-					continue;
-				}
-				// Parse model library
-				if( m.__ref != null && m.name != null ) {
-					var libchildren = modelLibCache.get(m.__ref);
-					if( libchildren == null ) {
-						var lib = try haxe.Json.parse(hxd.File.getBytes(baseDir + m.__ref).toString()) catch( e ) null;
-						if( lib == null || lib.children == null )
-							continue;
-						libchildren = lib.children;
-						modelLibCache.set(m.__ref, libchildren);
+		if( matProps != null ) {
+			var modelLibCache = new Map<String, Array<Dynamic>>();
+			for( config in Reflect.fields(matProps) ) {
+				var configProps = Reflect.field(matProps, config);
+				for( matName in matNames ) {
+					var m = Reflect.field(configProps, matName + "/" + filePath);
+					if( m == null )
+						m = Reflect.field(configProps, matName);
+					if( m == null )
+						continue;
+					if( m.ignoreCollide == true ) {
+						ignoredMaterials.push(matName);
+						continue;
 					}
-					for( c in libchildren ) {
-						if( c.type == "material" && c.name == m.name ) {
-							if( c.props?.PBR?.ignoreCollide == true ) {
-								ignoredMaterials.push(matName);
+					// Parse model library
+					if( m.__ref != null && m.name != null ) {
+						var libchildren = modelLibCache.get(m.__ref);
+						if( libchildren == null ) {
+							var lib = try haxe.Json.parse(hxd.File.getBytes(baseDir + m.__ref).toString()) catch( e ) null;
+							if( lib == null || lib.children == null )
+								continue;
+							libchildren = lib.children;
+							modelLibCache.set(m.__ref, libchildren);
+						}
+						for( c in libchildren ) {
+							if( c.type == "material" && c.name == m.name ) {
+								if( c.props?.PBR?.ignoreCollide == true ) {
+									ignoredMaterials.push(matName);
+								}
+								break;
 							}
-							break;
 						}
 					}
 				}
 			}
 		}
-		return { ignoreCollideMaterials : ignoredMaterials };
+		var localParams = {};
+		if( ignoredMaterials.length > 0 )
+			Reflect.setField(localParams, "ignoreCollideMaterials", ignoredMaterials);
+		if( foundModelProps )
+			Reflect.setField(localParams, "modelCollides", modelCollides);
+		return localParams;
 	}
 
 	override function convert() {
@@ -234,6 +275,9 @@ class ConvertFBX2HMD extends Convert {
 		if( localParams != null ) {
 			if( localParams.ignoreCollideMaterials != null ) {
 				hmdout.ignoreCollides = localParams.ignoreCollideMaterials;
+			}
+			if( localParams.modelCollides != null ) {
+				hmdout.modelCollides = localParams.modelCollides;
 			}
 		}
 		hmdout.load(fbx);

@@ -1,12 +1,15 @@
 package h3d.prim;
 
+#if !macro
 typedef ModelDataInput = {
 	var resourceDirectory : String;
 	var resourceName : String;
 	var objectName : String;
 	var hmd : HMDModel;
 	var skin : h3d.scene.Skin;
+	var collide : Dynamic;
 }
+#end
 
 class ModelDatabase {
 
@@ -39,7 +42,16 @@ class ModelDatabase {
 		if( cached != null )
 			return cached;
 		var file = getFilePath(directory);
+		#if macro
+		if ( !haxe.io.Path.isAbsolute(file) )
+			file = haxe.macro.Context.definedValue("resourcesPath") + file;
+		var value = try haxe.Json.parse(sys.io.File.getBytes(file).toString()) catch( e : hxd.res.NotFound ) {};
+		#else
+		var fs = Std.downcast(hxd.res.Loader.currentInstance.fs, hxd.fs.LocalFileSystem);
+		if ( fs != null && haxe.io.Path.isAbsolute(file) )
+			file = file.substr(fs.baseDir.length);
 		var value = try haxe.Json.parse(hxd.res.Loader.currentInstance.load(file).toText()) catch( e : hxd.res.NotFound ) {};
+		#end
 		ModelDatabase.db.set(directory, value);
 		return value;
 	}
@@ -50,30 +62,6 @@ class ModelDatabase {
 		cleanOldModelData(rootData, key);
 		return Reflect.field(rootData, key);
 	}
-
-	function saveModelData( directory : String, resourceName : String, modelName : String, data : Dynamic ) {
-		var file = getFilePath(directory);
-
-		var rootData = getRootData(directory);
-		var key = resourceName + "/" + modelName;
-		if (data == null || Reflect.fields(data).length == 0)
-			Reflect.deleteField(rootData, key);
-		else
-			Reflect.setField(rootData, key, data);
-
-		#if ((sys || nodejs) && !usesys)
-		var fs = Std.downcast(hxd.res.Loader.currentInstance.fs, hxd.fs.LocalFileSystem);
-		if( fs != null && !haxe.io.Path.isAbsolute(file) )
-			file = fs.baseDir + file;
-		if( rootData == null || Reflect.fields(rootData).length == 0 )
-			(try sys.FileSystem.deleteFile(file) catch( e : Dynamic ) {});
-		else
-			sys.io.File.saveContent(file, haxe.Json.stringify(rootData, "\t"));
-		#else
-		throw "Can't save model props database " + file;
-		#end
-	}
-
 
 	// Used to clean previous version of modelDatabase, should be removed after some time
 	function cleanOldModelData( rootData : Dynamic, key : String) {
@@ -106,6 +94,29 @@ class ModelDatabase {
 		}
 	}
 
+	#if !macro
+	function saveModelData( directory : String, resourceName : String, modelName : String, data : Dynamic ) {
+		var file = getFilePath(directory);
+
+		var rootData = getRootData(directory);
+		var key = resourceName + "/" + modelName;
+		if (data == null || Reflect.fields(data).length == 0)
+			Reflect.deleteField(rootData, key);
+		else
+			Reflect.setField(rootData, key, data);
+
+		#if ((sys || nodejs) && !usesys)
+		var fs = Std.downcast(hxd.res.Loader.currentInstance.fs, hxd.fs.LocalFileSystem);
+		if( fs != null && !haxe.io.Path.isAbsolute(file) )
+			file = fs.baseDir + file;
+		if( rootData == null || Reflect.fields(rootData).length == 0 )
+			(try sys.FileSystem.deleteFile(file) catch( e : Dynamic ) {});
+		else
+			sys.io.File.saveContent(file, haxe.Json.stringify(rootData, "\t"));
+		#else
+		throw "Can't save model props database " + file;
+		#end
+	}
 
 	function loadLodConfig( input : ModelDataInput, data : Dynamic ) {
 		var c = Reflect.field(data, LOD_CONFIG);
@@ -225,6 +236,12 @@ class ModelDatabase {
 		Reflect.setField(data, DYN_BONES_CONFIG, dynamicJoints);
 	}
 
+	function saveCollideConfig( input : ModelDataInput, data : Dynamic ) {
+		if ( !Reflect.hasField(input.collide, "collide") )
+			Reflect.deleteField(data, "collide");
+		else
+			Reflect.setField(data, "collide", Reflect.field(input.collide, "collide"));
+	}
 
 	public function loadModelProps( input : ModelDataInput ) {
 		var data : Dynamic = getModelData(input.resourceDirectory, input.resourceName, input.objectName);
@@ -242,9 +259,11 @@ class ModelDatabase {
 
 		saveLodConfig(input, data);
 		saveDynamicBonesConfig(input, data);
+		saveCollideConfig(input, data);
 
 		saveModelData(input.resourceDirectory, input.resourceName, input.objectName, data);
 	}
+	#end
 
 	public static var current = new ModelDatabase();
 }

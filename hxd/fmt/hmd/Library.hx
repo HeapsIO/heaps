@@ -473,7 +473,8 @@ class Library {
 				resourceName : resource.name,
 				objectName : obj.name,
 				hmd : Std.downcast(Std.downcast(obj, h3d.scene.Mesh)?.primitive, h3d.prim.HMDModel),
-				skin : Std.downcast(obj, h3d.scene.Skin)
+				skin : Std.downcast(obj, h3d.scene.Skin),
+				collide : null
 			}
 
 			// Apply default config to object (config that is in props.json)
