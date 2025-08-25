@@ -337,7 +337,7 @@ class FileConverter {
 		conv.originalFilename = e.name;
 		var hasLocalParams = conv.hasLocalParams();
 
-		if( alreadyGen && !hasLocalParams && match.time == time #if js && (match.milliseconds == null || match.milliseconds == milliseconds ) #end ) {
+		if( alreadyGen && !hasLocalParams && match.localParamsHash == null && match.time == time #if js && (match.milliseconds == null || match.milliseconds == milliseconds ) #end ) {
 			conv.cleanup();
 			return; // not changed (time stamp)
 		}
