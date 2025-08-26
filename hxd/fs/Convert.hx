@@ -160,8 +160,10 @@ class ConvertFBX2HMD extends Convert {
 				if( mpFile == filePath ) {
 					var mpModel = mp.substring(mp.lastIndexOf("/") + 1);
 					var collide = Reflect.field(modelProps, mp).collide;
-					modelCollides.set(mpModel, collide);
-					foundModelProps = true;
+					if( collide != null ) {
+						modelCollides.set(mpModel, collide);
+						foundModelProps = true;
+					}
 				}
 			}
 		}
@@ -228,6 +230,8 @@ class ConvertFBX2HMD extends Convert {
 			Reflect.setField(localParams, "ignoreCollideMaterials", ignoredMaterials);
 		if( foundModelProps )
 			Reflect.setField(localParams, "modelCollides", modelCollides);
+		if( Reflect.fields(localParams).length == 0 )
+			localParams = null;
 		return localParams;
 	}
 
