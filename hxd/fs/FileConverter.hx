@@ -155,6 +155,10 @@ class FileConverter {
 			var a : Array<Dynamic> = v;
 			return [for( v in a ) formatValue(v)].toString();
 		}
+		if( v is haxe.ds.StringMap ) {
+			var m : haxe.ds.StringMap<Dynamic> = v;
+			return [for( k=>v in m ) formatValue(k)+"_"+formatValue(v)].toString();
+		}
 		var fl = Reflect.fields(v);
 		fl.sort(Reflect.compare);
 		return [for( f in fl ) f+"_"+formatValue(Reflect.field(v,f))].join("_");
