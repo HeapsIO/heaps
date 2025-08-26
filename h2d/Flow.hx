@@ -1304,6 +1304,9 @@ class Flow extends Object {
 		var paddingTop = getPad(paddingTop,0);
 		var paddingBottom = getPad(paddingBottom,0);
 
+		if( scrollBar != null )
+			scrollBar.visible = true;
+
 		switch(layout) {
 		case Horizontal:
 			var halign = horizontalAlign == null ? Left : horizontalAlign;
@@ -1818,7 +1821,6 @@ class Flow extends Object {
 			if( contentHeight <= calculatedHeight )
 				scrollBar.visible = false;
 			else {
-				scrollBar.visible = true;
 				scrollBar.minHeight = scrollInnerHeight;
 				scrollBarCursor.minHeight = hxd.Math.imax(1, Std.int(scrollInnerHeight * (1 - (contentHeight - scrollInnerHeight)/contentHeight)));
 				updateScrollCursor();
