@@ -352,7 +352,7 @@ class LocalFileSystem implements FileSystem {
 
 	var directoryCache : Map<String,Map<String,Bool>> = new Map();
 
-	function checkPath( path : String ) {
+	function checkPathLeaf( path : String ) {
 		// make sure the file is loaded with correct case !
 		var baseDir = new haxe.io.Path(path).dir;
 		var c = directoryCache.get(baseDir);
@@ -368,9 +368,20 @@ class LocalFileSystem implements FileSystem {
 			// added since then?
 			if( !isNew ) {
 				directoryCache.remove(baseDir);
-				return checkPath(path);
+				return checkPathLeaf(path);
 			}
 			return false;
+		}
+		return true;
+	}
+	function checkPath(path: String) {
+		var relPath = path.substr(baseDir.length);
+		var split = relPath.split("/");
+		var count = split.length;
+		for (i in 0...count) {
+			if (!checkPathLeaf(baseDir + split.join("/")))
+				return false;
+			split.pop();
 		}
 		return true;
 	}
