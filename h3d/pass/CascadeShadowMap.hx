@@ -47,7 +47,6 @@ class CascadeShadowMap extends DirShadowMap {
 		super(light);
 		format = R32F;
 		shader = dshader = cshader = new h3d.shader.CascadeShadow();
-		border = null;
 	}
 
 	public override function getShadowTex() {
