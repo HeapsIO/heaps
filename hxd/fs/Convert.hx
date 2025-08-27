@@ -321,6 +321,14 @@ class ConvertWAV2MP3 extends Convert {
 		if(hasParam("samplerate")) {
 			sampleRate = getParam("samplerate");
 		}
+		if(hasParam("mono")) {
+			var f = sys.io.File.read(srcPath);
+			var wav = new format.wav.Reader(f).read();
+			f.close();
+			if (wav.header.channels >= 2) {
+				args = args.concat(["-m", "m", "-a"]);
+			}
+		}
 		if(hasParam("bitrate")) {
 			args = args.concat(["-b", Std.string(getParam("bitrate"))]);
 		} else {
