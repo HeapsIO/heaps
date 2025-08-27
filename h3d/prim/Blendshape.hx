@@ -142,7 +142,7 @@ class Blendshape {
 
 		#else
 		var alloc = hxd.impl.Allocator.get();
-		for (m in mesh.getMaterials()) {
+		for (m in mesh.getMaterials(false)) {
 			var shader : h3d.shader.Blendshape = null;
 			for (s in m.mainPass.getShaders()) {
 				if (Std.isOfType(s, h3d.shader.Blendshape)) {
