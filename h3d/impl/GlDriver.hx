@@ -1643,7 +1643,7 @@ class GlDriver extends Driver {
 				arr[0] = commands.offset * InstanceBuffer.ELEMENT_SIZE;
 				var commandOffset : hl.Bytes = (cast arr : hl.NativeArray<hl.Bytes>)[0];
 			#else
-				var commandOffset : hl.Bytes = hl.Api.unsafeCast(commands.offset * InstanceBuffer.ELEMENT_SIZE);
+				var commandOffset : hl.Bytes = hl.Api.unsafeCast(haxe.Int64.make(0, commands.offset * InstanceBuffer.ELEMENT_SIZE));
 			#end
 			gl.bindBuffer(GL.DRAW_INDIRECT_BUFFER, commands.data);
 			#if (hlsdl >= version("1.15.0"))
@@ -1653,7 +1653,7 @@ class GlDriver extends Driver {
 					arr[0] = commands.countOffset * 4;
 					var countOffset : hl.Bytes = (cast arr : hl.NativeArray<hl.Bytes>)[0];
 				#else
-					var countOffset : hl.Bytes = hl.Api.unsafeCast(commands.countOffset * 4);
+					var countOffset : hl.Bytes = hl.Api.unsafeCast(haxe.Int64.make(0, commands.countOffset * 4));
 				#end
 				gl.bindBuffer(GL.PARAMETER_BUFFER, commands.countBuffer);
 				gl.multiDrawElementsIndirectCount(drawMode, kind, commandOffset, countOffset, commands.commandCount, 0);
