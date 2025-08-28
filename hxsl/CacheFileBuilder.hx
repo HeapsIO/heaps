@@ -18,10 +18,10 @@ private class CustomCacheFile extends CacheFile {
 
 	public function new(build) {
 		this.build = build;
-		super(true, true);
+		super(true, true, true);
 	}
 
-	override function load(showProgress=true) {
+	override function load(showProgress) {
 		allowSave = true;
 		super.load(showProgress);
 	}
