@@ -34,8 +34,6 @@ class Renderer extends hxd.impl.AnyProps {
 	#end
 
 	public var effects : Array<h3d.impl.RendererFX> = [];
-	public var volumeEffects : Array<h3d.impl.RendererFXVolume> = [];
-	var toRemove : Array<h3d.impl.RendererFX> = [];
 
 	public var renderMode : RenderMode = Default;
 
@@ -63,9 +61,6 @@ class Renderer extends hxd.impl.AnyProps {
 			p.dispose();
 		for( f in effects )
 			f.dispose();
-		for( v in volumeEffects )
-			for (e in v.effects)
-				e.dispose();
 		if ( ctx.lightSystem != null )
 			ctx.lightSystem.dispose();
 		passObjects = new Map();
@@ -229,82 +224,5 @@ class Renderer extends hxd.impl.AnyProps {
 
 	public function computeDispatch( shader, x = 1, y = 1, z = 1 ) {
 		ctx.computeDispatch(shader, x, y, z);
-	}
-
-	public function processVolumetricEffects() {
-		if (volumeEffects.length == 1) {
-			for (e in volumeEffects[0].effects) {
-				var newEffect = e.modulate(volumeEffects[0].getFactor(ctx.camera.pos));
-				if (newEffect == null)
-					continue;
-				toRemove.push(newEffect);
-				this.effects.push(newEffect);
-			}
-		}
-		else if (volumeEffects.length >= 2) {
-			// When there is more than 2 active volume effects, we take the top 2 prios and closer distance and
-			// blend them
-			volumeEffects.sort((a, b) -> {
-				if (a.priority != b.priority)
-					return a.priority > b.priority ? -1 : 1;
-
-				var pos = ctx.camera.pos;
-				var aDist = (a.getAbsPos().getPosition() - pos).length();
-				var bDist = (b.getAbsPos().getPosition() - pos).length();
-				return aDist < bDist ? -1 : 1;
-			});
-
-			var r1 = volumeEffects[0];
-			var r2 = volumeEffects[1];
-
-			function containsEffectType(volume : h3d.impl.RendererFXVolume, e : h3d.impl.RendererFX) {
-				var cl = Type.getClass(e);
-				for (effect in volume.effects)
-					if (Std.isOfType(effect, cl))
-						return true;
-				return false;
-			}
-
-			// Push unique renderer FX from volume 1 and volume 2
-			for (e in r1.effects) {
-				if (!containsEffectType(r2, e)) {
-					this.toRemove.push(e);
-					this.effects.push(e);
-				}
-			}
-			for (e in r2.effects) {
-				if (!containsEffectType(r1, e)) {
-					this.toRemove.push(e);
-					this.effects.push(e);
-				}
-			}
-
-			// Manage blending of renderer FX that are in volume 1 and volume 2
-			// Look for which direction the blend should be (r1 -> r2 or r2 -> r1)
-			var isR1toR2 = r1.priority < r2.priority;
-			var volume1 = isR1toR2 ? r1 : r2;
-			var volume2 = isR1toR2 ? r2 : r1;
-			for (e1 in volume1.effects) {
-				if (!containsEffectType(volume2, e1))
-					continue;
-
-				for (e2 in volume2.effects) {
-					var transition = e1.transition(e1, e2);
-					transition.setFactor(volume2.getFactor(ctx.camera.pos));
-					if (transition != null) {
-						this.toRemove.push(transition.effect);
-						this.effects.push(transition.effect);
-					}
-				}
-			}
-		}
-	}
-
-	public function removeVolumetricEffects() {
-		for (e in toRemove) {
-			effects.remove(e);
-			toRemove.remove(e);
-			e.dispose();
-		}
 	}
 }

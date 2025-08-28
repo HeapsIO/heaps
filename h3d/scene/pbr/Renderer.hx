@@ -181,11 +181,6 @@ class Renderer extends h3d.scene.Renderer {
 		return super.getPassByName(name);
 	}
 
-	override function startEffects() {
-		processVolumetricEffects();
-		super.startEffects();
-	}
-
 	override function start() {
 		if( pbrLightPass == null ) {
 			pbrLightPass = new h3d.mat.Pass("lights");
@@ -754,7 +749,6 @@ class Renderer extends h3d.scene.Renderer {
 			hxd.Window.getInstance().removeEventTarget(onEvent);
 		}
 		mark("vsync");
-		removeVolumetricEffects();
 		#if render_graph
 		h3d.impl.RenderGraph.end();
 		#end
