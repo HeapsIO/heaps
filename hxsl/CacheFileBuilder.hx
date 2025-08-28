@@ -21,7 +21,7 @@ private class CustomCacheFile extends CacheFile {
 		super(true, true, true);
 	}
 
-	override function load(showProgress) {
+	override function load(showProgress=false) {
 		allowSave = true;
 		super.load(showProgress);
 	}
