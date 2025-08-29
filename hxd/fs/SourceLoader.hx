@@ -3,7 +3,7 @@ package hxd.fs;
 class SourceLoader {
 
 	static var RELOAD_LFS : Array<hxd.fs.FileSystem> = [];
-	#if sys
+	#if (sys && !usesys)
 	public static function addLivePath( path : String ) {
 		RELOAD_LFS.push(new hxd.fs.LocalFileSystem(path,""));
 	}
