@@ -1,6 +1,6 @@
 package hxd.tools;
 
-#if (hl && hl_ver >= version("1.16.0"))
+#if hl
 enum abstract RenderDocInputButton(Int) {
 	// '0' - '9' matches ASCII values
 	var Key_0 = 0x30;
