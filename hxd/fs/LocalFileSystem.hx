@@ -375,6 +375,8 @@ class LocalFileSystem implements FileSystem {
 		return true;
 	}
 	function checkPath(path: String) {
+		if (StringTools.contains(path, "../"))
+			return checkPathLeaf(path);
 		var relPath = path.substr(baseDir.length);
 		var split = relPath.split("/");
 		var count = split.length;
