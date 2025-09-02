@@ -102,6 +102,9 @@ class JointData {
 			m.multiply3x4inline(additivePose, m);
 		if( bid >= 0 )
 			skin.currentPalette[bid].multiply3x4inline(j.transPos, m);
+
+		var jData : JointData = Std.downcast(skin.jointsData[j.index], JointData);
+		jData.originMat.load(targetMat);
 	}
 }
 
@@ -166,7 +169,7 @@ class DynamicJointData extends JointData {
 		}
 
 		var jData : DynamicJointData = Std.downcast(skin.jointsData[j.index], DynamicJointData);
-		var jParentData : DynamicJointData = Std.downcast(skin.jointsData[j.parent.index], DynamicJointData);
+		var jParentData : JointData = Std.downcast(skin.jointsData[j.parent.index], JointData);
 		if (syncDyn) {
 			jData.originMat.load(jData.targetMat);
 
@@ -182,12 +185,11 @@ class DynamicJointData extends JointData {
 
 		var alpha = hxd.Math.clamp(skin.accumulator / Skin.FIXED_DT);
 
-		if( j.bindIndex >= 0 ) {
-			lerpMatrixTerms(jData.originMat, jData.targetMat, alpha, Skin.TMP_MAT);
+		lerpMatrixTerms(jData.originMat, jData.targetMat, alpha, Skin.TMP_MAT);
+		if( j.bindIndex >= 0 )
 			skin.currentPalette[j.bindIndex].multiply3x4inline(j.transPos, Skin.TMP_MAT);
-		}
 
-		if( j.parent.bindIndex >= 0 && jParentData != null) {
+		if( j.parent.bindIndex >= 0) {
 			lerpMatrixTerms(jParentData.originMat, jParentData.targetMat, alpha, Skin.TMP_MAT);
 			skin.currentPalette[j.parent.bindIndex].multiply3x4inline(j.parent.transPos, Skin.TMP_MAT);
 		}
