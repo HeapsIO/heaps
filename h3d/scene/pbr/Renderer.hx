@@ -650,6 +650,7 @@ class Renderer extends h3d.scene.Renderer {
 		begin(BeforeTonemapping);
 		draw("beforeTonemappingDecal");
 		draw("beforeTonemapping");
+		draw("volumetricOverlay");
 		end();
 
 		setTarget(textures.ldr);
