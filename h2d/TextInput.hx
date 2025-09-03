@@ -559,10 +559,19 @@ class TextInput extends Text {
 		return pos - 1;
 	}
 
-	override function sync(ctx) {
+	function syncInteract() {
 		var lines = getAllLines();
 		interactive.width = (inputWidth != null ? inputWidth : maxWidth != null ? Math.ceil(maxWidth) : textWidth);
-		interactive.height = font.lineHeight * lines.length;
+		interactive.height = font.lineHeight * (lines.length == 0 ? 1 : lines.length);
+	}
+
+	override function getBoundsRec(relativeTo:Object, out:h2d.col.Bounds, forSize:Bool) {
+		syncInteract();
+		super.getBoundsRec(relativeTo, out, forSize);
+	}
+
+	override function sync(ctx) {
+		syncInteract();
 		super.sync(ctx);
 	}
 
