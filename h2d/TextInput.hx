@@ -63,9 +63,7 @@ class TextInput extends Text {
 	var cursorX : Float;
 	var cursorXIndex : Int;
 	var cursorY : Float;
-	var cursorYIndex : Int;
 	var cursorBlink = 0.;
-	var cursorScroll = 0;
 	var scrollX = 0.;
 	var selectionPos : Float;
 	var selectionSize : Float;
@@ -432,6 +430,23 @@ class TextInput extends Text {
 		return { t : text, c : cursorIndex, sel : selectionRange == null ? null : { start : selectionRange.start, length : selectionRange.length } };
 	}
 
+	/**
+		Load the state from a previous input, copy the current text, cursor position, selection etc.
+		This allows to continue uninterrupted input experience while the input component has been reset/rebuild
+	**/
+	public function loadState( from : TextInput, focus=false ) {
+		if( from == null )
+			return;
+		this.undo = from.undo;
+		this.redo = from.redo;
+		this.text = from.text;
+		this.cursorIndex = from.cursorIndex;
+		this.scrollX = from.scrollX;
+		this.selectionRange = from.selectionRange;
+		this.cursorBlinkTime = from.cursorBlinkTime;
+		if( focus ) this.focus();
+	}
+
 	function beforeChange() {
 		var t = haxe.Timer.stamp();
 		if( t - lastChange < 1 ) {
@@ -642,7 +657,6 @@ class TextInput extends Text {
 				emitTile(ctx, cursorTile);
 				cursorTile.dx -= cursorX - scrollX;
 				cursorTile.dy -= cursorY;
-
 			}
 		}
 
