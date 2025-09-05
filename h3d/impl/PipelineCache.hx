@@ -96,6 +96,7 @@ class PipelineBuilder {
 
 	public function new() {
 		if( PSIGN_SIZE > 64 ) throw "assert";
+		setDepthBias(0, 0);
 	}
 
 	static function getRTBits( tex : h3d.mat.Texture ) {
