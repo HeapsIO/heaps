@@ -332,7 +332,10 @@ class CacheFile extends Cache {
 					throw "assert";
 				}
 				var rt2 = rttMap.get(r.specSign);
-				if( rt2 != null ) throw "assert";
+				if( rt2 != null ) {
+					log("Duplicate runtime shader found");
+					continue;
+				}
 				runtimeShaders.push(rt);
 				rttMap.set(r.specSign, { rt : rt, shaders : shaderList });
 			}
