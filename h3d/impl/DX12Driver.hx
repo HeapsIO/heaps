@@ -1863,20 +1863,20 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	var srvRingBuf : hl.CArray<SrvArgs>;
-	var srvHead : Int = 1;
-	var srvTail : Int = 0;
+	var srvHead : haxe.atomic.AtomicInt = new haxe.atomic.AtomicInt(1);
+	var srvTail : haxe.atomic.AtomicInt = new haxe.atomic.AtomicInt(0);
 	var srvThreadLaunched : Bool = false;
 
 	inline function computeSRVBufferDistance() : Int {
-		return (srvHead + (~(srvTail - 1 ) & 0xFF)) & 0xFF;
+		return (srvHead.load() + (~(srvTail.load() - 1 ) & 0xFF)) & 0xFF;
 	}
 
 	inline function processSRV() {
-		var index = (srvTail + 1) & 0xFF;
+		var index = (srvTail.load() + 1) & 0xFF;
 		var args = srvRingBuf[index];
 		Driver.createShaderResourceView(args.res, args.resourceDesc, args.srvAddr);
 		Driver.createSampler(args.samplerDesc, args.samplerAddr);
-		srvTail = index;
+		srvTail.store(index);
 	}
 
 	function runThread() {
@@ -1916,7 +1916,7 @@ class DX12Driver extends h3d.impl.Driver {
 		// Check if ring buffer is full
 		while ( computeSRVBufferDistance() == 0 ) {};
 
-		var srvArgs = srvRingBuf[srvHead];
+		var srvArgs = srvRingBuf[srvHead.load()];
 
 		if( t.flags.has(Cube) ) {
 			var desc = unsafeCastTo(srvArgs.resourceDesc, TexCubeSRV);
@@ -1974,7 +1974,7 @@ class DX12Driver extends h3d.impl.Driver {
 		srvArgs.res = t.t.res;
 		srvArgs.srvAddr = srvAddr;
 		srvArgs.samplerAddr = samplerAddr;
-		srvHead = (srvHead + 1) & 0xFF;
+		srvHead.store((srvHead.load() + 1) & 0xFF);
 
 		#if console
 		processSRV();
