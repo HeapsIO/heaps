@@ -29,7 +29,7 @@ class ColorSpaces extends hxsl.Shader {
 
         //YCoCg
         function rgb2ycocg( rgb : Vec3 ) : Vec3 {
-            var co = rgb.r - rgb.b;
+            var co = rgb.r - rgb.b; 
             var t = rgb.b + co * 0.5;
             var cg = rgb.g - t;
             var y = t + cg * 0.5;
@@ -44,11 +44,11 @@ class ColorSpaces extends hxsl.Shader {
 			return vec3(r, g, b);
 		}
 
-		function int2rgba( c : Int ) : Vec4 {
+		function unpackIntColor( c : Int ) : Vec4 {
 			return vec4((c >> 16) & 0xFF, (c >> 8) & 0xFF, c & 0xFF, (c >> 24) & 0xFF) * (1.0 / float(0xFF));
 		}
 
-		function rgba2int( c : Vec4 ) : Int {
+		function packIntColor( c : Vec4 ) : Int {
 			var cInt = ivec4(saturate(c) * 255 + 0.499);
 			return cInt.a << 24 | cInt.r << 16 | cInt.g << 8 | cInt.b;
 		}
