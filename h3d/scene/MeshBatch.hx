@@ -7,7 +7,10 @@ enum MeshBatchFlag {
 	HasPrimitiveOffset;
 	EnableCpuLod;
 	ForceGpuUpdate;
+	EnableSubMesh;
 }
+
+typedef CpuIndirectCallBuffer = { bytes : haxe.io.Bytes, count : Int };
 
 /**
 	h3d.scene.MeshBatch allows to draw multiple meshed in a single draw call.
@@ -18,9 +21,10 @@ class MeshBatch extends MultiMaterial {
 	static var modelViewID = hxsl.Globals.allocID("global.modelView");
 	static var modelViewInverseID = hxsl.Globals.allocID("global.modelViewInverse");
 	static var previousModelViewID = hxsl.Globals.allocID("global.previousModelView");
-	static var MAX_BUFFER_ELEMENTS = 4096;
-	static var MAX_STORAGE_BUFFER_ELEMENTS = 128 * 1024 * 1024 >> 2;
 	static var BATCH_START_FMT = hxd.BufferFormat.make([{ name : "Batch_Start", type : DFloat }]);
+	inline static var MAX_BUFFER_ELEMENTS = 4096;
+	inline static var MAX_STORAGE_BUFFER_ELEMENTS = 128 * 1024 * 1024 >> 2;
+	inline static var DEFAULT_EMIT_COUNT_TIP = 128;
 
 	var instanced : h3d.prim.Instanced;
 	var dataPasses : BatchData;
@@ -42,14 +46,19 @@ class MeshBatch extends MultiMaterial {
 	 * 	If set, use this position in emitInstance() instead MeshBatch absolute position
 	**/
 	public var worldPosition : Matrix;
-	var invWorldPosition : Matrix;
 
 	/**
 		Tells the mesh batch to draw only a subpart of the primitive.
-		One primitiveSubPart per material.
 	**/
-	public var primitiveSubParts : Array<MeshBatchPart>;
-	var primitiveSubBytes : Array<haxe.io.Bytes>;
+	public var primitiveSubMeshes : Array<SubMesh>;
+	public var curSubMesh : Int = -1;
+
+	/**
+		Use one indirect call buffer per material.
+		Instances can not be culled for a specific pass yet.
+	**/
+	var cpuIndirectCallBuffers : Array<CpuIndirectCallBuffer>;
+	var gpuIndirectCallBuffers : Array<h3d.impl.InstanceBuffer>;
 
 	/**
 		If set, exact bounds will be recalculated during emitInstance (default true)
@@ -58,8 +67,8 @@ class MeshBatch extends MultiMaterial {
 
 	/**
 	 	With EnableCpuLod, set the lod of the next emitInstance.
-		Without EnableCpuLod and not using primitiveSubParts, set the lod of the whole batch.
-	 */
+		Without EnableCpuLod and not using primitiveSubMeshes, set the lod of the whole batch.
+	**/
 	public var curLod : Int = -1;
 
 	public function new( primitive, ?material, ?parent ) {
@@ -98,13 +107,25 @@ class MeshBatch extends MultiMaterial {
 		meshBatchFlags.set(ForceGpuUpdate);
 	}
 
+	/**
+	 * Use sub mesh to emit instance.
+	 * Don't support multiple materials without Storage Buffer to simplify implementation.
+	**/
+	public function enableSubMesh() {
+		meshBatchFlags.set(EnableSubMesh);
+		if ( materials.length > 1 )
+			meshBatchFlags.set(EnableStorageBuffer);
+	}
+
 	public function enableCpuLod() {
 		var prim = getPrimitive();
 		var lodCount = prim.lodCount();
 		if ( lodCount <= 1 )
 			return;
-		if ( partsFromPrimitive(prim) )
+		if ( partsFromPrimitive(prim) ) {
 			meshBatchFlags.set(EnableCpuLod);
+			meshBatchFlags.set(EnableStorageBuffer);
+		}
 	}
 
 	function getPrimitive() return @:privateAccess instanced.primitive;
@@ -113,6 +134,7 @@ class MeshBatch extends MultiMaterial {
 	function gpuUpdateForced() return meshBatchFlags.has(ForceGpuUpdate);
 	function getMaxElements() return storageBufferEnabled() ? MAX_STORAGE_BUFFER_ELEMENTS : MAX_BUFFER_ELEMENTS;
 	function hasPrimitiveOffset() return meshBatchFlags.has(HasPrimitiveOffset);
+	function hasSubMeshes() return meshBatchFlags.has(EnableSubMesh);
 	function cpuLodEnabled() return meshBatchFlags.has(EnableCpuLod);
 
 	inline function shouldResizeDown( currentSize : Int, minSize : Int ) : Bool {
@@ -121,14 +143,19 @@ class MeshBatch extends MultiMaterial {
 
 	public function begin( emitCountTip = -1 ) : Int {
 		instanceCount = 0;
+
+		if ( emitCountTip < 0 )
+			emitCountTip = DEFAULT_EMIT_COUNT_TIP;
+
+		if ( primitiveSubMeshes != null )
+			enableSubMesh();
+
 		instanced.initBounds();
 		if( shadersChanged ) {
 			initShadersMapping();
 			shadersChanged = false;
 		}
 
-		if( emitCountTip < 0 )
-			emitCountTip = 128;
 		var p = dataPasses;
 		var alloc = hxd.impl.Allocator.get();
 		while( p != null ) {
@@ -140,7 +167,20 @@ class MeshBatch extends MultiMaterial {
 			p = p.next;
 		}
 
+		if ( hasSubMeshes() )
+			initSubMeshResources( emitCountTip );
+
 		return emitCountTip;
+	}
+
+	function initSubMeshResources( emitCountTip ) {
+		if ( cpuIndirectCallBuffers == null ) {
+			var instanceSize = emitCountTip * h3d.impl.InstanceBuffer.ELEMENT_SIZE;
+			cpuIndirectCallBuffers = [for ( _ in 0...materials.length ) { bytes : haxe.io.Bytes.alloc(instanceSize), count : 0 }];
+		} else {
+			for ( cpuIndirectCallBuffer in cpuIndirectCallBuffers )
+				cpuIndirectCallBuffer.count = 0;
+		}
 	}
 
 	function initShadersMapping() {
@@ -206,7 +246,7 @@ class MeshBatch extends MultiMaterial {
 		}
 	}
 
-	function updateHasPrimitiveOffset() meshBatchFlags.setTo(HasPrimitiveOffset, primitiveSubParts != null);
+	function updateHasPrimitiveOffset() meshBatchFlags.setTo(HasPrimitiveOffset, hasSubMeshes());
 
 	function createBatchData() {
 		return new BatchData();
@@ -258,7 +298,7 @@ class MeshBatch extends MultiMaterial {
 			for( i in prev...fmt.length )
 				curPos += fmt[i].getBytesSize() >> 2;
 		}
-		if ( curPos & 3 != 0) {
+		if ( curPos & 3 != 0 ) {
 			var paddingSize = 4 - (curPos & 3);
 			var paddingType : hxsl.Ast.Type = switch ( paddingSize ) {
 			case 1:
@@ -275,69 +315,121 @@ class MeshBatch extends MultiMaterial {
 	}
 
 	public function emitInstance() {
-		if( primitiveSubParts != null )
-			emitPrimitiveSubParts();
+		// When using sub meshes we need to fill the indirect call buffers for multi draw
+		if( hasSubMeshes() )
+			emitSubMesh(curSubMesh);
 
-		if(!gpuUpdateForced()){
-			if( worldPosition == null ) syncPos();
+		// Instance data can be filled from the GPU
+		if( !gpuUpdateForced() ) {
 
-			if (primitiveSubParts == null && calcBounds)
+			if ( !hasSubMeshes() && calcBounds)
 				instanced.addInstanceBounds(worldPosition == null ? absPos : worldPosition);
 
-			var p = dataPasses;
-			while( p != null ) {
-				syncData(p);
-				p = p.next;
-			}
+			// Use the mesh batch abs pos if no world position has been set.
+			if ( worldPosition == null )
+				syncPos();
+
+			syncData();
 		}
 
 		instanceCount++;
 	}
 
-	function emitPrimitiveSubParts() {
+	function getSubMesh( subMeshIndex : Int ) : SubMesh {
+		return primitiveSubMeshes[subMeshIndex];
+	}
+
+	function emitSubMesh(subMeshIndex : Int) {
+		if ( cpuIndirectCallBuffers == null )
+			throw "Something went wrong during the initialization";
+		if ( subMeshIndex < 0 || subMeshIndex >= primitiveSubMeshes.length )
+			throw "Invalid subMeshIndex";
+
+		var subMesh = getSubMesh(subMeshIndex);
+		var subParts = subMesh.subParts;
 		if(calcBounds) @:privateAccess {
-			for ( primitiveSubPart in primitiveSubParts ) {
-				instanced.tmpBounds.load(primitiveSubPart.bounds);
-				instanced.tmpBounds.transform(worldPosition == null ? absPos : worldPosition);
-				instanced.bounds.add(instanced.tmpBounds);
-			}
+			instanced.tmpBounds.load(subMesh.bounds);
+			instanced.tmpBounds.transform(worldPosition == null ? absPos : worldPosition);
+			instanced.bounds.add(instanced.tmpBounds);
 		}
 
-		if( primitiveSubBytes == null ) {
-			if ( primitiveSubParts.length != materials.length )
-				throw "Instancing using primitive sub parts must match material count";
-			primitiveSubBytes = [for ( i in 0...primitiveSubParts.length ) haxe.io.Bytes.alloc(128)];
-			instanced.commands = null;
-		}
 		var instanceSize = h3d.impl.InstanceBuffer.ELEMENT_SIZE;
-		for ( i in 0...primitiveSubBytes.length ) {
-			if( primitiveSubBytes[i].length < (instanceCount+1) * instanceSize ) {
-				var next = haxe.io.Bytes.alloc(Std.int(primitiveSubBytes[i].length*3/2));
-				next.blit(0, primitiveSubBytes[i], 0, instanceCount * instanceSize);
-				primitiveSubBytes[i] = next;
-			}
-		}
-		var p = instanceCount * instanceSize;
-		for ( mid => psBytes in primitiveSubBytes ) {
-			var primitiveSubPart = primitiveSubParts[mid];
-			var indexCount = primitiveSubPart.indexCount;
-			var indexStart = primitiveSubPart.indexStart;
+		for ( subPart in subParts ) {
+			var indexCount = subPart.indexCount;
+			var indexStart = subPart.indexStart;
 			if ( curLod >= 0 && cpuLodEnabled() ) {
-				indexStart = primitiveSubPart.lodIndexStart[curLod];
-				indexCount = primitiveSubPart.lodIndexCount[curLod];
+				indexStart = subPart.lodIndexStart[curLod];
+				indexCount = subPart.lodIndexCount[curLod];
 			}
-			psBytes.setInt32(p, indexCount);
-			psBytes.setInt32(p + 4, 1);
-			psBytes.setInt32(p + 8, indexStart);
-			psBytes.setInt32(p + 12, primitiveSubPart.baseVertex);
-			psBytes.setInt32(p + 16, instanceCount);
+
+			if ( indexCount == 0 && storageBufferEnabled() )
+				continue;
+
+			var matIndex = subPart.matIndex;
+			var indirectCallBuffer = cpuIndirectCallBuffers[matIndex];
+
+			// Resize
+			var count = indirectCallBuffer.count++;
+			var pos = count * instanceSize;
+			var minIndirectCallBufferSize = pos + instanceSize;
+			if ( indirectCallBuffer.bytes.length < minIndirectCallBufferSize ) {
+				var next = haxe.io.Bytes.alloc(Std.int((indirectCallBuffer.bytes.length * 3 / 2)));
+				next.blit(0, indirectCallBuffer.bytes, 0, pos);
+				indirectCallBuffer.bytes = next;
+			}
+
+			// Emit
+			var bytes = indirectCallBuffer.bytes;
+			bytes.setInt32(pos, indexCount);
+			bytes.setInt32(pos + 4, 1);
+			bytes.setInt32(pos + 8, indexStart);
+			bytes.setInt32(pos + 12, 0);
+			bytes.setInt32(pos + 16, instanceCount);
+
+			cpuIndirectCallBuffers[matIndex] = indirectCallBuffer;
 		}
+
+		// To clean
+		instanced.commands = null;
 	}
 
 	override function sync(ctx:RenderContext) {
 		super.sync(ctx);
 		if( instanceCount == 0 ) return;
 		flush();
+	}
+
+	function flushSubMeshResources() {
+		if ( !storageBufferEnabled() )
+			throw "Storage buffer must be set to use per material indirect call buffers";
+
+		if ( gpuIndirectCallBuffers == null )
+			gpuIndirectCallBuffers = [for ( i in 0...materials.length ) new h3d.impl.InstanceBuffer()];
+
+		for ( matIndex in 0...materials.length ) {
+			var cpuIndirectCallBuffer = cpuIndirectCallBuffers[matIndex];
+			var gpuIndirectCallBuffer = gpuIndirectCallBuffers[matIndex];
+
+			// Upload indirect call buffer
+			var count = cpuIndirectCallBuffer.count;
+			if ( needUpload || gpuIndirectCallBuffer.commandCount != count ) {
+				var bytes = cpuIndirectCallBuffer.bytes;
+				if ( count == 0 ) {
+					count = 1;
+					bytes.setInt32(0,  0);
+					bytes.setInt32(4,  0);
+					bytes.setInt32(8,  0);
+					bytes.setInt32(12, 0);
+					bytes.setInt32(16, 0);
+				}
+
+				var gpuIndirectCallMaxCount = gpuIndirectCallBuffer.maxCommandCount;
+				if ( shouldResizeDown(gpuIndirectCallMaxCount, count) || count > gpuIndirectCallMaxCount )
+					gpuIndirectCallBuffer.allocFromBytes(count, bytes);
+				else
+					gpuIndirectCallBuffer.uploadBytes(count, bytes);
+			}
+		}
 	}
 
 	public function flush() {
@@ -347,53 +439,60 @@ class MeshBatch extends MultiMaterial {
 		var prim = getPrimitive();
 		var instanceSize = h3d.impl.InstanceBuffer.ELEMENT_SIZE;
 
+		if ( hasSubMeshes() && storageBufferEnabled() )
+			flushSubMeshResources();
+
+		// Allocate and upload GPU buffers for each data passes
 		while( p != null ) {
 			var index = 0;
 			var start = 0;
 			while( start < instanceCount ) {
 				var upload = needUpload;
 				var buf = p.buffers[index];
-				var count = instanceCount - start;
-				if( count > p.maxInstance )
-					count = p.maxInstance;
+				if( instanceCount > p.maxInstance && storageBufferEnabled() )
+					throw "Maximum instance count reached";
 
+				var count = hxd.Math.imin(instanceCount - start, p.maxInstance);
 				var maxVertexCount = gpuUpdateEnabled() ? p.maxInstance : getMaxElements();
 				var vertexCount = Std.int( count * (( 4 * p.paramsCount ) / p.bufferFormat.stride) );
 				var vertexCountAllocated = #if js Std.int( MAX_BUFFER_ELEMENTS * 4 / p.bufferFormat.stride ) #else hxd.Math.imin( hxd.Math.nextPOT( vertexCount ), maxVertexCount ) #end;
 
+				// Lazy instance data buffer allocation
 				if( buf == null || buf.isDisposed() || buf.vertices < vertexCountAllocated ) {
 					var bufferFlags : hxd.impl.Allocator.BufferFlags = storageBufferEnabled() ? UniformReadWrite : UniformDynamic;
-
 					if ( buf != null )
 						alloc.disposeBuffer(buf);
-					buf = alloc.allocBuffer( vertexCountAllocated, p.bufferFormat,bufferFlags );
+					buf = alloc.allocBuffer( vertexCountAllocated, p.bufferFormat, bufferFlags );
 					p.buffers[index] = buf;
 					upload = true;
 				}
+
+				// Upload instance data buffer
 				if( upload && !gpuUpdateForced())
 					buf.uploadFloats(p.data, start * p.paramsCount * 4, vertexCount);
-				if( primitiveSubBytes != null ) {
-					if( p.instanceBuffers == null )
-						p.instanceBuffers = [];
-					var ibuf = p.instanceBuffers[index];
-					if ( ibuf == null )
-						ibuf = new h3d.impl.InstanceBuffer();
-					var ibufUpload = needUpload || ibuf.commandCount != count;
-					if ( ibufUpload ) {
-						var psBytes = primitiveSubBytes[p.matIndex];
+
+				if( hasSubMeshes() && !storageBufferEnabled() ) {
+					if( p.indirectCallBuffers == null )
+						p.indirectCallBuffers = [];
+					var indirectCallBuffer = p.indirectCallBuffers[index];
+					if ( indirectCallBuffer == null )
+						indirectCallBuffer = new h3d.impl.InstanceBuffer();
+					var upload = needUpload || indirectCallBuffer.commandCount != count;
+					if ( upload ) {
+						var bytes = cpuIndirectCallBuffers[p.matIndex].bytes;
 						if ( start > 0 && count < instanceCount ) {
-							psBytes = psBytes.sub(start*instanceSize,count*instanceSize);
+							bytes = bytes.sub(start*instanceSize,count*instanceSize);
 							for( i in 0...count )
-								psBytes.setInt32(i*instanceSize+16, i);
+								bytes.setInt32(i*instanceSize+16, i);
 						}
 
-						var ibufMaxCommandCount = ibuf.maxCommandCount;
-						if ( shouldResizeDown(ibufMaxCommandCount, count) || count > ibufMaxCommandCount) {
-							ibuf.allocFromBytes(count, psBytes);
+						var maxCommandCount = indirectCallBuffer.maxCommandCount;
+						if ( shouldResizeDown(maxCommandCount, count) || count > maxCommandCount) {
+							indirectCallBuffer.allocFromBytes(count, bytes);
 						} else {
-							ibuf.uploadBytes(count, psBytes);
+							indirectCallBuffer.uploadBytes(count, bytes);
 						}
-						p.instanceBuffers[index] = ibuf;
+						p.indirectCallBuffers[index] = indirectCallBuffer;
 					}
 				}
 
@@ -409,18 +508,18 @@ class MeshBatch extends MultiMaterial {
 				alloc.disposeBuffer( p.buffers.pop() );
 			p = p.next;
 		}
-		if( hasPrimitiveOffset() ) {
+		if ( hasPrimitiveOffset() ) {
 			var offsets = prim.resolveBuffer("Batch_Start");
-			if( offsets == null || offsets.vertices < instanceCount || offsets.isDisposed() ) {
-				if( offsets != null ) {
+			if ( offsets == null || offsets.vertices < instanceCount || offsets.isDisposed() ) {
+				if ( offsets != null ) {
 					offsets.dispose();
 					prim.removeBuffer(offsets);
 				}
 				var tmp = haxe.io.Bytes.alloc(4 * instanceCount);
-				for( i in 0...instanceCount )
+				for ( i in 0...instanceCount )
 					tmp.setFloat(i<<2, i);
 				offsets = new h3d.Buffer(instanceCount, BATCH_START_FMT);
-				offsets.uploadBytes(tmp,0,instanceCount);
+				offsets.uploadBytes(tmp, 0, instanceCount);
 				prim.addBuffer(offsets);
 			}
 		}
@@ -431,63 +530,61 @@ class MeshBatch extends MultiMaterial {
 
 	function onFlushPass(p : BatchData) {}
 
-	function syncData( batch : BatchData ) {
-		var startPos = batch.paramsCount * instanceCount << 2;
-		// in case we are bigger than emitCountTip
-		if( startPos + (batch.paramsCount<<2) > batch.data.length )
-			batch.data.grow(batch.data.length << 1);
+	function syncData() {
+		var batch = dataPasses;
+		var invWorldPosition = null;
+		var worldPosition = worldPosition ?? absPos;
+		while( batch != null ) {
+			var startPos = batch.paramsCount * instanceCount << 2;
+			// in case we are bigger than emitCountTip
+			if( startPos + (batch.paramsCount << 2) > batch.data.length )
+				batch.data.grow(batch.data.length << 1);
 
-		var p = batch.params;
-		var buf = batch.data;
-		var shaders = batch.shaders;
+			var p = batch.params;
+			var buf = batch.data;
+			var shaders = batch.shaders;
 
-		var calcInv = false;
-		while( p != null ) {
-			var bufLoader = new hxd.FloatBufferLoader(buf, startPos + p.pos);
-			if( p.perObjectGlobal != null ) {
-				if ( p.perObjectGlobal.gid == modelViewID ) {
-					bufLoader.loadMatrix(worldPosition != null ? worldPosition : absPos);
-				} else if ( p.perObjectGlobal.gid == modelViewInverseID ) {
-					if( worldPosition == null )
-						bufLoader.loadMatrix(getInvPos());
-					else {
-						if( !calcInv ) {
-							calcInv = true;
-							if( invWorldPosition == null ) invWorldPosition = new h3d.Matrix();
-							invWorldPosition.initInverse(worldPosition);
-						}
+			while( p != null ) {
+				var bufLoader = new hxd.FloatBufferLoader(buf, startPos + p.pos);
+				if( p.perObjectGlobal != null ) {
+					if ( p.perObjectGlobal.gid == modelViewID ) {
+						bufLoader.loadMatrix(worldPosition);
+					} else if ( p.perObjectGlobal.gid == modelViewInverseID ) {
+						if ( invWorldPosition == null )
+							invWorldPosition = worldPosition == null ? getInvPos() : worldPosition.getInverse();
 						bufLoader.loadMatrix(invWorldPosition);
-					}
-				} else if ( p.perObjectGlobal.gid == previousModelViewID )
-					bufLoader.loadMatrix(worldPosition != null ? worldPosition : absPos );
-				else
-					throw "Unsupported global param "+p.perObjectGlobal.path;
-				p = p.next;
-				continue;
-			}
-			var curShader = shaders[p.instance];
-			switch( p.type ) {
-			case TVec(size, _):
-				switch( size ) {
-				case 2:
-					var v : h3d.Vector = curShader.getParamValue(p.index);
-					bufLoader.loadVec2(v);
-				case 3:
-					var v : h3d.Vector = curShader.getParamValue(p.index);
-					bufLoader.loadVec3(v);
-				case 4:
-					var v : h3d.Vector4 = curShader.getParamValue(p.index);
-					bufLoader.loadVec4(v);
+					} else if ( p.perObjectGlobal.gid == previousModelViewID )
+						bufLoader.loadMatrix(worldPosition);
+					else
+						throw "Unsupported global param " + p.perObjectGlobal.path;
+					p = p.next;
+					continue;
 				}
-			case TFloat:
-				bufLoader.loadFloat(curShader.getParamFloatValue(p.index));
-			case TMat4:
-				var m : h3d.Matrix = curShader.getParamValue(p.index);
-				bufLoader.loadMatrix(m);
-			default:
-				throw "Unsupported batch type "+p.type;
+				var curShader = shaders[p.instance];
+				switch( p.type ) {
+				case TVec(size, _):
+					switch( size ) {
+					case 2:
+						var v : h3d.Vector = curShader.getParamValue(p.index);
+						bufLoader.loadVec2(v);
+					case 3:
+						var v : h3d.Vector = curShader.getParamValue(p.index);
+						bufLoader.loadVec3(v);
+					case 4:
+						var v : h3d.Vector4 = curShader.getParamValue(p.index);
+						bufLoader.loadVec4(v);
+					}
+				case TFloat:
+					bufLoader.loadFloat(curShader.getParamFloatValue(p.index));
+				case TMat4:
+					var m : h3d.Matrix = curShader.getParamValue(p.index);
+					bufLoader.loadMatrix(m);
+				default:
+					throw "Unsupported batch type "+p.type;
+				}
+				p = p.next;
 			}
-			p = p.next;
+			batch = batch.next;
 		}
 		needUpload = true;
 	}
@@ -507,7 +604,7 @@ class MeshBatch extends MultiMaterial {
 	}
 
 	function emitPass(ctx : RenderContext, p : BatchData) {
-		for( i => buf in p.buffers )
+		for( i in 0...p.buffers.length )
 			ctx.emitPass(p.pass, this).index = i | (p.matIndex << 16);
 	}
 
@@ -522,10 +619,10 @@ class MeshBatch extends MultiMaterial {
 				else
 					p.shader.Batch_Buffer = p.buffers[bufferIndex];
 
-				if( p.instanceBuffers == null )
+				if( cpuIndirectCallBuffers == null )
 					setPassCommand(p, bufferIndex);
 				else
-					instanced.commands = p.instanceBuffers[bufferIndex];
+					instanced.commands = storageBufferEnabled() ? gpuIndirectCallBuffers[p.matIndex] : p.indirectCallBuffers[bufferIndex];
 
 				break;
 			}
@@ -547,20 +644,25 @@ class MeshBatch extends MultiMaterial {
 		var hmd = Std.downcast(prim, h3d.prim.HMDModel);
 		if ( hmd == null )
 			return false;
-		if ( primitiveSubParts == null ) {
-			primitiveSubParts = [];
+		if ( primitiveSubMeshes == null ) {
+			var subMesh = new SubMesh();
+			var lodCount = hmd.lodCount();
+			subMesh.bounds = hmd.getBounds();
+			subMesh.lodCount = lodCount;
+			subMesh.lodConfig = hmd.getLodConfig();
+			var subParts = [];
 			for ( m in 0...materials.length ) {
-				var primitiveSubPart = new MeshBatchPart();
+				var primitiveSubPart = new SubPart();
 				primitiveSubPart.indexStart = hmd.getMaterialIndexStart(m, 0);
 				primitiveSubPart.indexCount = hmd.getMaterialIndexCount(m, 0);
-				primitiveSubPart.lodIndexCount = [for (i in 0...hmd.lodCount() ) hmd.getMaterialIndexCount(m, i)];
-				primitiveSubPart.lodIndexStart = [for (i in 0...hmd.lodCount() ) hmd.getMaterialIndexStart(m, i) ];
-				primitiveSubPart.lodConfig = hmd.getLodConfig();
-				primitiveSubPart.baseVertex = 0;
-				primitiveSubPart.bounds = hmd.getBounds();
-
-				primitiveSubParts.push(primitiveSubPart);
+				primitiveSubPart.lodIndexStart = [for (i in 0...lodCount) hmd.getMaterialIndexStart(m, i)];
+				primitiveSubPart.lodIndexCount = [for (i in 0...lodCount) hmd.getMaterialIndexCount(m, i)];
+				primitiveSubPart.matIndex = m;
+				subParts.push(primitiveSubPart);
 			}
+			subMesh.subParts = subParts;
+			primitiveSubMeshes = [subMesh];
+			curSubMesh = 0;
 		}
 		return true;
 	}
@@ -606,7 +708,13 @@ class MeshBatch extends MultiMaterial {
 		if( instanced.commands != null )
 			instanced.commands.dispose();
 
-		primitiveSubBytes = null;
+		cpuIndirectCallBuffers = null;
+		if ( gpuIndirectCallBuffers != null ) {
+			for ( gpuIndirectCallBuffer in gpuIndirectCallBuffers )
+				gpuIndirectCallBuffer.dispose();
+			gpuIndirectCallBuffers = null;
+		}
+
 		shadersChanged = true;
 	}
 }
@@ -618,7 +726,7 @@ class BatchData {
 	public var matIndex : Int;
 	public var indexCount : Int;
 	public var indexStart : Int;
-	public var instanceBuffers : Array<h3d.impl.InstanceBuffer>;
+	public var indirectCallBuffers : Array<h3d.impl.InstanceBuffer>;
 	public var buffers : Array<h3d.Buffer> = [];
 	public var bufferFormat : hxd.BufferFormat;
 	public var data : hxd.FloatBuffer;
@@ -637,35 +745,31 @@ class BatchData {
 		pass.removeShader(shader);
 		for( b in buffers )
 			alloc.disposeBuffer(b);
+		buffers.resize(0);
 
-		if( instanceBuffers != null ) {
-			for( b in instanceBuffers )
+		if( indirectCallBuffers != null ) {
+			for( b in indirectCallBuffers )
 				b.dispose();
 		}
 		alloc.disposeFloats(data);
 	}
 }
 
-class MeshBatchPart {
+class SubMesh {
+	public var subParts : Array<SubPart>;
+	public var bounds : h3d.col.Bounds;
+	public var lodCount : Int;
+	public var lodConfig : Array<Float>;
+	public function new() {
+	}
+}
+
+class SubPart {
 	public var indexStart : Int;
 	public var indexCount : Int;
 	public var lodIndexStart : Array<Int>;
 	public var lodIndexCount : Array<Int>;
-	public var lodConfig : Array<Float>;
-	public var baseVertex : Int;
-	public var bounds : h3d.col.Bounds;
+	public var matIndex : Int = 0;
 	public function new() {
-	}
-
-	public function clone() {
-		var cl = new MeshBatchPart();
-		cl.indexStart = indexStart;
-		cl.indexCount = indexCount;
-		cl.lodIndexStart = lodIndexStart;
-		cl.lodIndexCount = lodIndexCount;
-		cl.lodConfig = lodConfig;
-		cl.baseVertex = baseVertex;
-		cl.bounds = bounds;
-		return cl;
 	}
 }
