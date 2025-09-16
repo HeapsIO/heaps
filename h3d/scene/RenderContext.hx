@@ -108,7 +108,6 @@ class RenderContext extends h3d.impl.RenderContext {
 	}
 
 	public function start() {
-		lights = null;
 		drawPass = null;
 		passes = [];
 		lights = null;
