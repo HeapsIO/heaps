@@ -404,6 +404,8 @@ class PbrMaterial extends Material {
 			var passName = switch (props.mode) {
 			case PBR:
 				"depthPrepass";
+			case Forward:
+				"forwardDepthPrepass";
 			case BeforeTonemapping:
 				"beforeTonemappingDepthPrepass";
 			default:
@@ -420,9 +422,6 @@ class PbrMaterial extends Material {
 				}
 
 				var p = allocPass(passName);
-				var killAlpha = new h3d.shader.KillAlpha();
-				killAlpha.threshold = 0.5;
-				p.addShader(killAlpha);
 				p.depthWrite = true;
 				p.depthTest = Less;
 				p.culling = mainPass.culling;
