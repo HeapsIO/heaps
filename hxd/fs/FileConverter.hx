@@ -361,10 +361,12 @@ class FileConverter {
 		var localContextJson = localContext == null ? null : haxe.Json.stringify(localContext);
 		if( alreadyGen && match.hash == hash && match.localParamsHash == localParamsHash ) {
 			conv.cleanup();
-			match.time = time;
-			match.milliseconds = milliseconds;
-			match.localContextJson = localContextJson;
-			saveCache();
+			if( match.time != time || match.milliseconds != milliseconds || match.localContextJson != localContextJson ) {
+				match.time = time;
+				match.milliseconds = milliseconds;
+				match.localContextJson = localContextJson;
+				saveCache();
+			}
 			return; // not changed (hash)
 		}
 
