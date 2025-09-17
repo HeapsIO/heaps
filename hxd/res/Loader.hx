@@ -6,7 +6,14 @@ class Loader {
 		Set when initializing hxd.Res, or manually.
 		Allows code to resolve resources without compiling hxd.Res
 	*/
+	#if heaps_mt_loader
+	public static var currentInstance(get,set) : Loader;
+	static var loaderValue = new sys.thread.Tls<Loader>();
+	static function get_currentInstance() return loaderValue.value;
+	static function set_currentInstance(v) return loaderValue.value = v;
+	#else
 	public static var currentInstance : Loader;
+	#end
 
 	public var fs(default,null) : hxd.fs.FileSystem;
 	var cache : Map<String,Dynamic>;
