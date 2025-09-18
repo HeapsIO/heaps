@@ -54,6 +54,8 @@ class ShaderCache {
 		var curPos = cache.position;
 		if ( !hasVersion )
 			cache.position = curPos = 0;
+		else
+			cache.readInt32();
 
 		var hasMode = cache.readString(MODE_KEY_WORD.length) == MODE_KEY_WORD;
 		var mode = Base64;
@@ -124,7 +126,12 @@ class ShaderCache {
 
 	public function resolveShaderBinary( source : String, ?configurationKey = "" ) {
 		if( data == null ) load();
-		return data.get(configurationKey + haxe.crypto.Md5.encode(source));
+		var encodedSource = haxe.crypto.Md5.encode(source);
+		var key = configurationKey + encodedSource;
+		var bytes = data.get(key);
+		//if ( bytes == null )
+		//	trace("Can't found key : " + key);
+		return data.get(configurationKey + encodedSource);
 	}
 
 	public function saveCompiledShader( source : String, bytes : haxe.io.Bytes, ?configurationKey = "", ?saveToFile = true ) {
@@ -134,6 +141,7 @@ class ShaderCache {
 		var key = configurationKey + haxe.crypto.Md5.encode(source);
 		if( data.get(key) == bytes && (!keepSource || sources.get(key) == source) )
 			return;
+		//trace("Saving key : " + key);
 		data.set(key, bytes);
 		if( saveToFile )
 			save();
@@ -156,7 +164,7 @@ class ShaderCache {
 		case Binary: writeBinaryCache(keys, out);
 		}
 		#if sys
-		try sys.io.File.saveBytes(outputFile, out.getBytes()) catch( e : Dynamic ) {};
+		try sys.io.File.saveBytes(outputFile, out.getBytes()) catch( e : Dynamic ) { trace("Something went wrong"); };
 		#end
 	}
 
