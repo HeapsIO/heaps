@@ -127,7 +127,7 @@ class ConvertFBX2HMD extends Convert {
 			var res = hxd.File.getBytes(modelPropsPath).toString();
 			var modelProps = haxe.Json.parse(res);
 			for( mp in Reflect.fields(modelProps) ) {
-				if( mp.substring(0, mp.lastIndexOf("/")) == filePath && Reflect.field(modelProps, mp).collide != null ) {
+				if( mp.substring(0, mp.lastIndexOf("/")) == filePath && Reflect.hasField(Reflect.field(modelProps, mp), "collide") ) {
 					foundModelProps = true;
 					break;
 				}
@@ -159,8 +159,9 @@ class ConvertFBX2HMD extends Convert {
 				var mpFile = mp.substring(0, mp.lastIndexOf("/"));
 				if( mpFile == filePath ) {
 					var mpModel = mp.substring(mp.lastIndexOf("/") + 1);
-					var collide = Reflect.field(modelProps, mp).collide;
-					if( collide != null ) {
+					var mpProps = Reflect.field(modelProps, mp);
+					if( Reflect.hasField(mpProps, "collide") ) {
+						var collide = mpProps.collide;
 						modelCollides.set(mpModel, collide);
 						foundModelProps = true;
 					}
