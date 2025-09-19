@@ -34,11 +34,17 @@ typedef JsonFontGlyph = {
 	var atlasBounds:JsonFontBounds;
 }
 
+typedef KerningPairs = {
+	var unicode1:Int;
+	var unicode2:Int;
+	var advance:Float;
+}
 
 typedef JsonFontFormat = {
 	var atlas:JsonFontAtlas;
 	var metrics:JsonFontMetrics;
 	var glyphs:Array<JsonFontGlyph>;
+	var kerning:Array<KerningPairs>;
 }
 
 @:access(h2d.Font)
@@ -75,7 +81,18 @@ class JsonFontParser {
 				final subTile = tile.sub(0,0,1,1,0,0);
 				glyphs.set(glyph.unicode,new FontChar(subTile,xadvance));
 			}
-	
+		}
+
+		for(kerningPair in data.kerning) {
+			final u1 = kerningPair.unicode1;
+			final u2 = kerningPair.unicode2;
+			final offset = Std.int(kerningPair.advance * data.atlas.size);
+
+			final char = font.getChar(u2);
+			if(char == null && font.hasChar(u1)) {
+				continue;
+			}
+			char.addKerning(u1, offset);
 		}
 
 		return font;
