@@ -452,7 +452,8 @@ class Object {
 			calcAbsPos();
 		}
 		for( c in children )
-			c.addBoundsRec(b, relativeTo);
+			if( c.visible )
+				c.addBoundsRec(b, relativeTo);
 	}
 
 	/**
