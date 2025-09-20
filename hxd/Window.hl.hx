@@ -293,9 +293,11 @@ class Window {
 		var forced = onMouseModeChange(mouseMode, v);
 		if (forced != null) v = forced;
 
-		#if ( hldx || hlsdl )
+		#if hldx
 		window.setRelativeMouseMode(v != Absolute);
 		return mouseMode = v;
+		#elseif hlsdl
+		sdl.Sdl.setRelativeMouseMode(v != Absolute);
 		#else
 		if ( v != Absolute ) throw "Not implemented";
 		#end
