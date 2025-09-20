@@ -312,6 +312,10 @@ class Pad {
 	static var pads : Map<Int, hxd.Pad> = new Map();
 	#end
 
+	#if hlsdl
+	static var pendingPadIds: Array<Int> = [];
+	#end
+
 	/**
 		Wait until a gamepad gets connected. On some platforms, this might require the user to press a button until it activates
 	**/
@@ -324,10 +328,13 @@ class Pad {
 		#if hlsdl
 		if( !initDone ) {
 			initDone = true;
-			var c = @:privateAccess GameController.gctrlCount();
-			for( idx in 0...c )
-				initPad( idx );
 			haxe.MainLoop.add(syncPads);
+
+			for( id in pendingPadIds )
+				initPad( id );
+
+			pendingPadIds = null;
+			
 		}
 		#elseif (hldx || usesys)
 		if( !initDone ){
@@ -427,6 +434,10 @@ class Pad {
 			case GControllerAdded:
 				if( initDone )
 					initPad(e.controller);
+				#if hlsdl 
+				else 
+					pendingPadIds.push( e.controller );
+				#end
 			case GControllerRemoved:
 				if( p != null ){
 					pads.remove( p.index );
