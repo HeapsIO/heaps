@@ -932,6 +932,13 @@ class Object {
 	}
 
 	/**
+		Return the (x,y,z) position relative to the object parent.
+	**/
+	public inline function getPosition() {
+		return new h3d.col.Point(x,y,z);
+	}
+
+	/**
 		Set the position of the object relative to its parent.
 	**/
 	public inline function setPosition( x : Float, y : Float, z : Float ) {
