@@ -103,8 +103,10 @@ class JointData {
 		if( bid >= 0 )
 			skin.currentPalette[bid].multiply3x4inline(j.transPos, m);
 
-		var jData : JointData = Std.downcast(skin.jointsData[j.index], JointData);
-		jData.originMat.load(targetMat);
+		if (!Std.isOfType(this, DynamicJointData)) {
+			targetMat.load(m);
+			originMat.load(m);
+		}
 	}
 }
 
@@ -191,7 +193,7 @@ class DynamicJointData extends JointData {
 
 		if( j.parent.bindIndex >= 0) {
 			lerpMatrixTerms(jParentData.originMat, jParentData.targetMat, alpha, Skin.TMP_MAT);
-			skin.currentPalette[j.parent.bindIndex].multiply3x4inline(j.parent.transPos, jParentData.currentAbsPos);
+			skin.currentPalette[j.parent.bindIndex].multiply3x4inline(j.parent.transPos, Skin.TMP_MAT);
 		}
 
 		if (jData.speed.length() != 0.)
