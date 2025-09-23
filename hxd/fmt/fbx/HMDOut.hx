@@ -1281,16 +1281,13 @@ class HMDOut extends BaseLibrary {
 				model.skin = makeSkin(skin, o.skin);
 			}
 
-			// Reorder materials to unsure there are in the same order for lods
+			// Reorder materials to ensure there are in the same order for lods
 			var lodsInfos = getLODInfos(model.name);
 			if (lodsInfos.lodLevel != -1) {
 				midsSortRemap = new Map<Int, Int>();
-				var start = d.materials.length - mids.length;
 				for (idx in 0...mids.length) {
 					midsSortRemap.set(idx, mids[idx]);
-					if (idx + start < 0)
-						continue;
-					mids[idx + start] = start + idx;
+					mids[idx] = idx;
 				}
 			}
 
