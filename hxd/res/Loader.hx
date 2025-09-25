@@ -6,14 +6,7 @@ class Loader {
 		Set when initializing hxd.Res, or manually.
 		Allows code to resolve resources without compiling hxd.Res
 	*/
-	#if heaps_mt_loader
-	public static var currentInstance(get,set) : Loader;
-	static var loaderValue = new sys.thread.Tls<Loader>();
-	static function get_currentInstance() return loaderValue.value;
-	static function set_currentInstance(v) return loaderValue.value = v;
-	#else
 	public static var currentInstance : Loader;
-	#end
 
 	public var fs(default,null) : hxd.fs.FileSystem;
 	var cache : Map<String,Dynamic>;
@@ -24,7 +17,7 @@ class Loader {
 	}
 
 	public function cleanCache() {
-		cache = new Map();
+		hxd.fs.Exclusive.lock(() -> cache = new Map());
 	}
 
 	public function dir( path : String ) : Array<Any> {
@@ -44,19 +37,21 @@ class Loader {
 	}
 
 	public function loadCache<T:hxd.res.Resource>( path : String, c : Class<T> ) : T {
-		var res : T = cache.get(path);
-		if( res == null ) {
-			var entry = fs.get(path);
-			var old = currentInstance;
-			currentInstance = this;
-			res = Type.createInstance(c, [entry]);
-			currentInstance = old;
-			cache.set(path, res);
-		} else {
-			if( Std.downcast(res,c) == null )
-				throw path+" has been reintrepreted from "+Type.getClass(res)+" to "+c;
-		}
-		return res;
+		return hxd.fs.Exclusive.lock(function() {
+			var res : T = cache.get(path);
+			if( res == null ) {
+				var entry = fs.get(path);
+				var old = currentInstance;
+				currentInstance = this;
+				res = Type.createInstance(c, [entry]);
+				currentInstance = old;
+				cache.set(path, res);
+			} else {
+				if( Std.downcast(res,c) == null )
+					throw path+" has been reintrepreted from "+Type.getClass(res)+" to "+c;
+			}
+			return res;
+		});
 	}
 
 	public function dispose() {
