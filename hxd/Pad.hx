@@ -312,7 +312,6 @@ class Pad {
 	static var pads : Map<Int, hxd.Pad> = new Map();
 	#end
 
-
 	/**
 		Wait until a gamepad gets connected. On some platforms, this might require the user to press a button until it activates
 	**/
@@ -325,7 +324,7 @@ class Pad {
 		#if hlsdl
 		if( !initDone ) {
 			initDone = true;
-			#if (hlsdl >= version("1.17.0"))
+			#if (hlsdl >= version("1.16.0"))
 			var sticks = sdl.Sdl.getJoysticks();
 			for( stick in sticks )
 				initPad( stick );
