@@ -1220,6 +1220,7 @@ class GlDriver extends Driver {
 			fmt = GL.DEPTH_STENCIL;
 		case Depth32:
 			tt.internalFmt = GL.DEPTH_COMPONENT32F;
+			tt.pixelFmt = GL.FLOAT;
 		default:
 			throw "Unsupported depth format "+	t.format;
 		}
