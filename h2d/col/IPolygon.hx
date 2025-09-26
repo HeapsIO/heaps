@@ -242,13 +242,12 @@ abstract IPolygon(Array<IPoint>) from Array<IPoint> to Array<IPoint> {
 	**/
 	public function optimize( epsilon : Float ) : IPolygon {
 		var out = [];
-		optimizeRec(points, 0, points.length, out, epsilon);
+		optimizeRec(points, 0, points.length - 1, out, epsilon);
 		return out;
 	}
 
-	static function optimizeRec( points : Array<IPoint>, index : Int, len : Int, out : Array<IPoint>, epsilon : Float ) {
+	static function optimizeRec( points : Array<IPoint>, start : Int, end : Int, out : Array<IPoint>, epsilon : Float ) {
 		var dmax = 0.;
-		var result = [];
 
 		inline function distPointSeg(p0:IPoint, p1:IPoint, p2:IPoint) {
 			var A = p0.x - p1.x;
@@ -282,9 +281,10 @@ abstract IPolygon(Array<IPoint>) from Array<IPoint> to Array<IPoint> {
 			return dx * dx + dy * dy;
 		}
 
-		var pfirst = points[index];
-		var plast = points[len - 1];
-		for( i in index+1...len - 1 ) {
+		var pfirst = points[start];
+		var plast = points[end];
+		var index = 0;
+		for( i in start + 1...end ) {
 			var d = distPointSeg(points[i], pfirst, plast);
 			if(d > dmax) {
 				index = i;
@@ -292,13 +292,13 @@ abstract IPolygon(Array<IPoint>) from Array<IPoint> to Array<IPoint> {
 			}
 		}
 
-		if( dmax >= epsilon ) {
-			optimizeRec(points, 0, index, out, epsilon);
+		if( dmax >= epsilon * epsilon ) {
+			optimizeRec(points, start, index, out, epsilon);
 			out.pop();
-			optimizeRec(points, index, len, out, epsilon);
+			optimizeRec(points, index, end, out, epsilon);
 		} else {
-			out.push(points[index]);
-			out.push(points[len - 1]);
+			out.push(points[start]);
+			out.push(points[end]);
 		}
 	}
 
