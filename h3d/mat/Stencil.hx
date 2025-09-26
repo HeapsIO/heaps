@@ -57,12 +57,34 @@ class Stencil {
 		var s = new Stencil();
 		s.opBits = opBits;
 		s.maskBits = maskBits;
+		s.readMask = readMask;
+		s.writeMask = writeMask;
+		s.reference = reference;
+		s.frontTest = frontTest;
+		s.frontPass = frontPass;
+		s.frontSTfail = frontSTfail;
+		s.frontDPfail = frontDPfail;
+		s.backTest = backTest;
+		s.backPass = backPass;
+		s.backSTfail = backSTfail;
+		s.backDPfail = backDPfail;
 		return s;
 	}
 
 	public function load(s : Stencil) {
 		opBits = s.opBits;
 		maskBits = s.maskBits;
+		readMask = s.readMask;
+		writeMask = s.writeMask;
+		reference = s.reference;
+		frontTest = s.frontTest;
+		frontPass = s.frontPass;
+		frontSTfail = s.frontSTfail;
+		frontDPfail = s.frontDPfail;
+		backTest = s.backTest;
+		backPass = s.backPass;
+		backSTfail = s.backSTfail;
+		backDPfail = s.backDPfail;
 	}
 
 }
