@@ -9,12 +9,12 @@ class Exclusive {
 	public static inline function lock<T>( f : Void -> T ) {
 		#if heaps_mt_loader
 		e_lock.acquire();
-		#end
-		var ret = f();
-		#if heaps_mt_loader
+		var ret = try f() catch( e ) { e_lock.release(); throw e; }
 		e_lock.release();
-		#end
 		return ret;
+		#else
+		return f();
+		#end
 	}
 
 }
