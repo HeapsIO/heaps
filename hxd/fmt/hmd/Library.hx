@@ -278,6 +278,9 @@ class Library {
 		var p = cachedPrimitives[id];
 		if( p != null ) return p;
 
+		if( model.isCollider() )
+			return null;
+
 		var lods : Array<Model> = null;
 		var hasLod = model.lods != null;
 		if ( hasLod ) {

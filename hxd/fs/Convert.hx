@@ -145,7 +145,7 @@ class ConvertFBX2HMD extends Convert {
 		var filePath = srcPath.substring(srcPath.lastIndexOf("/") + 1);
 		var dirPath = srcPath.substring(0, srcPath.lastIndexOf("/"));
 		// Parse model.props to find model config
-		var modelCollides : Map<String, hxd.fmt.fbx.HMDOut.CollideParams> = [];
+		var modelCollides : Map<String, Array<hxd.fmt.fbx.HMDOut.CollideParams>> = [];
 		var modelPropsPath = dirPath + "/model.props";
 		var foundModelProps = false;
 		var modelProps = null;
@@ -162,8 +162,10 @@ class ConvertFBX2HMD extends Convert {
 					var mpProps = Reflect.field(modelProps, mp);
 					if( Reflect.hasField(mpProps, "collide") ) {
 						var collide = mpProps.collide;
-						modelCollides.set(mpModel, collide);
-						foundModelProps = true;
+						if( collide == null || Std.isOfType(collide, Array) ) {
+							modelCollides.set(mpModel, collide);
+							foundModelProps = true;
+						}
 					}
 				}
 			}
@@ -254,9 +256,10 @@ class ConvertFBX2HMD extends Convert {
 				hmdout.generateTangents = true;
 			if (params.collide != null) {
 				var collide = params.collide;
-				hmdout.generateCollides = { precision : collide.precision,
+				hmdout.generateCollides = {
+					precision : collide.precision,
 					maxConvexHulls : collide.maxConvexHulls,
-					maxSubdiv : collide.maxSubdiv
+					maxSubdiv : collide.maxSubdiv,
 				};
 			}
 			if (params.lowp != null) {
