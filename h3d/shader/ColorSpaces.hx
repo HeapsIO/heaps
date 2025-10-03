@@ -64,13 +64,13 @@ class ColorSpaces extends hxsl.Shader {
 			return linear;
 		}
 
-		function linear2srgb( linear : Vec3 ) : Vec3 {
-			var srgbLo = linear * 12.92;
-			var srgbHi = 1.055 * pow(linear, vec3(0.41666)) - 0.055;
+		function linear2srgb( rgb : Vec3 ) : Vec3 {
+			var srgbLo = rgb * 12.92;
+			var srgbHi = 1.055 * pow(rgb, vec3(0.41666)) - 0.055;
 			var srgb = vec3(
-				linear.x <= 0.0031308 ? srgbLo.x : srgbHi.x,
-				linear.y <= 0.0031308 ? srgbLo.y : srgbHi.y,
-				linear.z <= 0.0031308 ? srgbLo.z : srgbHi.z
+				rgb.x <= 0.0031308 ? srgbLo.x : srgbHi.x,
+				rgb.y <= 0.0031308 ? srgbLo.y : srgbHi.y,
+				rgb.z <= 0.0031308 ? srgbLo.z : srgbHi.z
 			);
 			return srgb;
 		}
