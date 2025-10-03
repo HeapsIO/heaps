@@ -266,7 +266,11 @@ class BlendSpace2D extends h3d.anim.Animation {
 			ySmoothed = y;
 		}
 
-		var scale = 1.0 / animBlendLength;
+		var scale = 1.0;
+		if (animBlendLength > 0) {
+			scale /= animBlendLength;
+		}
+
 		if (scaleSpeedOutsideOfBounds)
 		{
 			scale *= outsideSpeedScale;
