@@ -2522,7 +2522,17 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	function flushSRV() {
-		while ( computeSRVBufferDistance() != 1 ) {};
+		var count = 0;
+		while( true ) {
+			if( computeSRVBufferDistance() == 1 ) break;
+			count++;
+			if( count > 100000 ) {
+				// we sometimes get thread starvation by just doing the while loop.
+				// this might allow the SRV thread to catch up and get atomic locks.
+				Sys.sleep(0);
+				count = 0;
+			}
+		}
 	}
 
 	function flushFrame( onResize : Bool = false ) {
