@@ -454,6 +454,12 @@ class LocalFileSystem implements FileSystem {
 		return r;
 	}
 
+	public function delete( path : String ) : Bool {
+		removePathFromCache(path);
+		try sys.FileSystem.deleteFile(baseDir + path) catch( e : Dynamic ) { return false; };
+		return true;
+	}
+
 }
 
 #else
@@ -483,6 +489,10 @@ class LocalFileSystem implements FileSystem {
 
 	public function dir( path : String ) : Array<FileEntry> {
 		return null;
+	}
+
+	public function delete( path : String ) : Bool {
+		return false;
 	}
 }
 

@@ -54,6 +54,11 @@ class Loader {
 		});
 	}
 
+	public function delete( path : String ) : Bool {
+		cache.remove(path);
+		return fs.delete(path);
+	}
+
 	public function dispose() {
 		cleanCache();
 		fs.dispose();
