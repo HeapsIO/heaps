@@ -1914,7 +1914,17 @@ class DX12Driver extends h3d.impl.Driver {
 		}
 
 		// Check if ring buffer is full
-		while ( computeSRVBufferDistance() == 0 ) {};
+		var count = 0;
+		while( true ) {
+			if( computeSRVBufferDistance() != 0 ) break;
+			count++;
+			if( count > 100000 ) {
+				// we sometimes get thread starvation by just doing the while loop.
+				// this might allow the SRV thread to catch up and get atomic locks.
+				Sys.sleep(0);
+				count = 0;
+			}
+		};
 
 		var srvArgs = srvRingBuf[srvHead.load()];
 
