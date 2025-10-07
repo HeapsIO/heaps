@@ -160,12 +160,12 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	/**
 		The current mouse X coordinates (in pixels) relative to the current `Scene.interactiveCamera`.
 	**/
-	public var mouseX(get, null) : Float;
+	public var mouseX(get, never) : Float;
 
 	/**
 		The current mouse Y coordinates (in pixels) relative to the current `Scene.interactiveCamera`.
 	**/
-	public var mouseY(get, null) : Float;
+	public var mouseY(get, never) : Float;
 
 	/**
 		The zoom factor of the scene, allows to set a fixed x2, x4 etc. zoom for pixel art

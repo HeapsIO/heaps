@@ -71,7 +71,7 @@ class Window {
 	public var title(get, set) : String;
 	public var displayMode(get, set) : DisplayMode;
 	#if (hl_ver >= version("1.12.0"))
-	public var currentMonitorIndex(get,null) : Int;
+	public var currentMonitorIndex(get,never) : Int;
 	#end
 
 	#if hlsdl

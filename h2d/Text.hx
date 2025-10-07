@@ -86,14 +86,14 @@ class Text extends Drawable {
 	/**
 		Calculated text width. Can exceed maxWidth in certain cases.
 	**/
-	public var textWidth(get, null) : Float;
+	public var textWidth(get, never) : Float;
 	/**
 		Calculated text height.
 
 		Not a completely precise text metric and increments in the `Font.lineHeight` steps.
 		In `HtmlText`, can be increased by various values depending on the active line font and `HtmlText.lineHeightMode` value.
 	**/
-	public var textHeight(get, null) : Float;
+	public var textHeight(get, never) : Float;
 	/**
 		Text align rules dictate how the text lines are positioned.
 		See `Align` for specific details on each alignment mode.
