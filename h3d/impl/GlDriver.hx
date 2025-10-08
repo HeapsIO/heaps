@@ -1,8 +1,6 @@
 package h3d.impl;
 import h3d.impl.Driver;
 import h3d.mat.Data;
-import h3d.mat.Data;
-import h3d.mat.Data;
 import h3d.mat.Pass;
 import h3d.mat.Stencil;
 import hxd.CompressedTextureFormat;
