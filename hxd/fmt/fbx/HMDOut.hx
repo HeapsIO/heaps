@@ -869,6 +869,10 @@ class HMDOut extends BaseLibrary {
 		var maxResolution = subdiv * subdiv * subdiv;
 
 		var vertexCount = Std.int(vbuf.length / format.stride);
+		var indexCount = 0;
+		for( idx in ibufs ) {
+			indexCount += idx == null ? 0 : idx.length;
+		}
 
 		var convexPoints : Array<Array<h3d.Vector>> = [];
 		var convexIndexes32 : Array<Array<Int>> = [];
@@ -909,7 +913,7 @@ class HMDOut extends BaseLibrary {
 		}
 
 		#if (hl && hl_ver >= version("1.15.0"))
-		var vertices = new hl.Bytes(verts.length * 3 * 4);
+		var vertices = new hl.Bytes(vertexCount * 3 * 4);
 		var i = 0;
 		iterVertex(function(x : Float, y : Float, z : Float) {
 			vertices.setF32(4 * i * 3, x);
@@ -917,7 +921,7 @@ class HMDOut extends BaseLibrary {
 			vertices.setF32(4 * (i * 3 + 2), z);
 			i++;
 		});
-		var indexes = new hl.Bytes(index.length * 4);
+		var indexes = new hl.Bytes(indexCount * 4);
 		var pos = 0;
 		var triangleCount = iterTriangle(function(index : Int) {
 			indexes.setI32(4 * pos++, index);
