@@ -27,6 +27,8 @@ class Reader {
 			return HasLod;
 		case 5:
 			return HasCollider;
+		case 6:
+			return HasColliders;
 		case unk:
 			throw "Unknown property #" + unk;
 		}
@@ -213,6 +215,13 @@ class Reader {
 				m.lods = m.props.contains(HasLod) ? readLods() : null;
 				if ( m.props.contains(HasCollider) ) {
 					m.collider = i.readInt32();
+					hasCollider = true;
+				}
+				if( m.props.contains(HasColliders) ) {
+					m.colliders = [];
+					for( k in 0...i.readInt32() ) {
+						m.colliders.push(i.readInt32());
+					}
 					hasCollider = true;
 				}
 			}

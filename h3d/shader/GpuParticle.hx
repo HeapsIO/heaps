@@ -100,9 +100,11 @@ class GpuParticle extends hxsl.Shader {
 			}
 			projectedPosition *= visibility;
 			if( normT < fadeIn )
-				pixelColor.a *= (normT / fadeIn).pow(fadePower)
-			else if( normT > fadeOut )
+				pixelColor.a *= (normT / fadeIn).pow(fadePower);
+			else if( normT > fadeOut ) {
 				pixelColor.a *= ((1 - normT) / (1 - fadeOut)).pow(fadePower);
+				pixelColor.a = saturate(pixelColor.a);
+			}
 			colorUV = vec2(normT, randProp);
 		}
 

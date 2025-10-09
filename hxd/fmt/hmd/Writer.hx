@@ -20,6 +20,7 @@ class Writer {
 		case FourBonesByVertex:
 		case HasLod:
 		case HasCollider:
+		case HasColliders:
 		}
 	}
 
@@ -180,6 +181,11 @@ class Writer {
 			}
 			if ( m.collider != null && m.collider >= 0 )
 				out.writeInt32(m.collider);
+			if ( m.colliders != null && m.colliders.length > 0 ) {
+				out.writeInt32(m.colliders.length);
+				for( c in m.colliders )
+					out.writeInt32(c);
+			}
 		}
 
 		out.writeInt32(d.animations.length);

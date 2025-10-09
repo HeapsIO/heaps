@@ -26,6 +26,10 @@ class Math {
 		return std.Math.isNaN(v);
 	}
 
+	public static inline function isFinite(v:Float) {
+		return std.Math.isFinite(v);
+	}
+
 	// round to 4 significant digits, eliminates < 1e-10
 	public static function fmt( v : Float ) {
 		var neg;
@@ -36,7 +40,7 @@ class Math {
 			neg = 1.0;
 		if( std.Math.isNaN(v) || !std.Math.isFinite(v) )
 			return v;
-		var digits = Std.int(4 - std.Math.log(v) / std.Math.log(10));
+		var digits = Std.int(4 - log10(v));
 		if( digits < 1 )
 			digits = 1;
 		else if( digits >= 10 )
@@ -45,8 +49,32 @@ class Math {
 		return std.Math.ffloor(v * exp + .49999) * neg / exp;
 	}
 
+	public static inline function exp( f : Float ) {
+		return std.Math.exp(f);
+	}
+
+	public static inline function log( f : Float ) {
+		return std.Math.log(f);
+	}
+
+	public static inline function log2( f : Float ) {
+		return logBase(f, 2.0);
+	}
+
+	public static inline function log10( f : Float ) {
+		return logBase(f, 10.0);
+	}
+
+	public static inline function logBase( f : Float, base : Float ) {
+		return log(f) / log(base);
+	}
+
 	public static inline function floor( f : Float ) {
 		return std.Math.floor(f);
+	}
+
+	public static inline function ffloor( f : Float ) {
+		return std.Math.ffloor(f);
 	}
 
 	public static inline function ceil( f : Float ) {
@@ -55,6 +83,10 @@ class Math {
 
 	public static inline function round( f : Float ) {
 		return std.Math.round(f);
+	}
+
+	public static inline function fround( f : Float ) {
+		return std.Math.fround(f);
 	}
 
 	public static inline function clamp( f : Float, min = 0., max = 1. ) {

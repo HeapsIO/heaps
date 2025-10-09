@@ -267,4 +267,8 @@ class FileSystem implements hxd.fs.FileSystem {
 		return [for( s in f.subs ) s];
 	}
 
+	public function delete( path : String ) : Bool {
+		throw "Not supported";
+	}
+
 }

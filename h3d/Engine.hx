@@ -39,7 +39,7 @@ class Engine {
 	public var height(default, null) : Int;
 	public var debug(default, set) : Bool;
 
-	public var drawTriangles(default, null) : Int;
+	public var drawTriangles(default, null) : Float;
 	public var drawCalls(default, null) : Int;
 	public var dispatches(default, null) : Int;
 	public var shaderSwitches(default, null) : Int;
@@ -143,6 +143,13 @@ class Engine {
 
 	public function selectMaterial( pass : h3d.mat.Pass ) {
 		driver.selectMaterial(pass);
+	}
+
+	public function uploadInstanceShaderBuffers(buffers) {
+		driver.flushShaderBuffers();
+		driver.uploadShaderBuffers(buffers, Params);
+		driver.uploadShaderBuffers(buffers, Textures);
+		driver.uploadShaderBuffers(buffers, Buffers);
 	}
 
 	public function uploadShaderBuffers(buffers, which) {
@@ -429,10 +436,12 @@ class Engine {
 		return true;
 	}
 
-	public function onTextureBiasChanged(t : h3d.mat.Texture) {
-		if ( !t.isDepth() )
-			throw "Can change texture bias on depth buffer only";
-		driver.onTextureBiasChanged(t);
+	public function setDepthClamp( enabled : Bool ) {
+		driver.setDepthClamp(enabled);
+	}
+
+	public function setDepthBias( depthBias : Float, slopeScaledBias : Float ) {
+		driver.setDepthBias( depthBias, slopeScaledBias );
 	}
 
 	public function dispose() {

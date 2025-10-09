@@ -45,9 +45,11 @@ class Checker {
 		var genType = [TFloat, vec2, vec3, vec4];
 		var genIType = [TInt, ivec2, ivec3, ivec4];
 		var baseType = [TFloat, TBool, TInt];
+		var genSqMatType = [TMat2, TMat3, TMat4];
 		var genFloat = [for( t in genType ) { args : [ { name : "value", type : t } ], ret : t } ];
 		var genFloat2 = [for( t in genType ) { args : [ { name : "a", type : t }, { name : "b", type : t } ], ret : t } ];
 		var genWithFloat = [for( t in genType ) { args : [ { name : "a", type : t }, { name : "b", type : TFloat } ], ret : t } ];
+		var genSqMat = [for( t in genSqMatType ) { args : [ { name : "value", type : t } ], ret : t } ];
 		var texDefs = [
 			{ dim : T1D, arr : false, uv : TFloat, iuv : TInt },
 			{ dim : T2D, arr : false, uv : vec2, iuv : ivec2 },
@@ -76,6 +78,8 @@ class Checker {
 				genFloat;
 			case Cross:
 				[ { args : [ { name : "a", type : vec3 }, { name : "b", type : vec3 } ], ret : vec3 } ];
+			case Transpose:
+				genSqMat;
 			case Texture:
 				[for( t in texDefs ) { args : [{ name : "tex", type : TSampler(t.dim,t.arr) }, { name : "uv", type : t.uv }], ret : vec4 }];
 			case TextureLod:
@@ -1358,6 +1362,7 @@ class Checker {
 			case [_, TInt, TFloat]: toFloat(e1); TFloat;
 			case [_, TFloat, TInt]: toFloat(e2); TFloat;
 			case [_, TVec(a,VFloat), TVec(b,VFloat)] if( a == b ): TVec(a,VFloat);
+			case [_, TVec(a,VInt), TVec(b,VInt)] if( a == b ): TVec(a,VInt);
 			case [_, TFloat, TVec(_,VFloat)]: e2.t;
 			case [_, TVec(_,VFloat), TFloat]: e1.t;
 			case [_, TInt, TVec(_, VFloat)]: toFloat(e1); e2.t;

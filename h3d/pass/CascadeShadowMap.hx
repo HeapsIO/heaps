@@ -24,7 +24,7 @@ class CascadeShadowMap extends DirShadowMap {
 
 	public var cascadeViewProj = new h3d.Matrix();
 	public var params : Array<CascadeParams> = [];
-	public var pow : Float = 1.0;
+	public var ditributionPower : Float = 1.0;
 	// minimum count of pixels for an object to be drawn in cascade
 	public var minPixelSize : Int = 1;
 	public var firstCascadeSize : Float = 10.0;
@@ -63,7 +63,7 @@ class CascadeShadowMap extends DirShadowMap {
 		var max = maxDist < 0.0 ? ctx.camera.zFar : maxDist;
 		var step = max - firstCascadeSize;
 		var near = ( i == 0 ) ? 0.0 : previousFar - previousFar * transitionFraction;
-		var far = ( i == 0 ) ? firstCascadeSize : firstCascadeSize + hxd.Math.pow(i / (cascade - 1), pow) * step;
+		var far = ( i == 0 ) ? firstCascadeSize : firstCascadeSize + hxd.Math.pow(i / (cascade - 1), ditributionPower) * step;
 
 		// Not related to scale but let's pack it here to save memory
 		lightCameras[i].scale.w = far;
@@ -300,6 +300,7 @@ class CascadeShadowMap extends DirShadowMap {
 		var prevCheckNearFar = lightCamera.frustum.checkNearFar;
 		lightCamera.frustum.checkNearFar = false;
 		var textures = [];
+		ctx.engine.setDepthClamp(true);
 		for (i in 0...cascade) {
 			currentCascadeIndex = i;
 
@@ -309,8 +310,8 @@ class CascadeShadowMap extends DirShadowMap {
 			texture.filter = Nearest;
 
 			var param = params[i];
-			texture.slopeScaledBias = (param != null) ? param.slopeBias : 0;
-			texture.depthClamp = true;
+			var slopeScaledBias = (param != null) ? param.slopeBias : 0;
+			ctx.engine.setDepthBias(0, slopeScaledBias);
 
 			var lc = lightCameras[i];
 			var dimension = Math.max(lc.orthoBounds.xMax - lc.orthoBounds.xMin,	lc.orthoBounds.yMax - lc.orthoBounds.yMin);
@@ -321,6 +322,8 @@ class CascadeShadowMap extends DirShadowMap {
 			textures[i] = processShadowMap( passes, texture, sort);
 			passes.load(p);
 		}
+		ctx.engine.setDepthClamp(false);
+		ctx.engine.setDepthBias(0, 0);
 		syncCascadeShader(textures);
 		lightCamera.frustum.checkNearFar = prevCheckNearFar;
 

@@ -61,8 +61,8 @@ class Allocator {
 		b.dispose();
 	}
 
-	public function allocIndexBuffer( count : Int ) {
-		return new h3d.Indexes(count);
+	public function allocIndexBuffer( count : Int, is32 : Bool = false ) {
+		return new h3d.Indexes(count, is32);
 	}
 
 	public function ofIndexes( ib: hxd.IndexBuffer, length = -1) {

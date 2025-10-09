@@ -43,7 +43,7 @@ class Quat {
 		this.w = q.w;
 	}
 
-	public function clone() {
+	public inline function clone() {
 		return new Quat(x, y, z, w);
 	}
 
@@ -55,7 +55,6 @@ class Quat {
 		var hx = from.x + to.x;
 		var hy = from.y + to.y;
 		var hz = from.z + to.z;
-		var h = Math.invSqrt(hx * hx + hy * hy + hz * hz);
 		x = from.y * hz - from.z * hy;
 		y = from.z * hx - from.x * hz;
 		z = from.x * hy - from.y * hx;
@@ -230,26 +229,38 @@ class Quat {
 	}
 
 	public function slerp( q1 : Quat, q2 : Quat, v : Float ) {
-		var cosHalfTheta = q1.dot(q2);
-		if( cosHalfTheta.abs() >= 1 ) {
-			this.x = q1.x;
-			this.y = q1.y;
-			this.z = q1.z;
-			this.w = q1.w;
-			return;
+		// calc cosine
+		var cosom = q1.dot(q2);
+
+		var to1: Quat = q2.clone();
+
+		// adjust signs (if necessary)
+		if (cosom < 0.0) {
+			cosom = -cosom;
+			to1.negate();
 		}
-		var halfTheta = cosHalfTheta.acos();
-		var invSinHalfTheta = (1 - cosHalfTheta * cosHalfTheta).invSqrt();
-		if( invSinHalfTheta.abs() > 1e3 ) {
-			this.lerp(q1, q2, 0.5, true);
-			return;
+
+		// calculate coefficients
+
+		var scale0: Float;
+		var scale1: Float;
+
+		if ((1.0 - cosom) > 0.0001) {
+			// standard case (slerp)
+			var omega = Math.acos(cosom);
+			var sinom = Math.sin(omega);
+			scale0 = Math.sin((1.0 - v) * omega) / sinom;
+			scale1 = Math.sin(v * omega) / sinom;
+		} else {
+			// q1 and q2 are very close, so we can do a linear interpolation
+			scale0 = 1.0 - v;
+			scale1 = v;
 		}
-		var a = ((1 - v) * halfTheta).sin() * invSinHalfTheta;
-		var b = (v * halfTheta).sin() * invSinHalfTheta * (cosHalfTheta < 0 ? -1 : 1);
-		this.x = q1.x * a + q2.x * b;
-		this.y = q1.y * a + q2.y * b;
-		this.z = q1.z * a + q2.z * b;
-		this.w = q1.w * a + q2.w * b;
+		// calculate final values
+		this.x = scale0 * q1.x + scale1 * to1.x;
+		this.y = scale0 * q1.y + scale1 * to1.y;
+		this.z = scale0 * q1.z + scale1 * to1.z;
+		this.w = scale0 * q1.w + scale1 * to1.w;
 	}
 
 	public inline function conjugate() {
@@ -265,7 +276,7 @@ class Quat {
 		// ln()
 		var r = Math.sqrt(x*x+y*y+z*z);
 		var t = r > Math.EPSILON ? Math.atan2(r,w)/r : 0;
-		w = 0.5 * std.Math.log(w*w+x*x+y*y+z*z);
+		w = 0.5 * hxd.Math.log(w*w+x*x+y*y+z*z);
 		x *= t;
 		y *= t;
 		z *= t;
@@ -276,7 +287,7 @@ class Quat {
 		w *= v;
 		// exp
 		var r = Math.sqrt(x*x+y*y+z*z);
-		var et = std.Math.exp(w);
+		var et = hxd.Math.exp(w);
 		var s = r > Math.EPSILON ? et *Math.sin(r)/r : 0;
 		w = et * Math.cos(r);
 		x *= s;

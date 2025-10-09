@@ -5,9 +5,11 @@ import hxd.fmt.hmd.Data;
 import hxd.BufferFormat;
 
 typedef CollideParams = {
-	precision : Float,
-	maxSubdiv : Int,
-	maxConvexHulls : Int,
+	?useDefault : Bool,
+	?precision : Float,
+	?maxSubdiv : Int,
+	?maxConvexHulls : Int,
+	?mesh : String,
 }
 
 class HMDOut extends BaseLibrary {
@@ -22,6 +24,7 @@ class HMDOut extends BaseLibrary {
 	public var generateNormals = false;
 	public var generateTangents = false;
 	public var generateCollides : CollideParams;
+	public var modelCollides : Map<String, Array<CollideParams>> = [];
 	public var ignoreCollides : Array<String>;
 	var ignoreCollidesCache : Map<Int,Bool> = [];
 	public var lowPrecConfig : Map<String,Precision>;
@@ -684,7 +687,7 @@ class HMDOut extends BaseLibrary {
 			var remapped = remappedShapes[i];
 			var s = shapes[i];
 			var shape = new BlendShape();
-			shape.name = s.name;
+			shape.name = s.props != null && s.props.length > 0 ? s.props[0].toString() : s.name;
 			shape.geom = -1;
 			var indexes = s.get("Indexes").getFloats();
 			var verts = s.get("Vertices").getFloats();
@@ -814,13 +817,73 @@ class HMDOut extends BaseLibrary {
 		return { lodLevel : -1, modelName : null };
 	}
 
-	function buildColliders(g : hxd.fmt.hmd.Data, model : Model, geom : hxd.fmt.fbx.Geometry, bounds : h3d.col.Bounds) {
+	function buildGeomCollider( d : hxd.fmt.hmd.Data, geom : hxd.fmt.fbx.Geometry, dataOut : haxe.io.BytesOutput ) {
+		var verts = geom.getVertices();
+		var index = geom.getPolygons();
+		var gm = geom.getGeomMatrix();
+
+		function iterVertex(cb : Float -> Float -> Float -> Void) {
+			var tmp = new h3d.Vector();
+			for ( i in 0...Std.int(verts.length / 3) ) {
+				var x = verts[i*3];
+				var y = verts[i*3+1];
+				var z = verts[i*3+2];
+				if ( gm != null ) {
+					tmp.set(x, y, z);
+					tmp.transform(gm);
+					x = tmp.x;
+					y = tmp.y;
+					z = tmp.z;
+				}
+				cb(x, y, z);
+			}
+		}
+
+		function iterTriangle(cb : Int -> Void) {
+			inline function unpackIndex(i : Int) {
+				return i < 0 ? -i - 1 : i;
+			}
+			var triangleCount = 0;
+			for ( i in 0...Std.int(index.length / 3) ) {
+				cb(unpackIndex(index[3*i]));
+				cb(unpackIndex(index[3*i+2])); // order changed
+				cb(unpackIndex(index[3*i+1]));
+				triangleCount++;
+			}
+			return triangleCount;
+		}
+
+		var collider = new Collider();
+		collider.vertexPosition = dataOut.length;
+		var vertexCount = Std.int(verts.length / 3);
+		collider.vertexCounts = [vertexCount];
+		collider.indexCounts = [index.length];
+		iterVertex(function(x, y, z) {
+			dataOut.writeFloat(x);
+			dataOut.writeFloat(y);
+			dataOut.writeFloat(z);
+		});
+
+		var is32 = vertexCount > 0x10000;
+		collider.indexPosition = dataOut.length;
+		if( is32 ) {
+			iterTriangle(function(i) {
+				dataOut.writeInt32(i);
+			});
+		} else {
+			iterTriangle(function(i) {
+				dataOut.writeUInt16(i);
+			});
+		}
+		return collider;
+	}
+
+
+	function buildAutoColliders( d : hxd.fmt.hmd.Data, geom : hxd.fmt.fbx.Geometry, bounds : h3d.col.Bounds, generateCollides : CollideParams, dataOut : haxe.io.BytesOutput ) {
 		var maxConvexHulls = generateCollides.maxConvexHulls;
 		var dim = bounds.dimension();
-		if ( dim <= generateCollides.precision )
-			return null;
-
-		var subdiv = Math.ceil(dim / generateCollides.precision);
+		var prec = Math.min(dim, generateCollides.precision);
+		var subdiv = Math.ceil(dim / prec);
 		subdiv = Math.imin(subdiv, generateCollides.maxSubdiv);
 		var maxResolution = subdiv * subdiv * subdiv;
 
@@ -1025,13 +1088,6 @@ class HMDOut extends BaseLibrary {
 			}
 		}
 
-		if ( d.colliders == null )
-			d.colliders = [];
-		model.collider = d.colliders.length;
-		if( model.props == null ) model.props = [];
-		model.props.push(HasCollider);
-		d.colliders.push(collider);
-
 		return collider;
 	}
 
@@ -1146,6 +1202,7 @@ class HMDOut extends BaseLibrary {
 			tmpGeom.set(g.getId(), { setSkin : function(_) { }, vertexCount : function() return Std.int(new hxd.fmt.fbx.Geometry(this, g).getVertices().length/3) } );
 
 		var hgeom = new Map();
+		var hgeomData = new Map<String, hxd.fmt.fbx.Geometry>();
 		var hmat = new Map<Int,Int>();
 		var hlods = new Map<String, Array<Index<Model>>>();
 		var index = 0;
@@ -1282,16 +1339,13 @@ class HMDOut extends BaseLibrary {
 				model.skin = makeSkin(skin, o.skin);
 			}
 
-			// Reorder materials to unsure there are in the same order for lods
+			// Reorder materials to ensure there are in the same order for lods
 			var lodsInfos = getLODInfos(model.name);
 			if (lodsInfos.lodLevel != -1) {
 				midsSortRemap = new Map<Int, Int>();
-				var start = d.materials.length - mids.length;
 				for (idx in 0...mids.length) {
 					midsSortRemap.set(idx, mids[idx]);
-					if (idx + start < 0)
-						continue;
-					mids[idx + start] = start + idx;
+					mids[idx] = idx;
 				}
 			}
 
@@ -1300,12 +1354,11 @@ class HMDOut extends BaseLibrary {
 				var geomData = new hxd.fmt.fbx.Geometry(this, g);
 
 				var geom = buildGeom(geomData, skin, dataOut, hasNormalMap || generateTangents);
-				if ( generateCollides != null )
-					buildColliders(d, model, geomData, geom.g.bounds);
 
 				gdata = { gid : d.geometries.length, materials : geom.materials };
 				d.geometries.push(geom.g);
 				hgeom.set(g.getId(), gdata);
+				hgeomData.set(model.name, geomData);
 				for ( s in d.shapes ) {
 					if (s.geom == -1)
 						s.geom = gdata.gid;
@@ -1343,9 +1396,10 @@ class HMDOut extends BaseLibrary {
 				}
 				if( model.props == null ) model.props = [];
 				model.props.push(HasLod);
-			} else if ( lodsDecimation != null && model.skin == null ) {
+			} else if ( lodsDecimation != null && model.skin == null && !model.isCollider() ) {
 				var modelName = model.name;
 				model.name = model.toLODName(0);
+				hgeomData.set(model.name, hgeomData.get(modelName));
 				if( model.props == null ) model.props = [];
 				model.props.push(HasLod);
 				model.lods = [];
@@ -1355,7 +1409,12 @@ class HMDOut extends BaseLibrary {
 						continue;
 					var lodModel = new Model();
 					lodModel.name = modelName + 'LOD${i+1}';
-					lodModel.props = model.props;
+					lodModel.props = model.props != null ? model.props.copy() : null;
+					if ( lodModel.props != null ) {
+						lodModel.props.remove(HasCollider);
+						if ( lodModel.props.length == 0 )
+							lodModel.props = [];
+					}
 					lodModel.parent = model.parent;
 					lodModel.follow = model.follow;
 					lodModel.position = model.position;
@@ -1366,6 +1425,68 @@ class HMDOut extends BaseLibrary {
 					d.geometries.push(geom.g);
 					model.lods.push(d.models.length);
 					d.models.push(lodModel);
+				}
+			}
+		}
+
+		// Make colliders
+		d.colliders = [];
+		for( model in d.models ) {
+			if( model.geometry < 0 || model.isLOD() || model.isCollider() )
+				continue;
+			if( model.props == null ) model.props = [];
+
+			function findMeshModel( name : String ) {
+				if( name == null )
+					return null;
+				for( model in d.models ) {
+					if( model.geometry >= 0 && model.name == name )
+						return model;
+				}
+				return null;
+			}
+
+			var mname = model.getObjectName();
+			var mcs = modelCollides.exists(mname) ? modelCollides.get(mname) : [{ useDefault : true }];
+			if( mcs == null || mcs.length == 0 )
+				continue;
+
+			for( idx => mc in mcs ) {
+				if( mc == null )
+					continue;
+				var collider = null;
+				var collidersParams = mc;
+				if( mc.useDefault ) {
+					collidersParams = generateCollides;
+					var colliderModel = findMeshModel(mname + "_Collider");
+					if( colliderModel != null ) {
+						var geomData = hgeomData.get(colliderModel.name);
+						collider = buildGeomCollider(d, geomData, dataOut);
+					}
+				}
+				if( collider == null && collidersParams != null ) {
+					var colliderModel = findMeshModel(collidersParams.mesh) ?? model;
+					var geomData = hgeomData.get(colliderModel.name);
+					if( collidersParams.precision != null ) {
+						var geom = d.geometries[colliderModel.geometry];
+						collider = buildAutoColliders(d, geomData, geom.bounds, collidersParams, dataOut);
+					} else if( collidersParams.mesh != null ) {
+						collider = buildGeomCollider(d, geomData, dataOut);
+					}
+				}
+				if( collider != null ) {
+					var colliderId = d.colliders.length;
+					d.colliders.push(collider);
+					if( idx == 0 ) {
+						model.collider = colliderId;
+						model.props.push(HasCollider);
+					} else {
+						if( model.colliders == null ) {
+							model.colliders = [model.collider];
+							model.props.push(HasColliders);
+						}
+						model.colliders[idx] = colliderId;
+					}
 				}
 			}
 		}

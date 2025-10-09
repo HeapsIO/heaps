@@ -154,7 +154,7 @@ class SkinColliderDebugObj extends h3d.scene.Object {
 				var m = skin.currentPalette[j.bindIndex];
 				b.setTransform(m);
 			} else
-				b.setTransform(skin.jointsData[j.index].currentAbsPose);
+				b.setTransform(skin.jointsData[j.index].currentRelPos);
 		}
 	}
 

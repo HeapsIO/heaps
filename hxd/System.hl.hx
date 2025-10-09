@@ -21,6 +21,14 @@ enum SystemValue {
 	IsMobile;
 }
 
+enum KeyboardLayout {
+	QWERTY;
+	AZERTY;
+	QWERTZ;
+	QZERTY;
+	Unknown;
+}
+
 //@:coreApi
 class System {
 
@@ -206,8 +214,10 @@ class System {
 
 		#if (hlsdl && !multidriver)
 		// New UI window does not force SDL leave relative mouse mode, do it manually
-		var prevMouseMode = hxd.Window.getInstance().mouseMode;
-		hxd.Window.getInstance().mouseMode = Absolute;
+		var window = hxd.Window.getInstance();
+		var prevMouseMode = window?.mouseMode;
+		if (window != null)
+			window.mouseMode = Absolute;
 		#end
 		var f = new hl.UI.WinLog("Uncaught Exception", 500, 400);
 		f.setTextContent(err+"\n"+stack);
@@ -215,7 +225,8 @@ class System {
 		but.onClick = function() {
 			hl.UI.stopLoop();
 			#if (hlsdl && !multidriver)
-			hxd.Window.getInstance().mouseMode = prevMouseMode;
+			if (prevMouseMode != null)
+				hxd.Window.getInstance().mouseMode = prevMouseMode;
 			#end
 		};
 
@@ -224,7 +235,8 @@ class System {
 			dismissErrors = true;
 			hl.UI.stopLoop();
 			#if (hlsdl && !multidriver)
-			hxd.Window.getInstance().mouseMode = prevMouseMode;
+			if (prevMouseMode != null)
+				hxd.Window.getInstance().mouseMode = prevMouseMode;
 			#end
 		};
 
@@ -413,6 +425,29 @@ class System {
 		}
 		return _loc;
 	}
+
+	/**
+		The value isn't reliable on SDL when used without a window.
+	**/
+	public static function getKeyboardLayout() : KeyboardLayout {
+		var layoutStr = null;
+		#if hlsdl
+		layoutStr = sdl.Sdl.detectKeyboardLayout();
+		#elseif (hldx >= version("1.16.0"))
+		layoutStr = dx.Window.detectKeyboardLayout();
+		#elseif (hldx && !dx12)
+		layoutStr = dx.Driver.detectKeyboardLayout();
+		#end
+		return switch(layoutStr) {
+			case "qwerty": QWERTY;
+			case "azerty": AZERTY;
+			case "qwertz": QWERTZ;
+			case "qzerty": QZERTY;
+			case null, _: Unknown;
+		};
+	}
+
+	public static dynamic function onKeyboardLayoutChange() : Void {}
 
 	// getters
 

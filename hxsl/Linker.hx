@@ -398,7 +398,9 @@ class Linker {
 					v2.v.kind = Local;
 					if ( v2.v.qualifiers == null )
 						v2.v.qualifiers = [];
-					v2.v.qualifiers.push(Flat);
+					if(!v2.v.hasQualifier(Flat)){
+						v2.v.qualifiers.push(Flat);
+					}
 				}
 				if( v.kind == Output ) outVars.push(v);
 			}

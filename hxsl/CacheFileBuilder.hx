@@ -18,10 +18,10 @@ private class CustomCacheFile extends CacheFile {
 
 	public function new(build) {
 		this.build = build;
-		super(true, true);
+		super(true, true, true);
 	}
 
-	override function load(showProgress=true) {
+	override function load(showProgress=false) {
 		allowSave = true;
 		super.load(showProgress);
 	}
@@ -116,11 +116,11 @@ class CacheFileBuilder {
 		if( s.code == null )
 			return binaryPayload(s.bytes);
 		if( shaderCache != null )
-			shaderCache.saveCompiledShader(s.code, s.bytes, shaderCacheConfig, false);
+			shaderCache.saveCompiledShader(s.code, s.bytes, s.profile, false);
 		return s.code + binaryPayload(s.bytes);
 	}
 
-	function generateShader( r : RuntimeShader, rd : RuntimeShader.RuntimeShaderData ) : { code : String, bytes : haxe.io.Bytes } {
+	function generateShader( r : RuntimeShader, rd : RuntimeShader.RuntimeShaderData ) : { code : String, bytes : haxe.io.Bytes, profile : String } {
 		switch( platform ) {
 		case DirectX:
 			#if (hldx && !dx12)
@@ -133,7 +133,7 @@ class CacheFileBuilder {
 			var out = new HlslOut();
 			var code = out.run(rd.data);
 			var bytes = dx.Driver.compileShader(code, "", "main", ((rd.kind == Vertex)?"vs_":"ps_") + dxShaderVersion, OptimizationLevel3);
-			return { code : code, bytes : bytes };
+			return { code : code, bytes : bytes, profile : dxShaderVersion };
 			#else
 			throw "DirectX compilation requires -lib hldx without -D dx12";
 			#end
@@ -143,7 +143,7 @@ class CacheFileBuilder {
 				glout = new GlslOut();
 				glout.version = 150;
 			}
-			return { code : glout.run(rd.data), bytes : null };
+			return { code : glout.run(rd.data), bytes : null, profile : shaderCacheConfig };
 		case PS4:
 			#if hlps
 			var out = new ps.gnm.PsslOut();
@@ -162,7 +162,7 @@ class CacheFileBuilder {
 			var data = sys.io.File.getBytes(tmpOut);
 			sys.FileSystem.deleteFile(tmpSrc);
 			sys.FileSystem.deleteFile(tmpOut);
-			return { code : code, bytes : data };
+			return { code : code, bytes : data, profile : shaderCacheConfig };
 			#else
 			throw "PS4 compilation requires -lib hlps";
 			#end
@@ -183,7 +183,7 @@ class CacheFileBuilder {
 			var data = sys.io.File.getBytes(tmpOut);
 			sys.FileSystem.deleteFile(tmpSrc);
 			sys.FileSystem.deleteFile(tmpOut);
-			return { code : code, bytes : data };
+			return { code : code, bytes : data, profile : shaderCacheConfig };
 		case XBoxSeries, XBoxOneGDK:
 			#if (hldx && dx12)
 			if( !dxInitDone ) {
@@ -202,7 +202,8 @@ class CacheFileBuilder {
 			var serializeRootSignature = @:privateAccess dx12Driver.stringifyRootSignature(sign.sign, "ROOT_SIGNATURE", sign.params, sign.paramsCount);
 			code = serializeRootSignature + code;
 			sys.io.File.saveContent(tmpSrc, code);
-			var args = ["-rootsig-define", "ROOT_SIGNATURE", "-T", ( (rd.kind == Vertex) ? "vs_" : "ps_") + dxcShaderVersion,"-O3","-Fo", tmpOut, tmpSrc];
+			var profile = ( (rd.kind == Vertex) ? "vs_" : "ps_") + dxcShaderVersion;
+			var args = ["-rootsig-define", "ROOT_SIGNATURE", "-T", profile,"-O3","-Fo", tmpOut, tmpSrc];
 			var p;
 			if( platform == XBoxOneGDK )
 				p = new sys.io.Process(Sys.getEnv("GXDKLatest")+ "bin\\XboxOne\\dxc.exe", args);
@@ -216,26 +217,26 @@ class CacheFileBuilder {
 			var data = sys.io.File.getBytes(tmpOut);
 			sys.FileSystem.deleteFile(tmpSrc);
 			sys.FileSystem.deleteFile(tmpOut);
-			return { code : code, bytes : data };
+			return { code : code, bytes : data, profile : profile };
 			#else
 			throw "-lib hldx and -D dx12 are required to generate binaries for XBoxSeries";
 			#end
 		case NX:
 			if( rd.kind == Vertex )
 				glout = new hxsl.NXGlslOut();
-			return { code : glout.run(rd.data), bytes : null };
+			return { code : glout.run(rd.data), bytes : null, profile : shaderCacheConfig  };
 		case NXBinaries:
 			if( rd.kind == Vertex ) {
 				glout = new hxsl.NXGlslOut();
 				vertexOut = glout.run(rd.data);
-				return { code : vertexOut, bytes : null }; // binary is in fragment.code
+				return { code : vertexOut, bytes : null, profile : shaderCacheConfig }; // binary is in fragment.code
 			}
 			var path = binariesPath + '/${r.signature}.glslc';
 			if ( !sys.FileSystem.exists(path) || vertexOut == null )
 				return null;
 			var code = vertexOut + glout.run(rd.data);
 			vertexOut = null;
-			return { code : code, bytes : sys.io.File.getBytes(path) };
+			return { code : code, bytes : sys.io.File.getBytes(path), profile : shaderCacheConfig };
 		}
 		throw "Missing implementation for " + platform;
 	}

@@ -5,6 +5,7 @@ class DirShadow extends hxsl.Shader {
 	static var SRC = {
 
 		@const var enable : Bool;
+		@const var CHECK_OUT_OF_BOUNDS : Bool = true;
 
 		// ESM
 		@const var USE_ESM : Bool;
@@ -27,12 +28,22 @@ class DirShadow extends hxsl.Shader {
 
 		function rand( v : Float ) : Float {
 			 var dp = dot(vec4(v), vec4(12.9898,78.233,45.164,94.673));
-   			 return fract(sin(dp) * 43758.5453);
+			 return fract(sin(dp) * 43758.5453);
+		}
+
+		function sampleDepth( uv : Vec2 ) : Float {
+			var depth : Float;
+			if ( CHECK_OUT_OF_BOUNDS ) {
+				var outOfBounds = uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0;
+				depth = outOfBounds ? 1.0 : shadowMap.getLod(uv, 0).r;
+			} else
+				depth = shadowMap.getLod(uv, 0).r;
+			return depth;
 		}
 
 		function fragment() {
-			if( enable ) {
-				if( USE_PCF ) {
+			if ( enable ) {
+				if ( USE_PCF ) {
 					shadow = 1.0;
 					var texelSize = 1.0/shadowRes;
 					var shadowPos = transformedPosition * shadowProj;
@@ -47,21 +58,19 @@ class DirShadow extends hxsl.Shader {
 					for(i in 0...PCF_SAMPLES) {
 						var offset = poissonDisk[i].xy * offScale;
 						offset = vec2(cosR * offset.x - sinR * offset.y, cosR * offset.y + sinR * offset.x);
-						var depth = shadowMap.getLod(shadowUv + offset, 0);
+						var depth = sampleDepth(shadowUv + offset);
 						shadow  -= (zMax - shadowBias > depth) ? sampleStrength : 0.0;
 					}
-				}
-				else if( USE_ESM ) {
+				} else if ( USE_ESM ) {
 					var shadowPos = transformedPosition * shadowProj;
-					var depth = shadowMap.get(screenToUv(shadowPos.xy));
+					var depth = sampleDepth(screenToUv(shadowPos.xy));
 					var zMax = shadowPos.z.saturate();
 					var delta = (depth + shadowBias).min(zMax) - zMax;
 					shadow = exp(shadowPower * delta).saturate();
-				}
-				else {
+				} else {
 					var shadowPos = transformedPosition * shadowProj;
 					var shadowUv = screenToUv(shadowPos.xy);
-					var depth = shadowMap.get(shadowUv.xy);
+					var depth = sampleDepth(shadowUv.xy);
 					shadow = shadowPos.z.saturate() - shadowBias > depth ? 0 : 1;
 				}
 			}
