@@ -22,6 +22,8 @@ class BlendshapeInstance {
 
 	public function setBlendshapeWeight(name : String, weight : Float) {
 		var idx = blendshape.getBlendShapeIndex(name);
+		if (idx == -1)
+			return;
 
 		#if editor
 		var weights = [for (idx in 0...blendshape.shapes.length) 0.];
