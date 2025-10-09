@@ -167,6 +167,14 @@ class Mesh extends Object {
 		getBlendshapeInstance()?.setBlendshapeWeights(weights);
 	}
 
+	public function getBlenshapeNames() : Array<String> {
+		var shapes = @:privateAccess getBlendshapeInstance()?.blendshape?.shapes;
+		if (shapes == null)
+			return [];
+
+		return [for (s in shapes) s.name];
+	}
+
 	function getBlendshapeInstance() {
 		if (blendshapeInstance != null)
 			return blendshapeInstance;
