@@ -191,9 +191,6 @@ class MeshBatch extends MultiMaterial {
 		for( index in 0...materials.length ) {
 			var mat = materials[index];
 			if( mat == null ) continue;
-			var prim = getPrimitive();
-			var matCount = prim.getMaterialIndexCount(index);
-			var matStart = prim.getMaterialIndexStart(index);
 			for( p in mat.getPasses() ) @:privateAccess {
 				var ctx = scene.renderer.getPassByName(p.name);
 				if( ctx == null ) continue;
@@ -204,8 +201,6 @@ class MeshBatch extends MultiMaterial {
 				var shader = output.shaderCache.makeBatchShader(rt, shaders, instancedParams);
 
 				var b = createBatchData();
-				b.indexCount = matCount;
-				b.indexStart = matStart;
 				b.paramsCount = shader.paramsSize;
 				b.maxInstance = Std.int( getMaxElements() / b.paramsCount);
 				b.bufferFormat = hxd.BufferFormat.VEC4_DATA;
@@ -235,14 +230,10 @@ class MeshBatch extends MultiMaterial {
 				shader.Batch_HasOffset = hasPrimitiveOffset();
 				shader.constBits = (shader.Batch_Count << 2) | (shader.Batch_UseStorage ? ( 1 << 1 ) : 0) | (shader.Batch_HasOffset ? 1 : 0);
 				shader.updateConstants(null);
-			}
-		}
 
-		// add batch shaders
-		var p = dataPasses;
-		while( p != null ) {
-			@:privateAccess p.pass.addSelfShader(p.shader);
-			p = p.next;
+				@:privateAccess b.pass.addSelfShader(b.shader);
+			}
+
 		}
 	}
 
@@ -724,8 +715,6 @@ class BatchData {
 	public var paramsCount : Int;
 	public var maxInstance : Int;
 	public var matIndex : Int;
-	public var indexCount : Int;
-	public var indexStart : Int;
 	public var indirectCallBuffers : Array<h3d.impl.InstanceBuffer>;
 	public var buffers : Array<h3d.Buffer> = [];
 	public var bufferFormat : hxd.BufferFormat;
