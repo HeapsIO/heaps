@@ -570,14 +570,16 @@ class Skin extends MultiMaterial {
 			}
 		}
 		if( showJoints ) {
-			if( jointsGraphics == null ) {
-				jointsGraphics = new Graphics(this);
-				jointsGraphics.material.mainPass.depth(false, Always);
-				jointsGraphics.material.mainPass.setPassName("alpha");
-			}
 			var topParent : Object = this;
 			while( topParent.parent != null )
 				topParent = topParent.parent;
+
+			if( jointsGraphics == null ) {
+				jointsGraphics = new Graphics(topParent);
+				jointsGraphics.material.mainPass.depth(false, Always);
+				jointsGraphics.material.mainPass.setPassName("alpha");
+			}
+			
 			jointsGraphics.follow = topParent;
 
 			var g = jointsGraphics;
