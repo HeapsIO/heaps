@@ -410,8 +410,10 @@ class Skin extends MultiMaterial {
 	override function getGlobalCollider() : h3d.col.Collider {
 		var col = cast(primitive.getCollider(), h3d.col.Collider.OptimizedCollider);
 		var primCol = Std.downcast(col.b, h3d.col.PolygonBuffer);
-		if( primCol == null )
-			return col;
+		if( primCol == null ) {
+			var rootTrans = skinData.rootJoints[0].defMat.clone();
+			return new h3d.col.TransformCollider(rootTrans, col);
+		}
 		cast(primitive, h3d.prim.HMDModel).loadSkin(skinData);
 		return new h3d.col.SkinCollider(this, primCol);
 	}
