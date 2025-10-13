@@ -175,6 +175,14 @@ class Mesh extends Object {
 		return [for (s in shapes) s.name];
 	}
 
+	public function hasBlendshapes() : Bool {
+		if (blendshapeInstance != null)
+			return true;
+
+		var hmd = Std.downcast(primitive, h3d.prim.HMDModel);
+		return @:privateAccess hmd?.blendshape != null;
+	}
+
 	function getBlendshapeInstance() {
 		if (blendshapeInstance != null)
 			return blendshapeInstance;
