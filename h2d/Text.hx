@@ -340,6 +340,9 @@ class Text extends Drawable {
 		var wLastSep = 0.;
 		for( i in 0...text.length ) {
 			var cc = StringTools.fastCodeAt(text, i);
+			if (cc == '#'.code)
+				continue;
+
 			var e = font.getChar(cc);
 			var newline = cc == '\n'.code;
 			var esize = e.width + e.getKerningOffset(prevChar);
@@ -419,6 +422,10 @@ class Text extends Drawable {
 		return text.substr(0, Std.int(progress));
 	}
 
+	inline function rgb(r:Int, g:Int, b:Int):Int {
+		return (r << 16) | (g << 8) | b;
+	}
+
 	function initGlyphs( text : String, rebuild = true ) : Void {
 		if( rebuild ) glyphs.clear();
 		var x = 0., y = 0., xMax = 0., xMin = 0., yMin = 0., yMax = 0., prevChar = -1, linei = 0;
@@ -444,8 +451,19 @@ class Text extends Drawable {
 			x = 0;
 		}
 
+		var isHighlight = false;
 		for( i in 0...t.length ) {
 			var cc = StringTools.fastCodeAt(t, i);
+			if (cc == '#'.code) {
+				if (!isHighlight) {
+					glyphs.setDefaultColor(rgb(0, 0, 255));
+					isHighlight = true;
+				} else {
+					glyphs.setDefaultColor(rgb(255, 255, 255));
+					isHighlight = false;
+				}
+				continue;
+			}
 			var e = font.getChar(cc);
 			var offs = e.getKerningOffset(prevChar);
 			var esize = e.width + offs;
