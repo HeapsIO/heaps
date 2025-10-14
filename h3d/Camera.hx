@@ -503,6 +503,8 @@ class Camera {
 			follow = null;
 		viewX = cam.viewX;
 		viewY = cam.viewY;
+		rightHanded = cam.rightHanded;
+		reverseDepth = cam.reverseDepth;
 		update();
 	}
 
