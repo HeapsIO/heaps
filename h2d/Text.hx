@@ -382,7 +382,7 @@ class Text extends Drawable {
 				}
 				else wLastSep = size;
 			}
-			else if( wordWrap && (x + esize + letterSpacing) - wLastSep > (maxWidth-esize) ) {
+			else if( wordWrap && (x + esize + letterSpacing) - wLastSep > maxWidth ) {
 				newline = true;
 				lines.push(text.substr(restPos, i - restPos));
 				restPos = i;
