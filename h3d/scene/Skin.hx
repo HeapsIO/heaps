@@ -407,10 +407,15 @@ class Skin extends MultiMaterial {
 		return null;
 	}
 
-	override function getGlobalCollider() {
+	override function getGlobalCollider() : h3d.col.Collider {
 		var col = cast(primitive.getCollider(), h3d.col.Collider.OptimizedCollider);
+		var primCol = Std.downcast(col.b, h3d.col.PolygonBuffer);
+		if( primCol == null ) {
+			var rootTrans = skinData.rootJoints[0].defMat.clone();
+			return new h3d.col.TransformCollider(rootTrans, col);
+		}
 		cast(primitive, h3d.prim.HMDModel).loadSkin(skinData);
-		return new h3d.col.SkinCollider(this, cast(col.b, h3d.col.PolygonBuffer));
+		return new h3d.col.SkinCollider(this, primCol);
 	}
 
 	override function calcAbsPos() {
@@ -570,14 +575,16 @@ class Skin extends MultiMaterial {
 			}
 		}
 		if( showJoints ) {
-			if( jointsGraphics == null ) {
-				jointsGraphics = new Graphics(this);
-				jointsGraphics.material.mainPass.depth(false, Always);
-				jointsGraphics.material.mainPass.setPassName("alpha");
-			}
 			var topParent : Object = this;
 			while( topParent.parent != null )
 				topParent = topParent.parent;
+
+			if( jointsGraphics == null ) {
+				jointsGraphics = new Graphics(topParent);
+				jointsGraphics.material.mainPass.depth(false, Always);
+				jointsGraphics.material.mainPass.setPassName("alpha");
+			}
+
 			jointsGraphics.follow = topParent;
 
 			var g = jointsGraphics;

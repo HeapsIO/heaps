@@ -153,12 +153,16 @@ class SkinColliderDebugObj extends h3d.scene.Object {
 			if( j.offsets != null ) {
 				var m = skin.currentPalette[j.bindIndex];
 				b.setTransform(m);
-			} else
-				b.setTransform(skin.jointsData[j.index].currentRelPos);
+			} else {
+				var relPos = skin.jointsData[j.index].currentRelPos;
+				if (relPos != null)
+					b.setTransform(skin.jointsData[j.index].currentRelPos);
+			}
 		}
 	}
 
 	override function sync( ctx : h3d.scene.RenderContext ) {
+		super.sync(ctx);
 		col.checkBounds();
 		updateJoints();
 	}

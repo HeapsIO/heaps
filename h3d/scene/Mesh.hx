@@ -22,6 +22,11 @@ class Mesh extends Object {
 	public var inheritLod : Bool = false;
 
 	/**
+		Instance of the blendshape of the mesh: the list of weights for the different shapes
+	**/
+	public var blendshapeInstance(default, null) : h3d.prim.Blendshape.BlendshapeInstance;
+
+	/**
 		Creates a new mesh with given primitive, material and parent object.
 		If material is not specified, a new default material is created for the current renderer.
 	**/
@@ -121,6 +126,8 @@ class Mesh extends Object {
 
 	override private function onRemove() {
 		if ( primitive != null ) primitive.decref();
+		blendshapeInstance?.dispose();
+		blendshapeInstance = null;
 		super.onRemove();
 	}
 
@@ -149,5 +156,44 @@ class Mesh extends Object {
 		var screenArea = hxd.Math.max( screenBottomRight.x - screenTopLeft.x, screenBottomRight.y - screenTopLeft.y );
 
 		return screenArea * screenArea;
+	}
+
+
+	public function setBlendshapeWeight(name: String, weight : Float) {
+		getBlendshapeInstance()?.setBlendshapeWeight(name, weight);
+	}
+
+	public function setBlendshapeWeights(weights : Array<Float>) {
+		getBlendshapeInstance()?.setBlendshapeWeights(weights);
+	}
+
+	public function getBlenshapeNames() : Array<String> {
+		var shapes = @:privateAccess getBlendshapeInstance()?.blendshape?.shapes;
+		if (shapes == null)
+			return [];
+
+		return [for (s in shapes) s.name];
+	}
+
+	public function hasBlendshapes() : Bool {
+		if (blendshapeInstance != null)
+			return true;
+
+		var hmd = Std.downcast(primitive, h3d.prim.HMDModel);
+		return @:privateAccess hmd?.blendshape != null;
+	}
+
+	function getBlendshapeInstance() {
+		if (blendshapeInstance != null)
+			return blendshapeInstance;
+
+		var hmd = Std.downcast(primitive, h3d.prim.HMDModel);
+		var bs = @:privateAccess hmd?.blendshape;
+		if (bs != null)
+			blendshapeInstance = bs.getBlendshapeInstance(this);
+		else
+			trace("Can't set blendshape weights because primitive has no blendshapes.");
+
+		return blendshapeInstance;
 	}
 }

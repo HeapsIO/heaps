@@ -81,9 +81,9 @@ class SmoothTarget extends Animation {
 			return 0.;
 		var rt = target.update(dt);
 		var st = dt - rt;
-		blend += st * speed / duration;
+		blend = duration == 0 ? 1. : blend + (st * speed / duration);
 		frame = target.frame;
-		if( blend > 1 ) {
+		if( blend >= 1 ) {
 			blend = 1;
 			if( onAnimEnd != null ) onAnimEnd();
 		}
