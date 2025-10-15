@@ -83,7 +83,7 @@ class MeshTools {
 
 		var input = new haxe.io.BytesInput(sys.io.File.getBytes(args[1]));
 		var targetIndexCount = Std.parseInt(args[3]);
-		var targetError = args.length > 3 ? Std.parseFloat(args[4]) : 0.05;
+		var targetError = args.length > 4 ? Std.parseFloat(args[4]) : 0.05;
 		var vertexCount = input.readInt32();
 		var vertexSize = input.readInt32();
 		var vertices = hl.Bytes.fromBytes(input.read(vertexCount * vertexSize));
@@ -94,7 +94,7 @@ class MeshTools {
 		hxd.tools.MeshOptimizer.remapIndexBuffer(indices, indices, indexCount, remap);
 		hxd.tools.MeshOptimizer.remapVertexBuffer(vertices, vertices, vertexCount, vertexSize, remap);
 		vertexCount = uniqueVertexCount;
-		indexCount = hxd.tools.MeshOptimizer.simplify(indices, indices, indexCount, vertices, vertexCount, vertexSize, targetIndexCount, targetError, 0, null);
+		indexCount = hxd.tools.MeshOptimizer.simplify(indices, indices, indexCount, vertices, vertexCount, vertexSize, targetIndexCount, targetError, hxd.tools.MeshOptimizer.SimplifyOptions.LockBorder | hxd.tools.MeshOptimizer.SimplifyOptions.Prune, null);
 		hxd.tools.MeshOptimizer.optimizeVertexCache(indices, indices, indexCount, vertexCount);
 		hxd.tools.MeshOptimizer.optimizeOverdraw(indices, indices, indexCount, vertices, vertexCount, vertexSize, 1.05);
 		vertexCount = hxd.tools.MeshOptimizer.optimizeVertexFetch(vertices, indices, indexCount, vertices, vertexCount, vertexSize);

@@ -271,8 +271,10 @@ class HMDOut extends BaseLibrary {
 		hxd.tools.MeshOptimizer.remapIndexBuffer(indices, indices, indexCount, remap);
 		hxd.tools.MeshOptimizer.remapVertexBuffer(vertices, vertices, vertexCount, vertexSize, remap);
 		vertexCount = uniqueVertexCount;
-		if ( decimationFactor > 0.0 )
-			indexCount = hxd.tools.MeshOptimizer.simplify(indices, indices, indexCount, vertices, vertexCount, vertexSize, Std.int(indexCount * (1.0 - decimationFactor)), 0.05, 0, null);
+		if ( decimationFactor > 0.0 ) {
+			var options = hxd.tools.MeshOptimizer.SimplifyOptions.LockBorder | hxd.tools.MeshOptimizer.SimplifyOptions.Prune;
+			indexCount = hxd.tools.MeshOptimizer.simplify(indices, indices, indexCount, vertices, vertexCount, vertexSize, Std.int(indexCount * (1.0 - decimationFactor)), decimationFactor, options, null);
+		}
 		hxd.tools.MeshOptimizer.optimizeVertexCache(indices, indices, indexCount, vertexCount);
 		hxd.tools.MeshOptimizer.optimizeOverdraw(indices, indices, indexCount, vertices, vertexCount, vertexSize, 1.05);
 		vertexCount = hxd.tools.MeshOptimizer.optimizeVertexFetch(vertices, indices, indexCount, vertices, vertexCount, vertexSize);

@@ -1,6 +1,18 @@
 package hxd.tools;
 
 #if (hl && hl_ver >= version("1.15.0"))
+
+enum abstract SimplifyOptions(Int) to Int from Int {
+	/* Do not move vertices that are located on the topological border (vertices on triangle edges that don't have a paired triangle). Useful for simplifying portions of the larger mesh. */
+	var LockBorder = 1 << 0;
+	/* Improve simplification performance assuming input indices are a sparse subset of the mesh. Note that error becomes relative to subset extents. */
+	var Sparse = 1 << 1;
+	/* Treat error limit and resulting error as absolute instead of relative to mesh extents. */
+	var ErrorAbsolute = 1 << 2;
+	/* Remove disconnected parts of the mesh during simplification incrementally, regardless of the topological restrictions inside components. */
+	var Prune = 1 << 3;
+}
+
 class MeshOptimizer {
 	/**
 	Generates a vertex remap table from the vertex buffer and an optional index buffer and returns number of unique vertices
