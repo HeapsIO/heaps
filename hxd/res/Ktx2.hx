@@ -1,6 +1,7 @@
 package hxd.res;
 
 import haxe.io.UInt8Array;
+import h3d.mat.Data.TextureFlags;
 using Lambda;
 
 #if js
@@ -344,7 +345,10 @@ class Ktx2Decoder {
 			}
 			final face = data.faces[0];
 			final mipmaps:Array<ImageData> = face.mipmaps;
-			final texture = new h3d.mat.Texture(data.width, data.height, null, fmt);
+			final flags = mipmaps.length > 1 ? [MipMapped, ManualMipMapGen, NoAlloc] : [NoAlloc];
+			final texture = new h3d.mat.Texture(data.width, data.height, flags, fmt);
+			@:privateAccess texture.customMipLevels = mipmaps.length;
+
 			var level = 0;
 			for (mipmap in mipmaps) {
 				final bytes = haxe.io.Bytes.ofData(cast mipmap.data);
@@ -353,7 +357,6 @@ class Ktx2Decoder {
 				level++;
 			}
 			if (mipmaps.length > 1) {
-				texture.flags.set(MipMapped);
 				texture.mipMap = Linear;
 			}
 			texture;
