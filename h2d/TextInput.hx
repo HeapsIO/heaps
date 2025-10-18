@@ -64,6 +64,7 @@ class TextInput extends Text {
 	var cursorXIndex : Int;
 	var cursorY : Float;
 	var cursorBlink = 0.;
+	var constraintHeight = -1.;
 	var scrollX = 0.;
 	var selectionPos : Float;
 	var selectionSize : Float;
@@ -72,6 +73,7 @@ class TextInput extends Text {
 	var lastChange = 0.;
 	var lastClick = 0.;
 	var maxHistorySize = 100;
+	var splitLines : Array<String>;
 
 	/**
 		Create a new TextInput instance.
@@ -157,10 +159,22 @@ class TextInput extends Text {
 		interactive.onMove = function(e) onMove(e);
 		interactive.onOver = function(e) onOver(e);
 		interactive.onOut = function(e) onOut(e);
+		interactive.onWheel = function(e) e.propagate = true;
 
 		interactive.cursor = TextInput;
 
 		addChildAt(interactive, 0);
+	}
+
+	override function constraintSize(width:Float, height:Float) {
+		super.constraintSize(width, height);
+		constraintHeight = height;
+	}
+
+	function getVisibleLines() {
+		var v = Math.ceil(constraintHeight / font.lineHeight);
+		if( v <= 0 ) v = 10;
+		return v;
 	}
 
 	function handleKey( e : hxd.Event ) {
@@ -175,6 +189,10 @@ class TextInput extends Text {
 			moveCursorVertically(-1);
 		case K.DOWN if( multiline ):
 			moveCursorVertically(1);
+		case K.PGUP if( multiline ):
+			moveCursorVertically(-getVisibleLines());
+		case K.PGDOWN if( multiline ):
+			moveCursorVertically(getVisibleLines());
 		case K.LEFT if (K.isDown(K.CTRL)):
 			cursorIndex = getWordStart();
 		case K.LEFT:
@@ -353,11 +371,11 @@ class TextInput extends Text {
 	}
 
 	function moveCursorVertically(yDiff: Int){
-		if( !multiline || yDiff == 0)
+		if( !multiline || yDiff == 0 )
 			return;
 		var lines = [];
 		var cursorLineIndex = -1, currLineIndex = 0, currIndex = 0;
-		for( line in getAllLines() ) {
+		for( line in getSplitLines() ) {
 			lines.push( { line: line, startIndex: currIndex } );
 			var prevIndex = currIndex;
 			currIndex += line.length;
@@ -365,9 +383,10 @@ class TextInput extends Text {
 				cursorLineIndex = currLineIndex;
 			currLineIndex++;
 		}
-		if (cursorLineIndex == -1)
+		if( cursorLineIndex == -1 )
 			return;
-		var destinationIndex = hxd.Math.iclamp(cursorLineIndex + yDiff, -1, lines.length);
+		var inSelect = hxd.Key.isDown(hxd.Key.SHIFT);
+		var destinationIndex = hxd.Math.iclamp(cursorLineIndex + yDiff, inSelect ? -1 : 0, inSelect ? lines.length : lines.length - 1);
 		if (destinationIndex == cursorLineIndex)
 			return;
 		// We're moving down from the last line, move to the end of the line
@@ -455,24 +474,20 @@ class TextInput extends Text {
 		while( undo.length > maxHistorySize ) undo.shift();
 	}
 
-	function getAllLines() {
+	function getSplitLines() {
+		if( splitLines != null && !(needsRebuild || textChanged) )
+			return splitLines;
 		var lines = this.text.split('\n');
-		var finalLines : Array<String> = [];
-
+		splitLines = [];
 		for(l in lines) {
-			var splitText = splitText(l).split('\n');
-			finalLines = finalLines.concat(splitText);
+			for( l in splitText(l).split('\n') )
+				splitLines.push(l+'\n');
 		}
-
-		for(i in 0...finalLines.length) {
-			finalLines[i] += '\n';
-		}
-
-		return finalLines;
+		return splitLines;
 	}
 
 	function getCurrentLine() : {value: String, startIndex: Int} {
-		var lines = getAllLines();
+		var lines = getSplitLines();
 		var currIndex = 0;
 		for( i in 0...lines.length ) {
 			var newCurrIndex = currIndex + lines[i].length;
@@ -484,7 +499,7 @@ class TextInput extends Text {
 	}
 
 	function getCursorXOffset() {
-		var lines = getAllLines();
+		var lines = getSplitLines();
 		var offset = cursorIndex;
 		var currLine = getCurrentLine().value;
 		var currIndex = 0;
@@ -503,7 +518,7 @@ class TextInput extends Text {
 
 	function getCursorYOffset() {
 		// return 0.0;
-		var lines = getAllLines();
+		var lines = getSplitLines();
 		var currIndex = 0;
 		var lineNum = 0;
 
@@ -556,6 +571,7 @@ class TextInput extends Text {
 	override function initGlyphs(text:String, rebuild = true):Void {
 		super.initGlyphs(text, rebuild);
 		if( rebuild ) {
+			splitLines = null;
 			this.calcWidth += cursorTile.width; // cursor end pos
 			var iw = getInputWidth();
 			if( iw >= 0 && this.calcWidth > iw ) this.calcWidth = iw;
@@ -565,7 +581,7 @@ class TextInput extends Text {
 	function textPos( x : Float, y : Float ) {
 		x += scrollX;
 		var lineIndex = Math.floor(y / font.lineHeight);
-		var lines = getAllLines();
+		var lines = getSplitLines();
 		lineIndex = hxd.Math.iclamp(lineIndex, 0, lines.length - 1);
 		var selectedLine = lines[lineIndex];
 		var pos = 0;
@@ -586,7 +602,7 @@ class TextInput extends Text {
 	}
 
 	function syncInteract() {
-		var lines = getAllLines();
+		var lines = getSplitLines();
 		var iw = getInputWidth();
 		interactive.width = iw >= 0 ? iw : textWidth;
 		interactive.height = font.lineHeight * (lines.length == 0 ? 1 : lines.length);
@@ -604,11 +620,16 @@ class TextInput extends Text {
 
 	override function draw(ctx:RenderContext) {
 		var iw = getInputWidth();
+		if( multiline ) {
+			iw = -1;
+			scrollX = 0;
+		}
 		if( iw >= 0 ) {
-			var h = localToGlobal(new h2d.col.Point(iw, font.lineHeight));
+			var h = localToGlobal(new h2d.col.Point(iw, font.lineHeight * (getSplitLines().length)));
 			ctx.clipRenderZone(absX, absY, h.x - absX, h.y - absY);
 		}
 
+		var lastCursorY = cursorY;
 		if( cursorIndex >= 0 && (text != cursorText || cursorIndex != cursorXIndex) ) {
 			if( cursorIndex > text.length ) cursorIndex = text.length;
 			cursorText = text;
@@ -623,11 +644,28 @@ class TextInput extends Text {
 				scrollX = cursorX;
 		}
 
+		if( multiline && cursorY != lastCursorY ) {
+			// ensure cursor in scroll
+			var p = parentContainer;
+			var pt = localToGlobal(new h2d.col.Point(cursorX, cursorY));
+			while( p != null ) {
+				if( p.scrollToPos(pt) )
+					break;
+				p = p.parentContainer;
+			}
+			var pt = localToGlobal(new h2d.col.Point(cursorX, cursorY + font.lineHeight));
+			while( p != null ) {
+				if( p.scrollToPos(pt) )
+					break;
+				p = p.parentContainer;
+			}
+		}
+
 		absX -= scrollX * matA;
 		absY -= scrollX * matC;
 
 		if( selectionRange != null ) {
-			var lines = getAllLines();
+			var lines = getSplitLines();
 			var lineOffset = 0;
 
 			for(i in 0...lines.length) {
@@ -645,7 +683,7 @@ class TextInput extends Text {
 
 				selectionPos = calcTextWidth(line.substr(0, selStart));
 				selectionSize = calcTextWidth(line.substr(selStart, selEnd));
-				if( selectionRange.start + selectionRange.length == text.length ) selectionSize += cursorTile.width; // last pixel
+				if( selectionRange.start + selectionRange.length == cursorIndex ) selectionSize += cursorTile.width; // last pixel
 
 				selectionTile.dx += selectionPos;
 				selectionTile.dy += i * font.lineHeight;
