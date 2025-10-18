@@ -163,10 +163,6 @@ class TextInput extends Text {
 		addChildAt(interactive, 0);
 	}
 
-	override function constraintSize(width:Float, height:Float) {
-		// disable (don't allow multiline textinput for now)
-	}
-
 	function handleKey( e : hxd.Event ) {
 		if( e.cancel || cursorIndex < 0 )
 			return;
@@ -543,11 +539,26 @@ class TextInput extends Text {
 		return f;
 	}
 
+	override function splitRawText(text:String, leftMargin:Float = 0., afterData:Float = 0., ?font:Font, ?sizes:Array<Float>, ?prevChar:Int = -1):String {
+		if( !multiline )
+			return text;
+		return super.splitRawText(text, leftMargin, afterData, font, sizes, prevChar);
+	}
+
+	function getInputWidth() : Int {
+		if( inputWidth != null )
+			return inputWidth;
+		if( realMaxWidth >= 0 )
+			return Math.ceil(realMaxWidth);
+		return -1;
+	}
+
 	override function initGlyphs(text:String, rebuild = true):Void {
 		super.initGlyphs(text, rebuild);
 		if( rebuild ) {
 			this.calcWidth += cursorTile.width; // cursor end pos
-			if( inputWidth != null && this.calcWidth > inputWidth ) this.calcWidth = inputWidth;
+			var iw = getInputWidth();
+			if( iw >= 0 && this.calcWidth > iw ) this.calcWidth = iw;
 		}
 	}
 
@@ -576,7 +587,8 @@ class TextInput extends Text {
 
 	function syncInteract() {
 		var lines = getAllLines();
-		interactive.width = (inputWidth != null ? inputWidth : maxWidth != null ? Math.ceil(maxWidth) : textWidth);
+		var iw = getInputWidth();
+		interactive.width = iw >= 0 ? iw : textWidth;
 		interactive.height = font.lineHeight * (lines.length == 0 ? 1 : lines.length);
 	}
 
@@ -591,8 +603,9 @@ class TextInput extends Text {
 	}
 
 	override function draw(ctx:RenderContext) {
-		if( inputWidth != null ) {
-			var h = localToGlobal(new h2d.col.Point(inputWidth, font.lineHeight));
+		var iw = getInputWidth();
+		if( iw >= 0 ) {
+			var h = localToGlobal(new h2d.col.Point(iw, font.lineHeight));
 			ctx.clipRenderZone(absX, absY, h.x - absX, h.y - absY);
 		}
 
@@ -602,10 +615,10 @@ class TextInput extends Text {
 			cursorXIndex = cursorIndex;
 			cursorX = getCursorXOffset();
 			cursorY = getCursorYOffset();
-			if( inputWidth != null && cursorX - scrollX >= inputWidth )
-				scrollX = cursorX - inputWidth + 1;
+			if( iw >= 0 && cursorX - scrollX >= iw )
+				scrollX = cursorX - iw + 1;
 			else if( cursorX < scrollX && cursorIndex > 0 )
-				scrollX = cursorX - hxd.Math.imin(inputWidth, Std.int(cursorX));
+				scrollX = cursorX - hxd.Math.imin(iw, Std.int(cursorX));
 			else if( cursorX < scrollX )
 				scrollX = cursorX;
 		}
@@ -660,7 +673,7 @@ class TextInput extends Text {
 			}
 		}
 
-		if( inputWidth != null )
+		if( iw >= 0 )
 			ctx.popRenderZone();
 	}
 
