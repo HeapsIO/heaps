@@ -535,6 +535,10 @@ class Object #if (domkit && !domkit_heaps) implements domkit.Model<h2d.Object> #
 			s.setParentContainer(c);
 	}
 
+	function scrollToPos( pt : h2d.col.Point ) {
+		return false;
+	}
+
 	/**
 		Remove all children from the immediate children list.
 	**/
