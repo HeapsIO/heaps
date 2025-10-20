@@ -605,7 +605,9 @@ class TextInput extends Text {
 		var lines = getSplitLines();
 		var iw = getInputWidth();
 		interactive.width = iw >= 0 ? iw : textWidth;
-		interactive.height = font.lineHeight * (lines.length == 0 ? 1 : lines.length);
+		var ih = font.lineHeight * (lines.length == 0 ? 1 : lines.length);
+		if( multiline && constraintHeight >= 0 && ih < constraintHeight ) ih = constraintHeight;
+		interactive.height = ih;
 	}
 
 	override function getBoundsRec(relativeTo:Object, out:h2d.col.Bounds, forSize:Bool) {
