@@ -124,7 +124,7 @@ class GPUMeshBatch extends MeshBatch {
 			var subPartsCount = 0;
 			var subPartsStart = 0;
 			for ( subMesh in primitiveSubMeshes ) {
-				tmpSubMeshesInfos[pos++] = subMesh.bounds.dimension() * 0.5;
+				tmpSubMeshesInfos[pos++] = subMesh.bounds.getBoundingRadius();
 				tmpSubMeshesInfos[pos++] = subMesh.lodCount;
 				tmpSubMeshesInfos[pos++] = subPartsStart;
 				tmpSubMeshesInfos[pos++] = subMesh.subParts.length;
@@ -235,8 +235,7 @@ class GPUMeshBatch extends MeshBatch {
 		} else {
 			commandCountNeeded = materialCount * instanceCount;
 			var computeShader : h3d.shader.InstanceIndirect = cast computeShader;
-			var prim = getPrimitive();
-			computeShader.radius = prim.getBounds().dimension() * 0.5;
+			computeShader.radius = getPrimitive().getBounds().getBoundingRadius();
 			computeShader.lodCount = getLodCount();
 			computeShader.subPartsCount = materialCount;
 		}
