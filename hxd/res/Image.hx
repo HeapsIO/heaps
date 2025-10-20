@@ -94,7 +94,7 @@ class Image extends Resource {
 	public function getInfo() {
 		if (inf != null)
 			return inf;
-		inf = new ImageInfo();
+		var inf = new ImageInfo();
 		var f = entry.open();
 		f.fetch(256); // should be enough to fit DDS header
 		var head = try f.readUInt16() catch (e:haxe.io.Eof) 0;
@@ -291,8 +291,8 @@ class Image extends Resource {
 			}
 		}
 
+		this.inf = inf;
 		customCheckInfo(this);
-
 		return inf;
 	}
 
