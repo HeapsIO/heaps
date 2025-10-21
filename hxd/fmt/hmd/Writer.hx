@@ -21,6 +21,7 @@ class Writer {
 		case HasLod:
 		case HasCollider:
 		case HasColliders:
+		case HasCustomCollider:
 		}
 	}
 
@@ -55,6 +56,12 @@ class Writer {
 
 	inline function writeFloat( f : Float ) {
 		out.writeFloat( f == 0 ? 0 : f ); // prevent negative zero
+	}
+
+	function writeVector( p :h3d.Vector ) {
+		writeFloat(p.x);
+		writeFloat(p.y);
+		writeFloat(p.z);
 	}
 
 	function writePosition( p : Position, hasScale = true ) {
@@ -228,17 +235,47 @@ class Writer {
 		}
 
 		if ( d.colliders != null ) {
+			function writeCollider( c : Collider, withType : Bool ) {
+				var type = c.type;
+				if( withType )
+					out.writeByte(type);
+				switch( type ) {
+				case Mesh:
+					var c = Std.downcast(c, MeshCollider);
+					out.writeInt32(c.vertexCounts.length);
+					for ( v in c.vertexCounts )
+						out.writeInt32(v);
+					out.writeInt32(c.vertexPosition);
+					if ( c.indexCounts.length != c.vertexCounts.length )
+						throw "assert";
+					for ( i in c.indexCounts )
+						out.writeInt32(i);
+					out.writeInt32(c.indexPosition);
+				case Group:
+					var c = Std.downcast(c, GroupCollider);
+					out.writeInt32(c.colliders.length);
+					for( sub in c.colliders )
+						writeCollider(sub, withType);
+				case Sphere:
+					var c = Std.downcast(c, SphereCollider);
+					writeVector(c.position);
+					writeFloat(c.radius);
+				case Box:
+					var c = Std.downcast(c, BoxCollider);
+					writeVector(c.min);
+					writeVector(c.max);
+				case Capsule:
+					var c = Std.downcast(c, CapsuleCollider);
+					writeVector(c.point1);
+					writeVector(c.point2);
+					writeFloat(c.radius);
+				}
+			}
+
 			out.writeInt32(d.colliders.length);
+			var hasCustom = d.props != null && d.props.indexOf(HasCustomCollider) >= 0;
 			for ( c in d.colliders ) {
-				out.writeInt32(c.vertexCounts.length);
-				for ( v in c.vertexCounts )
-					out.writeInt32(v);
-				out.writeInt32(c.vertexPosition);
-				if ( c.indexCounts.length != c.vertexCounts.length )
-					throw "assert";
-				for ( i in c.indexCounts )
-					out.writeInt32(i);
-				out.writeInt32(c.indexPosition);
+				writeCollider(c, hasCustom);
 			}
 		}
 

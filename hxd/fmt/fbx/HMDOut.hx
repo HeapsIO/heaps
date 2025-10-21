@@ -10,6 +10,20 @@ typedef CollideParams = {
 	?maxSubdiv : Int,
 	?maxConvexHulls : Int,
 	?mesh : String,
+	?custom : Array<CustomColliderParams>,
+}
+
+typedef CustomColliderParams = {
+	type : CustomColliderType,
+	vec1 : h3d.Vector,
+	?vec2 : h3d.Vector,
+	?radius : Float,
+}
+
+enum abstract CustomColliderType(String) to String {
+	var Sphere;
+	var Box;
+	var Capsule;
 }
 
 class HMDOut extends BaseLibrary {
@@ -819,7 +833,7 @@ class HMDOut extends BaseLibrary {
 		return { lodLevel : -1, modelName : null };
 	}
 
-	function buildGeomCollider( d : hxd.fmt.hmd.Data, format : hxd.BufferFormat, vbuf : FloatBuffer, ibufs : Array<Array<Int>>, dataOut : haxe.io.BytesOutput ) {
+	function buildGeomCollider( d : hxd.fmt.hmd.Data, format : hxd.BufferFormat, vbuf : FloatBuffer, ibufs : Array<Array<Int>>, dataOut : haxe.io.BytesOutput ) : MeshCollider {
 		var vertexCount = Std.int(vbuf.length / format.stride);
 		var indexCount = 0;
 		for( idx in ibufs ) {
@@ -835,7 +849,7 @@ class HMDOut extends BaseLibrary {
 			}
 		}
 
-		var collider = new Collider();
+		var collider = new MeshCollider();
 		collider.vertexPosition = dataOut.length;
 		collider.vertexCounts = [vertexCount];
 		collider.indexCounts = [indexCount];
@@ -862,7 +876,7 @@ class HMDOut extends BaseLibrary {
 	}
 
 
-	function buildAutoColliders( d : hxd.fmt.hmd.Data, format : hxd.BufferFormat, vbuf : FloatBuffer, ibufs : Array<Array<Int>>, mids : Array<Int>, bounds : h3d.col.Bounds, generateCollides : CollideParams, dataOut : haxe.io.BytesOutput ) {
+	function buildAutoColliders( d : hxd.fmt.hmd.Data, format : hxd.BufferFormat, vbuf : FloatBuffer, ibufs : Array<Array<Int>>, mids : Array<Int>, bounds : h3d.col.Bounds, generateCollides : CollideParams, dataOut : haxe.io.BytesOutput ) : MeshCollider {
 		var maxConvexHulls = generateCollides.maxConvexHulls;
 		var dim = bounds.dimension();
 		var prec = Math.min(dim, generateCollides.precision);
@@ -1029,7 +1043,7 @@ class HMDOut extends BaseLibrary {
 		sys.FileSystem.deleteFile(outFile);
 		#end
 
-		var collider = new Collider();
+		var collider = new MeshCollider();
 		collider.vertexCounts = [];
 		collider.indexCounts = [];
 		var is32 = [];
@@ -1063,6 +1077,38 @@ class HMDOut extends BaseLibrary {
 		}
 
 		return collider;
+	}
+
+	function buildCustomColliders( d : hxd.fmt.hmd.Data, custom : Array<CustomColliderParams> ) : GroupCollider {
+		var group = new GroupCollider();
+		group.colliders = [];
+		for( cp in custom ) {
+			switch( cp.type ) {
+			case Sphere:
+				var c = new SphereCollider();
+				if( cp.vec1 == null )
+					throw "Invalid SphereCollider params";
+				c.position = cp.vec1;
+				c.radius = cp.radius;
+				group.colliders.push(c);
+			case Box:
+				var c = new BoxCollider();
+				if( cp.vec1 == null || cp.vec2 == null )
+					throw "Invalid BoxCollider params";
+				c.min = cp.vec1;
+				c.max = cp.vec2;
+				group.colliders.push(c);
+			case Capsule:
+				var c = new CapsuleCollider();
+				if( cp.vec1 == null || cp.vec2 == null )
+					throw "Invalid CapsuleCollider params";
+				c.point1 = cp.vec1;
+				c.point2 = cp.vec2;
+				c.radius = cp.radius;
+				group.colliders.push(c);
+			}
+		}
+		return group;
 	}
 
 	function addModels(includeGeometry) {
@@ -1430,7 +1476,7 @@ class HMDOut extends BaseLibrary {
 			for( idx => mc in mcs ) {
 				if( mc == null )
 					continue;
-				var collider = null;
+				var collider : Collider = null;
 				var collidersParams = mc;
 				if( mc.useDefault ) {
 					collidersParams = generateCollides;
@@ -1448,10 +1494,17 @@ class HMDOut extends BaseLibrary {
 						collider = buildAutoColliders(d, gdataCol.format, gdataCol.vbuf, gdataCol.ibufs, gdataCol.mids, geom.bounds, collidersParams, dataOut);
 					} else if( collidersParams.mesh != null ) {
 						collider = buildGeomCollider(d, gdataCol.format, gdataCol.vbuf, gdataCol.ibufs, dataOut);
+					} else if( collidersParams.custom != null ) {
+						collider = buildCustomColliders(d, collidersParams.custom);
 					}
 				}
 				if( collider != null ) {
 					var colliderId = d.colliders.length;
+					if( collider.type != Mesh ) {
+						if( d.props == null ) d.props = [];
+						if( !d.props.contains(HasCustomCollider) )
+							d.props.push(HasCustomCollider);
+					}
 					d.colliders.push(collider);
 					if( idx == 0 ) {
 						model.collider = colliderId;

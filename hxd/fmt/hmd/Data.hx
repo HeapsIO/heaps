@@ -14,9 +14,18 @@ enum Property<T> {
 	HasLod;
 	HasCollider;
 	HasColliders;
+	HasCustomCollider;
 }
 
 typedef Properties = Null<Array<Property<Dynamic>>>;
+
+enum abstract ColliderType(Int) from Int to Int {
+	var Mesh = 0;
+	var Group = 1;
+	var Sphere = 2;
+	var Box = 3;
+	var Capsule = 4;
+}
 
 class Position {
 	public var x : Float;
@@ -94,11 +103,48 @@ class BlendShape {
 }
 
 class Collider {
+	public var type : ColliderType;
+}
+
+class MeshCollider extends Collider {
 	public var vertexCounts : Array<Int>;
 	public var vertexPosition : DataPosition;
 	public var indexCounts : Array<Int>;
 	public var indexPosition : DataPosition;
 	public function new() {
+		type = Mesh;
+	}
+}
+
+class GroupCollider extends Collider {
+	public var colliders : Array<Collider>;
+	public function new() {
+		type = Group;
+	}
+}
+
+class SphereCollider extends Collider {
+	public var position : h3d.Vector;
+	public var radius : Float;
+	public function new() {
+		type = Sphere;
+	}
+}
+
+class BoxCollider extends Collider {
+	public var min : h3d.Vector;
+	public var max : h3d.Vector;
+	public function new() {
+		type = Box;
+	}
+}
+
+class CapsuleCollider extends Collider {
+	public var point1 : h3d.Vector;
+	public var point2 : h3d.Vector;
+	public var radius : Float;
+	public function new() {
+		type = Capsule;
 	}
 }
 
