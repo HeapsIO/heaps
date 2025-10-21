@@ -23,12 +23,20 @@ class Save {
 				throw "Invalid CRC";
 		}
 		var obj : Dynamic = haxe.Unserializer.run(data);
+		updateRec(obj, defValue);
+		return obj;
+	}
 
+	static function updateRec( obj : Dynamic, defValue : Dynamic ) {
 		// set all fields that were not set to default value (auto upgrade)
-		if( defValue != null && Reflect.isObject(obj) && Reflect.isObject(defValue) ) {
+		if( defValue != null && Type.typeof(obj) == TObject && Type.typeof(defValue) == TObject ) {
 			for( f in Reflect.fields(defValue) ) {
-				if( Reflect.hasField(obj, f) ) continue;
-				Reflect.setField(obj, f, Reflect.field(defValue,f));
+				var def : Dynamic = Reflect.field(defValue,f);
+				if( Reflect.hasField(obj, f) ) {
+					updateRec(Reflect.field(obj,f), def);
+					continue;
+				}
+				Reflect.setField(obj, f, def);
 			}
 		}
 		return obj;
