@@ -25,6 +25,7 @@ enum abstract ColliderType(Int) from Int to Int {
 	var Sphere = 2;
 	var Box = 3;
 	var Capsule = 4;
+	var Cylinder = 5;
 }
 
 class Position {
@@ -145,6 +146,15 @@ class CapsuleCollider extends Collider {
 	public var radius : Float;
 	public function new() {
 		type = Capsule;
+	}
+}
+
+class CylinderCollider extends Collider {
+	public var point1 : h3d.Vector;
+	public var point2 : h3d.Vector;
+	public var radius : Float;
+	public function new() {
+		type = Cylinder;
 	}
 }
 

@@ -269,6 +269,11 @@ class Writer {
 					writeVector(c.point1);
 					writeVector(c.point2);
 					writeFloat(c.radius);
+				case Cylinder:
+					var c = Std.downcast(c, CylinderCollider);
+					writeVector(c.point1);
+					writeVector(c.point2);
+					writeFloat(c.radius);
 				}
 			}
 

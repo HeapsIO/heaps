@@ -24,6 +24,7 @@ enum abstract CustomColliderType(String) to String {
 	var Sphere;
 	var Box;
 	var Capsule;
+	var Cylinder;
 }
 
 class HMDOut extends BaseLibrary {
@@ -1100,6 +1101,14 @@ class HMDOut extends BaseLibrary {
 				group.colliders.push(c);
 			case Capsule:
 				var c = new CapsuleCollider();
+				if( cp.vec1 == null || cp.vec2 == null )
+					throw "Invalid CapsuleCollider params";
+				c.point1 = cp.vec1;
+				c.point2 = cp.vec2;
+				c.radius = cp.radius;
+				group.colliders.push(c);
+			case Cylinder:
+				var c = new CylinderCollider();
 				if( cp.vec1 == null || cp.vec2 == null )
 					throw "Invalid CapsuleCollider params";
 				c.point1 = cp.vec1;

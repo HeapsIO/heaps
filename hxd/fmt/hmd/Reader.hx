@@ -317,6 +317,12 @@ class Reader {
 					c.point2 = readVector();
 					c.radius = i.readFloat();
 					return c;
+				case Cylinder:
+					var c = new CylinderCollider();
+					c.point1 = readVector();
+					c.point2 = readVector();
+					c.radius = i.readFloat();
+					return c;
 				}
 				throw "unknown collider type " + type;
 			}
