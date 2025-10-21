@@ -115,6 +115,10 @@ class Text extends Drawable {
 		Allow word wrapping.
 	**/
 	public var wordWrap(default,set) : Bool = true;
+	/**
+		Highlight RGB color. Alpha value is ignored.
+	**/
+	public var highlightColor: Int = 0xFFFFFF;
 
 	var glyphs : TileGroup;
 	var needsRebuild : Bool;
@@ -422,10 +426,6 @@ class Text extends Drawable {
 		return text.substr(0, Std.int(progress));
 	}
 
-	inline function rgb(r:Int, g:Int, b:Int):Int {
-		return (r << 16) | (g << 8) | b;
-	}
-
 	function initGlyphs( text : String, rebuild = true ) : Void {
 		if( rebuild ) glyphs.clear();
 		var x = 0., y = 0., xMax = 0., xMin = 0., yMin = 0., yMax = 0., prevChar = -1, linei = 0;
@@ -451,15 +451,16 @@ class Text extends Drawable {
 			x = 0;
 		}
 
+		glyphs.setDefaultColor(textColor);
 		var isHighlight = false;
 		for( i in 0...t.length ) {
 			var cc = StringTools.fastCodeAt(t, i);
 			if (cc == '#'.code) {
 				if (!isHighlight) {
-					glyphs.setDefaultColor(rgb(0, 0, 255));
+					glyphs.setDefaultColor(highlightColor);
 					isHighlight = true;
 				} else {
-					glyphs.setDefaultColor(rgb(255, 255, 255));
+					glyphs.setDefaultColor(textColor);
 					isHighlight = false;
 				}
 				continue;
