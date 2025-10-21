@@ -151,6 +151,7 @@ class RenderContext extends h3d.impl.RenderContext {
 		cameraStackIndex = 0;
 		filterStack = [];
 		filterStackIndex = 0;
+		globals.set("global.antiAliasing", 0);
 	}
 
 	override function dispose() {
