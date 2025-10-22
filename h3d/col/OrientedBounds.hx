@@ -51,6 +51,22 @@ class OrientedBounds extends Collider {
 		zz = m._33 * isz;
 	}
 
+	public function getMatrix() : h3d.Matrix {
+		var m = Matrix.I();
+		var s = new h3d.Vector(hx * 2.0, hy * 2.0, hz * 2.0);
+		m._11 = xx * s.x;
+		m._12 = xy * s.x;
+		m._13 = xz * s.x;
+		m._21 = yx * s.y;
+		m._22 = yy * s.y;
+		m._23 = yz * s.y;
+		m._31 = zx * s.z;
+		m._32 = zy * s.z;
+		m._33 = zz * s.z;
+		m.translate(centerX, centerY, centerZ);
+		return m;
+	}
+
 	public function setEulerAngles(x: Float, y: Float, z: Float) {
 		var cx = hxd.Math.cos(x); var sx = hxd.Math.sin(x);
 		var cy = hxd.Math.cos(y); var sy = hxd.Math.sin(y);
