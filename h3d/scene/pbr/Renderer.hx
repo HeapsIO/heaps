@@ -203,7 +203,7 @@ class Renderer extends h3d.scene.Renderer {
 		ctx.setGlobal("mainLightColor", defaultVec);
 		ctx.setGlobal("mainLightPower", 0);
 		ctx.setGlobal("mainLightPos", defaultVec);
-		ctx.setGlobal("mainLightDir", defaultVec);
+		ctx.setGlobal("mainLightDir", new h3d.Vector(0.0, 0.0, 1.0));
 		ctx.setGlobal("mainLightShadowMap", null);
 		ctx.setGlobal("mainLightViewProj", h3d.Matrix.I());
 	}
