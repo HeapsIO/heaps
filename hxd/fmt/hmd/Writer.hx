@@ -240,8 +240,8 @@ class Writer {
 				if( withType )
 					out.writeByte(type);
 				switch( type ) {
-				case Mesh:
-					var c = Std.downcast(c, MeshCollider);
+				case ConvexHulls:
+					var c = Std.downcast(c, ConvexHullsCollider);
 					out.writeInt32(c.vertexCounts.length);
 					for ( v in c.vertexCounts )
 						out.writeInt32(v);
@@ -250,6 +250,12 @@ class Writer {
 						throw "assert";
 					for ( i in c.indexCounts )
 						out.writeInt32(i);
+					out.writeInt32(c.indexPosition);
+				case Mesh:
+					var c = Std.downcast(c, MeshCollider);
+					out.writeInt32(c.vertexCount);
+					out.writeInt32(c.vertexPosition);
+					out.writeInt32(c.indexCount);
 					out.writeInt32(c.indexPosition);
 				case Group:
 					var c = Std.downcast(c, GroupCollider);

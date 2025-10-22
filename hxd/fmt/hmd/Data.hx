@@ -20,12 +20,13 @@ enum Property<T> {
 typedef Properties = Null<Array<Property<Dynamic>>>;
 
 enum abstract ColliderType(Int) from Int to Int {
-	var Mesh = 0;
-	var Group = 1;
-	var Sphere = 2;
-	var Box = 3;
-	var Capsule = 4;
-	var Cylinder = 5;
+	var ConvexHulls = 0;
+	var Mesh = 1;
+	var Group = 2;
+	var Sphere = 3;
+	var Box = 4;
+	var Capsule = 5;
+	var Cylinder = 6;
 }
 
 class Position {
@@ -107,10 +108,20 @@ class Collider {
 	public var type : ColliderType;
 }
 
-class MeshCollider extends Collider {
+class ConvexHullsCollider extends Collider {
 	public var vertexCounts : Array<Int>;
 	public var vertexPosition : DataPosition;
 	public var indexCounts : Array<Int>;
+	public var indexPosition : DataPosition;
+	public function new() {
+		type = ConvexHulls;
+	}
+}
+
+class MeshCollider extends Collider {
+	public var vertexCount : Int;
+	public var vertexPosition : DataPosition;
+	public var indexCount : Int;
 	public var indexPosition : DataPosition;
 	public function new() {
 		type = Mesh;

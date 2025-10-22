@@ -28,9 +28,9 @@ class ColliderData {
 
 	function getColliderFromData( data : hxd.fmt.hmd.Data.Collider ) : h3d.col.Collider {
 		switch( data.type ) {
-		case Mesh:
-			var data = Std.downcast(data, hxd.fmt.hmd.Data.MeshCollider);
-			var buffers = getBuffersFromMesh(data);
+		case ConvexHulls:
+			var data = Std.downcast(data, hxd.fmt.hmd.Data.ConvexHullsCollider);
+			var buffers = getBuffersFromConvexHulls(data);
 			var bounds = new h3d.col.Bounds();
 			var hulls : Array<h3d.col.Collider> = [];
 			hulls.resize(buffers.length);
@@ -42,6 +42,12 @@ class ColliderData {
 			}
 			var convexHulls = new h3d.col.Collider.GroupCollider(hulls);
 			return new h3d.col.Collider.OptimizedCollider(bounds, convexHulls);
+		case Mesh:
+			var data = Std.downcast(data, hxd.fmt.hmd.Data.MeshCollider);
+			var buf = getBufferFromMesh(data.vertexCount, data.vertexPosition, data.indexCount, data.indexPosition);
+			var p = new h3d.col.PolygonBuffer();
+			p.setData(buf.vertexes, buf.indexes, 0, -1, false);
+			return new h3d.col.Collider.OptimizedCollider(p.getBounds(), p);
 		case Group:
 			var data = Std.downcast(data, hxd.fmt.hmd.Data.GroupCollider);
 			var shapes : Array<h3d.col.Collider> = [];
@@ -67,43 +73,52 @@ class ColliderData {
 		return null;
 	}
 
-	function getBuffersFromMesh( data : hxd.fmt.hmd.Data.MeshCollider ) : Array<GeometryBuffer> {
-		var vertexPosition = hmdModel.dataPosition + data.vertexPosition;
-		var indexPosition = hmdModel.dataPosition + data.indexPosition;
+	function getBufferFromMesh( vertexCount : Int, vertexPosition : Int, indexCount : Int, indexPosition : Int) : GeometryBuffer {
+		var vertexPosition = hmdModel.dataPosition + vertexPosition;
+		var indexPosition = hmdModel.dataPosition + indexPosition;
+		var buf = new GeometryBuffer();
+		var is32 = vertexCount > 0x10000;
+		var vSize = vertexCount * 3 * 4;
+
+		var vertexBytes = haxe.io.Bytes.alloc(vSize);
+		hmdModel.lib.resource.entry.readBytes(vertexBytes, 0, vertexPosition, vSize);
+
+		var buf = new GeometryBuffer();
+		buf.vertexes = new haxe.ds.Vector(3 * vertexCount);
+		for ( i in 0...3 * vertexCount)
+			buf.vertexes[i] = vertexBytes.getFloat(i * 4);
+
+		var iSize = indexCount * (is32 ? 4 : 2);
+		var indexBytes = haxe.io.Bytes.alloc(iSize);
+		hmdModel.lib.resource.entry.readBytes(indexBytes, 0, indexPosition, iSize);
+
+		buf.indexes = new haxe.ds.Vector(indexCount);
+		var stride = is32 ? 4 : 2;
+		if ( is32 )
+			for ( i in 0...indexCount )
+				buf.indexes[i] = indexBytes.getInt32(i * stride);
+		else
+			for ( i in 0...indexCount )
+				buf.indexes[i] = indexBytes.getUInt16(i * stride);
+
+		return buf;
+	}
+
+	function getBuffersFromConvexHulls( data : hxd.fmt.hmd.Data.ConvexHullsCollider ) : Array<GeometryBuffer> {
+		var vertexPosition = data.vertexPosition;
+		var indexPosition = data.indexPosition;
 
 		var buffers = [];
 		for ( i in 0...data.vertexCounts.length ) {
 			var vertexCount = data.vertexCounts[i];
 			var indexCount = data.indexCounts[i];
 
-			var is32 = vertexCount > 0x10000;
-			var vSize = vertexCount * 3 * 4;
-
-			var vertexBytes = haxe.io.Bytes.alloc(vSize);
-			hmdModel.lib.resource.entry.readBytes(vertexBytes, 0, vertexPosition, vSize);
-
-			var buf = new GeometryBuffer();
-			buf.vertexes = new haxe.ds.Vector(3 * vertexCount);
-			for ( i in 0...3 * vertexCount)
-				buf.vertexes[i] = vertexBytes.getFloat(i * 4);
-
-			var iSize = indexCount * (is32 ? 4 : 2);
-			var indexBytes = haxe.io.Bytes.alloc(iSize);
-			hmdModel.lib.resource.entry.readBytes(indexBytes, 0, indexPosition, iSize);
-
-			buf.indexes = new haxe.ds.Vector(indexCount);
-			var stride = is32 ? 4 : 2;
-			if ( is32 )
-				for ( i in 0...indexCount )
-					buf.indexes[i] = indexBytes.getInt32(i * stride);
-			else
-				for ( i in 0...indexCount )
-					buf.indexes[i] = indexBytes.getUInt16(i * stride);
-
+			var buf = getBufferFromMesh(vertexCount, vertexPosition, indexCount, indexPosition);
 			buffers.push(buf);
 
-			vertexPosition += vSize;
-			indexPosition += iSize;
+			var is32 = vertexCount > 0x10000;
+			vertexPosition += vertexCount * 3 * 4;
+			indexPosition += indexCount * (is32 ? 4 : 2);
 		}
 		return buffers;
 	}

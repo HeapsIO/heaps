@@ -286,14 +286,21 @@ class Reader {
 
 		if ( hasCollider ) {
 			function readCollider( hasType : Bool ) : Collider {
-				var type : ColliderType = hasType ? i.readByte() : Mesh;
+				var type : ColliderType = hasType ? i.readByte() : ConvexHulls;
 				switch( type ) {
-				case Mesh:
-					var c = new MeshCollider();
+				case ConvexHulls:
+					var c = new ConvexHullsCollider();
 					var n = i.readInt32();
 					c.vertexCounts = [for( v in 0...n ) i.readInt32()];
 					c.vertexPosition = i.readInt32();
 					c.indexCounts = [for( v in 0...n ) i.readInt32()];
+					c.indexPosition = i.readInt32();
+					return c;
+				case Mesh:
+					var c = new MeshCollider();
+					c.vertexCount = i.readInt32();
+					c.vertexPosition = i.readInt32();
+					c.indexCount = i.readInt32();
 					c.indexPosition = i.readInt32();
 					return c;
 				case Group:

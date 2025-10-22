@@ -852,8 +852,8 @@ class HMDOut extends BaseLibrary {
 
 		var collider = new MeshCollider();
 		collider.vertexPosition = dataOut.length;
-		collider.vertexCounts = [vertexCount];
-		collider.indexCounts = [indexCount];
+		collider.vertexCount = vertexCount;
+		collider.indexCount = indexCount;
 		iterVertex(function(x, y, z) {
 			dataOut.writeFloat(x);
 			dataOut.writeFloat(y);
@@ -877,7 +877,7 @@ class HMDOut extends BaseLibrary {
 	}
 
 
-	function buildAutoColliders( d : hxd.fmt.hmd.Data, format : hxd.BufferFormat, vbuf : FloatBuffer, ibufs : Array<Array<Int>>, mids : Array<Int>, bounds : h3d.col.Bounds, generateCollides : CollideParams, dataOut : haxe.io.BytesOutput ) : MeshCollider {
+	function buildAutoColliders( d : hxd.fmt.hmd.Data, format : hxd.BufferFormat, vbuf : FloatBuffer, ibufs : Array<Array<Int>>, mids : Array<Int>, bounds : h3d.col.Bounds, generateCollides : CollideParams, dataOut : haxe.io.BytesOutput ) : ConvexHullsCollider {
 		var maxConvexHulls = generateCollides.maxConvexHulls;
 		var dim = bounds.dimension();
 		var prec = Math.min(dim, generateCollides.precision);
@@ -1044,7 +1044,7 @@ class HMDOut extends BaseLibrary {
 		sys.FileSystem.deleteFile(outFile);
 		#end
 
-		var collider = new MeshCollider();
+		var collider = new ConvexHullsCollider();
 		collider.vertexCounts = [];
 		collider.indexCounts = [];
 		var is32 = [];
@@ -1509,7 +1509,7 @@ class HMDOut extends BaseLibrary {
 				}
 				if( collider != null ) {
 					var colliderId = d.colliders.length;
-					if( collider.type != Mesh ) {
+					if( collider.type != ConvexHulls ) {
 						if( d.props == null ) d.props = [];
 						if( !d.props.contains(HasCustomCollider) )
 							d.props.push(HasCustomCollider);

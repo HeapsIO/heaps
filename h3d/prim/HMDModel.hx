@@ -277,8 +277,20 @@ class HMDModel extends MeshPrimitive {
 		curMaterial = -1;
 	}
 
-	function initCollider( poly : h3d.col.PolygonBuffer ) {
+	override function getCollider() {
+		if( collider != null )
+			return collider;
 		if ( colliderData == null ) {
+			var poly = new h3d.col.PolygonBuffer();
+			poly.source = {
+				entry : lib.resource.entry,
+				geometryName : null,
+			};
+			for( h in lib.header.models )
+				if( lib.header.geometries[h.geometry] == data ) {
+					poly.source.geometryName = h.name;
+					break;
+				}
 			var sphere = data.bounds.toSphere();
 			var buf = lib.getBuffers(data, hxd.BufferFormat.POS3D);
 			poly.setData(buf.vertexes, buf.indexes);
@@ -287,22 +299,6 @@ class HMDModel extends MeshPrimitive {
 		} else {
 			collider = colliderData.getCollider();
 		}
-	}
-
-	override function getCollider() {
-		if( collider != null )
-			return collider;
-		var poly = new h3d.col.PolygonBuffer();
-		poly.source = {
-			entry : lib.resource.entry,
-			geometryName : null,
-		};
-		for( h in lib.header.models )
-			if( lib.header.geometries[h.geometry] == data ) {
-				poly.source.geometryName = h.name;
-				break;
-			}
-		initCollider(poly);
 		return collider;
 	}
 

@@ -6,16 +6,18 @@ class PolygonBuffer extends Collider {
 	var indexes : haxe.ds.Vector<Int>;
 	var startIndex : Int;
 	var triCount : Int;
+	public var isConvex : Bool;
 	public var source : { entry : hxd.fs.FileEntry, geometryName : String };
 
 	public function new() {
 	}
 
-	public function setData( buffer, indexes, startIndex = 0, triCount = -1 ) {
+	public function setData( buffer, indexes, startIndex = 0, triCount = -1, isConvex = true ) {
 		this.buffer = buffer;
 		this.indexes = indexes;
 		this.startIndex = startIndex;
 		this.triCount = triCount >= 0 ? triCount : Std.int((indexes.length - startIndex) / 3);
+		this.isConvex = isConvex;
 	}
 
 	public function getBounds() {
@@ -154,7 +156,7 @@ class PolygonBuffer extends Collider {
 					c = c3;
 				}
 			}
-			
+
 			var distSq = p.distanceSq(c);
 			if ( distSq < minDistSq ) {
 				closest = c;
