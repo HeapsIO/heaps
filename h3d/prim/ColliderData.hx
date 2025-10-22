@@ -62,13 +62,24 @@ class ColliderData {
 			return new h3d.col.Sphere(p.x, p.y, p.z, data.radius);
 		case Box:
 			var data = Std.downcast(data, hxd.fmt.hmd.Data.BoxCollider);
-			return h3d.col.Bounds.fromPoints(data.min, data.max);
+			var mat = Matrix.I();
+			var size = data.halfExtent * 2;
+			mat.scale(size.x, size.y, size.z);
+			mat.rotate(data.rotation.x, data.rotation.y, data.rotation.z);
+			mat.translate(data.position.x, data.position.y, data.position.z);
+			var box = new h3d.col.OrientedBounds();
+			box.setMatrix(mat);
+			return box;
 		case Capsule:
 			var data = Std.downcast(data, hxd.fmt.hmd.Data.CapsuleCollider);
-			return new h3d.col.Capsule(data.point1, data.point2, data.radius);
+			var point1 = data.position + data.halfExtent;
+			var point2 = data.position - data.halfExtent;
+			return new h3d.col.Capsule(point1, point2, data.radius);
 		case Cylinder:
 			var data = Std.downcast(data, hxd.fmt.hmd.Data.CylinderCollider);
-			return new h3d.col.Cylinder(data.point1, data.point2, data.radius);
+			var point1 = data.position + data.halfExtent;
+			var point2 = data.position - data.halfExtent;
+			return new h3d.col.Cylinder(point1, point2, data.radius);
 		}
 		return null;
 	}

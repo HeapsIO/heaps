@@ -144,16 +144,17 @@ class SphereCollider extends Collider {
 }
 
 class BoxCollider extends Collider {
-	public var min : h3d.Vector;
-	public var max : h3d.Vector;
+	public var position : h3d.Vector;
+	public var halfExtent : h3d.Vector;
+	public var rotation : h3d.Vector;
 	public function new() {
 		type = Box;
 	}
 }
 
 class CapsuleCollider extends Collider {
-	public var point1 : h3d.Vector;
-	public var point2 : h3d.Vector;
+	public var position : h3d.Vector;
+	public var halfExtent : h3d.Vector;
 	public var radius : Float;
 	public function new() {
 		type = Capsule;
@@ -161,8 +162,8 @@ class CapsuleCollider extends Collider {
 }
 
 class CylinderCollider extends Collider {
-	public var point1 : h3d.Vector;
-	public var point2 : h3d.Vector;
+	public var position : h3d.Vector;
+	public var halfExtent : h3d.Vector;
 	public var radius : Float;
 	public function new() {
 		type = Cylinder;

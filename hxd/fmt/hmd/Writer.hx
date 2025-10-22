@@ -268,17 +268,18 @@ class Writer {
 					writeFloat(c.radius);
 				case Box:
 					var c = Std.downcast(c, BoxCollider);
-					writeVector(c.min);
-					writeVector(c.max);
+					writeVector(c.position);
+					writeVector(c.halfExtent);
+					writeVector(c.rotation);
 				case Capsule:
 					var c = Std.downcast(c, CapsuleCollider);
-					writeVector(c.point1);
-					writeVector(c.point2);
+					writeVector(c.position);
+					writeVector(c.halfExtent);
 					writeFloat(c.radius);
 				case Cylinder:
 					var c = Std.downcast(c, CylinderCollider);
-					writeVector(c.point1);
-					writeVector(c.point2);
+					writeVector(c.position);
+					writeVector(c.halfExtent);
 					writeFloat(c.radius);
 				}
 			}

@@ -10,17 +10,18 @@ typedef CollideParams = {
 	?maxSubdiv : Int,
 	?maxConvexHulls : Int,
 	?mesh : String,
-	?custom : Array<CustomColliderParams>,
+	?shapes : Array<ShapeColliderParams>,
 }
 
-typedef CustomColliderParams = {
-	type : CustomColliderType,
-	vec1 : h3d.Vector,
-	?vec2 : h3d.Vector,
+typedef ShapeColliderParams = {
+	type : ShapeColliderType,
+	position : h3d.Vector,
+	?halfExtent : h3d.Vector,
+	?rotation : h3d.Vector,
 	?radius : Float,
 }
 
-enum abstract CustomColliderType(String) to String {
+enum abstract ShapeColliderType(String) to String {
 	var Sphere;
 	var Box;
 	var Capsule;
@@ -1080,39 +1081,40 @@ class HMDOut extends BaseLibrary {
 		return collider;
 	}
 
-	function buildCustomColliders( d : hxd.fmt.hmd.Data, custom : Array<CustomColliderParams> ) : GroupCollider {
+	function buildShapeColliders( d : hxd.fmt.hmd.Data, shapes : Array<ShapeColliderParams> ) : GroupCollider {
 		var group = new GroupCollider();
 		group.colliders = [];
-		for( cp in custom ) {
+		for( cp in shapes ) {
 			switch( cp.type ) {
 			case Sphere:
 				var c = new SphereCollider();
-				if( cp.vec1 == null )
+				if( cp.position == null )
 					throw "Invalid SphereCollider params";
-				c.position = cp.vec1;
+				c.position = cp.position;
 				c.radius = cp.radius;
 				group.colliders.push(c);
 			case Box:
 				var c = new BoxCollider();
-				if( cp.vec1 == null || cp.vec2 == null )
+				if( cp.position == null || cp.halfExtent == null )
 					throw "Invalid BoxCollider params";
-				c.min = cp.vec1;
-				c.max = cp.vec2;
+				c.position = cp.position;
+				c.halfExtent = cp.halfExtent;
+				c.rotation = cp.rotation;
 				group.colliders.push(c);
 			case Capsule:
 				var c = new CapsuleCollider();
-				if( cp.vec1 == null || cp.vec2 == null )
+				if( cp.position == null || cp.halfExtent == null )
 					throw "Invalid CapsuleCollider params";
-				c.point1 = cp.vec1;
-				c.point2 = cp.vec2;
+				c.position = cp.position;
+				c.halfExtent = cp.halfExtent;
 				c.radius = cp.radius;
 				group.colliders.push(c);
 			case Cylinder:
 				var c = new CylinderCollider();
-				if( cp.vec1 == null || cp.vec2 == null )
+				if( cp.position == null || cp.halfExtent == null )
 					throw "Invalid CapsuleCollider params";
-				c.point1 = cp.vec1;
-				c.point2 = cp.vec2;
+				c.position = cp.position;
+				c.halfExtent = cp.halfExtent;
 				c.radius = cp.radius;
 				group.colliders.push(c);
 			}
@@ -1503,8 +1505,8 @@ class HMDOut extends BaseLibrary {
 						collider = buildAutoColliders(d, gdataCol.format, gdataCol.vbuf, gdataCol.ibufs, gdataCol.mids, geom.bounds, collidersParams, dataOut);
 					} else if( collidersParams.mesh != null ) {
 						collider = buildGeomCollider(d, gdataCol.format, gdataCol.vbuf, gdataCol.ibufs, dataOut);
-					} else if( collidersParams.custom != null ) {
-						collider = buildCustomColliders(d, collidersParams.custom);
+					} else if( collidersParams.shapes != null ) {
+						collider = buildShapeColliders(d, collidersParams.shapes);
 					}
 				}
 				if( collider != null ) {

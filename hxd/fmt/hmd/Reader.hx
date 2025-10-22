@@ -315,19 +315,20 @@ class Reader {
 					return c;
 				case Box:
 					var c = new BoxCollider();
-					c.min = readVector();
-					c.max = readVector();
+					c.position = readVector();
+					c.halfExtent = readVector();
+					c.rotation = readVector();
 					return c;
 				case Capsule:
 					var c = new CapsuleCollider();
-					c.point1 = readVector();
-					c.point2 = readVector();
+					c.position = readVector();
+					c.halfExtent = readVector();
 					c.radius = i.readFloat();
 					return c;
 				case Cylinder:
 					var c = new CylinderCollider();
-					c.point1 = readVector();
-					c.point2 = readVector();
+					c.position = readVector();
+					c.halfExtent = readVector();
 					c.radius = i.readFloat();
 					return c;
 				}
