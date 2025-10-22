@@ -19,7 +19,6 @@ class ModelDatabase {
 	static var FILE_NAME = "model.props";
 
 	static var LOD_CONFIG = "lodConfig";
-	static var LOD_CONFIG_FIELD = "lods.screenRatio";
 	static var DYN_BONES_CONFIG = "dynamicBones";
 
 	public static dynamic function customizeLodConfig(c : Array<Float>) {

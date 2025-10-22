@@ -37,6 +37,8 @@ class GeometryBuffer {
 	}
 }
 
+typedef ModelProps = {lodConfig: Array<Float>};
+
 class Library {
 
 	public var resource(default,null) : hxd.res.Resource;
@@ -45,9 +47,11 @@ class Library {
 	var cachedAnimations : Map<String, h3d.anim.Animation>;
 	var cachedSkin : Map<String, h3d.anim.Skin>;
 
-	static var baseLodConfig = [ 0.5, 0.2, 0.01];
+	static var baseModelProps : ModelProps = {
+		lodConfig: [ 0.5, 0.2, 0.01]
+	};
 	#if (sys || nodejs)
-	static var defaultLodConfigs : Map<String, hxd.fs.FileConverter.ConvertConfig> = new Map();
+	static var defaultLodConfigs : Map<String, ModelProps> = new Map();
 	static var defaultDynamicBonesConfigs : Map<String, hxd.fs.FileConverter.ConvertConfig> = new Map();
 	#end
 
@@ -881,22 +885,15 @@ class Library {
 
 	public static function getDefaultLodConfig( dir : String ) : Array<Float> {
 		var fs = Std.downcast(hxd.res.Loader.currentInstance.fs, hxd.fs.LocalFileSystem);
-		var c = baseLodConfig;
+		var c = baseModelProps.lodConfig;
 		#if (sys || nodejs)
 		if (fs != null) {
-			var conf : hxd.fs.FileConverter.ConvertConfig = null;
-
-			function getConvertConf(obj : Dynamic) : hxd.fs.FileConverter.ConvertConfig {
-				var defObj = {};
-				Reflect.setField(defObj, @:privateAccess h3d.prim.ModelDatabase.LOD_CONFIG_FIELD, obj);
-				return @:privateAccess fs.convert.makeConfig(defObj);
+			function loadConf(parent: Dynamic, obj: Dynamic) {
+				return @:privateAccess fs.convert.mergeRec(parent, Reflect.field(obj, "default"));
 			}
 
-			conf = @:privateAccess fs.convert.getConfig(defaultLodConfigs, getConvertConf(baseLodConfig), dir, function(fullObj) {
-				return fs.convert.makeConfig(fullObj);
-			});
-
-			c = Reflect.field(conf.obj, @:privateAccess h3d.prim.ModelDatabase.LOD_CONFIG_FIELD);
+			var conf : ModelProps = @:privateAccess fs.convert.getConfig(defaultLodConfigs, baseModelProps, dir, loadConf, "model.props");
+			c = conf.lodConfig;
 		}
 		#end
 		c = h3d.prim.ModelDatabase.customizeLodConfig(c);
@@ -916,7 +913,8 @@ class Library {
 				return @:privateAccess fs.convert.makeConfig(defObj);
 			}
 
-			conf = @:privateAccess fs.convert.getConfig(defaultDynamicBonesConfigs, getConvertConf([]), dir, function(fullObj) {
+			conf = @:privateAccess fs.convert.getConfig(defaultDynamicBonesConfigs, getConvertConf([]), dir, function(parent, obj) {
+				var fullObj = @:privateAccess fs.convert.mergeRec(parent.obj, obj);
 				return fs.convert.makeConfig(fullObj);
 			});
 
