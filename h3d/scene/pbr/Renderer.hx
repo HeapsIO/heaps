@@ -198,6 +198,14 @@ class Renderer extends h3d.scene.Renderer {
 			pbrLightPass.enableLights = true;
 		}
 		ctx.pbrLightPass = pbrLightPass;
+
+		var defaultVec = new h3d.Vector(0.0, 0.0, 0.0);
+		ctx.setGlobal("mainLightColor", defaultVec);
+		ctx.setGlobal("mainLightPower", 0);
+		ctx.setGlobal("mainLightPos", defaultVec);
+		ctx.setGlobal("mainLightDir", defaultVec);
+		ctx.setGlobal("mainLightShadowMap", null);
+		ctx.setGlobal("mainLightViewProj", h3d.Matrix.I());
 	}
 
 	inline function cullPasses( passes : h3d.pass.PassList, f : h3d.col.Collider -> Bool ) {
