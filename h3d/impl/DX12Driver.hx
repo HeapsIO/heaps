@@ -761,23 +761,25 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	function getDepthView( depthBuffer : h3d.mat.Texture, readOnly : Bool ) {
-		var res = depthBuffer == null ? frame.depthBuffer : depthBuffer.t.res;
+		if ( depthBuffer == null )
+			depthBuffer = getDefaultDepthBuffer();
 		var depthView = depthStenciViews.alloc(1);
 		var viewDesc = new DepthStencilViewDesc();
 		viewDesc.arraySize = 1;
 		viewDesc.mipSlice = 0;
 		viewDesc.firstArraySlice = 0;
-		viewDesc.format = (depthBuffer == null) ? D24_UNORM_S8_UINT : toDxgiDepthFormat(depthBuffer.format);
+		viewDesc.format = toDxgiDepthFormat(depthBuffer.format);
 		viewDesc.viewDimension = TEXTURE2D;
 		if ( readOnly ) {
 			viewDesc.flags.set(READ_ONLY_DEPTH);
 			viewDesc.flags.set(READ_ONLY_STENCIL);
 		}
-		Driver.createDepthStencilView(res, viewDesc, depthView);
+		Driver.createDepthStencilView(depthBuffer.t.res, viewDesc, depthView);
 		var depths = tmp.depthStencils;
 		depths[0] = depthView;
 		depthEnabled = true;
-		if ( depthBuffer != null && (depthBuffer.t.state & ( DEPTH_READ | DEPTH_WRITE ) == COMMON) )
+		var acceptedState = readOnly ? DEPTH_READ | DEPTH_WRITE : DEPTH_WRITE;
+		if ( depthBuffer.t.state & acceptedState == COMMON )
 			transition(depthBuffer.t, readOnly ? DEPTH_READ : DEPTH_WRITE);
 		return depths;
 	}
