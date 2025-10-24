@@ -12,7 +12,7 @@ class PolygonBuffer extends Collider {
 	public function new() {
 	}
 
-	public function setData( buffer, indexes, startIndex = 0, triCount = -1, isConvex = true ) {
+	public function setData( buffer, indexes, startIndex = 0, triCount = -1, isConvex = false ) {
 		this.buffer = buffer;
 		this.indexes = indexes;
 		this.startIndex = startIndex;

@@ -36,7 +36,7 @@ class ColliderData {
 			hulls.resize(buffers.length);
 			for ( i => buf in buffers ) {
 				var p = new h3d.col.PolygonBuffer();
-				p.setData(buf.vertexes, buf.indexes);
+				p.setData(buf.vertexes, buf.indexes, 0, -1, true);
 				hulls[i] = p;
 				bounds.add(p.getBounds());
 			}
@@ -46,7 +46,7 @@ class ColliderData {
 			var data = Std.downcast(data, hxd.fmt.hmd.Data.MeshCollider);
 			var buf = getBufferFromMesh(data.vertexCount, data.vertexPosition, data.indexCount, data.indexPosition);
 			var p = new h3d.col.PolygonBuffer();
-			p.setData(buf.vertexes, buf.indexes, 0, -1, false);
+			p.setData(buf.vertexes, buf.indexes);
 			return new h3d.col.Collider.OptimizedCollider(p.getBounds(), p);
 		case Group:
 			var data = Std.downcast(data, hxd.fmt.hmd.Data.GroupCollider);
