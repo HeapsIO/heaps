@@ -341,8 +341,7 @@ class Skin extends MultiMaterial {
 		s.setSkinData(skinData);
 
 		s.jointsData = [];
-		for (jData in jointsData)
-			s.jointsData.push(Reflect.copy(jData));
+		s.makeJointsData();
 
 		return s;
 	}
@@ -615,5 +614,6 @@ class Skin extends MultiMaterial {
 			primitive.render(ctx.engine);
 		}
 	}
+
 
 }
