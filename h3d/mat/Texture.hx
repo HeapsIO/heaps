@@ -243,14 +243,18 @@ class Texture {
 		var color = new h3d.Vector4(r,g,b,a);
 		if( layer < 0 ) {
 			for( i in 0...layerCount ) {
-				engine.pushTarget(this, i);
+				for ( j in 0...mipLevels ) {
+					engine.pushTarget(this, i, j);
+					engine.clearF(color);
+					engine.popTarget();
+				}
+			}
+		} else {
+			for ( i in 0...mipLevels ) {
+				engine.pushTarget(this, layer, i);
 				engine.clearF(color);
 				engine.popTarget();
 			}
-		} else {
-			engine.pushTarget(this, layer);
-			engine.clearF(color);
-			engine.popTarget();
 		}
 	}
 
@@ -262,14 +266,18 @@ class Texture {
 			color |= Std.int(hxd.Math.clamp(alpha)*255) << 24;
 			if( layer < 0 ) {
 				for( i in 0...layerCount ) {
-					engine.pushTarget(this, i);
+					for ( j in 0...mipLevels ) {
+						engine.pushTarget(this, i, j);
+						engine.clear(color);
+						engine.popTarget();
+					}
+				}
+			} else {
+				for ( i in 0...mipLevels ) {
+					engine.pushTarget(this, layer, i);
 					engine.clear(color);
 					engine.popTarget();
 				}
-			} else {
-				engine.pushTarget(this, layer);
-				engine.clear(color);
-				engine.popTarget();
 			}
 		} else {
 			var p = hxd.Pixels.alloc(width, height, nativeFormat);
