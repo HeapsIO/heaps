@@ -339,10 +339,6 @@ class Skin extends MultiMaterial {
 		var s = o == null ? new Skin(null,materials.copy()) : cast o;
 		super.clone(s);
 		s.setSkinData(skinData);
-
-		s.jointsData = [];
-		s.makeJointsData();
-
 		return s;
 	}
 
@@ -616,4 +612,3 @@ class Skin extends MultiMaterial {
 	}
 
 }
-
