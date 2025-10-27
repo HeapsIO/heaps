@@ -481,6 +481,7 @@ class Renderer extends h3d.scene.Renderer {
 		ctx.setGlobal("ldrMap", textures.ldr);
 		ctx.setGlobal("velocity", textures.velocity);
 		ctx.setGlobal("global.time", ctx.time);
+		ctx.setGlobal("DIFFUSE_ONLY", renderMode == LightProbe);
 		if(ctx.camera != null){
 			ctx.setGlobal("camera.position", ctx.camera.pos);
 			ctx.setGlobal("camera.inverseViewProj", ctx.camera.getInverseViewProj());
