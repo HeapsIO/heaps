@@ -51,6 +51,8 @@ class Camera {
 	public var jitterOffsetX : Float = 0.;
 	public var jitterOffsetY : Float = 0.;
 
+	public var reverseDepth = false;
+
 	var minv : Matrix;
 	var mcamInv : Matrix;
 	var mprojInv : Matrix;
@@ -204,14 +206,13 @@ class Camera {
 	**/
 
 	inline public function getUp() : h3d.Vector {
-		var up = new h3d.Vector(); 
+		var up = new h3d.Vector();
 		if ( directions == null ) {
 			directions = new h3d.Matrix();
 			directions._44 = 0;
 		}
 		if ( directions._44 == 0 )
 			calcDirections();
-		
 		up.x = directions._31;
 		up.y = directions._32;
 		up.z = directions._33;
@@ -418,9 +419,9 @@ class Camera {
 			var scale = zoom / Math.tan(halfFovX);
 			m._11 = scale;
 			m._22 = scale * screenRatio;
-			m._33 = zFar / (zFar - zNear);
+			m._33 = reverseDepth ? -zNear / (zFar - zNear) : zFar / (zFar - zNear);
 			m._34 = 1;
-			m._43 = -(zNear * zFar) / (zFar - zNear);
+			m._43 = reverseDepth ? (zNear * zFar) / (zFar - zNear) : -(zNear * zFar) / (zFar - zNear);
 
 			m._31 = jitterOffsetX;
 			m._32 = jitterOffsetY;
@@ -502,6 +503,8 @@ class Camera {
 			follow = null;
 		viewX = cam.viewX;
 		viewY = cam.viewY;
+		rightHanded = cam.rightHanded;
+		reverseDepth = cam.reverseDepth;
 		update();
 	}
 

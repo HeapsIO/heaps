@@ -86,14 +86,14 @@ class Text extends Drawable {
 	/**
 		Calculated text width. Can exceed maxWidth in certain cases.
 	**/
-	public var textWidth(get, null) : Float;
+	public var textWidth(get, never) : Float;
 	/**
 		Calculated text height.
 
 		Not a completely precise text metric and increments in the `Font.lineHeight` steps.
 		In `HtmlText`, can be increased by various values depending on the active line font and `HtmlText.lineHeightMode` value.
 	**/
-	public var textHeight(get, null) : Float;
+	public var textHeight(get, never) : Float;
 	/**
 		Text align rules dictate how the text lines are positioned.
 		See `Align` for specific details on each alignment mode.
@@ -331,6 +331,7 @@ class Text extends Drawable {
 	**/
 	@:dox(show)
 	function splitRawText( text : String, leftMargin = 0., afterData = 0., ?font : Font, ?sizes:Array<Float>, ?prevChar:Int = -1 ) {
+		var prevChar = prevChar ?? -1;
 		var maxWidth = realMaxWidth;
 		if( maxWidth < 0 ) {
 			if ( sizes == null )

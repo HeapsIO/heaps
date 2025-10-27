@@ -54,6 +54,8 @@ class IrradShader extends IrradBase {
 
 		@param var hdrMax : Float;
 
+		@:import h3d.shader.ColorSpaces;
+
 		function cosineWeightedSampling( p : Vec2, n : Vec3 ) : Vec3 {
 			var sq = sqrt(1 - p.x);
 			var alpha = 2 * PI * p.y;
@@ -76,7 +78,7 @@ class IrradShader extends IrradBase {
 		}
 
 		function gammaCorrect( color : Vec3 ) : Vec3 {
-			return isSRGB ? color : color.pow(vec3(2.2));
+			return isSRGB ? color : srgb2linear(color);
 		}
 
 		function fragment() {
@@ -97,6 +99,8 @@ class IrradShader extends IrradBase {
 				var amount = n.dot(l).saturate();
 				if( amount > 0 ) {
 					var envColor = gammaCorrect(min(envMap.get(l).rgb, hdrMax));
+					if ( !isSpecular )
+						amount = 1.0;
 					color += envColor * amount;
 					totalWeight += amount;
 				}

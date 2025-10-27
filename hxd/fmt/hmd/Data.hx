@@ -13,6 +13,7 @@ enum Property<T> {
 	FourBonesByVertex;
 	HasLod;
 	HasCollider;
+	HasColliders;
 }
 
 typedef Properties = Null<Array<Property<Dynamic>>>;
@@ -152,6 +153,7 @@ class Model {
 	public var skin : Null<Skin>;
 	public var lods : Array<Index<Model>>;
 	public var collider : Null<Index<Collider>>;
+	public var colliders : Null<Array<Index<Collider>>>;
 	public function new() {
 	}
 
@@ -163,7 +165,7 @@ class Model {
 	}
 
 	public function isLOD() {
-		return name.indexOf("LOD0") < 0;
+		return name != null && name.indexOf("LOD") >= 0 && name.indexOf("LOD0") < 0;
 	}
 
 	public function isLOD0(modelName : String) {
@@ -199,6 +201,15 @@ class Model {
 		}
 
 		return { lodLevel : -1, modelName : null };
+	}
+
+	public function isCollider() {
+		if( name == null )
+			return false;
+		var idx = name.lastIndexOf("_");
+		if( idx < 0 )
+			return false;
+		return StringTools.startsWith(name.substr(idx), "_Collider");
 	}
 }
 

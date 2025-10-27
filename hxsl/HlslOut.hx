@@ -832,7 +832,7 @@ class HlslOut {
 			if( sv == null ) continue;
 			add("\t");
 			switch( g ) {
-			case InstanceID:
+			case InstanceID, VertexID:
 				add("uint");
 			default:
 				addType(foundGlobals.get(g));

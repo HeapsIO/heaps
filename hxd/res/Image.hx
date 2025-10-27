@@ -80,6 +80,7 @@ class Image extends Resource {
 	public static var MIPMAP_MAX_SIZE = 0;
 
 	static var ENABLE_AUTO_WATCH = true;
+	var watchRegistered = false;
 
 	var tex:h3d.mat.Texture;
 	var inf:ImageInfo;
@@ -615,8 +616,10 @@ class Image extends Resource {
 						f();
 				}
 
-				if (ENABLE_AUTO_WATCH)
+				if (ENABLE_AUTO_WATCH && !watchRegistered) {
+					watchRegistered = true;
 					watch(watchCallb);
+				}
 			});
 			return;
 		}
@@ -707,8 +710,10 @@ class Image extends Resource {
 					+ " " + entry.path);
 			}
 			tex.realloc = () -> loadTexture();
-			if (ENABLE_AUTO_WATCH)
+			if (ENABLE_AUTO_WATCH && !watchRegistered) {
+				watchRegistered = true;
 				watch(watchCallb);
+			}
 		}
 		if (entry.isAvailable)
 			load();

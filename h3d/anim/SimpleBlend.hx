@@ -18,7 +18,21 @@ class SimpleBlend extends Transition {
 		for( o in anim2.objects.copy() )
 			if( !objectsMap.get(o.objectName) )
 				anim2.unbind(o.objectName);
+		objects = [];
+		objects = objects.concat(anim1.getObjects());
+		objects = objects.concat(anim2.getObjects());
 		isInstance = true;
+	}
+
+	override function sync( decompose : Bool = false ) {
+		if ( !decompose )
+			super.sync(false);
+		else {
+			// decompose is naturally supported
+			anim1.isSync = anim2.isSync = false;
+			anim1.sync(true);
+			anim2.sync(true);
+		}
 	}
 
 	override function clone(?a : Animation) : Animation {

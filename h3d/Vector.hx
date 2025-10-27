@@ -159,6 +159,10 @@ class VectorImpl #if apicheck implements h2d.impl.PointApi<Vector,Matrix> #end {
 		return new h3d.Vector4(x,y,z);
 	}
 
+	public inline function to2D() {
+		return new h2d.col.Point(x,y);
+	}
+
 	public function toString() {
 		return '{${x.fmt()},${y.fmt()},${z.fmt()}}';
 	}

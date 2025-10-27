@@ -45,6 +45,12 @@ class Library {
 	var cachedAnimations : Map<String, h3d.anim.Animation>;
 	var cachedSkin : Map<String, h3d.anim.Skin>;
 
+	static var baseLodConfig = [ 0.5, 0.2, 0.01];
+	#if (sys || nodejs)
+	static var defaultLodConfigs : Map<String, hxd.fs.FileConverter.ConvertConfig> = new Map();
+	static var defaultDynamicBonesConfigs : Map<String, hxd.fs.FileConverter.ConvertConfig> = new Map();
+	#end
+
 	public function new(res,  header) {
 		this.resource = res;
 		this.header = header;
@@ -272,6 +278,9 @@ class Library {
 		var p = cachedPrimitives[id];
 		if( p != null ) return p;
 
+		if( model.isCollider() )
+			return null;
+
 		var lods : Array<Model> = null;
 		var hasLod = model.lods != null;
 		if ( hasLod ) {
@@ -467,9 +476,19 @@ class Library {
 				resourceName : resource.name,
 				objectName : obj.name,
 				hmd : Std.downcast(Std.downcast(obj, h3d.scene.Mesh)?.primitive, h3d.prim.HMDModel),
-				skin : Std.downcast(obj, h3d.scene.Skin)
+				skin : Std.downcast(obj, h3d.scene.Skin),
+				collide : null
 			}
 
+			// Apply default config to object (config that is in props.json)
+			var data = {}
+			Reflect.setField(data, @:privateAccess h3d.prim.ModelDatabase.LOD_CONFIG, getDefaultLodConfig(modelData.resourceDirectory));
+			Reflect.setField(data, @:privateAccess h3d.prim.ModelDatabase.DYN_BONES_CONFIG, getDefaultDynamicBonesConfig(modelData.resourceDirectory));
+
+			@:privateAccess h3d.prim.ModelDatabase.current.loadLodConfig(modelData, data);
+			@:privateAccess h3d.prim.ModelDatabase.current.loadDynamicBonesConfig(modelData, data);
+
+			// Apply more specific config to object (config that is in model.props)
 			h3d.prim.ModelDatabase.current.loadModelProps(modelData);
 		}
 
@@ -859,4 +878,51 @@ class Library {
     }
 	#end
 
+
+	public static function getDefaultLodConfig( dir : String ) : Array<Float> {
+		var fs = Std.downcast(hxd.res.Loader.currentInstance.fs, hxd.fs.LocalFileSystem);
+		var c = baseLodConfig;
+		#if (sys || nodejs)
+		if (fs != null) {
+			var conf : hxd.fs.FileConverter.ConvertConfig = null;
+
+			function getConvertConf(obj : Dynamic) : hxd.fs.FileConverter.ConvertConfig {
+				var defObj = {};
+				Reflect.setField(defObj, @:privateAccess h3d.prim.ModelDatabase.LOD_CONFIG_FIELD, obj);
+				return @:privateAccess fs.convert.makeConfig(defObj);
+			}
+
+			conf = @:privateAccess fs.convert.getConfig(defaultLodConfigs, getConvertConf(baseLodConfig), dir, function(fullObj) {
+				return fs.convert.makeConfig(fullObj);
+			});
+
+			c = Reflect.field(conf.obj, @:privateAccess h3d.prim.ModelDatabase.LOD_CONFIG_FIELD);
+		}
+		#end
+		c = h3d.prim.ModelDatabase.customizeLodConfig(c);
+		return c;
+	}
+
+	public static function getDefaultDynamicBonesConfig( dir : String ) : Array<Dynamic> {
+		var fs = Std.downcast(hxd.res.Loader.currentInstance.fs, hxd.fs.LocalFileSystem);
+		var c = [];
+		#if (sys || nodejs)
+		if (fs != null) {
+			var conf : hxd.fs.FileConverter.ConvertConfig = null;
+
+			function getConvertConf(obj : Dynamic) : hxd.fs.FileConverter.ConvertConfig {
+				var defObj = {};
+				Reflect.setField(defObj, @:privateAccess h3d.prim.ModelDatabase.DYN_BONES_CONFIG, obj);
+				return @:privateAccess fs.convert.makeConfig(defObj);
+			}
+
+			conf = @:privateAccess fs.convert.getConfig(defaultDynamicBonesConfigs, getConvertConf([]), dir, function(fullObj) {
+				return fs.convert.makeConfig(fullObj);
+			});
+
+			c = Reflect.field(conf.obj, @:privateAccess h3d.prim.ModelDatabase.DYN_BONES_CONFIG);
+		}
+		#end
+		return c;
+	}
 }

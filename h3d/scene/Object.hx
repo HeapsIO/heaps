@@ -20,6 +20,7 @@ enum abstract ObjectFlags(Int) {
 	public var FDrawn = 0x10000;
 	public var FInSync = 0x20000;
 	public var FPosChangedInSync = 0x40000;
+	public var FForceBounds = 0x80000;
 	public inline function new(value) {
 		this = value;
 	}
@@ -28,6 +29,32 @@ enum abstract ObjectFlags(Int) {
 	public inline function set(f:ObjectFlags, b) {
 		if( b ) this |= f.toInt() else this &= ~f.toInt();
 		return b;
+	}
+	public inline function toString() {
+		var s = "";
+		if( has(FPosChanged) ) s += " | PosChanged";
+		if( has(FVisible) ) s += " | Visible";
+		if( has(FCulled) ) s += " | Culled";
+		if( has(FFollowPositionOnly) ) s += " | FollowPositionOnly";
+		if( has(FLightCameraCenter) ) s += " | LightCameraCenter";
+		if( has(FAllocated) ) s += " | Allocated";
+		if( has(FAlwaysSyncAnimation) ) s += " | AlwaysSyncAnimation";
+		if( has(FInheritCulled) ) s += " | InheritCulled";
+		if( has(FModelRoot) ) s += " | ModelRoot";
+		if( has(FIgnoreBounds) ) s += " | IgnoreBounds";
+		if( has(FIgnoreCollide) ) s += " | IgnoreCollide";
+		if( has(FIgnoreParentTransform) ) s += " | IgnoreParentTransform";
+		if( has(FCullingColliderInherited) ) s += " | CullingColliderInherited";
+		if( has(FFixedPosition) ) s += " | FixedPosition";
+		if( has(FFixedPositionSynced) ) s += " | FixedPositionSynced";
+		if( has(FAlwaysSync) ) s += " | AlwaysSync";
+		if( has(FDrawn) ) s += " | Drawn";
+		if( has(FInSync) ) s += " | InSync";
+		if( has(FPosChangedInSync) ) s += " | PosChangedInSync";
+		if( has(FForceBounds) ) s += " | FForceBounds";
+		if( s.length > 0 )
+			s = s.substr(3);
+		return s;
 	}
 }
 
@@ -85,6 +112,11 @@ class Object {
 		When enabled, the object bounds are ignored when using getBounds()
 	**/
 	public var ignoreBounds(get, set) : Bool;
+
+	/**
+		When enabled, the object bounds are included even if it's not visible when using getBounds()
+	**/
+	public var forceBounds(get, set) : Bool;
 
 	/**
 		When enabled, the object is ignored when using getCollider()
@@ -204,7 +236,7 @@ class Object {
 		Create a new empty object, and adds it to the parent object if not null.
 	**/
 	public function new( ?parent : Object ) {
-		flags = new ObjectFlags(0x8000);
+		flags = new ObjectFlags(FAlwaysSync.toInt());
 		absPos = new h3d.Matrix();
 		absPos.identity();
 		x = 0; y = 0; z = 0; scaleX = 1; scaleY = 1; scaleZ = 1;
@@ -225,6 +257,7 @@ class Object {
 	inline function get_alwaysSyncAnimation() return flags.has(FAlwaysSyncAnimation);
 	inline function get_inheritCulled() return flags.has(FInheritCulled);
 	inline function get_ignoreBounds() return flags.has(FIgnoreBounds);
+	inline function get_forceBounds() return flags.has(FForceBounds);
 	inline function get_ignoreCollide() return flags.has(FIgnoreCollide);
 	inline function get_modelRoot() return flags.has(FModelRoot);
 	inline function get_ignoreParentTransform() return flags.has(FIgnoreParentTransform);
@@ -245,6 +278,7 @@ class Object {
 	inline function set_lightCameraCenter(b) return flags.set(FLightCameraCenter, b);
 	inline function set_alwaysSyncAnimation(b) return flags.set(FAlwaysSyncAnimation, b);
 	inline function set_ignoreBounds(b) return flags.set(FIgnoreBounds, b);
+	inline function set_forceBounds(b) return flags.set(FForceBounds, b);
 	inline function set_inheritCulled(b) return flags.set(FInheritCulled, b);
 	inline function set_ignoreCollide(b) return flags.set(FIgnoreCollide, b);
 	inline function set_modelRoot(b) return flags.set(FModelRoot, b);
@@ -427,7 +461,8 @@ class Object {
 			calcAbsPos();
 		}
 		for( c in children )
-			c.addBoundsRec(b, relativeTo);
+			if( c.visible || c.forceBounds )
+				c.addBoundsRec(b, relativeTo);
 	}
 
 	/**
@@ -903,6 +938,13 @@ class Object {
 		defaultTransform = v;
 		posChanged = true;
 		return v;
+	}
+
+	/**
+		Return the (x,y,z) position relative to the object parent.
+	**/
+	public inline function getPosition() {
+		return new h3d.col.Point(x,y,z);
 	}
 
 	/**

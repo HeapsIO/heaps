@@ -264,6 +264,12 @@ class Dce {
 			check(loop, writeTo, affect);
 			affect.appendTo(isAffected);
 			check(it, affect, isAffected);
+		case TWhile(e, loop, _):
+			var affect = new WriteTo();
+			check(loop, writeTo, affect);
+			affect.appendTo(isAffected);
+			writeTo.appendTo(affect);
+			check(e, affect, isAffected);
 		case TCall({ e : TGlobal(ChannelRead) }, [{ e : TVar(c) }, uv, { e : TConst(CInt(cid)) }]):
 			check(uv, writeTo, isAffected);
 			if( channelVars[cid] == null ) {
@@ -323,6 +329,10 @@ class Dce {
 			var writeTo = new WriteTo();
 			writeTo.append(null,0);
 			check(cond, writeTo, new WriteTo());
+		case TWhile(cond, loop, _):
+			var writeTo = new WriteTo();
+			writeTo.append(null,0);
+			check(cond, writeTo, new WriteTo());
 		default:
 		}
 		e.iter(checkBranches);
@@ -378,6 +388,12 @@ class Dce {
 			if( !loop.hasSideEffect() )
 				return { e : TConst(CNull), t : e.t, p : e.p };
 			return { e : TFor(v, it, loop), p : e.p, t : e.t };
+		case TWhile(e, loop, normalWhile):
+			var e = mapExpr(e, true);
+			var loop = mapExpr(loop, isVar);
+			if( !loop.hasSideEffect() )
+				return { e : TConst(CNull), t : e.t, p : e.p };
+			return { e : TWhile(e, loop, normalWhile), p : e.p, t : e.t };
 		case TMeta(m, args, em):
 			var em = mapExpr(em, isVar);
 			if( !isVar && !em.hasSideEffect() )

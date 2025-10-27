@@ -5,13 +5,15 @@ import hxd.impl.Allocator;
 @:allow(hxd.impl.FIFOBufferAllocator)
 @:access(h3d.Buffer)
 private class Cache<T:h3d.Buffer> {
+	var config : BufferConfig;
 	var allocator : FIFOBufferAllocator;
 	var maxKeepFrame : Int;
 	var available : Array<T> = [];
 	var disposed : Array<T> = [];
 	public var onDispose : T -> Void;
 
-	public function new( allocator, maxKeepFrame : Int, ?dispose ) {
+	public function new( config, allocator, maxKeepFrame : Int, ?dispose ) {
+		this.config = config;
 		onDispose = dispose;
 		this.maxKeepFrame = maxKeepFrame;
 		this.allocator = allocator;
@@ -50,11 +52,17 @@ private class Cache<T:h3d.Buffer> {
 	}
 }
 
+typedef BufferConfig = {
+	var vertices : Int;
+	var formatId : Int;
+	var flags : Int;
+}
+
 class FIFOBufferAllocator extends Allocator {
 
 	public var currentFrame = -1;
-	var buffers = new Map<Int,Cache<h3d.Buffer>>();
-	var indexBuffers = new Map<Int,Cache<h3d.Indexes>>();
+	var buffers : Array<Cache<h3d.Buffer>> = [];
+	var indexBuffers : Array<Cache<h3d.Indexes>> = [];
 
 	var lastGC = hxd.Timer.frameCount;
 	var curMemory : Int = 0;
@@ -76,19 +84,30 @@ class FIFOBufferAllocator extends Allocator {
 	**/
 	public var maxMemSize : Int = 512 * 1024 * 1024;
 
+	function findCache<T:h3d.Buffer>(cache : Array<Cache<T>>, vertices : Int, formatId : Int, flags : Int) {
+		for ( c in cache ) {
+			var config = c.config;
+			if ( config.flags == flags && config.formatId == formatId && config.vertices == vertices )
+				return c;
+		}
+		return null;
+	}
+
+	function findBufferCache(vertices : Int, formatId : Int, flags : Int) {
+		return findCache(buffers, vertices, formatId, flags);
+	}
+
+	function findIndexCache(count : Int, formatId : Int) {
+		return findCache(indexBuffers, count, formatId, 0);
+	}
+
 	override function allocBuffer(vertices:Int, format:hxd.BufferFormat, flags:BufferFlags=Dynamic):h3d.Buffer {
-		if( vertices >= 65536 )
-			return super.allocBuffer(vertices, format, flags);
 		checkFrame();
-		var id = flags.toInt() | (format.uid << 3) | (vertices << 16);
-		var c = buffers.get(id);
+		var c = findBufferCache(vertices, format.uid, flags.toInt());
 		if( c != null ) {
 			var b = c.get();
-			if( b != null ) {
-				if ( b.vertices != vertices )
-					throw "Buffer signature mismatch";
+			if( b != null )
 				return b;
-			}
 		}
 		checkGC();
 		return super.allocBuffer(vertices,format,flags);
@@ -96,47 +115,46 @@ class FIFOBufferAllocator extends Allocator {
 
 	override function disposeBuffer(b:h3d.Buffer) {
 		if( b.isDisposed() ) return;
-		if ( b.vertices >= 65536 ) {
-			b.dispose();
-			return;
-		}
-		var id = fromBufferFlags(b.flags).toInt() | (b.format.uid << 3) | (b.vertices << 16);
-		var c = buffers.get(id);
+		var flags = fromBufferFlags(b.flags).toInt();
+		var formatId = b.format.uid;
+		var c = findBufferCache(b.vertices, formatId, flags);
 		if( c == null ) {
-			c = new Cache(this, maxKeepFrame, function(b:h3d.Buffer) b.dispose());
-			buffers.set(id, c);
+			var config = { vertices : b.vertices, formatId : formatId, flags : flags };
+			c = new Cache(config, this, maxKeepFrame, function(b:h3d.Buffer) b.dispose());
+			buffers.push(c);
 		}
 		c.put(b);
 		checkGC();
 	}
 
-	override function allocIndexBuffer( count : Int ) {
-		var id = count;
+	override function allocIndexBuffer( count : Int, is32 : Bool = false )  {
 		checkFrame();
-		var c = indexBuffers.get(id);
+		var formatId = is32 ? hxd.BufferFormat.INDEX32.uid : hxd.BufferFormat.INDEX16.uid;
+		var c = findIndexCache(count, formatId);
 		if( c != null ) {
 			var i = c.get();
 			if( i != null ) return i;
 		}
 		checkGC();
-		return super.allocIndexBuffer(count);
+		return super.allocIndexBuffer(count, is32);
 	}
 
 	override function disposeIndexBuffer( i : h3d.Indexes ) {
 		if( i.isDisposed() ) return;
-		var id = i.count;
-		var c = indexBuffers.get(id);
+		var formatId = cast(i, h3d.Buffer).format.uid;
+		var c = findIndexCache(i.count, formatId);
 		if( c == null ) {
-			c = new Cache(this, maxKeepFrame, function(i:h3d.Indexes) i.dispose());
-			indexBuffers.set(id, c);
+			var config = { vertices : i.count, formatId : formatId, flags : 0 };
+			c = new Cache(config, this, maxKeepFrame, function(i:h3d.Indexes) i.dispose());
+			indexBuffers.push(c);
 		}
 		c.put(i);
 		checkGC();
 	}
 
 	override function onContextLost() {
-		buffers = new Map();
-		indexBuffers = new Map();
+		buffers = [];
+		indexBuffers = [];
 	}
 
 	public function checkFrame() {
@@ -156,15 +174,18 @@ class FIFOBufferAllocator extends Allocator {
 
 	public function gc() {
 		var now = hxd.Timer.frameCount;
-		for( b in buffers.keys() ) {
-			var c = buffers.get(b);
-			if( !c.gc() )
-				buffers.remove(b);
+		var i = buffers.length;
+		while ( i-- > 0 ) {
+			var c = buffers[i];
+			if ( !c.gc() )
+				buffers.remove(c);
 		}
-		for( b in indexBuffers.keys() ) {
-			var c = indexBuffers.get(b);
-			if( !c.gc() )
-				indexBuffers.remove(b);
+
+		var i = indexBuffers.length;
+		while ( i-- > 0 ) {
+			var c = indexBuffers[i];
+			if ( !c.gc() )
+				indexBuffers.remove(c);
 		}
 		lastGC = now;
 	}

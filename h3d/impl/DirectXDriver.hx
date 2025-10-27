@@ -32,6 +32,7 @@ private class CompiledShader {
 	public var perInst : Array<Int>;
 	public var layouts : Map<Int, Layout>;
 	public var vertexBytes : haxe.io.Bytes;
+	public var semanticNames : Array<String>;
 	public function new() {
 	}
 }
@@ -1097,6 +1098,9 @@ class DirectXDriver extends h3d.impl.Driver {
 			s.perInst = [];
 			s.layouts = new Map();
 			var format : Array<hxd.BufferFormat.BufferInput> = [];
+			var allNames = new Map();
+			var varNames = new Map();
+			var semanticNames = [];
 			for( v in shader.vertex.data.vars )
 				if( v.kind == Input ) {
 					var perInst = 0;
@@ -1108,9 +1112,11 @@ class DirectXDriver extends h3d.impl.Driver {
 							}
 					s.perInst.push(perInst);
 					var t = hxd.BufferFormat.InputFormat.fromHXSL(v.type);
+					semanticNames.push(hxsl.HlslOut.semanticName(hxsl.HlslOut.varName(v, varNames, allNames)));
 					format.push({ name : v.name, type : t });
 				}
 			s.format = hxd.BufferFormat.make(format);
+			s.semanticNames = semanticNames;
 			shaders.set(shader.id, s);
 		}
 		if( s == currentShader )
@@ -1131,7 +1137,7 @@ class DirectXDriver extends h3d.impl.Driver {
 		for( index => input in @:privateAccess currentShader.format.inputs ) {
 			var inf = mapping[index];
 			var e = new LayoutElement();
-			var name = hxsl.HlslOut.semanticName(input.name);
+			var name = currentShader.semanticNames[index];
 			e.semanticName = @:privateAccess name.toUtf8();
 			e.inputSlot = index;
 			e.format = switch( [input.type, inf.precision] ) {
@@ -1401,6 +1407,12 @@ class DirectXDriver extends h3d.impl.Driver {
 
 	override function allocInstanceBuffer(b:InstanceBuffer, buf : haxe.io.Bytes) {
 		b.data = dx.Driver.createBuffer(b.commandCount * 5 * 4, Default, UnorderedAccess, None, DrawIndirectArgs, 4, buf);
+	}
+
+	override function uploadInstanceBufferBytes(b : InstanceBuffer, startVertex : Int, vertexCount : Int, buf : haxe.io.Bytes, bufPos : Int ) {
+		if( hasDeviceError ) return;
+		var strideBytes = 5 * 4;
+		updateBuffer(b.data, @:privateAccess buf.b.offset(bufPos), startVertex * strideBytes, vertexCount * strideBytes);
 	}
 
 	override function disposeInstanceBuffer(b:InstanceBuffer) {

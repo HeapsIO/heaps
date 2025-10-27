@@ -56,6 +56,8 @@ class Shader< T:h3d.shader.ScreenShader > extends Filter {
 		var found = false;
 		for( v in @:privateAccess shader.shader.data.vars ) {
 			if( v.name == textureParam ) {
+				if( v.kind != Param )
+					throw shader+"."+textureParam+" should a shader parameter (@param)";
 				found = true;
 				break;
 			}

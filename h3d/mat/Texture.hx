@@ -40,9 +40,6 @@ class Texture {
 	public var startingMip : Int = 0;
 	public var lodBias : Float = 0.;
 	public var mipLevels(get, never) : Int;
-	public var depthBias(default, set) : Float = 0.;
-	public var slopeScaledBias(default, set) : Float = 0.;
-	public var depthClamp : Bool = false;
 	var customMipLevels : Int;
 
 	/**
@@ -199,22 +196,6 @@ class Texture {
 
 	public function setName(n) {
 		name = n;
-	}
-
-	public function set_depthBias(v : Float) {
-		if ( v != depthBias ) {
-			depthBias = v;
-			h3d.Engine.getCurrent().onTextureBiasChanged(this);
-		}
-		return depthBias;
-	}
-
-	public function set_slopeScaledBias(v : Float) {
-		if ( v != slopeScaledBias ) {
-			slopeScaledBias = v;
-			h3d.Engine.getCurrent().onTextureBiasChanged(this);
-		}
-		return slopeScaledBias;
 	}
 
 	function set_mipMap(m:MipMap) {

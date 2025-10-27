@@ -97,6 +97,10 @@ class Renderer extends hxd.impl.AnyProps {
 		return ctx.scene.lightSystem;
 	}
 
+	function getDepthClearValue() {
+		return ctx.getDepthClearValue();
+	}
+
 	@:access(h3d.scene.Object)
 	function depthSort( frontToBack, passes : h3d.pass.PassList ) {
 		var cam = ctx.camera.m;
@@ -105,7 +109,7 @@ class Renderer extends hxd.impl.AnyProps {
 			var w = p.obj.absPos._41 * cam._14 + p.obj.absPos._42 * cam._24 + p.obj.absPos._43 * cam._34 + cam._44;
 			p.depth = w > 0.0 ? z / w : - z / w;
 		}
-		if( frontToBack )
+		if( frontToBack && !ctx.camera.reverseDepth || !frontToBack && ctx.camera.reverseDepth )
 			passes.sort(
 				function(p1, p2) {
 					if ( p1.pass.layer != p2.pass.layer )
@@ -221,5 +225,4 @@ class Renderer extends hxd.impl.AnyProps {
 	public function computeDispatch( shader, x = 1, y = 1, z = 1 ) {
 		ctx.computeDispatch(shader, x, y, z);
 	}
-
 }

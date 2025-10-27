@@ -104,4 +104,8 @@ class MultiFileSystem implements FileSystem {
 		throw "Not Supported";
 	}
 
+	public function delete( path : String ) : Bool {
+		throw "Not supported";
+	}
+
 }

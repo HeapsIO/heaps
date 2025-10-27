@@ -4,7 +4,7 @@ class Indirect extends PropsDefinition {
 
 	static var SRC = {
 
-		@:import h3d.shader.pbr.BDRF;
+		@:import h3d.shader.pbr.BRDF;
 
 		// Flags
 		@const var drawIndirectDiffuse : Bool;
@@ -31,6 +31,7 @@ class Indirect extends PropsDefinition {
 		@param var emissivePower : Float;
 
 		var calculatedUV : Vec2;
+		var indirectMultiplier : Float;
 
 		function rotateNormal( n : Vec3 ) : Vec3 {
 			return vec3(n.x * irrRotation.x - n.y * irrRotation.y, n.x * irrRotation.y + n.y * irrRotation.x, n.z);
@@ -42,6 +43,10 @@ class Indirect extends PropsDefinition {
 
 		function getEnvDiffuse( normal : Vec3 ) : Vec3 {
 			return irrDiffuse.get( rotateNormal(normal) ).rgb;
+		}
+
+		function __init__fragment2() {
+			indirectMultiplier = 1.0;
 		}
 
 		function fragment() {
@@ -87,7 +92,7 @@ class Indirect extends PropsDefinition {
 				}
 
 				var indirect = (diffuse * (1 - metalness) * (1 - F) + specular) * irrPower;
-				pixelColor.rgb += indirect * occlusion + albedo * emissive * emissivePower;
+				pixelColor.rgb += indirect * occlusion * indirectMultiplier + albedo * emissive * emissivePower;
 			}
 		}
 	};
@@ -97,7 +102,7 @@ class Direct extends PropsDefinition {
 
 	static var SRC = {
 
-		@:import h3d.shader.pbr.BDRF;
+		@:import h3d.shader.pbr.BRDF;
 
 		var pbrLightDirection : Vec3;
 		var pbrSpecularLightDirection : Vec3;

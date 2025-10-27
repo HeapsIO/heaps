@@ -22,7 +22,7 @@ class ThreadAsyncLoader implements AsyncLoader {
 		deque = new sys.thread.Deque();
 		lock = new sys.thread.Lock();
 		sys.thread.Thread.create(threadLoop);
-		haxe.MainLoop.add(uploadTextures);
+		haxe.MainLoop.add(uploadTextures).isBlocking = false;
 	}
 
 	function threadLoop() {
