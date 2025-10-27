@@ -46,7 +46,7 @@ class Blur extends ScreenShader {
 				var isEdge = false;
 
 				@unroll for( i in -Quality...Quality + 1 ) {
-					var curCoord = floor(coord + ( pixel * dimensions ) * vec2(1.0) * i) + vec2(0.5);
+					var curCoord = floor(coord + ( pixel * dimensions ) * i) + vec2(0.5);
 					var nearestUV = curCoord * invDimensions;
 					var pcur = getViewPosition(nearestUV);
 					var d = abs(pcur.z - p.z);
