@@ -12,6 +12,8 @@ class Indirect extends PropsDefinition {
 		@const var showSky : Bool;
 		@const var skyColor : Bool;
 
+		@global @const var DIFFUSE_ONLY : Bool;
+
 		// Indirect Params
 		@param var irrLut : Sampler2D;
 		@param var irrDiffuse : SamplerCube;
@@ -91,8 +93,8 @@ class Indirect extends PropsDefinition {
 					specular = envSpec * (F * envBRDF.x + envBRDF.y);
 				}
 
-				var indirect = (diffuse * (1 - metalness) * (1 - F) + specular) * irrPower;
-				pixelColor.rgb += indirect * occlusion * indirectMultiplier + albedo * emissive * emissivePower;
+				var indirect = DIFFUSE_ONLY ? diffuse : (diffuse * (1 - metalness) * (1 - F) + specular);
+				pixelColor.rgb += indirect * irrPower * occlusion * indirectMultiplier + albedo * emissive * emissivePower;
 			}
 		}
 	};
@@ -109,6 +111,8 @@ class Direct extends PropsDefinition {
 		var pbrLightColor : Vec3;
 		var pbrOcclusionFactor : Float;
 		@const var doDiscard : Bool = true;
+
+		@global @const var DIFFUSE_ONLY : Bool;
 
 		function __init__fragment2() {
 			pbrSpecularLightDirection = pbrLightDirection;
@@ -135,8 +139,8 @@ class Direct extends PropsDefinition {
 				var G = geometrySchlickGGX(NdV, NdL, roughness);// Geometric attenuation
 				var specular = (D * F * G).max(0.);
 
-				var direct = (diffuse * (1 - metalness) * (1 - F) + specular) * pbrLightColor * NdL;
-				pixelColor.rgb += direct * shadow * mix(1, occlusion, pbrOcclusionFactor);
+				var direct = DIFFUSE_ONLY ? diffuse : (diffuse * (1 - metalness) * (1 - F) + specular);
+				pixelColor.rgb += direct * pbrLightColor * NdL * shadow * mix(1, occlusion, pbrOcclusionFactor);
 			} else if( doDiscard )
 				discard;
 		}

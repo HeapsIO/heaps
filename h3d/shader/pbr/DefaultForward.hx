@@ -16,6 +16,8 @@ class DefaultForward extends hxsl.Shader {
 		@const(16) var MAX_POINT_SHADOW_COUNT:Int;
 		@const(16) var MAX_SPOT_SHADOW_COUNT:Int;
 
+		@global @const var DIFFUSE_ONLY : Bool;
+
 		@:import h3d.shader.pbr.Light.LightEvaluation;
 		@:import h3d.shader.pbr.BRDF;
 
@@ -83,8 +85,8 @@ class DefaultForward extends hxsl.Shader {
 			var envSpec = textureLod(irrSpecular, rotatedReflecVec, roughness * irrSpecularLevels).rgb;
 			var envBRDF = irrLut.get(vec2(roughness, NdV));
 			var specular = envSpec * (F * envBRDF.x + envBRDF.y);
-			var indirect = (diffuse * (1 - metalness) * (1 - F) + specular) * irrPower;
-			return indirect * occlusion;
+			var indirect = DIFFUSE_ONLY ? diffuse : (diffuse * (1 - metalness) * (1 - F) + specular);
+			return indirect * irrPower * occlusion;
 		}
 
 		function directLighting( lightColor : Vec3, lightDirection : Vec3) : Vec3 {
@@ -102,8 +104,8 @@ class DefaultForward extends hxsl.Shader {
 				var F = fresnelSchlick(VdH, F0);// Fresnel term
 				var G = geometrySchlickGGX(NdV, NdL, roughness);// Geometric attenuation
 				var specular = (D * F * G).max(0.);
-
-				result = (diffuse * (1 - metalness) * (1 - F) + specular) * lightColor * NdL;
+				var direct = DIFFUSE_ONLY ? diffuse : (diffuse * (1 - metalness) * (1 - F) + specular);
+				result = direct * lightColor * NdL;
 			}
 			return result;
 		}
