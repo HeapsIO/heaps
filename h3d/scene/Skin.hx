@@ -615,5 +615,5 @@ class Skin extends MultiMaterial {
 		}
 	}
 
-
 }
+
