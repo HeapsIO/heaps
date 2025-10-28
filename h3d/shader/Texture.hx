@@ -7,9 +7,11 @@ class Texture extends hxsl.Shader {
 			var uv : Vec2;
 		};
 
+		#if anti_aliasing
 		@global var global: { 
             var antiAliasing: Int; 
         };
+		#end
 
 		@const var additive : Bool;
 		@const var killAlpha : Bool;
@@ -26,6 +28,7 @@ class Texture extends hxsl.Shader {
 		}
 
 		function fragment() {
+			#if anti_aliasing
 			var c = if (global.antiAliasing == 1) {
 				var dx = dFdx(input.uv);
 				var dy = dFdy(input.uv);
@@ -37,6 +40,9 @@ class Texture extends hxsl.Shader {
 			} else {
 				texture.get(calculatedUV);
 			}
+			#else
+			var c = texture.get(calculatedUV);
+			#end
 			if( killAlpha && c.a - killAlphaThreshold < 0 ) discard;
 			if( additive )
 				pixelColor += c;
