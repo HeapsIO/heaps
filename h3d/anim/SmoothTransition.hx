@@ -103,6 +103,7 @@ class SmoothTransition extends Transition {
 		var a = 1 - blendFactor, b = blendFactor;
 		var q1 = new h3d.Quat(), q2 = new h3d.Quat(), qout = new h3d.Quat();
 		for( o in objects ) {
+			if (o.tmpMatrix == null) continue;
 			var m1 = o.tmpMatrix;
 			var m2 = if( !o.isAnim2 ) o.def else if( o.targetSkin != null ) o.targetSkin.jointsData[o.targetJoint].currentRelPos else o.targetObject.defaultTransform;
 			var m = o.outMatrix;
@@ -133,6 +134,14 @@ class SmoothTransition extends Transition {
 			// save matrix
 			if( o.targetSkin != null ) o.targetSkin.jointsData[o.targetJoint].currentRelPos = m else o.targetObject.defaultTransform = m;
 		}
+	}
+
+	override function clone(?a : Animation) : Animation {
+		var a : SmoothTransition = cast a;
+		if( a == null )
+			a = new SmoothTransition(anim1, anim2, tspeed);
+		super.clone(a);
+		return a;
 	}
 
 	override function update( dt : Float ) : Float {
