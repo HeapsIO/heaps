@@ -15,9 +15,9 @@ typedef CollideParams = {
 
 typedef ShapeColliderParams = {
 	type : ShapeColliderType,
-	position : h3d.Vector,
-	?halfExtent : h3d.Vector,
-	?rotation : h3d.Vector,
+	position : { x : Float, y : Float, z : Float },
+	?halfExtent : { x : Float, y : Float, z : Float },
+	?rotation : { x : Float, y : Float, z : Float },
 	?radius : Float,
 }
 
@@ -1084,37 +1084,43 @@ class HMDOut extends BaseLibrary {
 	function buildShapeColliders( d : hxd.fmt.hmd.Data, shapes : Array<ShapeColliderParams> ) : GroupCollider {
 		var group = new GroupCollider();
 		group.colliders = [];
+		function makeVector( dyn ) {
+			var x : Float = dyn.x;
+			var y : Float = dyn.y;
+			var z : Float = dyn.z;
+			return new h3d.Vector(x, y, z);
+		}
 		for( cp in shapes ) {
 			switch( cp.type ) {
 			case Sphere:
 				var c = new SphereCollider();
 				if( cp.position == null )
 					throw "Invalid SphereCollider params";
-				c.position = cp.position;
+				c.position = makeVector(cp.position);
 				c.radius = cp.radius;
 				group.colliders.push(c);
 			case Box:
 				var c = new BoxCollider();
 				if( cp.position == null || cp.halfExtent == null )
 					throw "Invalid BoxCollider params";
-				c.position = cp.position;
-				c.halfExtent = cp.halfExtent;
-				c.rotation = cp.rotation;
+				c.position = makeVector(cp.position);
+				c.halfExtent = makeVector(cp.halfExtent);
+				c.rotation = makeVector(cp.rotation);
 				group.colliders.push(c);
 			case Capsule:
 				var c = new CapsuleCollider();
 				if( cp.position == null || cp.halfExtent == null )
 					throw "Invalid CapsuleCollider params";
-				c.position = cp.position;
-				c.halfExtent = cp.halfExtent;
+				c.position = makeVector(cp.position);
+				c.halfExtent = makeVector(cp.halfExtent);
 				c.radius = cp.radius;
 				group.colliders.push(c);
 			case Cylinder:
 				var c = new CylinderCollider();
 				if( cp.position == null || cp.halfExtent == null )
 					throw "Invalid CapsuleCollider params";
-				c.position = cp.position;
-				c.halfExtent = cp.halfExtent;
+				c.position = makeVector(cp.position);
+				c.halfExtent = makeVector(cp.halfExtent);
 				c.radius = cp.radius;
 				group.colliders.push(c);
 			}

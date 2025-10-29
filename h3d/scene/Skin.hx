@@ -403,14 +403,19 @@ class Skin extends MultiMaterial {
 	}
 
 	override function getGlobalCollider() : h3d.col.Collider {
-		var col = cast(primitive.getCollider(), h3d.col.Collider.OptimizedCollider);
-		var primCol = Std.downcast(col.b, h3d.col.PolygonBuffer);
-		if( primCol == null ) {
+		var col = primitive.getCollider();
+		if( Std.isOfType(col, h3d.col.Collider.OptimizedCollider) ) {
+			// Generated from mesh, so need skin's transform
+			var col = cast(col, h3d.col.Collider.OptimizedCollider);
+			var primCol = Std.downcast(col.b, h3d.col.PolygonBuffer);
+			if( primCol != null && primCol.source != null ) {
+				cast(primitive, h3d.prim.HMDModel).loadSkin(skinData);
+				return new h3d.col.SkinCollider(this, primCol);
+			}
 			var rootTrans = skinData.rootJoints[0].defMat.clone();
 			return new h3d.col.TransformCollider(rootTrans, col);
 		}
-		cast(primitive, h3d.prim.HMDModel).loadSkin(skinData);
-		return new h3d.col.SkinCollider(this, primCol);
+		return col;
 	}
 
 	override function calcAbsPos() {
