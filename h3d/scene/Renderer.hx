@@ -172,11 +172,6 @@ class Renderer extends hxd.impl.AnyProps {
 		return passObjects.get(name) != null;
 	}
 
-	@:access(h3d.mat.Pass)
-	function setPassFlags( pass : h3d.mat.Pass ) {
-		pass.rendererFlags |= 1;
-	}
-
 	@:access(h3d.pass.PassList)
 	function get( name : String ) {
 		var p = passObjects.get(name);
