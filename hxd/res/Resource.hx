@@ -23,4 +23,10 @@ class Resource {
 		if( LIVE_UPDATE	) entry.watch(onChanged);
 	}
 
+	public function to<T:hxd.res.Resource>( c : Class<T> ) : T {
+		var v = Std.downcast(this,c);
+		if( v == null ) throw this+" should "+c;
+		return v;
+	}
+
 }
