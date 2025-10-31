@@ -2119,6 +2119,7 @@ class GlDriver extends Driver {
 	static var TWRAP = [
 		GL.CLAMP_TO_EDGE,
 		GL.REPEAT,
+		GL.MIRRORED_REPEAT,
 	];
 
 	static var FACES = [

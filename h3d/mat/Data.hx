@@ -62,7 +62,7 @@ enum Filter {
 enum Wrap {
 	Clamp;
 	Repeat;
-	//Mirrored;
+	Mirror;
 }
 
 enum Operation {

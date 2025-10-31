@@ -1980,6 +1980,7 @@ class DX12Driver extends h3d.impl.Driver {
 		desc.addressU = desc.addressV = desc.addressW = switch( t.wrap ) {
 			case Clamp: CLAMP;
 			case Repeat: WRAP;
+			case Mirror: MIRROR;
 		}
 		desc.mipLODBias = t.lodBias;
 

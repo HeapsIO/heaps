@@ -1525,7 +1525,8 @@ class DirectXDriver extends h3d.impl.Driver {
 	static var WRAP : Array<AddressMode> = [
 		Clamp,
 		Wrap,
-		//Mirror , Border , MirrorOnce
+		Mirror,
+		// Border , MirrorOnce
 	];
 }
 
