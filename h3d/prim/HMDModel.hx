@@ -309,9 +309,6 @@ class HMDModel extends MeshPrimitive {
 	override public function screenRatioToLod( screenRatio : Float ) : Int {
 		var lodCount = lodCount();
 
-		if (forcedLod >= 0)
-			return hxd.Math.imin(forcedLod, lodCount);
-
 		if ( lodCount == 1 )
 			return 0;
 

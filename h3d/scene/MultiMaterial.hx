@@ -25,7 +25,7 @@ class MultiMaterial extends Mesh {
 
 	override function emit( ctx : RenderContext ) {
 		calcScreenRatio(ctx);
-		if ( primitive.screenRatioToLod(curScreenRatio) >= primitive.lodCount() )
+		if ( getLodIndex() >= primitive.lodCount() )
 			return;
 		for( i in 0...materials.length ) {
 			var m = materials[i];
@@ -55,7 +55,7 @@ class MultiMaterial extends Mesh {
 
 	override function draw( ctx : RenderContext ) {
 		if( materials.length > 1 )
-			primitive.selectMaterial(ctx.drawPass.index, primitive.screenRatioToLod(curScreenRatio));
+			primitive.selectMaterial(ctx.drawPass.index, getLodIndex());
 		primitive.render(ctx.engine);
 	}
 

@@ -27,6 +27,11 @@ class Mesh extends Object {
 	public var blendshapeInstance(default, null) : h3d.prim.Blendshape.BlendshapeInstance;
 
 	/**
+		Allow user to force a specific lod index. If set to -1, forced lod will be ignored.
+	**/
+	public var forcedLod : Int = -1;
+
+	/**
 		Creates a new mesh with given primitive, material and parent object.
 		If material is not specified, a new default material is created for the current renderer.
 	**/
@@ -75,7 +80,7 @@ class Mesh extends Object {
 
 	var curScreenRatio : Float = 1.0;
 	override function draw( ctx : RenderContext ) {
-		primitive.selectMaterial(0,	primitive.screenRatioToLod(curScreenRatio));
+		primitive.selectMaterial(0,	getLodIndex());
 		primitive.render(ctx.engine);
 	}
 
@@ -102,7 +107,7 @@ class Mesh extends Object {
 
 	override function emit( ctx : RenderContext ) {
 		calcScreenRatio(ctx);
-		if ( primitive.screenRatioToLod(curScreenRatio) >= primitive.lodCount() )
+		if ( getLodIndex() >= primitive.lodCount() )
 			return;
 		ctx.emit(material, this);
 	}
@@ -137,6 +142,13 @@ class Mesh extends Object {
 			if (prim != null) prim.incref();
 		}
 		return this.primitive = prim;
+	}
+
+
+	public function getLodIndex() {
+		if (forcedLod > -1)
+			return forcedLod;
+		return primitive.screenRatioToLod(curScreenRatio);
 	}
 
 	public static function screenRatio(absPos : h3d.Matrix, bounds : h3d.col.Bounds, camera : h3d.Camera) {

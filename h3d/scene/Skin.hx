@@ -610,7 +610,7 @@ class Skin extends MultiMaterial {
 			skinShader.bonesMatrixes = splitPalette[i];
 			if ( prevSplitPalette != null )
 				skinShader.prevBonesMatrixes = prevSplitPalette[i];
-			primitive.selectMaterial(i, primitive.screenRatioToLod(curScreenRatio));
+			primitive.selectMaterial(i, getLodIndex());
 			ctx.uploadParams();
 			primitive.render(ctx.engine);
 		}
