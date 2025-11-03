@@ -120,8 +120,7 @@ class ConvexHullsCollider extends Collider {
 	public static function buildConvexHullCollider(hmd : h3d.prim.HMDModel, params : hxd.fmt.fbx.HMDOut.CollideParams) : Array<{indexes : Array<Int>, points: Array<Float>}> {
 		#if (!sys && !nodejs)
 		return null;
-		#end
-
+		#else
 		var lodIdx = 0;
 		var format : hxd.BufferFormat = @:privateAccess hmd.lods[lodIdx].vertexFormat;
 		var bufs = hmd.getLodBuffers(format, lodIdx);
@@ -249,7 +248,7 @@ class ConvexHullsCollider extends Collider {
 		sys.FileSystem.deleteFile(outFile);
 
 		return out;
-
+		#end
 	}
 
 	static function tmpFile(name : String): String {
