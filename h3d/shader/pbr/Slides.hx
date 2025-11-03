@@ -63,7 +63,7 @@ class Slides extends ScreenShader {
 					} else
 						color = shadowMap.get(uv).xxx;
 				} else if (HAS_VELOCITY) {
-					color = packNormal(velocity.get(input.uv).xyz * 100.0).xyz;
+					color = vec3(abs(velocity.get(input.uv).xy) * 100.0, 0.0);
 				}
 			}
 			return color;
