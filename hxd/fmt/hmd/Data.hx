@@ -117,139 +117,139 @@ class ConvexHullsCollider extends Collider {
 		type = ConvexHulls;
 	}
 
-	public static function buildConvexHullCollider(hmd : h3d.prim.HMDModel, params : hxd.fmt.fbx.HMDOut.CollideParams) : Array<{indexes : Array<Int>, points: Array<Float>}> {
-		#if (!sys && !nodejs)
-		return null;
-		#else
-		var lodIdx = 0;
-		var format : hxd.BufferFormat = @:privateAccess hmd.lods[lodIdx].vertexFormat;
-		var bufs = hmd.getLodBuffers(format, lodIdx);
-		var vertices : Array<Float> = [for (i in 0...bufs.vertexes.length) bufs.vertexes[i]];
-		var indexes : Array<Int> = [for (i in 0...bufs.indexes.length) bufs.indexes[i]];
-		var mids : Array<Int> = null;
-		var bounds : h3d.col.Bounds = hmd.getBounds();
+	// public static function buildConvexHullCollider(hmd : h3d.prim.HMDModel, params : hxd.fmt.fbx.HMDOut.CollideParams) : Array<{indexes : Array<Int>, points: Array<Float>}> {
+	// 	#if (!sys && !nodejs)
+	// 	return null;
+	// 	#else
+	// 	var lodIdx = 0;
+	// 	var format : hxd.BufferFormat = @:privateAccess hmd.lods[lodIdx].vertexFormat;
+	// 	var bufs = hmd.getLodBuffers(format, lodIdx);
+	// 	var vertices : Array<Float> = [for (i in 0...bufs.vertexes.length) bufs.vertexes[i]];
+	// 	var indexes : Array<Int> = [for (i in 0...bufs.indexes.length) bufs.indexes[i]];
+	// 	var mids : Array<Int> = null;
+	// 	var bounds : h3d.col.Bounds = hmd.getBounds();
 
-		var ignoreCollides : Array<String> = null;
-		var ignoreCollidesCache : Map<Int,Bool> = [];
+	// 	var ignoreCollides : Array<String> = null;
+	// 	var ignoreCollidesCache : Map<Int,Bool> = [];
 
-		// ----
+	// 	// ----
 
-		var maxConvexHulls = params.maxConvexHulls;
-		var dim = bounds.dimension();
-		var prec = Math.min(dim, params.precision);
-		var subdiv = Math.ceil(dim / prec);
-		subdiv = Math.imin(subdiv, params.maxSubdiv);
-		var maxResolution = subdiv * subdiv * subdiv;
+	// 	var maxConvexHulls = params.maxConvexHulls;
+	// 	var dim = bounds.dimension();
+	// 	var prec = Math.min(dim, params.precision);
+	// 	var subdiv = Math.ceil(dim / prec);
+	// 	subdiv = Math.imin(subdiv, params.maxSubdiv);
+	// 	var maxResolution = subdiv * subdiv * subdiv;
 
-		var vertexCount = Std.int(vertices.length / format.stride);
-		var indexCount = indexes.length;
-		// for( idx in indexes )
-		// 	indexCount += idx == null ? 0 : idx.length;
+	// 	var vertexCount = Std.int(vertices.length / format.stride);
+	// 	var indexCount = indexes.length;
+	// 	// for( idx in indexes )
+	// 	// 	indexCount += idx == null ? 0 : idx.length;
 
-		var convexPoints : Array<Array<Float>> = [];
-		var convexIndexes32 : Array<Array<Int>> = [];
+	// 	var convexPoints : Array<Array<Float>> = [];
+	// 	var convexIndexes32 : Array<Array<Int>> = [];
 
-		function iterVertex(cb : Float -> Float -> Float -> Void) {
-			for ( i in 0...vertexCount ) {
-				var x = vertices[i * format.stride];
-				var y = vertices[i * format.stride + 1];
-				var z = vertices[i * format.stride + 2];
-				cb(x, y, z);
-			}
-		}
+	// 	function iterVertex(cb : Float -> Float -> Float -> Void) {
+	// 		for ( i in 0...vertexCount ) {
+	// 			var x = vertices[i * format.stride];
+	// 			var y = vertices[i * format.stride + 1];
+	// 			var z = vertices[i * format.stride + 2];
+	// 			cb(x, y, z);
+	// 		}
+	// 	}
 
-		function iterTriangle(cb : Int -> Void) {
-			var triangleCount = 0;
-			for ( i => idx in indexes ) {
-				if( idx == null )
-					continue;
-				// if( ignoreCollides != null && i < mids.length ) {
-				// 	var mat = mids[i];
-				// 	var b = ignoreCollidesCache.get(mat);
-				// 	if( b == null ) {
-				// 		b = ignoreCollides.contains(hmd.lib.header.materials[mat].name);
-				// 		ignoreCollidesCache.set(mat, b);
-				// 	}
-				// 	if( b == true )
-				// 		continue;
-				// }
-				var ntri = Std.int(indexes.length / 3);
-				for( i in 0...ntri ) {
-					cb(indexes[3 * i]);
-					cb(indexes[3 * i + 1]);
-					cb(indexes[3 * i + 2]);
-				}
-				triangleCount += ntri;
-			}
-			return triangleCount;
-		}
+	// 	function iterTriangle(cb : Int -> Void) {
+	// 		var triangleCount = 0;
+	// 		for ( i => idx in indexes ) {
+	// 			if( idx == null )
+	// 				continue;
+	// 			// if( ignoreCollides != null && i < mids.length ) {
+	// 			// 	var mat = mids[i];
+	// 			// 	var b = ignoreCollidesCache.get(mat);
+	// 			// 	if( b == null ) {
+	// 			// 		b = ignoreCollides.contains(hmd.lib.header.materials[mat].name);
+	// 			// 		ignoreCollidesCache.set(mat, b);
+	// 			// 	}
+	// 			// 	if( b == true )
+	// 			// 		continue;
+	// 			// }
+	// 			var ntri = Std.int(indexes.length / 3);
+	// 			for( i in 0...ntri ) {
+	// 				cb(indexes[3 * i]);
+	// 				cb(indexes[3 * i + 1]);
+	// 				cb(indexes[3 * i + 2]);
+	// 			}
+	// 			triangleCount += ntri;
+	// 		}
+	// 		return triangleCount;
+	// 	}
 
-		var fileName = tmpFile("vhacd_data");
-		var outFile = fileName+".out";
+	// 	var fileName = tmpFile("vhacd_data");
+	// 	var outFile = fileName+".out";
 
-		var outputData = new haxe.io.BytesBuffer();
-		outputData.addInt32(vertexCount);
-		iterVertex(function(x : Float, y : Float, z : Float) {
-			outputData.addFloat(x);
-			outputData.addFloat(y);
-			outputData.addFloat(z);
-		});
-		var triangleCount = iterTriangle(function(_) {});
-		if ( triangleCount == 0 )
-			return null;
+	// 	var outputData = new haxe.io.BytesBuffer();
+	// 	outputData.addInt32(vertexCount);
+	// 	iterVertex(function(x : Float, y : Float, z : Float) {
+	// 		outputData.addFloat(x);
+	// 		outputData.addFloat(y);
+	// 		outputData.addFloat(z);
+	// 	});
+	// 	var triangleCount = iterTriangle(function(_) {});
+	// 	if ( triangleCount == 0 )
+	// 		return null;
 
-		var startStamp = haxe.Timer.stamp();
+	// 	var startStamp = haxe.Timer.stamp();
 
-		outputData.addInt32(triangleCount);
-		iterTriangle(function(index : Int) {
-			outputData.addInt32(index);
-		});
-		sys.io.File.saveBytes(fileName, outputData.getBytes());
-		var ret = try Sys.command("meshTools",["vhacd", fileName, outFile, '$maxConvexHulls', '$maxResolution']) catch( e : Dynamic ) -1;
-		if( ret != 0 ) {
-			sys.FileSystem.deleteFile(fileName);
-			throw "Failed to call 'vhacd' executable required to generate collision data. Please ensure it's in your PATH";
-		}
-		var bytes = sys.io.File.getBytes(outFile);
+	// 	outputData.addInt32(triangleCount);
+	// 	iterTriangle(function(index : Int) {
+	// 		outputData.addInt32(index);
+	// 	});
+	// 	sys.io.File.saveBytes(fileName, outputData.getBytes());
+	// 	var ret = try Sys.command("meshTools",["vhacd", fileName, outFile, '$maxConvexHulls', '$maxResolution']) catch( e : Dynamic ) -1;
+	// 	if( ret != 0 ) {
+	// 		sys.FileSystem.deleteFile(fileName);
+	// 		throw "Failed to call 'vhacd' executable required to generate collision data. Please ensure it's in your PATH";
+	// 	}
+	// 	var bytes = sys.io.File.getBytes(outFile);
 
 
-		var out : Array<{indexes : Array<Int>, points: Array<Float>}> = [];
-		var i = 0;
-		var convexHullCount = bytes.getInt32(i++<<2);
-		for ( idx in 0...convexHullCount ) {
-			var pointCount = bytes.getInt32(i++<<2);
-			var points = [];
-			for ( _ in 0...pointCount ) {
-				var x = bytes.getDouble(i<<2);
-				points.push(x);
-				i += 2;
-				var y = bytes.getDouble(i<<2);
-				points.push(y);
-				i += 2;
-				var z = bytes.getDouble(i<<2);
-				points.push(z);
-				i += 2;
-			}
-			// convexPoints.push(points);
+	// 	var out : Array<{indexes : Array<Int>, points: Array<Float>}> = [];
+	// 	var i = 0;
+	// 	var convexHullCount = bytes.getInt32(i++<<2);
+	// 	for ( idx in 0...convexHullCount ) {
+	// 		var pointCount = bytes.getInt32(i++<<2);
+	// 		var points = [];
+	// 		for ( _ in 0...pointCount ) {
+	// 			var x = bytes.getDouble(i<<2);
+	// 			points.push(x);
+	// 			i += 2;
+	// 			var y = bytes.getDouble(i<<2);
+	// 			points.push(y);
+	// 			i += 2;
+	// 			var z = bytes.getDouble(i<<2);
+	// 			points.push(z);
+	// 			i += 2;
+	// 		}
+	// 		// convexPoints.push(points);
 
-			var triangleCount = bytes.getInt32(i++<<2);
-			var indexes = [];
-			for ( _ in 0...triangleCount ) {
-				indexes.push(bytes.getInt32(i++<<2));
-				indexes.push(bytes.getInt32(i++<<2));
-				indexes.push(bytes.getInt32(i++<<2));
-			}
-			// convexIndexes32.push(indexes);
+	// 		var triangleCount = bytes.getInt32(i++<<2);
+	// 		var indexes = [];
+	// 		for ( _ in 0...triangleCount ) {
+	// 			indexes.push(bytes.getInt32(i++<<2));
+	// 			indexes.push(bytes.getInt32(i++<<2));
+	// 			indexes.push(bytes.getInt32(i++<<2));
+	// 		}
+	// 		// convexIndexes32.push(indexes);
 
-			out.push({ indexes : indexes, points: points });
-		}
+	// 		out.push({ indexes : indexes, points: points });
+	// 	}
 
-		sys.FileSystem.deleteFile(fileName);
-		sys.FileSystem.deleteFile(outFile);
+	// 	sys.FileSystem.deleteFile(fileName);
+	// 	sys.FileSystem.deleteFile(outFile);
 
-		return out;
-		#end
-	}
+	// 	return out;
+	// 	#end
+	// }
 
 	static function tmpFile(name : String): String {
 		#if (sys || nodejs)
