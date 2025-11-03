@@ -302,6 +302,22 @@ class OrientedBounds extends Collider {
 		return f.hasOrientedBounds(this);
 	}
 
+	public function hasSphere(s:Sphere):Bool {
+		var dx = s.x - centerX;
+		var dy = s.y - centerY;
+		var dz = s.z - centerZ;
+
+		var rpx = dx * xx + dy * xy + dz * xz;
+		var rpy = dx * yx + dy * yy + dz * yz;
+		var rpz = dx * zx + dy * zy + dz * zz;
+
+		return (
+			(hxd.Math.abs(hx) - hxd.Math.abs(rpx) > -hxd.Math.EPSILON - s.r) &&
+			(hxd.Math.abs(hy) - hxd.Math.abs(rpy) > -hxd.Math.EPSILON - s.r) &&
+			(hxd.Math.abs(hz) - hxd.Math.abs(rpz) > -hxd.Math.EPSILON - s.r)
+		);
+	}
+
 	public function inSphere(s:Sphere):Bool {
 		var sp = inline s.getCenter();
 		var rr = s.r * s.r;
