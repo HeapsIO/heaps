@@ -347,7 +347,7 @@ class Benchmark extends h2d.Graphics {
 		var totalName = measureCpu ? "cpu" : "gpu";
 		#if target.threaded
 		if (measureCpuThread != null) {
-			var n = measureCpuThread.getName();
+			var n = #if (haxe_ver >= 5) measureCpuThread.name #else measureCpuThread.getName() #end;
 			if (n != null)
 				totalName = n;
 		}

@@ -155,7 +155,9 @@ class System {
 			try {
 				hl.Api.setErrorHandler(reportError); // set exception trap
 			#end
-				#if ( target.threaded && (haxe_ver >= 4.2) )
+				#if ( haxe_ver >= 5 )
+				mainThread.events.loopOnce();
+				#elseif ( target.threaded && (haxe_ver >= 4.2) )
 				// Due to how 4.2+ timers work, instead of MainLoop, thread events have to be updated.
 				// Unsafe events rely on internal implementation of EventLoop, but utilize the recycling feature
 				// which in turn provides better optimization.

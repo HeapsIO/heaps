@@ -1911,7 +1911,7 @@ class DX12Driver extends h3d.impl.Driver {
 			srvRingBuf = hl.CArray.alloc(SrvArgs, 256);
 			#if !console
 			var thread = sys.thread.Thread.create(runThread);
-			thread.setName("DX12");
+			#if (haxe_ver >= 5) thread.name = "DX12"; #else thread.setName("DX12"); #end
 			#end
 		}
 
