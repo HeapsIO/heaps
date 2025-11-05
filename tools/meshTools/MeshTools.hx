@@ -1,7 +1,7 @@
 class MeshTools {
 
 	static function main() {
-		var args = ["vhacd", "", "1", "8"];
+		var args = Sys.args();
 		if( args.length < 2 )
 			exit();
 
@@ -111,7 +111,7 @@ class MeshTools {
 		if ( args.length < 3 )
 			exit();
 
-		var input = new haxe.io.BytesInput(sys.io.File.getBytes('C:\\Projects\\heaps\\tools\\meshTools\\michel.bin'));
+		var input = new haxe.io.BytesInput(sys.io.File.getBytes(args[1]));
 		var dataSize = 3 << 2;
 		var pointCount = input.readInt32();
 		var points = hl.Bytes.fromBytes(input.read(pointCount * dataSize));
