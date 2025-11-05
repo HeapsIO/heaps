@@ -39,7 +39,7 @@ class RenderContext {
 	function fillRec( v : Dynamic, type : hxsl.Ast.Type, out : #if hl hl.BytesAccess<hl.F32> #else h3d.shader.Buffers.ShaderBufferData #end, pos : Int ) {
 		switch( type ) {
 		case TInt:
-			out[pos] = v;
+			out[pos] = haxe.io.FPHelper.i32ToFloat(Std.int(v));
 			return 1;
 		case TFloat:
 			out[pos] = v;
@@ -249,15 +249,19 @@ class RenderContext {
 			while( p != null ) {
 				var v : Dynamic;
 				if( p.perObjectGlobal == null ) {
+					var i = getInstance(p.instance);
 					switch( p.type ) {
-					case TFloat, TInt:
-						var i = getInstance(p.instance);
+					case TFloat:
 						ptr[p.pos] = i.getParamFloatValue(p.index);
+						p = p.next;
+						continue;
+					case TInt:
+						ptr[p.pos] = haxe.io.FPHelper.i32ToFloat(Std.int(i.getParamFloatValue(p.index)));
 						p = p.next;
 						continue;
 					default:
 					}
-					v = getInstance(p.instance).getParamValue(p.index);
+					v = i.getParamValue(p.index);
 					if( v == null ) throw "Missing param value " + curInstanceValue + "." + p.name;
 				} else
 					v = getParamValue(p, shaders);

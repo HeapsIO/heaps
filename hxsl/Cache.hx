@@ -702,7 +702,7 @@ class Cache {
 			var size = switch( p.type ) {
 				case TMat4: 4 * 4;
 				case TVec(n,VFloat): n;
-				case TFloat: 1;
+				case TFloat, TInt: 1;
 				default: throw "Unsupported batch var type "+p.type;
 			}
 			var index;
@@ -807,6 +807,10 @@ class Cache {
 			return vreal;
 		}
 
+		inline function floatBitsToInt( e : TExpr ) {
+			return { e : TCall({ e : TGlobal(FloatBitsToInt), t : TFun([]), p : e.p }, [e]), t : TInt, p : e.p };
+		}
+
 		function extractVar( vreal, ebuffer, v : AllocParam ) {
 			var index = (v.pos>>2);
 			var extract = switch( v.type ) {
@@ -829,7 +833,9 @@ class Cache {
 				}
 				{ p : pos, t : v.type, e : TSwiz(readOffset(ebuffer, index),swiz) };
 			case TFloat:
-				{ p : pos, t : v.type, e : TSwiz(readOffset(ebuffer, index),swiz[v.pos&3]) }
+				{ p : pos, t : v.type, e : TSwiz(readOffset(ebuffer, index),swiz[v.pos&3]) };
+			case TInt:
+				floatBitsToInt({ p : pos, t : v.type, e : TSwiz(readOffset(ebuffer, index),swiz[v.pos&3]) });
 			default:
 				throw "assert";
 			}
