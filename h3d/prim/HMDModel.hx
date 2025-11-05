@@ -2,6 +2,7 @@ package h3d.prim;
 
 class HMDModel extends MeshPrimitive {
 
+	var model : hxd.fmt.hmd.Data.Model;
 	var data (get, never) : hxd.fmt.hmd.Data.Geometry;
 	function get_data() { return lods[0]; }
 	var lods : Array<hxd.fmt.hmd.Data.Geometry>;
@@ -16,8 +17,9 @@ class HMDModel extends MeshPrimitive {
 	var lodConfig : Array<Float> = null;
 	var colliderData : ColliderData;
 
-	public function new( data : hxd.fmt.hmd.Data.Geometry, dataPos, lib, lods : Array<hxd.fmt.hmd.Data.Model> = null ) {
-		this.lods = [data];
+	public function new( model : hxd.fmt.hmd.Data.Model, dataPos, lib, lods : Array<hxd.fmt.hmd.Data.Model> = null ) {
+		this.model = model;
+		this.lods = [lib.header.geometries[model.geometry]];
 		if (lods != null) {
 			for (lod in lods)
 				this.lods.push(lib.header.geometries[lod.geometry]);
