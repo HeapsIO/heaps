@@ -57,6 +57,7 @@ class BaseMesh extends hxsl.Shader {
 		var specColor : Vec3;
 		var worldDist : Float;
 		var pixelVelocity : Vec2;
+		var prevModelView : Mat3x4;
 
 		@param var color : Vec4;
 		@range(0,100) @param var specularPower : Float;
@@ -68,7 +69,8 @@ class BaseMesh extends hxsl.Shader {
 			relativePosition = input.position;
 			transformedPosition = relativePosition * global.modelView.mat3x4();
 			projectedPosition = vec4(transformedPosition, 1) * camera.viewProj;
-			previousTransformedPosition = relativePosition * global.previousModelView.mat3x4();
+			prevModelView = global.previousModelView.mat3x4();
+			previousTransformedPosition = relativePosition * prevModelView;
 			previousProjectedPosition = vec4(previousTransformedPosition, 1) * camera.previousViewProj;
 			transformedNormal = (input.normal * global.modelView.mat3()).normalize();
 			camera.dir = (camera.position - transformedPosition).normalize();
