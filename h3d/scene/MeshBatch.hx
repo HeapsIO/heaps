@@ -174,6 +174,7 @@ class MeshBatch extends MultiMaterial {
 	}
 
 	function initSubMeshResources( emitCountTip ) {
+		instanced.commands = null;
 		if ( cpuIndirectCallBuffers == null ) {
 			var instanceSize = emitCountTip * h3d.impl.InstanceBuffer.ELEMENT_SIZE;
 			cpuIndirectCallBuffers = [for ( _ in 0...materials.length ) { bytes : haxe.io.Bytes.alloc(instanceSize), count : 0 }];
@@ -316,10 +317,6 @@ class MeshBatch extends MultiMaterial {
 			if ( !hasSubMeshes() && calcBounds)
 				instanced.addInstanceBounds(worldPosition == null ? absPos : worldPosition);
 
-			// Use the mesh batch abs pos if no world position has been set.
-			if ( worldPosition == null )
-				syncPos();
-
 			syncData();
 		}
 
@@ -379,9 +376,6 @@ class MeshBatch extends MultiMaterial {
 
 			cpuIndirectCallBuffers[matIndex] = indirectCallBuffer;
 		}
-
-		// To clean
-		instanced.commands = null;
 	}
 
 	override function sync(ctx:RenderContext) {
@@ -524,7 +518,7 @@ class MeshBatch extends MultiMaterial {
 	function syncData() {
 		var batch = dataPasses;
 		var invWorldPosition = null;
-		var worldPosition = worldPosition ?? absPos;
+		var worldPosition = worldPosition ?? getAbsPos();
 		while( batch != null ) {
 			var startPos = batch.paramsCount * instanceCount << 2;
 			// in case we are bigger than emitCountTip
