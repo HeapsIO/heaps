@@ -109,6 +109,12 @@ class Collider {
 	public var type : ColliderType;
 }
 
+
+typedef ConvexHullParams = {
+	var maxConvexHulls : Int;
+	var maxResolution : Int;
+};
+
 class ConvexHullsCollider extends Collider {
 	public var vertexCounts : Array<Int>;
 	public var vertexPosition : DataPosition;
@@ -118,139 +124,134 @@ class ConvexHullsCollider extends Collider {
 		type = ConvexHulls;
 	}
 
-	// public static function buildConvexHullCollider(hmd : h3d.prim.HMDModel, params : hxd.fmt.fbx.HMDOut.CollideParams) : Array<{indexes : Array<Int>, points: Array<Float>}> {
-	// 	#if (!sys && !nodejs)
-	// 	return null;
-	// 	#else
-	// 	var lodIdx = 0;
-	// 	var format : hxd.BufferFormat = @:privateAccess hmd.lods[lodIdx].vertexFormat;
-	// 	var bufs = hmd.getLodBuffers(format, lodIdx);
-	// 	var vertices : Array<Float> = [for (i in 0...bufs.vertexes.length) bufs.vertexes[i]];
-	// 	var indexes : Array<Int> = [for (i in 0...bufs.indexes.length) bufs.indexes[i]];
-	// 	var mids : Array<Int> = null;
-	// 	var bounds : h3d.col.Bounds = hmd.getBounds();
+	public static function buildConvexHulls(vertices : haxe.ds.Vector<hxd.impl.Float32>, indexes : haxe.ds.Vector<Int>, params : ConvexHullParams) {
+		var vCount = Std.int(vertices.length / 3);
+		var triCount = Std.int(indexes.length / 3);
+		var out : Array<{vertices: haxe.ds.Vector<hxd.impl.Float32>, indexes : haxe.ds.Vector<Int>}> = [];
 
-	// 	var ignoreCollides : Array<String> = null;
-	// 	var ignoreCollidesCache : Map<Int,Bool> = [];
+		#if (sys || nodejs)
+		// Format data for meshtools
+		var outputData = new haxe.io.BytesBuffer();
+		outputData.addInt32(vCount);
+		for (idx in 0...vCount) {
+			var x = vertices[idx * 3];
+			var y = vertices[idx * 3 + 1];
+			var z = vertices[idx * 3 + 2];
+			outputData.addFloat(x);
+			outputData.addFloat(y);
+			outputData.addFloat(z);
+		}
 
-	// 	// ----
+		outputData.addInt32(triCount);
+		for (idx in indexes)
+			outputData.addInt32(idx);
 
-	// 	var maxConvexHulls = params.maxConvexHulls;
-	// 	var dim = bounds.dimension();
-	// 	var prec = Math.min(dim, params.precision);
-	// 	var subdiv = Math.ceil(dim / prec);
-	// 	subdiv = Math.imin(subdiv, params.maxSubdiv);
-	// 	var maxResolution = subdiv * subdiv * subdiv;
+		// Exec meshtools
+		var fileName = tmpFile("vhacd_data");
+		var outFile = fileName + ".out";
+		sys.io.File.saveBytes(fileName, outputData.getBytes());
 
-	// 	var vertexCount = Std.int(vertices.length / format.stride);
-	// 	var indexCount = indexes.length;
-	// 	// for( idx in indexes )
-	// 	// 	indexCount += idx == null ? 0 : idx.length;
+		var ret = try Sys.command("meshTools",["vhacd", fileName, outFile, '${params.maxConvexHulls}', '${params.maxResolution}']) catch( e : Dynamic ) -1;
+		if( ret != 0 ) {
+			sys.FileSystem.deleteFile(fileName);
+			throw "Failed to call 'vhacd' executable required to generate collision data. Please ensure it's in your PATH";
+		}
 
-	// 	var convexPoints : Array<Array<Float>> = [];
-	// 	var convexIndexes32 : Array<Array<Int>> = [];
+		// Get result data and format it for output
+		var bytes = sys.io.File.getBytes(outFile);
+		var i = 0;
+		var convexHullCount = bytes.getInt32(i++<<2);
+		for ( idx in 0...convexHullCount ) {
+			var pointCount = bytes.getInt32(i++<<2);
+			var vertices = [];
+			for ( _ in 0...pointCount ) {
+				var x = bytes.getDouble(i<<2);
+				vertices.push(x);
+				i += 2;
+				var y = bytes.getDouble(i<<2);
+				vertices.push(y);
+				i += 2;
+				var z = bytes.getDouble(i<<2);
+				vertices.push(z);
+				i += 2;
+			}
 
-	// 	function iterVertex(cb : Float -> Float -> Float -> Void) {
-	// 		for ( i in 0...vertexCount ) {
-	// 			var x = vertices[i * format.stride];
-	// 			var y = vertices[i * format.stride + 1];
-	// 			var z = vertices[i * format.stride + 2];
-	// 			cb(x, y, z);
-	// 		}
-	// 	}
+			var triangleCount = bytes.getInt32(i++<<2);
+			var indexes = [];
+			for ( _ in 0...triangleCount ) {
+				indexes.push(bytes.getInt32(i++<<2));
+				indexes.push(bytes.getInt32(i++<<2));
+				indexes.push(bytes.getInt32(i++<<2));
+			}
 
-	// 	function iterTriangle(cb : Int -> Void) {
-	// 		var triangleCount = 0;
-	// 		for ( i => idx in indexes ) {
-	// 			if( idx == null )
-	// 				continue;
-	// 			// if( ignoreCollides != null && i < mids.length ) {
-	// 			// 	var mat = mids[i];
-	// 			// 	var b = ignoreCollidesCache.get(mat);
-	// 			// 	if( b == null ) {
-	// 			// 		b = ignoreCollides.contains(hmd.lib.header.materials[mat].name);
-	// 			// 		ignoreCollidesCache.set(mat, b);
-	// 			// 	}
-	// 			// 	if( b == true )
-	// 			// 		continue;
-	// 			// }
-	// 			var ntri = Std.int(indexes.length / 3);
-	// 			for( i in 0...ntri ) {
-	// 				cb(indexes[3 * i]);
-	// 				cb(indexes[3 * i + 1]);
-	// 				cb(indexes[3 * i + 2]);
-	// 			}
-	// 			triangleCount += ntri;
-	// 		}
-	// 		return triangleCount;
-	// 	}
+			out.push({ vertices: cast vertices, indexes: cast indexes });
+		}
 
-	// 	var fileName = tmpFile("vhacd_data");
-	// 	var outFile = fileName+".out";
+		sys.FileSystem.deleteFile(fileName);
+		sys.FileSystem.deleteFile(outFile);
 
-	// 	var outputData = new haxe.io.BytesBuffer();
-	// 	outputData.addInt32(vertexCount);
-	// 	iterVertex(function(x : Float, y : Float, z : Float) {
-	// 		outputData.addFloat(x);
-	// 		outputData.addFloat(y);
-	// 		outputData.addFloat(z);
-	// 	});
-	// 	var triangleCount = iterTriangle(function(_) {});
-	// 	if ( triangleCount == 0 )
-	// 		return null;
+		return out;
+		#end
 
-	// 	var startStamp = haxe.Timer.stamp();
+		#if (hl && hl_ver >= version("1.15.0"))
+		var verticesBytes = new hl.Bytes(vCount * 3 * 4);
+		for (idx in 0...vCount) {
+			var x = vertices[idx * 3];
+			var y = vertices[idx * 3 + 1];
+			var z = vertices[idx * 3 + 2];
+			verticesBytes.setF32(4 * idx * 3, x);
+			verticesBytes.setF32(4 * (idx * 3 + 1), y);
+			verticesBytes.setF32(4 * (idx * 3 + 2), z);
+		}
 
-	// 	outputData.addInt32(triangleCount);
-	// 	iterTriangle(function(index : Int) {
-	// 		outputData.addInt32(index);
-	// 	});
-	// 	sys.io.File.saveBytes(fileName, outputData.getBytes());
-	// 	var ret = try Sys.command("meshTools",["vhacd", fileName, outFile, '$maxConvexHulls', '$maxResolution']) catch( e : Dynamic ) -1;
-	// 	if( ret != 0 ) {
-	// 		sys.FileSystem.deleteFile(fileName);
-	// 		throw "Failed to call 'vhacd' executable required to generate collision data. Please ensure it's in your PATH";
-	// 	}
-	// 	var bytes = sys.io.File.getBytes(outFile);
+		var indexesBytes = new hl.Bytes(indexes.length * 4);
+		for (idx in 0...indexes.length)
+			indexesBytes.setI32(4 * idx, indexes[idx]);
 
+		var startStamp = haxe.Timer.stamp();
+		var vhacdInstance = new hxd.tools.VHACD();
+		var p = new hxd.tools.VHACD.Parameters();
+		p.maxConvexHulls = params.maxConvexHulls;
+		p.maxResolution = params.maxResolution;
+		vhacdInstance.compute(verticesBytes, vCount, indexesBytes, triCount, p);
+		var convexHullCount = vhacdInstance.getConvexHullCount();
+		if ( convexHullCount == 0 )
+			return null;
 
-	// 	var out : Array<{indexes : Array<Int>, points: Array<Float>}> = [];
-	// 	var i = 0;
-	// 	var convexHullCount = bytes.getInt32(i++<<2);
-	// 	for ( idx in 0...convexHullCount ) {
-	// 		var pointCount = bytes.getInt32(i++<<2);
-	// 		var points = [];
-	// 		for ( _ in 0...pointCount ) {
-	// 			var x = bytes.getDouble(i<<2);
-	// 			points.push(x);
-	// 			i += 2;
-	// 			var y = bytes.getDouble(i<<2);
-	// 			points.push(y);
-	// 			i += 2;
-	// 			var z = bytes.getDouble(i<<2);
-	// 			points.push(z);
-	// 			i += 2;
-	// 		}
-	// 		// convexPoints.push(points);
+		var convexHull = new hxd.tools.VHACD.ConvexHull();
+		for ( i in 0...convexHullCount) {
+			vhacdInstance.getConvexHull(i, convexHull);
+			var pointCount = convexHull.pointCount;
+			var pos = 0;
+			var pointsBytes = convexHull.points;
+			var vertices = [];
+			for ( _ in 0...pointCount ) {
+				var x = pointsBytes.getF64(8*pos++);
+				var y = pointsBytes.getF64(8*pos++);
+				var z = pointsBytes.getF64(8*pos++);
+				vertices.push(x);
+				vertices.push(y);
+				vertices.push(z);
+			}
 
-	// 		var triangleCount = bytes.getInt32(i++<<2);
-	// 		var indexes = [];
-	// 		for ( _ in 0...triangleCount ) {
-	// 			indexes.push(bytes.getInt32(i++<<2));
-	// 			indexes.push(bytes.getInt32(i++<<2));
-	// 			indexes.push(bytes.getInt32(i++<<2));
-	// 		}
-	// 		// convexIndexes32.push(indexes);
+			var triangleCount = convexHull.triangleCount;
+			var triangles = convexHull.triangles;
+			var pos = 0;
+			var indexes = [];
+			for ( _ in 0...triangleCount ) {
+				indexes.push(triangles.getI32(4*pos++));
+				indexes.push(triangles.getI32(4*pos++));
+				indexes.push(triangles.getI32(4*pos++));
+			}
+			out.push({ vertices : cast vertices, indexes : cast indexes });
+		}
+		vhacdInstance.release();
 
-	// 		out.push({ indexes : indexes, points: points });
-	// 	}
+		return out;
+		#end
 
-	// 	sys.FileSystem.deleteFile(fileName);
-	// 	sys.FileSystem.deleteFile(outFile);
-
-	// 	return out;
-	// 	#end
-	// }
+		return out;
+	}
 
 	static function tmpFile(name : String): String {
 		#if (sys || nodejs)

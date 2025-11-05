@@ -228,12 +228,23 @@ class HMDOut extends BaseLibrary {
 		}
 	}
 
-	public static inline function writePrec( d : haxe.io.BytesOutput, v : Float, p : Precision ) {
-		switch( p ) {
-		case F32: writeFloat(d, v);
-		case F16: d.writeUInt16(hxd.BufferFormat.float32to16(v,true));
-		case S8: d.writeByte(hxd.BufferFormat.float32toS8(v));
-		case U8: d.writeByte(BufferFormat.float32toU8(v));
+	public static inline function writePrec( d : haxe.io.BytesOutput, v : Float, p : Precision ) : Float {
+		return switch( p ) {
+			case F32:
+				writeFloat(d, v);
+				v;
+			case F16:
+				var tmp = hxd.BufferFormat.float32to16(v, true);
+				d.writeUInt16(tmp);
+				hxd.BufferFormat.float16to32(tmp);
+			case S8:
+				var tmp = hxd.BufferFormat.float32toS8(v);
+				d.writeByte(tmp);
+				hxd.BufferFormat.floatS8to32(tmp);
+			case U8:
+				var tmp = BufferFormat.float32toU8(v);
+				d.writeByte(tmp);
+				BufferFormat.floatU8to32(tmp);
 		}
 	}
 
@@ -625,6 +636,7 @@ class HMDOut extends BaseLibrary {
 		}
 
 		// write data
+		var colVBuf = new FloatBuffer();
 		g.vertexPosition = dataOut.length;
 		if( lowPrecConfig == null ) {
 			for( i in 0...vbuf.length )
@@ -632,9 +644,12 @@ class HMDOut extends BaseLibrary {
 		} else {
 			for( index in 0...Std.int(vbuf.length / stride) ) {
 				var i = index * stride;
-				writePrec(dataOut, vbuf[i++], ppos);
-				writePrec(dataOut, vbuf[i++], ppos);
-				writePrec(dataOut, vbuf[i++], ppos);
+				var x = writePrec(dataOut, vbuf[i++], ppos);
+				var y = writePrec(dataOut, vbuf[i++], ppos);
+				var z = writePrec(dataOut, vbuf[i++], ppos);
+				colVBuf.push(x);
+				colVBuf.push(y);
+				colVBuf.push(z);
 				flushPrec(dataOut, ppos,3);
 				if( normals != null ) {
 					writePrec(dataOut, vbuf[i++], pnormal);
@@ -804,7 +819,7 @@ class HMDOut extends BaseLibrary {
 			}
 			d.shapes.push(shape);
 		}
-		return { g : g, materials : matMap, format : g.vertexFormat, vbuf : vbuf, ibufs : ibufs };
+		return { g : g, materials : matMap, vbuf : colVBuf, ibufs : ibufs };
 	}
 
 	function getLODInfos( modelName : String ) : { lodLevel : Int , modelName : String } {
@@ -835,8 +850,8 @@ class HMDOut extends BaseLibrary {
 		return { lodLevel : -1, modelName : null };
 	}
 
-	function buildGeomCollider( d : hxd.fmt.hmd.Data, format : hxd.BufferFormat, vbuf : FloatBuffer, ibufs : Array<Array<Int>>, dataOut : haxe.io.BytesOutput ) : MeshCollider {
-		var vertexCount = Std.int(vbuf.length / format.stride);
+	function buildGeomCollider( d : hxd.fmt.hmd.Data, vbuf : FloatBuffer, ibufs : Array<Array<Int>>, dataOut : haxe.io.BytesOutput ) : MeshCollider {
+		var vertexCount = Std.int(vbuf.length / 3);
 		var indexCount = 0;
 		for( idx in ibufs ) {
 			indexCount += idx == null ? 0 : idx.length;
@@ -844,9 +859,9 @@ class HMDOut extends BaseLibrary {
 
 		function iterVertex(cb : Float -> Float -> Float -> Void) {
 			for ( i in 0...vertexCount ) {
-				var x = vbuf[i*format.stride];
-				var y = vbuf[i*format.stride + 1];
-				var z = vbuf[i*format.stride + 2];
+				var x = vbuf[i*3];
+				var y = vbuf[i*3 + 1];
+				var z = vbuf[i*3 + 2];
 				cb(x, y, z);
 			}
 		}
@@ -878,203 +893,79 @@ class HMDOut extends BaseLibrary {
 	}
 
 
-	function buildAutoColliders( d : hxd.fmt.hmd.Data, format : hxd.BufferFormat, vbuf : FloatBuffer, ibufs : Array<Array<Int>>, mids : Array<Int>, bounds : h3d.col.Bounds, generateCollides : CollideParams, dataOut : haxe.io.BytesOutput ) : ConvexHullsCollider {
-		var maxConvexHulls = generateCollides.maxConvexHulls;
+	function buildAutoColliders( d : hxd.fmt.hmd.Data, vbuf : FloatBuffer, ibufs : Array<Array<Int>>, mids : Array<Int>, bounds : h3d.col.Bounds, generateCollides : CollideParams, dataOut : haxe.io.BytesOutput ) : ConvexHullsCollider {
+		// Format data for our convex hull algorithm
+		var vertices : Array<Float> = [];
+		var indexes : Array<Int> = [];
+
+		var vertexCount = Std.int(vbuf.length / 3);
+		var indexCount = 0;
+		for(idx in ibufs)
+			indexCount += idx == null ? 0 : idx.length;
+
+		for (i in 0...vertexCount) {
+			var x = vbuf[i * 3];
+			var y = vbuf[i * 3 + 1];
+			var z = vbuf[i * 3 + 2];
+			vertices.push(x);
+			vertices.push(y);
+			vertices.push(z);
+		}
+
+		for ( idx => ibuf in ibufs ) {
+			if( ibuf == null )
+				continue;
+			if( ignoreCollides != null && idx < mids.length ) {
+				var mat = mids[idx];
+				var b = ignoreCollidesCache.get(mat);
+				if( b == null ) {
+					b = ignoreCollides.contains(d.materials[mat].name);
+					ignoreCollidesCache.set(mat, b);
+				}
+				if( b == true )
+					continue;
+			}
+			for (idx in ibuf)
+				indexes.push(idx);
+		}
+
+		// Compute convex hulls shapes with hmd data
 		var dim = bounds.dimension();
 		var prec = Math.min(dim, generateCollides.precision);
 		var subdiv = Math.ceil(dim / prec);
 		subdiv = Math.imin(subdiv, generateCollides.maxSubdiv);
-		var maxResolution = subdiv * subdiv * subdiv;
+		var params = { maxConvexHulls: generateCollides.maxConvexHulls, maxResolution: subdiv * subdiv * subdiv };
+		var convexHulls = hxd.fmt.hmd.Data.ConvexHullsCollider.buildConvexHulls(cast vertices, cast indexes, params);
 
-		var vertexCount = Std.int(vbuf.length / format.stride);
-		var indexCount = 0;
-		for( idx in ibufs ) {
-			indexCount += idx == null ? 0 : idx.length;
-		}
-
-		var convexPoints : Array<Array<h3d.Vector>> = [];
-		var convexIndexes32 : Array<Array<Int>> = [];
-
-		function iterVertex(cb : Float -> Float -> Float -> Void) {
-			for ( i in 0...vertexCount ) {
-				var x = vbuf[i*format.stride];
-				var y = vbuf[i*format.stride + 1];
-				var z = vbuf[i*format.stride + 2];
-				cb(x, y, z);
-			}
-		}
-
-		function iterTriangle(cb : Int -> Void) {
-			var triangleCount = 0;
-			for ( i => idx in ibufs ) {
-				if( idx == null )
-					continue;
-				if( ignoreCollides != null && i < mids.length ) {
-					var mat = mids[i];
-					var b = ignoreCollidesCache.get(mat);
-					if( b == null ) {
-						b = ignoreCollides.contains(d.materials[mat].name);
-						ignoreCollidesCache.set(mat, b);
-					}
-					if( b == true )
-						continue;
-				}
-				var ntri = Std.int(idx.length / 3);
-				for( i in 0...ntri ) {
-					cb(idx[3*i]);
-					cb(idx[3*i + 1]);
-					cb(idx[3*i + 2]);
-				}
-				triangleCount += ntri;
-			}
-			return triangleCount;
-		}
-
-		#if (hl && hl_ver >= version("1.15.0"))
-		var vertices = new hl.Bytes(vertexCount * 3 * 4);
-		var i = 0;
-		iterVertex(function(x : Float, y : Float, z : Float) {
-			vertices.setF32(4 * i * 3, x);
-			vertices.setF32(4 * (i * 3 + 1), y);
-			vertices.setF32(4 * (i * 3 + 2), z);
-			i++;
-		});
-		var indexes = new hl.Bytes(indexCount * 4);
-		var pos = 0;
-		var triangleCount = iterTriangle(function(index : Int) {
-			indexes.setI32(4 * pos++, index);
-		});
-		if ( triangleCount == 0 )
-			return null;
-
-		var startStamp = haxe.Timer.stamp();
-
-		var vhacdInstance = new hxd.tools.VHACD();
-		var params = new hxd.tools.VHACD.Parameters();
-		params.maxConvexHulls = maxConvexHulls;
-		params.maxResolution = maxResolution;
-		vhacdInstance.compute(vertices, vertexCount, indexes, triangleCount, params);
-		var convexHullCount = vhacdInstance.getConvexHullCount();
-		if ( convexHullCount == 0 )
-			return null;
-
-		var convexHull = new hxd.tools.VHACD.ConvexHull();
-		for ( i in 0...convexHullCount) {
-			vhacdInstance.getConvexHull(i, convexHull);
-			var pointCount = convexHull.pointCount;
-			var pos = 0;
-			var pointsBytes = convexHull.points;
-			var points = [];
-			for ( _ in 0...pointCount ) {
-				var x = pointsBytes.getF64(8*pos++);
-				var y = pointsBytes.getF64(8*pos++);
-				var z = pointsBytes.getF64(8*pos++);
-				points.push(new h3d.Vector(x, y, z));
-			}
-			convexPoints.push(points);
-
-			var triangleCount = convexHull.triangleCount;
-			var triangles = convexHull.triangles;
-			var pos = 0;
-			var indexes = [];
-			for ( _ in 0...triangleCount ) {
-				indexes.push(triangles.getI32(4*pos++));
-				indexes.push(triangles.getI32(4*pos++));
-				indexes.push(triangles.getI32(4*pos++));
-			}
-			convexIndexes32.push(indexes);
-		}
-		vhacdInstance.release();
-		#elseif (sys || nodejs)
-		var fileName = tmpFile("vhacd_data");
-		var outFile = fileName+".out";
-
-		var outputData = new haxe.io.BytesBuffer();
-		outputData.addInt32(vertexCount);
-		iterVertex(function(x : Float, y : Float, z : Float) {
-			outputData.addFloat(x);
-			outputData.addFloat(y);
-			outputData.addFloat(z);
-		});
-		var triangleCount = iterTriangle(function(_) {});
-		if ( triangleCount == 0 )
-			return null;
-
-		var startStamp = haxe.Timer.stamp();
-
-		outputData.addInt32(triangleCount);
-		iterTriangle(function(index : Int) {
-			outputData.addInt32(index);
-		});
-		sys.io.File.saveBytes(fileName, outputData.getBytes());
-		var ret = try Sys.command("meshTools",["vhacd",fileName,outFile,'$maxConvexHulls','$maxResolution']) catch( e : Dynamic ) -1;
-		if( ret != 0 ) {
-			sys.FileSystem.deleteFile(fileName);
-			throw "Failed to call 'vhacd' executable required to generate collision data. Please ensure it's in your PATH"+(filePath == null ? "" : ' ($filePath)');
-		}
-		var bytes = sys.io.File.getBytes(outFile);
-
-		var i = 0;
-		var convexHullCount = bytes.getInt32(i++<<2);
-		for ( _ in 0...convexHullCount ) {
-			var pointCount = bytes.getInt32(i++<<2);
-			var points = [];
-			for ( _ in 0...pointCount ) {
-				var x = bytes.getDouble(i<<2);
-				i += 2;
-				var y = bytes.getDouble(i<<2);
-				i += 2;
-				var z = bytes.getDouble(i<<2);
-				i += 2;
-				var point = new h3d.Vector(x, y, z);
-				points.push(point);
-			}
-			convexPoints.push(points);
-
-			var triangleCount = bytes.getInt32(i++<<2);
-			var indexes = [];
-			for ( _ in 0...triangleCount ) {
-				indexes.push(bytes.getInt32(i++<<2));
-				indexes.push(bytes.getInt32(i++<<2));
-				indexes.push(bytes.getInt32(i++<<2));
-			}
-			convexIndexes32.push(indexes);
-		}
-
-		sys.FileSystem.deleteFile(fileName);
-		sys.FileSystem.deleteFile(outFile);
-		#end
-
+		// Create convex hulls colliders
 		var collider = new ConvexHullsCollider();
 		collider.vertexCounts = [];
 		collider.indexCounts = [];
 		var is32 = [];
 
 		collider.vertexPosition = dataOut.length;
-		for ( i in 0...convexPoints.length ) {
-			var points = convexPoints[i];
-			var indexes = convexIndexes32[i];
-			for ( p in points ) {
-				dataOut.writeFloat(p.x);
-				dataOut.writeFloat(p.y);
-				dataOut.writeFloat(p.z);
-			}
+		for ( i in 0...convexHulls.length ) {
+			var vertices = convexHulls[i].vertices;
+			var indexes = convexHulls[i].indexes;
+			for ( v in vertices )
+				dataOut.writeFloat(v);
 
-			collider.vertexCounts.push(points.length);
+			var vCount = Std.int(vertices.length / 3);
+			collider.vertexCounts.push(vCount);
 			collider.indexCounts.push(indexes.length);
 
-			is32.push(points.length > 0x10000);
+			is32.push(vCount > 0x10000);
 		}
 
 		collider.indexPosition = dataOut.length;
-		for ( i => indexes in convexIndexes32 ) {
+		for ( i in 0...convexHulls.length ) {
 			var is32 = is32[i];
 			if( is32 ) {
-				for( i in indexes )
-					dataOut.writeInt32(i);
+				for( idx in convexHulls[i].indexes )
+					dataOut.writeInt32(idx);
 			} else {
-				for( i in indexes )
-					dataOut.writeUInt16(i);
+				for( idx in convexHulls[i].indexes )
+					dataOut.writeUInt16(idx);
 			}
 		}
 
@@ -1393,7 +1284,7 @@ class HMDOut extends BaseLibrary {
 				var geom = buildGeom(geomData, skin, dataOut, hasNormalMap || generateTangents);
 
 				gdata = { gid : d.geometries.length, materials : geom.materials };
-				var gdataCol = { gid : d.geometries.length, mids : mids, format : geom.format, vbuf : geom.vbuf, ibufs : geom.ibufs };
+				var gdataCol = { gid : d.geometries.length, mids : mids, vbuf : geom.vbuf, ibufs : geom.ibufs };
 				d.geometries.push(geom.g);
 				hgeom.set(g.getId(), gdata);
 				hgeomCol.set(gdataCol.gid, gdataCol);
@@ -1444,7 +1335,7 @@ class HMDOut extends BaseLibrary {
 					var geom = buildGeom(new hxd.fmt.fbx.Geometry(this, g), skin, dataOut, hasNormalMap || generateTangents, lods);
 					if ( geom == null )
 						continue;
-					var gdataCol = { gid : d.geometries.length, mids : mids, format : geom.format, vbuf : geom.vbuf, ibufs : geom.ibufs };
+					var gdataCol = { gid : d.geometries.length, mids : mids, vbuf : geom.vbuf, ibufs : geom.ibufs };
 					hgeomCol.set(gdataCol.gid, gdataCol);
 					var lodModel = new Model();
 					lodModel.name = modelName + 'LOD${i+1}';
@@ -1509,7 +1400,7 @@ class HMDOut extends BaseLibrary {
 					var colliderModel = findMeshModel(mname + "_Collider");
 					if( colliderModel != null ) {
 						var gdataCol = hgeomCol.get(colliderModel.geometry);
-						collider = buildGeomCollider(d, gdataCol.format, gdataCol.vbuf, gdataCol.ibufs, dataOut);
+						collider = buildGeomCollider(d, gdataCol.vbuf, gdataCol.ibufs, dataOut);
 					}
 				}
 				if( collider == null && collidersParams != null ) {
@@ -1517,9 +1408,9 @@ class HMDOut extends BaseLibrary {
 					var gdataCol = hgeomCol.get(colliderModel.geometry);
 					if( collidersParams.precision != null ) {
 						var geom = d.geometries[colliderModel.geometry];
-						collider = buildAutoColliders(d, gdataCol.format, gdataCol.vbuf, gdataCol.ibufs, gdataCol.mids, geom.bounds, collidersParams, dataOut);
+						collider = buildAutoColliders(d, gdataCol.vbuf, gdataCol.ibufs, gdataCol.mids, geom.bounds, collidersParams, dataOut);
 					} else if( collidersParams.mesh != null ) {
-						collider = buildGeomCollider(d, gdataCol.format, gdataCol.vbuf, gdataCol.ibufs, dataOut);
+						collider = buildGeomCollider(d, gdataCol.vbuf, gdataCol.ibufs, dataOut);
 					} else if( collidersParams.shapes != null ) {
 						collider = buildShapeColliders(d, collidersParams.shapes);
 					}
