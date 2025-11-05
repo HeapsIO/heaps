@@ -80,6 +80,8 @@ class ColliderData {
 			var point1 = data.position + data.halfExtent;
 			var point2 = data.position - data.halfExtent;
 			return new h3d.col.Cylinder(point1, point2, data.radius);
+		case Empty:
+			return null;
 		}
 		return null;
 	}

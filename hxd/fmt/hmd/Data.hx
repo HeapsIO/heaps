@@ -27,6 +27,7 @@ enum abstract ColliderType(Int) from Int to Int {
 	var Box = 4;
 	var Capsule = 5;
 	var Cylinder = 6;
+	var Empty = 255; // Stored as byte
 }
 
 class Position {
@@ -313,6 +314,12 @@ class CylinderCollider extends Collider {
 	public var radius : Float;
 	public function new() {
 		type = Cylinder;
+	}
+}
+
+class EmptyCollider extends Collider {
+	public function new() {
+		type = Empty;
 	}
 }
 

@@ -1487,15 +1487,24 @@ class HMDOut extends BaseLibrary {
 
 			var mname = model.getObjectName();
 			var mcs = modelCollides.exists(mname) ? modelCollides.get(mname) : [{ useDefault : true }];
-			if( mcs == null || mcs.length == 0 )
+			if( mcs == null || mcs.length == 0 ) {
+				var collider = new EmptyCollider();
+				var colliderId = d.colliders.length;
+				if( d.props == null ) d.props = [];
+				if( !d.props.contains(HasCustomCollider) )
+					d.props.push(HasCustomCollider);
+				d.colliders.push(collider);
+				model.collider = colliderId;
+				model.props.push(HasCollider);
 				continue;
+			}
 
 			for( idx => mc in mcs ) {
-				if( mc == null )
-					continue;
 				var collider : Collider = null;
+				if( mc == null )
+					collider = new EmptyCollider();
 				var collidersParams = mc;
-				if( mc.useDefault ) {
+				if( collider == null && mc.useDefault ) {
 					collidersParams = generateCollides;
 					var colliderModel = findMeshModel(mname + "_Collider");
 					if( colliderModel != null ) {

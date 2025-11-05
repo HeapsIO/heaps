@@ -281,6 +281,8 @@ class Writer {
 					writeVector(c.position);
 					writeVector(c.halfExtent);
 					writeFloat(c.radius);
+				case Empty:
+					// Nothing
 				}
 			}
 

@@ -331,6 +331,9 @@ class Reader {
 					c.halfExtent = readVector();
 					c.radius = i.readFloat();
 					return c;
+				case Empty:
+					var c = new EmptyCollider();
+					return c;
 				}
 				throw "unknown collider type " + type;
 			}
