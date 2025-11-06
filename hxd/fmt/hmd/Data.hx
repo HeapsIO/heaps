@@ -124,10 +124,10 @@ class ConvexHullsCollider extends Collider {
 		type = ConvexHulls;
 	}
 
-	public static function buildConvexHulls(vertices : haxe.ds.Vector<hxd.impl.Float32>, indexes : haxe.ds.Vector<Int>, params : ConvexHullParams) {
+	public static function buildConvexHulls(vertices : Array<Float>, indexes : Array<Int>, params : ConvexHullParams) {
 		var vCount = Std.int(vertices.length / 3);
 		var triCount = Std.int(indexes.length / 3);
-		var out : Array<{vertices: haxe.ds.Vector<hxd.impl.Float32>, indexes : haxe.ds.Vector<Int>}> = [];
+		var out : Array<{vertices: Array<Float>, indexes : Array<Int>}> = [];
 
 		#if (sys || nodejs)
 		// Format data for meshtools
@@ -184,7 +184,7 @@ class ConvexHullsCollider extends Collider {
 				indexes.push(bytes.getInt32(i++<<2));
 			}
 
-			out.push({ vertices: cast vertices, indexes: cast indexes });
+			out.push({ vertices: vertices, indexes: indexes });
 		}
 
 		sys.FileSystem.deleteFile(fileName);
@@ -243,7 +243,7 @@ class ConvexHullsCollider extends Collider {
 				indexes.push(triangles.getI32(4*pos++));
 				indexes.push(triangles.getI32(4*pos++));
 			}
-			out.push({ vertices : cast vertices, indexes : cast indexes });
+			out.push({ vertices : vertices, indexes : indexes });
 		}
 		vhacdInstance.release();
 

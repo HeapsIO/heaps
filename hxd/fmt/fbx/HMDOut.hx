@@ -934,8 +934,9 @@ class HMDOut extends BaseLibrary {
 		var prec = Math.min(dim, generateCollides.precision);
 		var subdiv = Math.ceil(dim / prec);
 		subdiv = Math.imin(subdiv, generateCollides.maxSubdiv);
+
 		var params = { maxConvexHulls: generateCollides.maxConvexHulls, maxResolution: subdiv * subdiv * subdiv };
-		var convexHulls = hxd.fmt.hmd.Data.ConvexHullsCollider.buildConvexHulls(cast vertices, cast indexes, params);
+		var convexHulls = hxd.fmt.hmd.Data.ConvexHullsCollider.buildConvexHulls(vertices, indexes, params);
 
 		// Create convex hulls colliders
 		var collider = new ConvexHullsCollider();
