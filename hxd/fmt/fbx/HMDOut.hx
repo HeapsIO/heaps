@@ -42,7 +42,7 @@ class HMDOut extends BaseLibrary {
 	public var generateCollides : CollideParams;
 	public var modelCollides : Map<String, Array<CollideParams>> = [];
 	public var ignoreCollides : Array<String>;
-	var ignoreCollidesCache : Map<Int,Bool> = [];
+	var ignoreCollidesCache : Array<Bool> = [];
 	public var lowPrecConfig : Map<String,Precision>;
 	public var lodsDecimation : Array<Float>;
 
@@ -850,12 +850,8 @@ class HMDOut extends BaseLibrary {
 		return { lodLevel : -1, modelName : null };
 	}
 
-	function buildGeomCollider( d : hxd.fmt.hmd.Data, vbuf : FloatBuffer, ibufs : Array<Array<Int>>, dataOut : haxe.io.BytesOutput ) : MeshCollider {
+	function buildGeomCollider( d : hxd.fmt.hmd.Data, vbuf : FloatBuffer, ibufs : Array<Array<Int>>, ignoredMats : Array<Bool>, dataOut : haxe.io.BytesOutput ) : Collider {
 		var vertexCount = Std.int(vbuf.length / 3);
-		var indexCount = 0;
-		for( idx in ibufs ) {
-			indexCount += idx == null ? 0 : idx.length;
-		}
 
 		function iterVertex(cb : Float -> Float -> Float -> Void) {
 			for ( i in 0...vertexCount ) {
@@ -867,41 +863,46 @@ class HMDOut extends BaseLibrary {
 		}
 
 		var collider = new MeshCollider();
+		var is32 = vertexCount > 0x10000;
+		collider.indexPosition = dataOut.length;
+		var indexCount = 0;
+		for ( idx => ibuf in ibufs ) {
+			if( ibuf == null )
+				continue;
+			if( idx < ignoredMats.length ) {
+				if( ignoredMats[idx] == true )
+					continue;
+			}
+			indexCount += ibuf.length;
+			if( is32 ) {
+				for( i in ibuf )
+					dataOut.writeInt32(i);
+			} else {
+				for( i in ibuf )
+					dataOut.writeUInt16(i);
+			}
+		}
+		if( indexCount == 0 )
+			return new EmptyCollider();
+
+		collider.indexCount = indexCount;
 		collider.vertexPosition = dataOut.length;
 		collider.vertexCount = vertexCount;
-		collider.indexCount = indexCount;
 		iterVertex(function(x, y, z) {
 			dataOut.writeFloat(x);
 			dataOut.writeFloat(y);
 			dataOut.writeFloat(z);
 		});
-
-		var is32 = vertexCount > 0x10000;
-		collider.indexPosition = dataOut.length;
-		for ( i => idx in ibufs ) {
-			if( idx == null )
-				continue;
-			if( is32 ) {
-				for( i in idx )
-					dataOut.writeInt32(i);
-			} else {
-				for( i in idx )
-					dataOut.writeUInt16(i);
-			}
-		}
 		return collider;
 	}
 
 
-	function buildAutoColliders( d : hxd.fmt.hmd.Data, vbuf : FloatBuffer, ibufs : Array<Array<Int>>, mids : Array<Int>, bounds : h3d.col.Bounds, generateCollides : CollideParams, dataOut : haxe.io.BytesOutput ) : ConvexHullsCollider {
+	function buildAutoColliders( d : hxd.fmt.hmd.Data, vbuf : FloatBuffer, ibufs : Array<Array<Int>>, ignoredMats : Array<Bool>, bounds : h3d.col.Bounds, generateCollides : CollideParams, dataOut : haxe.io.BytesOutput ) : ConvexHullsCollider {
 		// Format data for our convex hull algorithm
 		var vertices : Array<Float> = [];
 		var indexes : Array<Int> = [];
 
 		var vertexCount = Std.int(vbuf.length / 3);
-		var indexCount = 0;
-		for(idx in ibufs)
-			indexCount += idx == null ? 0 : idx.length;
 
 		for (i in 0...vertexCount) {
 			var x = vbuf[i * 3];
@@ -915,14 +916,8 @@ class HMDOut extends BaseLibrary {
 		for ( idx => ibuf in ibufs ) {
 			if( ibuf == null )
 				continue;
-			if( ignoreCollides != null && idx < mids.length ) {
-				var mat = mids[idx];
-				var b = ignoreCollidesCache.get(mat);
-				if( b == null ) {
-					b = ignoreCollides.contains(d.materials[mat].name);
-					ignoreCollidesCache.set(mat, b);
-				}
-				if( b == true )
+			if( idx < ignoredMats.length ) {
+				if( ignoredMats[idx] == true )
 					continue;
 			}
 			for (idx in ibuf)
@@ -1362,6 +1357,12 @@ class HMDOut extends BaseLibrary {
 
 		// Make colliders
 		d.colliders = [];
+		if( ignoreCollides != null ) {
+			for( mid => mat in d.materials ) {
+				var b = ignoreCollides.contains(mat.name);
+				ignoreCollidesCache[mid] = b;
+			}
+		}
 		for( model in d.models ) {
 			if( model.geometry < 0 || model.isLOD() || model.isCollider() )
 				continue;
@@ -1401,7 +1402,7 @@ class HMDOut extends BaseLibrary {
 					var colliderModel = findMeshModel(mname + "_Collider");
 					if( colliderModel != null ) {
 						var gdataCol = hgeomCol.get(colliderModel.geometry);
-						collider = buildGeomCollider(d, gdataCol.vbuf, gdataCol.ibufs, dataOut);
+						collider = buildGeomCollider(d, gdataCol.vbuf, gdataCol.ibufs, [], dataOut);
 					}
 				}
 				if( collider == null && collidersParams != null ) {
@@ -1409,12 +1410,18 @@ class HMDOut extends BaseLibrary {
 					var gdataCol = hgeomCol.get(colliderModel.geometry);
 					if( collidersParams.precision != null ) {
 						var geom = d.geometries[colliderModel.geometry];
-						collider = buildAutoColliders(d, gdataCol.vbuf, gdataCol.ibufs, gdataCol.mids, geom.bounds, collidersParams, dataOut);
+						var ignoredMats = [for( mid in gdataCol.mids ) ignoreCollidesCache[mid]];
+						collider = buildAutoColliders(d, gdataCol.vbuf, gdataCol.ibufs, ignoredMats, geom.bounds, collidersParams, dataOut);
 					} else if( collidersParams.mesh != null ) {
-						collider = buildGeomCollider(d, gdataCol.vbuf, gdataCol.ibufs, dataOut);
+						collider = buildGeomCollider(d, gdataCol.vbuf, gdataCol.ibufs, [], dataOut);
 					} else if( collidersParams.shapes != null ) {
 						collider = buildShapeColliders(d, collidersParams.shapes);
 					}
+				}
+				if( collider == null && collidersParams == null && ignoreCollides != null ) {
+					var gdataCol = hgeomCol.get(model.geometry);
+					var ignoredMats = [for( mid in gdataCol.mids ) ignoreCollidesCache[mid]];
+					collider = buildGeomCollider(d, gdataCol.vbuf, gdataCol.ibufs, ignoredMats, dataOut);
 				}
 				if( collider != null ) {
 					var colliderId = d.colliders.length;
