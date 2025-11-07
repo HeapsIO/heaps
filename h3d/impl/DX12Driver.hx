@@ -1510,6 +1510,7 @@ class DX12Driver extends h3d.impl.Driver {
 	function allocGPU( size : Int, heapType, state, uav=false ) {
 		var desc = new ResourceDesc();
 		var flags = new haxe.EnumFlags();
+		flags.set(CREATE_NOT_ZEROED);
 		desc.dimension = BUFFER;
 		desc.width = size;
 		desc.height = 1;
@@ -1680,6 +1681,7 @@ class DX12Driver extends h3d.impl.Driver {
 		var isRT = t.flags.has(Target);
 
 		var flags = new haxe.EnumFlags();
+		flags.set(CREATE_NOT_ZEROED);
 		var desc = makeTextureDesc(t);
 		var td = new TextureData();
 		td.format = desc.format;
@@ -1713,6 +1715,7 @@ class DX12Driver extends h3d.impl.Driver {
 		var td = new TextureData();
 		var desc = new ResourceDesc();
 		var flags = new haxe.EnumFlags();
+		flags.set(CREATE_NOT_ZEROED);
 		desc.dimension = TEXTURE2D;
 		desc.width = b.width;
 		desc.height = b.height;
