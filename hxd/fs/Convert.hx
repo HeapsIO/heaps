@@ -119,8 +119,6 @@ class ConvertFBX2HMD extends Convert {
 	}
 
 	override function hasLocalParams():Bool {
-		if( params != null && params.collide != null )
-			return true;
 		var filePath = srcPath.substring(srcPath.lastIndexOf("/") + 1);
 		var dirPath = srcPath.substring(0, srcPath.lastIndexOf("/"));
 		var modelPropsPath = dirPath + "/model.props";
@@ -136,18 +134,7 @@ class ConvertFBX2HMD extends Convert {
 			}
 		} catch( e ) {
 		}
-		if( foundModelProps )
-			return true;
-		var matPropsPath = dirPath + "/materials.props";
-		var matProps = null;
-		try {
-			var res = hxd.File.getBytes(matPropsPath).toString();
-			matProps = haxe.Json.parse(res).materials;
-		} catch( e ) {
-		}
-		if( matProps != null )
-			return true;
-		return false;
+		return (params != null && params.collide != null) || foundModelProps;
 	}
 
 	override function getLocalContext():Dynamic {
