@@ -122,7 +122,7 @@ class Text extends Drawable {
 	/**
 		Tag for indicating highlighted text.
 	**/
-	public var highlightTag : String = "**";
+	public var highlightTag : String = "";
 
 	var glyphs : TileGroup;
 	var needsRebuild : Bool;
@@ -358,7 +358,7 @@ class Text extends Drawable {
 				continue;
 			}
 
-			if (highlightTag != "" && StringTools.startsWith(remaining, highlightTag))
+			if (highlightTag != null && highlightTag != "" && StringTools.startsWith(remaining, highlightTag))
 			{
 				skipCount = highlightTag.length-1;
 				continue;
@@ -481,7 +481,7 @@ class Text extends Drawable {
 				continue;
 			}
 
-			if (highlightTag != "" && StringTools.startsWith(remaining, highlightTag))
+			if (highlightTag != null && highlightTag != "" && StringTools.startsWith(remaining, highlightTag))
 			{
 				if (!isHighlight) {
 					glyphs.setDefaultColor(highlightColor);
@@ -569,9 +569,6 @@ class Text extends Drawable {
 	function set_textColor(c) {
 		if( this.textColor == c ) return c;
 		this.textColor = c;
-		var a = color.w;
-		color.setColor(c);
-		color.w = a;
 		return c;
 	}
 
