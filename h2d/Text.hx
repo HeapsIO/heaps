@@ -115,6 +115,14 @@ class Text extends Drawable {
 		Allow word wrapping.
 	**/
 	public var wordWrap(default,set) : Bool = true;
+	/**
+		Highlight RGB color. Alpha value is ignored.
+	**/
+	public var highlightColor : Int = 0xFFFFFF;
+	/**
+		Tag for indicating highlighted text.
+	**/
+	public var highlightTag : String = "";
 
 	var glyphs : TileGroup;
 	var needsRebuild : Bool;
@@ -339,8 +347,23 @@ class Text extends Drawable {
 		var lines = [], restPos = 0;
 		var x = leftMargin;
 		var wLastSep = 0.;
+		var skipCount = 0;
 		for( i in 0...text.length ) {
 			var cc = StringTools.fastCodeAt(text, i);
+			final remaining = text.substr(i);
+
+			if (skipCount > 0)
+			{
+				skipCount--;
+				continue;
+			}
+
+			if (highlightTag != null && highlightTag != "" && StringTools.startsWith(remaining, highlightTag))
+			{
+				skipCount = highlightTag.length-1;
+				continue;
+			}
+
 			var e = font.getChar(cc);
 			var newline = cc == '\n'.code;
 			var esize = e.width + e.getKerningOffset(prevChar);
@@ -445,8 +468,32 @@ class Text extends Drawable {
 			x = 0;
 		}
 
+		glyphs.setDefaultColor(textColor);
+		var isHighlight = false;
+		var skipCount = 0;
 		for( i in 0...t.length ) {
 			var cc = StringTools.fastCodeAt(t, i);
+			final remaining = t.substr(i);
+
+			if (skipCount > 0)
+			{
+				skipCount--;
+				continue;
+			}
+
+			if (highlightTag != null && highlightTag != "" && StringTools.startsWith(remaining, highlightTag))
+			{
+				if (!isHighlight) {
+					glyphs.setDefaultColor(highlightColor);
+					isHighlight = true;
+				} else {
+					glyphs.setDefaultColor(textColor);
+					isHighlight = false;
+				}
+				skipCount = highlightTag.length-1;
+				continue;
+			}
+
 			var e = font.getChar(cc);
 			var offs = e.getKerningOffset(prevChar);
 			var esize = e.width + offs;
@@ -522,9 +569,6 @@ class Text extends Drawable {
 	function set_textColor(c) {
 		if( this.textColor == c ) return c;
 		this.textColor = c;
-		var a = color.w;
-		color.setColor(c);
-		color.w = a;
 		return c;
 	}
 
