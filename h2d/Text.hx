@@ -118,7 +118,11 @@ class Text extends Drawable {
 	/**
 		Highlight RGB color. Alpha value is ignored.
 	**/
-	public var highlightColor: Int = 0xFFFFFF;
+	public var highlightColor : Int = 0xFFFFFF;
+	/**
+		Tag for indicating highlighted text.
+	**/
+	public var highlightTag : String = "**";
 
 	var glyphs : TileGroup;
 	var needsRebuild : Bool;
@@ -343,10 +347,22 @@ class Text extends Drawable {
 		var lines = [], restPos = 0;
 		var x = leftMargin;
 		var wLastSep = 0.;
+		var skipCount = 0;
 		for( i in 0...text.length ) {
 			var cc = StringTools.fastCodeAt(text, i);
-			if (cc == '*'.code)
+			final remaining = text.substr(i);
+
+			if (skipCount > 0)
+			{
+				skipCount--;
 				continue;
+			}
+
+			if (highlightTag != "" && StringTools.startsWith(remaining, highlightTag))
+			{
+				skipCount = highlightTag.length-1;
+				continue;
+			}
 
 			var e = font.getChar(cc);
 			var newline = cc == '\n'.code;
@@ -454,11 +470,19 @@ class Text extends Drawable {
 
 		glyphs.setDefaultColor(textColor);
 		var isHighlight = false;
-		var highlightCharCounter = 0;
+		var skipCount = 0;
 		for( i in 0...t.length ) {
 			var cc = StringTools.fastCodeAt(t, i);
+			final remaining = t.substr(i);
 
-			if (highlightCharCounter >= 2) {
+			if (skipCount > 0)
+			{
+				skipCount--;
+				continue;
+			}
+
+			if (highlightTag != "" && StringTools.startsWith(remaining, highlightTag))
+			{
 				if (!isHighlight) {
 					glyphs.setDefaultColor(highlightColor);
 					isHighlight = true;
@@ -466,15 +490,8 @@ class Text extends Drawable {
 					glyphs.setDefaultColor(textColor);
 					isHighlight = false;
 				}
-				highlightCharCounter = 0;
-			}
-
-			if (cc == '*'.code) {
-				highlightCharCounter++;
+				skipCount = highlightTag.length-1;
 				continue;
-			}
-			else {
-				highlightCharCounter = 0;
 			}
 
 			var e = font.getChar(cc);
