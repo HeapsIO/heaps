@@ -111,6 +111,10 @@ class Text extends Drawable {
 		Allow line break.
 	**/
 	public var lineBreak(default,set) : Bool = true;
+	/**
+		Allow word wrapping.
+	**/
+	public var wordWrap(default,set) : Bool = true;
 
 	var glyphs : TileGroup;
 	var needsRebuild : Bool;
@@ -196,6 +200,13 @@ class Text extends Drawable {
 	function set_lineBreak(b) {
 		if( lineBreak == b ) return b;
 		lineBreak = b;
+		rebuild();
+		return b;
+	}
+
+	function set_wordWrap(b) {
+		if( wordWrap == b ) return b;
+		wordWrap = b;
 		rebuild();
 		return b;
 	}
@@ -372,10 +383,11 @@ class Text extends Drawable {
 				}
 				else wLastSep = size;
 			}
-			else if( (x + esize + letterSpacing) - wLastSep > maxWidth ) {
+			else if( wordWrap && (x + esize + letterSpacing) - wLastSep > maxWidth ) {
 				newline = true;
 				lines.push(text.substr(restPos, i - restPos));
-				restPos = i + 1;
+				restPos = i;
+				x -= esize + letterSpacing;
 			}
 			if( e != null && cc != '\n'.code )
 				x += esize + letterSpacing;
