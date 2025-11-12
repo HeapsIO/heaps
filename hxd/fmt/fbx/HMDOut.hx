@@ -1405,6 +1405,8 @@ class HMDOut extends BaseLibrary {
 						buildGeomCollider(gdataCol.vbuf, gdataCol.ibufs, dataOut);
 					case Shapes:
 						buildShapeColliders(params.shapes);
+					case null:
+						null;
 					default:
 						null;
 				};
