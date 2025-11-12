@@ -1,5 +1,7 @@
 package hxd.fmt.hmd;
 
+import hxd.fmt.fbx.HMDOut.CollideParams;
+
 typedef GeometryDataFormat = hxd.BufferFormat.InputFormat;
 typedef GeometryFormat = hxd.BufferFormat.BufferInput;
 
@@ -105,8 +107,53 @@ class BlendShape {
 	}
 }
 
+
+enum ResolveResult {
+	Empty;
+	Mesh(model : Model);
+	ConvexHulls(model : Model);
+	Shapes;
+}
+
 class Collider {
 	public var type : ColliderType;
+
+	public static function resolveColliderType(d : Data, model : Model, params : CollideParams) : ResolveResult {
+		var generateCollides : Dynamic = null; // Default config (props.json)
+
+		var type : ResolveResult = null;
+		if (params == null)
+			type = ResolveResult.Empty;
+		var collidersParams = params;
+		if (type == null && params.useDefault) {
+			collidersParams = generateCollides;
+			var colliderModel = findMeshModel(d, model.getObjectName() + "_Collider");
+			if (colliderModel != null)
+				type = ResolveResult.Mesh(colliderModel);
+		}
+		if (type == null && collidersParams != null) {
+			var colliderModel = findMeshModel(d, collidersParams.mesh) ?? model;
+			if( collidersParams.precision != null ) {
+				type = ResolveResult.ConvexHulls(colliderModel);
+			} else if( collidersParams.mesh != null ) {
+				type = ResolveResult.Mesh(colliderModel);
+			} else if( collidersParams.shapes != null ) {
+				type = ResolveResult.Shapes;
+			}
+		}
+
+		return type;
+	}
+
+	static function findMeshModel(d : Data, name : String) {
+		if (name == null)
+			return null;
+		for (model in d.models) {
+			if (model.geometry >= 0 && model.name == name)
+				return model;
+		}
+		return null;
+	}
 }
 
 

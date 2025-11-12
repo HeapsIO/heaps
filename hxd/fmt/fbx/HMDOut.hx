@@ -850,7 +850,7 @@ class HMDOut extends BaseLibrary {
 		return { lodLevel : -1, modelName : null };
 	}
 
-	function buildGeomCollider( d : hxd.fmt.hmd.Data, vbuf : FloatBuffer, ibufs : Array<Array<Int>>, dataOut : haxe.io.BytesOutput ) : MeshCollider {
+	function buildGeomCollider( vbuf : FloatBuffer, ibufs : Array<Array<Int>>, dataOut : haxe.io.BytesOutput ) : MeshCollider {
 		var vertexCount = Std.int(vbuf.length / 3);
 		var indexCount = 0;
 		for( idx in ibufs ) {
@@ -973,7 +973,7 @@ class HMDOut extends BaseLibrary {
 		return collider;
 	}
 
-	function buildShapeColliders( d : hxd.fmt.hmd.Data, shapes : Array<ShapeColliderParams> ) : GroupCollider {
+	function buildShapeColliders( shapes : Array<ShapeColliderParams> ) : GroupCollider {
 		var group = new GroupCollider();
 		group.colliders = [];
 		function makeVector( dyn ) {
@@ -1392,30 +1392,23 @@ class HMDOut extends BaseLibrary {
 			}
 
 			for( idx => mc in mcs ) {
-				var collider : Collider = null;
-				if( mc == null )
-					collider = new EmptyCollider();
-				var collidersParams = mc;
-				if( collider == null && mc.useDefault ) {
-					collidersParams = generateCollides;
-					var colliderModel = findMeshModel(mname + "_Collider");
-					if( colliderModel != null ) {
-						var gdataCol = hgeomCol.get(colliderModel.geometry);
-						collider = buildGeomCollider(d, gdataCol.vbuf, gdataCol.ibufs, dataOut);
-					}
-				}
-				if( collider == null && collidersParams != null ) {
-					var colliderModel = findMeshModel(collidersParams.mesh) ?? model;
-					var gdataCol = hgeomCol.get(colliderModel.geometry);
-					if( collidersParams.precision != null ) {
-						var geom = d.geometries[colliderModel.geometry];
-						collider = buildAutoColliders(d, gdataCol.vbuf, gdataCol.ibufs, gdataCol.mids, geom.bounds, collidersParams, dataOut);
-					} else if( collidersParams.mesh != null ) {
-						collider = buildGeomCollider(d, gdataCol.vbuf, gdataCol.ibufs, dataOut);
-					} else if( collidersParams.shapes != null ) {
-						collider = buildShapeColliders(d, collidersParams.shapes);
-					}
-				}
+				var params = mc == null && mc.useDefault ? generateCollides : mc;
+				var colliderType = hxd.fmt.hmd.Data.Collider.resolveColliderType(d, model, mc);
+				var collider : Collider = switch (colliderType) {
+					case Empty:
+						new EmptyCollider();
+					case ConvexHulls(model):
+						var gdataCol = hgeomCol.get(model.geometry);
+						buildAutoColliders(d, gdataCol.vbuf, gdataCol.ibufs, gdataCol.mids, d.geometries[model.geometry].bounds, params, dataOut);
+					case Mesh(model):
+						var gdataCol = hgeomCol.get(model.geometry);
+						buildGeomCollider(gdataCol.vbuf, gdataCol.ibufs, dataOut);
+					case Shapes:
+						buildShapeColliders(params.shapes);
+					default:
+						null;
+				};
+
 				if( collider != null ) {
 					var colliderId = d.colliders.length;
 					if( collider.type != ConvexHulls ) {
