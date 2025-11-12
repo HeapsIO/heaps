@@ -296,9 +296,18 @@ class Renderer extends h3d.scene.Renderer {
 		end();
 	}
 
+	inline function shouldDoIndirect() : Bool {
+		return indirectEnv && ((env != null && env.power > 0.0) || skyMode == Background || skyMode == CustomColor);
+	}
+
+	inline function isIndirectSkyOnly() : Bool {
+		return env == null || env.power <= 0.0;
+	}
+
 	function doIndirectLighting() {
-		if( !renderLightProbes() && indirectEnv && env != null && env.power > 0.0 ) {
+		if( !renderLightProbes() && shouldDoIndirect() ) {
 			pbrProps.isScreen = true;
+			pbrIndirect.skyOnly = isIndirectSkyOnly();
 			pbrIndirect.drawIndirectDiffuse = true;
 			pbrIndirect.drawIndirectSpecular = true;
 			pbrOut.render();
@@ -325,8 +334,9 @@ class Renderer extends h3d.scene.Renderer {
 		clear(0);
 
 		// Default Env & SkyBox
-		if( indirectEnv && env != null && env.power > 0.0 ) {
+		if( shouldDoIndirect() ) {
 			pbrProps.isScreen = true;
+			pbrIndirect.skyOnly = isIndirectSkyOnly();
 			pbrIndirect.drawIndirectDiffuse = true;
 			pbrIndirect.drawIndirectSpecular = true;
 			pbrOut.render();

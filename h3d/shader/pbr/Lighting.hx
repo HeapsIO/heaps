@@ -11,6 +11,7 @@ class Indirect extends PropsDefinition {
 		@const var drawIndirectSpecular : Bool;
 		@const var showSky : Bool;
 		@const var skyColor : Bool;
+		@const var skyOnly : Bool;
 
 		@global @const var DIFFUSE_ONLY : Bool;
 
@@ -75,7 +76,7 @@ class Indirect extends PropsDefinition {
 					pixelColor.rgb += color;
 				} else
 					discard;
-			} else {
+			} else if ( !skyOnly ) {
 
 				var diffuse = vec3(0.);
 				var specular = vec3(0.);
