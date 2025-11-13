@@ -1603,7 +1603,7 @@ class GlDriver extends Driver {
 			data.push(offIndex);
 			data.push(instanceCount);
 		}
-		b.data = data;
+		b.cpuData = data;
 	}
 
 	override function uploadInstanceBufferBytes(b : InstanceBuffer, startVertex : Int, vertexCount : Int, buf : haxe.io.Bytes, bufPos : Int ) {
@@ -1665,7 +1665,7 @@ class GlDriver extends Driver {
 			return;
 		}
 		#end
-		var args : Array<Int> = commands.data;
+		var args : Array<Int> = commands.cpuData;
 		if( args != null ) {
 			var p = 0;
 			for( i in 0...Std.int(args.length/3) )

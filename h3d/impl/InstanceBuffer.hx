@@ -3,7 +3,7 @@ package h3d.impl;
 @:allow(h3d.impl.Driver)
 class InstanceBuffer {
 
-		/**
+	/**
 		Bytes are structures of 5 i32 with the following values:
 		- indexCount : number of indexes per instance
 		- instanceCount : number of indexed draws
@@ -14,7 +14,8 @@ class InstanceBuffer {
 	public static var ELEMENT_SIZE = 20;
 
 	var countBuffer : Dynamic;
-	var data : Dynamic;
+	var data : h3d.impl.Driver.GPUBuffer;
+	var cpuData : Array<Int>;
 	var driver : h3d.impl.Driver;
 
 	var offset : Int = 0;
