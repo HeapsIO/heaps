@@ -94,8 +94,8 @@ class LightBuffer {
 			return -1;
 		if ( dirL2 && !dirL1 )
 			return 1;
-		var d1 = l1.getAbsPos().getPosition().sub(cameraTarget).length();
-		var d2 = l2.getAbsPos().getPosition().sub(cameraTarget).length();
+		var d1 = l1.getAbsPos().getPosition().sub(cameraTarget).lengthSq();
+		var d2 = l2.getAbsPos().getPosition().sub(cameraTarget).lengthSq();
 		return d1 == d2 ? 0 : (d1 > d2 ? 1 : -1);
 	}
 
