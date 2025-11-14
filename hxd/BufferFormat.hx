@@ -72,7 +72,7 @@ enum abstract InputFormat(Int) {
 		case TVec(4, VFloat): DVec4;
 		case TMat4 : DMat4;
 		case TBytes(4): DBytes4;
-		case TFloat: DFloat;
+		case TFloat, TInt: DFloat;
 		default: throw "Unsupported buffer type " + t;
 		}
 	}
