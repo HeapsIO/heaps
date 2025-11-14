@@ -36,10 +36,19 @@ class RenderContext {
 		textures.dispose();
 	}
 
+	inline function fillIntParam( v:Int, pos: Int, out : #if hl hl.BytesAccess<hl.F32> #else h3d.shader.Buffers.ShaderBufferData #end ){
+		#if js
+		var view = new hxd.impl.TypedArray.Uint32Array(out.buffer);
+		view[pos] = v;
+		#else
+		out[pos] = haxe.io.FPHelper.i32ToFloat(v);
+		#end
+	}
+
 	function fillRec( v : Dynamic, type : hxsl.Ast.Type, out : #if hl hl.BytesAccess<hl.F32> #else h3d.shader.Buffers.ShaderBufferData #end, pos : Int ) {
 		switch( type ) {
 		case TInt:
-			out[pos] = haxe.io.FPHelper.i32ToFloat(Std.int(v));
+			fillIntParam(Std.int(v), pos, out);
 			return 1;
 		case TFloat:
 			out[pos] = v;
@@ -256,7 +265,7 @@ class RenderContext {
 						p = p.next;
 						continue;
 					case TInt:
-						ptr[p.pos] = haxe.io.FPHelper.i32ToFloat(Std.int(i.getParamFloatValue(p.index)));
+						fillIntParam(Std.int(i.getParamFloatValue(p.index)), p.pos, ptr);
 						p = p.next;
 						continue;
 					default:

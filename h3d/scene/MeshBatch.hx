@@ -562,7 +562,7 @@ class MeshBatch extends MultiMaterial {
 				case TFloat:
 					bufLoader.loadFloat(curShader.getParamFloatValue(p.index));
 				case TInt:
-					bufLoader.loadFloat(haxe.io.FPHelper.i32ToFloat(Std.int(curShader.getParamFloatValue(p.index))));
+					bufLoader.loadInt(Std.int(curShader.getParamFloatValue(p.index)));
 				case TMat4:
 					var m : h3d.Matrix = curShader.getParamValue(p.index);
 					bufLoader.loadMatrix(m);

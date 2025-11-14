@@ -4,9 +4,17 @@ class FloatBufferLoader {
 	public var buf(default, null) : FloatBuffer;
 	public var pos : Int;
 
+	#if js
+	var viewInt : hxd.impl.TypedArray.Uint32Array;
+	#end
+
 	public inline function new(b : FloatBuffer, p : Int){
 		buf = b;
 		pos = p;
+		#if js
+		var native : hxd.impl.TypedArray.Float32Array = buf.getNative();
+		viewInt = new hxd.impl.TypedArray.Uint32Array(native.buffer);
+		#end
 	}
 
 	public inline function loadMatrix(m:h3d.Matrix) {
@@ -30,6 +38,14 @@ class FloatBufferLoader {
 
 	public inline function loadFloat(v : Float) {
 		buf[pos++] = v;
+	}
+
+	public inline function loadInt(v : Int) {
+		#if js
+		viewInt[pos] = v;
+		#else
+		buf[pos++] = haxe.io.FPHelper.i32ToFloat(v);
+		#end
 	}
 
 	public inline function loadVec2(v : h3d.Vector) {
