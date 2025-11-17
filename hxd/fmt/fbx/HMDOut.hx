@@ -1307,7 +1307,7 @@ class HMDOut extends BaseLibrary {
 			}
 			if( gdata.materials == null )
 				model.materials = mids;
-			else if (lodsInfos.lodLevel > 0)
+			else if (lod0Mids != null && lodsInfos.lodLevel > 0)
 				model.materials = [for( id in gdata.materials ) lod0Mids[id]];
 			else
 				model.materials = [for( id in gdata.materials ) mids[id]];
