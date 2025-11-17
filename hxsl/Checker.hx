@@ -49,6 +49,8 @@ class Checker {
 		var genFloat = [for( t in genType ) { args : [ { name : "value", type : t } ], ret : t } ];
 		var genFloat2 = [for( t in genType ) { args : [ { name : "a", type : t }, { name : "b", type : t } ], ret : t } ];
 		var genWithFloat = [for( t in genType ) { args : [ { name : "a", type : t }, { name : "b", type : TFloat } ], ret : t } ];
+		var genInt2 = [for( t in genIType ) { args : [ { name : "a", type : t }, { name : "b", type : t } ], ret : t } ];
+		var genWithInt = [for( t in genIType ) { args : [ { name : "a", type : t }, { name : "b", type : TInt } ], ret : t } ];
 		var genSqMat = [for( t in genSqMatType ) { args : [ { name : "value", type : t } ], ret : t } ];
 		var texDefs = [
 			{ dim : T1D, arr : false, uv : TFloat, iuv : TInt },
@@ -68,8 +70,10 @@ class Checker {
 			case Pow: genFloat2;
 			case LReflect:
 				genFloat2;
-			case Mod, Min, Max:
+			case Mod:
 				genFloat2.concat(genWithFloat);
+			case Min, Max:
+				genFloat2.concat(genWithFloat).concat(genInt2).concat(genWithInt);
 			case Length:
 				[for( t in genType ) { args : [ { name : "value", type : t } ], ret : TFloat } ];
 			case Distance, Dot:
@@ -1364,6 +1368,8 @@ class Checker {
 			case [_, TVec(_,VFloat), TFloat]: e1.t;
 			case [_, TInt, TVec(_, VFloat)]: toFloat(e1); e2.t;
 			case [_, TVec(_,VFloat), TInt]: toFloat(e2); e1.t;
+			case [_, TInt, TVec(_,VInt)]: e2.t;
+			case [_, TVec(_,VInt), TInt]: e1.t;
 			case [OpMult, TMat4, TMat4]: TMat4;
 			default:
 				var opName = switch( op ) {
