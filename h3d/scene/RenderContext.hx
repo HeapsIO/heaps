@@ -32,6 +32,7 @@ class RenderContext extends h3d.impl.RenderContext {
 	@global("camera.zNear") var cameraNear : Float;
 	@global("camera.zFar") var cameraFar : Float;
 	@global("camera.proj") var cameraProj : h3d.Matrix;
+	@global("camera.invProj") var cameraInvProj : h3d.Matrix;
 	@global("camera.position") var cameraPos : h3d.Vector;
 	@global("camera.projDiag") var cameraProjDiag : h3d.Vector4;
 	@global("camera.projFlip") var cameraProjFlip : Float;
@@ -77,6 +78,7 @@ class RenderContext extends h3d.impl.RenderContext {
 		cameraNear = camera.zNear;
 		cameraFar = camera.zFar;
 		cameraProj = camera.mproj;
+		cameraInvProj = camera.getInverseProj();
 		cameraPos = camera.pos;
 		cameraProjDiag = new h3d.Vector4(camera.mproj._11,camera.mproj._22,camera.mproj._33,camera.mproj._44);
 		if ( cameraPreviousViewProj == null )
