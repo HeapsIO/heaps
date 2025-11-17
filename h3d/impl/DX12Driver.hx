@@ -2116,7 +2116,7 @@ class DX12Driver extends h3d.impl.Driver {
 							case [T2D, true]: TEXTURE2DARRAY;
 							default: throw "Unsupported RWTexture "+t;
 							}
-							desc.mipSlice = 0;
+							desc.mipSlice = t.startingMip;
 							desc.planeSlice = 0;
 							if(t.flags.has(Is3D)){
 								desc.wSlice = t.get_layerCount();
