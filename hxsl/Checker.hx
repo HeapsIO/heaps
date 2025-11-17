@@ -90,6 +90,8 @@ class Checker {
 				[for( t in texDefs ) { args : [{ name : "tex", type : TSampler(t.dim,t.arr) }, { name : "uv", type : t.uv }, { name : "lod", type : TFloat }], ret : vec4 }];
 			case Texel:
 				[for( t in texDefs ) { args : [{ name : "tex", type : TSampler(t.dim,t.arr) }, { name : "pos", type : t.iuv }], ret : vec4 }];
+			case TexelLod:
+				[for( t in texDefs ) { args : [{ name : "tex", type : TSampler(t.dim,t.arr) }, { name : "pos", type : t.iuv }, { name : "lod", type : TInt }], ret : vec4 }];
 			case TextureSize:
 				[];
 			case ToInt:
@@ -1077,7 +1079,8 @@ class Checker {
 			case ["get", TChannel(_)]: ChannelRead;
 			case ["getLod", TSampler(_)]: TextureLod;
 			case ["getLod", TChannel(_)]: ChannelReadLod;
-			case ["fetch"|"fetchLod", TSampler(_)]: Texel;
+			case ["fetch", TSampler(_)]: Texel;
+			case ["fetchLod", TSampler(_)]: TexelLod;
 			case ["fetch"|"fetchLod", TChannel(_)]: ChannelFetch;
 			case ["size", TSampler(_) | TRWTexture(_)]: TextureSize;
 			case ["size", TChannel(_)]: ChannelTextureSize;

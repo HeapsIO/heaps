@@ -475,7 +475,7 @@ class HlslOut {
 			addValue(uv, tabs);
 			add("] = ");
 			addValue(color, tabs);
-		case TCall({ e : TGlobal(g = (Texel)) }, args):
+		case TCall({ e : TGlobal(Texel) }, args):
 			addValue(args[0], tabs);
 			add(".Load(");
 			switch( args[0].t ) {
@@ -486,13 +486,20 @@ class HlslOut {
 				throw "assert";
 			}
 			addValue(args[1],tabs);
-			if ( args.length != 2 ) {
-				// with LOD argument
-				add(", ");
-				addValue(args[2], tabs);
-			} else {
-				add(", 0");
+			add(", 0))");
+		case TCall({ e : TGlobal(TexelLod) }, args):
+			addValue(args[0], tabs);
+			add(".Load(");
+			switch( args[0].t ) {
+			case TSampler(dim,arr):
+				var size = Tools.getDimSize(dim, arr) + 1;
+				add("int"+size+"(");
+			default:
+				throw "assert";
 			}
+			addValue(args[1],tabs);
+			add(", ");
+			addValue(args[2], tabs);
 			add("))");
 		case TCall(e = { e : TGlobal(g) }, args):
 			declGlobal(g, args);
@@ -659,9 +666,12 @@ class HlslOut {
 		case TDiscard:
 			add("discard");
 		case TReturn(e):
-			if( e == null )
-				add("return _out");
-			else {
+			if( e == null ) {
+				if ( isCompute )
+					add("return");
+				else
+					add("return _out");
+			} else {
 				add("return ");
 				addValue(e, tabs);
 			}

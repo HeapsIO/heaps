@@ -315,6 +315,7 @@ enum TGlobal {
 	UnpackSnorm4x8;
 	UnpackUnorm4x8;
 	Transpose;
+	TexelLod;
 }
 
 enum SyntaxArgAccess {
