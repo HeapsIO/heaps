@@ -10,7 +10,7 @@ typedef CollideParams = {
 	?maxSubdiv : Int,
 	?maxConvexHulls : Int,
 	?mesh : String,
-	?shapes : Array<ShapeColliderParams>,
+	?shapes : Array<ShapeColliderParams>
 }
 
 typedef ShapeColliderParams = {
@@ -44,6 +44,8 @@ class HMDOut extends BaseLibrary {
 	public var modelCollides : Map<String, Array<CollideParams>> = [];
 	public var ignoreCollides : Array<String>;
 	var ignoreCollidesCache : Map<Int,Bool> = [];
+	public var collisionThresholdHeight : Float;
+	public var collisionUseLowLod : Bool;
 	public var lowPrecConfig : Map<String,Precision>;
 	public var lodsDecimation : Array<Float>;
 
@@ -1398,7 +1400,7 @@ class HMDOut extends BaseLibrary {
 
 			for( idx => mc in mcs ) {
 				var params = mc == null && mc.useDefault ? generateCollides : mc;
-				var colliderType = hxd.fmt.hmd.Data.Collider.resolveColliderType(d, model, mc);
+				var colliderType = hxd.fmt.hmd.Data.Collider.resolveColliderType(d, model, mc, collisionThresholdHeight, collisionUseLowLod);
 				var collider : Collider = switch (colliderType) {
 					case Empty:
 						new EmptyCollider();

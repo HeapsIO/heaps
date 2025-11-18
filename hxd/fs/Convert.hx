@@ -121,13 +121,13 @@ class ConvertFBX2HMD extends Convert {
 	override function hasLocalParams():Bool {
 		var filePath = srcPath.substring(srcPath.lastIndexOf("/") + 1);
 		var dirPath = srcPath.substring(0, srcPath.lastIndexOf("/"));
-		var modelPropsPath = dirPath + "/model.props";
+		var modelPropsPath = dirPath + "/" + h3d.prim.ModelDatabase.FILE_NAME;
 		var foundModelProps = false;
 		try {
 			var res = hxd.File.getBytes(modelPropsPath).toString();
 			var modelProps = haxe.Json.parse(res);
 			for( mp in Reflect.fields(modelProps) ) {
-				if( mp.substring(0, mp.lastIndexOf("/")) == filePath && Reflect.hasField(Reflect.field(modelProps, mp), "collide") ) {
+				if( mp.substring(0, mp.lastIndexOf("/")) == filePath && Reflect.hasField(Reflect.field(modelProps, mp), h3d.prim.ModelDatabase.COLLIDE_CONFIG) ) {
 					foundModelProps = true;
 					break;
 				}
@@ -146,7 +146,7 @@ class ConvertFBX2HMD extends Convert {
 		var dirPath = srcPath.substring(0, srcPath.lastIndexOf("/"));
 		// Parse model.props to find model config
 		var modelCollides : Map<String, Array<hxd.fmt.fbx.HMDOut.CollideParams>> = [];
-		var modelPropsPath = dirPath + "/model.props";
+		var modelPropsPath = dirPath + "/" + h3d.prim.ModelDatabase.FILE_NAME;
 		var foundModelProps = false;
 		var modelProps = null;
 		try {
@@ -160,7 +160,7 @@ class ConvertFBX2HMD extends Convert {
 				if( mpFile == filePath ) {
 					var mpModel = mp.substring(mp.lastIndexOf("/") + 1);
 					var mpProps = Reflect.field(modelProps, mp);
-					if( Reflect.hasField(mpProps, "collide") ) {
+					if( Reflect.hasField(mpProps, h3d.prim.ModelDatabase.COLLIDE_CONFIG) ) {
 						var collide = mpProps.collide;
 						if( collide == null || Std.isOfType(collide, Array) ) {
 							modelCollides.set(mpModel, collide);
@@ -170,6 +170,7 @@ class ConvertFBX2HMD extends Convert {
 				}
 			}
 		}
+
 		// Parse fbx to find used materials
 		if( context != null && context.matNames != null && Std.isOfType(context.matNames, Array) ) {
 			matNames = context.matNames;
@@ -279,6 +280,10 @@ class ConvertFBX2HMD extends Convert {
 				var config: Array<Float> = params.lodsDecimation;
 				hmdout.lodsDecimation = [for(lod in config) lod];
 			}
+			if (params.collisionThresholdHeight != null)
+				hmdout.collisionThresholdHeight = params.collisionThresholdHeight;
+			if (params.collisionUseLowLod != null)
+				hmdout.collisionUseLowLod = params.collisionUseLowLod;
 		}
 		if( localParams != null ) {
 			if( localParams.ignoreCollideMaterials != null ) {

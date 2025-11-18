@@ -118,7 +118,7 @@ enum ResolveResult {
 class Collider {
 	public var type : ColliderType;
 
-	public static function resolveColliderType(d : Data, model : Model, params : CollideParams) : ResolveResult {
+	public static function resolveColliderType(d : Data, model : Model, params : CollideParams, ?collisionThresholdHeight : Float, ?collisionUseLowLod : Bool) : ResolveResult {
 		var generateCollides : Dynamic = null; // Default config (props.json)
 
 		var type : ResolveResult = null;
@@ -128,8 +128,20 @@ class Collider {
 		if (type == null && params.useDefault) {
 			collidersParams = generateCollides;
 			var colliderModel = findMeshModel(d, model.getObjectName() + "_Collider");
-			if (colliderModel != null)
+			if (colliderModel != null) {
 				type = ResolveResult.Mesh(colliderModel);
+			}
+
+			if (type == null && collisionThresholdHeight != null) {
+				var dimension = d.geometries[model.geometry].bounds.dimension();
+				if (dimension < collisionThresholdHeight)
+					type = ResolveResult.Empty;
+			}
+
+			if (type == null && collisionUseLowLod != null) {
+				if (model.lods != null && model.lods.length > 0)
+					type = ResolveResult.Mesh(d.models[model.lods[model.lods.length - 1]]);
+			}
 		}
 		if (type == null && collidersParams != null) {
 			var colliderModel = findMeshModel(d, collidersParams.mesh) ?? model;

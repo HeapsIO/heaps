@@ -26,6 +26,7 @@ class ModelDatabase {
 
 	public static var LOD_CONFIG = "lodConfig";
 	public static var DYN_BONES_CONFIG = "dynamicBones";
+	public static var COLLIDE_CONFIG = "collide";
 
 	public static dynamic function customizeLodConfig(c : Array<Float>) {
 		return c;
@@ -183,6 +184,7 @@ class ModelDatabase {
 		input.skin.setSkinData(skinData);
 	}
 
+
 	function saveLodConfig( input : ModelDataInput, data : Dynamic ) @:privateAccess {
 		var isDefaultConfig = true;
 		var defaultConfig = hxd.fmt.hmd.Library.getDefaultLodConfig(input.resourceDirectory);
@@ -212,7 +214,6 @@ class ModelDatabase {
 		else
 			Reflect.deleteField(data, LOD_CONFIG);
 	}
-
 
 	function saveDynamicBonesConfig( input : ModelDataInput, data : Dynamic ) {
 		if (input.skin == null)
@@ -264,10 +265,10 @@ class ModelDatabase {
 	}
 
 	function saveCollideConfig( input : ModelDataInput, data : Dynamic ) {
-		if ( !Reflect.hasField(input.collide, "collide") )
-			Reflect.deleteField(data, "collide");
+		if ( !Reflect.hasField(input.collide, COLLIDE_CONFIG) )
+			Reflect.deleteField(data, COLLIDE_CONFIG);
 		else
-			Reflect.setField(data, "collide", Reflect.field(input.collide, "collide"));
+			Reflect.setField(data, COLLIDE_CONFIG, Reflect.field(input.collide, COLLIDE_CONFIG));
 	}
 
 
