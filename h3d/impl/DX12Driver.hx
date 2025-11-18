@@ -1232,17 +1232,20 @@ class DX12Driver extends h3d.impl.Driver {
 					switch( p.type ) {
 						case TBuffer(type,_,kind):
 							regs.bufferTypes.push(kind);
-							regs.bufferStrides.push(hxsl.Ast.Tools.size(type) << 2);
-							switch ( kind ) {
+							var stride = switch ( kind ) {
 								case Uniform, Partial:
 									regs.cbvCount++;
+									hxsl.Ast.Tools.size(type) << 2;
 								case Storage, StoragePartial:
 									regs.storageCount++;
+									hxsl.Ast.Tools.size(type.match(TInt|TFloat) ? type : TVec(4, VFloat)) << 2;
 								case RW, RWPartial:
 									uavCount++;
+									hxsl.Ast.Tools.size(type.match(TInt|TFloat) ? type : TVec(4, VFloat)) << 2;
 								default:
 									throw "assert";
 							}
+							regs.bufferStrides.push(stride);
 						default:
 							throw "assert";
 					}
