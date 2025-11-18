@@ -132,7 +132,6 @@ class ModelDatabase {
 	}
 
 	function loadDynamicBonesConfig( input : ModelDataInput, data : Dynamic ) {
-		return;
 		var c : Array<Dynamic> = Reflect.field(data, DYN_BONES_CONFIG);
 		if (c == null || input.skin == null)
 			return;
@@ -239,7 +238,7 @@ class ModelDatabase {
 
 		var isDefaultConfig = true;
 		if (dynamicJoints.length > 0) {
-			var defaultConfig = hxd.fmt.hmd.Library.getDefaultDynamicBonesConfig(input.resourceDirectory);
+			var defaultConfig : Array<Dynamic> = hxd.fmt.hmd.Library.getDefaultDynamicBonesConfig(input.resourceDirectory);
 			for (jConf in dynamicJoints) {
 				var same = false;
 				for (defConf in defaultConfig) {
