@@ -1,4 +1,4 @@
--hl out/main.c
+-hl meshtools.hl
 -lib heaps
 -main MeshTools
 -D hl-ver=1.15.0

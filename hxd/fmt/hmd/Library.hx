@@ -236,7 +236,7 @@ class Library {
 			var r = 0, vcount = 0;
 			for( i in 0...buf.indexes.length ) {
 				var vid = isSmall ? (ibuf.get(r++) | (ibuf.get(r++) << 8)) : ibuf.getInt32(i<<2);
-				var rid = vmap[vid];
+				var rid : Int = vmap[vid] ?? 0;
 				if( rid == 0 ) {
 					rid = ++vcount;
 					vmap[vid] = rid;
