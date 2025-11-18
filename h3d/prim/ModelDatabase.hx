@@ -11,15 +11,21 @@ typedef ModelDataInput = {
 }
 #end
 
+typedef ModelProps = {
+	lodConfig: Array<Float>,
+	dynamicBones: Array<Dynamic>
+}
+
 class ModelDatabase {
 
 	public static var db : Map<String, Dynamic> = new Map();
 	var baseDir(get, never) : String;
 
-	static var FILE_NAME = "model.props";
+	public static var FILE_NAME = "model.props";
+	public static var DEFAULT_CONFIG_ENTRY = "default";
 
-	static var LOD_CONFIG = "lodConfig";
-	static var DYN_BONES_CONFIG = "dynamicBones";
+	public static var LOD_CONFIG = "lodConfig";
+	public static var DYN_BONES_CONFIG = "dynamicBones";
 
 	public static dynamic function customizeLodConfig(c : Array<Float>) {
 		return c;
@@ -117,6 +123,7 @@ class ModelDatabase {
 		#end
 	}
 
+
 	function loadLodConfig( input : ModelDataInput, data : Dynamic ) {
 		var c = Reflect.field(data, LOD_CONFIG);
 		if (c == null || input.hmd == null)
@@ -124,7 +131,7 @@ class ModelDatabase {
 		@:privateAccess input.hmd.lodConfig = c;
 	}
 
-	function loadDynamicBonesConfig( input : ModelDataInput, data : Dynamic) {
+	function loadDynamicBonesConfig( input : ModelDataInput, data : Dynamic ) {
 		var c : Array<Dynamic> = Reflect.field(data, DYN_BONES_CONFIG);
 		if (c == null || input.skin == null)
 			return;
@@ -206,6 +213,7 @@ class ModelDatabase {
 			Reflect.deleteField(data, LOD_CONFIG);
 	}
 
+
 	function saveDynamicBonesConfig( input : ModelDataInput, data : Dynamic ) {
 		if (input.skin == null)
 			return;
@@ -224,10 +232,30 @@ class ModelDatabase {
 				damping: dynJ.damping,
 				additive: dynJ.additive,
 				globalForce: dynJ.globalForce,
-				lockAxis: dynJ.lockAxis });
+				lockAxis: dynJ.lockAxis
+			});
 		}
 
-		if (dynamicJoints.length == 0) {
+		var isDefaultConfig = true;
+		if (dynamicJoints.length > 0) {
+			var defaultConfig = hxd.fmt.hmd.Library.getDefaultDynamicBonesConfig(input.resourceDirectory);
+			for (jConf in dynamicJoints) {
+				var same = false;
+				for (defConf in defaultConfig) {
+					if (jConf.name == defConf.name && haxe.Json.stringify(jConf) == haxe.Json.stringify(defConf)) {
+						same = true;
+						break;
+					}
+				}
+
+				if (!same) {
+					isDefaultConfig = false;
+					break;
+				}
+			}
+		}
+
+		if (isDefaultConfig || dynamicJoints.length == 0) {
 			Reflect.deleteField(data, DYN_BONES_CONFIG);
 			return;
 		}
@@ -241,6 +269,7 @@ class ModelDatabase {
 		else
 			Reflect.setField(data, "collide", Reflect.field(input.collide, "collide"));
 	}
+
 
 	public function loadModelProps( input : ModelDataInput ) {
 		var data : Dynamic = getModelData(input.resourceDirectory, input.resourceName, input.objectName);
