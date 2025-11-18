@@ -33,6 +33,7 @@ class RenderContext extends h3d.impl.RenderContext {
 	@global("camera.zFar") var cameraFar : Float;
 	@global("camera.proj") var cameraProj : h3d.Matrix;
 	@global("camera.invProj") var cameraInvProj : h3d.Matrix;
+	@global("camera.prevPosition") var cameraPrevPos : h3d.Vector;
 	@global("camera.position") var cameraPos : h3d.Vector;
 	@global("camera.projDiag") var cameraProjDiag : h3d.Vector4;
 	@global("camera.projFlip") var cameraProjFlip : Float;
@@ -41,6 +42,7 @@ class RenderContext extends h3d.impl.RenderContext {
 	@global("camera.inverseViewProj") var cameraInverseViewProj : h3d.Matrix;
 	@global("camera.previousViewProj") var cameraPreviousViewProj : h3d.Matrix;
 	@global("camera.jitterOffsets") var cameraJitterOffsets : h3d.Vector4;
+	@global("global.prevTime") var globalPrevTime : Float;
 	@global("global.time") var globalTime : Float;
 	@global("global.pixelSize") var pixelSize : h3d.Vector;
 	@global("global.modelView") var globalModelView : h3d.Matrix;
@@ -80,6 +82,8 @@ class RenderContext extends h3d.impl.RenderContext {
 		cameraProj = camera.mproj;
 		cameraInvProj = camera.getInverseProj();
 		cameraPos = camera.pos;
+		if(cameraPrevPos == null)
+			cameraPrevPos = camera.pos.clone();
 		cameraProjDiag = new h3d.Vector4(camera.mproj._11,camera.mproj._22,camera.mproj._33,camera.mproj._44);
 		if ( cameraPreviousViewProj == null )
 			cameraPreviousViewProj = camera.m.clone();
@@ -283,6 +287,8 @@ class RenderContext extends h3d.impl.RenderContext {
 
 		cameraFrustumUploaded = false;
 
+		globalPrevTime = time;
+		cameraPrevPos.load(cameraPos);
 		cameraPreviousViewProj.load(cameraViewProj);
 		computeVelocity = false;
 
