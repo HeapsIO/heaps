@@ -1133,6 +1133,28 @@ class HMDOut extends BaseLibrary {
 		for( g in this.root.getAll("Objects.Geometry") )
 			tmpGeom.set(g.getId(), { setSkin : function(_) { }, vertexCount : function() return Std.int(new hxd.fmt.fbx.Geometry(this, g).getVertices().length/3) } );
 
+		// Sort LODs to ensure we treat them in order after
+		objects.sort((a, b) -> {
+			var aName = a.model == null ? null : a.model.getName();
+			if (aName == null) return 0;
+			var aIndexOf = aName.lastIndexOf("_LOD");
+			var aLodLevel = Std.parseInt(aName.substr(aIndexOf + 4));
+			aName = aName.substring(0, aIndexOf);
+
+			var bName = b.model == null ? null : b.model.getName();
+			if (bName == null) return 0;
+			var bIndexOf = bName.lastIndexOf("_LOD");
+			var bLodLevel = Std.parseInt(bName.substr(bIndexOf + 4));
+			bName = bName.substring(0, bIndexOf);
+
+			if (aName == bName && aLodLevel != null && bLodLevel != null) {
+				return aLodLevel > bLodLevel ? 1 : -1;
+			}
+			else {
+				return 0;
+			}
+		});
+
 		var hgeom = new Map();
 		var hgeomCol = new Map();
 		var hmat = new Map<Int,Int>();
@@ -1309,7 +1331,7 @@ class HMDOut extends BaseLibrary {
 			}
 			if( gdata.materials == null )
 				model.materials = mids;
-			else if (lod0Mids != null && lodsInfos.lodLevel > 0)
+			else if (lodsInfos.lodLevel > 0)
 				model.materials = [for( id in gdata.materials ) lod0Mids[id]];
 			else
 				model.materials = [for( id in gdata.materials ) mids[id]];
