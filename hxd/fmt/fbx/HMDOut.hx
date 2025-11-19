@@ -1134,7 +1134,7 @@ class HMDOut extends BaseLibrary {
 			tmpGeom.set(g.getId(), { setSkin : function(_) { }, vertexCount : function() return Std.int(new hxd.fmt.fbx.Geometry(this, g).getVertices().length/3) } );
 
 		// Sort LODs to ensure we treat them in order after
-		objects.sort((a, b) -> {
+		haxe.ds.ArraySort.sort(objects, (a, b) -> {
 			var aName = a.model == null ? null : a.model.getName();
 			if (aName == null) return 0;
 			var aIndexOf = aName.lastIndexOf("_LOD");
