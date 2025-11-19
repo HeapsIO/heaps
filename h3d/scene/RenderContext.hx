@@ -120,6 +120,7 @@ class RenderContext extends h3d.impl.RenderContext {
 		cachedPos = 0;
 		visibleFlag = true;
 		forcedScreenRatio = -1;
+		globalPrevTime = time;
 		time += elapsedTime;
 		frame++;
 		setCurrent();
@@ -287,7 +288,6 @@ class RenderContext extends h3d.impl.RenderContext {
 
 		cameraFrustumUploaded = false;
 
-		globalPrevTime = time;
 		cameraPrevPos.load(cameraPos);
 		cameraPreviousViewProj.load(cameraViewProj);
 		computeVelocity = false;
