@@ -134,6 +134,10 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 
 			var width = ratioX * window.width;
 			var height = ratioY * window.height;
+
+			if (x < 0 || y < 0 || x > width || y > height)
+				return null;
+
 			var screenX = (x / width - 0.5) * 2;
 			var screenY = -(y / height - 0.5) * 2;
 
