@@ -240,6 +240,8 @@ class ModelDatabase {
 		var isDefaultConfig = true;
 		if (dynamicJoints.length > 0) {
 			var defaultConfig : Array<Dynamic> = hxd.fmt.hmd.Library.getDefaultDynamicBonesConfig(input.resourceDirectory);
+			if (defaultConfig == null)
+				defaultConfig = [];
 			for (jConf in dynamicJoints) {
 				var same = false;
 				for (defConf in defaultConfig) {
