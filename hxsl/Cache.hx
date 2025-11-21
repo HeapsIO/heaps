@@ -513,7 +513,7 @@ class Cache {
 						a1 ? 1 : -1;
 					else
 						t1.getIndex() - t2.getIndex();
-			case [TRWTexture(t1, a1, c1), TRWTexture(t2, a2, c2)]:
+				case [TRWTexture(t1, a1, c1), TRWTexture(t2, a2, c2)]:
 					if ( a1 != a2 )
 						a1 ? 1 : -1;
 					else if ( c1 != c2 )
