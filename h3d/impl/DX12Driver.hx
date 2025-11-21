@@ -1068,9 +1068,8 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	static final SHADER_ARGS : Array<String>= [/*"-Zi"*/];
-	function compileSource( sh : hxsl.RuntimeShader.RuntimeShaderData, profile, baseRegister, rootStr = "" ) {
+	function compileSource( sh : hxsl.RuntimeShader.RuntimeShaderData, profile, rootStr = "" ) {
 		var out = new hxsl.HlslOut();
-		out.baseRegister = baseRegister;
 		if( sh.code == null ) {
 			sh.code = out.run(sh.data);
 			sh.code = rootStr + sh.code;
@@ -1164,7 +1163,7 @@ class DX12Driver extends h3d.impl.Driver {
 	function computeRootSignature( shader : hxsl.RuntimeShader ) {
 		var allocatedParams = 16;
 		var params = hl.CArray.alloc(RootParameterDescriptorTable,allocatedParams);
-		var paramsCount = 0, regCount = 0;
+		var paramsCount = 0, regBufCount = 0, regTexCount = 0, regUAVCount = 0, regSamplerCount = 0;
 		var ranges = [];
 		var globalsParamsCBV = false;
 		var vertexParamsCBV = false;
@@ -1190,7 +1189,7 @@ class DX12Driver extends h3d.impl.Driver {
 		}
 
 		function allocConsts(size,vis,type) {
-			var reg = regCount++;
+			var reg = regBufCount++;
 			if( size == 0 ) return -1;
 
 			if( type != null ) {
@@ -1219,6 +1218,8 @@ class DX12Driver extends h3d.impl.Driver {
 			case Fragment: PIXEL;
 			default: ALL;
 			}
+			// Reset registers as they can overlap between shaders since we restrict their visibility
+			regBufCount = regTexCount = regUAVCount = regSamplerCount = 0;
 			var regs = new ShaderRegisters();
 			regs.globals = allocConsts(sh.globalsSize, vis, globalsParamsCBV ? CBV : null);
 			regs.params = allocConsts(sh.paramsSize, vis, (sh.kind == Fragment ? fragmentParamsCBV : vertexParamsCBV) ? CBV : null);
@@ -1261,27 +1262,28 @@ class DX12Driver extends h3d.impl.Driver {
 				if ( regs.cbvCount > 0 ) {
 					var r = rangArr[i];
 					r.rangeType = CBV;
-					r.baseShaderRegister = regCount;
+					r.baseShaderRegister = regBufCount;
 					r.registerSpace = 0;
 					r.numDescriptors = regs.cbvCount;
-					regCount += regs.cbvCount;
+					regBufCount += regs.cbvCount;
 					i++;
 				}
 				if ( regs.storageCount > 0 ) {
 					var r = rangArr[i];
 					r.rangeType = SRV;
-					r.baseShaderRegister = regs.texturesCount;
+					r.baseShaderRegister = regTexCount;
 					r.registerSpace = 0;
 					r.numDescriptors = regs.storageCount;
+					regTexCount += regs.storageCount;
 					i++;
 				}
 				if ( uavCount > 0 ) {
 					var r = rangArr[i];
 					r.rangeType = UAV;
-					r.baseShaderRegister = regCount;
+					r.baseShaderRegister = regUAVCount;
 					r.registerSpace = 0;
 					r.numDescriptors = uavCount;
-					regCount += uavCount;
+					regUAVCount += uavCount;
 					i++;
 				}
 			}
@@ -1311,29 +1313,30 @@ class DX12Driver extends h3d.impl.Driver {
 				var rangeArr = allocDescTable(vis, rangeCount);
 				var i = 0;
 				if( regs.texturesCount > 0 ) {
-
 					var r = rangeArr[i];
 					r.rangeType = SRV;
-					r.baseShaderRegister = regs.storageCount;
+					r.baseShaderRegister = regTexCount;
 					r.registerSpace = 0;
 					r.numDescriptors = regs.texturesCount;
+					regTexCount += regs.texturesCount;
 					i++;
 
 					regs.samplers = paramsCount;
 					var r = allocDescTable(vis)[0];
 					r.rangeType = SAMPLER;
-					r.baseShaderRegister = 0;
+					r.baseShaderRegister = regSamplerCount;
 					r.registerSpace = 0;
 					r.numDescriptors = regs.texturesCount;
+					regSamplerCount += regs.texturesCount;
 				}
 
 				if ( uavCount > 0 ) {
 					var r = rangeArr[i];
 					r.rangeType = UAV;
-					r.baseShaderRegister = regCount;
+					r.baseShaderRegister = regUAVCount;
 					r.registerSpace = 0;
 					r.numDescriptors = uavCount;
-					regCount += uavCount;
+					regUAVCount += uavCount;
 					i++;
 				}
 			}
@@ -1387,7 +1390,7 @@ class DX12Driver extends h3d.impl.Driver {
 
 		var regs = [];
 		for( s in shader.getShaders() )
-			regs.push({ start : regCount, registers : allocParams(s) });
+			regs.push(allocParams(s));
 		if( paramsCount > allocatedParams )
 			throw "ASSERT : Too many parameters";
 
@@ -1417,9 +1420,9 @@ class DX12Driver extends h3d.impl.Driver {
 		var c = new CompiledShader();
 
 		var rootStr = stringifyRootSignature(res.sign, "ROOT_SIGNATURE", res.params, res.paramsCount);
-		var vs = shader.mode == Compute ? null : compileSource(shader.vertex, "vs_6_0", 0, rootStr);
-		var ps = shader.mode == Compute ? null : compileSource(shader.fragment, "ps_6_0", res.registers[1].start, rootStr);
-		var cs = shader.mode == Compute ? compileSource(shader.compute, "cs_6_0", 0, rootStr) : null;
+		var vs = shader.mode == Compute ? null : compileSource(shader.vertex, "vs_6_0", rootStr);
+		var ps = shader.mode == Compute ? null : compileSource(shader.fragment, "ps_6_0", rootStr);
+		var cs = shader.mode == Compute ? compileSource(shader.compute, "cs_6_0", rootStr) : null;
 
 		var signSize = 0;
 		var signBytes = Driver.serializeRootSignature(res.sign, 1, signSize);
@@ -1434,12 +1437,12 @@ class DX12Driver extends h3d.impl.Driver {
 			desc.cs.shaderBytecode = cs;
 			desc.cs.bytecodeLength = cs.length;
 			c.computePipeline = Driver.createComputePipelineState(desc);
-			c.vertexRegisters = res.registers[0].registers;
+			c.vertexRegisters = res.registers[0];
 			return c;
 		}
 
-		c.vertexRegisters = res.registers[0].registers;
-		c.fragmentRegisters = res.registers[1].registers;
+		c.vertexRegisters = res.registers[0];
+		c.fragmentRegisters = res.registers[1];
 
 		var inputs = [];
 		for( v in shader.vertex.data.vars )
@@ -2052,7 +2055,6 @@ class DX12Driver extends h3d.impl.Driver {
 				lastFragmentGlobalBind = bind;
 			else
 				lastVertexGlobalBind = bind;
-
 		case Textures:
 			if( shader.texturesCount > 0 ) {
 				if ( hasBuffersTexturesChanged(buf, regs) ) {

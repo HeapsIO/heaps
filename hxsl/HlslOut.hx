@@ -102,7 +102,6 @@ class HlslOut {
 	var samplers : Map<Int, Array<Int>>;
 	var computeLayout = [1,1,1];
 	public var varNames : Map<Int,String>;
-	public var baseRegister : Int = 0;
 
 	var varAccess : Map<Int,String>;
 	var isVertex(get,never) : Bool;
@@ -873,7 +872,7 @@ class HlslOut {
 	}
 
 	function initGlobals( s : ShaderData ) {
-		add('cbuffer _globals : register(b$baseRegister) {\n');
+		add('cbuffer _globals : register(b0) {\n');
 		for( v in s.vars )
 			if( v.kind == Global ) {
 				add("\t");
@@ -887,7 +886,7 @@ class HlslOut {
 		var textures = [];
 		var buffers = [];
 		var uavs = [];
-		add('cbuffer _params : register(b${baseRegister+1}) {\n');
+		add('cbuffer _params : register(b1) {\n');
 		for( v in s.vars )
 			if( v.kind == Param ) {
 				switch( v.type ) {
@@ -912,32 +911,37 @@ class HlslOut {
 			}
 		add("};\n\n");
 
-		var regCount = baseRegister + 2;
-		var storageRegister = 0;
+		var bufRegister = 2;
+		var texRegister = 0;
+		var uavRegister = 0;
 		for( b in buffers.concat(uavs) ) {
 			switch( b.type ) {
 			case TBuffer(t, size, Uniform):
-				add('cbuffer _buffer$regCount : register(b${regCount++}) { ');
+				add('cbuffer _buffer$bufRegister : register(b${bufRegister++}) { ');
 				addVar(b);
 				add("; };\n");
 			case TBuffer(t, size, Storage):
 				addVar(b);
-				add(' : register(t${storageRegister++});\n');
+				add(' : register(t${texRegister++});\n');
+			case TArray(TRWTexture(_), SConst(n)):
+				addVar(b);
+				add(' : register(u${uavRegister});\n');
+				uavRegister += n;
+				continue;
 			default:
 				addVar(b);
-				add(' : register(u${regCount++});\n');
+				add(' : register(u${uavRegister++});\n');
 			}
 		}
 		if( buffers.length + uavs.length > 0 ) add("\n");
 
 		var ctx = new Samplers();
-		var texCount = storageRegister;
 		for( v in textures ) {
 			addVar(v);
-			add(' : register(t${texCount});\n');
+			add(' : register(t${texRegister});\n');
 			switch( v.type ) {
-			case TArray(_,SConst(n)): texCount += n;
-			default: texCount++;
+			case TArray(_,SConst(n)): texRegister += n;
+			default: texRegister++;
 			}
 			samplers.set(v.id, ctx.make(v, []));
 		}
