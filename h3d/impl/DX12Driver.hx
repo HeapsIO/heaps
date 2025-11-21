@@ -1683,14 +1683,13 @@ class DX12Driver extends h3d.impl.Driver {
 
 		var isRT = t.flags.has(Target);
 
-		var flags = new haxe.EnumFlags();
-		flags.set(CREATE_NOT_ZEROED);
 		var desc = makeTextureDesc(t);
 		var td = new TextureData();
 		td.format = desc.format;
 		tmp.heap.type = DEFAULT;
 
 		var clear = null;
+		var flags = new haxe.EnumFlags();
 		if( isRT ) {
 			var color = t.t == null || t.t.color == null ? new h3d.Vector4(0,0,0,0) : t.t.color; // reuse prev color
 			desc.flags.set(ALLOW_RENDER_TARGET);
@@ -1701,6 +1700,8 @@ class DX12Driver extends h3d.impl.Driver {
 			clear.color.b = color.b;
 			clear.color.a = color.a;
 			td.color = color;
+		} else {
+			flags.set(CREATE_NOT_ZEROED);
 		}
 		if( t.flags.has(Writable) )
 			desc.flags.set(ALLOW_UNORDERED_ACCESS);
