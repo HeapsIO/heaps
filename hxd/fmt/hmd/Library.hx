@@ -45,11 +45,6 @@ class Library {
 	var cachedAnimations : Map<String, h3d.anim.Animation>;
 	var cachedSkin : Map<String, h3d.anim.Skin>;
 
-	static var baseModelProps : h3d.prim.ModelDatabase.ModelProps = {
-		lodConfig: [ 0.5, 0.2, 0.01],
-		dynamicBones: null
-	};
-
 	#if (sys || nodejs)
 	static var defaultModelConfigs : Map<String, h3d.prim.ModelDatabase.ModelProps> = new Map();
 	#end
@@ -485,8 +480,8 @@ class Library {
 
 			// Apply default config to object (config that is in props.json)
 			var data = {}
-			Reflect.setField(data, @:privateAccess h3d.prim.ModelDatabase.LOD_CONFIG, getDefaultLodConfig(modelData.resourceDirectory));
-			Reflect.setField(data, @:privateAccess h3d.prim.ModelDatabase.DYN_BONES_CONFIG, getDefaultDynamicBonesConfig(modelData.resourceDirectory));
+			Reflect.setField(data, @:privateAccess h3d.prim.ModelDatabase.LOD_CONFIG, h3d.prim.ModelDatabase.current.getDefaultLodConfig(modelData.resourceDirectory));
+			Reflect.setField(data, @:privateAccess h3d.prim.ModelDatabase.DYN_BONES_CONFIG, h3d.prim.ModelDatabase.current.getDefaultDynamicBonesConfig(modelData.resourceDirectory));
 
 			@:privateAccess h3d.prim.ModelDatabase.current.loadLodConfig(modelData, data);
 			@:privateAccess h3d.prim.ModelDatabase.current.loadDynamicBonesConfig(modelData, data);
@@ -880,37 +875,4 @@ class Library {
         return true;
     }
 	#end
-
-	public static function getDefaultLodConfig( dir : String ) : Array<Float> {
-		var fs = Std.downcast(hxd.res.Loader.currentInstance.fs, hxd.fs.LocalFileSystem);
-		var c = baseModelProps.lodConfig;
-		#if (sys || nodejs)
-		if (fs != null) {
-			function loadConf(parent: Dynamic, obj: Dynamic) {
-				return @:privateAccess fs.convert.mergeRec(parent, Reflect.field(obj, h3d.prim.ModelDatabase.ModelDatabase.DEFAULT_CONFIG_ENTRY));
-			}
-
-			var conf : h3d.prim.ModelDatabase.ModelProps = @:privateAccess fs.convert.getConfig(defaultModelConfigs, baseModelProps, dir, loadConf, h3d.prim.ModelDatabase.ModelDatabase.FILE_NAME);
-			c = conf.lodConfig;
-		}
-		#end
-		c = h3d.prim.ModelDatabase.customizeLodConfig(c);
-		return c;
-	}
-
-	public static function getDefaultDynamicBonesConfig( dir : String ) : Array<Dynamic> {
-		var fs = Std.downcast(hxd.res.Loader.currentInstance.fs, hxd.fs.LocalFileSystem);
-		var c = baseModelProps.dynamicBones;
-		#if (sys || nodejs)
-		if (fs != null) {
-			function loadConf(parent: Dynamic, obj: Dynamic) {
-				return @:privateAccess fs.convert.mergeRec(parent, Reflect.field(obj, h3d.prim.ModelDatabase.ModelDatabase.DEFAULT_CONFIG_ENTRY));
-			}
-
-			var conf : h3d.prim.ModelDatabase.ModelProps = @:privateAccess fs.convert.getConfig(defaultModelConfigs, baseModelProps, dir, loadConf, h3d.prim.ModelDatabase.ModelDatabase.FILE_NAME);
-			c = conf.dynamicBones;
-		}
-		#end
-		return c;
-	}
 }

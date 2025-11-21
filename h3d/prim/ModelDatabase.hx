@@ -1,5 +1,7 @@
 package h3d.prim;
 
+import hxd.fs.FileConfig;
+
 #if !macro
 typedef ModelDataInput = {
 	var resourceDirectory : String;
@@ -18,9 +20,6 @@ typedef ModelProps = {
 
 class ModelDatabase {
 
-	public static var db : Map<String, Dynamic> = new Map();
-	var baseDir(get, never) : String;
-
 	public static var FILE_NAME = "model.props";
 	public static var DEFAULT_CONFIG_ENTRY = "default";
 
@@ -28,11 +27,26 @@ class ModelDatabase {
 	public static var DYN_BONES_CONFIG = "dynamicBones";
 	public static var COLLIDE_CONFIG = "collide";
 
+	public var defaultProps = {
+		lodConfig: [ 0.5, 0.2, 0.01],
+		dynamicBones: null
+	}
+
+	public static var db : Map<String, Dynamic> = new Map();
+	var baseDir(get, never) : String;
+	var fileConfig : FileConfig<Dynamic>;
+
 	public static dynamic function customizeLodConfig(c : Array<Float>) {
 		return c;
 	}
 
 	function new() {
+		fileConfig = new FileConfig<ModelProps>("", FILE_NAME, defaultProps);
+		#if !macro
+		fileConfig.loadConfig = (parent, obj) -> {
+			@:privateAccess fileConfig.mergeRec(parent, Reflect.field(obj, h3d.prim.ModelDatabase.ModelDatabase.DEFAULT_CONFIG_ENTRY));
+		}
+		#end
 	}
 
 	function get_baseDir() return '';
@@ -187,7 +201,7 @@ class ModelDatabase {
 
 	function saveLodConfig( input : ModelDataInput, data : Dynamic ) @:privateAccess {
 		var isDefaultConfig = true;
-		var defaultConfig = hxd.fmt.hmd.Library.getDefaultLodConfig(input.resourceDirectory);
+		var defaultConfig = getDefaultLodConfig(input.resourceDirectory);
 
 		if (input.hmd.lodConfig != null) {
 			if (defaultConfig.length != input.hmd.lodConfig.length)
@@ -239,7 +253,7 @@ class ModelDatabase {
 
 		var isDefaultConfig = true;
 		if (dynamicJoints.length > 0) {
-			var defaultConfig : Array<Dynamic> = hxd.fmt.hmd.Library.getDefaultDynamicBonesConfig(input.resourceDirectory);
+			var defaultConfig : Array<Dynamic> = getDefaultDynamicBonesConfig(input.resourceDirectory);
 			if (defaultConfig == null)
 				defaultConfig = [];
 			for (jConf in dynamicJoints) {
@@ -271,6 +285,16 @@ class ModelDatabase {
 			Reflect.deleteField(data, COLLIDE_CONFIG);
 		else
 			Reflect.setField(data, COLLIDE_CONFIG, Reflect.field(input.collide, COLLIDE_CONFIG));
+	}
+
+
+	public function getDefaultLodConfig( dir : String ) : Array<Float> {
+		var c = fileConfig.getConfig(dir).lodConfig;
+		return customizeLodConfig(c);
+	}
+
+	public function getDefaultDynamicBonesConfig( dir : String ) : Array<Dynamic> {
+		return fileConfig.getConfig(dir).dynamicBones;
 	}
 
 
