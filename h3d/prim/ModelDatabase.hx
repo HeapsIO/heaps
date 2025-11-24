@@ -43,8 +43,22 @@ class ModelDatabase {
 	function new() {
 		fileConfig = new FileConfig<ModelProps>("", FILE_NAME, defaultProps);
 		#if !macro
-		fileConfig.loadConfig = (parent, obj) -> {
-			@:privateAccess fileConfig.mergeRec(parent, Reflect.field(obj, h3d.prim.ModelDatabase.ModelDatabase.DEFAULT_CONFIG_ENTRY));
+		fileConfig.loadConfig = (parent : ModelProps, obj : ModelProps) -> {
+			obj = Reflect.field(obj, h3d.prim.ModelDatabase.ModelDatabase.DEFAULT_CONFIG_ENTRY);
+			var res = @:privateAccess fileConfig.mergeRec(parent, obj);
+
+			// Merge arrays entries
+			if (parent?.dynamicBones != null && obj?.dynamicBones != null) {
+				var tmpMap = new Map<String, Dynamic>();
+				for (j in parent.dynamicBones)
+					tmpMap.set(j.name, j);
+				for (j in obj.dynamicBones)
+					tmpMap.set(j.name, j);
+
+				res.dynamicBones = [ for (k in tmpMap.keys()) tmpMap.get(k) ];
+			}
+
+			return res;
 		}
 		#end
 	}
