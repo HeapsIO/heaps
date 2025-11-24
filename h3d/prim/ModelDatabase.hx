@@ -270,20 +270,19 @@ class ModelDatabase {
 			var defaultConfig : Array<Dynamic> = getDefaultDynamicBonesConfig(input.resourceDirectory);
 			if (defaultConfig == null)
 				defaultConfig = [];
-			for (jConf in dynamicJoints) {
-				var same = false;
-				for (defConf in defaultConfig) {
-					if (jConf.name == defConf.name && haxe.Json.stringify(jConf) == haxe.Json.stringify(defConf)) {
-						same = true;
-						break;
-					}
-				}
 
-				if (!same) {
+			var tmpMap = new Map<String, Dynamic>();
+			for (j in defaultConfig)
+				tmpMap.set(j.name, j);
+			for (jConf in dynamicJoints) {
+				var def = tmpMap.get(jConf.name);
+				if (def == null || haxe.Json.stringify(def) != haxe.Json.stringify(jConf)) {
+					tmpMap.set(jConf.name, jConf);
 					isDefaultConfig = false;
-					break;
 				}
 			}
+
+			dynamicJoints = [ for (k in tmpMap.keys()) tmpMap.get(k) ];
 		}
 
 		if (isDefaultConfig || dynamicJoints.length == 0) {
