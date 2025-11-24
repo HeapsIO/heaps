@@ -1426,6 +1426,7 @@ class Flow extends Object {
 			});
 
 			// position all not absolute nodes
+			maxLineHeight = 0;
 			forChildren(function(i, p, c) {
 				if( p.autoSizeWidth != null || p.autoSizeHeight != null )
 					calcSize(p, c);
