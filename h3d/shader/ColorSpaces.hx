@@ -74,5 +74,9 @@ class ColorSpaces extends hxsl.Shader {
 			);
 			return srgb;
 		}
+
+		function rgb2luminance( rgb : Vec3 ) : Float {
+			return dot(rgb, vec3(0.2126, 0.7152, 0.0722));
+		}
 	}
 }
