@@ -24,6 +24,7 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 	public var offsetY : Float = 0;
 	public var ratioX : Float = 1;
 	public var ratioY : Float = 1;
+	public var zoom : Float = 1;
 
 	/**
 		Adjust the position of the ray used to handle interactives.
@@ -129,9 +130,8 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 			return null;
 
 		if( hitInteractives.length == 0 ) {
-			var x = event.relX - offsetX;
-			var y = event.relY - offsetY;
-
+			var x = event.relX * zoom - offsetX;
+			var y = event.relY * zoom - offsetY;
 			var width = ratioX * window.width;
 			var height = ratioY * window.height;
 
