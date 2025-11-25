@@ -73,8 +73,8 @@ class JointData {
 	public var currentAbsPos : h3d.Matrix;
 	public var additivePose : h3d.Matrix;
 
-	var targetMat : h3d.Matrix = h3d.Matrix.I();
-	var originMat : h3d.Matrix = h3d.Matrix.I();
+	var targetMat : h3d.Matrix = null;
+	var originMat : h3d.Matrix = null;
 
 	public function new() {
 		this.currentAbsPos = h3d.Matrix.I();
@@ -102,6 +102,11 @@ class JointData {
 			m.multiply3x4inline(additivePose, m);
 		if( bid >= 0 )
 			skin.currentPalette[bid].multiply3x4inline(j.transPos, m);
+
+		if (targetMat == null)
+			targetMat = m.clone();
+		if (originMat == null)
+			originMat = m.clone();
 
 		if (!Std.isOfType(this, DynamicJointData)) {
 			targetMat.load(m);
