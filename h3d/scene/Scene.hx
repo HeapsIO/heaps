@@ -20,10 +20,16 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 	**/
 	public var renderer(default,set) : Renderer;
 
-	public var offsetX : Float = 0;
-	public var offsetY : Float = 0;
-	public var ratioX : Float = 1;
-	public var ratioY : Float = 1;
+	/**
+		The scene position. Mainly used for subscenes that aren't fullscreen.
+	**/
+	public var scenePosition : Null<{
+		offsetX : Float,
+		offsetY : Float,
+		width : Int,
+		height : Int,
+		?zoom : Float
+	}>;
 
 	/**
 		Adjust the position of the ray used to handle interactives.
@@ -129,11 +135,14 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 			return null;
 
 		if( hitInteractives.length == 0 ) {
-			var x = event.relX - offsetX;
-			var y = event.relY - offsetY;
+			var x = event.relX - scenePosition?.offsetX;
+			var y = event.relY - scenePosition?.offsetY;
 
-			var width = ratioX * window.width;
-			var height = ratioY * window.height;
+			if (scenePosition != null)
+				trace(event.relX + " " + event.relY + " || " + x + " " + y);
+
+			var width = scenePosition?.width ?? window.width;
+			var height = scenePosition?.height ?? window.height;
 
 			if (x < 0 || y < 0 || x > width || y > height)
 				return null;
