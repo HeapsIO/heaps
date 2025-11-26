@@ -56,8 +56,15 @@ class Camera {
 	var minv : Matrix;
 	var mcamInv : Matrix;
 	var mprojInv : Matrix;
-	var needInv : Bool;
 	var directions : Matrix;
+
+	inline static final invMask = 1 << 0;
+	inline static final invCamMask = 1 << 1;
+	inline static final invProjMask = 1 << 2;
+	inline static final directionsMask = 1 << 3;
+	inline function isInit(mask) : Bool return initFlag & mask == 0;
+	inline function markInit(mask) initFlag |= mask;
+	var initFlag : Int = 0;
 
 	public function new( fovY = 25., zoom = 1., screenRatio = 1.333333, zNear = 0.02, zFar = 4000., rightHanded = false ) {
 		this.fovY = fovY;
@@ -108,9 +115,9 @@ class Camera {
 	**/
 	public function getInverseViewProj() {
 		if( minv == null ) minv = new h3d.Matrix();
-		if( needInv ) {
+		if( isInit(invMask) ) {
 			minv.initInverse(m);
-			needInv = false;
+			markInit(invMask);
 		}
 		return minv;
 	}
@@ -119,12 +126,11 @@ class Camera {
 		Returns the inverse of the camera matrix projection. Cache the result until the next update().
 	**/
 	public function getInverseProj() {
-		if( mprojInv == null ) {
-			mprojInv = new h3d.Matrix();
-			mprojInv._44 = 0;
-		}
-		if( mprojInv._44 == 0 )
+		if( mprojInv == null ) mprojInv = new h3d.Matrix();
+		if( isInit(invProjMask) ) {
 			mprojInv.initInverse(mproj);
+			markInit(invProjMask);
+		}
 		return mprojInv;
 	}
 
@@ -132,12 +138,11 @@ class Camera {
 		Returns the inverse of the camera matrix view only. Cache the result until the next update().
 	**/
 	public function getInverseView() {
-		if( mcamInv == null ) {
-			mcamInv = new h3d.Matrix();
-			mcamInv._44 = 0;
-		}
-		if( mcamInv._44 == 0 )
+		if( mcamInv == null ) mcamInv = new h3d.Matrix();
+		if( isInit(invCamMask) ) {
 			mcamInv.initInverse(mcam);
+			markInit(invCamMask);
+		}
 		return mcamInv;
 	}
 
@@ -159,6 +164,7 @@ class Camera {
 		directions._33 = cameraUp.z;
 
 		directions._44 = 1;
+		markInit(directionsMask);
 	}
 
 	/**
@@ -167,11 +173,8 @@ class Camera {
 
 	inline public function getForward() : h3d.Vector {
 		var forward = new h3d.Vector();
-		if ( directions == null ) {
-			directions = new h3d.Matrix();
-			directions._44 = 0;
-		}
-		if ( directions._44 == 0 )
+		if ( directions == null ) directions = new h3d.Matrix();
+		if ( isInit(directionsMask) )
 			calcDirections();
 
 		forward.x = directions._11;
@@ -187,11 +190,8 @@ class Camera {
 
 	inline public function getRight() : h3d.Vector {
 		var right = new h3d.Vector();
-		if ( directions == null ) {
-			directions = new h3d.Matrix();
-			directions._44 = 0;
-		}
-		if ( directions._44 == 0 )
+		if ( directions == null ) directions = new h3d.Matrix();
+		if ( isInit(directionsMask) )
 			calcDirections();
 
 		right.x = directions._21;
@@ -207,12 +207,10 @@ class Camera {
 
 	inline public function getUp() : h3d.Vector {
 		var up = new h3d.Vector();
-		if ( directions == null ) {
-			directions = new h3d.Matrix();
-			directions._44 = 0;
-		}
-		if ( directions._44 == 0 )
+		if ( directions == null ) directions = new h3d.Matrix();
+		if ( isInit(directionsMask) )
 			calcDirections();
+
 		up.x = directions._31;
 		up.y = directions._32;
 		up.z = directions._33;
@@ -286,10 +284,7 @@ class Camera {
 
 		m.multiply(mcam, mproj);
 
-		needInv = true;
-		if( mcamInv != null ) mcamInv._44 = 0;
-		if( mprojInv != null ) mprojInv._44 = 0;
-		if( directions != null ) directions._44 = 0;
+		initFlag = 0;
 
 		frustum.loadMatrix(m);
 	}
