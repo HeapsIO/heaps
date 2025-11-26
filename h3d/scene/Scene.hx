@@ -138,9 +138,6 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 			var x = event.relX - scenePosition?.offsetX;
 			var y = event.relY - scenePosition?.offsetY;
 
-			if (scenePosition != null)
-				trace(event.relX + " " + event.relY + " || " + x + " " + y);
-
 			var width = scenePosition?.width ?? window.width;
 			var height = scenePosition?.height ?? window.height;
 
