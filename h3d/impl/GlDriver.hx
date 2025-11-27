@@ -720,7 +720,7 @@ class GlDriver extends Driver {
 
 					var mode = getBindType(t);
 					if( mode != pt.mode )
-						throw "Texture format mismatch: "+t+" should be "+pt.t;
+						throw "Texture format mismatch: "+t+ " is " + getBindName(mode) + " but should be "+getBindName(pt.mode) + " ( " +pt.t+" )";
 					gl.activeTexture(GL.TEXTURE0 + idx);
 					gl.uniform1i(pt.u, idx);
 					gl.bindTexture(mode, t.t.t);
@@ -1031,6 +1031,19 @@ class GlDriver extends Driver {
 		case S3TC(n): n <= maxCompressedTexturesSupport;
 		default: false;
 		}
+	}
+
+	function getBindName( i : Int ) {
+		return switch( i ) {
+		case GL.TEXTURE_2D: "TEXTURE_2D";
+		case GL.TEXTURE_3D: "TEXTURE_3D";
+		case GL.TEXTURE_CUBE_MAP: "TEXTURE_CUBE_MAP";
+		case GL.TEXTURE_2D_ARRAY: "TEXTURE_2D_ARRAY";
+		#if (hlsdl > version("1.15.0"))
+		case GL.TEXTURE_CUBE_MAP_ARRAY: "TEXTURE_CUBE_MAP_ARRAY";
+		#end
+		default: "UNKNOWN_TEXTURE_TYPE";
+		};
 	}
 
 	function getBindType( t : h3d.mat.Texture ) {
