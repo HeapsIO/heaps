@@ -186,6 +186,12 @@ class CustomParser extends domkit.CssValue.ValueParser {
 		var offset: Null<Int> = null, offsetChar = 0;
 		var lineHeight : Null<Float> = null, baseLine: Null<Int> = null;
 		switch(value) {
+			case VIdent("default"):
+				#if macro
+				return false;
+				#else
+				return hxd.res.DefaultFont.get();
+				#end
 			case VGroup(args):
 				var args = args.copy();
 				path = parsePath(args[0]);
@@ -222,6 +228,7 @@ class CustomParser extends domkit.CssValue.ValueParser {
 					adjustSdfParams(sdf);
 				}
 			default:
+
 				path = parsePath(value);
 		}
 		var res = loadResource(path);
