@@ -2,6 +2,10 @@ package h3d.impl;
 
 #if (hldx && dx12)
 
+#if (hl_ver < version("1.14.0"))
+#error "DX12Driver requires at least -D hl_ver=1.14.0"
+#end
+
 import h3d.impl.Driver;
 import dx.Dx12;
 import haxe.Int64;
