@@ -96,6 +96,7 @@ class GlslOut {
 	var isES2(get,never) : Bool;
 	var uniformBuffer : Int = 0;
 	var outIndex : Int = 0;
+	var rwTextures : Int = 0;
 	public var varNames : Map<Int,String>;
 	public var glES : Null<Float>;
 	public var version : Null<Int>;
@@ -751,9 +752,10 @@ class GlslOut {
 				default:
 					throw "assert";
 				}
-			case TArray(TRWTexture(_, _, chans), _):
+			case TArray(TRWTexture(_, _, chans), SConst(n)):
 				var format = "rgba".substr(0, chans);
-				add('layout(${format}32f) uniform ');
+				add('layout(${format}32f, binding=${rwTextures}) uniform ');
+				rwTextures += n;
 			default:
 				add("uniform ");
 			}
@@ -793,6 +795,7 @@ class GlslOut {
 
 	function initVars( s : ShaderData ){
 		outIndex = 0;
+		rwTextures = 0;
 		uniformBuffer = 0;
 		outIndexes = new Map();
 		for( v in s.vars )
