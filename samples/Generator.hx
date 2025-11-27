@@ -40,8 +40,6 @@ class Generator {
 				}
 				if( skip ) continue;
 
-				if( StringTools.endsWith(name,"_hl") )
-					d = "-lib hlsdl "+d;
 				try {
 					if( Sys.command("haxe "+d) == 0 ) pass = true;
 				} catch( e : Dynamic ) {
@@ -62,7 +60,7 @@ class Generator {
 	static function generateProjects() {
 
 		var templates = [];
-		function getRec(path) {			
+		function getRec(path) {
 			for( f in sys.FileSystem.readDirectory(path) ) {
 				var file = path+"/"+f;
 				if( sys.FileSystem.isDirectory(file) ) {
