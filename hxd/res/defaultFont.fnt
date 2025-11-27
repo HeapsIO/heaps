@@ -17,14 +17,14 @@
  <Char width="3" offset="1 12" rect="65 11 1 1" code="."/>
  <Char width="5" offset="1 4" rect="67 3 3 9" code="/"/>
  <Char width="7" offset="1 4" rect="71 3 5 9" code="0"/>
- <Char width="5" offset="1 4" rect="77 3 3 9" code="1"/>
- <Char width="7" offset="1 4" rect="81 3 5 9" code="2"/>
- <Char width="7" offset="1 4" rect="87 3 5 9" code="3"/>
- <Char width="7" offset="1 4" rect="93 3 5 9" code="4"/>
- <Char width="7" offset="1 4" rect="99 3 5 9" code="5"/>
- <Char width="7" offset="1 4" rect="105 3 5 9" code="6"/>
- <Char width="7" offset="1 4" rect="111 3 5 9" code="7"/>
- <Char width="7" offset="1 4" rect="117 3 5 9" code="8"/>
+ <Char width="7" offset="1 4" rect="77 3 5 9" code="1"/>
+ <Char width="7" offset="1 4" rect="83 3 5 9" code="2"/>
+ <Char width="7" offset="1 4" rect="89 3 5 9" code="3"/>
+ <Char width="7" offset="1 4" rect="95 3 5 9" code="4"/>
+ <Char width="7" offset="1 4" rect="101 3 5 9" code="5"/>
+ <Char width="7" offset="1 4" rect="107 3 5 9" code="6"/>
+ <Char width="7" offset="1 4" rect="113 3 5 9" code="7"/>
+ <Char width="7" offset="1 4" rect="119 3 5 9" code="8"/>
  <Char width="7" offset="1 4" rect="1 15 5 9" code="9"/>
  <Char width="3" offset="1 6" rect="7 17 1 7" code=":"/>
  <Char width="3" offset="0 6" rect="9 17 2 9" code=";"/>
