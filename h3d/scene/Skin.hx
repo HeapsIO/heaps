@@ -196,9 +196,11 @@ class DynamicJointData extends JointData {
 		if( j.bindIndex >= 0 )
 			skin.currentPalette[j.bindIndex].multiply3x4inline(j.transPos, Skin.TMP_MAT);
 
-		if( j.parent.bindIndex >= 0) {
-			lerpMatrixTerms(jParentData.originMat, jParentData.targetMat, alpha, Skin.TMP_MAT);
-			skin.currentPalette[j.parent.bindIndex].multiply3x4inline(j.parent.transPos, Skin.TMP_MAT);
+		if (jParentData.originMat != null && jParentData.targetMat != null) {
+			if( j.parent.bindIndex >= 0) {
+				lerpMatrixTerms(jParentData.originMat, jParentData.targetMat, alpha, Skin.TMP_MAT);
+				skin.currentPalette[j.parent.bindIndex].multiply3x4inline(j.parent.transPos, Skin.TMP_MAT);
+			}
 		}
 
 		if (jData.speed.length() != 0.)
