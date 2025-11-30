@@ -8,6 +8,9 @@ typedef SourceFile = {
 
 class Style extends domkit.CssStyle {
 
+	static var STATIC_CSS = new Array<hxd.res.Resource>();
+	public static function registerCSS(res) { STATIC_CSS.push(res); return res; }
+
 	var currentObjects : Array<h2d.Object> = [];
 	var resources : Array<hxd.res.Resource> = [];
 	var errors : Array<String>;
@@ -24,6 +27,8 @@ class Style extends domkit.CssStyle {
 	public function new() {
 		super();
 		cssParser = new domkit.CssParser();
+		for( r in STATIC_CSS )
+			load(r);
 	}
 
 	public function load( r : hxd.res.Resource, watchChanges = true, isVariablesDef = false ) {
@@ -44,6 +49,22 @@ class Style extends domkit.CssStyle {
 			cssParser.variables = variables;
 		for( o in currentObjects )
 			o.dom.applyStyle(this);
+	}
+
+	public function loadComponents( path : String, ?globals : Array<hxd.res.Resource> ) {
+		if( globals != null ) {
+			for( r in globals )
+				load(r, true, true);
+		}
+		function loadRec( dir : hxd.fs.FileEntry ) {
+			for( f in dir ) {
+				if( f.isDirectory )
+					loadRec(f);
+				else if( f.extension == "less" )
+					load(hxd.res.Loader.currentInstance.load(f.path));
+			}
+		}
+		loadRec(hxd.res.Loader.currentInstance.load(path).entry);
 	}
 
 	function loadData( r : hxd.res.Resource ) {
