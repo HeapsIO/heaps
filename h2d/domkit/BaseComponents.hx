@@ -84,6 +84,12 @@ class CustomParser extends domkit.CssValue.ValueParser {
 		return loadResource(path);
 	}
 
+	#if !macro
+	function toTile( r : hxd.res.Any ) {
+		return try r.toTile() catch( e : Dynamic ) invalidProp(Std.string(e));
+	}
+	#end
+
 	public function parseTile( v : CssValue) {
 		try {
 			switch( v ) {
@@ -96,19 +102,19 @@ class CustomParser extends domkit.CssValue.ValueParser {
 				return #if macro true #else h2d.Tile.fromColor(c,w,h,(c>>>24)/255) #end;
 			case VCall("tile",[VString(url),VInt(size)]):
 				var p = loadResource(url);
-				return #if macro p #else { var t = p.toTile(); t.sub(0,0,size,size); } #end;
+				return #if macro p #else { var t = toTile(p); t.sub(0,0,size,size); } #end;
 			case VCall("tile",[VString(url),VInt(sizex),VInt(sizey)]):
 				var p = loadResource(url);
-				return #if macro p #else { var t = p.toTile(); t.sub(0,0,sizex,sizey); } #end;
+				return #if macro p #else { var t = toTile(p); t.sub(0,0,sizex,sizey); } #end;
 			case VCall("grid",[VString(url),VInt(hsplit),VInt(vsplit)]):
 				var p = loadResource(url);
-				return #if macro p #else { var t = p.toTile(); t.sub(0,0,Std.int(t.iwidth/hsplit),Std.int(t.iheight/vsplit)); } #end;
+				return #if macro p #else { var t = toTile(p); t.sub(0,0,Std.int(t.iwidth/hsplit),Std.int(t.iheight/vsplit)); } #end;
 			case VCall("hgrid",[VString(url),VInt(hsplit)]):
 				var p = loadResource(url);
-				return #if macro p #else { var t = p.toTile(); t.sub(0,0,Std.int(t.iwidth/hsplit),t.iheight); } #end;
+				return #if macro p #else { var t = toTile(p); t.sub(0,0,Std.int(t.iwidth/hsplit),t.iheight); } #end;
 			case VCall("vgrid",[VString(url),VInt(vsplit)]):
 				var p = loadResource(url);
-				return #if macro p #else { var t = p.toTile(); t.sub(0,0,t.iwidth,Std.int(t.iheight/vsplit)); } #end;
+				return #if macro p #else { var t = toTile(p); t.sub(0,0,t.iwidth,Std.int(t.iheight/vsplit)); } #end;
 			default:
 				var c = parseColor(v);
 				return #if macro true #else h2d.Tile.fromColor(c,1,1,(c>>>24)/255) #end;
@@ -116,7 +122,7 @@ class CustomParser extends domkit.CssValue.ValueParser {
 		} catch( e : InvalidProperty ) {
 			var path = parsePath(v);
 			var p = loadResource(path);
-			return #if macro p #else p.toTile() #end;
+			return #if macro p #else toTile(p) #end;
 		}
 	}
 
