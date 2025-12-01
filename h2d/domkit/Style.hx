@@ -80,6 +80,8 @@ class Style extends domkit.CssStyle {
 	override function clear() {
 		super.clear();
 		resources.resize(0);
+		for( r in STATIC_CSS )
+			load(r);
 	}
 
 	public function addObject( obj ) {
