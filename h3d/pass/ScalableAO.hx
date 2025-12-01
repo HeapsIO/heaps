@@ -7,13 +7,20 @@ class ScalableAO extends h3d.pass.ScreenFx<h3d.shader.SAO> {
 	}
 
 	public function apply( depthTexture : h3d.mat.Texture, normalTexture : h3d.mat.Texture, camera : h3d.Camera ) {
+		var oldFilter = depthTexture.filter;
+		// Nearest filtering introduce artefacts on low resolution with our implementation.
+		depthTexture.filter = Linear;
 		shader.depthTexture = depthTexture;
 		shader.normalTexture = normalTexture;
 		shader.cameraView = camera.mcam;
 		shader.cameraInverseViewProj = camera.getInverseViewProj();
 		shader.screenRatio.set(engine.height / engine.width, 1);
 		shader.fovTan = 1.0 / (2.0 * Math.tan(camera.fovY * (Math.PI / 180) * 0.5));
+		shader.ORTHO = camera.orthoBounds != null;
+		if ( shader.ORTHO )
+			shader.invOrthoHeight = 1.0 / camera.orthoBounds.ySize;
 		render();
+		depthTexture.filter = oldFilter;
 	}
 
 }

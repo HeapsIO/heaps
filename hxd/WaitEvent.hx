@@ -47,11 +47,14 @@ class WaitEvent {
 
 	public function update(dt:Float) {
 		var i = 0;
+		var max = updateList.length;
 		while (i < updateList.length) {
+			if( i == max ) break;
 			var f = updateList[i];
-			if(f(dt))
+			if(f(dt)) {
 				updateList.remove(f);
-			else
+				max--;
+			} else
 				++i;
 		}
 	}

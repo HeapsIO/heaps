@@ -17,6 +17,9 @@ class Driver implements hxd.snd.Driver {
 	public var maxAuxiliarySends(default, null) : Int;
 
 	var tmpBytes : haxe.io.Bytes;
+	var lastUpdate : Float;
+	var canReopenDevice : Bool;
+	var currentSpecifier : String;
 
 	public function new() {
 		tmpBytes = haxe.io.Bytes.alloc(4 * 3 * 2);
@@ -31,6 +34,12 @@ class Driver implements hxd.snd.Driver {
 		var bytes = getTmpBytes(4);
 		ALC.getIntegerv(device, EFX.MAX_AUXILIARY_SENDS, 1, bytes);
 		maxAuxiliarySends = bytes.getInt32(0);
+
+		canReopenDevice = false;
+		#if (hl && hlopenal >= version("1.16.0"))
+		if( hl.Api.isPrimLoaded(openal.ExtALC.reopenDeviceSoft) && ALC.isExtensionPresent(null, @:privateAccess openal.ExtALC.SOFT_reopen_device.toUtf8()) )
+			canReopenDevice = true;
+		#end
 
 		if (AL.getError() != AL.NO_ERROR)
 			throw "could not init openAL Driver";
@@ -178,6 +187,21 @@ class Driver implements hxd.snd.Driver {
 	}
 
 	public function update() : Void {
+		if( !canReopenDevice )
+			return;
+		#if (hl && hlopenal >= version("1.16.0"))
+		var now = haxe.Timer.stamp();
+		if( now - lastUpdate > 0.5 ) {
+			lastUpdate = now;
+			// Detect device change and reopen default
+			var bytes = ALC.getString(null, ALC.ALL_DEVICES_SPECIFIER);
+			var specifier = bytes == null ? null : @:privateAccess String.fromUTF8(bytes);
+			if( specifier != currentSpecifier ) {
+				currentSpecifier = specifier;
+				openal.ExtALC.reopenDeviceSoft(device, null, null);
+			}
+		}
+		#end
 	}
 
 	public function dispose() : Void {

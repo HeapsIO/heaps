@@ -52,7 +52,15 @@ class Convert {
 		return false;
 	}
 
-	public function computeLocalParams():Dynamic {
+	/**
+		Context will be cached and passed to computeLocalParams next time if file hash has not changed.
+		This function will be called after each call to computeLocalParams for refresh the cache.
+	**/
+	public function getLocalContext():Dynamic {
+		return null;
+	}
+
+	public function computeLocalParams(context:Dynamic):Dynamic {
 		return null;
 	}
 
@@ -98,6 +106,7 @@ class Convert {
 #if (sys || nodejs)
 class ConvertFBX2HMD extends Convert {
 	var fbx : hxd.fmt.fbx.Data.FbxNode;
+	var matNames : Array<String>;
 
 	public function new() {
 		super("fbx", "hmd");
@@ -106,24 +115,77 @@ class ConvertFBX2HMD extends Convert {
 	override function cleanup() {
 		super.cleanup();
 		fbx = null;
+		matNames = null;
 	}
 
 	override function hasLocalParams():Bool {
-		return (params != null && params.collide != null);
+		var filePath = srcPath.substring(srcPath.lastIndexOf("/") + 1);
+		var dirPath = srcPath.substring(0, srcPath.lastIndexOf("/"));
+		var modelPropsPath = dirPath + "/" + h3d.prim.ModelDatabase.FILE_NAME;
+		var foundModelProps = false;
+		try {
+			var res = hxd.File.getBytes(modelPropsPath).toString();
+			var modelProps = haxe.Json.parse(res);
+			for( mp in Reflect.fields(modelProps) ) {
+				if( mp.substring(0, mp.lastIndexOf("/")) == filePath && Reflect.hasField(Reflect.field(modelProps, mp), h3d.prim.ModelDatabase.COLLIDE_CONFIG) ) {
+					foundModelProps = true;
+					break;
+				}
+			}
+		} catch( e ) {
+		}
+		return (params != null && params.collide != null) || foundModelProps;
 	}
 
-	override function computeLocalParams():Dynamic {
+	override function getLocalContext():Dynamic {
+		return { matNames : matNames };
+	}
+
+	override function computeLocalParams(context:Dynamic):Dynamic {
+		var filePath = srcPath.substring(srcPath.lastIndexOf("/") + 1);
+		var dirPath = srcPath.substring(0, srcPath.lastIndexOf("/"));
+		// Parse model.props to find model config
+		var modelCollides : Map<String, Array<hxd.fmt.fbx.HMDOut.CollideParams>> = [];
+		var modelPropsPath = dirPath + "/" + h3d.prim.ModelDatabase.FILE_NAME;
+		var foundModelProps = false;
+		var modelProps = null;
+		try {
+			var res = hxd.File.getBytes(modelPropsPath).toString();
+			modelProps = haxe.Json.parse(res);
+		} catch( e ) {
+		}
+		if( modelProps != null ) {
+			for( mp in Reflect.fields(modelProps) ) {
+				var mpFile = mp.substring(0, mp.lastIndexOf("/"));
+				if( mpFile == filePath ) {
+					var mpModel = mp.substring(mp.lastIndexOf("/") + 1);
+					var mpProps = Reflect.field(modelProps, mp);
+					if( Reflect.hasField(mpProps, h3d.prim.ModelDatabase.COLLIDE_CONFIG) ) {
+						var collide = mpProps.collide;
+						if( collide == null || Std.isOfType(collide, Array) ) {
+							modelCollides.set(mpModel, collide);
+							foundModelProps = true;
+						}
+					}
+				}
+			}
+		}
+
 		// Parse fbx to find used materials
-		fbx = try hxd.fmt.fbx.Parser.parse(srcBytes) catch (e:Dynamic) throw Std.string(e) + " in " + srcPath;
-		var matNodes = hxd.fmt.fbx.Data.FbxTools.getAll(fbx, "Objects.Material");
-		var matNames = [];
-		for( o in matNodes ) {
-			var name = hxd.fmt.fbx.Data.FbxTools.getName(o);
-			matNames.push(name);
+		if( context != null && context.matNames != null && Std.isOfType(context.matNames, Array) ) {
+			matNames = context.matNames;
+		}
+		if( matNames == null ) {
+			fbx = try hxd.fmt.fbx.Parser.parse(srcBytes) catch (e:Dynamic) throw Std.string(e) + " in " + srcPath;
+			var matNodes = hxd.fmt.fbx.Data.FbxTools.getAll(fbx, "Objects.Material");
+			matNames = [];
+			for( o in matNodes ) {
+				var name = hxd.fmt.fbx.Data.FbxTools.getName(o);
+				matNames.push(name);
+			}
 		}
 		// Parse material.props to find material config
 		var ignoredMaterials = [];
-		var dirPath = srcPath.substring(0, srcPath.lastIndexOf("/"));
 		var matPropsPath = dirPath + "/materials.props";
 		var matProps = null;
 		try {
@@ -131,41 +193,50 @@ class ConvertFBX2HMD extends Convert {
 			matProps = haxe.Json.parse(res).materials;
 		} catch( e ) {
 		}
-		if( matProps == null )
-			return null;
-		var modelLibCache = new Map<String, Array<Dynamic>>();
-		for( config in Reflect.fields(matProps) ) {
-			var configProps = Reflect.field(matProps, config);
-			for( matName in matNames ) {
-				var m = Reflect.field(configProps, matName);
-				if( m == null )
-					continue;
-				if( m.ignoreCollide == true ) {
-					ignoredMaterials.push(matName);
-					continue;
-				}
-				// Parse model library
-				if( m.__ref != null && m.name != null ) {
-					var libchildren = modelLibCache.get(m.__ref);
-					if( libchildren == null ) {
-						var lib = try haxe.Json.parse(hxd.File.getBytes(baseDir + m.__ref).toString()) catch( e ) null;
-						if( lib == null || lib.children == null )
-							continue;
-						libchildren = lib.children;
-						modelLibCache.set(m.__ref, libchildren);
+		if( matProps != null ) {
+			var modelLibCache = new Map<String, Array<Dynamic>>();
+			for( config in Reflect.fields(matProps) ) {
+				var configProps = Reflect.field(matProps, config);
+				for( matName in matNames ) {
+					var m = Reflect.field(configProps, matName + "/" + filePath);
+					if( m == null )
+						m = Reflect.field(configProps, matName);
+					if( m == null )
+						continue;
+					if( m.ignoreCollide == true ) {
+						ignoredMaterials.push(matName);
+						continue;
 					}
-					for( c in libchildren ) {
-						if( c.type == "material" && c.name == m.name ) {
-							if( c.props?.PBR?.ignoreCollide == true ) {
-								ignoredMaterials.push(matName);
+					// Parse model library
+					if( m.__ref != null && m.name != null ) {
+						var libchildren = modelLibCache.get(m.__ref);
+						if( libchildren == null ) {
+							var lib = try haxe.Json.parse(hxd.File.getBytes(baseDir + m.__ref).toString()) catch( e ) null;
+							if( lib == null || lib.children == null )
+								continue;
+							libchildren = lib.children;
+							modelLibCache.set(m.__ref, libchildren);
+						}
+						for( c in libchildren ) {
+							if( c.type == "material" && c.name == m.name ) {
+								if( c.props?.PBR?.ignoreCollide == true ) {
+									ignoredMaterials.push(matName);
+								}
+								break;
 							}
-							break;
 						}
 					}
 				}
 			}
 		}
-		return { ignoreCollideMaterials : ignoredMaterials };
+		var localParams = {};
+		if( ignoredMaterials.length > 0 )
+			Reflect.setField(localParams, "ignoreCollideMaterials", ignoredMaterials);
+		if( foundModelProps )
+			Reflect.setField(localParams, "modelCollides", modelCollides);
+		if( Reflect.fields(localParams).length == 0 )
+			localParams = null;
+		return localParams;
 	}
 
 	override function convert() {
@@ -186,9 +257,10 @@ class ConvertFBX2HMD extends Convert {
 				hmdout.generateTangents = true;
 			if (params.collide != null) {
 				var collide = params.collide;
-				hmdout.generateCollides = { precision : collide.precision,
+				hmdout.generateCollides = {
+					precision : collide.precision,
 					maxConvexHulls : collide.maxConvexHulls,
-					maxSubdiv : collide.maxSubdiv
+					maxSubdiv : collide.maxSubdiv,
 				};
 			}
 			if (params.lowp != null) {
@@ -208,10 +280,17 @@ class ConvertFBX2HMD extends Convert {
 				var config: Array<Float> = params.lodsDecimation;
 				hmdout.lodsDecimation = [for(lod in config) lod];
 			}
+			if (params.collisionThresholdHeight != null)
+				hmdout.collisionThresholdHeight = params.collisionThresholdHeight;
+			if (params.collisionUseLowLod != null)
+				hmdout.collisionUseLowLod = params.collisionUseLowLod;
 		}
 		if( localParams != null ) {
 			if( localParams.ignoreCollideMaterials != null ) {
 				hmdout.ignoreCollides = localParams.ignoreCollideMaterials;
+			}
+			if( localParams.modelCollides != null ) {
+				hmdout.modelCollides = localParams.modelCollides;
 			}
 		}
 		hmdout.load(fbx);
@@ -246,7 +325,27 @@ class ConvertWAV2MP3 extends Convert {
 	}
 
 	override function convert() {
-		command("lame", ["--resample", "44100", "--silent", "-h", srcPath, dstPath]);
+		var args = ["--silent"];
+		var sampleRate = 44100;
+		if(hasParam("samplerate")) {
+			sampleRate = getParam("samplerate");
+		}
+		if(hasParam("mono")) {
+			var f = sys.io.File.read(srcPath);
+			var wav = new format.wav.Reader(f).read();
+			f.close();
+			if (wav.header.channels >= 2) {
+				args = args.concat(["-m", "m", "-a"]);
+			}
+		}
+		if(hasParam("bitrate")) {
+			args = args.concat(["-b", Std.string(getParam("bitrate"))]);
+		} else {
+			args.push("-h");
+		}
+		args = args.concat(["--resample", Std.string(sampleRate)]);
+		args = args.concat([srcPath, dstPath]);
+		command("lame", args);
 	}
 
 	static var _ = Convert.register(new ConvertWAV2MP3());
@@ -259,16 +358,26 @@ class ConvertWAV2OGG extends Convert {
 
 	override function convert() {
 		var cmd = "oggenc";
-		var args = ["--resample", "44100", "-Q", srcPath, "-o", dstPath];
 		if (Sys.systemName() == "Windows")
 			cmd = "oggenc2";
+		var args = ["--quiet"];
+		var sampleRate = 44100;
+		if(hasParam("samplerate")) {
+			sampleRate = getParam("samplerate");
+		}
 		if (hasParam("mono")) {
 			var f = sys.io.File.read(srcPath);
 			var wav = new format.wav.Reader(f).read();
 			f.close();
-			if (wav.header.channels >= 2)
+			if (wav.header.channels >= 2) {
 				args.push("--downmix");
+			}
 		}
+		if(hasParam("bitrate")) {
+			args = args.concat(["-b", Std.string(getParam("bitrate"))]);
+		}
+		args = args.concat(["--resample", Std.string(sampleRate)]);
+		args = args.concat([srcPath, "-o", dstPath]);
 		command(cmd, args);
 	}
 
@@ -513,7 +622,7 @@ class ConvertBinJSON extends Convert {
 		save(out.getBytes());
 	}
 
-	static var _ = [Convert.register(new ConvertBinJSON("json,prefab,l3d", "hbson"))];
+	static var _ = [Convert.register(new ConvertBinJSON("json,prefab,l3d,fx,shgraph", "hbson"))];
 }
 
 class ConvertSVGToMSDF extends Convert {

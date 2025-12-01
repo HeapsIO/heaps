@@ -96,6 +96,7 @@ class GlslOut {
 	var isES2(get,never) : Bool;
 	var uniformBuffer : Int = 0;
 	var outIndex : Int = 0;
+	var rwTextures : Int = 0;
 	public var varNames : Map<Int,String>;
 	public var glES : Null<Float>;
 	public var version : Null<Int>;
@@ -324,12 +325,8 @@ class GlslOut {
 				return "textureCubeLodEXT";
 			default:
 			}
-		case Texel:
-			// if ( isES2 )
-			// 	decl("vec4 _texelFetch(sampler2d tex, ivec2 pos, int lod) ...")
-			// 	return "_texelFetch";
-			// else
-				return "texelFetch";
+		case Texel, TexelLod:
+			return "texelFetch";
 		case TextureSize:
 			var sufix = "";
 			switch( args[0].t ) {
@@ -502,14 +499,16 @@ class GlslOut {
 			addValue(args[0], tabs); // sampler
 			add(", ");
 			addValue(args[1], tabs); // uv
-			if ( args.length != 2 ) {
-				// with LOD argument
-				add(", ");
-				addValue(args[2], tabs);
-				add(")");
-			} else {
-				add(", 0)");
-			}
+			add(", 0)");
+		case TCall({ e : TGlobal(g = TexelLod) }, args):
+			add(getFunName(g,args,e.t));
+			add("(");
+			addValue(args[0], tabs); // sampler
+			add(", ");
+			addValue(args[1], tabs); // uv
+			add(", ");
+			addValue(args[2], tabs); // lod
+			add(")");
 		case TCall({ e : TGlobal(g = TextureSize) }, args):
 			add(getFunName(g,args,e.t));
 			add("(");
@@ -537,7 +536,7 @@ class GlslOut {
 			add(",");
 			if( chans != 4 ) add("(");
 			addValue(color, tabs);
-			if( chans != 4 ) add(")"+(chans == 1 ? ".xx" : ".xyyy"));
+			if( chans != 4 ) add(")"+(chans == 1 ? ".xxxx" : chans == 2 ? ".xyyy" : ".xyzz"));
 			add(")");
 		case TCall(v, args):
 			switch( v.e ) {
@@ -753,9 +752,10 @@ class GlslOut {
 				default:
 					throw "assert";
 				}
-			case TArray(TRWTexture(_, _, chans), _):
+			case TArray(TRWTexture(_, _, chans), SConst(n)):
 				var format = "rgba".substr(0, chans);
-				add('layout(${format}32f) uniform ');
+				add('layout(${format}32f, binding=${rwTextures}) uniform ');
+				rwTextures += n;
 			default:
 				add("uniform ");
 			}
@@ -795,6 +795,7 @@ class GlslOut {
 
 	function initVars( s : ShaderData ){
 		outIndex = 0;
+		rwTextures = 0;
 		uniformBuffer = 0;
 		outIndexes = new Map();
 		for( v in s.vars )

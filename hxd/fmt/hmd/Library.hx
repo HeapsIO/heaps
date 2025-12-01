@@ -45,6 +45,10 @@ class Library {
 	var cachedAnimations : Map<String, h3d.anim.Animation>;
 	var cachedSkin : Map<String, h3d.anim.Skin>;
 
+	#if (sys || nodejs)
+	static var defaultModelConfigs : Map<String, h3d.prim.ModelDatabase.ModelProps> = new Map();
+	#end
+
 	public function new(res,  header) {
 		this.resource = res;
 		this.header = header;
@@ -227,7 +231,7 @@ class Library {
 			var r = 0, vcount = 0;
 			for( i in 0...buf.indexes.length ) {
 				var vid = isSmall ? (ibuf.get(r++) | (ibuf.get(r++) << 8)) : ibuf.getInt32(i<<2);
-				var rid = vmap[vid];
+				var rid : Int = vmap[vid] ?? 0;
 				if( rid == 0 ) {
 					rid = ++vcount;
 					vmap[vid] = rid;
@@ -272,6 +276,9 @@ class Library {
 		var p = cachedPrimitives[id];
 		if( p != null ) return p;
 
+		if( model.isCollider() )
+			return null;
+
 		var lods : Array<Model> = null;
 		var hasLod = model.lods != null;
 		if ( hasLod ) {
@@ -295,7 +302,7 @@ class Library {
 			}
 		}
 
-		p = new h3d.prim.HMDModel(header.geometries[id], header.dataPosition, this, lods);
+		p = new h3d.prim.HMDModel(model, header.dataPosition, this, lods);
 		p.incref(); // Prevent from auto-disposing
 		cachedPrimitives[id] = p;
 
@@ -467,9 +474,19 @@ class Library {
 				resourceName : resource.name,
 				objectName : obj.name,
 				hmd : Std.downcast(Std.downcast(obj, h3d.scene.Mesh)?.primitive, h3d.prim.HMDModel),
-				skin : Std.downcast(obj, h3d.scene.Skin)
+				skin : Std.downcast(obj, h3d.scene.Skin),
+				collide : null
 			}
 
+			// Apply default config to object (config that is in props.json)
+			var data = {}
+			Reflect.setField(data, @:privateAccess h3d.prim.ModelDatabase.LOD_CONFIG, h3d.prim.ModelDatabase.current.getDefaultLodConfig(modelData.resourceDirectory));
+			Reflect.setField(data, @:privateAccess h3d.prim.ModelDatabase.DYN_BONES_CONFIG, h3d.prim.ModelDatabase.current.getDefaultDynamicBonesConfig(modelData.resourceDirectory));
+
+			@:privateAccess h3d.prim.ModelDatabase.current.loadLodConfig(modelData, data);
+			@:privateAccess h3d.prim.ModelDatabase.current.loadDynamicBonesConfig(modelData, data);
+
+			// Apply more specific config to object (config that is in model.props)
 			h3d.prim.ModelDatabase.current.loadModelProps(modelData);
 		}
 
@@ -858,5 +875,4 @@ class Library {
         return true;
     }
 	#end
-
 }

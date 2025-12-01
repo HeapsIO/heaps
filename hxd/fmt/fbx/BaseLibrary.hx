@@ -1402,7 +1402,7 @@ class BaseLibrary {
 
 	function round(v:Float) {
 		if( v != v ) throw '${fileName} : NaN found (could be multiple skin mesh, currently not supported)';
-		return highPrecision ? v : std.Math.fround(v * 131072) / 131072;
+		return highPrecision ? v : hxd.Math.fround(v * 131072) / 131072;
 	}
 
 	function updateDefaultMatrix( model : FbxNode, d : DefaultMatrixes ) {

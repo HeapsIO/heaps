@@ -1,5 +1,10 @@
 package h3d.impl;
 
+enum abstract ShaderCacheMode(Int) from Int to Int {
+	var Base64 = 0;
+	var Binary = 1;
+}
+
 class ShaderCache {
 
 	var file : String;
@@ -8,10 +13,16 @@ class ShaderCache {
 	var sources : Map<String, String>;
 	var sourceFile : String;
 	public var keepSource : Bool;
+	var mode : ShaderCacheMode;
 
-	public function new( file : String, ?outputFile : String ) {
+	inline static var VERSION_KEY_WORD = "VERSION";
+	inline static var VERSION = 1;
+	inline static var MODE_KEY_WORD = "MODE";
+
+	public function new( file : String, ?outputFile : String, mode = Base64) {
 		this.file = file;
 		this.outputFile = outputFile ?? file;
+		this.mode = mode;
 		sourceFile = file + ".source";
 	}
 
@@ -38,6 +49,30 @@ class ShaderCache {
 		if( !sys.FileSystem.exists(file) )
 			return;
 		var cache = new haxe.io.BytesInput(sys.io.File.getBytes(file));
+
+		var hasVersion = cache.readString(VERSION_KEY_WORD.length) == VERSION_KEY_WORD;
+		var curPos = cache.position;
+		if ( !hasVersion )
+			cache.position = curPos = 0;
+		else
+			cache.readInt32();
+
+		var hasMode = cache.readString(MODE_KEY_WORD.length) == MODE_KEY_WORD;
+		var mode = Base64;
+		if ( hasMode )
+			mode = cache.readInt32();
+		else
+			cache.position = curPos;
+
+		switch( mode ) {
+		case Base64: loadCache(cache);
+		case Binary: loadBinaryCache(cache);
+		}
+		#end
+	}
+
+	#if sys
+	function loadCache(cache : haxe.io.BytesInput) {
 		while( cache.position < cache.length ) {
 			var len = cache.readInt32();
 			if( len < 0 || len > 4<<20 ) break;
@@ -49,8 +84,22 @@ class ShaderCache {
 			data.set(key,haxe.crypto.Base64.decode(str));
 			cache.readByte(); // newline
 		}
-		#end
 	}
+
+	function loadBinaryCache(cache : haxe.io.BytesInput) {
+		while( cache.position < cache.length ) {
+			var len = cache.readInt32();
+			if( len < 0 || len > 4<<20 ) break;
+			var key = cache.readString(len);
+			if( key == "" ) break;
+			var len = cache.readInt32();
+			if( len < 0 || len > 4<<20 ) break;
+			var buf = haxe.io.Bytes.alloc(len);
+			cache.readBytes(buf, 0, len);
+			data.set(key, buf);
+		}
+	}
+	#end
 
 	function loadSources() {
 		#if !sys
@@ -77,7 +126,12 @@ class ShaderCache {
 
 	public function resolveShaderBinary( source : String, ?configurationKey = "" ) {
 		if( data == null ) load();
-		return data.get(configurationKey + haxe.crypto.Md5.encode(source));
+		var encodedSource = haxe.crypto.Md5.encode(source);
+		var key = configurationKey + encodedSource;
+		var bytes = data.get(key);
+		//if ( bytes == null )
+		//	trace("Can't found key : " + key);
+		return data.get(configurationKey + encodedSource);
 	}
 
 	public function saveCompiledShader( source : String, bytes : haxe.io.Bytes, ?configurationKey = "", ?saveToFile = true ) {
@@ -87,6 +141,7 @@ class ShaderCache {
 		var key = configurationKey + haxe.crypto.Md5.encode(source);
 		if( data.get(key) == bytes && (!keepSource || sources.get(key) == source) )
 			return;
+		//trace("Saving key : " + key);
 		data.set(key, bytes);
 		if( saveToFile )
 			save();
@@ -100,6 +155,21 @@ class ShaderCache {
 		var out = new haxe.io.BytesOutput();
 		var keys = Lambda.array({ iterator : data.keys });
 		keys.sort(Reflect.compare);
+		out.writeString(VERSION_KEY_WORD);
+		out.writeInt32(VERSION);
+		out.writeString(MODE_KEY_WORD);
+		out.writeInt32(mode);
+		switch ( mode ) {
+		case Base64: writeCache(keys, out);
+		case Binary: writeBinaryCache(keys, out);
+		}
+		#if sys
+		try sys.io.File.saveBytes(outputFile, out.getBytes()) catch( e : Dynamic ) { trace("Something went wrong"); };
+		#end
+	}
+
+	function writeCache(keys : Array<String>, out : haxe.io.BytesOutput) {
+
 		for( key in keys ) {
 			out.writeInt32(key.length);
 			out.writeString(key);
@@ -108,9 +178,16 @@ class ShaderCache {
 			out.writeString(b64);
 			out.writeByte('\n'.code);
 		}
-		#if sys
-		try sys.io.File.saveBytes(outputFile, out.getBytes()) catch( e : Dynamic ) {};
-		#end
+	}
+
+	function writeBinaryCache(keys : Array<String>, out : haxe.io.BytesOutput) {
+		for( key in keys ) {
+			out.writeInt32(key.length);
+			out.writeString(key);
+			var bytes = data.get(key);
+			out.writeInt32(bytes.length);
+			out.writeBytes(bytes, 0, bytes.length);
+		}
 	}
 
 	function saveSources() {

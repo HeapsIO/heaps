@@ -63,9 +63,8 @@ class TextInput extends Text {
 	var cursorX : Float;
 	var cursorXIndex : Int;
 	var cursorY : Float;
-	var cursorYIndex : Int;
 	var cursorBlink = 0.;
-	var cursorScroll = 0;
+	var constraintHeight = -1.;
 	var scrollX = 0.;
 	var selectionPos : Float;
 	var selectionSize : Float;
@@ -74,6 +73,7 @@ class TextInput extends Text {
 	var lastChange = 0.;
 	var lastClick = 0.;
 	var maxHistorySize = 100;
+	var splitLines : Array<String>;
 
 	/**
 		Create a new TextInput instance.
@@ -159,6 +159,7 @@ class TextInput extends Text {
 		interactive.onMove = function(e) onMove(e);
 		interactive.onOver = function(e) onOver(e);
 		interactive.onOut = function(e) onOut(e);
+		interactive.onWheel = function(e) e.propagate = true;
 
 		interactive.cursor = TextInput;
 
@@ -166,7 +167,14 @@ class TextInput extends Text {
 	}
 
 	override function constraintSize(width:Float, height:Float) {
-		// disable (don't allow multiline textinput for now)
+		super.constraintSize(width, height);
+		constraintHeight = height;
+	}
+
+	function getVisibleLines() {
+		var v = Math.ceil(constraintHeight / font.lineHeight);
+		if( v <= 0 ) v = 10;
+		return v;
 	}
 
 	function handleKey( e : hxd.Event ) {
@@ -181,6 +189,10 @@ class TextInput extends Text {
 			moveCursorVertically(-1);
 		case K.DOWN if( multiline ):
 			moveCursorVertically(1);
+		case K.PGUP if( multiline ):
+			moveCursorVertically(-getVisibleLines());
+		case K.PGDOWN if( multiline ):
+			moveCursorVertically(getVisibleLines());
 		case K.LEFT if (K.isDown(K.CTRL)):
 			cursorIndex = getWordStart();
 		case K.LEFT:
@@ -359,11 +371,11 @@ class TextInput extends Text {
 	}
 
 	function moveCursorVertically(yDiff: Int){
-		if( !multiline || yDiff == 0)
+		if( !multiline || yDiff == 0 )
 			return;
 		var lines = [];
 		var cursorLineIndex = -1, currLineIndex = 0, currIndex = 0;
-		for( line in getAllLines() ) {
+		for( line in getSplitLines() ) {
 			lines.push( { line: line, startIndex: currIndex } );
 			var prevIndex = currIndex;
 			currIndex += line.length;
@@ -371,9 +383,10 @@ class TextInput extends Text {
 				cursorLineIndex = currLineIndex;
 			currLineIndex++;
 		}
-		if (cursorLineIndex == -1)
+		if( cursorLineIndex == -1 )
 			return;
-		var destinationIndex = hxd.Math.iclamp(cursorLineIndex + yDiff, -1, lines.length);
+		var inSelect = hxd.Key.isDown(hxd.Key.SHIFT);
+		var destinationIndex = hxd.Math.iclamp(cursorLineIndex + yDiff, inSelect ? -1 : 0, inSelect ? lines.length : lines.length - 1);
 		if (destinationIndex == cursorLineIndex)
 			return;
 		// We're moving down from the last line, move to the end of the line
@@ -432,6 +445,23 @@ class TextInput extends Text {
 		return { t : text, c : cursorIndex, sel : selectionRange == null ? null : { start : selectionRange.start, length : selectionRange.length } };
 	}
 
+	/**
+		Load the state from a previous input, copy the current text, cursor position, selection etc.
+		This allows to continue uninterrupted input experience while the input component has been reset/rebuild
+	**/
+	public function loadState( from : TextInput, focus=false ) {
+		if( from == null )
+			return;
+		this.undo = from.undo;
+		this.redo = from.redo;
+		this.text = from.text;
+		this.cursorIndex = from.cursorIndex;
+		this.scrollX = from.scrollX;
+		this.selectionRange = from.selectionRange;
+		this.cursorBlinkTime = from.cursorBlinkTime;
+		if( focus ) this.focus();
+	}
+
 	function beforeChange() {
 		var t = haxe.Timer.stamp();
 		if( t - lastChange < 1 ) {
@@ -444,24 +474,20 @@ class TextInput extends Text {
 		while( undo.length > maxHistorySize ) undo.shift();
 	}
 
-	function getAllLines() {
+	function getSplitLines() {
+		if( splitLines != null && !(needsRebuild || textChanged) )
+			return splitLines;
 		var lines = this.text.split('\n');
-		var finalLines : Array<String> = [];
-
+		splitLines = [];
 		for(l in lines) {
-			var splitText = splitText(l).split('\n');
-			finalLines = finalLines.concat(splitText);
+			for( l in splitText(l).split('\n') )
+				splitLines.push(l+'\n');
 		}
-
-		for(i in 0...finalLines.length) {
-			finalLines[i] += '\n';
-		}
-
-		return finalLines;
+		return splitLines;
 	}
 
 	function getCurrentLine() : {value: String, startIndex: Int} {
-		var lines = getAllLines();
+		var lines = getSplitLines();
 		var currIndex = 0;
 		for( i in 0...lines.length ) {
 			var newCurrIndex = currIndex + lines[i].length;
@@ -473,7 +499,7 @@ class TextInput extends Text {
 	}
 
 	function getCursorXOffset() {
-		var lines = getAllLines();
+		var lines = getSplitLines();
 		var offset = cursorIndex;
 		var currLine = getCurrentLine().value;
 		var currIndex = 0;
@@ -492,7 +518,7 @@ class TextInput extends Text {
 
 	function getCursorYOffset() {
 		// return 0.0;
-		var lines = getAllLines();
+		var lines = getSplitLines();
 		var currIndex = 0;
 		var lineNum = 0;
 
@@ -528,18 +554,34 @@ class TextInput extends Text {
 		return f;
 	}
 
+	override function splitRawText(text:String, leftMargin:Float = 0., afterData:Float = 0., ?font:Font, ?sizes:Array<Float>, ?prevChar:Int = -1):String {
+		if( !multiline )
+			return text;
+		return super.splitRawText(text, leftMargin, afterData, font, sizes, prevChar);
+	}
+
+	function getInputWidth() : Int {
+		if( inputWidth != null )
+			return inputWidth;
+		if( realMaxWidth >= 0 )
+			return Math.ceil(realMaxWidth);
+		return -1;
+	}
+
 	override function initGlyphs(text:String, rebuild = true):Void {
 		super.initGlyphs(text, rebuild);
 		if( rebuild ) {
+			splitLines = null;
 			this.calcWidth += cursorTile.width; // cursor end pos
-			if( inputWidth != null && this.calcWidth > inputWidth ) this.calcWidth = inputWidth;
+			var iw = getInputWidth();
+			if( iw >= 0 && this.calcWidth > iw ) this.calcWidth = iw;
 		}
 	}
 
 	function textPos( x : Float, y : Float ) {
 		x += scrollX;
 		var lineIndex = Math.floor(y / font.lineHeight);
-		var lines = getAllLines();
+		var lines = getSplitLines();
 		lineIndex = hxd.Math.iclamp(lineIndex, 0, lines.length - 1);
 		var selectedLine = lines[lineIndex];
 		var pos = 0;
@@ -559,38 +601,73 @@ class TextInput extends Text {
 		return pos - 1;
 	}
 
+	function syncInteract() {
+		var lines = getSplitLines();
+		var iw = getInputWidth();
+		interactive.width = iw >= 0 ? iw : textWidth;
+		var ih = font.lineHeight * (lines.length == 0 ? 1 : lines.length);
+		if( multiline && constraintHeight >= 0 && ih < constraintHeight ) ih = constraintHeight;
+		interactive.height = ih;
+	}
+
+	override function getBoundsRec(relativeTo:Object, out:h2d.col.Bounds, forSize:Bool) {
+		syncInteract();
+		super.getBoundsRec(relativeTo, out, forSize);
+	}
+
 	override function sync(ctx) {
-		var lines = getAllLines();
-		interactive.width = (inputWidth != null ? inputWidth : maxWidth != null ? Math.ceil(maxWidth) : textWidth);
-		interactive.height = font.lineHeight * lines.length;
+		syncInteract();
 		super.sync(ctx);
 	}
 
 	override function draw(ctx:RenderContext) {
-		if( inputWidth != null ) {
-			var h = localToGlobal(new h2d.col.Point(inputWidth, font.lineHeight));
+		var iw = getInputWidth();
+		if( multiline ) {
+			iw = -1;
+			scrollX = 0;
+		}
+		if( iw >= 0 ) {
+			var h = localToGlobal(new h2d.col.Point(iw, font.lineHeight * (getSplitLines().length)));
 			ctx.clipRenderZone(absX, absY, h.x - absX, h.y - absY);
 		}
 
+		var lastCursorY = cursorY;
 		if( cursorIndex >= 0 && (text != cursorText || cursorIndex != cursorXIndex) ) {
 			if( cursorIndex > text.length ) cursorIndex = text.length;
 			cursorText = text;
 			cursorXIndex = cursorIndex;
 			cursorX = getCursorXOffset();
 			cursorY = getCursorYOffset();
-			if( inputWidth != null && cursorX - scrollX >= inputWidth )
-				scrollX = cursorX - inputWidth + 1;
+			if( iw >= 0 && cursorX - scrollX >= iw )
+				scrollX = cursorX - iw + 1;
 			else if( cursorX < scrollX && cursorIndex > 0 )
-				scrollX = cursorX - hxd.Math.imin(inputWidth, Std.int(cursorX));
+				scrollX = cursorX - hxd.Math.imin(iw, Std.int(cursorX));
 			else if( cursorX < scrollX )
 				scrollX = cursorX;
+		}
+
+		if( multiline && cursorY != lastCursorY ) {
+			// ensure cursor in scroll
+			var p = parentContainer;
+			var pt = localToGlobal(new h2d.col.Point(cursorX, cursorY));
+			while( p != null ) {
+				if( p.scrollToPos(pt) )
+					break;
+				p = p.parentContainer;
+			}
+			var pt = localToGlobal(new h2d.col.Point(cursorX, cursorY + font.lineHeight));
+			while( p != null ) {
+				if( p.scrollToPos(pt) )
+					break;
+				p = p.parentContainer;
+			}
 		}
 
 		absX -= scrollX * matA;
 		absY -= scrollX * matC;
 
 		if( selectionRange != null ) {
-			var lines = getAllLines();
+			var lines = getSplitLines();
 			var lineOffset = 0;
 
 			for(i in 0...lines.length) {
@@ -608,7 +685,7 @@ class TextInput extends Text {
 
 				selectionPos = calcTextWidth(line.substr(0, selStart));
 				selectionSize = calcTextWidth(line.substr(selStart, selEnd));
-				if( selectionRange.start + selectionRange.length == text.length ) selectionSize += cursorTile.width; // last pixel
+				if( selectionRange.start + selectionRange.length == cursorIndex ) selectionSize += cursorTile.width; // last pixel
 
 				selectionTile.dx += selectionPos;
 				selectionTile.dy += i * font.lineHeight;
@@ -633,11 +710,10 @@ class TextInput extends Text {
 				emitTile(ctx, cursorTile);
 				cursorTile.dx -= cursorX - scrollX;
 				cursorTile.dy -= cursorY;
-
 			}
 		}
 
-		if( inputWidth != null )
+		if( iw >= 0 )
 			ctx.popRenderZone();
 	}
 

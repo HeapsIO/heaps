@@ -22,6 +22,16 @@ class Mesh extends Object {
 	public var inheritLod : Bool = false;
 
 	/**
+		Instance of the blendshape of the mesh: the list of weights for the different shapes
+	**/
+	public var blendshapeInstance(default, null) : h3d.prim.Blendshape.BlendshapeInstance;
+
+	/**
+		Allow user to force a specific lod index. If set to -1, forced lod will be ignored.
+	**/
+	public var forcedLod : Int = -1;
+
+	/**
 		Creates a new mesh with given primitive, material and parent object.
 		If material is not specified, a new default material is created for the current renderer.
 	**/
@@ -70,7 +80,7 @@ class Mesh extends Object {
 
 	var curScreenRatio : Float = 1.0;
 	override function draw( ctx : RenderContext ) {
-		primitive.selectMaterial(0,	primitive.screenRatioToLod(curScreenRatio));
+		primitive.selectMaterial(0,	getLodIndex());
 		primitive.render(ctx.engine);
 	}
 
@@ -89,23 +99,7 @@ class Mesh extends Object {
 			return;
 		}
 
-		var absPos = getAbsPos();
-		var worldCenter = absPos.getPosition();
-		var worldScale = absPos.getScale();
-		var worldRadius = bounds.dimension() * hxd.Math.max( worldScale.x, hxd.Math.max(worldScale.y, worldScale.z) ) / 2.0;
-
-		var cameraRight = ctx.camera.getRight();
-		var cameraUp = ctx.camera.getUp();
-		var cameraTopLeft = (cameraUp - cameraRight).normalized();
-		var worldTopLeft = worldCenter + cameraTopLeft * worldRadius;
-		var worldBottomRight = worldCenter - cameraTopLeft * worldRadius;
-
-		var screenTopLeft = ctx.camera.projectInline( worldTopLeft.x, worldTopLeft.y, worldTopLeft.z, 1.0, 1.0, false );
-		var screenBottomRight = ctx.camera.projectInline( worldBottomRight.x, worldBottomRight.y, worldBottomRight.z, 1.0, 1.0, false );
-
-		var screenArea = hxd.Math.max( screenBottomRight.x - screenTopLeft.x, screenBottomRight.y - screenTopLeft.y );
-
-		curScreenRatio = screenArea * screenArea;
+		curScreenRatio = screenRatio(getAbsPos(), bounds, ctx.camera);
 
 		if ( inheritLod )
 			ctx.forcedScreenRatio = curScreenRatio;
@@ -113,7 +107,7 @@ class Mesh extends Object {
 
 	override function emit( ctx : RenderContext ) {
 		calcScreenRatio(ctx);
-		if ( primitive.screenRatioToLod(curScreenRatio) >= primitive.lodCount() )
+		if ( getLodIndex() >= primitive.lodCount() )
 			return;
 		ctx.emit(material, this);
 	}
@@ -137,6 +131,8 @@ class Mesh extends Object {
 
 	override private function onRemove() {
 		if ( primitive != null ) primitive.decref();
+		blendshapeInstance?.dispose();
+		blendshapeInstance = null;
 		super.onRemove();
 	}
 
@@ -148,4 +144,62 @@ class Mesh extends Object {
 		return this.primitive = prim;
 	}
 
+
+	public function getLodIndex() {
+		if (forcedLod > -1)
+			return forcedLod;
+		return primitive.screenRatioToLod(curScreenRatio);
+	}
+
+	public static function screenRatio(absPos : h3d.Matrix, bounds : h3d.col.Bounds, camera : h3d.Camera) {
+		var worldCenter = absPos.getPosition();
+		var worldScale = absPos.getScale();
+		var worldRadius = hxd.Math.abs(bounds.getBoundingRadius() * hxd.Math.max(worldScale.x, hxd.Math.max(worldScale.y, worldScale.z)));
+		var distanceFromCamera = (worldCenter - camera.pos).length();
+
+		var screenMultiple = hxd.Math.max(0.5 * camera.mproj._11, 0.5 * camera.mproj._22);
+
+		var screenRadius = screenMultiple * worldRadius / hxd.Math.max(1.0, distanceFromCamera);
+
+		return screenRadius * 2.0;
+	}
+
+
+	public function setBlendshapeWeight(name: String, weight : Float) {
+		getBlendshapeInstance()?.setBlendshapeWeight(name, weight);
+	}
+
+	public function setBlendshapeWeights(weights : Array<Float>) {
+		getBlendshapeInstance()?.setBlendshapeWeights(weights);
+	}
+
+	public function getBlenshapeNames() : Array<String> {
+		var shapes = @:privateAccess getBlendshapeInstance()?.blendshape?.shapes;
+		if (shapes == null)
+			return [];
+
+		return [for (s in shapes) s.name];
+	}
+
+	public function hasBlendshapes() : Bool {
+		if (blendshapeInstance != null)
+			return true;
+
+		var hmd = Std.downcast(primitive, h3d.prim.HMDModel);
+		return @:privateAccess hmd?.blendshape != null;
+	}
+
+	function getBlendshapeInstance() {
+		if (blendshapeInstance != null)
+			return blendshapeInstance;
+
+		var hmd = Std.downcast(primitive, h3d.prim.HMDModel);
+		var bs = @:privateAccess hmd?.blendshape;
+		if (bs != null)
+			blendshapeInstance = bs.getBlendshapeInstance(this);
+		else
+			trace("Can't set blendshape weights because primitive has no blendshapes.");
+
+		return blendshapeInstance;
+	}
 }

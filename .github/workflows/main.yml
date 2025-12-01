@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        haxe-version: [latest, 4.3.7]
+      fail-fast: false
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - uses: krdlab/setup-haxe@v1
+      with:
+        haxe-version: ${{ matrix.haxe-version }}
+    - name: Print Haxe version
+      run: |
+        haxe --version
+    - name: Install haxelib deps
+      run: |
+        haxelib dev heaps .
+        haxelib git format https://github.com/HaxeFoundation/format
+        haxelib git hxbit https://github.com/ncannasse/hxbit
+        haxelib git hscript https://github.com/HaxeFoundation/hscript
+        haxelib git domkit https://github.com/HeapsIO/domkit
+        haxelib git hide https://github.com/HeapsIO/hide
+        haxelib git hlsdl https://github.com/HaxeFoundation/hashlink master libs/sdl
+        haxelib git castle https://github.com/ncannasse/castle
+        haxelib git hldx https://github.com/HaxeFoundation/hashlink master libs/directx
+        haxelib git hlopenal https://github.com/HaxeFoundation/hashlink master libs/openal
+    - name: Build all.hxml
+      run: |
+        haxe all.hxml
+    - name: Build samples
+      run: |
+        cd samples
+        haxe all.hxml
+        cd ..

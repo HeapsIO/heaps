@@ -337,7 +337,6 @@ class Polygon extends Collider {
 	#if !macro
 	public function makeDebugObj() : h3d.scene.Object {
 		var points : Array<Point> = [];
-		var idx = new hxd.IndexBuffer();
 
 		var t = triPlanes;
 		while( t != null ) {

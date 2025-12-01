@@ -63,7 +63,13 @@ class Output {
 
 	function drawObject( p : h3d.pass.PassObject ) {
 		ctx.drawPass = p;
-		ctx.engine.selectMaterial(p.pass);
+		if( ctx.useReverseDepth ) {
+			p.pass.reverseDepthTest();
+			ctx.engine.selectMaterial(p.pass);
+			p.pass.reverseDepthTest();
+		} else {
+			ctx.engine.selectMaterial(p.pass);
+		}
 		p.obj.drawn = true;
 		@:privateAccess p.obj.draw(ctx);
 	}
@@ -108,9 +114,7 @@ class Output {
 			}
 			if( !p.pass.dynamicParameters ) {
 				ctx.fillParams(buf, p.shader, p.shaders);
-				ctx.engine.uploadShaderBuffers(buf, Params);
-				ctx.engine.uploadShaderBuffers(buf, Textures);
-				ctx.engine.uploadShaderBuffers(buf, Buffers);
+				ctx.engine.uploadInstanceShaderBuffers(buf);
 			}
 			drawObject(p);
 		}

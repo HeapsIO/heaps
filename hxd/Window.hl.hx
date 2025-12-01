@@ -71,7 +71,7 @@ class Window {
 	public var title(get, set) : String;
 	public var displayMode(get, set) : DisplayMode;
 	#if (hl_ver >= version("1.12.0"))
-	public var currentMonitorIndex(get,null) : Int;
+	public var currentMonitorIndex(get,never) : Int;
 	#end
 
 	#if hlsdl
@@ -465,7 +465,7 @@ class Window {
 		case GControllerAdded, GControllerRemoved, GControllerUp, GControllerDown, GControllerAxis:
 			@:privateAccess hxd.Pad.onEvent( e );
 		case KeyDown:
-			eh = new Event(EKeyDown);
+			eh = new Event(EKeyDown, curMouseX, curMouseY);
 			if( e.keyCode & (1 << 30) != 0 ) e.keyCode = (e.keyCode & ((1 << 30) - 1)) + 1000;
 			eh.keyCode = CODEMAP[e.keyCode];
 			if( eh.keyCode & (K.LOC_LEFT | K.LOC_RIGHT) != 0 ) {
@@ -473,7 +473,7 @@ class Window {
 				onEvent(e);
 			}
 		case KeyUp:
-			eh = new Event(EKeyUp);
+			eh = new Event(EKeyUp, curMouseX, curMouseY);
 			if( e.keyCode & (1 << 30) != 0 ) e.keyCode = (e.keyCode & ((1 << 30) - 1)) + 1000;
 			eh.keyCode = CODEMAP[e.keyCode];
 			if( eh.keyCode & (K.LOC_LEFT | K.LOC_RIGHT) != 0 ) {
@@ -515,14 +515,14 @@ class Window {
 
 		#elseif hldx
 		case KeyDown:
-			eh = new Event(EKeyDown);
+			eh = new Event(EKeyDown, curMouseX, curMouseY);
 			eh.keyCode = e.keyCode;
 			if( eh.keyCode & (K.LOC_LEFT | K.LOC_RIGHT) != 0 ) {
 				e.keyCode = eh.keyCode & 0xFF;
 				onEvent(e);
 			}
 		case KeyUp:
-			eh = new Event(EKeyUp);
+			eh = new Event(EKeyUp, curMouseX, curMouseY);
 			eh.keyCode = CODEMAP[e.keyCode];
 			if( eh.keyCode & (K.LOC_LEFT | K.LOC_RIGHT) != 0 ) {
 				e.keyCode = eh.keyCode & 0xFF;
@@ -552,6 +552,10 @@ class Window {
 			);
 			for ( dt in dropTargets ) dt(event);
 			dropFiles = null;
+		#end
+		#if (hlsdl >= version("1.16.0") || hldx >= version("1.16.0"))
+		case KeyMapChanged:
+			hxd.System.onKeyboardLayoutChange();
 		#end
 		#if !hlsdl // hlsdl post both Close+Quit
 		case Quit:

@@ -45,8 +45,9 @@ class Lights extends SampleApp {
 		box.addNormals();
 		for( i in 0...50 ) {
 			var m = new h3d.scene.Mesh(box, s3d);
-			m.material.color.set(Math.random(), Math.random(), Math.random());
-			m.material.color.normalize3();
+			var color = new h3d.Vector(Math.random(), Math.random(), Math.random());
+			color.normalize();
+			m.material.color.set(color.x, color.y, color.z);
 			m.scale(1 + Math.random() * 10);
 			m.z = m.scaleX * 0.5;
 			m.setRotation(0,0,Math.random() * Math.PI * 2);
@@ -64,8 +65,9 @@ class Lights extends SampleApp {
 		sp.addNormals();
 		for( i in 0...20 ) {
 			var m = new h3d.scene.Mesh(sp, s3d);
-			m.material.color.set(Math.random(), Math.random(), Math.random());
-			m.material.color.normalize3();
+			var color = new h3d.Vector(Math.random(), Math.random(), Math.random());
+			color.normalize();
+			m.material.color.set(color.x, color.y, color.z);
 			m.scale(0.5 + Math.random() * 4);
 			m.z = 2 + Math.random() * 5;
 			var cx = (Math.random() - 0.5) * 20;

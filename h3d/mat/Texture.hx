@@ -2,6 +2,9 @@ package h3d.mat;
 import h3d.mat.Data;
 
 @:allow(h3d)
+#if !macro
+@:build(hxd.impl.BitsBuilder.build())
+#end
 class Texture {
 
 	static var UID = 0;
@@ -33,16 +36,14 @@ class Texture {
 	var lastFrame(get,set) : Int;
 	var bits : Int;
 	var waitLoads : Array<Void -> Void>;
-	public var mipMap(default,set) : MipMap;
-	public var filter(default,set) : Filter;
-	public var wrap(default, set) : Wrap;
+	@:bits(bits) public var mipMap : MipMap;
+	@:bits(bits) public var filter : Filter;
+	@:bits(bits) public var wrap : Wrap;
 	public var layerCount(get, never) : Int;
-	public var startingMip : Int = 0;
-	public var lodBias : Float = 0.;
+	@:bits(bits, 4) public var startingMip : Int = 0;
+	@:bits(bits, 16) var packedLodBias : Int;
+	public var lodBias(get, set) : Float;
 	public var mipLevels(get, never) : Int;
-	public var depthBias(default, set) : Float = 0.;
-	public var slopeScaledBias(default, set) : Float = 0.;
-	public var depthClamp : Bool = false;
 	var customMipLevels : Int;
 
 	/**
@@ -84,6 +85,22 @@ class Texture {
 		return lv;
 	}
 
+	function get_lodBias() : Float {
+		final fBits = 1 << (16 - 4);
+		var iPart = (packedLodBias >> (16 - 4)) - 15;
+		var fPart = packedLodBias & (fBits - 1);
+		var v : Float = iPart + (fPart / fBits);
+		return v;
+	}
+
+	function set_lodBias(v:Float) {
+		v = hxd.Math.clamp(v, -15.0, 16.0) + 15.0;
+		var iPart = hxd.Math.floor(v);
+		var fPart = v % 1.0;
+		packedLodBias = iPart << (16 - 4) | hxd.Math.floor(fPart * (1 << (16 - 4)));
+		return v;
+	}
+
 	public function new(w, h, ?flags : Array<TextureFlags>, ?format : TextureFormat ) {
 		if( format == null ) format = nativeFormat;
 		this.id = ++UID;
@@ -112,7 +129,7 @@ class Texture {
 			this.mipMap = None;
 		this.filter = Linear;
 		this.wrap = DEFAULT_WRAP;
-		bits &= 0x7FFF;
+		this.lodBias = 0.0;
 		this.allocPos = hxd.impl.AllocPos.make();
 		if( !this.flags.has(NoAlloc) && width > 0 ) alloc();
 	}
@@ -201,37 +218,6 @@ class Texture {
 		name = n;
 	}
 
-	public function set_depthBias(v : Float) {
-		if ( v != depthBias ) {
-			depthBias = v;
-			h3d.Engine.getCurrent().onTextureBiasChanged(this);
-		}
-		return depthBias;
-	}
-
-	public function set_slopeScaledBias(v : Float) {
-		if ( v != slopeScaledBias ) {
-			slopeScaledBias = v;
-			h3d.Engine.getCurrent().onTextureBiasChanged(this);
-		}
-		return slopeScaledBias;
-	}
-
-	function set_mipMap(m:MipMap) {
-		bits = (bits & ~(3 << 0)) | (Type.enumIndex(m) << 0);
-		return mipMap = m;
-	}
-
-	function set_filter(f:Filter) {
-		bits = (bits & ~(3 << 3)) | (Type.enumIndex(f) << 3);
-		return filter = f;
-	}
-
-	function set_wrap(w:Wrap) {
-		bits = (bits & ~(3 << 6)) | (Type.enumIndex(w) << 6);
-		return wrap = w;
-	}
-
 	public inline function isDisposed() {
 		// realloc unsupported on depth buffers.
 		return t == null && (isDepth() || realloc == null);
@@ -262,14 +248,18 @@ class Texture {
 		var color = new h3d.Vector4(r,g,b,a);
 		if( layer < 0 ) {
 			for( i in 0...layerCount ) {
-				engine.pushTarget(this, i);
+				for ( j in 0...mipLevels ) {
+					engine.pushTarget(this, i, j);
+					engine.clearF(color);
+					engine.popTarget();
+				}
+			}
+		} else {
+			for ( i in 0...mipLevels ) {
+				engine.pushTarget(this, layer, i);
 				engine.clearF(color);
 				engine.popTarget();
 			}
-		} else {
-			engine.pushTarget(this, layer);
-			engine.clearF(color);
-			engine.popTarget();
 		}
 	}
 
@@ -281,14 +271,18 @@ class Texture {
 			color |= Std.int(hxd.Math.clamp(alpha)*255) << 24;
 			if( layer < 0 ) {
 				for( i in 0...layerCount ) {
-					engine.pushTarget(this, i);
+					for ( j in 0...mipLevels ) {
+						engine.pushTarget(this, i, j);
+						engine.clear(color);
+						engine.popTarget();
+					}
+				}
+			} else {
+				for ( i in 0...mipLevels ) {
+					engine.pushTarget(this, layer, i);
 					engine.clear(color);
 					engine.popTarget();
 				}
-			} else {
-				engine.pushTarget(this, layer);
-				engine.clear(color);
-				engine.popTarget();
 			}
 		} else {
 			var p = hxd.Pixels.alloc(width, height, nativeFormat);

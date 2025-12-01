@@ -127,6 +127,7 @@ class Interactive extends Object implements hxd.SceneEvents.Interactive {
 	function checkBounds( e : hxd.Event ) {
 		return switch( e.kind ) {
 		case EOut, EFocus, EFocusLost, EReleaseOutside: false;
+		case ETextInput, EKeyDown, EKeyUp, EWheel: !hasFocus();
 		default: true;
 		}
 	}

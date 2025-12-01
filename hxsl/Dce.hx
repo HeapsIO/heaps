@@ -242,6 +242,12 @@ class Dce {
 			check(loop, writeTo, affect);
 			affect.appendTo(isAffected);
 			check(it, affect, isAffected);
+		case TWhile(e, loop, _):
+			var affect = new WriteTo();
+			check(loop, writeTo, affect);
+			affect.appendTo(isAffected);
+			writeTo.appendTo(affect);
+			check(e, affect, isAffected);
 		case TCall({ e : TGlobal(ChannelRead) }, [{ e : TVar(c) }, uv, { e : TConst(CInt(cid)) }]):
 			check(uv, writeTo, isAffected);
 			if( channelVars[cid] == null ) {
@@ -266,6 +272,13 @@ class Dce {
 			check(val, writeTo, isAffected);
 			writeTo.pop();
 			isAffected.append(v,15);
+		case TCall({ e : TGlobal(AtomicAdd)}, [{ e : TVar(v) }, idx, data]):
+			var v = get(v);
+			writeTo.push(v, 15);
+			check(idx, writeTo, isAffected);
+			check(data, writeTo, isAffected);
+			writeTo.pop();
+			isAffected.append(v, 15);
 		case TSyntax(_, _, args):
 			for ( arg in args ) {
 				if ( arg.access != Read ) {
@@ -301,6 +314,10 @@ class Dce {
 			var writeTo = new WriteTo();
 			writeTo.append(null,0);
 			check(cond, writeTo, new WriteTo());
+		case TWhile(cond, loop, _):
+			var writeTo = new WriteTo();
+			writeTo.append(null,0);
+			check(cond, writeTo, new WriteTo());
 		default:
 		}
 		e.iter(checkBranches);
@@ -319,10 +336,10 @@ class Dce {
 				count++;
 			}
 			return { e : TBlock(out), p : e.p, t : e.t };
-		case TVarDecl(v,_) | TBinop(OpAssign | OpAssignOp(_), { e : (TVar(v) | TSwiz( { e : TVar(v) }, _) | TArray( { e : TVar(v) }, _)) }, _) if( get(v).used == 0 ):
-			return { e : TConst(CNull), t : e.t, p : e.p };
-		case TBinop(OpAssign | OpAssignOp(_), { e : TSwiz( { e : TVar(v) }, swiz) }, _) if( get(v).used & swizBits(swiz) == 0 ):
-			return { e : TConst(CNull), t : e.t, p : e.p };
+		case TVarDecl(v,e2) | TBinop(OpAssign | OpAssignOp(_), { e : (TVar(v) | TSwiz( { e : TVar(v) }, _) | TArray( { e : TVar(v) }, _)) }, e2) if( get(v).used == 0 ):
+			return (e2 != null && e2.hasSideEffect()) ? mapExpr(e2, false) : { e : TConst(CNull), t : e.t, p : e.p };
+		case TBinop(OpAssign | OpAssignOp(_), { e : TSwiz( { e : TVar(v) }, swiz) }, e2) if( get(v).used & swizBits(swiz) == 0 ):
+			return  e2.hasSideEffect() ? mapExpr(e2, false) : { e : TConst(CNull), t : e.t, p : e.p };
 		case TCall({ e : TGlobal(ChannelRead) }, [_, uv, { e : TConst(CInt(cid)) }]):
 			var c = channelVars[cid];
 			return { e : TCall({ e : TGlobal(Texture), p : e.p, t : TVoid }, [{ e : TVar(c), t : c.type, p : e.p }, mapExpr(uv,true)]), t : TVoid, p : e.p };
@@ -354,6 +371,12 @@ class Dce {
 			if( !loop.hasSideEffect() )
 				return { e : TConst(CNull), t : e.t, p : e.p };
 			return { e : TFor(v, it, loop), p : e.p, t : e.t };
+		case TWhile(e, loop, normalWhile):
+			var e = mapExpr(e, true);
+			var loop = mapExpr(loop, isVar);
+			if( !loop.hasSideEffect() )
+				return { e : TConst(CNull), t : e.t, p : e.p };
+			return { e : TWhile(e, loop, normalWhile), p : e.p, t : e.t };
 		case TMeta(m, args, em):
 			var em = mapExpr(em, isVar);
 			if( !isVar && !em.hasSideEffect() )

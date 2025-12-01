@@ -156,8 +156,10 @@ class SceneEvents {
 				currentFocus.handleEvent(event);
 				event.relX = oldX;
 				event.relY = oldY;
-				if( !event.propagate )
+				if( !event.propagate && !event.cancel )
 					return;
+				event.propagate = false;
+				event.cancel = false;
 			}
 		default:
 		}

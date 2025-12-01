@@ -19,7 +19,7 @@ class Texture3D extends Texture {
 	override function clone() {
 		var old = lastFrame;
 		preventAutoDispose();
-		var t = new TextureArray(width, height, depth, null, format);
+		var t = new Texture3D(width, height, depth, null, format);
 		h3d.pass.Copy.run(this, t);
 		lastFrame = old;
 		return t;
@@ -27,6 +27,20 @@ class Texture3D extends Texture {
 
 	override function toString() {
 		return super.toString()+"x("+depth+")";
+	}
+
+	/**
+		Returns a default 1x1x1 black 3D texture
+	**/
+	public static function default3DTexture() {
+		var engine = h3d.Engine.getCurrent();
+		var t : h3d.mat.Texture3D = @:privateAccess engine.resCache.get(Texture3D);
+		if( t != null )
+			return t;
+		t = new Texture3D(1, 1, 1, hxd.PixelFormat.R8);
+		t.setName("default3DTexture");
+		@:privateAccess engine.resCache.set(Texture3D,t);
+		return t;
 	}
 
 }

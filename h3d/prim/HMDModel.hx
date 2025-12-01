@@ -2,22 +2,24 @@ package h3d.prim;
 
 class HMDModel extends MeshPrimitive {
 
+	var model : hxd.fmt.hmd.Data.Model;
 	var data (get, never) : hxd.fmt.hmd.Data.Geometry;
 	function get_data() { return lods[0]; }
 	var lods : Array<hxd.fmt.hmd.Data.Geometry>;
 	var dataPosition : Int;
 	var indexCount : Int;
 	var indexesTriPos : Array<Int>;
-	var lib : hxd.fmt.hmd.Library;
+	public var lib(default,null) : hxd.fmt.hmd.Library;
 	var curMaterial : Int;
 	var collider : h3d.col.Collider;
 	var normalsRecomputed : String;
 	var blendshape : Blendshape;
 	var lodConfig : Array<Float> = null;
-	var colliderData : Collider;
+	var colliderData : ColliderData;
 
-	public function new( data : hxd.fmt.hmd.Data.Geometry, dataPos, lib, lods : Array<hxd.fmt.hmd.Data.Model> = null ) {
-		this.lods = [data];
+	public function new( model : hxd.fmt.hmd.Data.Model, dataPos, lib, lods : Array<hxd.fmt.hmd.Data.Model> = null ) {
+		this.model = model;
+		this.lods = [lib.header.geometries[model.geometry]];
 		if (lods != null) {
 			for (lod in lods)
 				this.lods.push(lib.header.geometries[lod.geometry]);
@@ -28,7 +30,11 @@ class HMDModel extends MeshPrimitive {
 		if (lib.header.shapes != null && lib.header.shapes.length > 0)
 			this.blendshape = new Blendshape(this);
 		if ( lib.header.colliders != null && lib.header.colliders.length > 0 )
-			this.colliderData = Collider.fromHmd(this);
+			this.colliderData = ColliderData.fromHmd(this);
+	}
+
+	public function getPath() {
+		return lib.resource.entry.path;
 	}
 
 	override function hasInput( name : String ) {
@@ -59,8 +65,12 @@ class HMDModel extends MeshPrimitive {
 		return lods[lod].indexCounts[material];
 	}
 
-	public function getDataBuffers(fmt, ?defaults,?material) {
-		return lib.getBuffers(data, fmt, defaults, material);
+	public function getDataBuffers(fmt, ?defaults, ?material) {
+		return getLodBuffers(fmt, 0, defaults, material);
+	}
+
+	public function getLodBuffers(fmt, lodIdx, ?defaults, ?material) {
+		return lib.getBuffers(lods[lodIdx], fmt, defaults, material);
 	}
 
 	public function loadSkin(skin) {
@@ -269,42 +279,28 @@ class HMDModel extends MeshPrimitive {
 		curMaterial = -1;
 	}
 
-	function initCollider( poly : h3d.col.PolygonBuffer ) {
-		var sphere = data.bounds.toSphere();
+	override function getCollider() {
+		if( collider != null )
+			return collider;
 		if ( colliderData == null ) {
+			var poly = new h3d.col.PolygonBuffer();
+			poly.source = {
+				entry : lib.resource.entry,
+				geometryName : null,
+			};
+			for( h in lib.header.models )
+				if( lib.header.geometries[h.geometry] == data ) {
+					poly.source.geometryName = h.name;
+					break;
+				}
+			var sphere = data.bounds.toSphere();
 			var buf = lib.getBuffers(data, hxd.BufferFormat.POS3D);
 			poly.setData(buf.vertexes, buf.indexes);
 			if( collider == null )
 				collider = new h3d.col.Collider.OptimizedCollider(sphere, poly);
 		} else {
-			var buffers = colliderData.getBuffers();
-			var hulls : Array<h3d.col.Collider> = [];
-			hulls.resize(buffers.length);
-			for ( i => buf in buffers ) {
-				var p = new h3d.col.PolygonBuffer();
-				p.source = poly.source;
-				p.setData(buf.vertexes, buf.indexes);
-				hulls[i] = p;
-			}
-			var convexHulls = new h3d.col.Collider.GroupCollider(hulls);
-			collider = new h3d.col.Collider.OptimizedCollider(sphere, convexHulls);
+			collider = colliderData.getCollider();
 		}
-	}
-
-	override function getCollider() {
-		if( collider != null )
-			return collider;
-		var poly = new h3d.col.PolygonBuffer();
-		poly.source = {
-			entry : lib.resource.entry,
-			geometryName : null,
-		};
-		for( h in lib.header.models )
-			if( lib.header.geometries[h.geometry] == data ) {
-				poly.source.geometryName = h.name;
-				break;
-			}
-		initCollider(poly);
 		return collider;
 	}
 
@@ -314,9 +310,6 @@ class HMDModel extends MeshPrimitive {
 
 	override public function screenRatioToLod( screenRatio : Float ) : Int {
 		var lodCount = lodCount();
-
-		if (forcedLod >= 0)
-			return hxd.Math.imin(forcedLod, lodCount);
 
 		if ( lodCount == 1 )
 			return 0;
@@ -344,11 +337,6 @@ class HMDModel extends MeshPrimitive {
 	}
 
 	public function getLodConfig() {
-		if (lodConfig != null)
-			return lodConfig;
-
-		var d = lib.resource.entry.directory;
-		lodConfig = @:privateAccess ModelDatabase.current.getDefaultLodConfig(d);
 		return lodConfig;
 	}
 }

@@ -72,6 +72,7 @@ class Image extends Resource {
 	public static var MIPMAP_MAX_SIZE = 0;
 
 	static var ENABLE_AUTO_WATCH = true;
+	var watchRegistered = false;
 
 	var tex:h3d.mat.Texture;
 	var inf:ImageInfo;
@@ -93,7 +94,7 @@ class Image extends Resource {
 	public function getInfo() {
 		if (inf != null)
 			return inf;
-		inf = new ImageInfo();
+		var inf = new ImageInfo();
 		var f = entry.open();
 		f.fetch(256); // should be enough to fit DDS header
 		var head = try f.readUInt16() catch (e:haxe.io.Eof) 0;
@@ -290,8 +291,8 @@ class Image extends Resource {
 			}
 		}
 
+		this.inf = inf;
 		customCheckInfo(this);
-
 		return inf;
 	}
 
@@ -558,8 +559,10 @@ class Image extends Resource {
 						f();
 				}
 
-				if (ENABLE_AUTO_WATCH)
+				if (ENABLE_AUTO_WATCH && !watchRegistered) {
+					watchRegistered = true;
 					watch(watchCallb);
+				}
 			});
 			return;
 		}
@@ -626,8 +629,10 @@ class Image extends Resource {
 					+ " " + entry.path);
 			}
 			tex.realloc = () -> loadTexture();
-			if (ENABLE_AUTO_WATCH)
+			if (ENABLE_AUTO_WATCH && !watchRegistered) {
+				watchRegistered = true;
 				watch(watchCallb);
+			}
 		}
 		if (entry.isAvailable)
 			load();

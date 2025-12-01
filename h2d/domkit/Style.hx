@@ -8,6 +8,9 @@ typedef SourceFile = {
 
 class Style extends domkit.CssStyle {
 
+	static var STATIC_CSS = new Array<hxd.res.Resource>();
+	public static function registerCSS(res) { STATIC_CSS.push(res); return res; }
+
 	var currentObjects : Array<h2d.Object> = [];
 	var resources : Array<hxd.res.Resource> = [];
 	var errors : Array<String>;
@@ -19,10 +22,13 @@ class Style extends domkit.CssStyle {
 	public var s3d : h3d.scene.Scene;
 	public var cssParser : domkit.CssParser;
 	public var onInspectHyperlink : (String) -> Void = null;
+	public var inspectModeActive(default,null) = false;
 
 	public function new() {
 		super();
 		cssParser = new domkit.CssParser();
+		for( r in STATIC_CSS )
+			load(r);
 	}
 
 	public function load( r : hxd.res.Resource, watchChanges = true, isVariablesDef = false ) {
@@ -37,11 +43,28 @@ class Style extends domkit.CssStyle {
 			return;
 		resources.push(r);
 		var variables = cssParser.variables.copy();
-		add(cssParser.parseSheet(loadData(r), r.name));
+		var data = loadData(r);
+		add( try cssParser.parseSheet(data, r.name) catch( e : domkit.Error ) throw r.entry.path+":"+data.substr(0,e.pmin).split("\n").length+": "+e.message );
 		if( !isVariablesDef )
 			cssParser.variables = variables;
 		for( o in currentObjects )
 			o.dom.applyStyle(this);
+	}
+
+	public function loadComponents( path : String, ?globals : Array<hxd.res.Resource> ) {
+		if( globals != null ) {
+			for( r in globals )
+				load(r, true, true);
+		}
+		function loadRec( dir : hxd.fs.FileEntry ) {
+			for( f in dir ) {
+				if( f.isDirectory )
+					loadRec(f);
+				else if( f.extension == "less" )
+					load(hxd.res.Loader.currentInstance.load(f.path));
+			}
+		}
+		loadRec(hxd.res.Loader.currentInstance.load(path).entry);
 	}
 
 	function loadData( r : hxd.res.Resource ) {
@@ -240,11 +263,11 @@ class Style extends domkit.CssStyle {
 
 	// ------ inspector -----
 
-	var inspectModeActive = false;
 	var inspectModeDetails = false;
 	var inspectModeDetailsRight = -1;
 	var inspectPreview : h2d.Object;
 	var inspectPreviewObjects : Array<h2d.Object>;
+	var prevDebug : Null<Bool>;
 
 	function set_allowInspect(b) {
 		if( allowInspect == b )
@@ -297,9 +320,14 @@ class Style extends domkit.CssStyle {
 				if( inspectModeActive && s3d != null && @:privateAccess s3d.renderer.debugging )
 					inspectModeActive = false;
 
-				if( inspectModeActive )
+				if( inspectModeActive ) {
 					updatePreview(e);
-				else {
+					if( inspectModeDetails && inspectPreview == null ) {
+						inspectModeActive = false;
+						inspectModeDetails = false;
+					}
+				}
+				if( !inspectModeActive ) {
 					clearPreview();
 					hxd.System.setNativeCursor(Default);
 				}
@@ -347,7 +375,7 @@ class Style extends domkit.CssStyle {
 		if( inspectPreview == null ) return;
 		var obj = inspectPreviewObjects[0];
 		var flow = Std.downcast(obj, h2d.Flow);
-		if( flow != null ) flow.debug = false;
+		if( flow != null ) flow.debug = prevDebug;
 		inspectPreview.remove();
 		inspectPreview = null;
 		inspectPreviewObjects = null;
@@ -373,6 +401,9 @@ class Style extends domkit.CssStyle {
 	function lookupRec( obj : h2d.Object, e : hxd.Event ) {
 		if( !obj.visible || obj.alpha <= 0 )
 			return false;
+		var fl = Std.downcast(obj, h2d.Flow);
+		if( fl != null && fl.debug == false )
+			return false;
 		var ch = @:privateAccess obj.children;
 		for( i in 0...ch.length ) {
 			if( lookupRec(ch[ch.length-1-i], e) )
@@ -380,13 +411,12 @@ class Style extends domkit.CssStyle {
 		}
 		if( obj.dom == null )
 			return false;
+		if( fl != null && fl.backgroundTile == null && fl.interactive == null )
+			return false;
 		var b = obj.getBounds();
 		if( !b.contains(new h2d.col.Point(e.relX,e.relY)) )
 			return false;
 		if( Type.getClass(obj) == h2d.Object ) // objects containing transparent flow?
-			return false;
-		var fl = Std.downcast(obj, h2d.Flow);
-		if( fl != null && fl.backgroundTile == null && fl.interactive == null )
 			return false;
 		setPreview(obj);
 		return true;
@@ -490,9 +520,10 @@ class Style extends domkit.CssStyle {
 		p.x = Math.round(b.xMin);
 		p.y = Math.round(b.yMin);
 		var flow = Std.downcast(obj, h2d.Flow);
-		if( flow != null )
+		if( flow != null ) {
+			prevDebug = flow.debug;
 			flow.debug = true;
-		else {
+		} else {
 			var w = p.tile.iwidth;
 			var h = p.tile.iheight;
 			var horiz = h2d.Tile.fromColor(0xFF0000, w, 1);
@@ -566,11 +597,13 @@ class Style extends domkit.CssStyle {
 					var f = find(files, f -> f.name == vs.pos.file);
 					if (f != null) {
 						var res = find(resources, r -> r.name == f.name);
-						var entry = Std.downcast(res?.entry, hxd.fs.LocalFileSystem.LocalEntry);
 						var resDir = "";
+						#if (sys || nodejs)
+						var entry = Std.downcast(res?.entry, hxd.fs.LocalFileSystem.LocalEntry);
 						if (entry != null && @:privateAccess entry.file.lastIndexOf("/") > 0) {
 							resDir = @:privateAccess entry.file.substr(0, entry.file.lastIndexOf("/"));
 						}
+						#end
 						var pos = getPos(f, vs.pos.pmin);
 						var s = "" + pos.line;
 						if (pos.file == null)

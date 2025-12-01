@@ -75,6 +75,11 @@ class Window {
 	**/
 	public var useScreenPixels : Bool = js.Browser.supported;
 	/**
+		Sets the maximum pixel ratio that will be used (only applicable with useScreenPixels enabled).
+		(default : Browser.window.devicePixelRatio)
+	**/
+	public var maxPixelRatio : Float = js.Browser.window.devicePixelRatio;
+	/**
 		When enabled, the user click event on the canvas that would trigger mouse capture to be enabled would be discarded.
 		(default : true)
 	**/
@@ -306,7 +311,7 @@ class Window {
 	}
 
 	function getPixelRatio() {
-		return useScreenPixels ? js.Browser.window.devicePixelRatio : 1;
+		return useScreenPixels ? Math.min(js.Browser.window.devicePixelRatio, maxPixelRatio) : 1;
 	}
 
 	function get_width() {

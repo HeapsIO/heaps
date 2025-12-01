@@ -8,6 +8,9 @@ class LineShader extends hxsl.Shader {
 			var view : Mat4;
 			var proj : Mat4;
 			var viewProj : Mat4;
+			var projDepth : Float;
+			var zNear : Float;
+			var zFar : Float;
 		};
 
 		@global var global : {
@@ -44,8 +47,14 @@ class LineShader extends hxsl.Shader {
 			}
 		}
 
+		function linearize(d : Float) : Float {
+			var n = camera.zNear;
+			var f = camera.zFar;
+			return (2 * n * f) / (f + n - (2 * d - 1) * (f - n) * camera.projDepth);
+		}
+
 		function vertex() {
-			projectedPosition.xy += (pdir.yx * vec2(1,-1)) * (input.uv.y - 0.5) * projectedPosition.z * global.pixelSize * width;
+			projectedPosition.xy += (pdir.yx * vec2(1,-1)) * (input.uv.y - 0.5) * linearize(projectedPosition.z / projectedPosition.w) * global.pixelSize * width;
 		}
 
 	};

@@ -52,7 +52,7 @@ class Joint extends Object {
 
 		if( lastFrame != skin.lastFrame) {
 			lastFrame = skin.lastFrame;
-			absPos.load(skin.jointsData[index].currentAbsPose);
+			absPos.load(skin.jointsData[index].currentAbsPos);
 		}
 	}
 
@@ -69,18 +69,21 @@ class Joint extends Object {
 
 @:access(h3d.scene.Skin)
 class JointData {
-	public var currentRelPose : h3d.Matrix;
-	public var currentAbsPose : h3d.Matrix;
+	public var currentRelPos : h3d.Matrix;
+	public var currentAbsPos : h3d.Matrix;
 	public var additivePose : h3d.Matrix;
 
+	var targetMat : h3d.Matrix = null;
+	var originMat : h3d.Matrix = null;
+
 	public function new() {
-		this.currentAbsPose = h3d.Matrix.I();
+		this.currentAbsPos = h3d.Matrix.I();
 	}
 
-	public function sync(skin: h3d.scene.Skin, j: h3d.anim.Skin.Joint) {
+	public function sync(skin: h3d.scene.Skin, j: h3d.anim.Skin.Joint, syncDyn : Bool) {
 		if ( j.follow != null ) return;
-		var m = currentAbsPose;
-		var r = currentRelPose;
+		var m = currentAbsPos;
+		var r = currentRelPos;
 		var bid = j.bindIndex;
 		if( r == null )
 			r = j.defMat
@@ -94,11 +97,21 @@ class JointData {
 		if( j.parent == null )
 			m.multiply3x4inline(r, skin.absPos);
 		else
-			m.multiply3x4inline(r, skin.jointsData[j.parent.index].currentAbsPose);
+			m.multiply3x4inline(r, skin.jointsData[j.parent.index].currentAbsPos);
 		if( additivePose != null )
 			m.multiply3x4inline(additivePose, m);
 		if( bid >= 0 )
 			skin.currentPalette[bid].multiply3x4inline(j.transPos, m);
+
+		if (targetMat == null)
+			targetMat = m.clone();
+		if (originMat == null)
+			originMat = m.clone();
+
+		if (!Std.isOfType(this, DynamicJointData)) {
+			targetMat.load(m);
+			originMat.load(m);
+		}
 	}
 }
 
@@ -110,9 +123,11 @@ class DynamicJointData extends JointData {
 
 	static var newWorldPos = new Vector(0, 0, 0);
 	static var expectedPos = new Vector(0, 0, 0);
+
 	static var tmpVec = new Vector(0, 0, 0);
 	static var tmpVec2 = new Vector(0, 0, 0);
 	static var tmpQ = new Quat();
+	static var tmpQ2 = new Quat();
 
 	var f = -1;
 	var initialState : DynamicJointData;
@@ -123,15 +138,15 @@ class DynamicJointData extends JointData {
 	}
 
 	public function load(data : DynamicJointData) {
-		if (data.currentRelPose != null) {
-			if (currentRelPose == null)
-				currentRelPose = new Matrix();
-			currentRelPose.load(data.currentRelPose);
+		if (data.currentRelPos != null) {
+			if (currentRelPos == null)
+				currentRelPos = new Matrix();
+			currentRelPos.load(data.currentRelPos);
 		}
-		if (data.currentAbsPose != null) {
-			if (currentAbsPose == null)
-				currentAbsPose = new Matrix();
-			currentAbsPose.load(data.currentAbsPose);
+		if (data.currentAbsPos != null) {
+			if (currentAbsPos == null)
+				currentAbsPos = new Matrix();
+			currentAbsPos.load(data.currentAbsPos);
 		}
 		if (data.additivePose != null) {
 			if (additivePose == null)
@@ -146,8 +161,8 @@ class DynamicJointData extends JointData {
 		speed.load(data.speed);
 	}
 
-	public override function sync(skin: h3d.scene.Skin, j: h3d.anim.Skin.Joint) {
-		super.sync(skin, j);
+	public override function sync(skin: h3d.scene.Skin, j: h3d.anim.Skin.Joint, syncDyn : Bool) {
+		super.sync(skin, j, syncDyn);
 
 		// Ensure we compute dynamic joints data once per frame
 		if (f != hxd.Timer.frameCount) {
@@ -160,17 +175,42 @@ class DynamicJointData extends JointData {
 			this.load(initialState);
 		}
 
-		// Compute position of the current joint
-		computeDyn(skin, j);
+		var jData : DynamicJointData = Std.downcast(skin.jointsData[j.index], DynamicJointData);
+		var jParentData : JointData = Std.downcast(skin.jointsData[j.parent.index], JointData);
+		if (syncDyn) {
+			jData.originMat.load(jData.targetMat);
 
-		// Orient parent to make him lookat his children
-		computeRotationDyn(skin, j.parent);
+			// Compute position of the current joint
+			computeDyn(skin, j);
+
+			// Orient parent to make him lookat his children
+			computeRotationDyn(skin, j.parent);
+		}
+
+		if (jData.originMat == null || jData.targetMat == null)
+			return;
+
+		var alpha = hxd.Math.clamp(skin.accumulator / Skin.FIXED_DT);
+
+		lerpMatrixTerms(jData.originMat, jData.targetMat, alpha, Skin.TMP_MAT);
+		if( j.bindIndex >= 0 )
+			skin.currentPalette[j.bindIndex].multiply3x4inline(j.transPos, Skin.TMP_MAT);
+
+		if (jParentData.originMat != null && jParentData.targetMat != null) {
+			if( j.parent.bindIndex >= 0) {
+				lerpMatrixTerms(jParentData.originMat, jParentData.targetMat, alpha, Skin.TMP_MAT);
+				skin.currentPalette[j.parent.bindIndex].multiply3x4inline(j.parent.transPos, Skin.TMP_MAT);
+			}
+		}
+
+		if (jData.speed.length() != 0.)
+			skin.forceJointsUpdateOnFrame = hxd.Timer.frameCount + 1;
 	}
 
 	function computeDyn(skin: h3d.scene.Skin, j: h3d.anim.Skin.Joint) {
 		var j : DynamicJoint = cast j;
 		var jData : DynamicJointData = Std.downcast(skin.jointsData[j.index], DynamicJointData);
-		var absPos = jData.absPos == null ?  jData.currentAbsPose : jData.absPos;
+		var absPos = jData.absPos == null ?  jData.currentAbsPos : jData.absPos;
 		var relPos = j.defMat;
 		newWorldPos.load(absPos.getPosition());
 		expectedPos.load(absPos.getPosition());
@@ -183,30 +223,29 @@ class DynamicJointData extends JointData {
 		jData.speed *= 1.0 - j.damping;
 
 		if (jData.speed.lengthSq() > DynamicJoint.SLEEP_THRESHOLD)
-			newWorldPos.load(newWorldPos + jData.speed * hxd.Math.clamp(hxd.Timer.dt, 0, hxd.Timer.maxDeltaTime));
+			newWorldPos.load(newWorldPos + jData.speed * Skin.FIXED_DT);
 
 		if (jData.speed.lengthSq() > DynamicJoint.MAX_THRESHOLD) {
-			newWorldPos.load(jData.currentAbsPose.getPosition());
-			absPos.load(jData.currentAbsPose);
 			jData.speed.set(0, 0, 0);
 		}
 
 		// Stiffness (shape keeper)
-		Skin.TMP_MAT.multiply(relPos, skin.jointsData[j.parent.index].currentAbsPose);
-        expectedPos.load(Skin.TMP_MAT.getPosition());
-        newWorldPos.lerp(newWorldPos, expectedPos, j.stiffness);
+		Skin.TMP_MAT.multiply(relPos, skin.jointsData[j.parent.index].currentAbsPos);
+		expectedPos.load(Skin.TMP_MAT.getPosition());
+		newWorldPos.lerp(newWorldPos, expectedPos, j.stiffness);
 
 		// Slackness (length keeper)
-		var dirToParent = (newWorldPos - skin.jointsData[j.parent.index].currentAbsPose.getPosition()).normalized();
+		var dirToParent = (newWorldPos - skin.jointsData[j.parent.index].currentAbsPos.getPosition()).normalized();
 		var lengthToParent = relPos.getPosition().length();
-		expectedPos.load(skin.jointsData[j.parent.index].currentAbsPose.getPosition() + dirToParent * lengthToParent);
+		var scale = skin.jointsData[j.parent.index].currentAbsPos.getScale(); //! Non uniform scale won't work
+		expectedPos.load(skin.jointsData[j.parent.index].currentAbsPos.getPosition() + (dirToParent * lengthToParent * scale.x));
 		newWorldPos.lerp(expectedPos, newWorldPos, j.slackness);
 
 		// Apply lock axis
-		skin.jointsData[j.parent.index].currentAbsPose.getInverse(Skin.TMP_MAT);
+		skin.jointsData[j.parent.index].currentAbsPos.getInverse(Skin.TMP_MAT);
 		tmpVec.load(newWorldPos);
 		tmpVec.transform(Skin.TMP_MAT);
-		tmpVec2.load(jData.currentAbsPose.getPosition());
+		tmpVec2.load(jData.currentAbsPos.getPosition());
 		tmpVec2.transform(Skin.TMP_MAT);
 		if (j.lockAxis.x > 0.0)
 			tmpVec.x = tmpVec2.x;
@@ -214,26 +253,22 @@ class DynamicJointData extends JointData {
 			tmpVec.y = tmpVec2.y;
 		if (j.lockAxis.z > 0.0)
 			tmpVec.z = tmpVec2.z;
-		tmpVec.transform(skin.jointsData[j.parent.index].currentAbsPose);
+		tmpVec.transform(skin.jointsData[j.parent.index].currentAbsPos);
 		newWorldPos.load(tmpVec);
 
 		// Apply computed position to joint
-		jData.speed.load((jData.speed + (newWorldPos - absPos.getPosition()) * (1.0 / hxd.Timer.dt)) * 0.5);
-		jData.currentAbsPose.setPosition(newWorldPos);
+		jData.speed.load((jData.speed + (newWorldPos - absPos.getPosition()) * (1.0 / Skin.FIXED_DT)) * 0.5);
+		jData.currentAbsPos.setPosition(newWorldPos);
 		if (jData.absPos == null)
 			jData.absPos = new h3d.Matrix();
-		jData.absPos.load(jData.currentAbsPose);
+		jData.absPos.load(jData.currentAbsPos);
 		if (jData.relPos == null)
 			jData.relPos = new Matrix();
 
-		skin.jointsData[j.parent.index].currentAbsPose.getInverse(Skin.TMP_MAT);
+		skin.jointsData[j.parent.index].currentAbsPos.getInverse(Skin.TMP_MAT);
 		jData.relPos.multiply(jData.absPos, Skin.TMP_MAT);
 
-		if( j.bindIndex >= 0 )
-			skin.currentPalette[j.bindIndex].multiply3x4inline(j.transPos, jData.currentAbsPose);
-
-		if (jData.speed.length() != 0.)
-			skin.forceJointsUpdateOnFrame = hxd.Timer.frameCount + 1;
+		jData.targetMat.load(jData.currentAbsPos);
 	}
 
 	function computeRotationDyn(skin: h3d.scene.Skin, j: h3d.anim.Skin.Joint) {
@@ -252,24 +287,45 @@ class DynamicJointData extends JointData {
 			tmpQ.initMoveTo(tmpVec, tmpVec2);
 			tmpQ.toMatrix(Skin.TMP_MAT);
 
-			jData.currentAbsPose.multiply(Skin.TMP_MAT, jData.currentAbsPose);
+			jData.currentAbsPos.multiply(Skin.TMP_MAT, jData.currentAbsPos);
 		}
 
-		if( j.bindIndex >= 0 )
-			skin.currentPalette[j.bindIndex].multiply3x4inline(j.transPos, jData.currentAbsPose);
+		jData.targetMat.load(jData.currentAbsPos);
+	}
 
-		if (jDynData != null)
-			jDynData.absPos.load(jDynData.currentAbsPose);
+	function lerpMatrixTerms(a: h3d.Matrix, b: h3d.Matrix, t: Float, out: h3d.Matrix): h3d.Matrix {
+		out._11 = hxd.Math.lerp(a._11, b._11, t);
+		out._12 = hxd.Math.lerp(a._12, b._12, t);
+		out._13 = hxd.Math.lerp(a._13, b._13, t);
+		out._14 = hxd.Math.lerp(a._14, b._14, t);
+		out._21 = hxd.Math.lerp(a._21, b._21, t);
+		out._22 = hxd.Math.lerp(a._22, b._22, t);
+		out._23 = hxd.Math.lerp(a._23, b._23, t);
+		out._24 = hxd.Math.lerp(a._24, b._24, t);
+		out._31 = hxd.Math.lerp(a._31, b._31, t);
+		out._32 = hxd.Math.lerp(a._32, b._32, t);
+		out._33 = hxd.Math.lerp(a._33, b._33, t);
+		out._34 = hxd.Math.lerp(a._34, b._34, t);
+		out._41 = hxd.Math.lerp(a._41, b._41, t);
+		out._42 = hxd.Math.lerp(a._42, b._42, t);
+		out._43 = hxd.Math.lerp(a._43, b._43, t);
+		out._44 = hxd.Math.lerp(a._44, b._44, t);
+    	return out;
 	}
 }
 
 class Skin extends MultiMaterial {
+	public static var FIXED_DT = 1. / 60.;
+	public var accumulator = FIXED_DT;
 
 	var skinData : h3d.anim.Skin;
 	var jointsData : Array<JointData>; // Runtime data
 
 	var currentPalette : Array<h3d.Matrix>;
+	var prevPalette : Array<h3d.Matrix>;
 	var splitPalette : Array<Array<h3d.Matrix>>;
+	var prevSplitPalette : Array<Array<h3d.Matrix>>;
+	var prevJointsFrame : Int = -1;
 	var forceJointsUpdateOnFrame : Int = -1;
 	var jointsUpdated : Bool;
 	var paletteChanged : Bool;
@@ -290,11 +346,6 @@ class Skin extends MultiMaterial {
 		var s = o == null ? new Skin(null,materials.copy()) : cast o;
 		super.clone(s);
 		s.setSkinData(skinData);
-
-		s.jointsData = [];
-		for (jData in jointsData)
-			s.jointsData.push(Reflect.copy(jData));
-
 		return s;
 	}
 
@@ -332,7 +383,7 @@ class Skin extends MultiMaterial {
 		var b = new h3d.col.Bounds();
 		for( j in skinData.allJoints ) {
 			if( j.bindIndex < 0 ) continue;
-			var r = jointsData[j.index].currentAbsPose;
+			var r = jointsData[j.index].currentAbsPos;
 			b.addSpherePos(r.tx, r.ty, r.tz, 0);
 		}
 		return b;
@@ -358,10 +409,20 @@ class Skin extends MultiMaterial {
 		return null;
 	}
 
-	override function getGlobalCollider() {
-		var col = cast(primitive.getCollider(), h3d.col.Collider.OptimizedCollider);
-		cast(primitive, h3d.prim.HMDModel).loadSkin(skinData);
-		return new h3d.col.SkinCollider(this, cast(col.b, h3d.col.PolygonBuffer));
+	override function getGlobalCollider() : h3d.col.Collider {
+		var col = primitive.getCollider();
+		if( Std.isOfType(col, h3d.col.Collider.OptimizedCollider) ) {
+			// Generated from mesh, so need skin's transform
+			var col = cast(col, h3d.col.Collider.OptimizedCollider);
+			var primCol = Std.downcast(col.b, h3d.col.PolygonBuffer);
+			if( primCol != null && primCol.source != null ) {
+				cast(primitive, h3d.prim.HMDModel).loadSkin(skinData);
+				return new h3d.col.SkinCollider(this, primCol);
+			}
+			var rootTrans = skinData.rootJoints[0].defMat.clone();
+			return new h3d.col.TransformCollider(rootTrans, col);
+		}
+		return col;
 	}
 
 	override function calcAbsPos() {
@@ -379,7 +440,7 @@ class Skin extends MultiMaterial {
 		if( j == null ) return null;
 		if( additive )
 			return jointsData[j.index].additivePose;
-		return jointsData[j.index].currentRelPose ?? j.defMat;
+		return jointsData[j.index].currentRelPos ?? j.defMat;
 	}
 
 	public function setJointRelPosition( name : String, pos : h3d.Matrix, additive = false ) {
@@ -388,7 +449,7 @@ class Skin extends MultiMaterial {
 		if( additive ) {
 			jointsData[j.index].additivePose = pos;
 		} else
-			jointsData[j.index].currentRelPose = pos;
+			jointsData[j.index].currentRelPos = pos;
 		jointsUpdated = true;
 	}
 
@@ -430,6 +491,8 @@ class Skin extends MultiMaterial {
 
 		jointsData = [];
 		currentPalette = [];
+		prevPalette = null;
+		prevSplitPalette = null;
 		paletteChanged = true;
 		makeJointsData();
 		for( i in 0...skinData.boundJoints.length )
@@ -457,14 +520,53 @@ class Skin extends MultiMaterial {
 
 	@:noDebug
 	function syncJoints() {
-		if( !jointsUpdated && forceJointsUpdateOnFrame != hxd.Timer.frameCount ) return;
+		if( !jointsUpdated && forceJointsUpdateOnFrame >= hxd.Timer.frameCount )
+			return;
 
-		for( j in skinData.allJoints )
-			jointsData[j.index].sync(this, j);
+		if ( computeVelocity() ) {
+			syncPrevJoints();
+			skinShader.calcPrevPos = true;
+		} else {
+			prevSplitPalette = null;
+			prevPalette = null;
+			skinShader.calcPrevPos = false;
+		}
+
+		skinShader.calcPrevPos = computeVelocity();
+
+		var syncDyn = false;
+		accumulator += hxd.Timer.dt;
+		if (accumulator >= Skin.FIXED_DT) {
+			syncDyn = true;
+			accumulator -= Skin.FIXED_DT;
+		}
+
+		for (j in skinData.allJoints)
+			jointsData[j.index].sync(this, j, syncDyn);
 
 		skinShader.bonesMatrixes = currentPalette;
 		jointsUpdated = false;
 		prevEnableRetargeting = enableRetargeting;
+	}
+
+	function syncPrevJoints() {
+		if ( prevJointsFrame == hxd.Timer.frameCount )
+			return;
+		prevJointsFrame = hxd.Timer.frameCount;
+
+		if ( prevPalette == null ) {
+			prevPalette = [];
+			for ( _ in 0...currentPalette.length )
+				prevPalette.push(h3d.Matrix.I());
+			if ( splitPalette != null ) {
+				prevSplitPalette = [];
+				for ( a in skinData.splitJoints )
+					prevSplitPalette.push([for ( j in a.joints ) prevPalette[j.bindIndex]]);
+			}
+		}
+		for ( i => m in currentPalette )
+			prevPalette[i].load(m);
+		skinShader.prevBonesMatrixes = prevPalette;
 	}
 
 	override function emit( ctx : RenderContext ) {
@@ -480,21 +582,23 @@ class Skin extends MultiMaterial {
 			}
 		}
 		if( showJoints ) {
-			if( jointsGraphics == null ) {
-				jointsGraphics = new Graphics(this);
-				jointsGraphics.material.mainPass.depth(false, Always);
-				jointsGraphics.material.mainPass.setPassName("alpha");
-			}
 			var topParent : Object = this;
 			while( topParent.parent != null )
 				topParent = topParent.parent;
+
+			if( jointsGraphics == null ) {
+				jointsGraphics = new Graphics(topParent);
+				jointsGraphics.material.mainPass.depth(false, Always);
+				jointsGraphics.material.mainPass.setPassName("alpha");
+			}
+
 			jointsGraphics.follow = topParent;
 
 			var g = jointsGraphics;
 			g.clear();
 			for( j in skinData.allJoints ) {
-				var m = jointsData[j.index].currentAbsPose;
-				var mp = j.parent == null ? absPos : jointsData[j.parent.index].currentAbsPose;
+				var m = jointsData[j.index].currentAbsPos;
+				var mp = j.parent == null ? absPos : jointsData[j.parent.index].currentAbsPos;
 				g.lineStyle(1, j.parent == null ? 0xFF0000FF : 0xFFFFFF00);
 				g.moveTo(mp._41, mp._42, mp._43);
 				g.lineTo(m._41, m._42, m._43);
@@ -511,7 +615,9 @@ class Skin extends MultiMaterial {
 		} else {
 			var i = ctx.drawPass.index;
 			skinShader.bonesMatrixes = splitPalette[i];
-			primitive.selectMaterial(i, primitive.screenRatioToLod(curScreenRatio));
+			if ( prevSplitPalette != null )
+				skinShader.prevBonesMatrixes = prevSplitPalette[i];
+			primitive.selectMaterial(i, getLodIndex());
 			ctx.uploadParams();
 			primitive.render(ctx.engine);
 		}

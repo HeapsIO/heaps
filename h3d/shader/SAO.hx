@@ -15,8 +15,10 @@ class SAO extends ScreenShader {
 		@range(4,30) @const(127) var numSamples : Int;
 		@range(1,10) @const(16) var numSpiralTurns : Int;
 		@const var useWorldUV : Bool;
+		@const var USE_START_FADE : Bool = false;
 		@const var USE_FADE : Bool = false;
 		@const var USE_SCALABLE_BIAS : Bool = false;
+		@const var ORTHO : Bool = false;
 
 		@ignore @param var depthTexture : Channel;
 		@ignore @param var normalTexture : Channel3;
@@ -31,6 +33,10 @@ class SAO extends ScreenShader {
 
 		@ignore @param var screenRatio : Vec2;
 		@ignore @param var fovTan : Float;
+		@ignore @param var invOrthoHeight : Float;
+
+		@param var startFadeStart : Float;
+		@param var startFadeEnd : Float;
 
 		@param var fadeStart : Float;
 		@param var fadeEnd : Float;
@@ -86,7 +92,11 @@ class SAO extends ScreenShader {
 			var randomPatternRotationAngle = 2.0 * PI * sampleNoise;
 
 			// change from WS to DepthUV space
-			var radiusSS = (sampleRadius * fovTan) / (origin * cameraView).z;
+			var radiusSS = 0.0;
+			if ( ORTHO )
+				radiusSS = sampleRadius * invOrthoHeight;
+			else
+				radiusSS = (sampleRadius * fovTan) / (origin * cameraView).z;
 
 			for( i in 0...numSamples )
 				occlusion += sampleAO(vUV, origin, normal, radiusSS, i, randomPatternRotationAngle);
@@ -94,9 +104,12 @@ class SAO extends ScreenShader {
 			occlusion = 1.0 - occlusion / float(numSamples);
 			occlusion = pow(occlusion, 1.0 + intensity).saturate();
 
-			if ( USE_FADE ) {
+			if ( USE_START_FADE || USE_FADE ) {
 				var dist = distance(origin, camera.position);
-				occlusion = mix(occlusion, 1.0, saturate((dist - fadeStart) / (fadeEnd - fadeStart)));
+				if ( USE_START_FADE )
+					occlusion = mix(1.0, occlusion, saturate((dist - startFadeStart) / (startFadeEnd - startFadeStart)));
+				if ( USE_FADE )
+					occlusion = mix(occlusion, 1.0, saturate((dist - fadeStart) / (fadeEnd - fadeStart)));
 			}
 
 			output.color = vec4(occlusion.xxx, 1.);

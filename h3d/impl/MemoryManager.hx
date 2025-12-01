@@ -4,25 +4,25 @@ typedef StackStats = {
 	var stats: Array<TextureStat>;
 	var stack : String;
 	var count : Int;
-	var size : Int;
+	var size : Float;
 }
 
 typedef AllocStats = {
 	var position : String;
 	var count : Int;
 	var tex : Bool;
-	var size : Int;
+	var size : Float;
 	var stacks : Array<StackStats>;
 }
 
 typedef TextureStat = {
 	var name: String;
-	var size: Int;
+	var size: Float;
 }
 
 class MemoryManager {
 
-	static inline var MAX_MEMORY = 4096 * (1024. * 1024.); // MB
+	static inline var MAX_MEMORY = 6144 * (1024. * 1024.); // MB
 	static inline var SIZE = 65532;
 	static var ALL_FLAGS = Type.allEnums(Buffer.BufferFlag);
 
@@ -263,7 +263,7 @@ class MemoryManager {
 	public function allocStats() : Array<AllocStats> {
 		var h = new Map();
 		var all = [];
-		inline function addStack( name: String, a : hxd.impl.AllocPos, stacks : Array<StackStats>, size : Int ) {
+		inline function addStack( name: String, a : hxd.impl.AllocPos, stacks : Array<StackStats>, size : Float ) {
 			var stackStr = a.stack.join("\n");
 			for( s in stacks )
 				if( s.stack == stackStr ) {
@@ -281,7 +281,7 @@ class MemoryManager {
 			var key = "$"+t.allocPos.position;
 			var inf = h.get(key);
 			if( inf == null ) {
-				inf = { position : t.allocPos.position, count : 0, size : 0, tex : true, stacks : [] };
+				inf = { position : t.allocPos.position, count : 0, size : 0.0, tex : true, stacks : [] };
 				h.set(key, inf);
 				all.push(inf);
 			}
@@ -296,7 +296,7 @@ class MemoryManager {
 			var key = b.allocPos.position;
 			var inf = h.get(key);
 			if( inf == null ) {
-				inf = { position : key, count : 0, size : 0, tex : false, stacks : [] };
+				inf = { position : key, count : 0, size : 0.0, tex : false, stacks : [] };
 				h.set(key, inf);
 				all.push(inf);
 			}
@@ -305,7 +305,7 @@ class MemoryManager {
 			inf.size += size;
 			addStack("buffer", b.allocPos, inf.stacks, size);
 		}
-		all.sort(function(a, b) return b.size - a.size);
+		all.sort(function(a, b) return a.size > b.size ? 1 : ( a.size < b.size ? -1 : 0 ));
 		return all;
 	}
 }

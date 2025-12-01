@@ -32,6 +32,7 @@ private class CompiledShader {
 	public var perInst : Array<Int>;
 	public var layouts : Map<Int, Layout>;
 	public var vertexBytes : haxe.io.Bytes;
+	public var semanticNames : Array<String>;
 	public function new() {
 	}
 }
@@ -235,7 +236,7 @@ class DirectXDriver extends h3d.impl.Driver {
 		vdesc.count = -1;
 		var shaderView = Driver.createShaderResourceView(depth, vdesc);
 
-		defaultDepth = { res : depth, view : shaderView, depthView : depthView, readOnlyDepthView : readOnlyDepthView, rt : null, mips : 0 };
+		defaultDepth = { res : depth, view : shaderView, depthView : depthView, readOnlyDepthView : readOnlyDepthView, rt : null };
 		@:privateAccess {
 			defaultDepthInst.t = defaultDepth;
 			defaultDepthInst.width = width;
@@ -357,7 +358,7 @@ class DirectXDriver extends h3d.impl.Driver {
 		var srv = Driver.createShaderResourceView(depth,vdesc);
 		var depthView = Driver.createDepthStencilView(depth,D24_UNORM_S8_UINT, false);
 		var readOnlyDepthView = Driver.createDepthStencilView(depth, D24_UNORM_S8_UINT, true);
-		return { res : depth, view : srv, depthView : depthView, readOnlyDepthView : readOnlyDepthView, rt : null, mips : 0 };
+		return { res : depth, view : srv, depthView : depthView, readOnlyDepthView : readOnlyDepthView, rt : null };
 	}
 
 	override function disposeDepthBuffer(b:h3d.mat.Texture) @:privateAccess {
@@ -458,7 +459,7 @@ class DirectXDriver extends h3d.impl.Driver {
 		t.lastFrame = frame;
 		t.flags.unset(WasCleared);
 
-		return { res : tex, view : makeTexView(t, tex, 0), rt : rt ? [] : null, mips : mips };
+		return { res : tex, view : makeTexView(t, tex, 0), rt : rt ? [] : null };
 	}
 
 	function makeTexView( t : h3d.mat.Texture, tex, startMip ) {
@@ -607,9 +608,9 @@ class DirectXDriver extends h3d.impl.Driver {
 			box.bottom = y + desc.height;
 			box.back = 1;
 			box.front = 0;
-			tmp.copySubresourceRegion(0,0,0,0,tex.t.res,tex.t.mips * layer + mipLevel, box);
+			tmp.copySubresourceRegion(0,0,0,0,tex.t.res,tex.mipLevels * layer + mipLevel, box);
 		} else {
-			tmp.copySubresourceRegion(0,0,0,0,tex.t.res,tex.t.mips * layer + mipLevel, null);
+			tmp.copySubresourceRegion(0,0,0,0,tex.t.res,tex.mipLevels * layer + mipLevel, null);
 		}
 
 		var pitch = 0;
@@ -639,13 +640,14 @@ class DirectXDriver extends h3d.impl.Driver {
 	override function uploadTexturePixels(t:h3d.mat.Texture, pixels:hxd.Pixels, mipLevel:Int, side:Int) {
 		pixels.convert(t.format);
 		if( hasDeviceError ) return;
-		if( mipLevel >= t.t.mips ) throw "Mip level outside texture range : " + mipLevel + " (max = " + (t.t.mips - 1) + ")";
+		var mipLevels = t.mipLevels;
+		if( mipLevel >= mipLevels ) throw "Mip level outside texture range : " + mipLevel + " (max = " + (mipLevels - 1) + ")";
 		var stride = @:privateAccess pixels.stride;
 		switch( t.format ) {
 		case S3TC(n): stride = pixels.width * ((n == 1 || n == 4) ? 2 : 4); // "uncompressed" stride ?
 		default:
 		}
-		t.t.res.updateSubresource(mipLevel + side * t.t.mips, null, (pixels.bytes:hl.Bytes).offset(pixels.offset), stride, 0);
+		t.t.res.updateSubresource(mipLevel + side * mipLevels, null, (pixels.bytes:hl.Bytes).offset(pixels.offset), stride, 0);
 		updateResCount++;
 		t.flags.set(WasCleared);
 	}
@@ -1097,6 +1099,9 @@ class DirectXDriver extends h3d.impl.Driver {
 			s.perInst = [];
 			s.layouts = new Map();
 			var format : Array<hxd.BufferFormat.BufferInput> = [];
+			var allNames = new Map();
+			var varNames = new Map();
+			var semanticNames = [];
 			for( v in shader.vertex.data.vars )
 				if( v.kind == Input ) {
 					var perInst = 0;
@@ -1108,9 +1113,11 @@ class DirectXDriver extends h3d.impl.Driver {
 							}
 					s.perInst.push(perInst);
 					var t = hxd.BufferFormat.InputFormat.fromHXSL(v.type);
+					semanticNames.push(hxsl.HlslOut.semanticName(hxsl.HlslOut.varName(v, varNames, allNames)));
 					format.push({ name : v.name, type : t });
 				}
 			s.format = hxd.BufferFormat.make(format);
+			s.semanticNames = semanticNames;
 			shaders.set(shader.id, s);
 		}
 		if( s == currentShader )
@@ -1131,7 +1138,7 @@ class DirectXDriver extends h3d.impl.Driver {
 		for( index => input in @:privateAccess currentShader.format.inputs ) {
 			var inf = mapping[index];
 			var e = new LayoutElement();
-			var name = hxsl.HlslOut.semanticName(input.name);
+			var name = currentShader.semanticNames[index];
 			e.semanticName = @:privateAccess name.toUtf8();
 			e.inputSlot = index;
 			e.format = switch( [input.type, inf.precision] ) {
@@ -1339,11 +1346,9 @@ class DirectXDriver extends h3d.impl.Driver {
 				}
 
 				var sidx = shader.samplersMap[i];
-				var bits = @:privateAccess t.bits;
-				if( t.lodBias != 0 )
-					bits |= Std.int((t.lodBias + 32)*32) << 10;
-				if( sidx < maxSamplers && bits != state.samplerBits[sidx] ) {
-					var ss = samplerStates.get(bits);
+				var samplerBits = @:privateAccess t.bits & ~h3d.mat.Texture.startingMip_mask;
+				if( sidx < maxSamplers && samplerBits != state.samplerBits[sidx] ) {
+					var ss = samplerStates.get(samplerBits);
 					if( ss == null ) {
 						var desc = new SamplerDesc();
 						desc.filter = FILTER[t.mipMap.getIndex()][t.filter.getIndex()];
@@ -1354,9 +1359,9 @@ class DirectXDriver extends h3d.impl.Driver {
 						desc.maxLod = 1e30;
 						desc.mipLodBias = t.lodBias;
 						ss = Driver.createSamplerState(desc);
-						samplerStates.set(bits, ss);
+						samplerStates.set(samplerBits, ss);
 					}
-					state.samplerBits[sidx] = bits;
+					state.samplerBits[sidx] = samplerBits;
 					state.samplers[sidx] = ss;
 					if( sidx > smax ) smax = sidx;
 					if( sstart < 0 || sidx < sstart ) sstart = sidx;
@@ -1401,6 +1406,12 @@ class DirectXDriver extends h3d.impl.Driver {
 
 	override function allocInstanceBuffer(b:InstanceBuffer, buf : haxe.io.Bytes) {
 		b.data = dx.Driver.createBuffer(b.commandCount * 5 * 4, Default, UnorderedAccess, None, DrawIndirectArgs, 4, buf);
+	}
+
+	override function uploadInstanceBufferBytes(b : InstanceBuffer, startVertex : Int, vertexCount : Int, buf : haxe.io.Bytes, bufPos : Int ) {
+		if( hasDeviceError ) return;
+		var strideBytes = 5 * 4;
+		updateBuffer(b.data, @:privateAccess buf.b.offset(bufPos), startVertex * strideBytes, vertexCount * strideBytes);
 	}
 
 	override function disposeInstanceBuffer(b:InstanceBuffer) {
@@ -1513,7 +1524,8 @@ class DirectXDriver extends h3d.impl.Driver {
 	static var WRAP : Array<AddressMode> = [
 		Clamp,
 		Wrap,
-		//Mirror , Border , MirrorOnce
+		Mirror,
+		// Border , MirrorOnce
 	];
 }
 

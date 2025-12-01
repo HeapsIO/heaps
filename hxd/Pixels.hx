@@ -698,6 +698,7 @@ class Pixels {
 		default:
 			write( 0x4 );
 			write(switch( fmt ) {
+			case RGBA16U: 36;
 			case R16F: 111;
 			case RG16F: 112;
 			case RGBA16F: 113;

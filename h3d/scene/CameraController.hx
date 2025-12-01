@@ -15,7 +15,7 @@ class CameraController extends h3d.scene.Object {
 	public var fovZoomAmount = 1.1;
 	public var panSpeed = 1.;
 	public var smooth = 0.6;
-	public var minDistance : Float = 1;
+	public var minDistance : Float = 0.1;
 	public var maxDistance : Float = 1e20;
 
 	public var lockZPlanes = false;

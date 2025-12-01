@@ -383,21 +383,31 @@ class Bounds extends Collider {
 	}
 
 	public inline function toSphere() {
-		var dx = xMax - xMin;
-		var dy = yMax - yMin;
-		var dz = zMax - zMin;
-		return new Sphere((xMin + xMax) * 0.5, (yMin + yMax) * 0.5, (zMin + zMax) * 0.5, Math.sqrt(dx * dx + dy * dy + dz * dz) * 0.5);
+		return new Sphere((xMin + xMax) * 0.5, (yMin + yMax) * 0.5, (zMin + zMax) * 0.5, getBoundingSphereRadius());
 	}
 
 	public inline function dimension() {
 		return Math.max(xSize, Math.max(ySize, zSize));
 	}
 
+	public inline function getBoundingSphereRadius() {
+		var dx = xMax - xMin;
+		var dy = yMax - yMin;
+		var dz = zMax - zMin;
+		return hxd.Math.sqrt(dx * dx + dy * dy + dz * dz) * 0.5;
+	}
+
+	public inline function getBoundingRadius() {
+		var s = toSphere();
+		var offsetMagnitude = hxd.Math.sqrt(s.x * s.x + s.y * s.y + s.z * s.z);
+		return s.r + offsetMagnitude;
+	}
+
 	public function closestPoint( p : h3d.col.Point ) {
 		throw "Not implemented";
 		return new h3d.col.Point();
 	}
-	
+
 	public static inline function fromPoints( min : Point, max : Point ) {
 		var b = new Bounds();
 		b.setMin(min);

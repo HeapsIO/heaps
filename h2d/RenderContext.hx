@@ -188,6 +188,7 @@ class RenderContext extends h3d.impl.RenderContext {
 		inFilter = null;
 		globals.set("time", time);
 		globals.set("global.time", time);
+		globals.set("depthMap", { texture : engine.driver.getDefaultDepthBuffer(), channel : hxsl.Channel.R });
 		baseShader.pixelAlign = false;
 		baseShader.halfPixelInverse.set(0.5 / engine.width, 0.5 / engine.height);
 		baseShader.viewportA.set(scene.viewportA, 0, scene.viewportX);
@@ -630,9 +631,7 @@ class RenderContext extends h3d.impl.RenderContext {
 		var buffers = shaderBuffers;
 		fillParams(buffers, compiledShader, currentShaders);
 		engine.selectMaterial(pass);
-		engine.uploadShaderBuffers(buffers, Params);
-		engine.uploadShaderBuffers(buffers, Textures);
-		engine.uploadShaderBuffers(buffers, Buffers);
+		engine.uploadInstanceShaderBuffers(buffers);
 	}
 
 	inline function setupColor( obj : h2d.Drawable ) {

@@ -18,7 +18,6 @@ class Pass {
 	var selfShadersCache : hxsl.ShaderList;
 	var shaders : hxsl.ShaderList;
 	var nextPass : Pass;
-	var rendererFlags : Int = 0;
 
 	@:bits(flags) public var enableLights : Bool;
 	/**
@@ -33,10 +32,13 @@ class Pass {
 	**/
 	@:bits(flags) public var isStatic : Bool;
 
+	@:bits(flags) public var culled : Bool;
+
 	@:bits(flags) var batchMode : Bool; // for MeshBatch
 
 	@:bits(bits) public var culling : Face;
 	@:bits(bits) public var depthWrite : Bool;
+	@:bits(bits) public var depthClamp : Bool;
 	@:bits(bits) public var depthTest : Compare;
 	@:bits(bits) public var blendSrc : Blend;
 	@:bits(bits) public var blendDst : Blend;
@@ -45,7 +47,6 @@ class Pass {
 	@:bits(bits) public var blendOp : Operation;
 	@:bits(bits) public var blendAlphaOp : Operation;
 	@:bits(bits) public var wireframe : Bool;
-	@:bits(bits) public var culled : Bool;
 	public var colorMask : Int;
 	public var layer : Int = 0;
 
@@ -73,6 +74,7 @@ class Pass {
 		dynamicParameters = p.dynamicParameters;
 		culling = p.culling;
 		depthWrite = p.depthWrite;
+		depthClamp = p.depthClamp;
 		depthTest = p.depthTest;
 		blendSrc = p.blendSrc;
 		blendDst = p.blendDst;
@@ -141,9 +143,10 @@ class Pass {
 		}
 	}
 
-	public function depth( write, test ) {
+	public function depth( write, test, clamp = false) {
 		this.depthWrite = write;
 		this.depthTest = test;
+		this.depthClamp = clamp;
 	}
 
 	public function setColorMask(r, g, b, a) {
@@ -168,15 +171,10 @@ class Pass {
 		this.colorMask = this.colorMask | mask;
 	}
 
-	function resetRendererFlags() {
-		rendererFlags = 0;
-	}
-
 	public function addShader<T:hxsl.Shader>(s:T) : T {
 		// throwing an exception will require NG GameServer review
 		if( s == null ) return null;
 		shaders = hxsl.ShaderList.addSort(s, shaders);
-		resetRendererFlags();
 		return s;
 	}
 
@@ -184,7 +182,6 @@ class Pass {
 		if ( s == null ) return null;
 		selfShadersChanged = true;
 		selfShaders = hxsl.ShaderList.addSort(s, selfShaders);
-		resetRendererFlags();
 		return s;
 	}
 
@@ -222,7 +219,6 @@ class Pass {
 		var shaderFound = false;
 		while( sl != null ) {
 			if( sl.s == s ) {
-				resetRendererFlags();
 				if ( selfShadersCache == sl )
 					selfShadersCache = selfShadersCache.next;
 				if( prev == null )
@@ -239,7 +235,6 @@ class Pass {
 		prev = null;
 		while ( sl != null ) {
 			if ( sl.s == s ) {
-				resetRendererFlags();
 				if ( selfShadersCache == sl )
 					selfShadersCache = selfShadersCache.next;
 				if ( prev == null )
@@ -259,7 +254,6 @@ class Pass {
 		var prev = null;
 		while( sl != null ) {
 			if( Std.isOfType(sl.s, t) ) {
-				resetRendererFlags();
 				if ( selfShadersCache == sl )
 					selfShadersCache = selfShadersCache.next;
 				if( prev == null )
@@ -275,7 +269,6 @@ class Pass {
 		prev = null;
 		while( sl != null ) {
 			if( Std.isOfType(sl.s, t) ) {
-				resetRendererFlags();
 				if ( selfShadersCache == sl )
 					selfShadersCache = selfShadersCache.next;
 				if( prev == null )
@@ -370,6 +363,16 @@ class Pass {
 		else
 			prev.next = parentShaders;
 		return selfShadersRec(true);
+	}
+
+	function reverseDepthTest() {
+		depthTest = switch( depthTest ) {
+			case Greater: Less;
+			case GreaterEqual: LessEqual;
+			case Less: Greater;
+			case LessEqual: GreaterEqual;
+			default: depthTest;
+		};
 	}
 
 	public function clone() {

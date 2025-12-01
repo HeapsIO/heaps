@@ -315,7 +315,7 @@ class Flatten {
 			switch( t ) {
 			case TInt:
 				e.t = TFloat;
-				e = toInt(e);
+				e = floatBitsToInt(e);
 			case TVec(size,VInt):
 				e.t = TVec(size,VFloat);
 				e = { e : TCall({ e : TGlobal([IVec2,IVec3,IVec4][size-2]), t : TFun([]), p : pos }, [e]), t : t, p : pos };
@@ -323,6 +323,10 @@ class Flatten {
 			}
 			return e;
 		}
+	}
+
+	function floatBitsToInt( e : TExpr ) {
+		return { e : TCall({ e : TGlobal(FloatBitsToInt), t : TFun([]), p : e.p }, [e]), t : TInt, p : e.p };
 	}
 
 	function floatBitsToUint( e : TExpr ) {

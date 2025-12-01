@@ -27,6 +27,10 @@ class Reader {
 			return HasLod;
 		case 5:
 			return HasCollider;
+		case 6:
+			return HasColliders;
+		case 7:
+			return HasCustomCollider;
 		case unk:
 			throw "Unknown property #" + unk;
 		}
@@ -61,6 +65,13 @@ class Reader {
 		if( n != null ) return n;
 		HMD_STRINGS.set(name,name);
 		return name;
+	}
+
+	function readVector() {
+		var x = i.readFloat();
+		var y = i.readFloat();
+		var z = i.readFloat();
+		return new h3d.Vector(x, y, z);
 	}
 
 	function readPosition(hasScale=true) {
@@ -215,6 +226,13 @@ class Reader {
 					m.collider = i.readInt32();
 					hasCollider = true;
 				}
+				if( m.props.contains(HasColliders) ) {
+					m.colliders = [];
+					for( k in 0...i.readInt32() ) {
+						m.colliders.push(i.readInt32());
+					}
+					hasCollider = true;
+				}
 			}
 		}
 
@@ -267,15 +285,64 @@ class Reader {
 		}
 
 		if ( hasCollider ) {
+			function readCollider( hasType : Bool ) : Collider {
+				var type : ColliderType = hasType ? i.readByte() : ConvexHulls;
+				switch( type ) {
+				case ConvexHulls:
+					var c = new ConvexHullsCollider();
+					var n = i.readInt32();
+					c.vertexCounts = [for( v in 0...n ) i.readInt32()];
+					c.vertexPosition = i.readInt32();
+					c.indexCounts = [for( v in 0...n ) i.readInt32()];
+					c.indexPosition = i.readInt32();
+					return c;
+				case Mesh:
+					var c = new MeshCollider();
+					c.vertexCount = i.readInt32();
+					c.vertexPosition = i.readInt32();
+					c.indexCount = i.readInt32();
+					c.indexPosition = i.readInt32();
+					return c;
+				case Group:
+					var c = new GroupCollider();
+					var n = i.readInt32();
+					c.colliders = [for( v in 0...n ) readCollider(hasType) ];
+					return c;
+				case Sphere:
+					var c = new SphereCollider();
+					c.position = readVector();
+					c.radius = i.readFloat();
+					return c;
+				case Box:
+					var c = new BoxCollider();
+					c.position = readVector();
+					c.halfExtent = readVector();
+					c.rotation = readVector();
+					return c;
+				case Capsule:
+					var c = new CapsuleCollider();
+					c.position = readVector();
+					c.halfExtent = readVector();
+					c.radius = i.readFloat();
+					return c;
+				case Cylinder:
+					var c = new CylinderCollider();
+					c.position = readVector();
+					c.halfExtent = readVector();
+					c.radius = i.readFloat();
+					return c;
+				case Empty:
+					var c = new EmptyCollider();
+					return c;
+				}
+				throw "unknown collider type " + type;
+			}
+
 			d.colliders = [];
+			var hasCustom = d.props != null && d.props.contains(HasCustomCollider);
 			var colliderLength = i.readInt32();
 			for ( k in 0...colliderLength ) {
-				var c = new Collider();
-				var n = i.readInt32();
-				c.vertexCounts = [for ( v in 0...n) i.readInt32()];
-				c.vertexPosition = i.readInt32();
-				c.indexCounts = [for ( v in 0...n) i.readInt32()];
-				c.indexPosition = i.readInt32();
+				var c = readCollider(hasCustom);
 				d.colliders.push(c);
 			}
 		}

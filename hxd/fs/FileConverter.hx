@@ -35,7 +35,7 @@ class FileConverter {
 	var tmpDir : String;
 	var configs : Map<String,ConvertConfig> = new Map();
 	var defaultConfig : ConvertConfig;
-	var cache : Map<String,Array<{ out : String, time : Int, hash : String, ver : Null<Int>, milliseconds : Null<Int>, localParamsHash : Null<String> }>>;
+	var cache : Map<String,Array<{ out : String, time : Int, hash : String, ver : Null<Int>, milliseconds : Null<Int>, localParamsHash : Null<String>, localContextJson : Null<String> }>>;
 	var cacheTime : Float;
 
 	static var extraConfigs:Array<Dynamic> = [];
@@ -155,6 +155,10 @@ class FileConverter {
 			var a : Array<Dynamic> = v;
 			return [for( v in a ) formatValue(v)].toString();
 		}
+		if( v is haxe.ds.StringMap ) {
+			var m : haxe.ds.StringMap<Dynamic> = v;
+			return [for( k=>v in m ) formatValue(k)+"_"+formatValue(v)].toString();
+		}
 		var fl = Reflect.fields(v);
 		fl.sort(Reflect.compare);
 		return [for( f in fl ) f+"_"+formatValue(Reflect.field(v,f))].join("_");
@@ -185,24 +189,24 @@ class FileConverter {
 	}
 
 	function loadConfig( dir : String ) : ConvertConfig {
-		return getConfig(configs, defaultConfig, dir, function(fullObj) {
+		return getConfig(configs, defaultConfig, dir, (parent, obj) -> {
+			var fullObj = mergeRec(parent.obj, obj);
 			return makeConfig(fullObj);
 		});
 	}
 
-	function getConfig(cachedConfigs : Map<String, Dynamic>, defaultConfig : Dynamic, dir : String, makeConfig : Dynamic -> Dynamic) : Dynamic {
+	function getConfig(cachedConfigs : Map<String, Dynamic>, defaultConfig : Dynamic, dir : String, loadConfig : (parent: Dynamic, obj: Dynamic) -> Dynamic, configName: String = "props.json") : Dynamic {
 		var c = cachedConfigs.get(dir);
 		if( c != null ) return c;
 		var dirPos = dir.lastIndexOf("/");
-		var parent = dir == "" ? defaultConfig : getConfig(cachedConfigs, defaultConfig, dirPos < 0 ? "" : dir.substr(0,dirPos), (fullObj) -> makeConfig(fullObj));
-		var propsFile = (dir == "" ? baseDir : baseDir + dir + "/") +"props.json";
+		var parent = dir == "" ? defaultConfig : getConfig(cachedConfigs, defaultConfig, dirPos < 0 ? "" : dir.substr(0,dirPos), loadConfig, configName);
+		var propsFile = (dir == "" ? baseDir : baseDir + dir + "/") +configName;
 		if( !sys.FileSystem.exists(propsFile) ) {
 			c = parent;
 		} else {
 			var content = sys.io.File.getContent(propsFile);
 			var obj = try haxe.Json.parse(content) catch( e : Dynamic ) throw "Failed to parse "+propsFile+"("+e+")";
-			var fullObj = mergeRec(parent.obj, obj);
-			c = makeConfig(fullObj);
+			c = loadConfig(parent, obj);
 		}
 		cachedConfigs.set(dir, c);
 		return c;
@@ -243,8 +247,12 @@ class FileConverter {
 			outFile += e.path.substr(0, -(ext.length + 1));
 		else
 			outFile += e.path;
-		if( cmd.paramsStr != null )
-			outFile += "."+cmd.paramsStr;
+		if( cmd.paramsStr != null ) {
+			var paramsStr = cmd.paramsStr;
+			if( paramsStr.length > 40 )
+				paramsStr = haxe.crypto.Sha1.make(haxe.io.Bytes.ofString(paramsStr)).toHex();
+			outFile += "." + paramsStr;
+		}
 		var conv = null;
 		for( c in cmd.conv )
 			if( c.sourceExts == null || c.sourceExts.indexOf(ext) >= 0 ) {
@@ -307,7 +315,8 @@ class FileConverter {
 				hash : "",
 				ver: conv.version,
 				milliseconds : #if js 0 #else null #end,
-				localParamsHash: null
+				localParamsHash: null,
+				localContextJson: null,
 			};
 			entry.push(match);
 		}
@@ -317,9 +326,9 @@ class FileConverter {
 		if( !sys.FileSystem.exists(fullPath) ) throw "Missing "+fullPath;
 
 		var fileTime = getFileTime(fullPath);
-		var time = std.Math.floor(fileTime / FILE_TIME_PRECISION);
+		var time = hxd.Math.floor(fileTime / FILE_TIME_PRECISION);
 		#if js
-		var milliseconds = std.Math.floor(fileTime) - time * FILE_TIME_PRECISION;
+		var milliseconds = hxd.Math.floor(fileTime) - time * FILE_TIME_PRECISION;
 		#else
 		var milliseconds = null;
 		#end
@@ -332,7 +341,7 @@ class FileConverter {
 		conv.originalFilename = e.name;
 		var hasLocalParams = conv.hasLocalParams();
 
-		if( alreadyGen && !hasLocalParams && match.time == time #if js && (match.milliseconds == null || match.milliseconds == milliseconds ) #end ) {
+		if( alreadyGen && !hasLocalParams && match.localParamsHash == null && match.time == time #if js && (match.milliseconds == null || match.milliseconds == milliseconds ) #end ) {
 			conv.cleanup();
 			return; // not changed (time stamp)
 		}
@@ -341,14 +350,23 @@ class FileConverter {
 		var hash = haxe.crypto.Sha1.make(content).toHex();
 		conv.srcBytes = content;
 		conv.hash = hash;
-		var localParams = hasLocalParams ? conv.computeLocalParams() : null;
+		var localContext : Dynamic = null;
+		if( match.ver == conv.version && match.hash == hash && match.localContextJson != null ) {
+			localContext = try { haxe.Json.parse(match.localContextJson); } catch(e) { null; }
+		}
+		var localParams = hasLocalParams ? conv.computeLocalParams(localContext) : null;
 		conv.localParams = localParams;
 		var localParamsHash = localParams == null ? null : haxe.crypto.Sha1.make(haxe.io.Bytes.ofString(formatValue(localParams))).toHex();
+		localContext = conv.getLocalContext();
+		var localContextJson = localContext == null ? null : haxe.Json.stringify(localContext);
 		if( alreadyGen && match.hash == hash && match.localParamsHash == localParamsHash ) {
 			conv.cleanup();
-			match.time = time;
-			match.milliseconds = milliseconds;
-			saveCache();
+			if( match.time != time || match.milliseconds != milliseconds || match.localContextJson != localContextJson ) {
+				match.time = time;
+				match.milliseconds = milliseconds;
+				match.localContextJson = localContextJson;
+				saveCache();
+			}
 			return; // not changed (hash)
 		}
 
@@ -366,6 +384,8 @@ class FileConverter {
 		match.milliseconds = milliseconds;
 		match.hash = hash;
 		match.localParamsHash = localParamsHash;
+		match.localContextJson = localContextJson;
+
 		saveCache();
 	}
 

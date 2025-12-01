@@ -8,7 +8,9 @@ class KillAlpha extends hxsl.Shader {
 		var pixelColor : Vec4;
 
 		function fragment() {
-			if( pixelColor.a < threshold ) discard;
+			// Put the result of the check in a var. This way the DCE can correctly say that only the alpha channel of pixelColor is needed.
+			var doDiscard = pixelColor.a < threshold;
+			if( doDiscard ) discard;
 		}
 	}
 

@@ -69,7 +69,13 @@ class CustomParser extends domkit.CssValue.ValueParser {
 		// TODO : compile-time path check?
 		return true;
 		#else
-		return try hxd.res.Loader.currentInstance.load(path) catch( e : hxd.res.NotFound ) invalidProp("Resource not found "+path);
+		return try {
+			var f = hxd.res.Loader.currentInstance.load(path);
+			if( f.entry.isDirectory ) invalidProp("Resource should be a file "+path);
+			return f;
+		} catch( e : hxd.res.NotFound ) {
+			invalidProp("Resource not found "+path);
+		}
 		#end
 	}
 
@@ -77,6 +83,12 @@ class CustomParser extends domkit.CssValue.ValueParser {
 		var path = parsePath(v);
 		return loadResource(path);
 	}
+
+	#if !macro
+	function toTile( r : hxd.res.Any ) {
+		return try r.toTile() catch( e : Dynamic ) invalidProp(Std.string(e));
+	}
+	#end
 
 	public function parseTile( v : CssValue) {
 		try {
@@ -90,19 +102,19 @@ class CustomParser extends domkit.CssValue.ValueParser {
 				return #if macro true #else h2d.Tile.fromColor(c,w,h,(c>>>24)/255) #end;
 			case VCall("tile",[VString(url),VInt(size)]):
 				var p = loadResource(url);
-				return #if macro p #else { var t = p.toTile(); t.sub(0,0,size,size); } #end;
+				return #if macro p #else { var t = toTile(p); t.sub(0,0,size,size); } #end;
 			case VCall("tile",[VString(url),VInt(sizex),VInt(sizey)]):
 				var p = loadResource(url);
-				return #if macro p #else { var t = p.toTile(); t.sub(0,0,sizex,sizey); } #end;
+				return #if macro p #else { var t = toTile(p); t.sub(0,0,sizex,sizey); } #end;
 			case VCall("grid",[VString(url),VInt(hsplit),VInt(vsplit)]):
 				var p = loadResource(url);
-				return #if macro p #else { var t = p.toTile(); t.sub(0,0,Std.int(t.iwidth/hsplit),Std.int(t.iheight/vsplit)); } #end;
+				return #if macro p #else { var t = toTile(p); t.sub(0,0,Std.int(t.iwidth/hsplit),Std.int(t.iheight/vsplit)); } #end;
 			case VCall("hgrid",[VString(url),VInt(hsplit)]):
 				var p = loadResource(url);
-				return #if macro p #else { var t = p.toTile(); t.sub(0,0,Std.int(t.iwidth/hsplit),t.iheight); } #end;
+				return #if macro p #else { var t = toTile(p); t.sub(0,0,Std.int(t.iwidth/hsplit),t.iheight); } #end;
 			case VCall("vgrid",[VString(url),VInt(vsplit)]):
 				var p = loadResource(url);
-				return #if macro p #else { var t = p.toTile(); t.sub(0,0,t.iwidth,Std.int(t.iheight/vsplit)); } #end;
+				return #if macro p #else { var t = toTile(p); t.sub(0,0,t.iwidth,Std.int(t.iheight/vsplit)); } #end;
 			default:
 				var c = parseColor(v);
 				return #if macro true #else h2d.Tile.fromColor(c,1,1,(c>>>24)/255) #end;
@@ -110,7 +122,7 @@ class CustomParser extends domkit.CssValue.ValueParser {
 		} catch( e : InvalidProperty ) {
 			var path = parsePath(v);
 			var p = loadResource(path);
-			return #if macro p #else p.toTile() #end;
+			return #if macro p #else toTile(p) #end;
 		}
 	}
 
@@ -180,6 +192,12 @@ class CustomParser extends domkit.CssValue.ValueParser {
 		var offset: Null<Int> = null, offsetChar = 0;
 		var lineHeight : Null<Float> = null, baseLine: Null<Int> = null;
 		switch(value) {
+			case VIdent("default"):
+				#if macro
+				return false;
+				#else
+				return hxd.res.DefaultFont.get();
+				#end
 			case VGroup(args):
 				var args = args.copy();
 				path = parsePath(args[0]);
@@ -216,6 +234,7 @@ class CustomParser extends domkit.CssValue.ValueParser {
 					adjustSdfParams(sdf);
 				}
 			default:
+
 				path = parsePath(value);
 		}
 		var res = loadResource(path);
@@ -495,6 +514,17 @@ class CustomParser extends domkit.CssValue.ValueParser {
 		}
 	}
 
+	public function parseMargin(value:CssValue) {
+		return switch(value) {
+		case VIdent("ignore-parent"): #if macro 0 #else h2d.Flow.PADDING_IGNORE_PARENT #end;
+		default: parseInt(value);
+		}
+	}
+
+	public function parseMarginBox( v : CssValue ) {
+		return parseGenBox(v,parseMargin);
+	}
+
 }
 
 #if !macro
@@ -504,7 +534,7 @@ class ObjectComp implements h2d.domkit.Object implements domkit.Component.Compon
 	@:p var x : Float;
 	@:p var y : Float;
 	@:p var alpha : Float = 1;
-	@:p(angleRad) var rotation : Float;
+	@:p(angleDeg) var rotation : Float;
 	@:p var visible : Bool = true;
 	@:p(scale) var scale : { x : Float, y : Float };
 	@:p var scaleX : Float = 1;
@@ -514,11 +544,11 @@ class ObjectComp implements h2d.domkit.Object implements domkit.Component.Compon
 	@:p var filterSmooth : Bool;
 
 	// flow properties
-	@:p(box) var margin : { left : Int, top : Int, right : Int, bottom : Int };
-	@:p var marginLeft = 0;
-	@:p var marginRight = 0;
-	@:p var marginTop = 0;
-	@:p var marginBottom = 0;
+	@:p(marginBox) var margin : { left : Int, top : Int, right : Int, bottom : Int };
+	@:p(margin) var marginLeft = 0;
+	@:p(margin) var marginRight = 0;
+	@:p(margin) var marginTop = 0;
+	@:p(margin) var marginBottom = 0;
 	@:p(align) var align : { v : h2d.Flow.FlowAlign, h : h2d.Flow.FlowAlign };
 	@:p(hAlign) var halign : h2d.Flow.FlowAlign;
 	@:p(vAlign) var valign : h2d.Flow.FlowAlign;

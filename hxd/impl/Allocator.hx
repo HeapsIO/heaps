@@ -29,7 +29,7 @@ class Allocator {
 	}
 
 	function fromBufferFlags(flags : haxe.EnumFlags<h3d.Buffer.BufferFlag>) : BufferFlags {
-		if ( flags == Dynamic )
+		if ( flags.toInt() == 0 )
 			return Static;
 		if ( flags == Dynamic )
 			return Dynamic;
@@ -61,8 +61,8 @@ class Allocator {
 		b.dispose();
 	}
 
-	public function allocIndexBuffer( count : Int ) {
-		return new h3d.Indexes(count);
+	public function allocIndexBuffer( count : Int, is32 : Bool = false ) {
+		return new h3d.Indexes(count, is32);
 	}
 
 	public function ofIndexes( ib: hxd.IndexBuffer, length = -1) {
