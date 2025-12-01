@@ -84,9 +84,9 @@ class Copy extends ScreenFx<CopyShader> {
 		super(new CopyShader());
 	}
 
-	public function apply( from, to, ?blend : h3d.mat.BlendMode, ?customPass : h3d.mat.Pass, ?layer :Int) {
+	public function apply( from, to, ?blend : h3d.mat.BlendMode, ?customPass : h3d.mat.Pass, ?layer :Int, ?mip :Int) {
 		if( to != null )
-			engine.pushTarget(to, layer != null ? layer : 0, NotBound);
+			engine.pushTarget(to, layer ?? 0, mip ?? 0, NotBound);
 		shader.texture = from;
 		if( customPass != null ) {
 			if( blend != null ) customPass.setBlendMode(blend);
@@ -100,7 +100,7 @@ class Copy extends ScreenFx<CopyShader> {
 			pass = old;
 			h.next = null;
 		} else {
-			pass.setBlendMode(blend == null ? None : blend);
+			pass.setBlendMode(blend ?? None);
 			render();
 		}
 		shader.texture = null;
@@ -108,16 +108,16 @@ class Copy extends ScreenFx<CopyShader> {
 			engine.popTarget();
 	}
 
-	public static function run( from : h3d.mat.Texture, to : h3d.mat.Texture, ?blend : h3d.mat.BlendMode, ?pass : h3d.mat.Pass, ?layer : Int ) {
+	public static function run( from : h3d.mat.Texture, to : h3d.mat.Texture, ?blend : h3d.mat.BlendMode, ?pass : h3d.mat.Pass, ?layer : Int, ?mip :Int ) {
 		var engine = h3d.Engine.getCurrent();
-		if( to != null && from != null && (blend == null || blend == None) && pass == null && layer == null && engine.driver.copyTexture(from, to) )
+		if( to != null && from != null && (blend == null || blend == None) && pass == null && layer == null && mip == null && engine.driver.copyTexture(from, to) )
 			return;
 		var inst : Copy = @:privateAccess engine.resCache.get(Copy);
 		if( inst == null ) {
 			inst = new Copy();
 			@:privateAccess engine.resCache.set(Copy, inst);
 		}
-		return inst.apply(from, to, blend, pass, layer);
+		return inst.apply(from, to, blend, pass, layer, mip);
 	}
 
 }
