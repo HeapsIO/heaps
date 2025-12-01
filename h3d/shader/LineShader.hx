@@ -8,7 +8,7 @@ class LineShader extends hxsl.Shader {
 			var view : Mat4;
 			var proj : Mat4;
 			var viewProj : Mat4;
-			var projDepth : Float;
+			@const var reverseDepth : Bool;
 			var zNear : Float;
 			var zFar : Float;
 		};
@@ -50,7 +50,7 @@ class LineShader extends hxsl.Shader {
 		function linearize(d : Float) : Float {
 			var n = camera.zNear;
 			var f = camera.zFar;
-			return (2 * n * f) / (f + n - (2 * d - 1) * (f - n) * camera.projDepth);
+			return (2 * n * f) / (f + n - (2 * d - 1) * (f - n) * (camera.reverseDepth ? -1.0 : 1.0) );
 		}
 
 		function vertex() {

@@ -37,7 +37,7 @@ class RenderContext extends h3d.impl.RenderContext {
 	@global("camera.position") var cameraPos : h3d.Vector;
 	@global("camera.projDiag") var cameraProjDiag : h3d.Vector4;
 	@global("camera.projFlip") var cameraProjFlip : Float;
-	@global("camera.projDepth") var cameraProjDepth : Float;
+	@global("camera.reverseDepth") var cameraReverseDepth : Bool;
 	@global("camera.viewProj") var cameraViewProj : h3d.Matrix;
 	@global("camera.inverseViewProj") var cameraInverseViewProj : h3d.Matrix;
 	@global("camera.previousViewProj") var cameraPreviousViewProj : h3d.Matrix;
@@ -74,7 +74,7 @@ class RenderContext extends h3d.impl.RenderContext {
 
 	public function setCamera( cam : h3d.Camera ) {
 		camera.load(cam);
-		camera.reverseDepth = useReverseDepth;
+		cameraReverseDepth = camera.reverseDepth = useReverseDepth;
 		camera.update();
 		cameraView = camera.mcam;
 		cameraNear = camera.zNear;
@@ -91,7 +91,6 @@ class RenderContext extends h3d.impl.RenderContext {
 			cameraJitterOffsets = new h3d.Vector4( 0.0, 0.0, 0.0, 0.0 );
 		cameraViewProj = camera.m;
 		cameraInverseViewProj = camera.getInverseViewProj();
-		cameraProjDepth = useReverseDepth ? -1.0 : 1.0;
 	}
 
 	public function setupTarget() {
