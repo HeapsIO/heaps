@@ -14,7 +14,7 @@ class TextureCache {
 		defaultDepthBuffer = h3d.mat.Texture.getDefaultDepth();
 		if ( checkFlags < 0 ) {
 			var flags = new haxe.EnumFlags<h3d.mat.Data.TextureFlags>();
-			var flagsArray : Array<h3d.mat.Data.TextureFlags> = [Cube, MipMapped, ManualMipMapGen, Dynamic, IsArray];
+			var flagsArray : Array<h3d.mat.Data.TextureFlags> = [Cube, MipMapped, ManualMipMapGen, Dynamic, IsArray, Writable];
 			for ( f in flagsArray )
 				flags.set(f);
 			checkFlags = flags.toInt();
