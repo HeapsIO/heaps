@@ -642,8 +642,14 @@ class HMDOut extends BaseLibrary {
 		var colVBuf = new FloatBuffer();
 		g.vertexPosition = dataOut.length;
 		if( lowPrecConfig == null ) {
-			for( i in 0...vbuf.length )
-				writeFloat(dataOut, vbuf[i]);
+			for( index in 0...Std.int(vbuf.length / stride) ) {
+				var i = index * stride;
+				for( si in 0...stride ) {
+					if ( si < 3 )
+						colVBuf.push(vbuf[i + si]);
+					writeFloat(dataOut, vbuf[i + si]);
+				}
+			}
 		} else {
 			for( index in 0...Std.int(vbuf.length / stride) ) {
 				var i = index * stride;
