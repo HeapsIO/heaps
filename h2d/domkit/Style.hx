@@ -39,8 +39,9 @@ class Style extends domkit.CssStyle {
 			#end
 			onChange();
 		});
-		if( resources.indexOf(r) >= 0 )
-			return;
+		for( r2 in resources )
+			if( r2.entry == r.entry )
+				return;
 		resources.push(r);
 		var variables = cssParser.variables.copy();
 		var data = loadData(r);
