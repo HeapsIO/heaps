@@ -67,6 +67,79 @@ class Style extends domkit.CssStyle {
 		loadRec(hxd.res.Loader.currentInstance.load(path).entry);
 	}
 
+	#if hscript
+	function defaultInterpRebuild( o : h2d.Object ) {
+		// the default rebuild try to call the first rebuild() method in hierarchy
+		while( o != null ) {
+			var f = Reflect.field(o, "rebuild");
+			if( f != null && Reflect.isFunction(f) ) {
+				(o:Dynamic).rebuild();
+				return;
+			}
+			o = o.parent;
+		}
+	}
+
+	function onRebuild( rebuild : h2d.Object -> Void, c : Class<Dynamic> ) {
+		function rebuildRec( o : h2d.Object ) {
+			if( Std.isOfType(o,c) )
+				rebuild(o);
+			for( c in o )
+				rebuildRec(c);
+		}
+		for( o in currentObjects )
+			rebuildRec(o);
+	}
+
+	static var WATCH_INIT_DONE = false;
+	static var ON_WATCH_CALLB = null;
+	#end
+
+	public function stopWatchInterpComponents() {
+		#if hscript
+		ON_WATCH_CALLB = null;
+		domkit.Interp.onError = null;
+		#end
+	}
+
+	public function watchInterpComponents( apiFile, srcPaths : Array<String>, ?customRebuild ) {
+		#if hscript
+		if( customRebuild == null ) customRebuild = defaultInterpRebuild;
+		ON_WATCH_CALLB = onRebuild.bind(customRebuild);
+		domkit.Interp.onError = function(msg) {
+			#if sys Sys.println(msg); #end
+			if( errors.indexOf(msg) < 0 )
+				errors.push(msg);
+			refreshErrors();
+		};
+		if( WATCH_INIT_DONE ) return;
+		WATCH_INIT_DONE = true;
+		domkit.Checker.init(apiFile);
+		var waitList = [];
+		function flushWait() {
+			var wl = waitList;
+			errors = [];
+			waitList = [];
+			for( cl in wl )
+				if( ON_WATCH_CALLB != null )
+					ON_WATCH_CALLB(cl);
+			refreshErrors();
+		}
+		var ret = domkit.Interp.init(srcPaths, function(path, callb) {
+			#if hl
+			new hl.uv.Fs(null, path, function(ev) {
+				var cl = callb();
+				if( cl != null && ON_WATCH_CALLB != null ) {
+					if( waitList.length == 0 ) haxe.Timer.delay(flushWait,0);
+					waitList.push(cl);
+				}
+			});
+			#end
+		});
+		if( !ret ) throw "No component found (invalid src path)";
+		#end
+	}
+
 	function loadData( r : hxd.res.Resource ) {
 		return r.entry.getText();
 	}
