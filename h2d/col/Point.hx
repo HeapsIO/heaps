@@ -223,6 +223,15 @@ class PointImpl #if apicheck implements h2d.impl.PointApi<Point,Matrix> #end {
 		y = y2;
 	}
 
+	/**
+		Get the angle in radians between the vector (1, 0) and this Point.
+		The angle returned is [-π, π]
+	**/
+	public inline function getRotation() : Float {
+		var dot = new h2d.col.Point(1, 0).dot(this.normalized());
+		var sign = (x >= 0 && y >= 0) || (x < 0 && y >= 0) ? 1 : -1;
+		return sign * hxd.Math.acos(dot);
+	}
 }
 
 @:forward abstract Point(PointImpl) from PointImpl to PointImpl {
