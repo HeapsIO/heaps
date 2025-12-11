@@ -557,8 +557,8 @@ class DX12Driver extends h3d.impl.Driver {
 
 		renderTargetViews = new ScratchHeap(RTV, INITIAL_RT_COUNT);
 		depthStenciViews = new ScratchHeap(DSV, INITIAL_RT_COUNT);
-		renderTargetViews.onFree = function(prev, prevSize) (prev : Resource).release();
-		depthStenciViews.onFree = function(prev, prevSize) (prev : Resource).release();
+		renderTargetViews.onFree = function(prev, prevSize) frame.toRelease.push(prev);
+		depthStenciViews.onFree = function(prev, prevSize) frame.toRelease.push(prev);
 
 		cpuSrvHeap = new BlockHeap(CBV_SRV_UAV, INITIAL_SRV_COUNT, false);
 		cpuSamplerHeap = new ScratchHeap(SAMPLER, INITIAL_SAMPLER_COUNT, false);
