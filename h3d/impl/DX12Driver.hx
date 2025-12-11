@@ -60,7 +60,7 @@ class ScratchHeapArray {
 
 }
 
-@:struct class BumpAllocation {
+@:struct class BufferAllocation {
 	public var resource : GpuResource = null;
 	public var cpuAddress : hl.Bytes = null;
 	public var offset : Int = 0;
@@ -69,72 +69,110 @@ class ScratchHeapArray {
 	}
 }
 
-class BumpAllocator {
-	var resource : GpuResource;
-	var capacity : Int;
-	var cpuAddress : hl.Bytes;
-	var heap : HeapProperties;
+class BufferAllocatorPage {
+	public var capacity(default, null) : Int;
 	var offset : Int = 0;
-	var next : BumpAllocator;
+	var resource : GpuResource;
+	var cpuAddress : hl.Bytes;
 
-	public function new( size : Int ) {
-		this.capacity = size;
-		heap = new HeapProperties();
-		var desc = new ResourceDesc();
-		var flags = new haxe.EnumFlags();
-		desc.dimension = BUFFER;
-		desc.width = capacity;
-		desc.height = 1;
-		desc.depthOrArraySize = 1;
-		desc.mipLevels = 1;
-		desc.sampleDesc.count = 1;
-		desc.layout = ROW_MAJOR;
-		heap.type = UPLOAD;
+	public function new( heap : HeapProperties, flags : haxe.EnumFlags<HeapFlag>, desc : ResourceDesc ) {
+		this.capacity = desc.width.low;
 		resource = Driver.createCommittedResource(heap, flags, desc, GENERIC_READ, null);
 		cpuAddress = resource.map(0, null);
 	}
 
-	public function reset() {
-		offset = 0;
-		if ( next != null) {
-			next.release();
-			next = null;
-		}
-	}
-
-	public function release() {
-		resource.release();
-		resource = null;
-		offset = 0;
-		capacity = 0;
-		heap = null;
-		cpuAddress = null;
-		if ( next != null) {
-			next.release();
-			next = null;
-		}
-	}
-
-	public inline function alloc( size : Int, alignment = 256, allocation : BumpAllocation ) {
-		var sz = size & ~(alignment - 1);
-		if( sz != size ) sz += alignment;
-		return tryAlloc(sz, alignment, allocation);
-	}
-
-	function tryAlloc( size, alignment = 256, allocation : BumpAllocation ) {
+	public function tryAlloc( size, alignment = 256, allocation : BufferAllocation ) : Bool {
 		var offsetAligned = offset & ~(alignment - 1);
 		if( offsetAligned != offset ) offsetAligned += alignment;
 		var newOffset = size + offsetAligned;
-		if ( newOffset > capacity ) {
-			if ( next == null )
-				next = new BumpAllocator(hxd.Math.imax(Std.int(capacity*3/2), size));
-			return next.tryAlloc(size, alignment, allocation);
-		}
+		if ( newOffset > capacity )
+			return false;
 		allocation.byteSize = size;
 		allocation.offset = offsetAligned;
 		allocation.cpuAddress = cpuAddress.offset(offsetAligned);
 		allocation.resource = resource;
 		offset = newOffset;
+		return true;
+	}
+
+	public function dispose() {
+		resource.release();
+		resource = null;
+		cpuAddress = null;
+	}
+}
+
+class BufferAllocator {
+	var pages : Array<BufferAllocatorPage>;
+
+	var heap : HeapProperties;
+	var desc : ResourceDesc;
+	var flags : haxe.EnumFlags<HeapFlag>;
+
+	inline static final HISTORY_SIZE : Int = 30;
+	var baseSize : Int;
+	var usedSize : Int;
+	var usedSizeHistory = new hl.NativeArray<Int>(HISTORY_SIZE);
+	var historyCursor = 0;
+
+	public function new( size : Int ) {
+		baseSize = size;
+		heap = new HeapProperties();
+		heap.type = UPLOAD;
+		desc = new ResourceDesc();
+		desc.dimension = BUFFER;
+		desc.width = size;
+		desc.height = 1;
+		desc.depthOrArraySize = 1;
+		desc.mipLevels = 1;
+		desc.sampleDesc.count = 1;
+		desc.layout = ROW_MAJOR;
+		flags = new haxe.EnumFlags();
+		pages = [new BufferAllocatorPage(heap, flags, desc)];
+	}
+
+	public function reset() {
+		var p = pages[0];
+		for ( i in 1...pages.length )
+			pages[i].dispose();
+		pages.resize(1);
+
+		usedSizeHistory[historyCursor++] = usedSize;
+		historyCursor = historyCursor % HISTORY_SIZE;
+		var maxSize = usedSizeHistory[0];
+		for ( i in 1...HISTORY_SIZE )
+			maxSize = hxd.Math.imax(maxSize, usedSizeHistory[i]);
+
+		var curCapacity = p.capacity;
+		if ( curCapacity < usedSize || curCapacity > maxSize ) {
+			p.dispose();
+			desc.width = hxd.Math.imax(baseSize, usedSize);
+			pages[0] = new BufferAllocatorPage(heap, flags, desc);
+		}
+
+		usedSize = 0;
+	}
+
+	public function dispose() {
+		for ( p in pages )
+			p.dispose();
+	}
+
+	public function alloc( size : Int, alignment = 256, allocation : BufferAllocation ) {
+		var sz = size & ~(alignment - 1);
+		if( sz != size ) sz += alignment;
+		usedSize += sz;
+
+		for ( p in pages ) {
+			if ( p.tryAlloc(sz, alignment, allocation ) )
+				return allocation;
+		}
+
+		var lastCapacity = pages[pages.length - 1].capacity;
+		desc.width = hxd.Math.imax(Std.int(lastCapacity*3/2), sz);
+		var p = new BufferAllocatorPage(heap, flags, desc);
+		p.tryAlloc(sz, alignment, allocation);
+		pages.push(p);
 		return allocation;
 	}
 }
@@ -160,7 +198,7 @@ class DxFrame {
 	public var queryCurrentHeap : Int;
 	public var queryHeapOffset : Int;
 	public var queryBuffer : GpuResource;
-	public var bumpAllocator : BumpAllocator;
+	public var bufferAllocator : BufferAllocator;
 	public function new() {
 	}
 }
@@ -229,7 +267,7 @@ class CompiledShader {
 	@:packed public var uavDesc(default,null) : UAVBufferViewDesc;
 	@:packed public var wtexDesc(default,null) : UAVTextureViewDesc;
 	@:packed public var subResourceData(default, null) : SubResourceData;
-	@:packed public var bumpAllocation(default,null) : BumpAllocation;
+	@:packed public var bufferAllocation(default,null) : BufferAllocation;
 	@:packed public var srcTextureLocation(default, null) : TextureCopyLocation;
 	@:packed public var dstTextureLocation(default, null) : TextureCopyLocation;
 
@@ -472,7 +510,7 @@ class DX12Driver extends h3d.impl.Driver {
 	public static var INITIAL_RT_COUNT = 1024;
 	public static var INITIAL_SRV_COUNT = 1024;
 	public static var INITIAL_SAMPLER_COUNT = 1024;
-	public static var INITIAL_BUMP_ALLOCATOR_SIZE = 2 * 1024 * 1024;
+	public static var INITIAL_BUFFER_ALLOCATOR_SIZE = 2 * 1024 * 1024;
 	public static var BUFFER_COUNT = #if console 3 #else 2 #end;
 	public static var DEVICE_NAME = null;
 	public static var DEBUG = false; // requires dxil.dll when set to true
@@ -508,9 +546,9 @@ class DX12Driver extends h3d.impl.Driver {
 			f.commandList.close();
 			f.srvHeapCache = new ScratchHeapArray(CBV_SRV_UAV, INITIAL_SRV_COUNT);
 			f.samplerHeapCache = new ScratchHeapArray(SAMPLER, INITIAL_SAMPLER_COUNT);
-			if ( f.bumpAllocator != null )
-				f.bumpAllocator.release();
-			f.bumpAllocator = new BumpAllocator(INITIAL_BUMP_ALLOCATOR_SIZE);
+			if ( f.bufferAllocator != null )
+				f.bufferAllocator.dispose();
+			f.bufferAllocator = new BufferAllocator(INITIAL_BUFFER_ALLOCATOR_SIZE);
 			frames.push(f);
 		}
 		fence = new Fence(0, NONE);
@@ -561,7 +599,7 @@ class DX12Driver extends h3d.impl.Driver {
 		frame = frames[currentFrame];
 		frame.allocator.reset();
 		frame.commandList.reset(frame.allocator, null);
-		frame.bumpAllocator.reset();
+		frame.bufferAllocator.reset();
 		while( frame.toRelease.length > 0 )
 			frame.toRelease.pop().release();
 		while( frame.tmpBufToRelease.length > 0 ) {
@@ -1866,7 +1904,7 @@ class DX12Driver extends h3d.impl.Driver {
 		#else
 		var textureAlignment = 512;
 		#end
-		var allocation = frame.bumpAllocator.alloc(tmpSize, textureAlignment, tmp.bumpAllocation);
+		var allocation = frame.bufferAllocator.alloc(tmpSize, textureAlignment, tmp.bufferAllocation);
 
 		transition(t.t, COPY_DEST);
 		flushTransitions();
@@ -1947,8 +1985,8 @@ class DX12Driver extends h3d.impl.Driver {
 		return sz;
  	}
 
-	function allocDynamicBuffer( data : hl.Bytes, dataSize : Int ) : BumpAllocation {
-		var allocation = frame.bumpAllocator.alloc(dataSize, tmp.bumpAllocation);
+	function allocDynamicBuffer( data : hl.Bytes, dataSize : Int ) : BufferAllocation {
+		var allocation = frame.bufferAllocator.alloc(dataSize, tmp.bufferAllocation);
 		allocation.cpuAddress.blit(0, data, 0, dataSize);
 		return allocation;
 	}
