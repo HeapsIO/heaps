@@ -92,8 +92,27 @@ class Style extends domkit.CssStyle {
 			rebuildRec(o);
 	}
 
+	static function interpInit() {
+		if( WATCH_INIT_DONE ) return;
+		WATCH_INIT_DONE = true;
+		var waitList = [];
+		function flushWait() {
+			var wl = waitList;
+			waitList = [];
+			if( ON_WATCH_CALLB != null )
+				ON_WATCH_CALLB(wl);
+		}
+		var ret = domkit.Interp.init(function(cl) {
+			if( ON_WATCH_CALLB != null ) {
+				if( waitList.length == 0 ) haxe.Timer.delay(flushWait,0);
+				waitList.push(cl);
+			}
+		});
+		if( !ret ) throw "No component found (missing hscript.LiveClass.init() macro)";
+	}
+
 	static var WATCH_INIT_DONE = false;
-	static var ON_WATCH_CALLB = null;
+	static var ON_WATCH_CALLB : Array<Class<Dynamic>> -> Void = null;
 	#end
 
 	public function stopWatchInterpComponents() {
@@ -103,41 +122,22 @@ class Style extends domkit.CssStyle {
 		#end
 	}
 
-	public function watchInterpComponents( apiFile, srcPaths : Array<String>, ?customRebuild ) {
+	public function watchInterpComponents( ?customRebuild ) {
 		#if hscript
 		if( customRebuild == null ) customRebuild = defaultInterpRebuild;
-		ON_WATCH_CALLB = onRebuild.bind(customRebuild);
+		ON_WATCH_CALLB = function(classes) {
+			errors = [];
+			for( cl in classes )
+				onRebuild(customRebuild,cl);
+			refreshErrors();
+		};
 		domkit.Interp.onError = function(msg) {
 			#if sys Sys.println(msg); #end
 			if( errors.indexOf(msg) < 0 )
 				errors.push(msg);
 			refreshErrors();
 		};
-		if( WATCH_INIT_DONE ) return;
-		WATCH_INIT_DONE = true;
-		domkit.Checker.init(apiFile);
-		var waitList = [];
-		function flushWait() {
-			var wl = waitList;
-			errors = [];
-			waitList = [];
-			for( cl in wl )
-				if( ON_WATCH_CALLB != null )
-					ON_WATCH_CALLB(cl);
-			refreshErrors();
-		}
-		var ret = domkit.Interp.init(srcPaths, function(path, callb) {
-			#if hl
-			new hl.uv.Fs(null, path, function(ev) {
-				var cl = callb();
-				if( cl != null && ON_WATCH_CALLB != null ) {
-					if( waitList.length == 0 ) haxe.Timer.delay(flushWait,0);
-					waitList.push(cl);
-				}
-			});
-			#end
-		});
-		if( !ret ) throw "No component found (invalid src path)";
+		interpInit();
 		#end
 	}
 
