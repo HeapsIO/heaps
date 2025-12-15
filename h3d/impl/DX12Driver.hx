@@ -251,6 +251,7 @@ class CompiledShader {
 	public var resourcesToTransition : hl.NativeArray<ResourceData>;
 	public var maxBarriers : Int;
 	public var barrierCount : Int;
+	public var needUAVBarrier : Bool = false;
 	@:packed public var heap(default,null) : HeapProperties;
 	@:packed public var barrier(default,null) : ResourceBarrier;
 	@:packed public var clearColor(default,null) : ClearColor;
@@ -505,6 +506,7 @@ class DX12Driver extends h3d.impl.Driver {
 	var currentPipelineState : PipelineState;
 	var lastVertexGlobalBind : Int = -1;
 	var lastFragmentGlobalBind : Int = -1;
+	var needUAVBarrier : Bool = false;
 	var useDepthClamp : Bool = false;
 
 	public static var INITIAL_RT_COUNT = 1024;
@@ -802,7 +804,8 @@ class DX12Driver extends h3d.impl.Driver {
 			return;
 		}
 
-		if( tmp.maxBarriers == tmp.barrierCount) {
+		// Need one barrier for UAV
+		if( tmp.maxBarriers - 1 == tmp.barrierCount) {
 			flushTransitions();
 			tmp.maxBarriers += 100;
 			tmp.barriers = hl.CArray.alloc(ResourceBarrier, tmp.maxBarriers);
@@ -819,8 +822,8 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	function flushTransitions() {
+		var totalBarrier = 0;
 		if (tmp.barrierCount > 0) {
-			var totalBarrier = 0;
 			for (i in 0...tmp.barrierCount) {
 				var res = tmp.resourcesToTransition[i];
 
@@ -828,22 +831,30 @@ class DX12Driver extends h3d.impl.Driver {
 				if (res.res == null)
 					continue;
 
-				var b = tmp.barriers[totalBarrier];
+				var b = tmp.barriers[totalBarrier++];
 				b.resource = res.res;
+				@:privateAccess b.type = TRANSITION;
 				b.stateBefore = res.state;
 				b.stateAfter = res.targetState;
 				res.state = res.targetState;
-				totalBarrier++;
 			}
-			if (totalBarrier > 0)
-				#if (hldx >= version("1.15.0"))
-				frame.commandList.resourceBarriers(tmp.barriers, totalBarrier);
-				#else
-				for (i in 0...totalBarrier)
-					frame.commandList.resourceBarrier(tmp.barriers[i]);
-				#end
 			tmp.barrierCount = 0;
 		}
+
+		if ( needUAVBarrier ) {
+			var b = tmp.barriers[totalBarrier++];
+			b.resource = null;
+			@:privateAccess b.type = UAV;
+			needUAVBarrier = false;
+		}
+
+		if (totalBarrier > 0)
+			#if (hldx >= version("1.15.0"))
+			frame.commandList.resourceBarriers(tmp.barriers, totalBarrier);
+			#else
+			for (i in 0...totalBarrier)
+				frame.commandList.resourceBarrier(tmp.barriers[i]);
+			#end
 	}
 
 	function getDepthViewFromTexture( tex : h3d.mat.Texture, readOnly : Bool ) {
@@ -2759,10 +2770,7 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	override function memoryBarrier() {
-		var barrier = tmp.barrier;
-		barrier.resource = null;
-		@:privateAccess barrier.type = UAV;
-		frame.commandList.resourceBarrier(barrier);
+		needUAVBarrier = true;
 	}
 
 }
