@@ -977,7 +977,7 @@ class FlowComp extends ObjectComp implements domkit.Component.ComponentDecl<h2d.
 	@:p var backgroundAlpha : Float = 1;
 	@:p(auto) var backgroundSmooth : Null<Bool>;
 	@:p var backgroundRepeat : Bool;
-	@:p var debug : Bool;
+	@:p var debug : Null<Bool>;
 	@:p var layout : h2d.Flow.FlowLayout;
 	@:p var vertical : Bool;
 	@:p var horizontal : Bool;
