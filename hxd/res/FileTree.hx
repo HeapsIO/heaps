@@ -89,6 +89,9 @@ class FileTree {
 		return ident;
 	}
 
+	public dynamic static function ignoreDirectory(dirname: String) {
+		return dirname.charCodeAt(0) == ".".code || dirname.charCodeAt(0) == "_".code;
+	}
 
 	function scanRec( tree : FileTreeData, basePath : String ) {
 		var dir = basePath + "/" + tree.relPath;
@@ -101,7 +104,7 @@ class FileTree {
 				if( Config.ignoredDirs.exists(f) )
 					continue;
 
-				if( f.charCodeAt(0) == ".".code || f.charCodeAt(0) == "_".code )
+				if( ignoreDirectory(f) )
 					continue;
 				var d = tree.dirs.get(f);
 				if( d == null ) {
