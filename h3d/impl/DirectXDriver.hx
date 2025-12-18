@@ -1358,6 +1358,7 @@ class DirectXDriver extends h3d.impl.Driver {
 						desc.minLod = 0;
 						desc.maxLod = 1e30;
 						desc.mipLodBias = t.lodBias;
+						desc.maxAnisotropy = t.anisotropicMaxLevel;
 						ss = Driver.createSamplerState(desc);
 						samplerStates.set(samplerBits, ss);
 					}
@@ -1515,10 +1516,10 @@ class DirectXDriver extends h3d.impl.Driver {
 	];
 
 	static var FILTER : Array<Array<Filter>> = [
-		[MinMagMipPoint,MinMagMipLinear],
-		[MinMagMipPoint,MinMagLinearMipPoint],
-		[MinMagPointMipLinear, MinMagMipLinear],
-		// Anisotropic , Comparison, Minimum, Maximum
+		[MinMagMipPoint,MinMagMipLinear,Anisotropic,Anisotropic],
+		[MinMagMipPoint,MinMagLinearMipPoint,Anisotropic,Anisotropic],
+		[MinMagPointMipLinear, MinMagMipLinear,Anisotropic,Anisotropic],
+		// Comparison, Minimum, Maximum
 	];
 
 	static var WRAP : Array<AddressMode> = [

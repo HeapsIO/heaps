@@ -2080,12 +2080,14 @@ class DX12Driver extends h3d.impl.Driver {
 			case [Nearest, Linear]: MIN_MAG_POINT_MIP_LINEAR;
 			case [Linear, None|Nearest]: MIN_MAG_LINEAR_MIP_POINT;
 			case [Linear, Linear]: MIN_MAG_MIP_LINEAR;
+			case [AnisotropicNearest|AnisotropicLinear,_]: ANISOTROPIC;
 		}
 		desc.addressU = desc.addressV = desc.addressW = switch( t.wrap ) {
 			case Clamp: CLAMP;
 			case Repeat: WRAP;
 			case Mirror: MIRROR;
 		}
+		desc.maxAnisotropy = t.anisotropicMaxLevel;
 		desc.mipLODBias = t.lodBias;
 	}
 

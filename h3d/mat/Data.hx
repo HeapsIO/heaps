@@ -57,6 +57,8 @@ enum MipMap {
 enum Filter {
 	Nearest;
 	Linear;
+	AnisotropicNearest;
+	AnisotropicLinear;
 }
 
 enum Wrap {

@@ -42,8 +42,10 @@ class Texture {
 	public var layerCount(get, never) : Int;
 	@:bits(bits, 4) public var startingMip : Int = 0;
 	@:bits(bits, 16) var packedLodBias : Int;
+	@:bits(bits, 4) var packedAnisotropicMaxLevel : Int = 15;
 	public var lodBias(get, set) : Float;
 	public var mipLevels(get, never) : Int;
+	public var anisotropicMaxLevel(get, set) : Int;
 	var customMipLevels : Int;
 
 	/**
@@ -98,6 +100,15 @@ class Texture {
 		var iPart = hxd.Math.floor(v);
 		var fPart = v % 1.0;
 		packedLodBias = iPart << (16 - 4) | hxd.Math.floor(fPart * (1 << (16 - 4)));
+		return v;
+	}
+
+	function get_anisotropicMaxLevel() : Int {
+		return packedAnisotropicMaxLevel + 1;
+	}
+
+	function set_anisotropicMaxLevel(v:Int) {
+		packedAnisotropicMaxLevel = hxd.Math.iclamp(v - 1, 0, 15);
 		return v;
 	}
 
