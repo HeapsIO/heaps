@@ -353,6 +353,10 @@ class Splitter {
 				checkSyntaxExpr(arg.e);
 				checkExpr(arg.e);
 			}
+		case TCall({ e : TGlobal(ResolveSampler)}, [handle, { e : TVar(v)}]):
+			var inf = get(v);
+			inf.write++;
+			checkExpr(handle);
 		default:
 			e.iter(checkExpr);
 		}

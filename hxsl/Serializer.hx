@@ -106,7 +106,7 @@ class Serializer {
 			out.addByte((dim.getIndex() << 1) | (arr ? 1 : 0));
 		case TRWTexture(dim, arr, chans):
 			out.addByte((dim.getIndex() << 3) | (arr ? 1 : 0) | ((chans - 1) << 1));
-		case TVoid, TInt, TBool, TFloat, TString, TMat2, TMat3, TMat4, TMat3x4:
+		case TVoid, TInt, TBool, TFloat, TString, TMat2, TMat3, TMat4, TMat3x4, TTextureHandle:
 		case __TUnused:
 			throw "assert";
 		}
@@ -173,6 +173,8 @@ class Serializer {
 			TBuffer(t, v == null ? SConst(readVarInt()) : SVar(v), kind);
 		case 17:
 			TChannel(input.readByte());
+		case 18:
+			TTextureHandle;
 		default:
 			throw "assert";
 		}
