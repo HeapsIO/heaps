@@ -465,6 +465,11 @@ class TextInput extends Text {
 		if( focus ) this.focus();
 	}
 
+	public function clearUndo() {
+		undo = [];
+		redo = [];
+	}
+
 	function beforeChange() {
 		var t = haxe.Timer.stamp();
 		if( t - lastChange < 1 ) {
