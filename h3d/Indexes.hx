@@ -28,4 +28,8 @@ abstract Indexes(Buffer) to Buffer {
 		return idx;
 	}
 
+	public static function ofBuffer( b : Buffer ) : Indexes {
+		return cast b;
+	}
+
 }
