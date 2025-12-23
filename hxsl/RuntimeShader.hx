@@ -107,4 +107,14 @@ class RuntimeShader {
 		return mode == Compute ? [compute] : [vertex, fragment];
 	}
 
+	public function getInputFormat() {
+		var format : Array<hxd.BufferFormat.BufferInput> = [];
+		for( v in vertex.data.vars )
+			switch( v.kind ) {
+			case Input: format.push({ name : v.name, type : hxd.BufferFormat.InputFormat.fromHXSL(v.type) });
+			default:
+			}
+		return hxd.BufferFormat.make(format);
+	}
+
 }
