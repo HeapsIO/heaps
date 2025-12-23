@@ -52,6 +52,11 @@ class TextInput extends Text {
 	public var backgroundColor(get, set) : Null<Int>;
 
 	/**
+		If set, insert these characters when pressing Tab
+	**/
+	public var insertTabs : Null<String>;
+
+	/**
 		When disabled, showSoftwareKeyboard will not be called.
 	**/
 	public var useSoftwareKeyboard : Bool = true;
@@ -287,27 +292,16 @@ class TextInput extends Text {
 		case K.V if (K.isDown(K.CTRL)):
 			if( !canEdit ) return;
 			var t = hxd.System.getClipboardText();
-			if( t != null && t.length > 0 ) {
-				beforeChange();
-				if( selectionRange != null )
-					cutSelection();
-				text = text.substr(0, cursorIndex) + t + text.substr(cursorIndex);
-				cursorIndex += t.length;
-				onChange();
-			}
+			if( t != null && t.length > 0 )
+				inputText(t);
+		case K.TAB if( insertTabs != null && canEdit ):
+			inputText(insertTabs);
 		default:
 			if( e.kind == EKeyDown )
 				return;
 			if( e.charCode != 0 && canEdit ) {
-
 				if( !font.hasChar(e.charCode) ) return; // don't allow chars not supported by font
-
-				beforeChange();
-				if( selectionRange != null )
-					cutSelection();
-				text = text.substr(0, cursorIndex) + String.fromCharCode(e.charCode) + text.substr(cursorIndex);
-				cursorIndex++;
-				onChange();
+				inputText(String.fromCharCode(e.charCode));
 			}
 		}
 
@@ -336,6 +330,15 @@ class TextInput extends Text {
 		} else
 			selectionRange = null;
 
+	}
+
+	function inputText( t : String ) {
+		beforeChange();
+		if( selectionRange != null )
+			cutSelection();
+		text = text.substr(0, cursorIndex) + t + text.substr(cursorIndex);
+		cursorIndex += t.length;
+		onChange();
 	}
 
 	function cutSelection() {
