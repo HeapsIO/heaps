@@ -247,13 +247,8 @@ class TextInput extends Text {
 				cursorIndex = -1;
 				interactive.blur();
 				return;
-			} else {
-				beforeChange();
-				if( selectionRange != null )
-					cutSelection();
-				text = text.substr(0, cursorIndex) + '\n' + text.substr(cursorIndex);
-				cursorIndex++;
-				onChange();
+			} else if( canEdit ) {
+				inputText("\n");
 			}
 		case K.Z if( K.isDown(K.CTRL) ):
 			if( undo.length > 0 && canEdit ) {
