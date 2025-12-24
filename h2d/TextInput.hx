@@ -288,7 +288,7 @@ class TextInput extends Text {
 			if( !canEdit ) return;
 			var t = hxd.System.getClipboardText();
 			if( t != null && t.length > 0 )
-				inputText(t);
+				inputText(t.split("\r\n").join("\n").split("\r").join("\n"));
 		case K.TAB if( insertTabs != null && canEdit ):
 			inputText(insertTabs);
 		default:
