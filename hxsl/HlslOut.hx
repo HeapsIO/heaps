@@ -191,6 +191,8 @@ class HlslOut {
 			addArraySize(size);
 		case TChannel(n):
 			add("channel" + n);
+		case TTextureHandle:
+			add("uint2");
 		}
 	}
 
@@ -415,8 +417,16 @@ class HlslOut {
 			decl("int3 ivec3( int v ) { return int3(v,v,v); }");
 		case IVec4 if( args.length == 1 && args[0].t.match(TInt | TFloat)):
 			decl("int4 ivec4( int v ) { return int4(v,v,v,v); }");
+		case ResolveSampler:
+			var tt = args[1].t;
+			var tstr = getTexType(tt);
+			decl('void resolveSampler( uint2 id, $tstr tex, SamplerState sampler ) { tex = ResourceDescriptorHeap[id.x]; sampler = SamplerDescriptorHeap[id.y]; }');
 		default:
 		}
+	}
+
+	function getSamplerName( v : TVar ) : String {
+		return "sampler_" + v.name;
 	}
 
 	function addExpr( e : TExpr, tabs : String ) {
@@ -456,6 +466,8 @@ class HlslOut {
 			default: args[0];
 			}
 			switch( expr.e ) {
+			case TVar(v) if (v.kind == Local ):
+				add(getSamplerName(v));
 			case TVar(v):
 				var samplers = samplers.get(v.id);
 				if( samplers == null ) throw "assert";
@@ -501,6 +513,16 @@ class HlslOut {
 			add(", ");
 			addValue(args[2], tabs);
 			add("))");
+		case TCall({ e : TGlobal( g = ResolveSampler) }, args = [handle, tex = { e : TVar(v)}]):
+			declGlobal(g, args);
+			add("resolveSampler");
+			add("(");
+			addValue(handle, tabs);
+			add(", ");
+			addValue(tex, tabs);
+			add(", ");
+			add(getSamplerName(v));
+			add(")");
 		case TCall(e = { e : TGlobal(g) }, args):
 			declGlobal(g, args);
 			switch( [g,args] ) {
@@ -1025,6 +1047,10 @@ class HlslOut {
 			add(STATIC);
 			addVar(v);
 			add(";\n");
+			if ( v.type.isTexture() ) {
+				add(STATIC);
+				add('SamplerState ${getSamplerName(v)};\n');
+			}
 		}
 		add("\n");
 

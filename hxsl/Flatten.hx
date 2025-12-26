@@ -319,6 +319,9 @@ class Flatten {
 			case TVec(size,VInt):
 				e.t = TVec(size,VFloat);
 				e = { e : TCall({ e : TGlobal([IVec2,IVec3,IVec4][size-2]), t : TFun([]), p : pos }, [e]), t : t, p : pos };
+			case TTextureHandle:
+				e.t = TVec(2, VFloat);
+				e = floatBitsToUint(e);
 			default:
 			}
 			return e;
@@ -526,6 +529,7 @@ class Flatten {
 			for( v in vl )
 				size += varSize(v.type, t);
 			size;
+		case TTextureHandle: 2;
 		default:
 			throw v.toString() + " size unknown for type " + t;
 		}

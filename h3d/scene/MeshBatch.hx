@@ -566,6 +566,11 @@ class MeshBatch extends MultiMaterial {
 				case TMat4:
 					var m : h3d.Matrix = curShader.getParamValue(p.index);
 					bufLoader.loadMatrix(m);
+				case TTextureHandle:
+					var v : h3d.mat.TextureHandle = curShader.getParamValue(p.index);
+					batch.textureHandles.push(v);
+					bufLoader.loadInt(v.handle.low);
+					bufLoader.loadInt(v.handle.high);
 				default:
 					throw "Unsupported batch type "+p.type;
 				}
@@ -616,6 +621,7 @@ class MeshBatch extends MultiMaterial {
 			p = p.next;
 		}
 		ctx.uploadParams();
+		ctx.selectTextureHandles(p.textureHandles);
 		var prev = ctx.drawPass.index;
 		ctx.drawPass.index >>= 16;
 		super.draw(ctx);
@@ -714,6 +720,7 @@ class BatchData {
 	public var indirectCallBuffers : Array<h3d.impl.InstanceBuffer>;
 	public var buffers : Array<h3d.Buffer> = [];
 	public var bufferFormat : hxd.BufferFormat;
+	public var textureHandles : Array<h3d.mat.TextureHandle> = [];
 	public var data : hxd.FloatBuffer;
 	public var params : hxsl.RuntimeShader.AllocParam;
 	public var shader : hxsl.BatchShader;

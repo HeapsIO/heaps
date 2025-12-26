@@ -128,6 +128,7 @@ class MacroParser {
 			case "Channel2": return TChannel(2);
 			case "Channel3": return TChannel(3);
 			case "Channel4": return TChannel(4);
+			case "TextureHandle": return TTextureHandle;
 			case _ if( StringTools.startsWith(name,"Sampler") ):
 				var t = getTexDim(name.substr(7), (d,arr) -> TSampler(d,arr));
 				if( t != null ) return t;

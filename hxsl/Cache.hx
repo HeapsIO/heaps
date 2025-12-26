@@ -456,6 +456,8 @@ class Cache {
 				var count = 0;
 				for( a in alloc ) {
 					if( a.v == null ) continue; // padding
+					if ( a.v.type.match(TTextureHandle) )
+						c.paramsHandleCount++;
 					var p = params.get(a.v.id);
 					if( p == null ) {
 						var ap = new AllocParam(a.v.name, a.pos, -1, -1, a.v.type);
@@ -491,7 +493,14 @@ class Cache {
 				default: throw "assert";
 				}
 			case Global:
-				var out = [for( a in alloc ) if( a.v != null ) new AllocGlobal(a.pos, getPath(a.v), a.v.type)];
+				var out = [
+					for( a in alloc )
+						if( a.v != null ) {
+							if ( a.v.type.match(TTextureHandle) )
+								c.globalsHandleCount++;
+							new AllocGlobal(a.pos, getPath(a.v), a.v.type);
+						}
+				];
 				for( i in 0...out.length - 1 )
 					out[i].next = out[i + 1];
 				switch( g.type ) {
@@ -557,6 +566,17 @@ class Cache {
 		if( c.params == null )
 			c.paramsSize = 0;
 		c.data = data;
+		c.hasBindless = c.globalsHandleCount > 0 || c.paramsHandleCount > 0;
+		if ( !c.hasBindless ) {
+			for ( v in c.data.vars ) {
+				switch ( v.type ) {
+				case TTextureHandle:
+					c.hasBindless = true;
+					break;
+				default:
+				}
+			}
+		}
 		return c;
 	}
 
@@ -705,6 +725,7 @@ class Cache {
 				case TMat4: 4 * 4;
 				case TVec(n,VFloat): n;
 				case TFloat, TInt: 1;
+				case TTextureHandle: 2;
 				default: throw "Unsupported batch var type "+p.type;
 			}
 			var index;
@@ -813,6 +834,10 @@ class Cache {
 			return { e : TCall({ e : TGlobal(FloatBitsToInt), t : TFun([]), p : e.p }, [e]), t : TInt, p : e.p };
 		}
 
+		inline function floatBitsToUint( e : TExpr ) {
+			return { e : TCall({ e : TGlobal(FloatBitsToUint), t : TFun([]), p : e.p }, [e]), t : TInt, p : e.p };
+		}
+
 		function extractVar( vreal, ebuffer, v : AllocParam ) {
 			var index = (v.pos>>2);
 			var extract = switch( v.type ) {
@@ -834,6 +859,13 @@ class Cache {
 				default: [Z,W];
 				}
 				{ p : pos, t : v.type, e : TSwiz(readOffset(ebuffer, index),swiz) };
+			case TTextureHandle:
+				var swiz = switch( v.pos & 3 ) {
+				case 0: [X,Y];
+				case 1: [Y,Z];
+				default: [Z,W];
+				}
+				floatBitsToUint({ p : pos, t : v.type, e : TSwiz(readOffset(ebuffer, index),swiz) });
 			case TFloat:
 				{ p : pos, t : v.type, e : TSwiz(readOffset(ebuffer, index),swiz[v.pos&3]) };
 			case TInt:

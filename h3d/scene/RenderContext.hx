@@ -255,6 +255,10 @@ class RenderContext extends h3d.impl.RenderContext {
 		return useReverseDepth ? 0 : 1;
 	}
 
+	public function selectTextureHandles(handles : Array<h3d.mat.TextureHandle>) {
+		engine.driver.selectTextureHandles(handles);
+	}
+
 	public function uploadParams() {
 		fillParams(shaderBuffers, drawPass.shader, drawPass.shaders);
 		engine.uploadInstanceShaderBuffers(shaderBuffers);

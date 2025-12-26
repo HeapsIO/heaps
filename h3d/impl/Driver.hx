@@ -183,6 +183,9 @@ class Driver {
 	public function selectMaterial( pass : h3d.mat.Pass ) {
 	}
 
+	public function selectTextureHandles( handles : Array<h3d.mat.TextureHandle> ) {
+	}
+
 	public function uploadShaderBuffers( buffers : h3d.shader.Buffers, which : h3d.shader.Buffers.BufferKind ) {
 	}
 
@@ -320,4 +323,9 @@ class Driver {
 		throw "Compute shaders are not implemented on this platform";
 	}
 
+	// --- Bindless
+
+	public function getTextureHandle( t : h3d.mat.Texture ) : h3d.mat.TextureHandle {
+		throw "Bindless is not implemented on this platform";
+	}
 }
