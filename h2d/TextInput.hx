@@ -139,10 +139,8 @@ class TextInput extends Text {
 				showSoftwareKeyboard(this);
 		}
 		interactive.onFocusLost = function(e) {
-			cursorIndex = -1;
-			selectionRange = null;
-			hideSoftwareKeyboard(this);
 			onFocusLost(e);
+			if( !e.cancel ) onBlur();
 		};
 
 		interactive.onClick = function(e) {
@@ -729,6 +727,17 @@ class TextInput extends Text {
 			cursorIndex = 0;
 			if( text != "" ) selectionRange = { start : 0, length : text.length };
 		}
+	}
+
+	function onBlur() {
+		cursorIndex = -1;
+		selectionRange = null;
+		hideSoftwareKeyboard(this);
+	}
+
+	public function blur() {
+		onBlur();
+		interactive.blur();
 	}
 
 	/**
