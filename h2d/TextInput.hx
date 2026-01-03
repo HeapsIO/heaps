@@ -343,15 +343,22 @@ class TextInput extends Text {
 		return true;
 	}
 
+	/**
+		This function is used to code the behavior of Ctrl-Left/Right word skipping.
+		By default it uses charset.isSpace but can be customized.
+	**/
+	public dynamic function isWordLimit( pos : Int ) {
+		return font.charset.isSpace(StringTools.fastCodeAt(text, pos));
+	}
+
 	function getWordEnd() {
 		var len = text.length;
 		if (cursorIndex >= len) {
 			return cursorIndex;
 		}
-		var charset = hxd.Charset.getDefault();
 		var ret = cursorIndex;
-		while (ret < len && charset.isSpace(StringTools.fastCodeAt(text, ret))) ret++;
-		while (ret < len && !charset.isSpace(StringTools.fastCodeAt(text, ret))) ret++;
+		while (ret < len && isWordLimit(ret)) ret++;
+		while (ret < len && !isWordLimit(ret)) ret++;
 		return ret;
 	}
 
@@ -359,10 +366,9 @@ class TextInput extends Text {
 		if (cursorIndex <= 0) {
 			return cursorIndex;
 		}
-		var charset = hxd.Charset.getDefault();
 		var ret = cursorIndex;
-		while (ret > 0 && charset.isSpace(StringTools.fastCodeAt(text, ret - 1))) ret--;
-		while (ret > 0 && !charset.isSpace(StringTools.fastCodeAt(text, ret - 1))) ret--;
+		while (ret > 0 && isWordLimit(ret-1)) ret--;
+		while (ret > 0 && !isWordLimit(ret-1)) ret--;
 		return ret;
 	}
 
