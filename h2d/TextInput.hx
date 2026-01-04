@@ -369,6 +369,21 @@ class TextInput extends Text {
 		return cursor;
 	}
 
+	/**
+		Convert a text line number into a display line number.
+		First line is 0. See getTextPos() and getCursorPos().
+	**/
+	public function getCursorLine( line : Int ) {
+		var lines = text.split("\n"); // real newlines
+		var cursor = 0;
+		for( l in lines ) {
+			if( line == 0 ) return cursor;
+			cursor += splitRawText(l).split("\n").length;
+			line--;
+		}
+		return cursor;
+	}
+
 	function inputText( t : String ) {
 		beforeChange();
 		if( selectionRange != null )
@@ -526,7 +541,10 @@ class TextInput extends Text {
 		while( undo.length > maxHistorySize ) undo.shift();
 	}
 
-	function getTextLength() {
+	/**
+		The expanded text length, including inserted line breaks.
+	**/
+	public function getTextLength() {
 		getSplitLines();
 		return splitTextSize;
 	}
@@ -598,12 +616,16 @@ class TextInput extends Text {
 		Returns a String representing currently selected text area or `null` if no text is selected.
 	**/
 	public function getSelectedText() : String {
-		return selectionRange == null ? null : text.substr(selectionRange.start, selectionRange.length);
+		if( selectionRange == null )
+			return null;
+		var pos = getTextPos(selectionRange.start);
+		var end = getTextPos(selectionRange.start + selectionRange.length);
+		return text.substr(pos, end - pos);
 	}
 
 	override function set_text(t:String) {
 		super.set_text(t);
-		if( cursorIndex > t.length ) cursorIndex = t.length;
+		if( cursorIndex > getTextLength() ) cursorIndex = getTextLength();
 		return t;
 	}
 
