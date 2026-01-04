@@ -102,9 +102,11 @@ class TextInput extends Text {
 				}
 				cursorBlink = 0;
 				var startIndex = textPos(e.relX, e.relY);
-				cursorIndex = startIndex;
-				selectionRange = null;
-
+				if( cursorIndex != startIndex || selectionRange != null ) {
+					cursorIndex = startIndex;
+					selectionRange = null;
+					onCursorChange();
+				}
 				var pt = new h2d.col.Point();
 				var scene = getScene();
 				if( scene == null ) return; // was removed
@@ -121,6 +123,7 @@ class TextInput extends Text {
 						selectionRange = { start : startIndex, length : index - startIndex };
 					selectionSize = 0;
 					cursorIndex = index;
+					onCursorChange();
 					if( e.kind == ERelease || getScene() != scene )
 						scene.stopCapture();
 				});
@@ -200,24 +203,32 @@ class TextInput extends Text {
 			moveCursorVertically(getVisibleLines());
 		case K.LEFT if (K.isDown(K.CTRL)):
 			cursorIndex = getWordStart();
+			onCursorChange();
 		case K.LEFT:
-			if( cursorIndex > 0 )
+			if( cursorIndex > 0 ) {
 				cursorIndex--;
+				onCursorChange();
+			}
 		case K.RIGHT if (K.isDown(K.CTRL)):
 			cursorIndex = getWordEnd();
+			onCursorChange();
 		case K.RIGHT:
-			if( cursorIndex < getTextLength() )
+			if( cursorIndex < getTextLength() ) {
 				cursorIndex++;
+				onCursorChange();
+			}
 		case K.HOME:
-			if( multiline ) {
+			if( multiline && !K.isDown(K.CTRL)) {
 				var currentLine = getCurrentLine();
 				cursorIndex = currentLine.startIndex;
 			} else cursorIndex = 0;
+			onCursorChange();
 		case K.END:
 			if( multiline ) {
 				var currentLine = getCurrentLine();
 				cursorIndex = currentLine.startIndex + currentLine.value.length - 1;
 			} else cursorIndex = getTextLength();
+			onCursorChange();
 		case K.BACKSPACE, K.DELETE if( selectionRange != null ):
 			if( !canEdit ) return;
 			beforeChange();
@@ -270,6 +281,7 @@ class TextInput extends Text {
 				cursorIndex = getTextLength();
 				selectionRange = {start: 0, length: cursorIndex};
 				selectionSize = 0;
+				onCursorChange();
 			}
 			return;
 		case K.C if (K.isDown(K.CTRL)):
@@ -322,6 +334,7 @@ class TextInput extends Text {
 				selectionRange.length = -selectionRange.length;
 			}
 			selectionSize = 0;
+			onCursorChange();
 
 		} else
 			selectionRange = null;
@@ -455,11 +468,13 @@ class TextInput extends Text {
 		// We're moving down from the last line, move to the end of the line
 		if( destinationIndex == lines.length) {
 			cursorIndex = getTextLength();
+			onCursorChange();
 			return;
 		}
 		// We're moving up from the first line, snap to beginning
 		if( destinationIndex == -1 ) {
 			cursorIndex = 0;
+			onCursorChange();
 			return;
 		}
 		var current = lines[cursorLineIndex];
@@ -484,6 +499,7 @@ class TextInput extends Text {
 				cursorIndex = destination.startIndex + cI + 1;
 				if( xOffset - currOffset < newCurrOffset - xOffset )
 					cursorIndex--;
+				onCursorChange();
 				return;
 			}
 			currOffset = newCurrOffset;
@@ -494,6 +510,7 @@ class TextInput extends Text {
 		// we can't just assume this because the last line typically won't end with a newline.
 		if( destination.line.charAt(destination.line.length-1) == "\n")
 			cursorIndex--;
+		onCursorChange();
 	}
 
 	function setState(h:TextHistoryElement) {
@@ -808,7 +825,7 @@ class TextInput extends Text {
 		interactive.focus();
 		if( cursorIndex < 0 ) {
 			cursorIndex = 0;
-			if( text != "" ) selectionRange = { start : 0, length : getTextLength() };
+			if( text != "" && !multiline ) selectionRange = { start : 0, length : getTextLength() };
 		}
 	}
 
@@ -816,6 +833,9 @@ class TextInput extends Text {
 		cursorIndex = -1;
 		selectionRange = null;
 		hideSoftwareKeyboard(this);
+	}
+
+	function onCursorChange() {
 	}
 
 	public function blur() {
