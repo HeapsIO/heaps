@@ -918,6 +918,18 @@ class Flow extends Object {
 		return false;
 	}
 
+	public function scrollIntoView( elt : h2d.Object ) {
+		if( overflow == Scroll || overflow == Hidden ) {
+			var b = elt.getBounds(this);
+			if( b.y < 0 )
+				scrollPosY += b.y;
+			else if( b.yMax > calculatedHeight )
+				scrollPosY += b.yMax - calculatedHeight;
+			return true;
+		}
+		return false;
+	}
+
 	#if domkit
 	override function getChildRefPosition( first : Bool ) {
 		if( !first ) {
