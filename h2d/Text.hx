@@ -376,7 +376,7 @@ class Text extends Drawable {
 			else if( (x + esize + letterSpacing) - wLastSep > maxWidth ) {
 				newline = true;
 				lines.push(text.substr(restPos, i - restPos));
-				restPos = i + 1;
+				restPos = font.charset.isSpace(cc) ? i + 1 : i;
 			}
 			if( e != null && cc != '\n'.code )
 				x += esize + letterSpacing;
