@@ -79,6 +79,7 @@ class TextInput extends Text {
 	var lastClick = 0.;
 	var maxHistorySize = 100;
 	var splitLines : Array<String>;
+	var splitTextSize : Int;
 
 	/**
 		Create a new TextInput instance.
@@ -148,10 +149,10 @@ class TextInput extends Text {
 			if( e.cancel ) return;
 			var t = haxe.Timer.stamp();
 			// double click to select all
-			if( t - lastClick < 0.3 && text.length != 0 ) {
-				selectionRange = { start : 0, length : text.length };
+			if( t - lastClick < 0.3 && getTextLength() != 0 ) {
+				selectionRange = { start : 0, length : getTextLength() };
 				selectionSize = 0;
-				cursorIndex = text.length;
+				cursorIndex = getTextLength();
 			}
 			lastClick = t;
 		};
@@ -204,7 +205,7 @@ class TextInput extends Text {
 		case K.RIGHT if (K.isDown(K.CTRL)):
 			cursorIndex = getWordEnd();
 		case K.RIGHT:
-			if( cursorIndex < text.length )
+			if( cursorIndex < getTextLength() )
 				cursorIndex++;
 		case K.HOME:
 			if( multiline ) {
@@ -215,25 +216,26 @@ class TextInput extends Text {
 			if( multiline ) {
 				var currentLine = getCurrentLine();
 				cursorIndex = currentLine.startIndex + currentLine.value.length - 1;
-			} else cursorIndex = text.length;
+			} else cursorIndex = getTextLength();
 		case K.BACKSPACE, K.DELETE if( selectionRange != null ):
 			if( !canEdit ) return;
 			beforeChange();
 			cutSelection();
 			onChange();
 		case K.DELETE:
-			if( cursorIndex < text.length && canEdit ) {
+			if( cursorIndex < getTextLength() && canEdit ) {
 				beforeChange();
-				var end = K.isDown(K.CTRL) ? getWordEnd() : cursorIndex + 1;
-				text = text.substr(0, cursorIndex) + text.substr(end);
+				if( selectionRange == null )
+					selectionRange = { start : cursorIndex, length : K.isDown(K.CTRL) ? getWordEnd() - cursorIndex : 1 };
+				cutSelection();
 				onChange();
 			}
 		case K.BACKSPACE:
 			if( cursorIndex > 0 && canEdit ) {
 				beforeChange();
-				var end = cursorIndex;
-				cursorIndex = K.isDown(K.CTRL) ? getWordStart() : cursorIndex - 1;
-				text = text.substr(0, cursorIndex) + text.substr(end);
+				if( selectionRange == null )
+					selectionRange = { start : K.isDown(K.CTRL) ? getWordStart() : cursorIndex - 1, length : 1 };
+				cutSelection();
 				onChange();
 			}
 		case K.ESCAPE:
@@ -264,8 +266,8 @@ class TextInput extends Text {
 			return;
 		case K.A if (K.isDown(K.CTRL)):
 			if (text != "") {
-				cursorIndex = text.length;
-				selectionRange = {start: 0, length: text.length};
+				cursorIndex = getTextLength();
+				selectionRange = {start: 0, length: cursorIndex};
 				selectionSize = 0;
 			}
 			return;
@@ -325,11 +327,54 @@ class TextInput extends Text {
 
 	}
 
+	/**
+		When lineBreak is enabled and some word wrapping operation applies, the cursorIndex no
+		longer represent the position in the exact text but in the wrapped text, including
+		inserted newlines. This function allows to translate the cursor position into the position
+		into the text. Use getCursorPos to convert the text position into a cursor position.
+	**/
+	public function getTextPos( cursor : Int ) {
+		var lines = text.split("\n"); // real newlines
+		var pos = 0;
+		for( line in lines ) {
+			for( p in splitRawText(line).split("\n") ) {
+				if( cursor < p.length )
+					return pos + cursor;
+				pos += p.length;
+				if( font.charset.isSpace(StringTools.fastCodeAt(text,pos)) ) pos++;
+				cursor -= p.length + 1;
+			}
+			pos++;
+		}
+		return pos;
+	}
+
+	/**
+		See getTextPos()
+	**/
+	public function getCursorPos( pos : Int ) {
+		var lines = text.split("\n"); // real newlines
+		var cursor = 0;
+		var spos = 0;
+		for( line in lines ) {
+			for( p in splitRawText(line).split("\n") ) {
+				if( (pos - spos) < p.length )
+					return (pos - spos) + cursor;
+				spos += p.length;
+				if( font.charset.isSpace(StringTools.fastCodeAt(text,spos)) ) spos++;
+				cursor += p.length + 1;
+			}
+			spos++;
+		}
+		return cursor;
+	}
+
 	function inputText( t : String ) {
 		beforeChange();
 		if( selectionRange != null )
 			cutSelection();
-		text = text.substr(0, cursorIndex) + t + text.substr(cursorIndex);
+		var pos = getTextPos(cursorIndex);
+		text = text.substr(0, pos) + t + text.substr(pos);
 		cursorIndex += t.length;
 		onChange();
 	}
@@ -338,7 +383,7 @@ class TextInput extends Text {
 		if(selectionRange == null) return false;
 		cursorIndex = selectionRange.start;
 		var end = cursorIndex + selectionRange.length;
-		text = text.substr(0, cursorIndex) + text.substr(end);
+		text = text.substr(0, getTextPos(cursorIndex)) + text.substr(getTextPos(end));
 		selectionRange = null;
 		return true;
 	}
@@ -352,24 +397,24 @@ class TextInput extends Text {
 	}
 
 	function getWordEnd() {
-		var len = text.length;
+		var len = getTextLength();
 		if (cursorIndex >= len) {
-			return cursorIndex;
+			return len;
 		}
-		var ret = cursorIndex;
+		var ret = getTextPos(cursorIndex);
 		while (ret < len && isWordLimit(ret)) ret++;
 		while (ret < len && !isWordLimit(ret)) ret++;
-		return ret;
+		return getCursorPos(ret);
 	}
 
 	function getWordStart() {
 		if (cursorIndex <= 0) {
-			return cursorIndex;
+			return 0;
 		}
-		var ret = cursorIndex;
+		var ret = getTextPos(cursorIndex);
 		while (ret > 0 && isWordLimit(ret-1)) ret--;
 		while (ret > 0 && !isWordLimit(ret-1)) ret--;
-		return ret;
+		return getCursorPos(ret);
 	}
 
 	function moveCursorVertically(yDiff: Int){
@@ -393,7 +438,7 @@ class TextInput extends Text {
 			return;
 		// We're moving down from the last line, move to the end of the line
 		if( destinationIndex == lines.length) {
-			cursorIndex = text.length;
+			cursorIndex = getTextLength();
 			return;
 		}
 		// We're moving up from the first line, snap to beginning
@@ -481,15 +526,24 @@ class TextInput extends Text {
 		while( undo.length > maxHistorySize ) undo.shift();
 	}
 
+	function getTextLength() {
+		getSplitLines();
+		return splitTextSize;
+	}
+
 	function getSplitLines() {
 		if( splitLines != null && !(needsRebuild || textChanged) )
 			return splitLines;
 		var lines = this.text.split('\n');
 		splitLines = [];
+		splitTextSize = 0;
 		for(l in lines) {
-			for( l in splitText(l).split('\n') )
+			for( l in splitText(l).split('\n') ) {
 				splitLines.push(l+'\n');
+				splitTextSize += l.length + 1;
+			}
 		}
+		if( splitTextSize > 0 ) splitTextSize--;
 		return splitLines;
 	}
 
@@ -640,7 +694,7 @@ class TextInput extends Text {
 
 		var lastCursorY = cursorY;
 		if( cursorIndex >= 0 && (text != cursorText || cursorIndex != cursorXIndex) ) {
-			if( cursorIndex > text.length ) cursorIndex = text.length;
+			if( cursorIndex > getTextLength() ) cursorIndex = getTextLength();
 			cursorText = text;
 			cursorXIndex = cursorIndex;
 			cursorX = getCursorXOffset();
@@ -731,7 +785,7 @@ class TextInput extends Text {
 		interactive.focus();
 		if( cursorIndex < 0 ) {
 			cursorIndex = 0;
-			if( text != "" ) selectionRange = { start : 0, length : text.length };
+			if( text != "" ) selectionRange = { start : 0, length : getTextLength() };
 		}
 	}
 
