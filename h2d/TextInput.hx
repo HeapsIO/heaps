@@ -148,11 +148,12 @@ class TextInput extends Text {
 			onClick(e);
 			if( e.cancel ) return;
 			var t = haxe.Timer.stamp();
-			// double click to select all
+			// double click to select current word
 			if( t - lastClick < 0.3 && getTextLength() != 0 ) {
-				selectionRange = { start : 0, length : getTextLength() };
+				var start = getWordStart();
+				selectionRange = { start : getWordStart(), length : getWordEnd() - start };
 				selectionSize = 0;
-				cursorIndex = getTextLength();
+				cursorIndex = selectionRange.start + selectionRange.length;
 			}
 			lastClick = t;
 		};
