@@ -372,6 +372,10 @@ class Texture {
 		}
 	}
 
+	public function getHandle() : h3d.mat.TextureHandle {
+		return mem.driver.getTextureHandle(this);
+	}
+
 	/**
 		This will return the default depth buffer, which is automatically resized to the screen size.
 	**/
