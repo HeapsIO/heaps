@@ -218,13 +218,13 @@ class RenderContext {
 		inline function fill(buf:h3d.shader.Buffers.ShaderBuffers, s:hxsl.RuntimeShader.RuntimeShaderData) {
 			var g = s.globals;
 			var ptr = getPtr(buf.globals);
-			var hid = 0;
+			var hid = s.paramsHandleCount;
 			while( g != null ) {
 				var v : Dynamic = globals.fastGet(g.gid);
 				if( v == null )
 					throw "Missing global value " + g.path;
 				if ( g.type.match(TTextureHandle) )
-					buf.globalsHandles[hid++] = v;
+					buf.handles[hid++] = v;
 				fillRec(v, g.type, ptr, g.pos);
 				g = g.next;
 			}
@@ -278,7 +278,7 @@ class RenderContext {
 						continue;
 					case TTextureHandle:
 						v = i.getParamValue(p.index);
-						buf.paramsHandles[hid++] = v;
+						buf.handles[hid++] = v;
 					default:
 						v = i.getParamValue(p.index);
 					}

@@ -452,7 +452,7 @@ class TextureData extends ResourceData {
 	public var uploadBuffer : TextureUploadBuffer;
 	var clearColorChanges : Int;
 	public var cpuViewsIndex : Array<Int> = [for (i in 0...16) -1];
-	public var handles : Map<Int, h3d.mat.TextureHandle> = [];
+	public var handles : Map<Int, h3d.mat.TextureHandle>;
 
 	public function setClearColor( c : h3d.Vector4 ) {
 		var color = color;
@@ -2217,7 +2217,7 @@ class DX12Driver extends h3d.impl.Driver {
 				else
 					frame.commandList.setGraphicsRoot32BitConstants(regs.params, dataSize >> 2, data, 0);
 				for ( i in 0...shader.paramsHandleCount ) {
-					var handle = buf.paramsHandles[i];
+					var handle = buf.handles[i];
 					transition(handle.texture.t, shader.kind == Fragment ? PIXEL_SHADER_RESOURCE : NON_PIXEL_SHADER_RESOURCE);
 				}
 			}
@@ -2244,8 +2244,10 @@ class DX12Driver extends h3d.impl.Driver {
 					frame.commandList.setComputeRoot32BitConstants(regs.globals, dataSize >> 2, data, 0);
 				else
 					frame.commandList.setGraphicsRoot32BitConstants(regs.globals, dataSize >> 2, data, 0);
-				for ( i in 0...shader.globalsHandleCount ) {
-					var handle = buf.globalsHandles[i];
+				var startIdx = shader.paramsHandleCount;
+				var lastIdx = startIdx + shader.globalsHandleCount;
+				for ( i in startIdx...lastIdx ) {
+					var handle = buf.handles[i];
 					transition(handle.texture.t, isFragment ? PIXEL_SHADER_RESOURCE : NON_PIXEL_SHADER_RESOURCE);
 				}
 			}
@@ -2842,7 +2844,11 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	override function getTextureHandle( t : h3d.mat.Texture ) : h3d.mat.TextureHandle {
-		var handle = t.t.handles.get(t.bits);
+		var handle : h3d.mat.TextureHandle = null;
+		if ( t.t.handles == null )
+			t.t.handles = []
+		else
+			handle = t.t.handles.get(t.bits);
 		if ( handle == null ) {
 			var sampler = getCpuSampler(t);
 			var srv = getCpuTexView(t);
