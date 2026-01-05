@@ -52,6 +52,11 @@ class TextInput extends Text {
 	public var backgroundColor(get, set) : Null<Int>;
 
 	/**
+		If set, insert these characters when pressing Tab
+	**/
+	public var insertTabs : Null<String>;
+
+	/**
 		When disabled, showSoftwareKeyboard will not be called.
 	**/
 	public var useSoftwareKeyboard : Bool = true;
@@ -74,6 +79,7 @@ class TextInput extends Text {
 	var lastClick = 0.;
 	var maxHistorySize = 100;
 	var splitLines : Array<String>;
+	var splitTextSize : Int;
 
 	/**
 		Create a new TextInput instance.
@@ -96,9 +102,11 @@ class TextInput extends Text {
 				}
 				cursorBlink = 0;
 				var startIndex = textPos(e.relX, e.relY);
-				cursorIndex = startIndex;
-				selectionRange = null;
-
+				if( cursorIndex != startIndex || selectionRange != null ) {
+					cursorIndex = startIndex;
+					selectionRange = null;
+					onCursorChange();
+				}
 				var pt = new h2d.col.Point();
 				var scene = getScene();
 				if( scene == null ) return; // was removed
@@ -115,6 +123,7 @@ class TextInput extends Text {
 						selectionRange = { start : startIndex, length : index - startIndex };
 					selectionSize = 0;
 					cursorIndex = index;
+					onCursorChange();
 					if( e.kind == ERelease || getScene() != scene )
 						scene.stopCapture();
 				});
@@ -134,21 +143,20 @@ class TextInput extends Text {
 				showSoftwareKeyboard(this);
 		}
 		interactive.onFocusLost = function(e) {
-			cursorIndex = -1;
-			selectionRange = null;
-			hideSoftwareKeyboard(this);
 			onFocusLost(e);
+			if( !e.cancel ) onBlur();
 		};
 
 		interactive.onClick = function(e) {
 			onClick(e);
 			if( e.cancel ) return;
 			var t = haxe.Timer.stamp();
-			// double click to select all
-			if( t - lastClick < 0.3 && text.length != 0 ) {
-				selectionRange = { start : 0, length : text.length };
+			// double click to select current word
+			if( t - lastClick < 0.3 && getTextLength() != 0 ) {
+				var start = getWordStart();
+				selectionRange = { start : getWordStart(), length : getWordEnd() - start };
 				selectionSize = 0;
-				cursorIndex = text.length;
+				cursorIndex = selectionRange.start + selectionRange.length;
 			}
 			lastClick = t;
 		};
@@ -195,42 +203,51 @@ class TextInput extends Text {
 			moveCursorVertically(getVisibleLines());
 		case K.LEFT if (K.isDown(K.CTRL)):
 			cursorIndex = getWordStart();
+			onCursorChange();
 		case K.LEFT:
-			if( cursorIndex > 0 )
+			if( cursorIndex > 0 ) {
 				cursorIndex--;
+				onCursorChange();
+			}
 		case K.RIGHT if (K.isDown(K.CTRL)):
 			cursorIndex = getWordEnd();
+			onCursorChange();
 		case K.RIGHT:
-			if( cursorIndex < text.length )
+			if( cursorIndex < getTextLength() ) {
 				cursorIndex++;
+				onCursorChange();
+			}
 		case K.HOME:
-			if( multiline ) {
+			if( multiline && !K.isDown(K.CTRL)) {
 				var currentLine = getCurrentLine();
 				cursorIndex = currentLine.startIndex;
 			} else cursorIndex = 0;
+			onCursorChange();
 		case K.END:
 			if( multiline ) {
 				var currentLine = getCurrentLine();
 				cursorIndex = currentLine.startIndex + currentLine.value.length - 1;
-			} else cursorIndex = text.length;
+			} else cursorIndex = getTextLength();
+			onCursorChange();
 		case K.BACKSPACE, K.DELETE if( selectionRange != null ):
 			if( !canEdit ) return;
 			beforeChange();
 			cutSelection();
 			onChange();
 		case K.DELETE:
-			if( cursorIndex < text.length && canEdit ) {
+			if( cursorIndex < getTextLength() && canEdit ) {
 				beforeChange();
-				var end = K.isDown(K.CTRL) ? getWordEnd() : cursorIndex + 1;
-				text = text.substr(0, cursorIndex) + text.substr(end);
+				if( selectionRange == null )
+					selectionRange = { start : cursorIndex, length : K.isDown(K.CTRL) ? getWordEnd() - cursorIndex : 1 };
+				cutSelection();
 				onChange();
 			}
 		case K.BACKSPACE:
 			if( cursorIndex > 0 && canEdit ) {
 				beforeChange();
-				var end = cursorIndex;
-				cursorIndex = K.isDown(K.CTRL) ? getWordStart() : cursorIndex - 1;
-				text = text.substr(0, cursorIndex) + text.substr(end);
+				if( selectionRange == null )
+					selectionRange = { start : K.isDown(K.CTRL) ? getWordStart() : cursorIndex - 1, length : 1 };
+				cutSelection();
 				onChange();
 			}
 		case K.ESCAPE:
@@ -242,13 +259,8 @@ class TextInput extends Text {
 				cursorIndex = -1;
 				interactive.blur();
 				return;
-			} else {
-				beforeChange();
-				if( selectionRange != null )
-					cutSelection();
-				text = text.substr(0, cursorIndex) + '\n' + text.substr(cursorIndex);
-				cursorIndex++;
-				onChange();
+			} else if( canEdit ) {
+				inputText("\n");
 			}
 		case K.Z if( K.isDown(K.CTRL) ):
 			if( undo.length > 0 && canEdit ) {
@@ -266,9 +278,10 @@ class TextInput extends Text {
 			return;
 		case K.A if (K.isDown(K.CTRL)):
 			if (text != "") {
-				cursorIndex = text.length;
-				selectionRange = {start: 0, length: text.length};
+				cursorIndex = getTextLength();
+				selectionRange = {start: 0, length: cursorIndex};
 				selectionSize = 0;
+				onCursorChange();
 			}
 			return;
 		case K.C if (K.isDown(K.CTRL)):
@@ -287,27 +300,16 @@ class TextInput extends Text {
 		case K.V if (K.isDown(K.CTRL)):
 			if( !canEdit ) return;
 			var t = hxd.System.getClipboardText();
-			if( t != null && t.length > 0 ) {
-				beforeChange();
-				if( selectionRange != null )
-					cutSelection();
-				text = text.substr(0, cursorIndex) + t + text.substr(cursorIndex);
-				cursorIndex += t.length;
-				onChange();
-			}
+			if( t != null && t.length > 0 )
+				inputText(t.split("\r\n").join("\n").split("\r").join("\n"));
+		case K.TAB if( insertTabs != null && canEdit ):
+			inputText(insertTabs);
 		default:
 			if( e.kind == EKeyDown )
 				return;
 			if( e.charCode != 0 && canEdit ) {
-
 				if( !font.hasChar(e.charCode) ) return; // don't allow chars not supported by font
-
-				beforeChange();
-				if( selectionRange != null )
-					cutSelection();
-				text = text.substr(0, cursorIndex) + String.fromCharCode(e.charCode) + text.substr(cursorIndex);
-				cursorIndex++;
-				onChange();
+				inputText(String.fromCharCode(e.charCode));
 			}
 		}
 
@@ -332,42 +334,116 @@ class TextInput extends Text {
 				selectionRange.length = -selectionRange.length;
 			}
 			selectionSize = 0;
+			onCursorChange();
 
 		} else
 			selectionRange = null;
 
 	}
 
+	/**
+		When lineBreak is enabled and some word wrapping operation applies, the cursorIndex no
+		longer represent the position in the exact text but in the wrapped text, including
+		inserted newlines. This function allows to translate the cursor position into the position
+		into the text. Use getCursorPos to convert the text position into a cursor position.
+	**/
+	public function getTextPos( cursor : Int ) {
+		var lines = text.split("\n"); // real newlines
+		var pos = 0;
+		for( line in lines ) {
+			for( p in splitRawText(line).split("\n") ) {
+				if( cursor < p.length )
+					return pos + cursor;
+				pos += p.length;
+				if( font.charset.isSpace(StringTools.fastCodeAt(text,pos)) ) pos++;
+				cursor -= p.length + 1;
+			}
+			pos++;
+		}
+		return pos;
+	}
+
+	/**
+		See getTextPos()
+	**/
+	public function getCursorPos( pos : Int ) {
+		var lines = text.split("\n"); // real newlines
+		var cursor = 0;
+		var spos = 0;
+		for( line in lines ) {
+			for( p in splitRawText(line).split("\n") ) {
+				if( (pos - spos) < p.length )
+					return (pos - spos) + cursor;
+				spos += p.length;
+				if( font.charset.isSpace(StringTools.fastCodeAt(text,spos)) ) spos++;
+				cursor += p.length + 1;
+			}
+			spos++;
+		}
+		return cursor;
+	}
+
+	/**
+		Convert a text line number into a display line number.
+		First line is 0. See getTextPos() and getCursorPos().
+	**/
+	public function getCursorLine( line : Int ) {
+		var lines = text.split("\n"); // real newlines
+		var cursor = 0;
+		for( l in lines ) {
+			if( line == 0 ) return cursor;
+			cursor += splitRawText(l).split("\n").length;
+			line--;
+		}
+		return cursor;
+	}
+
+	function inputText( t : String ) {
+		beforeChange();
+		if( selectionRange != null )
+			cutSelection();
+		var pos = getTextPos(cursorIndex);
+		text = text.substr(0, pos) + t + text.substr(pos);
+		cursorIndex += t.length;
+		onChange();
+	}
+
 	function cutSelection() {
 		if(selectionRange == null) return false;
 		cursorIndex = selectionRange.start;
 		var end = cursorIndex + selectionRange.length;
-		text = text.substr(0, cursorIndex) + text.substr(end);
+		text = text.substr(0, getTextPos(cursorIndex)) + text.substr(getTextPos(end));
 		selectionRange = null;
 		return true;
 	}
 
+	/**
+		This function is used to code the behavior of Ctrl-Left/Right word skipping.
+		By default it uses charset.isSpace but can be customized.
+	**/
+	public dynamic function isWordLimit( pos : Int ) {
+		return font.charset.isSpace(StringTools.fastCodeAt(text, pos));
+	}
+
 	function getWordEnd() {
-		var len = text.length;
+		var len = getTextLength();
 		if (cursorIndex >= len) {
-			return cursorIndex;
+			return len;
 		}
-		var charset = hxd.Charset.getDefault();
-		var ret = cursorIndex;
-		while (ret < len && charset.isSpace(StringTools.fastCodeAt(text, ret))) ret++;
-		while (ret < len && !charset.isSpace(StringTools.fastCodeAt(text, ret))) ret++;
-		return ret;
+		var ret = getTextPos(cursorIndex);
+		while (ret < len && isWordLimit(ret)) ret++;
+		while (ret < len && !isWordLimit(ret)) ret++;
+		return getCursorPos(ret);
 	}
 
 	function getWordStart() {
 		if (cursorIndex <= 0) {
-			return cursorIndex;
+			return 0;
 		}
-		var charset = hxd.Charset.getDefault();
-		var ret = cursorIndex;
-		while (ret > 0 && charset.isSpace(StringTools.fastCodeAt(text, ret - 1))) ret--;
-		while (ret > 0 && !charset.isSpace(StringTools.fastCodeAt(text, ret - 1))) ret--;
-		return ret;
+		var ret = getTextPos(cursorIndex);
+		while (ret > 0 && isWordLimit(ret-1)) ret--;
+		while (ret > 0 && !isWordLimit(ret-1)) ret--;
+		return getCursorPos(ret);
 	}
 
 	function moveCursorVertically(yDiff: Int){
@@ -391,12 +467,14 @@ class TextInput extends Text {
 			return;
 		// We're moving down from the last line, move to the end of the line
 		if( destinationIndex == lines.length) {
-			cursorIndex = text.length;
+			cursorIndex = getTextLength();
+			onCursorChange();
 			return;
 		}
 		// We're moving up from the first line, snap to beginning
 		if( destinationIndex == -1 ) {
 			cursorIndex = 0;
+			onCursorChange();
 			return;
 		}
 		var current = lines[cursorLineIndex];
@@ -421,6 +499,7 @@ class TextInput extends Text {
 				cursorIndex = destination.startIndex + cI + 1;
 				if( xOffset - currOffset < newCurrOffset - xOffset )
 					cursorIndex--;
+				onCursorChange();
 				return;
 			}
 			currOffset = newCurrOffset;
@@ -431,6 +510,7 @@ class TextInput extends Text {
 		// we can't just assume this because the last line typically won't end with a newline.
 		if( destination.line.charAt(destination.line.length-1) == "\n")
 			cursorIndex--;
+		onCursorChange();
 	}
 
 	function setState(h:TextHistoryElement) {
@@ -462,6 +542,11 @@ class TextInput extends Text {
 		if( focus ) this.focus();
 	}
 
+	public function clearUndo() {
+		undo = [];
+		redo = [];
+	}
+
 	function beforeChange() {
 		var t = haxe.Timer.stamp();
 		if( t - lastChange < 1 ) {
@@ -474,15 +559,27 @@ class TextInput extends Text {
 		while( undo.length > maxHistorySize ) undo.shift();
 	}
 
+	/**
+		The expanded text length, including inserted line breaks.
+	**/
+	public function getTextLength() {
+		getSplitLines();
+		return splitTextSize;
+	}
+
 	function getSplitLines() {
 		if( splitLines != null && !(needsRebuild || textChanged) )
 			return splitLines;
 		var lines = this.text.split('\n');
 		splitLines = [];
+		splitTextSize = 0;
 		for(l in lines) {
-			for( l in splitText(l).split('\n') )
+			for( l in splitText(l).split('\n') ) {
 				splitLines.push(l+'\n');
+				splitTextSize += l.length + 1;
+			}
 		}
+		if( splitTextSize > 0 ) splitTextSize--;
 		return splitLines;
 	}
 
@@ -537,12 +634,16 @@ class TextInput extends Text {
 		Returns a String representing currently selected text area or `null` if no text is selected.
 	**/
 	public function getSelectedText() : String {
-		return selectionRange == null ? null : text.substr(selectionRange.start, selectionRange.length);
+		if( selectionRange == null )
+			return null;
+		var pos = getTextPos(selectionRange.start);
+		var end = getTextPos(selectionRange.start + selectionRange.length);
+		return text.substr(pos, end - pos);
 	}
 
 	override function set_text(t:String) {
 		super.set_text(t);
-		if( cursorIndex > t.length ) cursorIndex = t.length;
+		if( cursorIndex > getTextLength() ) cursorIndex = getTextLength();
 		return t;
 	}
 
@@ -633,7 +734,7 @@ class TextInput extends Text {
 
 		var lastCursorY = cursorY;
 		if( cursorIndex >= 0 && (text != cursorText || cursorIndex != cursorXIndex) ) {
-			if( cursorIndex > text.length ) cursorIndex = text.length;
+			if( cursorIndex > getTextLength() ) cursorIndex = getTextLength();
 			cursorText = text;
 			cursorXIndex = cursorIndex;
 			cursorX = getCursorXOffset();
@@ -724,8 +825,22 @@ class TextInput extends Text {
 		interactive.focus();
 		if( cursorIndex < 0 ) {
 			cursorIndex = 0;
-			if( text != "" ) selectionRange = { start : 0, length : text.length };
+			if( text != "" && !multiline ) selectionRange = { start : 0, length : getTextLength() };
 		}
+	}
+
+	function onBlur() {
+		cursorIndex = -1;
+		selectionRange = null;
+		hideSoftwareKeyboard(this);
+	}
+
+	function onCursorChange() {
+	}
+
+	public function blur() {
+		onBlur();
+		interactive.blur();
 	}
 
 	/**

@@ -72,7 +72,7 @@ class Cache {
 	/**
 		Creates a shader that generate the output requested.
 	**/
-	public function getLinkShader( vars : Array<Output> ) {
+	public function getLinkShader( vars : Array<Output>, vertexOutputName = "output.position" ) {
 		var key = [for( v in vars ) Std.string(v)].join(",");
 		var shader = linkShaders.get(key);
 		if( shader != null )
@@ -178,7 +178,7 @@ class Cache {
 			};
 			s.data.funs.push(f);
 		}
-		defineFun(Vertex, [Value("output.position")]);
+		defineFun(Vertex, [Value(vertexOutputName)]);
 		defineFun(Fragment, vars);
 
 		shader = std.Type.createEmptyInstance(Shader);

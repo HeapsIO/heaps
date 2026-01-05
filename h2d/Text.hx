@@ -127,6 +127,7 @@ class Text extends Drawable {
 	var realMaxWidth:Float = -1;
 
 	var sdfShader : h3d.shader.SignedDistanceField;
+	var colorSegments : Array<Int> = null;
 
 	/**
 		Creates a new Text instance.
@@ -372,10 +373,10 @@ class Text extends Drawable {
 				}
 				else wLastSep = size;
 			}
-			else if( (x + esize + letterSpacing) - wLastSep > maxWidth ) {
+			else if( (x + esize + letterSpacing) - wLastSep > maxWidth && lineBreak ) {
 				newline = true;
 				lines.push(text.substr(restPos, i - restPos));
-				restPos = i + 1;
+				restPos = font.charset.isSpace(cc) ? i + 1 : i;
 			}
 			if( e != null && cc != '\n'.code )
 				x += esize + letterSpacing;
@@ -433,12 +434,23 @@ class Text extends Drawable {
 			x = 0;
 		}
 
+		var colors = colorSegments;
+		var colorsPos = 0;
+		if( colors != null && colors.length == 0 ) colors = null;
+		if( rebuild ) glyphs.setDefaultColor(0xFFFFFF);
 		for( i in 0...t.length ) {
 			var cc = StringTools.fastCodeAt(t, i);
 			var e = font.getChar(cc);
 			var offs = e.getKerningOffset(prevChar);
 			var esize = e.width + offs;
 			// if the next word goes past the max width, change it into a newline
+
+			if( rebuild && colors != null && colors[colorsPos] == i ) {
+				var c = colors[colorsPos+1];
+				glyphs.setDefaultColor(c,(c>>>24)/255);
+				colorsPos += 2;
+				if( colorsPos >= colors.length ) colors = null;
+			}
 
 			if( cc == '\n'.code ) {
 				if( x > xMax ) xMax = x;
@@ -514,6 +526,16 @@ class Text extends Drawable {
 		color.setColor(c);
 		color.w = a;
 		return c;
+	}
+
+	/**
+		Set the text color segments. This is an Array containing a pair of (position,color).
+		Each time the text display will reach the given position, the color will be set.
+		The segment color is multiplied by the global textColor.
+	**/
+	public function setColorSegments( arr ) {
+		colorSegments = arr;
+		needsRebuild = true;
 	}
 
 	override function getBoundsRec( relativeTo : Object, out : h2d.col.Bounds, forSize : Bool ) {
