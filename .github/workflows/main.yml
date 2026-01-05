@@ -9,12 +9,12 @@ jobs:
   build:
     strategy:
       matrix:
-        haxe-version: [latest, 4.3.7]
+        haxe-version: [2026-01-05_development_3aed86e, 4.3.7]
       fail-fast: false
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
-    - uses: krdlab/setup-haxe@v1
+    - uses: krdlab/setup-haxe@v2
       with:
         haxe-version: ${{ matrix.haxe-version }}
     - name: Print Haxe version
