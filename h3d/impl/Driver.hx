@@ -81,6 +81,10 @@ enum Feature {
 		Supports instanced rendering
 	*/
 	InstancedRendering;
+	/*
+		Supports bindless
+	*/
+	Bindless;
 }
 
 enum QueryKind {

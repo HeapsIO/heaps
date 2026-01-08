@@ -968,6 +968,7 @@ class Checker {
 					}
 				case Ignore, Doc(_):
 				case Flat: if( tv.kind != Local ) error("flat only allowed on local", pos);
+				case NoVar: if( tv.kind != Local ) error("noVar only allowed on local", pos);
 				}
 		}
 		if( tv.type != null )

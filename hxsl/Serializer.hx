@@ -211,7 +211,7 @@ class Serializer {
 			for( q in v.qualifiers ) {
 				out.addByte(q.getIndex());
 				switch (q) {
-				case Private, Nullable, PerObject, Shared, Ignore, Final, Flat:
+				case Private, Nullable, PerObject, Shared, Ignore, Final, Flat, NoVar:
 				case Const(max): out.addInt32(max == null ? 0 : max);
 				case Name(n): writeString(n);
 				case Precision(p): out.addByte(p.getIndex());

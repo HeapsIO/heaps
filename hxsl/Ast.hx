@@ -104,6 +104,7 @@ enum VarQualifier {
 	Sampler( name : String );
 	Final;
 	Flat;
+	NoVar;
 }
 
 enum Prec {

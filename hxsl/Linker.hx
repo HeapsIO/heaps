@@ -255,6 +255,15 @@ class Linker {
 			}
 			if ( curShader != null ) curShader.hasSyntax = true;
 			return { e : TSyntax(target, code, mappedArgs), t : e.t, p : e.p };
+		case TCall({ e : TGlobal(ResolveSampler)}, [handle, { e : TVar(v)}]):
+			var handle = mapExprVar(handle);
+			var v = allocVar(v, handle.p);
+			if( curShader != null && !curShader.writeMap.exists(v.id) ) {
+				debug(curShader.name + " write " + v.path);
+				curShader.writeMap.set(v.id, v);
+				curShader.writeVars.push(v);
+			}
+			return { e : TCall({ e : TGlobal(ResolveSampler),  t : TFun([]), p : e.p }, [handle, { e : TVar(v.v), t : v.v.type, p : e.p }] ), t : e.t, p : e.p };
 		default:
 		}
 		return e.map(mapExprVar);
@@ -328,22 +337,25 @@ class Linker {
 			buildDependency(s, r, s.writeMap.exists(r.id));
 	}
 
-	function collect( cur : ShaderInfos, out : Array<ShaderInfos>, vertex : Bool ) {
+	function collect( cur : ShaderInfos, out : Array<ShaderInfos>, vertex : Bool, prevHasVertex : Bool ) {
 		if( cur.onStack )
 			error("Loop in shader dependencies ("+cur.name+")", null);
 		if( cur.marked == vertex )
 			return;
 		cur.marked = vertex;
 		cur.onStack = true;
-		var deps = [for( d in cur.deps.keys() ) d];
-		deps.sort(sortByPriorityDesc);
-		for( d in deps )
-			collect(d, out, vertex);
-		if( cur.vertex == null ) {
+
+		var isBatchInit = mode == Batch && StringTools.startsWith(cur.name,"batchShader_") && cur.name.indexOf("__init__vertex") < 0;
+		if( cur.vertex == null && !isBatchInit ) {
 			debug("MARK " + cur.name+" " + (vertex?"vertex":"fragment"));
 			cur.vertex = vertex;
 		}
-		if( cur.vertex == vertex ) {
+
+		var deps = [for( d in cur.deps.keys() ) d];
+		deps.sort(sortByPriorityDesc);
+		for( d in deps )
+			collect(d, out, vertex, cur.vertex == true || prevHasVertex);
+		if( cur.vertex == vertex || (isBatchInit && prevHasVertex == vertex) ) {
 			debug("COLLECT " + cur.name + " " + (vertex?"vertex":"fragment"));
 			out.push(cur);
 		}
@@ -376,12 +388,16 @@ class Linker {
 			isBatchShader = mode == Batch && StringTools.startsWith(s.name,"batchShader_");
 			for( v in s.vars ) {
 				var v2 = allocVar(v, null, s.name);
-				if( isBatchShader && v2.v.kind == Param && !StringTools.startsWith(v2.path,"Batch_") ) {
-					v2.v.kind = Local;
-					if ( v2.v.qualifiers == null )
-						v2.v.qualifiers = [];
-					if(!v2.v.hasQualifier(Flat)){
-						v2.v.qualifiers.push(Flat);
+				if( isBatchShader ) {
+					var isBatchParam = StringTools.startsWith(v2.path,"Batch_");
+					if ( v2.v.kind == Param && !isBatchParam )
+						v2.v.kind = Local;
+					if ( v2.v.kind == Local ) {
+						if ( v2.v.qualifiers == null )
+							v2.v.qualifiers = [];
+						var qualifier = isBatchParam ? Flat : NoVar;
+						if ( !v2.v.hasQualifier(qualifier) )
+							v2.v.qualifiers.push(qualifier);
 					}
 				}
 				if( v.kind == Output ) outVars.push(v);
@@ -503,8 +519,8 @@ class Linker {
 
 		// collect needed dependencies
 		var v = [], f = [];
-		collect(entry, v, true);
-		collect(entry, f, false);
+		collect(entry, v, true, false);
+		collect(entry, f, false, false);
 		if( f.pop() != entry ) throw "assert";
 
 		// check that all dependencies are matched
