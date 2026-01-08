@@ -5,38 +5,73 @@ class Cylinder extends Collider {
 	public var a : Point;
 	public var b : Point;
 	public var r : Float;
+	static var tmpSphere = new Sphere(0., 0., 0., 0.);
 
-	public inline function new(a : Point, b : Point, r : Float) {
+	public inline function new( a : Point, b : Point, r : Float ) {
 		this.a = a;
 		this.b = b;
 		this.r = r;
 	}
 
 	public function rayIntersection( r : Ray, bestMatch : Bool ) : Float {
-		throw "Not implemented";
+		var ro = r.getPos();
+		var rd = r.getDir();
+		var ra = this.r;
+		var pa = a;
+		var pb = b;
+		var ba = pb - pa;
+		var oa = ro - pa;
+		var baba = ba.dot(ba);
+		var bard = ba.dot(rd);
+		var baoa = ba.dot(oa);
+		var rdoa = rd.dot(oa);
+		var oaoa = oa.dot(oa);
+		var a = baba - bard * bard;
+		var b = baba * rdoa - baoa * bard;
+		var c = baba * oaoa - baoa * baoa - ra * ra * baba;
+		var h = b * b - a * c;
+		if ( h >= 0.0 ) {
+			var hs = hxd.Math.sqrt(h);
+			var t = (-b - hs)/a;
+			var y = baoa + t * bard;
+			if ( y > 0.0 && y < baba )
+				return t;
+			t = ((y < 0.0 ? 0.0 : baba) - baoa) / bard;
+			if( hxd.Math.abs(b + a * t) < hs )
+				return t;
+		}
+		return -1;
 	}
 
 	public inline function contains( p : Point ) : Bool {
-		throw "Not implemented";
+		var t = p.sub(a).dot(b.sub(a)) / a.distanceSq(b);
+		if( t < 0 || t > 1 )
+			return false;
+		return p.distanceSq(new Point(a.x + t * (b.x - a.x), a.y + t * (b.y - a.y), a.z + t * (b.z - a.z))) < r * r;
 	}
 
 	public function inFrustum( f : Frustum, ?m : h3d.Matrix ) : Bool {
-		throw "Not implemented";
+		if( m != null )
+			throw "Not implemented";
+		tmpSphere.load(a.x + (b.x-a.x), a.y + (b.y-a.y), a.z + (b.z-a.z), dimension() * 0.5);
+		return tmpSphere.inFrustum(f);
 	}
 
 	public function inSphere( s : Sphere ) : Bool {
-		throw "Not implemented";
+		tmpSphere.load(a.x + (b.x-a.x), a.y + (b.y-a.y), a.z + (b.z-a.z), dimension() * 0.5);
+		return tmpSphere.inSphere(s);
 	}
 
 	public function toString() {
 		return "Cylinder{" + a + "," + b + "," + hxd.Math.fmt(r) + "}";
 	}
 
-	public function dimension() : Float {
-		throw "Not implemented";
+	public inline function dimension() : Float {
+		var h2 = a.distance(b) * 0.5;
+		return 2 * hxd.Math.sqrt(h2 * h2 + r * r);
 	}
 
-	public function closestPoint(p : Point) : Point {
+	public function closestPoint( p : Point ) : Point {
 		throw "not implemented";
 	}
 
