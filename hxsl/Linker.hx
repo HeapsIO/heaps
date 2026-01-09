@@ -293,8 +293,8 @@ class Linker {
 		}
 	}
 
-	function addShader( name : String, vertex : ShaderStage, e : TExpr, p : Int, isBatchInit : Bool ) {
-		var s = new ShaderInfos(name, vertex);
+	function addShader( name : String, stage : ShaderStage, e : TExpr, p : Int, isBatchInit : Bool ) {
+		var s = new ShaderInfos(name, stage);
 		curShader = s;
 		s.priority = p;
 		s.body = mapExprVar(e);
@@ -359,13 +359,29 @@ class Linker {
 		deps.sort(sortByPriorityDesc);
 		for( d in deps )
 			collect(d, vout, fout, cur.stage == Vertex ? Vertex : stage);
-		if( cur.added.toInt() == 0 || (cur.isBatchInit && !cur.added.has(stage)) ) {
-			var addTo = cur.stage == Undefined || cur.isBatchInit ? stage : cur.stage;
-			cur.added.set(addTo);
-			var isVertex = addTo == Vertex;
+
+		inline function add(stage : ShaderStage) {
+			cur.added.set(stage);
+			var isVertex = stage == Vertex;
 			var out = isVertex ? vout : fout;
 			out.push(cur);
 			debug("COLLECT " + cur.name + " " + (isVertex?"vertex":"fragment"));
+		}
+
+		if ( cur.isBatchInit ) {
+			// Batch init can be added multiple times, once per stage
+			if ( !cur.added.has(stage) )
+				add(stage);
+		} else if ( cur.added.toInt() == 0 ) {
+			add(cur.stage == Undefined ? stage : cur.stage);
+		} else if ( !cur.added.has(Vertex) && stage == Vertex ) {
+			if ( cur.stage == Fragment )
+				error("Shader " + cur.name + " cannot be added to vertex stage because it is marked as fragment", null);
+			// Init was first encountered as fragment dependency, but is also needed in vertex
+			debug("REMOVE " + cur.name + " from fragment");
+			cur.added.unset(Fragment);
+			fout.remove(cur);
+			add(stage);
 		}
 		cur.onStack = false;
 	}

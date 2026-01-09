@@ -42,6 +42,10 @@ class Base2d extends hxsl.Shader {
 
 		var outputPosition : Vec4;
 
+		function __init__vertex() {
+			calculatedUV = hasUVPos ? input.uv * uvPos.zw + uvPos.xy : input.uv;
+		}
+
 		function __init__() {
 			spritePosition = vec4(input.position, zValue, 1);
 			if( isRelative ) {
@@ -50,7 +54,6 @@ class Base2d extends hxsl.Shader {
 				absolutePosition.zw = spritePosition.zw;
 			} else
 				absolutePosition = spritePosition;
-			calculatedUV = hasUVPos ? input.uv * uvPos.zw + uvPos.xy : input.uv;
 			pixelColor = isRelative ? color * input.color : input.color;
 			textureColor = texture.get(calculatedUV);
 			pixelColor *= textureColor;
