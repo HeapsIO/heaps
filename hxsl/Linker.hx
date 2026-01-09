@@ -539,7 +539,7 @@ class Linker {
 		collect(ventry, v, f, Vertex);
 		if( v.pop() != ventry ) throw "assert";
 		collect(fentry, v, f, Fragment);
-		if( f.pop() != fentry ) throw "assert
+		if( f.pop() != fentry ) throw "assert";
 
 		// check that all dependencies are matched
 		for( s in shaders )
