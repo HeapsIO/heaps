@@ -8,6 +8,7 @@ enum MeshBatchFlag {
 	EnableCpuLod;
 	ForceGpuUpdate;
 	EnableSubMesh;
+	EnablePerInstanceTexture;
 }
 
 typedef CpuIndirectCallBuffer = { bytes : haxe.io.Bytes, count : Int };
@@ -117,6 +118,13 @@ class MeshBatch extends MultiMaterial {
 			meshBatchFlags.set(EnableStorageBuffer);
 	}
 
+	/**
+	 * Enable per instance texture if bindless is supported.
+	 */
+	public function enablePerInstanceTexture() {
+		meshBatchFlags.set(EnablePerInstanceTexture);
+	}
+
 	public function enableCpuLod() {
 		var prim = getPrimitive();
 		var lodCount = prim.lodCount();
@@ -184,11 +192,59 @@ class MeshBatch extends MultiMaterial {
 		}
 	}
 
+	inline function initPerInstanceTexture() {
+		var shaderVisited : Map<String, Bool> = [];
+
+		if ( instancedParams == null )
+			instancedParams = new hxsl.Cache.BatchInstanceParams([]);
+		inline function findInstancedParams(shaderName : String) {
+			var result = null;
+			for ( p in @:privateAccess instancedParams.forcedPerInstance ) {
+				if ( p.shader == shaderName ) {
+					result = p.params;
+					break;
+				}
+			}
+
+			if ( result == null ) {
+				result = [];
+				@:privateAccess instancedParams.forcedPerInstance.push( { shader: shaderName, params : result } );
+			}
+
+			return result;
+		}
+
+		for ( m in materials ) {
+			for ( p in m.getPasses() ) {
+				for ( s in p.getShaders() ) {
+					var ss = @:privateAccess s.shader;
+					var name = ss.data.name;
+					if ( shaderVisited.exists(name) )
+						continue;
+					shaderVisited.set(name, true);
+					var params = null;
+					for ( v in ss.data.vars ) {
+						if ( v.kind != Param || !v.type.match(TSampler(_)) )
+							continue;
+						if ( params == null )
+							params = findInstancedParams(name);
+						if ( params.indexOf(v.name) < 0 )
+							params.push(v.name);
+					}
+				}
+			}
+		}
+	}
+
 	function initShadersMapping() {
 		var scene = getScene();
 		if( scene == null ) return;
 		cleanPasses();
 		updateHasPrimitiveOffset();
+
+		if ( meshBatchFlags.has(EnablePerInstanceTexture) && @:privateAccess scene.ctx.engine.driver.hasFeature(Bindless) )
+			initPerInstanceTexture();
+
 		for( index in 0...materials.length ) {
 			var mat = materials[index];
 			if( mat == null ) continue;
@@ -566,6 +622,21 @@ class MeshBatch extends MultiMaterial {
 				case TMat4:
 					var m : h3d.Matrix = curShader.getParamValue(p.index);
 					bufLoader.loadMatrix(m);
+				case TTextureHandle:
+					if ( batch.textureHandles == null )
+						batch.textureHandles = [];
+					var v : h3d.mat.TextureHandle = curShader.getParamValue(p.index);
+					batch.textureHandles.push(v);
+					bufLoader.loadInt(v.handle.low);
+					bufLoader.loadInt(v.handle.high);
+				case TSampler(_):
+					if ( batch.textureHandles == null )
+						batch.textureHandles = [];
+					var v : h3d.mat.Texture = curShader.getParamValue(p.index);
+					var h = v.getHandle();
+					batch.textureHandles.push(h);
+					bufLoader.loadInt(h.handle.low);
+					bufLoader.loadInt(h.handle.high);
 				default:
 					throw "Unsupported batch type "+p.type;
 				}
@@ -616,6 +687,8 @@ class MeshBatch extends MultiMaterial {
 			p = p.next;
 		}
 		ctx.uploadParams();
+		if ( p.textureHandles != null )
+			ctx.selectTextureHandles(p.textureHandles);
 		var prev = ctx.drawPass.index;
 		ctx.drawPass.index >>= 16;
 		super.draw(ctx);
@@ -714,6 +787,7 @@ class BatchData {
 	public var indirectCallBuffers : Array<h3d.impl.InstanceBuffer>;
 	public var buffers : Array<h3d.Buffer> = [];
 	public var bufferFormat : hxd.BufferFormat;
+	public var textureHandles : Array<h3d.mat.TextureHandle>;
 	public var data : hxd.FloatBuffer;
 	public var params : hxsl.RuntimeShader.AllocParam;
 	public var shader : hxsl.BatchShader;

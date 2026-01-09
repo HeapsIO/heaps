@@ -100,9 +100,14 @@ class HlslOut {
 	var decls : Array<String>;
 	var kind : FunctionKind;
 	var allNames : Map<String, Int>;
+	var bindlessSamplersCount : Int;
+	var bindlessSamplers : Map<Int, Int>;
 	var samplers : Map<Int, Array<Int>>;
 	var computeLayout = [1,1,1];
 	public var varNames : Map<Int,String>;
+
+	var isAssigningTexture : Bool = false;
+	var assignedTexture : TVar = null;
 
 	var varAccess : Map<Int,String>;
 	var isVertex(get,never) : Bool;
@@ -191,6 +196,8 @@ class HlslOut {
 			addArraySize(size);
 		case TChannel(n):
 			add("channel" + n);
+		case TTextureHandle:
+			add("uint2");
 		}
 	}
 
@@ -254,6 +261,10 @@ class HlslOut {
 			buf = tmp;
 			add(name);
 			add("()");
+			if ( isAssigningTexture ) {
+				var v = switch( last.e ) { case TVar(v): v; default: throw "assert"; };
+				assignedTexture = v;
+			}
 		case TIf(econd, eif, eelse):
 			add("( ");
 			addValue(econd, tabs);
@@ -415,8 +426,20 @@ class HlslOut {
 			decl("int3 ivec3( int v ) { return int3(v,v,v); }");
 		case IVec4 if( args.length == 1 && args[0].t.match(TInt | TFloat)):
 			decl("int4 ivec4( int v ) { return int4(v,v,v,v); }");
+		case ResolveSampler:
+			var tt = args[1].t;
+			var tstr = getTexType(tt);
+			decl('void resolveSampler( uint2 id, $tstr tex, SamplerState sampler ) { tex = ResourceDescriptorHeap[id.x]; sampler = SamplerDescriptorHeap[id.y]; }');
 		default:
 		}
+	}
+
+	function transferSampler( from : Int, to : Int ) {
+		var sampler = bindlessSamplers.get(from);
+		if ( sampler != null )
+			bindlessSamplers.set(to, sampler);
+		else
+			samplers.set(to, samplers.get(from));
 	}
 
 	function addExpr( e : TExpr, tabs : String ) {
@@ -437,6 +460,8 @@ class HlslOut {
 			var acc = varAccess.get(v.id);
 			if( acc != null ) add(acc);
 			ident(v);
+			if ( isAssigningTexture )
+				assignedTexture = v;
 		case TCall({ e : TGlobal(SetLayout) },_):
 			// ignore
 		case TCall({ e : TGlobal(g = (Texture | TextureLod)) }, args):
@@ -456,6 +481,15 @@ class HlslOut {
 			default: args[0];
 			}
 			switch( expr.e ) {
+			case TVar(v) if (v.kind == Local ):
+				var sampler = bindlessSamplers.get(v.id);
+				if( sampler != null )
+					add('__BindlessSamplers[${sampler}]');
+				else {
+					var samplers = samplers.get(v.id);
+					if( samplers == null ) throw "assert";
+					add('__Samplers[${samplers[offset]}]');
+				}
 			case TVar(v):
 				var samplers = samplers.get(v.id);
 				if( samplers == null ) throw "assert";
@@ -501,6 +535,17 @@ class HlslOut {
 			add(", ");
 			addValue(args[2], tabs);
 			add("))");
+		case TCall({ e : TGlobal( g = ResolveSampler) }, args = [handle, tex = { e : TVar(v)}]):
+			declGlobal(g, args);
+			add("resolveSampler");
+			add("(");
+			addValue(handle, tabs);
+			add(", ");
+			addValue(tex, tabs);
+			add(", ");
+			add('__BindlessSamplers[$bindlessSamplersCount]');
+			add(")");
+			bindlessSamplers.set(v.id, bindlessSamplersCount++);
 		case TCall(e = { e : TGlobal(g) }, args):
 			declGlobal(g, args);
 			switch( [g,args] ) {
@@ -609,6 +654,16 @@ class HlslOut {
 				add(",");
 				addValue(e2, tabs);
 				add(")");
+			case [OpAssign, TSampler(_), _]:
+				var v = switch( e1.e ) { case TVar(v) : v; default: throw "assert"; };
+				var prevAssigningTexture = isAssigningTexture;
+				isAssigningTexture = true;
+				addValue(e1, tabs);
+				add(" = ");
+				addValue(e2, tabs);
+				transferSampler(assignedTexture.id, v.id);
+				isAssigningTexture = prevAssigningTexture;
+				assignedTexture = null;
 			default:
 				addValue(e1, tabs);
 				add(" ");
@@ -629,9 +684,16 @@ class HlslOut {
 		case TVarDecl(v, init):
 			locals.set(v.id, v);
 			if( init != null ) {
+				var prevAssigningTexture = isAssigningTexture;
+				isAssigningTexture = v.type.match(TSampler(_));
 				ident(v);
 				add(" = ");
 				addValue(init, tabs);
+				if ( isAssigningTexture ) {
+					transferSampler(assignedTexture.id, v.id);
+					assignedTexture = null;
+				}
+				isAssigningTexture = prevAssigningTexture;
 			} else {
 				add("/*var*/");
 			}
@@ -1026,7 +1088,11 @@ class HlslOut {
 			addVar(v);
 			add(";\n");
 		}
-		add("\n");
+
+		if ( bindlessSamplersCount > 0 ) {
+			add(STATIC);
+			add('SamplerState __BindlessSamplers[$bindlessSamplersCount];\n');
+		}
 
 		for( e in exprValues ) {
 			add(e);
@@ -1036,6 +1102,7 @@ class HlslOut {
 
 	public function run( s : ShaderData ) {
 		locals = new Map();
+		bindlessSamplers = new Map();
 		decls = [];
 		buf = new StringBuf();
 		exprValues = [];
