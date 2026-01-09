@@ -95,6 +95,10 @@ class System {
 			case Move: "move";
 			case TextInput: "text";
 			case Hide: "none";
+			case ResizeNS: "ns-resize";
+			case ResizeWE: "ew-resize"; // not a typo, WE is reversed in css
+			case ResizeNWSE: "nwse-resize";
+			case ResizeNESW: "nesw-resize";
 			case Callback(_): throw "assert";
 			case Custom(cur):
 				if ( cur.alloc == null ) {

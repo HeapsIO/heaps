@@ -274,6 +274,20 @@ class System {
 			cur = Cursor.createSystem(SizeALL);
 		case TextInput:
 			cur = Cursor.createSystem(IBeam);
+		#if (hlsdl || hldx >= version("1.16.0"))
+		case ResizeNS:
+			cur = Cursor.createSystem(SizeNS);
+		case ResizeWE:
+			cur = Cursor.createSystem(SizeWE);
+		case ResizeNWSE:
+			cur = Cursor.createSystem(SizeNWSE);
+		case ResizeNESW:
+			cur = Cursor.createSystem(SizeNESW);
+		#else
+		// fallback for old hldx versions that don't have all the CursorKind values for SizeXX
+		case ResizeNS, ResizeWE, ResizeNWSE, ResizeNESW:
+			cur = Cursor.createSystem(SizeALL);
+		#end
 		case Callback(_), Hide:
 			throw "assert";
 		case Custom(c):
