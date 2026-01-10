@@ -637,7 +637,7 @@ class Checker {
 			type = e.t;
 			TParenthesis(e);
 		case EFunction(_):
-			throw "assert";
+			error("Local functions not supported", e.pos);
 		case EVars(vl):
 			if( with != InBlock )
 				error("Cannot declare a variable outside of a block", e.pos);
@@ -1381,7 +1381,7 @@ class Checker {
 				case OpAdd: "add";
 				case OpSub: "subtract";
 				case OpDiv: "divide";
-				default: throw "assert";
+				default: ""+op;
 				}
 				error("Cannot " + opName + " " + e1.t.toString() + " and " + e2.t.toString(), pos);
 			}
