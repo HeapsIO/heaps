@@ -224,7 +224,7 @@ class TextInput extends Text {
 			} else cursorIndex = 0;
 			onCursorChange();
 		case K.END:
-			if( multiline ) {
+			if( multiline && !K.isDown(K.CTRL)) {
 				var currentLine = getCurrentLine();
 				cursorIndex = currentLine.startIndex + currentLine.value.length - 1;
 			} else cursorIndex = getTextLength();
@@ -336,7 +336,7 @@ class TextInput extends Text {
 			selectionSize = 0;
 			onCursorChange();
 
-		} else
+		} else if( oldText != text || cursorIndex != oldIndex )
 			selectionRange = null;
 
 	}
