@@ -53,6 +53,8 @@ private class ShaderInfos {
 		readVars = [];
 		writeMap = new Map();
 		writeVars = [];
+		marked = new haxe.EnumFlags();
+		added = new haxe.EnumFlags();
 	}
 }
 
