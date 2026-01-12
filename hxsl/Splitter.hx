@@ -58,7 +58,7 @@ class Splitter {
 			var v = inf.v;
 			if( inf.local ) continue;
 			switch( v.kind ) {
-			case Var, Local:
+			case Var, Local if ( !v.hasQualifier(NoVar) ):
 				var fv = fvars.get(inf.origin.id);
 				v.kind = fv != null && fv.read > 0 ? Var : Local;
 			default:
@@ -264,7 +264,7 @@ class Splitter {
 					if( v.qualifiers != null ) {
 						for ( q in v.qualifiers ) {
 							switch (q) {
-							case Final, Flat:
+							case Final, Flat, NoVar:
 								if ( nv.qualifiers == null )
 									nv.qualifiers = [];
 								nv.qualifiers.push(q);
@@ -353,6 +353,10 @@ class Splitter {
 				checkSyntaxExpr(arg.e);
 				checkExpr(arg.e);
 			}
+		case TCall({ e : TGlobal(ResolveSampler)}, [handle, { e : TVar(v)}]):
+			var inf = get(v);
+			inf.write++;
+			checkExpr(handle);
 		default:
 			e.iter(checkExpr);
 		}

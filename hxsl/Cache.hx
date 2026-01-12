@@ -456,6 +456,8 @@ class Cache {
 				var count = 0;
 				for( a in alloc ) {
 					if( a.v == null ) continue; // padding
+					if ( a.v.type.match(TTextureHandle) )
+						c.paramsHandleCount++;
 					var p = params.get(a.v.id);
 					if( p == null ) {
 						var ap = new AllocParam(a.v.name, a.pos, -1, -1, a.v.type);
@@ -491,7 +493,14 @@ class Cache {
 				default: throw "assert";
 				}
 			case Global:
-				var out = [for( a in alloc ) if( a.v != null ) new AllocGlobal(a.pos, getPath(a.v), a.v.type)];
+				var out = [
+					for( a in alloc )
+						if( a.v != null ) {
+							if ( a.v.type.match(TTextureHandle) )
+								c.globalsHandleCount++;
+							new AllocGlobal(a.pos, getPath(a.v), a.v.type);
+						}
+				];
 				for( i in 0...out.length - 1 )
 					out[i].next = out[i + 1];
 				switch( g.type ) {
@@ -557,6 +566,17 @@ class Cache {
 		if( c.params == null )
 			c.paramsSize = 0;
 		c.data = data;
+		c.hasBindless = c.globalsHandleCount > 0 || c.paramsHandleCount > 0;
+		if ( !c.hasBindless ) {
+			for ( v in c.data.vars ) {
+				switch ( v.type ) {
+				case TTextureHandle:
+					c.hasBindless = true;
+					break;
+				default:
+				}
+			}
+		}
 		return c;
 	}
 
@@ -705,6 +725,8 @@ class Cache {
 				case TMat4: 4 * 4;
 				case TVec(n,VFloat): n;
 				case TFloat, TInt: 1;
+				case TTextureHandle: 2;
+				case TSampler(_): 2;
 				default: throw "Unsupported batch var type "+p.type;
 			}
 			var index;
@@ -760,21 +782,19 @@ class Cache {
 			return false;
 		}
 
-		var p = rt.vertex.params;
-		while( p != null ) {
-			var v = getVar(p);
-			if( isPerInstance(p, v) )
-				addParam(p);
-			p = p.next;
-		}
-		var p = rt.fragment.params;
-		while( p != null ) {
-			var v = getVar(p);
-			if( isPerInstance(p, v) )
-				addParam(p);
-			p = p.next;
+		inline function addPerInstance(p : RuntimeShader.AllocParam) {
+			while( p != null ) {
+				var v = getVar(p);
+				if( isPerInstance(p, v) )
+					addParam(p);
+				p = p.next;
+			}
 		}
 
+		addPerInstance(rt.vertex.params);
+		addPerInstance(rt.fragment.params);
+		addPerInstance(rt.vertex.textures);
+		addPerInstance(rt.fragment.textures);
 
 		var parentVars = new Map();
 		var swiz = [[X],[Y],[Z],[W]];
@@ -813,6 +833,10 @@ class Cache {
 			return { e : TCall({ e : TGlobal(FloatBitsToInt), t : TFun([]), p : e.p }, [e]), t : TInt, p : e.p };
 		}
 
+		inline function floatBitsToUint( e : TExpr ) {
+			return { e : TCall({ e : TGlobal(FloatBitsToUint), t : TFun([]), p : e.p }, [e]), t : TInt, p : e.p };
+		}
+
 		function extractVar( vreal, ebuffer, v : AllocParam ) {
 			var index = (v.pos>>2);
 			var extract = switch( v.type ) {
@@ -834,6 +858,25 @@ class Cache {
 				default: [Z,W];
 				}
 				{ p : pos, t : v.type, e : TSwiz(readOffset(ebuffer, index),swiz) };
+			case TTextureHandle:
+				var swiz = switch( v.pos & 3 ) {
+				case 0: [X,Y];
+				case 1: [Y,Z];
+				default: [Z,W];
+				}
+				floatBitsToUint({ p : pos, t : v.type, e : TSwiz(readOffset(ebuffer, index),swiz) });
+			case TSampler(_):
+				var vh = new AllocParam(v.name + "Handle", v.pos, v.instance, v.index, TTextureHandle);
+				var vhreal = declareLocalVar(vh);
+				var swiz = switch( vh.pos & 3 ) {
+				case 0: [X,Y];
+				case 1: [Y,Z];
+				default: [Z,W];
+				}
+				var extract = floatBitsToUint({ p : pos, t : vh.type, e : TSwiz(readOffset(ebuffer, index),swiz) });
+				var einitHandle = { p : pos, e : TBinop(OpAssign, { e : TVar(vhreal), p : pos, t : vh.type }, extract), t : TVoid };
+				var eresolveTex = { p : pos, e : TCall({e : TGlobal(ResolveSampler), t : TFun([]), p : pos }, [{ e : TVar(vhreal), t : vh.type, p : pos }, { e : TVar(vreal), t : v.type, p : pos }]), t : TVoid };
+				return { p : pos, e : TBlock([einitHandle, eresolveTex]), t : TVoid };
 			case TFloat:
 				{ p : pos, t : v.type, e : TSwiz(readOffset(ebuffer, index),swiz[v.pos&3]) };
 			case TInt:
@@ -880,21 +923,7 @@ class Cache {
 			e : TBinop(OpAssignOp(OpMult),eoffset,{ e : TConst(CInt(stride)), t : TInt, p : pos }),
 		});
 
-		inits.push({
-			p : pos,
-			e : TIf({ e : TVar(useStorage), t : TBool, p : pos },{
-				p : pos,
-				e : TBlock(exprsStorage),
-				t : TVoid,
-			}, {
-				p : pos,
-				e : TBlock(exprsUniform),
-				t : TVoid,
-			}),
-			t : TVoid,
-		});
-
-		var fv : TVar = declVar("init",TFun([]), Function);
+		var fv : TVar = declVar("__init__vertex",TFun([]), Function);
 		var f : TFunction = {
 			kind : Init,
 			ref : fv,
@@ -902,7 +931,26 @@ class Cache {
 			ret : TVoid,
 			expr : { e : TBlock(inits), p : pos, t : TVoid },
 		};
+
+		var pinits = [];
+		for ( i in 0...exprsStorage.length) {
+			pinits.push({
+				p : pos,
+				e : TIf({ e : TVar(useStorage), t : TBool, p : pos }, exprsStorage[i], exprsUniform[i]),
+				t : TVoid,
+			});
+		}
+
+		var fpv : TVar = declVar("__init__",TFun([]), Function);
+		var fp : TFunction = {
+			kind : Init,
+			ref : fpv,
+			args : [],
+			ret : TVoid,
+			expr : { e : TBlock(pinits), p : pos, t : TVoid },
+		};
 		s.data.funs.push(f);
+		s.data.funs.push(fp);
 		s.consts = new SharedShader.ShaderConst(vcount,2,countBits+1);
 		s.consts.globalId = 0;
 		s.consts.next = new SharedShader.ShaderConst(hasOffset,0,1);
