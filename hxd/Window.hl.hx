@@ -652,6 +652,7 @@ class Window {
 			94 => K.QWERTY_BRACKET_RIGHT, // caret
 			249 => K.QWERTY_TILDE, // percent
 			58 => K.QWERTY_SLASH, // slash
+			33 => K.AZERTY_EXCLAIM,
 
 			1101 => K.CONTEXT_MENU,
 			1057 => K.CAPS_LOCK,

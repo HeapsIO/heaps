@@ -38,6 +38,7 @@ class Key {
 	public static inline var LEFT_WINDOW_KEY = 91;
 	public static inline var RIGHT_WINDOW_KEY = 92;
 	public static inline var CONTEXT_MENU = 93;
+	public static inline var AZERTY_EXCLAIM = 223;
 	// public static inline var PRINT_SCREEN = // Only available on SDL
 
 	public static inline var PAUSE_BREAK = 19;
