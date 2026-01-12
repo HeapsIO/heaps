@@ -49,8 +49,6 @@ class Macros {
 			throw "assert";
 		case TBuffer(_):
 			macro : hxsl.Types.Buffer;
-		case TTextureHandle:
-			macro : hxsl.Types.TextureHandle;
 		}
 	}
 

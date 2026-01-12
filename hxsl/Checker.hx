@@ -228,8 +228,6 @@ class Checker {
 				[ { args : [ { name : "value", type : TInt } ], ret : vec4 } ];
 			case UnpackUnorm4x8:
 				[ { args : [ { name : "value", type : TInt } ], ret : vec4 } ];
-			case ResolveSampler:
-				[for( t in texDefs ) { args : [{ name : "handle", type : TTextureHandle }, { name : "tex", type : TSampler(t.dim,t.arr) }], ret : TVoid }];
 			default:
 				throw "Unsupported global "+g;
 			}
@@ -968,7 +966,6 @@ class Checker {
 					}
 				case Ignore, Doc(_):
 				case Flat: if( tv.kind != Local ) error("flat only allowed on local", pos);
-				case NoVar: if( tv.kind != Local ) error("noVar only allowed on local", pos);
 				}
 		}
 		if( tv.type != null )

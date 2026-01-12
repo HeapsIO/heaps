@@ -66,7 +66,6 @@ class Printer {
 				case Sampler(s): "sampler("+ s + ")";
 				case Final: "final";
 				case Flat: "flat";
-				case NoVar: "noVar";
 				}) + " ");
 		}
 		if( v.kind != defKind )

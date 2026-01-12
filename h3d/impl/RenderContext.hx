@@ -168,10 +168,6 @@ class RenderContext {
 			for( vv in vl )
 				tot += fillRec(Reflect.field(v, vv.name), vv.type, out, pos + tot);
 			return tot;
-		case TTextureHandle:
-			var v : h3d.mat.TextureHandle = v;
-			fillIntParam(v.handle.low, pos, out);
-			fillIntParam(v.handle.high, pos + 1, out);
 		default:
 			throw "assert " + type;
 		}
@@ -218,13 +214,10 @@ class RenderContext {
 		inline function fill(buf:h3d.shader.Buffers.ShaderBuffers, s:hxsl.RuntimeShader.RuntimeShaderData) {
 			var g = s.globals;
 			var ptr = getPtr(buf.globals);
-			var hid = s.paramsHandleCount;
 			while( g != null ) {
-				var v : Dynamic = globals.fastGet(g.gid);
+				var v = globals.fastGet(g.gid);
 				if( v == null )
 					throw "Missing global value " + g.path;
-				if ( g.type.match(TTextureHandle) )
-					buf.handles[hid++] = v;
 				fillRec(v, g.type, ptr, g.pos);
 				g = g.next;
 			}
@@ -262,7 +255,6 @@ class RenderContext {
 		inline function fill(buf:h3d.shader.Buffers.ShaderBuffers, s:hxsl.RuntimeShader.RuntimeShaderData) {
 			var p = s.params;
 			var ptr = getPtr(buf.params);
-			var hid = 0;
 			while( p != null ) {
 				var v : Dynamic;
 				if( p.perObjectGlobal == null ) {
@@ -276,12 +268,9 @@ class RenderContext {
 						fillIntParam(Std.int(i.getParamFloatValue(p.index)), p.pos, ptr);
 						p = p.next;
 						continue;
-					case TTextureHandle:
-						v = i.getParamValue(p.index);
-						buf.handles[hid++] = v;
 					default:
-						v = i.getParamValue(p.index);
 					}
+					v = i.getParamValue(p.index);
 					if( v == null ) throw "Missing param value " + curInstanceValue + "." + p.name;
 				} else
 					v = getParamValue(p, shaders);

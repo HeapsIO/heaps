@@ -61,9 +61,6 @@ class RuntimeShaderData {
 	public var texturesCount : Int;
 	public var buffers : AllocParam;
 	public var bufferCount : Int;
-	public var globalsHandleCount : Int;
-	public var paramsHandleCount : Int;
-	public var hasBindless : Bool;
 	public function new() {
 	}
 }
@@ -100,10 +97,6 @@ class RuntimeShader {
 
 	public function new() {
 		id = UID++;
-	}
-
-	public inline function hasBindless() : Bool {
-		return vertex.hasBindless || (fragment != null && fragment.hasBindless);
 	}
 
 	public inline function hasGlobal( gid : Int ) {

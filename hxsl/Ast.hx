@@ -35,7 +35,6 @@ enum Type {
 	TArray( t : Type, size : SizeDecl );
 	TBuffer( t : Type, size : SizeDecl, kind : BufferKind );
 	TChannel( size : Int );
-	TTextureHandle;
 }
 
 enum VecType {
@@ -104,7 +103,6 @@ enum VarQualifier {
 	Sampler( name : String );
 	Final;
 	Flat;
-	NoVar;
 }
 
 enum Prec {
@@ -318,7 +316,6 @@ enum TGlobal {
 	UnpackUnorm4x8;
 	Transpose;
 	TexelLod;
-	ResolveSampler;
 }
 
 enum SyntaxArgAccess {
@@ -547,7 +544,7 @@ class Tools {
 			return true;
 		case TCall(e, pl):
 			switch( e.e ) {
-			case TGlobal( ImageStore | AtomicAdd | GroupMemoryBarrier | ResolveSampler ):
+			case TGlobal( ImageStore | AtomicAdd | GroupMemoryBarrier ):
 				return true;
 			case TGlobal(g):
 			default:
@@ -646,7 +643,6 @@ class Tools {
 		case TBool, TString, TSampler(_), TRWTexture(_), TFun(_): 0;
 		case TArray(t, SConst(v)), TBuffer(t, SConst(v),_): size(t) * v;
 		case TArray(_, SVar(_)), TBuffer(_): 0;
-		case TTextureHandle: 2;
 		}
 	}
 

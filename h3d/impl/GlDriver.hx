@@ -1958,16 +1958,11 @@ class GlDriver extends Driver {
 	}
 
 	override function hasFeature( f : Feature ) : Bool {
-		return switch(f) {
-		case Bindless:
-			false;
-		default:
-			#if js
-			features.get(f);
-			#else
-			true;
-			#end
-		};
+		#if js
+		return features.get(f);
+		#else
+		return true;
+		#end
 	}
 
 	#if js

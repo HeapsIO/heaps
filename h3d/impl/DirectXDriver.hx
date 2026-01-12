@@ -915,7 +915,7 @@ class DirectXDriver extends h3d.impl.Driver {
 
 	override function hasFeature(f:Feature) {
 		return switch(f) {
-		case Queries, BottomLeftCoords, Bindless:
+		case Queries, BottomLeftCoords:
 			false;
 		default:
 			true;
