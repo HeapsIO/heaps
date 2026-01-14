@@ -653,6 +653,7 @@ class Window {
 			249 => K.QWERTY_TILDE, // percent
 			58 => K.QWERTY_SLASH, // slash
 			33 => K.AZERTY_EXCLAM,
+			36 => K.QWERTY_SEMICOLON, // dollar
 
 			1101 => K.CONTEXT_MENU,
 			1057 => K.CAPS_LOCK,
