@@ -152,11 +152,10 @@ class PipelineBuilder {
 		return d;
 	}
 
-	public function setRenderTarget( tex : h3d.mat.Texture, depthEnabled : Bool ) {
+	public function setRenderTarget( tex : h3d.mat.Texture, depth : h3d.mat.Texture  ) {
 		signature.setI32(PSIGN_RENDER_TARGETS, tex == null ? 0 : getRTBits(tex));
 		signature.setI32(PSIGN_RENDER_TARGETS + 4, 0);
-		var format = tex == null || !depthEnabled ? 0 : tex.depthBuffer.format.getIndex();
-		signature.setI32(PSIGN_DEPTH_TARGET_FORMAT, format);
+		signature.setI32(PSIGN_DEPTH_TARGET_FORMAT, depth == null ? 0 : depth.format.getIndex());
 		needFlush = true;
 	}
 
@@ -171,14 +170,14 @@ class PipelineBuilder {
 		needFlush = true;
 	}
 
-	public function setRenderTargets( textures : Array<h3d.mat.Texture>, depthEnabled : Bool ) {
+	public function setRenderTargets( textures : Array<h3d.mat.Texture>, depth : h3d.mat.Texture  ) {
 		var bits = 0;
 		for( i => t in textures )
 			signature.setUI8(PSIGN_RENDER_TARGETS + i, getRTBits(t));
 		for ( i in textures.length...8)
 			signature.setUI8(PSIGN_RENDER_TARGETS + i, 0);
 		var tex = textures[0];
-		var format = tex == null || !depthEnabled ? 0 : tex.depthBuffer.format.getIndex();
+		var format = depth == null ? 0 : depth.format.getIndex();
 		signature.setI32(PSIGN_DEPTH_TARGET_FORMAT, format);
 		needFlush = true;
 	}

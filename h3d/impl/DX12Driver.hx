@@ -191,8 +191,6 @@ class DxFrame {
 	public var samplerHeap : ScratchHeap;
 	public var srvHeapCache : ScratchHeapArray;
 	public var samplerHeapCache : ScratchHeapArray;
-	public var availableBuffers : TempBuffer;
-	public var usedBuffers : TempBuffer;
 	public var queryHeaps : Array<QueryHeap> = [];
 	public var queriesPending : Array<Query> = [];
 	public var queryCurrentHeap : Int;
@@ -529,7 +527,7 @@ class DX12Driver extends h3d.impl.Driver {
 	public static var INITIAL_BUFFER_ALLOCATOR_SIZE = 2 * 1024 * 1024;
 	public static var BUFFER_COUNT = #if console 3 #else 2 #end;
 	public static var DEVICE_NAME = null;
-	public static var DEBUG = false; // requires dxil.dll when set to true
+	public static var DEBUG = true; // requires dxil.dll when set to true
 
 	public function new() {
 		window = @:privateAccess dx.Window.windows[0];
@@ -647,23 +645,6 @@ class DX12Driver extends h3d.impl.Driver {
 			}
 		}
 		beginQueries();
-
-		var used = frame.usedBuffers;
-		var b = frame.availableBuffers;
-		var prev = null;
-		while( b != null ) {
-			if( b.lastUse < frameCount - 120 ) {
-				b.buffer.release();
-				b = b.next;
-			} else {
-				var n = b.next;
-				b.next = used;
-				used = b;
-				b = n;
-			}
-		}
-		frame.availableBuffers = used;
-		frame.usedBuffers = null;
 
 		transition(frame.backBuffer, RENDER_TARGET);
 		frame.commandList.iaSetPrimitiveTopology(TRIANGLELIST);
@@ -1001,7 +982,8 @@ class DX12Driver extends h3d.impl.Driver {
 		if( w == 0 ) w = 1;
 		if( h == 0 ) h = 1;
 		initViewport(w, h);
-		pipelineBuilder.setRenderTarget(tex, depthEnabled);
+		var depthBuffer = tex == null ? defaultDepth : tex.depthBuffer;
+		pipelineBuilder.setRenderTarget(tex, depthEnabled ? depthBuffer : null);
 	}
 
 	function toDxgiDepthFormat( format : hxd.PixelFormat ) {
@@ -1053,7 +1035,8 @@ class DX12Driver extends h3d.impl.Driver {
 		frame.commandList.omSetRenderTargets(textures.length, tmp.renderTargets, true, depthEnabled ? getDepthViewFromTexture(t0, depthBinding == ReadOnly) : null);
 		initViewport(t0.width, t0.height);
 
-		pipelineBuilder.setRenderTargets(textures, depthEnabled);
+		var depthBuffer = t0 == null ? defaultDepth : t0.depthBuffer;
+		pipelineBuilder.setRenderTargets(textures, depthEnabled ? depthBuffer : null);
 	}
 
 	override function setDepth(depthBuffer : h3d.mat.Texture) {
