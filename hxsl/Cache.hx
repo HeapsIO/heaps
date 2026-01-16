@@ -77,6 +77,16 @@ class Cache {
 		var shader = linkShaders.get(key);
 		if( shader != null )
 			return shader;
+
+		var s = createLinkShader(key, vars, vertexOutputName);
+		shader = std.Type.createEmptyInstance(Shader);
+		@:privateAccess shader.shader = s;
+		linkShaders.set(key, shader);
+		@:privateAccess shader.updateConstantsFinal(null);
+		return shader;
+	}
+
+	function createLinkShader( key : String, vars : Array<Output>, vertexOutputName ) : SharedShader {
 		var s = new hxsl.SharedShader("");
 		var id = haxe.crypto.Md5.encode(key).substr(0, 8);
 		s.data = {
@@ -180,13 +190,7 @@ class Cache {
 		}
 		defineFun(Vertex, [Value(vertexOutputName)]);
 		defineFun(Fragment, vars);
-
-		shader = std.Type.createEmptyInstance(Shader);
-		@:privateAccess shader.shader = s;
-		linkShaders.set(key, shader);
-		@:privateAccess shader.updateConstantsFinal(null);
-
-		return shader;
+		return s;
 	}
 
 	@:noDebug
