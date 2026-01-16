@@ -9,15 +9,22 @@ class CacheFile2Loader {
 	// Input from file
 	public var lkInfos : Array<{ name : String, vars : Array<hxsl.Output> }> = [];
 	public var bcMap : Map<String, { sign : String, params : hxsl.Cache.BatchInstanceParams }> = [];
-	public var rtInfos : Array<{ sign : String, sl : Array<{ name : String, p : Int, constBits : Int }>, mode : RuntimeShader.LinkMode }> = [];
+	public var rtInfosDefault : Array<{ sign : String, sl : Array<{ name : String, p : Int, constBits : Int }> }> = [];
+	public var rtInfosBatch : Array<{ sign : String, sl : Array<{ name : String, p : Int, constBits : Int }> }> = [];
+	public var rtInfosCompute : Array<{ sign : String, sl : Array<{ name : String, p : Int, constBits : Int }> }> = [];
 
 	// Tmp used by run
 	var onDone : Void -> Void;
 	var ssMap : Map<String, SharedShader> = [];
-	var slists : Array<{ sl : ShaderList, mode : RuntimeShader.LinkMode }> = [];
+	var slistsDefault : Array<{ sign : String, sl : ShaderList }> = [];
+	var slistsBatch : Array<ShaderList> = [];
 	var rtMap : Map<String, { rt : RuntimeShader, sl : hxsl.ShaderList }> = [];
 	#if heaps_mt_hxsl_cache
 	var workThread : sys.thread.Thread;
+	var event : haxe.MainLoop.MainEvent = null;
+	var rtMapReady : Bool = false;
+	var bcListsReady : Bool = false;
+	var linkDone : Bool = false;
 	#end
 
 	public function new( cache : CacheFile2 ) {
@@ -33,79 +40,127 @@ class CacheFile2Loader {
 			ssMap.set(lk.name, @:privateAccess shader.shader);
 		}
 
-		// Build ShaderList
-		for( rtInfo in rtInfos ) {
-			var sign = rtInfo.sign;
-			var mode = rtInfo.mode;
-			var sl = null;
-			var slinfo = null;
-			while( (slinfo = rtInfo.sl.pop()) != null ) {
-				var name = slinfo.name;
-				var priority = slinfo.p;
-				var constBits = slinfo.constBits;
-				var ssd = ssMap.get(name);
-				if( ssd == null && mode == Batch ) {
-					var bcinfo = bcMap.get(name);
-					if( bcinfo != null ) {
-						var rts = rtMap.get(bcinfo.sign);
-						if( rts == null ) {
-							cache.log("Base shader not found for " + name);
-							sl = null;
-							break;
-						}
-						var b = cache.makeBatchShader(rts.rt, rts.sl.next, bcinfo.params);
-						ssd = @:privateAccess b.shader;
-					}
-				}
-				if( ssd == null ) {
-					var sd = resolveShader(name);
-					if( sd == null ) {
-						cache.log("Missing shader " + name);
-						sl = null;
-						break;
-					}
-					ssd = @:privateAccess sd.shader;
-					ssMap.set(name, ssd);
-				}
-				var s = Type.createEmptyInstance(hxsl.Shader);
-				@:privateAccess {
-					s.priority = priority;
-					s.constBits = constBits;
-					s.shader = ssd;
-					try {
-						s.instance = ssd.getInstance(constBits);
-					} catch( e ) {
-						cache.log('Can\'t instance shader $name(${StringTools.hex(constBits)}): ' + e.toString());
-						sl = null;
-						break;
-					}
-				}
-				sl = new ShaderList(s, sl);
-			}
+		// Build ShaderList Default
+		for( rtInfo in rtInfosDefault ) {
+			var sl = makeShaderList(rtInfo.sl, Default);
 			if( sl != null ) {
-				slists.push({ sl : sl, mode : mode });
+				slistsDefault.push({ sign : rtInfo.sign, sl : sl });
 			}
 		}
 
 		#if heaps_mt_hxsl_cache
-		workThread = sys.thread.Thread.create(threadLoop);
+		workThread = sys.thread.Thread.create(threadLoop, (e) -> { linkDone = true; });
 		workThread.name = "CacheFile2Loader";
+		event = haxe.MainLoop.add(update);
 		#else
 		threadLoop();
+		if( this.onDone != null )
+			this.onDone();
 		#end
 	}
 
 	function threadLoop() {
-		// Link ShaderList
-		for( l in slists ) {
-			var rts = cache.link(l.sl, l.mode);
-			// if( l.mode == Default ) {
-			// 	rtMap.set(sign, { rt : rts, sl : l.sl });
-			// }
+		// Link ShaderList Default
+		for( l in slistsDefault ) {
+			var rts = cache.link(l.sl, Default);
+			rtMap.set(l.sign, { rt : rts, sl : l.sl });
 		}
 
-		if( this.onDone != null )
-			this.onDone();
+		#if heaps_mt_hxsl_cache
+		rtMapReady = true;
+		while( !bcListsReady ) {
+			Sys.sleep(0.1);
+		}
+		#else
+		buildBatchShaders();
+		#end
+
+		// Link ShaderList Batch
+		for( sl in slistsBatch ) {
+			var rts = cache.link(sl, Batch);
+		}
+
+		#if heaps_mt_hxsl_cache
+		linkDone = true;
+		#end
+	}
+
+	#if heaps_mt_hxsl_cache
+	function update() {
+		if( !rtMapReady )
+			return;
+		if( !bcListsReady ) {
+			buildBatchShaders();
+			bcListsReady = true;
+			return;
+		}
+		if( linkDone ) {
+			if( this.onDone != null )
+				this.onDone();
+			event.stop();
+			event = null;
+		}
+	}
+	#end
+
+	function buildBatchShaders() {
+		for( rtInfo in rtInfosBatch ) {
+			var sl = makeShaderList(rtInfo.sl, Batch);
+			if( sl != null ) {
+				slistsBatch.push(sl);
+			}
+		}
+	}
+
+	function makeShaderList( slinfos : Array<{ name : String, p : Int, constBits : Int }>, mode : RuntimeShader.LinkMode ) {
+		var sl = null;
+		var i = slinfos.length;
+		while( i > 0 ) {
+			i--;
+			var slinfo = slinfos[i];
+			var name = slinfo.name;
+			var priority = slinfo.p;
+			var constBits = slinfo.constBits;
+			var ssd = ssMap.get(name);
+			if( ssd == null && mode == Batch ) {
+				var bcinfo = bcMap.get(name);
+				if( bcinfo != null ) {
+					var rts = rtMap.get(bcinfo.sign);
+					if( rts == null ) {
+						cache.log("Base shader not found for " + name);
+						sl = null;
+						break;
+					}
+					var b = cache.makeBatchShader(rts.rt, rts.sl.next, bcinfo.params);
+					ssd = @:privateAccess b.shader;
+				}
+			}
+			if( ssd == null ) {
+				var sd = resolveShader(name);
+				if( sd == null ) {
+					cache.log("Missing shader " + name);
+					sl = null;
+					break;
+				}
+				ssd = @:privateAccess sd.shader;
+				ssMap.set(name, ssd);
+			}
+			var s = Type.createEmptyInstance(hxsl.Shader);
+			@:privateAccess {
+				s.priority = priority;
+				s.constBits = constBits;
+				s.shader = ssd;
+				try {
+					s.instance = ssd.getInstance(constBits);
+				} catch( e ) {
+					cache.log('Can\'t instance shader $name(${StringTools.hex(constBits)}): ' + e.toString());
+					sl = null;
+					break;
+				}
+			}
+			sl = new ShaderList(s, sl);
+		}
+		return sl;
 	}
 
 	function resolveShader( name : String ) : hxsl.Shader {
@@ -171,14 +226,14 @@ class CacheFile2 extends Cache {
 
 	override function createBatchShader( rt, shaders, params ) {
 		var b = super.createBatchShader(rt, shaders, params);
-		// var name = b.shader.data.name;
-		// batchers.push({ name : name, rt : rt, params : params });
+		var name = b.shader.data.name;
+		batchers.push({ name : name, rt : rt, params : params });
 		return b;
 	}
 
 	override function compileRuntimeShader( shaders : hxsl.ShaderList, mode ) {
 		var rt = super.compileRuntimeShader(shaders, mode);
-		if( DEBUG && !isLoading ) {
+		if( !isLoading ) {
 			log("Compiled runtime shader (" + mode.getName() + "): " + rt.spec.signature + ":" + [for( inst in rt.spec.instances ) @:privateAccess inst.shader.data.name].join(":"));
 		}
 		switch( mode ) {
@@ -186,7 +241,8 @@ class CacheFile2 extends Cache {
 				runtimesDefault.push(rt);
 				isDirty = true;
 			case Batch:
-				// runtimesBatch.push(rt); // TODO fix multithread
+				runtimesBatch.push(rt);
+				isDirty = true;
 			case Compute:
 				// runtimesCompute.push(rt); // TODO fix Null access .inputs on getInstance
 		}
@@ -194,7 +250,8 @@ class CacheFile2 extends Cache {
 	}
 
 	inline function log( str : String ) {
-		Sys.println("[CacheFile2] " + str);
+		if( DEBUG )
+			Sys.println("[CacheFile2] " + str);
 	}
 
 	function load() {
@@ -277,7 +334,11 @@ class CacheFile2 extends Cache {
 				sl.push({ name : name, p : priority, constBits : constBits });
 			}
 			if( sl.length != 0 ) {
-				loader.rtInfos.push({ sign : sign, sl : sl, mode : mode });
+				switch( mode ) {
+				case Default: loader.rtInfosDefault.push({ sign : sign, sl : sl });
+				case Batch: loader.rtInfosBatch.push({ sign : sign, sl : sl });
+				case Compute: loader.rtInfosCompute.push({ sign : sign, sl : sl });
+				}
 			}
 		}
 
@@ -348,8 +409,7 @@ class CacheFile2 extends Cache {
 		writeRtArr(runtimesCompute);
 
 		sys.io.File.saveBytes(file, out.getBytes());
-		if( DEBUG )
-			log("Cache file saved to " + file);
+		log("Cache file saved to " + file);
 	}
 }
 
