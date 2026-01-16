@@ -60,6 +60,9 @@ class Cache {
 	var batchShaders : Map<RuntimeShader, { shader : SharedShader, params : RuntimeShader.AllocParam, size : Int }>;
 	var byID : Map<String, RuntimeShader>;
 	var batchShadersParams : Map<String, Map<RuntimeShader, { shader : SharedShader, params : RuntimeShader.AllocParam, size : Int }>>;
+	#if heaps_mt_hxsl_cache
+	var linkMutex : sys.thread.Mutex;
+	#end
 
 	function new() {
 		linkCache = new SearchMap();
@@ -67,6 +70,9 @@ class Cache {
 		batchShaders = new Map();
 		batchShadersParams = new Map();
 		byID = new Map();
+		#if heaps_mt_hxsl_cache
+		linkMutex = new sys.thread.Mutex();
+		#end
 	}
 
 	/**
@@ -195,6 +201,9 @@ class Cache {
 
 	@:noDebug
 	public function link( shaders : hxsl.ShaderList, mode : LinkMode ) {
+		#if heaps_mt_hxsl_cache
+		linkMutex.acquire();
+		#end
 		var c = linkCache;
 		for( s in shaders ) {
 			var i = @:privateAccess s.instance;
@@ -205,6 +214,9 @@ class Cache {
 			}
 			c = cs;
 		}
+		#if heaps_mt_hxsl_cache
+		linkMutex.release();
+		#end
 		if( c.linked == null )
 			c.linked = compileRuntimeShader(shaders, mode);
 		return c.linked;
@@ -376,11 +388,17 @@ class Cache {
 		var signParts = [for( i in r.spec.instances ) i.shader.data.name+"_" + i.bits + "_" + i.index];
 		r.spec.signature = haxe.crypto.Md5.encode(signParts.join(":"));
 		r.signature = haxe.crypto.Md5.encode([for( s in r.getShaders() ) Printer.shaderToString(s.data)].join(""));
+		#if heaps_mt_hxsl_cache
+		linkMutex.acquire();
+		#end
 		var r2 = byID.get(r.signature);
 		if( r2 != null )
 			r.id = r2.id; // same id but different variable mapping
 		else
 			byID.set(r.signature, r);
+		#if heaps_mt_hxsl_cache
+		linkMutex.release();
+		#end
 
 		#if shader_debug_dump
 		dbg.writeString("---- OUTPUT -----\n\n");

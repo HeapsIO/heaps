@@ -8,14 +8,17 @@ class CacheFile2Loader {
 
 	// Input from file
 	public var lkInfos : Array<{ name : String, vars : Array<hxsl.Output> }> = [];
-	public var bcMap : Map<String, { sign : String, params : hxsl.Cache.BatchInstanceParams}> = [];
+	public var bcMap : Map<String, { sign : String, params : hxsl.Cache.BatchInstanceParams }> = [];
 	public var rtInfos : Array<{ sign : String, sl : Array<{ name : String, p : Int, constBits : Int }>, mode : RuntimeShader.LinkMode }> = [];
 
 	// Tmp used by run
 	var onDone : Void -> Void;
 	var ssMap : Map<String, SharedShader> = [];
+	var slists : Array<{ sl : ShaderList, mode : RuntimeShader.LinkMode }> = [];
 	var rtMap : Map<String, { rt : RuntimeShader, sl : hxsl.ShaderList }> = [];
-	var errors : Array<String> = [];
+	#if heaps_mt_hxsl_cache
+	var workThread : sys.thread.Thread;
+	#end
 
 	public function new( cache : CacheFile2 ) {
 		this.cache = cache;
@@ -30,7 +33,7 @@ class CacheFile2Loader {
 			ssMap.set(lk.name, @:privateAccess shader.shader);
 		}
 
-		// Build RuntimeShader
+		// Build ShaderList
 		for( rtInfo in rtInfos ) {
 			var sign = rtInfo.sign;
 			var mode = rtInfo.mode;
@@ -79,14 +82,28 @@ class CacheFile2Loader {
 				}
 				sl = new ShaderList(s, sl);
 			}
-			// Link ShaderList
 			if( sl != null ) {
-				var rts = cache.link(sl, mode);
-				if( mode == Default ) {
-					rtMap.set(sign, { rt : rts, sl : sl });
-				}
+				slists.push({ sl : sl, mode : mode });
 			}
 		}
+
+		#if heaps_mt_hxsl_cache
+		workThread = sys.thread.Thread.create(threadLoop);
+		workThread.name = "CacheFile2Loader";
+		#else
+		threadLoop();
+		#end
+	}
+
+	function threadLoop() {
+		// Link ShaderList
+		for( l in slists ) {
+			var rts = cache.link(l.sl, l.mode);
+			// if( l.mode == Default ) {
+			// 	rtMap.set(sign, { rt : rts, sl : l.sl });
+			// }
+		}
+
 		if( this.onDone != null )
 			this.onDone();
 	}
@@ -112,7 +129,7 @@ class CacheFile2Loader {
 }
 
 /**
-	Similar to CacheFile, but save only platform-independent RuntimeShader data.
+	Similar to CacheFile, but save only platform-independent RuntimeShader data (shader list).
 **/
 class CacheFile2 extends Cache {
 	static var DEBUG : Bool = false;
@@ -154,8 +171,8 @@ class CacheFile2 extends Cache {
 
 	override function createBatchShader( rt, shaders, params ) {
 		var b = super.createBatchShader(rt, shaders, params);
-		var name = b.shader.data.name;
-		batchers.push({ name : name, rt : rt, params : params });
+		// var name = b.shader.data.name;
+		// batchers.push({ name : name, rt : rt, params : params });
 		return b;
 	}
 
@@ -169,8 +186,7 @@ class CacheFile2 extends Cache {
 				runtimesDefault.push(rt);
 				isDirty = true;
 			case Batch:
-				runtimesBatch.push(rt);
-				isDirty = true;
+				// runtimesBatch.push(rt); // TODO fix multithread
 			case Compute:
 				// runtimesCompute.push(rt); // TODO fix Null access .inputs on getInstance
 		}
