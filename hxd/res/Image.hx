@@ -526,6 +526,7 @@ class Image extends Resource {
 
 	static var BLACK_1x1 = Pixels.alloc(1, 1, RGBA);
 	public static var ASYNC_LOADER:hxd.impl.AsyncLoader;
+	public static var ASYNC_LOADER_MIPS = 0;
 	public static var LOG_TEXTURE_LOAD = #if heaps_texture_load true #else false #end;
 
 	function asyncLoad(data:haxe.io.Bytes) {
@@ -533,6 +534,10 @@ class Image extends Resource {
 			return;
 		tex.dispose();
 		tex.flags.unset(Loading);
+		if( tex.flags.has(AsyncKeepStartingMip) )
+			tex.flags.unset(AsyncKeepStartingMip);
+		else
+			tex.startingMip = 0;
 		@:privateAccess {
 			tex.format = inf.pixelFormat;
 			tex.width = inf.width;
@@ -568,24 +573,71 @@ class Image extends Resource {
 		}
 
 		function load() {
-			if ((enableAsyncLoading || tex.flags.has(AsyncLoading)) && asyncData == null && ASYNC_LOADER != null && ASYNC_LOADER.isSupported(this))
-				@:privateAccess {
-				tex.dispose();
-				tex.format = RGBA;
-				tex.width = 1;
-				tex.height = 1;
-				tex.customMipLevels = 1;
-				tex.flags.set(Loading);
-				tex.alloc();
-				tex.uploadPixels(BLACK_1x1);
-				tex.width = inf.width;
-				tex.height = inf.height;
+			if ((enableAsyncLoading || tex.flags.has(AsyncLoading)) && asyncData == null && ASYNC_LOADER != null && ASYNC_LOADER.isSupported(this)) @:privateAccess {
+				var mipSize = hxd.Math.imax(tex.width, tex.height) >> (tex.mipLevels - 1);
+				if( ASYNC_LOADER_MIPS > 0 && tex.mipLevels > 1 && inf.layerCount == 1 && inf.dataFormat == Dds ) {
+					// read the required mips
+					var pos = 128;
+					if (inf.flags.has(Dxt10Header))
+						pos += 20;
+					for (mip in 0...inf.mipOffset) {
+						var w = (inf.width << inf.mipOffset) >> mip;
+						var h = (inf.height << inf.mipOffset) >> mip;
+						var size = hxd.Pixels.calcDataSize(w, h, inf.pixelFormat);
+						pos += size;
+					}
+					var mipDataSize = 0;
+					var startMip = tex.mipLevels - ASYNC_LOADER_MIPS;
+					if( startMip < 0 ) startMip = 0;
+					for (mip in 0...tex.mipLevels) {
+						var w = inf.width >> mip;
+						var h = inf.height >> mip;
+						if (w == 0) w = 1;
+						if (h == 0) h = 1;
+						var size = hxd.Pixels.calcDataSize(w, h, inf.pixelFormat);
+						if( mip >= startMip ) mipDataSize += size;
+						pos += size;
+					}
+					var bytes = entry.fetchBytes(pos - mipDataSize, mipDataSize);
+					var pix = new hxd.Pixels(0, 0, bytes, inf.pixelFormat);
+					for( k in 0...tex.mipLevels - startMip ) {
+						var mip = startMip + k;
+						var w = inf.width >> mip;
+						var h = inf.height >> mip;
+						if (w == 0) w = 1;
+						if (h == 0) h = 1;
+						var size = hxd.Pixels.calcDataSize(w, h, inf.pixelFormat);
+						pix.width = w;
+						pix.height = h;
+						pix.dataSize = size;
+						tex.uploadPixels(pix, mip, 0);
+						pix.offset += size;
+					}
+					if( startMip == 0 ) {
+						// we're done !
+						tex.realloc = () -> loadTexture();
+						return;
+					}
+					// no dispose/alloc, instead use only these mip levels until loaded
+					tex.startingMip = startMip;
+					tex.flags.set(Loading);
+				} else {
+					tex.dispose();
+					tex.format = RGBA;
+					tex.width = 1;
+					tex.height = 1;
+					tex.customMipLevels = 1;
+					tex.flags.set(Loading);
+					tex.alloc();
+					tex.uploadPixels(BLACK_1x1);
+					tex.width = inf.width;
+					tex.height = inf.height;
+				}
 				ASYNC_LOADER.load(this);
 				tex.realloc = () -> loadTexture();
 				return;
 			}
 			var t0 = haxe.Timer.stamp();
-			// immediately loading the PNG is faster than going through loadBitmap
 			@:privateAccess tex.customMipLevels = inf.mipLevels;
 			tex.alloc();
 			switch (inf.dataFormat) {
