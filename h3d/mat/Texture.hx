@@ -40,12 +40,13 @@ class Texture {
 	@:bits(bits) public var filter : Filter;
 	@:bits(bits) public var wrap : Wrap;
 	public var layerCount(get, never) : Int;
-	@:bits(bits, 4) public var startingMip : Int = 0;
+	@:bits(bits, 4) var __startingMip : Int;
 	@:bits(bits, 16) var packedLodBias : Int;
 	@:bits(bits, 4) var packedAnisotropicMaxLevel : Int = 15;
 	public var lodBias(get, set) : Float;
 	public var mipLevels(get, never) : Int;
 	public var anisotropicMaxLevel(get, set) : Int;
+	public var startingMip(get,set) : Int;
 	var customMipLevels : Int;
 
 	/**
@@ -68,6 +69,15 @@ class Texture {
 			_lastFrame = lf;
 		}
 		return _lastFrame;
+	}
+
+	inline function get_startingMip() {
+		return __startingMip;
+	}
+
+	inline function set_startingMip(v:Int) {
+		if( flags.has(Loading) ) flags.set(AsyncKeepStartingMip);
+		return __startingMip = v;
 	}
 
 	inline function get_lastFrame()

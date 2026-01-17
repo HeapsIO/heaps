@@ -2128,7 +2128,7 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	inline function getSamplerBits( t : h3d.mat.Texture ) {
-		return @:privateAccess t.bits & ~h3d.mat.Texture.startingMip_mask;
+		return @:privateAccess t.bits & ~h3d.mat.Texture.__startingMip_mask;
 	}
 
 	function getCpuSampler( t : h3d.mat.Texture ) : Address {

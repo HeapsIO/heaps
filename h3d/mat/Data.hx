@@ -140,6 +140,10 @@ enum TextureFlags {
 		Tells if it's a 3D texture
 	**/
 	Is3D;
+	/**
+		The startingMip was set during loading, so do not reset it to 0 at end of loading
+	**/
+	AsyncKeepStartingMip;
 }
 
 typedef TextureFormat = hxd.PixelFormat;
