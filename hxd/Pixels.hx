@@ -406,11 +406,25 @@ class Pixels {
 			return;
 		#end
 
+		case [_, S3TC(1)] if( width == 1 && height == 1):
+			var out = haxe.io.Bytes.alloc(8);
+			var col0 = toRGB565(getPixel(0,0));
+			out.setUInt16(0, col0);
+			out.setUInt16(2, col0);
+			offset = 0;
+			this.bytes = out;
 		default:
 			throw "Cannot convert from " + format + " to " + target;
 		}
 
 		innerFormat = target;
+	}
+
+	static function toRGB565( color : Int ) {
+		var r = (color >> 16) & 0xFF;
+		var g = (color >> 8) & 0xFF;
+		var b = color & 0xFF;
+		return ((r >> 3) << 11) | ((g >> 2) << 5) | (b >> 3);
 	}
 
 	public function getPixel(x, y) : Int {
@@ -447,6 +461,9 @@ class Pixels {
 			bytes.setInt32(p, switchEndian(color));
 		case RG8:
 			bytes.setUInt16(p, ((color & 0xff) << 8) | ((color & 0xff00) >> 8));
+		case S3TC(1) if( width == 1 && height == 1 ):
+			var c = toRGB565(color);
+			bytes.setInt32(0, c | (c << 16)); // write both colors in cases
 		default:
 			invalidFormat();
 		}
