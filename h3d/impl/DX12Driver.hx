@@ -1558,7 +1558,7 @@ class DX12Driver extends h3d.impl.Driver {
 
 	function compileShader( shader : hxsl.RuntimeShader ) : CompiledShader {
 		if ( shader.hasBindless() && !useSM6_6 )
-			throw "Shader using bindless detected, but Shader Model 6.6 is not used. Please call enableBindless()."
+			throw "Shader using bindless detected, but Shader Model 6.6 is not used. Please call enableBindless().";
 
 		var res = computeRootSignature(shader);
 
