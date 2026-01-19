@@ -520,6 +520,7 @@ class DX12Driver extends h3d.impl.Driver {
 	var lastFragmentGlobalBind : Int = -1;
 	var needUAVBarrier : Bool = false;
 	var useDepthClamp : Bool = false;
+	var hasSM6_6 = false;
 
 	public static var INITIAL_RT_COUNT = 1024;
 	public static var INITIAL_SRV_COUNT = 1024;
@@ -538,6 +539,8 @@ class DX12Driver extends h3d.impl.Driver {
 		return switch(f) {
 		case Queries, BottomLeftCoords:
 			false;
+		case Bindless:
+			hasSM6_6;
 		default:
 			true;
 		};
@@ -620,6 +623,13 @@ class DX12Driver extends h3d.impl.Driver {
 		tsFreq = Driver.getTimestampFrequency();
 
 		compiler = new ShaderCompiler();
+		#if (hldx >= version("1.16.0"))
+		var shaderModel = new hl.Bytes(4);
+		shaderModel.setI32(0, HIGHEST_SHADER_MODEL);
+		Driver.checkFeatureSupport(SHADER_MODEL, shaderModel, 4);
+		hasSM6_6 = cast(SHADER_MODEL_6_6, Int) <= shaderModel.getI32(0);
+		#end
+
 		resize(window.width, window.height);
 	}
 
@@ -1186,7 +1196,7 @@ class DX12Driver extends h3d.impl.Driver {
 		return null;
 	}
 
-	static final SHADER_ARGS : Array<String>= [/*"-Zi"*/];
+	static final SHADER_ARGS : Array<String>= [/*"-Zi", "-Qembed_debug"*/];
 	function compileSource( sh : hxsl.RuntimeShader.RuntimeShaderData, profile, rootStr = "" ) {
 		var out = new hxsl.HlslOut();
 		if( sh.code == null ) {
@@ -1543,9 +1553,9 @@ class DX12Driver extends h3d.impl.Driver {
 		var c = new CompiledShader();
 
 		var rootStr = stringifyRootSignature(res.sign, "ROOT_SIGNATURE", res.params, res.paramsCount);
-		var vs = shader.mode == Compute ? null : compileSource(shader.vertex, "vs_6_6", rootStr);
-		var ps = shader.mode == Compute ? null : compileSource(shader.fragment, "ps_6_6", rootStr);
-		var cs = shader.mode == Compute ? compileSource(shader.compute, "cs_6_6", rootStr) : null;
+		var vs = shader.mode == Compute ? null : compileSource(shader.vertex, hasSM6_6 ? "vs_6_6" : "vs_6_0", rootStr);
+		var ps = shader.mode == Compute ? null : compileSource(shader.fragment, hasSM6_6 ? "ps_6_6" : "ps_6_0", rootStr);
+		var cs = shader.mode == Compute ? compileSource(shader.compute, hasSM6_6 ? "cs_6_6" : "cs_6_0", rootStr) : null;
 
 		var signSize = 0;
 		var signBytes = Driver.serializeRootSignature(res.sign, 1, signSize);
