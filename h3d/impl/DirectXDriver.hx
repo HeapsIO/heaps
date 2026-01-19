@@ -1346,7 +1346,7 @@ class DirectXDriver extends h3d.impl.Driver {
 				}
 
 				var sidx = shader.samplersMap[i];
-				var samplerBits = @:privateAccess t.bits & ~h3d.mat.Texture.startingMip_mask;
+				var samplerBits = @:privateAccess t.bits & ~h3d.mat.Texture.__startingMip_mask;
 				if( sidx < maxSamplers && samplerBits != state.samplerBits[sidx] ) {
 					var ss = samplerStates.get(samplerBits);
 					if( ss == null ) {
