@@ -205,7 +205,9 @@ class CacheFile2 extends Cache {
 		super();
 		this.file = file;
 		this.allowSave = allowSave;
+		#if !shader_debug_dump
 		load();
+		#end
 	}
 
 	function set_isDirty( b : Bool ) {
@@ -356,7 +358,9 @@ class CacheFile2 extends Cache {
 	function saveIfModified() {
 		if( this.isDirty ) {
 			this.isDirty = false;
+			#if !shader_debug_dump
 			save();
+			#end
 		}
 	}
 
