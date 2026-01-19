@@ -520,7 +520,7 @@ class DX12Driver extends h3d.impl.Driver {
 	var lastFragmentGlobalBind : Int = -1;
 	var needUAVBarrier : Bool = false;
 	var useDepthClamp : Bool = false;
-	var hasSM6_6 = false;
+	var useSM6_6 = false;
 
 	public static var INITIAL_RT_COUNT = 1024;
 	public static var INITIAL_SRV_COUNT = 1024;
@@ -540,7 +540,7 @@ class DX12Driver extends h3d.impl.Driver {
 		case Queries, BottomLeftCoords:
 			false;
 		case Bindless:
-			hasSM6_6;
+			useSM6_6;
 		default:
 			true;
 		};
@@ -548,6 +548,22 @@ class DX12Driver extends h3d.impl.Driver {
 
 	override function isSupportedFormat(fmt:h3d.mat.Data.TextureFormat):Bool {
 		return true;
+	}
+
+	override function enableBindless() {
+		if ( useSM6_6 )
+			return;
+
+		var hasSM6_6 = false;
+		#if (hldx >= version("1.16.0"))
+		var shaderModel = new hl.Bytes(4);
+		shaderModel.setI32(0, HIGHEST_SHADER_MODEL);
+		Driver.checkFeatureSupport(SHADER_MODEL, shaderModel, 4);
+		hasSM6_6 = cast(SHADER_MODEL_6_6, Int) <= shaderModel.getI32(0);
+		#end
+		if ( !hasSM6_6 )
+			throw "Shader Model 6.6 support not detected. Please ensure your graphics card supports shader model 6.6 and your graphics driver are up to date.";
+		useSM6_6 = true;
 	}
 
 	function reset() {
@@ -623,12 +639,6 @@ class DX12Driver extends h3d.impl.Driver {
 		tsFreq = Driver.getTimestampFrequency();
 
 		compiler = new ShaderCompiler();
-		#if (hldx >= version("1.16.0"))
-		var shaderModel = new hl.Bytes(4);
-		shaderModel.setI32(0, HIGHEST_SHADER_MODEL);
-		Driver.checkFeatureSupport(SHADER_MODEL, shaderModel, 4);
-		hasSM6_6 = cast(SHADER_MODEL_6_6, Int) <= shaderModel.getI32(0);
-		#end
 
 		resize(window.width, window.height);
 	}
@@ -1547,15 +1557,17 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	function compileShader( shader : hxsl.RuntimeShader ) : CompiledShader {
+		if ( shader.hasBindless() && !useSM6_6 )
+			throw "Shader using bindless detected, but Shader Model 6.6 is not used. Please call enableBindless()."
 
 		var res = computeRootSignature(shader);
 
 		var c = new CompiledShader();
 
 		var rootStr = stringifyRootSignature(res.sign, "ROOT_SIGNATURE", res.params, res.paramsCount);
-		var vs = shader.mode == Compute ? null : compileSource(shader.vertex, hasSM6_6 ? "vs_6_6" : "vs_6_0", rootStr);
-		var ps = shader.mode == Compute ? null : compileSource(shader.fragment, hasSM6_6 ? "ps_6_6" : "ps_6_0", rootStr);
-		var cs = shader.mode == Compute ? compileSource(shader.compute, hasSM6_6 ? "cs_6_6" : "cs_6_0", rootStr) : null;
+		var vs = shader.mode == Compute ? null : compileSource(shader.vertex, useSM6_6 ? "vs_6_6" : "vs_6_0", rootStr);
+		var ps = shader.mode == Compute ? null : compileSource(shader.fragment, useSM6_6 ? "ps_6_6" : "ps_6_0", rootStr);
+		var cs = shader.mode == Compute ? compileSource(shader.compute, useSM6_6 ? "cs_6_6" : "cs_6_0", rootStr) : null;
 
 		var signSize = 0;
 		var signBytes = Driver.serializeRootSignature(res.sign, 1, signSize);

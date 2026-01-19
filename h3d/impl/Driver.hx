@@ -329,6 +329,10 @@ class Driver {
 
 	// --- Bindless
 
+	public function enableBindless() {
+		throw "Bindless is not implemented on this platform";
+	}
+
 	public function getTextureHandle( t : h3d.mat.Texture ) : h3d.mat.TextureHandle {
 		throw "Bindless is not implemented on this platform";
 	}
