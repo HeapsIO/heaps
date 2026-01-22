@@ -350,6 +350,9 @@ typedef ShaderData = {
 class Tools {
 
 	static var UID = 0;
+	#if heaps_mt_hxsl_cache
+	static var uidMutex = new sys.thread.Mutex();
+	#end
 
 	public static var SWIZ = Component.createAll();
 	public static var MAX_CHANNELS_BITS = 3;
@@ -361,7 +364,14 @@ class Tools {
 		#if macro
 		return --UID;
 		#else
-		return ++UID;
+		#if heaps_mt_hxsl_cache
+		uidMutex.acquire();
+		#end
+		var id = ++UID;
+		#if heaps_mt_hxsl_cache
+		uidMutex.release();
+		#end
+		return id;
 		#end
 	}
 
