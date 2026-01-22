@@ -546,7 +546,7 @@ class Animation {
 
 class Data {
 
-	public static inline var CURRENT_VERSION = 4;
+	public static inline var CURRENT_VERSION = 5;
 
 	public var version : Int;
 	public var props : Properties;

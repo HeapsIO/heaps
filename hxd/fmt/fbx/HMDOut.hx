@@ -859,7 +859,7 @@ class HMDOut extends BaseLibrary {
 		return { lodLevel : -1, modelName : null };
 	}
 
-	function buildGeomCollider( vbuf : FloatBuffer, ibufs : Array<Array<Int>>, dataOut : haxe.io.BytesOutput ) : MeshCollider {
+	function buildGeomCollider( targetModel : Model, colliderModel : Model, vbuf : FloatBuffer, ibufs : Array<Array<Int>>, dataOut : haxe.io.BytesOutput ) : MeshCollider {
 		var vertexCount = Std.int(vbuf.length / 3);
 		var indexCount = 0;
 		for( idx in ibufs ) {
@@ -879,10 +879,16 @@ class HMDOut extends BaseLibrary {
 		collider.vertexPosition = dataOut.length;
 		collider.vertexCount = vertexCount;
 		collider.indexCount = indexCount;
+		var mat = colliderModel.position.toMatrix();
+		var invTargetModelMat = targetModel.position.toMatrix().getInverse();
+		mat.multiply(mat, invTargetModelMat);
+		var tmpVec = new h3d.Vector();
 		iterVertex(function(x, y, z) {
-			dataOut.writeFloat(x);
-			dataOut.writeFloat(y);
-			dataOut.writeFloat(z);
+			tmpVec.set(x, y, z);
+			tmpVec.transform(mat);
+			dataOut.writeFloat(tmpVec.x);
+			dataOut.writeFloat(tmpVec.y);
+			dataOut.writeFloat(tmpVec.z);
 		});
 
 		var is32 = vertexCount > 0x10000;
@@ -901,8 +907,7 @@ class HMDOut extends BaseLibrary {
 		return collider;
 	}
 
-
-	function buildAutoColliders( d : hxd.fmt.hmd.Data, vbuf : FloatBuffer, ibufs : Array<Array<Int>>, mids : Array<Int>, bounds : h3d.col.Bounds, generateCollides : CollideParams, dataOut : haxe.io.BytesOutput ) : ConvexHullsCollider {
+	function buildAutoColliders( targetModel : Model, colliderModel : Model, d : hxd.fmt.hmd.Data, vbuf : FloatBuffer, ibufs : Array<Array<Int>>, mids : Array<Int>, bounds : h3d.col.Bounds, generateCollides : CollideParams, dataOut : haxe.io.BytesOutput ) : ConvexHullsCollider {
 		// Format data for our convex hull algorithm
 		var vertices : Array<Float> = [];
 		var indexes : Array<Int> = [];
@@ -912,13 +917,19 @@ class HMDOut extends BaseLibrary {
 		for(idx in ibufs)
 			indexCount += idx == null ? 0 : idx.length;
 
+		var mat = colliderModel.position.toMatrix();
+		var invTargetModelMat = targetModel.position.toMatrix().getInverse();
+		mat.multiply(mat, invTargetModelMat);
+		var tmpVec = new h3d.Vector();
 		for (i in 0...vertexCount) {
 			var x = vbuf[i * 3];
 			var y = vbuf[i * 3 + 1];
 			var z = vbuf[i * 3 + 2];
-			vertices.push(x);
-			vertices.push(y);
-			vertices.push(z);
+			tmpVec.set(x, y, z);
+			tmpVec.transform(mat);
+			vertices.push(tmpVec.x);
+			vertices.push(tmpVec.y);
+			vertices.push(tmpVec.z);
 		}
 
 		for ( idx => ibuf in ibufs ) {
@@ -1432,12 +1443,12 @@ class HMDOut extends BaseLibrary {
 				var collider : Collider = switch (colliderType) {
 					case Empty:
 						new EmptyCollider();
-					case ConvexHulls(model):
-						var gdataCol = hgeomCol.get(model.geometry);
-						buildAutoColliders(d, gdataCol.vbuf, gdataCol.ibufs, gdataCol.mids, d.geometries[model.geometry].bounds, params, dataOut);
-					case Mesh(model):
-						var gdataCol = hgeomCol.get(model.geometry);
-						buildGeomCollider(gdataCol.vbuf, gdataCol.ibufs, dataOut);
+					case ConvexHulls(colliderModel):
+						var gdataCol = hgeomCol.get(colliderModel.geometry);
+						buildAutoColliders(model, colliderModel, d, gdataCol.vbuf, gdataCol.ibufs, gdataCol.mids, d.geometries[model.geometry].bounds, params, dataOut);
+					case Mesh(colliderModel):
+						var gdataCol = hgeomCol.get(colliderModel.geometry);
+						buildGeomCollider(model, colliderModel, gdataCol.vbuf, gdataCol.ibufs, dataOut);
 					case Shapes:
 						buildShapeColliders(params.shapes);
 					case null:
