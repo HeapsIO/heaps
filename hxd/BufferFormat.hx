@@ -15,7 +15,7 @@ enum abstract Precision(Int) {
 	public inline function toInt() {
 		return this;
 	}
-	static inline function fromInt( v : Int ) : Precision {
+	public static inline function fromInt( v : Int ) : Precision {
 		return new Precision(v);
 	}
 	public function toString() {
@@ -61,7 +61,7 @@ enum abstract InputFormat(Int) {
 		}
 	}
 
-	static inline function fromInt( v : Int ) : InputFormat {
+	public static inline function fromInt( v : Int ) : InputFormat {
 		return new InputFormat(v);
 	}
 

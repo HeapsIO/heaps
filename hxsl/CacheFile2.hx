@@ -12,12 +12,14 @@ class CacheFile2Loader {
 	public var rtInfosDefault : Array<{ sign : String, sl : Array<{ name : String, p : Int, constBits : Int }> }> = [];
 	public var rtInfosBatch : Array<{ sign : String, sl : Array<{ name : String, p : Int, constBits : Int }> }> = [];
 	public var rtInfosCompute : Array<{ sign : String, sl : Array<{ name : String, p : Int, constBits : Int }> }> = [];
+	public var bfMap : Map<Int, hxd.BufferFormat> = [];
 
 	// Tmp used by run
 	var onDone : Void -> Void;
 	var ssMap : Map<String, SharedShader> = [];
 	var slistsDefault : Array<{ sign : String, sl : ShaderList }> = [];
 	var slistsBatch : Array<ShaderList> = [];
+	var slistsCompute : Array<ShaderList> = [];
 	var rtMap : Map<String, { rt : RuntimeShader, sl : hxsl.ShaderList }> = [];
 	#if heaps_mt_hxsl_cache
 	var workThread : sys.thread.Thread;
@@ -48,6 +50,14 @@ class CacheFile2Loader {
 			}
 		}
 
+		// Build ShaderList Compute
+		for( rtInfo in rtInfosCompute ) {
+			var sl = makeShaderList(rtInfo.sl, Compute);
+			if( sl != null ) {
+				slistsCompute.push(sl);
+			}
+		}
+
 		#if heaps_mt_hxsl_cache
 		workThread = sys.thread.Thread.create(threadLoop, (e) -> { linkDone = true; });
 		workThread.name = "CacheFile2Loader";
@@ -64,6 +74,11 @@ class CacheFile2Loader {
 		for( l in slistsDefault ) {
 			var rts = cache.link(l.sl, Default);
 			rtMap.set(l.sign, { rt : rts, sl : l.sl });
+		}
+
+		// Link ShaderList Compute
+		for( sl in slistsCompute ) {
+			var rts = cache.link(sl, Compute);
 		}
 
 		#if heaps_mt_hxsl_cache
@@ -145,6 +160,29 @@ class CacheFile2Loader {
 				ssd = @:privateAccess sd.shader;
 				ssMap.set(name, ssd);
 			}
+			// Remap constBits based on BufferFormat
+			var remapFailed = false;
+			var c = ssd.consts;
+			while( c != null ) {
+				switch( c.v.type ) {
+				case TBuffer(_, _, _):
+					var bits = (constBits >>> c.pos) & ((1 << c.bits) - 1);
+					var fmt = bfMap.get(bits);
+					if( fmt == null ) {
+						remapFailed = true;
+						break;
+					}
+					constBits ^= bits << c.pos;
+					constBits |= fmt.uid << c.pos;
+				default:
+				}
+				c = c.next;
+			}
+			if( remapFailed ) {
+				cache.log('Remap BufferFormat failed $name(${StringTools.hex(constBits)})');
+				sl = null;
+				break;
+			}
 			var s = Type.createEmptyInstance(hxsl.Shader);
 			@:privateAccess {
 				s.priority = priority;
@@ -200,11 +238,17 @@ class CacheFile2 extends Cache {
 	var runtimesCompute : Array<RuntimeShader> = [];
 	var linkers : Array<{ name : String, vars : Array<hxsl.Output> }> = [];
 	var batchers : Array<{ name : String, rt : RuntimeShader, params : hxsl.Cache.BatchInstanceParams }> = [];
+	#if heaps_mt_hxsl_cache
+	var rtMutex : sys.thread.Mutex;
+	#end
 
 	public function new( file : String, allowSave : Bool ) {
 		super();
 		this.file = file;
 		this.allowSave = allowSave;
+		#if heaps_mt_hxsl_cache
+		rtMutex = new sys.thread.Mutex();
+		#end
 		#if !shader_debug_dump
 		load();
 		#end
@@ -238,16 +282,23 @@ class CacheFile2 extends Cache {
 		if( !isLoading ) {
 			log("Compiled runtime shader (" + mode.getName() + "): " + rt.spec.signature + ":" + [for( inst in rt.spec.instances ) @:privateAccess inst.shader.data.name].join(":"));
 		}
-		switch( mode ) {
-			case Default:
-				runtimesDefault.push(rt);
-				isDirty = true;
-			case Batch:
-				runtimesBatch.push(rt);
-				isDirty = true;
-			case Compute:
-				// runtimesCompute.push(rt); // TODO fix Null access .inputs on getInstance
+		#if heaps_mt_hxsl_cache
+		var acquired = false;
+		if( isLoading ) {
+			rtMutex.acquire();
+			acquired = true;
 		}
+		#end
+		switch( mode ) {
+		case Default: runtimesDefault.push(rt);
+		case Batch: runtimesBatch.push(rt);
+		case Compute: runtimesCompute.push(rt);
+		}
+		isDirty = true;
+		#if heaps_mt_hxsl_cache
+		if( acquired )
+			rtMutex.release();
+		#end
 		return rt;
 	}
 
@@ -265,7 +316,12 @@ class CacheFile2 extends Cache {
 
 		var tLoadStart = haxe.Timer.stamp();
 		var f = new haxe.io.BytesInput(sys.io.File.getBytes(file));
-		var magic = f.readLine();
+
+		inline function readLine() {
+			return f.position < f.length ? f.readLine() : "";
+		}
+
+		var magic = readLine();
 		if( !StringTools.startsWith(magic, "CF2-1") ) {
 			log("Invalid cache file, skipped");
 			isLoading = false;
@@ -275,7 +331,7 @@ class CacheFile2 extends Cache {
 		var loader = new CacheFile2Loader(this);
 
 		while( true ) {
-			var line = f.readLine();
+			var line = readLine();
 			if( line.length == 0 )
 				break;
 			var lkinfo = line.split(";");
@@ -287,7 +343,7 @@ class CacheFile2 extends Cache {
 		}
 
 		while( true ) {
-			var line = f.readLine();
+			var line = readLine();
 			if( line.length == 0 )
 				break;
 			var bcinfo = line.split(";");
@@ -308,7 +364,7 @@ class CacheFile2 extends Cache {
 
 		var mode : RuntimeShader.LinkMode = Default;
 		while( true ) {
-			var line = f.readLine();
+			var line = readLine();
 			if( line.length == 0 ) {
 				switch( mode ) {
 				case Default:
@@ -342,6 +398,29 @@ class CacheFile2 extends Cache {
 				case Compute: loader.rtInfosCompute.push({ sign : sign, sl : sl });
 				}
 			}
+		}
+
+		while( true ) {
+			var line = readLine();
+			if( line.length == 0 )
+				break;
+			var bfinfo = line.split(";");
+			if( bfinfo.length < 2 )
+				continue;
+			var uid = Std.parseInt(bfinfo[0]);
+			var inputs : Array<hxd.BufferFormat.BufferInput> = [];
+			var inputInfos = bfinfo[1].split(":");
+			for( part in inputInfos ) {
+				var iinfo = part.split(",");
+				if( iinfo.length < 3 )
+					continue;
+				var name = iinfo[0];
+				var type = hxd.BufferFormat.InputFormat.fromInt(Std.parseInt(iinfo[1]));
+				var precision = hxd.BufferFormat.Precision.fromInt(Std.parseInt(iinfo[2]));
+				inputs.push({ name : name, type : type, precision : precision });
+			}
+			var format = hxd.BufferFormat.make(inputs);
+			loader.bfMap.set(uid, format);
 		}
 
 		f.close();
@@ -392,6 +471,21 @@ class CacheFile2 extends Cache {
 		runtimesDefault.sort((rt1, rt2) -> Reflect.compare(rt1.spec.signature, rt2.spec.signature));
 		runtimesBatch.sort((rt1, rt2) -> Reflect.compare(rt1.spec.signature, rt2.spec.signature));
 		runtimesCompute.sort((rt1, rt2) -> Reflect.compare(rt1.spec.signature, rt2.spec.signature));
+		var formatRemap : Map<Int, hxd.BufferFormat> = [];
+		function collectRemapConstBits( ssd : SharedShader, constBits : Int ) {
+			var c = ssd.consts;
+			while( c != null ) {
+				switch( c.v.type ) {
+				case TBuffer(_, _, _):
+					var bits = (constBits >>> c.pos) & ((1 << c.bits) - 1);
+					var fmt = hxd.BufferFormat.fromID(bits);
+					formatRemap.set(bits, fmt);
+				default:
+				}
+				c = c.next;
+			}
+			return constBits;
+		}
 		function writeRtArr( rtArr : Array<RuntimeShader> ) {
 			for( rt in rtArr ) {
 				if( rt.spec.instances.length == 0 )
@@ -402,6 +496,7 @@ class CacheFile2 extends Cache {
 					var priority = inst.index;
 					var constBits = inst.bits;
 					out.writeString('${name},${priority},${constBits}:');
+					collectRemapConstBits(inst.shader, constBits);
 				}
 				out.writeString("\n");
 			}
@@ -411,6 +506,13 @@ class CacheFile2 extends Cache {
 		writeRtArr(runtimesDefault);
 		writeRtArr(runtimesBatch);
 		writeRtArr(runtimesCompute);
+
+		var formats = [ for( uid => v in formatRemap ) { uid : uid, format : [for( i in v.getInputs() ) '${i.name},${i.type.toInt()},${i.precision.toInt()}'].join(":") } ];
+		formats.sort((f1, f2) -> Reflect.compare(f1.format, f2.format));
+		for( f in formats ) {
+			out.writeString('${f.uid};${f.format}\n');
+		}
+		out.writeString("\n");
 
 		sys.io.File.saveBytes(file, out.getBytes());
 		log("Cache file saved to " + file);
