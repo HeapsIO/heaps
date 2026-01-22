@@ -404,13 +404,12 @@ class Skin extends MultiMaterial {
 		return null;
 	}
 
-	override function getLocalCollider() {
-		throw "Not implemented";
-		return null;
+	override function getLocalCollider() : h3d.col.Collider {
+		return primitive.getCollider();
 	}
 
 	override function getGlobalCollider() : h3d.col.Collider {
-		var col = primitive.getCollider();
+		var col = getLocalCollider();
 		if( Std.isOfType(col, h3d.col.Collider.OptimizedCollider) ) {
 			// Generated from mesh, so need skin's transform
 			var col = cast(col, h3d.col.Collider.OptimizedCollider);
