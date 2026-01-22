@@ -81,6 +81,10 @@ class ShaderInstanceDesc {
 class RuntimeShader {
 
 	static var UID = 0;
+	#if heaps_mt_hxsl_cache
+	static var uidMutex = new sys.thread.Mutex();
+	#end
+
 	public var id : Int;
 	public var vertex : RuntimeShaderData;
 	public var fragment : RuntimeShaderData;
@@ -99,7 +103,13 @@ class RuntimeShader {
 	public var spec : { instances : Array<ShaderInstanceDesc>, signature : String };
 
 	public function new() {
+		#if heaps_mt_hxsl_cache
+		uidMutex.acquire();
+		#end
 		id = UID++;
+		#if heaps_mt_hxsl_cache
+		uidMutex.release();
+		#end
 	}
 
 	public inline function hasBindless() : Bool {
