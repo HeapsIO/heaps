@@ -245,8 +245,15 @@ class TextInput extends Text {
 		case K.BACKSPACE:
 			if( cursorIndex > 0 && canEdit ) {
 				beforeChange();
-				if( selectionRange == null )
-					selectionRange = { start : K.isDown(K.CTRL) ? getWordStart() : cursorIndex - 1, length : 1 };
+				if( selectionRange == null ) {
+					if (K.isDown(K.CTRL)) {
+						var start = getWordStart();
+						var len = cursorIndex - start;
+						selectionRange = { start : start, length : len };
+					} else {
+						selectionRange = { start : cursorIndex - 1, length : 1 };
+					}
+				}
 				cutSelection();
 				onChange();
 			}
@@ -360,7 +367,7 @@ class TextInput extends Text {
 			}
 			pos++;
 		}
-		return pos;
+		return hxd.Math.iclamp(pos, 0, text.length);
 	}
 
 	/**
