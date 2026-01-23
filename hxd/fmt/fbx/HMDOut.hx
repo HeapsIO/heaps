@@ -879,7 +879,7 @@ class HMDOut extends BaseLibrary {
 		collider.vertexPosition = dataOut.length;
 		collider.vertexCount = vertexCount;
 		collider.indexCount = indexCount;
-		var mat = colliderModel.position.toMatrix();
+		var mat = colliderModel.skin != null && colliderModel.skin.joints.length > 0 ? colliderModel.skin.joints[0].position.toMatrix() : colliderModel.position.toMatrix();
 		var invTargetModelMat = targetModel.position.toMatrix().getInverse();
 		mat.multiply(mat, invTargetModelMat);
 		var tmpVec = new h3d.Vector();
