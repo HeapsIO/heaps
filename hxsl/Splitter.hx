@@ -20,6 +20,7 @@ class Splitter {
 	var vars : Map<Int,VarProps>;
 	var avars : Array<VarProps>;
 	var varNames : Map<String,TVar>;
+	var varNamesKByPrefix : Map<String, Int>;
 	var varMap : Map<TVar,TVar>;
 
 	var isBatchShader : Bool;
@@ -33,6 +34,7 @@ class Splitter {
 		var ffun = null, fvars = new Map(), afvars = [];
 		var isCompute = false;
 		varNames = new Map();
+		varNamesKByPrefix = new Map();
 		varMap = new Map();
 		for( f in s.funs )
 			switch( f.kind ) {
@@ -292,10 +294,14 @@ class Splitter {
 			var prefix = v.name;
 			while( prefix.charCodeAt(prefix.length - 1) >= '0'.code && prefix.charCodeAt(prefix.length - 1) <= '9'.code )
 				prefix = prefix.substr(0, -1);
-			var k = prefix == v.name ? 2 : Std.parseInt(v.name.substr(prefix.length));
+			var k : Int = prefix == v.name ? 2 : Std.parseInt(v.name.substr(prefix.length));
+			var lastK : Int = varNamesKByPrefix.get(prefix);
+			if( k <= lastK )
+				k = lastK + 1;
 			while( varNames.exists(prefix + k) )
 				k++;
 			v.name = prefix + k;
+			varNamesKByPrefix.set(prefix, k);
 		}
 		varNames.set(v.name, v);
 	}
