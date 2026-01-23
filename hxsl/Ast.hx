@@ -615,7 +615,7 @@ class Tools {
 		}
 	}
 
-	public static function map( e : TExpr, f : TExpr -> TExpr ) : TExpr {
+	public static inline function map( e : TExpr, f : TExpr -> TExpr ) : TExpr {
 		var ed = switch( e.e ) {
 		case TParenthesis(e): TParenthesis(f(e));
 		case TBlock(el): TBlock([for( e in el ) f(e)]);
