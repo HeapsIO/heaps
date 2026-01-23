@@ -183,7 +183,8 @@ class Library {
 			isize = geom.indexCounts[material] * imult;
 		}
 		var ibuf = haxe.io.Bytes.alloc(isize);
-		entry.readFull(ibuf, dataPos, isize);
+		if ( isize > 0 )
+			entry.readFull(ibuf, dataPos, isize);
 
 		var buf = new GeometryBuffer();
 		if( material == null ) {
