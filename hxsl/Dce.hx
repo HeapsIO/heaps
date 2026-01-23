@@ -62,8 +62,10 @@ class Dce {
 	var used : Map<Int,VarDeps>;
 	var channelVars : Array<TVar>;
 	var markAsKeep : Bool;
+	var checkBranchesFun : TExpr -> Void;
 
 	public function new() {
+		checkBranchesFun = this.checkBranches; // prevent recreation of instance closure
 	}
 
 	public function dce( shaders : Array<ShaderData> ) {
@@ -326,7 +328,7 @@ class Dce {
 			check(cond, writeTo, new WriteTo());
 		default:
 		}
-		e.iter(checkBranches);
+		e.iter(checkBranchesFun);
 	}
 
 	function mapExpr( e : TExpr, isVar ) : TExpr {
