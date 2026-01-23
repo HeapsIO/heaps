@@ -933,7 +933,7 @@ class Cache {
 			p : pos,
 			e : TIf({ e : TVar(hasOffset), t : TBool, p : pos },{
 				p : pos,
-				e : TBinop(OpAssignOp(OpAdd), eoffset, { e : TCall({ e : TGlobal(ToInt), t : TVoid, p : pos },[{ p : pos, t : TFloat, e : TVar(inputOffset) }]), t : TInt, p : pos }),
+				e : TBinop(OpAssign, eoffset, { e : TCall({ e : TGlobal(ToInt), t : TVoid, p : pos },[{ p : pos, t : TFloat, e : TVar(inputOffset) }]), t : TInt, p : pos }),
 				t : TVoid,
 			}, null),
 			t : TVoid,
