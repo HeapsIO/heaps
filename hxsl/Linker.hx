@@ -71,8 +71,11 @@ class Linker {
 	var isBatchShader : Bool;
 	var debugDepth = 0;
 
+	var lowercaseMap : Map<String, String>;
+
 	public function new(mode) {
 		this.mode = mode;
+		this.lowercaseMap = new Map();
 	}
 
 	function error( msg : String, p : Position ) : Dynamic {
@@ -129,7 +132,11 @@ class Linker {
 				case Name(n): key = n;
 				default:
 				}
-		var ukey = key.toLowerCase();
+		var ukey = lowercaseMap.get(key);
+		if( ukey == null ) {
+			ukey = key.toLowerCase();
+			lowercaseMap.set(key, ukey);
+		}
 		var v2 = varMap.get(ukey);
 		var vname = v.name;
 		if( v2 != null ) {
