@@ -186,7 +186,9 @@ enum TExprDef {
 	TSyntax(target : String, code : String, args : Array<SyntaxArg> ); // target = "code" should be treated as "insert regardless of target"
 }
 
-typedef TVar = {
+@:structInit
+@:publicFields
+class TVar {
 	var id : Int;
 	var name : String;
 	var type : Type;
