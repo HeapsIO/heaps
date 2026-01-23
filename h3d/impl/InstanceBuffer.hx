@@ -37,8 +37,7 @@ class InstanceBuffer {
 		this.startIndex = startIndex;
 	}
 
-	function updateTriCount(commandCount : Int, bytes : haxe.io.Bytes)
-	{
+	function updateTriCount(commandCount : Int, bytes : haxe.io.Bytes) {
 		triCount = 0;
 		for( i in 0...commandCount ) {
 			var idxCount = bytes.getInt32(i * ELEMENT_SIZE);
@@ -48,18 +47,21 @@ class InstanceBuffer {
 		}
 	}
 
-	public function uploadBytes(commandCount : Int, bytes : haxe.io.Bytes) {
-		updateTriCount(commandCount, bytes);
+	public function uploadBytes(commandCount : Int, bytes : haxe.io.Bytes, triCount = -1) {
+		this.triCount = triCount;
+		if ( triCount < 0 )
+			updateTriCount(commandCount, bytes);
 		this.commandCount = commandCount;
 		this.indexCount = 0;
 		driver = h3d.Engine.getCurrent().driver;
 		driver.uploadInstanceBufferBytes(this, 0, commandCount, bytes, 0);
 	}
 
-	public function allocFromBytes(commandCount : Int, bytes : haxe.io.Bytes) {
+	public function allocFromBytes(commandCount : Int, bytes : haxe.io.Bytes, triCount = -1 ) {
 		dispose();
-
-		updateTriCount(commandCount, bytes);
+		this.triCount = triCount;
+		if ( triCount < 0 )
+			updateTriCount(commandCount, bytes);
 		this.commandCount = this.maxCommandCount = commandCount;
 		this.indexCount = 0;
 		driver = h3d.Engine.getCurrent().driver;
