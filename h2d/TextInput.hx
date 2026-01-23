@@ -246,13 +246,8 @@ class TextInput extends Text {
 			if( cursorIndex > 0 && canEdit ) {
 				beforeChange();
 				if( selectionRange == null ) {
-					if (K.isDown(K.CTRL)) {
-						var start = getWordStart();
-						var len = cursorIndex - start;
-						selectionRange = { start : start, length : len };
-					} else {
-						selectionRange = { start : cursorIndex - 1, length : 1 };
-					}
+					var newIndex = K.isDown(K.CTRL) ? getWordStart() : cursorIndex - 1;
+					selectionRange = { start : newIndex , length : cursorIndex - newIndex };
 				}
 				cutSelection();
 				onChange();
