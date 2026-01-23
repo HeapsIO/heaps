@@ -523,7 +523,9 @@ class DX12Driver extends h3d.impl.Driver {
 	var useSM6_6 = false;
 
 	public static var INITIAL_RT_COUNT = 1024;
+	public static var INITIAL_BINDLESS_SRV_COUNT = 1024;
 	public static var INITIAL_SRV_COUNT = 1024;
+	public static var INITIAL_BINDLESS_SAMPLER_COUNT = 1024;
 	public static var INITIAL_SAMPLER_COUNT = 1024;
 	public static var INITIAL_BUFFER_ALLOCATOR_SIZE = 2 * 1024 * 1024;
 	public static var BUFFER_COUNT = #if console 3 #else 2 #end;
@@ -577,8 +579,8 @@ class DX12Driver extends h3d.impl.Driver {
 			f.allocator = new CommandAllocator(DIRECT);
 			f.commandList = new CommandList(DIRECT, f.allocator, null);
 			f.commandList.close();
-			f.srvHeapCache = new ScratchHeapArray(CBV_SRV_UAV, INITIAL_SRV_COUNT * 2);
-			f.samplerHeapCache = new ScratchHeapArray(SAMPLER, INITIAL_SAMPLER_COUNT * 2);
+			f.srvHeapCache = new ScratchHeapArray(CBV_SRV_UAV, INITIAL_SRV_COUNT + INITIAL_BINDLESS_SRV_COUNT);
+			f.samplerHeapCache = new ScratchHeapArray(SAMPLER, INITIAL_SAMPLER_COUNT + INITIAL_BINDLESS_SAMPLER_COUNT);
 			if ( f.bufferAllocator != null )
 				f.bufferAllocator.dispose();
 			f.bufferAllocator = new BufferAllocator(INITIAL_BUFFER_ALLOCATOR_SIZE);
@@ -2484,8 +2486,17 @@ class DX12Driver extends h3d.impl.Driver {
 
 	override function selectTextureHandles( handles : Array<h3d.mat.TextureHandle> ) {
 		for( i in 0...handles.length ) {
-			var th = handles[i];
-			transition(th.texture.t, PIXEL_SHADER_RESOURCE);
+			var t = handles[i].texture;
+			if( t != null && t.t == null && t.realloc != null ) {
+				var s = currentShader;
+				t.alloc();
+				t.realloc();
+				if( hasDeviceError ) return;
+				if( s != currentShader )
+					throw "Shader change detected.";
+			}
+			t.lastFrame = frameCount;
+			transition(t.t, PIXEL_SHADER_RESOURCE);
 		}
 	}
 
