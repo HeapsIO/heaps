@@ -78,10 +78,12 @@ class Linker {
 	var debugDepth = 0;
 
 	var lowercaseMap : Map<String, String>;
+	var mapExprVarFun : TExpr -> TExpr;
 
 	public function new(mode) {
 		this.mode = mode;
 		this.lowercaseMap = new Map();
+		this.mapExprVarFun = mapExprVar;
 	}
 
 	function error( msg : String, p : Position ) : Dynamic {
@@ -207,7 +209,7 @@ class Linker {
 		return a;
 	}
 
-	function mapExprVar( e : TExpr ) {
+	function mapExprVar( e : TExpr ) : TExpr {
 		switch( e.e ) {
 		case TVar(v) if( !locals.exists(v.id) ):
 			var v = allocVar(v, e.p);
@@ -294,7 +296,7 @@ class Linker {
 			return { e : TCall({ e : TGlobal(ResolveSampler),  t : TFun([]), p : e.p }, [handle, { e : TVar(v.v), t : v.v.type, p : e.p }] ), t : e.t, p : e.p };
 		default:
 		}
-		return e.map(mapExprVar);
+		return e.map(mapExprVarFun);
 	}
 
 	function mapSyntaxWrite( e : TExpr ) {

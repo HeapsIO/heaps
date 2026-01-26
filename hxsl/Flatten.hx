@@ -29,7 +29,10 @@ class Flatten {
 	var textureFormats : Array<{ dim : TexDimension, arr : Bool, rw : Int }>;
 	public var allocData : Map< TVar, Array<Alloc> >;
 
+	var mapExprFun : TExpr -> TExpr;
+
 	public function new() {
+		this.mapExprFun = mapExpr;
 	}
 
 	public function flatten( s : ShaderData, kind : FunctionKind ) : ShaderData {
@@ -66,7 +69,7 @@ class Flatten {
 		packBuffers("buffers", allVars, Uniform);
 		packBuffers("storagebuffers", allVars, Storage);
 		packBuffers("rwbuffers", allVars, RW);
-		var funs = [for( f in s.funs ) mapFun(f, mapExpr)];
+		var funs = [for( f in s.funs ) mapFun(f, mapExprFun)];
 		return {
 			name : s.name,
 			vars : outVars,
@@ -143,14 +146,14 @@ class Flatten {
 		case TArray( { e : TVar(v), p : vp }, eindex):
 			var a = varMap.get(v);
 			if( a == null || (!v.type.match(TBuffer(_)) && eindex.e.match(TConst(CInt(_)))) )
-				e.map(mapExpr);
+				e.map(mapExprFun);
 			else {
 				switch( v.type ) {
 				case TArray(t, _) if( t.isTexture() ):
 					eindex = toInt(mapExpr(eindex));
 					access(a, t, vp, AOffset(a,1,eindex));
 				case TBuffer(TInt|TFloat,_), TVec(_, VFloat|VInt):
-					e.map(mapExpr);
+					e.map(mapExprFun);
 				case TArray(t, _), TBuffer(t, _):
 					var stride = varSize4Bytes(t, a.t);
 					if( stride == 0 || (v.type.match(TArray(_)) && stride & 3 != 0) ) throw new Error("Dynamic access to an Array which size is not 4 components-aligned is not allowed", e.p);
@@ -232,7 +235,7 @@ class Flatten {
 			default : throw "assert";
 			}
 		default:
-			e.map(mapExpr);
+			e.map(mapExprFun);
 		};
 		return optimize(e);
 	}

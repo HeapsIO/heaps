@@ -25,7 +25,12 @@ class Splitter {
 
 	var isBatchShader : Bool;
 
+	var mapVarsFun : TExpr -> TExpr;
+	var checkExprFun : TExpr -> Void;
+
 	public function new() {
+		this.mapVarsFun = mapVars;
+		this.checkExprFun = checkExpr;
 	}
 
 	public function split( s : ShaderData, isBatchShader : Bool  ) : Array<ShaderData> {
@@ -233,19 +238,19 @@ class Splitter {
 		}
 	}
 
-	function mapVars( e : TExpr ) {
+	function mapVars( e : TExpr ) : TExpr {
 		return switch( e.e ) {
 		case TVar(v):
 			var v2 = varMap.get(v);
 			v2 == null ? e : { e : TVar(v2), t : e.t, p : e.p };
 		case TVarDecl(v, init):
 			var v2 = varMap.get(v);
-			v2 == null ? e.map(mapVars) : { e : TVarDecl(v2,init == null ? null : mapVars(init)), t : e.t, p : e.p };
+			v2 == null ? e.map(mapVarsFun) : { e : TVarDecl(v2,init == null ? null : mapVars(init)), t : e.t, p : e.p };
 		case TFor(v, it, loop):
 			var v2 = varMap.get(v);
-			v2 == null ? e.map(mapVars) : { e : TFor(v2,mapVars(it),mapVars(loop)), t : e.t, p : e.p };
+			v2 == null ? e.map(mapVarsFun) : { e : TFor(v2,mapVars(it),mapVars(loop)), t : e.t, p : e.p };
 		default:
-			e.map(mapVars);
+			e.map(mapVarsFun);
 		}
 	}
 
@@ -364,7 +369,7 @@ class Splitter {
 			inf.write++;
 			checkExpr(handle);
 		default:
-			e.iter(checkExpr);
+			e.iter(checkExprFun);
 		}
 	}
 
