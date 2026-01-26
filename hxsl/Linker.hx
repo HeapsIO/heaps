@@ -6,12 +6,18 @@ private class AllocatedVar {
 	public var id : Int;
 	public var v : TVar;
 	public var path : String;
-	public var merged : Array<TVar>;
+	public var mergedV : TVar;
+	public var merged(get, default) : Array<TVar>;
 	public var kind : Null<FunctionKind>;
 	public var parent : AllocatedVar;
 	public var rootShaderName : String;
 	public var instanceIndex : Int;
 	public function new() {
+	}
+	inline function get_merged() {
+		if( merged == null )
+			merged = [mergedV];
+		return merged;
 	}
 }
 
@@ -185,7 +191,7 @@ class Linker {
 		};
 		var a = new AllocatedVar();
 		a.v = v2;
-		a.merged = [v];
+		a.mergedV = v;
 		a.path = key;
 		a.id = v2.id;
 		a.parent = parent;
