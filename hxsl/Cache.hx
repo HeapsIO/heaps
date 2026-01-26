@@ -2,6 +2,13 @@ package hxsl;
 using hxsl.Ast;
 import hxsl.RuntimeShader;
 
+@:publicFields
+@:structInit
+private class ParamVar {
+	var instance : Int;
+	var index : Int;
+}
+
 class BatchInstanceParams {
 
 	var forcedPerInstance : Array<{ shader : String, params : Array<String> }>;
@@ -325,7 +332,7 @@ class Cache {
 		var sl = try splitter.split(s, mode == Batch ) catch( e : Error ) { e.msg += "\n\nin\n\n"+Printer.shaderToString(s); throw e; };
 
 		// params tracking
-		var paramVars = new Map();
+		var paramVars = new Map<Int, ParamVar>();
 		for( v in linker.allVars )
 			if( v.v.kind == Param ) {
 				switch( v.v.type ) {
@@ -460,7 +467,7 @@ class Cache {
 		return getPath(v.parent) + "." + v.name;
 	}
 
-	function flattenShader( s : ShaderData, kind : FunctionKind, params : Map<Int,{ instance:Int, index:Int }> ) {
+	function flattenShader( s : ShaderData, kind : FunctionKind, params : Map<Int, ParamVar> ) {
 		var flat = new Flatten();
 		var c = new RuntimeShaderData();
 		var data = flat.flatten(s, kind);
