@@ -609,13 +609,13 @@ class DX12Driver extends h3d.impl.Driver {
 		}
 		cpuSamplersIndex = [];
 
-		bindlessSrvHeap = new BlockHeap(CBV_SRV_UAV, INITIAL_SRV_COUNT, false);
+		bindlessSrvHeap = new BlockHeap(CBV_SRV_UAV, INITIAL_BINDLESS_SRV_COUNT, false);
 		bindlessSrvHeap.onFree = function(prev, prevSize) @:privateAccess {
 			Driver.copyDescriptorsSimple(prevSize, bindlessSrvHeap.address.value, prev.getHandle(false).value, CBV_SRV_UAV);
 			(prev : Resource).release();
 			flushHeaps();
 		}
-		bindlessSamplerHeap = new BlockHeap(SAMPLER, INITIAL_SAMPLER_COUNT, false);
+		bindlessSamplerHeap = new BlockHeap(SAMPLER, INITIAL_BINDLESS_SAMPLER_COUNT, false);
 		bindlessSamplerHeap.onFree = function(prev, prevSize) @:privateAccess {
 			Driver.copyDescriptorsSimple(prevSize, bindlessSamplerHeap.address.value, prev.getHandle(false).value, SAMPLER);
 			(prev : Resource).release();
