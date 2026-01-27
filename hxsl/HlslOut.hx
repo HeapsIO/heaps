@@ -251,7 +251,7 @@ class HlslOut {
 			var el2 = el.copy();
 			var last = el2[el2.length - 1];
 			el2[el2.length - 1] = { e : TReturn(last), t : e.t, p : last.p };
-			var e2 = {
+			var e2 : TExpr = {
 				t : TVoid,
 				e : TBlock(el2),
 				p : e.p,
