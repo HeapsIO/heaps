@@ -341,7 +341,12 @@ enum Component {
 	W;
 }
 
-typedef TExpr = { e : TExprDef, t : Type, p : Position }
+@:structInit
+class TExpr {
+	public var e : TExprDef;
+	public var t : Type;
+	public var p : Position;
+}
 
 typedef ShaderData = {
 	var name : String;

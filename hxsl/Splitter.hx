@@ -88,7 +88,7 @@ class Splitter {
 					vvars.set(nv.id, ninf);
 
 					var p = vfun.expr.p;
-					var e = { e : TBinop(OpAssign, { e : TVar(v), t : nv.type, p : p }, { e : TVar(nv), t : v.type, p : p } ), t : nv.type, p : p };
+					var e : TExpr = { e : TBinop(OpAssign, { e : TVar(v), t : nv.type, p : p }, { e : TVar(nv), t : v.type, p : p } ), t : nv.type, p : p };
 					vafterMap.push(() -> addExpr(vfun, e));
 
 					if( v.kind == Var )
@@ -110,7 +110,7 @@ class Splitter {
 		for( f in vafterMap )
 			f();
 
-		var finits = [];
+		var finits : Array<TExpr> = [];
 		var todo = [];
 		for( inf in afvars ) {
 			var v = inf.v;

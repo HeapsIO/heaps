@@ -299,7 +299,7 @@ class Linker {
 		return e.map(mapExprVarFun);
 	}
 
-	function mapSyntaxWrite( e : TExpr ) {
+	function mapSyntaxWrite( e : TExpr ) : TExpr {
 		switch ( e.e ) {
 			case TVar(v):
 				var v = allocVar(v, e.p);
@@ -639,7 +639,7 @@ class Linker {
 				default:
 					exprs.push(s.body);
 				}
-			var expr = { e : TBlock(exprs), t : TVoid, p : exprs.length == 0 ? null : exprs[0].p };
+			var expr : TExpr = { e : TBlock(exprs), t : TVoid, p : exprs.length == 0 ? null : exprs[0].p };
 			return {
 				kind : kind,
 				ref : v,

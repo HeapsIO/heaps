@@ -111,7 +111,7 @@ class Cache {
 		var outVars = new Map<String,TVar>();
 		var outputCount = 0;
 		var tvec4 = TVec(4, VFloat);
-		function makeVec( g, size, args : Array<Output>, makeOutExpr : Output -> Int -> TExpr ) {
+		function makeVec( g, size, args : Array<Output>, makeOutExpr : Output -> Int -> TExpr ) : TExpr {
 			var out = [];
 			var rem = size;
 			for( i in 0...args.length ) {
@@ -682,9 +682,9 @@ class Cache {
 		var vuniformBuffer = declVar("Batch_Buffer",TBuffer(TVec(4,VFloat),SVar(vcount),Uniform),Param);
 		var vstorageBuffer = declVar("Batch_StorageBuffer",TBuffer(TVec(4,VFloat),SConst(0),RW),Param);
 		var voffset = declVar("Batch_Offset", TInt, Local);
-		var euniformBuffer = { e : TVar(vuniformBuffer), p : pos, t : vuniformBuffer.type };
-		var estorageBuffer = { e : TVar(vstorageBuffer), p : pos, t : vstorageBuffer.type };
-		var eoffset = { e : TVar(voffset), p : pos, t : voffset.type };
+		var euniformBuffer : TExpr = { e : TVar(vuniformBuffer), p : pos, t : vuniformBuffer.type };
+		var estorageBuffer : TExpr = { e : TVar(vstorageBuffer), p : pos, t : vstorageBuffer.type };
+		var eoffset : TExpr = { e : TVar(voffset), p : pos, t : voffset.type };
 		var tvec4 = TVec(4,VFloat);
 		var countBits = 16;
 		vcount.qualifiers = [Const(1 << countBits)];
@@ -858,17 +858,17 @@ class Cache {
 			return vreal;
 		}
 
-		inline function floatBitsToInt( e : TExpr ) {
+		inline function floatBitsToInt( e : TExpr ) : TExpr {
 			return { e : TCall({ e : TGlobal(FloatBitsToInt), t : TFun([]), p : e.p }, [e]), t : TInt, p : e.p };
 		}
 
-		inline function floatBitsToUint( e : TExpr ) {
+		inline function floatBitsToUint( e : TExpr ) : TExpr {
 			return { e : TCall({ e : TGlobal(FloatBitsToUint), t : TFun([]), p : e.p }, [e]), t : TInt, p : e.p };
 		}
 
-		function extractVar( vreal, ebuffer, v : AllocParam ) {
+		function extractVar( vreal, ebuffer, v : AllocParam ) : TExpr {
 			var index = (v.pos>>2);
-			var extract = switch( v.type ) {
+			var extract : TExpr = switch( v.type ) {
 			case TMat4:
 				{ p : pos, t : v.type, e : TCall({ e : TGlobal(Mat4), t : TVoid, p : pos },[
 					readOffset(ebuffer, index),
@@ -903,8 +903,8 @@ class Cache {
 				default: [Z,W];
 				}
 				var extract = floatBitsToUint({ p : pos, t : vh.type, e : TSwiz(readOffset(ebuffer, index),swiz) });
-				var einitHandle = { p : pos, e : TBinop(OpAssign, { e : TVar(vhreal), p : pos, t : vh.type }, extract), t : TVoid };
-				var eresolveTex = { p : pos, e : TCall({e : TGlobal(ResolveSampler), t : TFun([]), p : pos }, [{ e : TVar(vhreal), t : vh.type, p : pos }, { e : TVar(vreal), t : v.type, p : pos }]), t : TVoid };
+				var einitHandle : TExpr = { p : pos, e : TBinop(OpAssign, { e : TVar(vhreal), p : pos, t : vh.type }, extract), t : TVoid };
+				var eresolveTex : TExpr = { p : pos, e : TCall({e : TGlobal(ResolveSampler), t : TFun([]), p : pos }, [{ e : TVar(vhreal), t : vh.type, p : pos }, { e : TVar(vreal), t : v.type, p : pos }]), t : TVoid };
 				return { p : pos, e : TBlock([einitHandle, eresolveTex]), t : TVoid };
 			case TFloat:
 				{ p : pos, t : v.type, e : TSwiz(readOffset(ebuffer, index),swiz[v.pos&3]) };
@@ -916,8 +916,8 @@ class Cache {
 			return { p : pos, e : TBinop(OpAssign, { e : TVar(vreal), p : pos, t : v.type }, extract), t : TVoid };
 		}
 
-		var exprsUniform = [];
-		var exprsStorage = [];
+		var exprsUniform : Array<TExpr> = [];
+		var exprsStorage : Array<TExpr> = [];
 		var stride = used.length;
 		var p = params;
 		while( p != null ) {
@@ -927,7 +927,7 @@ class Cache {
 			p = p.next;
 		}
 
-		var inits = [];
+		var inits : Array<TExpr> = [];
 
 		inits.push({
 			p : pos,
@@ -961,7 +961,7 @@ class Cache {
 			expr : { e : TBlock(inits), p : pos, t : TVoid },
 		};
 
-		var pinits = [];
+		var pinits : Array<TExpr> = [];
 		for ( i in 0...exprsStorage.length) {
 			pinits.push({
 				p : pos,

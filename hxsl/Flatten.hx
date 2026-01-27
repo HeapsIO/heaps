@@ -89,7 +89,7 @@ class Flatten {
 
 	static var SWIZ = [X,Y,Z,W];
 
-	function mkOp(e:TExpr,by:Int,f:Int->Int->Int,binop,pos) {
+	function mkOp(e:TExpr,by:Int,f:Int->Int->Int,binop,pos) : TExpr {
 		switch( e.e ) {
 		case TConst(CInt(i)):
 			return { e : TConst(CInt(f(i,by))), t : TInt, p : pos };
@@ -240,7 +240,7 @@ class Flatten {
 		return optimize(e);
 	}
 
-	inline function mkInt(v:Int,pos) {
+	inline function mkInt(v:Int,pos) : TExpr {
 		return { e : TConst(CInt(v)), t : TInt, p : pos };
 	}
 
@@ -331,20 +331,20 @@ class Flatten {
 		}
 	}
 
-	function floatBitsToInt( e : TExpr ) {
+	function floatBitsToInt( e : TExpr ) : TExpr {
 		return { e : TCall({ e : TGlobal(FloatBitsToInt), t : TFun([]), p : e.p }, [e]), t : TInt, p : e.p };
 	}
 
-	function floatBitsToUint( e : TExpr ) {
+	function floatBitsToUint( e : TExpr ) : TExpr {
 		return { e : TCall({ e : TGlobal(FloatBitsToUint), t : TFun([]), p : e.p }, [e]), t : TInt, p : e.p };
 	}
 
-	function toInt( e : TExpr ) {
+	function toInt( e : TExpr ) : TExpr {
 		if( e.t == TInt ) return e;
 		return { e : TCall({ e : TGlobal(ToInt), t : TFun([]), p : e.p }, [e]), t : TInt, p : e.p };
 	}
 
-	function optimize( e : TExpr ) {
+	function optimize( e : TExpr ) : TExpr {
 		switch( e.e ) {
 		case TCall( { e : TGlobal(Mat3x4) }, [ { e : TCall( { e : TGlobal(Mat4) }, args) } ]):
 			var rem = 0;

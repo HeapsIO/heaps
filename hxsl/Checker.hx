@@ -324,7 +324,7 @@ class Checker {
 		for( i in 0...tfuns.length )
 			typeFun(tfuns[i], funs[i].f.expr);
 
-		var localInits = [];
+		var localInits : Array<TExpr> = [];
 		for( i in inits.copy() ) {
 			if( i.v.kind == Local ) {
 				localInits.push({ e : TBinop(OpAssign,{ e : TVar(i.v), p : i.e.p, t : i.v.type },i.e), p : i.e.p, t : i.v.type });
@@ -609,7 +609,7 @@ class Checker {
 				case FField(ef):
 					makeCall(ef);
 				case FGlobal(g, arg, variants):
-					var eg = { e : TGlobal(g), t : TFun(variants), p : e1.p };
+					var eg : TExpr = { e : TGlobal(g), t : TFun(variants), p : e1.p };
 					if( variants.length == 0 ) {
 						var args = [for( a in args ) typeExpr(a, Value)];
 						args.unshift(arg);
@@ -1054,7 +1054,7 @@ class Checker {
 	}
 
 	function fieldAccess( e : TExpr, f : String, with : WithType, pos : Position ) : FieldAccess {
-		var ef = switch( e.t ) {
+		var ef : TExpr = switch( e.t ) {
 		case TStruct(vl):
 			var found = null;
 			for( v in vl )
