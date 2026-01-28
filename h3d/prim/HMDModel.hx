@@ -296,21 +296,26 @@ class HMDModel extends MeshPrimitive {
 				}
 			}
 
-			var defMat = this.model.skin != null ? this.model.skin.joints[0].position.toMatrix() : this.model.position.toMatrix();
+			// If the model is a skin, we should apply on it's collider the default transform of the root joint
+			// since the def mat of the model has been removed and set in the root joint
 			var b = data.bounds;
-			b.transform(defMat);
-
 			var buf = lib.getBuffers(data, hxd.BufferFormat.POS3D);
-			var tmpVec = new h3d.Vector();
-			var idx = 0;
-			while (idx < buf.vertexes.length) {
-				tmpVec.set(buf.vertexes.get(idx), buf.vertexes.get(idx + 1), buf.vertexes.get(idx + 2));
-				tmpVec.transform(defMat);
-				buf.vertexes.set(idx, tmpVec.x);
-				buf.vertexes.set(idx + 1, tmpVec.y);
-				buf.vertexes.set(idx + 2, tmpVec.z);
-				idx += 3;
+			if (this.model.skin != null) {
+				var defMat = this.model.skin.joints[0].position.toMatrix();
+				b.transform(defMat);
+
+				var tmpVec = new h3d.Vector();
+				var idx = 0;
+				while (idx < buf.vertexes.length) {
+					tmpVec.set(buf.vertexes.get(idx), buf.vertexes.get(idx + 1), buf.vertexes.get(idx + 2));
+					tmpVec.transform(defMat);
+					buf.vertexes.set(idx, tmpVec.x);
+					buf.vertexes.set(idx + 1, tmpVec.y);
+					buf.vertexes.set(idx + 2, tmpVec.z);
+					idx += 3;
+				}
 			}
+
 			poly.setData(buf.vertexes, buf.indexes);
 
 			if (collider == null)
