@@ -297,8 +297,12 @@ class Splitter {
 		var n = varNames.get(v.name);
 		if( n != null && n != v ) {
 			var prefix = v.name;
-			while( prefix.charCodeAt(prefix.length - 1) >= '0'.code && prefix.charCodeAt(prefix.length - 1) <= '9'.code )
+			while( prefix.length > 0 ) {
+				var c = StringTools.fastCodeAt(prefix, prefix.length - 1);
+				if( c < '0'.code || c > '9'.code )
+					break;
 				prefix = prefix.substr(0, -1);
+			}
 			var k : Int = prefix == v.name ? 2 : Std.parseInt(v.name.substr(prefix.length));
 			var lastK : Int = varNamesKByPrefix.get(prefix);
 			if( k <= lastK )
