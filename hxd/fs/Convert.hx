@@ -105,6 +105,9 @@ class Convert {
 
 #if (sys || nodejs)
 class ConvertFBX2HMD extends Convert {
+	static var lastModelPropsPath : String;
+	static var lastModelProps : Dynamic;
+
 	// hasLocalParams -> computeLocalParams
 	var foundModelProps : Bool;
 	var modelCollides : Map<String, Array<hxd.fmt.fbx.HMDOut.CollideParams>>;
@@ -135,9 +138,17 @@ class ConvertFBX2HMD extends Convert {
 
 	static function parseModelProps( modelPropsPath : String, filePath : String, modelCollides : Map<String, Array<hxd.fmt.fbx.HMDOut.CollideParams>> ) : Bool {
 		var foundModelProps = false;
+		var modelProps = null;
 		try {
-			var res = hxd.File.getBytes(modelPropsPath).toString();
-			var modelProps = haxe.Json.parse(res);
+			if( modelPropsPath == lastModelPropsPath ) {
+				modelProps = lastModelProps;
+			} else {
+				var res = hxd.File.getBytes(modelPropsPath).toString();
+				modelProps = haxe.Json.parse(res);
+			}
+		} catch( e ) {
+		}
+		if( modelProps != null ) {
 			for( mp in Reflect.fields(modelProps) ) {
 				var mpFile = mp.substring(0, mp.lastIndexOf("/"));
 				if( mpFile == filePath ) {
@@ -152,8 +163,9 @@ class ConvertFBX2HMD extends Convert {
 					}
 				}
 			}
-		} catch( e ) {
 		}
+		lastModelPropsPath = modelPropsPath;
+		lastModelProps = modelProps;
 		return foundModelProps;
 	}
 
