@@ -522,6 +522,7 @@ class DX12Driver extends h3d.impl.Driver {
 	var useDepthClamp : Bool = false;
 	var useSM6_6 = false;
 
+	public static var DEFAULT_DEPTH_FORMAT : h3d.mat.Data.TextureFormat = Depth24Stencil8;
 	public static var INITIAL_RT_COUNT = 1024;
 	public static var INITIAL_BINDLESS_SRV_COUNT = 1024;
 	public static var INITIAL_SRV_COUNT = 1024;
@@ -623,7 +624,7 @@ class DX12Driver extends h3d.impl.Driver {
 		}
 
 		if ( h3d.Engine.getCurrent() != null ) {
-			defaultDepth = new h3d.mat.Texture(0,0, Depth24Stencil8);
+			defaultDepth = new h3d.mat.Texture(0,0, DEFAULT_DEPTH_FORMAT);
 			defaultDepth.t = new TextureData();
 
 			defaultDepth.t.state = defaultDepth.t.targetState = DEPTH_WRITE;
@@ -773,7 +774,7 @@ class DX12Driver extends h3d.impl.Driver {
 		desc.depthOrArraySize = 1;
 		desc.mipLevels = 1;
 		desc.sampleDesc.count = 1;
-		desc.format = D24_UNORM_S8_UINT;
+		desc.format = toDxgiDepthFormat(defaultDepth.format);
 		desc.flags.set(ALLOW_DEPTH_STENCIL);
 		tmp.heap.type = DEFAULT;
 		tmp.clearValue.format = desc.format;
