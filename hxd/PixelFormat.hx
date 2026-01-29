@@ -28,4 +28,5 @@ enum PixelFormat {
 	Depth24;
 	Depth24Stencil8;
 	Depth32;
+	Depth32Stencil8;
 }

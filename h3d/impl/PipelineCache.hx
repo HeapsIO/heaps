@@ -138,7 +138,7 @@ class PipelineBuilder {
 
 	static function initFormats() {
 		var fmt = [];
-		for( f in ([Depth16,Depth24,Depth24Stencil8,Depth32] : Array<hxd.PixelFormat>) )
+		for( f in ([Depth16,Depth24,Depth24Stencil8,Depth32,Depth32Stencil8] : Array<hxd.PixelFormat>) )
 			fmt[f.getIndex()] = f;
 		return fmt;
 	}

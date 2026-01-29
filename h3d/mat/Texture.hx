@@ -370,14 +370,14 @@ class Texture {
 
 	public function hasStencil() {
 		return switch( format ) {
-		case Depth24Stencil8: true;
+		case Depth24Stencil8, Depth32Stencil8: true;
 		default: false;
 		}
 	}
 
 	public function isDepth() {
 		return switch( format ) {
-		case Depth16, Depth24, Depth24Stencil8, Depth32: true;
+		case Depth16, Depth24, Depth24Stencil8, Depth32, Depth32Stencil8: true;
 		default: false;
 		}
 	}

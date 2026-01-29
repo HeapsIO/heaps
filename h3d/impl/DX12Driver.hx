@@ -1018,6 +1018,8 @@ class DX12Driver extends h3d.impl.Driver {
 				return  D24_UNORM_S8_UINT;
 			case Depth32:
 				return  D32_FLOAT;
+			case Depth32Stencil8:
+				return  D32_FLOAT_S8X24_UINT;
 			default:
 				throw "Unsupported depth format "+ format;
 		}
@@ -2061,6 +2063,8 @@ class DX12Driver extends h3d.impl.Driver {
 				R24_UNORM_X8_TYPELESS;
 			case Depth32:
 				R32_FLOAT;
+			case Depth32Stencil8:
+				R32_FLOAT_X8X24_TYPELESS;
 			default:
 				throw "Unsupported depth format "+ format;
 		}
