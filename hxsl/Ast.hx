@@ -195,6 +195,24 @@ class TVar {
 	var kind : VarKind;
 	@:optional var parent : TVar;
 	@:optional var qualifiers : Null<Array<VarQualifier>>;
+
+	#if heaps_compact_mem
+	/**
+		Clone but keep the same id, useful when v is inside a read-only memory.
+	**/
+	public function clone() : TVar {
+		var v = this;
+		var v2 : TVar = {
+			id : v.id,
+			name : v.name,
+			type : v.type,
+			kind : v.kind,
+			parent : v.parent?.clone(),
+			qualifiers : v.qualifiers?.copy(),
+		}
+		return v2;
+	}
+	#end
 }
 
 typedef TFunction = {

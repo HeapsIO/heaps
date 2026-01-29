@@ -440,6 +440,10 @@ class Linker {
 					if ( v.kind == Local ) {
 						if ( v2.v.qualifiers == null )
 							v2.v.qualifiers = [];
+						#if heaps_compact_mem
+						else
+							v2.v.qualifiers = v2.v.qualifiers.copy();
+						#end
 						var qualifier = isBatchParam ? Flat : NoVar;
 						if ( !v2.v.hasQualifier(qualifier) )
 							v2.v.qualifiers.push(qualifier);
