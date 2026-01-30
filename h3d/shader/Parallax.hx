@@ -7,7 +7,7 @@ class Parallax extends hxsl.Shader {
 	static var SRC = {
 
 		@param var amount : Float;
-		@param var heightMap : Channel;
+		@param var heightMap : Sampler2D;
 		@:import BaseMesh;
 
 		@const var minLayers : Int;
@@ -31,22 +31,22 @@ class Parallax extends hxsl.Shader {
 				viewNS = vec3(viewWS.dot(tanX), viewWS.dot(tanY), viewWS.dot(n)).normalize();
 			}
 			if( maxLayers == 0 )
-				calculatedUV += viewNS.xy * heightMap.get(calculatedUV) * amount;
+				calculatedUV += viewNS.xy * heightMap.get(calculatedUV).a * amount;
 			else {
 				var numLayers = mix(float(maxLayers), float(minLayers), saturate(abs(viewNS.z)));
 				var layerDepth = 1 / numLayers;
 				var curLayerDepth = 0.;
 				var delta = (viewNS.xy / viewNS.z) * amount / numLayers;
 				var curUV = calculatedUV;
-				var curDepth = heightMap.getLod(curUV,0.);
+				var curDepth = heightMap.getLod(curUV,0.).a;
 			    while( curLayerDepth < curDepth ) {
 			        curUV += delta;
-			        curDepth = heightMap.getLod(curUV,0.);
+			        curDepth = heightMap.getLod(curUV,0.).a;
 			        curLayerDepth += layerDepth;
 				}
 				var prevUV = curUV - delta;
 				var after = curDepth - curLayerDepth;
-				var before = heightMap.get(prevUV) - curLayerDepth + layerDepth;
+				var before = heightMap.get(prevUV).a - curLayerDepth + layerDepth;
 				calculatedUV = mix(curUV, prevUV, after / (after - before));
 			}
 		}
