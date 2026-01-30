@@ -347,7 +347,12 @@ class FileConverter {
 		}
 
 		var content = hxd.File.getBytes(fullPath);
-		var hash = haxe.crypto.Sha1.make(content).toHex();
+		var hash = {
+			if( match.time == time #if js && (match.milliseconds == null || match.milliseconds == milliseconds ) #end )
+				match.hash; // not changed (time stamp)
+			else
+				haxe.crypto.Sha1.make(content).toHex();
+		};
 		conv.srcBytes = content;
 		conv.hash = hash;
 		var localContext : Dynamic = null;
