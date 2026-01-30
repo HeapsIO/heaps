@@ -86,6 +86,9 @@ class MeshBatch extends MultiMaterial {
 	 * allowing for huge amount of instances.
 	 */
 	public function enableStorageBuffer() {
+		#if js
+		throw "Storage Buffer are not supported on WebGL.";
+		#end
 		meshBatchFlags.set(EnableStorageBuffer);
 	}
 
