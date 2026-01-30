@@ -105,8 +105,8 @@ class Convert {
 
 #if (sys || nodejs)
 class ConvertFBX2HMD extends Convert {
-	static var lastModelPropsPath : String;
-	static var lastModelProps : Dynamic;
+	var lastModelPropsPath : String;
+	var lastModelProps : Dynamic;
 
 	// hasLocalParams -> computeLocalParams
 	var foundModelProps : Bool;
@@ -122,6 +122,8 @@ class ConvertFBX2HMD extends Convert {
 
 	override function cleanup() {
 		super.cleanup();
+		foundModelProps = false;
+		modelCollides = null;
 		fbx = null;
 		matNames = null;
 	}
@@ -136,7 +138,7 @@ class ConvertFBX2HMD extends Convert {
 		return (params != null && params.collide != null) || foundModelProps;
 	}
 
-	static function parseModelProps( modelPropsPath : String, filePath : String, modelCollides : Map<String, Array<hxd.fmt.fbx.HMDOut.CollideParams>> ) : Bool {
+	function parseModelProps( modelPropsPath : String, filePath : String, modelCollides : Map<String, Array<hxd.fmt.fbx.HMDOut.CollideParams>> ) : Bool {
 		var foundModelProps = false;
 		var modelProps = null;
 		try {
