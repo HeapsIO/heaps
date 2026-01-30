@@ -176,7 +176,7 @@ class Style extends domkit.CssStyle {
 			dt = hxd.Timer.elapsedTime;
 		var T0 = domkit.CssStyle.TAG;
 		for( o in currentObjects )
-			o.dom.applyStyle(this, true);
+			syncDirty(o.dom);
 		updateTime(dt);
 		return domkit.CssStyle.TAG - T0;
 	}
