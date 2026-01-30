@@ -107,6 +107,7 @@ class Convert {
 class ConvertFBX2HMD extends Convert {
 	var lastModelPropsPath : String;
 	var lastModelProps : Dynamic;
+	var modelLibCache = new Map<String, Array<Dynamic>>();
 
 	// hasLocalParams -> computeLocalParams
 	var foundModelProps : Bool;
@@ -207,7 +208,6 @@ class ConvertFBX2HMD extends Convert {
 		} catch( e ) {
 		}
 		if( matProps != null ) {
-			var modelLibCache = new Map<String, Array<Dynamic>>();
 			for( config in Reflect.fields(matProps) ) {
 				var configProps = Reflect.field(matProps, config);
 				for( matName in matNames ) {
@@ -225,9 +225,7 @@ class ConvertFBX2HMD extends Convert {
 						var libchildren = modelLibCache.get(m.__ref);
 						if( libchildren == null ) {
 							var lib = try haxe.Json.parse(hxd.File.getBytes(baseDir + m.__ref).toString()) catch( e ) null;
-							if( lib == null || lib.children == null )
-								continue;
-							libchildren = lib.children;
+							libchildren = lib?.children ?? [];
 							modelLibCache.set(m.__ref, libchildren);
 						}
 						for( c in libchildren ) {
