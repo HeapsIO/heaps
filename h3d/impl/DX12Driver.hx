@@ -186,8 +186,6 @@ class DxFrame {
 	public var fenceValue : Int64;
 	public var toRelease : Array<Resource> = [];
 	public var handlesToRelease : Array<h3d.mat.TextureHandle> = [];
-	public var tmpBufToNullify : Array<Texture> = [];
-	public var tmpBufToRelease : Array<dx.Dx12.GpuResource> = [];
 	public var srvHeap : ScratchHeap;
 	public var samplerHeap : ScratchHeap;
 	public var srvHeapCache : ScratchHeapArray;
@@ -440,17 +438,9 @@ class BufferData extends ResourceData {
 	public var size : Int;
 }
 
-class TextureUploadBuffer {
-	public var tmpBuf : dx.Dx12.GpuResource;
-	public var lastMipMapUploadPerSide : hl.Bytes;
-	public function new() {
-	}
-}
-
 class TextureData extends ResourceData {
 	public var format : DxgiFormat;
 	public var color : h3d.Vector4;
-	public var uploadBuffer : TextureUploadBuffer;
 	var clearColorChanges : Int;
 	public var cpuViewsIndex : Array<Int> = [for (i in 0...16) -1];
 
@@ -1185,17 +1175,7 @@ class DX12Driver extends h3d.impl.Driver {
 		dst.type = PLACED_FOOTPRINT;
 		Driver.getCopyableFootprints(srcDesc, src.subResourceIndex, 1, 0, dst.placedFootprint, null, null, totalSize);
 
-		var desc = new ResourceDesc();
-		var flags = new haxe.EnumFlags();
-		desc.dimension = BUFFER;
-		desc.width = totalSize[0];
-		desc.height = 1;
-		desc.depthOrArraySize = 1;
-		desc.mipLevels = 1;
-		desc.sampleDesc.count = 1;
-		desc.layout = ROW_MAJOR;
-		tmp.heap.type = READBACK;
-		var tmpBuf = Driver.createCommittedResource(tmp.heap, flags, desc, COPY_DEST, null);
+		var tmpBuf = allocGPU(totalSize[0].low, READBACK, COMMON);
 
 		var box = new Box();
 		box.left = x;
@@ -1805,17 +1785,7 @@ class DX12Driver extends h3d.impl.Driver {
 
 		var totalSize = vertexCount*stride;
 
-		var desc = new ResourceDesc();
-		var flags = new haxe.EnumFlags();
-		desc.dimension = BUFFER;
-		desc.width = totalSize;
-		desc.height = 1;
-		desc.depthOrArraySize = 1;
-		desc.mipLevels = 1;
-		desc.sampleDesc.count = 1;
-		desc.layout = ROW_MAJOR;
-		tmp.heap.type = READBACK;
-		var tmpBuf = Driver.createCommittedResource(tmp.heap, flags, desc, COPY_DEST, null);
+		var tmpBuf = allocGPU(totalSize, READBACK, COMMON);
 
 		transition(b.vbuf, COPY_SOURCE);
 		flushTransitions();
