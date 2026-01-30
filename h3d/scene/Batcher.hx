@@ -4,11 +4,12 @@ class BatchCommandBuilder extends hxsl.Shader {
 	static var SRC = {
 		@param var groupsInfos : StorageBuffer<Int>; // x : batchInstanceStart;
 		@param var batchInstancesInfos : StorageBuffer<Int>; // 2 elements => 0 : subMeshID, 1 : flags => culledMask(8 bits) + lodSelected(24 bits)
-		@param var passInstancesInfos : StorageBuffer<Int>; // 2 elements => 0 : groupInstanceID, 1 : flags => culledMask(2 bits) + subPartID(15 bits) + groupID(15 bits)
+		@param var passInstancesInfos : StorageBuffer<Int>; // 2 elements => 0 : groupInstanceID, 1 : flags => subPartID(16 bits) + groupID(16 bits)
 		@param var subPartInfos : StorageBuffer<Int>; // 2 elements => 0 : indexCount, 1 : indexStart
 		@param var countBuffer : RWBuffer<Int>;
 		@param var commandBuffer : RWBuffer<Int>;
 		@param var instanceCount : Int;
+		@param var cullingMask : Int;
 
 		final passInfosStride : Int = 2;
 		final batchInfosStride : Int = 2;
@@ -32,8 +33,7 @@ class BatchCommandBuilder extends hxsl.Shader {
 			var passInstancePos = passInstanceID * passInfosStride;
 			var groupInstanceID : Int = passInstancesInfos[passInstancePos + 0];
 			var flags : Int = passInstancesInfos[passInstancePos + 1];
-			var cullingMask : Int = flags & 3;
-			var groupID : Int = flags >> 17;
+			var groupID : Int = flags >> 16;
 
 			var batchInstanceStart = groupsInfos[groupID];
 			var batchInstanceID = batchInstanceStart + groupInstanceID;
@@ -41,11 +41,11 @@ class BatchCommandBuilder extends hxsl.Shader {
 			var batchFlags : Int = batchInstancesInfos[batchInstancePos + 1];
 			var batchCullingMask : Int = batchFlags & 0xFF;
 
-			if ( batchCullingMask & cullingMask != 0 )
+			if ( (batchCullingMask & cullingMask) != 0 )
 				return;
 
 			var lodSelected : Int = batchFlags >> 8;
-			var subPartID : Int = ( flags >> 2 ) & 0x7FFF;
+			var subPartID : Int = flags & 0xFFFF;
 
 			var subPartPos = (subPartID + lodSelected) * subPartInfosStride;
 			var indexCount : Int = subPartInfos[subPartPos + 0];
@@ -61,7 +61,7 @@ class BatchCommandBuilder extends hxsl.Shader {
 class BatchPass {
 	static var shaderTexParamsCache : Map<Int, Array<String>> = [];
 	static var INDIRECT_DRAW_ARGUMENTS_FMT = hxd.BufferFormat.make([{ name : "", type : DVec4 }, { name : "", type : DFloat }]);
-	static var INSTANCES_INFOS_FMT = hxd.BufferFormat.make([{ name : "batchInstanceID", type : DFloat }, { name : "flags", type : DFloat }]); // flags = culledMask(8 bits) + subPartID(8 bits) + groupID(16 bits)
+	static var INSTANCES_INFOS_FMT = hxd.BufferFormat.make([{ name : "batchInstanceID", type : DFloat }, { name : "flags", type : DFloat }]); // flags = subPartID(16 bits) + groupID(16 bits)
 
 	public var pass : h3d.mat.Pass;
 	public var batchShader : hxsl.BatchShader;
@@ -78,7 +78,7 @@ class BatchPass {
 	var textureHandles : Array<h3d.mat.TextureHandle>;
 	var triCount = 0;
 	var instanceDirty = false;
-	var isShadowPass = false;
+	var cullingMask = 0;
 
 	public function new(batcher : h3d.scene.Batcher, p : h3d.mat.Pass, sl : hxsl.ShaderList) @:privateAccess {
 		var scene = batcher.getScene();
@@ -129,7 +129,7 @@ class BatchPass {
 		pass.addSelfShader(batchShader);
 		pass.batchMode = true;
 		pass.dynamicParameters = false;
-		isShadowPass = pass.name == "shadow";
+		cullingMask = pass.name == "shadow" ? 1 << 1 : 1 << 0;
 	}
 
 	public function uploadInstanceBuffer() {
@@ -179,6 +179,7 @@ class BatchPass {
 		builderShader.instanceCount = totalInstanceCount;
 		builderShader.commandBuffer = commandBuffer;
 		builderShader.countBuffer = countBuffer.buffer;
+		builderShader.cullingMask = cullingMask;
 		countBuffer.reset();
 		ctx.computeDispatch(builderShader, hxd.Math.ceil(totalInstanceCount/64.0), false);
 	}
@@ -212,6 +213,7 @@ class BatchCulling extends hxsl.Shader {
 		@param var subMeshInfos : StorageBuffer<Int>; // x : lodStart, y : lodCount
 		@param var lodInfos : StorageBuffer<Float>; // x : screenRatio
 		@param var frustum : Buffer<Vec4, 6>;
+		@param var shadowMaxDistance : Float;
 		@param var instanceCount : Int;
 
 		final instanceInfosStride = 2;
@@ -239,10 +241,10 @@ class BatchCulling extends hxsl.Shader {
 			var lodStart : Int = subMeshInfos[subMeshPos + 0];
 			var lodCount : Int = subMeshInfos[subMeshPos + 1];
 
-			var culled = false;
+			var mainCulled = false;
 			@unroll for ( i  in 0...6 ) {
 				var plane = frustum[i];
-				culled = culled || ((dot(plane.xyz, position) - plane.w) < -boundingSphere);
+				mainCulled = mainCulled || ((dot(plane.xyz, position) - plane.w) < -boundingSphere);
 			}
 
 			var toCam = camera.position - position.xyz;
@@ -257,10 +259,16 @@ class BatchCulling extends hxsl.Shader {
 				lodSelected++;
 			}
 
-			culled = culled || lodSelected == lodCount;
+			var shadowCulled = shadowMaxDistance > 0 && shadowMaxDistance < distToCam;
 
-			var flags : Int = lodSelected << 8;
-			flags |= culled ? 0xFF : 0;
+			var cullingMask : Int = 0;
+			cullingMask |= mainCulled ? 1 << 0 : 0;
+			cullingMask |= shadowCulled ? 1 << 1 : 0;
+			cullingMask |= lodCount == lodSelected ? 3 : 0;
+
+			var flags : Int = 0;
+			flags |= lodSelected << 8;
+			flags |= cullingMask & 0xFF;
 			instancesInfos[instancePos + 1] = flags;
 		}
 	}
@@ -392,6 +400,7 @@ class Batcher extends h3d.scene.Object {
 	var passes : Array<BatchPass> = [];
 	var primitive : h3d.prim.BatchPrimitive;
 	var needLogicNormal : Bool = false;
+	public var shadowMaxDistance = -1.0;
 
 	var totalInstanceCount : Int;
 	var instancesData : h3d.Buffer;
@@ -432,7 +441,6 @@ class Batcher extends h3d.scene.Object {
 		var hmd = Std.downcast(mesh.primitive, h3d.prim.HMDModel);
 		if ( hmd == null )
 			return;
-		primitive.dispose();
 		primitive.addModel(hmd);
 
 		for ( m in mesh.getMeshMaterials() ) {
@@ -494,6 +502,7 @@ class Batcher extends h3d.scene.Object {
 		cullingShader.lodInfos = primitive.gpuLodInfos;
 		cullingShader.frustum = ctx.getCameraFrustumBuffer();
 		cullingShader.instanceCount = totalInstanceCount;
+		cullingShader.shadowMaxDistance = shadowMaxDistance;
 		ctx.computeDispatch(cullingShader, hxd.Math.ceil(totalInstanceCount/64.0), false);
 	}
 
@@ -603,8 +612,8 @@ class EmitData {
 		batchPass.totalInstanceCount++;
 		var instanceID = instanceCount++;
 
-		if ( subPartID > 0x7FFF || groupID > 0x7FFF )
-			throw 'ID overflow. Too many ${subPartID > 0x7FFF ? "models" : "groups"}';
+		if ( subPartID > 0xFFFF || groupID > 0xFFFF )
+			throw 'ID overflow. Too many ${subPartID > 0xFFFF ? "models" : "groups"}';
 
 		var instanceInfosStride = BatchPass.INSTANCES_INFOS_FMT.strideBytes;
 		var minInstanceInfosSize = instanceCount * instanceInfosStride;
@@ -616,7 +625,7 @@ class EmitData {
 			instancesInfos.blit(0, old, 0, old.length);
 		}
 		instancesInfos.setInt32(instanceID * instanceInfosStride + 0, groupInstanceID);
-		instancesInfos.setInt32(instanceID * instanceInfosStride + 4, groupID << 17 | subPartID << 2 | ( batchPass.isShadowPass ? 0 : 1 ));
+		instancesInfos.setInt32(instanceID * instanceInfosStride + 4, groupID << 16 | subPartID );
 
 		var instanceDataStride = batchPass.batchShader.paramsSize * 4;
 		var minInstanceDataSize = instanceCount * instanceDataStride;

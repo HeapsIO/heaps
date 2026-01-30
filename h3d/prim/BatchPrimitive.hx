@@ -58,6 +58,7 @@ class BatchPrimitive extends MeshPrimitive {
 			throw "assert";
 		if ( models.indexOf(model) >= 0 )
 			return;
+		dispose();
 		models.push(model);
 		fillModel(model);
 	}
