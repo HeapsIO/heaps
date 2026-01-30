@@ -185,6 +185,7 @@ class DxFrame {
 	public var commandList : CommandList;
 	public var fenceValue : Int64;
 	public var toRelease : Array<Resource> = [];
+	public var handlesToRelease : Array<h3d.mat.TextureHandle> = [];
 	public var tmpBufToNullify : Array<Texture> = [];
 	public var tmpBufToRelease : Array<dx.Dx12.GpuResource> = [];
 	public var srvHeap : ScratchHeap;
@@ -353,6 +354,8 @@ class ScratchHeap extends BaseHeap {
 
 	override function allocHeap( size : Int ) {
 		cursor = 0;
+		if ( type == SAMPLER && size > 2048)
+			throw "Max heap size reached";
 		super.allocHeap(size);
 	}
 
@@ -450,7 +453,6 @@ class TextureData extends ResourceData {
 	public var uploadBuffer : TextureUploadBuffer;
 	var clearColorChanges : Int;
 	public var cpuViewsIndex : Array<Int> = [for (i in 0...16) -1];
-	public var handles : Map<Int, h3d.mat.TextureHandle>;
 
 	public function setClearColor( c : h3d.Vector4 ) {
 		var color = color;
@@ -521,6 +523,8 @@ class DX12Driver extends h3d.impl.Driver {
 	var needUAVBarrier : Bool = false;
 	var useDepthClamp : Bool = false;
 	var useSM6_6 = false;
+	var errorTex : h3d.mat.Texture;
+	var textureHandles : Map<h3d.mat.Texture, Map<Int, h3d.mat.TextureHandle>>= [];
 
 	public static var DEFAULT_DEPTH_FORMAT : h3d.mat.Data.TextureFormat = Depth24Stencil8;
 	public static var INITIAL_RT_COUNT = 1024;
@@ -610,18 +614,43 @@ class DX12Driver extends h3d.impl.Driver {
 		}
 		cpuSamplersIndex = [];
 
+		errorTex = new h3d.mat.Texture(1, 1, [NoAlloc], RGBA);
+		errorTex.t = new TextureData();
+		errorTex.t.state = errorTex.t.state = COMMON;
+		errorTex.name = "errorTex";
+
+		var desc = new ResourceDesc();
+		var flags = new haxe.EnumFlags();
+		desc.dimension = TEXTURE2D;
+		desc.width = 1;
+		desc.height = 1;
+		desc.depthOrArraySize = 1;
+		desc.mipLevels = 1;
+		desc.sampleDesc.count = 1;
+		desc.format = R8G8B8A8_UNORM;
+		tmp.heap.type = DEFAULT;
+		errorTex.t.res = Driver.createCommittedResource(tmp.heap, flags, desc, COMMON, null);
+		errorTex.preventAutoDispose();
+
 		bindlessSrvHeap = new BlockHeap(CBV_SRV_UAV, INITIAL_BINDLESS_SRV_COUNT, false);
 		bindlessSrvHeap.onFree = function(prev, prevSize) @:privateAccess {
 			Driver.copyDescriptorsSimple(prevSize, bindlessSrvHeap.address.value, prev.getHandle(false).value, CBV_SRV_UAV);
 			(prev : Resource).release();
 			flushHeaps();
 		}
+		var errorTexView = getCpuTexView(errorTex);
+		for ( i in 0...bindlessSrvHeap.size)
+			Driver.copyDescriptorsSimple(1, bindlessSrvHeap.getCpuAddressAt(i), errorTexView, CBV_SRV_UAV);
+
 		bindlessSamplerHeap = new BlockHeap(SAMPLER, INITIAL_BINDLESS_SAMPLER_COUNT, false);
 		bindlessSamplerHeap.onFree = function(prev, prevSize) @:privateAccess {
 			Driver.copyDescriptorsSimple(prevSize, bindlessSamplerHeap.address.value, prev.getHandle(false).value, SAMPLER);
 			(prev : Resource).release();
 			flushHeaps();
 		}
+		var errorTexSampler = getCpuSampler(errorTex);
+		for ( i in 0...bindlessSamplerHeap.size)
+			Driver.copyDescriptorsSimple(1, bindlessSamplerHeap.getCpuAddressAt(i), errorTexSampler, SAMPLER);
 
 		if ( h3d.Engine.getCurrent() != null ) {
 			defaultDepth = new h3d.mat.Texture(0,0, DEFAULT_DEPTH_FORMAT);
@@ -656,15 +685,19 @@ class DX12Driver extends h3d.impl.Driver {
 		frame.bufferAllocator.reset();
 		while( frame.toRelease.length > 0 )
 			frame.toRelease.pop().release();
-		while( frame.tmpBufToRelease.length > 0 ) {
-			var tmpBuf = frame.tmpBufToRelease.pop();
-			if ( tmpBuf != null )
-				tmpBuf.release();
-		}
-		if ( prevFrame != null ) {
-			while ( prevFrame.tmpBufToNullify.length > 0 ) {
-				var t = prevFrame.tmpBufToNullify.pop();
-				t.uploadBuffer = null;
+
+		var errorTexSampler = getCpuSampler(errorTex);
+		var errorTexView = getCpuTexView(errorTex);
+		while( frame.handlesToRelease.length > 0 ) {
+			var h = frame.handlesToRelease.pop();
+			if ( h.handle != -1 && h.texture.t == null ) {
+				Driver.copyDescriptorsSimple(1, bindlessSamplerHeap.getCpuAddressAt(h.handle.high), errorTexSampler, SAMPLER);
+				Driver.copyDescriptorsSimple(1, bindlessSrvHeap.getCpuAddressAt(h.handle.low), errorTexView, CBV_SRV_UAV);
+				if ( h.texture.realloc == null ) {
+					bindlessSrvHeap.disposeIndex(h.handle.low);
+					bindlessSamplerHeap.disposeIndex(h.handle.high);
+					h.handle = -1;
+				}
 			}
 		}
 		beginQueries();
@@ -1882,6 +1915,25 @@ class DX12Driver extends h3d.impl.Driver {
 		t.lastFrame = frameCount;
 		t.flags.unset(WasCleared);
 
+		var handles = textureHandles.get(t);
+		var prevBits = t.bits;
+		var prevTd = t.t;
+		t.t = td;
+		if ( handles != null ) {
+			for ( bits => h in handles ) {
+				t.loadBits(bits);
+				var srv = getCpuTexView(t);
+				var srvIndex = h.handle.low;
+				Driver.copyDescriptorsSimple(1, bindlessSrvHeap.getCpuAddressAt(srvIndex), srv, CBV_SRV_UAV);
+				Driver.copyDescriptorsSimple(1, frame.srvHeap.getCpuAddressAt(srvIndex), srv, CBV_SRV_UAV);
+				var sampler = getCpuSampler(t);
+				var samplerIndex = h.handle.high;
+				Driver.copyDescriptorsSimple(1, bindlessSamplerHeap.getCpuAddressAt(samplerIndex), sampler, SAMPLER);
+				Driver.copyDescriptorsSimple(1, frame.samplerHeap.getCpuAddressAt(samplerIndex), sampler, SAMPLER);
+			}
+		}
+		t.t = prevTd;
+		t.loadBits(prevBits);
 		return td;
 	}
 
@@ -1925,6 +1977,13 @@ class DX12Driver extends h3d.impl.Driver {
 	override function disposeTexture(t:h3d.mat.Texture) {
 		disposeResource(t.t);
 		disposeTextureViews(t.t);
+		var handles = textureHandles.get(t);
+		if ( handles != null ) {
+			for ( h in handles )
+				frame.handlesToRelease.push(h);
+			if ( t.realloc == null )
+				textureHandles.remove(t);
+		}
 		t.t = null;
 	}
 
@@ -2490,8 +2549,10 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	override function selectTextureHandles( handles : Array<h3d.mat.TextureHandle> ) {
-		for( i in 0...handles.length ) {
-			var t = handles[i].texture;
+		for( h in handles ) {
+			var t = h.texture;
+			if ( h.handle == -1 )
+				throw "Handle is invalid";
 			if( t != null && t.t == null && t.realloc != null ) {
 				var s = currentShader;
 				t.alloc();
@@ -2866,10 +2927,16 @@ class DX12Driver extends h3d.impl.Driver {
 
 	override function getTextureHandle( t : h3d.mat.Texture ) : h3d.mat.TextureHandle {
 		var handle : h3d.mat.TextureHandle = null;
-		if ( t.t.handles == null )
-			t.t.handles = []
-		else
-			handle = t.t.handles.get(t.bits);
+		if ( t.t == null && t.realloc != null ) {
+			t.alloc();
+			t.realloc();
+		}
+		var handles = textureHandles.get(t);
+		if ( handles == null ) {
+			handles = [];
+			textureHandles.set(t, handles);
+		}
+		handle = handles.get(t.bits);
 		if ( handle == null ) {
 			var sampler = getCpuSampler(t);
 			var srv = getCpuTexView(t);
@@ -2880,7 +2947,7 @@ class DX12Driver extends h3d.impl.Driver {
 			Driver.copyDescriptorsSimple(1, bindlessSamplerHeap.getCpuAddressAt(samplerIndex), sampler, SAMPLER);
 			Driver.copyDescriptorsSimple(1, frame.samplerHeap.getCpuAddressAt(samplerIndex), sampler, SAMPLER);
 			handle = new h3d.mat.TextureHandle(t, haxe.Int64.make(samplerIndex, srvIndex));
-			t.t.handles.set(t.bits, handle);
+			handles.set(t.bits, handle);
 		}
 		return handle;
 	}
