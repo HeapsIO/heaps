@@ -215,6 +215,9 @@ class GlslOut {
 	function addVar( v : TVar ) {
 		switch( v.type ) {
 		case TArray(t, size):
+			#if heaps_compact_mem
+			var v = v.clone();
+			#end
 			var old = v.type;
 			v.type = t;
 			addVar(v);
@@ -237,6 +240,9 @@ class GlslOut {
 			}
 			add((isVertex ? "vertex_" : "") + "uniform_buffer"+(uniformBuffer++));
 			add(" { ");
+			#if heaps_compact_mem
+			var v = v.clone();
+			#end
 			v.type = TArray(t,size);
 			addVar(v);
 			v.type = TBuffer(t,size,kind);
