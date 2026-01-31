@@ -49,6 +49,9 @@ class RenderContext extends h3d.impl.RenderContext {
 	@global("global.modelViewInverse") var globalModelViewInverse : h3d.Matrix;
 	@global("global.previousModelView") var globalPreviousModelView : h3d.Matrix;
 	@global("global.frame") var globalFrame : Int;
+	#if anti_aliasing
+	@global("global.antiAliasing") var globalAntiAliasing : Int;
+	#end
 
 	var allocPool : h3d.pass.PassObject;
 	var allocFirst : h3d.pass.PassObject;
@@ -70,6 +73,9 @@ class RenderContext extends h3d.impl.RenderContext {
 		cachedShaderList = [];
 		cachedPassObjects = [];
 		initGlobals();
+		#if anti_aliasing
+		globalAntiAliasing = 0;
+		#end
 	}
 
 	public function setCamera( cam : h3d.Camera ) {
