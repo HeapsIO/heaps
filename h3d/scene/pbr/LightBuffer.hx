@@ -99,31 +99,28 @@ class LightBuffer {
 		return d1 == d2 ? 0 : (d1 > d2 ? 1 : -1);
 	}
 
+	var tmpLights = [];
+
 	public function sortLights ( ctx : h3d.scene.RenderContext ) : Array<Light> @:privateAccess {
-		var lights = [];
 		var l = Std.downcast(ctx.lights, Light);
 		if ( l == null )
 			return null;
+		var pos = 0;
 		while ( l != null ) {
 			if (l.enableForward && l.inFrustum(ctx.camera.frustum)) {
-				lights.push(l);
+				tmpLights[pos++] = l;
 			}
 			l = Std.downcast(l.next, Light);
 		}
-		lights.sort(function(l1,l2) { return sortingCriteria(l1, l2, ctx.camera.target); });
-		return lights;
+		while( tmpLights.length > pos ) tmpLights.pop();
+		tmpLights.sort(function(l1,l2) { return sortingCriteria(l1, l2, ctx.camera.target); });
+		return tmpLights;
 	}
 
 	public function fillLights (lights : Array<Light>, shadows : Bool) {
 		if (lights == null)
 			return;
-		pointLightsShadow = [];
-		spotLightsShadow = [];
-		dirLightsShadow = [];
 		cascadeLight = null;
-		pointLights = [];
-		spotLights = [];
-		dirLights = [];
 
 		var dirShadowCount = 0;
 		var pointShadowCount = 0;
@@ -353,12 +350,12 @@ class LightBuffer {
 		s.pointShadowCount = pointLightsShadow.length;
 		s.spotShadowCount = spotLightsShadow.length;
 		s.lightInfos.uploadFloats(lightInfos, 0, s.lightInfos.vertices, 0);
-		pointLights = [];
-		spotLights = [];
-		dirLights = [];
-		pointLightsShadow = [];
-		spotLightsShadow = [];
-		dirLightsShadow = [];
+		while( pointLights.length > 0 ) pointLights.pop();
+		while( spotLights.length > 0 ) spotLights.pop();
+		while( dirLights.length > 0 ) dirLights.pop();
+		while( pointLightsShadow.length > 0 ) pointLightsShadow.pop();
+		while( spotLightsShadow.length > 0 ) spotLightsShadow.pop();
+		while( dirLightsShadow.length > 0 ) dirLightsShadow.pop();
 		cascadeLight = null;
 
 		var pbrIndirect = @:privateAccess pbrRenderer.pbrIndirect;
