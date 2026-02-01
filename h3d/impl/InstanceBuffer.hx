@@ -13,7 +13,7 @@ class InstanceBuffer {
 	**/
 	public static var ELEMENT_SIZE = 20;
 
-	var countBuffer : Dynamic;
+	var countBuffer : h3d.impl.Driver.GPUBuffer;
 	var data : h3d.impl.Driver.GPUBuffer;
 	var cpuData : Array<Int>;
 	var driver : h3d.impl.Driver;
