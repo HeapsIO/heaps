@@ -268,6 +268,7 @@ class CompiledShader {
 	@:packed public var bufferAllocation(default,null) : BufferAllocation;
 	@:packed public var srcTextureLocation(default, null) : TextureCopyLocation;
 	@:packed public var dstTextureLocation(default, null) : TextureCopyLocation;
+	@:packed public var dstStencilViewDesc(default,null) : DepthStencilViewDesc;
 
 	public var pass : h3d.mat.Pass;
 
@@ -927,7 +928,7 @@ class DX12Driver extends h3d.impl.Driver {
 		if ( depthBuffer == null )
 			depthBuffer = getDefaultDepthBuffer();
 		var depthView = depthStenciViews.alloc(1);
-		var viewDesc = new DepthStencilViewDesc();
+		var viewDesc = tmp.dstStencilViewDesc;
 		viewDesc.arraySize = 1;
 		viewDesc.mipSlice = 0;
 		viewDesc.firstArraySlice = 0;
@@ -936,6 +937,8 @@ class DX12Driver extends h3d.impl.Driver {
 		if ( readOnly ) {
 			viewDesc.flags.set(READ_ONLY_DEPTH);
 			viewDesc.flags.set(READ_ONLY_STENCIL);
+		} else {
+			viewDesc.flags = new haxe.EnumFlags();
 		}
 		Driver.createDepthStencilView(depthBuffer.t.res, viewDesc, depthView);
 		var depths = tmp.depthStencils;
