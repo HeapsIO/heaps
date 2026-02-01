@@ -140,6 +140,8 @@ class CubeShadowMap extends Shadows {
 	}
 
 	var clearDepthColor = new h3d.Vector4(1,1,1,1);
+	var nullOne : Null<Float> = 1;
+
 	override function draw( passes : h3d.pass.PassList, ?sort ) {
 		if( !enabled )
 			return;
@@ -160,7 +162,7 @@ class CubeShadowMap extends Shadows {
 			return;
 		}
 
-		var computingStatic = ctx.computingStatic || updateStatic;  
+		var computingStatic = ctx.computingStatic || updateStatic;
 
 		var texture = computingStatic ? createStaticTexture() : ctx.textures.allocTarget("pointShadowMap", size, size, false, format, [Cube]);
 		if( depth == null || depth.width != texture.width || depth.height != texture.height || depth.isDisposed() ) {
@@ -196,7 +198,7 @@ class CubeShadowMap extends Shadows {
 			}
 
 			ctx.engine.pushTarget(texture, i);
-			format == RGBA ? ctx.engine.clear(0xFFFFFF, i) : ctx.engine.clearF(clearDepthColor, 1);
+			format == RGBA ? ctx.engine.clear(0xFFFFFF, nullOne) : ctx.engine.clearF(clearDepthColor, nullOne);
 
 			@:privateAccess ctx.cameraViewProj = getShadowProj();
 			@:privateAccess ctx.cameraFar = lightCamera.zFar;
