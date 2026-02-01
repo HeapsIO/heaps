@@ -284,7 +284,7 @@ class Texture {
 		}
 	}
 
-	public function clear( color : Int, alpha = 1., ?layer = -1 ) {
+	public function clear( color : Int, alpha = 1., layer = -1 ) {
 		alloc();
 		if( width == 0 || height == 0 ) return;
 		if( #if (usegl || hlsdl || js) true #else flags.has(Target) #end && (width != 1 || height != 1) ) {
