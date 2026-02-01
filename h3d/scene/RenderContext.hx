@@ -94,7 +94,8 @@ class RenderContext extends h3d.impl.RenderContext {
 	}
 
 	public function setupTarget() {
-		cameraProjFlip = engine.driver.hasFeature(BottomLeftCoords) && engine.getCurrentTarget() != null ? -1 : 1;
+		var v = engine.driver.hasFeature(BottomLeftCoords) && engine.getCurrentTarget() != null ? -1 : 1;
+		if( cameraProjFlip != v ) cameraProjFlip = v;
 	}
 
 	function getCurrentPixelSize() {
