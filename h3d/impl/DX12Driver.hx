@@ -1178,7 +1178,7 @@ class DX12Driver extends h3d.impl.Driver {
 		dst.type = PLACED_FOOTPRINT;
 		Driver.getCopyableFootprints(srcDesc, src.subResourceIndex, 1, 0, dst.placedFootprint, null, null, totalSize);
 
-		var tmpBuf = allocGPU(totalSize[0].low, READBACK, COMMON);
+		var tmpBuf = allocGPU(totalSize[0].low, READBACK, COPY_DEST);
 
 		var box = new Box();
 		box.left = x;
