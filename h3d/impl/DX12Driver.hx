@@ -71,6 +71,7 @@ class ScratchHeapArray {
 
 class BufferAllocatorPage {
 	public var capacity(default, null) : Int;
+	public var unusedFrame(default, null) : Int = 0;
 	var offset : Int = 0;
 	var resource : GpuResource;
 	var cpuAddress : hl.Bytes;
@@ -95,6 +96,15 @@ class BufferAllocatorPage {
 		return true;
 	}
 
+	public function reset() {
+		if ( offset == 0 )
+			unusedFrame++;
+		else {
+			offset = 0;
+			unusedFrame = 0;
+		}
+	}
+
 	public function dispose() {
 		resource.release();
 		resource = null;
@@ -103,20 +113,14 @@ class BufferAllocatorPage {
 }
 
 class BufferAllocator {
+	inline static var MAX_KEEP_FRAME = 3600;
 	var pages : Array<BufferAllocatorPage>;
 
 	var heap : HeapProperties;
 	var desc : ResourceDesc;
 	var flags : haxe.EnumFlags<HeapFlag>;
 
-	inline static final HISTORY_SIZE : Int = 30;
-	var baseSize : Int;
-	var usedSize : Int;
-	var usedSizeHistory = new hl.NativeArray<Int>(HISTORY_SIZE);
-	var historyCursor = 0;
-
 	public function new( size : Int ) {
-		baseSize = size;
 		heap = new HeapProperties();
 		heap.type = UPLOAD;
 		desc = new ResourceDesc();
@@ -132,25 +136,20 @@ class BufferAllocator {
 	}
 
 	public function reset() {
-		var p = pages[0];
-		for ( i in 1...pages.length )
-			pages[i].dispose();
-		pages.resize(1);
+		for ( p in pages )
+			p.reset();
 
-		usedSizeHistory[historyCursor++] = usedSize;
-		historyCursor = historyCursor % HISTORY_SIZE;
-		var maxSize = usedSizeHistory[0];
-		for ( i in 1...HISTORY_SIZE )
-			maxSize = hxd.Math.imax(maxSize, usedSizeHistory[i]);
-
-		var curCapacity = p.capacity;
-		if ( curCapacity < usedSize || curCapacity > maxSize ) {
-			p.dispose();
-			desc.width = hxd.Math.imax(baseSize, usedSize);
-			pages[0] = new BufferAllocatorPage(heap, flags, desc);
+		var i = 0;
+		while ( i < pages.length ) {
+			var page = pages[i];
+			if ( page.unusedFrame > MAX_KEEP_FRAME ) {
+				page.dispose();
+				pages[i] = pages[pages.length - 1];
+				pages.pop();
+				continue;
+			}
+			i++;
 		}
-
-		usedSize = 0;
 	}
 
 	public function dispose() {
@@ -161,7 +160,6 @@ class BufferAllocator {
 	public function alloc( size : Int, alignment = 256, allocation : BufferAllocation ) {
 		var sz = size & ~(alignment - 1);
 		if( sz != size ) sz += alignment;
-		usedSize += sz;
 
 		for ( p in pages ) {
 			if ( p.tryAlloc(sz, alignment, allocation ) )
@@ -169,7 +167,7 @@ class BufferAllocator {
 		}
 
 		var lastCapacity = pages[pages.length - 1].capacity;
-		desc.width = hxd.Math.imax(Std.int(lastCapacity*3/2), sz);
+		desc.width = hxd.Math.imax((lastCapacity >> 1) * 3, sz);
 		var p = new BufferAllocatorPage(heap, flags, desc);
 		p.tryAlloc(sz, alignment, allocation);
 		pages.push(p);
