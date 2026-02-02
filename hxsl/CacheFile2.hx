@@ -2,6 +2,13 @@ package hxsl;
 
 #if (sys || nodejs)
 
+@:structInit
+private class ShaderListInfo {
+	public var name : String;
+	public var p : Int;
+	public var constBits : Int;
+}
+
 @:access(hxsl.CacheFile2)
 class CacheFile2Loader {
 	var cache : CacheFile2;
@@ -9,9 +16,9 @@ class CacheFile2Loader {
 	// Input from file
 	public var lkInfos : Array<{ name : String, vars : Array<hxsl.Output> }> = [];
 	public var bcMap : Map<String, { sign : String, params : hxsl.Cache.BatchInstanceParams }> = [];
-	public var rtInfosDefault : Array<{ sign : String, sl : Array<{ name : String, p : Int, constBits : Int }> }> = [];
-	public var rtInfosBatch : Array<{ sign : String, sl : Array<{ name : String, p : Int, constBits : Int }> }> = [];
-	public var rtInfosCompute : Array<{ sign : String, sl : Array<{ name : String, p : Int, constBits : Int }> }> = [];
+	public var rtInfosDefault : Array<{ sign : String, sl : Array<ShaderListInfo> }> = [];
+	public var rtInfosBatch : Array<{ sign : String, sl : Array<ShaderListInfo> }> = [];
+	public var rtInfosCompute : Array<{ sign : String, sl : Array<ShaderListInfo> }> = [];
 	public var bfMap : Map<Int, hxd.BufferFormat> = [];
 
 	// Tmp used by run
@@ -127,7 +134,7 @@ class CacheFile2Loader {
 		}
 	}
 
-	function makeShaderList( slinfos : Array<{ name : String, p : Int, constBits : Int }>, mode : RuntimeShader.LinkMode ) {
+	function makeShaderList( slinfos : Array<ShaderListInfo>, mode : RuntimeShader.LinkMode ) {
 		var sl = null;
 		var i = slinfos.length;
 		while( i > 0 ) {
@@ -378,7 +385,7 @@ class CacheFile2 extends Cache {
 				break;
 			}
 			// Reconstruct ShaderList
-			var sl = [];
+			var sl : Array<ShaderListInfo> = [];
 			var parts = line.split(";");
 			var sign = parts[0];
 			var slinfos = parts[1].split(":");
