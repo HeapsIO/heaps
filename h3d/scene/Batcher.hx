@@ -423,11 +423,12 @@ class Batcher extends h3d.scene.Object {
 				var sIdx = 0;
 				while ( sl != null ) {
 					var s1 = sl.s;
-					var s2 = bp.shaders[sIdx++];
+					var s2 = bp.shaders[sIdx];
 					s1.updateConstants(globals);
 					s2.updateConstants(globals);
 					if ( s1.instance.id != s2.instance.id )
 						break;
+					sIdx++;
 					sl = sl.next;
 				}
 				if ( sIdx == bp.shaders.length )
