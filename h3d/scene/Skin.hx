@@ -472,8 +472,7 @@ class Skin extends MultiMaterial {
 						maxBones = s.joints.length;
 			} else
 				maxBones = skinData.boundJoints.length;
-			if( skinShader.MaxBones < maxBones )
-				skinShader.MaxBones = maxBones;
+			skinShader.MaxBones = hxd.Math.imax(32, hxd.Math.nextPOT(maxBones));
 			for( m in materials )
 				if( m != null ) {
 					var s = m.mainPass.getShader(h3d.shader.SkinTangent);
