@@ -1,5 +1,20 @@
 package h3d.scene;
 
+class FollowShader extends hxsl.Shader {
+	static var SRC = {
+		@param var followMatrix : Mat4;
+		@param var prevFollowMatrix : Mat4;
+
+		var transformedPosition : Vec3;
+		var previousTransformedPosition : Vec3;
+
+		function vertex() {
+			transformedPosition = transformedPosition * followMatrix.mat3x4();
+			previousTransformedPosition = previousTransformedPosition * prevFollowMatrix.mat3x4();
+		}
+	};
+}
+
 class BatchCommandBuilder extends hxsl.Shader {
 	static var SRC = {
 		@param var groupsInfos : StorageBuffer<Int>; // x : batchInstanceStart;
@@ -215,6 +230,8 @@ class BatchCulling extends hxsl.Shader {
 		@param var frustum : Buffer<Vec4, 6>;
 		@param var shadowMaxDistance : Float;
 		@param var instanceCount : Int;
+		@const var IS_RELATIVE : Bool = false;
+		@param var worldMatrix : Mat4;
 
 		final instanceInfosStride = 2;
 		final subMeshInfosStride = 2;
@@ -238,6 +255,8 @@ class BatchCulling extends hxsl.Shader {
 
 			var position = data.xyz;
 			var boundingSphere = data.w;
+			if ( IS_RELATIVE )
+				position = position * worldMatrix.mat3x4();
 			var lodStart : Int = subMeshInfos[subMeshPos + 0];
 			var lodCount : Int = subMeshInfos[subMeshPos + 1];
 
@@ -401,6 +420,8 @@ class Batcher extends h3d.scene.Object {
 	var primitive : h3d.prim.BatchPrimitive;
 	var needLogicNormal : Bool = false;
 	public var shadowMaxDistance = -1.0;
+	var followShader : FollowShader;
+	public var isRelative : Bool = false;
 
 	var totalInstanceCount : Int;
 	var instancesData : h3d.Buffer;
@@ -504,12 +525,25 @@ class Batcher extends h3d.scene.Object {
 		cullingShader.frustum = ctx.getCameraFrustumBuffer();
 		cullingShader.instanceCount = totalInstanceCount;
 		cullingShader.shadowMaxDistance = shadowMaxDistance;
+		cullingShader.IS_RELATIVE = isRelative;
+		cullingShader.worldMatrix = getAbsPos();
 		ctx.computeDispatch(cullingShader, hxd.Math.ceil(totalInstanceCount/64.0), false);
 	}
 
 	override function emit( ctx : h3d.scene.RenderContext ) {
 		if ( totalInstanceCount == 0 )
 			return;
+
+		if ( isRelative ) {
+			if ( followShader == null ) {
+				followShader = new FollowShader();
+				followShader.followMatrix = new h3d.Matrix();
+				followShader.prevFollowMatrix = new h3d.Matrix();
+			}
+			var absPos = getAbsPos();
+			followShader.followMatrix.load(absPos);
+			followShader.prevFollowMatrix.load(prevAbsPos ?? absPos);
+		}
 
 		if ( primitive.buffer == null || primitive.buffer.isDisposed() ) {
 			primitive.alloc(ctx.engine);
@@ -533,6 +567,11 @@ class Batcher extends h3d.scene.Object {
 			if ( p.totalInstanceCount == 0 )
 				continue;
 			p.dispatchCommandBuilder(ctx, this);
+			var hasFollowShader = p.pass.getShader(FollowShader) != null;
+			if ( !isRelative && hasFollowShader )
+				p.pass.removeShader(followShader);
+			if ( isRelative && !hasFollowShader )
+				p.pass.addShader(followShader);
 			maxInstanceCount = hxd.Math.imax(p.totalInstanceCount, maxInstanceCount);
 			ctx.emitPass(p.pass, this).index = i;
 		}
