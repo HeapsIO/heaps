@@ -94,8 +94,7 @@ class ShaderCache {
 			if( key == "" ) break;
 			var len = cache.readInt32();
 			if( len < 0 || len > 4<<20 ) break;
-			var buf = haxe.io.Bytes.alloc(len);
-			cache.readBytes(buf, 0, len);
+			var buf = cache.read(len);
 			data.set(key, buf);
 		}
 	}
