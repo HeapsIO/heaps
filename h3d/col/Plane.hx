@@ -96,10 +96,10 @@ class Plane {
 		out.z = p.z - d * nz;
 	}
 
-	public static inline function fromPoints( p0 : Point, p1 : Point, p2 : Point ) {
+	public static inline function _fromPoints( p0 : Point, p1 : Point, p2 : Point ) {
 		var d1 = p1.sub(p0);
 		var d2 = p2.sub(p0);
-		var n = d1.cross(d2);
+		var n = d1.cross(d2).normalized();
 		return new Plane(n.x,n.y,n.z,n.dot(p0));
 	}
 
