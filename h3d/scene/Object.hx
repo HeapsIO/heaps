@@ -722,7 +722,7 @@ class Object {
 	}
 
 	function set_follow(v) {
-		posChanged = true;
+		if( follow != v ) posChanged = true;
 		return follow = v;
 	}
 
@@ -899,38 +899,38 @@ class Object {
 	}
 
 	inline function set_x(v) {
+		if( x != v ) posChanged = true;
 		x = v;
-		posChanged = true;
 		return v;
 	}
 
 	inline function set_y(v) {
+		if( y != v ) posChanged = true;
 		y = v;
-		posChanged = true;
 		return v;
 	}
 
 	inline function set_z(v) {
+		if( z != v ) posChanged = true;
 		z = v;
-		posChanged = true;
 		return v;
 	}
 
 	inline function set_scaleX(v) {
+		if( scaleX != v ) posChanged = true;
 		scaleX = v;
-		posChanged = true;
 		return v;
 	}
 
 	inline function set_scaleY(v) {
+		if( scaleY != v ) posChanged = true;
 		scaleY = v;
-		posChanged = true;
 		return v;
 	}
 
 	inline function set_scaleZ(v) {
+		if( scaleZ != v ) posChanged = true;
 		scaleZ = v;
-		posChanged = true;
 		return v;
 	}
 
@@ -954,7 +954,6 @@ class Object {
 		this.x = x;
 		this.y = y;
 		this.z = z;
-		posChanged = true;
 	}
 
 	/**
