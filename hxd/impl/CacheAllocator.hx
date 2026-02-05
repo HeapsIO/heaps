@@ -2,23 +2,30 @@ package hxd.impl;
 import hxd.impl.Allocator;
 
 @:allow(hxd.impl.CacheAllocator)
-private class Cache<T> {
+@:access(hxd.impl.CacheAllocator)
+@:access(h3d.Buffer)
+private class Cache<T:h3d.Buffer> {
+	var allocator : CacheAllocator;
 	var available : Array<T> = [];
 	var disposed : Array<T> = [];
 	public var lastUse : Float = haxe.Timer.stamp();
 	public var onDispose : T -> Void;
 
-	public function new( ?dispose ) {
+	public function new(allocator, ?dispose) {
+		this.allocator = allocator;
 		onDispose = dispose;
 	}
 	public inline function get() {
 		var b = available.pop();
+		if( b != null )
+			allocator.curMemory -= b.getMemSize();
 		if( available.length == 0 ) lastUse = haxe.Timer.stamp();
 		return b;
 	}
 
-	public inline function put(v) {
+	public inline function put(v:T) {
 		disposed.push(v);
+		allocator.curMemory += v.getMemSize();
 	}
 
 	public function nextFrame() {
@@ -33,6 +40,7 @@ private class Cache<T> {
 		var b = available.pop();
 		if( b == null ) b = disposed.pop();
 		if( b == null ) return false;
+		allocator.curMemory -= b.getMemSize();
 		if( onDispose != null ) onDispose(b);
 		return true;
 	}
@@ -49,6 +57,10 @@ class CacheAllocator extends Allocator {
 	 * How long do we keep some buffer than hasn't been used in memory (in seconds, default 60)
 	**/
 	public var maxKeepTime = 60.;
+
+	public var maxMemSize : Int = 512 * 1024 * 1024;
+
+	var curMemory : Int = 0;
 
 	override function allocBuffer(vertices:Int, format:hxd.BufferFormat, flags:BufferFlags=Dynamic):h3d.Buffer {
 		if( vertices >= 65536 ) {
@@ -75,7 +87,7 @@ class CacheAllocator extends Allocator {
 		var id = flags.toInt() | (b.format.uid << 3) | (b.vertices << 16);
 		var c = buffers.get(id);
 		if( c == null ) {
-			c = new Cache(function(b:h3d.Buffer) b.dispose());
+			c = new Cache(this, function(b:h3d.Buffer) b.dispose());
 			buffers.set(id, c);
 		}
 		c.put(b);
@@ -100,7 +112,7 @@ class CacheAllocator extends Allocator {
 		var id = i.count << 1 + (is32 ? 1 : 0);
 		var c = indexBuffers.get(id);
 		if( c == null ) {
-			c = new Cache(function(i:h3d.Indexes) i.dispose());
+			c = new Cache(this, function(i:h3d.Indexes) i.dispose());
 			indexBuffers.set(id, c);
 		}
 		c.put(i);
@@ -129,6 +141,14 @@ class CacheAllocator extends Allocator {
 
 	public function gc() {
 		var now = haxe.Timer.stamp();
+		
+		while( curMemory > maxMemSize ) {
+			var oldest : Cache<Dynamic> = null;
+			for( c in buffers ) if( oldest == null || c.lastUse < oldest.lastUse ) oldest = c;
+			for( c in indexBuffers ) if( oldest == null || c.lastUse < oldest.lastUse ) oldest = c;
+			if( oldest == null || !oldest.gc() ) break;
+		}
+		
 		for( b in buffers.keys() ) {
 			var c = buffers.get(b);
 			if( now - c.lastUse > maxKeepTime && !c.gc() )
