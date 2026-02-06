@@ -174,7 +174,7 @@ class GlDriver extends Driver {
 		hasMultiIndirect = gl.getConfigParameter(0) > 0;
 		maxCompressedTexturesSupport = 7;
 		var driver = getDriverName(false).toLowerCase();
-		isIntelGpu = ~/intel.*graphics/.match(driver);
+		isIntelGpu = ~/intel.*(graphics|gpu)/.match(driver);
 		#end
 
 		#if (hlsdl >= version("1.15.0"))
