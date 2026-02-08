@@ -4,6 +4,7 @@ enum SoundFormat {
 	Wav;
 	Mp3;
 	OggVorbis;
+	Opus;
 }
 
 class Sound extends Resource {
@@ -24,6 +25,12 @@ class Sound extends Resource {
 			#else
 			return false;
 			#end
+		case Opus:
+			#if hl
+			return true;
+			#else
+			return false;
+			#end
 		}
 	}
 
@@ -36,12 +43,20 @@ class Sound extends Resource {
 			data = new hxd.snd.WavData(bytes);
 		case 255, 'I'.code: // MP3 (or ID3)
 			data = new hxd.snd.Mp3Data(bytes);
-		case 'O'.code: // Ogg (vorbis)
-			#if (hl || stb_ogg_sound)
-			data = new hxd.snd.OggData(bytes);
-			#else
-			throw "OGG format requires -lib stb_ogg_sound (for " + entry.path+")";
-			#end
+		case 'O'.code: // Ogg container (vorbis or opus)
+			if( isOpusStream(bytes) ) {
+				#if hl
+				data = new hxd.snd.OpusData(bytes);
+				#else
+				throw "Opus format requires HashLink (for " + entry.path + ")";
+				#end
+			} else {
+				#if (hl || stb_ogg_sound)
+				data = new hxd.snd.OggData(bytes);
+				#else
+				throw "OGG format requires -lib stb_ogg_sound (for " + entry.path+")";
+				#end
+			}
 		default:
 		}
 		if( data == null )
@@ -49,6 +64,21 @@ class Sound extends Resource {
 		if ( ENABLE_AUTO_WATCH )
 			watch(watchCallb);
 		return data;
+	}
+
+	static function isOpusStream( bytes : haxe.io.Bytes ) : Bool {
+		if( bytes.length < 36 ) return false;
+		var numSegments = bytes.get(26);
+		var dataOffset = 27 + numSegments;
+		if( bytes.length < dataOffset + 8 ) return false;
+		return bytes.get(dataOffset) == 'O'.code
+			&& bytes.get(dataOffset + 1) == 'p'.code
+			&& bytes.get(dataOffset + 2) == 'u'.code
+			&& bytes.get(dataOffset + 3) == 's'.code
+			&& bytes.get(dataOffset + 4) == 'H'.code
+			&& bytes.get(dataOffset + 5) == 'e'.code
+			&& bytes.get(dataOffset + 6) == 'a'.code
+			&& bytes.get(dataOffset + 7) == 'd'.code;
 	}
 
 	public function dispose() {

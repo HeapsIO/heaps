@@ -21,7 +21,7 @@ class Config {
 		"ttf" => "hxd.res.Font",
 		"fnt" => "hxd.res.BitmapFont",
 		"bdf" => "hxd.res.BDFFont",
-		"wav,mp3,ogg" => "hxd.res.Sound",
+		"wav,mp3,ogg,opus" => "hxd.res.Sound",
 		"tmx" => "hxd.res.TiledMap",
 		"atlas" => "hxd.res.Atlas",
 		"grd" => "hxd.res.Gradients",
@@ -64,6 +64,7 @@ class Config {
 		"cdb" => "img",
 		"atlas" => "png",
 		"ogg" => "wav",
+		"opus" => "wav",
 		"mp3" => "wav",
 		"l3d" => "bake",
 		"css" => "less,css.map",
@@ -94,6 +95,7 @@ class Config {
 			#if !stb_ogg_sound
 			ignoredExtensions.set("ogg", true);
 			#end
+			ignoredExtensions.set("opus", true);
 		}
 		return pf;
 	}
