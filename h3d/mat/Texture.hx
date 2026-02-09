@@ -62,6 +62,7 @@ class Texture {
 	public var depthBuffer : Texture;
 
 	var _lastFrame:Int;
+	var tmpColor : h3d.Vector4;
 
 	function set_lastFrame(lf:Int) {
 		// Make sure we do not override lastFrame of textures set to prevent auto dispose
@@ -266,19 +267,21 @@ class Texture {
 		alloc();
 		if( !flags.has(Target) ) throw "Texture should be target";
 		var engine = h3d.Engine.getCurrent();
-		var color = new h3d.Vector4(r,g,b,a);
+		if( tmpColor == null )
+			tmpColor = new h3d.Vector4();
+		tmpColor.set(r, g, b, a);
 		if( layer < 0 ) {
 			for( i in 0...layerCount ) {
 				for ( j in 0...mipLevels ) {
 					engine.pushTarget(this, i, j);
-					engine.clearF(color);
+					engine.clearF(tmpColor);
 					engine.popTarget();
 				}
 			}
 		} else {
 			for ( i in 0...mipLevels ) {
 				engine.pushTarget(this, layer, i);
-				engine.clearF(color);
+				engine.clearF(tmpColor);
 				engine.popTarget();
 			}
 		}
