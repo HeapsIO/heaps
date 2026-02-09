@@ -40,7 +40,10 @@ class TileLayerContent extends h3d.prim.Primitive {
 		Remove all data from Content instance.
 	**/
 	public function clear() {
-		tmp = new hxd.FloatBuffer();
+		if( tmp == null ) {
+			tmp = new hxd.FloatBuffer();
+		}
+		tmp.resize(0);
 		if( buffer != null ) {
 			if(buffer.vertices * 8 < useAllocatorLimit) hxd.impl.Allocator.get().disposeBuffer(buffer);
 			else buffer.dispose();
