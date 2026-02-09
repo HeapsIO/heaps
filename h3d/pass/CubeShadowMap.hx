@@ -121,7 +121,7 @@ class CubeShadowMap extends Shadows {
 		return tmpTex;
 	}
 
-	inline function clear( t : h3d.mat.Texture, ?layer = -1 ) {
+	inline function clear( t : h3d.mat.Texture, layer = -1 ) {
 		if( format == RGBA )
 			t.clear(0xFFFFFF, layer);
 		else
