@@ -139,7 +139,7 @@ class BufferAllocator {
 		for ( p in pages )
 			p.reset();
 
-		var i = 0;
+		var i = 1;
 		while ( i < pages.length ) {
 			var page = pages[i];
 			if ( page.unusedFrame > MAX_KEEP_FRAME ) {
