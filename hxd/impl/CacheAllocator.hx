@@ -86,7 +86,6 @@ class CacheAllocator extends Allocator {
 		if( c != null ) {
 			var b = c.get();
 			if( b != null ) return b;
-			}
 		}
 		checkGC();
 		return super.allocBuffer(vertices,format,flags);
