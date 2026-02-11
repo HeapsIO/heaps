@@ -318,12 +318,29 @@ class CacheFile2 extends Cache {
 
 	function load() {
 		isLoading = true;
-		if( !sys.FileSystem.exists(file) ) {
-			isLoading = false;
-			return;
-		}
 
 		var tLoadStart = haxe.Timer.stamp();
+		var loader = new CacheFile2Loader(this);
+
+		loadFile(loader, file);
+		if( outFile != file ) {
+			loadFile(loader, outFile);
+		}
+
+		loader.run(function() {
+			var tLoadEnd = haxe.Timer.stamp();
+			var dt = tLoadEnd - tLoadStart;
+			CacheFile2.LOAD_TIME = dt;
+			log('${runtimesDefault.length + runtimesBatch.length} shaders loaded in ${hxd.Math.fmt(dt)}s');
+			isLoading = false;
+		});
+	}
+
+	static function loadFile( loader : CacheFile2Loader, file : String ) : Bool {
+		if( !sys.FileSystem.exists(file) ) {
+			return false;
+		}
+
 		var f = new haxe.io.BytesInput(sys.io.File.getBytes(file));
 
 		inline function readLine() {
@@ -332,12 +349,9 @@ class CacheFile2 extends Cache {
 
 		var magic = readLine();
 		if( !StringTools.startsWith(magic, "CF2-1") ) {
-			log("Invalid cache file, skipped");
-			isLoading = false;
-			return;
+			f.close();
+			return false;
 		}
-
-		var loader = new CacheFile2Loader(this);
 
 		while( true ) {
 			var line = readLine();
@@ -433,14 +447,7 @@ class CacheFile2 extends Cache {
 		}
 
 		f.close();
-
-		loader.run(function() {
-			var tLoadEnd = haxe.Timer.stamp();
-			var dt = tLoadEnd - tLoadStart;
-			CacheFile2.LOAD_TIME = dt;
-			log('${runtimesDefault.length + runtimesBatch.length} shaders loaded in ${hxd.Math.fmt(dt)}s');
-			isLoading = false;
-		});
+		return true;
 	}
 
 	function saveIfModified() {
