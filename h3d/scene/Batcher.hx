@@ -78,6 +78,7 @@ class BatchPass {
 	static var INDIRECT_DRAW_ARGUMENTS_FMT = hxd.BufferFormat.make([{ name : "", type : DVec4 }, { name : "", type : DFloat }]);
 	static var INSTANCES_INFOS_FMT = hxd.BufferFormat.make([{ name : "batchInstanceID", type : DFloat }, { name : "flags", type : DFloat }]); // flags = subPartID(16 bits) + groupID(16 bits)
 
+	public var primitive : h3d.prim.BatchPrimitive;
 	public var pass : h3d.mat.Pass;
 	public var batchShader : hxsl.BatchShader;
 	public var shaders : Array<hxsl.Shader>;
@@ -95,15 +96,15 @@ class BatchPass {
 	var instanceDirty = false;
 	var cullingMask = 0;
 
-	public function new(batcher : h3d.scene.Batcher, p : h3d.mat.Pass, sl : hxsl.ShaderList) @:privateAccess {
-		var scene = batcher.getScene();
-		var output = scene.renderer.getPassByName(p.name);
+	public function new(renderer : h3d.scene.Renderer, batch : BatchInstance, p : h3d.mat.Pass, sl : hxsl.ShaderList, prim : h3d.prim.BatchPrimitive) @:privateAccess {
+		primitive = prim;
+		var output = renderer.getPassByName(p.name);
 		if( output == null )
 			throw "Unknown pass " + p.name;
 
 		var shaderLinker = output.output;
-		var rt = shaderLinker.compileShaders(scene.ctx.globals, sl, Default);
-		batcher.needLogicNormal = batcher.needLogicNormal || rt.getInputFormat().hasInput("logicNormal");
+		var rt = shaderLinker.compileShaders(renderer.ctx.globals, sl, Default);
+		batch.needLogicNormal = batch.needLogicNormal || rt.getInputFormat().hasInput("logicNormal");
 
 		var shaderVisited : Map<String, Bool> = [];
 		var forcedPerInstance = [];
@@ -186,11 +187,11 @@ class BatchPass {
 	}
 
 	var builderShader = new BatchCommandBuilder();
-	public function dispatchCommandBuilder(ctx : h3d.scene.RenderContext, batcher : Batcher) {
-		builderShader.groupsInfos = @:privateAccess batcher.groupsInfos;
+	public function dispatchCommandBuilder(ctx : h3d.scene.RenderContext, batch : BatchInstance) {
+		builderShader.groupsInfos = @:privateAccess batch.groupsInfos;
 		builderShader.passInstancesInfos = instancesInfos;
-		builderShader.batchInstancesInfos = @:privateAccess batcher.instancesInfos;
-		builderShader.subPartInfos = @:privateAccess batcher.primitive.gpuSubPartInfos;
+		builderShader.batchInstancesInfos = @:privateAccess batch.instancesInfos;
+		builderShader.subPartInfos = primitive.gpuSubPartInfos;
 		builderShader.instanceCount = totalInstanceCount;
 		builderShader.commandBuffer = commandBuffer;
 		builderShader.countBuffer = countBuffer.buffer;
@@ -199,7 +200,7 @@ class BatchPass {
 		ctx.computeDispatch(builderShader, hxd.Math.ceil(totalInstanceCount/64.0), false);
 	}
 
-	public function draw( primitive : h3d.prim.BatchPrimitive, ctx : h3d.scene.RenderContext ) {
+	public function draw( ctx : h3d.scene.RenderContext ) {
 		if ( textureHandles != null )
 			ctx.selectTextureHandles( textureHandles );
 		var engine = ctx.engine;
@@ -293,28 +294,22 @@ class BatchCulling extends hxsl.Shader {
 	}
 }
 
-@:allow(h3d.scene.Batcher)
-class BatchGroup {
-	var passToEmitData : Map<BatchPass, Int> = [];
-	var emitData : Array<EmitData> = [];
-	var batcher : Batcher;
-	var groupID : Int;
+private class GroupData {
+	var passToEmitData : Map<BatchPass, EmitData> = [];
+	var batch : BatchInstance;
 
-	var instanceCount = 0;
-	var instancesData : haxe.io.Bytes;
-	var instancesInfos : haxe.io.Bytes;
+	public var instanceCount(default, null) = 0;
+	public var instancesData(default, null) : haxe.io.Bytes;
+	public var instancesInfos(default, null) : haxe.io.Bytes;
 
-	public function new(b:Batcher, groupID : Int) {
-		batcher = b;
-		this.groupID = groupID;
+	public function new( b : BatchInstance ) {
+		batch = b;
 	}
 
-	function emitGroupInstance( mesh : h3d.scene.Mesh, subMeshID : Int, worldPosition : h3d.Matrix ) {
-		batcher.instancesDirty = true;
-		batcher.totalInstanceCount++;
+	public function emitInstance( primitive : h3d.prim.BatchPrimitive, subMeshID : Int, materials : Array<h3d.mat.Material>, worldPosition : h3d.Matrix, groupID : Int ) {
 		var groupInstanceID = instanceCount++;
 
-		var dataByteStride = Batcher.BATCH_INSTANCES_DATA_FMT.strideBytes;
+		var dataByteStride = BatchInstance.BATCH_INSTANCES_DATA_FMT.strideBytes;
 		var dataNeeded = instanceCount * dataByteStride;
 		if ( instancesData == null )
 			instancesData = haxe.io.Bytes.alloc(dataNeeded);
@@ -324,9 +319,10 @@ class BatchGroup {
 			instancesData.blit(0, old, 0, old.length);
 		}
 
+		var subMesh = primitive.subMeshes[subMeshID];
 		var position = worldPosition.getPosition();
 		var scale = worldPosition.getScale();
-		var boundingSphere = mesh.primitive.getBounds().getBoundingRadius();
+		var boundingSphere = subMesh.bounds.getBoundingRadius();
 		boundingSphere *= hxd.Math.max(hxd.Math.max(hxd.Math.abs(scale.x), hxd.Math.abs(scale.y)), hxd.Math.abs(scale.z));
 
 		var dataStart = groupInstanceID * dataByteStride;
@@ -335,7 +331,7 @@ class BatchGroup {
 		instancesData.setFloat( dataStart + 8, position.z );
 		instancesData.setFloat( dataStart + 12, boundingSphere );
 
-		var infoByteStride = Batcher.BATCH_INSTANCES_INFOS_FMT.strideBytes;
+		var infoByteStride = BatchInstance.BATCH_INSTANCES_INFOS_FMT.strideBytes;
 		var infoNeeded = instanceCount * infoByteStride;
 		if ( instancesInfos == null )
 			instancesInfos = haxe.io.Bytes.alloc(infoNeeded);
@@ -349,95 +345,195 @@ class BatchGroup {
 		instancesInfos.setInt32( infoStart + 0, subMeshID );
 		instancesInfos.setInt32( infoStart + 4, 0 );
 
-		return groupInstanceID;
-	}
+		var globals = @:privateAccess batch.batcher.getScene().ctx.globals;
 
-	public function emitInstance( mesh : h3d.scene.Mesh, worldPosition : h3d.Matrix ) {
-		var hmd = Std.downcast(mesh.primitive, h3d.prim.HMDModel);
-		if ( hmd == null )
-			throw "Only HMDModel meshes can be batched";
-
-		var subMeshID = batcher.primitive.getSubMeshID(hmd);
-		if ( subMeshID < 0 )
-			throw "Model not added to batcher";
-
-		var groupInstanceID = emitGroupInstance(mesh, subMeshID, worldPosition);
-		var subMesh = batcher.primitive.subMeshes[subMeshID];
 		var subPartStart = subMesh.subPartStart;
-		for ( subPartIdx => m in mesh.getMeshMaterials() ) {
+		for ( subPartIdx => m in materials ) {
 			for ( pass in m.getPasses() ) {
 				var sl = @:privateAccess pass.getShadersRec();
-				var bpIdx : Int = batcher.findPass(sl, @:privateAccess pass.bits, pass.name);
+				var bpIdx : Int = batch.findPass(globals, sl, @:privateAccess pass.bits, pass.name);
 				if ( bpIdx < 0 )
 					throw "Pass not found in batcher";
 
-				var bp = batcher.passes[bpIdx];
-				var dataIdx = passToEmitData.get(bp);
-				if ( dataIdx == null ) {
-					dataIdx = emitData.length;
-					emitData.push(new EmitData(this, bp));
-					passToEmitData.set(bp, dataIdx);
+				var bp = batch.passes[bpIdx];
+				var emitData = passToEmitData.get(bp);
+				if ( emitData == null ) {
+					emitData = new EmitData(bp);
+					passToEmitData.set(bp, emitData);
 				}
-				emitData[dataIdx].emitInstance(groupInstanceID, groupID, subPartStart + subPartIdx * subMesh.lodCount, sl, worldPosition);
+				emitData.emitInstance(groupInstanceID, groupID, subPartStart + subPartIdx * subMesh.lodCount, sl, worldPosition);
 			}
 		}
 	}
 
-	public function remove() {
-		batcher.groups.remove(this);
-		batcher.freeGroupIDs.push(groupID);
-		batcher.instancesDirty = true;
-		if ( batcher.totalInstanceCount < instanceCount )
-			throw "assert";
-		batcher.totalInstanceCount -= instanceCount;
-		batcher = null;
-		dispose();
-	}
-
-	@:allow(h3d.scene.Batcher)
-	function dispose() {
-		for ( ed in emitData )
-			ed.dispose();
-		emitData.resize(0);
+	public function dispose() {
+		for ( e in passToEmitData )
+			e.dispose();
 		passToEmitData.clear();
 		instancesData = null;
 		instancesInfos = null;
+		batch.instancesDirty = true;
+		if ( batch.totalInstanceCount < instanceCount )
+			throw "assert";
+		batch.totalInstanceCount -= instanceCount;
 		instanceCount = 0;
 	}
 }
 
-@:allow(h3d.scene.BatchGroup, h3d.scene.BatchPass)
-class Batcher extends h3d.scene.Object {
-	static var BATCH_INSTANCES_DATA_FMT = hxd.BufferFormat.make([{ name : "position", type : DVec3 }, { name : "boundingSphere", type : DFloat }]);
-	static var BATCH_INSTANCES_INFOS_FMT = hxd.BufferFormat.make([{ name : "subMeshID", type : DFloat }, { name : "flags", type : DFloat }]); // flags = culledMask(8 bits) + lodSelected(24 bits)
-	static final GROUP_INFOS = hxd.BufferFormat.make([{ name : "batchInstanceStart", type : DFloat }]);
-	static final BATCH_START_FMT = hxd.BufferFormat.make([{ name : "Batch_Start", type : DFloat }]);
+class BatchGroup {
+	var batcher : Batcher;
+	var groupID : Int;
 
-	var highestGroupID = 0;
-	var freeGroupIDs : Array<Int> = [];
-	var groups : Array<BatchGroup> = [];
-	var passes : Array<BatchPass> = [];
-	var primitive : h3d.prim.BatchPrimitive;
-	var needLogicNormal : Bool = false;
-	public var shadowMaxDistance = -1.0;
-	var followShader : FollowShader;
-	public var isRelative : Bool = false;
-
-	var totalInstanceCount : Int;
-	var instancesData : h3d.Buffer;
-	var instancesInfos : h3d.Buffer;
-	var instancesDirty : Bool;
-	var groupsInfos : h3d.Buffer;
-
-	public function new( format : hxd.BufferFormat, ?parent:h3d.scene.Object ) {
-		super(parent);
-		primitive = new h3d.prim.BatchPrimitive(format);
-		if ( format == null )
-			throw "assert";
+	public function new(b:Batcher, groupID : Int) {
+		batcher = b;
+		this.groupID = groupID;
 	}
 
-	function findPass( shaders : hxsl.ShaderList, bits : Int, name : String ) : Int {
-		var globals = @:privateAccess getScene().ctx.globals;
+	public function emitMesh( mesh : h3d.scene.Mesh, worldPosition : h3d.Matrix ) {
+		batcher.emitMesh( mesh, worldPosition, groupID );
+	}
+
+	public function remove() {
+		batcher.removeGroup(groupID);
+	}
+}
+
+@:allow(h3d.scene.Batcher, h3d.scene.GroupData)
+private class BatchInstance {
+	public static final BATCH_INSTANCES_DATA_FMT = hxd.BufferFormat.make([{ name : "position", type : DVec3 }, { name : "boundingSphere", type : DFloat }]);
+	public static final BATCH_INSTANCES_INFOS_FMT = hxd.BufferFormat.make([{ name : "subMeshID", type : DFloat }, { name : "flags", type : DFloat }]); // flags = culledMask(8 bits) + lodSelected(24 bits)
+	public static final GROUP_INFOS = hxd.BufferFormat.make([{ name : "batchInstanceStart", type : DFloat }]);
+
+	public var batcher : h3d.scene.Batcher;
+	public var primitive : h3d.prim.BatchPrimitive;
+	public var totalInstanceCount : Int;
+	public var instancesData : h3d.Buffer;
+	public var instancesInfos : h3d.Buffer;
+	public var instancesDirty : Bool;
+	public var groupsInfos : h3d.Buffer;
+
+	public var needLogicNormal : Bool = false;
+	var passes : Array<BatchPass> = [];
+	var groups : Array<GroupData> = [];
+
+	public function new( b : Batcher, format : hxd.BufferFormat ) {
+		batcher = b;
+		primitive = new h3d.prim.BatchPrimitive(format);
+	}
+
+	public function addModel( mesh : h3d.scene.Mesh) {
+		primitive.addModel(cast mesh.primitive);
+	}
+
+	public function addMaterial( m : h3d.mat.Material, renderer : h3d.scene.Renderer ) {
+		var globals = @:privateAccess renderer.ctx.globals;
+		for ( p in m.getPasses() ) @:privateAccess {
+			var shaders = p.getShadersRec();
+			if ( findPass(globals, shaders, p.bits, p.name) < 0 )
+				passes.push( new BatchPass(renderer, this, p, shaders, primitive) );
+		}
+	}
+
+	public function emitMesh( mesh : h3d.scene.Mesh, worldPosition : h3d.Matrix, groupID : Int ) {
+		var group = groups[groupID];
+		if ( group == null ) {
+			group = new GroupData(this);
+			groups[groupID] = group;
+		}
+
+		var hmd : h3d.prim.HMDModel = cast mesh.primitive;
+		var subMeshID = primitive.getSubMeshID(hmd);
+		if ( subMeshID < 0 )
+			throw "Model not added to batcher";
+
+		instancesDirty = true;
+		totalInstanceCount++;
+
+		group.emitInstance( primitive, subMeshID, mesh.getMeshMaterials(), worldPosition, groupID);
+	}
+
+	public function flushPrimitive(ctx : h3d.scene.RenderContext) {
+		if ( primitive.buffer == null || primitive.buffer.isDisposed() ) {
+			primitive.alloc(ctx.engine);
+			if ( needLogicNormal )
+				primitive.addLogicNormal();
+		}
+	}
+
+	public function flushInstances() {
+		for ( i => p in passes ) {
+			if ( p.totalInstanceCount == 0 )
+				continue;
+			p.uploadInstanceBuffer();
+		}
+	}
+
+	public function disposeGroup(groupID : Int) {
+		groups[groupID]?.dispose();
+	}
+
+	var cullingShader = new BatchCulling();
+	public function dispatchCulling(ctx : h3d.scene.RenderContext) {
+		if ( totalInstanceCount == 0 )
+			return;
+		uploadBatchInstance();
+		cullingShader.instancesData = instancesData;
+		cullingShader.instancesInfos = instancesInfos;
+		cullingShader.subMeshInfos = primitive.gpuSubMeshInfos;
+		cullingShader.lodInfos = primitive.gpuLodInfos;
+		cullingShader.frustum = ctx.getCameraFrustumBuffer();
+		cullingShader.instanceCount = totalInstanceCount;
+		cullingShader.shadowMaxDistance = batcher.shadowMaxDistance;
+		cullingShader.IS_RELATIVE = batcher.isRelative;
+		cullingShader.worldMatrix = batcher.getAbsPos();
+		ctx.computeDispatch(cullingShader, hxd.Math.ceil(totalInstanceCount/64.0), false);
+	}
+
+	public function emit( ctx : h3d.scene.RenderContext, batchID : Int ) {
+		if ( totalInstanceCount == 0 )
+			return;
+
+		for ( i => p in passes ) {
+			if ( p.totalInstanceCount == 0 )
+				continue;
+			p.dispatchCommandBuilder(ctx, this);
+			var hasFollowShader = p.pass.getShader(FollowShader) != null;
+			if ( !batcher.isRelative && hasFollowShader )
+				p.pass.removeShader(batcher.followShader);
+			if ( batcher.isRelative && !hasFollowShader )
+				p.pass.addShader(batcher.followShader);
+			ctx.emitPass(p.pass, batcher).index = i << 16 | batchID;
+			batcher.resizeOffsets(p.totalInstanceCount);
+		}
+	}
+
+	public function draw( ctx : h3d.scene.RenderContext ) {
+		passes[ctx.drawPass.index >> 16].draw(ctx);
+	}
+
+	public function dispose() {
+		for (p in passes)
+			p.dispose();
+		passes.resize(0);
+		for ( g in groups )
+			g?.dispose();
+		groups.resize(0);
+		primitive.dispose();
+		if ( totalInstanceCount != 0 )
+			throw "Instance leak in batcher";
+		totalInstanceCount = 0;
+		instancesData?.dispose();
+		instancesData = null;
+		instancesInfos?.dispose();
+		instancesInfos = null;
+		instancesDirty = false;
+		groupsInfos?.dispose();
+		groupsInfos = null;
+		needLogicNormal = false;
+
+	}
+
+	function findPass( globals : hxsl.Globals, shaders : hxsl.ShaderList, bits : Int, name : String ) : Int {
 		for ( i => bp in passes ) @:privateAccess {
 			if ( bp.pass.bits == bits && name == bp.pass.name ) {
 				var sl = shaders;
@@ -459,30 +555,6 @@ class Batcher extends h3d.scene.Object {
 		return -1;
 	}
 
-	public function addMesh( mesh : h3d.scene.Mesh ) {
-		var hmd = Std.downcast(mesh.primitive, h3d.prim.HMDModel);
-		if ( hmd == null )
-			return;
-		primitive.addModel(hmd);
-
-		for ( m in mesh.getMeshMaterials() ) {
-			for ( p in m.getPasses() ) @:privateAccess {
-				var shaders = p.getShadersRec();
-				var bpIdx : Int = findPass(shaders, p.bits, p.name);
-				if ( bpIdx < 0 )
-					passes.push( new BatchPass(this, p, shaders) );
-			}
-		}
-	}
-
-	public function createGroup() : BatchGroup {
-		var groupID = freeGroupIDs.length > 0 ? freeGroupIDs.pop() : highestGroupID++;
-		var group = new BatchGroup(this, groupID);
-		groups.push(group);
-		instancesDirty = true;
-		return group;
-	}
-
 	function uploadBatchInstance() {
 		if ( !instancesDirty )
 			return;
@@ -498,7 +570,7 @@ class Batcher extends h3d.scene.Object {
 			instancesInfos = new h3d.Buffer(totalInstanceCount, BATCH_INSTANCES_INFOS_FMT, [UniformBuffer, ReadWriteBuffer]);
 		}
 
-		var groupsNeeded = highestGroupID;
+		var groupsNeeded = groups.length;
 		if ( groupsInfos == null || groupsInfos.vertices < groupsNeeded ) {
 			groupsInfos?.dispose();
 			groupsInfos = new h3d.Buffer(groupsNeeded, GROUP_INFOS, [UniformBuffer]);
@@ -507,31 +579,112 @@ class Batcher extends h3d.scene.Object {
 		var groupsInfosBytes = haxe.io.Bytes.alloc(groupsNeeded * 4);
 
 		var instanceCursor = 0;
-		for ( g in groups ) {
+		for ( groupID => g in groups ) {
+			if ( g == null )
+				continue;
 			instancesData.uploadBytes( g.instancesData, 0, g.instanceCount, instanceCursor );
 			instancesInfos.uploadBytes( g.instancesInfos, 0, g.instanceCount, instanceCursor );
-			groupsInfosBytes.setInt32( g.groupID * 4, instanceCursor );
+			groupsInfosBytes.setInt32( groupID * 4, instanceCursor );
 			instanceCursor += g.instanceCount;
 		}
 		groupsInfos.uploadBytes( groupsInfosBytes, 0, groupsNeeded );
 	}
+}
 
-	var cullingShader = new BatchCulling();
-	public function dispatchCulling(ctx : h3d.scene.RenderContext) {
-		cullingShader.instancesData = instancesData;
-		cullingShader.instancesInfos = instancesInfos;
-		cullingShader.subMeshInfos = primitive.gpuSubMeshInfos;
-		cullingShader.lodInfos = primitive.gpuLodInfos;
-		cullingShader.frustum = ctx.getCameraFrustumBuffer();
-		cullingShader.instanceCount = totalInstanceCount;
-		cullingShader.shadowMaxDistance = shadowMaxDistance;
-		cullingShader.IS_RELATIVE = isRelative;
-		cullingShader.worldMatrix = getAbsPos();
-		ctx.computeDispatch(cullingShader, hxd.Math.ceil(totalInstanceCount/64.0), false);
+@:allow(h3d.scene.BatchInstance)
+class Batcher extends h3d.scene.Object {
+	public static final BATCH_START_FMT = hxd.BufferFormat.make([{ name : "Batch_Start", type : DFloat }]);
+
+	var highestGroupID = 1;
+	var freeGroupIDs : Array<Int> = [];
+	var groups : Array<BatchGroup> = [];
+
+	/* One batcher per primitive */
+	var batches : Array<BatchInstance> = [];
+
+	public var shadowMaxDistance = -1.0;
+	public var isRelative : Bool = false;
+	var followShader : FollowShader;
+
+	var offsets : h3d.Buffer;
+
+	function getBatchID( hmd : h3d.prim.HMDModel ) {
+		var format = @:privateAccess hmd.data.vertexFormat;
+		for ( i => b in batches )
+			if ( b.primitive.vertexFormat == format )
+				return i;
+		var batchID = batches.length;
+		batches.push(new BatchInstance(this, format));
+		return batchID;
+	}
+
+	public function addMesh( mesh : h3d.scene.Mesh ) {
+		var hmd = Std.downcast(mesh.primitive, h3d.prim.HMDModel);
+		if ( hmd == null )
+			return;
+
+		var batchID = getBatchID(hmd);
+		var batch = batches[batchID];
+
+		batch.addModel(mesh);
+		var renderer = getScene().renderer;
+		for ( m in mesh.getMeshMaterials() )
+			batch.addMaterial(m, renderer);
+	}
+
+	public function createGroup() : BatchGroup {
+		var groupID = freeGroupIDs.length > 0 ? freeGroupIDs.pop() : highestGroupID++;
+		var group = new BatchGroup(this, groupID);
+		groups.push(group);
+		return group;
+	}
+
+	public function removeGroup(groupID : Int) {
+		groups.splice(groupID, 1);
+		freeGroupIDs.push(groupID);
+		for (b in batches)
+			b.disposeGroup(groupID);
+	}
+
+	public function emitMesh( mesh : h3d.scene.Mesh, worldPosition : h3d.Matrix, groupID : Int = 0 ) {
+		var hmd = Std.downcast(mesh.primitive, h3d.prim.HMDModel);
+		if ( hmd == null )
+			throw "Only HMDModel meshes can be batched";
+
+		var batchID = getBatchID(hmd);
+		var batch = batches[batchID];
+
+		batch.emitMesh( mesh, worldPosition, groupID );
+	}
+
+	function resizeOffsets( instanceCount : Int ) {
+		if ( offsets == null || offsets.vertices < instanceCount || offsets.isDisposed() ) {
+			if ( offsets != null ) {
+				offsets.dispose();
+				for ( b in batches )
+					b.primitive.removeBuffer(offsets);
+			}
+			var tmp = haxe.io.Bytes.alloc(4 * instanceCount);
+			for ( i in 0...instanceCount )
+				tmp.setFloat(i<<2, i);
+			offsets = new h3d.Buffer(instanceCount, BATCH_START_FMT);
+			offsets.uploadBytes(tmp, 0, instanceCount);
+			for ( b in batches )
+				b.primitive.addBuffer(offsets);
+		}
 	}
 
 	override function emit( ctx : h3d.scene.RenderContext ) {
-		if ( totalInstanceCount == 0 )
+		var maxInstanceCount = 0;
+		for ( b in batches ) {
+			if ( b.totalInstanceCount == 0 )
+				continue;
+			maxInstanceCount = hxd.Math.imax(b.totalInstanceCount, maxInstanceCount);
+			b.flushPrimitive(ctx);
+			b.flushInstances();
+		}
+
+		if ( maxInstanceCount == 0 )
 			return;
 
 		if ( isRelative ) {
@@ -545,79 +698,28 @@ class Batcher extends h3d.scene.Object {
 			followShader.prevFollowMatrix.load(prevAbsPos ?? absPos);
 		}
 
-		if ( primitive.buffer == null || primitive.buffer.isDisposed() ) {
-			primitive.alloc(ctx.engine);
-			if ( needLogicNormal )
-				primitive.addLogicNormal();
-		}
-
-		uploadBatchInstance();
-		dispatchCulling(ctx);
-
-		for ( i => p in passes ) {
-			if ( p.totalInstanceCount == 0 )
-				continue;
-			p.uploadInstanceBuffer();
-		}
+		for ( b in batches )
+			b.dispatchCulling(ctx);
 
 		ctx.memoryBarrier();
 
-		var maxInstanceCount = 0;
-		for ( i => p in passes ) {
-			if ( p.totalInstanceCount == 0 )
-				continue;
-			p.dispatchCommandBuilder(ctx, this);
-			var hasFollowShader = p.pass.getShader(FollowShader) != null;
-			if ( !isRelative && hasFollowShader )
-				p.pass.removeShader(followShader);
-			if ( isRelative && !hasFollowShader )
-				p.pass.addShader(followShader);
-			maxInstanceCount = hxd.Math.imax(p.totalInstanceCount, maxInstanceCount);
-			ctx.emitPass(p.pass, this).index = i;
-		}
-
-		if ( maxInstanceCount == 0 )
-			return;
+		for ( batchID => b in batches )
+			b.emit(ctx, batchID);
 
 		ctx.memoryBarrier();
-
-		var offsets = primitive.resolveBuffer("Batch_Start");
-		if ( offsets == null || offsets.vertices < maxInstanceCount || offsets.isDisposed() ) {
-			if ( offsets != null ) {
-				offsets.dispose();
-				primitive.removeBuffer(offsets);
-			}
-			var tmp = haxe.io.Bytes.alloc(4 * maxInstanceCount);
-			for ( i in 0...maxInstanceCount )
-				tmp.setFloat(i<<2, i);
-			offsets = new h3d.Buffer(maxInstanceCount, BATCH_START_FMT);
-			offsets.uploadBytes(tmp, 0, maxInstanceCount);
-			primitive.addBuffer(offsets);
-		}
 	}
 
 	override function draw(ctx : h3d.scene.RenderContext ) {
-		passes[ctx.drawPass.index].draw(primitive, ctx);
+		batches[ctx.drawPass.index & 0xFF].draw(ctx);
 	}
 
 	override function onRemove() {
-		primitive.dispose();
-		for ( g in groups )
-			g.dispose();
-		for ( p in passes )
-			p.dispose();
+		for ( b in batches)
+			b.dispose();
 		groups.resize(0);
-		passes.resize(0);
+		batches.resize(0);
 		freeGroupIDs.resize(0);
-		instancesData?.dispose();
-		instancesData = null;
-		instancesInfos?.dispose();
-		instancesInfos = null;
-		groupsInfos?.dispose();
-		groupsInfos = null;
-		totalInstanceCount = 0;
-		instancesDirty = false;
-		highestGroupID = 0;
+		highestGroupID = 1;
 	}
 }
 
@@ -627,7 +729,6 @@ class EmitData {
 	static final modelViewInverseID = hxsl.Globals.allocID("global.modelViewInverse");
 	static final previousModelViewID = hxsl.Globals.allocID("global.previousModelView");
 
-	var group : BatchGroup;
 	var instanceCount : Int;
 	var instancesInfos : haxe.io.Bytes;
 	var instancesData : hxd.FloatBuffer;
@@ -639,10 +740,9 @@ class EmitData {
 		return batchPass.pass;
 	}
 
-	public function new(g : BatchGroup, bp : BatchPass) {
+	public function new(bp : BatchPass) {
 		if ( !h3d.Engine.getCurrent().driver.hasFeature(Bindless) )
 			throw "h3d.scene.Batcher requires Bindless support.";
-		group = g;
 		batchPass = bp;
 		bp.toEmit.push(this);
 	};
