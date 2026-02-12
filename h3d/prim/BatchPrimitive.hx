@@ -53,14 +53,17 @@ class BatchPrimitive extends MeshPrimitive {
 		ibuf = haxe.io.Bytes.alloc(0);
 	}
 
-	public function addModel( model : h3d.prim.HMDModel ) {
+	public function addModel( model : h3d.prim.HMDModel ) : Int {
 		if ( model.data.vertexFormat != vertexFormat )
 			throw "assert";
-		if ( models.indexOf(model) >= 0 )
-			return;
+		var subMeshID = models.indexOf(model);
+		if ( subMeshID >= 0 )
+			return subMeshID;
 		dispose();
+		subMeshID = models.length;
 		models.push(model);
 		fillModel(model);
+		return subMeshID;
 	}
 
 	public function addLogicNormal() {
