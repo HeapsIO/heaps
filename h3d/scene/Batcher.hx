@@ -916,11 +916,18 @@ private class EmitData {
 			continue;
 		}
 
+
+		#if hl
 		var instanceByteStride = instanceDataStride * 4;
 		var startPos = instanceID * instanceByteStride;
 		var dst = hl.Bytes.getArray(instancesData.getNative());
 		var src = hl.Bytes.getArray(shaderData.getNative());
 		dst.blit(startPos, src, 0, instanceByteStride);
+		#else
+		var startPos = instanceID * instanceDataStride;
+		for ( i in 0...instanceDataStride )
+			instancesData[startPos + i] = shaderData[i];
+		#end
 	}
 
 	public function dispose() {
