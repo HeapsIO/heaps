@@ -76,6 +76,7 @@ class MeshBatch extends MultiMaterial {
 		instanced = new h3d.prim.Instanced();
 		instanced.commands = new h3d.impl.InstanceBuffer();
 		instanced.setMesh(primitive);
+		ignoreCollide = true; // instanced doesn't support colliders
 		super(instanced, material == null ? null : [material], parent);
 		for( p in this.material.getPasses() )
 			@:privateAccess p.batchMode = true;

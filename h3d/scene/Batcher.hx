@@ -45,6 +45,11 @@ class Batcher extends h3d.scene.Object {
 	var batches : Array<Batch> = [];
 	var instancesOffset : h3d.Buffer;
 
+	public function new( parent : h3d.scene.Object ) {
+		super(p);
+		ignoreCollide = true;
+	}
+
 	function getBatchID( hmd : h3d.prim.HMDModel ) {
 		var format = @:privateAccess hmd.data.vertexFormat;
 		for ( i => b in batches )
