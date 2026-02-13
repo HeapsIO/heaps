@@ -75,7 +75,7 @@ class CacheAllocator extends Allocator {
 		super();
 		if ( debug ) {
 			buffersLookup = [];
-			indexBuffersLookup = []
+			indexBuffersLookup = [];
 		}
 	}
 
