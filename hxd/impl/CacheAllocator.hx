@@ -53,7 +53,9 @@ private class Cache<T:h3d.Buffer> {
 class CacheAllocator extends Allocator {
 
 	public var currentFrame = -1;
+	var buffersLookup : Map<h3d.Buffer,Bool>;
 	var buffers = new Map<Int,Cache<h3d.Buffer>>();
+	var indexBuffersLookup : Map<h3d.Indexes,Bool>;
 	var indexBuffers = new Map<Int,Cache<h3d.Indexes>>();
 
 	var lastGC = haxe.Timer.stamp();
@@ -68,6 +70,14 @@ class CacheAllocator extends Allocator {
 
 	var curMemory : Int = 0;
 	var curBuffers : Int = 0;
+
+	public function new(debug = false) {
+		super();
+		if ( debug ) {
+			buffersLookup = [];
+			indexBuffersLookup = []
+		}
+	}
 
 	function getId(vertices:Int, format:hxd.BufferFormat, flags:BufferFlags) {
 		return flags.toInt() | (format.uid << 3) | (vertices << 16);
@@ -85,7 +95,10 @@ class CacheAllocator extends Allocator {
 		var c = buffers.get(id);
 		if( c != null ) {
 			var b = c.get();
-			if( b != null ) return b;
+			if( b != null ) {
+				buffersLookup?.remove(b);
+				return b;
+			}
 		}
 		checkGC();
 		return super.allocBuffer(vertices,format,flags);
@@ -99,6 +112,11 @@ class CacheAllocator extends Allocator {
 			c = new Cache(this, function(b:h3d.Buffer) b.dispose());
 			buffers.set(id, c);
 		}
+		if ( buffersLookup != null ) {
+			if ( buffersLookup.exists(b) )
+				throw "Buffer already disposed";
+			buffersLookup.set(b, true);
+		}
 		c.put(b);
 		checkGC();
 	}
@@ -109,7 +127,10 @@ class CacheAllocator extends Allocator {
 		var c = indexBuffers.get(id);
 		if( c != null ) {
 			var i = c.get();
-			if( i != null ) return i;
+			if( i != null ) {
+				indexBuffersLookup?.remove(i);
+				return i;
+			}
 		}
 		checkGC();
 		return super.allocIndexBuffer(count, is32);
@@ -123,6 +144,11 @@ class CacheAllocator extends Allocator {
 		if( c == null ) {
 			c = new Cache(this, function(i:h3d.Indexes) i.dispose());
 			indexBuffers.set(id, c);
+		}
+		if ( indexBuffersLookup != null ) {
+			if ( indexBuffersLookup.exists(i) )
+				throw "Index buffer already disposed";
+			indexBuffersLookup.set(i, true);
 		}
 		c.put(i);
 		checkGC();
