@@ -301,8 +301,10 @@ class RenderContext extends h3d.impl.RenderContext {
 
 	override public function dispose() {
 		super.dispose();
-		if ( cameraFrustumBuffer != null )
+		if ( cameraFrustumBuffer != null ) {
 			hxd.impl.Allocator.get().disposeBuffer( cameraFrustumBuffer );
+			cameraFrustumBuffer = null;
+		}
 	}
 
 }
