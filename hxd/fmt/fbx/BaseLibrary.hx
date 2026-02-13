@@ -143,6 +143,11 @@ class BaseLibrary {
 	**/
 	public var highPrecision : Bool = false;
 
+	/**
+		Use the legacy system to convert scale and axis of FBX file
+	**/
+	public var legacyScaleAxisConversion : Bool = false;
+
 	public function new( fileName ) {
 		this.fileName = fileName;
 		root = { name : "Root", props : [], childs : [] };
@@ -180,8 +185,18 @@ class BaseLibrary {
 		for( c in root.childs )
 			init(c);
 
-		if( normalizeScaleOrient )
-			updateModelScale();
+		if (legacyScaleAxisConversion) {
+			if (normalizeScaleOrient)
+				legacyUpdateModelScale();
+		}
+		else {
+			// Update model data based on axis specified in FBX header
+			updateModelAxis();
+
+			// Update model data based on scale specified in FBX header
+			if (normalizeScaleOrient)
+				updateModelScale();
+		}
 
 		// init properties
 		for( m in getAllModels() ) {
@@ -235,7 +250,7 @@ class BaseLibrary {
 		return getParent(m,"Model",true) == null;
 	}
 
-	function updateModelScale() {
+	function legacyUpdateModelScale() {
 		var unitScale = 1;
 		var originScale = 1;
 		var upAxis = 1;
@@ -253,7 +268,7 @@ class BaseLibrary {
 		var geometryScaleFactor = scaleFactor;
 
 		if( upAxis == 1 ) // Y-up
-			convertYupToZup(originalUpAxis);
+			legacyUpdateModelAxis(originalUpAxis);
 
 		var app = "";
 		for( p in root.getAll("FBXHeaderExtension.SceneInfo.Properties70.P") )
@@ -352,7 +367,7 @@ class BaseLibrary {
 		}
 	}
 
-	function convertYupToZup( originalUpAxis : Int ) {
+	function legacyUpdateModelAxis( originalUpAxis : Int ) {
 		switch( originalUpAxis ) {
 			case 2: // Original Axis Z - Maya & 3DS Max
 				for( rootObject in getRootModels() ) {
@@ -388,6 +403,106 @@ class BaseLibrary {
 				}
 			default:
 				throw "From Y-up to Z-up with orginalUpAxis = " + originalUpAxis + " not implemented.";
+		}
+	}
+
+	function updateModelScale() {
+		var unitScaleFactor = 1;
+		var originalUnitScaleFactor = 1;
+		for( p in root.getAll("GlobalSettings.Properties70.P") ) {
+			switch( p.props[0].toString() ) {
+				case "UnitScaleFactor": unitScaleFactor = p.props[4].toInt();
+				case "OriginalUnitScaleFactor": originalUnitScaleFactor = p.props[4].toInt();
+				default:
+			}
+		}
+
+		// FBX file scale is relative to CM, must be converted to M
+		var factor = unitScaleFactor * 0.01;
+		if (factor == 1) return;
+
+		// Scale on geometry
+		if (factor != 1) {
+			for( g in this.root.getAll("Objects.Geometry.Vertices").concat(this.root.getAll("Objects.Geometry.Shape.Vertices")) ) {
+				var v = toFloats(g);
+				for( i in 0...v.length )
+					v[i] = v[i] * factor;
+			}
+		}
+
+		// Scale on animation
+		for (n in this.root.getAll("Objects.AnimationCurveNode")) {
+			var name = n.getName();
+			var model = getParent(n,"Model",true);
+			var isRoot = model != null && getParent(model,"Model",true) == null;
+			for (p in n.getAll("Properties70.P")) {
+				switch( p.props[0].toString() ) {
+					case "d|X", "d|Y", "d|Z" if( name == "T" && !isRoot ): p.props[4] = PFloat(p.props[4].toFloat() / factor);
+					case "d|X", "d|Y", "d|Z" if( name == "S" && isRoot ): p.props[4] = PFloat(p.props[4].toFloat() * factor);
+					default:
+				}
+			}
+			for (c in getChilds(n,"AnimationCurve")) {
+				var vl = toFloats(c.get("KeyValueFloat"));
+				switch (name) {
+					case "T" if( !isRoot ):
+						for( i in 0...vl.length )
+							vl[i] = vl[i] / factor;
+					case "S" if( isRoot ):
+						for( i in 0...vl.length )
+							vl[i] = vl[i] * factor;
+					default:
+				}
+			}
+		}
+	}
+
+	function updateModelAxis() {
+		var originalUpAxis = "2";
+		var upAxis = "1";
+		var frontAxis = "2";
+
+		for (p in root.getAll("GlobalSettings.Properties70.P")) {
+			switch (p.props[0].toString()) {
+				case "FrontAxis": frontAxis = '${p.props[4].toInt()}';
+				case "FrontAxisSign": frontAxis = (p.props[4].toInt() == -1) ? '-${frontAxis}' : frontAxis;
+				case "UpAxis": upAxis = '${p.props[4].toInt()}';
+				case "UpAxisSign": upAxis = (p.props[4].toInt() == -1) ? '-${upAxis}' : upAxis;
+				case "OriginalUpAxis": originalUpAxis = '${p.props[4].toInt()}';
+				case "OriginalUpAxisSign": originalUpAxis = (p.props[4].toInt() == -1) ? '-${originalUpAxis}' : originalUpAxis;
+				default:
+			}
+		}
+
+		// Convert model if front axis isn't matching heaps's front axis
+		var preRot = new h3d.Vector(0, 0, 0);
+		if (frontAxis != "-0") {
+			switch (frontAxis) {
+				case "1" if (upAxis == "2"): preRot.z = 90;
+				case "-1" if (upAxis == "2"): preRot.z = -90;
+				case "2" if (upAxis == "1"): preRot.x = 90; preRot.z = -90;
+				case "-2" if (upAxis == "1"): preRot.x = 90; preRot.z = 90;
+				default: 'Front axis $frontAxis is not supported';
+			}
+		}
+
+		for (rootObject in getRootModels()) {
+			var props = rootObject.get("Properties70");
+			var added = false;
+			for (c in props.childs) {
+				if (c.props[0].toString() != "PreRotation")
+					continue;
+				c.props[4] = PFloat((c.props[4].toFloat() + preRot.x) % 360);
+				c.props[5] = PFloat((c.props[5].toFloat() + preRot.y) % 360);
+				c.props[6] = PFloat((c.props[6].toFloat() + preRot.z) % 360);
+				added = true;
+				break;
+			}
+
+			if (!added) {
+				var preRotProp : FbxNode = { name : "P", props : [PString("PreRotation"), PString("Vector3D"), PString("Vector"), PString(""), PFloat(preRot.x), PFloat(preRot.y), PFloat(preRot.z)], childs : [] };
+				rootObject.get("Properties70").childs.insert(0, preRotProp);
+			}
 		}
 	}
 
