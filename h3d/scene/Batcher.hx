@@ -46,7 +46,7 @@ class Batcher extends h3d.scene.Object {
 	var instancesOffset : h3d.Buffer;
 
 	public function new( parent : h3d.scene.Object ) {
-		super(p);
+		super(parent);
 		ignoreCollide = true;
 	}
 
