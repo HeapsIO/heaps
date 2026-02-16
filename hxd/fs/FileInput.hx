@@ -10,6 +10,11 @@ class FileInput extends haxe.io.Input {
 	var cacheLen : Int = 0;
 	var nextReadPos : Int = 0;
 
+	public var position(get, never) : Int;
+	inline function get_position() : Int {
+		return nextReadPos - cacheLen;
+	}
+
 	function new(entry) {
 		this.entry = entry;
 	}
