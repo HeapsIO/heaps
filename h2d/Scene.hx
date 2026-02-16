@@ -785,6 +785,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		ctx.time += ctx.elapsedTime;
 		ctx.globalAlpha = alpha;
 		mark("s2d");
+		ctx.engine.driver.beginEvent("Render 2D");
 		sync(ctx);
 		if( children.length != 0 ) {
 			ctx.begin();
@@ -793,6 +794,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 			#if sceneprof h3d.impl.SceneProf.end(); #end
 			ctx.end();
 		}
+		ctx.engine.driver.endEvent();
 		mark("vsync");
 	}
 

@@ -80,6 +80,7 @@ class Output {
 	public function draw( passes : h3d.pass.PassList, ?sort : h3d.pass.PassList -> Void ) {
 		if( passes.isEmpty() )
 			return;
+		ctx.engine.driver.beginEvent(@:privateAccess passes.current.pass.name);
 		#if sceneprof
 		h3d.impl.SceneProf.begin('draw_${@:privateAccess passes.current.pass.name}', ctx.frame);
 		#end
@@ -118,6 +119,7 @@ class Output {
 			}
 			drawObject(p);
 		}
+		ctx.engine.driver.endEvent();
 		#if sceneprof h3d.impl.SceneProf.end(); #end
 		ctx.nextPass();
 	}

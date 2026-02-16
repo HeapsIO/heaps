@@ -2684,6 +2684,20 @@ class DX12Driver extends h3d.impl.Driver {
 		}
 	}
 
+	// MARKING
+
+	override function beginEvent( name : String ) {
+		#if heaps_debug_events
+		frame.commandList.pixBeginEvent(0, @:privateAccess name.bytes);
+		#end
+	}
+
+	override function endEvent() {
+		#if heaps_debug_events
+		frame.commandList.pixEndEvent();
+		#end
+	}
+
 	// QUERIES
 
 	static inline var QUERY_COUNT = 128;

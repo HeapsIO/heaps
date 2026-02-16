@@ -372,8 +372,10 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 		h3d.impl.SceneProf.end();
 		h3d.impl.SceneProf.begin("emit", ctx.frame);
 		#end
+		ctx.engine.driver.beginEvent("Emit");
 		mark("emit");
 		emitRec(ctx);
+		ctx.engine.driver.endEvent();
 		#if sceneprof h3d.impl.SceneProf.end(); #end
 
 		var passes = [];

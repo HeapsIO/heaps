@@ -294,6 +294,14 @@ class Driver {
 		return false;
 	}
 
+	// --- MARKING API
+
+	public function beginEvent( name : String ) {
+	}
+
+	public function endEvent() {
+	}
+
 	// --- QUERY API
 
 	public function allocQuery( queryKind : QueryKind ) : Query {
