@@ -215,10 +215,14 @@ private class FollowShader extends hxsl.Shader {
 		@param var prevFollowMatrix : Mat4;
 
 		var transformedPosition : Vec3;
+		var transformedNormal : Vec3;
+		var transformedTangent : Vec4;
 		var previousTransformedPosition : Vec3;
 
 		function vertex() {
 			transformedPosition = transformedPosition * followMatrix.mat3x4();
+			transformedNormal = normalize(transformedNormal * followMatrix.mat3());
+			transformedTangent.xyz = normalize(transformedTangent.xyz * followMatrix.mat3());
 			previousTransformedPosition = previousTransformedPosition * prevFollowMatrix.mat3x4();
 		}
 	};
