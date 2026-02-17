@@ -117,6 +117,7 @@ class Video extends Drawable {
 	var cache : FrameCache;
 	var frameCacheSize : Int = 20;
 	var stopThread = false;
+	var hasThread = false;
 	#elseif js
 	var v : js.html.VideoElement;
 	var videoPlaying : Bool;
@@ -204,10 +205,11 @@ class Video extends Drawable {
 	**/
 	public function dispose() {
 		#if (hl && hlvideo)
-		if( frameCacheSize > 1 ) {
+		if( hasThread ) {
 			stopThread = true;
 			while(stopThread)
 				Sys.sleep(0.01);
+			hasThread = false;
 		}
 		if( webm != null ) {
 			webm.close();
@@ -420,6 +422,8 @@ class Video extends Drawable {
 
 	#if (hl && hlvideo)
 	function threadInit() {
+		if( hasThread ) return;
+		hasThread = true;
 		sys.thread.Thread.create(function() {
 			var first = true;
 			var finished = false;
