@@ -336,9 +336,9 @@ private class Batch {
 		return primitive.addModel(cast mesh.primitive);
 	}
 
-	function findPassID( globals : hxsl.Globals, shaders : hxsl.ShaderList, bits : Int, name : String ) : Int {
+	function findPassID( globals : hxsl.Globals, shaders : hxsl.ShaderList, pass : h3d.mat.Pass ) : Int {
 		for ( i => bp in passes ) @:privateAccess {
-			if ( bp.pass.bits == bits && name == bp.pass.name ) {
+			if ( pass.bits == bp.pass.bits && pass.name == bp.pass.name && pass.layer == bp.pass.layer ) {
 				var sl = shaders;
 				var sIdx = 0;
 				while ( sl != null ) {
@@ -363,7 +363,7 @@ private class Batch {
 		var draws : Array<DrawInstance> = [];
 		for ( p in m.getPasses() ) @:privateAccess {
 			var shaders = p.getShadersRec();
-			var passID = findPassID(globals, shaders, p.bits, p.name);
+			var passID = findPassID(globals, shaders, p);
 			if ( passID < 0 ) {
 				passID = passes.length;
 				passes.push( new BatchPass(renderer, this, p, shaders, primitive) );

@@ -391,6 +391,8 @@ class Pass {
 		}
 		p.loadBits(bits);
 		p.loadFlags(flags);
+		p.layer = layer;
+		p.colorMask = colorMask;
 		if (stencil != null) p.stencil = stencil.clone();
 		return p;
 	}
