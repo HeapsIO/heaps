@@ -242,7 +242,7 @@ class Console #if !macro extends h2d.Object #end {
 				e.propagate = false;
 			}
 		case ETextInput:
-			if( e.charCode == shortKeyChar && !bg.visible )
+			if( e.charCode == shortKeyChar && !bg.visible && getScene().getFocus() == null )
 				show();
 		default:
 		}
