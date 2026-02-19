@@ -264,6 +264,7 @@ class Interactive extends Object implements hxd.SceneEvents.Interactive {
 		Stops current input event capture.
 	**/
 	public function stopCapture() {
+		if ( scene == null ) return;
 		scene.stopCapture();
 	}
 
