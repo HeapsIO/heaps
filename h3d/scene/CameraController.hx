@@ -160,8 +160,8 @@ class CameraController extends h3d.scene.Object {
 			@:privateAccess scene.events.startCapture(onEvent, function() {
 				pushing = -1;
 				var wnd = hxd.Window.getInstance();
-				wnd.setCursorPos(Std.int(pushStartX), Std.int(pushStartY));
 				wnd.mouseMode = Absolute;
+				wnd.setCursorPos(Std.int(pushStartX), Std.int(pushStartY));
 			}, e.touchId);
 			pushing = e.button;
 			pushTime = haxe.Timer.stamp();
