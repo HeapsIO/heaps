@@ -273,7 +273,7 @@ class VectorImpl #if apicheck implements h2d.impl.PointApi<Vector,Matrix> #end {
 			h = s = 0.0; // achromatic
 		else {
 			var d = max - min;
-			s = (max + min) > 1.0 ? d / (2 - max - min) : d / (max + min);
+			s = d / v;
 			if(max == r)
 				h = (g - b) / d + (g < b ? 6.0 : 0.0);
 			else if(max == g)
