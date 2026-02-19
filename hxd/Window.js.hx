@@ -554,6 +554,7 @@ class Window {
 		return Windowed;
 	}
 
+	public static var FULLSCREEN_ORIENTATION:js.html.OrientationLockType = LANDSCAPE;
 	function set_displayMode( m : DisplayMode ) : DisplayMode {
 		if( !js.Browser.supported )
 			return m;
@@ -562,10 +563,16 @@ class Window {
 		var fullscreen = m != Windowed;
 		if( (doc.fullscreenElement == elt) == fullscreen )
 			return Windowed;
-		if( m != Windowed )
-			elt.requestFullscreen();
-		else
-			doc.exitFullscreen();
+		if( m != Windowed ) {
+			if (elt.requestFullscreen != null) {
+				elt.requestFullscreen({ navigationUI: "hide" });
+				js.Browser.window.screen.orientation.lock(FULLSCREEN_ORIENTATION);
+			}
+		} else {
+			if (doc.exitFullscreen != null) {
+				doc.exitFullscreen();
+			}
+		}
 
 		return m;
 	}
