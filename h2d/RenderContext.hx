@@ -93,8 +93,11 @@ class RenderContext extends h3d.impl.RenderContext {
 	var compiledShader : hxsl.RuntimeShader;
 	var fixedBuffer : h3d.Buffer;
 	var pass : h3d.mat.Pass;
+	// ...Tail points at an end of global shader list, and shaders afterwards belong to specific objects.
 	var currentShaders : hxsl.ShaderList;
+	var currentShadersTail : hxsl.ShaderList;
 	var baseShaderList : hxsl.ShaderList;
+	var baseShaderListTail : hxsl.ShaderList;
 	var needInitShaders : Bool;
 	var currentObj : Drawable;
 	var stride : Int;
@@ -145,6 +148,7 @@ class RenderContext extends h3d.impl.RenderContext {
 		baseShader.setPriority(100);
 		baseShader.zValue = 0.;
 		baseShaderList = new hxsl.ShaderList(baseShader);
+		baseShaderListTail = baseShaderList;
 		targetsStack = [];
 		targetsStackIndex = 0;
 		cameraStack = [];
@@ -195,8 +199,8 @@ class RenderContext extends h3d.impl.RenderContext {
 		baseShader.viewportB.set(0, scene.viewportD * -baseFlipY, scene.viewportY * -baseFlipY);
 		baseShader.filterMatrixA.set(1, 0, 0);
 		baseShader.filterMatrixB.set(0, 1, 0);
-		baseShaderList.next = null;
-		initShaders(baseShaderList);
+		baseShaderListTail.next = null;
+		initShaders(baseShaderList, baseShaderListTail);
 		engine.selectMaterial(pass);
 		textures.begin();
 	}
@@ -218,9 +222,10 @@ class RenderContext extends h3d.impl.RenderContext {
 		engine.clear(color);
 	}
 
-	function initShaders( shaders ) {
+	function initShaders( shaders : hxsl.ShaderList, tail : hxsl.ShaderList ) {
 		needInitShaders = false;
 		currentShaders = shaders;
+		currentShadersTail = tail;
 		compiledShader = output.compileShaders(globals, shaders);
 		var buffers = shaderBuffers;
 		buffers.grow(compiledShader);
@@ -238,7 +243,7 @@ class RenderContext extends h3d.impl.RenderContext {
 		flush();
 		texture = null;
 		currentObj = null;
-		baseShaderList.next = null;
+		baseShaderListTail.next = null;
 		clearCurrent();
 		if ( targetsStackIndex != 0 ) throw "Missing popTarget()";
 		if ( cameraStackIndex != 0 ) throw "Missing popCamera()";
@@ -304,6 +309,50 @@ class RenderContext extends h3d.impl.RenderContext {
 		var flipY = curTarget != null ? -targetFlipY : -baseFlipY;
 		baseShader.viewportA.set(viewA, viewC, viewX);
 		baseShader.viewportB.set(viewB * flipY, viewD * flipY, viewY * flipY);
+	}
+
+	/**
+		Adds a shader the global shader list.
+
+		Global shaders are present in all draw operations along with base2d shader.
+	**/
+	public function addGlobalShader( shader : hxsl.Shader ) {
+		var list = new hxsl.ShaderList(shader, baseShaderListTail.next);
+		baseShaderListTail.next = list;
+		baseShaderListTail = list;
+		needInitShaders = true;
+	}
+
+	/**
+		Removes the shader from the global shader list.
+
+		@returns `true` if shader was removed, `false` otherwise.
+	**/
+	public function removeGlobalShader( shader : hxsl.Shader ) {
+		if ( shader == baseShader ) throw "Cannot remove base shader!";
+		var prev : hxsl.ShaderList = null;
+		var hd = baseShaderList;
+		while ( hd != baseShaderListTail.next ) {
+			if ( hd.s == shader ) {
+				if ( prev != null ) prev.next = hd.next;
+				needInitShaders = true;
+				if ( hd == baseShaderListTail ) {
+					baseShaderListTail = prev;
+				}
+				return true;
+			}
+			prev = hd;
+			hd = hd.next;
+		}
+		return false;
+	}
+
+	function updateGlobals() {
+		var hd = baseShaderList;
+		while ( hd != baseShaderListTail.next ) {
+			hd.s.updateConstants(globals);
+			hd = hd.next;
+		}
 	}
 
 	/**
@@ -384,7 +433,7 @@ class RenderContext extends h3d.impl.RenderContext {
 	public function pushTarget( t : h3d.mat.Texture, startX = 0, startY = 0, width = -1, height = -1 ) {
 		flush();
 		engine.pushTarget(t);
-		initShaders(baseShaderList);
+		initShaders(baseShaderList, baseShaderListTail.next);
 
 		var entry = targetsStack[targetsStackIndex++];
 		if ( entry == null ) {
@@ -452,7 +501,7 @@ class RenderContext extends h3d.impl.RenderContext {
 		viewY = tinf.vy;
 		var flipY = t == null ? -baseFlipY : -targetFlipY;
 
-		initShaders(baseShaderList);
+		initShaders(baseShaderList, baseShaderListTail.next);
 		baseShader.halfPixelInverse.set(0.5 / (t == null ? engine.width : t.width), 0.5 / (t == null ? engine.height : t.height));
 		baseShader.viewportA.set(viewA, viewC, viewX);
 		baseShader.viewportB.set(viewB * flipY, viewD * flipY, viewY * flipY);
@@ -780,7 +829,7 @@ class RenderContext extends h3d.impl.RenderContext {
 			flush();
 		var shaderChanged = needInitShaders, paramsChanged = false;
 		var objShaders = obj.shaders;
-		var curShaders = currentShaders.next;
+		var curShaders = currentShadersTail.next;
 		while( objShaders != null && curShaders != null ) {
 			var s = objShaders.s;
 			var t = curShaders.s;
@@ -800,14 +849,14 @@ class RenderContext extends h3d.impl.RenderContext {
 			baseShader.hasUVPos = hasUVPos;
 			baseShader.isRelative = isRelative;
 			baseShader.killAlpha = killAlpha;
-			baseShader.updateConstants(globals);
-			baseShaderList.next = obj.shaders;
-			initShaders(baseShaderList);
+			updateGlobals();
+			baseShaderListTail.next = obj.shaders;
+			initShaders(baseShaderList, baseShaderListTail);
 		} else if( paramsChanged ) {
 			flush();
 			if( currentShaders != baseShaderList ) throw "!";
 			// the next flush will fetch their params
-			currentShaders.next = obj.shaders;
+			currentShadersTail.next = obj.shaders;
 		}
 
 		this.texture = texture;
