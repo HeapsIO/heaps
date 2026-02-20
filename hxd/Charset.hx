@@ -123,7 +123,7 @@ class Charset {
 					 (code >= 0xA490 && code <= 0xA4CF) || // Yi Radicals
 					 (code >= 0xFE64 && code <= 0xFE66) || // SMALL PLUS SIGN..SMALL EQUALS SIGN
 					 (code >= 0xFF01 && code <= 0xFF5A) || // Fullwidth Latin letters and digits
-					 (code >= 0x20000 && code <= 0x3FFFD) || // CJK Unified Ideographs Extension B-E, CJK Compatibility Ideographs Supplement, SIP (Plane 2) and TIP (Plane 3)
+					 (code >= 0x20000 && code <= 0x3FFFD); // CJK Unified Ideographs Extension B-E, CJK Compatibility Ideographs Supplement, SIP (Plane 2) and TIP (Plane 3)
 		#else
 		// Simpler and less accurate SJK detection, but faster due to less compares.
 		return (code >= 0x2E80 && code <= 0xA4CF) || (code >= 0xF900 && code <= 0xFAFF) || (code >= 0x20000 && code <= 0x3FFFD);
@@ -140,7 +140,7 @@ class Charset {
 	}
 
 	static var complementChars : Map<Int,Bool> = {
-		var str = "ヽヾーァィゥェォッャュョヮヵヶぁぃぅぇぉっゃゅょゎゕゖㇰㇱㇲㇳㇴㇵㇶㇷㇸㇹㇺㇻㇼㇽㇾㇿ々〻。，";
+		var str = "ヽヾーァィゥェォッャュョヮヵヶぁぃぅぇぉっゃゅょゎゕゖㇰㇱㇲㇳㇴㇵㇶㇷㇸㇹㇺㇻㇼㇽㇾㇿ々〻。，、；：！？";
 		[for( i in 0...str.length ) str.charCodeAt(i) => true];
 	}
 
