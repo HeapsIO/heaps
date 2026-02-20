@@ -1786,7 +1786,7 @@ class DX12Driver extends h3d.impl.Driver {
 
 		var totalSize = vertexCount*stride;
 
-		var tmpBuf = allocGPU(totalSize, READBACK, COMMON);
+		var tmpBuf = allocGPU(totalSize, READBACK, COPY_DEST);
 
 		transition(b.vbuf, COPY_SOURCE);
 		flushTransitions();
