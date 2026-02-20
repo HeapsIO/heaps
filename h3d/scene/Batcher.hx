@@ -403,21 +403,25 @@ private class Batch {
 		if ( !instancesDirty )
 			return;
 		instancesDirty = false;
+		var alloc = hxd.impl.Allocator.get();
 
 		if ( cullingData == null || cullingData.vertices < totalInstanceCount ) {
-			cullingData?.dispose();
-			cullingData = new h3d.Buffer(totalInstanceCount, CULLING_DATA_FMT, [UniformBuffer]);
+			if ( cullingData != null )
+				alloc.disposeBuffer(cullingData);
+			cullingData = alloc.allocBuffer(totalInstanceCount, CULLING_DATA_FMT, Uniform);
 		}
 
 		if ( batchInfos == null || batchInfos.vertices < totalInstanceCount ) {
-			batchInfos?.dispose();
-			batchInfos = new h3d.Buffer(totalInstanceCount, BATCH_INFOS_FMT, [UniformBuffer, ReadWriteBuffer]);
+			if ( batchInfos != null )
+				alloc.disposeBuffer(batchInfos);
+			batchInfos = alloc.allocBuffer(totalInstanceCount, BATCH_INFOS_FMT, UniformReadWrite);
 		}
 
 		var groupsNeeded = groups.length;
 		if ( groupsInfos == null || groupsInfos.vertices < groupsNeeded ) {
-			groupsInfos?.dispose();
-			groupsInfos = new h3d.Buffer(groupsNeeded, GROUP_INFOS, [UniformBuffer]);
+			if ( groupsInfos != null )
+				alloc.disposeBuffer(groupsInfos);
+			groupsInfos = alloc.allocBuffer(groupsNeeded, GROUP_INFOS, Uniform);
 		}
 
 		var groupsInfosBytes = haxe.io.Bytes.alloc(groupsNeeded * 4);
@@ -487,15 +491,21 @@ private class Batch {
 		if ( totalInstanceCount != 0 )
 			throw "Instance leak in batcher";
 		totalInstanceCount = 0;
-		cullingData?.dispose();
-		cullingData = null;
-		batchInfos?.dispose();
-		batchInfos = null;
+		var alloc = hxd.impl.Allocator.get();
+		if ( cullingData != null ) {
+			alloc.disposeBuffer(cullingData);
+			cullingData = null;
+		}
+		if ( batchInfos != null ) {
+			alloc.disposeBuffer(batchInfos);
+			batchInfos = null;
+		}
+		if ( groupsInfos != null ) {
+			alloc.disposeBuffer(groupsInfos);
+			groupsInfos = null;
+		}
 		instancesDirty = false;
-		groupsInfos?.dispose();
-		groupsInfos = null;
 		needLogicNormal = false;
-
 	}
 }
 
@@ -798,17 +808,20 @@ private class BatchPass {
 		if ( !instancesDirty )
 			return;
 		instancesDirty = false;
+		var alloc = hxd.impl.Allocator.get();
 
 		var instanceDataSize = totalInstanceCount * batchShader.paramsSize;
 		if ( instancesData == null || instancesData.vertices < instanceDataSize ) {
-			instancesData?.dispose();
-			instancesData = new h3d.Buffer( instanceDataSize, hxd.BufferFormat.VEC4_DATA, [UniformBuffer, ReadWriteBuffer] );
+			if ( instancesData != null )
+				alloc.disposeBuffer(instancesData);
+			instancesData = alloc.allocBuffer( instanceDataSize, hxd.BufferFormat.VEC4_DATA, UniformReadWrite );
 			batchShader.Batch_StorageBuffer = instancesData;
 		}
 
 		if ( instancesInfos == null || instancesInfos.vertices < totalInstanceCount ) {
-			instancesInfos?.dispose();
-			instancesInfos = new h3d.Buffer(totalInstanceCount, PASS_INSTANCES_INFOS_FMT, [UniformBuffer]);
+			if ( instancesInfos != null )
+				alloc.disposeBuffer(instancesInfos);
+			instancesInfos = alloc.allocBuffer( totalInstanceCount, PASS_INSTANCES_INFOS_FMT, Uniform );
 		}
 
 		var instanceCursor = 0;
@@ -819,8 +832,9 @@ private class BatchPass {
 		}
 
 		if ( commandBuffer == null || commandBuffer.vertices < totalInstanceCount )  {
-			commandBuffer?.dispose();
-			commandBuffer = new h3d.Buffer(totalInstanceCount, INDIRECT_DRAW_ARGUMENTS_FMT, [UniformBuffer, ReadWriteBuffer]);
+			if ( commandBuffer != null )
+				alloc.disposeBuffer(commandBuffer);
+			commandBuffer = alloc.allocBuffer( totalInstanceCount, INDIRECT_DRAW_ARGUMENTS_FMT, UniformReadWrite );
 			if ( command == null )
 				command = new h3d.impl.InstanceBuffer();
 			@:privateAccess command.data = commandBuffer.vbuf;
@@ -855,10 +869,22 @@ private class BatchPass {
 	}
 
 	public function dispose() {
-		instancesData?.dispose();
-		instancesInfos?.dispose();
-		commandBuffer?.dispose();
+		var alloc = hxd.impl.Allocator.get();
+		if ( instancesData != null ) {
+			alloc.disposeBuffer(instancesData);
+			instancesData = null;
+		}
+		if ( instancesInfos != null ) {
+			alloc.disposeBuffer(instancesInfos);
+			instancesInfos = null;
+		}
+		if ( commandBuffer != null ) {
+			alloc.disposeBuffer(commandBuffer);
+			commandBuffer = null;
+		}
 		countBuffer?.dispose();
+		countBuffer = null;
+		command = null;
 	}
 }
 
