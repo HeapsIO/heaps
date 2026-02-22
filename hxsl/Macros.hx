@@ -142,6 +142,110 @@ class Macros {
 		}
 	}
 
+	static function makeWriteExpr( eparam : haxe.macro.Expr, tparam : Type, pos : Position ) : haxe.macro.Expr {
+		return switch( tparam ) {
+		case TFloat:
+			macro out[pos] = $eparam;
+		case TInt:
+			macro hxsl.Shader.writeIntAsFloat(Std.int($eparam), pos, out);
+		case TVec(4, _):
+			macro {
+				var _v : hxsl.Types.Vec4 = $eparam;
+				out[pos] = _v.x;
+				out[pos + 1] = _v.y;
+				out[pos + 2] = _v.z;
+				out[pos + 3] = _v.w;
+			};
+		case TVec(n, _):
+			if( n == 3 )
+				macro {
+					var _v : hxsl.Types.Vec = $eparam;
+					out[pos] = _v.x;
+					out[pos + 1] = _v.y;
+					out[pos + 2] = _v.z;
+				}
+			else
+				macro {
+					var _v : hxsl.Types.Vec = $eparam;
+					out[pos] = _v.x;
+					out[pos + 1] = _v.y;
+				};
+		case TMat4:
+			macro {
+				var _m : h3d.Matrix = $eparam;
+				out[pos] = _m._11; out[pos + 1] = _m._21; out[pos + 2] = _m._31; out[pos + 3] = _m._41;
+				out[pos + 4] = _m._12; out[pos + 5] = _m._22; out[pos + 6] = _m._32; out[pos + 7] = _m._42;
+				out[pos + 8] = _m._13; out[pos + 9] = _m._23; out[pos + 10] = _m._33; out[pos + 11] = _m._43;
+				out[pos + 12] = _m._14; out[pos + 13] = _m._24; out[pos + 14] = _m._34; out[pos + 15] = _m._44;
+			};
+		case TMat3x4:
+			macro {
+				var _m : h3d.Matrix = $eparam;
+				out[pos] = _m._11; out[pos + 1] = _m._21; out[pos + 2] = _m._31; out[pos + 3] = _m._41;
+				out[pos + 4] = _m._12; out[pos + 5] = _m._22; out[pos + 6] = _m._32; out[pos + 7] = _m._42;
+				out[pos + 8] = _m._13; out[pos + 9] = _m._23; out[pos + 10] = _m._33; out[pos + 11] = _m._43;
+			};
+		case TMat3:
+			macro {
+				var _m : h3d.Matrix = $eparam;
+				out[pos] = _m._11; out[pos + 1] = _m._21; out[pos + 2] = _m._31; out[pos + 3] = 0;
+				out[pos + 4] = _m._12; out[pos + 5] = _m._22; out[pos + 6] = _m._32; out[pos + 7] = 0;
+				out[pos + 8] = _m._13; out[pos + 9] = _m._23; out[pos + 10] = _m._33; out[pos + 11] = 0;
+			};
+		case TTextureHandle:
+			macro {
+				var _v : h3d.mat.TextureHandle = $eparam;
+				hxsl.Shader.writeIntAsFloat(_v.handle.low, pos, out);
+				hxsl.Shader.writeIntAsFloat(_v.handle.high, pos + 1, out);
+			};
+		case TArray(TVec(4, VFloat), SConst(len)):
+			macro {
+				var _arr : Array<h3d.Vector4> = $eparam;
+				var _p = pos;
+				for( _i in 0...$v{len} ) {
+					var _n = _arr[_i];
+					if( _n == null ) break;
+					out[_p++] = _n.x; out[_p++] = _n.y; out[_p++] = _n.z; out[_p++] = _n.w;
+				}
+			};
+		case TArray(TMat3x4, SConst(len)):
+			macro {
+				var _arr : Array<h3d.Matrix> = $eparam;
+				var _p = pos;
+				for( _i in 0...$v{len} ) {
+					var _m = _arr[_i];
+					if( _m == null ) break;
+					out[_p++] = _m._11; out[_p++] = _m._21; out[_p++] = _m._31; out[_p++] = _m._41;
+					out[_p++] = _m._12; out[_p++] = _m._22; out[_p++] = _m._32; out[_p++] = _m._42;
+					out[_p++] = _m._13; out[_p++] = _m._23; out[_p++] = _m._33; out[_p++] = _m._43;
+				}
+			};
+		case TArray(TFloat, SConst(len)):
+			macro {
+				var _arr : Array<Float> = $eparam;
+				var _count = _arr.length < $v{len} ? _arr.length : $v{len};
+				var _p = pos;
+				for( _i in 0..._count )
+					out[_p++] = _arr[_i];
+			};
+		case TArray(TMat4, SConst(len)):
+			macro {
+				var _arr : Array<h3d.Matrix> = $eparam;
+				var _p = pos;
+				for( _i in 0...$v{len} ) {
+					var _m = _arr[_i];
+					if( _m == null ) break;
+					out[_p++] = _m._11; out[_p++] = _m._21; out[_p++] = _m._31; out[_p++] = _m._41;
+					out[_p++] = _m._12; out[_p++] = _m._22; out[_p++] = _m._32; out[_p++] = _m._42;
+					out[_p++] = _m._13; out[_p++] = _m._23; out[_p++] = _m._33; out[_p++] = _m._43;
+					out[_p++] = _m._14; out[_p++] = _m._24; out[_p++] = _m._34; out[_p++] = _m._44;
+				}
+			};
+		default:
+			macro throw "writeParam: unhandled type";
+		}
+	}
+
 	static function buildFields( shader : ShaderData, inits : Array<{ v : TVar, e : Ast.TExpr }>, pos : Position ) {
 		var fields = new Array<Field>();
 		var globals = [], consts = [], params = [], eparams = [], tparams = [];
@@ -348,6 +452,24 @@ class Macros {
 			}),
 			access : [AOverride],
 		});
+		var bufType = if( Context.defined("hl") )
+			(macro : hl.BytesAccess<hl.F32>)
+		else
+			(macro : h3d.shader.Buffers.ShaderBufferData);
+		index = 0;
+		fields.push( {
+			name : "writeParam",
+			pos : pos,
+			kind : FFun( {
+				ret : macro : Void,
+				args : [ { name : "index", type : macro : Int }, { name : "out", type : bufType }, { name : "pos", type : macro : Int } ],
+				expr : {
+					expr : ESwitch(macro index, [for( i in 0...tparams.length ) { values : [macro $v{ index++ } ], expr : makeWriteExpr(eparams[i], tparams[i], pos) } ], macro {}),
+					pos : pos,
+				},
+			}),
+			access : [AOverride],
+		});
 		if( params.length > 0 ) {
 			var cexpr = [];
 			var type = Context.getLocalClass().toString().split(".").pop();
@@ -427,6 +549,7 @@ class Macros {
 							supFields.remove("getParamFloatValue");
 							supFields.remove("setParamValue");
 							supFields.remove("setParamFloatValue");
+							supFields.remove("writeParam");
 							supFields.remove("clone");
 							csup = tsup.superClass;
 						} while( true);

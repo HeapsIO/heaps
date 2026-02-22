@@ -22,6 +22,7 @@ class DynamicShader extends Shader {
 	var values = new Array<Dynamic>();
 	var floats = new Array<Float>();
 	var accesses = new Array<Access>();
+	var types = new Array<hxsl.Ast.Type>();
 	var varIndexes = new Map<Int,Int>();
 	var varNames = new Map<String,Int>();
 
@@ -90,6 +91,7 @@ class DynamicShader extends Shader {
 		var vidx = accesses.length;
 		varIndexes.set(v.id, vidx);
 		accesses.push(access == null ? new Access(isFloat?Float:Dynamic,vid,null) : access);
+		types.push(v.type);
 	}
 
 	public function getParamIndex( p : hxsl.Ast.TVar ) : Int {
@@ -116,6 +118,18 @@ class DynamicShader extends Shader {
 		if( a.kind != Float )
 			return getParamValue(index);
 		return floats[a.index];
+	}
+
+	override function writeParam( index : Int, out : #if hl hl.BytesAccess<hl.F32> #else h3d.shader.Buffers.ShaderBufferData #end, pos : Int ) {
+		var type = types[index];
+		switch( type ) {
+		case TFloat:
+			out[pos] = getParamFloatValue(index);
+		case TInt:
+			writeIntAsFloat(Std.int(getParamFloatValue(index)), pos, out);
+		default:
+			h3d.impl.RenderContext.fillRec(getParamValue(index), type, out, pos);
+		}
 	}
 
 	public function setParamValue( p : hxsl.Ast.TVar, value : Dynamic ) {
