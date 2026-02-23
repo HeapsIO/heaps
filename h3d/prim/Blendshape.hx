@@ -8,16 +8,18 @@ class BlendshapeInstance {
 
 	#if !editor
 	var weightsBuffer : hxd.FloatBuffer;
+	var gpuWeights : h3d.Buffer;
 	#end
 
 	public function new(blendshape: Blendshape, mesh: h3d.scene.Mesh) {
 		this.blendshape = blendshape;
 		this.mesh = mesh;
-		blendshape.incref();
 
 		#if !editor
-		weightsBuffer = hxd.impl.Allocator.get().allocFloats(blendshape.shapes.length);
+		weightsBuffer = new hxd.FloatBuffer(blendshape.shapes.length);
 		#end
+
+		alloc();
 	}
 
 	public function setBlendshapeWeight(name : String, weight : Float) {
@@ -30,7 +32,8 @@ class BlendshapeInstance {
 		weights[idx] = weight;
 		uploadBlendshapeBytes(weights);
 		#else
-		createAndApplyShader();
+		createShader();
+		applyShader();
 
 		weightsBuffer[idx] = weight;
 
@@ -42,12 +45,11 @@ class BlendshapeInstance {
 		#if editor
 		uploadBlendshapeBytes(weights);
 		#else
-		createAndApplyShader();
+		createShader();
+		applyShader();
 
 		for (wIdx => w in weights)
 			weightsBuffer[wIdx] = w;
-
-		shader.weights.uploadFloats(weightsBuffer, 0, blendshape.shapes.length, 0);
 		#end
 	}
 
@@ -136,23 +138,38 @@ class BlendshapeInstance {
 	#end
 
 	#if !editor
-	function createAndApplyShader() {
+	function createShader() {
 		if (shader == null) {
 			shader = new h3d.shader.Blendshape();
 			shader.shapeCount = blendshape.shapes.length;
 			shader.vcount = @:privateAccess blendshape.hmdModel.data.vertexCount;
 			shader.offsets = blendshape.gpuOffsets;
-			shader.weights = hxd.impl.Allocator.get().ofFloats(weightsBuffer, hxd.BufferFormat.INDEX32, UniformReadWrite);
-			for (m in mesh.getMaterials(false))
+			shader.weights = gpuWeights;
+		}
+	}
+
+	function applyShader() {
+		for (m in mesh.getMaterials(false)) {
+			var hasShader = m.mainPass.getShader(h3d.shader.Blendshape) != null;
+			if (!hasShader)
 				m.mainPass.addShader(shader);
 		}
 	}
 	#end
 
+	public function alloc() {
+		blendshape.incref();
+		#if !editor
+		gpuWeights = hxd.impl.Allocator.get().ofFloats(weightsBuffer, hxd.BufferFormat.INDEX32, UniformReadWrite);
+		createShader();
+		applyShader();
+		#end
+	}
+
 	public function dispose() {
 		blendshape.decref();
 		#if !editor
-		hxd.impl.Allocator.get().disposeBuffer(shader.weights);
+		hxd.impl.Allocator.get().disposeBuffer(gpuWeights);
 		#end
 	}
 }

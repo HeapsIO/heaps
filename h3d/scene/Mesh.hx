@@ -127,12 +127,12 @@ class Mesh extends Object {
 	override private function onAdd() {
 		super.onAdd();
 		if ( primitive != null ) primitive.incref();
+		blendshapeInstance?.alloc();
 	}
 
 	override private function onRemove() {
 		if ( primitive != null ) primitive.decref();
 		blendshapeInstance?.dispose();
-		blendshapeInstance = null;
 		super.onRemove();
 	}
 
