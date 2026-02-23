@@ -67,6 +67,7 @@ class CacheAllocator extends Allocator {
 	public var maxMemSize : Int = 512 * 1024 * 1024;
 
 	public var maxBuffers : Int = 10000;
+	static final MAX_VERTICES = (1 << 16);
 
 	var curMemory : Int = 0;
 	var curBuffers : Int = 0;
@@ -84,18 +85,17 @@ class CacheAllocator extends Allocator {
 	}
 
 	override function allocBuffer(vertices:Int, format:hxd.BufferFormat, flags:BufferFlags=Dynamic):h3d.Buffer {
-		if( vertices >= 65536 ) {
-			switch ( flags ) {
-			case UniformReadWrite:
-			default: throw "assert";
-			}
-		}
+		if( vertices >= MAX_VERTICES )
+			return super.allocBuffer(vertices,format,flags);
+
 		checkFrame();
 		var id = getId(vertices, format, flags);
 		var c = buffers.get(id);
 		if( c != null ) {
 			var b = c.get();
 			if( b != null ) {
+				if( buffersLookup != null && (b.vertices != vertices || b.format != format) )
+					throw 'expected ${vertices}x${format.stride} got ${b.vertices}x${b.format.stride}';
 				buffersLookup?.remove(b);
 				return b;
 			}
@@ -106,6 +106,10 @@ class CacheAllocator extends Allocator {
 
 	override function disposeBuffer(b:h3d.Buffer) {
 		if( b.isDisposed() ) return;
+		if( b.vertices >= MAX_VERTICES ) {
+			b.dispose();
+			return;
+		}
 		var id = getId(b.vertices, b.format, fromBufferFlags(b.flags));
 		var c = buffers.get(id);
 		if( c == null ) {
@@ -122,12 +126,14 @@ class CacheAllocator extends Allocator {
 	}
 
 	override function allocIndexBuffer( count : Int, is32 : Bool = false ) {
-		var id = count << 1 + (is32 ? 1 : 0);
+		var id = (count << 1) + (is32 ? 1 : 0);
 		checkFrame();
 		var c = indexBuffers.get(id);
 		if( c != null ) {
 			var i = c.get();
 			if( i != null ) {
+				if( indexBuffersLookup != null && i.count != count )
+					throw 'expected count=${count}';
 				indexBuffersLookup?.remove(i);
 				return i;
 			}
@@ -139,7 +145,7 @@ class CacheAllocator extends Allocator {
 	override function disposeIndexBuffer( i : h3d.Indexes ) {
 		if( i.isDisposed() ) return;
 		var is32 = cast(i, h3d.Buffer).format.strideBytes == 4;
-		var id = i.count << 1 + (is32 ? 1 : 0);
+		var id = (i.count << 1) + (is32 ? 1 : 0);
 		var c = indexBuffers.get(id);
 		if( c == null ) {
 			c = new Cache(this, function(i:h3d.Indexes) i.dispose());
@@ -155,8 +161,10 @@ class CacheAllocator extends Allocator {
 	}
 
 	override function onContextLost() {
-		buffers = new Map();
-		indexBuffers = new Map();
+		buffers = [];
+		indexBuffers = [];
+		curMemory = 0;
+		curBuffers = 0;
 	}
 
 	public function checkFrame() {
@@ -216,6 +224,8 @@ class CacheAllocator extends Allocator {
 		}
 		buffers = [];
 		indexBuffers = [];
+		curMemory = 0;
+		curBuffers = 0;
 	}
 
 }
