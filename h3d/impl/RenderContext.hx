@@ -263,17 +263,17 @@ class RenderContext {
 			var ptr = getPtr(buf.params);
 			var hid = 0;
 			while( p != null ) {
-				if( p.perObjectGlobal != null ) {
+				if( p.perObjectGlobal == null ) {
+					var i = getInstance(p.instance);
+					if( p.type.match(TTextureHandle) ) {
+						var v = i.getParamValue(p.index);
+						if( v == null ) throw "Missing param value " + curInstanceValue + "." + p.name;
+						buf.handles[hid++] = v;
+					}
+					i.writeParam(p.index, ptr, p.pos, p.type);
+				} else {
 					var v = getParamValue(p, shaders);
 					fillRec(v, p.type, ptr, p.pos);
-				} else if( p.type.match(TTextureHandle) ) {
-					var i = getInstance(p.instance);
-					var v = i.getParamValue(p.index);
-					if( v == null ) throw "Missing param value " + curInstanceValue + "." + p.name;
-					buf.handles[hid++] = v;
-					fillRec(v, p.type, ptr, p.pos);
-				} else {
-					getInstance(p.instance).writeParam(p.index, ptr, p.pos, p.type);
 				}
 				p = p.next;
 			}
