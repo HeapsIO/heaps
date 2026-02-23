@@ -144,6 +144,7 @@ class Macros {
 
 	static function makeWriteExpr( eparam : haxe.macro.Expr, tparam : Type, pos : Position ) : haxe.macro.Expr {
 		return switch( tparam ) {
+			/*
 		case TFloat:
 			macro out[pos] = $eparam;
 		case TInt:
@@ -241,8 +242,9 @@ class Macros {
 					out[_p++] = _m._14; out[_p++] = _m._24; out[_p++] = _m._34; out[_p++] = _m._44;
 				}
 			};
-		default:
-			macro super.writeParam(index, out, pos, type);
+			*/
+			default:
+				macro super.writeParam(index, out, pos, type);
 		}
 	}
 
