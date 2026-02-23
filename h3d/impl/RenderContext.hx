@@ -258,7 +258,7 @@ class RenderContext {
 			if( v == null && !opt ) throw "Missing param value " + shaders.s + "." + p.name;
 			return v;
 		}
-		function fill(buf:h3d.shader.Buffers.ShaderBuffers, s:hxsl.RuntimeShader.RuntimeShaderData) {
+		inline function fill(buf:h3d.shader.Buffers.ShaderBuffers, s:hxsl.RuntimeShader.RuntimeShaderData) {
 			var p = s.params;
 			var ptr = getPtr(buf.params);
 			var hid = 0;
