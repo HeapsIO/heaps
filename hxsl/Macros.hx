@@ -242,7 +242,7 @@ class Macros {
 				}
 			};
 		default:
-			macro h3d.impl.RenderContext.fillRec(getParamValue(index), type, out, pos);
+			macro super.writeParam(index, out, pos, type);
 		}
 	}
 
