@@ -36,8 +36,7 @@ class RenderContext {
 		textures.dispose();
 	}
 
-	@:allow(hxsl.DynamicShader)
-	static inline function fillIntParam( v:Int, pos: Int, out : #if hl hl.BytesAccess<hl.F32> #else h3d.shader.Buffers.ShaderBufferData #end ){
+	public static inline function fillIntParam( v:Int, pos: Int, out : #if hl hl.BytesAccess<hl.F32> #else h3d.shader.Buffers.ShaderBufferData #end ){
 		#if js
 		var view = new hxd.impl.TypedArray.Uint32Array(out.buffer);
 		view[pos] = v;
@@ -46,8 +45,7 @@ class RenderContext {
 		#end
 	}
 
-	@:allow(hxsl.DynamicShader)
-	static function fillRec( v : Dynamic, type : hxsl.Ast.Type, out : #if hl hl.BytesAccess<hl.F32> #else h3d.shader.Buffers.ShaderBufferData #end, pos : Int ) : Int {
+	public static function fillRec( v : Dynamic, type : hxsl.Ast.Type, out : #if hl hl.BytesAccess<hl.F32> #else h3d.shader.Buffers.ShaderBufferData #end, pos : Int ) : Int {
 		switch( type ) {
 		case TInt:
 			fillIntParam(Std.int(v), pos, out);
