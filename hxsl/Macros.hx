@@ -452,10 +452,7 @@ class Macros {
 			}),
 			access : [AOverride],
 		});
-		var bufType = if( Context.defined("hl") )
-			(macro : hl.BytesAccess<hl.F32>)
-		else
-			(macro : h3d.shader.Buffers.ShaderBufferData);
+		var bufType = macro : hxsl.Shader.ShaderParamBuffer;
 		index = 0;
 		fields.push( {
 			name : "writeParam",

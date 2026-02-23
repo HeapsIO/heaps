@@ -120,7 +120,7 @@ class DynamicShader extends Shader {
 		return floats[a.index];
 	}
 
-	override function writeParam( index : Int, out : #if hl hl.BytesAccess<hl.F32> #else h3d.shader.Buffers.ShaderBufferData #end, pos : Int, type : hxsl.Ast.Type ) {
+	override function writeParam( index : Int, out : Shader.ShaderParamBuffer, pos : Int, type : hxsl.Ast.Type ) {
 		switch( types[index] ) {
 		case TFloat:
 			out[pos] = getParamFloatValue(index);
