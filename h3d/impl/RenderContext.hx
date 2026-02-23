@@ -36,7 +36,7 @@ class RenderContext {
 		textures.dispose();
 	}
 
-	public static inline function fillIntParam( v:Int, pos: Int, out : #if hl hl.BytesAccess<hl.F32> #else h3d.shader.Buffers.ShaderBufferData #end ){
+	public static inline function fillIntParam( v:Int, pos: Int, out : hxsl.Shader.ShaderParamBuffer ){
 		#if js
 		var view = new hxd.impl.TypedArray.Uint32Array(out.buffer);
 		view[pos] = v;
@@ -45,7 +45,7 @@ class RenderContext {
 		#end
 	}
 
-	public static function fillRec( v : Dynamic, type : hxsl.Ast.Type, out : #if hl hl.BytesAccess<hl.F32> #else h3d.shader.Buffers.ShaderBufferData #end, pos : Int ) : Int {
+	public static function fillRec( v : Dynamic, type : hxsl.Ast.Type, out : hxsl.Shader.ShaderParamBuffer, pos : Int ) : Int {
 		switch( type ) {
 		case TInt:
 			fillIntParam(Std.int(v), pos, out);
@@ -258,19 +258,21 @@ class RenderContext {
 			if( v == null && !opt ) throw "Missing param value " + shaders.s + "." + p.name;
 			return v;
 		}
-		inline function fill(buf:h3d.shader.Buffers.ShaderBuffers, s:hxsl.RuntimeShader.RuntimeShaderData) {
+		function fill(buf:h3d.shader.Buffers.ShaderBuffers, s:hxsl.RuntimeShader.RuntimeShaderData) {
 			var p = s.params;
 			var ptr = getPtr(buf.params);
 			var hid = 0;
 			while( p != null ) {
 				if( p.perObjectGlobal == null ) {
 					var i = getInstance(p.instance);
-					if( p.type.match(TTextureHandle) ) {
+					switch( p.type ) {
+					case TTextureHandle:
 						var v = i.getParamValue(p.index);
 						if( v == null ) throw "Missing param value " + curInstanceValue + "." + p.name;
 						buf.handles[hid++] = v;
+					default:
 					}
-					i.writeParam(p.index, ptr, p.pos, p.type);
+					i.writeParam(p.index, p.type, ptr, p.pos);
 				} else {
 					var v = getParamValue(p, shaders);
 					fillRec(v, p.type, ptr, p.pos);

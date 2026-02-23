@@ -144,7 +144,6 @@ class Macros {
 
 	static function makeWriteExpr( eparam : haxe.macro.Expr, tparam : Type, pos : Position ) : haxe.macro.Expr {
 		return switch( tparam ) {
-			/*
 		case TFloat:
 			macro out[pos] = $eparam;
 		case TInt:
@@ -242,9 +241,8 @@ class Macros {
 					out[_p++] = _m._14; out[_p++] = _m._24; out[_p++] = _m._34; out[_p++] = _m._44;
 				}
 			};
-			*/
-			default:
-				macro super.writeParam(index, out, pos, type);
+		default:
+			macro super.writeParam(index, type, out, pos);
 		}
 	}
 
@@ -461,9 +459,17 @@ class Macros {
 			pos : pos,
 			kind : FFun( {
 				ret : macro : Void,
-				args : [ { name : "index", type : macro : Int }, { name : "out", type : bufType }, { name : "pos", type : macro : Int }, { name : "type", type : macro : hxsl.Ast.Type } ],
+				args : [
+					{ name : "index", type : macro : Int },
+					{ name : "type", type : macro : hxsl.Ast.Type },
+					{ name : "out", type : bufType },
+					{ name : "pos", type : macro : Int },
+				],
 				expr : {
-					expr : ESwitch(macro index, [for( i in 0...tparams.length ) { values : [macro $v{ index++ } ], expr : makeWriteExpr(eparams[i], tparams[i], pos) } ], macro {}),
+					expr : ESwitch(macro index, [for( i in 0...tparams.length ) {
+						values : [macro $v{ index++ } ],
+						expr : makeWriteExpr(eparams[i], tparams[i], pos)
+					} ], macro super.writeParam(index, type, out, pos)),
 					pos : pos,
 				},
 			}),

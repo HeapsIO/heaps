@@ -61,7 +61,7 @@ class Shader {
 		throw "assert"; // will be subclassed in sub shaders
 	}
 
-	public function writeParam( index : Int, out : ShaderParamBuffer, pos : Int, type : hxsl.Ast.Type ) {
+	public function writeParam( index : Int, type : hxsl.Ast.Type, out : ShaderParamBuffer, pos : Int ) {
 		h3d.impl.RenderContext.fillRec(getParamValue(index), type, out, pos);
 	}
 
