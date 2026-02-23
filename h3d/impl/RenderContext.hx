@@ -37,10 +37,20 @@ class RenderContext {
 	}
 
 	@:allow(hxsl.DynamicShader)
+	static inline function fillIntParam( v:Int, pos: Int, out : #if hl hl.BytesAccess<hl.F32> #else h3d.shader.Buffers.ShaderBufferData #end ){
+		#if js
+		var view = new hxd.impl.TypedArray.Uint32Array(out.buffer);
+		view[pos] = v;
+		#else
+		out[pos] = haxe.io.FPHelper.i32ToFloat(v);
+		#end
+	}
+
+	@:allow(hxsl.DynamicShader)
 	static function fillRec( v : Dynamic, type : hxsl.Ast.Type, out : #if hl hl.BytesAccess<hl.F32> #else h3d.shader.Buffers.ShaderBufferData #end, pos : Int ) : Int {
 		switch( type ) {
 		case TInt:
-			hxsl.Shader.writeIntAsFloat(Std.int(v), pos, out);
+			fillIntParam(Std.int(v), pos, out);
 			return 1;
 		case TFloat:
 			out[pos] = v;
@@ -161,8 +171,8 @@ class RenderContext {
 			return tot;
 		case TTextureHandle:
 			var v : h3d.mat.TextureHandle = v;
-			hxsl.Shader.writeIntAsFloat(v.handle.low, pos, out);
-			hxsl.Shader.writeIntAsFloat(v.handle.high, pos + 1, out);
+			fillIntParam(v.handle.low, pos, out);
+			fillIntParam(v.handle.high, pos + 1, out);
 		default:
 			throw "assert " + type;
 		}
@@ -265,7 +275,7 @@ class RenderContext {
 					buf.handles[hid++] = v;
 					fillRec(v, p.type, ptr, p.pos);
 				} else {
-					getInstance(p.instance).writeParam(p.index, ptr, p.pos);
+					getInstance(p.instance).writeParam(p.index, ptr, p.pos, p.type);
 				}
 				p = p.next;
 			}

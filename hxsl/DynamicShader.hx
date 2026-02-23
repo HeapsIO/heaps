@@ -120,15 +120,14 @@ class DynamicShader extends Shader {
 		return floats[a.index];
 	}
 
-	override function writeParam( index : Int, out : #if hl hl.BytesAccess<hl.F32> #else h3d.shader.Buffers.ShaderBufferData #end, pos : Int ) {
-		var type = types[index];
-		switch( type ) {
+	override function writeParam( index : Int, out : #if hl hl.BytesAccess<hl.F32> #else h3d.shader.Buffers.ShaderBufferData #end, pos : Int, type : hxsl.Ast.Type ) {
+		switch( types[index] ) {
 		case TFloat:
 			out[pos] = getParamFloatValue(index);
 		case TInt:
-			writeIntAsFloat(Std.int(getParamFloatValue(index)), pos, out);
+			h3d.impl.RenderContext.fillIntParam(Std.int(getParamFloatValue(index)), pos, out);
 		default:
-			h3d.impl.RenderContext.fillRec(getParamValue(index), type, out, pos);
+			h3d.impl.RenderContext.fillRec(getParamValue(index), types[index], out, pos);
 		}
 	}
 

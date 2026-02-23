@@ -59,17 +59,8 @@ class Shader {
 		throw "assert"; // will be subclassed in sub shaders
 	}
 
-	public function writeParam( index : Int, out : #if hl hl.BytesAccess<hl.F32> #else h3d.shader.Buffers.ShaderBufferData #end, pos : Int ) {
-		throw "assert"; // will be subclassed in sub shaders
-	}
-
-	public static inline function writeIntAsFloat( v : Int, pos : Int, out : #if hl hl.BytesAccess<hl.F32> #else h3d.shader.Buffers.ShaderBufferData #end ) {
-		#if js
-		var view = new hxd.impl.TypedArray.Uint32Array(out.buffer);
-		view[pos] = v;
-		#else
-		out[pos] = haxe.io.FPHelper.i32ToFloat(v);
-		#end
+	public function writeParam( index : Int, out : #if hl hl.BytesAccess<hl.F32> #else h3d.shader.Buffers.ShaderBufferData #end, pos : Int, type : hxsl.Ast.Type ) {
+		h3d.impl.RenderContext.fillRec(getParamValue(index), type, out, pos);
 	}
 
 	public function updateConstants( globals : Globals ) {

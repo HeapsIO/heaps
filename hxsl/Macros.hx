@@ -147,56 +147,56 @@ class Macros {
 		case TFloat:
 			macro out[pos] = $eparam;
 		case TInt:
-			macro hxsl.Shader.writeIntAsFloat(Std.int($eparam), pos, out);
+			macro h3d.impl.RenderContext.fillIntParam(Std.int($eparam), pos, out);
 		case TVec(4, _):
 			macro {
 				var _v : hxsl.Types.Vec4 = $eparam;
-				out[pos] = _v.x;
-				out[pos + 1] = _v.y;
-				out[pos + 2] = _v.z;
-				out[pos + 3] = _v.w;
+				out[pos++] = _v.x;
+				out[pos++] = _v.y;
+				out[pos++] = _v.z;
+				out[pos++] = _v.w;
 			};
 		case TVec(n, _):
 			if( n == 3 )
 				macro {
 					var _v : hxsl.Types.Vec = $eparam;
-					out[pos] = _v.x;
-					out[pos + 1] = _v.y;
-					out[pos + 2] = _v.z;
+					out[pos++] = _v.x;
+					out[pos++] = _v.y;
+					out[pos++] = _v.z;
 				}
 			else
 				macro {
 					var _v : hxsl.Types.Vec = $eparam;
-					out[pos] = _v.x;
-					out[pos + 1] = _v.y;
+					out[pos++] = _v.x;
+					out[pos++] = _v.y;
 				};
 		case TMat4:
 			macro {
 				var _m : h3d.Matrix = $eparam;
-				out[pos] = _m._11; out[pos + 1] = _m._21; out[pos + 2] = _m._31; out[pos + 3] = _m._41;
-				out[pos + 4] = _m._12; out[pos + 5] = _m._22; out[pos + 6] = _m._32; out[pos + 7] = _m._42;
-				out[pos + 8] = _m._13; out[pos + 9] = _m._23; out[pos + 10] = _m._33; out[pos + 11] = _m._43;
-				out[pos + 12] = _m._14; out[pos + 13] = _m._24; out[pos + 14] = _m._34; out[pos + 15] = _m._44;
+				out[pos++] = _m._11; out[pos++] = _m._21; out[pos++] = _m._31; out[pos++] = _m._41;
+				out[pos++] = _m._12; out[pos++] = _m._22; out[pos++] = _m._32; out[pos++] = _m._42;
+				out[pos++] = _m._13; out[pos++] = _m._23; out[pos++] = _m._33; out[pos++] = _m._43;
+				out[pos++] = _m._14; out[pos++] = _m._24; out[pos++] = _m._34; out[pos++] = _m._44;
 			};
 		case TMat3x4:
 			macro {
 				var _m : h3d.Matrix = $eparam;
-				out[pos] = _m._11; out[pos + 1] = _m._21; out[pos + 2] = _m._31; out[pos + 3] = _m._41;
-				out[pos + 4] = _m._12; out[pos + 5] = _m._22; out[pos + 6] = _m._32; out[pos + 7] = _m._42;
-				out[pos + 8] = _m._13; out[pos + 9] = _m._23; out[pos + 10] = _m._33; out[pos + 11] = _m._43;
+				out[pos++] = _m._11; out[pos++] = _m._21; out[pos++] = _m._31; out[pos++] = _m._41;
+				out[pos++] = _m._12; out[pos++] = _m._22; out[pos++] = _m._32; out[pos++] = _m._42;
+				out[pos++] = _m._13; out[pos++] = _m._23; out[pos++] = _m._33; out[pos++] = _m._43;
 			};
 		case TMat3:
 			macro {
 				var _m : h3d.Matrix = $eparam;
-				out[pos] = _m._11; out[pos + 1] = _m._21; out[pos + 2] = _m._31; out[pos + 3] = 0;
-				out[pos + 4] = _m._12; out[pos + 5] = _m._22; out[pos + 6] = _m._32; out[pos + 7] = 0;
-				out[pos + 8] = _m._13; out[pos + 9] = _m._23; out[pos + 10] = _m._33; out[pos + 11] = 0;
+				out[pos++] = _m._11; out[pos++] = _m._21; out[pos++] = _m._31; out[pos++] = 0;
+				out[pos++] = _m._12; out[pos++] = _m._22; out[pos++] = _m._32; out[pos++] = 0;
+				out[pos++] = _m._13; out[pos++] = _m._23; out[pos++] = _m._33; out[pos++] = 0;
 			};
 		case TTextureHandle:
 			macro {
 				var _v : h3d.mat.TextureHandle = $eparam;
-				hxsl.Shader.writeIntAsFloat(_v.handle.low, pos, out);
-				hxsl.Shader.writeIntAsFloat(_v.handle.high, pos + 1, out);
+				h3d.impl.RenderContext.fillIntParam(_v.handle.low, pos++, out);
+				h3d.impl.RenderContext.fillIntParam(_v.handle.high, pos++, out);
 			};
 		case TArray(TVec(4, VFloat), SConst(len)):
 			macro {
@@ -242,7 +242,7 @@ class Macros {
 				}
 			};
 		default:
-			macro throw "writeParam: unhandled type";
+			macro h3d.impl.RenderContext.fillRec(getParamValue(index), type, out, pos);
 		}
 	}
 
@@ -462,7 +462,7 @@ class Macros {
 			pos : pos,
 			kind : FFun( {
 				ret : macro : Void,
-				args : [ { name : "index", type : macro : Int }, { name : "out", type : bufType }, { name : "pos", type : macro : Int } ],
+				args : [ { name : "index", type : macro : Int }, { name : "out", type : bufType }, { name : "pos", type : macro : Int }, { name : "type", type : macro : hxsl.Ast.Type } ],
 				expr : {
 					expr : ESwitch(macro index, [for( i in 0...tparams.length ) { values : [macro $v{ index++ } ], expr : makeWriteExpr(eparams[i], tparams[i], pos) } ], macro {}),
 					pos : pos,
