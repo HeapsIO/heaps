@@ -142,6 +142,7 @@ class Macros {
 		}
 	}
 
+	// Macro port of RenderContext.fillRec
 	static function makeWriteExpr( eparam : haxe.macro.Expr, tparam : Type, pos : Position ) : haxe.macro.Expr {
 		return switch( tparam ) {
 		case TFloat:
@@ -156,20 +157,19 @@ class Macros {
 				out[pos++] = _v.z;
 				out[pos++] = _v.w;
 			};
-		case TVec(n, _):
-			if( n == 3 )
-				macro {
-					var _v : hxsl.Types.Vec = $eparam;
-					out[pos++] = _v.x;
-					out[pos++] = _v.y;
-					out[pos++] = _v.z;
-				}
-			else
-				macro {
-					var _v : hxsl.Types.Vec = $eparam;
-					out[pos++] = _v.x;
-					out[pos++] = _v.y;
-				};
+		case TVec(3, _):
+			macro {
+				var _v : hxsl.Types.Vec = $eparam;
+				out[pos++] = _v.x;
+				out[pos++] = _v.y;
+				out[pos++] = _v.z;
+			};
+		case TVec(2, _):
+			macro {
+				var _v : hxsl.Types.Vec = $eparam;
+				out[pos++] = _v.x;
+				out[pos++] = _v.y;
+			};
 		case TMat4:
 			macro {
 				var _m : h3d.Matrix = $eparam;
@@ -191,12 +191,6 @@ class Macros {
 				out[pos++] = _m._11; out[pos++] = _m._21; out[pos++] = _m._31; out[pos++] = 0;
 				out[pos++] = _m._12; out[pos++] = _m._22; out[pos++] = _m._32; out[pos++] = 0;
 				out[pos++] = _m._13; out[pos++] = _m._23; out[pos++] = _m._33; out[pos++] = 0;
-			};
-		case TTextureHandle:
-			macro {
-				var _v : h3d.mat.TextureHandle = $eparam;
-				h3d.impl.RenderContext.fillIntParam(_v.handle.low, pos++, out);
-				h3d.impl.RenderContext.fillIntParam(_v.handle.high, pos++, out);
 			};
 		case TArray(TVec(4, VFloat), SConst(len)):
 			macro {
@@ -240,6 +234,12 @@ class Macros {
 					out[_p++] = _m._13; out[_p++] = _m._23; out[_p++] = _m._33; out[_p++] = _m._43;
 					out[_p++] = _m._14; out[_p++] = _m._24; out[_p++] = _m._34; out[_p++] = _m._44;
 				}
+			};
+		case TTextureHandle:
+			macro {
+				var _v : h3d.mat.TextureHandle = $eparam;
+				h3d.impl.RenderContext.fillIntParam(_v.handle.low, pos++, out);
+				h3d.impl.RenderContext.fillIntParam(_v.handle.high, pos++, out);
 			};
 		default:
 			macro super.writeParam(index, type, out, pos);
