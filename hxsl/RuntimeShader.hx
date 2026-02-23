@@ -7,13 +7,13 @@ enum LinkMode {
 }
 
 class AllocParam {
-	public var name : String;
+	public var next : AllocParam;
+	public var perObjectGlobal : AllocGlobal;
 	public var pos : Int;
 	public var instance : Int;
 	public var index : Int;
 	public var type : Ast.Type;
-	public var perObjectGlobal : AllocGlobal;
-	public var next : AllocParam;
+	public var name : String;
 	public function new(name, pos, instance, index, type) {
 		this.name = name;
 		this.pos = pos;
