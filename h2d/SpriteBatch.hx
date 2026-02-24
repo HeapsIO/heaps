@@ -3,6 +3,9 @@ package h2d;
 import h2d.RenderContext;
 import h2d.impl.BatchDrawState;
 
+/**
+	Iterates through the BatchElement linked list.
+**/
 private class ElementsIterator {
 	var e : BatchElement;
 	public inline function new(e) {
@@ -15,6 +18,28 @@ private class ElementsIterator {
 		var n = e;
 		e = @:privateAccess e.next;
 		return n;
+	}
+}
+
+/**
+	Iterates through the BatchElement linked list in reverse (from the last element backwards to the first element).
+**/
+
+private class ReversedElementsIterator {
+	var e:BatchElement;
+
+	public inline function new(e) {
+		this.e = e;
+	}
+
+	public inline function hasNext() {
+		return e != null;
+	}
+
+	public inline function next() {
+		var p = e;
+		e = @:privateAccess e.prev;
+		return p;
 	}
 }
 
@@ -81,6 +106,12 @@ class BatchElement {
 	**/
 	public var t : Tile;
 	/**
+		The order it is drawn on screen.
+
+		The `hasZOrder` bool must be `true` on `SpriteBatch` for this to take effect.
+	**/
+	public var zOrder(default,set) : Float;
+	/**
 		Alpha value of the element.
 		Alias of `BatchElement.a`.
 	**/
@@ -117,10 +148,28 @@ class BatchElement {
 		return a = v;
 	}
 
+
+	/**
+	   Set the zOrder. The `SpriteBatch.hasZOrder` must be `true` for this to work as intended.
+	   @param v The z-order of the `BatchElement`. The higher the z-order the closer it is to the screen.
+	**/
+	function set_zOrder(v) {
+		this.zOrder = v;
+		if (this.batch == null)
+			return v;
+
+		// Remove and re-insert the item back into the batch sorted
+		if (this.batch.hasZOrder) {
+			this.batch.delete(this);
+			this.batch.add(this);
+		}
+		return v;
+	}
+
 	/**
 		Override this method to perform custom logic per batch element.
 		Update method called only if `SpriteBatch.hasUpdate` is set to `true`.
-		@param dt The elapsed time in seconds since last update from `RenderContext.elapsedTime`.
+		@param et The elapsed time in seconds since last update from `RenderContext.elapsedTime`.
 		@returns If method returns `false`, element will be removed from the SpriteBatch.
 	**/
 	@:dox(show)
@@ -204,13 +253,22 @@ class SpriteBatch extends Drawable {
 		Enables usage of `update` method in SpriteBatch elements.
 	**/
 	public var hasUpdate : Bool = false;
+	/**
+		Enables z-ordering on added BatchElements. 
+
+		Makes use of `BatchElement.zOrder`. Higher numbers of zOrder means the sprites will be drawn on top.
+	**/
+	public var hasZOrder : Bool = false;
+	/**
+		Get number of elements in this SpriteBatch
+	**/
+	public var length(get, null):Int;
 	var first : BatchElement;
 	var last : BatchElement;
 	var tmpBuf : hxd.FloatBuffer;
 	var buffer : h3d.Buffer;
 	var state : BatchDrawState;
 	var empty : Bool;
-
 	/**
 		Create new SpriteBatch instance.
 		@param t The Tile used as a base Texture to draw contents with.
@@ -225,10 +283,50 @@ class SpriteBatch extends Drawable {
 	/**
 		Adds a new BatchElement to the SpriteBatch.
 		@param e The element to add.
-		@param before When set, element will be added to the beginning of the element chain (rendered first).
+		@param before When set, element will be added to the beginning of the element chain (rendered first). If `hasZOrder` is enabled, this is ignored.
 	**/
-	public function add(e:BatchElement,before=false) {
+	public function add(e:BatchElement, before=false) {
 		e.batch = this;
+		
+		// If hasZOrder=true insert it in the correct spot in the linked list.
+		if (hasZOrder) {
+			insertByZOrder(e);
+			return e;
+		}
+
+		// Default behaviour
+		addDefault(e);
+		return e;
+	}
+	/**
+		Add element by their z-order. 
+
+		If the values are the same it will add it to front of the elements with the same values.
+		@param e The element to insert into the linked list sorted by z-order.
+	**/
+	function insertByZOrder(e:BatchElement) {
+		var inserted = false;
+
+		for (e1 in this.getElementsReversed()) {
+			if (e1.zOrder <= e.zOrder) {
+				this.insertAfter(e, e1);
+				inserted = true;
+				break;
+			}
+		}
+
+		if (inserted == false) {
+			addDefault(e, true);
+		}
+		return e;
+	}
+	/**
+		Add element to the end (or beginning) of the element chain.
+		@param e The element to add.
+		@param before When set, element will be added to the beginning of the element chain (rendered first).
+	 */
+	inline function addDefault(e:BatchElement, before=false) {
+
 		if( first == null ) {
 			first = last = e;
 			e.prev = e.next = null;
@@ -245,7 +343,6 @@ class SpriteBatch extends Drawable {
 		}
 		return e;
 	}
-
 	/**
 		Removes all elements from the SpriteBatch.
 
@@ -262,6 +359,59 @@ class SpriteBatch extends Drawable {
 	**/
 	public function alloc( t : Tile ) : BatchElement {
 		return add(new BatchElement(t));
+	}
+
+	/**
+		Insert element before a certain element
+		@param e The element to insert
+		@param before The element to insert before
+	**/
+	public function insertBefore(e:BatchElement, before:BatchElement) {
+		e.batch = this;
+
+		if (first == null) { // List is likely empty
+			first = last = e;
+			e.prev = e.next = null;
+		} else if (before.prev == null) { // First element
+			before.prev = e;
+			e.prev = null;
+			e.next = before;
+			first = e;
+		} else { // Insert between 'before' and 'before.prev'
+			var tmp = before.prev;
+			e.prev = tmp;
+			tmp.next = e;
+
+			e.next = before;
+			before.prev = e;
+		}
+		return e;
+	}
+
+	/**
+		Insert element after a certain element.
+		@param e The element to insert
+		@param after The element to insert after.
+	**/
+	public function insertAfter(e:BatchElement, after:BatchElement) {
+		e.batch = this;
+		if (first == null) { // List is likely empty
+			first = last = e;
+			e.prev = e.next = null;
+		} else if (after.next == null) { // Last element
+			after.next = e;
+			e.prev = after;
+			e.next = null;
+			last = e;
+		} else { // Insert between 'after' and 'after.next'
+			var tmp = after.next;
+			e.next = tmp;
+			tmp.prev = e;
+
+			e.prev = after;
+			after.next = e;
+		}
+		return e;
 	}
 
 	@:allow(h2d.BatchElement)
@@ -467,6 +617,23 @@ class SpriteBatch extends Drawable {
 	**/
 	public inline function getElements() {
 		return new ElementsIterator(first);
+	}
+
+	/**
+		Iterates through the elements in reverse from the end to the beginning.
+
+		Adding or removing the elements will affect the Iterator results.
+	**/
+	public inline function getElementsReversed() {
+		return new ReversedElementsIterator(last);
+	}
+
+	/**
+		Get number of elements in SpriteBatch
+		@return Int
+	**/
+	function get_length():Int {
+		return [for (e in this.getElements()) e].length;
 	}
 
 	override function onRemove() {
