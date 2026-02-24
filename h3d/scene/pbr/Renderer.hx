@@ -450,20 +450,6 @@ class Renderer extends h3d.scene.Renderer {
 			renderPass(defaultPass, get("debuggeom"), backToFront);
 			renderPass(defaultPass, get("debuggeom_alpha"), backToFront);
 		}
-
-		if (showEditorOutlines) {
-			var outlineTex = allocTarget("outline", true);
-			ctx.engine.pushTarget(outlineTex);
-			clear(0);
-			draw("highlightBack");
-			draw("highlight");
-			ctx.engine.popTarget();
-			var outlineBlurTex = allocTarget("outlineBlur", false);
-			outline.pass.setBlendMode(Alpha);
-			outlineBlur.apply(ctx, outlineTex, outlineBlurTex);
-			outline.shader.texture = outlineBlurTex;
-			outline.render();
-		}
 		#end
 	}
 
