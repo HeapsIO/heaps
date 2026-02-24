@@ -252,8 +252,8 @@ class RenderContext extends h3d.impl.RenderContext {
 		return cameraFrustumBuffer;
 	}
 
-	public function getDepthClearValue() {
-		return useReverseDepth ? 0 : 1;
+	public function getDepthClearValue() : Float {
+		return useReverseDepth ? 0.0 : 1.0;
 	}
 
 	public function selectTextureHandles(handles : Array<h3d.mat.TextureHandle>) {
