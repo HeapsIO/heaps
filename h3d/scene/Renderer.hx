@@ -30,7 +30,6 @@ class Renderer extends hxd.impl.AnyProps {
 
 	#if editor
 	public var showEditorGuides = false;
-	public var showEditorOutlines = true;
 	#end
 
 	public var effects : Array<h3d.impl.RendererFX> = [];
