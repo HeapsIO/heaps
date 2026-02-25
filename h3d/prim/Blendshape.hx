@@ -37,7 +37,7 @@ class BlendshapeInstance {
 
 		weightsBuffer[idx] = weight;
 
-		shader.weights.uploadFloats(weightsBuffer, 0, blendshape.shapes.length, 0);
+		gpuWeights.uploadFloats(weightsBuffer, 0, blendshape.shapes.length, 0);
 		#end
 	}
 
@@ -50,6 +50,8 @@ class BlendshapeInstance {
 
 		for (wIdx => w in weights)
 			weightsBuffer[wIdx] = w;
+
+		gpuWeights.uploadFloats(weightsBuffer, 0, blendshape.shapes.length, 0);
 		#end
 	}
 
