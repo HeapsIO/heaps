@@ -12,7 +12,9 @@ class ObjectInstance {
 
 @:allow(h3d.scene.Batcher)
 class BatchLibrary {
+	static final BATCH_START_FMT = hxd.BufferFormat.make([{ name : "Batch_Start", type : DFloat }]);
 	var primitives : Array<h3d.prim.BatchPrimitive> = [];
+	var instancesOffset : h3d.Buffer;
 
 	public function new() {
 	}
@@ -29,6 +31,24 @@ class BatchLibrary {
 	public function dispose() {
 		for ( p in primitives )
 			p.dispose();
+		instancesOffset.dispose();
+	}
+
+	public function checkOffsetBuffer( instanceCount : Int ) {
+		if ( instancesOffset == null || instancesOffset.vertices < instanceCount || instancesOffset.isDisposed() ) {
+			if ( instancesOffset != null ) {
+				instancesOffset.dispose();
+				for ( p in primitives )
+					p.removeBuffer(instancesOffset);
+			}
+			var tmp = haxe.io.Bytes.alloc(4 * instanceCount);
+			for ( i in 0...instanceCount )
+				tmp.setFloat(i<<2, i);
+			instancesOffset = new h3d.Buffer(instanceCount, BATCH_START_FMT);
+			instancesOffset.uploadBytes(tmp, 0, instanceCount);
+			for ( p in primitives )
+				p.addBuffer(instancesOffset);
+		}
 	}
 }
 
@@ -54,8 +74,6 @@ class BatchGroup {
 
 @:allow(h3d.scene.Batch)
 class Batcher extends h3d.scene.Object {
-	static final BATCH_START_FMT = hxd.BufferFormat.make([{ name : "Batch_Start", type : DFloat }]);
-
 	public var shadowMaxDistance = -1.0;
 	public var isRelative : Bool = false;
 	var followShader : FollowShader;
@@ -66,7 +84,6 @@ class Batcher extends h3d.scene.Object {
 
 	var batches : Array<Batch> = [];
 	var primToBatch : Map<h3d.prim.BatchPrimitive, Int> = [];
-	var instancesOffset : h3d.Buffer;
 	var library : BatchLibrary;
 	var shouldDisposeLibrary : Bool = false;
 
@@ -184,23 +201,6 @@ class Batcher extends h3d.scene.Object {
 		batches.resize(0);
 		freeGroupIDs.resize(0);
 		highestGroupID = 1;
-	}
-
-	function checkInstancesOffset( instanceCount : Int ) {
-		if ( instancesOffset == null || instancesOffset.vertices < instanceCount || instancesOffset.isDisposed() ) {
-			if ( instancesOffset != null ) {
-				instancesOffset.dispose();
-				for ( b in batches )
-					b.primitive.removeBuffer(instancesOffset);
-			}
-			var tmp = haxe.io.Bytes.alloc(4 * instanceCount);
-			for ( i in 0...instanceCount )
-				tmp.setFloat(i<<2, i);
-			instancesOffset = new h3d.Buffer(instanceCount, BATCH_START_FMT);
-			instancesOffset.uploadBytes(tmp, 0, instanceCount);
-			for ( b in batches )
-				b.primitive.addBuffer(instancesOffset);
-		}
 	}
 }
 
@@ -425,6 +425,8 @@ private class Batch {
 	public function uploadPrimitive(ctx : h3d.scene.RenderContext) {
 		if ( primitive.buffer == null || primitive.buffer.isDisposed() ) {
 			primitive.alloc(ctx.engine);
+			if ( batcher.library.instancesOffset != null )
+				primitive.addBuffer(batcher.library.instancesOffset);
 			if ( needLogicNormal )
 				primitive.addLogicNormal();
 		}
@@ -503,7 +505,7 @@ private class Batch {
 			if ( batcher.isRelative && !hasFollowShader )
 				p.pass.addShader(batcher.followShader);
 			ctx.emitPass(p.pass, batcher).index = i << 16 | batchID;
-			batcher.checkInstancesOffset(p.totalInstanceCount);
+			batcher.library.checkOffsetBuffer(p.totalInstanceCount);
 		}
 	}
 
