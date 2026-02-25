@@ -11,6 +11,28 @@ class ObjectInstance {
 }
 
 @:allow(h3d.scene.Batcher)
+class BatchLibrary {
+	var primitives : Array<h3d.prim.BatchPrimitive> = [];
+
+	public function new() {
+	}
+
+	function getPrimitive( format : hxd.BufferFormat ) {
+		for ( p in primitives )
+			if ( p.vertexFormat == format )
+				return p;
+		var p = new h3d.prim.BatchPrimitive(format);
+		primitives.push(p);
+		return p;
+	}
+
+	public function dispose() {
+		for ( p in primitives )
+			p.dispose();
+	}
+}
+
+@:allow(h3d.scene.Batcher)
 class BatchGroup {
 	var batcher : Batcher;
 	var groupID : Int;
@@ -43,20 +65,27 @@ class Batcher extends h3d.scene.Object {
 	var groups : Array<BatchGroup> = [];
 
 	var batches : Array<Batch> = [];
+	var primToBatch : Map<h3d.prim.BatchPrimitive, Int> = [];
 	var instancesOffset : h3d.Buffer;
+	var library : BatchLibrary;
+	var shouldDisposeLibrary : Bool = false;
 
-	public function new( parent : h3d.scene.Object ) {
+	public function new( parent : h3d.scene.Object, library : BatchLibrary = null ) {
 		super(parent);
+		shouldDisposeLibrary = library != null;
+		this.library = shouldDisposeLibrary ? library : new BatchLibrary();
 		ignoreCollide = true;
 	}
 
 	function getBatchID( hmd : h3d.prim.HMDModel ) {
 		var format = @:privateAccess hmd.data.vertexFormat;
-		for ( i => b in batches )
-			if ( b.primitive.vertexFormat == format )
-				return i;
+		var prim = library.getPrimitive(format);
+		var batchID = primToBatch.get(prim);
+		if ( batchID != null )
+			return batchID;
 		var batchID = batches.length;
-		batches.push(new Batch(this, format));
+		batches.push(new Batch(this, prim));
+		primToBatch.set(prim, batchID);
 		return batchID;
 	}
 
@@ -149,6 +178,8 @@ class Batcher extends h3d.scene.Object {
 	override function onRemove() {
 		for ( b in batches)
 			b.dispose();
+		if ( shouldDisposeLibrary )
+			library.dispose();
 		groups.resize(0);
 		batches.resize(0);
 		freeGroupIDs.resize(0);
@@ -327,9 +358,9 @@ private class Batch {
 
 	var cullingShader = new BatchCulling();
 
-	public function new( b : Batcher, format : hxd.BufferFormat ) {
+	public function new( b : Batcher, prim : h3d.prim.BatchPrimitive ) {
 		batcher = b;
-		primitive = new h3d.prim.BatchPrimitive(format);
+		primitive = prim;
 	}
 
 	public function addModel( mesh : h3d.scene.Mesh ) : Int {
@@ -487,7 +518,6 @@ private class Batch {
 		for ( g in groups )
 			g?.dispose();
 		groups.resize(0);
-		primitive.dispose();
 		if ( totalInstanceCount != 0 )
 			throw "Instance leak in batcher";
 		totalInstanceCount = 0;
