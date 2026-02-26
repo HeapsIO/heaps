@@ -63,7 +63,7 @@ class FontChar {
 	/**
 		Adds a new kerning to the character with specified `prevChar` and `offset`.
 	**/
-	public function addKerning( prevChar : Int, offset : Int ) {
+	public function addKerning( prevChar : Int, offset : Float ) {
 		var k = new Kerning(prevChar, offset);
 		k.next = kerning;
 		kerning = k;
