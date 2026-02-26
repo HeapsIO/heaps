@@ -12,6 +12,7 @@ class RenderContext {
 	public var globals : hxsl.Globals;
 	public var shaderBuffers = new h3d.shader.Buffers();
 
+
 	function new() {
 		engine = h3d.Engine.getCurrent();
 		frame = 0;
@@ -214,11 +215,13 @@ class RenderContext {
 	}
 
 	public function fillGlobals( buf : h3d.shader.Buffers, s : hxsl.RuntimeShader ) {
+		#if !macro
 		inline function fill(buf:h3d.shader.Buffers.ShaderBuffers, s:hxsl.RuntimeShader.RuntimeShaderData) {
 			var g = s.globals;
 			var ptr = getPtr(buf.globals);
 			var hid = s.paramsHandleCount;
 			while( g != null ) {
+				#if heaps_prefetch untyped $prefetch(g.next, 1); #end
 				var v : Dynamic = globals.fastGet(g.gid);
 				if( v == null )
 					throw "Missing global value " + g.path;
@@ -230,20 +233,31 @@ class RenderContext {
 		}
 		fill(buf.vertex, s.vertex);
 		if( s.fragment != null ) fill(buf.fragment, s.fragment);
+		#end
 	}
 
+	static var cacheMisses = 0;
+	static var cacheHits = 0;
+	static var avgLength = 0.0;
+
 	public function fillParams( buf : h3d.shader.Buffers, s : hxsl.RuntimeShader, shaders : hxsl.ShaderList, compute : Bool = false ) {
+		#if !macro
 		var curInstance = -1;
 		var curInstanceValue = null;
 		inline function getInstance( index : Int ) {
-			if( curInstance == index )
+			if( curInstance == index ) {
+				cacheHits++;
 				return curInstanceValue;
+			}
+
+			avgLength += (1.0 * index - avgLength) * 0.01;
 			var si = shaders;
 			curInstance = index;
 			// Compute list has no linker shader.
 			if ( compute ) index++;
 			while( --index > 0 ) si = si.next;
 			curInstanceValue = si.s;
+			cacheMisses++;
 			return curInstanceValue;
 		}
 		inline function getParamValue( p : hxsl.RuntimeShader.AllocParam, shaders : hxsl.ShaderList, opt = false ) : Dynamic {
@@ -263,6 +277,7 @@ class RenderContext {
 			var ptr = getPtr(buf.params);
 			var hid = 0;
 			while( p != null ) {
+				#if heaps_prefetch untyped $prefetch(p.next, 1); #end
 				if( p.perObjectGlobal == null ) {
 					var i = getInstance(p.instance);
 					switch( p.type ) {
@@ -282,6 +297,7 @@ class RenderContext {
 			var tid = 0;
 			var p = s.textures;
 			while( p != null ) {
+				#if heaps_prefetch untyped $prefetch(p.next, 1); #end
 				var t : Dynamic = getParamValue(p, shaders, !STRICT);
 				if( p.pos < 0 ) {
 					// is array !
@@ -295,6 +311,7 @@ class RenderContext {
 			var p = s.buffers;
 			var bid = 0;
 			while( p != null ) {
+				#if heaps_prefetch untyped $prefetch(p.next, 1); #end
 				var b : h3d.Buffer = getParamValue(p, shaders, !STRICT);
 				buf.buffers[bid++] = b;
 				p = p.next;
@@ -302,6 +319,7 @@ class RenderContext {
 		}
 		fill(buf.vertex, s.vertex);
 		if( s.fragment != null ) fill(buf.fragment, s.fragment);
+		#end
 	}
 
 	static var inst : RenderContext;
