@@ -8,7 +8,6 @@ private class Bucket<T:h3d.Buffer> {
 	var allocator : CacheAllocator;
 	var available : Array<T> = [];
 	var disposed : Array<T> = [];
-	var onDispose : T -> Void;
 	public var lastUse : Float = haxe.Timer.stamp();
 	public var memSize : Int;  // debugging
 	public var id : Int;
@@ -16,11 +15,10 @@ private class Bucket<T:h3d.Buffer> {
 	public var prev : Bucket<T>;
 	public var next : Bucket<T>;
 
-	public function new(allocator, id, memSize, ?dispose) {
+	public function new(allocator, id, memSize) {
 		this.allocator = allocator;
 		this.id = id;
 		this.memSize = memSize;
-		onDispose = dispose;
 	}
 	public function get() {
 		var b = available.pop();
@@ -47,10 +45,9 @@ private class Bucket<T:h3d.Buffer> {
 
 	public function disposeAll() {
 		var total = available.length + disposed.length;
-		if( onDispose != null ) {
-			for( b in available ) onDispose(b);
-			for( b in disposed ) onDispose(b);
-		}
+		for( b in available ) b.dispose();
+		for( b in disposed ) b.dispose();
+
 		allocator.curMemory -= memSize * total;
 		allocator.curBuffers -= total;
 		available = [];
@@ -71,18 +68,17 @@ private class Cache<T:h3d.Buffer> {
 	var tail : Bucket<T>;
 	var lookup : Map<T, Bool>;
 	var allocator : CacheAllocator;
-	var onDispose : T -> Void;
 
-	function new(allocator, onDispose, ?debug:Bool) {
+	function new(allocator) {
 		this.allocator = allocator;
-		this.onDispose = onDispose;
-		if( debug ) lookup = [];
+		if(allocator.debug )
+			lookup = [];
 	}
 
 	function alloc(id:Int, memSize:Int):T {
 		var bucket = map.get(id);
 		if( bucket == null ) {
-			bucket = new Bucket(allocator, id, memSize, onDispose);
+			bucket = new Bucket(allocator, id, memSize);
 			map.set(id, bucket);
 			linkHead(bucket);
 		} else {
@@ -98,12 +94,9 @@ private class Cache<T:h3d.Buffer> {
 
 	function dispose(id:Int, memSize:Int, v:T) {
 		var bucket = map.get(id);
-		if(bucket == null)
-			throw "Buffer not allocated through allocator";
-		if( bucket.allocCount < allocator.cacheThreshold ) {
-			if( onDispose != null ) onDispose(v);
-			return;
-		}
+		if( bucket == null || bucket.allocCount < allocator.cacheThreshold )
+			return v.dispose();
+
 		if( lookup != null ) {
 			if( lookup.exists(v) )
 				throw "Buffer already disposed";
@@ -206,11 +199,13 @@ class CacheAllocator extends Allocator {
 
 	var curMemory : Int = 0;
 	var curBuffers : Int = 0;
+	var debug = false;
 
 	public function new(debug = false) {
 		super();
-		buffers = new Cache(this, function(b:h3d.Buffer) b.dispose(), debug);
-		indexBuffers = new Cache(this, function(i:h3d.Indexes) i.dispose(), debug);
+		this.debug = debug;
+		buffers = new Cache(this);
+		indexBuffers = new Cache(this);
 	}
 
 	function getId(vertices:Int, format:hxd.BufferFormat, flags:BufferFlags) {
