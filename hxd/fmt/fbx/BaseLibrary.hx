@@ -223,19 +223,31 @@ class BaseLibrary {
 								}
 							}
 						case "Enum":
-							var animationCurveId = -1;
-							var animNodes = this.root.getAll("Objects.AnimationCurveNode");
-							for (n in animNodes) {
-								if (n.props[1].toString() == 'AnimCurveNode::Events') {
-									trace("e");
+							var enumValues = p.props[5].toString().split("~");
+
+							var animationCurveId = null;
+							var animationCurve : FbxNode = null;
+							var connections = this.root.get("Connections");
+							for (c in connections.childs) {
+								if (c.hasProp(PString("d|Events"))) {
+									animationCurveId = c.props[1];
+									break;
 								}
 							}
-							var eventsCurves = this.root.getAll("Objects.AnimationCurve");
-							for (c in eventsCurves) {
-								trace(c);
+
+							var animationCurves = this.root.getAll("Objects.AnimationCurve");
+							for (a in animationCurves) {
+								if (a.hasProp(animationCurveId)) {
+									animationCurve = a;
+									break;
+								}
 							}
 
-							// this.root.getAll("Connections")
+							animationEvents = [];
+							for (f => e in animationCurve.get("KeyValueFloat").getFloats()) {
+								if (e == 0) continue;
+								animationEvents.push({ { frame: f, data: enumValues[Std.int(e)] } });
+							}
 						default:
 					}
 				}
