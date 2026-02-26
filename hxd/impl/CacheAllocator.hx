@@ -304,6 +304,7 @@ class CacheAllocator extends Allocator {
 		curBuffers = 0;
 	}
 
+	#if hl
 	@:access(h3d.Buffer)
 	public function printStats(filePath:String) {
 		var fo = sys.io.File.write(filePath);
@@ -357,4 +358,5 @@ class CacheAllocator extends Allocator {
 		dumpCache(indexBuffers, "Index Buffers");
 		fo.close();
 	}
+	#end
 }
