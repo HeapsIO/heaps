@@ -118,15 +118,27 @@ enum ResolveResult {
 class Collider {
 	public var type : ColliderType;
 
-	public static function resolveColliderType(d : Data, model : Model, params : CollideParams, ?collisionThresholdHeight : Float, ?collisionUseLowLod : Bool) : ResolveResult {
-		var generateCollides : Dynamic = null; // Default config (props.json)
+	public static function resolveColliderType(path : String, d : Data, model : Model, params : CollideParams, ?collisionThresholdHeight : Float, ?collisionUseLowLod : Bool) : ResolveResult {
+		var defaultParams : CollideParams = null;
+		#if (sys || nodejs)
+		var fs : hxd.fs.LocalFileSystem = Std.downcast(hxd.res.Loader.currentInstance.fs, hxd.fs.LocalFileSystem);
+		if (fs != null) {
+			var convertRule = @:privateAccess fs.convert.getConvertRule(path);
+			var collide = convertRule.cmd?.params?.collide;
+			defaultParams = {
+				precision : collide.precision,
+				maxConvexHulls : collide.maxConvexHulls,
+				maxSubdiv : collide.maxSubdiv,
+			};
+		}
+		#end
 
 		var type : ResolveResult = null;
 		if (params == null)
 			type = ResolveResult.Empty;
 		var collidersParams = params;
-		if (type == null && params.useDefault) {
-			collidersParams = generateCollides;
+		if (params != null && params.useDefault) {
+			collidersParams = defaultParams;
 			var colliderModel = findMeshModel(d, model.getObjectName() + "_Collider");
 			if (colliderModel != null) {
 				type = ResolveResult.Mesh(colliderModel);
