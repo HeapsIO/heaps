@@ -120,7 +120,7 @@ class Collider {
 
 	public static function resolveColliderType(path : String, d : Data, model : Model, params : CollideParams, ?collisionThresholdHeight : Float, ?collisionUseLowLod : Bool) : ResolveResult {
 		var defaultParams : CollideParams = null;
-		#if (sys || nodejs)
+		#if ((sys || nodejs) && !macro)
 		var fs : hxd.fs.LocalFileSystem = Std.downcast(hxd.res.Loader.currentInstance.fs, hxd.fs.LocalFileSystem);
 		if (fs != null) {
 			var convertRule = @:privateAccess fs.convert.getConvertRule(path);

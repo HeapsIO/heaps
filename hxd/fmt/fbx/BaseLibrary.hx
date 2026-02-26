@@ -199,29 +199,47 @@ class BaseLibrary {
 		}
 
 		// init properties
-		for( m in getAllModels() ) {
-			for( p in m.getAll("Properties70.P") )
-				switch( p.props[0].toString() ) {
-				case "UDP3DSMAX" | "Events":
-					var userProps = p.props[4].toString().split("&cr;&lf;");
-					for( p in userProps ) {
-						var pl = p.split("=");
-						var pname = StringTools.trim(pl.shift());
-						var pval = StringTools.trim(pl.join("="));
-						switch( pname ) {
-						case "UV" if( pval != "" ):
-							var xml = try Xml.parse(pval) catch( e : Dynamic ) throw "Invalid UV data in " + m.getName();
-							var frames = [for( f in new Access(xml.firstElement()).elements ) { var f = f.innerData.split(" ");  { t : Std.parseFloat(f[0]) * 9622116.25, u : Std.parseFloat(f[1]), v : Std.parseFloat(f[2]) }} ];
-							if( uvAnims == null ) uvAnims = new Map();
-							uvAnims.set(m.getName(), frames);
-						case "Events":
-							var xml = try Xml.parse(pval) catch( e : Dynamic ) throw "Invalid Events data in " + m.getName();
-							animationEvents = [for( f in new Access(xml.firstElement()).elements ) { var f = f.innerData.split(" ");  { frame : Std.parseInt(f.shift()), data : StringTools.trim(f.join(" ")) }} ];
+		for (m in getAllModels()) {
+			for (p in m.getAll("Properties70.P")) {
+				var pName = p.props[0].toString();
+				if (pName == "UDP3DSMAX" || pName == "Events") {
+					switch (p.props[1].toString()) {
+						case "KString":
+							var userProps = p.props[4].toString().split("&cr;&lf;");
+							for (p in userProps) {
+								var pl = p.split("=");
+								var pname = StringTools.trim(pl.shift());
+								var pval = StringTools.trim(pl.join("="));
+								switch( pname ) {
+									case "UV" if( pval != "" ):
+										var xml = try Xml.parse(pval) catch( e : Dynamic ) throw "Invalid UV data in " + m.getName();
+										var frames = [for( f in new Access(xml.firstElement()).elements ) { var f = f.innerData.split(" ");  { t : Std.parseFloat(f[0]) * 9622116.25, u : Std.parseFloat(f[1]), v : Std.parseFloat(f[2]) }} ];
+										if( uvAnims == null ) uvAnims = new Map();
+										uvAnims.set(m.getName(), frames);
+									case "Events":
+										var xml = try Xml.parse(pval) catch( e : Dynamic ) throw "Invalid Events data in " + m.getName();
+										animationEvents = [for( f in new Access(xml.firstElement()).elements ) { var f = f.innerData.split(" ");  { frame : Std.parseInt(f.shift()), data : StringTools.trim(f.join(" ")) }} ];
+									default:
+								}
+							}
+						case "Enum":
+							var animationCurveId = -1;
+							var animNodes = this.root.getAll("Objects.AnimationCurveNode");
+							for (n in animNodes) {
+								if (n.props[1].toString() == 'AnimCurveNode::Events') {
+									trace("e");
+								}
+							}
+							var eventsCurves = this.root.getAll("Objects.AnimationCurve");
+							for (c in eventsCurves) {
+								trace(c);
+							}
+
+							// this.root.getAll("Connections")
 						default:
-						}
 					}
-				default:
 				}
+			}
 		}
 	}
 
