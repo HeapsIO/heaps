@@ -87,6 +87,7 @@ class Window {
 	var startMouseX = 0;
 	var startMouseY = 0;
 	var savedSize : { x : Int, y : Int, width : Int, height : Int };
+	var flags : { fixed: Bool, hidden: Bool };
 
 	static var CODEMAP = [for( i in 0...2048 ) i];
 	static var MIN_HEIGHT = 720;
@@ -98,14 +99,19 @@ class Window {
 	#end
 	#end
 
-	function new(title:String, width:Int, height:Int, fixed:Bool = false) {
+	public function new(title:String, width:Int, height:Int, ?flags: { ?fixed:Bool, ?hidden:Bool }) {
 		this.windowWidth = width;
 		this.windowHeight = height;
 		eventTargets = new List();
 		resizeEvents = new List();
 		dropTargets = new List();
+		this.flags = flags;
+		var fixed = flags != null && flags.fixed != null ? flags.fixed : false;
+		var hidden = flags != null && flags.hidden != null ? flags.hidden : false;
 		#if hlsdl
-		var sdlFlags = if (!fixed) sdl.Window.SDL_WINDOW_SHOWN | sdl.Window.SDL_WINDOW_RESIZABLE else sdl.Window.SDL_WINDOW_SHOWN;
+		var sdlFlags = 0;
+		if (!hidden) sdlFlags |= sdl.Window.SDL_WINDOW_SHOWN;
+		if (fixed) sdlFlags |= sdl.Window.SDL_WINDOW_RESIZABLE;
 		#if heaps_vulkan
 		if( USE_VULKAN ) sdlFlags |= sdl.Window.SDL_WINDOW_VULKAN;
 		#end
@@ -113,7 +119,9 @@ class Window {
 		this.windowWidth = window.width;
 		this.windowHeight = window.height;
 		#elseif hldx
-		final dxFlags = if (!fixed) dx.Window.RESIZABLE else 0;
+		var dxFlags = 0;
+		if (!fixed) dxFlags |= dx.Window.RESIZABLE;
+		if (hidden) dxFlags |= dx.Window.HIDDEN;
 		window = new dx.Window(title, width, height, dx.Window.CW_USEDEFAULT, dx.Window.CW_USEDEFAULT, dxFlags);
 		#end
 		WINDOWS.push(this);
@@ -705,6 +713,10 @@ class Window {
 				}
 			}
 		}
+
+		if(flags != null && flags.hidden)
+			return displayMode;
+
 		// No way to choose the screen in SDL, need to fit the window in the right screen before.
 		if(m != Windowed) {
 			window.displayMode = Windowed;

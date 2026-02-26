@@ -35,7 +35,7 @@ class Window {
 	public var title(get, set) : String;
 	public var displayMode(get, set) : DisplayMode;
 
-	function new() : Void {
+	public function new() : Void {
 		eventTargets = new List();
 		resizeEvents = new List();
 	}

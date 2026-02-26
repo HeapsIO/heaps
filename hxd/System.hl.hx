@@ -94,14 +94,7 @@ class System {
 		}
 	}
 
-	public static function start( init : Void -> Void ) : Void {
-		#if usesys
-
-		if( !haxe.System.init() ) return;
-		@:privateAccess Window.inst = new Window("", haxe.System.width, haxe.System.height);
-		init();
-
-		#else
+	public static dynamic function createWindow() {
 		var width = 800;
 		var height = 600;
 		var size = haxe.macro.Compiler.getDefine("windowSize");
@@ -114,21 +107,26 @@ class System {
 			width = Std.parseInt(p[0]);
 			height = Std.parseInt(p[1]);
 		}
+		return new Window(title, width, height, { fixed: fixed });
+	}
+
+	public static function start( init : Void -> Void ) : Void {
+		#if usesys
+		if( !haxe.System.init() ) return;
+		@:privateAccess Window.inst = new Window("", haxe.System.width, haxe.System.height);
+		init();
+
+		#else
 		timeoutTick();
 		#if hlsdl
-			sdl.Sdl.init();
-			@:privateAccess Window.initChars();
-			@:privateAccess Window.inst = new Window(title, width, height, fixed);
-			init();
-		#elseif hldx
-			@:privateAccess Window.inst = new Window(title, width, height, fixed);
-			init();
-		#else
-			@:privateAccess Window.inst = new Window(title, width, height);
-			init();
-		#end
+		sdl.Sdl.init();
+		@:privateAccess Window.initChars();
 		#end
 
+		@:privateAccess Window.inst = createWindow();
+
+		init();
+		#end
 		timeoutTick();
 		haxe.Timer.delay(runMainLoop, 0);
 	}
