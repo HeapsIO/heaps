@@ -125,11 +125,13 @@ class Collider {
 		if (fs != null) {
 			var convertRule = @:privateAccess fs.convert.getConvertRule(path);
 			var collide = convertRule.cmd?.params?.collide;
-			defaultParams = {
-				precision : collide.precision,
-				maxConvexHulls : collide.maxConvexHulls,
-				maxSubdiv : collide.maxSubdiv,
-			};
+			if (collide != null) {
+				defaultParams = {
+					precision : collide.precision,
+					maxConvexHulls : collide.maxConvexHulls,
+					maxSubdiv : collide.maxSubdiv,
+				};
+			}
 		}
 		#end
 
