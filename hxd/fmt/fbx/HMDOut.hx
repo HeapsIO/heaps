@@ -1437,9 +1437,10 @@ class HMDOut extends BaseLibrary {
 				continue;
 			}
 
-			for( idx => mc in mcs ) {
-				var params = mc == null && mc.useDefault ? generateCollides : mc;
-				var colliderType = hxd.fmt.hmd.Data.Collider.resolveColliderType(fileName, d, model, mc, collisionThresholdHeight, collisionUseLowLod);
+			for ( idx => mc in mcs ) {
+				var isDefaultParams = mc != null && mc.useDefault;
+				var params = isDefaultParams ? generateCollides : mc;
+				var colliderType = hxd.fmt.hmd.Data.Collider.resolveColliderType(d, model, params, isDefaultParams, collisionThresholdHeight, collisionUseLowLod);
 				var collider : Collider = switch (colliderType) {
 					case Empty:
 						new EmptyCollider();

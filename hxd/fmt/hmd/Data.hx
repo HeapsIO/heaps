@@ -118,57 +118,52 @@ enum ResolveResult {
 class Collider {
 	public var type : ColliderType;
 
-	public static function resolveColliderType(path : String, d : Data, model : Model, params : CollideParams, ?collisionThresholdHeight : Float, ?collisionUseLowLod : Bool) : ResolveResult {
-		var defaultParams : CollideParams = null;
-		#if ((sys || nodejs) && !macro)
-		var fs : hxd.fs.LocalFileSystem = Std.downcast(hxd.res.Loader.currentInstance.fs, hxd.fs.LocalFileSystem);
-		if (fs != null) {
-			var convertRule = @:privateAccess fs.convert.getConvertRule(path);
-			var collide = convertRule.cmd?.params?.collide;
-			if (collide != null) {
-				defaultParams = {
-					precision : collide.precision,
-					maxConvexHulls : collide.maxConvexHulls,
-					maxSubdiv : collide.maxSubdiv,
-				};
-			}
-		}
-		#end
+	// Collision params can be set per asset in editor. See below the different modes.
+	// None : return an empty collider
+	// Default : 1- Use the collider specified in the fbx file (XXX_Collider model)
+	//			 2- (if 1 is null) Use the collider specified in props.json
+	//			 3- (if 2 is null) Use the primitive of the model as a collider
+	// Auto : Generate a convex hull and use it as a collider
+	// Mesh : Use a specific model as collider
+	// Custom : Use custom shapes defined by the user as collider
+	public static function resolveColliderType(d : Data, model : Model, params : CollideParams, isDefaultParams : Bool, ?collisionThresholdHeight : Float, ?collisionUseLowLod : Bool) : ResolveResult {
+		// None mode
+		if (params == null && !isDefaultParams)
+			return ResolveResult.Empty;
 
-		var type : ResolveResult = null;
-		if (params == null)
-			type = ResolveResult.Empty;
-		var collidersParams = params;
-		if (params != null && params.useDefault) {
-			collidersParams = defaultParams;
+		// Default mode
+		if (isDefaultParams) {
 			var colliderModel = findMeshModel(d, model.getObjectName() + "_Collider");
-			if (colliderModel != null) {
-				type = ResolveResult.Mesh(colliderModel);
-			}
+			if (colliderModel != null)
+				return ResolveResult.Mesh(colliderModel);
 
-			if (type == null && collisionThresholdHeight != null) {
+			if (collisionThresholdHeight != null) {
 				var dimension = d.geometries[model.geometry].bounds.dimension();
 				if (dimension < collisionThresholdHeight)
-					type = ResolveResult.Empty;
+					return ResolveResult.Empty;
 			}
 
-			if (type == null && collisionUseLowLod != null) {
+			if (collisionUseLowLod != null) {
 				if (model.lods != null && model.lods.length > 0)
-					type = ResolveResult.Mesh(d.models[model.lods[model.lods.length - 1]]);
-			}
-		}
-		if (type == null && collidersParams != null) {
-			var colliderModel = findMeshModel(d, collidersParams.mesh) ?? model;
-			if( collidersParams.precision != null ) {
-				type = ResolveResult.ConvexHulls(colliderModel);
-			} else if( collidersParams.mesh != null ) {
-				type = ResolveResult.Mesh(colliderModel);
-			} else if( collidersParams.shapes != null ) {
-				type = ResolveResult.Shapes;
+					return ResolveResult.Mesh(d.models[model.lods[model.lods.length - 1]]);
 			}
 		}
 
-		return type;
+		if (params != null) {
+			var colliderModel = findMeshModel(d, params.mesh) ?? model;
+			if (params.precision != null) {
+				return ResolveResult.ConvexHulls(colliderModel);
+			} else if (params.mesh != null) {
+				return ResolveResult.Mesh(colliderModel);
+			} else if (params.shapes != null) {
+				return ResolveResult.Shapes;
+			}
+		}
+
+		if (isDefaultParams)
+			return ResolveResult.Mesh(model);
+
+		return null;
 	}
 
 	static function findMeshModel(d : Data, name : String) {
