@@ -30,6 +30,8 @@ class Blur extends ScreenFx<h3d.shader.Blur> {
 	**/
 	public var quality(default,set) : Float;
 
+	public var additive : Bool = false;
+
 	var values : Array<Float>;
 	var offsets : Array<Float>;
 
@@ -164,15 +166,16 @@ class Blur extends ScreenFx<h3d.shader.Blur> {
 			shader.texture = tmp;
 
 		shader.pixel.set(0, 1 / src.height);
-		var outDepth = output.depthBuffer;
-		output.depthBuffer = null;
+
+		pass.setBlendMode(additive ? Add : None);
+		pass.depth(false, Always);
 		for( i in 0 ... faceCount ){
 			engine.pushTarget(output, i);
 			if( isCube ) shader.cubeDir = cubeDir[i];
 			render();
 			engine.popTarget();
 		}
-		output.depthBuffer = outDepth;
+		pass.setBlendMode(None);
 	}
 
 }
