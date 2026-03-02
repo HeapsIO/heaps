@@ -36,7 +36,7 @@ class RenderContext {
 		textures.dispose();
 	}
 
-	inline function fillIntParam( v:Int, pos: Int, out : #if hl hl.BytesAccess<hl.F32> #else h3d.shader.Buffers.ShaderBufferData #end ){
+	public static inline function fillIntParam( v:Int, pos: Int, out : hxsl.Shader.ShaderParamBuffer ){
 		#if js
 		var view = new hxd.impl.TypedArray.Uint32Array(out.buffer);
 		view[pos] = v;
@@ -45,7 +45,8 @@ class RenderContext {
 		#end
 	}
 
-	function fillRec( v : Dynamic, type : hxsl.Ast.Type, out : #if hl hl.BytesAccess<hl.F32> #else h3d.shader.Buffers.ShaderBufferData #end, pos : Int ) {
+
+	public static function fillRec( v : Dynamic, type : hxsl.Ast.Type, out : hxsl.Shader.ShaderParamBuffer, pos : Int ) : Int {
 		switch( type ) {
 		case TInt:
 			fillIntParam(Std.int(v), pos, out);
@@ -148,7 +149,6 @@ class RenderContext {
 			return len * 12;
 		case TArray(TFloat, SConst(len)):
 			var v : Array<Float> = v;
-			var size = 0;
 			var count = v.length < len ? v.length : len;
 			for( i in 0...count )
 				out[pos++] = v[i];
@@ -264,28 +264,20 @@ class RenderContext {
 			var ptr = getPtr(buf.params);
 			var hid = 0;
 			while( p != null ) {
-				var v : Dynamic;
 				if( p.perObjectGlobal == null ) {
 					var i = getInstance(p.instance);
 					switch( p.type ) {
-					case TFloat:
-						ptr[p.pos] = i.getParamFloatValue(p.index);
-						p = p.next;
-						continue;
-					case TInt:
-						fillIntParam(Std.int(i.getParamFloatValue(p.index)), p.pos, ptr);
-						p = p.next;
-						continue;
 					case TTextureHandle:
-						v = i.getParamValue(p.index);
+						var v = i.getParamValue(p.index);
+						if( v == null ) throw "Missing param value " + curInstanceValue + "." + p.name;
 						buf.handles[hid++] = v;
 					default:
-						v = i.getParamValue(p.index);
 					}
-					if( v == null ) throw "Missing param value " + curInstanceValue + "." + p.name;
-				} else
-					v = getParamValue(p, shaders);
-				fillRec(v, p.type, ptr, p.pos);
+					i.writeParam(p.index, p.type, ptr, p.pos);
+				} else {
+					var v = getParamValue(p, shaders);
+					fillRec(v, p.type, ptr, p.pos);
+				}
 				p = p.next;
 			}
 			var tid = 0;

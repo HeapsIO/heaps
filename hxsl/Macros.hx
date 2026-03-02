@@ -142,6 +142,132 @@ class Macros {
 		}
 	}
 
+	// Macro port of RenderContext.fillRec
+	static function makeWriteExpr( eparam : haxe.macro.Expr, tparam : Type, pos : Position ) : haxe.macro.Expr {
+		inline function getSize( sizeDecl : SizeDecl ) : haxe.macro.Expr {
+			return switch( sizeDecl ) {
+			case SConst(len): macro $v{len};
+			case SVar(_): macro switch(type) { case TArray(_, SConst(n)): n; default: 0; };
+			}
+		}
+		inline function prefetch( e : haxe.macro.Expr ) : haxe.macro.Expr {
+			#if heaps_prefetch
+			var pexpr = Context.parse("untyped $prefetch(ptr, 0)", pos);
+			return macro { var ptr = $e; $pexpr; };
+			#else
+			return macro {};
+			#end
+		}
+
+		return switch( tparam ) {
+		case TFloat:
+			macro out[pos] = $eparam;
+		case TInt:
+			macro h3d.impl.RenderContext.fillIntParam(Std.int($eparam), pos, out);
+		case TVec(4, _):
+			macro {
+				var v : hxsl.Types.Vec4 = $eparam;
+				out[pos++] = v.x;
+				out[pos++] = v.y;
+				out[pos++] = v.z;
+				out[pos++] = v.w;
+			};
+		case TVec(3, _):
+			macro {
+				var v : hxsl.Types.Vec = $eparam;
+				out[pos++] = v.x;
+				out[pos++] = v.y;
+				out[pos++] = v.z;
+			};
+		case TVec(2, _):
+			macro {
+				var v : hxsl.Types.Vec = $eparam;
+				out[pos++] = v.x;
+				out[pos++] = v.y;
+			};
+		case TMat4:
+			macro {
+				var m : h3d.Matrix = $eparam;
+				out[pos++] = m._11; out[pos++] = m._21; out[pos++] = m._31; out[pos++] = m._41;
+				out[pos++] = m._12; out[pos++] = m._22; out[pos++] = m._32; out[pos++] = m._42;
+				out[pos++] = m._13; out[pos++] = m._23; out[pos++] = m._33; out[pos++] = m._43;
+				out[pos++] = m._14; out[pos++] = m._24; out[pos++] = m._34; out[pos++] = m._44;
+			};
+		case TMat3x4:
+			macro {
+				var m : h3d.Matrix = $eparam;
+				out[pos++] = m._11; out[pos++] = m._21; out[pos++] = m._31; out[pos++] = m._41;
+				out[pos++] = m._12; out[pos++] = m._22; out[pos++] = m._32; out[pos++] = m._42;
+				out[pos++] = m._13; out[pos++] = m._23; out[pos++] = m._33; out[pos++] = m._43;
+			};
+		case TMat3:
+			macro {
+				var m : h3d.Matrix = $eparam;
+				out[pos++] = m._11; out[pos++] = m._21; out[pos++] = m._31; out[pos++] = 0;
+				out[pos++] = m._12; out[pos++] = m._22; out[pos++] = m._32; out[pos++] = 0;
+				out[pos++] = m._13; out[pos++] = m._23; out[pos++] = m._33; out[pos++] = 0;
+			};
+		case TArray(TVec(4, VFloat), s):
+			var elen = getSize(s);
+			macro {
+				var arr : Array<h3d.Vector4> = $eparam;
+				var p = pos;
+				for( i in 0...$elen ) {
+					var v = arr[i];
+					if( v == null ) break;
+					${prefetch(macro arr[i+1])};
+					out[p++] = v.x; out[p++] = v.y; out[p++] = v.z; out[p++] = v.w;
+				}
+			};
+		case TArray(TMat3x4, s):
+			var elen = getSize(s);
+			macro {
+				var arr : Array<h3d.Matrix> = $eparam;
+				var p = pos;
+				for( i in 0...$elen ) {
+					var m = arr[i];
+					if( m == null ) break;
+					${prefetch(macro arr[i+1])};
+					out[p++] = m._11; out[p++] = m._21; out[p++] = m._31; out[p++] = m._41;
+					out[p++] = m._12; out[p++] = m._22; out[p++] = m._32; out[p++] = m._42;
+					out[p++] = m._13; out[p++] = m._23; out[p++] = m._33; out[p++] = m._43;
+				}
+			};
+		case TArray(TFloat, s):
+			var elen = getSize(s);
+			macro {
+				var arr : Array<Float> = $eparam;
+				var _count = arr.length < $elen ? arr.length : $elen;
+				var p = pos;
+				for( i in 0..._count )
+					out[p++] = arr[i];
+			};
+		case TArray(TMat4, s):
+			var elen = getSize(s);
+			macro {
+				var arr : Array<h3d.Matrix> = $eparam;
+				var p = pos;
+				for( i in 0...$elen ) {
+					var m = arr[i];
+					if( m == null ) break;
+					${prefetch(macro arr[i+1])};
+					out[p++] = m._11; out[p++] = m._21; out[p++] = m._31; out[p++] = m._41;
+					out[p++] = m._12; out[p++] = m._22; out[p++] = m._32; out[p++] = m._42;
+					out[p++] = m._13; out[p++] = m._23; out[p++] = m._33; out[p++] = m._43;
+					out[p++] = m._14; out[p++] = m._24; out[p++] = m._34; out[p++] = m._44;
+				}
+			};
+		case TTextureHandle:
+			macro {
+				var v : h3d.mat.TextureHandle = $eparam;
+				h3d.impl.RenderContext.fillIntParam(v.handle.low, pos++, out);
+				h3d.impl.RenderContext.fillIntParam(v.handle.high, pos++, out);
+			};
+		default:
+			macro super.writeParam(index, type, out, pos);
+		}
+	}
+
 	static function buildFields( shader : ShaderData, inits : Array<{ v : TVar, e : Ast.TExpr }>, pos : Position ) {
 		var fields = new Array<Field>();
 		var globals = [], consts = [], params = [], eparams = [], tparams = [];
@@ -348,6 +474,29 @@ class Macros {
 			}),
 			access : [AOverride],
 		});
+		var bufType = macro : hxsl.Shader.ShaderParamBuffer;
+		index = 0;
+		fields.push( {
+			name : "writeParam",
+			pos : pos,
+			kind : FFun( {
+				ret : macro : Void,
+				args : [
+					{ name : "index", type : macro : Int },
+					{ name : "type", type : macro : hxsl.Ast.Type },
+					{ name : "out", type : bufType },
+					{ name : "pos", type : macro : Int },
+				],
+				expr : {
+					expr : ESwitch(macro index, [for( i in 0...tparams.length ) {
+						values : [macro $v{ index++ } ],
+						expr : makeWriteExpr(eparams[i], tparams[i], pos)
+					} ], macro super.writeParam(index, type, out, pos)),
+					pos : pos,
+				},
+			}),
+			access : [AOverride],
+		});
 		if( params.length > 0 ) {
 			var cexpr = [];
 			var type = Context.getLocalClass().toString().split(".").pop();
@@ -427,6 +576,7 @@ class Macros {
 							supFields.remove("getParamFloatValue");
 							supFields.remove("setParamValue");
 							supFields.remove("setParamFloatValue");
+							supFields.remove("writeParam");
 							supFields.remove("clone");
 							csup = tsup.superClass;
 						} while( true);
