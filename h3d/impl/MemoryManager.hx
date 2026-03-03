@@ -201,7 +201,7 @@ class MemoryManager {
 	@:allow(h3d.mat.Texture.alloc)
 	function allocTexture( t : h3d.mat.Texture ) {
 		while( true ) {
-			if( hxd.Timer.frameCount > lastAutoDispose + autoDisposeCooldown ) {
+			if( autoDisposeCooldown > 0 && hxd.Timer.frameCount > lastAutoDispose + autoDisposeCooldown ) {
 				cleanTextures(false, true);
 				lastAutoDispose = hxd.Timer.frameCount;
 			}
