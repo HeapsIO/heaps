@@ -110,8 +110,8 @@ class Window {
 		var hidden = flags != null && flags.hidden != null ? flags.hidden : false;
 		#if hlsdl
 		var sdlFlags = 0;
+		if (!fixed) sdlFlags |= sdl.Window.SDL_WINDOW_RESIZABLE;
 		if (!hidden) sdlFlags |= sdl.Window.SDL_WINDOW_SHOWN;
-		if (fixed) sdlFlags |= sdl.Window.SDL_WINDOW_RESIZABLE;
 		#if heaps_vulkan
 		if( USE_VULKAN ) sdlFlags |= sdl.Window.SDL_WINDOW_VULKAN;
 		#end
