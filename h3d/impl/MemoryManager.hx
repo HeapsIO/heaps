@@ -141,7 +141,7 @@ class MemoryManager {
 			var size = usedMemory;
 			garbage();
 			if( usedMemory == size )
-				throw "Memory full (" + Math.fceil(size / 1024) + " KB," + buffers.length + " buffers)";
+				errorOutOfMemory();
 		}
 		usedMemory += mem;
 		buffers.push(b);
@@ -209,10 +209,14 @@ class MemoryManager {
 			var free = false;
 			while( cleanTextures(false) ) free = true; // clean all old textures
 			if( !free && !cleanTextures(true) )
-				throw "Maximum texture memory reached";
+				errorOutOfMemory();
 		}
 		textures.push(t);
 		texMemory += memSize(t);
+	}
+
+	public dynamic function errorOutOfMemory() {
+		throw "Failed to alloc GPU Memory (full)";
 	}
 
 	// ------------------------------------- DISPOSE ------------------------------------------
