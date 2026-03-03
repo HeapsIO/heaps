@@ -78,7 +78,7 @@ class BufferAllocatorPage {
 
 	public function new( heap : HeapProperties, flags : haxe.EnumFlags<HeapFlag>, desc : ResourceDesc ) {
 		this.capacity = desc.width.low;
-		resource = Driver.createCommittedResource(heap, flags, desc, GENERIC_READ, null);
+		resource = DX12Driver.allocCheck(() -> Driver.createCommittedResource(heap, flags, desc, GENERIC_READ, null));
 		cpuAddress = resource.map(0, null);
 	}
 
@@ -318,7 +318,7 @@ class BaseHeap {
 		desc.numDescriptors = size;
 		if( shaderVisible )
 			desc.flags = SHADER_VISIBLE;
-		heap = new DescriptorHeap(desc);
+		heap = DX12Driver.allocCheck(() -> new DescriptorHeap(desc));
 		this.size = size;
 		address = heap.getHandle(false);
 		cpuToGpu = desc.flags == SHADER_VISIBLE ? ( heap.getHandle(true).value - address.value ) : 0;
@@ -526,6 +526,17 @@ class DX12Driver extends h3d.impl.Driver {
 	public static var DEVICE_NAME = null;
 	public static var DEBUG = false; // requires dxil.dll when set to true
 
+	@:allow(h3d.impl) static function allocCheck<T>( f : Void -> T ) {
+		var ret = f();
+		if( ret == null ) {
+			var mem = Engine.getCurrent().mem;
+			mem.garbage();
+			ret = f();
+			if( ret == null ) mem.errorOutOfMemory();
+		}
+		return ret;
+	}
+
 	public function new() {
 		window = @:privateAccess dx.Window.windows[0];
 		reset();
@@ -724,7 +735,7 @@ class DX12Driver extends h3d.impl.Driver {
 					needRebind = true;
 					// update texture to use another clear value
 					var prev = tex.t;
-					tex.t = allocTexture(tex);
+					tex.t = allocCheck(() -> allocTexture(tex));
 					@:privateAccess tex.t.clearColorChanges = prev.clearColorChanges;
 					frame.toRelease.push(prev.res);
 					Driver.createRenderTargetView(tex.t.res, lastRtvDesc, tmp.renderTargets[i]);
@@ -2039,6 +2050,7 @@ class DX12Driver extends h3d.impl.Driver {
 		var src = tmp.srcTextureLocation;
 		dst.res = to.t.res;
 		src.res = from.t.res;
+		if( dst.res == null || src.res == null ) throw "assert";
 		dst.type = SUBRESOURCE_INDEX;
 		src.type = SUBRESOURCE_INDEX;
 		var is3d = to.flags.has(Is3D);
