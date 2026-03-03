@@ -463,6 +463,7 @@ class Skin extends MultiMaterial {
 					hasNormalMap = true;
 					break;
 				}
+			var prevSkinShader = skinShader;
 			skinShader = hasNormalMap ? new h3d.shader.SkinTangent() : new h3d.shader.Skin();
 			skinShader.fourBonesByVertex = skinData.bonesPerVertex == 4;
 			var maxBones = 0;
@@ -475,9 +476,8 @@ class Skin extends MultiMaterial {
 			skinShader.MaxBones = hxd.Math.imax(32, hxd.Math.nextPOT(maxBones));
 			for( m in materials )
 				if( m != null ) {
-					var s = m.mainPass.getShader(h3d.shader.SkinTangent);
-					if ( s != null )
-						m.mainPass.removeShader(s);
+					if ( prevSkinShader != null )
+						m.mainPass.removeShader(prevSkinShader);
 					if( m.normalMap != null ) {
 						@:privateAccess m.mainPass.addShaderAtIndex(skinShader, m.mainPass.getShaderIndex(m.normalShader) + 1);
 					} else {
