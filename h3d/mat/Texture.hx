@@ -9,7 +9,6 @@ class Texture {
 
 	static var UID = 0;
 	static final PREVENT_AUTO_DISPOSE = 0x7FFFFFFF;
-	static final PREVENT_FORCED_DISPOSE = -1;
 
 	/**
 		The default texture color format
@@ -33,7 +32,8 @@ class Texture {
 	public var flags(default, null) : haxe.EnumFlags<TextureFlags>;
 	public var format(default, null) : TextureFormat;
 
-	var lastFrame(get,set) : Int;
+	var lastFrame(default,set) : Int;
+	var keepPriority : Int;
 	var bits : Int;
 	var waitLoads : Array<Void -> Void>;
 	@:bits(bits) public var mipMap : MipMap;
@@ -61,15 +61,11 @@ class Texture {
 	**/
 	public var depthBuffer : Texture;
 
-	var _lastFrame:Int;
 	var tmpColor : h3d.Vector4;
 
 	function set_lastFrame(lf:Int) {
-		// Make sure we do not override lastFrame of textures set to prevent auto dispose
-		if(_lastFrame != PREVENT_AUTO_DISPOSE) {
-			_lastFrame = lf;
-		}
-		return _lastFrame;
+		if( lastFrame != PREVENT_AUTO_DISPOSE ) lastFrame = lf;
+		return lastFrame;
 	}
 
 	inline function get_startingMip() {
@@ -79,11 +75,6 @@ class Texture {
 	inline function set_startingMip(v:Int) {
 		if( flags.has(Loading) ) flags.set(AsyncKeepStartingMip);
 		return __startingMip = v;
-	}
-
-	inline function get_lastFrame()
-	{
-		return _lastFrame;
 	}
 
 	function get_mipLevels() {
@@ -198,15 +189,21 @@ class Texture {
 	}
 
 	/**
-		In case of out of GPU memory, textures that hasn't been used for a long time will be disposed.
+		In case we run out of GPU memory, textures that hasn't been used for a long time will be disposed.
 		Calling this will make this texture not considered for auto disposal.
 	**/
 	public function preventAutoDispose() {
 		lastFrame = PREVENT_AUTO_DISPOSE;
 	}
 
-	public function preventForcedDispose() {
-		lastFrame = PREVENT_FORCED_DISPOSE;
+	/**
+		In case we run out of GPU memory, textures that hasn't been used for a long time will be disposed.
+		This allows to set a per texture priority, so textures with lower priority will get disposed first.
+		You can also set a negative value to give priority for a texture to be disposed.
+		Textures with priority > 0 will also not be subject to regular textures cleanup.
+	**/
+	public function setKeepPriority( priority : Int ) {
+		keepPriority = priority;
 	}
 
 	/**
