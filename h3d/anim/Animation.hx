@@ -135,7 +135,7 @@ class Animation {
 				continue;
 			for (event in ev) {
 				if (event.name == name)
-					return event.frame;
+					return frameToTime(event.frame);
 			}
 		}
 		return null;
