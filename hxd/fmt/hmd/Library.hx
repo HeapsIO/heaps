@@ -521,7 +521,7 @@ class Library {
 		var l = header.version <= 2 ? makeLinearAnimation(a) : makeAnimation(a);
 		l.speed = a.speed;
 		l.loop = a.loop;
-		if( a.events != null ) l.setEvents(a.events);
+		if (a.events != null) @:privateAccess l.sourceEvents = [for (e in a.events) { frame: e.frame, name: e.data, originalEvent: { frame: e.frame, name: e.data } }];
 		l.resourcePath = resource.entry.path;
 		cachedAnimations.set(a.name, l);
 		if( name == null ) cachedAnimations.set("", l);

@@ -43,6 +43,11 @@ class Plane2D extends Primitive {
 		engine.renderQuadBuffer(buffer);
 	}
 
+	// override function getBounds() {
+	// 	// var b = new h3d.col.Bounds();
+	// 	return null;
+	// }
+
 	public static function get() {
 		var engine = h3d.Engine.getCurrent();
 		var inst = @:privateAccess engine.resCache.get(Plane2D);

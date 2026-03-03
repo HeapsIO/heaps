@@ -19,6 +19,12 @@ class AnimatedObject {
 
 }
 
+typedef Event = {
+	name : String,
+	frame : Int,
+	?originalEvent : Event
+}
+
 class Animation {
 
 	static inline var EPSILON = 0.000001;
@@ -36,7 +42,9 @@ class Animation {
 	public var pause : Bool;
 	public var loop : Bool;
 
-	public var events(default, null) : Array<Array<String>>;
+	// Events extracted from animation source file (FBX for example)
+	public var sourceEvents(default, null) : Array<Event>;
+	public var events(default, null) : Array<Array<Event>>;
 
 	var isInstance : Bool;
 	var objects : Array<AnimatedObject>;
@@ -82,48 +90,44 @@ class Animation {
 			}
 	}
 
-	/**
-		Register a callback function that will be called once when a frame is reached.
-	**/
-	public function setEvents( el : Iterable<{ frame : Int, data : String }> ) {
-		events = [for( i in 0...frameCount ) null];
-		for( e in el ) {
-			if(events[e.frame] == null) events[e.frame] = [];
-			events[e.frame].push(e.data);
-		}
-	}
-
-	public function addEvent(frame : Int, data : String) {
-		if (events == null)
-			events = [];
-		if (events[frame] == null)
-			events[frame] = [data];
-		else
-			events[frame].push(data);
-	}
-
-	public function removeEvent(frame : Int, data : String) {
-		if (events == null || events[frame] == null || !events[frame].contains(data))
-			throw 'Can\'t delete event $data because it doesn\'t exist at frame $frame';
-
-		events[frame].remove(data);
-		if (events[frame].length == 0)
-			events[frame] = null;
-	}
 
 	public function getEvents() return events;
+	public function getSourceEvents() return sourceEvents;
+
+	public function setEvents(evts : Array<Event>) {
+		events = [for( i in 0...frameCount ) null];
+		for (e in evts) {
+			if (events[e.frame] == null) events[e.frame] = [];
+			events[e.frame].push(e);
+		}
+	}
+
+	public function addEvent(frame : Int, name : String, ?originalEvent : Event) {
+		if (events == null)
+			events = [];
+		var e = { name: name, frame: frame, originalEvent: originalEvent };
+		if (events[frame] == null)
+			events[frame] = [e];
+		else
+			events[frame].push(e);
+	}
+
+	public function removeEvent(frame : Int, name : String) {
+		if (events == null || events[frame] == null)
+			throw 'Can\'t delete event $name because it doesn\'t exist at frame $frame';
+
+		for (e in events[frame]) {
+			if (e.name == name && e.frame == frame) {
+				events[frame].remove(e);
+				if (events[frame].length == 0)
+					events[frame] = null;
+				break;
+			}
+		}
+	}
+
 
 	public function getObjects() return objects;
-
-	public function getEventTime( id : String ) : Null<Float> {
-		if( events == null )
-			return null;
-		for( i in 0...events.length ) {
-			var ev = events[i];
-			if( ev != null && ev.indexOf(id) >= 0 ) return frameToTime(i);
-		}
-		return null;
-	}
 
 	public function setFrame( f : Float ) {
 		frame = f;
@@ -146,6 +150,49 @@ class Animation {
 
 	function initInstance() {
 		isInstance = true;
+	}
+
+	public function loadProps(props : Dynamic) {
+		var animationData = Reflect.field(props, "animations");
+		var data = Reflect.field(animationData, resourcePath.split("/").pop());
+		var eventsData : Array<Dynamic> = Reflect.field(data, "events");
+
+		events = [];
+
+		// Backward compatibility
+		if (eventsData != null && eventsData.length > 0 && Reflect.hasField(eventsData[0], "data")) {
+			setEvents([for (e in eventsData) { frame: e.frame, name: e.data }]);
+		}
+		else {
+			if (sourceEvents != null) {
+				for (se in sourceEvents) {
+					var overrideEvent : Event = null;
+					if (eventsData != null) {
+						for (e in eventsData) {
+							var ev : h3d.anim.Animation.Event = e;
+							if (ev.originalEvent != null && ev.originalEvent.name == se.name && ev.originalEvent.frame == se.frame) {
+								overrideEvent = ev;
+								break;
+							}
+						}
+					}
+
+					if (overrideEvent != null)
+						addEvent(overrideEvent.frame, overrideEvent.name, overrideEvent.originalEvent);
+					else
+						addEvent(se.frame, se.name, se);
+				}
+			}
+
+			if (eventsData != null) {
+				for (e in eventsData) {
+					var ev : h3d.anim.Animation.Event = e;
+					if (ev.originalEvent != null)
+						continue;
+					addEvent(ev.frame, ev.name);
+				}
+			}
+		}
 	}
 
 	#if !(dataOnly || macro)
@@ -236,7 +283,7 @@ class Animation {
 					dt -= (f - frame) / (speed * sampling);
 					frame = f;
 					for(e in events[f])
-						onEvent(e);
+						onEvent(e.name);
 					if( frame == f && f == frameCount - 1 ) {
 						frame = oldF;
 						dt = oldDT;

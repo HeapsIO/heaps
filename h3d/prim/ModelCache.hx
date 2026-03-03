@@ -1,7 +1,7 @@
 package h3d.prim;
 
 typedef HideProps = {
-	var animations : haxe.DynamicAccess<{ events : Array<{ frame : Int, data : String }> }>;
+	var animations : haxe.DynamicAccess<{ events : Array<h3d.anim.Animation.Event> }>;
 }
 
 class ModelCache {
@@ -136,20 +136,14 @@ class ModelCache {
 		return a;
 	}
 
-	function setAnimationProps( a : h3d.anim.Animation, resName : String, props : HideProps ) {
-		if( props == null || props.animations == null ) return;
-		var n = props.animations.get(resName);
-		if( n != null && n.events != null )
-			a.setEvents(n.events);
-	}
-
-	function initAnimation( res : hxd.res.Model, name : String, ?forModel : hxd.res.Model ) {
+	function initAnimation(res : hxd.res.Model, name : String, ?forModel : hxd.res.Model) {
 		var m = loadLibraryData(res);
 		var a = m.lib.loadAnimation(name);
-		setAnimationProps(a, res.name, m.props);
-		if( forModel != null ) {
+		a.loadProps(m.props);
+		if (forModel != null) {
 			var m = loadLibraryData(forModel);
-			setAnimationProps(a, res.name, m.props);
+			if (m.props != null)
+				a.loadProps(m.props);
 		}
 		return a;
 	}
