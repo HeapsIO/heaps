@@ -1699,6 +1699,8 @@ class DX12Driver extends h3d.impl.Driver {
 		var bufSize = m.flags.has(UniformBuffer) || m.flags.has(ReadWriteBuffer) ? calcCBVSize(size) : size;
 		buf.state = buf.targetState = COPY_DEST;
 		buf.res = allocGPU(bufSize, DEFAULT, COMMON,  m.flags.has(ReadWriteBuffer));
+		if( buf.res == null )
+			return null;
 		if( m.flags.has(UniformBuffer) ) {
 			// no view
 		} else if( m.flags.has(IndexBuffer) ) {
