@@ -79,6 +79,7 @@ class MemoryManager {
 		Might be called several times if we need to allocate a lot of memory
 	**/
 	public dynamic function garbage() {
+		if( !cleanTextures(false) ) cleanTextures(true);
 	}
 
 	public function getTriIndexes( vertices : Int ) {
@@ -197,16 +198,16 @@ class MemoryManager {
 	@:allow(h3d.mat.Texture.alloc)
 	function allocTexture( t : h3d.mat.Texture ) {
 		while( true ) {
-			var free = true;
-			if ( hxd.Timer.frameCount > lastAutoDispose + autoDisposeCooldown ) {
-				free = cleanTextures(false);
+			if( hxd.Timer.frameCount > lastAutoDispose + autoDisposeCooldown ) {
+				cleanTextures(false);
 				lastAutoDispose = hxd.Timer.frameCount;
 			}
 			t.t = t.isDepth() ? driver.allocDepthBuffer(t) : driver.allocTexture(t);
 			if( t.t != null ) break;
 
 			if( driver.isDisposed() ) return;
-			while( cleanTextures(false) ) {} // clean all old textures
+			var free = false;
+			while( cleanTextures(false) ) free = true; // clean all old textures
 			if( !free && !cleanTextures(true) )
 				throw "Maximum texture memory reached";
 		}
