@@ -1882,6 +1882,9 @@ class DX12Driver extends h3d.impl.Driver {
 
 		td.state = td.targetState = isRT ? RENDER_TARGET : COPY_DEST;
 		td.res = Driver.createCommittedResource(tmp.heap, flags, desc, isRT ? RENDER_TARGET : COMMON, clear);
+		if( td.res == null )
+			return null;
+
 		td.res.setName(t.name == null ? "Texture#"+t.id : t.name);
 		t.lastFrame = frameCount;
 		t.flags.unset(WasCleared);
