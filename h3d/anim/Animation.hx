@@ -126,6 +126,21 @@ class Animation {
 		}
 	}
 
+	public function getEventTime(name : String) : Null<Float> {
+		if (events == null)
+			return null;
+		for (idx in 0...events.length) {
+			var ev = events[idx];
+			if (ev == null)
+				continue;
+			for (event in ev) {
+				if (event.name == name)
+					return event.frame;
+			}
+		}
+		return null;
+	}
+
 
 	public function getObjects() return objects;
 
