@@ -19,7 +19,7 @@ class SubPart {
 
 @:access(h3d.prim.HMDModel)
 class BatchPrimitive extends MeshPrimitive {
-	static var SUBMESH_INFOS_FMT = hxd.BufferFormat.make([{ name : "lodStart", type : DFloat }, { name : "lodCount", type : DFloat }]);
+	static var SUBMESH_INFOS_FMT = hxd.BufferFormat.make([{ name : "lodStart", type : DFloat }, { name : "lodCount", type : DFloat },{ name : "boudingSphere", type : DFloat }]);
 	static var SUBPART_INFOS_FMT = hxd.BufferFormat.make([{ name : "indexCount", type : DFloat }, { name : "indexStart", type : DFloat }]);
 	static var LOD_INFOS_FMT = hxd.BufferFormat.make([{ name : "screenRatio", type : DFloat }]);
 
@@ -168,6 +168,7 @@ class BatchPrimitive extends MeshPrimitive {
 		var lodStart = totalLodCount * LOD_INFOS_FMT.stride;
 		cpuSubMeshInfos.setInt32(subMeshStart + 0, lodStart);
 		cpuSubMeshInfos.setInt32(subMeshStart + 4, lodCount);
+		cpuSubMeshInfos.setFloat(subMeshStart + 8, subMesh.bounds.getBoundingRadius());
 
 		totalLodCount += lodCount;
 		var lodNeeded = totalLodCount * LOD_INFOS_FMT.stride;
