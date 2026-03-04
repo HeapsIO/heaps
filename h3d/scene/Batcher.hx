@@ -532,7 +532,7 @@ private class BatchCommandBuilder extends hxsl.Shader {
 			var subMeshPos = subMeshID * subMeshInfosStride;
 			var lodStart : Int = floatBitsToInt(subMeshInfos[subMeshPos + 0]);
 			var lodCount : Int = floatBitsToInt(subMeshInfos[subMeshPos + 1]);
-			var boundingSphere = subMeshInfos[subMeshPos + 2];
+			var boundingSphere = subMeshInfos[subMeshPos + 2] * max(scale.x,max(scale.y, scale.z));
 
 			if ( ENABLE_FRUSTUM_CULLING ) {
 				@unroll for ( i  in 0...6 ) {
