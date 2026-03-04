@@ -45,13 +45,13 @@ class CacheFile2Loader {
 
 		// Shadergraph might need engine to make Texture
 		var engine = h3d.Engine.getCurrent();
-		if( engine != null ) {
+		if( engine?.mem != null ) {
 			runOnEngineReady();
 		} else {
 			var waitEvent : haxe.MainLoop.MainEvent = null;
 			waitEvent = haxe.MainLoop.add(function() {
 				var engine = h3d.Engine.getCurrent();
-				if( engine == null )
+				if( engine?.mem == null )
 					return;
 				waitEvent.stop();
 				runOnEngineReady();
