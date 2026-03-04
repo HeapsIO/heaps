@@ -43,6 +43,23 @@ class CacheFile2Loader {
 	public function run( onDone : Void -> Void ) {
 		this.onDone = onDone;
 
+		// Shadergraph might need engine to make Texture
+		var engine = h3d.Engine.getCurrent();
+		if( engine != null ) {
+			runOnEngineReady();
+		} else {
+			var waitEvent : haxe.MainLoop.MainEvent = null;
+			waitEvent = haxe.MainLoop.add(function() {
+				var engine = h3d.Engine.getCurrent();
+				if( engine == null )
+					return;
+				waitEvent.stop();
+				runOnEngineReady();
+			});
+		}
+	}
+
+	function runOnEngineReady() {
 		// Build ShaderLinker
 		for( lk in lkInfos ) {
 			var shader = cache.getLinkShader(lk.vars);
