@@ -307,7 +307,7 @@ class ConvertFBX2HMD extends Convert {
 			}
 		}
 		hmdout.load(fbx);
-		var isAnim = StringTools.startsWith(originalFilename, "Anim_") || originalFilename.toLowerCase().indexOf("_anim_") > 0;
+		var isAnim = h3d.anim.Animation.isAnimation(originalFilename);
 		var hmd = hmdout.toHMD(null, !isAnim);
 		var out = new haxe.io.BytesOutput();
 		new hxd.fmt.hmd.Writer(out).write(hmd);

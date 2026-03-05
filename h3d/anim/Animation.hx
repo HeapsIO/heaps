@@ -63,6 +63,11 @@ class Animation {
 		pause = false;
 	}
 
+	public static function isAnimation(filename : String) {
+		var lowerCase = filename.toLowerCase();
+		return StringTools.startsWith(lowerCase, "anim_")|| lowerCase.indexOf("_anim_") > 0;
+	}
+
 	public function getDuration() {
 		return frameToTime(frameCount);
 	}
