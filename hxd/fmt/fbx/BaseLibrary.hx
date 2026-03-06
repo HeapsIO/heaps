@@ -460,6 +460,18 @@ class BaseLibrary {
 			}
 		}
 
+		// Scale translation
+		for (m in getAllModels()) {
+			for (p in m.getAll("Properties70.P")) {
+				if (p.props[0].toString() == "Lcl Translation" || p.props[0].toString() == "GeometricTranslation") {
+					for (idx in [4,5,6]) {
+						var v = p.props[idx].toFloat();
+						p.props[idx] = PFloat(v * factor);
+					}
+				}
+			}
+		}
+
 		// Scale on animation
 		for (n in this.root.getAll("Objects.AnimationCurveNode")) {
 			var name = n.getName();
