@@ -791,7 +791,7 @@ private class BatchPass {
 		builderShader.countBuffer = countBuffer.buffer;
 		builderShader.IS_RELATIVE = batcher.isRelative;
 		builderShader.worldMatrix = batcher.getAbsPos();
-		builderShader.ENABLE_DISTANCE_CLIPPING = isShadowPass;
+		builderShader.ENABLE_DISTANCE_CLIPPING = isShadowPass && batcher.shadowMaxDistance > 0.0;
 		builderShader.ENABLE_FRUSTUM_CULLING = !isShadowPass;
 		if ( isShadowPass )
 			builderShader.maxDistance = batcher.shadowMaxDistance;
