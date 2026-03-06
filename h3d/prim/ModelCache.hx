@@ -139,7 +139,8 @@ class ModelCache {
 	function initAnimation(res : hxd.res.Model, name : String, ?forModel : hxd.res.Model) {
 		var m = loadLibraryData(res);
 		var a = m.lib.loadAnimation(name);
-		a.loadProps(m.props);
+		if (m.props != null)
+			a.loadProps(m.props);
 		if (forModel != null) {
 			var m = loadLibraryData(forModel);
 			if (m.props != null)
