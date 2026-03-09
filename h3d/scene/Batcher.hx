@@ -96,8 +96,8 @@ class Batcher extends h3d.scene.Object {
 		super(parent);
 		if ( batchFlags != null )
 			this.batchFlags = batchFlags;
-		shouldDisposeLibrary = library != null;
-		this.library = shouldDisposeLibrary ? library : new BatchLibrary();
+		shouldDisposeLibrary = library == null;
+		this.library = shouldDisposeLibrary ? new BatchLibrary() : library;
 		ignoreCollide = true;
 	}
 
