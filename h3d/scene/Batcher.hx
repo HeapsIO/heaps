@@ -35,7 +35,7 @@ class BatchLibrary {
 	public function dispose() {
 		for ( p in primitives )
 			p.dispose();
-		instancesOffset.dispose();
+		instancesOffset?.dispose();
 	}
 
 	public function checkOffsetBuffer( instanceCount : Int ) {
