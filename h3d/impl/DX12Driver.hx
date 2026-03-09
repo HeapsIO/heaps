@@ -58,6 +58,13 @@ class ScratchHeapArray {
 		return h;
 	}
 
+	public function getSize() {
+		var size : haxe.Int64 = 0;
+		for( h in heaps )
+			size += h.getSize();
+		return size;
+	}
+
 }
 
 @:struct class BufferAllocation {
@@ -173,6 +180,14 @@ class BufferAllocator {
 		pages.push(p);
 		return allocation;
 	}
+
+	public function getSize() {
+		var size : haxe.Int64 = 0;
+		for( p in pages )
+			size += p.capacity;
+		return size;
+	}
+
 }
 
 class DxFrame {
@@ -195,6 +210,14 @@ class DxFrame {
 	public var queryBuffer : GpuResource;
 	public var bufferAllocator : BufferAllocator;
 	public function new() {
+	}
+	public function getSize() {
+		var size : haxe.Int64 = 0;
+		// both srvHeap and samplerHeap are from cache
+		size += srvHeapCache.getSize();
+		size += samplerHeapCache.getSize();
+		size += bufferAllocator.getSize();
+		return size;
 	}
 }
 
@@ -310,6 +333,10 @@ class BaseHeap {
 		this.shaderVisible = shaderVisible && (type == CBV_SRV_UAV || type == SAMPLER);
 		this.stride = Driver.getDescriptorHandleIncrementSize(type);
 		allocHeap(size);
+	}
+
+	public function getSize() {
+		return size * stride;
 	}
 
 	function allocHeap( size : Int ) {
@@ -540,6 +567,19 @@ class DX12Driver extends h3d.impl.Driver {
 	public function new() {
 		window = @:privateAccess dx.Window.windows[0];
 		reset();
+	}
+
+	override function getInternalMemorySize() {
+		var size : haxe.Int64 = 0;
+		size += renderTargetViews.getSize();
+		size += depthStenciViews.getSize();
+		size += cpuSrvHeap.getSize();
+		size += cpuSamplerHeap.getSize();
+		size += bindlessSrvHeap.getSize();
+		size += bindlessSamplerHeap.getSize();
+		for( f in frames )
+			size += f.getSize();
+		return size;
 	}
 
 	override function hasFeature(f:Feature) {

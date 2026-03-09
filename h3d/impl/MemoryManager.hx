@@ -254,12 +254,14 @@ class MemoryManager {
 		var total = 0.;
 		for( b in buffers )
 			total += b.getMemSize();
+		var dmem = driver.getInternalMemorySize();
 		return {
 			bufferCount : buffers.length,
 			bufferMemory : total,
-			totalMemory : usedMemory + texMemory,
+			totalMemory : usedMemory + texMemory + (dmem / 1024).low * 1024.0,
 			textureCount : textures.length,
 			textureMemory : texMemory,
+			internalMemory : dmem,
 		};
 	}
 
