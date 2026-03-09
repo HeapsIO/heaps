@@ -93,6 +93,8 @@ class Batcher extends h3d.scene.Object {
 	var shouldDisposeLibrary : Bool = false;
 
 	public function new( parent : h3d.scene.Object, library : BatchLibrary = null, batchFlags = null ) {
+		if ( !h3d.Engine.getCurrent().driver.hasFeature(Bindless) )
+			throw "h3d.scene.Batcher requires Bindless support.";
 		super(parent);
 		if ( batchFlags != null )
 			this.batchFlags = batchFlags;
@@ -838,8 +840,6 @@ private class EmitData {
 	var batchPass : BatchPass;
 
 	public function new(bp : BatchPass) {
-		if ( !h3d.Engine.getCurrent().driver.hasFeature(Bindless) )
-			throw "h3d.scene.Batcher requires Bindless support.";
 		batchPass = bp;
 		bp.toEmit.push(this);
 	};

@@ -587,7 +587,7 @@ class DX12Driver extends h3d.impl.Driver {
 		case Queries, BottomLeftCoords:
 			false;
 		case Bindless:
-			useSM6_6;
+			enableBindless();
 		default:
 			true;
 		};
@@ -597,9 +597,9 @@ class DX12Driver extends h3d.impl.Driver {
 		return true;
 	}
 
-	override function enableBindless() {
+	function enableBindless() {
 		if ( useSM6_6 )
-			return;
+			return true;
 
 		var hasSM6_6 = false;
 		#if (hldx >= version("1.16.0"))
@@ -608,9 +608,9 @@ class DX12Driver extends h3d.impl.Driver {
 		Driver.checkFeatureSupport(SHADER_MODEL, shaderModel, 4);
 		hasSM6_6 = cast(SHADER_MODEL_6_6, Int) <= shaderModel.getI32(0);
 		#end
-		if ( !hasSM6_6 )
-			throw "Shader Model 6.6 support not detected. Please ensure your graphics card supports shader model 6.6 and your graphics driver are up to date.";
-		useSM6_6 = true;
+
+		useSM6_6 = hasSM6_6;
+		return useSM6_6;
 	}
 
 	function reset() {
