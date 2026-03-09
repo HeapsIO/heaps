@@ -668,6 +668,7 @@ class Style extends domkit.CssStyle {
 				var v = dom.currentValues == null ? null : dom.currentValues[i];
 				var vs = dom.currentRuleStyles == null ? null : dom.currentRuleStyles[i];
 				var lStr = emptyDigits;
+				var importantStr = "";
 				if (vs != null) {
 					v = vs.value;
 					var f = find(files, f -> f.name == vs.pos.file);
@@ -693,10 +694,19 @@ class Style extends domkit.CssStyle {
 							lStr = '<font color="#707070">$posStr</font>';
 						}
 					}
+					var baseValue: domkit.CssValue = (vs.pos: Dynamic).value;
+					if (baseValue != null) {
+						switch (baseValue) {
+							case VLabel("important", _):
+								importantStr = ' <font color="#A00000">!important</font>';
+							default:
+						}
+					}
 				}
 				var vstr = v == null ? "???" : StringTools.htmlEscape(domkit.CssParser.valueStr(v));
 				posLines.push(lStr);
-				valueLines.push('<font color="#D0D0D0"> ${p.name}</font> <font color="#808080">$vstr</font>');
+
+				valueLines.push('<font color="#D0D0D0"> ${p.name}</font> <font color="#808080">$vstr</font>$importantStr');
 			}
 			var txt = Std.downcast(obj, h2d.HtmlText);
 			if( txt != null ) {
