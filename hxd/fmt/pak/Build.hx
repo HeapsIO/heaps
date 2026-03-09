@@ -19,6 +19,7 @@ class Build {
 	public var pakDiff = false;
 	public var checkJPG = false;
 	public var checkOGG = false;
+	public var whitelist = true;
 
 	function new() {
 	}
@@ -32,7 +33,7 @@ class Build {
 	function buildRec( path : String ) {
 
 		if( path != "" ) {
-			if( excludePath.indexOf(path) >= 0 ) return null;
+			if( whitelist && excludePath.indexOf(path) >= 0 ) return null;
 		}
 
 		var dir = resPath + (path == "" ? "" : "/" + path);
@@ -63,14 +64,21 @@ class Build {
 			if( excludedExt.indexOf(ext) >= 0 )
 				return null;
 
-			if( includePath.length != 0 ) {
-				var found = false;
-				for( p in includePath )
-					if( StringTools.startsWith(path,p) ) {
-						found = true;
-						break;
-					}
-				if( !found ) return null;
+			var included = false;
+			for( p in includePath )
+				if( StringTools.startsWith(path,p) ) {
+					included = true;
+					break;
+				}
+			if( !included ) {
+				if( whitelist ) {
+					if( includePath.length > 0 )
+						return null;
+				} else {
+					for( p in excludePath )
+						if( StringTools.startsWith(path,p) )
+							return null;
+				}
 			}
 
 			if( nextPath != null ) {
@@ -149,7 +157,7 @@ class Build {
 		writeRec(pak.root);
 		return out;
 	}
-	
+
 	public static dynamic function onInit( b : Build ) {}
 
 	function makePak() {
@@ -256,6 +264,8 @@ class Build {
 				parseParams(args.shift(), b.includePath);
 			case "-special-path" if( args.length > 0 ):
 				parseParams(args.shift(), b.specialPath);
+			case "-include-ignore-exclude":
+				b.whitelist = false;
 			case "-check-ogg":
 				b.checkOGG = true;
 			case "-config" if( args.length > 0 ):
