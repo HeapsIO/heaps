@@ -34,7 +34,7 @@ class HMDOut extends BaseLibrary {
 	var filePath : String;
 	var tmp = haxe.io.Bytes.alloc(4);
 	var midsSortRemap : Map<Int, Int>;
-	var lod0Mids : Array<Int>;
+	var lods0Mids : Map<String, Array<Int>> = new Map();
 	public var absoluteTexturePath : Bool;
 	public var optimizeSkin = true;
 	public var optimizeMesh = false;
@@ -1348,13 +1348,15 @@ class HMDOut extends BaseLibrary {
 			}
 			if( gdata.materials == null )
 				model.materials = mids;
-			else if (lodsInfos.lodLevel > 0)
+			else if (lodsInfos.lodLevel > 0) {
+				var lod0Mids = lods0Mids.get(lodsInfos.modelName);
 				model.materials = [for( id in gdata.materials ) lod0Mids[id]];
+			}
 			else
 				model.materials = [for( id in gdata.materials ) mids[id]];
 
 			if (lodsInfos.lodLevel == 0)
-				lod0Mids = mids;
+				lods0Mids.set(lodsInfos.modelName, mids);
 			var lodsInfos = getLODInfos(model.name);
 			var lodIndex = lodsInfos.lodLevel;
 			var key = lodsInfos.modelName;
