@@ -34,7 +34,6 @@ class HMDOut extends BaseLibrary {
 	var filePath : String;
 	var tmp = haxe.io.Bytes.alloc(4);
 	var midsSortRemap : Map<Int, Int>;
-	var lods0Mids : Map<String, Array<Int>> = new Map();
 	public var absoluteTexturePath : Bool;
 	public var optimizeSkin = true;
 	public var optimizeMesh = false;
@@ -1176,6 +1175,7 @@ class HMDOut extends BaseLibrary {
 		var hgeomCol = new Map();
 		var hmat = new Map<Int,Int>();
 		var hlods = new Map<String, Array<Index<Model>>>();
+		var lods0Mids : Map<String, Array<Int>> = new Map();
 		var index = 0;
 		for( o in objects ) {
 
