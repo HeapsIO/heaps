@@ -89,7 +89,7 @@ class Copy extends ScreenFx<CopyShader> {
 			engine.pushTarget(to, layer ?? 0, toMip ?? 0, NotBound);
 		shader.texture = from;
 		var oldStartingMip = from.startingMip;
-		from.startingMip = fromMip;
+		from.startingMip = fromMip ?? 0;
 		if( customPass != null ) {
 			if( blend != null ) customPass.setBlendMode(blend);
 			var h = @:privateAccess customPass.shaders;
