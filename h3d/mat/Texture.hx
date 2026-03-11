@@ -39,9 +39,10 @@ class Texture {
 	@:bits(bits) public var mipMap : MipMap;
 	@:bits(bits) public var filter : Filter;
 	@:bits(bits) public var wrap : Wrap;
+	@:bits(bits, 11) public var slice : Int;
 	public var layerCount(get, never) : Int;
 	@:bits(bits, 4) var __startingMip : Int;
-	@:bits(bits, 16) var packedLodBias : Int;
+	@:bits(bits, 7) var packedLodBias : Int;
 	@:bits(bits, 4) var packedAnisotropicMaxLevel : Int = 15;
 	public var lodBias(get, set) : Float;
 	public var mipLevels(get, never) : Int;
@@ -90,8 +91,8 @@ class Texture {
 	}
 
 	function get_lodBias() : Float {
-		final fBits = 1 << (16 - 4);
-		var iPart = (packedLodBias >> (16 - 4)) - 15;
+		final fBits = 1 << (7 - 5);
+		var iPart = (packedLodBias >> 5) - 15;
 		var fPart = packedLodBias & (fBits - 1);
 		var v : Float = iPart + (fPart / fBits);
 		return v;
@@ -100,8 +101,8 @@ class Texture {
 	function set_lodBias(v:Float) {
 		v = hxd.Math.clamp(v, -15.0, 16.0) + 15.0;
 		var iPart = hxd.Math.floor(v);
-		var fPart = v % 1.0;
-		packedLodBias = iPart << (16 - 4) | hxd.Math.floor(fPart * (1 << (16 - 4)));
+		var fPart = hxd.Math.ufmod(v, 1.0);
+		packedLodBias = iPart << 5 | hxd.Math.floor(fPart * (1 << (7 - 5) - 1));
 		return v;
 	}
 
@@ -144,6 +145,7 @@ class Texture {
 		this.wrap = DEFAULT_WRAP;
 		this.lodBias = 0.0;
 		this.allocPos = hxd.impl.AllocPos.make();
+		this.slice = 0;
 		if( !this.flags.has(NoAlloc) && width > 0 ) alloc();
 	}
 

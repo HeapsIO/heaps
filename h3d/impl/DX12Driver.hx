@@ -468,7 +468,7 @@ class TextureData extends ResourceData {
 	public var format : DxgiFormat;
 	public var color : h3d.Vector4;
 	var clearColorChanges : Int;
-	public var cpuViewsIndex : Array<Int> = [for (i in 0...16) -1];
+	public var cpuViewsIndex : Map<Int, Int> = new Map();
 
 	public function setClearColor( c : h3d.Vector4 ) {
 		var color = color;
@@ -1992,13 +1992,10 @@ class DX12Driver extends h3d.impl.Driver {
 
 	function disposeTextureViews(t:TextureData) {
 		var viewsIndex = t.cpuViewsIndex;
-		for ( i in 0...16 ) {
-			var srvIndex = viewsIndex[i];
-			if ( srvIndex != -1 ) {
-				viewsIndex[i] = -1;
-				cpuSrvHeap.disposeIndex(srvIndex);
-			}
+		for( v in t.cpuViewsIndex){
+			cpuSrvHeap.disposeIndex(v);
 		}
+		t.cpuViewsIndex.clear();
 	}
 
 	override function disposeTexture(t:h3d.mat.Texture) {
@@ -2160,7 +2157,18 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	function fillTexViewDesc( t : h3d.mat.Texture, srvDesc : ShaderResourceViewDesc ) {
-		if( t.flags.has(Cube) ) {
+		if(t.slice > 0 ){
+			var desc = unsafeCastTo(srvDesc, Tex2DArraySRV);
+			desc.format = t.t.format;
+			desc.dimension = TEXTURE2DARRAY;
+			desc.shader4ComponentMapping = ShaderComponentMapping.DEFAULT;
+			desc.mostDetailedMip = t.startingMip;
+			desc.mipLevels = -1;
+			desc.firstArraySlice = t.slice - 1;
+			desc.arraySize = 1;
+			desc.planeSlice = 0;
+			desc.resourceMinLODClamp = 0;
+		} else if( t.flags.has(Cube) ) {
 			var desc = unsafeCastTo(srvDesc, TexCubeSRV);
 			desc.format = t.t.format;
 			desc.dimension = TEXTURECUBE;
@@ -2221,15 +2229,15 @@ class DX12Driver extends h3d.impl.Driver {
 
 	function getCpuTexView(t : h3d.mat.Texture) : Address {
 		var startingMip = hxd.Math.iclamp(t.startingMip, 0, 16);
-		var texViewIdx = t.t.cpuViewsIndex[startingMip];
-		if ( texViewIdx != -1 )
+		var texViewIdx = t.t.cpuViewsIndex.get(getTexBits(t));
+		if ( texViewIdx != null )
 			return cpuSrvHeap.getCpuAddressAt(texViewIdx);
 
 		texViewIdx = cpuSrvHeap.allocIndex();
 		fillTexViewDesc(t, tmp.texViewDesc);
 		var texView = cpuSrvHeap.getCpuAddressAt(texViewIdx);
 		Driver.createShaderResourceView(t.t.res, tmp.texViewDesc, texView);
-		t.t.cpuViewsIndex[startingMip] = texViewIdx;
+		t.t.cpuViewsIndex.set(getTexBits(t), texViewIdx);
 		return texView;
 	}
 
@@ -2243,8 +2251,17 @@ class DX12Driver extends h3d.impl.Driver {
 		#end
 	}
 
-	inline function getSamplerBits( t : h3d.mat.Texture ) {
-		return @:privateAccess t.bits & ~h3d.mat.Texture.__startingMip_mask;
+	function getTexMask() {
+		return h3d.mat.Texture.__startingMip_mask | h3d.mat.Texture.slice_mask;
+	}
+
+	function getSamplerBits( t : h3d.mat.Texture ) {
+		return @:privateAccess t.bits & ~getTexMask();
+	}
+
+	function getTexBits( t : h3d.mat.Texture ) {
+		var mask = getTexMask();
+		return @:privateAccess t.bits & mask;
 	}
 
 	function getCpuSampler( t : h3d.mat.Texture ) : Address {
