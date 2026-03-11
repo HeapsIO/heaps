@@ -244,9 +244,11 @@ class BaseLibrary {
 							}
 
 							animationEvents = [];
-							for (f => e in animationCurve.get("KeyValueFloat").getFloats()) {
-								if (e == 0) continue;
-								animationEvents.push({ { frame: f, data: enumValues[Std.int(e)] } });
+							if (animationCurve != null) {
+								for (f => e in animationCurve.get("KeyValueFloat").getFloats()) {
+									if (e == 0) continue;
+									animationEvents.push({ { frame: f, data: enumValues[Std.int(e)] } });
+								}
 							}
 						default:
 					}
