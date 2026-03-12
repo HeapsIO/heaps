@@ -66,8 +66,8 @@ class BatchGroup {
 		this.groupID = groupID;
 	}
 
-	public inline function emitInstance( obj : ObjectInstance, worldPosition : h3d.Matrix ) {
-		batcher.emitInstance( obj, worldPosition, groupID );
+	public inline function emitInstance( obj : ObjectInstance, worldPosition : h3d.Matrix, syncID : Int = 0 ) {
+		batcher.emitInstance( obj, worldPosition, syncID, groupID );
 	}
 
 	public inline function remove() {
@@ -81,6 +81,7 @@ class Batcher extends h3d.scene.Object {
 	public var shadowMaxDistance = -1.0;
 	public var isRelative : Bool = false;
 	public var batchFlags = new haxe.EnumFlags<BatcherFlags>();
+	public var syncShader : SyncShaderInterface;
 	var followShader : FollowShader;
 
 	var highestGroupID = 1;
@@ -154,17 +155,25 @@ class Batcher extends h3d.scene.Object {
 	}
 
 	var tmpMat = new h3d.Matrix();
-	public function emitInstance( instance : ObjectInstance, worldPosition : h3d.Matrix, groupID : Int = 0 ) {
+	public function emitInstance( instance : ObjectInstance, worldPosition : h3d.Matrix, syncID : Int = 0, groupID : Int = 0 ) {
 		for ( mesh in instance.meshes ) {
 			var batch = batches[mesh.batchID];
 			tmpMat.multiply3x4(mesh.relPos, worldPosition);
-			batch.emitMesh( mesh, tmpMat, groupID );
+			batch.emitMesh( mesh, tmpMat, syncID, groupID );
 		}
+	}
+
+	public function syncGPU(ctx : h3d.scene.RenderContext) {
+		if ( !batchFlags.has(ManualEmitGPU) )
+			throw "Can't call syncGPU without flag ManualEmitGPU";
+		for ( b in batches )
+			b.syncGPU(ctx);
+		ctx.memoryBarrier();
 	}
 
 	public function emitGPU(ctx : h3d.scene.RenderContext) {
 		if ( !batchFlags.has(ManualEmitGPU) )
-			throw "Can't call dispatch without flag ManualEmitGPU";
+			throw "Can't call emitGPU without flag ManualEmitGPU";
 		for ( b in batches )
 			b.emitGPU(ctx);
 		ctx.memoryBarrier();
@@ -173,10 +182,10 @@ class Batcher extends h3d.scene.Object {
 	override function emit( ctx : h3d.scene.RenderContext ) {
 		var maxInstanceCount = 0;
 		for ( b in batches ) {
+			b.uploadPrimitive(ctx);
 			if ( b.totalInstanceCount == 0 )
 				continue;
 			maxInstanceCount = hxd.Math.imax(b.totalInstanceCount, maxInstanceCount);
-			b.uploadPrimitive(ctx);
 		}
 
 		if ( maxInstanceCount == 0 )
@@ -215,6 +224,33 @@ class Batcher extends h3d.scene.Object {
 		freeGroupIDs.resize(0);
 		highestGroupID = 1;
 	}
+}
+
+class BaseSync extends hxsl.Shader {
+	static var SRC = {
+		@param var instancesData : RWBuffer<Vec4>;
+		@param var instanceStride : Int;
+		@param var modelViewOffset : Int;
+		@param var instanceCount : Int;
+		@param var syncIDs : StorageBuffer<Int>;
+
+		function fillModelView( id : Int, modelView : Mat4 ) {
+			var modelViewPos = id * instanceStride+modelViewOffset;
+			instancesData[modelViewPos + 0] = modelView[0];
+			instancesData[modelViewPos + 1] = modelView[1];
+			instancesData[modelViewPos + 2] = modelView[2];
+			instancesData[modelViewPos + 3] = modelView[3];
+		}
+	}
+}
+
+interface SyncShaderInterface {
+	var instancesData(get,set) : h3d.Buffer;
+	var instanceStride(get,set) : Int;
+	var modelViewOffset(get,set) : Int;
+	var instanceCount(get,set) : Int;
+	var syncIDs(get,set) : h3d.Buffer;
+	public function hasSyncIDs() : Bool;
 }
 
 /** Batcher Implementation **/
@@ -333,7 +369,7 @@ private class Batch {
 		return new MaterialInstance(draws);
 	}
 
-	public function emitMesh( mesh : MeshInstance, worldPosition : h3d.Matrix, groupID : Int ) {
+	public function emitMesh( mesh : MeshInstance, worldPosition : h3d.Matrix, syncID : Int, groupID : Int ) {
 		var group = groups[groupID];
 		if ( group == null ) {
 			group = new GroupData(this);
@@ -345,28 +381,38 @@ private class Batch {
 		instancesDirty = true;
 		totalInstanceCount++;
 
-		group.emitMesh(primitive, subMeshID, mesh.materials, worldPosition, groupID);
+		group.emitMesh(primitive, subMeshID, mesh.materials, worldPosition, syncID, groupID);
 	}
 
 	public function uploadPrimitive(ctx : h3d.scene.RenderContext) {
-		if ( primitive.buffer == null || primitive.buffer.isDisposed() ) {
+		if ( @:privateAccess primitive.buffers == null ) {
 			primitive.alloc(ctx.engine);
-			if ( batcher.library.instancesOffset != null )
-				primitive.addBuffer(batcher.library.instancesOffset);
 			if ( needLogicNormal )
 				primitive.addLogicNormal();
 		}
+		var maxInstanceCount = 0;
+		for ( p in passes )
+			maxInstanceCount = hxd.Math.imax(maxInstanceCount, p.totalInstanceCount);
+		batcher.library.checkOffsetBuffer(maxInstanceCount);
 	}
 
 	public function disposeGroup(groupID : Int) {
 		groups[groupID]?.dispose();
 	}
 
+	public function syncGPU(ctx : h3d.scene.RenderContext) {
+		for ( i => p in passes ) {
+			if ( p.totalInstanceCount == 0 )
+				continue;
+			p.syncGPU(ctx);
+		}
+	}
+
 	public function emitGPU(ctx : h3d.scene.RenderContext) {
 		for ( i => p in passes ) {
 			if ( p.totalInstanceCount == 0 )
 				continue;
-				p.emitGPU(ctx, this);
+			p.emitGPU(ctx);
 		}
 	}
 
@@ -377,16 +423,14 @@ private class Batch {
 		for ( i => p in passes ) {
 			if ( p.totalInstanceCount == 0 )
 				continue;
-			p.uploadInstances();
 			if ( doEmitGPU )
-				p.emitGPU(ctx, this);
+				p.emitGPU(ctx);
 			var hasFollowShader = p.pass.getShader(FollowShader) != null;
 			if ( !batcher.isRelative && hasFollowShader )
 				p.pass.removeShader(batcher.followShader);
 			if ( batcher.isRelative && !hasFollowShader )
 				p.pass.addShader(batcher.followShader);
 			ctx.emitPass(p.pass, batcher).index = i << 16 | batchID;
-			batcher.library.checkOffsetBuffer(p.totalInstanceCount);
 		}
 	}
 
@@ -419,7 +463,7 @@ private class GroupData {
 		batch = b;
 	}
 
-	public function emitMesh( primitive : h3d.prim.BatchPrimitive, subMeshID : Int, materials : Array<MaterialInstance>, worldPosition : h3d.Matrix, groupID : Int ) {
+	public function emitMesh( primitive : h3d.prim.BatchPrimitive, subMeshID : Int, materials : Array<MaterialInstance>, worldPosition : h3d.Matrix, syncID : Int, groupID : Int ) {
 		instanceCount++;
 
 		var subMesh = primitive.subMeshes[subMeshID];
@@ -432,7 +476,7 @@ private class GroupData {
 					emitData = new EmitData(bp);
 					passToEmitData.set(bp, emitData);
 				}
-				emitData.emitInstance(subMeshID, subPartStart + subPartIdx * subMesh.lodCount, draw.shaderData, worldPosition);
+				emitData.emitInstance(subMeshID, subPartStart + subPartIdx * subMesh.lodCount, draw.shaderData, worldPosition, syncID );
 			}
 		}
 	}
@@ -598,6 +642,7 @@ private class BatchPass {
 	var instancesData : h3d.Buffer;
 	var instancesInfos : h3d.Buffer;
 	var instancesFormat : hxd.BufferFormat;
+	var syncIDs : h3d.Buffer;
 
 	var command : h3d.impl.InstanceBuffer;
 	var commandBuffer : h3d.Buffer;
@@ -752,6 +797,15 @@ private class BatchPass {
 			batchShader.Batch_StorageBuffer = instancesData;
 		}
 
+		var hasSyncIDs = batcher.syncShader?.hasSyncIDs() == true;
+		if ( hasSyncIDs ) {
+			if ( syncIDs == null || syncIDs.vertices < totalInstanceCount ) {
+				if ( syncIDs != null )
+					alloc.disposeBuffer(syncIDs);
+				syncIDs = alloc.allocBuffer( totalInstanceCount, hxd.BufferFormat.INDEX32, Uniform );
+			}
+		}
+
 		if ( instancesInfos == null || instancesInfos.vertices < totalInstanceCount ) {
 			if ( instancesInfos != null )
 				alloc.disposeBuffer(instancesInfos);
@@ -762,6 +816,8 @@ private class BatchPass {
 		for ( ed in toEmit ) {
 			instancesData.uploadFloats( ed.instancesData, 0, ed.instanceCount * batchShader.paramsSize, instanceCursor * batchShader.paramsSize );
 			instancesInfos.uploadBytes( ed.instancesInfos, 0, ed.instanceCount, instanceCursor );
+			if ( hasSyncIDs )
+				syncIDs.uploadBytes( ed.syncIDs, 0, ed.instanceCount, instanceCursor);
 			instanceCursor += ed.instanceCount;
 		}
 
@@ -780,7 +836,19 @@ private class BatchPass {
 		}
 	}
 
-	public function emitGPU(ctx : h3d.scene.RenderContext, batch : Batch) {
+	public function syncGPU(ctx : h3d.scene.RenderContext) {
+		uploadInstances();
+		var s = batcher.syncShader;
+		s.instancesData = instancesData;
+		s.instanceStride = batchShader.paramsSize;
+		s.modelViewOffset = modelViewOffset;
+		s.instanceCount = totalInstanceCount;
+		s.syncIDs = syncIDs;
+		ctx.computeDispatch(cast s, hxd.Math.ceil(totalInstanceCount/64.0), false);
+	}
+
+	public function emitGPU(ctx : h3d.scene.RenderContext) {
+		uploadInstances();
 		builderShader.instancesData = instancesData;
 		builderShader.instanceStride = batchShader.paramsSize;
 		builderShader.modelViewOffset = modelViewOffset;
@@ -837,6 +905,7 @@ private class EmitData {
 	public var instanceCount(default, null) : Int;
 	var instancesInfos : haxe.io.Bytes;
 	var instancesData : hxd.FloatBuffer;
+	var syncIDs : haxe.io.Bytes;
 	var batchPass : BatchPass;
 
 	public function new(bp : BatchPass) {
@@ -844,7 +913,7 @@ private class EmitData {
 		bp.toEmit.push(this);
 	};
 
-	public function emitInstance( subMeshID : Int, subPartID : Int, shaderData : hxd.FloatBuffer,  worldPosition : h3d.Matrix ) {
+	public function emitInstance( subMeshID : Int, subPartID : Int, shaderData : hxd.FloatBuffer, worldPosition : h3d.Matrix, syncID : Int ) {
 		batchPass.instancesDirty = true;
 		batchPass.totalInstanceCount++;
 		var instanceID = instanceCount++;
@@ -862,6 +931,18 @@ private class EmitData {
 			instancesInfos.blit(0, old, 0, old.length);
 		}
 		instancesInfos.setInt32(instanceID * instanceInfosStride, subMeshID << 16 | subPartID );
+
+		if ( @:privateAccess batchPass.batcher.syncShader?.hasSyncIDs() ) {
+			var minSyncDataSize = instanceCount << 2;
+			if ( syncIDs == null )
+				syncIDs = haxe.io.Bytes.alloc(minSyncDataSize);
+			if ( syncIDs.length < minSyncDataSize ) {
+				var old = syncIDs;
+				syncIDs = haxe.io.Bytes.alloc( hxd.Math.imax((old.length >> 1) * 3, minSyncDataSize) );
+				syncIDs.blit(0, old, 0, old.length);
+			}
+			syncIDs.setInt32(instanceID << 2, syncID);
+		}
 
 		var instanceDataStride = batchPass.batchShader.paramsSize * 4;
 		var minInstanceDataSize = instanceCount * instanceDataStride;
