@@ -38,6 +38,17 @@ class Key {
 	public static inline var LEFT_WINDOW_KEY = 91;
 	public static inline var RIGHT_WINDOW_KEY = 92;
 	public static inline var CONTEXT_MENU = 93;
+	
+	public static inline var AZERTY_DOLLAR = 186;
+	public static inline var AZERTY_EQUALS = 187;
+	public static inline var AZERTY_COMMA = 188;
+	public static inline var AZERTY_SEMICOLON = 190;
+	public static inline var AZERTY_COLON = 191;
+	public static inline var AZERTY_MODULO = 192;
+	public static inline var AZERTY_PARENT_CLOSE = 219;
+	public static inline var AZERTY_MULTIPLY = 220;
+	public static inline var AZERTY_POWER = 221;
+	public static inline var AZERTY_SQUARED = 222;
 	public static inline var AZERTY_EXCLAM = 223;
 	// public static inline var PRINT_SCREEN = // Only available on SDL
 
