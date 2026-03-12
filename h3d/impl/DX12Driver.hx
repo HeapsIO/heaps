@@ -142,14 +142,14 @@ class BufferAllocator {
 		pages = [new BufferAllocatorPage(heap, flags, desc)];
 	}
 
-	public function reset() {
+	public function reset( forceDispose = false ) {
 		for ( p in pages )
 			p.reset();
 
 		var i = 1;
 		while ( i < pages.length ) {
 			var page = pages[i];
-			if ( page.unusedFrame > MAX_KEEP_FRAME ) {
+			if ( page.unusedFrame > MAX_KEEP_FRAME || forceDispose ) {
 				page.dispose();
 				pages[i] = pages[pages.length - 1];
 				pages.pop();
@@ -722,7 +722,11 @@ class DX12Driver extends h3d.impl.Driver {
 		frame = frames[currentFrame];
 		frame.allocator.reset();
 		frame.commandList.reset(frame.allocator, null);
-		frame.bufferAllocator.reset();
+
+		// if too much memory was allocated from last frame, let's dispose immediately
+		var forceDispose = (frame.bufferAllocator.getSize()/(1024*1024)).low >= 1024;
+		frame.bufferAllocator.reset(forceDispose);
+
 		while( frame.toRelease.length > 0 )
 			frame.toRelease.pop().release();
 
