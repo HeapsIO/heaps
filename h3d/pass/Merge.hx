@@ -44,8 +44,8 @@ class Merge extends ScreenFx<MergeShader> {
 			if (tex1.flags.has(Cube)) {
 				#if hldx
 				for (layer in 0...6) {
-					mergeShader.tex1.slice = layer + 1;
-					mergeShader.tex2.slice = layer + 1;
+					shader.tex1.slice = layer + 1;
+					shader.tex2.slice = layer + 1;
 					e.pushTarget(output, layer, i);
 					render();
 					e.popTarget();
