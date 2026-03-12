@@ -92,7 +92,7 @@ class Texture {
 
 	function get_lodBias() : Float {
 		final fBits = 1 << (7 - 5);
-		var iPart = (packedLodBias >> 5) - 15;
+		var iPart = (packedLodBias >> 2) - 15;
 		var fPart = packedLodBias & (fBits - 1);
 		var v : Float = iPart + (fPart / fBits);
 		return v;
@@ -102,7 +102,8 @@ class Texture {
 		v = hxd.Math.clamp(v, -15.0, 16.0) + 15.0;
 		var iPart = hxd.Math.floor(v);
 		var fPart = hxd.Math.ufmod(v, 1.0);
-		packedLodBias = iPart << 5 | hxd.Math.floor(fPart * (1 << (7 - 5) - 1));
+		final fBits = 1 << (7 - 5);
+		packedLodBias = iPart << 2 | hxd.Math.floor(fPart * (fBits - 1));
 		return v;
 	}
 
