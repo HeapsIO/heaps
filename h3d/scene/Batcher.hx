@@ -385,15 +385,13 @@ private class Batch {
 	}
 
 	public function uploadPrimitive(ctx : h3d.scene.RenderContext) {
-		if ( @:privateAccess primitive.buffers == null ) {
+		if ( primitive.gpuSubMeshInfos == null || primitive.gpuSubMeshInfos.isDisposed() ) {
 			primitive.alloc(ctx.engine);
-			if ( needLogicNormal )
-				primitive.addLogicNormal();
+			if ( batcher.library.instancesOffset != null )
+				primitive.addBuffer(batcher.library.instancesOffset);
 		}
-		var maxInstanceCount = 0;
-		for ( p in passes )
-			maxInstanceCount = hxd.Math.imax(maxInstanceCount, p.totalInstanceCount);
-		batcher.library.checkOffsetBuffer(maxInstanceCount);
+		if ( needLogicNormal )
+			primitive.addLogicNormal();
 	}
 
 	public function disposeGroup(groupID : Int) {
@@ -431,6 +429,7 @@ private class Batch {
 			if ( batcher.isRelative && !hasFollowShader )
 				p.pass.addShader(batcher.followShader);
 			ctx.emitPass(p.pass, batcher).index = i << 16 | batchID;
+			batcher.library.checkOffsetBuffer(p.totalInstanceCount);
 		}
 	}
 
