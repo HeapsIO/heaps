@@ -522,6 +522,7 @@ class Library {
 		l.speed = a.speed;
 		l.loop = a.loop;
 		if (a.events != null) @:privateAccess l.sourceEvents = [for (e in a.events) { frame: e.frame, name: e.data, originalEvent: { frame: e.frame, name: e.data } }];
+		if (l.sourceEvents != null) for (s in l.sourceEvents) l.addEvent(s.frame, s.name, s);
 		l.resourcePath = resource.entry.path;
 		cachedAnimations.set(a.name, l);
 		if( name == null ) cachedAnimations.set("", l);
