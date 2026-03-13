@@ -79,6 +79,9 @@ class BatchGroup {
 @:allow(h3d.scene.Batch)
 class Batcher extends h3d.scene.Object {
 	public var shadowMaxDistance = -1.0;
+	// Shadows should be culled by the camera frustum of its lights.
+	// As a performance workaround, we can use the main camera frustum instead until the feature is done.
+	public var shadowCameraFrustumCulling = false;
 	public var isRelative : Bool = false;
 	public var batchFlags = new haxe.EnumFlags<BatcherFlags>();
 	public var syncShader : SyncShaderInterface;
@@ -861,10 +864,10 @@ private class BatchPass {
 		builderShader.IS_RELATIVE = batcher.isRelative;
 		builderShader.worldMatrix = batcher.getAbsPos();
 		builderShader.ENABLE_DISTANCE_CLIPPING = isShadowPass && batcher.shadowMaxDistance > 0.0;
-		builderShader.ENABLE_FRUSTUM_CULLING = !isShadowPass;
+		builderShader.ENABLE_FRUSTUM_CULLING = !isShadowPass || batcher.shadowCameraFrustumCulling;
 		if ( isShadowPass )
 			builderShader.maxDistance = batcher.shadowMaxDistance;
-		else
+		if ( builderShader.ENABLE_FRUSTUM_CULLING )
 			builderShader.frustum = ctx.getCameraFrustumBuffer();
 		countBuffer.reset();
 		ctx.computeDispatch(builderShader, hxd.Math.ceil(totalInstanceCount/64.0), false);
