@@ -114,6 +114,7 @@ class Text extends Drawable {
 
 	var glyphs : TileGroup;
 	var needsRebuild : Bool;
+	var trimTrailingSpaces : Bool = true;
 	var currentText : String;
 	var textChanged : Bool;
 
@@ -324,79 +325,63 @@ class Text extends Drawable {
 				return text;
 			else
 				maxWidth = Math.POSITIVE_INFINITY;
+		} else {
+			maxWidth -= afterData;
 		}
 		if ( font == null ) font = this.font;
-		var lines = [], restPos = 0;
+		var lines = [];
 		var x = leftMargin;
-		var wLastSep = 0.;
-		for( i in 0...text.length ) {
+		var lastPos = 0;
+		var lastBreak = -1;
+		var lastBreakX = 0.;
+
+		inline function flushLine(pos) {
+			lines.push(text.substr(lastPos,pos-lastPos));
+			lastPos = pos;
+			if( sizes != null ) sizes.push(x);
+			x = 0;
+			prevChar = -1;
+			lastBreak = -1;
+			leftMargin = 0;
+		}
+
+		var i = -1;
+		var maxLen = text.length;
+		while( ++i < maxLen ) {
 			var cc = StringTools.fastCodeAt(text, i);
+			if( cc == '\n'.code ) {
+				flushLine(i);
+				lastPos++;
+				continue;
+			}
+			var startX = x;
+			if( lastPos < i ) x += letterSpacing;
 			var e = font.getChar(cc);
-			var newline = cc == '\n'.code;
 			var esize = e.width + e.getKerningOffset(prevChar);
-			var isComplement = (i < text.length - 1 && font.charset.isComplementChar(StringTools.fastCodeAt(text, i + 1)));
-			if( font.charset.isBreakChar(cc) && !isComplement ) {
-				if( lines.length == 0 && leftMargin > 0 && x > maxWidth ) {
-					lines.push("");
-					if ( sizes != null ) sizes.push(leftMargin);
-					x -= leftMargin;
-				}
-				var size = x + esize + letterSpacing; /* TODO : no letter spacing */
-				var k = i + 1, max = text.length;
-				var prevChar = cc;
-				var breakFound = false;
-				while( size <= maxWidth && k < max ) {
-					var cc = StringTools.fastCodeAt(text, k++);
-					if( lineBreak && (font.charset.isSpace(cc) || cc == '\n'.code ) ) {
-						breakFound = true;
-						break;
+			x += esize;
+			prevChar = cc;
+			if( lineBreak ) {
+				if( x > maxWidth && lastBreak >= 0 && (!trimTrailingSpaces || !font.charset.isSpace(cc) || startX > maxWidth) ) {
+					i = lastBreak;
+					x = lastBreakX;
+					flushLine(i + 1);
+				} else if( font.charset.isBreakChar(cc) && (i+1 == maxLen || !font.charset.isComplementChar(StringTools.fastCodeAt(text, i + 1))) ) {
+					if( leftMargin > 0 && x > maxWidth ) {
+						lines.push("");
+						if ( sizes != null ) sizes.push(leftMargin);
+						x -= leftMargin;
 					}
-					var e = font.getChar(cc);
-					size += e.width + letterSpacing + e.getKerningOffset(prevChar);
-					prevChar = cc;
-					if ( font.charset.isBreakChar(cc) ) {
-						if ( k >= text.length )
-							break;
-						var nc = StringTools.fastCodeAt(text, k);
-						if ( !font.charset.isComplementChar(nc) ) break;
+					if( x > maxWidth && (!trimTrailingSpaces || !font.charset.isSpace(cc)) ) {
+						lastBreak = i - 1;
+						lastBreakX = startX;
+					} else {
+						lastBreak = i;
+						lastBreakX = x;
 					}
 				}
-				if( lineBreak && (size > maxWidth || (!breakFound && size + afterData > maxWidth)) ) {
-					newline = true;
-					if( font.charset.isSpace(cc) ){
-						lines.push(text.substr(restPos, i - restPos));
-						e = null;
-					}else{
-						lines.push(text.substr(restPos, i + 1 - restPos));
-					}
-					restPos = i + 1;
-				}
-				else wLastSep = size;
 			}
-			else if( (x + esize + letterSpacing) - wLastSep > maxWidth && lineBreak ) {
-				newline = true;
-				lines.push(text.substr(restPos, i - restPos));
-				restPos = font.charset.isSpace(cc) ? i + 1 : i;
-			}
-			if( e != null && cc != '\n'.code )
-				x += esize + letterSpacing;
-			if( newline ) {
-				if ( sizes != null ) sizes.push(x);
-				x = 0;
-				wLastSep = 0.;
-				prevChar = -1;
-			} else
-				prevChar = cc;
 		}
-		if( restPos < text.length ) {
-			if( lines.length == 0 && leftMargin > 0 && x + afterData - letterSpacing > maxWidth ) {
-				lines.push("");
-				if ( sizes != null ) sizes.push(leftMargin);
-				x -= leftMargin;
-			}
-			lines.push(text.substr(restPos, text.length - restPos));
-			if ( sizes != null ) sizes.push(x);
-		}
+		if( x > leftMargin ) flushLine(text.length);
 		return lines.join("\n");
 	}
 
