@@ -237,8 +237,18 @@ class BaseSync extends hxsl.Shader {
 		@param var instanceCount : Int;
 		@param var syncIDs : StorageBuffer<Int>;
 
+		function getModelView( id : Int ) : Mat4 {
+			var modelViewPos = id * instanceStride + modelViewOffset;
+			return mat4(
+				instancesData[modelViewPos + 0],
+				instancesData[modelViewPos + 1],
+				instancesData[modelViewPos + 2],
+				instancesData[modelViewPos + 3],
+			);
+		}
+
 		function fillModelView( id : Int, modelView : Mat4 ) {
-			var modelViewPos = id * instanceStride+modelViewOffset;
+			var modelViewPos = id * instanceStride + modelViewOffset;
 			instancesData[modelViewPos + 0] = modelView[0];
 			instancesData[modelViewPos + 1] = modelView[1];
 			instancesData[modelViewPos + 2] = modelView[2];
