@@ -10,15 +10,16 @@ class CascadeShadow extends DirShadow {
 			var view : Mat4;
 		}
 
-		@const(5) var CASCADE_COUNT : Int;
+		@const(5) var MAX_CASCADE_COUNT : Int;
+		@param var CASCADE_COUNT : Int;
 		@const var DEBUG : Bool;
 		@const var BLEND : Bool;
-		@param var cascadeShadowMaps : Array<Sampler2D, CASCADE_COUNT>;
+		@param var cascadeShadowMaps : Array<Sampler2D, MAX_CASCADE_COUNT>;
 		@param var cascadeViewProj : Mat3x4;
 		@param var cascadeTransitionFraction : Float;
-		@param var cascadeScales : Array<Vec4, CASCADE_COUNT>;
-		@param var cascadeOffsets : Array<Vec4, CASCADE_COUNT>;
-		@param var cascadeDebugs : Array<Vec4, CASCADE_COUNT>;
+		@param var cascadeScales : Array<Vec4, MAX_CASCADE_COUNT>;
+		@param var cascadeOffsets : Array<Vec4, MAX_CASCADE_COUNT>;
+		@param var cascadeDebugs : Array<Vec4, MAX_CASCADE_COUNT>;
 
 		var texelSize : Vec2;
 
@@ -72,33 +73,35 @@ class CascadeShadow extends DirShadow {
 				vPos /= vPos.w;
 
 				var found = false;
-				@unroll for ( i in 0...CASCADE_COUNT ) {
-					if ( !found && vPos.z <= cascadeScales[i].w ) {
-						found = true;
+				@unroll for ( i in 0...MAX_CASCADE_COUNT ) {
+					if( i < CASCADE_COUNT) {
+						if ( !found && vPos.z <= cascadeScales[i].w ) {
+							found = true;
 
-						var shadowPos0 = transformedPosition * cascadeViewProj;
-						var shadowPos = ( i == 0 ) ? shadowPos0 : shadowPos0 * cascadeScales[i].xyz + cascadeOffsets[i].xyz;
-						shadowValue = sampleShadow(shadowPos, i);
-						color = cascadeDebugs[i].rgb;
+							var shadowPos0 = transformedPosition * cascadeViewProj;
+							var shadowPos = ( i == 0 ) ? shadowPos0 : shadowPos0 * cascadeScales[i].xyz + cascadeOffsets[i].xyz;
+							shadowValue = sampleShadow(shadowPos, i);
+							color = cascadeDebugs[i].rgb;
 
-						if ( BLEND ) {
-							var blendEnd = cascadeScales[i].w;
-							var blendSize = blendEnd * cascadeTransitionFraction;
-							var blendStart = blendEnd - blendSize;
-							var blendFactor = ( vPos.z - blendStart ) / blendSize;
+							if ( BLEND ) {
+								var blendEnd = cascadeScales[i].w;
+								var blendSize = blendEnd * cascadeTransitionFraction;
+								var blendStart = blendEnd - blendSize;
+								var blendFactor = ( vPos.z - blendStart ) / blendSize;
 
-							if (  blendFactor > 0.0 ) {
-								if ( i != CASCADE_COUNT - 1 ) {
-									var nextShadowPos = shadowPos0 * cascadeScales[i + 1].xyz + cascadeOffsets[i + 1].xyz;
-									var nextShadow = sampleShadow(nextShadowPos, i + 1);
-									shadowValue = nextShadow * blendFactor + shadowValue * (1 - blendFactor);
+								if ( blendFactor > 0.0 ) {
+									if(i < MAX_CASCADE_COUNT - 1 && i < CASCADE_COUNT - 1 ) {
+										var nextShadowPos = shadowPos0 * cascadeScales[i + 1].xyz + cascadeOffsets[i + 1].xyz;
+										var nextShadow = sampleShadow(nextShadowPos, i + 1);
+										shadowValue = nextShadow * blendFactor + shadowValue * (1 - blendFactor);
 
-									var nextColor = cascadeDebugs[i + 1].rgb;
-									color = nextColor * blendFactor + color * (1 - blendFactor);
+										var nextColor = cascadeDebugs[i + 1].rgb;
+										color = nextColor * blendFactor + color * (1 - blendFactor);
 
-								} else {
-									shadowValue = blendFactor + shadowValue * (1 - blendFactor);
-									color = color * (1 - blendFactor);
+									} else {
+										shadowValue = blendFactor + shadowValue * (1 - blendFactor);
+										color = color * (1 - blendFactor);
+									}
 								}
 							}
 						}

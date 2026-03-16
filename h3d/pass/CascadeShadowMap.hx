@@ -33,7 +33,7 @@ class CascadeShadowMap extends DirShadowMap {
 	public var cascade(default, set) = 1;
 	public var highPrecision : Bool = false;
 	public function set_cascade(v) {
-		cascade = v;
+		cascade = v;  // ?
 		lightCameras = [];
 		for ( i in 0...cascade )
 			lightCameras.push({ viewProj : new h3d.Matrix(), scale : new h3d.Vector4(), offset : new h3d.Vector4(), orthoBounds : new h3d.col.Bounds() });
@@ -231,6 +231,8 @@ class CascadeShadowMap extends DirShadowMap {
 			if ( debugShader )
 				cshader.cascadeDebugs[i] = h3d.Vector4.fromColor(debugColors[i]);
 		}
+		if(cascade > cshader.MAX_CASCADE_COUNT)
+			cshader.MAX_CASCADE_COUNT = cascade;
 		cshader.CASCADE_COUNT = cascade;
 		cshader.BLEND = transitionFraction > 0.0;
 		cshader.shadowBias = bias;
