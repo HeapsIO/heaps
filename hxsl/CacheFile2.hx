@@ -476,6 +476,37 @@ class CacheFile2 extends Cache {
 		}
 	}
 
+	public function dump(path: String) {
+		var lines = [];
+		var printer = new hxsl.Printer();
+		function dumpSub( label : String, list : Array<RuntimeShader> ) {
+			lines.push("=== " + label + " (" + list.length + ") ===");
+			for( rt in list ) {
+				lines.push("--------------------------------");
+				lines.push(rt.spec.signature);
+				for( inst in rt.spec.instances )
+					lines.push("  " + @:privateAccess inst.shader.data.name + "(bits=" + inst.bits + ")");
+				if( rt.vertex != null && rt.vertex.data != null ) {
+					lines.push("// --- vertex ---");
+					lines.push(printer.shaderString(rt.vertex.data));
+					lines.push("\n");
+				}
+				if( rt.fragment != null && rt.fragment.data != null ) {
+					lines.push("// --- fragment ---");
+					lines.push(printer.shaderString(rt.fragment.data));
+					lines.push("\n");
+				}
+				lines.push("\n\n");
+			}
+		}
+		dumpSub("Default", runtimesDefault);
+		dumpSub("Batch", runtimesBatch);
+		dumpSub("Compute", runtimesCompute);
+
+		var content = lines.join("\n");
+		sys.io.File.saveContent(path, content);
+	}
+
 	function save() {
 		if( !allowSave ) return;
 
