@@ -475,9 +475,10 @@ class HlslOut {
 				throw "assert";
 			}
 			var offset = 0;
+			var dynOffset = null;
 			var expr = switch( args[0].e ) {
 			case TArray(e,{ e : TConst(CInt(i)) }): offset = i; e;
-			case TArray(e,{ e : TBinop(OpAdd,{e:TVar(_)},{e:TConst(CInt(_))}) }): throw "Offset in texture access: need loop unroll?";
+			case TArray(e, idx): dynOffset = idx; e;
 			default: args[0];
 			}
 			switch( expr.e ) {
@@ -488,12 +489,22 @@ class HlslOut {
 				else {
 					var samplers = samplers.get(v.id);
 					if( samplers == null ) throw "assert";
-					add('__Samplers[${samplers[offset]}]');
+					if( dynOffset != null ) {
+						add('__Samplers[${samplers[0]}+');
+						addValue(dynOffset, tabs);
+						add(']');
+					} else
+						add('__Samplers[${samplers[offset]}]');
 				}
 			case TVar(v):
 				var samplers = samplers.get(v.id);
 				if( samplers == null ) throw "assert";
-				add('__Samplers[${samplers[offset]}]');
+				if( dynOffset != null ) {
+					add('__Samplers[${samplers[0]}+');
+					addValue(dynOffset, tabs);
+					add(']');
+				} else
+					add('__Samplers[${samplers[offset]}]');
 			default: throw "assert";
 			}
 			for( i in 1...args.length ) {
