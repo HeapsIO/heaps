@@ -33,7 +33,7 @@ class CascadeShadowMap extends DirShadowMap {
 	public var cascade(default, set) = 1;
 	public var highPrecision : Bool = false;
 	public function set_cascade(v) {
-		cascade = v;  // ?
+		cascade = v;
 		lightCameras = [];
 		for ( i in 0...cascade )
 			lightCameras.push({ viewProj : new h3d.Matrix(), scale : new h3d.Vector4(), offset : new h3d.Vector4(), orthoBounds : new h3d.col.Bounds() });
