@@ -73,7 +73,12 @@ class CascadeShadow extends DirShadow {
 				vPos /= vPos.w;
 
 				var found = false;
+				#if hldx
 				for ( i in 0...CASCADE_COUNT ) {
+				#else
+				@unroll for ( i in 0...MAX_CASCADE_COUNT )
+				if( i < CASCADE_COUNT) {
+				#end
 					if ( !found && vPos.z <= cascadeScales[i].w ) {
 						found = true;
 
@@ -89,7 +94,7 @@ class CascadeShadow extends DirShadow {
 							var blendFactor = ( vPos.z - blendStart ) / blendSize;
 
 							if ( blendFactor > 0.0 ) {
-								if(i < CASCADE_COUNT - 1 ) {
+								if(i < MAX_CASCADE_COUNT - 1 && i < CASCADE_COUNT - 1 ) {
 									var nextShadowPos = shadowPos0 * cascadeScales[i + 1].xyz + cascadeOffsets[i + 1].xyz;
 									var nextShadow = sampleShadow(nextShadowPos, i + 1);
 									shadowValue = nextShadow * blendFactor + shadowValue * (1 - blendFactor);
