@@ -196,6 +196,10 @@ class DxFrame {
 	public var depthBuffer : GpuResource;
 	public var allocator : CommandAllocator;
 	public var commandList : CommandList;
+	public var copyAllocator : CommandAllocator;
+	public var copyCommandList : CommandList;
+	public var copyBuffer : GpuResource;
+	public var copyBufferCursor : Int = 0;
 	public var fenceValue : Int64;
 	public var toRelease : Array<Resource> = [];
 	public var handlesToRelease : Array<h3d.mat.TextureHandle> = [];
@@ -217,6 +221,7 @@ class DxFrame {
 		size += srvHeapCache.getSize();
 		size += samplerHeapCache.getSize();
 		size += bufferAllocator.getSize();
+		size += DX12Driver.COPY_BUFFER_SIZE;
 		return size;
 	}
 }
@@ -524,6 +529,7 @@ class DX12Driver extends h3d.impl.Driver {
 
 	var tmp : TempObjects;
 	var currentRenderTargets : Array<h3d.mat.Texture> = [];
+	var currentDepth : h3d.mat.Texture;
 	var defaultDepth : h3d.mat.Texture;
 	var depthEnabled = true;
 	var curStencilRef : Int = -1;
@@ -542,7 +548,13 @@ class DX12Driver extends h3d.impl.Driver {
 	var errorTex : h3d.mat.Texture;
 	var textureHandles : Map<h3d.mat.Texture, Map<Int, h3d.mat.TextureHandle>>= [];
 
+	var copyQueue : CommandQueue;
+	var copyFence : Fence;
+	var copyFenceValue : Int64;
+
+	public static var COPY_BUFFER_SIZE = 256 * 1024 * 1024; // 256 Mo per frame
 	public static var DEFAULT_DEPTH_FORMAT : h3d.mat.Data.TextureFormat = Depth24Stencil8;
+	public static var DEFAULT_DEPTH_VALUE = 1.0;
 	public static var INITIAL_RT_COUNT = 1024;
 	public static var INITIAL_BINDLESS_SRV_COUNT = 1024;
 	public static var INITIAL_SRV_COUNT = 1024;
@@ -618,22 +630,43 @@ class DX12Driver extends h3d.impl.Driver {
 		if( DEBUG ) flags.set(DriverInitFlag.DEBUG);
 		driver = Driver.create(window, flags, DEVICE_NAME);
 		frames = [];
+
+		var flags = new haxe.EnumFlags();
+		var heap = new HeapProperties();
+		heap.type = UPLOAD;
+		var desc = new ResourceDesc();
+		desc.dimension = BUFFER;
+		desc.width = COPY_BUFFER_SIZE;
+		desc.height = 1;
+		desc.depthOrArraySize = 1;
+		desc.mipLevels = 1;
+		desc.sampleDesc.count = 1;
+		desc.layout = ROW_MAJOR;
+
 		for(i in 0...BUFFER_COUNT) {
 			var f = new DxFrame();
 			f.backBuffer = new ResourceData();
 			f.allocator = new CommandAllocator(DIRECT);
 			f.commandList = new CommandList(DIRECT, f.allocator, null);
 			f.commandList.close();
+			f.copyAllocator = new CommandAllocator(COPY);
+			f.copyCommandList = new CommandList(COPY, f.copyAllocator, null);
+			f.copyCommandList.close();
 			f.srvHeapCache = new ScratchHeapArray(CBV_SRV_UAV, INITIAL_SRV_COUNT + INITIAL_BINDLESS_SRV_COUNT);
 			f.samplerHeapCache = new ScratchHeapArray(SAMPLER, INITIAL_SAMPLER_COUNT + INITIAL_BINDLESS_SAMPLER_COUNT);
 			if ( f.bufferAllocator != null )
 				f.bufferAllocator.dispose();
 			f.bufferAllocator = new BufferAllocator(INITIAL_BUFFER_ALLOCATOR_SIZE);
+			f.copyBuffer = Driver.createCommittedResource(heap, flags, desc, GENERIC_READ, null);
 			frames.push(f);
 		}
 		fence = new Fence(0, NONE);
 		fenceEvent = new WaitEvent(false);
 		tmp = new TempObjects();
+
+		copyQueue = new CommandQueue(COPY);
+		copyFence = new Fence(0, NONE);
+		copyFenceValue = 0;
 
 		renderTargetViews = new ScratchHeap(RTV, INITIAL_RT_COUNT);
 		depthStenciViews = new ScratchHeap(DSV, INITIAL_RT_COUNT);
@@ -695,7 +728,7 @@ class DX12Driver extends h3d.impl.Driver {
 		if ( h3d.Engine.getCurrent() != null ) {
 			defaultDepth = new h3d.mat.Texture(0,0, DEFAULT_DEPTH_FORMAT);
 			defaultDepth.t = new TextureData();
-
+			currentDepth = defaultDepth;
 			defaultDepth.t.state = defaultDepth.t.targetState = DEPTH_WRITE;
 			defaultDepth.name = "defaultDepth";
 		}
@@ -724,9 +757,12 @@ class DX12Driver extends h3d.impl.Driver {
 		frame.commandList.reset(frame.allocator, null);
 
 		// if too much memory was allocated from last frame, let's dispose immediately
-		var forceDispose = (frame.bufferAllocator.getSize()/(1024*1024)).low >= 1024;
+		var forceDispose = (frame.bufferAllocator.getSize()/(1024*1024)).low >= 512;
 		frame.bufferAllocator.reset(forceDispose);
 
+		frame.copyAllocator.reset();
+		frame.copyCommandList.reset(frame.copyAllocator, null);
+		frame.copyBufferCursor = 0;
 		while( frame.toRelease.length > 0 )
 			frame.toRelease.pop().release();
 
@@ -797,11 +833,16 @@ class DX12Driver extends h3d.impl.Driver {
 			frame.commandList.clearDepthStencilView(tmp.depthStencils[0], depth != null ? (stencil != null ? BOTH : DEPTH) : STENCIL, (depth:Float), stencil);
 	}
 
+	function waitCopy() {
+		copyQueue.signal(copyFence, ++copyFenceValue);
+		copyFence.setEvent(copyFenceValue, fenceEvent);
+		fenceEvent.wait(-1);
+	}
+
 	function waitGpu() {
-		Driver.signal(fence, fenceValue);
+		Driver.signal(fence, ++fenceValue);
 		fence.setEvent(fenceValue, fenceEvent);
 		fenceEvent.wait(-1);
-		fenceValue++;
 	}
 
 	override function resize(width:Int, height:Int)  {
@@ -817,6 +858,7 @@ class DX12Driver extends h3d.impl.Driver {
 		if( frame != null )
 			flushFrame(true);
 
+		waitCopy();
 		waitGpu();
 
 		for( f in frames ) {
@@ -855,8 +897,8 @@ class DX12Driver extends h3d.impl.Driver {
 		desc.flags.set(ALLOW_DEPTH_STENCIL);
 		tmp.heap.type = DEFAULT;
 		tmp.clearValue.format = desc.format;
-		tmp.clearValue.depth = 1;
-		tmp.clearValue.stencil= 0;
+		tmp.clearValue.depth = DEFAULT_DEPTH_VALUE;
+		tmp.clearValue.stencil = 0;
 		defaultDepth.t.res = Driver.createCommittedResource(tmp.heap, flags, desc, DEPTH_WRITE, tmp.clearValue);
 
 		beginFrame();
@@ -884,7 +926,7 @@ class DX12Driver extends h3d.impl.Driver {
 		hasDeviceError = true;
 	}
 
-	inline function cancelTransition( res : ResourceData ) {
+	function cancelTransition( res : ResourceData ) {
 		var found = false;
 		for (i in 0...tmp.barrierCount) {
 			if (tmp.resourcesToTransition[i] == res) {
@@ -1141,6 +1183,7 @@ class DX12Driver extends h3d.impl.Driver {
 
 		var depthBuffer = t0 == null ? defaultDepth : t0.depthBuffer;
 		pipelineBuilder.setRenderTargets(textures, depthEnabled ? depthBuffer : null);
+		currentDepth = depthBuffer;
 	}
 
 	override function setDepth(depthBuffer : h3d.mat.Texture) {
@@ -1152,6 +1195,7 @@ class DX12Driver extends h3d.impl.Driver {
 
 		initViewport(depthBuffer.width, depthBuffer.height);
 		pipelineBuilder.setDepth(depthBuffer);
+		currentDepth = depthBuffer;
 	}
 
 	override function setDepthClamp( enabled : Bool ) {
@@ -1246,6 +1290,7 @@ class DX12Driver extends h3d.impl.Driver {
 		frame.commandList.copyTextureRegion(dst, 0, 0, 0, src, box);
 
 		flushFrame();
+		waitCopy();
 		waitGpu();
 
 		var output = tmpBuf.map(0, null);
@@ -1937,8 +1982,8 @@ class DX12Driver extends h3d.impl.Driver {
 		if( t.flags.has(Writable) )
 			desc.flags.set(ALLOW_UNORDERED_ACCESS);
 
-		td.state = td.targetState = isRT ? RENDER_TARGET : COPY_DEST;
-		td.res = Driver.createCommittedResource(tmp.heap, flags, desc, isRT ? RENDER_TARGET : COMMON, clear);
+		td.state = td.targetState = isRT ? RENDER_TARGET : COMMON;
+		td.res = Driver.createCommittedResource(tmp.heap, flags, desc, td.state, clear);
 		if( td.res == null )
 			return null;
 
@@ -2041,10 +2086,32 @@ class DX12Driver extends h3d.impl.Driver {
 		#else
 		var textureAlignment = 512;
 		#end
-		var allocation = frame.bufferAllocator.alloc(tmpSize, textureAlignment, tmp.bufferAllocation);
 
-		transition(t.t, COPY_DEST);
-		flushTransitions();
+		var useCopy = t.t.state == COMMON && t.t.targetState == COMMON && tmpSize <= COPY_BUFFER_SIZE;
+		var allocation, cmd;
+		if( useCopy ) {
+			var offs = frame.copyBufferCursor % textureAlignment;
+			if( offs != 0 ) frame.copyBufferCursor += textureAlignment - offs;
+			if( frame.copyBufferCursor + tmpSize > COPY_BUFFER_SIZE ) {
+				frame.copyCommandList.close();
+				copyQueue.executeCommandList(frame.copyCommandList);
+				waitCopy();
+				frame.copyAllocator.reset();
+				frame.copyCommandList.reset(frame.copyAllocator, null);
+				frame.copyBufferCursor = 0;
+			}
+			allocation = tmp.bufferAllocation;
+			allocation.resource = frame.copyBuffer;
+			allocation.offset = frame.copyBufferCursor;
+			allocation.cpuAddress = frame.copyBuffer.map(0, null).offset(frame.copyBufferCursor);
+			frame.copyBufferCursor += tmpSize;
+			cmd = frame.copyCommandList;
+		} else {
+			transition(t.t, COPY_DEST);
+			flushTransitions();
+			allocation = frame.bufferAllocator.alloc(tmpSize, textureAlignment, tmp.bufferAllocation);
+			cmd = frame.commandList;
+		}
 
 		var dst = tmp.dstTextureLocation;
 		dst.res = t.t.res;
@@ -2068,7 +2135,7 @@ class DX12Driver extends h3d.impl.Driver {
 			allocation.cpuAddress.blit(rowPitch * i, data, rowSizeInBytes * i, rowSizeInBytes);
 
 		src.placedFootprint.footprint.depth = 1;
-		frame.commandList.copyTextureRegion(dst, 0, 0, is3d ? side : 0, src, null);
+		cmd.copyTextureRegion(dst, 0, 0, is3d ? side : 0, src, null);
 
 		t.flags.set(WasCleared);
 	}
@@ -2941,11 +3008,15 @@ class DX12Driver extends h3d.impl.Driver {
 	function flushFrame( onResize : Bool = false ) {
 		flushQueries();
 		frame.commandList.close();
+		frame.copyCommandList.close();
+		copyQueue.executeCommandList(frame.copyCommandList);
+		copyQueue.signal(copyFence, ++copyFenceValue);
+		Driver.wait(copyFence, copyFenceValue);
 		frame.commandList.execute();
 		currentPipelineState = null;
 		currentShader = null;
 		Driver.flushMessages();
-		frame.fenceValue = fenceValue++;
+		frame.fenceValue = ++fenceValue;
 		Driver.signal(fence, frame.fenceValue);
 	}
 
