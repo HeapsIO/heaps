@@ -131,6 +131,12 @@ class Buffer {
 		engine.driver.readBufferBytes(this, startVertice, vertices, bytes, bytesPosition);
 	}
 
+	public function readBytesAsync( bytes : haxe.io.Bytes, bytesPosition : Int, vertices : Int, startVertice : Int = 0, callback : Void -> Void ) {
+		if( startVertice < 0 || vertices < 0 || startVertice + vertices > this.vertices )
+			throw "Invalid vertices count";
+		engine.driver.readBufferBytesAsync(this, startVertice, vertices, bytes, bytesPosition, callback);
+	}
+
 	public static function ofFloats( v : hxd.FloatBuffer, format : hxd.BufferFormat, ?flags ) {
 		var nvert = Math.ceil(v.length / format.stride);
 		var b = new Buffer(nvert, format, flags);

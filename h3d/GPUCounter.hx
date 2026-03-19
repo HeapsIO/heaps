@@ -26,6 +26,17 @@ class GPUCounter {
 		return res;
 	}
 
+	public function getAllAsync(callback : Array<Int> -> Void) {
+		buffer.readBytesAsync(accessor, 0, size, 0, () -> {
+			var res = [];
+			res.resize(size);
+			for ( i in 0...size )
+				res[i] = accessor.getInt32(i << 2);
+
+			callback(res);
+		});
+	}
+
 	public function get( index : Int = 0 ) : Int {
 		buffer.readBytes(accessor, 0, 1, index);
 		return accessor.getInt32(0);

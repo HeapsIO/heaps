@@ -11,6 +11,7 @@ import dx.Dx12;
 import haxe.Int64;
 import h3d.mat.Pass;
 import h3d.mat.Stencil;
+import haxe.MainLoop;
 
 private typedef Driver = Dx12;
 
@@ -493,6 +494,18 @@ class QueryData {
 	}
 }
 
+class AsyncReadbackRequest {
+	public var b : Buffer;
+	public var startVertex : Int;
+	public var vertexCount : Int;
+	public var buf : haxe.io.Bytes;
+	public var bufPos : Int;
+	public var callback : Void -> Void;
+	public var tmpBuf : GpuResource;
+	public function new() {
+	}
+}
+
 class DX12Driver extends h3d.impl.Driver {
 
 	var pipelineBuilder = new PipelineCache.PipelineBuilder();
@@ -552,6 +565,13 @@ class DX12Driver extends h3d.impl.Driver {
 	var copyFence : Fence;
 	var copyFenceValue : Int64;
 
+	var asyncCopyCommandList : CommandList;
+	var asyncCopyAllocator : CommandAllocator;
+	var asyncCopyEvent : MainEvent;
+	var waitingAsyncCopy : Bool;
+	var asyncReadbackQueue : Array<AsyncReadbackRequest> = [];
+	var currentRequest : AsyncReadbackRequest;
+
 	public static var COPY_BUFFER_SIZE = 256 * 1024 * 1024; // 256 Mo per frame
 	public static var DEFAULT_DEPTH_FORMAT : h3d.mat.Data.TextureFormat = Depth24Stencil8;
 	public static var DEFAULT_DEPTH_VALUE = 1.0;
@@ -563,7 +583,7 @@ class DX12Driver extends h3d.impl.Driver {
 	public static var INITIAL_BUFFER_ALLOCATOR_SIZE = 2 * 1024 * 1024;
 	public static var BUFFER_COUNT = #if console 3 #else 2 #end;
 	public static var DEVICE_NAME = null;
-	public static var DEBUG = false; // requires dxil.dll when set to true
+	public static var DEBUG = true; // requires dxil.dll when set to true
 
 	@:allow(h3d.impl) static function allocCheck<T>( f : Void -> T ) {
 		var ret = f();
@@ -667,6 +687,12 @@ class DX12Driver extends h3d.impl.Driver {
 		copyQueue = new CommandQueue(COPY);
 		copyFence = new Fence(0, NONE);
 		copyFenceValue = 0;
+
+		asyncCopyAllocator = new CommandAllocator(COPY);
+		asyncCopyCommandList = new CommandList(COPY, asyncCopyAllocator, null);
+		asyncCopyCommandList.close();
+		asyncCopyAllocator.reset();
+		asyncCopyCommandList.reset(asyncCopyAllocator, null);
 
 		renderTargetViews = new ScratchHeap(RTV, INITIAL_RT_COUNT);
 		depthStenciViews = new ScratchHeap(DSV, INITIAL_RT_COUNT);
@@ -1907,6 +1933,62 @@ class DX12Driver extends h3d.impl.Driver {
 		tmpBuf.release();
 
 		beginFrame();
+	}
+
+	override function readBufferBytesAsync( b : Buffer, startVertex : Int, vertexCount : Int, buf : haxe.io.Bytes, bufPos : Int, callback : Void -> Void ) {
+		var request = new AsyncReadbackRequest();
+		request.b = b;
+		request.startVertex = startVertex;
+		request.vertexCount = vertexCount;
+		request.buf = buf;
+		request.bufPos = bufPos;
+		request.callback = callback;
+		asyncReadbackQueue.insert(0, request);
+
+		if ( asyncCopyEvent == null ) {
+			asyncCopyEvent = haxe.MainLoop.add(() -> {
+				if ( !waitingAsyncCopy ) {
+					if ( asyncReadbackQueue.length > 0 ) {
+						currentRequest = asyncReadbackQueue.pop();
+						var stride = currentRequest.b.format.strideBytes;
+						var totalSize = currentRequest.vertexCount*stride;
+						currentRequest.tmpBuf = allocGPU(totalSize, READBACK, COPY_DEST);
+
+						transition(currentRequest.b.vbuf, COPY_SOURCE);
+						flushTransitions();
+						flushFrame();
+						waitGpu();
+						beginFrame();
+
+						asyncCopyCommandList.copyBufferRegion(currentRequest.tmpBuf, 0, currentRequest.b.vbuf.res, currentRequest.startVertex*stride, totalSize);
+						asyncCopyCommandList.close();
+						copyQueue.executeCommandList(asyncCopyCommandList);
+						copyQueue.signal(copyFence, ++copyFenceValue);
+
+						waitingAsyncCopy = true;
+					} else {
+						asyncCopyEvent.stop();
+						asyncCopyEvent = null;
+					}
+				} else {
+					if ( copyFence.getValue() >= copyFenceValue ) {
+						asyncCopyAllocator.reset();
+						asyncCopyCommandList.reset(asyncCopyAllocator, null);
+
+						var stride = currentRequest.b.format.strideBytes;
+						var totalSize = currentRequest.vertexCount*stride;
+						var output = currentRequest.tmpBuf.map(0, null);
+						@:privateAccess currentRequest.buf.b.blit(currentRequest.bufPos, output, 0, totalSize);
+						currentRequest.tmpBuf.release();
+
+						currentRequest.callback();
+
+						waitingAsyncCopy = false;
+						currentRequest = null;
+					}
+				}
+			});
+		}
 	}
 
 	// ------------ TEXTURES -------
