@@ -111,6 +111,16 @@ class DynamicShader extends Shader {
 		}
 	}
 
+	override function writeParam( index : Int, type : hxsl.Ast.Type, out : Shader.ShaderParamBuffer, pos : Int ) {
+		var a = accesses[index];
+		switch( a.kind ) {
+		case Float:
+			out[pos] = floats[a.index];
+		default:
+			h3d.impl.RenderContext.fillRec(getParamValue(index), type, out, pos);
+		}
+	}
+
 	override function getParamFloatValue(index:Int):Float {
 		var a = accesses[index];
 		if( a.kind != Float )
