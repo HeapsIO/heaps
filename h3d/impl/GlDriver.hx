@@ -1510,6 +1510,11 @@ class GlDriver extends Driver {
 		gl.bindBuffer(type, null);
 	}
 
+	override function readBufferBytesAsync(b:h3d.Buffer, startVertex:Int, vertexCount:Int, buf:haxe.io.Bytes, bufPos:Int, callback : Void -> Void) {
+		readBufferBytes(b, startVertex, vertexCount, buf, bufPos);
+		callback();
+	}
+
 	override function uploadIndexData( i : h3d.Buffer, startIndice : Int, indiceCount : Int, buf : hxd.IndexBuffer, bufPos : Int ) {
 		var bits = i.format.strideBytes >> 1;
 		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, i.vbuf);
