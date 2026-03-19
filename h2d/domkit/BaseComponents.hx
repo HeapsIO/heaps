@@ -319,6 +319,13 @@ class CustomParser extends domkit.CssValue.ValueParser {
 		case VIdent("move"): Move;
 		case VIdent("textinput") | VIdent("input"): TextInput;
 		case VIdent("hide"): Hide;
+
+		// use both css and hxd.Cursor names
+		case VIdent("ns-resize") | VIdent("resize-ns"): ResizeNS;
+		case VIdent("ew-resize") | VIdent("resize-we"): ResizeWE;
+		case VIdent("nwse-resize") | VIdent("resize-nwse"): ResizeNWSE;
+		case VIdent("nesw-resize") | VIdent("resize-nesw"): ResizeNESW;
+		case VIdent("none"): null;
 		default: invalidProp();
 		}
 	}
