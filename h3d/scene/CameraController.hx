@@ -27,6 +27,8 @@ class CameraController extends h3d.scene.Object {
 	var pushY = 0.;
 	var pushStartX = 0.;
 	var pushStartY = 0.;
+	var absStartMouseX = 0;
+	var absStartMouseY = 0;
 	var moveX = 0.;
 	var moveY = 0.;
 	var pushTime : Float;
@@ -161,10 +163,13 @@ class CameraController extends h3d.scene.Object {
 				pushing = -1;
 				var wnd = hxd.Window.getInstance();
 				wnd.mouseMode = Absolute;
-				wnd.setCursorPos(Std.int(pushStartX), Std.int(pushStartY));
+				wnd.setCursorPos(Std.int(absStartMouseX), Std.int(absStartMouseY));
 			}, e.touchId);
 			pushing = e.button;
 			pushTime = haxe.Timer.stamp();
+			var wnd = hxd.Window.getInstance();
+			absStartMouseX = wnd.mouseX;
+			absStartMouseY = wnd.mouseY;
 			pushStartX = pushX = e.relX;
 			pushStartY = pushY = e.relY;
 			hxd.Window.getInstance().mouseMode = AbsoluteUnbound(true);
