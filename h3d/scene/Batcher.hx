@@ -32,6 +32,11 @@ class BatchLibrary {
 		return p;
 	}
 
+	public function addModel( m : h3d.prim.HMDModel ) {
+		var prim = getPrimitive(@:privateAccess m.data.vertexFormat);
+		prim.addModel(m);
+	}
+
 	public function dispose() {
 		for ( p in primitives )
 			p.dispose();
@@ -95,6 +100,12 @@ class Batcher extends h3d.scene.Object {
 	var primToBatch : Map<h3d.prim.BatchPrimitive, Int> = [];
 	var library : BatchLibrary;
 	var shouldDisposeLibrary : Bool = false;
+
+	public function addShader( s : hxsl.Shader ) {
+		for ( b in batches )
+			for ( p in @:privateAccess b.passes )
+				p.pass.addShader(s);
+	}
 
 	public function new( parent : h3d.scene.Object, library : BatchLibrary = null, batchFlags = null ) {
 		if ( !h3d.Engine.getCurrent().driver.hasFeature(Bindless) )
@@ -806,8 +817,8 @@ private class BatchPass {
 			if ( instancesData != null )
 				alloc.disposeBuffer(instancesData);
 			instancesData = alloc.allocBuffer( instanceDataSize, hxd.BufferFormat.VEC4_DATA, UniformReadWrite );
-			batchShader.Batch_StorageBuffer = instancesData;
 		}
+		batchShader.Batch_StorageBuffer = instancesData;
 
 		var hasSyncIDs = batcher.syncShader?.hasSyncIDs() == true;
 		if ( hasSyncIDs ) {
