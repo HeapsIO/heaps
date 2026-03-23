@@ -221,7 +221,7 @@ class DxFrame {
 		// both srvHeap and samplerHeap are from cache
 		size += srvHeapCache.getSize();
 		size += samplerHeapCache.getSize();
-		size += bufferAllocator.getSize();
+		// size += bufferAllocator.getSize(); // UPLOAD heap is in shared memory, not in GPU
 		size += DX12Driver.COPY_BUFFER_SIZE;
 		return size;
 	}
