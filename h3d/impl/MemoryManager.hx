@@ -35,7 +35,7 @@ class MemoryManager {
 	var quadIndexes16 : Indexes;
 	var triIndexes32 : Indexes;
 	var quadIndexes32 : Indexes;
-	public var usedMemory(default, null) : Float = 0;
+	public var bufferMemory(default, null) : Float = 0;
 	public var texMemory(default, null) : Float = 0;
 	public var autoDisposeCooldown : Int = 60;
 	public var autoDisposeCleanup : Int = 3600;
@@ -135,16 +135,16 @@ class MemoryManager {
 
 		if( mem == 0 ) return;
 
-		while( usedMemory + mem > MAX_MEMORY || (b.vbuf = driver.allocBuffer(b)) == null ) {
+		while( bufferMemory + mem > MAX_MEMORY || (b.vbuf = driver.allocBuffer(b)) == null ) {
 
 			if( driver.isDisposed() ) return;
 
-			var size = usedMemory;
+			var size = bufferMemory + texMemory;
 			garbage();
-			if( usedMemory == size )
+			if( bufferMemory + texMemory == size )
 				errorOutOfMemory();
 		}
-		usedMemory += mem;
+		bufferMemory += mem;
 		buffers.push(b);
 	}
 
@@ -154,7 +154,7 @@ class MemoryManager {
 		b.vbuf = null;
 		// in case it was allocated with a previous memory manager
 		if( buffers.remove(b) )
-			usedMemory -= b.getMemSize();
+			bufferMemory -= b.getMemSize();
 	}
 
 	// ------------------------------------- TEXTURES ------------------------------------------
@@ -244,22 +244,18 @@ class MemoryManager {
 			b.dispose();
 		buffers = [];
 		textures = [];
-		usedMemory = 0;
+		bufferMemory = 0;
 		texMemory = 0;
 	}
 
 	// ------------------------------------- STATS ------------------------------------------
 
 	public function stats() {
-		var total = 0.;
-		for( b in buffers )
-			total += b.getMemSize();
-		var dmem = driver.getInternalMemorySize();
-		var internalMem = (dmem / 1024).low * 1024.0;
+		var internalMem =  driver.getInternalMemorySize();
 		return {
 			bufferCount : buffers.length,
-			bufferMemory : total,
-			totalMemory : usedMemory + texMemory + internalMem,
+			bufferMemory : bufferMemory,
+			totalMemory : bufferMemory + texMemory + internalMem,
 			textureCount : textures.length,
 			textureMemory : texMemory,
 			internalMemory : internalMem,
@@ -312,7 +308,7 @@ class MemoryManager {
 				all.push(inf);
 			}
 			inf.count++;
-			var size = b.vertices * b.format.stride * 4;
+			var size = b.getMemSize();
 			inf.size += size;
 			addStack("buffer", b.allocPos, inf.stacks, size);
 		}

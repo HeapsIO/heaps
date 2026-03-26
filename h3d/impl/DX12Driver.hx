@@ -60,7 +60,7 @@ class ScratchHeapArray {
 	}
 
 	public function getSize() {
-		var size : haxe.Int64 = 0;
+		var size : Float = 0;
 		for( h in heaps )
 			size += h.getSize();
 		return size;
@@ -217,7 +217,7 @@ class DxFrame {
 	public function new() {
 	}
 	public function getSize() {
-		var size : haxe.Int64 = 0;
+		var size : Float = 0;
 		// both srvHeap and samplerHeap are from cache
 		size += srvHeapCache.getSize();
 		size += samplerHeapCache.getSize();
@@ -602,7 +602,7 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	override function getInternalMemorySize() {
-		var size : haxe.Int64 = 0;
+		var size : Float = 0;
 		size += renderTargetViews.getSize();
 		size += depthStenciViews.getSize();
 		size += cpuSrvHeap.getSize();
