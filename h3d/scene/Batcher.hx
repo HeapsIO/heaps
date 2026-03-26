@@ -84,9 +84,7 @@ class BatchGroup {
 @:allow(h3d.scene.Batch)
 class Batcher extends h3d.scene.Object {
 	public var shadowMaxDistance = -1.0;
-	// Shadows should be culled by the camera frustum of its lights.
-	// As a performance workaround, we can use the main camera frustum instead until the feature is done.
-	public var shadowCameraFrustumCulling = false;
+	public var shadowCameraFrustumCulling = false; // Aggressive culling inside Shadow passes, using player camera frustum
 	public var isRelative : Bool = false;
 	public var batchFlags = new haxe.EnumFlags<BatcherFlags>();
 	public var syncShader : SyncShaderInterface;
@@ -522,6 +520,10 @@ private class GroupData {
 
 private class BatchCommandBuilder extends hxsl.Shader {
 	static var SRC = {
+		@const var ENABLE_FRUSTUM_CULLING : Bool;
+		@const var ENABLE_DISTANCE_CLIPPING : Bool;
+		@const var ENABLE_DIRLIGHT_OBB_CULLING : Bool;
+		
 		@global var camera : {
 			var position : Vec3;
 			var proj : Mat4;
@@ -541,14 +543,22 @@ private class BatchCommandBuilder extends hxsl.Shader {
 		@const var IS_RELATIVE : Bool;
 		@param var worldMatrix : Mat4;
 
-		@const var ENABLE_FRUSTUM_CULLING : Bool;
 		@param var frustum : Buffer<Vec4, 6>;
 
-		@const var ENABLE_DISTANCE_CLIPPING : Bool;
 		@param var maxDistance : Float = -1;
 
 		final subMeshInfosStride : Int = 3;
 		final subPartInfosStride : Int = 2;
+
+		@param var lightDir : Vec3;
+		@param var lightOBBMin : Vec3;
+		@param var lightOBBMax : Vec3;
+
+		function insideOBB(pos : Vec3, radius : Float, min : Vec3, max : Vec3) : Bool {
+			return (pos.x + radius) > min.x && (pos.x - radius) < max.x &&
+					(pos.y + radius) > min.y && (pos.y - radius) < max.y &&
+					(pos.z + radius) > min.z && (pos.z - radius) < max.z;
+		}
 
 		function emitInstance(instanceID : Int, indexCount : Int, instanceCount : Int, startIndex : Int, startVertex : Int, baseInstance : Int ) {
 			var instancePos = instanceID * 5;
@@ -609,6 +619,20 @@ private class BatchCommandBuilder extends hxsl.Shader {
 				 	if ((dot(plane.xyz, position) - plane.w) < -boundingSphere)
 						return;
 				}
+			}
+
+			if ( ENABLE_DIRLIGHT_OBB_CULLING ) {
+				var z = normalize(lightDir);
+				var up = vec3(0, 1, 0);
+				var x = normalize(cross(up, z));
+				var y = normalize(cross(z, x));
+
+				var minLs = lightOBBMin;
+				var maxLs = lightOBBMax;
+
+				var objPosLs = vec3(dot(position, x), dot(position, y), dot(position, z));
+				if ( !insideOBB(objPosLs, boundingSphere, minLs, maxLs) )
+					return;
 			}
 
 			var toCam = camera.position - position.xyz;
@@ -885,11 +909,57 @@ private class BatchPass {
 		builderShader.IS_RELATIVE = batcher.isRelative;
 		builderShader.worldMatrix = batcher.getAbsPos();
 		builderShader.ENABLE_DISTANCE_CLIPPING = isShadowPass && batcher.shadowMaxDistance > 0.0;
-		builderShader.ENABLE_FRUSTUM_CULLING = !isShadowPass || batcher.shadowCameraFrustumCulling;
-		if ( isShadowPass )
+
+		builderShader.frustum = ctx.getCameraFrustumBuffer();
+
+		if ( isShadowPass ) {
 			builderShader.maxDistance = batcher.shadowMaxDistance;
-		if ( builderShader.ENABLE_FRUSTUM_CULLING )
-			builderShader.frustum = ctx.getCameraFrustumBuffer();
+			var foundLight = false;
+			var ls = ctx.lightSystem;
+			if ( ls != null ) {
+				var sl = ls.shadowLight;
+				if ( sl != null ) {
+					var pbrSl = Std.downcast(sl, h3d.scene.pbr.Light);
+					if ( pbrSl != null ) {
+						var ldir = @:privateAccess pbrSl.getShadowDirection();
+						builderShader.lightDir.set(ldir.x, ldir.y, ldir.z);
+						foundLight = true;
+						builderShader.ENABLE_FRUSTUM_CULLING = batcher.shadowCameraFrustumCulling;
+
+						var z = ldir;
+						z.normalize();
+						var up = new h3d.Vector(0, 1, 0);
+						var x = up.cross(z);
+						x.normalize();
+						var y = z.cross(x);
+						y.normalize();
+
+						var minLs = new h3d.Vector(1e30, 1e30, 1e30);
+						var maxLs = new h3d.Vector(-1e30, -1e30, -1e30);
+
+						var frustumPoints = ctx.camera.frustum.getPoints();
+						for ( i in 0...8 ) {
+							var p = frustumPoints[i];
+							var pLs = new h3d.Vector(p.dot(x), p.dot(y), p.dot(z));
+							minLs.x = Math.min(minLs.x, pLs.x);
+							minLs.y = Math.min(minLs.y, pLs.y);
+							minLs.z = Math.min(minLs.z, pLs.z);
+    						maxLs.x = Math.max(maxLs.x, pLs.x);
+							maxLs.y = Math.max(maxLs.y, pLs.y);
+							maxLs.z = Math.max(maxLs.z, pLs.z);
+						}
+
+						builderShader.lightOBBMin.set(minLs.x, minLs.y, minLs.z);
+						builderShader.lightOBBMax.set(maxLs.x, maxLs.y, maxLs.z);
+					}
+				}
+			}
+			builderShader.ENABLE_DIRLIGHT_OBB_CULLING = foundLight;
+		} else {
+			builderShader.ENABLE_FRUSTUM_CULLING = true;
+			builderShader.ENABLE_DIRLIGHT_OBB_CULLING = false;
+		}
+
 		countBuffer.reset();
 		ctx.computeDispatch(builderShader, hxd.Math.ceil(totalInstanceCount/64.0), false);
 	}
