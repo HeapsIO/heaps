@@ -97,6 +97,10 @@ enum ScaleMode {
 
 	**/
 	AutoZoom(minWidth : Int, minHeight : Int, ?integerScaling : Bool);
+	/**
+		Custom mode.
+ 	**/
+	Custom( width : Int, height : Int, scaleW : Float, scaleH : Float );
 }
 
 /**
@@ -418,6 +422,10 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 				}
 				setSceneSize(Math.ceil(engine.width / zoom), Math.ceil(engine.height / zoom));
 				setViewportScale(zoom, zoom);
+				zeroViewport();
+			case Custom(_width,_height,_sw,_sh):
+				setSceneSize(_width,_height);
+				setViewportScale(_sw, _sh);
 				zeroViewport();
 		}
 	}
