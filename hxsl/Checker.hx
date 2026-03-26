@@ -198,8 +198,10 @@ class Checker {
 				];
 			case ImageStore:
 				[];
-			case VertexID, InstanceID, FragCoord, FrontFacing:
+			case VertexID, InstanceID, FragCoord, FrontFacing, Barycentrics:
 				null;
+			case VertexAt:
+				[for( t in genType ) { args : [ { name : "v", type : t }, { name : "index", type : TInt } ], ret : t }];
 			case AtomicAdd:
 				[{ args : [{ name : "buf", type : TBuffer(TInt, SConst(0), RW) },{ name : "index", type : TInt }, { name : "data", type : TInt }], ret : TInt }];
 			case _ if( g.getName().indexOf("_") > 0 ):
@@ -240,6 +242,7 @@ class Checker {
 		globals.set("instanceID", { t : TInt, g : InstanceID });
 		globals.set("fragCoord", { t : vec4, g : FragCoord });
 		globals.set("frontFacing", { t : TBool, g : FrontFacing });
+		globals.set("barycentrics", { t : vec3, g : Barycentrics });
 		for( gname => vl in gvars )
 			globals.set(gname, { t : TStruct([
 				for( v in vl )

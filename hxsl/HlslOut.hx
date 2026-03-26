@@ -78,6 +78,7 @@ class HlslOut {
 		m.set(BVec3, "bool3");
 		m.set(BVec4, "bool4");
 		m.set(FragCoord,"_in.__pos__");
+		m.set(Barycentrics,"_in.__bary__");
 		m.set(FloatBitsToInt, "asint");
 		m.set(FloatBitsToUint, "asuint");
 		m.set(IntBitsToFloat, "asfloat");
@@ -126,6 +127,7 @@ class HlslOut {
 		case VertexID: "SV_VertexID";
 		case InstanceID: "SV_InstanceID";
 		case FrontFacing: "SV_IsFrontFace";
+		case Barycentrics: "SV_Barycentrics";
 		case ComputeVar_GlobalInvocation: "SV_DispatchThreadID";
 		case ComputeVar_LocalInvocation: "SV_GroupThreadID";
 		case ComputeVar_WorkGroup: "SV_GroupID";
@@ -557,6 +559,14 @@ class HlslOut {
 			add('__BindlessSamplers[$bindlessSamplersCount]');
 			add(")");
 			bindlessSamplers.set(v.id, bindlessSamplersCount++);
+		case TCall({ e : TGlobal(VertexAt) }, [{ e : TVar(v) }, index]):
+			add("GetAttributeAtVertex(");
+			var acc = varAccess.get(v.id);
+			if( acc != null ) add(acc);
+			ident(v);
+			add(", ");
+			addValue(index, tabs);
+			add(")");
 		case TCall(e = { e : TGlobal(g) }, args):
 			declGlobal(g, args);
 			switch( [g,args] ) {

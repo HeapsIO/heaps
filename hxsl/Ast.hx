@@ -317,6 +317,9 @@ enum TGlobal {
 	// gl globals
 	FragCoord;
 	FrontFacing;
+	// dx12 barycentrics
+	Barycentrics;
+	VertexAt;
 	// bit casting
 	FloatBitsToInt;
 	FloatBitsToUint;
