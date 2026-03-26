@@ -22,7 +22,6 @@ typedef TextureStat = {
 
 class MemoryManager {
 
-	static inline var MAX_MEMORY = 6144 * (1024. * 1024.); // MB
 	static inline var SIZE = 65532;
 	static var ALL_FLAGS = Type.allEnums(Buffer.BufferFlag);
 
@@ -132,17 +131,12 @@ class MemoryManager {
 		if( b.vbuf != null ) return;
 
 		var mem = b.getMemSize();
-
 		if( mem == 0 ) return;
 
-		while( bufferMemory + mem > MAX_MEMORY || (b.vbuf = driver.allocBuffer(b)) == null ) {
-
+		autoDisposeMemory();
+		while( (b.vbuf = driver.allocBuffer(b)) == null ) {
 			if( driver.isDisposed() ) return;
-
-			var size = bufferMemory + texMemory;
-			garbage();
-			if( bufferMemory + texMemory == size )
-				errorOutOfMemory();
+			tryFreeMemory();
 		}
 		bufferMemory += mem;
 		buffers.push(b);
@@ -191,6 +185,20 @@ class MemoryManager {
 		return dp != 0 ? dp : t1.lastFrame - t2.lastFrame;
 	}
 
+	function autoDisposeMemory() {
+		if( autoDisposeCooldown > 0 && hxd.Timer.frameCount > lastAutoDispose + autoDisposeCooldown ) {
+			cleanTextures(false, true);
+			lastAutoDispose = hxd.Timer.frameCount;
+		}
+	}
+
+	function tryFreeMemory() {
+		var size = bufferMemory + texMemory;
+		if( !cleanTextures(false) ) garbage();
+		if( bufferMemory + texMemory == size )
+			errorOutOfMemory();
+	}
+
 	@:allow(h3d.mat.Texture.dispose)
 	function deleteTexture( t : h3d.mat.Texture ) {
 		if( !textures.remove(t) ) return;
@@ -201,18 +209,11 @@ class MemoryManager {
 	@:allow(h3d.mat.Texture.alloc)
 	function allocTexture( t : h3d.mat.Texture ) {
 		while( true ) {
-			if( autoDisposeCooldown > 0 && hxd.Timer.frameCount > lastAutoDispose + autoDisposeCooldown ) {
-				cleanTextures(false, true);
-				lastAutoDispose = hxd.Timer.frameCount;
-			}
+			autoDisposeMemory();
 			t.t = t.isDepth() ? driver.allocDepthBuffer(t) : driver.allocTexture(t);
 			if( t.t != null ) break;
-
 			if( driver.isDisposed() ) return;
-			var free = false;
-			while( cleanTextures(false) ) free = true; // clean all old textures
-			if( !free && !cleanTextures(true) )
-				errorOutOfMemory();
+			tryFreeMemory();
 		}
 		textures.push(t);
 		texMemory += memSize(t);
