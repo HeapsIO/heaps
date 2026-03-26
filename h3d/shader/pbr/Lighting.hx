@@ -28,7 +28,7 @@ class Indirect extends PropsDefinition {
 		@param var skyHdrMax : Float;
 		@const var gammaCorrect : Bool;
 		@param var cameraInvViewProj : Mat4;
-		@param var skyColorValue : Vec3;
+		@param var skyColorValue : Vec4;
 
 		// Emissive Blend
 		@param var emissivePower : Float;
@@ -62,7 +62,8 @@ class Indirect extends PropsDefinition {
 				if( showSky ) {
 					var color : Vec3;
 					if( skyColor ) {
-						color = skyColorValue;
+						color = skyColorValue.rgb;
+						pixelColor.a = skyColorValue.a;
 						if( gammaCorrect )
 							color *= color;
 					} else {

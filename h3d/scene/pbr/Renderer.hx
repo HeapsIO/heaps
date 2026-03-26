@@ -75,6 +75,7 @@ class Renderer extends h3d.scene.Renderer {
 	var pbrIndirect = new h3d.shader.pbr.Lighting.Indirect();
 	var pbrDirect = new h3d.shader.pbr.Lighting.Direct();
 	var pbrProps = new h3d.shader.pbr.PropsImport();
+	var pbrAlphaMask = new h3d.shader.pbr.AlphaMask();
 	var enableFXAA = true;
 	var currentStep : h3d.impl.RendererFX.Step;
 	var performance = new h3d.pass.ScreenFx(new h3d.shader.pbr.PerformanceViewer());
@@ -98,6 +99,7 @@ class Renderer extends h3d.scene.Renderer {
 	public var displayMode : DisplayMode = Pbr;
 	public var env : Environment;
 	public var exposure(get,set) : Float;
+	public var enableTransparency = false;
 	var debugShadowMapIndex = 1;
 
 	#if editor
@@ -145,7 +147,7 @@ class Renderer extends h3d.scene.Renderer {
 		slides.addShader(pbrProps);
 		pbrOut.addShader(pbrIndirect);
 		pbrOut.addShader(pbrProps);
-		pbrOut.pass.setBlendMode(Add);
+		pbrOut.pass.blend(One, One);
 		pbrOut.pass.stencil = new h3d.mat.Stencil();
 		pbrOut.pass.stencil.setOp(Keep, Keep, Keep);
 		pbrOut.pass.stencil.setFunc(NotEqual, LIGHTMAP_STENCIL, LIGHTMAP_STENCIL, LIGHTMAP_STENCIL); // ignore already drawn volumetricLightMap areas
@@ -313,6 +315,12 @@ class Renderer extends h3d.scene.Renderer {
 			lpass.addShader(pbrDirect);
 			lpass.pass.setBlendMode(Add);
 			screenLightPass = lpass;
+		}
+		if( enableTransparency ) {
+			if( lpass.getShader(h3d.shader.pbr.AlphaMask) == null )
+				lpass.addShader(pbrAlphaMask);
+		} else {
+			lpass.removeShader(pbrAlphaMask);
 		}
 
 		mark("DirectLighting");
@@ -596,12 +604,12 @@ class Renderer extends h3d.scene.Renderer {
 					env.diffuse;
 				case Background:
 					pbrIndirect.skyColor = true;
-					pbrIndirect.skyColorValue.setColor(ctx.engine.backgroundColor);
+					pbrIndirect.skyColorValue.setColor(ctx.engine.backgroundColor | (enableTransparency?0:0xFF000000) );
 					pbrIndirect.gammaCorrect = true;
 					null;
 				case CustomColor:
 					pbrIndirect.skyColor = true;
-					pbrIndirect.skyColorValue.setColor(props.skyColor);
+					pbrIndirect.skyColorValue.setColor(props.skyColor | (enableTransparency?0:0xFF000000));
 					pbrIndirect.gammaCorrect = true;
 					null;
 				};
