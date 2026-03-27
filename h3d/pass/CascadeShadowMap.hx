@@ -37,6 +37,8 @@ class CascadeShadowMap extends DirShadowMap {
 		lightCameras = [];
 		for ( i in 0...cascade )
 			lightCameras.push({ viewProj : new h3d.Matrix(), scale : new h3d.Vector4(), offset : new h3d.Vector4(), orthoBounds : new h3d.col.Bounds() });
+		if ( ctx != null )
+			ctx.updateViews(cascade + 1);
 		return cascade;
 	}
 	public var debugShader : Bool = false;

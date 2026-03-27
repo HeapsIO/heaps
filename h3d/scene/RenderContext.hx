@@ -28,6 +28,9 @@ class RenderContext extends h3d.impl.RenderContext {
 	public var cullingCollider : h3d.col.Collider;
 	public var forcedScreenRatio : Float = -1;
 
+	public var numViews : Int = 1;
+	public var currViewIdx : Int = 0;
+
 	@global("camera.view") var cameraView : h3d.Matrix;
 	@global("camera.zNear") var cameraNear : Float;
 	@global("camera.zFar") var cameraFar : Float;
@@ -93,6 +96,11 @@ class RenderContext extends h3d.impl.RenderContext {
 		cameraInverseViewProj = camera.getInverseViewProj();
 	}
 
+	public function updateViews( views : Int ) {
+		numViews = views;
+		currViewIdx = 0;
+	}
+
 	public function setupTarget() {
 		var v = engine.driver.hasFeature(BottomLeftCoords) && engine.getCurrentTarget() != null ? -1 : 1;
 		if( cameraProjFlip != v ) cameraProjFlip = v;
@@ -129,6 +137,8 @@ class RenderContext extends h3d.impl.RenderContext {
 		globalFrame = frame;
 		pixelSize = getCurrentPixelSize();
 		setCamera(scene.camera);
+		numViews = 1;
+		currViewIdx = 0;
 	}
 
 	public inline function nextPass() {
