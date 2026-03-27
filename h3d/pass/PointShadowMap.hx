@@ -28,7 +28,7 @@ class PointShadowMap extends CubeShadowMap {
 			throw "assert";
 		var pointLight = cast(light, h3d.scene.pbr.PointLight);
 		pshader.shadowMap = texture;
-		pshader.shadowBias = bias;
+		pshader.shadowBias = bias * pointLight.range;
 		pshader.shadowPower = power;
 		pshader.lightPos = light.getAbsPos().getPosition();
 		pshader.zFar = pointLight.range;
