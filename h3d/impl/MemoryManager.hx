@@ -192,7 +192,7 @@ class MemoryManager {
 		}
 	}
 
-	function tryFreeMemory() {
+	public function tryFreeMemory() {
 		var size = bufferMemory + texMemory;
 		if( !cleanTextures(false) ) garbage();
 		if( bufferMemory + texMemory == size )
