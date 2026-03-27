@@ -50,6 +50,8 @@ class Merge extends ScreenFx<MergeShader> {
 					render();
 					e.popTarget();
 				}
+				shader.tex1.slice = 0;
+				shader.tex2.slice = 0;
 				#else
 					output = t < 0.5 ? tex1 : tex2;
 				#end
