@@ -550,7 +550,7 @@ private class BatchCommandBuilder extends hxsl.Shader {
 		final subMeshInfosStride : Int = 3;
 		final subPartInfosStride : Int = 2;
 
-		@param var lightDir : Vec3;
+		@param var lightMatrix : Mat3;
 		@param var lightOBBMin : Vec3;
 		@param var lightOBBMax : Vec3;
 
@@ -622,16 +622,8 @@ private class BatchCommandBuilder extends hxsl.Shader {
 			}
 
 			if ( ENABLE_DIRLIGHT_OBB_CULLING ) {
-				var z = normalize(lightDir);
-				var up = vec3(0, 1, 0);
-				var x = normalize(cross(up, z));
-				var y = normalize(cross(z, x));
-
-				var minLs = lightOBBMin;
-				var maxLs = lightOBBMax;
-
-				var objPosLs = vec3(dot(position, x), dot(position, y), dot(position, z));
-				if ( !insideOBB(objPosLs, boundingSphere, minLs, maxLs) )
+				var objPosLs = position * lightMatrix;			
+				if ( !insideOBB(objPosLs, boundingSphere, lightOBBMin, lightOBBMax) )
 					return;
 			}
 
@@ -912,9 +904,8 @@ private class BatchPass {
 
 		builderShader.frustum = ctx.getCameraFrustumBuffer();
 
-		if ( isShadowPass ) {
+		if ( isShadowPass && !batcher.shadowCameraFrustumCulling ) {
 			builderShader.maxDistance = batcher.shadowMaxDistance;
-			var foundLight = false;
 			var ls = ctx.lightSystem;
 			if ( ls != null ) {
 				var sl = ls.shadowLight;
@@ -922,10 +913,6 @@ private class BatchPass {
 					var pbrSl = Std.downcast(sl, h3d.scene.pbr.Light);
 					if ( pbrSl != null ) {
 						var ldir = @:privateAccess pbrSl.getShadowDirection();
-						builderShader.lightDir.set(ldir.x, ldir.y, ldir.z);
-						foundLight = true;
-						builderShader.ENABLE_FRUSTUM_CULLING = batcher.shadowCameraFrustumCulling;
-
 						var z = ldir;
 						z.normalize();
 						var up = new h3d.Vector(0, 1, 0);
@@ -949,12 +936,20 @@ private class BatchPass {
 							maxLs.z = Math.max(maxLs.z, pLs.z);
 						}
 
+						var lightMatrix = h3d.Matrix.L([
+							x.x, y.x, z.x, 0,
+							x.y, y.y, z.y, 0,
+							x.z, y.z, z.z, 0
+						]);
+
+						builderShader.lightMatrix = lightMatrix;
 						builderShader.lightOBBMin.set(minLs.x, minLs.y, minLs.z);
 						builderShader.lightOBBMax.set(maxLs.x, maxLs.y, maxLs.z);
+
+						builderShader.ENABLE_DIRLIGHT_OBB_CULLING = true;
 					}
 				}
 			}
-			builderShader.ENABLE_DIRLIGHT_OBB_CULLING = foundLight;
 		} else {
 			builderShader.ENABLE_FRUSTUM_CULLING = true;
 			builderShader.ENABLE_DIRLIGHT_OBB_CULLING = false;
