@@ -886,6 +886,10 @@ private class BatchPass {
 		ctx.computeDispatch(cast s, hxd.Math.ceil(totalInstanceCount/64.0), false);
 	}
 
+	var tmpMinLs = new h3d.Vector();
+	var tmpMaxLs = new h3d.Vector();
+	var tmpUp = new h3d.Vector(0, 1, 0);
+
 	public function emitGPU(ctx : h3d.scene.RenderContext) {
 		uploadInstances();
 		builderShader.instancesData = instancesData;
@@ -912,29 +916,12 @@ private class BatchPass {
 				if ( sl != null ) {
 					var pbrSl = Std.downcast(sl, h3d.scene.pbr.Light);
 					if ( pbrSl != null ) {
-						var ldir = @:privateAccess pbrSl.getShadowDirection();
-						var z = ldir;
+						var z = @:privateAccess pbrSl.getShadowDirection();
 						z.normalize();
-						var up = new h3d.Vector(0, 1, 0);
-						var x = up.cross(z);
+						var x = tmpUp.cross(z);
 						x.normalize();
 						var y = z.cross(x);
 						y.normalize();
-
-						var minLs = new h3d.Vector(1e30, 1e30, 1e30);
-						var maxLs = new h3d.Vector(-1e30, -1e30, -1e30);
-
-						var frustumPoints = ctx.camera.frustum.getPoints();
-						for ( i in 0...8 ) {
-							var p = frustumPoints[i];
-							var pLs = new h3d.Vector(p.dot(x), p.dot(y), p.dot(z));
-							minLs.x = Math.min(minLs.x, pLs.x);
-							minLs.y = Math.min(minLs.y, pLs.y);
-							minLs.z = Math.min(minLs.z, pLs.z);
-    						maxLs.x = Math.max(maxLs.x, pLs.x);
-							maxLs.y = Math.max(maxLs.y, pLs.y);
-							maxLs.z = Math.max(maxLs.z, pLs.z);
-						}
 
 						var lightMatrix = h3d.Matrix.L([
 							x.x, y.x, z.x, 0,
@@ -942,9 +929,20 @@ private class BatchPass {
 							x.z, y.z, z.z, 0
 						]);
 
+						tmpMinLs.set(1e30, 1e30, 1e30);
+						tmpMaxLs.set(-1e30, -1e30, -1e30);
+
+						var frustumPoints = ctx.camera.frustum.getPoints();
+						for ( i in 0...8 ) {
+							var p = frustumPoints[i];
+							var pLs = p * lightMatrix;
+							tmpMinLs.min(pLs);
+							tmpMaxLs.max(pLs);
+						}
+
 						builderShader.lightMatrix = lightMatrix;
-						builderShader.lightOBBMin.set(minLs.x, minLs.y, minLs.z);
-						builderShader.lightOBBMax.set(maxLs.x, maxLs.y, maxLs.z);
+						builderShader.lightOBBMin.set(tmpMinLs.x, tmpMinLs.y, tmpMinLs.z);
+						builderShader.lightOBBMax.set(tmpMaxLs.x, tmpMaxLs.y, tmpMaxLs.z);
 
 						builderShader.ENABLE_DIRLIGHT_OBB_CULLING = true;
 					}
