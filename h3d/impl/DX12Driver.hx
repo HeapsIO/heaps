@@ -783,7 +783,7 @@ class DX12Driver extends h3d.impl.Driver {
 		frame.commandList.reset(frame.allocator, null);
 
 		// if too much memory was allocated from last frame, let's dispose immediately
-		var forceDispose = (frame.bufferAllocator.getSize()/(1024*1024)).low >= 512;
+		var forceDispose = (frame.bufferAllocator.getSize()/(1024*1024)) >= 512;
 		frame.bufferAllocator.reset(forceDispose);
 
 		frame.copyAllocator.reset();
