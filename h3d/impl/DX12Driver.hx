@@ -183,7 +183,7 @@ class BufferAllocator {
 	}
 
 	public function getSize() {
-		var size : haxe.Int64 = 0;
+		var size : Float = 0;
 		for( p in pages )
 			size += p.capacity;
 		return size;
