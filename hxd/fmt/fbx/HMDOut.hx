@@ -1138,9 +1138,27 @@ class HMDOut extends BaseLibrary {
 			return;
 
 		objects = [];
-		if( root.childs.length <= 1 && root.model == null ) {
-			root = root.childs[0];
-			root.parent = null;
+		if( root.childs.length <= 1 && root.model == null) {
+			var newRoot = root.childs[0];
+			var newRootHasAnim = false;
+			if (newRoot.model != null) {
+				var rootName = newRoot.model.getName();
+				for (anim in d.animations) {
+					for (obj in anim.objects) {
+						if (obj.name == rootName) {
+							newRootHasAnim = true;
+							break;
+						}
+					}
+					if (newRootHasAnim)
+						break;
+				}
+			}
+
+			if (!newRootHasAnim) {
+				root = root.childs[0];
+				root.parent = null;
+			}
 		}
 		if( root != null ) indexRec(root); // reorder after we have changed hierarchy
 
@@ -1724,14 +1742,14 @@ class HMDOut extends BaseLibrary {
 
 		dataOut = new haxe.io.BytesOutput();
 
-		addModels(includeGeometry);
-
 		var names = getAnimationNames();
 		for ( animName in names ) {
 			var anim = loadAnimation(animName);
 			if(anim != null)
 				d.animations.push(makeAnimation(anim));
 		}
+
+		addModels(includeGeometry);
 
 		d.data = dataOut.getBytes();
 		return d;
