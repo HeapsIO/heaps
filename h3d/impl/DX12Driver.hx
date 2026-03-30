@@ -2045,6 +2045,8 @@ class DX12Driver extends h3d.impl.Driver {
 
 		var isRT = t.flags.has(Target);
 
+		if( t.width < 1 ) t.width = 1;
+		if( t.height < 1 ) t.height = 1;
 		var desc = makeTextureDesc(t);
 		var td = new TextureData();
 		td.format = desc.format;
