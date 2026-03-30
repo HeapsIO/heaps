@@ -1,11 +1,21 @@
 package h3d.scene;
 
+import h3d.col.Frustum;
+
 private class SharedGlobal {
 	public var gid : Int;
 	public var value : Dynamic;
 	public function new(gid, value) {
 		this.gid = gid;
 		this.value = value;
+	}
+}
+
+class View {
+	public var idx : Int;
+	public var frustum : Frustum;
+	public function new(idx) {
+		this.idx = idx;
 	}
 }
 
@@ -29,7 +39,7 @@ class RenderContext extends h3d.impl.RenderContext {
 	public var forcedScreenRatio : Float = -1;
 
 	public var numViews : Int = 1;
-	public var currViewIdx : Int = 0;
+	public var currentView : View = new h3d.scene.View(0);
 
 	@global("camera.view") var cameraView : h3d.Matrix;
 	@global("camera.zNear") var cameraNear : Float;
@@ -94,11 +104,16 @@ class RenderContext extends h3d.impl.RenderContext {
 			cameraJitterOffsets = new h3d.Vector4( 0.0, 0.0, 0.0, 0.0 );
 		cameraViewProj = camera.m;
 		cameraInverseViewProj = camera.getInverseViewProj();
+		currentView.frustum = camera.frustum;
 	}
 
-	public function updateViews( views : Int ) {
-		numViews = views;
-		currViewIdx = 0;
+	public function updateNumViews( numViews : Int ) {
+		this.numViews = numViews;
+	}
+
+	public function setCurrentView( viewIdx : Int, viewFrustum : Frustum ) {
+		currentView.idx = viewIdx;
+		currentView.frustum = viewFrustum;
 	}
 
 	public function setupTarget() {
@@ -138,7 +153,6 @@ class RenderContext extends h3d.impl.RenderContext {
 		pixelSize = getCurrentPixelSize();
 		setCamera(scene.camera);
 		numViews = 1;
-		currViewIdx = 0;
 	}
 
 	public inline function nextPass() {

@@ -38,7 +38,7 @@ class CascadeShadowMap extends DirShadowMap {
 		for ( i in 0...cascade )
 			lightCameras.push({ viewProj : new h3d.Matrix(), scale : new h3d.Vector4(), offset : new h3d.Vector4(), orthoBounds : new h3d.col.Bounds() });
 		if ( ctx != null )
-			ctx.updateViews(cascade + 1);
+			ctx.updateNumViews(cascade + 1);
 		return cascade;
 	}
 	public var debugShader : Bool = false;
@@ -277,6 +277,7 @@ class CascadeShadowMap extends DirShadowMap {
 		if( !filterPasses(passes) )
 			return;
 
+		var prevCtxViewFrustum = ctx.currentView.frustum;
 		var slight = light == null ? ctx.lightSystem.shadowLight : light;
 		var ldir = slight == null ? null : @:privateAccess slight.getShadowDirection();
 		if( ldir == null )
@@ -322,6 +323,7 @@ class CascadeShadowMap extends DirShadowMap {
 			dimension = ( dimension * hxd.Math.clamp(minPixelSize, 0, size) ) / size;
 			lightCamera.orthoBounds = lc.orthoBounds;
 			lightCamera.update();
+			ctx.setCurrentView(i + 1, lightCamera.frustum);
 			customCullPasses(passes, lightCamera.frustum, i, dimension);
 			textures[i] = processShadowMap( passes, texture, sort);
 			passes.load(p);
@@ -330,6 +332,8 @@ class CascadeShadowMap extends DirShadowMap {
 		ctx.engine.setDepthBias(0, 0);
 		syncCascadeShader(textures);
 		lightCamera.frustum.checkNearFar = prevCheckNearFar;
+
+		ctx.currentView.frustum = prevCtxViewFrustum;
 
 		#if editor
 		drawDebug();
