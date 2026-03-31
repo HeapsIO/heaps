@@ -1044,8 +1044,9 @@ class HMDOut extends BaseLibrary {
 		var root = buildHierarchy().root;
 		var objects = [], joints = [], skins = [], foundSkin : Array<TmpObject> = null;
 		var uid = 0;
+
 		function indexRec( t : TmpObject ) {
-			if( t.isJoint ) {
+			if (t.isJoint) {
 				joints.push(t);
 			} else {
 				var isSkin = false;
@@ -1081,7 +1082,7 @@ class HMDOut extends BaseLibrary {
 			}
 		}
 
-		// mark skin references
+		// Setup skin reference
 		foundSkin = [];
 		for( o in skins ) {
 			function loopRec( o : TmpObject ) {
@@ -1106,31 +1107,45 @@ class HMDOut extends BaseLibrary {
 			if( models.length == 0 ) continue;
 			if( models.length > 1 ) throw "Single skin applied to multiple models not supported";
 			var m = models[0];
-			for( o2 in objects )
-				if( o2.model == m ) {
-					foundSkin.push(o);
-					o2.skin = o;
-					if( o.model == null ) o.model = m;
-					ignoreMissingObject(m.getId()); // make sure we don't store animation for the model (only skin object has one)
-					// copy parent
-					var p = o.parent;
-					if( p != o2 ) {
+			for (o2 in objects) {
+				if (o2.model != m)
+					continue;
+
+				// Affect skin to model
+				foundSkin.push(o);
+				o2.skin = o;
+				o.model = m;
+
+				ignoreMissingObject(m.getId()); // Make sure we don't store animation for the model (only skin object has one)
+
+				// Remove skin from hierarchy
+				var p = o.parent;
+				if (p != null) {
+					p.childs.remove(o);
+					if (o2.parent != null)
 						o2.parent.childs.remove(o2);
-						o2.parent = p;
-						if( p != null ) p.childs.push(o2) else root = o2;
-					}
-					// remove skin from hierarchy
-					if( p != null ) p.childs.remove(o);
-					// move not joint to new parent
-					// (only first level, others will follow their respective joint)
-					for( c in o.childs.copy() )
-						if( !c.isJoint ) {
-							o.childs.remove(c);
-							o2.childs.push(c);
-							c.parent = o2;
-						}
-					break;
+					o2.parent = p;
+					p.childs.push(o2);
 				}
+				else {
+					root = o2;
+					o2.parent = null;
+					o.childs.remove(o2);
+				}
+
+
+
+				// Move not joint to model (only first level, others will follow their respective joint)
+				for (c in o.childs.copy()) {
+					if (!c.isJoint) {
+						o.childs.remove(c);
+						o2.childs.push(c);
+						c.parent = o2;
+					}
+				}
+
+				break;
+			}
 		}
 
 		// we need to have ignored skins objects anims first
@@ -1182,12 +1197,11 @@ class HMDOut extends BaseLibrary {
 			o.index = index++;
 
 			var model = new Model();
-			var ref = o.skin == null ? o : o.skin;
 
 			model.name = o.model == null ? null : o.model.getName();
 			model.parent = o.parent == null || o.parent.isJoint ? -1 : o.parent.index;
 			model.follow = o.parent != null && o.parent.isJoint ? o.parent.model.getName() : null;
-			var m = ref.model == null ? new hxd.fmt.fbx.BaseLibrary.DefaultMatrixes() : getDefaultMatrixes(ref.model);
+			var m = getDefaultMatrixes(o.model);
 			var p = new Position();
 			p.x = m.trans == null ? 0 : -m.trans.x;
 			p.y = m.trans == null ? 0 : m.trans.y;
