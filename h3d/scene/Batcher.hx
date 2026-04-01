@@ -85,7 +85,7 @@ class BatchGroup {
 class Batcher extends h3d.scene.Object {
 	public var shadowMaxDistance = -1.0;
 	public var shadowCameraFrustumCulling = false; // Aggressive culling inside Shadow passes, using player camera frustum
-	public var shadowCullingOffset = 50.0;
+	public var shadowCullingOffset = 100.0;
 	public var isRelative : Bool = false;
 	public var batchFlags = new haxe.EnumFlags<BatcherFlags>();
 	public var syncShader : SyncShaderInterface;
