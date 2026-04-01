@@ -31,32 +31,40 @@ class BatchInstanceParams {
 
 class SearchMap {
 	public var linked : RuntimeShader;
-	var nexts : Array<SearchMap> = [];
-	var minId = 0;
+	var nexts : Map<Int,SearchMap>;
+	var firstId: Int = -1;  // Optim: majority of nodes have 0-1 nexts
+	var firstNext : SearchMap;
 
 	public function new() { }
 
 	public function set(id: Int, s: SearchMap) {
-		if(minId == 0) {
-			minId = id;
-			nexts = [s];
+		if(nexts != null) {
+			nexts.set(id, s);
 			return;
 		}
-
-		var offset = id - minId;
-		if(offset < 0) {
-			var n = [];
-			for(i in 0...nexts.length)
-				n[i - offset] = nexts[i];  // shift indices
-			nexts = n;
-			minId += offset;
-			offset = 0;
+		if(firstId < 0) {
+			firstId = id;
+			firstNext = s;
 		}
-		nexts[offset] = s;
+		else {
+			if(id == firstId)
+				firstNext = s;
+			else {
+				nexts = new Map();
+				nexts.set(firstId, firstNext);
+				nexts.set(id, s);
+			}
+		}
 	}
 
 	inline public function get(id: Int) {
-		return nexts[id - minId];
+		if(firstId < 0)
+			return null;
+		if(id == firstId)
+			return firstNext;
+		if(nexts == null)
+			return null;
+		return nexts.get(id);
 	}
 }
 
