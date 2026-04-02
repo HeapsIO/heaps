@@ -524,7 +524,7 @@ private class BatchCommandBuilder extends hxsl.Shader {
 		@const var ENABLE_FRUSTUM_CULLING : Bool;
 		@const var ENABLE_DISTANCE_CLIPPING : Bool;
 		@const var ENABLE_DIRLIGHT_OBB_CULLING : Bool;
-		
+
 		@global var camera : {
 			var position : Vec3;
 			var proj : Mat4;
@@ -623,7 +623,7 @@ private class BatchCommandBuilder extends hxsl.Shader {
 			}
 
 			if ( ENABLE_DIRLIGHT_OBB_CULLING ) {
-				var objPosLs = position * lightMatrix;			
+				var objPosLs = position * lightMatrix;
 				if ( !insideOBB(objPosLs, boundingSphere, lightOBBMin, lightOBBMax) )
 					return;
 			}
@@ -631,7 +631,7 @@ private class BatchCommandBuilder extends hxsl.Shader {
 			var toCam = camera.position - position.xyz;
 			var distToCam = length(toCam);
 			if ( ENABLE_DISTANCE_CLIPPING )
-				if ( distToCam > maxDistance)
+				if ( distToCam > maxDistance )
 					return;
 
 			var screenRatio = computeScreenRatio(distToCam, boundingSphere);
@@ -905,12 +905,15 @@ private class BatchPass {
 		builderShader.countBuffer = countBuffer.buffer;
 		builderShader.IS_RELATIVE = batcher.isRelative;
 		builderShader.worldMatrix = batcher.getAbsPos();
-		builderShader.ENABLE_DISTANCE_CLIPPING = isShadowPass && batcher.shadowMaxDistance > 0.0;
 
 		builderShader.frustum = ctx.getCameraFrustumBuffer();
 
 		if ( isShadowPass && !batcher.shadowCameraFrustumCulling ) {
-			builderShader.maxDistance = batcher.shadowMaxDistance;
+			if ( batcher.shadowMaxDistance > 0.0 ) {
+				builderShader.maxDistance = batcher.shadowMaxDistance;
+				builderShader.ENABLE_DISTANCE_CLIPPING = true;
+			}
+
 			var ls = ctx.lightSystem;
 			if ( ls != null ) {
 				var sl = ls.shadowLight;
