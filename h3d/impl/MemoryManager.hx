@@ -251,15 +251,18 @@ class MemoryManager {
 
 	// ------------------------------------- STATS ------------------------------------------
 
-	public function stats() {
-		var internalMem =  driver.getInternalMemorySize();
+	public function stats( megas = false ) {
+		var total = bufferMemory + texMemory;
+		var use = driver.getMemoryUsage();
+		inline function fmt( v : Float ) return megas ? hxd.Math.fmt(v/(1024*1024)) : v;
 		return {
 			bufferCount : buffers.length,
-			bufferMemory : bufferMemory,
-			totalMemory : bufferMemory + texMemory + internalMem,
+			bufferMemory : fmt(bufferMemory),
+			totalMemory : fmt(use == null ? bufferMemory + texMemory : use.allocated),
 			textureCount : textures.length,
-			textureMemory : texMemory,
-			internalMemory : internalMem,
+			textureMemory : fmt(texMemory),
+			otherMemory : use == null ? 0 : fmt(use.allocated - total) /* remaining memory that we don't know about */,
+			maxMemory : use == null ? 0 : fmt(use.total),
 		};
 	}
 

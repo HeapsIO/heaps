@@ -601,17 +601,11 @@ class DX12Driver extends h3d.impl.Driver {
 		reset();
 	}
 
-	override function getInternalMemorySize() {
-		var size : Float = 0;
-		size += renderTargetViews.getSize();
-		size += depthStenciViews.getSize();
-		size += cpuSrvHeap.getSize();
-		size += cpuSamplerHeap.getSize();
-		size += bindlessSrvHeap.getSize();
-		size += bindlessSamplerHeap.getSize();
-		for( f in frames )
-			size += f.getSize();
-		return size;
+	override function getMemoryUsage() {
+		var mem = new QueryVideoMemoryInfo();
+		Dx12.queryVideoMemoryInfo(0, mem);
+		inline function toF( v : haxe.Int64 ) return (v / 1024).low * 1024.;
+		return { total : toF(mem.budget), allocated : toF(mem.currentUsage), free : toF(mem.budget - mem.currentUsage) };
 	}
 
 	override function hasFeature(f:Feature) {

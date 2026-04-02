@@ -162,8 +162,8 @@ class Driver {
 	public function clear( ?color : h3d.Vector4, ?depth : Float, ?stencil : Int ) {
 	}
 
-	public function getInternalMemorySize() : Float {
-		return 0.;
+	public function getMemoryUsage() : Null<{ total : Float, allocated : Float, free : Float }>  {
+		return null;
 	}
 
 	public function captureRenderBuffer( pixels : hxd.Pixels ) {
