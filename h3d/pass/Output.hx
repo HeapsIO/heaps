@@ -102,8 +102,8 @@ class Output {
 				if( onShaderError != null ) {
 					try {
 						ctx.engine.selectShader(p.shader);
-					} catch(e : Dynamic) {
-						onShaderError(e, p);
+					} catch(e) {
+						onShaderError(e.message, p);
 						continue;
 					}
 				} else {
