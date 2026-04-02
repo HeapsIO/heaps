@@ -1133,8 +1133,6 @@ class HMDOut extends BaseLibrary {
 					o.childs.remove(o2);
 				}
 
-
-
 				// Move not joint to model (only first level, others will follow their respective joint)
 				for (c in o.childs.copy()) {
 					if (!c.isJoint) {
@@ -1324,13 +1322,15 @@ class HMDOut extends BaseLibrary {
 				model.skin = makeSkin(skin, o.skin);
 			}
 
-			// Reorder materials to ensure there are in the same order for lods
+			// For each LOD > 0, reorder its materials in the same order that the LOD 0
 			var lodsInfos = getLODInfos(model.name);
+			if (lodsInfos.lodLevel == 0)
+				lods0Mids.set(lodsInfos.modelName, mids);
 			if (lodsInfos.lodLevel != -1) {
 				midsSortRemap = new Map<Int, Int>();
 				for (idx in 0...mids.length) {
-					midsSortRemap.set(idx, mids[idx]);
-					mids[idx] = idx;
+					midsSortRemap.set(idx, mids[idx] - lods0Mids.get(lodsInfos.modelName)[0]);
+					mids[idx] = lods0Mids.get(lodsInfos.modelName)[idx];
 				}
 			}
 
@@ -1369,8 +1369,6 @@ class HMDOut extends BaseLibrary {
 			else
 				model.materials = [for( id in gdata.materials ) mids[id]];
 
-			if (lodsInfos.lodLevel == 0)
-				lods0Mids.set(lodsInfos.modelName, mids);
 			var lodsInfos = getLODInfos(model.name);
 			var lodIndex = lodsInfos.lodLevel;
 			var key = lodsInfos.modelName;
