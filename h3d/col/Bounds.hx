@@ -391,6 +391,7 @@ class Bounds extends Collider {
 	}
 
 	public inline function getBoundingSphereRadius() {
+		if(isEmpty()) return 0.0;
 		var dx = xMax - xMin;
 		var dy = yMax - yMin;
 		var dz = zMax - zMin;
