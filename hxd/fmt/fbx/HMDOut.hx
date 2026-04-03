@@ -1329,8 +1329,14 @@ class HMDOut extends BaseLibrary {
 			if (lodsInfos.lodLevel != -1) {
 				midsSortRemap = new Map<Int, Int>();
 				for (idx in 0...mids.length) {
-					midsSortRemap.set(idx, mids[idx] - lods0Mids.get(lodsInfos.modelName)[0]);
-					mids[idx] = lods0Mids.get(lodsInfos.modelName)[idx];
+					var lod0Mids = lods0Mids.get(lodsInfos.modelName);
+					for (idx2 in 0...lod0Mids.length) {
+						if (mids[idx] == lod0Mids[idx2]) {
+							mids[idx] = lod0Mids[idx2];
+							midsSortRemap.set(idx, idx2);
+							break;
+						}
+					}
 				}
 			}
 
