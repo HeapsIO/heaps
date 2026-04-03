@@ -1389,6 +1389,11 @@ class BaseLibrary {
 					fov[f] = c.fov.v[fovp - 1];
 				}
 			}
+
+			var objectName = c.object;
+			var reg = ~/_*-*LOD0/;
+			objectName = reg.replace(objectName, '');
+
 			if( frames != null ) {
 				var hasTrans = c.t != null;
 				var hasRot = c.r != null || def.rotate != null || def.preRot != null;
@@ -1396,16 +1401,16 @@ class BaseLibrary {
 				// force position for objects unless it's default to skin
 				if( !hasTrans && def.transPos == null )
 					hasTrans = true;
-				anim.addCurve(c.object, frames, hasTrans, hasRot, hasScale);
+				anim.addCurve(objectName, frames, hasTrans, hasRot, hasScale);
 			}
 			if( alpha != null )
-				anim.addAlphaCurve(c.object, alpha);
+				anim.addAlphaCurve(objectName, alpha);
 			if( uvs != null )
-				anim.addUVCurve(c.object, uvs);
+				anim.addUVCurve(objectName, uvs);
 			if( roll != null )
-				anim.addPropCurve(c.object, "Roll", roll);
+				anim.addPropCurve(objectName, "Roll", roll);
 			if( fov != null )
-				anim.addPropCurve(c.object, "FOVY", fov);
+				anim.addPropCurve(objectName, "FOVY", fov);
 		}
 		return anim;
 	}
