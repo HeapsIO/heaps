@@ -241,18 +241,19 @@ class Animation {
 					continue;
 				}
 			}
-			var obj = base.getObjectByName(a.objectName);
-			if( obj == null ) {
+
+			var objs = base.findAll((o) -> o.name == a.objectName && o != base ? o : null);
+			if( objs.length == 0 ) {
 				objects.remove(a);
 				continue;
 			}
-			var joint = Std.downcast(obj, h3d.scene.Skin.Joint);
+			var joint = Std.downcast(objs[objs.length - 1], h3d.scene.Skin.Joint);
 			if( joint != null ) {
 				currentSkin = cast joint.parent;
 				a.targetSkin = currentSkin != null ? currentSkin : joint.skin;
 				a.targetJoint = joint.index;
 			} else {
-				a.targetObject = obj;
+				a.targetObject = objs[objs.length - 1];
 			}
 		}
 		isSync = false;
