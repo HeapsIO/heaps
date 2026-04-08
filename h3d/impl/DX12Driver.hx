@@ -1237,6 +1237,7 @@ class DX12Driver extends h3d.impl.Driver {
 			tmp.rect.right = rtWidth;
 			tmp.rect.bottom = rtHeight;
 		} else {
+			 if( width <= 0 || height <= 0 ) return;
 			tmp.rect.left = x;
 			tmp.rect.top = y;
 			tmp.rect.right = x + width;
