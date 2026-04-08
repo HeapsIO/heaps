@@ -1236,22 +1236,13 @@ class DX12Driver extends h3d.impl.Driver {
 			tmp.rect.top = 0;
 			tmp.rect.right = rtWidth;
 			tmp.rect.bottom = rtHeight;
-			tmp.viewport.topLeftX = 0;
-			tmp.viewport.topLeftY = 0;
-			tmp.viewport.width = rtWidth;
-			tmp.viewport.height = rtHeight;
 		} else {
 			tmp.rect.left = x;
 			tmp.rect.top = y;
 			tmp.rect.right = x + width;
 			tmp.rect.bottom = y + height;
-			tmp.viewport.topLeftX = x;
-			tmp.viewport.topLeftY = y;
-			tmp.viewport.width = width;
-			tmp.viewport.height = height;
 		}
 		frame.commandList.rsSetScissorRects(1, tmp.rect);
-    	// frame.commandList.rsSetViewports(1, tmp.viewport);
 	}
 
 	override function captureRenderBuffer( pixels : hxd.Pixels ) {
