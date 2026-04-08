@@ -1251,7 +1251,7 @@ class DX12Driver extends h3d.impl.Driver {
 			tmp.viewport.height = height;
 		}
 		frame.commandList.rsSetScissorRects(1, tmp.rect);
-    	frame.commandList.rsSetViewports(1, tmp.viewport);
+    	// frame.commandList.rsSetViewports(1, tmp.viewport);
 	}
 
 	override function captureRenderBuffer( pixels : hxd.Pixels ) {
