@@ -100,10 +100,16 @@ class Batcher extends h3d.scene.Object {
 	var library : BatchLibrary;
 	var shouldDisposeLibrary : Bool = false;
 
+	public function hasSyncIDs() : Bool {
+		return (syncShader != null && syncShader.hasSyncIDs());
+	}
+
 	public function addShader( s : hxsl.Shader ) {
 		for ( b in batches )
-			for ( p in @:privateAccess b.passes )
+			for ( p in @:privateAccess b.passes ){
+				p.pass.removeShader(s);
 				p.pass.addShader(s);
+			}
 	}
 
 	public function new( parent : h3d.scene.Object, library : BatchLibrary = null, batchFlags = null ) {
@@ -762,13 +768,13 @@ private class BatchPass {
 		}
 		var shaderData = new hxd.FloatBuffer(batchShader.paramsSize * 4);
 		while ( p != null ) {
-			var bufLoader = new hxd.FloatBufferLoader(shaderData, p.pos);
 			if( p.perObjectGlobal != null ) {
 				if ( p.perObjectGlobal.gid != modelViewID && p.perObjectGlobal.gid != modelViewInverseID && p.perObjectGlobal.gid != previousModelViewID )
 					throw "Unsupported global param " + p.perObjectGlobal.path;
 				p = p.next;
 				continue;
 			}
+			var bufLoader = new hxd.FloatBufferLoader(shaderData, p.pos);
 			var curShader = shaders[p.instance];
 			switch( p.type ) {
 			case TVec(size, _):
@@ -837,7 +843,7 @@ private class BatchPass {
 		}
 		batchShader.Batch_StorageBuffer = instancesData;
 
-		var hasSyncIDs = batcher.syncShader?.hasSyncIDs() == true;
+		var hasSyncIDs = batcher.hasSyncIDs();
 		if ( hasSyncIDs ) {
 			if ( syncIDs == null || syncIDs.vertices < totalInstanceCount ) {
 				if ( syncIDs != null )
@@ -1023,7 +1029,7 @@ private class EmitData {
 		}
 		instancesInfos.setInt32(instanceID * instanceInfosStride, subMeshID << 16 | subPartID );
 
-		if ( @:privateAccess batchPass.batcher.syncShader?.hasSyncIDs() ) {
+		if ( @:privateAccess batchPass.batcher.hasSyncIDs() ) {
 			var minSyncDataSize = instanceCount << 2;
 			if ( syncIDs == null )
 				syncIDs = haxe.io.Bytes.alloc(minSyncDataSize);
