@@ -583,7 +583,7 @@ class DX12Driver extends h3d.impl.Driver {
 	public static var INITIAL_BUFFER_ALLOCATOR_SIZE = 2 * 1024 * 1024;
 	public static var BUFFER_COUNT = #if console 3 #else 2 #end;
 	public static var DEVICE_NAME = null;
-	public static var DEBUG = false; // requires dxil.dll when set to true
+	public static var DEBUG = true; // requires dxil.dll when set to true
 
 	@:allow(h3d.impl) static function allocCheck<T>( f : Void -> T ) {
 		var ret = f();
@@ -1236,14 +1236,22 @@ class DX12Driver extends h3d.impl.Driver {
 			tmp.rect.top = 0;
 			tmp.rect.right = rtWidth;
 			tmp.rect.bottom = rtHeight;
-			frame.commandList.rsSetScissorRects(1, tmp.rect);
+			tmp.viewport.topLeftX = 0;
+			tmp.viewport.topLeftY = 0;
+			tmp.viewport.width = rtWidth;
+			tmp.viewport.height = rtHeight;
 		} else {
 			tmp.rect.left = x;
 			tmp.rect.top = y;
 			tmp.rect.right = x + width;
 			tmp.rect.bottom = y + height;
-			frame.commandList.rsSetScissorRects(1, tmp.rect);
+			tmp.viewport.topLeftX = x;
+			tmp.viewport.topLeftY = y;
+			tmp.viewport.width = width;
+			tmp.viewport.height = height;
 		}
+		frame.commandList.rsSetScissorRects(1, tmp.rect);
+    	frame.commandList.rsSetViewports(1, tmp.viewport);
 	}
 
 	override function captureRenderBuffer( pixels : hxd.Pixels ) {
@@ -2114,7 +2122,7 @@ class DX12Driver extends h3d.impl.Driver {
 		tmp.heap.type = DEFAULT;
 
 		tmp.clearValue.format = desc.format;
-		tmp.clearValue.depth = 1;
+		tmp.clearValue.depth = DEFAULT_DEPTH_VALUE;
 		tmp.clearValue.stencil= 0;
 		td.state = td.targetState = DEPTH_WRITE;
 		td.res = Driver.createCommittedResource(tmp.heap, flags, desc, DEPTH_WRITE, tmp.clearValue);
