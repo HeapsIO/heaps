@@ -241,14 +241,11 @@ class Animation {
 					continue;
 				}
 			}
-
-			// var objs = base.findAll((o) -> o.name == a.objectName && o != base ? o : null);
-			// if( objs.length == 0 ) {
-			// 	objects.remove(a);
-			// 	continue;
-			// }
-			// var obj = objs[0];
 			var obj = base.getObjectByName(a.objectName);
+			if( obj == null ) {
+				objects.remove(a);
+				continue;
+			}
 			var joint = Std.downcast(obj, h3d.scene.Skin.Joint);
 			if( joint != null ) {
 				currentSkin = cast joint.parent;
