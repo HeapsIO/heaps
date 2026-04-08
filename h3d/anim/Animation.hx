@@ -242,18 +242,20 @@ class Animation {
 				}
 			}
 
-			var objs = base.findAll((o) -> o.name == a.objectName && o != base ? o : null);
-			if( objs.length == 0 ) {
-				objects.remove(a);
-				continue;
-			}
-			var joint = Std.downcast(objs[objs.length - 1], h3d.scene.Skin.Joint);
+			// var objs = base.findAll((o) -> o.name == a.objectName && o != base ? o : null);
+			// if( objs.length == 0 ) {
+			// 	objects.remove(a);
+			// 	continue;
+			// }
+			// var obj = objs[0];
+			var obj = base.getObjectByName(a.objectName);
+			var joint = Std.downcast(obj, h3d.scene.Skin.Joint);
 			if( joint != null ) {
 				currentSkin = cast joint.parent;
 				a.targetSkin = currentSkin != null ? currentSkin : joint.skin;
 				a.targetJoint = joint.index;
 			} else {
-				a.targetObject = objs[objs.length - 1];
+				a.targetObject = obj;
 			}
 		}
 		isSync = false;
