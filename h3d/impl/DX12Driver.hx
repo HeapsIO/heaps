@@ -572,6 +572,13 @@ class DX12Driver extends h3d.impl.Driver {
 	var asyncReadbackQueue : Array<AsyncReadbackRequest> = [];
 	var currentRequest : AsyncReadbackRequest;
 
+	var computeQueue : CommandQueue;
+	var computeFence : Fence;
+	var computeFenceValue : Int64;
+
+	var asyncComputeCommandList : CommandList;
+	var asyncComputeAllocator : CommandAllocator;
+
 	public static var COPY_BUFFER_SIZE = 256 * 1024 * 1024; // 256 Mo per frame
 	public static var DEFAULT_DEPTH_FORMAT : h3d.mat.Data.TextureFormat = Depth24Stencil8;
 	public static var DEFAULT_DEPTH_VALUE = 1.0;
@@ -687,6 +694,16 @@ class DX12Driver extends h3d.impl.Driver {
 		asyncCopyCommandList.close();
 		asyncCopyAllocator.reset();
 		asyncCopyCommandList.reset(asyncCopyAllocator, null);
+
+		computeQueue = new CommandQueue(COMPUTE);
+		computeFence = new Fence(0, NONE);
+		computeFenceValue = 0;
+
+		asyncComputeAllocator = new CommandAllocator(COMPUTE);
+		asyncComputeCommandList = new CommandList(COMPUTE, asyncComputeAllocator, null);
+		asyncComputeCommandList.close();
+		asyncComputeAllocator.reset();
+		asyncComputeCommandList.reset(asyncComputeAllocator, null);
 
 		renderTargetViews = new ScratchHeap(RTV, INITIAL_RT_COUNT);
 		depthStenciViews = new ScratchHeap(DSV, INITIAL_RT_COUNT);
@@ -856,6 +873,12 @@ class DX12Driver extends h3d.impl.Driver {
 	function waitCopy() {
 		copyQueue.signal(copyFence, ++copyFenceValue);
 		copyFence.setEvent(copyFenceValue, fenceEvent);
+		fenceEvent.wait(-1);
+	}
+
+	function waitCompute() {
+		computeQueue.signal(computeFence, ++computeFenceValue);
+		computeFence.setEvent(computeFenceValue, fenceEvent);
 		fenceEvent.wait(-1);
 	}
 
@@ -1948,11 +1971,23 @@ class DX12Driver extends h3d.impl.Driver {
 						var totalSize = currentRequest.vertexCount*stride;
 						currentRequest.tmpBuf = allocGPU(totalSize, READBACK, COPY_DEST);
 
-						transition(currentRequest.b.vbuf, COPY_SOURCE);
-						flushTransitions();
-						flushFrame();
-						waitGpu();
-						beginFrame();
+						currentRequest.b.vbuf.targetState = COMMON;
+						var b = tmp.barriers[0];
+						b.resource = currentRequest.b.vbuf.res;
+						@:privateAccess b.type = TRANSITION;
+						b.stateBefore = currentRequest.b.vbuf.state;
+						b.stateAfter = currentRequest.b.vbuf.targetState;
+						currentRequest.b.vbuf.state = currentRequest.b.vbuf.targetState;
+
+						asyncComputeCommandList.resourceBarrier(b);
+						asyncComputeCommandList.close();
+						computeQueue.executeCommandList(asyncComputeCommandList);
+						computeQueue.signal(computeFence, ++computeFenceValue);
+
+						waitCompute();
+
+						asyncComputeAllocator.reset();
+						asyncComputeCommandList.reset(asyncComputeAllocator, null);
 
 						asyncCopyCommandList.copyBufferRegion(currentRequest.tmpBuf, 0, currentRequest.b.vbuf.res, currentRequest.startVertex*stride, totalSize);
 						asyncCopyCommandList.close();
