@@ -2585,7 +2585,7 @@ class DX12Driver extends h3d.impl.Driver {
 								var color = h3d.mat.Defaults.loadingTextureColor;
 								t = h3d.mat.Texture.fromColor(color, (color >>> 24) / 255);
 							default:
-								throw "Missing texture";
+								t = errorTex;
 							}
 						}
 						if( t != null && t.t == null && t.realloc != null ) {
