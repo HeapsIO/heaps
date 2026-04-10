@@ -19,14 +19,16 @@ private class Access {
 
 class DynamicShader extends Shader {
 
+	public var instanceName : String;
 	var values = new Array<Dynamic>();
 	var floats = new Array<Float>();
 	var accesses = new Array<Access>();
 	var varIndexes = new Map<Int,Int>();
 	var varNames = new Map<String,Int>();
 
-	public function new( s : SharedShader ) {
+	public function new( s : SharedShader, ?name ) {
 		this.shader = s;
+		this.instanceName = name;
 		super();
 		for( v in s.data.vars )
 			addVarIndex(v);
