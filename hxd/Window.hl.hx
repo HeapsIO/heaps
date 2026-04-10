@@ -242,6 +242,12 @@ class Window {
 		if (emitEvent) event(new hxd.Event(EMove, x, y));
 	}
 
+	public function captureMouseEvents(enable: Bool) : Void {
+		#if (hldx || hlsdl)
+		window.captureMouseEvents(enable);
+		#end
+	}
+
 	@:deprecated("Use the displayMode property instead")
 	public function setFullScreen( v : Bool ) : Void {
 		#if (hldx || hlsdl)
