@@ -502,6 +502,7 @@ class AsyncReadbackRequest {
 	public var bufPos : Int;
 	public var callback : Void -> Void;
 	public var tmpBuf : GpuResource;
+	public var barrier : ResourceBarrier;
 	public function new() {
 	}
 }
@@ -570,7 +571,7 @@ class DX12Driver extends h3d.impl.Driver {
 	var asyncCopyEvent : MainEvent;
 	var waitingAsyncCopy : Bool;
 	var asyncReadbackQueue : Array<AsyncReadbackRequest> = [];
-	var currentRequest : AsyncReadbackRequest;
+	var currentRequests : Array<AsyncReadbackRequest> = [];
 
 	var computeQueue : CommandQueue;
 	var computeFence : Fence;
@@ -1953,48 +1954,56 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	override function readBufferBytesAsync( b : Buffer, startVertex : Int, vertexCount : Int, buf : haxe.io.Bytes, bufPos : Int, callback : Void -> Void ) {
-		var request = new AsyncReadbackRequest();
-		request.b = b;
-		request.startVertex = startVertex;
-		request.vertexCount = vertexCount;
-		request.buf = buf;
-		request.bufPos = bufPos;
-		request.callback = callback;
-		asyncReadbackQueue.insert(0, request);
-
 		haxe.Timer.delay(() -> {
+			var rq = new AsyncReadbackRequest();
+			rq.b = b;
+			rq.startVertex = startVertex;
+			rq.vertexCount = vertexCount;
+			rq.buf = buf;
+			rq.bufPos = bufPos;
+			rq.callback = callback;
+			asyncReadbackQueue.insert(0, rq);
+
 			if ( asyncCopyEvent == null ) {
 				asyncCopyEvent = haxe.MainLoop.add(() -> {
 					if ( !waitingAsyncCopy ) {
 						if ( asyncReadbackQueue.length > 0 ) {
-							currentRequest = asyncReadbackQueue.pop();
-							var stride = currentRequest.b.format.strideBytes;
-							var totalSize = currentRequest.vertexCount*stride;
-							currentRequest.tmpBuf = allocGPU(totalSize, READBACK, COPY_DEST);
-	
-							currentRequest.b.vbuf.targetState = COMMON;
-							var b = tmp.barriers[0];
-							b.resource = currentRequest.b.vbuf.res;
-							@:privateAccess b.type = TRANSITION;
-							b.stateBefore = currentRequest.b.vbuf.state;
-							b.stateAfter = currentRequest.b.vbuf.targetState;
-							currentRequest.b.vbuf.state = currentRequest.b.vbuf.targetState;
-	
-							asyncComputeCommandList.resourceBarrier(b);
+							for ( i in 0...asyncReadbackQueue.length ) {
+								var request = asyncReadbackQueue[i];
+								var stride = request.b.format.strideBytes;
+								var totalSize = request.vertexCount*stride;
+								request.tmpBuf = allocGPU(totalSize, READBACK, COPY_DEST);
+
+								request.b.vbuf.targetState = COMMON;
+								var b = new ResourceBarrier();
+								b.resource = request.b.vbuf.res;
+								@:privateAccess b.type = TRANSITION;
+								b.stateBefore = request.b.vbuf.state;
+								b.stateAfter = request.b.vbuf.targetState;
+								request.b.vbuf.state = request.b.vbuf.targetState;
+								request.barrier = b;
+
+								asyncComputeCommandList.resourceBarrier(b);
+
+								asyncCopyCommandList.copyBufferRegion(request.tmpBuf, 0, request.b.vbuf.res, request.startVertex*stride, totalSize);
+
+								currentRequests.push(request);
+							}
+
+							asyncReadbackQueue.resize(0);
+
 							asyncComputeCommandList.close();
 							computeQueue.executeCommandList(asyncComputeCommandList);
 							computeQueue.signal(computeFence, ++computeFenceValue);
-	
+
 							waitCompute();
-	
 							asyncComputeAllocator.reset();
 							asyncComputeCommandList.reset(asyncComputeAllocator, null);
-	
-							asyncCopyCommandList.copyBufferRegion(currentRequest.tmpBuf, 0, currentRequest.b.vbuf.res, currentRequest.startVertex*stride, totalSize);
+
 							asyncCopyCommandList.close();
 							copyQueue.executeCommandList(asyncCopyCommandList);
 							copyQueue.signal(copyFence, ++copyFenceValue);
-	
+
 							waitingAsyncCopy = true;
 						} else {
 							asyncCopyEvent.stop();
@@ -2004,17 +2013,18 @@ class DX12Driver extends h3d.impl.Driver {
 						if ( copyFence.getValue() >= copyFenceValue ) {
 							asyncCopyAllocator.reset();
 							asyncCopyCommandList.reset(asyncCopyAllocator, null);
-	
-							var stride = currentRequest.b.format.strideBytes;
-							var totalSize = currentRequest.vertexCount*stride;
-							var output = currentRequest.tmpBuf.map(0, null);
-							@:privateAccess currentRequest.buf.b.blit(currentRequest.bufPos, output, 0, totalSize);
-							currentRequest.tmpBuf.release();
-	
-							currentRequest.callback();
-	
+
+							for ( request in currentRequests ) {
+								var stride = request.b.format.strideBytes;
+								var totalSize = request.vertexCount*stride;
+								var output = request.tmpBuf.map(0, null);
+								@:privateAccess request.buf.b.blit(request.bufPos, output, 0, totalSize);
+								request.tmpBuf.release();
+								request.callback();
+							}
+
+							currentRequests.resize(0);
 							waitingAsyncCopy = false;
-							currentRequest = null;
 						}
 					}
 				});
