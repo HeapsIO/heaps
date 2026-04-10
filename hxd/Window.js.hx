@@ -300,6 +300,12 @@ class Window {
 		if (emitEvent) event(new hxd.Event(EMove, x, y));
 	}
 
+	public function captureMouseEvents(enable: Bool) : Void {
+		// capturing mouse event is currently not supported on js target
+		// because it must be made in response to a mouse event
+		// see : https://developer.mozilla.org/en-US/docs/Web/API/Element/setPointerCapture
+	}
+
 	public function setCurrent() {
 		inst = this;
 	}
