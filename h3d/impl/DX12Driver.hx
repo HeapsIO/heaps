@@ -1962,62 +1962,64 @@ class DX12Driver extends h3d.impl.Driver {
 		request.callback = callback;
 		asyncReadbackQueue.insert(0, request);
 
-		if ( asyncCopyEvent == null ) {
-			asyncCopyEvent = haxe.MainLoop.add(() -> {
-				if ( !waitingAsyncCopy ) {
-					if ( asyncReadbackQueue.length > 0 ) {
-						currentRequest = asyncReadbackQueue.pop();
-						var stride = currentRequest.b.format.strideBytes;
-						var totalSize = currentRequest.vertexCount*stride;
-						currentRequest.tmpBuf = allocGPU(totalSize, READBACK, COPY_DEST);
-
-						currentRequest.b.vbuf.targetState = COMMON;
-						var b = tmp.barriers[0];
-						b.resource = currentRequest.b.vbuf.res;
-						@:privateAccess b.type = TRANSITION;
-						b.stateBefore = currentRequest.b.vbuf.state;
-						b.stateAfter = currentRequest.b.vbuf.targetState;
-						currentRequest.b.vbuf.state = currentRequest.b.vbuf.targetState;
-
-						asyncComputeCommandList.resourceBarrier(b);
-						asyncComputeCommandList.close();
-						computeQueue.executeCommandList(asyncComputeCommandList);
-						computeQueue.signal(computeFence, ++computeFenceValue);
-
-						waitCompute();
-
-						asyncComputeAllocator.reset();
-						asyncComputeCommandList.reset(asyncComputeAllocator, null);
-
-						asyncCopyCommandList.copyBufferRegion(currentRequest.tmpBuf, 0, currentRequest.b.vbuf.res, currentRequest.startVertex*stride, totalSize);
-						asyncCopyCommandList.close();
-						copyQueue.executeCommandList(asyncCopyCommandList);
-						copyQueue.signal(copyFence, ++copyFenceValue);
-
-						waitingAsyncCopy = true;
+		haxe.Timer.delay(() -> {
+			if ( asyncCopyEvent == null ) {
+				asyncCopyEvent = haxe.MainLoop.add(() -> {
+					if ( !waitingAsyncCopy ) {
+						if ( asyncReadbackQueue.length > 0 ) {
+							currentRequest = asyncReadbackQueue.pop();
+							var stride = currentRequest.b.format.strideBytes;
+							var totalSize = currentRequest.vertexCount*stride;
+							currentRequest.tmpBuf = allocGPU(totalSize, READBACK, COPY_DEST);
+	
+							currentRequest.b.vbuf.targetState = COMMON;
+							var b = tmp.barriers[0];
+							b.resource = currentRequest.b.vbuf.res;
+							@:privateAccess b.type = TRANSITION;
+							b.stateBefore = currentRequest.b.vbuf.state;
+							b.stateAfter = currentRequest.b.vbuf.targetState;
+							currentRequest.b.vbuf.state = currentRequest.b.vbuf.targetState;
+	
+							asyncComputeCommandList.resourceBarrier(b);
+							asyncComputeCommandList.close();
+							computeQueue.executeCommandList(asyncComputeCommandList);
+							computeQueue.signal(computeFence, ++computeFenceValue);
+	
+							waitCompute();
+	
+							asyncComputeAllocator.reset();
+							asyncComputeCommandList.reset(asyncComputeAllocator, null);
+	
+							asyncCopyCommandList.copyBufferRegion(currentRequest.tmpBuf, 0, currentRequest.b.vbuf.res, currentRequest.startVertex*stride, totalSize);
+							asyncCopyCommandList.close();
+							copyQueue.executeCommandList(asyncCopyCommandList);
+							copyQueue.signal(copyFence, ++copyFenceValue);
+	
+							waitingAsyncCopy = true;
+						} else {
+							asyncCopyEvent.stop();
+							asyncCopyEvent = null;
+						}
 					} else {
-						asyncCopyEvent.stop();
-						asyncCopyEvent = null;
+						if ( copyFence.getValue() >= copyFenceValue ) {
+							asyncCopyAllocator.reset();
+							asyncCopyCommandList.reset(asyncCopyAllocator, null);
+	
+							var stride = currentRequest.b.format.strideBytes;
+							var totalSize = currentRequest.vertexCount*stride;
+							var output = currentRequest.tmpBuf.map(0, null);
+							@:privateAccess currentRequest.buf.b.blit(currentRequest.bufPos, output, 0, totalSize);
+							currentRequest.tmpBuf.release();
+	
+							currentRequest.callback();
+	
+							waitingAsyncCopy = false;
+							currentRequest = null;
+						}
 					}
-				} else {
-					if ( copyFence.getValue() >= copyFenceValue ) {
-						asyncCopyAllocator.reset();
-						asyncCopyCommandList.reset(asyncCopyAllocator, null);
-
-						var stride = currentRequest.b.format.strideBytes;
-						var totalSize = currentRequest.vertexCount*stride;
-						var output = currentRequest.tmpBuf.map(0, null);
-						@:privateAccess currentRequest.buf.b.blit(currentRequest.bufPos, output, 0, totalSize);
-						currentRequest.tmpBuf.release();
-
-						currentRequest.callback();
-
-						waitingAsyncCopy = false;
-						currentRequest = null;
-					}
-				}
-			});
-		}
+				});
+			}
+		}, 0);
 	}
 
 	// ------------ TEXTURES -------
