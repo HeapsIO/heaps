@@ -266,6 +266,7 @@ class GPUMeshBatch extends MeshBatch {
 			var computeShader = computePass.getShader(h3d.shader.InstanceIndirect.InstanceIndirectBase);
 			if ( gpuCullingEnabled )
 				computeShader.frustum = ctx.getCameraFrustumBuffer();
+			computeShader.meshLodScale = ctx.meshLodScale;
 			computeShader.instanceData = dataPasses.buffers[0];
 			computeShader.commandBuffer = commandBuffer;
 			gpuCounter.reset();

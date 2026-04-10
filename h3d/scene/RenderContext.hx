@@ -37,6 +37,7 @@ class RenderContext extends h3d.impl.RenderContext {
 	public var wasContextLost : Bool;
 	public var cullingCollider : h3d.col.Collider;
 	public var forcedScreenRatio : Float = -1;
+	public var meshLodScale : Float = 1.0;
 
 	public var numViews : Int = 1;
 	public var currentView : View = new h3d.scene.View(0);

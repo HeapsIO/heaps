@@ -36,10 +36,6 @@ class ModelDatabase {
 	var baseDir(get, never) : String;
 	var fileConfig : FileConfig<Dynamic>;
 
-	public static dynamic function customizeLodConfig(c : Array<Float>) {
-		return c;
-	}
-
 	function new() {
 		fileConfig = new FileConfig<ModelProps>("", FILE_NAME, defaultProps);
 		#if !macro
@@ -300,10 +296,8 @@ class ModelDatabase {
 			Reflect.setField(data, COLLIDE_CONFIG, Reflect.field(input.collide, COLLIDE_CONFIG));
 	}
 
-
 	public function getDefaultLodConfig( dir : String ) : Array<Float> {
-		var c = fileConfig.getConfig(dir).lodConfig;
-		return customizeLodConfig(c);
+		return fileConfig.getConfig(dir).lodConfig;
 	}
 
 	public function getDefaultDynamicBonesConfig( dir : String ) : Array<Dynamic> {

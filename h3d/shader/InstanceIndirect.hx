@@ -23,6 +23,7 @@ class InstanceIndirectBase extends hxsl.Shader {
 
 		@const var ENABLE_DISTANCE_CLIPPING : Bool;
 		@param var maxDistance : Float = -1;
+		@param var meshLodScale : Float = 1.0;
 
 		var modelView : Mat4;
 		var invocID : Int;
@@ -101,7 +102,7 @@ class InstanceIndirectBase extends hxsl.Shader {
 		function computeScreenRatio( distToCam : Float, radius : Float ) : Float {
 			var screenMultiple = max(0.5 * camera.proj[0][0], 0.5 * camera.proj[1][1]);
 			var screenRadius = screenMultiple * radius / max(1.0, distToCam);
-			return 2.0 * screenRadius;
+			return 2.0 * screenRadius * meshLodScale;
 		}
 
 		function selectLod( screenRatio : Float ) : Int {

@@ -99,7 +99,7 @@ class Mesh extends Object {
 			return;
 		}
 
-		curScreenRatio = screenRatio(getAbsPos(), bounds, ctx.camera);
+		curScreenRatio = screenRatio(getAbsPos(), bounds, ctx.camera) * ctx.meshLodScale;
 
 		if ( inheritLod )
 			ctx.forcedScreenRatio = curScreenRatio;

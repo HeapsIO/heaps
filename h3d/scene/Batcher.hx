@@ -553,6 +553,7 @@ private class BatchCommandBuilder extends hxsl.Shader {
 		@param var frustum : Buffer<Vec4, 6>;
 
 		@param var maxDistance : Float = -1;
+		@param var meshLodScale : Float = 1.0;
 
 		final subMeshInfosStride : Int = 3;
 		final subPartInfosStride : Int = 2;
@@ -579,7 +580,7 @@ private class BatchCommandBuilder extends hxsl.Shader {
 		function computeScreenRatio( distToCam : Float, radius : Float ) : Float {
 			var screenMultiple = max(0.5 * camera.proj[0][0], 0.5 * camera.proj[1][1]);
 			var screenRadius = screenMultiple * radius / max(1.0, distToCam);
-			return 2.0 * screenRadius;
+			return 2.0 * screenRadius * meshLodScale;
 		}
 
 		function main() {
@@ -964,6 +965,7 @@ private class BatchPass {
 			builderShader.ENABLE_DIRLIGHT_OBB_CULLING = false;
 		}
 
+		builderShader.meshLodScale = ctx.meshLodScale;
 		countBuffer.reset();
 		ctx.computeDispatch(builderShader, hxd.Math.ceil(totalInstanceCount/64.0), false);
 	}
