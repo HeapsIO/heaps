@@ -2,6 +2,8 @@ package hxsl;
 
 #if (sys || nodejs)
 
+private typedef DumpNode = { name : String, count: Int, children : Array<DumpNode> };
+
 @:structInit
 private class ShaderListInfo {
 	public var name : String;
@@ -476,35 +478,141 @@ class CacheFile2 extends Cache {
 		}
 	}
 
-	public function dump(path: String) {
-		var lines = [];
+	public function dump(path: String, withCode : Bool=false) {
+		function addChild( parent : DumpNode, name : String ) : DumpNode {
+			for(child in parent.children) {
+				if( child.name == name ) {
+					child.count++;
+					return child;
+				}
+			}
+			var child = { name : name, count: 1, children : [] };
+			parent.children.push(child);
+			return child;
+		}
+
+		var root : DumpNode = { name : "shaders", count: 1, children : [] };
+		var stats = new Map<String, { name: String, count: Int }>();
+		var duplicates = new Map<String, Int>();
+		var variants = new Map<String, Map<Int, Bool>>();
+		var allShaders : Array<{ instances : Array<String>, count : Int }> = [];
+		var codedump = [];
 		var printer = new hxsl.Printer();
-		function dumpSub( label : String, list : Array<RuntimeShader> ) {
-			lines.push("=== " + label + " (" + list.length + ") ===");
+
+		function collect( label : String, list : Array<RuntimeShader> ) {
+			if(withCode)
+				codedump.push("=== " + label + " (" + list.length + ") ===");
 			for( rt in list ) {
-				lines.push("--------------------------------");
-				lines.push(rt.spec.signature);
-				for( inst in rt.spec.instances )
-					lines.push("  " + @:privateAccess inst.shader.data.name + "(bits=" + inst.bits + ")");
-				if( rt.vertex != null && rt.vertex.data != null ) {
-					lines.push("// --- vertex ---");
-					lines.push(printer.shaderString(rt.vertex.data));
-					lines.push("\n");
+				var n = root;
+				var instNames = [];
+				var count = rt.spec.instances.length;
+				for( i in 0...count ) {
+					var inst = rt.spec.instances[count - i - 1];
+					var baseName = @:privateAccess inst.shader.data.name;
+					if(baseName.indexOf("shaderLinker") == 0)
+						continue;
+					if( !variants.exists(baseName) )
+						variants.set(baseName, new Map());
+					variants.get(baseName).set(inst.bits, true);
+
+					var name = inst.bits != 0 ? baseName + ":" + inst.bits : baseName;
+					if(stats.exists(name)) {
+						var s = stats.get(name);
+						s.count++;
+					} else
+						stats.set(name, { name : name, count : 1 });
+					n = addChild(n, name);
+					instNames.push(name);
 				}
-				if( rt.fragment != null && rt.fragment.data != null ) {
-					lines.push("// --- fragment ---");
-					lines.push(printer.shaderString(rt.fragment.data));
-					lines.push("\n");
+				if( instNames.length > 0 ) {
+					allShaders.push({ instances : instNames, count : rt.spec.instances.length });
+					var counts = new Map<String, Int>();
+					for( n in instNames )
+						counts.set(n, (counts.exists(n) ? counts.get(n) : 0) + 1);
+					for( n => c in counts )
+						if( c > 1 )
+							duplicates.set(n, (duplicates.exists(n) ? duplicates.get(n) : 0) + 1);
 				}
-				lines.push("\n\n");
+
+				if(withCode) {
+					codedump.push(StringTools.rpad("", "-", 40));
+					codedump.push(rt.spec.signature);
+					for( inst in rt.spec.instances )
+						codedump.push("  " + @:privateAccess inst.shader.data.name + "(bits=" + inst.bits + ")");
+					if( rt.vertex != null && rt.vertex.data != null ) {
+						codedump.push("// --- vertex ---");
+						codedump.push(printer.shaderString(rt.vertex.data));
+						codedump.push("\n");
+					}
+					if( rt.fragment != null && rt.fragment.data != null ) {
+						codedump.push("// --- fragment ---");
+						codedump.push(printer.shaderString(rt.fragment.data));
+						codedump.push("\n");
+					}
+					codedump.push("\n\n");
+				}
 			}
 		}
-		dumpSub("Default", runtimesDefault);
-		dumpSub("Batch", runtimesBatch);
-		dumpSub("Compute", runtimesCompute);
+		collect("Default", runtimesDefault);
+		collect("Batch", runtimesBatch);
+		collect("Compute", runtimesCompute);
 
-		var content = lines.join("\n");
-		sys.io.File.saveContent(path, content);
+		var out = [];
+		out.push("--------------------------------");
+		out.push("# Stats");
+		var statLines = [for(k => v in stats) v];
+		statLines.sort((s1, s2) -> {
+			return Reflect.compare(s2.count, s1.count);
+		});
+		for( s in statLines ) {
+			out.push(StringTools.rpad(Std.string(s.count), " ", 8) + "| " + s.name);
+		}
+		out.push("\n\n");
+
+		out.push("--------------------------------");
+		out.push("# Duplicates");
+		var dupLines = [for(k => v in duplicates) { name: k, count: v }];
+		dupLines.sort((a, b) -> Reflect.compare(b.count, a.count));
+		if( dupLines.length == 0 )
+			out.push("none");
+		else
+			for( d in dupLines )
+				out.push(StringTools.rpad(Std.string(d.count), " ", 8) + "| " + d.name);
+		out.push("\n\n");
+
+		out.push("--------------------------------");
+		out.push("# Variants");
+		var variantLines = [for(k => v in variants) { name: k, bits: [for(b in v.keys()) b] }];
+		variantLines = variantLines.filter(v -> v.bits.length > 1);
+		variantLines.sort((a, b) -> Reflect.compare(b.bits.length, a.bits.length));
+		if( variantLines.length == 0 )
+			out.push("none");
+		else
+			for( v in variantLines ) {
+				v.bits.sort(Reflect.compare);
+				out.push(v.name);
+				for( b in v.bits )
+					out.push("    " + b);
+			}
+		out.push("\n\n");
+
+		out.push("--------------------------------");
+		out.push("# Shader trees");
+		function dumpRec( node : DumpNode, indent : String ) {
+			out.push(indent + node.name);
+			for( child in node.children )
+				dumpRec(child, indent + "    ");
+		}
+		for( child in root.children )
+			dumpRec(child, "");
+		out.push("\n\n");
+
+		if(withCode) {
+			out.push("--------------------------------");
+			out.push("# Shader code");
+			out.push(codedump.join("\n"));
+		}
+		sys.io.File.saveContent(path, out.join("\n"));
 	}
 
 	function save() {
