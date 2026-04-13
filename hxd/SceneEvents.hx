@@ -386,12 +386,14 @@ class SceneEvents {
 		if ( currentDrag != null && currentDrag.onCancel != null )
 			currentDrag.onCancel();
 		currentDrag = { f: f, ref: touchId, onCancel: onCancel };
+		window.captureMouseEvents(true);
 	}
 
 	public function stopCapture() {
 		if ( currentDrag != null && currentDrag.onCancel != null )
 			currentDrag.onCancel();
 		currentDrag = null;
+		window.captureMouseEvents(false);
 	}
 
 	@:deprecated("Renamed to startCapture") @:dox(hide)

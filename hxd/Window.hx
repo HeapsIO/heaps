@@ -114,7 +114,7 @@ class Window {
 	public function setCursorPos( x : Int, y : Int, emitEvent : Bool = false ) : Void {
 		throw "Not implemented";
 	}
-	
+
 	public function setCurrent() {
 	}
 
@@ -183,5 +183,8 @@ class Window {
 	}
 	function set_title( t : String ) : String {
 		return t;
+	}
+
+	public function captureMouseEvents(enable: Bool) : Void {
 	}
 }
