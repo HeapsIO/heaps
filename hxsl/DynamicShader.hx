@@ -182,7 +182,7 @@ class DynamicShader extends Shader {
 		updateConstantsFinal(globals);
 	}
 
-	public function getVariable( name : String ) {
+	public function getVariable( name : String ) : Dynamic {
 		var vid = varNames.get(name);
 		if( vid == null )
 			return null;
