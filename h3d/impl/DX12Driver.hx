@@ -501,7 +501,8 @@ class AsyncReadbackRequest {
 	public var buf : haxe.io.Bytes;
 	public var bufPos : Int;
 	public var callback : Void -> Void;
-	public var tmpBuf : GpuResource;
+	public var tmpBufOffset : Int;
+    public var tmpBufSize : Int;
 	public var barrier : ResourceBarrier;
 	public function new() {
 	}
@@ -572,6 +573,7 @@ class DX12Driver extends h3d.impl.Driver {
 	var waitingAsyncCopy : Bool;
 	var asyncReadbackQueue : Array<AsyncReadbackRequest> = [];
 	var currentRequests : Array<AsyncReadbackRequest> = [];
+	var asyncReadbackBuffer : GpuResource;
 
 	var computeQueue : CommandQueue;
 	var computeFence : Fence;
@@ -1968,24 +1970,30 @@ class DX12Driver extends h3d.impl.Driver {
 				asyncCopyEvent = haxe.MainLoop.add(() -> {
 					if ( !waitingAsyncCopy ) {
 						if ( asyncReadbackQueue.length > 0 ) {
-							for ( i in 0...asyncReadbackQueue.length ) {
-								var request = asyncReadbackQueue[i];
+							var totalBatchSize = 0;
+							for ( request in asyncReadbackQueue ) {
 								var stride = request.b.format.strideBytes;
-								var totalSize = request.vertexCount*stride;
-								request.tmpBuf = allocGPU(totalSize, READBACK, COPY_DEST);
+								request.tmpBufOffset = totalBatchSize;
+								request.tmpBufSize = request.vertexCount * stride;
+								totalBatchSize += request.tmpBufSize;
+							}
+
+							asyncReadbackBuffer = allocGPU(totalBatchSize, READBACK, COPY_DEST);
+
+							 for ( request in asyncReadbackQueue ) {
+								var stride = request.b.format.strideBytes;
 
 								request.b.vbuf.targetState = COMMON;
-								var b = new ResourceBarrier();
-								b.resource = request.b.vbuf.res;
-								@:privateAccess b.type = TRANSITION;
-								b.stateBefore = request.b.vbuf.state;
-								b.stateAfter = request.b.vbuf.targetState;
+								var barrier = new ResourceBarrier();
+								barrier.resource = request.b.vbuf.res;
+								@:privateAccess barrier.type = TRANSITION;
+								barrier.stateBefore = request.b.vbuf.state;
+								barrier.stateAfter  = request.b.vbuf.targetState;
 								request.b.vbuf.state = request.b.vbuf.targetState;
-								request.barrier = b;
+								request.barrier = barrier;
 
-								asyncComputeCommandList.resourceBarrier(b);
-
-								asyncCopyCommandList.copyBufferRegion(request.tmpBuf, 0, request.b.vbuf.res, request.startVertex*stride, totalSize);
+								asyncComputeCommandList.resourceBarrier(barrier);
+								asyncCopyCommandList.copyBufferRegion(asyncReadbackBuffer, request.tmpBufOffset, request.b.vbuf.res, request.startVertex * stride, request.tmpBufSize);
 
 								currentRequests.push(request);
 							}
@@ -2014,15 +2022,13 @@ class DX12Driver extends h3d.impl.Driver {
 							asyncCopyAllocator.reset();
 							asyncCopyCommandList.reset(asyncCopyAllocator, null);
 
+							var mappedPtr = asyncReadbackBuffer?.map(0, null);
 							for ( request in currentRequests ) {
-								var stride = request.b.format.strideBytes;
-								var totalSize = request.vertexCount*stride;
-								var output = request.tmpBuf.map(0, null);
-								@:privateAccess request.buf.b.blit(request.bufPos, output, 0, totalSize);
-								request.tmpBuf.release();
+								@:privateAccess request.buf.b.blit(request.bufPos, mappedPtr, request.tmpBufOffset, request.tmpBufSize);
 								request.callback();
 							}
 
+							asyncReadbackBuffer?.release();
 							currentRequests.resize(0);
 							waitingAsyncCopy = false;
 						}
