@@ -574,6 +574,7 @@ class DX12Driver extends h3d.impl.Driver {
 	var asyncReadbackQueue : Array<AsyncReadbackRequest> = [];
 	var currentRequests : Array<AsyncReadbackRequest> = [];
 	var asyncReadbackBuffer : GpuResource;
+	var asyncReadbackBufferSize : Int = 0;
 
 	var computeQueue : CommandQueue;
 	var computeFence : Fence;
@@ -1978,7 +1979,11 @@ class DX12Driver extends h3d.impl.Driver {
 								totalBatchSize += request.tmpBufSize;
 							}
 
-							asyncReadbackBuffer = allocGPU(totalBatchSize, READBACK, COPY_DEST);
+							if ( asyncReadbackBuffer == null || asyncReadbackBufferSize < totalBatchSize ) {
+								asyncReadbackBuffer?.release();
+								asyncReadbackBuffer = allocGPU(totalBatchSize, READBACK, COPY_DEST);
+								asyncReadbackBufferSize = totalBatchSize;
+							}
 
 							 for ( request in asyncReadbackQueue ) {
 								var stride = request.b.format.strideBytes;
@@ -2028,9 +2033,15 @@ class DX12Driver extends h3d.impl.Driver {
 								request.callback();
 							}
 
-							asyncReadbackBuffer?.release();
+							asyncReadbackBuffer?.unmap(0, null);
 							currentRequests.resize(0);
 							waitingAsyncCopy = false;
+
+							if ( asyncReadbackQueue.length == 0 ) {
+								asyncReadbackBuffer?.release();
+								asyncReadbackBuffer = null;
+								asyncReadbackBufferSize = 0;
+							}
 						}
 					}
 				});
