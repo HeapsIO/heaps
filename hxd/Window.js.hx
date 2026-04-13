@@ -69,6 +69,8 @@ class Window {
 	var focused : Bool;
 	var observer : Dynamic;
 
+	var lastPointerId : Int;
+
 	/**
 		When enabled, the browser zoom does not affect the canvas.
 		(default : true)
@@ -139,6 +141,8 @@ class Window {
 		element.addEventListener("keypress", onKeyPress);
 		element.addEventListener("blur", onFocus.bind(false));
 		element.addEventListener("focus", onFocus.bind(true));
+		element.addEventListener("pointerdown", onPointerDown);
+		element.addEventListener("pointerup", onPointerUp);
 
 		if ((js.Browser.window:Dynamic).ResizeObserver != null) {
 			// Modern solution for canvas resize monitoring, supported in most browsers, but not Haxe API.
@@ -301,9 +305,17 @@ class Window {
 	}
 
 	public function captureMouseEvents(enable: Bool) : Void {
-		// capturing mouse event is currently not supported on js target
-		// because it must be made in response to a mouse event
-		// see : https://developer.mozilla.org/en-US/docs/Web/API/Element/setPointerCapture
+		if (lastPointerId < 0)
+			return;
+		if (enable) {
+			try {
+				canvas.setPointerCapture(lastPointerId);
+			} catch(e) {};
+		} else {
+			try {
+				canvas.releasePointerCapture(lastPointerId);
+			} catch(e) {};
+		}
 	}
 
 	public function setCurrent() {
@@ -547,6 +559,14 @@ class Window {
 	function onFocus(b: Bool) {
 		event(new Event(b ? EFocus : EFocusLost));
 		focused = b;
+	}
+
+	function onPointerDown(e:js.html.PointerEvent) {
+		lastPointerId = e.pointerId;
+	}
+
+	function onPointerUp(e:js.html.PointerEvent) {
+		lastPointerId = -1;
 	}
 
 	function get_isFocused() : Bool return focused;
