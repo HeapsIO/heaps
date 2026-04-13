@@ -243,7 +243,7 @@ class Window {
 	}
 
 	public function captureMouseEvents(enable: Bool) : Void {
-		#if (hldx || hlsdl)
+		#if (hldx >= version("1.16.0") || hlsdl >= version("1.16.0"))
 		window.captureMouseEvents(enable);
 		#end
 	}
