@@ -612,6 +612,12 @@ class DX12Driver extends h3d.impl.Driver {
 		reset();
 	}
 
+	function hasFreeMemory( size : Int ) {
+		var mem = new QueryVideoMemoryInfo();
+		Dx12.queryVideoMemoryInfo(0, mem);
+		return ((mem.budget * 95) / 100 - mem.currentUsage) > size;
+	}
+
 	override function getMemoryUsage() {
 		var mem = new QueryVideoMemoryInfo();
 		Dx12.queryVideoMemoryInfo(0, mem);
@@ -1118,6 +1124,7 @@ class DX12Driver extends h3d.impl.Driver {
 
 		if( tex != null ) {
 			if( tex.t == null ) tex.alloc();
+			tex.lastFrame = frameCount;
 			transition(tex.t, RENDER_TARGET);
 		}
 
@@ -1178,6 +1185,7 @@ class DX12Driver extends h3d.impl.Driver {
 		if( h == 0 ) h = 1;
 		initViewport(w, h);
 		var depthBuffer = tex == null ? defaultDepth : tex.depthBuffer;
+		depthBuffer?.lastFrame = frameCount;
 		pipelineBuilder.setRenderTarget(tex, depthEnabled ? depthBuffer : null);
 	}
 
@@ -1213,6 +1221,7 @@ class DX12Driver extends h3d.impl.Driver {
 				t.alloc();
 				if ( hasDeviceError ) return;
 			}
+			t.lastFrame = frameCount;
 			var view = texViews.offset(renderTargetViews.stride * i);
 			Driver.createRenderTargetView(t.t.res, null, view);
 			tmp.renderTargets[i] = view;
@@ -1241,7 +1250,7 @@ class DX12Driver extends h3d.impl.Driver {
 		var view = getDepthView(depthBuffer, false);
 		depthEnabled = true;
 		frame.commandList.omSetRenderTargets(0, null, true, view);
-
+		depthBuffer.lastFrame = frameCount;
 		while( currentRenderTargets.length > 0 ) currentRenderTargets.pop();
 
 		initViewport(depthBuffer.width, depthBuffer.height);
@@ -1845,8 +1854,11 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	override function allocBuffer( m : h3d.Buffer ) : GPUBuffer {
-		var buf = new BufferData();
 		var size = m.getMemSize();
+		if( !hasFreeMemory(size) )
+			return null;
+
+		var buf = new BufferData();
 		var bufSize = m.flags.has(UniformBuffer) || m.flags.has(ReadWriteBuffer) ? calcCBVSize(size) : size;
 		buf.state = buf.targetState = COPY_DEST;
 		buf.res = allocGPU(bufSize, DEFAULT, COMMON,  m.flags.has(ReadWriteBuffer));
@@ -2101,6 +2113,11 @@ class DX12Driver extends h3d.impl.Driver {
 		if( t.format.match(S3TC(_)) && (t.width & 3 != 0 || t.height & 3 != 0) )
 			throw t+" is compressed "+t.width+"x"+t.height+" but should be a 4x4 multiple";
 
+		var size = hxd.Pixels.calcDataSize(t.width, t.height, t.format) * t.layerCount;
+		if( t.mipLevels > 1 ) size *= 2;
+		if( !hasFreeMemory(size) )
+			return null;
+
 		var isRT = t.flags.has(Target);
 
 		if( t.width < 1 ) t.width = 1;
@@ -2194,7 +2211,14 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	override function disposeTexture(t:h3d.mat.Texture) {
-		disposeResource(t.t);
+		if( t.lastFrame < frameCount - 1 ) {
+			// immediate dispose
+			var r = t.t;
+			r.res.release();
+			r.res = null;
+			r.state = r.targetState = PRESENT;
+		} else
+			disposeResource(t.t);
 		disposeTextureViews(t.t);
 		var handles = textureHandles.get(t);
 		if ( handles != null ) {
@@ -2635,6 +2659,8 @@ class DX12Driver extends h3d.impl.Driver {
 						regs.lastTextures[i] = buf.tex[i] != null ? buf.tex[i].t : null;
 						regs.lastTexturesBits[i] = buf.tex[i] != null ? buf.tex[i].bits : -1;
 
+						t.lastFrame = frameCount;
+
 						switch( pt ) {
 						case TRWTexture(dim,arr,chans):
 							var tdim : hxsl.Ast.TexDimension = t.flags.has(Cube) ? TCube : dim;
@@ -2668,7 +2694,6 @@ class DX12Driver extends h3d.impl.Driver {
 							uavIndex++;
 							continue;
 						default:
-							t.lastFrame = frameCount;
 							var state = if ( shader.kind == Fragment )
 								PIXEL_SHADER_RESOURCE;
 							else
