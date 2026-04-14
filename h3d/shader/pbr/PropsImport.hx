@@ -40,7 +40,7 @@ class PropsImport extends hxsl.Shader {
 			else
 				albedo = srgb2linear(albedo);
 
-			normal = normalTex.get(uv).xyz;
+			normal = normalize(normalTex.get(uv).xyz);
 			#if MRT_low
 			normal = (normal - 0.5) * 2.0;
 			#end
