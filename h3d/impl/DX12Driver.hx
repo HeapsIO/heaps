@@ -1242,6 +1242,7 @@ class DX12Driver extends h3d.impl.Driver {
 		initViewport(t0.width, t0.height);
 
 		var depthBuffer = t0 == null ? defaultDepth : t0.depthBuffer;
+		depthBuffer?.lastFrame = frameCount;
 		pipelineBuilder.setRenderTargets(textures, depthEnabled ? depthBuffer : null);
 		currentDepth = depthBuffer;
 	}
@@ -2211,6 +2212,7 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	override function disposeTexture(t:h3d.mat.Texture) {
+		/*
 		if( t.lastFrame < frameCount - 1 ) {
 			// immediate dispose
 			var r = t.t;
@@ -2218,6 +2220,7 @@ class DX12Driver extends h3d.impl.Driver {
 			r.res = null;
 			r.state = r.targetState = PRESENT;
 		} else
+		*/
 			disposeResource(t.t);
 		disposeTextureViews(t.t);
 		var handles = textureHandles.get(t);
