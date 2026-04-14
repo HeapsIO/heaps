@@ -2212,16 +2212,16 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	override function disposeTexture(t:h3d.mat.Texture) {
-		if( t.lastFrame < frameCount - 1 ) {
-			// immediate dispose
-			var r = t.t;
-			if ( t.allocPos != null ) {
-				r.res.release();
-				r.res = null;
-				r.state = r.targetState = PRESENT;
-			}
-		} else
-			disposeResource(t.t);
+		// if( t.lastFrame < frameCount - 1 ) {
+		// 	// immediate dispose
+		// 	var r = t.t;
+		// 	if ( t.allocPos != null ) {
+		// 		r.res.release();
+		// 		r.res = null;
+		// 		r.state = r.targetState = PRESENT;
+		// 	}
+		// } else
+		disposeResource(t.t);
 		disposeTextureViews(t.t);
 		var handles = textureHandles.get(t);
 		if ( handles != null ) {
@@ -2742,58 +2742,60 @@ class DX12Driver extends h3d.impl.Driver {
 				for( i in 0...shader.bufferCount ) {
 					var b = buf.buffers[i];
 					var cbv = b.vbuf;
-					switch( regs.bufferTypes[i] ) {
-					case Uniform:
-						if( cbv.view != null )
-							throw "Buffer was allocated without UniformBuffer flag";
-						transition(cbv, VERTEX_AND_CONSTANT_BUFFER);
-						var cbvAddress = srv.offset(cbvIndex * frame.srvHeap.stride);
-						#if (hldx >= version("1.16.0"))
-						var cViewIndex = cbv.cViewIndex;
-						if ( cViewIndex == -1 ) {
-							cbv.cViewIndex = cViewIndex = cpuSrvHeap.allocIndex();
-							createCBV(cbv, cpuSrvHeap.getCpuAddressAt(cViewIndex));
+					if ( cbv != null ) {
+						switch( regs.bufferTypes[i] ) {
+						case Uniform:
+							if( cbv.view != null )
+								throw "Buffer was allocated without UniformBuffer flag";
+							transition(cbv, VERTEX_AND_CONSTANT_BUFFER);
+							var cbvAddress = srv.offset(cbvIndex * frame.srvHeap.stride);
+							#if (hldx >= version("1.16.0"))
+							var cViewIndex = cbv.cViewIndex;
+							if ( cViewIndex == -1 ) {
+								cbv.cViewIndex = cViewIndex = cpuSrvHeap.allocIndex();
+								createCBV(cbv, cpuSrvHeap.getCpuAddressAt(cViewIndex));
+							}
+							Driver.copyDescriptorsSimple(1, cbvAddress, cpuSrvHeap.getCpuAddressAt(cViewIndex), CBV_SRV_UAV);
+							#else
+							createCBV(cbv, cbvAddress);
+							#end
+							cbvIndex++;
+						case Storage:
+							var state = shader.kind == Fragment ? PIXEL_SHADER_RESOURCE : NON_PIXEL_SHADER_RESOURCE;
+							transition(cbv, state);
+							var srvAddress = srv.offset(storageIndex * frame.srvHeap.stride);
+							var stride = regs.bufferStrides[i];
+							#if (hldx >= version("1.16.0"))
+							var sViewIndex = cbv.sViewIndex;
+							if ( sViewIndex == -1 ) {
+								cbv.sViewIndex = sViewIndex = cpuSrvHeap.allocIndex();
+								createBufferSRV(cbv, stride, cpuSrvHeap.getCpuAddressAt(sViewIndex));
+							}
+							Driver.copyDescriptorsSimple(1, srvAddress, cpuSrvHeap.getCpuAddressAt(sViewIndex), CBV_SRV_UAV);
+							#else
+							createBufferSRV(cbv, stride, srvAddress);
+							#end
+							storageIndex++;
+						case RW:
+							if( !b.flags.has(ReadWriteBuffer) )
+								throw "Buffer was allocated without ReadWriteBuffer flag";
+							transition(cbv, UNORDERED_ACCESS);
+							var uavAddress = srv.offset(uavIndex * frame.srvHeap.stride);
+							var stride = regs.bufferStrides[i];
+							#if (hldx >= version("1.16.0"))
+							var uViewIndex = cbv.uViewIndex;
+							if ( uViewIndex == -1 ) {
+								cbv.uViewIndex = uViewIndex = cpuSrvHeap.allocIndex();
+								createBufferUAV(cbv, stride, cpuSrvHeap.getCpuAddressAt(uViewIndex));
+							}
+							Driver.copyDescriptorsSimple(1, uavAddress, cpuSrvHeap.getCpuAddressAt(uViewIndex), CBV_SRV_UAV);
+							#else
+							createBufferUAV(cbv, stride, uavAddress);
+							#end
+							uavIndex++;
+						default:
+							throw "assert";
 						}
-						Driver.copyDescriptorsSimple(1, cbvAddress, cpuSrvHeap.getCpuAddressAt(cViewIndex), CBV_SRV_UAV);
-						#else
-						createCBV(cbv, cbvAddress);
-						#end
-						cbvIndex++;
-					case Storage:
-						var state = shader.kind == Fragment ? PIXEL_SHADER_RESOURCE : NON_PIXEL_SHADER_RESOURCE;
-						transition(cbv, state);
-						var srvAddress = srv.offset(storageIndex * frame.srvHeap.stride);
-						var stride = regs.bufferStrides[i];
-						#if (hldx >= version("1.16.0"))
-						var sViewIndex = cbv.sViewIndex;
-						if ( sViewIndex == -1 ) {
-							cbv.sViewIndex = sViewIndex = cpuSrvHeap.allocIndex();
-							createBufferSRV(cbv, stride, cpuSrvHeap.getCpuAddressAt(sViewIndex));
-						}
-						Driver.copyDescriptorsSimple(1, srvAddress, cpuSrvHeap.getCpuAddressAt(sViewIndex), CBV_SRV_UAV);
-						#else
-						createBufferSRV(cbv, stride, srvAddress);
-						#end
-						storageIndex++;
-					case RW:
-						if( !b.flags.has(ReadWriteBuffer) )
-							throw "Buffer was allocated without ReadWriteBuffer flag";
-						transition(cbv, UNORDERED_ACCESS);
-						var uavAddress = srv.offset(uavIndex * frame.srvHeap.stride);
-						var stride = regs.bufferStrides[i];
-						#if (hldx >= version("1.16.0"))
-						var uViewIndex = cbv.uViewIndex;
-						if ( uViewIndex == -1 ) {
-							cbv.uViewIndex = uViewIndex = cpuSrvHeap.allocIndex();
-							createBufferUAV(cbv, stride, cpuSrvHeap.getCpuAddressAt(uViewIndex));
-						}
-						Driver.copyDescriptorsSimple(1, uavAddress, cpuSrvHeap.getCpuAddressAt(uViewIndex), CBV_SRV_UAV);
-						#else
-						createBufferUAV(cbv, stride, uavAddress);
-						#end
-						uavIndex++;
-					default:
-						throw "assert";
 					}
 				}
 				if( currentShader.isCompute )
