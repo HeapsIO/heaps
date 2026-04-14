@@ -594,7 +594,7 @@ class DX12Driver extends h3d.impl.Driver {
 	public static var INITIAL_BUFFER_ALLOCATOR_SIZE = 2 * 1024 * 1024;
 	public static var BUFFER_COUNT = #if console 3 #else 2 #end;
 	public static var DEVICE_NAME = null;
-	public static var DEBUG = false; // requires dxil.dll when set to true
+	public static var DEBUG = true; // requires dxil.dll when set to true
 
 	@:allow(h3d.impl) static function allocCheck<T>( f : Void -> T ) {
 		var ret = f();
@@ -2212,15 +2212,15 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	override function disposeTexture(t:h3d.mat.Texture) {
-		/*
 		if( t.lastFrame < frameCount - 1 ) {
 			// immediate dispose
 			var r = t.t;
-			r.res.release();
-			r.res = null;
-			r.state = r.targetState = PRESENT;
+			if ( t.allocPos != null ) {
+				r.res.release();
+				r.res = null;
+				r.state = r.targetState = PRESENT;
+			}
 		} else
-		*/
 			disposeResource(t.t);
 		disposeTextureViews(t.t);
 		var handles = textureHandles.get(t);
