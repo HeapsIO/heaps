@@ -2311,6 +2311,7 @@ class DX12Driver extends h3d.impl.Driver {
 		cmd.copyTextureRegion(dst, 0, 0, is3d ? side : 0, src, null);
 
 		t.flags.set(WasCleared);
+		t.lastFrame = frameCount;
 	}
 
 	override function copyTexture(from:h3d.mat.Texture, to:h3d.mat.Texture):Bool {
@@ -2320,10 +2321,11 @@ class DX12Driver extends h3d.impl.Driver {
 			var prev = from.lastFrame;
 			from.preventAutoDispose();
 			to.alloc();
-			from.lastFrame = prev;
+			@:bypassAccessor from.lastFrame = prev;
 			if( from.t == null ) throw "assert";
 			if( to.t == null ) return false;
 		}
+		from.lastFrame = to.lastFrame = frameCount;
 		transition( from.t, COPY_SOURCE);
 		transition( to.t, COPY_DEST);
 		flushTransitions();
