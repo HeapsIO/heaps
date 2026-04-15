@@ -48,6 +48,9 @@ class RenderContext {
 
 	public static function fillRec( v : Dynamic, type : hxsl.Ast.Type, out : hxsl.Shader.ShaderParamBuffer, pos : Int ) : Int {
 		switch( type ) {
+		case TBool:
+			out[pos] = v ? 1.0 : 0.0;
+			return 1;
 		case TInt:
 			fillIntParam(Std.int(v), pos, out);
 			return 1;

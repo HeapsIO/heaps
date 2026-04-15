@@ -141,8 +141,13 @@ class Flatten {
 			var a = varMap.get(v);
 			if( a == null )
 				e
-			else
-				access(a, v.type, e.p, AIndex(a));
+			else {
+				var acc = access(a, v.type, e.p, AIndex(a));
+				if( v.type == TBool && v.kind == Param && !Tools.isConst(v) )
+					{ e : TBinop(OpNotEq, acc, { e : TConst(CFloat(0)), t : TFloat, p : e.p }), t : TBool, p : e.p }
+				else
+					acc;
+			}
 		case TArray( { e : TVar(v), p : vp }, eindex):
 			var a = varMap.get(v);
 			if( a == null || (!v.type.match(TBuffer(_)) && eindex.e.match(TConst(CInt(_)))) )
@@ -521,7 +526,7 @@ class Flatten {
 
 	function varSize( v : Type, t : VecType ) {
 		return switch( v ) {
-		case TFloat, TInt if( t == VFloat ): 1;
+		case TFloat, TInt, TBool if( t == VFloat ): 1;
 		case TVec(n, t2) if( t == t2 ): n;
 		case TBytes(n): n;
 		case TMat4 if( t == VFloat ): 16;

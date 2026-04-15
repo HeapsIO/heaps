@@ -57,6 +57,7 @@ class Macros {
 	static function makeDef( t : Type, pos : Position ) : haxe.macro.Expr {
 		return switch( t ) {
 		case TFloat, TInt: macro 0;
+		case TBool: macro false;
 		case TVec(n, t):
 			switch( t ) {
 			case VFloat:
@@ -164,6 +165,8 @@ class Macros {
 			macro out[pos] = $eparam;
 		case TInt:
 			macro h3d.impl.RenderContext.fillIntParam(Std.int($eparam), pos, out);
+		case TBool:
+			macro out[pos] = $eparam ? 1.0 : 0.0;
 		case TVec(4, _):
 			macro {
 				var v : hxsl.Types.Vec4 = $eparam;

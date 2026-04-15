@@ -448,7 +448,7 @@ class Tools {
 	public static function getConstBits( v : TVar ) {
 		switch( v.type ) {
 		case TBool:
-			return 1;
+			if( isConst(v) ) return 1;
 		case TInt:
 			for( q in v.qualifiers )
 				switch( q ) {
@@ -681,7 +681,8 @@ class Tools {
 		case TMat4: 16;
 		case TMat3x4: 12;
 		case TBytes(s): s;
-		case TBool, TString, TSampler(_), TRWTexture(_), TFun(_): 0;
+		case TBool: 1;
+		case TString, TSampler(_), TRWTexture(_), TFun(_): 0;
 		case TArray(t, SConst(v)), TBuffer(t, SConst(v),_): size(t) * v;
 		case TArray(_, SVar(_)), TBuffer(_): 0;
 		case TTextureHandle: 2;

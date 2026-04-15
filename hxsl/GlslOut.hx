@@ -248,7 +248,10 @@ class GlslOut {
 			v.type = TBuffer(t,size,kind);
 			add("; }");
 		default:
-			addType(v.type);
+			if( v.type == TBool && v.kind == Param && !Tools.isConst(v) )
+				add("float");
+			else
+				addType(v.type);
 			add(" ");
 			ident(v);
 		}
