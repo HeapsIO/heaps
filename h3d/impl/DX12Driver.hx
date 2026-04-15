@@ -615,7 +615,10 @@ class DX12Driver extends h3d.impl.Driver {
 	function hasFreeMemory( size : Int ) {
 		var mem = new QueryVideoMemoryInfo();
 		Dx12.queryVideoMemoryInfo(0, mem);
-		return ((mem.budget * 95) / 100 - mem.currentUsage) > size;
+		var tot = ((mem.budget * 95) / 100 - mem.currentUsage);
+		if( tot < size )
+			return false;
+		return true;
 	}
 
 	override function getMemoryUsage() {
@@ -2215,11 +2218,9 @@ class DX12Driver extends h3d.impl.Driver {
 		if( t.lastFrame < frameCount - 1 ) {
 			// immediate dispose
 			var r = t.t;
-			if ( t.allocPos != null ) {
-				r.res.release();
-				r.res = null;
-				r.state = r.targetState = PRESENT;
-			}
+			r.res.release();
+			r.res = null;
+			r.state = r.targetState = PRESENT;
 		} else
 			disposeResource(t.t);
 		disposeTextureViews(t.t);
