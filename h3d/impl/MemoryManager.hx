@@ -169,13 +169,19 @@ class MemoryManager {
 
 	public function cleanTextures( force = true, regular = false ) {
 		textures.sort(sortByLRUPrio);
+		var oldest : h3d.mat.Texture = null;
 		for( t in textures ) {
 			if( t.realloc == null || t.isDisposed() ) continue;
 			if( regular && t.keepPriority > 0 ) break;
 			if( (force || t.lastFrame < hxd.Timer.frameCount - autoDisposeCleanup) && t.lastFrame != h3d.mat.Texture.PREVENT_AUTO_DISPOSE ) {
-				t.dispose();
-				return true;
+				if( oldest == null || oldest.lastFrame < t.lastFrame )
+					oldest = t;
+				if( regular ) break;
 			}
+		}
+		if( oldest != null ) {
+			oldest.dispose();
+			return true;
 		}
 		return false;
 	}
