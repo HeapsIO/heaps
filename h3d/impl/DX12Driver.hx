@@ -12,25 +12,79 @@ import haxe.Int64;
 import h3d.mat.Pass;
 import h3d.mat.Stencil;
 import haxe.MainLoop;
+import h3d.impl.Allocator;
 
 private typedef Driver = Dx12;
 
-class TempBuffer {
-	public var next : TempBuffer;
-	public var buffer : GpuResource;
-	public var size : Int;
-	public var lastUse : Int;
-	public function new() {
+class HeapMemType extends MemoryType {
+
+	var type : DescriptorHeapType;
+	var shaderVisible : Bool;
+
+	public function new(type,shaderVisible) {
+		this.type = type;
+		this.shaderVisible = shaderVisible;
+		this.stride = Dx12.getDescriptorHandleIncrementSize(type);
 	}
-	public inline function count() {
-		var b = this;
-		var k = 0;
-		while( b != null ) {
-			k++;
-			b = b.next;
-		}
-		return k;
+
+	public function alloc( size : Int ) {
+		var desc = new DescriptorHeapDesc();
+		desc.type = type;
+		desc.numDescriptors = size;
+		if( shaderVisible ) desc.flags = SHADER_VISIBLE;
+		var heap = new DescriptorHeap(desc);
+		if( heap == null ) return null;
+		return new MemoryPage(hl.Api.unsafeCast(heap.getHandle(false)), heap.getHandle(true).value, size, heap);
 	}
+
+	function free( mem : MemoryPage ) {
+		var heap : DescriptorHeap = mem.ref;
+		(heap : Resource).release();
+	}
+
+}
+
+class BufferMemType extends MemoryType {
+
+	var heapType : HeapType;
+	var startState : ResourceState;
+	var uav : Bool;
+
+	public function new( heapType, startState, uav = false ) {
+		this.heapType = heapType;
+		this.startState = startState;
+		this.uav = uav;
+		alignment = 256;
+	}
+
+	function alloc( size : Int ) {
+		var heap = new HeapProperties();
+		heap.type = heapType;
+		var desc = new ResourceDesc();
+		desc.dimension = BUFFER;
+		desc.width = size;
+		desc.height = 1;
+		desc.depthOrArraySize = 1;
+		desc.mipLevels = 1;
+		desc.sampleDesc.count = 1;
+		desc.layout = ROW_MAJOR;
+
+		var flags = new haxe.EnumFlags();
+		flags.set(CREATE_NOT_ZEROED);
+		if( uav ) desc.flags.set(ALLOW_UNORDERED_ACCESS);
+
+		var res = Dx12.createCommittedResource(heap, flags, desc, startState, null);
+		if( res == null ) return null;
+		var cpuAddress = res.map(0, null);
+		return new MemoryPage(cpuAddress, res.getGpuVirtualAddress(), size, res);
+	}
+
+	function free( mem : MemoryPage ) {
+		var res : GpuResource = mem.ref;
+		res.unmap(0, null);
+		res.release();
+	}
+
 }
 
 class ScratchHeapArray {
@@ -68,129 +122,6 @@ class ScratchHeapArray {
 
 }
 
-@:struct class BufferAllocation {
-	public var resource : GpuResource = null;
-	public var cpuAddress : hl.Bytes = null;
-	public var offset : Int = 0;
-	public var byteSize : Int = 0;
-	public function new() {
-	}
-}
-
-class BufferAllocatorPage {
-	public var capacity(default, null) : Int;
-	public var unusedFrame(default, null) : Int = 0;
-	var offset : Int = 0;
-	var resource : GpuResource;
-	var cpuAddress : hl.Bytes;
-
-	public function new( heap : HeapProperties, flags : haxe.EnumFlags<HeapFlag>, desc : ResourceDesc ) {
-		this.capacity = desc.width.low;
-		resource = DX12Driver.allocCheck(() -> Driver.createCommittedResource(heap, flags, desc, GENERIC_READ, null));
-		cpuAddress = resource.map(0, null);
-	}
-
-	public function tryAlloc( size, alignment = 256, allocation : BufferAllocation ) : Bool {
-		var offsetAligned = offset & ~(alignment - 1);
-		if( offsetAligned != offset ) offsetAligned += alignment;
-		var newOffset = size + offsetAligned;
-		if ( newOffset > capacity )
-			return false;
-		allocation.byteSize = size;
-		allocation.offset = offsetAligned;
-		allocation.cpuAddress = cpuAddress.offset(offsetAligned);
-		allocation.resource = resource;
-		offset = newOffset;
-		return true;
-	}
-
-	public function reset() {
-		if ( offset == 0 )
-			unusedFrame++;
-		else {
-			offset = 0;
-			unusedFrame = 0;
-		}
-	}
-
-	public function dispose() {
-		resource.release();
-		resource = null;
-		cpuAddress = null;
-	}
-}
-
-class BufferAllocator {
-	inline static var MAX_KEEP_FRAME = 3600;
-	var pages : Array<BufferAllocatorPage>;
-
-	var heap : HeapProperties;
-	var desc : ResourceDesc;
-	var flags : haxe.EnumFlags<HeapFlag>;
-
-	public function new( size : Int ) {
-		heap = new HeapProperties();
-		heap.type = UPLOAD;
-		desc = new ResourceDesc();
-		desc.dimension = BUFFER;
-		desc.width = size;
-		desc.height = 1;
-		desc.depthOrArraySize = 1;
-		desc.mipLevels = 1;
-		desc.sampleDesc.count = 1;
-		desc.layout = ROW_MAJOR;
-		flags = new haxe.EnumFlags();
-		pages = [new BufferAllocatorPage(heap, flags, desc)];
-	}
-
-	public function reset( forceDispose = false ) {
-		for ( p in pages )
-			p.reset();
-
-		var i = 1;
-		while ( i < pages.length ) {
-			var page = pages[i];
-			if ( page.unusedFrame > MAX_KEEP_FRAME || forceDispose ) {
-				page.dispose();
-				pages[i] = pages[pages.length - 1];
-				pages.pop();
-				continue;
-			}
-			i++;
-		}
-	}
-
-	public function dispose() {
-		for ( p in pages )
-			p.dispose();
-	}
-
-	public function alloc( size : Int, alignment = 256, allocation : BufferAllocation ) {
-		var sz = size & ~(alignment - 1);
-		if( sz != size ) sz += alignment;
-
-		for ( p in pages ) {
-			if ( p.tryAlloc(sz, alignment, allocation ) )
-				return allocation;
-		}
-
-		var lastCapacity = pages[pages.length - 1].capacity;
-		desc.width = hxd.Math.imax((lastCapacity >> 1) * 3, sz);
-		var p = new BufferAllocatorPage(heap, flags, desc);
-		p.tryAlloc(sz, alignment, allocation);
-		pages.push(p);
-		return allocation;
-	}
-
-	public function getSize() {
-		var size : Float = 0;
-		for( p in pages )
-			size += p.capacity;
-		return size;
-	}
-
-}
-
 class DxFrame {
 	public var backBuffer : ResourceData;
 	public var backBufferView : Address;
@@ -199,8 +130,6 @@ class DxFrame {
 	public var commandList : CommandList;
 	public var copyAllocator : CommandAllocator;
 	public var copyCommandList : CommandList;
-	public var copyBuffer : GpuResource;
-	public var copyBufferCursor : Int = 0;
 	public var fenceValue : Int64;
 	public var toRelease : Array<Resource> = [];
 	public var handlesToRelease : Array<h3d.mat.TextureHandle> = [];
@@ -213,7 +142,9 @@ class DxFrame {
 	public var queryCurrentHeap : Int;
 	public var queryHeapOffset : Int;
 	public var queryBuffer : GpuResource;
-	public var bufferAllocator : BufferAllocator;
+	public var dynamicBufferAlloc : BlockAllocator;
+	public var pendingCopyBuffers : Array<MemoryBlock> = [];
+
 	public function new() {
 	}
 	public function getSize() {
@@ -221,8 +152,6 @@ class DxFrame {
 		// both srvHeap and samplerHeap are from cache
 		size += srvHeapCache.getSize();
 		size += samplerHeapCache.getSize();
-		// size += bufferAllocator.getSize(); // UPLOAD heap is in shared memory, not in GPU
-		size += DX12Driver.COPY_BUFFER_SIZE;
 		return size;
 	}
 }
@@ -292,7 +221,6 @@ class CompiledShader {
 	@:packed public var uavDesc(default,null) : UAVBufferViewDesc;
 	@:packed public var wtexDesc(default,null) : UAVTextureViewDesc;
 	@:packed public var subResourceData(default, null) : SubResourceData;
-	@:packed public var bufferAllocation(default,null) : BufferAllocation;
 	@:packed public var srcTextureLocation(default, null) : TextureCopyLocation;
 	@:packed public var dstTextureLocation(default, null) : TextureCopyLocation;
 	@:packed public var dstStencilViewDesc(default,null) : DepthStencilViewDesc;
@@ -583,7 +511,9 @@ class DX12Driver extends h3d.impl.Driver {
 	var asyncComputeCommandList : CommandList;
 	var asyncComputeAllocator : CommandAllocator;
 
-	public static var COPY_BUFFER_SIZE = 256 * 1024 * 1024; // 256 Mo per frame
+	var uploadBufferAlloc : FreeListAllocator;
+	var textureAlignment : Int;
+
 	public static var DEFAULT_DEPTH_FORMAT : h3d.mat.Data.TextureFormat = Depth24Stencil8;
 	public static var DEFAULT_DEPTH_VALUE = 1.0;
 	public static var INITIAL_RT_COUNT = 1024;
@@ -591,7 +521,10 @@ class DX12Driver extends h3d.impl.Driver {
 	public static var INITIAL_SRV_COUNT = 1024;
 	public static var INITIAL_BINDLESS_SAMPLER_COUNT = 1024;
 	public static var INITIAL_SAMPLER_COUNT = 1024;
-	public static var INITIAL_BUFFER_ALLOCATOR_SIZE = 2 * 1024 * 1024;
+
+	public static var INITIAL_BUFFER_ALLOCATOR_SIZE = 16 * 1024 * 1024;
+	public static var COPY_STEAM_SIZE = 512 * 1024 * 1024;
+
 	public static var BUFFER_COUNT = #if console 3 #else 2 #end;
 	public static var DEVICE_NAME = null;
 	public static var DEBUG = false; // requires dxil.dll when set to true
@@ -665,17 +598,22 @@ class DX12Driver extends h3d.impl.Driver {
 		driver = Driver.create(window, flags, DEVICE_NAME);
 		frames = [];
 
+		#if (hldx >= version("1.15.0"))
+		textureAlignment = Driver.getConstant(TEXTURE_DATA_PLACEMENT_ALIGNMENT);
+		#else
+		textureAlignment = 512;
+		#end
+
 		var flags = new haxe.EnumFlags();
 		var heap = new HeapProperties();
 		heap.type = UPLOAD;
-		var desc = new ResourceDesc();
-		desc.dimension = BUFFER;
-		desc.width = COPY_BUFFER_SIZE;
-		desc.height = 1;
-		desc.depthOrArraySize = 1;
-		desc.mipLevels = 1;
-		desc.sampleDesc.count = 1;
-		desc.layout = ROW_MAJOR;
+
+		var policy = new ScalePolicy(INITIAL_BUFFER_ALLOCATOR_SIZE, 2);
+		policy.garbageMem = function() Engine.getCurrent().mem.tryFreeMemory();
+
+		uploadBufferAlloc?.dispose();
+		uploadBufferAlloc = new FreeListAllocator(new BufferMemType(UPLOAD,GENERIC_READ,false),policy);
+		uploadBufferAlloc.name = "UploadBuffer";
 
 		for(i in 0...BUFFER_COUNT) {
 			var f = new DxFrame();
@@ -688,10 +626,8 @@ class DX12Driver extends h3d.impl.Driver {
 			f.copyCommandList.close();
 			f.srvHeapCache = new ScratchHeapArray(CBV_SRV_UAV, INITIAL_SRV_COUNT + INITIAL_BINDLESS_SRV_COUNT);
 			f.samplerHeapCache = new ScratchHeapArray(SAMPLER, INITIAL_SAMPLER_COUNT + INITIAL_BINDLESS_SAMPLER_COUNT);
-			if ( f.bufferAllocator != null )
-				f.bufferAllocator.dispose();
-			f.bufferAllocator = new BufferAllocator(INITIAL_BUFFER_ALLOCATOR_SIZE);
-			f.copyBuffer = Driver.createCommittedResource(heap, flags, desc, GENERIC_READ, null);
+			f.dynamicBufferAlloc = new BlockAllocator(uploadBufferAlloc.mem, policy);
+			f.dynamicBufferAlloc.name = "DynamicBuffer#"+i;
 			frames.push(f);
 		}
 		fence = new Fence(0, NONE);
@@ -805,14 +741,11 @@ class DX12Driver extends h3d.impl.Driver {
 		frame = frames[currentFrame];
 		frame.allocator.reset();
 		frame.commandList.reset(frame.allocator, null);
-
-		// if too much memory was allocated from last frame, let's dispose immediately
-		var forceDispose = (frame.bufferAllocator.getSize()/(1024*1024)) >= 512;
-		frame.bufferAllocator.reset(forceDispose);
-
+		frame.dynamicBufferAlloc.reset();
 		frame.copyAllocator.reset();
 		frame.copyCommandList.reset(frame.copyAllocator, null);
-		frame.copyBufferCursor = 0;
+		while( frame.pendingCopyBuffers.length > 0 )
+			uploadBufferAlloc.free(frame.pendingCopyBuffers.pop());
 		while( frame.toRelease.length > 0 )
 			frame.toRelease.pop().release();
 
@@ -1893,8 +1826,12 @@ class DX12Driver extends h3d.impl.Driver {
 		buf.state = buf.targetState = COPY_DEST;
 		buf.res = allocGPU(dataSize, DEFAULT, COMMON);
 		var alloc = allocDynamicBuffer(bytes, dataSize);
-		frame.commandList.copyBufferRegion(buf.res, 0, alloc.resource, alloc.offset, dataSize);
+		frame.commandList.copyBufferRegion(buf.res, 0, getRes(alloc), alloc.offset, dataSize);
 		b.data = buf;
+	}
+
+	inline function getRes( m : MemoryBlock ) : GpuResource {
+		return m.page.ref;
 	}
 
 	override function uploadInstanceBufferBytes(b : InstanceBuffer, startVertex : Int, vertexCount : Int, buf : haxe.io.Bytes, bufPos : Int ) {
@@ -1933,7 +1870,7 @@ class DX12Driver extends h3d.impl.Driver {
 		var alloc = allocDynamicBuffer(bytes, bytesCount);
 		transition(b, COPY_DEST);
 		flushTransitions();
-		frame.commandList.copyBufferRegion(b.res, startByte, alloc.resource, alloc.offset, bytesCount);
+		frame.commandList.copyBufferRegion(b.res, startByte, getRes(alloc), alloc.offset, bytesCount);
 	}
 
 	override function uploadIndexData(i:Buffer, startIndice:Int, indiceCount:Int, buf:hxd.IndexBuffer, bufPos:Int) {
@@ -2245,6 +2182,23 @@ class DX12Driver extends h3d.impl.Driver {
 		pixels.dispose();
 	}
 
+	function flushCopy( request : Int ) {
+		if( frame.pendingCopyBuffers.length == 0 )
+			return;
+		var size = 0.;
+		for( c in frame.pendingCopyBuffers )
+			size += c.size;
+		if( size + request < COPY_STEAM_SIZE )
+			return;
+		frame.copyCommandList.close();
+		copyQueue.executeCommandList(frame.copyCommandList);
+		waitCopy();
+		frame.copyAllocator.reset();
+		frame.copyCommandList.reset(frame.copyAllocator, null);
+		while( frame.pendingCopyBuffers.length > 0 )
+			uploadBufferAlloc.free(frame.pendingCopyBuffers.pop());
+	}
+
 	override function uploadTexturePixels(t:h3d.mat.Texture, pixels:hxd.Pixels, mipLevel:Int, side:Int) {
 		pixels.convert(t.format);
 		if( mipLevel >= t.mipLevels ) throw "Mip level outside texture range : " + mipLevel + " (max = " + (t.mipLevels - 1) + ")";
@@ -2255,37 +2209,24 @@ class DX12Driver extends h3d.impl.Driver {
 		if ( is3d )
 			tmpSize = Std.int(tmpSize / t.layerCount );
 
-		#if (hldx >= version("1.15.0"))
-		var textureAlignment = Driver.getConstant(TEXTURE_DATA_PLACEMENT_ALIGNMENT);
-		#else
-		var textureAlignment = 512;
-		#end
-
-		var useCopy = t.t.state == COMMON && t.t.targetState == COMMON && tmpSize <= COPY_BUFFER_SIZE;
-		var allocation, cmd;
+		var useCopy = t.t.state == COMMON && t.t.targetState == COMMON;
+		var cmd, alloc : Allocator;
 		if( useCopy ) {
-			var offs = frame.copyBufferCursor % textureAlignment;
-			if( offs != 0 ) frame.copyBufferCursor += textureAlignment - offs;
-			if( frame.copyBufferCursor + tmpSize > COPY_BUFFER_SIZE ) {
-				frame.copyCommandList.close();
-				copyQueue.executeCommandList(frame.copyCommandList);
-				waitCopy();
-				frame.copyAllocator.reset();
-				frame.copyCommandList.reset(frame.copyAllocator, null);
-				frame.copyBufferCursor = 0;
-			}
-			allocation = tmp.bufferAllocation;
-			allocation.resource = frame.copyBuffer;
-			allocation.offset = frame.copyBufferCursor;
-			allocation.cpuAddress = frame.copyBuffer.map(0, null).offset(frame.copyBufferCursor);
-			frame.copyBufferCursor += tmpSize;
+			flushCopy(tmpSize);
+			alloc = uploadBufferAlloc;
 			cmd = frame.copyCommandList;
 		} else {
 			transition(t.t, COPY_DEST);
 			flushTransitions();
-			allocation = frame.bufferAllocator.alloc(tmpSize, textureAlignment, tmp.bufferAllocation);
+			alloc = frame.dynamicBufferAlloc;
 			cmd = frame.commandList;
 		}
+
+		alloc.mem.alignment = textureAlignment;
+		var mem = alloc.alloc(tmpSize);
+		alloc.mem.alignment = 256; // back to normal buffer align
+
+		if( useCopy ) frame.pendingCopyBuffers.push(mem); // release later
 
 		var dst = tmp.dstTextureLocation;
 		dst.res = t.t.res;
@@ -2294,19 +2235,20 @@ class DX12Driver extends h3d.impl.Driver {
 		var dstDesc = makeTextureDesc(t);
 
 		var src = tmp.srcTextureLocation;
-		src.res = allocation.resource;
+		src.res = getRes(mem);
 		src.type = PLACED_FOOTPRINT;
 
 		var numRow : hl.BytesAccess<Int64> = tmp.copyableInfosBytes;
 		var rowSizeInBytes : hl.BytesAccess<Int64> = tmp.copyableInfosBytes.offset(8);
-		Driver.getCopyableFootprints(dstDesc, subRes, 1, allocation.offset, src.placedFootprint, numRow, rowSizeInBytes, null);
+		Driver.getCopyableFootprints(dstDesc, subRes, 1, mem.offset, src.placedFootprint, numRow, rowSizeInBytes, null);
 
 		var rowPitch = src.placedFootprint.footprint.rowPitch;
 		var data = (pixels.bytes:hl.Bytes).offset(pixels.offset);
 		var numRow = numRow[0].low;
 		var rowSizeInBytes = rowSizeInBytes[0].low;
-		for ( i in 0...numRow)
-			allocation.cpuAddress.blit(rowPitch * i, data, rowSizeInBytes * i, rowSizeInBytes);
+		var address = mem.cpuAddress;
+		for( i in 0...numRow )
+			address.blit(rowPitch * i, data, rowSizeInBytes * i, rowSizeInBytes);
 
 		src.placedFootprint.footprint.depth = 1;
 		cmd.copyTextureRegion(dst, 0, 0, is3d ? side : 0, src, null);
@@ -2366,10 +2308,10 @@ class DX12Driver extends h3d.impl.Driver {
 		return sz;
  	}
 
-	function allocDynamicBuffer( data : hl.Bytes, dataSize : Int ) : BufferAllocation {
-		var allocation = frame.bufferAllocator.alloc(dataSize, tmp.bufferAllocation);
-		allocation.cpuAddress.blit(0, data, 0, dataSize);
-		return allocation;
+	function allocDynamicBuffer( data : hl.Bytes, dataSize : Int ) : MemoryBlock {
+		var mem = frame.dynamicBufferAlloc.alloc(dataSize);
+		mem.cpuAddress.blit(0, data, 0, dataSize);
+		return mem;
 	}
 
 	function hasTexturesChanged( buf : h3d.shader.Buffers.ShaderBuffers, regs : ShaderRegisters ) : Bool {
@@ -2568,8 +2510,8 @@ class DX12Driver extends h3d.impl.Driver {
 					var srv = frame.srvHeap.alloc(1);
 					var alloc = allocDynamicBuffer(data,dataSize);
 					var desc = tmp.cbvDesc;
-					desc.bufferLocation = alloc.resource.getGpuVirtualAddress() + alloc.offset;
-					desc.sizeInBytes = alloc.byteSize;
+					desc.bufferLocation = alloc.gpuAddress;
+					desc.sizeInBytes = alloc.size;
 					Driver.createConstantBufferView(desc, srv);
 					if( currentShader.isCompute )
 						frame.commandList.setComputeRootDescriptorTable(regs.params & 0xFF, frame.srvHeap.toGPU(srv));
@@ -2595,8 +2537,8 @@ class DX12Driver extends h3d.impl.Driver {
 					var srv = frame.srvHeap.alloc(1);
 					var alloc = allocDynamicBuffer(data,dataSize);
 					var desc = isFragment ? tmp.fragmentGlobalDesc : tmp.vertexGlobalDesc;
-					desc.bufferLocation = alloc.resource.getGpuVirtualAddress() + alloc.offset;
-					desc.sizeInBytes = alloc.byteSize;
+					desc.bufferLocation = alloc.gpuAddress;
+					desc.sizeInBytes = alloc.size;
 					Driver.createConstantBufferView(desc, srv);
 					bind = regs.globals & 0xFF;
 					if( currentShader.isCompute )
