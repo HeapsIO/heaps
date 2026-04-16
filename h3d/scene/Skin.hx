@@ -316,6 +316,7 @@ class DynamicJointData extends JointData {
 
 class Skin extends MultiMaterial {
 	public static var FIXED_DT = 1. / 60.;
+	public static var MIN_SHADER_BONES = 32;
 	public var accumulator = FIXED_DT;
 
 	var skinData : h3d.anim.Skin;
@@ -473,7 +474,7 @@ class Skin extends MultiMaterial {
 						maxBones = s.joints.length;
 			} else
 				maxBones = skinData.boundJoints.length;
-			skinShader.MaxBones = hxd.Math.imax(32, hxd.Math.nextPOT(maxBones));
+			skinShader.MaxBones = hxd.Math.imax(MIN_SHADER_BONES, hxd.Math.nextPOT(maxBones));
 			for( m in materials )
 				if( m != null ) {
 					if ( prevSkinShader != null )
