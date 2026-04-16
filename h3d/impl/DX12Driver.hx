@@ -1188,7 +1188,8 @@ class DX12Driver extends h3d.impl.Driver {
 		if( h == 0 ) h = 1;
 		initViewport(w, h);
 		var depthBuffer = tex == null ? defaultDepth : tex.depthBuffer;
-		depthBuffer?.lastFrame = frameCount;
+		if(depthBuffer != null)
+			depthBuffer.lastFrame = frameCount;
 		pipelineBuilder.setRenderTarget(tex, depthEnabled ? depthBuffer : null);
 	}
 
@@ -1245,7 +1246,8 @@ class DX12Driver extends h3d.impl.Driver {
 		initViewport(t0.width, t0.height);
 
 		var depthBuffer = t0 == null ? defaultDepth : t0.depthBuffer;
-		depthBuffer?.lastFrame = frameCount;
+		if(depthBuffer != null)
+			depthBuffer.lastFrame = frameCount;
 		pipelineBuilder.setRenderTargets(textures, depthEnabled ? depthBuffer : null);
 		currentDepth = depthBuffer;
 	}
