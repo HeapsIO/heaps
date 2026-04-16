@@ -144,7 +144,7 @@ class Flatten {
 			else {
 				var acc = access(a, v.type, e.p, AIndex(a));
 				if( v.type == TBool && v.kind == Param && !Tools.isConst(v) )
-					{ e : TBinop(OpNotEq, acc, { e : TConst(CFloat(0)), t : TFloat, p : e.p }), t : TBool, p : e.p }
+					{ e: TParenthesis({ e : TBinop(OpNotEq, acc, { e : TConst(CFloat(0)), t : TFloat, p : e.p }), t : TBool, p : e.p }), t : TBool, p : e.p }
 				else
 					acc;
 			}
