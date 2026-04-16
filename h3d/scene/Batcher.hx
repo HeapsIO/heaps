@@ -815,13 +815,15 @@ private class BatchPass {
 					textureHandlesMap = [];
 				}
 				var t : h3d.mat.Texture = curShader.getParamValue(p.index);
-				var h = t.getHandle();
-				if ( !textureHandlesMap.exists(h) ) {
-					textureHandlesMap.set(h, true);
-					textureHandles.push(h);
+				if(t != null) {
+					var h = t.getHandle();
+					if ( !textureHandlesMap.exists(h) ) {
+						textureHandlesMap.set(h, true);
+						textureHandles.push(h);
+					}
+					bufLoader.loadInt(h.handle.low);
+					bufLoader.loadInt(h.handle.high);
 				}
-				bufLoader.loadInt(h.handle.low);
-				bufLoader.loadInt(h.handle.high);
 			default:
 				throw "Unsupported per instance type "+p.type;
 			}
