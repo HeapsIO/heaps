@@ -3109,6 +3109,9 @@ class DX12Driver extends h3d.impl.Driver {
 	// --- DRAW etc.
 
 	override function draw( ibuf : Buffer, startIndex : Int, ntriangles : Int ) {
+		if ( (tmp.rect.right - tmp.rect.left) <= 0 || (tmp.rect.bottom - tmp.rect.top) <= 0 )
+			return;
+
 		flushPipeline();
 		if( currentIndex != ibuf ) {
 			currentIndex = ibuf;
@@ -3120,6 +3123,9 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	override function drawInstanced(ibuf:Buffer, commands:InstanceBuffer) {
+		if ( (tmp.rect.right - tmp.rect.left) <= 0 || (tmp.rect.bottom - tmp.rect.top) <= 0 )
+			return;
+		
 		flushPipeline();
 		if( currentIndex != ibuf ) {
 			currentIndex = ibuf;
