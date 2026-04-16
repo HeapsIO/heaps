@@ -45,7 +45,7 @@ class Bindless extends SampleApp {
 			treeBatch.emitInstance();
 		}
 
-		new h3d.scene.CameraController(s3d).loadFromCamera();
+		new h3d.scene.CameraController.OrbitCameraController(s3d).loadFromCamera();
 	}
 
 	static function main() {

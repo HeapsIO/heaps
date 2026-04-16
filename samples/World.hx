@@ -59,7 +59,7 @@ class World extends hxd.App {
 
 		s3d.camera.zNear = 1;
 		s3d.camera.zFar = 100;
-		new h3d.scene.CameraController(s3d).loadFromCamera();
+		new h3d.scene.CameraController.OrbitCameraController(s3d).loadFromCamera();
 
 		tf = new h2d.Text(hxd.res.DefaultFont.get(), s2d);
 	}

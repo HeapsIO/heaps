@@ -163,7 +163,7 @@ class Interactive extends SampleApp {
 
 		addCheck("Show Debug Colliders", function() { return showDebug; }, function(v) { setDebug(v); });
 
-		new h3d.scene.CameraController(s3d).loadFromCamera();
+		new h3d.scene.CameraController.OrbitCameraController(s3d).loadFromCamera();
 		onResize();
 	}
 

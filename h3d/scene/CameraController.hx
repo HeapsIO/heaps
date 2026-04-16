@@ -1,25 +1,30 @@
 package h3d.scene;
 
-class CameraController extends h3d.scene.Object {
-
+abstract class CameraController extends h3d.scene.Object {
 	public var distance(get, never) : Float;
+	inline function get_distance() return curPos.x / curOffset.w;
 	public var targetDistance(get, never) : Float;
+	inline function get_targetDistance() return targetPos.x / targetOffset.w;
 	public var theta(get, never) : Float;
+	inline function get_theta() return curPos.y;
 	public var phi(get, never) : Float;
+	inline function get_phi() return curPos.z;
 	public var fovY(get, never) : Float;
+	inline function get_fovY() return curOffset.w;
 	public var target(get, never) : h3d.col.Point;
+	inline function get_target() return curOffset.toVector();
 
-	public var friction = 0.4;
-	public var rotateSpeed = 1.;
-	public var zoomAmount = 1.15;
-	public var fovZoomAmount = 1.1;
-	public var panSpeed = 1.;
-	public var smooth = 0.6;
 	public var minDistance : Float = 0.1;
 	public var maxDistance : Float = 1e20;
-
-	public var lockZPlanes = false;
 	public var enableZoom = true;
+	public var zoomAmount = 1.15;
+	public var friction = 0.4;
+	public var rotateSpeed = 1.;
+	public var panSpeed = 1.;
+	public var smooth = 0.6;
+	public var lockZPlanes = false;
+	public var wantedFOV = 60.0;
+	public var moveSpeed = 1.0;
 
 	var scene : h3d.scene.Scene;
 	var pushing = -1;
@@ -31,26 +36,68 @@ class CameraController extends h3d.scene.Object {
 	var absStartMouseY = 0;
 	var moveX = 0.;
 	var moveY = 0.;
-	var pushTime : Float;
 	var curPos = new h3d.Vector();
 	var curOffset = new h3d.Vector4();
 	var targetPos = new h3d.Vector(10. / 25., Math.PI / 4, Math.PI * 5 / 13);
 	var targetOffset = new h3d.Vector4(0, 0, 0, 0);
+	var pushTime : Float;
+	var startPush : h2d.col.Point;
 
-	public function new(?distance,?parent) {
+	public function new(?parent : h3d.scene.Object) {
 		super(parent);
-		name = "CameraController";
-		set(distance);
-		curPos.load(targetPos);
-		curOffset.load(targetOffset);
 	}
 
-	inline function get_distance() return curPos.x / curOffset.w;
-	inline function get_targetDistance() return targetPos.x / targetOffset.w;
-	inline function get_theta() return curPos.y;
-	inline function get_phi() return curPos.z;
-	inline function get_fovY() return curOffset.w;
-	inline function get_target() return curOffset.toVector();
+	override function onAdd() {
+		super.onAdd();
+		scene = getScene();
+		scene.addEventListener(onEvent);
+		if( curOffset.w == 0 )
+			curPos.x *= scene.camera.fovY;
+		curOffset.w = scene.camera.fovY; // load
+		targetPos.load(curPos);
+		targetOffset.load(curOffset);
+	}
+
+	override function onRemove() {
+		super.onRemove();
+		scene.removeEventListener(onEvent);
+		scene = null;
+	}
+
+	override function sync(ctx: h3d.scene.RenderContext) {
+		// Disable Camera Sync during bake
+		if( ctx.scene.renderer.renderMode == LightProbe )
+			return;
+
+		if( !ctx.visibleFlag && !alwaysSyncAnimation ) {
+			super.sync(ctx);
+			return;
+		}
+
+		if( moveX != 0 ) {
+			targetPos.y += moveX * 0.003 * rotateSpeed;
+			moveX *= 1 - friction;
+			if( Math.abs(moveX) < 1 ) moveX = 0;
+		}
+
+		if( moveY != 0 ) {
+			targetPos.z -= moveY * 0.003 * rotateSpeed;
+			var E = 2e-5;
+			var bound = Math.PI - E;
+			if( targetPos.z < E ) targetPos.z = E;
+			if( targetPos.z > bound ) targetPos.z = bound;
+			moveY *= 1 - friction;
+			if( Math.abs(moveY) < 1 ) moveY = 0;
+		}
+
+		var dt = hxd.Math.min(1, 1 - Math.pow(smooth, ctx.elapsedTime * 60));
+		curOffset.lerp(curOffset, targetOffset, dt);
+		curPos.lerp(curPos, targetPos, dt );
+
+		syncCamera();
+
+		super.sync(ctx);
+	}
 
 	/**
 		Set the controller parameters.
@@ -121,96 +168,31 @@ class CameraController extends h3d.scene.Object {
 		syncCamera();
 	}
 
-	override function onAdd() {
-		super.onAdd();
-		scene = getScene();
-		scene.addEventListener(onEvent);
-		if( curOffset.w == 0 )
-			curPos.x *= scene.camera.fovY;
-		curOffset.w = scene.camera.fovY; // load
-		targetPos.load(curPos);
-		targetOffset.load(curOffset);
-	}
-
-	override function onRemove() {
-		super.onRemove();
-		scene.removeEventListener(onEvent);
-		scene = null;
-	}
-
-	public dynamic function onClick( e : hxd.Event ) {
-	}
-
-	function onEvent( e : hxd.Event ) {
-
-		var p : Object = this;
-		while( p != null ) {
-			if( !p.visible ) {
-				e.propagate = true;
-				return;
-			}
-			p = p.parent;
-		}
-
-		switch( e.kind ) {
-		case EWheel:
-			if( hxd.Key.isDown(hxd.Key.CTRL) )
-				fov(e.wheelDelta * fovZoomAmount * 2);
-			else
-				zoom(e.wheelDelta);
-		case EPush:
-			@:privateAccess scene.events.startCapture(onEvent, function() {
-				pushing = -1;
-				var wnd = hxd.Window.getInstance();
-				wnd.mouseMode = Absolute;
-				wnd.setCursorPos(Std.int(absStartMouseX), Std.int(absStartMouseY));
-			}, e.touchId);
-			pushing = e.button;
-			pushTime = haxe.Timer.stamp();
-			var wnd = hxd.Window.getInstance();
-			absStartMouseX = wnd.mouseX;
-			absStartMouseY = wnd.mouseY;
-			pushStartX = pushX = e.relX;
-			pushStartY = pushY = e.relY;
-			hxd.Window.getInstance().mouseMode = AbsoluteUnbound(true);
-		case ERelease, EReleaseOutside:
-			if( pushing == e.button ) {
-				pushing = -1;
-				var wnd = hxd.Window.getInstance();
-				@:privateAccess scene.events.stopCapture();
-				if( e.kind == ERelease && haxe.Timer.stamp() - pushTime < 0.2 && hxd.Math.distance(e.relX - pushStartX,e.relY - pushStartY) < 5 )
-					onClick(e);
-			}
-		case EMove:
-			switch( pushing ) {
-			case 0:
-				if( hxd.Key.isDown(hxd.Key.ALT) )
-					zoom(-((e.relX - pushX) +  (e.relY - pushY)) * 0.03);
-				else
-					rot(e.relX - pushX, e.relY - pushY);
-				pushX = e.relX;
-				pushY = e.relY;
-			case 1:
-				var m = 0.001 * curPos.x * panSpeed / 25;
-				pan(-(e.relX - pushX) * m, (e.relY - pushY) * m);
-				pushX = e.relX;
-				pushY = e.relY;
-			case 2:
-				rot(e.relX - pushX, e.relY - pushY);
-				pushX = e.relX;
-				pushY = e.relY;
-			default:
-			}
-		default:
-		}
-	}
-
 	function fov(delta) {
 		targetOffset.w += delta;
 		if( targetOffset.w >= 179 )
 			targetOffset.w = 179;
 		if( targetOffset.w < 1 )
 			targetOffset.w = 1;
+	}
+
+	function offset(pt:h3d.Vector) {
+		targetOffset.x -= pt.x;
+		targetOffset.y -= pt.y;
+		targetOffset.z -= pt.z;
+	}
+
+	function pan(dx, dy, dz = 0.) {
+		var v = new h3d.Vector4(dx, dy, dz);
+		scene.camera.update();
+		v.transform3x3(scene.camera.getInverseView());
+		v.w = 0;
+		targetOffset = targetOffset.add(v);
+	}
+
+	function rot(dx, dy) {
+		moveX += dx;
+		moveY += dy;
 	}
 
 	function zoom(delta : Float) {
@@ -231,19 +213,6 @@ class CameraController extends h3d.scene.Object {
 		}
 	}
 
-	function rot(dx, dy) {
-		moveX += dx;
-		moveY += dy;
-	}
-
-	function pan(dx, dy, dz = 0.) {
-		var v = new h3d.Vector4(dx, dy, dz);
-		scene.camera.update();
-		v.transform3x3(scene.camera.getInverseView());
-		v.w = 0;
-		targetOffset = targetOffset.add(v);
-	}
-
 	function syncCamera() {
 		var cam = getScene().camera;
 		var distance = distance;
@@ -261,41 +230,248 @@ class CameraController extends h3d.scene.Object {
 		cam.update();
 	}
 
-	override function sync(ctx:RenderContext) {
+	function onEvent( e : hxd.Event ) {
+		var p : h3d.scene.Object = this;
+		while( p != null ) {
+			if( !p.visible ) {
+				e.propagate = true;
+				return;
+			}
+			p = p.parent;
+		}
 
-		// Disable Camera Sync during bake
-		if( ctx.scene.renderer.renderMode == LightProbe )
+		onCustomEvent(e);
+		if (e.propagate == false)
 			return;
 
-		if( !ctx.visibleFlag && !alwaysSyncAnimation ) {
-			super.sync(ctx);
-			return;
-		}
-
-		if( moveX != 0 ) {
-			targetPos.y += moveX * 0.003 * rotateSpeed;
-			moveX *= 1 - friction;
-			if( Math.abs(moveX) < 1 ) moveX = 0;
-		}
-
-		if( moveY != 0 ) {
-			targetPos.z -= moveY * 0.003 * rotateSpeed;
-			var E = 2e-5;
-			var bound = Math.PI - E;
-			if( targetPos.z < E ) targetPos.z = E;
-			if( targetPos.z > bound ) targetPos.z = bound;
-			moveY *= 1 - friction;
-			if( Math.abs(moveY) < 1 ) moveY = 0;
-		}
-
-		var dt = hxd.Math.min(1, 1 - Math.pow(smooth, ctx.elapsedTime * 60));
-		var cam = scene.camera;
-		curOffset.lerp(curOffset, targetOffset, dt);
-		curPos.lerp(curPos, targetPos, dt );
-
-		syncCamera();
-
-		super.sync(ctx);
+		onEventInternal(e);
 	}
 
+	function onEventInternal(e: hxd.Event) {
+
+	}
+
+	public dynamic function onCustomEvent(e: hxd.Event) {}
+	public dynamic function onClick( e : hxd.Event ) {}
+}
+
+class OrbitCameraController extends CameraController {
+	var moveCount = 0;
+
+	public function new(?distance: Float, ?parent : h3d.scene.Object) {
+		super(parent);
+		name = "OrbitCameraController";
+		set(distance);
+		curPos.load(targetPos);
+		curOffset.load(targetOffset);
+	}
+
+	override function onEventInternal( e : hxd.Event ) {
+		switch( e.kind ) {
+		case EWheel:
+			zoom(e.wheelDelta);
+		case EPush:
+			pushing = e.button;
+			if (pushing == 0 && hxd.Key.isDown(hxd.Key.ALT)) pushing = 2;
+			pushTime = haxe.Timer.stamp();
+			pushStartX = pushX = e.relX;
+			pushStartY = pushY = e.relY;
+			startPush = new h2d.col.Point(pushX, pushY);
+			moveCount = 0;
+			@:privateAccess scene.events.startCapture(onEvent);
+
+			@:privateAccess scene.window.mouseMode = AbsoluteUnbound(true);
+		case ERelease, EReleaseOutside:
+			if( pushing == e.button || pushing == 2) {
+				pushing = -1;
+				startPush = null;
+				if( e.kind == ERelease && haxe.Timer.stamp() - pushTime < 0.2 && hxd.Math.distance(e.relX - pushStartX,e.relY - pushStartY) < 5 )
+					onClick(e);
+				@:privateAccess scene.window.mouseMode = Absolute;
+				@:privateAccess scene.events.stopCapture();
+			}
+
+		case EMove:
+			// Windows bug that jumps movementX/Y on all browsers
+			if( moveCount < 10 && hxd.Math.distanceSq(pushX - e.relX, pushY - e.relY) > 100000 ) {
+				pushX = e.relX;
+				pushY = e.relY;
+				return;
+			}
+			moveCount++;
+
+			switch( pushing ) {
+				case 1:
+					if(startPush != null && startPush.distance(new h2d.col.Point(e.relX, e.relY)) > 3) {
+						var m = 0.001 * curPos.x * panSpeed / 25;
+						pan(-(e.relX - pushX) * m, (e.relY - pushY) * m);
+					}
+					pushX = e.relX;
+					pushY = e.relY;
+				case 2:
+					rot(e.relX - pushX, e.relY - pushY);
+					pushX = e.relX;
+					pushY = e.relY;
+				default:
+			}
+
+		case EFocus:
+			@:privateAccess hxd.Window.inst.mouseMode = Absolute;
+		default:
+		}
+	}
+
+	function moveKeys() {
+		var mov = new h3d.Vector();
+		if( hxd.Key.isDown(hxd.Key.UP) || hxd.Key.isDown(hxd.Key.Z) || hxd.Key.isDown(hxd.Key.W) )
+			mov.x += 1;
+		if( hxd.Key.isDown(hxd.Key.DOWN) || hxd.Key.isDown(hxd.Key.S) )
+			mov.x -= 1;
+		if( hxd.Key.isDown(hxd.Key.LEFT) || hxd.Key.isDown(hxd.Key.Q) || hxd.Key.isDown(hxd.Key.A) )
+			mov.y -= 1;
+		if( hxd.Key.isDown(hxd.Key.RIGHT) || hxd.Key.isDown(hxd.Key.D) )
+			mov.y += 1;
+
+		if( mov.x == 0 && mov.y == 0 )
+			return;
+		var dir = new h3d.Vector(
+			mov.x * Math.cos(theta) + mov.y * Math.cos(Math.PI / 2 + theta),
+			mov.x * Math.sin(theta) + mov.y * Math.sin(Math.PI / 2 + theta)
+		);
+
+		var delta = dir.scaled(0.01 * moveSpeed * (distance + scene.camera.zNear));
+		offset(delta);
+	}
+
+	override function sync(ctx : h3d.scene.RenderContext) {
+		if( pushing == 2 || pushing == 1) {
+			moveKeys();
+		}
+
+		var cam = getScene().camera;
+		cam.orthoBounds = null;
+		curOffset.w = wantedFOV;
+		targetOffset.w = wantedFOV;
+
+		var old = ctx.elapsedTime;
+		ctx.elapsedTime = hxd.Timer.dt;
+		super.sync(ctx);
+		ctx.elapsedTime = old;
+	}
+}
+
+class FPSCameraController extends CameraController {
+	public var camSpeed = 1.0;
+	public var zNear = 0.1;
+	public var zFar = 10000.0;
+	public var snapToGround = true;
+
+	public function new(?parent : h3d.scene.Object) {
+		super(parent);
+		name = "FPSCameraController";
+	}
+
+	override function sync(ctx : h3d.scene.RenderContext) {
+		var cam = getScene().camera;
+		cam.orthoBounds = null;
+		curOffset.w = wantedFOV;
+		targetOffset.w = wantedFOV;
+
+		var old = ctx.elapsedTime;
+		ctx.elapsedTime = hxd.Timer.dt;
+		lockZPlanes = true;
+		super.sync(ctx);
+		cam.fovY = wantedFOV;
+		cam.zNear = zNear;
+		cam.zFar = zFar;
+		ctx.elapsedTime = old;
+
+		if( pushing == 2 || pushing == 1)
+			moveKeys();
+	}
+
+	override function onEventInternal(e : hxd.Event) {
+		switch( e.kind ) {
+		case EWheel:
+			if (pushing == 2 || pushing == 1) {
+				if (e.wheelDelta > 0) {
+					camSpeed /= 1.1;
+				}
+				else {
+					camSpeed *= 1.1;
+				}
+			}
+		case EPush:
+			pushing = e.button;
+			if (pushing == 0 && hxd.Key.isDown(hxd.Key.ALT)) pushing = 2;
+			pushTime = haxe.Timer.stamp();
+			pushStartX = pushX = e.relX;
+			pushStartY = pushY = e.relY;
+			startPush = new h2d.col.Point(pushX, pushY);
+			@:privateAccess scene.window.mouseMode = AbsoluteUnbound(true);
+		case ERelease, EReleaseOutside:
+			if( pushing == e.button || pushing == 2) {
+				pushing = -1;
+				startPush = null;
+				if( e.kind == ERelease && haxe.Timer.stamp() - pushTime < 0.2 && hxd.Math.distance(e.relX - pushStartX,e.relY - pushStartY) < 5 )
+					onClick(e);
+				@:privateAccess scene.window.mouseMode = Absolute;
+			}
+		case EMove:
+			switch( pushing ) {
+				case 1:
+					var m = 0.1 * panSpeed / 25;
+					lookAround(-(e.relX - pushX) * m, (e.relY - pushY) * m);
+					pushX = e.relX;
+					pushY = e.relY;
+				case 2:
+					pushX = e.relX;
+					pushY = e.relY;
+				default:
+			}
+		case EFocus:
+			@:privateAccess scene.window.mouseMode = Absolute;
+		default:
+		}
+	}
+
+	function moveKeys() {
+		var cam = getScene().camera;
+		var mov = new h3d.Vector();
+		if( hxd.Key.isDown(hxd.Key.UP) || hxd.Key.isDown(hxd.Key.Z) || hxd.Key.isDown(hxd.Key.W) )
+			mov += cam.getForward() * -1;
+		if( hxd.Key.isDown(hxd.Key.DOWN) || hxd.Key.isDown(hxd.Key.S) )
+			mov += cam.getForward() * 1;
+		if( hxd.Key.isDown(hxd.Key.LEFT) || hxd.Key.isDown(hxd.Key.Q) )
+			mov += cam.getRight() * 1;
+		if( hxd.Key.isDown(hxd.Key.RIGHT) || hxd.Key.isDown(hxd.Key.D) )
+			mov += cam.getRight() * -1;
+		if ( hxd.Key.isDown(hxd.Key.A) )
+			mov += cam.getUp() * -1;
+		if ( hxd.Key.isDown(hxd.Key.E) )
+			mov += cam.getUp() * 1;
+
+		if( mov.x == 0 && mov.y == 0 && mov.z == 0 )
+			return;
+
+		var delta = mov.scaled(moveSpeed);
+		offset(delta);
+	}
+
+	function lookAround(dtheta : Float, dphi : Float) {
+		var tx = targetOffset.x + distance * Math.cos(theta) * Math.sin(phi) ;
+		var ty = targetOffset.y + distance * Math.sin(theta) * Math.sin(phi);
+		var tz = targetOffset.z + distance * Math.cos(phi);
+
+		targetPos.y = theta - dtheta;
+		var min = hxd.Math.PI*0.01;
+		targetPos.z = hxd.Math.clamp(phi - dphi, 0 + min, hxd.Math.PI - min);
+
+		curOffset.x = curOffset.w;
+		targetOffset.x = tx - distance * Math.cos(targetPos.y) * Math.sin(targetPos.z);
+		targetOffset.y = ty - distance * Math.sin(targetPos.y) * Math.sin(targetPos.z);
+		targetOffset.z = tz - distance * Math.cos(targetPos.z);
+		curOffset.load(targetOffset);
+		curPos.load(targetPos);
+	}
 }

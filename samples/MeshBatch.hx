@@ -53,7 +53,7 @@ class MeshBatch extends hxd.App {
 		shader = new PerMeshColor();
 		batch.material.mainPass.addShader(shader);
 		meshes = [];
-		new h3d.scene.CameraController(20,s3d);
+		new h3d.scene.CameraController.OrbitCameraController(20,s3d);
 	}
 
 	override function update(dt:Float) {

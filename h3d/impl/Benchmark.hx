@@ -437,7 +437,7 @@ class Benchmark extends h2d.Graphics {
 		var prevScenes = app.sevents.scenes;
 		app.sevents.scenes = [s3d];
 		s3d.interactives = [];
-		var camCtrl = new h3d.scene.CameraController(s3d);
+		var camCtrl = new h3d.scene.CameraController.OrbitCameraController(s3d);
 		var prevStates = new Map();
 		var frustum = s3d.camera.frustum;
 		function getRec( obj : h3d.scene.Object ) {
