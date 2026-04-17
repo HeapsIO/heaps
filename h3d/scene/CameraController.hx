@@ -43,8 +43,19 @@ abstract class CameraController extends h3d.scene.Object {
 	var pushTime : Float;
 	var startPush : h2d.col.Point;
 
-	public function new(?parent : h3d.scene.Object) {
+	public function new(?distance: Float, ?parent : h3d.scene.Object) {
 		super(parent);
+		set(distance);
+		curPos.load(targetPos);
+		curOffset.load(targetOffset);
+	}
+
+	public static function getCameraControllersClass() : Array<Class<h3d.scene.CameraController>>{
+		return [OrbitCameraController, FPSCameraController];
+	}
+
+	public static function getCameraControllerClassIdx(ctrl : h3d.scene.CameraController) {
+		return h3d.scene.CameraController.getCameraControllersClass().indexOf(Type.getClass(ctrl));
 	}
 
 	override function onAdd() {
@@ -259,11 +270,8 @@ class OrbitCameraController extends CameraController {
 	var moveCount = 0;
 
 	public function new(?distance: Float, ?parent : h3d.scene.Object) {
-		super(parent);
+		super(distance, parent);
 		name = "OrbitCameraController";
-		set(distance);
-		curPos.load(targetPos);
-		curOffset.load(targetOffset);
 	}
 
 	override function onEventInternal( e : hxd.Event ) {
@@ -366,8 +374,8 @@ class FPSCameraController extends CameraController {
 	public var zFar = 10000.0;
 	public var snapToGround = true;
 
-	public function new(?parent : h3d.scene.Object) {
-		super(parent);
+	public function new(?distance: Float, ?parent : h3d.scene.Object) {
+		super(distance, parent);
 		name = "FPSCameraController";
 	}
 
