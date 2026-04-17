@@ -133,6 +133,7 @@ class ShaderCache {
 		return data.get(configurationKey + encodedSource);
 	}
 
+	var saveTimer : haxe.Timer;
 	public function saveCompiledShader( source : String, bytes : haxe.io.Bytes, ?configurationKey = "", ?saveToFile = true ) {
 		if( outputFile == null )
 			return;
@@ -140,14 +141,19 @@ class ShaderCache {
 		var key = configurationKey + haxe.crypto.Md5.encode(source);
 		if( data.get(key) == bytes && (!keepSource || sources.get(key) == source) )
 			return;
-		//trace("Saving key : " + key);
 		data.set(key, bytes);
-		if( saveToFile )
-			save();
-		if( keepSource ) {
+		if( keepSource )
 			sources.set(key, source);
-			saveSources();
-		}
+
+		if(saveTimer != null)
+			saveTimer.stop();
+		saveTimer = haxe.Timer.delay(function() {
+			if( saveToFile )
+				save();
+			if( keepSource )
+				saveSources();
+			saveTimer = null;
+		}, 100);
 	}
 
 	function save() {
