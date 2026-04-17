@@ -1344,9 +1344,9 @@ class DX12Driver extends h3d.impl.Driver {
 
 		var box = new Box();
 		box.left = x;
-		box.right = pixels.width;
+		box.right = x + pixels.width;
 		box.top = y;
-		box.bottom = pixels.height;
+		box.bottom = y + pixels.height;
 		box.back = 1;
 
 		transition(tex.t, COPY_SOURCE);
