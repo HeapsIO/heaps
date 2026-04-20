@@ -131,6 +131,7 @@ class Window {
 
 		element.addEventListener("mousedown", onMouseDown);
 		element.addEventListener("mouseup", onMouseUp);
+		element.addEventListener("mouseenter", onMouseEnter);
 		element.addEventListener("mouseleave", onMouseLeave);
 		element.addEventListener("wheel", onMouseWheel);
 		element.addEventListener("touchstart", onTouchStart);
@@ -438,13 +439,13 @@ class Window {
 		event(ev);
 	}
 
+	function onMouseEnter(e:js.html.MouseEvent) {
+		var ev = new Event(EOver, mouseX, mouseY);
+		event(ev);
+	}
+
 	function onMouseLeave(e:js.html.MouseEvent) {
-		var ev = new Event(EReleaseOutside, mouseX, mouseY);
-		ev.button = switch( e.button ) {
-			case 1: 2;
-			case 2: 1;
-			case x: x;
-		};
+		var ev = new Event(EOut, mouseX, mouseY);
 		event(ev);
 	}
 
