@@ -28,7 +28,7 @@ class Renderer extends hxd.impl.AnyProps {
 	var backToFront : h3d.pass.PassList -> Void;
 	var debugging = false;
 
-	#if editor
+	#if editor_hl
 	public var showEditorGuides = false;
 	#end
 
