@@ -36,8 +36,17 @@ class MemoryManager {
 	var quadIndexes32 : Indexes;
 	public var bufferMemory(default, null) : Float = 0;
 	public var texMemory(default, null) : Float = 0;
-	public var autoDisposeCooldown : Int = 60;
-	public var autoDisposeCleanup : Int = 3600;
+
+	/**
+	 	How much time a texture should be kept into memory if it's not used.
+	**/
+	public var autoDisposeKeepTime : Float = 3.0;
+
+	/**
+	 	The amount of free memory we want to keep on our GPU to allow swapping.
+	**/
+	public var autoDisposeGpuFreeMB : Float = 1024;
+
 	var lastAutoDispose = 0;
 
 	public function new(driver) {
@@ -167,33 +176,46 @@ class MemoryManager {
 		return size * t.layerCount;
 	}
 
-	public function cleanTextures( force = true, regular = false ) {
-		textures.sort(sortByLRUPrio);
-		var oldest : h3d.mat.Texture = null;
+	public function cleanTextures( force = true ) {
+		textures.sort(sortByLRU);
+		var cleanupFrames = Math.ceil(autoDisposeKeepTime * hxd.Timer.fps());
+		if( cleanupFrames < 1 ) cleanupFrames = 1;
 		for( t in textures ) {
 			if( t.realloc == null || t.isDisposed() ) continue;
-			if( regular && t.keepPriority > 0 ) break;
-			if( (force || t.lastFrame < hxd.Timer.frameCount - autoDisposeCleanup) && t.lastFrame != h3d.mat.Texture.PREVENT_AUTO_DISPOSE ) {
-				if( oldest == null || oldest.lastFrame < t.lastFrame )
-					oldest = t;
-				if( regular ) break;
+			if( t.lastFrame == h3d.mat.Texture.PREVENT_AUTO_DISPOSE ) break;
+			if( force || t.lastFrame < hxd.Timer.frameCount - cleanupFrames ) {
+				t.dispose();
+				return true;
 			}
-		}
-		if( oldest != null ) {
-			oldest.dispose();
-			return true;
 		}
 		return false;
 	}
 
-	static function sortByLRUPrio( t1 : h3d.mat.Texture, t2 : h3d.mat.Texture ) {
-		var dp = t1.keepPriority - t2.keepPriority;
-		return dp != 0 ? dp : t1.lastFrame - t2.lastFrame;
+	static function sortByLRU( t1 : h3d.mat.Texture, t2 : h3d.mat.Texture ) {
+		return t1.lastFrame - t2.lastFrame;
+	}
+
+	public function beginFrame() {
+		if( autoDisposeGpuFreeMB > 0 && hxd.Timer.frameCount > lastAutoDispose + 60 ) {
+			var stats = driver.getMemoryUsage();
+			if( stats == null ) {
+				// disable (our driver doesn't support it anyway)
+				autoDisposeGpuFreeMB = -1;
+				return;
+			}
+			if( (stats.free/(1024*1024)) < autoDisposeGpuFreeMB )
+				cleanTextures(false); // will check again next frame, if we are still above the limit
+			else
+				lastAutoDispose = hxd.Timer.frameCount; // wait a bit
+		}
 	}
 
 	function autoDisposeMemory() {
-		if( autoDisposeCooldown > 0 && hxd.Timer.frameCount > lastAutoDispose + autoDisposeCooldown ) {
-			cleanTextures(false, true);
+		if( autoDisposeGpuFreeMB < 0 && hxd.Timer.frameCount > lastAutoDispose + 60 ) {
+			// if we have disabled per frame memory cleanup, or if our driver doesn't support it
+			// then let's do at least some cleanup for each allocation on a regular basis
+			// so we don't wait until our GPU returns null
+			cleanTextures(false);
 			lastAutoDispose = hxd.Timer.frameCount;
 		}
 	}
@@ -214,8 +236,8 @@ class MemoryManager {
 
 	@:allow(h3d.mat.Texture.alloc)
 	function allocTexture( t : h3d.mat.Texture ) {
+		autoDisposeMemory();
 		while( true ) {
-			autoDisposeMemory();
 			t.t = t.isDepth() ? driver.allocDepthBuffer(t) : driver.allocTexture(t);
 			if( t.t != null ) break;
 			if( driver.isDisposed() ) return;

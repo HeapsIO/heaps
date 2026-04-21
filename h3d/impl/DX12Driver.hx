@@ -612,15 +612,6 @@ class DX12Driver extends h3d.impl.Driver {
 		reset();
 	}
 
-	function hasFreeMemory( size : Int ) {
-		var mem = new QueryVideoMemoryInfo();
-		Dx12.queryVideoMemoryInfo(0, mem);
-		var tot = ((mem.budget * 95) / 100 - mem.currentUsage);
-		if( tot < size )
-			return false;
-		return true;
-	}
-
 	override function getMemoryUsage() {
 		var mem = new QueryVideoMemoryInfo();
 		Dx12.queryVideoMemoryInfo(0, mem);
@@ -1860,9 +1851,6 @@ class DX12Driver extends h3d.impl.Driver {
 
 	override function allocBuffer( m : h3d.Buffer ) : GPUBuffer {
 		var size = m.getMemSize();
-		if( !hasFreeMemory(size) )
-			return null;
-
 		var buf = new BufferData();
 		var bufSize = m.flags.has(UniformBuffer) || m.flags.has(ReadWriteBuffer) ? calcCBVSize(size) : size;
 		buf.state = buf.targetState = COPY_DEST;
@@ -2119,11 +2107,6 @@ class DX12Driver extends h3d.impl.Driver {
 
 		if( t.format.match(S3TC(_)) && (t.width & 3 != 0 || t.height & 3 != 0) )
 			throw t+" is compressed "+t.width+"x"+t.height+" but should be a 4x4 multiple";
-
-		var size = hxd.Pixels.calcDataSize(t.width, t.height, t.format) * t.layerCount;
-		if( t.mipLevels > 1 ) size *= 2;
-		if( !hasFreeMemory(size) )
-			return null;
 
 		var isRT = t.flags.has(Target);
 

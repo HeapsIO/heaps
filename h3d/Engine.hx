@@ -309,6 +309,7 @@ class Engine {
 		#if (usesys && !macro)
 		haxe.System.beginFrame();
 		#end
+		mem.beginFrame();
 		driver.begin(hxd.Timer.frameCount);
 		if( backgroundColor != null ) clear(backgroundColor, 1, 0);
 		return true;

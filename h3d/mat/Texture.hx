@@ -33,7 +33,6 @@ class Texture {
 	public var format(default, null) : TextureFormat;
 
 	var lastFrame(default,set) : Int;
-	var keepPriority : Int;
 	var bits : Int;
 	var waitLoads : Array<Void -> Void>;
 	@:bits(bits) public var mipMap : MipMap;
@@ -197,16 +196,6 @@ class Texture {
 	**/
 	public function preventAutoDispose() {
 		lastFrame = PREVENT_AUTO_DISPOSE;
-	}
-
-	/**
-		In case we run out of GPU memory, textures that hasn't been used for a long time will be disposed.
-		This allows to set a per texture priority, so textures with lower priority will get disposed first.
-		You can also set a negative value to give priority for a texture to be disposed.
-		Textures with priority > 0 will also not be subject to regular textures cleanup.
-	**/
-	public function setKeepPriority( priority : Int ) {
-		keepPriority = priority;
 	}
 
 	/**
