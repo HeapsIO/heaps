@@ -203,9 +203,7 @@ class MemoryManager {
 				autoDisposeGpuFreeMB = -1;
 				return;
 			}
-			if( (stats.free/(1024*1024)) < autoDisposeGpuFreeMB )
-				cleanTextures(false); // will check again next frame, if we are still above the limit
-			else
+			if( (stats.free/(1024*1024)) > autoDisposeGpuFreeMB || !cleanTextures(false) )
 				lastAutoDispose = hxd.Timer.frameCount; // wait a bit
 		}
 	}
