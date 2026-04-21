@@ -595,6 +595,7 @@ class DX12Driver extends h3d.impl.Driver {
 	public static var BUFFER_COUNT = #if console 3 #else 2 #end;
 	public static var DEVICE_NAME = null;
 	public static var DEBUG = false; // requires dxil.dll when set to true
+	public static var SUPPRESSED_MESSAGE_IDS : Array<Int> = [];
 
 	@:allow(h3d.impl) static function allocCheck<T>( f : Void -> T ) {
 		var ret = f();
@@ -650,10 +651,23 @@ class DX12Driver extends h3d.impl.Driver {
 		return useSM6_6;
 	}
 
+	function suppressDebugMessages() {
+		var ids = SUPPRESSED_MESSAGE_IDS;
+		if( ids.length == 0 ) return;
+		var buf = new hl.Bytes(ids.length * 4);
+		for( i in 0...ids.length )
+			buf.setI32(i * 4, ids[i]);
+		var filter = new InfoQueueFilter();
+		filter.denyList.numIDs = ids.length;
+		filter.denyList.idList = buf;
+		Driver.suppressDebugMessages(filter);
+	}
+
 	function reset() {
 		var flags = new DriverInitFlags();
 		if( DEBUG ) flags.set(DriverInitFlag.DEBUG);
 		driver = Driver.create(window, flags, DEVICE_NAME);
+		if( DEBUG ) suppressDebugMessages();
 		frames = [];
 
 		var flags = new haxe.EnumFlags();
