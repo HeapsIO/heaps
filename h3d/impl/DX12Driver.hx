@@ -1931,6 +1931,8 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	function updateBuffer( b : ResourceData, bytes : hl.Bytes, startByte : Int, bytesCount : Int ) {
+		if( hasDeviceError ) return;
+		if( b == null ) throw "Updating buffer which was not allocated";
 		var alloc = allocDynamicBuffer(bytes, bytesCount);
 		transition(b, COPY_DEST);
 		flushTransitions();
@@ -3125,7 +3127,7 @@ class DX12Driver extends h3d.impl.Driver {
 	override function drawInstanced(ibuf:Buffer, commands:InstanceBuffer) {
 		if ( (tmp.rect.right - tmp.rect.left) <= 0 || (tmp.rect.bottom - tmp.rect.top) <= 0 )
 			return;
-		
+
 		flushPipeline();
 		if( currentIndex != ibuf ) {
 			currentIndex = ibuf;
