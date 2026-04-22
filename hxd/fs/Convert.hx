@@ -476,8 +476,41 @@ class CompressIMG extends Convert {
 		return @:privateAccess new hxd.res.Image(new hxd.fs.BytesFileSystem.BytesFileEntry(path, sys.io.File.getBytes(path)));
 	}
 
+	function runTexconv(srcPath:String, dstPath:String, args:Array<String>) {
+		// texconv can only handle output dir, and it prepends to srcPath
+		var dstExt = new haxe.io.Path(dstPath).ext;
+		var tmpPath = new haxe.io.Path(dstPath);
+		tmpPath.ext = "tmp." + new haxe.io.Path(srcPath).ext;
+		var tmpFile = tmpPath.toString();
+		try sys.FileSystem.deleteFile(tmpFile) catch (e:Dynamic) {};
+		try sys.FileSystem.deleteFile(dstPath) catch (e:Dynamic) {};
+		sys.io.File.copy(srcPath, tmpFile);
+		command("texconv", ["-y", "-nologo"].concat(args).concat([tmpFile]));
+		tmpPath.ext = "tmp." + dstExt;
+		var p = tmpPath.toString();
+		if ( sys.FileSystem.exists(p) )
+			sys.FileSystem.rename(p, dstPath);
+		// delete after rename in case the format is the same
+		try sys.FileSystem.deleteFile(tmpFile) catch (e:Dynamic) {};
+		return dstPath;
+	}
+
 	override function convert() {
-		var resizedImagePath:String = null;
+		var cleanupFiles : Array<String> = null;
+		function cleanup() {
+			if(cleanupFiles == null) return;
+			for(file in cleanupFiles) {
+				try sys.FileSystem.deleteFile(file) catch (e:Dynamic) {};
+			}
+		}
+		function tempFile(path: String, tag: String, ext=null) : String {
+			var spath = new haxe.io.Path(path);
+			var tmp = '${spath.file}.$tag.' + (ext != null ? ext : spath.ext);
+			if(cleanupFiles == null) cleanupFiles = [];
+			cleanupFiles.push(tmp);
+			return tmp;
+		}
+
 		var mips = hasParam("mips") && getParam("mips") == true;
 		if (hasParam("size")) {
 			try {
@@ -485,68 +518,23 @@ class CompressIMG extends Convert {
 				var image = makeImage(srcPath);
 				var pxls = image.getPixels();
 				if (pxls.width == pxls.height && pxls.width > maxSize) {
-					pxls.dispose();
-					var prevMip = mips;
-					if (!prevMip)
-						Reflect.setField(params, "mips", true);
-					Reflect.deleteField(params, "size");
-					var tmpPath = new haxe.io.Path(dstPath);
-					tmpPath.ext = "forced_mips." + tmpPath.ext;
-					var prevDstPath = dstPath;
-					dstPath = tmpPath.toString();
-					convert();
-					dstPath = prevDstPath;
-					Reflect.setField(params, "size", maxSize);
-					if (!prevMip)
-						Reflect.deleteField(params, "mips");
-					var prevMipSize = hxd.res.Image.MIPMAP_MAX_SIZE;
-					hxd.res.Image.MIPMAP_MAX_SIZE = maxSize;
-					var mippedImage = makeImage(tmpPath.toString());
-					var resizedPixels = mippedImage.getPixels();
-					hxd.res.Image.MIPMAP_MAX_SIZE = prevMipSize;
-					srcPath = Sys.getEnv("TEMP") + "/output_resized_" + srcPath.split("/").pop();
-					resizedImagePath = srcPath;
-					sys.io.File.saveBytes(srcPath, resizedPixels.toPNG());
-					resizedPixels.dispose();
-					sys.FileSystem.deleteFile(tmpPath.toString());
+					var resized = tempFile(srcPath, "resized", "tga");
+					var ssize = "" + maxSize;
+					runTexconv(srcPath, resized, ["-m", "0", "-sepalpha", "-w", ssize, "-h", ssize, "-f", "RGBA", "-ft", "tga"]);
+					srcPath = resized;
 				}
 			} catch (e:Dynamic) {
-				trace("Faile to resize", e);
+				trace("Failed to resize", e);
 			}
 		}
 		var format = getParam("format");
 		var tcFmt = TEXCONV_FMT.get(format);
 		if (tcFmt != null) {
-			// texconv can only handle output dir, and it prepended to srcPath :'(
-			var tmpPath = new haxe.io.Path(dstPath);
-			tmpPath.ext = "tmp." + new haxe.io.Path(srcPath).ext;
-			var tmpFile = tmpPath.toString();
-			try
-				sys.FileSystem.deleteFile(tmpFile)
-			catch (e:Dynamic) {};
-			try
-				sys.FileSystem.deleteFile(dstPath)
-			catch (e:Dynamic) {};
-			sys.io.File.copy(srcPath, tmpFile);
-
-			var args = [
-				"-f",
-				tcFmt,
-				"-y",
-				"-nologo",
-				"-srgb", // Convert srgb to linear color space if target format doesn't support srgb (i.e from convertig from PNG to dds RGBA)
-				tmpFile
-			];
-
+			var args = ["-f", tcFmt, "-srgb"];
 			if (!mips)
 				args = ["-m", "1"].concat(args);
-			command("texconv", args);
-			sys.FileSystem.deleteFile(tmpFile);
-			tmpPath.ext = "tmp.DDS";
-			var p = tmpPath.toString();
-			if ( sys.FileSystem.exists(p) )
-				sys.FileSystem.rename(p, dstPath);
-			return;
+			runTexconv(srcPath, dstPath, args);
+			return cleanup();
 		}
 		var path = new haxe.io.Path(srcPath);
 		if (path.ext == "dds") {
@@ -588,7 +576,7 @@ class CompressIMG extends Convert {
 					pixels.dispose();
 				var tmpPath = dstPath + path.file + "_" + format + "." + path.ext;
 				sys.io.File.saveBytes(tmpPath, convertBytes);
-				return;
+				return cleanup();
 			}
 		}
 		var args = ["-silent"];
@@ -600,17 +588,14 @@ class CompressIMG extends Convert {
 		var tmpPath = null;
 		if (ext == "envd" || ext == "envs") {
 			// copy temporary (compressonator uses file extension ;_;)
-			tmpPath = Sys.getEnv("TEMP") + "/output_" + dstPath.split("/").pop() + ".dds";
+			tmpPath = tempFile(dstPath, "tmp", "dds");
 			sys.io.File.saveBytes(tmpPath, sys.io.File.getBytes(srcPath));
 		}
 		if (hasParam("alpha") && format == "BC1")
 			args = args.concat(["-DXT1UseAlpha", "1", "-AlphaThreshold", "" + getParam("alpha")]);
 		args = args.concat(["-fd", "" + getParam("format"), tmpPath == null ? srcPath : tmpPath, dstPath]);
 		command("CompressonatorCLI", args);
-		if (tmpPath != null)
-			sys.FileSystem.deleteFile(tmpPath);
-		if (resizedImagePath != null)
-			sys.FileSystem.deleteFile(resizedImagePath);
+		cleanup();
 	}
 
 	static var _ = Convert.register(new CompressIMG("png,tga,jpg,jpeg,dds,envd,envs", "dds"));
