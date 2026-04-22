@@ -234,7 +234,12 @@ class LocalEntry extends FileEntry {
 		if(watchHandle != null)
 			watchHandle.close();
 		lastChanged = getModifTime();
-		watchHandle = new hl.uv.Fs(hl.uv.Loop.getDefault(), originalFile, function(ev) {
+		watchHandle = new hl.uv.Fs(hl.uv.Loop.getDefault(), originalFile,
+		#if (hl_ver >= version("1.16.0"))
+		function(path, ev) {
+		#else
+		function(ev) {
+		#end
 			switch(ev) {
 				case Change|Rename:
 					if(getModifTime() != lastChanged) {
