@@ -474,7 +474,30 @@ class TextureData extends ResourceData {
 	public var format : DxgiFormat;
 	public var color : h3d.Vector4;
 	var clearColorChanges : Int;
-	public var cpuViewsIndex : Map<Int, Int> = new Map();
+	var cpuViewBits : Int = -1;
+	var cpuViewIndex : Int = -1;
+	var cpuViewsMap : Map<Int, Int>;
+
+	inline public function getView(bits: Int) {
+		if( cpuViewBits == bits )
+			return cpuViewIndex;
+		if( cpuViewsMap != null ) {
+			var idx = cpuViewsMap.get(bits);
+			return idx != null ? idx : -1;
+		}
+		return -1;
+	}
+
+	public function setView(bits: Int, idx: Int) {
+		if( cpuViewIndex < 0 ) {
+			cpuViewIndex = idx;
+			cpuViewBits = bits;
+			return;
+		}
+		if( cpuViewsMap == null )
+			cpuViewsMap = new Map();
+		cpuViewsMap.set(bits, idx);
+	}
 
 	public function setClearColor( c : h3d.Vector4 ) {
 		var color = color;
@@ -483,6 +506,19 @@ class TextureData extends ResourceData {
 		clearColorChanges++;
 		color.load(c);
 		return true;
+	}
+
+	public function disposeViews(heap: BlockHeap) {
+		if(cpuViewIndex >= 0) {
+			heap.disposeIndex(cpuViewIndex);
+			cpuViewIndex = -1;
+			cpuViewBits = -1;
+		}
+		if( cpuViewsMap != null ) {
+			for( v in cpuViewsMap )
+				heap.disposeIndex(v);
+			cpuViewsMap = null;
+		}
 	}
 }
 
@@ -2207,11 +2243,7 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	function disposeTextureViews(t:TextureData) {
-		var viewsIndex = t.cpuViewsIndex;
-		for( v in t.cpuViewsIndex){
-			cpuSrvHeap.disposeIndex(v);
-		}
-		t.cpuViewsIndex.clear();
+		t.disposeViews(cpuSrvHeap);
 	}
 
 	override function disposeTexture(t:h3d.mat.Texture) {
@@ -2476,15 +2508,16 @@ class DX12Driver extends h3d.impl.Driver {
 
 	function getCpuTexView(t : h3d.mat.Texture) : Address {
 		var startingMip = hxd.Math.iclamp(t.startingMip, 0, 16);
-		var texViewIdx = t.t.cpuViewsIndex.get(getTexBits(t));
-		if ( texViewIdx != null )
+		var texBits = getTexBits(t);
+		var texViewIdx = t.t.getView(texBits);
+		if ( texViewIdx >= 0 )
 			return cpuSrvHeap.getCpuAddressAt(texViewIdx);
 
 		texViewIdx = cpuSrvHeap.allocIndex();
 		fillTexViewDesc(t, tmp.texViewDesc);
 		var texView = cpuSrvHeap.getCpuAddressAt(texViewIdx);
 		Driver.createShaderResourceView(t.t.res, tmp.texViewDesc, texView);
-		t.t.cpuViewsIndex.set(getTexBits(t), texViewIdx);
+		t.t.setView(texBits, texViewIdx);
 		return texView;
 	}
 
