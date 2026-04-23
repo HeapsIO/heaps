@@ -317,6 +317,28 @@ class ConvertFBX2HMD extends Convert {
 	static var _ = Convert.register(new ConvertFBX2HMD());
 }
 
+class ConvertGLTF2HMD extends Convert {
+	var gltf : hxd.fmt.gltf.Data.GltfNode;
+
+	public function new() {
+		super("glb", "hmd");
+	}
+
+	override function cleanup() {
+		super.cleanup();
+		gltf = null;
+	}
+
+	override function convert() {
+		if (gltf == null)
+			gltf = try hxd.fmt.gltf.Parser.parse(srcBytes) catch (e:Dynamic) throw Std.string(e) + " in " + srcPath;
+
+		trace("e");
+	}
+
+	static var _ = Convert.register(new ConvertGLTF2HMD());
+}
+
 class Command extends Convert {
 	var cmd:String;
 	var args:Array<String>;
