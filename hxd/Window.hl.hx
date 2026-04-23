@@ -764,6 +764,21 @@ class Window {
 		displayMode = displayMode;
 	}
 
+	public function setIcon(icon: hxd.BitmapData) : Void {
+		#if (hlsdl >= version("1.16.0") || hldx >= version("1.16.0"))
+		var pixels = icon.getPixels();
+		pixels.convert(BGRA);
+		#if hlsdl
+		var surf = sdl.Surface.fromBGRA(pixels.bytes, pixels.width, pixels.height);
+		window.setIcon(surf);
+		surf.free();
+		#elseif hldx
+		window.setIcon(pixels.width, pixels.height, pixels.bytes);
+		#end
+		pixels.dispose();
+		#end
+	}
+
 	#if (hl_ver >= version("1.12.0"))
 	public static function getMonitors() : Array<Monitor> {
 		return [for(m in #if hldx dx.Window.getMonitors() #elseif hlsdl sdl.Sdl.getDisplays() #else [] #end) { name: m.name, width: m.right-m.left, height: m.bottom-m.top}];
