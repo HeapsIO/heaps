@@ -86,6 +86,7 @@ class Batcher extends h3d.scene.Object {
 	public var shadowMaxDistance = -1.0;
 	public var shadowCameraFrustumCulling = false; // Aggressive culling inside Shadow passes, using player camera frustum
 	public var shadowCullingOffset = 100.0;
+	public var hzbCulling = false;
 	public var isRelative : Bool = false;
 	public var batchFlags = new haxe.EnumFlags<BatcherFlags>();
 	public var syncShader : SyncShaderInterface;
@@ -530,10 +531,14 @@ private class BatchCommandBuilder extends hxsl.Shader {
 		@const var ENABLE_FRUSTUM_CULLING : Bool;
 		@const var ENABLE_DISTANCE_CLIPPING : Bool;
 		@const var ENABLE_DIRLIGHT_OBB_CULLING : Bool;
+		@const var ENABLE_HZB_CULLING : Bool;
 
 		@global var camera : {
 			var position : Vec3;
 			var proj : Mat4;
+			var view : Mat4;
+			var zNear : Float;
+			var zFar : Float;
 		}
 
 		@param var instancesData : StorageBuffer<Vec4>;
@@ -561,6 +566,9 @@ private class BatchCommandBuilder extends hxsl.Shader {
 		@param var lightMatrix : Mat3;
 		@param var lightOBBMin : Vec3;
 		@param var lightOBBMax : Vec3;
+
+		@param var hzb : Sampler2D;
+		@param var hzbSize : Vec2;
 
 		function insideOBB(pos : Vec3, radius : Float, min : Vec3, max : Vec3) : Bool {
 			return (pos.x + radius) > min.x && (pos.x - radius) < max.x &&
@@ -632,6 +640,55 @@ private class BatchCommandBuilder extends hxsl.Shader {
 			if ( ENABLE_DIRLIGHT_OBB_CULLING ) {
 				var objPosLs = position * lightMatrix;
 				if ( !insideOBB(objPosLs, boundingSphere, lightOBBMin, lightOBBMax) )
+					return;
+			}
+
+			if ( ENABLE_HZB_CULLING ) {
+				var posView = vec4(position, 1.0) * camera.view;
+				var depthView = posView.z - boundingSphere;
+				var objDepthMin = (camera.zFar * (depthView - camera.zNear)) / (depthView * (camera.zFar - camera.zNear));
+
+				var aabbCornersViewSpace = [
+					posView.xyz + vec3(boundingSphere, boundingSphere, -boundingSphere), // top right
+					posView.xyz + vec3(boundingSphere, -boundingSphere, -boundingSphere), // bottom right
+					posView.xyz + vec3(-boundingSphere, boundingSphere, -boundingSphere), // top left
+					posView.xyz + vec3(-boundingSphere, -boundingSphere, -boundingSphere) // bottom left
+				];
+
+				var offscreen = false;
+				var aabbCornersUVSpace = [ vec2(0), vec2(0), vec2(0), vec2(0) ];
+				var aabbMinMax = [ 1e30, 0.0, 1e30, 0.0 ]; // minX, maxX, minY, maxY
+				@unroll for ( i in 0...4 ) {
+					var cornerViewSpace = aabbCornersViewSpace[i];
+					var cornerScreenPos = vec4(cornerViewSpace, 1.0) * camera.proj;
+					cornerScreenPos.xyz /= cornerScreenPos.w;
+					cornerScreenPos.xy = screenToUv(cornerScreenPos.xy);
+					aabbCornersUVSpace[i] = cornerScreenPos.xy;
+
+					aabbMinMax[0] = min(aabbMinMax[0], aabbCornersUVSpace[i].x);
+					aabbMinMax[1] = max(aabbMinMax[1], aabbCornersUVSpace[i].x);
+					aabbMinMax[2] = min(aabbMinMax[2], aabbCornersUVSpace[i].y);
+					aabbMinMax[3] = max(aabbMinMax[3], aabbCornersUVSpace[i].y);
+
+					if ( aabbCornersUVSpace[i].x < 0.0 || aabbCornersUVSpace[i].x > 1.0 || aabbCornersUVSpace[i].y < 0.0 || aabbCornersUVSpace[i].y > 1.0 )
+						offscreen = true;
+				}
+
+				var boxWidth = aabbMinMax[1] - aabbMinMax[0];
+				var boxHeight = aabbMinMax[3] - aabbMinMax[2];
+				var texelSize = vec2(boxWidth, boxHeight) * hzbSize;
+				var w = max(texelSize.x, texelSize.y);
+
+				var mip = floor(log2(w));
+
+				var depth = 0.0;
+				@unroll for ( i in 0...4 ) {
+					var cornerPos = ivec2(aabbCornersUVSpace[i] * hzbSize);
+					var cornerDepth = hzb.fetch(cornerPos).x;
+					depth = max(depth, cornerDepth);
+				}
+
+				if ( !offscreen && objDepthMin > depth )
 					return;
 			}
 
@@ -965,6 +1022,13 @@ private class BatchPass {
 		} else {
 			builderShader.ENABLE_FRUSTUM_CULLING = true;
 			builderShader.ENABLE_DIRLIGHT_OBB_CULLING = false;
+			if ( batcher.hzbCulling ) {
+				builderShader.ENABLE_HZB_CULLING = true;
+				builderShader.hzb = ctx.hzb;
+				builderShader.hzbSize.set(ctx.hzb.width, ctx.hzb.height);
+			} else {
+				builderShader.ENABLE_HZB_CULLING = false;
+			}
 		}
 
 		builderShader.meshLodScale = ctx.meshLodScale;

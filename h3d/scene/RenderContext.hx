@@ -1,5 +1,6 @@
 package h3d.scene;
 
+import h3d.mat.Texture;
 import h3d.col.Frustum;
 
 private class SharedGlobal {
@@ -38,6 +39,8 @@ class RenderContext extends h3d.impl.RenderContext {
 	public var cullingCollider : h3d.col.Collider;
 	public var forcedScreenRatio : Float = -1;
 	public var meshLodScale : Float = 1.0;
+
+	public var hzb : h3d.mat.Texture;
 
 	public var numViews : Int = 1;
 	public var currentView : View = new h3d.scene.View(0);
