@@ -6,24 +6,41 @@ class Scene3D extends h2d.Flow {
 	public var s3d : h3d.scene.Scene;
 	public var deleteOnRemove = true;
 	public var backgroundColor : Null<Int> = null;
-	var events : hxd.SceneEvents;
+	public var events(default,set) : hxd.SceneEvents;
 	var renderTexture : h3d.mat.Texture;
 	var prevScale : h2d.Scene.ScaleMode;
 	var prevWidth = -1;
 	var prevHeight = -1;
 	var bgModel : h3d.scene.Mesh;
 
-	public function new(events:hxd.SceneEvents,?parent) {
+	public function new(?events:hxd.SceneEvents,?parent) {
 		this.events = events;
 		s2d = new h2d.Scene();
 		s3d = new h3d.scene.Scene();
 		super(parent);
 	}
 
+	function set_events(ev) {
+		if( events == ev )
+			return ev;
+		if( events != null ) {
+			events.removeScene(s2d);
+			events.removeScene(s3d);
+		}
+		events = ev;
+		if( events != null && allocated ) {
+			events.addScene(s3d,0);
+			events.addScene(s2d,0);
+		}
+		return ev;
+	}
+
 	override function onAdd() {
 		super.onAdd();
-		events.addScene(s3d, 0);
-		events.addScene(s2d, 0);
+		if( events != null ) {
+			events.addScene(s3d, 0);
+			events.addScene(s2d, 0);
+		}
 	}
 
 	override function onAfterReflow() {
@@ -69,8 +86,10 @@ class Scene3D extends h2d.Flow {
 		super.onRemove();
 		if( !deleteOnRemove )
 			return;
-		events.removeScene(s3d);
-		events.removeScene(s2d);
+		if( events != null ) {
+			events.removeScene(s3d);
+			events.removeScene(s2d);
+		}
 		s3d.dispose();
 		s2d.dispose();
 		if( renderTexture != null ) {
