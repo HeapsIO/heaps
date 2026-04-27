@@ -16,16 +16,15 @@ class RawPrimitive extends Primitive {
 
 	override function alloc( engine : h3d.Engine ) {
 		if( onContextLost == null ) throw "Cannot realloc " + this;
+		var alloc = hxd.impl.Allocator.get();
+		if( buffer != null ) alloc.disposeBuffer(buffer);
+		if( indexes != null ) alloc.disposeIndexBuffer(indexes);
 		var inf = onContextLost();
-		buffer = h3d.Buffer.ofFloats(inf.vbuf, inf.format);
+		buffer = alloc.ofFloats(inf.vbuf, inf.format);
 		vcount = buffer.vertices;
 		tcount = inf.ibuf != null ? Std.int(inf.ibuf.length / 3) : Std.int(vcount/3);
 		if( inf.ibuf != null )
-			indexes = h3d.Indexes.alloc(inf.ibuf);
-		else if( indexes != null ) {
-			indexes.dispose();
-			indexes = null;
-		}
+			indexes = alloc.ofIndexes(inf.ibuf);
 	}
 
 	override public function getBounds() {
