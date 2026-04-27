@@ -239,7 +239,7 @@ class Renderer extends h3d.scene.Renderer {
 	}
 
 	var hzbPass = new h3d.pass.ScreenFx(new h3d.shader.HZB());
-	public function updateHZB() {
+	public function updateHZB(max : Bool = true) {
 		ctx.hzb = allocTarget("HZB", false, 1, R32F, [Target, Writable, MipMapped, ManualMipMapGen]);
 		var hzbTarget = ctx.hzb;
 		var hzbTargetCopy = allocTarget("HZBCopy", false, 1, R32F, [Target, Writable, MipMapped, ManualMipMapGen]);
@@ -247,6 +247,7 @@ class Renderer extends h3d.scene.Renderer {
 		var width = textures.depth.width;
 		var height = textures.depth.height;
 		var hzbShader = hzbPass.shader;
+		hzbShader.compareMax = max;
 
 		var prevFilter = depth.filter;
 		depth.filter = Nearest;
@@ -267,8 +268,8 @@ class Renderer extends h3d.scene.Renderer {
 			var target = lvl & 1 == 0 ? hzbTarget : hzbTargetCopy;
 			source.startingMip = lvl - 1;
 			hzbShader.source = source;
-			hzbShader.invWidth = 1.0 / curWidth;
-			hzbShader.invHeight = 1.0 / curHeight;
+			hzbShader.sourceWidth = curWidth;
+			hzbShader.sourceHeight = curHeight;
 			ctx.engine.pushTarget(target, 0, lvl);
 			hzbPass.render();
 			ctx.engine.popTarget();
@@ -282,11 +283,6 @@ class Renderer extends h3d.scene.Renderer {
 		}
 		hzbTarget.startingMip = 0;
 		hzbTargetCopy.startingMip = 0;
-	}
-
-	public function computeHZB() : h3d.mat.Texture {
-		updateHZB();
-		return ctx.hzb;
 	}
 
 	function lighting() {
