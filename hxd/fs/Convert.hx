@@ -297,6 +297,8 @@ class ConvertFBX2HMD extends Convert {
 				hmdout.collisionUseLowLod = params.collisionUseLowLod;
 			if (params.legacyScaleAxisConversion != null)
 				hmdout.legacyScaleAxisConversion = params.legacyScaleAxisConversion;
+			if (params.legacySkinImport != null)
+				hmdout.legacySkinImport = params.legacySkinImport;
 		}
 		if( localParams != null ) {
 			if( localParams.ignoreCollideMaterials != null ) {

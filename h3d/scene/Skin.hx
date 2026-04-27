@@ -419,7 +419,7 @@ class Skin extends MultiMaterial {
 				cast(primitive, h3d.prim.HMDModel).loadSkin(skinData);
 				return new h3d.col.SkinCollider(this, primCol);
 			}
-			var rootTrans = skinData.rootJoints[0].defMat.clone();
+			var rootTrans = this.getAbsPos();
 			return new h3d.col.TransformCollider(rootTrans, col);
 		}
 		return col;
