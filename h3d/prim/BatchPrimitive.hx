@@ -177,7 +177,7 @@ class BatchPrimitive extends MeshPrimitive {
 		if( cpuLodInfos.length < lodNeeded )
 			cpuLodInfos.grow( hxd.Math.imax((cpuLodInfos.length >> 1) * 3, lodNeeded) );
 
-		var lodConfigHasCulling = lodConfig.length > lodCount - 1;
+		var lodConfigHasCulling = lodConfig.length > lodCount - 1 && lodCount > 1;
 		var minScreenRatioCulling = lodConfigHasCulling ? lodConfig[lodConfig.length - 1] : 0.0;
 		for ( lodIndex in 0...lodCount )
 			cpuLodInfos[lodStart + lodIndex] = lodIndex < lodConfig.length ? lodConfig[lodIndex] : 0.0;
