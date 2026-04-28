@@ -213,6 +213,8 @@ class RenderContext extends h3d.impl.RenderContext {
 	public function computeDispatch( ?shader : hxsl.Shader, x = 1, y = 1, z = 1, barrier : Bool = true) {
 		if ( x <= 0 || y <= 0 || z <= 0 )
 			throw "Can't use zero or negative work groups count";
+		if ( x > 65535 || y > 65535 || z > 65535 )
+			throw "Thread group size can't exceed 65535";
 
 		var prev = h3d.impl.RenderContext.get();
 		if( prev != this )
