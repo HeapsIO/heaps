@@ -73,7 +73,7 @@ private class CopyShader extends h3d.shader.ScreenShader {
 	static var SRC = {
 		@param var texture : Sampler2D;
 		function fragment() {
-			pixelColor = texture.get(calculatedUV);
+			pixelColor = texture.getLod(calculatedUV, 0.0);
 		}
 	}
 }
@@ -89,7 +89,8 @@ class Copy extends ScreenFx<CopyShader> {
 			engine.pushTarget(to, layer ?? 0, toMip ?? 0, NotBound);
 		shader.texture = from;
 		var oldStartingMip = from.startingMip;
-		from.startingMip = fromMip ?? 0;
+		if( fromMip != null )
+			from.startingMip = fromMip;
 		if( customPass != null ) {
 			if( blend != null ) customPass.setBlendMode(blend);
 			var h = @:privateAccess customPass.shaders;

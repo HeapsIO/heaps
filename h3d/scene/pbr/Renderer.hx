@@ -274,10 +274,9 @@ class Renderer extends h3d.scene.Renderer {
 			hzbPass.render();
 			ctx.engine.popTarget();
 
-			if ( target == hzbTargetCopy ) {
-				hzbTargetCopy.startingMip = lvl;
-				h3d.pass.Copy.run(hzbTargetCopy, hzbTarget, None, null, 0, lvl);
-			}
+			if ( target == hzbTargetCopy )
+				h3d.pass.Copy.run(hzbTargetCopy, hzbTarget, None, null, 0, lvl, lvl);
+
 			curWidth >>= 1;
 			curHeight >>= 1;
 		}
