@@ -332,7 +332,6 @@ class Skin extends MultiMaterial {
 	var prevSplitBuffers : Array<h3d.Buffer>;
 
 	var forceJointsUpdateOnFrame : Int = -1;
-	var lastBuffersUpdate = -1;
 	var buffersDirty = true;
 	var jointsUpdated : Bool;
 	var paletteChanged : Bool;
@@ -539,12 +538,8 @@ class Skin extends MultiMaterial {
 			prevSplitBuffers = null;
 		}
 	}
-	
-	function updateShader() {
-		if(lastBuffersUpdate == hxd.Timer.frameCount)
-			return;
-		lastBuffersUpdate = hxd.Timer.frameCount;
 
+	function updateShader() {
 		inline function alloc(count: Int) {
 			#if !hldx
 			// GL doesn't support passing smaller buffers than declared
@@ -554,30 +549,31 @@ class Skin extends MultiMaterial {
 		}
 		var hasVelocity = computeVelocity();
 
-		if( skinData.splitJoints != null ) {
-			if(splitBuffers == null)
-				splitBuffers = [for( a in skinData.splitJoints ) alloc(a.joints.length)];
-			if(hasVelocity) {
-				if(prevSplitBuffers == null)
-					prevSplitBuffers = [for( a in skinData.splitJoints ) alloc(a.joints.length)];
-				var tmp = prevSplitBuffers;
-				prevSplitBuffers = splitBuffers;
-				splitBuffers = tmp;
-			}
-		} else {
-			if(jointsBuffer == null)
-				jointsBuffer = alloc(skinData.boundJoints.length);
-			if(hasVelocity) {
-				if(prevJointsBuffer == null)
-					prevJointsBuffer = alloc(skinData.boundJoints.length);
-				var tmp = prevJointsBuffer;
-				prevJointsBuffer = jointsBuffer;
-				jointsBuffer = tmp;
-				skinShader.prevBonesMatrixes = prevJointsBuffer;
-			}
-		}
-
 		if(buffersDirty) {
+			// Swap buffers
+			if( skinData.splitJoints != null ) {
+				if(splitBuffers == null)
+					splitBuffers = [for( a in skinData.splitJoints ) alloc(a.joints.length)];
+				if(hasVelocity) {
+					if(prevSplitBuffers == null)
+						prevSplitBuffers = [for( a in skinData.splitJoints ) alloc(a.joints.length)];
+					var tmp = prevSplitBuffers;
+					prevSplitBuffers = splitBuffers;
+					splitBuffers = tmp;
+				}
+			} else {
+				if(jointsBuffer == null)
+					jointsBuffer = alloc(skinData.boundJoints.length);
+				if(hasVelocity) {
+					if(prevJointsBuffer == null)
+						prevJointsBuffer = alloc(skinData.boundJoints.length);
+					var tmp = prevJointsBuffer;
+					prevJointsBuffer = jointsBuffer;
+					jointsBuffer = tmp;
+				}
+			}
+
+			// Fill current
 			static var fbuf : hxd.FloatBuffer;
 				if(fbuf == null) fbuf = hxd.impl.Allocator.get().allocFloats(MAX_SHADER_BONES * hxd.BufferFormat.MAT3x4_DATA.stride * 4);
 
@@ -592,19 +588,19 @@ class Skin extends MultiMaterial {
 				}
 			} else
 				fillBones(currentPalette, jointsBuffer);
-			buffersDirty = false;
 		}
 
 		if( splitPalette == null ) {
 			skinShader.bonesMatrixes = jointsBuffer;
 			if( hasVelocity )
-				skinShader.prevBonesMatrixes = prevJointsBuffer;
+				skinShader.prevBonesMatrixes = buffersDirty ? prevJointsBuffer : jointsBuffer;
 		}
 		else {
 			// shader buffers set in draw() because dynamicParameters
 		}
 
 		skinShader.calcPrevPos = hasVelocity;
+		buffersDirty = false;
 	}
 
 	function makeJointsData() {
@@ -622,10 +618,11 @@ class Skin extends MultiMaterial {
 
 	@:noDebug
 	function syncJoints() {
-		if( !jointsUpdated && forceJointsUpdateOnFrame >= hxd.Timer.frameCount )
+		if( !jointsUpdated && (forceJointsUpdateOnFrame < 0 || forceJointsUpdateOnFrame >= hxd.Timer.frameCount ))
 			return;
 
-		var syncDyn = false;		accumulator += hxd.Timer.dt;
+		var syncDyn = false;
+		accumulator += hxd.Timer.dt;
 		if (accumulator >= Skin.FIXED_DT) {
 			syncDyn = true;
 			accumulator -= Skin.FIXED_DT;
