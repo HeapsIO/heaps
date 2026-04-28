@@ -466,8 +466,81 @@ class BufferData extends ResourceData {
 	public var iview : dx.Dx12.IndexBufferView;
 	public var cViewIndex : Int = -1;
 	public var sViewIndex : Int = -1;
+	public var sViewStride : Int = -1;
+	public var sViewsMap : Map<Int, Int>;
 	public var uViewIndex : Int = -1;
+	public var uViewStride : Int = -1;
+	public var uViewsMap : Map<Int, Int>;
 	public var size : Int;
+
+	inline public function getSRV(stride:Int) {
+		if( sViewStride == stride )
+			return sViewIndex;
+		if( sViewsMap != null ) {
+			var idx = sViewsMap.get(stride);
+			return idx != null ? idx : -1;
+		}
+		return -1;
+	}
+
+	public function setSRV(stride:Int, idx:Int) {
+		if( sViewIndex < 0 ) {
+			sViewIndex = idx;
+			sViewStride = stride;
+			return;
+		}
+		if( sViewsMap == null )
+			sViewsMap = new Map();
+		sViewsMap.set(stride, idx);
+	}
+
+	inline public function getUAV(stride:Int) {
+		if( uViewStride == stride )
+			return uViewIndex;
+		if( uViewsMap != null ) {
+			var idx = uViewsMap.get(stride);
+			return idx != null ? idx : -1;
+		}
+		return -1;
+	}
+
+	public function setUAV(stride:Int, idx:Int) {
+		if( uViewIndex < 0 ) {
+			uViewIndex = idx;
+			uViewStride = stride;
+			return;
+		}
+		if( uViewsMap == null )
+			uViewsMap = new Map();
+		uViewsMap.set(stride, idx);
+	}
+
+	public function disposeViews(heap : BlockHeap) {
+		if ( cViewIndex != -1 ) {
+			heap.disposeIndex(cViewIndex);
+			cViewIndex = -1;
+		}
+		if(sViewIndex >= 0) {
+			heap.disposeIndex(sViewIndex);
+			sViewIndex = -1;
+			sViewStride = -1;
+		}
+		if( sViewsMap != null ) {
+			for( v in sViewsMap )
+				heap.disposeIndex(v);
+			sViewsMap = null;
+		}
+		if(uViewIndex >= 0) {
+			heap.disposeIndex(uViewIndex);
+			uViewIndex = -1;
+			uViewStride = -1;
+		}
+		if( uViewsMap != null ) {
+			for( v in uViewsMap )
+				heap.disposeIndex(v);
+			uViewsMap = null;
+		}
+	}
 }
 
 class TextureData extends ResourceData {
@@ -1942,18 +2015,7 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	function disposeBufferViews(b:BufferData) {
-		if ( b.cViewIndex != -1 ) {
-			cpuSrvHeap.disposeIndex(b.cViewIndex);
-			b.cViewIndex = -1;
-		}
-		if ( b.sViewIndex != -1 ) {
-			cpuSrvHeap.disposeIndex(b.sViewIndex);
-			b.sViewIndex = -1;
-		}
-		if ( b.uViewIndex != -1 ) {
-			cpuSrvHeap.disposeIndex(b.uViewIndex);
-			b.uViewIndex = -1;
-		}
+		b.disposeViews(cpuSrvHeap);
 	}
 
 	override function disposeBuffer(v:Buffer) {
@@ -2247,13 +2309,9 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	override function disposeTexture(t:h3d.mat.Texture) {
-		if( t.lastFrame < frameCount - 1 ) {
-			// immediate dispose
-			var r = t.t;
-			r.res.release();
-			r.res = null;
-			r.state = r.targetState = PRESENT;
-		} else
+		if( t.lastFrame < frameCount - 1 )
+			t.t.res.release();
+		else
 			disposeResource(t.t);
 		disposeTextureViews(t.t);
 		var handles = textureHandles.get(t);
@@ -2802,10 +2860,11 @@ class DX12Driver extends h3d.impl.Driver {
 							var srvAddress = srv.offset(storageIndex * frame.srvHeap.stride);
 							var stride = regs.bufferStrides[i];
 							#if (hldx >= version("1.16.0"))
-							var sViewIndex = cbv.sViewIndex;
+							var sViewIndex = cbv.getSRV(stride);
 							if ( sViewIndex == -1 ) {
-								cbv.sViewIndex = sViewIndex = cpuSrvHeap.allocIndex();
+								sViewIndex = cpuSrvHeap.allocIndex();
 								createBufferSRV(cbv, stride, cpuSrvHeap.getCpuAddressAt(sViewIndex));
+								cbv.setSRV(stride, sViewIndex);
 							}
 							Driver.copyDescriptorsSimple(1, srvAddress, cpuSrvHeap.getCpuAddressAt(sViewIndex), CBV_SRV_UAV);
 							#else
@@ -2819,10 +2878,11 @@ class DX12Driver extends h3d.impl.Driver {
 							var uavAddress = srv.offset(uavIndex * frame.srvHeap.stride);
 							var stride = regs.bufferStrides[i];
 							#if (hldx >= version("1.16.0"))
-							var uViewIndex = cbv.uViewIndex;
+							var uViewIndex = cbv.getUAV(stride);
 							if ( uViewIndex == -1 ) {
-								cbv.uViewIndex = uViewIndex = cpuSrvHeap.allocIndex();
+								uViewIndex = cpuSrvHeap.allocIndex();
 								createBufferUAV(cbv, stride, cpuSrvHeap.getCpuAddressAt(uViewIndex));
+								cbv.setUAV(stride, uViewIndex);
 							}
 							Driver.copyDescriptorsSimple(1, uavAddress, cpuSrvHeap.getCpuAddressAt(uViewIndex), CBV_SRV_UAV);
 							#else
