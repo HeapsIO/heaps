@@ -35,6 +35,7 @@ enum abstract InputFormat(Int) {
 	public var DVec2 = 2;
 	public var DVec3 = 3;
 	public var DVec4 = 4;
+	public var DMat3x4 = 12;
 	public var DMat4 = 16;
 	public var DBytes4 = 9;
 
@@ -56,6 +57,7 @@ enum abstract InputFormat(Int) {
 		case DVec2: "DVec2";
 		case DVec3: "DVec3";
 		case DVec4: "DVec4";
+		case DMat3x4: "DMat3x4";
 		case DMat4: "DMat4";
 		case DBytes4: "DBytes4";
 		}
@@ -71,6 +73,7 @@ enum abstract InputFormat(Int) {
 		case TVec(3, VFloat): DVec3;
 		case TVec(4, VFloat): DVec4;
 		case TMat4 : DMat4;
+		case TMat3x4 : DMat3x4;
 		case TBytes(4): DBytes4;
 		case TFloat, TInt: DFloat;
 		default: throw "Unsupported buffer type " + t;
@@ -324,6 +327,7 @@ class BufferFormat {
 	public static var POS3D_NORMAL_UV_RGBA(get,null) : BufferFormat;
 	public static var VEC4_DATA(get,null) : BufferFormat;
 	public static var MAT4_DATA(get,null) : BufferFormat;
+	public static var MAT3x4_DATA(get,null) : BufferFormat;
 
 	public static var INDEX16(get,null) : BufferFormat;
 	public static var INDEX32(get,null) : BufferFormat;
@@ -365,6 +369,11 @@ class BufferFormat {
 	static function get_MAT4_DATA() {
 		if( MAT4_DATA == null ) MAT4_DATA = hxd.BufferFormat.make([{ name : "data", type : DMat4 }]);
 		return MAT4_DATA;
+	}
+
+	static function get_MAT3x4_DATA() {
+		if( MAT3x4_DATA == null ) MAT3x4_DATA = hxd.BufferFormat.make([{ name : "data", type : DMat3x4 }]);
+		return MAT3x4_DATA;
 	}
 
 	static function get_INDEX16() {

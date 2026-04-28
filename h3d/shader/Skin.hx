@@ -47,10 +47,10 @@ class Skin extends SkinBase {
 
 		function vertex() {
 			if ( calcPrevPos ) {
-				boneMatrixX = prevBonesMatrixes[int(input.indexes.x)];
-				boneMatrixY = prevBonesMatrixes[int(input.indexes.y)];
-				boneMatrixZ = prevBonesMatrixes[int(input.indexes.z)];
-				boneMatrixW = prevBonesMatrixes[int(input.indexes.w)];
+				boneMatrixX = getPrevBoneMatrix(input.indexes.x);
+				boneMatrixY = getPrevBoneMatrix(input.indexes.y);
+				boneMatrixZ = getPrevBoneMatrix(input.indexes.z);
+				boneMatrixW = getPrevBoneMatrix(input.indexes.w);
 				skinWeights = vec4(input.weights, 0.0);
 				if ( fourBonesByVertex )
 					skinWeights.w = 1 - (input.weights.x + input.weights.y + input.weights.z);
@@ -58,10 +58,10 @@ class Skin extends SkinBase {
 				previousTransformedPosition = applySkinPoint(relativePosition);
 			}
 
-			boneMatrixX = bonesMatrixes[int(input.indexes.x)];
-			boneMatrixY = bonesMatrixes[int(input.indexes.y)];
-			boneMatrixZ = bonesMatrixes[int(input.indexes.z)];
-			boneMatrixW = bonesMatrixes[int(input.indexes.w)];
+			boneMatrixX = getBoneMatrix(input.indexes.x);
+			boneMatrixY = getBoneMatrix(input.indexes.y);
+			boneMatrixZ = getBoneMatrix(input.indexes.z);
+			boneMatrixW = getBoneMatrix(input.indexes.w);
 			skinWeights = vec4(input.weights, 0.0);
 			if ( fourBonesByVertex )
 				skinWeights.w = 1 - (input.weights.x + input.weights.y + input.weights.z);
