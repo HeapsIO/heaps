@@ -176,7 +176,10 @@ class SmoothTarget extends Animation {
 					mout.tz = lerp(o.tz, m.tz, blend);
 				}
 
-				@:privateAccess if( o.targetSkin != null ) o.targetSkin.jointsData[o.targetJoint].currentRelPos = mout else o.targetObject.defaultTransform = mout;
+				@:privateAccess if( o.targetSkin != null ) {
+					o.targetSkin.jointsData[o.targetJoint].currentRelPos = mout;
+					o.targetSkin.jointsUpdated = true;
+				} else o.targetObject.defaultTransform = mout;
 			}
 		}
 	}
