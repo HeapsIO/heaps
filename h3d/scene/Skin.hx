@@ -334,7 +334,6 @@ class Skin extends MultiMaterial {
 	var forceJointsUpdateOnFrame : Int = -1;
 	var buffersDirty = true;
 	var jointsUpdated : Bool;
-	var paletteChanged : Bool;
 	var skinShader : h3d.shader.SkinBase;
 	var jointsGraphics : Graphics;
 
@@ -505,7 +504,6 @@ class Skin extends MultiMaterial {
 
 		jointsData = [];
 		currentPalette = [];
-		paletteChanged = true;
 		makeJointsData();
 		for( i in 0...skinData.boundJoints.length )
 			currentPalette.push(h3d.Matrix.I());
