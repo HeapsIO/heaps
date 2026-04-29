@@ -2329,7 +2329,7 @@ class DX12Driver extends h3d.impl.Driver {
 		var handles = textureHandles.get(t);
 		if ( handles != null ) {
 			for ( h in handles )
-				frame.handlesToRelease.push(h);
+				frame.texHandlesToRelease.push(h);
 			if ( t.realloc == null )
 				textureHandles.remove(t);
 		}
