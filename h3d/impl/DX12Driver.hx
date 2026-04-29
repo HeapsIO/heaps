@@ -203,7 +203,8 @@ class DxFrame {
 	public var copyBufferCursor : Int = 0;
 	public var fenceValue : Int64;
 	public var toRelease : Array<Resource> = [];
-	public var handlesToRelease : Array<h3d.mat.TextureHandle> = [];
+	public var texHandlesToRelease : Array<h3d.mat.TextureHandle> = [];
+	public var bufHandlesToRelease : Array<h3d.BufferHandle> = [];
 	public var srvHeap : ScratchHeap;
 	public var samplerHeap : ScratchHeap;
 	public var srvHeapCache : ScratchHeapArray;
@@ -464,6 +465,7 @@ class ResourceData {
 class BufferData extends ResourceData {
 	public var view : dx.Dx12.VertexBufferView;
 	public var iview : dx.Dx12.IndexBufferView;
+	public var handle : h3d.BufferHandle = null;
 	public var cViewIndex : Int = -1;
 	public var sViewIndex : Int = -1;
 	public var sViewStride : Int = -1;
@@ -670,7 +672,7 @@ class DX12Driver extends h3d.impl.Driver {
 	var useDepthClamp : Bool = false;
 	var useSM6_6 = false;
 	var errorTex : h3d.mat.Texture;
-	var textureHandles : Map<h3d.mat.Texture, Map<Int, h3d.mat.TextureHandle>>= [];
+	var textureHandles : Map<h3d.mat.Texture, Map<Int, h3d.mat.TextureHandle>> = [];
 
 	var copyQueue : CommandQueue;
 	var copyFence : Fence;
@@ -932,8 +934,8 @@ class DX12Driver extends h3d.impl.Driver {
 
 		var errorTexSampler = getCpuSampler(errorTex);
 		var errorTexView = getCpuTexView(errorTex);
-		while( frame.handlesToRelease.length > 0 ) {
-			var h = frame.handlesToRelease.pop();
+		while( frame.texHandlesToRelease.length > 0 ) {
+			var h = frame.texHandlesToRelease.pop();
 			if ( h.handle != -1 && h.texture.t == null ) {
 				Driver.copyDescriptorsSimple(1, bindlessSamplerHeap.getCpuAddressAt(h.handle.high), errorTexSampler, SAMPLER);
 				Driver.copyDescriptorsSimple(1, bindlessSrvHeap.getCpuAddressAt(h.handle.low), errorTexView, CBV_SRV_UAV);
@@ -942,6 +944,13 @@ class DX12Driver extends h3d.impl.Driver {
 					bindlessSamplerHeap.disposeIndex(h.handle.high);
 					h.handle = -1;
 				}
+			}
+		}
+		while( frame.bufHandlesToRelease.length > 0 ) {
+			var h = frame.bufHandlesToRelease.pop();
+			if ( h.handle != -1 ) {
+				bindlessSrvHeap.disposeIndex(h.handle);
+				h.handle = -1;
 			}
 		}
 		beginQueries();
@@ -2021,6 +2030,9 @@ class DX12Driver extends h3d.impl.Driver {
 	override function disposeBuffer(v:Buffer) {
 		disposeResource(v.vbuf);
 		disposeBufferViews(v.vbuf);
+		var handle = v.vbuf.handle;
+		if ( handle != null )
+			frame.bufHandlesToRelease.push(handle);
 	}
 
 	override function disposeInstanceBuffer(b:InstanceBuffer) {
@@ -2565,7 +2577,6 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	function getCpuTexView(t : h3d.mat.Texture) : Address {
-		var startingMip = hxd.Math.iclamp(t.startingMip, 0, 16);
 		var texBits = getTexBits(t);
 		var texViewIdx = t.t.getView(texBits);
 		if ( texViewIdx >= 0 )
@@ -2670,9 +2681,14 @@ class DX12Driver extends h3d.impl.Driver {
 					frame.commandList.setComputeRoot32BitConstants(regs.params, dataSize >> 2, data, 0);
 				else
 					frame.commandList.setGraphicsRoot32BitConstants(regs.params, dataSize >> 2, data, 0);
-				for ( i in 0...shader.paramsHandleCount ) {
-					var handle = buf.handles[i];
-					transition(handle.texture.t, shader.kind == Fragment ? PIXEL_SHADER_RESOURCE : NON_PIXEL_SHADER_RESOURCE);
+				var state = shader.kind == Fragment ? PIXEL_SHADER_RESOURCE : NON_PIXEL_SHADER_RESOURCE;
+				for ( i in 0...shader.paramsTexHandleCount ) {
+					var handle = buf.texHandles[i];
+					transition(handle.texture.t, state);
+				}
+				for ( i in 0...shader.paramsBufHandleCount ) {
+					var handle = buf.bufHandles[i];
+					transition(handle.buffer.vbuf, state);
 				}
 			}
 		case Globals:
@@ -2698,11 +2714,18 @@ class DX12Driver extends h3d.impl.Driver {
 					frame.commandList.setComputeRoot32BitConstants(regs.globals, dataSize >> 2, data, 0);
 				else
 					frame.commandList.setGraphicsRoot32BitConstants(regs.globals, dataSize >> 2, data, 0);
-				var startIdx = shader.paramsHandleCount;
-				var lastIdx = startIdx + shader.globalsHandleCount;
+				var state = isFragment ? PIXEL_SHADER_RESOURCE : NON_PIXEL_SHADER_RESOURCE;
+				var startIdx = shader.paramsTexHandleCount;
+				var lastIdx = startIdx + shader.globalsTexHandleCount;
 				for ( i in startIdx...lastIdx ) {
-					var handle = buf.handles[i];
-					transition(handle.texture.t, isFragment ? PIXEL_SHADER_RESOURCE : NON_PIXEL_SHADER_RESOURCE);
+					var handle = buf.texHandles[i];
+					transition(handle.texture.t, state);
+				}
+				startIdx = shader.paramsBufHandleCount;
+				lastIdx = startIdx + shader.globalsBufHandleCount;
+				for ( i in startIdx...lastIdx ) {
+					var handle = buf.bufHandles[i];
+					transition(handle.buffer.vbuf, state);
 				}
 			}
 			if ( isFragment )
@@ -2951,6 +2974,15 @@ class DX12Driver extends h3d.impl.Driver {
 			}
 			t.lastFrame = frameCount;
 			transition(t.t, PIXEL_SHADER_RESOURCE);
+		}
+	}
+
+	override function selectBufferHandles( handles : Array<h3d.BufferHandle> ) {
+		for ( h in handles ) {
+			var vbuf = h.buffer.vbuf;
+			if ( h.handle == -1 )
+				throw "Handle is invalid";
+			transition(vbuf, PIXEL_SHADER_RESOURCE);
 		}
 	}
 
@@ -3360,6 +3392,19 @@ class DX12Driver extends h3d.impl.Driver {
 			Driver.copyDescriptorsSimple(1, frame.samplerHeap.getCpuAddressAt(samplerIndex), sampler, SAMPLER);
 			handle = new h3d.mat.TextureHandle(t, haxe.Int64.make(samplerIndex, srvIndex));
 			handles.set(t.bits, handle);
+		}
+		return handle;
+	}
+
+	override function getBufferHandle( b : h3d.Buffer ) : h3d.BufferHandle {
+		var vbuf = b.vbuf;
+		var handle : h3d.BufferHandle = vbuf.handle;
+		if ( handle == null ) {
+			var viewIndex = bindlessSrvHeap.allocIndex();
+			var srv = bindlessSrvHeap.getCpuAddressAt(viewIndex);
+			createBufferSRV(b.vbuf, 4, srv);
+			Driver.copyDescriptorsSimple(1, frame.srvHeap.getCpuAddressAt(viewIndex), srv, CBV_SRV_UAV);
+			vbuf.handle = handle = new h3d.BufferHandle(b, viewIndex);
 		}
 		return handle;
 	}

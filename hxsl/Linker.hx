@@ -294,6 +294,15 @@ class Linker {
 				curShader.writeVars.push(v);
 			}
 			return { e : TCall({ e : TGlobal(ResolveSampler),  t : TFun([]), p : e.p }, [handle, { e : TVar(v.v), t : v.v.type, p : e.p }] ), t : e.t, p : e.p };
+		case TCall({ e : TGlobal(ResolveBuffer)}, [handle, { e : TVar(v)}]):
+			var handle = mapExprVar(handle);
+			var v = allocVar(v, handle.p);
+			if( curShader != null && !curShader.writeMap.exists(v.id) ) {
+				debug(curShader.name + " write " + v.path);
+				curShader.writeMap.set(v.id, v);
+				curShader.writeVars.push(v);
+			}
+			return { e : TCall({ e : TGlobal(ResolveBuffer),  t : TFun([]), p : e.p }, [handle, { e : TVar(v.v), t : v.v.type, p : e.p }] ), t : e.t, p : e.p };
 		default:
 		}
 		return e.map(mapExprVarFun);

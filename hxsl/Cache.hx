@@ -493,8 +493,11 @@ class Cache {
 				var count = 0;
 				for( a in alloc ) {
 					if( a.v == null ) continue; // padding
-					if ( a.v.type.match(TTextureHandle) )
-						c.paramsHandleCount++;
+					switch(a.v.type) {
+					case TTextureHandle: c.paramsTexHandleCount++;
+					case TBufferHandle: c.paramsBufHandleCount++;
+					default:
+					}
 					var p = params.get(a.v.id);
 					if( p == null ) {
 						var ap = new AllocParam(a.v.name, a.pos, -1, -1, a.v.type);
@@ -533,8 +536,11 @@ class Cache {
 				var out = [
 					for( a in alloc )
 						if( a.v != null ) {
-							if ( a.v.type.match(TTextureHandle) )
-								c.globalsHandleCount++;
+							switch(a.v.type) {
+							case TTextureHandle: c.globalsTexHandleCount++;
+							case TBufferHandle: c.globalsBufHandleCount++;
+							default:
+							}
 							new AllocGlobal(a.pos, getPath(a.v), a.v.type);
 						}
 				];
@@ -603,11 +609,11 @@ class Cache {
 		if( c.params == null )
 			c.paramsSize = 0;
 		c.data = data;
-		c.hasBindless = c.globalsHandleCount > 0 || c.paramsHandleCount > 0;
+		c.hasBindless = (c.globalsTexHandleCount + c.paramsTexHandleCount + c.globalsBufHandleCount + c.paramsBufHandleCount) > 0;
 		if ( !c.hasBindless ) {
 			for ( v in c.data.vars ) {
 				switch ( v.type ) {
-				case TTextureHandle:
+				case TTextureHandle, TBufferHandle:
 					c.hasBindless = true;
 					break;
 				default:
@@ -761,9 +767,8 @@ class Cache {
 			var size = switch( p.type ) {
 				case TMat4: 4 * 4;
 				case TVec(n,VFloat): n;
-				case TFloat, TInt: 1;
-				case TTextureHandle: 2;
-				case TSampler(_): 2;
+				case TFloat, TInt, TBufferHandle, TBuffer(_): 1;
+				case TTextureHandle, TSampler(_): 2;
 				default: throw "Unsupported batch var type "+p.type;
 			}
 			var index;
@@ -832,6 +837,8 @@ class Cache {
 		addPerInstance(rt.fragment.params);
 		addPerInstance(rt.vertex.textures);
 		addPerInstance(rt.fragment.textures);
+		addPerInstance(rt.vertex.buffers);
+		addPerInstance(rt.fragment.buffers);
 
 		var parentVars = new Map();
 		var swiz = [[X],[Y],[Z],[W]];
@@ -916,8 +923,15 @@ class Cache {
 				return { p : pos, e : TBlock([einitHandle, eresolveTex]), t : TVoid };
 			case TFloat:
 				{ p : pos, t : v.type, e : TSwiz(readOffset(ebuffer, index),swiz[v.pos&3]) };
-			case TInt:
+			case TInt, TBufferHandle:
 				floatBitsToInt({ p : pos, t : v.type, e : TSwiz(readOffset(ebuffer, index),swiz[v.pos&3]) });
+			case TBuffer(_):
+				var vh = new AllocParam(v.name + "Handle", v.pos, v.instance, v.index, TBufferHandle);
+				var vhreal = declareLocalVar(vh);
+				var extract = floatBitsToUint({ p : pos, t : vh.type, e : TSwiz(readOffset(ebuffer, index),swiz[v.pos&3]) });
+				var einitHandle : TExpr = { p : pos, e : TBinop(OpAssign, { e : TVar(vhreal), p : pos, t : vh.type }, extract), t : TVoid };
+				var eresolveTex : TExpr = { p : pos, e : TCall({e : TGlobal(ResolveBuffer), t : TFun([]), p : pos }, [{ e : TVar(vhreal), t : vh.type, p : pos }, { e : TVar(vreal), t : v.type, p : pos }]), t : TVoid };
+				return { p : pos, e : TBlock([einitHandle, eresolveTex]), t : TVoid };
 			default:
 				throw "assert";
 			}

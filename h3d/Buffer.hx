@@ -137,6 +137,10 @@ class Buffer {
 		engine.driver.readBufferBytesAsync(this, startVertice, vertices, bytes, bytesPosition, callback);
 	}
 
+	public function getHandle() : h3d.BufferHandle {
+		return engine.driver.getBufferHandle(this);
+	}
+
 	public static function ofFloats( v : hxd.FloatBuffer, format : hxd.BufferFormat, ?flags ) {
 		var nvert = Math.ceil(v.length / format.stride);
 		var b = new Buffer(nvert, format, flags);

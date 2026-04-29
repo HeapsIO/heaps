@@ -194,6 +194,10 @@ class Driver {
 	public function selectTextureHandles( handles : Array<h3d.mat.TextureHandle> ) {
 	}
 
+	public function selectBufferHandles( handles : Array<h3d.BufferHandle> ) {
+	}
+
+
 	public function uploadShaderBuffers( buffers : h3d.shader.Buffers, which : h3d.shader.Buffers.BufferKind ) {
 	}
 
@@ -345,6 +349,10 @@ class Driver {
 	// --- Bindless
 
 	public function getTextureHandle( t : h3d.mat.Texture ) : h3d.mat.TextureHandle {
+		throw "Bindless is not implemented on this platform";
+	}
+
+	public function getBufferHandle( b : h3d.Buffer ) : h3d.BufferHandle {
 		throw "Bindless is not implemented on this platform";
 	}
 }

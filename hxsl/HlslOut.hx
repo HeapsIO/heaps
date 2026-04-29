@@ -200,6 +200,8 @@ class HlslOut {
 			add("channel" + n);
 		case TTextureHandle:
 			add("uint2");
+		case TBufferHandle:
+			add("uint");
 		}
 	}
 
@@ -435,6 +437,8 @@ class HlslOut {
 			var tt = args[1].t;
 			var tstr = getTexType(tt);
 			decl('void resolveSampler( uint2 id, $tstr tex, SamplerState sampler ) { tex = ResourceDescriptorHeap[id.x]; sampler = SamplerDescriptorHeap[id.y]; }');
+		case ResolveBuffer:
+			decl('void resolveBuffer( uint id, StructuredBuffer<${(args[1].t.match(TBuffer(TInt,_,_)))?"int":"float"}> buf) { buf = ResourceDescriptorHeap[id]; }');
 		default:
 		}
 	}
@@ -562,6 +566,14 @@ class HlslOut {
 			add('__BindlessSamplers[$bindlessSamplersCount]');
 			add(")");
 			bindlessSamplers.set(v.id, bindlessSamplersCount++);
+		case TCall({ e : TGlobal( g = ResolveBuffer) }, args = [handle, buf = { e : TVar(v)}]):
+			declGlobal(g, args);
+			add("resolveBuffer");
+			add("(");
+			addValue(handle, tabs);
+			add(", ");
+			addValue(buf, tabs);
+			add(")");
 		case TCall({ e : TGlobal(VertexAt) }, [{ e : TVar(v) }, index]):
 			add("GetAttributeAtVertex(");
 			var acc = varAccess.get(v.id);

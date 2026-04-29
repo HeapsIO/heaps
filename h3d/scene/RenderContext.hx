@@ -290,6 +290,10 @@ class RenderContext extends h3d.impl.RenderContext {
 		engine.driver.selectTextureHandles(handles);
 	}
 
+	public function selectBufferHandles(handles : Array<h3d.BufferHandle>) {
+		engine.driver.selectBufferHandles(handles);
+	}
+
 	public function uploadParams() {
 		fillParams(shaderBuffers, drawPass.shader, drawPass.shaders);
 		engine.uploadInstanceShaderBuffers(shaderBuffers);
