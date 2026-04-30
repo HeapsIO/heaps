@@ -136,25 +136,33 @@ class Batcher extends h3d.scene.Object {
 		return batchID;
 	}
 
-	public function addInstance( obj : h3d.scene.Object ) : ObjectInstance {
+	public function addInstance( obj : h3d.scene.Object, recChildren : Bool = true ) : ObjectInstance {
 		var meshes = [];
 		var invPos = obj.getInvPos();
 		var renderer = getScene().renderer;
-		for ( m in obj.getMeshes() ) {
+		inline function processMesh( m : h3d.scene.Mesh ) {
 			var hmd = Std.downcast(m.primitive, h3d.prim.HMDModel);
-			if ( hmd == null )
-				continue;
+			if ( hmd != null ) {
+				var batchID = getBatchID(hmd);
+				var batch = batches[batchID];
 
-			var batchID = getBatchID(hmd);
-			var batch = batches[batchID];
+				var subMeshID = batch.addModel(m);
+				var materials = [];
+				for ( m in m.getMeshMaterials() )
+					materials.push(batch.addMaterial(m, renderer));
 
-			var subMeshID = batch.addModel(m);
-			var materials = [];
-			for ( m in m.getMeshMaterials() )
-				materials.push(batch.addMaterial(m, renderer));
+				var meshInstance = new MeshInstance(m.getAbsPos() * invPos, batchID, subMeshID, materials);
+				meshes.push(meshInstance);
+			}
+		}
 
-			var meshInstance = new MeshInstance(m.getAbsPos() * invPos, batchID, subMeshID, materials);
-			meshes.push(meshInstance);
+		if ( recChildren )
+			for ( m in obj.getMeshes() )
+				processMesh(m);
+		else {
+			var m = Std.downcast(obj, h3d.scene.Mesh);
+			if ( m != null )
+				processMesh(m);
 		}
 		return new ObjectInstance(meshes);
 	}
