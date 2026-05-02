@@ -207,6 +207,14 @@ class ScaleGrid extends h2d.TileGroup {
 		if( tile != null && tile.width == 1 && tile.height == 1 )
 			return;
 
+		var width = width;
+		var height = height;
+		// prevent having very huge buffers if for some reason the scalegrid grows too large
+		if( tileBorders || tileCenter ) {
+			if( width > 65536 ) width = 65536;
+			if( height > 65536 ) height = 65536;
+		}
+
 		var bt = borderTop, bb = borderBottom, bl = borderLeft, br = borderRight;
 		var unscaledBl : Float = bl * borderScale,
 			unscaledBr : Float = br * borderScale,
