@@ -1,5 +1,51 @@
 package h3d.prim;
 
+class BytesArray {
+	public var bytes(default, null) : Array<haxe.io.Bytes>;
+	public var pos(default, null) : Array<Int>;
+	public var totalSize(default, null) : Int;
+	var maxSize : Int;
+
+	public function new(bSize: Int, maxSize : Int) {
+		if ( bSize > maxSize && maxSize > 0 )
+			throw "assert";
+		this.maxSize = maxSize;
+		bytes = [haxe.io.Bytes.alloc(bSize)];
+		pos = [0];
+	}
+
+	public function alloc(bSize : Int) : { b : haxe.io.Bytes, pos : Int } {
+		if ( bSize > maxSize && maxSize > 0 )
+			throw "assert";
+		totalSize += bSize;
+		var bIdx = bytes.length - 1;
+		var b = bytes[bIdx];
+		var bStart = pos[bIdx];
+		var bNeeded = bStart + bSize;
+		if ( bNeeded > b.length ) {
+			if ( bNeeded < maxSize || maxSize < 0 ) {
+				var oldB = b;
+				b = bytes[bIdx] = haxe.io.Bytes.alloc( (bNeeded >> 1) * 3 );
+				b.blit(0, oldB, 0, bStart);
+			} else {
+				b = bytes[++bIdx] = haxe.io.Bytes.alloc(bSize);
+				bNeeded = bSize;
+				bStart = 0;
+			}
+		}
+		pos[bIdx] = bNeeded;
+		return { b : b, pos : bStart };
+	}
+
+	public function upload( buffer : h3d.Buffer, vStart : Int = 0 ) {
+		for ( i => b in bytes ) {
+			var vCount = Std.int(pos[i] / buffer.format.strideBytes);
+			buffer.uploadBytes(b, 0, vCount, vStart);
+			vStart += vCount;
+		}
+	}
+}
+
 class SubMesh {
 	public var subParts : Array<SubPart>;
 	public var subPartStart : Int;
@@ -27,10 +73,10 @@ class BatchPrimitive extends MeshPrimitive {
 	public var subMeshes(default, null) : Array<SubMesh> = [];
 	var models(default, null) : Array<h3d.prim.HMDModel> = [];
 	var bounds = new h3d.col.Bounds();
-	var vbuf : haxe.io.Bytes;
-	var vByteStart : Int = 0;
-	var ibuf : haxe.io.Bytes;
-	var iByteStart : Int = 0;
+
+	var vBytes : BytesArray;
+	var iBytes : BytesArray;
+	var maxByteSize = -1;
 
 	var subMeshCount : Int = 0;
 	public var cpuSubMeshInfos : haxe.io.Bytes;
@@ -46,11 +92,9 @@ class BatchPrimitive extends MeshPrimitive {
 	public var hasLogicNormal(get, never) : Bool;
 	function get_hasLogicNormal() return logicNormals != null;
 
-	public function new(format) {
+	public function new(format, maxByteSize = -1) {
 		vertexFormat = format;
-
-		vbuf = haxe.io.Bytes.alloc(0);
-		ibuf = haxe.io.Bytes.alloc(0);
+		this.maxByteSize = maxByteSize;
 	}
 
 	public function addModel( model : h3d.prim.HMDModel ) : Int {
@@ -95,44 +139,38 @@ class BatchPrimitive extends MeshPrimitive {
 
 		for ( lod in model.lods ) {
 			var vByteSize = lod.vertexCount * vertexFormat.strideBytes;
-			var vByteNeeded = vByteStart + vByteSize;
-			if ( vByteNeeded > vbuf.length ) {
-				var oldVbuf = vbuf;
-				vbuf = haxe.io.Bytes.alloc( (vByteNeeded >> 1) * 3 );
-				vbuf.blit(0, oldVbuf, 0, vByteStart);
-			}
+			if ( vBytes == null )
+				vBytes = new BytesArray(vByteSize, maxByteSize);
+			var vStart = Std.int(vBytes.totalSize / vertexFormat.strideBytes);
+			var vAlloc = vBytes.alloc(vByteSize);
+			var vbuf = vAlloc.b;
+			var vByteStart = vAlloc.pos;
 			var vertices = entry.fetchBytes(dataPosition + lod.vertexPosition, vByteSize);
 			vbuf.blit(vByteStart, vertices, 0, vByteSize);
 
 			var iCount = lod.indexCount;
 			var iByteSize = iCount * 4;
-			var iByteNeeded = iByteStart + iByteSize;
-			if ( iByteNeeded > ibuf.length ) {
-				var oldIbuf = ibuf;
-				ibuf = haxe.io.Bytes.alloc( (iByteNeeded >> 1) * 3 );
-				ibuf.blit(0, oldIbuf, 0, iByteStart);
-			}
+			if ( iBytes == null )
+				iBytes = new BytesArray(iByteSize, maxByteSize);
 
-			var lodIs32 = lod.vertexCount > 0x10000;
-			var iLodByteSize = (lodIs32 ? 4 : 2) * iCount;
-			var inIndices = entry.fetchBytes(dataPosition + lod.indexPosition, iLodByteSize);
-			var outIndices : haxe.io.Bytes = !lodIs32 ? haxe.io.Bytes.alloc( iCount * 4 ) : inIndices;
-			var vStart = Std.int(vByteStart / vertexFormat.strideBytes);
-			for ( i in 0...iCount )
-				if ( lodIs32 )
-					outIndices.setInt32(i << 2, inIndices.getInt32(i << 2) + vStart);
-				else
-					outIndices.setInt32(i << 2, inIndices.getUInt16(i << 1) + vStart);
-			ibuf.blit(iByteStart, outIndices, 0, iByteSize);
-
-			var iStart = iByteStart >> 2;
+			var iStart = iBytes.totalSize >> 2;
 			for ( count in lod.indexCounts ) {
 				indexStarts.push(iStart);
 				iStart += count;
 			}
 
-			vByteStart = vByteNeeded;
-			iByteStart = iByteNeeded;
+			var iAlloc = iBytes.alloc(iByteSize);
+			var ibuf = iAlloc.b;
+			var iByteStart = iAlloc.pos;
+
+			var lodIs32 = lod.vertexCount > 0x10000;
+			var iLodByteSize = (lodIs32 ? 4 : 2) * iCount;
+			var indices = entry.fetchBytes(dataPosition + lod.indexPosition, iLodByteSize);
+			for ( i in 0...iCount )
+				if ( lodIs32 )
+					ibuf.setInt32(iByteStart + (i << 2), indices.getInt32(i << 2) + vStart);
+				else
+					ibuf.setInt32(iByteStart + (i << 2), indices.getUInt16(i << 1) + vStart);
 		}
 
 		for ( matIdx in 0...matCount ) {
@@ -268,13 +306,13 @@ class BatchPrimitive extends MeshPrimitive {
 	override public function alloc( engine : h3d.Engine ) {
 		dispose();
 
-		var vCount = Std.int(vByteStart / vertexFormat.strideBytes);
+		var vCount = Std.int(vBytes.totalSize / vertexFormat.strideBytes);
 		buffer = new h3d.Buffer(vCount, vertexFormat);
-		buffer.uploadBytes(vbuf, 0, vCount);
+		vBytes.upload(buffer);
 
-		var iCount = iByteStart >> 2;
+		var iCount = iBytes.totalSize >> 2;
 		indexes = new h3d.Indexes(iCount, true);
-		indexes.uploadBytes(ibuf, 0, iCount);
+		iBytes.upload(indexes);
 
 		if ( hasLogicNormal )
 			addBuffer(h3d.Buffer.ofFloats(logicNormals, hxd.BufferFormat.make([{ name : "logicNormal", type : DVec3 }])));
