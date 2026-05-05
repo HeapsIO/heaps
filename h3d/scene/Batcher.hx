@@ -20,16 +20,18 @@ class BatchLibrary {
 	var primitives : Array<h3d.prim.BatchPrimitive> = [];
 	var instancesOffset : h3d.Buffer;
 	var maxUploadSize : Int;
+	var isDynamic : Bool = true;
 
-	public function new(maxUploadSize = -1) {
+	public function new(isDynamic = true, maxUploadSize = -1) {
 		this.maxUploadSize = maxUploadSize;
+		this.isDynamic = isDynamic;
 	}
 
 	function getPrimitive( format : hxd.BufferFormat ) {
 		for ( p in primitives )
 			if ( p.vertexFormat == format )
 				return p;
-		var p = new h3d.prim.BatchPrimitive(format, maxUploadSize);
+		var p = new h3d.prim.BatchPrimitive(format, isDynamic, maxUploadSize);
 		primitives.push(p);
 		return p;
 	}

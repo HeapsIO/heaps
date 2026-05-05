@@ -73,6 +73,7 @@ class BatchPrimitive extends MeshPrimitive {
 	public var subMeshes(default, null) : Array<SubMesh> = [];
 	var models(default, null) : Array<h3d.prim.HMDModel> = [];
 	var bounds = new h3d.col.Bounds();
+	var isDynamic : Bool = true;
 
 	var vBytes : BytesArray;
 	var iBytes : BytesArray;
@@ -88,13 +89,13 @@ class BatchPrimitive extends MeshPrimitive {
 	public var cpuLodInfos : hxd.FloatBuffer;
 	public var gpuLodInfos : h3d.Buffer;
 
+	public var hasLogicNormal : Bool = false;
 	var logicNormals : hxd.FloatBuffer;
-	public var hasLogicNormal(get, never) : Bool;
-	function get_hasLogicNormal() return logicNormals != null;
 
-	public function new(format, maxByteSize = -1) {
+	public function new(format, isDynamic = true, maxByteSize = -1) {
 		vertexFormat = format;
 		this.maxByteSize = maxByteSize;
+		this.isDynamic = true;
 	}
 
 	public function addModel( model : h3d.prim.HMDModel ) : Int {
@@ -103,7 +104,11 @@ class BatchPrimitive extends MeshPrimitive {
 		var subMeshID = models.indexOf(model);
 		if ( subMeshID >= 0 )
 			return subMeshID;
-		dispose();
+		if ( buffer != null ) {
+			dispose();
+			if ( !isDynamic )
+				rebuildModels();
+		}
 		subMeshID = models.length;
 		models.push(model);
 		fillModel(model);
@@ -113,14 +118,27 @@ class BatchPrimitive extends MeshPrimitive {
 	public function addLogicNormal() {
 		if ( hasLogicNormal )
 			return;
-		logicNormals = new hxd.FloatBuffer();
-		for ( m in models )
-			fillLogicNormal(m);
-		addBuffer(h3d.Buffer.ofFloats(logicNormals, hxd.BufferFormat.make([{ name : "logicNormal", type : DVec3 }])));
+		hasLogicNormal = true;
+		if ( buffer != null ) {
+			logicNormals = new hxd.FloatBuffer();
+			for ( m in models )
+				fillLogicNormal(m);
+			addBuffer(h3d.Buffer.ofFloats(logicNormals, hxd.BufferFormat.make([{ name : "logicNormal", type : DVec3 }])));
+			if ( !isDynamic )
+				logicNormals = null;
+		}
 	}
 
 	public function getSubMeshID( model : h3d.prim.HMDModel ) {
 		return models.indexOf(model);
+	}
+
+	function rebuildModels() {
+		subMeshes = [];
+		bounds.empty();
+		subMeshCount = subPartCount = totalLodCount = 0;
+		for ( m in models )
+			fillModel(m);
 	}
 
 	function fillModel( model : h3d.prim.HMDModel ) {
@@ -323,6 +341,15 @@ class BatchPrimitive extends MeshPrimitive {
 		gpuSubPartInfos.uploadBytes(cpuSubPartInfos, 0, subPartCount, 0);
 		gpuLodInfos = new h3d.Buffer(totalLodCount, LOD_INFOS_FMT, [UniformBuffer]);
 		gpuLodInfos.uploadFloats(cpuLodInfos, 0, totalLodCount, 0);
+
+		if ( !isDynamic ) {
+			vBytes = null;
+			logicNormals = null;
+			cpuSubMeshInfos = null;
+			cpuSubPartInfos = null;
+			cpuLodInfos = null;
+			iBytes = null;
+		}
 	}
 
 	override public function getBounds() : h3d.col.Bounds {
