@@ -246,6 +246,23 @@ class Batcher extends h3d.scene.Object {
 		batches[ctx.drawPass.index & 0xFFFF].draw(ctx);
 	}
 
+	public function dump( path : String = "batcher_dump.txt" ) {
+		var lines : Array<{ prim : String, pass : String, shaders : String, count : Int }> = [];
+		for ( b in batches ) {
+			var primName = @:privateAccess b.primitive.vertexFormat.toString();
+			for ( bp in @:privateAccess b.passes ) {
+				var shaderNames = [ for (s in @:privateAccess bp.shaders) Type.getClassName(Type.getClass(s)).split(".").pop() ].join("+");
+				lines.push({ prim: primName, pass: @:privateAccess bp.pass.name, shaders: shaderNames, count: @:privateAccess bp.totalInstanceCount });
+			}
+		}
+		lines.sort((a, b) -> b.count - a.count);
+		var sb = new StringBuf();
+		sb.add("COUNT\tPASS\tPRIMITIVE\tSHADERS\n");
+		for ( l in lines )
+			sb.add('${l.count}\t${l.pass}\t${l.prim}\t${l.shaders}\n');
+		sys.io.File.saveContent(path, sb.toString());
+	}
+
 	override function onRemove() {
 		for ( b in batches)
 			b.dispose();
