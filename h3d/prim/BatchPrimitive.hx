@@ -95,7 +95,7 @@ class BatchPrimitive extends MeshPrimitive {
 	public function new(format, isDynamic = true, maxByteSize = -1) {
 		vertexFormat = format;
 		this.maxByteSize = maxByteSize;
-		this.isDynamic = true;
+		this.isDynamic = isDynamic;
 	}
 
 	public function addModel( model : h3d.prim.HMDModel ) : Int {
