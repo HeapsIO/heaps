@@ -14,10 +14,12 @@ class ShaderCache {
 	var sourceFile : String;
 	public var keepSource : Bool;
 	var mode : ShaderCacheMode;
+	var dirty = true;
+	public var allowSave = true;
 
-	inline static var VERSION_KEY_WORD = "VERSION";
-	inline static var VERSION = 1;
-	inline static var MODE_KEY_WORD = "MODE";
+	public static var VERSION_KEY_WORD = "VERSION";
+	public static var VERSION = 1;
+	public static var MODE_KEY_WORD = "MODE";
 
 	public function new( file : String, ?outputFile : String, mode = Base64) {
 		this.file = file;
@@ -26,8 +28,9 @@ class ShaderCache {
 		sourceFile = file + ".source";
 	}
 
+	@:deprecated("use allowSave = false")
 	public function disableSave() {
-		outputFile = null;
+		allowSave = false;
 	}
 
 	public function initEmpty() {
@@ -35,7 +38,7 @@ class ShaderCache {
 		sources = [];
 	}
 
-	function load() {
+	public function load() {
 		data = new Map();
 		try loadFile(file) catch( e : Dynamic ) {};
 		if( outputFile != file ) try loadFile(outputFile) catch( e : Dynamic ) {};
@@ -54,8 +57,13 @@ class ShaderCache {
 		var curPos = cache.position;
 		if ( !hasVersion )
 			cache.position = curPos = 0;
-		else
-			cache.readInt32();
+		else {
+			var version = cache.readInt32();
+			if(version != VERSION) {
+				trace('Shader cache version $version, expected $VERSION, skipping');
+				return;
+			}
+		}
 
 		var hasMode = cache.readString(MODE_KEY_WORD.length) == MODE_KEY_WORD;
 		var mode = Base64;
@@ -135,7 +143,8 @@ class ShaderCache {
 
 	var saveTimer : haxe.Timer;
 	public function saveCompiledShader( source : String, bytes : haxe.io.Bytes, ?configurationKey = "", ?saveToFile = true ) {
-		if( outputFile == null )
+		dirty = true;
+		if( !allowSave )
 			return;
 		if( data == null ) load();
 		var key = configurationKey + haxe.crypto.Md5.encode(source);
@@ -156,7 +165,10 @@ class ShaderCache {
 		}, 100);
 	}
 
-	function save() {
+	public function save() {
+		if( !dirty )
+			return;
+		dirty = false;
 		var out = new haxe.io.BytesOutput();
 		var keys = Lambda.array({ iterator : data.keys });
 		keys.sort(Reflect.compare);
