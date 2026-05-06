@@ -30,7 +30,7 @@ class PointShadowMap extends CubeShadowMap {
 		pshader.shadowMap = texture;
 		pshader.shadowBias = bias;
 		pshader.shadowPower = power;
-		pshader.lightPos = light.getAbsPos().getPosition();
+		pshader.lightPos.load(light.getAbsPos().getPosition());
 		pshader.zFar = pointLight.range;
 
 		// ESM
