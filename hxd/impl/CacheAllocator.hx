@@ -89,6 +89,7 @@ private class Cache<T:h3d.Buffer> {
 		var b = bucket.get();
 		if( b != null )
 			lookup?.remove(b);
+		allocator.hitRate += ((b != null ? 1. : 0.) - allocator.hitRate) * 0.01;
 		return b;
 	}
 
@@ -200,6 +201,8 @@ class CacheAllocator extends Allocator {
 	var curMemory : Int = 0;
 	var curBuffers : Int = 0;
 	var debug = false;
+
+	public var hitRate : Float = 0.;
 
 	public function new(debug = false) {
 		super();
