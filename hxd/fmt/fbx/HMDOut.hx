@@ -47,6 +47,7 @@ class HMDOut extends BaseLibrary {
 	public var collisionUseLowLod : Bool;
 	public var lowPrecConfig : Map<String,Precision>;
 	public var lodsDecimation : Array<Float>;
+	public var maxUVs : Int = 0;
 
 	function int32tof( v : Int ) : Float {
 		tmp.set(0, v & 0xFF);
@@ -211,10 +212,8 @@ class HMDOut extends BaseLibrary {
 		}
 		var realIdx = new hxd.IndexBuffer();
 		for( idx in idx ) {
-			if ( idx == null ) {
-				trace("Empty list of vertex indexes");
+			if ( idx == null )
 				continue;
-			}
 			for( i in idx )
 				realIdx.push(pmap[i]);
 		}
@@ -368,6 +367,8 @@ class HMDOut extends BaseLibrary {
 		var verts = geom.getVertices();
 		var normals = geom.getNormals();
 		var uvs = geom.getUVs();
+		if( maxUVs > 0 && uvs.length > maxUVs )
+			uvs = uvs.slice(0, maxUVs);
 		var colors = geom.getColors();
 		var mats = geom.getMaterials();
 		var index = geom.getPolygons();

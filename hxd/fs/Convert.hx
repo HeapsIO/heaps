@@ -299,6 +299,8 @@ class ConvertFBX2HMD extends Convert {
 				hmdout.legacyScaleAxisConversion = params.legacyScaleAxisConversion;
 			if (params.legacySkinImport != null)
 				hmdout.legacySkinImport = params.legacySkinImport;
+			if (params.maxUVs != null)
+				hmdout.maxUVs = params.maxUVs;
 		}
 		if( localParams != null ) {
 			if( localParams.ignoreCollideMaterials != null ) {
