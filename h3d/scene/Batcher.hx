@@ -987,8 +987,6 @@ private class BatchPass {
 		ctx.computeDispatch(cast s, hxd.Math.ceil(totalInstanceCount/64.0), false);
 	}
 
-	var tmpMinLs = new h3d.Vector();
-	var tmpMaxLs = new h3d.Vector();
 	var tmpUp = new h3d.Vector(0, 1, 0);
 
 	public function emitGPU(ctx : h3d.scene.RenderContext) {
@@ -1033,21 +1031,11 @@ private class BatchPass {
 							x.z, y.z, z.z, 0
 						]);
 
-						tmpMinLs.set(1e30, 1e30, 1e30);
-						tmpMaxLs.set(-1e30, -1e30, -1e30);
-
-						var frustumPoints = ctx.camera.frustum.getPoints();
-						for ( i in 0...8 ) {
-							var p = frustumPoints[i];
-							var pLs = p * lightMatrix;
-							tmpMinLs.min(pLs);
-							tmpMaxLs.max(pLs);
-						}
-
-						tmpMinLs.z = tmpMinLs.z - batcher.shadowCullingOffset;
+						static var bounds = new h3d.col.Bounds();
+						ctx.camera.frustum.getBounds(lightMatrix, bounds);
 						builderShader.lightMatrix = lightMatrix;
-						builderShader.lightOBBMin.set(tmpMinLs.x, tmpMinLs.y, tmpMinLs.z);
-						builderShader.lightOBBMax.set(tmpMaxLs.x, tmpMaxLs.y, tmpMaxLs.z);
+						builderShader.lightOBBMin.set(bounds.xMin, bounds.yMin, bounds.zMin - batcher.shadowCullingOffset);
+						builderShader.lightOBBMax.set(bounds.xMax, bounds.yMax, bounds.zMax);
 
 						builderShader.ENABLE_DIRLIGHT_OBB_CULLING = true;
 					}
