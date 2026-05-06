@@ -925,11 +925,15 @@ private class BatchPass {
 		instancesDirty = false;
 		var alloc = hxd.impl.Allocator.get();
 
+		inline function allocBuffer(size, format, flags) {
+			return alloc.allocBuffer(hxd.impl.Allocator.roundPOT(size), format, flags);
+		}
+
 		var instanceDataSize = totalInstanceCount * batchShader.paramsSize;
 		if ( instancesData == null || instancesData.vertices < instanceDataSize ) {
 			if ( instancesData != null )
 				alloc.disposeBuffer(instancesData);
-			instancesData = alloc.allocBuffer( instanceDataSize, hxd.BufferFormat.VEC4_DATA, UniformReadWrite );
+			instancesData = allocBuffer( instanceDataSize, hxd.BufferFormat.VEC4_DATA, UniformReadWrite );
 		}
 		batchShader.Batch_StorageBuffer = instancesData;
 
@@ -938,14 +942,14 @@ private class BatchPass {
 			if ( syncIDs == null || syncIDs.vertices < totalInstanceCount ) {
 				if ( syncIDs != null )
 					alloc.disposeBuffer(syncIDs);
-				syncIDs = alloc.allocBuffer( totalInstanceCount, hxd.BufferFormat.INDEX32, Uniform );
+				syncIDs = allocBuffer( totalInstanceCount, hxd.BufferFormat.INDEX32, Uniform );
 			}
 		}
 
 		if ( instancesInfos == null || instancesInfos.vertices < totalInstanceCount ) {
 			if ( instancesInfos != null )
 				alloc.disposeBuffer(instancesInfos);
-			instancesInfos = alloc.allocBuffer( totalInstanceCount, PASS_INSTANCES_INFOS_FMT, Uniform );
+			instancesInfos = allocBuffer( totalInstanceCount, PASS_INSTANCES_INFOS_FMT, Uniform );
 		}
 
 		var instanceCursor = 0;
@@ -960,7 +964,7 @@ private class BatchPass {
 		if ( commandBuffer == null || commandBuffer.vertices < totalInstanceCount )  {
 			if ( commandBuffer != null )
 				alloc.disposeBuffer(commandBuffer);
-			commandBuffer = alloc.allocBuffer( totalInstanceCount, INDIRECT_DRAW_ARGUMENTS_FMT, UniformReadWrite );
+			commandBuffer = allocBuffer( totalInstanceCount, INDIRECT_DRAW_ARGUMENTS_FMT, UniformReadWrite );
 			if ( command == null )
 				command = new h3d.impl.InstanceBuffer();
 			@:privateAccess command.data = commandBuffer.vbuf;
