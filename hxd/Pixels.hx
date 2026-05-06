@@ -503,6 +503,8 @@ class Pixels {
 			bytes.setFloat(p + 4, v.y);
 			bytes.setFloat(p + 8, v.z);
 			bytes.setFloat(p + 12, v.w);
+		case R16U:
+			bytes.setUInt16(p, Std.int(v.x * 65535.0));
 		default:
 			setPixel(x,y,v.toColor());
 		}
