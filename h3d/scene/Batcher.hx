@@ -708,7 +708,7 @@ private class BatchCommandBuilder extends hxsl.Shader {
 				var texelSize = vec2(boxWidth, boxHeight) * hzbSize;
 				var w = max(texelSize.x, texelSize.y);
 
-				var mip = floor(log2(w));
+				var mip = ceil(log2(w));
 				var mipSize = max(vec2(1.0), floor(hzbSize / pow(vec2(2.0), vec2(mip))));
 
 				var depth = 0.0;
