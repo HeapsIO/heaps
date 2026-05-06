@@ -1025,11 +1025,11 @@ private class BatchPass {
 						var y = z.cross(x);
 						y.normalize();
 
-						var lightMatrix = h3d.Matrix.L([
-							x.x, y.x, z.x, 0,
-							x.y, y.y, z.y, 0,
-							x.z, y.z, z.z, 0
-						]);
+						static var lightMatrix = new h3d.Matrix();
+						var m = lightMatrix;
+						m._11 = x.x; m._12 = y.x; m._13 = z.x; m._14 = 0;
+						m._21 = x.y; m._22 = y.y; m._23 = z.y; m._24 = 0;
+						m._31 = x.z; m._32 = y.z; m._33 = z.z; m._34 = 0;
 
 						static var bounds = new h3d.col.Bounds();
 						ctx.camera.frustum.getBounds(lightMatrix, bounds);
