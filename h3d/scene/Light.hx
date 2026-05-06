@@ -25,7 +25,7 @@ class Light extends Object {
 		ctx.emitLight(this);
 	}
 
-	function getShadowDirection() : h3d.Vector {
+	public function getShadowDirection( ?v: h3d.Vector ) : h3d.Vector {
 		return null;
 	}
 

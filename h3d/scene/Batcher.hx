@@ -1018,7 +1018,8 @@ private class BatchPass {
 				if ( sl != null ) {
 					var pbrSl = Std.downcast(sl, h3d.scene.pbr.Light);
 					if ( pbrSl != null ) {
-						var z = @:privateAccess pbrSl.getShadowDirection();
+						static var z = new h3d.Vector();
+						pbrSl.getShadowDirection(z);
 						z.normalize();
 						var x = tmpUp.cross(z);
 						x.normalize();
