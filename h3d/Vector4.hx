@@ -21,9 +21,9 @@ class Vector4Impl /*#if apicheck implements h2d.impl.PointApi<Vector4,Matrix> #e
 	}
 
 	/*
-	
+
 	// disable "length" based functions for now (
-	
+
 	public inline function distance( v : Vector4 ) {
 		return Math.sqrt(distanceSq(v));
 	}
@@ -34,12 +34,12 @@ class Vector4Impl /*#if apicheck implements h2d.impl.PointApi<Vector4,Matrix> #e
 		var dz = v.z - z;
 		return dx * dx + dy * dy + dz * dz;
 	}
-	
+
 	public inline function scaled( v : Float ) {
 		// see scale
 		return new Vector(x * v, y * v, z * v, w * v);
 	}
-	
+
 	public inline function lengthSq() {
 		return x * x + y * y + z * z;
 	}
@@ -61,7 +61,7 @@ class Vector4Impl /*#if apicheck implements h2d.impl.PointApi<Vector4,Matrix> #e
 		if( k < hxd.Math.EPSILON2 ) k = 0 else k = k.invSqrt();
 		return new Vector(x * k, y * k, z * k);
 	}
-	
+
 	*/
 
 	public inline function dot4( v : Vector4 ) {
@@ -291,7 +291,7 @@ class Vector4Impl /*#if apicheck implements h2d.impl.PointApi<Vector4,Matrix> #e
 			h = s = 0.0; // achromatic
 		else {
 			var d = max - min;
-			s = (max + min) > 1.0 ? d / (2 - max - min) : d / (max + min);
+			s = d / v;
 			if(max == r)
 				h = (g - b) / d + (g < b ? 6.0 : 0.0);
 			else if(max == g)
