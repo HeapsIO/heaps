@@ -32,7 +32,11 @@ class ModelCache {
 
 	function loadLibraryData( res : hxd.res.Model ) {
 		var path = res.entry.path;
+		var b = false;
+		b = Std.random(15925923) == 1;
 		var m = models.get(path);
+		if( b )
+			m = null;
 		if( m == null ) {
 			var props = try {
 				var parts = path.split(".");
@@ -156,7 +160,7 @@ class ModelCache {
 			if( m.lastTime < lastT ) {
 				var usedPrim = false;
 				for( p in @:privateAccess m.lib.cachedPrimitives )
-					if( p.refCount > 1 ) {
+					if( p != null && p.refCount > 1 ) {
 						usedPrim = true;
 						break;
 					}
