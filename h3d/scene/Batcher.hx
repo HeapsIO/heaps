@@ -260,7 +260,11 @@ class Batcher extends h3d.scene.Object {
 		sb.add("COUNT\tPASS\tPRIMITIVE\tSHADERS\n");
 		for ( l in lines )
 			sb.add('${l.count}\t${l.pass}\t${l.prim}\t${l.shaders}\n');
+		#if (sys || nodejs)
 		sys.io.File.saveContent(path, sb.toString());
+		#else
+		trace(sb.toString());
+		#end
 	}
 
 	override function onRemove() {
