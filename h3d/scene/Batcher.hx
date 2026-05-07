@@ -712,12 +712,13 @@ private class BatchCommandBuilder extends hxsl.Shader {
 				var texelSize = vec2(boxWidth, boxHeight) * hzbSize;
 				var w = max(texelSize.x, texelSize.y);
 
-				var mip = ceil(log2(w));
+				var mip = max(0.0, ceil(log2(w))) + 1;
+				mip = clamp(mip, 0.0, log2(max(hzbSize.x, hzbSize.y)));
 				var mipSize = max(vec2(1.0), floor(hzbSize / pow(vec2(2.0), vec2(mip))));
 
 				var depth = 0.0;
 				@unroll for ( i in 0...4 ) {
-					var cornerPos = ivec2(aabbCornersUVSpace[i] * mipSize);
+					var cornerPos = ivec2(clamp(aabbCornersUVSpace[i] * mipSize, vec2(0.0), mipSize - vec2(1.0)));
 					var cornerDepth = hzb.fetchLod(cornerPos, int(mip)).x;
 					depth = max(depth, cornerDepth);
 				}
