@@ -117,7 +117,15 @@ class DynamicShader extends Shader {
 		var a = accesses[index];
 		switch( a.kind ) {
 		case Float:
-			out[pos] = floats[a.index];
+			var v = floats[a.index];
+			switch(type) {
+				case TInt:
+					h3d.impl.RenderContext.fillIntParam(Std.int(v), pos, out);
+				case TFloat:
+					out[pos] = v;
+				default:
+					throw "invalid number value";
+			}
 		default:
 			h3d.impl.RenderContext.fillRec(getParamValue(index), type, out, pos);
 		}
