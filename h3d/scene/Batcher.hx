@@ -1022,7 +1022,12 @@ private class BatchPass {
 				if ( sl != null ) {
 					var pbrSl = Std.downcast(sl, h3d.scene.pbr.Light);
 					if ( pbrSl != null ) {
+						#if (haxe_ver >= 5)
 						static var z = new h3d.Vector();
+						#else
+						static var z : h3d.Vector = null;
+						if( z == null ) z = new h3d.Vector();
+						#end
 						pbrSl.getShadowDirection(z);
 						z.normalize();
 						var x = tmpUp.cross(z);
@@ -1030,7 +1035,12 @@ private class BatchPass {
 						var y = z.cross(x);
 						y.normalize();
 
+						#if (haxe_ver >= 5)
 						static var lightMatrix = new h3d.Matrix();
+						#else
+						static var lightMatrix : h3d.Matrix = null;
+						if( lightMatrix == null ) lightMatrix = new h3d.Matrix();
+						#end
 						var m = lightMatrix;
 						m._11 = x.x; m._12 = y.x; m._13 = z.x; m._14 = 0;
 						m._21 = x.y; m._22 = y.y; m._23 = z.y; m._24 = 0;
