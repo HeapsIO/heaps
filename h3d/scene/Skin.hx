@@ -692,3 +692,50 @@ class Skin extends MultiMaterial {
 	}
 
 }
+
+class SubSkin extends h3d.scene.Skin {
+
+	var baseSkin : h3d.scene.Skin;
+	var bindMap : Array<Int> = null;
+
+	public function new( baseSkin : h3d.scene.Skin, subSkin : h3d.scene.Skin, ?parent) {
+		this.baseSkin = baseSkin;
+		super(null, subSkin.materials, parent);
+		skinShader = subSkin.skinShader;
+		setSkinData(subSkin.skinData, false);
+	}
+
+	function initBinds() {
+		bindMap = [];
+		for( b in skinData.allJoints ) {
+			var b2 = baseSkin.skinData.namedJoints.get(b.name);
+			if( b2 != null )
+				bindJoint(b2, b);
+		}
+	}
+
+	override function setSkinData( s, shaderInit = true ) {
+		super.setSkinData(s, shaderInit);
+		initBinds();
+	}
+
+	function bindJoint(from: h3d.anim.Skin.Joint, to: h3d.anim.Skin.Joint) {
+		if(!baseSkin.skinData.allJoints.contains(from)) throw "assert";
+		if(!skinData.allJoints.contains(to)) throw "assert";
+		bindMap.push((from.index << 16) | to.index);
+	}
+
+	override function syncJoints() {
+		if(!baseSkin.buffersDirty)
+			return;
+		jointsUpdated = true;
+		if( bindMap != null ) {
+			for( b in bindMap ) {
+				var to = b & ((1<<16)-1);
+				var from = b >> 16;
+				jointsData[to]?.currentRelPos = baseSkin.jointsData[from]?.currentRelPos;
+			}
+		}
+		super.syncJoints();
+	}
+}
