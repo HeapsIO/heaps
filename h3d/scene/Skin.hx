@@ -719,10 +719,46 @@ class SubSkin extends h3d.scene.Skin {
 		initBinds();
 	}
 
+	inline function packIndices(from: Int, to: Int) {
+		return (from << 16) | to;
+	}
+
+	inline function unpackIndices( i : Int ) {
+		return {
+			to: i & ((1<<16)-1),
+			from: i >> 16
+		}
+	}
+
 	function bindJoint(from: h3d.anim.Skin.Joint, to: h3d.anim.Skin.Joint) {
 		if(!baseSkin.skinData.allJoints.contains(from)) throw "assert";
 		if(!skinData.allJoints.contains(to)) throw "assert";
-		bindMap.push((from.index << 16) | to.index);
+		bindMap.push(packIndices(from.index, to.index));
+	}
+
+	function getBound(toJoint: h3d.anim.Skin.Joint) {
+		for( b in bindMap ) {
+			var bind = unpackIndices( b );
+			if(toJoint.index == bind.to)
+				return baseSkin.getSkinData().allJoints[bind.from];
+		}
+		return null;
+	}
+
+	override function getObjectByName( name : String ) : h3d.scene.Object {
+		if ( skinData != null ) {
+			var j = skinData.namedJoints.get(name);
+			if ( j != null ) {
+				var bound = getBound(j);
+				var joint = if ( bound != null )
+						new h3d.scene.Skin.Joint(baseSkin, bound);
+					else
+						new h3d.scene.Skin.Joint(this, j);
+				joint.parent = null;
+				return joint;
+			}
+		}
+		return null;
 	}
 
 	override function syncJoints() {
@@ -731,10 +767,11 @@ class SubSkin extends h3d.scene.Skin {
 		jointsUpdated = true;
 		if( bindMap != null ) {
 			for( b in bindMap ) {
-				var to = b & ((1<<16)-1);
-				var from = b >> 16;
-				if (jointsData[to] != null)
-					jointsData[to].currentRelPos = baseSkin.jointsData[from]?.currentRelPos;
+				var bind = unpackIndices( b );
+				var toJoint = jointsData[bind.to];
+				var fromJoint = baseSkin.jointsData[bind.from];
+				if(toJoint != null && fromJoint != null)
+					toJoint.currentRelPos = fromJoint.currentRelPos;
 			}
 		}
 		super.syncJoints();
