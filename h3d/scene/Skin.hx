@@ -733,7 +733,8 @@ class SubSkin extends h3d.scene.Skin {
 			for( b in bindMap ) {
 				var to = b & ((1<<16)-1);
 				var from = b >> 16;
-				jointsData[to]?.currentRelPos = baseSkin.jointsData[from]?.currentRelPos;
+				if (jointsData[to] != null)
+					jointsData[to].currentRelPos = baseSkin.jointsData[from]?.currentRelPos;
 			}
 		}
 		super.syncJoints();
