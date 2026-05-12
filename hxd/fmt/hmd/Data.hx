@@ -46,6 +46,10 @@ class Position {
 	public function new() {
 	}
 
+	public inline function isIdentity() : Bool {
+		return x == 0 && y == 0 && z == 0 && qx == 0 && qy == 0 && qz == 0 && sx == 1 && sy == 1 && sz == 1;
+	}
+
 	public inline function loadQuaternion( q : h3d.Quat ) {
 		q.x = qx;
 		q.y = qy;
