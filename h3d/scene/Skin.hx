@@ -746,18 +746,9 @@ class SubSkin extends h3d.scene.Skin {
 	}
 
 	override function getObjectByName( name : String ) : h3d.scene.Object {
-		if ( skinData != null ) {
-			var j = skinData.namedJoints.get(name);
-			if ( j != null ) {
-				var bound = getBound(j);
-				var joint = if ( bound != null )
-						new h3d.scene.Skin.Joint(baseSkin, bound);
-					else
-						new h3d.scene.Skin.Joint(this, j);
-				joint.parent = null;
-				return joint;
-			}
-		}
+		// Prevent animation bind() from targeting this SubSkin
+		// Without this, super.getObjectByName would match bones in our skinData and set
+		// currentSkin to this SubSkin, causing animation to write currentRelPos here instead of baseSkin
 		return null;
 	}
 
