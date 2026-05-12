@@ -1471,6 +1471,8 @@ class HMDOut extends BaseLibrary {
 		var rootIndex = -1;
 		for ( m in d.models ) {
 			if ( m.geometry >= 0 && !m.isLOD() && !m.isCollider() ) {
+				if ( m.parent == -1 )
+					break;
 				meshCount++;
 				var root = d.models[m.parent];
 				if ( root.parent != -1 || root.geometry != -1 || root.name != null || !root.position.isIdentity() )
