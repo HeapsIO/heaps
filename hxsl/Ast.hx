@@ -523,10 +523,10 @@ class Tools {
 		case TVec(size, t):
 			var prefix = switch( t ) {
 			case VFloat: "";
-			case VInt: "i";
-			case VBool: "b";
+			case VInt: "I";
+			case VBool: "B";
 			}
-			prefix + "vec" + size;
+			prefix + "Vec" + size;
 		case TStruct(vl):"{" + [for( v in vl ) v.name + " : " + toString(v.type)].join(",") + "}";
 		case TArray(t, s): toString(t) + "[" + (switch( s ) { case SConst(i): "" + i; case SVar(v): v.name; } ) + "]";
 		case TBuffer(t, s, k):
