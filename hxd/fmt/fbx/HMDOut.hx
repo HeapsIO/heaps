@@ -1467,31 +1467,34 @@ class HMDOut extends BaseLibrary {
 			}
 		}
 
-		var meshCount = 0;
 		var rootIndex = -1;
-		for ( m in d.models ) {
-			if ( m.geometry >= 0 && !m.isLOD() && !m.isCollider() ) {
-				if ( m.parent == -1 )
-					break;
-				meshCount++;
-				var root = d.models[m.parent];
-				if ( root.parent != -1 || root.geometry != -1 || root.name != null || !root.position.isIdentity() )
-					break;
-				rootIndex = m.parent;
+		for ( i => m in d.models ) {
+			if ( m.parent == -1 && m.geometry == -1 && m.name == null && m.position.isIdentity() ) {
+				rootIndex = i;
+				break;
 			}
 		}
-		if ( meshCount == 1 && rootIndex != -1 ) {
-			d.models.remove(d.models[rootIndex]);
+		if ( rootIndex != -1 ) {
+			var meshCount = 0;
 			for ( m in d.models ) {
-				if ( m.parent == rootIndex )
-					m.parent = -1;
-				else if ( m.parent > rootIndex )
-					m.parent--;
-				if ( m.lods != null ) {
-					for ( i in 0...m.lods.length ) {
-						var lodIndex = m.lods[i];
-						if ( lodIndex > rootIndex )
-							m.lods[i] = lodIndex - 1;
+				if ( m.geometry >= 0 && !m.isLOD() && !m.isCollider() && m.parent == rootIndex )
+					meshCount++;
+				if ( meshCount > 1 )
+					break;
+			}
+			if ( meshCount == 1 ) {
+				d.models.remove(d.models[rootIndex]);
+				for ( m in d.models ) {
+					if ( m.parent == rootIndex )
+						m.parent = -1;
+					else if ( m.parent > rootIndex )
+						m.parent--;
+					if ( m.lods != null ) {
+						for ( i in 0...m.lods.length ) {
+							var lodIndex = m.lods[i];
+							if ( lodIndex > rootIndex )
+								m.lods[i] = lodIndex - 1;
+						}
 					}
 				}
 			}
