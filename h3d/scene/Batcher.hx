@@ -105,6 +105,8 @@ class Batcher extends h3d.scene.Object {
 	var library : BatchLibrary;
 	var shouldDisposeLibrary : Bool = false;
 
+	var renderer : h3d.scene.Renderer;
+
 	public function hasSyncIDs() : Bool {
 		return (syncShader != null && syncShader.hasSyncIDs());
 	}
@@ -117,7 +119,7 @@ class Batcher extends h3d.scene.Object {
 			}
 	}
 
-	public function new( parent : h3d.scene.Object, library : BatchLibrary = null, batchFlags = null ) {
+	public function new( parent : h3d.scene.Object, renderer : h3d.scene.Renderer, library : BatchLibrary = null, batchFlags = null ) {
 		if ( !h3d.Engine.getCurrent().driver.hasFeature(Bindless) )
 			throw "h3d.scene.Batcher requires Bindless support.";
 		super(parent);
@@ -125,6 +127,7 @@ class Batcher extends h3d.scene.Object {
 			this.batchFlags = batchFlags;
 		shouldDisposeLibrary = library == null;
 		this.library = shouldDisposeLibrary ? new BatchLibrary() : library;
+		this.renderer = renderer;
 		ignoreCollide = true;
 	}
 
@@ -143,7 +146,6 @@ class Batcher extends h3d.scene.Object {
 	public function addInstance( obj : h3d.scene.Object, recChildren : Bool = true ) : ObjectInstance {
 		var meshes = [];
 		var invPos = obj.getInvPos();
-		var renderer = getScene().renderer;
 		inline function processMesh( m : h3d.scene.Mesh ) {
 			var hmd = Std.downcast(m.primitive, h3d.prim.HMDModel);
 			if ( hmd != null ) {
