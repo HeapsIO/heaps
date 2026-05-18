@@ -80,8 +80,10 @@ class BatchGroup {
 	}
 
 	public inline function remove() {
-		batcher.removeGroup(this);
-		batcher = null;
+		if ( batcher != null) {
+			batcher.removeGroup(this);
+			batcher = null;
+		}
 	}
 }
 
