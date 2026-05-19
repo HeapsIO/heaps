@@ -27,6 +27,18 @@ class RawPrimitive extends Primitive {
 			indexes = alloc.ofIndexes(inf.ibuf);
 	}
 
+	override function dispose() {
+		var alloc = hxd.impl.Allocator.get();
+		if( buffer != null ) {
+			alloc.disposeBuffer(buffer);
+			buffer = null;
+		}
+		if( indexes != null ) {
+			alloc.disposeIndexBuffer(indexes);
+			indexes = null;
+		}
+	}
+
 	override public function getBounds() {
 		if( bounds == null ) throw "Bounds not defined for " + this;
 		return bounds;
