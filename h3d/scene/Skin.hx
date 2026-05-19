@@ -333,6 +333,7 @@ class Skin extends MultiMaterial {
 
 	var forceJointsUpdateOnFrame : Int = -1;
 	var buffersDirty = true;
+	var jointsFrame : Int = -1;
 	var jointsUpdated : Bool;
 	var skinShader : h3d.shader.SkinBase;
 	var jointsGraphics : Graphics;
@@ -631,6 +632,7 @@ class Skin extends MultiMaterial {
 
 		jointsUpdated = false;
 		buffersDirty = true;
+		jointsFrame = hxd.Timer.frameCount;
 		prevEnableRetargeting = enableRetargeting;
 	}
 
@@ -753,7 +755,7 @@ class SubSkin extends h3d.scene.Skin {
 	}
 
 	override function syncJoints() {
-		if(!baseSkin.buffersDirty)
+		if( baseSkin.jointsFrame != hxd.Timer.frameCount )
 			return;
 		jointsUpdated = true;
 		if( bindMap != null ) {
