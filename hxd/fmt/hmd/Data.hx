@@ -130,9 +130,9 @@ class Collider {
 	// Auto : Generate a convex hull and use it as a collider
 	// Mesh : Use a specific model as collider
 	// Custom : Use custom shapes defined by the user as collider
-	public static function resolveColliderType(d : Data, model : Model, params : CollideParams, isDefaultParams : Bool, ?collisionThresholdHeight : Float, ?collisionUseLowLod : Bool) : ResolveResult {
+	public static function resolveColliderType(d : Data, model : Model, params : CollideParams, isDefaultParams : Bool, ?collisionThresholdHeight : Float, ?collisionUseLowLod : Bool, ?noCollision : Bool) : ResolveResult {
 		// None mode
-		if (params == null && !isDefaultParams)
+		if ((noCollision != null && noCollision) || (params == null && !isDefaultParams))
 			return ResolveResult.Empty;
 
 		// Default mode

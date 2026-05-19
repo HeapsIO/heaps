@@ -45,6 +45,7 @@ class HMDOut extends BaseLibrary {
 	var ignoreCollidesCache : Map<Int,Bool> = [];
 	public var collisionThresholdHeight : Float;
 	public var collisionUseLowLod : Bool;
+	public var noCollision : Bool;
 	public var lowPrecConfig : Map<String,Precision>;
 	public var lodsDecimation : Array<Float>;
 	public var maxUVs : Int = 0;
