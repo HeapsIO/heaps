@@ -259,7 +259,7 @@ class RenderContext {
 				return v;
 			}
 			var v = getInstance(p.instance).getParamValue(p.index);
-			if( v == null && !opt ) throw "Missing param value " + shaders.s + "." + p.name;
+			if( v == null && !opt ) throw "Missing param value " + curInstanceValue + "." + p.name;
 			return v;
 		}
 		inline function fill(buf:h3d.shader.Buffers.ShaderBuffers, s:hxsl.RuntimeShader.RuntimeShaderData) {
