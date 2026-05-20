@@ -497,7 +497,10 @@ class Skin extends MultiMaterial {
 					} else {
 						m.mainPass.addShader(skinShader);
 					}
-					if( skinData.splitJoints != null ) m.mainPass.dynamicParameters = true;
+					if( skinData.splitJoints != null ) {
+						for( p in m.getPasses() )
+							p.dynamicParameters = true;
+					}
 				}
 		}
 
