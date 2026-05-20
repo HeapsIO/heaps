@@ -169,7 +169,7 @@ class Renderer extends h3d.scene.Renderer {
 
 	override function getPassByName(name:String):h3d.pass.Output {
 		switch( name ) {
-		case "overlay", "beforeTonemapping", "beforeTonemappingAlpha", "albedo", "afterTonemapping", "forward", "forwardAlpha", "distortion":
+		case "overlay", "beforeTonemapping", "beforeTonemappingAlpha", "albedo", "afterTonemapping", "forward", "forwardAlpha", "distortion", "debug":
 			return defaultPass;
 		case "default", "alpha", "additive":
 			return output;
@@ -722,6 +722,10 @@ class Renderer extends h3d.scene.Renderer {
 
 		begin(Overlay);
 		draw("overlay");
+		end();
+
+		begin(Debug);
+		draw("debug");
 		end();
 
 		endPbr();
