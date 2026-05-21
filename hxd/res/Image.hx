@@ -229,6 +229,12 @@ class Image extends Resource {
 								inf.pixelFormat = RGBA;
 							case [16, 0xFFFF, 0, 0, 0]:
 								inf.pixelFormat = R16U;
+							case [8, 0xFF, 0, 0, 0]:
+								inf.pixelFormat = R8;
+							case [16, 0xFF, 0xFF00, 0, 0]:
+								inf.pixelFormat = RG8;
+							case [16, 0xFF, 0, 0, 0xFF00]:
+								inf.pixelFormat = RG8;
 							case [32, 0xFFFF, 0xFFFF0000, 0, 0]:
 								inf.pixelFormat = RG16U;
 							default:

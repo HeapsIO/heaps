@@ -472,6 +472,8 @@ class CompressIMG extends Convert {
 		"RGB32F" => "R32G32B32_FLOAT",
 		"RGBA16F" => "R16G16B16A16_FLOAT",
 		"RGBA32F" => "R32G32B32A32_FLOAT",
+		"R8" => "R8_UNORM",
+		"RG8" => "R8G8_UNORM",
 		"RGBA" => "R8G8B8A8_UNORM",
 		"R16U" => "R16_UNORM",
 		"RG16U" => "R16G16_UNORM",
