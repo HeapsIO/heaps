@@ -476,6 +476,7 @@ class CompressIMG extends Convert {
 		"R16U" => "R16_UNORM",
 		"RG16U" => "R16G16_UNORM",
 		"RGBA16U" => "R16G16B16A16_UNORM",
+		"BC5" => "BC5_UNORM"
 	];
 
 	function makeImage(path:String) {
