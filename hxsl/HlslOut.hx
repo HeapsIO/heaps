@@ -350,7 +350,7 @@ class HlslOut {
 		case PackNormal:
 			decl("float4 packNormal( float3 n ) { return float4((n + 1.) * 0.5,1.); }");
 		case UnpackNormal:
-			decl("float3 unpackNormal( float4 p ) { return normalize(p.xyz * 2. - 1.); }");
+			decl("float3 unpackNormal( float4 p ) { float2 normalXY = p.xy * 2. - 1.; return float3(normalXY, sqrt(1.0 - saturate(dot(normalXY,normalXY)))); }");
 		case Atan:
 			decl("float atan( float y, float x ) { return atan2(y,x); }");
 		case ScreenToUv:
