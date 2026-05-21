@@ -486,6 +486,9 @@ class Pixels {
 		case R16U:
 			v.set(bytes.getUInt16(p) / 65535.0,0,0,0);
 			return v;
+		case R8:
+			v.set(bytes.get(p) / 255.0, 0, 0, 0);
+			return v;
 		default:
 			v.setColor(getPixel(x,y));
 			return v;
