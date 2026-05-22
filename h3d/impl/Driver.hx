@@ -120,6 +120,33 @@ enum DLSSTag {
 	ColorOut;
 }
 
+@:struct class DLSSConstants {
+	public var cameraViewToClip : Matrix;
+	public var clipToCameraView : Matrix;
+	public var clipToPrevClip : Matrix;
+	public var prevClipToClip : Matrix;
+	public var jitterOffsetX : Float;
+	public var jitterOffsetY : Float;
+	public var mvecScaleX : Float;
+	public var mvecScaleY : Float;
+	public var cameraPos : Vector;
+	public var cameraUp : Vector;
+	public var cameraRight : Vector;
+	public var cameraFwd : Vector;
+	public var cameraNear : Float;
+	public var cameraFar : Float;
+	public var cameraFOV : Float;
+	public var cameraAspectRatio : Float;
+	public var motionVectorsInvalidValue : Float;
+	public var depthInverted : Bool;
+	public var cameraMotionIncluded : Bool;
+	public var reset : Bool;
+	public var motionVectorsDilated : Bool;
+	public var motionVectorsJittered : Bool;
+	public function new() {
+	}
+}
+
 class Driver {
 
 	static var SHADER_CACHE : h3d.impl.ShaderCache;
@@ -361,7 +388,7 @@ class Driver {
 
 	// --- DLSS
 
-	public function applyDLSS( resources : Map<h3d.mat.Texture, DLSSTag> ) {
+	public function applyDLSS( resources : Map<h3d.mat.Texture, DLSSTag>, constants : DLSSConstants ) {
 		throw "DLSS not supported on this platform";
 	}
 }

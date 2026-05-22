@@ -3391,7 +3391,7 @@ class DX12Driver extends h3d.impl.Driver {
 		return handle;
 	}
 
-	override function applyDLSS( resources : Map<h3d.mat.Texture, DLSSTag> ) {
+	override function applyDLSS( resources : Map<h3d.mat.Texture, DLSSTag>, constants : DLSSConstants ) {
 		#if dlss
 		var dlssOptions = new DLSSOptions();
 		dlssOptions.mode = DLSSMode.DLAA;
@@ -3399,14 +3399,14 @@ class DX12Driver extends h3d.impl.Driver {
 		dlssOptions.outputHeight = window.height;
 
 		var dlssOptimalSettings = Dlss.getOptimalSettings(dlssOptions);
-		trace("JULES dlss optimal settings : " +
-		dlssOptimalSettings.optimalRenderWidth + " / " +
-		dlssOptimalSettings.optimalRenderHeight + " / " +
-		dlssOptimalSettings.optimalSharpness);
+		// trace("JULES dlss optimal settings : " + dlssOptimalSettings.optimalRenderWidth + " / " + dlssOptimalSettings.optimalRenderHeight + " / " + dlssOptimalSettings.optimalSharpness);
+
+		var result = Dlss.setOptions(dlssOptions);
+		trace("JULES dlss set options : " + result);
 
 		var resCount = 0;
 		for ( t in resources.keys() ) {
-			trace("JULES dlss res : " + t.name + " :  " + resources.get(t));
+			// trace("JULES dlss res : " + t.name + " :  " + resources.get(t));
 			resCount++;
 		}
 
@@ -3432,8 +3432,11 @@ class DX12Driver extends h3d.impl.Driver {
 			idx++;
 		}
 
-		var result = Dlss.setTagForFrame(dlssFrameToken, dlssResources, resCount, frame.commandList);
+		result = Dlss.setTagForFrame(dlssFrameToken, dlssResources, resCount, frame.commandList);
 		trace("JULES dlss set tag for frame : " + result);
+
+		// set constants (earlier in the frame ?)
+
 		#end
 	}
 }
