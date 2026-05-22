@@ -180,8 +180,13 @@ class Pass {
 
 	function addSelfShader<T:hxsl.Shader>(s:T) : T {
 		if ( s == null ) return null;
-		selfShadersChanged = true;
-		selfShaders = hxsl.ShaderList.addSort(s, selfShaders);
+		if ( selfShaders == selfShadersCache ) {
+			selfShaders = new hxsl.ShaderList(s, shaders);
+			selfShaders.next = selfShadersCache = shaders;
+		} else {
+			selfShadersChanged = true;
+			selfShaders = hxsl.ShaderList.addSort(s, selfShaders);
+		}
 		return s;
 	}
 
@@ -327,19 +332,24 @@ class Pass {
 		}
 	}
 
-	function selfShadersRec(rebuild : Bool) {
-		if ( selfShaders == null )
-			return shaders;
-		if ( !selfShadersChanged && !rebuild && shaders == selfShadersCache )
-			return selfShaders;
+	inline function findSelfShaderTail() {
 		var sl = selfShaders, prev = null;
 		while ( sl != null && sl != selfShadersCache ) {
 			prev = sl;
 			sl = sl.next;
 		}
+		return prev;
+	}
+
+	function selfShadersRec(rebuild : Bool) {
+		if ( selfShaders == null )
+			return shaders;
+		if ( !selfShadersChanged && !rebuild && shaders == selfShadersCache )
+			return selfShaders;
+		var tail = findSelfShaderTail();
 		selfShadersCache = shaders;
-		if ( prev != null )
-			prev.next = selfShadersCache;
+		if ( tail != null )
+			tail.next = selfShadersCache;
 		else
 			selfShaders = shaders;
 		return selfShaders;
@@ -378,16 +388,11 @@ class Pass {
 	#if !macro
 	public function clone() {
 		var p = new Pass(name, shaders.clone());
-		if ( selfShaders != null ) {
-			var sl = selfShaders;
-			var prev = null;
-			while ( sl != null && sl != shaders)  {
-				prev = sl;
-				sl = sl.next;
-			}
-			prev.next = null;
+		var tail = findSelfShaderTail();
+		if ( tail != null ) {
+			tail.next = null;
 			p.selfShaders = selfShaders.clone();
-			prev.next = sl;
+			tail.next = selfShadersCache = shaders;
 		}
 		p.loadBits(bits);
 		p.loadFlags(flags);
