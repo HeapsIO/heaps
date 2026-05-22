@@ -78,7 +78,7 @@ class CacheFileBuilder {
 	public var dx12Driver : h3d.impl.DX12Driver;
 	#end
 	public var dxShaderVersion = "5_0";
-	public var dxcShaderVersion = "6_0";
+	public var dxcShaderVersion = "6_1";
 	var glout : GlslOut;
 	var vertexOut : String;
 	var hasCompiled : Bool;
