@@ -484,6 +484,7 @@ class CompressIMG extends Convert {
 	static var TEXCONV_FMT_16BITS = [
 		"BC1" => "BC1_UNORM",
 		"BC3" => "BC3_UNORM",
+		"BC4" => "BC4_UNORM",
 		"BC5" => "BC5_UNORM",
 		"BC7" => "BC7_UNORM"
 	];
