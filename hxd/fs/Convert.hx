@@ -477,8 +477,15 @@ class CompressIMG extends Convert {
 		"RGBA" => "R8G8B8A8_UNORM",
 		"R16U" => "R16_UNORM",
 		"RG16U" => "R16G16_UNORM",
-		"RGBA16U" => "R16G16B16A16_UNORM",
-		"BC5" => "BC5_UNORM"
+		"RGBA16U" => "R16G16B16A16_UNORM"
+	];
+
+	// Use texconv for BCn format if source is 16bits
+	static var TEXCONV_FMT_16BITS = [
+		"BC1" => "BC1_UNORM",
+		"BC3" => "BC3_UNORM",
+		"BC5" => "BC5_UNORM",
+		"BC7" => "BC7_UNORM"
 	];
 
 	function makeImage(path:String) {
@@ -538,6 +545,14 @@ class CompressIMG extends Convert {
 		}
 		var format = getParam("format");
 		var tcFmt = TEXCONV_FMT.get(format);
+		if (tcFmt == null) {
+			tcFmt = TEXCONV_FMT_16BITS.get(format);
+			if (tcFmt != null) {
+				var image = makeImage(srcPath);
+				if (!image.getInfo().pixelFormat.match(R16F|R16U|RG16F|RG16U|RGB16F|RGB16U|RGBA16F|RGBA16U))
+					tcFmt = null;
+			}
+		}
 		if (tcFmt != null) {
 			var args = ["-f", tcFmt, "-srgb"];
 			if (!mips)
