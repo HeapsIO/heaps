@@ -1977,6 +1977,8 @@ class GlDriver extends Driver {
 		return switch(f) {
 		case Bindless:
 			false;
+		case DLSS:
+			false;
 		default:
 			#if js
 			features.get(f);
