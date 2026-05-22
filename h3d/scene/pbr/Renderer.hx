@@ -1,5 +1,6 @@
 package h3d.scene.pbr;
 
+import h3d.impl.Driver.DLSSConstants;
 #if dlss
 import dx.Dlss;
 #end
@@ -485,7 +486,11 @@ class Renderer extends h3d.scene.Renderer {
 			resources.set(depthMap, Depth);
 			resources.set(output, ColorOut);
 
-			ctx.engine.driver.applyDLSS(resources);
+			var constants = new DLSSConstants();
+			constants.cameraViewToClip = ctx.camera.mproj;
+			constants.clipToCameraView = ctx.camera.getInverseProj();
+
+			ctx.engine.driver.applyDLSS(resources, constants);
 		}
 	}
 
