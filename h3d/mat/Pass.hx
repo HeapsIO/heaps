@@ -180,13 +180,8 @@ class Pass {
 
 	function addSelfShader<T:hxsl.Shader>(s:T) : T {
 		if ( s == null ) return null;
-		if ( selfShaders == selfShadersCache ) {
-			selfShaders = new hxsl.ShaderList(s, shaders);
-			selfShaders.next = selfShadersCache = shaders;
-		} else {
-			selfShadersChanged = true;
-			selfShaders = hxsl.ShaderList.addSort(s, selfShaders);
-		}
+		selfShadersChanged = true;
+		selfShaders = hxsl.ShaderList.addSort(s, selfShaders);
 		return s;
 	}
 
