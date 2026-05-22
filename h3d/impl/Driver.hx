@@ -85,6 +85,10 @@ enum Feature {
 		Supports bindless
 	*/
 	Bindless;
+	/*
+		Supports DLSS
+	*/
+	DLSS;
 }
 
 enum QueryKind {
@@ -107,6 +111,13 @@ enum RenderFlag {
 		0 = LeftHanded (default), 1 = RightHanded. Affects the meaning of triangle culling value.
 	**/
 	CameraHandness;
+}
+
+enum DLSSTag {
+	Depth;
+	MotionVectors;
+	ColorIn;
+	ColorOut;
 }
 
 class Driver {
@@ -346,5 +357,11 @@ class Driver {
 
 	public function getTextureHandle( t : h3d.mat.Texture ) : h3d.mat.TextureHandle {
 		throw "Bindless is not implemented on this platform";
+	}
+
+	// --- DLSS
+
+	public function applyDLSS( resources : Map<h3d.mat.Texture, DLSSTag> ) {
+		throw "DLSS not supported on this platform";
 	}
 }

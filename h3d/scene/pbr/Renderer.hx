@@ -1,5 +1,9 @@
 package h3d.scene.pbr;
 
+#if dlss
+import dx.Dlss;
+#end
+
 enum abstract DisplayMode(String) {
 	/*
 		Full PBR display
@@ -465,6 +469,24 @@ class Renderer extends h3d.scene.Renderer {
 		renderPass(defaultPass, get("overlay"), backToFront);
 		renderPass(defaultPass, get("ui"), backToFront);
 		#end
+	}
+
+	function applyDLSS() {
+		if (ctx.engine.driver.hasFeature(DLSS)) {
+			var output : h3d.mat.Texture = ctx.engine.getCurrentTarget();
+			var curFrame = allocTarget("curFrame", false, 1.0, output.format);
+			h3d.pass.Copy.run(output, curFrame);
+			var depthMap : h3d.mat.Texture = getPbrDepth();
+			var velocity = ctx.getGlobal("velocity");
+
+			var resources : Map<h3d.mat.Texture, h3d.impl.Driver.DLSSTag> = new Map();
+			resources.set(curFrame, ColorIn);
+			resources.set(velocity, MotionVectors);
+			resources.set(depthMap, Depth);
+			resources.set(output, ColorOut);
+
+			ctx.engine.driver.applyDLSS(resources);
+		}
 	}
 
 	function end() {

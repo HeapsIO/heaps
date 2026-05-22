@@ -13,6 +13,10 @@ import h3d.mat.Pass;
 import h3d.mat.Stencil;
 import haxe.MainLoop;
 
+#if dlss
+import dx.Dlss;
+#end
+
 private typedef Driver = Dx12;
 
 class TempBuffer {
@@ -692,6 +696,10 @@ class DX12Driver extends h3d.impl.Driver {
 	var asyncComputeCommandList : CommandList;
 	var asyncComputeAllocator : CommandAllocator;
 
+	#if dlss
+	var dlssFrameToken : DLSSFrameToken;
+	#end
+
 	public static var COPY_BUFFER_SIZE = 256 * 1024 * 1024; // 256 Mo per frame
 	public static var DEFAULT_DEPTH_FORMAT : h3d.mat.Data.TextureFormat = Depth24Stencil8;
 	public static var DEFAULT_DEPTH_VALUE = 1.0;
@@ -773,11 +781,26 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	function reset() {
+		#if dlss
+		var slResult = Dlss.init(true);
+		trace("JULES dlss init : " + slResult);
+		#end
+
 		var flags = new DriverInitFlags();
 		if( DEBUG ) flags.set(DriverInitFlag.DEBUG);
 		driver = Driver.create(window, flags, DEVICE_NAME);
 		if( DEBUG ) suppressDebugMessages();
 		frames = [];
+
+		#if dlss
+		var device = Driver.getDevice();
+		slResult = Dlss.setDevice(device);
+		trace("JULES dlss set device : " + slResult);
+
+		var adapter = Driver.getAdapter();
+		slResult = Dlss.isFeatureSupported(adapter, DLSSFeature.DLSS);
+		trace("JULES dlss supported : " + slResult);
+		#end
 
 		var flags = new haxe.EnumFlags();
 		var heap = new HeapProperties();
@@ -961,6 +984,10 @@ class DX12Driver extends h3d.impl.Driver {
 		frame.srvHeapCache.reset();
 		frame.samplerHeapCache.reset();
 		flushHeaps();
+
+		#if dlss
+		dlssFrameToken = Dlss.getNewFrameToken(frameCount);
+		#end
 	}
 
 	override function clear(?color:Vector4, ?depth:Float, ?stencil:Int) {
@@ -3364,6 +3391,51 @@ class DX12Driver extends h3d.impl.Driver {
 		return handle;
 	}
 
+	override function applyDLSS( resources : Map<h3d.mat.Texture, DLSSTag> ) {
+		#if dlss
+		var dlssOptions = new DLSSOptions();
+		dlssOptions.mode = DLSSMode.DLAA;
+		dlssOptions.outputWidth = window.width;
+		dlssOptions.outputHeight = window.height;
+
+		var dlssOptimalSettings = Dlss.getOptimalSettings(dlssOptions);
+		trace("JULES dlss optimal settings : " +
+		dlssOptimalSettings.optimalRenderWidth + " / " +
+		dlssOptimalSettings.optimalRenderHeight + " / " +
+		dlssOptimalSettings.optimalSharpness);
+
+		var resCount = 0;
+		for ( t in resources.keys() ) {
+			trace("JULES dlss res : " + t.name + " :  " + resources.get(t));
+			resCount++;
+		}
+
+		var dlssResources = hl.CArray.alloc(DLSSResource, resCount);
+		var idx = 0;
+		for ( t in resources.keys() ) {
+			var res = dlssResources[idx];
+			res.res = t.t.res;
+			res.width = t.width;
+			res.height = t.height;
+			var type = resources.get(t);
+			switch(type){
+				case Depth:
+					res.type = DLSSBufferType.DEPTH;
+				case MotionVectors:
+					res.type = DLSSBufferType.MOTIONVECTORS;
+				case ColorIn:
+					res.type = DLSSBufferType.COLORIN;
+				case ColorOut:
+					res.type = DLSSBufferType.COLOROUT;
+			}
+			res.state = t.t.state;
+			idx++;
+		}
+
+		var result = Dlss.setTagForFrame(dlssFrameToken, dlssResources, resCount, frame.commandList);
+		trace("JULES dlss set tag for frame : " + result);
+		#end
+	}
 }
 
 #end
