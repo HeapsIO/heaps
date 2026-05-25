@@ -1,6 +1,5 @@
 package h3d.scene.pbr;
 
-import h3d.impl.Driver.DLSSConstants;
 #if dlss
 import dx.Dlss;
 #end
@@ -486,9 +485,45 @@ class Renderer extends h3d.scene.Renderer {
 			resources.set(depthMap, Depth);
 			resources.set(output, ColorOut);
 
-			var constants = new DLSSConstants();
+			var constants = new h3d.impl.Driver.DLSSParams();
 			constants.cameraViewToClip = ctx.camera.mproj;
-			constants.clipToCameraView = ctx.camera.getInverseProj();
+			var clipToView = ctx.camera.getInverseProj();
+			constants.clipToCameraView = clipToView;
+
+			// TODO less mat allocations
+			var viewToWorld = ctx.camera.getInverseView();
+			var viewToViewPrev = new h3d.Matrix();
+			viewToViewPrev.multiply(viewToWorld, ctx.prevCamera.mcam);
+			var tmp = new h3d.Matrix();
+			var clipToPrevClip = new h3d.Matrix();
+			tmp.multiply(clipToView, viewToViewPrev);
+			clipToPrevClip.multiply(tmp, ctx.prevCamera.mproj);
+
+			constants.clipToPrevClip = clipToPrevClip;
+
+			var prevClipToClip = new h3d.Matrix();
+			prevClipToClip.initInverse(clipToPrevClip);
+			constants.prevClipToClip = prevClipToClip;
+
+			constants.jitterOffsetX = ctx.camera.jitterOffsetX;
+			constants.jitterOffsetY = ctx.camera.jitterOffsetY;
+			constants.mvecScaleX = 1.0;
+			constants.mvecScaleY = 1.0;
+			constants.cameraPos = ctx.camera.pos;
+			constants.cameraUp = ctx.camera.getUp();
+			constants.cameraRight = ctx.camera.getRight();
+			constants.cameraFwd = ctx.camera.getForward();
+			constants.cameraNear = ctx.camera.zNear;
+			constants.cameraFar = ctx.camera.zFar;
+			constants.cameraFOV = ctx.camera.fovY;
+			constants.cameraAspectRatio = ctx.camera.screenRatio;
+			constants.motionVectorsInvalidValue = 3.14; // TODO check velocity invalid value
+			constants.depthInverted = ctx.useReverseDepth;
+			constants.cameraMotionIncluded = true;
+			constants.reset = false;
+			constants.orthographicProjection = false;
+			constants.motionVectorsDilated = false;
+			constants.motionVectorsJittered = false;
 
 			ctx.engine.driver.applyDLSS(resources, constants);
 		}

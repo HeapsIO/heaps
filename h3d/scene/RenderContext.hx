@@ -45,6 +45,8 @@ class RenderContext extends h3d.impl.RenderContext {
 	public var numViews : Int = 1;
 	public var currentView : View = new h3d.scene.View(0);
 
+	public var prevCamera : h3d.Camera;
+
 	@global("camera.view") var cameraView : h3d.Matrix;
 	@global("camera.zNear") var cameraNear : Float;
 	@global("camera.zFar") var cameraFar : Float;
@@ -84,12 +86,14 @@ class RenderContext extends h3d.impl.RenderContext {
 		super();
 		this.scene = scene;
 		camera = new h3d.Camera();
+		prevCamera = new h3d.Camera(); 
 		cachedShaderList = [];
 		cachedPassObjects = [];
 		initGlobals();
 	}
 
 	public function setCamera( cam : h3d.Camera ) {
+		prevCamera.load(camera);
 		camera.load(cam);
 		cameraReverseDepth = camera.reverseDepth = useReverseDepth;
 		camera.update();

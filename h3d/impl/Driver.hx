@@ -120,7 +120,7 @@ enum DLSSTag {
 	ColorOut;
 }
 
-@:struct class DLSSConstants {
+@:struct class DLSSParams {
 	public var cameraViewToClip : Matrix;
 	public var clipToCameraView : Matrix;
 	public var clipToPrevClip : Matrix;
@@ -141,6 +141,7 @@ enum DLSSTag {
 	public var depthInverted : Bool;
 	public var cameraMotionIncluded : Bool;
 	public var reset : Bool;
+	public var orthographicProjection : Bool;
 	public var motionVectorsDilated : Bool;
 	public var motionVectorsJittered : Bool;
 	public function new() {
@@ -388,7 +389,7 @@ class Driver {
 
 	// --- DLSS
 
-	public function applyDLSS( resources : Map<h3d.mat.Texture, DLSSTag>, constants : DLSSConstants ) {
+	public function applyDLSS( resources : Map<h3d.mat.Texture, DLSSTag>, constants : DLSSParams ) {
 		throw "DLSS not supported on this platform";
 	}
 }
