@@ -3485,7 +3485,9 @@ class DX12Driver extends h3d.impl.Driver {
 		result = Dlss.setConstants(dlssFrameToken, dlssConstants);
 		trace("JULES dlss set constants : " + result);
 
-		
+
+		result = Dlss.evaluateFeature(dlssFrameToken, frame.commandList);
+		trace("JULES dlss evaluate feature : " + result);
 
 		#end
 	}
