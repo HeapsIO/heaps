@@ -537,7 +537,10 @@ class CompressIMG extends Convert {
 				if (pxls.width == pxls.height && pxls.width > maxSize) {
 					var resized = tempFile(srcPath, "resized", "tga");
 					var ssize = "" + maxSize;
-					runTexconv(srcPath, resized, ["-m", "0", "-sepalpha", "-w", ssize, "-h", ssize, "-f", "RGBA", "-ft", "tga"]);
+					var args = ["-m", "0", "-sepalpha", "-w", ssize, "-h", ssize, "-f", "RGBA", "-ft", "tga"];
+					if ( hasParam("filter") )
+						args.push("-if"); args.push(getParam("filter"));
+					runTexconv(srcPath, resized, args);
 					srcPath = resized;
 				}
 			} catch (e:Dynamic) {
