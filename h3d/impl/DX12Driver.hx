@@ -3391,22 +3391,44 @@ class DX12Driver extends h3d.impl.Driver {
 		return handle;
 	}
 
+	#if dlss
+	static var _dlssOptions : DLSSOptions   = new DLSSOptions();
+	static var _dlssConstants : DLSSConstants = new DLSSConstants();
+	static var _matCameraViewToClip : DLSSMatrix = new DLSSMatrix();
+	static var _matClipToCameraView : DLSSMatrix = new DLSSMatrix();
+	static var _matClipToLensClip : DLSSMatrix = new DLSSMatrix();
+	static var _matClipToPrevClip : DLSSMatrix = new DLSSMatrix();
+	static var _matPrevClipToClip : DLSSMatrix = new DLSSMatrix();
+	static var _vecCameraPos : DLSSVector = new DLSSVector();
+	static var _vecCameraUp : DLSSVector = new DLSSVector();
+	static var _vecCameraRight : DLSSVector = new DLSSVector();
+	static var _vecCameraFwd : DLSSVector = new DLSSVector();
+	#end
+
+	inline static function loadDlssVec( vec : DLSSVector, v : h3d.Vector ) {
+		vec.x = v.x;
+		vec.y = v.y;
+		vec.z = v.z;
+	}
+
+	inline static function loadDlssMat( mat : DLSSMatrix, m : h3d.Matrix ) {
+		mat._11 = m._11; mat._12 = m._12; mat._13 = m._13; mat._14 = m._14;
+		mat._21 = m._21; mat._22 = m._22; mat._23 = m._23; mat._24 = m._24;
+		mat._31 = m._31; mat._32 = m._32; mat._33 = m._33; mat._34 = m._34;
+		mat._41 = m._41; mat._42 = m._42; mat._43 = m._43; mat._44 = m._44;
+	}
+
 	override function applyDLSS( resources : Map<h3d.mat.Texture, DLSSTag>, constants : DLSSParams ) {
 		#if dlss
-		var dlssOptions = new DLSSOptions();
-		dlssOptions.mode = DLSSMode.DLAA;
-		dlssOptions.outputWidth = window.width;
-		dlssOptions.outputHeight = window.height;
+		_dlssOptions.mode = DLSSMode.DLAA;
+		_dlssOptions.outputWidth = window.width;
+		_dlssOptions.outputHeight = window.height;
 
-		var dlssOptimalSettings = Dlss.getOptimalSettings(dlssOptions);
-		// trace("JULES dlss optimal settings : " + dlssOptimalSettings.optimalRenderWidth + " / " + dlssOptimalSettings.optimalRenderHeight + " / " + dlssOptimalSettings.optimalSharpness);
-
-		var result = Dlss.setOptions(dlssOptions);
-		trace("JULES dlss set options : " + result);
+		var dlssOptimalSettings = Dlss.getOptimalSettings(_dlssOptions);
+		var result = Dlss.setOptions(_dlssOptions);
 
 		var resCount = 0;
 		for ( t in resources.keys() ) {
-			// trace("JULES dlss res : " + t.name + " :  " + resources.get(t));
 			resCount++;
 		}
 
@@ -3433,61 +3455,51 @@ class DX12Driver extends h3d.impl.Driver {
 		}
 
 		result = Dlss.setTagForFrame(dlssFrameToken, dlssResources, resCount, frame.commandList);
-		trace("JULES dlss set tag for frame : " + result);
 
-		inline function toDlssVec(v : h3d.Vector) : DLSSVector {
-			var vec = new DLSSVector(); // TODO less allocs
-			vec.x = v.x;
-			vec.y = v.y;
-			vec.z = v.z;
-			return vec;
-		}
+		loadDlssMat(_matCameraViewToClip, constants.cameraViewToClip);
+		loadDlssMat(_matClipToCameraView, constants.clipToCameraView);
+		loadDlssMat(_matClipToPrevClip,   constants.clipToPrevClip);
+		loadDlssMat(_matPrevClipToClip,   constants.prevClipToClip);
 
-		inline function toDlssMat(m : h3d.Matrix) : DLSSMatrix {
-			var mat = new DLSSMatrix(); // TODO less allocs
-			mat._11 = m._11; mat._12 = m._12; mat._13 = m._13; mat._14 = m._14;
-			mat._21 = m._21; mat._22 = m._22; mat._23 = m._23; mat._24 = m._24;
-			mat._31 = m._31; mat._32 = m._32; mat._33 = m._33; mat._34 = m._34;
-			mat._41 = m._41; mat._42 = m._42; mat._43 = m._43; mat._44 = m._44;
-			return mat;
-		}
+		loadDlssVec(_vecCameraPos,   constants.cameraPos);
+		loadDlssVec(_vecCameraUp,    constants.cameraUp);
+		loadDlssVec(_vecCameraRight, constants.cameraRight);
+		loadDlssVec(_vecCameraFwd,   constants.cameraFwd);
 
-		var dlssConstants = new DLSSConstants();
-		dlssConstants.cameraViewToClip = toDlssMat(constants.cameraViewToClip);
-		dlssConstants.clipToCameraView = toDlssMat(constants.clipToCameraView);
-		dlssConstants.clipToLensClip = new DLSSMatrix();
-		dlssConstants.clipToPrevClip = toDlssMat(constants.clipToPrevClip);
-		dlssConstants.prevClipToClip = toDlssMat(constants.prevClipToClip);
-		dlssConstants.jitterOffsetX = constants.jitterOffsetX;
-		dlssConstants.jitterOffsetY = constants.jitterOffsetY;
-		dlssConstants.mvecScaleX = constants.mvecScaleX;
-		dlssConstants.mvecScaleY = constants.mvecScaleY;
-		dlssConstants.cameraPinholeOffsetX = 0.0;
-		dlssConstants.cameraPinholeOffsetY = 0.0;
-		dlssConstants.cameraPos = toDlssVec(constants.cameraPos);
-		dlssConstants.cameraUp = toDlssVec(constants.cameraUp);
-		dlssConstants.cameraRight = toDlssVec(constants.cameraRight);
-		dlssConstants.cameraFwd = toDlssVec(constants.cameraFwd);
-		dlssConstants.cameraNear = constants.cameraNear;
-		dlssConstants.cameraFar = constants.cameraFar;
-		dlssConstants.cameraFOV = constants.cameraFOV;
-		dlssConstants.cameraAspectRatio = constants.cameraAspectRatio;
-		dlssConstants.motionVectorsInvalidValue = constants.motionVectorsInvalidValue;
-		dlssConstants.depthInverted = constants.depthInverted;
-		dlssConstants.cameraMotionIncluded = constants.cameraMotionIncluded;
-		dlssConstants.motionVectors3D = false;
-		dlssConstants.reset = constants.reset;
-		dlssConstants.orthographicProjection = constants.orthographicProjection;
-		dlssConstants.motionVectorsDilated = constants.motionVectorsDilated;
-		dlssConstants.motionVectorsJittered = constants.motionVectorsJittered;
-		dlssConstants.minRelativeLinearDepthObjectSeparation = 40.0;
+		_dlssConstants.cameraViewToClip = _matCameraViewToClip;
+		_dlssConstants.clipToCameraView = _matClipToCameraView;
+		_dlssConstants.clipToLensClip = _matClipToLensClip;
+		_dlssConstants.clipToPrevClip = _matClipToPrevClip;
+		_dlssConstants.prevClipToClip = _matPrevClipToClip;
+		_dlssConstants.jitterOffsetX = constants.jitterOffsetX;
+		_dlssConstants.jitterOffsetY = constants.jitterOffsetY;
+		_dlssConstants.mvecScaleX = constants.mvecScaleX;
+		_dlssConstants.mvecScaleY = constants.mvecScaleY;
+		_dlssConstants.cameraPinholeOffsetX = 0.0;
+		_dlssConstants.cameraPinholeOffsetY = 0.0;
+		_dlssConstants.cameraPos = _vecCameraPos;
+		_dlssConstants.cameraUp = _vecCameraUp;
+		_dlssConstants.cameraRight = _vecCameraRight;
+		_dlssConstants.cameraFwd = _vecCameraFwd;
+		_dlssConstants.cameraNear = constants.cameraNear;
+		_dlssConstants.cameraFar = constants.cameraFar;
+		_dlssConstants.cameraFOV = constants.cameraFOV;
+		_dlssConstants.cameraAspectRatio = constants.cameraAspectRatio;
+		_dlssConstants.motionVectorsInvalidValue = constants.motionVectorsInvalidValue;
+		_dlssConstants.depthInverted = constants.depthInverted;
+		_dlssConstants.cameraMotionIncluded = constants.cameraMotionIncluded;
+		_dlssConstants.motionVectors3D = false;
+		_dlssConstants.reset = constants.reset;
+		_dlssConstants.orthographicProjection = constants.orthographicProjection;
+		_dlssConstants.motionVectorsDilated = constants.motionVectorsDilated;
+		_dlssConstants.motionVectorsJittered = constants.motionVectorsJittered;
+		_dlssConstants.minRelativeLinearDepthObjectSeparation = 40.0;
 
-		result = Dlss.setConstants(dlssFrameToken, dlssConstants);
-		trace("JULES dlss set constants : " + result);
-
+		result = Dlss.setConstants(dlssFrameToken, _dlssConstants);
 
 		result = Dlss.evaluateFeature(dlssFrameToken, frame.commandList);
-		trace("JULES dlss evaluate feature : " + result);
+
+		flushHeaps(true);
 
 		#end
 	}
