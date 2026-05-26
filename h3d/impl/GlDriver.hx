@@ -1028,8 +1028,8 @@ class GlDriver extends Driver {
 		case GL.RGB: GL.RGB;
 		case GL.R11F_G11F_B10F: GL.RGB;
 		case GL.RGB10_A2: GL.RGBA;
-		case GL.RED, GL.R8, GL.R16F, GL.R32F, 0x822A: GL.RED;
-		case GL.RG, GL.RG8, GL.RG16F, GL.RG32F, 0x822C: GL.RG;
+		case GL.RED, GL.R8, GL.R16F, GL.R32F, 0x822A, 0x8DBB: GL.RED;
+		case GL.RG, GL.RG8, GL.RG16F, GL.RG32F, 0x822C, 0x8DBD: GL.RG;
 		case GL.RGB16F, GL.RGB32F, 0x8054, 0x8E8F: GL.RGB;
 		case 0x83F1, 0x83F2, 0x83F3, 0x805B, 0x8E8C: GL.RGBA;
 		default: throw "Invalid format " + t.internalFmt;
