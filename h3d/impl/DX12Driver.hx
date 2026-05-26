@@ -3391,6 +3391,16 @@ class DX12Driver extends h3d.impl.Driver {
 		return handle;
 	}
 
+	override function isDLSSSupported( framegen : Bool = false ) : Bool {
+		#if dlss
+		var adapter = Driver.getAdapter();
+		var feature = framegen ? DLSSFeature.FRAMEGEN : DLSSFeature.DLSS;
+		var slResult = Dlss.isFeatureSupported(adapter, feature);
+		return slResult == 0;
+		#end
+		return false;
+	}
+
 	#if dlss
 	inline static function loadDlssVec( vec : DLSSVector, v : h3d.Vector ) {
 			vec.x = v.x;
@@ -3530,7 +3540,7 @@ class DX12Driver extends h3d.impl.Driver {
 
 		result = Dlss.setConstants(dlssFrameToken, dlssConstants);
 
-		result = Dlss.evaluateFeature(dlssFrameToken, frame.commandList);
+		result = Dlss.evaluateFeature(dlssFrameToken, frame.commandList, DLSSFeature.DLSS);
 
 		flushHeaps(true);
 

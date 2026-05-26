@@ -395,6 +395,11 @@ class Driver {
 
 	// --- DLSS
 
+	public function isDLSSSupported( framegen : Bool = false ) : Bool {
+		throw "DLSS not supported on this platform";
+		return false;
+	}
+
 	public function applyDLSS( resources : Map<h3d.mat.Texture, DLSSTag>, constants : DLSSParams, quality : DLSSQuality, dlaa : Bool ) {
 		throw "DLSS not supported on this platform";
 	}

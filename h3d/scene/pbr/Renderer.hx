@@ -1,5 +1,6 @@
 package h3d.scene.pbr;
 
+import h3d.impl.Driver.DLSSQuality;
 #if dlss
 import dx.Dlss;
 #end
@@ -471,7 +472,7 @@ class Renderer extends h3d.scene.Renderer {
 		#end
 	}
 
-	function applyDLSS() {
+	function applyDLSS(quality : DLSSQuality, dlaa : Bool = true, reset : Bool = false) {
 		if (ctx.engine.driver.hasFeature(DLSS)) {
 			#if (haxe_ver >= 5)
 			static var resources : Map<h3d.mat.Texture, h3d.impl.Driver.DLSSTag> = new Map();
@@ -534,12 +535,12 @@ class Renderer extends h3d.scene.Renderer {
 			constants.cameraAspectRatio = ctx.camera.screenRatio;
 			constants.depthInverted = ctx.useReverseDepth;
 			constants.cameraMotionIncluded = true;
-			constants.reset = false;
+			constants.reset = reset;
 			constants.orthographicProjection = false;
 			constants.motionVectorsDilated = false;
 			constants.motionVectorsJittered = false;
 
-			ctx.engine.driver.applyDLSS(resources, constants, UltraPerformance, true);
+			ctx.engine.driver.applyDLSS(resources, constants, quality, dlaa);
 		}
 	}
 
