@@ -530,21 +530,19 @@ class CompressIMG extends Convert {
 
 		var mips = hasParam("mips") && getParam("mips") == true;
 		if (hasParam("size")) {
-			try {
-				var maxSize = getParam("size");
-				var image = makeImage(srcPath);
-				var pxls = image.getPixels();
-				if (pxls.width == pxls.height && pxls.width > maxSize) {
-					var resized = tempFile(srcPath, "resized", "tga");
-					var ssize = "" + maxSize;
-					var args = ["-m", "0", "-sepalpha", "-w", ssize, "-h", ssize, "-f", "RGBA", "-ft", "tga"];
-					if ( hasParam("filter") )
-						args.push("-if"); args.push(getParam("filter"));
-					runTexconv(srcPath, resized, args);
-					srcPath = resized;
+			var maxSize = getParam("size");
+			var image = makeImage(srcPath);
+			var pxls = image.getPixels();
+			if (pxls.width == pxls.height && pxls.width > maxSize) {
+				var resized = tempFile(srcPath, "resized", "tga");
+				var ssize = "" + maxSize;
+				var args = ["-m", "0", "-sepalpha", "-w", ssize, "-h", ssize, "-f", "RGBA", "-ft", "tga"];
+				if ( hasParam("filter") ) {
+					args.push("-if");
+					args.push(getParam("filter"));
 				}
-			} catch (e:Dynamic) {
-				trace("Failed to resize", e);
+				runTexconv(srcPath, resized, args);
+				srcPath = resized;
 			}
 		}
 		var format = getParam("format");
