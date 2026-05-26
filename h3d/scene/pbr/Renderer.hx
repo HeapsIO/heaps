@@ -473,35 +473,50 @@ class Renderer extends h3d.scene.Renderer {
 
 	function applyDLSS() {
 		if (ctx.engine.driver.hasFeature(DLSS)) {
+			#if (haxe_ver >= 5)
+			static var resources : Map<h3d.mat.Texture, h3d.impl.Driver.DLSSTag> = new Map();
+			static var constants = new h3d.impl.Driver.DLSSParams();
+			static var viewToViewPrev = new h3d.Matrix();
+			static var tmp = new h3d.Matrix();
+			static var clipToPrevClip = new h3d.Matrix();
+			static var prevClipToClip = new h3d.Matrix();
+			#else
+			static var resources : Map<h3d.mat.Texture, h3d.impl.Driver.DLSSTag> = null;
+			if ( resources == null ) resources = new Map();
+			static var constants : h3d.impl.Driver.DLSSParams = null;
+			if ( constants == null ) constants = new h3d.impl.Driver.DLSSParams();
+			static var viewToViewPrev : h3d.Matrix = null;
+			if ( viewToViewPrev == null ) viewToViewPrev = new h3d.Matrix();
+			static var tmp : h3d.Matrix = null;
+			if ( tmp == null ) tmp = new h3d.Matrix();
+			static var clipToPrevClip : h3d.Matrix = null;
+			if ( clipToPrevClip == null ) clipToPrevClip = new h3d.Matrix();
+			static var prevClipToClip : h3d.Matrix = null;
+			if ( prevClipToClip == null ) prevClipToClip = new h3d.Matrix();
+			#end
+
 			var output : h3d.mat.Texture = ctx.engine.getCurrentTarget();
 			var curFrame = allocTarget("curFrame", false, 1.0, output.format);
 			h3d.pass.Copy.run(output, curFrame);
 			var depthMap : h3d.mat.Texture = getPbrDepth();
 			var velocity = ctx.getGlobal("velocity");
 
-			var resources : Map<h3d.mat.Texture, h3d.impl.Driver.DLSSTag> = new Map();
+			resources.clear();
 			resources.set(curFrame, ColorIn);
 			resources.set(velocity, MotionVectors);
 			resources.set(depthMap, Depth);
 			resources.set(output, ColorOut);
 
-			var constants = new h3d.impl.Driver.DLSSParams();
 			constants.cameraViewToClip = ctx.camera.mproj;
 			var clipToView = ctx.camera.getInverseProj();
 			constants.clipToCameraView = clipToView;
 
-			// TODO less mat allocations
 			var viewToWorld = ctx.camera.getInverseView();
-			var viewToViewPrev = new h3d.Matrix();
 			viewToViewPrev.multiply(viewToWorld, ctx.prevCamera.mcam);
-			var tmp = new h3d.Matrix();
-			var clipToPrevClip = new h3d.Matrix();
 			tmp.multiply(clipToView, viewToViewPrev);
 			clipToPrevClip.multiply(tmp, ctx.prevCamera.mproj);
-
 			constants.clipToPrevClip = clipToPrevClip;
 
-			var prevClipToClip = new h3d.Matrix();
 			prevClipToClip.initInverse(clipToPrevClip);
 			constants.prevClipToClip = prevClipToClip;
 
@@ -517,7 +532,6 @@ class Renderer extends h3d.scene.Renderer {
 			constants.cameraFar = ctx.camera.zFar;
 			constants.cameraFOV = ctx.camera.fovY;
 			constants.cameraAspectRatio = ctx.camera.screenRatio;
-			constants.motionVectorsInvalidValue = 3.14; // TODO check velocity invalid value
 			constants.depthInverted = ctx.useReverseDepth;
 			constants.cameraMotionIncluded = true;
 			constants.reset = false;
@@ -525,7 +539,7 @@ class Renderer extends h3d.scene.Renderer {
 			constants.motionVectorsDilated = false;
 			constants.motionVectorsJittered = false;
 
-			ctx.engine.driver.applyDLSS(resources, constants);
+			ctx.engine.driver.applyDLSS(resources, constants, UltraPerformance, true);
 		}
 	}
 

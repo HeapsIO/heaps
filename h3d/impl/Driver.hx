@@ -148,6 +148,12 @@ enum DLSSTag {
 	}
 }
 
+enum DLSSQuality {
+	Default;
+	Performance;
+	UltraPerformance;
+}
+
 class Driver {
 
 	static var SHADER_CACHE : h3d.impl.ShaderCache;
@@ -389,7 +395,7 @@ class Driver {
 
 	// --- DLSS
 
-	public function applyDLSS( resources : Map<h3d.mat.Texture, DLSSTag>, constants : DLSSParams ) {
+	public function applyDLSS( resources : Map<h3d.mat.Texture, DLSSTag>, constants : DLSSParams, quality : DLSSQuality, dlaa : Bool ) {
 		throw "DLSS not supported on this platform";
 	}
 }
