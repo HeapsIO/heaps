@@ -1,5 +1,10 @@
 package h3d.scene.pbr;
 
+import h3d.impl.Driver.DLSSQuality;
+#if dlss
+import heaps.dlss.Dlss;
+#end
+
 enum abstract DisplayMode(String) {
 	/*
 		Full PBR display
@@ -467,6 +472,78 @@ class Renderer extends h3d.scene.Renderer {
 		#end
 	}
 
+	function applyDLSS(quality : DLSSQuality, dlaa : Bool = true, reset : Bool = false) {
+		if (ctx.engine.driver.hasFeature(DLSS)) {
+			#if (haxe_ver >= 5)
+			static var resources : Map<h3d.mat.Texture, h3d.impl.Driver.DLSSTag> = new Map();
+			static var constants = new h3d.impl.Driver.DLSSParams();
+			static var viewToViewPrev = new h3d.Matrix();
+			static var tmp = new h3d.Matrix();
+			static var clipToPrevClip = new h3d.Matrix();
+			static var prevClipToClip = new h3d.Matrix();
+			#else
+			static var resources : Map<h3d.mat.Texture, h3d.impl.Driver.DLSSTag> = null;
+			if ( resources == null ) resources = new Map();
+			static var constants : h3d.impl.Driver.DLSSParams = null;
+			if ( constants == null ) constants = new h3d.impl.Driver.DLSSParams();
+			static var viewToViewPrev : h3d.Matrix = null;
+			if ( viewToViewPrev == null ) viewToViewPrev = new h3d.Matrix();
+			static var tmp : h3d.Matrix = null;
+			if ( tmp == null ) tmp = new h3d.Matrix();
+			static var clipToPrevClip : h3d.Matrix = null;
+			if ( clipToPrevClip == null ) clipToPrevClip = new h3d.Matrix();
+			static var prevClipToClip : h3d.Matrix = null;
+			if ( prevClipToClip == null ) prevClipToClip = new h3d.Matrix();
+			#end
+
+			var output : h3d.mat.Texture = ctx.engine.getCurrentTarget();
+			var curFrame = allocTarget("curFrame", false, 1.0, output.format);
+			h3d.pass.Copy.run(output, curFrame);
+			var depthMap : h3d.mat.Texture = getPbrDepth();
+			var velocity = ctx.getGlobal("velocity");
+
+			resources.clear();
+			resources.set(curFrame, ColorIn);
+			resources.set(velocity, MotionVectors);
+			resources.set(depthMap, Depth);
+			resources.set(output, ColorOut);
+
+			constants.cameraViewToClip = ctx.camera.mproj;
+			var clipToView = ctx.camera.getInverseProj();
+			constants.clipToCameraView = clipToView;
+
+			var viewToWorld = ctx.camera.getInverseView();
+			viewToViewPrev.multiply(viewToWorld, ctx.prevCamera.mcam);
+			tmp.multiply(clipToView, viewToViewPrev);
+			clipToPrevClip.multiply(tmp, ctx.prevCamera.mproj);
+			constants.clipToPrevClip = clipToPrevClip;
+
+			prevClipToClip.initInverse(clipToPrevClip);
+			constants.prevClipToClip = prevClipToClip;
+
+			constants.jitterOffsetX = ctx.camera.jitterOffsetX;
+			constants.jitterOffsetY = ctx.camera.jitterOffsetY;
+			constants.mvecScaleX = 1.0;
+			constants.mvecScaleY = 1.0;
+			constants.cameraPos = ctx.camera.pos;
+			constants.cameraUp = ctx.camera.getUp();
+			constants.cameraRight = ctx.camera.getRight();
+			constants.cameraFwd = ctx.camera.getForward();
+			constants.cameraNear = ctx.camera.zNear;
+			constants.cameraFar = ctx.camera.zFar;
+			constants.cameraFOV = ctx.camera.fovY;
+			constants.cameraAspectRatio = ctx.camera.screenRatio;
+			constants.depthInverted = ctx.useReverseDepth;
+			constants.cameraMotionIncluded = true;
+			constants.reset = reset;
+			constants.orthographicProjection = false;
+			constants.motionVectorsDilated = false;
+			constants.motionVectorsJittered = false;
+
+			ctx.engine.driver.applyDLSS(resources, constants, quality, dlaa);
+		}
+	}
+
 	function end() {
 		#if editor
 			switch( currentStep ) {
@@ -512,7 +589,7 @@ class Renderer extends h3d.scene.Renderer {
 		textures.other = allocTarget("other", true, 1., RGBA16F);
 		#end
 		textures.depth = allocTarget("depth", true, 1., R32F);
-		textures.hdr = allocTarget("hdrOutput", true, 1, #if MRT_low RGB10A2 #else RGBA16F #end);
+		textures.hdr = allocTarget("hdrOutput", true, 1, #if MRT_low RGB10A2 #else RGBA16F #end, [ Writable ]);
 		textures.ldr = allocTarget("ldrOutput");
 		if ( ctx.computeVelocity )
 			textures.velocity = allocTarget("velocity", true, 1., RG16F );

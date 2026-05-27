@@ -13,6 +13,10 @@ import h3d.mat.Pass;
 import h3d.mat.Stencil;
 import haxe.MainLoop;
 
+#if dlss
+import heaps.dlss.Dlss;
+#end
+
 private typedef Driver = Dx12;
 
 class TempBuffer {
@@ -692,6 +696,10 @@ class DX12Driver extends h3d.impl.Driver {
 	var asyncComputeCommandList : CommandList;
 	var asyncComputeAllocator : CommandAllocator;
 
+	#if dlss
+	var dlssFrameToken : DLSSFrameToken;
+	#end
+
 	public static var COPY_BUFFER_SIZE = 256 * 1024 * 1024; // 256 Mo per frame
 	public static var DEFAULT_DEPTH_FORMAT : h3d.mat.Data.TextureFormat = Depth24Stencil8;
 	public static var DEFAULT_DEPTH_VALUE = 1.0;
@@ -773,11 +781,23 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	function reset() {
+		#if dlss
+		Dlss.init(true);
+		#end
+
 		var flags = new DriverInitFlags();
 		if( DEBUG ) flags.set(DriverInitFlag.DEBUG);
 		driver = Driver.create(window, flags, DEVICE_NAME);
 		if( DEBUG ) suppressDebugMessages();
 		frames = [];
+
+		#if dlss
+		var device = Driver.getDevice();
+		Dlss.setDevice(device);
+
+		var adapter = Driver.getAdapter();
+		Dlss.isFeatureSupported(adapter, DLSSFeature.DLSS);
+		#end
 
 		var flags = new haxe.EnumFlags();
 		var heap = new HeapProperties();
@@ -961,6 +981,10 @@ class DX12Driver extends h3d.impl.Driver {
 		frame.srvHeapCache.reset();
 		frame.samplerHeapCache.reset();
 		flushHeaps();
+
+		#if dlss
+		dlssFrameToken = Dlss.getNewFrameToken(frameCount);
+		#end
 	}
 
 	override function clear(?color:Vector4, ?depth:Float, ?stencil:Int) {
@@ -3364,6 +3388,137 @@ class DX12Driver extends h3d.impl.Driver {
 		return handle;
 	}
 
+	override function isDLSSSupported( framegen : Bool = false ) : Bool {
+		#if dlss
+		var adapter = Driver.getAdapter();
+		var feature = framegen ? DLSSFeature.FRAMEGEN : DLSSFeature.DLSS;
+		var slResult = Dlss.isFeatureSupported(adapter, feature);
+		return slResult == 0;
+		#end
+		return false;
+	}
+
+	#if dlss
+	inline static function loadDlssVec( vec : DLSSVector, v : h3d.Vector ) {
+			vec.x = v.x;
+			vec.y = v.y;
+			vec.z = v.z;
+	}
+
+	inline static function loadDlssMat( mat : DLSSMatrix, m : h3d.Matrix ) {
+		mat._11 = m._11; mat._12 = m._12; mat._13 = m._13; mat._14 = m._14;
+		mat._21 = m._21; mat._22 = m._22; mat._23 = m._23; mat._24 = m._24;
+		mat._31 = m._31; mat._32 = m._32; mat._33 = m._33; mat._34 = m._34;
+		mat._41 = m._41; mat._42 = m._42; mat._43 = m._43; mat._44 = m._44;
+	}
+
+	static var dlssOptions = new DLSSOptions();
+	static var dlssConstants = new DLSSConstants();
+	static var matCameraViewToClip = new DLSSMatrix();
+	static var matClipToCameraView = new DLSSMatrix();
+	static var matClipToLensClip = new DLSSMatrix();
+	static var matClipToPrevClip = new DLSSMatrix();
+	static var matPrevClipToClip = new DLSSMatrix();
+	static var vecCameraPos = new DLSSVector();
+	static var vecCameraUp = new DLSSVector();
+	static var vecCameraRight = new DLSSVector();
+	static var vecCameraFwd = new DLSSVector();
+
+	#end
+
+	override function applyDLSS( resources : Map<h3d.mat.Texture, DLSSTag>, constants : DLSSParams, quality : DLSSQuality, dlaa : Bool ) {
+		#if dlss
+		dlssOptions.mode = dlaa ? DLSSMode.DLAA : DLSSMode.BALANCED;
+		dlssOptions.outputWidth = window.width;
+		dlssOptions.outputHeight = window.height;
+		dlssOptions.colorBufferHDR = true;
+		switch ( quality ) {
+			case Default:
+				dlssOptions.preset = PRESET_K;
+			case Performance:
+				dlssOptions.preset = PRESET_M;
+			case UltraPerformance:
+				dlssOptions.preset = PRESET_L;
+		}
+
+		var dlssOptimalSettings = Dlss.getOptimalSettings(dlssOptions);
+		Dlss.setOptions(dlssOptions);
+
+		var resCount = 0;
+		for ( t in resources.keys() ) {
+			resCount++;
+		}
+
+		var dlssResources = hl.CArray.alloc(DLSSResource, resCount);
+		var idx = 0;
+		for ( t in resources.keys() ) {
+			var res = dlssResources[idx];
+			res.res = t.t.res;
+			res.width = t.width;
+			res.height = t.height;
+			var type = resources.get(t);
+			switch ( type ) {
+				case Depth:
+					res.type = DLSSBufferType.DEPTH;
+				case MotionVectors:
+					res.type = DLSSBufferType.MOTIONVECTORS;
+				case ColorIn:
+					res.type = DLSSBufferType.COLORIN;
+				case ColorOut:
+					res.type = DLSSBufferType.COLOROUT;
+			}
+			res.state = t.t.state;
+			idx++;
+		}
+
+		Dlss.setTagForFrame(dlssFrameToken, dlssResources, resCount, frame.commandList);
+
+		loadDlssMat(matCameraViewToClip, constants.cameraViewToClip);
+		loadDlssMat(matClipToCameraView, constants.clipToCameraView);
+		loadDlssMat(matClipToPrevClip,   constants.clipToPrevClip);
+		loadDlssMat(matPrevClipToClip,   constants.prevClipToClip);
+
+		loadDlssVec(vecCameraPos,   constants.cameraPos);
+		loadDlssVec(vecCameraUp,    constants.cameraUp);
+		loadDlssVec(vecCameraRight, constants.cameraRight);
+		loadDlssVec(vecCameraFwd,   constants.cameraFwd);
+
+		dlssConstants.cameraViewToClip = matCameraViewToClip;
+		dlssConstants.clipToCameraView = matClipToCameraView;
+		dlssConstants.clipToLensClip = matClipToLensClip;
+		dlssConstants.clipToPrevClip = matClipToPrevClip;
+		dlssConstants.prevClipToClip = matPrevClipToClip;
+		dlssConstants.jitterOffsetX = constants.jitterOffsetX;
+		dlssConstants.jitterOffsetY = constants.jitterOffsetY;
+		dlssConstants.mvecScaleX = constants.mvecScaleX;
+		dlssConstants.mvecScaleY = constants.mvecScaleY;
+		dlssConstants.cameraPinholeOffsetX = 0.0;
+		dlssConstants.cameraPinholeOffsetY = 0.0;
+		dlssConstants.cameraPos = vecCameraPos;
+		dlssConstants.cameraUp = vecCameraUp;
+		dlssConstants.cameraRight = vecCameraRight;
+		dlssConstants.cameraFwd = vecCameraFwd;
+		dlssConstants.cameraNear = constants.cameraNear;
+		dlssConstants.cameraFar = constants.cameraFar;
+		dlssConstants.cameraFOV = constants.cameraFOV;
+		dlssConstants.cameraAspectRatio = constants.cameraAspectRatio;
+		dlssConstants.motionVectorsInvalidValue = constants.motionVectorsInvalidValue;
+		dlssConstants.depthInverted = constants.depthInverted;
+		dlssConstants.cameraMotionIncluded = constants.cameraMotionIncluded;
+		dlssConstants.motionVectors3D = false;
+		dlssConstants.reset = constants.reset;
+		dlssConstants.orthographicProjection = constants.orthographicProjection;
+		dlssConstants.motionVectorsDilated = constants.motionVectorsDilated;
+		dlssConstants.motionVectorsJittered = constants.motionVectorsJittered;
+		dlssConstants.minRelativeLinearDepthObjectSeparation = 40.0;
+
+		Dlss.setConstants(dlssFrameToken, dlssConstants);
+		Dlss.evaluateFeature(dlssFrameToken, frame.commandList, DLSSFeature.DLSS);
+
+		flushHeaps(true);
+
+		#end
+	}
 }
 
 #end
