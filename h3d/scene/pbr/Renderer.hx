@@ -2,7 +2,7 @@ package h3d.scene.pbr;
 
 import h3d.impl.Driver.DLSSQuality;
 #if dlss
-import dx.Dlss;
+import h3d.impl.Dlss;
 #end
 
 enum abstract DisplayMode(String) {

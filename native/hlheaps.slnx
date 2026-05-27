@@ -1,0 +1,7 @@
+<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Project Path="dlss/dlss.vcxproj" Id="c98584e3-e6ff-4614-8946-e4f8651d00af" />
+</Solution>
