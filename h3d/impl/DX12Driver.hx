@@ -782,8 +782,7 @@ class DX12Driver extends h3d.impl.Driver {
 
 	function reset() {
 		#if dlss
-		var slResult = Dlss.init(true);
-		trace("JULES dlss init : " + slResult);
+		Dlss.init(true);
 		#end
 
 		var flags = new DriverInitFlags();
@@ -794,12 +793,10 @@ class DX12Driver extends h3d.impl.Driver {
 
 		#if dlss
 		var device = Driver.getDevice();
-		slResult = Dlss.setDevice(device);
-		trace("JULES dlss set device : " + slResult);
+		Dlss.setDevice(device);
 
 		var adapter = Driver.getAdapter();
-		slResult = Dlss.isFeatureSupported(adapter, DLSSFeature.DLSS);
-		trace("JULES dlss supported : " + slResult);
+		Dlss.isFeatureSupported(adapter, DLSSFeature.DLSS);
 		#end
 
 		var flags = new haxe.EnumFlags();
@@ -3470,7 +3467,7 @@ class DX12Driver extends h3d.impl.Driver {
 		}
 
 		var dlssOptimalSettings = Dlss.getOptimalSettings(dlssOptions);
-		var result = Dlss.setOptions(dlssOptions);
+		Dlss.setOptions(dlssOptions);
 
 		var resCount = 0;
 		for ( t in resources.keys() ) {
@@ -3499,7 +3496,7 @@ class DX12Driver extends h3d.impl.Driver {
 			idx++;
 		}
 
-		result = Dlss.setTagForFrame(dlssFrameToken, dlssResources, resCount, frame.commandList);
+		Dlss.setTagForFrame(dlssFrameToken, dlssResources, resCount, frame.commandList);
 
 		loadDlssMat(matCameraViewToClip, constants.cameraViewToClip);
 		loadDlssMat(matClipToCameraView, constants.clipToCameraView);
@@ -3540,9 +3537,8 @@ class DX12Driver extends h3d.impl.Driver {
 		dlssConstants.motionVectorsJittered = constants.motionVectorsJittered;
 		dlssConstants.minRelativeLinearDepthObjectSeparation = 40.0;
 
-		result = Dlss.setConstants(dlssFrameToken, dlssConstants);
-
-		result = Dlss.evaluateFeature(dlssFrameToken, frame.commandList, DLSSFeature.DLSS);
+		Dlss.setConstants(dlssFrameToken, dlssConstants);
+		Dlss.evaluateFeature(dlssFrameToken, frame.commandList, DLSSFeature.DLSS);
 
 		flushHeaps(true);
 

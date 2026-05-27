@@ -1,6 +1,6 @@
 package h3d.impl;
 
-#if (hldx && dx12)
+#if (hldx && dx12 && dlss)
 
 typedef DX12Device = dx.Dx12.Device;
 typedef DX12Adapter = dx.Dx12.Adapter;
