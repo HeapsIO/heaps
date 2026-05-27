@@ -1,5 +1,7 @@
 package h3d.impl;
 
+#if (hldx && dx12)
+
 typedef DX12Device = dx.Dx12.Device;
 typedef DX12Adapter = dx.Dx12.Adapter;
 typedef DLSSRes = dx.Dx12.Resource;
@@ -222,3 +224,5 @@ class Dlss {
 		return 0;
 	}
 }
+
+#end
