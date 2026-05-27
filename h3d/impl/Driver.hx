@@ -401,6 +401,5 @@ class Driver {
 	}
 
 	public function applyDLSS( resources : Map<h3d.mat.Texture, DLSSTag>, constants : DLSSParams, quality : DLSSQuality, dlaa : Bool ) {
-		throw "DLSS not supported on this platform";
 	}
 }
