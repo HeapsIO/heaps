@@ -3424,6 +3424,8 @@ class DX12Driver extends h3d.impl.Driver {
 	static var vecCameraRight = new DLSSVector();
 	static var vecCameraFwd = new DLSSVector();
 
+	#end
+
 	override function applyDLSS( resources : Map<h3d.mat.Texture, DLSSTag>, constants : DLSSParams, quality : DLSSQuality, dlaa : Bool ) {
 		#if dlss
 		dlssOptions.mode = dlaa ? DLSSMode.DLAA : DLSSMode.BALANCED;
