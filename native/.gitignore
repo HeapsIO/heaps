@@ -1,5 +1,3 @@
 x64/
-
 .vs/
-
-dlss/x64
+*.user
