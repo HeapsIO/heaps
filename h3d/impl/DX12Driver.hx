@@ -14,7 +14,7 @@ import h3d.mat.Stencil;
 import haxe.MainLoop;
 
 #if dlss
-import h3d.impl.Dlss;
+import heaps.dlss.Dlss;
 #end
 
 private typedef Driver = Dx12;
