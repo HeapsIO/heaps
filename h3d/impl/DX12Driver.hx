@@ -3412,7 +3412,6 @@ class DX12Driver extends h3d.impl.Driver {
 		mat._41 = m._41; mat._42 = m._42; mat._43 = m._43; mat._44 = m._44;
 	}
 
-	#if (haxe_ver >= 5)
 	static var dlssOptions = new DLSSOptions();
 	static var dlssConstants = new DLSSConstants();
 	static var matCameraViewToClip = new DLSSMatrix();
@@ -3424,32 +3423,6 @@ class DX12Driver extends h3d.impl.Driver {
 	static var vecCameraUp = new DLSSVector();
 	static var vecCameraRight = new DLSSVector();
 	static var vecCameraFwd = new DLSSVector();
-	#else
-	static var dlssOptions : DLSSOptions = null;
-	if ( dlssOptions == null ) dlssOptions = new DLSSOptions();
-	static var dlssConstants : DLSSConstants = null;
-	if ( dlssConstants == null ) dlssConstants = new DLSSConstants();
-	static var matCameraViewToClip : DLSSMatrix = null;
-	if ( matCameraViewToClip == null ) matCameraViewToClip = new DLSSMatrix();
-	static var matClipToCameraView : DLSSMatrix = null;
-	if ( matClipToCameraView == null ) matClipToCameraView = new DLSSMatrix();
-	static var matClipToLensClip : DLSSMatrix = null;
-	if ( matClipToLensClip == null ) matClipToLensClip = new DLSSMatrix();
-	static var matClipToPrevClip : DLSSMatrix = null;
-	if ( matClipToPrevClip == null ) matClipToPrevClip = new DLSSMatrix();
-	static var matPrevClipToClip : DLSSMatrix = null;
-	if ( matPrevClipToClip == null ) matPrevClipToClip = new DLSSMatrix();
-	static var vecCameraPos : DLSSVector = null;
-	if ( vecCameraPos == null ) vecCameraPos = new DLSSVector();
-	static var vecCameraUp : DLSSVector = null;
-	if ( vecCameraUp == null ) vecCameraUp = new DLSSVector();
-	static var vecCameraRight : DLSSVector = null;
-	if ( vecCameraRight == null ) vecCameraRight = new DLSSVector();
-	static var vecCameraFwd : DLSSVector = null;
-	if ( vecCameraFwd == null ) vecCameraFwd = new DLSSVector();
-	#end
-
-	#end
 
 	override function applyDLSS( resources : Map<h3d.mat.Texture, DLSSTag>, constants : DLSSParams, quality : DLSSQuality, dlaa : Bool ) {
 		#if dlss
