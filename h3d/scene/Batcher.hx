@@ -44,6 +44,7 @@ class BatchLibrary {
 	public function dispose() {
 		for ( p in primitives )
 			p.dispose();
+		primitives.resize(0);
 		instancesOffset?.dispose();
 	}
 
@@ -279,6 +280,7 @@ class Batcher extends h3d.scene.Object {
 		groups.resize(0);
 		batches.resize(0);
 		freeGroupIDs.resize(0);
+		primToBatch.clear();
 		highestGroupID = 1;
 	}
 }
