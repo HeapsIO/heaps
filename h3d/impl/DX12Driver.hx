@@ -3400,16 +3400,16 @@ class DX12Driver extends h3d.impl.Driver {
 
 	#if dlss
 	inline static function loadDlssVec( vec : DLSSVector, v : h3d.Vector ) {
-			vec.x = v.x;
-			vec.y = v.y;
-			vec.z = v.z;
+		vec.x = cast(v.x, Single);
+		vec.y = cast(v.y, Single);
+		vec.z = cast(v.z, Single);
 	}
 
 	inline static function loadDlssMat( mat : DLSSMatrix, m : h3d.Matrix ) {
-		mat._11 = m._11; mat._12 = m._12; mat._13 = m._13; mat._14 = m._14;
-		mat._21 = m._21; mat._22 = m._22; mat._23 = m._23; mat._24 = m._24;
-		mat._31 = m._31; mat._32 = m._32; mat._33 = m._33; mat._34 = m._34;
-		mat._41 = m._41; mat._42 = m._42; mat._43 = m._43; mat._44 = m._44;
+		mat._11 = cast(m._11, Single); mat._12 = cast(m._12, Single); mat._13 = cast(m._13, Single); mat._14 = cast(m._14, Single);
+		mat._21 = cast(m._21, Single); mat._22 = cast(m._22, Single); mat._23 = cast(m._23, Single); mat._24 = cast(m._24, Single);
+		mat._31 = cast(m._31, Single); mat._32 = cast(m._32, Single); mat._33 = cast(m._33, Single); mat._34 = cast(m._34, Single);
+		mat._41 = cast(m._41, Single); mat._42 = cast(m._42, Single); mat._43 = cast(m._43, Single); mat._44 = cast(m._44, Single);
 	}
 
 	static var dlssOptions = new DLSSOptions();
@@ -3423,7 +3423,6 @@ class DX12Driver extends h3d.impl.Driver {
 	static var vecCameraUp = new DLSSVector();
 	static var vecCameraRight = new DLSSVector();
 	static var vecCameraFwd = new DLSSVector();
-
 	#end
 
 	override function applyDLSS( resources : Map<h3d.mat.Texture, DLSSTag>, constants : DLSSParams, quality : DLSSQuality, dlaa : Bool ) {
@@ -3475,13 +3474,13 @@ class DX12Driver extends h3d.impl.Driver {
 
 		loadDlssMat(matCameraViewToClip, constants.cameraViewToClip);
 		loadDlssMat(matClipToCameraView, constants.clipToCameraView);
-		loadDlssMat(matClipToPrevClip,   constants.clipToPrevClip);
-		loadDlssMat(matPrevClipToClip,   constants.prevClipToClip);
+		loadDlssMat(matClipToPrevClip, constants.clipToPrevClip);
+		loadDlssMat(matPrevClipToClip, constants.prevClipToClip);
 
-		loadDlssVec(vecCameraPos,   constants.cameraPos);
-		loadDlssVec(vecCameraUp,    constants.cameraUp);
+		loadDlssVec(vecCameraPos, constants.cameraPos);
+		loadDlssVec(vecCameraUp, constants.cameraUp);
 		loadDlssVec(vecCameraRight, constants.cameraRight);
-		loadDlssVec(vecCameraFwd,   constants.cameraFwd);
+		loadDlssVec(vecCameraFwd, constants.cameraFwd);
 
 		dlssConstants.cameraViewToClip = matCameraViewToClip;
 		dlssConstants.clipToCameraView = matClipToCameraView;
