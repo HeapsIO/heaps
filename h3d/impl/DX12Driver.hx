@@ -782,7 +782,7 @@ class DX12Driver extends h3d.impl.Driver {
 
 	function reset() {
 		#if dlss
-		Dlss.init(true);
+		Dlss.init(false);
 		#end
 
 		var flags = new DriverInitFlags();
@@ -3425,22 +3425,26 @@ class DX12Driver extends h3d.impl.Driver {
 	static var vecCameraFwd = new DLSSVector();
 	#end
 
-	override function applyDLSS( resources : Map<h3d.mat.Texture, DLSSTag>, constants : DLSSParams, quality : DLSSQuality, dlaa : Bool ) {
+	override function applyDLSS( resources : Map<h3d.mat.Texture, DLSSTag>, constants : DLSSParams, quality : DLSSQuality, mode : DLSSMode ) {
 		#if dlss
-		dlssOptions.mode = dlaa ? DLSSMode.DLAA : DLSSMode.BALANCED;
+		switch (mode) {
+			case Off: dlssOptions.mode = OFF;
+			case MaxPerformance: dlssOptions.mode = MAXPERFORMANCE;
+			case Balanced: dlssOptions.mode = BALANCED;
+			case MaxQuality: dlssOptions.mode = MAXQUALITY;
+			case UltraPerformance: dlssOptions.mode = ULTRAPERFORMANCE;
+			case UltraQuality: dlssOptions.mode = ULTRAQUALITY;
+			case Dlaa: dlssOptions.mode = DLAA;
+		}
 		dlssOptions.outputWidth = window.width;
 		dlssOptions.outputHeight = window.height;
 		dlssOptions.colorBufferHDR = true;
 		switch ( quality ) {
-			case Default:
-				dlssOptions.preset = PRESET_K;
-			case Performance:
-				dlssOptions.preset = PRESET_M;
-			case UltraPerformance:
-				dlssOptions.preset = PRESET_L;
+			case Default: dlssOptions.preset = PRESET_K;
+			case Performance: dlssOptions.preset = PRESET_M;
+			case UltraPerformance: dlssOptions.preset = PRESET_L;
 		}
 
-		var dlssOptimalSettings = Dlss.getOptimalSettings(dlssOptions);
 		Dlss.setOptions(dlssOptions);
 
 		var resCount = 0;
@@ -3457,14 +3461,10 @@ class DX12Driver extends h3d.impl.Driver {
 			res.height = t.height;
 			var type = resources.get(t);
 			switch ( type ) {
-				case Depth:
-					res.type = DLSSBufferType.DEPTH;
-				case MotionVectors:
-					res.type = DLSSBufferType.MOTIONVECTORS;
-				case ColorIn:
-					res.type = DLSSBufferType.COLORIN;
-				case ColorOut:
-					res.type = DLSSBufferType.COLOROUT;
+				case Depth: res.type = DLSSBufferType.DEPTH;
+				case MotionVectors: res.type = DLSSBufferType.MOTIONVECTORS;
+				case ColorIn: res.type = DLSSBufferType.COLORIN;
+				case ColorOut: res.type = DLSSBufferType.COLOROUT;
 			}
 			res.state = t.t.state;
 			idx++;

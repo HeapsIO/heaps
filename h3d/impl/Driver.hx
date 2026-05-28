@@ -154,6 +154,16 @@ enum DLSSQuality {
 	UltraPerformance;
 }
 
+enum DLSSMode {
+	Off;
+	MaxPerformance;
+	Balanced;
+	MaxQuality;
+	UltraPerformance;
+	UltraQuality;
+	Dlaa;
+}
+
 class Driver {
 
 	static var SHADER_CACHE : h3d.impl.ShaderCache;
@@ -400,6 +410,6 @@ class Driver {
 		return false;
 	}
 
-	public function applyDLSS( resources : Map<h3d.mat.Texture, DLSSTag>, constants : DLSSParams, quality : DLSSQuality, dlaa : Bool ) {
+	public function applyDLSS( resources : Map<h3d.mat.Texture, DLSSTag>, constants : DLSSParams, quality : DLSSQuality, mode : DLSSMode ) {
 	}
 }

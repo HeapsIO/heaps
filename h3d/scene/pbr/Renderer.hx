@@ -1,6 +1,6 @@
 package h3d.scene.pbr;
 
-import h3d.impl.Driver.DLSSQuality;
+import h3d.impl.Driver;
 #if dlss
 import heaps.dlss.Dlss;
 #end
@@ -472,30 +472,15 @@ class Renderer extends h3d.scene.Renderer {
 		#end
 	}
 
-	function applyDLSS(quality : DLSSQuality, dlaa : Bool = true, reset : Bool = false) {
-		if (ctx.engine.driver.hasFeature(DLSS)) {
-			#if (haxe_ver >= 5)
-			static var resources : Map<h3d.mat.Texture, h3d.impl.Driver.DLSSTag> = new Map();
-			static var constants = new h3d.impl.Driver.DLSSParams();
-			static var viewToViewPrev = new h3d.Matrix();
-			static var tmp = new h3d.Matrix();
-			static var clipToPrevClip = new h3d.Matrix();
-			static var prevClipToClip = new h3d.Matrix();
-			#else
-			static var resources : Map<h3d.mat.Texture, h3d.impl.Driver.DLSSTag> = null;
-			if ( resources == null ) resources = new Map();
-			static var constants : h3d.impl.Driver.DLSSParams = null;
-			if ( constants == null ) constants = new h3d.impl.Driver.DLSSParams();
-			static var viewToViewPrev : h3d.Matrix = null;
-			if ( viewToViewPrev == null ) viewToViewPrev = new h3d.Matrix();
-			static var tmp : h3d.Matrix = null;
-			if ( tmp == null ) tmp = new h3d.Matrix();
-			static var clipToPrevClip : h3d.Matrix = null;
-			if ( clipToPrevClip == null ) clipToPrevClip = new h3d.Matrix();
-			static var prevClipToClip : h3d.Matrix = null;
-			if ( prevClipToClip == null ) prevClipToClip = new h3d.Matrix();
-			#end
+	static var resources : Map<h3d.mat.Texture, h3d.impl.Driver.DLSSTag> = new Map();
+	static var constants = new h3d.impl.Driver.DLSSParams();
+	static var viewToViewPrev = new h3d.Matrix();
+	static var tmp = new h3d.Matrix();
+	static var clipToPrevClip = new h3d.Matrix();
+	static var prevClipToClip = new h3d.Matrix();
 
+	function applyDLSS(quality : DLSSQuality, mode : DLSSMode, reset : Bool = false) {
+		if (ctx.engine.driver.hasFeature(DLSS)) {
 			var output : h3d.mat.Texture = ctx.engine.getCurrentTarget();
 			var curFrame = allocTarget("curFrame", false, 1.0, output.format);
 			h3d.pass.Copy.run(output, curFrame);
@@ -540,7 +525,7 @@ class Renderer extends h3d.scene.Renderer {
 			constants.motionVectorsDilated = false;
 			constants.motionVectorsJittered = false;
 
-			ctx.engine.driver.applyDLSS(resources, constants, quality, dlaa);
+			ctx.engine.driver.applyDLSS(resources, constants, quality, mode);
 		}
 	}
 
