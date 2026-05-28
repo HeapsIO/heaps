@@ -794,9 +794,6 @@ class DX12Driver extends h3d.impl.Driver {
 		#if dlss
 		var device = Driver.getDevice();
 		Dlss.setDevice(device);
-
-		var adapter = Driver.getAdapter();
-		Dlss.isFeatureSupported(adapter, DLSSFeature.DLSS);
 		#end
 
 		var flags = new haxe.EnumFlags();
