@@ -489,12 +489,26 @@ class CompressIMG extends Convert {
 		return @:privateAccess new hxd.res.Image(new hxd.fs.BytesFileSystem.BytesFileEntry(path, sys.io.File.getBytes(path)));
 	}
 
-	function runTexconv(srcPath:String, dstPath:String, args:Array<String>) {
-		if ( srcPath != dstPath ) {
-			try sys.FileSystem.deleteFile(dstPath) catch (e:Dynamic) {};
-			sys.io.File.copy(srcPath, dstPath);
+	function runTexconv(src:String, dst:String, args:Array<String>) {
+		var allArgs = ["-y", "-nologo"].concat(args);
+		var src = src.toLowerCase();
+		var dst = dst.toLowerCase();
+		var srcPath = new haxe.io.Path(src);
+		var dstPath = new haxe.io.Path(dst);
+		var input = '${dstPath.dir}/${srcPath.file}.${srcPath.ext}';
+		var output = '${dstPath.dir}/${srcPath.file}.dds';
+		if ( input != src )
+			sys.io.File.copy(src, input);
+		else {
+			if ( src != dst && src == output ) {
+				var prefix = "_tmp.";
+				allArgs.concat(["-px", prefix]);
+				output = '${dstPath.dir}/$prefix${srcPath.file}.dds';
+			}
 		}
-		command("texconv", ["-y", "-nologo"].concat(args).concat([dstPath]));
+		allArgs.push(input);
+		command("texconv", allArgs);
+		sys.FileSystem.rename(output, dst);
 		return dstPath;
 	}
 
