@@ -30,6 +30,8 @@ class RenderContext extends h3d.impl.RenderContext {
 	public var computingStatic : Bool;
 	public var computeVelocity : Bool;
 	public var useReverseDepth : Bool;
+	public var renderResolutionWidth : Int;
+	public var renderResolutionHeight : Int;
 
 	public var lightSystem : h3d.scene.LightSystem;
 	public var extraShaders : hxsl.ShaderList;
@@ -86,7 +88,9 @@ class RenderContext extends h3d.impl.RenderContext {
 		super();
 		this.scene = scene;
 		camera = new h3d.Camera();
-		prevCamera = new h3d.Camera(); 
+		prevCamera = new h3d.Camera();
+		renderResolutionWidth = engine.width;
+		renderResolutionHeight = engine.height;
 		cachedShaderList = [];
 		cachedPassObjects = [];
 		initGlobals();
@@ -113,6 +117,11 @@ class RenderContext extends h3d.impl.RenderContext {
 		cameraViewProj = camera.m;
 		cameraInverseViewProj = camera.getInverseViewProj();
 		currentView.frustum = camera.frustum;
+	}
+
+	public function setRenderResolution( x : Int, y : Int ) {
+		renderResolutionWidth = x;
+		renderResolutionHeight = y;
 	}
 
 	public function updateNumViews( numViews : Int ) {
@@ -156,6 +165,7 @@ class RenderContext extends h3d.impl.RenderContext {
 		frame++;
 		setCurrent();
 		engine = h3d.Engine.getCurrent();
+		setRenderResolution(engine.width, engine.height);
 		globalTime = time;
 		globalFrame = frame;
 		pixelSize = getCurrentPixelSize();

@@ -481,7 +481,7 @@ class Renderer extends h3d.scene.Renderer {
 
 	function applyDLSS(quality : DLSSQuality, mode : DLSSMode, reset : Bool = false) {
 		if (ctx.engine.driver.hasFeature(DLSS)) {
-			var output : h3d.mat.Texture = ctx.engine.getCurrentTarget();
+			var output = textures.hdr;
 			var curFrame = allocTarget("curFrame", false, 1.0, output.format);
 			h3d.pass.Copy.run(output, curFrame);
 			var depthMap : h3d.mat.Texture = getPbrDepth();
@@ -526,6 +526,17 @@ class Renderer extends h3d.scene.Renderer {
 			constants.motionVectorsJittered = false;
 
 			ctx.engine.driver.applyDLSS(resources, constants, quality, mode);
+		}
+	}
+
+	function setRenderResolution( width : Int, height : Int ) {
+		ctx.setRenderResolution(width, height);
+		@:privateAccess {
+			if ( width == ctx.engine.width && height == ctx.engine.height ) {
+				ctx.textures.defaultDepthBuffer = h3d.mat.Texture.getDefaultDepth();
+			} else {
+				ctx.textures.defaultDepthBuffer = allocTarget("defaultDepth", false, 1., Depth24Stencil8);
+			}
 		}
 	}
 
