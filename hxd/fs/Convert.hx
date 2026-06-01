@@ -498,26 +498,17 @@ class CompressIMG extends Convert {
 		return @:privateAccess new hxd.res.Image(new hxd.fs.BytesFileSystem.BytesFileEntry(path, sys.io.File.getBytes(path)));
 	}
 
-	function runTexconv(src:String, dst:String, args:Array<String>) {
-		var allArgs = ["-y", "-nologo"].concat(args);
-		var src = src.toLowerCase();
-		var dst = dst.toLowerCase();
-		var srcPath = new haxe.io.Path(src);
-		var dstPath = new haxe.io.Path(dst);
-		var input = '${dstPath.dir}/${srcPath.file}.${srcPath.ext}';
-		var output = '${dstPath.dir}/${srcPath.file}.dds';
-		if ( input != src )
-			sys.io.File.copy(src, input);
-		else {
-			if ( src != dst && src == output ) {
-				var prefix = "_tmp.";
-				allArgs.concat(["-px", prefix]);
-				output = '${dstPath.dir}/$prefix${srcPath.file}.dds';
-			}
-		}
-		allArgs.push(input);
-		command("texconv", allArgs);
-		sys.FileSystem.rename(output, dst);
+	function runTexconv(srcPath:String, dstPath:String, args:Array<String>, outExt = "dds") {
+		var tmpPath = new haxe.io.Path(dstPath);
+		tmpPath.ext = "tmp." + new haxe.io.Path(srcPath).ext;
+		var input = tmpPath.toString();
+		sys.io.File.copy(srcPath, input);
+		command("texconv", ["-y", "-nologo"].concat(args).concat([input]));
+		tmpPath.ext = 'tmp.$outExt';
+		var output = tmpPath.toString();
+		if ( sys.FileSystem.exists(output) )
+			sys.FileSystem.rename(output, dstPath);
+		try sys.FileSystem.deleteFile(input) catch (e) {};
 		return dstPath;
 	}
 
@@ -532,6 +523,7 @@ class CompressIMG extends Convert {
 		function tempFile(path: String, tag: String, ext=null) : String {
 			var spath = new haxe.io.Path(path);
 			var tmp = Sys.getEnv("TEMP") + '/${spath.file}.$tag.' + (ext != null ? ext : spath.ext);
+			tmp = haxe.io.Path.normalize(tmp);
 			if(cleanupFiles == null) cleanupFiles = [];
 			cleanupFiles.push(tmp);
 			return tmp;
