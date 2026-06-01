@@ -11,7 +11,6 @@ class Joint extends Object {
 		super(null);
 		name = j.name;
 		this.skin = skin;
-		lastFrame = -2; // force first sync
 		// fake parent
 		this.parent = skin;
 		this.index = j.index;
@@ -38,33 +37,11 @@ class Joint extends Object {
 
 	@:access(h3d.scene.Skin)
 	override function syncPos() {
-		// check if one of our parents has changed
-		// we don't have a posChanged flag since the Joint
-		// is not actualy part of the hierarchy
-		var p : h3d.scene.Object = skin;
-		while( p != null ) {
-			if( p.posChanged) {
-				update();
-				break;
-			}
-			p = p.parent;
-		}
-
-		if( lastFrame != skin.lastFrame) {
-			lastFrame = skin.lastFrame;
-			absPos.load(skin.jointsData[index].currentAbsPos);
-		}
-	}
-
-	/**
-		Force the update of the position of this joint
-	**/
-	@:access(h3d.scene.Skin)
-	public function update() {
 		skin.getAbsPos();
 		skin.syncJoints();
-		lastFrame = -1;
+		absPos.load(skin.jointsData[index].currentAbsPos);
 	}
+
 }
 
 @:access(h3d.scene.Skin)
@@ -758,6 +735,7 @@ class SubSkin extends h3d.scene.Skin {
 	}
 
 	override function syncJoints() {
+		baseSkin.syncJoints();  // for when subSkin is before baseSkin in the hierarchy
 		if( baseSkin.jointsFrame != hxd.Timer.frameCount )
 			return;
 		jointsUpdated = true;
