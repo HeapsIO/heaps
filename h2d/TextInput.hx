@@ -257,6 +257,7 @@ class TextInput extends Text {
 			if(!multiline) {
 				cursorIndex = -1;
 				interactive.blur();
+				if( canEdit ) onSubmit();
 				return;
 			} else if( canEdit ) {
 				inputText("\n");
@@ -848,6 +849,12 @@ class TextInput extends Text {
 	**/
 	public function hasFocus() {
 		return interactive.hasFocus();
+	}
+
+	/**
+		Triggered when a not multiline text input is validated with Enter
+	**/
+	public dynamic function onSubmit() {
 	}
 
 	/**
