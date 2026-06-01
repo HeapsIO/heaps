@@ -727,11 +727,21 @@ class SubSkin extends h3d.scene.Skin {
 		return null;
 	}
 
+	var selfPlayAnim = false;
+	override function playAnimation( a : h3d.anim.Animation ) {
+		selfPlayAnim = true;
+		var inst = super.playAnimation(a);
+		selfPlayAnim = false;
+		return inst;
+	}
+
 	override function getObjectByName( name : String ) : h3d.scene.Object {
-		// Prevent animation bind() from targeting this SubSkin
-		// Without this, super.getObjectByName would match bones in our skinData and set
-		// currentSkin to this SubSkin, causing animation to write currentRelPos here instead of baseSkin
-		return null;
+		// Returning null prevents external animation.bind() from matching our joints and writing
+		// currentRelPos here instead of baseSkin. Bypassed when playAnimation is called on this
+		// SubSkin directly, so specific bones can still be animated on top (lipsync, eye blinks etc)
+		if( !selfPlayAnim )
+			return null;
+		return super.getObjectByName(name);
 	}
 
 	override function syncJoints() {
