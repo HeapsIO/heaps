@@ -49,6 +49,7 @@ class HMDOut extends BaseLibrary {
 	public var lowPrecConfig : Map<String,Precision>;
 	public var lodsDecimation : Array<Float>;
 	public var maxUVs : Int = 0;
+	public var noColor : Bool = false;
 
 	function int32tof( v : Int ) : Float {
 		tmp.set(0, v & 0xFF);
@@ -370,7 +371,7 @@ class HMDOut extends BaseLibrary {
 		var uvs = geom.getUVs();
 		if( maxUVs > 0 && uvs.length > maxUVs )
 			uvs = uvs.slice(0, maxUVs);
-		var colors = geom.getColors();
+		var colors = noColor ? null : geom.getColors();
 		var mats = geom.getMaterials();
 		var index = geom.getPolygons();
 

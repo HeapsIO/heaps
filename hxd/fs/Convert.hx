@@ -277,13 +277,22 @@ class ConvertFBX2HMD extends Convert {
 			if (params.lowp != null) {
 				var m:haxe.DynamicAccess<String> = params.lowp;
 				hmdout.lowPrecConfig = [];
-				for (k in m.keys())
-					hmdout.lowPrecConfig.set(k, switch (m.get(k)) {
+				for (k in m.keys()) {
+					var prec : hxd.BufferFormat.Precision = switch (m.get(k)) {
 						case "f16": F16;
 						case "u8": U8;
 						case "s8": S8;
+						case "remove":
+							switch(k) {
+							case "color": hmdout.noColor = true;
+							default: throw "Removal of attribute " + k + " is not supported";
+							}
+							hxd.BufferFormat.Precision.fromInt(-1);
 						case x: throw "Invalid precision '" + x + "' should be u8|s8|f16";
-					});
+					}
+					if (prec.toInt() != -1)
+						hmdout.lowPrecConfig.set(k, prec);
+				}
 			}
 			if ( params.optimizeMesh != null )
 				hmdout.optimizeMesh = params.optimizeMesh;
