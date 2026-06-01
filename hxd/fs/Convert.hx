@@ -502,7 +502,9 @@ class CompressIMG extends Convert {
 		var tmpPath = new haxe.io.Path(dstPath);
 		tmpPath.ext = "tmp." + new haxe.io.Path(srcPath).ext;
 		var input = tmpPath.toString();
+		try sys.FileSystem.deleteFile(input) catch (e) {};
 		sys.io.File.copy(srcPath, input);
+		try sys.FileSystem.deleteFile(dstPath) catch (e) {};
 		command("texconv", ["-y", "-nologo"].concat(args).concat([input]));
 		tmpPath.ext = 'tmp.$outExt';
 		var output = tmpPath.toString();
@@ -552,7 +554,7 @@ class CompressIMG extends Convert {
 			var srcFmt = Std.string(image.getPixelFormat());
 			var fmt = TEXCONV_FMT.get(srcFmt) ?? "RGBA";
 			if (pxls.width == pxls.height && pxls.width > maxSize) {
-				var resized = tempFile(srcPath, "resized");
+				var resized = tempFile(srcPath, "resized", "dds");
 				var ssize = "" + maxSize;
 				var args = ["-m", "0", "-sepalpha", "-w", ssize, "-h", ssize, "-f", fmt];
 				if (hasParam("filter"))
