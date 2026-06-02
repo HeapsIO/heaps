@@ -3385,16 +3385,6 @@ class DX12Driver extends h3d.impl.Driver {
 		return handle;
 	}
 
-	override function isDLSSSupported( framegen : Bool = false ) : Bool {
-		#if dlss
-		var adapter = Driver.getAdapter();
-		var feature = framegen ? DLSSFeature.FRAMEGEN : DLSSFeature.DLSS;
-		var slResult = Dlss.isFeatureSupported(adapter, feature);
-		return slResult == 0;
-		#end
-		return false;
-	}
-
 	#if dlss
 	inline static function loadDlssVec( vec : DLSSVector, v : h3d.Vector ) {
 		vec.x = cast(v.x, Single);
@@ -3409,6 +3399,7 @@ class DX12Driver extends h3d.impl.Driver {
 		mat._41 = cast(m._41, Single); mat._42 = cast(m._42, Single); mat._43 = cast(m._43, Single); mat._44 = cast(m._44, Single);
 	}
 
+	static var dlssSettings = new DLSSSettings();
 	static var dlssOptions = new DLSSOptions();
 	static var dlssConstants = new DLSSConstants();
 	static var matCameraViewToClip = new DLSSMatrix();
@@ -3422,7 +3413,35 @@ class DX12Driver extends h3d.impl.Driver {
 	static var vecCameraFwd = new DLSSVector();
 	#end
 
-	override function applyDLSS( resources : Map<h3d.mat.Texture, DLSSTag>, constants : DLSSParams, quality : DLSSQuality, mode : DLSSMode ) {
+	override function isDLSSSupported( framegen : Bool = false ) : Bool {
+		#if dlss
+		var adapter = Driver.getAdapter();
+		var feature = framegen ? DLSSFeature.FRAMEGEN : DLSSFeature.DLSS;
+		var slResult = Dlss.isFeatureSupported(adapter, feature);
+		return slResult == 0;
+		#end
+		return false;
+	}
+
+	override function getDLSSOptimalSettings( mode : DLSSMode, targetWidth : Int, targetHeight : Int ) : DLSSSettings {
+		switch (mode) {
+			case Off: dlssOptions.mode = OFF;
+			case MaxPerformance: dlssOptions.mode = MAXPERFORMANCE;
+			case Balanced: dlssOptions.mode = BALANCED;
+			case MaxQuality: dlssOptions.mode = MAXQUALITY;
+			case UltraPerformance: dlssOptions.mode = ULTRAPERFORMANCE;
+			case UltraQuality: dlssOptions.mode = ULTRAQUALITY;
+			case Dlaa: dlssOptions.mode = DLAA;
+		}
+		dlssOptions.outputWidth = targetWidth;
+		dlssOptions.outputHeight = targetHeight;
+		var optimalSettings = Dlss.getOptimalSettings(dlssOptions);
+		dlssSettings.optimalWidth = optimalSettings.optimalRenderWidth;
+		dlssSettings.optimalHeight = optimalSettings.optimalRenderHeight;
+		return dlssSettings;
+	}
+
+	override function applyDLSS( resources : Map<h3d.impl.Driver.DLSSTag, h3d.mat.Texture>, constants : DLSSParams, quality : DLSSQuality, mode : DLSSMode ) {
 		#if dlss
 		switch (mode) {
 			case Off: dlssOptions.mode = OFF;
@@ -3433,9 +3452,11 @@ class DX12Driver extends h3d.impl.Driver {
 			case UltraQuality: dlssOptions.mode = ULTRAQUALITY;
 			case Dlaa: dlssOptions.mode = DLAA;
 		}
-		dlssOptions.outputWidth = window.width;
-		dlssOptions.outputHeight = window.height;
-		dlssOptions.colorBufferHDR = true;
+
+		var output = resources[ColorOut];
+		dlssOptions.outputWidth = output.width;
+		dlssOptions.outputHeight = output.height;
+		dlssOptions.colorBufferHDR = constants.colorBufferHDR;
 		switch ( quality ) {
 			case Default: dlssOptions.preset = PRESET_K;
 			case Performance: dlssOptions.preset = PRESET_M;
@@ -3451,12 +3472,12 @@ class DX12Driver extends h3d.impl.Driver {
 
 		var dlssResources = hl.CArray.alloc(DLSSResource, resCount);
 		var idx = 0;
-		for ( t in resources.keys() ) {
+		for ( type in resources.keys() ) {
+			var t = resources.get(type);
 			var res = dlssResources[idx];
 			res.res = t.t.res;
 			res.width = t.width;
 			res.height = t.height;
-			var type = resources.get(t);
 			switch ( type ) {
 				case Depth: res.type = DLSSBufferType.DEPTH;
 				case MotionVectors: res.type = DLSSBufferType.MOTIONVECTORS;

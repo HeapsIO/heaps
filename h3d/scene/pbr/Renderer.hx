@@ -472,7 +472,7 @@ class Renderer extends h3d.scene.Renderer {
 		#end
 	}
 
-	static var resources : Map<h3d.mat.Texture, h3d.impl.Driver.DLSSTag> = new Map();
+	static var resources : Map<h3d.impl.Driver.DLSSTag, h3d.mat.Texture> = new Map();
 	static var constants = new h3d.impl.Driver.DLSSParams();
 	static var viewToViewPrev = new h3d.Matrix();
 	static var tmp = new h3d.Matrix();
@@ -481,18 +481,21 @@ class Renderer extends h3d.scene.Renderer {
 
 	function applyDLSS(quality : DLSSQuality, mode : DLSSMode, reset : Bool = false) {
 		if (ctx.engine.driver.hasFeature(DLSS)) {
-			var output = textures.hdr;
-			var curFrame = allocTarget("curFrame", false, 1.0, output.format);
-			h3d.pass.Copy.run(output, curFrame);
+			var ldr = ctx.getGlobal("ldrMap");
+			var curFrame = allocTarget("curFrame", false, 1.0, ldr.format);
+			h3d.pass.Copy.run(ldr, curFrame);
 			var depthMap : h3d.mat.Texture = getPbrDepth();
 			var velocity = ctx.getGlobal("velocity");
+			var output = ctx.textures.allocTarget("dlssOutput", ctx.engine.width, ctx.engine.height, true, ldr.format, [ Writable ]);
 
 			resources.clear();
-			resources.set(curFrame, ColorIn);
-			resources.set(velocity, MotionVectors);
-			resources.set(depthMap, Depth);
-			resources.set(output, ColorOut);
+			resources.set(ColorIn, curFrame);
+			resources.set(MotionVectors, velocity);
+			resources.set(Depth, depthMap);
+			resources.set(ColorOut, output);
 
+			constants.autoExposure = true;
+			constants.colorBufferHDR = false;
 			constants.cameraViewToClip = ctx.camera.mproj;
 			var clipToView = ctx.camera.getInverseProj();
 			constants.clipToCameraView = clipToView;
@@ -526,6 +529,7 @@ class Renderer extends h3d.scene.Renderer {
 			constants.motionVectorsJittered = false;
 
 			ctx.engine.driver.applyDLSS(resources, constants, quality, mode);
+			ctx.setGlobal("ldrMap", output);
 		}
 	}
 
@@ -585,8 +589,8 @@ class Renderer extends h3d.scene.Renderer {
 		textures.other = allocTarget("other", true, 1., RGBA16F);
 		#end
 		textures.depth = allocTarget("depth", true, 1., R32F);
-		textures.hdr = allocTarget("hdrOutput", true, 1, #if MRT_low RGB10A2 #else RGBA16F #end, [ Writable ]);
-		textures.ldr = allocTarget("ldrOutput");
+		textures.hdr = allocTarget("hdrOutput", true, 1, #if MRT_low RGB10A2 #else RGBA16F #end);
+		textures.ldr = allocTarget("ldrOutput", true, 1., null, [ Writable ]);
 		if ( ctx.computeVelocity )
 			textures.velocity = allocTarget("velocity", true, 1., RG16F );
 	}

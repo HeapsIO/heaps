@@ -144,6 +144,15 @@ enum DLSSTag {
 	public var orthographicProjection : Bool;
 	public var motionVectorsDilated : Bool;
 	public var motionVectorsJittered : Bool;
+	public var colorBufferHDR : Bool;
+	public var autoExposure : Bool;
+	public function new() {
+	}
+}
+
+@struct class DLSSSettings {
+	public var optimalWidth : Int;
+	public var optimalHeight : Int;
 	public function new() {
 	}
 }
@@ -410,6 +419,10 @@ class Driver {
 		return false;
 	}
 
-	public function applyDLSS( resources : Map<h3d.mat.Texture, DLSSTag>, constants : DLSSParams, quality : DLSSQuality, mode : DLSSMode ) {
+	public function getDLSSOptimalSettings( mode : DLSSMode, targetWidth : Int, targetHeight : Int ) : DLSSSettings {
+		return null;
+	}
+
+	public function applyDLSS( resources : Map<DLSSTag, h3d.mat.Texture>, constants : DLSSParams, quality : DLSSQuality, mode : DLSSMode ) {
 	}
 }
