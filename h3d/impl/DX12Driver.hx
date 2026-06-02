@@ -3424,6 +3424,7 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	override function getDLSSOptimalSettings( mode : DLSSMode, targetWidth : Int, targetHeight : Int ) : DLSSSettings {
+		#if dlss
 		switch (mode) {
 			case Off: dlssOptions.mode = OFF;
 			case MaxPerformance: dlssOptions.mode = MAXPERFORMANCE;
@@ -3439,6 +3440,9 @@ class DX12Driver extends h3d.impl.Driver {
 		dlssSettings.optimalWidth = optimalSettings.optimalRenderWidth;
 		dlssSettings.optimalHeight = optimalSettings.optimalRenderHeight;
 		return dlssSettings;
+		#else
+		return null;
+		#end
 	}
 
 	override function applyDLSS( resources : Map<h3d.impl.Driver.DLSSTag, h3d.mat.Texture>, constants : DLSSParams, quality : DLSSQuality, mode : DLSSMode ) {
