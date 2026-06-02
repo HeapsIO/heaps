@@ -46,6 +46,37 @@ class Samplers {
 
 }
 
+private class GlobalsCollect {
+
+	public var globals : Array<TGlobal> = [];
+	public var computeLayout : Array<Int> = [1,1,1];
+	public var gtypes : Map<Int,Type> = [];
+
+	public function new() {
+	}
+
+	public function collect( e : TExpr ) {
+		switch( e.e )  {
+		case TGlobal(g):
+			var idx = g.getIndex();
+			if( !gtypes.exists(idx) ) {
+				globals.push(g);
+				gtypes.set(idx, e.t);
+			}
+		case TCall({ e : TGlobal(SetLayout) }, [{ e : TConst(CInt(x)) }, { e : TConst(CInt(y)) }, { e : TConst(CInt(z)) }]):
+			computeLayout = [x,y,z];
+		case TCall({ e : TGlobal(SetLayout) }, [{ e : TConst(CInt(x)) }, { e : TConst(CInt(y)) }]):
+			computeLayout = [x,y,1];
+		case TCall({ e : TGlobal(SetLayout) }, [{ e : TConst(CInt(x)) }]):
+			computeLayout = [x,1,1];
+		default:
+			e.iter(collect);
+		}
+	}
+
+}
+
+
 class HlslOut {
 
 	static var KWD_LIST = [
@@ -104,7 +135,7 @@ class HlslOut {
 	var bindlessSamplersCount : Int;
 	var bindlessSamplers : Map<Int, Int>;
 	var samplers : Map<Int, Array<Int>>;
-	var computeLayout = [1,1,1];
+	var computeLayout : Array<Int>;
 	public var varNames : Map<Int,String>;
 
 	var isAssigningTexture : Bool = false;
@@ -883,19 +914,6 @@ class HlslOut {
 		}
 	}
 
-	function collectGlobals( m : Map<TGlobal,Type>, e : TExpr ) {
-		switch( e.e )  {
-		case TGlobal(g): m.set(g,e.t);
-		case TCall({ e : TGlobal(SetLayout) }, [{ e : TConst(CInt(x)) }, { e : TConst(CInt(y)) }, { e : TConst(CInt(z)) }]):
-			computeLayout = [x,y,z];
-		case TCall({ e : TGlobal(SetLayout) }, [{ e : TConst(CInt(x)) }, { e : TConst(CInt(y)) }]):
-			computeLayout = [x,y,1];
-		case TCall({ e : TGlobal(SetLayout) }, [{ e : TConst(CInt(x)) }]):
-			computeLayout = [x,1,1];
-		default: e.iter(collectGlobals.bind(m));
-		}
-	}
-
 	function initVars( s : ShaderData ) {
 		var index = 0;
 		function declVar(prefix:String, v : TVar ) {
@@ -911,9 +929,10 @@ class HlslOut {
 			varAccess.set(v.id, prefix);
 		}
 
-		var foundGlobals = new Map();
+		var collect = new GlobalsCollect();
 		for( f in s.funs )
-			collectGlobals(foundGlobals, f.expr);
+			collect.collect(f.expr);
+		computeLayout = collect.computeLayout;
 
 		var oldAllNames = allNames;
 		allNames = new Map();
@@ -923,7 +942,7 @@ class HlslOut {
 		for( v in s.vars )
 			if( v.kind == Input || (v.kind == Var && !isVertex) )
 				declVar("_in.", v);
-		for( g in foundGlobals.keys() ) {
+		for( g in collect.globals ) {
 			var sv = getSVName(g);
 			if( sv == null ) continue;
 			add("\t");
@@ -931,7 +950,7 @@ class HlslOut {
 			case InstanceID, VertexID:
 				add("uint");
 			default:
-				addType(foundGlobals.get(g));
+				addType(collect.gtypes.get(g.getIndex()));
 			}
 			var name = g.getName().split("_").pop();
 			name = name.charAt(0).toLowerCase()+name.substr(1);
