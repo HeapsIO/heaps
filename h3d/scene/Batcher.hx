@@ -251,18 +251,35 @@ class Batcher extends h3d.scene.Object {
 		batches[ctx.drawPass.index & 0xFFFF].draw(ctx);
 	}
 
-	public function dump( path : String = "batcher_dump.txt" ) {
-		var lines : Array<{ prim : String, pass : String, shaders : String, count : Int }> = [];
+	public function dump( path : String = "batcher_dump.txt" ) @:privateAccess {
+		var sb = new StringBuf();
+		var primLines : Array<{ format : String, hmds : Array<String>}> = [];
+		var primitives = library.primitives;
+		for ( i => p in primitives ) {
+			var format = '\t$i) ${p.vertexFormat.toString()}\n';
+			var hmds = [];
+			for ( m in p.models)
+				hmds.push("\t\t" + m.lib.resource.entry.path + " - " + m.model.getObjectName() + "\n");
+			primLines.push({format:format, hmds:hmds});
+		}
+
+		sb.add("Primitives:\n");
+		for (l in primLines) {
+			sb.add(l.format);
+			for ( hmd in l.hmds )
+				sb.add(hmd);
+		}
+
+		var lines : Array<{ prim : Int, pass : String, shaders : String, count : Int }> = [];
 		for ( b in batches ) {
-			var primName = @:privateAccess b.primitive.vertexFormat.toString();
-			for ( bp in @:privateAccess b.passes ) {
-				var shaderNames = [ for (s in @:privateAccess bp.shaders) Type.getClassName(Type.getClass(s)).split(".").pop() ].join("+");
-				lines.push({ prim: primName, pass: @:privateAccess bp.pass.name, shaders: shaderNames, count: @:privateAccess bp.totalInstanceCount });
+			var primId = primitives.indexOf(b.primitive);
+			for ( bp in b.passes ) {
+				var shaderNames = [ for (s in bp.shaders) { Type.getClassName(Type.getClass(s)).split(".").pop() + ':${s.constBits}'; } ].join("+");
+				lines.push({ prim: primId, pass: bp.pass.name, shaders: shaderNames, count: bp.totalInstanceCount });
 			}
 		}
 		lines.sort((a, b) -> b.count - a.count);
-		var sb = new StringBuf();
-		sb.add("COUNT\tPASS\tPRIMITIVE\tSHADERS\n");
+		sb.add("\nCOUNT\tPASS\tPRIMITIVE\tSHADERS\n");
 		for ( l in lines )
 			sb.add('${l.count}\t${l.pass}\t${l.prim}\t${l.shaders}\n');
 		#if (sys || nodejs)
