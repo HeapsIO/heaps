@@ -307,6 +307,7 @@ class CascadeShadowMap extends DirShadowMap {
 		var textures = [];
 		ctx.engine.setDepthClamp(true);
 		for (i in 0...cascade) {
+			ctx.scene.mark("cascade "+i);
 			currentCascadeIndex = i;
 
 			var texture = ctx.textures.allocTarget("cascadeShadowMap_"+i, size, size, false, #if js Depth24Stencil8 #else highPrecision ? Depth32 : Depth16 #end );
@@ -328,6 +329,7 @@ class CascadeShadowMap extends DirShadowMap {
 			textures[i] = processShadowMap( passes, texture, sort);
 			passes.load(p);
 		}
+		ctx.scene.mark("Shadows");
 		ctx.engine.setDepthClamp(false);
 		ctx.engine.setDepthBias(0, 0);
 		syncCascadeShader(textures);

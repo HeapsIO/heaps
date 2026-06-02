@@ -1,5 +1,10 @@
 package h3d.scene.pbr;
 
+import h3d.impl.Driver;
+#if dlss
+import heaps.dlss.Dlss;
+#end
+
 enum abstract DisplayMode(String) {
 	/*
 		Full PBR display
@@ -169,7 +174,7 @@ class Renderer extends h3d.scene.Renderer {
 
 	override function getPassByName(name:String):h3d.pass.Output {
 		switch( name ) {
-		case "overlay", "beforeTonemapping", "beforeTonemappingAlpha", "albedo", "afterTonemapping", "forward", "forwardAlpha", "distortion":
+		case "overlay", "beforeTonemapping", "beforeTonemappingAlpha", "albedo", "afterTonemapping", "forward", "forwardAlpha", "distortion", "debug":
 			return defaultPass;
 		case "default", "alpha", "additive":
 			return output;
@@ -467,6 +472,78 @@ class Renderer extends h3d.scene.Renderer {
 		#end
 	}
 
+	static var resources : Map<h3d.impl.Driver.DLSSTag, h3d.mat.Texture> = new Map();
+	static var constants = new h3d.impl.Driver.DLSSParams();
+	static var viewToViewPrev = new h3d.Matrix();
+	static var tmp = new h3d.Matrix();
+	static var clipToPrevClip = new h3d.Matrix();
+	static var prevClipToClip = new h3d.Matrix();
+
+	function applyDLSS(quality : DLSSQuality, mode : DLSSMode, reset : Bool = false) {
+		if (ctx.engine.driver.hasFeature(DLSS)) {
+			var ldr = ctx.getGlobal("ldrMap");
+			var curFrame = allocTarget("curFrame", false, 1.0, ldr.format);
+			h3d.pass.Copy.run(ldr, curFrame);
+			var depthMap : h3d.mat.Texture = getPbrDepth();
+			var velocity = ctx.getGlobal("velocity");
+			var output = ctx.textures.allocTarget("dlssOutput", ctx.engine.width, ctx.engine.height, true, ldr.format, [ Writable ]);
+
+			resources.clear();
+			resources.set(ColorIn, curFrame);
+			resources.set(MotionVectors, velocity);
+			resources.set(Depth, depthMap);
+			resources.set(ColorOut, output);
+
+			constants.autoExposure = true;
+			constants.colorBufferHDR = false;
+			constants.cameraViewToClip = ctx.camera.mproj;
+			var clipToView = ctx.camera.getInverseProj();
+			constants.clipToCameraView = clipToView;
+
+			var viewToWorld = ctx.camera.getInverseView();
+			viewToViewPrev.multiply(viewToWorld, ctx.prevCamera.mcam);
+			tmp.multiply(clipToView, viewToViewPrev);
+			clipToPrevClip.multiply(tmp, ctx.prevCamera.mproj);
+			constants.clipToPrevClip = clipToPrevClip;
+
+			prevClipToClip.initInverse(clipToPrevClip);
+			constants.prevClipToClip = prevClipToClip;
+
+			constants.jitterOffsetX = ctx.camera.jitterOffsetX;
+			constants.jitterOffsetY = ctx.camera.jitterOffsetY;
+			constants.mvecScaleX = 1.0;
+			constants.mvecScaleY = 1.0;
+			constants.cameraPos = ctx.camera.pos;
+			constants.cameraUp = ctx.camera.getUp();
+			constants.cameraRight = ctx.camera.getRight();
+			constants.cameraFwd = ctx.camera.getForward();
+			constants.cameraNear = ctx.camera.zNear;
+			constants.cameraFar = ctx.camera.zFar;
+			constants.cameraFOV = ctx.camera.fovY;
+			constants.cameraAspectRatio = ctx.camera.screenRatio;
+			constants.depthInverted = ctx.useReverseDepth;
+			constants.cameraMotionIncluded = true;
+			constants.reset = reset;
+			constants.orthographicProjection = false;
+			constants.motionVectorsDilated = false;
+			constants.motionVectorsJittered = false;
+
+			ctx.engine.driver.applyDLSS(resources, constants, quality, mode);
+			ctx.setGlobal("ldrMap", output);
+		}
+	}
+
+	function setRenderResolution( width : Int, height : Int ) {
+		ctx.setRenderResolution(width, height);
+		@:privateAccess {
+			if ( width == ctx.engine.width && height == ctx.engine.height ) {
+				ctx.textures.defaultDepthBuffer = h3d.mat.Texture.getDefaultDepth();
+			} else {
+				ctx.textures.defaultDepthBuffer = allocTarget("defaultDepth", false, 1., Depth24Stencil8);
+			}
+		}
+	}
+
 	function end() {
 		#if editor
 			switch( currentStep ) {
@@ -513,7 +590,7 @@ class Renderer extends h3d.scene.Renderer {
 		#end
 		textures.depth = allocTarget("depth", true, 1., R32F);
 		textures.hdr = allocTarget("hdrOutput", true, 1, #if MRT_low RGB10A2 #else RGBA16F #end);
-		textures.ldr = allocTarget("ldrOutput");
+		textures.ldr = allocTarget("ldrOutput", true, 1., null, [ Writable ]);
 		if ( ctx.computeVelocity )
 			textures.velocity = allocTarget("velocity", true, 1., RG16F );
 	}
@@ -722,6 +799,10 @@ class Renderer extends h3d.scene.Renderer {
 
 		begin(Overlay);
 		draw("overlay");
+		end();
+
+		begin(Debug);
+		draw("debug");
 		end();
 
 		endPbr();

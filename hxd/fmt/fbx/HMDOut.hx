@@ -45,8 +45,11 @@ class HMDOut extends BaseLibrary {
 	var ignoreCollidesCache : Map<Int,Bool> = [];
 	public var collisionThresholdHeight : Float;
 	public var collisionUseLowLod : Bool;
+	public var noCollision : Bool;
 	public var lowPrecConfig : Map<String,Precision>;
 	public var lodsDecimation : Array<Float>;
+	public var maxUVs : Int = 0;
+	public var noColor : Bool = false;
 
 	function int32tof( v : Int ) : Float {
 		tmp.set(0, v & 0xFF);
@@ -211,10 +214,8 @@ class HMDOut extends BaseLibrary {
 		}
 		var realIdx = new hxd.IndexBuffer();
 		for( idx in idx ) {
-			if ( idx == null ) {
-				trace("Empty list of vertex indexes");
+			if ( idx == null )
 				continue;
-			}
 			for( i in idx )
 				realIdx.push(pmap[i]);
 		}
@@ -368,7 +369,9 @@ class HMDOut extends BaseLibrary {
 		var verts = geom.getVertices();
 		var normals = geom.getNormals();
 		var uvs = geom.getUVs();
-		var colors = geom.getColors();
+		if( maxUVs > 0 && uvs.length > maxUVs )
+			uvs = uvs.slice(0, maxUVs);
+		var colors = noColor ? null : geom.getColors();
 		var mats = geom.getMaterials();
 		var index = geom.getPolygons();
 
@@ -1466,6 +1469,39 @@ class HMDOut extends BaseLibrary {
 			}
 		}
 
+		var rootIndex = -1;
+		for (i => m in d.models) {
+			if (m.parent == -1 && m.geometry == -1 && m.name == null && m.position.isIdentity()) {
+				rootIndex = i;
+				break;
+			}
+		}
+		if (rootIndex != -1) {
+			var objectCount = 0;
+			for (m in d.models) {
+				if (!m.isLOD() && !m.isCollider() && m.parent == rootIndex)
+					objectCount++;
+				if (objectCount > 1)
+					break;
+			}
+			if (objectCount == 1) {
+				d.models.remove(d.models[rootIndex]);
+				for (m in d.models) {
+					if (m.parent == rootIndex)
+						m.parent = -1;
+					else if (m.parent > rootIndex)
+						m.parent--;
+					if (m.lods != null) {
+						for (i in 0...m.lods.length) {
+							var lodIndex = m.lods[i];
+							if (lodIndex > rootIndex)
+								m.lods[i] = lodIndex - 1;
+						}
+					}
+				}
+			}
+		}
+
 		// Make colliders
 		d.colliders = [];
 		for( model in d.models ) {
@@ -1500,7 +1536,7 @@ class HMDOut extends BaseLibrary {
 			for ( idx => mc in mcs ) {
 				var isDefaultParams = mc != null && mc.useDefault;
 				var params = isDefaultParams ? generateCollides : mc;
-				var colliderType = hxd.fmt.hmd.Data.Collider.resolveColliderType(d, model, params, isDefaultParams, collisionThresholdHeight, collisionUseLowLod);
+				var colliderType = hxd.fmt.hmd.Data.Collider.resolveColliderType(d, model, params, isDefaultParams, collisionThresholdHeight, collisionUseLowLod, noCollision);
 				var collider : Collider = switch (colliderType) {
 					case Empty:
 						new EmptyCollider();

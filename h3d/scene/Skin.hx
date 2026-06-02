@@ -11,7 +11,6 @@ class Joint extends Object {
 		super(null);
 		name = j.name;
 		this.skin = skin;
-		lastFrame = -2; // force first sync
 		// fake parent
 		this.parent = skin;
 		this.index = j.index;
@@ -38,33 +37,11 @@ class Joint extends Object {
 
 	@:access(h3d.scene.Skin)
 	override function syncPos() {
-		// check if one of our parents has changed
-		// we don't have a posChanged flag since the Joint
-		// is not actualy part of the hierarchy
-		var p : h3d.scene.Object = skin;
-		while( p != null ) {
-			if( p.posChanged) {
-				update();
-				break;
-			}
-			p = p.parent;
-		}
-
-		if( lastFrame != skin.lastFrame) {
-			lastFrame = skin.lastFrame;
-			absPos.load(skin.jointsData[index].currentAbsPos);
-		}
-	}
-
-	/**
-		Force the update of the position of this joint
-	**/
-	@:access(h3d.scene.Skin)
-	public function update() {
 		skin.getAbsPos();
 		skin.syncJoints();
-		lastFrame = -1;
+		absPos.load(skin.jointsData[index].currentAbsPos);
 	}
+
 }
 
 @:access(h3d.scene.Skin)
@@ -333,6 +310,7 @@ class Skin extends MultiMaterial {
 
 	var forceJointsUpdateOnFrame : Int = -1;
 	var buffersDirty = true;
+	var jointsFrame : Int = -1;
 	var jointsUpdated : Bool;
 	var skinShader : h3d.shader.SkinBase;
 	var jointsGraphics : Graphics;
@@ -496,7 +474,10 @@ class Skin extends MultiMaterial {
 					} else {
 						m.mainPass.addShader(skinShader);
 					}
-					if( skinData.splitJoints != null ) m.mainPass.dynamicParameters = true;
+					if( skinData.splitJoints != null ) {
+						for( p in m.getPasses() )
+							p.dynamicParameters = true;
+					}
 				}
 		}
 
@@ -631,6 +612,7 @@ class Skin extends MultiMaterial {
 
 		jointsUpdated = false;
 		buffersDirty = true;
+		jointsFrame = hxd.Timer.frameCount;
 		prevEnableRetargeting = enableRetargeting;
 	}
 
@@ -691,4 +673,91 @@ class Skin extends MultiMaterial {
 		}
 	}
 
+}
+
+class SubSkin extends h3d.scene.Skin {
+
+	var baseSkin : h3d.scene.Skin;
+	var bindMap : Array<Int> = null;
+
+	public function new( baseSkin : h3d.scene.Skin, subSkin : h3d.scene.Skin, ?parent) {
+		this.baseSkin = baseSkin;
+		super(null, subSkin.materials, parent);
+		skinShader = subSkin.skinShader;
+		setSkinData(subSkin.skinData, false);
+	}
+
+	function initBinds() {
+		bindMap = [];
+		for( b in skinData.allJoints ) {
+			var b2 = baseSkin.skinData.namedJoints.get(b.name);
+			if( b2 != null )
+				bindJoint(b2, b);
+		}
+	}
+
+	override function setSkinData( s, shaderInit = true ) {
+		super.setSkinData(s, shaderInit);
+		initBinds();
+	}
+
+	inline function packIndices(from: Int, to: Int) {
+		return (from << 16) | to;
+	}
+
+	inline function unpackIndices( i : Int ) {
+		return {
+			to: i & ((1<<16)-1),
+			from: i >> 16
+		}
+	}
+
+	function bindJoint(from: h3d.anim.Skin.Joint, to: h3d.anim.Skin.Joint) {
+		if(!baseSkin.skinData.allJoints.contains(from)) throw "assert";
+		if(!skinData.allJoints.contains(to)) throw "assert";
+		bindMap.push(packIndices(from.index, to.index));
+	}
+
+	function getBound(toJoint: h3d.anim.Skin.Joint) {
+		for( b in bindMap ) {
+			var bind = unpackIndices( b );
+			if(toJoint.index == bind.to)
+				return baseSkin.getSkinData().allJoints[bind.from];
+		}
+		return null;
+	}
+
+	var selfPlayAnim = false;
+	override function playAnimation( a : h3d.anim.Animation ) {
+		selfPlayAnim = true;
+		var inst = super.playAnimation(a);
+		selfPlayAnim = false;
+		return inst;
+	}
+
+	override function getObjectByName( name : String ) : h3d.scene.Object {
+		// Returning null prevents external animation.bind() from matching our joints and writing
+		// currentRelPos here instead of baseSkin. Bypassed when playAnimation is called on this
+		// SubSkin directly, so specific bones can still be animated on top (lipsync, eye blinks etc)
+		if( !selfPlayAnim )
+			return null;
+		return super.getObjectByName(name);
+	}
+
+	override function syncJoints() {
+		baseSkin.syncJoints();  // for when subSkin is before baseSkin in the hierarchy
+		if( baseSkin.jointsFrame != hxd.Timer.frameCount )
+			return;
+		jointsUpdated = true;
+		if( bindMap != null ) {
+			for( b in bindMap ) {
+				var bind = unpackIndices( b );
+				var toJoint = jointsData[bind.to];
+				var fromJoint = baseSkin.jointsData[bind.from];
+				if(toJoint != null && fromJoint != null)
+					toJoint.currentRelPos = fromJoint.currentRelPos;
+			}
+		}
+		super.syncJoints();
+	}
 }

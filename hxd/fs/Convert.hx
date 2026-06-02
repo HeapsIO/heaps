@@ -277,13 +277,22 @@ class ConvertFBX2HMD extends Convert {
 			if (params.lowp != null) {
 				var m:haxe.DynamicAccess<String> = params.lowp;
 				hmdout.lowPrecConfig = [];
-				for (k in m.keys())
-					hmdout.lowPrecConfig.set(k, switch (m.get(k)) {
+				for (k in m.keys()) {
+					var prec : hxd.BufferFormat.Precision = switch (m.get(k)) {
 						case "f16": F16;
 						case "u8": U8;
 						case "s8": S8;
+						case "remove":
+							switch(k) {
+							case "color": hmdout.noColor = true;
+							default: throw "Removal of attribute " + k + " is not supported";
+							}
+							hxd.BufferFormat.Precision.fromInt(-1);
 						case x: throw "Invalid precision '" + x + "' should be u8|s8|f16";
-					});
+					}
+					if (prec.toInt() != -1)
+						hmdout.lowPrecConfig.set(k, prec);
+				}
 			}
 			if ( params.optimizeMesh != null )
 				hmdout.optimizeMesh = params.optimizeMesh;
@@ -295,10 +304,14 @@ class ConvertFBX2HMD extends Convert {
 				hmdout.collisionThresholdHeight = params.collisionThresholdHeight;
 			if (params.collisionUseLowLod != null)
 				hmdout.collisionUseLowLod = params.collisionUseLowLod;
+			if (params.noCollision != null)
+				hmdout.noCollision = params.noCollision;
 			if (params.legacyScaleAxisConversion != null)
 				hmdout.legacyScaleAxisConversion = params.legacyScaleAxisConversion;
 			if (params.legacySkinImport != null)
 				hmdout.legacySkinImport = params.legacySkinImport;
+			if (params.maxUVs != null)
+				hmdout.maxUVs = params.maxUVs;
 		}
 		if( localParams != null ) {
 			if( localParams.ignoreCollideMaterials != null ) {
@@ -468,32 +481,36 @@ class CompressIMG extends Convert {
 		"RGB32F" => "R32G32B32_FLOAT",
 		"RGBA16F" => "R16G16B16A16_FLOAT",
 		"RGBA32F" => "R32G32B32A32_FLOAT",
+		"R8" => "R8_UNORM",
+		"RG8" => "R8G8_UNORM",
 		"RGBA" => "R8G8B8A8_UNORM",
 		"R16U" => "R16_UNORM",
 		"RG16U" => "R16G16_UNORM",
 		"RGBA16U" => "R16G16B16A16_UNORM",
+		"BC1" => "BC1_UNORM",
+		"BC3" => "BC3_UNORM",
+		"BC4" => "BC4_UNORM",
+		"BC5" => "BC5_UNORM",
+		"BC7" => "BC7_UNORM"
 	];
 
 	function makeImage(path:String) {
 		return @:privateAccess new hxd.res.Image(new hxd.fs.BytesFileSystem.BytesFileEntry(path, sys.io.File.getBytes(path)));
 	}
 
-	function runTexconv(srcPath:String, dstPath:String, args:Array<String>) {
-		// texconv can only handle output dir, and it prepends to srcPath
-		var dstExt = new haxe.io.Path(dstPath).ext;
+	function runTexconv(srcPath:String, dstPath:String, args:Array<String>, outExt = "dds") {
 		var tmpPath = new haxe.io.Path(dstPath);
 		tmpPath.ext = "tmp." + new haxe.io.Path(srcPath).ext;
-		var tmpFile = tmpPath.toString();
-		try sys.FileSystem.deleteFile(tmpFile) catch (e:Dynamic) {};
-		try sys.FileSystem.deleteFile(dstPath) catch (e:Dynamic) {};
-		sys.io.File.copy(srcPath, tmpFile);
-		command("texconv", ["-y", "-nologo"].concat(args).concat([tmpFile]));
-		tmpPath.ext = "tmp." + dstExt;
-		var p = tmpPath.toString();
-		if ( sys.FileSystem.exists(p) )
-			sys.FileSystem.rename(p, dstPath);
-		// delete after rename in case the format is the same
-		try sys.FileSystem.deleteFile(tmpFile) catch (e:Dynamic) {};
+		var input = tmpPath.toString();
+		try sys.FileSystem.deleteFile(input) catch (e) {};
+		sys.io.File.copy(srcPath, input);
+		try sys.FileSystem.deleteFile(dstPath) catch (e) {};
+		command("texconv", ["-y", "-nologo"].concat(args).concat([input]));
+		tmpPath.ext = 'tmp.$outExt';
+		var output = tmpPath.toString();
+		if ( sys.FileSystem.exists(output) )
+			sys.FileSystem.rename(output, dstPath);
+		try sys.FileSystem.deleteFile(input) catch (e) {};
 		return dstPath;
 	}
 
@@ -507,35 +524,59 @@ class CompressIMG extends Convert {
 		}
 		function tempFile(path: String, tag: String, ext=null) : String {
 			var spath = new haxe.io.Path(path);
-			var tmp = '${spath.file}.$tag.' + (ext != null ? ext : spath.ext);
+			var tmp = Sys.getEnv("TEMP") + '/${spath.file}.$tag.' + (ext != null ? ext : spath.ext);
+			tmp = haxe.io.Path.normalize(tmp);
 			if(cleanupFiles == null) cleanupFiles = [];
 			cleanupFiles.push(tmp);
 			return tmp;
 		}
 
+		var cachedImage : hxd.res.Image = null;
+		inline function getSrc() {
+			if (cachedImage == null)
+				cachedImage = makeImage(srcPath);
+			return cachedImage;
+		}
+		inline function isSrc16Bits() {
+			return getSrc().getPixelFormat().match(R16F|R16U|RG16F|RG16U|RGB16F|RGB16U|RGBA16F|RGBA16U);
+		}
+		inline function isSrc4x4aligned() {
+			var info = getSrc().getInfo();
+			return (info.width & 3) == 0 && (info.height & 3) == 0;
+		}
+
+		var dstFmt : String = getParam("format");
 		var mips = hasParam("mips") && getParam("mips") == true;
 		if (hasParam("size")) {
-			try {
-				var maxSize = getParam("size");
-				var image = makeImage(srcPath);
-				var pxls = image.getPixels();
-				if (pxls.width == pxls.height && pxls.width > maxSize) {
-					var resized = tempFile(srcPath, "resized", "tga");
-					var ssize = "" + maxSize;
-					runTexconv(srcPath, resized, ["-m", "0", "-sepalpha", "-w", ssize, "-h", ssize, "-f", "RGBA", "-ft", "tga"]);
-					srcPath = resized;
-				}
-			} catch (e:Dynamic) {
-				trace("Failed to resize", e);
+			var maxSize = getParam("size");
+			var image = getSrc();
+			var pxls = image.getPixels();
+			var srcFmt = Std.string(image.getPixelFormat());
+			var fmt = TEXCONV_FMT.get(srcFmt) ?? "RGBA";
+			if (pxls.width == pxls.height && pxls.width > maxSize) {
+				var resized = tempFile(srcPath, "resized", "dds");
+				var ssize = "" + maxSize;
+				var args = ["-m", "0", "-sepalpha", "-w", ssize, "-h", ssize, "-f", fmt];
+				if (hasParam("filter"))
+					args = args.concat(["-if", getParam("filter")]);
+				runTexconv(srcPath, resized, args);
+				srcPath = resized;
+				cachedImage = null;
 			}
 		}
-		var format = getParam("format");
-		var tcFmt = TEXCONV_FMT.get(format);
+		var isBCFormat = dstFmt.indexOf("BC") == 0;
+		var fix4x4 = isBCFormat && !isSrc4x4aligned();
+		var useTc = !isBCFormat || fix4x4 || isSrc16Bits();
+		var tcFmt = useTc ? TEXCONV_FMT.get(dstFmt) : null;
 		if (tcFmt != null) {
 			var args = ["-f", tcFmt, "-srgb"];
 			if (!mips)
 				args = ["-m", "1"].concat(args);
+			if (hasParam("alpha") && dstFmt == "BC1")
+				args = ["-at", ""+ Std.parseInt("" + getParam("alpha")) / 256.0].concat(args);
 			runTexconv(srcPath, dstPath, args);
+			if (fix4x4)
+				runTexconv(dstPath, dstPath, ["-fixbc4x4"]);
 			return cleanup();
 		}
 		var path = new haxe.io.Path(srcPath);
@@ -565,7 +606,7 @@ class CompressIMG extends Convert {
 				srcPath = oldPath;
 				var convertPixels = [];
 				for (layer in 0...info.layerCount) {
-					var layerPath = dstPath + path.file + "_" + layer + "_dds_" + format + "." + path.ext;
+					var layerPath = dstPath + path.file + "_" + layer + "_dds_" + dstFmt + "." + path.ext;
 					var image = makeImage(layerPath);
 					for (mip in 0...info.mipLevels) {
 						var pixels = image.getPixels(null, mip);
@@ -576,7 +617,7 @@ class CompressIMG extends Convert {
 				var convertBytes = hxd.Pixels.toDDSLayers(convertPixels);
 				for (pixels in convertPixels)
 					pixels.dispose();
-				var tmpPath = dstPath + path.file + "_" + format + "." + path.ext;
+				var tmpPath = dstPath + path.file + "_" + dstFmt + "." + path.ext;
 				sys.io.File.saveBytes(tmpPath, convertBytes);
 				return cleanup();
 			}
@@ -593,7 +634,7 @@ class CompressIMG extends Convert {
 			tmpPath = tempFile(dstPath, "tmp", "dds");
 			sys.io.File.saveBytes(tmpPath, sys.io.File.getBytes(srcPath));
 		}
-		if (hasParam("alpha") && format == "BC1")
+		if (hasParam("alpha") && dstFmt == "BC1")
 			args = args.concat(["-DXT1UseAlpha", "1", "-AlphaThreshold", "" + getParam("alpha")]);
 		args = args.concat(["-fd", "" + getParam("format"), tmpPath == null ? srcPath : tmpPath, dstPath]);
 		command("CompressonatorCLI", args);

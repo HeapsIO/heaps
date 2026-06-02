@@ -198,6 +198,15 @@ class CustomParser extends domkit.CssValue.ValueParser {
 				#else
 				return hxd.res.DefaultFont.get();
 				#end
+			case VCall("group",fonts):
+				#if macro
+				for( f in fonts )
+					parseFont(f);
+				#else
+				var fnt = @:privateAccess new h2d.Font("group",0,FontGroup);
+				fnt.subFonts = [for( f in fonts ) parseFont(f)];
+				return fnt;
+				#end
 			case VGroup(args):
 				var args = args.copy();
 				path = parsePath(args[0]);

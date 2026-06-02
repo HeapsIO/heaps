@@ -19,15 +19,19 @@ class BatchLibrary {
 	static final BATCH_START_FMT = hxd.BufferFormat.make([{ name : "Batch_Start", type : DFloat }]);
 	var primitives : Array<h3d.prim.BatchPrimitive> = [];
 	var instancesOffset : h3d.Buffer;
+	var maxUploadSize : Int;
+	var isDynamic : Bool = true;
 
-	public function new() {
+	public function new(isDynamic = true, maxUploadSize = -1) {
+		this.maxUploadSize = maxUploadSize;
+		this.isDynamic = isDynamic;
 	}
 
 	function getPrimitive( format : hxd.BufferFormat ) {
 		for ( p in primitives )
 			if ( p.vertexFormat == format )
 				return p;
-		var p = new h3d.prim.BatchPrimitive(format);
+		var p = new h3d.prim.BatchPrimitive(format, isDynamic, maxUploadSize);
 		primitives.push(p);
 		return p;
 	}
@@ -40,6 +44,7 @@ class BatchLibrary {
 	public function dispose() {
 		for ( p in primitives )
 			p.dispose();
+		primitives.resize(0);
 		instancesOffset?.dispose();
 	}
 
@@ -76,8 +81,10 @@ class BatchGroup {
 	}
 
 	public inline function remove() {
-		batcher.removeGroup(this);
-		batcher = null;
+		if ( batcher != null) {
+			batcher.removeGroup(this);
+			batcher = null;
+		}
 	}
 }
 
@@ -101,6 +108,8 @@ class Batcher extends h3d.scene.Object {
 	var library : BatchLibrary;
 	var shouldDisposeLibrary : Bool = false;
 
+	var renderer : h3d.scene.Renderer;
+
 	public function hasSyncIDs() : Bool {
 		return (syncShader != null && syncShader.hasSyncIDs());
 	}
@@ -113,7 +122,7 @@ class Batcher extends h3d.scene.Object {
 			}
 	}
 
-	public function new( parent : h3d.scene.Object, library : BatchLibrary = null, batchFlags = null ) {
+	public function new( parent : h3d.scene.Object, renderer : h3d.scene.Renderer, library : BatchLibrary = null, batchFlags = null ) {
 		if ( !h3d.Engine.getCurrent().driver.hasFeature(Bindless) )
 			throw "h3d.scene.Batcher requires Bindless support.";
 		super(parent);
@@ -121,6 +130,7 @@ class Batcher extends h3d.scene.Object {
 			this.batchFlags = batchFlags;
 		shouldDisposeLibrary = library == null;
 		this.library = shouldDisposeLibrary ? new BatchLibrary() : library;
+		this.renderer = renderer;
 		ignoreCollide = true;
 	}
 
@@ -136,25 +146,32 @@ class Batcher extends h3d.scene.Object {
 		return batchID;
 	}
 
-	public function addInstance( obj : h3d.scene.Object ) : ObjectInstance {
+	public function addInstance( obj : h3d.scene.Object, recChildren : Bool = true ) : ObjectInstance {
 		var meshes = [];
 		var invPos = obj.getInvPos();
-		var renderer = getScene().renderer;
-		for ( m in obj.getMeshes() ) {
+		inline function processMesh( m : h3d.scene.Mesh ) {
 			var hmd = Std.downcast(m.primitive, h3d.prim.HMDModel);
-			if ( hmd == null )
-				continue;
+			if ( hmd != null ) {
+				var batchID = getBatchID(hmd);
+				var batch = batches[batchID];
 
-			var batchID = getBatchID(hmd);
-			var batch = batches[batchID];
+				var subMeshID = batch.addModel(m);
+				var materials = [];
+				for ( m in m.getMeshMaterials() )
+					materials.push(batch.addMaterial(m, renderer));
 
-			var subMeshID = batch.addModel(m);
-			var materials = [];
-			for ( m in m.getMeshMaterials() )
-				materials.push(batch.addMaterial(m, renderer));
+				var meshInstance = new MeshInstance(m.getAbsPos() * invPos, batchID, subMeshID, materials);
+				meshes.push(meshInstance);
+			}
+		}
 
-			var meshInstance = new MeshInstance(m.getAbsPos() * invPos, batchID, subMeshID, materials);
-			meshes.push(meshInstance);
+		if ( recChildren )
+			for ( m in obj.getMeshes() )
+				processMesh(m);
+		else {
+			var m = Std.downcast(obj, h3d.scene.Mesh);
+			if ( m != null )
+				processMesh(m);
 		}
 		return new ObjectInstance(meshes);
 	}
@@ -234,6 +251,44 @@ class Batcher extends h3d.scene.Object {
 		batches[ctx.drawPass.index & 0xFFFF].draw(ctx);
 	}
 
+	public function dump( path : String = "batcher_dump.txt" ) @:privateAccess {
+		var sb = new StringBuf();
+		var primLines : Array<{ format : String, hmds : Array<String>}> = [];
+		var primitives = library.primitives;
+		for ( i => p in primitives ) {
+			var format = '\t$i) ${p.vertexFormat.toString()}\n';
+			var hmds = [];
+			for ( m in p.models)
+				hmds.push("\t\t" + m.lib.resource.entry.path + " - " + m.model.getObjectName() + "\n");
+			primLines.push({format:format, hmds:hmds});
+		}
+
+		sb.add("Primitives:\n");
+		for (l in primLines) {
+			sb.add(l.format);
+			for ( hmd in l.hmds )
+				sb.add(hmd);
+		}
+
+		var lines : Array<{ prim : Int, pass : String, shaders : String, count : Int }> = [];
+		for ( b in batches ) {
+			var primId = primitives.indexOf(b.primitive);
+			for ( bp in b.passes ) {
+				var shaderNames = [ for (s in bp.shaders) { Type.getClassName(Type.getClass(s)).split(".").pop() + ':${s.constBits}'; } ].join("+");
+				lines.push({ prim: primId, pass: bp.pass.name, shaders: shaderNames, count: bp.totalInstanceCount });
+			}
+		}
+		lines.sort((a, b) -> b.count - a.count);
+		sb.add("\nCOUNT\tPASS\tPRIMITIVE\tSHADERS\n");
+		for ( l in lines )
+			sb.add('${l.count}\t${l.pass}\t${l.prim}\t${l.shaders}\n');
+		#if (sys || nodejs)
+		sys.io.File.saveContent(path, sb.toString());
+		#else
+		trace(sb.toString());
+		#end
+	}
+
 	override function onRemove() {
 		for ( b in batches)
 			b.dispose();
@@ -242,6 +297,7 @@ class Batcher extends h3d.scene.Object {
 		groups.resize(0);
 		batches.resize(0);
 		freeGroupIDs.resize(0);
+		primToBatch.clear();
 		highestGroupID = 1;
 	}
 }
@@ -687,12 +743,13 @@ private class BatchCommandBuilder extends hxsl.Shader {
 				var texelSize = vec2(boxWidth, boxHeight) * hzbSize;
 				var w = max(texelSize.x, texelSize.y);
 
-				var mip = floor(log2(w));
+				var mip = max(0.0, ceil(log2(w))) + 1;
+				mip = clamp(mip, 0.0, log2(max(hzbSize.x, hzbSize.y)));
 				var mipSize = max(vec2(1.0), floor(hzbSize / pow(vec2(2.0), vec2(mip))));
 
 				var depth = 0.0;
 				@unroll for ( i in 0...4 ) {
-					var cornerPos = ivec2(aabbCornersUVSpace[i] * mipSize);
+					var cornerPos = ivec2(clamp(aabbCornersUVSpace[i] * mipSize, vec2(0.0), mipSize - vec2(1.0)));
 					var cornerDepth = hzb.fetchLod(cornerPos, int(mip)).x;
 					depth = max(depth, cornerDepth);
 				}
@@ -915,11 +972,15 @@ private class BatchPass {
 		instancesDirty = false;
 		var alloc = hxd.impl.Allocator.get();
 
+		inline function allocBuffer(size, format, flags) {
+			return alloc.allocBuffer(hxd.impl.Allocator.roundPOT(size), format, flags);
+		}
+
 		var instanceDataSize = totalInstanceCount * batchShader.paramsSize;
 		if ( instancesData == null || instancesData.vertices < instanceDataSize ) {
 			if ( instancesData != null )
 				alloc.disposeBuffer(instancesData);
-			instancesData = alloc.allocBuffer( instanceDataSize, hxd.BufferFormat.VEC4_DATA, UniformReadWrite );
+			instancesData = allocBuffer( instanceDataSize, hxd.BufferFormat.VEC4_DATA, UniformReadWrite );
 		}
 		batchShader.Batch_StorageBuffer = instancesData;
 
@@ -928,14 +989,14 @@ private class BatchPass {
 			if ( syncIDs == null || syncIDs.vertices < totalInstanceCount ) {
 				if ( syncIDs != null )
 					alloc.disposeBuffer(syncIDs);
-				syncIDs = alloc.allocBuffer( totalInstanceCount, hxd.BufferFormat.INDEX32, Uniform );
+				syncIDs = allocBuffer( totalInstanceCount, hxd.BufferFormat.INDEX32, Uniform );
 			}
 		}
 
 		if ( instancesInfos == null || instancesInfos.vertices < totalInstanceCount ) {
 			if ( instancesInfos != null )
 				alloc.disposeBuffer(instancesInfos);
-			instancesInfos = alloc.allocBuffer( totalInstanceCount, PASS_INSTANCES_INFOS_FMT, Uniform );
+			instancesInfos = allocBuffer( totalInstanceCount, PASS_INSTANCES_INFOS_FMT, Uniform );
 		}
 
 		var instanceCursor = 0;
@@ -968,7 +1029,7 @@ private class BatchPass {
 		if ( commandBuffer == null || commandBuffer.vertices < totalInstanceCount )  {
 			if ( commandBuffer != null )
 				alloc.disposeBuffer(commandBuffer);
-			commandBuffer = alloc.allocBuffer( totalInstanceCount, INDIRECT_DRAW_ARGUMENTS_FMT, UniformReadWrite );
+			commandBuffer = allocBuffer( totalInstanceCount, INDIRECT_DRAW_ARGUMENTS_FMT, UniformReadWrite );
 			if ( command == null )
 				command = new h3d.impl.InstanceBuffer();
 			@:privateAccess command.data = commandBuffer.vbuf;
@@ -991,8 +1052,6 @@ private class BatchPass {
 		ctx.computeDispatch(cast s, hxd.Math.ceil(totalInstanceCount/64.0), false);
 	}
 
-	var tmpMinLs = new h3d.Vector();
-	var tmpMaxLs = new h3d.Vector();
 	var tmpUp = new h3d.Vector(0, 1, 0);
 
 	public function emitGPU(ctx : h3d.scene.RenderContext) {
@@ -1024,34 +1083,35 @@ private class BatchPass {
 				if ( sl != null ) {
 					var pbrSl = Std.downcast(sl, h3d.scene.pbr.Light);
 					if ( pbrSl != null ) {
-						var z = @:privateAccess pbrSl.getShadowDirection();
+						#if (haxe_ver >= 5)
+						static var z = new h3d.Vector();
+						#else
+						static var z : h3d.Vector = null;
+						if( z == null ) z = new h3d.Vector();
+						#end
+						pbrSl.getShadowDirection(z);
 						z.normalize();
 						var x = tmpUp.cross(z);
 						x.normalize();
 						var y = z.cross(x);
 						y.normalize();
 
-						var lightMatrix = h3d.Matrix.L([
-							x.x, y.x, z.x, 0,
-							x.y, y.y, z.y, 0,
-							x.z, y.z, z.z, 0
-						]);
+						#if (haxe_ver >= 5)
+						static var lightMatrix = new h3d.Matrix();
+						#else
+						static var lightMatrix : h3d.Matrix = null;
+						if( lightMatrix == null ) lightMatrix = new h3d.Matrix();
+						#end
+						var m = lightMatrix;
+						m._11 = x.x; m._12 = y.x; m._13 = z.x; m._14 = 0;
+						m._21 = x.y; m._22 = y.y; m._23 = z.y; m._24 = 0;
+						m._31 = x.z; m._32 = y.z; m._33 = z.z; m._34 = 0;
 
-						tmpMinLs.set(1e30, 1e30, 1e30);
-						tmpMaxLs.set(-1e30, -1e30, -1e30);
-
-						var frustumPoints = ctx.camera.frustum.getPoints();
-						for ( i in 0...8 ) {
-							var p = frustumPoints[i];
-							var pLs = p * lightMatrix;
-							tmpMinLs.min(pLs);
-							tmpMaxLs.max(pLs);
-						}
-
-						tmpMinLs.z = tmpMinLs.z - batcher.shadowCullingOffset;
+						static var bounds = new h3d.col.Bounds();
+						ctx.camera.frustum.getBounds(lightMatrix, bounds);
 						builderShader.lightMatrix = lightMatrix;
-						builderShader.lightOBBMin.set(tmpMinLs.x, tmpMinLs.y, tmpMinLs.z);
-						builderShader.lightOBBMax.set(tmpMaxLs.x, tmpMaxLs.y, tmpMaxLs.z);
+						builderShader.lightOBBMin.set(bounds.xMin, bounds.yMin, bounds.zMin - batcher.shadowCullingOffset);
+						builderShader.lightOBBMax.set(bounds.xMax, bounds.yMax, bounds.zMax);
 
 						builderShader.ENABLE_DIRLIGHT_OBB_CULLING = true;
 					}

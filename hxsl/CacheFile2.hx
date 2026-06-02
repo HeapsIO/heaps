@@ -253,10 +253,11 @@ class CacheFile2Loader {
 class CacheFile2 extends Cache {
 	static var DEBUG : Bool = false;
 	static var LOAD_TIME : Float = 0.0;
+	public static var VERSION = 1;
 
 	var file : String;
 	var outFile : String;
-	var allowSave : Bool;
+	public var allowSave : Bool;
 
 	var isLoading : Bool = false;
 	var isDirty(default, set) : Bool = false;
@@ -367,7 +368,7 @@ class CacheFile2 extends Cache {
 		}
 
 		var magic = readLine();
-		if( !StringTools.startsWith(magic, "CF2-1") ) {
+		if( !StringTools.startsWith(magic, 'CF2-$VERSION') ) {
 			f.close();
 			return false;
 		}
@@ -469,11 +470,11 @@ class CacheFile2 extends Cache {
 		return true;
 	}
 
-	function saveIfModified() {
+	public function saveIfModified() {
 		if( this.isDirty ) {
 			this.isDirty = false;
 			#if !shader_debug_dump
-			save();
+			_save();
 			#end
 		}
 	}
@@ -615,11 +616,9 @@ class CacheFile2 extends Cache {
 		sys.io.File.saveContent(path, out.join("\n"));
 	}
 
-	function save() {
-		if( !allowSave ) return;
-
+	function _save() {
 		var out = new haxe.io.BytesOutput();
-		out.writeString("CF2-1\n", UTF8); // magic-version
+		out.writeString('CF2-$VERSION\n', UTF8);
 
 		linkers.sort((l1, l2) -> Reflect.compare(l1.name, l2.name));
 		for( lk in linkers ) {

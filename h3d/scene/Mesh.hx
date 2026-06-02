@@ -159,7 +159,7 @@ class Mesh extends Object {
 
 		var screenMultiple = hxd.Math.max(0.5 * camera.mproj._11, 0.5 * camera.mproj._22);
 
-		var screenRadius = screenMultiple * worldRadius / hxd.Math.max(1.0, distanceFromCamera);
+		var screenRadius = screenMultiple * worldRadius / hxd.Math.max(camera.zNear, distanceFromCamera);
 
 		return screenRadius * 2.0;
 	}
