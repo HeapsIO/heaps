@@ -119,9 +119,10 @@ class RenderContext extends h3d.impl.RenderContext {
 		currentView.frustum = camera.frustum;
 	}
 
-	public function setRenderResolution( x : Int, y : Int ) {
-		renderResolutionWidth = x;
-		renderResolutionHeight = y;
+	public function setRenderResolution( width : Int, height : Int ) {
+		renderResolutionWidth = width;
+		renderResolutionHeight = height;
+		pixelSize = new h3d.Vector(2 / width, 2 / height);
 	}
 
 	public function updateNumViews( numViews : Int ) {
