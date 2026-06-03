@@ -697,6 +697,7 @@ class DX12Driver extends h3d.impl.Driver {
 	var asyncComputeAllocator : CommandAllocator;
 
 	#if dlss
+	var dlssReady : Bool;
 	var dlssFrameToken : DLSSFrameToken;
 	#end
 
@@ -782,7 +783,8 @@ class DX12Driver extends h3d.impl.Driver {
 
 	function reset() {
 		#if dlss
-		Dlss.init(false);
+		var result = Dlss.init(false);
+		dlssReady = result == 0;
 		#end
 
 		var flags = new DriverInitFlags();
@@ -792,8 +794,10 @@ class DX12Driver extends h3d.impl.Driver {
 		frames = [];
 
 		#if dlss
-		var device = Driver.getDevice();
-		Dlss.setDevice(device);
+		if ( dlssReady ) {
+			var device = Driver.getDevice();
+			Dlss.setDevice(device);
+		}
 		#end
 
 		var flags = new haxe.EnumFlags();
@@ -980,7 +984,7 @@ class DX12Driver extends h3d.impl.Driver {
 		flushHeaps();
 
 		#if dlss
-		dlssFrameToken = Dlss.getNewFrameToken(frameCount);
+		if ( dlssReady ) dlssFrameToken = Dlss.getNewFrameToken(frameCount);
 		#end
 	}
 
@@ -3415,6 +3419,7 @@ class DX12Driver extends h3d.impl.Driver {
 
 	override function isDLSSSupported( framegen : Bool = false ) : Bool {
 		#if dlss
+		if ( !dlssReady ) return false;
 		var adapter = Driver.getAdapter();
 		var feature = framegen ? DLSSFeature.FRAMEGEN : DLSSFeature.DLSS;
 		var slResult = Dlss.isFeatureSupported(adapter, feature);
@@ -3425,6 +3430,7 @@ class DX12Driver extends h3d.impl.Driver {
 
 	override function getDLSSOptimalSettings( mode : DLSSMode, targetWidth : Int, targetHeight : Int ) : DLSSSettings {
 		#if dlss
+		if ( !dlssReady ) return null;
 		switch (mode) {
 			case Off: dlssOptions.mode = OFF;
 			case MaxPerformance: dlssOptions.mode = MAXPERFORMANCE;
@@ -3447,6 +3453,7 @@ class DX12Driver extends h3d.impl.Driver {
 
 	override function applyDLSS( resources : Map<h3d.impl.Driver.DLSSTag, h3d.mat.Texture>, constants : DLSSParams, quality : DLSSQuality, mode : DLSSMode ) {
 		#if dlss
+		if ( !dlssReady ) return;
 		switch (mode) {
 			case Off: dlssOptions.mode = OFF;
 			case MaxPerformance: dlssOptions.mode = MAXPERFORMANCE;
