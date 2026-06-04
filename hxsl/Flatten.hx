@@ -321,7 +321,7 @@ class Flatten {
 				e = { e : TSwiz(e, sw), t : t, p : pos };
 			}
 			switch( t ) {
-			case TInt:
+			case TInt, TBufferHandle:
 				e.t = TFloat;
 				e = floatBitsToInt(e);
 			case TVec(size,VInt):
@@ -538,6 +538,7 @@ class Flatten {
 				size += varSize(v.type, t);
 			size;
 		case TTextureHandle: 2;
+		case TBufferHandle: 1;
 		default:
 			throw v.toString() + " size unknown for type " + t;
 		}

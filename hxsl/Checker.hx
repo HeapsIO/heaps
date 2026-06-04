@@ -61,6 +61,10 @@ class Checker {
 			{ dim : T2D, arr : true, uv : vec3, iuv : ivec3 },
 			{ dim : TCube, arr : true, uv : vec4, iuv : ivec4 },
 		];
+		var bindlessBufDef = [
+			{ t : TInt, size : SConst(0), kind : Storage },
+			{ t : TFloat, size : SConst(0), kind : Storage }
+		];
 		var gvars = new Map();
 		for( g in Ast.TGlobal.createAll() ) {
 			var def = switch( g ) {
@@ -232,6 +236,8 @@ class Checker {
 				[ { args : [ { name : "value", type : TInt } ], ret : vec4 } ];
 			case ResolveSampler:
 				[for( t in texDefs ) { args : [{ name : "handle", type : TTextureHandle }, { name : "tex", type : TSampler(t.dim,t.arr) }], ret : TVoid }];
+			case ResolveBuffer:
+				[for( b in bindlessBufDef ) { args : [{ name : "handle", type : TBufferHandle }, { name : "buf", type : TBuffer(b.t, b.size, b.kind) }], ret : TVoid }];
 			default:
 				throw "Unsupported global "+g;
 			}

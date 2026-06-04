@@ -61,8 +61,10 @@ class RuntimeShaderData {
 	public var texturesCount : Int;
 	public var buffers : AllocParam;
 	public var bufferCount : Int;
-	public var globalsHandleCount : Int;
-	public var paramsHandleCount : Int;
+	public var globalsTexHandleCount : Int;
+	public var globalsBufHandleCount : Int;
+	public var paramsTexHandleCount : Int;
+	public var paramsBufHandleCount : Int;
 	public var hasBindless : Bool;
 	public function new() {
 	}

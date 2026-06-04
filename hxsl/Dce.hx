@@ -281,7 +281,7 @@ class Dce {
 			check(data, writeTo, isAffected);
 			writeTo.pop();
 			isAffected.append(v, 15);
-		case TCall({ e : TGlobal(ResolveSampler)}, [handle, { e : TVar(v)}]):
+		case TCall({ e : TGlobal(ResolveSampler|ResolveBuffer)}, [handle, { e : TVar(v)}]):
 			var v = get(v);
 			writeTo.push(v, 15);
 			check(handle, writeTo, isAffected);
@@ -366,7 +366,7 @@ class Dce {
 		case TCall({ e : TGlobal(ChannelTextureSize) }, [_, lod, { e : TConst(CInt(cid)) }]):
 			var c = channelVars[cid];
 			return { e : TCall({ e : TGlobal(TextureSize), p : e.p, t : TVoid }, [{ e : TVar(c), t : c.type, p : e.p }, mapExpr(lod,true)]), t : TVoid, p : e.p };
-		case TCall({ e : TGlobal(ResolveSampler)}, [handle, { e : TVar(v)}]):
+		case TCall({ e : TGlobal(ResolveSampler|ResolveBuffer)}, [handle, { e : TVar(v)}]):
 			if (get(v).used == 0)
 				return { e : TConst(CNull), t : e.t, p : e.p };
 			return e.map(function(e) return mapExpr(e,true));
