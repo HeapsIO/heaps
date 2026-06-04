@@ -79,6 +79,9 @@ class BaseMesh extends hxsl.Shader {
 			specColor = specularColor * specularAmount;
 			screenUV = screenToUv(projectedPosition.xy / projectedPosition.w);
 			depth = projectedPosition.z / projectedPosition.w;
+		}
+
+		function __init__vertex() {
 			worldDist = length(transformedPosition - camera.position) / camera.zFar;
 		}
 
