@@ -270,18 +270,24 @@ class Batcher extends h3d.scene.Object {
 				sb.add(hmd);
 		}
 
-		var lines : Array<{ prim : Int, pass : String, shaders : String, count : Int }> = [];
+		var lines : Array<{ prim : Int, pass : String, shaders : String, count : Int, batchShader : hxsl.BatchShader }> = [];
 		for ( b in batches ) {
 			var primId = primitives.indexOf(b.primitive);
 			for ( bp in b.passes ) {
 				var shaderNames = [ for (s in bp.shaders) { Type.getClassName(Type.getClass(s)).split(".").pop() + ':${s.constBits}'; } ].join("+");
-				lines.push({ prim: primId, pass: bp.pass.name, shaders: shaderNames, count: bp.totalInstanceCount });
+				lines.push({ prim: primId, pass: bp.pass.name, shaders: shaderNames, count: bp.totalInstanceCount, batchShader:bp.batchShader });
 			}
 		}
 		lines.sort((a, b) -> b.count - a.count);
-		sb.add("\nCOUNT\tPASS\tPRIMITIVE\tSHADERS\n");
-		for ( l in lines )
-			sb.add('${l.count}\t${l.pass}\t${l.prim}\t${l.shaders}\n');
+		sb.add("\nCOUNT\tPASS\tPRIMITIVE\tSHADERS\tPARAMS SIZE\n");
+		for ( l in lines ) {
+			sb.add('${l.count}\t${l.pass}\t${l.prim}\t${l.shaders}\t${l.batchShader.paramsSize * 16}B\n');
+			var p = l.batchShader.params;
+			while ( p != null ) {
+				sb.add('\t${p.name}\n');
+				p = p.next;
+			}
+		}
 		#if (sys || nodejs)
 		sys.io.File.saveContent(path, sb.toString());
 		#else
