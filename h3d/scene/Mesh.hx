@@ -85,23 +85,23 @@ class Mesh extends Object {
 	}
 
 	function calcScreenRatio( ctx : RenderContext ) {
-		if ( primitive == null || primitive.lodCount() == 1 )
+		if (primitive == null || (primitive.lodCount() == 1 && primitive.getCullingScreenRatio() == 0.))
 			return;
 
-		if ( ctx.forcedScreenRatio >= 0.0 ) {
+		if (ctx.forcedScreenRatio >= 0.0) {
 			curScreenRatio = ctx.forcedScreenRatio;
 			return;
 		}
 
 		var bounds = primitive.getBounds();
-		if ( bounds == null ) {
+		if (bounds == null) {
 			curScreenRatio = 1.0;
 			return;
 		}
 
 		curScreenRatio = screenRatio(getAbsPos(), bounds, ctx.camera) * ctx.meshLodScale;
 
-		if ( inheritLod )
+		if (inheritLod)
 			ctx.forcedScreenRatio = curScreenRatio;
 	}
 

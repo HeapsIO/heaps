@@ -146,8 +146,12 @@ class Primitive {
 		return 1;
 	}
 
-	public function screenRatioToLod ( screenRatio : Float ) : Int {
+	public function screenRatioToLod( screenRatio : Float ) : Int {
 		return 0;
+	}
+
+	public function getCullingScreenRatio() : Float {
+		return 0.;
 	}
 
 }

@@ -15,6 +15,7 @@ class HMDModel extends MeshPrimitive {
 	var normalsRecomputed : String;
 	var blendshape : Blendshape;
 	var lodConfig : Array<Float> = null;
+	var cullingScreenRatio : Float = 0.;
 	var colliderData : ColliderData;
 
 	public function new( model : hxd.fmt.hmd.Data.Model, dataPos, lib, lods : Array<hxd.fmt.hmd.Data.Model> = null ) {
@@ -332,18 +333,16 @@ class HMDModel extends MeshPrimitive {
 
 	override public function screenRatioToLod( screenRatio : Float ) : Int {
 		var lodCount = lodCount();
+		if (screenRatio < getCullingScreenRatio())
+			return lodCount;
 
-		if ( lodCount == 1 )
+		if (lodCount == 1)
 			return 0;
 
 		var lodConfig = getLodConfig();
-		if ( lodConfig != null ) {
-			var lodConfigHasCulling = lodConfig.length > lodCount - 1;
-			if ( lodConfigHasCulling && screenRatio < lodConfig[lodConfig.length - 1] )
-				return lodCount;
-
+		if (lodConfig != null) {
 			var lodLevel : Int = 0;
-			var maxIter = lodConfigHasCulling ? lodCount - 1 : lodConfig.length;
+			var maxIter = hxd.Math.imin(lodCount - 1, lodConfig.length);
 			for ( i in 0...maxIter ) {
 				if ( lodConfig[i] == 0.0 )
 					return lodLevel;
@@ -356,6 +355,10 @@ class HMDModel extends MeshPrimitive {
 		}
 
 		return 0;
+	}
+
+	override public function getCullingScreenRatio() {
+		return cullingScreenRatio;
 	}
 
 	public function getLodConfig() {
