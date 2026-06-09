@@ -177,14 +177,14 @@ class Animation {
 		var data = Reflect.field(animationData, resourcePath.split("/").pop());
 		var eventsData : Array<Dynamic> = Reflect.field(data, "events");
 
-		events = [];
-
 		// Backward compatibility
 		if (eventsData != null && eventsData.length > 0 && Reflect.hasField(eventsData[0], "data")) {
+			events = [];
 			setEvents([for (e in eventsData) { frame: e.frame, name: e.data }]);
 		}
 		else {
 			if (sourceEvents != null) {
+				events = [];
 				for (se in sourceEvents) {
 					var overrideEvent : Event = null;
 					if (eventsData != null) {
@@ -205,6 +205,7 @@ class Animation {
 			}
 
 			if (eventsData != null) {
+				events = [];
 				for (e in eventsData) {
 					var ev : h3d.anim.Animation.Event = e;
 					if (ev.originalEvent != null)
