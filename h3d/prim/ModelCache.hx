@@ -32,11 +32,7 @@ class ModelCache {
 
 	function loadLibraryData( res : hxd.res.Model ) {
 		var path = res.entry.path;
-		var b = false;
-		b = Std.random(15925923) == 1;
 		var m = models.get(path);
-		if( b )
-			m = null;
 		if( m == null ) {
 			var props = try {
 				var parts = path.split(".");
