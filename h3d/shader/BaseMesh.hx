@@ -63,13 +63,14 @@ class BaseMesh extends hxsl.Shader {
 		@range(0,100) @param var specularPower : Float;
 		@range(0,10) @param var specularAmount : Float;
 		@param var specularColor : Vec3;
+		@const var IS_STATIC : Bool = false;
 
 		// each __init__ expr is out of order dependency-based
 		function __init__() {
 			relativePosition = input.position;
 			transformedPosition = relativePosition * global.modelView.mat3x4();
 			projectedPosition = vec4(transformedPosition, 1) * camera.viewProj;
-			prevModelView = global.previousModelView.mat3x4();
+			prevModelView = IS_STATIC ? global.modelView.mat3x4() : global.previousModelView.mat3x4();
 			previousTransformedPosition = relativePosition * prevModelView;
 			previousProjectedPosition = vec4(previousTransformedPosition, 1) * camera.previousViewProj;
 			transformedNormal = (input.normal * global.modelView.mat3()).normalize();
