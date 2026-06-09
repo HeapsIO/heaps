@@ -164,6 +164,7 @@ class Renderer extends h3d.scene.Renderer {
 		allPasses.push(decalsOutput);
 		allPasses.push(colorDepthOutput);
 		allPasses.push(colorDepthVelocityOutput);
+		allPasses.push(depthOutput);
 		allPasses.push(new h3d.pass.Shadows(null));
 		refreshProps();
 	}
