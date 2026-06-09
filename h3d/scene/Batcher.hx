@@ -280,38 +280,47 @@ class Batcher extends h3d.scene.Object {
 
 	public function dump( path : String = "batcher_dump.txt" ) @:privateAccess {
 		var sb = new StringBuf();
-		var primLines : Array<{ format : String, hmds : Array<String>}> = [];
+		var primLines : Array<{format : String, hmds : Array<String>, refCount : Int}> = [];
 		var primitives = library.primitives;
 		for ( i => p in primitives ) {
-			var format = '\t$i) ${p.vertexFormat.toString()}\n';
+			var format = '\n\t$i) ${p.vertexFormat.toString()}';
 			var hmds = [];
 			for ( m in p.models)
-				hmds.push("\t\t" + m.lib.resource.entry.path + " - " + m.model.getObjectName() + "\n");
-			primLines.push({format:format, hmds:hmds});
-		}
-
-		sb.add("Primitives:\n");
-		for (l in primLines) {
-			sb.add(l.format);
-			for ( hmd in l.hmds )
-				sb.add(hmd);
+				hmds.push("\n\t\t" + m.lib.resource.entry.path + " - " + m.model.getObjectName());
+			primLines.push({format:format, hmds:hmds, refCount:0});
 		}
 
 		var lines : Array<{ prim : Int, pass : String, shaders : String, count : Int, batchShader : hxsl.BatchShader }> = [];
 		for ( b in batches ) {
 			var primId = primitives.indexOf(b.primitive);
+			primLines[primId].refCount += b.totalInstanceCount;
 			for ( bp in b.passes ) {
 				var shaderNames = [ for (s in bp.shaders) { Type.getClassName(Type.getClass(s)).split(".").pop() + ':${s.constBits}'; } ].join("+");
 				lines.push({ prim: primId, pass: bp.pass.name, shaders: shaderNames, count: bp.totalInstanceCount, batchShader:bp.batchShader });
 			}
 		}
 		lines.sort((a, b) -> b.count - a.count);
-		sb.add("\nCOUNT\tPASS\tPRIMITIVE\tSHADERS\tPARAMS SIZE\n");
+
+		sb.add("Primitives:");
+		for (l in primLines) {
+			sb.add('${l.format} (${l.refCount} refCount)');
+			for ( hmd in l.hmds )
+				sb.add(hmd);
+		}
+
+		sb.add("\n\nGlobal shaders:");
+		if( globalShaders == null )
+			sb.add("\n\tnone");
+		else
+			for( p => shaders in globalShaders )
+				sb.add('\n\t${p==""?"all":p}: ${[ for( s in shaders ) { Type.getClassName(Type.getClass(s)).split(".").pop() + ':${s.constBits}'; } ].join("+")}');
+
+		sb.add("\n\nCOUNT\tPASS\tPRIMITIVE\tSHADERS\tPARAMS SIZE");
 		for ( l in lines ) {
-			sb.add('${l.count}\t${l.pass}\t${l.prim}\t${l.shaders}\t${l.batchShader.paramsSize * 16}B\n');
+			sb.add('\n${l.count}\t${l.pass}\t${l.prim}\t${l.shaders}\t${l.batchShader.paramsSize * 16}B');
 			var p = l.batchShader.params;
 			while ( p != null ) {
-				sb.add('\t${p.name}\n');
+				sb.add('\n\t${p.name}');
 				p = p.next;
 			}
 		}
