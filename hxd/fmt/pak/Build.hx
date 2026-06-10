@@ -20,6 +20,7 @@ class Build {
 	public var checkJPG = false;
 	public var checkOGG = false;
 	public var whitelist = true;
+	public var infoDepth = -1;
 
 	function new() {
 	}
@@ -224,7 +225,7 @@ class Build {
 		var f = sys.io.File.write(outFile);
 		new Writer(f, align).write(pak, null, out.bytes);
 		f.close();
-		printSize(pak, 1);
+		printSize(pak, infoDepth < 0 ? 1 : infoDepth);
 	}
 
 	public static function make( dir = "res", out = "res", ?pakDiff ) {
@@ -257,7 +258,7 @@ class Build {
 				var fs = sys.io.File.read(pakFile);
 				var pak = new hxd.fmt.pak.Reader(fs).readHeader();
 				fs.close();
-				printSize(pak, 3);
+				printSize(pak, b.infoDepth < 0 ? 3 : b.infoDepth);
 				Sys.exit(0);
 			case "-x" if( args.length > 0 ):
 				var pakFile = args.shift();
@@ -304,6 +305,8 @@ class Build {
 				b.checkOGG = true;
 			case "-config" if( args.length > 0 ):
 				b.configuration = args.shift();
+			case "-info-depth":
+				b.infoDepth = Std.parseInt(args.shift());
 			default:
 				throw "Unknown parameter " + f;
 			}
