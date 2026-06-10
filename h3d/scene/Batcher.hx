@@ -865,13 +865,8 @@ private class BatchPass {
 		if( output == null )
 			throw "Unknown pass " + p.name;
 
-		shaders = [];
 		pass = p.clone();
 		var sl = pass.getShadersRec();
-		while( sl != null ) {
-			shaders.push(sl.s);
-			sl = sl.next;
-		}
 
 		var shaderLinker = output.output;
 		var rt = shaderLinker.compileShaders(renderer.ctx.globals, sl, Default);
@@ -907,6 +902,12 @@ private class BatchPass {
 		batchShader.Batch_HasOffset = true;
 		batchShader.constBits = 1 << 1 | 1 << 0;
 		batchShader.updateConstants(null);
+
+		shaders = [];
+		while( sl != null ) {
+			shaders.push(sl.s);
+			sl = sl.next;
+		}
 
 		pass.addSelfShader(batchShader);
 		pass.batchMode = true;
