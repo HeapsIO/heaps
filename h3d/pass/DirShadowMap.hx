@@ -253,6 +253,8 @@ class DirShadowMap extends Shadows {
 		var prevView = @:privateAccess ctx.cameraView;
 		var prevProj = @:privateAccess ctx.cameraProj;
 		var prevViewProj = @:privateAccess ctx.cameraViewProj;
+		@:privateAccess ctx.cameraView = getShadowView();
+		@:privateAccess ctx.cameraProj = getShadowProj();
 		@:privateAccess ctx.cameraViewProj = getShadowViewProj();
 		if ( tex.isDepth() ) {
 			ctx.engine.pushDepth(tex);
