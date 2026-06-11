@@ -61,6 +61,8 @@ class RenderContext extends h3d.impl.RenderContext {
 	@global("camera.reverseDepth") var cameraReverseDepth : Bool;
 	@global("camera.viewProj") var cameraViewProj : h3d.Matrix;
 	@global("camera.inverseViewProj") var cameraInverseViewProj : h3d.Matrix;
+	@global("camera.prevView") var cameraPrevView : h3d.Matrix;
+	@global("camera.prevProj") var cameraPrevProj : h3d.Matrix;
 	@global("camera.previousViewProj") var cameraPreviousViewProj : h3d.Matrix;
 	@global("camera.jitterOffsets") var cameraJitterOffsets : h3d.Vector4;
 	@global("global.prevTime") var globalPrevTime : Float;
@@ -110,6 +112,10 @@ class RenderContext extends h3d.impl.RenderContext {
 		if(cameraPrevPos == null)
 			cameraPrevPos = camera.pos.clone();
 		cameraProjDiag = new h3d.Vector4(camera.mproj._11,camera.mproj._22,camera.mproj._33,camera.mproj._44);
+		if ( cameraPrevView == null )
+			cameraPrevView = camera.mcam.clone();
+		if ( cameraPrevProj == null )
+			cameraPrevProj = camera.mproj.clone();
 		if ( cameraPreviousViewProj == null )
 			cameraPreviousViewProj = camera.m.clone();
 		if (cameraJitterOffsets == null)
@@ -342,6 +348,8 @@ class RenderContext extends h3d.impl.RenderContext {
 		cameraFrustumUploaded = false;
 
 		cameraPrevPos.load(cameraPos);
+		cameraPrevView.load(cameraView);
+		cameraPrevProj.load(cameraProj);
 		cameraPreviousViewProj.load(cameraViewProj);
 		computeVelocity = false;
 
