@@ -892,7 +892,8 @@ class Object #if (domkit && !domkit_heaps) implements domkit.Model<h2d.Object> #
 			return;
 		}
 
-		var t = ctx.textures.allocTarget("filterTemp", width, height, false);
+		var targetFmt = @:privateAccess ctx.curTarget?.format;
+		var t = ctx.textures.allocTarget("filterTemp", width, height, false, targetFmt);
 		ctx.pushTarget(t, xMin, yMin, width, height);
 		ctx.engine.clear(0);
 
