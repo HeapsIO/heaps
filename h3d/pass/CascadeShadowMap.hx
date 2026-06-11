@@ -188,6 +188,7 @@ class CascadeShadowMap extends DirShadowMap {
 			lightCameras[i].offset.y = ( lightPos0.y - lightPos.y ) * invD + halfMinusD0Inv2D;
 			lightCameras[i].offset.z = ( lightPos0.z - lightPos.z ) * invZDist;
 
+			lightCameras[i].view.load(view);
 			var view = lightCameras[i].view;
 			view._41 = -lightPos.x;
 			view._42 = -lightPos.y;
