@@ -29,7 +29,7 @@ class Light extends h3d.scene.Light {
 			ctx.setGlobal("mainLightPos",new h3d.Vector(absPos.tx, absPos.ty, absPos.tz));
 			ctx.setGlobal("mainLightDir", absPos.front());
 			ctx.setGlobal("mainLightShadowMap", shadows.getShadowTex());
-			ctx.setGlobal("mainLightViewProj", shadows.getShadowProj());
+			ctx.setGlobal("mainLightViewProj", shadows.getShadowViewProj());
 		}
 	}
 

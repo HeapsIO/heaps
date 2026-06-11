@@ -66,7 +66,15 @@ class Shadows extends Output {
 		if( staticTexture != null ) staticTexture.dispose();
 	}
 
+	public function getShadowView() {
+		return lightCamera.mcam;
+	}
+
 	public function getShadowProj() {
+		return lightCamera.mproj;
+	}
+
+	public function getShadowViewProj() {
 		return lightCamera.m;
 	}
 

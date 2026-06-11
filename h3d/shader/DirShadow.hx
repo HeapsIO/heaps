@@ -17,7 +17,7 @@ class DirShadow extends hxsl.Shader {
 		@param var shadowRes : Vec2;
 
 		@param var shadowMap : Channel;
-		@param var shadowProj : Mat3x4;
+		@param var shadowViewProj : Mat3x4;
 		@param var shadowBias : Float;
 
 		var transformedPosition : Vec3;
@@ -46,7 +46,7 @@ class DirShadow extends hxsl.Shader {
 				if ( USE_PCF ) {
 					shadow = 1.0;
 					var texelSize = 1.0/shadowRes;
-					var shadowPos = transformedPosition * shadowProj;
+					var shadowPos = transformedPosition * shadowViewProj;
 					var shadowUv = screenToUv(shadowPos.xy);
 					var zMax = shadowPos.z.saturate();
 
@@ -62,13 +62,13 @@ class DirShadow extends hxsl.Shader {
 						shadow  -= (zMax - shadowBias > depth) ? sampleStrength : 0.0;
 					}
 				} else if ( USE_ESM ) {
-					var shadowPos = transformedPosition * shadowProj;
+					var shadowPos = transformedPosition * shadowViewProj;
 					var depth = sampleDepth(screenToUv(shadowPos.xy));
 					var zMax = shadowPos.z.saturate();
 					var delta = (depth + shadowBias).min(zMax) - zMax;
 					shadow = exp(shadowPower * delta).saturate();
 				} else {
-					var shadowPos = transformedPosition * shadowProj;
+					var shadowPos = transformedPosition * shadowViewProj;
 					var shadowUv = screenToUv(shadowPos.xy);
 					var depth = sampleDepth(shadowUv.xy);
 					shadow = shadowPos.z.saturate() - shadowBias > depth ? 0 : 1;

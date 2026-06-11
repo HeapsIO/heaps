@@ -225,7 +225,7 @@ class LightBuffer {
 			fillVector(lightInfos, pbr.lightDir, i+4);
 			lightInfos[i+7] = dl.shadows.bias;
 			s.dirShadowMaps[li] = dl.shadows.getShadowTex();
-			var mat = dl.shadows.getShadowProj();
+			var mat = dl.shadows.getShadowViewProj();
 			fillFloats(lightInfos, mat._11, mat._21, mat._31, mat._41, i+8);
 			fillFloats(lightInfos, mat._12, mat._22, mat._32, mat._42, i+12);
 			fillFloats(lightInfos, mat._13, mat._23, mat._33, mat._43, i+16);
@@ -291,7 +291,7 @@ class LightBuffer {
 			lightInfos[i+13] = pbr.fallOff;
 			lightInfos[i+14] = 1.0;
 			lightInfos[i+15] = sl.shadows.bias;
-			var mat = sl.shadows.getShadowProj();
+			var mat = sl.shadows.getShadowViewProj();
 			fillFloats(lightInfos, mat._11, mat._21, mat._31, mat._41, i+16);
 			fillFloats(lightInfos, mat._12, mat._22, mat._32, mat._42, i+20);
 			fillFloats(lightInfos, mat._13, mat._23, mat._33, mat._43, i+24);

@@ -16,7 +16,7 @@ class SpotShadow extends hxsl.Shader {
 		@param var shadowRes : Vec2;
 
 		@param var shadowMap : Channel;
-		@param var shadowProj : Mat4;
+		@param var shadowViewProj : Mat4;
 		@param var shadowBias : Float;
 
 		var transformedPosition : Vec3;
@@ -36,7 +36,7 @@ class SpotShadow extends hxsl.Shader {
 				if( USE_PCF ) {
 					shadow = 1.0;
 					var texelSize = 1.0/shadowRes;
-					var shadowPos = vec4(transformedPosition, 1.0) * shadowProj;
+					var shadowPos = vec4(transformedPosition, 1.0) * shadowViewProj;
 					shadowPos.xyz = shadowPos.xyz / shadowPos.w;
 					var shadowUv = screenToUv(shadowPos.xy);
 					var zMax = shadowPos.z;
@@ -73,7 +73,7 @@ class SpotShadow extends hxsl.Shader {
 					}
 				}
 				else if ( USE_ESM) {
-					var shadowPos = vec4(transformedPosition, 1.0) * shadowProj;
+					var shadowPos = vec4(transformedPosition, 1.0) * shadowViewProj;
 					var shadowScreenPos = shadowPos.xyz / shadowPos.w;
 					var depth = shadowMap.get(screenToUv(shadowScreenPos.xy));
 					var zMax = shadowScreenPos.z.saturate();
@@ -81,7 +81,7 @@ class SpotShadow extends hxsl.Shader {
 					shadow = exp(shadowPower * delta).saturate();
 				}
 				else {
-					var shadowPos = vec4(transformedPosition, 1.0) * shadowProj;
+					var shadowPos = vec4(transformedPosition, 1.0) * shadowViewProj;
 					shadowPos.xyz = shadowPos.xyz / shadowPos.w;
 					var shadowUv = screenToUv(shadowPos.xy);
 					var depth = shadowMap.get(shadowUv.xy);
