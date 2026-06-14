@@ -344,7 +344,11 @@ class CacheFile2 extends Cache {
 
 		loadFile(loader, file);
 		if( outFile != file ) {
-			loadFile(loader, outFile);
+			try {
+				loadFile(loader, outFile);
+			} catch( e : Dynamic ) {
+				// ignore errors for local files
+			}
 		}
 
 		loader.run(function() {
