@@ -789,7 +789,8 @@ class Window {
 		var mon = monitorId != null ? getMonitors()[monitorId] : null;
 		return dx.Window.getCurrentDisplaySetting(mon == null ? null : mon.name, registry);
 		#elseif hlsdl
-		return sdl.Sdl.getCurrentDisplayMode(monitorId == null ? 0 : monitorId, true);
+		var mon = sdl.Sdl.getDisplays()[monitorId == null ? 0 : monitorId];
+		return sdl.Sdl.getCurrentDisplayMode(mon.handle, true);
 		#else
 		return null;
 		#end
@@ -804,7 +805,8 @@ class Window {
 		var m = dx.Window.getMonitors()[monitorId];
 		var l = m != null ? dx.Window.getDisplaySettings(m.name) : [];
 		#elseif hlsdl
-		var l = sdl.Sdl.getDisplayModes( monitorId == null ? window.currentMonitor : monitorId );
+		var m = sdl.Sdl.getDisplays()[monitorId == null ? currentMonitorIndex : monitorId];
+		var l = sdl.Sdl.getDisplayModes(m.handle);
 		#else
 		var l = [];
 		#end
@@ -861,7 +863,12 @@ class Window {
 		}
 		return 0;
 		#elseif hlsdl
-		return window.currentMonitor;
+		var current = window.currentMonitor;
+		for(i => m in sdl.Sdl.getDisplays()) {
+			if(m.handle == current)
+				return i;
+		}
+		return 0;
 		#else
 		return 0;
 		#end
