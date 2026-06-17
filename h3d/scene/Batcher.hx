@@ -41,6 +41,11 @@ class BatchLibrary {
 		prim.addModel(m);
 	}
 
+	public function addPolygon( m : h3d.prim.Polygon ) {
+		var prim = getPrimitive(m.getBufferFormat());
+		prim.addModel(m);
+	}
+
 	public function dispose() {
 		for ( p in primitives )
 			p.dispose();
@@ -157,8 +162,7 @@ class Batcher extends h3d.scene.Object {
 		ignoreCollide = true;
 	}
 
-	function getBatchID( hmd : h3d.prim.HMDModel ) {
-		var format = @:privateAccess hmd.data.vertexFormat;
+	function getBatchID( format : hxd.BufferFormat ) {
 		var prim = library.getPrimitive(format);
 		var batchID = primToBatch.get(prim);
 		if ( batchID != null )
@@ -173,9 +177,17 @@ class Batcher extends h3d.scene.Object {
 		var meshes = [];
 		var invPos = obj.getInvPos();
 		inline function processMesh( m : h3d.scene.Mesh ) {
+			var fmt : hxd.BufferFormat = null;
 			var hmd = Std.downcast(m.primitive, h3d.prim.HMDModel);
-			if ( hmd != null ) {
-				var batchID = getBatchID(hmd);
+			if ( hmd != null )
+				fmt = @:privateAccess hmd.data.vertexFormat;
+			else {
+				var poly = Std.downcast(m.primitive, h3d.prim.Polygon);
+				if (poly != null)
+					fmt = poly.getBufferFormat();
+			}
+			if ( fmt != null ) {
+				var batchID = getBatchID(fmt);
 				var batch = batches[batchID];
 
 				var subMeshID = batch.addModel(m);
@@ -285,8 +297,13 @@ class Batcher extends h3d.scene.Object {
 		for ( i => p in primitives ) {
 			var format = '\n\t$i) ${p.vertexFormat.toString()}';
 			var hmds = [];
-			for ( m in p.models)
-				hmds.push("\n\t\t" + m.lib.resource.entry.path + " - " + m.model.getObjectName());
+			for ( m in p.models) {
+				var hmd = Std.downcast(m, h3d.prim.HMDModel);
+				if ( hmd != null )
+					hmds.push("\n\t\t" + hmd.lib.resource.entry.path + " - " + hmd.model.getObjectName());
+				else
+					hmds.push("\n\t\t polygon");
+			}
 			primLines.push({format:format, hmds:hmds, refCount:0});
 		}
 
@@ -555,7 +572,7 @@ private class Batch {
 			return;
 
 		for ( i => p in passes ) {
-			if ( p.totalInstanceCount == 0 )
+			if ( p.totalInstanceCount == 0 || p.pass.culled )
 				continue;
 			if ( doEmitGPU )
 				p.emitGPU(ctx);

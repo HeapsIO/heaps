@@ -71,7 +71,7 @@ class BatchPrimitive extends MeshPrimitive {
 
 	public var vertexFormat(default, null) : hxd.BufferFormat;
 	public var subMeshes(default, null) : Array<SubMesh> = [];
-	var models(default, null) : Array<h3d.prim.HMDModel> = [];
+	var models(default, null) : Array<MeshPrimitive> = [];
 	var bounds = new h3d.col.Bounds();
 	var isDynamic : Bool = true;
 
@@ -98,9 +98,7 @@ class BatchPrimitive extends MeshPrimitive {
 		this.isDynamic = isDynamic;
 	}
 
-	public function addModel( model : h3d.prim.HMDModel ) : Int {
-		if ( model.data.vertexFormat != vertexFormat )
-			throw "assert";
+	public function addModel( model : MeshPrimitive ) : Int {
 		var subMeshID = models.indexOf(model);
 		if ( subMeshID >= 0 )
 			return subMeshID;
@@ -129,7 +127,7 @@ class BatchPrimitive extends MeshPrimitive {
 		}
 	}
 
-	public function getSubMeshID( model : h3d.prim.HMDModel ) {
+	public function getSubMeshID( model : MeshPrimitive ) {
 		return models.indexOf(model);
 	}
 
@@ -141,11 +139,63 @@ class BatchPrimitive extends MeshPrimitive {
 			fillModel(m);
 	}
 
-	function fillModel( model : h3d.prim.HMDModel ) {
+	function fillPolygon( model : Polygon ) {
 		var subMesh = new SubMesh();
 		subMesh.bounds = model.getBounds();
 		bounds.add(subMesh.bounds);
-		var lodCount = subMesh.lodCount = model.lods.length;
+		subMesh.lodCount = 1;
+		subMesh.lodConfig = [0.0];
+		subMesh.subPartStart = subPartCount;
+
+		var cpuBuf = model.getCPUBuffer();
+		#if hl
+		var vertices = @:privateAccess new haxe.io.Bytes(hl.Bytes.getArray(cpuBuf.getNative()), cpuBuf.length * 4);
+		#else
+		var vertices = haxe.io.Bytes.alloc(cpuBuf.length * 4);
+		for ( i in 0...cpuBuf.length )
+			vertices.setFloat(i<<2, cpuBuf[i]);
+		#end
+
+		var vByteSize = model.vertexCount() * vertexFormat.strideBytes;
+		if ( vBytes == null )
+			vBytes = new BytesArray(vByteSize, maxByteSize);
+		var vStart = Std.int(vBytes.totalSize / vertexFormat.strideBytes);
+		var vAlloc = vBytes.alloc(vByteSize);
+		var vbuf = vAlloc.b;
+		var vByteStart = vAlloc.pos;
+		vbuf.blit(vByteStart, vertices, 0, vByteSize);
+
+		var triIndices = model.idx == null;
+		var iCount = triIndices ? model.triCount() * 3 : model.idx.length;
+		var iByteSize = iCount * 4;
+		if ( iBytes == null )
+			iBytes = new BytesArray(iByteSize, maxByteSize);
+		var iStart = iBytes.totalSize >> 2;
+		var iAlloc = iBytes.alloc(iByteSize);
+		var ibuf = iAlloc.b;
+		var iByteStart = iAlloc.pos;
+
+		if ( triIndices ) {
+			for ( i in 0...iCount )
+				ibuf.setInt32(iByteStart + (i << 2), i + vStart);
+		} else {
+			for ( i in 0...iCount )
+				ibuf.setInt32(iByteStart + (i << 2), model.idx[i] + vStart);
+		}
+
+		var subPart = new SubPart();
+		subPart.indexStarts = [iStart];
+		subPart.indexCounts = [iCount];
+		subMesh.subParts = [subPart];
+		subMeshes.push( subMesh );
+		fillSubMeshInfos( subMesh );
+	}
+
+	function fillHMD( model : HMDModel) {
+		var subMesh = new SubMesh();
+		subMesh.bounds = model.getBounds();
+		bounds.add(subMesh.bounds);
+		subMesh.lodCount = model.lods.length;
 		subMesh.lodConfig = model.lodConfig;
 		subMesh.subParts = [];
 		subMesh.subPartStart = subPartCount;
@@ -206,6 +256,14 @@ class BatchPrimitive extends MeshPrimitive {
 		fillSubMeshInfos( subMesh );
 	}
 
+	function fillModel( model : MeshPrimitive ) {
+		var hmd = Std.downcast(model, HMDModel);
+		if (hmd != null )
+			fillHMD(hmd);
+		else
+			fillPolygon(cast model);
+	}
+
 	function fillSubMeshInfos( subMesh : SubMesh ) {
 		var subMeshID = subMeshCount++;
 		var subMeshNeeded = subMeshCount * SUBMESH_INFOS_FMT.strideBytes;
@@ -260,7 +318,27 @@ class BatchPrimitive extends MeshPrimitive {
 		subPartCount += subParts.length * lodCount;
 	}
 
-	function fillLogicNormal( model : h3d.prim.HMDModel ) @:privateAccess {
+	function fillLogicNormal( model : MeshPrimitive ) @:privateAccess {
+		var poly = Std.downcast(model, Polygon);
+		if ( poly != null ) {
+			var startOffset : Int = logicNormals.length;
+			var vCount = poly.vertexCount();
+			logicNormals.grow(vCount*3);
+			var k = 0;
+			var hasNormal = poly.normals == null;
+			if ( !hasNormal )
+				poly.addNormals();
+			for( n in poly.normals ) {
+				logicNormals[startOffset + k++] = n.x;
+				logicNormals[startOffset + k++] = n.y;
+				logicNormals[startOffset + k++] = n.z;
+			}
+			if ( !hasNormal )
+				poly.normals = null;
+			return;
+		}
+
+		var model : HMDModel = cast model;
 		var lods = model.lods;
 		for ( lod in lods ) {
 			var pos = model.lib.getBuffers(lod, hxd.BufferFormat.POS3D);

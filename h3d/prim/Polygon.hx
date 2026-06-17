@@ -27,12 +27,7 @@ class Polygon extends MeshPrimitive {
 		return b;
 	}
 
-	override function alloc( engine : h3d.Engine ) {
-		dispose();
-
-		if (uvCount == 0 && uvs != null)
-			uvCount = 1;
-
+	public function getBufferFormat() : hxd.BufferFormat {
 		var format = hxd.BufferFormat.POS3D;
 		if( normals != null )
 			format = format.append("normal", DVec3);
@@ -48,7 +43,10 @@ class Polygon extends MeshPrimitive {
 			format = format.append("uv4", DVec2);
 		if( colors != null )
 			format = format.append("color", DVec3);
+		return format;
+	}
 
+	public function getCPUBuffer() : hxd.FloatBuffer {
 		var buf = new hxd.FloatBuffer();
 		for( k in 0...points.length ) {
 			var p = points[k];
@@ -79,6 +77,17 @@ class Polygon extends MeshPrimitive {
 				buf.push(c.z);
 			}
 		}
+		return buf;
+	}
+
+	override function alloc( engine : h3d.Engine ) {
+		dispose();
+
+		if (uvCount == 0 && uvs != null)
+			uvCount = 1;
+
+		var format = getBufferFormat();
+		var buf = getCPUBuffer();
 		buffer = h3d.Buffer.ofFloats(buf, format);
 		if( idx != null )
 			indexes = h3d.Indexes.alloc(idx);
