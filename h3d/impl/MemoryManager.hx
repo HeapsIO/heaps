@@ -22,7 +22,6 @@ typedef TextureStat = {
 
 class MemoryManager {
 
-	static inline var MAX_MEMORY = 6144 * (1024. * 1024.); // MB
 	static inline var SIZE = 65532;
 	static var ALL_FLAGS = Type.allEnums(Buffer.BufferFlag);
 
@@ -35,9 +34,19 @@ class MemoryManager {
 	var quadIndexes16 : Indexes;
 	var triIndexes32 : Indexes;
 	var quadIndexes32 : Indexes;
-	public var usedMemory(default, null) : Float = 0;
+	public var bufferMemory(default, null) : Float = 0;
 	public var texMemory(default, null) : Float = 0;
-	public var autoDisposeCooldown : Int = 60;
+
+	/**
+	 	How much time a texture should be kept into memory if it's not used.
+	**/
+	public var autoDisposeKeepTime : Float = 3.0;
+
+	/**
+	 	The amount of free memory we want to keep on our GPU to allow swapping.
+	**/
+	public var autoDisposeGpuFreeMB : Float = 1024;
+
 	var lastAutoDispose = 0;
 
 	public function new(driver) {
@@ -79,6 +88,7 @@ class MemoryManager {
 		Might be called several times if we need to allocate a lot of memory
 	**/
 	public dynamic function garbage() {
+		if( !cleanTextures(false) ) cleanTextures(true);
 	}
 
 	public function getTriIndexes( vertices : Int ) {
@@ -130,19 +140,14 @@ class MemoryManager {
 		if( b.vbuf != null ) return;
 
 		var mem = b.getMemSize();
-
 		if( mem == 0 ) return;
 
-		while( usedMemory + mem > MAX_MEMORY || (b.vbuf = driver.allocBuffer(b)) == null ) {
-
+		autoDisposeMemory();
+		while( (b.vbuf = driver.allocBuffer(b)) == null ) {
 			if( driver.isDisposed() ) return;
-
-			var size = usedMemory;
-			garbage();
-			if( usedMemory == size )
-				throw "Memory full (" + Math.fceil(size / 1024) + " KB," + buffers.length + " buffers)";
+			tryFreeMemory();
 		}
-		usedMemory += mem;
+		bufferMemory += mem;
 		buffers.push(b);
 	}
 
@@ -152,7 +157,7 @@ class MemoryManager {
 		b.vbuf = null;
 		// in case it was allocated with a previous memory manager
 		if( buffers.remove(b) )
-			usedMemory -= b.getMemSize();
+			bufferMemory -= b.getMemSize();
 	}
 
 	// ------------------------------------- TEXTURES ------------------------------------------
@@ -173,9 +178,12 @@ class MemoryManager {
 
 	public function cleanTextures( force = true ) {
 		textures.sort(sortByLRU);
+		var cleanupFrames = Math.ceil(autoDisposeKeepTime * hxd.Timer.fps());
+		if( cleanupFrames < 1 ) cleanupFrames = 1;
 		for( t in textures ) {
 			if( t.realloc == null || t.isDisposed() ) continue;
-			if( (force || t.lastFrame < hxd.Timer.frameCount - 3600) && t.lastFrame != h3d.mat.Texture.PREVENT_AUTO_DISPOSE ) {
+			if( t.lastFrame == h3d.mat.Texture.PREVENT_AUTO_DISPOSE ) break;
+			if( force || t.lastFrame < hxd.Timer.frameCount - cleanupFrames ) {
 				t.dispose();
 				return true;
 			}
@@ -183,8 +191,38 @@ class MemoryManager {
 		return false;
 	}
 
-	function sortByLRU( t1 : h3d.mat.Texture, t2 : h3d.mat.Texture ) {
+	static function sortByLRU( t1 : h3d.mat.Texture, t2 : h3d.mat.Texture ) {
 		return t1.lastFrame - t2.lastFrame;
+	}
+
+	public function beginFrame() {
+		if( autoDisposeGpuFreeMB > 0 && hxd.Timer.frameCount > lastAutoDispose + 60 ) {
+			var stats = driver.getMemoryUsage();
+			if( stats == null ) {
+				// disable (our driver doesn't support it anyway)
+				autoDisposeGpuFreeMB = -1;
+				return;
+			}
+			if( (stats.free/(1024*1024)) > autoDisposeGpuFreeMB || !cleanTextures(false) )
+				lastAutoDispose = hxd.Timer.frameCount; // wait a bit
+		}
+	}
+
+	function autoDisposeMemory() {
+		if( autoDisposeGpuFreeMB < 0 && hxd.Timer.frameCount > lastAutoDispose + 60 ) {
+			// if we have disabled per frame memory cleanup, or if our driver doesn't support it
+			// then let's do at least some cleanup for each allocation on a regular basis
+			// so we don't wait until our GPU returns null
+			cleanTextures(false);
+			lastAutoDispose = hxd.Timer.frameCount;
+		}
+	}
+
+	function tryFreeMemory() {
+		var size = bufferMemory + texMemory;
+		if( !cleanTextures(false) ) garbage();
+		if( bufferMemory + texMemory == size )
+			errorOutOfMemory();
 	}
 
 	@:allow(h3d.mat.Texture.dispose)
@@ -196,22 +234,19 @@ class MemoryManager {
 
 	@:allow(h3d.mat.Texture.alloc)
 	function allocTexture( t : h3d.mat.Texture ) {
+		autoDisposeMemory();
 		while( true ) {
-			var free = true;
-			if ( hxd.Timer.frameCount > lastAutoDispose + autoDisposeCooldown ) {
-				free = cleanTextures(false);
-				lastAutoDispose = hxd.Timer.frameCount;
-			}
 			t.t = t.isDepth() ? driver.allocDepthBuffer(t) : driver.allocTexture(t);
 			if( t.t != null ) break;
-
 			if( driver.isDisposed() ) return;
-			while( cleanTextures(false) ) {} // clean all old textures
-			if( !free && !cleanTextures(true) )
-				throw "Maximum texture memory reached";
+			tryFreeMemory();
 		}
 		textures.push(t);
 		texMemory += memSize(t);
+	}
+
+	public dynamic function errorOutOfMemory() {
+		throw "Failed to alloc GPU Memory (full)";
 	}
 
 	// ------------------------------------- DISPOSE ------------------------------------------
@@ -236,22 +271,24 @@ class MemoryManager {
 			b.dispose();
 		buffers = [];
 		textures = [];
-		usedMemory = 0;
+		bufferMemory = 0;
 		texMemory = 0;
 	}
 
 	// ------------------------------------- STATS ------------------------------------------
 
-	public function stats() {
-		var total = 0.;
-		for( b in buffers )
-			total += b.getMemSize();
+	public function stats( megas = false ) {
+		var total = bufferMemory + texMemory;
+		var use = driver.getMemoryUsage();
+		inline function fmt( v : Float ) return megas ? hxd.Math.fmt(v/(1024*1024)) : v;
 		return {
 			bufferCount : buffers.length,
-			bufferMemory : total,
-			totalMemory : usedMemory + texMemory,
+			bufferMemory : fmt(bufferMemory),
+			totalMemory : fmt(use == null ? bufferMemory + texMemory : use.allocated),
 			textureCount : textures.length,
-			textureMemory : texMemory,
+			textureMemory : fmt(texMemory),
+			otherMemory : use == null ? 0 : fmt(use.allocated - total) /* remaining memory that we don't know about */,
+			maxMemory : use == null ? 0 : fmt(use.total),
 		};
 	}
 
@@ -301,7 +338,7 @@ class MemoryManager {
 				all.push(inf);
 			}
 			inf.count++;
-			var size = b.vertices * b.format.stride * 4;
+			var size = b.getMemSize();
 			inf.size += size;
 			addStack("buffer", b.allocPos, inf.stacks, size);
 		}

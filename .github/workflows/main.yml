@@ -13,8 +13,8 @@ jobs:
       fail-fast: false
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
-    - uses: krdlab/setup-haxe@v1
+    - uses: actions/checkout@v6
+    - uses: krdlab/setup-haxe@v2
       with:
         haxe-version: ${{ matrix.haxe-version }}
     - name: Print Haxe version

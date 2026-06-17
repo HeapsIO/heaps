@@ -17,6 +17,8 @@ class Printer {
 	public function shaderString( s : ShaderData ) {
 		buffer = new StringBuf();
 		for( v in s.vars ) {
+			if(v.kind == Function)
+				continue;
 			addVar(v, null);
 			add(";\n");
 		}
@@ -66,6 +68,7 @@ class Printer {
 				case Sampler(s): "sampler("+ s + ")";
 				case Final: "final";
 				case Flat: "flat";
+				case NoVar: "noVar";
 				}) + " ");
 		}
 		if( v.kind != defKind )
@@ -75,7 +78,7 @@ class Printer {
 			case Global:
 				add("@global ");
 			case Var:
-				add("@varying ");
+				add("@var ");
 			case Param:
 				add("@param ");
 			case Input:
@@ -85,19 +88,20 @@ class Printer {
 			case Output:
 				add("@output ");
 			}
-		add("var ");
-		if( v.parent == parent )
+		if( parent != null && v.parent == parent )
 			add(v.name + (varId?"@" + v.id:""));
-		else
+		else {
+			add("var ");
 			addVarName(v);
+		}
 		add(" : ");
 		switch( v.type ) {
 		case TStruct(vl):
 			add("{");
 			var first = true;
-			for( v in vl ) {
+			for( childV in vl ) {
 				if( first ) first = false else add(", ");
-				addVar(v,v.kind,tabs,v);
+				addVar(childV,v.kind,tabs,v);
 			}
 			add("}");
 		default:

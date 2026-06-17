@@ -25,6 +25,7 @@ class GPUMeshBatch extends MeshBatch {
 
 	var gpuLodEnabled : Bool;
 	var gpuCullingEnabled : Bool;
+	var manualDispatch : Bool = false;
 
 	/**
 	* If set, clip all instanced behind this distance.
@@ -55,6 +56,14 @@ class GPUMeshBatch extends MeshBatch {
 	 */
 	public function enableGpuCulling() {
 		gpuCullingEnabled = true;
+	}
+
+
+	/**
+	 * Enable the user to decide when to call dispatch.
+	 */
+	public function enableManualDispatch() {
+		manualDispatch = true;
 	}
 
 	function getLodCount() return gpuLodEnabled ? getPrimitive().lodCount() : 1;
@@ -115,7 +124,7 @@ class GPUMeshBatch extends MeshBatch {
 			var subPartsCount = 0;
 			var subPartsStart = 0;
 			for ( subMesh in primitiveSubMeshes ) {
-				tmpSubMeshesInfos[pos++] = subMesh.bounds.dimension() * 0.5;
+				tmpSubMeshesInfos[pos++] = subMesh.bounds.getBoundingRadius();
 				tmpSubMeshesInfos[pos++] = subMesh.lodCount;
 				tmpSubMeshesInfos[pos++] = subPartsStart;
 				tmpSubMeshesInfos[pos++] = subMesh.subParts.length;
@@ -226,8 +235,7 @@ class GPUMeshBatch extends MeshBatch {
 		} else {
 			commandCountNeeded = materialCount * instanceCount;
 			var computeShader : h3d.shader.InstanceIndirect = cast computeShader;
-			var prim = getPrimitive();
-			computeShader.radius = prim.getBounds().dimension() * 0.5;
+			computeShader.radius = getPrimitive().getBounds().getBoundingRadius();
 			computeShader.lodCount = getLodCount();
 			computeShader.subPartsCount = materialCount;
 		}
@@ -249,10 +257,16 @@ class GPUMeshBatch extends MeshBatch {
 		if ( instanceCount == 0 || (cullingCollider != null && !cullingCollider.inFrustum(ctx.camera.frustum)) )
 			return;
 		super.emit(ctx);
+		if ( !manualDispatch )
+			dispatch(ctx);
+	}
+
+	public function dispatch(ctx:RenderContext) {
 		if ( commandBuffer != null ) {
 			var computeShader = computePass.getShader(h3d.shader.InstanceIndirect.InstanceIndirectBase);
 			if ( gpuCullingEnabled )
 				computeShader.frustum = ctx.getCameraFrustumBuffer();
+			computeShader.meshLodScale = ctx.meshLodScale;
 			computeShader.instanceData = dataPasses.buffers[0];
 			computeShader.commandBuffer = commandBuffer;
 			gpuCounter.reset();

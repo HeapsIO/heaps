@@ -2,6 +2,7 @@ package h3d.prim;
 
 class HMDModel extends MeshPrimitive {
 
+	var model : hxd.fmt.hmd.Data.Model;
 	var data (get, never) : hxd.fmt.hmd.Data.Geometry;
 	function get_data() { return lods[0]; }
 	var lods : Array<hxd.fmt.hmd.Data.Geometry>;
@@ -14,10 +15,12 @@ class HMDModel extends MeshPrimitive {
 	var normalsRecomputed : String;
 	var blendshape : Blendshape;
 	var lodConfig : Array<Float> = null;
-	var colliderData : Collider;
+	var cullingScreenRatio : Float = 0.;
+	var colliderData : ColliderData;
 
-	public function new( data : hxd.fmt.hmd.Data.Geometry, dataPos, lib, lods : Array<hxd.fmt.hmd.Data.Model> = null ) {
-		this.lods = [data];
+	public function new( model : hxd.fmt.hmd.Data.Model, dataPos, lib, lods : Array<hxd.fmt.hmd.Data.Model> = null ) {
+		this.model = model;
+		this.lods = [lib.header.geometries[model.geometry]];
 		if (lods != null) {
 			for (lod in lods)
 				this.lods.push(lib.header.geometries[lod.geometry]);
@@ -28,7 +31,7 @@ class HMDModel extends MeshPrimitive {
 		if (lib.header.shapes != null && lib.header.shapes.length > 0)
 			this.blendshape = new Blendshape(this);
 		if ( lib.header.colliders != null && lib.header.colliders.length > 0 )
-			this.colliderData = Collider.fromHmd(this);
+			this.colliderData = ColliderData.fromHmd(this);
 	}
 
 	public function getPath() {
@@ -277,42 +280,50 @@ class HMDModel extends MeshPrimitive {
 		curMaterial = -1;
 	}
 
-	function initCollider( poly : h3d.col.PolygonBuffer ) {
-		var sphere = data.bounds.toSphere();
-		if ( colliderData == null ) {
-			var buf = lib.getBuffers(data, hxd.BufferFormat.POS3D);
-			poly.setData(buf.vertexes, buf.indexes);
-			if( collider == null )
-				collider = new h3d.col.Collider.OptimizedCollider(sphere, poly);
-		} else {
-			var buffers = colliderData.getBuffers();
-			var hulls : Array<h3d.col.Collider> = [];
-			hulls.resize(buffers.length);
-			for ( i => buf in buffers ) {
-				var p = new h3d.col.PolygonBuffer();
-				p.source = poly.source;
-				p.setData(buf.vertexes, buf.indexes);
-				hulls[i] = p;
-			}
-			var convexHulls = new h3d.col.Collider.GroupCollider(hulls);
-			collider = new h3d.col.Collider.OptimizedCollider(sphere, convexHulls);
-		}
-	}
-
 	override function getCollider() {
-		if( collider != null )
+		if (collider != null)
 			return collider;
-		var poly = new h3d.col.PolygonBuffer();
-		poly.source = {
-			entry : lib.resource.entry,
-			geometryName : null,
-		};
-		for( h in lib.header.models )
-			if( lib.header.geometries[h.geometry] == data ) {
-				poly.source.geometryName = h.name;
-				break;
+		if (colliderData == null) {
+			var poly = new h3d.col.PolygonBuffer();
+			poly.source = {
+				entry : lib.resource.entry,
+				geometryName : null,
+			};
+
+			for (h in lib.header.models) {
+				if( lib.header.geometries[h.geometry] == data ) {
+					poly.source.geometryName = h.name;
+					break;
+				}
 			}
-		initCollider(poly);
+
+			// If the model is a skin, we should apply on it's collider the default transform of the root joint
+			// since the def mat of the model has been removed and set in the root joint
+			var b = data.bounds;
+			var buf = lib.getBuffers(data, hxd.BufferFormat.POS3D);
+			if (this.model.skin != null) {
+				var defMat = this.model.skin.joints[0].position.toMatrix();
+				b.transform(defMat);
+
+				var tmpVec = new h3d.Vector();
+				var idx = 0;
+				while (idx < buf.vertexes.length) {
+					tmpVec.set(buf.vertexes.get(idx), buf.vertexes.get(idx + 1), buf.vertexes.get(idx + 2));
+					tmpVec.transform(defMat);
+					buf.vertexes.set(idx, tmpVec.x);
+					buf.vertexes.set(idx + 1, tmpVec.y);
+					buf.vertexes.set(idx + 2, tmpVec.z);
+					idx += 3;
+				}
+			}
+
+			poly.setData(buf.vertexes, buf.indexes);
+
+			if (collider == null)
+				collider = new h3d.col.Collider.OptimizedCollider(b.toSphere(), poly);
+		} else {
+			collider = colliderData.getCollider();
+		}
 		return collider;
 	}
 
@@ -322,21 +333,16 @@ class HMDModel extends MeshPrimitive {
 
 	override public function screenRatioToLod( screenRatio : Float ) : Int {
 		var lodCount = lodCount();
+		if (screenRatio < getCullingScreenRatio())
+			return lodCount;
 
-		if (forcedLod >= 0)
-			return hxd.Math.imin(forcedLod, lodCount);
-
-		if ( lodCount == 1 )
+		if (lodCount == 1)
 			return 0;
 
 		var lodConfig = getLodConfig();
-		if ( lodConfig != null ) {
-			var lodConfigHasCulling = lodConfig.length > lodCount - 1;
-			if ( lodConfigHasCulling && screenRatio < lodConfig[lodConfig.length - 1] )
-				return lodCount;
-
+		if (lodConfig != null) {
 			var lodLevel : Int = 0;
-			var maxIter = lodConfigHasCulling ? lodCount - 1 : lodConfig.length;
+			var maxIter = hxd.Math.imin(lodCount - 1, lodConfig.length);
 			for ( i in 0...maxIter ) {
 				if ( lodConfig[i] == 0.0 )
 					return lodLevel;
@@ -349,6 +355,10 @@ class HMDModel extends MeshPrimitive {
 		}
 
 		return 0;
+	}
+
+	override public function getCullingScreenRatio() {
+		return cullingScreenRatio;
 	}
 
 	public function getLodConfig() {

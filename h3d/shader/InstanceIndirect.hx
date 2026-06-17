@@ -4,6 +4,7 @@ class InstanceIndirectBase extends hxsl.Shader {
 	static var SRC = {
 		@global var camera : {
 			var position : Vec3;
+			var proj : Mat4;
 		}
 
 		@const var ENABLE_COUNT_BUFFER : Bool;
@@ -22,6 +23,7 @@ class InstanceIndirectBase extends hxsl.Shader {
 
 		@const var ENABLE_DISTANCE_CLIPPING : Bool;
 		@param var maxDistance : Float = -1;
+		@param var meshLodScale : Float = 1.0;
 
 		var modelView : Mat4;
 		var invocID : Int;
@@ -65,7 +67,7 @@ class InstanceIndirectBase extends hxsl.Shader {
 			if ( ENABLE_CULLING ) {
 				@unroll for ( i  in 0...6 ) {
 					var plane = frustum[i];
-					culled = culled || plane.x * pos.x + plane.y * pos.y + plane.z * pos.z - plane.w < -radius;
+					culled = culled || ((dot(plane.xyz, pos) - plane.w) < -radius);
 				}
 			}
 			return culled;
@@ -98,8 +100,9 @@ class InstanceIndirectBase extends hxsl.Shader {
 		}
 
 		function computeScreenRatio( distToCam : Float, radius : Float ) : Float {
-			var screenRatio = radius / distToCam;
-			return screenRatio * screenRatio;
+			var screenMultiple = max(0.5 * camera.proj[0][0], 0.5 * camera.proj[1][1]);
+			var screenRadius = screenMultiple * radius / max(1.0, distToCam);
+			return 2.0 * screenRadius * meshLodScale;
 		}
 
 		function selectLod( screenRatio : Float ) : Int {
@@ -122,12 +125,17 @@ class InstanceIndirectBase extends hxsl.Shader {
 				init();
 
 				var pos = vec3(modelView[0].w, modelView[1].w, modelView[2].w);
-				var vScale = abs(vec3(1) * modelView.mat3x4() - pos);
-				var scaledRadius = max(max(vScale.x, vScale.y), vScale.z);
+				var scale = vec3(
+					length(vec3(modelView[0].x,modelView[1].x,modelView[2].x)),
+					length(vec3(modelView[0].y,modelView[1].y,modelView[2].y)),
+					length(vec3(modelView[0].z,modelView[1].z,modelView[2].z))
+				);
+
+				var maxScale = max(max(scale.x, scale.y), scale.z);
 				var toCam = camera.position - pos.xyz;
 				var distToCam = length(toCam);
 
-				scaledRadius *= getRadius();
+				var scaledRadius = maxScale * getRadius();
 				var culled = dot(scaledRadius, scaledRadius) < 1e-6;
 
 				culled = culled || frustumCulling(pos, scaledRadius);

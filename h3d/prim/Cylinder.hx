@@ -3,15 +3,22 @@ import h3d.col.Point;
 
 class Cylinder extends Quads {
 
+	var ray : Float;
+	var height : Float;
+	var centered : Bool;
 	var segs : Int;
 
 	public function new( segs : Int, ray = 1.0, height = 1.0, centered = false ) {
+		this.ray = ray;
+		this.height = height;
+		this.centered = centered;
+
 		var pts = new Array();
 		var normals = new Array();
 		var ds = Math.PI * 2 / segs;
 		this.segs = segs;
-		var z0 = centered ? -height * 0.5 : 0;
-		var z1 = centered ? -z0 : height;
+		var z0 = getMinZ();
+		var z1 = getMaxZ();
 		for( s in 0...segs ) {
 			var a = s * ds;
 			var a2 = (s + 1) * ds;
@@ -32,6 +39,10 @@ class Cylinder extends Quads {
 		super(pts,normals);
 	}
 
+	override public function getCollider() : h3d.col.Collider {
+		return new h3d.col.Cylinder(new h3d.col.Point(0, 0, getMinZ()), new h3d.col.Point(0, 0, getMaxZ()), ray);
+	}
+
 	override function addUVs() {
 		uvs = new Array();
 		for( s in 0...segs ) {
@@ -44,8 +55,16 @@ class Cylinder extends Quads {
 		}
 	}
 
+	inline function getMinZ() {
+		return centered ? -height * 0.5 : 0;
+	}
+
+	inline function getMaxZ() {
+		return centered ? -getMinZ() : height;
+	}
+
 	/**
-	 * Get a default unit Cylinder with 
+	 * Get a default unit Cylinder with
 	 * segs = 16, ray = 0.5, height = 1.0, centered = false
 	 * and add UVs to it. If it has not be cached, it is cached and subsequent
 	 * calls to this method will return Cylinder from cache.

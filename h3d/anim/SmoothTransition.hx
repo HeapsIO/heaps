@@ -131,7 +131,10 @@ class SmoothTransition extends Transition {
 			m._42 = m1._42 * a + m2._42 * b;
 			m._43 = m1._43 * a + m2._43 * b;
 			// save matrix
-			if( o.targetSkin != null ) o.targetSkin.jointsData[o.targetJoint].currentRelPos = m else o.targetObject.defaultTransform = m;
+			if( o.targetSkin != null ) {
+				o.targetSkin.jointsData[o.targetJoint].currentRelPos = m;
+				o.targetSkin.jointsUpdated = true;
+			} else o.targetObject.defaultTransform = m;
 		}
 	}
 

@@ -94,36 +94,33 @@ class LightBuffer {
 			return -1;
 		if ( dirL2 && !dirL1 )
 			return 1;
-		var d1 = l1.getAbsPos().getPosition().sub(cameraTarget).length();
-		var d2 = l2.getAbsPos().getPosition().sub(cameraTarget).length();
+		var d1 = l1.getAbsPos().getPosition().sub(cameraTarget).lengthSq();
+		var d2 = l2.getAbsPos().getPosition().sub(cameraTarget).lengthSq();
 		return d1 == d2 ? 0 : (d1 > d2 ? 1 : -1);
 	}
 
+	var tmpLights = [];
+
 	public function sortLights ( ctx : h3d.scene.RenderContext ) : Array<Light> @:privateAccess {
-		var lights = [];
 		var l = Std.downcast(ctx.lights, Light);
 		if ( l == null )
 			return null;
+		var pos = 0;
 		while ( l != null ) {
 			if (l.enableForward && l.inFrustum(ctx.camera.frustum)) {
-				lights.push(l);
+				tmpLights[pos++] = l;
 			}
 			l = Std.downcast(l.next, Light);
 		}
-		lights.sort(function(l1,l2) { return sortingCriteria(l1, l2, ctx.camera.target); });
-		return lights;
+		while( tmpLights.length > pos ) tmpLights.pop();
+		tmpLights.sort(function(l1,l2) { return sortingCriteria(l1, l2, ctx.camera.target); });
+		return tmpLights;
 	}
 
 	public function fillLights (lights : Array<Light>, shadows : Bool) {
 		if (lights == null)
 			return;
-		pointLightsShadow = [];
-		spotLightsShadow = [];
-		dirLightsShadow = [];
 		cascadeLight = null;
-		pointLights = [];
-		spotLights = [];
-		dirLights = [];
 
 		var dirShadowCount = 0;
 		var pointShadowCount = 0;
@@ -228,7 +225,7 @@ class LightBuffer {
 			fillVector(lightInfos, pbr.lightDir, i+4);
 			lightInfos[i+7] = dl.shadows.bias;
 			s.dirShadowMaps[li] = dl.shadows.getShadowTex();
-			var mat = dl.shadows.getShadowProj();
+			var mat = dl.shadows.getShadowViewProj();
 			fillFloats(lightInfos, mat._11, mat._21, mat._31, mat._41, i+8);
 			fillFloats(lightInfos, mat._12, mat._22, mat._32, mat._42, i+12);
 			fillFloats(lightInfos, mat._13, mat._23, mat._33, mat._43, i+16);
@@ -294,7 +291,7 @@ class LightBuffer {
 			lightInfos[i+13] = pbr.fallOff;
 			lightInfos[i+14] = 1.0;
 			lightInfos[i+15] = sl.shadows.bias;
-			var mat = sl.shadows.getShadowProj();
+			var mat = sl.shadows.getShadowViewProj();
 			fillFloats(lightInfos, mat._11, mat._21, mat._31, mat._41, i+16);
 			fillFloats(lightInfos, mat._12, mat._22, mat._32, mat._42, i+20);
 			fillFloats(lightInfos, mat._13, mat._23, mat._33, mat._43, i+24);
@@ -353,12 +350,12 @@ class LightBuffer {
 		s.pointShadowCount = pointLightsShadow.length;
 		s.spotShadowCount = spotLightsShadow.length;
 		s.lightInfos.uploadFloats(lightInfos, 0, s.lightInfos.vertices, 0);
-		pointLights = [];
-		spotLights = [];
-		dirLights = [];
-		pointLightsShadow = [];
-		spotLightsShadow = [];
-		dirLightsShadow = [];
+		while( pointLights.length > 0 ) pointLights.pop();
+		while( spotLights.length > 0 ) spotLights.pop();
+		while( dirLights.length > 0 ) dirLights.pop();
+		while( pointLightsShadow.length > 0 ) pointLightsShadow.pop();
+		while( spotLightsShadow.length > 0 ) spotLightsShadow.pop();
+		while( dirLightsShadow.length > 0 ) dirLightsShadow.pop();
 		cascadeLight = null;
 
 		var pbrIndirect = @:privateAccess pbrRenderer.pbrIndirect;

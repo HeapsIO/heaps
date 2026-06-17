@@ -1,11 +1,22 @@
 package h3d.scene;
 
+import h3d.mat.Texture;
+import h3d.col.Frustum;
+
 private class SharedGlobal {
 	public var gid : Int;
 	public var value : Dynamic;
 	public function new(gid, value) {
 		this.gid = gid;
 		this.value = value;
+	}
+}
+
+class View {
+	public var idx : Int;
+	public var frustum : Frustum;
+	public function new(idx) {
+		this.idx = idx;
 	}
 }
 
@@ -19,6 +30,8 @@ class RenderContext extends h3d.impl.RenderContext {
 	public var computingStatic : Bool;
 	public var computeVelocity : Bool;
 	public var useReverseDepth : Bool;
+	public var renderResolutionWidth : Int;
+	public var renderResolutionHeight : Int;
 
 	public var lightSystem : h3d.scene.LightSystem;
 	public var extraShaders : hxsl.ShaderList;
@@ -27,19 +40,32 @@ class RenderContext extends h3d.impl.RenderContext {
 	public var wasContextLost : Bool;
 	public var cullingCollider : h3d.col.Collider;
 	public var forcedScreenRatio : Float = -1;
+	public var meshLodScale : Float = 1.0;
+
+	public var hzb : h3d.mat.Texture;
+
+	public var numViews : Int = 1;
+	public var currentView : View = new h3d.scene.View(0);
+
+	public var prevCamera : h3d.Camera;
 
 	@global("camera.view") var cameraView : h3d.Matrix;
 	@global("camera.zNear") var cameraNear : Float;
 	@global("camera.zFar") var cameraFar : Float;
 	@global("camera.proj") var cameraProj : h3d.Matrix;
+	@global("camera.invProj") var cameraInvProj : h3d.Matrix;
+	@global("camera.prevPosition") var cameraPrevPos : h3d.Vector;
 	@global("camera.position") var cameraPos : h3d.Vector;
 	@global("camera.projDiag") var cameraProjDiag : h3d.Vector4;
 	@global("camera.projFlip") var cameraProjFlip : Float;
-	@global("camera.projDepth") var cameraProjDepth : Float;
+	@global("camera.reverseDepth") var cameraReverseDepth : Bool;
 	@global("camera.viewProj") var cameraViewProj : h3d.Matrix;
 	@global("camera.inverseViewProj") var cameraInverseViewProj : h3d.Matrix;
+	@global("camera.prevView") var cameraPrevView : h3d.Matrix;
+	@global("camera.prevProj") var cameraPrevProj : h3d.Matrix;
 	@global("camera.previousViewProj") var cameraPreviousViewProj : h3d.Matrix;
 	@global("camera.jitterOffsets") var cameraJitterOffsets : h3d.Vector4;
+	@global("global.prevTime") var globalPrevTime : Float;
 	@global("global.time") var globalTime : Float;
 	@global("global.pixelSize") var pixelSize : h3d.Vector;
 	@global("global.modelView") var globalModelView : h3d.Matrix;
@@ -64,32 +90,59 @@ class RenderContext extends h3d.impl.RenderContext {
 		super();
 		this.scene = scene;
 		camera = new h3d.Camera();
+		prevCamera = new h3d.Camera();
+		renderResolutionWidth = engine.width;
+		renderResolutionHeight = engine.height;
 		cachedShaderList = [];
 		cachedPassObjects = [];
 		initGlobals();
 	}
 
 	public function setCamera( cam : h3d.Camera ) {
+		prevCamera.load(camera);
 		camera.load(cam);
-		camera.reverseDepth = useReverseDepth;
+		cameraReverseDepth = camera.reverseDepth = useReverseDepth;
 		camera.update();
 		cameraView = camera.mcam;
 		cameraNear = camera.zNear;
 		cameraFar = camera.zFar;
 		cameraProj = camera.mproj;
+		cameraInvProj = camera.getInverseProj();
 		cameraPos = camera.pos;
+		if(cameraPrevPos == null)
+			cameraPrevPos = camera.pos.clone();
 		cameraProjDiag = new h3d.Vector4(camera.mproj._11,camera.mproj._22,camera.mproj._33,camera.mproj._44);
+		if ( cameraPrevView == null )
+			cameraPrevView = camera.mcam.clone();
+		if ( cameraPrevProj == null )
+			cameraPrevProj = camera.mproj.clone();
 		if ( cameraPreviousViewProj == null )
 			cameraPreviousViewProj = camera.m.clone();
 		if (cameraJitterOffsets == null)
 			cameraJitterOffsets = new h3d.Vector4( 0.0, 0.0, 0.0, 0.0 );
 		cameraViewProj = camera.m;
 		cameraInverseViewProj = camera.getInverseViewProj();
-		cameraProjDepth = useReverseDepth ? -1.0 : 1.0;
+		currentView.frustum = camera.frustum;
+	}
+
+	public function setRenderResolution( width : Int, height : Int ) {
+		renderResolutionWidth = width;
+		renderResolutionHeight = height;
+		pixelSize = new h3d.Vector(2 / width, 2 / height);
+	}
+
+	public function updateNumViews( numViews : Int ) {
+		this.numViews = numViews;
+	}
+
+	public function setCurrentView( viewIdx : Int, viewFrustum : Frustum ) {
+		currentView.idx = viewIdx;
+		currentView.frustum = viewFrustum;
 	}
 
 	public function setupTarget() {
-		cameraProjFlip = engine.driver.hasFeature(BottomLeftCoords) && engine.getCurrentTarget() != null ? -1 : 1;
+		var v = engine.driver.hasFeature(BottomLeftCoords) && engine.getCurrentTarget() != null ? -1 : 1;
+		if( cameraProjFlip != v ) cameraProjFlip = v;
 	}
 
 	function getCurrentPixelSize() {
@@ -114,14 +167,17 @@ class RenderContext extends h3d.impl.RenderContext {
 		cachedPos = 0;
 		visibleFlag = true;
 		forcedScreenRatio = -1;
+		globalPrevTime = time;
 		time += elapsedTime;
 		frame++;
 		setCurrent();
 		engine = h3d.Engine.getCurrent();
+		setRenderResolution(engine.width, engine.height);
 		globalTime = time;
 		globalFrame = frame;
 		pixelSize = getCurrentPixelSize();
 		setCamera(scene.camera);
+		numViews = 1;
 	}
 
 	public inline function nextPass() {
@@ -138,8 +194,6 @@ class RenderContext extends h3d.impl.RenderContext {
 	}
 
 	public function emitPass( pass : h3d.mat.Pass, obj : h3d.scene.Object ) @:privateAccess {
-		if ( pass.rendererFlags & 1 == 0 )
-			@:privateAccess scene.renderer.setPassFlags(pass);
 		var o = allocPool;
 		if( o == null ) {
 			o = new h3d.pass.PassObject();
@@ -180,6 +234,8 @@ class RenderContext extends h3d.impl.RenderContext {
 	public function computeDispatch( ?shader : hxsl.Shader, x = 1, y = 1, z = 1, barrier : Bool = true) {
 		if ( x <= 0 || y <= 0 || z <= 0 )
 			throw "Can't use zero or negative work groups count";
+		if ( x > 65535 || y > 65535 || z > 65535 )
+			throw "Thread group size can't exceed 65535";
 
 		var prev = h3d.impl.RenderContext.get();
 		if( prev != this )
@@ -247,8 +303,16 @@ class RenderContext extends h3d.impl.RenderContext {
 		return cameraFrustumBuffer;
 	}
 
-	public function getDepthClearValue() {
-		return useReverseDepth ? 0 : 1;
+	public function getDepthClearValue() : Float {
+		return useReverseDepth ? 0.0 : 1.0;
+	}
+
+	public function selectTextureHandles(handles : Array<h3d.mat.TextureHandle>) {
+		engine.driver.selectTextureHandles(handles);
+	}
+
+	public function selectBufferHandles(handles : Array<h3d.BufferHandle>) {
+		engine.driver.selectBufferHandles(handles);
 	}
 
 	public function uploadParams() {
@@ -283,6 +347,9 @@ class RenderContext extends h3d.impl.RenderContext {
 
 		cameraFrustumUploaded = false;
 
+		cameraPrevPos.load(cameraPos);
+		cameraPrevView.load(cameraView);
+		cameraPrevProj.load(cameraProj);
 		cameraPreviousViewProj.load(cameraViewProj);
 		computeVelocity = false;
 
@@ -291,8 +358,10 @@ class RenderContext extends h3d.impl.RenderContext {
 
 	override public function dispose() {
 		super.dispose();
-		if ( cameraFrustumBuffer != null )
+		if ( cameraFrustumBuffer != null ) {
 			hxd.impl.Allocator.get().disposeBuffer( cameraFrustumBuffer );
+			cameraFrustumBuffer = null;
+		}
 	}
 
 }

@@ -94,14 +94,7 @@ class System {
 		}
 	}
 
-	public static function start( init : Void -> Void ) : Void {
-		#if usesys
-
-		if( !haxe.System.init() ) return;
-		@:privateAccess Window.inst = new Window("", haxe.System.width, haxe.System.height);
-		init();
-
-		#else
+	public static dynamic function createWindow() {
 		var width = 800;
 		var height = 600;
 		var size = haxe.macro.Compiler.getDefine("windowSize");
@@ -114,21 +107,26 @@ class System {
 			width = Std.parseInt(p[0]);
 			height = Std.parseInt(p[1]);
 		}
+		return new Window(title, width, height, { fixed: fixed });
+	}
+
+	public static function start( init : Void -> Void ) : Void {
+		#if usesys
+		if( !haxe.System.init() ) return;
+		@:privateAccess Window.inst = new Window("", haxe.System.width, haxe.System.height);
+		init();
+
+		#else
 		timeoutTick();
 		#if hlsdl
-			sdl.Sdl.init();
-			@:privateAccess Window.initChars();
-			@:privateAccess Window.inst = new Window(title, width, height, fixed);
-			init();
-		#elseif hldx
-			@:privateAccess Window.inst = new Window(title, width, height, fixed);
-			init();
-		#else
-			@:privateAccess Window.inst = new Window(title, width, height);
-			init();
-		#end
+		sdl.Sdl.init();
+		@:privateAccess Window.initChars();
 		#end
 
+		@:privateAccess Window.inst = createWindow();
+
+		init();
+		#end
 		timeoutTick();
 		haxe.Timer.delay(runMainLoop, 0);
 	}
@@ -155,7 +153,9 @@ class System {
 			try {
 				hl.Api.setErrorHandler(reportError); // set exception trap
 			#end
-				#if ( target.threaded && (haxe_ver >= 4.2) )
+				#if ( haxe_ver >= 5 )
+				mainThread.events.loopOnce();
+				#elseif ( target.threaded && (haxe_ver >= 4.2) )
 				// Due to how 4.2+ timers work, instead of MainLoop, thread events have to be updated.
 				// Unsafe events rely on internal implementation of EventLoop, but utilize the recycling feature
 				// which in turn provides better optimization.
@@ -272,6 +272,20 @@ class System {
 			cur = Cursor.createSystem(SizeALL);
 		case TextInput:
 			cur = Cursor.createSystem(IBeam);
+		#if (hlsdl || hldx >= version("1.16.0"))
+		case ResizeNS:
+			cur = Cursor.createSystem(SizeNS);
+		case ResizeWE:
+			cur = Cursor.createSystem(SizeWE);
+		case ResizeNWSE:
+			cur = Cursor.createSystem(SizeNWSE);
+		case ResizeNESW:
+			cur = Cursor.createSystem(SizeNESW);
+		#else
+		// fallback for old hldx versions that don't have all the CursorKind values for SizeXX
+		case ResizeNS, ResizeWE, ResizeNWSE, ResizeNESW:
+			cur = Cursor.createSystem(SizeALL);
+		#end
 		case Callback(_), Hide:
 			throw "assert";
 		case Custom(c):

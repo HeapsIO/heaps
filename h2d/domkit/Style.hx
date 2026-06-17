@@ -8,6 +8,9 @@ typedef SourceFile = {
 
 class Style extends domkit.CssStyle {
 
+	static var STATIC_CSS = new Array<hxd.res.Resource>();
+	public static function registerCSS(res) { STATIC_CSS.push(res); return res; }
+
 	var currentObjects : Array<h2d.Object> = [];
 	var resources : Array<hxd.res.Resource> = [];
 	var errors : Array<String>;
@@ -24,6 +27,8 @@ class Style extends domkit.CssStyle {
 	public function new() {
 		super();
 		cssParser = new domkit.CssParser();
+		for( r in STATIC_CSS )
+			load(r);
 	}
 
 	public function load( r : hxd.res.Resource, watchChanges = true, isVariablesDef = false ) {
@@ -34,8 +39,9 @@ class Style extends domkit.CssStyle {
 			#end
 			onChange();
 		});
-		if( resources.indexOf(r) >= 0 )
-			return;
+		for( r2 in resources )
+			if( r2.entry == r.entry )
+				return;
 		resources.push(r);
 		var variables = cssParser.variables.copy();
 		var data = loadData(r);
@@ -44,6 +50,95 @@ class Style extends domkit.CssStyle {
 			cssParser.variables = variables;
 		for( o in currentObjects )
 			o.dom.applyStyle(this);
+	}
+
+	public function loadComponents( path : String, ?globals : Array<hxd.res.Resource> ) {
+		if( globals != null ) {
+			for( r in globals )
+				load(r, true, true);
+		}
+		function loadRec( dir : hxd.fs.FileEntry ) {
+			for( f in dir ) {
+				if( f.isDirectory )
+					loadRec(f);
+				else if( f.extension == "less" )
+					load(hxd.res.Loader.currentInstance.load(f.path));
+			}
+		}
+		loadRec(hxd.res.Loader.currentInstance.load(path).entry);
+	}
+
+	#if hscript
+	function defaultInterpRebuild( o : h2d.Object ) {
+		// the default rebuild try to call the first rebuild() method in hierarchy
+		while( o != null ) {
+			var f = Reflect.field(o, "rebuild");
+			if( f != null && Reflect.isFunction(f) ) {
+				(o:Dynamic).rebuild();
+				return;
+			}
+			o = o.parent;
+		}
+	}
+
+	function onRebuild( rebuild : h2d.Object -> Void, c : Class<Dynamic> ) {
+		function rebuildRec( o : h2d.Object ) {
+			if( Std.isOfType(o,c) )
+				rebuild(o);
+			for( c in o )
+				rebuildRec(c);
+		}
+		for( o in currentObjects )
+			rebuildRec(o);
+	}
+
+	static function interpInit() {
+		if( WATCH_INIT_DONE ) return;
+		WATCH_INIT_DONE = true;
+		var waitList = [];
+		function flushWait() {
+			var wl = waitList;
+			waitList = [];
+			if( ON_WATCH_CALLB != null )
+				ON_WATCH_CALLB(wl);
+		}
+		var ret = domkit.Interp.init(function(cl) {
+			if( ON_WATCH_CALLB != null ) {
+				if( waitList.length == 0 ) haxe.Timer.delay(flushWait,0);
+				waitList.push(cl);
+			}
+		});
+		if( !ret ) throw "No component found (missing hscript.LiveClass.init() macro)";
+	}
+
+	static var WATCH_INIT_DONE = false;
+	static var ON_WATCH_CALLB : Array<Class<Dynamic>> -> Void = null;
+	#end
+
+	public function stopWatchInterpComponents() {
+		#if hscript
+		ON_WATCH_CALLB = null;
+		domkit.Interp.onError = null;
+		#end
+	}
+
+	public function watchInterpComponents( ?customRebuild ) {
+		#if hscript
+		if( customRebuild == null ) customRebuild = defaultInterpRebuild;
+		ON_WATCH_CALLB = function(classes) {
+			errors = [];
+			for( cl in classes )
+				onRebuild(customRebuild,cl);
+			refreshErrors();
+		};
+		domkit.Interp.onError = function(msg) {
+			#if sys Sys.println(msg); #end
+			if( errors.indexOf(msg) < 0 )
+				errors.push(msg);
+			refreshErrors();
+		};
+		interpInit();
+		#end
 	}
 
 	function loadData( r : hxd.res.Resource ) {
@@ -59,6 +154,8 @@ class Style extends domkit.CssStyle {
 	override function clear() {
 		super.clear();
 		resources.resize(0);
+		for( r in STATIC_CSS )
+			load(r);
 	}
 
 	public function addObject( obj ) {
@@ -79,7 +176,7 @@ class Style extends domkit.CssStyle {
 			dt = hxd.Timer.elapsedTime;
 		var T0 = domkit.CssStyle.TAG;
 		for( o in currentObjects )
-			o.dom.applyStyle(this, true);
+			syncDirty(o.dom);
 		updateTime(dt);
 		return domkit.CssStyle.TAG - T0;
 	}
@@ -571,6 +668,7 @@ class Style extends domkit.CssStyle {
 				var v = dom.currentValues == null ? null : dom.currentValues[i];
 				var vs = dom.currentRuleStyles == null ? null : dom.currentRuleStyles[i];
 				var lStr = emptyDigits;
+				var importantStr = "";
 				if (vs != null) {
 					v = vs.value;
 					var f = find(files, f -> f.name == vs.pos.file);
@@ -596,10 +694,19 @@ class Style extends domkit.CssStyle {
 							lStr = '<font color="#707070">$posStr</font>';
 						}
 					}
+					var baseValue: domkit.CssValue = (vs.pos: Dynamic).value;
+					if (baseValue != null) {
+						switch (baseValue) {
+							case VLabel("important", _):
+								importantStr = ' <font color="#A00000">!important</font>';
+							default:
+						}
+					}
 				}
 				var vstr = v == null ? "???" : StringTools.htmlEscape(domkit.CssParser.valueStr(v));
 				posLines.push(lStr);
-				valueLines.push('<font color="#D0D0D0"> ${p.name}</font> <font color="#808080">$vstr</font>');
+
+				valueLines.push('<font color="#D0D0D0"> ${p.name}</font> <font color="#808080">$vstr</font>$importantStr');
 			}
 			var txt = Std.downcast(obj, h2d.HtmlText);
 			if( txt != null ) {

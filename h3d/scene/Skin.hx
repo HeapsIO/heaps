@@ -11,7 +11,6 @@ class Joint extends Object {
 		super(null);
 		name = j.name;
 		this.skin = skin;
-		lastFrame = -2; // force first sync
 		// fake parent
 		this.parent = skin;
 		this.index = j.index;
@@ -38,33 +37,11 @@ class Joint extends Object {
 
 	@:access(h3d.scene.Skin)
 	override function syncPos() {
-		// check if one of our parents has changed
-		// we don't have a posChanged flag since the Joint
-		// is not actualy part of the hierarchy
-		var p : h3d.scene.Object = skin;
-		while( p != null ) {
-			if( p.posChanged) {
-				update();
-				break;
-			}
-			p = p.parent;
-		}
-
-		if( lastFrame != skin.lastFrame) {
-			lastFrame = skin.lastFrame;
-			absPos.load(skin.jointsData[index].currentAbsPos);
-		}
-	}
-
-	/**
-		Force the update of the position of this joint
-	**/
-	@:access(h3d.scene.Skin)
-	public function update() {
 		skin.getAbsPos();
 		skin.syncJoints();
-		lastFrame = -1;
+		absPos.load(skin.jointsData[index].currentAbsPos);
 	}
+
 }
 
 @:access(h3d.scene.Skin)
@@ -73,8 +50,8 @@ class JointData {
 	public var currentAbsPos : h3d.Matrix;
 	public var additivePose : h3d.Matrix;
 
-	var targetMat : h3d.Matrix = h3d.Matrix.I();
-	var originMat : h3d.Matrix = h3d.Matrix.I();
+	var targetMat : h3d.Matrix = null;
+	var originMat : h3d.Matrix = null;
 
 	public function new() {
 		this.currentAbsPos = h3d.Matrix.I();
@@ -103,8 +80,15 @@ class JointData {
 		if( bid >= 0 )
 			skin.currentPalette[bid].multiply3x4inline(j.transPos, m);
 
-		var jData : JointData = Std.downcast(skin.jointsData[j.index], JointData);
-		jData.originMat.load(targetMat);
+		if (targetMat == null)
+			targetMat = m.clone();
+		if (originMat == null)
+			originMat = m.clone();
+
+		if (!Std.isOfType(this, DynamicJointData)) {
+			targetMat.load(m);
+			originMat.load(m);
+		}
 	}
 }
 
@@ -189,9 +173,11 @@ class DynamicJointData extends JointData {
 		if( j.bindIndex >= 0 )
 			skin.currentPalette[j.bindIndex].multiply3x4inline(j.transPos, Skin.TMP_MAT);
 
-		if( j.parent.bindIndex >= 0) {
-			lerpMatrixTerms(jParentData.originMat, jParentData.targetMat, alpha, Skin.TMP_MAT);
-			skin.currentPalette[j.parent.bindIndex].multiply3x4inline(j.parent.transPos, jParentData.currentAbsPos);
+		if (jParentData.originMat != null && jParentData.targetMat != null) {
+			if( j.parent.bindIndex >= 0) {
+				lerpMatrixTerms(jParentData.originMat, jParentData.targetMat, alpha, Skin.TMP_MAT);
+				skin.currentPalette[j.parent.bindIndex].multiply3x4inline(j.parent.transPos, Skin.TMP_MAT);
+			}
 		}
 
 		if (jData.speed.length() != 0.)
@@ -307,19 +293,25 @@ class DynamicJointData extends JointData {
 
 class Skin extends MultiMaterial {
 	public static var FIXED_DT = 1. / 60.;
+	public static var MIN_SHADER_BONES = 32;
+	public final MAX_SHADER_BONES = 256;
 	public var accumulator = FIXED_DT;
 
 	var skinData : h3d.anim.Skin;
 	var jointsData : Array<JointData>; // Runtime data
 
 	var currentPalette : Array<h3d.Matrix>;
-	var prevPalette : Array<h3d.Matrix>;
+	var jointsBuffer : h3d.Buffer;
+	var prevJointsBuffer : h3d.Buffer;
+
 	var splitPalette : Array<Array<h3d.Matrix>>;
-	var prevSplitPalette : Array<Array<h3d.Matrix>>;
-	var prevJointsFrame : Int = -1;
+	var splitBuffers : Array<h3d.Buffer>;
+	var prevSplitBuffers : Array<h3d.Buffer>;
+
 	var forceJointsUpdateOnFrame : Int = -1;
+	var buffersDirty = true;
+	var jointsFrame : Int = -1;
 	var jointsUpdated : Bool;
-	var paletteChanged : Bool;
 	var skinShader : h3d.shader.SkinBase;
 	var jointsGraphics : Graphics;
 
@@ -337,12 +329,12 @@ class Skin extends MultiMaterial {
 		var s = o == null ? new Skin(null,materials.copy()) : cast o;
 		super.clone(s);
 		s.setSkinData(skinData);
-
-		s.jointsData = [];
-		for (jData in jointsData)
-			s.jointsData.push(Reflect.copy(jData));
-
 		return s;
+	}
+
+	override function onRemove() {
+		super.onRemove();
+		disposeBuffers();
 	}
 
 	override function addBoundsRec( b : h3d.col.Bounds, relativeTo : h3d.Matrix ) {
@@ -400,15 +392,24 @@ class Skin extends MultiMaterial {
 		return null;
 	}
 
-	override function getLocalCollider() {
-		throw "Not implemented";
-		return null;
+	override function getLocalCollider() : h3d.col.Collider {
+		return primitive.getCollider();
 	}
 
-	override function getGlobalCollider() {
-		var col = cast(primitive.getCollider(), h3d.col.Collider.OptimizedCollider);
-		cast(primitive, h3d.prim.HMDModel).loadSkin(skinData);
-		return new h3d.col.SkinCollider(this, cast(col.b, h3d.col.PolygonBuffer));
+	override function getGlobalCollider() : h3d.col.Collider {
+		var col = getLocalCollider();
+		if( Std.isOfType(col, h3d.col.Collider.OptimizedCollider) ) {
+			// Generated from mesh, so need skin's transform
+			var col = cast(col, h3d.col.Collider.OptimizedCollider);
+			var primCol = Std.downcast(col.b, h3d.col.PolygonBuffer);
+			if( primCol != null && primCol.source != null ) {
+				cast(primitive, h3d.prim.HMDModel).loadSkin(skinData);
+				return new h3d.col.SkinCollider(this, primCol);
+			}
+			var rootTrans = this.getAbsPos();
+			return new h3d.col.TransformCollider(rootTrans, col);
+		}
+		return col;
 	}
 
 	override function calcAbsPos() {
@@ -459,27 +460,31 @@ class Skin extends MultiMaterial {
 						maxBones = s.joints.length;
 			} else
 				maxBones = skinData.boundJoints.length;
-			if( skinShader.MaxBones < maxBones )
-				skinShader.MaxBones = maxBones;
+			#if !editor
+			maxBones = hxd.Math.imax(MIN_SHADER_BONES, hxd.Math.nextPOT(maxBones));
+			#end
+			if(maxBones > MAX_SHADER_BONES)
+				throw "too many bones";
+			skinShader.BUFFER_SIZE = maxBones * 3; // Mat3x4 passed as 3 vec4
 			for( m in materials )
 				if( m != null ) {
-					var s = m.mainPass.getShader(h3d.shader.SkinTangent);
-					if ( s != null )
-						m.mainPass.removeShader(s);
+					m.mainPass.removeShaders(h3d.shader.SkinBase);
 					if( m.normalMap != null ) {
 						@:privateAccess m.mainPass.addShaderAtIndex(skinShader, m.mainPass.getShaderIndex(m.normalShader) + 1);
 					} else {
 						m.mainPass.addShader(skinShader);
 					}
-					if( skinData.splitJoints != null ) m.mainPass.dynamicParameters = true;
+					if( skinData.splitJoints != null ) {
+						for( p in m.getPasses() )
+							p.dynamicParameters = true;
+					}
 				}
 		}
 
+		disposeBuffers();
+
 		jointsData = [];
 		currentPalette = [];
-		prevPalette = null;
-		prevSplitPalette = null;
-		paletteChanged = true;
 		makeJointsData();
 		for( i in 0...skinData.boundJoints.length )
 			currentPalette.push(h3d.Matrix.I());
@@ -489,6 +494,92 @@ class Skin extends MultiMaterial {
 				splitPalette.push([for( j in a.joints ) currentPalette[j.bindIndex]]);
 		} else
 			splitPalette = null;
+	}
+
+	function disposeBuffers() {
+		var alloc = hxd.impl.Allocator.get();
+		if( jointsBuffer != null ) {
+			alloc.disposeBuffer(jointsBuffer);
+			jointsBuffer = null;
+		}
+		if(prevJointsBuffer != null) {
+			alloc.disposeBuffer(prevJointsBuffer);
+			prevJointsBuffer = null;
+		}
+		if( splitBuffers != null ) {
+			for( b in splitBuffers )
+				alloc.disposeBuffer(b);
+			splitBuffers = null;
+		}
+		if(prevSplitBuffers != null) {
+			for( b in prevSplitBuffers )
+				alloc.disposeBuffer(b);
+			prevSplitBuffers = null;
+		}
+	}
+
+	function updateShader() {
+		inline function alloc(count: Int) {
+			#if !hldx
+			// GL doesn't support passing smaller buffers than declared
+			count = Std.int(skinShader.BUFFER_SIZE / 3);  // Mat3x4 passed as Vec3
+			#end
+			return hxd.impl.Allocator.get().allocBuffer(count, hxd.BufferFormat.MAT3x4_DATA, UniformDynamic);
+		}
+		var hasVelocity = computeVelocity();
+
+		if(buffersDirty) {
+			// Swap buffers
+			if( skinData.splitJoints != null ) {
+				if(splitBuffers == null)
+					splitBuffers = [for( a in skinData.splitJoints ) alloc(a.joints.length)];
+				if(hasVelocity) {
+					if(prevSplitBuffers == null)
+						prevSplitBuffers = [for( a in skinData.splitJoints ) alloc(a.joints.length)];
+					var tmp = prevSplitBuffers;
+					prevSplitBuffers = splitBuffers;
+					splitBuffers = tmp;
+				}
+			} else {
+				if(jointsBuffer == null)
+					jointsBuffer = alloc(skinData.boundJoints.length);
+				if(hasVelocity) {
+					if(prevJointsBuffer == null)
+						prevJointsBuffer = alloc(skinData.boundJoints.length);
+					var tmp = prevJointsBuffer;
+					prevJointsBuffer = jointsBuffer;
+					jointsBuffer = tmp;
+				}
+			}
+
+			// Fill current
+			static var fbuf : hxd.FloatBuffer;
+				if(fbuf == null) fbuf = hxd.impl.Allocator.get().allocFloats(MAX_SHADER_BONES * hxd.BufferFormat.MAT3x4_DATA.stride * 4);
+
+			inline function fillBones(palette : Array<h3d.Matrix>, buffer : h3d.Buffer) {
+				var loader = new hxd.FloatBufferLoader(fbuf, 0);
+				for( m in palette ) loader.loadMatrix3x4(m);
+				buffer.uploadFloats(fbuf, 0, palette.length);
+			}
+			if( splitPalette != null ) {
+				for( si in 0...splitPalette.length ) {
+					fillBones(splitPalette[si], splitBuffers[si]);
+				}
+			} else
+				fillBones(currentPalette, jointsBuffer);
+		}
+
+		if( splitPalette == null ) {
+			skinShader.bonesMatrixes = jointsBuffer;
+			if( hasVelocity )
+				skinShader.prevBonesMatrixes = buffersDirty ? prevJointsBuffer : jointsBuffer;
+		}
+		else {
+			// shader buffers set in draw() because dynamicParameters
+		}
+
+		skinShader.calcPrevPos = hasVelocity;
+		buffersDirty = false;
 	}
 
 	function makeJointsData() {
@@ -506,19 +597,8 @@ class Skin extends MultiMaterial {
 
 	@:noDebug
 	function syncJoints() {
-		if( !jointsUpdated && forceJointsUpdateOnFrame >= hxd.Timer.frameCount )
+		if( !jointsUpdated && (forceJointsUpdateOnFrame < 0 || forceJointsUpdateOnFrame >= hxd.Timer.frameCount ))
 			return;
-
-		if ( computeVelocity() ) {
-			syncPrevJoints();
-			skinShader.calcPrevPos = true;
-		} else {
-			prevSplitPalette = null;
-			prevPalette = null;
-			skinShader.calcPrevPos = false;
-		}
-
-		skinShader.calcPrevPos = computeVelocity();
 
 		var syncDyn = false;
 		accumulator += hxd.Timer.dt;
@@ -530,34 +610,18 @@ class Skin extends MultiMaterial {
 		for (j in skinData.allJoints)
 			jointsData[j.index].sync(this, j, syncDyn);
 
-		skinShader.bonesMatrixes = currentPalette;
 		jointsUpdated = false;
+		buffersDirty = true;
+		jointsFrame = hxd.Timer.frameCount;
 		prevEnableRetargeting = enableRetargeting;
-	}
-
-	function syncPrevJoints() {
-		if ( prevJointsFrame == hxd.Timer.frameCount )
-			return;
-		prevJointsFrame = hxd.Timer.frameCount;
-
-		if ( prevPalette == null ) {
-			prevPalette = [];
-			for ( _ in 0...currentPalette.length )
-				prevPalette.push(h3d.Matrix.I());
-			if ( splitPalette != null ) {
-				prevSplitPalette = [];
-				for ( a in skinData.splitJoints )
-					prevSplitPalette.push([for ( j in a.joints ) prevPalette[j.bindIndex]]);
-			}
-		}
-		for ( i => m in currentPalette )
-			prevPalette[i].load(m);
-		skinShader.prevBonesMatrixes = prevPalette;
 	}
 
 	override function emit( ctx : RenderContext ) {
 		calcScreenRatio(ctx);
 		syncJoints(); // In case sync was not called because of culling (eg fixedPosition)
+
+		updateShader();
+
 		if( splitPalette == null )
 			super.emit(ctx);
 		else {
@@ -568,14 +632,16 @@ class Skin extends MultiMaterial {
 			}
 		}
 		if( showJoints ) {
-			if( jointsGraphics == null ) {
-				jointsGraphics = new Graphics(this);
-				jointsGraphics.material.mainPass.depth(false, Always);
-				jointsGraphics.material.mainPass.setPassName("alpha");
-			}
 			var topParent : Object = this;
 			while( topParent.parent != null )
 				topParent = topParent.parent;
+
+			if( jointsGraphics == null ) {
+				jointsGraphics = new Graphics(topParent);
+				jointsGraphics.material.mainPass.depth(false, Always);
+				jointsGraphics.material.mainPass.setPassName("alpha");
+			}
+
 			jointsGraphics.follow = topParent;
 
 			var g = jointsGraphics;
@@ -598,13 +664,100 @@ class Skin extends MultiMaterial {
 			super.draw(ctx);
 		} else {
 			var i = ctx.drawPass.index;
-			skinShader.bonesMatrixes = splitPalette[i];
-			if ( prevSplitPalette != null )
-				skinShader.prevBonesMatrixes = prevSplitPalette[i];
-			primitive.selectMaterial(i, primitive.screenRatioToLod(curScreenRatio));
+			skinShader.bonesMatrixes = splitBuffers[i];
+			if ( skinShader.calcPrevPos )
+				skinShader.prevBonesMatrixes = prevSplitBuffers[i];
+			primitive.selectMaterial(i, getLodIndex());
 			ctx.uploadParams();
 			primitive.render(ctx.engine);
 		}
 	}
 
+}
+
+class SubSkin extends h3d.scene.Skin {
+
+	var baseSkin : h3d.scene.Skin;
+	var bindMap : Array<Int> = null;
+
+	public function new( baseSkin : h3d.scene.Skin, subSkin : h3d.scene.Skin, ?parent) {
+		this.baseSkin = baseSkin;
+		super(null, subSkin.materials, parent);
+		skinShader = subSkin.skinShader;
+		setSkinData(subSkin.skinData, false);
+	}
+
+	function initBinds() {
+		bindMap = [];
+		for( b in skinData.allJoints ) {
+			var b2 = baseSkin.skinData.namedJoints.get(b.name);
+			if( b2 != null )
+				bindJoint(b2, b);
+		}
+	}
+
+	override function setSkinData( s, shaderInit = true ) {
+		super.setSkinData(s, shaderInit);
+		initBinds();
+	}
+
+	inline function packIndices(from: Int, to: Int) {
+		return (from << 16) | to;
+	}
+
+	inline function unpackIndices( i : Int ) {
+		return {
+			to: i & ((1<<16)-1),
+			from: i >> 16
+		}
+	}
+
+	function bindJoint(from: h3d.anim.Skin.Joint, to: h3d.anim.Skin.Joint) {
+		if(!baseSkin.skinData.allJoints.contains(from)) throw "assert";
+		if(!skinData.allJoints.contains(to)) throw "assert";
+		bindMap.push(packIndices(from.index, to.index));
+	}
+
+	function getBound(toJoint: h3d.anim.Skin.Joint) {
+		for( b in bindMap ) {
+			var bind = unpackIndices( b );
+			if(toJoint.index == bind.to)
+				return baseSkin.getSkinData().allJoints[bind.from];
+		}
+		return null;
+	}
+
+	var selfPlayAnim = false;
+	override function playAnimation( a : h3d.anim.Animation ) {
+		selfPlayAnim = true;
+		var inst = super.playAnimation(a);
+		selfPlayAnim = false;
+		return inst;
+	}
+
+	override function getObjectByName( name : String ) : h3d.scene.Object {
+		// Returning null prevents external animation.bind() from matching our joints and writing
+		// currentRelPos here instead of baseSkin. Bypassed when playAnimation is called on this
+		// SubSkin directly, so specific bones can still be animated on top (lipsync, eye blinks etc)
+		if( !selfPlayAnim )
+			return null;
+		return super.getObjectByName(name);
+	}
+
+	override function syncJoints() {
+		baseSkin.syncJoints();  // for when subSkin is before baseSkin in the hierarchy
+		if( baseSkin.jointsFrame != hxd.Timer.frameCount )
+			return;
+		jointsUpdated = true;
+		if( bindMap != null ) {
+			for( b in bindMap ) {
+				var bind = unpackIndices( b );
+				var toJoint = jointsData[bind.to];
+				var fromJoint = baseSkin.jointsData[bind.from];
+				if(toJoint != null && fromJoint != null)
+					toJoint.currentRelPos = fromJoint.currentRelPos;
+			}
+		}
+		super.syncJoints();
+	}
 }

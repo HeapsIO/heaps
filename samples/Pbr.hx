@@ -18,7 +18,7 @@ class Pbr extends SampleApp {
 	override function init() {
 		super.init();
 
-		new h3d.scene.CameraController(5.5, s3d);
+		new h3d.scene.CameraController.OrbitCameraController(5.5, s3d);
 
 		#if js
 		if( !engine.driver.hasFeature(ShaderModel3) ) {

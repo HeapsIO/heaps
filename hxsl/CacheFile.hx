@@ -66,8 +66,8 @@ class CacheFile extends Cache {
 		#end
 	}
 
-	override function getLinkShader( vars : Array<hxsl.Output> ) {
-		var shader = super.getLinkShader(vars);
+	override function getLinkShader( vars : Array<hxsl.Output>, ?vertexOutputName = "output.position" ) {
+		var shader = super.getLinkShader(vars,vertexOutputName);
 		for( l in linkers )
 			if( l.shader == shader )
 				return shader;

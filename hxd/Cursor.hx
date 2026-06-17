@@ -6,6 +6,10 @@ enum Cursor {
 	Move;
 	TextInput;
 	Hide;
+	ResizeNS;
+	ResizeWE;
+	ResizeNWSE;
+	ResizeNESW;
 	Custom( custom : CustomCursor );
 	/**
 		When this cursor is selected, call the function itself, which can handle complex logic and is responsible to call hxd.System.setCursor

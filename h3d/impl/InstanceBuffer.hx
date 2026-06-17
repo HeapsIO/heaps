@@ -3,7 +3,7 @@ package h3d.impl;
 @:allow(h3d.impl.Driver)
 class InstanceBuffer {
 
-		/**
+	/**
 		Bytes are structures of 5 i32 with the following values:
 		- indexCount : number of indexes per instance
 		- instanceCount : number of indexed draws
@@ -13,8 +13,9 @@ class InstanceBuffer {
 	**/
 	public static var ELEMENT_SIZE = 20;
 
-	var countBuffer : Dynamic;
-	var data : Dynamic;
+	var countBuffer : h3d.impl.Driver.GPUBuffer;
+	var data : h3d.impl.Driver.GPUBuffer;
+	var cpuData : Array<Int>;
 	var driver : h3d.impl.Driver;
 
 	var offset : Int = 0;
@@ -36,8 +37,7 @@ class InstanceBuffer {
 		this.startIndex = startIndex;
 	}
 
-	function updateTriCount(commandCount : Int, bytes : haxe.io.Bytes)
-	{
+	function updateTriCount(commandCount : Int, bytes : haxe.io.Bytes) {
 		triCount = 0;
 		for( i in 0...commandCount ) {
 			var idxCount = bytes.getInt32(i * ELEMENT_SIZE);
@@ -47,18 +47,21 @@ class InstanceBuffer {
 		}
 	}
 
-	public function uploadBytes(commandCount : Int, bytes : haxe.io.Bytes) {
-		updateTriCount(commandCount, bytes);
+	public function uploadBytes(commandCount : Int, bytes : haxe.io.Bytes, triCount = -1) {
+		this.triCount = triCount;
+		if ( triCount < 0 )
+			updateTriCount(commandCount, bytes);
 		this.commandCount = commandCount;
 		this.indexCount = 0;
 		driver = h3d.Engine.getCurrent().driver;
 		driver.uploadInstanceBufferBytes(this, 0, commandCount, bytes, 0);
 	}
 
-	public function allocFromBytes(commandCount : Int, bytes : haxe.io.Bytes) {
+	public function allocFromBytes(commandCount : Int, bytes : haxe.io.Bytes, triCount = -1 ) {
 		dispose();
-
-		updateTriCount(commandCount, bytes);
+		this.triCount = triCount;
+		if ( triCount < 0 )
+			updateTriCount(commandCount, bytes);
 		this.commandCount = this.maxCommandCount = commandCount;
 		this.indexCount = 0;
 		driver = h3d.Engine.getCurrent().driver;

@@ -128,6 +128,7 @@ class GlDriver extends Driver {
 	var rightHanded = false;
 	var hasMultiIndirect = false;
 	var maxCompressedTexturesSupport = 0;
+	var hasRGTCSupport = false;
 
 	public static var hasMultiIndirectCount = false;
 
@@ -173,8 +174,9 @@ class GlDriver extends Driver {
 		#if hlsdl
 		hasMultiIndirect = gl.getConfigParameter(0) > 0;
 		maxCompressedTexturesSupport = 7;
+		hasRGTCSupport = true;
 		var driver = getDriverName(false).toLowerCase();
-		isIntelGpu = ~/intel.*graphics/.match(driver);
+		isIntelGpu = ~/intel.*(graphics|gpu)/.match(driver);
 		#end
 
 		#if (hlsdl >= version("1.15.0"))
@@ -184,6 +186,7 @@ class GlDriver extends Driver {
 		#if hlmesa
 		hasMultiIndirect = true;
 		maxCompressedTexturesSupport = 7;
+		hasRGTCSupport = true;
 		#end
 
 		var v : String = gl.getParameter(GL.VERSION);
@@ -652,8 +655,14 @@ class GlDriver extends Driver {
 						case TSampler(_, false):
 							var color = h3d.mat.Defaults.loadingTextureColor;
 							t = h3d.mat.Texture.fromColor(color, (color >>> 24) / 255);
+						case TSampler(_, true):
+							t = h3d.mat.TextureArray.defaultArrayTexture();
+	
 						default:
-							throw "Missing texture";
+							if(t == null)
+								t = h3d.mat.Texture.fromColor(0, 1);
+							else 
+								throw "Disposed texture";
 					}
 				}
 				if( t != null && t.t == null && t.realloc != null ) {
@@ -720,7 +729,7 @@ class GlDriver extends Driver {
 
 					var mode = getBindType(t);
 					if( mode != pt.mode )
-						throw "Texture format mismatch: "+t+" should be "+pt.t;
+						throw "Texture format mismatch: "+t+ " is " + getBindName(mode) + " but should be "+getBindName(pt.mode) + " ( " +pt.t+" )";
 					gl.activeTexture(GL.TEXTURE0 + idx);
 					gl.uniform1i(pt.u, idx);
 					gl.bindTexture(mode, t.t.t);
@@ -730,7 +739,8 @@ class GlDriver extends Driver {
 				var mip = Type.enumIndex(t.mipMap);
 				var filter = Type.enumIndex(t.filter);
 				var wrap = Type.enumIndex(t.wrap);
-				var bits = mip | (filter << 3) | (wrap << 6);
+				var startingMip = t.startingMip;
+				var bits = t.bits;
 				if( bits != t.t.bits ) {
 					t.t.bits = bits;
 					var flags = TFILTERS[mip][filter];
@@ -742,17 +752,16 @@ class GlDriver extends Driver {
 					gl.texParameteri(mode, GL.TEXTURE_WRAP_S, w);
 					gl.texParameteri(mode, GL.TEXTURE_WRAP_T, w);
 					gl.texParameteri(mode, GL.TEXTURE_WRAP_R, w);
+					gl.texParameteri(mode, GL.TEXTURE_BASE_LEVEL, startingMip);
+					#if !js
+					gl.texParameterf(mode, GL.TEXTURE_LOD_BIAS, t.lodBias);
+					var hasAnisotropicFiltering = true;
+					#end
+					if( hasAnisotropicFiltering ) {
+						var anisotropicLevel = t.filter.match(AnisotropicLinear|AnisotropicNearest) ? t.anisotropicMaxLevel : 1;
+						gl.texParameterf(mode, 0x84fe /* GL_TEXTURE_MAX_ANISOTROPY_EXT */, anisotropicLevel);
+					}
 				}
-				if( t.t.startMip != t.startingMip ) {
-					gl.texParameteri(pt.mode, GL.TEXTURE_BASE_LEVEL, t.startingMip);
-					t.t.startMip = t.startingMip;
-				}
-				#if !js
-				if( t.lodBias != t.t.bias ) {
-					t.t.bias = t.lodBias;
-					gl.texParameterf(pt.mode, GL.TEXTURE_LOD_BIAS, t.lodBias);
-				}
-				#end
 			}
 		}
 	}
@@ -1019,8 +1028,8 @@ class GlDriver extends Driver {
 		case GL.RGB: GL.RGB;
 		case GL.R11F_G11F_B10F: GL.RGB;
 		case GL.RGB10_A2: GL.RGBA;
-		case GL.RED, GL.R8, GL.R16F, GL.R32F, 0x822A: GL.RED;
-		case GL.RG, GL.RG8, GL.RG16F, GL.RG32F, 0x822C: GL.RG;
+		case GL.RED, GL.R8, GL.R16F, GL.R32F, 0x822A, 0x8DBB: GL.RED;
+		case GL.RG, GL.RG8, GL.RG16F, GL.RG32F, 0x822C, 0x8DBD: GL.RG;
 		case GL.RGB16F, GL.RGB32F, 0x8054, 0x8E8F: GL.RGB;
 		case 0x83F1, 0x83F2, 0x83F3, 0x805B, 0x8E8C: GL.RGBA;
 		default: throw "Invalid format " + t.internalFmt;
@@ -1033,9 +1042,23 @@ class GlDriver extends Driver {
 		case RGBA16F, RGBA32F: hasFeature(FloatTextures);
 		case SRGB, SRGB_ALPHA: hasFeature(SRGBTextures);
 		case R8, RG8, RGB8, R16F, RG16F, RGB16F, R32F, RG32F, RGB32F, RG11B10UF, RGB10A2: #if js glES >= 3 #else true #end;
+		case S3TC(4), S3TC(5): hasRGTCSupport;
 		case S3TC(n): n <= maxCompressedTexturesSupport;
 		default: false;
 		}
+	}
+
+	function getBindName( i : Int ) {
+		return switch( i ) {
+		case GL.TEXTURE_2D: "TEXTURE_2D";
+		case GL.TEXTURE_3D: "TEXTURE_3D";
+		case GL.TEXTURE_CUBE_MAP: "TEXTURE_CUBE_MAP";
+		case GL.TEXTURE_2D_ARRAY: "TEXTURE_2D_ARRAY";
+		#if (hlsdl > version("1.15.0"))
+		case GL.TEXTURE_CUBE_MAP_ARRAY: "TEXTURE_CUBE_MAP_ARRAY";
+		#end
+		default: "UNKNOWN_TEXTURE_TYPE";
+		};
 	}
 
 	function getBindType( t : h3d.mat.Texture ) {
@@ -1051,7 +1074,7 @@ class GlDriver extends Driver {
 		discardError();
 		var tt = gl.createTexture();
 		var bind = getBindType(t);
-		var tt : Texture = { t : tt, width : t.width, height : t.height, internalFmt : GL.RGBA, pixelFmt : GL.UNSIGNED_BYTE, bits : -1, bind : bind, bias : 0, startMip : t.startingMip #if multidriver, driver : this #end };
+		var tt : Texture = { t : tt, width : t.width, height : t.height, internalFmt : GL.RGBA, pixelFmt : GL.UNSIGNED_BYTE, bits : -1, bind : bind #if multidriver, driver : this #end };
 		switch( t.format ) {
 		case RGBA:
 			// default
@@ -1118,6 +1141,8 @@ class GlDriver extends Driver {
 			case 1: tt.internalFmt = 0x83F1; // COMPRESSED_RGBA_S3TC_DXT1_EXT
 			case 2:	tt.internalFmt = 0x83F2; // COMPRESSED_RGBA_S3TC_DXT3_EXT
 			case 3: tt.internalFmt = 0x83F3; // COMPRESSED_RGBA_S3TC_DXT5_EXT
+			case 4 if( hasRGTCSupport ): tt.internalFmt = 0x8DBB; // COMPRESSED_RED_RGTC1
+			case 5 if( hasRGTCSupport ): tt.internalFmt = 0x8DBD; // COMPRESSED_RG_RGTC2
 			case 6: tt.internalFmt = 0x8E8F; // COMPRESSED_RGB_BPTC_UNSIGNED_FLOAT
 			case 7: tt.internalFmt = 0x8E8C; // COMPRESSED_RGBA_BPTC_UNORM
 			default: throw "Unsupported texture format "+t.format;
@@ -1208,7 +1233,7 @@ class GlDriver extends Driver {
 
 	override function allocDepthBuffer( t : h3d.mat.Texture ) : Texture {
 		var tt = gl.createTexture();
-		var tt : Texture = { t : tt, width : t.width, height : t.height, internalFmt : GL.RGBA, pixelFmt : GL.UNSIGNED_BYTE, bits : -1, bind : GL.TEXTURE_2D, bias : 0, startMip: 0 #if multidriver, driver : this #end };
+		var tt : Texture = { t : tt, width : t.width, height : t.height, internalFmt : GL.RGBA, pixelFmt : GL.UNSIGNED_BYTE, bits : -1, bind : GL.TEXTURE_2D #if multidriver, driver : this #end };
 		var fmt = GL.DEPTH_COMPONENT;
 		switch( t.format ) {
 		case Depth16:
@@ -1220,6 +1245,7 @@ class GlDriver extends Driver {
 			fmt = GL.DEPTH_STENCIL;
 		case Depth32:
 			tt.internalFmt = GL.DEPTH_COMPONENT32F;
+			tt.pixelFmt = GL.FLOAT;
 		default:
 			throw "Unsupported depth format "+	t.format;
 		}
@@ -1496,6 +1522,11 @@ class GlDriver extends Driver {
 		gl.bindBuffer(type, null);
 	}
 
+	override function readBufferBytesAsync(b:h3d.Buffer, startVertex:Int, vertexCount:Int, buf:haxe.io.Bytes, bufPos:Int, callback : Void -> Void) {
+		readBufferBytes(b, startVertex, vertexCount, buf, bufPos);
+		callback();
+	}
+
 	override function uploadIndexData( i : h3d.Buffer, startIndice : Int, indiceCount : Int, buf : hxd.IndexBuffer, bufPos : Int ) {
 		var bits = i.format.strideBytes >> 1;
 		gl.bindBuffer(GL.ELEMENT_ARRAY_BUFFER, i.vbuf);
@@ -1602,7 +1633,7 @@ class GlDriver extends Driver {
 			data.push(offIndex);
 			data.push(instanceCount);
 		}
-		b.data = data;
+		b.cpuData = data;
 	}
 
 	override function uploadInstanceBufferBytes(b : InstanceBuffer, startVertex : Int, vertexCount : Int, buf : haxe.io.Bytes, bufPos : Int ) {
@@ -1664,7 +1695,7 @@ class GlDriver extends Driver {
 			return;
 		}
 		#end
-		var args : Array<Int> = commands.data;
+		var args : Array<Int> = commands.cpuData;
 		if( args != null ) {
 			var p = 0;
 			for( i in 0...Std.int(args.length/3) )
@@ -1944,27 +1975,37 @@ class GlDriver extends Driver {
 	}
 
 	override function hasFeature( f : Feature ) : Bool {
-		#if js
-		return features.get(f);
-		#else
-		return true;
-		#end
+		return switch(f) {
+		case Bindless:
+			false;
+		case DLSS:
+			false;
+		default:
+			#if js
+			features.get(f);
+			#else
+			true;
+			#end
+		};
 	}
 
 	#if js
 	var features : Map<Feature,Bool> = new Map();
 	var has16Bits : Bool;
+	var hasAnisotropicFiltering : Bool;
 	function makeFeatures() {
 		for( f in Type.allEnums(Feature) )
 			features.set(f,checkFeature(f));
 		if( gl.getExtension("WEBGL_compressed_texture_s3tc") != null ) {
 			maxCompressedTexturesSupport = 3;
+			hasRGTCSupport = gl.getExtension("EXT_texture_compression_rgtc") != null;
 			if( gl.getExtension("EXT_texture_compression_bptc") != null )
 				maxCompressedTexturesSupport = 7;
 		}
 		if( glES < 3 )
 			gl.getExtension("WEBGL_depth_texture");
 		has16Bits = gl.getExtension("EXT_texture_norm16") != null; // 16 bit textures
+		hasAnisotropicFiltering = gl.getExtension("EXT_texture_filter_anisotropic") != null;
 	}
 	function checkFeature( f : Feature ) {
 		return switch( f ) {
@@ -2110,14 +2151,15 @@ class GlDriver extends Driver {
 	#end
 
 	static var TFILTERS = [
-		[[GL.NEAREST,GL.NEAREST],[GL.LINEAR,GL.LINEAR]],
-		[[GL.NEAREST,GL.NEAREST_MIPMAP_NEAREST],[GL.LINEAR,GL.LINEAR_MIPMAP_NEAREST]],
-		[[GL.NEAREST,GL.NEAREST_MIPMAP_LINEAR],[GL.LINEAR,GL.LINEAR_MIPMAP_LINEAR]],
+		[[GL.NEAREST,GL.NEAREST],[GL.LINEAR,GL.LINEAR],[GL.NEAREST,GL.NEAREST],[GL.LINEAR,GL.LINEAR]],
+		[[GL.NEAREST,GL.NEAREST_MIPMAP_NEAREST],[GL.LINEAR,GL.LINEAR_MIPMAP_NEAREST],[GL.NEAREST,GL.NEAREST_MIPMAP_NEAREST],[GL.LINEAR,GL.LINEAR_MIPMAP_NEAREST]],
+		[[GL.NEAREST,GL.NEAREST_MIPMAP_LINEAR],[GL.LINEAR,GL.LINEAR_MIPMAP_LINEAR],[GL.NEAREST,GL.NEAREST_MIPMAP_LINEAR],[GL.LINEAR,GL.LINEAR_MIPMAP_LINEAR]],
 	];
 
 	static var TWRAP = [
 		GL.CLAMP_TO_EDGE,
 		GL.REPEAT,
+		GL.MIRRORED_REPEAT,
 	];
 
 	static var FACES = [

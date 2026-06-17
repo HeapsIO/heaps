@@ -43,6 +43,8 @@ class SharedShader {
 	public var globals : Array<ShaderGlobal>;
 	public var consts : ShaderConst;
 	var instanceCache : Map<Int,ShaderInstance>;
+	var lastBits = -1;
+	var lastInstance : ShaderInstance;
 	var paramsCount : Int;
 	var file : hxd.fs.FileEntry;
 	var module : String;
@@ -71,8 +73,14 @@ class SharedShader {
 	}
 
 	public inline function getInstance( constBits : Int ) {
+		if( lastBits == constBits )
+			return lastInstance;
 		var i = instanceCache.get(constBits);
-		return if( i == null ) makeInstance(constBits) else i;
+		if( i == null )
+			i = makeInstance(constBits);
+		lastInstance = i;
+		lastBits = constBits;
+		return i;
 	}
 
 	function makeBufferType( v : TVar, tbuf : hxsl.Ast.Type, fmt : hxd.BufferFormat ) : hxsl.Ast.Type {
@@ -90,6 +98,7 @@ class SharedShader {
 				case DVec3: TVec(3,VFloat);
 				case DVec4: TVec(4,VFloat);
 				case DMat4: TMat4;
+				case DMat3x4: TMat3x4;
 				case DFloat: TFloat;
 				case DBytes4: TBytes(4);
 				}

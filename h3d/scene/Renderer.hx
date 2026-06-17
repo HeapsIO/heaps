@@ -28,9 +28,8 @@ class Renderer extends hxd.impl.AnyProps {
 	var backToFront : h3d.pass.PassList -> Void;
 	var debugging = false;
 
-	#if editor
+	#if editor_hl
 	public var showEditorGuides = false;
-	public var showEditorOutlines = true;
 	#end
 
 	public var effects : Array<h3d.impl.RendererFX> = [];
@@ -135,8 +134,8 @@ class Renderer extends hxd.impl.AnyProps {
 		ctx.engine.clear(color, depth, stencil);
 	}
 
-	inline function allocTarget( name : String, depth = true, size = 1., ?format ) {
-		return ctx.textures.allocTarget(name, Math.round(ctx.engine.width * size), Math.round(ctx.engine.height * size), depth, format);
+	inline function allocTarget( name : String, depth = true, size = 1., ?format, ?flags : Array<h3d.mat.Data.TextureFlags> ) {
+		return ctx.textures.allocTarget(name, Math.round(ctx.renderResolutionWidth * size), Math.round(ctx.renderResolutionHeight * size), depth, format, flags);
 	}
 
 	function copy( from, to, ?blend ) {
@@ -170,11 +169,6 @@ class Renderer extends hxd.impl.AnyProps {
 
 	function has( name : String ) {
 		return passObjects.get(name) != null;
-	}
-
-	@:access(h3d.mat.Pass)
-	function setPassFlags( pass : h3d.mat.Pass ) {
-		pass.rendererFlags |= 1;
 	}
 
 	@:access(h3d.pass.PassList)

@@ -2,11 +2,13 @@ package h3d.mat;
 import h3d.mat.Data;
 
 @:allow(h3d)
+#if !macro
+@:build(hxd.impl.BitsBuilder.build())
+#end
 class Texture {
 
 	static var UID = 0;
 	static final PREVENT_AUTO_DISPOSE = 0x7FFFFFFF;
-	static final PREVENT_FORCED_DISPOSE = -1;
 
 	/**
 		The default texture color format
@@ -30,16 +32,21 @@ class Texture {
 	public var flags(default, null) : haxe.EnumFlags<TextureFlags>;
 	public var format(default, null) : TextureFormat;
 
-	var lastFrame(get,set) : Int;
+	var lastFrame(default,set) : Int;
 	var bits : Int;
 	var waitLoads : Array<Void -> Void>;
-	public var mipMap(default,set) : MipMap;
-	public var filter(default,set) : Filter;
-	public var wrap(default, set) : Wrap;
+	@:bits(bits) public var mipMap : MipMap;
+	@:bits(bits) public var filter : Filter;
+	@:bits(bits) public var wrap : Wrap;
+	@:bits(bits, 11) public var slice : Int;
 	public var layerCount(get, never) : Int;
-	public var startingMip : Int = 0;
-	public var lodBias : Float = 0.;
+	@:bits(bits, 4) var __startingMip : Int;
+	@:bits(bits, 7) var packedLodBias : Int;
+	@:bits(bits, 4) var packedAnisotropicMaxLevel : Int = 15;
+	public var lodBias(get, set) : Float;
 	public var mipLevels(get, never) : Int;
+	public var anisotropicMaxLevel(get, set) : Int;
+	public var startingMip(get,set) : Int;
 	var customMipLevels : Int;
 
 	/**
@@ -54,19 +61,20 @@ class Texture {
 	**/
 	public var depthBuffer : Texture;
 
-	var _lastFrame:Int;
+	var tmpColor : h3d.Vector4;
 
 	function set_lastFrame(lf:Int) {
-		// Make sure we do not override lastFrame of textures set to prevent auto dispose
-		if(_lastFrame != PREVENT_AUTO_DISPOSE) {
-			_lastFrame = lf;
-		}
-		return _lastFrame;
+		if( lastFrame != PREVENT_AUTO_DISPOSE ) lastFrame = lf;
+		return lastFrame;
 	}
 
-	inline function get_lastFrame()
-	{
-		return _lastFrame;
+	inline function get_startingMip() {
+		return __startingMip;
+	}
+
+	inline function set_startingMip(v:Int) {
+		if( flags.has(Loading) ) flags.set(AsyncKeepStartingMip);
+		return __startingMip = v;
 	}
 
 	function get_mipLevels() {
@@ -79,6 +87,32 @@ class Texture {
 		var w = width, h = height;
 		while( (w >> lv) >= 1 || (h >> lv) >= 1 ) lv++;
 		return lv;
+	}
+
+	function get_lodBias() : Float {
+		final fBits = 1 << (7 - 5);
+		var iPart = (packedLodBias >> 2) - 15;
+		var fPart = packedLodBias & (fBits - 1);
+		var v : Float = iPart + (fPart / fBits);
+		return v;
+	}
+
+	function set_lodBias(v:Float) {
+		v = hxd.Math.clamp(v, -15.0, 16.0) + 15.0;
+		var iPart = hxd.Math.floor(v);
+		var fPart = hxd.Math.ufmod(v, 1.0);
+		final fBits = 1 << (7 - 5);
+		packedLodBias = iPart << 2 | hxd.Math.floor(fPart * (fBits - 1));
+		return v;
+	}
+
+	function get_anisotropicMaxLevel() : Int {
+		return packedAnisotropicMaxLevel + 1;
+	}
+
+	function set_anisotropicMaxLevel(v:Int) {
+		packedAnisotropicMaxLevel = hxd.Math.iclamp(v - 1, 0, 15);
+		return v;
 	}
 
 	public function new(w, h, ?flags : Array<TextureFlags>, ?format : TextureFormat ) {
@@ -109,8 +143,9 @@ class Texture {
 			this.mipMap = None;
 		this.filter = Linear;
 		this.wrap = DEFAULT_WRAP;
-		bits &= 0x7FFF;
+		this.lodBias = 0.0;
 		this.allocPos = hxd.impl.AllocPos.make();
+		this.slice = 0;
 		if( !this.flags.has(NoAlloc) && width > 0 ) alloc();
 	}
 
@@ -156,15 +191,11 @@ class Texture {
 	}
 
 	/**
-		In case of out of GPU memory, textures that hasn't been used for a long time will be disposed.
+		In case we run out of GPU memory, textures that hasn't been used for a long time will be disposed.
 		Calling this will make this texture not considered for auto disposal.
 	**/
 	public function preventAutoDispose() {
 		lastFrame = PREVENT_AUTO_DISPOSE;
-	}
-
-	public function preventForcedDispose() {
-		lastFrame = PREVENT_FORCED_DISPOSE;
 	}
 
 	/**
@@ -198,21 +229,6 @@ class Texture {
 		name = n;
 	}
 
-	function set_mipMap(m:MipMap) {
-		bits = (bits & ~(3 << 0)) | (Type.enumIndex(m) << 0);
-		return mipMap = m;
-	}
-
-	function set_filter(f:Filter) {
-		bits = (bits & ~(3 << 3)) | (Type.enumIndex(f) << 3);
-		return filter = f;
-	}
-
-	function set_wrap(w:Wrap) {
-		bits = (bits & ~(3 << 6)) | (Type.enumIndex(w) << 6);
-		return wrap = w;
-	}
-
 	public inline function isDisposed() {
 		// realloc unsupported on depth buffers.
 		return t == null && (isDepth() || realloc == null);
@@ -240,21 +256,27 @@ class Texture {
 		alloc();
 		if( !flags.has(Target) ) throw "Texture should be target";
 		var engine = h3d.Engine.getCurrent();
-		var color = new h3d.Vector4(r,g,b,a);
+		if( tmpColor == null )
+			tmpColor = new h3d.Vector4();
+		tmpColor.set(r, g, b, a);
 		if( layer < 0 ) {
 			for( i in 0...layerCount ) {
-				engine.pushTarget(this, i);
-				engine.clearF(color);
-				engine.popTarget();
+				for ( j in 0...mipLevels ) {
+					engine.pushTarget(this, i, j);
+					engine.clearF(tmpColor);
+					engine.popTarget();
+				}
 			}
 		} else {
-			engine.pushTarget(this, layer);
-			engine.clearF(color);
-			engine.popTarget();
+			for ( i in 0...mipLevels ) {
+				engine.pushTarget(this, layer, i);
+				engine.clearF(tmpColor);
+				engine.popTarget();
+			}
 		}
 	}
 
-	public function clear( color : Int, alpha = 1., ?layer = -1 ) {
+	public function clear( color : Int, alpha = 1., layer = -1 ) {
 		alloc();
 		if( width == 0 || height == 0 ) return;
 		if( #if (usegl || hlsdl || js) true #else flags.has(Target) #end && (width != 1 || height != 1) ) {
@@ -262,14 +284,18 @@ class Texture {
 			color |= Std.int(hxd.Math.clamp(alpha)*255) << 24;
 			if( layer < 0 ) {
 				for( i in 0...layerCount ) {
-					engine.pushTarget(this, i);
+					for ( j in 0...mipLevels ) {
+						engine.pushTarget(this, i, j);
+						engine.clear(color);
+						engine.popTarget();
+					}
+				}
+			} else {
+				for ( i in 0...mipLevels ) {
+					engine.pushTarget(this, layer, i);
 					engine.clear(color);
 					engine.popTarget();
 				}
-			} else {
-				engine.pushTarget(this, layer);
-				engine.clear(color);
-				engine.popTarget();
 			}
 		} else {
 			var p = hxd.Pixels.alloc(width, height, nativeFormat);
@@ -336,16 +362,20 @@ class Texture {
 
 	public function hasStencil() {
 		return switch( format ) {
-		case Depth24Stencil8: true;
+		case Depth24Stencil8, Depth32Stencil8: true;
 		default: false;
 		}
 	}
 
 	public function isDepth() {
 		return switch( format ) {
-		case Depth16, Depth24, Depth24Stencil8, Depth32: true;
+		case Depth16, Depth24, Depth24Stencil8, Depth32, Depth32Stencil8: true;
 		default: false;
 		}
+	}
+
+	public function getHandle() : h3d.mat.TextureHandle {
+		return mem.driver.getTextureHandle(this);
 	}
 
 	/**

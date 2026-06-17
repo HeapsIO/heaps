@@ -20,6 +20,7 @@ enum abstract ObjectFlags(Int) {
 	public var FDrawn = 0x10000;
 	public var FInSync = 0x20000;
 	public var FPosChangedInSync = 0x40000;
+	public var FForceBounds = 0x80000;
 	public inline function new(value) {
 		this = value;
 	}
@@ -50,6 +51,7 @@ enum abstract ObjectFlags(Int) {
 		if( has(FDrawn) ) s += " | Drawn";
 		if( has(FInSync) ) s += " | InSync";
 		if( has(FPosChangedInSync) ) s += " | PosChangedInSync";
+		if( has(FForceBounds) ) s += " | FForceBounds";
 		if( s.length > 0 )
 			s = s.substr(3);
 		return s;
@@ -110,6 +112,11 @@ class Object {
 		When enabled, the object bounds are ignored when using getBounds()
 	**/
 	public var ignoreBounds(get, set) : Bool;
+
+	/**
+		When enabled, the object bounds are included even if it's not visible when using getBounds()
+	**/
+	public var forceBounds(get, set) : Bool;
 
 	/**
 		When enabled, the object is ignored when using getCollider()
@@ -250,6 +257,7 @@ class Object {
 	inline function get_alwaysSyncAnimation() return flags.has(FAlwaysSyncAnimation);
 	inline function get_inheritCulled() return flags.has(FInheritCulled);
 	inline function get_ignoreBounds() return flags.has(FIgnoreBounds);
+	inline function get_forceBounds() return flags.has(FForceBounds);
 	inline function get_ignoreCollide() return flags.has(FIgnoreCollide);
 	inline function get_modelRoot() return flags.has(FModelRoot);
 	inline function get_ignoreParentTransform() return flags.has(FIgnoreParentTransform);
@@ -270,6 +278,7 @@ class Object {
 	inline function set_lightCameraCenter(b) return flags.set(FLightCameraCenter, b);
 	inline function set_alwaysSyncAnimation(b) return flags.set(FAlwaysSyncAnimation, b);
 	inline function set_ignoreBounds(b) return flags.set(FIgnoreBounds, b);
+	inline function set_forceBounds(b) return flags.set(FForceBounds, b);
 	inline function set_inheritCulled(b) return flags.set(FInheritCulled, b);
 	inline function set_ignoreCollide(b) return flags.set(FIgnoreCollide, b);
 	inline function set_modelRoot(b) return flags.set(FModelRoot, b);
@@ -452,7 +461,8 @@ class Object {
 			calcAbsPos();
 		}
 		for( c in children )
-			c.addBoundsRec(b, relativeTo);
+			if( c.visible || c.forceBounds )
+				c.addBoundsRec(b, relativeTo);
 	}
 
 	/**
@@ -712,7 +722,7 @@ class Object {
 	}
 
 	function set_follow(v) {
-		posChanged = true;
+		if( follow != v ) posChanged = true;
 		return follow = v;
 	}
 
@@ -889,38 +899,38 @@ class Object {
 	}
 
 	inline function set_x(v) {
+		if( x != v ) posChanged = true;
 		x = v;
-		posChanged = true;
 		return v;
 	}
 
 	inline function set_y(v) {
+		if( y != v ) posChanged = true;
 		y = v;
-		posChanged = true;
 		return v;
 	}
 
 	inline function set_z(v) {
+		if( z != v ) posChanged = true;
 		z = v;
-		posChanged = true;
 		return v;
 	}
 
 	inline function set_scaleX(v) {
+		if( scaleX != v ) posChanged = true;
 		scaleX = v;
-		posChanged = true;
 		return v;
 	}
 
 	inline function set_scaleY(v) {
+		if( scaleY != v ) posChanged = true;
 		scaleY = v;
-		posChanged = true;
 		return v;
 	}
 
 	inline function set_scaleZ(v) {
+		if( scaleZ != v ) posChanged = true;
 		scaleZ = v;
-		posChanged = true;
 		return v;
 	}
 
@@ -931,13 +941,19 @@ class Object {
 	}
 
 	/**
+		Return the (x,y,z) position relative to the object parent.
+	**/
+	public inline function getPosition() {
+		return new h3d.col.Point(x,y,z);
+	}
+
+	/**
 		Set the position of the object relative to its parent.
 	**/
 	public inline function setPosition( x : Float, y : Float, z : Float ) {
 		this.x = x;
 		this.y = y;
 		this.z = z;
-		posChanged = true;
 	}
 
 	/**

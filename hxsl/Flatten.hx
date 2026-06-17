@@ -29,7 +29,10 @@ class Flatten {
 	var textureFormats : Array<{ dim : TexDimension, arr : Bool, rw : Int }>;
 	public var allocData : Map< TVar, Array<Alloc> >;
 
+	var mapExprFun : TExpr -> TExpr;
+
 	public function new() {
+		this.mapExprFun = mapExpr;
 	}
 
 	public function flatten( s : ShaderData, kind : FunctionKind ) : ShaderData {
@@ -66,7 +69,7 @@ class Flatten {
 		packBuffers("buffers", allVars, Uniform);
 		packBuffers("storagebuffers", allVars, Storage);
 		packBuffers("rwbuffers", allVars, RW);
-		var funs = [for( f in s.funs ) mapFun(f, mapExpr)];
+		var funs = [for( f in s.funs ) mapFun(f, mapExprFun)];
 		return {
 			name : s.name,
 			vars : outVars,
@@ -86,7 +89,7 @@ class Flatten {
 
 	static var SWIZ = [X,Y,Z,W];
 
-	function mkOp(e:TExpr,by:Int,f:Int->Int->Int,binop,pos) {
+	function mkOp(e:TExpr,by:Int,f:Int->Int->Int,binop,pos) : TExpr {
 		switch( e.e ) {
 		case TConst(CInt(i)):
 			return { e : TConst(CInt(f(i,by))), t : TInt, p : pos };
@@ -138,19 +141,24 @@ class Flatten {
 			var a = varMap.get(v);
 			if( a == null )
 				e
-			else
-				access(a, v.type, e.p, AIndex(a));
+			else {
+				var acc = access(a, v.type, e.p, AIndex(a));
+				if( v.type == TBool && v.kind == Param && !Tools.isConst(v) )
+					{ e: TParenthesis({ e : TBinop(OpNotEq, acc, { e : TConst(CFloat(0)), t : TFloat, p : e.p }), t : TBool, p : e.p }), t : TBool, p : e.p }
+				else
+					acc;
+			}
 		case TArray( { e : TVar(v), p : vp }, eindex):
 			var a = varMap.get(v);
 			if( a == null || (!v.type.match(TBuffer(_)) && eindex.e.match(TConst(CInt(_)))) )
-				e.map(mapExpr);
+				e.map(mapExprFun);
 			else {
 				switch( v.type ) {
 				case TArray(t, _) if( t.isTexture() ):
 					eindex = toInt(mapExpr(eindex));
 					access(a, t, vp, AOffset(a,1,eindex));
 				case TBuffer(TInt|TFloat,_), TVec(_, VFloat|VInt):
-					e.map(mapExpr);
+					e.map(mapExprFun);
 				case TArray(t, _), TBuffer(t, _):
 					var stride = varSize4Bytes(t, a.t);
 					if( stride == 0 || (v.type.match(TArray(_)) && stride & 3 != 0) ) throw new Error("Dynamic access to an Array which size is not 4 components-aligned is not allowed", e.p);
@@ -232,12 +240,12 @@ class Flatten {
 			default : throw "assert";
 			}
 		default:
-			e.map(mapExpr);
+			e.map(mapExprFun);
 		};
 		return optimize(e);
 	}
 
-	inline function mkInt(v:Int,pos) {
+	inline function mkInt(v:Int,pos) : TExpr {
 		return { e : TConst(CInt(v)), t : TInt, p : pos };
 	}
 
@@ -313,28 +321,35 @@ class Flatten {
 				e = { e : TSwiz(e, sw), t : t, p : pos };
 			}
 			switch( t ) {
-			case TInt:
+			case TInt, TBufferHandle:
 				e.t = TFloat;
-				e = toInt(e);
+				e = floatBitsToInt(e);
 			case TVec(size,VInt):
 				e.t = TVec(size,VFloat);
 				e = { e : TCall({ e : TGlobal([IVec2,IVec3,IVec4][size-2]), t : TFun([]), p : pos }, [e]), t : t, p : pos };
+			case TTextureHandle:
+				e.t = TVec(2, VFloat);
+				e = floatBitsToUint(e);
 			default:
 			}
 			return e;
 		}
 	}
 
-	function floatBitsToUint( e : TExpr ) {
+	function floatBitsToInt( e : TExpr ) : TExpr {
+		return { e : TCall({ e : TGlobal(FloatBitsToInt), t : TFun([]), p : e.p }, [e]), t : TInt, p : e.p };
+	}
+
+	function floatBitsToUint( e : TExpr ) : TExpr {
 		return { e : TCall({ e : TGlobal(FloatBitsToUint), t : TFun([]), p : e.p }, [e]), t : TInt, p : e.p };
 	}
 
-	function toInt( e : TExpr ) {
+	function toInt( e : TExpr ) : TExpr {
 		if( e.t == TInt ) return e;
 		return { e : TCall({ e : TGlobal(ToInt), t : TFun([]), p : e.p }, [e]), t : TInt, p : e.p };
 	}
 
-	function optimize( e : TExpr ) {
+	function optimize( e : TExpr ) : TExpr {
 		switch( e.e ) {
 		case TCall( { e : TGlobal(Mat3x4) }, [ { e : TCall( { e : TGlobal(Mat4) }, args) } ]):
 			var rem = 0;
@@ -511,7 +526,7 @@ class Flatten {
 
 	function varSize( v : Type, t : VecType ) {
 		return switch( v ) {
-		case TFloat, TInt if( t == VFloat ): 1;
+		case TFloat, TInt, TBool if( t == VFloat ): 1;
 		case TVec(n, t2) if( t == t2 ): n;
 		case TBytes(n): n;
 		case TMat4 if( t == VFloat ): 16;
@@ -522,6 +537,8 @@ class Flatten {
 			for( v in vl )
 				size += varSize(v.type, t);
 			size;
+		case TTextureHandle: 2;
+		case TBufferHandle: 1;
 		default:
 			throw v.toString() + " size unknown for type " + t;
 		}

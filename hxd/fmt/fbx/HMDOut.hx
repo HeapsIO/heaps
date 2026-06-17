@@ -5,9 +5,27 @@ import hxd.fmt.hmd.Data;
 import hxd.BufferFormat;
 
 typedef CollideParams = {
-	precision : Float,
-	maxSubdiv : Int,
-	maxConvexHulls : Int,
+	?useDefault : Bool,
+	?precision : Float,
+	?maxSubdiv : Int,
+	?maxConvexHulls : Int,
+	?mesh : String,
+	?shapes : Array<ShapeColliderParams>
+}
+
+typedef ShapeColliderParams = {
+	type : ShapeColliderType,
+	position : { x : Float, y : Float, z : Float },
+	?halfExtent : { x : Float, y : Float, z : Float },
+	?rotation : { x : Float, y : Float, z : Float },
+	?radius : Float,
+}
+
+enum abstract ShapeColliderType(String) to String {
+	var Sphere;
+	var Box;
+	var Capsule;
+	var Cylinder;
 }
 
 class HMDOut extends BaseLibrary {
@@ -22,11 +40,16 @@ class HMDOut extends BaseLibrary {
 	public var generateNormals = false;
 	public var generateTangents = false;
 	public var generateCollides : CollideParams;
-	public var modelCollides : Map<String, CollideParams> = [];
+	public var modelCollides : Map<String, Array<CollideParams>> = [];
 	public var ignoreCollides : Array<String>;
 	var ignoreCollidesCache : Map<Int,Bool> = [];
+	public var collisionThresholdHeight : Float;
+	public var collisionUseLowLod : Bool;
+	public var noCollision : Bool;
 	public var lowPrecConfig : Map<String,Precision>;
 	public var lodsDecimation : Array<Float>;
+	public var maxUVs : Int = 0;
+	public var noColor : Bool = false;
 
 	function int32tof( v : Int ) : Float {
 		tmp.set(0, v & 0xFF);
@@ -191,10 +214,8 @@ class HMDOut extends BaseLibrary {
 		}
 		var realIdx = new hxd.IndexBuffer();
 		for( idx in idx ) {
-			if ( idx == null ) {
-				trace("Empty list of vertex indexes");
+			if ( idx == null )
 				continue;
-			}
 			for( i in idx )
 				realIdx.push(pmap[i]);
 		}
@@ -210,12 +231,23 @@ class HMDOut extends BaseLibrary {
 		}
 	}
 
-	public static inline function writePrec( d : haxe.io.BytesOutput, v : Float, p : Precision ) {
-		switch( p ) {
-		case F32: writeFloat(d, v);
-		case F16: d.writeUInt16(hxd.BufferFormat.float32to16(v,true));
-		case S8: d.writeByte(hxd.BufferFormat.float32toS8(v));
-		case U8: d.writeByte(BufferFormat.float32toU8(v));
+	public static inline function writePrec( d : haxe.io.BytesOutput, v : Float, p : Precision ) : Float {
+		return switch( p ) {
+			case F32:
+				writeFloat(d, v);
+				v;
+			case F16:
+				var tmp = hxd.BufferFormat.float32to16(v, true);
+				d.writeUInt16(tmp);
+				hxd.BufferFormat.float16to32(tmp);
+			case S8:
+				var tmp = hxd.BufferFormat.float32toS8(v);
+				d.writeByte(tmp);
+				hxd.BufferFormat.floatS8to32(tmp);
+			case U8:
+				var tmp = BufferFormat.float32toU8(v);
+				d.writeByte(tmp);
+				BufferFormat.floatU8to32(tmp);
 		}
 	}
 
@@ -269,8 +301,10 @@ class HMDOut extends BaseLibrary {
 		hxd.tools.MeshOptimizer.remapIndexBuffer(indices, indices, indexCount, remap);
 		hxd.tools.MeshOptimizer.remapVertexBuffer(vertices, vertices, vertexCount, vertexSize, remap);
 		vertexCount = uniqueVertexCount;
-		if ( decimationFactor > 0.0 )
-			indexCount = hxd.tools.MeshOptimizer.simplify(indices, indices, indexCount, vertices, vertexCount, vertexSize, Std.int(indexCount * (1.0 - decimationFactor)), 0.05, 0, null);
+		if ( decimationFactor > 0.0 ) {
+			var options = hxd.tools.MeshOptimizer.SimplifyOptions.LockBorder | hxd.tools.MeshOptimizer.SimplifyOptions.Prune;
+			indexCount = hxd.tools.MeshOptimizer.simplify(indices, indices, indexCount, vertices, vertexCount, vertexSize, Std.int(indexCount * (1.0 - decimationFactor)), decimationFactor, options, null);
+		}
 		hxd.tools.MeshOptimizer.optimizeVertexCache(indices, indices, indexCount, vertexCount);
 		hxd.tools.MeshOptimizer.optimizeOverdraw(indices, indices, indexCount, vertices, vertexCount, vertexSize, 1.05);
 		vertexCount = hxd.tools.MeshOptimizer.optimizeVertexFetch(vertices, indices, indexCount, vertices, vertexCount, vertexSize);
@@ -335,7 +369,9 @@ class HMDOut extends BaseLibrary {
 		var verts = geom.getVertices();
 		var normals = geom.getNormals();
 		var uvs = geom.getUVs();
-		var colors = geom.getColors();
+		if( maxUVs > 0 && uvs.length > maxUVs )
+			uvs = uvs.slice(0, maxUVs);
+		var colors = noColor ? null : geom.getColors();
 		var mats = geom.getMaterials();
 		var index = geom.getPolygons();
 
@@ -605,16 +641,26 @@ class HMDOut extends BaseLibrary {
 		}
 
 		// write data
+		var colVBuf = new FloatBuffer();
 		g.vertexPosition = dataOut.length;
 		if( lowPrecConfig == null ) {
-			for( i in 0...vbuf.length )
-				writeFloat(dataOut, vbuf[i]);
+			for( index in 0...Std.int(vbuf.length / stride) ) {
+				var i = index * stride;
+				for( si in 0...stride ) {
+					if ( si < 3 )
+						colVBuf.push(vbuf[i + si]);
+					writeFloat(dataOut, vbuf[i + si]);
+				}
+			}
 		} else {
 			for( index in 0...Std.int(vbuf.length / stride) ) {
 				var i = index * stride;
-				writePrec(dataOut, vbuf[i++], ppos);
-				writePrec(dataOut, vbuf[i++], ppos);
-				writePrec(dataOut, vbuf[i++], ppos);
+				var x = writePrec(dataOut, vbuf[i++], ppos);
+				var y = writePrec(dataOut, vbuf[i++], ppos);
+				var z = writePrec(dataOut, vbuf[i++], ppos);
+				colVBuf.push(x);
+				colVBuf.push(y);
+				colVBuf.push(z);
 				flushPrec(dataOut, ppos,3);
 				if( normals != null ) {
 					writePrec(dataOut, vbuf[i++], pnormal);
@@ -707,7 +753,7 @@ class HMDOut extends BaseLibrary {
 			shape.vertexFormat = hxd.BufferFormat.make(format);
 			shape.vertexPosition = dataOut.length;
 
-			vbuf = new hxd.FloatBuffer();
+			var vbuf = new hxd.FloatBuffer();
 			for ( i in 0...shape.vertexCount ) {
 				vbuf.push(verts[i * 3]);
 				vbuf.push(verts[i * 3 + 1]);
@@ -784,7 +830,7 @@ class HMDOut extends BaseLibrary {
 			}
 			d.shapes.push(shape);
 		}
-		return { g : g, materials : matMap };
+		return { g : g, materials : matMap, vbuf : colVBuf, ibufs : ibufs };
 	}
 
 	function getLODInfos( modelName : String ) : { lodLevel : Int , modelName : String } {
@@ -815,223 +861,197 @@ class HMDOut extends BaseLibrary {
 		return { lodLevel : -1, modelName : null };
 	}
 
-	function buildColliders(g : hxd.fmt.hmd.Data, model : Model, geom : hxd.fmt.fbx.Geometry, bounds : h3d.col.Bounds, generateCollides : Dynamic ) {
-		var maxConvexHulls = generateCollides.maxConvexHulls;
-		var dim = bounds.dimension();
-		var prec = Math.min(dim, generateCollides.precision);
-		var subdiv = Math.ceil(dim / prec);
-		subdiv = Math.imin(subdiv, generateCollides.maxSubdiv);
-		var maxResolution = subdiv * subdiv * subdiv;
-
-		var verts = geom.getVertices();
-		var index = geom.getPolygons();
-		var gm = geom.getGeomMatrix();
-		var mats = geom.getMaterials();
-
-		var vertexCount = Std.int(verts.length / 3);
-
-		var convexPoints : Array<Array<h3d.Vector>> = [];
-		var convexIndexes32 : Array<Array<Int>> = [];
+	function buildGeomCollider( targetModel : Model, colliderModel : Model, vbuf : FloatBuffer, ibufs : Array<Array<Int>>, dataOut : haxe.io.BytesOutput ) : MeshCollider {
+		var vertexCount = Std.int(vbuf.length / 3);
+		var indexCount = 0;
+		for( idx in ibufs ) {
+			indexCount += idx == null ? 0 : idx.length;
+		}
 
 		function iterVertex(cb : Float -> Float -> Float -> Void) {
-			var tmp = new h3d.Vector();
-			for ( i in 0...Std.int(verts.length / 3) ) {
-				var x = verts[i*3];
-				var y = verts[i*3+1];
-				var z = verts[i*3+2];
-				if ( gm != null ) {
-					tmp.set(x, y, z);
-					tmp.transform(gm);
-					x = tmp.x;
-					y = tmp.y;
-					z = tmp.z;
-				}
+			for ( i in 0...vertexCount ) {
+				var x = vbuf[i*3];
+				var y = vbuf[i*3 + 1];
+				var z = vbuf[i*3 + 2];
 				cb(x, y, z);
 			}
 		}
 
-		function iterTriangle(cb : Int -> Void) {
-			inline function unpackIndex(i : Int) {
-				return i < 0 ? -i - 1 : i;
+		var collider = new MeshCollider();
+		collider.vertexPosition = dataOut.length;
+		collider.vertexCount = vertexCount;
+		collider.indexCount = indexCount;
+		var mat : h3d.Matrix;
+		if (legacySkinImport) {
+			mat = colliderModel.skin != null && colliderModel.skin.joints.length > 0 ? colliderModel.skin.joints[0].position.toMatrix() : colliderModel.position.toMatrix();
+		}
+		else {
+			mat = colliderModel.position.toMatrix();
+			if (colliderModel.skin != null)
+				mat.multiply(mat, colliderModel.skin.joints[0].position.toMatrix());
+		}
+		var invTargetModelMat = targetModel.position.toMatrix().getInverse();
+		mat.multiply(mat, invTargetModelMat);
+		var tmpVec = new h3d.Vector();
+		iterVertex(function(x, y, z) {
+			tmpVec.set(x, y, z);
+			tmpVec.transform(mat);
+			dataOut.writeFloat(tmpVec.x);
+			dataOut.writeFloat(tmpVec.y);
+			dataOut.writeFloat(tmpVec.z);
+		});
+
+		var is32 = vertexCount > 0x10000;
+		collider.indexPosition = dataOut.length;
+		for ( i => idx in ibufs ) {
+			if( idx == null )
+				continue;
+			if( is32 ) {
+				for( i in idx )
+					dataOut.writeInt32(i);
+			} else {
+				for( i in idx )
+					dataOut.writeUInt16(i);
 			}
-			var triangleCount = 0;
-			for ( i in 0...Std.int(index.length / 3) ) {
-				var mat = (mats == null || i >= mats.length) ? 0 : mats[i];
-				if ( mat >= d.materials.length )
-					continue;
-				if( ignoreCollides != null ) {
-					var b = ignoreCollidesCache.get(mat);
-					if( b == null ) {
-						b = ignoreCollides.contains(d.materials[mat].name);
-						ignoreCollidesCache.set(mat, b);
-					}
-					if( b == true )
-						continue;
+		}
+		return collider;
+	}
+
+	function buildAutoColliders( targetModel : Model, colliderModel : Model, d : hxd.fmt.hmd.Data, vbuf : FloatBuffer, ibufs : Array<Array<Int>>, mids : Array<Int>, bounds : h3d.col.Bounds, generateCollides : CollideParams, dataOut : haxe.io.BytesOutput ) : ConvexHullsCollider {
+		// Format data for our convex hull algorithm
+		var vertices : Array<Float> = [];
+		var indexes : Array<Int> = [];
+
+		var vertexCount = Std.int(vbuf.length / 3);
+		var indexCount = 0;
+		for(idx in ibufs)
+			indexCount += idx == null ? 0 : idx.length;
+
+		var mat = colliderModel.position.toMatrix();
+		if (!legacySkinImport) {
+			if (colliderModel.skin != null)
+				mat.multiply(mat, colliderModel.skin.joints[0].position.toMatrix());
+		}
+		var invTargetModelMat = targetModel.position.toMatrix().getInverse();
+		mat.multiply(mat, invTargetModelMat);
+		var tmpVec = new h3d.Vector();
+		for (i in 0...vertexCount) {
+			var x = vbuf[i * 3];
+			var y = vbuf[i * 3 + 1];
+			var z = vbuf[i * 3 + 2];
+			tmpVec.set(x, y, z);
+			tmpVec.transform(mat);
+			vertices.push(tmpVec.x);
+			vertices.push(tmpVec.y);
+			vertices.push(tmpVec.z);
+		}
+
+		for ( idx => ibuf in ibufs ) {
+			if( ibuf == null )
+				continue;
+			if( ignoreCollides != null && idx < mids.length ) {
+				var mat = mids[idx];
+				var b = ignoreCollidesCache.get(mat);
+				if( b == null ) {
+					b = ignoreCollides.contains(d.materials[mat].name);
+					ignoreCollidesCache.set(mat, b);
 				}
-				cb(unpackIndex(index[3*i]));
-				cb(unpackIndex(index[3*i+1]));
-				cb(unpackIndex(index[3*i+2]));
-				triangleCount++;
+				if( b == true )
+					continue;
 			}
-			return triangleCount;
+			for (idx in ibuf)
+				indexes.push(idx);
 		}
 
-		#if (hl && hl_ver >= version("1.15.0"))
-		var vertices = new hl.Bytes(verts.length * 3 * 4);
-		var i = 0;
-		iterVertex(function(x : Float, y : Float, z : Float) {
-			vertices.setF32(4 * i * 3, x);
-			vertices.setF32(4 * (i * 3 + 1), y);
-			vertices.setF32(4 * (i * 3 + 2), z);
-			i++;
-		});
-		var indexes = new hl.Bytes(index.length * 4);
-		var pos = 0;
-		var triangleCount = iterTriangle(function(index : Int) {
-			indexes.setI32(4 * pos++, index);
-		});
-		if ( triangleCount == 0 )
-			return null;
+		// Compute convex hulls shapes with hmd data
+		var dim = bounds.dimension();
+		var prec = Math.min(dim, generateCollides.precision);
+		var subdiv = Math.ceil(dim / prec);
+		subdiv = Math.imin(subdiv, generateCollides.maxSubdiv);
 
-		var startStamp = haxe.Timer.stamp();
+		var params = { maxConvexHulls: generateCollides.maxConvexHulls, maxResolution: subdiv * subdiv * subdiv };
+		var convexHulls = hxd.fmt.hmd.Data.ConvexHullsCollider.buildConvexHulls(vertices, indexes, params);
 
-		var vhacdInstance = new hxd.tools.VHACD();
-		var params = new hxd.tools.VHACD.Parameters();
-		params.maxConvexHulls = maxConvexHulls;
-		params.maxResolution = maxResolution;
-		vhacdInstance.compute(vertices, vertexCount, indexes, triangleCount, params);
-		var convexHullCount = vhacdInstance.getConvexHullCount();
-		if ( convexHullCount == 0 )
-			return null;
-
-		var convexHull = new hxd.tools.VHACD.ConvexHull();
-		for ( i in 0...convexHullCount) {
-			vhacdInstance.getConvexHull(i, convexHull);
-			var pointCount = convexHull.pointCount;
-			var pos = 0;
-			var pointsBytes = convexHull.points;
-			var points = [];
-			for ( _ in 0...pointCount ) {
-				var x = pointsBytes.getF64(8*pos++);
-				var y = pointsBytes.getF64(8*pos++);
-				var z = pointsBytes.getF64(8*pos++);
-				points.push(new h3d.Vector(x, y, z));
-			}
-			convexPoints.push(points);
-
-			var triangleCount = convexHull.triangleCount;
-			var triangles = convexHull.triangles;
-			var pos = 0;
-			var indexes = [];
-			for ( _ in 0...triangleCount ) {
-				indexes.push(triangles.getI32(4*pos++));
-				indexes.push(triangles.getI32(4*pos++));
-				indexes.push(triangles.getI32(4*pos++));
-			}
-			convexIndexes32.push(indexes);
-		}
-		vhacdInstance.release();
-		#elseif (sys || nodejs)
-		var fileName = tmpFile("vhacd_data");
-		var outFile = fileName+".out";
-
-		var outputData = new haxe.io.BytesBuffer();
-		outputData.addInt32(vertexCount);
-		iterVertex(function(x : Float, y : Float, z : Float) {
-			outputData.addFloat(x);
-			outputData.addFloat(y);
-			outputData.addFloat(z);
-		});
-		var triangleCount = iterTriangle(function(_) {});
-		if ( triangleCount == 0 )
-			return null;
-
-		var startStamp = haxe.Timer.stamp();
-
-		outputData.addInt32(triangleCount);
-		iterTriangle(function(index : Int) {
-			outputData.addInt32(index);
-		});
-		sys.io.File.saveBytes(fileName, outputData.getBytes());
-		var ret = try Sys.command("meshTools",["vhacd",fileName,outFile,'$maxConvexHulls','$maxResolution']) catch( e : Dynamic ) -1;
-		if( ret != 0 ) {
-			sys.FileSystem.deleteFile(fileName);
-			throw "Failed to call 'vhacd' executable required to generate collision data. Please ensure it's in your PATH"+(filePath == null ? "" : ' ($filePath)');
-		}
-		var bytes = sys.io.File.getBytes(outFile);
-
-		var i = 0;
-		var convexHullCount = bytes.getInt32(i++<<2);
-		for ( _ in 0...convexHullCount ) {
-			var pointCount = bytes.getInt32(i++<<2);
-			var points = [];
-			for ( _ in 0...pointCount ) {
-				var x = bytes.getDouble(i<<2);
-				i += 2;
-				var y = bytes.getDouble(i<<2);
-				i += 2;
-				var z = bytes.getDouble(i<<2);
-				i += 2;
-				var point = new h3d.Vector(x, y, z);
-				points.push(point);
-			}
-			convexPoints.push(points);
-
-			var triangleCount = bytes.getInt32(i++<<2);
-			var indexes = [];
-			for ( _ in 0...triangleCount ) {
-				indexes.push(bytes.getInt32(i++<<2));
-				indexes.push(bytes.getInt32(i++<<2));
-				indexes.push(bytes.getInt32(i++<<2));
-			}
-			convexIndexes32.push(indexes);
-		}
-
-		sys.FileSystem.deleteFile(fileName);
-		sys.FileSystem.deleteFile(outFile);
-		#end
-
-		var collider = new Collider();
+		// Create convex hulls colliders
+		var collider = new ConvexHullsCollider();
 		collider.vertexCounts = [];
 		collider.indexCounts = [];
 		var is32 = [];
 
 		collider.vertexPosition = dataOut.length;
-		for ( i in 0...convexPoints.length ) {
-			var points = convexPoints[i];
-			var indexes = convexIndexes32[i];
-			for ( p in points ) {
-				dataOut.writeFloat(p.x);
-				dataOut.writeFloat(p.y);
-				dataOut.writeFloat(p.z);
-			}
+		for ( i in 0...convexHulls.length ) {
+			var vertices = convexHulls[i].vertices;
+			var indexes = convexHulls[i].indexes;
+			for ( v in vertices )
+				dataOut.writeFloat(v);
 
-			collider.vertexCounts.push(points.length);
+			var vCount = Std.int(vertices.length / 3);
+			collider.vertexCounts.push(vCount);
 			collider.indexCounts.push(indexes.length);
 
-			is32.push(points.length > 0x10000);
+			is32.push(vCount > 0x10000);
 		}
 
 		collider.indexPosition = dataOut.length;
-		for ( i => indexes in convexIndexes32 ) {
+		for ( i in 0...convexHulls.length ) {
 			var is32 = is32[i];
 			if( is32 ) {
-				for( i in indexes )
-					dataOut.writeInt32(i);
+				for( idx in convexHulls[i].indexes )
+					dataOut.writeInt32(idx);
 			} else {
-				for( i in indexes )
-					dataOut.writeUInt16(i);
+				for( idx in convexHulls[i].indexes )
+					dataOut.writeUInt16(idx);
 			}
 		}
 
-		if ( d.colliders == null )
-			d.colliders = [];
-		model.collider = d.colliders.length;
-		if( model.props == null ) model.props = [];
-		model.props.push(HasCollider);
-		d.colliders.push(collider);
-
 		return collider;
+	}
+
+	function buildShapeColliders( shapes : Array<ShapeColliderParams> ) : GroupCollider {
+		var group = new GroupCollider();
+		group.colliders = [];
+		function makeVector( dyn ) {
+			var x : Float = dyn.x;
+			var y : Float = dyn.y;
+			var z : Float = dyn.z;
+			return new h3d.Vector(x, y, z);
+		}
+		for( cp in shapes ) {
+			switch( cp.type ) {
+			case Sphere:
+				var c = new SphereCollider();
+				if( cp.position == null )
+					throw "Invalid SphereCollider params";
+				c.position = makeVector(cp.position);
+				c.radius = cp.radius;
+				group.colliders.push(c);
+			case Box:
+				var c = new BoxCollider();
+				if( cp.position == null || cp.halfExtent == null )
+					throw "Invalid BoxCollider params";
+				c.position = makeVector(cp.position);
+				c.halfExtent = makeVector(cp.halfExtent);
+				c.rotation = makeVector(cp.rotation);
+				group.colliders.push(c);
+			case Capsule:
+				var c = new CapsuleCollider();
+				if( cp.position == null || cp.halfExtent == null )
+					throw "Invalid CapsuleCollider params";
+				c.position = makeVector(cp.position);
+				c.halfExtent = makeVector(cp.halfExtent);
+				c.radius = cp.radius;
+				group.colliders.push(c);
+			case Cylinder:
+				var c = new CylinderCollider();
+				if( cp.position == null || cp.halfExtent == null )
+					throw "Invalid CapsuleCollider params";
+				c.position = makeVector(cp.position);
+				c.halfExtent = makeVector(cp.halfExtent);
+				c.radius = cp.radius;
+				group.colliders.push(c);
+			}
+		}
+		return group;
 	}
 
 	function addModels(includeGeometry) {
@@ -1039,8 +1059,9 @@ class HMDOut extends BaseLibrary {
 		var root = buildHierarchy().root;
 		var objects = [], joints = [], skins = [], foundSkin : Array<TmpObject> = null;
 		var uid = 0;
+
 		function indexRec( t : TmpObject ) {
-			if( t.isJoint ) {
+			if (t.isJoint) {
 				joints.push(t);
 			} else {
 				var isSkin = false;
@@ -1101,31 +1122,52 @@ class HMDOut extends BaseLibrary {
 			if( models.length == 0 ) continue;
 			if( models.length > 1 ) throw "Single skin applied to multiple models not supported";
 			var m = models[0];
-			for( o2 in objects )
+			for( o2 in objects ) {
 				if( o2.model == m ) {
-					foundSkin.push(o);
-					o2.skin = o;
-					if( o.model == null ) o.model = m;
-					ignoreMissingObject(m.getId()); // make sure we don't store animation for the model (only skin object has one)
-					// copy parent
-					var p = o.parent;
-					if( p != o2 ) {
-						o2.parent.childs.remove(o2);
-						o2.parent = p;
-						if( p != null ) p.childs.push(o2) else root = o2;
-					}
-					// remove skin from hierarchy
-					if( p != null ) p.childs.remove(o);
-					// move not joint to new parent
-					// (only first level, others will follow their respective joint)
-					for( c in o.childs.copy() )
-						if( !c.isJoint ) {
-							o.childs.remove(c);
-							o2.childs.push(c);
-							c.parent = o2;
+					if (legacySkinImport) {
+						foundSkin.push(o);
+						o2.skin = o;
+						if( o.model == null ) o.model = m;
+						ignoreMissingObject(m.getId()); // make sure we don't store animation for the model (only skin object has one)
+						// copy parent
+						var p = o.parent;
+						if( p != o2 ) {
+							o2.parent.childs.remove(o2);
+							o2.parent = p;
+							if( p != null ) p.childs.push(o2) else root = o2;
 						}
+						// remove skin from hierarchy
+						if( p != null ) p.childs.remove(o);
+						// move not joint to new parent
+						// (only first level, others will follow their respective joint)
+						for( c in o.childs.copy() ) {
+							if( !c.isJoint ) {
+								o.childs.remove(c);
+								o2.childs.push(c);
+								c.parent = o2;
+							}
+						}
+					}
+					else {
+						for (c in o.childs) {
+							if (c.isJoint) {
+								if (o2.rootJoints == null)
+									o2.rootJoints = [];
+								o2.rootJoints.push(c);
+
+								var jDef = getDefaultMatrixes(c.model);
+								var modelDef = getDefaultMatrixes(m);
+
+								var newDef = new DefaultMatrixes();
+								newDef.fromMatrix(modelDef.toMatrix(false).multiplied(jDef.toMatrix(false).getInverse()));
+								defaultModelMatrixes.set(m.getId(), newDef);
+							}
+						}
+					}
+
 					break;
 				}
+			}
 		}
 
 		// we need to have ignored skins objects anims first
@@ -1144,21 +1186,50 @@ class HMDOut extends BaseLibrary {
 		for( g in this.root.getAll("Objects.Geometry") )
 			tmpGeom.set(g.getId(), { setSkin : function(_) { }, vertexCount : function() return Std.int(new hxd.fmt.fbx.Geometry(this, g).getVertices().length/3) } );
 
+		// Sort LODs to ensure we treat them in order after
+		haxe.ds.ArraySort.sort(objects, (a, b) -> {
+			var aName = a.model == null ? null : a.model.getName();
+			if (aName == null) return 0;
+			var aIndexOf = aName.lastIndexOf("_LOD");
+			var aLodLevel = Std.parseInt(aName.substr(aIndexOf + 4));
+			aName = aName.substring(0, aIndexOf);
+
+			var bName = b.model == null ? null : b.model.getName();
+			if (bName == null) return 0;
+			var bIndexOf = bName.lastIndexOf("_LOD");
+			var bLodLevel = Std.parseInt(bName.substr(bIndexOf + 4));
+			bName = bName.substring(0, bIndexOf);
+
+			if (aName == bName && aLodLevel != null && bLodLevel != null) {
+				return aLodLevel > bLodLevel ? 1 : -1;
+			}
+			else {
+				return 0;
+			}
+		});
+
 		var hgeom = new Map();
+		var hgeomCol = new Map();
 		var hmat = new Map<Int,Int>();
 		var hlods = new Map<String, Array<Index<Model>>>();
+		var lods0Mids : Map<String, Array<Int>> = new Map();
 		var index = 0;
 		for( o in objects ) {
 
 			o.index = index++;
 
 			var model = new Model();
-			var ref = o.skin == null ? o : o.skin;
-
 			model.name = o.model == null ? null : o.model.getName();
 			model.parent = o.parent == null || o.parent.isJoint ? -1 : o.parent.index;
 			model.follow = o.parent != null && o.parent.isJoint ? o.parent.model.getName() : null;
-			var m = ref.model == null ? new hxd.fmt.fbx.BaseLibrary.DefaultMatrixes() : getDefaultMatrixes(ref.model);
+			var m : DefaultMatrixes;
+			if (legacySkinImport) {
+				var ref = o.skin == null ? o : o.skin;
+				m = ref.model == null ? new hxd.fmt.fbx.BaseLibrary.DefaultMatrixes() : getDefaultMatrixes(ref.model);
+			}
+			else {
+				m = o.model == null ? new hxd.fmt.fbx.BaseLibrary.DefaultMatrixes() : getDefaultMatrixes(o.model);
+			}
 			var p = new Position();
 			p.x = m.trans == null ? 0 : -m.trans.x;
 			p.y = m.trans == null ? 0 : m.trans.y;
@@ -1267,30 +1338,48 @@ class HMDOut extends BaseLibrary {
 			var g = getChild(o.model, "Geometry");
 
 			var skin = null;
-			if( o.skin != null ) {
-				var rootJoints = [];
-				for( c in o.skin.childs )
-					if( c.isJoint )
-						rootJoints.push(c.joint);
-				skin = createSkin(hskins, tmpGeom, rootJoints);
-				if( skin.boundJoints.length > maxBonesPerSkin ) {
-					var g = new hxd.fmt.fbx.Geometry(this, g);
-					var idx = g.getIndexes();
-					skin.split(maxBonesPerSkin, [for( i in idx.idx ) idx.vidx[i]], mids.length > 1 ? g.getMaterialByTriangle() : null);
+			if (legacySkinImport) {
+				if( o.skin != null ) {
+					var rootJoints = [];
+					for( c in o.skin.childs )
+						if( c.isJoint )
+							rootJoints.push(c.joint);
+					skin = createSkin(hskins, tmpGeom, rootJoints);
+					if( skin.boundJoints.length > maxBonesPerSkin ) {
+						var g = new hxd.fmt.fbx.Geometry(this, g);
+						var idx = g.getIndexes();
+						skin.split(maxBonesPerSkin, [for( i in idx.idx ) idx.vidx[i]], mids.length > 1 ? g.getMaterialByTriangle() : null);
+					}
+					model.skin = makeSkin(skin);
 				}
-				model.skin = makeSkin(skin, o.skin);
+			}
+			else {
+				if( o.rootJoints != null ) {
+					skin = createSkin(hskins, tmpGeom, [for (j in o.rootJoints) j.joint]);
+					if( skin.boundJoints.length > maxBonesPerSkin ) {
+						var g = new hxd.fmt.fbx.Geometry(this, g);
+						var idx = g.getIndexes();
+						skin.split(maxBonesPerSkin, [for( i in idx.idx ) idx.vidx[i]], mids.length > 1 ? g.getMaterialByTriangle() : null);
+					}
+					model.skin = makeSkin(skin);
+				}
 			}
 
-			// Reorder materials to unsure there are in the same order for lods
+			// For each LOD > 0, reorder its materials in the same order that the LOD 0
 			var lodsInfos = getLODInfos(model.name);
+			if (lodsInfos.lodLevel == 0)
+				lods0Mids.set(lodsInfos.modelName, mids);
 			if (lodsInfos.lodLevel != -1) {
 				midsSortRemap = new Map<Int, Int>();
-				var start = d.materials.length - mids.length;
 				for (idx in 0...mids.length) {
-					midsSortRemap.set(idx, mids[idx]);
-					if (idx + start < 0)
-						continue;
-					mids[idx + start] = start + idx;
+					var lod0Mids = lods0Mids.get(lodsInfos.modelName);
+					for (idx2 in 0...lod0Mids.length) {
+						if (mids[idx] == lod0Mids[idx2]) {
+							mids[idx] = lod0Mids[idx2];
+							midsSortRemap.set(idx, idx2);
+							break;
+						}
+					}
 				}
 			}
 
@@ -1300,16 +1389,11 @@ class HMDOut extends BaseLibrary {
 
 				var geom = buildGeom(geomData, skin, dataOut, hasNormalMap || generateTangents);
 
-				if ( lodsInfos.lodLevel <= 0 ) {
-					var mname = model.getObjectName();
-					var collidersParams = modelCollides.exists(mname) ? modelCollides.get(mname) : generateCollides;
-					if ( collidersParams != null )
-						buildColliders(d, model, geomData, geom.g.bounds, collidersParams);
-				}
-
 				gdata = { gid : d.geometries.length, materials : geom.materials };
+				var gdataCol = { gid : d.geometries.length, mids : mids, vbuf : geom.vbuf, ibufs : geom.ibufs };
 				d.geometries.push(geom.g);
 				hgeom.set(g.getId(), gdata);
+				hgeomCol.set(gdataCol.gid, gdataCol);
 				for ( s in d.shapes ) {
 					if (s.geom == -1)
 						s.geom = gdata.gid;
@@ -1327,6 +1411,10 @@ class HMDOut extends BaseLibrary {
 			}
 			if( gdata.materials == null )
 				model.materials = mids;
+			else if (lodsInfos.lodLevel > 0) {
+				var lod0Mids = lods0Mids.get(lodsInfos.modelName);
+				model.materials = [for( id in gdata.materials ) lod0Mids[id]];
+			}
 			else
 				model.materials = [for( id in gdata.materials ) mids[id]];
 
@@ -1347,7 +1435,7 @@ class HMDOut extends BaseLibrary {
 				}
 				if( model.props == null ) model.props = [];
 				model.props.push(HasLod);
-			} else if ( lodsDecimation != null && model.skin == null ) {
+			} else if ( lodsDecimation != null && model.skin == null && !model.isCollider() ) {
 				var modelName = model.name;
 				model.name = model.toLODName(0);
 				if( model.props == null ) model.props = [];
@@ -1357,6 +1445,8 @@ class HMDOut extends BaseLibrary {
 					var geom = buildGeom(new hxd.fmt.fbx.Geometry(this, g), skin, dataOut, hasNormalMap || generateTangents, lods);
 					if ( geom == null )
 						continue;
+					var gdataCol = { gid : d.geometries.length, mids : mids, vbuf : geom.vbuf, ibufs : geom.ibufs };
+					hgeomCol.set(gdataCol.gid, gdataCol);
 					var lodModel = new Model();
 					lodModel.name = modelName + 'LOD${i+1}';
 					lodModel.props = model.props != null ? model.props.copy() : null;
@@ -1375,6 +1465,113 @@ class HMDOut extends BaseLibrary {
 					d.geometries.push(geom.g);
 					model.lods.push(d.models.length);
 					d.models.push(lodModel);
+				}
+			}
+		}
+
+		var rootIndex = -1;
+		for (i => m in d.models) {
+			if (m.parent == -1 && m.geometry == -1 && m.name == null && m.position.isIdentity()) {
+				rootIndex = i;
+				break;
+			}
+		}
+		if (rootIndex != -1) {
+			var objectCount = 0;
+			for (m in d.models) {
+				if (!m.isLOD() && !m.isCollider() && m.parent == rootIndex)
+					objectCount++;
+				if (objectCount > 1)
+					break;
+			}
+			if (objectCount == 1) {
+				d.models.remove(d.models[rootIndex]);
+				for (m in d.models) {
+					if (m.parent == rootIndex)
+						m.parent = -1;
+					else if (m.parent > rootIndex)
+						m.parent--;
+					if (m.lods != null) {
+						for (i in 0...m.lods.length) {
+							var lodIndex = m.lods[i];
+							if (lodIndex > rootIndex)
+								m.lods[i] = lodIndex - 1;
+						}
+					}
+				}
+			}
+		}
+
+		// Make colliders
+		d.colliders = [];
+		for( model in d.models ) {
+			if( model.geometry < 0 || model.isLOD() || model.isCollider() )
+				continue;
+			if( model.props == null ) model.props = [];
+
+			function findMeshModel( name : String ) {
+				if( name == null )
+					return null;
+				for( model in d.models ) {
+					if( model.geometry >= 0 && model.name == name )
+						return model;
+				}
+				return null;
+			}
+
+			var mname = model.getObjectName();
+			var mcs = modelCollides.exists(mname) ? modelCollides.get(mname) : [{ useDefault : true }];
+			if( mcs == null || mcs.length == 0 ) {
+				var collider = new EmptyCollider();
+				var colliderId = d.colliders.length;
+				if( d.props == null ) d.props = [];
+				if( !d.props.contains(HasCustomCollider) )
+					d.props.push(HasCustomCollider);
+				d.colliders.push(collider);
+				model.collider = colliderId;
+				model.props.push(HasCollider);
+				continue;
+			}
+
+			for ( idx => mc in mcs ) {
+				var isDefaultParams = mc != null && mc.useDefault;
+				var params = isDefaultParams ? generateCollides : mc;
+				var colliderType = hxd.fmt.hmd.Data.Collider.resolveColliderType(d, model, params, isDefaultParams, collisionThresholdHeight, collisionUseLowLod, noCollision);
+				var collider : Collider = switch (colliderType) {
+					case Empty:
+						new EmptyCollider();
+					case ConvexHulls(colliderModel):
+						var gdataCol = hgeomCol.get(colliderModel.geometry);
+						buildAutoColliders(model, colliderModel, d, gdataCol.vbuf, gdataCol.ibufs, gdataCol.mids, d.geometries[model.geometry].bounds, params, dataOut);
+					case Mesh(colliderModel):
+						var gdataCol = hgeomCol.get(colliderModel.geometry);
+						buildGeomCollider(model, colliderModel, gdataCol.vbuf, gdataCol.ibufs, dataOut);
+					case Shapes:
+						buildShapeColliders(params.shapes);
+					case null:
+						null;
+					default:
+						null;
+				};
+
+				if( collider != null ) {
+					var colliderId = d.colliders.length;
+					if( collider.type != ConvexHulls ) {
+						if( d.props == null ) d.props = [];
+						if( !d.props.contains(HasCustomCollider) )
+							d.props.push(HasCustomCollider);
+					}
+					d.colliders.push(collider);
+					if( idx == 0 ) {
+						model.collider = colliderId;
+						model.props.push(HasCollider);
+					} else {
+						if( model.colliders == null ) {
+							model.colliders = [model.collider];
+							model.props.push(HasColliders);
+						}
+						model.colliders[idx] = colliderId;
+					}
 				}
 			}
 		}
@@ -1402,9 +1599,9 @@ class HMDOut extends BaseLibrary {
 		return path;
 	}
 
-	function makeSkin( skin : h3d.anim.Skin, obj : TmpObject ) {
+	function makeSkin( skin : h3d.anim.Skin ) {
 		var s = new Skin();
-		s.name = obj.model.getName();
+		s.name = "Skin";
 		s.joints = [];
 		for( jo in skin.allJoints ) {
 			var j = new SkinJoint();
@@ -1444,10 +1641,14 @@ class HMDOut extends BaseLibrary {
 	function makePosition( m : h3d.Matrix ) {
 		var p = new Position();
 		var s = m.getScale();
+		var angles = m.getEulerAngles();
+		var r = h3d.Matrix.R(angles.x, angles.y, angles.z);
 		var q = new h3d.Quat();
-		q.initRotateMatrix(m);
-		q.normalize();
-		if( q.w < 0 ) q.negate();
+		q.initRotateMatrix(r);
+		if (Math.isNaN(q.x)) q.x = 0;
+		if (Math.isNaN(q.y)) q.y = 0;
+		if (Math.isNaN(q.z)) q.z = 0;
+		if (q.w < 0) q.negate();
 		p.sx = round(s.x);
 		p.sy = round(s.y);
 		p.sz = round(s.z);

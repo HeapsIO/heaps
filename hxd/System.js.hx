@@ -32,6 +32,7 @@ class System {
 	public static var screenDPI(get,never) : Float;
 	public static var setCursor = setNativeCursor;
 	public static var allowTimeout(get, set) : Bool;
+	static var CLIPBOARD_TEXT : String = null;
 
 	public static function timeoutTick() : Void {
 	}
@@ -95,6 +96,10 @@ class System {
 			case Move: "move";
 			case TextInput: "text";
 			case Hide: "none";
+			case ResizeNS: "ns-resize";
+			case ResizeWE: "ew-resize"; // not a typo, WE is reversed in css
+			case ResizeNWSE: "nwse-resize";
+			case ResizeNESW: "nesw-resize";
 			case Callback(_): throw "assert";
 			case Custom(cur):
 				if ( cur.alloc == null ) {
@@ -151,16 +156,20 @@ class System {
 	public static function getClipboardText() : String {
 		#if (hide && editor)
 		return nw.Clipboard.get().get(Text);
+		#else
+		return CLIPBOARD_TEXT;
 		#end
-		return null;
 	}
 
 	public static function setClipboardText(text:String) : Bool {
 		#if (hide && editor)
 		nw.Clipboard.get().set({ data: text, type: nw.Clipboard.ClipboardType.Text });
 		return true;
+		#else
+		js.Browser.navigator.clipboard.writeText(text);
+		CLIPBOARD_TEXT = text;
+		return true;
 		#end
-		return false;
 	}
 
 	public static function getLocale() : String {

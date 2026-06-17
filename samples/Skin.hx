@@ -31,7 +31,7 @@ class Skin extends SampleApp {
 		shadow.color.setColor(0x301030);
 		dir.enableSpecular = true;
 
-		new h3d.scene.CameraController(s3d).loadFromCamera();
+		new h3d.scene.CameraController.OrbitCameraController(s3d).loadFromCamera();
 	}
 
 	static function main() {

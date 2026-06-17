@@ -84,6 +84,12 @@ class CustomParser extends domkit.CssValue.ValueParser {
 		return loadResource(path);
 	}
 
+	#if !macro
+	function toTile( r : hxd.res.Any ) {
+		return try r.toTile() catch( e : Dynamic ) invalidProp(Std.string(e));
+	}
+	#end
+
 	public function parseTile( v : CssValue) {
 		try {
 			switch( v ) {
@@ -96,19 +102,19 @@ class CustomParser extends domkit.CssValue.ValueParser {
 				return #if macro true #else h2d.Tile.fromColor(c,w,h,(c>>>24)/255) #end;
 			case VCall("tile",[VString(url),VInt(size)]):
 				var p = loadResource(url);
-				return #if macro p #else { var t = p.toTile(); t.sub(0,0,size,size); } #end;
+				return #if macro p #else { var t = toTile(p); t.sub(0,0,size,size); } #end;
 			case VCall("tile",[VString(url),VInt(sizex),VInt(sizey)]):
 				var p = loadResource(url);
-				return #if macro p #else { var t = p.toTile(); t.sub(0,0,sizex,sizey); } #end;
+				return #if macro p #else { var t = toTile(p); t.sub(0,0,sizex,sizey); } #end;
 			case VCall("grid",[VString(url),VInt(hsplit),VInt(vsplit)]):
 				var p = loadResource(url);
-				return #if macro p #else { var t = p.toTile(); t.sub(0,0,Std.int(t.iwidth/hsplit),Std.int(t.iheight/vsplit)); } #end;
+				return #if macro p #else { var t = toTile(p); t.sub(0,0,Std.int(t.iwidth/hsplit),Std.int(t.iheight/vsplit)); } #end;
 			case VCall("hgrid",[VString(url),VInt(hsplit)]):
 				var p = loadResource(url);
-				return #if macro p #else { var t = p.toTile(); t.sub(0,0,Std.int(t.iwidth/hsplit),t.iheight); } #end;
+				return #if macro p #else { var t = toTile(p); t.sub(0,0,Std.int(t.iwidth/hsplit),t.iheight); } #end;
 			case VCall("vgrid",[VString(url),VInt(vsplit)]):
 				var p = loadResource(url);
-				return #if macro p #else { var t = p.toTile(); t.sub(0,0,t.iwidth,Std.int(t.iheight/vsplit)); } #end;
+				return #if macro p #else { var t = toTile(p); t.sub(0,0,t.iwidth,Std.int(t.iheight/vsplit)); } #end;
 			default:
 				var c = parseColor(v);
 				return #if macro true #else h2d.Tile.fromColor(c,1,1,(c>>>24)/255) #end;
@@ -116,7 +122,7 @@ class CustomParser extends domkit.CssValue.ValueParser {
 		} catch( e : InvalidProperty ) {
 			var path = parsePath(v);
 			var p = loadResource(path);
-			return #if macro p #else p.toTile() #end;
+			return #if macro p #else toTile(p) #end;
 		}
 	}
 
@@ -186,6 +192,21 @@ class CustomParser extends domkit.CssValue.ValueParser {
 		var offset: Null<Int> = null, offsetChar = 0;
 		var lineHeight : Null<Float> = null, baseLine: Null<Int> = null;
 		switch(value) {
+			case VIdent("default"):
+				#if macro
+				return false;
+				#else
+				return hxd.res.DefaultFont.get();
+				#end
+			case VCall("group",fonts):
+				#if macro
+				for( f in fonts )
+					parseFont(f);
+				#else
+				var fnt = @:privateAccess new h2d.Font("group",0,FontGroup);
+				fnt.subFonts = [for( f in fonts ) parseFont(f)];
+				return fnt;
+				#end
 			case VGroup(args):
 				var args = args.copy();
 				path = parsePath(args[0]);
@@ -222,6 +243,7 @@ class CustomParser extends domkit.CssValue.ValueParser {
 					adjustSdfParams(sdf);
 				}
 			default:
+
 				path = parsePath(value);
 		}
 		var res = loadResource(path);
@@ -306,6 +328,13 @@ class CustomParser extends domkit.CssValue.ValueParser {
 		case VIdent("move"): Move;
 		case VIdent("textinput") | VIdent("input"): TextInput;
 		case VIdent("hide"): Hide;
+
+		// use both css and hxd.Cursor names
+		case VIdent("ns-resize") | VIdent("resize-ns"): ResizeNS;
+		case VIdent("ew-resize") | VIdent("resize-we"): ResizeWE;
+		case VIdent("nwse-resize") | VIdent("resize-nwse"): ResizeNWSE;
+		case VIdent("nesw-resize") | VIdent("resize-nesw"): ResizeNESW;
+		case VIdent("none"): null;
 		default: invalidProp();
 		}
 	}
@@ -851,7 +880,6 @@ class BitmapComp extends DrawableComp implements domkit.Component.ComponentDecl<
 @:uiComp("text") @:domkitDecl
 class TextComp extends DrawableComp implements domkit.Component.ComponentDecl<h2d.Text> {
 
-	@:p var text : String = "";
 	@:p(font) var font : h2d.Font;
 	@:p var letterSpacing = 0;
 	@:p var lineSpacing = 0;
@@ -964,7 +992,7 @@ class FlowComp extends ObjectComp implements domkit.Component.ComponentDecl<h2d.
 	@:p var backgroundAlpha : Float = 1;
 	@:p(auto) var backgroundSmooth : Null<Bool>;
 	@:p var backgroundRepeat : Bool;
-	@:p var debug : Bool;
+	@:p var debug : Null<Bool>;
 	@:p var layout : h2d.Flow.FlowLayout;
 	@:p var vertical : Bool;
 	@:p var horizontal : Bool;

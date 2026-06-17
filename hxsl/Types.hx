@@ -8,7 +8,9 @@ typedef Matrix = h3d.Matrix;
 typedef Texture = h3d.mat.Texture;
 typedef TextureArray = h3d.mat.TextureArray;
 typedef TextureChannel = h3d.mat.Texture;
+typedef TextureHandle = h3d.mat.TextureHandle;
 typedef Buffer = h3d.Buffer;
+typedef BufferHandle = h3d.BufferHandle;
 
 class ChannelTools {
 	public static inline function isPackedFormat( c : TextureChannel ) {

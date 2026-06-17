@@ -20,11 +20,17 @@ class Splitter {
 	var vars : Map<Int,VarProps>;
 	var avars : Array<VarProps>;
 	var varNames : Map<String,TVar>;
+	var varNamesKByPrefix : Map<String, Int>;
 	var varMap : Map<TVar,TVar>;
 
 	var isBatchShader : Bool;
 
+	var mapVarsFun : TExpr -> TExpr;
+	var checkExprFun : TExpr -> Void;
+
 	public function new() {
+		this.mapVarsFun = mapVars;
+		this.checkExprFun = checkExpr;
 	}
 
 	public function split( s : ShaderData, isBatchShader : Bool  ) : Array<ShaderData> {
@@ -33,6 +39,7 @@ class Splitter {
 		var ffun = null, fvars = new Map(), afvars = [];
 		var isCompute = false;
 		varNames = new Map();
+		varNamesKByPrefix = new Map();
 		varMap = new Map();
 		for( f in s.funs )
 			switch( f.kind ) {
@@ -58,7 +65,7 @@ class Splitter {
 			var v = inf.v;
 			if( inf.local ) continue;
 			switch( v.kind ) {
-			case Var, Local:
+			case Var, Local if ( !v.hasQualifier(NoVar) ):
 				var fv = fvars.get(inf.origin.id);
 				v.kind = fv != null && fv.read > 0 ? Var : Local;
 			default:
@@ -81,7 +88,7 @@ class Splitter {
 					vvars.set(nv.id, ninf);
 
 					var p = vfun.expr.p;
-					var e = { e : TBinop(OpAssign, { e : TVar(v), t : nv.type, p : p }, { e : TVar(nv), t : v.type, p : p } ), t : nv.type, p : p };
+					var e : TExpr = { e : TBinop(OpAssign, { e : TVar(v), t : nv.type, p : p }, { e : TVar(nv), t : v.type, p : p } ), t : nv.type, p : p };
 					vafterMap.push(() -> addExpr(vfun, e));
 
 					if( v.kind == Var )
@@ -103,7 +110,7 @@ class Splitter {
 		for( f in vafterMap )
 			f();
 
-		var finits = [];
+		var finits : Array<TExpr> = [];
 		var todo = [];
 		for( inf in afvars ) {
 			var v = inf.v;
@@ -231,19 +238,19 @@ class Splitter {
 		}
 	}
 
-	function mapVars( e : TExpr ) {
+	function mapVars( e : TExpr ) : TExpr {
 		return switch( e.e ) {
 		case TVar(v):
 			var v2 = varMap.get(v);
 			v2 == null ? e : { e : TVar(v2), t : e.t, p : e.p };
 		case TVarDecl(v, init):
 			var v2 = varMap.get(v);
-			v2 == null ? e.map(mapVars) : { e : TVarDecl(v2,init == null ? null : mapVars(init)), t : e.t, p : e.p };
+			v2 == null ? e.map(mapVarsFun) : { e : TVarDecl(v2,init == null ? null : mapVars(init)), t : e.t, p : e.p };
 		case TFor(v, it, loop):
 			var v2 = varMap.get(v);
-			v2 == null ? e.map(mapVars) : { e : TFor(v2,mapVars(it),mapVars(loop)), t : e.t, p : e.p };
+			v2 == null ? e.map(mapVarsFun) : { e : TFor(v2,mapVars(it),mapVars(loop)), t : e.t, p : e.p };
 		default:
-			e.map(mapVars);
+			e.map(mapVarsFun);
 		}
 	}
 
@@ -264,7 +271,7 @@ class Splitter {
 					if( v.qualifiers != null ) {
 						for ( q in v.qualifiers ) {
 							switch (q) {
-							case Final, Flat:
+							case Final, Flat, NoVar:
 								if ( nv.qualifiers == null )
 									nv.qualifiers = [];
 								nv.qualifiers.push(q);
@@ -290,12 +297,20 @@ class Splitter {
 		var n = varNames.get(v.name);
 		if( n != null && n != v ) {
 			var prefix = v.name;
-			while( prefix.charCodeAt(prefix.length - 1) >= '0'.code && prefix.charCodeAt(prefix.length - 1) <= '9'.code )
+			while( prefix.length > 0 ) {
+				var c = StringTools.fastCodeAt(prefix, prefix.length - 1);
+				if( c < '0'.code || c > '9'.code )
+					break;
 				prefix = prefix.substr(0, -1);
-			var k = prefix == v.name ? 2 : Std.parseInt(v.name.substr(prefix.length));
+			}
+			var k : Int = prefix == v.name ? 2 : Std.parseInt(v.name.substr(prefix.length));
+			var lastK : Int = varNamesKByPrefix.get(prefix);
+			if( k <= lastK )
+				k = lastK + 1;
 			while( varNames.exists(prefix + k) )
 				k++;
 			v.name = prefix + k;
+			varNamesKByPrefix.set(prefix, k);
 		}
 		varNames.set(v.name, v);
 	}
@@ -353,8 +368,12 @@ class Splitter {
 				checkSyntaxExpr(arg.e);
 				checkExpr(arg.e);
 			}
+		case TCall({ e : TGlobal(ResolveSampler|ResolveBuffer)}, [handle, { e : TVar(v)}]):
+			var inf = get(v);
+			inf.write++;
+			checkExpr(handle);
 		default:
-			e.iter(checkExpr);
+			e.iter(checkExprFun);
 		}
 	}
 

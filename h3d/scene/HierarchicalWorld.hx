@@ -39,7 +39,7 @@ class HierarchicalWorld extends Object {
 		updateGraphics();
 		return locked;
 	}
-	public var level(get, null) : Int;
+	public var level(get, never) : Int;
 	public function get_level() {
 		return data.maxDepth - data.depth;
 	}

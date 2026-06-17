@@ -19,14 +19,16 @@ private class Access {
 
 class DynamicShader extends Shader {
 
+	public var instanceName : String;
 	var values = new Array<Dynamic>();
 	var floats = new Array<Float>();
 	var accesses = new Array<Access>();
 	var varIndexes = new Map<Int,Int>();
 	var varNames = new Map<String,Int>();
 
-	public function new( s : SharedShader ) {
+	public function new( s : SharedShader, ?name ) {
 		this.shader = s;
+		this.instanceName = name;
 		super();
 		for( v in s.data.vars )
 			addVarIndex(v);
@@ -111,6 +113,24 @@ class DynamicShader extends Shader {
 		}
 	}
 
+	override function writeParam( index : Int, type : hxsl.Ast.Type, out : Shader.ShaderParamBuffer, pos : Int ) {
+		var a = accesses[index];
+		switch( a.kind ) {
+		case Float:
+			var v = floats[a.index];
+			switch(type) {
+				case TInt:
+					h3d.impl.RenderContext.fillIntParam(Std.int(v), pos, out);
+				case TFloat:
+					out[pos] = v;
+				default:
+					throw "invalid number value";
+			}
+		default:
+			h3d.impl.RenderContext.fillRec(getParamValue(index), type, out, pos);
+		}
+	}
+
 	override function getParamFloatValue(index:Int):Float {
 		var a = accesses[index];
 		if( a.kind != Float )
@@ -170,7 +190,7 @@ class DynamicShader extends Shader {
 		updateConstantsFinal(globals);
 	}
 
-	public function getVariable( name : String ) {
+	public function getVariable( name : String ) : Dynamic {
 		var vid = varNames.get(name);
 		if( vid == null )
 			return null;

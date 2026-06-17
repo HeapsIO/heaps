@@ -86,14 +86,14 @@ class Text extends Drawable {
 	/**
 		Calculated text width. Can exceed maxWidth in certain cases.
 	**/
-	public var textWidth(get, null) : Float;
+	public var textWidth(get, never) : Float;
 	/**
 		Calculated text height.
 
 		Not a completely precise text metric and increments in the `Font.lineHeight` steps.
 		In `HtmlText`, can be increased by various values depending on the active line font and `HtmlText.lineHeightMode` value.
 	**/
-	public var textHeight(get, null) : Float;
+	public var textHeight(get, never) : Float;
 	/**
 		Text align rules dictate how the text lines are positioned.
 		See `Align` for specific details on each alignment mode.
@@ -114,6 +114,7 @@ class Text extends Drawable {
 
 	var glyphs : TileGroup;
 	var needsRebuild : Bool;
+	var trimTrailingSpaces : Bool = true;
 	var currentText : String;
 	var textChanged : Bool;
 
@@ -127,6 +128,7 @@ class Text extends Drawable {
 	var realMaxWidth:Float = -1;
 
 	var sdfShader : h3d.shader.SignedDistanceField;
+	var colorSegments : Array<Int> = null;
 
 	/**
 		Creates a new Text instance.
@@ -135,14 +137,24 @@ class Text extends Drawable {
 	**/
 	public function new( font : Font, ?parent : h2d.Object ) {
 		super(parent);
-		this.font = font;
+		this.font = resolveFont(font);
 		textAlign = Left;
 		text = "";
 		currentText = "";
 		textColor = 0xFFFFFF;
 	}
 
-	function set_font(font) {
+	function resolveFont(font:Font) {
+		while( true ) {
+			if( font == null || font.type != FontGroup ) return font;
+			var sub = resolveSubFont(font, this);
+			if( font == sub ) throw "Recursive font";
+			font = sub;
+		}
+	}
+
+	function set_font(font:Font) {
+		font = resolveFont(font);
 		if( this.font == font ) return font;
 		this.font = font;
 		if ( font != null ) {
@@ -163,6 +175,8 @@ class Text extends Drawable {
 					sdfShader.smoothing = smoothing;
 					sdfShader.channel = channel;
 					sdfShader.autoSmoothing = smoothing == -1;
+				case FontGroup:
+					throw "assert";
 			}
 		}
 		if( glyphs != null ) glyphs.remove();
@@ -323,79 +337,63 @@ class Text extends Drawable {
 				return text;
 			else
 				maxWidth = Math.POSITIVE_INFINITY;
+		} else {
+			maxWidth -= afterData;
 		}
 		if ( font == null ) font = this.font;
-		var lines = [], restPos = 0;
+		var lines = [];
 		var x = leftMargin;
-		var wLastSep = 0.;
-		for( i in 0...text.length ) {
+		var lastPos = 0;
+		var lastBreak = -1;
+		var lastBreakX = 0.;
+
+		inline function flushLine(pos) {
+			lines.push(text.substr(lastPos,pos-lastPos));
+			lastPos = pos;
+			if( sizes != null ) sizes.push(x);
+			x = 0;
+			prevChar = -1;
+			lastBreak = -1;
+			leftMargin = 0;
+		}
+
+		var i = -1;
+		var maxLen = text.length;
+		while( ++i < maxLen ) {
 			var cc = StringTools.fastCodeAt(text, i);
+			if( cc == '\n'.code ) {
+				flushLine(i);
+				lastPos++;
+				continue;
+			}
+			var startX = x;
+			if( lastPos < i ) x += letterSpacing;
 			var e = font.getChar(cc);
-			var newline = cc == '\n'.code;
 			var esize = e.width + e.getKerningOffset(prevChar);
-			var isComplement = (i < text.length - 1 && font.charset.isComplementChar(StringTools.fastCodeAt(text, i + 1)));
-			if( font.charset.isBreakChar(cc) && !isComplement ) {
-				if( lines.length == 0 && leftMargin > 0 && x > maxWidth ) {
-					lines.push("");
-					if ( sizes != null ) sizes.push(leftMargin);
-					x -= leftMargin;
-				}
-				var size = x + esize + letterSpacing; /* TODO : no letter spacing */
-				var k = i + 1, max = text.length;
-				var prevChar = cc;
-				var breakFound = false;
-				while( size <= maxWidth && k < max ) {
-					var cc = StringTools.fastCodeAt(text, k++);
-					if( lineBreak && (font.charset.isSpace(cc) || cc == '\n'.code ) ) {
-						breakFound = true;
-						break;
+			x += esize;
+			prevChar = cc;
+			if( lineBreak ) {
+				if( x > maxWidth && lastBreak >= 0 && (!trimTrailingSpaces || !font.charset.isSpace(cc) || startX > maxWidth) ) {
+					i = lastBreak;
+					x = lastBreakX;
+					flushLine(i + 1);
+				} else if( font.charset.isBreakChar(cc) && (i+1 == maxLen || !font.charset.isComplementChar(StringTools.fastCodeAt(text, i + 1))) ) {
+					if( leftMargin > 0 && x > maxWidth ) {
+						lines.push("");
+						if ( sizes != null ) sizes.push(leftMargin);
+						x -= leftMargin;
 					}
-					var e = font.getChar(cc);
-					size += e.width + letterSpacing + e.getKerningOffset(prevChar);
-					prevChar = cc;
-					if ( font.charset.isBreakChar(cc) ) {
-						if ( k >= text.length )
-							break;
-						var nc = StringTools.fastCodeAt(text, k);
-						if ( !font.charset.isComplementChar(nc) ) break;
+					if( x > maxWidth && (!trimTrailingSpaces || !font.charset.isSpace(cc)) ) {
+						lastBreak = i - 1;
+						lastBreakX = startX;
+					} else {
+						lastBreak = i;
+						lastBreakX = x;
 					}
 				}
-				if( lineBreak && (size > maxWidth || (!breakFound && size + afterData > maxWidth)) ) {
-					newline = true;
-					if( font.charset.isSpace(cc) ){
-						lines.push(text.substr(restPos, i - restPos));
-						e = null;
-					}else{
-						lines.push(text.substr(restPos, i + 1 - restPos));
-					}
-					restPos = i + 1;
-				}
-				else wLastSep = size;
 			}
-			else if( (x + esize + letterSpacing) - wLastSep > maxWidth ) {
-				newline = true;
-				lines.push(text.substr(restPos, i - restPos));
-				restPos = i + 1;
-			}
-			if( e != null && cc != '\n'.code )
-				x += esize + letterSpacing;
-			if( newline ) {
-				if ( sizes != null ) sizes.push(x);
-				x = 0;
-				wLastSep = 0.;
-				prevChar = -1;
-			} else
-				prevChar = cc;
 		}
-		if( restPos < text.length ) {
-			if( lines.length == 0 && leftMargin > 0 && x + afterData - letterSpacing > maxWidth ) {
-				lines.push("");
-				if ( sizes != null ) sizes.push(leftMargin);
-				x -= leftMargin;
-			}
-			lines.push(text.substr(restPos, text.length - restPos));
-			if ( sizes != null ) sizes.push(x);
-		}
+		if( x > leftMargin ) flushLine(text.length);
 		return lines.join("\n");
 	}
 
@@ -433,12 +431,23 @@ class Text extends Drawable {
 			x = 0;
 		}
 
+		var colors = colorSegments;
+		var colorsPos = 0;
+		if( colors != null && colors.length == 0 ) colors = null;
+		if( rebuild ) glyphs.setDefaultColor(0xFFFFFF);
 		for( i in 0...t.length ) {
 			var cc = StringTools.fastCodeAt(t, i);
 			var e = font.getChar(cc);
 			var offs = e.getKerningOffset(prevChar);
 			var esize = e.width + offs;
 			// if the next word goes past the max width, change it into a newline
+
+			if( rebuild && colors != null && colors[colorsPos] == i ) {
+				var c = colors[colorsPos+1];
+				glyphs.setDefaultColor(c,(c>>>24)/255);
+				colorsPos += 2;
+				if( colorsPos >= colors.length ) colors = null;
+			}
 
 			if( cc == '\n'.code ) {
 				if( x > xMax ) xMax = x;
@@ -516,6 +525,16 @@ class Text extends Drawable {
 		return c;
 	}
 
+	/**
+		Set the text color segments. This is an Array containing a pair of (position,color).
+		Each time the text display will reach the given position, the color will be set.
+		The segment color is multiplied by the global textColor.
+	**/
+	public function setColorSegments( arr ) {
+		colorSegments = arr;
+		needsRebuild = true;
+	}
+
 	override function getBoundsRec( relativeTo : Object, out : h2d.col.Bounds, forSize : Bool ) {
 		super.getBoundsRec(relativeTo, out, forSize);
 		updateSize();
@@ -532,6 +551,10 @@ class Text extends Drawable {
 			h = calcHeight;
 		}
 		addBounds(relativeTo, out, x, y, w, h);
+	}
+
+	public static dynamic function resolveSubFont( fnt : Font, text : Text ) : Font {
+		return fnt.subFonts[0];
 	}
 
 }

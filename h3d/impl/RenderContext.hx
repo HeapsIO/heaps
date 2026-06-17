@@ -36,10 +36,23 @@ class RenderContext {
 		textures.dispose();
 	}
 
-	function fillRec( v : Dynamic, type : hxsl.Ast.Type, out : #if hl hl.BytesAccess<hl.F32> #else h3d.shader.Buffers.ShaderBufferData #end, pos : Int ) {
+	public static inline function fillIntParam( v:Int, pos: Int, out : hxsl.Shader.ShaderParamBuffer ){
+		#if js
+		var view = new hxd.impl.TypedArray.Uint32Array(out.buffer);
+		view[pos] = v;
+		#else
+		out[pos] = haxe.io.FPHelper.i32ToFloat(v);
+		#end
+	}
+
+
+	public static function fillRec( v : Dynamic, type : hxsl.Ast.Type, out : hxsl.Shader.ShaderParamBuffer, pos : Int ) : Int {
 		switch( type ) {
+		case TBool:
+			out[pos] = v ? 1.0 : 0.0;
+			return 1;
 		case TInt:
-			out[pos] = v;
+			fillIntParam(Std.int(v), pos, out);
 			return 1;
 		case TFloat:
 			out[pos] = v;
@@ -139,7 +152,6 @@ class RenderContext {
 			return len * 12;
 		case TArray(TFloat, SConst(len)):
 			var v : Array<Float> = v;
-			var size = 0;
 			var count = v.length < len ? v.length : len;
 			for( i in 0...count )
 				out[pos++] = v[i];
@@ -159,6 +171,13 @@ class RenderContext {
 			for( vv in vl )
 				tot += fillRec(Reflect.field(v, vv.name), vv.type, out, pos + tot);
 			return tot;
+		case TTextureHandle:
+			var v : h3d.mat.TextureHandle = v;
+			fillIntParam(v.handle.low, pos, out);
+			fillIntParam(v.handle.high, pos + 1, out);
+		case TBufferHandle:
+			var v : h3d.BufferHandle = v;
+			fillIntParam(v.handle, pos, out);
 		default:
 			throw "assert " + type;
 		}
@@ -205,10 +224,17 @@ class RenderContext {
 		inline function fill(buf:h3d.shader.Buffers.ShaderBuffers, s:hxsl.RuntimeShader.RuntimeShaderData) {
 			var g = s.globals;
 			var ptr = getPtr(buf.globals);
+			var thid = s.paramsTexHandleCount;
+			var bhid = s.paramsBufHandleCount;
 			while( g != null ) {
-				var v = globals.fastGet(g.gid);
+				var v : Dynamic = globals.fastGet(g.gid);
 				if( v == null )
 					throw "Missing global value " + g.path;
+				switch ( g.type ) {
+				case TTextureHandle: buf.texHandles[thid++] = v;
+				case TBufferHandle:	buf.bufHandles[bhid++] = v;
+				default:
+				}
 				fillRec(v, g.type, ptr, g.pos);
 				g = g.next;
 			}
@@ -240,28 +266,33 @@ class RenderContext {
 				return v;
 			}
 			var v = getInstance(p.instance).getParamValue(p.index);
-			if( v == null && !opt ) throw "Missing param value " + shaders.s + "." + p.name;
+			if( v == null && !opt ) throw "Missing param value " + curInstanceValue + "." + p.name;
 			return v;
 		}
 		inline function fill(buf:h3d.shader.Buffers.ShaderBuffers, s:hxsl.RuntimeShader.RuntimeShaderData) {
 			var p = s.params;
 			var ptr = getPtr(buf.params);
+			var thid = 0;
+			var bhid = 0;
 			while( p != null ) {
-				var v : Dynamic;
 				if( p.perObjectGlobal == null ) {
+					var i = getInstance(p.instance);
 					switch( p.type ) {
-					case TFloat, TInt:
-						var i = getInstance(p.instance);
-						ptr[p.pos] = i.getParamFloatValue(p.index);
-						p = p.next;
-						continue;
+					case TTextureHandle:
+						var v = i.getParamValue(p.index);
+						if( v == null ) throw "Missing param value " + curInstanceValue + "." + p.name;
+						buf.texHandles[thid++] = v;
+					case TBufferHandle:
+						var v = i.getParamValue(p.index);
+						if( v == null ) throw "Missing param value " + curInstanceValue + "." + p.name;
+						buf.bufHandles[bhid++] = v;
 					default:
 					}
-					v = getInstance(p.instance).getParamValue(p.index);
-					if( v == null ) throw "Missing param value " + curInstanceValue + "." + p.name;
-				} else
-					v = getParamValue(p, shaders);
-				fillRec(v, p.type, ptr, p.pos);
+					i.writeParam(p.index, p.type, ptr, p.pos);
+				} else {
+					var v = getParamValue(p, shaders);
+					fillRec(v, p.type, ptr, p.pos);
+				}
 				p = p.next;
 			}
 			var tid = 0;

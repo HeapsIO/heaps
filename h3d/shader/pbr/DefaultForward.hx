@@ -16,11 +16,13 @@ class DefaultForward extends hxsl.Shader {
 		@const(16) var MAX_POINT_SHADOW_COUNT:Int;
 		@const(16) var MAX_SPOT_SHADOW_COUNT:Int;
 
+		@global @const var DIFFUSE_ONLY : Bool;
+
 		@:import h3d.shader.pbr.Light.LightEvaluation;
 		@:import h3d.shader.pbr.BRDF;
 
 		// Import pbr info
-		var output : {color : Vec4, metalness : Float, roughness : Float, occlusion : Float, emissive : Float, depth : Float };
+		var output : {color : Vec4, metalness : Float, roughness : Float, occlusion : Float, emissive : Float, velocity : Vec2, depth : Float };
 
 		@param var lightInfos : Buffer<Vec4, 4096>;
 
@@ -69,6 +71,9 @@ class DefaultForward extends hxsl.Shader {
 		var transformedPosition : Vec3;
 		var pixelColor : Vec4;
 		var depth : Float;
+		var pixelVelocity : Vec2;
+
+		@:import h3d.shader.ColorSpaces;
 
 		function rotateNormal( n : Vec3 ) : Vec3 {
 			return vec3(n.x * irrRotation.x - n.y * irrRotation.y, n.x * irrRotation.y + n.y * irrRotation.x, n.z);
@@ -83,8 +88,8 @@ class DefaultForward extends hxsl.Shader {
 			var envSpec = textureLod(irrSpecular, rotatedReflecVec, roughness * irrSpecularLevels).rgb;
 			var envBRDF = irrLut.get(vec2(roughness, NdV));
 			var specular = envSpec * (F * envBRDF.x + envBRDF.y);
-			var indirect = (diffuse * (1 - metalness) * (1 - F) + specular) * irrPower;
-			return indirect * occlusion;
+			var indirect = DIFFUSE_ONLY ? diffuse : (diffuse * (1 - metalness) * (1 - F) + specular);
+			return indirect * irrPower * occlusion;
 		}
 
 		function directLighting( lightColor : Vec3, lightDirection : Vec3) : Vec3 {
@@ -102,8 +107,8 @@ class DefaultForward extends hxsl.Shader {
 				var F = fresnelSchlick(VdH, F0);// Fresnel term
 				var G = geometrySchlickGGX(NdV, NdL, roughness);// Geometric attenuation
 				var specular = (D * F * G).max(0.);
-
-				result = (diffuse * (1 - metalness) * (1 - F) + specular) * lightColor * NdL;
+				var direct = DIFFUSE_ONLY ? diffuse : (diffuse * (1 - metalness) * (1 - F) + specular);
+				result = direct * lightColor * NdL;
 			}
 			return result;
 		}
@@ -124,8 +129,8 @@ class DefaultForward extends hxsl.Shader {
 			var shadow = 1.0;
 			if (lightInfos[i].a > 0) {
 				var shadowBias = lightInfos[i+1].a;
-				var shadowProj = mat3x4(lightInfos[i+2], lightInfos[i+3], lightInfos[i+4]);
-				var shadowPos = transformedPosition * shadowProj;
+				var shadowViewProj = mat3x4(lightInfos[i+2], lightInfos[i+3], lightInfos[i+4]);
+				var shadowPos = transformedPosition * shadowViewProj;
 				var shadowUv = screenToUv(shadowPos.xy);
 				var depth = dirShadowMaps[index].get(shadowUv.xy).r;
 				shadow = (shadowPos.z - shadowBias > depth) ? 0.0 : 1.0;
@@ -175,8 +180,8 @@ class DefaultForward extends hxsl.Shader {
 			var shadow = 1.0;
 			if (lightInfos[i+3].b > 0) {
 				var shadowBias = lightInfos[i+3].a;
-				var shadowProj = mat4(lightInfos[i+4], lightInfos[i+5], lightInfos[i+6], lightInfos[i+7]);
-				var shadowPos = vec4(transformedPosition, 1.0) * shadowProj;
+				var shadowViewProj = mat4(lightInfos[i+4], lightInfos[i+5], lightInfos[i+6], lightInfos[i+7]);
+				var shadowPos = vec4(transformedPosition, 1.0) * shadowViewProj;
 				shadowPos.xyz /= shadowPos.w;
 				var shadowUv = screenToUv(shadowPos.xy);
 				var depth = spotShadowMaps[index].get(shadowUv.xy).r;
@@ -221,11 +226,11 @@ class DefaultForward extends hxsl.Shader {
 		function evaluateCascadeShadow() : Float {
 			var i = cascadeLightStride;
 			var shadow = 1.0;
-			var shadowProj = mat3x4(lightInfos[i + 2], lightInfos[i + 3], lightInfos[i + 4]);
+			var shadowViewProj = mat3x4(lightInfos[i + 2], lightInfos[i + 3], lightInfos[i + 4]);
 
 			@unroll for ( c in 0...CASCADE_COUNT ) {
 				var cascadeScale = lightInfos[i + 5 + 2 * c];
-				var shadowPos0 = transformedPosition * shadowProj;
+				var shadowPos0 = transformedPosition * shadowViewProj;
 				var shadowPos = c == 0 ? shadowPos0 : shadowPos0 * cascadeScale.xyz + lightInfos[i + 6 + 2 * c].xyz;
 				if ( inside(shadowPos) ) {
 					var zMax = saturate(shadowPos.z);
@@ -303,6 +308,7 @@ class DefaultForward extends hxsl.Shader {
 			init();
 			output.color = vec4(evaluateLighting(), pixelColor.a);
 			output.depth = depth;
+			output.velocity = pixelVelocity;
 		}
 
 	};

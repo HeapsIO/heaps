@@ -104,4 +104,10 @@ class Allocator {
 		return inst;
 	}
 
+	public static function roundPOT(v: Int, limit=1024*1024) {
+		return if(v < limit)
+			hxd.Math.nextPOT(v);
+		else
+			Math.ceil(v / limit) * limit;
+	}
 }

@@ -6,23 +6,23 @@ typedef Texture = {};
 typedef Query = {};
 #elseif js
 typedef GPUBuffer = js.html.webgl.Buffer;
-typedef Texture = { t : js.html.webgl.Texture, width : Int, height : Int, internalFmt : Int, pixelFmt : Int, bits : Int, bias : Float, bind : Int #if multidriver, driver : Driver #end, startMip : Int };
+typedef Texture = { t : js.html.webgl.Texture, width : Int, height : Int, internalFmt : Int, pixelFmt : Int, bits : Int, bind : Int #if multidriver, driver : Driver #end };
 typedef Query = {};
 #elseif hlsdl
 typedef GPUBuffer = sdl.GL.Buffer;
-typedef Texture = { t : sdl.GL.Texture, width : Int, height : Int, internalFmt : Int, pixelFmt : Int, bits : Int, bind : Int, bias : Float, startMip : Int #if multidriver, driver : Driver #end };
+typedef Texture = { t : sdl.GL.Texture, width : Int, height : Int, internalFmt : Int, pixelFmt : Int, bits : Int, bind : Int #if multidriver, driver : Driver #end };
 typedef Query = { q : sdl.GL.Query, kind : QueryKind };
 #elseif usegl
 typedef GPUBuffer = haxe.GLTypes.Buffer;
-typedef Texture = { t : haxe.GLTypes.Texture, width : Int, height : Int, internalFmt : Int, pixelFmt : Int, bits : Int, bind : Int, bias : Float, startMip : Int };
+typedef Texture = { t : haxe.GLTypes.Texture, width : Int, height : Int, internalFmt : Int, pixelFmt : Int, bits : Int, bind : Int };
 typedef Query = { q : haxe.GLTypes.Query, kind : QueryKind };
 #elseif (hldx && dx12)
-typedef GPUBuffer = DX12Driver.VertexBufferData;
+typedef GPUBuffer = DX12Driver.BufferData;
 typedef Texture = h3d.impl.DX12Driver.TextureData;
 typedef Query = h3d.impl.DX12Driver.QueryData;
 #elseif hldx
 typedef GPUBuffer = dx.Resource;
-typedef Texture = { res : dx.Resource, view : dx.Driver.ShaderResourceView, ?depthView : dx.Driver.DepthStencilView, ?readOnlyDepthView : dx.Driver.DepthStencilView, rt : Array<dx.Driver.RenderTargetView>, mips : Int, ?views : Array<dx.Driver.ShaderResourceView> };
+typedef Texture = { res : dx.Resource, view : dx.Driver.ShaderResourceView, ?depthView : dx.Driver.DepthStencilView, ?readOnlyDepthView : dx.Driver.DepthStencilView, rt : Array<dx.Driver.RenderTargetView>, ?views : Array<dx.Driver.ShaderResourceView> };
 typedef Query = {};
 #elseif usesys
 typedef GPUBuffer = haxe.GraphicsDriver.GPUBuffer;
@@ -81,6 +81,14 @@ enum Feature {
 		Supports instanced rendering
 	*/
 	InstancedRendering;
+	/*
+		Supports bindless
+	*/
+	Bindless;
+	/*
+		Supports DLSS
+	*/
+	DLSS;
 }
 
 enum QueryKind {
@@ -103,6 +111,66 @@ enum RenderFlag {
 		0 = LeftHanded (default), 1 = RightHanded. Affects the meaning of triangle culling value.
 	**/
 	CameraHandness;
+}
+
+enum DLSSTag {
+	Depth;
+	MotionVectors;
+	ColorIn;
+	ColorOut;
+}
+
+@:struct class DLSSParams {
+	public var cameraViewToClip : Matrix;
+	public var clipToCameraView : Matrix;
+	public var clipToPrevClip : Matrix;
+	public var prevClipToClip : Matrix;
+	public var jitterOffsetX : Float;
+	public var jitterOffsetY : Float;
+	public var mvecScaleX : Float;
+	public var mvecScaleY : Float;
+	public var cameraPos : Vector;
+	public var cameraUp : Vector;
+	public var cameraRight : Vector;
+	public var cameraFwd : Vector;
+	public var cameraNear : Float;
+	public var cameraFar : Float;
+	public var cameraFOV : Float;
+	public var cameraAspectRatio : Float;
+	public var motionVectorsInvalidValue : Float;
+	public var depthInverted : Bool;
+	public var cameraMotionIncluded : Bool;
+	public var reset : Bool;
+	public var orthographicProjection : Bool;
+	public var motionVectorsDilated : Bool;
+	public var motionVectorsJittered : Bool;
+	public var colorBufferHDR : Bool;
+	public var autoExposure : Bool;
+	public function new() {
+	}
+}
+
+@struct class DLSSSettings {
+	public var optimalWidth : Int;
+	public var optimalHeight : Int;
+	public function new() {
+	}
+}
+
+enum DLSSQuality {
+	Default;
+	Performance;
+	UltraPerformance;
+}
+
+enum DLSSMode {
+	Off;
+	MaxPerformance;
+	Balanced;
+	MaxQuality;
+	UltraPerformance;
+	UltraQuality;
+	Dlaa;
 }
 
 class Driver {
@@ -158,6 +226,10 @@ class Driver {
 	public function clear( ?color : h3d.Vector4, ?depth : Float, ?stencil : Int ) {
 	}
 
+	public function getMemoryUsage() : Null<{ total : Float, allocated : Float, free : Float }>  {
+		return null;
+	}
+
 	public function captureRenderBuffer( pixels : hxd.Pixels ) {
 	}
 
@@ -182,6 +254,13 @@ class Driver {
 
 	public function selectMaterial( pass : h3d.mat.Pass ) {
 	}
+
+	public function selectTextureHandles( handles : Array<h3d.mat.TextureHandle> ) {
+	}
+
+	public function selectBufferHandles( handles : Array<h3d.BufferHandle> ) {
+	}
+
 
 	public function uploadShaderBuffers( buffers : h3d.shader.Buffers, which : h3d.shader.Buffers.BufferKind ) {
 	}
@@ -280,11 +359,22 @@ class Driver {
 	public function readBufferBytes( b : Buffer, startVertex : Int, vertexCount : Int, buf : haxe.io.Bytes, bufPos : Int ) {
 	}
 
+	public function readBufferBytesAsync( b : Buffer, startVertex : Int, vertexCount : Int, buf : haxe.io.Bytes, bufPos : Int, callback : Void -> Void ) {
+	}
+
 	/**
 		Returns true if we could copy the texture, false otherwise (not supported by driver or mismatch in size/format)
 	**/
 	public function copyTexture( from : h3d.mat.Texture, to : h3d.mat.Texture ) {
 		return false;
+	}
+
+	// --- MARKING API
+
+	public function beginEvent( name : String ) {
+	}
+
+	public function endEvent() {
 	}
 
 	// --- QUERY API
@@ -320,4 +410,27 @@ class Driver {
 		throw "Compute shaders are not implemented on this platform";
 	}
 
+	// --- Bindless
+
+	public function getTextureHandle( t : h3d.mat.Texture ) : h3d.mat.TextureHandle {
+		throw "Bindless is not implemented on this platform";
+	}
+
+	public function getBufferHandle( b : h3d.Buffer ) : h3d.BufferHandle {
+		throw "Bindless is not implemented on this platform";
+	}
+
+	// --- DLSS
+
+	public function isDLSSSupported( framegen : Bool = false ) : Bool {
+		throw "DLSS not supported on this platform";
+		return false;
+	}
+
+	public function getDLSSOptimalSettings( mode : DLSSMode, targetWidth : Int, targetHeight : Int ) : DLSSSettings {
+		return null;
+	}
+
+	public function applyDLSS( resources : Map<DLSSTag, h3d.mat.Texture>, constants : DLSSParams, quality : DLSSQuality, mode : DLSSMode ) {
+	}
 }

@@ -41,9 +41,11 @@ class ThreadAsyncLoader implements AsyncLoader {
 				var pos = 128;
 				if( inf.flags.has(Dxt10Header) ) pos += 20;
 				for( layer in 0...t.tex.layerCount ) {
+					var baseWidth = inf.width << inf.mipOffset;
+					var baseHeight = inf.height << inf.mipOffset;
 					for( mip in 0...inf.mipLevels+inf.mipOffset ) {
-						var w = inf.width >> mip;
-						var h = inf.height >> mip;
+						var w = baseWidth >> mip;
+						var h = baseHeight >> mip;
 						if( w == 0 ) w = 1;
 						if( h == 0 ) h = 1;
 						var size = hxd.Pixels.calcDataSize(w, h, inf.pixelFormat);

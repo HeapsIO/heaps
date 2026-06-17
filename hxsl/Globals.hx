@@ -59,7 +59,13 @@ class Globals {
 
 	static var ALL : Array<String>;
 	static var MAP : Map<String,Int>;
+	#if heaps_mt_hxsl_cache
+	static var idMutex = new sys.thread.Mutex();
+	#end
 	public static function allocID( path : String ) : Int {
+		#if heaps_mt_hxsl_cache
+		idMutex.acquire();
+		#end
 		if( MAP == null ) {
 			MAP = new Map();
 			ALL = [];
@@ -70,6 +76,9 @@ class Globals {
 			ALL.push(path);
 			MAP.set(path, id);
 		}
+		#if heaps_mt_hxsl_cache
+		idMutex.release();
+		#end
 		return id;
 	}
 	public static function getIDName( id : Int ) : String {

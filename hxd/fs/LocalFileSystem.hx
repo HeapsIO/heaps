@@ -234,7 +234,7 @@ class LocalEntry extends FileEntry {
 		if(watchHandle != null)
 			watchHandle.close();
 		lastChanged = getModifTime();
-		watchHandle = new hl.uv.Fs(originalFile, function(ev) {
+		watchHandle = new hl.uv.Fs(hl.uv.Loop.getDefault(), originalFile, function(ev) {
 			switch(ev) {
 				case Change|Rename:
 					if(getModifTime() != lastChanged) {
@@ -392,29 +392,37 @@ class LocalFileSystem implements FileSystem {
 		var r = fileCache.get(path);
 		if( r != null )
 			return r.r;
-		var e = null;
-		var f = sys.FileSystem.fullPath(baseDir + path);
-		if( f == null )
-			return null;
-		f = f.split("\\").join("/");
-		if( !check || ((!isWindows || (isWindows && f == baseDir + path)) && sys.FileSystem.exists(f) && checkPath(f)) ) {
-			e = new LocalEntry(this, path.split("/").pop(), path, f);
-			convert.run(e);
-			if( e.file == null ) e = null;
-		}
-		fileCache.set(path, {r:e});
-		return e;
+		return Exclusive.lock(function() {
+			var r = fileCache.get(path);
+			if( r != null )
+				return r.r;
+			var e = null;
+			var f = sys.FileSystem.fullPath(baseDir + path);
+			if( f == null )
+				return null;
+			f = f.split("\\").join("/");
+			if( !check || ((!isWindows || (isWindows && f == baseDir + path)) && sys.FileSystem.exists(f) && checkPath(f)) ) {
+				e = new LocalEntry(this, path.split("/").pop(), path, f);
+				convert.run(e);
+				if( e.file == null ) e = null;
+			}
+			fileCache.set(path, {r:e});
+			return e;
+		});
 	}
 
 	public function clearCache() {
-		for( path in fileCache.keys() ) {
-			var r = fileCache.get(path);
-			if( r.r == null ) fileCache.remove(path);
-		}
+		Exclusive.lock(function() {
+			for( path in fileCache.keys() ) {
+				var r = fileCache.get(path);
+				if( r.r == null ) fileCache.remove(path);
+			}
+			return true;
+		});
 	}
 
 	public function removePathFromCache(path : String) {
-		fileCache.remove(path);
+		Exclusive.lock(() -> fileCache.remove(path));
 	}
 
 	public function exists( path : String ) {
@@ -430,7 +438,7 @@ class LocalFileSystem implements FileSystem {
 	}
 
 	public function dispose() {
-		fileCache = new Map();
+		Exclusive.lock(() -> fileCache = new Map());
 	}
 
 	public function dir( path : String ) : Array<FileEntry> {
@@ -444,6 +452,12 @@ class LocalFileSystem implements FileSystem {
 				r.push(entry);
 		}
 		return r;
+	}
+
+	public function delete( path : String ) : Bool {
+		removePathFromCache(path);
+		try sys.FileSystem.deleteFile(baseDir + path) catch( e : Dynamic ) { return false; };
+		return true;
 	}
 
 }
@@ -475,6 +489,10 @@ class LocalFileSystem implements FileSystem {
 
 	public function dir( path : String ) : Array<FileEntry> {
 		return null;
+	}
+
+	public function delete( path : String ) : Bool {
+		return false;
 	}
 }
 

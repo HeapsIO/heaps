@@ -906,6 +906,30 @@ class Flow extends Object {
 		s.setParentContainer(this);
 	}
 
+	override function scrollToPos( pt : h2d.col.Point ) {
+		if( overflow == Scroll || overflow == Hidden ) {
+			var pt = globalToLocal(pt);
+			if( pt.y < 0 )
+				scrollPosY += pt.y;
+			else if( pt.y > calculatedHeight )
+				scrollPosY += pt.y - calculatedHeight;
+			return true;
+		}
+		return false;
+	}
+
+	public function scrollIntoView( elt : h2d.Object ) {
+		if( overflow == Scroll || overflow == Hidden ) {
+			var b = elt.getBounds(this);
+			if( b.y < 0 )
+				scrollPosY += b.y;
+			else if( b.yMax > calculatedHeight )
+				scrollPosY += b.yMax - calculatedHeight;
+			return true;
+		}
+		return false;
+	}
+
 	#if domkit
 	override function getChildRefPosition( first : Bool ) {
 		if( !first ) {

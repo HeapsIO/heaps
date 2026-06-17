@@ -6,6 +6,8 @@ typedef CascadeParams = {
 }
 
 typedef CascadeCamera = {
+	var view : h3d.Matrix;
+	var proj : h3d.Matrix;
 	var viewProj : h3d.Matrix;
 	var scale : h3d.Vector4;
 	var offset : h3d.Vector4;
@@ -18,8 +20,6 @@ class CascadeShadowMap extends DirShadowMap {
 	var lightCameras : Array<CascadeCamera> = [];
 	var currentCascadeIndex = 0;
 	var tmpCorners : Array<h3d.Vector> = [for (i in 0...8) new h3d.Vector()];
-	var tmpView = new h3d.Matrix();
-	var tmpProj = new h3d.Matrix();
 	var tmpFrustum = new h3d.col.Frustum();
 
 	public var cascadeViewProj = new h3d.Matrix();
@@ -36,7 +36,9 @@ class CascadeShadowMap extends DirShadowMap {
 		cascade = v;
 		lightCameras = [];
 		for ( i in 0...cascade )
-			lightCameras.push({ viewProj : new h3d.Matrix(), scale : new h3d.Vector4(), offset : new h3d.Vector4(), orthoBounds : new h3d.col.Bounds() });
+			lightCameras.push({ view : new h3d.Matrix(), proj : new h3d.Matrix(), viewProj : new h3d.Matrix(), scale : new h3d.Vector4(), offset : new h3d.Vector4(), orthoBounds : new h3d.col.Bounds() });
+		if ( ctx != null )
+			ctx.updateNumViews(cascade + 1);
 		return cascade;
 	}
 	public var debugShader : Bool = false;
@@ -47,7 +49,6 @@ class CascadeShadowMap extends DirShadowMap {
 		super(light);
 		format = R32F;
 		shader = dshader = cshader = new h3d.shader.CascadeShadow();
-		border = null;
 	}
 
 	public override function getShadowTex() {
@@ -117,7 +118,7 @@ class CascadeShadowMap extends DirShadowMap {
 		computeBounds( cascadeBounds0 );
 		var lightPos0 = computeLightPos(cascadeBounds0, d0);
 
-		var view = tmpView;
+		var view = lightCameras[0].view;
 		view._11 = invLight._11;
 		view._12 = invLight._21;
 		view._13 = invLight._31;
@@ -143,7 +144,7 @@ class CascadeShadowMap extends DirShadowMap {
 			return 0.00000190734 * depthBiasFactor; // 2^-19 depth offset;
 		}
 
-		var proj = tmpProj;
+		var proj = lightCameras[0].proj;
 		proj.zero();
 		proj._11 = invD0;
 		proj._22 = invD0;
@@ -187,12 +188,13 @@ class CascadeShadowMap extends DirShadowMap {
 			lightCameras[i].offset.y = ( lightPos0.y - lightPos.y ) * invD + halfMinusD0Inv2D;
 			lightCameras[i].offset.z = ( lightPos0.z - lightPos.z ) * invZDist;
 
-			var view = tmpView;
+			lightCameras[i].view.load(view);
+			var view = lightCameras[i].view;
 			view._41 = -lightPos.x;
 			view._42 = -lightPos.y;
 			view._43 = -lightPos.z;
 
-			var proj = tmpProj;
+			var proj = lightCameras[i].proj;
 			proj.zero();
 			var invD2 = 2.0 * invD;
 
@@ -206,7 +208,17 @@ class CascadeShadowMap extends DirShadowMap {
 		}
 	}
 
+	public function getCascadeView(i:Int) {
+		var i = hxd.Math.imin(i, lightCameras.length - 1);
+		return lightCameras[i].view;
+	}
+
 	public function getCascadeProj(i:Int) {
+		var i = hxd.Math.imin(i, lightCameras.length - 1);
+		return lightCameras[i].proj;
+	}
+
+	public function getCascadeViewProj(i:Int) {
 		var i = hxd.Math.imin(i, lightCameras.length - 1);
 		return lightCameras[i].viewProj;
 	}
@@ -232,11 +244,13 @@ class CascadeShadowMap extends DirShadowMap {
 			if ( debugShader )
 				cshader.cascadeDebugs[i] = h3d.Vector4.fromColor(debugColors[i]);
 		}
+		if(cascade > cshader.MAX_CASCADE_COUNT)
+			cshader.MAX_CASCADE_COUNT = cascade;
 		cshader.CASCADE_COUNT = cascade;
 		cshader.BLEND = transitionFraction > 0.0;
 		cshader.shadowBias = bias;
 		cshader.shadowPower = power;
-		cshader.shadowProj = getShadowProj();
+		cshader.shadowViewProj = getShadowViewProj();
 
 		//ESM
 		cshader.USE_ESM = samplingKind == ESM;
@@ -249,8 +263,17 @@ class CascadeShadowMap extends DirShadowMap {
 		cshader.pcfQuality = pcfQuality;
 	}
 
+
+	override function getShadowView():Matrix {
+		return getCascadeView(currentCascadeIndex);
+	}
+
 	override function getShadowProj():Matrix {
 		return getCascadeProj(currentCascadeIndex);
+	}
+
+	override function getShadowViewProj():Matrix {
+		return getCascadeViewProj(currentCascadeIndex);
 	}
 
 	public dynamic function customCullPasses(passes : h3d.pass.PassList, frustum : h3d.col.Frustum, i : Int, minSize : Float) {
@@ -274,6 +297,7 @@ class CascadeShadowMap extends DirShadowMap {
 		if( !filterPasses(passes) )
 			return;
 
+		var prevCtxViewFrustum = ctx.currentView.frustum;
 		var slight = light == null ? ctx.lightSystem.shadowLight : light;
 		var ldir = slight == null ? null : @:privateAccess slight.getShadowDirection();
 		if( ldir == null )
@@ -303,6 +327,7 @@ class CascadeShadowMap extends DirShadowMap {
 		var textures = [];
 		ctx.engine.setDepthClamp(true);
 		for (i in 0...cascade) {
+			ctx.scene.mark("cascade "+i);
 			currentCascadeIndex = i;
 
 			var texture = ctx.textures.allocTarget("cascadeShadowMap_"+i, size, size, false, #if js Depth24Stencil8 #else highPrecision ? Depth32 : Depth16 #end );
@@ -319,14 +344,18 @@ class CascadeShadowMap extends DirShadowMap {
 			dimension = ( dimension * hxd.Math.clamp(minPixelSize, 0, size) ) / size;
 			lightCamera.orthoBounds = lc.orthoBounds;
 			lightCamera.update();
+			ctx.setCurrentView(i + 1, lightCamera.frustum);
 			customCullPasses(passes, lightCamera.frustum, i, dimension);
 			textures[i] = processShadowMap( passes, texture, sort);
 			passes.load(p);
 		}
+		ctx.scene.mark("Shadows");
 		ctx.engine.setDepthClamp(false);
 		ctx.engine.setDepthBias(0, 0);
 		syncCascadeShader(textures);
 		lightCamera.frustum.checkNearFar = prevCheckNearFar;
+
+		ctx.currentView.frustum = prevCtxViewFrustum;
 
 		#if editor
 		drawDebug();

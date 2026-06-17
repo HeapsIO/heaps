@@ -383,7 +383,6 @@ class PbrMaterial extends Material {
 				ps.maxLayers = h3d.shader.Parallax.MAX_LAYERS;
 			ps.amount = props.parallax;
 			ps.heightMap = specularTexture;
-			ps.heightMapChannel = A;
 		} else if( ps != null )
 			mainPass.removeShader(ps);
 
@@ -404,6 +403,8 @@ class PbrMaterial extends Material {
 			var passName = switch (props.mode) {
 			case PBR:
 				"depthPrepass";
+			case Forward:
+				"forwardDepthPrepass";
 			case BeforeTonemapping:
 				"beforeTonemappingDepthPrepass";
 			default:
@@ -420,9 +421,6 @@ class PbrMaterial extends Material {
 				}
 
 				var p = allocPass(passName);
-				var killAlpha = new h3d.shader.KillAlpha();
-				killAlpha.threshold = 0.5;
-				p.addShader(killAlpha);
 				p.depthWrite = true;
 				p.depthTest = Less;
 				p.culling = mainPass.culling;
@@ -529,7 +527,6 @@ class PbrMaterial extends Material {
 		var ps = mainPass.getShader(h3d.shader.Parallax);
 		if( ps != null ) {
 			ps.heightMap = t;
-			ps.heightMapChannel = A;
 			mainPass.removeShader(ps);
 			mainPass.addShader(ps);
 		}

@@ -78,7 +78,7 @@ class CacheFileBuilder {
 	public var dx12Driver : h3d.impl.DX12Driver;
 	#end
 	public var dxShaderVersion = "5_0";
-	public var dxcShaderVersion = "6_0";
+	public var dxcShaderVersion = "6_1";
 	var glout : GlslOut;
 	var vertexOut : String;
 	var hasCompiled : Bool;
@@ -197,7 +197,6 @@ class CacheFileBuilder {
 			var tmpSrc = tmpFile + ".hlsl";
 			var tmpOut = tmpFile + ".sb";
 			var sign = @:privateAccess dx12Driver.computeRootSignature(r);
-			out.baseRegister = (rd.kind == Vertex) ? 0 : sign.registers[1].start;
 			var code = out.run(rd.data);
 			var serializeRootSignature = @:privateAccess dx12Driver.stringifyRootSignature(sign.sign, "ROOT_SIGNATURE", sign.params, sign.paramsCount);
 			code = serializeRootSignature + code;

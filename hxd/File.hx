@@ -11,6 +11,8 @@ typedef BrowseOptions = {
 	?fileTypes : Array<{ name : String, extensions : Array<String> }>,
 	/** this will be called when saving a file with the target path, if supported **/
 	?saveFileName : String -> Void,
+	/** this will be called when saving a file, and allow you to write it again without displaying the browser, if supported **/
+	?writeFile : (haxe.io.Bytes -> Void) -> Void,
 };
 
 typedef BrowseSelect = {
@@ -43,6 +45,8 @@ class File {
 				fileName : path,
 				load : function(onReady) {
 					var data = sys.io.File.getBytes(path);
+					if( options.writeFile != null )
+						options.writeFile(function(bytes) sys.io.File.saveBytes(path,bytes));
 					haxe.Timer.delay(function() onReady(data),0);
 				},
 			};
@@ -121,7 +125,52 @@ class File {
 			}
 			if( options.saveFileName != null )
 				options.saveFileName(path);
+			if( options.writeFile != null )
+				options.writeFile(function(bytes) sys.io.File.saveBytes(path,bytes));
 			sys.io.File.saveBytes(path, dataContent);
+		#elseif js
+			var blob = new js.html.Blob([dataContent.getData()],{ type: "application/octet-stream" });
+			try {
+				var opts : Dynamic = {
+					id : "picogpu",
+					startIn : "documents",
+					suggestedName : options.defaultPath,
+				};
+				if( options.fileTypes != null ) {
+					opts.excludeAcceptAllOption = true;
+					opts.types = [for( e in options.fileTypes ) { description : e.name, accept : { "application/custom.binary.file" : [for( e in e.extensions ) "."+e] }}];
+				}
+				var p : js.lib.Promise<Dynamic> = (js.Browser.window : Dynamic).showSaveFilePicker(opts);
+				p.then(function(handle:Dynamic) {
+					if( options.saveFileName != null )
+						options.saveFileName(handle.name);
+					if( options.writeFile != null ) {
+						options.writeFile(function(bytes) {
+							var blob = new js.html.Blob([bytes.getData()],{ type: "application/octet-stream" });
+							handle.createWritable().then(function(writable) {
+								return writable.write(blob).then(() -> writable.close());
+							});
+						});
+					}
+    				return handle.createWritable();
+  				})
+				.then(function(writable) {
+    				return writable.write(blob).then(() -> writable.close());
+				})
+				.catchError(function(err) {
+					// aborted
+				});
+			} catch( e : Dynamic ) {
+				var blob = new js.html.Blob([dataContent.getData()],{ type: "application/octet-stream" });
+				var url = js.html.URL.createObjectURL(blob);
+				var a = js.Browser.document.createAnchorElement();
+				a.href = url;
+				a.download = options.defaultPath;
+				js.Browser.document.body.appendChild(a);
+				a.click();
+				js.Browser.document.body.removeChild(a);
+				js.html.URL.revokeObjectURL(url);
+			}
 		#else
 			throw "Not supported";
 		#end

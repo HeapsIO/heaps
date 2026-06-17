@@ -61,6 +61,11 @@ class RuntimeShaderData {
 	public var texturesCount : Int;
 	public var buffers : AllocParam;
 	public var bufferCount : Int;
+	public var globalsTexHandleCount : Int;
+	public var globalsBufHandleCount : Int;
+	public var paramsTexHandleCount : Int;
+	public var paramsBufHandleCount : Int;
+	public var hasBindless : Bool;
 	public function new() {
 	}
 }
@@ -78,6 +83,10 @@ class ShaderInstanceDesc {
 class RuntimeShader {
 
 	static var UID = 0;
+	#if heaps_mt_hxsl_cache
+	static var uidMutex = new sys.thread.Mutex();
+	#end
+
 	public var id : Int;
 	public var vertex : RuntimeShaderData;
 	public var fragment : RuntimeShaderData;
@@ -96,7 +105,17 @@ class RuntimeShader {
 	public var spec : { instances : Array<ShaderInstanceDesc>, signature : String };
 
 	public function new() {
+		#if heaps_mt_hxsl_cache
+		uidMutex.acquire();
+		#end
 		id = UID++;
+		#if heaps_mt_hxsl_cache
+		uidMutex.release();
+		#end
+	}
+
+	public inline function hasBindless() : Bool {
+		return vertex.hasBindless || (fragment != null && fragment.hasBindless);
 	}
 
 	public inline function hasGlobal( gid : Int ) {
@@ -105,6 +124,26 @@ class RuntimeShader {
 
 	public function getShaders() {
 		return mode == Compute ? [compute] : [vertex, fragment];
+	}
+
+	public function getInputFormat( instance=false ) {
+		var format : Array<hxd.BufferFormat.BufferInput> = [];
+		for( v in vertex.data.vars )
+			switch( v.kind ) {
+			case Input:
+				var isInst = false;
+				if( v.qualifiers != null ) {
+					for( q in v.qualifiers )
+						if( q.match(PerInstance(_)) ) {
+							isInst = true;
+							break;
+						}
+				}
+				if( isInst == instance )
+					format.push({ name : v.name, type : hxd.BufferFormat.InputFormat.fromHXSL(v.type) });
+			default:
+			}
+		return hxd.BufferFormat.make(format);
 	}
 
 }

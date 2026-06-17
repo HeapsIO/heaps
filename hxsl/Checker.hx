@@ -49,6 +49,8 @@ class Checker {
 		var genFloat = [for( t in genType ) { args : [ { name : "value", type : t } ], ret : t } ];
 		var genFloat2 = [for( t in genType ) { args : [ { name : "a", type : t }, { name : "b", type : t } ], ret : t } ];
 		var genWithFloat = [for( t in genType ) { args : [ { name : "a", type : t }, { name : "b", type : TFloat } ], ret : t } ];
+		var genInt2 = [for( t in genIType ) { args : [ { name : "a", type : t }, { name : "b", type : t } ], ret : t } ];
+		var genWithInt = [for( t in genIType ) { args : [ { name : "a", type : t }, { name : "b", type : TInt } ], ret : t } ];
 		var genSqMat = [for( t in genSqMatType ) { args : [ { name : "value", type : t } ], ret : t } ];
 		var texDefs = [
 			{ dim : T1D, arr : false, uv : TFloat, iuv : TInt },
@@ -59,6 +61,10 @@ class Checker {
 			{ dim : T2D, arr : true, uv : vec3, iuv : ivec3 },
 			{ dim : TCube, arr : true, uv : vec4, iuv : ivec4 },
 		];
+		var bindlessBufDef = [
+			{ t : TInt, size : SConst(0), kind : Storage },
+			{ t : TFloat, size : SConst(0), kind : Storage }
+		];
 		var gvars = new Map();
 		for( g in Ast.TGlobal.createAll() ) {
 			var def = switch( g ) {
@@ -68,8 +74,10 @@ class Checker {
 			case Pow: genFloat2;
 			case LReflect:
 				genFloat2;
-			case Mod, Min, Max:
+			case Mod:
 				genFloat2.concat(genWithFloat);
+			case Min, Max:
+				genFloat2.concat(genWithFloat).concat(genInt2).concat(genWithInt);
 			case Length:
 				[for( t in genType ) { args : [ { name : "value", type : t } ], ret : TFloat } ];
 			case Distance, Dot:
@@ -86,6 +94,8 @@ class Checker {
 				[for( t in texDefs ) { args : [{ name : "tex", type : TSampler(t.dim,t.arr) }, { name : "uv", type : t.uv }, { name : "lod", type : TFloat }], ret : vec4 }];
 			case Texel:
 				[for( t in texDefs ) { args : [{ name : "tex", type : TSampler(t.dim,t.arr) }, { name : "pos", type : t.iuv }], ret : vec4 }];
+			case TexelLod:
+				[for( t in texDefs ) { args : [{ name : "tex", type : TSampler(t.dim,t.arr) }, { name : "pos", type : t.iuv }, { name : "lod", type : TInt }], ret : vec4 }];
 			case TextureSize:
 				[];
 			case ToInt:
@@ -192,8 +202,10 @@ class Checker {
 				];
 			case ImageStore:
 				[];
-			case VertexID, InstanceID, FragCoord, FrontFacing:
+			case VertexID, InstanceID, FragCoord, FrontFacing, Barycentrics:
 				null;
+			case VertexAt:
+				[for( t in genType ) { args : [ { name : "v", type : t }, { name : "index", type : TInt } ], ret : t }];
 			case AtomicAdd:
 				[{ args : [{ name : "buf", type : TBuffer(TInt, SConst(0), RW) },{ name : "index", type : TInt }, { name : "data", type : TInt }], ret : TInt }];
 			case _ if( g.getName().indexOf("_") > 0 ):
@@ -222,6 +234,10 @@ class Checker {
 				[ { args : [ { name : "value", type : TInt } ], ret : vec4 } ];
 			case UnpackUnorm4x8:
 				[ { args : [ { name : "value", type : TInt } ], ret : vec4 } ];
+			case ResolveSampler:
+				[for( t in texDefs ) { args : [{ name : "handle", type : TTextureHandle }, { name : "tex", type : TSampler(t.dim,t.arr) }], ret : TVoid }];
+			case ResolveBuffer:
+				[for( b in bindlessBufDef ) { args : [{ name : "handle", type : TBufferHandle }, { name : "buf", type : TBuffer(b.t, b.size, b.kind) }], ret : TVoid }];
 			default:
 				throw "Unsupported global "+g;
 			}
@@ -232,6 +248,7 @@ class Checker {
 		globals.set("instanceID", { t : TInt, g : InstanceID });
 		globals.set("fragCoord", { t : vec4, g : FragCoord });
 		globals.set("frontFacing", { t : TBool, g : FrontFacing });
+		globals.set("barycentrics", { t : vec3, g : Barycentrics });
 		for( gname => vl in gvars )
 			globals.set(gname, { t : TStruct([
 				for( v in vl )
@@ -316,7 +333,7 @@ class Checker {
 		for( i in 0...tfuns.length )
 			typeFun(tfuns[i], funs[i].f.expr);
 
-		var localInits = [];
+		var localInits : Array<TExpr> = [];
 		for( i in inits.copy() ) {
 			if( i.v.kind == Local ) {
 				localInits.push({ e : TBinop(OpAssign,{ e : TVar(i.v), p : i.e.p, t : i.v.type },i.e), p : i.e.p, t : i.v.type });
@@ -601,7 +618,7 @@ class Checker {
 				case FField(ef):
 					makeCall(ef);
 				case FGlobal(g, arg, variants):
-					var eg = { e : TGlobal(g), t : TFun(variants), p : e1.p };
+					var eg : TExpr = { e : TGlobal(g), t : TFun(variants), p : e1.p };
 					if( variants.length == 0 ) {
 						var args = [for( a in args ) typeExpr(a, Value)];
 						args.unshift(arg);
@@ -629,7 +646,7 @@ class Checker {
 			type = e.t;
 			TParenthesis(e);
 		case EFunction(_):
-			throw "assert";
+			error("Local functions not supported", e.pos);
 		case EVars(vl):
 			if( with != InBlock )
 				error("Cannot declare a variable outside of a block", e.pos);
@@ -760,10 +777,8 @@ class Checker {
 				type = vec3;
 			case TMat4, TMat3x4:
 				type = vec4;
-			case TVec(_, VFloat):
-				type = TFloat;
-			case TVec(_, VInt):
-				type = TInt;
+			case TVec(_, t):
+				type = t.toType();
 			default:
 				error("Cannot index " + e1.t.toString() + " : should be an array", e.pos);
 			}
@@ -962,6 +977,7 @@ class Checker {
 					}
 				case Ignore, Doc(_):
 				case Flat: if( tv.kind != Local ) error("flat only allowed on local", pos);
+				case NoVar: if( tv.kind != Local ) error("noVar only allowed on local", pos);
 				}
 		}
 		if( tv.type != null )
@@ -1047,7 +1063,7 @@ class Checker {
 	}
 
 	function fieldAccess( e : TExpr, f : String, with : WithType, pos : Position ) : FieldAccess {
-		var ef = switch( e.t ) {
+		var ef : TExpr = switch( e.t ) {
 		case TStruct(vl):
 			var found = null;
 			for( v in vl )
@@ -1073,7 +1089,8 @@ class Checker {
 			case ["get", TChannel(_)]: ChannelRead;
 			case ["getLod", TSampler(_)]: TextureLod;
 			case ["getLod", TChannel(_)]: ChannelReadLod;
-			case ["fetch"|"fetchLod", TSampler(_)]: Texel;
+			case ["fetch", TSampler(_)]: Texel;
+			case ["fetchLod", TSampler(_)]: TexelLod;
 			case ["fetch"|"fetchLod", TChannel(_)]: ChannelFetch;
 			case ["size", TSampler(_) | TRWTexture(_)]: TextureSize;
 			case ["size", TChannel(_)]: ChannelTextureSize;
@@ -1364,6 +1381,8 @@ class Checker {
 			case [_, TVec(_,VFloat), TFloat]: e1.t;
 			case [_, TInt, TVec(_, VFloat)]: toFloat(e1); e2.t;
 			case [_, TVec(_,VFloat), TInt]: toFloat(e2); e1.t;
+			case [_, TInt, TVec(_,VInt)]: e2.t;
+			case [_, TVec(_,VInt), TInt]: e1.t;
 			case [OpMult, TMat4, TMat4]: TMat4;
 			default:
 				var opName = switch( op ) {
@@ -1371,7 +1390,7 @@ class Checker {
 				case OpAdd: "add";
 				case OpSub: "subtract";
 				case OpDiv: "divide";
-				default: throw "assert";
+				default: ""+op;
 				}
 				error("Cannot " + opName + " " + e1.t.toString() + " and " + e2.t.toString(), pos);
 			}

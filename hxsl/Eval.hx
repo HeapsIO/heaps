@@ -220,7 +220,7 @@ class Eval {
 			for( i in 1...args.length )
 				targs.push(args[i]);
 			targs.push({ e : TConst(CInt(i >> 3)), t : TInt, p : pos });
-			var tget = {
+			var tget : TExpr = {
 				e : TCall({ e : TGlobal(g), t : TVoid, p : pos }, targs),
 				t : TVoid,
 				p : pos,
@@ -240,7 +240,7 @@ class Eval {
 					default: throw "Invalid channel value "+channelMode+" for "+count+" channels";
 				});
 			case Unknown:
-				var zero = { e : TConst(CFloat(0.)), t : TFloat, p : pos };
+				var zero : TExpr = { e : TConst(CFloat(0.)), t : TFloat, p : pos };
 				if( count == 1 )
 					return zero.e;
 				return TCall({ e : TGlobal([Vec2, Vec3, Vec4][count - 2]), t : TVoid, p : pos }, [zero]);
@@ -305,7 +305,7 @@ class Eval {
 			case TVar(v) if( funMap.exists(v) ):
 				// inline the function call
 				var f = funMap.get(v);
-				var outExprs = [], undo = [];
+				var outExprs : Array<TExpr> = [], undo = [];
 				for( i in 0...f.args.length ) {
 					var v = f.args[i];
 					var e = args[i];

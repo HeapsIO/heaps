@@ -323,6 +323,14 @@ class Matrix {
 		return p;
 	}
 
+	/**
+		Sets the matrix position by given a point `p`.
+	**/
+	public inline function setPosition( p : h2d.col.Point ) {
+		x = p.x;
+		y = p.y;
+	}
+
 	@:dox(hide)
 	public function toString() {
 		return "MAT=[\n" +

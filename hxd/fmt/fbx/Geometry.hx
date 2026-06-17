@@ -219,10 +219,23 @@ class Geometry {
 		var vect = root.get(layer + "." + name, opt);
 		if( vect == null ) return null;
 		var nrm = vect.getFloats();
+		var mapping = root.get(layer+".MappingInformationType").props[0].toString();
+		var refType = root.get(layer+".ReferenceInformationType").props[0].toString();
+
+		if( refType == "IndexToDirect" ) {
+			var nout = [];
+			var nrmIdx = root.get(layer+"."+name+"Index").getInts();
+			for( i in 0...nrmIdx.length ) {
+				nout.push(nrm[nrmIdx[i] * 3]);
+				nout.push(nrm[nrmIdx[i] * 3 + 1]);
+				nout.push(nrm[nrmIdx[i] * 3 + 2]);
+			}
+			nrm = nout;
+		}
 
 		// if by-vertice (Maya in some cases, unless maybe "Split per-Vertex Normals" is checked)
 		// let's reindex based on polygon indexes
-		if( root.get(layer+".MappingInformationType").props[0].toString() == "ByVertice" ) {
+		if( mapping == "ByVertice" ) {
 			var nout = [];
 			for( i in getPolygons() ) {
 				var vid = i;
@@ -230,18 +243,6 @@ class Geometry {
 				nout.push(nrm[vid * 3]);
 				nout.push(nrm[vid * 3 + 1]);
 				nout.push(nrm[vid * 3 + 2]);
-			}
-			nrm = nout;
-		}
-
-		// Blender after version 4.X export normals with index to direct inforamtion type
-		if( root.get(layer+".ReferenceInformationType").props[0].toString() == "IndexToDirect" ) {
-			var nout = [];
-			var nrmIdx = root.get(layer+".NormalsIndex").getInts();
-			for (i in 0...nrmIdx.length) {
-				nout.push(nrm[nrmIdx[i] * 3]);
-				nout.push(nrm[nrmIdx[i] * 3 + 1]);
-				nout.push(nrm[nrmIdx[i] * 3 + 2]);
 			}
 			nrm = nout;
 		}

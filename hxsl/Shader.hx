@@ -1,6 +1,8 @@
 package hxsl;
 using hxsl.Ast;
 
+typedef ShaderParamBuffer = #if hl hl.BytesAccess<hl.F32> #else h3d.shader.Buffers.ShaderBufferData #end;
+
 @:autoBuild(hxsl.Macros.buildShader())
 class Shader {
 
@@ -57,6 +59,10 @@ class Shader {
 
 	public function setParamIndexFloatValue( index : Int, val : Float ) {
 		throw "assert"; // will be subclassed in sub shaders
+	}
+
+	public function writeParam( index : Int, type : hxsl.Ast.Type, out : ShaderParamBuffer, pos : Int ) {
+		h3d.impl.RenderContext.fillRec(getParamValue(index), type, out, pos);
 	}
 
 	public function updateConstants( globals : Globals ) {

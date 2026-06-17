@@ -119,6 +119,18 @@ class VectorImpl #if apicheck implements h2d.impl.PointApi<Vector,Matrix> #end {
 		this.z = Math.lerp(v1.z, v2.z, k);
 	}
 
+	public inline function min( v : Vector ) {
+		this.x = Math.min(this.x, v.x);
+		this.y = Math.min(this.y, v.y);
+		this.z = Math.min(this.z, v.z);
+	}
+
+	public inline function max( v : Vector ) {
+		this.x = Math.max(this.x, v.x);
+		this.y = Math.max(this.y, v.y);
+		this.z = Math.max(this.z, v.z);
+	}
+
 	public inline function transform( m : Matrix ) {
 		var px = x * m._11 + y * m._21 + z * m._31 + m._41;
 		var py = x * m._12 + y * m._22 + z * m._32 + m._42;
@@ -273,7 +285,7 @@ class VectorImpl #if apicheck implements h2d.impl.PointApi<Vector,Matrix> #end {
 			h = s = 0.0; // achromatic
 		else {
 			var d = max - min;
-			s = (max + min) > 1.0 ? d / (2 - max - min) : d / (max + min);
+			s = d / v;
 			if(max == r)
 				h = (g - b) / d + (g < b ? 6.0 : 0.0);
 			else if(max == g)

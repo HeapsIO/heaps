@@ -97,6 +97,10 @@ enum ScaleMode {
 
 	**/
 	AutoZoom(minWidth : Int, minHeight : Int, ?integerScaling : Bool);
+	/**
+		Custom mode.
+ 	**/
+	Custom( width : Int, height : Int, scaleW : Float, scaleH : Float );
 }
 
 /**
@@ -160,12 +164,12 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	/**
 		The current mouse X coordinates (in pixels) relative to the current `Scene.interactiveCamera`.
 	**/
-	public var mouseX(get, null) : Float;
+	public var mouseX(get, never) : Float;
 
 	/**
 		The current mouse Y coordinates (in pixels) relative to the current `Scene.interactiveCamera`.
 	**/
-	public var mouseY(get, null) : Float;
+	public var mouseY(get, never) : Float;
 
 	/**
 		The zoom factor of the scene, allows to set a fixed x2, x4 etc. zoom for pixel art
@@ -418,6 +422,10 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 				}
 				setSceneSize(Math.ceil(engine.width / zoom), Math.ceil(engine.height / zoom));
 				setViewportScale(zoom, zoom);
+				zeroViewport();
+			case Custom(_width,_height,_sw,_sh):
+				setSceneSize(_width,_height);
+				setViewportScale(_sw, _sh);
 				zeroViewport();
 		}
 	}
@@ -785,6 +793,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		ctx.time += ctx.elapsedTime;
 		ctx.globalAlpha = alpha;
 		mark("s2d");
+		ctx.engine.driver.beginEvent("Render 2D");
 		sync(ctx);
 		if( children.length != 0 ) {
 			ctx.begin();
@@ -793,6 +802,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 			#if sceneprof h3d.impl.SceneProf.end(); #end
 			ctx.end();
 		}
+		ctx.engine.driver.endEvent();
 		mark("vsync");
 	}
 

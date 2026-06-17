@@ -191,6 +191,7 @@ class Graphics extends Drawable {
 	var md : Float = 1.;
 	var mx : Float = 0.;
 	var my : Float = 0.;
+	var defaultTile : h2d.Tile;
 
 	/**
 		The Tile used as source of Texture to render.
@@ -211,7 +212,8 @@ class Graphics extends Drawable {
 	public function new(?parent) {
 		super(parent);
 		content = new GraphicsContent();
-		tile = h2d.Tile.fromColor(0xFFFFFF);
+		defaultTile = h2d.Tile.fromColor(0xFFFFFF);
+		tile = defaultTile;
 		clear();
 	}
 
@@ -268,7 +270,7 @@ class Graphics extends Drawable {
 		var prev = pts[last];
 		var p = pts[0];
 
-		content.setTile(h2d.Tile.fromColor(0xFFFFFF));
+		content.setTile(defaultTile);
 		var closed = p.x == prev.x && p.y == prev.y;
 		var count = pts.length;
 		if( !closed ) {
@@ -448,9 +450,9 @@ class Graphics extends Drawable {
 		@param color An RGB color with which to fill the drawn shapes.
 		@param alpha A transparency of the fill color.
 	**/
-	public function beginFill( color : Int = 0, alpha = 1.  ) {
+	public function beginFill( color : Int = 0, alpha = 1. ) {
 		flush();
-		tile = h2d.Tile.fromColor(0xFFFFFF);
+		tile = defaultTile;
 		content.setTile(tile);
 		setColor(color,alpha);
 		doFill = true;

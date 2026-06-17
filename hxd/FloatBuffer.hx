@@ -14,7 +14,7 @@ private abstract Float32Expand({ pos : Int, array : hxd.impl.TypedArray.Float32A
 
 	inline function get_length() return this.pos;
 	inline function set_length(v:Int) {
-		if( length != v ) {
+		if( v > this.array.length ) {
 			var newArray = new Float32Array(v);
 			newArray.set(this.array);
 			this.array = newArray;

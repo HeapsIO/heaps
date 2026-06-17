@@ -35,7 +35,7 @@ class Window {
 	public var title(get, set) : String;
 	public var displayMode(get, set) : DisplayMode;
 
-	function new() : Void {
+	public function new() : Void {
 		eventTargets = new List();
 		resizeEvents = new List();
 	}
@@ -53,6 +53,9 @@ class Window {
 	**/
 	public dynamic function onMouseModeChange( from : MouseMode, to : MouseMode ) : Null<MouseMode> {
 		return null;
+	}
+
+	public function setIcon(icon: hxd.BitmapData) : Void {
 	}
 
 	public function event( e : hxd.Event ) : Void {
@@ -114,7 +117,7 @@ class Window {
 	public function setCursorPos( x : Int, y : Int, emitEvent : Bool = false ) : Void {
 		throw "Not implemented";
 	}
-	
+
 	public function setCurrent() {
 	}
 
@@ -183,5 +186,8 @@ class Window {
 	}
 	function set_title( t : String ) : String {
 		return t;
+	}
+
+	public function captureMouseEvents(enable: Bool) : Void {
 	}
 }

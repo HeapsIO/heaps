@@ -1,4 +1,5 @@
--hl out/main.c
 -lib heaps
 -main MeshTools
 -D hl-ver=1.15.0
+-hl out/meshtools.c
+-D hlgen.makefile=vs2022

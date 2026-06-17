@@ -135,7 +135,7 @@ class Driver implements hxd.snd.Driver {
 			#if (js)
 			case F32 : channelCount == 1 ? AL.FORMAT_MONOF32 : AL.FORMAT_STEREOF32;
 			#else
-			case F32 : channelCount == 1 ? AL.FORMAT_MONO16 : AL.FORMAT_STEREO16;
+			case F32 : channelCount == 1 ? 0x10010 : 0x10011; // openal soft values
 			#end
 		}
 		AL.bufferData(buffer.inst, alFormat, data, size, samplingRate);

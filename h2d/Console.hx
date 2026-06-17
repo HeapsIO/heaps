@@ -103,8 +103,8 @@ class Console #if !macro extends h2d.Object #end {
 	**/
 	public function new(font:h2d.Font,?parent) {
 		super(parent);
-		height = Math.ceil(font.lineHeight) + 2;
 		logTxt = new h2d.HtmlText(font, this);
+		height = Math.ceil(logTxt.font.lineHeight) + 2;
 		logTxt.x = 2;
 		logTxt.dropShadow = { dx : 0, dy : 1, color : 0, alpha : 0.5 };
 		logTxt.visible = false;
@@ -242,7 +242,7 @@ class Console #if !macro extends h2d.Object #end {
 				e.propagate = false;
 			}
 		case ETextInput:
-			if( e.charCode == shortKeyChar && !bg.visible )
+			if( e.charCode == shortKeyChar && !bg.visible && getScene().getFocus() == null )
 				show();
 		default:
 		}

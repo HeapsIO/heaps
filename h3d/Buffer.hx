@@ -111,24 +111,34 @@ class Buffer {
 					if ( bytesPos & 3 != 0 ) bytesPos += ( 4 - (bytesPos & 3) );
 				}
 			}
-			uploadBytes(bytes, 0, vertices);
+			uploadBytes(bytes, 0, vertices, startVertice);
 			return;
 		}
 		engine.driver.uploadBufferData(this, startVertice, vertices, buf, bufPos);
 	}
 
-	public function uploadBytes( data : haxe.io.Bytes, dataPos : Int, vertices : Int ) {
-		if( vertices < 0 || vertices > this.vertices )
+	public function uploadBytes( data : haxe.io.Bytes, dataPos : Int, vertices : Int, startVertice : Int = 0 ) {
+		if( startVertice < 0 || vertices < 0 || startVertice + vertices > this.vertices )
 			throw "Invalid vertices count";
 		if( vertices == 0 )
 			return;
-		engine.driver.uploadBufferBytes(this, 0, vertices, data, dataPos);
+		engine.driver.uploadBufferBytes(this, startVertice, vertices, data, dataPos);
 	}
 
-	public function readBytes( bytes : haxe.io.Bytes, bytesPosition : Int, vertices : Int,  startVertice : Int = 0 ) {
+	public function readBytes( bytes : haxe.io.Bytes, bytesPosition : Int, vertices : Int, startVertice : Int = 0 ) {
 		if( startVertice < 0 || vertices < 0 || startVertice + vertices > this.vertices )
 			throw "Invalid vertices count";
 		engine.driver.readBufferBytes(this, startVertice, vertices, bytes, bytesPosition);
+	}
+
+	public function readBytesAsync( bytes : haxe.io.Bytes, bytesPosition : Int, vertices : Int, startVertice : Int = 0, callback : Void -> Void ) {
+		if( startVertice < 0 || vertices < 0 || startVertice + vertices > this.vertices )
+			throw "Invalid vertices count";
+		engine.driver.readBufferBytesAsync(this, startVertice, vertices, bytes, bytesPosition, callback);
+	}
+
+	public function getHandle() : h3d.BufferHandle {
+		return engine.driver.getBufferHandle(this);
 	}
 
 	public static function ofFloats( v : hxd.FloatBuffer, format : hxd.BufferFormat, ?flags ) {

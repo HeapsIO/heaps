@@ -149,7 +149,10 @@ class FbxTools {
 		if( n.props.length != 3 )
 			throw n.name + " is not an object";
 		return switch( n.props[1] ) {
-		case PString(n): n.split("::").pop();
+		case PString(n): {
+			var str = n.split("::").pop();
+			str.split(".").join("_");
+		};
 		default: throw n.name + " is not an object";
 		}
 	}

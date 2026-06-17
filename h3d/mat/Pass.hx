@@ -18,7 +18,6 @@ class Pass {
 	var selfShadersCache : hxsl.ShaderList;
 	var shaders : hxsl.ShaderList;
 	var nextPass : Pass;
-	var rendererFlags : Int = 0;
 
 	@:bits(flags) public var enableLights : Bool;
 	/**
@@ -172,23 +171,22 @@ class Pass {
 		this.colorMask = this.colorMask | mask;
 	}
 
-	function resetRendererFlags() {
-		rendererFlags = 0;
-	}
-
 	public function addShader<T:hxsl.Shader>(s:T) : T {
 		// throwing an exception will require NG GameServer review
 		if( s == null ) return null;
 		shaders = hxsl.ShaderList.addSort(s, shaders);
-		resetRendererFlags();
 		return s;
 	}
 
 	function addSelfShader<T:hxsl.Shader>(s:T) : T {
 		if ( s == null ) return null;
-		selfShadersChanged = true;
-		selfShaders = hxsl.ShaderList.addSort(s, selfShaders);
-		resetRendererFlags();
+		if ( selfShaders == selfShadersCache ) {
+			selfShaders = new hxsl.ShaderList(s, shaders);
+			selfShaders.next = selfShadersCache = shaders;
+		} else {
+			selfShadersChanged = true;
+			selfShaders = hxsl.ShaderList.addSort(s, selfShaders);
+		}
 		return s;
 	}
 
@@ -226,9 +224,6 @@ class Pass {
 		var shaderFound = false;
 		while( sl != null ) {
 			if( sl.s == s ) {
-				resetRendererFlags();
-				if ( selfShadersCache == sl )
-					selfShadersCache = selfShadersCache.next;
 				if( prev == null )
 					shaders = sl.next;
 				else
@@ -243,7 +238,6 @@ class Pass {
 		prev = null;
 		while ( sl != null ) {
 			if ( sl.s == s ) {
-				resetRendererFlags();
 				if ( selfShadersCache == sl )
 					selfShadersCache = selfShadersCache.next;
 				if ( prev == null )
@@ -263,9 +257,6 @@ class Pass {
 		var prev = null;
 		while( sl != null ) {
 			if( Std.isOfType(sl.s, t) ) {
-				resetRendererFlags();
-				if ( selfShadersCache == sl )
-					selfShadersCache = selfShadersCache.next;
 				if( prev == null )
 					shaders = sl.next;
 				else
@@ -279,7 +270,6 @@ class Pass {
 		prev = null;
 		while( sl != null ) {
 			if( Std.isOfType(sl.s, t) ) {
-				resetRendererFlags();
 				if ( selfShadersCache == sl )
 					selfShadersCache = selfShadersCache.next;
 				if( prev == null )
@@ -338,19 +328,24 @@ class Pass {
 		}
 	}
 
+	inline function findTail(first : hxsl.ShaderList, last : hxsl.ShaderList) {
+		var sl = first, prev = null;
+		while ( sl != null && sl != last ) {
+			prev = sl;
+			sl = sl.next;
+		}
+		return prev;
+	}
+
 	function selfShadersRec(rebuild : Bool) {
 		if ( selfShaders == null )
 			return shaders;
 		if ( !selfShadersChanged && !rebuild && shaders == selfShadersCache )
 			return selfShaders;
-		var sl = selfShaders, prev = null;
-		while ( sl != null && sl != selfShadersCache ) {
-			prev = sl;
-			sl = sl.next;
-		}
+		var tail = findTail(selfShaders, selfShadersCache);
 		selfShadersCache = shaders;
-		if ( prev != null )
-			prev.next = selfShadersCache;
+		if ( tail != null )
+			tail.next = selfShadersCache;
 		else
 			selfShaders = shaders;
 		return selfShaders;
@@ -361,18 +356,12 @@ class Pass {
 			return selfShadersRec(false);
 		}
 		// relink to our parent shader list
-		var s = shaders, prev = null;
-		while( s != null && s != parentShaders ) {
-			prev = s;
-			s = s.next;
-		}
-		if ( s != parentShaders )
-			prev = null;
+		var tail = findTail(shaders, parentShaders);
 		parentShaders = parentPass.shaders;
-		if( prev == null )
+		if( tail == null )
 			shaders = parentShaders;
 		else
-			prev.next = parentShaders;
+			tail.next = parentShaders;
 		return selfShadersRec(true);
 	}
 
@@ -386,13 +375,22 @@ class Pass {
 		};
 	}
 
+	#if !macro
 	public function clone() {
 		var p = new Pass(name, shaders.clone());
-		p.selfShaders = selfShaders;
-		p.bits = bits;
-		p.enableLights = enableLights;
+		var tail = findTail(selfShaders, selfShadersCache);
+		if ( tail != null ) {
+			tail.next = null;
+			p.selfShaders = selfShaders.clone();
+			tail.next = selfShadersCache = shaders;
+		}
+		p.loadBits(bits);
+		p.loadFlags(flags);
+		p.layer = layer;
+		p.colorMask = colorMask;
 		if (stencil != null) p.stencil = stencil.clone();
 		return p;
 	}
+	#end
 
 }

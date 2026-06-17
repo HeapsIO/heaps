@@ -38,7 +38,7 @@ class FxView extends hxd.App {
 		}
 		play();
 
-		new h3d.scene.CameraController(20,s3d);
+		new h3d.scene.CameraController.OrbitCameraController(20,s3d);
 		var text = new h2d.Text(hxd.res.DefaultFont.get(), s2d);
 		text.text = "Drag and move with your mouse!";
 

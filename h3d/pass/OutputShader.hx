@@ -11,9 +11,9 @@ class OutputShader {
 		setOutput(output);
 	}
 
-	public function setOutput( ?output : Array<hxsl.Output> ) {
+	public function setOutput( ?output : Array<hxsl.Output>, ?vertexOutputName ) {
 		if( output == null ) output = [Value("output.color")];
-		currentOutput.s = shaderCache.getLinkShader(output);
+		currentOutput.s = shaderCache.getLinkShader(output,vertexOutputName);
 	}
 
 	public function compileShaders( globals : hxsl.Globals, shaders : hxsl.ShaderList, mode : hxsl.RuntimeShader.LinkMode = Default ) {

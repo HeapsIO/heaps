@@ -91,4 +91,8 @@ class BytesFileSystem implements FileSystem {
 		return null;
 	}
 
+	public function delete( path : String ) : Bool {
+		throw "Not supported";
+	}
+
 }

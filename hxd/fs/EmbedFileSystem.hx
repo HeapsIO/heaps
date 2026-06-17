@@ -192,4 +192,8 @@ class EmbedFileSystem #if !macro implements FileSystem #end {
 		#end
 	}
 
+	public function delete( path : String ) : Bool {
+		throw "Not supported";
+	}
+
 }

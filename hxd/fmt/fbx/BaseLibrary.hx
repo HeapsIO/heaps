@@ -17,6 +17,7 @@ class TmpObject {
 	#end
 	public var joint : h3d.anim.Skin.Joint;
 	public var skin : TmpObject;
+	public var rootJoints : Array<TmpObject>;
 	public function new() {
 		childs = [];
 	}
@@ -60,6 +61,12 @@ class DefaultMatrixes {
 		m._21 = -m._21;
 		m._31 = -m._31;
 		m._41 = -m._41;
+	}
+
+	public function fromMatrix(m : h3d.Matrix) {
+		trans = m.getPosition();
+		scale = m.getScale();
+		rotate = m.getEulerAngles();
 	}
 
 	public function toMatrix(leftHand) {
@@ -124,7 +131,7 @@ class BaseLibrary {
 	/**
 		If there are too many bones, the model will be split in separate render passes.
 	**/
-	public var maxBonesPerSkin = 34;
+	public var maxBonesPerSkin = 256;
 
 	/**
 		Consider unskinned joints to be simple objects
@@ -142,6 +149,16 @@ class BaseLibrary {
 		Keep high precision values. Might increase animation data size and compressed size.
 	**/
 	public var highPrecision : Bool = false;
+
+	/**
+		Use the legacy system to convert scale and axis of FBX file
+	**/
+	public var legacyScaleAxisConversion : Bool = false;
+
+	/**
+		Use the legacy system to import skinned mesh of FBX file
+	**/
+	public var legacySkinImport : Bool = false;
 
 	public function new( fileName ) {
 		this.fileName = fileName;
@@ -180,33 +197,75 @@ class BaseLibrary {
 		for( c in root.childs )
 			init(c);
 
-		if( normalizeScaleOrient )
-			updateModelScale();
+		if (legacyScaleAxisConversion) {
+			if (normalizeScaleOrient)
+				legacyUpdateModelScale();
+		}
+		else {
+			// Update model data based on axis specified in FBX header
+			updateModelAxis();
+
+			// Update model data based on scale specified in FBX header
+			if (normalizeScaleOrient)
+				updateModelScale();
+		}
 
 		// init properties
-		for( m in getAllModels() ) {
-			for( p in m.getAll("Properties70.P") )
-				switch( p.props[0].toString() ) {
-				case "UDP3DSMAX" | "Events":
-					var userProps = p.props[4].toString().split("&cr;&lf;");
-					for( p in userProps ) {
-						var pl = p.split("=");
-						var pname = StringTools.trim(pl.shift());
-						var pval = StringTools.trim(pl.join("="));
-						switch( pname ) {
-						case "UV" if( pval != "" ):
-							var xml = try Xml.parse(pval) catch( e : Dynamic ) throw "Invalid UV data in " + m.getName();
-							var frames = [for( f in new Access(xml.firstElement()).elements ) { var f = f.innerData.split(" ");  { t : Std.parseFloat(f[0]) * 9622116.25, u : Std.parseFloat(f[1]), v : Std.parseFloat(f[2]) }} ];
-							if( uvAnims == null ) uvAnims = new Map();
-							uvAnims.set(m.getName(), frames);
-						case "Events":
-							var xml = try Xml.parse(pval) catch( e : Dynamic ) throw "Invalid Events data in " + m.getName();
-							animationEvents = [for( f in new Access(xml.firstElement()).elements ) { var f = f.innerData.split(" ");  { frame : Std.parseInt(f.shift()), data : StringTools.trim(f.join(" ")) }} ];
+		for (m in getAllModels()) {
+			for (p in m.getAll("Properties70.P")) {
+				var pName = p.props[0].toString();
+				if (pName == "UDP3DSMAX" || pName == "Events") {
+					switch (p.props[1].toString()) {
+						case "KString":
+							var userProps = p.props[4].toString().split("&cr;&lf;");
+							for (p in userProps) {
+								var pl = p.split("=");
+								var pname = StringTools.trim(pl.shift());
+								var pval = StringTools.trim(pl.join("="));
+								switch( pname ) {
+									case "UV" if( pval != "" ):
+										var xml = try Xml.parse(pval) catch( e : Dynamic ) throw "Invalid UV data in " + m.getName();
+										var frames = [for( f in new Access(xml.firstElement()).elements ) { var f = f.innerData.split(" ");  { t : Std.parseFloat(f[0]) * 9622116.25, u : Std.parseFloat(f[1]), v : Std.parseFloat(f[2]) }} ];
+										if( uvAnims == null ) uvAnims = new Map();
+										uvAnims.set(m.getName(), frames);
+									case "Events":
+										var xml = try Xml.parse(pval) catch( e : Dynamic ) throw "Invalid Events data in " + m.getName();
+										animationEvents = [for( f in new Access(xml.firstElement()).elements ) { var f = f.innerData.split(" ");  { frame : Std.parseInt(f.shift()), data : StringTools.trim(f.join(" ")) }} ];
+									default:
+								}
+							}
+						case "Enum":
+							var enumValues = p.props[5].toString().split("~");
+
+							var animationCurveId = null;
+							var animationCurve : FbxNode = null;
+							var connections = this.root.get("Connections");
+							for (c in connections.childs) {
+								if (c.hasProp(PString("d|Events"))) {
+									animationCurveId = c.props[1];
+									break;
+								}
+							}
+
+							var animationCurves = this.root.getAll("Objects.AnimationCurve");
+							for (a in animationCurves) {
+								if (a.hasProp(animationCurveId)) {
+									animationCurve = a;
+									break;
+								}
+							}
+
+							animationEvents = [];
+							if (animationCurve != null) {
+								for (f => e in animationCurve.get("KeyValueFloat").getFloats()) {
+									if (e == 0) continue;
+									animationEvents.push({ { frame: f, data: enumValues[Std.int(e)] } });
+								}
+							}
 						default:
-						}
 					}
-				default:
 				}
+			}
 		}
 	}
 
@@ -235,7 +294,7 @@ class BaseLibrary {
 		return getParent(m,"Model",true) == null;
 	}
 
-	function updateModelScale() {
+	function legacyUpdateModelScale() {
 		var unitScale = 1;
 		var originScale = 1;
 		var upAxis = 1;
@@ -253,7 +312,7 @@ class BaseLibrary {
 		var geometryScaleFactor = scaleFactor;
 
 		if( upAxis == 1 ) // Y-up
-			convertYupToZup(originalUpAxis);
+			legacyUpdateModelAxis(originalUpAxis);
 
 		var app = "";
 		for( p in root.getAll("FBXHeaderExtension.SceneInfo.Properties70.P") )
@@ -352,7 +411,7 @@ class BaseLibrary {
 		}
 	}
 
-	function convertYupToZup( originalUpAxis : Int ) {
+	function legacyUpdateModelAxis( originalUpAxis : Int ) {
 		switch( originalUpAxis ) {
 			case 2: // Original Axis Z - Maya & 3DS Max
 				for( rootObject in getRootModels() ) {
@@ -388,6 +447,118 @@ class BaseLibrary {
 				}
 			default:
 				throw "From Y-up to Z-up with orginalUpAxis = " + originalUpAxis + " not implemented.";
+		}
+	}
+
+	function updateModelScale() {
+		var unitScaleFactor = 1;
+		var originalUnitScaleFactor = 1;
+		for( p in root.getAll("GlobalSettings.Properties70.P") ) {
+			switch( p.props[0].toString() ) {
+				case "UnitScaleFactor": unitScaleFactor = p.props[4].toInt();
+				case "OriginalUnitScaleFactor": originalUnitScaleFactor = p.props[4].toInt();
+				default:
+			}
+		}
+
+		// FBX file scale is relative to CM, must be converted to M
+		var factor = unitScaleFactor * 0.01;
+		if (factor == 1) return;
+
+		// Scale on geometry
+		if (factor != 1) {
+			for( g in this.root.getAll("Objects.Geometry.Vertices").concat(this.root.getAll("Objects.Geometry.Shape.Vertices")) ) {
+				var v = toFloats(g);
+				for( i in 0...v.length )
+					v[i] = v[i] * factor;
+			}
+		}
+
+		// Scale translation
+		for (m in getAllModels()) {
+			for (p in m.getAll("Properties70.P")) {
+				if (p.props[0].toString() == "Lcl Translation" || p.props[0].toString() == "GeometricTranslation") {
+					for (idx in [4,5,6]) {
+						var v = p.props[idx].toFloat();
+						p.props[idx] = PFloat(v * factor);
+					}
+				}
+			}
+		}
+
+		// Scale on animation
+		for (n in this.root.getAll("Objects.AnimationCurveNode")) {
+			var name = n.getName();
+			var model = getParent(n,"Model",true);
+			var isRoot = model != null && getParent(model,"Model",true) == null;
+			for (p in n.getAll("Properties70.P")) {
+				switch( p.props[0].toString() ) {
+					case "d|X", "d|Y", "d|Z" if( name == "T" && !isRoot ): p.props[4] = PFloat(p.props[4].toFloat() / factor);
+					case "d|X", "d|Y", "d|Z" if( name == "S" && isRoot ): p.props[4] = PFloat(p.props[4].toFloat() * factor);
+					default:
+				}
+			}
+			for (c in getChilds(n,"AnimationCurve")) {
+				var vl = toFloats(c.get("KeyValueFloat"));
+				switch (name) {
+					case "T" if( !isRoot ):
+						for( i in 0...vl.length )
+							vl[i] = vl[i] / factor;
+					case "S" if( isRoot ):
+						for( i in 0...vl.length )
+							vl[i] = vl[i] * factor;
+					default:
+				}
+			}
+		}
+	}
+
+	function updateModelAxis() {
+		var originalUpAxis = "2";
+		var upAxis = "1";
+		var frontAxis = "2";
+
+		for (p in root.getAll("GlobalSettings.Properties70.P")) {
+			switch (p.props[0].toString()) {
+				case "FrontAxis": frontAxis = '${p.props[4].toInt()}';
+				case "FrontAxisSign": frontAxis = (p.props[4].toInt() == -1) ? '-${frontAxis}' : frontAxis;
+				case "UpAxis": upAxis = '${p.props[4].toInt()}';
+				case "UpAxisSign": upAxis = (p.props[4].toInt() == -1) ? '-${upAxis}' : upAxis;
+				case "OriginalUpAxis": originalUpAxis = '${p.props[4].toInt()}';
+				case "OriginalUpAxisSign": originalUpAxis = (p.props[4].toInt() == -1) ? '-${originalUpAxis}' : originalUpAxis;
+				default:
+			}
+		}
+
+		// Convert model if front axis isn't matching heaps's front axis
+		var preRot = new h3d.Vector(0, 0, 0);
+		if (frontAxis != "-0") {
+			switch (frontAxis) {
+				case "1" if (upAxis == "2"): preRot.z = 90;
+				case "-1" if (upAxis == "2"): preRot.z = -90;
+				case "2" if (upAxis == "1"): preRot.x = 90; preRot.z = -90;
+				case "-2" if (upAxis == "1"): preRot.x = 90; preRot.z = 90;
+				default: 'Front axis $frontAxis is not supported';
+			}
+		}
+
+		for (rootObject in getRootModels()) {
+			var props = rootObject.get("Properties70");
+			var added = false;
+			for (c in props.childs) {
+				if (c.props[0].toString() != "PreRotation")
+					continue;
+				c.props[4] = PFloat((c.props[4].toFloat() + preRot.x) % 360);
+				c.props[5] = PFloat((c.props[5].toFloat() + preRot.y) % 360);
+				c.props[6] = PFloat((c.props[6].toFloat() + preRot.z) % 360);
+				added = true;
+				break;
+			}
+
+			if (!added) {
+				var preRotProp : FbxNode = { name : "P", props : [PString("PreRotation"), PString("Vector3D"), PString("Vector"), PString(""), PFloat(preRot.x), PFloat(preRot.y), PFloat(preRot.z)], childs : [] };
+				rootObject.get("Properties70").childs.insert(0, preRotProp);
+			}
 		}
 	}
 
@@ -1230,6 +1401,11 @@ class BaseLibrary {
 					fov[f] = c.fov.v[fovp - 1];
 				}
 			}
+
+			var objectName = c.object;
+			var reg = ~/_*-*LOD0/;
+			objectName = reg.replace(objectName, '');
+
 			if( frames != null ) {
 				var hasTrans = c.t != null;
 				var hasRot = c.r != null || def.rotate != null || def.preRot != null;
@@ -1237,16 +1413,16 @@ class BaseLibrary {
 				// force position for objects unless it's default to skin
 				if( !hasTrans && def.transPos == null )
 					hasTrans = true;
-				anim.addCurve(c.object, frames, hasTrans, hasRot, hasScale);
+				anim.addCurve(objectName, frames, hasTrans, hasRot, hasScale);
 			}
 			if( alpha != null )
-				anim.addAlphaCurve(c.object, alpha);
+				anim.addAlphaCurve(objectName, alpha);
 			if( uvs != null )
-				anim.addUVCurve(c.object, uvs);
+				anim.addUVCurve(objectName, uvs);
 			if( roll != null )
-				anim.addPropCurve(c.object, "Roll", roll);
+				anim.addPropCurve(objectName, "Roll", roll);
 			if( fov != null )
-				anim.addPropCurve(c.object, "FOVY", fov);
+				anim.addPropCurve(objectName, "FOVY", fov);
 		}
 		return anim;
 	}

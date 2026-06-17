@@ -29,7 +29,7 @@ class Lights extends SampleApp {
 		super.init();
 
 		s3d.camera.pos.set(100, 20, 80);
-		new h3d.scene.CameraController(s3d).loadFromCamera();
+		new h3d.scene.CameraController.OrbitCameraController(s3d).loadFromCamera();
 
 		var prim = new h3d.prim.Grid(100,100,1,1);
 		prim.addNormals();
