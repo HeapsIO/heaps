@@ -1155,6 +1155,9 @@ class HMDOut extends BaseLibrary {
 									o2.rootJoints = [];
 								o2.rootJoints.push(c);
 
+								if (c.model.name.toLowerCase().indexOf("root") < 0)
+									continue;
+
 								var jDef = getDefaultMatrixes(c.model);
 								var modelDef = getDefaultMatrixes(m);
 
