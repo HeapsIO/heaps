@@ -324,9 +324,15 @@ class Pad {
 		#if hlsdl
 		if( !initDone ) {
 			initDone = true;
+			#if (hlsdl >= version("1.16.0"))
+			var sticks = sdl.Sdl.getJoysticks();
+			for( stick in sticks )
+				initPad( stick );
+			#else
 			var c = @:privateAccess GameController.gctrlCount();
 			for( idx in 0...c )
 				initPad( idx );
+			#end
 			haxe.MainLoop.add(syncPads);
 		}
 		#elseif (hldx || usesys)
