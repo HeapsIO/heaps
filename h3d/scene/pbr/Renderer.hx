@@ -463,7 +463,7 @@ class Renderer extends h3d.scene.Renderer {
 	}
 
 	function renderEditorOutline() {
-		#if editor
+		#if (editor || editor_hl)
 		if (showEditorGuides) {
 			renderPass(defaultPass, get("debuggeom"), backToFront);
 			renderPass(defaultPass, get("debuggeom_alpha"), backToFront);
