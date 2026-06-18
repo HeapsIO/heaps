@@ -545,7 +545,7 @@ class Renderer extends h3d.scene.Renderer {
 			if ( width == ctx.engine.width && height == ctx.engine.height ) {
 				ctx.textures.defaultDepthBuffer = h3d.mat.Texture.getDefaultDepth();
 			} else {
-				ctx.textures.defaultDepthBuffer = allocTarget("defaultDepth", false, 1., Depth24Stencil8);
+				ctx.textures.defaultDepthBuffer = allocTarget("defaultDepth", false, 1., h3d.mat.Texture.getDefaultDepth().format);
 			}
 		}
 	}
