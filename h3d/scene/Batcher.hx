@@ -266,11 +266,13 @@ class Batcher extends h3d.scene.Object {
 		if ( isRelative ) {
 			if ( followShader == null ) {
 				followShader = new FollowShader();
+				followShader.invFollowMatrix = new h3d.Matrix();
 				followShader.followMatrix = new h3d.Matrix();
 				followShader.prevFollowMatrix = new h3d.Matrix();
 				addShader(followShader);
 			}
 			var absPos = getAbsPos();
+			followShader.invFollowMatrix.load(absPos.getInverse());
 			followShader.followMatrix.load(absPos);
 			followShader.prevFollowMatrix.load(prevAbsPos ?? absPos);
 		} else if ( followShader != null ) {
@@ -444,19 +446,18 @@ private class ShaderData {
 
 private class FollowShader extends hxsl.Shader {
 	static var SRC = {
+		@param var invFollowMatrix : Mat4;
 		@param var followMatrix : Mat4;
 		@param var prevFollowMatrix : Mat4;
 
-		var transformedPosition : Vec3;
-		var transformedNormal : Vec3;
-		var transformedTangent : Vec4;
-		var previousTransformedPosition : Vec3;
+		var modelView : Mat4;
+		var modelViewInverse : Mat4;
+		var prevModelView : Mat4;
 
-		function __init__vertex() {
-			transformedPosition = transformedPosition * followMatrix.mat3x4();
-			transformedNormal = normalize(transformedNormal * followMatrix.mat3());
-			transformedTangent.xyz = normalize(transformedTangent.xyz * followMatrix.mat3());
-			previousTransformedPosition = previousTransformedPosition * prevFollowMatrix.mat3x4();
+		function __init__() {
+			modelView = modelView * followMatrix;
+			modelViewInverse = invFollowMatrix * modelViewInverse;
+			prevModelView = prevModelView * prevFollowMatrix;
 		}
 	};
 }

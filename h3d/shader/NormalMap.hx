@@ -9,10 +9,6 @@ class NormalMap extends hxsl.Shader {
 			@var var dir : Vec3;
 		};
 
-		@global var global : {
-			@perObject var modelView : Mat4;
-		};
-
 		@input var input : {
 			var uv : Vec2;
 			var normal : Vec3;
@@ -24,11 +20,12 @@ class NormalMap extends hxsl.Shader {
 		var calculatedUV : Vec2;
 		var transformedPosition : Vec3;
 		var transformedNormal : Vec3;
+		var modelView : Mat4;
 
 		@var var transformedTangent : Vec4;
 
 		function __init__vertex() {
-			transformedTangent = vec4(input.tangent * global.modelView.mat3(),input.tangent.dot(input.tangent) > 0.5 ? 1. : -1.);
+			transformedTangent = vec4(input.tangent * modelView.mat3(),input.tangent.dot(input.tangent) > 0.5 ? 1. : -1.);
 			calculatedUV = input.uv;
 		}
 

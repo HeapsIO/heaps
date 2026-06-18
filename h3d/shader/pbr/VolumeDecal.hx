@@ -33,9 +33,10 @@ class BaseDecal extends hxsl.Shader {
 		var projectedPosition : Vec4;
 		var pixelColor : Vec4;
 		var fadeFactor : Float;
+		var modelView : Mat4;
 
 		function normalFade(worldNormal: Vec3) {
-			var z = normalize(vec3(0,0,1) * global.modelView.mat3());
+			var z = normalize(vec3(0,0,1) * modelView.mat3());
 			var angle = 1 - abs(acos(z.dot(worldNormal)) / PI);
 			var f = saturate((angle - normalFadeStart) / (normalFadeEnd - normalFadeStart));
 			fadeFactor *= f;
@@ -80,10 +81,11 @@ class DecalOverlay extends BaseDecal {
 
 		@param var colorTexture : Sampler2D;
 
+		var modelViewInverse : Mat4;
 
 		function __init__fragment() {
 			{
-				var matrix = camera.inverseViewProj * global.modelViewInverse;
+				var matrix = camera.inverseViewProj * modelViewInverse;
 				var screenPos = projectedPosition.xy / projectedPosition.w;
 				var depth = depthMap.get(screenToUv(screenPos));
 				var ruv = vec4( screenPos, depth, 1 );
@@ -151,15 +153,16 @@ class DecalPBR extends BaseDecal {
 		@param var albedoTexture : Sampler2D;
 		@param var normalTexture : Sampler2D;
 
+		var modelViewInverse : Mat4;
 
 		function __init__vertex() {
-			transformedNormal = (normal * global.modelView.mat3()).normalize();
-			transformedTangent = vec4((tangent * global.modelView.mat3()).normalize(),1.);
+			transformedNormal = (normal * modelView.mat3()).normalize();
+			transformedTangent = vec4((tangent * modelView.mat3()).normalize(),1.);
 		}
 
 		function __init__fragment() {
 			{
-				var matrix = camera.inverseViewProj * global.modelViewInverse;
+				var matrix = camera.inverseViewProj * modelViewInverse;
 				var screenPos = projectedPosition.xy / projectedPosition.w;
 
 				var depth = depthMap.get(screenToUv(screenPos));
