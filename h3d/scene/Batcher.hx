@@ -195,9 +195,7 @@ class Batcher extends h3d.scene.Object {
 				for ( m in m.getMeshMaterials() )
 					materials.push(batch.addMaterial(m, renderer));
 
-				// When m == obj, getAbsPos() * invPos cancels to identity and drops defaultTransform.
-				var relPos = m == obj && m.defaultTransform != null ? m.defaultTransform.clone() : m.getAbsPos() * invPos;
-				var meshInstance = new MeshInstance(relPos, batchID, subMeshID, materials);
+				var meshInstance = new MeshInstance(m.getAbsPos() * invPos, batchID, subMeshID, materials);
 				meshes.push(meshInstance);
 			}
 		}
