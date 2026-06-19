@@ -144,8 +144,6 @@ class ShaderCache {
 	var saveTimer : haxe.Timer;
 	public function saveCompiledShader( source : String, bytes : haxe.io.Bytes, ?configurationKey = "", ?saveToFile = true ) {
 		dirty = true;
-		if( !allowSave )
-			return;
 		if( data == null ) load();
 		var key = configurationKey + haxe.crypto.Md5.encode(source);
 		if( data.get(key) == bytes && (!keepSource || sources.get(key) == source) )
@@ -153,6 +151,9 @@ class ShaderCache {
 		data.set(key, bytes);
 		if( keepSource )
 			sources.set(key, source);
+
+		if( !allowSave )
+			return;
 
 		if(saveTimer != null)
 			saveTimer.stop();
