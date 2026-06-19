@@ -373,10 +373,12 @@ class Pad {
 	}
 
 	function _detectAnalogButton(index: Int, v: Float) {
-		if(v > ANALOG_BUTTON_THRESHOLDS.press && v > values[index]) {
+		v = Math.abs(v);
+		var absValue = Math.abs(values[index]);
+		if(v > ANALOG_BUTTON_THRESHOLDS.press && v > absValue) {
 			buttons[ index ] = true;
 		}
-		if(v < ANALOG_BUTTON_THRESHOLDS.release && v < values[index]) {
+		if(v < ANALOG_BUTTON_THRESHOLDS.release && v < absValue) {
 			buttons[ index ] = false;
 		}
 	}
