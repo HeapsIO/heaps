@@ -509,6 +509,8 @@ private class Batch {
 		var globals = @:privateAccess renderer.ctx.globals;
 		var draws : Array<DrawInstance> = [];
 		for ( p in m.getPasses() ) @:privateAccess {
+			if ( p.culled )
+				continue;
 			var shaders = p.getShadersRec();
 			var passID = findPassID(globals, shaders, p);
 			if ( passID < 0 ) {
@@ -573,7 +575,7 @@ private class Batch {
 			return;
 
 		for ( i => p in passes ) {
-			if ( p.totalInstanceCount == 0 || p.pass.culled )
+			if ( p.totalInstanceCount == 0 )
 				continue;
 			if ( doEmitGPU )
 				p.emitGPU(ctx);
