@@ -716,6 +716,7 @@ class DX12Driver extends h3d.impl.Driver {
 	public static var DEVICE_NAME = null;
 	public static var DEBUG = false; // requires dxil.dll when set to true
 	public static var SUPPRESSED_MESSAGE_IDS : Array<Int> = [];
+	public static var DLSS = true;
 
 	@:allow(h3d.impl) static function allocCheck<T>( f : Void -> T ) {
 		var ret = f();
@@ -785,8 +786,10 @@ class DX12Driver extends h3d.impl.Driver {
 
 	function reset() {
 		#if dlss
-		var result = Dlss.init(false);
-		dlssReady = result == 0;
+		if ( DLSS ) {
+			var result = Dlss.init(false);
+			dlssReady = result == 0;
+		}
 		#end
 
 		var flags = new DriverInitFlags();
