@@ -85,7 +85,7 @@ class CacheFile2Loader {
 		}
 
 		#if heaps_mt_hxsl_cache
-		workThread = sys.thread.Thread.create(threadLoop, (e) -> { linkDone = true; });
+		workThread = sys.thread.Thread.create(threadLoop, { onAbort : (e) -> { linkDone = true; } });
 		workThread.name = "CacheFile2Loader";
 		event = haxe.MainLoop.add(update);
 		#else
