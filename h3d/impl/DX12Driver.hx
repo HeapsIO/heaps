@@ -619,6 +619,7 @@ class AsyncReadbackRequest {
 	public var tmpBufOffset : Int;
     public var tmpBufSize : Int;
 	public var barrier : ResourceBarrier;
+	public var frame : Int;
 	public function new() {
 	}
 }
@@ -2116,35 +2117,38 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	override function readBufferBytesAsync( b : Buffer, startVertex : Int, vertexCount : Int, buf : haxe.io.Bytes, bufPos : Int, callback : Void -> Void ) {
-		haxe.Timer.delay(() -> {
-			var rq = new AsyncReadbackRequest();
-			rq.b = b;
-			rq.startVertex = startVertex;
-			rq.vertexCount = vertexCount;
-			rq.buf = buf;
-			rq.bufPos = bufPos;
-			rq.callback = callback;
-			asyncReadbackQueue.insert(0, rq);
+		var rq = new AsyncReadbackRequest();
+		rq.b = b;
+		rq.startVertex = startVertex;
+		rq.vertexCount = vertexCount;
+		rq.buf = buf;
+		rq.bufPos = bufPos;
+		rq.callback = callback;
+		rq.frame = frameCount;
+		asyncReadbackQueue.push(rq);
 
-			if ( asyncCopyEvent == null ) {
-				asyncCopyEvent = haxe.MainLoop.add(() -> {
-					if ( !waitingAsyncCopy ) {
-						if ( asyncReadbackQueue.length > 0 ) {
-							var totalBatchSize = 0;
-							for ( request in asyncReadbackQueue ) {
+		if ( asyncCopyEvent == null ) {
+			asyncCopyEvent = haxe.MainLoop.add(() -> {
+				if ( !waitingAsyncCopy ) {
+					if ( asyncReadbackQueue.length > 0 ) {
+						var totalBatchSize = 0;
+						for ( request in asyncReadbackQueue ) {
+							if ( request.frame < (frameCount - 1) ) {
 								var stride = request.b.format.strideBytes;
 								request.tmpBufOffset = totalBatchSize;
 								request.tmpBufSize = request.vertexCount * stride;
 								totalBatchSize += request.tmpBufSize;
 							}
+						}
 
-							if ( asyncReadbackBuffer == null || asyncReadbackBufferSize < totalBatchSize ) {
-								asyncReadbackBuffer?.release();
-								asyncReadbackBuffer = allocGPU(totalBatchSize, READBACK, COPY_DEST);
-								asyncReadbackBufferSize = totalBatchSize;
-							}
+						if ( (asyncReadbackBuffer == null || asyncReadbackBufferSize < totalBatchSize) && totalBatchSize > 0 ) {
+							asyncReadbackBuffer?.release();
+							asyncReadbackBuffer = allocGPU(totalBatchSize, READBACK, COPY_DEST);
+							asyncReadbackBufferSize = totalBatchSize;
+						}
 
-							 for ( request in asyncReadbackQueue ) {
+						for ( request in asyncReadbackQueue ) {
+							if ( request.frame < (frameCount - 1) ) {
 								var stride = request.b.format.strideBytes;
 
 								request.b.vbuf.targetState = COMMON;
@@ -2161,9 +2165,12 @@ class DX12Driver extends h3d.impl.Driver {
 
 								currentRequests.push(request);
 							}
+						}
 
-							asyncReadbackQueue.resize(0);
+						for ( r in currentRequests )
+							asyncReadbackQueue.remove(r);
 
+						if ( currentRequests.length > 0 ) {
 							asyncComputeCommandList.close();
 							computeQueue.executeCommandList(asyncComputeCommandList);
 							computeQueue.signal(computeFence, ++computeFenceValue);
@@ -2177,35 +2184,35 @@ class DX12Driver extends h3d.impl.Driver {
 							copyQueue.signal(copyFence, ++copyFenceValue);
 
 							waitingAsyncCopy = true;
-						} else {
-							asyncCopyEvent.stop();
-							asyncCopyEvent = null;
 						}
 					} else {
-						if ( copyFence.getValue() >= copyFenceValue ) {
-							asyncCopyAllocator.reset();
-							asyncCopyCommandList.reset(asyncCopyAllocator, null);
+						asyncCopyEvent.stop();
+						asyncCopyEvent = null;
+					}
+				} else {
+					if ( copyFence.getValue() >= copyFenceValue ) {
+						asyncCopyAllocator.reset();
+						asyncCopyCommandList.reset(asyncCopyAllocator, null);
 
-							var mappedPtr = asyncReadbackBuffer?.map(0, null);
-							for ( request in currentRequests ) {
-								@:privateAccess request.buf.b.blit(request.bufPos, mappedPtr, request.tmpBufOffset, request.tmpBufSize);
-								request.callback();
-							}
+						var mappedPtr = asyncReadbackBuffer?.map(0, null);
+						for ( request in currentRequests ) {
+							@:privateAccess request.buf.b.blit(request.bufPos, mappedPtr, request.tmpBufOffset, request.tmpBufSize);
+							request.callback();
+						}
 
-							asyncReadbackBuffer?.unmap(0, null);
-							currentRequests.resize(0);
-							waitingAsyncCopy = false;
+						asyncReadbackBuffer?.unmap(0, null);
+						currentRequests.resize(0);
+						waitingAsyncCopy = false;
 
-							if ( asyncReadbackQueue.length == 0 ) {
-								asyncReadbackBuffer?.release();
-								asyncReadbackBuffer = null;
-								asyncReadbackBufferSize = 0;
-							}
+						if ( asyncReadbackQueue.length == 0 ) {
+							asyncReadbackBuffer?.release();
+							asyncReadbackBuffer = null;
+							asyncReadbackBufferSize = 0;
 						}
 					}
-				});
-			}
-		}, 0);
+				}
+			});
+		}
 	}
 
 	// ------------ TEXTURES -------
