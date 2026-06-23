@@ -471,6 +471,7 @@ class Linker {
 			vert : -1500,
 			frag : -500,
 		}
+		var isCompute = mode == Compute;
 		for( s in shadersData ) {
 			isBatchShader = mode == Batch && StringTools.startsWith(s.name,"batchShader_");
 			for( f in s.funs ) {
@@ -478,12 +479,12 @@ class Linker {
 				if( v.kind == null ) throw "assert";
 				switch( v.kind ) {
 				case Vertex, Fragment:
-					if( mode == Compute )
+					if( isCompute )
 						throw "Unexpected "+v.kind.getName().toLowerCase()+"() function in compute shader";
 					var offset = v.kind == Vertex ? shaderOffset.vert : shaderOffset.frag;
 					addShader(s.name + "." + (v.kind == Vertex ? "vertex" : "fragment"), v.kind == Vertex ? Vertex : Fragment, f.expr, priority + offset, false);
 				case Main:
-					if( mode != Compute )
+					if( !isCompute )
 						throw "Unexpected main() outside compute shader";
 					addShader(s.name, Vertex, f.expr, priority, false).isCompute = true;
 				case Init:
@@ -499,9 +500,9 @@ class Linker {
 					case TBlock(el):
 						var index = 0;
 						for( e in el )
-							addShader(s.name+"."+f.ref.name+(index++),status,e, prio[0]++, isBatchInit);
+							addShader(s.name+"."+f.ref.name+(index++),status,e, prio[0]++, isBatchInit).isCompute = isCompute;
 					default:
-						addShader(s.name+"."+f.ref.name,status,f.expr, prio[0]++, isBatchInit);
+						addShader(s.name+"."+f.ref.name,status,f.expr, prio[0]++, isBatchInit).isCompute = isCompute;
 					}
 				case Helper:
 					throw "Unexpected helper function in linker "+v.v.name;
@@ -540,41 +541,47 @@ class Linker {
 					fentry.deps.set(s, true);
 			}
 
-		// force shaders reading only params into fragment shader
-		// (pixelColor = color with no effect in BaseMesh)
-		for( s in shaders ) {
-			if( s.stage != Undefined ) continue;
-			var onlyParams = true;
-			for( r in s.readVars )
-				if( r.v.kind != Param ) {
-					onlyParams = false;
-					break;
+		if ( isCompute ) {
+			for( s in shaders )
+				s.stage = Vertex;
+		} else {
+			// force shaders reading only params into fragment shader
+			// (pixelColor = color with no effect in BaseMesh)
+			for( s in shaders ) {
+				if( s.stage != Undefined ) continue;
+				var onlyParams = true;
+				for( r in s.readVars )
+					if( r.v.kind != Param ) {
+						onlyParams = false;
+						break;
+					}
+				if( onlyParams ) {
+					debug("Force " + s.name + " into fragment since it only reads params");
+					s.stage = Fragment;
 				}
-			if( onlyParams ) {
-				debug("Force " + s.name + " into fragment since it only reads params");
-				s.stage = Fragment;
+			}
+
+			for( s in shaders ) {
+				if ( s.deps == null)
+					continue;
+				// propagate fragment flag
+				if( s.stage == Undefined )
+					for( d in s.deps.keys() )
+						if( d.stage == Fragment ) {
+							debug(s.name + " marked as fragment because of " + d.name);
+							s.stage = Fragment;
+							break;
+						}
+				// propagate vertex flag
+				if( s.stage == Vertex )
+					for( d in s.deps.keys() )
+						if( d.stage == Undefined ) {
+							debug(d.name + " marked as vertex because of " + s.name);
+							d.stage = Vertex;
+						}
 			}
 		}
 
-		for( s in shaders ) {
-			if ( s.deps == null)
-				continue;
-			// propagate fragment flag
-			if( s.stage == Undefined )
-				for( d in s.deps.keys() )
-					if( d.stage == Fragment ) {
-						debug(s.name + " marked as fragment because of " + d.name);
-						s.stage = Fragment;
-						break;
-					}
-			// propagate vertex flag
-			if( s.stage == Vertex )
-				for( d in s.deps.keys() )
-					if( d.stage == Undefined ) {
-						debug(d.name + " marked as vertex because of " + s.name);
-						d.stage = Vertex;
-					}
-		}
 
 		// collect needed dependencies
 		var v = [], f = [];
