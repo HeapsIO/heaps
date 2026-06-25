@@ -14,33 +14,13 @@ class TestSegments {
     }
 
     function testConvexContains() {
-        // Create a square
         var p1 = new Point(0, 0);
         var p2 = new Point(0, 10);
         var p3 = new Point(10, 10);
         var p4 = new Point(10, 0);
 
-        var s1 = new Segment(p1, p2);
-        var s2 = new Segment(p2, p3);
-        var s3 = new Segment(p3, p4);
-        var s4 = new Segment(p4, p1);
-
-        var segments:Segments = [s1, s2, s3, s4];
-
-        // Since it's clockwise/counter-clockwise, let's check side orientations.
-        // Wait, for containsPoint(p, true):
-        // if s.side(p) < 0, it returns false.
-        // Let's verify if the side is positive for points inside.
-        // For s1 (0,0 -> 0,10): dx = 0, dy = 10. For p=(5,5): side = 0*(5) - 10*(5) = -50 < 0.
-        // Wait! If side < 0, containsPoint(p, true) returns false!
-        // That means containsPoint(p, true) expects points to be oriented such that side(p) >= 0.
-        // Let's reverse the order of points for the segments to make it counter-clockwise.
-        // CCW: (0,0) -> (10,0) -> (10,10) -> (0,10) -> (0,0)
-        // s1: (0,0) -> (10,0). dx = 10, dy = 0. p=(5,5): side = 10*(5) - 0*(5) = 50 > 0.
-        // s2: (10,0) -> (10,10). dx = 0, dy = 10. p=(5,5): side = 0*(5) - 10*(-5) = 50 > 0.
-        // s3: (10,10) -> (0,10). dx = -10, dy = 0. p=(5,5): side = -10*(-5) - 0*(-5) = 50 > 0.
-        // s4: (0,10) -> (0,0). dx = 0, dy = -10. p=(5,5): side = 0*(-5) - (-10)*(5) = 50 > 0.
-        
+        // For containsPoint(p, true) to succeed, the segments must be counter-clockwise
+        // so that the point is on the inside side of all segment axes (s.side(p) >= 0).
         var ccw_s1 = new Segment(p1, p4);
         var ccw_s2 = new Segment(p4, p3);
         var ccw_s3 = new Segment(p3, p2);
