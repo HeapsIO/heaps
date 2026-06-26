@@ -1545,8 +1545,8 @@ class DX12Driver extends h3d.impl.Driver {
 
 	static final SHADER_ARGS : Array<String>= [#if dx12_shader_debug "-Zi", "-Qembed_debug" #end];
 	function compileSource( sh : hxsl.RuntimeShader.RuntimeShaderData, profile, rootStr = "" ) {
-		var out = new hxsl.HlslOut();
 		if( sh.code == null ) {
+			var out = new hxsl.HlslOut();
 			sh.code = out.run(sh.data);
 			sh.code = rootStr + sh.code;
 		}
