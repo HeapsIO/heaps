@@ -10,6 +10,7 @@ class Parallax extends hxsl.Shader {
 		@param var heightMap : Sampler2D;
 		@:import BaseMesh;
 
+		@const var invertBasis : Bool;
 		@const var minLayers : Int;
 		@const var maxLayers : Int;
 
@@ -28,6 +29,9 @@ class Parallax extends hxsl.Shader {
 				var n = vertexTransformedNormal.normalize();
 				var tanX = transformedTangent.xyz.normalize();
 				var tanY = n.cross(tanX);
+				if(invertBasis) {
+					tanY = -tanY;
+				}
 				viewNS = vec3(viewWS.dot(tanX), viewWS.dot(tanY), viewWS.dot(n)).normalize();
 			}
 			if( maxLayers == 0 )

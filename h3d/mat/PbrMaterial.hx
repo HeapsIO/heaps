@@ -81,6 +81,7 @@ typedef PbrProps = {
 	@:optional var emissive : Float;
 	@:optional var parallax : Float;
 	@:optional var parallaxSteps : Int;
+	@:optional var invertBasis : Bool;
 	@:optional var textureWrap : Bool;
 
 	var enableStencil : Bool;
@@ -382,6 +383,7 @@ class PbrMaterial extends Material {
 			else
 				ps.maxLayers = h3d.shader.Parallax.MAX_LAYERS;
 			ps.amount = props.parallax;
+			ps.invertBasis = props.invertBasis != null ? props.invertBasis : false;
 			ps.heightMap = specularTexture;
 		} else if( ps != null )
 			mainPass.removeShader(ps);
