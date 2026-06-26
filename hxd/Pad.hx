@@ -333,13 +333,13 @@ class Pad {
 			for( idx in 0...c )
 				initPad( idx );
 			#end
-			haxe.MainLoop.add(syncPads);
+			haxe.MainLoop.add(syncPads, -1);
 		}
 		#elseif (hldx || usesys)
 		if( !initDone ){
 			initDone = true;
 			GameController.init();
-			haxe.MainLoop.add(syncPads);
+			haxe.MainLoop.add(syncPads, -1);
 		}
 		#elseif js
 		if( !initDone ) {
@@ -360,7 +360,7 @@ class Pad {
 				pad.onDisconnect();
 			});
 			#if !manual_sync_pad
-			haxe.MainLoop.add(syncPads);
+			haxe.MainLoop.add(syncPads, -1);
 			#end
 		}
 		#end
