@@ -282,6 +282,31 @@ class MatrixImpl {
 		multiply(tmp, this);
 	}
 
+	public function multiply3x3( a : Matrix, b : Matrix ) {
+		multiply3x3inline(a, b);
+	}
+
+	public inline function multiply3x3inline( a : Matrix, b : Matrix ) {
+		var m11 = a._11; var m12 = a._12; var m13 = a._13;
+		var m21 = a._21; var m22 = a._22; var m23 = a._23;
+		var a31 = a._31; var a32 = a._32; var a33 = a._33;
+		var b11 = b._11; var b12 = b._12; var b13 = b._13;
+		var b21 = b._21; var b22 = b._22; var b23 = b._23;
+		var b31 = b._31; var b32 = b._32; var b33 = b._33;
+
+		_11 = m11 * b11 + m12 * b21 + m13 * b31;
+		_12 = m11 * b12 + m12 * b22 + m13 * b32;
+		_13 = m11 * b13 + m12 * b23 + m13 * b33;
+
+		_21 = m21 * b11 + m22 * b21 + m23 * b31;
+		_22 = m21 * b12 + m22 * b22 + m23 * b32;
+		_23 = m21 * b13 + m22 * b23 + m23 * b33;
+
+		_31 = a31 * b11 + a32 * b21 + a33 * b31;
+		_32 = a31 * b12 + a32 * b22 + a33 * b32;
+		_33 = a31 * b13 + a32 * b23 + a33 * b33;
+	}
+
 	@:noDebug
 	public function multiply3x4( a : Matrix, b : Matrix ) {
 		multiply3x4inline(a, b);
