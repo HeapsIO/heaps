@@ -1229,6 +1229,10 @@ private class BatchPass {
 			alloc.disposeBuffer(commandBuffer);
 			commandBuffer = null;
 		}
+		if( syncIDs != null ) {
+			alloc.disposeBuffer(syncIDs);
+			syncIDs = null;
+		}
 		countBuffer?.dispose();
 		countBuffer = null;
 		command = null;
