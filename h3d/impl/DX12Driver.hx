@@ -3598,7 +3598,10 @@ class DX12Driver extends h3d.impl.Driver {
 		Dlss.setConstants(dlssFrameToken, dlssConstants);
 		Dlss.evaluateFeature(dlssFrameToken, frame.commandList, DLSSFeature.DLSS);
 
-		flushHeaps(true);
+		var arr = tmp.descriptors2;
+		arr[0] = @:privateAccess frame.srvHeap.heap;
+		arr[1] = @:privateAccess frame.samplerHeap.heap;
+		frame.commandList.setDescriptorHeaps(arr);
 
 		#end
 	}
