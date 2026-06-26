@@ -678,6 +678,7 @@ class DX12Driver extends h3d.impl.Driver {
 	var useSM6_6 = false;
 	var errorTex : h3d.mat.Texture;
 	var textureHandles : Map<h3d.mat.Texture, Map<Int, h3d.mat.TextureHandle>> = [];
+	var samplerHandles : Map<Int, Int> = [];
 
 	var copyQueue : CommandQueue;
 	var copyFence : Fence;
@@ -3417,14 +3418,19 @@ class DX12Driver extends h3d.impl.Driver {
 		}
 		handle = handles.get(t.bits);
 		if ( handle == null ) {
+			var samplerBits = getSamplerBits(t);
+			var samplerIndex = samplerHandles.get(samplerBits);
+			if ( samplerIndex == null ) {
 			var sampler = getCpuSampler(t);
+				samplerIndex = bindlessSamplerHeap.allocIndex();
+				samplerHandles.set(samplerBits, samplerIndex);
+				Driver.copyDescriptorsSimple(1, bindlessSamplerHeap.getCpuAddressAt(samplerIndex), sampler, SAMPLER);
+				Driver.copyDescriptorsSimple(1, frame.samplerHeap.getCpuAddressAt(samplerIndex), sampler, SAMPLER);
+			}
 			var srv = getCpuTexView(t);
 			var srvIndex = bindlessSrvHeap.allocIndex();
-			var samplerIndex = bindlessSamplerHeap.allocIndex();
 			Driver.copyDescriptorsSimple(1, bindlessSrvHeap.getCpuAddressAt(srvIndex), srv, CBV_SRV_UAV);
 			Driver.copyDescriptorsSimple(1, frame.srvHeap.getCpuAddressAt(srvIndex), srv, CBV_SRV_UAV);
-			Driver.copyDescriptorsSimple(1, bindlessSamplerHeap.getCpuAddressAt(samplerIndex), sampler, SAMPLER);
-			Driver.copyDescriptorsSimple(1, frame.samplerHeap.getCpuAddressAt(samplerIndex), sampler, SAMPLER);
 			handle = new h3d.mat.TextureHandle(t, haxe.Int64.make(samplerIndex, srvIndex));
 			handles.set(t.bits, handle);
 		}
