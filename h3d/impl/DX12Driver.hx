@@ -3557,6 +3557,7 @@ class DX12Driver extends h3d.impl.Driver {
 				case ColorOut: res.type = DLSSBufferType.COLOROUT;
 			}
 			res.state = t.t.state;
+			t.lastFrame = frameCount;
 			idx++;
 		}
 
