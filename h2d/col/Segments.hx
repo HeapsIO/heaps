@@ -40,7 +40,20 @@ abstract Segments(Array<Segment>) from Array<Segment> to Array<Segment> {
 				if( s.side(p) < 0 )
 					return false;
 		} else {
-			throw "TODO";
+			// Ray-casting (winding number) algorithm for arbitrary polygons.
+			// Counts intersections of a horizontal ray starting from point p and going right.
+			var w = 0;
+			for( s in segments ) {
+				var startY = s.y;
+				var endY = s.y + s.dy;
+				if( endY <= p.y ) {
+					if( startY > p.y && s.side(p) < 0 )
+						w++;
+				} else if( startY <= p.y && s.side(p) > 0 ) {
+					w--;
+				}
+			}
+			return w != 0;
 		}
 		return true;
 	}
