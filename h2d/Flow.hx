@@ -1091,7 +1091,7 @@ class Flow extends Object {
 	}
 
 	function onMouseWheel( e : hxd.Event ) {
-		if( overflow == Scroll ) {
+		if( overflow == Scroll && contentHeight > calculatedHeight ) {
 			scrollPosY += e.wheelDelta * scrollWheelSpeed;
 			e.propagate = false;
 		}
