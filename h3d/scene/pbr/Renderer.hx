@@ -129,6 +129,15 @@ class Renderer extends h3d.scene.Renderer {
 		Vec4([Swiz(Value("output.color"),[X,Y,Z]), Value("output.albedoStrength",1)]),
 		Vec4([Value("output.normal",3), Value("output.normalStrength",1)]),
 		#if !MRT_low
+		Vec4([Value("output.metalness"), Value("output.roughness"), Value("output.occlusion"), Value("output.pbrStrength")])
+		#else
+		Vec4([Value("output.metalness"), Value("output.roughness"), Value("output.emissive"), Value("output.pbrStrength")])
+		#end
+	]);
+	var emissiveDecalsOutput = new h3d.pass.Output("emissiveDecal",[
+		Vec4([Swiz(Value("output.color"),[X,Y,Z]), Value("output.albedoStrength",1)]),
+		Vec4([Value("output.normal",3), Value("output.normalStrength",1)]),
+		#if !MRT_low
 		Vec4([Value("output.metalness"), Value("output.roughness"), Value("output.occlusion"), Value("output.pbrStrength")]),
 		Vec4([Value("output.emissive"), Value("output.custom1"), Value("output.custom2"), Value("output.emissiveStrength")])
 		#else
@@ -162,6 +171,7 @@ class Renderer extends h3d.scene.Renderer {
 		allPasses.push(output);
 		allPasses.push(defaultPass);
 		allPasses.push(decalsOutput);
+		allPasses.push(emissiveDecalsOutput);
 		allPasses.push(colorDepthOutput);
 		allPasses.push(colorDepthVelocityOutput);
 		allPasses.push(depthOutput);
@@ -184,6 +194,8 @@ class Renderer extends h3d.scene.Renderer {
 			return output;
 		case "decal":
 			return decalsOutput;
+		case "emissiveDecal":
+			return emissiveDecalsOutput;
 		case "depthPrepass", "forwardDepthPrepass", "beforeTonemappingDepthPrepass":
 			return depthOutput;
 		#if editor
@@ -736,6 +748,14 @@ class Renderer extends h3d.scene.Renderer {
 		ctx.engine.popTarget();
 	}
 
+	function drawEmissiveDecals( passName : String ) {
+		var passes = get(passName);
+		if( passes.isEmpty() ) return;
+		ctx.engine.pushTargets([textures.albedo,textures.normal,textures.pbr #if !MRT_low , textures.other #end]);
+		renderPass(emissiveDecalsOutput, passes);
+		ctx.engine.popTarget();
+	}
+
 	function getPbrRenderTargets( depth : Bool ) {
 		var targets = [textures.albedo, textures.normal, textures.pbr #if !MRT_low , textures.other #end];
 		if ( depth )
@@ -765,6 +785,7 @@ class Renderer extends h3d.scene.Renderer {
 
 		begin(Decals);
 		drawPbrDecals("decal");
+		drawEmissiveDecals("emissiveDecal");
 		end();
 
 		setTarget(textures.hdr);
