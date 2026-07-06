@@ -7,7 +7,7 @@ typedef ConvertConfig = {
 	var rules : Array<ConvertRule>;
 }
 
-typedef ConvertRule = { pt : ConvertPattern, cmd : ConvertCommand, priority : Int };
+typedef ConvertRule = { pt : ConvertPattern, cmd : ConvertCommand, priority : Int, version : Int };
 
 enum ConvertPattern {
 	Filename( name : String );
@@ -87,13 +87,19 @@ class FileConverter {
 	function makeConfig( obj : Dynamic ) {
 		var cfg : ConvertConfig = {
 			obj : obj,
-			rules : [],
+			rules : []
 		};
+		var versions : Map<String, Int>= [];
+		var ver = Reflect.field(obj,"fs.convertVersion");
+		if ( ver != null )
+			for( f in Reflect.fields(ver) )
+				versions.set(f, Reflect.field(ver, f));
 		var def = Reflect.field(obj,"fs.convert");
 		var conf = Reflect.field(obj,"fs.convert."+configuration);
 		var merge = mergeRec(def, conf);
 		for( f in Reflect.fields(merge) ) {
-			var cmd = makeCommmand(Reflect.field(merge,f));
+			var v : Dynamic = Reflect.field(merge,f);
+			var cmd = makeCommmand(v);
 			var pt = if( f.charCodeAt(0) == "^".code ) {
 				f = f.split("\\/").join("/").split("/").join("\\/");
 				Regexp(new EReg(f,"i"));
@@ -104,7 +110,9 @@ class FileConverter {
 				Wildcard;
 			else
 				Filename(f);
-			cfg.rules.push({ pt : pt, cmd : cmd.cmd, priority : cmd.priority });
+			var destExt = v is String ? v : v.convert;
+			var version = versions.get(destExt) ?? 0;
+			cfg.rules.push({ pt : pt, cmd : cmd.cmd, priority : cmd.priority, version : version });
 		}
 		cfg.rules.sort(sortByRulePiority);
 		return cfg;
@@ -237,10 +245,10 @@ class FileConverter {
 		if( rule == null || rule.cmd.conv == null )
 			return;
 		e.file = e.file.substr(baseDir.length);
-		runConvert(e, rule.cmd, rule.pt.match(Ext(_)));
+		runConvert(e, rule.cmd, rule.version, rule.pt.match(Ext(_)));
 	}
 
-	function runConvert( e : LocalFileSystem.LocalEntry, cmd : ConvertCommand, replaceExt : Bool = false ) {
+	function runConvert( e : LocalFileSystem.LocalEntry, cmd : ConvertCommand, version : Int, replaceExt : Bool = false ) {
 		var outFile = tmpDir;
 		var ext = e.extension;
 		if( replaceExt && cmd.paramsStr == null && cmd.then == null )
@@ -272,10 +280,15 @@ class FileConverter {
 			return;
 		}
 		outFile += "."+conv.destExt;
-		convertAndCache(e, outFile, conv, cmd.params);
+		var baseVersion = conv.version;
+		@:privateAccess {
+			conv.version = hxd.Math.imax(version, baseVersion);
+			convertAndCache(e, outFile, conv, cmd.params);
+			conv.version = baseVersion;
+		}
 		if( cmd.then != null ) {
 			e.file = outFile;
-			runConvert(e, cmd.then);
+			runConvert(e, cmd.then, version);
 		}
 		e.file = baseDir + outFile;
 	}
