@@ -362,6 +362,15 @@ class CustomParser extends domkit.CssValue.ValueParser {
 				f.matrix.colorSaturate(v);
 				f;
 			#end
+		case VCall("hue",[v]):
+			var v = parseFloat(v);
+			#if macro
+				true;
+			#else
+				var f = new h2d.filter.ColorMatrix();
+				f.matrix.colorHue(v*Math.PI/180);
+				f;
+			#end
 		case VCall("outline",[s, c]):
 			var s = parseFloat(s);
 			var c = parseColor(c);
