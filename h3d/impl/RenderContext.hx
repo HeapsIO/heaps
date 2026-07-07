@@ -22,6 +22,8 @@ class RenderContext {
 	}
 
 	public function setCurrent() {
+		if (inst != null)
+			onContextChange();
 		inst = this;
 	}
 
@@ -326,4 +328,7 @@ class RenderContext {
 		return Std.downcast(inst, cl);
 	}
 
+	public static dynamic function onContextChange() {
+		// Will throw 'Context has changed' down the line
+	}
 }
