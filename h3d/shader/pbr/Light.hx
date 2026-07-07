@@ -244,7 +244,7 @@ class RectangleLight extends Light {
 		}
 
 		function getClosestPointOnRectangle(rayOrigin : Vec3, rayDirection : Vec3, p0 : Vec3, p1 : Vec3, p2 : Vec3, p3 : Vec3) : Vec3 {
-			var int = getIntersectionPoint(rayOrigin, rayDirection, p0, p1, p3);
+			var intersectionPoint = getIntersectionPoint(rayOrigin, rayDirection, p0, p1, p3);
 			var closestPoint = vec3(0, 0, 0);
 			if (traceTriangle(rayOrigin, rayDirection, p0, p3, p2)) {
 				closestPoint = getIntersectionPoint(rayOrigin, rayDirection, p0, p3, p2);
@@ -253,7 +253,7 @@ class RectangleLight extends Light {
 				closestPoint = getIntersectionPoint(rayOrigin, rayDirection, p0, p1, p3);
 			}
 			else {
-				var p = int - lightPos;
+				var p = intersectionPoint - lightPos;
 				var right = (p1 - p0).normalize();
 				var up = (p2 - p0).normalize();
 				var intRight = clamp(dot(p, right), -width * 0.5, width * 0.5) * right;
