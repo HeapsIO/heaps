@@ -186,7 +186,7 @@ class Texture {
 		else
 		#end
 			h3d.pass.Copy.run(this, t);
-		lastFrame = old;
+		@:bypassAccessor lastFrame = old;
 		return t;
 	}
 
@@ -393,7 +393,7 @@ class Texture {
 		var old = lastFrame;
 		preventAutoDispose();
 		var pix = mem.driver.capturePixels(this, face, mipLevel, region);
-		lastFrame = old;
+		@:bypassAccessor lastFrame = old;
 		return pix;
 	}
 
