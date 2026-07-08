@@ -194,6 +194,8 @@ class Checker {
 				[for( i => t in genType ) { args : [ { name: "x", type: t } ], ret: genIType[i] }];
 			case IntBitsToFloat, UintBitsToFloat:
 				[for( i => t in genType ) { args : [ { name: "x", type: genIType[i] } ], ret: t }];
+			case FindLSB, FindMSB, BitCount:
+				[for( i => t in genIType ) { args : [ { name: "x", type: genIType[i] } ], ret: t }];
 			case SetLayout:
 				[
 					{ args : [{ name : "x", type : TInt },{ name : "y", type : TInt },{ name : "z", type : TInt }], ret : TVoid },
@@ -206,7 +208,7 @@ class Checker {
 				null;
 			case VertexAt:
 				[for( t in genType ) { args : [ { name : "v", type : t }, { name : "index", type : TInt } ], ret : t }];
-			case AtomicAdd:
+			case AtomicAdd, AtomicOr, AtomicAnd:
 				[{ args : [{ name : "buf", type : TBuffer(TInt, SConst(0), RW) },{ name : "index", type : TInt }, { name : "data", type : TInt }], ret : TInt }];
 			case _ if( g.getName().indexOf("_") > 0 ):
 				var name = g.getName();
@@ -415,10 +417,14 @@ class Checker {
 
 	function unifyExpr( e : TExpr, t : Type ) {
 		if( !tryUnify(e.t, t) ) {
-			if( e.t == TInt && t == TFloat ) {
-				toFloat(e);
+			if( e.t == TInt ) {
+				if( t == TFloat ) {
+					toFloat(e);
+					return;
+				} else if( t == TBool )
+					return;
+			} else if ( e.t == TBool && t == TInt)
 				return;
-			}
 			error(e.t.toString() + " should be " + t.toString(), e.p);
 		}
 	}
@@ -685,6 +691,13 @@ class Checker {
 				}
 				type = TVoid;
 				TBinop(OpAssignOp(op == OpIncrement ? OpAdd : OpSub), e1, { e : TConst(CInt(1)), t : TInt, p : e1.p });
+			case OpNegBits:
+				switch( e1.t ){
+				case TInt, TVec(_, VInt):
+				default: error("Cannot negate bits of " + e1.t.toString(), e.pos);
+				}
+				type = e1.t;
+				TUnop(op, e1);
 			default:
 				error("Operation non supported", e.pos);
 			}
@@ -1384,6 +1397,7 @@ class Checker {
 			case [_, TInt, TVec(_,VInt)]: e2.t;
 			case [_, TVec(_,VInt), TInt]: e1.t;
 			case [OpMult, TMat4, TMat4]: TMat4;
+			case [OpMult, TMat3, TMat3]: TMat3;
 			default:
 				var opName = switch( op ) {
 				case OpMult: "multiply";

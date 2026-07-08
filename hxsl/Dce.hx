@@ -274,7 +274,7 @@ class Dce {
 			check(val, writeTo, isAffected);
 			writeTo.pop();
 			isAffected.append(v,15);
-		case TCall({ e : TGlobal(AtomicAdd)}, [{ e : TVar(v) }, idx, data]):
+		case TCall({ e : TGlobal(AtomicAdd|AtomicAnd|AtomicOr)}, [{ e : TVar(v) }, idx, data]):
 			var v = get(v);
 			writeTo.push(v, 15);
 			check(idx, writeTo, isAffected);

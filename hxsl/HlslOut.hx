@@ -116,6 +116,9 @@ class HlslOut {
 		m.set(UintBitsToFloat, "_uintBitsToFloat");
 		m.set(RoundEven, "round");
 		m.set(GroupMemoryBarrier, "GroupMemoryBarrier");
+		m.set(FindLSB, "firstbitlow");
+		m.set(FindMSB, "firstbithigh");
+		m.set(BitCount, "countbits");
 		for( g in m )
 			KWDS.set(g, true);
 		m;
@@ -423,6 +426,10 @@ class HlslOut {
 			 }");
 		case AtomicAdd:
 			decl("int atomicAdd( RWStructuredBuffer<int> buf, int index, int data ) { int val; InterlockedAdd(buf[index], data, val); return val; }");
+		case AtomicAnd:
+			decl("int atomicAnd( RWStructuredBuffer<int> buf, int index, int data ) { int val; InterlockedAnd(buf[index], data, val); return val; }");
+		case AtomicOr:
+			decl("int atomicOr( RWStructuredBuffer<int> buf, int index, int data ) { int val; InterlockedOr(buf[index], data, val); return val; }");
 		case InvLerp:
 			decl("float invLerp(float v, float a, float b) { return saturate((v - a) / (b - a)); }");
 		case TextureSize:
@@ -612,6 +619,17 @@ class HlslOut {
 			ident(v);
 			add(", ");
 			addValue(index, tabs);
+			add(")");
+		case TCall(e = { e : TGlobal(g = FindMSB|FindLSB) }, args = [v]):
+			declGlobal(g, args);
+			addValue(e,tabs);
+			var channel = switch(v.t) {
+			case TInt: "";
+			case TVec(s, VInt): '$s';
+			default: throw "assert";
+			}
+			add('((uint$channel)');
+			addValue(v, tabs);
 			add(")");
 		case TCall(e = { e : TGlobal(g) }, args):
 			declGlobal(g, args);

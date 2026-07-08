@@ -496,8 +496,8 @@ class GlslOut {
 			add("clamp(");
 			addValue(e, tabs);
 			add(", 0., 1.)");
-		case TCall( { e : TGlobal(AtomicAdd) }, args):
-			add("atomicAdd(");
+		case TCall( { e : TGlobal(g = AtomicAdd|AtomicAnd|AtomicOr) }, args):
+			add(getFunName(g,args,e.t));
 			addValue(args[0], tabs);
 			add("[");
 			addValue(args[1], tabs);
