@@ -161,11 +161,25 @@ class FileConverter {
 			return v;
 		if( v is Array ) {
 			var a : Array<Dynamic> = v;
-			return [for( v in a ) formatValue(v)].toString();
+			var s = "[";
+			var first = true;
+			for( v in a ) {
+				s += first?"":",";
+				first = false;
+				s += formatValue(v);
+			}
+			return s + "]";
 		}
 		if( v is haxe.ds.StringMap ) {
 			var m : haxe.ds.StringMap<Dynamic> = v;
-			return [for( k=>v in m ) formatValue(k)+"_"+formatValue(v)].toString();
+			var s = "[";
+			var first = true;
+			for( k=>v in m ) {
+				s += first?"":",";
+				first = false;
+				s += formatValue(k)+"_"+formatValue(v);
+			}
+			return s + "]";
 		}
 		var fl = Reflect.fields(v);
 		fl.sort(Reflect.compare);
