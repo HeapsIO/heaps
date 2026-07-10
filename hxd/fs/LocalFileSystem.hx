@@ -375,7 +375,8 @@ class LocalFileSystem implements FileSystem {
 		return true;
 	}
 	function checkPath(path: String) {
-		if (StringTools.contains(path, "../"))
+		// fullPath() resolves symlinks; a target outside baseDir can only get the leaf check
+		if (StringTools.contains(path, "../") || !StringTools.startsWith(path, baseDir))
 			return checkPathLeaf(path);
 		var relPath = path.substr(baseDir.length);
 		var split = relPath.split("/");
