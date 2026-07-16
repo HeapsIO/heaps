@@ -220,7 +220,7 @@ class PbrMaterial extends Material {
 		// Backward compatibility
 		if( (props:Dynamic).culling is Bool )
 			props.culling = (props:Dynamic).culling ? Back : None;
-		#if editor
+		#if (editor || editor_hl)
 		if( (props:Dynamic).colorMask == null ) props.colorMask = 15;
 
 		// Remove unused fields
