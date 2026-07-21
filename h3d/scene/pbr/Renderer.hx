@@ -563,7 +563,7 @@ class Renderer extends h3d.scene.Renderer {
 	}
 
 	function end() {
-		#if editor
+		#if ( editor || editor_hl )
 			switch( currentStep ) {
 				case MainDraw:
 				case BeforeTonemapping:
