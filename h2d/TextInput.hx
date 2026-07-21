@@ -62,6 +62,7 @@ class TextInput extends Text {
 	public var useSoftwareKeyboard : Bool = true;
 	public static dynamic function showSoftwareKeyboard(target:TextInput) {}
 	public static dynamic function hideSoftwareKeyboard(target:TextInput) {}
+	public dynamic function onSoftwareKeyboardEnd(isSubmit: Bool) {}
 
 	var interactive : h2d.Interactive;
 	var cursorText : String;
