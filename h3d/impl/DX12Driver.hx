@@ -3612,6 +3612,21 @@ class DX12Driver extends h3d.impl.Driver {
 
 		#end
 	}
+
+	#if (hl_ver >= version("1.16.0"))
+	public static function setGpuCrashHandler( cb : (String, haxe.io.Bytes, Bool) -> Void ) {
+		var wrapper = function( name : hl.Bytes, bytes : hl.Bytes, size : Int, lastFile : Bool ) {
+			try {
+				var name = @:privateAccess String.fromUTF8(name);
+				var content = haxe.io.Bytes.ofData(new haxe.io.BytesData(bytes, size));
+				cb(name, content, lastFile);
+			} catch(e) {
+				trace("Failed to process gpu crash");
+			}
+		}
+		Driver.setGpuCrashHandler(wrapper);
+	}
+	#end
 }
 
 #end
