@@ -1,5 +1,10 @@
 package h3d.scene.pbr;
 
+import h3d.impl.Driver;
+#if dlss
+import heaps.dlss.Dlss;
+#end
+
 enum abstract DisplayMode(String) {
 	/*
 		Full PBR display
@@ -124,6 +129,15 @@ class Renderer extends h3d.scene.Renderer {
 		Vec4([Swiz(Value("output.color"),[X,Y,Z]), Value("output.albedoStrength",1)]),
 		Vec4([Value("output.normal",3), Value("output.normalStrength",1)]),
 		#if !MRT_low
+		Vec4([Value("output.metalness"), Value("output.roughness"), Value("output.occlusion"), Value("output.pbrStrength")])
+		#else
+		Vec4([Value("output.metalness"), Value("output.roughness"), Value("output.emissive"), Value("output.pbrStrength")])
+		#end
+	]);
+	var emissiveDecalsOutput = new h3d.pass.Output("emissiveDecal",[
+		Vec4([Swiz(Value("output.color"),[X,Y,Z]), Value("output.albedoStrength",1)]),
+		Vec4([Value("output.normal",3), Value("output.normalStrength",1)]),
+		#if !MRT_low
 		Vec4([Value("output.metalness"), Value("output.roughness"), Value("output.occlusion"), Value("output.pbrStrength")]),
 		Vec4([Value("output.emissive"), Value("output.custom1"), Value("output.custom2"), Value("output.emissiveStrength")])
 		#else
@@ -139,6 +153,9 @@ class Renderer extends h3d.scene.Renderer {
 		Vec4([Value("output.depth"),Const(0),Const(0),h3d.scene.pbr.Renderer.ALPHA]),
 		Vec4([Value("output.velocity", 2), Const(0), Const(0)])
 	]);
+	var depthOutput = new h3d.pass.Output("depth",
+		[Swiz(Value("output.depth",1),[X,X,X,X])]
+	);
 
 	public function new(?env) {
 		super();
@@ -154,8 +171,10 @@ class Renderer extends h3d.scene.Renderer {
 		allPasses.push(output);
 		allPasses.push(defaultPass);
 		allPasses.push(decalsOutput);
+		allPasses.push(emissiveDecalsOutput);
 		allPasses.push(colorDepthOutput);
 		allPasses.push(colorDepthVelocityOutput);
+		allPasses.push(depthOutput);
 		allPasses.push(new h3d.pass.Shadows(null));
 		refreshProps();
 	}
@@ -169,13 +188,17 @@ class Renderer extends h3d.scene.Renderer {
 
 	override function getPassByName(name:String):h3d.pass.Output {
 		switch( name ) {
-		case "overlay", "beforeTonemapping", "beforeTonemappingAlpha", "albedo", "afterTonemapping", "forward", "forwardAlpha", "distortion":
+		case "overlay", "beforeTonemapping", "beforeTonemappingAlpha", "albedo", "afterTonemapping", "forward", "forwardAlpha", "distortion", "debug", "lightProbe":
 			return defaultPass;
 		case "default", "alpha", "additive":
 			return output;
 		case "decal":
 			return decalsOutput;
-		#if editor
+		case "emissiveDecal":
+			return emissiveDecalsOutput;
+		case "depthPrepass", "forwardDepthPrepass", "beforeTonemappingDepthPrepass":
+			return depthOutput;
+		#if (editor || editor_hl)
 		case "highlight", "highlightBack":
 			return defaultPass;
 		#end
@@ -239,13 +262,15 @@ class Renderer extends h3d.scene.Renderer {
 	}
 
 	var hzbPass = new h3d.pass.ScreenFx(new h3d.shader.HZB());
-	public function computeHZB() : h3d.mat.Texture {
-		var hzbTarget = allocTarget("HZB", false, 1, R32F, [Target, Writable, MipMapped, ManualMipMapGen]);
+	public function updateHZB(max : Bool = true) {
+		ctx.hzb = allocTarget("HZB", false, 1, R32F, [Target, Writable, MipMapped, ManualMipMapGen]);
+		var hzbTarget = ctx.hzb;
 		var hzbTargetCopy = allocTarget("HZBCopy", false, 1, R32F, [Target, Writable, MipMapped, ManualMipMapGen]);
 		var depth = textures.albedo.depthBuffer;
 		var width = textures.depth.width;
 		var height = textures.depth.height;
 		var hzbShader = hzbPass.shader;
+		hzbShader.compareMax = max;
 
 		var prevFilter = depth.filter;
 		depth.filter = Nearest;
@@ -266,23 +291,20 @@ class Renderer extends h3d.scene.Renderer {
 			var target = lvl & 1 == 0 ? hzbTarget : hzbTargetCopy;
 			source.startingMip = lvl - 1;
 			hzbShader.source = source;
-			hzbShader.invWidth = 1.0 / curWidth;
-			hzbShader.invHeight = 1.0 / curHeight;
+			hzbShader.sourceWidth = curWidth;
+			hzbShader.sourceHeight = curHeight;
 			ctx.engine.pushTarget(target, 0, lvl);
 			hzbPass.render();
 			ctx.engine.popTarget();
 
-			if ( target == hzbTargetCopy ) {
-				hzbTargetCopy.startingMip = lvl;
-				h3d.pass.Copy.run(hzbTargetCopy, hzbTarget, None, null, 0, lvl);
-			}
+			if ( target == hzbTargetCopy )
+				h3d.pass.Copy.run(hzbTargetCopy, hzbTarget, None, null, 0, lvl, lvl);
+
 			curWidth >>= 1;
 			curHeight >>= 1;
 		}
 		hzbTarget.startingMip = 0;
 		hzbTargetCopy.startingMip = 0;
-
-		return hzbTarget;
 	}
 
 	function lighting() {
@@ -453,7 +475,7 @@ class Renderer extends h3d.scene.Renderer {
 	}
 
 	function renderEditorOutline() {
-		#if editor
+		#if (editor || editor_hl)
 		if (showEditorGuides) {
 			renderPass(defaultPass, get("debuggeom"), backToFront);
 			renderPass(defaultPass, get("debuggeom_alpha"), backToFront);
@@ -468,8 +490,80 @@ class Renderer extends h3d.scene.Renderer {
 		#end
 	}
 
+	static var resources : Map<h3d.impl.Driver.DLSSTag, h3d.mat.Texture> = new Map();
+	static var constants = new h3d.impl.Driver.DLSSParams();
+	static var viewToViewPrev = new h3d.Matrix();
+	static var tmp = new h3d.Matrix();
+	static var clipToPrevClip = new h3d.Matrix();
+	static var prevClipToClip = new h3d.Matrix();
+
+	function applyDLSS(quality : DLSSQuality, mode : DLSSMode, reset : Bool = false) {
+		if (ctx.engine.driver.hasFeature(DLSS)) {
+			var ldr = ctx.getGlobal("ldrMap");
+			var curFrame = allocTarget("curFrame", false, 1.0, ldr.format);
+			h3d.pass.Copy.run(ldr, curFrame);
+			var depthMap : h3d.mat.Texture = getPbrDepth();
+			var velocity = ctx.getGlobal("velocity");
+			var output = ctx.textures.allocTarget("dlssOutput", ctx.engine.width, ctx.engine.height, true, ldr.format, [ Writable ]);
+
+			resources.clear();
+			resources.set(ColorIn, curFrame);
+			resources.set(MotionVectors, velocity);
+			resources.set(Depth, depthMap);
+			resources.set(ColorOut, output);
+
+			constants.autoExposure = true;
+			constants.colorBufferHDR = false;
+			constants.cameraViewToClip = ctx.camera.mproj;
+			var clipToView = ctx.camera.getInverseProj();
+			constants.clipToCameraView = clipToView;
+
+			var viewToWorld = ctx.camera.getInverseView();
+			viewToViewPrev.multiply(viewToWorld, ctx.prevCamera.mcam);
+			tmp.multiply(clipToView, viewToViewPrev);
+			clipToPrevClip.multiply(tmp, ctx.prevCamera.mproj);
+			constants.clipToPrevClip = clipToPrevClip;
+
+			prevClipToClip.initInverse(clipToPrevClip);
+			constants.prevClipToClip = prevClipToClip;
+
+			constants.jitterOffsetX = ctx.camera.jitterOffsetX;
+			constants.jitterOffsetY = ctx.camera.jitterOffsetY;
+			constants.mvecScaleX = 1.0;
+			constants.mvecScaleY = 1.0;
+			constants.cameraPos = ctx.camera.pos;
+			constants.cameraUp = ctx.camera.getUp();
+			constants.cameraRight = ctx.camera.getRight();
+			constants.cameraFwd = ctx.camera.getForward();
+			constants.cameraNear = ctx.camera.zNear;
+			constants.cameraFar = ctx.camera.zFar;
+			constants.cameraFOV = ctx.camera.fovY;
+			constants.cameraAspectRatio = ctx.camera.screenRatio;
+			constants.depthInverted = ctx.useReverseDepth;
+			constants.cameraMotionIncluded = true;
+			constants.reset = reset;
+			constants.orthographicProjection = false;
+			constants.motionVectorsDilated = false;
+			constants.motionVectorsJittered = false;
+
+			ctx.engine.driver.applyDLSS(resources, constants, quality, mode);
+			ctx.setGlobal("ldrMap", output);
+		}
+	}
+
+	function setRenderResolution( width : Int, height : Int ) {
+		ctx.setRenderResolution(width, height);
+		@:privateAccess {
+			if ( width == ctx.engine.width && height == ctx.engine.height ) {
+				ctx.textures.defaultDepthBuffer = h3d.mat.Texture.getDefaultDepth();
+			} else {
+				ctx.textures.defaultDepthBuffer = allocTarget("defaultDepth", false, 1., h3d.mat.Texture.getDefaultDepth().format);
+			}
+		}
+	}
+
 	function end() {
-		#if editor
+		#if ( editor || editor_hl )
 			switch( currentStep ) {
 				case MainDraw:
 				case BeforeTonemapping:
@@ -514,7 +608,7 @@ class Renderer extends h3d.scene.Renderer {
 		#end
 		textures.depth = allocTarget("depth", true, 1., R32F);
 		textures.hdr = allocTarget("hdrOutput", true, 1, #if MRT_low RGB10A2 #else RGBA16F #end);
-		textures.ldr = allocTarget("ldrOutput");
+		textures.ldr = allocTarget("ldrOutput", true, 1., null, [ Writable ]);
 		if ( ctx.computeVelocity )
 			textures.velocity = allocTarget("velocity", true, 1., RG16F );
 	}
@@ -654,6 +748,14 @@ class Renderer extends h3d.scene.Renderer {
 		ctx.engine.popTarget();
 	}
 
+	function drawEmissiveDecals( passName : String ) {
+		var passes = get(passName);
+		if( passes.isEmpty() ) return;
+		ctx.engine.pushTargets([textures.albedo,textures.normal,textures.pbr #if !MRT_low , textures.other #end]);
+		renderPass(emissiveDecalsOutput, passes);
+		ctx.engine.popTarget();
+	}
+
 	function getPbrRenderTargets( depth : Bool ) {
 		var targets = [textures.albedo, textures.normal, textures.pbr #if !MRT_low , textures.other #end];
 		if ( depth )
@@ -683,6 +785,7 @@ class Renderer extends h3d.scene.Renderer {
 
 		begin(Decals);
 		drawPbrDecals("decal");
+		drawEmissiveDecals("emissiveDecal");
 		end();
 
 		setTarget(textures.hdr);
@@ -723,6 +826,10 @@ class Renderer extends h3d.scene.Renderer {
 
 		begin(Overlay);
 		draw("overlay");
+		end();
+
+		begin(Debug);
+		draw("debug");
 		end();
 
 		endPbr();

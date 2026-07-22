@@ -137,14 +137,24 @@ class Text extends Drawable {
 	**/
 	public function new( font : Font, ?parent : h2d.Object ) {
 		super(parent);
-		this.font = font;
+		this.font = resolveFont(font);
 		textAlign = Left;
 		text = "";
 		currentText = "";
 		textColor = 0xFFFFFF;
 	}
 
-	function set_font(font) {
+	function resolveFont(font:Font) {
+		while( true ) {
+			if( font == null || font.type != FontGroup ) return font;
+			var sub = resolveSubFont(font, this);
+			if( font == sub ) throw "Recursive font";
+			font = sub;
+		}
+	}
+
+	function set_font(font:Font) {
+		font = resolveFont(font);
 		if( this.font == font ) return font;
 		this.font = font;
 		if ( font != null ) {
@@ -165,6 +175,8 @@ class Text extends Drawable {
 					sdfShader.smoothing = smoothing;
 					sdfShader.channel = channel;
 					sdfShader.autoSmoothing = smoothing == -1;
+				case FontGroup:
+					throw "assert";
 			}
 		}
 		if( glyphs != null ) glyphs.remove();
@@ -539,6 +551,10 @@ class Text extends Drawable {
 			h = calcHeight;
 		}
 		addBounds(relativeTo, out, x, y, w, h);
+	}
+
+	public static dynamic function resolveSubFont( fnt : Font, text : Text ) : Font {
+		return fnt.subFonts[0];
 	}
 
 }

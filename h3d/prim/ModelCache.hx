@@ -156,7 +156,7 @@ class ModelCache {
 			if( m.lastTime < lastT ) {
 				var usedPrim = false;
 				for( p in @:privateAccess m.lib.cachedPrimitives )
-					if( p.refCount > 1 ) {
+					if( p != null && p.refCount > 1 ) {
 						usedPrim = true;
 						break;
 					}

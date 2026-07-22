@@ -207,7 +207,7 @@ class GlslOut {
 			throw "assert";
 		case TChannel(n):
 			add("channel" + n);
-		case TTextureHandle:
+		case TTextureHandle, TBufferHandle:
 			throw "assert";
 		}
 	}
@@ -317,7 +317,7 @@ class GlslOut {
 		case PackNormal:
 			decl("vec4 packNormal( vec3 v ) { return vec4((v + vec3(1.)) * vec3(0.5),1.); }");
 		case UnpackNormal:
-			decl("vec3 unpackNormal( vec4 v ) { return normalize((v.xyz - vec3(0.5)) * vec3(2.)); }");
+			decl("vec3 unpackNormal( vec4 v ) { vec2 normalXY = (v.xy - vec2(0.5)) * vec2(2.); return vec3(normalXY, sqrt(1.0 - clamp(dot(normalXY, normalXY), 0.0, 1.0))); }");
 		case Texture:
 			switch( args[0].t ) {
 			case TSampler(T2D,_), TChannel(_) if( isES2 ):
@@ -496,8 +496,8 @@ class GlslOut {
 			add("clamp(");
 			addValue(e, tabs);
 			add(", 0., 1.)");
-		case TCall( { e : TGlobal(AtomicAdd) }, args):
-			add("atomicAdd(");
+		case TCall( { e : TGlobal(g = AtomicAdd|AtomicAnd|AtomicOr) }, args):
+			add(getFunName(g,args,e.t));
 			addValue(args[0], tabs);
 			add("[");
 			addValue(args[1], tabs);

@@ -182,6 +182,7 @@ class RectangleLight extends Light {
 		points.push(p2);
 
 		primitive = new h3d.prim.Polygon(points);
+		cast (primitive, h3d.prim.Polygon).addNormals();
 		return primitive;
 	}
 

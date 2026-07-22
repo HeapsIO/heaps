@@ -20,6 +20,7 @@ class Build {
 	public var checkJPG = false;
 	public var checkOGG = false;
 	public var whitelist = true;
+	public var infoDepth = -1;
 
 	function new() {
 	}
@@ -158,6 +159,32 @@ class Build {
 		return out;
 	}
 
+	public static function printSize( pak : Data, maxDepth = 0 ) {
+		function fmtSize(b:Float) {
+			if( b >= 1024*1024*1024 ) return Std.string(Math.round(b*10/(1024*1024*1024))/10)+"Gb";
+			if( b >= 1024*1024 ) return Std.string(Math.round(b*10/(1024*1024))/10)+"Mb";
+			return Std.string(Math.round(b*10/1024)/10)+"Kb";
+		}
+		function calcRec(f:File):Float {
+			if( !f.isDirectory ) return f.dataSize;
+			var total = 0.;
+			for( c in f.content ) total += calcRec(c);
+			return total;
+		}
+		function printRec(f:File, depth:Int, indent = "") {
+			var size = calcRec(f);
+			var label = f.name == "" ? "<root>" : f.name;
+			Sys.println(indent + (f.isDirectory ? "> " : "") + label + " " + fmtSize(size));
+			if( (maxDepth == 0 || depth < maxDepth) && f.isDirectory) {
+				for( c in f.content )
+					if(f.isDirectory) printRec(c, depth + 1, indent + "    ");
+				for( c in f.content )
+					if(!f.isDirectory) printRec(c, depth + 1, indent + "    ");
+			}
+		}
+		printRec(pak.root, 0, "");
+	}
+
 	public static dynamic function onInit( b : Build ) {}
 
 	function makePak() {
@@ -198,6 +225,7 @@ class Build {
 		var f = sys.io.File.write(outFile);
 		new Writer(f, align).write(pak, null, out.bytes);
 		f.close();
+		printSize(pak, infoDepth < 0 ? 1 : infoDepth);
 	}
 
 	public static function make( dir = "res", out = "res", ?pakDiff ) {
@@ -225,6 +253,13 @@ class Build {
 					output.push(p);
 			}
 			switch( f ) {
+			case "-info" if( args.length > 0 ):
+				var pakFile = args.shift();
+				var fs = sys.io.File.read(pakFile);
+				var pak = new hxd.fmt.pak.Reader(fs).readHeader();
+				fs.close();
+				printSize(pak, b.infoDepth < 0 ? 3 : b.infoDepth);
+				Sys.exit(0);
 			case "-x" if( args.length > 0 ):
 				var pakFile = args.shift();
 				var fs = sys.io.File.read(pakFile);
@@ -270,6 +305,8 @@ class Build {
 				b.checkOGG = true;
 			case "-config" if( args.length > 0 ):
 				b.configuration = args.shift();
+			case "-info-depth":
+				b.infoDepth = Std.parseInt(args.shift());
 			default:
 				throw "Unknown parameter " + f;
 			}

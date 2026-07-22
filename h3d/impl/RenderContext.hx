@@ -22,6 +22,8 @@ class RenderContext {
 	}
 
 	public function setCurrent() {
+		if (inst != null)
+			onContextChange();
 		inst = this;
 	}
 
@@ -175,6 +177,9 @@ class RenderContext {
 			var v : h3d.mat.TextureHandle = v;
 			fillIntParam(v.handle.low, pos, out);
 			fillIntParam(v.handle.high, pos + 1, out);
+		case TBufferHandle:
+			var v : h3d.BufferHandle = v;
+			fillIntParam(v.handle, pos, out);
 		default:
 			throw "assert " + type;
 		}
@@ -221,13 +226,17 @@ class RenderContext {
 		inline function fill(buf:h3d.shader.Buffers.ShaderBuffers, s:hxsl.RuntimeShader.RuntimeShaderData) {
 			var g = s.globals;
 			var ptr = getPtr(buf.globals);
-			var hid = s.paramsHandleCount;
+			var thid = s.paramsTexHandleCount;
+			var bhid = s.paramsBufHandleCount;
 			while( g != null ) {
 				var v : Dynamic = globals.fastGet(g.gid);
 				if( v == null )
 					throw "Missing global value " + g.path;
-				if ( g.type.match(TTextureHandle) )
-					buf.handles[hid++] = v;
+				switch ( g.type ) {
+				case TTextureHandle: buf.texHandles[thid++] = v;
+				case TBufferHandle:	buf.bufHandles[bhid++] = v;
+				default:
+				}
 				fillRec(v, g.type, ptr, g.pos);
 				g = g.next;
 			}
@@ -259,13 +268,14 @@ class RenderContext {
 				return v;
 			}
 			var v = getInstance(p.instance).getParamValue(p.index);
-			if( v == null && !opt ) throw "Missing param value " + shaders.s + "." + p.name;
+			if( v == null && !opt ) throw "Missing param value " + curInstanceValue + "." + p.name;
 			return v;
 		}
 		inline function fill(buf:h3d.shader.Buffers.ShaderBuffers, s:hxsl.RuntimeShader.RuntimeShaderData) {
 			var p = s.params;
 			var ptr = getPtr(buf.params);
-			var hid = 0;
+			var thid = 0;
+			var bhid = 0;
 			while( p != null ) {
 				if( p.perObjectGlobal == null ) {
 					var i = getInstance(p.instance);
@@ -273,7 +283,11 @@ class RenderContext {
 					case TTextureHandle:
 						var v = i.getParamValue(p.index);
 						if( v == null ) throw "Missing param value " + curInstanceValue + "." + p.name;
-						buf.handles[hid++] = v;
+						buf.texHandles[thid++] = v;
+					case TBufferHandle:
+						var v = i.getParamValue(p.index);
+						if( v == null ) throw "Missing param value " + curInstanceValue + "." + p.name;
+						buf.bufHandles[bhid++] = v;
 					default:
 					}
 					i.writeParam(p.index, p.type, ptr, p.pos);
@@ -314,4 +328,7 @@ class RenderContext {
 		return Std.downcast(inst, cl);
 	}
 
+	public static dynamic function onContextChange() {
+		// Will throw 'Context has changed' down the line
+	}
 }

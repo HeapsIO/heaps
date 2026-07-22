@@ -198,6 +198,15 @@ class CustomParser extends domkit.CssValue.ValueParser {
 				#else
 				return hxd.res.DefaultFont.get();
 				#end
+			case VCall("group",fonts):
+				#if macro
+				for( f in fonts )
+					parseFont(f);
+				#else
+				var fnt = @:privateAccess new h2d.Font("group",0,FontGroup);
+				fnt.subFonts = [for( f in fonts ) parseFont(f)];
+				return fnt;
+				#end
 			case VGroup(args):
 				var args = args.copy();
 				path = parsePath(args[0]);
@@ -351,6 +360,15 @@ class CustomParser extends domkit.CssValue.ValueParser {
 			#else
 				var f = new h2d.filter.ColorMatrix();
 				f.matrix.colorSaturate(v);
+				f;
+			#end
+		case VCall("hue",[v]):
+			var v = parseFloat(v);
+			#if macro
+				true;
+			#else
+				var f = new h2d.filter.ColorMatrix();
+				f.matrix.colorHue(v*Math.PI/180);
 				f;
 			#end
 		case VCall("outline",[s, c]):

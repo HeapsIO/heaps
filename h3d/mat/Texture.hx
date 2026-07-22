@@ -33,7 +33,6 @@ class Texture {
 	public var format(default, null) : TextureFormat;
 
 	var lastFrame(default,set) : Int;
-	var keepPriority : Int;
 	var bits : Int;
 	var waitLoads : Array<Void -> Void>;
 	@:bits(bits) public var mipMap : MipMap;
@@ -187,7 +186,7 @@ class Texture {
 		else
 		#end
 			h3d.pass.Copy.run(this, t);
-		lastFrame = old;
+		@:bypassAccessor lastFrame = old;
 		return t;
 	}
 
@@ -197,16 +196,6 @@ class Texture {
 	**/
 	public function preventAutoDispose() {
 		lastFrame = PREVENT_AUTO_DISPOSE;
-	}
-
-	/**
-		In case we run out of GPU memory, textures that hasn't been used for a long time will be disposed.
-		This allows to set a per texture priority, so textures with lower priority will get disposed first.
-		You can also set a negative value to give priority for a texture to be disposed.
-		Textures with priority > 0 will also not be subject to regular textures cleanup.
-	**/
-	public function setKeepPriority( priority : Int ) {
-		keepPriority = priority;
 	}
 
 	/**
@@ -401,10 +390,11 @@ class Texture {
 		Beware, this is a very slow operation that shouldn't be done during rendering.
 	**/
 	public function capturePixels( face = 0, mipLevel = 0, ?region:h2d.col.IBounds ) : hxd.Pixels {
+		checkAlloc();
 		var old = lastFrame;
 		preventAutoDispose();
 		var pix = mem.driver.capturePixels(this, face, mipLevel, region);
-		lastFrame = old;
+		@:bypassAccessor lastFrame = old;
 		return pix;
 	}
 

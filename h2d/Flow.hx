@@ -1091,7 +1091,7 @@ class Flow extends Object {
 	}
 
 	function onMouseWheel( e : hxd.Event ) {
-		if( overflow == Scroll ) {
+		if( overflow == Scroll && contentHeight > calculatedHeight ) {
 			scrollPosY += e.wheelDelta * scrollWheelSpeed;
 			e.propagate = false;
 		}
@@ -1438,6 +1438,7 @@ class Flow extends Object {
 			});
 
 			// position all not absolute nodes
+			if( multiline ) maxLineHeight = 0;
 			forChildren(function(i, p, c) {
 				if( p.autoSizeWidth != null || p.autoSizeHeight != null )
 					calcSize(p, c);
@@ -1636,6 +1637,7 @@ class Flow extends Object {
 			});
 
 			// position all not absolute nodes
+			if( multiline ) maxColWidth = 0;
 			forChildren(function(i, p, c) {
 				if( p.autoSizeWidth != null || p.autoSizeHeight != null )
 					calcSize(p, c);

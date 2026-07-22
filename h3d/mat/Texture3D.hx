@@ -21,7 +21,7 @@ class Texture3D extends Texture {
 		preventAutoDispose();
 		var t = new Texture3D(width, height, depth, null, format);
 		h3d.pass.Copy.run(this, t);
-		lastFrame = old;
+		@:bypassAccessor lastFrame = old;
 		return t;
 	}
 

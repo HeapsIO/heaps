@@ -1,7 +1,5 @@
 package hxd.tools;
 
-#if (hl && hl_ver >= version("1.15.0"))
-
 enum abstract SimplifyOptions(Int) to Int from Int {
 	/* Do not move vertices that are located on the topological border (vertices on triangle edges that don't have a paired triangle). Useful for simplifying portions of the larger mesh. */
 	var LockBorder = 1 << 0;
@@ -13,6 +11,14 @@ enum abstract SimplifyOptions(Int) to Int from Int {
 	var Prune = 1 << 3;
 }
 
+enum abstract TangentOptions(Int) to Int from Int {
+	/* Produce tangents compatible with MikkTSpace (same weighting and fallbacks) at the cost of reduced quality. Not recommended unless normal maps are baked. */
+	var TangentCompatible = 1 << 0;
+	/* Experimental: For vertices only connected to degenerate triangles, output zero tangents instead of an arbitrary fallback.  */
+	var TangentZeroFallback = 1 << 1;
+}
+
+#if (hl && hl_ver >= version("1.15.0"))
 class MeshOptimizer {
 	/**
 	Generates a vertex remap table from the vertex buffer and an optional index buffer and returns number of unique vertices
@@ -66,6 +72,36 @@ class MeshOptimizer {
 		return 0;
 	}
 
+#if (hl_ver >= version("1.16.0"))
+	/**
+	* Mesh simplifier with position/attribute update
+	* Reduces the number of triangles in the mesh, attempting to preserve mesh appearance as much as possible.
+	* Similar to meshopt_simplifyWithAttributes, but destructively updates positions and attribute values for optimal appearance.
+	* The algorithm tries to preserve mesh topology and can stop short of the target goal based on topology constraints or target error.
+	* If not all attributes from the input mesh are needed, it's recommended to reindex the mesh without them prior to simplification.
+	* Returns the number of indices after simplification, indices are destructively updated with new index data
+	*
+	* The updated index buffer references vertices from the original vertex buffer, however the vertex positions and attributes are updated in-place.
+	* Creating a compact vertex buffer using meshopt_optimizeVertexFetch is recommended; if the original vertex data is needed, it should be copied before simplification.
+	* Note that the number of attributes with non-zero weights affects memory requirements and running time. Attributes with zero weights are not updated.
+	*
+	* vertexPos should have float3 position in the first 12 bytes of each vertex
+	* vertexAttributes should have attributeCount floats for each vertex
+	* attributeWeights should have attributeCount floats in total; the weights determine relative priority of attributes between each other and wrt position
+	* attributeCount must be <= 32
+	* vertexLock can be null; when it's not null, it should have a value for each vertex composed of meshopt_SimplifyVertex_* flags
+	* targetError represents the error relative to mesh extents that can be tolerated, e.g. 0.01 = 1% deformation (unless absolute error option is used)
+	* options must be a bitmask composed of meshopt_SimplifyX options; 0 is a safe default
+	* resultErrorOut can be null; when it's not null, it will contain the resulting (relative/absolute) error after simplification
+	*/
+	@:hlNative("heaps", "simplifyWithUpdate")
+	public static function simplifyWithUpdate(indicesOut:hl.Bytes, indexCount : Int, vertexPos:hl.Bytes, vertexCount:Int, vertexStride:Int,
+		vertexAttributes:hl.Bytes, attributeStride:Int, attributeWeights:hl.Bytes, attributeCount:Int,
+		vertexLock:hl.Bytes, targetIndexCount:Int, targetError:Single, options:Int, resultErrorOut:hl.Bytes) : Int {
+		return 0;
+	}
+#end
+
 	/**
 	Vertex transform cache optimizer
 	Reorders indices to reduce the number of GPU vertex shader invocations
@@ -101,5 +137,23 @@ class MeshOptimizer {
 	public static function optimizeVertexFetch(verticesOut:hl.Bytes, indices:hl.Bytes, indexCount:Int, verticesIn:hl.Bytes, vertexCount:Int, vertexSize:Int) : Int {
 		return 0;
 	}
+
+	#if (hl_ver >= version("1.16.0"))
+	/**
+	* Computes per-corner tangent vectors; for each corner, computes normalized tangent vector (xyz) and orientation (w, +/-1).
+	* Bitangent can be reconstructed via cross(normal, tangent.xyz) * tangent.w.
+	* To apply tangents to the mesh, either deindex and reindex it with the tangent stream, or copy tangents to existing vertex data while duplicating
+	* vertices with different tangent vectors (e.g. on UV mirror seams).
+	* Input can be indexed or unindexed (indices=NULL); this does not affect the resulting tangents, but indexed inputs are ~30% faster to process.
+	*
+	* result must contain enough space for the output tangent data (indexCount*4 elements)
+	* indices can be NULL if the input is unindexed
+	* vertexPos should have float3 position in the first 12 bytes of each vertex
+	* vertexNormals should have unit float3 normal in the first 12 bytes of each vertex
+	* vertexUVs should have float2 texture coordinate in the first 8 bytes of each vertex
+	*/
+	@:hlNative("heaps", "generate_tangents")
+	public static function generateTangents(tangentsOut:hl.Bytes, indices:hl.Bytes, indexCount:Int, vertexPos:hl.Bytes, vertexCount:Int, posStride:Int, vertexNormals:hl.Bytes, normalStride:Int, vertexUVs:hl.Bytes, uvStride:Int, options:Int) {}
+	#end
 }
 #end

@@ -177,7 +177,7 @@ class HtmlText extends Text {
 	public dynamic function loadFont( name : String ) : Font {
 		var f = defaultLoadFont(name);
 		if (f == null) return this.font;
-		else return f;
+		return resolveFont(f);
 	}
 
 	/**

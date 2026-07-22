@@ -128,6 +128,7 @@ class GlDriver extends Driver {
 	var rightHanded = false;
 	var hasMultiIndirect = false;
 	var maxCompressedTexturesSupport = 0;
+	var hasRGTCSupport = false;
 
 	public static var hasMultiIndirectCount = false;
 
@@ -173,6 +174,7 @@ class GlDriver extends Driver {
 		#if hlsdl
 		hasMultiIndirect = gl.getConfigParameter(0) > 0;
 		maxCompressedTexturesSupport = 7;
+		hasRGTCSupport = true;
 		var driver = getDriverName(false).toLowerCase();
 		isIntelGpu = ~/intel.*(graphics|gpu)/.match(driver);
 		#end
@@ -184,6 +186,7 @@ class GlDriver extends Driver {
 		#if hlmesa
 		hasMultiIndirect = true;
 		maxCompressedTexturesSupport = 7;
+		hasRGTCSupport = true;
 		#end
 
 		var v : String = gl.getParameter(GL.VERSION);
@@ -1025,8 +1028,8 @@ class GlDriver extends Driver {
 		case GL.RGB: GL.RGB;
 		case GL.R11F_G11F_B10F: GL.RGB;
 		case GL.RGB10_A2: GL.RGBA;
-		case GL.RED, GL.R8, GL.R16F, GL.R32F, 0x822A: GL.RED;
-		case GL.RG, GL.RG8, GL.RG16F, GL.RG32F, 0x822C: GL.RG;
+		case GL.RED, GL.R8, GL.R16F, GL.R32F, 0x822A, 0x8DBB: GL.RED;
+		case GL.RG, GL.RG8, GL.RG16F, GL.RG32F, 0x822C, 0x8DBD: GL.RG;
 		case GL.RGB16F, GL.RGB32F, 0x8054, 0x8E8F: GL.RGB;
 		case 0x83F1, 0x83F2, 0x83F3, 0x805B, 0x8E8C: GL.RGBA;
 		default: throw "Invalid format " + t.internalFmt;
@@ -1039,6 +1042,7 @@ class GlDriver extends Driver {
 		case RGBA16F, RGBA32F: hasFeature(FloatTextures);
 		case SRGB, SRGB_ALPHA: hasFeature(SRGBTextures);
 		case R8, RG8, RGB8, R16F, RG16F, RGB16F, R32F, RG32F, RGB32F, RG11B10UF, RGB10A2: #if js glES >= 3 #else true #end;
+		case S3TC(4), S3TC(5): hasRGTCSupport;
 		case S3TC(n): n <= maxCompressedTexturesSupport;
 		default: false;
 		}
@@ -1137,6 +1141,8 @@ class GlDriver extends Driver {
 			case 1: tt.internalFmt = 0x83F1; // COMPRESSED_RGBA_S3TC_DXT1_EXT
 			case 2:	tt.internalFmt = 0x83F2; // COMPRESSED_RGBA_S3TC_DXT3_EXT
 			case 3: tt.internalFmt = 0x83F3; // COMPRESSED_RGBA_S3TC_DXT5_EXT
+			case 4 if( hasRGTCSupport ): tt.internalFmt = 0x8DBB; // COMPRESSED_RED_RGTC1
+			case 5 if( hasRGTCSupport ): tt.internalFmt = 0x8DBD; // COMPRESSED_RG_RGTC2
 			case 6: tt.internalFmt = 0x8E8F; // COMPRESSED_RGB_BPTC_UNSIGNED_FLOAT
 			case 7: tt.internalFmt = 0x8E8C; // COMPRESSED_RGBA_BPTC_UNORM
 			default: throw "Unsupported texture format "+t.format;
@@ -1972,6 +1978,8 @@ class GlDriver extends Driver {
 		return switch(f) {
 		case Bindless:
 			false;
+		case DLSS:
+			false;
 		default:
 			#if js
 			features.get(f);
@@ -1990,6 +1998,7 @@ class GlDriver extends Driver {
 			features.set(f,checkFeature(f));
 		if( gl.getExtension("WEBGL_compressed_texture_s3tc") != null ) {
 			maxCompressedTexturesSupport = 3;
+			hasRGTCSupport = gl.getExtension("EXT_texture_compression_rgtc") != null;
 			if( gl.getExtension("EXT_texture_compression_bptc") != null )
 				maxCompressedTexturesSupport = 7;
 		}

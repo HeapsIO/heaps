@@ -55,6 +55,9 @@ class Window {
 		return null;
 	}
 
+	public function setIcon(icon: hxd.BitmapData) : Void {
+	}
+
 	public function event( e : hxd.Event ) : Void {
 		for( et in eventTargets )
 			et(e);

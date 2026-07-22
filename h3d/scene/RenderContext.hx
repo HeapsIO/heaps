@@ -1,5 +1,6 @@
 package h3d.scene;
 
+import h3d.mat.Texture;
 import h3d.col.Frustum;
 
 private class SharedGlobal {
@@ -29,6 +30,8 @@ class RenderContext extends h3d.impl.RenderContext {
 	public var computingStatic : Bool;
 	public var computeVelocity : Bool;
 	public var useReverseDepth : Bool;
+	public var renderResolutionWidth : Int;
+	public var renderResolutionHeight : Int;
 
 	public var lightSystem : h3d.scene.LightSystem;
 	public var extraShaders : hxsl.ShaderList;
@@ -39,8 +42,12 @@ class RenderContext extends h3d.impl.RenderContext {
 	public var forcedScreenRatio : Float = -1;
 	public var meshLodScale : Float = 1.0;
 
+	public var hzb : h3d.mat.Texture;
+
 	public var numViews : Int = 1;
 	public var currentView : View = new h3d.scene.View(0);
+
+	public var prevCamera : h3d.Camera;
 
 	@global("camera.view") var cameraView : h3d.Matrix;
 	@global("camera.zNear") var cameraNear : Float;
@@ -54,6 +61,8 @@ class RenderContext extends h3d.impl.RenderContext {
 	@global("camera.reverseDepth") var cameraReverseDepth : Bool;
 	@global("camera.viewProj") var cameraViewProj : h3d.Matrix;
 	@global("camera.inverseViewProj") var cameraInverseViewProj : h3d.Matrix;
+	@global("camera.prevView") var cameraPrevView : h3d.Matrix;
+	@global("camera.prevProj") var cameraPrevProj : h3d.Matrix;
 	@global("camera.previousViewProj") var cameraPreviousViewProj : h3d.Matrix;
 	@global("camera.jitterOffsets") var cameraJitterOffsets : h3d.Vector4;
 	@global("global.prevTime") var globalPrevTime : Float;
@@ -81,12 +90,16 @@ class RenderContext extends h3d.impl.RenderContext {
 		super();
 		this.scene = scene;
 		camera = new h3d.Camera();
+		prevCamera = new h3d.Camera();
+		renderResolutionWidth = engine.width;
+		renderResolutionHeight = engine.height;
 		cachedShaderList = [];
 		cachedPassObjects = [];
 		initGlobals();
 	}
 
 	public function setCamera( cam : h3d.Camera ) {
+		prevCamera.load(camera);
 		camera.load(cam);
 		cameraReverseDepth = camera.reverseDepth = useReverseDepth;
 		camera.update();
@@ -99,6 +112,10 @@ class RenderContext extends h3d.impl.RenderContext {
 		if(cameraPrevPos == null)
 			cameraPrevPos = camera.pos.clone();
 		cameraProjDiag = new h3d.Vector4(camera.mproj._11,camera.mproj._22,camera.mproj._33,camera.mproj._44);
+		if ( cameraPrevView == null )
+			cameraPrevView = camera.mcam.clone();
+		if ( cameraPrevProj == null )
+			cameraPrevProj = camera.mproj.clone();
 		if ( cameraPreviousViewProj == null )
 			cameraPreviousViewProj = camera.m.clone();
 		if (cameraJitterOffsets == null)
@@ -106,6 +123,12 @@ class RenderContext extends h3d.impl.RenderContext {
 		cameraViewProj = camera.m;
 		cameraInverseViewProj = camera.getInverseViewProj();
 		currentView.frustum = camera.frustum;
+	}
+
+	public function setRenderResolution( width : Int, height : Int ) {
+		renderResolutionWidth = width;
+		renderResolutionHeight = height;
+		pixelSize = new h3d.Vector(2 / width, 2 / height);
 	}
 
 	public function updateNumViews( numViews : Int ) {
@@ -149,6 +172,7 @@ class RenderContext extends h3d.impl.RenderContext {
 		frame++;
 		setCurrent();
 		engine = h3d.Engine.getCurrent();
+		setRenderResolution(engine.width, engine.height);
 		globalTime = time;
 		globalFrame = frame;
 		pixelSize = getCurrentPixelSize();
@@ -210,6 +234,8 @@ class RenderContext extends h3d.impl.RenderContext {
 	public function computeDispatch( ?shader : hxsl.Shader, x = 1, y = 1, z = 1, barrier : Bool = true) {
 		if ( x <= 0 || y <= 0 || z <= 0 )
 			throw "Can't use zero or negative work groups count";
+		if ( x > 65535 || y > 65535 || z > 65535 )
+			throw "Thread group size can't exceed 65535";
 
 		var prev = h3d.impl.RenderContext.get();
 		if( prev != this )
@@ -285,6 +311,10 @@ class RenderContext extends h3d.impl.RenderContext {
 		engine.driver.selectTextureHandles(handles);
 	}
 
+	public function selectBufferHandles(handles : Array<h3d.BufferHandle>) {
+		engine.driver.selectBufferHandles(handles);
+	}
+
 	public function uploadParams() {
 		fillParams(shaderBuffers, drawPass.shader, drawPass.shaders);
 		engine.uploadInstanceShaderBuffers(shaderBuffers);
@@ -318,6 +348,8 @@ class RenderContext extends h3d.impl.RenderContext {
 		cameraFrustumUploaded = false;
 
 		cameraPrevPos.load(cameraPos);
+		cameraPrevView.load(cameraView);
+		cameraPrevProj.load(cameraProj);
 		cameraPreviousViewProj.load(cameraViewProj);
 		computeVelocity = false;
 

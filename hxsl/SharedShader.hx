@@ -98,6 +98,7 @@ class SharedShader {
 				case DVec3: TVec(3,VFloat);
 				case DVec4: TVec(4,VFloat);
 				case DMat4: TMat4;
+				case DMat3x4: TMat3x4;
 				case DFloat: TFloat;
 				case DBytes4: TBytes(4);
 				}

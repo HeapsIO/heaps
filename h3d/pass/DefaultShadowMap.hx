@@ -3,7 +3,7 @@ package h3d.pass;
 class DefaultShadowMap extends DirShadowMap {
 
 	var shadowMapId : Int;
-	var shadowProjId : Int;
+	var shadowViewProjId : Int;
 	var shadowColorId : Int;
 	var shadowPowerId : Int;
 	var shadowBiasId : Int;
@@ -18,7 +18,7 @@ class DefaultShadowMap extends DirShadowMap {
 		color = new h3d.Vector();
 		mode = Dynamic;
 		shadowMapId = hxsl.Globals.allocID("shadow.map");
-		shadowProjId = hxsl.Globals.allocID("shadow.proj");
+		shadowViewProjId = hxsl.Globals.allocID("shadow.viewProj");
 		shadowColorId = hxsl.Globals.allocID("shadow.color");
 		shadowPowerId = hxsl.Globals.allocID("shadow.power");
 		shadowBiasId = hxsl.Globals.allocID("shadow.bias");
@@ -27,7 +27,7 @@ class DefaultShadowMap extends DirShadowMap {
 	override function draw( passes, ?sort ) {
 		super.draw(passes, sort);
 		ctx.globals.fastSet(shadowMapId, { texture : dshader.shadowMap, channel : format == h3d.mat.Texture.nativeFormat ? hxsl.Channel.PackedFloat : hxsl.Channel.R });
-		ctx.globals.fastSet(shadowProjId, getShadowProj());
+		ctx.globals.fastSet(shadowViewProjId, getShadowViewProj());
 		ctx.globals.fastSet(shadowColorId, color);
 		ctx.globals.fastSet(shadowPowerId, power);
 		ctx.globals.fastSet(shadowBiasId, bias);

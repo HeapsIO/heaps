@@ -78,8 +78,6 @@ class TextureCache {
 		if ( !flags.contains(Target) )
 			flags.push(Target);
 		var newt = new h3d.mat.Texture(width, height, flags, format);
-		// make the texture disposable if we're out of memory
-		newt.realloc = function() {};
 		if( t != null )
 			cache.insert(position,newt);
 		else

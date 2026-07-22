@@ -12,9 +12,11 @@ class HMDModel extends MeshPrimitive {
 	public var lib(default,null) : hxd.fmt.hmd.Library;
 	var curMaterial : Int;
 	var collider : h3d.col.Collider;
+	var polygonCollider : h3d.col.Collider;
 	var normalsRecomputed : String;
 	var blendshape : Blendshape;
 	var lodConfig : Array<Float> = null;
+	var cullingScreenRatio : Float = 0.;
 	var colliderData : ColliderData;
 
 	public function new( model : hxd.fmt.hmd.Data.Model, dataPos, lib, lods : Array<hxd.fmt.hmd.Data.Model> = null ) {
@@ -283,47 +285,55 @@ class HMDModel extends MeshPrimitive {
 		if (collider != null)
 			return collider;
 		if (colliderData == null) {
-			var poly = new h3d.col.PolygonBuffer();
-			poly.source = {
-				entry : lib.resource.entry,
-				geometryName : null,
-			};
-
-			for (h in lib.header.models) {
-				if( lib.header.geometries[h.geometry] == data ) {
-					poly.source.geometryName = h.name;
-					break;
-				}
-			}
-
-			// If the model is a skin, we should apply on it's collider the default transform of the root joint
-			// since the def mat of the model has been removed and set in the root joint
-			var b = data.bounds;
-			var buf = lib.getBuffers(data, hxd.BufferFormat.POS3D);
-			if (this.model.skin != null) {
-				var defMat = this.model.skin.joints[0].position.toMatrix();
-				b.transform(defMat);
-
-				var tmpVec = new h3d.Vector();
-				var idx = 0;
-				while (idx < buf.vertexes.length) {
-					tmpVec.set(buf.vertexes.get(idx), buf.vertexes.get(idx + 1), buf.vertexes.get(idx + 2));
-					tmpVec.transform(defMat);
-					buf.vertexes.set(idx, tmpVec.x);
-					buf.vertexes.set(idx + 1, tmpVec.y);
-					buf.vertexes.set(idx + 2, tmpVec.z);
-					idx += 3;
-				}
-			}
-
-			poly.setData(buf.vertexes, buf.indexes);
-
-			if (collider == null)
-				collider = new h3d.col.Collider.OptimizedCollider(b.toSphere(), poly);
+			collider = getRawPolygonCollider();
 		} else {
 			collider = colliderData.getCollider();
 		}
 		return collider;
+	}
+
+	public function getRawPolygonCollider() {
+		if (polygonCollider != null)
+			return polygonCollider;
+
+		var poly = new h3d.col.PolygonBuffer();
+		poly.source = {
+			entry : lib.resource.entry,
+			geometryName : null,
+		};
+
+		for (h in lib.header.models) {
+			if( lib.header.geometries[h.geometry] == data ) {
+				poly.source.geometryName = h.name;
+				break;
+			}
+		}
+
+		// If the model is a skin, we should apply on it's collider the default transform of the root joint
+		// since the def mat of the model has been removed and set in the root joint
+		var b = data.bounds;
+		var buf = lib.getBuffers(data, hxd.BufferFormat.POS3D);
+		if (this.model.skin != null) {
+			var defMat = this.model.skin.joints[0].position.toMatrix();
+			b.transform(defMat);
+
+			var tmpVec = new h3d.Vector();
+			var idx = 0;
+			while (idx < buf.vertexes.length) {
+				tmpVec.set(buf.vertexes.get(idx), buf.vertexes.get(idx + 1), buf.vertexes.get(idx + 2));
+				tmpVec.transform(defMat);
+				buf.vertexes.set(idx, tmpVec.x);
+				buf.vertexes.set(idx + 1, tmpVec.y);
+				buf.vertexes.set(idx + 2, tmpVec.z);
+				idx += 3;
+			}
+		}
+
+		poly.setData(buf.vertexes, buf.indexes);
+
+		polygonCollider = new h3d.col.Collider.OptimizedCollider(b.toSphere(), poly);
+
+		return polygonCollider;
 	}
 
 	override public function lodCount() : Int {
@@ -332,18 +342,16 @@ class HMDModel extends MeshPrimitive {
 
 	override public function screenRatioToLod( screenRatio : Float ) : Int {
 		var lodCount = lodCount();
+		if (screenRatio < getCullingScreenRatio())
+			return lodCount;
 
-		if ( lodCount == 1 )
+		if (lodCount == 1)
 			return 0;
 
 		var lodConfig = getLodConfig();
-		if ( lodConfig != null ) {
-			var lodConfigHasCulling = lodConfig.length > lodCount - 1;
-			if ( lodConfigHasCulling && screenRatio < lodConfig[lodConfig.length - 1] )
-				return lodCount;
-
+		if (lodConfig != null) {
 			var lodLevel : Int = 0;
-			var maxIter = lodConfigHasCulling ? lodCount - 1 : lodConfig.length;
+			var maxIter = hxd.Math.imin(lodCount - 1, lodConfig.length);
 			for ( i in 0...maxIter ) {
 				if ( lodConfig[i] == 0.0 )
 					return lodLevel;
@@ -356,6 +364,10 @@ class HMDModel extends MeshPrimitive {
 		}
 
 		return 0;
+	}
+
+	override public function getCullingScreenRatio() {
+		return cullingScreenRatio;
 	}
 
 	public function getLodConfig() {

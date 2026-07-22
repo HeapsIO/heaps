@@ -180,8 +180,13 @@ class Pass {
 
 	function addSelfShader<T:hxsl.Shader>(s:T) : T {
 		if ( s == null ) return null;
-		selfShadersChanged = true;
-		selfShaders = hxsl.ShaderList.addSort(s, selfShaders);
+		if ( selfShaders == selfShadersCache ) {
+			selfShaders = new hxsl.ShaderList(s, shaders);
+			selfShaders.next = selfShadersCache = shaders;
+		} else {
+			selfShadersChanged = true;
+			selfShaders = hxsl.ShaderList.addSort(s, selfShaders);
+		}
 		return s;
 	}
 
@@ -219,8 +224,6 @@ class Pass {
 		var shaderFound = false;
 		while( sl != null ) {
 			if( sl.s == s ) {
-				if ( selfShadersCache == sl )
-					selfShadersCache = selfShadersCache.next;
 				if( prev == null )
 					shaders = sl.next;
 				else
@@ -254,8 +257,6 @@ class Pass {
 		var prev = null;
 		while( sl != null ) {
 			if( Std.isOfType(sl.s, t) ) {
-				if ( selfShadersCache == sl )
-					selfShadersCache = selfShadersCache.next;
 				if( prev == null )
 					shaders = sl.next;
 				else
@@ -327,19 +328,24 @@ class Pass {
 		}
 	}
 
+	inline function findTail(first : hxsl.ShaderList, last : hxsl.ShaderList) {
+		var sl = first, prev = null;
+		while ( sl != null && sl != last ) {
+			prev = sl;
+			sl = sl.next;
+		}
+		return prev;
+	}
+
 	function selfShadersRec(rebuild : Bool) {
 		if ( selfShaders == null )
 			return shaders;
 		if ( !selfShadersChanged && !rebuild && shaders == selfShadersCache )
 			return selfShaders;
-		var sl = selfShaders, prev = null;
-		while ( sl != null && sl != selfShadersCache ) {
-			prev = sl;
-			sl = sl.next;
-		}
+		var tail = findTail(selfShaders, selfShadersCache);
 		selfShadersCache = shaders;
-		if ( prev != null )
-			prev.next = selfShadersCache;
+		if ( tail != null )
+			tail.next = selfShadersCache;
 		else
 			selfShaders = shaders;
 		return selfShaders;
@@ -350,18 +356,12 @@ class Pass {
 			return selfShadersRec(false);
 		}
 		// relink to our parent shader list
-		var s = shaders, prev = null;
-		while( s != null && s != parentShaders ) {
-			prev = s;
-			s = s.next;
-		}
-		if ( s != parentShaders )
-			prev = null;
+		var tail = findTail(shaders, parentShaders);
 		parentShaders = parentPass.shaders;
-		if( prev == null )
+		if( tail == null )
 			shaders = parentShaders;
 		else
-			prev.next = parentShaders;
+			tail.next = parentShaders;
 		return selfShadersRec(true);
 	}
 
@@ -378,16 +378,11 @@ class Pass {
 	#if !macro
 	public function clone() {
 		var p = new Pass(name, shaders.clone());
-		if ( selfShaders != null ) {
-			var sl = selfShaders;
-			var prev = null;
-			while ( sl != null && sl != shaders)  {
-				prev = sl;
-				sl = sl.next;
-			}
-			prev.next = null;
+		var tail = findTail(selfShaders, selfShadersCache);
+		if ( tail != null ) {
+			tail.next = null;
 			p.selfShaders = selfShaders.clone();
-			prev.next = sl;
+			tail.next = selfShadersCache = shaders;
 		}
 		p.loadBits(bits);
 		p.loadFlags(flags);

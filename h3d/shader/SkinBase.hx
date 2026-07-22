@@ -8,11 +8,21 @@ class SkinBase extends hxsl.Shader {
 		var transformedPosition : Vec3;
 		var transformedNormal : Vec3;
 
-		@const var MaxBones : Int;
+		@const(1024) var BUFFER_SIZE : Int;  // MAX_SHADER_BONES x3 vec4 per mat3x4
 		@const @param var fourBonesByVertex = false;
 		@const var calcPrevPos : Bool = false;
 
-		@ignore @param var bonesMatrixes : Array<Mat3x4,MaxBones>;
-		@ignore @param var prevBonesMatrixes : Array<Mat3x4,MaxBones>;
+		@param var bonesMatrixes : Buffer<Vec4, BUFFER_SIZE>;
+		@param var prevBonesMatrixes : Buffer<Vec4, BUFFER_SIZE>;
+
+		function getBoneMatrix( index : Float ) : Mat3x4 {
+			var i = int(index) * 3;
+			return mat3x4(bonesMatrixes[i], bonesMatrixes[i + 1], bonesMatrixes[i + 2]);
+		}
+
+		function getPrevBoneMatrix( index : Float ) : Mat3x4 {
+			var i = int(index) * 3;
+			return mat3x4(prevBonesMatrixes[i], prevBonesMatrixes[i + 1], prevBonesMatrixes[i + 2]);
+		}
 	};
 }

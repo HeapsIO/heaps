@@ -369,7 +369,6 @@ class OrbitCameraController extends CameraController {
 }
 
 class FPSCameraController extends CameraController {
-	public var camSpeed = 1.0;
 	public var zNear = 0.1;
 	public var zFar = 10000.0;
 	public var snapToGround = true;
@@ -403,10 +402,10 @@ class FPSCameraController extends CameraController {
 		case EWheel:
 			if (pushing == 2 || pushing == 1) {
 				if (e.wheelDelta > 0) {
-					camSpeed /= 1.1;
+					moveSpeed /= 1.1;
 				}
 				else {
-					camSpeed *= 1.1;
+					moveSpeed *= 1.1;
 				}
 			}
 		case EPush:

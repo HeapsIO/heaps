@@ -180,7 +180,7 @@ class DirShadowMap extends Shadows {
 		dshader.shadowMapChannel = format == h3d.mat.Texture.nativeFormat ? PackedFloat : R;
 		dshader.shadowBias = bias;
 		dshader.shadowPower = power;
-		dshader.shadowProj = getShadowProj();
+		dshader.shadowViewProj = getShadowViewProj();
 
 		//ESM
 		dshader.USE_ESM = samplingKind == ESM;
@@ -250,8 +250,12 @@ class DirShadowMap extends Shadows {
 	}
 
 	function processShadowMap( passes, tex, ?sort) {
+		var prevView = @:privateAccess ctx.cameraView;
+		var prevProj = @:privateAccess ctx.cameraProj;
 		var prevViewProj = @:privateAccess ctx.cameraViewProj;
-		@:privateAccess ctx.cameraViewProj = getShadowProj();
+		@:privateAccess ctx.cameraView = getShadowView();
+		@:privateAccess ctx.cameraProj = getShadowProj();
+		@:privateAccess ctx.cameraViewProj = getShadowViewProj();
 		if ( tex.isDepth() ) {
 			ctx.engine.pushDepth(tex);
 			ctx.engine.clear(null, 1.0);
@@ -290,6 +294,8 @@ class DirShadowMap extends Shadows {
 			blur.apply(ctx, tex);
 		}
 
+		@:privateAccess ctx.cameraView = prevView;
+		@:privateAccess ctx.cameraProj = prevProj;
 		@:privateAccess ctx.cameraViewProj = prevViewProj;
 
 		return tex;

@@ -85,6 +85,10 @@ enum Feature {
 		Supports bindless
 	*/
 	Bindless;
+	/*
+		Supports DLSS
+	*/
+	DLSS;
 }
 
 enum QueryKind {
@@ -107,6 +111,66 @@ enum RenderFlag {
 		0 = LeftHanded (default), 1 = RightHanded. Affects the meaning of triangle culling value.
 	**/
 	CameraHandness;
+}
+
+enum DLSSTag {
+	Depth;
+	MotionVectors;
+	ColorIn;
+	ColorOut;
+}
+
+@:struct class DLSSParams {
+	public var cameraViewToClip : Matrix;
+	public var clipToCameraView : Matrix;
+	public var clipToPrevClip : Matrix;
+	public var prevClipToClip : Matrix;
+	public var jitterOffsetX : Float;
+	public var jitterOffsetY : Float;
+	public var mvecScaleX : Float;
+	public var mvecScaleY : Float;
+	public var cameraPos : Vector;
+	public var cameraUp : Vector;
+	public var cameraRight : Vector;
+	public var cameraFwd : Vector;
+	public var cameraNear : Float;
+	public var cameraFar : Float;
+	public var cameraFOV : Float;
+	public var cameraAspectRatio : Float;
+	public var motionVectorsInvalidValue : Float;
+	public var depthInverted : Bool;
+	public var cameraMotionIncluded : Bool;
+	public var reset : Bool;
+	public var orthographicProjection : Bool;
+	public var motionVectorsDilated : Bool;
+	public var motionVectorsJittered : Bool;
+	public var colorBufferHDR : Bool;
+	public var autoExposure : Bool;
+	public function new() {
+	}
+}
+
+@struct class DLSSSettings {
+	public var optimalWidth : Int;
+	public var optimalHeight : Int;
+	public function new() {
+	}
+}
+
+enum DLSSQuality {
+	Default;
+	Performance;
+	UltraPerformance;
+}
+
+enum DLSSMode {
+	Off;
+	MaxPerformance;
+	Balanced;
+	MaxQuality;
+	UltraPerformance;
+	UltraQuality;
+	Dlaa;
 }
 
 class Driver {
@@ -193,6 +257,10 @@ class Driver {
 
 	public function selectTextureHandles( handles : Array<h3d.mat.TextureHandle> ) {
 	}
+
+	public function selectBufferHandles( handles : Array<h3d.BufferHandle> ) {
+	}
+
 
 	public function uploadShaderBuffers( buffers : h3d.shader.Buffers, which : h3d.shader.Buffers.BufferKind ) {
 	}
@@ -346,5 +414,23 @@ class Driver {
 
 	public function getTextureHandle( t : h3d.mat.Texture ) : h3d.mat.TextureHandle {
 		throw "Bindless is not implemented on this platform";
+	}
+
+	public function getBufferHandle( b : h3d.Buffer ) : h3d.BufferHandle {
+		throw "Bindless is not implemented on this platform";
+	}
+
+	// --- DLSS
+
+	public function isDLSSSupported( framegen : Bool = false ) : Bool {
+		throw "DLSS not supported on this platform";
+		return false;
+	}
+
+	public function getDLSSOptimalSettings( mode : DLSSMode, targetWidth : Int, targetHeight : Int ) : DLSSSettings {
+		return null;
+	}
+
+	public function applyDLSS( resources : Map<DLSSTag, h3d.mat.Texture>, constants : DLSSParams, quality : DLSSQuality, mode : DLSSMode ) {
 	}
 }

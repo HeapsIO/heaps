@@ -36,6 +36,21 @@ class FloatBufferLoader {
 		buf[pos++] = m._44;
 	}
 
+	public inline function loadMatrix3x4(m:h3d.Matrix) {
+		buf[pos++] = m._11;
+		buf[pos++] = m._21;
+		buf[pos++] = m._31;
+		buf[pos++] = m._41;
+		buf[pos++] = m._12;
+		buf[pos++] = m._22;
+		buf[pos++] = m._32;
+		buf[pos++] = m._42;
+		buf[pos++] = m._13;
+		buf[pos++] = m._23;
+		buf[pos++] = m._33;
+		buf[pos++] = m._43;
+	}
+
 	public inline function loadFloat(v : Float) {
 		buf[pos++] = v;
 	}

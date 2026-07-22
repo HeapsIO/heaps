@@ -46,6 +46,37 @@ class Samplers {
 
 }
 
+private class GlobalsCollect {
+
+	public var globals : Array<TGlobal> = [];
+	public var computeLayout : Array<Int> = [1,1,1];
+	public var gtypes : Map<Int,Type> = [];
+
+	public function new() {
+	}
+
+	public function collect( e : TExpr ) {
+		switch( e.e )  {
+		case TGlobal(g):
+			var idx = g.getIndex();
+			if( !gtypes.exists(idx) ) {
+				globals.push(g);
+				gtypes.set(idx, e.t);
+			}
+		case TCall({ e : TGlobal(SetLayout) }, [{ e : TConst(CInt(x)) }, { e : TConst(CInt(y)) }, { e : TConst(CInt(z)) }]):
+			computeLayout = [x,y,z];
+		case TCall({ e : TGlobal(SetLayout) }, [{ e : TConst(CInt(x)) }, { e : TConst(CInt(y)) }]):
+			computeLayout = [x,y,1];
+		case TCall({ e : TGlobal(SetLayout) }, [{ e : TConst(CInt(x)) }]):
+			computeLayout = [x,1,1];
+		default:
+			e.iter(collect);
+		}
+	}
+
+}
+
+
 class HlslOut {
 
 	static var KWD_LIST = [
@@ -85,6 +116,9 @@ class HlslOut {
 		m.set(UintBitsToFloat, "_uintBitsToFloat");
 		m.set(RoundEven, "round");
 		m.set(GroupMemoryBarrier, "GroupMemoryBarrier");
+		m.set(FindLSB, "firstbitlow");
+		m.set(FindMSB, "firstbithigh");
+		m.set(BitCount, "countbits");
 		for( g in m )
 			KWDS.set(g, true);
 		m;
@@ -104,7 +138,7 @@ class HlslOut {
 	var bindlessSamplersCount : Int;
 	var bindlessSamplers : Map<Int, Int>;
 	var samplers : Map<Int, Array<Int>>;
-	var computeLayout = [1,1,1];
+	var computeLayout : Array<Int>;
 	public var varNames : Map<Int,String>;
 
 	var isAssigningTexture : Bool = false;
@@ -200,6 +234,8 @@ class HlslOut {
 			add("channel" + n);
 		case TTextureHandle:
 			add("uint2");
+		case TBufferHandle:
+			add("uint");
 		}
 	}
 
@@ -350,7 +386,7 @@ class HlslOut {
 		case PackNormal:
 			decl("float4 packNormal( float3 n ) { return float4((n + 1.) * 0.5,1.); }");
 		case UnpackNormal:
-			decl("float3 unpackNormal( float4 p ) { return normalize(p.xyz * 2. - 1.); }");
+			decl("float3 unpackNormal( float4 p ) { float2 normalXY = p.xy * 2. - 1.; return float3(normalXY, sqrt(1.0 - saturate(dot(normalXY,normalXY)))); }");
 		case Atan:
 			decl("float atan( float y, float x ) { return atan2(y,x); }");
 		case ScreenToUv:
@@ -390,6 +426,10 @@ class HlslOut {
 			 }");
 		case AtomicAdd:
 			decl("int atomicAdd( RWStructuredBuffer<int> buf, int index, int data ) { int val; InterlockedAdd(buf[index], data, val); return val; }");
+		case AtomicAnd:
+			decl("int atomicAnd( RWStructuredBuffer<int> buf, int index, int data ) { int val; InterlockedAnd(buf[index], data, val); return val; }");
+		case AtomicOr:
+			decl("int atomicOr( RWStructuredBuffer<int> buf, int index, int data ) { int val; InterlockedOr(buf[index], data, val); return val; }");
 		case InvLerp:
 			decl("float invLerp(float v, float a, float b) { return saturate((v - a) / (b - a)); }");
 		case TextureSize:
@@ -435,6 +475,8 @@ class HlslOut {
 			var tt = args[1].t;
 			var tstr = getTexType(tt);
 			decl('void resolveSampler( uint2 id, $tstr tex, SamplerState sampler ) { tex = ResourceDescriptorHeap[id.x]; sampler = SamplerDescriptorHeap[id.y]; }');
+		case ResolveBuffer:
+			decl('void resolveBuffer( uint id, StructuredBuffer<${(args[1].t.match(TBuffer(TInt,_,_)))?"int":"float"}> buf) { buf = ResourceDescriptorHeap[id]; }');
 		default:
 		}
 	}
@@ -562,6 +604,14 @@ class HlslOut {
 			add('__BindlessSamplers[$bindlessSamplersCount]');
 			add(")");
 			bindlessSamplers.set(v.id, bindlessSamplersCount++);
+		case TCall({ e : TGlobal( g = ResolveBuffer) }, args = [handle, buf = { e : TVar(v)}]):
+			declGlobal(g, args);
+			add("resolveBuffer");
+			add("(");
+			addValue(handle, tabs);
+			add(", ");
+			addValue(buf, tabs);
+			add(")");
 		case TCall({ e : TGlobal(VertexAt) }, [{ e : TVar(v) }, index]):
 			add("GetAttributeAtVertex(");
 			var acc = varAccess.get(v.id);
@@ -569,6 +619,17 @@ class HlslOut {
 			ident(v);
 			add(", ");
 			addValue(index, tabs);
+			add(")");
+		case TCall(e = { e : TGlobal(g = FindMSB|FindLSB) }, args = [v]):
+			declGlobal(g, args);
+			addValue(e,tabs);
+			var channel = switch(v.t) {
+			case TInt: "";
+			case TVec(s, VInt): '$s';
+			default: throw "assert";
+			}
+			add('((uint$channel)');
+			addValue(v, tabs);
 			add(")");
 		case TCall(e = { e : TGlobal(g) }, args):
 			declGlobal(g, args);
@@ -883,19 +944,6 @@ class HlslOut {
 		}
 	}
 
-	function collectGlobals( m : Map<TGlobal,Type>, e : TExpr ) {
-		switch( e.e )  {
-		case TGlobal(g): m.set(g,e.t);
-		case TCall({ e : TGlobal(SetLayout) }, [{ e : TConst(CInt(x)) }, { e : TConst(CInt(y)) }, { e : TConst(CInt(z)) }]):
-			computeLayout = [x,y,z];
-		case TCall({ e : TGlobal(SetLayout) }, [{ e : TConst(CInt(x)) }, { e : TConst(CInt(y)) }]):
-			computeLayout = [x,y,1];
-		case TCall({ e : TGlobal(SetLayout) }, [{ e : TConst(CInt(x)) }]):
-			computeLayout = [x,1,1];
-		default: e.iter(collectGlobals.bind(m));
-		}
-	}
-
 	function initVars( s : ShaderData ) {
 		var index = 0;
 		function declVar(prefix:String, v : TVar ) {
@@ -911,9 +959,10 @@ class HlslOut {
 			varAccess.set(v.id, prefix);
 		}
 
-		var foundGlobals = new Map();
+		var collect = new GlobalsCollect();
 		for( f in s.funs )
-			collectGlobals(foundGlobals, f.expr);
+			collect.collect(f.expr);
+		computeLayout = collect.computeLayout;
 
 		var oldAllNames = allNames;
 		allNames = new Map();
@@ -923,7 +972,7 @@ class HlslOut {
 		for( v in s.vars )
 			if( v.kind == Input || (v.kind == Var && !isVertex) )
 				declVar("_in.", v);
-		for( g in foundGlobals.keys() ) {
+		for( g in collect.globals ) {
 			var sv = getSVName(g);
 			if( sv == null ) continue;
 			add("\t");
@@ -931,7 +980,7 @@ class HlslOut {
 			case InstanceID, VertexID:
 				add("uint");
 			default:
-				addType(foundGlobals.get(g));
+				addType(collect.gtypes.get(g.getIndex()));
 			}
 			var name = g.getName().split("_").pop();
 			name = name.charAt(0).toLowerCase()+name.substr(1);

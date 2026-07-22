@@ -45,8 +45,11 @@ class HMDOut extends BaseLibrary {
 	var ignoreCollidesCache : Map<Int,Bool> = [];
 	public var collisionThresholdHeight : Float;
 	public var collisionUseLowLod : Bool;
+	public var noCollision : Bool;
 	public var lowPrecConfig : Map<String,Precision>;
 	public var lodsDecimation : Array<Float>;
+	public var maxUVs : Int = 0;
+	public var noColor : Bool = false;
 
 	function int32tof( v : Int ) : Float {
 		tmp.set(0, v & 0xFF);
@@ -211,10 +214,8 @@ class HMDOut extends BaseLibrary {
 		}
 		var realIdx = new hxd.IndexBuffer();
 		for( idx in idx ) {
-			if ( idx == null ) {
-				trace("Empty list of vertex indexes");
+			if ( idx == null )
 				continue;
-			}
 			for( i in idx )
 				realIdx.push(pmap[i]);
 		}
@@ -368,7 +369,9 @@ class HMDOut extends BaseLibrary {
 		var verts = geom.getVertices();
 		var normals = geom.getNormals();
 		var uvs = geom.getUVs();
-		var colors = geom.getColors();
+		if( maxUVs > 0 && uvs.length > maxUVs )
+			uvs = uvs.slice(0, maxUVs);
+		var colors = noColor ? null : geom.getColors();
 		var mats = geom.getMaterials();
 		var index = geom.getPolygons();
 
@@ -878,7 +881,15 @@ class HMDOut extends BaseLibrary {
 		collider.vertexPosition = dataOut.length;
 		collider.vertexCount = vertexCount;
 		collider.indexCount = indexCount;
-		var mat = colliderModel.skin != null && colliderModel.skin.joints.length > 0 ? colliderModel.skin.joints[0].position.toMatrix() : colliderModel.position.toMatrix();
+		var mat : h3d.Matrix;
+		if (legacySkinImport) {
+			mat = colliderModel.skin != null && colliderModel.skin.joints.length > 0 ? colliderModel.skin.joints[0].position.toMatrix() : colliderModel.position.toMatrix();
+		}
+		else {
+			mat = colliderModel.position.toMatrix();
+			if (colliderModel.skin != null)
+				mat.multiply(mat, colliderModel.skin.joints[0].position.toMatrix());
+		}
 		var invTargetModelMat = targetModel.position.toMatrix().getInverse();
 		mat.multiply(mat, invTargetModelMat);
 		var tmpVec = new h3d.Vector();
@@ -917,6 +928,10 @@ class HMDOut extends BaseLibrary {
 			indexCount += idx == null ? 0 : idx.length;
 
 		var mat = colliderModel.position.toMatrix();
+		if (!legacySkinImport) {
+			if (colliderModel.skin != null)
+				mat.multiply(mat, colliderModel.skin.joints[0].position.toMatrix());
+		}
 		var invTargetModelMat = targetModel.position.toMatrix().getInverse();
 		mat.multiply(mat, invTargetModelMat);
 		var tmpVec = new h3d.Vector();
@@ -1107,31 +1122,55 @@ class HMDOut extends BaseLibrary {
 			if( models.length == 0 ) continue;
 			if( models.length > 1 ) throw "Single skin applied to multiple models not supported";
 			var m = models[0];
-			for( o2 in objects )
+			for( o2 in objects ) {
 				if( o2.model == m ) {
-					foundSkin.push(o);
-					o2.skin = o;
-					if( o.model == null ) o.model = m;
-					ignoreMissingObject(m.getId()); // make sure we don't store animation for the model (only skin object has one)
-					// copy parent
-					var p = o.parent;
-					if( p != o2 ) {
-						o2.parent.childs.remove(o2);
-						o2.parent = p;
-						if( p != null ) p.childs.push(o2) else root = o2;
-					}
-					// remove skin from hierarchy
-					if( p != null ) p.childs.remove(o);
-					// move not joint to new parent
-					// (only first level, others will follow their respective joint)
-					for( c in o.childs.copy() )
-						if( !c.isJoint ) {
-							o.childs.remove(c);
-							o2.childs.push(c);
-							c.parent = o2;
+					if (legacySkinImport) {
+						foundSkin.push(o);
+						o2.skin = o;
+						if( o.model == null ) o.model = m;
+						ignoreMissingObject(m.getId()); // make sure we don't store animation for the model (only skin object has one)
+						// copy parent
+						var p = o.parent;
+						if( p != o2 ) {
+							o2.parent.childs.remove(o2);
+							o2.parent = p;
+							if( p != null ) p.childs.push(o2) else root = o2;
 						}
+						// remove skin from hierarchy
+						if( p != null ) p.childs.remove(o);
+						// move not joint to new parent
+						// (only first level, others will follow their respective joint)
+						for( c in o.childs.copy() ) {
+							if( !c.isJoint ) {
+								o.childs.remove(c);
+								o2.childs.push(c);
+								c.parent = o2;
+							}
+						}
+					}
+					else {
+						for (c in o.childs) {
+							if (c.isJoint) {
+								if (o2.rootJoints == null)
+									o2.rootJoints = [];
+								o2.rootJoints.push(c);
+
+								if (c.model.name.toLowerCase().indexOf("root") < 0)
+									continue;
+
+								var jDef = getDefaultMatrixes(c.model);
+								var modelDef = getDefaultMatrixes(m);
+
+								var newDef = new DefaultMatrixes();
+								newDef.fromMatrix(modelDef.toMatrix(false).multiplied(jDef.toMatrix(false).getInverse()));
+								defaultModelMatrixes.set(m.getId(), newDef);
+							}
+						}
+					}
+
 					break;
 				}
+			}
 		}
 
 		// we need to have ignored skins objects anims first
@@ -1183,12 +1222,17 @@ class HMDOut extends BaseLibrary {
 			o.index = index++;
 
 			var model = new Model();
-			var ref = o.skin == null ? o : o.skin;
-
 			model.name = o.model == null ? null : o.model.getName();
 			model.parent = o.parent == null || o.parent.isJoint ? -1 : o.parent.index;
 			model.follow = o.parent != null && o.parent.isJoint ? o.parent.model.getName() : null;
-			var m = ref.model == null ? new hxd.fmt.fbx.BaseLibrary.DefaultMatrixes() : getDefaultMatrixes(ref.model);
+			var m : DefaultMatrixes;
+			if (legacySkinImport) {
+				var ref = o.skin == null ? o : o.skin;
+				m = ref.model == null ? new hxd.fmt.fbx.BaseLibrary.DefaultMatrixes() : getDefaultMatrixes(ref.model);
+			}
+			else {
+				m = o.model == null ? new hxd.fmt.fbx.BaseLibrary.DefaultMatrixes() : getDefaultMatrixes(o.model);
+			}
 			var p = new Position();
 			p.x = m.trans == null ? 0 : -m.trans.x;
 			p.y = m.trans == null ? 0 : m.trans.y;
@@ -1297,18 +1341,31 @@ class HMDOut extends BaseLibrary {
 			var g = getChild(o.model, "Geometry");
 
 			var skin = null;
-			if( o.skin != null ) {
-				var rootJoints = [];
-				for( c in o.skin.childs )
-					if( c.isJoint )
-						rootJoints.push(c.joint);
-				skin = createSkin(hskins, tmpGeom, rootJoints);
-				if( skin.boundJoints.length > maxBonesPerSkin ) {
-					var g = new hxd.fmt.fbx.Geometry(this, g);
-					var idx = g.getIndexes();
-					skin.split(maxBonesPerSkin, [for( i in idx.idx ) idx.vidx[i]], mids.length > 1 ? g.getMaterialByTriangle() : null);
+			if (legacySkinImport) {
+				if( o.skin != null ) {
+					var rootJoints = [];
+					for( c in o.skin.childs )
+						if( c.isJoint )
+							rootJoints.push(c.joint);
+					skin = createSkin(hskins, tmpGeom, rootJoints);
+					if( skin.boundJoints.length > maxBonesPerSkin ) {
+						var g = new hxd.fmt.fbx.Geometry(this, g);
+						var idx = g.getIndexes();
+						skin.split(maxBonesPerSkin, [for( i in idx.idx ) idx.vidx[i]], mids.length > 1 ? g.getMaterialByTriangle() : null);
+					}
+					model.skin = makeSkin(skin);
 				}
-				model.skin = makeSkin(skin, o.skin);
+			}
+			else {
+				if( o.rootJoints != null ) {
+					skin = createSkin(hskins, tmpGeom, [for (j in o.rootJoints) j.joint]);
+					if( skin.boundJoints.length > maxBonesPerSkin ) {
+						var g = new hxd.fmt.fbx.Geometry(this, g);
+						var idx = g.getIndexes();
+						skin.split(maxBonesPerSkin, [for( i in idx.idx ) idx.vidx[i]], mids.length > 1 ? g.getMaterialByTriangle() : null);
+					}
+					model.skin = makeSkin(skin);
+				}
 			}
 
 			// For each LOD > 0, reorder its materials in the same order that the LOD 0
@@ -1415,6 +1472,39 @@ class HMDOut extends BaseLibrary {
 			}
 		}
 
+		var rootIndex = -1;
+		for (i => m in d.models) {
+			if (m.parent == -1 && m.geometry == -1 && m.name == null && m.position.isIdentity()) {
+				rootIndex = i;
+				break;
+			}
+		}
+		if (rootIndex != -1) {
+			var objectCount = 0;
+			for (m in d.models) {
+				if (!m.isLOD() && !m.isCollider() && m.parent == rootIndex)
+					objectCount++;
+				if (objectCount > 1)
+					break;
+			}
+			if (objectCount == 1) {
+				d.models.remove(d.models[rootIndex]);
+				for (m in d.models) {
+					if (m.parent == rootIndex)
+						m.parent = -1;
+					else if (m.parent > rootIndex)
+						m.parent--;
+					if (m.lods != null) {
+						for (i in 0...m.lods.length) {
+							var lodIndex = m.lods[i];
+							if (lodIndex > rootIndex)
+								m.lods[i] = lodIndex - 1;
+						}
+					}
+				}
+			}
+		}
+
 		// Make colliders
 		d.colliders = [];
 		for( model in d.models ) {
@@ -1449,7 +1539,7 @@ class HMDOut extends BaseLibrary {
 			for ( idx => mc in mcs ) {
 				var isDefaultParams = mc != null && mc.useDefault;
 				var params = isDefaultParams ? generateCollides : mc;
-				var colliderType = hxd.fmt.hmd.Data.Collider.resolveColliderType(d, model, params, isDefaultParams, collisionThresholdHeight, collisionUseLowLod);
+				var colliderType = hxd.fmt.hmd.Data.Collider.resolveColliderType(d, model, params, isDefaultParams, collisionThresholdHeight, collisionUseLowLod, noCollision);
 				var collider : Collider = switch (colliderType) {
 					case Empty:
 						new EmptyCollider();
@@ -1512,9 +1602,9 @@ class HMDOut extends BaseLibrary {
 		return path;
 	}
 
-	function makeSkin( skin : h3d.anim.Skin, obj : TmpObject ) {
+	function makeSkin( skin : h3d.anim.Skin ) {
 		var s = new Skin();
-		s.name = obj.model.getName();
+		s.name = "Skin";
 		s.joints = [];
 		for( jo in skin.allJoints ) {
 			var j = new SkinJoint();

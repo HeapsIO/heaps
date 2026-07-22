@@ -13,6 +13,10 @@ import h3d.mat.Pass;
 import h3d.mat.Stencil;
 import haxe.MainLoop;
 
+#if dlss
+import heaps.dlss.Dlss;
+#end
+
 private typedef Driver = Dx12;
 
 class TempBuffer {
@@ -203,7 +207,8 @@ class DxFrame {
 	public var copyBufferCursor : Int = 0;
 	public var fenceValue : Int64;
 	public var toRelease : Array<Resource> = [];
-	public var handlesToRelease : Array<h3d.mat.TextureHandle> = [];
+	public var texHandlesToRelease : Array<h3d.mat.TextureHandle> = [];
+	public var bufHandlesToRelease : Array<h3d.BufferHandle> = [];
 	public var srvHeap : ScratchHeap;
 	public var samplerHeap : ScratchHeap;
 	public var srvHeapCache : ScratchHeapArray;
@@ -464,17 +469,114 @@ class ResourceData {
 class BufferData extends ResourceData {
 	public var view : dx.Dx12.VertexBufferView;
 	public var iview : dx.Dx12.IndexBufferView;
+	public var handle : h3d.BufferHandle = null;
 	public var cViewIndex : Int = -1;
 	public var sViewIndex : Int = -1;
+	public var sViewStride : Int = -1;
+	public var sViewsMap : Map<Int, Int>;
 	public var uViewIndex : Int = -1;
+	public var uViewStride : Int = -1;
+	public var uViewsMap : Map<Int, Int>;
 	public var size : Int;
+
+	inline public function getSRV(stride:Int) {
+		if( sViewStride == stride )
+			return sViewIndex;
+		if( sViewsMap != null ) {
+			var idx = sViewsMap.get(stride);
+			return idx != null ? idx : -1;
+		}
+		return -1;
+	}
+
+	public function setSRV(stride:Int, idx:Int) {
+		if( sViewIndex < 0 ) {
+			sViewIndex = idx;
+			sViewStride = stride;
+			return;
+		}
+		if( sViewsMap == null )
+			sViewsMap = new Map();
+		sViewsMap.set(stride, idx);
+	}
+
+	inline public function getUAV(stride:Int) {
+		if( uViewStride == stride )
+			return uViewIndex;
+		if( uViewsMap != null ) {
+			var idx = uViewsMap.get(stride);
+			return idx != null ? idx : -1;
+		}
+		return -1;
+	}
+
+	public function setUAV(stride:Int, idx:Int) {
+		if( uViewIndex < 0 ) {
+			uViewIndex = idx;
+			uViewStride = stride;
+			return;
+		}
+		if( uViewsMap == null )
+			uViewsMap = new Map();
+		uViewsMap.set(stride, idx);
+	}
+
+	public function disposeViews(heap : BlockHeap) {
+		if ( cViewIndex != -1 ) {
+			heap.disposeIndex(cViewIndex);
+			cViewIndex = -1;
+		}
+		if(sViewIndex >= 0) {
+			heap.disposeIndex(sViewIndex);
+			sViewIndex = -1;
+			sViewStride = -1;
+		}
+		if( sViewsMap != null ) {
+			for( v in sViewsMap )
+				heap.disposeIndex(v);
+			sViewsMap = null;
+		}
+		if(uViewIndex >= 0) {
+			heap.disposeIndex(uViewIndex);
+			uViewIndex = -1;
+			uViewStride = -1;
+		}
+		if( uViewsMap != null ) {
+			for( v in uViewsMap )
+				heap.disposeIndex(v);
+			uViewsMap = null;
+		}
+	}
 }
 
 class TextureData extends ResourceData {
 	public var format : DxgiFormat;
 	public var color : h3d.Vector4;
 	var clearColorChanges : Int;
-	public var cpuViewsIndex : Map<Int, Int> = new Map();
+	var cpuViewBits : Int = -1;
+	var cpuViewIndex : Int = -1;
+	var cpuViewsMap : Map<Int, Int>;
+
+	inline public function getView(bits: Int) {
+		if( cpuViewBits == bits )
+			return cpuViewIndex;
+		if( cpuViewsMap != null ) {
+			var idx = cpuViewsMap.get(bits);
+			return idx != null ? idx : -1;
+		}
+		return -1;
+	}
+
+	public function setView(bits: Int, idx: Int) {
+		if( cpuViewIndex < 0 ) {
+			cpuViewIndex = idx;
+			cpuViewBits = bits;
+			return;
+		}
+		if( cpuViewsMap == null )
+			cpuViewsMap = new Map();
+		cpuViewsMap.set(bits, idx);
+	}
 
 	public function setClearColor( c : h3d.Vector4 ) {
 		var color = color;
@@ -483,6 +585,19 @@ class TextureData extends ResourceData {
 		clearColorChanges++;
 		color.load(c);
 		return true;
+	}
+
+	public function disposeViews(heap: BlockHeap) {
+		if(cpuViewIndex >= 0) {
+			heap.disposeIndex(cpuViewIndex);
+			cpuViewIndex = -1;
+			cpuViewBits = -1;
+		}
+		if( cpuViewsMap != null ) {
+			for( v in cpuViewsMap )
+				heap.disposeIndex(v);
+			cpuViewsMap = null;
+		}
 	}
 }
 
@@ -504,6 +619,7 @@ class AsyncReadbackRequest {
 	public var tmpBufOffset : Int;
     public var tmpBufSize : Int;
 	public var barrier : ResourceBarrier;
+	public var frame : Int;
 	public function new() {
 	}
 }
@@ -561,7 +677,8 @@ class DX12Driver extends h3d.impl.Driver {
 	var useDepthClamp : Bool = false;
 	var useSM6_6 = false;
 	var errorTex : h3d.mat.Texture;
-	var textureHandles : Map<h3d.mat.Texture, Map<Int, h3d.mat.TextureHandle>>= [];
+	var textureHandles : Map<h3d.mat.Texture, Map<Int, h3d.mat.TextureHandle>> = [];
+	var samplerHandles : Map<Int, Int> = [];
 
 	var copyQueue : CommandQueue;
 	var copyFence : Fence;
@@ -583,6 +700,11 @@ class DX12Driver extends h3d.impl.Driver {
 	var asyncComputeCommandList : CommandList;
 	var asyncComputeAllocator : CommandAllocator;
 
+	#if dlss
+	var dlssReady : Bool;
+	var dlssFrameToken : DLSSFrameToken;
+	#end
+
 	public static var COPY_BUFFER_SIZE = 256 * 1024 * 1024; // 256 Mo per frame
 	public static var DEFAULT_DEPTH_FORMAT : h3d.mat.Data.TextureFormat = Depth24Stencil8;
 	public static var DEFAULT_DEPTH_VALUE = 1.0;
@@ -595,6 +717,8 @@ class DX12Driver extends h3d.impl.Driver {
 	public static var BUFFER_COUNT = #if console 3 #else 2 #end;
 	public static var DEVICE_NAME = null;
 	public static var DEBUG = false; // requires dxil.dll when set to true
+	public static var SUPPRESSED_MESSAGE_IDS : Array<Int> = [];
+	public static var DLSS = true;
 
 	@:allow(h3d.impl) static function allocCheck<T>( f : Void -> T ) {
 		var ret = f();
@@ -610,15 +734,6 @@ class DX12Driver extends h3d.impl.Driver {
 	public function new() {
 		window = @:privateAccess dx.Window.windows[0];
 		reset();
-	}
-
-	function hasFreeMemory( size : Int ) {
-		var mem = new QueryVideoMemoryInfo();
-		Dx12.queryVideoMemoryInfo(0, mem);
-		var tot = ((mem.budget * 95) / 100 - mem.currentUsage);
-		if( tot < size )
-			return false;
-		return true;
 	}
 
 	override function getMemoryUsage() {
@@ -659,11 +774,38 @@ class DX12Driver extends h3d.impl.Driver {
 		return useSM6_6;
 	}
 
+	function suppressDebugMessages() {
+		var ids = SUPPRESSED_MESSAGE_IDS;
+		if( ids.length == 0 ) return;
+		var buf = new hl.Bytes(ids.length * 4);
+		for( i in 0...ids.length )
+			buf.setI32(i * 4, ids[i]);
+		var filter = new InfoQueueFilter();
+		filter.denyList.numIDs = ids.length;
+		filter.denyList.idList = buf;
+		Driver.suppressDebugMessages(filter);
+	}
+
 	function reset() {
+		#if dlss
+		if ( DLSS ) {
+			var result = Dlss.init(false);
+			dlssReady = result == 0;
+		}
+		#end
+
 		var flags = new DriverInitFlags();
 		if( DEBUG ) flags.set(DriverInitFlag.DEBUG);
 		driver = Driver.create(window, flags, DEVICE_NAME);
+		if( DEBUG ) suppressDebugMessages();
 		frames = [];
+
+		#if dlss
+		if ( dlssReady ) {
+			var device = Driver.getDevice();
+			Dlss.setDevice(device);
+		}
+		#end
 
 		var flags = new haxe.EnumFlags();
 		var heap = new HeapProperties();
@@ -818,8 +960,8 @@ class DX12Driver extends h3d.impl.Driver {
 
 		var errorTexSampler = getCpuSampler(errorTex);
 		var errorTexView = getCpuTexView(errorTex);
-		while( frame.handlesToRelease.length > 0 ) {
-			var h = frame.handlesToRelease.pop();
+		while( frame.texHandlesToRelease.length > 0 ) {
+			var h = frame.texHandlesToRelease.pop();
 			if ( h.handle != -1 && h.texture.t == null ) {
 				Driver.copyDescriptorsSimple(1, bindlessSamplerHeap.getCpuAddressAt(h.handle.high), errorTexSampler, SAMPLER);
 				Driver.copyDescriptorsSimple(1, bindlessSrvHeap.getCpuAddressAt(h.handle.low), errorTexView, CBV_SRV_UAV);
@@ -828,6 +970,13 @@ class DX12Driver extends h3d.impl.Driver {
 					bindlessSamplerHeap.disposeIndex(h.handle.high);
 					h.handle = -1;
 				}
+			}
+		}
+		while( frame.bufHandlesToRelease.length > 0 ) {
+			var h = frame.bufHandlesToRelease.pop();
+			if ( h.handle != -1 ) {
+				bindlessSrvHeap.disposeIndex(h.handle);
+				h.handle = -1;
 			}
 		}
 		beginQueries();
@@ -847,6 +996,10 @@ class DX12Driver extends h3d.impl.Driver {
 		frame.srvHeapCache.reset();
 		frame.samplerHeapCache.reset();
 		flushHeaps();
+
+		#if dlss
+		if ( dlssReady ) dlssFrameToken = Dlss.getNewFrameToken(frameCount);
+		#end
 	}
 
 	override function clear(?color:Vector4, ?depth:Float, ?stencil:Int) {
@@ -1392,8 +1545,8 @@ class DX12Driver extends h3d.impl.Driver {
 
 	static final SHADER_ARGS : Array<String>= [#if dx12_shader_debug "-Zi", "-Qembed_debug" #end];
 	function compileSource( sh : hxsl.RuntimeShader.RuntimeShaderData, profile, rootStr = "" ) {
-		var out = new hxsl.HlslOut();
 		if( sh.code == null ) {
+			var out = new hxsl.HlslOut();
 			sh.code = out.run(sh.data);
 			sh.code = rootStr + sh.code;
 		}
@@ -1860,9 +2013,6 @@ class DX12Driver extends h3d.impl.Driver {
 
 	override function allocBuffer( m : h3d.Buffer ) : GPUBuffer {
 		var size = m.getMemSize();
-		if( !hasFreeMemory(size) )
-			return null;
-
 		var buf = new BufferData();
 		var bufSize = m.flags.has(UniformBuffer) || m.flags.has(ReadWriteBuffer) ? calcCBVSize(size) : size;
 		buf.state = buf.targetState = COPY_DEST;
@@ -1904,23 +2054,15 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	function disposeBufferViews(b:BufferData) {
-		if ( b.cViewIndex != -1 ) {
-			cpuSrvHeap.disposeIndex(b.cViewIndex);
-			b.cViewIndex = -1;
-		}
-		if ( b.sViewIndex != -1 ) {
-			cpuSrvHeap.disposeIndex(b.sViewIndex);
-			b.sViewIndex = -1;
-		}
-		if ( b.uViewIndex != -1 ) {
-			cpuSrvHeap.disposeIndex(b.uViewIndex);
-			b.uViewIndex = -1;
-		}
+		b.disposeViews(cpuSrvHeap);
 	}
 
 	override function disposeBuffer(v:Buffer) {
 		disposeResource(v.vbuf);
 		disposeBufferViews(v.vbuf);
+		var handle = v.vbuf.handle;
+		if ( handle != null )
+			frame.bufHandlesToRelease.push(handle);
 	}
 
 	override function disposeInstanceBuffer(b:InstanceBuffer) {
@@ -1976,35 +2118,38 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	override function readBufferBytesAsync( b : Buffer, startVertex : Int, vertexCount : Int, buf : haxe.io.Bytes, bufPos : Int, callback : Void -> Void ) {
-		haxe.Timer.delay(() -> {
-			var rq = new AsyncReadbackRequest();
-			rq.b = b;
-			rq.startVertex = startVertex;
-			rq.vertexCount = vertexCount;
-			rq.buf = buf;
-			rq.bufPos = bufPos;
-			rq.callback = callback;
-			asyncReadbackQueue.insert(0, rq);
+		var rq = new AsyncReadbackRequest();
+		rq.b = b;
+		rq.startVertex = startVertex;
+		rq.vertexCount = vertexCount;
+		rq.buf = buf;
+		rq.bufPos = bufPos;
+		rq.callback = callback;
+		rq.frame = frameCount;
+		asyncReadbackQueue.push(rq);
 
-			if ( asyncCopyEvent == null ) {
-				asyncCopyEvent = haxe.MainLoop.add(() -> {
-					if ( !waitingAsyncCopy ) {
-						if ( asyncReadbackQueue.length > 0 ) {
-							var totalBatchSize = 0;
-							for ( request in asyncReadbackQueue ) {
+		if ( asyncCopyEvent == null ) {
+			asyncCopyEvent = haxe.MainLoop.add(() -> {
+				if ( !waitingAsyncCopy ) {
+					if ( asyncReadbackQueue.length > 0 ) {
+						var totalBatchSize = 0;
+						for ( request in asyncReadbackQueue ) {
+							if ( request.frame < (frameCount - 1) ) {
 								var stride = request.b.format.strideBytes;
 								request.tmpBufOffset = totalBatchSize;
 								request.tmpBufSize = request.vertexCount * stride;
 								totalBatchSize += request.tmpBufSize;
 							}
+						}
 
-							if ( asyncReadbackBuffer == null || asyncReadbackBufferSize < totalBatchSize ) {
-								asyncReadbackBuffer?.release();
-								asyncReadbackBuffer = allocGPU(totalBatchSize, READBACK, COPY_DEST);
-								asyncReadbackBufferSize = totalBatchSize;
-							}
+						if ( (asyncReadbackBuffer == null || asyncReadbackBufferSize < totalBatchSize) && totalBatchSize > 0 ) {
+							asyncReadbackBuffer?.release();
+							asyncReadbackBuffer = allocGPU(totalBatchSize, READBACK, COPY_DEST);
+							asyncReadbackBufferSize = totalBatchSize;
+						}
 
-							 for ( request in asyncReadbackQueue ) {
+						for ( request in asyncReadbackQueue ) {
+							if ( request.frame < (frameCount - 1) ) {
 								var stride = request.b.format.strideBytes;
 
 								request.b.vbuf.targetState = COMMON;
@@ -2021,9 +2166,12 @@ class DX12Driver extends h3d.impl.Driver {
 
 								currentRequests.push(request);
 							}
+						}
 
-							asyncReadbackQueue.resize(0);
+						for ( r in currentRequests )
+							asyncReadbackQueue.remove(r);
 
+						if ( currentRequests.length > 0 ) {
 							asyncComputeCommandList.close();
 							computeQueue.executeCommandList(asyncComputeCommandList);
 							computeQueue.signal(computeFence, ++computeFenceValue);
@@ -2037,35 +2185,35 @@ class DX12Driver extends h3d.impl.Driver {
 							copyQueue.signal(copyFence, ++copyFenceValue);
 
 							waitingAsyncCopy = true;
-						} else {
-							asyncCopyEvent.stop();
-							asyncCopyEvent = null;
 						}
 					} else {
-						if ( copyFence.getValue() >= copyFenceValue ) {
-							asyncCopyAllocator.reset();
-							asyncCopyCommandList.reset(asyncCopyAllocator, null);
+						asyncCopyEvent.stop();
+						asyncCopyEvent = null;
+					}
+				} else {
+					if ( copyFence.getValue() >= copyFenceValue ) {
+						asyncCopyAllocator.reset();
+						asyncCopyCommandList.reset(asyncCopyAllocator, null);
 
-							var mappedPtr = asyncReadbackBuffer?.map(0, null);
-							for ( request in currentRequests ) {
-								@:privateAccess request.buf.b.blit(request.bufPos, mappedPtr, request.tmpBufOffset, request.tmpBufSize);
-								request.callback();
-							}
+						var mappedPtr = asyncReadbackBuffer?.map(0, null);
+						for ( request in currentRequests ) {
+							@:privateAccess request.buf.b.blit(request.bufPos, mappedPtr, request.tmpBufOffset, request.tmpBufSize);
+							request.callback();
+						}
 
-							asyncReadbackBuffer?.unmap(0, null);
-							currentRequests.resize(0);
-							waitingAsyncCopy = false;
+						asyncReadbackBuffer?.unmap(0, null);
+						currentRequests.resize(0);
+						waitingAsyncCopy = false;
 
-							if ( asyncReadbackQueue.length == 0 ) {
-								asyncReadbackBuffer?.release();
-								asyncReadbackBuffer = null;
-								asyncReadbackBufferSize = 0;
-							}
+						if ( asyncReadbackQueue.length == 0 ) {
+							asyncReadbackBuffer?.release();
+							asyncReadbackBuffer = null;
+							asyncReadbackBufferSize = 0;
 						}
 					}
-				});
-			}
-		}, 0);
+				}
+			});
+		}
 	}
 
 	// ------------ TEXTURES -------
@@ -2119,11 +2267,6 @@ class DX12Driver extends h3d.impl.Driver {
 
 		if( t.format.match(S3TC(_)) && (t.width & 3 != 0 || t.height & 3 != 0) )
 			throw t+" is compressed "+t.width+"x"+t.height+" but should be a 4x4 multiple";
-
-		var size = hxd.Pixels.calcDataSize(t.width, t.height, t.format) * t.layerCount;
-		if( t.mipLevels > 1 ) size *= 2;
-		if( !hasFreeMemory(size) )
-			return null;
 
 		var isRT = t.flags.has(Target);
 
@@ -2210,27 +2353,19 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	function disposeTextureViews(t:TextureData) {
-		var viewsIndex = t.cpuViewsIndex;
-		for( v in t.cpuViewsIndex){
-			cpuSrvHeap.disposeIndex(v);
-		}
-		t.cpuViewsIndex.clear();
+		t.disposeViews(cpuSrvHeap);
 	}
 
 	override function disposeTexture(t:h3d.mat.Texture) {
-		if( t.lastFrame < frameCount - 1 ) {
-			// immediate dispose
-			var r = t.t;
-			r.res.release();
-			r.res = null;
-			r.state = r.targetState = PRESENT;
-		} else
+		if( t.lastFrame < frameCount - 1 )
+			t.t.res.release();
+		else
 			disposeResource(t.t);
 		disposeTextureViews(t.t);
 		var handles = textureHandles.get(t);
 		if ( handles != null ) {
 			for ( h in handles )
-				frame.handlesToRelease.push(h);
+				frame.texHandlesToRelease.push(h);
 			if ( t.realloc == null )
 				textureHandles.remove(t);
 		}
@@ -2478,16 +2613,16 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	function getCpuTexView(t : h3d.mat.Texture) : Address {
-		var startingMip = hxd.Math.iclamp(t.startingMip, 0, 16);
-		var texViewIdx = t.t.cpuViewsIndex.get(getTexBits(t));
-		if ( texViewIdx != null )
+		var texBits = getTexBits(t);
+		var texViewIdx = t.t.getView(texBits);
+		if ( texViewIdx >= 0 )
 			return cpuSrvHeap.getCpuAddressAt(texViewIdx);
 
 		texViewIdx = cpuSrvHeap.allocIndex();
 		fillTexViewDesc(t, tmp.texViewDesc);
 		var texView = cpuSrvHeap.getCpuAddressAt(texViewIdx);
 		Driver.createShaderResourceView(t.t.res, tmp.texViewDesc, texView);
-		t.t.cpuViewsIndex.set(getTexBits(t), texViewIdx);
+		t.t.setView(texBits, texViewIdx);
 		return texView;
 	}
 
@@ -2582,9 +2717,14 @@ class DX12Driver extends h3d.impl.Driver {
 					frame.commandList.setComputeRoot32BitConstants(regs.params, dataSize >> 2, data, 0);
 				else
 					frame.commandList.setGraphicsRoot32BitConstants(regs.params, dataSize >> 2, data, 0);
-				for ( i in 0...shader.paramsHandleCount ) {
-					var handle = buf.handles[i];
-					transition(handle.texture.t, shader.kind == Fragment ? PIXEL_SHADER_RESOURCE : NON_PIXEL_SHADER_RESOURCE);
+				var state = shader.kind == Fragment ? PIXEL_SHADER_RESOURCE : NON_PIXEL_SHADER_RESOURCE;
+				for ( i in 0...shader.paramsTexHandleCount ) {
+					var handle = buf.texHandles[i];
+					transition(handle.texture.t, state);
+				}
+				for ( i in 0...shader.paramsBufHandleCount ) {
+					var handle = buf.bufHandles[i];
+					transition(handle.buffer.vbuf, state);
 				}
 			}
 		case Globals:
@@ -2610,11 +2750,18 @@ class DX12Driver extends h3d.impl.Driver {
 					frame.commandList.setComputeRoot32BitConstants(regs.globals, dataSize >> 2, data, 0);
 				else
 					frame.commandList.setGraphicsRoot32BitConstants(regs.globals, dataSize >> 2, data, 0);
-				var startIdx = shader.paramsHandleCount;
-				var lastIdx = startIdx + shader.globalsHandleCount;
+				var state = isFragment ? PIXEL_SHADER_RESOURCE : NON_PIXEL_SHADER_RESOURCE;
+				var startIdx = shader.paramsTexHandleCount;
+				var lastIdx = startIdx + shader.globalsTexHandleCount;
 				for ( i in startIdx...lastIdx ) {
-					var handle = buf.handles[i];
-					transition(handle.texture.t, isFragment ? PIXEL_SHADER_RESOURCE : NON_PIXEL_SHADER_RESOURCE);
+					var handle = buf.texHandles[i];
+					transition(handle.texture.t, state);
+				}
+				startIdx = shader.paramsBufHandleCount;
+				lastIdx = startIdx + shader.globalsBufHandleCount;
+				for ( i in startIdx...lastIdx ) {
+					var handle = buf.bufHandles[i];
+					transition(handle.buffer.vbuf, state);
 				}
 			}
 			if ( isFragment )
@@ -2772,10 +2919,11 @@ class DX12Driver extends h3d.impl.Driver {
 							var srvAddress = srv.offset(storageIndex * frame.srvHeap.stride);
 							var stride = regs.bufferStrides[i];
 							#if (hldx >= version("1.16.0"))
-							var sViewIndex = cbv.sViewIndex;
+							var sViewIndex = cbv.getSRV(stride);
 							if ( sViewIndex == -1 ) {
-								cbv.sViewIndex = sViewIndex = cpuSrvHeap.allocIndex();
+								sViewIndex = cpuSrvHeap.allocIndex();
 								createBufferSRV(cbv, stride, cpuSrvHeap.getCpuAddressAt(sViewIndex));
+								cbv.setSRV(stride, sViewIndex);
 							}
 							Driver.copyDescriptorsSimple(1, srvAddress, cpuSrvHeap.getCpuAddressAt(sViewIndex), CBV_SRV_UAV);
 							#else
@@ -2789,10 +2937,11 @@ class DX12Driver extends h3d.impl.Driver {
 							var uavAddress = srv.offset(uavIndex * frame.srvHeap.stride);
 							var stride = regs.bufferStrides[i];
 							#if (hldx >= version("1.16.0"))
-							var uViewIndex = cbv.uViewIndex;
+							var uViewIndex = cbv.getUAV(stride);
 							if ( uViewIndex == -1 ) {
-								cbv.uViewIndex = uViewIndex = cpuSrvHeap.allocIndex();
+								uViewIndex = cpuSrvHeap.allocIndex();
 								createBufferUAV(cbv, stride, cpuSrvHeap.getCpuAddressAt(uViewIndex));
+								cbv.setUAV(stride, uViewIndex);
 							}
 							Driver.copyDescriptorsSimple(1, uavAddress, cpuSrvHeap.getCpuAddressAt(uViewIndex), CBV_SRV_UAV);
 							#else
@@ -2861,6 +3010,15 @@ class DX12Driver extends h3d.impl.Driver {
 			}
 			t.lastFrame = frameCount;
 			transition(t.t, PIXEL_SHADER_RESOURCE);
+		}
+	}
+
+	override function selectBufferHandles( handles : Array<h3d.BufferHandle> ) {
+		for ( h in handles ) {
+			var vbuf = h.buffer.vbuf;
+			if ( h.handle == -1 )
+				throw "Handle is invalid";
+			transition(vbuf, PIXEL_SHADER_RESOURCE);
 		}
 	}
 
@@ -3260,20 +3418,200 @@ class DX12Driver extends h3d.impl.Driver {
 		}
 		handle = handles.get(t.bits);
 		if ( handle == null ) {
+			var samplerBits = getSamplerBits(t);
+			var samplerIndex = samplerHandles.get(samplerBits);
+			if ( samplerIndex == null ) {
 			var sampler = getCpuSampler(t);
+				samplerIndex = bindlessSamplerHeap.allocIndex();
+				samplerHandles.set(samplerBits, samplerIndex);
+				Driver.copyDescriptorsSimple(1, bindlessSamplerHeap.getCpuAddressAt(samplerIndex), sampler, SAMPLER);
+				Driver.copyDescriptorsSimple(1, frame.samplerHeap.getCpuAddressAt(samplerIndex), sampler, SAMPLER);
+			}
 			var srv = getCpuTexView(t);
 			var srvIndex = bindlessSrvHeap.allocIndex();
-			var samplerIndex = bindlessSamplerHeap.allocIndex();
 			Driver.copyDescriptorsSimple(1, bindlessSrvHeap.getCpuAddressAt(srvIndex), srv, CBV_SRV_UAV);
 			Driver.copyDescriptorsSimple(1, frame.srvHeap.getCpuAddressAt(srvIndex), srv, CBV_SRV_UAV);
-			Driver.copyDescriptorsSimple(1, bindlessSamplerHeap.getCpuAddressAt(samplerIndex), sampler, SAMPLER);
-			Driver.copyDescriptorsSimple(1, frame.samplerHeap.getCpuAddressAt(samplerIndex), sampler, SAMPLER);
 			handle = new h3d.mat.TextureHandle(t, haxe.Int64.make(samplerIndex, srvIndex));
 			handles.set(t.bits, handle);
 		}
 		return handle;
 	}
 
+	override function getBufferHandle( b : h3d.Buffer ) : h3d.BufferHandle {
+		var vbuf = b.vbuf;
+		var handle : h3d.BufferHandle = vbuf.handle;
+		if ( handle == null ) {
+			var viewIndex = bindlessSrvHeap.allocIndex();
+			var srv = bindlessSrvHeap.getCpuAddressAt(viewIndex);
+			createBufferSRV(b.vbuf, 4, srv);
+			Driver.copyDescriptorsSimple(1, frame.srvHeap.getCpuAddressAt(viewIndex), srv, CBV_SRV_UAV);
+			vbuf.handle = handle = new h3d.BufferHandle(b, viewIndex);
+		}
+		return handle;
+	}
+
+	#if dlss
+	inline static function loadDlssVec( vec : DLSSVector, v : h3d.Vector ) {
+		vec.x = cast(v.x, Single);
+		vec.y = cast(v.y, Single);
+		vec.z = cast(v.z, Single);
+	}
+
+	inline static function loadDlssMat( mat : DLSSMatrix, m : h3d.Matrix ) {
+		mat._11 = cast(m._11, Single); mat._12 = cast(m._12, Single); mat._13 = cast(m._13, Single); mat._14 = cast(m._14, Single);
+		mat._21 = cast(m._21, Single); mat._22 = cast(m._22, Single); mat._23 = cast(m._23, Single); mat._24 = cast(m._24, Single);
+		mat._31 = cast(m._31, Single); mat._32 = cast(m._32, Single); mat._33 = cast(m._33, Single); mat._34 = cast(m._34, Single);
+		mat._41 = cast(m._41, Single); mat._42 = cast(m._42, Single); mat._43 = cast(m._43, Single); mat._44 = cast(m._44, Single);
+	}
+
+	static var dlssSettings = new DLSSSettings();
+	static var dlssOptions = new DLSSOptions();
+	static var dlssConstants = new DLSSConstants();
+	static var matCameraViewToClip = new DLSSMatrix();
+	static var matClipToCameraView = new DLSSMatrix();
+	static var matClipToLensClip = new DLSSMatrix();
+	static var matClipToPrevClip = new DLSSMatrix();
+	static var matPrevClipToClip = new DLSSMatrix();
+	static var vecCameraPos = new DLSSVector();
+	static var vecCameraUp = new DLSSVector();
+	static var vecCameraRight = new DLSSVector();
+	static var vecCameraFwd = new DLSSVector();
+	#end
+
+	override function isDLSSSupported( framegen : Bool = false ) : Bool {
+		#if dlss
+		if ( !dlssReady ) return false;
+		var adapter = Driver.getAdapter();
+		var feature = framegen ? DLSSFeature.FRAMEGEN : DLSSFeature.DLSS;
+		var slResult = Dlss.isFeatureSupported(adapter, feature);
+		return slResult == 0;
+		#end
+		return false;
+	}
+
+	override function getDLSSOptimalSettings( mode : DLSSMode, targetWidth : Int, targetHeight : Int ) : DLSSSettings {
+		#if dlss
+		if ( !dlssReady ) return null;
+		switch (mode) {
+			case Off: dlssOptions.mode = OFF;
+			case MaxPerformance: dlssOptions.mode = MAXPERFORMANCE;
+			case Balanced: dlssOptions.mode = BALANCED;
+			case MaxQuality: dlssOptions.mode = MAXQUALITY;
+			case UltraPerformance: dlssOptions.mode = ULTRAPERFORMANCE;
+			case UltraQuality: dlssOptions.mode = ULTRAQUALITY;
+			case Dlaa: dlssOptions.mode = DLAA;
+		}
+		dlssOptions.outputWidth = targetWidth;
+		dlssOptions.outputHeight = targetHeight;
+		var optimalSettings = Dlss.getOptimalSettings(dlssOptions);
+		dlssSettings.optimalWidth = optimalSettings.optimalRenderWidth;
+		dlssSettings.optimalHeight = optimalSettings.optimalRenderHeight;
+		return dlssSettings;
+		#else
+		return null;
+		#end
+	}
+
+	override function applyDLSS( resources : Map<h3d.impl.Driver.DLSSTag, h3d.mat.Texture>, constants : DLSSParams, quality : DLSSQuality, mode : DLSSMode ) {
+		#if dlss
+		if ( !dlssReady ) return;
+		switch (mode) {
+			case Off: dlssOptions.mode = OFF;
+			case MaxPerformance: dlssOptions.mode = MAXPERFORMANCE;
+			case Balanced: dlssOptions.mode = BALANCED;
+			case MaxQuality: dlssOptions.mode = MAXQUALITY;
+			case UltraPerformance: dlssOptions.mode = ULTRAPERFORMANCE;
+			case UltraQuality: dlssOptions.mode = ULTRAQUALITY;
+			case Dlaa: dlssOptions.mode = DLAA;
+		}
+
+		var output = resources[ColorOut];
+		dlssOptions.outputWidth = output.width;
+		dlssOptions.outputHeight = output.height;
+		dlssOptions.colorBufferHDR = constants.colorBufferHDR;
+		switch ( quality ) {
+			case Default: dlssOptions.preset = PRESET_K;
+			case Performance: dlssOptions.preset = PRESET_M;
+			case UltraPerformance: dlssOptions.preset = PRESET_L;
+		}
+
+		Dlss.setOptions(dlssOptions);
+
+		var resCount = 0;
+		for ( t in resources.keys() ) {
+			resCount++;
+		}
+
+		var dlssResources = hl.CArray.alloc(DLSSResource, resCount);
+		var idx = 0;
+		for ( type in resources.keys() ) {
+			var t = resources.get(type);
+			var res = dlssResources[idx];
+			res.res = t.t.res;
+			res.width = t.width;
+			res.height = t.height;
+			switch ( type ) {
+				case Depth: res.type = DLSSBufferType.DEPTH;
+				case MotionVectors: res.type = DLSSBufferType.MOTIONVECTORS;
+				case ColorIn: res.type = DLSSBufferType.COLORIN;
+				case ColorOut: res.type = DLSSBufferType.COLOROUT;
+			}
+			res.state = t.t.state;
+			t.lastFrame = frameCount;
+			idx++;
+		}
+
+		Dlss.setTagForFrame(dlssFrameToken, dlssResources, resCount, frame.commandList);
+
+		loadDlssMat(matCameraViewToClip, constants.cameraViewToClip);
+		loadDlssMat(matClipToCameraView, constants.clipToCameraView);
+		loadDlssMat(matClipToPrevClip, constants.clipToPrevClip);
+		loadDlssMat(matPrevClipToClip, constants.prevClipToClip);
+
+		loadDlssVec(vecCameraPos, constants.cameraPos);
+		loadDlssVec(vecCameraUp, constants.cameraUp);
+		loadDlssVec(vecCameraRight, constants.cameraRight);
+		loadDlssVec(vecCameraFwd, constants.cameraFwd);
+
+		dlssConstants.cameraViewToClip = matCameraViewToClip;
+		dlssConstants.clipToCameraView = matClipToCameraView;
+		dlssConstants.clipToLensClip = matClipToLensClip;
+		dlssConstants.clipToPrevClip = matClipToPrevClip;
+		dlssConstants.prevClipToClip = matPrevClipToClip;
+		dlssConstants.jitterOffsetX = constants.jitterOffsetX;
+		dlssConstants.jitterOffsetY = constants.jitterOffsetY;
+		dlssConstants.mvecScaleX = constants.mvecScaleX;
+		dlssConstants.mvecScaleY = constants.mvecScaleY;
+		dlssConstants.cameraPinholeOffsetX = 0.0;
+		dlssConstants.cameraPinholeOffsetY = 0.0;
+		dlssConstants.cameraPos = vecCameraPos;
+		dlssConstants.cameraUp = vecCameraUp;
+		dlssConstants.cameraRight = vecCameraRight;
+		dlssConstants.cameraFwd = vecCameraFwd;
+		dlssConstants.cameraNear = constants.cameraNear;
+		dlssConstants.cameraFar = constants.cameraFar;
+		dlssConstants.cameraFOV = constants.cameraFOV;
+		dlssConstants.cameraAspectRatio = constants.cameraAspectRatio;
+		dlssConstants.motionVectorsInvalidValue = constants.motionVectorsInvalidValue;
+		dlssConstants.depthInverted = constants.depthInverted;
+		dlssConstants.cameraMotionIncluded = constants.cameraMotionIncluded;
+		dlssConstants.motionVectors3D = false;
+		dlssConstants.reset = constants.reset;
+		dlssConstants.orthographicProjection = constants.orthographicProjection;
+		dlssConstants.motionVectorsDilated = constants.motionVectorsDilated;
+		dlssConstants.motionVectorsJittered = constants.motionVectorsJittered;
+		dlssConstants.minRelativeLinearDepthObjectSeparation = 40.0;
+
+		Dlss.setConstants(dlssFrameToken, dlssConstants);
+		Dlss.evaluateFeature(dlssFrameToken, frame.commandList, DLSSFeature.DLSS);
+
+		var arr = tmp.descriptors2;
+		arr[0] = @:privateAccess frame.srvHeap.heap;
+		arr[1] = @:privateAccess frame.samplerHeap.heap;
+		frame.commandList.setDescriptorHeaps(arr);
+
+		#end
+	}
 }
 
 #end

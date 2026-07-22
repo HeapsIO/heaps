@@ -205,6 +205,9 @@ class Window {
 		}
 	}
 
+	public function setIcon(icon: hxd.BitmapData) : Void {
+	}
+
 	public dynamic function onClose() : Bool {
 		return true;
 	}

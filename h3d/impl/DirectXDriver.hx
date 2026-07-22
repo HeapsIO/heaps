@@ -929,7 +929,7 @@ class DirectXDriver extends h3d.impl.Driver {
 			var prev = from.lastFrame;
 			from.preventAutoDispose();
 			to.alloc();
-			from.lastFrame = prev;
+			@:bypassAccessor from.lastFrame = prev;
 			if( from.t == null ) throw "assert";
 			if( to.t == null ) return false;
 		}

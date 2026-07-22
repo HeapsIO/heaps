@@ -62,6 +62,7 @@ class TextInput extends Text {
 	public var useSoftwareKeyboard : Bool = true;
 	public static dynamic function showSoftwareKeyboard(target:TextInput) {}
 	public static dynamic function hideSoftwareKeyboard(target:TextInput) {}
+	public dynamic function onSoftwareKeyboardEnd(isSubmit: Bool) {}
 
 	var interactive : h2d.Interactive;
 	var cursorText : String;
@@ -257,6 +258,7 @@ class TextInput extends Text {
 			if(!multiline) {
 				cursorIndex = -1;
 				interactive.blur();
+				if( canEdit ) onSubmit();
 				return;
 			} else if( canEdit ) {
 				inputText("\n");
@@ -821,11 +823,11 @@ class TextInput extends Text {
 	/**
 		Sets focus on this `TextInput`.
 	**/
-	public function focus() {
+	public function focus( autoSelect=false ) {
 		interactive.focus();
 		if( cursorIndex < 0 ) {
 			cursorIndex = 0;
-			if( text != "" && !multiline ) selectionRange = { start : 0, length : getTextLength() };
+			if( autoSelect && text != "" && !multiline ) selectionRange = { start : 0, length : getTextLength() };
 		}
 	}
 
@@ -848,6 +850,12 @@ class TextInput extends Text {
 	**/
 	public function hasFocus() {
 		return interactive.hasFocus();
+	}
+
+	/**
+		Triggered when a not multiline text input is validated with Enter
+	**/
+	public dynamic function onSubmit() {
 	}
 
 	/**

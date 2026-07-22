@@ -9,6 +9,7 @@ enum Step {
 	BeforeTonemapping;
 	AfterTonemapping;
 	Overlay;
+	Debug;
 	Custom( name : String );
 }
 

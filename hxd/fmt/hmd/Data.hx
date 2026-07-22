@@ -46,6 +46,10 @@ class Position {
 	public function new() {
 	}
 
+	public inline function isIdentity() : Bool {
+		return x == 0 && y == 0 && z == 0 && qx == 0 && qy == 0 && qz == 0 && sx == 1 && sy == 1 && sz == 1;
+	}
+
 	public inline function loadQuaternion( q : h3d.Quat ) {
 		q.x = qx;
 		q.y = qy;
@@ -126,9 +130,9 @@ class Collider {
 	// Auto : Generate a convex hull and use it as a collider
 	// Mesh : Use a specific model as collider
 	// Custom : Use custom shapes defined by the user as collider
-	public static function resolveColliderType(d : Data, model : Model, params : CollideParams, isDefaultParams : Bool, ?collisionThresholdHeight : Float, ?collisionUseLowLod : Bool) : ResolveResult {
+	public static function resolveColliderType(d : Data, model : Model, params : CollideParams, isDefaultParams : Bool, ?collisionThresholdHeight : Float, ?collisionUseLowLod : Bool, ?noCollision : Bool) : ResolveResult {
 		// None mode
-		if (params == null && !isDefaultParams)
+		if ((noCollision != null && noCollision) || (params == null && !isDefaultParams))
 			return ResolveResult.Empty;
 
 		// Default mode

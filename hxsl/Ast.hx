@@ -36,6 +36,7 @@ enum Type {
 	TBuffer( t : Type, size : SizeDecl, kind : BufferKind );
 	TChannel( size : Int );
 	TTextureHandle;
+	TBufferHandle;
 }
 
 enum VecType {
@@ -342,6 +343,12 @@ enum TGlobal {
 	Transpose;
 	TexelLod;
 	ResolveSampler;
+	ResolveBuffer;
+	FindLSB;
+	FindMSB;
+	AtomicAnd;
+	AtomicOr;
+	BitCount;
 }
 
 enum SyntaxArgAccess {
@@ -523,10 +530,10 @@ class Tools {
 		case TVec(size, t):
 			var prefix = switch( t ) {
 			case VFloat: "";
-			case VInt: "i";
-			case VBool: "b";
+			case VInt: "I";
+			case VBool: "B";
 			}
-			prefix + "vec" + size;
+			prefix + "Vec" + size;
 		case TStruct(vl):"{" + [for( v in vl ) v.name + " : " + toString(v.type)].join(",") + "}";
 		case TArray(t, s): toString(t) + "[" + (switch( s ) { case SConst(i): "" + i; case SVar(v): v.name; } ) + "]";
 		case TBuffer(t, s, k):
@@ -585,7 +592,7 @@ class Tools {
 			return true;
 		case TCall(e, pl):
 			switch( e.e ) {
-			case TGlobal( ImageStore | AtomicAdd | GroupMemoryBarrier | ResolveSampler ):
+			case TGlobal( ImageStore | AtomicAdd | AtomicAnd | AtomicOr | GroupMemoryBarrier | ResolveSampler | ResolveBuffer ):
 				return true;
 			case TGlobal(g):
 			default:
@@ -686,6 +693,7 @@ class Tools {
 		case TArray(t, SConst(v)), TBuffer(t, SConst(v),_): size(t) * v;
 		case TArray(_, SVar(_)), TBuffer(_): 0;
 		case TTextureHandle: 2;
+		case TBufferHandle: 1;
 		}
 	}
 

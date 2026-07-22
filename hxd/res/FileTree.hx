@@ -24,9 +24,11 @@ class FileTree {
 	var ignoredPairedExt : Map<String,Array<String>>;
 	var options : EmbedOptions;
 	var embedTypes : Array<String>;
+	var rootPack: String;
 	var checkTmp : Bool;
 
-	public function new(dir) {
+	public function new(dir, rootPack = "hxd") {
+		this.rootPack = rootPack;
 		this.paths = resolvePaths(dir);
 		currentModule = Std.string(Context.getLocalClass());
 		pos = Context.currentPos();
@@ -168,7 +170,7 @@ class FileTree {
 			switch( file.ext ) {
 			case "ttf" if( Config.platform == JS ):
 				Embed.doEmbedFont(name, fullPath, options.fontsChars);
-				embedTypes.push("hxd._res." + name);
+				embedTypes.push('$rootPack._res.$name');
 				continue;
 			default:
 				Context.addResource(name, sys.io.File.getBytes(fullPath));
@@ -352,7 +354,7 @@ class FileTree {
 		for( f in def.fields )
 			ofields.push(f);
 		Context.defineType( {
-			pack : ["hxd", "_res"],
+			pack : [rootPack, "_res"],
 			name : name,
 			pos : pos,
 			meta : [{ name : ":dce", params : [], pos : pos }],
@@ -361,15 +363,15 @@ class FileTree {
 			params : [],
 			kind : TDAbstract(loaderType),
 		});
-		var tpath = { pack : ["hxd", "_res"], name : name, params : [] };
+		var tpath = { pack : [rootPack, "_res"], name : name, params : [] };
 		return {
 			t : TPath(tpath),
 			e : { expr : ENew(tpath, [macro loader]), pos : pos },
 		};
 	}
 
-	public static function build( ?dir : String ) {
-		return new FileTree(dir).buildFields();
+	public static function build( ?dir : String, ?rootPack: String ) {
+		return new FileTree(dir, rootPack).buildFields();
 	}
 
 }

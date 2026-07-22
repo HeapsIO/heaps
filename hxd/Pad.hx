@@ -324,16 +324,22 @@ class Pad {
 		#if hlsdl
 		if( !initDone ) {
 			initDone = true;
+			#if (hlsdl >= version("1.16.0"))
+			var sticks = sdl.Sdl.getJoysticks();
+			for( stick in sticks )
+				initPad( stick );
+			#else
 			var c = @:privateAccess GameController.gctrlCount();
 			for( idx in 0...c )
 				initPad( idx );
-			haxe.MainLoop.add(syncPads);
+			#end
+			haxe.MainLoop.add(syncPads, -1);
 		}
 		#elseif (hldx || usesys)
 		if( !initDone ){
 			initDone = true;
 			GameController.init();
-			haxe.MainLoop.add(syncPads);
+			haxe.MainLoop.add(syncPads, -1);
 		}
 		#elseif js
 		if( !initDone ) {
@@ -354,7 +360,7 @@ class Pad {
 				pad.onDisconnect();
 			});
 			#if !manual_sync_pad
-			haxe.MainLoop.add(syncPads);
+			haxe.MainLoop.add(syncPads, -1);
 			#end
 		}
 		#end
@@ -367,10 +373,12 @@ class Pad {
 	}
 
 	function _detectAnalogButton(index: Int, v: Float) {
-		if(v > ANALOG_BUTTON_THRESHOLDS.press && v > values[index]) {
+		v = Math.abs(v);
+		var absValue = Math.abs(values[index]);
+		if(v > ANALOG_BUTTON_THRESHOLDS.press && v > absValue) {
 			buttons[ index ] = true;
 		}
-		if(v < ANALOG_BUTTON_THRESHOLDS.release && v < values[index]) {
+		if(v < ANALOG_BUTTON_THRESHOLDS.release && v < absValue) {
 			buttons[ index ] = false;
 		}
 	}

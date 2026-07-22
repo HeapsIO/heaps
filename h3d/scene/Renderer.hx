@@ -28,7 +28,7 @@ class Renderer extends hxd.impl.AnyProps {
 	var backToFront : h3d.pass.PassList -> Void;
 	var debugging = false;
 
-	#if editor_hl
+	#if (editor || editor_hl)
 	public var showEditorGuides = false;
 	#end
 
@@ -135,7 +135,7 @@ class Renderer extends hxd.impl.AnyProps {
 	}
 
 	inline function allocTarget( name : String, depth = true, size = 1., ?format, ?flags : Array<h3d.mat.Data.TextureFlags> ) {
-		return ctx.textures.allocTarget(name, Math.round(ctx.engine.width * size), Math.round(ctx.engine.height * size), depth, format, flags);
+		return ctx.textures.allocTarget(name, Math.round(ctx.renderResolutionWidth * size), Math.round(ctx.renderResolutionHeight * size), depth, format, flags);
 	}
 
 	function copy( from, to, ?blend ) {

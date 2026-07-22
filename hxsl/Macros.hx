@@ -51,6 +51,8 @@ class Macros {
 			macro : hxsl.Types.Buffer;
 		case TTextureHandle:
 			macro : hxsl.Types.TextureHandle;
+		case TBufferHandle:
+			macro : hxsl.Types.BufferHandle;
 		}
 	}
 
@@ -266,6 +268,11 @@ class Macros {
 				h3d.impl.RenderContext.fillIntParam(v.handle.low, pos++, out);
 				h3d.impl.RenderContext.fillIntParam(v.handle.high, pos++, out);
 			};
+		case TBufferHandle:
+			macro {
+				var v : h3d.BufferHandle = $eparam;
+				h3d.impl.RenderContext.fillIntParam(v.handle, pos++, out);
+			}
 		default:
 			macro super.writeParam(index, type, out, pos);
 		}

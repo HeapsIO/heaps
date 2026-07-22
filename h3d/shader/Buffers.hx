@@ -15,7 +15,8 @@ class ShaderBuffers {
 	public var params : ShaderBufferData;
 	public var tex : haxe.ds.Vector<h3d.mat.Texture>;
 	public var buffers : haxe.ds.Vector<h3d.Buffer>;
-	public var handles : haxe.ds.Vector<h3d.mat.TextureHandle>;
+	public var texHandles : haxe.ds.Vector<h3d.mat.TextureHandle>;
+	public var bufHandles : haxe.ds.Vector<h3d.BufferHandle>;
 
 	public function new() {
 		globals = new ShaderBufferData(0);
@@ -28,12 +29,14 @@ class ShaderBuffers {
 		var np = s.paramsSize << 2;
 		var nt = s.texturesCount;
 		var nb = s.bufferCount;
-		var nh = s.globalsHandleCount + s.paramsHandleCount;
+		var nth = s.globalsTexHandleCount + s.paramsTexHandleCount;
+		var nbh = s.globalsBufHandleCount + s.paramsBufHandleCount;
 		if( globals.length < ng ) globals = new ShaderBufferData(ng);
 		if( params.length < np ) params = new ShaderBufferData(np);
 		if( tex.length < nt ) tex = new haxe.ds.Vector(nt);
 		if( nb > 0 && (buffers == null || buffers.length < nb) ) buffers = new haxe.ds.Vector(nb);
-		if( nh > 0 && (handles == null || handles.length < nh) ) handles = new haxe.ds.Vector(nh);
+		if( nth > 0 && (texHandles == null || texHandles.length < nth) ) texHandles = new haxe.ds.Vector(nth);
+		if( nbh > 0 && (bufHandles == null || bufHandles.length < nbh) ) bufHandles = new haxe.ds.Vector(nbh);
 	}
 
 }

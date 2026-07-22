@@ -177,6 +177,8 @@ class CubeShadowMap extends Shadows {
 
 		var prevFar = @:privateAccess ctx.cameraFar;
 		var prevPos = @:privateAccess ctx.cameraPos;
+		var prevView = @:privateAccess ctx.cameraView;
+		var prevProj = @:privateAccess ctx.cameraProj;
 		var prevViewProj = @:privateAccess ctx.cameraViewProj;
 
 		for( i in 0...6 ) {
@@ -200,7 +202,9 @@ class CubeShadowMap extends Shadows {
 			ctx.engine.pushTarget(texture, i);
 			format == RGBA ? ctx.engine.clear(0xFFFFFF, nullOne) : ctx.engine.clearF(clearDepthColor, nullOne);
 
-			@:privateAccess ctx.cameraViewProj = getShadowProj();
+			@:privateAccess ctx.cameraView = getShadowView();
+			@:privateAccess ctx.cameraProj = getShadowProj();
+			@:privateAccess ctx.cameraViewProj = getShadowViewProj();
 			@:privateAccess ctx.cameraFar = lightCamera.zFar;
 			@:privateAccess ctx.cameraPos = lightCamera.pos;
 
@@ -211,6 +215,8 @@ class CubeShadowMap extends Shadows {
 
 		@:privateAccess ctx.cameraFar = prevFar;
 		@:privateAccess ctx.cameraPos = prevPos;
+		@:privateAccess ctx.cameraView = prevView;
+		@:privateAccess ctx.cameraProj = prevProj;
 		@:privateAccess ctx.cameraViewProj = prevViewProj;
 
 		// Blur is applied even if there's no shadows - TO DO : remove the useless blur pass

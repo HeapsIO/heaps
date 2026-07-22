@@ -17,6 +17,7 @@ class TmpObject {
 	#end
 	public var joint : h3d.anim.Skin.Joint;
 	public var skin : TmpObject;
+	public var rootJoints : Array<TmpObject>;
 	public function new() {
 		childs = [];
 	}
@@ -60,6 +61,12 @@ class DefaultMatrixes {
 		m._21 = -m._21;
 		m._31 = -m._31;
 		m._41 = -m._41;
+	}
+
+	public function fromMatrix(m : h3d.Matrix) {
+		trans = m.getPosition();
+		scale = m.getScale();
+		rotate = m.getEulerAngles();
 	}
 
 	public function toMatrix(leftHand) {
@@ -147,6 +154,11 @@ class BaseLibrary {
 		Use the legacy system to convert scale and axis of FBX file
 	**/
 	public var legacyScaleAxisConversion : Bool = false;
+
+	/**
+		Use the legacy system to import skinned mesh of FBX file
+	**/
+	public var legacySkinImport : Bool = false;
 
 	public function new( fileName ) {
 		this.fileName = fileName;

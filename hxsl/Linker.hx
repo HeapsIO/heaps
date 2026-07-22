@@ -77,12 +77,10 @@ class Linker {
 	var isBatchShader : Bool;
 	var debugDepth = 0;
 
-	var lowercaseMap : Map<String, String>;
 	var mapExprVarFun : TExpr -> TExpr;
 
 	public function new(mode) {
 		this.mode = mode;
-		this.lowercaseMap = new Map();
 		this.mapExprVarFun = mapExprVar;
 	}
 
@@ -140,12 +138,7 @@ class Linker {
 				case Name(n): key = n;
 				default:
 				}
-		var ukey = lowercaseMap.get(key);
-		if( ukey == null ) {
-			ukey = key.toLowerCase();
-			lowercaseMap.set(key, ukey);
-		}
-		var v2 = varMap.get(ukey);
+		var v2 = varMap.get(key);
 		var vname = v.name;
 		if( v2 != null ) {
 			for( vm in v2.merged )
@@ -158,7 +151,7 @@ class Linker {
 				// allocate a new unique name in the shader if already in use
 				var k = 2;
 				while( true ) {
-					var a = varMap.get(ukey + k);
+					var a = varMap.get(key + k);
 					if( a == null ) break;
 					for( vm in a.merged )
 						if( vm == v )
@@ -167,14 +160,13 @@ class Linker {
 				}
 				if( v.kind == Input ) {
 					// it's not allowed to rename an input var, let's rename existing var instead
-					varMap.remove(ukey);
-					varMap.set(ukey + k, v2);
+					varMap.remove(key);
+					varMap.set(key + k, v2);
 					v2.v.name += k;
 					v2.path += k;
 				} else {
 					vname += k;
 					key += k;
-					ukey += k;
 				}
 			} else {
 				v2.merged.push(v);
@@ -200,7 +192,7 @@ class Linker {
 		a.instanceIndex = curInstance;
 		a.rootShaderName = shaderName;
 		allVars.push(a);
-		varMap.set(ukey, a);
+		varMap.set(key, a);
 		switch( v2.type ) {
 		case TStruct(vl):
 			v2.type = TStruct([for( v in vl ) allocVar(v, p, shaderName, key, a).v]);
@@ -294,6 +286,15 @@ class Linker {
 				curShader.writeVars.push(v);
 			}
 			return { e : TCall({ e : TGlobal(ResolveSampler),  t : TFun([]), p : e.p }, [handle, { e : TVar(v.v), t : v.v.type, p : e.p }] ), t : e.t, p : e.p };
+		case TCall({ e : TGlobal(ResolveBuffer)}, [handle, { e : TVar(v)}]):
+			var handle = mapExprVar(handle);
+			var v = allocVar(v, handle.p);
+			if( curShader != null && !curShader.writeMap.exists(v.id) ) {
+				debug(curShader.name + " write " + v.path);
+				curShader.writeMap.set(v.id, v);
+				curShader.writeVars.push(v);
+			}
+			return { e : TCall({ e : TGlobal(ResolveBuffer),  t : TFun([]), p : e.p }, [handle, { e : TVar(v.v), t : v.v.type, p : e.p }] ), t : e.t, p : e.p };
 		default:
 		}
 		return e.map(mapExprVarFun);
@@ -470,6 +471,7 @@ class Linker {
 			vert : -1500,
 			frag : -500,
 		}
+		var isCompute = mode == Compute;
 		for( s in shadersData ) {
 			isBatchShader = mode == Batch && StringTools.startsWith(s.name,"batchShader_");
 			for( f in s.funs ) {
@@ -477,12 +479,12 @@ class Linker {
 				if( v.kind == null ) throw "assert";
 				switch( v.kind ) {
 				case Vertex, Fragment:
-					if( mode == Compute )
+					if( isCompute )
 						throw "Unexpected "+v.kind.getName().toLowerCase()+"() function in compute shader";
 					var offset = v.kind == Vertex ? shaderOffset.vert : shaderOffset.frag;
 					addShader(s.name + "." + (v.kind == Vertex ? "vertex" : "fragment"), v.kind == Vertex ? Vertex : Fragment, f.expr, priority + offset, false);
 				case Main:
-					if( mode != Compute )
+					if( !isCompute )
 						throw "Unexpected main() outside compute shader";
 					addShader(s.name, Vertex, f.expr, priority, false).isCompute = true;
 				case Init:
@@ -498,9 +500,9 @@ class Linker {
 					case TBlock(el):
 						var index = 0;
 						for( e in el )
-							addShader(s.name+"."+f.ref.name+(index++),status,e, prio[0]++, isBatchInit);
+							addShader(s.name+"."+f.ref.name+(index++),status,e, prio[0]++, isBatchInit).isCompute = isCompute;
 					default:
-						addShader(s.name+"."+f.ref.name,status,f.expr, prio[0]++, isBatchInit);
+						addShader(s.name+"."+f.ref.name,status,f.expr, prio[0]++, isBatchInit).isCompute = isCompute;
 					}
 				case Helper:
 					throw "Unexpected helper function in linker "+v.v.name;
@@ -539,41 +541,47 @@ class Linker {
 					fentry.deps.set(s, true);
 			}
 
-		// force shaders reading only params into fragment shader
-		// (pixelColor = color with no effect in BaseMesh)
-		for( s in shaders ) {
-			if( s.stage != Undefined ) continue;
-			var onlyParams = true;
-			for( r in s.readVars )
-				if( r.v.kind != Param ) {
-					onlyParams = false;
-					break;
+		if ( isCompute ) {
+			for( s in shaders )
+				s.stage = Vertex;
+		} else {
+			// force shaders reading only params into fragment shader
+			// (pixelColor = color with no effect in BaseMesh)
+			for( s in shaders ) {
+				if( s.stage != Undefined ) continue;
+				var onlyParams = true;
+				for( r in s.readVars )
+					if( r.v.kind != Param ) {
+						onlyParams = false;
+						break;
+					}
+				if( onlyParams ) {
+					debug("Force " + s.name + " into fragment since it only reads params");
+					s.stage = Fragment;
 				}
-			if( onlyParams ) {
-				debug("Force " + s.name + " into fragment since it only reads params");
-				s.stage = Fragment;
+			}
+
+			for( s in shaders ) {
+				if ( s.deps == null)
+					continue;
+				// propagate fragment flag
+				if( s.stage == Undefined )
+					for( d in s.deps.keys() )
+						if( d.stage == Fragment ) {
+							debug(s.name + " marked as fragment because of " + d.name);
+							s.stage = Fragment;
+							break;
+						}
+				// propagate vertex flag
+				if( s.stage == Vertex )
+					for( d in s.deps.keys() )
+						if( d.stage == Undefined ) {
+							debug(d.name + " marked as vertex because of " + s.name);
+							d.stage = Vertex;
+						}
 			}
 		}
 
-		for( s in shaders ) {
-			if ( s.deps == null)
-				continue;
-			// propagate fragment flag
-			if( s.stage == Undefined )
-				for( d in s.deps.keys() )
-					if( d.stage == Fragment ) {
-						debug(s.name + " marked as fragment because of " + d.name);
-						s.stage = Fragment;
-						break;
-					}
-			// propagate vertex flag
-			if( s.stage == Vertex )
-				for( d in s.deps.keys() )
-					if( d.stage == Undefined ) {
-						debug(d.name + " marked as vertex because of " + s.name);
-						d.stage = Vertex;
-					}
-		}
 
 		// collect needed dependencies
 		var v = [], f = [];

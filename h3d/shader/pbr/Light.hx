@@ -216,6 +216,7 @@ class RectangleLight extends Light {
 
 		var view : Vec3;
 		var normal : Vec3;
+		final epsilon : Float = 0.00001;
 
 		function getIntersectionPoint(rayOrigin : Vec3, rayDirection : Vec3, p0 : Vec3, p1 : Vec3, p2 : Vec3) : Vec3 {
 			var planeNormal = cross(p1 - p0, p2 - p1).normalize();
@@ -244,7 +245,7 @@ class RectangleLight extends Light {
 		}
 
 		function getClosestPointOnRectangle(rayOrigin : Vec3, rayDirection : Vec3, p0 : Vec3, p1 : Vec3, p2 : Vec3, p3 : Vec3) : Vec3 {
-			var int = getIntersectionPoint(rayOrigin, rayDirection, p0, p1, p3);
+			var intersectionPoint = getIntersectionPoint(rayOrigin, rayDirection, p0, p1, p3);
 			var closestPoint = vec3(0, 0, 0);
 			if (traceTriangle(rayOrigin, rayDirection, p0, p3, p2)) {
 				closestPoint = getIntersectionPoint(rayOrigin, rayDirection, p0, p3, p2);
@@ -253,7 +254,7 @@ class RectangleLight extends Light {
 				closestPoint = getIntersectionPoint(rayOrigin, rayDirection, p0, p1, p3);
 			}
 			else {
-				var p = int - lightPos;
+				var p = intersectionPoint - lightPos;
 				var right = (p1 - p0).normalize();
 				var up = (p2 - p0).normalize();
 				var intRight = clamp(dot(p, right), -width * 0.5, width * 0.5) * right;
@@ -276,13 +277,13 @@ class RectangleLight extends Light {
 			var delta = closestPointDiffuse - transformedPosition;
 			pbrLightDirection = normalize(delta);
 
-			var xyEpsilon = horizontalFallOff - horizontalAngle;
+			var xyEpsilon = horizontalFallOff - horizontalAngle + epsilon;
 			var xyLightDir = invLightDir - dot(invLightDir, up) * up;
 			var xyDelta = delta - dot(delta, up) * up;
 			var xyTheta = dot(xyDelta.normalize(), xyLightDir.normalize());
 			var horizontalFalloff = saturate((xyTheta - horizontalAngle) / xyEpsilon);
 
-			var xzEpsilon = verticalFallOff - verticalAngle;
+			var xzEpsilon = verticalFallOff - verticalAngle + epsilon;
 			var xzLightDir = invLightDir - dot(invLightDir, right) * right;
 			var xzDelta = delta - dot(delta, right) * right;
 			var xzTheta = dot(xzDelta.normalize(), xzLightDir.normalize());
