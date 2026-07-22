@@ -198,7 +198,7 @@ class Renderer extends h3d.scene.Renderer {
 			return emissiveDecalsOutput;
 		case "depthPrepass", "forwardDepthPrepass", "beforeTonemappingDepthPrepass":
 			return depthOutput;
-		#if editor
+		#if (editor || editor_hl)
 		case "highlight", "highlightBack":
 			return defaultPass;
 		#end

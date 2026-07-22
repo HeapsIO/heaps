@@ -402,7 +402,7 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 		renderer.process(passes);
 
 		// check that passes have been rendered
-		#if (debug && !editor)
+		#if (debug && !editor && !editor_hl)
 		if( !ctx.computingStatic && checkPasses)
 			for( p in passes )
 				if( !p.rendered )
