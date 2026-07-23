@@ -333,7 +333,7 @@ class ConvertFBX2HMD extends Convert {
 }
 
 class ConvertGLTF2HMD extends Convert {
-	var gltf : hxd.fmt.gltf.Data.GltfNode;
+	var gltf : hxd.fmt.gltf.Data.GltfDocument;
 
 	public function new() {
 		super("glb", "hmd");

@@ -1,4 +1,5 @@
 package hxd.fmt.gltf;
+import haxe.io.BytesInput;
 import haxe.io.Bytes;
 using hxd.fmt.gltf.Data;
 
@@ -17,42 +18,36 @@ class Parser {
 	public function new() {
 	}
 
-	public function parseBytes(bytes : Bytes) : GltfNode {
-		var pos = 0;
-		if (bytes.getInt32(pos) != MAGIC_FLAG)
+	public function parseBytes(bytes : Bytes) : hxd.fmt.gltf.Data.GltfDocument {
+		var input = new BytesInput(bytes);
+		input.bigEndian = false;
+
+		var magic = input.readInt32();
+		var version = input.readInt32();
+		var length = input.readInt32();
+
+		if (magic != MAGIC_FLAG)
 			throw "Not a GLTF file";
-		pos += 4;
-		var version = bytes.getInt32(pos);
-		pos += 4;
-		var length = bytes.getInt32(pos);
-		pos += 4;
 
-		var chunks : Array<Chunk> = [];
-		while (pos < length) {
+		var chunks = [];
+		while (input.position < length) {
 			var c : Chunk = { length: 0, type: 0, data: null };
-			c.length = bytes.getInt32(pos);
-			c.type = bytes.getInt32(pos + 4);
-			c.data = bytes.sub(pos + 8, c.length);
-			chunks.push(c);
-
-			// chunks.push({ length: bytes.getInt32(pos), type: bytes.getInt32(pos + 4), data: bytes.sub(pos + 8, bytes.getInt32(pos + 4)) });
-			pos += 4 + 4 + c.length;
-		}
+			c.length = input.readInt32();
+			c.type = input.readInt32();
+			c.data = input.read(c.length);
+        	chunks.push(c);
+        }
 
 		// Parse JSON chunk
 		if (chunks[0].type != JSON_CHUNK_TYPE_FLAG)
 			throw "First chunk of the file should be JSON Chunk";
 
 		var jsonChunk = chunks[0];
-
-		return null;
+		var gltfDocument : GltfDocument = haxe.format.JsonParser.parse(jsonChunk.data.toString());
+		return gltfDocument;
 	}
 
-	public function parseText(str : String) : GltfNode {
-		return null;
-	}
-
-	public static inline function parse(data : Bytes) : GltfNode {
+	public static inline function parse(data : Bytes) : GltfDocument {
 		return new Parser().parseBytes(data);
 	}
 
