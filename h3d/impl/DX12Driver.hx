@@ -2367,7 +2367,7 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	override function disposeTexture(t:h3d.mat.Texture) {
-		if( t.lastFrame < frameCount - 1 )
+		if( t.lastFrame <= (frameCount - BUFFER_COUNT) )
 			t.t.res.release();
 		else
 			disposeResource(t.t);
