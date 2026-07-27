@@ -1113,6 +1113,7 @@ class DX12Driver extends h3d.impl.Driver {
 		tmp.clearValue.stencil = 0;
 		defaultDepth.t.res = Driver.createCommittedResource(tmp.heap, flags, desc, DEPTH_WRITE, tmp.clearValue);
 		defaultDepth.t.res.setName("defaultDepth");
+		defaultDepth.t.state = defaultDepth.t.targetState = DEPTH_WRITE;
 
 		beginFrame();
 	}
