@@ -500,14 +500,12 @@ class Renderer extends h3d.scene.Renderer {
 	function applyDLSS(quality : DLSSQuality, mode : DLSSMode, reset : Bool = false) {
 		if (ctx.engine.driver.hasFeature(DLSS)) {
 			var ldr = ctx.getGlobal("ldrMap");
-			var curFrame = allocTarget("curFrame", false, 1.0, ldr.format);
-			h3d.pass.Copy.run(ldr, curFrame);
 			var depthMap : h3d.mat.Texture = getPbrDepth();
 			var velocity = ctx.getGlobal("velocity");
 			var output = ctx.textures.allocTarget("dlssOutput", ctx.engine.width, ctx.engine.height, true, ldr.format, [ Writable ]);
 
 			resources.clear();
-			resources.set(ColorIn, curFrame);
+			resources.set(ColorIn, ldr);
 			resources.set(MotionVectors, velocity);
 			resources.set(Depth, depthMap);
 			resources.set(ColorOut, output);
