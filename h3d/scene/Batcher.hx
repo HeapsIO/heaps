@@ -732,6 +732,9 @@ private class BatchCommandBuilder extends hxsl.Shader {
 				length(vec3(modelView[0].z,modelView[1].z,modelView[2].z))
 			);
 
+			if ( dot(scale, scale) < 1e-12 )
+				return;
+
 			if ( IS_RELATIVE ) {
 				position = position * worldMatrix.mat3x4();
 				var worldScale = vec3(
