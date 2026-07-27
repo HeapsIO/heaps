@@ -251,6 +251,8 @@ class FileConverter {
 	}
 
 	public function run( e : LocalFileSystem.LocalEntry ) {
+		if( e.isDirectory )
+			return;
 		var rule = getConvertRule(e.path);
 		if( e.originalFile == null )
 			e.originalFile = e.file;
