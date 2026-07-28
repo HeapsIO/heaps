@@ -255,7 +255,7 @@ class FileConverter {
 			e.originalFile = e.file;
 		else
 			e.file = e.originalFile;
-		if( e.isDirectory ) {}
+		if( e.isDirectory )
 			return;
 		var rule = getConvertRule(e.path);
 		if( rule == null || rule.cmd.conv == null )
