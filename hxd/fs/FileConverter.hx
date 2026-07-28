@@ -207,7 +207,10 @@ class FileConverter {
 	}
 
 	function getFileTime( filePath : String ) : Float {
-		return sys.FileSystem.stat(filePath).mtime.getTime();
+		var stat = sys.FileSystem.stat(filePath);
+		var mtime = stat.mtime.getTime();
+		var ctime = stat.ctime.getTime();
+		return Math.max(mtime, ctime);
 	}
 
 	function loadConfig( dir : String ) : ConvertConfig {
