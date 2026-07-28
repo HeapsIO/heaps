@@ -220,6 +220,9 @@ class DxFrame {
 	public var queryHeapOffset : Int;
 	public var queryBuffer : GpuResource;
 	public var bufferAllocator : BufferAllocator;
+	#if dlss
+	public var dlssFrameToken : DLSSFrameToken;
+	#end
 	public function new() {
 	}
 	public function getSize() {
@@ -703,7 +706,6 @@ class DX12Driver extends h3d.impl.Driver {
 
 	#if dlss
 	var dlssReady : Bool;
-	var dlssFrameToken : DLSSFrameToken;
 	#end
 
 	public static var COPY_BUFFER_SIZE = 256 * 1024 * 1024; // 256 Mo per frame
@@ -796,7 +798,9 @@ class DX12Driver extends h3d.impl.Driver {
 		#end
 
 		var flags = new DriverInitFlags();
-		if( DEBUG ) flags.set(DriverInitFlag.DEBUG);
+		if( DEBUG ) {
+			flags.set(DriverInitFlag.DEBUG);
+		}
 		driver = Driver.create(window, flags, DEVICE_NAME);
 		if( DEBUG ) suppressDebugMessages();
 		frames = [];
@@ -1001,7 +1005,8 @@ class DX12Driver extends h3d.impl.Driver {
 		flushHeaps();
 
 		#if dlss
-		if ( dlssReady ) dlssFrameToken = Dlss.getNewFrameToken(frameCount);
+		if ( dlssReady && frame.dlssFrameToken == null )
+			frame.dlssFrameToken = Dlss.getNewFrameToken(currentFrame);
 		#end
 	}
 
@@ -3574,7 +3579,7 @@ class DX12Driver extends h3d.impl.Driver {
 			idx++;
 		}
 
-		Dlss.setTagForFrame(dlssFrameToken, dlssResources, resCount, frame.commandList);
+		Dlss.setTagForFrame(frame.dlssFrameToken, dlssResources, resCount, frame.commandList);
 
 		loadDlssMat(matCameraViewToClip, constants.cameraViewToClip);
 		loadDlssMat(matClipToCameraView, constants.clipToCameraView);
@@ -3615,8 +3620,8 @@ class DX12Driver extends h3d.impl.Driver {
 		dlssConstants.motionVectorsJittered = constants.motionVectorsJittered;
 		dlssConstants.minRelativeLinearDepthObjectSeparation = 40.0;
 
-		Dlss.setConstants(dlssFrameToken, dlssConstants);
-		Dlss.evaluateFeature(dlssFrameToken, frame.commandList, DLSSFeature.DLSS);
+		Dlss.setConstants(frame.dlssFrameToken, dlssConstants);
+		Dlss.evaluateFeature(frame.dlssFrameToken, frame.commandList, DLSSFeature.DLSS);
 
 		var arr = tmp.descriptors2;
 		arr[0] = @:privateAccess frame.srvHeap.heap;
