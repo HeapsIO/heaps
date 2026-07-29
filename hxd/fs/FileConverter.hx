@@ -38,6 +38,7 @@ class FileConverter {
 
 	// Date implementation has a second resolution on some platforms.
 	public static final FILE_TIME_PRECISION = 1000;
+	public static var CACHE_SAVE_MAX_PENDING = 50;
 
 	public var configuration(default,null) : String;
 
@@ -47,6 +48,8 @@ class FileConverter {
 	var defaultConfig : ConvertConfig;
 	var cache : Map<String,Array<ConvertCacheItem>>;
 	var cacheTime : Float;
+	var cacheChanges : Array<{ file : String, item : ConvertCacheItem }> = [];
+	var cacheSaveScheduled : Bool = false;
 
 	static var extraConfigs:Array<Dynamic> = [];
 
@@ -317,24 +320,12 @@ class FileConverter {
 
 	function convertAndCache( e : LocalFileSystem.LocalEntry, outFile : String, conv : Convert, params : Dynamic ) {
 		var cacheFile = baseDir + tmpDir + "cache.dat";
-		var time = try sys.FileSystem.stat(cacheFile).mtime.getTime() catch( e : Dynamic ) 0;
-		if( cache == null || time > cacheTime ) {
-			cache = try haxe.Unserializer.run(sys.io.File.getContent(cacheFile)) catch( e : Dynamic ) cache == null ? new Map() : cache;
-			cacheTime = time;
-		}
+		syncCache(false);
 		var entry = cache.get(e.file);
-		var needInsert = false;
 		if( entry == null ) {
 			entry = [];
-			needInsert = true;
+			cache.set(e.file, entry);
 		}
-		function saveCache() {
-			if( needInsert ) cache.set(e.file, entry);
-			sys.FileSystem.createDirectory(baseDir + tmpDir);
-			sys.io.File.saveContent(baseDir + tmpDir + "cache.dat", haxe.Serializer.run(cache));
-			cacheTime = Date.now().getTime();
-		}
-
 		var match = null;
 		for( e in entry ) {
 			if( e.out == outFile ) {
@@ -355,6 +346,17 @@ class FileConverter {
 			};
 			entry.push(match);
 		}
+
+		function saveCache() {
+			cacheChanges.push({ file : e.file, item : match });
+			if( cacheChanges.length >= CACHE_SAVE_MAX_PENDING ) {
+				syncCache(true);
+			} else if( !cacheSaveScheduled ) {
+				cacheSaveScheduled = true;
+				haxe.Timer.delay(() -> syncCache(true), 0);
+			}
+		}
+
 		var fullPath = baseDir + e.file;
 		var fullOutPath = baseDir + outFile;
 
@@ -436,6 +438,47 @@ class FileConverter {
 		conv.convert();
 		if( prev ) hxd.System.timeoutTick();
 		hxd.System.allowTimeout = prev;
+	}
+
+	function syncCache( saveToFile : Bool ) {
+		if( saveToFile )
+			cacheSaveScheduled = false;
+		var cacheFile = baseDir + tmpDir + "cache.dat";
+		var needReplay = false;
+		var time = try sys.FileSystem.stat(cacheFile).mtime.getTime() catch( e : Dynamic ) 0;
+		if( cache == null || time > cacheTime ) {
+			cache = try haxe.Unserializer.run(sys.io.File.getContent(cacheFile)) catch( e : Dynamic ) cache == null ? new Map() : cache;
+			cacheTime = time;
+			needReplay = true;
+		}
+		if( needReplay ) {
+			for( elt in cacheChanges ) {
+				var entry = cache.get(elt.file);
+				if( entry == null ) {
+					entry = [];
+					cache.set(elt.file, entry);
+				}
+				var outFile = elt.item.out;
+				var matchIdx = -1;
+				for( i => item in entry ) {
+					if( item.out == outFile ) {
+						matchIdx = i;
+						break;
+					}
+				}
+				if( matchIdx == -1 ) {
+					entry.push(elt.item);
+				} else {
+					entry[matchIdx] = elt.item;
+				}
+			}
+		}
+		if( !saveToFile || cacheChanges.length == 0 )
+			return;
+		sys.FileSystem.createDirectory(baseDir + tmpDir);
+		sys.io.File.saveContent(cacheFile, haxe.Serializer.run(cache));
+		cacheTime = try sys.FileSystem.stat(cacheFile).mtime.getTime() catch( e : Dynamic ) Date.now().getTime();
+		cacheChanges.resize(0);
 	}
 
 }
