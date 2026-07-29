@@ -28,7 +28,6 @@ typedef ConvertCacheItem = {
 	out : String,
 	ver : Null<Int>,
 	time : Int,
-	milliseconds : Null<Int>,
 	size : Int,
 	hash : String,
 	localParamsHash : Null<String>,
@@ -342,7 +341,6 @@ class FileConverter {
 				size : 0,
 				hash : "",
 				ver: conv.version,
-				milliseconds : #if js 0 #else null #end,
 				localParamsHash: null,
 				localContextJson: null,
 			};
@@ -368,11 +366,6 @@ class FileConverter {
 		var fileTime = hxd.Math.max(fileStat.mtime.getTime(), fileStat.ctime.getTime());
 		var fileSize = fileStat.size;
 		var time = hxd.Math.floor(fileTime / FILE_TIME_PRECISION);
-		#if js
-		var milliseconds = hxd.Math.floor(fileTime) - time * FILE_TIME_PRECISION;
-		#else
-		var milliseconds = null;
-		#end
 		var alreadyGen = sys.FileSystem.exists(fullOutPath) && match.ver == conv.version #if disable_res_cache && false #end;
 
 		conv.params = params;
@@ -382,8 +375,7 @@ class FileConverter {
 		conv.originalFilename = e.name;
 		var hasLocalParams = conv.hasLocalParams();
 
-		var sameTime = match.time == time #if js && (match.milliseconds == null || match.milliseconds == milliseconds ) #end;
-		var sameTimeAndSize = sameTime && match.size == fileSize;
+		var sameTimeAndSize = match.time == time && match.size == fileSize;
 		if( alreadyGen && !hasLocalParams && match.localParamsHash == null && sameTimeAndSize ) {
 			conv.cleanup();
 			return; // not changed (time stamp)
@@ -409,9 +401,8 @@ class FileConverter {
 		var localContextJson = localContext == null ? null : haxe.Json.stringify(localContext);
 		if( alreadyGen && match.hash == hash && match.localParamsHash == localParamsHash ) {
 			conv.cleanup();
-			if( match.time != time || match.size != fileSize || match.milliseconds != milliseconds || match.localContextJson != localContextJson ) {
+			if( match.time != time || match.size != fileSize || match.localContextJson != localContextJson ) {
 				match.time = time;
-				match.milliseconds = milliseconds;
 				match.size = fileSize;
 				match.localContextJson = localContextJson;
 				saveCache();
@@ -430,7 +421,6 @@ class FileConverter {
 
 		match.ver = conv.version;
 		match.time = time;
-		match.milliseconds = milliseconds;
 		match.size = fileSize;
 		match.hash = hash;
 		match.localParamsHash = localParamsHash;
