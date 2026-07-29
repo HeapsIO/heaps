@@ -24,6 +24,16 @@ typedef ConvertCommand = {
 	?then : ConvertCommand
 }
 
+typedef ConvertCacheItem = {
+	out : String,
+	ver : Null<Int>,
+	time : Int,
+	milliseconds : Null<Int>,
+	hash : String,
+	localParamsHash : Null<String>,
+	localContextJson : Null<String>,
+}
+
 class FileConverter {
 
 	// Date implementation has a second resolution on some platforms.
@@ -35,7 +45,7 @@ class FileConverter {
 	var tmpDir : String;
 	var configs : Map<String,ConvertConfig> = new Map();
 	var defaultConfig : ConvertConfig;
-	var cache : Map<String,Array<{ out : String, time : Int, hash : String, ver : Null<Int>, milliseconds : Null<Int>, localParamsHash : Null<String>, localContextJson : Null<String> }>>;
+	var cache : Map<String,Array<ConvertCacheItem>>;
 	var cacheTime : Float;
 
 	static var extraConfigs:Array<Dynamic> = [];
@@ -206,13 +216,6 @@ class FileConverter {
 		return cp;
 	}
 
-	function getFileTime( filePath : String ) : Float {
-		var stat = sys.FileSystem.stat(filePath);
-		var mtime = stat.mtime.getTime();
-		var ctime = stat.ctime.getTime();
-		return Math.max(mtime, ctime);
-	}
-
 	function loadConfig( dir : String ) : ConvertConfig {
 		return getConfig(configs, defaultConfig, dir, (parent, obj) -> {
 			var fullObj = mergeRec(parent.obj, obj);
@@ -357,7 +360,8 @@ class FileConverter {
 
 		if( !sys.FileSystem.exists(fullPath) ) throw "Missing "+fullPath;
 
-		var fileTime = getFileTime(fullPath);
+		var fileStat = sys.FileSystem.stat(fullPath);
+		var fileTime = hxd.Math.max(fileStat.mtime.getTime(), fileStat.ctime.getTime());
 		var time = hxd.Math.floor(fileTime / FILE_TIME_PRECISION);
 		#if js
 		var milliseconds = hxd.Math.floor(fileTime) - time * FILE_TIME_PRECISION;
