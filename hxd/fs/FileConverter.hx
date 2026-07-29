@@ -29,6 +29,7 @@ typedef ConvertCacheItem = {
 	ver : Null<Int>,
 	time : Int,
 	milliseconds : Null<Int>,
+	size : Int,
 	hash : String,
 	localParamsHash : Null<String>,
 	localContextJson : Null<String>,
@@ -338,6 +339,7 @@ class FileConverter {
 			match = {
 				out : outFile,
 				time : 0,
+				size : 0,
 				hash : "",
 				ver: conv.version,
 				milliseconds : #if js 0 #else null #end,
@@ -364,6 +366,7 @@ class FileConverter {
 
 		var fileStat = sys.FileSystem.stat(fullPath);
 		var fileTime = hxd.Math.max(fileStat.mtime.getTime(), fileStat.ctime.getTime());
+		var fileSize = fileStat.size;
 		var time = hxd.Math.floor(fileTime / FILE_TIME_PRECISION);
 		#if js
 		var milliseconds = hxd.Math.floor(fileTime) - time * FILE_TIME_PRECISION;
@@ -379,14 +382,16 @@ class FileConverter {
 		conv.originalFilename = e.name;
 		var hasLocalParams = conv.hasLocalParams();
 
-		if( alreadyGen && !hasLocalParams && match.localParamsHash == null && match.time == time #if js && (match.milliseconds == null || match.milliseconds == milliseconds ) #end ) {
+		var sameTime = match.time == time #if js && (match.milliseconds == null || match.milliseconds == milliseconds ) #end;
+		var sameTimeAndSize = sameTime && match.size == fileSize;
+		if( alreadyGen && !hasLocalParams && match.localParamsHash == null && sameTimeAndSize ) {
 			conv.cleanup();
 			return; // not changed (time stamp)
 		}
 
 		var content = hxd.File.getBytes(fullPath);
 		var hash = {
-			if( match.time == time #if js && (match.milliseconds == null || match.milliseconds == milliseconds ) #end )
+			if( sameTimeAndSize )
 				match.hash; // not changed (time stamp)
 			else
 				haxe.crypto.Sha1.make(content).toHex();
@@ -404,9 +409,10 @@ class FileConverter {
 		var localContextJson = localContext == null ? null : haxe.Json.stringify(localContext);
 		if( alreadyGen && match.hash == hash && match.localParamsHash == localParamsHash ) {
 			conv.cleanup();
-			if( match.time != time || match.milliseconds != milliseconds || match.localContextJson != localContextJson ) {
+			if( match.time != time || match.size != fileSize || match.milliseconds != milliseconds || match.localContextJson != localContextJson ) {
 				match.time = time;
 				match.milliseconds = milliseconds;
+				match.size = fileSize;
 				match.localContextJson = localContextJson;
 				saveCache();
 			}
@@ -425,6 +431,7 @@ class FileConverter {
 		match.ver = conv.version;
 		match.time = time;
 		match.milliseconds = milliseconds;
+		match.size = fileSize;
 		match.hash = hash;
 		match.localParamsHash = localParamsHash;
 		match.localContextJson = localContextJson;
