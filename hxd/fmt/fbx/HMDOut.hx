@@ -6,8 +6,8 @@ import hxd.BufferFormat;
 
 typedef CollideParams = {
 	?useDefault : Bool,
-	?precision : Float,
-	?maxSubdiv : Int,
+	?scale : Int,
+	?shrink : Float,
 	?maxConvexHulls : Int,
 	?mesh : String,
 	?shapes : Array<ShapeColliderParams>
@@ -965,12 +965,10 @@ class HMDOut extends BaseLibrary {
 
 		// Compute convex hulls shapes with hmd data
 		var dim = bounds.dimension();
-		var prec = Math.min(dim, generateCollides.precision);
-		var subdiv = Math.ceil(dim / prec);
-		subdiv = Math.imin(subdiv, generateCollides.maxSubdiv);
-
-		var params = { maxConvexHulls: generateCollides.maxConvexHulls, maxResolution: subdiv * subdiv * subdiv };
+		var resolution = Math.ceil(dim / generateCollides.scale);
+		var params = { maxConvexHulls: generateCollides.maxConvexHulls, resolution: resolution };
 		var convexHulls = hxd.fmt.hmd.Data.ConvexHullsCollider.buildConvexHulls(vertices, indexes, params);
+		convexHulls = [ for (idx in 0...convexHulls.length) hxd.fmt.hmd.Data.ConvexHullsCollider.shrink(convexHulls[idx].vertices, convexHulls[idx].indexes, generateCollides.shrink) ];
 
 		// Create convex hulls colliders
 		var collider = new ConvexHullsCollider();
