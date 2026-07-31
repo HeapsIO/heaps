@@ -188,7 +188,7 @@ typedef ConvexHullParams = {
 };
 
 class ConvexHullsCollider extends Collider {
-	public static final SCALE_UNITS = [
+	public static final UNITS = [
 		"Micrometer" => 10e-6,
 		"Millimeter" => 10e-3,
 		"Meter" => 1,
@@ -333,7 +333,7 @@ class ConvexHullsCollider extends Collider {
 		return out;
 	}
 
-	public static function shrink(vertices : Array<Float>, indexes : Array<Int>, f : Float) {
+	public static function scale(vertices : Array<Float>, indexes : Array<Int>, f : Float) {
 		var out : { vertices: Array<Float>, indexes : Array<Int> } = { vertices : vertices.copy(), indexes : indexes.copy() };
 		var idx = 0;
 		while (idx < indexes.length) {
