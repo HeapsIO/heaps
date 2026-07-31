@@ -105,13 +105,8 @@ class Convert {
 
 #if (sys || nodejs)
 class ConvertFBX2HMD extends Convert {
-	var lastModelPropsPath : String;
-	var lastModelProps : Dynamic;
-	var modelLibCache = new Map<String, Array<Dynamic>>();
+	var lastModelProps : { path : String, time : Float, size : Int, v : Dynamic };
 
-	// hasLocalParams -> computeLocalParams
-	var foundModelProps : Bool;
-	var modelCollides : Map<String, Array<hxd.fmt.fbx.HMDOut.CollideParams>>;
 	// computeLocalParams -> convert
 	var fbx : hxd.fmt.fbx.Data.FbxNode;
 	// context
@@ -123,31 +118,35 @@ class ConvertFBX2HMD extends Convert {
 
 	override function cleanup() {
 		super.cleanup();
-		foundModelProps = false;
-		modelCollides = null;
 		fbx = null;
 		matNames = null;
 	}
 
 	override function hasLocalParams():Bool {
-		var filePath = srcPath.substring(srcPath.lastIndexOf("/") + 1);
+		if( params != null && params.collide != null )
+			return true;
 		var dirPath = srcPath.substring(0, srcPath.lastIndexOf("/"));
-		// Parse model.props to find model config
 		var modelPropsPath = dirPath + "/" + h3d.prim.ModelDatabase.FILE_NAME;
-		modelCollides = [];
-		foundModelProps = parseModelProps(modelPropsPath, filePath, modelCollides);
-		return (params != null && params.collide != null) || foundModelProps;
+		return hxd.File.exists(modelPropsPath);
+	}
+
+	override function getLocalContext():Dynamic {
+		return matNames == null ? null : { matNames : matNames };
 	}
 
 	function parseModelProps( modelPropsPath : String, filePath : String, modelCollides : Map<String, Array<hxd.fmt.fbx.HMDOut.CollideParams>> ) : Bool {
 		var foundModelProps = false;
 		var modelProps = null;
 		try {
-			if( modelPropsPath == lastModelPropsPath ) {
-				modelProps = lastModelProps;
+			var fileStat = sys.FileSystem.stat(modelPropsPath);
+			var fileTime = hxd.Math.max(fileStat.mtime.getTime(), fileStat.ctime.getTime());
+			var fileSize = fileStat.size;
+			if( lastModelProps != null && modelPropsPath == lastModelProps.path && fileTime == lastModelProps.time && fileSize == lastModelProps.size ) {
+				modelProps = lastModelProps.v;
 			} else {
 				var res = hxd.File.getBytes(modelPropsPath).toString();
 				modelProps = haxe.Json.parse(res);
+				lastModelProps = { path : modelPropsPath, time : fileTime, size : fileSize, v : modelProps };
 			}
 		} catch( e ) {
 		}
@@ -167,40 +166,11 @@ class ConvertFBX2HMD extends Convert {
 				}
 			}
 		}
-		lastModelPropsPath = modelPropsPath;
-		lastModelProps = modelProps;
 		return foundModelProps;
 	}
 
-	override function getLocalContext():Dynamic {
-		return { matNames : matNames };
-	}
-
-	override function computeLocalParams(context:Dynamic):Dynamic {
-		var filePath = srcPath.substring(srcPath.lastIndexOf("/") + 1);
-		var dirPath = srcPath.substring(0, srcPath.lastIndexOf("/"));
-		// Parse model.props to find model config if not done in hasLocalParams
-		if( modelCollides == null ) {
-			var modelPropsPath = dirPath + "/" + h3d.prim.ModelDatabase.FILE_NAME;
-			modelCollides = [];
-			foundModelProps = parseModelProps(modelPropsPath, filePath, modelCollides);
-		}
-		// Parse fbx to find used materials
-		if( context != null && context.matNames != null && Std.isOfType(context.matNames, Array) ) {
-			matNames = context.matNames;
-		}
-		if( matNames == null ) {
-			fbx = try hxd.fmt.fbx.Parser.parse(srcBytes) catch (e:Dynamic) throw Std.string(e) + " in " + srcPath;
-			var matNodes = hxd.fmt.fbx.Data.FbxTools.getAll(fbx, "Objects.Material");
-			matNames = [];
-			for( o in matNodes ) {
-				var name = hxd.fmt.fbx.Data.FbxTools.getName(o);
-				matNames.push(name);
-			}
-		}
-		// Parse material.props to find material config
-		var ignoredMaterials = [];
-		var matPropsPath = dirPath + "/materials.props";
+	function findIgnoredMaterials( matPropsPath : String, filePath : String, matNames : Array<String> ) {
+		var ignoredMaterials : Array<String> = [];
 		var matProps = null;
 		try {
 			var res = hxd.File.getBytes(matPropsPath).toString();
@@ -208,6 +178,7 @@ class ConvertFBX2HMD extends Convert {
 		} catch( e ) {
 		}
 		if( matProps != null ) {
+			var modelLibCache = new Map<String, Array<Dynamic>>();
 			for( config in Reflect.fields(matProps) ) {
 				var configProps = Reflect.field(matProps, config);
 				for( matName in matNames ) {
@@ -239,6 +210,36 @@ class ConvertFBX2HMD extends Convert {
 					}
 				}
 			}
+		}
+		return ignoredMaterials;
+	}
+
+	override function computeLocalParams(context:Dynamic):Dynamic {
+		var filePath = srcPath.substring(srcPath.lastIndexOf("/") + 1);
+		var dirPath = srcPath.substring(0, srcPath.lastIndexOf("/"));
+		// Parse model.props to find modelCollides
+		var modelPropsPath = dirPath + "/" + h3d.prim.ModelDatabase.FILE_NAME;
+		var modelCollides : Map<String, Array<hxd.fmt.fbx.HMDOut.CollideParams>> = [];
+		var foundModelProps = parseModelProps(modelPropsPath, filePath, modelCollides);
+		// Parse fbx and material.props to find ignoredMaterials if has any collide config
+		var ignoredMaterials : Array<String> = [];
+		if( (params != null && params.collide != null) || foundModelProps ) {
+			// Parse fbx to find used materials or get from context
+			if( context != null && context.matNames != null && Std.isOfType(context.matNames, Array) ) {
+				matNames = context.matNames;
+			}
+			if( matNames == null ) {
+				fbx = try hxd.fmt.fbx.Parser.parse(srcBytes) catch (e:Dynamic) throw Std.string(e) + " in " + srcPath;
+				var matNodes = hxd.fmt.fbx.Data.FbxTools.getAll(fbx, "Objects.Material");
+				matNames = [];
+				for( o in matNodes ) {
+					var name = hxd.fmt.fbx.Data.FbxTools.getName(o);
+					matNames.push(name);
+				}
+			}
+			// Parse material.props to find material config
+			var matPropsPath = dirPath + "/materials.props";
+			ignoredMaterials = findIgnoredMaterials(matPropsPath, filePath, matNames);
 		}
 		var localParams = {};
 		if( ignoredMaterials.length > 0 )
