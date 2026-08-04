@@ -299,14 +299,14 @@ class ConvertFBX2HMD extends Convert {
 		new hxd.fmt.hmd.Writer(out).write(hmd);
 		save(out.getBytes());
 	}
-	
+
 	static var fileCache = new Map<String, { time : Float, size : Int, value : Dynamic }>();
 
 	static function getCachedFile<T>( path : String, build : haxe.io.Bytes -> T ) : Null<T> {
 		if( !hxd.File.exists(path) )
 			return null;
 		var stat = sys.FileSystem.stat(path);
-		var time = stat.mtime.getTime();
+		var time = hxd.Math.max(stat.mtime.getTime(), stat.ctime.getTime());
 		var cached = fileCache.get(path);
 		if( cached != null && cached.time == time && cached.size == stat.size )
 			return cached.value;
@@ -342,7 +342,7 @@ class ConvertFBX2HMD extends Convert {
 				mats.set(c.name, c.props?.PBR?.ignoreCollide == true);
 		}
 		return mats;
-	}	
+	}
 
 	static var _ = Convert.register(new ConvertFBX2HMD());
 }
