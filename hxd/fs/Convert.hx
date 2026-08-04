@@ -13,11 +13,32 @@ class Convert {
 	public var params:Dynamic;
 	public var localParams:Dynamic;
 
-	public var srcPath:String;
+	public var srcPath(get, never):String;
 	public var dstPath:String;
 	public var baseDir:String;
 	public var originalFilename:String;
-	public var srcBytes:haxe.io.Bytes;
+	public var srcBytes(get, never):haxe.io.Bytes;
+
+	@:noCompletion var _srcPath:String;
+	@:noCompletion var _srcBytes:haxe.io.Bytes;
+
+	function get_srcPath() {
+		return _srcPath;
+	}
+
+	function get_srcBytes() {
+		if (_srcBytes == null && _srcPath != null)
+			_srcBytes = hxd.File.getBytes(_srcPath);
+		return _srcBytes;
+	}
+
+	public function setSource(path:String) {
+		if (path == _srcPath)
+			return;
+		_srcPath = path;
+		_srcBytes = null;
+	}
+
 	/*
 		The calculated hash for the input source file content.
 	*/
@@ -32,11 +53,10 @@ class Convert {
 	public function cleanup() {
 		params = null;
 		localParams = null;
-		srcPath = null;
+		setSource(null);
 		dstPath = null;
 		baseDir = null;
 		originalFilename = null;
-		srcBytes = null;
 		hash = null;
 	}
 
@@ -575,7 +595,7 @@ class CompressIMG extends Convert {
 				if (hasParam("filter"))
 					args = args.concat(["-if", getParam("filter")]);
 				runTexconv(srcPath, resized, args);
-				srcPath = resized;
+				setSource(resized);
 				cachedImage = null;
 			}
 		}
@@ -599,7 +619,6 @@ class CompressIMG extends Convert {
 			var image = makeImage(srcPath);
 			var info = image.getInfo();
 			if (info.layerCount > 1 && info.dataFormat == Dds) {
-				var oldBytes = srcBytes;
 				var oldPath = srcPath;
 				for (layer in 0...info.layerCount) {
 					var layerPixels = [];
@@ -612,13 +631,11 @@ class CompressIMG extends Convert {
 						pixels.dispose();
 					var tmpPath = dstPath + path.file + "_" + layer + "." + path.ext;
 					sys.io.File.saveBytes(tmpPath, layerBytes);
-					srcBytes = layerBytes;
-					srcPath = tmpPath;
+					setSource(tmpPath);
 					convert();
 					sys.FileSystem.deleteFile(tmpPath);
 				}
-				srcBytes = oldBytes;
-				srcPath = oldPath;
+				setSource(oldPath);
 				var convertPixels = [];
 				for (layer in 0...info.layerCount) {
 					var layerPath = dstPath + path.file + "_" + layer + "_dds_" + dstFmt + "." + path.ext;

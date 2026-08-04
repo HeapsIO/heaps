@@ -369,7 +369,7 @@ class FileConverter {
 		var alreadyGen = sys.FileSystem.exists(fullOutPath) && match.ver == conv.version #if disable_res_cache && false #end;
 
 		conv.params = params;
-		conv.srcPath = fullPath;
+		conv.setSource(fullPath);
 		conv.dstPath = fullOutPath;
 		conv.baseDir = baseDir;
 		conv.originalFilename = e.name;
@@ -381,14 +381,12 @@ class FileConverter {
 			return; // not changed (time stamp)
 		}
 
-		var content = hxd.File.getBytes(fullPath);
 		var hash = {
 			if( sameTimeAndSize )
 				match.hash; // not changed (time stamp)
 			else
-				haxe.crypto.Sha1.make(content).toHex();
+				haxe.crypto.Sha1.make(conv.srcBytes).toHex();
 		};
-		conv.srcBytes = content;
 		conv.hash = hash;
 		var localContext : Dynamic = null;
 		if( match.ver == conv.version && match.hash == hash && match.localContextJson != null ) {
