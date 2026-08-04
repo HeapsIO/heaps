@@ -189,11 +189,11 @@ typedef ConvexHullParams = {
 
 class ConvexHullsCollider extends Collider {
 	public static final UNITS = [
-		"Micrometer" => 10e-6,
-		"Millimeter" => 10e-3,
+		"Micrometer" => 10e-7,
+		"Millimeter" => 10e-4,
 		"Meter" => 1,
-		"Kilometer" => 10e3,
-		"Megameter" => 10e6,
+		"Kilometer" => 10e4,
+		"Megameter" => 10e7,
 	];
 	public var vertexCounts : Array<Int>;
 	public var vertexPosition : DataPosition;

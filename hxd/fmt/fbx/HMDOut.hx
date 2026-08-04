@@ -6,7 +6,7 @@ import hxd.BufferFormat;
 
 typedef CollideParams = {
 	?useDefault : Bool,
-	?unit : Int,
+	?unit : Float,
 	?scale : Float,
 	?maxConvexHulls : Int,
 	?mesh : String,
