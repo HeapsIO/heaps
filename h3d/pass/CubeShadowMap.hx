@@ -76,14 +76,7 @@ class CubeShadowMap extends Shadows {
 		staticTexture = new h3d.mat.Texture(size, size, [Target, Cube], format);
 		staticTexture.name = "staticTexture";
 		staticTexture.preventAutoDispose();
-		staticTexture.realloc = function () {
-			if( pixelsForRealloc != null && pixelsForRealloc.length == 6 ) {
-				for( i in 0 ... 6 ) {
-					var pixels = pixelsForRealloc[i];
-					staticTexture.uploadPixels(pixels, 0, i);
-				}
-			}
-		}
+		staticTexture.realloc = null;
 		return staticTexture;
 	}
 
