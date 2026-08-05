@@ -809,7 +809,8 @@ class DX12Driver extends h3d.impl.Driver {
 			var nativeDevice = Driver.getDevice();
 			var proxyDevice = Dlss.upgradeDevice(nativeDevice);
 			Driver.setDevice(proxyDevice);
-			dlssReady = Dlss.setDevice(proxyDevice) == 0;
+			var device = Driver.getDevice();
+			dlssReady = Dlss.setDevice(device) == 0;
 		}
 		#end
 
@@ -1140,6 +1141,13 @@ class DX12Driver extends h3d.impl.Driver {
 
 	override function isDisposed() {
 		return hasDeviceError;
+	}
+
+	override function dispose() {
+		#if dlss
+		if ( dlssReady )
+			Dlss.shutdown();
+		#end
 	}
 
 	override function init( onCreate : Bool -> Void, forceSoftware = false ) {
@@ -3413,13 +3421,6 @@ class DX12Driver extends h3d.impl.Driver {
 			onContextLost();
 		}
 
-	}
-
-	override function end() {
-		#if dlss
-		if(dlssReady)
-			Dlss.shutdown();
-		#end
 	}
 
 	function waitForFrame( index : Int ) {
