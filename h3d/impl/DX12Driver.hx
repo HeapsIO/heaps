@@ -792,8 +792,7 @@ class DX12Driver extends h3d.impl.Driver {
 	function reset() {
 		#if dlss
 		if ( DLSS ) {
-			var result = Dlss.init(false);
-			dlssReady = result == 0;
+			dlssReady = Dlss.init(false) == 0;
 		}
 		#end
 
@@ -807,8 +806,20 @@ class DX12Driver extends h3d.impl.Driver {
 
 		#if dlss
 		if ( dlssReady ) {
-			var device = Driver.getDevice();
-			Dlss.setDevice(device);
+			var nativeDevice = Driver.getDevice();
+			var proxyDevice = Dlss.upgradeDevice(nativeDevice);
+			Driver.setDevice(proxyDevice);
+			dlssReady = Dlss.setDevice(proxyDevice) == 0;
+		}
+		#end
+
+		Driver.createCommandQueue();
+
+		#if dlss
+		if ( dlssReady ) {
+			var nativeFactory = Driver.getFactory();
+			var proxyFactory = Dlss.upgradeFactory(nativeFactory);
+			Driver.setFactory(proxyFactory);
 		}
 		#end
 
@@ -1005,8 +1016,9 @@ class DX12Driver extends h3d.impl.Driver {
 		flushHeaps();
 
 		#if dlss
-		if ( dlssReady && frame.dlssFrameToken == null )
+		if ( dlssReady && frame.dlssFrameToken == null ) {
 			frame.dlssFrameToken = Dlss.getNewFrameToken(currentFrame);
+		}
 		#end
 	}
 
@@ -3403,6 +3415,13 @@ class DX12Driver extends h3d.impl.Driver {
 
 	}
 
+	override function end() {
+		#if dlss
+		if(dlssReady)
+			Dlss.shutdown();
+		#end
+	}
+
 	function waitForFrame( index : Int ) {
 		var frame = frames[index];
 		if( fence.getValue() < frame.fenceValue ) {
@@ -3621,6 +3640,7 @@ class DX12Driver extends h3d.impl.Driver {
 		dlssConstants.minRelativeLinearDepthObjectSeparation = 40.0;
 
 		Dlss.setConstants(frame.dlssFrameToken, dlssConstants);
+
 		Dlss.evaluateFeature(frame.dlssFrameToken, frame.commandList, DLSSFeature.DLSS);
 
 		var arr = tmp.descriptors2;
