@@ -340,6 +340,8 @@ class Text extends Drawable {
 		} else {
 			maxWidth -= afterData;
 		}
+		if (maxWidth <= 2)
+			return text;
 		if ( font == null ) font = this.font;
 		var lines = [];
 		var x = leftMargin;
