@@ -3028,16 +3028,9 @@ class DX12Driver extends h3d.impl.Driver {
 		}
 	}
 
-	var counter = 0;
 	override function selectTextureHandles( handles : Array<h3d.mat.TextureHandle> ) {
 		for( h in handles ) {
 			var t = h.texture;
-			if( t.name != null && t.name.indexOf("Plastic_Grip_basecolor.png") != -1){
-				counter = counter + 1;
-				if(counter == 1000000){
-					trace("here");
-				}
-			}
 			if ( h.handle == -1 )
 				throw "Handle is invalid";
 			if( t != null && t.t == null && t.realloc != null ) {
