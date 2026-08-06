@@ -982,13 +982,9 @@ class DX12Driver extends h3d.impl.Driver {
 		while( frame.texHandlesToRelease.length > 0 ) {
 			var h = frame.texHandlesToRelease.pop();
 			if ( h.handle != -1 && h.texture.t == null ) {
-				Driver.copyDescriptorsSimple(1, bindlessSamplerHeap.getCpuAddressAt(h.handle.high), errorTexSampler, SAMPLER);
-				Driver.copyDescriptorsSimple(1, bindlessSrvHeap.getCpuAddressAt(h.handle.low), errorTexView, CBV_SRV_UAV);
-				if ( h.texture.realloc == null ) {
-					bindlessSrvHeap.disposeIndex(h.handle.low);
-					bindlessSamplerHeap.disposeIndex(h.handle.high);
-					h.handle = -1;
-				}
+				bindlessSrvHeap.disposeIndex(h.handle.low);
+				bindlessSamplerHeap.disposeIndex(h.handle.high);
+				h.handle = -1;
 			}
 		}
 		while( frame.bufHandlesToRelease.length > 0 ) {
@@ -2399,10 +2395,12 @@ class DX12Driver extends h3d.impl.Driver {
 		disposeTextureViews(t.t);
 		var handles = textureHandles.get(t);
 		if ( handles != null ) {
-			for ( h in handles )
-				frame.texHandlesToRelease.push(h);
-			if ( t.realloc == null )
-				textureHandles.remove(t);
+			for ( h in handles ){
+				if ( t.realloc == null ){
+					frame.texHandlesToRelease.push(h);
+					textureHandles.remove(t);
+				}
+			}
 		}
 		t.t = null;
 	}
@@ -3030,9 +3028,16 @@ class DX12Driver extends h3d.impl.Driver {
 		}
 	}
 
+	var counter = 0;
 	override function selectTextureHandles( handles : Array<h3d.mat.TextureHandle> ) {
 		for( h in handles ) {
 			var t = h.texture;
+			if( t.name != null && t.name.indexOf("Plastic_Grip_basecolor.png") != -1){
+				counter = counter + 1;
+				if(counter == 1000000){
+					trace("here");
+				}
+			}
 			if ( h.handle == -1 )
 				throw "Handle is invalid";
 			if( t != null && t.t == null && t.realloc != null ) {
@@ -3458,7 +3463,7 @@ class DX12Driver extends h3d.impl.Driver {
 			var samplerBits = getSamplerBits(t);
 			var samplerIndex = samplerHandles.get(samplerBits);
 			if ( samplerIndex == null ) {
-			var sampler = getCpuSampler(t);
+				var sampler = getCpuSampler(t);
 				samplerIndex = bindlessSamplerHeap.allocIndex();
 				samplerHandles.set(samplerBits, samplerIndex);
 				Driver.copyDescriptorsSimple(1, bindlessSamplerHeap.getCpuAddressAt(samplerIndex), sampler, SAMPLER);
