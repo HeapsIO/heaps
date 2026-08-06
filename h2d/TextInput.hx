@@ -88,6 +88,7 @@ class TextInput extends Text {
 	public function new(font, ?parent) {
 		super(font, parent);
 		trimTrailingSpaces = false;
+		wordBreak = true;
 		interactive = new h2d.Interactive(0, 0);
 		interactive.cursor = TextInput;
 		interactive.onPush = function(e:hxd.Event) {
