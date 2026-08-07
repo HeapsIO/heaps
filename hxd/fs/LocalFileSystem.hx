@@ -264,7 +264,6 @@ class LocalEntry extends FileEntry {
 		#end
 
 		watchCallback = function() {
-			trace("COUCOU");
 			#if ((editor || editor_hl) && !macro)
 			try {
 				fs.convert.run(this);
