@@ -237,6 +237,8 @@ class LocalEntry extends FileEntry {
 		watchHandle = new hl.uv.Fs(hl.uv.Loop.getDefault(), originalFile, function(ev) {
 			switch(ev) {
 				case Change|Rename:
+					if (!sys.FileSystem.exists(originalFile))
+						return;
 					if(getModifTime() != lastChanged) {
 						lastChanged = getModifTime();
 						if(onChangedDelay != null)
@@ -248,6 +250,7 @@ class LocalEntry extends FileEntry {
 					}
 			}
 		});
+
 		#else
 		watchTime = getModifTime();
 		#end
@@ -261,14 +264,20 @@ class LocalEntry extends FileEntry {
 		#end
 
 		watchCallback = function() {
-			#if (js && multidriver && !macro)
+			trace("COUCOU");
+			#if ((editor || editor_hl) && !macro)
 			try {
 				fs.convert.run(this);
 			} catch ( e : Dynamic ) {
+				#if editor
 				hide.Ide.inst.quickMessage('Failed convert for ${name}, trying again');
 				// Convert failed, let's mark this watch as not performed.
 				watchTime = -1;
 				lastCheck = null;
+				#elseif editor_hl
+				hide.Ide.showError('Failed convert for ${name}, trying again');
+				#end
+
 				return;
 			}
 			#else
