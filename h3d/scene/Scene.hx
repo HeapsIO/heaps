@@ -106,7 +106,7 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 	function sortHitPointByCameraDistance( i1 : Interactive, i2 : Interactive ) {
 		var z1 = i1.hitPoint.w;
 		var z2 = i2.hitPoint.w;
-		if( z1 > z2 )
+		if( z1 < z2 )
 			return -1;
 		return 1;
 	}
@@ -129,7 +129,7 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 	}
 
 	@:dox(hide) @:noCompletion
-	public function handleEvent( event : hxd.Event, last : hxd.SceneEvents.Interactive ) {
+	public function handleEvent( event : hxd.Event, last : hxd.SceneEvents.Interactive ) : Null<Interactive> {
 
 		if( interactives.length == 0 )
 			return null;
@@ -155,85 +155,11 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 				r.py += r.ly * interactiveOffset;
 				r.pz += r.lz * interactiveOffset;
 			}
-			var saveR = r.clone();
-			var priority = 0x80000000;
-
-			for( i in interactives ) {
-
-				if( i.priority < priority ) continue;
-
-				var p : h3d.scene.Object = i;
-				while( p != null && p.visible )
-					p = p.parent;
-				if( p != null ) continue;
-
-				if( !i.isAbsoluteShape ) {
-					var minv = i.getInvPos();
-					r.transform(minv);
-				}
-
-				// check for NaN
-				if( r.lx != r.lx ) {
-					r.load(saveR);
-					continue;
-				}
-
-				var hit = i.shape.rayIntersection(r, i.bestMatch);
-				if( hit < 0 ) {
-					r.load(saveR);
-					continue;
-				}
-
-				var hitPoint = r.getPoint(hit);
-				r.load(saveR);
-
-				i.hitPoint.x = hitPoint.x;
-				i.hitPoint.y = hitPoint.y;
-				i.hitPoint.z = hitPoint.z;
-
-				if( i.priority > priority ) {
-					while( hitInteractives.length > 0 ) hitInteractives.pop();
-					priority = i.priority;
-				}
-
-				hitInteractives.push(i);
-			}
-
+			hitInteractives = rayCastEventTargets(r);
 			if( hitInteractives.length == 0 )
 				return null;
-
-
-			if( hitInteractives.length > 1 ) {
-				for( i in hitInteractives ) {
-					var m = i.invPos;
-					var wfactor = 0.;
-
-					// adjust result with better precision
-					if( i.preciseShape != null || !i.bestMatch ) {
-						if( !i.isAbsoluteShape )
-							r.transform(m);
-						var hit = (i.preciseShape ?? i.shape).rayIntersection(r, true);
-						if( hit > 0 ) {
-							var hitPoint = r.getPoint(hit);
-							i.hitPoint.x = hitPoint.x;
-							i.hitPoint.y = hitPoint.y;
-							i.hitPoint.z = hitPoint.z;
-						} else
-							wfactor = 1.;
-						r.load(saveR);
-					}
-
-					var p = i.hitPoint.clone();
-					p.w = 1;
-					if( !i.isAbsoluteShape )
-						p.transform3x4(i.absPos);
-					p.project(camera.m);
-					i.hitPoint.w = p.z + wfactor;
-				}
-				hitInteractives.sort(sortHitPointByCameraDistance);
-			}
-
-			hitInteractives.unshift(null);
+			hitInteractives.push(null);
+			hitInteractives.reverse();
 		}
 
 		while( hitInteractives.length > 0 ) {
@@ -261,6 +187,86 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 		}
 
 		return null;
+	}
+
+	public function rayCastEventTargets( r : h3d.col.Ray ) : Array<Interactive> {
+		var hits = [];
+
+		var saveR = r.clone();
+		var priority = 0x80000000;
+
+		for( i in interactives ) {
+
+			if( i.priority < priority ) continue;
+
+			var p : h3d.scene.Object = i;
+			while( p != null && p.visible )
+				p = p.parent;
+			if( p != null ) continue;
+
+			if( !i.isAbsoluteShape ) {
+				var minv = i.getInvPos();
+				r.transform(minv);
+			}
+
+			// check for NaN
+			if( r.lx != r.lx ) {
+				r.load(saveR);
+				continue;
+			}
+
+			var hit = i.shape.rayIntersection(r, i.bestMatch);
+			if( hit < 0 ) {
+				r.load(saveR);
+				continue;
+			}
+
+			var hitPoint = r.getPoint(hit);
+			r.load(saveR);
+
+			i.hitPoint.x = hitPoint.x;
+			i.hitPoint.y = hitPoint.y;
+			i.hitPoint.z = hitPoint.z;
+
+			if( i.priority > priority ) {
+				while( hits.length > 0 ) hits.pop();
+				priority = i.priority;
+			}
+
+			hits.push(i);
+		}
+
+		if( hits.length > 1 ) {
+			for( i in hits ) {
+				var m = i.invPos;
+				var wfactor = 0.;
+
+				// adjust result with better precision
+				if( i.preciseShape != null || !i.bestMatch ) {
+					if( !i.isAbsoluteShape )
+						r.transform(m);
+					var hit = (i.preciseShape ?? i.shape).rayIntersection(r, true);
+					if( hit > 0 ) {
+						var hitPoint = r.getPoint(hit);
+						i.hitPoint.x = hitPoint.x;
+						i.hitPoint.y = hitPoint.y;
+						i.hitPoint.z = hitPoint.z;
+					} else
+						wfactor = 1.;
+					r.load(saveR);
+				}
+
+				var p = i.hitPoint.clone();
+				p.w = 1;
+				if( !i.isAbsoluteShape )
+					p.transform3x4(i.absPos);
+				p.project(camera.m);
+				i.hitPoint.w = p.z + wfactor;
+			}
+			hits.sort(sortHitPointByCameraDistance);
+		}
+
+		return hits;
 	}
 
 	override function clone( ?o : Object ) {
