@@ -325,13 +325,12 @@ class ConvertFBX2HMD extends Convert {
 	static function getCachedFile<T>( path : String, build : haxe.io.Bytes -> T ) : Null<T> {
 		if( !hxd.File.exists(path) )
 			return null;
-		var stat = sys.FileSystem.stat(path);
-		var time = hxd.Math.max(stat.mtime.getTime(), stat.ctime.getTime());
+		var stat = hxd.fs.FileConverter.statTimeAndSize(path);
 		var cached = fileCache.get(path);
-		if( cached != null && cached.time == time && cached.size == stat.size )
+		if( cached != null && cached.time == stat.time && cached.size == stat.size )
 			return cached.value;
 		var value = build(hxd.File.getBytes(path));
-		fileCache.set(path, { time : time, size : stat.size, value : value });
+		fileCache.set(path, { time : stat.time, size : stat.size, value : value });
 		return value;
 	}
 
