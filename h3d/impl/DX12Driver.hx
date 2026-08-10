@@ -982,8 +982,8 @@ class DX12Driver extends h3d.impl.Driver {
 		while( frame.texHandlesToRelease.length > 0 ) {
 			var h = frame.texHandlesToRelease.pop();
 			if ( h.handle != -1 && h.texture.t == null ) {
+				Driver.copyDescriptorsSimple(1, bindlessSrvHeap.getCpuAddressAt(h.handle.low), errorTexView, CBV_SRV_UAV);
 				bindlessSrvHeap.disposeIndex(h.handle.low);
-				bindlessSamplerHeap.disposeIndex(h.handle.high);
 				h.handle = -1;
 			}
 		}
