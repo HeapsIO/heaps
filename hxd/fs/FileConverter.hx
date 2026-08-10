@@ -137,7 +137,7 @@ class FileConverter {
 		return r1.pt.getIndex() - r2.pt.getIndex();
 	}
 
-	public static function statTimeAndSize( path : String ) : { time : Float, size : Int } {
+	static function statTimeAndSize( path : String ) {
 		var s = sys.FileSystem.stat(path);
 		return {
 			time : hxd.Math.max(s.mtime.getTime(), s.ctime.getTime()),
