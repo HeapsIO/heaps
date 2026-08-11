@@ -488,7 +488,8 @@ private class Batch {
 			if ( pass.bits == bp.pass.bits && pass.name == bp.pass.name && pass.layer == bp.pass.layer ) {
 				var sl = shaders;
 				var sIdx = 0;
-				while ( sl != null ) {
+				var shaderCount = bp.shaders.length;
+				while ( sl != null && sIdx < shaderCount ) {
 					var s1 = sl.s;
 					var s2 = bp.shaders[sIdx];
 					s1.updateConstants(globals);
