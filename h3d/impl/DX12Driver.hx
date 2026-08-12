@@ -640,6 +640,7 @@ class DX12Driver extends h3d.impl.Driver {
 	var frame : DxFrame;
 	var fence : Fence;
 	var fenceEvent : WaitEvent;
+	#if (hldx > version("1.16.0")) var directQueue : CommandQueue; #end
 
 	var renderTargetViews : ScratchHeap;
 	var depthStenciViews : ScratchHeap;
@@ -814,7 +815,7 @@ class DX12Driver extends h3d.impl.Driver {
 		}
 		#end
 
-		Driver.createCommandQueue();
+		#if (hldx > version("1.16.0")) directQueue = new CommandQueue(DIRECT); #else Driver.createCommandQueue(); #end
 
 		#if dlss
 		if ( dlssReady ) {
@@ -952,7 +953,7 @@ class DX12Driver extends h3d.impl.Driver {
 		adesc[0].type = DRAW_INDEXED;
 		indirectCommand = Driver.createCommandSignature(desc,null);
 
-		tsFreq = Driver.getTimestampFrequency();
+		tsFreq = #if (hldx > version("1.16.0")) Driver.getTimestampFrequency(directQueue) #else Driver.getTimestampFrequency() #end;
 
 		compiler = new ShaderCompiler();
 
@@ -1066,7 +1067,7 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	function waitGpu() {
-		Driver.signal(fence, ++fenceValue);
+		#if (hldx > version("1.16.0")) directQueue.signal(fence, ++fenceValue); #else Driver.signal(fence, ++fenceValue); #end
 		fence.setEvent(fenceValue, fenceEvent);
 		fenceEvent.wait(-1);
 	}
@@ -1100,7 +1101,7 @@ class DX12Driver extends h3d.impl.Driver {
 			disposeTextureViews(defaultDepth.t);
 		}
 
-		Driver.resize(width, height, BUFFER_COUNT, R8G8B8A8_UNORM);
+		#if (hldx > version("1.16.0")) Driver.resize(directQueue, width, height, BUFFER_COUNT, R8G8B8A8_UNORM); #else Driver.resize(width, height, BUFFER_COUNT, R8G8B8A8_UNORM); #end
 
 		renderTargetViews.clear();
 		depthStenciViews.clear();
@@ -3392,13 +3393,13 @@ class DX12Driver extends h3d.impl.Driver {
 		frame.copyCommandList.close();
 		copyQueue.executeCommandList(frame.copyCommandList);
 		copyQueue.signal(copyFence, ++copyFenceValue);
-		Driver.wait(copyFence, copyFenceValue);
-		frame.commandList.execute();
+		#if (hldx > version("1.16.0")) directQueue.wait(copyFence, copyFenceValue); #else Driver.wait(copyFence, copyFenceValue); #end
+		#if (hldx > version("1.16.0")) directQueue.executeCommandList(frame.commandList); #else frame.commandList.execute(); #end
 		currentPipelineState = null;
 		currentShader = null;
 		Driver.flushMessages();
 		frame.fenceValue = ++fenceValue;
-		Driver.signal(fence, frame.fenceValue);
+		#if (hldx > version("1.16.0")) directQueue.signal(fence, frame.fenceValue); #else Driver.signal(fence, frame.fenceValue); #end
 	}
 
 	override function present() {
@@ -3406,7 +3407,7 @@ class DX12Driver extends h3d.impl.Driver {
 		transition(frame.backBuffer, PRESENT);
 		flushTransitions();
 		flushFrame();
-		Driver.present(window.vsync);
+		#if (hldx > version("1.16.0")) Driver.present(directQueue, window.vsync); #else Driver.present(window.vsync); #end
 
 		waitForFrame(Driver.getCurrentBackBufferIndex());
 		beginFrame();
