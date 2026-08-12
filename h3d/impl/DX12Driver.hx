@@ -953,7 +953,7 @@ class DX12Driver extends h3d.impl.Driver {
 		adesc[0].type = DRAW_INDEXED;
 		indirectCommand = Driver.createCommandSignature(desc,null);
 
-		tsFreq = #if (hldx > version("1.16.0")) Driver.getTimestampFrequency(directQueue) #else Driver.getTimestampFrequency() #end;
+		tsFreq = #if (hldx > version("1.16.0")) directQueue.getTimestampFrequency() #else Driver.getTimestampFrequency() #end;
 
 		compiler = new ShaderCompiler();
 
@@ -3407,7 +3407,7 @@ class DX12Driver extends h3d.impl.Driver {
 		transition(frame.backBuffer, PRESENT);
 		flushTransitions();
 		flushFrame();
-		#if (hldx > version("1.16.0")) Driver.present(directQueue, window.vsync); #else Driver.present(window.vsync); #end
+		#if (hldx > version("1.16.0")) directQueue.present(window.vsync); #else Driver.present(window.vsync); #end
 
 		waitForFrame(Driver.getCurrentBackBufferIndex());
 		beginFrame();
