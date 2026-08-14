@@ -77,7 +77,6 @@ class BaseMesh extends hxsl.Shader {
 			prevModelView = IS_STATIC ? modelView : global.previousModelView;
 			previousTransformedPosition = relativePosition * prevModelView.mat3x4();
 			previousProjectedPosition = vec4(previousTransformedPosition, 1) * camera.previousViewProj;
-			transformedNormal = (input.normal * modelView.mat3()).normalize();
 			camera.dir = (camera.position - transformedPosition).normalize();
 			pixelColor = color;
 			specPower = specularPower;
@@ -87,6 +86,7 @@ class BaseMesh extends hxsl.Shader {
 		}
 
 		function __init__vertex() {
+			transformedNormal = (input.normal * modelView.mat3()).normalize();
 			worldDist = length(transformedPosition - camera.position) / camera.zFar;
 		}
 
