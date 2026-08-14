@@ -272,7 +272,7 @@ class Batcher extends h3d.scene.Object {
 				addShader(followShader);
 			}
 			var absPos = getAbsPos();
-			followShader.invFollowMatrix.load(absPos.getInverse());
+			followShader.invFollowMatrix.initInverse(absPos);
 			followShader.followMatrix.load(absPos);
 			followShader.prevFollowMatrix.load(prevAbsPos ?? absPos);
 		} else if ( followShader != null ) {
