@@ -29,6 +29,7 @@ class RenderContext extends h3d.impl.RenderContext {
 	public var pbrLightPass : h3d.mat.Pass;
 	public var computingStatic : Bool;
 	public var computeVelocity : Bool;
+	public var enableTranslucency : Bool;
 	public var useReverseDepth : Bool;
 	public var renderResolutionWidth : Int;
 	public var renderResolutionHeight : Int;

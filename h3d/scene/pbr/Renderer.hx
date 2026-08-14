@@ -97,6 +97,7 @@ class Renderer extends h3d.scene.Renderer {
 		hdr : (null:h3d.mat.Texture),
 		ldr : (null:h3d.mat.Texture),
 		velocity : (null:h3d.mat.Texture),
+		translucency : (null:h3d.mat.Texture),
 	};
 
 	public var skyMode : SkyMode = Hide;
@@ -123,7 +124,8 @@ class Renderer extends h3d.scene.Renderer {
 		Vec4([Value("output.metalness"), Value("output.roughness"), Value("output.emissive"), ALPHA]),
 		#end
 		Vec4([Value("output.depth"),Const(0), Const(0), ALPHA /* ? */]),
-		Vec4([Value("output.velocity", 2), Const(0), Const(0)])
+		Vec4([Value("output.velocity", 2), Const(0), Const(0)]),
+		Vec4([Value("output.translucency", 3), ALPHA])
 	]);
 	var decalsOutput = new h3d.pass.Output("decals",[
 		Vec4([Swiz(Value("output.color"),[X,Y,Z]), Value("output.albedoStrength",1)]),
@@ -609,6 +611,8 @@ class Renderer extends h3d.scene.Renderer {
 		textures.ldr = allocTarget("ldrOutput", true, 1., null, [ Writable ]);
 		if ( ctx.computeVelocity )
 			textures.velocity = allocTarget("velocity", true, 1., RG16F );
+		if ( ctx.enableTranslucency )
+			textures.translucency = allocTarget("translucency", true, 1., RGBA);
 	}
 
 	public function getPbrDepth() {
@@ -623,6 +627,7 @@ class Renderer extends h3d.scene.Renderer {
 		ctx.setGlobal("hdrMap", textures.hdr);
 		ctx.setGlobal("ldrMap", textures.ldr);
 		ctx.setGlobal("velocity", textures.velocity);
+		ctx.setGlobal("translucency", textures.translucency);
 		ctx.setGlobal("global.time", ctx.time);
 		ctx.setGlobal("DIFFUSE_ONLY", renderMode == LightProbe);
 		if(ctx.camera != null){
@@ -660,6 +665,10 @@ class Renderer extends h3d.scene.Renderer {
 		#end
 		pbrProps.cameraInverseViewProj = ctx.camera.getInverseViewProj();
 		pbrProps.occlusionPower = props.occlusion * props.occlusion;
+
+		pbrProps.ENABLE_TRANSLUCENCY = ctx.enableTranslucency;
+		if ( ctx.enableTranslucency )
+			pbrProps.translucencyTex = textures.translucency;
 
 		pbrDirect.cameraPosition.load(ctx.camera.pos);
 
@@ -760,6 +769,8 @@ class Renderer extends h3d.scene.Renderer {
 			targets.push(getPbrDepth());
 		if ( ctx.computeVelocity )
 			targets.push(textures.velocity);
+		if ( ctx.enableTranslucency )
+			targets.push(textures.translucency);
 		return targets;
 	}
 
@@ -892,6 +903,8 @@ class Renderer extends h3d.scene.Renderer {
 			slides.shader.shadowMapChannel = R;
 			slides.shader.HAS_VELOCITY = textures.velocity != null;
 			slides.shader.velocity = textures.velocity;
+			slides.shader.HAS_TRANSLUCENCY = textures.translucency != null;
+			slides.shader.translucencyMap = textures.translucency;
 			pbrProps.isScreen = true;
 			slides.render();
 			if( !debugging ) {
@@ -934,7 +947,7 @@ class Renderer extends h3d.scene.Renderer {
 
 		if( e.kind == ERelease && e.button == 2 && hxd.Math.distance(e.relX-debugPushPos.x,e.relY-debugPushPos.y) < 10 ) {
 			var x = Std.int((e.relX / win.width) * 3);
-			var y = Std.int((e.relY / win.height) * 3);
+			var y = Std.int((e.relY / win.height) * 4);
 			if( slides.shader.mode != Full ) {
 				slides.shader.mode = Full;
 			} else {
@@ -943,12 +956,15 @@ class Renderer extends h3d.scene.Renderer {
 					a = [Albedo,Normal,Depth];
 				else if ( y == 1 )
 					a = [Metalness,Roughness,AO];
-				else
+				else if ( y == 2 )
 					a = [Emissive,Shadow,Velocity];
-				slides.shader.mode = a[x];
+				else
+					a = [Translucency];
+				if( x < a.length )
+					slides.shader.mode = a[x];
 			}
 		}
-		if( e.kind == EWheel && (slides.shader.mode == Shadow || (slides.shader.mode == Full && e.relX > win.width/3 && e.relY > win.height/3)) )
+		if( e.kind == EWheel && (slides.shader.mode == Shadow || (slides.shader.mode == Full && e.relX > win.width/3 && e.relX < win.width*2/3 && e.relY > win.height*2/4 && e.relY < win.height*3/4)) )
 			debugShadowMapIndex += e.wheelDelta > 0 ? 1 : -1;
 	}
 
