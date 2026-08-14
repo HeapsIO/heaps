@@ -102,7 +102,7 @@ class Batcher extends h3d.scene.Object {
 	public var isRelative : Bool = false;
 	public var batchFlags = new haxe.EnumFlags<BatcherFlags>();
 	public var syncShader : SyncShaderInterface;
-	var followShader : FollowShader;
+	var applyTransformShader : h3d.shader.ApplyTransformShader;
 
 	var highestGroupID = 1;
 	var freeGroupIDs : Array<Int> = [];
@@ -264,20 +264,20 @@ class Batcher extends h3d.scene.Object {
 			return;
 
 		if ( isRelative ) {
-			if ( followShader == null ) {
-				followShader = new FollowShader();
-				followShader.invFollowMatrix = new h3d.Matrix();
-				followShader.followMatrix = new h3d.Matrix();
-				followShader.prevFollowMatrix = new h3d.Matrix();
-				addShader(followShader);
+			if ( applyTransformShader == null ) {
+				applyTransformShader = new h3d.shader.ApplyTransformShader();
+				applyTransformShader.invTransform = new h3d.Matrix();
+				applyTransformShader.transform = new h3d.Matrix();
+				applyTransformShader.prevTransform = new h3d.Matrix();
+				addShader(applyTransformShader);
 			}
 			var absPos = getAbsPos();
-			followShader.invFollowMatrix.initInverse(absPos);
-			followShader.followMatrix.load(absPos);
-			followShader.prevFollowMatrix.load(prevAbsPos ?? absPos);
-		} else if ( followShader != null ) {
-			removeShader(followShader);
-			followShader = null;
+			applyTransformShader.invTransform.initInverse(absPos);
+			applyTransformShader.transform.load(absPos);
+			applyTransformShader.prevTransform.load(prevAbsPos ?? absPos);
+		} else if ( applyTransformShader != null ) {
+			removeShader(applyTransformShader);
+			applyTransformShader = null;
 		}
 
 		var doDispatch = !batchFlags.has(ManualEmitGPU);
@@ -442,24 +442,6 @@ private class ShaderData {
 	public var bufferHandles : Array<h3d.BufferHandle>;
 	public var textureHandles : Array<h3d.mat.TextureHandle>;
 	function new() {}
-}
-
-private class FollowShader extends hxsl.Shader {
-	static var SRC = {
-		@param var invFollowMatrix : Mat4;
-		@param var followMatrix : Mat4;
-		@param var prevFollowMatrix : Mat4;
-
-		var modelView : Mat4;
-		var modelViewInverse : Mat4;
-		var prevModelView : Mat4;
-
-		function __init__() {
-			modelView = modelView * followMatrix;
-			modelViewInverse = invFollowMatrix * modelViewInverse;
-			prevModelView = prevModelView * prevFollowMatrix;
-		}
-	};
 }
 
 @:allow(h3d.scene.GroupData, h3d.scene.BatchPass)
