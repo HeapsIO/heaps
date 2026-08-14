@@ -80,6 +80,38 @@ class Pad {
 		dpadRight : 20,
 		names : ["LX","LY","RX","RY","LT","RT","A","B","X","Y","Back",null,"Start","LCLK","RCLK","LB","RB","DUp","DDown","DLeft","DRight"],
 	};
+
+	#if (hlsdl >= version("1.16.0"))
+	/**
+		SDL3 buttons are positional (south/east/west/north); Nintendo pads have
+		A/B and X/Y labels swapped relative to those positions, so remap to keep
+		the SDL2 label-based behavior (SDL2 defaults
+		SDL_HINT_GAMECONTROLLER_USE_BUTTON_LABELS to labels).
+	**/
+	public static var CONFIG_SDL_NINTENDO = {
+		analogX : 0,
+		analogY : 1,
+		ranalogX : 2,
+		ranalogY : 3,
+		A : 7,
+		B : 6,
+		X : 9,
+		Y : 8,
+		LB : 15,
+		RB : 16,
+		LT : 4,
+		RT : 5,
+		back : 10,
+		start : 12,
+		analogClick : 13,
+		ranalogClick : 14,
+		dpadUp : 17,
+		dpadDown : 18,
+		dpadLeft : 19,
+		dpadRight : 20,
+		names : ["LX","LY","RX","RY","LT","RT","B","A","Y","X","Back",null,"Start","LCLK","RCLK","LB","RB","DUp","DDown","DLeft","DRight"],
+	};
+	#end
 	#end
 
 	#if js
@@ -414,6 +446,10 @@ class Pad {
 		var p = new hxd.Pad();
 		p.index = sp.id;
 		p.d = sp;
+		#if (hlsdl >= version("1.16.0"))
+		if( sp.name != null && StringTools.startsWith(sp.name, "Nintendo") )
+			p.config = CONFIG_SDL_NINTENDO;
+		#end
 		var prev = pads.get( p.index );
 		if (prev != null) {
 			pads.remove( p.index );
