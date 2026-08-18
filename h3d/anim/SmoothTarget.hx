@@ -103,13 +103,14 @@ class SmoothTarget extends Animation {
 		return cast objects;
 	}
 
-	override function clone( ?a : SmoothTarget ) : SmoothTarget {
+	override function clone( ?a : Animation ) : Animation {
 		if( a == null )
 			a = new SmoothTarget(target, duration);
 		super.clone(a);
-		a.blend = blend;
-		a.ignoreTranslate = ignoreTranslate;
-		a.easing = easing;
+		var sa = Std.downcast(a, SmoothTarget);
+		sa.blend = blend;
+		sa.ignoreTranslate = ignoreTranslate;
+		sa.easing = easing;
 		return a;
 	}
 
