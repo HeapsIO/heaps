@@ -103,6 +103,15 @@ class SmoothTarget extends Animation {
 		return cast objects;
 	}
 
+	override function clone( ?a : SmoothTarget ) : SmoothTarget {
+		if( a == null )
+			a = new SmoothTarget(target, duration);
+		super.clone(a);
+		a.blend = blend
+		a.ignoreTranslate = ignoreTranslate;
+		a.easing = easing;
+		return a;
+	}
 
 	var q1 : Quat = new h3d.Quat();
 	var qout : Quat = new h3d.Quat();
