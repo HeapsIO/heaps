@@ -107,7 +107,7 @@ class SmoothTarget extends Animation {
 		if( a == null )
 			a = new SmoothTarget(target, duration);
 		super.clone(a);
-		a.blend = blend
+		a.blend = blend;
 		a.ignoreTranslate = ignoreTranslate;
 		a.easing = easing;
 		return a;
