@@ -707,6 +707,7 @@ class DX12Driver extends h3d.impl.Driver {
 
 	#if dlss
 	var dlssReady : Bool;
+	var pclReady : Bool;
 	#end
 
 	public static var COPY_BUFFER_SIZE = 256 * 1024 * 1024; // 256 Mo per frame
@@ -812,6 +813,8 @@ class DX12Driver extends h3d.impl.Driver {
 			Driver.setDevice(proxyDevice);
 			var device = Driver.getDevice();
 			dlssReady = Dlss.setDevice(device) == 0;
+			if ( dlssReady )
+				pclReady = Dlss.isFeatureSupported(Driver.getAdapter(), DLSSFeature.PCL) == 0 && Dlss.pclInitStats() == 0;
 		}
 		#end
 
@@ -1014,8 +1017,8 @@ class DX12Driver extends h3d.impl.Driver {
 		flushHeaps();
 
 		#if dlss
-		if ( dlssReady && frame.dlssFrameToken == null ) {
-			frame.dlssFrameToken = Dlss.getNewFrameToken(currentFrame);
+		if ( dlssReady ) {
+			frame.dlssFrameToken = Dlss.getNewFrameToken(frameCount);
 		}
 		#end
 	}
@@ -1134,6 +1137,9 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	override function begin(frame:Int) {
+		#if dlss
+		pclMarker(PCLMarker.RENDER_SUBMIT_START);
+		#end
 	}
 
 	override function isDisposed() {
@@ -1142,8 +1148,10 @@ class DX12Driver extends h3d.impl.Driver {
 
 	override function dispose() {
 		#if dlss
-		if ( dlssReady )
+		if ( dlssReady ) {
 			Dlss.shutdown();
+			dlssReady = false;
+		}
 		#end
 	}
 
@@ -3407,8 +3415,12 @@ class DX12Driver extends h3d.impl.Driver {
 		transition(frame.backBuffer, PRESENT);
 		flushTransitions();
 		flushFrame();
+		#if dlss
+		pclMarker(PCLMarker.RENDER_SUBMIT_END);
+		pclMarker(PCLMarker.PRESENT_START);
+		#end
 		#if (hldx > version("1.16.0")) directQueue.present(window.vsync); #else Driver.present(window.vsync); #end
-
+		#if dlss pclMarker(PCLMarker.PRESENT_END); #end
 		waitForFrame(Driver.getCurrentBackBufferIndex());
 		beginFrame();
 
@@ -3648,6 +3660,34 @@ class DX12Driver extends h3d.impl.Driver {
 		arr[1] = @:privateAccess frame.samplerHeap.heap;
 		frame.commandList.setDescriptorHeaps(arr);
 
+		#end
+	}
+
+	#if dlss
+	inline function pclMarker( marker : PCLMarker ) {
+		if ( dlssReady && pclReady && frame.dlssFrameToken != null )
+			Dlss.pclSetMarker(frame.dlssFrameToken, marker);
+	}
+	#end
+
+	override function pclSimulationStart() {
+		#if dlss
+		if ( dlssReady && pclReady && frame.dlssFrameToken != null ) {
+			pclMarker(PCLMarker.SIMULATION_START);
+			Dlss.pclPollPing(frame.dlssFrameToken);
+		}
+		#end
+	}
+
+	override function pclSimulationEnd() {
+		#if dlss
+		pclMarker(PCLMarker.SIMULATION_END);
+		#end
+	}
+
+	override function pclTriggerFlash() {
+		#if dlss
+		pclMarker(PCLMarker.TRIGGER_FLASH);
 		#end
 	}
 

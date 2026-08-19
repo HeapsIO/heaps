@@ -433,4 +433,13 @@ class Driver {
 
 	public function applyDLSS( resources : Map<DLSSTag, h3d.mat.Texture>, constants : DLSSParams, quality : DLSSQuality, mode : DLSSMode ) {
 	}
+
+	public function pclSimulationStart() {
+	}
+
+	public function pclSimulationEnd() {
+	}
+
+	public function pclTriggerFlash() {
+	}
 }

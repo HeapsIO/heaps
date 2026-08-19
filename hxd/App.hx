@@ -166,6 +166,7 @@ class App implements h3d.IDrawable {
 		if( s2d != null ) s2d.dispose();
 		if( s3d != null ) s3d.dispose();
 		if( sevents != null ) sevents.dispose();
+		engine.dispose();
 	}
 
 	/**
