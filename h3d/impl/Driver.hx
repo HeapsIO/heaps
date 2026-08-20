@@ -173,6 +173,12 @@ enum DLSSMode {
 	Dlaa;
 }
 
+enum ReflexMode {
+	Off;
+	LowLatency;
+	LowLatencyWithBoost;
+}
+
 class Driver {
 
 	static var SHADER_CACHE : h3d.impl.ShaderCache;
@@ -441,5 +447,24 @@ class Driver {
 	}
 
 	public function pclTriggerFlash() {
+	}
+
+	public function reflexSleep() {
+	}
+
+	public function setReflexOptions( mode : ReflexMode, frameLimitUs : Int = 0 ) {
+		return false;
+	}
+
+	public function reflexLowLatencyAvailable() {
+		return false;
+	}
+
+	public function reflexFlashIndicatorDriverControlled() {
+		return false;
+	}
+
+	public function debugReflex() : String {
+		return "";
 	}
 }

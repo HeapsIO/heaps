@@ -706,8 +706,12 @@ class DX12Driver extends h3d.impl.Driver {
 	var asyncComputeAllocator : CommandAllocator;
 
 	#if dlss
+	var slReady : Bool;
 	var dlssReady : Bool;
 	var pclReady : Bool;
+	var reflexReady : Bool;
+	var reflexState : ReflexStateInfo;
+	var pclFlashRequested : Bool;
 	#end
 
 	public static var COPY_BUFFER_SIZE = 256 * 1024 * 1024; // 256 Mo per frame
@@ -724,6 +728,7 @@ class DX12Driver extends h3d.impl.Driver {
 	public static var DEBUG = false; // requires dxil.dll when set to true
 	public static var SUPPRESSED_MESSAGE_IDS : Array<Int> = [];
 	public static var DLSS = true;
+	public static var REFLEX = false;
 
 	@:allow(h3d.impl) static function allocCheck<T>( f : Void -> T ) {
 		var ret = f();
@@ -793,8 +798,8 @@ class DX12Driver extends h3d.impl.Driver {
 
 	function reset() {
 		#if dlss
-		if ( DLSS ) {
-			dlssReady = Dlss.init(false) == 0;
+		if ( DLSS || REFLEX ) {
+			slReady = Dlss.init(false) == 0;
 		}
 		#end
 
@@ -807,21 +812,29 @@ class DX12Driver extends h3d.impl.Driver {
 		frames = [];
 
 		#if dlss
-		if ( dlssReady ) {
+		if ( slReady ) {
 			var nativeDevice = Driver.getDevice();
 			var proxyDevice = Dlss.upgradeDevice(nativeDevice);
 			Driver.setDevice(proxyDevice);
 			var device = Driver.getDevice();
-			dlssReady = Dlss.setDevice(device) == 0;
-			if ( dlssReady )
-				pclReady = Dlss.isFeatureSupported(Driver.getAdapter(), DLSSFeature.PCL) == 0 && Dlss.pclInitStats() == 0;
+			slReady = Dlss.setDevice(device) == 0;
+			if ( slReady ) {
+				var adapter = Driver.getAdapter();
+				dlssReady = DLSS && Dlss.isFeatureSupported(adapter, DLSSFeature.DLSS) == 0;
+				if ( REFLEX ) {
+					pclReady = Dlss.isFeatureSupported(adapter, DLSSFeature.PCL) == 0 && Dlss.pclInitStats() == 0;
+					reflexReady = Dlss.isFeatureSupported(adapter, DLSSFeature.REFLEX) == 0;
+					if ( reflexState == null ) reflexState = new ReflexStateInfo();
+					reflexReady = reflexReady && setReflexOptions(Off, 0);
+				}
+			}
 		}
 		#end
 
 		#if (hldx > version("1.16.0")) directQueue = new CommandQueue(DIRECT); #else Driver.createCommandQueue(); #end
 
 		#if dlss
-		if ( dlssReady ) {
+		if ( slReady ) {
 			var nativeFactory = Driver.getFactory();
 			var proxyFactory = Dlss.upgradeFactory(nativeFactory);
 			Driver.setFactory(proxyFactory);
@@ -1017,8 +1030,9 @@ class DX12Driver extends h3d.impl.Driver {
 		flushHeaps();
 
 		#if dlss
-		if ( dlssReady ) {
+		if ( slReady ) {
 			frame.dlssFrameToken = Dlss.getNewFrameToken(frameCount);
+			if ( reflexReady ) Dlss.reflexGetState(reflexState);
 		}
 		#end
 	}
@@ -1148,9 +1162,12 @@ class DX12Driver extends h3d.impl.Driver {
 
 	override function dispose() {
 		#if dlss
-		if ( dlssReady ) {
+		if ( slReady ) {
 			Dlss.shutdown();
+			slReady = false;
 			dlssReady = false;
+			pclReady = false;
+			reflexReady = false;
 		}
 		#end
 	}
@@ -3529,7 +3546,7 @@ class DX12Driver extends h3d.impl.Driver {
 
 	override function isDLSSSupported( framegen : Bool = false ) : Bool {
 		#if dlss
-		if ( !dlssReady ) return false;
+		if ( !slReady || !DLSS ) return false;
 		var adapter = Driver.getAdapter();
 		var feature = framegen ? DLSSFeature.FRAMEGEN : DLSSFeature.DLSS;
 		var slResult = Dlss.isFeatureSupported(adapter, feature);
@@ -3665,14 +3682,14 @@ class DX12Driver extends h3d.impl.Driver {
 
 	#if dlss
 	inline function pclMarker( marker : PCLMarker ) {
-		if ( dlssReady && pclReady && frame.dlssFrameToken != null )
+		if ( slReady && pclReady && frame.dlssFrameToken != null )
 			Dlss.pclSetMarker(frame.dlssFrameToken, marker);
 	}
 	#end
 
 	override function pclSimulationStart() {
 		#if dlss
-		if ( dlssReady && pclReady && frame.dlssFrameToken != null ) {
+		if ( slReady && pclReady && frame.dlssFrameToken != null ) {
 			pclMarker(PCLMarker.SIMULATION_START);
 			Dlss.pclPollPing(frame.dlssFrameToken);
 		}
@@ -3682,13 +3699,109 @@ class DX12Driver extends h3d.impl.Driver {
 	override function pclSimulationEnd() {
 		#if dlss
 		pclMarker(PCLMarker.SIMULATION_END);
+		if ( pclFlashRequested ) {
+			pclMarker(PCLMarker.TRIGGER_FLASH);
+			pclFlashRequested = false;
+		}
 		#end
 	}
 
 	override function pclTriggerFlash() {
 		#if dlss
-		pclMarker(PCLMarker.TRIGGER_FLASH);
+		pclFlashRequested = true;
 		#end
+	}
+
+	override function reflexSleep() {
+		#if dlss
+		if ( slReady && reflexReady && frame.dlssFrameToken != null )
+			Dlss.reflexSleep(frame.dlssFrameToken);
+		#end
+	}
+
+	override function setReflexOptions( mode : ReflexMode, frameLimitUs : Int = 0 ) {
+		#if dlss
+		if ( !slReady || !reflexReady )
+			return false;
+
+		var native = switch ( mode ) {
+			case Off: ReflexModeNative.OFF;
+			case LowLatency: ReflexModeNative.LOW_LATENCY;
+			case LowLatencyWithBoost: ReflexModeNative.LOW_LATENCY_WITH_BOOST;
+		}
+		return Dlss.reflexSetOptions(native, frameLimitUs, false, PCLHotKey.USE_PING_MESSAGE, 0) == 0;
+		#else
+		return false;
+		#end
+	}
+
+	override function reflexLowLatencyAvailable() {
+		#if dlss
+		return slReady && reflexReady && reflexState != null && reflexState.lowLatencyAvailable != 0;
+		#else
+		return false;
+		#end
+	}
+
+	override function reflexFlashIndicatorDriverControlled() {
+		#if dlss
+		return slReady && reflexReady && reflexState != null && reflexState.flashIndicatorDriverControlled != 0;
+		#else
+		return false;
+		#end
+	}
+
+	override function debugReflex() : String {
+		#if dlss
+		var buf = new StringBuf();
+		buf.add("=== Reflex Debug ===\n");
+		if ( !slReady || !reflexReady ) {
+			buf.add("Streamline or Reflex are not ready\n");
+			return buf.toString();
+		}
+		if ( reflexState == null )
+			reflexState = new ReflexStateInfo();
+		Dlss.reflexGetState(reflexState);
+		buf.add('lowLatencyAvailable=${reflexState.lowLatencyAvailable} ');
+		buf.add('latencyReportAvailable=${reflexState.latencyReportAvailable} ');
+		buf.add('flashIndicatorDriverControlled=${reflexState.flashIndicatorDriverControlled} ');
+		buf.add('statsWindowMessage=${reflexState.statsWindowMessage}\n');
+		if ( reflexState.lowLatencyAvailable == 0 ) buf.add("Low latency is not available.\n");
+		if ( reflexState.latencyReportAvailable == 0 ) buf.add("Latency report are not available.\n");
+		var reports = [];
+		for ( i in 0...Dlss.REFLEX_FRAME_REPORT_COUNT ) {
+			var r = new ReflexFrameReport();
+			var res = Dlss.reflexGetFrameReport(i, r);
+			if ( res == 0 && r.frameID > 0 )
+				reports.push(r);
+		}
+		if ( reports.length == 0 ) {
+			buf.add("Empty reports.\n");
+			return buf.toString();
+		}
+		reports.sort((a, b) -> a.frameID < b.frameID ? -1 : (a.frameID > b.frameID ? 1 : 0));
+		var totalPcLatency = 0.;
+		var totalGpuFrameUs = 0.;
+		buf.add('\nframeID   simMs   renderMs   driverMs   osQueueMs   gpuMs   pcLatencyMs   gpuFrameTimeUs\n');
+		for ( r in reports ) {
+			inline function ms(a:Float, b:Float) return (b - a) / 1000.0;
+			var simDur = ms(r.simStartTime, r.simEndTime);
+			var renderDur = ms(r.renderSubmitStartTime, r.renderSubmitEndTime);
+			var drvDur = ms(r.driverStartTime, r.driverEndTime);
+			var osDur = ms(r.osRenderQueueStartTime, r.osRenderQueueEndTime);
+			var gpuDur = ms(r.gpuRenderStartTime, r.gpuRenderEndTime);
+			var pcLatency = ms(r.simStartTime, r.presentEndTime);
+			buf.add('${r.frameID}   ${simDur}   ${renderDur}   ${drvDur}   ${osDur}   ${gpuDur}   ${pcLatency}   ${r.gpuFrameTimeUs}\n');
+			totalPcLatency += pcLatency;
+			totalGpuFrameUs += r.gpuFrameTimeUs;
+			if (r.driverStartTime <= 0 || r.gpuRenderStartTime <= 0 || r.osRenderQueueStartTime <= 0)
+				buf.add("One or more driver/OS/GPU timestamps are 0.\n");
+		}
+		var n = reports.length;
+		buf.add('\nSampled ${n} frames. Avg PC latency: ${totalPcLatency / n} ms. Avg GPU frame time: ${totalGpuFrameUs / n} us.\n');
+		return buf.toString();
+		#end
+		return "DLSS Undefined";
 	}
 
 	#if (hl_ver >= version("1.16.0"))

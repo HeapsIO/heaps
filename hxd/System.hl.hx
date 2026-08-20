@@ -69,8 +69,10 @@ class System {
 	static function mainLoop() {
 		#if dlss
 		var engine = h3d.Engine.getCurrent();
-		if( engine != null && engine.ready )
+		if( engine != null && engine.ready ) {
+			engine.driver.reflexSleep();
 			engine.driver.pclSimulationStart();
+		}
 		#end
 
 		// process events
