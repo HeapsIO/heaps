@@ -529,8 +529,8 @@ class Renderer extends h3d.scene.Renderer {
 
 			constants.jitterOffsetX = ctx.camera.jitterOffsetX;
 			constants.jitterOffsetY = ctx.camera.jitterOffsetY;
-			constants.mvecScaleX = 1.0;
-			constants.mvecScaleY = 1.0;
+			constants.mvecScaleX = 2.0;
+			constants.mvecScaleY = -2.0;
 			constants.cameraPos = ctx.camera.pos;
 			constants.cameraUp = ctx.camera.getUp();
 			constants.cameraRight = ctx.camera.getRight();
