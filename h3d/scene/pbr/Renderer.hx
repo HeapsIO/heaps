@@ -486,7 +486,7 @@ class Renderer extends h3d.scene.Renderer {
 	}
 
 	function renderEditorOverlay() {
-		#if editor
+		#if (editor || editor_hl)
 		renderPass(defaultPass, get("overlay"), backToFront);
 		renderPass(defaultPass, get("ui"), backToFront);
 		#end
