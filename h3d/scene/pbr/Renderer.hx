@@ -498,6 +498,54 @@ class Renderer extends h3d.scene.Renderer {
 	static var tmp = new h3d.Matrix();
 	static var clipToPrevClip = new h3d.Matrix();
 	static var prevClipToClip = new h3d.Matrix();
+	static var projNoJitter = new h3d.Matrix();
+	static var prevProjNoJitter = new h3d.Matrix();
+	static var clipToViewNoJitter = new h3d.Matrix();
+
+	inline function unjitterProj( out : h3d.Matrix, cam : h3d.Camera ) {
+		out.load(cam.mproj);
+		out._31 -= cam.jitterOffsetX;
+		out._32 -= cam.jitterOffsetY;
+	}
+
+	function fillDLSSConstants(reset : Bool) {
+		constants.autoExposure = true;
+		constants.colorBufferHDR = false;
+		unjitterProj(projNoJitter, ctx.camera);
+		unjitterProj(prevProjNoJitter, ctx.prevCamera);
+		clipToViewNoJitter.initInverse(projNoJitter);
+
+		constants.cameraViewToClip = projNoJitter;
+		constants.clipToCameraView = clipToViewNoJitter;
+
+		var viewToWorld = ctx.camera.getInverseView();
+		viewToViewPrev.multiply(viewToWorld, ctx.prevCamera.mcam);
+		tmp.multiply(clipToViewNoJitter, viewToViewPrev);
+		clipToPrevClip.multiply(tmp, prevProjNoJitter);
+		constants.clipToPrevClip = clipToPrevClip;
+
+		prevClipToClip.initInverse(clipToPrevClip);
+		constants.prevClipToClip = prevClipToClip;
+
+		constants.jitterOffsetX = ctx.camera.jitterOffsetX;
+		constants.jitterOffsetY = ctx.camera.jitterOffsetY;
+		constants.mvecScaleX = 1.0;
+		constants.mvecScaleY = 1.0;
+		constants.cameraPos = ctx.camera.pos;
+		constants.cameraUp = ctx.camera.getUp();
+		constants.cameraRight = ctx.camera.getRight();
+		constants.cameraFwd = ctx.camera.getForward();
+		constants.cameraNear = ctx.camera.zNear;
+		constants.cameraFar = ctx.camera.zFar;
+		constants.cameraFOV = ctx.camera.fovY;
+		constants.cameraAspectRatio = ctx.camera.screenRatio;
+		constants.depthInverted = ctx.useReverseDepth;
+		constants.cameraMotionIncluded = true;
+		constants.reset = reset;
+		constants.orthographicProjection = false;
+		constants.motionVectorsDilated = false;
+		constants.motionVectorsJittered = false;
+	}
 
 	function applyDLSS(quality : DLSSQuality, mode : DLSSMode, reset : Bool = false) {
 		if (ctx.engine.driver.hasFeature(DLSS)) {
@@ -512,42 +560,23 @@ class Renderer extends h3d.scene.Renderer {
 			resources.set(Depth, depthMap);
 			resources.set(ColorOut, output);
 
-			constants.autoExposure = true;
-			constants.colorBufferHDR = false;
-			constants.cameraViewToClip = ctx.camera.mproj;
-			var clipToView = ctx.camera.getInverseProj();
-			constants.clipToCameraView = clipToView;
-
-			var viewToWorld = ctx.camera.getInverseView();
-			viewToViewPrev.multiply(viewToWorld, ctx.prevCamera.mcam);
-			tmp.multiply(clipToView, viewToViewPrev);
-			clipToPrevClip.multiply(tmp, ctx.prevCamera.mproj);
-			constants.clipToPrevClip = clipToPrevClip;
-
-			prevClipToClip.initInverse(clipToPrevClip);
-			constants.prevClipToClip = prevClipToClip;
-
-			constants.jitterOffsetX = ctx.camera.jitterOffsetX;
-			constants.jitterOffsetY = ctx.camera.jitterOffsetY;
-			constants.mvecScaleX = 2.0;
-			constants.mvecScaleY = -2.0;
-			constants.cameraPos = ctx.camera.pos;
-			constants.cameraUp = ctx.camera.getUp();
-			constants.cameraRight = ctx.camera.getRight();
-			constants.cameraFwd = ctx.camera.getForward();
-			constants.cameraNear = ctx.camera.zNear;
-			constants.cameraFar = ctx.camera.zFar;
-			constants.cameraFOV = ctx.camera.fovY;
-			constants.cameraAspectRatio = ctx.camera.screenRatio;
-			constants.depthInverted = ctx.useReverseDepth;
-			constants.cameraMotionIncluded = true;
-			constants.reset = reset;
-			constants.orthographicProjection = false;
-			constants.motionVectorsDilated = false;
-			constants.motionVectorsJittered = false;
+			fillDLSSConstants(reset);
 
 			ctx.engine.driver.applyDLSS(resources, constants, quality, mode);
 			ctx.setGlobal("ldrMap", output);
+		}
+	}
+
+	function applyDLSSG(reset : Bool = false) {
+		if (ctx.engine.driver.hasFeature(DLSS)) {
+			resources.clear();
+			resources.set(MotionVectors, ctx.getGlobal("velocity"));
+			resources.set(Depth, getPbrDepth());
+
+			fillDLSSConstants(reset);
+
+			ctx.engine.driver.tagDLSSResources(resources);
+			ctx.engine.driver.setDLSSConstants(constants);
 		}
 	}
 

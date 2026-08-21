@@ -708,10 +708,16 @@ class DX12Driver extends h3d.impl.Driver {
 	#if dlss
 	var slReady : Bool;
 	var dlssReady : Bool;
+	var framegenReady : Bool;
 	var pclReady : Bool;
 	var reflexReady : Bool;
 	var reflexState : ReflexStateInfo;
 	var pclFlashRequested : Bool;
+	var dlssgMode : h3d.impl.Driver.DLSSGMode = Off;
+	var dlssgFrames : Int = 1;
+	var dlssgLastStatus : Int = 0;
+	var reflexMode : ReflexMode = Off;
+	var dlssConstantsFrame : Int = -1;
 	#end
 
 	public static var COPY_BUFFER_SIZE = 256 * 1024 * 1024; // 256 Mo per frame
@@ -728,7 +734,9 @@ class DX12Driver extends h3d.impl.Driver {
 	public static var DEBUG = false; // requires dxil.dll when set to true
 	public static var SUPPRESSED_MESSAGE_IDS : Array<Int> = [];
 	public static var DLSS = true;
-	public static var REFLEX = false;
+	public static var FRAMEGEN = true;
+	public static var REFLEX = true;
+	public static var CHECK_DLL_SIGNATURE = true;
 
 	@:allow(h3d.impl) static function allocCheck<T>( f : Void -> T ) {
 		var ret = f();
@@ -798,8 +806,13 @@ class DX12Driver extends h3d.impl.Driver {
 
 	function reset() {
 		#if dlss
-		if ( DLSS || REFLEX ) {
-			slReady = Dlss.init(false) == 0;
+		if ( DLSS || FRAMEGEN || REFLEX ) {
+			var features = new hl.NativeArray<Int>((DLSS ? 1 : 0) + (FRAMEGEN ? 1 : 0) + (REFLEX ? 1 : 0));
+			var count = 0;
+			if ( DLSS ) features[count++] = DLSSFeature.DLSS;
+			if ( FRAMEGEN ) features[count++] = DLSSFeature.FRAMEGEN;
+			if ( REFLEX ) features[count++] = DLSSFeature.REFLEX;
+			slReady = Dlss.init(false, features, CHECK_DLL_SIGNATURE) == 0;
 		}
 		#end
 
@@ -821,7 +834,8 @@ class DX12Driver extends h3d.impl.Driver {
 			if ( slReady ) {
 				var adapter = Driver.getAdapter();
 				dlssReady = DLSS && Dlss.isFeatureSupported(adapter, DLSSFeature.DLSS) == 0;
-				if ( REFLEX ) {
+				framegenReady = FRAMEGEN && Dlss.isFeatureSupported(adapter, DLSSFeature.FRAMEGEN) == 0;
+				if ( REFLEX || framegenReady ) {
 					pclReady = Dlss.isFeatureSupported(adapter, DLSSFeature.PCL) == 0 && Dlss.pclInitStats() == 0;
 					reflexReady = Dlss.isFeatureSupported(adapter, DLSSFeature.REFLEX) == 0;
 					if ( reflexState == null ) reflexState = new ReflexStateInfo();
@@ -1094,6 +1108,11 @@ class DX12Driver extends h3d.impl.Driver {
 		if( defaultDepth == null || (currentWidth == width && currentHeight == height) )
 			return;
 
+		#if dlss
+		var prevDlssgMode = dlssgMode;
+		if ( dlssgMode != Off ) setDLSSGMode(Off);
+		#end
+
 		currentWidth = rtWidth = width;
 		currentHeight = rtHeight = height;
 		@:privateAccess defaultDepth.width = width;
@@ -1148,6 +1167,10 @@ class DX12Driver extends h3d.impl.Driver {
 		defaultDepth.t.state = defaultDepth.t.targetState = DEPTH_WRITE;
 
 		beginFrame();
+
+		#if dlss
+		if ( prevDlssgMode != Off ) setDLSSGMode(prevDlssgMode, dlssgFrames);
+		#end
 	}
 
 	override function begin(frame:Int) {
@@ -1161,14 +1184,23 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	override function dispose() {
+		shutdownDLSS();
+	}
+
+	override function shutdownDLSS() {
 		#if dlss
-		if ( slReady ) {
-			Dlss.shutdown();
-			slReady = false;
-			dlssReady = false;
-			pclReady = false;
-			reflexReady = false;
+		if ( !slReady ) return;
+		if ( dlssgMode != Off ) {
+			setDLSSGMode(Off, 1, true);
+			Dlss.setFeatureLoaded(DLSSFeature.FRAMEGEN, false);
 		}
+		waitGpu();
+		Dlss.shutdown();
+		slReady = false;
+		dlssReady = false;
+		framegenReady = false;
+		pclReady = false;
+		reflexReady = false;
 		#end
 	}
 
@@ -3437,7 +3469,13 @@ class DX12Driver extends h3d.impl.Driver {
 		pclMarker(PCLMarker.PRESENT_START);
 		#end
 		#if (hldx > version("1.16.0")) directQueue.present(window.vsync); #else Driver.present(window.vsync); #end
-		#if dlss pclMarker(PCLMarker.PRESENT_END); #end
+		#if dlss
+		pclMarker(PCLMarker.PRESENT_END);
+		if ( dlssgMode == Off )
+			dlssgSettings.framesPresented = 1;
+		else if ( refreshDLSSGState() && dlssgSettings.status != 0 )
+			setDLSSGMode(Off);
+		#end
 		waitForFrame(Driver.getCurrentBackBufferIndex());
 		beginFrame();
 
@@ -3533,6 +3571,9 @@ class DX12Driver extends h3d.impl.Driver {
 	static var dlssSettings = new DLSSSettings();
 	static var dlssOptions = new DLSSOptions();
 	static var dlssConstants = new DLSSConstants();
+	static var dlssgOptions = new DLSSGOptions();
+	static var dlssgStateInfo = new DLSSGStateInfo();
+	static var dlssgSettings = new h3d.impl.Driver.DLSSGSettings();
 	static var matCameraViewToClip = new DLSSMatrix();
 	static var matClipToCameraView = new DLSSMatrix();
 	static var matClipToLensClip = new DLSSMatrix();
@@ -3546,11 +3587,7 @@ class DX12Driver extends h3d.impl.Driver {
 
 	override function isDLSSSupported( framegen : Bool = false ) : Bool {
 		#if dlss
-		if ( !slReady || !DLSS ) return false;
-		var adapter = Driver.getAdapter();
-		var feature = framegen ? DLSSFeature.FRAMEGEN : DLSSFeature.DLSS;
-		var slResult = Dlss.isFeatureSupported(adapter, feature);
-		return slResult == 0;
+		return framegen ? framegenReady : dlssReady;
 		#end
 		return false;
 	}
@@ -3603,10 +3640,27 @@ class DX12Driver extends h3d.impl.Driver {
 
 		Dlss.setOptions(dlssOptions);
 
+		tagDLSSResources(resources);
+
+		setDLSSConstants(constants);
+
+		Dlss.evaluateFeature(frame.dlssFrameToken, frame.commandList, DLSSFeature.DLSS);
+
+		var arr = tmp.descriptors2;
+		arr[0] = @:privateAccess frame.srvHeap.heap;
+		arr[1] = @:privateAccess frame.samplerHeap.heap;
+		frame.commandList.setDescriptorHeaps(arr);
+		#end
+	}
+
+	override function tagDLSSResources( resources : Map<h3d.impl.Driver.DLSSTag, h3d.mat.Texture> ) {
+		#if dlss
+		if ( !slReady || frame.dlssFrameToken == null ) return;
+
 		var resCount = 0;
-		for ( t in resources.keys() ) {
+		for ( t in resources.keys() )
 			resCount++;
-		}
+		if ( resCount == 0 ) return;
 
 		var dlssResources = hl.CArray.alloc(DLSSResource, resCount);
 		var idx = 0;
@@ -3621,13 +3675,41 @@ class DX12Driver extends h3d.impl.Driver {
 				case MotionVectors: res.type = DLSSBufferType.MOTIONVECTORS;
 				case ColorIn: res.type = DLSSBufferType.COLORIN;
 				case ColorOut: res.type = DLSSBufferType.COLOROUT;
+				case HUDLess: res.type = DLSSBufferType.HUDLESSCOLOR;
+				case UIColorAndAlpha: res.type = DLSSBufferType.UICOLORANDALPHA;
+				case UIAlpha: res.type = DLSSBufferType.UIALPHA;
 			}
 			res.state = t.t.state;
+			res.lifecycle = DLSSResourceLifecycle.VALID_UNTIL_PRESENT;
 			t.lastFrame = frameCount;
 			idx++;
 		}
 
 		Dlss.setTagForFrame(frame.dlssFrameToken, dlssResources, resCount, frame.commandList);
+		#end
+	}
+
+	override function clearDLSSTags() {
+		#if dlss
+		if ( !slReady || frame.dlssFrameToken == null )
+			return;
+		var types = [DLSSBufferType.DEPTH, DLSSBufferType.MOTIONVECTORS, DLSSBufferType.COLORIN, DLSSBufferType.COLOROUT, DLSSBufferType.HUDLESSCOLOR, DLSSBufferType.UICOLORANDALPHA, DLSSBufferType.UIALPHA];
+		var dlssResources = hl.CArray.alloc(DLSSResource, types.length);
+		for ( i => type in types ) {
+			var res = dlssResources[i];
+			res.res = null;
+			res.type = type;
+			res.lifecycle = DLSSResourceLifecycle.VALID_UNTIL_PRESENT;
+		}
+		Dlss.setTagForFrame(frame.dlssFrameToken, dlssResources, types.length, frame.commandList);
+		#end
+	}
+
+	override function setDLSSConstants( constants : DLSSParams ) {
+		#if dlss
+		if ( !slReady || frame.dlssFrameToken == null || dlssConstantsFrame == frameCount )
+			return;
+		dlssConstantsFrame = frameCount;
 
 		loadDlssMat(matCameraViewToClip, constants.cameraViewToClip);
 		loadDlssMat(matClipToCameraView, constants.clipToCameraView);
@@ -3669,14 +3751,6 @@ class DX12Driver extends h3d.impl.Driver {
 		dlssConstants.minRelativeLinearDepthObjectSeparation = 40.0;
 
 		Dlss.setConstants(frame.dlssFrameToken, dlssConstants);
-
-		Dlss.evaluateFeature(frame.dlssFrameToken, frame.commandList, DLSSFeature.DLSS);
-
-		var arr = tmp.descriptors2;
-		arr[0] = @:privateAccess frame.srvHeap.heap;
-		arr[1] = @:privateAccess frame.samplerHeap.heap;
-		frame.commandList.setDescriptorHeaps(arr);
-
 		#end
 	}
 
@@ -3724,14 +3798,88 @@ class DX12Driver extends h3d.impl.Driver {
 		if ( !slReady || !reflexReady )
 			return false;
 
+		if ( mode == Off && dlssgMode != Off )
+			mode = LowLatency;
+
 		var native = switch ( mode ) {
 			case Off: ReflexModeNative.OFF;
 			case LowLatency: ReflexModeNative.LOW_LATENCY;
 			case LowLatencyWithBoost: ReflexModeNative.LOW_LATENCY_WITH_BOOST;
 		}
-		return Dlss.reflexSetOptions(native, frameLimitUs, false, PCLHotKey.USE_PING_MESSAGE, 0) == 0;
+
+		if ( Dlss.reflexSetOptions(native, frameLimitUs, false, PCLHotKey.USE_PING_MESSAGE, 0) != 0 )
+			return false;
+
+		reflexMode = mode;
+		return true;
 		#else
 		return false;
+		#end
+	}
+
+	override function setDLSSGMode( mode : h3d.impl.Driver.DLSSGMode, numFramesToGenerate : Int = 1, releaseResources = false ) : Bool {
+		#if dlss
+		if ( !slReady || !framegenReady )
+			return false;
+
+		if ( mode != Off && reflexMode == Off && !setReflexOptions(LowLatency) )
+			return false;
+
+		dlssgOptions.mode = switch ( mode ) {
+			case Off: DLSSGModeNative.OFF;
+			case On: DLSSGModeNative.ON;
+			case Auto: DLSSGModeNative.AUTO;
+			case Dynamic: DLSSGModeNative.DYNAMIC;
+		}
+		dlssgOptions.numFramesToGenerate = numFramesToGenerate;
+		if ( mode != Off )
+			dlssgFrames = numFramesToGenerate;
+
+		dlssgOptions.flags = DLSSGFlag.RETAIN_RESOURCES_WHEN_OFF;
+		if ( Dlss.dlssgSetOptions(dlssgOptions) != 0 )
+			return false;
+
+		dlssgMode = mode;
+		refreshDLSSGState();
+		if ( mode == Off && releaseResources )
+			Dlss.freeResources(DLSSFeature.FRAMEGEN);
+
+		return true;
+		#else
+		return false;
+		#end
+	}
+
+	override function getDLSSGMode() : h3d.impl.Driver.DLSSGMode {
+		#if dlss
+		return dlssgMode;
+		#else
+		return Off;
+		#end
+	}
+
+	#if dlss
+	function refreshDLSSGState() : Bool {
+		if ( !slReady || !framegenReady || Dlss.dlssgGetState(dlssgStateInfo) != 0 )
+			return false;
+
+		dlssgSettings.status = dlssgStateInfo.status;
+		dlssgSettings.minWidthOrHeight = dlssgStateInfo.minWidthOrHeight;
+		dlssgSettings.framesPresented = dlssgStateInfo.numFramesActuallyPresented;
+		dlssgSettings.maxFramesToGenerate = dlssgStateInfo.numFramesToGenerateMax;
+		dlssgSettings.dynamicSupported = dlssgStateInfo.dynamicMFGSupported != 0;
+		dlssgSettings.vsyncSupported = dlssgStateInfo.vsyncSupportAvailable != 0;
+		if ( dlssgSettings.status != 0 )
+			dlssgLastStatus = dlssgSettings.status;
+		return true;
+	}
+	#end
+
+	override function getDLSSGSettings() : h3d.impl.Driver.DLSSGSettings {
+		#if dlss
+		return slReady && framegenReady ? dlssgSettings : null;
+		#else
+		return null;
 		#end
 	}
 
@@ -3749,6 +3897,40 @@ class DX12Driver extends h3d.impl.Driver {
 		#else
 		return false;
 		#end
+	}
+
+	override function debugDLSSG() : String {
+		#if dlss
+		var buf = new StringBuf();
+		buf.add("=== DLSS-G Debug ===\n");
+		if ( !slReady ) {
+			buf.add("Streamline is not ready\n");
+			return buf.toString();
+		}
+		if ( !framegenReady ) {
+			buf.add("Frame generation is not supported on this adapter\n");
+			return buf.toString();
+		}
+		buf.add('mode=$dlssgMode framesToGenerate=$dlssgFrames reflexMode=$reflexMode\n');
+		var state = getDLSSGSettings();
+		buf.add('framesPresentedPerFrame=${state.framesPresented}\n');
+		buf.add('minWidthOrHeight=${state.minWidthOrHeight} maxFramesToGenerate=${state.maxFramesToGenerate} ');
+		buf.add('dynamicSupported=${state.dynamicSupported} vsyncSupported=${state.vsyncSupported}\n');
+		var status = state.status == 0 ? dlssgLastStatus : state.status;
+		if ( status == 0 ) {
+			buf.add("status=Ok\n");
+		} else {
+			if ( status & 1 != 0 ) buf.add("status: output resolution too low\n");
+			if ( status & 2 != 0 ) buf.add("status: Reflex not active at runtime\n");
+			if ( status & 4 != 0 ) buf.add("status: HDR format not supported\n");
+			if ( status & 8 != 0 ) buf.add("status: common constants invalid\n");
+			if ( status & 16 != 0 ) buf.add("status: GetCurrentBackBufferIndex not called\n");
+		}
+		if ( currentWidth < state.minWidthOrHeight || currentHeight < state.minWidthOrHeight )
+			buf.add('backbuffer ${currentWidth}x${currentHeight} is below minWidthOrHeight\n');
+		return buf.toString();
+		#end
+		return "DLSS Undefined";
 	}
 
 	override function debugReflex() : String {
