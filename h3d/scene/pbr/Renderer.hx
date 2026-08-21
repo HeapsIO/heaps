@@ -519,7 +519,7 @@ class Renderer extends h3d.scene.Renderer {
 		constants.clipToCameraView = clipToViewNoJitter;
 
 		var viewToWorld = ctx.camera.getInverseView();
-		viewToViewPrev.multiply(viewToWorld, ctx.prevCamera.mcam);
+			viewToViewPrev.multiply(viewToWorld, ctx.prevCamera.mcam);
 		tmp.multiply(clipToViewNoJitter, viewToViewPrev);
 		clipToPrevClip.multiply(tmp, prevProjNoJitter);
 		constants.clipToPrevClip = clipToPrevClip;
@@ -527,8 +527,9 @@ class Renderer extends h3d.scene.Renderer {
 		prevClipToClip.initInverse(clipToPrevClip);
 		constants.prevClipToClip = prevClipToClip;
 
-		constants.jitterOffsetX = ctx.camera.jitterOffsetX;
-		constants.jitterOffsetY = ctx.camera.jitterOffsetY;
+		var jitter = @:privateAccess ctx.cameraJitterOffsets;
+		constants.jitterOffsetX = jitter.x * ctx.renderResolutionWidth * 0.5;
+		constants.jitterOffsetY = -jitter.y * ctx.renderResolutionHeight * 0.5;
 		constants.mvecScaleX = 1.0;
 		constants.mvecScaleY = 1.0;
 		constants.cameraPos = ctx.camera.pos;
