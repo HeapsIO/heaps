@@ -1,0 +1,4 @@
+-cp test
+-main test.TestRunner
+-lib heaps
+--interp
