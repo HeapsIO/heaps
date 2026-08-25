@@ -501,6 +501,7 @@ class Renderer extends h3d.scene.Renderer {
 	static var projNoJitter = new h3d.Matrix();
 	static var prevProjNoJitter = new h3d.Matrix();
 	static var clipToViewNoJitter = new h3d.Matrix();
+	static var viewToWorldRebased = new h3d.Matrix();
 
 	inline function unjitterProj( out : h3d.Matrix, cam : h3d.Camera ) {
 		out.load(cam.mproj);
@@ -519,7 +520,15 @@ class Renderer extends h3d.scene.Renderer {
 		constants.clipToCameraView = clipToViewNoJitter;
 
 		var viewToWorld = ctx.camera.getInverseView();
-			viewToViewPrev.multiply(viewToWorld, ctx.prevCamera.mcam);
+		var delta = ctx.prevWorldDelta;
+		if ( delta != null ) {
+			viewToWorldRebased.load(viewToWorld);
+			viewToWorldRebased._41 -= delta.x;
+			viewToWorldRebased._42 -= delta.y;
+			viewToWorldRebased._43 -= delta.z;
+			viewToWorld = viewToWorldRebased;
+		}
+		viewToViewPrev.multiply(viewToWorld, ctx.prevCamera.mcam);
 		tmp.multiply(clipToViewNoJitter, viewToViewPrev);
 		clipToPrevClip.multiply(tmp, prevProjNoJitter);
 		constants.clipToPrevClip = clipToPrevClip;

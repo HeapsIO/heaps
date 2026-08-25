@@ -736,7 +736,7 @@ class DX12Driver extends h3d.impl.Driver {
 	public static var DLSS = true;
 	public static var FRAMEGEN = true;
 	public static var REFLEX = true;
-	public static var CHECK_DLL_SIGNATURE = true;
+	public static var CHECK_SL_DLL_SIGNATURE = true;
 
 	@:allow(h3d.impl) static function allocCheck<T>( f : Void -> T ) {
 		var ret = f();
@@ -812,7 +812,7 @@ class DX12Driver extends h3d.impl.Driver {
 			if ( DLSS ) features[count++] = DLSSFeature.DLSS;
 			if ( FRAMEGEN ) features[count++] = DLSSFeature.FRAMEGEN;
 			if ( REFLEX ) features[count++] = DLSSFeature.REFLEX;
-			slReady = Dlss.init(false, features, CHECK_DLL_SIGNATURE) == 0;
+			slReady = Dlss.init(false, features, CHECK_SL_DLL_SIGNATURE) == 0;
 		}
 		#end
 
