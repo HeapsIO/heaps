@@ -93,6 +93,8 @@ class TextInput extends Text {
 		interactive.cursor = TextInput;
 		interactive.onPush = function(e:hxd.Event) {
 			onPush(e);
+			if (!canEdit)
+				return;
 			if( !e.cancel && e.button == 0 ) {
 				if( !interactive.hasFocus() ) {
 					e.kind = EFocus;
