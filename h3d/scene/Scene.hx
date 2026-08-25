@@ -381,6 +381,12 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 			renderer.dispose();
 			renderer = new Renderer();
 		}
+		#if hlphysics
+		if( interactiveWorld != null ) {
+			interactiveWorld.dispose();
+			interactiveWorld = null;
+		}
+		#end
 	}
 
 	@:allow(h3d)
