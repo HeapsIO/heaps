@@ -2,8 +2,9 @@ package h3d.scene;
 
 #if hlphysics
 enum abstract CollisionGroup(Int) from Int to Int {
-	var Visible = 1;
-	var Invisible = 2;
+	var Invisible = 1;
+	var AnyMatch = 2;
+	var BestMatch = 4;
 
 	@:op(a | b) static function or( a : CollisionGroup, b : CollisionGroup ) : CollisionGroup;
 }
@@ -222,7 +223,7 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 			while( p != null && p.visible )
 				p = p.parent;
 			var visible = p == null;
-			body.collisionGroup = visible ? CollisionGroup.Visible : CollisionGroup.Invisible;
+			body.collisionGroup = visible ? (i.bestMatch ? CollisionGroup.BestMatch : CollisionGroup.AnyMatch) : CollisionGroup.Invisible;
 			if( i.isAbsoluteShape )
 				tmpMat.identity();
 			else
@@ -251,7 +252,7 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 		var saveR = physics.collision.Ray.fromHeaps(r);
 		var priority = 0x80000000;
 		var allHits = [];
-		interactiveWorld.raycast(saveR, function(hit, bodyId) {
+		function onHit( hit : physics.collision.HitResult, bodyId ) {
 			var body = interactiveWorld.getBody(bodyId);
 			var i : Interactive = body.userData;
 			if( i.priority > priority )
@@ -265,7 +266,9 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 			i.hitPoint.w = hit.fraction;
 			allHits.push(i);
 			return true;
-		}, physics.math.Math.SCALAR_MAX, CollisionGroup.Visible, ClosestPerBody);
+		}
+		interactiveWorld.raycast(saveR, onHit, physics.math.Math.SCALAR_MAX, CollisionGroup.AnyMatch, AnyPerBody);
+		interactiveWorld.raycast(saveR, onHit, physics.math.Math.SCALAR_MAX, CollisionGroup.BestMatch, ClosestPerBody);
 		for( i in allHits ) {
 			if( i.priority < priority )
 				continue;
@@ -358,7 +361,7 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 			var body = interactiveWorld.getBody(bodyId);
 			hits.push(body.userData);
 			return true;
-		}, CollisionGroup.Visible, AnyPerBody);
+		}, CollisionGroup.AnyMatch | CollisionGroup.BestMatch, AnyPerBody);
 		return hits;
 	}
 	#end
