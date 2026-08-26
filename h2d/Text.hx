@@ -111,6 +111,11 @@ class Text extends Drawable {
 		Allow line break.
 	**/
 	public var lineBreak(default,set) : Bool = true;
+	/**
+		When `lineBreak` is enabled, allow breaking inside a word if it does not fit on a single line.
+		Without it, a word longer than `maxWidth` overflows the text bounds.
+	**/
+	public var wordBreak(default,set) : Bool = false;
 
 	var glyphs : TileGroup;
 	var needsRebuild : Bool;
@@ -210,6 +215,13 @@ class Text extends Drawable {
 	function set_lineBreak(b) {
 		if( lineBreak == b ) return b;
 		lineBreak = b;
+		rebuild();
+		return b;
+	}
+
+	function set_wordBreak(b) {
+		if( wordBreak == b ) return b;
+		wordBreak = b;
 		rebuild();
 		return b;
 	}
@@ -390,6 +402,10 @@ class Text extends Drawable {
 						lastBreak = i;
 						lastBreakX = x;
 					}
+				} else if( wordBreak && x > maxWidth && lastPos < i ) {
+					x = startX;
+					flushLine(i);
+					i--;
 				}
 			}
 		}

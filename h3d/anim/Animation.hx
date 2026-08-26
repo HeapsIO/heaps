@@ -183,8 +183,8 @@ class Animation {
 			setEvents([for (e in eventsData) { frame: e.frame, name: e.data }]);
 		}
 		else {
+			events = [];
 			if (sourceEvents != null) {
-				events = [];
 				for (se in sourceEvents) {
 					var overrideEvent : Event = null;
 					if (eventsData != null) {
@@ -205,7 +205,6 @@ class Animation {
 			}
 
 			if (eventsData != null) {
-				events = [];
 				for (e in eventsData) {
 					var ev : h3d.anim.Animation.Event = e;
 					if (ev.originalEvent != null)

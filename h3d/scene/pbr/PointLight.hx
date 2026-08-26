@@ -27,13 +27,7 @@ class PointLight extends Light {
 	}
 
 	function get_range() {
-		var minScale = 1.0;
-		var p = parent;
-		while (p != null) {
-			minScale *= hxd.Math.min(p.scaleX, hxd.Math.min(p.scaleY, p.scaleZ));
-			p = p.parent;
-		}
-		return scaleX * minScale;
+		return scaleX * getParentScale();
 	}
 
 	function set_range(v:Float) {

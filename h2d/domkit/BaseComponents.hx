@@ -893,6 +893,7 @@ class TextComp extends DrawableComp implements domkit.Component.ComponentDecl<h2
 	@:p var letterSpacing = 0;
 	@:p var lineSpacing = 0;
 	@:p var lineBreak : Bool;
+	@:p var wordBreak : Bool;
 	@:p(none) var maxWidth : Null<Int>;
 	@:p var textAlign : h2d.Text.Align = Left;
 	@:p(textShadow) var textShadow : { dx : Float, dy : Float, color : Int, alpha : Float };
@@ -912,6 +913,10 @@ class TextComp extends DrawableComp implements domkit.Component.ComponentDecl<h2
 
 	static function set_lineBreak( t : h2d.Text, v ) {
 		t.lineBreak = v;
+	}
+
+	static function set_wordBreak( t : h2d.Text, v ) {
+		t.wordBreak = v;
 	}
 
 	#if !domkit_drawable_color

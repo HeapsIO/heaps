@@ -76,11 +76,7 @@ class SpotShadowMap extends Shadows {
 		staticTexture = new h3d.mat.Texture(size, size, [Target], format);
 		staticTexture.name = "staticTexture";
 		staticTexture.preventAutoDispose();
-		staticTexture.realloc = function () {
-			if( pixelsForRealloc != null ) {
-				staticTexture.uploadPixels(pixelsForRealloc);
-			}
-		}
+		staticTexture.realloc = null;
 		return staticTexture;
 	}
 

@@ -24,10 +24,21 @@ typedef ConvertCommand = {
 	?then : ConvertCommand
 }
 
+typedef ConvertCacheItem = {
+	out : String,
+	ver : Null<Int>,
+	time : Int,
+	size : Int,
+	hash : String,
+	localParamsHash : Null<String>,
+	localContextJson : Null<String>,
+}
+
 class FileConverter {
 
 	// Date implementation has a second resolution on some platforms.
 	public static final FILE_TIME_PRECISION = 1000;
+	public static var CACHE_SAVE_MAX_PENDING = 50;
 
 	public var configuration(default,null) : String;
 
@@ -35,8 +46,10 @@ class FileConverter {
 	var tmpDir : String;
 	var configs : Map<String,ConvertConfig> = new Map();
 	var defaultConfig : ConvertConfig;
-	var cache : Map<String,Array<{ out : String, time : Int, hash : String, ver : Null<Int>, milliseconds : Null<Int>, localParamsHash : Null<String>, localContextJson : Null<String> }>>;
+	var cache : Map<String,Array<ConvertCacheItem>>;
 	var cacheTime : Float;
+	var cacheChanges : Array<{ file : String, item : ConvertCacheItem }> = [];
+	var cacheSaveScheduled : Bool = false;
 
 	static var extraConfigs:Array<Dynamic> = [];
 
@@ -125,6 +138,14 @@ class FileConverter {
 		return r1.pt.getIndex() - r2.pt.getIndex();
 	}
 
+	static function statTimeAndSize( path : String ) {
+		var s = sys.FileSystem.stat(path);
+		return {
+			time : hxd.Math.max(s.mtime.getTime(), s.ctime.getTime()),
+			size : s.size,
+		};
+	}
+
 	function loadConvert( name : String ) {
 		if( name == "none" ) return null;
 		var c = @:privateAccess Convert.converts.get(name);
@@ -207,10 +228,6 @@ class FileConverter {
 		return cp;
 	}
 
-	function getFileTime( filePath : String ) : Float {
-		return sys.FileSystem.stat(filePath).mtime.getTime();
-	}
-
 	function loadConfig( dir : String ) : ConvertConfig {
 		return getConfig(configs, defaultConfig, dir, (parent, obj) -> {
 			var fullObj = mergeRec(parent.obj, obj);
@@ -252,11 +269,13 @@ class FileConverter {
 	}
 
 	public function run( e : LocalFileSystem.LocalEntry ) {
-		var rule = getConvertRule(e.path);
 		if( e.originalFile == null )
 			e.originalFile = e.file;
 		else
 			e.file = e.originalFile;
+		if( e.isDirectory )
+			return;
+		var rule = getConvertRule(e.path);
 		if( rule == null || rule.cmd.conv == null )
 			return;
 		e.file = e.file.substr(baseDir.length);
@@ -310,24 +329,12 @@ class FileConverter {
 
 	function convertAndCache( e : LocalFileSystem.LocalEntry, outFile : String, conv : Convert, params : Dynamic ) {
 		var cacheFile = baseDir + tmpDir + "cache.dat";
-		var time = try sys.FileSystem.stat(cacheFile).mtime.getTime() catch( e : Dynamic ) 0;
-		if( cache == null || time > cacheTime ) {
-			cache = try haxe.Unserializer.run(sys.io.File.getContent(cacheFile)) catch( e : Dynamic ) cache == null ? new Map() : cache;
-			cacheTime = time;
-		}
+		syncCache(false);
 		var entry = cache.get(e.file);
-		var needInsert = false;
 		if( entry == null ) {
 			entry = [];
-			needInsert = true;
+			cache.set(e.file, entry);
 		}
-		function saveCache() {
-			if( needInsert ) cache.set(e.file, entry);
-			sys.FileSystem.createDirectory(baseDir + tmpDir);
-			sys.io.File.saveContent(baseDir + tmpDir + "cache.dat", haxe.Serializer.run(cache));
-			cacheTime = Date.now().getTime();
-		}
-
 		var match = null;
 		for( e in entry ) {
 			if( e.out == outFile ) {
@@ -340,48 +347,54 @@ class FileConverter {
 			match = {
 				out : outFile,
 				time : 0,
+				size : 0,
 				hash : "",
 				ver: conv.version,
-				milliseconds : #if js 0 #else null #end,
 				localParamsHash: null,
 				localContextJson: null,
 			};
 			entry.push(match);
 		}
+
+		function saveCache() {
+			cacheChanges.push({ file : e.file, item : match });
+			if( cacheChanges.length >= CACHE_SAVE_MAX_PENDING ) {
+				syncCache(true);
+			} else if( !cacheSaveScheduled ) {
+				cacheSaveScheduled = true;
+				haxe.Timer.delay(() -> syncCache(true), 0);
+			}
+		}
+
 		var fullPath = baseDir + e.file;
 		var fullOutPath = baseDir + outFile;
 
 		if( !sys.FileSystem.exists(fullPath) ) throw "Missing "+fullPath;
 
-		var fileTime = getFileTime(fullPath);
-		var time = hxd.Math.floor(fileTime / FILE_TIME_PRECISION);
-		#if js
-		var milliseconds = hxd.Math.floor(fileTime) - time * FILE_TIME_PRECISION;
-		#else
-		var milliseconds = null;
-		#end
+		var fileStat = statTimeAndSize(fullPath);
+		var fileSize = fileStat.size;
+		var time = hxd.Math.floor(fileStat.time / FILE_TIME_PRECISION);
 		var alreadyGen = sys.FileSystem.exists(fullOutPath) && match.ver == conv.version #if disable_res_cache && false #end;
 
 		conv.params = params;
-		conv.srcPath = fullPath;
+		conv.setSource(fullPath);
 		conv.dstPath = fullOutPath;
 		conv.baseDir = baseDir;
 		conv.originalFilename = e.name;
 		var hasLocalParams = conv.hasLocalParams();
 
-		if( alreadyGen && !hasLocalParams && match.localParamsHash == null && match.time == time #if js && (match.milliseconds == null || match.milliseconds == milliseconds ) #end ) {
+		var sameTimeAndSize = match.time == time && match.size == fileSize;
+		if( alreadyGen && !hasLocalParams && match.localParamsHash == null && sameTimeAndSize ) {
 			conv.cleanup();
 			return; // not changed (time stamp)
 		}
 
-		var content = hxd.File.getBytes(fullPath);
 		var hash = {
-			if( match.time == time #if js && (match.milliseconds == null || match.milliseconds == milliseconds ) #end )
+			if( sameTimeAndSize )
 				match.hash; // not changed (time stamp)
 			else
-				haxe.crypto.Sha1.make(content).toHex();
+				haxe.crypto.Sha1.make(conv.srcBytes).toHex();
 		};
-		conv.srcBytes = content;
 		conv.hash = hash;
 		var localContext : Dynamic = null;
 		if( match.ver == conv.version && match.hash == hash && match.localContextJson != null ) {
@@ -394,9 +407,9 @@ class FileConverter {
 		var localContextJson = localContext == null ? null : haxe.Json.stringify(localContext);
 		if( alreadyGen && match.hash == hash && match.localParamsHash == localParamsHash ) {
 			conv.cleanup();
-			if( match.time != time || match.milliseconds != milliseconds || match.localContextJson != localContextJson ) {
+			if( match.time != time || match.size != fileSize || match.localContextJson != localContextJson ) {
 				match.time = time;
-				match.milliseconds = milliseconds;
+				match.size = fileSize;
 				match.localContextJson = localContextJson;
 				saveCache();
 			}
@@ -414,7 +427,7 @@ class FileConverter {
 
 		match.ver = conv.version;
 		match.time = time;
-		match.milliseconds = milliseconds;
+		match.size = fileSize;
 		match.hash = hash;
 		match.localParamsHash = localParamsHash;
 		match.localContextJson = localContextJson;
@@ -428,6 +441,47 @@ class FileConverter {
 		conv.convert();
 		if( prev ) hxd.System.timeoutTick();
 		hxd.System.allowTimeout = prev;
+	}
+
+	function syncCache( saveToFile : Bool ) {
+		if( saveToFile )
+			cacheSaveScheduled = false;
+		var cacheFile = baseDir + tmpDir + "cache.dat";
+		var needReplay = false;
+		var time = try sys.FileSystem.stat(cacheFile).mtime.getTime() catch( e : Dynamic ) 0;
+		if( cache == null || time > cacheTime ) {
+			cache = try haxe.Unserializer.run(sys.io.File.getContent(cacheFile)) catch( e : Dynamic ) cache == null ? new Map() : cache;
+			cacheTime = time;
+			needReplay = true;
+		}
+		if( needReplay ) {
+			for( elt in cacheChanges ) {
+				var entry = cache.get(elt.file);
+				if( entry == null ) {
+					entry = [];
+					cache.set(elt.file, entry);
+				}
+				var outFile = elt.item.out;
+				var matchIdx = -1;
+				for( i => item in entry ) {
+					if( item.out == outFile ) {
+						matchIdx = i;
+						break;
+					}
+				}
+				if( matchIdx == -1 ) {
+					entry.push(elt.item);
+				} else {
+					entry[matchIdx] = elt.item;
+				}
+			}
+		}
+		if( !saveToFile || cacheChanges.length == 0 )
+			return;
+		sys.FileSystem.createDirectory(baseDir + tmpDir);
+		sys.io.File.saveContent(cacheFile, haxe.Serializer.run(cache));
+		cacheTime = try sys.FileSystem.stat(cacheFile).mtime.getTime() catch( e : Dynamic ) Date.now().getTime();
+		cacheChanges.resize(0);
 	}
 
 }

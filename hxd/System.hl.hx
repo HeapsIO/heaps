@@ -67,6 +67,14 @@ class System {
 	}
 
 	static function mainLoop() {
+		#if dlss
+		var engine = h3d.Engine.getCurrent();
+		if( engine != null && engine.ready ) {
+			engine.driver.reflexSleep();
+			engine.driver.pclSimulationStart();
+		}
+		#end
+
 		// process events
 		#if usesys
 		haxe.System.emitEvents(@:privateAccess hxd.Window.dispatchEvent);
@@ -178,6 +186,11 @@ class System {
 			if( check_reload() ) onReload();
 			#end
 		}
+		#if dlss
+		var engine = h3d.Engine.getCurrent();
+		if( engine != null )
+			engine.driver.shutdownDLSS();
+		#end
 		Sys.exit(0);
 	}
 
@@ -195,7 +208,7 @@ class System {
 	public dynamic static function reportError( e : Dynamic ) {
 		#if (haxe_ver >= 4.1)
 		var exc = Std.downcast(e, haxe.Exception);
-		var stack = haxe.CallStack.toString(exc != null ? exc.stack : haxe.CallStack.exceptionStack());
+		var stack = haxe.CallStack.toString(exc != null ? exc.stack : haxe.CallStack.exceptionStack(true));
 		#else
 		var stack = haxe.CallStack.toString(haxe.CallStack.exceptionStack());
 		#end

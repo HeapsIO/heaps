@@ -14,7 +14,7 @@ class ShaderCache {
 	var sourceFile : String;
 	public var keepSource : Bool;
 	var mode : ShaderCacheMode;
-	var dirty = true;
+	var dirty = false;
 	public var allowSave = true;
 
 	public static var VERSION_KEY_WORD = "VERSION";

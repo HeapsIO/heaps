@@ -52,6 +52,7 @@ class SubMesh {
 	public var bounds : h3d.col.Bounds;
 	public var lodCount : Int;
 	public var lodConfig : Array<Float>;
+	public var cullingScreenRatio : Float;
 	public function new() {
 	}
 }
@@ -197,6 +198,7 @@ class BatchPrimitive extends MeshPrimitive {
 		bounds.add(subMesh.bounds);
 		subMesh.lodCount = model.lods.length;
 		subMesh.lodConfig = model.lodConfig;
+		subMesh.cullingScreenRatio = model.cullingScreenRatio;
 		subMesh.subParts = [];
 		subMesh.subPartStart = subPartCount;
 		var dataPosition = model.dataPosition;
@@ -291,11 +293,9 @@ class BatchPrimitive extends MeshPrimitive {
 		if( cpuLodInfos.length < lodNeeded )
 			cpuLodInfos.grow( hxd.Math.imax((cpuLodInfos.length >> 1) * 3, lodNeeded) );
 
-		var lodConfigHasCulling = lodConfig.length > lodCount - 1 && lodCount > 1;
-		var minScreenRatioCulling = lodConfigHasCulling ? lodConfig[lodConfig.length - 1] : 0.0;
 		for ( lodIndex in 0...lodCount )
 			cpuLodInfos[lodStart + lodIndex] = lodIndex < lodConfig.length ? lodConfig[lodIndex] : 0.0;
-		cpuLodInfos[totalLodCount - 1] = minScreenRatioCulling;
+		cpuLodInfos[totalLodCount - 1] = subMesh.cullingScreenRatio;
 
 		var subParts = subMesh.subParts;
 		var subPartNeeded = (subPartCount + subParts.length * lodCount) * SUBPART_INFOS_FMT.strideBytes;

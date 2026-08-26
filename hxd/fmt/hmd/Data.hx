@@ -155,7 +155,7 @@ class Collider {
 
 		if (params != null) {
 			var colliderModel = findMeshModel(d, params.mesh) ?? model;
-			if (params.precision != null) {
+			if (params.maxConvexHulls != null) {
 				return ResolveResult.ConvexHulls(colliderModel);
 			} else if (params.mesh != null) {
 				return ResolveResult.Mesh(colliderModel);
@@ -184,14 +184,22 @@ class Collider {
 
 typedef ConvexHullParams = {
 	var maxConvexHulls : Int;
-	var maxResolution : Int;
+	var resolution : Int;
 };
 
 class ConvexHullsCollider extends Collider {
+	public static final UNITS = [
+		"Micrometer" => 10e-7,
+		"Millimeter" => 10e-4,
+		"Meter" => 1,
+		"Kilometer" => 10e4,
+		"Megameter" => 10e7,
+	];
 	public var vertexCounts : Array<Int>;
 	public var vertexPosition : DataPosition;
 	public var indexCounts : Array<Int>;
 	public var indexPosition : DataPosition;
+
 	public function new() {
 		type = ConvexHulls;
 	}
@@ -223,7 +231,7 @@ class ConvexHullsCollider extends Collider {
 		var outFile = fileName + ".out";
 		sys.io.File.saveBytes(fileName, outputData.getBytes());
 
-		var ret = try Sys.command("meshTools",["vhacd", fileName, outFile, '${params.maxConvexHulls}', '${params.maxResolution}']) catch( e : Dynamic ) -1;
+		var ret = try Sys.command("meshTools",["vhacd", fileName, outFile, '${params.maxConvexHulls}', '${params.resolution}']) catch( e : Dynamic ) -1;
 		if( ret != 0 ) {
 			sys.FileSystem.deleteFile(fileName);
 			throw "Failed to call 'meshTools' executable required to generate collision data. Please ensure it's in your PATH (see tools/meshTools for build)";
@@ -284,7 +292,7 @@ class ConvexHullsCollider extends Collider {
 		var vhacdInstance = new hxd.tools.VHACD();
 		var p = new hxd.tools.VHACD.Parameters();
 		p.maxConvexHulls = params.maxConvexHulls;
-		p.maxResolution = params.maxResolution;
+		p.maxResolution = params.resolution;
 		vhacdInstance.compute(verticesBytes, vCount, indexesBytes, triCount, p);
 		var convexHullCount = vhacdInstance.getConvexHullCount();
 		if ( convexHullCount == 0 )
@@ -321,6 +329,21 @@ class ConvexHullsCollider extends Collider {
 
 		return out;
 		#end
+
+		return out;
+	}
+
+	public static function scale(vertices : Array<Float>, indexes : Array<Int>, f : Float) {
+		var out : { vertices: Array<Float>, indexes : Array<Int> } = { vertices : vertices.copy(), indexes : indexes.copy() };
+		var idx = 0;
+		while (idx < indexes.length) {
+			var p = new h3d.col.Point(vertices[indexes[idx] * 3], vertices[indexes[idx] * 3 + 1], vertices[indexes[idx] * 3 + 2]);
+			p *= f;
+			out.vertices[indexes[idx] * 3] = p.x;
+			out.vertices[indexes[idx] * 3 + 1] = p.y;
+			out.vertices[indexes[idx] * 3 + 2] = p.z;
+			idx++;
+		}
 
 		return out;
 	}

@@ -7,7 +7,7 @@ class Polygon extends MeshPrimitive {
 	public var normals : Array<Point>;
 	public var tangents : Array<Point>;
 	public var uvs : Array<UV>;
-	var uvCount = 0;
+	var additionalUVs = 0;
 	public var idx : hxd.IndexBuffer;
 	public var colors : Array<Point>;
 	var scaled = 1.;
@@ -33,13 +33,13 @@ class Polygon extends MeshPrimitive {
 			format = format.append("normal", DVec3);
 		if( tangents != null )
 			format = format.append("tangent", DVec3);
-		if (uvCount > 0)
+		if( uvs != null )
 			format = format.append("uv", DVec2);
-		if (uvCount > 1)
+		if( additionalUVs > 0 )
 			format = format.append("uv2", DVec2);
-		if (uvCount > 2)
+		if( additionalUVs > 1 )
 			format = format.append("uv3", DVec2);
-		if (uvCount > 3)
+		if( additionalUVs > 2 )
 			format = format.append("uv4", DVec2);
 		if( colors != null )
 			format = format.append("color", DVec3);
@@ -65,10 +65,14 @@ class Polygon extends MeshPrimitive {
 				buf.push(t.y);
 				buf.push(t.z);
 			}
-			for (i in 0...uvCount) {
+			if( uvs != null ) {
 				var t = uvs[k];
 				buf.push(t.u);
 				buf.push(t.v);
+				for( _ in 0...additionalUVs ) {
+					buf.push(t.u);
+					buf.push(t.v);
+				}
 			}
 			if( colors != null ) {
 				var c = colors[k];
@@ -82,9 +86,6 @@ class Polygon extends MeshPrimitive {
 
 	override function alloc( engine : h3d.Engine ) {
 		dispose();
-
-		if (uvCount == 0 && uvs != null)
-			uvCount = 1;
 
 		var format = getBufferFormat();
 		var buf = getCPUBuffer();
@@ -232,23 +233,22 @@ class Polygon extends MeshPrimitive {
 		uvs = [];
 		for( i in 0 ... points.length )
 			uvs[i] = new UV(points[i].x, points[i].y);
-		uvCount = hxd.Math.imax(uvCount, 1);
 	}
 
 	/**
 		Add additional Uv sets that are a copy of the base uv set
 	**/
 	public function setUVCount(count: Int) {
-		if (count == 0) {
-			uvCount = 0;
+		if( count == 0 ) {
+			additionalUVs = 0;
 			uvs = null;
 			return;
 		}
-		if (count > 4)
+		if( count > 4 )
 			throw "max uv count is 4";
-		if (uvs == null)
+		if( uvs == null )
 			addUVs();
-		uvCount = count;
+		additionalUVs = count - 1;
 	}
 
 	public function uvScale( su : Float, sv : Float ) {

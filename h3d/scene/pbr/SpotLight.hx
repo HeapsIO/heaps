@@ -33,7 +33,7 @@ class SpotLight extends Light {
 	}
 
 	function get_range() {
-		return scaleX;
+		return scaleX * getParentScale();
 	}
 
 	function set_range(v:Float) {

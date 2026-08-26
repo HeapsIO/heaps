@@ -68,6 +68,11 @@ class Window {
 	public var vsync(get, set) : Bool;
 	public var isFocused(get, never) : Bool;
 
+	/**
+		Get the preferred scaling ratio for high dpi displays for this window
+	**/
+	public var displayScale(get, never) : Float;
+
 	public var title(get, set) : String;
 	public var displayMode(get, set) : DisplayMode;
 	#if (hl_ver >= version("1.12.0"))
@@ -913,6 +918,14 @@ class Window {
 		return true;
 		#else
 		return inst.onEvent(e);
+		#end
+	}
+
+	function get_displayScale() {
+		#if (hlsdl >= version("1.16.0") || hldx >= version("1.16.0"))
+		return window.displayScale;
+		#else
+		return 1.0;
 		#end
 	}
 
