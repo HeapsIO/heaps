@@ -382,7 +382,13 @@ class ConvertGLTF2HMD extends Convert {
 		if (gltf == null)
 			gltf = try hxd.fmt.gltf.Parser.parse(srcBytes) catch (e:Dynamic) throw Std.string(e) + " in " + srcPath;
 
-		trace("e");
+		var hmdout = new hxd.fmt.gltf.HMDOut();
+		hmdout.load(null);
+		var hmd = hmdout.toHMD();
+
+		var out = new haxe.io.BytesOutput();
+		new hxd.fmt.hmd.Writer(out).write(hmd);
+		save(out.getBytes());
 	}
 
 	static var _ = Convert.register(new ConvertGLTF2HMD());

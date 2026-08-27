@@ -1,5 +1,25 @@
 package hxd.fmt.gltf;
 
+class Data {
+
+	public static inline var CURRENT_VERSION = 6;
+
+	// public var version : Int;
+	// public var props : Properties;
+	// public var geometries : Array<Geometry>;
+	// public var materials : Array<Material>;
+	// public var models : Array<Model>;
+	// public var animations : Array<Animation>;
+	// public var shapes : Array<BlendShape>;
+	// public var colliders : Array<Collider>;
+	// public var dataPosition : Int;
+	// public var data : haxe.io.Bytes;
+
+	public function new() {
+	}
+
+}
+
 typedef GltfDocument = {
     asset: GltfAsset,
     ?scene: Int,
