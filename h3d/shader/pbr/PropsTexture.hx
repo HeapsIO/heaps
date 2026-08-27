@@ -15,6 +15,7 @@ class PropsTexture extends hxsl.Shader {
 			emissive : Float,
 			custom1 : Float,
 			custom2 : Float,
+			translucency : Vec3,
 		};
 
 		var metalness : Float;
@@ -23,6 +24,7 @@ class PropsTexture extends hxsl.Shader {
 		var emissive : Float;
 		var custom1 : Float;
 		var custom2 : Float;
+		var translucency : Vec3;
 
 		var calculatedUV : Vec2;
 
@@ -36,6 +38,7 @@ class PropsTexture extends hxsl.Shader {
 			}
 			custom1 = custom1Value;
 			custom2 = custom2Value;
+			translucency = vec3(0);
 		}
 
 		function fragment() {
@@ -45,6 +48,7 @@ class PropsTexture extends hxsl.Shader {
 			output.emissive = emissive;
 			output.custom1 = custom1;
 			output.custom2 = custom2;
+			output.translucency = translucency;
 		}
 
 	}

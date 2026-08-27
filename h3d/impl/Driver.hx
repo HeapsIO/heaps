@@ -118,6 +118,9 @@ enum DLSSTag {
 	MotionVectors;
 	ColorIn;
 	ColorOut;
+	HUDLess;
+	UIColorAndAlpha;
+	UIAlpha;
 }
 
 @:struct class DLSSParams {
@@ -171,6 +174,30 @@ enum DLSSMode {
 	UltraPerformance;
 	UltraQuality;
 	Dlaa;
+}
+
+enum DLSSGMode {
+	Off;
+	On;
+	Auto;
+	Dynamic;
+}
+
+class DLSSGSettings {
+	public var status : Int;
+	public var minWidthOrHeight : Int;
+	public var framesPresented : Int;
+	public var maxFramesToGenerate : Int;
+	public var dynamicSupported : Bool;
+	public var vsyncSupported : Bool;
+	public function new() {
+	}
+}
+
+enum ReflexMode {
+	Off;
+	LowLatency;
+	LowLatencyWithBoost;
 }
 
 class Driver {
@@ -432,5 +459,61 @@ class Driver {
 	}
 
 	public function applyDLSS( resources : Map<DLSSTag, h3d.mat.Texture>, constants : DLSSParams, quality : DLSSQuality, mode : DLSSMode ) {
+	}
+
+	public function tagDLSSResources( resources : Map<DLSSTag, h3d.mat.Texture> ) {
+	}
+
+	public function clearDLSSTags() {
+	}
+
+	public function setDLSSConstants( constants : DLSSParams ) {
+	}
+
+	public function setDLSSGMode( mode : DLSSGMode, numFramesToGenerate : Int = 1, releaseResources = false ) : Bool {
+		return false;
+	}
+
+	public function getDLSSGMode() : DLSSGMode {
+		return Off;
+	}
+
+	public function getDLSSGSettings() : DLSSGSettings {
+		return null;
+	}
+
+	public function pclSimulationStart() {
+	}
+
+	public function pclSimulationEnd() {
+	}
+
+	public function pclTriggerFlash() {
+	}
+
+	public function reflexSleep() {
+	}
+
+	public function setReflexOptions( mode : ReflexMode, frameLimitUs : Int = 0 ) {
+		return false;
+	}
+
+	public function reflexLowLatencyAvailable() {
+		return false;
+	}
+
+	public function reflexFlashIndicatorDriverControlled() {
+		return false;
+	}
+
+	public function debugReflex() : String {
+		return "";
+	}
+
+	public function debugDLSSG() : String {
+		return "";
+	}
+
+	public function shutdownDLSS() {
 	}
 }

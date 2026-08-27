@@ -97,6 +97,7 @@ class Renderer extends h3d.scene.Renderer {
 		hdr : (null:h3d.mat.Texture),
 		ldr : (null:h3d.mat.Texture),
 		velocity : (null:h3d.mat.Texture),
+		translucency : (null:h3d.mat.Texture),
 	};
 
 	public var skyMode : SkyMode = Hide;
@@ -123,7 +124,8 @@ class Renderer extends h3d.scene.Renderer {
 		Vec4([Value("output.metalness"), Value("output.roughness"), Value("output.emissive"), ALPHA]),
 		#end
 		Vec4([Value("output.depth"),Const(0), Const(0), ALPHA /* ? */]),
-		Vec4([Value("output.velocity", 2), Const(0), Const(0)])
+		Vec4([Value("output.velocity", 2), Const(0), Const(0)]),
+		Vec4([Value("output.translucency", 3), ALPHA])
 	]);
 	var decalsOutput = new h3d.pass.Output("decals",[
 		Vec4([Swiz(Value("output.color"),[X,Y,Z]), Value("output.albedoStrength",1)]),
@@ -484,7 +486,7 @@ class Renderer extends h3d.scene.Renderer {
 	}
 
 	function renderEditorOverlay() {
-		#if editor
+		#if (editor || editor_hl)
 		renderPass(defaultPass, get("overlay"), backToFront);
 		renderPass(defaultPass, get("ui"), backToFront);
 		#end
@@ -496,6 +498,64 @@ class Renderer extends h3d.scene.Renderer {
 	static var tmp = new h3d.Matrix();
 	static var clipToPrevClip = new h3d.Matrix();
 	static var prevClipToClip = new h3d.Matrix();
+	static var projNoJitter = new h3d.Matrix();
+	static var prevProjNoJitter = new h3d.Matrix();
+	static var clipToViewNoJitter = new h3d.Matrix();
+	static var viewToWorldRebased = new h3d.Matrix();
+
+	inline function unjitterProj( out : h3d.Matrix, cam : h3d.Camera ) {
+		out.load(cam.mproj);
+		out._31 -= cam.jitterOffsetX;
+		out._32 -= cam.jitterOffsetY;
+	}
+
+	function fillDLSSConstants(reset : Bool) {
+		constants.autoExposure = true;
+		constants.colorBufferHDR = false;
+		unjitterProj(projNoJitter, ctx.camera);
+		unjitterProj(prevProjNoJitter, ctx.prevCamera);
+		clipToViewNoJitter.initInverse(projNoJitter);
+
+		constants.cameraViewToClip = projNoJitter;
+		constants.clipToCameraView = clipToViewNoJitter;
+
+		var viewToWorld = ctx.camera.getInverseView();
+		var delta = ctx.prevWorldDelta;
+		if ( delta != null ) {
+			viewToWorldRebased.load(viewToWorld);
+			viewToWorldRebased._41 -= delta.x;
+			viewToWorldRebased._42 -= delta.y;
+			viewToWorldRebased._43 -= delta.z;
+			viewToWorld = viewToWorldRebased;
+		}
+		viewToViewPrev.multiply(viewToWorld, ctx.prevCamera.mcam);
+		tmp.multiply(clipToViewNoJitter, viewToViewPrev);
+		clipToPrevClip.multiply(tmp, prevProjNoJitter);
+		constants.clipToPrevClip = clipToPrevClip;
+
+		prevClipToClip.initInverse(clipToPrevClip);
+		constants.prevClipToClip = prevClipToClip;
+
+		var jitter = @:privateAccess ctx.cameraJitterOffsets;
+		constants.jitterOffsetX = jitter.x * ctx.renderResolutionWidth * 0.5;
+		constants.jitterOffsetY = -jitter.y * ctx.renderResolutionHeight * 0.5;
+		constants.mvecScaleX = 1.0;
+		constants.mvecScaleY = 1.0;
+		constants.cameraPos = ctx.camera.pos;
+		constants.cameraUp = ctx.camera.getUp();
+		constants.cameraRight = ctx.camera.getRight();
+		constants.cameraFwd = ctx.camera.getForward();
+		constants.cameraNear = ctx.camera.zNear;
+		constants.cameraFar = ctx.camera.zFar;
+		constants.cameraFOV = ctx.camera.fovY;
+		constants.cameraAspectRatio = ctx.camera.screenRatio;
+		constants.depthInverted = ctx.useReverseDepth;
+		constants.cameraMotionIncluded = true;
+		constants.reset = reset;
+		constants.orthographicProjection = false;
+		constants.motionVectorsDilated = false;
+		constants.motionVectorsJittered = false;
+	}
 
 	function applyDLSS(quality : DLSSQuality, mode : DLSSMode, reset : Bool = false) {
 		if (ctx.engine.driver.hasFeature(DLSS)) {
@@ -510,42 +570,23 @@ class Renderer extends h3d.scene.Renderer {
 			resources.set(Depth, depthMap);
 			resources.set(ColorOut, output);
 
-			constants.autoExposure = true;
-			constants.colorBufferHDR = false;
-			constants.cameraViewToClip = ctx.camera.mproj;
-			var clipToView = ctx.camera.getInverseProj();
-			constants.clipToCameraView = clipToView;
-
-			var viewToWorld = ctx.camera.getInverseView();
-			viewToViewPrev.multiply(viewToWorld, ctx.prevCamera.mcam);
-			tmp.multiply(clipToView, viewToViewPrev);
-			clipToPrevClip.multiply(tmp, ctx.prevCamera.mproj);
-			constants.clipToPrevClip = clipToPrevClip;
-
-			prevClipToClip.initInverse(clipToPrevClip);
-			constants.prevClipToClip = prevClipToClip;
-
-			constants.jitterOffsetX = ctx.camera.jitterOffsetX;
-			constants.jitterOffsetY = ctx.camera.jitterOffsetY;
-			constants.mvecScaleX = 1.0;
-			constants.mvecScaleY = 1.0;
-			constants.cameraPos = ctx.camera.pos;
-			constants.cameraUp = ctx.camera.getUp();
-			constants.cameraRight = ctx.camera.getRight();
-			constants.cameraFwd = ctx.camera.getForward();
-			constants.cameraNear = ctx.camera.zNear;
-			constants.cameraFar = ctx.camera.zFar;
-			constants.cameraFOV = ctx.camera.fovY;
-			constants.cameraAspectRatio = ctx.camera.screenRatio;
-			constants.depthInverted = ctx.useReverseDepth;
-			constants.cameraMotionIncluded = true;
-			constants.reset = reset;
-			constants.orthographicProjection = false;
-			constants.motionVectorsDilated = false;
-			constants.motionVectorsJittered = false;
+			fillDLSSConstants(reset);
 
 			ctx.engine.driver.applyDLSS(resources, constants, quality, mode);
 			ctx.setGlobal("ldrMap", output);
+		}
+	}
+
+	function applyDLSSG(reset : Bool = false) {
+		if (ctx.engine.driver.hasFeature(DLSS)) {
+			resources.clear();
+			resources.set(MotionVectors, ctx.getGlobal("velocity"));
+			resources.set(Depth, getPbrDepth());
+
+			fillDLSSConstants(reset);
+
+			ctx.engine.driver.tagDLSSResources(resources);
+			ctx.engine.driver.setDLSSConstants(constants);
 		}
 	}
 
@@ -609,6 +650,8 @@ class Renderer extends h3d.scene.Renderer {
 		textures.ldr = allocTarget("ldrOutput", true, 1., null, [ Writable ]);
 		if ( ctx.computeVelocity )
 			textures.velocity = allocTarget("velocity", true, 1., RG16F );
+		if ( ctx.enableTranslucency )
+			textures.translucency = allocTarget("translucency", true, 1., RGBA);
 	}
 
 	public function getPbrDepth() {
@@ -623,6 +666,7 @@ class Renderer extends h3d.scene.Renderer {
 		ctx.setGlobal("hdrMap", textures.hdr);
 		ctx.setGlobal("ldrMap", textures.ldr);
 		ctx.setGlobal("velocity", textures.velocity);
+		ctx.setGlobal("translucency", textures.translucency);
 		ctx.setGlobal("global.time", ctx.time);
 		ctx.setGlobal("DIFFUSE_ONLY", renderMode == LightProbe);
 		if(ctx.camera != null){
@@ -660,6 +704,10 @@ class Renderer extends h3d.scene.Renderer {
 		#end
 		pbrProps.cameraInverseViewProj = ctx.camera.getInverseViewProj();
 		pbrProps.occlusionPower = props.occlusion * props.occlusion;
+
+		pbrProps.ENABLE_TRANSLUCENCY = ctx.enableTranslucency;
+		if ( ctx.enableTranslucency )
+			pbrProps.translucencyTex = textures.translucency;
 
 		pbrDirect.cameraPosition.load(ctx.camera.pos);
 
@@ -760,6 +808,8 @@ class Renderer extends h3d.scene.Renderer {
 			targets.push(getPbrDepth());
 		if ( ctx.computeVelocity )
 			targets.push(textures.velocity);
+		if ( ctx.enableTranslucency )
+			targets.push(textures.translucency);
 		return targets;
 	}
 
@@ -892,6 +942,8 @@ class Renderer extends h3d.scene.Renderer {
 			slides.shader.shadowMapChannel = R;
 			slides.shader.HAS_VELOCITY = textures.velocity != null;
 			slides.shader.velocity = textures.velocity;
+			slides.shader.HAS_TRANSLUCENCY = textures.translucency != null;
+			slides.shader.translucencyMap = textures.translucency;
 			pbrProps.isScreen = true;
 			slides.render();
 			if( !debugging ) {
@@ -934,7 +986,7 @@ class Renderer extends h3d.scene.Renderer {
 
 		if( e.kind == ERelease && e.button == 2 && hxd.Math.distance(e.relX-debugPushPos.x,e.relY-debugPushPos.y) < 10 ) {
 			var x = Std.int((e.relX / win.width) * 3);
-			var y = Std.int((e.relY / win.height) * 3);
+			var y = Std.int((e.relY / win.height) * 4);
 			if( slides.shader.mode != Full ) {
 				slides.shader.mode = Full;
 			} else {
@@ -943,12 +995,15 @@ class Renderer extends h3d.scene.Renderer {
 					a = [Albedo,Normal,Depth];
 				else if ( y == 1 )
 					a = [Metalness,Roughness,AO];
-				else
+				else if ( y == 2 )
 					a = [Emissive,Shadow,Velocity];
-				slides.shader.mode = a[x];
+				else
+					a = [Translucency];
+				if( x < a.length )
+					slides.shader.mode = a[x];
 			}
 		}
-		if( e.kind == EWheel && (slides.shader.mode == Shadow || (slides.shader.mode == Full && e.relX > win.width/3 && e.relY > win.height/3)) )
+		if( e.kind == EWheel && (slides.shader.mode == Shadow || (slides.shader.mode == Full && e.relX > win.width/3 && e.relX < win.width*2/3 && e.relY > win.height*2/4 && e.relY < win.height*3/4)) )
 			debugShadowMapIndex += e.wheelDelta > 0 ? 1 : -1;
 	}
 

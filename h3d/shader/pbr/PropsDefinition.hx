@@ -12,6 +12,7 @@ class PropsDefinition extends hxsl.Shader {
 		var emissive : Float;
 		var custom1 : Float;
 		var custom2 : Float;
+		var translucency : Vec3;
 		var pbrSpecularColor : Vec3;
 		var transformedPosition : Vec3;
 

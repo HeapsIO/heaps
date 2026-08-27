@@ -310,6 +310,7 @@ class Engine {
 		haxe.System.beginFrame();
 		#end
 		mem.beginFrame();
+		#if dlss driver.pclSimulationEnd(); #end
 		driver.begin(hxd.Timer.frameCount);
 		if( backgroundColor != null ) clear(backgroundColor, 1, 0);
 		return true;

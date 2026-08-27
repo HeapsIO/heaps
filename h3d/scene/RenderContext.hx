@@ -29,6 +29,7 @@ class RenderContext extends h3d.impl.RenderContext {
 	public var pbrLightPass : h3d.mat.Pass;
 	public var computingStatic : Bool;
 	public var computeVelocity : Bool;
+	public var enableTranslucency : Bool;
 	public var useReverseDepth : Bool;
 	public var renderResolutionWidth : Int;
 	public var renderResolutionHeight : Int;
@@ -48,6 +49,7 @@ class RenderContext extends h3d.impl.RenderContext {
 	public var currentView : View = new h3d.scene.View(0);
 
 	public var prevCamera : h3d.Camera;
+	public var prevWorldDelta : h3d.Vector;
 
 	@global("camera.view") var cameraView : h3d.Matrix;
 	@global("camera.zNear") var cameraNear : Float;
@@ -352,6 +354,7 @@ class RenderContext extends h3d.impl.RenderContext {
 		cameraPrevProj.load(cameraProj);
 		cameraPreviousViewProj.load(cameraViewProj);
 		computeVelocity = false;
+		prevWorldDelta = null;
 
 		clearCurrent();
 	}

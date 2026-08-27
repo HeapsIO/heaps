@@ -11,6 +11,7 @@ enum abstract DebugMode(Int) {
 	var Emissive = 7;
 	var Shadow = 8;
 	var Velocity = 9;
+	var Translucency = 10;
 }
 
 class Slides extends ScreenShader {
@@ -30,9 +31,11 @@ class Slides extends ScreenShader {
 		@param var shadowMap : Channel;
 		@param var shadowMapCube : SamplerCube;
 		@param var velocity : Sampler2D;
+		@param var translucencyMap : Sampler2D;
 		@const var shadowIsCube : Bool;
 		@const var smode : Int;
 		@const var HAS_VELOCITY : Bool;
+		@const var HAS_TRANSLUCENCY : Bool;
 
 		function getColor(x:Float,y:Float) : Vec3 {
 			var color : Vec3;
@@ -50,7 +53,7 @@ class Slides extends ScreenShader {
 					color = roughness.xxx;
 				else if( x < 3 )
 					color = occlusion.xxx;
-			} else {
+			} else if ( y < 3 ) {
 				if ( x < 1 )
 					color = vec3(emissive, custom1, custom2);
 				else if ( x < 2 ) {
@@ -65,6 +68,9 @@ class Slides extends ScreenShader {
 				} else if (HAS_VELOCITY) {
 					color = vec3(abs(velocity.get(input.uv).xy) * 100.0, 0.0);
 				}
+			} else {
+				if( x < 1 && HAS_TRANSLUCENCY )
+					color = translucencyMap.get(vec2(x, y - 3)).rgb;
 			}
 			return color;
 		}
@@ -72,7 +78,7 @@ class Slides extends ScreenShader {
 		function fragment() {
 			var color : Vec3;
 			var x = input.uv.x * 3;
-			var y = input.uv.y * 3;
+			var y = input.uv.y * 4;
 			if( smode == 0 )
 				color = getColor(x,y);
 			else

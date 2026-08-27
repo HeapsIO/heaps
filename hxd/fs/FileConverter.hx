@@ -137,6 +137,14 @@ class FileConverter {
 		return r1.pt.getIndex() - r2.pt.getIndex();
 	}
 
+	static function statTimeAndSize( path : String ) {
+		var s = sys.FileSystem.stat(path);
+		return {
+			time : hxd.Math.max(s.mtime.getTime(), s.ctime.getTime()),
+			size : s.size,
+		};
+	}
+
 	function loadConvert( name : String ) {
 		if( name == "none" ) return null;
 		var c = @:privateAccess Convert.converts.get(name);
@@ -362,10 +370,9 @@ class FileConverter {
 
 		if( !sys.FileSystem.exists(fullPath) ) throw "Missing "+fullPath;
 
-		var fileStat = sys.FileSystem.stat(fullPath);
-		var fileTime = hxd.Math.max(fileStat.mtime.getTime(), fileStat.ctime.getTime());
+		var fileStat = statTimeAndSize(fullPath);
 		var fileSize = fileStat.size;
-		var time = hxd.Math.floor(fileTime / FILE_TIME_PRECISION);
+		var time = hxd.Math.floor(fileStat.time / FILE_TIME_PRECISION);
 		var alreadyGen = sys.FileSystem.exists(fullOutPath) && match.ver == conv.version #if disable_res_cache && false #end;
 
 		conv.params = params;
