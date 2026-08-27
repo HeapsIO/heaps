@@ -55,6 +55,7 @@ class GlslOut {
 		}
 		set(ToInt, "int");
 		set(ToFloat, "float");
+		set(ToUInt, "uint");
 		set(ToBool, "bool");
 		set(LReflect, "reflect");
 		set(Mat3x4, "_mat3x4");

@@ -98,7 +98,7 @@ class Checker {
 				[for( t in texDefs ) { args : [{ name : "tex", type : TSampler(t.dim,t.arr) }, { name : "pos", type : t.iuv }, { name : "lod", type : TInt }], ret : vec4 }];
 			case TextureSize:
 				[];
-			case ToInt:
+			case ToInt, ToUInt:
 				[for( t in baseType ) { args : [ { name : "value", type : t } ], ret : TInt } ];
 			case ToFloat:
 				[for( t in baseType ) { args : [ { name : "value", type : t } ], ret : TFloat } ];
@@ -263,6 +263,7 @@ class Checker {
 			]), g : null });
 		globals.set("int", globals.get("toInt"));
 		globals.set("float", globals.get("toFloat"));
+		globals.set("uint", globals.get("toUInt"));
 		globals.set("reflect", globals.get("lReflect"));
 		for( i in 2...5 ) {
 			globals.set("ivec"+i, globals.get("iVec"+i));
