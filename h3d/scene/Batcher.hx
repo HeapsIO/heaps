@@ -85,6 +85,10 @@ class BatchGroup {
 		batcher.emitInstance( obj, worldPosition, syncID, groupID );
 	}
 
+	public inline function reserveInstances( obj : ObjectInstance, count : Int ) {
+		batcher.reserveInstances( obj, count, groupID );
+	}
+
 	public inline function remove() {
 		if ( batcher != null) {
 			batcher.removeGroup(this);
@@ -224,6 +228,11 @@ class Batcher extends h3d.scene.Object {
 		freeGroupIDs.push(groupID);
 		for (b in batches)
 			b.disposeGroup(groupID);
+	}
+
+	public function reserveInstances( instance : ObjectInstance, count : Int, groupID : Int = 0 ) {
+		for ( mesh in instance.meshes )
+			batches[mesh.batchID].reserve(mesh, count, groupID);
 	}
 
 	var tmpMat = new h3d.Matrix();
@@ -508,12 +517,21 @@ private class Batch {
 		return new MaterialInstance(draws);
 	}
 
-	public function emitMesh( mesh : MeshInstance, worldPosition : h3d.Matrix, syncID : Int, groupID : Int ) {
+	function getGroup( groupID : Int ) {
 		var group = groups[groupID];
 		if ( group == null ) {
 			group = new GroupData(this);
 			groups[groupID] = group;
 		}
+		return group;
+	}
+
+	public function reserve( mesh : MeshInstance, count : Int, groupID : Int ) {
+		getGroup(groupID).reserve(mesh.materials, count);
+	}
+
+	public function emitMesh( mesh : MeshInstance, worldPosition : h3d.Matrix, syncID : Int, groupID : Int ) {
+		var group = getGroup(groupID);
 
 		var subMeshID = mesh.subMeshID;
 
@@ -596,6 +614,21 @@ private class GroupData {
 		batch = b;
 	}
 
+	function getEmitData( bp : BatchPass ) {
+		var emitData = passToEmitData.get(bp);
+		if ( emitData == null ) {
+			emitData = new EmitData(bp);
+			passToEmitData.set(bp, emitData);
+		}
+		return emitData;
+	}
+
+	public function reserve( materials : Array<MaterialInstance>, count : Int ) {
+		for ( m in materials )
+			for ( draw in m.draws )
+				getEmitData(batch.passes[draw.passID]).reserve(count);
+	}
+
 	public function emitMesh( primitive : h3d.prim.BatchPrimitive, subMeshID : Int, materials : Array<MaterialInstance>, worldPosition : h3d.Matrix, syncID : Int, groupID : Int ) {
 		instanceCount++;
 
@@ -603,12 +636,7 @@ private class GroupData {
 		var subPartStart = subMesh.subPartStart;
 		for ( subPartIdx => m in materials ) {
 			for ( draw in m.draws ) {
-				var bp = batch.passes[draw.passID];
-				var emitData = passToEmitData.get(bp);
-				if ( emitData == null ) {
-					emitData = new EmitData(bp);
-					passToEmitData.set(bp, emitData);
-				}
+				var emitData = getEmitData(batch.passes[draw.passID]);
 				emitData.emitInstance(subMeshID, subPartStart + subPartIdx * subMesh.lodCount, draw.shaderData, worldPosition, syncID );
 			}
 		}
@@ -1234,11 +1262,27 @@ private class EmitData {
 	var batchPass : BatchPass;
 	var bufferHandles : Array<h3d.BufferHandle> = [];
 	var textureHandles : Array<h3d.mat.TextureHandle> = [];
+	var capacity : Int = 0;
 
 	public function new(bp : BatchPass) {
 		batchPass = bp;
 		bp.toEmit.push(this);
 	};
+
+	function growBytes( b : haxe.io.Bytes, count : Int, stride : Int ) {
+		if ( b == null )
+			return haxe.io.Bytes.alloc(hxd.Math.imax(count, capacity) * stride);
+		var minSize = count * stride;
+		if ( b.length >= minSize )
+			return b;
+		var n = haxe.io.Bytes.alloc( hxd.Math.imax((b.length >> 1) * 3, minSize) );
+		n.blit(0, b, 0, b.length);
+		return n;
+	}
+
+	public inline function reserve( count : Int ) {
+		capacity += count;
+	}
 
 	public function emitInstance( subMeshID : Int, subPartID : Int, shaderData : ShaderData, worldPosition : h3d.Matrix, syncID : Int ) {
 		if ( shaderData.bufferHandles != null)
@@ -1257,32 +1301,18 @@ private class EmitData {
 			throw 'ID overflow. Too many models';
 
 		var instanceInfosStride = BatchPass.PASS_INSTANCES_INFOS_FMT.strideBytes;
-		var minInstanceInfosSize = instanceCount * instanceInfosStride;
-		if ( instancesInfos == null )
-			instancesInfos = haxe.io.Bytes.alloc(minInstanceInfosSize);
-		if ( instancesInfos.length < minInstanceInfosSize) {
-			var old = instancesInfos;
-			instancesInfos = haxe.io.Bytes.alloc( hxd.Math.imax((old.length >> 1) * 3, minInstanceInfosSize) );
-			instancesInfos.blit(0, old, 0, old.length);
-		}
+		instancesInfos = growBytes(instancesInfos, instanceCount, instanceInfosStride);
 		instancesInfos.setInt32(instanceID * instanceInfosStride, subMeshID << 16 | subPartID );
 
 		if ( @:privateAccess batchPass.batcher.hasSyncIDs() ) {
-			var minSyncDataSize = instanceCount << 2;
-			if ( syncIDs == null )
-				syncIDs = haxe.io.Bytes.alloc(minSyncDataSize);
-			if ( syncIDs.length < minSyncDataSize ) {
-				var old = syncIDs;
-				syncIDs = haxe.io.Bytes.alloc( hxd.Math.imax((old.length >> 1) * 3, minSyncDataSize) );
-				syncIDs.blit(0, old, 0, old.length);
-			}
+			syncIDs = growBytes(syncIDs, instanceCount, 4);
 			syncIDs.setInt32(instanceID << 2, syncID);
 		}
 
 		var instanceDataStride = batchPass.batchShader.paramsSize * 4;
 		var minInstanceDataSize = instanceCount * instanceDataStride;
 		if ( instancesData == null )
-			instancesData = new hxd.FloatBuffer(minInstanceDataSize);
+			instancesData = new hxd.FloatBuffer(hxd.Math.imax(instanceCount, capacity) * instanceDataStride);
 		if ( instancesData.length < minInstanceDataSize)
 			instancesData.grow((minInstanceDataSize >> 1) * 3);
 
@@ -1332,5 +1362,6 @@ private class EmitData {
 		instancesData = null;
 		instancesInfos = null;
 		instanceCount = 0;
+		capacity = 0;
 	}
 }
