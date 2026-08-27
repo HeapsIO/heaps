@@ -60,6 +60,7 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 	#if hlphysics
 	var interactiveWorld : physics.collision.PhysicsWorld;
 	var interactiveInfos : Map<Interactive, { id : Int, follow : Null<h3d.scene.Object> }>;
+	var lastSyncFrame = -1;
 	#end
 
 	/**
@@ -203,6 +204,9 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 
 	public function syncEventTargets() {
 		#if hlphysics
+		if( lastSyncFrame == hxd.Timer.frameCount )
+			return;
+		lastSyncFrame = hxd.Timer.frameCount;
 		var tmpMat = new Matrix();
 		for( i in interactives ) {
 			if( i.shape == null )
@@ -248,7 +252,7 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 		var hits : Array<Interactive> = [];
 
 		#if hlphysics
-		syncEventTargets(); // TODO reduce sync
+		syncEventTargets();
 		var saveR = physics.collision.Ray.fromHeaps(r);
 		var priority = 0x80000000;
 		var allHits = [];
@@ -357,6 +361,7 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 	#if hlphysics
 	public function collideEventTargets( shape : physics.collision.shapes.Shape ) : Array<Interactive> {
 		var hits = [];
+		syncEventTargets();
 		interactiveWorld.collide(shape, physics.math.Vec3.one(), physics.math.Mat.identity(), (contact, bodyId) -> {
 			var body = interactiveWorld.getBody(bodyId);
 			hits.push(body.userData);
