@@ -118,6 +118,7 @@ private class Particle extends h2d.SpriteBatch.BatchElement {
 			alpha = Math.pow((1 - t) / (1 - group.fadeOut), group.fadePower);
 		else
 			alpha = 1;
+		alpha *= group.parts.alpha;
 
 		r = t; // pass to pshader for colorGradient
 
