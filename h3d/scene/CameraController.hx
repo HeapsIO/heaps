@@ -391,10 +391,11 @@ class FPSCameraController extends CameraController {
 		cam.fovY = wantedFOV;
 		cam.zNear = zNear;
 		cam.zFar = zFar;
-		ctx.elapsedTime = old;
 
 		if( pushing == 2 || pushing == 1)
 			moveKeys();
+
+		ctx.elapsedTime = old;
 	}
 
 	override function onEventInternal(e : hxd.Event) {
@@ -461,7 +462,7 @@ class FPSCameraController extends CameraController {
 		if( mov.x == 0 && mov.y == 0 && mov.z == 0 )
 			return;
 
-		var delta = mov.scaled(moveSpeed);
+		var delta = mov.scaled(moveSpeed * (hxd.Timer.dt * 60.0));
 		offset(delta);
 	}
 
