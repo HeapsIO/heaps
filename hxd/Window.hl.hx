@@ -788,6 +788,16 @@ class Window {
 		return [for(m in #if hldx dx.Window.getMonitors() #elseif hlsdl sdl.Sdl.getDisplays() #else [] #end) { name: m.name, width: m.right-m.left, height: m.bottom-m.top}];
 	}
 
+	public function isMaximized() : Bool {
+		#if (hldx >= version("1.17.0"))
+		return window.isZoomed();
+		#elseif (hlsdl >= version("1.17.0"))
+		return window.isMaximized();
+		#else
+		return false;
+		#end
+	}
+
 	// If registry is set, return the default DisplaySetting when it's currently modified by the application.
 	public function getCurrentDisplaySetting(?monitorId : Int, registry : Bool = false) : DisplaySetting {
 		#if hldx
