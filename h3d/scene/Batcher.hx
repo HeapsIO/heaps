@@ -9,8 +9,12 @@ enum BatcherFlags {
 @:allow(h3d.scene.Batcher)
 class ObjectInstance {
 	public var meshes : Array<MeshInstance>;
-	function new(meshes : Array<MeshInstance>) {
+	public var materials : Array<MaterialInstance>;
+	public var draws : Array<DrawInstance>;
+	function new(meshes : Array<MeshInstance>, materials : Array<MaterialInstance>, draws : Array<DrawInstance>) {
 		this.meshes = meshes;
+		this.materials = materials;
+		this.draws = draws;
 	}
 }
 
@@ -179,6 +183,8 @@ class Batcher extends h3d.scene.Object {
 
 	public function addInstance( obj : h3d.scene.Object, recChildren : Bool = true ) : ObjectInstance {
 		var meshes = [];
+		var materials = [];
+		var draws = [];
 		var invPos = obj.getInvPos();
 		inline function processMesh( m : h3d.scene.Mesh ) {
 			var fmt : hxd.BufferFormat = null;
@@ -195,11 +201,12 @@ class Batcher extends h3d.scene.Object {
 				var batch = batches[batchID];
 
 				var subMeshID = batch.addModel(m);
-				var materials = [];
-				for ( m in m.getMeshMaterials() )
-					materials.push(batch.addMaterial(m, renderer));
+				var materialStart = materials.length;
+				var meshMaterials = m.getMeshMaterials();
+				for ( mat in meshMaterials )
+					materials.push(batch.addMaterial(mat, draws, renderer));
 
-				var meshInstance = new MeshInstance(m.getAbsPos() * invPos, batchID, subMeshID, materials);
+				var meshInstance = new MeshInstance(m.getAbsPos() * invPos, batchID, subMeshID, materialStart, meshMaterials.length);
 				meshes.push(meshInstance);
 			}
 		}
@@ -212,7 +219,7 @@ class Batcher extends h3d.scene.Object {
 			if ( m != null )
 				processMesh(m);
 		}
-		return new ObjectInstance(meshes);
+		return new ObjectInstance(meshes, materials, draws);
 	}
 
 	public function createGroup() : BatchGroup {
@@ -232,7 +239,7 @@ class Batcher extends h3d.scene.Object {
 
 	public function reserveInstances( instance : ObjectInstance, count : Int, groupID : Int = 0 ) {
 		for ( mesh in instance.meshes )
-			batches[mesh.batchID].reserve(mesh, count, groupID);
+			batches[mesh.batchID].reserve(mesh, instance.materials, instance.draws, count, groupID);
 	}
 
 	var tmpMat = new h3d.Matrix();
@@ -240,7 +247,7 @@ class Batcher extends h3d.scene.Object {
 		for ( mesh in instance.meshes ) {
 			var batch = batches[mesh.batchID];
 			tmpMat.multiply3x4(mesh.relPos, worldPosition);
-			batch.emitMesh( mesh, tmpMat, syncID, groupID );
+			batch.emitMesh( mesh, instance.materials, instance.draws, tmpMat, syncID, groupID );
 		}
 	}
 
@@ -416,21 +423,25 @@ private class MeshInstance {
 	public var relPos : h3d.Matrix;
 	public var batchID : Int;
 	public var subMeshID : Int;
-	public var materials : Array<MaterialInstance>;
-	function new(relPos: h3d.Matrix, batchID : Int, subMeshID : Int, materials : Array<MaterialInstance>) {
+	public var materialStart : Int;
+	public var materialCount : Int;
+	function new(relPos: h3d.Matrix, batchID : Int, subMeshID : Int, materialStart : Int, materialCount : Int) {
 		this.relPos = relPos;
 		this.batchID = batchID;
 		this.subMeshID = subMeshID;
-		this.materials = materials;
+		this.materialStart = materialStart;
+		this.materialCount = materialCount;
 	}
 }
 
 @:allow(h3d.scene.Batch)
 private class MaterialInstance {
-	public var draws : Array<DrawInstance>;
+	public var drawStart : Int;
+	public var drawCount : Int;
 
-	function new( draws: Array<DrawInstance> ) {
-		this.draws = draws;
+	function new( drawStart : Int, drawCount : Int ) {
+		this.drawStart = drawStart;
+		this.drawCount = drawCount;
 	}
 }
 
@@ -497,9 +508,9 @@ private class Batch {
 		return -1;
 	}
 
-	public function addMaterial( m : h3d.mat.Material, renderer : h3d.scene.Renderer ) : MaterialInstance {
+	public function addMaterial( m : h3d.mat.Material, draws : Array<DrawInstance>, renderer : h3d.scene.Renderer ) : MaterialInstance {
 		var globals = @:privateAccess renderer.ctx.globals;
-		var draws : Array<DrawInstance> = [];
+		var drawStart = draws.length;
 		for ( p in m.getPasses() ) @:privateAccess {
 			if ( p.culled )
 				continue;
@@ -511,10 +522,9 @@ private class Batch {
 			}
 			var bp = passes[passID];
 			var shaderData = bp.getShaderData(shaders);
-			var draw = new DrawInstance(shaderData , passID);
-			draws.push(draw);
+			draws.push(new DrawInstance(shaderData, passID));
 		}
-		return new MaterialInstance(draws);
+		return new MaterialInstance(drawStart, draws.length - drawStart);
 	}
 
 	function getGroup( groupID : Int ) {
@@ -526,19 +536,17 @@ private class Batch {
 		return group;
 	}
 
-	public function reserve( mesh : MeshInstance, count : Int, groupID : Int ) {
-		getGroup(groupID).reserve(mesh.materials, count);
+	public function reserve( mesh : MeshInstance, materials : Array<MaterialInstance>, draws : Array<DrawInstance>, count : Int, groupID : Int ) {
+		getGroup(groupID).reserve(materials, draws, mesh.materialStart, mesh.materialCount, count);
 	}
 
-	public function emitMesh( mesh : MeshInstance, worldPosition : h3d.Matrix, syncID : Int, groupID : Int ) {
+	public function emitMesh( mesh : MeshInstance, materials : Array<MaterialInstance>, draws : Array<DrawInstance>, worldPosition : h3d.Matrix, syncID : Int, groupID : Int ) {
 		var group = getGroup(groupID);
-
-		var subMeshID = mesh.subMeshID;
 
 		instancesDirty = true;
 		totalInstanceCount++;
 
-		group.emitMesh(primitive, subMeshID, mesh.materials, worldPosition, syncID, groupID);
+		group.emitMesh(primitive, mesh.subMeshID, materials, draws, mesh.materialStart, mesh.materialCount, worldPosition, syncID);
 	}
 
 	public function uploadPrimitive(ctx : h3d.scene.RenderContext) {
@@ -605,7 +613,7 @@ private class Batch {
 }
 
 private class GroupData {
-	var passToEmitData : Map<BatchPass, EmitData> = [];
+	var emitDatas : Array<EmitData> = [];
 	var batch : Batch;
 
 	public var instanceCount(default, null) = 0;
@@ -614,42 +622,48 @@ private class GroupData {
 		batch = b;
 	}
 
-	function getEmitData( bp : BatchPass ) {
-		var emitData = passToEmitData.get(bp);
+	inline function getEmitData( passID : Int ) {
+		var emitData = emitDatas[passID];
 		if ( emitData == null ) {
-			emitData = new EmitData(bp);
-			passToEmitData.set(bp, emitData);
+			emitData = new EmitData(batch.passes[passID]);
+			emitDatas[passID] = emitData;
 		}
 		return emitData;
 	}
 
-	public function reserve( materials : Array<MaterialInstance>, count : Int ) {
-		for ( m in materials )
-			for ( draw in m.draws )
-				getEmitData(batch.passes[draw.passID]).reserve(count);
+	public function reserve( materials : Array<MaterialInstance>, draws : Array<DrawInstance>, materialStart : Int, materialCount : Int, count : Int ) {
+		for ( i in materialStart...materialStart + materialCount ) {
+			var m = materials[i];
+			for ( j in m.drawStart...m.drawStart + m.drawCount )
+				getEmitData(draws[j].passID).reserve(count);
+		}
 	}
 
-	public function emitMesh( primitive : h3d.prim.BatchPrimitive, subMeshID : Int, materials : Array<MaterialInstance>, worldPosition : h3d.Matrix, syncID : Int, groupID : Int ) {
+	public function emitMesh( primitive : h3d.prim.BatchPrimitive, subMeshID : Int, materials : Array<MaterialInstance>, draws : Array<DrawInstance>, materialStart : Int, materialCount : Int, worldPosition : h3d.Matrix, syncID : Int ) {
 		instanceCount++;
 
 		var subMesh = primitive.subMeshes[subMeshID];
 		var subPartStart = subMesh.subPartStart;
-		for ( subPartIdx => m in materials ) {
-			for ( draw in m.draws ) {
-				var emitData = getEmitData(batch.passes[draw.passID]);
-				emitData.emitInstance(subMeshID, subPartStart + subPartIdx * subMesh.lodCount, draw.shaderData, worldPosition, syncID );
+		for ( i in 0...materialCount ) {
+			var m = materials[materialStart + i];
+			var subPartID = subPartStart + i * subMesh.lodCount;
+			for ( j in m.drawStart...m.drawStart + m.drawCount ) {
+				var draw = draws[j];
+				getEmitData(draw.passID).emitInstance(subMeshID, subPartID, draw.shaderData, worldPosition, syncID );
 			}
 		}
 	}
 
 	public function dispose() {
-		for ( e in passToEmitData ) {
+		for ( e in emitDatas ) {
+			if ( e == null )
+				continue;
 			e.dispose();
 			if ( instanceCount < e.instanceCount )
 				throw "assert";
 			instanceCount -= e.instanceCount;
 		}
-		passToEmitData.clear();
+		emitDatas.resize(0);
 		batch.instancesDirty = true;
 		if ( batch.totalInstanceCount < instanceCount )
 			throw "assert";
