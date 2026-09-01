@@ -50,9 +50,6 @@ class JointData {
 	public var currentAbsPos : h3d.Matrix;
 	public var additivePose : h3d.Matrix;
 
-	var targetMat : h3d.Matrix = null;
-	var originMat : h3d.Matrix = null;
-
 	public function new() {
 		this.currentAbsPos = h3d.Matrix.I();
 	}
@@ -79,76 +76,41 @@ class JointData {
 			m.multiply3x4inline(additivePose, m);
 		if( bid >= 0 )
 			skin.currentPalette[bid].multiply3x4inline(j.transPos, m);
-
-		if (targetMat == null)
-			targetMat = m.clone();
-		if (originMat == null)
-			originMat = m.clone();
-
-		if (!Std.isOfType(this, DynamicJointData)) {
-			targetMat.load(m);
-			originMat.load(m);
-		}
 	}
 }
 
 @:access(h3d.scene.Skin)
 class DynamicJointData extends JointData {
-	public var prevAbsPos : h3d.Matrix;
-	public var speed : h3d.Vector;
-
 	static var tmpVec = new Vector(0, 0, 0);
 	static var tmpVec2 = new Vector(0, 0, 0);
 	static var tmpQ = new Quat();
 
-	var f = -1;
-	var initialState : DynamicJointData;
+	public var targetMat : h3d.Matrix;
+	var prevTargetMat : h3d.Matrix;
+	var speed : h3d.Vector;
+	var parentQuat : h3d.Quat;
+	var prevParentQuat : h3d.Quat;
 
 	public function new() {
 		super();
-		this.speed = new Vector(0, 0, 0);
 	}
 
-	public function load(data : DynamicJointData) {
-		if (data.currentRelPos != null) {
-			if (currentRelPos == null)
-				currentRelPos = new Matrix();
-			currentRelPos.load(data.currentRelPos);
-		}
-		if (data.currentAbsPos != null) {
-			if (currentAbsPos == null)
-				currentAbsPos = new Matrix();
-			currentAbsPos.load(data.currentAbsPos);
-		}
-		if (data.additivePose != null) {
-			if (additivePose == null)
-				additivePose = new h3d.Matrix();
-			additivePose.load(data.additivePose);
-		}
-		if (data.prevAbsPos != null) {
-			if (prevAbsPos == null)
-				prevAbsPos = new h3d.Matrix();
-			prevAbsPos.load(data.prevAbsPos);
-		}
-		speed.load(data.speed);
+	public function initData() {
+		targetMat = currentAbsPos.clone();
+		prevTargetMat = currentAbsPos.clone();
+		speed = new h3d.Vector();
+		parentQuat = new h3d.Quat();
+		prevParentQuat = new h3d.Quat();
 	}
 
 	override function sync(skin: h3d.scene.Skin, j: h3d.anim.Skin.Joint, syncDyn : Bool) {
 		super.sync(skin, j, syncDyn);
-
-		// Ensure we compute dynamic joints data once per frame
-		if (f != hxd.Timer.frameCount) {
-			f = hxd.Timer.frameCount;
-			if (initialState == null)
-				initialState = new DynamicJointData();
-			initialState.load(this);
-		} else {
-			this.load(initialState);
-		}
+		if (targetMat == null)
+			initData();
 
 		var jParentData : JointData = Std.downcast(skin.jointsData[j.parent.index], JointData);
 		if (syncDyn) {
-			originMat.load(targetMat);
+			prevTargetMat.load(targetMat);
 
 			// Compute position of the current joint
 			updateJoint(skin, j);
@@ -157,20 +119,23 @@ class DynamicJointData extends JointData {
 			updateParentRotation(skin, j);
 		}
 
-		if (originMat == null || targetMat == null)
-			return;
-
 		var alpha = hxd.Math.clamp(skin.accumulator / Skin.FIXED_DT);
 
-		lerpMatrixTerms(originMat, targetMat, alpha, Skin.TMP_MAT);
-		if( j.bindIndex >= 0 )
-			skin.currentPalette[j.bindIndex].multiply3x4inline(j.transPos, Skin.TMP_MAT);
+		// Scale and rotation lerping is not needed for current joint since it only translate
+		currentAbsPos.load(targetMat);
+		currentAbsPos._41 = hxd.Math.lerp(prevTargetMat._41, targetMat._41, alpha);
+		currentAbsPos._42 = hxd.Math.lerp(prevTargetMat._42, targetMat._42, alpha);
+		currentAbsPos._43 = hxd.Math.lerp(prevTargetMat._43, targetMat._43, alpha);
 
-		if (jParentData.originMat != null && jParentData.targetMat != null) {
-			if( j.parent.bindIndex >= 0) {
-				lerpMatrixTerms(jParentData.originMat, jParentData.targetMat, alpha, Skin.TMP_MAT);
-				skin.currentPalette[j.parent.bindIndex].multiply3x4inline(j.parent.transPos, Skin.TMP_MAT);
-			}
+		if( j.bindIndex >= 0 )
+			skin.currentPalette[j.bindIndex].multiply3x4inline(j.transPos, currentAbsPos);
+
+		if (j.parent.follow == null) {
+			tmpQ.slerp(prevParentQuat, parentQuat, alpha);
+			tmpQ.toMatrix(Skin.TMP_MAT);
+			jParentData.currentAbsPos.multiply(Skin.TMP_MAT, jParentData.currentAbsPos);
+			if (j.parent.bindIndex >= 0)
+				skin.currentPalette[j.parent.bindIndex].multiply3x4inline(j.parent.transPos, jParentData.currentAbsPos);
 		}
 
 		if (speed.length() != 0.)
@@ -179,16 +144,16 @@ class DynamicJointData extends JointData {
 
 	function updateJoint(skin: h3d.scene.Skin, j: h3d.anim.Skin.Joint) {
 		var j : DynamicJoint = cast j;
-		if (prevAbsPos == null) {
-			prevAbsPos = new h3d.Matrix();
-			prevAbsPos.load(currentAbsPos);
+		if (targetMat == null) {
+			targetMat = new h3d.Matrix();
+			targetMat.load(currentAbsPos);
 		}
 
-		var prevPos = prevAbsPos.getPosition();
+		var prevPos = targetMat.getPosition();
 		var nextPos = prevPos.clone();
 
-		var jParent = j.parent;
-		var jParentData = skin.jointsData[jParent.index];
+		var jParent = skin.jointsData[j.parent.index];
+		var jParentMat = Std.downcast(jParent, DynamicJointData)?.targetMat ?? jParent.currentAbsPos;
 
 		// Resistance (force resistance)
 		speed.load(speed + j.globalForce * (1.0 - j.resistance));
@@ -204,19 +169,19 @@ class DynamicJointData extends JointData {
 
 		// Stiffness (shape keeper)
 		var stiffAbsPos = Skin.TMP_MAT;
-		stiffAbsPos.multiply(j.defMat, jParentData.currentAbsPos);
+		stiffAbsPos.multiply(j.defMat, jParentMat);
 		var stiffPos = stiffAbsPos.getPosition();
 		nextPos.lerp(nextPos, stiffPos, j.stiffness);
 
 		// Slackness (length keeper)
-		var dirToParent = (nextPos - jParentData.currentAbsPos.getPosition()).normalized();
+		var dirToParent = (nextPos - jParentMat.getPosition()).normalized();
 		var lengthToParent = j.defMat.getPosition().length();
-		var scale = jParentData.currentAbsPos.getScale(); //! Non uniform scale won't work
-		var slackPos = jParentData.currentAbsPos.getPosition() + (dirToParent * lengthToParent * scale.x);
+		var scale = jParentMat.getScale(); //! Non uniform scale won't work
+		var slackPos = jParentMat.getPosition() + (dirToParent * lengthToParent * scale.x);
 		nextPos.lerp(slackPos, nextPos, j.slackness);
 
 		// Apply lock axis
-		jParentData.currentAbsPos.getInverse(stiffAbsPos);
+		jParentMat.getInverse(stiffAbsPos);
 		nextPos.transform(stiffAbsPos);
 		var curPos = currentAbsPos.getPosition();
 		curPos.transform(stiffAbsPos);
@@ -226,13 +191,11 @@ class DynamicJointData extends JointData {
 			nextPos.y = curPos.y;
 		if (j.lockAxis.z > 0.0)
 			nextPos.z = curPos.z;
-		nextPos.transform(jParentData.currentAbsPos);
+		nextPos.transform(jParentMat);
 
 		// Apply computed position to joint
 		speed.load((speed + (nextPos - prevPos) * (1.0 / Skin.FIXED_DT)) * 0.5);
 		currentAbsPos.setPosition(nextPos);
-		prevAbsPos.load(currentAbsPos);
-
 		targetMat.load(currentAbsPos);
 	}
 
@@ -241,39 +204,19 @@ class DynamicJointData extends JointData {
 		if (jParent.follow != null)
 			return;
 
-		var jParentData = skin.jointsData[jParent.index];
+		prevParentQuat.load(parentQuat);
+
 		if (jParent.subs.length == 1) {
+			var jParentData = skin.jointsData[jParent.index];
 			tmpVec.load(j.defMat.getPosition().normalized());
 			var tmpMat = Skin.TMP_MAT;
-	 		jParentData.currentAbsPos.getInverse(tmpMat);
-			tmpMat.multiply(prevAbsPos, tmpMat);
+			jParentData.currentAbsPos.getInverse(tmpMat);
+			tmpMat.multiply(targetMat, tmpMat);
 			tmpVec2.load(tmpMat.getPosition().normalized());
-			tmpQ.initMoveTo(tmpVec, tmpVec2);
-			tmpQ.toMatrix(tmpMat);
-			jParentData.currentAbsPos.multiply(tmpMat, jParentData.currentAbsPos);
+			parentQuat.initMoveTo(tmpVec, tmpVec2);
+		} else {
+			parentQuat.identity();
 		}
-
-		jParentData.targetMat.load(jParentData.currentAbsPos);
-	}
-
-	function lerpMatrixTerms(a: h3d.Matrix, b: h3d.Matrix, t: Float, out: h3d.Matrix): h3d.Matrix {
-		out._11 = hxd.Math.lerp(a._11, b._11, t);
-		out._12 = hxd.Math.lerp(a._12, b._12, t);
-		out._13 = hxd.Math.lerp(a._13, b._13, t);
-		out._14 = hxd.Math.lerp(a._14, b._14, t);
-		out._21 = hxd.Math.lerp(a._21, b._21, t);
-		out._22 = hxd.Math.lerp(a._22, b._22, t);
-		out._23 = hxd.Math.lerp(a._23, b._23, t);
-		out._24 = hxd.Math.lerp(a._24, b._24, t);
-		out._31 = hxd.Math.lerp(a._31, b._31, t);
-		out._32 = hxd.Math.lerp(a._32, b._32, t);
-		out._33 = hxd.Math.lerp(a._33, b._33, t);
-		out._34 = hxd.Math.lerp(a._34, b._34, t);
-		out._41 = hxd.Math.lerp(a._41, b._41, t);
-		out._42 = hxd.Math.lerp(a._42, b._42, t);
-		out._43 = hxd.Math.lerp(a._43, b._43, t);
-		out._44 = hxd.Math.lerp(a._44, b._44, t);
-    	return out;
 	}
 }
 
@@ -587,10 +530,12 @@ class Skin extends MultiMaterial {
 			return;
 
 		var syncDyn = false;
-		accumulator += hxd.Timer.dt;
-		if (accumulator >= Skin.FIXED_DT) {
-			syncDyn = true;
-			accumulator -= Skin.FIXED_DT;
+		if( jointsFrame != hxd.Timer.frameCount ) {
+			accumulator += hxd.Timer.dt;
+			while ( accumulator >= FIXED_DT ) {
+				syncDyn = true;
+				accumulator -= FIXED_DT;
+			}
 		}
 
 		for (j in skinData.allJoints)
