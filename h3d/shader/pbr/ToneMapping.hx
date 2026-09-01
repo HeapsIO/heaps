@@ -35,6 +35,22 @@ class ToneMapping extends ScreenShader {
 			case 2:
 				// filmic
 				color.rgb = saturate((color.rgb*(a*color.rgb+b))/(color.rgb*(c*color.rgb+d)+e));
+			case 3:
+				// Khronos PBR Neutral
+				// see https://github.com/KhronosGroup/ToneMapping/blob/main/PBR_Neutral/README.md
+				var startCompression = 0.8 - 0.04;
+				var desaturation = 0.15;
+				var x = min(color.r, min(color.g, color.b));
+				var offset = x < 0.08 ? x - 6.25 * x * x : 0.04;
+				color.rgb -= offset;
+				var peak = max(color.r, max(color.g, color.b));
+				if( peak >= startCompression ) {
+					var dd = 1. - startCompression;
+					var newPeak = 1. - dd * dd / (peak + dd - startCompression);
+					color.rgb *= newPeak / peak;
+					var g = 1. - 1. / (desaturation * (peak - newPeak) + 1.);
+					color.rgb = mix(color.rgb, vec3(newPeak), g);
+				}
 			}
 			// gamma correct
 			if( !isSRBG )
