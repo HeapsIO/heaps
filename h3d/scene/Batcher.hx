@@ -367,6 +367,7 @@ class Batcher extends h3d.scene.Object {
 	}
 
 	override function onRemove() {
+		super.onRemove();
 		for ( b in batches)
 			b.dispose();
 		if ( shouldDisposeLibrary )
@@ -890,6 +891,11 @@ private class BatchPass {
 	var batcher : Batcher;
 	var isShadowPass = false;
 	var modelViewOffset : Int;
+	var modelViewPos : Int = -1;
+	var modelViewInversePos : Int = -1;
+	var previousModelViewPos : Int = -1;
+
+	var hasSyncIDs = false;
 
 	public var totalInstanceCount(default, null) = 0;
 	var toEmit : Array<EmitData> = [];
@@ -909,6 +915,7 @@ private class BatchPass {
 
 	public function new(renderer : h3d.scene.Renderer, batch : Batch, p : h3d.mat.Pass, prim : h3d.prim.BatchPrimitive) @:privateAccess {
 		primitive = prim;
+		hasSyncIDs = batch.batcher.hasSyncIDs();
 		var output = renderer.getPassByName(p.name);
 		if( output == null )
 			throw "Unknown pass " + p.name;
@@ -973,9 +980,17 @@ private class BatchPass {
 		isShadowPass = pass.name == "shadow";
 		var p = batchShader.params;
 		while ( p != null ) {
-			if( p.perObjectGlobal != null && p.perObjectGlobal.gid == modelViewID ) {
-				modelViewOffset = p.pos >> 2;
-				break;
+			var g = p.perObjectGlobal;
+			if ( g != null ) {
+				if ( g.gid == modelViewID ) {
+					modelViewOffset = p.pos >> 2;
+					modelViewPos = p.pos;
+				} else if ( g.gid == modelViewInverseID )
+					modelViewInversePos = p.pos;
+				else if ( g.gid == previousModelViewID )
+					previousModelViewPos = p.pos;
+				else
+					throw "Unsupported global param " + g.path;
 			}
 			p = p.next;
 		}
@@ -1082,7 +1097,6 @@ private class BatchPass {
 		}
 		batchShader.Batch_StorageBuffer = instancesData;
 
-		var hasSyncIDs = batcher.hasSyncIDs();
 		if ( hasSyncIDs ) {
 			if ( syncIDs == null || syncIDs.vertices < totalInstanceCount ) {
 				if ( syncIDs != null )
@@ -1318,7 +1332,7 @@ private class EmitData {
 		instancesInfos = growBytes(instancesInfos, instanceCount, instanceInfosStride);
 		instancesInfos.setInt32(instanceID * instanceInfosStride, subMeshID << 16 | subPartID );
 
-		if ( @:privateAccess batchPass.batcher.hasSyncIDs() ) {
+		if ( batchPass.hasSyncIDs ) {
 			syncIDs = growBytes(syncIDs, instanceCount, 4);
 			syncIDs.setInt32(instanceID << 2, syncID);
 		}
@@ -1330,40 +1344,26 @@ private class EmitData {
 		if ( instancesData.length < minInstanceDataSize)
 			instancesData.grow((minInstanceDataSize >> 1) * 3);
 
-		var p = batchPass.batchShader.params;
-		var invWorldPosition : h3d.Matrix = null;
-		while ( p != null ) {
-			var bufLoader = new hxd.FloatBufferLoader(shaderData.data, p.pos);
-			if( p.perObjectGlobal == null ) {
-				p = p.next;
-				continue;
-			}
-			if ( p.perObjectGlobal.gid == BatchPass.modelViewID )
-				bufLoader.loadMatrix(worldPosition);
-			else if ( p.perObjectGlobal.gid == BatchPass.modelViewInverseID ) {
-				if ( invWorldPosition == null )
-					invWorldPosition = worldPosition.getInverse();
-				bufLoader.loadMatrix(invWorldPosition);
-			} else if ( p.perObjectGlobal.gid == BatchPass.previousModelViewID )
-				bufLoader.loadMatrix(worldPosition);
-			else
-				throw "Unsupported global param " + p.perObjectGlobal.path;
-			p = p.next;
-			continue;
-		}
-
+		var instanceDataStart = instanceID * instanceDataStride;
 		#if hl
 		var instanceByteStride = instanceDataStride * 4;
-		var startPos = instanceID * instanceByteStride;
+		var instanceByteStart = instanceID * instanceByteStride;
 		var dst = hl.Bytes.getArray(instancesData.getNative());
 		var src = hl.Bytes.getArray(shaderData.data.getNative());
-		dst.blit(startPos, src, 0, instanceByteStride);
+		dst.blit(instanceByteStart, src, 0, instanceByteStride);
 		#else
-		var startPos = instanceID * instanceDataStride;
 		var data = shaderData.data;
 		for ( i in 0...instanceDataStride )
-			instancesData[startPos + i] = data[i];
+			instancesData[instanceDataStart + i] = data[i];
 		#end
+
+		var bp = batchPass;
+		if ( bp.modelViewPos >= 0 )
+			new hxd.FloatBufferLoader(instancesData, instanceDataStart + bp.modelViewPos).loadMatrix(worldPosition);
+		if ( bp.previousModelViewPos >= 0 )
+			new hxd.FloatBufferLoader(instancesData, instanceDataStart + bp.previousModelViewPos).loadMatrix(worldPosition);
+		if ( bp.modelViewInversePos >= 0 )
+			new hxd.FloatBufferLoader(instancesData, instanceDataStart + bp.modelViewInversePos).loadMatrix(worldPosition.getInverse());
 	}
 
 	public function dispose() {
