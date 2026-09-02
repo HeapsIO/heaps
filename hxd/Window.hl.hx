@@ -788,6 +788,14 @@ class Window {
 		return [for(m in #if hldx dx.Window.getMonitors() #elseif hlsdl sdl.Sdl.getDisplays() #else [] #end) { name: m.name, width: m.right-m.left, height: m.bottom-m.top}];
 	}
 
+	public function setMaximized(maximized: Bool) : Void {
+		#if (hldx >= version("1.17.0"))
+		window.setZoomed(maximized);
+		#elseif (hlsdl >= version("1.17.0"))
+		window.setMaximized(maximized);
+		#end
+	}
+
 	public function isMaximized() : Bool {
 		#if (hldx >= version("1.17.0"))
 		return window.isZoomed();
