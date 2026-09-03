@@ -968,9 +968,11 @@ class Object {
 		this.scaleX = s.x;
 		this.scaleY = s.y;
 		this.scaleZ = s.z;
-		tmpMat.load(mat);
-		tmpMat.prependScale(1.0 / s.x, 1.0 / s.y, 1.0 / s.z);
-		qRot.initRotateMatrix(tmpMat);
+		if( hxd.Math.abs(s.x) > hxd.Math.EPSILON && hxd.Math.abs(s.y) > hxd.Math.EPSILON && hxd.Math.abs(s.z) > hxd.Math.EPSILON ) {
+			tmpMat.load(mat);
+			tmpMat.prependScale(1.0 / s.x, 1.0 / s.y, 1.0 / s.z);
+			qRot.initRotateMatrix(tmpMat);
+		}
 		posChanged = true;
 	}
 

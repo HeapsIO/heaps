@@ -59,7 +59,7 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 
 	#if hlphysics
 	var interactiveWorld : physics.collision.PhysicsWorld;
-	var interactiveInfos : Map<Interactive, { id : Int, follow : Null<h3d.scene.Object> }>;
+	var interactiveInfos : Map<Interactive, Array<{ id : Int, follow : Null<h3d.scene.Object>, lastTrans : Matrix }>>;
 	var lastSyncFrame = -1;
 	#end
 
@@ -207,44 +207,63 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 		if( lastSyncFrame == hxd.Timer.frameCount )
 			return;
 		lastSyncFrame = hxd.Timer.frameCount;
+		var tmpStartMat = new Matrix();
 		var tmpMat = new Matrix();
+		var tmpScale = new physics.math.Vec3();
 		for( i in interactives ) {
 			if( i.shape == null )
 				continue;
-			var info = interactiveInfos.get(i);
-			if( info == null ) {
-				var follows = [];
-				var col = physics.collision.shapes.Shape.fromHeaps(i.shape, follows);
-				var body = new physics.collision.Body(col);
-				body.setMotionType(Kinematic);
-				body.userData = i;
-				var bodyId = interactiveWorld.addBody(body);
-				info = { id : bodyId, follow : follows[0] };
-				interactiveInfos.set(i, info);
+			var infos = interactiveInfos.get(i);
+			if( infos == null ) {
+				infos = [];
+				for( elt in physics.collision.shapes.Shape.listFromHeaps(i.shape) ) {
+					var body = new physics.collision.Body(elt.shape);
+					body.setMotionType(Kinematic);
+					body.userData = i;
+					var bodyId = interactiveWorld.addBody(body);
+					infos.push({ id : bodyId, follow : elt.follow, lastTrans : Matrix.I() });
+				}
+				interactiveInfos.set(i, infos);
 			}
-			var body = interactiveWorld.getBody(info.id);
 			var p : h3d.scene.Object = i;
 			while( p != null && p.visible )
 				p = p.parent;
 			var visible = p == null;
-			body.collisionGroup = visible ? (i.bestMatch ? CollisionGroup.BestMatch : CollisionGroup.AnyMatch) : CollisionGroup.Invisible;
-			if( i.isAbsoluteShape )
-				tmpMat.identity();
-			else
-				tmpMat.load(i.getAbsPos());
-			var follow = info.follow;
-			if( follow != null ) {
-				var matF = follow.getAbsPos();
-				tmpMat.multiply3x4inline(matF, tmpMat);
+			var collisionGroup = visible ? (i.bestMatch ? CollisionGroup.BestMatch : CollisionGroup.AnyMatch) : CollisionGroup.Invisible;
+			if( visible ) {
+				if( i.isAbsoluteShape )
+					tmpStartMat.identity();
+				else
+					tmpStartMat.load(i.getAbsPos());
 			}
-			var pos = tmpMat.getPosition();
-			var rot = tmpMat.getEulerAngles();
-			var scale = tmpMat.getScale();
-			body.setPosition(pos.x, pos.y, pos.z);
-			body.setRotation(rot.x, rot.y, rot.z);
-			body.setScale(scale.x, scale.y, scale.z);
+			for( info in infos ) {
+				var body = interactiveWorld.getBody(info.id);
+				body.collisionGroup = collisionGroup;
+				if( !visible )
+					continue;
+				tmpMat.load(tmpStartMat);
+				var follow = info.follow;
+				if( follow != null ) {
+					var matF = follow.getAbsPos();
+					tmpMat.multiply3x4inline(matF, tmpMat);
+				}
+				if( tmpMat.equal(info.lastTrans) )
+					continue;
+				var scale = tmpMat.getScale();
+				tmpScale.set(scale.x, scale.y, scale.z);
+				if( physics.math.ScaleHelper.isNearZero(tmpScale) ) {
+					body.collisionGroup = CollisionGroup.Invisible;
+					continue;
+				}
+				info.lastTrans.load(tmpMat);
+				var pos = tmpMat.getPosition();
+				var rot = tmpMat.getEulerAngles();
+				body.setPosition(pos.x, pos.y, pos.z);
+				body.setRotation(rot.x, rot.y, rot.z);
+				body.setScale(scale.x, scale.y, scale.z);
+				interactiveWorld.updateBody(info.id);
+			}
 		}
-		interactiveWorld.update();
 		#end
 	}
 
@@ -256,11 +275,17 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 		var saveR = physics.collision.Ray.fromHeaps(r);
 		var priority = 0x80000000;
 		var allHits = [];
+		var bestHits : Map<Interactive, Float> = [];
 		function onHit( hit : physics.collision.HitResult, bodyId ) {
 			var body = interactiveWorld.getBody(bodyId);
 			var i : Interactive = body.userData;
 			if( i.priority > priority )
 				priority = i.priority;
+			var previous = bestHits.get(i);
+			if( previous != null && hit.fraction >= previous ) {
+				return true;
+			}
+			bestHits.set(i, hit.fraction);
 			var pos = hit.position.toHeaps();
 			if( !i.isAbsoluteShape )
 				pos.transform(i.getInvPos());
@@ -268,7 +293,8 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 			i.hitPoint.y = pos.y;
 			i.hitPoint.z = pos.z;
 			i.hitPoint.w = hit.fraction;
-			allHits.push(i);
+			if( !allHits.contains(i) )
+				allHits.push(i);
 			return true;
 		}
 		interactiveWorld.raycast(saveR, onHit, physics.math.Math.SCALAR_MAX, CollisionGroup.AnyMatch, AnyPerBody);
@@ -331,7 +357,7 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 			var wfactor = 0.;
 
 			// adjust result with better precision
-				if( i.preciseShape != null || !i.bestMatch ) {
+			if( i.preciseShape != null || !i.bestMatch ) {
 				if( !i.isAbsoluteShape )
 					r.transform(m);
 				var hit = (i.preciseShape ?? i.shape).rayIntersection(r, true);
@@ -364,7 +390,9 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 		syncEventTargets();
 		interactiveWorld.collide(shape, physics.math.Vec3.one(), physics.math.Mat.identity(), (contact, bodyId) -> {
 			var body = interactiveWorld.getBody(bodyId);
-			hits.push(body.userData);
+			var interactive : Interactive = body.userData;
+			if( !hits.contains(interactive) )
+				hits.push(interactive);
 			return true;
 		}, CollisionGroup.AnyMatch | CollisionGroup.BestMatch, AnyPerBody);
 		return hits;
@@ -409,10 +437,11 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 			if( events != null ) @:privateAccess events.onRemove(i);
 			hitInteractives.remove(i);
 			#if hlphysics
-			var info = interactiveInfos.get(i);
-			if( info != null ) {
+			var infos = interactiveInfos.get(i);
+			if( infos != null ) {
 				interactiveInfos.remove(i);
-				interactiveWorld.removeBody(info.id);
+				for( info in infos )
+					interactiveWorld.removeBody(info.id);
 			}
 			#end
 		}
