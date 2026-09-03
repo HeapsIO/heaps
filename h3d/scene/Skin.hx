@@ -85,8 +85,9 @@ class DynamicJointData extends JointData {
 	static var tmpVec2 = new Vector(0, 0, 0);
 	static var tmpQ = new Quat();
 
-	public var targetMat : h3d.Matrix;
-	var prevTargetMat : h3d.Matrix;
+	public var curTargetWorld : h3d.Matrix;
+	var curTargetLocal : h3d.Matrix;
+	var prevTargetLocal : h3d.Matrix;
 	var speed : h3d.Vector;
 	var parentQuat : h3d.Quat;
 	var prevParentQuat : h3d.Quat;
@@ -96,8 +97,9 @@ class DynamicJointData extends JointData {
 	}
 
 	public function initData() {
-		targetMat = currentAbsPos.clone();
-		prevTargetMat = currentAbsPos.clone();
+		curTargetWorld = currentAbsPos.clone();
+		curTargetLocal = h3d.Matrix.I();
+		prevTargetLocal = h3d.Matrix.I();
 		speed = new h3d.Vector();
 		parentQuat = new h3d.Quat();
 		prevParentQuat = new h3d.Quat();
@@ -105,13 +107,11 @@ class DynamicJointData extends JointData {
 
 	override function sync(skin: h3d.scene.Skin, j: h3d.anim.Skin.Joint, syncDyn : Bool) {
 		super.sync(skin, j, syncDyn);
-		if (targetMat == null)
+		if (curTargetWorld == null)
 			initData();
 
 		var jParentData : JointData = Std.downcast(skin.jointsData[j.parent.index], JointData);
 		if (syncDyn) {
-			prevTargetMat.load(targetMat);
-
 			// Compute position of the current joint
 			updateJoint(skin, j);
 
@@ -122,10 +122,11 @@ class DynamicJointData extends JointData {
 		var alpha = hxd.Math.clamp(skin.accumulator / Skin.FIXED_DT);
 
 		// Scale and rotation lerping is not needed for current joint since it only translate
-		currentAbsPos.load(targetMat);
-		currentAbsPos._41 = hxd.Math.lerp(prevTargetMat._41, targetMat._41, alpha);
-		currentAbsPos._42 = hxd.Math.lerp(prevTargetMat._42, targetMat._42, alpha);
-		currentAbsPos._43 = hxd.Math.lerp(prevTargetMat._43, targetMat._43, alpha);
+		Skin.TMP_MAT.load(curTargetLocal);
+		Skin.TMP_MAT._41 = hxd.Math.lerp(prevTargetLocal._41, curTargetLocal._41, alpha);
+		Skin.TMP_MAT._42 = hxd.Math.lerp(prevTargetLocal._42, curTargetLocal._42, alpha);
+		Skin.TMP_MAT._43 = hxd.Math.lerp(prevTargetLocal._43, curTargetLocal._43, alpha);
+		currentAbsPos.multiply3x4(Skin.TMP_MAT, jParentData.currentAbsPos);
 
 		if( j.bindIndex >= 0 )
 			skin.currentPalette[j.bindIndex].multiply3x4inline(j.transPos, currentAbsPos);
@@ -144,16 +145,16 @@ class DynamicJointData extends JointData {
 
 	function updateJoint(skin: h3d.scene.Skin, j: h3d.anim.Skin.Joint) {
 		var j : DynamicJoint = cast j;
-		if (targetMat == null) {
-			targetMat = new h3d.Matrix();
-			targetMat.load(currentAbsPos);
+		if (curTargetWorld == null) {
+			curTargetWorld = new h3d.Matrix();
+			curTargetWorld.load(currentAbsPos);
 		}
 
-		var prevPos = targetMat.getPosition();
+		var prevPos = curTargetWorld.getPosition();
 		var nextPos = prevPos.clone();
 
 		var jParent = skin.jointsData[j.parent.index];
-		var jParentMat = Std.downcast(jParent, DynamicJointData)?.targetMat ?? jParent.currentAbsPos;
+		var jParentMat = Std.downcast(jParent, DynamicJointData)?.curTargetWorld ?? jParent.currentAbsPos;
 
 		// Resistance (force resistance)
 		speed.load(speed + j.globalForce * (1.0 - j.resistance));
@@ -196,7 +197,11 @@ class DynamicJointData extends JointData {
 		// Apply computed position to joint
 		speed.load((speed + (nextPos - prevPos) * (1.0 / Skin.FIXED_DT)) * 0.5);
 		currentAbsPos.setPosition(nextPos);
-		targetMat.load(currentAbsPos);
+		curTargetWorld.load(currentAbsPos);
+
+		prevTargetLocal.load(curTargetLocal);
+		jParentMat.getInverse(Skin.TMP_MAT);
+		curTargetLocal.multiply3x4(currentAbsPos, Skin.TMP_MAT);
 	}
 
 	function updateParentRotation(skin: h3d.scene.Skin, j: h3d.anim.Skin.Joint) {
@@ -211,7 +216,7 @@ class DynamicJointData extends JointData {
 			tmpVec.load(j.defMat.getPosition().normalized());
 			var tmpMat = Skin.TMP_MAT;
 			jParentData.currentAbsPos.getInverse(tmpMat);
-			tmpMat.multiply(targetMat, tmpMat);
+			tmpMat.multiply(curTargetWorld, tmpMat);
 			tmpVec2.load(tmpMat.getPosition().normalized());
 			parentQuat.initMoveTo(tmpVec, tmpVec2);
 		} else {
