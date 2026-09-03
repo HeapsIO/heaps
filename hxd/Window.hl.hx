@@ -47,6 +47,8 @@ class Window {
 	var dropFiles : Array<hxd.DropFileEvent.DroppedFile>;
 
 	public var id : Int;
+	public var x(get, never) : Int;
+	public var y(get, never) : Int;
 	public var width(get, never) : Int;
 	public var height(get, never) : Int;
 	public var mouseX(get, never) : Int;
@@ -208,6 +210,12 @@ class Window {
 		for( f in resizeEvents ) f();
 	}
 
+	public function setPosition(x: Int, y: Int) {
+		#if (hldx || hlsdl)
+		window.setPosition(x, y);
+		#end
+	}
+
 	public function addDragAndDropTarget( f : ( event : DropFileEvent ) -> Void ) : Void {
 		if (dropTargets.length == 0) {
 			#if (hlsdl >= version("1.14.0"))
@@ -260,6 +268,14 @@ class Window {
 		#end
 	}
 
+	function get_x() : Int {
+		return window.x;
+	}
+
+	function get_y() : Int {
+		return window.y;
+	}
+	
 	function get_mouseX() : Int {
 		return curMouseX;
 	}
