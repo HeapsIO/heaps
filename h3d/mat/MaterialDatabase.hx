@@ -91,7 +91,7 @@ class MaterialDatabase {
 		Reflect.deleteField(root, specName);
 
 		if ( defaultProps == null ) defaultProps = material.getDefaultProps();
-		if( currentProps == null || Std.string(defaultProps) == Std.string(currentProps) ) {
+		if( currentProps == null || haxe.Json.stringify(defaultProps) == haxe.Json.stringify(currentProps) ) {
 			// cleanup
 			while( path.length > 0 ) {
 				var name = path.pop();
@@ -101,7 +101,8 @@ class MaterialDatabase {
 				Reflect.deleteField(root, name);
 			}
 		} else {
-			Reflect.setField(root, modelSpec ? specName : name, currentProps);
+			var props = Std.downcast(currentProps, PbrMaterial.PbrProps);
+			Reflect.setField(root, modelSpec ? specName : name, props == null ? currentProps : props.save());
 		}
 
 		var file = getFilePath(material.model);
