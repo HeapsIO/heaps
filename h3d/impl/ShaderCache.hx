@@ -39,7 +39,7 @@ class ShaderCache {
 	}
 
 	public function load() {
-		data = new Map();
+		initEmpty();
 		try loadFile(file) catch( e : Dynamic ) {};
 		if( outputFile != file ) try loadFile(outputFile) catch( e : Dynamic ) {};
 		if( keepSource ) try loadSources() catch( e : Dynamic ) {};
@@ -53,16 +53,17 @@ class ShaderCache {
 			return;
 		var cache = new haxe.io.BytesInput(sys.io.File.getBytes(file));
 
+		var curPos = 0;
 		var hasVersion = cache.readString(VERSION_KEY_WORD.length) == VERSION_KEY_WORD;
-		var curPos = cache.position;
 		if ( !hasVersion )
-			cache.position = curPos = 0;
+			cache.position = 0;
 		else {
 			var version = cache.readInt32();
 			if(version != VERSION) {
 				trace('Shader cache version $version, expected $VERSION, skipping');
 				return;
 			}
+			curPos = cache.position;
 		}
 
 		var hasMode = cache.readString(MODE_KEY_WORD.length) == MODE_KEY_WORD;
@@ -135,10 +136,7 @@ class ShaderCache {
 		if( data == null ) load();
 		var encodedSource = haxe.crypto.Md5.encode(source);
 		var key = configurationKey + encodedSource;
-		var bytes = data.get(key);
-		//if ( bytes == null )
-		//	trace("Can't found key : " + key);
-		return data.get(configurationKey + encodedSource);
+		return data.get(key);
 	}
 
 	var saveTimer : haxe.Timer;
