@@ -3,7 +3,7 @@ package h3d.impl;
 #if !js
 
 #if hl
-@:forward(setI32,setUI8,setUI16,getUI8,getUI16,getI32,setF32,getF32,sub)
+@:forward(setI32,setUI8,setUI16,getUI8,getUI16,getI32,setF32,getF32,sub,blit)
 private abstract Bytes(hl.Bytes) from hl.Bytes to hl.Bytes {
 	public function new(size) this = new hl.Bytes(size);
 	public inline function compare( bytes : Bytes, size : Int ) {
@@ -51,15 +51,93 @@ private abstract Bytes(haxe.io.Bytes) from haxe.io.Bytes {
 	public var pipeline : T;
 	public function new() {
 	}
+
+	public function getFields() : Array<{ name : String, value : String }> @:privateAccess {
+		inline function depthFormatName( idx : Int ) : String {
+			if( idx == 0 )
+				return "none";
+			return try Std.string(Type.createEnumIndex(hxd.PixelFormat, idx)) catch( e : Dynamic ) 'invalid($idx)';
+		}
+
+		inline function rtFormatName( rtBits : Int ) : String {
+			if( rtBits == 0 )
+				return "-";
+			return try Std.string(@:privateAccess PipelineBuilder.getRTFormat(rtBits)) catch( e : Dynamic ) 'invalid($rtBits)';
+		}
+
+		var b = bytes;
+		var matId = b.getI32(PipelineBuilder.PSIGN_MATID);
+		var out = [{ name : "matId", value : '$matId' }];
+		for( f in h3d.mat.Pass.bitsToFields(matId) )
+			out.push(f);
+		out.push({ name : "colorMask", value : '${b.getUI8(PipelineBuilder.PSIGN_COLOR_MASK)}' });
+		out.push({ name : "depthBias",   value : '${b.getF32(PipelineBuilder.PSIGN_DEPTH_BIAS)}' });
+		out.push({ name : "slopeBias",   value : '${b.getF32(PipelineBuilder.PSIGN_SLOPE_SCALED_DEPTH_BIAS)}' });
+		out.push({ name : "stencilMask", value : '${b.getUI16(PipelineBuilder.PSIGN_STENCIL_MASK)}' });
+		out.push({ name : "stencilOps",  value : '${b.getI32(PipelineBuilder.PSIGN_STENCIL_OPS)}' });
+		out.push({ name : "depthFormat", value : depthFormatName(b.getI32(PipelineBuilder.PSIGN_DEPTH_TARGET_FORMAT)) });
+		for( i in 0...8 )
+			out.push({ name : 'rt$i', value : rtFormatName(b.getUI8(PipelineBuilder.PSIGN_RENDER_TARGETS + i)) });
+		var inputCount = (size - PipelineBuilder.PSIGN_LAYOUT) >> PipelineBuilder.SHIFT_PER_BUFFER;
+		for( i in 0...inputCount )
+			out.push({ name : 'input$i', value : '${b.getUI16(PipelineBuilder.PSIGN_LAYOUT + (i << PipelineBuilder.SHIFT_PER_BUFFER))}' });
+		return out;
+	}
+
+	public function toString() {
+		var buf = new StringBuf();
+		for( i => f in getFields() ) {
+			if( i > 0 ) buf.add(" ");
+			buf.add(f.name);
+			buf.add("=");
+			buf.add(f.value);
+		}
+		return buf.toString();
+	}
 }
 
-@:forward(get,set)
+@:forward(get,set,keys)
 abstract PipelineCache<T>(Map<Int,#if hl hl.NativeArray #else Array #end<CachedPipeline<T>>>) {
 
 	public function new() {
 		this = new Map();
 	}
 
+	public function diff( cp : CachedPipeline<T>, max = 3 ) : String {
+		inline function diffFields( a, b ) : Array<String> {
+			var fa = a.getFields(), fb = b.getFields();
+			var out = [];
+			var n = fa.length < fb.length ? fa.length : fb.length;
+			for( i in 0...n )
+				if( fa[i].value != fb[i].value )
+					out.push('${fa[i].name} ${fa[i].value} -> ${fb[i].value}');
+			if( fa.length != fb.length )
+				out.push('inputCount ${fa.length} -> ${fb.length}');
+			return out;
+		}
+
+		var results = [];
+		for( p in this ) @:privateAccess {
+			for( i in 0...p.length ) {
+				var other = p[i];
+				if( other == null || other == cp )
+					continue;
+				results.push({ entry : other, diffs : diffFields(cp, other) });
+			}
+		}
+		if( results.length == 0 )
+			return "no other entries to compare against";
+		results.sort((a, b) -> a.diffs.length - b.diffs.length);
+
+		var buf = new StringBuf();
+		buf.add('closest of ${results.length} entries:');
+		for( i in 0...(results.length < max ? results.length : max) ) {
+			var r = results[i];
+			buf.add('\n  ');
+			buf.add(r.diffs.length == 0 ? "identical fields (error?)" : r.diffs.join(", "));
+		}
+		return buf.toString();
+	}
 }
 
 class DepthProps {
@@ -126,6 +204,32 @@ class PipelineBuilder {
 		}
 	}
 
+	static function getRTFormat( rtBits : Int ) : hxd.PixelFormat {
+		var channels = (rtBits & 3) + 1;
+		var format = (rtBits >> 2) - 1;
+		return switch( [channels, format] ) {
+		case [1, 0]: R8;
+		case [2, 0]: RG8;
+		case [3, 0]: RGB8;
+		case [4, 0]: RGBA;
+		case [1, 1]: R16F;
+		case [2, 1]: RG16F;
+		case [3, 1]: RGB16F;
+		case [4, 1]: RGBA16F;
+		case [1, 2]: R32F;
+		case [2, 2]: RG32F;
+		case [3, 2]: RGB32F;
+		case [4, 2]: RGBA32F;
+		case [1, 3]: R16U;
+		case [2, 3]: RG16U;
+		case [3, 3]: RGB16U;
+		case [4, 3]: RGBA16U;
+		case [2, 4]: RG11B10UF;
+		case [3, 4]: RGB10A2;
+		default: throw "Invalid RT bits "+ rtBits;
+		}
+	}
+
 	public inline function setShader( sh : hxsl.RuntimeShader ) {
 		needFlush = sh.mode != Compute;
 	}
@@ -171,15 +275,25 @@ class PipelineBuilder {
 	}
 
 	public function setRenderTargets( textures : Array<h3d.mat.Texture>, depth : h3d.mat.Texture  ) {
-		var bits = 0;
 		for( i => t in textures )
 			signature.setUI8(PSIGN_RENDER_TARGETS + i, getRTBits(t));
 		for ( i in textures.length...8)
 			signature.setUI8(PSIGN_RENDER_TARGETS + i, 0);
-		var tex = textures[0];
 		var format = depth == null ? 0 : depth.format.getIndex();
 		signature.setI32(PSIGN_DEPTH_TARGET_FORMAT, format);
 		needFlush = true;
+	}
+
+	public function getRenderTargetsCount() {
+		var rtCount = 0;
+		for( i in 0...8 )
+			rtCount += signature.getUI8(PSIGN_RENDER_TARGETS + i) != 0 ? 1 : 0;
+		return rtCount;
+	}
+
+	public function getRenderTargetFormat(i : Int) {
+		var rtBits = signature.getUI8(PSIGN_RENDER_TARGETS + i);
+		return rtBits != 0 ? getRTFormat(rtBits) : null;
 	}
 
 	public function selectMaterial( pass : h3d.mat.Pass ) @:privateAccess {
@@ -197,7 +311,7 @@ class PipelineBuilder {
 	}
 
 	public inline function setBuffer( i : Int, inf : hxd.BufferFormat.BufferMapping, stride : Int ) {
-		if( inf.offset >= 256 ) throw "assert";
+		if( inf.offset >= 256 || (inf.offset & 3) != 0 ) throw "assert";
 		signature.setUI16(PSIGN_LAYOUT + (i<<SHIFT_PER_BUFFER), (inf.offset << 1) | inf.precision.toInt());
 		#if js
 		signature.setUI16(PSIGN_LAYOUT + (i<<SHIFT_PER_BUFFER) + 2, stride);
@@ -270,13 +384,12 @@ class PipelineBuilder {
 				return p;
 		}
 		if( insert < 0 ) {
+			insert = pipes.length;
 			#if hl
 			var pipes2 = new hl.NativeArray(pipes.length + 1);
 			pipes2.blit(0, pipes, 0, insert);
 			cache.set(hash, pipes2);
 			pipes = pipes2;
-			#else
-			insert = pipes.length + 1;
 			#end
 		}
 		var cp = new CachedPipeline<T>();
@@ -285,7 +398,5 @@ class PipelineBuilder {
 		pipes[insert] = cp;
 		return cp;
 	}
-
-
 }
 #end

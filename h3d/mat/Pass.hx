@@ -391,6 +391,42 @@ class Pass {
 		if (stencil != null) p.stencil = stencil.clone();
 		return p;
 	}
-	#end
 
+	public static function bitsToFields( bits : Int ) : Array<{ name : String, value : String }> {
+		static var FACES : Array<h3d.mat.Data.Face> = Type.allEnums(h3d.mat.Data.Face);
+		static var COMPARES : Array<h3d.mat.Data.Compare> = Type.allEnums(h3d.mat.Data.Compare);
+		static var BLENDS : Array<h3d.mat.Data.Blend> = Type.allEnums(h3d.mat.Data.Blend);
+		static var OPS : Array<h3d.mat.Data.Operation> = Type.allEnums(h3d.mat.Data.Operation);
+
+		inline function shiftOf( mask : Int ) {
+			var s = 0;
+			while( mask & 1 == 0 ) { mask >>>= 1; s++; }
+			return s;
+		}
+
+		inline function get( bits : Int, mask : Int ) : Int {
+			return (bits & mask) >>> shiftOf(mask);
+		}
+
+		inline function name<T>( values : Array<T>, idx : Int ) : String {
+			return idx < values.length ? Std.string(values[idx]) : 'invalid($idx)';
+		}
+
+		inline function b( mask ) return get(bits, mask) != 0 ? "true" : "false";
+
+		return [
+			{ name : "culling",       value : name(FACES,    get(bits, Pass.culling_mask)) },
+			{ name : "depthWrite",    value : b(Pass.depthWrite_mask) },
+			{ name : "depthClamp",    value : b(Pass.depthClamp_mask) },
+			{ name : "depthTest",     value : name(COMPARES, get(bits, Pass.depthTest_mask)) },
+			{ name : "blendSrc",      value : name(BLENDS,   get(bits, Pass.blendSrc_mask)) },
+			{ name : "blendDst",      value : name(BLENDS,   get(bits, Pass.blendDst_mask)) },
+			{ name : "blendAlphaSrc", value : name(BLENDS,   get(bits, Pass.blendAlphaSrc_mask)) },
+			{ name : "blendAlphaDst", value : name(BLENDS,   get(bits, Pass.blendAlphaDst_mask)) },
+			{ name : "blendOp",       value : name(OPS,      get(bits, Pass.blendOp_mask)) },
+			{ name : "blendAlphaOp",  value : name(OPS,      get(bits, Pass.blendAlphaOp_mask)) },
+			{ name : "wireframe",     value : b(Pass.wireframe_mask) },
+		];
+	}
+	#end
 }
