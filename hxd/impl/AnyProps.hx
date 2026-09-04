@@ -18,6 +18,10 @@ class AnyProps {
 		return {};
 	}
 
+	public function loadProps( v : Dynamic ) : Any {
+		return v;
+	}
+
 	public function refreshProps() {
 	}
 

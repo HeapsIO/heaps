@@ -30,6 +30,11 @@ class MaterialSetup {
 		return emptyMat.getDefaultProps(kind);
 	}
 
+	public function loadProps( v : Dynamic ) : Any {
+		if( emptyMat == null ) emptyMat = createMaterial();
+		return emptyMat.loadProps(v);
+	}
+
 	public function loadMaterialProps( material : h3d.mat.Material ) {
 		return database.loadMatProps(material, this);
 	}
