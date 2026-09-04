@@ -372,7 +372,7 @@ class CacheFile2 extends Cache {
 		}
 
 		var magic = readLine();
-		if( !StringTools.startsWith(magic, 'CF2-$VERSION') ) {
+		if( magic != 'CF2-$VERSION' ) {
 			f.close();
 			return false;
 		}
