@@ -385,16 +385,16 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 	}
 
 	#if hlphysics
-	public function collideEventTargets( shape : physics.collision.shapes.Shape ) : Array<Interactive> {
+	public function getEventTargetsInFrustum( shape : physics.collision.shapes.FrustumShape ) : Array<Interactive> {
 		var hits = [];
 		syncEventTargets();
-		interactiveWorld.collide(shape, physics.math.Vec3.one(), physics.math.Mat.identity(), (contact, bodyId) -> {
+		interactiveWorld.overlapFrustum(shape, physics.math.Vec3.one(), physics.math.Mat.identity(), (bodyId) -> {
 			var body = interactiveWorld.getBody(bodyId);
 			var interactive : Interactive = body.userData;
 			if( !hits.contains(interactive) )
 				hits.push(interactive);
 			return true;
-		}, CollisionGroup.AnyMatch | CollisionGroup.BestMatch, AnyPerBody);
+		}, CollisionGroup.AnyMatch | CollisionGroup.BestMatch);
 		return hits;
 	}
 	#end
