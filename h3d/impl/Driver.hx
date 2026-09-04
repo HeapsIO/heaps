@@ -247,6 +247,9 @@ class Driver {
 		return null;
 	}
 
+	public function warmupShader( shader : hxsl.RuntimeShader ) {
+	}
+
 	function logImpl( str : String ) {
 	}
 
