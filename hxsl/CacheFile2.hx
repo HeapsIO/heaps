@@ -313,7 +313,7 @@ class CacheFile2 extends Cache {
 	override function compileRuntimeShader( shaders : hxsl.ShaderList, mode ) {
 		var rt = super.compileRuntimeShader(shaders, mode);
 		if( !isLoading ) {
-			log("Compiled runtime shader (" + mode.getName() + "): " + rt.spec.signature + ":" + [for( inst in rt.spec.instances ) @:privateAccess inst.shader.data.name].join(":"));
+			log("Compiled runtime shader (" + mode.getName() + "): " + rt.spec.signature + ":" + [for( inst in rt.spec.instances ) @:privateAccess inst.shader.data.name +'@${inst.bits}'].join(":"));
 		}
 		#if heaps_mt_hxsl_cache
 		var acquired = false;
