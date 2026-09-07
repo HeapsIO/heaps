@@ -38,6 +38,7 @@ enum abstract TonemapMap(String) {
 	var Linear = "Linear";
 	var Reinhard = "Reinhard";
 	var Filmic = "Filmic";
+	var KhronosNeutral = "KhronosNeutral";
 }
 
 typedef RenderProps = {
@@ -774,6 +775,7 @@ class Renderer extends h3d.scene.Renderer {
 			case Linear: 0;
 			case Reinhard: 1;
 			case Filmic: 2;
+			case KhronosNeutral: 3;
 			default: 0;
 		};
 		if ( toneMode == Filmic ) {
@@ -1081,6 +1083,7 @@ class Renderer extends h3d.scene.Renderer {
 							<option value="Linear">Linear</option>
 							<option value="Reinhard">Reinhard</option>
 							<option value="Filmic">Filmic</option>
+							<option value="KhronosNeutral">Khronos Neutral</option>
 						</select>
 					</dd>
 					<dt>Filmic a</dt><dd><input type="range" min="0" max="5" field="a"></dd>

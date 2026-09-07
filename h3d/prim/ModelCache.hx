@@ -6,7 +6,7 @@ typedef HideProps = {
 
 class ModelCache {
 
-	var models : Map<String, { lib : hxd.fmt.hmd.Library, props : HideProps, col : Array<h3d.col.TransformCollider>, lastTime : Float }>;
+	var models : Map<String, { lib : hxd.fmt.hmd.Library, props : HideProps, col : Array<h3d.col.TransformCollider>, textures : Map<String, h3d.mat.Texture>, lastTime : Float }>;
 	var textures : Map<String, h3d.mat.Texture>;
 	var anims : Map<String, h3d.anim.Animation>;
 
@@ -17,8 +17,11 @@ class ModelCache {
 	}
 
 	public function dispose() {
-		for( m in models )
+		for( m in models ) {
 			m.lib.dispose();
+			for( t in m.textures )
+				t.dispose();
+		}
 		for( t in textures )
 			t.dispose();
 		anims = new Map();
@@ -41,13 +44,17 @@ class ModelCache {
 				var propsRes = hxd.res.Loader.currentInstance.load(parts.join("."));
 				propsRes.watch(() -> {
 					// Clear this anim cache so the anim and it's props are reloaded the next time they are requested
+					var old = models.get(path);
+					if( old != null )
+						for( t in old.textures )
+							t.dispose();
 					models.remove(path);
 					anims.remove(path);
 				});
 				haxe.Json.parse(propsRes.toText());
 			} catch( e : hxd.res.NotFound )
 				null;
-			m = { lib : res.toHmd(), props : props, col : null, lastTime : 0. };
+			m = { lib : res.toHmd(), props : props, col : null, textures : new Map(), lastTime : 0. };
 			models.set(path, m);
 		}
 		m.lastTime = haxe.Timer.stamp();
@@ -56,7 +63,11 @@ class ModelCache {
 
 	public function loadModel( res : hxd.res.Model ) : h3d.scene.Object {
 		var m = loadLibraryData(res);
-		return m.lib.makeObject(texturePath -> loadTexture(res, texturePath));
+		var cache = m.textures;
+		return m.lib.makeObject(function(texturePath) {
+			var t = cache.get(texturePath);
+			return t != null ? t : loadTexture(res, texturePath);
+		});
 	}
 
 	public function loadCollider( res : hxd.res.Model ) {
@@ -84,11 +95,9 @@ class ModelCache {
 		return m.col;
 	}
 
-	public function loadTexture( model : hxd.res.Model, texturePath, async = false ) : h3d.mat.Texture {
-		var fullPath = texturePath;
-		if(model != null)
-			fullPath = model.entry.path + "@" + fullPath;
-		var t = textures.get(fullPath);
+	public function loadTexture( model : hxd.res.Model, texturePath : String, async = false ) : h3d.mat.Texture {
+		var cache = model == null ? textures : loadLibraryData(model).textures;
+		var t = cache.get(texturePath);
 		if( t != null )
 			return t;
 		var tres;
@@ -115,13 +124,13 @@ class ModelCache {
 				tres = hxd.res.Loader.currentInstance.load(path);
 			} catch( e : hxd.res.NotFound ) {
 				// force good path error
-				throw error + (model != null ? " fullpath : " + fullPath : "");
+				throw error + (model != null ? " fullpath : " + model.entry.path + "@" + texturePath : "");
 			}
 		}
 		var img = tres.toImage();
 		img.enableAsyncLoading = async;
 		t = img.toTexture();
-		textures.set(fullPath, t);
+		cache.set(texturePath, t);
 		return t;
 	}
 
@@ -164,6 +173,8 @@ class ModelCache {
 					m.lastTime = now;
 				else {
 					models.remove(m.lib.resource.entry.path);
+					for( t in m.textures )
+						t.dispose();
 					m.lib.dispose();
 				}
 			}
