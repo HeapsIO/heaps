@@ -269,13 +269,21 @@ class Window {
 	}
 
 	function get_x() : Int {
+		#if (hlsdl || hldx)
 		return window.x;
+		#else
+		return 0;
+		#end
 	}
 
 	function get_y() : Int {
+		#if (hlsdl || hldx)
 		return window.y;
+		#else
+		return 0;
+		#end
 	}
-	
+
 	function get_mouseX() : Int {
 		return curMouseX;
 	}
