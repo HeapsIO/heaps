@@ -44,6 +44,7 @@ class Library {
 	var cachedPrimitives : Array<h3d.prim.HMDModel>;
 	var cachedAnimations : Map<String, h3d.anim.Animation>;
 	var cachedSkin : Map<String, h3d.anim.Skin>;
+	var cachedMaterials : Array<h3d.mat.Material>;
 
 	#if (sys || nodejs)
 	static var defaultModelConfigs : Map<String, h3d.prim.ModelDatabase.ModelProps> = new Map();
@@ -55,6 +56,7 @@ class Library {
 		cachedPrimitives = [];
 		cachedAnimations = new Map();
 		cachedSkin = new Map();
+		cachedMaterials = [];
 	}
 
 	public function getData() {
@@ -315,35 +317,66 @@ class Library {
 			if( p != null )
 				p.decref();
 		cachedPrimitives = [];
+		cachedMaterials = [];
 	}
 
 	function makeMaterial( model : Model, mid : Int, loadTexture : String -> h3d.mat.Texture ) {
-		var m = header.materials[mid];
-		var mat = h3d.mat.MaterialSetup.current.createMaterial();
-		mat.name = m.name;
-		mat.model = resource;
-		mat.blendMode = m.blendMode;
-		var props = h3d.mat.MaterialSetup.current.loadMaterialProps(mat);
-		if( props == null ) props = mat.getDefaultModelProps();
-		#if hide
-		if( (props:Dynamic).__ref != null ) {
-			try {
-				if ( setupMaterialLibrary(loadTexture, mat, hxd.res.Loader.currentInstance.load((props:Dynamic).__ref).toPrefab(), (props:Dynamic).name) )
-					return mat;
-			} catch( e : Dynamic ) {}
-			props = mat.getDefaultModelProps();
+		var mat = cachedMaterials[mid];
+		if( mat == null ) {
+			var m = header.materials[mid];
+			mat = h3d.mat.MaterialSetup.current.createMaterial();
+			mat.name = m.name;
+			mat.model = resource;
+			mat.blendMode = m.blendMode;
+			var props = h3d.mat.MaterialSetup.current.loadMaterialProps(mat);
+			if( props == null ) props = mat.getDefaultModelProps();
+			#if hide
+			if( (props:Dynamic).__ref != null ) {
+				try {
+					if ( setupMaterialLibrary(loadTexture, mat, hxd.res.Loader.currentInstance.load((props:Dynamic).__ref).toPrefab(), (props:Dynamic).name) ){
+						cachedMaterials[mid] = mat;
+						return deepCopyMaterial(mat);
+					}
+				} catch( e : Dynamic ) {}
+				props = mat.getDefaultModelProps();
+			}
+			#end
+			if( m.diffuseTexture != null ) {
+				mat.texture = loadTexture(m.diffuseTexture);
+				if( mat.texture == null ) mat.texture = h3d.mat.Texture.fromColor(0xFF00FF);
+			}
+			if( m.specularTexture != null )
+				mat.specularTexture = loadTexture(m.specularTexture);
+			if( m.normalMap != null )
+				mat.normalMap = loadTexture(m.normalMap);
+			mat.props = props;
+			cachedMaterials[mid] = mat;
 		}
-		#end
-		if( m.diffuseTexture != null ) {
-			mat.texture = loadTexture(m.diffuseTexture);
-			if( mat.texture == null ) mat.texture = h3d.mat.Texture.fromColor(0xFF00FF);
+		return deepCopyMaterial(mat);
+	}
+
+	function deepCopyMaterial( src : h3d.mat.Material ) : h3d.mat.Material {
+		var m : h3d.mat.Material = Type.createEmptyInstance(Type.getClass(src));
+		@:bypassAccessor {
+			m.name = src.name;
+			m.model = src.model;
+			m.props = src.props;
+			m.blendMode = src.blendMode;
+			m.castShadows = src.castShadows;
+			m.receiveShadows = src.receiveShadows;
+			m.staticShadows = src.staticShadows;
 		}
-		if( m.specularTexture != null )
-			mat.specularTexture = loadTexture(m.specularTexture);
-		if( m.normalMap != null )
-			mat.normalMap = loadTexture(m.normalMap);
-		mat.props = props;
-		return mat;
+		@:privateAccess {
+			var passes = src.getPasses();
+			for( p in passes )
+				m.addPass(p.clone(p.parentPass == null ? null : m.mainPass));
+			m.mshader = m.mainPass.getShader(h3d.shader.BaseMesh);
+			m.textureShader = m.mainPass.getShader(h3d.shader.Texture);
+			m.normalShader = m.mainPass.getShader(h3d.shader.NormalMap);
+			m.specularShader = m.mainPass.getShader(h3d.shader.SpecularTexture);
+			m.mshader.color = src.mshader.color.clone();
+		}
+		return m;
 	}
 
 	@:access(h3d.anim.Skin)
@@ -857,8 +890,15 @@ class Library {
 
 	#if hide
 	static var materialContainer : h3d.scene.Mesh;
+	static var materialLibraryCache : Map<String, hrt.prefab.Material> = new Map();
+
     public dynamic static function setupMaterialLibrary( loadTexture : String -> h3d.mat.Texture, mat : h3d.mat.Material, lib : hrt.prefab.Resource, name : String ) {
-        var m  = lib.load().getOpt(hrt.prefab.Material,name);
+		var key = lib.entry.path + "/" + name;
+		var m = materialLibraryCache.get(key);
+		if( m == null ) {
+			m = lib.load().getOpt(hrt.prefab.Material, name);
+			materialLibraryCache.set(key, m);
+		}
         if ( m == null )
             return false;
 
