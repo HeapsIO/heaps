@@ -13,6 +13,10 @@ typedef BrowseOptions = {
 	?saveFileName : String -> Void,
 	/** this will be called when saving a file, and allow you to write it again without displaying the browser, if supported **/
 	?writeFile : (haxe.io.Bytes -> Void) -> Void,
+#if (hl_ver >= version("2.0.0"))
+	/** if we should prompt the user for a folder instead of a file**/
+	?isFolder : Bool,
+#end
 };
 
 typedef BrowseSelect = {
@@ -33,6 +37,9 @@ class File {
 				fileName : options.defaultPath,
 				filters : options.fileTypes == null ? null : [for( e in options.fileTypes ) { name : e.name, exts : e.extensions }],
 				title : options.title,
+#if (hl_ver >= version("2.0.0"))
+				isFolder : options.isFolder,
+#end
 			});
 			hxd.System.allowTimeout = old;
 			if( path == null ) return;
