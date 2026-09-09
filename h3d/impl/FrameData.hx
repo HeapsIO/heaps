@@ -15,7 +15,7 @@ class FrameDataImpl {
 		tail = 0;
 		full = false;
 	}
-	function get_length() {
+	function get_length() : Int {
 		return full ? max : ( head >= tail ? head - tail : max + head - tail );
 	}
 	public function push( v : Float ) {
@@ -37,6 +37,30 @@ class FrameDataImpl {
 		if( i >= max )
 			i -= max;
 		return arr[i];
+	}
+
+	var medianValues : Array<Float> = [];
+	public function getMedian() : Float {
+		function fillMedianValues() {
+			if(medianValues.length != arr.length){
+				medianValues.resize(arr.length);
+			}
+			var cursor = 0;
+			if(head > tail) {
+				for(i in tail...head)
+					medianValues[cursor++] = arr[i];
+			} else {
+				for(i in tail...max)
+					medianValues[cursor++] = arr[i];
+				for(i in 0...head)
+					medianValues[cursor++] = arr[i];
+			}
+			return cursor;
+		}
+
+		var n = fillMedianValues();
+		medianValues.slice(0,n).sort(function(a: Float, b: Float) return a > b ? 1 : (a < b ? -1 : 0));
+		return medianValues[Std.int(n / 2)];
 	}
 }
 
