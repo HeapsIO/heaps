@@ -33,12 +33,14 @@ class PointShadowMap extends CubeShadowMap {
 		pshader.lightPos.load(light.getAbsPos().getPosition());
 		pshader.zFar = pointLight.range;
 
-		pshader.SAMPLING_MODE = samplingKind;
 		// ESM
+		pshader.USE_ESM = samplingKind == ESM;
 		pshader.shadowPower = power;
 
 		// PCF
+		pshader.USE_PCF = samplingKind == PCF;
 		pshader.pcfScale = pcfScale / 100.0;
+		pshader.pcfQuality = pcfQuality;
 	}
 
 	override function createCollider(light : h3d.scene.Light) {

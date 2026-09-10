@@ -177,16 +177,20 @@ class DirShadowMap extends Shadows {
 
 	override function syncShader(texture) {
 		dshader.shadowMap = texture;
+		dshader.shadowMapChannel = format == h3d.mat.Texture.nativeFormat ? PackedFloat : R;
 		dshader.shadowBias = bias;
 		dshader.shadowPower = power;
 		dshader.shadowViewProj = getShadowViewProj();
-		dshader.SAMPLING_MODE = samplingKind;
 
 		//ESM
+		dshader.USE_ESM = samplingKind == ESM;
 		dshader.shadowPower = power;
 
 		// PCF
-		dshader.pcfScale = pcfScale / texture.width;
+		dshader.USE_PCF = samplingKind == PCF;
+		dshader.shadowRes.set(texture.width,texture.height);
+		dshader.pcfScale = pcfScale;
+		dshader.pcfQuality = pcfQuality;
 	}
 
 	override function saveStaticData() {
