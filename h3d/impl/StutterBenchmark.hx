@@ -34,12 +34,20 @@ class StutterBenchmark {
 	var median : Float = 0;
 	var frameWithoutStutter : Int = 0;
 
+	var cpuStart : Float = 0;
+	var cpuEnd : Float = 0;
+
 	public function new() {
 		frames = new FrameData(MAX_FRAME_COUNT);
 	}
 
-    public function update( dt : Float ) {
-		var dtInMs = dt * 1000;
+	public function begin() {
+		cpuStart = haxe.Timer.stamp();
+	}
+
+	public function end() {
+		cpuEnd = haxe.Timer.stamp();
+		var dtInMs = (cpuEnd - cpuStart) * 1000.0;
 		if(isStutter(dtInMs)){
 			if(frameWithoutStutter > 1){
 				stutters.push(new Stutter(dtInMs - median));
