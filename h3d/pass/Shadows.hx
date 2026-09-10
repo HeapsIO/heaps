@@ -7,11 +7,12 @@ enum RenderMode {
 	Mixed;
 }
 
-enum ShadowSamplingKind {
-		None;
-		PCF;
-		ESM;
-	}
+// Keep in sync with h3d.shader.ShadowSampling
+enum abstract ShadowSamplingKind(Int) to Int {
+	var None = 0;
+	var ESM = 1;
+	var PCF = 2;
+}
 
 class Shadows extends Output {
 

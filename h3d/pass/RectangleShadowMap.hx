@@ -1,7 +1,5 @@
 package h3d.pass;
 
-import h3d.scene.pbr.RectangleLight;
-
 class RectangleShadowMap extends CubeShadowMap {
 
 	var pshader : h3d.shader.PointShadow;
@@ -36,14 +34,12 @@ class RectangleShadowMap extends CubeShadowMap {
 		pshader.lightPos = light.getAbsPos().getPosition();
 		pshader.zFar = rectangleLight.range;
 
+		pshader.SAMPLING_MODE = samplingKind;
 		// ESM
-		pshader.USE_ESM = samplingKind == ESM;
 		pshader.shadowPower = power;
 
 		// PCF
-		pshader.USE_PCF = samplingKind == PCF;
-		pshader.pcfScale = pcfScale / 100.0;
-		pshader.pcfQuality = pcfQuality;
+		pshader.pcfScale = pcfScale / ( 100.0 * texture.width );
 	}
 
 	override function createCollider(light : h3d.scene.Light) {

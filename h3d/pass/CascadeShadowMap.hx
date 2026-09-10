@@ -244,23 +244,16 @@ class CascadeShadowMap extends DirShadowMap {
 			if ( debugShader )
 				cshader.cascadeDebugs[i] = h3d.Vector4.fromColor(debugColors[i]);
 		}
-		if(cascade > cshader.MAX_CASCADE_COUNT)
-			cshader.MAX_CASCADE_COUNT = cascade;
-		cshader.CASCADE_COUNT = cascade;
 		cshader.BLEND = transitionFraction > 0.0;
-		cshader.shadowBias = bias;
+		cshader.cascadeCount = cascade;
 		cshader.shadowPower = power;
 		cshader.shadowViewProj = getShadowViewProj();
-
+		cshader.SAMPLING_MODE = samplingKind;
 		//ESM
-		cshader.USE_ESM = samplingKind == ESM;
 		cshader.shadowPower = power;
 
 		// PCF
-		cshader.USE_PCF = samplingKind == PCF;
-		cshader.shadowRes.set(textures[0].width,textures[0].height);
-		cshader.pcfScale = pcfScale;
-		cshader.pcfQuality = pcfQuality;
+		cshader.pcfScale = pcfScale / textures[0].width;
 	}
 
 
