@@ -10,93 +10,59 @@ class CascadeShadow extends DirShadow {
 			var view : Mat4;
 		}
 
-		@const(4) var MAX_CASCADE_COUNT : Int;
-		@param var CASCADE_COUNT : Int;
 		@const var DEBUG : Bool;
 		@const var BLEND : Bool;
-		@param var cascadeShadowMaps : Array<Sampler2D, MAX_CASCADE_COUNT>;
+
+		final MAX_CASCADE_COUNT = 4;
+		@param var cascadeShadowMaps : Array<Sampler2D, 4>;
+		@param var cascadeScales : Array<Vec4, 4>;
+		@param var cascadeOffsets : Array<Vec4, 4>;
+		@param var cascadeDebugs : Array<Vec4, 4>;
+		@param var cascadeCount : Int;
 		@param var cascadeViewProj : Mat3x4;
 		@param var cascadeTransitionFraction : Float;
-		@param var cascadeScales : Array<Vec4, MAX_CASCADE_COUNT>;
-		@param var cascadeOffsets : Array<Vec4, MAX_CASCADE_COUNT>;
-		@param var cascadeDebugs : Array<Vec4, MAX_CASCADE_COUNT>;
 
-		var texelSize : Vec2;
-
-		function shadowPCF( shadowUv : Vec2, zMax : Float, c : Int ) : Float {
-			var shadow = 1.0;
-			var rot = rand(transformedPosition.x + transformedPosition.y + transformedPosition.z) * 3.14 * 2;
-			var cosR = cos(rot);
-			var sinR = sin(rot);
-			var sampleStrength = 1.0 / PCF_SAMPLES;
-			var offScale = texelSize * pcfScale;
-			for(i in 0...PCF_SAMPLES) {
-				var offset = poissonDisk[i].xy * offScale;
-				offset = vec2(cosR * offset.x - sinR * offset.y, cosR * offset.y + sinR * offset.x);
-				var depth = cascadeShadowMaps[c].getLod(shadowUv + offset, 0).r;
-				shadow -= (zMax > depth) ? sampleStrength : 0.0;
-			}
-			return shadow;
-		}
-
-		function shadowESM( shadowUv : Vec2, zMax : Float, c : Int ) : Float {
-			var depth = cascadeShadowMaps[c].get(shadowUv).r;
-			var delta = depth.min(zMax) - zMax;
-			return exp(shadowPower * delta).saturate();
-		}
-
-		function shadowBase( shadowUv : Vec2, zMax : Float, c : Int ) : Float {
-			var depth = cascadeShadowMaps[c].get(shadowUv).r;
-			return zMax > depth ? 0 : 1;
-		}
-
-		function sampleShadow( shadowPos : Vec3, c : Int) : Float {
+		function sampleCascade( shadowPos : Vec3, c : Int) : Float {
 			var zMax = shadowPos.z.saturate();
 			var shadowUv = shadowPos.xy;
 			shadowUv.y = 1.0 - shadowUv.y;
 
-			if( USE_PCF )
-				return shadowPCF(shadowUv, zMax, c);
-			else if( USE_ESM )
-				return shadowESM(shadowUv, zMax, c);
-			else
-				return shadowBase(shadowUv, zMax, c);
+			sampleShadow( cascadeShadowMaps[c], shadowUv, zMax, 0.0, pcfScale, shadowPower, transformedPosition, SAMPLING_MODE );
 		}
 
 		function fragment() {
-			if ( enable ) {
+			if( enable ) {
 				var shadowValue = 1.0;
 				var color = vec3(0);
-				texelSize = 1.0 / shadowRes;
 
 				var vPos = vec4(transformedPosition, 1.0) * camera.view;
 				vPos /= vPos.w;
 
-				var found = false;
+				var shouldContinue = true;
 				#if hldx
-				for ( i in 0...CASCADE_COUNT ) {
+				for( i in 0...cascadeCount ) {
 				#else
-				@unroll for ( i in 0...MAX_CASCADE_COUNT )
-				if( i < CASCADE_COUNT) {
+				@unroll for( i in 0...MAX_CASCADE_COUNT )
+				if( i < cascadeCount) {
 				#end
-					if ( !found && vPos.z <= cascadeScales[i].w ) {
-						found = true;
+					if( shouldContinue && vPos.z <= cascadeScales[i].w ) {
+						shouldContinue = false;
 
 						var shadowPos0 = transformedPosition * cascadeViewProj;
 						var shadowPos = ( i == 0 ) ? shadowPos0 : shadowPos0 * cascadeScales[i].xyz + cascadeOffsets[i].xyz;
-						shadowValue = sampleShadow(shadowPos, i);
+						shadowValue = sampleCascade(shadowPos, i);
 						color = cascadeDebugs[i].rgb;
 
-						if ( BLEND ) {
+						if( BLEND ) {
 							var blendEnd = cascadeScales[i].w;
 							var blendSize = blendEnd * cascadeTransitionFraction;
 							var blendStart = blendEnd - blendSize;
 							var blendFactor = ( vPos.z - blendStart ) / blendSize;
 
-							if ( blendFactor > 0.0 ) {
-								if(i < MAX_CASCADE_COUNT - 1 && i < CASCADE_COUNT - 1 ) {
+							if( blendFactor > 0.0 ) {
+								if( i < MAX_CASCADE_COUNT - 1 && i < cascadeCount - 1 ) {
 									var nextShadowPos = shadowPos0 * cascadeScales[i + 1].xyz + cascadeOffsets[i + 1].xyz;
-									var nextShadow = sampleShadow(nextShadowPos, i + 1);
+									var nextShadow = sampleCascade(nextShadowPos, i + 1);
 									shadowValue = nextShadow * blendFactor + shadowValue * (1 - blendFactor);
 
 									var nextColor = cascadeDebugs[i + 1].rgb;
@@ -111,7 +77,7 @@ class CascadeShadow extends DirShadow {
 					}
 				}
 
-				if ( DEBUG )
+				if( DEBUG )
 					pixelColor = vec4(color, 1.0);
 				else {
 					shadow = shadowValue;
