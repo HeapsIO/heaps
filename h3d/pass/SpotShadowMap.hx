@@ -40,14 +40,19 @@ class SpotShadowMap extends Shadows {
 
 	override function syncShader(texture) {
 		sshader.shadowMap = texture;
+		sshader.shadowMapChannel = format == h3d.mat.Texture.nativeFormat ? PackedFloat : R;
 		sshader.shadowBias = bias;
 		sshader.shadowViewProj = getShadowViewProj();
-		sshader.SAMPLING_MODE = samplingKind;
+
 		//ESM
+		sshader.USE_ESM = samplingKind == ESM;
 		sshader.shadowPower = power;
 
 		// PCF
-		sshader.pcfScale = pcfScale / texture.width;
+		sshader.USE_PCF = samplingKind == PCF;
+		sshader.shadowRes.set(texture.width,texture.height);
+		sshader.pcfScale = pcfScale;
+		sshader.pcfQuality = pcfQuality;
 	}
 
 	override function saveStaticData() {

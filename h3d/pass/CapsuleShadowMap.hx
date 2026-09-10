@@ -32,12 +32,15 @@ class CapsuleShadowMap extends CubeShadowMap {
 		pshader.shadowPower = power;
 		pshader.lightPos = light.getAbsPos().getPosition();
 		pshader.zFar = capsuleLight.range + capsuleLight.length;
-		pshader.SAMPLING_MODE = samplingKind;
+
 		// ESM
+		pshader.USE_ESM = samplingKind == ESM;
 		pshader.shadowPower = power;
 
 		// PCF
-		pshader.pcfScale = pcfScale / ( 100.0 * texture.width );
+		pshader.USE_PCF = samplingKind == PCF;
+		pshader.pcfScale = pcfScale / 100.0;
+		pshader.pcfQuality = pcfQuality;
 	}
 
 	override function createCollider(light : h3d.scene.Light) {
