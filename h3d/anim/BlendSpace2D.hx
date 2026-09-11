@@ -316,7 +316,7 @@ class BlendSpace2D extends h3d.anim.Animation {
 		for (point in points) {
 			xMin = hxd.Math.min(point.x, xMin);
 			xMax = hxd.Math.max(point.x, xMax);
-			yMin = hxd.Math.min(point.y, xMin);
+			yMin = hxd.Math.min(point.y, yMin);
 			yMax = hxd.Math.max(point.y, yMax);
 		}
 
