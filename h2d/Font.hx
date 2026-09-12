@@ -185,6 +185,18 @@ class Font {
 		Defaults to `hxd.Charset.getDefault()`.
 	**/
 	public var charset : hxd.Charset;
+	/**
+		Optional fallback font used when a character glyph is not found in this font.
+	**/
+	public var fallback : Null<Font>;
+	/**
+		List of fallback fonts used when a character is not found in this font or fallback.
+	**/
+	public var fallbacks : Array<Font>;
+	/**
+		List of tiles if font is split across multiple texture pages.
+	**/
+	public var tiles : Array<h2d.Tile>;
 	var glyphs : Map<Int,FontChar>;
 	var nullChar : FontChar;
 	var defaultChar : FontChar;
@@ -216,13 +228,31 @@ class Font {
 	/**
 		Returns a `FontChar` instance corresponding to the `code`.
 		If font char is not present in glyph list, `charset.resolveChar` is called.
+		If still not found, queries fallback and fallbacks fonts.
 		Returns `null` if glyph under specified charcode does not exist.
 		@param code The charcode to search for.
 	**/
-	public inline function getChar( code : Int ) {
+	public function getChar( code : Int ) {
 		var c = glyphs.get(code);
 		if( c == null ) {
 			c = charset.resolveChar(code, glyphs);
+			if( c == null ) {
+				if( fallback != null ) {
+					var fc = fallback.getChar(code);
+					if( fc != null && fc != fallback.defaultChar && fc != fallback.nullChar )
+						c = fc;
+				}
+				if( c == null && fallbacks != null ) {
+					for( f in fallbacks ) {
+						if( f == null ) continue;
+						var fc = f.getChar(code);
+						if( fc != null && fc != f.defaultChar && fc != f.nullChar ) {
+							c = fc;
+							break;
+						}
+					}
+				}
+			}
 			if( c == null )
 				c = code == "\r".code || code == "\n".code ? nullChar : defaultChar;
 		}
@@ -260,6 +290,9 @@ class Font {
 		f.type = type;
 		f.offsetX = offsetX;
 		f.offsetY = offsetY;
+		f.fallback = fallback;
+		if( fallbacks != null ) f.fallbacks = fallbacks.copy();
+		if( tiles != null ) f.tiles = [for( t in tiles ) t.clone()];
 		for( g in glyphs.keys() ) {
 			var c = glyphs.get(g);
 			var c2 = c.clone();
@@ -297,19 +330,29 @@ class Font {
 	}
 
 	/**
-		Checks if character is present in glyph list.
+		Checks if character is present in glyph list or any fallback font.
 		Compared to `getChar` does not check if it exists through `Font.charset`.
 		@param code The charcode to look up.
 	**/
 	public function hasChar( code : Int ) : Bool {
-		return glyphs.get(code) != null;
+		if( glyphs.get(code) != null ) return true;
+		if( fallback != null && fallback.hasChar(code) ) return true;
+		if( fallbacks != null ) {
+			for( f in fallbacks )
+				if( f != null && f.hasChar(code) ) return true;
+		}
+		return false;
 	}
 
 	/**
-		Disposes of the Font instance. Equivalent to `Tile.dispose`.
+		Disposes of the Font instance and its tiles.
 	**/
 	public function dispose() {
-		tile.dispose();
+		if( tile != null ) tile.dispose();
+		if( tiles != null ) {
+			for( t in tiles )
+				if( t != null && t != tile ) t.dispose();
+		}
 	}
 
 	/**

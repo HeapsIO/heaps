@@ -10,22 +10,33 @@ class FontParser {
 		// TODO: Support multiple textures per font.
 
 		var tile : h2d.Tile = null;
+		var pages : Array<h2d.Tile> = [];
 		var font : h2d.Font = new h2d.Font(null, 0);
 		var glyphs = font.glyphs;
 
-		inline function resolveTileSameName() {
+		inline function resolveTileSameName() : h2d.Tile {
 			font.tilePath = new haxe.io.Path(path).file + ".png";
 			tile = resolveTile(haxe.io.Path.withExtension(path, "png"));
+			return tile;
 		}
 
-		inline function resolveTileWithFallback( tilePath : String ) {
+		inline function resolveTileWithFallback( tilePath : String ) : h2d.Tile {
+			var t : h2d.Tile = null;
 			try {
 				font.tilePath = tilePath;
-				tile = resolveTile(haxe.io.Path.join([haxe.io.Path.directory(path), tilePath]));
+				t = resolveTile(haxe.io.Path.join([haxe.io.Path.directory(path), tilePath]));
 			} catch ( e : Dynamic ) {
 				trace('Warning: Could not find referenced font texture at "${tilePath}", trying to resolve same name as fnt!');
-				resolveTileSameName();
+				t = resolveTileSameName();
 			}
+			if ( tile == null ) tile = t;
+			return t;
+		}
+
+		inline function getPageTile( pageId : Int ) : h2d.Tile {
+			if ( pages != null && pageId >= 0 && pageId < pages.length && pages[pageId] != null )
+				return pages[pageId];
+			return tile;
 		}
 
 		// Supported formats:
@@ -42,7 +53,7 @@ class FontParser {
 
 		switch( bytes.getInt32(0) ) {
 		case 0x544E4642: // Internal BFNT
-			return hxd.fmt.bfnt.Reader.parse(bytes, function( tp : String ) { resolveTileWithFallback(tp); return tile; });
+			return hxd.fmt.bfnt.Reader.parse(bytes, function( tp : String ) { return resolveTileWithFallback(tp); });
 
 		case 0x6D783F3C, // <?xml : XML file
 				 0x6E6F663C: // <font>
@@ -56,23 +67,28 @@ class FontParser {
 				font.baseLine = Std.parseInt(xml.node.common.att.base);
 
 				for ( p in xml.node.pages.elements ) {
-					if ( p.att.id == "0" ) {
-						resolveTileWithFallback(p.att.file);
-					} else {
-						trace("Warning: BMF format only supports one page at the moment.");
-					}
+					var pid = Std.parseInt(p.att.id);
+					var pt = resolveTileWithFallback(p.att.file);
+					pages[pid] = pt;
+					if ( pid == 0 || tile == null ) tile = pt;
 				}
 
 				var chars = xml.node.chars.elements;
 				for( c in chars) {
-					var t = tile.sub(Std.parseInt(c.att.x), Std.parseInt(c.att.y), Std.parseInt(c.att.width), Std.parseInt(c.att.height), Std.parseInt(c.att.xoffset), Std.parseInt(c.att.yoffset));
+					var pageId = c.has.page ? Std.parseInt(c.att.page) : 0;
+					var curTile = getPageTile(pageId);
+					var t = curTile.sub(Std.parseInt(c.att.x), Std.parseInt(c.att.y), Std.parseInt(c.att.width), Std.parseInt(c.att.height), Std.parseInt(c.att.xoffset), Std.parseInt(c.att.yoffset));
 					var fc = new h2d.Font.FontChar(t, Std.parseInt(c.att.xadvance));
-					var kerns = xml.node.kernings.elements;
-					for (k in kerns)
-						if (k.att.second == c.att.id)
-							fc.addKerning(Std.parseInt(k.att.first), Std.parseInt(k.att.amount));
-
 					glyphs.set(Std.parseInt(c.att.id), fc);
+				}
+
+				if ( xml.hasNode.kernings ) {
+					for (k in xml.node.kernings.elements) {
+						var second = Std.parseInt(k.att.second);
+						var fc = glyphs.get(second);
+						if (fc != null)
+							fc.addKerning(Std.parseInt(k.att.first), Std.parseInt(k.att.amount));
+					}
 				}
 			} else {
 				// support for the FontBuilder/Divo format
@@ -150,19 +166,23 @@ class FontParser {
 								case "base": font.baseLine = extractInt();
 								case "pages":
 									pageCount = extractInt();
-									if (pageCount != 1) trace("Warning: BMF format only supports one page at the moment.");
 							}
 							next();
 						}
 					case "page":
+						var pageId = 0;
 						while (idx < line.length && reg.matchSub(line, idx)) {
 							switch (reg.matched(1)) {
-								case "file": resolveTileWithFallback(processValue());
+								case "id": pageId = extractInt();
+								case "file":
+									var pt = resolveTileWithFallback(processValue());
+									pages[pageId] = pt;
+									if ( pageId == 0 || tile == null ) tile = pt;
 							}
 							next();
 						}
 					case "char":
-						var id = 0, x = 0, y = 0, width = 0, height = 0, xoffset = 0, yoffset = 0, xadvance = 0;
+						var id = 0, x = 0, y = 0, width = 0, height = 0, xoffset = 0, yoffset = 0, xadvance = 0, page = 0;
 						while (idx < line.length && reg.matchSub(line, idx)) {
 							switch (reg.matched(1)) {
 								case "id": id = extractInt();
@@ -173,10 +193,12 @@ class FontParser {
 								case "xoffset": xoffset = extractInt();
 								case "yoffset": yoffset = extractInt();
 								case "xadvance": xadvance = extractInt();
+								case "page": page = extractInt();
 							}
 							next();
 						}
-						var t = tile.sub(x, y, width, height, xoffset, yoffset);
+						var curTile = getPageTile(page);
+						var t = curTile.sub(x, y, width, height, xoffset, yoffset);
 						var fc = new h2d.Font.FontChar(t, xadvance);
 						glyphs.set(id, fc);
 					case "kerning":
@@ -217,19 +239,33 @@ class FontParser {
 						// skip scaleW (2), scaleH (2)
 						bytes.position += 4;
 						pageCount = bytes.readUInt16();
-						if (pageCount != 1) trace("Warning: BMF format only supports one page at the moment.");
 						// skip bitField (1), channels (4)
 					case 3: // pages
-						var name : String = bytes.readUntil(0);
-						resolveTileWithFallback(name);
+						while ( bytes.position < pos + length ) {
+							var name : String = bytes.readUntil(0);
+							if ( name.length > 0 ) {
+								var pt = resolveTileWithFallback(name);
+								pages.push(pt);
+								if ( tile == null ) tile = pt;
+							}
+						}
 					case 4: // chars
 						var count : Int = Std.int(length / 20);
 						while ( count > 0 ) {
 							var cid = bytes.readInt32();
-							var t = tile.sub(bytes.readUInt16(), bytes.readUInt16(), bytes.readUInt16(), bytes.readUInt16(), bytes.readInt16(), bytes.readInt16());
-							var fc = new h2d.Font.FontChar(t, bytes.readInt16());
+							var cx = bytes.readUInt16();
+							var cy = bytes.readUInt16();
+							var cw = bytes.readUInt16();
+							var ch = bytes.readUInt16();
+							var cdx = bytes.readInt16();
+							var cdy = bytes.readInt16();
+							var cadv = bytes.readInt16();
+							var pageId = bytes.readByte();
+							var chnl = bytes.readByte();
+							var curTile = getPageTile(pageId);
+							var t = curTile.sub(cx, cy, cw, ch, cdx, cdy);
+							var fc = new h2d.Font.FontChar(t, cadv);
 							glyphs.set(cid, fc);
-							bytes.position += 2; // skip page and channel
 							count--;
 						}
 					case 5: // kerning
@@ -251,8 +287,12 @@ class FontParser {
 			throw "Unknown font signature " + StringTools.hex(sign, 8);
 		}
 		if( glyphs.get(" ".code) == null )
-			glyphs.set(" ".code, new h2d.Font.FontChar(tile.sub(0, 0, 0, 0), font.size>>1));
+			glyphs.set(" ".code, new h2d.Font.FontChar((tile != null ? tile : h2d.Tile.fromColor(0, 0, 0, 0)).sub(0, 0, 0, 0), font.size>>1));
 
+		if ( pages.length > 0 ) {
+			font.tiles = pages;
+			if ( tile == null ) tile = pages[0];
+		}
 		font.tile = tile;
 
 		if( font.baseLine == 0 )

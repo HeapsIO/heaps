@@ -140,12 +140,21 @@ class Charset {
 	}
 
 	static var complementChars : Map<Int,Bool> = {
-		var str = "ヽヾーァィゥェォッャュョヮヵヶぁぃぅぇぉっゃゅょゎゕゖㇰㇱㇲㇳㇴㇵㇶㇷㇸㇹㇺㇻㇼㇽㇾㇿ々〻。，";
+		var str = "ヽヾーァィゥェォッャュョヮヵヶぁぃぅぇぉっゃゅょゎゕゖㇰㇱㇲㇳㇴㇵㇶㇷㇸㇹㇺㇻㇼㇽㇾㇿ々㻉。，、！？：；”’）》】〉』〗〕…—～·!?:;)]}.,／＼";
+		[for( i in 0...str.length ) str.charCodeAt(i) => true];
+	}
+
+	static var leadingChars : Map<Int,Bool> = {
+		var str = "“‘（《【〈『〖〔([{";
 		[for( i in 0...str.length ) str.charCodeAt(i) => true];
 	}
 
 	public function isComplementChar(code) {
 		return complementChars.exists(code);
+	}
+
+	public function isLeadingChar(code) {
+		return leadingChars.exists(code);
 	}
 
 	static var inst : Charset;

@@ -92,6 +92,7 @@ class ModelDatabase {
 	}
 
 	public function getDefaultLodConfig( dir : String ) : Array<Float> {
+		#if (sys || nodejs)
 		var fs = Std.downcast(hxd.res.Loader.currentInstance.fs, hxd.fs.LocalFileSystem);
 		if (fs == null)
 			return baseLodConfig;
@@ -103,6 +104,9 @@ class ModelDatabase {
 		});
 
 		return c;
+		#else
+		return baseLodConfig;
+		#end
 	}
 
 	public static var current = new ModelDatabase();

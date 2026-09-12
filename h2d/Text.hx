@@ -333,7 +333,8 @@ class Text extends Drawable {
 			var newline = cc == '\n'.code;
 			var esize = e.width + e.getKerningOffset(prevChar);
 			var isComplement = (i < text.length - 1 && font.charset.isComplementChar(StringTools.fastCodeAt(text, i + 1)));
-			if( font.charset.isBreakChar(cc) && !isComplement ) {
+			var isLeading = font.charset.isLeadingChar(cc);
+			if( font.charset.isBreakChar(cc) && !isComplement && !isLeading ) {
 				if( lines.length == 0 && leftMargin > 0 && x > maxWidth ) {
 					lines.push("");
 					if ( sizes != null ) sizes.push(leftMargin);
@@ -356,7 +357,7 @@ class Text extends Drawable {
 						if ( k >= text.length )
 							break;
 						var nc = StringTools.fastCodeAt(text, k);
-						if ( !font.charset.isComplementChar(nc) ) break;
+						if ( !font.charset.isComplementChar(nc) && !font.charset.isLeadingChar(cc) ) break;
 					}
 				}
 				if( lineBreak && (size > maxWidth || (!breakFound && size + afterData > maxWidth)) ) {

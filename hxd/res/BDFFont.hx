@@ -16,6 +16,7 @@ using StringTools;
 	public var yoffset : Int;
 	public var stride : Int;
 	public var bits : Array<Int>;
+	public var page : Int = 0;
 
 	public function new( code, width, height, xoffset, yoffset, stride ) {
 		this.code = code;
@@ -232,20 +233,19 @@ class BDFFont extends Resource {
 	 */
 	@:access(h2d.Font)
 	function generateGlyphs() {
-		// Firstly, sort glyphData by height
+		// Sort glyphData by height descending
 		glyphData.sort( BDFFontChar.sortOnHeight );
 
-		// Calculate total volume, and from that an approx width and height if packing with 80%
-		// efficiency (i.e. add a 10% buffer). This is from trial and error :)
-		var volume : Int = 0;
-		for ( d in glyphData ) volume += ( d.width * d.height );
-		var bitmapWidth : Int = Math.ceil( Math.sqrt( volume * (1 + BitmapPad) ) );
-		if ( bitmapWidth > BitmapMaxWidth ) throw 'The font bitmap is too big: ${bitmapWidth}x${bitmapWidth} (max ${BitmapMaxWidth}x${BitmapMaxWidth})';
+		// Calculate total volume to choose an optimal page size
+		var pad = 1;
+		var totalVolume : Float = 0;
+		for ( d in glyphData ) totalVolume += ( d.width + pad ) * ( d.height + pad );
 
-		// Create the bitmap
-		var bitmapData : hxd.BitmapData = new hxd.BitmapData( bitmapWidth, bitmapWidth );
-		bitmapData.lock();
-		bitmapData.clear( ClearColor ); // Blue, but transparent
+		var maxPageSize = 2048;
+		var pageSize = 128;
+		while ( pageSize * pageSize < totalVolume * 1.2 && pageSize < maxPageSize ) {
+			pageSize <<= 1;
+		}
 
 		// Calculate values for extracting pixel data
 		var bppMask : Int = 0x80;
@@ -256,87 +256,79 @@ class BDFFont extends Resource {
 		}
 		var pixPerByte : Int = Math.floor( 8 / bitsPerPixel );
 		var bppScale : Float = 255 / ((1 << bitsPerPixel) - 1);
-		var pixLeftInByte : Int = 0;
-		var pixBits : Int = 0;
-		var pixAlpha : Int = 0;
 
-		// Draw glyphs to bitmap in height order and save position on bitmap
-		var x : Int = 0;
-		var y : Int = 0;
-		var found : Bool = false;
+		var pagesData : Array<hxd.BitmapData> = [];
+		var curBitmap : hxd.BitmapData = new hxd.BitmapData( pageSize, pageSize );
+		curBitmap.lock();
+		curBitmap.clear( ClearColor );
+		pagesData.push( curBitmap );
+
+		var curX = pad;
+		var curY = pad;
+		var shelfHeight = 0;
+		var curPage = 0;
+
 		for ( d in glyphData ) {
-			found = false;
-
-			// Wrap x if glyph will not fit in width
-			if ( ( x + d.width ) > bitmapWidth ) x = 0;
-
-			// Find nearest space big enough for glyph, left to right, top to bottom
-			while ( x <= (bitmapWidth - d.width) ) {
-				y = 0;
-				while ( y <= (bitmapWidth - d.height) ) {
-					// If top-left pixel is clear...
-					if ( bitmapData.getPixel( x, y ) == ClearColor ) {
-						found = true;
-						// Check first row and first column are clear to ensure space is clear
-						for ( xx in x...(x + d.width) ) {
-							if ( bitmapData.getPixel( xx, y ) != ClearColor ) {
-								found = false;
-								break;
-							}
-						}
-						if ( found ) {
-							for ( yy in y...(y + d.height) ) {
-								if ( bitmapData.getPixel( x, yy ) != ClearColor ) {
-									found = false;
-									break;
-								}
-							}
-						}
-						if ( found ) break;
-					}
-					y++;
-				}
-				if ( found ) break;
-				x++;
+			if ( ( curX + d.width + pad ) > pageSize ) {
+				curX = pad;
+				curY += shelfHeight + pad;
+				shelfHeight = 0;
+			}
+			if ( ( curY + d.height + pad ) > pageSize ) {
+				curBitmap.unlock();
+				curPage++;
+				curBitmap = new hxd.BitmapData( pageSize, pageSize );
+				curBitmap.lock();
+				curBitmap.clear( ClearColor );
+				pagesData.push( curBitmap );
+				curX = pad;
+				curY = pad;
+				shelfHeight = 0;
 			}
 
-			// XXX: At this point it would be really good to see the bitmap (so far)
-			if ( !found ) throw 'Glyphs are overflowing the bitmap. Help!';
+			d.x = curX;
+			d.y = curY;
+			d.page = curPage;
+			if ( d.height > shelfHeight ) shelfHeight = d.height;
 
-			// Now have space that starts at x,y.
-			// Draw the glyph to the bitmap and save position
-			d.x = x; d.y = y;
-			for ( yy in y...(y + d.height) ) {
+			// Draw the glyph pixels to curBitmap
+			var pixLeftInByte : Int = 0;
+			var pixBits : Int = 0;
+			var pixAlpha : Int = 0;
+			for ( yy in 0...d.height ) {
 				pixLeftInByte = 0;
-				for ( xx in x...(x + d.width) ) {
-					// Grab a new byte
+				for ( xx in 0...d.width ) {
 					if ( pixLeftInByte == 0 ) {
 						pixLeftInByte = pixPerByte;
 						pixBits = d.bits.shift();
 					}
-					// Grab a pixel alpha
 					pixAlpha = (pixBits & bppMask) >> (8 - bitsPerPixel);
 					pixBits = pixBits << bitsPerPixel;
-					// Calculate actual pixel value and set pixel
 					pixAlpha = Math.floor( pixAlpha * bppScale ) << 24;
-					bitmapData.setPixel( xx, yy, pixAlpha | PixelColor );
-					// Advance
+					curBitmap.setPixel( d.x + xx, d.y + yy, pixAlpha | PixelColor );
 					pixLeftInByte--;
 				}
 			}
 
-			// Advance the start position to after the bitmap
-			x += d.width;
+			curX += d.width + pad;
 		}
-		bitmapData.unlock();
+		curBitmap.unlock();
 
-		// Create tile from bitmap data
-		font.tile = h2d.Tile.fromBitmap( bitmapData );
+		// Create tiles from bitmap data
+		var fontTiles : Array<h2d.Tile> = [];
+		for ( bmp in pagesData ) {
+			var t = h2d.Tile.fromBitmap( bmp );
+			fontTiles.push( t );
+			bmp.dispose();
+		}
+		font.tile = fontTiles[0];
+		if ( fontTiles.length > 1 )
+			font.tiles = fontTiles;
 
 		// Generate glyphs
 		for ( d in glyphData ) {
-			// In BDF, y-offset is offset from baseline. In FNT it appears to be offset from top
-			var t = font.tile.sub( d.x, d.y, d.width, d.height, d.xoffset, ascent - (d.height + d.yoffset) );
+			var pageTile = fontTiles[d.page];
+			var t = pageTile.sub( d.x, d.y, d.width, d.height, d.xoffset, ascent - (d.height + d.yoffset) );
 			var fc = new h2d.Font.FontChar( t, d.stride );
 			font.glyphs.set( d.code, fc );
 		}
@@ -350,7 +342,7 @@ class BDFFont extends Resource {
 			font.lineHeight = ascent + descent;
 		else if ( fbbHeight >= 0 )
 			font.lineHeight = fbbHeight;
-		else{
+		else {
 			var a = font.glyphs.get( "E".code );
 			if ( a == null )
 				a = font.glyphs.get( "A".code );
@@ -381,8 +373,6 @@ class BDFFont extends Resource {
 			fallback = font.glyphs.get( " ".code );
 		font.defaultChar = fallback;
 
-		// Cleanup
-		bitmapData.dispose();
 		this.glyphData = null; // No longer required
 	}
 
