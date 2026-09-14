@@ -399,7 +399,6 @@ class Checker {
 			switch( [size1,size2] ) {
 			case [SConst(a),SConst(b)] if( a == b ):
 			case [SVar(v1),SVar(v2)] if( v1 == v2 ):
-			case [SConst(a),SVar(v)] | [SVar(v),SConst(a)] if( a == finalInts.get(v.id) ):
 			default: return false;
 			}
 			return tryUnify(t1,t2);
@@ -537,14 +536,20 @@ class Checker {
 		case EIdent(name):
 			var v = vars.get(name);
 			if( v != null ) {
-				var canCall =  switch( name ) {
-				case "vertex", "fragment", "main": false;
-				default: !StringTools.startsWith(name,"__init__");
+				var value = finalInts.get(v.id);
+				if( value != null ) {
+					type = TInt;
+					TConst(CInt(value));
+				} else {
+					var canCall =  switch( name ) {
+					case "vertex", "fragment", "main": false;
+					default: !StringTools.startsWith(name,"__init__");
+					}
+					if( !canCall )
+						error("Function cannot be accessed", e.pos);
+					type = v.type;
+					TVar(v);
 				}
-				if( !canCall )
-					error("Function cannot be accessed", e.pos);
-				type = v.type;
-				TVar(v);
 			} else {
 				var g = globals.get(name);
 				if( g != null && g.g != null ) {
@@ -734,7 +739,7 @@ class Checker {
 			TReturn(e);
 		case EFor(v, it, block):
 			type = TVoid;
-			var it = inlineFinalInts(typeExpr(it, Value));
+			var it = typeExpr(it, Value);
 			switch( it.t ) {
 			case TArray(t, _):
 				var v : TVar = {
@@ -849,12 +854,12 @@ class Checker {
 						default:
 						}
 				}
-				if( isImport && v.kind == Param )
-					continue;
 				if( v.expr != null && v.kind != Param && v.kind != Local )
 					error("Cannot initialize variable declaration if not @param or local", v.expr.pos);
 				if( v.type == null && v.expr == null )
 					error("Type required for variable declaration", e.pos);
+				if( isImport && v.kind == Param )
+					continue;
 				if( vars.exists(v.name) )
 					error("Duplicate var decl '" + v.name + "'", e.pos);
 
@@ -881,8 +886,9 @@ class Checker {
 				}
 				var isFinal = tv.hasQualifier(Final);
 				if( einit != null ) {
-					inits.push({ v : tv, e : einit });
 					if( isFinal ) registerFinalInt(tv, einit);
+					if( !finalInts.exists(tv.id) )
+						inits.push({ v : tv, e : einit });
 				} else if( isFinal )
 					error("Final variable needs initializer", e.pos);
 				vars.set(tv.name, tv);
@@ -930,7 +936,6 @@ class Checker {
 	function constIntValue( e : TExpr ) : Null<Int> {
 		switch( e.e ) {
 		case TConst(CInt(v)):        return v;
-		case TVar(v):                return finalInts.get(v.id);
 		case TParenthesis(e):        return constIntValue(e);
 		case TBinop(OpAdd,  e1, e2): return constIntValue(e1) + constIntValue(e2);
 		case TBinop(OpSub,  e1, e2): return constIntValue(e1) - constIntValue(e2);
@@ -952,28 +957,9 @@ class Checker {
 		if( value != null ) finalInts.set(v.id, value);
 	}
 
-	function inlineFinalInts( e : TExpr ) : TExpr {
-		return switch( e.e ) {
-		case TVar(v):
-			var value = finalInts.get(v.id);
-			value == null ? e : { e : TConst(CInt(value)), t : TInt, p : e.p };
-		case TParenthesis(e1):
-			{ e : TParenthesis(inlineFinalInts(e1)), t : e.t, p : e.p };
-		case TUnop(op, e1):
-			{ e : TUnop(op, inlineFinalInts(e1)), t : e.t, p : e.p };
-		case TBinop(op, e1, e2):
-			switch( op ) {
-			case OpAssign, OpAssignOp(_): e;
-			default: { e : TBinop(op, inlineFinalInts(e1), inlineFinalInts(e2)), t : e.t, p : e.p };
-			}
-		default: e;
-		}
-	}
-
 	function checkConst( e : TExpr ) {
 		switch( e.e ) {
 		case TConst(_):
-		case TVar(v) if( finalInts.exists(v.id) ):
 		case TParenthesis(e): checkConst(e);
 		case TCall({ e : TGlobal(Vec2 | Vec3 | Vec4 | IVec2 | IVec3 | IVec4) }, args):
 			for( a in args ) checkConst(a);
