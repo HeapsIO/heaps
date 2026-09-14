@@ -309,12 +309,26 @@ class Eval {
 				for( i in 0...f.args.length ) {
 					var v = f.args[i];
 					var e = args[i];
-					switch( e.e ) {
+					var replace : TExprDef = switch( e.e ) {
 					case TConst(_), TVar({ kind : (Input|Param|Global) }):
+						e.e;
+					case TArray(arr = { e : TVar({ kind : (Input|Param|Global) }) }, index) if( v.type.isTexture() ):
+						switch( index.e ) {
+						case TConst(_), TVar({ kind : (Input|Param|Global) }):
+							e.e;
+						default:
+							var vidx : TVar = { id : Tools.allocVarId(), name : v.name + "Index", type : index.t, kind : Local };
+							outExprs.push({ e : TVarDecl(vidx, index), t : TVoid, p : index.p });
+							TArray(arr, { e : TVar(vidx), t : vidx.type, p : index.p });
+						}
+					default:
+						null;
+					}
+					if( replace != null ) {
 						var old = constants.get(v.id);
 						undo.push(function() old == null ? constants.remove(v.id) : constants.set(v.id, old));
-						constants.set(v.id, e.e);
-					default:
+						constants.set(v.id, replace);
+					} else {
 						var old = varMap.get(v);
 						if( old == null )
 							undo.push(function() varMap.remove(v));
