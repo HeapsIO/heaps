@@ -79,7 +79,11 @@ class DirShadow extends hxsl.Shader {
 	}
 
 	public var pcfQuality(never, set) : Int;
+	var curPcfQuality = -1;
 	function set_pcfQuality(q: Int) {
+		if( q == curPcfQuality )
+			return q;
+		curPcfQuality = q;
 		poissonDisk = switch(q) {
 		default: [
 			new h3d.Vector4(-0.942,-0.399 ),
