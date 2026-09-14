@@ -31,6 +31,7 @@ class Checker {
 	var curFun : TFunction;
 	var inLoop : Bool;
 	var inWhile : Bool;
+	var finalInts : Map<Int, Int>;
 	public var inits : Array<{ v : TVar, e : TExpr }>;
 
 	public function new() {
@@ -291,6 +292,7 @@ class Checker {
 	public function check( name : String, shader : Expr ) : ShaderData {
 		vars = new Map();
 		inits = [];
+		finalInts = [];
 		inLoop = false;
 		inWhile = false;
 
@@ -397,6 +399,7 @@ class Checker {
 			switch( [size1,size2] ) {
 			case [SConst(a),SConst(b)] if( a == b ):
 			case [SVar(v1),SVar(v2)] if( v1 == v2 ):
+			case [SConst(a),SVar(v)] | [SVar(v),SConst(a)] if( a == finalInts.get(v.id) ):
 			default: return false;
 			}
 			return tryUnify(t1,t2);
@@ -731,7 +734,7 @@ class Checker {
 			TReturn(e);
 		case EFor(v, it, block):
 			type = TVoid;
-			var it = typeExpr(it, Value);
+			var it = inlineFinalInts(typeExpr(it, Value));
 			switch( it.t ) {
 			case TArray(t, _):
 				var v : TVar = {
@@ -846,35 +849,43 @@ class Checker {
 						default:
 						}
 				}
-				var einit = null;
-				if( v.expr != null ) {
-					if( v.kind != Param && v.kind != Local )
-						error("Cannot initialize variable declaration if not @param or local", v.expr.pos);
-					var e = typeExpr(v.expr, v.type == null ? Value : With(v.type));
-					if( v.type == null )
-						v.type = e.t;
-					else
-						unify(e.t, v.type, v.expr.pos);
-					checkConst(e);
-					einit = e;
-				}
-				if( v.type == null ) error("Type required for variable declaration", e.pos);
 				if( isImport && v.kind == Param )
 					continue;
+				if( v.expr != null && v.kind != Param && v.kind != Local )
+					error("Cannot initialize variable declaration if not @param or local", v.expr.pos);
+				if( v.type == null && v.expr == null )
+					error("Type required for variable declaration", e.pos);
+				if( vars.exists(v.name) )
+					error("Duplicate var decl '" + v.name + "'", e.pos);
 
-				if( vars.exists(v.name) ) error("Duplicate var decl '" + v.name + "'", e.pos);
-				var v = makeVar(v, e.pos);
+				var tv = null;
+				var einit = null;
+				if( v.type != null ) {
+					tv = makeVar(v, e.pos);
+					if( v.expr != null ) {
+						einit = typeExpr(v.expr, With(tv.type));
+						unify(einit.t, tv.type, v.expr.pos);
+						checkConst(einit);
+					}
+				} else {
+					einit = typeExpr(v.expr, Value);
+					checkConst(einit);
+					v.type = einit.t;
+					tv = makeVar(v, e.pos);
+				}
 
-				switch( v.type ) {
+				switch( tv.type ) {
 				case TSampler(T3D, true), TRWTexture(T3D, true, _), TRWTexture(_,_,3):
 					error("Unsupported texture type", e.pos);
 				default:
 				}
-				if( einit != null )
-					inits.push({ v : v, e : einit });
-				else if( v.qualifiers != null && v.qualifiers.indexOf(Final) >= 0 )
+				var isFinal = tv.hasQualifier(Final);
+				if( einit != null ) {
+					inits.push({ v : tv, e : einit });
+					if( isFinal ) registerFinalInt(tv, einit);
+				} else if( isFinal )
 					error("Final variable needs initializer", e.pos);
-				vars.set(v.name, v);
+				vars.set(tv.name, tv);
 			}
 		case ECall( { expr : EIdent("import") }, [e]):
 			var path = [];
@@ -912,9 +923,57 @@ class Checker {
 		}
 	}
 
+	function isFinalInt( v : TVar ) {
+		return v.kind.match(Local) && v.type.match(TInt) && v.hasQualifier(Final);
+	}
+
+	function constIntValue( e : TExpr ) : Null<Int> {
+		switch( e.e ) {
+		case TConst(CInt(v)):        return v;
+		case TVar(v):                return finalInts.get(v.id);
+		case TParenthesis(e):        return constIntValue(e);
+		case TBinop(OpAdd,  e1, e2): return constIntValue(e1) + constIntValue(e2);
+		case TBinop(OpSub,  e1, e2): return constIntValue(e1) - constIntValue(e2);
+		case TBinop(OpMult, e1, e2): return constIntValue(e1) * constIntValue(e2);
+		case TBinop(OpDiv,  e1, e2): return Std.int(constIntValue(e1) / constIntValue(e2));
+		case TBinop(OpAnd,  e1, e2): return constIntValue(e1) & constIntValue(e2);
+		case TBinop(OpOr,   e1, e2): return constIntValue(e1) | constIntValue(e2);
+		case TBinop(OpXor,  e1, e2): return constIntValue(e1) ^ constIntValue(e2);
+		case TBinop(OpMod,  e1, e2): return constIntValue(e1) % constIntValue(e2);
+		default:
+			error("This expression should resolve to a const int", e.p);
+			return null;
+		}
+	}
+
+	function registerFinalInt( v : TVar, init : TExpr ) {
+		if( init == null || !isFinalInt(v) ) return;
+		var value = constIntValue(init);
+		if( value != null ) finalInts.set(v.id, value);
+	}
+
+	function inlineFinalInts( e : TExpr ) : TExpr {
+		return switch( e.e ) {
+		case TVar(v):
+			var value = finalInts.get(v.id);
+			value == null ? e : { e : TConst(CInt(value)), t : TInt, p : e.p };
+		case TParenthesis(e1):
+			{ e : TParenthesis(inlineFinalInts(e1)), t : e.t, p : e.p };
+		case TUnop(op, e1):
+			{ e : TUnop(op, inlineFinalInts(e1)), t : e.t, p : e.p };
+		case TBinop(op, e1, e2):
+			switch( op ) {
+			case OpAssign, OpAssignOp(_): e;
+			default: { e : TBinop(op, inlineFinalInts(e1), inlineFinalInts(e2)), t : e.t, p : e.p };
+			}
+		default: e;
+		}
+	}
+
 	function checkConst( e : TExpr ) {
 		switch( e.e ) {
 		case TConst(_):
+		case TVar(v) if( finalInts.exists(v.id) ):
 		case TParenthesis(e): checkConst(e);
 		case TCall({ e : TGlobal(Vec2 | Vec3 | Vec4 | IVec2 | IVec3 | IVec4) }, args):
 			for( a in args ) checkConst(a);
@@ -976,11 +1035,11 @@ class Checker {
 					default:
 						error("Precision qualifier not supported on " + v.type, pos);
 					}
-				case Range(min,max):
+				case Range(_,_):
 					switch( v.type ) {
 					case TFloat, TInt, TVec(_, VFloat):
 					default:
-						error("Precision qualifier not supported on " + v.type, pos);
+						error("Range qualifier not supported on " + v.type, pos);
 					}
 				case Borrow(source):
 					if ( v.kind != Local ) error("Borrow should not have a type qualifier", pos);
@@ -1049,8 +1108,13 @@ class Checker {
 					if( v2 == null ) break;
 				}
 				if( v2 == null ) error("Array size variable '" + v.name + "'not found", pos);
-				if( !v2.isConst() ) error("Array size variable '" + v.name + "'should be a constant", pos);
-				SVar(v2);
+				var value = finalInts.get(v2.id);
+				if( value != null )
+					SConst(value);
+				else {
+					if( !v2.isConst() ) error("Array size variable '" + v.name + "'should be a constant", pos);
+					SVar(v2);
+				}
 			}
 			t = makeVarType(t,parent,pos);
 			return switch( vt ) {
