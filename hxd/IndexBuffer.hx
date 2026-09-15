@@ -46,7 +46,7 @@ abstract IndexBuffer(InnerData) {
 
 	public inline function resize( v : Int ) {
 		#if js
-		this.length = v;
+		this.resize(v);
 		#else
 		if( this.length > v ) this.resize(v) else grow(v);
 		#end
