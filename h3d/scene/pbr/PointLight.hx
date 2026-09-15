@@ -35,6 +35,11 @@ class PointLight extends Light {
 		return v;
 	}
 
+	override function getIntensity() : Float {
+		var power = power * 10; // base scale
+		return power * power;
+	}
+
 	override function draw(ctx:RenderContext) {
 		primitive.render(ctx.engine);
 	}
@@ -45,8 +50,7 @@ class PointLight extends Light {
 		pbr.lightColor.load(_color);
 		var range = hxd.Math.max(range, 1e-10);
 		var size = hxd.Math.min(size, range);
-		var power = power * 10; // base scale
-		pbr.lightColor.scale(power * power);
+		pbr.lightColor.scale(getIntensity());
 		pbr.lightPos.set(absPos.tx, absPos.ty, absPos.tz);
 		pbr.invLightRange4 = 1 / (range * range * range * range);
 		pbr.pointSize = size;

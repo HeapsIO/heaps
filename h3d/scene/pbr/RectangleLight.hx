@@ -74,8 +74,7 @@ class RectangleLight extends Light {
 		}
 
 		pbr.lightColor.load(_color);
-		var power = power;
-		pbr.lightColor.scale(power * power);
+		pbr.lightColor.scale(getIntensity());
 		pbr.lightPos.set(absPos.tx, absPos.ty, absPos.tz);
 		pbr.width = width;
 		pbr.height = height;

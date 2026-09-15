@@ -25,7 +25,7 @@ class DirLight extends Light {
 
 	override function emit(ctx:RenderContext) {
 		pbr.lightColor.load(_color);
-		pbr.lightColor.scale(power * power);
+		pbr.lightColor.scale(getIntensity());
 		pbr.lightDir.load(absPos.front());
 		pbr.lightDir.scale(-1);
 		pbr.lightDir.normalize();
