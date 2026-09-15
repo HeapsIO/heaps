@@ -136,26 +136,30 @@ class LightBuffer {
 		var curSize = 0;
 		for (l in lights) {
 			var dl = Std.downcast(l, DirLight);
-			if (dl != null) {
-				if ( curSize + DIR_LIGHT_INFO_SIZE < BUFFER_MAX_SIZE ) {
-					curSize += DIR_LIGHT_INFO_SIZE;
+			if(dl != null) {
+				if( curSize + DIR_LIGHT_INFO_SIZE < BUFFER_MAX_SIZE ) {
 					var hasShadow = dl.shadows != null && dl.shadows.enabled && dl.shadows.mode != None && shadows;
-					if (hasShadow && dirShadowCount < MAX_DIR_SHADOW) {
+					if( hasShadow ) {
 						var cascade = Std.downcast(dl.shadows, CascadeShadowMap);
-						if ( cascade != null ) {
-							curSize -= DIR_LIGHT_INFO_SIZE;
-							if ( curSize + CASCADE_SHADOW_INFO_SIZE < BUFFER_MAX_SIZE ) {
+						if( cascade != null ) {
+							if( cascadeLight == null && curSize + CASCADE_SHADOW_INFO_SIZE < BUFFER_MAX_SIZE ) {
 								curSize += CASCADE_SHADOW_INFO_SIZE;
 								cascadeLight = dl;
 							}
-						} else {
+						} else if( dirShadowCount < MAX_DIR_SHADOW ) {
+							curSize += DIR_LIGHT_INFO_SIZE;
 							dirLightsShadow.push(dl);
 							dirShadowCount++;
+						} else {
+							curSize += DIR_LIGHT_INFO_SIZE;
+							dirLights.push(dl);
 						}
 					} else {
+						curSize += DIR_LIGHT_INFO_SIZE;
 						dirLights.push(dl);
 					}
 				}
+				continue;
 			}
 
 			var pl = Std.downcast(l, PointLight);
@@ -170,7 +174,7 @@ class LightBuffer {
 						pointLights.push(pl);
 					}
 				}
-
+				continue;
 			}
 
 			var sl = Std.downcast(l, SpotLight);
@@ -185,7 +189,7 @@ class LightBuffer {
 						spotLights.push(sl);
 					}
 				}
-
+				continue;
 			}
 		}
 	}
