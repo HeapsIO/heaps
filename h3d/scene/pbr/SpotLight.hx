@@ -107,8 +107,7 @@ class SpotLight extends Light {
 		super.sync(ctx);
 
 		pbr.lightColor.load(_color);
-		var power = power;
-		pbr.lightColor.scale(power * power);
+		pbr.lightColor.scale(getIntensity());
 		pbr.lightPos.set(absPos.tx, absPos.ty, absPos.tz);
 		pbr.spotDir.load(absPos.front());
 		pbr.angle = hxd.Math.cos(hxd.Math.degToRad(angle/2.0));

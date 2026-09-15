@@ -43,6 +43,11 @@ class CapsuleLight extends Light {
 		return v;
 	}
 
+	override function getIntensity() : Float {
+		var power = power * 10; // base scale
+		return power * power;
+	}
+
 	function set_length(v:Float) {
 		length = v;
 		updatePrim();
@@ -58,8 +63,7 @@ class CapsuleLight extends Light {
 
 		pbr.lightColor.load(_color);
 		var range = hxd.Math.max(range, 1e-10);
-		var power = power * 10; // base scale
-		pbr.lightColor.scale(power * power);
+		pbr.lightColor.scale(getIntensity());
 		pbr.lightPos.set(absPos.getPosition().x, absPos.getPosition().y, absPos.getPosition().z);
 		pbr.radius = radius;
 		pbr.halfLength = length * 0.5;
