@@ -609,17 +609,7 @@ class Cache {
 		if( c.params == null )
 			c.paramsSize = 0;
 		c.data = data;
-		c.hasBindless = (c.globalsTexHandleCount + c.paramsTexHandleCount + c.globalsBufHandleCount + c.paramsBufHandleCount) > 0;
-		if ( !c.hasBindless ) {
-			for ( v in c.data.vars ) {
-				switch ( v.type ) {
-				case TTextureHandle, TBufferHandle:
-					c.hasBindless = true;
-					break;
-				default:
-				}
-			}
-		}
+		c.hasBindless = flat.hasBindless;
 		return c;
 	}
 
