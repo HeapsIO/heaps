@@ -30,7 +30,6 @@ class Shadows extends Output {
 	public var samplingKind : ShadowSamplingKind = None;
 	public var power = 30.0;
 	public var bias = 0.01;
-	public var pcfQuality = 1;
 	public var pcfScale = 1.0;
 
 	public function new(light) {
