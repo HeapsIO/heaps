@@ -102,9 +102,9 @@ class ShadowSampling extends hxsl.Shader {
 			if( samplingMode == SAMPLING_PCF )
 				shadow = cubeShadowPcf(shadowMap, dir, zMax, range, bias, pcfScale);
 			else if( samplingMode == SAMPLING_ESM )
-				shadow = esmFilter(shadowMap.getLod(dir, 0).r, zMax, bias, esmPower);
+				shadow = esmFilter(shadowMap.getLod(dir, 0).r * range, zMax, bias, esmPower);
 			else if( samplingMode == SAMPLING_NONE )
-				shadow = compareDepth(shadowMap.getLod(dir, 0).r, zMax, bias);
+				shadow = compareDepth(shadowMap.getLod(dir, 0).r * range, zMax, bias);
 			return saturate(shadow);
 		}
 
