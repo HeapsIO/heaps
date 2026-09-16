@@ -238,9 +238,11 @@ class Checker {
 			case UnpackUnorm4x8:
 				[ { args : [ { name : "value", type : TInt } ], ret : vec4 } ];
 			case ResolveSampler:
-				[for( t in texDefs ) { args : [{ name : "handle", type : TTextureHandle }, { name : "tex", type : TSampler(t.dim,t.arr) }], ret : TVoid }];
+				[for( t in texDefs ) { args : [{ name : "handle", type : TTextureHandle }, { name : "tex", type : TSampler(t.dim,t.arr) }], ret : TVoid }].concat(
+				[for( t in texDefs ) { args : [{ name : "handle", type : TVec(2, VInt) }, { name : "tex", type : TSampler(t.dim,t.arr) }], ret : TVoid }]);
 			case ResolveBuffer:
-				[for( b in bindlessBufDef ) { args : [{ name : "handle", type : TBufferHandle }, { name : "buf", type : TBuffer(b.t, b.size, b.kind) }], ret : TVoid }];
+				[for( b in bindlessBufDef ) { args : [{ name : "handle", type : TBufferHandle }, { name : "buf", type : TBuffer(b.t, b.size, b.kind) }], ret : TVoid }].concat(
+				[for( b in bindlessBufDef ) { args : [{ name : "handle", type : TInt }, { name : "buf", type : TBuffer(b.t, b.size, b.kind) }], ret : TVoid}]);
 			default:
 				throw "Unsupported global "+g;
 			}
