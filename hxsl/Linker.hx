@@ -277,7 +277,7 @@ class Linker {
 			}
 			if ( curShader != null ) curShader.hasSyntax = true;
 			return { e : TSyntax(target, code, mappedArgs), t : e.t, p : e.p };
-		case TCall({ e : TGlobal(ResolveSampler)}, [handle, { e : TVar(v)}]):
+		case TCall({ e : TGlobal(ResolveSampler)}, [handle, { e : TVar(v)}]) if(!locals.exists(v.id)):
 			var handle = mapExprVar(handle);
 			var v = allocVar(v, handle.p);
 			if( curShader != null && !curShader.writeMap.exists(v.id) ) {
@@ -286,7 +286,7 @@ class Linker {
 				curShader.writeVars.push(v);
 			}
 			return { e : TCall({ e : TGlobal(ResolveSampler),  t : TFun([]), p : e.p }, [handle, { e : TVar(v.v), t : v.v.type, p : e.p }] ), t : e.t, p : e.p };
-		case TCall({ e : TGlobal(ResolveBuffer)}, [handle, { e : TVar(v)}]):
+		case TCall({ e : TGlobal(ResolveBuffer)}, [handle, { e : TVar(v)}]) if(!locals.exists(v.id)):
 			var handle = mapExprVar(handle);
 			var v = allocVar(v, handle.p);
 			if( curShader != null && !curShader.writeMap.exists(v.id) ) {

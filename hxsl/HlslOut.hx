@@ -474,9 +474,9 @@ class HlslOut {
 		case ResolveSampler:
 			var tt = args[1].t;
 			var tstr = getTexType(tt);
-			decl('void resolveSampler( uint2 id, $tstr tex, SamplerState sampler ) { tex = ResourceDescriptorHeap[id.x]; sampler = SamplerDescriptorHeap[id.y]; }');
+			decl('void resolveSampler( uint2 id, $tstr tex, SamplerState sampler ) { tex = ResourceDescriptorHeap[NonUniformResourceIndex(id.x)]; sampler = SamplerDescriptorHeap[NonUniformResourceIndex(id.y)]; }');
 		case ResolveBuffer:
-			decl('void resolveBuffer( uint id, StructuredBuffer<${(args[1].t.match(TBuffer(TInt,_,_)))?"int":"float"}> buf) { buf = ResourceDescriptorHeap[id]; }');
+			decl('void resolveBuffer( uint id, StructuredBuffer<${(args[1].t.match(TBuffer(TInt,_,_)))?"int":"float"}> buf) { buf = ResourceDescriptorHeap[NonUniformResourceIndex(id)]; }');
 		default:
 		}
 	}
@@ -505,6 +505,8 @@ class HlslOut {
 				s.index = index;
 			}
 			return r;
+		case TBlock(el) if( el.length > 0 ):
+			return resolveSamplerRef(el[el.length - 1]);
 		default:
 			throw "Cannot resolve sampler for " + e.e;
 		}
