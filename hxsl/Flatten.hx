@@ -241,7 +241,7 @@ class Flatten {
 				]), t : e.t, p : e.p}
 			default : throw "assert";
 			}
-		case TCall({ e : TGlobal(ResolveSampler|ResolveBuffer), _}):
+		case TCall({ e : TGlobal(ResolveSampler|ResolveBuffer) }, _):
 			hasBindless = true;
 			e.map(mapExprFun);
 		default:
