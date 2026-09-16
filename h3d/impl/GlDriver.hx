@@ -2092,7 +2092,7 @@ class GlDriver extends Driver {
 	}
 
 	override function memoryBarrier(){
-		GL.memoryBarrier(GL.BUFFER_UPDATE_BARRIER_BIT | GL.TEXTURE_FETCH_BARRIER_BIT);
+		GL.memoryBarrier(GL.BUFFER_UPDATE_BARRIER_BIT | GL.TEXTURE_FETCH_BARRIER_BIT | GL.SHADER_STORAGE_BARRIER_BIT);
 	}
 
 	override function allocQuery(kind:QueryKind) {
