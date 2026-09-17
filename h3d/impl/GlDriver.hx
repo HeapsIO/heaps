@@ -1232,8 +1232,11 @@ class GlDriver extends Driver {
 	}
 
 	override function allocDepthBuffer( t : h3d.mat.Texture ) : Texture {
+		var isArray = t.flags.has(IsArray);
+		if( isArray && !hasFeature(DepthTextureArray) )
+			throw "Depth texture arrays require GLES3";
 		var tt = gl.createTexture();
-		var tt : Texture = { t : tt, width : t.width, height : t.height, internalFmt : GL.RGBA, pixelFmt : GL.UNSIGNED_BYTE, bits : -1, bind : GL.TEXTURE_2D #if multidriver, driver : this #end };
+		var tt : Texture = { t : tt, width : t.width, height : t.height, internalFmt : GL.RGBA, pixelFmt : GL.UNSIGNED_BYTE, bits : -1, bind : isArray ? GL.TEXTURE_2D_ARRAY : GL.TEXTURE_2D #if multidriver, driver : this #end };
 		var fmt = GL.DEPTH_COMPONENT;
 		switch( t.format ) {
 		case Depth16:
@@ -1259,7 +1262,10 @@ class GlDriver extends Driver {
 		gl.texParameteri(tt.bind, GL.TEXTURE_WRAP_S, GL.CLAMP_TO_EDGE);
 		gl.texParameteri(tt.bind, GL.TEXTURE_WRAP_T, GL.CLAMP_TO_EDGE);
 		#end
-		gl.texImage2D(tt.bind, 0, tt.internalFmt, tt.width, tt.height, 0, fmt, tt.pixelFmt, null);
+		if( isArray )
+			gl.texImage3D(tt.bind, 0, tt.internalFmt, tt.width, tt.height, t.layerCount, 0, fmt, tt.pixelFmt, null);
+		else
+			gl.texImage2D(tt.bind, 0, tt.internalFmt, tt.width, tt.height, 0, fmt, tt.pixelFmt, null);
 
 		restoreBind();
 		return tt;
@@ -1901,12 +1907,12 @@ class GlDriver extends Driver {
 		if( needClear ) clear(BLACK);
 	}
 
-	override function setDepth( depthBuffer : h3d.mat.Texture ) {
+	override function setDepth( depthBuffer : h3d.mat.Texture, layer = 0 ) {
 		unbindTargets();
 		curTarget = depthBuffer;
 
 		depthBuffer.lastFrame = frame;
-		curTargetLayer = 0;
+		curTargetLayer = layer;
 		curTargetMip = 0;
 		#if multidriver
 		if( depthBuffer.t.driver != this )
@@ -1916,12 +1922,24 @@ class GlDriver extends Driver {
 
 		gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0, GL.TEXTURE_2D, null, 0);
 
+		var tex = @:privateAccess depthBuffer.t.t;
+		var isArray = depthBuffer.flags.has(IsArray);
+		inline function attach( slot : Int, t ) {
+			if( isArray ) {
+				if( t == null )
+					gl.framebufferTexture2D(GL.FRAMEBUFFER, slot, GL.TEXTURE_2D, null, 0);
+				else
+					gl.framebufferTextureLayer(GL.FRAMEBUFFER, slot, t, 0, layer);
+			} else
+				gl.framebufferTexture2D(GL.FRAMEBUFFER, slot, GL.TEXTURE_2D, t, 0);
+		}
+
 		if(depthBuffer.hasStencil() && depthBuffer.format == Depth24Stencil8) {
-			gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.DEPTH_STENCIL_ATTACHMENT, GL.TEXTURE_2D,@:privateAccess depthBuffer.t.t, 0);
+			attach(GL.DEPTH_STENCIL_ATTACHMENT, tex);
 		} else {
-			gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.DEPTH_STENCIL_ATTACHMENT, GL.TEXTURE_2D,null,0);
-			gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.DEPTH_ATTACHMENT, GL.TEXTURE_2D, @:privateAccess depthBuffer.t.t,0);
-			gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.STENCIL_ATTACHMENT, GL.TEXTURE_2D,depthBuffer.hasStencil() ? @:privateAccess depthBuffer.t.t : null,0);
+			attach(GL.DEPTH_STENCIL_ATTACHMENT, null);
+			attach(GL.DEPTH_ATTACHMENT, tex);
+			attach(GL.STENCIL_ATTACHMENT, depthBuffer.hasStencil() ? tex : null);
 		}
 
 		var w = depthBuffer.width; if( w == 0 ) w = 1;
@@ -1980,6 +1998,8 @@ class GlDriver extends Driver {
 			false;
 		case DLSS:
 			false;
+		case DepthTextureArray:
+			glES >= 3;
 		default:
 			#if js
 			features.get(f);
