@@ -358,7 +358,7 @@ class CascadeShadowMap extends Shadows {
 		var depthFormat : hxd.PixelFormat = #if js Depth24Stencil8 #else highPrecision ? Depth32 : Depth16 #end;
 		var renderToDepthArray = ctx.engine.driver.hasFeature(DepthTextureArray);
 		var arrayFormat : hxd.PixelFormat = renderToDepthArray ? depthFormat : R32F;
-		var cascades : h3d.mat.TextureArray = cast ctx.textures.allocTarget("cascadeShadowMaps", size, size, false, arrayFormat, null, cascade);
+		var cascades : h3d.mat.TextureArray = cast ctx.textures.allocTarget("cascadeShadowMaps", size, size, false, arrayFormat, [IsArray], cascade);
 		// Bilinear depth only make sense if we use sample compare to get weighted shadow occlusion which we doesn't support yet.
 		cascades.filter = Nearest;
 		var copyTex = null;
