@@ -629,7 +629,7 @@ class Renderer extends h3d.scene.Renderer {
 			passes.clear();
 		while( light != null ) {
 			var plight = Std.downcast(light, h3d.scene.pbr.Light);
-			if( plight != null ) {
+			if( plight != null && plight.shadows.hasStaticShadow() ) {
 				plight.shadows.setContext(ctx);
 				plight.shadows.computeStatic(passes);
 				passes.reset();
