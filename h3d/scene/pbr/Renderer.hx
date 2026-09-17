@@ -899,6 +899,9 @@ class Renderer extends h3d.scene.Renderer {
 			}
 		case Debug:
 			var defaultShadows : h3d.mat.Texture = ctx.getGlobal("mainLightShadowMap");
+			// TextureArray defaultShadows is not supported .
+			if( Std.isOfType(defaultShadows, h3d.mat.TextureArray) )
+				defaultShadows = null;
 			var prev = slides.shader.shadowMap;
 			var shadowMap = defaultShadows;
 			if( debugShadowMapIndex < 0 )
