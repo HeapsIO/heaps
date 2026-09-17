@@ -1,8 +1,9 @@
 package h3d.shader;
 
-class CascadeShadow extends DirShadow {
+class CascadeShadow extends hxsl.Shader {
 
 	static var SRC = {
+		@:extends h3d.shader.ShadowSampling;
 
 		var pixelColor : Vec4;
 
@@ -10,11 +11,22 @@ class CascadeShadow extends DirShadow {
 			var view : Mat4;
 		}
 
+		@const var enable : Bool;
+		@const(2) var SAMPLING_MODE : Int;
 		@const var DEBUG : Bool;
 		@const var BLEND : Bool;
 
+		// ESM
+		@param var shadowPower : Float;
+		// PCF
+		@param var pcfScale : Float;
+
+		var transformedPosition : Vec3;
+		var shadow : Float;
+		var dirShadow : Float;
+
 		final MAX_CASCADE_COUNT : Int = 4;
-		@param var cascadeShadowMaps : Array<Sampler2D, MAX_CASCADE_COUNT>;
+		@param var cascadeShadowMaps : Sampler2DArray;
 		@param var cascadeScales : Array<Vec4, MAX_CASCADE_COUNT>;
 		@param var cascadeOffsets : Array<Vec4, MAX_CASCADE_COUNT>;
 		@param var cascadeDebugs : Array<Vec4, MAX_CASCADE_COUNT>;
@@ -41,7 +53,7 @@ class CascadeShadow extends DirShadow {
 
 						var shadowPos0 = transformedPosition * cascadeViewProj;
 						var shadowPos = ( i == 0 ) ? shadowPos0 : cascadeShadowPos(shadowPos0, cascadeScales[i].xyz, cascadeOffsets[i].xyz);
-						shadowValue = sampleCascade(cascadeShadowMaps[i], shadowPos, 0.0, pcfScale, shadowPower, transformedPosition, SAMPLING_MODE);
+						shadowValue = sampleCascadeArray(cascadeShadowMaps, i, shadowPos, 0.0, pcfScale, shadowPower, transformedPosition, SAMPLING_MODE);
 						color = cascadeDebugs[i].rgb;
 
 						if( BLEND ) {
@@ -50,7 +62,7 @@ class CascadeShadow extends DirShadow {
 							if( blendFactor > 0.0 ) {
 								if( i < MAX_CASCADE_COUNT - 1 && i < cascadeCount - 1 ) {
 									var nextShadowPos = cascadeShadowPos(shadowPos0, cascadeScales[i + 1].xyz, cascadeOffsets[i + 1].xyz);
-									var nextShadow = sampleCascade(cascadeShadowMaps[i + 1], nextShadowPos, 0.0, pcfScale, shadowPower, transformedPosition, SAMPLING_MODE);
+									var nextShadow = sampleCascadeArray(cascadeShadowMaps, i + 1, nextShadowPos, 0.0, pcfScale, shadowPower, transformedPosition, SAMPLING_MODE);
 									shadowValue = nextShadow * blendFactor + shadowValue * (1 - blendFactor);
 
 									var nextColor = cascadeDebugs[i + 1].rgb;

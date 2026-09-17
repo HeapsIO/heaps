@@ -84,6 +84,17 @@ class ShadowSampling extends hxsl.Shader {
 			return saturate(shadow);
 		}
 
+		function shadowArrayPcf( shadowMap : Sampler2DArray, uv : Vec2, layer : Int, zMax : Float, bias : Float, pcfScale : Float, pos : Vec3 ) : Float {
+			var cs = poissonRotation(pos);
+			var shadow = 1.0;
+			@unroll for( i in 0...PCF_SAMPLES ) {
+				var o = poissonOffset(i, cs, pcfScale);
+				var compare = insideShadow(uv) ? compareDepth(shadowMap.getLod(vec3(uv + o, layer), 0).r, zMax, bias) : 1.0;
+				shadow -= compare > 0.0 ? 0.0 : 1.0 / PCF_SAMPLES;
+			}
+			return shadow;
+		}
+
 		function sampleShadow( shadowMap : Sampler2D, uv : Vec2, zMax : Float, bias : Float, pcfScale : Float, esmPower : Float, worldPos : Vec3, samplingMode : Int ) : Float {
 			var shadow = 1.0;
 			if( insideShadow(uv) ) {
@@ -118,17 +129,17 @@ class ShadowSampling extends hxsl.Shader {
 			return shadowPos0 * scale + offset;
 		}
 
-		function sampleCascade( shadowMap : Sampler2D, shadowPos : Vec3, bias : Float, pcfScale : Float, esmPower : Float, worldPos : Vec3, samplingMode : Int ) : Float {
+		function sampleCascadeArray( shadowMap : Sampler2DArray, layer : Int, shadowPos : Vec3, bias : Float, pcfScale : Float, esmPower : Float, worldPos : Vec3, samplingMode : Int ) : Float {
 			var zMax = shadowPos.z.saturate();
 			var uv = shadowPos.xy;
 			uv.y = 1.0 - uv.y;
 			var shadow = 1.0;
 			if( samplingMode == SAMPLING_PCF )
-				shadow = shadowPcf(shadowMap, uv, zMax, bias, pcfScale, worldPos);
+				shadow = shadowArrayPcf(shadowMap, uv, layer, zMax, bias, pcfScale, worldPos);
 			else if( samplingMode == SAMPLING_ESM )
-				shadow = esmFilter(shadowMap.getLod(uv, 0).r, zMax, bias, esmPower);
+				shadow = esmFilter(shadowMap.getLod(vec3(uv, layer), 0).r, zMax, bias, esmPower);
 			else if( samplingMode == SAMPLING_NONE )
-				shadow = compareDepth(shadowMap.getLod(uv, 0).r, zMax, bias);
+				shadow = compareDepth(shadowMap.getLod(vec3(uv, layer), 0).r, zMax, bias);
 			return saturate(shadow);
 		}
 	};

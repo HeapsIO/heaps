@@ -39,7 +39,7 @@ class DefaultForward extends hxsl.Shader {
 		@param var cascadeLightStride : Int;
 
 		// ShadowMaps
-		@param var cascadeShadowMaps : Array<Sampler2D, CASCADE_COUNT>;
+		@param var cascadeShadowMaps : Sampler2DArray;
 		@param var dirShadowMaps : Array<Sampler2D, MAX_DIR_SHADOW_COUNT>;
 		@param var pointShadowMaps : Array<SamplerCube, MAX_POINT_SHADOW_COUNT>;
 		@param var spotShadowMaps : Array<Sampler2D, MAX_SPOT_SHADOW_COUNT>;
@@ -245,7 +245,7 @@ class DefaultForward extends hxsl.Shader {
 
 						var offset = lightInfos[i + 6 + 2 * c];
 						var shadowPos = ( c == 0 ) ? shadowPos0 : cascadeShadowPos(shadowPos0, scale.xyz, offset.xyz);
-						shadow = sampleCascade(cascadeShadowMaps[c], shadowPos, 0.0, shadowParam, shadowParam, transformedPosition, samplingMode);
+						shadow = sampleCascadeArray(cascadeShadowMaps, c, shadowPos, 0.0, shadowParam, shadowParam, transformedPosition, samplingMode);
 
 						var blendFactor = cascadeBlendFactor(viewZ, scale.w, transitionFraction);
 						if( blendFactor > 0.0 ) {
@@ -253,7 +253,7 @@ class DefaultForward extends hxsl.Shader {
 								var nextScale = lightInfos[i + 5 + 2 * (c + 1)];
 								var nextOffset = lightInfos[i + 6 + 2 * (c + 1)];
 								var nextShadowPos = cascadeShadowPos(shadowPos0, nextScale.xyz, nextOffset.xyz);
-								var nextShadow = sampleCascade(cascadeShadowMaps[c + 1], nextShadowPos, 0.0, shadowParam, shadowParam, transformedPosition, samplingMode);
+								var nextShadow = sampleCascadeArray(cascadeShadowMaps, c + 1, nextShadowPos, 0.0, shadowParam, shadowParam, transformedPosition, samplingMode);
 								shadow = nextShadow * blendFactor + shadow * (1 - blendFactor);
 							} else {
 								shadow = blendFactor + shadow * (1 - blendFactor);
