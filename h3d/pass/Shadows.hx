@@ -107,15 +107,20 @@ class Shadows extends Output {
 		throw "Not implemented";
 	}
 
-	/**
-	 * Triggers update of static part of shadows (if any).
-	**/ 
-	public function needStaticUpdate() {
+	public function hasStaticShadow() {
 		switch ( mode ) {
 		case Mixed, Static:
-			updateStatic = true;
+			return true;
 		case None, Dynamic:
+			return false;
 		}
+	}
+
+	/**
+	 * Triggers update of static part of shadows (if any).
+	**/
+	public function needStaticUpdate() {
+		updateStatic = hasStaticShadow();
 	}
 
 	function createDefaultShadowMap() {
