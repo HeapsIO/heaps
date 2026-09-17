@@ -712,6 +712,7 @@ class GlDriver extends Driver {
 					#else
 					gl.bindImageTexture(imageBindingIdx++, cast t.t.t, 0, tdim == T3D ? true : false, 0, GL.READ_WRITE, fmt);
 					#end
+					t.flags.set(WasCleared);
 					boundTextures[i] = null;
 					continue;
 				default:

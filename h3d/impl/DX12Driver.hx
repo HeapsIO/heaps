@@ -3083,6 +3083,7 @@ class DX12Driver extends h3d.impl.Driver {
 							var srv = frame.srvHeap.alloc(1);
 							if( !t.flags.has(Writable) )
 								throw "Texture was allocated without Writable flag";
+							t.flags.set(WasCleared);
 							transition(t.t, UNORDERED_ACCESS);
 							var desc = tmp.wtexDesc;
 							desc.format = cast getTextureFormat(t);
