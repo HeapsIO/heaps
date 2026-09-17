@@ -125,10 +125,10 @@ class Blur extends ScreenFx<h3d.shader.Blur> {
 		return radius <= 0 ? 0 : values.length * 2 - 1;
 	}
 
-	public function apply( ctx : h3d.impl.RenderContext, src : h3d.mat.Texture, ?output : h3d.mat.Texture ) {
+	public function apply( ctx : h3d.impl.RenderContext, src : h3d.mat.Texture, ?output : h3d.mat.Texture, layer = 0 ) {
 
 		if( radius <= 0 && shader.fixedColor == null ) {
-			if( output != null ) Copy.run(src, output);
+			if( output != null ) Copy.run(src, output, null, null, layer);
 			return;
 		}
 
@@ -170,7 +170,7 @@ class Blur extends ScreenFx<h3d.shader.Blur> {
 		pass.setBlendMode(additive ? Add : None);
 		pass.depth(false, Always);
 		for( i in 0 ... faceCount ){
-			engine.pushTarget(output, i);
+			engine.pushTarget(output, isCube ? i : layer);
 			if( isCube ) shader.cubeDir = cubeDir[i];
 			render();
 			engine.popTarget();
