@@ -59,8 +59,7 @@ class LightBuffer {
 			s.spotShadowMaps[i] = defaultForwardShader.spotShadowMaps[i];
 		for( i in 0 ... defaultForwardShader.MAX_DIR_SHADOW_COUNT )
 			s.dirShadowMaps[i] = defaultForwardShader.dirShadowMaps[i];
-		for ( i in 0... defaultForwardShader.CASCADE_COUNT )
-			s.cascadeShadowMaps[i] = defaultForwardShader.cascadeShadowMaps[i];
+		s.cascadeShadowMaps = defaultForwardShader.cascadeShadowMaps;
 
 		s.USE_INDIRECT = defaultForwardShader.USE_INDIRECT;
 		if( s.USE_INDIRECT ) {
@@ -332,14 +331,13 @@ class LightBuffer {
 			fillCommon(i, cascadeLight.color, cascadeLight.getIntensity(), cascadeShadow);
 			fillVector(lightInfos, pbr.lightDir, i+4);
 			lightInfos[i+7] = cascadeShadow.transitionFraction;
-			var shadowMaps = cascadeShadow.getShadowTextures();
+			s.cascadeShadowMaps = cascadeShadow.getShadowTex();
 			s.CASCADE_COUNT = cascadeShadow.cascade;
 			var mat = cascadeShadow.cascadeViewProj;
 			fillFloats(lightInfos, mat._11, mat._21, mat._31, mat._41, i+8);
 			fillFloats(lightInfos, mat._12, mat._22, mat._32, mat._42, i+12);
 			fillFloats(lightInfos, mat._13, mat._23, mat._33, mat._43, i+16);
 			for ( index in 0...cascadeShadow.cascade ) {
-				s.cascadeShadowMaps[index] = shadowMaps[index];
 				fillVector4(lightInfos, cascadeShadow.getCascadeScale(index), i + 20 + index * 8);
 				fillVector4(lightInfos, cascadeShadow.getCascadeOffset(index), i + 24 + index * 8);
 			}

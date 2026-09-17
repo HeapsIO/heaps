@@ -911,11 +911,16 @@ class Renderer extends h3d.scene.Renderer {
 					if( pl != null && pl.shadows != null ) {
 						var cl = Std.downcast(pl.shadows, h3d.pass.CascadeShadowMap);
 						if ( cl != null ) {
-							for ( tex in cl.getShadowTextures() ) {
-								if ( tex != null && tex != defaultShadows ) {
+							var cascades = cl.getShadowTex();
+							if ( cascades != null && cascades != defaultShadows ) {
+								for ( layer in 0...cascades.layerCount ) {
 									k--;
-									shadowMap = tex;
-									if ( k == 0 ) break;
+									if ( k == 0 ) {
+										var tex = ctx.textures.allocTarget("debugCascade", cascades.width, cascades.height, false, R32F);
+										h3d.pass.Copy.ArrayCopy.run(cascades, layer, tex);
+										shadowMap = tex;
+										break;
+									}
 								}
 							}
 							if ( k == 0 ) break;
