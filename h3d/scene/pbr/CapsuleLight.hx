@@ -65,12 +65,11 @@ class CapsuleLight extends Light {
 		var range = hxd.Math.max(range, 1e-10);
 		pbr.lightColor.scale(getIntensity());
 		pbr.lightPos.set(absPos.getPosition().x, absPos.getPosition().y, absPos.getPosition().z);
-		pbr.radius = radius;
+		pbr.radius = hxd.Math.min(radius, range);
 		pbr.halfLength = length * 0.5;
 		pbr.occlusionFactor = occlusionFactor;
 		pbr.left.load(absPos.front());
-		var d = range - radius;
-		pbr.invRange4 = 1 / (d * d * d * d);
+		pbr.invRange4 = 1 / (range * range * range * range);
 	}
 
 	var s = new h3d.col.Sphere();
