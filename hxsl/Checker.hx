@@ -31,7 +31,6 @@ class Checker {
 	var curFun : TFunction;
 	var inLoop : Bool;
 	var inWhile : Bool;
-	var finalInts : Map<Int, Int>;
 	public var inits : Array<{ v : TVar, e : TExpr }>;
 
 	public function new() {
@@ -294,7 +293,6 @@ class Checker {
 	public function check( name : String, shader : Expr ) : ShaderData {
 		vars = new Map();
 		inits = [];
-		finalInts = [];
 		inLoop = false;
 		inWhile = false;
 
@@ -401,6 +399,7 @@ class Checker {
 			switch( [size1,size2] ) {
 			case [SConst(a),SConst(b)] if( a == b ):
 			case [SVar(v1),SVar(v2)] if( v1 == v2 ):
+			case [SConst(_),SVar(v)] | [SVar(v),SConst(_)] if( v.isFinalInt() ):
 			default: return false;
 			}
 			return tryUnify(t1,t2);
@@ -538,20 +537,14 @@ class Checker {
 		case EIdent(name):
 			var v = vars.get(name);
 			if( v != null ) {
-				var value = finalInts.get(v.id);
-				if( value != null ) {
-					type = TInt;
-					TConst(CInt(value));
-				} else {
-					var canCall =  switch( name ) {
-					case "vertex", "fragment", "main": false;
-					default: !StringTools.startsWith(name,"__init__");
-					}
-					if( !canCall )
-						error("Function cannot be accessed", e.pos);
-					type = v.type;
-					TVar(v);
+				var canCall =  switch( name ) {
+				case "vertex", "fragment", "main": false;
+				default: !StringTools.startsWith(name,"__init__");
 				}
+				if( !canCall )
+					error("Function cannot be accessed", e.pos);
+				type = v.type;
+				TVar(v);
 			} else {
 				var g = globals.get(name);
 				if( g != null && g.g != null ) {
@@ -872,13 +865,17 @@ class Checker {
 					if( v.expr != null ) {
 						einit = typeExpr(v.expr, With(tv.type));
 						unify(einit.t, tv.type, v.expr.pos);
-						checkConst(einit);
 					}
 				} else {
 					einit = typeExpr(v.expr, Value);
-					checkConst(einit);
 					v.type = einit.t;
 					tv = makeVar(v, e.pos);
+				}
+				if( einit != null ) {
+					if( tv.isFinalConst() )
+						checkConstValue(einit)
+					else
+						checkConst(einit);
 				}
 
 				switch( tv.type ) {
@@ -888,9 +885,7 @@ class Checker {
 				}
 				var isFinal = tv.hasQualifier(Final);
 				if( einit != null ) {
-					if( isFinal ) registerFinalInt(tv, einit);
-					if( !finalInts.exists(tv.id) )
-						inits.push({ v : tv, e : einit });
+					inits.push({ v : tv, e : einit });
 				} else if( isFinal )
 					error("Final variable needs initializer", e.pos);
 				vars.set(tv.name, tv);
@@ -931,32 +926,25 @@ class Checker {
 		}
 	}
 
-	function isFinalInt( v : TVar ) {
-		return v.kind.match(Local) && v.type.match(TInt) && v.hasQualifier(Final);
-	}
-
-	function constIntValue( e : TExpr ) : Null<Int> {
+	function checkConstValue( e : TExpr ) {
 		switch( e.e ) {
-		case TConst(CInt(v)):        return v;
-		case TParenthesis(e):        return constIntValue(e);
-		case TBinop(OpAdd,  e1, e2): return constIntValue(e1) + constIntValue(e2);
-		case TBinop(OpSub,  e1, e2): return constIntValue(e1) - constIntValue(e2);
-		case TBinop(OpMult, e1, e2): return constIntValue(e1) * constIntValue(e2);
-		case TBinop(OpDiv,  e1, e2): return Std.int(constIntValue(e1) / constIntValue(e2));
-		case TBinop(OpAnd,  e1, e2): return constIntValue(e1) & constIntValue(e2);
-		case TBinop(OpOr,   e1, e2): return constIntValue(e1) | constIntValue(e2);
-		case TBinop(OpXor,  e1, e2): return constIntValue(e1) ^ constIntValue(e2);
-		case TBinop(OpMod,  e1, e2): return constIntValue(e1) % constIntValue(e2);
+		case TConst(_):
+		case TVar(v) if( v.isFinalConst() ):
+		case TParenthesis(e): checkConstValue(e);
+		case TCall({ e : TGlobal(ToFloat) }, [e]): checkConstValue(e);
+		case TUnop(OpNeg | OpNot | OpNegBits, e): checkConstValue(e);
+		case TIf(econd, eif, eelse) if( eelse != null ):
+			checkConstValue(econd);
+			checkConstValue(eif);
+			checkConstValue(eelse);
+		case TBinop(OpAssign | OpAssignOp(_) | OpInterval, _, _):
+			error("This expression should be constant", e.p);
+		case TBinop(_, e1, e2):
+			checkConstValue(e1);
+			checkConstValue(e2);
 		default:
-			error("This expression should resolve to a const int", e.p);
-			return null;
+			error("This expression should be constant", e.p);
 		}
-	}
-
-	function registerFinalInt( v : TVar, init : TExpr ) {
-		if( init == null || !isFinalInt(v) ) return;
-		var value = constIntValue(init);
-		if( value != null ) finalInts.set(v.id, value);
 	}
 
 	function checkConst( e : TExpr ) {
@@ -1096,13 +1084,8 @@ class Checker {
 					if( v2 == null ) break;
 				}
 				if( v2 == null ) error("Array size variable '" + v.name + "'not found", pos);
-				var value = finalInts.get(v2.id);
-				if( value != null )
-					SConst(value);
-				else {
-					if( !v2.isConst() ) error("Array size variable '" + v.name + "'should be a constant", pos);
-					SVar(v2);
-				}
+				if( !v2.isConst() && !v2.isFinalInt() ) error("Array size variable '" + v.name + "'should be a constant", pos);
+				SVar(v2);
 			}
 			t = makeVarType(t,parent,pos);
 			return switch( vt ) {

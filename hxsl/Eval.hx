@@ -106,7 +106,35 @@ class Eval {
 		return false;
 	}
 
+	function checkArraySize( t : Type, e : TExpr ) {
+		switch( [t, e.e] ) {
+		case [TArray(_, SConst(size)), TArrayDecl(el)] if( el.length != size ):
+			Error.t("Array of " + size + " elements expected, got " + el.length, e.p);
+		default:
+		}
+	}
+
+	function evalFinalConsts( s : ShaderData ) {
+		for( f in s.funs ) {
+			if( f.kind != Init ) continue;
+			var el = switch( f.expr.e ) {
+			case TBlock(el): el;
+			default: [f.expr];
+			};
+			for( e in el )
+				switch( e.e ) {
+				case TBinop(OpAssign, { e : TVar(v) }, init) if( v.isFinalConst() ):
+					switch( evalExpr(init).e ) {
+					case c = TConst(_): constants.set(v.id, c);
+					default: Error.t("Constant value expected for final " + v.name, e.p);
+					}
+				default:
+				}
+		}
+	}
+
 	public function eval( s : ShaderData ) : ShaderData {
+		evalFinalConsts(s);
 		var funs = [];
 		for( f in s.funs ) {
 			var f2 : TFunction = {
@@ -277,7 +305,10 @@ class Eval {
 				TVar(v2);
 			}
 		case TVarDecl(v, init):
-			TVarDecl(mapVar(v, true), init == null ? null : evalExpr(init));
+			var v2 = mapVar(v, true);
+			init = init == null ? null : evalExpr(init);
+			if( init != null ) checkArraySize(v2.type, init);
+			TVarDecl(v2, init);
 		case TArray(e1, e2):
 			var e1 = evalExpr(e1);
 			var e2 = evalExpr(e2);
@@ -363,7 +394,7 @@ class Eval {
 				var isVal = isVal && i == last;
 				var e = evalExpr(el[i], isVal);
 				switch( e.e ) {
-				case TConst(_), TVar(_) if( !isVal ):
+				case TConst(_), TVar(_), TBlock([]) if( !isVal ):
 				default:
 					out.push(e);
 				}
@@ -381,6 +412,8 @@ class Eval {
 				out[0].e
 			else
 				TBlock(out);
+		case TBinop(OpAssign, { e : TVar(v) }, _) if( v.isFinalConst() && constants.exists(v.id) ):
+			TBlock([]);
 		case TBinop(op, e1, e2):
 			var e1 = evalExpr(e1);
 			var e2 = evalExpr(e2);
@@ -460,7 +493,10 @@ class Eval {
 			case OpGte: compare(function(x) return x >= 0);
 			case OpLt: compare(function(x) return x < 0);
 			case OpLte: compare(function(x) return x <= 0);
-			case OpInterval, OpAssign, OpAssignOp(_): TBinop(op, e1, e2);
+			case OpAssign:
+				checkArraySize(e1.t, e2);
+				TBinop(op, e1, e2);
+			case OpInterval, OpAssignOp(_): TBinop(op, e1, e2);
 			default: throw "assert";
 			}
 		case TUnop(op, e):
@@ -471,6 +507,7 @@ class Eval {
 				case [OpNot, CBool(b)]: TConst(CBool(!b));
 				case [OpNeg, CInt(i)]: TConst(CInt( -i));
 				case [OpNeg, CFloat(f)]: TConst(CFloat( -f));
+				case [OpNegBits, CInt(i)]: TConst(CInt( ~i));
 				default:
 					TUnop(op, e);
 				}
