@@ -564,60 +564,14 @@ class Tools {
 		};
 	}
 
-	public static function hasSideEffect( e : TExpr ) {
-		switch( e.e ) {
-		case TParenthesis(e):
-			return hasSideEffect(e);
-		case TBlock(el), TArrayDecl(el):
-			for( e in el )
-				if( hasSideEffect(e) )
-					return true;
-			return false;
-		case TBinop(OpAssign | OpAssignOp(_), _, _):
-			return true;
-		case TBinop(_, e1, e2):
-			return hasSideEffect(e1) || hasSideEffect(e2);
-		case TUnop(_, e1):
-			return hasSideEffect(e1);
-		case TSwiz(e, _):
-			return hasSideEffect(e);
-		case TIf(econd, eif, eelse):
-			return hasSideEffect(econd) || hasSideEffect(eif) || (eelse != null && hasSideEffect(eelse));
-		case TFor(_, it, loop):
-			return hasSideEffect(it) || hasSideEffect(loop);
-		case TArray(e, index):
-			return hasSideEffect(e) || hasSideEffect(index);
-		case TConst(_), TVar(_), TGlobal(_):
-			return false;
-		case TCall({ e : TGlobal(SetLayout) },_):
-			return true;
-		case TCall(e, pl):
-			switch( e.e ) {
-			case TGlobal( ImageStore | AtomicAdd | AtomicAnd | AtomicOr | GroupMemoryBarrier | ResolveSampler | ResolveBuffer ):
-				return true;
-			case TGlobal(g):
-			default:
-				return true;
-			}
-			for( p in pl )
-				if( hasSideEffect(p) )
-					return true;
-			return false;
-		case TVarDecl(_), TDiscard, TContinue, TBreak, TReturn(_), TSyntax(_, _, _):
-			return true;
-		case TSwitch(e, cases, def):
-			for( c in cases ) {
-				for( v in c.values ) if( hasSideEffect(v) ) return true;
-				if( hasSideEffect(c.expr) ) return true;
-			}
-			return hasSideEffect(e) || (def != null && hasSideEffect(def));
-		case TWhile(e, loop, _):
-			return hasSideEffect(e) || hasSideEffect(loop);
-		case TMeta(_, _, e):
-			return hasSideEffect(e);
-		case TField(e,_):
-			return hasSideEffect(e);
+	public static function hasReturn( e : TExpr ) {
+		var found = false;
+		function rec( e : TExpr ) {
+			if( found ) return;
+			if( e.e.match(TReturn(_)) ) found = true else iter(e, rec);
 		}
+		rec(e);
+		return found;
 	}
 
 	public static function iter( e : TExpr, f : TExpr -> Void ) {

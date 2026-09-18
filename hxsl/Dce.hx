@@ -57,21 +57,39 @@ private class WriteTo {
 	}
 }
 
+private class FunDeps {
+	public var access : VarAccess;
+	public var calls : Array<FunDeps> = [];
+	public var closed : Bool;
+	public var onStack : Bool;
+	public function new( f : TFunction ) {
+		access = new VarAccess();
+		for( a in f.args )
+			access.addLocal(a);
+		access.collect(f.expr);
+	}
+}
+
 class Dce {
 
 	var used : Map<Int,VarDeps>;
 	var channelVars : Array<TVar>;
 	var markAsKeep : Bool;
 	var checkBranchesFun : TExpr -> Void;
+	var isDeadCallFun : TVar -> Bool;
+	var funs : Map<Int,FunDeps>;
+	var curRet : VarDeps;
 
 	public function new() {
 		checkBranchesFun = this.checkBranches; // prevent recreation of instance closure
+		isDeadCallFun = this.isDeadCall;
 	}
 
 	public function dce( shaders : Array<ShaderData> ) {
 		// collect vars dependencies
 		used = new Map();
 		channelVars = [];
+		funs = new Map();
 
 		var inputs = [];
 		for( s in shaders ) {
@@ -84,10 +102,30 @@ class Dce {
 			}
 		}
 
+		// an helper function is not inlined : list the vars it reads and writes, so that calling
+		// it creates the same dependencies an inlined body would have
+		for( s in shaders )
+			for( f in s.funs )
+				if( f.kind == Helper ) funs.set(f.ref.id, new FunDeps(f));
+		for( fd in funs )
+			for( f in fd.access.calls ) {
+				var c = funs.get(f.id);
+				if( c != null ) fd.calls.push(c);
+			}
+		for( fd in funs )
+			closeFun(fd);
+
 		// collect dependencies
 		for( s in shaders ) {
-			for( f in s.funs )
-				check(f.expr, new WriteTo(), new WriteTo());
+			for( f in s.funs ) {
+				// the function var holds the dependencies of the returned value, and tells whether
+				// a call to it is still alive
+				curRet = f.kind == Helper && f.ret != TVoid ? get(f.ref) : null;
+				var wt = new WriteTo();
+				if( curRet != null ) wt.push(curRet, 15);
+				check(f.expr, wt, new WriteTo());
+				curRet = null;
+			}
 		}
 
 		var outExprs = [];
@@ -107,7 +145,7 @@ class Dce {
 			outExprs = [];
 			for( s in shaders ) {
 				for( f in s.funs )
-					outExprs.push(mapExpr(f.expr, false));
+					outExprs.push(mapExpr(f.expr, f.kind == Helper && f.ret != TVoid));
 			}
 
 			// post add conditional branches
@@ -120,16 +158,48 @@ class Dce {
 		for( s in shaders ) {
 			for( f in s.funs )
 				f.expr = outExprs.shift();
+			// drop the helper functions that are no longer called : they might reference vars
+			// that have been removed
+			var i = s.funs.length;
+			while( i-- > 0 ) {
+				var f = s.funs[i];
+				if( f.kind == Helper && get(f.ref).used == 0 ) s.funs.splice(i, 1);
+			}
 		}
 
 		for( v in used ) {
 			if( v.used != 0 ) continue;
-			if( v.v.kind == VarKind.Input) continue;
+			if( v.v.kind == VarKind.Input || v.v.kind == VarKind.Function ) continue;
 			for( s in shaders )
 				s.vars.remove(v.v);
 		}
 
 		return shaders.copy();
+	}
+
+	function closeFun( fd : FunDeps ) {
+		if( fd.closed || fd.onStack ) return;
+		fd.onStack = true;
+		for( c in fd.calls ) {
+			closeFun(c);
+			fd.access.merge(c.access);
+		}
+		fd.onStack = false;
+		fd.closed = true;
+	}
+
+	// a call can be removed if it writes nothing that is still used and has no other side effect ;
+	// this is only asked when the returned value is discarded
+	function isDeadCall( f : TVar ) {
+		var fd = funs.get(f.id);
+		if( fd == null || fd.access.sideEffect ) return false;
+		for( w in fd.access.writes )
+			if( get(w).used != 0 ) return false;
+		return true;
+	}
+
+	inline function sideEffect( e : TExpr ) {
+		return VarAccess.hasSideEffect(e, isDeadCallFun);
 	}
 
 	function get( v : TVar ) {
@@ -250,6 +320,27 @@ class Dce {
 			affect.appendTo(isAffected);
 			writeTo.appendTo(affect);
 			check(e, affect, isAffected);
+		case TReturn(e) if( e != null && curRet != null ):
+			var wt = new WriteTo();
+			wt.push(curRet, 15);
+			check(e, wt, isAffected);
+		case TCall({ e : TVar(f) }, args) if( funs.exists(f.id) ):
+			// the call behaves like the inlined body : what the function writes, plus the value it
+			// returns (which flows into writeTo), depends on what it reads and on the args
+			var acc = funs.get(f.id).access;
+			var wt = new WriteTo();
+			writeTo.appendTo(wt);
+			for( w in acc.writes )
+				wt.append(get(w), 15);
+			if( acc.sideEffect )
+				wt.push(null, 0);
+			link(f, wt);
+			for( r in acc.reads )
+				link(r, wt);
+			for( a in args )
+				check(a, wt, isAffected);
+			for( w in acc.writes )
+				isAffected.append(get(w), 15);
 		case TCall({ e : TGlobal(ChannelRead) }, [{ e : TVar(c) }, uv, { e : TConst(CInt(cid)) }]):
 			check(uv, writeTo, isAffected);
 			if( channelVars[cid] == null ) {
@@ -339,15 +430,15 @@ class Dce {
 			for( e in el ) {
 				var isVar = isVar && count == el.length - 1;
 				var e = mapExpr(e, isVar);
-				if( e.hasSideEffect() || isVar )
+				if( sideEffect(e) || isVar )
 					out.push(e);
 				count++;
 			}
 			return { e : TBlock(out), p : e.p, t : e.t };
 		case TVarDecl(v,e2) | TBinop(OpAssign | OpAssignOp(_), { e : (TVar(v) | TSwiz( { e : TVar(v) }, _) | TArray( { e : TVar(v) }, _)) }, e2) if( get(v).used == 0 ):
-			return (e2 != null && e2.hasSideEffect()) ? mapExpr(e2, false) : { e : TConst(CNull), t : e.t, p : e.p };
+			return (e2 != null && sideEffect(e2)) ? mapExpr(e2, false) : { e : TConst(CNull), t : e.t, p : e.p };
 		case TBinop(OpAssign | OpAssignOp(_), { e : TSwiz( { e : TVar(v) }, swiz) }, e2) if( get(v).used & swizBits(swiz) == 0 ):
-			return  e2.hasSideEffect() ? mapExpr(e2, false) : { e : TConst(CNull), t : e.t, p : e.p };
+			return  sideEffect(e2) ? mapExpr(e2, false) : { e : TConst(CNull), t : e.t, p : e.p };
 		case TCall({ e : TGlobal(ChannelRead) }, [_, uv, { e : TConst(CInt(cid)) }]):
 			var c = channelVars[cid];
 			return { e : TCall({ e : TGlobal(Texture), p : e.p, t : TVoid }, [{ e : TVar(c), t : c.type, p : e.p }, mapExpr(uv,true)]), t : TVoid, p : e.p };
@@ -374,24 +465,24 @@ class Dce {
 			var e = mapExpr(e, true);
 			var econd = mapExpr(econd, isVar);
 			var eelse = eelse == null ? null : mapExpr(eelse, isVar);
-			if( !isVar && !econd.hasSideEffect() && (eelse == null || !eelse.hasSideEffect()) )
+			if( !isVar && !sideEffect(econd) && (eelse == null || !sideEffect(eelse)) )
 				return { e : TConst(CNull), t : e.t, p : e.p };
 			return { e : TIf(e, econd, eelse), p : e.p, t : e.t };
 		case TFor(v, it, loop):
 			var it = mapExpr(it, true);
 			var loop = mapExpr(loop, false);
-			if( !loop.hasSideEffect() )
+			if( !sideEffect(loop) )
 				return { e : TConst(CNull), t : e.t, p : e.p };
 			return { e : TFor(v, it, loop), p : e.p, t : e.t };
 		case TWhile(e, loop, normalWhile):
 			var e = mapExpr(e, true);
 			var loop = mapExpr(loop, isVar);
-			if( !loop.hasSideEffect() )
+			if( !sideEffect(loop) )
 				return { e : TConst(CNull), t : e.t, p : e.p };
 			return { e : TWhile(e, loop, normalWhile), p : e.p, t : e.t };
 		case TMeta(m, args, em):
 			var em = mapExpr(em, isVar);
-			if( !isVar && !em.hasSideEffect() )
+			if( !isVar && !sideEffect(em) )
 				return { e : TConst(CNull), t : e.t, p : e.p };
 			return { e : TMeta(m, args, em), t : e.t, p : e.p };
 		default:

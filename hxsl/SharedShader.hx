@@ -37,6 +37,8 @@ class ShaderConst {
 
 class SharedShader {
 	public static var UNROLL_LOOPS = false;
+	// helper functions are kept as real functions, unless they need to be inlined (texture args)
+	public static var INLINE_HELPERS = #if hxsl_inline_helpers true #else false #end;
 	static var SHADER_RESOLVE : Map<String, SharedShader> = [];
 
 	public var data : ShaderData;
@@ -194,7 +196,7 @@ class SharedShader {
 			default:
 			}
 		}
-		eval.inlineCalls = true;
+		eval.inlineCalls = INLINE_HELPERS;
 		eval.unrollLoops = UNROLL_LOOPS;
 		var edata = eval.eval(data);
 		edata = compactMem(edata);

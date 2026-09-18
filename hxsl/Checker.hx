@@ -513,7 +513,7 @@ class Checker {
 				default: if( el.length == 0 ) with else NoValue;
 				}
 				var et = typeExpr(e, ew);
-				if( el.length != 0 && !et.hasSideEffect() ) warning("This expression has no side effect", e.pos);
+				if( el.length != 0 && !VarAccess.hasSideEffect(et) ) warning("This expression has no side effect", e.pos);
 				tl.push(et);
 			}
 			vars = old;

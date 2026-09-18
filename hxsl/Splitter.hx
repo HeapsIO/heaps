@@ -25,6 +25,10 @@ class Splitter {
 
 	var isBatchShader : Bool;
 
+	var helpers : Map<Int,TFunction>;
+	var curHelpers : Array<TFunction>;
+	var curHelperSet : Map<Int,Bool>;
+
 	var mapVarsFun : TExpr -> TExpr;
 	var checkExprFun : TExpr -> Void;
 
@@ -41,19 +45,29 @@ class Splitter {
 		varNames = new Map();
 		varNamesKByPrefix = new Map();
 		varMap = new Map();
+		helpers = new Map();
+		var vHelpers = [], fHelpers = [];
+		for( f in s.funs )
+			if( f.kind == Helper ) helpers.set(f.ref.id, f);
 		for( f in s.funs )
 			switch( f.kind ) {
 			case Vertex, Main:
 				vars = vvars;
 				avars = avvars;
 				vfun = f;
+				curHelpers = vHelpers;
+				curHelperSet = new Map();
 				checkExpr(f.expr);
 				if( f.kind == Main ) isCompute = true;
 			case Fragment:
 				vars = fvars;
 				avars = afvars;
 				ffun = f;
+				curHelpers = fHelpers;
+				curHelperSet = new Map();
 				checkExpr(f.expr);
+			case Helper:
+				// checked through its callers, once per stage
 			default:
 				throw "assert";
 			}
@@ -99,6 +113,7 @@ class Splitter {
 		}
 
 		// perform a first mapVars before we map fragment shader vars
+		var vHelperFuns = mapHelpers(vHelpers);
 		vfun = {
 			ret : vfun.ret,
 			ref : vfun.ref,
@@ -161,7 +176,9 @@ class Splitter {
 		for( v in fvars )
 			checkVar(v, false, vvars, ffun.expr.p);
 
+		var fHelperFuns = [];
 		if( ffun != null ) {
+			fHelperFuns = mapHelpers(fHelpers);
 			ffun = {
 				ret : ffun.ret,
 				ref : ffun.ref,
@@ -192,24 +209,49 @@ class Splitter {
 		vvars.sort(function(v1, v2) return compare(v1, v2));
 		fvars.sort(function(v1, v2) return compare(v1, v2));
 
-		return isCompute ? [
-			{
-				name : "main",
-				vars : [for( v in vvars ) v.v],
-				funs : [vfun],
-			}
-		] : [
-			{
-				name : "vertex",
-				vars : [for( v in vvars ) v.v],
-				funs : [vfun],
-			},
-			{
-				name : "fragment",
-				vars : [for( v in fvars ) v.v],
-				funs : [ffun],
-			}
+		// helper functions are emitted before the entry point, and their ref vars must be declared
+		function makeData( name : String, vars : Array<VarProps>, helpers : Array<TFunction>, f : TFunction ) : ShaderData {
+			return {
+				name : name,
+				vars : [for( v in vars ) v.v].concat([for( h in helpers ) h.ref]),
+				funs : helpers.concat([f]),
+			};
+		}
+
+		if( isCompute )
+			return [makeData("main", vvars, vHelperFuns, vfun)];
+		return [
+			makeData("vertex", vvars, vHelperFuns, vfun),
+			makeData("fragment", fvars, fHelperFuns, ffun),
 		];
+	}
+
+	// an helper can be called from both stages : each one gets its own copy, since vars are not
+	// mapped the same way (eg. an Input becomes a varying in the fragment shader)
+	function useHelper( f : TFunction ) {
+		if( curHelperSet.exists(f.ref.id) ) return;
+		curHelperSet.set(f.ref.id, true);
+		for( a in f.args ) {
+			var inf = get(a);
+			inf.local = true;
+			inf.write++; // an argument is always initialized by the caller
+		}
+		checkExpr(f.expr);
+		curHelpers.push(f); // callees first
+	}
+
+	function mapHelpers( list : Array<TFunction> ) : Array<TFunction> {
+		for( f in list ) {
+			var nref : TVar = { id : Tools.allocVarId(), name : f.ref.name, type : f.ref.type, kind : Function };
+			varMap.set(f.ref, nref);
+		}
+		return [for( f in list ) {
+			kind : Helper,
+			ref : varMap.get(f.ref),
+			ret : f.ret,
+			args : [for( a in f.args ) { var n = varMap.get(a); n == null ? a : n; }],
+			expr : mapVars(f.expr),
+		}];
 	}
 
 	function addExpr( f : TFunction, e : TExpr ) {
@@ -372,6 +414,10 @@ class Splitter {
 			var inf = get(v);
 			inf.write++;
 			checkExpr(handle);
+		case TCall({ e : TVar(f) }, args) if( helpers.exists(f.id) ):
+			for( a in args )
+				checkExpr(a);
+			useHelper(helpers.get(f.id));
 		default:
 			e.iter(checkExprFun);
 		}

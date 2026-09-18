@@ -146,6 +146,8 @@ class HlslOut {
 	var bindlessSamplers : Map<Int, Int>;
 	var samplers : Map<Int, SamplerRef>;
 	var computeLayout : Array<Int>;
+	var inHelper : Bool;
+	var curHelperArgs : Array<TVar>;
 	public var varNames : Map<Int,String>;
 
 	var varAccess : Map<Int,String>;
@@ -292,7 +294,18 @@ class HlslOut {
 			addType(e.t);
 			add(" ");
 			add(name);
-			add("(void)");
+			// everything else is a global, but the args of the enclosing helper are not : forward them
+			if( curHelperArgs == null )
+				add("(void)");
+			else {
+				add("(");
+				var first = true;
+				for( a in curHelperArgs ) {
+					if( first ) first = false else add(", ");
+					addVar(a);
+				}
+				add(")");
+			}
 			var el2 = el.copy();
 			var last = el2[el2.length - 1];
 			el2[el2.length - 1] = { e : TReturn(last), t : e.t, p : last.p };
@@ -305,7 +318,17 @@ class HlslOut {
 			exprValues.push(buf.toString());
 			buf = tmp;
 			add(name);
-			add("()");
+			if( curHelperArgs == null )
+				add("()");
+			else {
+				add("(");
+				var first = true;
+				for( a in curHelperArgs ) {
+					if( first ) first = false else add(", ");
+					ident(a);
+				}
+				add(")");
+			}
 		case TIf(econd, eif, eelse):
 			add("( ");
 			addValue(econd, tabs);
@@ -824,7 +847,7 @@ class HlslOut {
 			add("discard");
 		case TReturn(e):
 			if( e == null ) {
-				if ( isCompute )
+				if ( isCompute || inHelper )
 					add("return");
 				else
 					add("return _out");
@@ -1163,6 +1186,50 @@ class HlslOut {
 		add("}");
 	}
 
+	function emitHelper( f : TFunction ) {
+		inHelper = true;
+		curHelperArgs = f.args.length == 0 ? null : f.args;
+		addType(f.ret);
+		add(" ");
+		ident(f.ref);
+		add("(");
+		var first = true;
+		for( a in f.args ) {
+			if( first ) first = false else add(", ");
+			addVar(a);
+		}
+		add(") {\n");
+		var expr = f.expr;
+		if( f.ret != TVoid && !expr.hasReturn() ) {
+			// the last expression of the body is an implicit return
+			switch( expr.e ) {
+			case TBlock(el) if( el.length > 0 ):
+				el = el.copy();
+				var last = el[el.length - 1];
+				el[el.length - 1] = { e : TReturn(last), t : TVoid, p : last.p };
+				expr = { e : TBlock(el), t : TVoid, p : expr.p };
+			case TBlock(_):
+			default:
+				expr = { e : TReturn(expr), t : TVoid, p : expr.p };
+			}
+		}
+		switch( expr.e ) {
+		case TBlock(el):
+			for( e in el ) {
+				add("\t");
+				addExpr(e, "\t");
+				newLine(e);
+			}
+		default:
+			add("\t");
+			addExpr(expr, "\t");
+			newLine(expr);
+		}
+		add("}");
+		inHelper = false;
+		curHelperArgs = null;
+	}
+
 	function initLocals() {
 		var locals = Lambda.array(locals);
 		locals.sort(function(v1, v2) return Reflect.compare(v1.name, v2.name));
@@ -1191,8 +1258,8 @@ class HlslOut {
 		buf = new StringBuf();
 		exprValues = [];
 
-		if( s.funs.length != 1 ) throw "assert";
-		var f = s.funs[0];
+		var f = s.funs[s.funs.length - 1];
+		if( f == null || f.kind == Helper ) throw "assert";
 		kind = f.kind;
 		varAccess = new Map();
 		samplers = new Map();
@@ -1202,6 +1269,12 @@ class HlslOut {
 		initStatics(s);
 
 		var tmp = buf;
+		for( h in s.funs ) {
+			if( h.kind != Helper ) continue;
+			buf = new StringBuf();
+			emitHelper(h);
+			exprValues.push(buf.toString());
+		}
 		buf = new StringBuf();
 		emitMain(f.expr);
 		exprValues.push(buf.toString());

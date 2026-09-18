@@ -46,6 +46,7 @@ private class ShaderInfos {
 	public var isCompute : Bool;
 	public var isBatchInit : Bool;
 	public var hasSyntax : Bool;
+	public var calls : Array<HelperInfos>;
 	public var marked : haxe.EnumFlags<ShaderStage>;
 	public var added : haxe.EnumFlags<ShaderStage>;
 
@@ -55,12 +56,28 @@ private class ShaderInfos {
 		this.stage = s;
 		processed = new Map();
 		usedFunctions = [];
+		calls = [];
 		readMap = new Map();
 		readVars = [];
 		writeMap = new Map();
 		writeVars = [];
 		marked = new haxe.EnumFlags();
 		added = new haxe.EnumFlags();
+	}
+}
+
+private class HelperInfos {
+	public var v : AllocatedVar;
+	public var args : Array<TVar>;
+	public var ret : Type;
+	public var body : TExpr;
+	public var infos : ShaderInfos;
+	public var closed : Bool;
+	public var onStack : Bool;
+	public var used : Bool;
+	public function new( v, name ) {
+		this.v = v;
+		this.infos = new ShaderInfos(name, Undefined);
 	}
 }
 
@@ -76,6 +93,9 @@ class Linker {
 	var mode : hxsl.RuntimeShader.LinkMode;
 	var isBatchShader : Bool;
 	var debugDepth = 0;
+	var helpers : Map<Int,HelperInfos>;
+	var allHelpers : Array<HelperInfos>;
+	var mappingHelpers : Bool;
 
 	var mapExprVarFun : TExpr -> TExpr;
 
@@ -201,37 +221,52 @@ class Linker {
 		return a;
 	}
 
+	function addRead( s : ShaderInfos, v : AllocatedVar ) {
+		if( s == null || s.writeMap.exists(v.id) ) return;
+		debug(s.name + " read " + v.path);
+		if( !s.readMap.exists(v.id) ) {
+			s.readMap.set(v.id, v);
+			s.readVars.push(v);
+		}
+		// if we read a varying, force into fragment
+		if( s.stage == Undefined && v.v.kind == Var ) {
+			debug("Force " + s.name+" into fragment (read varying)");
+			s.stage = Fragment;
+		}
+	}
+
+	function addWrite( s : ShaderInfos, v : AllocatedVar, forceVertex : Bool ) {
+		if( s == null || s.writeMap.exists(v.id) ) return;
+		debug(s.name + " write " + v.path);
+		s.writeMap.set(v.id, v);
+		s.writeVars.push(v);
+		if( forceVertex && s.stage == Undefined && v.v.kind == Var ) {
+			debug("Force " + s.name+" into vertex (write varying)");
+			s.stage = Vertex;
+		}
+	}
+
 	function mapExprVar( e : TExpr ) : TExpr {
 		switch( e.e ) {
+		case TCall({ e : TVar(f) }, args) if( helpers.exists(f.id) ):
+			var h = helpers.get(f.id);
+			if( curShader != null ) {
+				curShader.calls.push(h);
+				// merge at the call site so that reads and writes keep their relative order
+				if( !mappingHelpers ) mergeCall(curShader, h);
+			}
+			var fe : TExpr = { e : TVar(h.v.v), t : h.v.v.type, p : e.p };
+			return { e : TCall(fe, [for( a in args ) mapExprVar(a)]), t : e.t, p : e.p };
 		case TVar(v) if( !locals.exists(v.id) ):
 			var v = allocVar(v, e.p);
-			if( curShader != null && !curShader.writeMap.exists(v.id) ) {
-				debug(curShader.name + " read " + v.path);
-				if( !curShader.readMap.exists(v.id) ) {
-					curShader.readMap.set(v.id, v);
-					curShader.readVars.push(v);
-				}
-				// if we read a varying, force into fragment
-				if( curShader.stage == Undefined && v.v.kind == Var ) {
-					debug("Force " + curShader.name+" into fragment (read varying)");
-					curShader.stage = Fragment;
-				}
-			}
+			addRead(curShader, v);
 			return { e : TVar(v.v), t : v.v.type, p : e.p };
 		case TBinop(op, e1, e2):
 			switch( [op, e1.e] ) {
 			case [OpAssign, TVar(v)] if( !locals.exists(v.id) ):
 				var e2 = mapExprVar(e2);
 				var v = allocVar(v, e1.p);
-				if( curShader != null && !curShader.writeMap.exists(v.id) ) {
-					debug(curShader.name + " write " + v.path);
-					curShader.writeMap.set(v.id, v);
-					curShader.writeVars.push(v);
-					if( curShader.stage == Undefined && v.v.kind == Var ) {
-						debug("Force " + curShader.name+" into vertex (write varying)");
-						curShader.stage = Vertex;
-					}
-				}
+				addWrite(curShader, v, true);
 				// don't read the var
 				return { e : TBinop(op, { e : TVar(v.v), t : v.v.type, p : e.p }, e2), t : e.t, p : e.p };
 			case [OpAssign | OpAssignOp(_), (TVar(v) | TSwiz( { e : TVar(v) }, _))] if( !locals.exists(v.id) ):
@@ -240,12 +275,8 @@ class Linker {
 				var e2 = mapExprVar(e2);
 
 				var v = allocVar(v, e1.p);
-				if( curShader != null && !curShader.writeMap.exists(v.id) ) {
-					// TODO : mark as partial write if SWIZ
-					debug(curShader.name + " write " + v.path);
-					curShader.writeMap.set(v.id, v);
-					curShader.writeVars.push(v);
-				}
+				// TODO : mark as partial write if SWIZ
+				addWrite(curShader, v, false);
 				return { e : TBinop(op, e1, e2), t : e.t, p : e.p };
 			default:
 			}
@@ -325,6 +356,43 @@ class Linker {
 		curShader = null;
 		debug("Adding shader "+name+" with priority "+p);
 		return s;
+	}
+
+	// a call to an helper function behaves like an inlined body : the caller reads and writes
+	// everything the function does
+	function mergeCall( s : ShaderInfos, h : HelperInfos ) {
+		closeHelper(h);
+		for( v in h.infos.readVars )
+			addRead(s, v);
+		for( v in h.infos.writeVars )
+			addWrite(s, v, true);
+		if( h.infos.hasDiscard ) {
+			s.hasDiscard = true;
+			s.stage = Fragment;
+		}
+		if( h.infos.hasSyntax )
+			s.hasSyntax = true;
+	}
+
+	function closeHelper( h : HelperInfos ) {
+		if( h.closed || h.onStack ) return;
+		h.onStack = true;
+		for( c in h.infos.calls )
+			mergeCall(h.infos, c);
+		h.onStack = false;
+		h.closed = true;
+	}
+
+	function addHelper( s : ShaderData, f : TFunction ) {
+		var v = allocVar(f.ref, f.expr.p);
+		var h = new HelperInfos(v, s.name + "." + f.ref.name);
+		h.args = f.args;
+		h.ret = f.ret;
+		for( a in f.args )
+			locals.set(a.id, true);
+		helpers.set(f.ref.id, h);
+		allHelpers.push(h);
+		return h;
 	}
 
 	function sortByPriorityDesc( s1 : ShaderInfos, s2 : ShaderInfos ) {
@@ -415,6 +483,8 @@ class Linker {
 		allVars = new Array();
 		shaders = [];
 		locals = new Map();
+		helpers = new Map();
+		allHelpers = [];
 
 		var dupShaders = [];
 		shadersData = [for( i => s in shadersData ) {
@@ -458,6 +528,30 @@ class Linker {
 			}
 			curInstance++;
 		}
+
+		// helper functions are not inlined : globalize their body and collect what they read/write
+		curInstance = 0;
+		for( s in shadersData ) {
+			for( f in s.funs )
+				if( f.kind == Helper ) addHelper(s, f);
+			curInstance++;
+		}
+		curInstance = 0;
+		mappingHelpers = true;
+		for( s in shadersData ) {
+			isBatchShader = mode == Batch && StringTools.startsWith(s.name,"batchShader_");
+			for( f in s.funs ) {
+				if( f.kind != Helper ) continue;
+				var h = helpers.get(f.ref.id);
+				curShader = h.infos;
+				h.body = mapExprVar(f.expr);
+				curShader = null;
+			}
+			curInstance++;
+		}
+		mappingHelpers = false;
+		for( h in allHelpers )
+			closeHelper(h);
 
 		// create shader segments
 		var priority = 0;
@@ -505,7 +599,7 @@ class Linker {
 						addShader(s.name+"."+f.ref.name,status,f.expr, prio[0]++, isBatchInit).isCompute = isCompute;
 					}
 				case Helper:
-					throw "Unexpected helper function in linker "+v.v.name;
+					// already mapped
 				}
 			}
 			priority++;
@@ -618,6 +712,20 @@ class Linker {
 			for( v in s.writeVars )
 				addVar(v);
 		}
+		// only keep the helper functions actually reached by the collected segments
+		var usedHelpers = [];
+		function markHelpers( calls : Array<HelperInfos> ) {
+			for( h in calls ) {
+				if( h.used ) continue;
+				h.used = true;
+				markHelpers(h.infos.calls); // callees first, so they are declared before being used
+				usedHelpers.push(h);
+			}
+		}
+		for( s in v.concat(f) )
+			markHelpers(s.calls);
+		for( h in usedHelpers )
+			outVars.push(h.v.v);
 		// cleanup unused structure vars
 		function cleanVar( v : TVar ) {
 			switch( v.type ) {
@@ -660,10 +768,19 @@ class Linker {
 				expr : expr,
 			};
 		}
-		var funs = mode == Compute ? [build(Main,"main",v)] : [
+		var funs : Array<TFunction> = [for( h in usedHelpers ) {
+			kind : Helper,
+			ref : h.v.v,
+			ret : h.ret,
+			args : h.args,
+			expr : h.body,
+		}];
+		var entries = mode == Compute ? [build(Main,"main",v)] : [
 			build(Vertex, "vertex", v),
 			build(Fragment, "fragment", f),
 		];
+		for( fn in entries )
+			funs.push(fn);
 
 		// make sure the first merged var is the original for duplicate shaders
 		for( d in dupShaders ) {

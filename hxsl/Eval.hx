@@ -132,23 +132,6 @@ class Eval {
 		};
 	}
 
-	var markReturn : Bool;
-
-	function hasReturn( e : TExpr ) {
-		markReturn = false;
-		hasReturnLoop(e);
-		return markReturn;
-	}
-
-	function hasReturnLoop( e : TExpr ) {
-		switch( e.e ) {
-		case TReturn(_):
-			markReturn = true;
-		default:
-			if( !markReturn ) e.iter(hasReturnLoop);
-		}
-	}
-
 	function handleReturn( e : TExpr, isFinal : Bool = false ) : TExpr {
 		switch( e.e ) {
 		case TReturn(v):
@@ -165,7 +148,7 @@ class Eval {
 				if( i == last )
 					out.push(handleReturn(e, isFinal));
 				else switch( e.e ) {
-				case TIf(econd, eif, null) if( isFinal && hasReturn(eif) ):
+				case TIf(econd, eif, null) if( isFinal && eif.hasReturn() ):
 					out.push(handleReturn( { e : TIf(econd, eif, { e : TBlock(el.slice(i)), t : e.t, p : e.p } ), t : e.t, p : e.p } ));
 					break;
 				case TReturn(e):
@@ -367,6 +350,8 @@ class Eval {
 				default:
 					out.push(e);
 				}
+				// a conditional return might have been resolved : skip the unreachable code
+				if( e.e.match(TReturn(_)) ) break;
 			}
 			// unmap previous vars
 			while( mapped.length > index ) {
