@@ -19,9 +19,15 @@ class LightBuffer {
 	var dirLights : Array<DirLight> = [];
 
 	var lightInfos : hxd.FloatBuffer;
-	final POINT_LIGHT_INFO_SIZE = 3;
-	final SPOT_LIGHT_INFO_SIZE = 8;
-	final DIR_LIGHT_INFO_SIZE = 5;
+	// Keep in sync with h3d.shader.pbr.DefaultForward
+	final DIR_LIGHT_STRIDE   = 1;
+	final POINT_LIGHT_STRIDE = 2;
+	final SPOT_LIGHT_STRIDE  = 3;
+
+	final DIR_SHADOW_STRIDE  = 3;
+	final SPOT_SHADOW_STRIDE = 5;
+	final CUBE_SHADOW_STRIDE = 1;
+
 	final CASCADE_SHADOW_INFO_SIZE = 13;
 	final BUFFER_MAX_SIZE = 4096;
 
@@ -36,9 +42,12 @@ class LightBuffer {
 
 	public function setBuffers( s : h3d.shader.pbr.DefaultForward ) {
 		s.lightInfos = defaultForwardShader.lightInfos;
-		s.pointLightStride = defaultForwardShader.pointLightStride;
-		s.spotLightStride = defaultForwardShader.spotLightStride;
+		s.pointLightOffset = defaultForwardShader.pointLightOffset;
+		s.spotLightOffset = defaultForwardShader.spotLightOffset;
 		s.cascadeLightStride = defaultForwardShader.cascadeLightStride;
+		s.dirShadowOffset = defaultForwardShader.dirShadowOffset;
+		s.cubeShadowOffset = defaultForwardShader.cubeShadowOffset;
+		s.spotShadowOffset = defaultForwardShader.spotShadowOffset;
 		s.cameraPosition = defaultForwardShader.cameraPosition;
 		s.emissivePower = defaultForwardShader.emissivePower;
 
@@ -128,65 +137,50 @@ class LightBuffer {
 			return;
 		cascadeLight = null;
 
-		var dirShadowCount = 0;
-		var pointShadowCount = 0;
-		var spotShadowCount = 0;
+		var reserved = CASCADE_SHADOW_INFO_SIZE + MAX_POINT_SHADOW * CUBE_SHADOW_STRIDE + MAX_SPOT_SHADOW * SPOT_SHADOW_STRIDE;
+		var budget = BUFFER_MAX_SIZE - reserved;
 
 		var curSize = 0;
 		for (l in lights) {
 			var dl = Std.downcast(l, DirLight);
 			if(dl != null) {
-				if( curSize + DIR_LIGHT_INFO_SIZE < BUFFER_MAX_SIZE ) {
-					var hasShadow = dl.shadows != null && dl.shadows.enabled && dl.shadows.mode != None && shadows;
-					if( hasShadow ) {
-						var cascade = Std.downcast(dl.shadows, CascadeShadowMap);
-						if( cascade != null ) {
-							if( cascadeLight == null && curSize + CASCADE_SHADOW_INFO_SIZE < BUFFER_MAX_SIZE ) {
-								curSize += CASCADE_SHADOW_INFO_SIZE;
-								cascadeLight = dl;
-							}
-						} else if( dirShadowCount < MAX_DIR_SHADOW ) {
-							curSize += DIR_LIGHT_INFO_SIZE;
-							dirLightsShadow.push(dl);
-							dirShadowCount++;
-						} else {
-							curSize += DIR_LIGHT_INFO_SIZE;
-							dirLights.push(dl);
-						}
-					} else {
-						curSize += DIR_LIGHT_INFO_SIZE;
+				var hasShadow = dl.shadows != null && dl.shadows.enabled && dl.shadows.mode != None && shadows;
+				var cascade = hasShadow ? Std.downcast(dl.shadows, CascadeShadowMap) : null;
+				if( cascade != null ) {
+					if( cascadeLight == null )
+						cascadeLight = dl;
+				} else if( curSize + DIR_LIGHT_INFO_SIZE <= budget ) {
+					curSize += DIR_LIGHT_INFO_SIZE;
+					if( hasShadow && dirLightsShadow.length < MAX_DIR_SHADOW )
+						dirLightsShadow.push(dl);
+					else
 						dirLights.push(dl);
-					}
 				}
 				continue;
 			}
 
 			var pl = Std.downcast(l, PointLight);
 			if (pl != null) {
-				if ( curSize + POINT_LIGHT_INFO_SIZE < BUFFER_MAX_SIZE ) {
-					curSize += POINT_LIGHT_INFO_SIZE;
+				if ( curSize + POINT_LIGHT_STRIDE <= budget ) {
+					curSize += POINT_LIGHT_STRIDE;
 					var hasShadow = pl.shadows != null && pl.shadows.enabled && pl.shadows.mode != None && shadows;
-					if (hasShadow && pointShadowCount < MAX_POINT_SHADOW) {
+					if (hasShadow && pointLightsShadow.length < MAX_POINT_SHADOW)
 						pointLightsShadow.push(pl);
-						pointShadowCount++;
-					} else {
+					else
 						pointLights.push(pl);
-					}
 				}
 				continue;
 			}
 
 			var sl = Std.downcast(l, SpotLight);
 			if (sl != null) {
-				if ( curSize + SPOT_LIGHT_INFO_SIZE < BUFFER_MAX_SIZE ) {
-					curSize += SPOT_LIGHT_INFO_SIZE;
+				if ( curSize + SPOT_LIGHT_STRIDE <= budget ) {
+					curSize += SPOT_LIGHT_STRIDE;
 					var hasShadow = sl.shadows != null && sl.shadows.enabled && sl.shadows.mode != None && shadows;
-					if (hasShadow && spotShadowCount < MAX_SPOT_SHADOW) {
+					if (hasShadow && spotLightsShadow.length < MAX_SPOT_SHADOW)
 						spotLightsShadow.push(sl);
-						spotShadowCount++;
-					} else {
+					else
 						spotLights.push(sl);
-					}
 				}
 				continue;
 			}
@@ -211,11 +205,27 @@ class LightBuffer {
 		s.dirLightCount = 0;
 		s.CASCADE_COUNT = 0;
 
-		inline function fillCommon( i : Int, color : h3d.Vector, intensity : Float, shadows : h3d.pass.Shadows ) {
-			lightInfos[i+0] = color.toColor() & 0xFFFFFF; // drop toColor()'s alpha byte so the value stays exact as a float
+		inline function shadowParam( shadows : h3d.pass.Shadows ) {
+			return shadows.samplingKind == PCF ? shadows.pcfScale / shadows.size : shadows.power;
+		}
+
+		inline function fillColor( i : Int, color : h3d.Vector, intensity : Float ) {
+			// drop toColor()'s alpha byte so the value stays exact as a float
+			lightInfos[i+0] = color.toColor() & 0xFFFFFF;
 			lightInfos[i+1] = intensity;
-			lightInfos[i+2] = shadows == null ? 0.0 : (shadows.samplingKind == PCF ? shadows.pcfScale / shadows.size : shadows.power);
+		}
+
+		inline function fillDirCommon( i : Int, color : h3d.Vector, intensity : Float, shadows : h3d.pass.Shadows ) {
+			fillColor(i, color, intensity);
+			lightInfos[i+2] = shadows == null ? 0.0 : shadowParam(shadows);
 			lightInfos[i+3] = shadows == null ? -1.0 : shadows.samplingKind;
+		}
+
+		inline function fillShadowCommon( i : Int, shadows : h3d.pass.Shadows, extra : Float ) {
+			lightInfos[i+0] = shadows.bias;
+			lightInfos[i+1] = extra;
+			lightInfos[i+2] = shadowParam(shadows);
+			lightInfos[i+3] = shadows.samplingKind;
 		}
 
 		// Safe Reset
@@ -225,13 +235,26 @@ class LightBuffer {
 		var lights = sortLights(ctx);
 		fillLights(lights, pbrRenderer.shadows);
 
+		var pointShadowCount = pointLightsShadow.length;
+		var spotShadowCount = spotLightsShadow.length;
+		var dirTotal = dirLightsShadow.length + dirLights.length;
+		var cascadeLightStride = dirTotal * DIR_LIGHT_INFO_SIZE;
+		var pointLightOffset = cascadeLightStride + (cascadeLight != null ? CASCADE_SHADOW_INFO_SIZE : 0);
+		var spotLightOffset = pointLightOffset + (pointShadowCount + pointLights.length) * POINT_LIGHT_STRIDE;
+		var cubeShadowOffset = spotLightOffset + (spotShadowCount + spotLights.length) * SPOT_LIGHT_STRIDE;
+		var spotShadowOffset = cubeShadowOffset + pointShadowCount * CUBE_SHADOW_STRIDE;
+		s.cascadeLightStride = cascadeLightStride;
+		s.pointLightOffset = pointLightOffset;
+		s.spotLightOffset = spotLightOffset;
+		s.cubeShadowOffset = cubeShadowOffset;
+		s.spotShadowOffset = spotShadowOffset;
+
 		// Dir Light With Shadow
-		var stride = 0;
 		for (li in 0...dirLightsShadow.length) {
 			var dl = dirLightsShadow[li];
 			var pbr = @:privateAccess dl.pbr;
-			var i = stride << 2;
-			fillCommon(i, dl.color, dl.getIntensity(), dl.shadows);
+			var i = (li * DIR_LIGHT_INFO_SIZE) << 2;
+			fillDirCommon(i, dl.color, dl.getIntensity(), dl.shadows);
 			fillVector(lightInfos, pbr.lightDir, i+4);
 			lightInfos[i+7] = dl.shadows.bias;
 			s.dirShadowMaps[li] = dl.shadows.getShadowTex();
@@ -239,96 +262,83 @@ class LightBuffer {
 			fillFloats(lightInfos, mat._11, mat._21, mat._31, mat._41, i+8);
 			fillFloats(lightInfos, mat._12, mat._22, mat._32, mat._42, i+12);
 			fillFloats(lightInfos, mat._13, mat._23, mat._33, mat._43, i+16);
-			stride += DIR_LIGHT_INFO_SIZE;
 		}
 
 		// Dir Light
 		for (li in 0...dirLights.length) {
 			var dl = dirLights[li];
-			var i = stride << 2;
+			var i = ((dirLightsShadow.length + li) * DIR_LIGHT_INFO_SIZE) << 2;
 			var pbr = @:privateAccess dl.pbr;
-			fillCommon(i, dl.color, dl.getIntensity(), null);
+			fillDirCommon(i, dl.color, dl.getIntensity(), null);
 			fillVector(lightInfos, pbr.lightDir, i+4);
-			stride += DIR_LIGHT_INFO_SIZE;
 		}
-
-		s.pointLightStride = stride;
 
 		// Point Light With Shadows
 		for (li in 0...pointLightsShadow.length) {
 			var pl = pointLightsShadow[li];
-			var i = stride << 2;
+			var i = (pointLightOffset + li * POINT_LIGHT_STRIDE) << 2;
 			var pbr = @:privateAccess pl.pbr;
-			fillCommon(i, pl.color, pl.getIntensity(), pl.shadows);
+			fillColor(i, pl.color, pl.getIntensity());
+			lightInfos[i+2] = pbr.pointSize;
 			fillVector(lightInfos, pbr.lightPos, i+4);
 			lightInfos[i+7] = pbr.invLightRange4;
-			lightInfos[i+8] = pl.range;
-			lightInfos[i+9] = pbr.pointSize;
-			lightInfos[i+10] = pl.shadows.bias;
+			fillShadowCommon((cubeShadowOffset + li * CUBE_SHADOW_STRIDE) << 2, pl.shadows, pl.range);
 			s.pointShadowMaps[li] = pl.shadows.getShadowTex();
-			stride += POINT_LIGHT_INFO_SIZE;
 		}
 
 		// Point Light
 		for (li in 0...pointLights.length) {
 			var pl = pointLights[li];
-			var i = stride << 2;
+			var i = (pointLightOffset + (pointShadowCount + li) * POINT_LIGHT_STRIDE) << 2;
 			var pbr = @:privateAccess pl.pbr;
-			fillCommon(i, pl.color, pl.getIntensity(), null);
+			fillColor(i, pl.color, pl.getIntensity());
+			lightInfos[i+2] = pbr.pointSize;
 			fillVector(lightInfos, pbr.lightPos, i+4);
 			lightInfos[i+7] = pbr.invLightRange4;
-			lightInfos[i+8] = pl.range;
-			lightInfos[i+9] = pbr.pointSize;
-			stride += POINT_LIGHT_INFO_SIZE;
 		}
-
-		s.spotLightStride = stride;
 
 		// Spot Light With Shadow
 		for (li in 0...spotLightsShadow.length) {
 			var sl = spotLightsShadow[li];
-			var i = stride << 2;
+			var i = (spotLightOffset + li * SPOT_LIGHT_STRIDE) << 2;
 			var pbr = @:privateAccess sl.pbr;
-			fillCommon(i, sl.color, sl.getIntensity(), sl.shadows);
+			fillColor(i, sl.color, sl.getIntensity());
+			lightInfos[i+2] = pbr.angle;
+			lightInfos[i+3] = pbr.fallOff;
 			fillVector(lightInfos, pbr.lightPos, i+4);
 			lightInfos[i+7] = pbr.invLightRange4;
 			fillVector(lightInfos, pbr.spotDir, i+8);
-			lightInfos[i+12] = pbr.angle;
-			lightInfos[i+13] = pbr.fallOff;
-			lightInfos[i+14] = pbr.range;
-			lightInfos[i+15] = sl.shadows.bias;
+			lightInfos[i+11] = pbr.range;
+			var si = (spotShadowOffset + li * SPOT_SHADOW_STRIDE) << 2;
+			fillShadowCommon(si, sl.shadows, 0.0);
 			var mat = sl.shadows.getShadowViewProj();
-			fillFloats(lightInfos, mat._11, mat._21, mat._31, mat._41, i+16);
-			fillFloats(lightInfos, mat._12, mat._22, mat._32, mat._42, i+20);
-			fillFloats(lightInfos, mat._13, mat._23, mat._33, mat._43, i+24);
-			fillFloats(lightInfos, mat._14, mat._24, mat._34, mat._44, i+28);
+			fillFloats(lightInfos, mat._11, mat._21, mat._31, mat._41, si+4);
+			fillFloats(lightInfos, mat._12, mat._22, mat._32, mat._42, si+8);
+			fillFloats(lightInfos, mat._13, mat._23, mat._33, mat._43, si+12);
+			fillFloats(lightInfos, mat._14, mat._24, mat._34, mat._44, si+16);
 			s.spotShadowMaps[li] = sl.shadows.getShadowTex();
-			stride += SPOT_LIGHT_INFO_SIZE;
 		}
 
 		// Spot Light
 		for (li in 0...spotLights.length) {
 			var sl = spotLights[li];
-			var i = stride << 2;
+			var i = (spotLightOffset + (spotShadowCount + li) * SPOT_LIGHT_STRIDE) << 2;
 			var pbr = @:privateAccess sl.pbr;
-			fillCommon(i, sl.color, sl.getIntensity(), null);
+			fillColor(i, sl.color, sl.getIntensity());
+			lightInfos[i+2] = pbr.angle;
+			lightInfos[i+3] = pbr.fallOff;
 			fillVector(lightInfos, pbr.lightPos, i+4);
 			lightInfos[i+7] = pbr.invLightRange4;
 			fillVector(lightInfos, pbr.spotDir, i+8);
-			lightInfos[i+12] = pbr.angle;
-			lightInfos[i+13] = pbr.fallOff;
-			lightInfos[i+14] = pbr.range;
-			stride += SPOT_LIGHT_INFO_SIZE;
+			lightInfos[i+11] = pbr.range;
 		}
-
-		s.cascadeLightStride = stride;
 
 		// Cascade shadows
 		if ( cascadeLight != null ) {
-			var i = stride << 2;
+			var i = cascadeLightStride << 2;
 			var pbr = @:privateAccess cascadeLight.pbr;
 			var cascadeShadow = cast(cascadeLight.shadows, CascadeShadowMap);
-			fillCommon(i, cascadeLight.color, cascadeLight.getIntensity(), cascadeShadow);
+			fillDirCommon(i, cascadeLight.color, cascadeLight.getIntensity(), cascadeShadow);
 			fillVector(lightInfos, pbr.lightDir, i+4);
 			lightInfos[i+7] = cascadeShadow.transitionFraction;
 			s.cascadeShadowMaps = cascadeShadow.getShadowTex();
