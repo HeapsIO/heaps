@@ -491,6 +491,14 @@ class Tools {
 		return false;
 	}
 
+	public static function isFinalConst( v : TVar ) {
+		return v.kind.match(Local) && v.type.match(TInt | TFloat | TBool) && hasQualifier(v, Final);
+	}
+
+	public static function isFinalInt( v : TVar ) {
+		return isFinalConst(v) && v.type.match(TInt);
+	}
+
 	public static function isStruct( v : TVar ) {
 		return switch( v.type ) { case TStruct(_): true; default: false; }
 	}
