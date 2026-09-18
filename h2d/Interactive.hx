@@ -91,7 +91,7 @@ class Interactive extends Object implements hxd.SceneEvents.Interactive {
 
 	override function onAdd() {
 		this.scene = getScene();
-		if( scene != null ) scene.addEventTarget(this);
+		if( scene != null ) scene.invalidateEventTargets();
 		super.onAdd();
 	}
 
@@ -109,16 +109,21 @@ class Interactive extends Object implements hxd.SceneEvents.Interactive {
 	{
 		super.onHierarchyMoved(parentChanged);
 		if( scene != null ) {
-			scene.removeEventTarget(this);
-			scene = getScene();
-			if( scene != null )
-				scene.addEventTarget(this);
+			var ns = getScene();
+			if( ns == scene ) {
+				scene.invalidateEventTargets();
+			} else {
+				scene.removeEventTarget(this);
+				scene = ns;
+				if( scene != null )
+					scene.invalidateEventTargets();
+			}
 		}
 	}
 
 	override function onRemove() {
 		if( scene != null ) {
-			scene.removeEventTarget(this, true);
+			scene.removeEventTarget(this);
 			scene = null;
 		}
 		super.onRemove();
