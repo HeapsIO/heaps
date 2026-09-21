@@ -107,11 +107,11 @@ class DefaultForward extends hxsl.Shader {
 			return indirect * irrPower * occlusion;
 		}
 
-		function directLighting( lightColor : Vec3, lightDirection : Vec3) : Vec3 {
+		function directLighting( lightColor : Vec3, lightDirection : Vec3, specularDirection : Vec3 ) : Vec3 {
 			var result = vec3(0);
 			var NdL = clamp(transformedNormal.dot(lightDirection), 0.0, 1.0);
 			if( lightColor.dot(lightColor) > 0.0001 && NdL > 0 ) {
-				var half = (lightDirection + view).normalize();
+				var half = (specularDirection + view).normalize();
 				var NdH = clamp(transformedNormal.dot(half), 0.0, 1.0);
 				var VdH = clamp(view.dot(half), 0.0, 1.0);
 				var diffuse = albedoGamma / PI;
@@ -153,7 +153,7 @@ class DefaultForward extends hxsl.Shader {
 			var lightColor = unpackIntColor(int(lightInfos[i].r)).rgb * lightInfos[i].g;
 			var lightDir = lightInfos[i+1].xyz;
 
-			return directLighting(lightColor, lightDir);
+			return directLighting(lightColor, lightDir, lightDir);
 		}
 
 		function evaluatePointShadow( index : Int ) : Float {
@@ -178,7 +178,8 @@ class DefaultForward extends hxsl.Shader {
 			var invRange4 = lightInfos[i+1].a;
 			var delta = lightPos - transformedPosition;
 
-			return directLighting(pointLightIntensity(delta, size, invRange4) * lightColor, delta.normalize());
+			var lightDir = delta.normalize();
+			return directLighting(pointLightIntensity(delta, size, invRange4) * lightColor, lightDir, lightDir);
 		}
 
 		function evaluateSpotShadow( index : Int ) : Float {
@@ -206,14 +207,15 @@ class DefaultForward extends hxsl.Shader {
 			var fallOff = fallOffInfo.x;
 			var fallOffInfoAngle = fallOffInfo.y;
 
-			return directLighting(fallOff * lightColor * fallOffInfoAngle, delta.normalize());
+			var lightToPixel = delta.normalize();
+			return directLighting(fallOff * lightColor * fallOffInfoAngle, lightToPixel, lightToPixel);
 		}
 
 		function evaluateCascadeLight() : Vec3 {
 			var lightColor = unpackIntColor(int(lightInfos[0].r)).rgb * lightInfos[0].g;
 			var lightDir = lightInfos[1].xyz;
 
-			return directLighting(lightColor, lightDir);
+			return directLighting(lightColor, lightDir, lightDir);
 		}
 
 		function inside(pos : Vec3) : Bool {
