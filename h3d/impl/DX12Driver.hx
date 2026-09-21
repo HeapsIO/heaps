@@ -2123,8 +2123,11 @@ class DX12Driver extends h3d.impl.Driver {
 			return sh;
 		}
 
-		if ( shader.hasBindless() && !useSM6_6 )
-			throw "Shader using bindless detected, but Shader Model 6.6 is not used. Please call enableBindless().";
+		if ( shader.hasBindless() && !useSM6_6 ) {
+			enableBindless();
+			if ( !useSM6_6 )
+				throw "Shader using bindless detected, but Shader Model 6.6 is not used. SM6_6 unavailable on this device.";
+		}
 
 		var res = computeRootSignature(shader);
 
