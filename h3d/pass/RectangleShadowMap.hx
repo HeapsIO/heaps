@@ -20,8 +20,8 @@ class RectangleShadowMap extends ProjectedShadowMap {
 		var range = rectangleLight.range;
 		var halfWidth = rectangleLight.width * 0.5 * axisLen(absPos._21, absPos._22, absPos._23);
 		var halfHeight = rectangleLight.height * 0.5 * axisLen(absPos._31, absPos._32, absPos._33);
-		var tanX = (halfWidth + hxd.Math.sin(hxd.Math.degToRad(rectangleLight.horizontalAngle * 0.5)) * range) / range;
-		var tanY = (halfHeight + hxd.Math.sin(hxd.Math.degToRad(rectangleLight.verticalAngle * 0.5)) * range) / range;
+		var tanX = (halfWidth + rectangleLight.getSpread(rectangleLight.horizontalAngle)) / range;
+		var tanY = (halfHeight + rectangleLight.getSpread(rectangleLight.verticalAngle)) / range;
 
 		lightCamera.fovY = hxd.Math.radToDeg(2 * Math.atan(tanY));
 		lightCamera.screenRatio = tanX / tanY;

@@ -16,6 +16,8 @@ class DefaultForward extends hxsl.Shader {
 		@const(2) var MAX_DIR_SHADOW_COUNT:Int;
 		@const(16) var MAX_POINT_SHADOW_COUNT:Int;
 		@const(16) var MAX_SPOT_SHADOW_COUNT:Int;
+		@const(2) var MAX_CAPSULE_SHADOW_COUNT:Int;
+		@const(2) var MAX_RECT_SHADOW_COUNT:Int;
 
 		@global @const var DIFFUSE_ONLY : Bool;
 
@@ -31,6 +33,8 @@ class DefaultForward extends hxsl.Shader {
 		final DIR_LIGHT_STRIDE   : Int = 2;
 		final POINT_LIGHT_STRIDE : Int = 2;
 		final SPOT_LIGHT_STRIDE  : Int = 3;
+		final CAPSULE_LIGHT_STRIDE : Int = 3;
+		final RECT_LIGHT_STRIDE    : Int = 6;
 
 		final DIR_SHADOW_STRIDE  : Int = 4;
 		final SPOT_SHADOW_STRIDE : Int = 5;
@@ -52,11 +56,23 @@ class DefaultForward extends hxsl.Shader {
 		@param var spotShadowCount   : Int;
 		@param var spotShadowOffset  : Int;
 
+		@param var capsuleLightCount   : Int;
+		@param var capsuleLightOffset  : Int;
+		@param var capsuleShadowCount  : Int;
+		@param var capsuleShadowOffset : Int;
+
+		@param var rectLightCount    : Int;
+		@param var rectLightOffset   : Int;
+		@param var rectShadowCount   : Int;
+		@param var rectShadowOffset  : Int;
+
 		// ShadowMaps
 		@param var cascadeShadowMaps : Sampler2DArray;
 		@param var dirShadowMaps : Array<Sampler2D, MAX_DIR_SHADOW_COUNT>;
 		@param var pointShadowMaps : Array<SamplerCube, MAX_POINT_SHADOW_COUNT>;
 		@param var spotShadowMaps : Array<Sampler2D, MAX_SPOT_SHADOW_COUNT>;
+		@param var capsuleShadowMaps : Array<SamplerCube, MAX_CAPSULE_SHADOW_COUNT>;
+		@param var rectShadowMaps : Array<Sampler2D, MAX_RECT_SHADOW_COUNT>;
 
 		// Direct Lighting
 		@param var cameraPosition : Vec3;
@@ -211,6 +227,61 @@ class DefaultForward extends hxsl.Shader {
 			return directLighting(fallOff * lightColor * fallOffInfoAngle, lightToPixel, lightToPixel);
 		}
 
+		function evaluateCapsuleShadow( index : Int ) : Float {
+			var s = capsuleShadowOffset + index * CUBE_SHADOW_STRIDE;
+			var i = capsuleLightOffset + index * CAPSULE_LIGHT_STRIDE;
+			var samplingMode = int(lightInfos[s].a);
+			var shadowParam = lightInfos[s].b;
+			var shadowBias = lightInfos[s].r;
+			var range = lightInfos[s].g;
+			var lightPos = lightInfos[i+1].rgb;
+			var posToLight = transformedPosition.xyz - lightPos;
+			var zMax = length(posToLight);
+			var dir = posToLight / zMax;
+			return sampleCubeShadow(capsuleShadowMaps[index], dir, zMax, range, shadowBias, shadowParam, shadowParam, samplingMode);
+		}
+
+		function evaluateCapsuleLight( index : Int ) : Vec3 {
+			var i = capsuleLightOffset + index * CAPSULE_LIGHT_STRIDE;
+			var lightColor = unpackIntColor(int(lightInfos[i].r)).rgb * lightInfos[i].g;
+			var radius = lightInfos[i].b;
+			var halfLength = lightInfos[i].a;
+			var lightPos = lightInfos[i+1].rgb;
+			var invRange4 = lightInfos[i+1].a;
+			var left = lightInfos[i+2].rgb;
+
+			var light = capsuleLightDiffuse(lightPos, left, halfLength, radius, invRange4, transformedPosition);
+			var specularDir = capsuleLightSpecularDir(lightPos, left, halfLength, radius, transformedPosition, reflect(-view, transformedNormal));
+			return directLighting(light.w * lightColor, light.xyz, specularDir);
+		}
+
+		function evaluateRectShadow( index : Int ) : Float {
+			var s = rectShadowOffset + index * SPOT_SHADOW_STRIDE;
+			var samplingMode = int(lightInfos[s].a);
+			var shadowParam = lightInfos[s].b;
+			var shadowBias = lightInfos[s].r;
+			var shadowViewProj = mat4(lightInfos[s+1], lightInfos[s+2], lightInfos[s+3], lightInfos[s+4]);
+			var shadowPos = spotShadowPos(transformedPosition, shadowViewProj);
+			return sampleShadow(rectShadowMaps[index], shadowPos.xy, shadowPos.z.saturate(), shadowBias, shadowParam, shadowParam, transformedPosition, samplingMode);
+		}
+
+		function evaluateRectLight( index : Int ) : Vec3 {
+			var i = rectLightOffset + index * RECT_LIGHT_STRIDE;
+			var lightColor = unpackIntColor(int(lightInfos[i].r)).rgb * lightInfos[i].g;
+			var halfSize = vec2(lightInfos[i].b, lightInfos[i].a);
+			var lightPos = lightInfos[i+1].rgb;
+			var invRange4 = lightInfos[i+1].a;
+			var lightDir = lightInfos[i+2].rgb;
+			var range = lightInfos[i+2].a;
+			var right = lightInfos[i+3].rgb;
+			var up = lightInfos[i+4].rgb;
+			var angles = vec4(lightInfos[i+3].a, lightInfos[i+4].a, lightInfos[i+5].r, lightInfos[i+5].g);
+
+			var light = rectangleLightDiffuse(lightPos, lightDir, right, up, halfSize, angles, range, invRange4, transformedPosition, transformedNormal);
+			var specularDir = rectangleLightSpecularDir(lightPos, lightDir, right, up, halfSize, transformedPosition, reflect(-view, transformedNormal));
+			return directLighting(light.w * lightColor, light.xyz, specularDir);
+		}
+
 		function evaluateCascadeLight() : Vec3 {
 			var lightColor = unpackIntColor(int(lightInfos[0].r)).rgb * lightInfos[0].g;
 			var lightDir = lightInfos[1].xyz;
@@ -310,6 +381,32 @@ class DefaultForward extends hxsl.Shader {
 			for( l in spotShadowCount ... spotLightCount + spotShadowCount )
 				lightAccumulation += evaluateSpotLight(l);
 
+			// Capsule Light With Shadow
+			@unroll for( l in 0 ... MAX_CAPSULE_SHADOW_COUNT ) {
+				if ( l < capsuleShadowCount ) {
+					var c = evaluateCapsuleLight(l);
+					if ( dot(c, c) > 1e-6 )
+						c *= evaluateCapsuleShadow(l);
+					lightAccumulation += c;
+				}
+			}
+			// Capsule Light
+			for( l in capsuleShadowCount ... capsuleLightCount + capsuleShadowCount )
+				lightAccumulation += evaluateCapsuleLight(l);
+
+			// Rectangle Light With Shadow
+			@unroll for( l in 0 ... MAX_RECT_SHADOW_COUNT ) {
+				if ( l < rectShadowCount ) {
+					var c = evaluateRectLight(l);
+					if ( dot(c, c) > 1e-6 )
+						c *= evaluateRectShadow(l);
+					lightAccumulation += c;
+				}
+			}
+			// Rectangle Light
+			for( l in rectShadowCount ... rectLightCount + rectShadowCount )
+				lightAccumulation += evaluateRectLight(l);
+
 			// Cascade shadows
 			if ( CASCADE_COUNT > 0 ) {
 				var c = evaluateCascadeLight();
@@ -336,4 +433,4 @@ class DefaultForward extends hxsl.Shader {
 		}
 
 	};
-}
+}
