@@ -1,7 +1,6 @@
 package h3d.scene.pbr;
 
 import h3d.pass.RectangleShadowMap;
-import h3d.prim.Cube;
 
 class RectangleLight extends Light {
 
@@ -15,7 +14,7 @@ class RectangleLight extends Light {
 
 	public function new(?parent) {
 		pbr = new h3d.shader.pbr.Light.RectangleLight();
-		shadows = new RectangleShadowMap(this, true);
+		shadows = new RectangleShadowMap(this);
 		super(pbr,parent);
 		range = 10;
 	}

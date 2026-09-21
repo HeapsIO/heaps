@@ -153,7 +153,7 @@ class PbrLights extends BenchApp {
 		rect.verticalAngle = 120;
 		rect.range = 50;
 		rect.power = 3.2;
-		rect.shadows.bias = 1.0;
+		rect.shadows.bias = 0.001;
 
 		addPreset("Dir", true, [dir]);
 		addPreset("Cascade", true, [cascade]);
