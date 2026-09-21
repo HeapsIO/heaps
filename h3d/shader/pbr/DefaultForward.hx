@@ -139,22 +139,17 @@ class DefaultForward extends hxsl.Shader {
 		}
 
 		function evaluateDirShadow( index : Int ) : Float {
-			var i = index * 5;
-			var samplingMode = int(lightInfos[i].a);
-
-			var shadow = 1.0;
-			if( samplingMode >= 0 ) {
-				var shadowParam = lightInfos[i].b;
-				var shadowBias = lightInfos[i+1].a;
-				var shadowViewProj = mat3x4(lightInfos[i+2], lightInfos[i+3], lightInfos[i+4]);
-				var shadowPos = dirShadowPos(transformedPosition, shadowViewProj);
-				shadow = sampleShadow(dirShadowMaps[index], shadowPos.xy, shadowPos.z, shadowBias, shadowParam, shadowParam, transformedPosition, samplingMode);
-			}
-			return shadow;
+			var s = dirShadowOffset + index * DIR_SHADOW_STRIDE;
+			var samplingMode = int(lightInfos[s].a);
+			var shadowParam = lightInfos[s].b;
+			var shadowBias = lightInfos[s].r;
+			var shadowViewProj = mat3x4(lightInfos[s+1], lightInfos[s+2], lightInfos[s+3]);
+			var shadowPos = dirShadowPos(transformedPosition, shadowViewProj);
+			return sampleShadow(dirShadowMaps[index], shadowPos.xy, shadowPos.z, shadowBias, shadowParam, shadowParam, transformedPosition, samplingMode);
 		}
 
 		function evaluateDirLight( index : Int ) : Vec3 {
-			var i = index * 5;
+			var i = dirLightOffset + index * DIR_LIGHT_STRIDE;
 			var lightColor = unpackIntColor(int(lightInfos[i].r)).rgb * lightInfos[i].g;
 			var lightDir = lightInfos[i+1].xyz;
 
@@ -215,9 +210,8 @@ class DefaultForward extends hxsl.Shader {
 		}
 
 		function evaluateCascadeLight() : Vec3 {
-			var i = cascadeLightStride;
-			var lightColor = unpackIntColor(int(lightInfos[i].r)).rgb * lightInfos[i].g;
-			var lightDir = lightInfos[i+1].xyz;
+			var lightColor = unpackIntColor(int(lightInfos[0].r)).rgb * lightInfos[0].g;
+			var lightDir = lightInfos[1].xyz;
 
 			return directLighting(lightColor, lightDir);
 		}
@@ -230,13 +224,12 @@ class DefaultForward extends hxsl.Shader {
 		}
 
 		function evaluateCascadeShadow() : Float {
-			var i = cascadeLightStride;
-			var samplingMode = int(lightInfos[i].a);
+			var samplingMode = int(lightInfos[0].a);
 			var shadow = 1.0;
 			if( samplingMode >= 0 ) {
-				var shadowParam = lightInfos[i].b;
-				var transitionFraction = lightInfos[i+1].a;
-				var shadowViewProj = mat3x4(lightInfos[i+2], lightInfos[i+3], lightInfos[i+4]);
+				var shadowParam = lightInfos[0].b;
+				var transitionFraction = lightInfos[1].a;
+				var shadowViewProj = mat3x4(lightInfos[2], lightInfos[3], lightInfos[4]);
 
 				var viewZ = (transformedPosition * camera.view.mat3x4()).z;
 
@@ -244,19 +237,19 @@ class DefaultForward extends hxsl.Shader {
 
 				var shouldContinue = true;
 				@unroll for( c in 0...CASCADE_COUNT ) {
-					var scale = lightInfos[i + 5 + 2 * c];
+					var scale = lightInfos[5 + 2 * c];
 					if( shouldContinue && viewZ <= scale.w ) {
 						shouldContinue = false;
 
-						var offset = lightInfos[i + 6 + 2 * c];
+						var offset = lightInfos[6 + 2 * c];
 						var shadowPos = ( c == 0 ) ? shadowPos0 : cascadeShadowPos(shadowPos0, scale.xyz, offset.xyz);
 						shadow = sampleCascadeArray(cascadeShadowMaps, c, shadowPos, 0.0, shadowParam, shadowParam, transformedPosition, samplingMode);
 
 						var blendFactor = cascadeBlendFactor(viewZ, scale.w, transitionFraction);
 						if( blendFactor > 0.0 ) {
 							if( c < CASCADE_COUNT - 1 ) {
-								var nextScale = lightInfos[i + 5 + 2 * (c + 1)];
-								var nextOffset = lightInfos[i + 6 + 2 * (c + 1)];
+								var nextScale = lightInfos[5 + 2 * (c + 1)];
+								var nextOffset = lightInfos[6 + 2 * (c + 1)];
 								var nextShadowPos = cascadeShadowPos(shadowPos0, nextScale.xyz, nextOffset.xyz);
 								var nextShadow = sampleCascadeArray(cascadeShadowMaps, c + 1, nextShadowPos, 0.0, shadowParam, shadowParam, transformedPosition, samplingMode);
 								shadow = nextShadow * blendFactor + shadow * (1 - blendFactor);

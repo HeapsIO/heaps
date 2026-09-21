@@ -20,15 +20,15 @@ class LightBuffer {
 
 	var lightInfos : hxd.FloatBuffer;
 	// Keep in sync with h3d.shader.pbr.DefaultForward
-	final DIR_LIGHT_STRIDE   = 1;
+	final DIR_LIGHT_STRIDE   = 2;
 	final POINT_LIGHT_STRIDE = 2;
 	final SPOT_LIGHT_STRIDE  = 3;
 
-	final DIR_SHADOW_STRIDE  = 3;
+	final DIR_SHADOW_STRIDE  = 4;
 	final SPOT_SHADOW_STRIDE = 5;
 	final CUBE_SHADOW_STRIDE = 1;
 
-	final CASCADE_SHADOW_INFO_SIZE = 13;
+	final CASCADE_SHADOW_STRIDE = 13;
 	final BUFFER_MAX_SIZE = 4096;
 
 	public function new() {
@@ -41,22 +41,26 @@ class LightBuffer {
 	}
 
 	public function setBuffers( s : h3d.shader.pbr.DefaultForward ) {
-		s.lightInfos = defaultForwardShader.lightInfos;
-		s.pointLightOffset = defaultForwardShader.pointLightOffset;
-		s.spotLightOffset = defaultForwardShader.spotLightOffset;
-		s.cascadeLightStride = defaultForwardShader.cascadeLightStride;
-		s.dirShadowOffset = defaultForwardShader.dirShadowOffset;
-		s.cubeShadowOffset = defaultForwardShader.cubeShadowOffset;
-		s.spotShadowOffset = defaultForwardShader.spotShadowOffset;
 		s.cameraPosition = defaultForwardShader.cameraPosition;
 		s.emissivePower = defaultForwardShader.emissivePower;
+		s.lightInfos = defaultForwardShader.lightInfos;
 
+		s.dirLightCount = defaultForwardShader.dirLightCount;
 		s.pointLightCount = defaultForwardShader.pointLightCount;
 		s.spotLightCount = defaultForwardShader.spotLightCount;
-		s.dirLightCount = defaultForwardShader.dirLightCount;
+
+		s.dirLightOffset = defaultForwardShader.dirLightOffset;
+		s.pointLightOffset = defaultForwardShader.pointLightOffset;
+		s.spotLightOffset = defaultForwardShader.spotLightOffset;
+
+		s.dirShadowCount = defaultForwardShader.dirShadowCount;
 		s.pointShadowCount = defaultForwardShader.pointShadowCount;
 		s.spotShadowCount = defaultForwardShader.spotShadowCount;
-		s.dirShadowCount = defaultForwardShader.dirShadowCount;
+
+		s.dirShadowOffset = defaultForwardShader.dirShadowOffset;
+		s.pointShadowOffset = defaultForwardShader.pointShadowOffset;
+		s.spotShadowOffset = defaultForwardShader.spotShadowOffset;
+
 		s.MAX_DIR_SHADOW_COUNT = defaultForwardShader.MAX_DIR_SHADOW_COUNT;
 		s.MAX_POINT_SHADOW_COUNT = defaultForwardShader.MAX_POINT_SHADOW_COUNT;
 		s.MAX_SPOT_SHADOW_COUNT = defaultForwardShader.MAX_SPOT_SHADOW_COUNT;
@@ -137,7 +141,7 @@ class LightBuffer {
 			return;
 		cascadeLight = null;
 
-		var reserved = CASCADE_SHADOW_INFO_SIZE + MAX_POINT_SHADOW * CUBE_SHADOW_STRIDE + MAX_SPOT_SHADOW * SPOT_SHADOW_STRIDE;
+		var reserved = CASCADE_SHADOW_STRIDE + MAX_DIR_SHADOW * DIR_SHADOW_STRIDE + MAX_POINT_SHADOW * CUBE_SHADOW_STRIDE + MAX_SPOT_SHADOW * SPOT_SHADOW_STRIDE;
 		var budget = BUFFER_MAX_SIZE - reserved;
 
 		var curSize = 0;
@@ -149,8 +153,8 @@ class LightBuffer {
 				if( cascade != null ) {
 					if( cascadeLight == null )
 						cascadeLight = dl;
-				} else if( curSize + DIR_LIGHT_INFO_SIZE <= budget ) {
-					curSize += DIR_LIGHT_INFO_SIZE;
+				} else if( curSize + DIR_LIGHT_STRIDE <= budget ) {
+					curSize += DIR_LIGHT_STRIDE;
 					if( hasShadow && dirLightsShadow.length < MAX_DIR_SHADOW )
 						dirLightsShadow.push(dl);
 					else
@@ -215,7 +219,7 @@ class LightBuffer {
 			lightInfos[i+1] = intensity;
 		}
 
-		inline function fillDirCommon( i : Int, color : h3d.Vector, intensity : Float, shadows : h3d.pass.Shadows ) {
+		inline function fillCascadeCommon( i : Int, color : h3d.Vector, intensity : Float, shadows : h3d.pass.Shadows ) {
 			fillColor(i, color, intensity);
 			lightInfos[i+2] = shadows == null ? 0.0 : shadowParam(shadows);
 			lightInfos[i+3] = shadows == null ? -1.0 : shadows.samplingKind;
@@ -235,41 +239,45 @@ class LightBuffer {
 		var lights = sortLights(ctx);
 		fillLights(lights, pbrRenderer.shadows);
 
+		var dirShadowCount = dirLightsShadow.length;
 		var pointShadowCount = pointLightsShadow.length;
 		var spotShadowCount = spotLightsShadow.length;
-		var dirTotal = dirLightsShadow.length + dirLights.length;
-		var cascadeLightStride = dirTotal * DIR_LIGHT_INFO_SIZE;
-		var pointLightOffset = cascadeLightStride + (cascadeLight != null ? CASCADE_SHADOW_INFO_SIZE : 0);
+		var dirLightOffset = cascadeLight != null ? CASCADE_SHADOW_STRIDE : 0;
+		var pointLightOffset = dirLightOffset + (dirLightsShadow.length + dirLights.length) * DIR_LIGHT_STRIDE;
 		var spotLightOffset = pointLightOffset + (pointShadowCount + pointLights.length) * POINT_LIGHT_STRIDE;
-		var cubeShadowOffset = spotLightOffset + (spotShadowCount + spotLights.length) * SPOT_LIGHT_STRIDE;
-		var spotShadowOffset = cubeShadowOffset + pointShadowCount * CUBE_SHADOW_STRIDE;
-		s.cascadeLightStride = cascadeLightStride;
+		var dirShadowOffset = spotLightOffset + (spotShadowCount + spotLights.length) * SPOT_LIGHT_STRIDE;
+		var pointShadowOffset = dirShadowOffset + dirShadowCount * DIR_SHADOW_STRIDE;
+		var spotShadowOffset = pointShadowOffset + pointShadowCount * CUBE_SHADOW_STRIDE;
+
+		s.dirLightOffset = dirLightOffset;
 		s.pointLightOffset = pointLightOffset;
 		s.spotLightOffset = spotLightOffset;
-		s.cubeShadowOffset = cubeShadowOffset;
+		s.dirShadowOffset = dirShadowOffset;
+		s.pointShadowOffset = pointShadowOffset;
 		s.spotShadowOffset = spotShadowOffset;
 
 		// Dir Light With Shadow
 		for (li in 0...dirLightsShadow.length) {
 			var dl = dirLightsShadow[li];
 			var pbr = @:privateAccess dl.pbr;
-			var i = (li * DIR_LIGHT_INFO_SIZE) << 2;
-			fillDirCommon(i, dl.color, dl.getIntensity(), dl.shadows);
+			var i = (dirLightOffset + li * DIR_LIGHT_STRIDE) << 2;
+			fillColor(i, dl.color, dl.getIntensity());
 			fillVector(lightInfos, pbr.lightDir, i+4);
-			lightInfos[i+7] = dl.shadows.bias;
+			var si = (dirShadowOffset + li * DIR_SHADOW_STRIDE) << 2;
+			fillShadowCommon(si, dl.shadows, 0.0);
 			s.dirShadowMaps[li] = dl.shadows.getShadowTex();
 			var mat = dl.shadows.getShadowViewProj();
-			fillFloats(lightInfos, mat._11, mat._21, mat._31, mat._41, i+8);
-			fillFloats(lightInfos, mat._12, mat._22, mat._32, mat._42, i+12);
-			fillFloats(lightInfos, mat._13, mat._23, mat._33, mat._43, i+16);
+			fillFloats(lightInfos, mat._11, mat._21, mat._31, mat._41, si+4);
+			fillFloats(lightInfos, mat._12, mat._22, mat._32, mat._42, si+8);
+			fillFloats(lightInfos, mat._13, mat._23, mat._33, mat._43, si+12);
 		}
 
 		// Dir Light
 		for (li in 0...dirLights.length) {
 			var dl = dirLights[li];
-			var i = ((dirLightsShadow.length + li) * DIR_LIGHT_INFO_SIZE) << 2;
+			var i = (dirLightOffset + (dirLightsShadow.length + li) * DIR_LIGHT_STRIDE) << 2;
 			var pbr = @:privateAccess dl.pbr;
-			fillDirCommon(i, dl.color, dl.getIntensity(), null);
+			fillColor(i, dl.color, dl.getIntensity());
 			fillVector(lightInfos, pbr.lightDir, i+4);
 		}
 
@@ -282,7 +290,7 @@ class LightBuffer {
 			lightInfos[i+2] = pbr.pointSize;
 			fillVector(lightInfos, pbr.lightPos, i+4);
 			lightInfos[i+7] = pbr.invLightRange4;
-			fillShadowCommon((cubeShadowOffset + li * CUBE_SHADOW_STRIDE) << 2, pl.shadows, pl.range);
+			fillShadowCommon((pointShadowOffset + li * CUBE_SHADOW_STRIDE) << 2, pl.shadows, pl.range);
 			s.pointShadowMaps[li] = pl.shadows.getShadowTex();
 		}
 
@@ -335,10 +343,10 @@ class LightBuffer {
 
 		// Cascade shadows
 		if ( cascadeLight != null ) {
-			var i = cascadeLightStride << 2;
+			var i = 0;
 			var pbr = @:privateAccess cascadeLight.pbr;
 			var cascadeShadow = cast(cascadeLight.shadows, CascadeShadowMap);
-			fillDirCommon(i, cascadeLight.color, cascadeLight.getIntensity(), cascadeShadow);
+			fillCascadeCommon(i, cascadeLight.color, cascadeLight.getIntensity(), cascadeShadow);
 			fillVector(lightInfos, pbr.lightDir, i+4);
 			lightInfos[i+7] = cascadeShadow.transitionFraction;
 			s.cascadeShadowMaps = cascadeShadow.getShadowTex();
