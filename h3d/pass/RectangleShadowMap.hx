@@ -1,62 +1,32 @@
 package h3d.pass;
 
-class RectangleShadowMap extends CubeShadowMap {
+class RectangleShadowMap extends ProjectedShadowMap {
 
-	var pshader : h3d.shader.PointShadow;
-
-	public function new( light : h3d.scene.Light, useWorldDist : Bool ) {
-		super(light, useWorldDist);
-		shader = pshader = new h3d.shader.PointShadow();
+	override function targetName() : String {
+		return "rectangleShadowMap";
 	}
 
-	override function set_mode(m:Shadows.RenderMode) {
-		pshader.enable = m != None && enabled;
-		return mode = m;
-	}
-
-	override function set_enabled(b:Bool) {
-		pshader.enable = b && mode != None;
-		return enabled = b;
-	}
-
-	override function getShadowTex() {
-		return pshader.shadowMap;
-	}
-
-	override function syncShader(texture) {
-		if( texture == null )
-			throw "assert";
-
-		var rectangleLight = cast(light, h3d.scene.pbr.RectangleLight);
-		pshader.shadowMap = texture;
-		pshader.shadowBias = bias;
-		pshader.shadowPower = power;
-		pshader.lightPos = light.getAbsPos().getPosition();
-		pshader.zFar = rectangleLight.range;
-
-		pshader.SAMPLING_MODE = samplingKind;
-		// ESM
-		pshader.shadowPower = power;
-
-		// PCF
-		pshader.pcfScale = pcfScale / texture.width;
-	}
-
-	override function createCollider(light : h3d.scene.Light) {
+	override function updateCamera() {
 		var absPos = light.getAbsPos();
 		var rectangleLight = cast(light, h3d.scene.pbr.RectangleLight);
-		// TODO : Optimize culling
-		return new h3d.col.Sphere(absPos.tx, absPos.ty, absPos.tz, rectangleLight.range);
-	}
+		var ldir = absPos.front();
+		lightCamera.pos.set(absPos.tx, absPos.ty, absPos.tz);
+		lightCamera.target.set(absPos.tx + ldir.x, absPos.ty + ldir.y, absPos.tz + ldir.z);
 
-	override function cull(lightCollider : h3d.col.Collider, col : h3d.col.Collider ) {
-		var sphere = cast(lightCollider, h3d.col.Sphere);
-		return col.inSphere(sphere);
-	}
+		inline function axisLen(x : Float, y : Float, z : Float) : Float {
+			return Math.sqrt(x * x + y * y + z * z);
+		}
 
-	override function updateLightCameraNearFar(light : h3d.scene.Light) {
-		var rectangleLight = cast(light, h3d.scene.pbr.RectangleLight);
-		lightCamera.zFar = rectangleLight.range;
-		lightCamera.zNear = 0.01;
+		var range = rectangleLight.range;
+		var halfWidth = rectangleLight.width * 0.5 * axisLen(absPos._21, absPos._22, absPos._23);
+		var halfHeight = rectangleLight.height * 0.5 * axisLen(absPos._31, absPos._32, absPos._33);
+		var tanX = (halfWidth + rectangleLight.getSpread(rectangleLight.horizontalAngle)) / range;
+		var tanY = (halfHeight + rectangleLight.getSpread(rectangleLight.verticalAngle)) / range;
+
+		lightCamera.fovY = hxd.Math.radToDeg(2 * Math.atan(tanY));
+		lightCamera.screenRatio = tanX / tanY;
+		lightCamera.zNear = range * 0.05;
+		lightCamera.zFar = range;
+		lightCamera.update();
 	}
 }

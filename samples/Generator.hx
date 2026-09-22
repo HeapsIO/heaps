@@ -82,7 +82,7 @@ class Generator {
 
 			var title = f.split(".").shift();
 
-			if( title == "Generator" || title == "SampleApp" ) continue;
+			if( title == "Generator" || title == "SampleApp" || title == "BenchApp" ) continue;
 
 			var name = title.charAt(0).toLowerCase() + title.substr(1);
 			var params = [];
