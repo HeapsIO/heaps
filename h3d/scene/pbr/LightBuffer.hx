@@ -9,8 +9,8 @@ class LightBuffer {
 	var MAX_DIR_SHADOW = 1;
 	var MAX_SPOT_SHADOW = 2;
 	var MAX_POINT_SHADOW = 2;
-	var MAX_CAPSULE_SHADOW = 2;
-	var MAX_RECT_SHADOW = 2;
+	var MAX_CAPSULE_SHADOW = 1;
+	var MAX_RECT_SHADOW = 1;
 
 	var cascadeLight : DirLight;
 	var dirLightsShadow : Array<DirLight> = [];
