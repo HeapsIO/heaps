@@ -1,7 +1,6 @@
 package h3d.scene.pbr;
 
 import h3d.pass.RectangleShadowMap;
-import h3d.prim.Cube;
 
 class RectangleLight extends Light {
 
@@ -15,7 +14,7 @@ class RectangleLight extends Light {
 
 	public function new(?parent) {
 		pbr = new h3d.shader.pbr.Light.RectangleLight();
-		shadows = new RectangleShadowMap(this, true);
+		shadows = new RectangleShadowMap(this);
 		super(pbr,parent);
 		range = 10;
 	}
@@ -91,7 +90,6 @@ class RectangleLight extends Light {
 	}
 
 	var s = new h3d.col.Sphere();
-	var d = new h3d.Vector();
 	override function emit(ctx:RenderContext) {
 		if( ctx.computingStatic ) {
 			super.emit(ctx);
@@ -101,18 +99,21 @@ class RectangleLight extends Light {
 		if( ctx.pbrLightPass == null )
 			throw "Rendering a pbr light require a PBR compatible scene renderer";
 
-		d.load(absPos.front());
-		d.scale(range / 2.0);
-		s.x = absPos.tx + d.x;
-		s.y = absPos.ty + d.y;
-		s.z = absPos.tz + d.z;
-		s.r = range / 2.0;
+		var hw = width * 0.5, hh = height * 0.5;
+		s.x = absPos.tx;
+		s.y = absPos.ty;
+		s.z = absPos.tz;
+		s.r = range + hxd.Math.sqrt(hw * hw + hh * hh);
 
 		if( !inFrustum(ctx.camera.frustum) )
 			return;
 
 		super.emit(ctx);
 		ctx.emitPass(ctx.pbrLightPass, this);
+	}
+
+	public function getSpread( angle : Float ) : Float {
+		return hxd.Math.tan(hxd.Math.degToRad(hxd.Math.min(angle, 179.0) / 2)) * range;
 	}
 
 	function updatePrim() {
@@ -123,10 +124,12 @@ class RectangleLight extends Light {
 		var p2 = new h3d.col.Point(0, width / 2, -height / 2);
 		var p3 = new h3d.col.Point(0,-width / 2,height / 2);
 		var p4 = new h3d.col.Point(0, width / 2, height / 2);
-		var p5 = p1 + new h3d.col.Point(range,-hxd.Math.sin(hxd.Math.degToRad(horizontalAngle / 2)) * range,-hxd.Math.sin(hxd.Math.degToRad(verticalAngle / 2)) * range);
-		var p6 =  p2 + new h3d.col.Point(range,hxd.Math.sin(hxd.Math.degToRad(horizontalAngle / 2)) * range,-hxd.Math.sin(hxd.Math.degToRad(verticalAngle / 2)) * range);
-		var p7 =  p3 + new h3d.col.Point(range,-hxd.Math.sin(hxd.Math.degToRad(horizontalAngle / 2)) * range,hxd.Math.sin(hxd.Math.degToRad(verticalAngle / 2)) * range);
-		var p8 =  p4 + new h3d.col.Point(range,hxd.Math.sin(hxd.Math.degToRad(horizontalAngle / 2)) * range,hxd.Math.sin(hxd.Math.degToRad(verticalAngle / 2)) * range);
+		var hSpread = getSpread(horizontalAngle);
+		var vSpread = getSpread(verticalAngle);
+		var p5 = p1 + new h3d.col.Point(range,-hSpread,-vSpread);
+		var p6 = p2 + new h3d.col.Point(range, hSpread,-vSpread);
+		var p7 = p3 + new h3d.col.Point(range,-hSpread, vSpread);
+		var p8 = p4 + new h3d.col.Point(range, hSpread, vSpread);
 
 		var points = new Array<h3d.col.Point>();
 
