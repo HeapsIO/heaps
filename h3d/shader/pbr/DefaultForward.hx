@@ -277,7 +277,7 @@ class DefaultForward extends hxsl.Shader {
 			var up = lightInfos[i+4].rgb;
 			var angles = vec4(lightInfos[i+3].a, lightInfos[i+4].a, lightInfos[i+5].r, lightInfos[i+5].g);
 
-			var light = rectangleLightDiffuse(lightPos, lightDir, right, up, halfSize, angles, range, invRange4, transformedPosition, transformedNormal);
+			var light = rectangleLightDiffuse(lightPos, lightDir, right, up, halfSize, angles, range, invRange4, transformedPosition);
 			var specularDir = rectangleLightSpecularDir(lightPos, lightDir, right, up, halfSize, transformedPosition, reflect(-view, transformedNormal));
 			return directLighting(light.w * lightColor, light.xyz, specularDir);
 		}
