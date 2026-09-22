@@ -16,6 +16,7 @@ class Eval {
 	var funMap : Map<TVar,TFunction>;
 	var curFun : TFunction;
 	var mapped : Array<TVar> = [];
+	var hoist : Array<TExpr>;
 
 	public function new() {
 		varMap = new Map();
@@ -240,6 +241,14 @@ class Eval {
 		return [for( c in constants.keys() ) c + " => " + Printer.toString({ e : constants.get(c), t : TVoid, p : null }, true)].toString();
 	}
 
+	function evalBranch( e : TExpr, isVal = true ) {
+		var old = hoist;
+		hoist = null;
+		var e = evalExpr(e, isVal);
+		hoist = old;
+		return e;
+	}
+
 	function ifBlock( e : TExpr ) {
 		if( e == null || !e.e.match(TIf(_)) )
 			return e;
@@ -332,7 +341,13 @@ class Eval {
 				default:
 					outExprs.push(e);
 				}
-				TBlock(outExprs);
+				if( hoist != null && t != TVoid && outExprs.length > 1 ) {
+					var value = outExprs.pop();
+					for( x in outExprs )
+						hoist.push(x);
+					value.e;
+				} else
+					TBlock(outExprs);
 			case TVar(_):
 				TCall(c, args);
 			default:
@@ -342,9 +357,12 @@ class Eval {
 			var index = mapped.length;
 			var out = [];
 			var last = el.length - 1;
+			var oldHoist = hoist;
 			for( i in 0...el.length ) {
 				var isVal = isVal && i == last;
+				hoist = out;
 				var e = evalExpr(el[i], isVal);
+				hoist = oldHoist;
 				switch( e.e ) {
 				case TConst(_), TVar(_) if( !isVal ):
 				default:
@@ -368,7 +386,7 @@ class Eval {
 				TBlock(out);
 		case TBinop(op, e1, e2):
 			var e1 = evalExpr(e1);
-			var e2 = evalExpr(e2);
+			var e2 = op.match(OpBoolAnd | OpBoolOr) ? evalBranch(e2) : evalExpr(e2);
 			inline function fop(callb:Float->Float->Float) {
 				return switch( [e1.e, e2.e] ) {
 				case [TConst(CInt(a)), TConst(CInt(b))]:
@@ -474,11 +492,11 @@ class Eval {
 			case TConst(CBool(b)): b ? evalExpr(eif, isVal).e : eelse == null ? TConst(CNull) : evalExpr(eelse, isVal).e;
 			default:
 				if( isVal && eelse != null && eliminateConditionals )
-					TCall( { e : TGlobal(Mix), t : e.t, p : e.p }, [evalExpr(eelse,true), evalExpr(eif,true), { e : TCall( { e : TGlobal(ToFloat), t : TFun([]), p : econd.p }, [econd]), t : TFloat, p : e.p } ]);
+					TCall( { e : TGlobal(Mix), t : e.t, p : e.p }, [evalBranch(eelse,true), evalBranch(eif,true), { e : TCall( { e : TGlobal(ToFloat), t : TFun([]), p : econd.p }, [econd]), t : TFloat, p : e.p } ]);
 				else {
-					eif = evalExpr(eif, isVal);
+					eif = evalBranch(eif, isVal);
 					if( eelse != null ) {
-						eelse = evalExpr(eelse,isVal);
+						eelse = evalBranch(eelse,isVal);
 						if( eelse.e.match(TConst(CNull)) ) eelse = null;
 					}
 					eif = ifBlock(eif);
@@ -500,23 +518,23 @@ class Eval {
 				var out = [];
 				for( i in start...len ) {
 					constants.set(v.id, TConst(CInt(i)));
-					out.push(evalExpr(loop,false));
+					out.push(evalBranch(loop,false));
 				}
 				constants.remove(v.id);
 				TBlock(out);
 			default:
-				TFor(v2, it, ifBlock(evalExpr(loop,false)));
+				TFor(v2, it, ifBlock(evalBranch(loop,false)));
 			}
 			varMap.remove(v);
 			e;
 		case TWhile(cond, loop, normalWhile):
-			var cond = evalExpr(cond);
-			var loop = evalExpr(loop, false);
+			var cond = evalBranch(cond);
+			var loop = evalBranch(loop, false);
 			TWhile(cond, ifBlock(loop), normalWhile);
 		case TSwitch(e, cases, def):
 			var e = evalExpr(e);
-			var cases = [for( c in cases ) { values : [for( v in c.values ) evalExpr(v)], expr : evalExpr(c.expr, isVal) }];
-			var def = def == null ? null : evalExpr(def, isVal);
+			var cases = [for( c in cases ) { values : [for( v in c.values ) evalExpr(v)], expr : evalBranch(c.expr, isVal) }];
+			var def = def == null ? null : evalBranch(def, isVal);
 			var hasCase = false;
 			switch( e.e ) {
 			case TConst(c):
