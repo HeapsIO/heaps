@@ -164,8 +164,16 @@ class Splitter {
 					type : v.type,
 				};
 				uniqueName(nv);
-				finits.push( { e : TVarDecl(nv, { e : TVar(v), t : v.type, p : ffun.expr.p } ), t:TVoid, p:ffun.expr.p } );
+				var p = ffun.expr.p;
+				finits.push( { e : TBinop(OpAssign, { e : TVar(nv), t : v.type, p : p }, { e : TVar(v), t : v.type, p : p } ), t : v.type, p : p } );
 				varMap.set(inf.origin, nv);
+
+				// declared at shader level and not inside the entry point, helpers may read it too
+				var ninf = new VarProps(nv);
+				ninf.origin = nv;
+				ninf.read++;
+				ninf.write++;
+				fvars.set(nv.id, ninf);
 			default:
 			}
 		}
