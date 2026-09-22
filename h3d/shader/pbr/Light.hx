@@ -98,8 +98,8 @@ class LightEvaluation extends hxsl.Shader {
 			return normalize(closestPoint);
 		}
 
-		function rectangleLightDiffuse( center : Vec3, lightDir : Vec3, right : Vec3, up : Vec3, halfSize : Vec2, angles : Vec4, range : Float, invRange4 : Float, position : Vec3, surfaceNormal : Vec3 ) : Vec4 {
-			var delta = closestPointOnRectangle(center, lightDir, right, up, halfSize, position, surfaceNormal) - position;
+		function rectangleLightDiffuse( center : Vec3, lightDir : Vec3, right : Vec3, up : Vec3, halfSize : Vec2, angles : Vec4, range : Float, invRange4 : Float, position : Vec3 ) : Vec4 {
+			var delta = closestPointOnRectangle(center, lightDir, right, up, halfSize, position, lightDir) - position;
 			var intensity = rectangleLightIntensity(delta, lightDir, right, up, angles) * pointLightIntensity(delta, range, invRange4);
 			return vec4(normalize(delta), intensity);
 		}
@@ -250,7 +250,7 @@ class RectangleLight extends Light {
 
 		function fragment() {
 			var angles = vec4(horizontalAngle, horizontalFallOff, verticalAngle, verticalFallOff);
-			var light = rectangleLightDiffuse(lightPos, lightDir, right, up, halfSize, angles, range, invLightRange4, transformedPosition, normal);
+			var light = rectangleLightDiffuse(lightPos, lightDir, right, up, halfSize, angles, range, invLightRange4, transformedPosition);
 			pbrLightDirection = light.xyz;
 			pbrLightColor = light.w * lightColor;
 			pbrSpecularLightDirection = rectangleLightSpecularDir(lightPos, lightDir, right, up, halfSize, transformedPosition, reflect(-view, normal));
