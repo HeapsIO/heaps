@@ -12,6 +12,12 @@ class LightSystem extends h3d.scene.LightSystem {
 		lightBuffer = new h3d.scene.pbr.LightBuffer();
 	}
 
+	override function initGlobals( globals : hxsl.Globals ) {
+		super.initGlobals(globals);
+		if( forwardMode && ctx != null && lightBuffer.shadowHandles.length > 0 )
+			ctx.selectTextureHandles(lightBuffer.shadowHandles);
+	}
+
 	override function computeLight( obj : h3d.scene.Object, shaders : hxsl.ShaderList ) : hxsl.ShaderList {
 		var light = Std.downcast(obj, h3d.scene.pbr.Light);
 		if( light != null ) {
