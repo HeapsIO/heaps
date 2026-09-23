@@ -2,6 +2,43 @@ package hxd.fmt.bfnt;
 
 import haxe.xml.Access;
 
+// Example using https://github.com/Chlumsky/msdf-atlas-gen.
+//
+// msdf-atlas-gen \
+//  -font /usr/share/fonts/truetype/LiberationSans-Regular.ttf  \
+//  -format png -pots -size 64 \
+//  -yorigin top -charset chars.txt \
+//  -json res/atlas.fnt -imageout res/atlas.png
+typedef AtlasJson = {
+	atlas:AAtlas,
+	metrics:AMetrics,
+	glyphs:Array<AGlyph>,
+	kerning:Array<AKern>
+}
+
+typedef AAtlas = {/*type: String ("msdf") */ distanceRange:Int, /*distanceRangeMiddle:?*/
+	size:Float,
+	width:Int,
+	height:Int,
+	yOrigin:String
+}
+
+// All sizes are in em's.
+typedef AMetrics = {
+	/*emSize: 1 ? */
+	lineHeight:Float,
+	ascender:Float,
+	descender:Float,
+	/*
+		underlineY: Float,
+		underlineThickness: Float
+	*/
+}
+
+typedef AGlyph = {unicode:Int, advance:Float, ?planeBounds:ABounds, ?atlasBounds:ABounds}
+typedef ABounds = {left:Float, bottom:Float, right:Float, top:Float}
+typedef AKern = {unicode1:Int, unicode2:Int, advance:Float}
+
 class FontParser {
 
 	@:access(h2d.Font)
@@ -44,8 +81,58 @@ class FontParser {
 		case 0x544E4642: // Internal BFNT
 			return hxd.fmt.bfnt.Reader.parse(bytes, function( tp : String ) { resolveTileWithFallback(tp); return tile; });
 
+		case 0x7461227B: // {"at.. atlas json file
+			var json:AtlasJson = haxe.Json.parse(bytes.toString());
+			if (Math.ffloor(json.atlas.size) != json.atlas.size) {
+				throw "Atlas size is non-integer, please specify -size <int> when generating (size: " + json.atlas.size + ").";
+			}
+			if (json.atlas.yOrigin != "top") {
+				throw "Please generate using -yorigin top (or add support for bottom)";
+			}
+			font.name = "AnAtlasFont";
+			font.size = Math.floor(json.atlas.size);
+			var sz = font.size;
+			// See code pointer below.
+			font.lineHeight = json.metrics.lineHeight * sz;
+			font.baseLine = -json.metrics.ascender * sz;
+			resolveTileSameName();
+			for (g in json.glyphs) {
+				var ab = g.atlasBounds; // in pixels
+				var pb = g.planeBounds; // in ems
+				// See https://github.com/hotchaipro/msdf-atlas-bmfont/blob/c6798b57e131b9483400dc104a2048806c2670cd/src/Program.cs#L67
+				// for approximate interpretation (maybe incomplete?).
+				// The main difference here is that we keep things as float, as it should be (BMFile was a bottleneck with its int types).
+				//
+				if (ab == null || pb == null) {
+					// This is a space charecter, only having unicode and advance.
+					var t = tile.sub(0, 0, 0, 0, 0, 0);
+					var fc = new h2d.Font.FontChar(t, g.advance * sz);
+					glyphs.set(g.unicode, fc);
+				} else {
+					var id = g.unicode;
+					var x = ab.left;
+					var y = ab.top;
+					var width = ab.right - ab.left;
+					var height = ab.bottom - ab.top;
+					var xoffset = pb.left * sz;
+					var yoffset = (pb.top - json.metrics.ascender) * sz;
+					// What about pb.right, descender...
+					var xadvance = g.advance * sz;
+					// trace('UNICODE $id x=$x y=$y w=$width h=$height xoffs=$xoffset yoffs=$yoffset');
+					var t = tile.sub(x, y, width, height, xoffset, yoffset);
+					var fc = new h2d.Font.FontChar(t, xadvance);
+					glyphs.set(id, fc);
+				}
+			}
+			for (k in json.kerning) {
+				var fc = glyphs.get(k.unicode2);
+				if (fc != null) {
+					fc.addKerning(k.unicode1, k.advance * sz);
+				}
+			}
+			return font;
 		case 0x6D783F3C, // <?xml : XML file
-				 0x6E6F663C: // <font>
+				0x6E6F663C: // <font>
 			var xml = Xml.parse(bytes.toString());
 			var xml = new Access(xml.firstElement());
 			if (xml.hasNode.info) {
