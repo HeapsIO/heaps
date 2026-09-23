@@ -144,6 +144,7 @@ class HlslOut {
 	var allNames : Map<String, Int>;
 	var bindlessSamplersCount : Int;
 	var bindlessSamplers : Map<Int, Int>;
+	var unresolvedBindless : Map<Int, TVar>;
 	var samplers : Map<Int, SamplerRef>;
 	var computeLayout : Array<Int>;
 	var inHelper : Bool;
@@ -504,6 +505,15 @@ class HlslOut {
 		}
 	}
 
+	function bindlessSlot( v : TVar ) {
+		var b = bindlessSamplers.get(v.id);
+		if( b == null ) {
+			b = bindlessSamplersCount++;
+			bindlessSamplers.set(v.id, b);
+		}
+		return b;
+	}
+
 	function resolveSamplerRef( e : TExpr ) : { s : SamplerRef, b : Int } {
 		switch( e.e ) {
 		case TVar(v):
@@ -511,8 +521,10 @@ class HlslOut {
 			if( b != null )
 				return { s : null, b : b };
 			var r = samplers.get(v.id);
-			if( r == null )
-				return null;
+			if( r == null ) {
+				unresolvedBindless.set(v.id, v);
+				return { s : null, b : bindlessSlot(v) };
+			}
 			return { s : { arr : r.arr, offset : r.offset, index : r.index }, b : -1 };
 		case TArray(ea, index):
 			var r = resolveSamplerRef(ea);
@@ -643,9 +655,9 @@ class HlslOut {
 			add(", ");
 			addValue(tex, tabs);
 			add(", ");
-			add('__BindlessSamplers[$bindlessSamplersCount]');
+			add('__BindlessSamplers[${bindlessSlot(v)}]');
 			add(")");
-			bindlessSamplers.set(v.id, bindlessSamplersCount++);
+			unresolvedBindless.remove(v.id);
 		case TCall({ e : TGlobal( g = ResolveBuffer) }, args = [handle, buf = { e : TVar(v)}]):
 			declGlobal(g, args);
 			add("resolveBuffer");
@@ -1253,6 +1265,7 @@ class HlslOut {
 	public function run( s : ShaderData ) {
 		locals = new Map();
 		bindlessSamplers = new Map();
+		unresolvedBindless = new Map();
 		bindlessSamplersCount = 0;
 		decls = [];
 		buf = new StringBuf();
@@ -1279,6 +1292,9 @@ class HlslOut {
 		emitMain(f.expr);
 		exprValues.push(buf.toString());
 		buf = tmp;
+
+		for( v in unresolvedBindless )
+			throw "Cannot resolve sampler for " + v.name;
 
 		initLocals();
 
