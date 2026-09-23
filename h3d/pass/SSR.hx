@@ -18,7 +18,7 @@ class SSR implements h3d.impl.RendererFX {
 	public var debugRoughnessFactor : Float = 1.0;
 	public var debugIteration : Int = 0;
 
-	var ssrResolve : h3d.pass.ScreenFx<h3d.shader.pbr.SSR.SSRResolve>;
+	public var ssrResolve : h3d.pass.ScreenFx<h3d.shader.pbr.SSR.SSRResolve>;
 	var ssrFilter :  h3d.pass.ScreenFx<h3d.shader.pbr.SSR.SSRFilter>;
 	var ssrShader : h3d.shader.pbr.SSR;
 	var copyPass : h3d.pass.Copy;
