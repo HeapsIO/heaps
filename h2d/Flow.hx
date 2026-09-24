@@ -949,7 +949,17 @@ class Flow extends Object {
 		super.removeChild(s);
 		if( index >= 0 ) {
 			needReflow = true;
-			properties.splice(index, 1);
+			// onRemove might have removed other children
+			if( properties[index]?.elt != s ) {
+				index = -1;
+				for( i => p in properties )
+					if( p.elt == s ) {
+						index = i;
+						break;
+					}
+			}
+			if( index >= 0 )
+				properties.splice(index, 1);
 			s.constraintSize( -1, -1); // remove constraint
 		}
 		if( s != null ) {
