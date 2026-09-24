@@ -123,7 +123,7 @@ class SSR implements h3d.impl.RendererFX {
 
 		ssrResolve.shader.ssrMipLevel = ssrMipLevels;
 		ssrResolve.shader.ssrColor = ssrTarget;
-		ssrResolve.pass.setBlendMode(Alpha);
+		ssrResolve.pass.setBlendMode(AlphaAdd);
 		ctx.engine.pushTarget(hdr);
 		ssrResolve.render();
 		ctx.engine.popTarget();

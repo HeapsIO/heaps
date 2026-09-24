@@ -227,7 +227,7 @@ class SSR extends hxsl.Shader {
 				}
 
 				var geomViewNormal = normalize(computeGeometricNormal(pixelPos, screenPos.z, viewPos, 0.5));
-				viewPos += viewNormal * 1.0 * (1.0 - pow(saturate(dot(viewNormal, geomViewNormal)), 8.0));
+				viewPos += geomViewNormal * (1.0 - pow(saturate(dot(viewNormal, geomViewNormal)), 8.0));
 				screenPos = computeScreenPos(viewPos);
 
 				var viewDir = ORTHOGONAL ? vec3(0.0, 0.0, 1.0) : normalize(viewPos);
@@ -237,6 +237,8 @@ class SSR extends hxsl.Shader {
 					viewRayDir = normalize(reflect(viewRayDir, geomViewNormal));
 
 				var secondViewPos = viewPos + viewRayDir;
+				if ( secondViewPos.z < 0.0 )
+					secondViewPos -= viewRayDir / viewRayDir.z * (secondViewPos.z - 0.00001);
 				var secondScreenPos = computeScreenPos(secondViewPos);
 
 				var screenRayDir = secondScreenPos - screenPos;
@@ -284,7 +286,7 @@ class SSR extends hxsl.Shader {
 					var hit = facingCamera ? (t <= tDepth) : (tDepth <= tNextBounds);
 					var mipOffset = hit ? -1 : 1;
 
-					if ( curLevel == 0 && hit ) {
+					if ( curLevel == 0 ) {
 						var z0 = linearizeDepth(cellDepth);
 						var z1 = linearizeDepth(curScreenPos.z);
 
@@ -296,6 +298,8 @@ class SSR extends hxsl.Shader {
 
 					if ( !hit )
 						t = tNextBounds;
+					else if ( !facingCamera )
+						t = max(t, tDepth);
 
 					if ( DEBUG )
 						drawDebug(curIteration, screenPos, screenRayDir, curScreenPos, t, max(tNewCell.x, tNewCell.y), curLevel, hit);
@@ -313,9 +317,11 @@ class SSR extends hxsl.Shader {
 				if ( t >= tMax || hitDepth == farPlane )
 					validity = 0.0;
 
-				var hitNormal = normalMap.fetch(curPixelPos).xyz * camera.view.mat3();
-				if ( dot(viewRayDir, hitNormal) >= 0.0 )
-					validity = 0.0;
+				if ( abs(screenRayDir.x * t) < 2.0 / screenSize.x && abs(screenRayDir.y * t) < 2.0 / screenSize.y ) {
+					var hitNormal = normalMap.fetch(curPixelPos).xyz * camera.view.mat3();
+					if ( dot(viewRayDir, hitNormal) >= 0.0 )
+						validity = 0.0;
+				}
 
 				var curViewPos = computeViewPos(curScreenPos);
 				var hitViewPos = computeViewPos(vec3(curScreenPos.xy, hitDepth));
@@ -324,6 +330,7 @@ class SSR extends hxsl.Shader {
 				var tolerance = depthTolerance + distanceBias * pow(curViewPos.z, distancePowerBias);
 				var confidence = 1.0 - step(tolerance, distance);
 				validity *= saturate(confidence * confidence);
+				validity *= 1.0 - smoothstep(0.5, 0.7, roughness);
 
 				var marginBlend = 1.0;
 				var margin = vec2((screenSize.x + screenSize.y) * marginSize);
@@ -359,7 +366,7 @@ class SSR extends hxsl.Shader {
 						blurRadius = (a * (sqrt(a2 + fh2) - a)) / (4.0 * h);
 					}
 
-					mipLevel = clamp(log2(blurRadius * max(screenSize.x, screenSize.y) / 16.0), 0.0, float(mipMaps - 1));
+					mipLevel = clamp(log2(blurRadius * max(screenSize.x, screenSize.y) / 16.0 + 1.0), 0.0, float(mipMaps - 1));
 				}
 				mipLevel *= pow(clamp(1.25 - rayLength, 0.0, 1.0), 0.2);
 			}
