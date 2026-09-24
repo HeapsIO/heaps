@@ -119,6 +119,7 @@ class GlDriver extends Driver {
 	var curTargetLayer : Int;
 	var curTargetMip : Int;
 
+	var textureCheckEnabled : Bool = false;
 	var maxFragmentTexture : Int;
 	var maxVertexTexture : Int;
 	var maxCombinedTexture : Int;
@@ -193,9 +194,14 @@ class GlDriver extends Driver {
 		hasRGTCSupport = true;
 		#end
 
+		try {
 		maxFragmentTexture = gl.getParameter(GL.MAX_TEXTURE_IMAGE_UNITS);
-		maxVertexTexture = gl.getParameter(GL.MAX_VERTEX_TEXTURE_IMAGE_UNITS);
+			maxVertexTexture   = gl.getParameter(GL.MAX_VERTEX_TEXTURE_IMAGE_UNITS);
 		maxCombinedTexture = gl.getParameter(GL.MAX_COMBINED_TEXTURE_IMAGE_UNITS);
+			textureCheckEnabled = true;
+		} catch(e) {
+			textureCheckEnabled = false;
+		}
 
 		var v : String = gl.getParameter(GL.VERSION);
 		var reg = ~/ES ([0-9]+\.[0-9]+)/;
@@ -492,7 +498,7 @@ class GlDriver extends Driver {
 	}
 
 	function checkTextureCount( shader : hxsl.RuntimeShader ) {
-		if( shader.mode == Compute )
+		if( shader.mode == Compute || !textureCheckEnabled )
 			return;
 		var vertexCount = countSamplers(shader.vertex);
 		var fragmentCount = shader.fragment == null ? 0 : countSamplers(shader.fragment);
