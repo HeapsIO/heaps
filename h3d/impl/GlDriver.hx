@@ -119,6 +119,10 @@ class GlDriver extends Driver {
 	var curTargetLayer : Int;
 	var curTargetMip : Int;
 
+	var maxFragmentTexture : Int;
+	var maxVertexTexture : Int;
+	var maxCombinedTexture : Int;
+
 	var debug : Bool;
 	var glDebug : Bool;
 	var boundTextures : Array<Texture> = [];
@@ -188,6 +192,10 @@ class GlDriver extends Driver {
 		maxCompressedTexturesSupport = 7;
 		hasRGTCSupport = true;
 		#end
+
+		maxFragmentTexture = gl.getParameter(GL.MAX_TEXTURE_IMAGE_UNITS);
+		maxVertexTexture = gl.getParameter(GL.MAX_VERTEX_TEXTURE_IMAGE_UNITS);
+		maxCombinedTexture = gl.getParameter(GL.MAX_COMBINED_TEXTURE_IMAGE_UNITS);
 
 		var v : String = gl.getParameter(GL.VERSION);
 		var reg = ~/ES ([0-9]+\.[0-9]+)/;
@@ -469,9 +477,48 @@ class GlDriver extends Driver {
 		}
 	}
 
+	function countSamplers( s : hxsl.RuntimeShader.RuntimeShaderData ) {
+		var count = 0;
+		var t = s.textures;
+		while( t != null ) {
+			switch( t.type ) {
+			case TRWTexture(_), TArray(TRWTexture(_), _):
+			case TArray(_, SConst(n)): count += n;
+			default: count++;
+			}
+			t = t.next;
+		}
+		return count;
+	}
+
+	function checkTextureCount( shader : hxsl.RuntimeShader ) {
+		if( shader.mode == Compute )
+			return;
+		var vertexCount = countSamplers(shader.vertex);
+		var fragmentCount = shader.fragment == null ? 0 : countSamplers(shader.fragment);
+		var maxVertex = maxVertexTexture;
+		var maxFragment = maxFragmentTexture;
+		#if js
+		// ANGLE/D3D11 translates uniform blocks into StructuredBuffers that share the per-stage texture slots.
+		maxVertex -= shader.vertex.bufferCount;
+		if( shader.fragment != null )
+			maxFragment -= shader.fragment.bufferCount;
+		#end
+		var error = null;
+		if( vertexCount > maxVertex )
+			error = 'Too many vertex textures. Current:$vertexCount Max:$maxVertex';
+		else if( fragmentCount > maxFragment )
+			error = 'Too many fragment textures. Current:$fragmentCount Max:$maxFragment';
+		else if( vertexCount + fragmentCount > maxCombinedTexture )
+			error = 'Too many total textures in vertex and fragment. Current:${vertexCount + fragmentCount} Max:$maxCombinedTexture';
+		if( error != null )
+			throw error + " (" + [for( i in shader.spec.instances ) i.shader.data.name].join(",") + ")";
+	}
+
 	override function selectShader( shader : hxsl.RuntimeShader ) {
 		var p = programs.get(shader.id);
 		if( p == null ) {
+			checkTextureCount(shader);
 			p = new CompiledProgram();
 			var glout = makeCompiler();
 			p.vertex = compileShader(glout,shader.vertex);
