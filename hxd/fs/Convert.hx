@@ -220,7 +220,7 @@ class ConvertFBX2HMD extends Convert {
 				matNames = context.matNames;
 			}
 			if( matNames == null ) {
-				fbx = try hxd.fmt.fbx.Parser.parse(srcBytes) catch (e:Dynamic) throw Std.string(e) + " in " + srcPath;
+				fbx = try hxd.fmt.fbx.ParserOld.parse(srcBytes) catch (e:Dynamic) throw Std.string(e) + " in " + srcPath;
 				var matNodes = hxd.fmt.fbx.Data.FbxTools.getAll(fbx, "Objects.Material");
 				matNames = [];
 				for( o in matNodes ) {
@@ -244,7 +244,7 @@ class ConvertFBX2HMD extends Convert {
 
 	override function convert() {
 		if( fbx == null ) {
-			fbx = try hxd.fmt.fbx.Parser.parse(srcBytes) catch (e:Dynamic) throw Std.string(e) + " in " + srcPath;
+			fbx = try hxd.fmt.fbx.ParserOld.parse(srcBytes) catch (e:Dynamic) throw Std.string(e) + " in " + srcPath;
 		}
 		var hmdout = new hxd.fmt.fbx.HMDOut(srcPath);
 		if (params != null) {
@@ -316,8 +316,14 @@ class ConvertFBX2HMD extends Convert {
 		var isAnim = h3d.anim.Animation.isAnimation(originalFilename);
 		var hmd = hmdout.toHMD(null, !isAnim);
 		var out = new haxe.io.BytesOutput();
-		new hxd.fmt.hmd.Writer(out).write(hmd);
+		new hxd.fmt.hmd.WriterOld(out).write(hmd);
 		save(out.getBytes());
+
+		// Temp
+		var l = try new hxd.fmt.fbx.Parser().parse(srcBytes) catch (e:Dynamic) throw Std.string(e) + " in " + srcPath;
+		var out = new haxe.io.BytesOutput();
+		new hxd.fmt.hmd.Writer(out).write(l);
+		// save(out.getBytes());
 	}
 
 	static var fileCache = new Map<String, { time : Float, size : Int, value : Dynamic }>();
@@ -382,13 +388,13 @@ class ConvertGLTF2HMD extends Convert {
 		if (gltf == null)
 			gltf = try hxd.fmt.gltf.Parser.parse(srcBytes) catch (e:Dynamic) throw Std.string(e) + " in " + srcPath;
 
-		var hmdout = new hxd.fmt.gltf.HMDOut();
-		hmdout.load(null);
-		var hmd = hmdout.toHMD();
+		// var hmdout = new hxd.fmt.gltf.HMDOut();
+		// hmdout.load(null);
+		// var hmd = hmdout.toHMD();
 
-		var out = new haxe.io.BytesOutput();
-		new hxd.fmt.hmd.Writer(out).write(hmd);
-		save(out.getBytes());
+		// var out = new haxe.io.BytesOutput();
+		// new hxd.fmt.hmd.Writer(out).write(hmd);
+		// save(out.getBytes());
 	}
 
 	static var _ = Convert.register(new ConvertGLTF2HMD());

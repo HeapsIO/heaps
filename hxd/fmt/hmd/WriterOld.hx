@@ -1,70 +1,14 @@
 package hxd.fmt.hmd;
 import hxd.fmt.hmd.Data;
 
-class Writer extends hxd.fmt.Writer {
+class WriterOld {
 
-	override function write( l : hxd.fmt.Library ) {
-		writeData(toData(l));
+	var out : haxe.io.Output;
+	var version : Int;
+
+	public function new(out) {
+		this.out = out;
 	}
-
-	public function toData( l : hxd.fmt.Library ) : Data {
-		var d = new Data();
-		#if hmd_version
-		d.version = Std.parseInt(#if macro haxe.macro.Context.definedValue("hmd_version") #else haxe.macro.Compiler.getDefine("hmd_version") #end);
-		#else
-		d.version = Data.CURRENT_VERSION;
-		#end
-		d.geometries = [];
-		d.materials = [];
-		d.models = [];
-		d.animations = [];
-		d.shapes = [];
-		d.data = haxe.io.Bytes.alloc(0);
-
-		// Depth first so that parents are always written before their children,
-		// root is model 0 as expected by hxd.fmt.hmd.Library.makeObject
-		function addNode( n : hxd.fmt.Library.Node, parent : Int ) {
-			var m = new Model();
-			m.name = n.name == "" ? null : n.name;
-			m.parent = parent;
-			m.position = makePosition(n);
-			m.geometry = -1;
-			var index = d.models.length;
-			d.models.push(m);
-			for( c in n.children )
-				addNode(c, index);
-		}
-		if( l.root != null )
-			addNode(l.root, -1);
-
-		return d;
-	}
-
-	function makePosition( n : hxd.fmt.Library.Node ) {
-		var p = new Position();
-		var pos = n.position;
-		p.x = pos == null ? 0 : pos.x;
-		p.y = pos == null ? 0 : pos.y;
-		p.z = pos == null ? 0 : pos.z;
-
-		var q = new h3d.Quat();
-		if( n.rotation != null ) {
-			q.load(n.rotation);
-			q.normalize();
-			if( q.w < 0 ) q.negate(); // qw is rebuilt as positive when reading
-		}
-		p.qx = q.x;
-		p.qy = q.y;
-		p.qz = q.z;
-
-		var s = n.scale;
-		p.sx = s == null ? 1 : s.x;
-		p.sy = s == null ? 1 : s.y;
-		p.sz = s == null ? 1 : s.z;
-		return p;
-	}
-
-	// ---------- HMD binary serialization ----------
 
 	function writeProperty( p : Property<Dynamic> ) {
 		out.writeByte(p.getIndex());
@@ -108,13 +52,13 @@ class Writer extends hxd.fmt.Writer {
 		out.writeByte(name.length);
 		#end
 		out.writeString(name);
-	}
+ 	}
 
 	inline function writeFloat( f : Float ) {
 		out.writeFloat( f == 0 ? 0 : f ); // prevent negative zero
 	}
 
-	function writeVector( p : h3d.Vector ) {
+	function writeVector( p :h3d.Vector ) {
 		writeFloat(p.x);
 		writeFloat(p.y);
 		writeFloat(p.z);
@@ -143,15 +87,6 @@ class Writer extends hxd.fmt.Writer {
 		writeFloat(b.zMax);
 	}
 
-	function writeFormat( format : hxd.BufferFormat ) {
-		out.writeByte(format.stride);
-		out.writeByte(@:privateAccess format.inputs.length);
-		for( f in format.getInputs() ) {
-			writeName(f.name);
-			out.writeByte(f.type.toInt() | (f.precision.toInt() << 4));
-		}
-	}
-
 	function writeSkin( s : Skin ) {
 		writeName(s.name == null ? "" : s.name);
 		writeProps(s.props);
@@ -177,58 +112,7 @@ class Writer extends hxd.fmt.Writer {
 		}
 	}
 
-	function writeCollider( c : Collider, withType : Bool ) {
-		var type = c.type;
-		if( withType )
-			out.writeByte(type);
-		switch( type ) {
-		case ConvexHulls:
-			var c = Std.downcast(c, ConvexHullsCollider);
-			out.writeInt32(c.vertexCounts.length);
-			for ( v in c.vertexCounts )
-				out.writeInt32(v);
-			out.writeInt32(c.vertexPosition);
-			if ( c.indexCounts.length != c.vertexCounts.length )
-				throw "assert";
-			for ( i in c.indexCounts )
-				out.writeInt32(i);
-			out.writeInt32(c.indexPosition);
-		case Mesh:
-			var c = Std.downcast(c, MeshCollider);
-			out.writeInt32(c.vertexCount);
-			out.writeInt32(c.vertexPosition);
-			out.writeInt32(c.indexCount);
-			out.writeInt32(c.indexPosition);
-		case Group:
-			var c = Std.downcast(c, GroupCollider);
-			out.writeInt32(c.colliders.length);
-			for( sub in c.colliders )
-				writeCollider(sub, withType);
-		case Sphere:
-			var c = Std.downcast(c, SphereCollider);
-			writeVector(c.position);
-			writeFloat(c.radius);
-		case Box:
-			var c = Std.downcast(c, BoxCollider);
-			writeVector(c.position);
-			writeVector(c.halfExtent);
-			writeVector(c.rotation);
-		case Capsule:
-			var c = Std.downcast(c, CapsuleCollider);
-			writeVector(c.position);
-			writeVector(c.halfExtent);
-			writeFloat(c.radius);
-		case Cylinder:
-			var c = Std.downcast(c, CylinderCollider);
-			writeVector(c.position);
-			writeVector(c.halfExtent);
-			writeFloat(c.radius);
-		case Empty:
-			// Nothing
-		}
-	}
-
-	public function writeData( d : Data ) {
+	public function write( d : Data ) {
 		var old = out;
 		var header = new haxe.io.BytesOutput();
 		out = header;
@@ -238,6 +122,14 @@ class Writer extends hxd.fmt.Writer {
 
 		writeProps(d.props);
 
+		function writeFormat(format : hxd.BufferFormat) {
+			out.writeByte(format.stride);
+			out.writeByte(@:privateAccess format.inputs.length);
+			for( f in format.getInputs() ) {
+				writeName(f.name);
+				out.writeByte(f.type.toInt() | (f.precision.toInt() << 4));
+			}
+		}
 		out.writeInt32(d.geometries.length);
 		for( g in d.geometries ) {
 			writeProps(g.props);
@@ -343,10 +235,62 @@ class Writer extends hxd.fmt.Writer {
 		}
 
 		if ( d.colliders != null ) {
+			function writeCollider( c : Collider, withType : Bool ) {
+				var type = c.type;
+				if( withType )
+					out.writeByte(type);
+				switch( type ) {
+				case ConvexHulls:
+					var c = Std.downcast(c, ConvexHullsCollider);
+					out.writeInt32(c.vertexCounts.length);
+					for ( v in c.vertexCounts )
+						out.writeInt32(v);
+					out.writeInt32(c.vertexPosition);
+					if ( c.indexCounts.length != c.vertexCounts.length )
+						throw "assert";
+					for ( i in c.indexCounts )
+						out.writeInt32(i);
+					out.writeInt32(c.indexPosition);
+				case Mesh:
+					var c = Std.downcast(c, MeshCollider);
+					out.writeInt32(c.vertexCount);
+					out.writeInt32(c.vertexPosition);
+					out.writeInt32(c.indexCount);
+					out.writeInt32(c.indexPosition);
+				case Group:
+					var c = Std.downcast(c, GroupCollider);
+					out.writeInt32(c.colliders.length);
+					for( sub in c.colliders )
+						writeCollider(sub, withType);
+				case Sphere:
+					var c = Std.downcast(c, SphereCollider);
+					writeVector(c.position);
+					writeFloat(c.radius);
+				case Box:
+					var c = Std.downcast(c, BoxCollider);
+					writeVector(c.position);
+					writeVector(c.halfExtent);
+					writeVector(c.rotation);
+				case Capsule:
+					var c = Std.downcast(c, CapsuleCollider);
+					writeVector(c.position);
+					writeVector(c.halfExtent);
+					writeFloat(c.radius);
+				case Cylinder:
+					var c = Std.downcast(c, CylinderCollider);
+					writeVector(c.position);
+					writeVector(c.halfExtent);
+					writeFloat(c.radius);
+				case Empty:
+					// Nothing
+				}
+			}
+
 			out.writeInt32(d.colliders.length);
 			var hasCustom = d.props != null && d.props.indexOf(HasCustomCollider) >= 0;
-			for ( c in d.colliders )
+			for ( c in d.colliders ) {
 				writeCollider(c, hasCustom);
+			}
 		}
 
 		var bytes = header.getBytes();

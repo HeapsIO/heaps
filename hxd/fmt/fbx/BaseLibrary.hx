@@ -177,7 +177,7 @@ class BaseLibrary {
 	}
 
 	public function loadFile( data : Bytes ) {
-		load(Parser.parse(data));
+		load(ParserOld.parse(data));
 	}
 
 	public function load( root : FbxNode ) {

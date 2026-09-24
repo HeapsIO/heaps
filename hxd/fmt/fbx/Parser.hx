@@ -1,6 +1,6 @@
 package hxd.fmt.fbx;
-import haxe.io.Bytes;
-using hxd.fmt.fbx.Data;
+import hxd.fmt.fbx.Data;
+using hxd.fmt.fbx.Data.FbxTools;
 
 private enum Token {
 	TIdent( s : String );
@@ -15,78 +15,125 @@ private enum Token {
 	TEof;
 }
 
-class Parser {
-
+class Parser extends hxd.fmt.Parser {
 	var line : Int;
 	var buf : String;
-	var bytes : Bytes;
+	var bytes : haxe.io.Bytes;
 	var pos : Int;
 	var token : Null<Token>;
 	var binary : Bool;
-	var fbxVersion:Int;
+	var fbxVersion : Int;
 
-	function new() {
+	override function parse(data : haxe.io.Bytes) : Library {
+		if (data.length > 20 && data.getString(0, 20) == "Kaydara FBX Binary  ")
+			return parseBytes(data);
+		return parseText(data.toString());
 	}
 
-	function parseText( str ) : FbxNode {
+	function parseText(str : String) : Library {
 		this.buf = str;
 		this.pos = 0;
 		this.line = 1;
 		this.binary = false;
 		token = null;
-		return {
+
+		var root : FbxNode = {
 			name : "Root",
-			props : [PInt(0),PString("Root"),PString("Root")],
+			props : [PInt(0), PString("Root"), PString("Root")],
 			childs : parseNodes(),
 		};
+		return buildLibrary(root);
 	}
 
-	function parseBytes( bytes : Bytes ) : FbxNode {
-		this.bytes = bytes;
-		this.pos = 0;
-		this.line = 0;
-		this.binary = (bytes.getString(0, 20) == "Kaydara FBX Binary  ") && bytes.get(20) == 0;
+	function parseBytes(bytes : haxe.io.Bytes) : Library {
+		throw "Not implemented";
+	}
 
-		token = null;
-		if (this.binary) {
-			// Skip header, magic [0x1A, 0x00] and version number.
-			fbxVersion = bytes.getInt32(0x17);
+	// TODO : up axis / left hand conversion, UnitScaleFactor, GeometricTranslation, pivots, RotationOrder
+	function buildLibrary( root : FbxNode ) : Library {
+		var library = new Library();
+		library.root = {
+			name : "Root",
+			children : [],
+			position : new h3d.Vector(0, 0, 0),
+			rotation : new h3d.Quat(),
+			scale : new h3d.Vector(1, 1, 1),
+		};
 
-			this.pos = 21 + 2 + 4;
-			var firstNode = parseBinaryNode(getVersionedInt32());
-			if (firstNode.name != "") {
+		var models = new Map<Int, hxd.fmt.Library.Node>();
+		var order = [];
+		for( m in root.getAll("Objects.Model") ) {
+			var node = makeNode(m);
+			models.set(m.getId(), node);
+			order.push(node);
+		}
 
-				// Root was omitted, read until all data obtained.
-				var nodes : Array<FbxNode> = [firstNode];
-				var size:Int = getVersionedInt32();
-
-				while (size != 0) {
-					nodes.push(parseBinaryNode(size));
-					size = getVersionedInt32();
-				}
-
-				return {
-					name: "Root",
-					props: [PInt(0), PString("Root"), PString("Root")],
-					childs: nodes
-				};
-			}
-			else
-			{
-				return firstNode;
+		var connections = root.get("Connections", true);
+		if( connections != null ) {
+			for( c in connections.childs ) {
+				if( c.name != "C" || c.props.length < 3 || c.props[0].toString() != "OO" )
+					continue;
+				var child = models.get(c.props[1].toInt());
+				if( child == null || child.parent != null )
+					continue;
+				var parent = models.get(c.props[2].toInt());
+				if( parent == null )
+					parent = library.root;
+				child.parent = parent;
+				parent.children.push(child);
 			}
 		}
 
+		// Models without connection are attached to the root
+		for( node in order ) {
+			if( node.parent != null ) continue;
+			node.parent = library.root;
+			library.root.children.push(node);
+		}
+
+		return library;
+	}
+
+	function makeNode( m : FbxNode ) : hxd.fmt.Library.Node {
+		var F = Math.PI / 180;
+		var position = new h3d.Vector(0, 0, 0);
+		var scale = new h3d.Vector(1, 1, 1);
+		var rot = null, preRot = null;
+		for( p in m.getAll("Properties70.P") ) {
+			switch( p.props[0].toString() ) {
+			case "Lcl Translation":
+				position.set(p.props[4].toFloat(), p.props[5].toFloat(), p.props[6].toFloat());
+			case "Lcl Scaling":
+				scale.set(p.props[4].toFloat(), p.props[5].toFloat(), p.props[6].toFloat());
+			case "Lcl Rotation":
+				rot = new h3d.Vector(p.props[4].toFloat() * F, p.props[5].toFloat() * F, p.props[6].toFloat() * F);
+			case "PreRotation":
+				preRot = new h3d.Vector(p.props[4].toFloat() * F, p.props[5].toFloat() * F, p.props[6].toFloat() * F);
+			default:
+			}
+		}
+
+		// Same order as BaseLibrary.DefaultMatrixes.toQuaternion
+		var mat = new h3d.Matrix();
+		mat.identity();
+		if( rot != null ) mat.rotate(rot.x, rot.y, rot.z);
+		if( preRot != null ) mat.rotate(preRot.x, preRot.y, preRot.z);
+		var rotation = new h3d.Quat();
+		rotation.initRotateMatrix(mat);
+
 		return {
-			name: "Root",
-			props : [PInt(0),PString("Root"),PString("Root")],
-			childs : parseNodes(),
+			name : m.getName(),
+			children : [],
+			position : position,
+			rotation : rotation,
+			scale : scale,
 		};
 	}
 
+
 	function parseNodes() {
 		var nodes = [];
-		while( true ) {
+		while (true) {
 			switch( peek() ) {
 			case TEof, TBraceClose:
 				return nodes;
@@ -100,240 +147,81 @@ class Parser {
 	function parseNode() : FbxNode {
 		var t = next();
 		var name = switch( t ) {
-		case TNode(n): n;
-		default: unexpected(t);
+			case TNode(n): n;
+			default: unexpected(t);
 		};
+
 		var props = [], childs = null;
-		while( true ) {
+		while (true) {
 			t = next();
-			switch( t ) {
-			case TFloat(s):
-				props.push(PFloat(Std.parseFloat(s)));
-			case TInt(s):
-				props.push(PInt(Std.parseInt(s)));
-			case TString(s):
-				props.push(PString(s));
-			case TIdent(s):
-				props.push(PIdent(s));
-			case TBraceOpen, TBraceClose, TNode(_):
-				token = t;
-			case TLength(v):
-				except(TBraceOpen);
-				except(TNode("a"));
-				var ints : Array<Int> = [];
-				var floats : Array<Float> = null;
-				var i = 0;
-				while( i < v ) {
-					t = next();
-					switch( t ) {
-					case TColon:
-						continue;
-					case TInt(s):
-						i++;
-						if( floats == null )
-							ints.push(Std.parseInt(s));
-						else
-							floats.push(Std.parseInt(s));
-					case TFloat(s):
-						i++;
-						if( floats == null ) {
-							floats = [];
-							for( i in ints )
-								floats.push(i);
-							ints = null;
+			switch (t) {
+				case TFloat(s):
+					props.push(PFloat(Std.parseFloat(s)));
+				case TInt(s):
+					props.push(PInt(Std.parseInt(s)));
+				case TString(s):
+					props.push(PString(s));
+				case TIdent(s):
+					props.push(PIdent(s));
+				case TBraceOpen, TBraceClose, TNode(_):
+					token = t;
+				case TLength(v):
+					except(TBraceOpen);
+					except(TNode("a"));
+					var ints : Array<Int> = [];
+					var floats : Array<Float> = null;
+					var i = 0;
+					while( i < v ) {
+						t = next();
+						switch( t ) {
+						case TColon:
+							continue;
+						case TInt(s):
+							i++;
+							if( floats == null )
+								ints.push(Std.parseInt(s));
+							else
+								floats.push(Std.parseInt(s));
+						case TFloat(s):
+							i++;
+							if( floats == null ) {
+								floats = [];
+								for( i in ints )
+									floats.push(i);
+								ints = null;
+							}
+							floats.push(Std.parseFloat(s));
+						default:
+							unexpected(t);
 						}
-						floats.push(Std.parseFloat(s));
-					default:
-						unexpected(t);
 					}
-				}
-				props.push(floats == null ? PInts(ints) : PFloats(floats));
-				if (peek()==TColon) except(TColon); // Allow trailing ,
-				except(TBraceClose);
-				break;
-			default:
-				unexpected(t);
+					props.push(floats == null ? PInts(ints) : PFloats(floats));
+					if (peek()==TColon) except(TColon); // Allow trailing ,
+					except(TBraceClose);
+					break;
+				default:
+					unexpected(t);
 			}
+
 			t = next();
-			switch( t ) {
-			case TNode(_), TBraceClose:
-				token = t; // next
-				break;
-			case TColon:
-				// next prop
-			case TBraceOpen:
-				childs = parseNodes();
-				except(TBraceClose);
-				break;
-			default:
-				unexpected(t);
+			switch (t) {
+				case TNode(_), TBraceClose:
+					token = t; // next
+					break;
+				case TColon:
+					// next prop
+				case TBraceOpen:
+					childs = parseNodes();
+					except(TBraceClose);
+					break;
+				default:
+					unexpected(t);
 			}
 		}
-		if( childs == null ) childs = [];
+		if (childs == null ) childs = [];
 		return { name : name, props : props, childs : childs };
 	}
 
-	function parseBinaryNodes( output : Array<FbxNode> ) {
-		var size : Int = getVersionedInt32();
-		while (size != 0)
-		{
-			output.push(parseBinaryNode(size));
-			size = getVersionedInt32();
-		}
-	}
-
-	function readBinaryString( length : Int ) : String {
-		if  (length == 0 ) return "";
-		var str = bytes.getString(pos, length);
-		pos += length;
-		// Blender inserts extra data to strings following `\0\1` byte sequence
-		// expecting them to be stripped away due to 0 byte being terminator.
-		final len = str.length;
-		for ( i in 0...len ) {
-			if ( str.charCodeAt(i) == 0 ) {
-				return str.substr(0, i);
-			}
-		}
-		return str;
-	}
-
-	function parseBinaryNode( nextRecord : Int ) : FbxNode {
-
-		var numProperties : Int = getVersionedInt32();
-		var propertyListLength : UInt = getVersionedInt32();
-		var name : String = readBinaryString(getByte());
-
-		var props : Array<FbxProp> = new Array();
-		var childs : Array<FbxNode> = new Array();
-
-		var propStart : Int = pos;
-
-		for ( i in 0...numProperties ) {
-			props.push(readBinaryProperty());
-		}
-
-		pos = propStart + propertyListLength;
-
-		if ( pos < nextRecord ) {
-			parseBinaryNodes(childs);
-		}
-		pos = nextRecord;
-
-		return { name: name, props: props, childs: childs };
-	}
-
-	function readBinaryProperty() : FbxProp {
-
-		var arrayLen : Int = 0;
-		var arrayEncoding:Int;
-		var arrayCompressedLen:Int;
-		var arrayBytes:Bytes = null;
-		var arrayBytesPos:Int = 0;
-
-		inline function readArray(entrySize:Int) {
-			arrayLen = getInt32();
-			arrayEncoding = getInt32();
-			arrayCompressedLen = getInt32();
-
-			switch( arrayEncoding ) {
-				case 0:
-					arrayBytes = bytes;
-					arrayBytesPos = pos;
-					pos += arrayLen * entrySize;
-				case 1:
-					arrayBytesPos = 0;
-					var buf = bytes.sub(pos, arrayCompressedLen);
-					#if hxnodejs
-					try {
-						arrayBytes = haxe.zip.Uncompress.run(buf);
-					} catch( e : Dynamic ) {
-						arrayBytes = haxe.zip.InflateImpl.run(new haxe.io.BytesInput(buf));
-					}
-					#else
-					arrayBytes = haxe.zip.Uncompress.run(buf);
-					#end
-					pos += arrayCompressedLen;
-				default:
-					error("Unsupported array encoding: " + arrayEncoding);
-			}
-		}
-
-		// Limitations:
-		// Int64 records are converted to Floats with top bits being lost.
-		// Raw binary data converted to Strings.
-
-		var type : Int = getByte();
-		switch( type ) {
-			case 'Y'.code:
-				return PInt(getInt16());
-			case 'C'.code:
-				return PInt(getByte());
-			case 'I'.code:
-				return PInt(getInt32());
-			case 'F'.code:
-				return PFloat(getFloat());
-			case 'D'.code:
-				return PFloat(getDouble());
-			case 'L'.code:
-				var i64 : haxe.Int64 = bytes.getInt64(pos);
-				pos += 8;
-				return PFloat(i64ToFloat(i64));
-			case 'f'.code:
-				readArray(4);
-				var floats:Array<Float> = new Array();
-				while ( arrayLen > 0 ) {
-					floats.push(arrayBytes.getFloat(arrayBytesPos));
-					arrayBytesPos += 4;
-					arrayLen--;
-				}
-				return PFloats(floats);
-			case 'd'.code:
-				readArray(8);
-				var doubles:Array<Float> = new Array();
-				while ( arrayLen > 0 ) {
-					doubles.push(arrayBytes.getDouble(arrayBytesPos));
-					arrayBytesPos += 8;
-					arrayLen--;
-				}
-				return PFloats(doubles);
-			case 'l'.code:
-				readArray(8);
-				var i64s:Array<Float> = new Array();
-				while ( arrayLen > 0 ) {
-					i64s.push(i64ToFloat(arrayBytes.getInt64(arrayBytesPos)));
-					arrayBytesPos += 8;
-					arrayLen--;
-				}
-				return PFloats(i64s);
-			case 'i'.code:
-				readArray(4);
-				var ints:Array<Int> = new Array();
-				while ( arrayLen > 0 ) {
-					ints.push(arrayBytes.getInt32(arrayBytesPos));
-					arrayBytesPos += 4;
-					arrayLen--;
-				}
-				return PInts(ints);
-			case 'b'.code:
-				readArray(1);
-				var bools:Array<Int> = new Array();
-				while ( arrayLen > 0 ) {
-					bools.push(arrayBytes.get(arrayBytesPos++));
-					arrayLen--;
-				}
-				return PInts(bools);
-			case 'S'.code:
-				return PString(readBinaryString(getInt32()));
-			case 'R'.code:
-				var len:Int = getInt32();
-				var data = Bytes.alloc(len);
-				data.blit(0, bytes, pos, len);
-				pos += len;
-				return PBinary(data);
-			default:
-				return error("Unknown property type: " + type + "/" + String.fromCharCode(type));
-		}
-	}
 
 	function except( except : Token ) {
 		var t = next();
@@ -516,12 +404,4 @@ class Parser {
 			}
 		}
 	}
-
-	public static function parse( data : Bytes ) {
-		if (data.length > 20 && data.getString(0, 20) == "Kaydara FBX Binary  ") {
-			return new Parser().parseBytes(data);
-		}
-		return new Parser().parseText(data.toString());
-	}
-
 }
