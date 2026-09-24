@@ -954,6 +954,15 @@ class Renderer extends h3d.scene.Renderer {
 			slides.shader.velocity = textures.velocity;
 			slides.shader.HAS_TRANSLUCENCY = textures.translucency != null;
 			slides.shader.translucencyMap = textures.translucency;
+			var ls = Std.downcast(getLightSystem(), h3d.scene.pbr.LightSystem);
+			var forward = ls != null ? ls.lightBuffer.defaultForwardShader : null;
+			slides.shader.HAS_CLUSTERS = forward != null && forward.CLUSTERED;
+			if( slides.shader.HAS_CLUSTERS ) {
+				slides.shader.clusterData = forward.clusterData;
+				slides.shader.clusterZParams = forward.clusterZParams;
+			}
+			slides.shader.clearDepth = getDepthClearValue();
+			slides.shader.sceneColor = ldr;
 			pbrProps.isScreen = true;
 			slides.render();
 			if( !debugging ) {
@@ -1008,7 +1017,7 @@ class Renderer extends h3d.scene.Renderer {
 				else if ( y == 2 )
 					a = [Emissive,Shadow,Velocity];
 				else
-					a = [Translucency];
+					a = [Translucency, Clusters];
 				if( x < a.length )
 					slides.shader.mode = a[x];
 			}

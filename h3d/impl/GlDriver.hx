@@ -195,9 +195,9 @@ class GlDriver extends Driver {
 		#end
 
 		try {
-		maxFragmentTexture = gl.getParameter(GL.MAX_TEXTURE_IMAGE_UNITS);
+			maxFragmentTexture = gl.getParameter(GL.MAX_TEXTURE_IMAGE_UNITS);
 			maxVertexTexture   = gl.getParameter(GL.MAX_VERTEX_TEXTURE_IMAGE_UNITS);
-		maxCombinedTexture = gl.getParameter(GL.MAX_COMBINED_TEXTURE_IMAGE_UNITS);
+			maxCombinedTexture = gl.getParameter(GL.MAX_COMBINED_TEXTURE_IMAGE_UNITS);
 			textureCheckEnabled = true;
 		} catch(e) {
 			textureCheckEnabled = false;
@@ -710,11 +710,10 @@ class GlDriver extends Driver {
 							t = h3d.mat.Texture.fromColor(color, (color >>> 24) / 255);
 						case TSampler(_, true):
 							t = h3d.mat.TextureArray.defaultArrayTexture();
-	
 						default:
 							if(t == null)
 								t = h3d.mat.Texture.fromColor(0, 1);
-							else 
+							else
 								throw "Disposed texture";
 					}
 				}
@@ -2054,6 +2053,18 @@ class GlDriver extends Driver {
 			false;
 		case DepthTextureArray:
 			glES >= 3;
+		case ComputeShaders:
+			#if (hlsdl >= version("1.15.0") && hl_ver >= version("1.15.0"))
+			computeEnabled;
+			#else
+			false;
+			#end
+		case DynamicSamplerIndex:
+			#if js
+			false;
+			#else
+			shaderVersion >= 400;
+			#end
 		default:
 			#if js
 			features.get(f);

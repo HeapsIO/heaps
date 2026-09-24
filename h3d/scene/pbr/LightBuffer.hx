@@ -7,6 +7,7 @@ class LightBuffer {
 	public var defaultForwardShader = new h3d.shader.pbr.DefaultForward();
 
 	var useBindless : Bool;
+	var useDynamicSamplerIndex : Bool;
 	public var shadowHandles : Array<h3d.mat.TextureHandle> = [];
 
 	var MAX_DIR_SHADOW = 1;
@@ -42,10 +43,22 @@ class LightBuffer {
 	final CASCADE_SHADOW_STRIDE = 13;
 	final BUFFER_MAX_SIZE = 4096;
 
+	// Keep in sync with h3d.shader.pbr.ClusterCull
+	final CLUSTER_COUNT = 16 * 9 * 24;
+	final CLUSTER_Z = 24;
+	final CLUSTER_STRIDE = 128;
+
+	public var clusterMaxDistance = 0.;
+	public var enableClustering = true;
+	var cullShader : h3d.shader.pbr.ClusterCull;
+	var clusterBuffer : h3d.Buffer;
+
 	public function new() {
 		var engine = h3d.Engine.getCurrent();
 		useBindless = engine != null && engine.driver.hasFeature(Bindless);
+		useDynamicSamplerIndex = engine != null && engine.driver.hasFeature(DynamicSamplerIndex);
 		defaultForwardShader.USE_BINDLESS = useBindless;
+		defaultForwardShader.DYNAMIC_SAMPLER_INDEX = useDynamicSamplerIndex;
 		createBuffers();
 	}
 
@@ -85,6 +98,12 @@ class LightBuffer {
 		s.rectShadowOffset = defaultForwardShader.rectShadowOffset;
 
 		s.USE_BINDLESS = defaultForwardShader.USE_BINDLESS;
+		s.DYNAMIC_SAMPLER_INDEX = defaultForwardShader.DYNAMIC_SAMPLER_INDEX;
+		s.CLUSTERED = defaultForwardShader.CLUSTERED;
+		if( s.CLUSTERED ) {
+			s.clusterData = defaultForwardShader.clusterData;
+			s.clusterZParams = defaultForwardShader.clusterZParams;
+		}
 		s.MAX_DIR_SHADOW_COUNT = defaultForwardShader.MAX_DIR_SHADOW_COUNT;
 		s.MAX_POINT_SHADOW_COUNT = defaultForwardShader.MAX_POINT_SHADOW_COUNT;
 		s.MAX_SPOT_SHADOW_COUNT = defaultForwardShader.MAX_SPOT_SHADOW_COUNT;
@@ -161,7 +180,7 @@ class LightBuffer {
 			}
 			l = Std.downcast(l.next, Light);
 		}
-		while( tmpLights.length > pos ) tmpLights.pop();
+		tmpLights.resize(pos);
 		tmpLights.sort(function(l1,l2) { return sortingCriteria(l1, l2, ctx.camera.target); });
 		return tmpLights;
 	}
@@ -252,6 +271,7 @@ class LightBuffer {
 		s.spotLightCount = 0;
 		s.dirLightCount = 0;
 		s.CASCADE_COUNT = 0;
+		s.CLUSTERED = false;
 
 		inline function shadowParam( shadows : h3d.pass.Shadows ) {
 			return shadows.samplingKind == PCF ? shadows.pcfScale / shadows.size : shadows.power;
@@ -492,16 +512,17 @@ class LightBuffer {
 		s.capsuleShadowCount = capsuleLightsShadow.length;
 		s.rectShadowCount = rectLightsShadow.length;
 		s.lightInfos.uploadFloats(lightInfos, 0, s.lightInfos.vertices, 0);
-		while( pointLights.length > 0 ) pointLights.pop();
-		while( spotLights.length > 0 ) spotLights.pop();
-		while( dirLights.length > 0 ) dirLights.pop();
-		while( pointLightsShadow.length > 0 ) pointLightsShadow.pop();
-		while( spotLightsShadow.length > 0 ) spotLightsShadow.pop();
-		while( dirLightsShadow.length > 0 ) dirLightsShadow.pop();
-		while( capsuleLights.length > 0 ) capsuleLights.pop();
-		while( capsuleLightsShadow.length > 0 ) capsuleLightsShadow.pop();
-		while( rectLights.length > 0 ) rectLights.pop();
-		while( rectLightsShadow.length > 0 ) rectLightsShadow.pop();
+		cull(ctx);
+		pointLights.resize(0);
+		spotLights.resize(0);
+		dirLights.resize(0);
+		pointLightsShadow.resize(0);
+		spotLightsShadow.resize(0);
+		dirLightsShadow.resize(0);
+		capsuleLights.resize(0);
+		capsuleLightsShadow.resize(0);
+		rectLights.resize(0);
+		rectLightsShadow.resize(0);
 		cascadeLight = null;
 
 		var pbrIndirect = @:privateAccess pbrRenderer.pbrIndirect;
@@ -516,7 +537,56 @@ class LightBuffer {
 		}
 	}
 
+	function cull( ctx : h3d.scene.RenderContext ) {
+		var engine = h3d.Engine.getCurrent();
+		if( !enableClustering || !engine.driver.hasFeature(ComputeShaders) )
+			return;
+		var s = defaultForwardShader;
+		var total = s.pointLightCount + s.pointShadowCount + s.spotLightCount + s.spotShadowCount
+			+ s.capsuleLightCount + s.capsuleShadowCount + s.rectLightCount + s.rectShadowCount;
+		if( total == 0 )
+			return;
+
+		if( clusterBuffer == null || clusterBuffer.isDisposed() )
+			clusterBuffer = new h3d.Buffer(CLUSTER_COUNT * CLUSTER_STRIDE, hxd.BufferFormat.INDEX32, [UniformBuffer, ReadWriteBuffer]);
+		if( cullShader == null )
+			cullShader = new h3d.shader.pbr.ClusterCull();
+
+		var cam = ctx.camera;
+		var near = cam.zNear;
+		var far = clusterMaxDistance > 0 ? clusterMaxDistance : cam.zFar;
+		if( far <= near ) far = near * 2;
+
+		var c = cullShader;
+		c.lightInfos = s.lightInfos;
+		c.clusterData = clusterBuffer;
+		c.clusterNear = near;
+		c.clusterFarOverNear = far / near;
+		c.pointLightOffset = s.pointLightOffset;
+		c.pointStart = useBindless ? 0 : s.pointShadowCount;
+		c.pointEnd = s.pointShadowCount + s.pointLightCount;
+		c.spotLightOffset = s.spotLightOffset;
+		c.spotStart = useBindless ? 0 : s.spotShadowCount;
+		c.spotEnd = s.spotShadowCount + s.spotLightCount;
+		c.capsuleLightOffset = s.capsuleLightOffset;
+		c.capsuleStart = useBindless ? 0 : s.capsuleShadowCount;
+		c.capsuleEnd = s.capsuleShadowCount + s.capsuleLightCount;
+		c.rectLightOffset = s.rectLightOffset;
+		c.rectStart = useBindless ? 0 : s.rectShadowCount;
+		c.rectEnd = s.rectShadowCount + s.rectLightCount;
+		ctx.computeDispatch(c, Math.ceil(CLUSTER_COUNT / 64));
+
+		var zScale = CLUSTER_Z / Math.log(far / near);
+		s.clusterData = clusterBuffer;
+		s.clusterZParams.set(zScale, -Math.log(near) * zScale);
+		s.CLUSTERED = true;
+	}
+
 	public function dispose() {
 		defaultForwardShader.lightInfos.dispose();
+		if( clusterBuffer != null ) {
+			clusterBuffer.dispose();
+			clusterBuffer = null;
+		}
 	}
 }

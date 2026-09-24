@@ -916,7 +916,9 @@ class DirectXDriver extends h3d.impl.Driver {
 	override function hasFeature(f:Feature) {
 		return switch(f) {
 		// rendering into a single depth array slice needs a sliced DSV, which hldx does not expose
-		case Queries, BottomLeftCoords, Bindless, DepthTextureArray:
+		case Queries, BottomLeftCoords, Bindless, DepthTextureArray, ComputeShaders:
+			false;
+		case DynamicSamplerIndex:
 			false;
 		default:
 			true;

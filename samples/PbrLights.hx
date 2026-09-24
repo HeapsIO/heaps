@@ -3,6 +3,43 @@ typedef LightPreset = {
 	var lights : Array<h3d.scene.pbr.Light>;
 	// this preset can cast shadows, so its views are captured with every sampling kind
 	var shadows : Bool;
+	// timed view comparing deferred, forward and clustered forward
+	var perf : Bool;
+}
+
+// Times the lighting and forward steps, and the gap between shadows and lighting where the light buffer is synced and culled
+class PbrLightsRenderer extends h3d.scene.pbr.Renderer {
+
+	public var cullTimer : BenchApp.BenchGpuTimer;
+	public var lightingTimer : BenchApp.BenchGpuTimer;
+	public var forwardTimer : BenchApp.BenchGpuTimer;
+	var timedStep : BenchApp.BenchGpuTimer;
+
+	override function begin( step : h3d.impl.RendererFX.Step ) {
+		super.begin(step);
+		switch( step ) {
+		case Lighting:
+			if( cullTimer != null ) cullTimer.end();
+			timedStep = lightingTimer;
+		case Forward:
+			timedStep = forwardTimer;
+		default:
+			timedStep = null;
+		}
+		if( timedStep != null )
+			timedStep.begin();
+	}
+
+	override function end() {
+		if( timedStep != null ) {
+			timedStep.end();
+			timedStep = null;
+		}
+		var shadows = currentStep == Shadows;
+		super.end();
+		if( shadows && cullTimer != null )
+			cullTimer.begin();
+	}
 }
 
 /**
@@ -16,8 +53,12 @@ typedef LightPreset = {
 		hl pbrLights_dx12.hl --auto --make-ref   // capture every state as reference
 		hl pbrLights_dx12.hl --auto              // capture every state and compare, exit code 1 on differences
 		--tolerance N                            // max per-channel difference (0-255) still considered equal, default 2
+		--perf-frames N                          // frames timed per mode by the Perf views, default 200
 	Every view captures deferred then forward for each sampling kind, named <preset>_<mode>[_<sampling>], and also writes
 	the forward vs deferred difference to captures/<backend>/parity/ (informational, never fails).
+	The Perf views capture and time deferred, forward and clustered forward ("forwardplus") on hundreds of lights, the GPU
+	times (frame, cull, lighting, forward) go to captures/<backend>/gpu_times.csv. Clustered forward must match forward.
+		hl pbrLights_dx12.hl --auto --only Perf_256,Perf_1024
 	--only takes the view names with spaces replaced by underscores (Many_points), not the capture names.
 **/
 class PbrLights extends BenchApp {
@@ -30,8 +71,10 @@ class PbrLights extends BenchApp {
 	var shadows = true;
 	var sampling : h3d.pass.Shadows.ShadowSamplingKind = PCF;
 	var showTransparents = false;
+	var clustered = true;
 	var transparents : Array<h3d.scene.Mesh> = [];
 	var info : h2d.Text;
+	var perfFrames = 200;
 
 	override function init() {
 		tolerance = 2;
@@ -44,6 +87,12 @@ class PbrLights extends BenchApp {
 		}
 		#end
 
+		perfFrames = getIntArg("--perf-frames", perfFrames);
+		var r = new PbrLightsRenderer(h3d.scene.pbr.Environment.getDefault());
+		r.cullTimer = addGpuTimer("cull");
+		r.lightingTimer = addGpuTimer("lighting");
+		r.forwardTimer = addGpuTimer("forward");
+		s3d.renderer = r;
 		buildScene();
 		buildLights();
 		buildViews();
@@ -176,13 +225,50 @@ class PbrLights extends BenchApp {
 			}
 		}
 		addPreset("Many points", false, many);
+		addPreset("Perf 256", false, perfLights(256, 7, 11, SEED + 2), true);
+		addPreset("Perf 1024", false, perfLights(1024, 4, 7, SEED + 3), true);
 	}
 
-	function addPreset( name : String, shadows : Bool, lights : Array<h3d.scene.pbr.Light> ) {
-		presets.push({ name : name, lights : lights, shadows : shadows });
+	function perfLights( count : Int, minRange : Float, maxRange : Float, seed : Int ) {
+		var rnd = new hxd.Rand(seed);
+		var lights : Array<h3d.scene.pbr.Light> = [];
+		for( i in 0...count ) {
+			var x = rnd.srand(48), y = rnd.srand(48), z = 1 + rnd.rand() * 5;
+			var range = minRange + rnd.rand() * (maxRange - minRange);
+			var kind = rnd.random(10);
+			var l : h3d.scene.pbr.Light;
+			if( kind < 7 ) {
+				var p = new h3d.scene.pbr.PointLight(s3d);
+				p.range = range;
+				l = p;
+			} else if( kind < 9 ) {
+				var s = new h3d.scene.pbr.SpotLight(s3d);
+				s.range = range * 1.5;
+				s.angle = 40 + rnd.rand() * 60;
+				s.setDirection(new h3d.Vector(rnd.srand(1), rnd.srand(1), -1 - rnd.rand()));
+				l = s;
+			} else {
+				var c = new h3d.scene.pbr.CapsuleLight(s3d);
+				c.range = range;
+				c.length = 2 + rnd.rand() * 4;
+				c.radius = 0.2;
+				c.setDirection(new h3d.Vector(rnd.srand(1), rnd.srand(1), 0));
+				l = c;
+			}
+			l.setPosition(x, y, z);
+			l.color.set(0.3 + rnd.rand() * 0.7, 0.3 + rnd.rand() * 0.7, 0.3 + rnd.rand() * 0.7);
+			l.power = 0.5;
+			lights.push(l);
+		}
+		return lights;
+	}
+
+	function addPreset( name : String, shadows : Bool, lights : Array<h3d.scene.pbr.Light>, perf = false ) {
+		presets.push({ name : name, lights : lights, shadows : shadows, perf : perf });
 	}
 
 	function applyPreset() {
+		cast(s3d.lightSystem, h3d.scene.pbr.LightSystem).lightBuffer.enableClustering = clustered;
 		var preset = presets[curPreset];
 		for( p in presets )
 			for( l in p.lights )
@@ -237,7 +323,50 @@ class PbrLights extends BenchApp {
 	}
 
 	function addPresetView( p : Int ) {
-		addView(presets[p].name, () -> { curPreset = p; applyPreset(); }, { run : _ -> runPreset(p) });
+		addView(presets[p].name, () -> { curPreset = p; applyPreset(); }, { run : _ -> presets[p].perf ? runPerf(p) : runPreset(p) });
+	}
+
+	function runPerf( p : Int ) {
+		var file = presets[p].name.split(" ").join("");
+		var forwardPix : hxd.Pixels = null;
+		function queue( fwd : Bool, cl : Bool ) {
+			var name = file + "_" + (fwd ? (cl ? "forwardplus" : "forward") : "deferred");
+			call(function() {
+				forward = fwd;
+				clustered = cl;
+				applyPreset();
+			});
+			renderFrames(warmupFrames);
+			capture(function(pix) {
+				saveCapture(name, pix);
+				if( fwd && !cl )
+					forwardPix = pix;
+				if( cl ) {
+					var d = diffPixels(forwardPix, pix, 8);
+					report("  " + name + "_vs_forward: max " + d.maxDiff + ", " + d.count + " px above " + tolerance);
+				}
+			});
+			if( hasGpuTimestamps() )
+				timePerf(name);
+		}
+		var wasClustered = clustered;
+		queue(false, false);
+		queue(true, false);
+		queue(true, true);
+		call(() -> clustered = wasClustered);
+	}
+
+	function timePerf( name : String ) {
+		var frames = timingFrames;
+		timingFrames = perfFrames;
+		super.timeView(name);
+		timingFrames = frames;
+	}
+
+	override function timeView( name : String ) {
+		if( StringTools.startsWith(name, "Perf") )
+			return;
+		super.timeView(name);
 	}
 
 	// Deferred then forward for each sampling kind, comparing the two modes with each other along the way
@@ -274,6 +403,7 @@ class PbrLights extends BenchApp {
 		var kinds : Array<h3d.pass.Shadows.ShadowSamplingKind> = [None, ESM, PCF];
 		addChoice("Sampling", ["None", "ESM", "PCF"], function(i) { sampling = kinds[i]; applyPreset(); }, kinds.indexOf(sampling));
 		addCheck("Alpha", () -> showTransparents, function(b) { showTransparents = b; applyPreset(); });
+		addCheck("Clustered", () -> clustered, function(b) { clustered = b; applyPreset(); });
 		addButton("Reset view", () -> applyView(currentView));
 		info = addText();
 	}
@@ -281,11 +411,15 @@ class PbrLights extends BenchApp {
 	override function update( dt : Float ) {
 		super.update(dt);
 		if( info == null ) return;
-		info.text = BenchApp.BACKEND + " | " + (forward ? "forward" : "deferred") + " | " + presets[curPreset].name
-			+ "\nDraw calls: " + engine.drawCalls + "  FPS: " + Std.int(engine.fps);
+		info.text = BenchApp.BACKEND + " | " + (forward ? (clustered ? "forward+" : "forward") : "deferred") + " | " + presets[curPreset].name
+			+ "\nDraw calls: " + engine.drawCalls + "  FPS: " + Std.int(engine.fps)
+			+ "\nGPU: " + gpuTimesText();
 	}
 
 	static function main() {
+		#if hlsdl
+		h3d.impl.GlDriver.enableComputeShaders();
+		#end
 		h3d.mat.MaterialSetup.current = new h3d.mat.PbrMaterialSetup();
 		new PbrLights();
 	}
