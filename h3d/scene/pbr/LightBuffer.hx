@@ -53,6 +53,13 @@ class LightBuffer {
 	var cullShader : h3d.shader.pbr.ClusterCull;
 	var clusterBuffer : h3d.Buffer;
 
+	// Camera of the last built clusters, for createClusterDebug
+	var hasClusterCamera = false;
+	var clusterInvView = new h3d.Matrix();
+	var clusterInvProj = new h3d.Matrix();
+	var clusterNear = 0.;
+	var clusterFar = 0.;
+
 	public function new() {
 		var engine = h3d.Engine.getCurrent();
 		useBindless = engine != null && engine.driver.hasFeature(Bindless);
@@ -556,12 +563,18 @@ class LightBuffer {
 		var near = cam.zNear;
 		var far = clusterMaxDistance > 0 ? clusterMaxDistance : cam.zFar;
 		if( far <= near ) far = near * 2;
+		clusterInvView.load(cam.getInverseView());
+		clusterInvProj.load(cam.getInverseProj());
+		clusterNear = near;
+		clusterFar = far;
+		hasClusterCamera = true;
 
 		var c = cullShader;
 		c.lightInfos = s.lightInfos;
 		c.clusterData = clusterBuffer;
 		c.clusterNear = near;
 		c.clusterFarOverNear = far / near;
+		c.clusterLastSliceFar = clusterMaxDistance > 0 ? 1e30 : far;
 		c.pointLightOffset = s.pointLightOffset;
 		c.pointStart = useBindless ? 0 : s.pointShadowCount;
 		c.pointEnd = s.pointShadowCount + s.pointLightCount;
@@ -580,6 +593,67 @@ class LightBuffer {
 		s.clusterData = clusterBuffer;
 		s.clusterZParams.set(zScale, -Math.log(near) * zScale);
 		s.CLUSTERED = true;
+	}
+
+	public function createClusterDebug( ?parent : h3d.scene.Object ) : h3d.scene.Graphics {
+		if( clusterBuffer == null || clusterBuffer.isDisposed() || !hasClusterCamera )
+			return null;
+		var clusterX = 16, clusterY = 9;
+		var heatMax = 32.;
+		var bytes = haxe.io.Bytes.alloc(CLUSTER_COUNT * CLUSTER_STRIDE * 4);
+		clusterBuffer.readBytes(bytes, 0, CLUSTER_COUNT * CLUSTER_STRIDE);
+
+		inline function unproject( x : Float, y : Float, z : Float ) {
+			var v = new h3d.Vector4(x, y, z, 1);
+			v.transform(clusterInvProj);
+			return new h3d.Vector(v.x / v.w, v.y / v.w, v.z / v.w);
+		}
+		function corner( tx : Int, ty : Int, z : Float ) {
+			var x = tx / clusterX * 2 - 1, y = ty / clusterY * 2 - 1;
+			var a = unproject(x, y, 0), b = unproject(x, y, 0.5);
+			var t = (z - a.z) / (b.z - a.z);
+			var p = new h3d.Vector(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, z);
+			return p.transformed(clusterInvView);
+		}
+		inline function sliceDepth( z : Int ) {
+			return z == 0 ? clusterNear : clusterNear * Math.pow(clusterFar / clusterNear, z / CLUSTER_Z);
+		}
+		inline function channel( v : Float ) {
+			return Std.int(hxd.Math.clamp(v) * 255);
+		}
+		function heat( t : Float ) {
+			var j = 0.125 + hxd.Math.clamp(t) * 0.75;
+			return (channel(1.5 - Math.abs(4 * j - 3)) << 16) | (channel(1.5 - Math.abs(4 * j - 2)) << 8) | channel(1.5 - Math.abs(4 * j - 1));
+		}
+
+		var g = new h3d.scene.Graphics(parent);
+		g.name = "clusterDebug";
+		g.material.mainPass.setPassName("overlay");
+		g.ignoreBounds = true;
+
+		function box( x0 : Int, y0 : Int, x1 : Int, y1 : Int, z0 : Float, z1 : Float, color : Int ) {
+			var n = [corner(x0, y0, z0), corner(x1, y0, z0), corner(x1, y1, z0), corner(x0, y1, z0)];
+			var f = [corner(x0, y0, z1), corner(x1, y0, z1), corner(x1, y1, z1), corner(x0, y1, z1)];
+			g.lineStyle(1, color);
+			for( i in 0...4 ) {
+				var j = (i + 1) % 4;
+				g.moveTo(n[i].x, n[i].y, n[i].z); g.lineTo(n[j].x, n[j].y, n[j].z);
+				g.moveTo(f[i].x, f[i].y, f[i].z); g.lineTo(f[j].x, f[j].y, f[j].z);
+				g.moveTo(n[i].x, n[i].y, n[i].z); g.lineTo(f[i].x, f[i].y, f[i].z);
+			}
+		}
+
+		for( z in 0...CLUSTER_Z )
+			for( y in 0...clusterY )
+				for( x in 0...clusterX ) {
+					var counts = bytes.getInt32(((z * clusterY + y) * clusterX + x) * CLUSTER_STRIDE * 4);
+					var count = (counts & 0xFF) + ((counts >> 8) & 0xFF) + ((counts >> 16) & 0xFF) + ((counts >>> 24) & 0xFF);
+					if( count == 0 )
+						continue;
+					box(x, y, x + 1, y + 1, sliceDepth(z), sliceDepth(z + 1), count >= CLUSTER_STRIDE - 1 ? 0xFF00FF : heat(count / heatMax));
+				}
+		box(0, 0, clusterX, clusterY, clusterNear, clusterFar, 0xFFFFFF);
+		return g;
 	}
 
 	public function dispose() {

@@ -127,7 +127,6 @@ class DefaultForward extends hxsl.Shader {
 
 		var transformedNormal : Vec3;
 		var transformedPosition : Vec3;
-		var projectedPosition : Vec4;
 		var pixelColor : Vec4;
 		var depth : Float;
 		var pixelVelocity : Vec2;
@@ -405,7 +404,8 @@ class DefaultForward extends hxsl.Shader {
 		}
 
 		function clusterIndex() : Int {
-			var ndc = projectedPosition.xy / projectedPosition.w;
+			var p = vec4(transformedPosition, 1.) * camera.viewProj;
+			var ndc = p.xy / p.w;
 			var tile = clamp(floor((ndc * 0.5 + 0.5) * vec2(float(CLUSTER_X), float(CLUSTER_Y))), vec2(0.), vec2(float(CLUSTER_X - 1), float(CLUSTER_Y - 1)));
 			var viewZ = (transformedPosition * camera.view.mat3x4()).z;
 			var slice = clamp(floor(log(max(viewZ, 1e-6)) * clusterZParams.x + clusterZParams.y), 0., float(CLUSTER_Z - 1));

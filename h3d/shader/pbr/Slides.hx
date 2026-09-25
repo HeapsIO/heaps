@@ -38,10 +38,11 @@ class Slides extends ScreenShader {
 		@const var HAS_VELOCITY : Bool;
 		@const var HAS_TRANSLUCENCY : Bool;
 
+		var transformedPosition : Vec3;
 		@global var camera : {
 			var view : Mat4;
+			var viewProj : Mat4;
 		}
-		var transformedPosition : Vec3;
 		@const var HAS_CLUSTERS : Bool;
 		@param var clusterData : StorageBuffer<Int>;
 		@param var clusterZParams : Vec2;
@@ -63,8 +64,9 @@ class Slides extends ScreenShader {
 		function clusterColor() : Vec3 {
 			var gray = vec3(dot(sceneColor.get(calculatedUV).rgb, vec3(0.299, 0.587, 0.114)) * 0.4);
 			var color = gray;
-			if( HAS_CLUSTERS && depth != clearDepth ) {
-				var grid = (uvToScreen(calculatedUV) * 0.5 + 0.5) * vec2(float(CLUSTER_X), float(CLUSTER_Y));
+			if( HAS_CLUSTERS ) {
+				var p = vec4(transformedPosition, 1.) * camera.viewProj;
+				var grid = (p.xy / p.w * 0.5 + 0.5) * vec2(float(CLUSTER_X), float(CLUSTER_Y));
 				var tile = clamp(floor(grid), vec2(0.), vec2(float(CLUSTER_X - 1), float(CLUSTER_Y - 1)));
 				var viewZ = (transformedPosition * camera.view.mat3x4()).z;
 				var slice = clamp(floor(log(max(viewZ, 1e-6)) * clusterZParams.x + clusterZParams.y), 0., float(CLUSTER_Z - 1));
@@ -76,7 +78,7 @@ class Slides extends ScreenShader {
 					color = mix(gray, heat(float(count) / CLUSTER_HEAT_MAX), 0.75);
 				var edge = abs(fract(grid) - 0.5);
 				if( max(edge.x, edge.y) > 0.48 )
-					color *= 0.5;
+					color = vec3(0.5);
 			}
 			return color;
 		}

@@ -38,6 +38,7 @@ class ClusterCull extends hxsl.Shader {
 
 		@param var clusterNear : Float;
 		@param var clusterFarOverNear : Float;
+		@param var clusterLastSliceFar : Float;
 
 		var aabbMin : Vec3;
 		var aabbMax : Vec3;
@@ -103,7 +104,7 @@ class ClusterCull extends hxsl.Shader {
 			var ndcMax = vec2(float(tx + 1) / float(CLUSTER_X), float(ty + 1) / float(CLUSTER_Y)) * 2.0 - 1.0;
 
 			var z0 = tz == 0 ? 0.0 : clusterNear * pow(clusterFarOverNear, float(tz) / float(CLUSTER_Z));
-			var z1 = tz == CLUSTER_Z - 1 ? 1e30 : clusterNear * pow(clusterFarOverNear, float(tz + 1) / float(CLUSTER_Z));
+			var z1 = tz == CLUSTER_Z - 1 ? clusterLastSliceFar : clusterNear * pow(clusterFarOverNear, float(tz + 1) / float(CLUSTER_Z));
 
 			aabbMin = vec3(1e30);
 			aabbMax = vec3(-1e30);
