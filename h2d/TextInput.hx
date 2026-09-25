@@ -289,11 +289,11 @@ class TextInput extends Text {
 			return;
 		case K.C if (K.isDown(K.CTRL)):
 			if( text != "" && selectionRange != null ) {
-				hxd.System.setClipboardText(text.substr(selectionRange.start, selectionRange.length));
+				hxd.System.setClipboardText(getSelectedText());
 			}
 		case K.X if (K.isDown(K.CTRL)):
 			if( text != "" && selectionRange != null ) {
-				if(hxd.System.setClipboardText(text.substr(selectionRange.start, selectionRange.length))) {
+				if(hxd.System.setClipboardText(getSelectedText())) {
 					if( !canEdit ) return;
 					beforeChange();
 					cutSelection();
@@ -435,9 +435,13 @@ class TextInput extends Text {
 		if (cursorIndex >= len) {
 			return len;
 		}
+		// ret walks the text itself, so it stops at the end of the TEXT: getTextLength
+		// is the expanded length, longer than the text by one per inserted line break,
+		// and bounding a text position with it runs past the end.
+		var max = text.length;
 		var ret = getTextPos(cursorIndex);
-		while (ret < len && isWordLimit(ret)) ret++;
-		while (ret < len && !isWordLimit(ret)) ret++;
+		while (ret < max && isWordLimit(ret)) ret++;
+		while (ret < max && !isWordLimit(ret)) ret++;
 		return getCursorPos(ret);
 	}
 
