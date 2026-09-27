@@ -1031,7 +1031,7 @@ class Flow extends Object {
 		realMaxHeight = if( maxHeight == null ) constraintHeight else if( constraintHeight < 0 ) maxHeight else hxd.Math.min(maxHeight, constraintHeight);
 		if( minWidth != null && realMaxWidth < minWidth && realMaxWidth >= 0 )
 			realMaxWidth = minWidth;
-		if( minHeight != null && realMaxHeight < minHeight && realMaxWidth >= 0 )
+		if( minHeight != null && realMaxHeight < minHeight && realMaxHeight >= 0 )
 			realMaxHeight = minHeight;
 		if( realMaxWidth != oldW || realMaxHeight != oldH )
 			needReflow = true;
@@ -1461,7 +1461,7 @@ class Flow extends Object {
 					x = startX;
 				}
 				p.isBreak = br;
-				c.x = x + p.offsetY + p.calcPadding;
+				c.x = x + p.offsetX + p.calcPadding;
 				x += p.calculatedWidth;
 				if( x > cw ) cw = x;
 				x += horizontalSpacing;
@@ -1776,7 +1776,7 @@ class Flow extends Object {
 			var ymin = paddingTop + borderTop;
 			var xmax = if(realMaxWidth > 0 && overflow != Expand) flowFloor(realMaxWidth - (paddingRight + borderRight))
 				else hxd.Math.imax(xmin + maxChildW, realMinWidth - (paddingRight + borderRight));
-			var ymax = if(realMaxWidth > 0 && overflow != Expand) flowFloor(realMaxHeight - (paddingBottom + borderBottom))
+			var ymax = if(realMaxHeight > 0 && overflow != Expand) flowFloor(realMaxHeight - (paddingBottom + borderBottom))
 				else hxd.Math.imax(ymin + maxChildH, realMinHeight - (paddingBottom + borderBottom));
 			cw = xmax + paddingRight + borderRight;
 			ch = ymax + paddingBottom + borderBottom;
