@@ -1,8 +1,14 @@
 package h3d.prim;
 import h3d.col.Point;
 
+typedef PolygonLod = {
+	var prim : Polygon;
+	var screenRatio : Float;
+}
+
 class Polygon extends MeshPrimitive {
 
+	public var lods : Array<PolygonLod>;
 	public var points : Array<Point>;
 	public var normals : Array<Point>;
 	public var tangents : Array<Point>;
