@@ -1357,7 +1357,7 @@ class Flow extends Object {
 			inline function alignLine( maxIndex, absolute = false ) {
 				if( maxLineHeight < minLineHeight )
 					maxLineHeight = minLineHeight;
-				else if( overflow != Expand && minLineHeight != 0 )
+				else if( overflow != Expand && overflow != Scroll && minLineHeight != 0 )
 					maxLineHeight = minLineHeight;
 				var height = maxLineHeight;
 				for( i in lastIndex...maxIndex ) {
@@ -1540,7 +1540,6 @@ class Flow extends Object {
 				}
 				c.x = px + p.offsetX + p.calcPadding;
 			}
-
 		case Vertical:
 			var halign = horizontalAlign == null ? Left : horizontalAlign;
 			var valign = verticalAlign == null ? Top : verticalAlign;
@@ -1556,7 +1555,7 @@ class Flow extends Object {
 			inline function alignLine( maxIndex, absolute = false ) {
 				if( maxColWidth < minColWidth )
 					maxColWidth = minColWidth;
-				else if( overflow != Expand && minColWidth != 0 )
+				else if( overflow != Expand && overflow != Scroll && minColWidth != 0 )
 					maxColWidth = minColWidth;
 				var width = maxColWidth;
 				for( i in lastIndex...maxIndex ) {
