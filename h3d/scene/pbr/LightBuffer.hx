@@ -213,6 +213,8 @@ class LightBuffer {
 		}
 
 		inline function addLight<T:Light>( l : T, list : Array<T>, shadowList : Array<T>, maxShadow : Int, stride : Int, shadowStride : Int ) {
+			if( l.getIntensity() == 0.0 )
+				return;
 			var shadowed = hasShadow(l) && (useBindless || shadowList.length < maxShadow);
 			var need = stride + (useBindless && shadowed ? shadowStride : 0);
 			if( curSize + need <= budget ) {
