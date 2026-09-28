@@ -12,6 +12,7 @@ enum abstract DebugMode(Int) {
 	var Shadow = 8;
 	var Velocity = 9;
 	var Translucency = 10;
+	var Clusters = 11;
 }
 
 class Slides extends ScreenShader {
@@ -36,6 +37,51 @@ class Slides extends ScreenShader {
 		@const var smode : Int;
 		@const var HAS_VELOCITY : Bool;
 		@const var HAS_TRANSLUCENCY : Bool;
+
+		var transformedPosition : Vec3;
+		@global var camera : {
+			var view : Mat4;
+			var viewProj : Mat4;
+		}
+		@const var HAS_CLUSTERS : Bool;
+		@param var clusterData : StorageBuffer<Int>;
+		@param var clusterZParams : Vec2;
+		@param var clearDepth : Float;
+		@param var sceneColor : Sampler2D;
+
+		// Keep in sync with h3d.shader.pbr.DefaultForward.
+		final CLUSTER_X : Int = 16;
+		final CLUSTER_Y : Int = 9;
+		final CLUSTER_Z : Int = 24;
+		final CLUSTER_STRIDE : Int = 128;
+		final CLUSTER_HEAT_MAX : Float = 32.0;
+
+		function heat( t : Float ) : Vec3 {
+			var j = 0.125 + saturate(t) * 0.75;
+			return saturate(vec3(1.5 - abs(4.0 * j - 3.0), 1.5 - abs(4.0 * j - 2.0), 1.5 - abs(4.0 * j - 1.0)));
+		}
+
+		function clusterColor() : Vec3 {
+			var gray = vec3(dot(sceneColor.get(calculatedUV).rgb, vec3(0.299, 0.587, 0.114)) * 0.4);
+			var color = gray;
+			if( HAS_CLUSTERS ) {
+				var p = vec4(transformedPosition, 1.) * camera.viewProj;
+				var grid = (p.xy / p.w * 0.5 + 0.5) * vec2(float(CLUSTER_X), float(CLUSTER_Y));
+				var tile = clamp(floor(grid), vec2(0.), vec2(float(CLUSTER_X - 1), float(CLUSTER_Y - 1)));
+				var viewZ = (transformedPosition * camera.view.mat3x4()).z;
+				var slice = clamp(floor(log(max(viewZ, 1e-6)) * clusterZParams.x + clusterZParams.y), 0., float(CLUSTER_Z - 1));
+				var counts = clusterData[((int(slice) * CLUSTER_Y + int(tile.y)) * CLUSTER_X + int(tile.x)) * CLUSTER_STRIDE];
+				var count = (counts & 0xFF) + ((counts >> 8) & 0xFF) + ((counts >> 16) & 0xFF) + ((counts >> 24) & 0xFF);
+				if( count >= CLUSTER_STRIDE - 1 )
+					color = vec3(1., 0., 1.);
+				else if( count > 0 )
+					color = mix(gray, heat(float(count) / CLUSTER_HEAT_MAX), 0.75);
+				var edge = abs(fract(grid) - 0.5);
+				if( max(edge.x, edge.y) > 0.48 )
+					color = vec3(0.5);
+			}
+			return color;
+		}
 
 		function getColor(x:Float,y:Float) : Vec3 {
 			var color : Vec3;
@@ -69,8 +115,11 @@ class Slides extends ScreenShader {
 					color = vec3(abs(velocity.get(input.uv).xy) * 100.0, 0.0);
 				}
 			} else {
-				if( x < 1 && HAS_TRANSLUCENCY )
-					color = translucencyMap.get(vec2(x, y - 3)).rgb;
+				if( x < 1 ) {
+					if( HAS_TRANSLUCENCY )
+						color = translucencyMap.get(vec2(x, y - 3)).rgb;
+				} else if( x < 2 )
+					color = clusterColor();
 			}
 			return color;
 		}

@@ -12,6 +12,12 @@ class LightSystem extends h3d.scene.LightSystem {
 		lightBuffer = new h3d.scene.pbr.LightBuffer();
 	}
 
+	override function initGlobals( globals : hxsl.Globals ) {
+		super.initGlobals(globals);
+		if( forwardMode && ctx != null && lightBuffer.shadowHandles.length > 0 )
+			ctx.selectTextureHandles(lightBuffer.shadowHandles);
+	}
+
 	override function computeLight( obj : h3d.scene.Object, shaders : hxsl.ShaderList ) : hxsl.ShaderList {
 		var light = Std.downcast(obj, h3d.scene.pbr.Light);
 		if( light != null ) {
@@ -47,7 +53,8 @@ class LightSystem extends h3d.scene.LightSystem {
 		while( plight != null ) {
 			var light = Std.downcast(plight, h3d.scene.pbr.Light);
 			if( light != null && light.primitive == null ) {
-				if( light.shadows.shader != null && shadows) lightPass.addShader(light.shadows.shader);
+				var hasShadow = shadows && light.shadows.shader != null && light.shadows.mode != None;
+				if( hasShadow ) lightPass.addShader(light.shadows.shader);
 				lightPass.addShader(light.shader);
 				for( s in lightingShaders )
 					lightPass.addShader(s);
@@ -55,7 +62,7 @@ class LightSystem extends h3d.scene.LightSystem {
 				lightPass.removeShader(light.shader);
 				for( s in lightingShaders )
 					lightPass.removeShader(s);
-				if( light.shadows.shader != null ) lightPass.removeShader(light.shadows.shader);
+				if( hasShadow ) lightPass.removeShader(light.shadows.shader);
 			}
 			plight = plight.next;
 		}

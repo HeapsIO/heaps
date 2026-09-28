@@ -41,6 +41,10 @@ class Light extends h3d.scene.Light {
 		return _color = v;
 	}
 
+	public function getIntensity() : Float {
+		return power * power;
+	}
+
 	public function inFrustum(frustum : h3d.col.Frustum) {
 		return true;
 	}

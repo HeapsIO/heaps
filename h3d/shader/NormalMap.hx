@@ -4,11 +4,6 @@ class NormalMap extends hxsl.Shader {
 
 	static var SRC = {
 
-		@global var camera : {
-			var position : Vec3;
-			@var var dir : Vec3;
-		};
-
 		@input var input : {
 			var uv : Vec2;
 			var normal : Vec3;

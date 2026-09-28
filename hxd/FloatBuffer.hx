@@ -90,7 +90,7 @@ abstract FloatBuffer(InnerData) {
 		#if js
 		this.length = v;
 		#else
-		if( this.length > v ) this.splice(v, this.length - v) else grow(v);
+		if( this.length > v ) this.resize(v) else grow(v);
 		#end
 	}
 

@@ -177,20 +177,16 @@ class DirShadowMap extends Shadows {
 
 	override function syncShader(texture) {
 		dshader.shadowMap = texture;
-		dshader.shadowMapChannel = format == h3d.mat.Texture.nativeFormat ? PackedFloat : R;
 		dshader.shadowBias = bias;
 		dshader.shadowPower = power;
 		dshader.shadowViewProj = getShadowViewProj();
+		dshader.SAMPLING_MODE = samplingKind;
 
 		//ESM
-		dshader.USE_ESM = samplingKind == ESM;
 		dshader.shadowPower = power;
 
 		// PCF
-		dshader.USE_PCF = samplingKind == PCF;
-		dshader.shadowRes.set(texture.width,texture.height);
-		dshader.pcfScale = pcfScale;
-		dshader.pcfQuality = pcfQuality;
+		dshader.pcfScale = pcfScale / texture.width;
 	}
 
 	override function saveStaticData() {
@@ -301,8 +297,6 @@ class DirShadowMap extends Shadows {
 		return tex;
 	}
 
-	var g : h3d.scene.Graphics;
-	public var debug : Bool;
 	override function draw( passes, ?sort ) {
 		if( !enabled )
 			return;
@@ -377,45 +371,4 @@ class DirShadowMap extends Shadows {
 		drawBounds(lightCamera.getInverseViewProj(), 0xffffff);
 	}
 
-	function drawBounds(invViewModel : h3d.Matrix, color : Int) {
-
-		inline function unproject(screenX, screenY, camZ) {
-			var p = new h3d.Vector(screenX, screenY, camZ);
-			p.project(invViewModel);
-			return p;
-		}
-
-		var nearPlaneCorner = [unproject(-1, 1, 0), unproject(1, 1, 0), unproject(1, -1, 0), unproject(-1, -1, 0)];
-		var farPlaneCorner = [unproject(-1, 1, 1), unproject(1, 1, 1), unproject(1, -1, 1), unproject(-1, -1, 1)];
-
-		g.lineStyle(1, color);
-
-		// Near Plane
-		var last = nearPlaneCorner[nearPlaneCorner.length - 1];
-		inline function moveTo(x : Float, y : Float, z : Float) {
-			g.moveTo(x - ctx.scene.x, y - ctx.scene.y, z - ctx.scene.z);
-		}
-		inline function lineTo(x : Float, y : Float, z : Float) {
-			g.lineTo(x - ctx.scene.x, y - ctx.scene.y, z - ctx.scene.z);
-		}
-		moveTo(last.x,last.y,last.z);
-		for( fc in nearPlaneCorner ) {
-			lineTo(fc.x, fc.y, fc.z);
-		}
-
-		// Far Plane
-		var last = farPlaneCorner[farPlaneCorner.length - 1];
-		moveTo(last.x,last.y,last.z);
-		for( fc in farPlaneCorner ) {
-			lineTo(fc.x, fc.y, fc.z);
-		}
-
-		// Connections
-		for( i in 0 ... 4 ) {
-			var np = nearPlaneCorner[i];
-			var fp = farPlaneCorner[i];
-			moveTo(np.x, np.y, np.z);
-			lineTo(fp.x, fp.y, fp.z);
-		}
-	}
 }

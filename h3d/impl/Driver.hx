@@ -89,6 +89,18 @@ enum Feature {
 		Supports DLSS
 	*/
 	DLSS;
+	/*
+		Can render into a single layer of a depth texture array.
+	*/
+	DepthTextureArray;
+	/*
+		Supports compute shaders and read/write storage buffers.
+	*/
+	ComputeShaders;
+	/*
+		Sampler arrays can be indexed by a non-constant, dynamically uniform expression.
+	*/
+	DynamicSamplerIndex;
 }
 
 enum QueryKind {
@@ -319,7 +331,9 @@ class Driver {
 	public function setRenderTargets( textures : Array<h3d.mat.Texture>, depthBinding : h3d.Engine.DepthBinding = ReadWrite ) {
 	}
 
-	public function setDepth( tex : Null<h3d.mat.Texture> ) {
+	public function setDepth( tex : Null<h3d.mat.Texture>, layer = 0 ) {
+		if( layer != 0 )
+			throw "Not implemented";
 	}
 
 	public function setDepthClamp( enabled : Bool ) {

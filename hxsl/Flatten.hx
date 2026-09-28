@@ -28,6 +28,7 @@ class Flatten {
 	var varMap : Map<TVar,Alloc>;
 	var textureFormats : Array<{ dim : TexDimension, arr : Bool, rw : Int }>;
 	public var allocData : Map< TVar, Array<Alloc> >;
+	public var hasBindless : Bool;
 
 	var mapExprFun : TExpr -> TExpr;
 
@@ -42,6 +43,7 @@ class Flatten {
 		textureFormats = [];
 		varMap = new Map();
 		allocData = new Map();
+		hasBindless = false;
 		for( v in s.vars )
 			gatherVar(v);
 		var prefix = switch( kind ) {
@@ -239,6 +241,9 @@ class Flatten {
 				]), t : e.t, p : e.p}
 			default : throw "assert";
 			}
+		case TCall({ e : TGlobal(ResolveSampler|ResolveBuffer) }, _):
+			hasBindless = true;
+			e.map(mapExprFun);
 		default:
 			e.map(mapExprFun);
 		};

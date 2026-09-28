@@ -191,7 +191,7 @@ class Renderer extends h3d.scene.Renderer {
 
 	override function getPassByName(name:String):h3d.pass.Output {
 		switch( name ) {
-		case "overlay", "beforeTonemapping", "beforeTonemappingAlpha", "albedo", "afterTonemapping", "forward", "forwardAlpha", "distortion", "debug", "lightProbe":
+		case "overlay", "beforeTonemapping", "beforeTonemappingAlpha", "albedo", "afterTonemapping", "forward", "forwardAlpha", "distortion", "debug", "lightProbe", "volumetricOverlay":
 			return defaultPass;
 		case "default", "alpha", "additive":
 			return output;
@@ -266,9 +266,12 @@ class Renderer extends h3d.scene.Renderer {
 
 	var hzbPass = new h3d.pass.ScreenFx(new h3d.shader.HZB());
 	public function updateHZB(max : Bool = true) {
-		ctx.hzb = allocTarget("HZB", false, 1, R32F, [Target, Writable, MipMapped, ManualMipMapGen]);
-		var hzbTarget = ctx.hzb;
-		var hzbTargetCopy = allocTarget("HZBCopy", false, 1, R32F, [Target, Writable, MipMapped, ManualMipMapGen]);
+		ctx.hzb = buildHZB(max, "HZB");
+	}
+
+	public function buildHZB(max : Bool, name : String) : h3d.mat.Texture {
+		var hzbTarget = allocTarget(name, false, 1, R32F, [Target, Writable, MipMapped, ManualMipMapGen]);
+		var hzbTargetCopy = allocTarget(name + "Copy", false, 1, R32F, [Target, Writable, MipMapped, ManualMipMapGen]);
 		var depth = textures.albedo.depthBuffer;
 		var width = textures.depth.width;
 		var height = textures.depth.height;
@@ -308,6 +311,7 @@ class Renderer extends h3d.scene.Renderer {
 		}
 		hzbTarget.startingMip = 0;
 		hzbTargetCopy.startingMip = 0;
+		return hzbTarget;
 	}
 
 	function lighting() {
@@ -629,7 +633,7 @@ class Renderer extends h3d.scene.Renderer {
 			passes.clear();
 		while( light != null ) {
 			var plight = Std.downcast(light, h3d.scene.pbr.Light);
-			if( plight != null ) {
+			if( plight != null && plight.shadows.hasStaticShadow() ) {
 				plight.shadows.setContext(ctx);
 				plight.shadows.computeStatic(passes);
 				passes.reset();
@@ -899,6 +903,9 @@ class Renderer extends h3d.scene.Renderer {
 			}
 		case Debug:
 			var defaultShadows : h3d.mat.Texture = ctx.getGlobal("mainLightShadowMap");
+			// TextureArray defaultShadows is not supported .
+			if( Std.isOfType(defaultShadows, h3d.mat.TextureArray) )
+				defaultShadows = null;
 			var prev = slides.shader.shadowMap;
 			var shadowMap = defaultShadows;
 			if( debugShadowMapIndex < 0 )
@@ -911,11 +918,16 @@ class Renderer extends h3d.scene.Renderer {
 					if( pl != null && pl.shadows != null ) {
 						var cl = Std.downcast(pl.shadows, h3d.pass.CascadeShadowMap);
 						if ( cl != null ) {
-							for ( tex in cl.getShadowTextures() ) {
-								if ( tex != null && tex != defaultShadows ) {
+							var cascades = cl.getShadowTex();
+							if ( cascades != null && cascades != defaultShadows ) {
+								for ( layer in 0...cascades.layerCount ) {
 									k--;
-									shadowMap = tex;
-									if ( k == 0 ) break;
+									if ( k == 0 ) {
+										var tex = ctx.textures.allocTarget("debugCascade", cascades.width, cascades.height, false, R32F);
+										h3d.pass.Copy.ArrayCopy.run(cascades, layer, tex);
+										shadowMap = tex;
+										break;
+									}
 								}
 							}
 							if ( k == 0 ) break;
@@ -946,6 +958,15 @@ class Renderer extends h3d.scene.Renderer {
 			slides.shader.velocity = textures.velocity;
 			slides.shader.HAS_TRANSLUCENCY = textures.translucency != null;
 			slides.shader.translucencyMap = textures.translucency;
+			var ls = Std.downcast(getLightSystem(), h3d.scene.pbr.LightSystem);
+			var forward = ls != null ? ls.lightBuffer.defaultForwardShader : null;
+			slides.shader.HAS_CLUSTERS = forward != null && forward.CLUSTERED;
+			if( slides.shader.HAS_CLUSTERS ) {
+				slides.shader.clusterData = forward.clusterData;
+				slides.shader.clusterZParams = forward.clusterZParams;
+			}
+			slides.shader.clearDepth = getDepthClearValue();
+			slides.shader.sceneColor = ldr;
 			pbrProps.isScreen = true;
 			slides.render();
 			if( !debugging ) {
@@ -1000,7 +1021,7 @@ class Renderer extends h3d.scene.Renderer {
 				else if ( y == 2 )
 					a = [Emissive,Shadow,Velocity];
 				else
-					a = [Translucency];
+					a = [Translucency, Clusters];
 				if( x < a.length )
 					slides.shader.mode = a[x];
 			}

@@ -237,9 +237,11 @@ class Checker {
 			case UnpackUnorm4x8:
 				[ { args : [ { name : "value", type : TInt } ], ret : vec4 } ];
 			case ResolveSampler:
-				[for( t in texDefs ) { args : [{ name : "handle", type : TTextureHandle }, { name : "tex", type : TSampler(t.dim,t.arr) }], ret : TVoid }];
+				[for( t in texDefs ) { args : [{ name : "handle", type : TTextureHandle }, { name : "tex", type : TSampler(t.dim,t.arr) }], ret : TVoid }].concat(
+				[for( t in texDefs ) { args : [{ name : "handle", type : TVec(2, VInt) }, { name : "tex", type : TSampler(t.dim,t.arr) }], ret : TVoid }]);
 			case ResolveBuffer:
-				[for( b in bindlessBufDef ) { args : [{ name : "handle", type : TBufferHandle }, { name : "buf", type : TBuffer(b.t, b.size, b.kind) }], ret : TVoid }];
+				[for( b in bindlessBufDef ) { args : [{ name : "handle", type : TBufferHandle }, { name : "buf", type : TBuffer(b.t, b.size, b.kind) }], ret : TVoid }].concat(
+				[for( b in bindlessBufDef ) { args : [{ name : "handle", type : TInt }, { name : "buf", type : TBuffer(b.t, b.size, b.kind) }], ret : TVoid}]);
 			default:
 				throw "Unsupported global "+g;
 			}
@@ -397,6 +399,7 @@ class Checker {
 			switch( [size1,size2] ) {
 			case [SConst(a),SConst(b)] if( a == b ):
 			case [SVar(v1),SVar(v2)] if( v1 == v2 ):
+			case [SConst(_),SVar(v)] | [SVar(v),SConst(_)] if( v.isFinalInt() ):
 			default: return false;
 			}
 			return tryUnify(t1,t2);
@@ -846,35 +849,46 @@ class Checker {
 						default:
 						}
 				}
-				var einit = null;
-				if( v.expr != null ) {
-					if( v.kind != Param && v.kind != Local )
-						error("Cannot initialize variable declaration if not @param or local", v.expr.pos);
-					var e = typeExpr(v.expr, v.type == null ? Value : With(v.type));
-					if( v.type == null )
-						v.type = e.t;
-					else
-						unify(e.t, v.type, v.expr.pos);
-					checkConst(e);
-					einit = e;
-				}
-				if( v.type == null ) error("Type required for variable declaration", e.pos);
+				if( v.expr != null && v.kind != Param && v.kind != Local )
+					error("Cannot initialize variable declaration if not @param or local", v.expr.pos);
+				if( v.type == null && v.expr == null )
+					error("Type required for variable declaration", e.pos);
 				if( isImport && v.kind == Param )
 					continue;
+				if( vars.exists(v.name) )
+					error("Duplicate var decl '" + v.name + "'", e.pos);
 
-				if( vars.exists(v.name) ) error("Duplicate var decl '" + v.name + "'", e.pos);
-				var v = makeVar(v, e.pos);
+				var tv = null;
+				var einit = null;
+				if( v.type != null ) {
+					tv = makeVar(v, e.pos);
+					if( v.expr != null ) {
+						einit = typeExpr(v.expr, With(tv.type));
+						unify(einit.t, tv.type, v.expr.pos);
+					}
+				} else {
+					einit = typeExpr(v.expr, Value);
+					v.type = einit.t;
+					tv = makeVar(v, e.pos);
+				}
+				if( einit != null ) {
+					if( tv.isFinalConst() )
+						checkConstValue(einit)
+					else
+						checkConst(einit);
+				}
 
-				switch( v.type ) {
+				switch( tv.type ) {
 				case TSampler(T3D, true), TRWTexture(T3D, true, _), TRWTexture(_,_,3):
 					error("Unsupported texture type", e.pos);
 				default:
 				}
-				if( einit != null )
-					inits.push({ v : v, e : einit });
-				else if( v.qualifiers != null && v.qualifiers.indexOf(Final) >= 0 )
+				var isFinal = tv.hasQualifier(Final);
+				if( einit != null ) {
+					inits.push({ v : tv, e : einit });
+				} else if( isFinal )
 					error("Final variable needs initializer", e.pos);
-				vars.set(v.name, v);
+				vars.set(tv.name, tv);
 			}
 		case ECall( { expr : EIdent("import") }, [e]):
 			var path = [];
@@ -909,6 +923,27 @@ class Checker {
 				checkExpr(sexpr, funs, isImport, true);
 		default:
 			error("This expression is not allowed at shader declaration level", e.pos);
+		}
+	}
+
+	function checkConstValue( e : TExpr ) {
+		switch( e.e ) {
+		case TConst(_):
+		case TVar(v) if( v.isFinalConst() ):
+		case TParenthesis(e): checkConstValue(e);
+		case TCall({ e : TGlobal(ToFloat) }, [e]): checkConstValue(e);
+		case TUnop(OpNeg | OpNot | OpNegBits, e): checkConstValue(e);
+		case TIf(econd, eif, eelse) if( eelse != null ):
+			checkConstValue(econd);
+			checkConstValue(eif);
+			checkConstValue(eelse);
+		case TBinop(OpAssign | OpAssignOp(_) | OpInterval, _, _):
+			error("This expression should be constant", e.p);
+		case TBinop(_, e1, e2):
+			checkConstValue(e1);
+			checkConstValue(e2);
+		default:
+			error("This expression should be constant", e.p);
 		}
 	}
 
@@ -976,11 +1011,11 @@ class Checker {
 					default:
 						error("Precision qualifier not supported on " + v.type, pos);
 					}
-				case Range(min,max):
+				case Range(_,_):
 					switch( v.type ) {
 					case TFloat, TInt, TVec(_, VFloat):
 					default:
-						error("Precision qualifier not supported on " + v.type, pos);
+						error("Range qualifier not supported on " + v.type, pos);
 					}
 				case Borrow(source):
 					if ( v.kind != Local ) error("Borrow should not have a type qualifier", pos);
@@ -1049,7 +1084,7 @@ class Checker {
 					if( v2 == null ) break;
 				}
 				if( v2 == null ) error("Array size variable '" + v.name + "'not found", pos);
-				if( !v2.isConst() ) error("Array size variable '" + v.name + "'should be a constant", pos);
+				if( !v2.isConst() && !v2.isFinalInt() ) error("Array size variable '" + v.name + "'should be a constant", pos);
 				SVar(v2);
 			}
 			t = makeVarType(t,parent,pos);

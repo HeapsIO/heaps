@@ -106,7 +106,7 @@ class Window {
 	#end
 	#end
 
-	public function new(title:String, width:Int, height:Int, ?flags: { ?fixed:Bool, ?hidden:Bool }) {
+	public function new(title:String, width:Int, height:Int, ?flags: { ?fixed:Bool, ?hidden:Bool, ?background:Bool }) {
 		this.windowWidth = width;
 		this.windowHeight = height;
 		eventTargets = new List();
@@ -129,6 +129,7 @@ class Window {
 		var dxFlags = 0;
 		if (!fixed) dxFlags |= dx.Window.RESIZABLE;
 		if (hidden) dxFlags |= dx.Window.HIDDEN;
+		if (flags != null && flags.background) dxFlags |= dx.Window.NO_ACTIVATE;
 		window = new dx.Window(title, width, height, dx.Window.CW_USEDEFAULT, dx.Window.CW_USEDEFAULT, dxFlags);
 		#end
 		WINDOWS.push(this);
@@ -269,13 +270,21 @@ class Window {
 	}
 
 	function get_x() : Int {
+		#if (hlsdl || hldx)
 		return window.x;
+		#else
+		return 0;
+		#end
 	}
 
 	function get_y() : Int {
+		#if (hlsdl || hldx)
 		return window.y;
+		#else
+		return 0;
+		#end
 	}
-	
+
 	function get_mouseX() : Int {
 		return curMouseX;
 	}

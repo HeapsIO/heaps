@@ -52,6 +52,7 @@ class RenderContext extends h3d.impl.RenderContext {
 	public var prevWorldDelta : h3d.Vector;
 
 	@global("camera.view") var cameraView : h3d.Matrix;
+	@global("camera.invView") var cameraInvView : h3d.Matrix;
 	@global("camera.zNear") var cameraNear : Float;
 	@global("camera.zFar") var cameraFar : Float;
 	@global("camera.proj") var cameraProj : h3d.Matrix;
@@ -106,6 +107,7 @@ class RenderContext extends h3d.impl.RenderContext {
 		cameraReverseDepth = camera.reverseDepth = useReverseDepth;
 		camera.update();
 		cameraView = camera.mcam;
+		cameraInvView = camera.getInverseView();
 		cameraNear = camera.zNear;
 		cameraFar = camera.zFar;
 		cameraProj = camera.mproj;

@@ -141,52 +141,66 @@ class BatchPrimitive extends MeshPrimitive {
 	}
 
 	function fillPolygon( model : Polygon ) {
+		var levels = [model];
+		var lodConfig = [];  // ratio of the next level
+		var lods = model.lods;
+		if( lods != null ) {
+			for ( l in lods ) {
+				levels.push(l.prim);
+				lodConfig.push(l.screenRatio);
+			}
+		}
+		lodConfig.push(0.0);
 		var subMesh = new SubMesh();
 		subMesh.bounds = model.getBounds();
 		bounds.add(subMesh.bounds);
-		subMesh.lodCount = 1;
-		subMesh.lodConfig = [0.0];
+		subMesh.lodCount = levels.length;
+		subMesh.lodConfig = lodConfig;
 		subMesh.subPartStart = subPartCount;
 
-		var cpuBuf = model.getCPUBuffer();
-		#if hl
-		var vertices = @:privateAccess new haxe.io.Bytes(hl.Bytes.getArray(cpuBuf.getNative()), cpuBuf.length * 4);
-		#else
-		var vertices = haxe.io.Bytes.alloc(cpuBuf.length * 4);
-		for ( i in 0...cpuBuf.length )
-			vertices.setFloat(i<<2, cpuBuf[i]);
-		#end
+		var subPart = new SubPart();
+		subPart.indexStarts = [];
+		subPart.indexCounts = [];
+		for ( model in levels ) {
+			var cpuBuf = model.getCPUBuffer();
+			#if hl
+			var vertices = @:privateAccess new haxe.io.Bytes(hl.Bytes.getArray(cpuBuf.getNative()), cpuBuf.length * 4);
+			#else
+			var vertices = haxe.io.Bytes.alloc(cpuBuf.length * 4);
+			for ( i in 0...cpuBuf.length )
+				vertices.setFloat(i<<2, cpuBuf[i]);
+			#end
 
-		var vByteSize = model.vertexCount() * vertexFormat.strideBytes;
-		if ( vBytes == null )
-			vBytes = new BytesArray(vByteSize, maxByteSize);
-		var vStart = Std.int(vBytes.totalSize / vertexFormat.strideBytes);
-		var vAlloc = vBytes.alloc(vByteSize);
-		var vbuf = vAlloc.b;
-		var vByteStart = vAlloc.pos;
-		vbuf.blit(vByteStart, vertices, 0, vByteSize);
+			var vByteSize = model.vertexCount() * vertexFormat.strideBytes;
+			if ( vBytes == null )
+				vBytes = new BytesArray(vByteSize, maxByteSize);
+			var vStart = Std.int(vBytes.totalSize / vertexFormat.strideBytes);
+			var vAlloc = vBytes.alloc(vByteSize);
+			var vbuf = vAlloc.b;
+			var vByteStart = vAlloc.pos;
+			vbuf.blit(vByteStart, vertices, 0, vByteSize);
 
-		var triIndices = model.idx == null;
-		var iCount = triIndices ? model.triCount() * 3 : model.idx.length;
-		var iByteSize = iCount * 4;
-		if ( iBytes == null )
-			iBytes = new BytesArray(iByteSize, maxByteSize);
-		var iStart = iBytes.totalSize >> 2;
-		var iAlloc = iBytes.alloc(iByteSize);
-		var ibuf = iAlloc.b;
-		var iByteStart = iAlloc.pos;
+			var triIndices = model.idx == null;
+			var iCount = triIndices ? model.triCount() * 3 : model.idx.length;
+			var iByteSize = iCount * 4;
+			if ( iBytes == null )
+				iBytes = new BytesArray(iByteSize, maxByteSize);
+			var iStart = iBytes.totalSize >> 2;
+			var iAlloc = iBytes.alloc(iByteSize);
+			var ibuf = iAlloc.b;
+			var iByteStart = iAlloc.pos;
 
-		if ( triIndices ) {
-			for ( i in 0...iCount )
-				ibuf.setInt32(iByteStart + (i << 2), i + vStart);
-		} else {
-			for ( i in 0...iCount )
-				ibuf.setInt32(iByteStart + (i << 2), model.idx[i] + vStart);
+			if ( triIndices ) {
+				for ( i in 0...iCount )
+					ibuf.setInt32(iByteStart + (i << 2), i + vStart);
+			} else {
+				for ( i in 0...iCount )
+					ibuf.setInt32(iByteStart + (i << 2), model.idx[i] + vStart);
+			}
+			subPart.indexStarts.push(iStart);
+			subPart.indexCounts.push(iCount);
 		}
 
-		var subPart = new SubPart();
-		subPart.indexStarts = [iStart];
-		subPart.indexCounts = [iCount];
 		subMesh.subParts = [subPart];
 		subMeshes.push( subMesh );
 		fillSubMeshInfos( subMesh );
@@ -321,20 +335,26 @@ class BatchPrimitive extends MeshPrimitive {
 	function fillLogicNormal( model : MeshPrimitive ) @:privateAccess {
 		var poly = Std.downcast(model, Polygon);
 		if ( poly != null ) {
-			var startOffset : Int = logicNormals.length;
-			var vCount = poly.vertexCount();
-			logicNormals.grow(vCount*3);
-			var k = 0;
-			var hasNormal = poly.normals == null;
-			if ( !hasNormal )
-				poly.addNormals();
-			for( n in poly.normals ) {
-				logicNormals[startOffset + k++] = n.x;
-				logicNormals[startOffset + k++] = n.y;
-				logicNormals[startOffset + k++] = n.z;
+			var levels = [poly];
+			var lods = poly.lods;
+			if( lods != null )
+				for ( l in lods ) levels.push(l.prim);
+			for ( poly in levels ) {
+				var startOffset : Int = logicNormals.length;
+				var vCount = poly.vertexCount();
+				logicNormals.grow(vCount*3);
+				var k = 0;
+				var hasNormal = poly.normals == null;
+				if ( !hasNormal )
+					poly.addNormals();
+				for( n in poly.normals ) {
+					logicNormals[startOffset + k++] = n.x;
+					logicNormals[startOffset + k++] = n.y;
+					logicNormals[startOffset + k++] = n.z;
+				}
+				if ( !hasNormal )
+					poly.normals = null;
 			}
-			if ( !hasNormal )
-				poly.normals = null;
 			return;
 		}
 

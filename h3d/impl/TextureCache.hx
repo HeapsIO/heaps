@@ -45,22 +45,29 @@ class TextureCache {
 		position = 0;
 	}
 
-	inline function matchTargetFlags(t : h3d.mat.Texture, flags : Array<h3d.mat.Data.TextureFlags>) {
+	inline function targetLayerCount( flags : Array<h3d.mat.Data.TextureFlags>, layers : Int ) {
+		return ( flags != null && flags.contains(Cube) ) ? 6 : layers;
+	}
+
+	inline function matchTargetFlags(t : h3d.mat.Texture, flags : Array<h3d.mat.Data.TextureFlags>, layers = 1) {
 		var enumFlags = new haxe.EnumFlags<h3d.mat.Data.TextureFlags>();
 		if ( flags != null ) {
 			for ( f in flags )
 				enumFlags.set(f);
 		}
+		if ( layers > 1 && !enumFlags.has(Cube) )
+			enumFlags.set(IsArray);
 		return (t.flags.toInt() & checkFlags) == (enumFlags.toInt() & checkFlags);
 	}
 
-	function lookupTarget( name, width, height, format, flags : Array<h3d.mat.Data.TextureFlags> ) {
+	function lookupTarget( name, width, height, format, flags : Array<h3d.mat.Data.TextureFlags>, layers = 1 ) {
 		var t = cache[position];
+		var layerCount = targetLayerCount(flags, layers);
 		// look for a suitable candidate
 		for( i in position+1...cache.length ) {
 			var t2 = cache[i];
-			if( t2 != null && !t2.isDisposed() && t2.width == width && t2.height == height && t2.format == format ) {
-				if ( !matchTargetFlags(t2, flags) )
+			if( t2 != null && !t2.isDisposed() && t2.width == width && t2.height == height && t2.format == format && t2.layerCount == layerCount ) {
+				if ( !matchTargetFlags(t2, flags, layers) )
 					continue;
 				// swap
 				cache[position] = t2;
@@ -73,11 +80,11 @@ class TextureCache {
 			t.dispose();
 			t = null;
 		}
-		if ( flags == null )
-			flags = [];
-		if ( !flags.contains(Target) )
-			flags.push(Target);
-		var newt = new h3d.mat.Texture(width, height, flags, format);
+		var allocFlags = flags == null ? [] : flags.copy();
+		if ( !allocFlags.contains(Target) )
+			allocFlags.push(Target);
+		var isArray = !allocFlags.contains(Cube) && (layers > 1 || allocFlags.contains(IsArray));
+		var newt : h3d.mat.Texture = isArray ? new h3d.mat.TextureArray(width, height, layers, allocFlags, format) : new h3d.mat.Texture(width, height, allocFlags, format);
 		if( t != null )
 			cache.insert(position,newt);
 		else
@@ -85,25 +92,26 @@ class TextureCache {
 		return newt;
 	}
 
-	public function allocTarget( name : String, width : Int, height : Int, defaultDepth=true, ?format:hxd.PixelFormat, flags : Array<h3d.mat.Data.TextureFlags> = null ) {
+	public function allocTarget( name : String, width : Int, height : Int, defaultDepth=true, ?format:hxd.PixelFormat, flags : Array<h3d.mat.Data.TextureFlags> = null, layers = 1 ) {
 		var t = cache[position];
 		if( format == null ) format = defaultFormat;
+		var layerCount = targetLayerCount(flags, layers);
 		var alloc = false;
-		if( t == null || t.isDisposed() || t.width != width || t.height != height || t.format != format )
+		if( t == null || t.isDisposed() || t.width != width || t.height != height || t.format != format || t.layerCount != layerCount )
 			alloc = true;
 		else
-			alloc = !matchTargetFlags(t, flags);
+			alloc = !matchTargetFlags(t, flags, layers);
 		if ( alloc )
-			t = lookupTarget(name,width,height,format,flags);
+			t = lookupTarget(name,width,height,format,flags,layers);
 		t.depthBuffer = defaultDepth ? defaultDepthBuffer : null;
 		t.setName(name);
 		position++;
 		return t;
 	}
 
-	public function allocTargetScale( name : String, scale : Float, defaultDepth=true, ?format:hxd.PixelFormat ) {
+	public function allocTargetScale( name : String, scale : Float, defaultDepth=true, ?format:hxd.PixelFormat, flags : Array<h3d.mat.Data.TextureFlags> = null, layers = 1 ) {
 		var e = h3d.Engine.getCurrent();
-		return allocTarget(name, Math.ceil(e.width * scale), Math.ceil(e.height * scale), defaultDepth, format);
+		return allocTarget(name, Math.ceil(e.width * scale), Math.ceil(e.height * scale), defaultDepth, format, flags, layers);
 	}
 
 	public function allocTileTarget( name : String, tile : h2d.Tile, defaultDepth=false, ?format:hxd.PixelFormat ) {

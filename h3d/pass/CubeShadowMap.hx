@@ -109,7 +109,7 @@ class CubeShadowMap extends Shadows {
 			return tmpTex;
 		tmpTex = new h3d.mat.Texture(1,1, [Target,Cube], format);
 		tmpTex.name = "defaultCubeShadowMap";
-		tmpTex.realloc = function() clear(tmpTex);
+		tmpTex.realloc = null;
 		clear(tmpTex);
 		return tmpTex;
 	}

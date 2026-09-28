@@ -44,6 +44,14 @@ abstract IndexBuffer(InnerData) {
 		#end
 	}
 
+	public inline function resize( v : Int ) {
+		#if js
+		this.resize(v);
+		#else
+		if( this.length > v ) this.resize(v) else grow(v);
+		#end
+	}
+
 	@:arrayAccess inline function arrayRead(key:Int) : Int {
 		return this[key];
 	}

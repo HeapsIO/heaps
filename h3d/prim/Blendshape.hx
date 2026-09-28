@@ -6,7 +6,7 @@ class BlendshapeInstance {
 	var blendshape : Blendshape;
 	var shader : h3d.shader.Blendshape;
 
-	#if !editor
+	#if !js
 	var weightsBuffer : hxd.FloatBuffer;
 	var gpuWeights : h3d.Buffer;
 	#end
@@ -15,7 +15,7 @@ class BlendshapeInstance {
 		this.blendshape = blendshape;
 		this.mesh = mesh;
 
-		#if !editor
+		#if !js
 		weightsBuffer = new hxd.FloatBuffer(blendshape.shapes.length);
 		#end
 
@@ -27,7 +27,7 @@ class BlendshapeInstance {
 		if (idx == -1)
 			return;
 
-		#if editor
+		#if js
 		var weights = [for (idx in 0...blendshape.shapes.length) 0.];
 		weights[idx] = weight;
 		uploadBlendshapeBytes(weights);
@@ -42,7 +42,7 @@ class BlendshapeInstance {
 	}
 
 	public function setBlendshapeWeights(weights: Array<Float>) {
-		#if editor
+		#if js
 		uploadBlendshapeBytes(weights);
 		#else
 		createShader();
@@ -55,7 +55,7 @@ class BlendshapeInstance {
 		#end
 	}
 
-	#if editor
+	#if js
 	public function uploadBlendshapeBytes(weights : Array<Float>) @:privateAccess {
 		var hmdModel = blendshape.hmdModel;
 		if (hmdModel.buffer == null || hmdModel.buffer.isDisposed())
@@ -139,7 +139,7 @@ class BlendshapeInstance {
 	}
 	#end
 
-	#if !editor
+	#if !js
 	function createShader() {
 		if (shader == null) {
 			shader = new h3d.shader.Blendshape();
@@ -161,7 +161,7 @@ class BlendshapeInstance {
 
 	public function alloc() {
 		blendshape.incref();
-		#if !editor
+		#if !js
 		gpuWeights = hxd.impl.Allocator.get().ofFloats(weightsBuffer, hxd.BufferFormat.INDEX32, UniformReadWrite);
 		createShader();
 		applyShader();
@@ -170,7 +170,7 @@ class BlendshapeInstance {
 
 	public function dispose() {
 		blendshape.decref();
-		#if !editor
+		#if !js
 		hxd.impl.Allocator.get().disposeBuffer(gpuWeights);
 		#end
 	}
@@ -186,7 +186,7 @@ class Blendshape {
 	var inputMapping : Array<Map<String, Int>> = [];
 	var shapesBytes = [];
 
-	#if !editor
+	#if !js
 	var offsetsBuffer : hxd.FloatBuffer;
 	var gpuOffsets : h3d.Buffer;
 	#end
@@ -250,14 +250,14 @@ class Blendshape {
 	}
 
 	public function dispose() {
-		#if !editor
+		#if !js
 		hxd.impl.Allocator.get().disposeFloats(offsetsBuffer);
 		hxd.impl.Allocator.get().disposeBuffer(gpuOffsets);
 		#end
 	}
 
 	public function alloc() {
-		#if !editor
+		#if !js
 		offsetsBuffer = hxd.impl.Allocator.get().allocFloats(3 * hmdModel.data.vertexCount * shapes.length);
 
 		var flagOffset = 31;

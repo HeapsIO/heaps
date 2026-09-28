@@ -14,7 +14,7 @@ typedef CascadeCamera = {
 	var orthoBounds : h3d.col.Bounds;
 }
 
-class CascadeShadowMap extends DirShadowMap {
+class CascadeShadowMap extends Shadows {
 
 	var cshader : h3d.shader.CascadeShadow;
 	var lightCameras : Array<CascadeCamera> = [];
@@ -24,7 +24,7 @@ class CascadeShadowMap extends DirShadowMap {
 
 	public var cascadeViewProj = new h3d.Matrix();
 	public var params : Array<CascadeParams> = [];
-	public var ditributionPower : Float = 1.0;
+	public var distributionPower : Float = 1.0;
 	// minimum count of pixels for an object to be drawn in cascade
 	public var minPixelSize : Int = 1;
 	public var firstCascadeSize : Float = 10.0;
@@ -45,17 +45,30 @@ class CascadeShadowMap extends DirShadowMap {
 
 	static var debugColors = [0xff0000, 0x00ff00, 0x0000ff, 0xffff00, 0x00ffff, 0xff00ff, 0x000000];
 
+	/**
+		Clamp the zFar of the frustum of the camera for bounds calculation
+	**/
+	public var maxDist = -1.0;
+
 	public function new( light : h3d.scene.Light ) {
 		super(light);
 		format = R32F;
-		shader = dshader = cshader = new h3d.shader.CascadeShadow();
+		lightCamera = new h3d.Camera();
+		lightCamera.orthoBounds = new h3d.col.Bounds();
+		shader = cshader = new h3d.shader.CascadeShadow();
+	}
+
+	override function set_mode(m:Shadows.RenderMode) {
+		cshader.enable = m != None;
+		return mode = m;
+	}
+
+	override function set_enabled(b:Bool) {
+		cshader.enable = b && mode != None;
+		return enabled = b;
 	}
 
 	public override function getShadowTex() {
-		return cshader.shadowMap;
-	}
-
-	public function getShadowTextures() {
 		return cshader.cascadeShadowMaps;
 	}
 
@@ -65,7 +78,7 @@ class CascadeShadowMap extends DirShadowMap {
 		var max = maxDist < 0.0 ? ctx.camera.zFar : maxDist;
 		var step = max - firstCascadeSize;
 		var near = ( i == 0 ) ? 0.0 : previousFar - previousFar * transitionFraction;
-		var far = ( i == 0 ) ? firstCascadeSize : firstCascadeSize + hxd.Math.pow(i / (cascade - 1), ditributionPower) * step;
+		var far = ( i == 0 ) ? firstCascadeSize : firstCascadeSize + hxd.Math.pow(i / (cascade - 1), distributionPower) * step;
 
 		// Not related to scale but let's pack it here to save memory
 		lightCameras[i].scale.w = far;
@@ -233,36 +246,54 @@ class CascadeShadowMap extends DirShadowMap {
 		return lightCameras[i].scale;
 	}
 
-	function syncCascadeShader(textures : Array<h3d.mat.Texture>) {
+	function syncCascadeShader(textures : h3d.mat.TextureArray) {
 		cshader.DEBUG = debugShader;
 		cshader.cascadeViewProj = cascadeViewProj;
 		cshader.cascadeTransitionFraction = transitionFraction;
+		cshader.cascadeShadowMaps = textures;
 		for ( i in 0...cascade ) {
-			cshader.cascadeShadowMaps[i] = textures[i];
 			cshader.cascadeOffsets[i] = lightCameras[i].offset;
 			cshader.cascadeScales[i] = lightCameras[i].scale;
 			if ( debugShader )
 				cshader.cascadeDebugs[i] = h3d.Vector4.fromColor(debugColors[i]);
 		}
-		if(cascade > cshader.MAX_CASCADE_COUNT)
-			cshader.MAX_CASCADE_COUNT = cascade;
-		cshader.CASCADE_COUNT = cascade;
 		cshader.BLEND = transitionFraction > 0.0;
-		cshader.shadowBias = bias;
+		cshader.cascadeCount = cascade;
+		// ESM
 		cshader.shadowPower = power;
-		cshader.shadowViewProj = getShadowViewProj();
-
-		//ESM
-		cshader.USE_ESM = samplingKind == ESM;
-		cshader.shadowPower = power;
+		cshader.SAMPLING_MODE = samplingKind;
 
 		// PCF
-		cshader.USE_PCF = samplingKind == PCF;
-		cshader.shadowRes.set(textures[0].width,textures[0].height);
-		cshader.pcfScale = pcfScale;
-		cshader.pcfQuality = pcfQuality;
+		cshader.pcfScale = pcfScale / textures.width;
 	}
 
+	function processShadowMap( passes : h3d.pass.PassList, cascades : h3d.mat.TextureArray, copyTex : h3d.mat.Texture, index : Int, ?sort ) {
+		var prevView = @:privateAccess ctx.cameraView;
+		var prevProj = @:privateAccess ctx.cameraProj;
+		var prevViewProj = @:privateAccess ctx.cameraViewProj;
+		@:privateAccess ctx.cameraView = getShadowView();
+		@:privateAccess ctx.cameraProj = getShadowProj();
+		@:privateAccess ctx.cameraViewProj = getShadowViewProj();
+
+		var tex = copyTex != null ? copyTex : cascades;
+		var layer = copyTex != null ? 0 : index;
+		if( tex.isDepth() ) {
+			ctx.engine.pushDepth(tex, layer);
+			ctx.engine.clear(null, 1.0);
+		} else {
+			ctx.engine.pushTarget(tex, layer);
+			ctx.engine.clear(0xFFFFFF, 1.0);
+		}
+		super.draw(passes, sort);
+		ctx.engine.popTarget();
+
+		if( copyTex != null )
+			h3d.pass.Copy.run(copyTex, cascades, null, null, index);
+
+		@:privateAccess ctx.cameraView = prevView;
+		@:privateAccess ctx.cameraProj = prevProj;
+		@:privateAccess ctx.cameraViewProj = prevViewProj;
+	}
 
 	override function getShadowView():Matrix {
 		return getCascadeView(currentCascadeIndex);
@@ -324,16 +355,21 @@ class CascadeShadowMap extends DirShadowMap {
 
 		var prevCheckNearFar = lightCamera.frustum.checkNearFar;
 		lightCamera.frustum.checkNearFar = false;
-		var textures = [];
+		var depthFormat : hxd.PixelFormat = #if js Depth24Stencil8 #else highPrecision ? Depth32 : Depth16 #end;
+		var renderToDepthArray = ctx.engine.driver.hasFeature(DepthTextureArray);
+		var arrayFormat : hxd.PixelFormat = renderToDepthArray ? depthFormat : R32F;
+		var cascades : h3d.mat.TextureArray = cast ctx.textures.allocTarget("cascadeShadowMaps", size, size, false, arrayFormat, [IsArray], cascade);
+		// Bilinear depth only make sense if we use sample compare to get weighted shadow occlusion which we doesn't support yet.
+		cascades.filter = Nearest;
+		var copyTex = null;
+		if( !renderToDepthArray ) {
+			copyTex = ctx.textures.allocTarget("cascadeShadowMap", size, size, false, depthFormat);
+			copyTex.filter = Nearest;
+		}
 		ctx.engine.setDepthClamp(true);
 		for (i in 0...cascade) {
 			ctx.scene.mark("cascade "+i);
 			currentCascadeIndex = i;
-
-			var texture = ctx.textures.allocTarget("cascadeShadowMap_"+i, size, size, false, #if js Depth24Stencil8 #else highPrecision ? Depth32 : Depth16 #end );
-
-			// Bilinear depth only make sense if we use sample compare to get weighted shadow occlusion which we doesn't support yet.
-			texture.filter = Nearest;
 
 			var param = params[i];
 			var slopeScaledBias = (param != null) ? param.slopeBias : 0;
@@ -346,13 +382,13 @@ class CascadeShadowMap extends DirShadowMap {
 			lightCamera.update();
 			ctx.setCurrentView(i + 1, lightCamera.frustum);
 			customCullPasses(passes, lightCamera.frustum, i, dimension);
-			textures[i] = processShadowMap( passes, texture, sort);
+			processShadowMap( passes, cascades, copyTex, i, sort);
 			passes.load(p);
 		}
 		ctx.scene.mark("Shadows");
 		ctx.engine.setDepthClamp(false);
 		ctx.engine.setDepthBias(0, 0);
-		syncCascadeShader(textures);
+		syncCascadeShader(cascades);
 		lightCamera.frustum.checkNearFar = prevCheckNearFar;
 
 		ctx.currentView.frustum = prevCtxViewFrustum;
@@ -362,14 +398,18 @@ class CascadeShadowMap extends DirShadowMap {
 		#end
 	}
 
-	override function drawDebug() {
-		super.drawDebug();
-
+	function drawDebug() {
+		if( g == null ) {
+			g = new h3d.scene.Graphics(ctx.scene);
+			g.name = "cascadeFrustumDebug";
+			g.material.mainPass.setPassName("overlay");
+			g.ignoreBounds = true;
+		}
 		if ( !debug )
 			return;
+		g.clear();
 
-		for ( i in 0...cascade ) {
+		for ( i in 0...cascade )
 			drawBounds(lightCameras[i].viewProj.getInverse(), debugColors[i]);
-		}
 	}
 }

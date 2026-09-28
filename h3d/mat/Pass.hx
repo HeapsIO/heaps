@@ -376,8 +376,9 @@ class Pass {
 	}
 
 	#if !macro
-	public function clone() {
-		var p = new Pass(name, shaders.clone());
+	public function clone( ?parent : Pass ) {
+		var sl = shaders == null ? null : (parent == null ? shaders.clone() : shaders.clone(parentShaders));
+		var p = new Pass(name, sl, parent);
 		var tail = findTail(selfShaders, selfShadersCache);
 		if ( tail != null ) {
 			tail.next = null;

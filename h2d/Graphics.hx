@@ -144,9 +144,9 @@ private class GraphicsContent extends h3d.prim.Primitive {
 
 	public function clear() {
 		dispose();
-		tmp = new hxd.FloatBuffer();
-		index = new hxd.IndexBuffer();
-		buffers = [];
+		if( tmp == null ) tmp = new hxd.FloatBuffer() else tmp.resize(0);
+		if( index == null ) index = new hxd.IndexBuffer() else index.resize(0);
+		buffers.resize(0);
 	}
 
 }
@@ -164,6 +164,7 @@ class Graphics extends Drawable {
 
 	var content : GraphicsContent;
 	var tmpPoints : Array<GPoint>;
+	var gpool : Array<GPoint> = [];
 	var pindex : Int;
 	var curR : Float;
 	var curG : Float;
@@ -227,7 +228,7 @@ class Graphics extends Drawable {
 	**/
 	public function clear() {
 		content.clear();
-		tmpPoints = [];
+		if( tmpPoints == null ) tmpPoints = [] else recyclePoints();
 		pindex = 0;
 		lineSize = 0;
 		xMin = Math.POSITIVE_INFINITY;
@@ -276,7 +277,7 @@ class Graphics extends Drawable {
 		if( !closed ) {
 			var prevLast = pts[last - 1];
 			if( prevLast == null ) prevLast = p;
-			var gp = new GPoint();
+			var gp = allocPoint();
 			gp.load(prev.x * 2 - prevLast.x, prev.y * 2 - prevLast.y, 0, 0, 0, 0);
 			pts.push(gp);
 			var pNext = pts[1];
@@ -439,7 +440,17 @@ class Graphics extends Drawable {
 			if( content.next() )
 				pindex = 0;
 		}
-		tmpPoints = [];
+		recyclePoints();
+	}
+
+	inline function allocPoint() {
+		return gpool.length > 0 ? gpool.pop() : new GPoint();
+	}
+
+	inline function recyclePoints() {
+		for( p in tmpPoints )
+			gpool.push(p);
+		tmpPoints.resize(0);
 	}
 
 	/**
@@ -850,7 +861,7 @@ class Graphics extends Drawable {
 		if( y > yMaxSize ) yMaxSize = y;
 		if( doFill )
 			content.add(x, y, u, v, r, g, b, a);
-		var gp = new GPoint();
+		var gp = allocPoint();
 		gp.load(x, y, lineR, lineG, lineB, lineA);
 		tmpPoints.push(gp);
 	}

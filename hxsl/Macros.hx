@@ -514,6 +514,7 @@ class Macros {
 			cexpr.push(macro var s : $ctype = Type.createEmptyInstance($i { type } ));
 			cexpr.push(macro {
 				s.shader = shader;
+				s.priority = priority;
 			});
 			for( p in params ) {
 				cexpr.push(macro s.$p = $i{p});

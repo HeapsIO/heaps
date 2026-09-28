@@ -3,6 +3,7 @@ package h3d.shader.pbr;
 class DefaultForward extends hxsl.Shader {
 
 	static var SRC = {
+		@:extends h3d.shader.ShadowSampling;
 
 		@global var camera : {
 			var view : Mat4;
@@ -11,12 +12,18 @@ class DefaultForward extends hxsl.Shader {
 			var inverseViewProj : Mat4;
 		}
 
-		@const(4) var CASCADE_COUNT:Int;
 		@const(2) var MAX_DIR_SHADOW_COUNT:Int;
-		@const(16) var MAX_POINT_SHADOW_COUNT:Int;
-		@const(16) var MAX_SPOT_SHADOW_COUNT:Int;
+		@const(4) var MAX_POINT_SHADOW_COUNT:Int;
+		@const(4) var MAX_SPOT_SHADOW_COUNT:Int;
+		@const(2) var MAX_CAPSULE_SHADOW_COUNT:Int;
+		@const(2) var MAX_RECT_SHADOW_COUNT:Int;
 
 		@global @const var DIFFUSE_ONLY : Bool;
+
+		@const var USE_BINDLESS = false;
+		@const var DYNAMIC_SAMPLER_INDEX = false;
+		@const var CLUSTERED = false;
+		@const var HAS_CASCADE = false;
 
 		@:import h3d.shader.pbr.Light.LightEvaluation;
 		@:import h3d.shader.pbr.BRDF;
@@ -26,22 +33,73 @@ class DefaultForward extends hxsl.Shader {
 
 		@param var lightInfos : Buffer<Vec4, 4096>;
 
+		// Keep in sync with h3d.scene.pbr.LightBuffer.
+		final DIR_LIGHT_STRIDE   : Int = 2;
+		final POINT_LIGHT_STRIDE : Int = 2;
+		final SPOT_LIGHT_STRIDE  : Int = 3;
+		final CAPSULE_LIGHT_STRIDE : Int = 3;
+		final RECT_LIGHT_STRIDE    : Int = 6;
+
+		final DIR_SHADOW_STRIDE  : Int = 5;
+		final SPOT_SHADOW_STRIDE : Int = 6;
+		final CUBE_SHADOW_STRIDE : Int = 2;
+
+		// Keep in sync with h3d.shader.pbr.ClusterCull.
+		final CLUSTER_X : Int = 16;
+		final CLUSTER_Y : Int = 9;
+		final CLUSTER_Z : Int = 24;
+		final CLUSTER_STRIDE : Int = 128;
+
+		final LIGHT_DIR : Int = 0;
+		final LIGHT_POINT : Int = 1;
+		final LIGHT_SPOT : Int = 2;
+		final LIGHT_CAPSULE : Int = 3;
+		final LIGHT_RECT : Int = 4;
+
+		@param var clusterData : StorageBuffer<Int>;
+		@param var clusterZParams : Vec2;
+		var clusterCounts : Int;
+		var clusterStart : Int;
+
 		// Buffer Info
-		@param var dirLightCount : Int;
-		@param var dirShadowCount : Int;
-		@param var pointLightCount : Int;
-		@param var pointShadowCount : Int;
-		@param var spotLightCount : Int;
-		@param var spotShadowCount : Int;
-		@param var pointLightStride : Int;
-		@param var spotLightStride : Int;
-		@param var cascadeLightStride : Int;
+		@param var dirLightCount     : Int;
+		@param var dirLightOffset    : Int;
+		@param var dirShadowCount    : Int;
+		@param var dirShadowOffset   : Int;
+
+		@param var pointLightCount   : Int;
+		@param var pointLightOffset  : Int;
+		@param var pointShadowCount  : Int;
+		@param var pointShadowOffset : Int;
+
+		@param var spotLightCount    : Int;
+		@param var spotLightOffset   : Int;
+		@param var spotShadowCount   : Int;
+		@param var spotShadowOffset  : Int;
+
+		@param var capsuleLightCount   : Int;
+		@param var capsuleLightOffset  : Int;
+		@param var capsuleShadowCount  : Int;
+		@param var capsuleShadowOffset : Int;
+
+		@param var rectLightCount    : Int;
+		@param var rectLightOffset   : Int;
+		@param var rectShadowCount   : Int;
+		@param var rectShadowOffset  : Int;
 
 		// ShadowMaps
-		@param var cascadeShadowMaps : Array<Sampler2D, CASCADE_COUNT>;
+		@param var cascadeShadowMaps : Sampler2DArray;
 		@param var dirShadowMaps : Array<Sampler2D, MAX_DIR_SHADOW_COUNT>;
 		@param var pointShadowMaps : Array<SamplerCube, MAX_POINT_SHADOW_COUNT>;
 		@param var spotShadowMaps : Array<Sampler2D, MAX_SPOT_SHADOW_COUNT>;
+		@param var capsuleShadowMaps : Array<SamplerCube, MAX_CAPSULE_SHADOW_COUNT>;
+		@param var rectShadowMaps : Array<Sampler2D, MAX_RECT_SHADOW_COUNT>;
+
+		var bindlessDirShadow : Sampler2D;
+		var bindlessSpotShadow : Sampler2D;
+		var bindlessRectShadow : Sampler2D;
+		var bindlessPointShadow : SamplerCube;
+		var bindlessCapsuleShadow : SamplerCube;
 
 		// Direct Lighting
 		@param var cameraPosition : Vec3;
@@ -92,11 +150,11 @@ class DefaultForward extends hxsl.Shader {
 			return indirect * irrPower * occlusion;
 		}
 
-		function directLighting( lightColor : Vec3, lightDirection : Vec3) : Vec3 {
+		function directLighting( lightColor : Vec3, lightDirection : Vec3, specularDirection : Vec3 ) : Vec3 {
 			var result = vec3(0);
 			var NdL = clamp(transformedNormal.dot(lightDirection), 0.0, 1.0);
 			if( lightColor.dot(lightColor) > 0.0001 && NdL > 0 ) {
-				var half = (lightDirection + view).normalize();
+				var half = (specularDirection + view).normalize();
 				var NdH = clamp(transformedNormal.dot(half), 0.0, 1.0);
 				var VdH = clamp(view.dot(half), 0.0, 1.0);
 				var diffuse = albedoGamma / PI;
@@ -124,96 +182,178 @@ class DefaultForward extends hxsl.Shader {
 		}
 
 		function evaluateDirShadow( index : Int ) : Float {
-			var i = index * 5;
-
+			var s = dirShadowOffset + index * DIR_SHADOW_STRIDE;
+			var samplingMode = int(lightInfos[s].a);
 			var shadow = 1.0;
-			if (lightInfos[i].a > 0) {
-				var shadowBias = lightInfos[i+1].a;
-				var shadowViewProj = mat3x4(lightInfos[i+2], lightInfos[i+3], lightInfos[i+4]);
-				var shadowPos = transformedPosition * shadowViewProj;
-				var shadowUv = screenToUv(shadowPos.xy);
-				var depth = dirShadowMaps[index].get(shadowUv.xy).r;
-				shadow = (shadowPos.z - shadowBias > depth) ? 0.0 : 1.0;
+			if( samplingMode >= 0 ) {
+				var shadowParam = lightInfos[s].b;
+				var shadowBias = lightInfos[s].r;
+				var shadowViewProj = mat3x4(lightInfos[s+1], lightInfos[s+2], lightInfos[s+3]);
+				var shadowPos = dirShadowPos(transformedPosition, shadowViewProj);
+				if( USE_BINDLESS ) {
+					resolveSampler(ivec2(int(lightInfos[s+4].r), int(lightInfos[s+4].g)), bindlessDirShadow);
+					shadow = sampleShadow(bindlessDirShadow, shadowPos.xy, shadowPos.z, shadowBias, shadowParam, shadowParam, transformedPosition, samplingMode);
+				} else
+					shadow = sampleShadow(dirShadowMaps[index], shadowPos.xy, shadowPos.z, shadowBias, shadowParam, shadowParam, transformedPosition, samplingMode);
 			}
 			return shadow;
 		}
 
 		function evaluateDirLight( index : Int ) : Vec3 {
-			var i = index * 5;
-			var lightColor = lightInfos[i].rgb;
+			var i = dirLightOffset + index * DIR_LIGHT_STRIDE;
+			var lightColor = unpackIntColor(int(lightInfos[i].r)).rgb * lightInfos[i].g;
 			var lightDir = lightInfos[i+1].xyz;
 
-			return directLighting(lightColor, lightDir);
+			return directLighting(lightColor, lightDir, lightDir);
 		}
 
 		function evaluatePointShadow( index : Int ) : Float {
-			var i = index * 3 + pointLightStride;
-
+			var s = pointShadowOffset + index * CUBE_SHADOW_STRIDE;
+			var i = pointLightOffset + index * POINT_LIGHT_STRIDE;
+			var samplingMode = int(lightInfos[s].a);
 			var shadow = 1.0;
-			if (lightInfos[i+2].g > 0) {
+			if( samplingMode >= 0 ) {
+				var shadowParam = lightInfos[s].b;
+				var shadowBias = lightInfos[s].r;
+				var range = lightInfos[s].g;
 				var lightPos = lightInfos[i+1].rgb;
-				var range = lightInfos[i+2].r;
-				var shadowBias = lightInfos[i+2].b;
 				var posToLight = transformedPosition.xyz - lightPos;
-				var dir = normalize(posToLight.xyz);
-				var depth = pointShadowMaps[index].getLod(dir, 0).r * range;
 				var zMax = length(posToLight);
-				shadow = (zMax - shadowBias > depth) ? 0.0 : 1.0;
+				var dir = posToLight / zMax;
+				if( USE_BINDLESS ) {
+					resolveSampler(ivec2(int(lightInfos[s+1].r), int(lightInfos[s+1].g)), bindlessPointShadow);
+					shadow = sampleCubeShadow(bindlessPointShadow, dir, zMax, range, shadowBias, shadowParam, shadowParam, samplingMode);
+				} else
+					shadow = sampleCubeShadow(pointShadowMaps[index], dir, zMax, range, shadowBias, shadowParam, shadowParam, samplingMode);
 			}
 			return shadow;
 		}
 
 		function evaluatePointLight( index : Int ) : Vec3 {
-			var i = index * 3 + pointLightStride;
-			var lightColor = lightInfos[i].rgb;
-			var size = lightInfos[i].a;
+			var i = pointLightOffset + index * POINT_LIGHT_STRIDE;
+			var lightColor = unpackIntColor(int(lightInfos[i].r)).rgb * lightInfos[i].g;
+			var size = lightInfos[i].b;
 			var lightPos = lightInfos[i+1].rgb;
 			var invRange4 = lightInfos[i+1].a;
 			var delta = lightPos - transformedPosition;
 
-			return directLighting(pointLightIntensity(delta, size, invRange4) * lightColor, delta.normalize());
+			var lightDir = delta.normalize();
+			return directLighting(pointLightIntensity(delta, size, invRange4) * lightColor, lightDir, lightDir);
 		}
 
 		function evaluateSpotShadow( index : Int ) : Float {
-			var i = index * 8 + spotLightStride;
-
+			var s = spotShadowOffset + index * SPOT_SHADOW_STRIDE;
+			var samplingMode = int(lightInfos[s].a);
 			var shadow = 1.0;
-			if (lightInfos[i+3].b > 0) {
-				var shadowBias = lightInfos[i+3].a;
-				var shadowViewProj = mat4(lightInfos[i+4], lightInfos[i+5], lightInfos[i+6], lightInfos[i+7]);
-				var shadowPos = vec4(transformedPosition, 1.0) * shadowViewProj;
-				shadowPos.xyz /= shadowPos.w;
-				var shadowUv = screenToUv(shadowPos.xy);
-				var depth = spotShadowMaps[index].get(shadowUv.xy).r;
-				shadow = (shadowPos.z - shadowBias > depth) ? 0.0 : 1.0;
+			if( samplingMode >= 0 ) {
+				var shadowParam = lightInfos[s].b;
+				var shadowBias = lightInfos[s].r;
+				var shadowViewProj = mat4(lightInfos[s+1], lightInfos[s+2], lightInfos[s+3], lightInfos[s+4]);
+				var shadowPos = spotShadowPos(transformedPosition, shadowViewProj);
+				if( USE_BINDLESS ) {
+					resolveSampler(ivec2(int(lightInfos[s+5].r), int(lightInfos[s+5].g)), bindlessSpotShadow);
+					shadow = sampleShadow(bindlessSpotShadow, shadowPos.xy, shadowPos.z.saturate(), shadowBias, shadowParam, shadowParam, transformedPosition, samplingMode);
+				} else
+					shadow = sampleShadow(spotShadowMaps[index], shadowPos.xy, shadowPos.z.saturate(), shadowBias, shadowParam, shadowParam, transformedPosition, samplingMode);
 			}
 			return shadow;
 		}
 
 		function evaluateSpotLight( index : Int ) : Vec3 {
-			var i = index * 8 + spotLightStride;
-			var lightColor = lightInfos[i].rgb;
-			var range = lightInfos[i].a;
-			var lightPos = lightInfos[i+1].xyz;
+			var i = spotLightOffset + index * SPOT_LIGHT_STRIDE;
+			var lightColor = unpackIntColor(int(lightInfos[i].r)).rgb * lightInfos[i].g;
+			var angle = lightInfos[i].b;
+			var fallOff = lightInfos[i].a;
+			var lightPos = lightInfos[i+1].rgb;
 			var invRange4 = lightInfos[i+1].a;
-			var lightDir = lightInfos[i+2].xyz;
-			var angle = lightInfos[i+3].r;
-			var fallOff = lightInfos[i+3].g;
+			var lightDir = lightInfos[i+2].rgb;
+			var range = lightInfos[i+2].a;
 			var delta = lightPos - transformedPosition;
 
 			var fallOffInfo = spotLightIntensity(delta, lightDir, range, invRange4, fallOff, angle);
 			var fallOff = fallOffInfo.x;
 			var fallOffInfoAngle = fallOffInfo.y;
 
-			return directLighting(fallOff * lightColor * fallOffInfoAngle, delta.normalize());
+			var lightToPixel = delta.normalize();
+			return directLighting(fallOff * lightColor * fallOffInfoAngle, lightToPixel, lightToPixel);
+		}
+
+		function evaluateCapsuleShadow( index : Int ) : Float {
+			var s = capsuleShadowOffset + index * CUBE_SHADOW_STRIDE;
+			var i = capsuleLightOffset + index * CAPSULE_LIGHT_STRIDE;
+			var samplingMode = int(lightInfos[s].a);
+			var shadow = 1.0;
+			if( samplingMode >= 0 ) {
+				var shadowParam = lightInfos[s].b;
+				var shadowBias = lightInfos[s].r;
+				var range = lightInfos[s].g;
+				var lightPos = lightInfos[i+1].rgb;
+				var posToLight = transformedPosition.xyz - lightPos;
+				var zMax = length(posToLight);
+				var dir = posToLight / zMax;
+				if( USE_BINDLESS ) {
+					resolveSampler(ivec2(int(lightInfos[s+1].r), int(lightInfos[s+1].g)), bindlessCapsuleShadow);
+					shadow = sampleCubeShadow(bindlessCapsuleShadow, dir, zMax, range, shadowBias, shadowParam, shadowParam, samplingMode);
+				} else
+					shadow = sampleCubeShadow(capsuleShadowMaps[index], dir, zMax, range, shadowBias, shadowParam, shadowParam, samplingMode);
+			}
+			return shadow;
+		}
+
+		function evaluateCapsuleLight( index : Int ) : Vec3 {
+			var i = capsuleLightOffset + index * CAPSULE_LIGHT_STRIDE;
+			var lightColor = unpackIntColor(int(lightInfos[i].r)).rgb * lightInfos[i].g;
+			var radius = lightInfos[i].b;
+			var halfLength = lightInfos[i].a;
+			var lightPos = lightInfos[i+1].rgb;
+			var invRange4 = lightInfos[i+1].a;
+			var left = lightInfos[i+2].rgb;
+
+			var light = capsuleLightDiffuse(lightPos, left, halfLength, radius, invRange4, transformedPosition);
+			var specularDir = capsuleLightSpecularDir(lightPos, left, halfLength, radius, transformedPosition, reflect(-view, transformedNormal));
+			return directLighting(light.w * lightColor, light.xyz, specularDir);
+		}
+
+		function evaluateRectShadow( index : Int ) : Float {
+			var s = rectShadowOffset + index * SPOT_SHADOW_STRIDE;
+			var samplingMode = int(lightInfos[s].a);
+			var shadow = 1.0;
+			if( samplingMode >= 0 ) {
+				var shadowParam = lightInfos[s].b;
+				var shadowBias = lightInfos[s].r;
+				var shadowViewProj = mat4(lightInfos[s+1], lightInfos[s+2], lightInfos[s+3], lightInfos[s+4]);
+				var shadowPos = spotShadowPos(transformedPosition, shadowViewProj);
+				if( USE_BINDLESS ) {
+					resolveSampler(ivec2(int(lightInfos[s+5].r), int(lightInfos[s+5].g)), bindlessRectShadow);
+					shadow = sampleShadow(bindlessRectShadow, shadowPos.xy, shadowPos.z.saturate(), shadowBias, shadowParam, shadowParam, transformedPosition, samplingMode);
+				} else
+					shadow = sampleShadow(rectShadowMaps[index], shadowPos.xy, shadowPos.z.saturate(), shadowBias, shadowParam, shadowParam, transformedPosition, samplingMode);
+			}
+			return shadow;
+		}
+
+		function evaluateRectLight( index : Int ) : Vec3 {
+			var i = rectLightOffset + index * RECT_LIGHT_STRIDE;
+			var lightColor = unpackIntColor(int(lightInfos[i].r)).rgb * lightInfos[i].g;
+			var halfSize = vec2(lightInfos[i].b, lightInfos[i].a);
+			var lightPos = lightInfos[i+1].rgb;
+			var invRange4 = lightInfos[i+1].a;
+			var lightDir = lightInfos[i+2].rgb;
+			var range = lightInfos[i+2].a;
+			var right = lightInfos[i+3].rgb;
+			var up = lightInfos[i+4].rgb;
+			var angles = vec4(lightInfos[i+3].a, lightInfos[i+4].a, lightInfos[i+5].r, lightInfos[i+5].g);
+
+			var light = rectangleLightDiffuse(lightPos, lightDir, right, up, halfSize, angles, range, invRange4, transformedPosition);
+			var specularDir = rectangleLightSpecularDir(lightPos, lightDir, right, up, halfSize, transformedPosition, reflect(-view, transformedNormal));
+			return directLighting(light.w * lightColor, light.xyz, specularDir);
 		}
 
 		function evaluateCascadeLight() : Vec3 {
-			var i = cascadeLightStride;
-			var lightColor = lightInfos[i].rgb;
-			var lightDir = lightInfos[i+1].xyz;
+			var lightColor = unpackIntColor(int(lightInfos[0].r)).rgb * lightInfos[0].g;
+			var lightDir = lightInfos[1].xyz;
 
-			return directLighting(lightColor, lightDir);
+			return directLighting(lightColor, lightDir, lightDir);
 		}
 
 		function inside(pos : Vec3) : Bool {
@@ -224,23 +364,113 @@ class DefaultForward extends hxsl.Shader {
 		}
 
 		function evaluateCascadeShadow() : Float {
-			var i = cascadeLightStride;
+			var samplingMode = int(lightInfos[0].a);
 			var shadow = 1.0;
-			var shadowViewProj = mat3x4(lightInfos[i + 2], lightInfos[i + 3], lightInfos[i + 4]);
+			if( samplingMode >= 0 ) {
+				var shadowParam = lightInfos[0].b;
+				var transitionFraction = lightInfos[1].a;
+				var shadowViewProj = mat3x4(lightInfos[2], lightInfos[3], lightInfos[4]);
 
-			@unroll for ( c in 0...CASCADE_COUNT ) {
-				var cascadeScale = lightInfos[i + 5 + 2 * c];
+				var viewZ = (transformedPosition * camera.view.mat3x4()).z;
+
 				var shadowPos0 = transformedPosition * shadowViewProj;
-				var shadowPos = c == 0 ? shadowPos0 : shadowPos0 * cascadeScale.xyz + lightInfos[i + 6 + 2 * c].xyz;
-				if ( inside(shadowPos) ) {
-					var zMax = saturate(shadowPos.z);
-					var shadowUv = shadowPos.xy;
-					shadowUv.y = 1.0 - shadowUv.y;
-					var depth = cascadeShadowMaps[c].get(shadowUv.xy).r;
-					shadow -= zMax > depth ? 1.0 : 0.0;
+
+				var shouldContinue = true;
+				@unroll for( c in 0...MAX_CASCADE_COUNT ) {
+					var scale = lightInfos[5 + 2 * c];
+					if( shouldContinue && viewZ <= scale.w ) {
+						shouldContinue = false;
+
+						var offset = lightInfos[6 + 2 * c];
+						var shadowPos = ( c == 0 ) ? shadowPos0 : cascadeShadowPos(shadowPos0, scale.xyz, offset.xyz);
+						shadow = sampleCascadeArray(cascadeShadowMaps, c, shadowPos, 0.0, shadowParam, shadowParam, transformedPosition, samplingMode);
+
+						var blendFactor = cascadeBlendFactor(viewZ, scale.w, transitionFraction);
+						if( blendFactor > 0.0 ) {
+							if( c < MAX_CASCADE_COUNT - 1 ) {
+								var nextScale = lightInfos[5 + 2 * (c + 1)];
+								var nextOffset = lightInfos[6 + 2 * (c + 1)];
+								var nextShadowPos = cascadeShadowPos(shadowPos0, nextScale.xyz, nextOffset.xyz);
+								var nextShadow = sampleCascadeArray(cascadeShadowMaps, c + 1, nextShadowPos, 0.0, shadowParam, shadowParam, transformedPosition, samplingMode);
+								shadow = nextShadow * blendFactor + shadow * (1 - blendFactor);
+							} else {
+								shadow = blendFactor + shadow * (1 - blendFactor);
+							}
+						}
+					}
 				}
 			}
-			return saturate(shadow);
+			return shadow;
+		}
+
+		function clusterIndex() : Int {
+			var p = vec4(transformedPosition, 1.) * camera.viewProj;
+			var ndc = p.xy / p.w;
+			var tile = clamp(floor((ndc * 0.5 + 0.5) * vec2(float(CLUSTER_X), float(CLUSTER_Y))), vec2(0.), vec2(float(CLUSTER_X - 1), float(CLUSTER_Y - 1)));
+			var viewZ = (transformedPosition * camera.view.mat3x4()).z;
+			var slice = clamp(floor(log(max(viewZ, 1e-6)) * clusterZParams.x + clusterZParams.y), 0., float(CLUSTER_Z - 1));
+			return ((int(slice) * CLUSTER_Y + int(tile.y)) * CLUSTER_X + int(tile.x)) * CLUSTER_STRIDE;
+		}
+
+		function evaluateLight( type : Int, index : Int ) : Vec3 {
+			var c = vec3(0);
+			if( type == LIGHT_DIR )
+				c = evaluateDirLight(index);
+			else if( type == LIGHT_POINT )
+				c = evaluatePointLight(index);
+			else if( type == LIGHT_SPOT )
+				c = evaluateSpotLight(index);
+			else if( type == LIGHT_CAPSULE )
+				c = evaluateCapsuleLight(index);
+			else
+				c = evaluateRectLight(index);
+			return c;
+		}
+
+		function evaluateShadowedLight( type : Int, index : Int ) : Vec3 {
+			var c = evaluateLight(type, index);
+			if( dot(c, c) > 1e-6 ) {
+				if( type == LIGHT_DIR )
+					c *= evaluateDirShadow(index);
+				else if( type == LIGHT_POINT )
+					c *= evaluatePointShadow(index);
+				else if( type == LIGHT_SPOT )
+					c *= evaluateSpotShadow(index);
+				else if( type == LIGHT_CAPSULE )
+					c *= evaluateCapsuleShadow(index);
+				else
+					c *= evaluateRectShadow(index);
+			}
+			return c;
+		}
+
+		function accumulateLights( acc : Vec3, type : Int, shadowCount : Int, lightCount : Int, maxShadowCount : Int ) : Vec3 {
+			// Shadowed lights can only be culled with bindless. Per pixel index into a sampler array is not dynamically uniform
+			if( !(CLUSTERED && USE_BINDLESS && type != LIGHT_DIR) ) {
+				if( USE_BINDLESS || DYNAMIC_SAMPLER_INDEX ) {
+					for( l in 0 ... shadowCount )
+						acc += evaluateShadowedLight(type, l);
+				} else {
+					@unroll for( l in 0 ... maxShadowCount )
+						if( l < shadowCount )
+							acc += evaluateShadowedLight(type, l);
+				}
+			}
+			if( CLUSTERED && type != LIGHT_DIR ) {
+				var count = (clusterCounts >> ((type - LIGHT_POINT) * 8)) & 0xFF;
+				for( k in 0 ... count ) {
+					var l = clusterData[clusterStart + k];
+					if( USE_BINDLESS && l < shadowCount )
+						acc += evaluateShadowedLight(type, l);
+					else
+						acc += evaluateLight(type, l);
+				}
+				clusterStart += count;
+			} else {
+				for( l in shadowCount ... shadowCount + lightCount )
+					acc += evaluateLight(type, l);
+			}
+			return acc;
 		}
 
 		function evaluateLighting() : Vec3 {
@@ -249,45 +479,20 @@ class DefaultForward extends hxsl.Shader {
 
 			F0 = mix(pbrSpecularColor, albedoGamma, metalness);
 
-			// Dir Light With Shadow
-			@unroll for( l in 0 ... MAX_DIR_SHADOW_COUNT ) {
-				if ( l < dirShadowCount ) {
-					var c = evaluateDirLight(l);
-					if ( dot(c, c) > 1e-6 )
-						c *= evaluateDirShadow(l);
-					lightAccumulation += c;
-				}
+			if( CLUSTERED ) {
+				var cluster = clusterIndex();
+				clusterCounts = clusterData[cluster];
+				clusterStart = cluster + 1;
 			}
-			// Dir Light
-			for( l in dirShadowCount ... dirLightCount )
-				lightAccumulation += evaluateDirLight(l);
 
-			// Point Light With Shadow
-			@unroll for( l in 0 ... MAX_POINT_SHADOW_COUNT ) {
-				if ( l < pointShadowCount ) {
-					var c = evaluatePointLight(l);
-					if ( dot(c, c) > 1e-6 )
-						c *= evaluatePointShadow(l);
-					lightAccumulation += c;
-				}
-			}
-			// Point Light
-			for( l in pointShadowCount ... pointLightCount + pointShadowCount )
-				lightAccumulation += evaluatePointLight(l);
-
-			// Spot Light With Shadow
-			@unroll for( l in 0 ... MAX_SPOT_SHADOW_COUNT ) {
-				var c = evaluateSpotLight(l);
-				if ( dot(c, c) > 1e-6 )
-					c *= evaluateSpotShadow(l);
-				lightAccumulation += c;
-			}
-			// Spot Light
-			for( l in spotShadowCount ... spotLightCount + spotShadowCount )
-				lightAccumulation += evaluateSpotLight(l);
+			lightAccumulation = accumulateLights(lightAccumulation, LIGHT_DIR, dirShadowCount, dirLightCount, MAX_DIR_SHADOW_COUNT);
+			lightAccumulation = accumulateLights(lightAccumulation, LIGHT_POINT, pointShadowCount, pointLightCount, MAX_POINT_SHADOW_COUNT);
+			lightAccumulation = accumulateLights(lightAccumulation, LIGHT_SPOT, spotShadowCount, spotLightCount, MAX_SPOT_SHADOW_COUNT);
+			lightAccumulation = accumulateLights(lightAccumulation, LIGHT_CAPSULE, capsuleShadowCount, capsuleLightCount, MAX_CAPSULE_SHADOW_COUNT);
+			lightAccumulation = accumulateLights(lightAccumulation, LIGHT_RECT, rectShadowCount, rectLightCount, MAX_RECT_SHADOW_COUNT);
 
 			// Cascade shadows
-			if ( CASCADE_COUNT > 0 ) {
+			if ( HAS_CASCADE ) {
 				var c = evaluateCascadeLight();
 				if ( dot(c, c) > 1e-6 )
 					c *= evaluateCascadeShadow();
