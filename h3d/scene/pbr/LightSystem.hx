@@ -53,7 +53,8 @@ class LightSystem extends h3d.scene.LightSystem {
 		while( plight != null ) {
 			var light = Std.downcast(plight, h3d.scene.pbr.Light);
 			if( light != null && light.primitive == null ) {
-				if( light.shadows.shader != null && light.shadows.mode != None && shadows) lightPass.addShader(light.shadows.shader);
+				var hasShadow = shadows && light.shadows.shader != null && light.shadows.mode != None;
+				if( hasShadow ) lightPass.addShader(light.shadows.shader);
 				lightPass.addShader(light.shader);
 				for( s in lightingShaders )
 					lightPass.addShader(s);
@@ -61,7 +62,7 @@ class LightSystem extends h3d.scene.LightSystem {
 				lightPass.removeShader(light.shader);
 				for( s in lightingShaders )
 					lightPass.removeShader(s);
-				if( light.shadows.shader != null ) lightPass.removeShader(light.shadows.shader);
+				if( hasShadow ) lightPass.removeShader(light.shadows.shader);
 			}
 			plight = plight.next;
 		}

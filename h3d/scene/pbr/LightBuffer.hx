@@ -111,6 +111,7 @@ class LightBuffer {
 			s.clusterData = defaultForwardShader.clusterData;
 			s.clusterZParams = defaultForwardShader.clusterZParams;
 		}
+		s.HAS_CASCADE = defaultForwardShader.HAS_CASCADE;
 		s.MAX_DIR_SHADOW_COUNT = defaultForwardShader.MAX_DIR_SHADOW_COUNT;
 		s.MAX_POINT_SHADOW_COUNT = defaultForwardShader.MAX_POINT_SHADOW_COUNT;
 		s.MAX_SPOT_SHADOW_COUNT = defaultForwardShader.MAX_SPOT_SHADOW_COUNT;
@@ -505,6 +506,7 @@ class LightBuffer {
 		s.spotLightCount = spotLights.length;
 		s.capsuleLightCount = capsuleLights.length;
 		s.rectLightCount = rectLights.length;
+		s.HAS_CASCADE = cascadeLight != null;
 		s.MAX_DIR_SHADOW_COUNT = MAX_DIR_SHADOW;
 		s.MAX_POINT_SHADOW_COUNT = MAX_POINT_SHADOW;
 		s.MAX_SPOT_SHADOW_COUNT = MAX_SPOT_SHADOW;

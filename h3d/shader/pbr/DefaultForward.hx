@@ -23,6 +23,7 @@ class DefaultForward extends hxsl.Shader {
 		@const var USE_BINDLESS = false;
 		@const var DYNAMIC_SAMPLER_INDEX = false;
 		@const var CLUSTERED = false;
+		@const var HAS_CASCADE = false;
 
 		@:import h3d.shader.pbr.Light.LightEvaluation;
 		@:import h3d.shader.pbr.BRDF;
@@ -491,7 +492,7 @@ class DefaultForward extends hxsl.Shader {
 			lightAccumulation = accumulateLights(lightAccumulation, LIGHT_RECT, rectShadowCount, rectLightCount, MAX_RECT_SHADOW_COUNT);
 
 			// Cascade shadows
-			if ( MAX_CASCADE_COUNT > 0 ) {
+			if ( HAS_CASCADE ) {
 				var c = evaluateCascadeLight();
 				if ( dot(c, c) > 1e-6 )
 					c *= evaluateCascadeShadow();
