@@ -53,7 +53,7 @@ class LightSystem extends h3d.scene.LightSystem {
 		while( plight != null ) {
 			var light = Std.downcast(plight, h3d.scene.pbr.Light);
 			if( light != null && light.primitive == null ) {
-				if( light.shadows.shader != null && shadows) lightPass.addShader(light.shadows.shader);
+				if( light.shadows.shader != null && light.shadows.mode != None && shadows) lightPass.addShader(light.shadows.shader);
 				lightPass.addShader(light.shader);
 				for( s in lightingShaders )
 					lightPass.addShader(s);
