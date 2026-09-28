@@ -50,7 +50,10 @@ class LightBuffer {
 
 	public var clusterMaxDistance = 0.;
 	public var enableClustering = true;
+	public var enableClusterHZB = true;
 	var cullShader : h3d.shader.pbr.ClusterCull;
+	var occlusionShader : h3d.shader.pbr.ClusterCull.ClusterLightOcclusion;
+	var lightVisibleBuffer : h3d.Buffer;
 	var clusterBuffer : h3d.Buffer;
 
 	// Camera of the last built clusters, for createClusterDebug
@@ -518,7 +521,7 @@ class LightBuffer {
 		s.capsuleShadowCount = capsuleLightsShadow.length;
 		s.rectShadowCount = rectLightsShadow.length;
 		s.lightInfos.uploadFloats(lightInfos, 0, s.lightInfos.vertices, 0);
-		cull(ctx);
+		cull(ctx, pbrRenderer);
 		pointLights.resize(0);
 		spotLights.resize(0);
 		dirLights.resize(0);
@@ -543,7 +546,7 @@ class LightBuffer {
 		}
 	}
 
-	function cull( ctx : h3d.scene.RenderContext ) {
+	function cull( ctx : h3d.scene.RenderContext, renderer : Renderer ) {
 		var engine = h3d.Engine.getCurrent();
 		if( !enableClustering || !engine.driver.hasFeature(ComputeShaders) )
 			return;
@@ -574,6 +577,37 @@ class LightBuffer {
 		c.clusterNear = near;
 		c.clusterFarOverNear = far / near;
 		c.clusterLastSliceFar = clusterMaxDistance > 0 ? 1e30 : far;
+		c.USE_HZB = enableClusterHZB;
+		c.USE_OCCLUSION = enableClusterHZB;
+		if( enableClusterHZB ) {
+			var hzb = renderer.buildHZB(!cam.reverseDepth, "ClusterHZB");
+			c.hzb = hzb;
+			c.hzbSize.set(hzb.width, hzb.height);
+
+			if( lightVisibleBuffer == null || lightVisibleBuffer.isDisposed() )
+				lightVisibleBuffer = new h3d.Buffer(BUFFER_MAX_SIZE, hxd.BufferFormat.INDEX32, [UniformBuffer, ReadWriteBuffer]);
+			if( occlusionShader == null )
+				occlusionShader = new h3d.shader.pbr.ClusterCull.ClusterLightOcclusion();
+			var o = occlusionShader;
+			o.lightInfos = s.lightInfos;
+			o.lightVisible = lightVisibleBuffer;
+			o.hzb = hzb;
+			o.hzbSize.set(hzb.width, hzb.height);
+			o.pointLightOffset = s.pointLightOffset;
+			o.pointCount = s.pointShadowCount + s.pointLightCount;
+			o.spotLightOffset = s.spotLightOffset;
+			o.spotCount = s.spotShadowCount + s.spotLightCount;
+			o.capsuleLightOffset = s.capsuleLightOffset;
+			o.capsuleCount = s.capsuleShadowCount + s.capsuleLightCount;
+			o.rectLightOffset = s.rectLightOffset;
+			o.rectCount = s.rectShadowCount + s.rectLightCount;
+			ctx.computeDispatch(o, Math.ceil(total / 64));
+
+			c.lightVisible = lightVisibleBuffer;
+			c.spotSlot = o.pointCount;
+			c.capsuleSlot = o.pointCount + o.spotCount;
+			c.rectSlot = o.pointCount + o.spotCount + o.capsuleCount;
+		}
 		c.pointLightOffset = s.pointLightOffset;
 		c.pointStart = useBindless ? 0 : s.pointShadowCount;
 		c.pointEnd = s.pointShadowCount + s.pointLightCount;
@@ -660,6 +694,10 @@ class LightBuffer {
 		if( clusterBuffer != null ) {
 			clusterBuffer.dispose();
 			clusterBuffer = null;
+		}
+		if( lightVisibleBuffer != null ) {
+			lightVisibleBuffer.dispose();
+			lightVisibleBuffer = null;
 		}
 	}
 }
