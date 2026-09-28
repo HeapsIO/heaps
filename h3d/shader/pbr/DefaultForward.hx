@@ -12,7 +12,6 @@ class DefaultForward extends hxsl.Shader {
 			var inverseViewProj : Mat4;
 		}
 
-		@const(4) var CASCADE_COUNT:Int;
 		@const(2) var MAX_DIR_SHADOW_COUNT:Int;
 		@const(4) var MAX_POINT_SHADOW_COUNT:Int;
 		@const(4) var MAX_SPOT_SHADOW_COUNT:Int;
@@ -376,7 +375,7 @@ class DefaultForward extends hxsl.Shader {
 				var shadowPos0 = transformedPosition * shadowViewProj;
 
 				var shouldContinue = true;
-				@unroll for( c in 0...CASCADE_COUNT ) {
+				@unroll for( c in 0...MAX_CASCADE_COUNT ) {
 					var scale = lightInfos[5 + 2 * c];
 					if( shouldContinue && viewZ <= scale.w ) {
 						shouldContinue = false;
@@ -387,7 +386,7 @@ class DefaultForward extends hxsl.Shader {
 
 						var blendFactor = cascadeBlendFactor(viewZ, scale.w, transitionFraction);
 						if( blendFactor > 0.0 ) {
-							if( c < CASCADE_COUNT - 1 ) {
+							if( c < MAX_CASCADE_COUNT - 1 ) {
 								var nextScale = lightInfos[5 + 2 * (c + 1)];
 								var nextOffset = lightInfos[6 + 2 * (c + 1)];
 								var nextShadowPos = cascadeShadowPos(shadowPos0, nextScale.xyz, nextOffset.xyz);
@@ -492,7 +491,7 @@ class DefaultForward extends hxsl.Shader {
 			lightAccumulation = accumulateLights(lightAccumulation, LIGHT_RECT, rectShadowCount, rectLightCount, MAX_RECT_SHADOW_COUNT);
 
 			// Cascade shadows
-			if ( CASCADE_COUNT > 0 ) {
+			if ( MAX_CASCADE_COUNT > 0 ) {
 				var c = evaluateCascadeLight();
 				if ( dot(c, c) > 1e-6 )
 					c *= evaluateCascadeShadow();

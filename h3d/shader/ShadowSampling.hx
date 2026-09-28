@@ -119,6 +119,8 @@ class ShadowSampling extends hxsl.Shader {
 			return saturate(shadow);
 		}
 
+		final MAX_CASCADE_COUNT : Int = 4;
+
 		function cascadeBlendFactor(viewZ : Float, blendEnd : Float, transitionFraction : Float) : Float {
 			var blendSize = blendEnd * transitionFraction;
 			var blendStart = blendEnd - blendSize;

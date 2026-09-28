@@ -116,7 +116,6 @@ class LightBuffer {
 		s.MAX_SPOT_SHADOW_COUNT = defaultForwardShader.MAX_SPOT_SHADOW_COUNT;
 		s.MAX_CAPSULE_SHADOW_COUNT = defaultForwardShader.MAX_CAPSULE_SHADOW_COUNT;
 		s.MAX_RECT_SHADOW_COUNT = defaultForwardShader.MAX_RECT_SHADOW_COUNT;
-		s.CASCADE_COUNT = defaultForwardShader.CASCADE_COUNT;
 
 		for( i in 0 ... defaultForwardShader.MAX_POINT_SHADOW_COUNT )
 			s.pointShadowMaps[i] = defaultForwardShader.pointShadowMaps[i];
@@ -277,7 +276,6 @@ class LightBuffer {
 		s.pointLightCount = 0;
 		s.spotLightCount = 0;
 		s.dirLightCount = 0;
-		s.CASCADE_COUNT = 0;
 		s.CLUSTERED = false;
 
 		inline function shadowParam( shadows : h3d.pass.Shadows ) {
@@ -492,7 +490,6 @@ class LightBuffer {
 			fillVector(lightInfos, pbr.lightDir, i+4);
 			lightInfos[i+7] = cascadeShadow.transitionFraction;
 			s.cascadeShadowMaps = cascadeShadow.getShadowTex();
-			s.CASCADE_COUNT = cascadeShadow.cascade;
 			var mat = cascadeShadow.cascadeViewProj;
 			fillFloats(lightInfos, mat._11, mat._21, mat._31, mat._41, i+8);
 			fillFloats(lightInfos, mat._12, mat._22, mat._32, mat._42, i+12);
