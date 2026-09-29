@@ -731,7 +731,7 @@ class AsyncReadbackRequest {
 	public var tmpBufOffset : Int;
     public var tmpBufSize : Int;
 	public var barrier : ResourceBarrier;
-	public var frame : Int;
+	public var fenceValue : Int64;
 	public function new() {
 	}
 }
@@ -2378,16 +2378,17 @@ class DX12Driver extends h3d.impl.Driver {
 		rq.buf = buf;
 		rq.bufPos = bufPos;
 		rq.callback = callback;
-		rq.frame = frameCount;
+		rq.fenceValue = fenceValue + 1;
 		asyncReadbackQueue.push(rq);
 
 		if ( asyncCopyEvent == null ) {
 			asyncCopyEvent = haxe.MainLoop.add(() -> {
 				if ( !waitingAsyncCopy ) {
 					if ( asyncReadbackQueue.length > 0 ) {
+						var curFence = fence.getValue();
 						var totalBatchSize = 0;
 						for ( request in asyncReadbackQueue ) {
-							if ( request.frame < (frameCount - 1) ) {
+							if ( request.fenceValue <= curFence ) {
 								var stride = request.b.format.strideBytes;
 								request.tmpBufOffset = totalBatchSize;
 								request.tmpBufSize = request.vertexCount * stride;
@@ -2403,7 +2404,7 @@ class DX12Driver extends h3d.impl.Driver {
 						}
 
 						for ( request in asyncReadbackQueue ) {
-							if ( request.frame < (frameCount - 1) ) {
+							if ( request.fenceValue <= curFence ) {
 								var stride = request.b.format.strideBytes;
 
 								request.b.vbuf.targetState = COMMON;
