@@ -163,7 +163,7 @@ class DynamicJointData extends JointData {
 		speed *= 1.0 - j.damping;
 
 		if (speed.lengthSq() > DynamicJoint.SLEEP_THRESHOLD)
-			nextPos = nextPos + speed * Skin.FIXED_DT;
+			nextPos.load(nextPos + speed * Skin.FIXED_DT);
 
 		if (speed.lengthSq() > DynamicJoint.MAX_THRESHOLD)
 			speed.set(0, 0, 0);
