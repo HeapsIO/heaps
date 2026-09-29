@@ -8,6 +8,7 @@ enum Step {
 	Forward;
 	BeforeTonemapping;
 	AfterTonemapping;
+	AfterUpscaling;
 	Overlay;
 	Debug;
 	Custom( name : String );
