@@ -42,7 +42,7 @@ class Bounds extends Collider {
 		return dd + rr - p.d*2;
 	}
 
-	public function rayIntersection( r : Ray, bestMatch : Bool ) : Float {
+	public inline function rayIntersection( r : Ray, bestMatch : Bool ) : Float {
 		var minTx = (xMin - r.px) / r.lx;
 		var minTy = (yMin - r.py) / r.ly;
 		var minTz = (zMin - r.pz) / r.lz;
@@ -60,9 +60,7 @@ class Bounds extends Collider {
 		var minmax = Math.min( Math.min(realMaxTx, realMaxTy), realMaxTz);
 		var maxmin = Math.max( Math.max(realMinTx, realMinTy), realMinTz);
 
-		if(minmax < maxmin)	return -1;
-
-		return maxmin;
+		return if(minmax < maxmin) -1 else maxmin;
 	}
 
 	/**
