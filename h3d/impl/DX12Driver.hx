@@ -772,6 +772,7 @@ class DX12Driver extends h3d.impl.Driver {
 	var currentIndex : Buffer;
 	#if heaps_mt_hxsl_cache
 	var compileMutex  = new sys.thread.Mutex();
+	var shaderBinaryMutex  = new sys.thread.Mutex();
 	var pipelineMutex  = new sys.thread.Mutex();
 	#end
 	var psoConfigCache : PSOConfigCache;
@@ -1763,12 +1764,26 @@ class DX12Driver extends h3d.impl.Driver {
 		var key = profile;
 		for ( arg in SHADER_ARGS )
 			key += arg;
-		var bytes = getBinaryPayload(sh.code, key);
-		if( bytes == null ) {
-			bytes = compiler.compile(sh.code, profile, SHADER_ARGS);
-			if( shaderCache != null )
-				shaderCache.saveCompiledShader(sh.code, bytes, key);
+		#if heaps_mt_hxsl_cache
+		shaderBinaryMutex.acquire();
+		#end
+		var bytes = try {
+			var bytes = getBinaryPayload(sh.code, key);
+			if( bytes == null ) {
+				bytes = compiler.compile(sh.code, profile, SHADER_ARGS);
+				if( shaderCache != null )
+					shaderCache.saveCompiledShader(sh.code, bytes, key);
+			}
+			bytes;
+		} catch( e : Dynamic ) {
+			#if heaps_mt_hxsl_cache
+			shaderBinaryMutex.release();
+			#end
+			throw e;
 		}
+		#if heaps_mt_hxsl_cache
+		shaderBinaryMutex.release();
+		#end
 		return bytes;
 	}
 
@@ -1785,8 +1800,7 @@ class DX12Driver extends h3d.impl.Driver {
 	function resolveShaderDataCode( sh : hxsl.RuntimeShader.RuntimeShaderData, rootStr : String ) {
 		if( sh.code == null ) {
 			var out = new hxsl.HlslOut();
-			sh.code = out.run(sh.data);
-			sh.code = rootStr + sh.code;
+			sh.code = rootStr + out.run(sh.data);
 		}
 	}
 
@@ -2125,9 +2139,16 @@ class DX12Driver extends h3d.impl.Driver {
 
 		if ( shader.hasBindless() && !useSM6_6 ) {
 			enableBindless();
-			if ( !useSM6_6 )
+			if ( !useSM6_6 ) {
+				#if heaps_mt_hxsl_cache
+				compileMutex.release();
+				#end
 				throw "Shader using bindless detected, but Shader Model 6.6 is not used. SM6_6 unavailable on this device.";
+			}
 		}
+		#if heaps_mt_hxsl_cache
+		compileMutex.release();
+		#end
 
 		var res = computeRootSignature(shader);
 
@@ -2152,6 +2173,14 @@ class DX12Driver extends h3d.impl.Driver {
 			desc.cs.bytecodeLength = cs.length;
 			c.computePipeline = Driver.createComputePipelineState(desc);
 			c.vertexRegisters = res.registers[0];
+			#if heaps_mt_hxsl_cache
+			compileMutex.acquire();
+			var prev = compiledShaders.get(shader.id);
+			if( prev != null ) {
+				compileMutex.release();
+				return prev;
+			}
+			#end
 			compiledShaders.set(shader.id, c);
 			#if heaps_mt_hxsl_cache
 			compileMutex.release();
@@ -2213,6 +2242,14 @@ class DX12Driver extends h3d.impl.Driver {
 
 		//Driver.createGraphicsPipelineState(p);
 
+		#if heaps_mt_hxsl_cache
+		compileMutex.acquire();
+		var prev = compiledShaders.get(shader.id);
+		if( prev != null ) {
+			compileMutex.release();
+			return prev;
+		}
+		#end
 		c.format = hxd.BufferFormat.make(format);
 		c.pipeline = p;
 		c.inputLayout = inputLayout;
