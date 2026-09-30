@@ -54,9 +54,35 @@ class PolygonBuffer extends Collider {
 	}
 
 	public function contains( p : Point ) {
-		// CONVEX only : TODO : check convex (cache result)
 		var i = startIndex;
 		var p = new FPoint(p.x, p.y, p.z);
+		if( !isConvex ) {
+			var dir = new FPoint(0.2672612, 0.5345225, 0.8017837);
+			var count = 0;
+			for( t in 0...triCount ) {
+				var i0 = indexes[i++] * 3;
+				var p0 = new FPoint(buffer[i0++], buffer[i0++], buffer[i0]);
+				var i1 = indexes[i++] * 3;
+				var p1 = new FPoint(buffer[i1++], buffer[i1++], buffer[i1]);
+				var i2 = indexes[i++] * 3;
+				var p2 = new FPoint(buffer[i2++], buffer[i2++], buffer[i2]);
+
+				var e1 = p1.sub(p0);
+				var e2 = p2.sub(p0);
+				var pv = dir.cross(e2);
+				var det = e1.dot(pv);
+				if( det > -hxd.Math.EPSILON && det < hxd.Math.EPSILON ) continue;
+				var invDet = 1 / det;
+				var T = p.sub(p0);
+				var u = T.dot(pv) * invDet;
+				if( u < 0 || u > 1 ) continue;
+				var q = T.cross(e1);
+				var v = dir.dot(q) * invDet;
+				if( v < 0 || u + v > 1 ) continue;
+				if( e2.dot(q) * invDet > 0 ) count++;
+			}
+			return (count & 1) == 1;
+		}
 		for( t in 0...triCount ) {
 			var i0 = indexes[i++] * 3;
 			var p0 = new FPoint(buffer[i0++], buffer[i0++], buffer[i0]);
