@@ -134,6 +134,8 @@ class GlDriver extends Driver {
 	var hasMultiIndirect = false;
 	var maxCompressedTexturesSupport = 0;
 	var hasRGTCSupport = false;
+	var hasDepthClamp = #if js false #else true #end;
+	static inline var DEPTH_CLAMP = #if js 0x864F #else GL.DEPTH_CLAMP #end;
 
 	public static var hasMultiIndirectCount = false;
 
@@ -957,14 +959,12 @@ class GlDriver extends Driver {
 			}
 		}
 
-		#if !js
-		if ( (!useDepthClamp && diff & Pass.depthClamp_mask != 0) ) {
+		if ( hasDepthClamp && !useDepthClamp && diff & Pass.depthClamp_mask != 0 ) {
 			if ( Pass.getDepthClamp(bits) != 0 )
-				gl.enable(GL.DEPTH_CLAMP);
+				gl.enable(DEPTH_CLAMP);
 			else
-				gl.disable(GL.DEPTH_CLAMP);
+				gl.disable(DEPTH_CLAMP);
 		}
-		#end
 
 		curMatBits = bits;
 	}
@@ -2011,13 +2011,13 @@ class GlDriver extends Driver {
 	}
 
 	override function setDepthClamp( enabled : Bool ) {
-		#if !js
+		if( !hasDepthClamp )
+			return;
 		useDepthClamp = enabled;
 		if ( useDepthClamp )
-			gl.enable(GL.DEPTH_CLAMP);
+			gl.enable(DEPTH_CLAMP);
 		else
-			gl.disable(GL.DEPTH_CLAMP);
-		#end
+			gl.disable(DEPTH_CLAMP);
 	}
 
 	override function setDepthBias( depthBias : Float, slopeScaledBias : Float ) {
@@ -2091,6 +2091,9 @@ class GlDriver extends Driver {
 			gl.getExtension("WEBGL_depth_texture");
 		has16Bits = gl.getExtension("EXT_texture_norm16") != null; // 16 bit textures
 		hasAnisotropicFiltering = gl.getExtension("EXT_texture_filter_anisotropic") != null;
+		#if js
+		hasDepthClamp = gl.getExtension("EXT_depth_clamp") != null;
+		#end
 	}
 	function checkFeature( f : Feature ) {
 		return switch( f ) {
