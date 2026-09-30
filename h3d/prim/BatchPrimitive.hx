@@ -23,15 +23,14 @@ class BytesArray {
 		var bStart = pos[bIdx];
 		var bNeeded = bStart + bSize;
 		if ( bNeeded > b.length ) {
-			if ( bNeeded < maxSize || maxSize < 0 ) {
-				var oldB = b;
-				b = bytes[bIdx] = haxe.io.Bytes.alloc( (bNeeded >> 1) * 3 );
-				b.blit(0, oldB, 0, bStart);
-			} else {
-				b = bytes[++bIdx] = haxe.io.Bytes.alloc(bSize);
-				bNeeded = bSize;
-				bStart = 0;
-			}
+			var size = b.length * 2;
+			if ( maxSize > 0 && size > maxSize )
+				size = maxSize;
+			if ( size < bSize )
+				size = bSize;
+			b = bytes[++bIdx] = haxe.io.Bytes.alloc(size);
+			bNeeded = bSize;
+			bStart = 0;
 		}
 		pos[bIdx] = bNeeded;
 		return { b : b, pos : bStart };
