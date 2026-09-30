@@ -86,6 +86,7 @@ class PSOConfigCache {
 					continue;
 				cache.pipeline = p;
 				c.usedPSOConfig = true;
+				hxd.System.timeoutTick();
 			}
 		}
 	}
