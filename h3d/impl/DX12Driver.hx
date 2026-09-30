@@ -30,9 +30,11 @@ class PSOConfigCache {
 	var loadFailed = false;
 	var canSave = true;
 
-	var builder = new PipelineCache.PipelineBuilder();
 	var magic : String;
 	var isDirty = false;
+	#if heaps_mt_hxsl_cache
+	var mutex = new sys.thread.Mutex();
+	#end
 
 	public function new(file : String, ?outputFile : String ) {
 		this.file = file;
@@ -74,26 +76,54 @@ class PSOConfigCache {
 	}
 
 	public function resolveConfig( c : CompiledShader ) {
+		#if heaps_mt_hxsl_cache
+		mutex.acquire();
+		var pipelines = configs.get(c.shader.signature)?.copy();
+		mutex.release();
+		#else
 		var pipelines = configs.get(c.shader.signature);
-		if( pipelines != null ) {
-			for( sign in pipelines ) @:privateAccess {
-				builder.signature.blit(0, sign.getData(), 0, sign.length);
-				var inputCount = (sign.length - PipelineCache.PipelineBuilder.PSIGN_LAYOUT) >> PipelineCache.PipelineBuilder.SHIFT_PER_BUFFER;
-				if( inputCount != c.inputCount ) continue;
-				var cache = builder.lookup(c.pipelines, inputCount);
-				var p = DX12Driver.makePipeline(c, builder);
-				if( p == null )
-					continue;
-				cache.pipeline = p;
-				c.usedPSOConfig = true;
-				hxd.System.timeoutTick();
+		#end
+		if( pipelines == null )
+			return;
+		var builder = new PipelineCache.PipelineBuilder();
+		for( sign in pipelines ) @:privateAccess {
+			builder.signature.blit(0, sign.getData(), 0, sign.length);
+			var inputCount = (sign.length - PipelineCache.PipelineBuilder.PSIGN_LAYOUT) >> PipelineCache.PipelineBuilder.SHIFT_PER_BUFFER;
+			if( inputCount != c.inputCount ) continue;
+			#if heaps_mt_hxsl_cache
+			c.pipelineMutex.acquire();
+			#end
+			var cache = builder.lookup(c.pipelines, inputCount);
+			if( cache.pipeline == null ) {
+				var p = try DX12Driver.makePipeline(c, builder) catch( e : Dynamic ) {
+					trace('Skipping invalid PSO config for ${c.shader.signature}: $e');
+					null;
+				}
+				if( p != null ) {
+					cache.pipeline = p;
+					c.usedPSOConfig = true;
+					hxd.System.timeoutTick();
+				}
 			}
+			#if heaps_mt_hxsl_cache
+			c.pipelineMutex.release();
+			#end
 		}
 	}
 
 	public function addConfig<T>(shader : hxsl.RuntimeShader, p : PipelineCache.CachedPipeline<T>) {
 		if( p.size > 64 )
 			throw "assert";
+		#if heaps_mt_hxsl_cache
+		mutex.acquire();
+		addConfigUnsafe(shader, p);
+		mutex.release();
+		#else
+		addConfigUnsafe(shader, p);
+		#end
+	}
+
+	function addConfigUnsafe<T>(shader : hxsl.RuntimeShader, p : PipelineCache.CachedPipeline<T>) {
 		var pipelines = configs.get(shader.signature);
 		if( pipelines == null ) {
 			pipelines = [];
@@ -117,6 +147,9 @@ class PSOConfigCache {
 
 		var out = new haxe.io.BytesOutput();
 		out.writeString(magic);
+		#if heaps_mt_hxsl_cache
+		mutex.acquire();
+		#end
 		var signs = [for( s in configs.keys() ) s];
 		signs.sort(Reflect.compare);
 		for( sign in signs ) {
@@ -130,6 +163,9 @@ class PSOConfigCache {
 				out.write(p);
 			}
 		}
+		#if heaps_mt_hxsl_cache
+		mutex.release();
+		#end
 
 		try {
 			var tmpPath = outputFile + ".tmp";
@@ -378,6 +414,9 @@ class CompiledShader {
 	public var isCompute : Bool;
 	public var computePipeline : ComputePipelineState;
 	public var usedPSOConfig : Bool;
+	#if heaps_mt_hxsl_cache
+	public var pipelineMutex = new sys.thread.Mutex();
+	#end
 	public function new() {
 	}
 }
@@ -774,7 +813,6 @@ class DX12Driver extends h3d.impl.Driver {
 	#if heaps_mt_hxsl_cache
 	var compileMutex  = new sys.thread.Mutex();
 	var shaderBinaryMutex  = new sys.thread.Mutex();
-	var pipelineMutex  = new sys.thread.Mutex();
 	#end
 	var psoConfigCache : PSOConfigCache;
 
@@ -2264,13 +2302,7 @@ class DX12Driver extends h3d.impl.Driver {
 		compileMutex.release();
 		#end
 
-		#if heaps_mt_hxsl_cache
-		pipelineMutex.acquire();
-		#end
 		psoConfigCache?.resolveConfig(c);
-		#if heaps_mt_hxsl_cache
-		pipelineMutex.release();
-		#end
 
 		return c;
 	}
@@ -3462,7 +3494,7 @@ class DX12Driver extends h3d.impl.Driver {
 			return true;
 
 		#if heaps_mt_hxsl_cache
-		pipelineMutex.acquire();
+		currentShader.pipelineMutex.acquire();
 		#end
 		var cache = pipelineBuilder.lookup(currentShader.pipelines, currentShader.inputCount);
 		if( cache.pipeline == null ) {
@@ -3475,7 +3507,7 @@ class DX12Driver extends h3d.impl.Driver {
 				trace('Failed to create pipeline for ${currentShader.shader.signature}');
 				hasDeviceError = true;
 				#if heaps_mt_hxsl_cache
-				pipelineMutex.release();
+				currentShader.pipelineMutex.release();
 				#end
 				return false;
 			}
@@ -3483,7 +3515,7 @@ class DX12Driver extends h3d.impl.Driver {
 			psoConfigCache?.addConfig(currentShader.shader, cache);
 		}
 		#if heaps_mt_hxsl_cache
-		pipelineMutex.release();
+		currentShader.pipelineMutex.release();
 		#end
 		if ( currentPipelineState != cache.pipeline ) {
 			frame.commandList.setPipelineState(cache.pipeline);
