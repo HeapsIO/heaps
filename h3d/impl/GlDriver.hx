@@ -1295,7 +1295,10 @@ class GlDriver extends Driver {
 		switch( t.format ) {
 		case Depth16:
 			tt.internalFmt = GL.DEPTH_COMPONENT16;
-		case Depth24 #if js if( glES >= 3 ) #end: tt.internalFmt = GL.DEPTH_COMPONENT;
+			tt.pixelFmt = GL.UNSIGNED_SHORT;
+		case Depth24 #if js if( glES >= 3 ) #end:
+			tt.internalFmt = GL.DEPTH_COMPONENT24;
+			tt.pixelFmt = GL.UNSIGNED_INT;
 		case Depth24Stencil8:
 			tt.internalFmt = GL.DEPTH24_STENCIL8;
 			tt.pixelFmt = GL.UNSIGNED_INT_24_8;
