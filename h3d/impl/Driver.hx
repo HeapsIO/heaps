@@ -101,6 +101,10 @@ enum Feature {
 		Sampler arrays can be indexed by a non-constant, dynamically uniform expression.
 	*/
 	DynamicSamplerIndex;
+	/*
+		Supports depth clamping instead of clipping against the near and far planes.
+	*/
+	DepthClamp;
 }
 
 enum QueryKind {

@@ -2053,6 +2053,8 @@ class GlDriver extends Driver {
 			false;
 		case DepthTextureArray:
 			glES >= 3;
+		case DepthClamp:
+			hasDepthClamp;
 		case ComputeShaders:
 			#if (hlsdl >= version("1.15.0") && hl_ver >= version("1.15.0"))
 			computeEnabled;
