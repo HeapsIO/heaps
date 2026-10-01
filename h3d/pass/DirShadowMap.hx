@@ -174,9 +174,11 @@ class DirShadowMap extends Shadows {
 						}
 					bounds.zMin += dMin;
 				}
-			}
-			else
+			} else {
 				bounds.load( cameraBounds );
+				if( useDepthClamp() )
+					cullZMin = bounds.zMin - maxDist;
+			}
 			if( useDepthClamp() && bounds.zMin < cameraZMin ) {
 				cullZMin = bounds.zMin;
 				bounds.zMin = cameraZMin;
