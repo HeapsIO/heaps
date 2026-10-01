@@ -26,6 +26,7 @@ class DirShadowMap extends Shadows {
 	public var minDist = -1.0;
 
 	public function new( light : h3d.scene.Light ) {
+		if( format == null ) format = R32F;
 		super(light);
 		lightCamera = new h3d.Camera();
 		lightCamera.orthoBounds = new h3d.col.Bounds();
@@ -247,7 +248,10 @@ class DirShadowMap extends Shadows {
 		lightCamera.orthoBounds.zMax = buffer.readFloat();
 		lightCamera.update();
 		var len = buffer.readInt32();
-		var pixels = new hxd.Pixels(size, size, haxe.zip.Uncompress.run(buffer.read(len)), format);
+		var data = haxe.zip.Uncompress.run(buffer.read(len));
+		if( data.length != hxd.Pixels.calcDataSize(size, size, format) )
+			return false;
+		var pixels = new hxd.Pixels(size, size, data, format);
 		if( staticTexture != null ) staticTexture.dispose();
 		staticTexture = new h3d.mat.Texture(size, size, [Target], format);
 		staticTexture.uploadPixels(pixels);
@@ -375,7 +379,8 @@ class DirShadowMap extends Shadows {
 		draw(passes);
 		var texture = dshader.shadowMap;
 		var old = staticTexture;
-		staticTexture = texture.clone();
+		staticTexture = new h3d.mat.Texture(texture.width, texture.height, [Target], format);
+		h3d.pass.Copy.run(texture, staticTexture);
 		staticTexture.name = "StaticDirShadowMap";
 		staticTexture.preventAutoDispose();
 		dshader.shadowMap = staticTexture;

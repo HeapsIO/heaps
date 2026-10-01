@@ -2,7 +2,6 @@ package h3d.pass;
 
 class ProjectedShadowMap extends Shadows {
 
-	var depth : h3d.mat.Texture;
 	var sshader : h3d.shader.SpotShadow;
 	var mergePass = new h3d.pass.ScreenFx(new h3d.shader.MinMaxShader());
 
@@ -34,11 +33,6 @@ class ProjectedShadowMap extends Shadows {
 
 	override function isUsingWorldDist(){
 		return false;
-	}
-
-	override function dispose() {
-		super.dispose();
-		if( depth != null ) depth.dispose();
 	}
 
 	public override function getShadowTex() {
@@ -82,7 +76,6 @@ class ProjectedShadowMap extends Shadows {
 		return staticTexture;
 	}
 
-	var pixelsForRealloc : hxd.Pixels = null;
 	override function loadStaticData( bytes : haxe.io.Bytes ) {
 		if( (mode != Mixed && mode != Static) || bytes == null )
 			return false;
@@ -90,13 +83,12 @@ class ProjectedShadowMap extends Shadows {
 		var size = buffer.readInt32();
 		if( size != this.size )
 			return false;
-
-		createStaticTexture();
-
 		var len = buffer.readInt32();
-		var pixels = new hxd.Pixels(size, size, haxe.zip.Uncompress.run(buffer.read(len)), format);
-		pixelsForRealloc = pixels;
-
+		var data = haxe.zip.Uncompress.run(buffer.read(len));
+		if( data.length != hxd.Pixels.calcDataSize(size, size, format) )
+			return false;
+		createStaticTexture().uploadPixels(new hxd.Pixels(size, size, data, format));
+		updateCamera();
 		syncShader(staticTexture);
 		return true;
 	}
@@ -105,10 +97,10 @@ class ProjectedShadowMap extends Shadows {
 		if( !enabled )
 			return;
 
+		updateCamera();
 		if( !filterPasses(passes) )
 			return;
 
-		updateCamera();
 		cullPasses(passes, function(col) return col.inFrustum(lightCamera.frustum));
 
 		var prevFar = @:privateAccess ctx.cameraFar;
@@ -124,17 +116,18 @@ class ProjectedShadowMap extends Shadows {
 
 		var computingStatic = ctx.computingStatic || updateStatic;
 
-		var texture = computingStatic ? createStaticTexture() : ctx.textures.allocTarget(targetName(), size, size, false, format);
-		if( depth == null || depth.width != texture.width || depth.height != texture.height || depth.isDisposed() ) {
-			if( depth != null ) depth.dispose();
-			depth = new h3d.mat.Texture(texture.width, texture.height, Depth24Stencil8);
-		}
-		texture.depthBuffer = depth;
-
-		ctx.engine.pushTarget(texture);
-		ctx.engine.clear(0xFFFFFF, 1);
+		var texture = ctx.textures.allocTarget(targetName(), size, size, false, Depth32);
+		texture.filter = Nearest;
+		ctx.engine.pushDepth(texture);
+		ctx.engine.clear(null, 1);
 		super.draw(passes, sort);
 		ctx.engine.popTarget();
+
+		if( computingStatic || blur.radius > 0 ) {
+			var tmp = computingStatic ? createStaticTexture() : ctx.textures.allocTarget(targetName() + "Float", size, size, false, format);
+			h3d.pass.Copy.run(texture, tmp);
+			texture = tmp;
+		}
 
 		if( blur.radius > 0 )
 			blur.apply(ctx, texture);
