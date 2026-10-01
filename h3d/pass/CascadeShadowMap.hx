@@ -354,7 +354,7 @@ class CascadeShadowMap extends Shadows {
 		var p = passes.save();
 
 		var casterZMin = lightCamera.orthoBounds.zMin;
-		var depthFormat : hxd.PixelFormat = #if js Depth24Stencil8 #else highPrecision ? Depth32 : Depth16 #end;
+		var depthFormat : hxd.PixelFormat = highPrecision ? Depth32 : Depth16;
 		var renderToDepthArray = ctx.engine.driver.hasFeature(DepthTextureArray);
 		var arrayFormat : hxd.PixelFormat = renderToDepthArray ? depthFormat : R32F;
 		var cascades : h3d.mat.TextureArray = cast ctx.textures.allocTarget("cascadeShadowMaps", size, size, false, arrayFormat, [IsArray], cascade);
