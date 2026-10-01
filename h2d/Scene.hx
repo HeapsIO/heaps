@@ -224,6 +224,13 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	public var renderer(get, set) : RenderContext;
 
 	var interactive : Array<Interactive>;
+	
+	/**
+		Set when `interactive` is no longer guaranteed to be in front-to-back order, either
+		because targets were added/removed or because the object tree was reordered.
+		The list is rebuilt lazily by `Scene.checkInteractives` on the next event query.
+	**/
+	var interactiveDirty : Bool;
 	var eventListeners : Array< hxd.Event -> Void >;
 	var ctx : RenderContext;
 	var window : hxd.Window;
@@ -477,6 +484,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		Returns the topmost visible Interactive at the specified coordinates.
 	**/
 	public function getInteractive( x : Float, y : Float ) : Interactive {
+		checkInteractives();
 		var pt = shapePoint;
 		for( i in interactive ) {
 			if( i.posChanged ) i.syncPos();
@@ -535,6 +543,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		var ey = event.relY;
 		if( ex < 0 || ey < 0 || ex >= width || ey >= height )
 			return null;
+		checkInteractives();
 		var index = last == null ? 0 : interactive.indexOf(cast last) + 1;
 		var pt = shapePoint;
 		for( idx in index...interactive.length ) {
@@ -656,67 +665,40 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		var i = Std.downcast(f, h2d.Interactive);
 		if( i == null )
 			return null;
-		return interactive[interactive.indexOf(i)];
+		// check if the interactive actually belong in this scene
+		return i.scene == this ? i : null;
 	}
 
 
 	@:allow(h2d)
-	function addEventTarget(i:Interactive) {
-		// sort by which is over the other in the scene hierarchy
-		inline function getLevel(i:Object) {
-			var lv = 0;
-			while( i != null ) {
-				i = i.parent;
-				lv++;
-			}
-			return lv;
-		}
-		inline function indexOf(p:Object, i:Object) {
-			var id = -1;
-			for( k in 0...p.children.length )
-				if( p.children[k] == i ) {
-					id = k;
-					break;
-				}
-			return id;
-		}
-		var level = getLevel(i);
-		for( index in 0...interactive.length ) {
-			var i1 : Object = i;
-			var i2 : Object = interactive[index];
-			var lv1 = level;
-			var lv2 = getLevel(i2);
-			var p1 : Object = i1;
-			var p2 : Object = i2;
-			while( lv1 > lv2 ) {
-				i1 = p1;
-				p1 = p1.parent;
-				lv1--;
-			}
-			while( lv2 > lv1 ) {
-				i2 = p2;
-				p2 = p2.parent;
-				lv2--;
-			}
-			while( p1 != p2 ) {
-				i1 = p1;
-				p1 = p1.parent;
-				i2 = p2;
-				p2 = p2.parent;
-			}
-			if( indexOf(p1,i1) > indexOf(p2,i2) ) {
-				interactive.insert(index, i);
-				return;
-			}
-		}
-		interactive.push(i);
+	function invalidateEventTargets() {
+		interactiveDirty = true;
 	}
 
 	@:allow(h2d)
-	function removeEventTarget(i,notify=false) {
-		interactive.remove(i);
-		if( notify && events != null )
+	function removeEventTarget( i : Interactive ) {
+		interactiveDirty = true;
+		if( events != null )
 			@:privateAccess events.onRemove(i);
+	}
+
+	/**
+		Rebuilds the event target list in front-to-back order if it was invalidated.
+	**/
+	function checkInteractives() {
+		if( !interactiveDirty ) return;
+		interactiveDirty = false;
+		interactive.resize(0);
+
+		function rec( o : Object ) {
+			var k = o.children.length;
+			while( k-- > 0 )
+				rec(o.children[k]);
+			var i = Std.downcast(o, Interactive);
+			if( i != null ) interactive.push(i);
+		}
+
+		rec(this);
 	}
 
 	/**
