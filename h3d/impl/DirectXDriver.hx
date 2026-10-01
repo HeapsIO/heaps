@@ -100,7 +100,7 @@ class DirectXDriver extends h3d.impl.Driver {
 
 	var depthStates : Map<Int,{ def : DepthStencilState, stencils : Array<{ op : Int, mask : Int, state : DepthStencilState }> }>;
 	var blendStates : Map<Int,BlendState>;
-	var rasterStates : Map<haxe.Int64,RasterState>;
+	var rasterStates : #if (haxe_ver < 5) hl.types.Int64Map #else Map<haxe.Int64,RasterState> #end;
 	var samplerStates : Map<Int,SamplerState>;
 	var currentDepthState : DepthStencilState;
 	var currentBlendState : BlendState;
@@ -155,12 +155,12 @@ class DirectXDriver extends h3d.impl.Driver {
 		}
 		if( depthStates != null ) for( s in depthStates ) { if( s.def != null ) s.def.release(); for( s in s.stencils ) if( s.state != null ) s.state.release(); }
 		if( blendStates != null ) for( s in blendStates ) if( s != null ) s.release();
-		if( rasterStates != null ) for( s in rasterStates ) if( s != null ) s.release();
+		if( rasterStates != null ) for( s in rasterStates ) { var s : RasterState = s; if( s != null ) s.release(); }
 		if( samplerStates != null ) for( s in samplerStates ) if( s != null ) s.release();
 		shaders = new Map();
 		depthStates = new Map();
 		blendStates = new Map();
-		rasterStates = new Map();
+		rasterStates = #if (haxe_ver < 5) new hl.types.Int64Map() #else new Map() #end;
 		samplerStates = new Map();
 		vertexShader = new PipelineState(Vertex);
 		pixelShader = new PipelineState(Pixel);
@@ -726,7 +726,7 @@ class DirectXDriver extends h3d.impl.Driver {
 
 		var rasterBits = bits & (Pass.culling_mask | SCISSOR_BIT | Pass.wireframe_mask | Pass.depthClamp_mask);
 		var rasterKey = haxe.Int64.make(depthBiasBits, rasterBits);
-		var raster = rasterStates.get(rasterKey);
+		var raster : RasterState = rasterStates.get(rasterKey);
 		if( raster == null ) {
 			var desc = new RasterizerDesc();
 			if ( pass.wireframe ) {
