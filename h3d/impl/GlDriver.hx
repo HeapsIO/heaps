@@ -1286,10 +1286,11 @@ class GlDriver extends Driver {
 
 	override function allocDepthBuffer( t : h3d.mat.Texture ) : Texture {
 		var isArray = t.flags.has(IsArray);
-		if( isArray && !hasFeature(DepthTextureArray) )
+		var isCube = t.flags.has(Cube);
+		if( (isArray || isCube) && !hasFeature(DepthTextureArray) )
 			throw "Depth texture arrays require GLES3";
 		var tt = gl.createTexture();
-		var tt : Texture = { t : tt, width : t.width, height : t.height, internalFmt : GL.RGBA, pixelFmt : GL.UNSIGNED_BYTE, bits : -1, bind : isArray ? GL.TEXTURE_2D_ARRAY : GL.TEXTURE_2D #if multidriver, driver : this #end };
+		var tt : Texture = { t : tt, width : t.width, height : t.height, internalFmt : GL.RGBA, pixelFmt : GL.UNSIGNED_BYTE, bits : -1, bind : isCube ? GL.TEXTURE_CUBE_MAP : isArray ? GL.TEXTURE_2D_ARRAY : GL.TEXTURE_2D #if multidriver, driver : this #end };
 		var fmt = GL.DEPTH_COMPONENT;
 		switch( t.format ) {
 		case Depth16:
@@ -1315,7 +1316,10 @@ class GlDriver extends Driver {
 		gl.texParameteri(tt.bind, GL.TEXTURE_WRAP_S, GL.CLAMP_TO_EDGE);
 		gl.texParameteri(tt.bind, GL.TEXTURE_WRAP_T, GL.CLAMP_TO_EDGE);
 		#end
-		if( isArray )
+		if( isCube ) {
+			for( face in CUBE_FACES )
+				gl.texImage2D(face, 0, tt.internalFmt, tt.width, tt.height, 0, fmt, tt.pixelFmt, null);
+		} else if( isArray )
 			gl.texImage3D(tt.bind, 0, tt.internalFmt, tt.width, tt.height, t.layerCount, 0, fmt, tt.pixelFmt, null);
 		else
 			gl.texImage2D(tt.bind, 0, tt.internalFmt, tt.width, tt.height, 0, fmt, tt.pixelFmt, null);
@@ -1977,8 +1981,11 @@ class GlDriver extends Driver {
 
 		var tex = @:privateAccess depthBuffer.t.t;
 		var isArray = depthBuffer.flags.has(IsArray);
+		var isCube = depthBuffer.flags.has(Cube);
 		inline function attach( slot : Int, t ) {
-			if( isArray ) {
+			if( isCube )
+				gl.framebufferTexture2D(GL.FRAMEBUFFER, slot, t == null ? GL.TEXTURE_2D : CUBE_FACES[layer], t, 0);
+			else if( isArray ) {
 				if( t == null )
 					gl.framebufferTexture2D(GL.FRAMEBUFFER, slot, GL.TEXTURE_2D, null, 0);
 				else

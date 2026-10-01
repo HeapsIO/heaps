@@ -1493,7 +1493,7 @@ class DX12Driver extends h3d.impl.Driver {
 		viewDesc.mipSlice = 0;
 		viewDesc.firstArraySlice = layer;
 		viewDesc.format = toDxgiDepthFormat(depthBuffer.format);
-		viewDesc.viewDimension = depthBuffer.flags.has(IsArray) ? TEXTURE2DARRAY : TEXTURE2D;
+		viewDesc.viewDimension = depthBuffer.flags.has(IsArray) || depthBuffer.flags.has(Cube) ? TEXTURE2DARRAY : TEXTURE2D;
 		if ( readOnly ) {
 			viewDesc.flags.set(READ_ONLY_DEPTH);
 			viewDesc.flags.set(READ_ONLY_STENCIL);
@@ -2886,7 +2886,7 @@ class DX12Driver extends h3d.impl.Driver {
 			desc.resourceMinLODClamp = 0;
 		} else if( t.flags.has(Cube) ) {
 			var desc = unsafeCastTo(srvDesc, TexCubeSRV);
-			desc.format = t.t.format;
+			desc.format = t.isDepth() ? toDepthFormat(t.format) : t.t.format;
 			desc.dimension = TEXTURECUBE;
 			desc.shader4ComponentMapping = ShaderComponentMapping.DEFAULT;
 			desc.mostDetailedMip = t.startingMip;
