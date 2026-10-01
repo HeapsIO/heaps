@@ -31,10 +31,6 @@ class ProjectedShadowMap extends Shadows {
 		return enabled = b;
 	}
 
-	override function isUsingWorldDist(){
-		return false;
-	}
-
 	public override function getShadowTex() {
 		return sshader.shadowMap;
 	}

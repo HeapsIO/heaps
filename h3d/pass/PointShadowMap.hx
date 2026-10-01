@@ -4,8 +4,8 @@ class PointShadowMap extends CubeShadowMap {
 
 	var pshader : h3d.shader.PointShadow;
 
-	public function new( light : h3d.scene.Light, useWorldDist : Bool ) {
-		super(light, useWorldDist);
+	public function new( light : h3d.scene.Light ) {
+		super(light);
 		shader = pshader = new h3d.shader.PointShadow();
 	}
 
