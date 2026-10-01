@@ -17,6 +17,7 @@ enum Step {
 typedef RFXTransition = {
 	var effect : RendererFX;
 	var setFactor : (t : Float) -> Void;
+	var ?dispose : () -> Void;
 }
 
 interface RendererFX {
