@@ -69,6 +69,7 @@ class Printer {
 				case Final: "final";
 				case Flat: "flat";
 				case NoVar: "noVar";
+				case Enum(path, _): "enum(" + path + ")";
 				}) + " ");
 		}
 		if( v.kind != defKind )
