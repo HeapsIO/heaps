@@ -565,12 +565,12 @@ class CacheFile2 extends Cache {
 						codedump.push("  " + @:privateAccess inst.shader.data.name + "(bits=" + inst.bits + ")");
 					if( rt.vertex != null && rt.vertex.data != null ) {
 						codedump.push("// --- vertex ---");
-						codedump.push(printer.shaderString(rt.vertex.data));
+						codedump.push(rt.vertex.code ?? printer.shaderString(rt.vertex.data));
 						codedump.push("\n");
 					}
 					if( rt.fragment != null && rt.fragment.data != null ) {
 						codedump.push("// --- fragment ---");
-						codedump.push(printer.shaderString(rt.fragment.data));
+						codedump.push(rt.fragment.code ?? printer.shaderString(rt.fragment.data));
 						codedump.push("\n");
 					}
 					codedump.push("\n\n");

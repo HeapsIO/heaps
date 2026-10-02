@@ -813,6 +813,8 @@ class DX12Driver extends h3d.impl.Driver {
 	#if heaps_mt_hxsl_cache
 	var compileMutex  = new sys.thread.Mutex();
 	var shaderBinaryMutex  = new sys.thread.Mutex();
+	var compilingCount = 0;
+	var releaseQueue : Array<hxsl.RuntimeShader> = [];
 	#end
 	var psoConfigCache : PSOConfigCache;
 
@@ -1827,12 +1829,13 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	override function getNativeShaderCode( shader : hxsl.RuntimeShader ) {
-		var out = new hxsl.HlslOut();
-		var vsSource = out.run(shader.vertex.data);
+		inline function compile( sh : hxsl.RuntimeShader.RuntimeShaderData ) {
+			return sh.code ?? new hxsl.HlslOut().run(sh.data);
+		}
+		var vsSource = compile(shader.vertex);
 		if( shader.mode == Compute )
 			return vsSource;
-		var out = new hxsl.HlslOut();
-		var psSource = out.run(shader.fragment.data);
+		var psSource = compile(shader.fragment);
 		return vsSource+"\n\n\n\n"+psSource;
 	}
 
@@ -2165,6 +2168,45 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	function compileShader( shader : hxsl.RuntimeShader ) : CompiledShader {
+		#if heaps_mt_hxsl_cache
+		// data is only released once no thread is compiling, as another thread might be compiling the same shader
+		compileMutex.acquire();
+		var sh = compiledShaders.get(shader.id);
+		if( sh != null ) {
+			compileMutex.release();
+			return sh;
+		}
+		compilingCount++;
+		compileMutex.release();
+		var c = try doCompileShader(shader) catch( e : haxe.Exception ) {
+			endCompile(null);
+			throw e;
+		}
+		endCompile(shader);
+		return c;
+		#else
+		var c = doCompileShader(shader);
+		shader.releaseData();
+		return c;
+		#end
+	}
+
+	#if heaps_mt_hxsl_cache
+	function endCompile( shader : hxsl.RuntimeShader ) {
+		compileMutex.acquire();
+		compilingCount--;
+		if( shader != null )
+			releaseQueue.push(shader);
+		if( compilingCount == 0 ) {
+			for( s in releaseQueue )
+				s.releaseData();
+			releaseQueue = [];
+		}
+		compileMutex.release();
+	}
+	#end
+
+	function doCompileShader( shader : hxsl.RuntimeShader ) : CompiledShader {
 		#if heaps_mt_hxsl_cache
 		compileMutex.acquire();
 		#end
