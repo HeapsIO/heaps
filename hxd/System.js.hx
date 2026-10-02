@@ -77,6 +77,11 @@ class System {
 			#end
 		}
 		if( loopFunc != null ) loopFunc();
+		#if dx12
+		// unlike WebGL, the DX12 driver presents explicitly (see System.hl)
+		var cur = h3d.Engine.getCurrent();
+		if( cur != null && cur.ready ) cur.driver.present();
+		#end
 	}
 
 	public static function start( callb : Void -> Void ) : Void {

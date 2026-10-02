@@ -16,19 +16,28 @@ class Shader {
 		initialize();
 	}
 
+	static inline function getClassShader( cl : Dynamic ) : SharedShader {
+		#if js
+		// ES6 classes inherit static fields : only use the shader built for this class
+		return js.lib.Object.prototype.hasOwnProperty.call(cl, "_SHADER") ? cl._SHADER : null;
+		#else
+		return cl._SHADER;
+		#end
+	}
+
 	function initialize() {
 		constModified = true;
 		if( shader != null )
 			return;
 		var cl : Dynamic = std.Type.getClass(this);
-		shader = cl._SHADER;
+		shader = getClassShader(cl);
 		if( shader == null ) {
 			var curClass : Dynamic = cl;
 			while( curClass != null && curClass.SRC == null )
 				curClass = std.Type.getSuperClass(curClass);
 			if( curClass == null )
 				throw std.Type.getClassName(cl) + " has no shader source";
-			shader = curClass._SHADER;
+			shader = getClassShader(curClass);
 			if( shader == null ) {
 				shader = new SharedShader(curClass.SRC,curClass._MODULE);
 				curClass._SHADER = shader;
