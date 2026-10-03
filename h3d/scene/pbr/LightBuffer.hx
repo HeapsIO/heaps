@@ -440,7 +440,7 @@ class LightBuffer {
 			var cl = capsuleLightsShadow[li];
 			fillCapsule((capsuleLightOffset + li * CAPSULE_LIGHT_STRIDE) << 2, cl);
 			var si = (capsuleShadowOffset + li * CUBE_SHADOW_STRIDE) << 2;
-			fillShadowCommon(si, cl.shadows, cl.range + cl.length);
+			fillShadowCommon(si, cl.shadows, cl.range + cl.length * 0.5);
 			var tex = cl.shadows.getShadowTex();
 			if( !fillShadowTex(si, 4, tex) ) continue;
 			if( !useBindless ) s.capsuleShadowMaps[li] = tex;

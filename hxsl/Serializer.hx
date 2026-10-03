@@ -222,6 +222,9 @@ class Serializer {
 				case Doc(s): writeString(s);
 				case Borrow(s): writeString(s);
 				case Sampler(s): writeString(s);
+				case Enum(path, constructors):
+					writeString(path);
+					writeArr(constructors, writeString);
 				}
 			}
 		}
@@ -459,6 +462,8 @@ class Serializer {
 				case 12: Sampler(readString());
 				case 13: Final;
 				case 14: Flat;
+				case 15: NoVar;
+				case 16: Enum(readString(), readArr(readString));
 				default: throw "assert";
 				}
 				v.qualifiers.push(q);

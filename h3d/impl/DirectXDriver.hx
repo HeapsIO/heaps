@@ -100,7 +100,7 @@ class DirectXDriver extends h3d.impl.Driver {
 
 	var depthStates : Map<Int,{ def : DepthStencilState, stencils : Array<{ op : Int, mask : Int, state : DepthStencilState }> }>;
 	var blendStates : Map<Int,BlendState>;
-	var rasterStates : Map<Int,RasterState>;
+	var rasterStates : #if (haxe_ver < 5) hl.types.Int64Map #else Map<haxe.Int64,RasterState> #end;
 	var samplerStates : Map<Int,SamplerState>;
 	var currentDepthState : DepthStencilState;
 	var currentBlendState : BlendState;
@@ -110,6 +110,8 @@ class DirectXDriver extends h3d.impl.Driver {
 	var outputWidth : Int;
 	var outputHeight : Int;
 	var hasScissor = false;
+	var useDepthClamp = false;
+	var depthBiasBits = 0;
 	var shaderVersion : String;
 
 	var window : dx.Window;
@@ -153,12 +155,12 @@ class DirectXDriver extends h3d.impl.Driver {
 		}
 		if( depthStates != null ) for( s in depthStates ) { if( s.def != null ) s.def.release(); for( s in s.stencils ) if( s.state != null ) s.state.release(); }
 		if( blendStates != null ) for( s in blendStates ) if( s != null ) s.release();
-		if( rasterStates != null ) for( s in rasterStates ) if( s != null ) s.release();
+		if( rasterStates != null ) for( s in rasterStates ) { var s : RasterState = s; if( s != null ) s.release(); }
 		if( samplerStates != null ) for( s in samplerStates ) if( s != null ) s.release();
 		shaders = new Map();
 		depthStates = new Map();
 		blendStates = new Map();
-		rasterStates = new Map();
+		rasterStates = #if (haxe_ver < 5) new hl.types.Int64Map() #else new Map() #end;
 		samplerStates = new Map();
 		vertexShader = new PipelineState(Vertex);
 		pixelShader = new PipelineState(Pixel);
@@ -659,6 +661,7 @@ class DirectXDriver extends h3d.impl.Driver {
 		var mask = pass.colorMask;
 
 		if( hasScissor ) bits |= SCISSOR_BIT;
+		if( useDepthClamp ) bits |= Pass.depthClamp_mask;
 
 		var stOpBits = pass.stencil != null ? @:privateAccess pass.stencil.opBits : -1;
 		var stMaskBits = pass.stencil != null ? @:privateAccess pass.stencil.maskBits : -1;
@@ -721,8 +724,9 @@ class DirectXDriver extends h3d.impl.Driver {
 			Driver.omSetDepthStencilState(depth, ref);
 		}
 
-		var rasterBits = bits & (Pass.culling_mask | SCISSOR_BIT | Pass.wireframe_mask);
-		var raster = rasterStates.get(rasterBits);
+		var rasterBits = bits & (Pass.culling_mask | SCISSOR_BIT | Pass.wireframe_mask | Pass.depthClamp_mask);
+		var rasterKey = haxe.Int64.make(depthBiasBits, rasterBits);
+		var raster : RasterState = rasterStates.get(rasterKey);
 		if( raster == null ) {
 			var desc = new RasterizerDesc();
 			if ( pass.wireframe ) {
@@ -732,10 +736,12 @@ class DirectXDriver extends h3d.impl.Driver {
 				desc.fillMode = Solid;
 				desc.cullMode = CULL[Pass.getCulling(bits)];
 			}
-			desc.depthClipEnable = true;
+			desc.depthClipEnable = bits & Pass.depthClamp_mask == 0;
 			desc.scissorEnable = bits & SCISSOR_BIT != 0;
+			desc.depthBias = (depthBiasBits << 16) >> 16;
+			desc.slopeScaledDepthBias = haxe.io.FPHelper.i32ToFloat(depthBiasBits & 0xFFFF0000);
 			raster = Driver.createRasterizerState(desc);
-			rasterStates.set(rasterBits, raster);
+			rasterStates.set(rasterKey, raster);
 		}
 
 		allowDraw = pass.culling != Both;
@@ -1066,6 +1072,20 @@ class DirectXDriver extends h3d.impl.Driver {
 		viewport[3] = h;
 		viewport[5] = 1.;
 		Driver.rsSetViewports(1, viewport);
+	}
+
+	override function setDepthClamp( enabled : Bool ) {
+		useDepthClamp = enabled;
+	}
+
+	override function setDepthBias( depthBias : Float, slopeScaledBias : Float ) {
+		var bias = hxd.Math.iclamp(Std.int(depthBias), -0x8000, 0x7FFF) & 0xFFFF;
+		var slope = haxe.io.FPHelper.floatToI32(slopeScaledBias) & 0xFFFF0000;
+		var biasBits = bias | slope;
+		if( biasBits == depthBiasBits )
+			return;
+		depthBiasBits = biasBits;
+		currentMaterialBits = -1;
 	}
 
 	override function setRenderZone(x:Int, y:Int, width:Int, height:Int) {

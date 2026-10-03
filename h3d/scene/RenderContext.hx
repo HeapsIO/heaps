@@ -98,6 +98,7 @@ class RenderContext extends h3d.impl.RenderContext {
 		renderResolutionHeight = engine.height;
 		cachedShaderList = [];
 		cachedPassObjects = [];
+		passes = [];
 		initGlobals();
 	}
 
@@ -166,7 +167,7 @@ class RenderContext extends h3d.impl.RenderContext {
 
 	public function start() {
 		drawPass = null;
-		passes = [];
+		passes.resize(0);
 		lights = null;
 		cachedPos = 0;
 		visibleFlag = true;
@@ -346,7 +347,7 @@ class RenderContext extends h3d.impl.RenderContext {
 			c.s = null;
 			c.next = null;
 		}
-		passes = [];
+		passes.resize(0);
 		lights = null;
 
 		cameraFrustumUploaded = false;

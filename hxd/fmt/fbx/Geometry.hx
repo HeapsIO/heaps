@@ -194,7 +194,8 @@ class Geometry {
 	public function getNormals(?matrix) {
 		if( matrix == null ) matrix = getGeomMatrix();
 		if( matrix != null && matrix.isIdentity() ) matrix = null;
-		var normals = processVectors("LayerElementNormal", "Normals");
+		var normals = processVectors("LayerElementNormal", "Normals", true);
+		if( normals == null ) return null;
 		var tmp = new h3d.Vector();
 		for( i in 0...Std.int(normals.length/3) ) {
 			var x = normals[i*3];

@@ -398,7 +398,21 @@ class BufferFormat {
 		return null;
 	}
 
+	#if heaps_mt_hxsl_cache
+	static var makeMutex = new sys.thread.Mutex();
+	#end
 	public static function make( inputs : Array<BufferInput> ) {
+		#if heaps_mt_hxsl_cache
+		makeMutex.acquire();
+		var fmt = makeUnsafe(inputs);
+		makeMutex.release();
+		return fmt;
+		#else
+		return makeUnsafe(inputs);
+		#end
+	}
+
+	static function makeUnsafe( inputs : Array<BufferInput> ) {
 		var names = [];
 		for( b in inputs )
 			names.push(b.name);

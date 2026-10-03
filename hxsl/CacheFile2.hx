@@ -85,7 +85,12 @@ class CacheFile2Loader {
 		}
 
 		#if heaps_mt_hxsl_cache
-		workThread = sys.thread.Thread.create(threadLoop, { onAbort : (e) -> { linkDone = true; } });
+		workThread = sys.thread.Thread.create(threadLoop, { onAbort : (e) -> {
+			Sys.println("[CacheFile2] Preload aborted: " + e.toString());
+			bcListsReady = true;
+			linkDone = true;
+			rtMapReady = true;
+		} });
 		workThread.name = "CacheFile2Loader";
 		event = haxe.MainLoop.add(update);
 		#else
@@ -265,6 +270,9 @@ class CacheFile2 extends Cache {
 
 	var isLoading : Bool = false;
 	var isDirty(default, set) : Bool = false;
+	#if heaps_mt_hxsl_cache
+	var compiledWhileLoading : Bool = false;
+	#end
 	var runtimesDefault : Array<RuntimeShader> = [];
 	var runtimesBatch : Array<RuntimeShader> = [];
 	var runtimesCompute : Array<RuntimeShader> = [];
@@ -320,6 +328,9 @@ class CacheFile2 extends Cache {
 		if( isLoading ) {
 			rtMutex.acquire();
 			acquired = true;
+			// Compiled outside of the preload, would be lost since isDirty is ignored while loading
+			if( sys.thread.Thread.current() == sys.thread.Thread.main() )
+				compiledWhileLoading = true;
 		}
 		#end
 		switch( mode ) {
@@ -361,6 +372,10 @@ class CacheFile2 extends Cache {
 			CacheFile2.LOAD_TIME = dt;
 			log('${runtimesDefault.length + runtimesBatch.length} shaders loaded in ${hxd.Math.fmt(dt)}s');
 			isLoading = false;
+			#if heaps_mt_hxsl_cache
+			if( compiledWhileLoading )
+				isDirty = true;
+			#end
 		});
 	}
 

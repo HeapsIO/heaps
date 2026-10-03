@@ -39,14 +39,20 @@ class SpotLight extends Light {
 	function set_range(v:Float) {
 		scaleX = v;
 		lightProj.zFar = v;
+		updateConeScale();
 		return v;
 	}
 
 	function set_angle(v:Float) {
-		scaleY = hxd.Math.tan(hxd.Math.degToRad(v/2.0)) * range;
-		scaleZ = scaleY;
+		angle = v;
+		updateConeScale();
 		lightProj.fovY = v;
-		return angle = v;
+		return v;
+	}
+
+	function updateConeScale() {
+		scaleY = hxd.Math.tan(hxd.Math.degToRad(angle/2.0)) * scaleX;
+		scaleZ = scaleY;
 	}
 
 	public static function spotLightPrim() : h3d.prim.Polygon {
@@ -126,8 +132,6 @@ class SpotLight extends Light {
 		}
 	}
 
-	var s = new h3d.col.Sphere();
-	var d = new h3d.Vector();
 	override function emit(ctx:RenderContext) {
 		if( ctx.computingStatic ) {
 			super.emit(ctx);
@@ -137,13 +141,6 @@ class SpotLight extends Light {
 		if( ctx.pbrLightPass == null )
 			throw "Rendering a pbr light require a PBR compatible scene renderer";
 
-		d.load(absPos.front());
-		d.scale(range / 2.0);
-		s.x = absPos.tx + d.x;
-		s.y = absPos.ty + d.y;
-		s.z = absPos.tz + d.z;
-		s.r = range / 2.0;
-
 		if( !inFrustum(ctx.camera.frustum) )
 			return;
 
@@ -151,7 +148,22 @@ class SpotLight extends Light {
 		ctx.emitPass(ctx.pbrLightPass, this);
 	}
 
+	@:access(h3d.col.Plane)
 	override function inFrustum(frustum : h3d.col.Frustum) {
-		return frustum.hasSphere(s);
+		var r = range;
+		var cosA = hxd.Math.cos(hxd.Math.degToRad(angle / 2.0));
+		var sinA = Math.sqrt(hxd.Math.max(0, 1 - cosA * cosA));
+		var d = absPos.front();
+		var pos = absPos.getPosition();
+		inline function outside( p : h3d.col.Plane ) {
+			var k = p.nx * d.x + p.ny * d.y + p.nz * d.z;
+			var h = (k >= cosA || cosA <= 0) ? 1.0 : hxd.Math.max(0, k * cosA + Math.sqrt(hxd.Math.max(0, 1 - k * k)) * sinA);
+			return p.distance(pos) + r * h < 0;
+		}
+		if( outside(frustum.pleft) || outside(frustum.pright) || outside(frustum.ptop) || outside(frustum.pbottom) )
+			return false;
+		if( frustum.checkNearFar && (outside(frustum.pnear) || outside(frustum.pfar)) )
+			return false;
+		return true;
 	}
 }

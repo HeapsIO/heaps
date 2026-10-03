@@ -30,9 +30,11 @@ class PSOConfigCache {
 	var loadFailed = false;
 	var canSave = true;
 
-	var builder = new PipelineCache.PipelineBuilder();
 	var magic : String;
 	var isDirty = false;
+	#if heaps_mt_hxsl_cache
+	var mutex = new sys.thread.Mutex();
+	#end
 
 	public function new(file : String, ?outputFile : String ) {
 		this.file = file;
@@ -74,25 +76,54 @@ class PSOConfigCache {
 	}
 
 	public function resolveConfig( c : CompiledShader ) {
+		#if heaps_mt_hxsl_cache
+		mutex.acquire();
+		var pipelines = configs.get(c.shader.signature)?.copy();
+		mutex.release();
+		#else
 		var pipelines = configs.get(c.shader.signature);
-		if( pipelines != null ) {
-			for( sign in pipelines ) @:privateAccess {
-				builder.signature.blit(0, sign.getData(), 0, sign.length);
-				var inputCount = (sign.length - PipelineCache.PipelineBuilder.PSIGN_LAYOUT) >> PipelineCache.PipelineBuilder.SHIFT_PER_BUFFER;
-				if( inputCount != c.inputCount ) continue;
-				var cache = builder.lookup(c.pipelines, inputCount);
-				var p = DX12Driver.makePipeline(c, builder);
-				if( p == null )
-					continue;
-				cache.pipeline = p;
-				c.usedPSOConfig = true;
+		#end
+		if( pipelines == null )
+			return;
+		var builder = new PipelineCache.PipelineBuilder();
+		for( sign in pipelines ) @:privateAccess {
+			builder.signature.blit(0, sign.getData(), 0, sign.length);
+			var inputCount = (sign.length - PipelineCache.PipelineBuilder.PSIGN_LAYOUT) >> PipelineCache.PipelineBuilder.SHIFT_PER_BUFFER;
+			if( inputCount != c.inputCount ) continue;
+			#if heaps_mt_hxsl_cache
+			c.pipelineMutex.acquire();
+			#end
+			var cache = builder.lookup(c.pipelines, inputCount);
+			if( cache.pipeline == null ) {
+				var p = try DX12Driver.makePipeline(c, builder) catch( e : Dynamic ) {
+					trace('Skipping invalid PSO config for ${c.shader.signature}: $e');
+					null;
+				}
+				if( p != null ) {
+					cache.pipeline = p;
+					c.usedPSOConfig = true;
+					hxd.System.timeoutTick();
+				}
 			}
+			#if heaps_mt_hxsl_cache
+			c.pipelineMutex.release();
+			#end
 		}
 	}
 
 	public function addConfig<T>(shader : hxsl.RuntimeShader, p : PipelineCache.CachedPipeline<T>) {
 		if( p.size > 64 )
 			throw "assert";
+		#if heaps_mt_hxsl_cache
+		mutex.acquire();
+		addConfigUnsafe(shader, p);
+		mutex.release();
+		#else
+		addConfigUnsafe(shader, p);
+		#end
+	}
+
+	function addConfigUnsafe<T>(shader : hxsl.RuntimeShader, p : PipelineCache.CachedPipeline<T>) {
 		var pipelines = configs.get(shader.signature);
 		if( pipelines == null ) {
 			pipelines = [];
@@ -116,6 +147,9 @@ class PSOConfigCache {
 
 		var out = new haxe.io.BytesOutput();
 		out.writeString(magic);
+		#if heaps_mt_hxsl_cache
+		mutex.acquire();
+		#end
 		var signs = [for( s in configs.keys() ) s];
 		signs.sort(Reflect.compare);
 		for( sign in signs ) {
@@ -129,6 +163,9 @@ class PSOConfigCache {
 				out.write(p);
 			}
 		}
+		#if heaps_mt_hxsl_cache
+		mutex.release();
+		#end
 
 		try {
 			var tmpPath = outputFile + ".tmp";
@@ -377,6 +414,9 @@ class CompiledShader {
 	public var isCompute : Bool;
 	public var computePipeline : ComputePipelineState;
 	public var usedPSOConfig : Bool;
+	#if heaps_mt_hxsl_cache
+	public var pipelineMutex = new sys.thread.Mutex();
+	#end
 	public function new() {
 	}
 }
@@ -731,7 +771,7 @@ class AsyncReadbackRequest {
 	public var tmpBufOffset : Int;
     public var tmpBufSize : Int;
 	public var barrier : ResourceBarrier;
-	public var frame : Int;
+	public var fenceValue : Int64;
 	public function new() {
 	}
 }
@@ -772,7 +812,7 @@ class DX12Driver extends h3d.impl.Driver {
 	var currentIndex : Buffer;
 	#if heaps_mt_hxsl_cache
 	var compileMutex  = new sys.thread.Mutex();
-	var pipelineMutex  = new sys.thread.Mutex();
+	var shaderBinaryMutex  = new sys.thread.Mutex();
 	#end
 	var psoConfigCache : PSOConfigCache;
 
@@ -1453,7 +1493,7 @@ class DX12Driver extends h3d.impl.Driver {
 		viewDesc.mipSlice = 0;
 		viewDesc.firstArraySlice = layer;
 		viewDesc.format = toDxgiDepthFormat(depthBuffer.format);
-		viewDesc.viewDimension = depthBuffer.flags.has(IsArray) ? TEXTURE2DARRAY : TEXTURE2D;
+		viewDesc.viewDimension = depthBuffer.flags.has(IsArray) || depthBuffer.flags.has(Cube) ? TEXTURE2DARRAY : TEXTURE2D;
 		if ( readOnly ) {
 			viewDesc.flags.set(READ_ONLY_DEPTH);
 			viewDesc.flags.set(READ_ONLY_STENCIL);
@@ -1763,12 +1803,26 @@ class DX12Driver extends h3d.impl.Driver {
 		var key = profile;
 		for ( arg in SHADER_ARGS )
 			key += arg;
-		var bytes = getBinaryPayload(sh.code, key);
-		if( bytes == null ) {
-			bytes = compiler.compile(sh.code, profile, SHADER_ARGS);
-			if( shaderCache != null )
-				shaderCache.saveCompiledShader(sh.code, bytes, key);
+		#if heaps_mt_hxsl_cache
+		shaderBinaryMutex.acquire();
+		#end
+		var bytes = try {
+			var bytes = getBinaryPayload(sh.code, key);
+			if( bytes == null ) {
+				bytes = compiler.compile(sh.code, profile, SHADER_ARGS);
+				if( shaderCache != null )
+					shaderCache.saveCompiledShader(sh.code, bytes, key);
+			}
+			bytes;
+		} catch( e : Dynamic ) {
+			#if heaps_mt_hxsl_cache
+			shaderBinaryMutex.release();
+			#end
+			throw e;
 		}
+		#if heaps_mt_hxsl_cache
+		shaderBinaryMutex.release();
+		#end
 		return bytes;
 	}
 
@@ -1785,8 +1839,7 @@ class DX12Driver extends h3d.impl.Driver {
 	function resolveShaderDataCode( sh : hxsl.RuntimeShader.RuntimeShaderData, rootStr : String ) {
 		if( sh.code == null ) {
 			var out = new hxsl.HlslOut();
-			sh.code = out.run(sh.data);
-			sh.code = rootStr + sh.code;
+			sh.code = rootStr + out.run(sh.data);
 		}
 	}
 
@@ -2125,9 +2178,16 @@ class DX12Driver extends h3d.impl.Driver {
 
 		if ( shader.hasBindless() && !useSM6_6 ) {
 			enableBindless();
-			if ( !useSM6_6 )
+			if ( !useSM6_6 ) {
+				#if heaps_mt_hxsl_cache
+				compileMutex.release();
+				#end
 				throw "Shader using bindless detected, but Shader Model 6.6 is not used. SM6_6 unavailable on this device.";
+			}
 		}
+		#if heaps_mt_hxsl_cache
+		compileMutex.release();
+		#end
 
 		var res = computeRootSignature(shader);
 
@@ -2152,6 +2212,14 @@ class DX12Driver extends h3d.impl.Driver {
 			desc.cs.bytecodeLength = cs.length;
 			c.computePipeline = Driver.createComputePipelineState(desc);
 			c.vertexRegisters = res.registers[0];
+			#if heaps_mt_hxsl_cache
+			compileMutex.acquire();
+			var prev = compiledShaders.get(shader.id);
+			if( prev != null ) {
+				compileMutex.release();
+				return prev;
+			}
+			#end
 			compiledShaders.set(shader.id, c);
 			#if heaps_mt_hxsl_cache
 			compileMutex.release();
@@ -2213,6 +2281,14 @@ class DX12Driver extends h3d.impl.Driver {
 
 		//Driver.createGraphicsPipelineState(p);
 
+		#if heaps_mt_hxsl_cache
+		compileMutex.acquire();
+		var prev = compiledShaders.get(shader.id);
+		if( prev != null ) {
+			compileMutex.release();
+			return prev;
+		}
+		#end
 		c.format = hxd.BufferFormat.make(format);
 		c.pipeline = p;
 		c.inputLayout = inputLayout;
@@ -2226,13 +2302,7 @@ class DX12Driver extends h3d.impl.Driver {
 		compileMutex.release();
 		#end
 
-		#if heaps_mt_hxsl_cache
-		pipelineMutex.acquire();
-		#end
 		psoConfigCache?.resolveConfig(c);
-		#if heaps_mt_hxsl_cache
-		pipelineMutex.release();
-		#end
 
 		return c;
 	}
@@ -2378,16 +2448,17 @@ class DX12Driver extends h3d.impl.Driver {
 		rq.buf = buf;
 		rq.bufPos = bufPos;
 		rq.callback = callback;
-		rq.frame = frameCount;
+		rq.fenceValue = fenceValue + 1;
 		asyncReadbackQueue.push(rq);
 
 		if ( asyncCopyEvent == null ) {
 			asyncCopyEvent = haxe.MainLoop.add(() -> {
 				if ( !waitingAsyncCopy ) {
 					if ( asyncReadbackQueue.length > 0 ) {
+						var curFence = fence.getValue();
 						var totalBatchSize = 0;
 						for ( request in asyncReadbackQueue ) {
-							if ( request.frame < (frameCount - 1) ) {
+							if ( request.fenceValue <= curFence ) {
 								var stride = request.b.format.strideBytes;
 								request.tmpBufOffset = totalBatchSize;
 								request.tmpBufSize = request.vertexCount * stride;
@@ -2403,7 +2474,7 @@ class DX12Driver extends h3d.impl.Driver {
 						}
 
 						for ( request in asyncReadbackQueue ) {
-							if ( request.frame < (frameCount - 1) ) {
+							if ( request.fenceValue <= curFence ) {
 								var stride = request.b.format.strideBytes;
 
 								request.b.vbuf.targetState = COMMON;
@@ -2815,7 +2886,7 @@ class DX12Driver extends h3d.impl.Driver {
 			desc.resourceMinLODClamp = 0;
 		} else if( t.flags.has(Cube) ) {
 			var desc = unsafeCastTo(srvDesc, TexCubeSRV);
-			desc.format = t.t.format;
+			desc.format = t.isDepth() ? toDepthFormat(t.format) : t.t.format;
 			desc.dimension = TEXTURECUBE;
 			desc.shader4ComponentMapping = ShaderComponentMapping.DEFAULT;
 			desc.mostDetailedMip = t.startingMip;
@@ -3423,7 +3494,7 @@ class DX12Driver extends h3d.impl.Driver {
 			return true;
 
 		#if heaps_mt_hxsl_cache
-		pipelineMutex.acquire();
+		currentShader.pipelineMutex.acquire();
 		#end
 		var cache = pipelineBuilder.lookup(currentShader.pipelines, currentShader.inputCount);
 		if( cache.pipeline == null ) {
@@ -3436,7 +3507,7 @@ class DX12Driver extends h3d.impl.Driver {
 				trace('Failed to create pipeline for ${currentShader.shader.signature}');
 				hasDeviceError = true;
 				#if heaps_mt_hxsl_cache
-				pipelineMutex.release();
+				currentShader.pipelineMutex.release();
 				#end
 				return false;
 			}
@@ -3444,7 +3515,7 @@ class DX12Driver extends h3d.impl.Driver {
 			psoConfigCache?.addConfig(currentShader.shader, cache);
 		}
 		#if heaps_mt_hxsl_cache
-		pipelineMutex.release();
+		currentShader.pipelineMutex.release();
 		#end
 		if ( currentPipelineState != cache.pipeline ) {
 			frame.commandList.setPipelineState(cache.pipeline);

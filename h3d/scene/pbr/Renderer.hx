@@ -223,6 +223,7 @@ class Renderer extends h3d.scene.Renderer {
 			*/
 			pbrLightPass.culling = Front;
 			pbrLightPass.depth(false, GreaterEqual);
+			pbrLightPass.depthClamp = true;
 			pbrLightPass.enableLights = true;
 		}
 		ctx.pbrLightPass = pbrLightPass;

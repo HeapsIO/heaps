@@ -37,6 +37,7 @@ enum Type {
 	TChannel( size : Int );
 	TTextureHandle;
 	TBufferHandle;
+	TEnum( path : String );
 }
 
 enum VecType {
@@ -106,6 +107,7 @@ enum VarQualifier {
 	Final;
 	Flat;
 	NoVar;
+	Enum( path : String, constructors : Array<String> );
 }
 
 enum Prec {
@@ -453,6 +455,17 @@ class Tools {
 		return null;
 	}
 
+	public static function getEnum( v : TVar ) {
+		if( v.qualifiers == null )
+			return null;
+		for( q in v.qualifiers )
+			switch( q ) {
+			case Enum(path, constructors): return { path : path, constructors : constructors };
+			default:
+			}
+		return null;
+	}
+
 	public static function getConstBits( v : TVar ) {
 		switch( v.type ) {
 		case TBool:
@@ -556,6 +569,7 @@ class Tools {
 			};
 			prefix+" "+toString(t) + "[" + (switch( s ) { case SConst(i): "" + i; case SVar(v): v.name; } ) + "]";
 		case TBytes(n): "Bytes" + n;
+		case TEnum(path): path;
 		case TSampler(dim, arr):
 			"Sampler"+dim.getName().substr(1)+(arr ? "Array":"");
 		case TRWTexture(dim, arr,dims):
@@ -686,7 +700,7 @@ class Tools {
 	public static function size( t : Type ) {
 		return switch( t ) {
 		case TVoid: 0;
-		case TFloat, TInt: 1;
+		case TFloat, TInt, TEnum(_): 1;
 		case TVec(n, _), TChannel(n): n;
 		case TStruct(vl):
 			var s = 0;

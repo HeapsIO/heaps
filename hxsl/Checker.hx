@@ -31,6 +31,7 @@ class Checker {
 	var curFun : TFunction;
 	var inLoop : Bool;
 	var inWhile : Bool;
+	var enums : Map<String, Array<String>>;
 	public var inits : Array<{ v : TVar, e : TExpr }>;
 
 	public function new() {
@@ -292,6 +293,7 @@ class Checker {
 
 	public function check( name : String, shader : Expr ) : ShaderData {
 		vars = new Map();
+		enums = new Map();
 		inits = [];
 		inLoop = false;
 		inWhile = false;
@@ -363,6 +365,22 @@ class Checker {
 				expr : { e : TBlock(localInits), p : localInits[0].p, t : TVoid },
 			});
 		}
+
+		// enum types are only used for type checking, the shader sees Int
+		function enumVarToInt( v : TVar ) {
+			if( v.type.match(TEnum(_)) ) v.type = TInt;
+		}
+		function enumExprToInt( e : TExpr ) {
+			if( e.t.match(TEnum(_)) ) e.t = TInt;
+			switch( e.e ) {
+			case TVar(v), TVarDecl(v, _): enumVarToInt(v);
+			default:
+			}
+			e.iter(enumExprToInt);
+		}
+		for( v in vars ) enumVarToInt(v);
+		for( f in tfuns ) enumExprToInt(f.expr);
+		for( i in inits ) enumExprToInt(i.e);
 
 		var vars = Lambda.array(vars);
 		vars.sort(function(v1, v2) return (v1.id < 0 ? -v1.id : v1.id) - (v2.id < 0 ? -v2.id : v2.id));
@@ -556,7 +574,7 @@ class Checker {
 						type = TFloat;
 						TConst(CFloat(Math.PI));
 					default:
-						error("Unknown identifier '" + name + "'", e.pos);
+						return enumConst(null, name, with, e.pos);
 					}
 				}
 			}
@@ -573,6 +591,19 @@ class Checker {
 				throw "assert";
 			}
 		case EField(e1, f):
+			// qualified enum constructor
+			var path = null;
+			switch( e1.expr ) {
+			case EIdent(name) if( vars.get(name) == null && globals.get(name) == null ):
+				for( p in enums.keys() )
+					if( p == name || StringTools.endsWith(p, "." + name) ) {
+						if( path != null ) error("Ambiguous enum '" + name + "'", e1.pos);
+						path = p;
+					}
+			default:
+			}
+			if( path != null )
+				return enumConst(path, f, with, e.pos);
 			var e1 = typeExpr(e1, Value);
 			var ef = fieldAccess(e1, f, with, e.pos);
 			if( ef == null ) error(e1.t.toString() + " has no field '" + f + "'", e.pos);
@@ -622,6 +653,8 @@ class Checker {
 			switch( e1.expr ) {
 			case EField(e1, f):
 				var e1 = typeExpr(e1, Value);
+				if( f == "toInt" && args.length == 0 && e1.t.match(TEnum(_)) )
+					return { e : e1.e, t : TInt, p : e.pos };
 				var ef = fieldAccess(e1, f, with, e.pos);
 				if( ef == null ) error(e1.t.toString() + " has no field '" + f + "'", e.pos);
 				switch( ef ) {
@@ -664,7 +697,8 @@ class Checker {
 			var v = vl[0];
 			if( v.kind == null ) v.kind = Local;
 			if( v.kind != Local ) error("Should be local var", e.pos);
-			if( v.qualifiers.length != 0 ) error("Unexpected qualifier", e.pos);
+			for( q in v.qualifiers )
+				if( !q.match(Enum(_)) ) error("Unexpected qualifier", e.pos);
 			var tv = makeVar(vl[0],e.pos);
 			var init = v.expr == null ? null : typeWith(v.expr, tv.type);
 			if( tv.type == null ) {
@@ -960,6 +994,26 @@ class Checker {
 		}
 	}
 
+	function enumConst( path : String, name : String, with : WithType, pos : Position ) : TExpr {
+		if( path == null ) {
+			// emulate type inference: use the expected enum type, or the constructor name must be unique
+			switch( with ) {
+			case With(TEnum(p)) if( enums.get(p).indexOf(name) >= 0 ):
+				path = p;
+			default:
+				for( p => cl in enums )
+					if( cl.indexOf(name) >= 0 ) {
+						if( path != null ) error("Ambiguous enum constructor '" + name + "'", pos);
+						path = p;
+					}
+				if( path == null ) error("Unknown identifier '" + name + "'", pos);
+			}
+		}
+		var index = enums.get(path).indexOf(name);
+		if( index < 0 ) error(name + " is not a constructor of " + path, pos);
+		return { e : TConst(CInt(index)), t : TEnum(path), p : pos };
+	}
+
 	function makeVar( v : VarDecl, pos : Position, ?parent : TVar ) {
 		var tv : TVar = {
 			id : Tools.allocVarId(),
@@ -1027,6 +1081,13 @@ class Checker {
 				case Ignore, Doc(_):
 				case Flat: if( tv.kind != Local ) error("flat only allowed on local", pos);
 				case NoVar: if( tv.kind != Local ) error("noVar only allowed on local", pos);
+				case Enum(path, constructors):
+					enums.set(path, constructors);
+					tv.type = TEnum(path);
+					// @const max value is known
+					for( i in 0...v.qualifiers.length )
+						if( v.qualifiers[i].match(Const(null)) )
+							v.qualifiers[i] = Const(constructors.length > 1 ? constructors.length - 1 : 1);
 				}
 		}
 		if( tv.type != null )
@@ -1449,7 +1510,7 @@ class Checker {
 			case TFloat, TInt, TString if( e2.t != TVoid ):
 				unifyExpr(e2, e1.t);
 				TBool;
-			case TBool if( (op == OpEq || op == OpNotEq) && e2.t != TVoid ):
+			case TBool, TEnum(_) if( (op == OpEq || op == OpNotEq) && e2.t != TVoid ):
 				unifyExpr(e2, e1.t);
 				TBool;
 			case TVec(_) if( e2.t != TVoid ):

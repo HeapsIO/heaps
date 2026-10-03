@@ -353,9 +353,8 @@ class CascadeShadowMap extends Shadows {
 		cullPasses(passes, function(col) return col.inFrustum(lightCamera.frustum));
 		var p = passes.save();
 
-		var prevCheckNearFar = lightCamera.frustum.checkNearFar;
-		lightCamera.frustum.checkNearFar = false;
-		var depthFormat : hxd.PixelFormat = #if js Depth24Stencil8 #else highPrecision ? Depth32 : Depth16 #end;
+		var casterZMin = lightCamera.orthoBounds.zMin;
+		var depthFormat : hxd.PixelFormat = highPrecision ? Depth32 : Depth16;
 		var renderToDepthArray = ctx.engine.driver.hasFeature(DepthTextureArray);
 		var arrayFormat : hxd.PixelFormat = renderToDepthArray ? depthFormat : R32F;
 		var cascades : h3d.mat.TextureArray = cast ctx.textures.allocTarget("cascadeShadowMaps", size, size, false, arrayFormat, [IsArray], cascade);
@@ -378,7 +377,8 @@ class CascadeShadowMap extends Shadows {
 			var lc = lightCameras[i];
 			var dimension = Math.max(lc.orthoBounds.xMax - lc.orthoBounds.xMin,	lc.orthoBounds.yMax - lc.orthoBounds.yMin);
 			dimension = ( dimension * hxd.Math.clamp(minPixelSize, 0, size) ) / size;
-			lightCamera.orthoBounds = lc.orthoBounds;
+			lightCamera.orthoBounds.load(lc.orthoBounds);
+			lightCamera.orthoBounds.zMin = casterZMin;
 			lightCamera.update();
 			ctx.setCurrentView(i + 1, lightCamera.frustum);
 			customCullPasses(passes, lightCamera.frustum, i, dimension);
@@ -389,7 +389,6 @@ class CascadeShadowMap extends Shadows {
 		ctx.engine.setDepthClamp(false);
 		ctx.engine.setDepthBias(0, 0);
 		syncCascadeShader(cascades);
-		lightCamera.frustum.checkNearFar = prevCheckNearFar;
 
 		ctx.currentView.frustum = prevCtxViewFrustum;
 

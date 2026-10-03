@@ -4,8 +4,8 @@ class CapsuleShadowMap extends CubeShadowMap {
 
 	var pshader : h3d.shader.PointShadow;
 
-	public function new( light : h3d.scene.Light, useWorldDist : Bool ) {
-		super(light, useWorldDist);
+	public function new( light : h3d.scene.Light ) {
+		super(light);
 		shader = pshader = new h3d.shader.PointShadow();
 	}
 
@@ -31,7 +31,7 @@ class CapsuleShadowMap extends CubeShadowMap {
 		pshader.shadowBias = bias;
 		pshader.shadowPower = power;
 		pshader.lightPos = light.getAbsPos().getPosition();
-		pshader.zFar = capsuleLight.range + capsuleLight.length;
+		pshader.zFar = capsuleLight.range + capsuleLight.length * 0.5;
 		pshader.SAMPLING_MODE = samplingKind;
 		// ESM
 		pshader.shadowPower = power;
@@ -54,7 +54,7 @@ class CapsuleShadowMap extends CubeShadowMap {
 
 	override function updateLightCameraNearFar(light : h3d.scene.Light) {
 		var capsuleLight = cast(light, h3d.scene.pbr.CapsuleLight);
-		lightCamera.zFar = capsuleLight.range;
+		lightCamera.zFar = capsuleLight.range + capsuleLight.length * 0.5;
 		lightCamera.zNear = capsuleLight.zNear;
 	}
 }

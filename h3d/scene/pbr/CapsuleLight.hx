@@ -13,7 +13,7 @@ class CapsuleLight extends Light {
 
 	public function new(?parent) {
 		pbr = new h3d.shader.pbr.Light.CapsuleLight();
-		shadows = new h3d.pass.CapsuleShadowMap(this, true);
+		shadows = new h3d.pass.CapsuleShadowMap(this);
 		super(pbr,parent);
 		range = 10;
 	}
