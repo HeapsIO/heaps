@@ -65,7 +65,7 @@ class Window {
 		@see `hxd.impl.MouseMode` for more details on each mode.
 	**/
 	public var mouseMode(default, set): MouseMode = Absolute;
-	public var monitor : Null<Int> = null;
+	public var monitor(default, set) : Null<Int> = null;
 	public var framerate : Null<Int> = null;
 	public var vsync(get, set) : Bool;
 	public var isFocused(get, never) : Bool;
@@ -761,16 +761,18 @@ class Window {
 				window.resize(mon.right-mon.left, mon.bottom-mon.top);
 			}
 		}
+		#if hldx
+		if( m != Windowed ) {
+			var mon = selectedMonitor();
+			window.selectedMonitor = mon != null ? mon.name : null;
+		}
+		#end
 		if( m == Fullscreen ) {
 			var cds = getCurrentDisplaySetting();
 			var dm = getBestDisplayMode(windowWidth, windowHeight, framerate != null ? framerate : cds.framerate);
 			if(dm == null)
 				return oldMode;
 			window.displaySetting = dm.mode;
-			#if hldx
-			var mon = selectedMonitor();
-			window.selectedMonitor = mon != null ? mon.name : null;
-			#end
 			window.displayMode = m;
 			window.resize(dm.mode.width, dm.mode.height);
 		}
@@ -791,6 +793,15 @@ class Window {
 
 	public function applyDisplay() {
 		displayMode = displayMode;
+	}
+
+	function set_monitor( m : Null<Int> ) {
+		if( monitor == m )
+			return m;
+		monitor = m;
+		if( m != null && displayMode != Windowed )
+			applyDisplay();
+		return m;
 	}
 
 	public function setIcon(icon: hxd.BitmapData) : Void {
