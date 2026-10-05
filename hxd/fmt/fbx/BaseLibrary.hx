@@ -451,12 +451,12 @@ class BaseLibrary {
 	}
 
 	function updateModelScale() {
-		var unitScaleFactor = 1;
-		var originalUnitScaleFactor = 1;
+		var unitScaleFactor = 1.;
+		var originalUnitScaleFactor = 1.;
 		for( p in root.getAll("GlobalSettings.Properties70.P") ) {
 			switch( p.props[0].toString() ) {
-				case "UnitScaleFactor": unitScaleFactor = p.props[4].toInt();
-				case "OriginalUnitScaleFactor": originalUnitScaleFactor = p.props[4].toInt();
+				case "UnitScaleFactor": unitScaleFactor = p.props[4].toFloat();
+				case "OriginalUnitScaleFactor": originalUnitScaleFactor = p.props[4].toFloat();
 				default:
 			}
 		}
@@ -466,12 +466,10 @@ class BaseLibrary {
 		if (factor == 1) return;
 
 		// Scale on geometry
-		if (factor != 1) {
-			for( g in this.root.getAll("Objects.Geometry.Vertices").concat(this.root.getAll("Objects.Geometry.Shape.Vertices")) ) {
-				var v = toFloats(g);
-				for( i in 0...v.length )
-					v[i] = v[i] * factor;
-			}
+		for( g in this.root.getAll("Objects.Geometry.Vertices").concat(this.root.getAll("Objects.Geometry.Shape.Vertices")) ) {
+			var v = toFloats(g);
+			for( i in 0...v.length )
+				v[i] = v[i] * factor;
 		}
 
 		// Scale translation
