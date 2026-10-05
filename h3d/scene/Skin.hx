@@ -505,14 +505,12 @@ class Skin extends MultiMaterial {
 
 		if( splitPalette == null ) {
 			skinShader.bonesMatrixes = jointsBuffer;
-			if( hasVelocity )
-				skinShader.prevBonesMatrixes = buffersDirty ? prevJointsBuffer : jointsBuffer;
+			skinShader.prevBonesMatrixes = hasVelocity && buffersDirty ? prevJointsBuffer : jointsBuffer;
 		}
 		else {
 			// shader buffers set in draw() because dynamicParameters
 		}
 
-		skinShader.calcPrevPos = hasVelocity;
 		buffersDirty = false;
 	}
 
@@ -601,8 +599,7 @@ class Skin extends MultiMaterial {
 		} else {
 			var i = ctx.drawPass.index;
 			skinShader.bonesMatrixes = splitBuffers[i];
-			if ( skinShader.calcPrevPos )
-				skinShader.prevBonesMatrixes = prevSplitBuffers[i];
+			skinShader.prevBonesMatrixes = prevSplitBuffers != null && computeVelocity() ? prevSplitBuffers[i] : splitBuffers[i];
 			primitive.selectMaterial(i, getLodIndex());
 			ctx.uploadParams();
 			primitive.render(ctx.engine);
