@@ -486,29 +486,28 @@ class BaseLibrary {
 			}
 		}
 
-		// Scale on animation
+		// Scale on skin : the bind matrices of the deformers are in the same unit as the geometry
+		for( t in this.root.getAll("Objects.Deformer.Transform") ) {
+			var m = toFloats(t);
+			m[12] *= factor;
+			m[13] *= factor;
+			m[14] *= factor;
+		}
+
+		// Scale on animation : the translations as the Lcl Translation of every model above (the scale is unchanged)
 		for (n in this.root.getAll("Objects.AnimationCurveNode")) {
-			var name = n.getName();
-			var model = getParent(n,"Model",true);
-			var isRoot = model != null && getParent(model,"Model",true) == null;
+			if (n.getName() != "T")
+				continue;
 			for (p in n.getAll("Properties70.P")) {
 				switch( p.props[0].toString() ) {
-					case "d|X", "d|Y", "d|Z" if( name == "T" && !isRoot ): p.props[4] = PFloat(p.props[4].toFloat() / factor);
-					case "d|X", "d|Y", "d|Z" if( name == "S" && isRoot ): p.props[4] = PFloat(p.props[4].toFloat() * factor);
+					case "d|X", "d|Y", "d|Z": p.props[4] = PFloat(p.props[4].toFloat() * factor);
 					default:
 				}
 			}
 			for (c in getChilds(n,"AnimationCurve")) {
 				var vl = toFloats(c.get("KeyValueFloat"));
-				switch (name) {
-					case "T" if( !isRoot ):
-						for( i in 0...vl.length )
-							vl[i] = vl[i] / factor;
-					case "S" if( isRoot ):
-						for( i in 0...vl.length )
-							vl[i] = vl[i] * factor;
-					default:
-				}
+				for( i in 0...vl.length )
+					vl[i] = vl[i] * factor;
 			}
 		}
 	}
