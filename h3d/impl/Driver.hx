@@ -85,10 +85,7 @@ enum Feature {
 		Supports bindless
 	*/
 	Bindless;
-	/*
-		Supports DLSS
-	*/
-	DLSS;
+	Upscaling;
 	/*
 		Can render into a single layer of a depth texture array.
 	*/
@@ -129,7 +126,7 @@ enum RenderFlag {
 	CameraHandness;
 }
 
-enum DLSSTag {
+enum UpscalingTag {
 	Depth;
 	MotionVectors;
 	ColorIn;
@@ -139,7 +136,7 @@ enum DLSSTag {
 	UIAlpha;
 }
 
-@:struct class DLSSParams {
+@:struct class UpscalingParams {
 	public var cameraViewToClip : Matrix;
 	public var clipToCameraView : Matrix;
 	public var clipToPrevClip : Matrix;
@@ -169,37 +166,30 @@ enum DLSSTag {
 	}
 }
 
-@struct class DLSSSettings {
-	public var optimalWidth : Int;
-	public var optimalHeight : Int;
+@struct class UpscalingSettings {
+	public var renderWidth : Int;
+	public var renderHeight : Int;
 	public function new() {
 	}
 }
 
-enum DLSSQuality {
-	Default;
+enum UpscalingMode {
+	Off;
+	NativeAA;
+	Quality;
+	Balanced;
 	Performance;
 	UltraPerformance;
 }
 
-enum DLSSMode {
-	Off;
-	MaxPerformance;
-	Balanced;
-	MaxQuality;
-	UltraPerformance;
-	UltraQuality;
-	Dlaa;
-}
-
-enum DLSSGMode {
+enum FrameGenMode {
 	Off;
 	On;
 	Auto;
 	Dynamic;
 }
 
-class DLSSGSettings {
+class FrameGenSettings {
 	public var status : Int;
 	public var minWidthOrHeight : Int;
 	public var framesPresented : Int;
@@ -210,10 +200,10 @@ class DLSSGSettings {
 	}
 }
 
-enum ReflexMode {
+enum LowLatencyMode {
 	Off;
-	LowLatency;
-	LowLatencyWithBoost;
+	On;
+	OnWithBoost;
 }
 
 class Driver {
@@ -468,73 +458,82 @@ class Driver {
 		throw "Bindless is not implemented on this platform";
 	}
 
-	// --- DLSS
-
-	public function isDLSSSupported( framegen : Bool = false ) : Bool {
-		throw "DLSS not supported on this platform";
+	public function isUpscalingSupported() : Bool {
 		return false;
 	}
 
-	public function getDLSSOptimalSettings( mode : DLSSMode, targetWidth : Int, targetHeight : Int ) : DLSSSettings {
+	public function isFrameGenSupported() : Bool {
+		return false;
+	}
+
+	public function getUpscalerName() : String {
 		return null;
 	}
 
-	public function applyDLSS( resources : Map<DLSSTag, h3d.mat.Texture>, constants : DLSSParams, quality : DLSSQuality, mode : DLSSMode ) {
+	public function getUpscalingSettings( mode : UpscalingMode, targetWidth : Int, targetHeight : Int ) : UpscalingSettings {
+		return null;
 	}
 
-	public function tagDLSSResources( resources : Map<DLSSTag, h3d.mat.Texture> ) {
+	public function applyUpscaling( resources : Map<UpscalingTag, h3d.mat.Texture>, params : UpscalingParams, mode : UpscalingMode ) {
 	}
 
-	public function clearDLSSTags() {
+	public function setFrameGenResources( resources : Map<UpscalingTag, h3d.mat.Texture> ) {
 	}
 
-	public function setDLSSConstants( constants : DLSSParams ) {
+	public function clearFrameGenResources() {
 	}
 
-	public function setDLSSGMode( mode : DLSSGMode, numFramesToGenerate : Int = 1, releaseResources = false ) : Bool {
+	public function setFrameGenParams( params : UpscalingParams ) {
+	}
+
+	public function setFrameGenMode( mode : FrameGenMode, numFramesToGenerate : Int = 1, releaseResources = false ) : Bool {
 		return false;
 	}
 
-	public function getDLSSGMode() : DLSSGMode {
+	public function getFrameGenMode() : FrameGenMode {
 		return Off;
 	}
 
-	public function getDLSSGSettings() : DLSSGSettings {
+	public function getFrameGenSettings() : FrameGenSettings {
 		return null;
 	}
 
-	public function pclSimulationStart() {
+	public function latencyMarkerSimulationStart() {
 	}
 
-	public function pclSimulationEnd() {
+	public function latencyMarkerSimulationEnd() {
 	}
 
-	public function pclTriggerFlash() {
+	public function latencyMarkerTriggerFlash() {
 	}
 
-	public function reflexSleep() {
+	public function lowLatencySleep() {
 	}
 
-	public function setReflexOptions( mode : ReflexMode, frameLimitUs : Int = 0 ) {
+	public function setLowLatencyOptions( mode : LowLatencyMode, frameLimitUs : Int = 0 ) {
 		return false;
 	}
 
-	public function reflexLowLatencyAvailable() {
+	public function lowLatencyAvailable() {
 		return false;
 	}
 
-	public function reflexFlashIndicatorDriverControlled() {
+	public function lowLatencyFlashIndicatorDriverControlled() {
 		return false;
 	}
 
-	public function debugReflex() : String {
+	public function debugUpscaling() : String {
 		return "";
 	}
 
-	public function debugDLSSG() : String {
+	public function debugLowLatency() : String {
 		return "";
 	}
 
-	public function shutdownDLSS() {
+	public function debugFrameGen() : String {
+		return "";
+	}
+
+	public function shutdownUpscaling() {
 	}
 }

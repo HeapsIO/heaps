@@ -2059,7 +2059,7 @@ class GlDriver extends Driver {
 		return switch(f) {
 		case Bindless:
 			false;
-		case DLSS:
+		case Upscaling:
 			false;
 		case DepthTextureArray:
 			glES >= 3;

@@ -71,6 +71,29 @@ abstract Polygons(Array<Polygon>) from Array<Polygon> to Array<Polygon> {
 	}
 
 	/**
+		Returns the distance from Point `p` to the area covered by the Polygon instances in Polygons, `0` if inside any of them.
+		@param p The point to measure from.
+		@param isConvex Use simplified collision test suited for convex polygons. Results are undefined if polygon is concave.
+	**/
+	public function distance( p : Point, isConvex = false ) {
+		return Math.sqrt(distanceSq(p, isConvex));
+	}
+
+	/**
+		Same as `distance` but returns the squared value.
+	**/
+	public function distanceSq( p : Point, isConvex = false ) {
+		var best = 1e10;
+		for( pl in polygons ) {
+			if( pl.contains(p, isConvex) )
+				return 0.;
+			var d = pl.distanceSq(p);
+			if( d < best ) best = d;
+		}
+		return best;
+	}
+
+	/**
 		Optimizes all polygons and returns new Polygons instances. See [h2d.col.Polygon.optimize].
 	**/
 	public function optimize( epsilon : Float ) : Polygons {

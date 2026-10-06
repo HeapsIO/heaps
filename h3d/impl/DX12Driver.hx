@@ -16,8 +16,17 @@ import haxe.MainLoop;
 #if dlss
 import heaps.dlss.Dlss;
 #end
+#if fsr
+import heaps.fsr.Fsr;
+#end
 
 private typedef Driver = Dx12;
+
+enum abstract UpscalerSelection(String) {
+	var AUTO = "auto";
+	var DLSS = "dlss";
+	var FSR = "fsr";
+}
 
 class PSOConfigCache {
 	static inline var MAX_SIGN_SIZE = 1024;
@@ -866,12 +875,32 @@ class DX12Driver extends h3d.impl.Driver {
 	var reflexReady : Bool;
 	var reflexState : ReflexStateInfo;
 	var pclFlashRequested : Bool;
-	var dlssgMode : h3d.impl.Driver.DLSSGMode = Off;
+	var dlssgMode : h3d.impl.Driver.FrameGenMode = Off;
 	var dlssgFrames : Int = 1;
 	var dlssgLastStatus : Int = 0;
-	var reflexMode : ReflexMode = Off;
+	var reflexMode : LowLatencyMode = Off;
 	var dlssConstantsFrame : Int = -1;
+	var slInitResult : Int = -1;
+	var dlssSupportResult : Int = -1;
+	var dlssLastResult : Int = 0;
 	#end
+
+	#if fsr
+	var fsrReady : Bool;
+	var fsrInitResult : Int = -1;
+	var fsrContext : FsrContext;
+	var fsrContextWidth : Int = -1;
+	var fsrContextHeight : Int = -1;
+	var fsrContextFlags : Int = -1;
+	var fsrLastResult : Int = 0;
+	#end
+
+	var upscalingFrame : Int = -1;
+	var upscalingMode : UpscalingMode = Off;
+	var upscalingColorIn : h3d.mat.Texture;
+	var upscalingColorOut : h3d.mat.Texture;
+	var upscalingDepth : h3d.mat.Texture;
+	var upscalingMotionVectors : h3d.mat.Texture;
 
 	public static var COPY_BUFFER_SIZE = 256 * 1024 * 1024; // 256 Mo per frame
 	public static var DEFAULT_DEPTH_FORMAT : h3d.mat.Data.TextureFormat = Depth24Stencil8;
@@ -886,9 +915,12 @@ class DX12Driver extends h3d.impl.Driver {
 	public static var DEVICE_NAME = null;
 	public static var DEBUG = false; // requires dxil.dll when set to true
 	public static var SUPPRESSED_MESSAGE_IDS : Array<Int> = [];
-	public static var DLSS = true;
-	public static var FRAMEGEN = true;
-	public static var REFLEX = true;
+	public static var ENABLE_UPSCALING = true;
+	public static var UPSCALER : UpscalerSelection = UpscalerSelection.AUTO;
+	public static var FRAME_GEN = true;
+	public static var LOW_LATENCY = true;
+	public static var UPSCALER_DEBUG = false;
+	public static var UPSCALER_DEBUG_VIEW = false;
 	public static var CHECK_SL_DLL_SIGNATURE = true;
 	public static var ENABLE_PSO_CONFIG_CACHE = false;
 	public static var PSO_CONFIG_CACHE_PATH = "psoconfig.dx12";
@@ -962,13 +994,14 @@ class DX12Driver extends h3d.impl.Driver {
 
 	function reset() {
 		#if dlss
-		if ( DLSS || FRAMEGEN || REFLEX ) {
-			var features = new hl.NativeArray<Int>((DLSS ? 1 : 0) + (FRAMEGEN ? 1 : 0) + (REFLEX ? 1 : 0));
+		if ( ENABLE_UPSCALING && (UPSCALER == UpscalerSelection.AUTO || UPSCALER == UpscalerSelection.DLSS) ) {
+			var features = new hl.NativeArray<Int>(1 + (FRAME_GEN ? 1 : 0) + (LOW_LATENCY ? 1 : 0));
 			var count = 0;
-			if ( DLSS ) features[count++] = DLSSFeature.DLSS;
-			if ( FRAMEGEN ) features[count++] = DLSSFeature.FRAMEGEN;
-			if ( REFLEX ) features[count++] = DLSSFeature.REFLEX;
-			slReady = Dlss.init(false, features, CHECK_SL_DLL_SIGNATURE) == 0;
+			features[count++] = DLSSFeature.DLSS;
+			if ( FRAME_GEN ) features[count++] = DLSSFeature.FRAMEGEN;
+			if ( LOW_LATENCY ) features[count++] = DLSSFeature.REFLEX;
+			slInitResult = Dlss.init(UPSCALER_DEBUG, features, CHECK_SL_DLL_SIGNATURE);
+			slReady = slInitResult == 0;
 		}
 		#end
 
@@ -988,6 +1021,10 @@ class DX12Driver extends h3d.impl.Driver {
 		if( DEBUG ) suppressDebugMessages();
 		frames = [];
 
+		#if fsr
+		initFsr();
+		#end
+
 		#if dlss
 		if ( slReady ) {
 			var nativeDevice = Driver.getDevice();
@@ -997,13 +1034,14 @@ class DX12Driver extends h3d.impl.Driver {
 			slReady = Dlss.setDevice(device) == 0;
 			if ( slReady ) {
 				var adapter = Driver.getAdapter();
-				dlssReady = DLSS && Dlss.isFeatureSupported(adapter, DLSSFeature.DLSS) == 0;
-				framegenReady = FRAMEGEN && Dlss.isFeatureSupported(adapter, DLSSFeature.FRAMEGEN) == 0;
-				if ( REFLEX || framegenReady ) {
+				dlssSupportResult = Dlss.isFeatureSupported(adapter, DLSSFeature.DLSS);
+				dlssReady = dlssSupportResult == 0;
+				framegenReady = FRAME_GEN && Dlss.isFeatureSupported(adapter, DLSSFeature.FRAMEGEN) == 0;
+				if ( LOW_LATENCY || framegenReady ) {
 					pclReady = Dlss.isFeatureSupported(adapter, DLSSFeature.PCL) == 0 && Dlss.pclInitStats() == 0;
 					reflexReady = Dlss.isFeatureSupported(adapter, DLSSFeature.REFLEX) == 0;
 					if ( reflexState == null ) reflexState = new ReflexStateInfo();
-					reflexReady = reflexReady && setReflexOptions(Off, 0);
+					reflexReady = reflexReady && setLowLatencyOptions(Off, 0);
 				}
 			}
 		}
@@ -1277,7 +1315,7 @@ class DX12Driver extends h3d.impl.Driver {
 
 		#if dlss
 		var prevDlssgMode = dlssgMode;
-		if ( dlssgMode != Off ) setDLSSGMode(Off);
+		if ( dlssgMode != Off ) setFrameGenMode(Off);
 		#end
 
 		currentWidth = rtWidth = width;
@@ -1290,6 +1328,10 @@ class DX12Driver extends h3d.impl.Driver {
 
 		waitCopy();
 		waitGpu();
+
+		#if fsr
+		destroyFsrContext();
+		#end
 
 		for( f in frames ) {
 			if( f.backBuffer.res != null ) {
@@ -1336,7 +1378,7 @@ class DX12Driver extends h3d.impl.Driver {
 		beginFrame();
 
 		#if dlss
-		if ( prevDlssgMode != Off ) setDLSSGMode(prevDlssgMode, dlssgFrames);
+		if ( prevDlssgMode != Off ) setFrameGenMode(prevDlssgMode, dlssgFrames);
 		#end
 	}
 
@@ -1352,14 +1394,21 @@ class DX12Driver extends h3d.impl.Driver {
 
 	override function dispose() {
 		psoConfigCache?.save();
-		shutdownDLSS();
+		shutdownUpscaling();
 	}
 
-	override function shutdownDLSS() {
+	override function shutdownUpscaling() {
+		#if fsr
+		if ( fsrReady ) {
+			destroyFsrContext();
+			Fsr.shutdown();
+			fsrReady = false;
+		}
+		#end
 		#if dlss
 		if ( !slReady ) return;
 		if ( dlssgMode != Off ) {
-			setDLSSGMode(Off, 1, true);
+			setFrameGenMode(Off, 1, true);
 			Dlss.setFeatureLoaded(DLSSFeature.FRAMEGEN, false);
 		}
 		waitGpu();
@@ -3741,7 +3790,7 @@ class DX12Driver extends h3d.impl.Driver {
 		if ( dlssgMode == Off )
 			dlssgSettings.framesPresented = 1;
 		else if ( refreshDLSSGState() && dlssgSettings.status != 0 )
-			setDLSSGMode(Off);
+			setFrameGenMode(Off);
 		#end
 		waitForFrame(Driver.getCurrentBackBufferIndex());
 		beginFrame();
@@ -3835,12 +3884,12 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	static var dlssOptimalSettings = new DLSSOptimalSettings();
-	static var dlssSettings = new DLSSSettings();
+	static var dlssSettings = new UpscalingSettings();
 	static var dlssOptions = new DLSSOptions();
 	static var dlssConstants = new DLSSConstants();
 	static var dlssgOptions = new DLSSGOptions();
 	static var dlssgStateInfo = new DLSSGStateInfo();
-	static var dlssgSettings = new h3d.impl.Driver.DLSSGSettings();
+	static var dlssgSettings = new h3d.impl.Driver.FrameGenSettings();
 	static var matCameraViewToClip = new DLSSMatrix();
 	static var matClipToCameraView = new DLSSMatrix();
 	static var matClipToLensClip = new DLSSMatrix();
@@ -3852,75 +3901,291 @@ class DX12Driver extends h3d.impl.Driver {
 	static var vecCameraFwd = new DLSSVector();
 	#end
 
-	override function isDLSSSupported( framegen : Bool = false ) : Bool {
+	#if fsr
+	static var fsrParams = new FsrDispatchParams();
+	static var fsrSettings = new UpscalingSettings();
+	static var fsrSettingsMode : UpscalingMode = null;
+	static var fsrSettingsWidth = -1;
+	static var fsrSettingsHeight = -1;
+
+	function initFsr() {
+		if ( !ENABLE_UPSCALING || (UPSCALER != UpscalerSelection.AUTO && UPSCALER != UpscalerSelection.FSR) )
+			return;
 		#if dlss
-		return framegen ? framegenReady : dlssReady;
+		if ( slReady ) {
+			dlssSupportResult = Dlss.isFeatureSupported(Driver.getAdapter(), DLSSFeature.DLSS);
+			if ( dlssSupportResult == 0 )
+				return;
+		}
 		#end
-		return false;
+		fsrInitResult = Fsr.init(Driver.getDevice(), UPSCALER_DEBUG ? FsrDebugLevel.WARNINGS : FsrDebugLevel.ERRORS);
+		fsrReady = fsrInitResult == FsrResult.Ok;
+		if ( !fsrReady ) {
+			trace('FSR unavailable ($fsrInitResult)');
+			return;
+		}
+		#if dlss
+		if ( slReady ) {
+			Dlss.shutdown();
+			slReady = false;
+		}
+		#end
 	}
 
-	override function getDLSSOptimalSettings( mode : DLSSMode, targetWidth : Int, targetHeight : Int ) : DLSSSettings {
-		#if dlss
-		if ( !dlssReady ) return null;
-		switch (mode) {
-			case Off: dlssOptions.mode = OFF;
-			case MaxPerformance: dlssOptions.mode = MAXPERFORMANCE;
-			case Balanced: dlssOptions.mode = BALANCED;
-			case MaxQuality: dlssOptions.mode = MAXQUALITY;
-			case UltraPerformance: dlssOptions.mode = ULTRAPERFORMANCE;
-			case UltraQuality: dlssOptions.mode = ULTRAQUALITY;
-			case Dlaa: dlssOptions.mode = DLAA;
+	function destroyFsrContext() {
+		if ( fsrContext != null ) {
+			waitGpu();
+			Fsr.destroyContext(fsrContext);
+			fsrContext = null;
 		}
-		dlssOptions.outputWidth = targetWidth;
-		dlssOptions.outputHeight = targetHeight;
-		Dlss.getOptimalSettings(dlssOptions, dlssOptimalSettings);
-		dlssSettings.optimalWidth = dlssOptimalSettings.optimalRenderWidth;
-		dlssSettings.optimalHeight = dlssOptimalSettings.optimalRenderHeight;
-		return dlssSettings;
-		#else
-		return null;
-		#end
+		fsrContextWidth = -1;
+		fsrContextHeight = -1;
+		fsrContextFlags = -1;
 	}
 
-	override function applyDLSS( resources : Map<h3d.impl.Driver.DLSSTag, h3d.mat.Texture>, constants : DLSSParams, quality : DLSSQuality, mode : DLSSMode ) {
-		#if dlss
-		if ( !dlssReady ) return;
-		switch (mode) {
-			case Off: dlssOptions.mode = OFF;
-			case MaxPerformance: dlssOptions.mode = MAXPERFORMANCE;
-			case Balanced: dlssOptions.mode = BALANCED;
-			case MaxQuality: dlssOptions.mode = MAXQUALITY;
-			case UltraPerformance: dlssOptions.mode = ULTRAPERFORMANCE;
-			case UltraQuality: dlssOptions.mode = ULTRAQUALITY;
-			case Dlaa: dlssOptions.mode = DLAA;
+	function getFsrQuality( mode : UpscalingMode ) : FsrQuality {
+		return switch (mode) {
+			case Off, NativeAA: FsrQuality.NATIVE_AA;
+			case Quality: FsrQuality.QUALITY;
+			case Balanced: FsrQuality.BALANCED;
+			case Performance: FsrQuality.PERFORMANCE;
+			case UltraPerformance: FsrQuality.ULTRA_PERFORMANCE;
 		}
+	}
 
+	function getFsrSettings( mode : UpscalingMode, targetWidth : Int, targetHeight : Int ) : UpscalingSettings {
+		if ( mode == fsrSettingsMode && targetWidth == fsrSettingsWidth && targetHeight == fsrSettingsHeight )
+			return fsrSettings;
+		var renderWidth = targetWidth;
+		var renderHeight = targetHeight;
+		var res = Fsr.getRenderResolution(Driver.getDevice(), getFsrQuality(mode), targetWidth, targetHeight, renderWidth, renderHeight);
+		if ( res != FsrResult.Ok ) {
+			trace('FSR render resolution query failed ($res)');
+			renderWidth = targetWidth;
+			renderHeight = targetHeight;
+		}
+		fsrSettings.renderWidth = renderWidth;
+		fsrSettings.renderHeight = renderHeight;
+		fsrSettingsMode = mode;
+		fsrSettingsWidth = targetWidth;
+		fsrSettingsHeight = targetHeight;
+		return fsrSettings;
+	}
+
+	function applyFsr( resources : Map<h3d.impl.Driver.UpscalingTag, h3d.mat.Texture>, params : UpscalingParams ) {
+		var color = resources[ColorIn];
+		var depth = resources[Depth];
+		var motionVectors = resources[MotionVectors];
 		var output = resources[ColorOut];
-		dlssOptions.outputWidth = output.width;
-		dlssOptions.outputHeight = output.height;
-		dlssOptions.colorBufferHDR = constants.colorBufferHDR;
-		switch ( quality ) {
-			case Default: dlssOptions.preset = PRESET_K;
-			case Performance: dlssOptions.preset = PRESET_M;
-			case UltraPerformance: dlssOptions.preset = PRESET_L;
+		if ( color?.t == null || depth?.t == null || motionVectors?.t == null || output?.t == null )
+			return;
+
+		var flags = 0;
+		if ( params.autoExposure )
+			flags |= FsrCreateFlag.AUTO_EXPOSURE;
+		if ( params.colorBufferHDR )
+			flags |= FsrCreateFlag.HIGH_DYNAMIC_RANGE;
+		else
+			flags |= FsrCreateFlag.NON_LINEAR_COLORSPACE;
+		if ( params.depthInverted )
+			flags |= FsrCreateFlag.DEPTH_INVERTED;
+		if ( params.motionVectorsJittered )
+			flags |= FsrCreateFlag.MOTION_VECTORS_JITTER_CANCELLATION;
+		if ( UPSCALER_DEBUG ) {
+			flags |= FsrCreateFlag.DEBUG_CHECKING;
+			flags |= FsrCreateFlag.DEBUG_VISUALIZATION;
 		}
 
-		Dlss.setOptions(dlssOptions);
+		if ( output.width != fsrContextWidth || output.height != fsrContextHeight || flags != fsrContextFlags ) {
+			destroyFsrContext();
+			var res = 0;
+			fsrContext = Fsr.createContext(Driver.getDevice(), flags, output.width, output.height, output.width, output.height, res);
+			fsrContextWidth = output.width;
+			fsrContextHeight = output.height;
+			fsrContextFlags = flags;
+			if ( fsrContext == null )
+				trace('FSR context creation failed ($res)');
+			else
+				trace('FSR ${Fsr.getVersion(fsrContext)} context ${output.width}x${output.height}');
+		}
+		if ( fsrContext == null )
+			return;
 
-		tagDLSSResources(resources);
+		flushTransitions();
 
-		setDLSSConstants(constants);
+		var p = fsrParams;
+		p.color = color.t.res;
+		p.colorState = color.t.state;
+		p.depth = depth.t.res;
+		p.depthState = depth.t.state;
+		p.motionVectors = motionVectors.t.res;
+		p.motionVectorsState = motionVectors.t.state;
+		p.output = output.t.res;
+		p.outputState = output.t.state;
+		p.jitterOffsetX = params.jitterOffsetX;
+		p.jitterOffsetY = params.jitterOffsetY;
+		p.motionVectorScaleX = params.mvecScaleX * color.width;
+		p.motionVectorScaleY = params.mvecScaleY * color.height;
+		p.renderWidth = color.width;
+		p.renderHeight = color.height;
+		p.upscaleWidth = output.width;
+		p.upscaleHeight = output.height;
+		p.enableSharpening = false;
+		p.sharpness = 0.;
+		p.frameTimeDelta = hxd.Timer.elapsedTime * 1000.;
+		p.preExposure = 1.;
+		p.reset = params.reset;
+		p.cameraNear = params.depthInverted ? params.cameraFar : params.cameraNear;
+		p.cameraFar = params.depthInverted ? params.cameraNear : params.cameraFar;
+		p.cameraFovAngleVertical = hxd.Math.degToRad(params.cameraFOV);
+		p.viewSpaceToMetersFactor = 1.;
+		var dispatchFlags = 0;
+		if ( !params.colorBufferHDR )
+			dispatchFlags |= FsrDispatchFlag.NON_LINEAR_COLOR_SRGB;
+		if ( UPSCALER_DEBUG && UPSCALER_DEBUG_VIEW )
+			dispatchFlags |= FsrDispatchFlag.DRAW_DEBUG_VIEW;
+		p.flags = dispatchFlags;
 
-		Dlss.evaluateFeature(frame.dlssFrameToken, frame.commandList, DLSSFeature.DLSS);
+		beginEvent("FSR");
+		var res = Fsr.dispatch(fsrContext, frame.commandList, p);
+		endEvent();
+		if ( res != fsrLastResult ) {
+			if ( res != FsrResult.Ok )
+				trace('FSR dispatch failed ($res)');
+			fsrLastResult = res;
+		}
 
 		var arr = tmp.descriptors2;
 		arr[0] = @:privateAccess frame.srvHeap.heap;
 		arr[1] = @:privateAccess frame.samplerHeap.heap;
 		frame.commandList.setDescriptorHeaps(arr);
+		heapCount++;
+		currentShader = null;
+		currentPipelineState = null;
+
+		color.lastFrame = frameCount;
+		depth.lastFrame = frameCount;
+		motionVectors.lastFrame = frameCount;
+		output.lastFrame = frameCount;
+	}
+	#end
+
+	override function isUpscalingSupported() : Bool {
+		#if fsr
+		if ( fsrReady ) return true;
+		#end
+		#if dlss
+		return dlssReady;
+		#end
+		return false;
+	}
+
+	override function isFrameGenSupported() : Bool {
+		#if fsr
+		if ( fsrReady ) return false;
+		#end
+		#if dlss
+		return framegenReady;
+		#end
+		return false;
+	}
+
+	override function getUpscalerName() : String {
+		#if fsr
+		if ( fsrReady ) return fsrContext != null ? "FSR " + Fsr.getVersion(fsrContext) : "FSR";
+		#end
+		#if dlss
+		if ( dlssReady ) return "DLSS";
+		#end
+		return null;
+	}
+
+	#if dlss
+	function getDlssMode( mode : UpscalingMode ) : DLSSModeNative {
+		return switch (mode) {
+			case Off: DLSSModeNative.OFF;
+			case NativeAA: DLSSModeNative.DLAA;
+			case Quality: DLSSModeNative.MAXQUALITY;
+			case Balanced: DLSSModeNative.BALANCED;
+			case Performance: DLSSModeNative.MAXPERFORMANCE;
+			case UltraPerformance: DLSSModeNative.ULTRAPERFORMANCE;
+		}
+	}
+
+	function getDlssSettings( mode : UpscalingMode, targetWidth : Int, targetHeight : Int ) : UpscalingSettings {
+		dlssOptions.mode = getDlssMode(mode);
+		dlssOptions.outputWidth = targetWidth;
+		dlssOptions.outputHeight = targetHeight;
+		Dlss.getOptimalSettings(dlssOptions, dlssOptimalSettings);
+		dlssSettings.renderWidth = dlssOptimalSettings.optimalRenderWidth;
+		dlssSettings.renderHeight = dlssOptimalSettings.optimalRenderHeight;
+		return dlssSettings;
+	}
+
+	function applyDlss( resources : Map<h3d.impl.Driver.UpscalingTag, h3d.mat.Texture>, params : UpscalingParams, mode : UpscalingMode ) {
+		dlssOptions.mode = getDlssMode(mode);
+
+		var output = resources[ColorOut];
+		dlssOptions.outputWidth = output.width;
+		dlssOptions.outputHeight = output.height;
+		dlssOptions.colorBufferHDR = params.colorBufferHDR;
+		dlssOptions.preset = mode == NativeAA ? DLSSPreset.PRESET_L : DLSSPreset.PRESET_K;
+
+		Dlss.setOptions(dlssOptions);
+
+		tagDlssResources(resources);
+
+		setDlssConstants(params);
+
+		dlssLastResult = Dlss.evaluateFeature(frame.dlssFrameToken, frame.commandList, DLSSFeature.DLSS);
+
+		var arr = tmp.descriptors2;
+		arr[0] = @:privateAccess frame.srvHeap.heap;
+		arr[1] = @:privateAccess frame.samplerHeap.heap;
+		frame.commandList.setDescriptorHeaps(arr);
+	}
+	#end
+
+	override function getUpscalingSettings( mode : UpscalingMode, targetWidth : Int, targetHeight : Int ) : UpscalingSettings {
+		#if fsr
+		if ( fsrReady ) return getFsrSettings(mode, targetWidth, targetHeight);
+		#end
+		#if dlss
+		if ( dlssReady ) return getDlssSettings(mode, targetWidth, targetHeight);
+		#end
+		return null;
+	}
+
+	override function applyUpscaling( resources : Map<h3d.impl.Driver.UpscalingTag, h3d.mat.Texture>, params : UpscalingParams, mode : UpscalingMode ) {
+		upscalingFrame = frameCount;
+		upscalingMode = mode;
+		upscalingColorIn = resources[ColorIn];
+		upscalingColorOut = resources[ColorOut];
+		upscalingDepth = resources[Depth];
+		upscalingMotionVectors = resources[MotionVectors];
+		#if fsr
+		if ( fsrReady ) {
+			applyFsr(resources, params);
+			return;
+		}
+		#end
+		#if dlss
+		if ( dlssReady ) {
+			applyDlss(resources, params, mode);
+			return;
+		}
 		#end
 	}
 
-	override function tagDLSSResources( resources : Map<h3d.impl.Driver.DLSSTag, h3d.mat.Texture> ) {
+	override function setFrameGenResources( resources : Map<h3d.impl.Driver.UpscalingTag, h3d.mat.Texture> ) {
+		tagDlssResources(resources);
+	}
+
+	override function setFrameGenParams( params : UpscalingParams ) {
+		setDlssConstants(params);
+	}
+
+	function tagDlssResources( resources : Map<h3d.impl.Driver.UpscalingTag, h3d.mat.Texture> ) {
 		#if dlss
 		if ( !slReady || frame.dlssFrameToken == null ) return;
 
@@ -3956,7 +4221,7 @@ class DX12Driver extends h3d.impl.Driver {
 		#end
 	}
 
-	override function clearDLSSTags() {
+	override function clearFrameGenResources() {
 		#if dlss
 		if ( !slReady || frame.dlssFrameToken == null )
 			return;
@@ -3972,49 +4237,49 @@ class DX12Driver extends h3d.impl.Driver {
 		#end
 	}
 
-	override function setDLSSConstants( constants : DLSSParams ) {
+	function setDlssConstants( params : UpscalingParams ) {
 		#if dlss
 		if ( !slReady || frame.dlssFrameToken == null || dlssConstantsFrame == frameCount )
 			return;
 		dlssConstantsFrame = frameCount;
 
-		loadDlssMat(matCameraViewToClip, constants.cameraViewToClip);
-		loadDlssMat(matClipToCameraView, constants.clipToCameraView);
-		loadDlssMat(matClipToPrevClip, constants.clipToPrevClip);
-		loadDlssMat(matPrevClipToClip, constants.prevClipToClip);
+		loadDlssMat(matCameraViewToClip, params.cameraViewToClip);
+		loadDlssMat(matClipToCameraView, params.clipToCameraView);
+		loadDlssMat(matClipToPrevClip, params.clipToPrevClip);
+		loadDlssMat(matPrevClipToClip, params.prevClipToClip);
 
-		loadDlssVec(vecCameraPos, constants.cameraPos);
-		loadDlssVec(vecCameraUp, constants.cameraUp);
-		loadDlssVec(vecCameraRight, constants.cameraRight);
-		loadDlssVec(vecCameraFwd, constants.cameraFwd);
+		loadDlssVec(vecCameraPos, params.cameraPos);
+		loadDlssVec(vecCameraUp, params.cameraUp);
+		loadDlssVec(vecCameraRight, params.cameraRight);
+		loadDlssVec(vecCameraFwd, params.cameraFwd);
 
 		dlssConstants.cameraViewToClip = matCameraViewToClip;
 		dlssConstants.clipToCameraView = matClipToCameraView;
 		dlssConstants.clipToLensClip = matClipToLensClip;
 		dlssConstants.clipToPrevClip = matClipToPrevClip;
 		dlssConstants.prevClipToClip = matPrevClipToClip;
-		dlssConstants.jitterOffsetX = constants.jitterOffsetX;
-		dlssConstants.jitterOffsetY = constants.jitterOffsetY;
-		dlssConstants.mvecScaleX = constants.mvecScaleX;
-		dlssConstants.mvecScaleY = constants.mvecScaleY;
+		dlssConstants.jitterOffsetX = params.jitterOffsetX;
+		dlssConstants.jitterOffsetY = params.jitterOffsetY;
+		dlssConstants.mvecScaleX = params.mvecScaleX;
+		dlssConstants.mvecScaleY = params.mvecScaleY;
 		dlssConstants.cameraPinholeOffsetX = 0.0;
 		dlssConstants.cameraPinholeOffsetY = 0.0;
 		dlssConstants.cameraPos = vecCameraPos;
 		dlssConstants.cameraUp = vecCameraUp;
 		dlssConstants.cameraRight = vecCameraRight;
 		dlssConstants.cameraFwd = vecCameraFwd;
-		dlssConstants.cameraNear = constants.cameraNear;
-		dlssConstants.cameraFar = constants.cameraFar;
-		dlssConstants.cameraFOV = constants.cameraFOV;
-		dlssConstants.cameraAspectRatio = constants.cameraAspectRatio;
-		dlssConstants.motionVectorsInvalidValue = constants.motionVectorsInvalidValue;
-		dlssConstants.depthInverted = constants.depthInverted;
-		dlssConstants.cameraMotionIncluded = constants.cameraMotionIncluded;
+		dlssConstants.cameraNear = params.cameraNear;
+		dlssConstants.cameraFar = params.cameraFar;
+		dlssConstants.cameraFOV = params.cameraFOV;
+		dlssConstants.cameraAspectRatio = params.cameraAspectRatio;
+		dlssConstants.motionVectorsInvalidValue = params.motionVectorsInvalidValue;
+		dlssConstants.depthInverted = params.depthInverted;
+		dlssConstants.cameraMotionIncluded = params.cameraMotionIncluded;
 		dlssConstants.motionVectors3D = false;
-		dlssConstants.reset = constants.reset;
-		dlssConstants.orthographicProjection = constants.orthographicProjection;
-		dlssConstants.motionVectorsDilated = constants.motionVectorsDilated;
-		dlssConstants.motionVectorsJittered = constants.motionVectorsJittered;
+		dlssConstants.reset = params.reset;
+		dlssConstants.orthographicProjection = params.orthographicProjection;
+		dlssConstants.motionVectorsDilated = params.motionVectorsDilated;
+		dlssConstants.motionVectorsJittered = params.motionVectorsJittered;
 		dlssConstants.minRelativeLinearDepthObjectSeparation = 40.0;
 
 		Dlss.setConstants(frame.dlssFrameToken, dlssConstants);
@@ -4028,7 +4293,7 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 	#end
 
-	override function pclSimulationStart() {
+	override function latencyMarkerSimulationStart() {
 		#if dlss
 		if ( slReady && pclReady && frame.dlssFrameToken != null ) {
 			pclMarker(PCLMarker.SIMULATION_START);
@@ -4037,7 +4302,7 @@ class DX12Driver extends h3d.impl.Driver {
 		#end
 	}
 
-	override function pclSimulationEnd() {
+	override function latencyMarkerSimulationEnd() {
 		#if dlss
 		pclMarker(PCLMarker.SIMULATION_END);
 		if ( pclFlashRequested ) {
@@ -4047,31 +4312,31 @@ class DX12Driver extends h3d.impl.Driver {
 		#end
 	}
 
-	override function pclTriggerFlash() {
+	override function latencyMarkerTriggerFlash() {
 		#if dlss
 		pclFlashRequested = true;
 		#end
 	}
 
-	override function reflexSleep() {
+	override function lowLatencySleep() {
 		#if dlss
 		if ( slReady && reflexReady && frame.dlssFrameToken != null )
 			Dlss.reflexSleep(frame.dlssFrameToken);
 		#end
 	}
 
-	override function setReflexOptions( mode : ReflexMode, frameLimitUs : Int = 0 ) {
+	override function setLowLatencyOptions( mode : LowLatencyMode, frameLimitUs : Int = 0 ) {
 		#if dlss
 		if ( !slReady || !reflexReady )
 			return false;
 
 		if ( mode == Off && dlssgMode != Off )
-			mode = LowLatency;
+			mode = LowLatencyMode.On;
 
 		var native = switch ( mode ) {
 			case Off: ReflexModeNative.OFF;
-			case LowLatency: ReflexModeNative.LOW_LATENCY;
-			case LowLatencyWithBoost: ReflexModeNative.LOW_LATENCY_WITH_BOOST;
+			case On: ReflexModeNative.LOW_LATENCY;
+			case OnWithBoost: ReflexModeNative.LOW_LATENCY_WITH_BOOST;
 		}
 
 		if ( Dlss.reflexSetOptions(native, frameLimitUs, false, PCLHotKey.USE_PING_MESSAGE, 0) != 0 )
@@ -4084,12 +4349,12 @@ class DX12Driver extends h3d.impl.Driver {
 		#end
 	}
 
-	override function setDLSSGMode( mode : h3d.impl.Driver.DLSSGMode, numFramesToGenerate : Int = 1, releaseResources = false ) : Bool {
+	override function setFrameGenMode( mode : h3d.impl.Driver.FrameGenMode, numFramesToGenerate : Int = 1, releaseResources = false ) : Bool {
 		#if dlss
 		if ( !slReady || !framegenReady )
 			return false;
 
-		if ( mode != Off && reflexMode == Off && !setReflexOptions(LowLatency) )
+		if ( mode != Off && reflexMode == Off && !setLowLatencyOptions(LowLatencyMode.On) )
 			return false;
 
 		dlssgOptions.mode = switch ( mode ) {
@@ -4117,7 +4382,7 @@ class DX12Driver extends h3d.impl.Driver {
 		#end
 	}
 
-	override function getDLSSGMode() : h3d.impl.Driver.DLSSGMode {
+	override function getFrameGenMode() : h3d.impl.Driver.FrameGenMode {
 		#if dlss
 		return dlssgMode;
 		#else
@@ -4142,7 +4407,7 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 	#end
 
-	override function getDLSSGSettings() : h3d.impl.Driver.DLSSGSettings {
+	override function getFrameGenSettings() : h3d.impl.Driver.FrameGenSettings {
 		#if dlss
 		return slReady && framegenReady ? dlssgSettings : null;
 		#else
@@ -4150,7 +4415,7 @@ class DX12Driver extends h3d.impl.Driver {
 		#end
 	}
 
-	override function reflexLowLatencyAvailable() {
+	override function lowLatencyAvailable() {
 		#if dlss
 		return slReady && reflexReady && reflexState != null && reflexState.lowLatencyAvailable != 0;
 		#else
@@ -4158,7 +4423,7 @@ class DX12Driver extends h3d.impl.Driver {
 		#end
 	}
 
-	override function reflexFlashIndicatorDriverControlled() {
+	override function lowLatencyFlashIndicatorDriverControlled() {
 		#if dlss
 		return slReady && reflexReady && reflexState != null && reflexState.flashIndicatorDriverControlled != 0;
 		#else
@@ -4166,7 +4431,90 @@ class DX12Driver extends h3d.impl.Driver {
 		#end
 	}
 
-	override function debugDLSSG() : String {
+	override function debugUpscaling() : String {
+		var buf = new StringBuf();
+		buf.add("=== Upscaling Debug ===\n");
+		if ( !ENABLE_UPSCALING ) {
+			buf.add("Upscaling is disabled (ENABLE_UPSCALING = false)\n");
+			return buf.toString();
+		}
+		var name = getUpscalerName();
+		if ( name == null ) {
+			buf.add('No upscaler available (UPSCALER = $UPSCALER)\n');
+			#if dlss
+			if ( UPSCALER == UpscalerSelection.FSR )
+				buf.add("DLSS: not selected\n");
+			else if ( slInitResult != 0 )
+				buf.add('DLSS: Streamline init failed ($slInitResult)\n');
+			else if ( dlssSupportResult < 0 )
+				buf.add("DLSS: Streamline device setup failed\n");
+			else
+				buf.add('DLSS: not supported on this adapter ($dlssSupportResult)\n');
+			#else
+			buf.add("DLSS: not compiled (-D dlss)\n");
+			#end
+			#if fsr
+			if ( UPSCALER == UpscalerSelection.DLSS )
+				buf.add("FSR: not selected\n");
+			else
+				buf.add('FSR: init failed ($fsrInitResult)\n');
+			#else
+			buf.add("FSR: not compiled (-D fsr)\n");
+			#end
+			return buf.toString();
+		}
+		buf.add('upscaler=$name mode=$upscalingMode\n');
+		var input = upscalingColorIn;
+		var output = upscalingColorOut;
+		if ( upscalingFrame < 0 || input == null || output == null ) {
+			buf.add("Upscaling was never applied\n");
+			return buf.toString();
+		}
+		buf.add('render=${input.width}x${input.height} output=${output.width}x${output.height}\n');
+		var issues = [];
+		var age = frameCount - upscalingFrame;
+		if ( age > 1 )
+			issues.push('not applied for $age frames');
+		function checkInput( t : h3d.mat.Texture, tname : String ) {
+			if ( t == null )
+				issues.push('missing $tname');
+			else if ( t.width != input.width || t.height != input.height )
+				issues.push('$tname is ${t.width}x${t.height}');
+		}
+		checkInput(upscalingDepth, "depth");
+		checkInput(upscalingMotionVectors, "motion vectors");
+		if ( upscalingMode != Off && upscalingMode != NativeAA ) {
+			var optimal = getUpscalingSettings(upscalingMode, output.width, output.height);
+			if ( optimal != null && (optimal.renderWidth != input.width || optimal.renderHeight != input.height) )
+				issues.push('render size differs from optimal ${optimal.renderWidth}x${optimal.renderHeight}');
+		} else if ( input.width != output.width || input.height != output.height )
+			issues.push("render size differs from output size");
+		#if fsr
+		if ( fsrReady ) {
+			if ( fsrContext == null )
+				issues.push("FSR context creation failed");
+			else if ( fsrLastResult != FsrResult.Ok )
+				issues.push('FSR dispatch failed ($fsrLastResult)');
+			if ( UPSCALER_DEBUG )
+				buf.add("FSR debug checker on, warnings go to the log\n");
+		}
+		#end
+		#if dlss
+		var dlssResult : SlResult = cast dlssLastResult;
+		if ( dlssReady && dlssResult == SlResult.WarnOutOfVRAM ) {
+			var mem = getMemoryUsage();
+			issues.push('DLSS out of VRAM warning (${Std.int(mem.allocated / 1048576)} / ${Std.int(mem.total / 1048576)} MB)');
+		} else if ( dlssReady && dlssResult != SlResult.Ok )
+			issues.push('DLSS evaluate failed ($dlssLastResult)');
+		#end
+		if ( issues.length == 0 )
+			buf.add("status=Ok\n");
+		for ( issue in issues )
+			buf.add('status: $issue\n');
+		return buf.toString();
+	}
+
+	override function debugFrameGen() : String {
 		#if dlss
 		var buf = new StringBuf();
 		buf.add("=== DLSS-G Debug ===\n");
@@ -4179,7 +4527,7 @@ class DX12Driver extends h3d.impl.Driver {
 			return buf.toString();
 		}
 		buf.add('mode=$dlssgMode framesToGenerate=$dlssgFrames reflexMode=$reflexMode\n');
-		var state = getDLSSGSettings();
+		var state = getFrameGenSettings();
 		buf.add('framesPresentedPerFrame=${state.framesPresented}\n');
 		buf.add('minWidthOrHeight=${state.minWidthOrHeight} maxFramesToGenerate=${state.maxFramesToGenerate} ');
 		buf.add('dynamicSupported=${state.dynamicSupported} vsyncSupported=${state.vsyncSupported}\n');
@@ -4200,7 +4548,7 @@ class DX12Driver extends h3d.impl.Driver {
 		return "DLSS Undefined";
 	}
 
-	override function debugReflex() : String {
+	override function debugLowLatency() : String {
 		#if dlss
 		var buf = new StringBuf();
 		buf.add("=== Reflex Debug ===\n");
