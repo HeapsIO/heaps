@@ -361,6 +361,9 @@ class DxFrame {
 	public var copyBufferCursor : Int = 0;
 	public var fenceValue : Int64;
 	public var toRelease : Array<Resource> = [];
+	#if (hldx >= version("2.0.0"))
+	public var placedToFree : Array<TextureData> = [];
+	#end
 	public var texHandlesToRelease : Array<h3d.mat.TextureHandle> = [];
 	public var bufHandlesToRelease : Array<h3d.BufferHandle> = [];
 	public var srvHeap : ScratchHeap;
@@ -717,6 +720,11 @@ class TextureData extends ResourceData {
 	var cpuViewBits : Int = -1;
 	var cpuViewIndex : Int = -1;
 	var cpuViewsMap : Map<Int, Int>;
+	#if (hldx >= version("2.0.0"))
+	public var page : TextureHeapPage;
+	public var pagePos : Int;
+	public var pageSize : Int;
+	#end
 
 	inline public function getView(bits: Int) {
 		if( cpuViewBits == bits )
@@ -762,6 +770,167 @@ class TextureData extends ResourceData {
 	}
 }
 
+#if (hldx >= version("2.0.0"))
+class TextureHeapPage {
+	public var heap(default,null) : Heap;
+	public var size(default,null) : Int;
+	public var used(default,null) : Int = 0;
+	// sorted list of [pos,len] free ranges
+	var freeList : Array<Int>;
+
+	public function new( heap, size ) {
+		this.heap = heap;
+		this.size = size;
+		freeList = [0, size];
+	}
+
+	public function alloc( size : Int, align : Int ) {
+		var i = 0;
+		while( i < freeList.length ) {
+			var pos = freeList[i];
+			var len = freeList[i + 1];
+			var apos = (pos + align - 1) & ~(align - 1);
+			var end = apos + size;
+			var rest = pos + len - end;
+			if( rest >= 0 ) {
+				if( apos > pos ) {
+					freeList[i + 1] = apos - pos;
+					if( rest > 0 ) {
+						freeList.insert(i + 2, end);
+						freeList.insert(i + 3, rest);
+					}
+				} else if( rest > 0 ) {
+					freeList[i] = end;
+					freeList[i + 1] = rest;
+				} else
+					freeList.splice(i, 2);
+				used += size;
+				return apos;
+			}
+			i += 2;
+		}
+		return -1;
+	}
+
+	public function free( pos : Int, size : Int ) {
+		used -= size;
+		var i = 0;
+		while( i < freeList.length && freeList[i] < pos )
+			i += 2;
+		freeList.insert(i, pos);
+		freeList.insert(i + 1, size);
+		// merge with next
+		if( i + 2 < freeList.length && pos + size == freeList[i + 2] ) {
+			freeList[i + 1] += freeList[i + 3];
+			freeList.splice(i + 2, 2);
+		}
+		// merge with previous
+		if( i > 0 && freeList[i - 2] + freeList[i - 1] == pos ) {
+			freeList[i - 1] += freeList[i + 1];
+			freeList.splice(i, 2);
+		}
+	}
+}
+
+/**
+	Sub-allocates small sampled textures (not render targets / not writable) as placed resources
+	into heaps, instead of one committed resource per texture (min 64KB each).
+	Only textures accepting the 4KB placement alignment (most detailed mip <= 64KB) are placed,
+	bigger ones keep being committed resources so they can be released / evicted individually.
+**/
+class TextureHeapAllocator {
+
+	static inline var SMALL_ALIGN = 4096;
+	static inline var DEFAULT_ALIGN = 65536;
+
+	public var pageSize(default,null) : Int;
+	public var pages(default,null) : Array<TextureHeapPage> = [];
+	var heapDesc : HeapDesc;
+	var allocInfo : ResourceAllocationInfo;
+
+	public function new( pageSize ) {
+		this.pageSize = pageSize;
+		heapDesc = new HeapDesc();
+		heapDesc.sizeInBytes = pageSize;
+		heapDesc.properties.type = DEFAULT;
+		heapDesc.alignment = DEFAULT_ALIGN;
+		heapDesc.flags.set(DENY_BUFFERS);
+		heapDesc.flags.set(DENY_RT_DS_TEXTURES);
+		heapDesc.flags.set(CREATE_NOT_ZEROED);
+		allocInfo = new ResourceAllocationInfo();
+	}
+
+	/**
+		Returns the allocation size of the texture, or -1 if it should not be placed (too big).
+		Sets desc.alignment accordingly.
+	**/
+	public function getAllocSize( t : h3d.mat.Texture, desc : ResourceDesc ) {
+		// small alignment requires the most detailed mip to fit in 64KB
+		if( hxd.Pixels.calcDataSize(t.width, t.height, t.format) * t.layerCount > 65536 )
+			return -1;
+		desc.alignment = SMALL_ALIGN;
+		Dx12.getResourceAllocationInfo(desc, allocInfo);
+		if( allocInfo.alignment != SMALL_ALIGN ) {
+			desc.alignment = 0;
+			return -1;
+		}
+		return allocInfo.sizeInBytes.low;
+	}
+
+	public function alloc( td : TextureData, desc : ResourceDesc, size : Int ) : GpuResource {
+		var align = desc.alignment.low;
+		var page = null, pos = -1;
+		for( p in pages ) {
+			if( p.size - p.used < size ) continue;
+			pos = p.alloc(size, align);
+			if( pos >= 0 ) {
+				page = p;
+				break;
+			}
+		}
+		if( page == null ) {
+			var heap = Dx12.createHeap(heapDesc);
+			if( heap == null )
+				return null;
+			heap.setName("TextureHeap#" + pages.length);
+			page = new TextureHeapPage(heap, pageSize);
+			pages.push(page);
+			pos = page.alloc(size, align);
+		}
+		var res = Dx12.createPlacedResource(page.heap, pos, desc, td.state, null);
+		if( res == null ) {
+			freeBlock(page, pos, size);
+			return null;
+		}
+		td.page = page;
+		td.pagePos = pos;
+		td.pageSize = size;
+		return res;
+	}
+
+	public function free( td : TextureData ) {
+		if( td.page == null ) return;
+		freeBlock(td.page, td.pagePos, td.pageSize);
+		td.page = null;
+	}
+
+	function freeBlock( page : TextureHeapPage, pos : Int, size : Int ) {
+		page.free(pos, size);
+		// release empty pages, but keep one to prevent alloc/free churn
+		if( page.used == 0 && pages.length > 1 ) {
+			pages.remove(page);
+			page.heap.release();
+		}
+	}
+
+	public function getStats() {
+		var used = 0.;
+		for( p in pages ) used += p.used;
+		return { pages : pages.length, size : pages.length * (pageSize:Float), used : used };
+	}
+}
+#end
+
 class QueryData {
 	public var heap : Int;
 	public var offset : Int;
@@ -794,6 +963,9 @@ class DX12Driver extends h3d.impl.Driver {
 	var window : dx.Window;
 	var onContextLost : Void -> Void;
 	var frames : Array<DxFrame>;
+	#if (hldx >= version("2.0.0"))
+	var textureHeap : TextureHeapAllocator;
+	#end
 	var frame : DxFrame;
 	var fence : Fence;
 	var fenceEvent : WaitEvent;
@@ -903,6 +1075,7 @@ class DX12Driver extends h3d.impl.Driver {
 	var upscalingMotionVectors : h3d.mat.Texture;
 
 	public static var COPY_BUFFER_SIZE = 256 * 1024 * 1024; // 256 Mo per frame
+	public static var TEXTURE_HEAP_SIZE = 16 * 1024 * 1024;
 	public static var DEFAULT_DEPTH_FORMAT : h3d.mat.Data.TextureFormat = Depth24Stencil8;
 	public static var DEFAULT_DEPTH_VALUE = 1.0;
 	public static var INITIAL_RT_COUNT = 1024;
@@ -1020,6 +1193,9 @@ class DX12Driver extends h3d.impl.Driver {
 		driver = Driver.create(window, flags, DEVICE_NAME);
 		if( DEBUG ) suppressDebugMessages();
 		frames = [];
+		#if (hldx >= version("2.0.0"))
+		textureHeap = TEXTURE_HEAP_SIZE > 0 ? new TextureHeapAllocator(TEXTURE_HEAP_SIZE) : null;
+		#end
 
 		#if fsr
 		initFsr();
@@ -1209,6 +1385,10 @@ class DX12Driver extends h3d.impl.Driver {
 		frame.copyBufferCursor = 0;
 		while( frame.toRelease.length > 0 )
 			frame.toRelease.pop().release();
+		#if (hldx >= version("2.0.0"))
+		while( frame.placedToFree.length > 0 )
+			textureHeap.free(frame.placedToFree.pop());
+		#end
 
 		var errorTexSampler = getCpuSampler(errorTex);
 		var errorTexView = getCpuTexView(errorTex);
@@ -2674,6 +2854,12 @@ class DX12Driver extends h3d.impl.Driver {
 			desc.flags.set(ALLOW_UNORDERED_ACCESS);
 
 		td.state = td.targetState = isRT ? RENDER_TARGET : COMMON;
+		#if (hldx >= version("2.0.0"))
+		var placedSize = textureHeap == null || isRT || t.flags.has(Writable) ? -1 : textureHeap.getAllocSize(t, desc);
+		if( placedSize > 0 )
+			td.res = textureHeap.alloc(td, desc, placedSize);
+		else
+		#end
 		td.res = Driver.createCommittedResource(tmp.heap, flags, desc, td.state, clear);
 		if( td.res == null )
 			return null;
@@ -2735,10 +2921,17 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	override function disposeTexture(t:h3d.mat.Texture) {
-		if( t.lastFrame <= (frameCount - BUFFER_COUNT) )
+		if( t.lastFrame <= (frameCount - BUFFER_COUNT) ) {
 			t.t.res.release();
-		else
+			#if (hldx >= version("2.0.0"))
+			textureHeap?.free(t.t);
+			#end
+		} else {
 			disposeResource(t.t);
+			#if (hldx >= version("2.0.0"))
+			if( t.t.page != null ) frame.placedToFree.push(t.t);
+			#end
+		}
 		disposeTextureViews(t.t);
 		var handles = textureHandles.get(t);
 		if ( handles != null ) {
