@@ -387,7 +387,7 @@ class Text extends Drawable {
 			x += esize;
 			prevChar = cc;
 			if( lineBreak ) {
-				if( x > maxWidth && lastBreak >= 0 && (!trimTrailingSpaces || !font.charset.isSpace(cc) || startX > maxWidth) ) {
+				if( x > maxWidth && lastBreak >= lastPos && (!trimTrailingSpaces || !font.charset.isSpace(cc) || startX > maxWidth) ) {
 					i = lastBreak;
 					x = lastBreakX;
 					flushLine(i + 1);
