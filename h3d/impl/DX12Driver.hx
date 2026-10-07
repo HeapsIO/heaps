@@ -3919,7 +3919,7 @@ class DX12Driver extends h3d.impl.Driver {
 		}
 		var position = 0;
 		for( i in 0...frame.queryCurrentHeap ) {
-			var count = i < frame.queryCurrentHeap - 1 ? QUERY_COUNT : frame.queryHeapOffset;
+			var count = i < frame.queryCurrentHeap - 1 || frame.queryHeapOffset == 0 ? QUERY_COUNT : frame.queryHeapOffset;
 			frame.commandList.resolveQueryData(frame.queryHeaps[i], TIMESTAMP, 0, count, frame.queryBuffer, position);
 			position += count * 8;
 		}
