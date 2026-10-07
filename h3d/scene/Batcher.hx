@@ -1056,7 +1056,7 @@ private class BatchPass {
 					sd.textureHandles = [];
 				var h : h3d.mat.TextureHandle = curShader.getParamValue(p.index);
 				if ( sd.textureHandles.indexOf(h) < 0 )
-					textureHandles.push(h);
+					sd.textureHandles.push(h);
 				bufLoader.loadInt(h.handle.low);
 				bufLoader.loadInt(h.handle.high);
 			case TSampler(_):
