@@ -1953,9 +1953,15 @@ class DX12Driver extends h3d.impl.Driver {
 			captureTexPixels(pixels, tex, layer, mipLevel);
 		}
 
-		if(oldRTs.length > 0){
+		// the command list has been reset : restore the render targets, unless one has been disposed
+		var restore = oldRTs.length > 0;
+		for( rt in oldRTs )
+			if( rt.t == null )
+				restore = false;
+		if( restore )
 			setRenderTargets(oldRTs);
-		}
+		else
+			setRenderTarget(null);
 
 		return pixels;
 	}
@@ -1997,12 +2003,13 @@ class DX12Driver extends h3d.impl.Driver {
 		waitGpu();
 
 		var output = tmpBuf.map(0, null);
-		var stride = hxd.Pixels.calcStride(pixels.width, tex.format);
+		var rows = tex.format.match(S3TC(_)) ? (pixels.height + 3) >> 2 : pixels.height;
+		var stride = Std.int(hxd.Pixels.calcDataSize(pixels.width, pixels.height, tex.format) / rows);
 		var rowStride = dst.placedFootprint.footprint.rowPitch;
 		if( rowStride == stride )
-			(pixels.bytes:hl.Bytes).blit(pixels.offset, output, 0, stride * pixels.height);
+			(pixels.bytes:hl.Bytes).blit(pixels.offset, output, 0, stride * rows);
 		else {
-			for( i in 0...pixels.height )
+			for( i in 0...rows )
 				(pixels.bytes:hl.Bytes).blit(pixels.offset + i * stride, output, i * rowStride, stride);
 		}
 
@@ -2881,15 +2888,15 @@ class DX12Driver extends h3d.impl.Driver {
 				var srv = getCpuTexView(t);
 				var srvIndex = h.handle.low;
 				Driver.copyDescriptorsSimple(1, bindlessSrvHeap.getCpuAddressAt(srvIndex), srv, CBV_SRV_UAV);
-				Driver.copyDescriptorsSimple(1, frame.srvHeap.getCpuAddressAt(srvIndex), srv, CBV_SRV_UAV);
 				var sampler = getCpuSampler(t);
 				var samplerIndex = h.handle.high;
 				Driver.copyDescriptorsSimple(1, bindlessSamplerHeap.getCpuAddressAt(samplerIndex), sampler, SAMPLER);
-				Driver.copyDescriptorsSimple(1, frame.samplerHeap.getCpuAddressAt(samplerIndex), sampler, SAMPLER);
 			}
 		}
 		t.t = prevTd;
 		t.loadBits(prevBits);
+		if ( handles != null && frame != null )
+			flushHeaps();
 		return td;
 	}
 
