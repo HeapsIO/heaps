@@ -102,6 +102,10 @@ enum Feature {
 		Supports depth clamping instead of clipping against the near and far planes.
 	*/
 	DepthClamp;
+	/*
+		Textures can allocate only their less detailed mip levels (see Texture.setResidentMip).
+	*/
+	ResidentMips;
 }
 
 enum QueryKind {
@@ -404,6 +408,15 @@ class Driver {
 		Returns true if we could copy the texture, false otherwise (not supported by driver or mismatch in size/format)
 	**/
 	public function copyTexture( from : h3d.mat.Texture, to : h3d.mat.Texture ) {
+		return false;
+	}
+
+	/**
+		Reallocates the allocated texture so its most detailed mip level is `mip`, keeping the content
+		of the mip levels common to both allocations. Returns false if not supported or out of memory,
+		in which case the texture is unchanged. Requires the ResidentMips feature.
+	**/
+	public function setResidentMip( t : h3d.mat.Texture, mip : Int ) : Bool {
 		return false;
 	}
 

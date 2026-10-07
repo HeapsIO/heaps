@@ -866,7 +866,7 @@ class TextureHeapAllocator {
 	**/
 	public function getAllocSize( t : h3d.mat.Texture, desc : ResourceDesc ) {
 		// small alignment requires the most detailed mip to fit in 64KB
-		if( hxd.Pixels.calcDataSize(t.width, t.height, t.format) * t.layerCount > 65536 )
+		if( hxd.Pixels.calcDataSize(desc.width.low, desc.height, t.format) * t.layerCount > 65536 )
 			return -1;
 		desc.alignment = SMALL_ALIGN;
 		Dx12.getResourceAllocationInfo(desc, allocInfo);
@@ -1968,7 +1968,8 @@ class DX12Driver extends h3d.impl.Driver {
 		var src = tmp.srcTextureLocation;
 		src.res = tex.t.res;
 		src.type = SUBRESOURCE_INDEX;
-		src.subResourceIndex = mipLevel + layer * tex.mipLevels;
+		if( mipLevel < tex.residentMip ) throw "Mip level " + mipLevel + " is not resident in " + tex;
+		src.subResourceIndex = (mipLevel - tex.residentMip) + layer * (tex.mipLevels - tex.residentMip);
 		var srcDesc = makeTextureDesc(tex);
 
 		var dst = tmp.dstTextureLocation;
@@ -2812,10 +2813,11 @@ class DX12Driver extends h3d.impl.Driver {
 	function makeTextureDesc(t:h3d.mat.Texture) {
 		var desc = new ResourceDesc();
 		desc.dimension = t.flags.has(Is3D) ? TEXTURE3D : TEXTURE2D;
-		desc.width = t.width;
-		desc.height = t.height;
+		var r = t.residentMip;
+		desc.width = r == 0 ? t.width : hxd.Math.imax(1, t.width >> r);
+		desc.height = r == 0 ? t.height : hxd.Math.imax(1, t.height >> r);
 		desc.depthOrArraySize = t.layerCount;
-		desc.mipLevels = t.mipLevels;
+		desc.mipLevels = t.mipLevels - r;
 		desc.sampleDesc.count = 1;
 		desc.format = getTextureFormat(t);
 		return desc;
@@ -2823,7 +2825,7 @@ class DX12Driver extends h3d.impl.Driver {
 
 	override function allocTexture(t:h3d.mat.Texture):Texture {
 
-		if( t.format.match(S3TC(_)) && (t.width & 3 != 0 || t.height & 3 != 0) )
+		if( t.format.match(S3TC(_)) && ((t.width >> t.residentMip) & 3 != 0 || (t.height >> t.residentMip) & 3 != 0) )
 			throw t+" is compressed "+t.width+"x"+t.height+" but should be a 4x4 multiple";
 
 		var isRT = t.flags.has(Target);
@@ -2959,9 +2961,11 @@ class DX12Driver extends h3d.impl.Driver {
 	override function uploadTexturePixels(t:h3d.mat.Texture, pixels:hxd.Pixels, mipLevel:Int, side:Int) {
 		pixels.convert(t.format);
 		if( mipLevel >= t.mipLevels ) throw "Mip level outside texture range : " + mipLevel + " (max = " + (t.mipLevels - 1) + ")";
+		if( mipLevel < t.residentMip ) throw "Mip level " + mipLevel + " is not resident in " + t;
 
 		var is3d = t.flags.has(Is3D);
-		var subRes = is3d ? mipLevel : mipLevel + side * t.mipLevels;
+		var mip = mipLevel - t.residentMip;
+		var subRes = is3d ? mip : mip + side * (t.mipLevels - t.residentMip);
 		var tmpSize = t.t.res.getRequiredIntermediateSize(subRes, 1).low;
 		if ( is3d )
 			tmpSize = Std.int(tmpSize / t.layerCount );
@@ -3027,7 +3031,7 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	override function copyTexture(from:h3d.mat.Texture, to:h3d.mat.Texture):Bool {
-		if( from.t == null || from.format != to.format || from.width != to.width || from.height != to.height || from.layerCount != to.layerCount || from.mipLevels != to.mipLevels )
+		if( from.t == null || from.format != to.format || from.width != to.width || from.height != to.height || from.layerCount != to.layerCount || from.mipLevels != to.mipLevels || from.residentMip != to.residentMip )
 			return false;
 		if( to.t == null ) {
 			var prev = from.lastFrame;
@@ -3049,7 +3053,8 @@ class DX12Driver extends h3d.impl.Driver {
 		dst.type = SUBRESOURCE_INDEX;
 		src.type = SUBRESOURCE_INDEX;
 		var is3d = to.flags.has(Is3D);
-		var subResCount = is3d ? to.mipLevels : to.layerCount * to.mipLevels;
+		var mipCount = to.mipLevels - to.residentMip;
+		var subResCount = is3d ? mipCount : to.layerCount * mipCount;
 		for ( i in 0...subResCount ) {
 			dst.subResourceIndex = i;
 			src.subResourceIndex = i;
@@ -3059,6 +3064,49 @@ class DX12Driver extends h3d.impl.Driver {
 		for( t in currentRenderTargets )
 			if( t == to || t == from )
 				transition( t.t, RENDER_TARGET );
+		return true;
+	}
+
+	override function setResidentMip( t : h3d.mat.Texture, mip : Int ) : Bool {
+		var prev = t.t;
+		var prevMip = t.residentMip;
+		var wasCleared = t.flags.has(WasCleared);
+		t.residentMip = mip;
+		var td = allocTexture(t);
+		if( wasCleared ) t.flags.set(WasCleared); // content is kept
+		if( td == null ) {
+			t.residentMip = prevMip;
+			return false;
+		}
+		// copy the mip levels common to both allocations
+		var levels = t.mipLevels;
+		var first = mip > prevMip ? mip : prevMip;
+		transition(prev, COPY_SOURCE);
+		transition(td, COPY_DEST);
+		flushTransitions();
+		var dst = tmp.dstTextureLocation;
+		var src = tmp.srcTextureLocation;
+		dst.res = td.res;
+		src.res = prev.res;
+		dst.type = SUBRESOURCE_INDEX;
+		src.type = SUBRESOURCE_INDEX;
+		for( layer in 0...t.layerCount )
+			for( m in first...levels ) {
+				src.subResourceIndex = (m - prevMip) + layer * (levels - prevMip);
+				dst.subResourceIndex = (m - mip) + layer * (levels - mip);
+				frame.commandList.copyTextureRegion(dst, 0, 0, 0, src, null);
+			}
+		// back to COMMON so the new mip levels can be uploaded with the copy queue
+		transition(td, COMMON);
+		flushTransitions();
+		// the previous allocation is used by the copy : always release it later
+		disposeResource(prev);
+		#if (hldx >= version("2.0.0"))
+		if( prev.page != null ) frame.placedToFree.push(prev);
+		#end
+		disposeTextureViews(prev);
+		t.t = td;
+		t.lastFrame = frameCount;
 		return true;
 	}
 
@@ -3114,13 +3162,17 @@ class DX12Driver extends h3d.impl.Driver {
 		return fmt;
 	}
 
+	inline function getViewMip( t : h3d.mat.Texture ) {
+		return t.startingMip > t.residentMip ? t.startingMip - t.residentMip : 0;
+	}
+
 	function fillTexViewDesc( t : h3d.mat.Texture, srvDesc : ShaderResourceViewDesc ) {
 		if(t.slice > 0 ){
 			var desc = unsafeCastTo(srvDesc, Tex2DArraySRV);
 			desc.format = t.t.format;
 			desc.dimension = TEXTURE2DARRAY;
 			desc.shader4ComponentMapping = ShaderComponentMapping.DEFAULT;
-			desc.mostDetailedMip = t.startingMip;
+			desc.mostDetailedMip = getViewMip(t);
 			desc.mipLevels = -1;
 			desc.firstArraySlice = t.slice - 1;
 			desc.arraySize = 1;
@@ -3131,7 +3183,7 @@ class DX12Driver extends h3d.impl.Driver {
 			desc.format = t.isDepth() ? toDepthFormat(t.format) : t.t.format;
 			desc.dimension = TEXTURECUBE;
 			desc.shader4ComponentMapping = ShaderComponentMapping.DEFAULT;
-			desc.mostDetailedMip = t.startingMip;
+			desc.mostDetailedMip = getViewMip(t);
 			desc.mipLevels = -1;
 			desc.resourceMinLODClamp = 0;
 		} else if( t.flags.has(IsArray) ) {
@@ -3139,7 +3191,7 @@ class DX12Driver extends h3d.impl.Driver {
 			desc.format = t.isDepth() ? toDepthFormat(t.format) : t.t.format;
 			desc.dimension = TEXTURE2DARRAY;
 			desc.shader4ComponentMapping = ShaderComponentMapping.DEFAULT;
-			desc.mostDetailedMip = t.startingMip;
+			desc.mostDetailedMip = getViewMip(t);
 			desc.mipLevels = -1;
 			desc.firstArraySlice = 0;
 			desc.arraySize = t.layerCount;
@@ -3150,7 +3202,7 @@ class DX12Driver extends h3d.impl.Driver {
 			desc.format = t.t.format;
 			desc.dimension = TEXTURE3D;
 			desc.shader4ComponentMapping = ShaderComponentMapping.DEFAULT;
-			desc.mostDetailedMip = t.startingMip;
+			desc.mostDetailedMip = getViewMip(t);
 			desc.mipLevels = -1;
 			desc.resourceMinLODClamp = 0;
 		} else {
@@ -3158,7 +3210,7 @@ class DX12Driver extends h3d.impl.Driver {
 			desc.format = t.isDepth() ? toDepthFormat(t.format) : t.t.format;
 			desc.dimension = TEXTURE2D;
 			desc.shader4ComponentMapping = ShaderComponentMapping.DEFAULT;
-			desc.mostDetailedMip = t.startingMip;
+			desc.mostDetailedMip = getViewMip(t);
 			desc.mipLevels = -1;
 			desc.planeSlice = 0;
 			desc.resourceMinLODClamp = 0;

@@ -165,15 +165,22 @@ class MemoryManager {
 	function memSize( t : h3d.mat.Texture ) {
 		if( t.flags.has(AsyncLoading) && t.flags.has(Loading) )
 			return 4; // 1x1 pixel
-		var size = hxd.Pixels.calcDataSize(t.width,t.height,t.format);
-		if( t.mipLevels > 0 ) {
-			for( i in 1...t.mipLevels ) {
-				var w = t.width >> i; if( w == 0 ) w = 1;
-				var h = t.height >> i; if( h == 0 ) h = 1;
-				size += hxd.Pixels.calcDataSize(w,h,t.format);
-			}
+		var size = 0;
+		for( i in t.residentMip...t.mipLevels ) {
+			var w = t.width >> i; if( w == 0 ) w = 1;
+			var h = t.height >> i; if( h == 0 ) h = 1;
+			size += hxd.Pixels.calcDataSize(w,h,t.format);
 		}
 		return size * t.layerCount;
+	}
+
+	@:allow(h3d.mat.Texture.setResidentMip)
+	function setResidentMip( t : h3d.mat.Texture, mip : Int ) {
+		var prevSize = memSize(t);
+		if( !driver.setResidentMip(t, mip) )
+			return false;
+		texMemory += memSize(t) - prevSize;
+		return true;
 	}
 
 	public function cleanTextures( force = true ) {

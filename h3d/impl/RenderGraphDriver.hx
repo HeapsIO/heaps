@@ -224,6 +224,10 @@ class RenderGraphDriver extends Driver {
 		return d.copyTexture(from, to);
 	}
 
+	override function setResidentMip(t, mip) {
+		return d.setResidentMip(t, mip);
+	}
+
 	override function allocQuery(queryKind) {
 		return d.allocQuery(queryKind);
 	}
