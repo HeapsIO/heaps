@@ -53,6 +53,10 @@ class Texture {
 	**/
 	public var residentMip(default,null) : Int = 0;
 	var customMipLevels : Int;
+	/**
+		A 1x1 texture is allocated while the texture is loading (see hxd.res.Image)
+	**/
+	var isPlaceholder : Bool;
 
 	/**
 		If this callback is set, the texture can be re-allocated when the 3D context has been lost or when
@@ -78,7 +82,6 @@ class Texture {
 	}
 
 	inline function set_startingMip(v:Int) {
-		if( flags.has(Loading) ) flags.set(AsyncKeepStartingMip);
 		return __startingMip = v;
 	}
 

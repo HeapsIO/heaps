@@ -163,7 +163,7 @@ class MemoryManager {
 	// ------------------------------------- TEXTURES ------------------------------------------
 
 	function memSize( t : h3d.mat.Texture ) {
-		if( t.flags.has(AsyncLoading) && t.flags.has(Loading) )
+		if( t.isPlaceholder )
 			return 4; // 1x1 pixel
 		var size = 0;
 		for( i in t.residentMip...t.mipLevels ) {

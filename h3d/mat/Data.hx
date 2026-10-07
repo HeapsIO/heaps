@@ -125,7 +125,7 @@ enum TextureFlags {
 	**/
 	IsArray;
 	/**
-		Allows the texture to be loaded asynchronously (requires initializating hxd.res.Image.ASYNC_LOADER)
+		Allows a DDS texture to be loaded asynchronously (see hxd.res.Image.ASYNC_LOADING)
 	**/
 	AsyncLoading;
 	/**
@@ -140,10 +140,6 @@ enum TextureFlags {
 		Tells if it's a 3D texture
 	**/
 	Is3D;
-	/**
-		The startingMip was set during loading, so do not reset it to 0 at end of loading
-	**/
-	AsyncKeepStartingMip;
 }
 
 typedef TextureFormat = hxd.PixelFormat;
