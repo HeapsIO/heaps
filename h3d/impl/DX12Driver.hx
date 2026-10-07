@@ -1012,6 +1012,7 @@ class DX12Driver extends h3d.impl.Driver {
 	var currentPipelineState : PipelineState;
 	var lastVertexGlobalBind : Int = -1;
 	var lastFragmentGlobalBind : Int = -1;
+	var lastGlobalsShader : CompiledShader;
 	var needUAVBarrier : Bool = false;
 	var useDepthClamp : Bool = false;
 	var useSM6_6 = false;
@@ -3113,6 +3114,8 @@ class DX12Driver extends h3d.impl.Driver {
 	// ----- PIPELINE UPDATE
 
 	override function uploadShaderBuffers(buffers:h3d.shader.Buffers, which:h3d.shader.Buffers.BufferKind) {
+		if( which == Globals )
+			lastGlobalsShader = currentShader;
 		uploadBuffers(buffers, buffers.vertex, which, currentShader.shader.vertex, currentShader.vertexRegisters);
 		if( !currentShader.isCompute )
 			uploadBuffers(buffers, buffers.fragment, which, currentShader.shader.fragment, currentShader.fragmentRegisters);
@@ -3957,7 +3960,7 @@ class DX12Driver extends h3d.impl.Driver {
 		}
 	}
 
-	function flushHeaps(rebind : Bool = false) {
+	function flushHeaps() {
 		frame.srvHeap = frame.srvHeapCache.next();
 		frame.samplerHeap = frame.samplerHeapCache.next();
 		heapCount++;
@@ -3974,7 +3977,16 @@ class DX12Driver extends h3d.impl.Driver {
 		@:privateAccess frame.srvHeap.cursor = bindlessSrvHeap.size;
 		@:privateAccess frame.samplerHeap.cursor = bindlessSamplerHeap.size;
 
-		if ( rebind ) {
+		if ( currentShader != null ) {
+			if ( currentShader.shader.hasBindless() ) {
+				if ( currentShader.isCompute )
+					frame.commandList.setComputeRootSignature(currentShader.rootSignature);
+				else
+					frame.commandList.setGraphicsRootSignature(currentShader.rootSignature);
+				if ( currentPipelineState != null )
+					frame.commandList.setPipelineState(currentPipelineState);
+			}
+
 			inline function rebindGlobal(bindSlot, desc) {
 				if ( bindSlot >= 0 ) {
 					var srv = frame.srvHeap.alloc(1);
@@ -3986,22 +3998,16 @@ class DX12Driver extends h3d.impl.Driver {
 				}
 			}
 
-			rebindGlobal(lastVertexGlobalBind, tmp.vertexGlobalDesc);
-			rebindGlobal(lastFragmentGlobalBind, tmp.fragmentGlobalDesc);
-
-			if ( currentShader.shader.hasBindless() ) {
-				if ( currentShader.isCompute )
-					frame.commandList.setComputeRootSignature(currentShader.rootSignature);
-				else
-					frame.commandList.setGraphicsRootSignature(currentShader.rootSignature);
-				frame.commandList.setPipelineState(currentPipelineState);
+			if ( lastGlobalsShader == currentShader ) {
+				rebindGlobal(lastVertexGlobalBind, tmp.vertexGlobalDesc);
+				rebindGlobal(lastFragmentGlobalBind, tmp.fragmentGlobalDesc);
 			}
 		}
 	}
 
 	override function flushShaderBuffers() {
 		if( frame.srvHeap.available < 128 || frame.samplerHeap.available < 64 )
-			flushHeaps(true);
+			flushHeaps();
 	}
 
 	function flushFrame( onResize : Bool = false ) {
