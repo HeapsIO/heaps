@@ -107,6 +107,19 @@ class Animation {
 		}
 	}
 
+	public function getEvent(frame : Int, name : String) : Event {
+		if (events == null || events[frame] == null)
+			return null;
+
+		for (e in events[frame]) {
+			if (e.name == name && e.frame == frame) {
+				return e;
+			}
+		}
+
+		return null;
+	}
+
 	public function addEvent(frame : Int, name : String, ?originalEvent : Event) {
 		if (events == null)
 			events = [];
