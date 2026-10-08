@@ -102,18 +102,25 @@ class CacheFile2Loader {
 
 	function threadLoop() {
 		var driver = h3d.Engine.getCurrent()?.driver;
+		function link( sl : ShaderList, mode : RuntimeShader.LinkMode ) {
+			var rts = try cache.link(sl, mode) catch( e ) {
+				Sys.println("[CacheFile2] Failed to link " + [for( s in sl ) @:privateAccess s.shader.data.name].join(":") + ": " + e.toString());
+				return null;
+			}
+			driver?.warmupShader(rts);
+			return rts;
+		}
+
 		// Link ShaderList Default
 		for( l in slistsDefault ) {
-			var rts = cache.link(l.sl, Default);
-			driver?.warmupShader(rts);
-			rtMap.set(l.sign, { rt : rts, sl : l.sl });
+			var rts = link(l.sl, Default);
+			if( rts != null )
+				rtMap.set(l.sign, { rt : rts, sl : l.sl });
 		}
 
 		// Link ShaderList Compute
-		for( sl in slistsCompute ) {
-			var rts = cache.link(sl, Compute);
-			driver?.warmupShader(rts);
-		}
+		for( sl in slistsCompute )
+			link(sl, Compute);
 
 		#if heaps_mt_hxsl_cache
 		rtMapReady = true;
@@ -125,10 +132,8 @@ class CacheFile2Loader {
 		#end
 
 		// Link ShaderList Batch
-		for( sl in slistsBatch ) {
-			var rts = cache.link(sl, Batch);
-			driver?.warmupShader(rts);
-		}
+		for( sl in slistsBatch )
+			link(sl, Batch);
 
 		#if heaps_mt_hxsl_cache
 		linkDone = true;
@@ -181,7 +186,11 @@ class CacheFile2Loader {
 						sl = null;
 						break;
 					}
-					var b = cache.makeBatchShader(rts.rt, rts.sl.next, bcinfo.params);
+					var b = try cache.makeBatchShader(rts.rt, rts.sl.next, bcinfo.params) catch( e ) {
+						Sys.println('[CacheFile2] Can\'t make batch shader $name: ' + e.toString());
+						sl = null;
+						break;
+					}
 					ssd = @:privateAccess b.shader;
 				}
 			}
