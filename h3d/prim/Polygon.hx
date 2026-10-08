@@ -20,6 +20,7 @@ class Polygon extends MeshPrimitive {
 	var translatedX = 0.;
 	var translatedY = 0.;
 	var translatedZ = 0.;
+	var bounds : h3d.col.Bounds;
 
 	public function new( points, ?idx ) {
 		this.points = points;
@@ -27,10 +28,12 @@ class Polygon extends MeshPrimitive {
 	}
 
 	override function getBounds() {
-		var b = new h3d.col.Bounds();
-		for( p in points )
-			b.addPoint(p);
-		return b;
+		if( bounds == null ) {
+			bounds = new h3d.col.Bounds();
+			for( p in points )
+				bounds.addPoint(p);
+		}
+		return bounds;
 	}
 
 	public function getBufferFormat() : hxd.BufferFormat {
@@ -140,6 +143,7 @@ class Polygon extends MeshPrimitive {
 		translatedX += dx;
 		translatedY += dy;
 		translatedZ += dz;
+		if( bounds != null ) bounds.offset(dx, dy, dz);
 		for( p in points ) {
 			p.x += dx;
 			p.y += dy;
@@ -149,6 +153,9 @@ class Polygon extends MeshPrimitive {
 
 	public function scale( s : Float ) {
 		scaled *= s;
+		if( bounds != null ) {
+			if( s >= 0 ) bounds.scalePivot(s) else bounds = null;
+		}
 		for( p in points ) {
 			p.x *= s;
 			p.y *= s;
