@@ -582,7 +582,7 @@ class Renderer extends h3d.scene.Renderer {
 	}
 
 	function applyFrameGen(reset : Bool = false) {
-		if (ctx.engine.driver.hasFeature(Upscaling)) {
+		if (ctx.engine.driver.isFrameGenSupported()) {
 			resources.clear();
 			resources.set(MotionVectors, ctx.getGlobal("velocity"));
 			resources.set(Depth, getPbrDepth());

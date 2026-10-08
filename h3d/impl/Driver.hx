@@ -212,6 +212,12 @@ class FrameGenSettings {
 	}
 }
 
+enum FrameGenUIMode {
+	BackBuffer;
+	HudLess;
+	UITexture;
+}
+
 enum LowLatencyMode {
 	Off;
 	On;
@@ -505,6 +511,10 @@ class Driver {
 		return null;
 	}
 
+	public function getFrameGenName() : String {
+		return null;
+	}
+
 	public function getUpscalingSettings( mode : UpscalingMode, targetWidth : Int, targetHeight : Int ) : UpscalingSettings {
 		return null;
 	}
@@ -531,6 +541,23 @@ class Driver {
 
 	public function getFrameGenSettings() : FrameGenSettings {
 		return null;
+	}
+
+	public function setFrameGenUIMode( mode : FrameGenUIMode ) {
+	}
+
+	public function getFrameGenUIMode() : FrameGenUIMode {
+		return BackBuffer;
+	}
+
+	public function markFrameGenHudless( ?source : h3d.mat.Texture ) {
+	}
+
+	public function getFrameGenUITarget() : h3d.mat.Texture {
+		return null;
+	}
+
+	public function compositeFrameGenUI() {
 	}
 
 	public function latencyMarkerSimulationStart() {

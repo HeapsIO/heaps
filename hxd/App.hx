@@ -35,6 +35,8 @@ class App implements h3d.IDrawable {
 
 	var isDisposed : Bool;
 
+	static var UI_CLEAR_COLOR = new h3d.Vector4(0, 0, 0, 0);
+
 	public function new() {
 		var engine = h3d.Engine.getCurrent();
 		if( engine != null ) {
@@ -126,7 +128,19 @@ class App implements h3d.IDrawable {
 
 	public function render(e:h3d.Engine) {
 		s3d.render(e);
-		s2d.render(e);
+		switch( e.driver.getFrameGenUIMode() ) {
+		case HudLess:
+			e.driver.markFrameGenHudless();
+			s2d.render(e);
+		case UITexture if( e.driver.getFrameGenUITarget() != null ):
+			e.pushTarget(e.driver.getFrameGenUITarget());
+			e.clearF(UI_CLEAR_COLOR);
+			s2d.render(e);
+			e.popTarget();
+			e.driver.compositeFrameGenUI();
+		default:
+			s2d.render(e);
+		}
 	}
 
 	function mark(name : String) {
