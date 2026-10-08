@@ -52,6 +52,12 @@ class PSOConfigCache {
 	public function load() {
 		configs = [];
 		loadFailed = false;
+		loadFile(file);
+		if( outputFile != file )
+			loadFile(outputFile);
+	}
+
+	function loadFile( file : String ) {
 		try {
 			if( !sys.FileSystem.exists(file) )
 				return;
@@ -66,15 +72,25 @@ class PSOConfigCache {
 				var cachedCount = cache.readInt32();
 				if( cachedCount < 0 || cachedCount > MAX_PIPELINES_PER_SHADER )
 					return;
-				var pipelines = [];
+				var pipelines = configs.get(shaderSign);
+				if( pipelines == null ) {
+					pipelines = [];
+					configs.set(shaderSign, pipelines);
+				}
 				for( i in 0...cachedCount ) {
 					var byteSize = cache.readInt32();
 					if( byteSize <= 0 || byteSize > 64 )
 						return;
 					var bytes = cache.read(byteSize);
-					pipelines.push(bytes);
+					var found = false;
+					for( p in pipelines )
+						if( p.compare(bytes) == 0 ) {
+							found = true;
+							break;
+						}
+					if( !found )
+						pipelines.push(bytes);
 				}
-				configs.set(shaderSign, pipelines);
 			}
 		} catch( e : Dynamic ) {
 			trace("Failed to load pipeline cache, keeping partial contents: " + e);
