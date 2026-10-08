@@ -4,34 +4,42 @@ package h3d.impl;
 typedef GPUBuffer = {};
 typedef Texture = {};
 typedef Query = {};
+typedef DriverImpl = Driver;
 #elseif js
 typedef GPUBuffer = js.html.webgl.Buffer;
 typedef Texture = { t : js.html.webgl.Texture, width : Int, height : Int, internalFmt : Int, pixelFmt : Int, bits : Int, bind : Int #if multidriver, driver : Driver #end };
 typedef Query = {};
+typedef DriverImpl = GlDriver;
 #elseif hlsdl
 typedef GPUBuffer = sdl.GL.Buffer;
 typedef Texture = { t : sdl.GL.Texture, width : Int, height : Int, internalFmt : Int, pixelFmt : Int, bits : Int, bind : Int #if multidriver, driver : Driver #end };
 typedef Query = { q : sdl.GL.Query, kind : QueryKind };
+typedef DriverImpl = GlDriver;
 #elseif usegl
 typedef GPUBuffer = haxe.GLTypes.Buffer;
 typedef Texture = { t : haxe.GLTypes.Texture, width : Int, height : Int, internalFmt : Int, pixelFmt : Int, bits : Int, bind : Int };
 typedef Query = { q : haxe.GLTypes.Query, kind : QueryKind };
+typedef DriverImpl = GlDriver;
 #elseif (hldx && dx12)
 typedef GPUBuffer = DX12Driver.BufferData;
 typedef Texture = h3d.impl.DX12Driver.TextureData;
 typedef Query = h3d.impl.DX12Driver.QueryData;
+typedef DriverImpl = DX12Driver;
 #elseif hldx
 typedef GPUBuffer = dx.Resource;
 typedef Texture = { res : dx.Resource, view : dx.Driver.ShaderResourceView, ?depthView : dx.Driver.DepthStencilView, ?readOnlyDepthView : dx.Driver.DepthStencilView, rt : Array<dx.Driver.RenderTargetView>, ?views : Array<dx.Driver.ShaderResourceView> };
 typedef Query = {};
+typedef DriverImpl = Driver;
 #elseif usesys
 typedef GPUBuffer = haxe.GraphicsDriver.GPUBuffer;
 typedef Texture = haxe.GraphicsDriver.Texture;
 typedef Query = haxe.GraphicsDriver.Query;
+typedef DriverImpl = Driver;
 #else
 typedef GPUBuffer = {};
 typedef Texture = {};
 typedef Query = {};
+typedef DriverImpl = Driver;
 #end
 
 enum Feature {
@@ -223,6 +231,20 @@ class Driver {
 
 
 	public function hasFeature( f : Feature ) {
+		return false;
+	}
+
+	public static var requestedFeatures(default, null) = new haxe.EnumFlags<Feature>();
+	public static function requestFeature( f : Feature ) : Bool {
+		if( h3d.Engine.getCurrent() != null )
+			throw "Driver.requestFeature(" + f + ") must be called before the engine is created";
+		var accepted = DriverImpl.onFeatureRequested(f);
+		if( accepted )
+			requestedFeatures.set(f);
+		return accepted;
+	}
+
+	static function onFeatureRequested( f : Feature ) : Bool {
 		return false;
 	}
 

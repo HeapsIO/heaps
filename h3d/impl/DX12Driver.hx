@@ -1114,6 +1114,7 @@ class DX12Driver extends h3d.impl.Driver {
 	public function new() {
 		window = @:privateAccess dx.Window.windows[0];
 		reset();
+		useSM6_6 = h3d.impl.Driver.requestedFeatures.has(Bindless) && checkSM6_6();
 	}
 
 	override function getMemoryUsage() {
@@ -1128,7 +1129,17 @@ class DX12Driver extends h3d.impl.Driver {
 		case Queries, BottomLeftCoords:
 			false;
 		case Bindless:
-			enableBindless();
+			useSM6_6;
+		default:
+			true;
+		};
+	}
+
+	@:allow(h3d.impl.Driver)
+	static function onFeatureRequested( f : Feature ) : Bool {
+		return switch(f) {
+		case Queries, BottomLeftCoords:
+			false;
 		default:
 			true;
 		};
@@ -1138,10 +1149,7 @@ class DX12Driver extends h3d.impl.Driver {
 		return true;
 	}
 
-	function enableBindless() {
-		if ( useSM6_6 )
-			return true;
-
+	function checkSM6_6() : Bool {
 		var hasSM6_6 = false;
 		#if (hldx >= version("1.16.0"))
 		var shaderModel = new hl.Bytes(4);
@@ -1149,9 +1157,7 @@ class DX12Driver extends h3d.impl.Driver {
 		Driver.checkFeatureSupport(SHADER_MODEL, shaderModel, 4);
 		hasSM6_6 = cast(SHADER_MODEL_6_6, Int) <= shaderModel.getI32(0);
 		#end
-
-		useSM6_6 = hasSM6_6;
-		return useSM6_6;
+		return hasSM6_6;
 	}
 
 	function suppressDebugMessages() {
@@ -2415,13 +2421,10 @@ class DX12Driver extends h3d.impl.Driver {
 		}
 
 		if ( shader.hasBindless() && !useSM6_6 ) {
-			enableBindless();
-			if ( !useSM6_6 ) {
-				#if heaps_mt_hxsl_cache
-				compileMutex.release();
-				#end
-				throw "Shader using bindless detected, but Shader Model 6.6 is not used. SM6_6 unavailable on this device.";
-			}
+			#if heaps_mt_hxsl_cache
+			compileMutex.release();
+			#end
+			throw "Shader using bindless detected, but Shader Model 6.6 is not used: " + (h3d.impl.Driver.requestedFeatures.has(Bindless) ? "SM6_6 unavailable on this device." : "call h3d.impl.Driver.requestFeature(Bindless) before creating the engine.");
 		}
 		#if heaps_mt_hxsl_cache
 		compileMutex.release();

@@ -151,11 +151,6 @@ class GlDriver extends Driver {
 	public static var outOfMemoryCheck = #if js false #else true #end;
 
 	public function new(antiAlias=0) {
-		#if (hlsdl >= version("1.15.0"))
-		if ( computeEnabled )
-			sdl.Sdl.setGLVersion(4, 3);
-		#end
-
 		#if js
 		canvas = @:privateAccess hxd.Window.getInstance().canvas;
 		var options = {alpha:false,stencil:true,antialias:antiAlias>0};
@@ -226,10 +221,8 @@ class GlDriver extends Driver {
 			shaderVersion = Math.round( Std.parseFloat(reg.matched(0)) * 100 );
 		}
 
-		#if (hlsdl >= version("1.15.0"))
-		if ( computeEnabled )
+		if( h3d.impl.Driver.requestedFeatures.has(ComputeShaders) )
 			shaderVersion = 430;
-		#end
 
 		drawMode = GL.TRIANGLES;
 
@@ -254,16 +247,29 @@ class GlDriver extends Driver {
 		gl.pixelStorei(GL.UNPACK_ALIGNMENT, 1);
 	}
 
-	#if hlsdl
-	static var computeEnabled : Bool = false;
-	public static function enableComputeShaders() {
-		#if (hlsdl >= version("1.15.0"))
-		computeEnabled = true;
+	@:allow(h3d.impl.Driver)
+	static function onFeatureRequested( f : Feature ) : Bool {
+		#if (hlsdl >= version("1.15.0") && hl_ver >= version("1.15.0"))
+		if( f != ComputeShaders )
+			return false;
+		if( @:privateAccess sdl.Window.windows.length > 0 )
+			throw "Driver.requestFeature(ComputeShaders) must be called before the window is created";
+		var major = sdl.Sdl.requiredGLMajor, minor = sdl.Sdl.requiredGLMinor;
+		if( major * 10 + minor >= 43 )
+			return true;
+		sdl.Sdl.setGLVersion(4, 3);
+		var onRetry = sdl.Sdl.onGlContextRetry;
+		sdl.Sdl.onGlContextRetry = function() {
+			sdl.Sdl.onGlContextRetry = onRetry;
+			sdl.Sdl.setGLVersion(major, minor);
+			@:privateAccess h3d.impl.Driver.requestedFeatures.unset(ComputeShaders);
+			return true;
+		};
+		return true;
 		#else
-		throw "enableComputeShaders() requires hlsdl 1.15+";
+		return false;
 		#end
 	}
-	#end
 
 	override function setRenderFlag( r : RenderFlag, value : Int ) {
 		switch( r ) {
@@ -2105,11 +2111,7 @@ class GlDriver extends Driver {
 		case DepthClamp:
 			hasDepthClamp;
 		case ComputeShaders:
-			#if (hlsdl >= version("1.15.0") && hl_ver >= version("1.15.0"))
-			computeEnabled;
-			#else
-			false;
-			#end
+			h3d.impl.Driver.requestedFeatures.has(ComputeShaders);
 		case DynamicSamplerIndex:
 			#if js
 			false;
