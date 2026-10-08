@@ -1055,9 +1055,9 @@ class DX12Driver extends h3d.impl.Driver {
 	public static var DEBUG = false; // requires dxil.dll when set to true
 	public static var SUPPRESSED_MESSAGE_IDS : Array<Int> = [];
 	public static var ENABLE_UPSCALING = true;
-	public static var UPSCALER : UpscalerSelection = UpscalerSelection.FSR;
+	public static var UPSCALER : UpscalerSelection = UpscalerSelection.AUTO;
 	public static var FRAME_GEN = true;
-	public static var FRAME_GEN_PROVIDER : UpscalerSelection = UpscalerSelection.FSR;
+	public static var FRAME_GEN_PROVIDER : UpscalerSelection = UpscalerSelection.AUTO;
 	public static var FRAME_GEN_ASYNC = false;
 	public static var FRAME_GEN_DEBUG_FLAGS = 0;
 	public static var LOW_LATENCY = true;
