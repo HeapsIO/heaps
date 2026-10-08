@@ -93,7 +93,6 @@ enum Feature {
 		Supports bindless
 	*/
 	Bindless;
-	Upscaling;
 	/*
 		Can render into a single layer of a depth texture array.
 	*/
@@ -138,96 +137,12 @@ enum RenderFlag {
 	CameraHandness;
 }
 
-enum UpscalingTag {
-	Depth;
-	MotionVectors;
-	ColorIn;
-	ColorOut;
-	HUDLess;
-	UIColorAndAlpha;
-	UIAlpha;
-}
-
-@:struct class UpscalingParams {
-	public var cameraViewToClip : Matrix;
-	public var clipToCameraView : Matrix;
-	public var clipToPrevClip : Matrix;
-	public var prevClipToClip : Matrix;
-	public var jitterOffsetX : Float;
-	public var jitterOffsetY : Float;
-	public var mvecScaleX : Float;
-	public var mvecScaleY : Float;
-	public var cameraPos : Vector;
-	public var cameraUp : Vector;
-	public var cameraRight : Vector;
-	public var cameraFwd : Vector;
-	public var cameraNear : Float;
-	public var cameraFar : Float;
-	public var cameraFOV : Float;
-	public var cameraAspectRatio : Float;
-	public var motionVectorsInvalidValue : Float;
-	public var depthInverted : Bool;
-	public var cameraMotionIncluded : Bool;
-	public var reset : Bool;
-	public var orthographicProjection : Bool;
-	public var motionVectorsDilated : Bool;
-	public var motionVectorsJittered : Bool;
-	public var colorBufferHDR : Bool;
-	public var autoExposure : Bool;
-	public function new() {
-	}
-}
-
-@struct class UpscalingSettings {
-	public var renderWidth : Int;
-	public var renderHeight : Int;
-	public function new() {
-	}
-}
-
-enum UpscalingMode {
-	Off;
-	NativeAA;
-	Quality;
-	Balanced;
-	Performance;
-	UltraPerformance;
-}
-
-enum FrameGenMode {
-	Off;
-	On;
-	Auto;
-	Dynamic;
-}
-
-class FrameGenSettings {
-	public var status : Int;
-	public var minWidthOrHeight : Int;
-	public var framesPresented : Int;
-	public var maxFramesToGenerate : Int;
-	public var dynamicSupported : Bool;
-	public var vsyncSupported : Bool;
-	public function new() {
-	}
-}
-
-enum FrameGenUIMode {
-	BackBuffer;
-	HudLess;
-	UITexture;
-}
-
-enum LowLatencyMode {
-	Off;
-	On;
-	OnWithBoost;
-}
-
 class Driver {
 
 	static var SHADER_CACHE : h3d.impl.ShaderCache;
 	var shaderCache = SHADER_CACHE;
+
+	public var upscaling(default, null) = new h3d.impl.Upscaling(null, []);
 
 	public static function setShaderCache( cache : h3d.impl.ShaderCache ) {
 		SHADER_CACHE = cache;
@@ -499,103 +414,7 @@ class Driver {
 		throw "Bindless is not implemented on this platform";
 	}
 
-	public function isUpscalingSupported() : Bool {
+	public function copyBackBuffer( to : h3d.mat.Texture ) : Bool {
 		return false;
-	}
-
-	public function isFrameGenSupported() : Bool {
-		return false;
-	}
-
-	public function getUpscalerName() : String {
-		return null;
-	}
-
-	public function getFrameGenName() : String {
-		return null;
-	}
-
-	public function getUpscalingSettings( mode : UpscalingMode, targetWidth : Int, targetHeight : Int ) : UpscalingSettings {
-		return null;
-	}
-
-	public function applyUpscaling( resources : Map<UpscalingTag, h3d.mat.Texture>, params : UpscalingParams, mode : UpscalingMode ) {
-	}
-
-	public function setFrameGenResources( resources : Map<UpscalingTag, h3d.mat.Texture> ) {
-	}
-
-	public function clearFrameGenResources() {
-	}
-
-	public function setFrameGenParams( params : UpscalingParams ) {
-	}
-
-	public function setFrameGenMode( mode : FrameGenMode, numFramesToGenerate : Int = 1, releaseResources = false ) : Bool {
-		return false;
-	}
-
-	public function getFrameGenMode() : FrameGenMode {
-		return Off;
-	}
-
-	public function getFrameGenSettings() : FrameGenSettings {
-		return null;
-	}
-
-	public function setFrameGenUIMode( mode : FrameGenUIMode ) {
-	}
-
-	public function getFrameGenUIMode() : FrameGenUIMode {
-		return BackBuffer;
-	}
-
-	public function markFrameGenHudless( ?source : h3d.mat.Texture ) {
-	}
-
-	public function getFrameGenUITarget() : h3d.mat.Texture {
-		return null;
-	}
-
-	public function compositeFrameGenUI() {
-	}
-
-	public function latencyMarkerSimulationStart() {
-	}
-
-	public function latencyMarkerSimulationEnd() {
-	}
-
-	public function latencyMarkerTriggerFlash() {
-	}
-
-	public function lowLatencySleep() {
-	}
-
-	public function setLowLatencyOptions( mode : LowLatencyMode, frameLimitUs : Int = 0 ) {
-		return false;
-	}
-
-	public function lowLatencyAvailable() {
-		return false;
-	}
-
-	public function lowLatencyFlashIndicatorDriverControlled() {
-		return false;
-	}
-
-	public function debugUpscaling() : String {
-		return "";
-	}
-
-	public function debugLowLatency() : String {
-		return "";
-	}
-
-	public function debugFrameGen() : String {
-		return "";
-	}
-
-	public function shutdownUpscaling() {
 	}
 }

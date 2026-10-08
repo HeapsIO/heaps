@@ -1,6 +1,7 @@
 package h3d.scene.pbr;
 
 import h3d.impl.Driver;
+import h3d.impl.Upscaling;
 
 enum abstract DisplayMode(String) {
 	/*
@@ -495,8 +496,8 @@ class Renderer extends h3d.scene.Renderer {
 		#end
 	}
 
-	static var resources : Map<h3d.impl.Driver.UpscalingTag, h3d.mat.Texture> = new Map();
-	static var upscalingParams = new h3d.impl.Driver.UpscalingParams();
+	static var upscalingInputs = new UpscalingInputs();
+	static var upscalingParams = new UpscalingParams();
 	static var viewToViewPrev = new h3d.Matrix();
 	static var tmp = new h3d.Matrix();
 	static var clipToPrevClip = new h3d.Matrix();
@@ -562,35 +563,36 @@ class Renderer extends h3d.scene.Renderer {
 	}
 
 	function applyUpscaling(mode : UpscalingMode, reset : Bool = false) {
-		if (ctx.engine.driver.hasFeature(Upscaling)) {
-			var ldr = ctx.getGlobal("ldrMap");
-			var depthMap : h3d.mat.Texture = getPbrDepth();
-			var velocity = ctx.getGlobal("velocity");
+		var upscaling = ctx.engine.driver.upscaling;
+		if (upscaling.isSupported(Upscaler)) {
+			var ldr : h3d.mat.Texture = ctx.getGlobal("ldrMap");
 			var output = ctx.textures.allocTarget("upscalingOutput", ctx.engine.width, ctx.engine.height, true, ldr.format, [ Writable ]);
 
-			resources.clear();
-			resources.set(ColorIn, ldr);
-			resources.set(MotionVectors, velocity);
-			resources.set(Depth, depthMap);
-			resources.set(ColorOut, output);
+			var inputs = upscalingInputs;
+			inputs.color = ldr;
+			inputs.motionVectors = ctx.getGlobal("velocity");
+			inputs.depth = getPbrDepth();
+			inputs.output = output;
 
 			fillUpscalingParams(reset);
 
-			ctx.engine.driver.applyUpscaling(resources, upscalingParams, mode);
+			upscaling.upscale(inputs, upscalingParams, mode);
 			ctx.setGlobal("ldrMap", output);
 		}
 	}
 
 	function applyFrameGen(reset : Bool = false) {
-		if (ctx.engine.driver.isFrameGenSupported()) {
-			resources.clear();
-			resources.set(MotionVectors, ctx.getGlobal("velocity"));
-			resources.set(Depth, getPbrDepth());
+		var upscaling = ctx.engine.driver.upscaling;
+		if (upscaling.isSupported(FrameGen)) {
+			var inputs = upscalingInputs;
+			inputs.color = null;
+			inputs.motionVectors = ctx.getGlobal("velocity");
+			inputs.depth = getPbrDepth();
+			inputs.output = null;
 
 			fillUpscalingParams(reset);
 
-			ctx.engine.driver.setFrameGenResources(resources);
-			ctx.engine.driver.setFrameGenParams(upscalingParams);
+			upscaling.prepareFrameGen(inputs, upscalingParams);
 		}
 	}
 

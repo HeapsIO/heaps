@@ -128,16 +128,17 @@ class App implements h3d.IDrawable {
 
 	public function render(e:h3d.Engine) {
 		s3d.render(e);
-		switch( e.driver.getFrameGenUIMode() ) {
+		var upscaling = e.driver.upscaling;
+		switch( upscaling.getFrameGenUIMode() ) {
 		case HudLess:
-			e.driver.markFrameGenHudless();
+			upscaling.markFrameGenHudless();
 			s2d.render(e);
-		case UITexture if( e.driver.getFrameGenUITarget() != null ):
-			e.pushTarget(e.driver.getFrameGenUITarget());
+		case UITexture if( upscaling.getFrameGenUITarget() != null ):
+			e.pushTarget(upscaling.getFrameGenUITarget());
 			e.clearF(UI_CLEAR_COLOR);
 			s2d.render(e);
 			e.popTarget();
-			e.driver.compositeFrameGenUI();
+			upscaling.compositeFrameGenUI();
 		default:
 			s2d.render(e);
 		}

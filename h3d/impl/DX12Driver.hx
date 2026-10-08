@@ -14,17 +14,7 @@ import h3d.mat.Pass;
 import h3d.mat.Stencil;
 import haxe.MainLoop;
 
-#if dlss
-import heaps.dlss.Dlss;
-#end
-
 private typedef Driver = Dx12;
-
-enum abstract UpscalerSelection(String) {
-	var AUTO = "auto";
-	var DLSS = "dlss";
-	var FSR = "fsr";
-}
 
 class PSOConfigCache {
 	static inline var MAX_SIGN_SIZE = 1024;
@@ -390,9 +380,6 @@ class DxFrame {
 	public var queryHeapOffset : Int;
 	public var queryBuffer : GpuResource;
 	public var bufferAllocator : BufferAllocator;
-	#if dlss
-	public var dlssFrameToken : DLSSFrameToken;
-	#end
 	public function new() {
 	}
 	public function getSize() {
@@ -1056,7 +1043,10 @@ class DX12Driver extends h3d.impl.Driver {
 	var asyncComputeCommandList : CommandList;
 	var asyncComputeAllocator : CommandAllocator;
 
-	var upscaling : DX12Upscaling;
+	var nativeDevice : Device;
+	var nativeFactory : Factory;
+	var nativeQueue : CommandQueue;
+	var swapChain : SwapChain;
 
 	public static var COPY_BUFFER_SIZE = 256 * 1024 * 1024; // 256 Mo per frame
 	public static var TEXTURE_HEAP_SIZE = 16 * 1024 * 1024;
@@ -1072,16 +1062,6 @@ class DX12Driver extends h3d.impl.Driver {
 	public static var DEVICE_NAME = null;
 	public static var DEBUG = false; // requires dxil.dll when set to true
 	public static var SUPPRESSED_MESSAGE_IDS : Array<Int> = [];
-	public static var ENABLE_UPSCALING = true;
-	public static var UPSCALER : UpscalerSelection = UpscalerSelection.AUTO;
-	public static var FRAME_GEN = true;
-	public static var FRAME_GEN_PROVIDER : UpscalerSelection = UpscalerSelection.AUTO;
-	public static var FRAME_GEN_ASYNC = false;
-	public static var FRAME_GEN_DEBUG_FLAGS = 0;
-	public static var LOW_LATENCY = true;
-	public static var UPSCALER_DEBUG = false;
-	public static var UPSCALER_DEBUG_VIEW = false;
-	public static var CHECK_SL_DLL_SIGNATURE = true;
 	public static var ENABLE_PSO_CONFIG_CACHE = false;
 	public static var PSO_CONFIG_CACHE_PATH = "psoconfig.dx12";
 	public static var PSO_CONFIG_CACHE_OUTPUT_PATH = "psoconfig.dx12";
@@ -1099,7 +1079,10 @@ class DX12Driver extends h3d.impl.Driver {
 
 	public function new() {
 		window = @:privateAccess dx.Window.windows[0];
-		upscaling = new DX12Upscaling(this);
+		var backends : Array<UpscalingBackend> = [];
+		#if dlss backends.push(new DX12DlssBackend(this)); #end
+		#if fsr backends.push(new DX12FsrBackend(this)); #end
+		upscaling = new Upscaling(this, backends);
 		reset();
 		useSM6_6 = h3d.impl.Driver.requestedFeatures.has(Bindless) && checkSM6_6();
 	}
@@ -1181,11 +1164,15 @@ class DX12Driver extends h3d.impl.Driver {
 		textureHeap = TEXTURE_HEAP_SIZE > 0 ? new TextureHeapAllocator(TEXTURE_HEAP_SIZE) : null;
 		#end
 
+		nativeDevice = Driver.getDevice();
+		nativeFactory = Driver.getFactory();
+		swapChain = null;
 		upscaling.afterCreateDevice();
 
-		#if (hldx > version("1.16.0")) directQueue = new CommandQueue(DIRECT); #else Driver.createCommandQueue(); #end
+		#if (hldx > version("1.16.0")) directQueue = new CommandQueue(DIRECT); nativeQueue = directQueue; #else Driver.createCommandQueue(); #end
 
 		upscaling.afterCreateQueue();
+		upscaling.afterCreateSwapChain();
 
 		var flags = new haxe.EnumFlags();
 		var heap = new HeapProperties();
@@ -1514,7 +1501,7 @@ class DX12Driver extends h3d.impl.Driver {
 
 	override function dispose() {
 		psoConfigCache?.save();
-		shutdownUpscaling();
+		upscaling.dispose();
 	}
 
 	override function init( onCreate : Bool -> Void, forceSoftware = false ) {
@@ -4071,34 +4058,46 @@ class DX12Driver extends h3d.impl.Driver {
 		return handle;
 	}
 
-	override function isUpscalingSupported() return upscaling.isUpscalingSupported();
-	override function isFrameGenSupported() return upscaling.isFrameGenSupported();
-	override function getUpscalerName() return upscaling.getUpscalerName();
-	override function getFrameGenName() return upscaling.getFrameGenName();
-	override function getUpscalingSettings( mode : UpscalingMode, targetWidth : Int, targetHeight : Int ) return upscaling.getUpscalingSettings(mode, targetWidth, targetHeight);
-	override function applyUpscaling( resources : Map<h3d.impl.Driver.UpscalingTag, h3d.mat.Texture>, params : UpscalingParams, mode : UpscalingMode ) upscaling.applyUpscaling(resources, params, mode);
-	override function setFrameGenResources( resources : Map<h3d.impl.Driver.UpscalingTag, h3d.mat.Texture> ) upscaling.setFrameGenResources(resources);
-	override function clearFrameGenResources() upscaling.clearFrameGenResources();
-	override function setFrameGenParams( params : UpscalingParams ) upscaling.setFrameGenParams(params);
-	override function setFrameGenMode( mode : h3d.impl.Driver.FrameGenMode, numFramesToGenerate : Int = 1, releaseResources = false ) return upscaling.setFrameGenMode(mode, numFramesToGenerate, releaseResources);
-	override function getFrameGenMode() return upscaling.getFrameGenMode();
-	override function getFrameGenSettings() return upscaling.getFrameGenSettings();
-	override function setFrameGenUIMode( mode : h3d.impl.Driver.FrameGenUIMode ) upscaling.setFrameGenUIMode(mode);
-	override function getFrameGenUIMode() return upscaling.getFrameGenUIMode();
-	override function markFrameGenHudless( ?source : h3d.mat.Texture ) upscaling.markFrameGenHudless(source);
-	override function getFrameGenUITarget() return upscaling.getFrameGenUITarget();
-	override function compositeFrameGenUI() upscaling.compositeFrameGenUI();
-	override function latencyMarkerSimulationStart() upscaling.latencyMarkerSimulationStart();
-	override function latencyMarkerSimulationEnd() upscaling.latencyMarkerSimulationEnd();
-	override function latencyMarkerTriggerFlash() upscaling.latencyMarkerTriggerFlash();
-	override function lowLatencySleep() upscaling.lowLatencySleep();
-	override function setLowLatencyOptions( mode : LowLatencyMode, frameLimitUs : Int = 0 ) return upscaling.setLowLatencyOptions(mode, frameLimitUs);
-	override function lowLatencyAvailable() return upscaling.lowLatencyAvailable();
-	override function lowLatencyFlashIndicatorDriverControlled() return upscaling.lowLatencyFlashIndicatorDriverControlled();
-	override function debugUpscaling() return upscaling.debugUpscaling();
-	override function debugFrameGen() return upscaling.debugFrameGen();
-	override function debugLowLatency() return upscaling.debugLowLatency();
-	override function shutdownUpscaling() upscaling.shutdownUpscaling();
+	override function copyBackBuffer( to : h3d.mat.Texture ) : Bool {
+		if( to.t == null )
+			return false;
+		to.lastFrame = frameCount;
+		transition(frame.backBuffer, COPY_SOURCE);
+		transition(to.t, COPY_DEST);
+		flushTransitions();
+		var dst = tmp.dstTextureLocation;
+		var src = tmp.srcTextureLocation;
+		dst.res = to.t.res;
+		src.res = frame.backBuffer.res;
+		dst.type = SUBRESOURCE_INDEX;
+		src.type = SUBRESOURCE_INDEX;
+		dst.subResourceIndex = 0;
+		src.subResourceIndex = 0;
+		frame.commandList.copyTextureRegion(dst, 0, 0, 0, src, null);
+		to.flags.set(WasCleared);
+		transition(frame.backBuffer, RENDER_TARGET);
+		return true;
+	}
+
+	function setSwapChain( sc : SwapChain ) {
+		swapChain = sc;
+		Driver.setSwapChain(sc);
+	}
+
+	function beginExternalCommands() : CommandList {
+		flushTransitions();
+		return frame.commandList;
+	}
+
+	function endExternalCommands() {
+		var arr = tmp.descriptors2;
+		arr[0] = @:privateAccess frame.srvHeap.heap;
+		arr[1] = @:privateAccess frame.samplerHeap.heap;
+		frame.commandList.setDescriptorHeaps(arr);
+		heapCount++;
+		currentShader = null;
+		currentPipelineState = null;
+	}
 
 	#if (hl_ver >= version("1.16.0"))
 	public static function setGpuCrashHandler( cb : (String, haxe.io.Bytes, Bool) -> Void ) {

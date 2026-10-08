@@ -2100,8 +2100,6 @@ class GlDriver extends Driver {
 		return switch(f) {
 		case Bindless:
 			false;
-		case Upscaling:
-			false;
 		case ResidentMips:
 			#if (hlsdl >= version("2.0.0")) glES == null && shaderVersion >= 430 #else false #end;
 		case DepthTextureArray:
