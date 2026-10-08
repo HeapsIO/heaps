@@ -310,12 +310,12 @@ class GlDriver extends Driver {
 	}
 
 	override function getNativeShaderCode( shader : hxsl.RuntimeShader ) {
-		inline function compile(sh) {
-			return makeCompiler().run(sh);
+		inline function compile( sh : hxsl.RuntimeShader.RuntimeShaderData ) {
+			return sh.code ?? makeCompiler().run(sh.data);
 		}
 		if( shader.mode == Compute )
-			return compile(shader.compute.data);
-		return "// vertex:\n" + compile(shader.vertex.data) + "// fragment:\n" + compile(shader.fragment.data);
+			return compile(shader.compute);
+		return "// vertex:\n" + compile(shader.vertex) + "// fragment:\n" + compile(shader.fragment);
 	}
 
 	override public function getDriverName(details:Bool) {
@@ -344,9 +344,6 @@ class GlDriver extends Driver {
 		var s = gl.createShader(type);
 		if( shader.code == null ){
 			shader.code = glout.run(shader.data);
-			#if !heaps_compact_mem
-			shader.data.funs = null;
-			#end
 		}
 		gl.shaderSource(s, shader.code);
 		gl.compileShader(s);
@@ -622,6 +619,7 @@ class GlDriver extends Driver {
 				}
 			p.format = hxd.BufferFormat.make(format);
 			programs.set(shader.id, p);
+			shader.releaseData();
 		}
 		if( curShader == p ) return false;
 		setProgram(p);
