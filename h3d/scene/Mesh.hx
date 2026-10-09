@@ -155,7 +155,8 @@ class Mesh extends Object {
 		var worldCenter = bounds.getCenter();
 		worldCenter.transform(absPos);
 		var worldScale = absPos.getScale();
-		var worldRadius = hxd.Math.abs(bounds.getBoundingSphereRadius() * hxd.Math.max(worldScale.x, hxd.Math.max(worldScale.y, worldScale.z)));
+		var maxScale = hxd.Math.max(hxd.Math.abs(worldScale.x), hxd.Math.max(hxd.Math.abs(worldScale.y), hxd.Math.abs(worldScale.z)));
+		var worldRadius = bounds.getBoundingSphereRadius() * maxScale;
 		var distanceFromCamera = (worldCenter - camera.pos).length();
 
 		var screenMultiple = hxd.Math.max(0.5 * camera.mproj._11, 0.5 * camera.mproj._22);
