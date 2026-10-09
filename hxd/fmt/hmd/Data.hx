@@ -207,130 +207,13 @@ class ConvexHullsCollider extends Collider {
 	public static function buildConvexHulls(vertices : Array<Float>, indexes : Array<Int>, params : ConvexHullParams) {
 		var vCount = Std.int(vertices.length / 3);
 		var triCount = Std.int(indexes.length / 3);
-		var out : Array<{vertices: Array<Float>, indexes : Array<Int>}> = [];
-
-		#if (sys || nodejs)
-		// Format data for meshtools
-		var outputData = new haxe.io.BytesBuffer();
-		outputData.addInt32(vCount);
-		for (idx in 0...vCount) {
-			var x = vertices[idx * 3];
-			var y = vertices[idx * 3 + 1];
-			var z = vertices[idx * 3 + 2];
-			outputData.addFloat(x);
-			outputData.addFloat(y);
-			outputData.addFloat(z);
-		}
-
-		outputData.addInt32(triCount);
-		for (idx in indexes)
-			outputData.addInt32(idx);
-
-		// Exec meshtools
-		var fileName = tmpFile("vhacd_data");
-		var outFile = fileName + ".out";
-		sys.io.File.saveBytes(fileName, outputData.getBytes());
-
-		var ret = try Sys.command("meshTools",["vhacd", fileName, outFile, '${params.maxConvexHulls}', '${params.resolution}']) catch( e : Dynamic ) -1;
-		if( ret != 0 ) {
-			sys.FileSystem.deleteFile(fileName);
-			throw "Failed to call 'meshTools' executable required to generate collision data. Please ensure it's in your PATH (see tools/meshTools for build)";
-		}
-
-		// Get result data and format it for output
-		var bytes = sys.io.File.getBytes(outFile);
-		var i = 0;
-		var convexHullCount = bytes.getInt32(i++<<2);
-		for ( idx in 0...convexHullCount ) {
-			var pointCount = bytes.getInt32(i++<<2);
-			var vertices = [];
-			for ( _ in 0...pointCount ) {
-				var x = bytes.getDouble(i<<2);
-				vertices.push(x);
-				i += 2;
-				var y = bytes.getDouble(i<<2);
-				vertices.push(y);
-				i += 2;
-				var z = bytes.getDouble(i<<2);
-				vertices.push(z);
-				i += 2;
-			}
-
-			var triangleCount = bytes.getInt32(i++<<2);
-			var indexes = [];
-			for ( _ in 0...triangleCount ) {
-				indexes.push(bytes.getInt32(i++<<2));
-				indexes.push(bytes.getInt32(i++<<2));
-				indexes.push(bytes.getInt32(i++<<2));
-			}
-
-			out.push({ vertices: vertices, indexes: indexes });
-		}
-
-		sys.FileSystem.deleteFile(fileName);
-		sys.FileSystem.deleteFile(outFile);
-
-		return out;
-		#end
-
-		#if (hl && hl_ver >= version("1.15.0"))
-		var verticesBytes = new hl.Bytes(vCount * 3 * 4);
-		for (idx in 0...vCount) {
-			var x = vertices[idx * 3];
-			var y = vertices[idx * 3 + 1];
-			var z = vertices[idx * 3 + 2];
-			verticesBytes.setF32(4 * idx * 3, x);
-			verticesBytes.setF32(4 * (idx * 3 + 1), y);
-			verticesBytes.setF32(4 * (idx * 3 + 2), z);
-		}
-
-		var indexesBytes = new hl.Bytes(indexes.length * 4);
-		for (idx in 0...indexes.length)
-			indexesBytes.setI32(4 * idx, indexes[idx]);
-
-		var startStamp = haxe.Timer.stamp();
-		var vhacdInstance = new hxd.tools.VHACD();
-		var p = new hxd.tools.VHACD.Parameters();
-		p.maxConvexHulls = params.maxConvexHulls;
-		p.maxResolution = params.resolution;
-		vhacdInstance.compute(verticesBytes, vCount, indexesBytes, triCount, p);
-		var convexHullCount = vhacdInstance.getConvexHullCount();
-		if ( convexHullCount == 0 )
-			return null;
-
-		var convexHull = new hxd.tools.VHACD.ConvexHull();
-		for ( i in 0...convexHullCount) {
-			vhacdInstance.getConvexHull(i, convexHull);
-			var pointCount = convexHull.pointCount;
-			var pos = 0;
-			var pointsBytes = convexHull.points;
-			var vertices = [];
-			for ( _ in 0...pointCount ) {
-				var x = pointsBytes.getF64(8*pos++);
-				var y = pointsBytes.getF64(8*pos++);
-				var z = pointsBytes.getF64(8*pos++);
-				vertices.push(x);
-				vertices.push(y);
-				vertices.push(z);
-			}
-
-			var triangleCount = convexHull.triangleCount;
-			var triangles = convexHull.triangles;
-			var pos = 0;
-			var indexes = [];
-			for ( _ in 0...triangleCount ) {
-				indexes.push(triangles.getI32(4*pos++));
-				indexes.push(triangles.getI32(4*pos++));
-				indexes.push(triangles.getI32(4*pos++));
-			}
-			out.push({ vertices : vertices, indexes : indexes });
-		}
-		vhacdInstance.release();
-
-		return out;
-		#end
-
-		return out;
+		var verticesBytes = haxe.io.Bytes.alloc(vCount * 12);
+		for( i in 0...vCount * 3 )
+			verticesBytes.setFloat(i << 2, vertices[i]);
+		var indexesBytes = haxe.io.Bytes.alloc(triCount * 12);
+		for( i in 0...triCount * 3 )
+			indexesBytes.setInt32(i << 2, indexes[i]);
+		return hxd.tools.MeshTools.convexHulls(verticesBytes, vCount, indexesBytes, triCount, params.maxConvexHulls, params.resolution);
 	}
 
 	public static function scale(vertices : Array<Float>, indexes : Array<Int>, f : Float) {
@@ -346,18 +229,6 @@ class ConvexHullsCollider extends Collider {
 		}
 
 		return out;
-	}
-
-	static function tmpFile(name : String): String {
-		#if (sys || nodejs)
-		var tmp = Sys.getEnv("TMPDIR");
-		if( tmp == null ) tmp = Sys.getEnv("TMP");
-		if( tmp == null ) tmp = Sys.getEnv("TEMP");
-		if( tmp == null ) tmp = ".";
-		return tmp+"/"+name+Date.now().getTime()+"_"+Std.random(0x1000000)+".bin";
-		#else
-		return null;
-		#end
 	}
 }
 
