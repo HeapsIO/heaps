@@ -9,7 +9,7 @@ class LightBuffer {
 	var useBindless : Bool;
 	var useDynamicSamplerIndex : Bool;
 	public var shadowHandles : Array<h3d.mat.TextureHandle> = [];
-	public var tightShadowSamplers = #if js true #else false #end;
+	public var tightShadowSamplers = #if (js && !dx12) true #else false #end;
 
 	var MAX_DIR_SHADOW = 1;
 	var MAX_SPOT_SHADOW = 2;

@@ -89,6 +89,8 @@ class Engine {
 		setCurrent();
 		#if macro
 		driver = new h3d.impl.NullDriver();
+		#elseif (js && dx12)
+		driver = new h3d.impl.DX12Driver();
 		#elseif (js || hlsdl || usegl)
 		#if (hlsdl && heaps_vulkan)
 		if( hxd.Window.USE_VULKAN )

@@ -42,7 +42,7 @@ class Merge extends ScreenFx<MergeShader> {
 		for (i in 0...tex1.mipLevels) {
 			shader.mipLvl = i;
 			if (tex1.flags.has(Cube)) {
-				#if hldx
+				#if (hldx || dx12)
 				for (layer in 0...6) {
 					shader.tex1.slice = layer + 1;
 					shader.tex2.slice = layer + 1;

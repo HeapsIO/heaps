@@ -77,7 +77,20 @@ class System {
 			#end
 		}
 		if( loopFunc != null ) loopFunc();
+		#if dx12
+		// unlike WebGL, the DX12 driver presents explicitly (see System.hl) : only when a frame was rendered,
+		// the loop can skip rendering (editor views not refreshed) and the back buffers would show older frames
+		var cur = h3d.Engine.getCurrent();
+		if( cur != null && cur.ready && @:privateAccess cur.lastTime != lastPresentTime ) {
+			lastPresentTime = @:privateAccess cur.lastTime;
+			cur.driver.present();
+		}
+		#end
 	}
+
+	#if dx12
+	static var lastPresentTime = -1.;
+	#end
 
 	public static function start( callb : Void -> Void ) : Void {
 		callb();

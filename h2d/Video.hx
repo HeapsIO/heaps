@@ -386,6 +386,24 @@ class Video extends Drawable {
 		#end
 	}
 
+	#if (js && dx12)
+	var videoContext : js.html.CanvasRenderingContext2D;
+
+	// the DX12 driver has no access to the video element : copy the frame through a 2D canvas
+	function uploadVideoElement() {
+		var w = videoWidth, h = videoHeight;
+		if( videoContext == null || videoContext.canvas.width != w || videoContext.canvas.height != h ) {
+			var c = js.Browser.document.createCanvasElement();
+			c.width = w;
+			c.height = h;
+			videoContext = c.getContext2d({ willReadFrequently : true });
+		}
+		videoContext.drawImage(v, 0, 0);
+		var data = videoContext.getImageData(0, 0, w, h).data;
+		texture.uploadPixels(new hxd.Pixels(w, h, haxe.io.Bytes.ofData(data.buffer), RGBA));
+	}
+	#end
+
 	#if js
 	@:access(h3d.mat.Texture)
 	#end
@@ -397,7 +415,11 @@ class Video extends Drawable {
 		if( frameReady && time >= videoTime ) {
 			texture.alloc();
 			texture.checkSize(videoWidth, videoHeight, 0);
+			#if dx12
+			uploadVideoElement();
+			#else
 			@:privateAccess cast (@:privateAccess texture.mem.driver, h3d.impl.GlDriver).uploadTextureVideoElement(texture, v, 0, 0);
+			#end
 			texture.flags.set(WasCleared);
 			texture.checkMipMapGen(0, 0);
 		}
