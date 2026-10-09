@@ -37,6 +37,10 @@ class InstanceIndirectBase extends hxsl.Shader {
 
 		function init() {}
 
+		function getCenter() : Vec3 {
+			return vec3(0.0);
+		}
+
 		function getRadius() : Float {
 			return 0.0;
 		}
@@ -124,7 +128,8 @@ class InstanceIndirectBase extends hxsl.Shader {
 			if ( invocID < instanceCount ) {
 				init();
 
-				var pos = vec3(modelView[0].w, modelView[1].w, modelView[2].w);
+				var localCenter = vec4(getCenter(), 1.0);
+				var pos = vec3(dot(modelView[0], localCenter), dot(modelView[1], localCenter), dot(modelView[2], localCenter));
 				var scale = vec3(
 					length(vec3(modelView[0].x,modelView[1].x,modelView[2].x)),
 					length(vec3(modelView[0].y,modelView[1].y,modelView[2].y)),
@@ -177,16 +182,21 @@ class SubPartInstanceIndirect extends InstanceIndirectBase {
 	static var SRC = {
 		// n : subMesh index
 		@param var instancesInfos: StorageBuffer<Int>;
-		// x : radius, y : lodCount, z : subPartsStart, w : subPartsCount
+		// 2 elements => 0 : boundingSphere (center, radius), 1 : x : lodCount, y : subPartsStart, z : subPartsCount
 		@param var subMeshesInfos : StorageBuffer<Vec4>;
 
 		@const(32) var MATERIAL_COUNT : Int = 1;
 		@param var materialCommandStart : Array<Vec4, MATERIAL_COUNT>;
 
+		var center : Vec3;
 		var radius : Float;
 		var lodCount : Int;
 		var subPartsStart : Int;
 		var subPartsCount : Int;
+
+		function getCenter() : Vec3 {
+			return center;
+		}
 
 		function getRadius() : Float {
 			return radius;
@@ -211,29 +221,38 @@ class SubPartInstanceIndirect extends InstanceIndirectBase {
 		function init() {
 			var instanceID = invocID;
 			var subMeshIndex = instancesInfos[instanceID];
-			var subMeshInfos = subMeshesInfos[subMeshIndex];
-			radius = subMeshInfos.x;
-			lodCount = int(subMeshInfos.y);
-			subPartsStart = int(subMeshInfos.z);
-			subPartsCount = int(subMeshInfos.w);
+			var boundingSphere = subMeshesInfos[subMeshIndex * 2];
+			var subMeshInfos = subMeshesInfos[subMeshIndex * 2 + 1];
+			center = boundingSphere.xyz;
+			radius = boundingSphere.w;
+			lodCount = int(subMeshInfos.x);
+			subPartsStart = int(subMeshInfos.y);
+			subPartsCount = int(subMeshInfos.z);
 		}
 	}
 }
 
 class InstanceIndirect extends InstanceIndirectBase {
 	static var SRC = {
+		@param var center : Vec3;
 		@param var radius : Float;
 		@param var lodCount : Int = 1;
 		@param var subPartsCount : Int;
 
+		var fetchedCenter : Vec3;
 		var fetchedRadius : Float;
 		var fetchedLodCount : Int;
 		var fetchedSubPartsCount : Int;
 
 		function init() {
+			fetchedCenter = center;
 			fetchedRadius = radius;
 			fetchedLodCount = lodCount;
 			fetchedSubPartsCount = subPartsCount;
+		}
+
+		function getCenter() : Vec3 {
+			return fetchedCenter;
 		}
 
 		function getRadius() : Float {

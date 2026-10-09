@@ -152,9 +152,10 @@ class Mesh extends Object {
 	}
 
 	public static function screenRatio(absPos : h3d.Matrix, bounds : h3d.col.Bounds, camera : h3d.Camera) {
-		var worldCenter = absPos.getPosition();
+		var worldCenter = bounds.getCenter();
+		worldCenter.transform(absPos);
 		var worldScale = absPos.getScale();
-		var worldRadius = hxd.Math.abs(bounds.getBoundingRadius() * hxd.Math.max(worldScale.x, hxd.Math.max(worldScale.y, worldScale.z)));
+		var worldRadius = hxd.Math.abs(bounds.getBoundingSphereRadius() * hxd.Math.max(worldScale.x, hxd.Math.max(worldScale.y, worldScale.z)));
 		var distanceFromCamera = (worldCenter - camera.pos).length();
 
 		var screenMultiple = hxd.Math.max(0.5 * camera.mproj._11, 0.5 * camera.mproj._22);

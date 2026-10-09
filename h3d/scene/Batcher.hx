@@ -692,7 +692,7 @@ private class BatchCommandBuilder extends hxsl.Shader {
 		@param var instanceStride : Int;
 		@param var modelViewOffset : Int;
 		@param var instancesInfos : StorageBuffer<Int>; // 1 elements => 0 : flags = subPartID(16 bits) + subMeshID(16 bits)
-		@param var subMeshInfos : StorageBuffer<Float>; // 3 elements => 0 : lodStart, 1 : lodCount, 2 : boundingSphere
+		@param var subMeshInfos : StorageBuffer<Vec4>; // 2 elements => 0 : boundingSphere (center, radius), 1 : x : lodStart, y : lodCount
 		@param var lodInfos : StorageBuffer<Float>; // x : screenRatio
 		@param var subPartInfos : StorageBuffer<Int>; // 2 elements => 0 : indexCount, 1 : indexStart
 		@param var countBuffer : RWBuffer<Int>;
@@ -707,7 +707,7 @@ private class BatchCommandBuilder extends hxsl.Shader {
 		@param var maxDistance : Float = -1;
 		@param var meshLodScale : Float = 1.0;
 
-		final subMeshInfosStride : Int = 3;
+		final subMeshInfosStride : Int = 2;
 		final subPartInfosStride : Int = 2;
 
 		@param var lightMatrix : Mat3;
@@ -751,7 +751,6 @@ private class BatchCommandBuilder extends hxsl.Shader {
 				instancesData[modelViewPos + 2],
 				instancesData[modelViewPos + 3],
 			);
-			var position = vec3(modelView[0].w, modelView[1].w, modelView[2].w);
 			var scale = vec3(
 				length(vec3(modelView[0].x,modelView[1].x,modelView[2].x)),
 				length(vec3(modelView[0].y,modelView[1].y,modelView[2].y)),
@@ -760,6 +759,18 @@ private class BatchCommandBuilder extends hxsl.Shader {
 
 			if ( dot(scale, scale) < 1e-12 )
 				return;
+
+			var flags : Int = instancesInfos[instanceID];
+			var subMeshID : Int = flags >> 16;
+
+			var subMeshPos = subMeshID * subMeshInfosStride;
+			var localSphere = subMeshInfos[subMeshPos + 0];
+			var lodInfo = subMeshInfos[subMeshPos + 1];
+			var lodStart : Int = floatBitsToInt(lodInfo.x);
+			var lodCount : Int = floatBitsToInt(lodInfo.y);
+
+			var localCenter = vec4(localSphere.xyz, 1.0);
+			var position = vec3(dot(modelView[0], localCenter), dot(modelView[1], localCenter), dot(modelView[2], localCenter));
 
 			if ( IS_RELATIVE ) {
 				position = position * worldMatrix.mat3x4();
@@ -771,13 +782,7 @@ private class BatchCommandBuilder extends hxsl.Shader {
 				scale *= worldScale;
 			}
 
-			var flags : Int = instancesInfos[instanceID];
-			var subMeshID : Int = flags >> 16;
-
-			var subMeshPos = subMeshID * subMeshInfosStride;
-			var lodStart : Int = floatBitsToInt(subMeshInfos[subMeshPos + 0]);
-			var lodCount : Int = floatBitsToInt(subMeshInfos[subMeshPos + 1]);
-			var boundingSphere = subMeshInfos[subMeshPos + 2] * max(scale.x,max(scale.y, scale.z));
+			var boundingSphere = localSphere.w * max(scale.x,max(scale.y, scale.z));
 
 			if ( ENABLE_FRUSTUM_CULLING ) {
 				@unroll for ( i  in 0...6 ) {
