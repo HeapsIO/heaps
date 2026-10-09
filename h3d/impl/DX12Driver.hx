@@ -210,6 +210,16 @@ class ScratchHeapArray {
 		cursor = 0;
 	}
 
+	public function checkSize( minSize : Int, toRelease : Array<Resource> ) {
+		if( minSize <= size )
+			return;
+		size = minSize;
+		for( h in heaps )
+			toRelease.push(@:privateAccess h.heap);
+		heaps = [];
+		cursor = 0;
+	}
+
 	public function next() {
 		var h = heaps[cursor++];
 		if( h == null ) {
@@ -3060,8 +3070,11 @@ class DX12Driver extends h3d.impl.Driver {
 	// ----- PIPELINE UPDATE
 
 	override function uploadShaderBuffers(buffers:h3d.shader.Buffers, which:h3d.shader.Buffers.BufferKind) {
-		if( which == Globals )
+		if( which == Globals ) {
 			lastGlobalsShader = currentShader;
+			if( currentShader.isCompute )
+				lastFragmentGlobalBind = -1;
+		}
 		uploadBuffers(buffers, buffers.vertex, which, currentShader.shader.vertex, currentShader.vertexRegisters);
 		if( !currentShader.isCompute )
 			uploadBuffers(buffers, buffers.fragment, which, currentShader.shader.fragment, currentShader.fragmentRegisters);
@@ -3907,6 +3920,8 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	function flushHeaps() {
+		frame.srvHeapCache.checkSize(bindlessSrvHeap.size + INITIAL_SRV_COUNT, frame.toRelease);
+		frame.samplerHeapCache.checkSize(hxd.Math.imin(bindlessSamplerHeap.size + INITIAL_SAMPLER_COUNT, 2048), frame.toRelease);
 		frame.srvHeap = frame.srvHeapCache.next();
 		frame.samplerHeap = frame.samplerHeapCache.next();
 		heapCount++;
