@@ -1,6 +1,6 @@
 package h3d.impl;
 
-#if !js
+#if (!js || dx12)
 
 #if hl
 @:forward(setI32,setUI8,setUI16,getUI8,getUI16,getI32,setF32,getF32,sub,blit)
@@ -8,6 +8,9 @@ private abstract Bytes(hl.Bytes) from hl.Bytes to hl.Bytes {
 	public function new(size) this = new hl.Bytes(size);
 	public inline function compare( bytes : Bytes, size : Int ) {
 		return this.compare(0, bytes, 0, size);
+	}
+	public inline function toBytes( size : Int ) : haxe.io.Bytes {
+		return @:privateAccess new haxe.io.Bytes(this, size);
 	}
 }
 #else
@@ -33,6 +36,18 @@ private abstract Bytes(haxe.io.Bytes) from haxe.io.Bytes {
 	}
 	public inline function getUI16(idx:Int) {
 		return this.getUInt16(idx);
+	}
+	public inline function setF32(idx:Int,v:Float) {
+		this.setFloat(idx, v);
+	}
+	public inline function getF32(idx:Int) : Float {
+		return this.getFloat(idx);
+	}
+	public inline function blit(pos:Int,src:haxe.io.BytesData,srcPos:Int,len:Int) {
+		this.blit(pos, haxe.io.Bytes.ofData(src), srcPos, len);
+	}
+	public inline function toBytes( size : Int ) : haxe.io.Bytes {
+		return this.sub(0, size);
 	}
 	public function compare( bytes : Bytes, size : Int ) {
 		var bytes : haxe.io.Bytes = cast bytes;
@@ -355,11 +370,8 @@ class PipelineBuilder {
 		var tot = 0;
 		for( i in 0...size>>2 )
 			tot = (tot * 31 + signature.getI32(i<<2)) % 0x7FFFFFFF;
-		switch( size & 3 ) {
-		case 0:
-		case 2: tot = (tot * 31 + signature.getUI16(size - 2)) % 0x7FFFFFFF;
-		default: throw "assert";
-		}
+		for( i in (size & ~3)...size )
+			tot = (tot * 31 + signature.getUI8(i)) % 0x7FFFFFFF;
 		return tot;
 		#end
 	}

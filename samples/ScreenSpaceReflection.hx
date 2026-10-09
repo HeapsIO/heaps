@@ -35,7 +35,7 @@ class ScreenSpaceReflection extends BenchApp {
 		timingFrames = 32;
 		super.init();
 
-		#if js
+		#if (js && !dx12)
 		addText("SSR bench needs compute shaders, not available in WebGL");
 		return;
 		#end
