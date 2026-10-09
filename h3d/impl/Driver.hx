@@ -5,6 +5,11 @@ typedef GPUBuffer = {};
 typedef Texture = {};
 typedef Query = {};
 typedef DriverImpl = Driver;
+#elseif (js && dx12)
+typedef GPUBuffer = DX12Driver.BufferData;
+typedef Texture = h3d.impl.DX12Driver.TextureData;
+typedef Query = h3d.impl.DX12Driver.QueryData;
+typedef DriverImpl = DX12Driver;
 #elseif js
 typedef GPUBuffer = js.html.webgl.Buffer;
 typedef Texture = { t : js.html.webgl.Texture, width : Int, height : Int, internalFmt : Int, pixelFmt : Int, bits : Int, bind : Int #if multidriver, driver : Driver #end };

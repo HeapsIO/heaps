@@ -455,7 +455,7 @@ class Skin extends MultiMaterial {
 
 	function updateShader() {
 		inline function alloc(count: Int) {
-			#if !hldx
+			#if !(hldx || dx12)
 			// GL doesn't support passing smaller buffers than declared
 			count = Std.int(skinShader.BUFFER_SIZE / 3);  // Mat3x4 passed as Vec3
 			#end

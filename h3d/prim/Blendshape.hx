@@ -6,7 +6,7 @@ class BlendshapeInstance {
 	var blendshape : Blendshape;
 	var shader : h3d.shader.Blendshape;
 
-	#if !js
+	#if (!js || dx12)
 	var weightsBuffer : hxd.FloatBuffer;
 	var gpuWeights : h3d.Buffer;
 	#end
@@ -15,7 +15,7 @@ class BlendshapeInstance {
 		this.blendshape = blendshape;
 		this.mesh = mesh;
 
-		#if !js
+		#if (!js || dx12)
 		weightsBuffer = new hxd.FloatBuffer(blendshape.shapes.length);
 		#end
 
@@ -27,7 +27,7 @@ class BlendshapeInstance {
 		if (idx == -1)
 			return;
 
-		#if js
+		#if (js && !dx12)
 		var weights = [for (idx in 0...blendshape.shapes.length) 0.];
 		weights[idx] = weight;
 		uploadBlendshapeBytes(weights);
@@ -42,7 +42,7 @@ class BlendshapeInstance {
 	}
 
 	public function setBlendshapeWeights(weights: Array<Float>) {
-		#if js
+		#if (js && !dx12)
 		uploadBlendshapeBytes(weights);
 		#else
 		createShader();
@@ -55,7 +55,7 @@ class BlendshapeInstance {
 		#end
 	}
 
-	#if js
+	#if (js && !dx12)
 	public function uploadBlendshapeBytes(weights : Array<Float>) @:privateAccess {
 		var hmdModel = blendshape.hmdModel;
 		if (hmdModel.buffer == null || hmdModel.buffer.isDisposed())
@@ -139,7 +139,7 @@ class BlendshapeInstance {
 	}
 	#end
 
-	#if !js
+	#if (!js || dx12)
 	function createShader() {
 		if (shader == null) {
 			shader = new h3d.shader.Blendshape();
@@ -161,7 +161,7 @@ class BlendshapeInstance {
 
 	public function alloc() {
 		blendshape.incref();
-		#if !js
+		#if (!js || dx12)
 		gpuWeights = hxd.impl.Allocator.get().ofFloats(weightsBuffer, hxd.BufferFormat.INDEX32, UniformReadWrite);
 		createShader();
 		applyShader();
@@ -170,7 +170,7 @@ class BlendshapeInstance {
 
 	public function dispose() {
 		blendshape.decref();
-		#if !js
+		#if (!js || dx12)
 		hxd.impl.Allocator.get().disposeBuffer(gpuWeights);
 		#end
 	}
@@ -186,7 +186,7 @@ class Blendshape {
 	var inputMapping : Array<Map<String, Int>> = [];
 	var shapesBytes = [];
 
-	#if !js
+	#if (!js || dx12)
 	var offsetsBuffer : hxd.FloatBuffer;
 	var gpuOffsets : h3d.Buffer;
 	#end
@@ -250,14 +250,14 @@ class Blendshape {
 	}
 
 	public function dispose() {
-		#if !js
+		#if (!js || dx12)
 		hxd.impl.Allocator.get().disposeFloats(offsetsBuffer);
 		hxd.impl.Allocator.get().disposeBuffer(gpuOffsets);
 		#end
 	}
 
 	public function alloc() {
-		#if !js
+		#if (!js || dx12)
 		offsetsBuffer = hxd.impl.Allocator.get().allocFloats(3 * hmdModel.data.vertexCount * shapes.length);
 
 		var flagOffset = 31;
