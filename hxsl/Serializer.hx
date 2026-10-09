@@ -220,6 +220,7 @@ class Serializer {
 				case Range(min, max): out.addDouble(min); out.addDouble(max);
 				case PerInstance(v): out.addInt32(v);
 				case Doc(s): writeString(s);
+				case Category(n): writeString(n);
 				case Borrow(s): writeString(s);
 				case Sampler(s): writeString(s);
 				case Enum(path, constructors):
@@ -464,6 +465,7 @@ class Serializer {
 				case 14: Flat;
 				case 15: NoVar;
 				case 16: Enum(readString(), readArr(readString));
+				case 17: Category(readString());
 				default: throw "assert";
 				}
 				v.qualifiers.push(q);

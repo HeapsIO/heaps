@@ -34,6 +34,9 @@ class MacroParser {
 		case [ { expr: EConst(CString(s)), pos: pos } ] if (m.name == "doc"):
 			v.qualifiers.push(Doc(s));
 			return;
+		case [ { expr: EConst(CString(s)) } ] if (m.name == "category"):
+			v.qualifiers.push(Category(s));
+			return;
 		case [ { expr: EConst(CString(s)) } ] if (m.name == "sampler"):
 			v.qualifiers.push(Sampler(s));
 			return;
