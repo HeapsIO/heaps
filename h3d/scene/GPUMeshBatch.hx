@@ -35,7 +35,7 @@ class GPUMeshBatch extends MeshBatch {
 	public function new(primitive, ?material, ?parent) {
 		super(primitive, material, parent);
 
-		#if (js || (hldx && !dx12))
+		#if ((js || hldx) && !dx12)
 		throw "Not available on this platform";
 		#end
 

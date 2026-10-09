@@ -87,7 +87,7 @@ class MeshBatch extends MultiMaterial {
 	 * allowing for huge amount of instances.
 	 */
 	public function enableStorageBuffer() {
-		#if js
+		#if (js && !dx12)
 		throw "Storage Buffer are not supported on WebGL.";
 		#end
 		meshBatchFlags.set(EnableStorageBuffer);
@@ -500,7 +500,7 @@ class MeshBatch extends MultiMaterial {
 				var count = hxd.Math.imin(instanceCount - start, p.maxInstance);
 				var maxVertexCount = gpuUpdateEnabled() ? p.maxInstance : getMaxElements();
 				var vertexCount = Std.int( count * (( 4 * p.paramsCount ) / p.bufferFormat.stride) );
-				var vertexCountAllocated = #if js Std.int( MAX_BUFFER_ELEMENTS * 4 / p.bufferFormat.stride ) #else hxd.Math.imin( hxd.Math.nextPOT( vertexCount ), maxVertexCount ) #end;
+				var vertexCountAllocated = #if (js && !dx12) Std.int( MAX_BUFFER_ELEMENTS * 4 / p.bufferFormat.stride ) #else hxd.Math.imin( hxd.Math.nextPOT( vertexCount ), maxVertexCount ) #end;
 
 				// Lazy instance data buffer allocation
 				if( buf == null || buf.isDisposed() || buf.vertices < vertexCountAllocated ) {

@@ -19,7 +19,7 @@ class CheckerboardDepth extends h3d.shader.ScreenShader {
 			var s01 = source.get( ( upscalePixels + offsets[1] ) * invDimensions );
 			var s10 = source.get( ( upscalePixels + offsets[2] ) * invDimensions );
 			var s11 = source.get( ( upscalePixels + offsets[3] ) * invDimensions );
-            #if js
+            #if (js && !dx12)
 			if ( mod(pixels.x, 2) != mod(pixels.y, 2) )
             #else
 			if ( (int(pixels.x) & 1) != (int(pixels.y) & 1) )

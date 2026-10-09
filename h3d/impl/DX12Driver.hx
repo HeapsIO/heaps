@@ -1,9 +1,13 @@
 package h3d.impl;
 
-#if (hldx && dx12)
+#if (dx12 && (hldx || js))
 
-#if (hl_ver < version("1.14.0"))
+#if (hldx && hl_ver < version("1.14.0"))
 #error "DX12Driver requires at least -D hl_ver=1.14.0"
+#end
+
+#if (hldx && hldx < version("1.16.1"))
+#error "DX12Driver requires hldx 1.16.1 or later"
 #end
 
 import h3d.impl.Driver;
@@ -143,7 +147,7 @@ class PSOConfigCache {
 		}
 		if( pipelines.length >= MAX_PIPELINES_PER_SHADER )
 			return;
-		var bytes = @:privateAccess new haxe.io.Bytes(p.bytes, p.size);
+		var bytes = p.bytes.toBytes(p.size);
 		for( existing in pipelines )
 			if( existing.length == bytes.length && existing.compare(bytes) == 0 )
 				return;
@@ -489,7 +493,7 @@ class CompiledShader {
 		vertexViews = hl.CArray.alloc(VertexBufferView, 16);
 		maxBarriers = 100;
 		barriers = hl.CArray.alloc( ResourceBarrier, maxBarriers );
-		var allSubresource = #if (hldx >= version("1.16.0")) Driver.getConstant(RESOURCE_BARRIER_ALL_SUBRESOURCES) #else 0xffffffff #end;
+		var allSubresource = Driver.getConstant(RESOURCE_BARRIER_ALL_SUBRESOURCES);
 		for ( i in 0...maxBarriers )
 			barriers[i].subResource = allSubresource;
 		resourcesToTransition = new hl.NativeArray(maxBarriers);
@@ -978,7 +982,7 @@ class DX12Driver extends h3d.impl.Driver {
 	var frame : DxFrame;
 	var fence : Fence;
 	var fenceEvent : WaitEvent;
-	#if (hldx > version("1.16.0")) var directQueue : CommandQueue; #end
+	var directQueue : CommandQueue;
 
 	var renderTargetViews : ScratchHeap;
 	var depthStenciViews : ScratchHeap;
@@ -1114,12 +1118,10 @@ class DX12Driver extends h3d.impl.Driver {
 
 	function checkSM6_6() : Bool {
 		var hasSM6_6 = false;
-		#if (hldx >= version("1.16.0"))
 		var shaderModel = new hl.Bytes(4);
 		shaderModel.setI32(0, HIGHEST_SHADER_MODEL);
 		Driver.checkFeatureSupport(SHADER_MODEL, shaderModel, 4);
 		hasSM6_6 = cast(SHADER_MODEL_6_6, Int) <= shaderModel.getI32(0);
-		#end
 		return hasSM6_6;
 	}
 
@@ -1162,7 +1164,8 @@ class DX12Driver extends h3d.impl.Driver {
 		swapChain = null;
 		upscaling.afterCreateDevice();
 
-		#if (hldx > version("1.16.0")) directQueue = new CommandQueue(DIRECT); nativeQueue = directQueue; #else Driver.createCommandQueue(); #end
+		directQueue = new CommandQueue(DIRECT);
+		nativeQueue = directQueue;
 
 		upscaling.afterCreateQueue();
 		upscaling.afterCreateSwapChain();
@@ -1280,7 +1283,7 @@ class DX12Driver extends h3d.impl.Driver {
 		adesc[0].type = DRAW_INDEXED;
 		indirectCommand = Driver.createCommandSignature(desc,null);
 
-		tsFreq = #if (hldx > version("1.16.0")) directQueue.getTimestampFrequency() #else Driver.getTimestampFrequency() #end;
+		tsFreq = directQueue.getTimestampFrequency();
 
 		compiler = new ShaderCompiler();
 
@@ -1355,7 +1358,7 @@ class DX12Driver extends h3d.impl.Driver {
 			frame.readbacks = [];
 			for( rq in readbacks )
 				if( rq.size > 0 )
-					@:privateAccess rq.buf.b.blit(rq.bufPos, rq.cpuAddress, 0, rq.size);
+					(rq.buf : hl.Bytes).blit(rq.bufPos, rq.cpuAddress, 0, rq.size);
 		}
 		frame.readbackAllocator.reset();
 		for( rq in readbacks )
@@ -1403,7 +1406,7 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	function waitGpu() {
-		#if (hldx > version("1.16.0")) directQueue.signal(fence, ++fenceValue); #else Driver.signal(fence, ++fenceValue); #end
+		directQueue.signal(fence, ++fenceValue);
 		fence.setEvent(fenceValue, fenceEvent);
 		fenceEvent.wait(-1);
 	}
@@ -1444,7 +1447,7 @@ class DX12Driver extends h3d.impl.Driver {
 			disposeTextureViews(defaultDepth.t);
 		}
 
-		#if (hldx > version("1.16.0")) Driver.resize(directQueue, width, height, BUFFER_COUNT, R8G8B8A8_UNORM); #else Driver.resize(width, height, BUFFER_COUNT, R8G8B8A8_UNORM); #end
+		Driver.resize(directQueue, width, height, BUFFER_COUNT, R8G8B8A8_UNORM);
 
 		renderTargetViews.clear();
 		depthStenciViews.clear();
@@ -1541,7 +1544,7 @@ class DX12Driver extends h3d.impl.Driver {
 			flushTransitions();
 			tmp.maxBarriers += 100;
 			tmp.barriers = hl.CArray.alloc(ResourceBarrier, tmp.maxBarriers);
-			var allSubresource = #if (hldx >= version("1.16.0")) Driver.getConstant(RESOURCE_BARRIER_ALL_SUBRESOURCES) #else 0xffffffff #end;
+			var allSubresource = Driver.getConstant(RESOURCE_BARRIER_ALL_SUBRESOURCES);
 			for ( i in 0...tmp.maxBarriers )
 				tmp.barriers[i].subResource = allSubresource;
 			tmp.resourcesToTransition = new hl.NativeArray<ResourceData>(tmp.maxBarriers);
@@ -1581,12 +1584,7 @@ class DX12Driver extends h3d.impl.Driver {
 		}
 
 		if (totalBarrier > 0)
-			#if (hldx >= version("1.15.0"))
 			frame.commandList.resourceBarriers(tmp.barriers, totalBarrier);
-			#else
-			for (i in 0...totalBarrier)
-				frame.commandList.resourceBarrier(tmp.barriers[i]);
-			#end
 	}
 
 	function getDepthViewFromTexture( tex : h3d.mat.Texture, readOnly : Bool ) {
@@ -2051,11 +2049,7 @@ class DX12Driver extends h3d.impl.Driver {
 			var rangeArr = hl.CArray.alloc(DescriptorRange,rangeCount);
 			for ( i in 0...rangeCount) {
 				var range = rangeArr[i];
-				#if (hldx >= version("1.15.0"))
 				range.offsetInDescriptorsFromTableStart = Driver.getConstant(DESCRIPTOR_RANGE_OFFSET_APPEND);
-				#else
-				range.offsetInDescriptorsFromTableStart = 0xffffffff;
-				#end
 				ranges.push(range);
 			}
 			p.descriptorRanges = rangeArr;
@@ -2554,7 +2548,7 @@ class DX12Driver extends h3d.impl.Driver {
 
 	override function uploadInstanceBufferBytes(b : InstanceBuffer, startVertex : Int, vertexCount : Int, buf : haxe.io.Bytes, bufPos : Int ) {
 		var strideBytes = 5 * 4;
-		updateBuffer(b.data, @:privateAccess buf.b.offset(bufPos), startVertex * strideBytes, vertexCount * strideBytes);
+		updateBuffer(b.data, (buf : hl.Bytes).offset(bufPos), startVertex * strideBytes, vertexCount * strideBytes);
 	}
 
 	function disposeBufferViews(b:BufferData) {
@@ -2596,7 +2590,7 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	override function uploadBufferBytes(b:Buffer, startVertex:Int, vertexCount:Int, buf:haxe.io.Bytes, bufPos:Int) {
-		updateBuffer(b.vbuf, @:privateAccess buf.b.offset(bufPos), startVertex * b.format.strideBytes, vertexCount * b.format.strideBytes);
+		updateBuffer(b.vbuf, (buf : hl.Bytes).offset(bufPos), startVertex * b.format.strideBytes, vertexCount * b.format.strideBytes);
 	}
 
 	override function readBufferBytes(b:Buffer, startVertex:Int, vertexCount:Int, buf:haxe.io.Bytes, bufPos:Int) {
@@ -2616,7 +2610,7 @@ class DX12Driver extends h3d.impl.Driver {
 		waitGpu();
 
 		var output = tmpBuf.map(0, null);
-		@:privateAccess buf.b.blit(bufPos, output, 0, totalSize);
+		(buf : hl.Bytes).blit(bufPos, output, 0, totalSize);
 		tmpBuf.release();
 
 		beginFrame();
@@ -2840,11 +2834,7 @@ class DX12Driver extends h3d.impl.Driver {
 		if ( is3d )
 			tmpSize = Std.int(tmpSize / t.layerCount );
 
-		#if (hldx >= version("1.15.0"))
 		var textureAlignment = Driver.getConstant(TEXTURE_DATA_PLACEMENT_ALIGNMENT);
-		#else
-		var textureAlignment = 512;
-		#end
 
 		var useCopy = t.t.state == COMMON && t.t.targetState == COMMON && tmpSize <= COPY_BUFFER_SIZE;
 		var allocation, cmd;
@@ -3127,13 +3117,8 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	function createTexView( t : h3d.mat.Texture, srvAddr : Address) {
-		#if (hldx >= version("1.16.0"))
 		var texView = getCpuTexView(t);
 		Driver.copyDescriptorsSimple(1, srvAddr, texView, CBV_SRV_UAV);
-		#else
-		fillTexViewDesc(t, tmp.texViewDesc);
-		Driver.createShaderResourceView(t.t.res, tmp.texViewDesc, srvAddr);
-		#end
 	}
 
 	function getTexMask() {
@@ -3164,13 +3149,8 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	function createSampler( t : h3d.mat.Texture, samplerAddr : Address ) {
-		#if (hldx >= version("1.16.0"))
 		var sampler = getCpuSampler(t);
 		Driver.copyDescriptorsSimple(1, samplerAddr, sampler, SAMPLER);
-		#else
-		fillSamplerDesc(t, tmp.samplerDesc);
-		Driver.createSampler(tmp.samplerDesc, samplerAddr);
-		#end
 	}
 
 	function createCBV(vbuf : BufferData, cbvAddr : Address) {
@@ -3403,23 +3383,18 @@ class DX12Driver extends h3d.impl.Driver {
 								throw "Buffer was allocated without UniformBuffer flag";
 							transition(cbv, VERTEX_AND_CONSTANT_BUFFER);
 							var cbvAddress = srv.offset(cbvIndex * frame.srvHeap.stride);
-							#if (hldx >= version("1.16.0"))
 							var cViewIndex = cbv.cViewIndex;
 							if ( cViewIndex == -1 ) {
 								cbv.cViewIndex = cViewIndex = cpuSrvHeap.allocIndex();
 								createCBV(cbv, cpuSrvHeap.getCpuAddressAt(cViewIndex));
 							}
 							Driver.copyDescriptorsSimple(1, cbvAddress, cpuSrvHeap.getCpuAddressAt(cViewIndex), CBV_SRV_UAV);
-							#else
-							createCBV(cbv, cbvAddress);
-							#end
 							cbvIndex++;
 						case Storage:
 							var state = shader.kind == Fragment ? PIXEL_SHADER_RESOURCE : NON_PIXEL_SHADER_RESOURCE;
 							transition(cbv, state);
 							var srvAddress = srv.offset(storageIndex * frame.srvHeap.stride);
 							var stride = regs.bufferStrides[i];
-							#if (hldx >= version("1.16.0"))
 							var sViewIndex = cbv.getSRV(stride);
 							if ( sViewIndex == -1 ) {
 								sViewIndex = cpuSrvHeap.allocIndex();
@@ -3427,9 +3402,6 @@ class DX12Driver extends h3d.impl.Driver {
 								cbv.setSRV(stride, sViewIndex);
 							}
 							Driver.copyDescriptorsSimple(1, srvAddress, cpuSrvHeap.getCpuAddressAt(sViewIndex), CBV_SRV_UAV);
-							#else
-							createBufferSRV(cbv, stride, srvAddress);
-							#end
 							storageIndex++;
 						case RW:
 							if( !b.flags.has(ReadWriteBuffer) )
@@ -3437,7 +3409,6 @@ class DX12Driver extends h3d.impl.Driver {
 							transition(cbv, UNORDERED_ACCESS);
 							var uavAddress = srv.offset(uavIndex * frame.srvHeap.stride);
 							var stride = regs.bufferStrides[i];
-							#if (hldx >= version("1.16.0"))
 							var uViewIndex = cbv.getUAV(stride);
 							if ( uViewIndex == -1 ) {
 								uViewIndex = cpuSrvHeap.allocIndex();
@@ -3445,9 +3416,6 @@ class DX12Driver extends h3d.impl.Driver {
 								cbv.setUAV(stride, uViewIndex);
 							}
 							Driver.copyDescriptorsSimple(1, uavAddress, cpuSrvHeap.getCpuAddressAt(uViewIndex), CBV_SRV_UAV);
-							#else
-							createBufferUAV(cbv, stride, uavAddress);
-							#end
 							uavIndex++;
 						default:
 							throw "assert";
@@ -3890,14 +3858,14 @@ class DX12Driver extends h3d.impl.Driver {
 		frame.copyCommandList.close();
 		copyQueue.executeCommandList(frame.copyCommandList);
 		copyQueue.signal(copyFence, ++copyFenceValue);
-		#if (hldx > version("1.16.0")) directQueue.wait(copyFence, copyFenceValue); #else Driver.wait(copyFence, copyFenceValue); #end
-		#if (hldx > version("1.16.0")) directQueue.executeCommandList(frame.commandList); #else frame.commandList.execute(); #end
+		directQueue.wait(copyFence, copyFenceValue);
+		directQueue.executeCommandList(frame.commandList);
 		currentPipelineState = null;
 		currentShader = null;
 		Driver.flushMessages();
 		psoConfigCache?.save();
 		frame.fenceValue = ++fenceValue;
-		#if (hldx > version("1.16.0")) directQueue.signal(fence, frame.fenceValue); #else Driver.signal(fence, frame.fenceValue); #end
+		directQueue.signal(fence, frame.fenceValue);
 	}
 
 	override function present() {
@@ -3907,7 +3875,7 @@ class DX12Driver extends h3d.impl.Driver {
 		flushTransitions();
 		flushFrame();
 		upscaling.beforeQueuePresent();
-		#if (hldx > version("1.16.0")) directQueue.present(window.vsync); #else Driver.present(window.vsync); #end
+		directQueue.present(window.vsync);
 		upscaling.afterQueuePresent();
 		waitForFrame(Driver.getCurrentBackBufferIndex());
 		beginFrame();
