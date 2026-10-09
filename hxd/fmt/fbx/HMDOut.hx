@@ -966,7 +966,7 @@ class HMDOut extends BaseLibrary {
 		// Compute convex hulls shapes with hmd data
 		var dim = bounds.dimension();
 		if( generateCollides.unit == null || generateCollides.unit < 0 )
-			throw 'Invalid collide unit ${generateCollides.unit} for ${colliderModel.getObjectName()} in $filePath';
+			throw 'Invalid collide unit ${generateCollides.unit} for ${colliderModel.getObjectName()} in $fileName';
 		var resolution = Math.ceil(dim / generateCollides.unit);
 		var params = { maxConvexHulls: generateCollides.maxConvexHulls, resolution: resolution };
 		var convexHulls = hxd.fmt.hmd.Data.ConvexHullsCollider.buildConvexHulls(vertices, indexes, params);
