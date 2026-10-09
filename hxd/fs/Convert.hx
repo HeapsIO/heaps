@@ -102,7 +102,13 @@ class Convert {
 
 	function command(cmd:String, args:Array<String>) {
 		#if (sys || nodejs)
+		#if nodejs
+		// no console window for each command on Windows (an Electron app)
+		var code : Null<Int> = js.node.ChildProcess.spawnSync(cmd, args, cast { stdio : "inherit", windowsHide : true }).status;
+		if (code == null) code = -1;
+		#else
 		var code = Sys.command(cmd, args);
+		#end
 		if (code != 0)
 			throw "Command '" + cmd + (args.length == 0 ? "" : " " + args.join(" ")) + "' failed with exit code " + code;
 		#else

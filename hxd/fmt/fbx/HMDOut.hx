@@ -68,16 +68,6 @@ class HMDOut extends BaseLibrary {
 		return true;
 	}
 
-	#if (sys || nodejs)
-	function tmpFile(name : String) {
-		var tmp = Sys.getEnv("TMPDIR");
-		if( tmp == null ) tmp = Sys.getEnv("TMP");
-		if( tmp == null ) tmp = Sys.getEnv("TEMP");
-		if( tmp == null ) tmp = ".";
-		return tmp+"/"+name+Date.now().getTime()+"_"+Std.random(0x1000000)+".bin";
-	}
-	#end
-
 	function buildTangents( geom : hxd.fmt.fbx.Geometry ) {
 		var verts = geom.getVertices();
 		var normals = geom.getNormals();
@@ -87,55 +77,14 @@ class HMDOut extends BaseLibrary {
 		if ( index.vidx.length > 0 && uvs[0] == null ) @:privateAccess
 			throw "Need UVs to build tangents" + (geom.lib != null ? ' in ${geom.lib.fileName}' : '');
 
-		#if (hl && !hl_disable_mikkt)
-		var m = new hxd.tools.Mikktspace();
-		m.buffer = new hl.Bytes(8 * 4 * index.vidx.length);
-		m.stride = 8;
-		m.xPos = 0;
-		m.normalPos = 3;
-		m.uvPos = 6;
-
-		m.indexes = new hl.Bytes(4 * index.vidx.length);
-		m.indices = index.vidx.length;
-
-		m.tangents = new hl.Bytes(4 * 4 * index.vidx.length);
-		(m.tangents:hl.Bytes).fill(0,4 * 4 * index.vidx.length,0);
-		m.tangentStride = 4;
-		m.tangentPos = 0;
-
+		var count = index.vidx.length;
+		var buffer = haxe.io.Bytes.alloc(count * 8 * 4);
 		var out = 0;
-		for( i in 0...index.vidx.length ) {
-			var vidx = index.vidx[i];
-			m.buffer[out++] = verts[vidx*3];
-			m.buffer[out++] = verts[vidx*3+1];
-			m.buffer[out++] = verts[vidx*3+2];
-
-			m.buffer[out++] = normals[i*3];
-			m.buffer[out++] = normals[i*3+1];
-			m.buffer[out++] = normals[i*3+2];
-			var uidx = uvs[0].index[i];
-
-			m.buffer[out++] = uvs[0].values[uidx*2];
-			m.buffer[out++] = uvs[0].values[uidx*2+1];
-
-			m.tangents[i<<2] = 1;
-
-			m.indexes[i] = i;
+		inline function w(v:Float) {
+			buffer.setFloat(out, v);
+			out += 4;
 		}
-
-		m.compute();
-		return m.tangents;
-		#elseif (sys || nodejs)
-		var fileName = tmpFile("mikktspace_data");
-		var outFile = fileName+".out";
-		var outputData = new haxe.io.BytesBuffer();
-		outputData.addInt32(index.vidx.length);
-		outputData.addInt32(8);
-		outputData.addInt32(0);
-		outputData.addInt32(3);
-		outputData.addInt32(6);
-		for( i in 0...index.vidx.length ) {
-			inline function w(v:Float) outputData.addFloat(v);
+		for( i in 0...count ) {
 			var vidx = index.vidx[i];
 			w(verts[vidx*3]);
 			w(verts[vidx*3+1]);
@@ -149,27 +98,12 @@ class HMDOut extends BaseLibrary {
 			w(uvs[0].values[uidx*2]);
 			w(uvs[0].values[uidx*2+1]);
 		}
-		outputData.addInt32(index.vidx.length);
-		for( i in 0...index.vidx.length )
-			outputData.addInt32(i);
-		sys.io.File.saveBytes(fileName, outputData.getBytes());
-		var ret = try Sys.command("meshTools",["mikktspace",fileName,outFile]) catch( e : Dynamic ) -1;
-		if( ret != 0 ) {
-			sys.FileSystem.deleteFile(fileName);
-			throw "Failed to call 'mikktspace' executable required to generate tangent data. Please ensure it's in your PATH"+(filePath == null ? "" : ' ($filePath)');
-		}
-		var bytes = sys.io.File.getBytes(outFile);
-		var size = index.vidx.length*4;
+		var bytes = try hxd.tools.MeshTools.mikktspace(buffer, count, 8, 0, 3, 6) catch( e : String ) throw e + (filePath == null ? "" : ' ($filePath)');
+		var size = count * 4;
 		var arr = new hxd.FloatBuffer(size);
 		for( i in 0...size )
 			arr[i] = bytes.getFloat(i << 2);
-		sys.FileSystem.deleteFile(fileName);
-		sys.FileSystem.deleteFile(outFile);
 		return arr;
-		#else
-		throw "Tangent generation is not supported on this platform";
-		return ([] : Array<Float>);
-		#end
 	}
 
 	function updateNormals( g : Geometry, vbuf : hxd.FloatBuffer, idx : Array<Array<Int>> ) {
@@ -282,84 +216,27 @@ class HMDOut extends BaseLibrary {
 	}
 
 	function optimize( vbuf : hxd.FloatBuffer, vertexFormat : hxd.BufferFormat, ibuf : Array<Int>, startIndex : Int, decimationFactor : Float ) {
-		var optimizedVbuf : hxd.FloatBuffer;
 		decimationFactor = hxd.Math.clamp(decimationFactor);
-
-		#if ( hl && hl_ver >= version("1.15.0") )
 		var vertexSize = vertexFormat.stride << 2;
 		var vertexCount = Std.int(vbuf.length / vertexFormat.stride);
-		var vertices = new hl.Bytes(vertexCount * vertexSize);
-		for ( i in 0...vbuf.length )
-			vertices.setF32(i << 2, cast(vbuf[i], Single));
+		var vertices = haxe.io.Bytes.alloc(vertexCount * vertexSize);
+		for( i in 0...vertexCount * vertexFormat.stride )
+			vertices.setFloat(i << 2, vbuf[i]);
 		var indexCount = ibuf.length;
-		var indices = new hl.Bytes(indexCount * 4);
-		for ( i => idx in ibuf )
-			indices.setI32(i << 2, idx);
-
-		var remap = new hl.Bytes(vertexCount * 4);
-		var uniqueVertexCount = hxd.tools.MeshOptimizer.generateVertexRemap(remap, indices, indexCount, vertices, vertexCount, vertexSize);
-		hxd.tools.MeshOptimizer.remapIndexBuffer(indices, indices, indexCount, remap);
-		hxd.tools.MeshOptimizer.remapVertexBuffer(vertices, vertices, vertexCount, vertexSize, remap);
-		vertexCount = uniqueVertexCount;
-		if ( decimationFactor > 0.0 ) {
-			var options = hxd.tools.MeshOptimizer.SimplifyOptions.LockBorder | hxd.tools.MeshOptimizer.SimplifyOptions.Prune;
-			indexCount = hxd.tools.MeshOptimizer.simplify(indices, indices, indexCount, vertices, vertexCount, vertexSize, Std.int(indexCount * (1.0 - decimationFactor)), decimationFactor, options, null);
-		}
-		hxd.tools.MeshOptimizer.optimizeVertexCache(indices, indices, indexCount, vertexCount);
-		hxd.tools.MeshOptimizer.optimizeOverdraw(indices, indices, indexCount, vertices, vertexCount, vertexSize, 1.05);
-		vertexCount = hxd.tools.MeshOptimizer.optimizeVertexFetch(vertices, indices, indexCount, vertices, vertexCount, vertexSize);
-
-		optimizedVbuf = new hxd.FloatBuffer();
-		optimizedVbuf.resize(vertexCount * vertexFormat.stride);
-		for ( i in 0...vertexCount * vertexFormat.stride )
-			optimizedVbuf[i] = vertices.getF32(i << 2);
-		ibuf.resize(indexCount);
-		for ( i in 0...indexCount )
-			ibuf[i] = indices.getI32(i << 2) + startIndex;
-
-		#elseif (sys || nodejs)
-		var fileName = tmpFile("meshTools_data");
-		var outFile = fileName+".out";
-
-		var vertexSize = vertexFormat.stride << 2;
-		var vertexCount = Std.int(vbuf.length / vertexFormat.stride);
-
-		var outputData = new haxe.io.BytesBuffer();
-		outputData.addInt32(vertexCount);
-		outputData.addInt32(vertexSize);
-		for( v in vbuf )
-			outputData.addFloat(v);
-		var indexCount = ibuf.length;
-		outputData.addInt32(indexCount);
-		for( i in ibuf )
-			outputData.addInt32(i);
-		sys.io.File.saveBytes(fileName, outputData.getBytes());
-		var ret = if (decimationFactor > 0.0)
-			try Sys.command("meshTools",["simplify",fileName,outFile,'${Std.int(indexCount * (1.0 - decimationFactor))}','${decimationFactor}']) catch( e : Dynamic ) -1;
-		else
-			try Sys.command("meshTools",["optimize",fileName,outFile]) catch( e : Dynamic ) -1;
-
-		if( ret != 0 ) {
-			sys.FileSystem.deleteFile(fileName);
-			throw "Failed to call 'meshTools' executable required to generate optimized mesh. Please ensure it's in your PATH"+(filePath == null ? "" : ' ($filePath)');
-		}
-		var input = sys.io.File.getBytes(outFile);
-		var pos = 1;
-		vertexCount = input.getInt32(0);
-		optimizedVbuf = new hxd.FloatBuffer();
-		optimizedVbuf.resize(vertexCount * vertexFormat.stride);
-		for ( i in 0...vertexCount * vertexFormat.stride )
-			optimizedVbuf[i] = input.getFloat(4 * pos++);
-		indexCount = input.getInt32(4 * pos++);
-		ibuf.resize(indexCount);
-		for ( i in 0...indexCount )
-			ibuf[i] = input.getInt32(4 * pos++) + startIndex;
-		sys.FileSystem.deleteFile(fileName);
-		sys.FileSystem.deleteFile(outFile);
-		#else
-		optimizedVbuf = vbuf;
-		#end
-
+		var indices = haxe.io.Bytes.alloc(indexCount << 2);
+		for( i => idx in ibuf )
+			indices.setInt32(i << 2, idx);
+		var targetIndexCount = decimationFactor > 0.0 ? Std.int(indexCount * (1.0 - decimationFactor)) : -1;
+		var r = try hxd.tools.MeshTools.optimize(vertices, vertexCount, vertexSize, indices, indexCount, targetIndexCount, decimationFactor) catch( e : String ) throw e + (filePath == null ? "" : ' ($filePath)');
+		if( r == null )
+			return vbuf;
+		var optimizedVbuf = new hxd.FloatBuffer();
+		optimizedVbuf.resize(r.vertexCount * vertexFormat.stride);
+		for( i in 0...r.vertexCount * vertexFormat.stride )
+			optimizedVbuf[i] = vertices.getFloat(i << 2);
+		ibuf.resize(r.indexCount);
+		for( i in 0...r.indexCount )
+			ibuf[i] = indices.getInt32(i << 2) + startIndex;
 		return optimizedVbuf;
 	}
 
