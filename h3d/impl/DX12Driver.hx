@@ -1057,6 +1057,7 @@ class DX12Driver extends h3d.impl.Driver {
 	public static var INITIAL_READBACK_ALLOCATOR_SIZE = 64 * 1024;
 	public static var BUFFER_COUNT = #if console 3 #else 2 #end;
 	public static var DEVICE_NAME = null;
+	public static var inst(default, null) : DX12Driver;
 	public static var DEBUG = false; // requires dxil.dll when set to true
 	public static var SUPPRESSED_MESSAGE_IDS : Array<Int> = [];
 	public static var ENABLE_PSO_CONFIG_CACHE = false;
@@ -1075,6 +1076,7 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	public function new() {
+		inst = this;
 		window = @:privateAccess dx.Window.windows[0];
 		var backends : Array<UpscalingBackend> = [];
 		#if dlss backends.push(new DX12DlssBackend(this)); #end
