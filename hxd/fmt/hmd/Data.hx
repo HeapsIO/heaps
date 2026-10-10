@@ -147,7 +147,7 @@ class Collider {
 					return ResolveResult.Empty;
 			}
 
-			if (collisionUseLowLod != null) {
+			if (collisionUseLowLod == true) {
 				if (model.lods != null && model.lods.length > 0)
 					return ResolveResult.Mesh(d.models[model.lods[model.lods.length - 1]]);
 			}
