@@ -1350,14 +1350,15 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	function resolveReadbacks() {
-		if( frame.readbacks.length > 0 ) {
+		var readbacks = frame.readbacks;
+		if( readbacks.length > 0 ) {
 			frame.readbacks = [];
-			for( rq in frame.readbacks )
+			for( rq in readbacks )
 				if( rq.size > 0 )
 					@:privateAccess rq.buf.b.blit(rq.bufPos, rq.cpuAddress, 0, rq.size);
 		}
 		frame.readbackAllocator.reset();
-		for( rq in frame.readbacks )
+		for( rq in readbacks )
 			rq.callback();
 	}
 
