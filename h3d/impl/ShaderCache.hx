@@ -46,7 +46,7 @@ class ShaderCache {
 	}
 
 	function loadFile( file : String ) {
-		#if !sys
+		#if !(sys || nodejs)
 		throw "Cannot load shader cache with this platform";
 		#else
 		if( !sys.FileSystem.exists(file) )
@@ -80,7 +80,7 @@ class ShaderCache {
 		#end
 	}
 
-	#if sys
+	#if (sys || nodejs)
 	function loadCache(cache : haxe.io.BytesInput) {
 		while( cache.position < cache.length ) {
 			var len = cache.readInt32();
@@ -110,7 +110,7 @@ class ShaderCache {
 	#end
 
 	function loadSources() {
-		#if !sys
+		#if !(sys || nodejs)
 		throw "Cannot load shader cache with this platform";
 		#else
 		sources = new Map();
@@ -215,7 +215,7 @@ class ShaderCache {
 		case Binary: writeBinaryCache(keys, out);
 		}
 		unlock();
-		#if sys
+		#if (sys || nodejs)
 		try sys.io.File.saveBytes(outputFile, out.getBytes()) catch( e : Dynamic ) { trace("Something went wrong"); };
 		#end
 	}
@@ -257,7 +257,7 @@ class ShaderCache {
 			out.writeByte('\n'.code);
 		}
 		unlock();
-		#if sys
+		#if (sys || nodejs)
 		try sys.io.File.saveBytes(sourceFile, out.getBytes()) catch( e : Dynamic ) {};
 		#end
 	}
