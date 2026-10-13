@@ -399,7 +399,10 @@ class FileConverter {
 		if( match.ver == conv.version && match.hash == hash && match.localContextJson != null ) {
 			localContext = try { haxe.Json.parse(match.localContextJson); } catch(e) { null; }
 		}
-		var localParams = hasLocalParams ? conv.computeLocalParams(localContext) : null;
+		var localParams = try hasLocalParams ? conv.computeLocalParams(localContext) : null catch( err : haxe.Exception ) {
+			conv.cleanup();
+			throw err;
+		}
 		conv.localParams = localParams;
 		var localParamsHash = localParams == null ? null : haxe.crypto.Sha1.make(haxe.io.Bytes.ofString(formatValue(localParams))).toHex();
 		localContext = conv.getLocalContext();
@@ -418,7 +421,10 @@ class FileConverter {
 		sys.FileSystem.createDirectory(fullOutPath.substr(0, fullOutPath.lastIndexOf("/")));
 
 		onConvert(conv);
-		executeConvert(conv);
+		try executeConvert(conv) catch( err : haxe.Exception ) {
+			conv.cleanup();
+			throw err;
+		}
 		conv.cleanup();
 
 		if( !sys.FileSystem.exists(fullOutPath) )
@@ -437,7 +443,10 @@ class FileConverter {
 	dynamic function executeConvert( conv : Convert ) {
 		var prev = hxd.System.allowTimeout;
 		hxd.System.allowTimeout = false;
-		conv.convert();
+		try conv.convert() catch( err : haxe.Exception ) {
+			hxd.System.allowTimeout = prev;
+			throw err;
+		}
 		if( prev ) hxd.System.timeoutTick();
 		hxd.System.allowTimeout = prev;
 	}
