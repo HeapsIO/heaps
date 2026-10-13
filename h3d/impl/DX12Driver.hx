@@ -12,7 +12,6 @@ import dx.Dx12;
 import haxe.Int64;
 import h3d.mat.Pass;
 import h3d.mat.Stencil;
-import haxe.MainLoop;
 
 private typedef Driver = Dx12;
 
@@ -255,9 +254,9 @@ class BufferAllocatorPage {
 	var resource : GpuResource;
 	var cpuAddress : hl.Bytes;
 
-	public function new( heap : HeapProperties, flags : haxe.EnumFlags<HeapFlag>, desc : ResourceDesc ) {
+	public function new( heap : HeapProperties, flags : haxe.EnumFlags<HeapFlag>, desc : ResourceDesc, state : ResourceState ) {
 		this.capacity = desc.width.low;
-		resource = DX12Driver.allocCheck(() -> Driver.createCommittedResource(heap, flags, desc, GENERIC_READ, null));
+		resource = DX12Driver.allocCheck(() -> Driver.createCommittedResource(heap, flags, desc, state, null));
 		resource.setName("BufferAllocatorPage");
 		cpuAddress = resource.map(0, null);
 	}
@@ -299,10 +298,12 @@ class BufferAllocator {
 	var heap : HeapProperties;
 	var desc : ResourceDesc;
 	var flags : haxe.EnumFlags<HeapFlag>;
+	var state : ResourceState;
 
-	public function new( size : Int ) {
+	public function new( size : Int, heapType : HeapType = UPLOAD, state : ResourceState = GENERIC_READ ) {
 		heap = new HeapProperties();
-		heap.type = UPLOAD;
+		heap.type = heapType;
+		this.state = state;
 		desc = new ResourceDesc();
 		desc.dimension = BUFFER;
 		desc.width = size;
@@ -312,7 +313,7 @@ class BufferAllocator {
 		desc.sampleDesc.count = 1;
 		desc.layout = ROW_MAJOR;
 		flags = new haxe.EnumFlags();
-		pages = [new BufferAllocatorPage(heap, flags, desc)];
+		pages = [new BufferAllocatorPage(heap, flags, desc, state)];
 	}
 
 	public function reset( forceDispose = false ) {
@@ -348,7 +349,7 @@ class BufferAllocator {
 
 		var lastCapacity = pages[pages.length - 1].capacity;
 		desc.width = hxd.Math.imax((lastCapacity >> 1) * 3, sz);
-		var p = new BufferAllocatorPage(heap, flags, desc);
+		var p = new BufferAllocatorPage(heap, flags, desc, state);
 		p.tryAlloc(sz, alignment, allocation);
 		pages.push(p);
 		return allocation;
@@ -390,6 +391,8 @@ class DxFrame {
 	public var queryHeapOffset : Int;
 	public var queryBuffer : GpuResource;
 	public var bufferAllocator : BufferAllocator;
+	public var readbackAllocator : BufferAllocator;
+	public var readbacks : Array<ReadbackRequest> = [];
 	public function new() {
 	}
 	public function getSize() {
@@ -950,17 +953,12 @@ class QueryData {
 	}
 }
 
-class AsyncReadbackRequest {
-	public var b : Buffer;
-	public var startVertex : Int;
-	public var vertexCount : Int;
+class ReadbackRequest {
+	public var cpuAddress : hl.Bytes;
+	public var size : Int;
 	public var buf : haxe.io.Bytes;
 	public var bufPos : Int;
 	public var callback : Void -> Void;
-	public var tmpBufOffset : Int;
-    public var tmpBufSize : Int;
-	public var barrier : ResourceBarrier;
-	public var fenceValue : Int64;
 	public function new() {
 	}
 }
@@ -1037,22 +1035,6 @@ class DX12Driver extends h3d.impl.Driver {
 	var copyFence : Fence;
 	var copyFenceValue : Int64;
 
-	var asyncCopyCommandList : CommandList;
-	var asyncCopyAllocator : CommandAllocator;
-	var asyncCopyEvent : MainEvent;
-	var waitingAsyncCopy : Bool;
-	var asyncReadbackQueue : Array<AsyncReadbackRequest> = [];
-	var currentRequests : Array<AsyncReadbackRequest> = [];
-	var asyncReadbackBuffer : GpuResource;
-	var asyncReadbackBufferSize : Int = 0;
-
-	var computeQueue : CommandQueue;
-	var computeFence : Fence;
-	var computeFenceValue : Int64;
-
-	var asyncComputeCommandList : CommandList;
-	var asyncComputeAllocator : CommandAllocator;
-
 	var nativeDevice : Device;
 	var nativeFactory : Factory;
 	var nativeQueue : CommandQueue;
@@ -1068,6 +1050,7 @@ class DX12Driver extends h3d.impl.Driver {
 	public static var INITIAL_BINDLESS_SAMPLER_COUNT = 1024;
 	public static var INITIAL_SAMPLER_COUNT = 1024;
 	public static var INITIAL_BUFFER_ALLOCATOR_SIZE = 2 * 1024 * 1024;
+	public static var INITIAL_READBACK_ALLOCATOR_SIZE = 64 * 1024;
 	public static var BUFFER_COUNT = #if console 3 #else 2 #end;
 	public static var DEVICE_NAME = null;
 	public static var DEBUG = false; // requires dxil.dll when set to true
@@ -1210,6 +1193,7 @@ class DX12Driver extends h3d.impl.Driver {
 			if ( f.bufferAllocator != null )
 				f.bufferAllocator.dispose();
 			f.bufferAllocator = new BufferAllocator(INITIAL_BUFFER_ALLOCATOR_SIZE);
+			f.readbackAllocator = new BufferAllocator(INITIAL_READBACK_ALLOCATOR_SIZE, READBACK, COPY_DEST);
 			f.copyBuffer = Driver.createCommittedResource(heap, flags, desc, GENERIC_READ, null);
 			f.copyBuffer.setName('CopyBuffer$i');
 			frames.push(f);
@@ -1221,22 +1205,6 @@ class DX12Driver extends h3d.impl.Driver {
 		copyQueue = new CommandQueue(COPY);
 		copyFence = new Fence(0, NONE);
 		copyFenceValue = 0;
-
-		asyncCopyAllocator = new CommandAllocator(COPY);
-		asyncCopyCommandList = new CommandList(COPY, asyncCopyAllocator, null);
-		asyncCopyCommandList.close();
-		asyncCopyAllocator.reset();
-		asyncCopyCommandList.reset(asyncCopyAllocator, null);
-
-		computeQueue = new CommandQueue(COMPUTE);
-		computeFence = new Fence(0, NONE);
-		computeFenceValue = 0;
-
-		asyncComputeAllocator = new CommandAllocator(COMPUTE);
-		asyncComputeCommandList = new CommandList(COMPUTE, asyncComputeAllocator, null);
-		asyncComputeCommandList.close();
-		asyncComputeAllocator.reset();
-		asyncComputeCommandList.reset(asyncComputeAllocator, null);
 
 		renderTargetViews = new ScratchHeap(RTV, INITIAL_RT_COUNT);
 		depthStenciViews = new ScratchHeap(DSV, INITIAL_RT_COUNT);
@@ -1377,6 +1345,20 @@ class DX12Driver extends h3d.impl.Driver {
 		flushHeaps();
 
 		upscaling.beginFrame();
+
+		resolveReadbacks();
+	}
+
+	function resolveReadbacks() {
+		if( frame.readbacks.length > 0 ) {
+			frame.readbacks = [];
+			for( rq in frame.readbacks )
+				if( rq.size > 0 )
+					@:privateAccess rq.buf.b.blit(rq.bufPos, rq.cpuAddress, 0, rq.size);
+		}
+		frame.readbackAllocator.reset();
+		for( rq in frame.readbacks )
+			rq.callback();
 	}
 
 	override function clear(?color:Vector4, ?depth:Float, ?stencil:Int) {
@@ -1416,12 +1398,6 @@ class DX12Driver extends h3d.impl.Driver {
 	function waitCopy() {
 		copyQueue.signal(copyFence, ++copyFenceValue);
 		copyFence.setEvent(copyFenceValue, fenceEvent);
-		fenceEvent.wait(-1);
-	}
-
-	function waitCompute() {
-		computeQueue.signal(computeFence, ++computeFenceValue);
-		computeFence.setEvent(computeFenceValue, fenceEvent);
 		fenceEvent.wait(-1);
 	}
 
@@ -2628,104 +2604,22 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	override function readBufferBytesAsync( b : Buffer, startVertex : Int, vertexCount : Int, buf : haxe.io.Bytes, bufPos : Int, callback : Void -> Void ) {
-		var rq = new AsyncReadbackRequest();
-		rq.b = b;
-		rq.startVertex = startVertex;
-		rq.vertexCount = vertexCount;
+		if( hasDeviceError ) return;
+		if( b.vbuf == null ) throw "Reading buffer which was not allocated";
+		var stride = b.format.strideBytes;
+		var rq = new ReadbackRequest();
+		rq.size = vertexCount * stride;
 		rq.buf = buf;
 		rq.bufPos = bufPos;
 		rq.callback = callback;
-		rq.fenceValue = fenceValue + 1;
-		asyncReadbackQueue.push(rq);
-
-		if ( asyncCopyEvent == null ) {
-			asyncCopyEvent = haxe.MainLoop.add(() -> {
-				if ( !waitingAsyncCopy ) {
-					if ( asyncReadbackQueue.length > 0 ) {
-						var curFence = fence.getValue();
-						var totalBatchSize = 0;
-						for ( request in asyncReadbackQueue ) {
-							if ( request.fenceValue <= curFence ) {
-								var stride = request.b.format.strideBytes;
-								request.tmpBufOffset = totalBatchSize;
-								request.tmpBufSize = request.vertexCount * stride;
-								totalBatchSize += request.tmpBufSize;
-							}
-						}
-
-						if ( (asyncReadbackBuffer == null || asyncReadbackBufferSize < totalBatchSize) && totalBatchSize > 0 ) {
-							asyncReadbackBuffer?.release();
-							asyncReadbackBuffer = allocGPU(totalBatchSize, READBACK, COPY_DEST);
-							asyncReadbackBuffer.setName("AsyncReadbackBuffer");
-							asyncReadbackBufferSize = totalBatchSize;
-						}
-
-						for ( request in asyncReadbackQueue ) {
-							if ( request.fenceValue <= curFence ) {
-								var stride = request.b.format.strideBytes;
-
-								request.b.vbuf.targetState = COMMON;
-								var barrier = new ResourceBarrier();
-								barrier.resource = request.b.vbuf.res;
-								@:privateAccess barrier.type = TRANSITION;
-								barrier.stateBefore = request.b.vbuf.state;
-								barrier.stateAfter  = request.b.vbuf.targetState;
-								request.b.vbuf.state = request.b.vbuf.targetState;
-								request.barrier = barrier;
-
-								asyncComputeCommandList.resourceBarrier(barrier);
-								asyncCopyCommandList.copyBufferRegion(asyncReadbackBuffer, request.tmpBufOffset, request.b.vbuf.res, request.startVertex * stride, request.tmpBufSize);
-
-								currentRequests.push(request);
-							}
-						}
-
-						for ( r in currentRequests )
-							asyncReadbackQueue.remove(r);
-
-						if ( currentRequests.length > 0 ) {
-							asyncComputeCommandList.close();
-							computeQueue.executeCommandList(asyncComputeCommandList);
-							computeQueue.signal(computeFence, ++computeFenceValue);
-
-							waitCompute();
-							asyncComputeAllocator.reset();
-							asyncComputeCommandList.reset(asyncComputeAllocator, null);
-
-							asyncCopyCommandList.close();
-							copyQueue.executeCommandList(asyncCopyCommandList);
-							copyQueue.signal(copyFence, ++copyFenceValue);
-
-							waitingAsyncCopy = true;
-						}
-					} else {
-						asyncCopyEvent.stop();
-						asyncCopyEvent = null;
-					}
-				} else {
-					if ( copyFence.getValue() >= copyFenceValue ) {
-						asyncCopyAllocator.reset();
-						asyncCopyCommandList.reset(asyncCopyAllocator, null);
-
-						var mappedPtr = asyncReadbackBuffer?.map(0, null);
-						for ( request in currentRequests ) {
-							@:privateAccess request.buf.b.blit(request.bufPos, mappedPtr, request.tmpBufOffset, request.tmpBufSize);
-							request.callback();
-						}
-
-						asyncReadbackBuffer?.unmap(0, null);
-						currentRequests.resize(0);
-						waitingAsyncCopy = false;
-
-						if ( asyncReadbackQueue.length == 0 ) {
-							asyncReadbackBuffer?.release();
-							asyncReadbackBuffer = null;
-							asyncReadbackBufferSize = 0;
-						}
-					}
-				}
-			});
+		if( rq.size > 0 ) {
+			var alloc = frame.readbackAllocator.alloc(rq.size, 16, tmp.bufferAllocation);
+			rq.cpuAddress = alloc.cpuAddress;
+			transition(b.vbuf, COPY_SOURCE);
+			flushTransitions();
+			frame.commandList.copyBufferRegion(alloc.resource, alloc.offset, b.vbuf.res, startVertex * stride, rq.size);
 		}
+		frame.readbacks.push(rq);
 	}
 
 	// ------------ TEXTURES -------
