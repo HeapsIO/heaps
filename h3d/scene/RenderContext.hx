@@ -436,6 +436,7 @@ class RenderContext extends h3d.impl.RenderContext {
 		cameraPrevProj.load(cameraProj);
 		cameraPreviousViewProj.load(cameraViewProj);
 		computeVelocity = false;
+		cameraJitterOffsets.set(0, 0, 0, 0);
 		prevWorldDelta = null;
 
 		clearCurrent();
