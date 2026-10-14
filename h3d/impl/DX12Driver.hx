@@ -2298,30 +2298,48 @@ class DX12Driver extends h3d.impl.Driver {
 		compileMutex.acquire();
 		var sh = compiledShaders.get(shader.id);
 		if( sh != null ) {
+			if( compilingCount == 0 )
+				releaseShaderData(shader, sh);
 			compileMutex.release();
 			return sh;
 		}
 		compilingCount++;
 		compileMutex.release();
 		var c = try doCompileShader(shader) catch( e : haxe.Exception ) {
-			endCompile(null);
+			endCompile(null, null);
 			throw e;
 		}
-		endCompile(shader);
+		endCompile(shader, c);
 		return c;
 		#else
 		var c = doCompileShader(shader);
-		shader.releaseData();
+		releaseShaderData(shader, c);
 		return c;
 		#end
 	}
 
+	function releaseShaderData( shader : hxsl.RuntimeShader, compiled : CompiledShader ) {
+		copyShaderCode(shader, compiled);
+		shader.releaseData();
+	}
+
+	function copyShaderCode( shader : hxsl.RuntimeShader, compiled : CompiledShader ) {
+		var src = compiled.shader;
+		if( src == shader )
+			return;
+		shader.vertex.code ??= src.vertex.code;
+		if( shader.fragment != null )
+			shader.fragment.code ??= src.fragment.code;
+	}
+
 	#if heaps_mt_hxsl_cache
-	function endCompile( shader : hxsl.RuntimeShader ) {
+	function endCompile( shader : hxsl.RuntimeShader, compiled : CompiledShader ) {
 		compileMutex.acquire();
 		compilingCount--;
-		if( shader != null )
+		if( shader != null ) {
+			copyShaderCode(shader, compiled);
 			releaseQueue.push(shader);
+		}
 		if( compilingCount == 0 ) {
 			for( s in releaseQueue )
 				s.releaseData();
