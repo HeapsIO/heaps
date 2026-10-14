@@ -9,9 +9,14 @@ class LinearShadowDepth extends hxsl.Shader {
 		};
 		var transformedPosition : Vec3;
 		var depth : Float;
+		var shadowLightVec : Vec3;
+
+		function vertex() {
+			shadowLightVec = (transformedPosition - camera.position) / camera.zFar;
+		}
 
 		function fragment() {
-			depth = length(transformedPosition - camera.position) / camera.zFar;
+			depth = length(shadowLightVec);
 		}
 	}
 }

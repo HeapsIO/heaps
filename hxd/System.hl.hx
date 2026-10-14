@@ -69,8 +69,8 @@ class System {
 	static function mainLoop() {
 		var engine = h3d.Engine.getCurrent();
 		if( engine != null && engine.ready ) {
-			engine.driver.lowLatencySleep();
-			engine.driver.latencyMarkerSimulationStart();
+			engine.driver.upscaling.lowLatencySleep();
+			engine.driver.upscaling.latencyMarker(SimulationStart);
 		}
 
 		// process events
@@ -186,7 +186,7 @@ class System {
 		}
 		var engine = h3d.Engine.getCurrent();
 		if( engine != null )
-			engine.driver.shutdownUpscaling();
+			engine.driver.upscaling.dispose();
 		Sys.exit(0);
 	}
 

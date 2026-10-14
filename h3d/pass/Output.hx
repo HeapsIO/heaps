@@ -114,7 +114,9 @@ class Output {
 				ctx.engine.uploadShaderBuffers(buf, Globals);
 			}
 			if( !p.pass.dynamicParameters ) {
+				ctx.currentObject = p.obj;
 				ctx.fillParams(buf, p.shader, p.shaders);
+				ctx.currentObject = null;
 				ctx.engine.uploadInstanceShaderBuffers(buf);
 			}
 			drawObject(p);

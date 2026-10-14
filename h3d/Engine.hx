@@ -310,7 +310,7 @@ class Engine {
 		haxe.System.beginFrame();
 		#end
 		mem.beginFrame();
-		driver.latencyMarkerSimulationEnd();
+		driver.upscaling.latencyMarker(SimulationEnd);
 		driver.begin(hxd.Timer.frameCount);
 		if( backgroundColor != null ) clear(backgroundColor, 1, 0);
 		return true;

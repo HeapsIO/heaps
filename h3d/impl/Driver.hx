@@ -4,34 +4,42 @@ package h3d.impl;
 typedef GPUBuffer = {};
 typedef Texture = {};
 typedef Query = {};
+typedef DriverImpl = Driver;
 #elseif js
 typedef GPUBuffer = js.html.webgl.Buffer;
 typedef Texture = { t : js.html.webgl.Texture, width : Int, height : Int, internalFmt : Int, pixelFmt : Int, bits : Int, bind : Int #if multidriver, driver : Driver #end };
 typedef Query = {};
+typedef DriverImpl = GlDriver;
 #elseif hlsdl
 typedef GPUBuffer = sdl.GL.Buffer;
 typedef Texture = { t : sdl.GL.Texture, width : Int, height : Int, internalFmt : Int, pixelFmt : Int, bits : Int, bind : Int #if multidriver, driver : Driver #end };
 typedef Query = { q : sdl.GL.Query, kind : QueryKind };
+typedef DriverImpl = GlDriver;
 #elseif usegl
 typedef GPUBuffer = haxe.GLTypes.Buffer;
 typedef Texture = { t : haxe.GLTypes.Texture, width : Int, height : Int, internalFmt : Int, pixelFmt : Int, bits : Int, bind : Int };
 typedef Query = { q : haxe.GLTypes.Query, kind : QueryKind };
+typedef DriverImpl = GlDriver;
 #elseif (hldx && dx12)
 typedef GPUBuffer = DX12Driver.BufferData;
 typedef Texture = h3d.impl.DX12Driver.TextureData;
 typedef Query = h3d.impl.DX12Driver.QueryData;
+typedef DriverImpl = DX12Driver;
 #elseif hldx
 typedef GPUBuffer = dx.Resource;
 typedef Texture = { res : dx.Resource, view : dx.Driver.ShaderResourceView, ?depthView : dx.Driver.DepthStencilView, ?readOnlyDepthView : dx.Driver.DepthStencilView, rt : Array<dx.Driver.RenderTargetView>, ?views : Array<dx.Driver.ShaderResourceView> };
 typedef Query = {};
+typedef DriverImpl = Driver;
 #elseif usesys
 typedef GPUBuffer = haxe.GraphicsDriver.GPUBuffer;
 typedef Texture = haxe.GraphicsDriver.Texture;
 typedef Query = haxe.GraphicsDriver.Query;
+typedef DriverImpl = Driver;
 #else
 typedef GPUBuffer = {};
 typedef Texture = {};
 typedef Query = {};
+typedef DriverImpl = Driver;
 #end
 
 enum Feature {
@@ -85,7 +93,6 @@ enum Feature {
 		Supports bindless
 	*/
 	Bindless;
-	Upscaling;
 	/*
 		Can render into a single layer of a depth texture array.
 	*/
@@ -102,6 +109,10 @@ enum Feature {
 		Supports depth clamping instead of clipping against the near and far planes.
 	*/
 	DepthClamp;
+	/*
+		Textures can allocate only their less detailed mip levels (see Texture.setResidentMip).
+	*/
+	ResidentMips;
 }
 
 enum QueryKind {
@@ -126,90 +137,12 @@ enum RenderFlag {
 	CameraHandness;
 }
 
-enum UpscalingTag {
-	Depth;
-	MotionVectors;
-	ColorIn;
-	ColorOut;
-	HUDLess;
-	UIColorAndAlpha;
-	UIAlpha;
-}
-
-@:struct class UpscalingParams {
-	public var cameraViewToClip : Matrix;
-	public var clipToCameraView : Matrix;
-	public var clipToPrevClip : Matrix;
-	public var prevClipToClip : Matrix;
-	public var jitterOffsetX : Float;
-	public var jitterOffsetY : Float;
-	public var mvecScaleX : Float;
-	public var mvecScaleY : Float;
-	public var cameraPos : Vector;
-	public var cameraUp : Vector;
-	public var cameraRight : Vector;
-	public var cameraFwd : Vector;
-	public var cameraNear : Float;
-	public var cameraFar : Float;
-	public var cameraFOV : Float;
-	public var cameraAspectRatio : Float;
-	public var motionVectorsInvalidValue : Float;
-	public var depthInverted : Bool;
-	public var cameraMotionIncluded : Bool;
-	public var reset : Bool;
-	public var orthographicProjection : Bool;
-	public var motionVectorsDilated : Bool;
-	public var motionVectorsJittered : Bool;
-	public var colorBufferHDR : Bool;
-	public var autoExposure : Bool;
-	public function new() {
-	}
-}
-
-@struct class UpscalingSettings {
-	public var renderWidth : Int;
-	public var renderHeight : Int;
-	public function new() {
-	}
-}
-
-enum UpscalingMode {
-	Off;
-	NativeAA;
-	Quality;
-	Balanced;
-	Performance;
-	UltraPerformance;
-}
-
-enum FrameGenMode {
-	Off;
-	On;
-	Auto;
-	Dynamic;
-}
-
-class FrameGenSettings {
-	public var status : Int;
-	public var minWidthOrHeight : Int;
-	public var framesPresented : Int;
-	public var maxFramesToGenerate : Int;
-	public var dynamicSupported : Bool;
-	public var vsyncSupported : Bool;
-	public function new() {
-	}
-}
-
-enum LowLatencyMode {
-	Off;
-	On;
-	OnWithBoost;
-}
-
 class Driver {
 
 	static var SHADER_CACHE : h3d.impl.ShaderCache;
 	var shaderCache = SHADER_CACHE;
+
+	public var upscaling(default, null) = new h3d.impl.Upscaling(null, []);
 
 	public static function setShaderCache( cache : h3d.impl.ShaderCache ) {
 		SHADER_CACHE = cache;
@@ -219,6 +152,20 @@ class Driver {
 
 
 	public function hasFeature( f : Feature ) {
+		return false;
+	}
+
+	public static var requestedFeatures(default, null) = new haxe.EnumFlags<Feature>();
+	public static function requestFeature( f : Feature ) : Bool {
+		if( h3d.Engine.getCurrent() != null )
+			throw "Driver.requestFeature(" + f + ") must be called before the engine is created";
+		var accepted = DriverImpl.onFeatureRequested(f);
+		if( accepted )
+			requestedFeatures.set(f);
+		return accepted;
+	}
+
+	static function onFeatureRequested( f : Feature ) : Bool {
 		return false;
 	}
 
@@ -407,6 +354,15 @@ class Driver {
 		return false;
 	}
 
+	/**
+		Reallocates the allocated texture so its most detailed mip level is `mip`, keeping the content
+		of the mip levels common to both allocations. Returns false if not supported or out of memory,
+		in which case the texture is unchanged. Requires the ResidentMips feature.
+	**/
+	public function setResidentMip( t : h3d.mat.Texture, mip : Int ) : Bool {
+		return false;
+	}
+
 	// --- MARKING API
 
 	public function beginEvent( name : String ) {
@@ -458,82 +414,7 @@ class Driver {
 		throw "Bindless is not implemented on this platform";
 	}
 
-	public function isUpscalingSupported() : Bool {
+	public function copyBackBuffer( to : h3d.mat.Texture ) : Bool {
 		return false;
-	}
-
-	public function isFrameGenSupported() : Bool {
-		return false;
-	}
-
-	public function getUpscalerName() : String {
-		return null;
-	}
-
-	public function getUpscalingSettings( mode : UpscalingMode, targetWidth : Int, targetHeight : Int ) : UpscalingSettings {
-		return null;
-	}
-
-	public function applyUpscaling( resources : Map<UpscalingTag, h3d.mat.Texture>, params : UpscalingParams, mode : UpscalingMode ) {
-	}
-
-	public function setFrameGenResources( resources : Map<UpscalingTag, h3d.mat.Texture> ) {
-	}
-
-	public function clearFrameGenResources() {
-	}
-
-	public function setFrameGenParams( params : UpscalingParams ) {
-	}
-
-	public function setFrameGenMode( mode : FrameGenMode, numFramesToGenerate : Int = 1, releaseResources = false ) : Bool {
-		return false;
-	}
-
-	public function getFrameGenMode() : FrameGenMode {
-		return Off;
-	}
-
-	public function getFrameGenSettings() : FrameGenSettings {
-		return null;
-	}
-
-	public function latencyMarkerSimulationStart() {
-	}
-
-	public function latencyMarkerSimulationEnd() {
-	}
-
-	public function latencyMarkerTriggerFlash() {
-	}
-
-	public function lowLatencySleep() {
-	}
-
-	public function setLowLatencyOptions( mode : LowLatencyMode, frameLimitUs : Int = 0 ) {
-		return false;
-	}
-
-	public function lowLatencyAvailable() {
-		return false;
-	}
-
-	public function lowLatencyFlashIndicatorDriverControlled() {
-		return false;
-	}
-
-	public function debugUpscaling() : String {
-		return "";
-	}
-
-	public function debugLowLatency() : String {
-		return "";
-	}
-
-	public function debugFrameGen() : String {
-		return "";
-	}
-
-	public function shutdownUpscaling() {
 	}
 }

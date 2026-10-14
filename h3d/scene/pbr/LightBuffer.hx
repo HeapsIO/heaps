@@ -9,6 +9,7 @@ class LightBuffer {
 	var useBindless : Bool;
 	var useDynamicSamplerIndex : Bool;
 	public var shadowHandles : Array<h3d.mat.TextureHandle> = [];
+	public var tightShadowSamplers = #if js true #else false #end;
 
 	var MAX_DIR_SHADOW = 1;
 	var MAX_SPOT_SHADOW = 2;
@@ -512,11 +513,13 @@ class LightBuffer {
 		s.capsuleLightCount = capsuleLights.length;
 		s.rectLightCount = rectLights.length;
 		s.HAS_CASCADE = cascadeLight != null;
-		s.MAX_DIR_SHADOW_COUNT = MAX_DIR_SHADOW;
-		s.MAX_POINT_SHADOW_COUNT = MAX_POINT_SHADOW;
-		s.MAX_SPOT_SHADOW_COUNT = MAX_SPOT_SHADOW;
-		s.MAX_CAPSULE_SHADOW_COUNT = MAX_CAPSULE_SHADOW;
-		s.MAX_RECT_SHADOW_COUNT = MAX_RECT_SHADOW;
+		var tight = tightShadowSamplers && !useBindless;
+		s.DYNAMIC_SAMPLER_INDEX = useDynamicSamplerIndex && !tight;
+		s.MAX_DIR_SHADOW_COUNT = tight ? dirLightsShadow.length : MAX_DIR_SHADOW;
+		s.MAX_POINT_SHADOW_COUNT = tight ? pointLightsShadow.length : MAX_POINT_SHADOW;
+		s.MAX_SPOT_SHADOW_COUNT = tight ? spotLightsShadow.length : MAX_SPOT_SHADOW;
+		s.MAX_CAPSULE_SHADOW_COUNT = tight ? capsuleLightsShadow.length : MAX_CAPSULE_SHADOW;
+		s.MAX_RECT_SHADOW_COUNT = tight ? rectLightsShadow.length : MAX_RECT_SHADOW;
 		s.dirShadowCount = dirLightsShadow.length;
 		s.pointShadowCount = pointLightsShadow.length;
 		s.spotShadowCount = spotLightsShadow.length;
