@@ -545,6 +545,7 @@ class Image extends Resource {
 			if (stream != null)
 				stream.cancel();
 			stream = null;
+			tex.flags.unset(Streamed);
 		} else if (stream == null)
 			stream = new TextureStream(this);
 		else

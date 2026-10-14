@@ -245,6 +245,10 @@ class RenderContext {
 		if( s.fragment != null ) fill(buf.fragment, s.fragment);
 	}
 
+	function markTextureVisible( t : h3d.mat.Texture ) {
+		t.markVisible();
+	}
+
 	public function fillParams( buf : h3d.shader.Buffers, s : hxsl.RuntimeShader, shaders : hxsl.ShaderList, compute : Bool = false ) {
 		var curInstance = -1;
 		var curInstanceValue = null;
@@ -281,8 +285,9 @@ class RenderContext {
 					var i = getInstance(p.instance);
 					switch( p.type ) {
 					case TTextureHandle:
-						var v = i.getParamValue(p.index);
+						var v : h3d.mat.TextureHandle = i.getParamValue(p.index);
 						if( v == null ) throw "Missing param value " + curInstanceValue + "." + p.name;
+						if( v.texture.flags.has(Streamed) ) markTextureVisible(v.texture);
 						buf.texHandles[thid++] = v;
 					case TBufferHandle:
 						var v = i.getParamValue(p.index);
@@ -304,10 +309,16 @@ class RenderContext {
 				if( p.pos < 0 ) {
 					// is array !
 					var arr : Array<h3d.mat.Texture> = t;
-					for( i in 0...-p.pos )
-						buf.tex[tid++] = arr[i];
-				} else
+					for( i in 0...-p.pos ) {
+						var t = arr[i];
+						if( t != null && t.flags.has(Streamed) ) markTextureVisible(t);
+						buf.tex[tid++] = t;
+					}
+				} else {
+					var t : h3d.mat.Texture = t;
+					if( t != null && t.flags.has(Streamed) ) markTextureVisible(t);
 					buf.tex[tid++] = t;
+				}
 				p = p.next;
 			}
 			var p = s.buffers;

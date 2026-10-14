@@ -140,7 +140,10 @@ enum TextureFlags {
 		Tells if it's a 3D texture
 	**/
 	Is3D;
+	/**
+		The texture mip levels are streamed : its visibility is recorded with `markVisible`
+	**/
+	Streamed;
 }
 
 typedef TextureFormat = hxd.PixelFormat;
-

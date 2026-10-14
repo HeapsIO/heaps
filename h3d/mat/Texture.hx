@@ -52,6 +52,10 @@ class Texture {
 		and the texture is sampled starting at this level.
 	**/
 	public var residentMip(default,null) : Int = 0;
+	/**
+		For a Streamed texture, the last frame (hxd.Timer.frameCount) in which the texture was visible, see `markVisible`.
+	**/
+	public var visibleFrame(default,null) : Int = -1;
 	var customMipLevels : Int;
 	/**
 		A 1x1 texture is allocated while the texture is loading (see hxd.res.Image)
@@ -204,6 +208,14 @@ class Texture {
 	**/
 	public function preventAutoDispose() {
 		lastFrame = PREVENT_AUTO_DISPOSE;
+	}
+
+	/**
+		Records that the texture is used by something visible during the current frame.
+		Streamed textures that are not visible lose mip levels when the streaming budget is exceeded (see hxd.res.TextureStream).
+	**/
+	public inline function markVisible() {
+		visibleFrame = hxd.Timer.frameCount;
 	}
 
 	/**
