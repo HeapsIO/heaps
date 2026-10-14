@@ -8,6 +8,7 @@ enum Step {
 	Forward;
 	BeforeTonemapping;
 	AfterTonemapping;
+	AfterUpscaling;
 	Overlay;
 	Debug;
 	Custom( name : String );
@@ -16,6 +17,7 @@ enum Step {
 typedef RFXTransition = {
 	var effect : RendererFX;
 	var setFactor : (t : Float) -> Void;
+	var ?dispose : () -> Void;
 }
 
 interface RendererFX {

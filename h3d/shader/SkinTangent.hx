@@ -18,18 +18,6 @@ class SkinTangent extends SkinBase {
 		var previousTransformedPosition : Vec3;
 
 		function vertex() {
-			if ( calcPrevPos ) {
-				boneMatrixX = getPrevBoneMatrix(input.indexes.x);
-				boneMatrixY = getPrevBoneMatrix(input.indexes.y);
-				boneMatrixZ = getPrevBoneMatrix(input.indexes.z);
-				boneMatrixW = getPrevBoneMatrix(input.indexes.w);
-				skinWeights = vec4(input.weights, 0.0);
-				if ( fourBonesByVertex )
-					skinWeights.w = 1 - (input.weights.x + input.weights.y + input.weights.z);
-
-				previousTransformedPosition = applySkinPoint(relativePosition);
-			}
-
 			boneMatrixX = getBoneMatrix(input.indexes.x);
 			boneMatrixY = getBoneMatrix(input.indexes.y);
 			boneMatrixZ = getBoneMatrix(input.indexes.z);
@@ -45,8 +33,13 @@ class SkinTangent extends SkinBase {
 			transformedNormal = normalize(transformedNormal);
 			transformedTangent.xyz = normalize(transformedTangent.xyz);
 
-			if ( !calcPrevPos )
-				previousTransformedPosition = transformedPosition;
+			// Kept in a local: Dce only drops writes to unused vars, so going through boneMatrix* would keep prevBonesMatrixes alive when not needed
+			var prevPosition = (relativePosition * getPrevBoneMatrix(input.indexes.x)) * skinWeights.x +
+			                   (relativePosition * getPrevBoneMatrix(input.indexes.y)) * skinWeights.y +
+			                   (relativePosition * getPrevBoneMatrix(input.indexes.z)) * skinWeights.z;
+			if( skinWeights.w > 0.0 )
+				prevPosition += (relativePosition * getPrevBoneMatrix(input.indexes.w)) * skinWeights.w;
+			previousTransformedPosition = prevPosition;
 		}
 
 	};

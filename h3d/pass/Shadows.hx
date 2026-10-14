@@ -35,7 +35,7 @@ class Shadows extends Output {
 	public function new(light) {
 		if( format == null ) format = R16F;
 		if( !h3d.Engine.getCurrent().driver.isSupportedFormat(format) ) format = h3d.mat.Texture.nativeFormat;
-		super("shadow", getOutputs());
+		super("shadow", format == h3d.mat.Texture.nativeFormat ? [PackFloat(Value("output.depth"))] : [Swiz(Value("output.depth",1),[X,X,X,X])]);
 		this.light = light;
 		blur = new Blur(5);
 		blur.quality = 0.5;
@@ -66,6 +66,13 @@ class Shadows extends Output {
 		if( staticTexture != null ) staticTexture.dispose();
 	}
 
+	override function draw( passes : h3d.pass.PassList, ?sort : h3d.pass.PassList -> Void ) {
+		var prev = ctx.visibilityFrustum;
+		if( lightCamera != null ) ctx.visibilityFrustum = lightCamera.frustum;
+		super.draw(passes, sort);
+		ctx.visibilityFrustum = prev;
+	}
+
 	public function getShadowView() {
 		return lightCamera.mcam;
 	}
@@ -80,19 +87,6 @@ class Shadows extends Output {
 
 	public function getShadowTex() : h3d.mat.Texture {
 		return null;
-	}
-
-	function isUsingWorldDist(){
-		return false;
-	}
-
-	function getOutputs() : Array<hxsl.Output> {
-		if(isUsingWorldDist())
-			return [Swiz(Value("output.worldDist",1),[X,X,X,X])];
-
-		if( format == h3d.mat.Texture.nativeFormat )
-			return [PackFloat(Value("output.depth"))];
-		return [Swiz(Value("output.depth",1),[X,X,X,X])];
 	}
 
 	public function loadStaticData( bytes : haxe.io.Bytes ) {

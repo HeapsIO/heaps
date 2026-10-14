@@ -949,7 +949,17 @@ class Flow extends Object {
 		super.removeChild(s);
 		if( index >= 0 ) {
 			needReflow = true;
-			properties.splice(index, 1);
+			// onRemove might have removed other children
+			if( properties[index]?.elt != s ) {
+				index = -1;
+				for( i => p in properties )
+					if( p.elt == s ) {
+						index = i;
+						break;
+					}
+			}
+			if( index >= 0 )
+				properties.splice(index, 1);
 			s.constraintSize( -1, -1); // remove constraint
 		}
 		if( s != null ) {
@@ -1021,7 +1031,7 @@ class Flow extends Object {
 		realMaxHeight = if( maxHeight == null ) constraintHeight else if( constraintHeight < 0 ) maxHeight else hxd.Math.min(maxHeight, constraintHeight);
 		if( minWidth != null && realMaxWidth < minWidth && realMaxWidth >= 0 )
 			realMaxWidth = minWidth;
-		if( minHeight != null && realMaxHeight < minHeight && realMaxWidth >= 0 )
+		if( minHeight != null && realMaxHeight < minHeight && realMaxHeight >= 0 )
 			realMaxHeight = minHeight;
 		if( realMaxWidth != oldW || realMaxHeight != oldH )
 			needReflow = true;
@@ -1347,7 +1357,7 @@ class Flow extends Object {
 			inline function alignLine( maxIndex, absolute = false ) {
 				if( maxLineHeight < minLineHeight )
 					maxLineHeight = minLineHeight;
-				else if( overflow != Expand && minLineHeight != 0 )
+				else if( overflow != Expand && overflow != Scroll && minLineHeight != 0 )
 					maxLineHeight = minLineHeight;
 				var height = maxLineHeight;
 				for( i in lastIndex...maxIndex ) {
@@ -1451,7 +1461,7 @@ class Flow extends Object {
 					x = startX;
 				}
 				p.isBreak = br;
-				c.x = x + p.offsetY + p.calcPadding;
+				c.x = x + p.offsetX + p.calcPadding;
 				x += p.calculatedWidth;
 				if( x > cw ) cw = x;
 				x += horizontalSpacing;
@@ -1530,7 +1540,6 @@ class Flow extends Object {
 				}
 				c.x = px + p.offsetX + p.calcPadding;
 			}
-
 		case Vertical:
 			var halign = horizontalAlign == null ? Left : horizontalAlign;
 			var valign = verticalAlign == null ? Top : verticalAlign;
@@ -1546,7 +1555,7 @@ class Flow extends Object {
 			inline function alignLine( maxIndex, absolute = false ) {
 				if( maxColWidth < minColWidth )
 					maxColWidth = minColWidth;
-				else if( overflow != Expand && minColWidth != 0 )
+				else if( overflow != Expand && overflow != Scroll && minColWidth != 0 )
 					maxColWidth = minColWidth;
 				var width = maxColWidth;
 				for( i in lastIndex...maxIndex ) {
@@ -1766,7 +1775,7 @@ class Flow extends Object {
 			var ymin = paddingTop + borderTop;
 			var xmax = if(realMaxWidth > 0 && overflow != Expand) flowFloor(realMaxWidth - (paddingRight + borderRight))
 				else hxd.Math.imax(xmin + maxChildW, realMinWidth - (paddingRight + borderRight));
-			var ymax = if(realMaxWidth > 0 && overflow != Expand) flowFloor(realMaxHeight - (paddingBottom + borderBottom))
+			var ymax = if(realMaxHeight > 0 && overflow != Expand) flowFloor(realMaxHeight - (paddingBottom + borderBottom))
 				else hxd.Math.imax(ymin + maxChildH, realMinHeight - (paddingBottom + borderBottom));
 			cw = xmax + paddingRight + borderRight;
 			ch = ymax + paddingBottom + borderBottom;

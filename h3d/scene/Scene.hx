@@ -60,6 +60,7 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 	#if hlphysics
 	var interactiveWorld : physics.collision.PhysicsWorld;
 	var interactiveInfos : Map<Interactive, Array<{ id : Int, follow : Null<h3d.scene.Object>, lastTrans : Matrix }>>;
+	var shapeCache : Map<h3d.col.Collider, physics.collision.shapes.Shape>;
 	var lastSyncFrame = -1;
 	#end
 
@@ -83,6 +84,7 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 		#if hlphysics
 		interactiveWorld = new physics.collision.PhysicsWorld(100);
 		interactiveInfos = new Map();
+		shapeCache = new Map();
 		#end
 	}
 
@@ -216,7 +218,7 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 			var infos = interactiveInfos.get(i);
 			if( infos == null ) {
 				infos = [];
-				for( elt in physics.collision.shapes.Shape.listFromHeaps(i.shape) ) {
+				for( elt in physics.collision.shapes.Shape.listFromHeaps(i.shape, null, shapeCache) ) {
 					var body = new physics.collision.Body(elt.shape);
 					body.setMotionType(Kinematic);
 					body.userData = i;
@@ -421,6 +423,7 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 		if( interactiveWorld != null ) {
 			interactiveWorld.dispose();
 			interactiveWorld = null;
+			shapeCache = null;
 		}
 		#end
 	}
@@ -491,6 +494,7 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 		ctx.wasContextLost = true;
 	}
 
+	var tmpPasses = [];
 	/**
 		Render the scene on screen. Internal usage only.
 	**/
@@ -528,7 +532,7 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 		ctx.engine.driver.endEvent();
 		#if sceneprof h3d.impl.SceneProf.end(); #end
 
-		var passes = [];
+		tmpPasses.resize(0);
 		var passIndex = -1;
 		for ( passId in 0...ctx.passes.length ) {
 			var curPass = ctx.passes[passId];
@@ -541,7 +545,7 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 			}
 			pobjs.name = curPass.pass.name;
 			pobjs.passes.init(curPass);
-			passes.push(pobjs);
+			tmpPasses.push(pobjs);
 		}
 
 		// send to rendered
@@ -549,12 +553,12 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 			ctx.lightSystem = lightSystem;
 			lightSystem.initLights(ctx);
 		}
-		renderer.process(passes);
+		renderer.process(tmpPasses);
 
 		// check that passes have been rendered
 		#if (debug && !editor && !editor_hl)
 		if( !ctx.computingStatic && checkPasses)
-			for( p in passes )
+			for( p in tmpPasses )
 				if( !p.rendered )
 					trace("Pass " + p.name+" has not been rendered : don't know how to handle.");
 		#end
@@ -569,6 +573,7 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 			p.name = null;
 			p.passes.init(null);
 		}
+		tmpPasses.resize(0);
 	}
 
 	public dynamic function mark(name : String) {

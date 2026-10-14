@@ -28,7 +28,6 @@ private enum ShaderStage {
 }
 
 private class ShaderInfos {
-	static var UID = 0;
 	public var uid : Int;
 	public var name : String;
 	public var priority : Int;
@@ -49,9 +48,9 @@ private class ShaderInfos {
 	public var marked : haxe.EnumFlags<ShaderStage>;
 	public var added : haxe.EnumFlags<ShaderStage>;
 
-	public function new(n, s) {
+	public function new(n, s, uid) {
 		this.name = n;
-		this.uid = UID++;
+		this.uid = uid;
 		this.stage = s;
 		processed = new Map();
 		usedFunctions = [];
@@ -76,6 +75,7 @@ class Linker {
 	var mode : hxsl.RuntimeShader.LinkMode;
 	var isBatchShader : Bool;
 	var debugDepth = 0;
+	var nextUID = 0;
 
 	var mapExprVarFun : TExpr -> TExpr;
 
@@ -316,7 +316,7 @@ class Linker {
 	}
 
 	function addShader( name : String, stage : ShaderStage, e : TExpr, p : Int, isBatchInit : Bool ) {
-		var s = new ShaderInfos(name, stage);
+		var s = new ShaderInfos(name, stage, nextUID++);
 		curShader = s;
 		s.priority = p;
 		s.body = mapExprVar(e);
@@ -522,11 +522,11 @@ class Linker {
 		#end
 
 		// build dependency tree
-		var ventry = new ShaderInfos("<vertexEntry>", Vertex);
+		var ventry = new ShaderInfos("<vertexEntry>", Vertex, nextUID++);
 		ventry.deps = new Map();
 		if ( outVars.length > 0 )
 			buildDependency(ventry, allocVar(outVars[0],null), false);
-		var fentry = new ShaderInfos("<fragmentEntry>", Fragment);
+		var fentry = new ShaderInfos("<fragmentEntry>", Fragment, nextUID++);
 		fentry.deps = new Map();
 		for( v in outVars )
 			buildDependency(fentry, allocVar(v,null), false);

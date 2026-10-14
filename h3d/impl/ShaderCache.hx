@@ -132,27 +132,59 @@ class ShaderCache {
 		#end
 	}
 
+	#if heaps_mt_hxsl_cache
+	var mutex = new sys.thread.Mutex();
+	#end
+	inline function lock() {
+		#if heaps_mt_hxsl_cache
+		mutex.acquire();
+		#end
+	}
+	inline function unlock() {
+		#if heaps_mt_hxsl_cache
+		mutex.release();
+		#end
+	}
+
 	public function resolveShaderBinary( source : String, ?configurationKey = "" ) {
-		if( data == null ) load();
 		var encodedSource = haxe.crypto.Md5.encode(source);
 		var key = configurationKey + encodedSource;
-		return data.get(key);
+		lock();
+		if( data == null ) load();
+		var bytes = data.get(key);
+		unlock();
+		return bytes;
 	}
 
 	var saveTimer : haxe.Timer;
 	public function saveCompiledShader( source : String, bytes : haxe.io.Bytes, ?configurationKey = "", ?saveToFile = true ) {
+		var key = configurationKey + haxe.crypto.Md5.encode(source);
+		lock();
 		dirty = true;
 		if( data == null ) load();
-		var key = configurationKey + haxe.crypto.Md5.encode(source);
-		if( data.get(key) == bytes && (!keepSource || sources.get(key) == source) )
+		if( data.get(key) == bytes && (!keepSource || sources.get(key) == source) ) {
+			unlock();
 			return;
+		}
 		data.set(key, bytes);
 		if( keepSource )
 			sources.set(key, source);
+		unlock();
 
 		if( !allowSave )
 			return;
 
+		#if heaps_mt_hxsl_cache
+		// Do save on main thread only
+		if( sys.thread.Thread.current() != sys.thread.Thread.main() ) {
+			haxe.EventLoop.main.run(() -> scheduleSave(saveToFile));
+			return;
+		}
+		#end
+		scheduleSave(saveToFile);
+	}
+
+	function scheduleSave( saveToFile : Bool ) {
 		if(saveTimer != null)
 			saveTimer.stop();
 		saveTimer = haxe.Timer.delay(function() {
@@ -165,8 +197,11 @@ class ShaderCache {
 	}
 
 	public function save() {
-		if( !dirty )
+		lock();
+		if( !dirty ) {
+			unlock();
 			return;
+		}
 		dirty = false;
 		var out = new haxe.io.BytesOutput();
 		var keys = Lambda.array({ iterator : data.keys });
@@ -179,6 +214,7 @@ class ShaderCache {
 		case Base64: writeCache(keys, out);
 		case Binary: writeBinaryCache(keys, out);
 		}
+		unlock();
 		#if sys
 		try sys.io.File.saveBytes(outputFile, out.getBytes()) catch( e : Dynamic ) { trace("Something went wrong"); };
 		#end
@@ -208,6 +244,7 @@ class ShaderCache {
 
 	function saveSources() {
 		var out = new haxe.io.BytesOutput();
+		lock();
 		var keys = Lambda.array({ iterator : sources.keys });
 		keys.sort(Reflect.compare);
 		for( key in keys ) {
@@ -219,6 +256,7 @@ class ShaderCache {
 			out.writeByte('\n'.code);
 			out.writeByte('\n'.code);
 		}
+		unlock();
 		#if sys
 		try sys.io.File.saveBytes(sourceFile, out.getBytes()) catch( e : Dynamic ) {};
 		#end
