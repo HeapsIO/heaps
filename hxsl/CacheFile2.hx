@@ -85,12 +85,16 @@ class CacheFile2Loader {
 		}
 
 		#if heaps_mt_hxsl_cache
-		workThread = sys.thread.Thread.create(threadLoop, { onAbort : (e) -> {
-			Sys.println("[CacheFile2] Preload aborted: " + e.toString());
-			bcListsReady = true;
-			linkDone = true;
-			rtMapReady = true;
-		} });
+		workThread = sys.thread.Thread.create(function() {
+			try {
+				threadLoop();
+			} catch( e ) {
+				Sys.println("[CacheFile2] Preload aborted: " + e.toString());
+				bcListsReady = true;
+				linkDone = true;
+				rtMapReady = true;
+			}
+		});
 		workThread.name = "CacheFile2Loader";
 		event = haxe.MainLoop.add(update);
 		#else
