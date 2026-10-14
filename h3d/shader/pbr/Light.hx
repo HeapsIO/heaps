@@ -31,11 +31,16 @@ class LightEvaluation extends hxsl.Shader {
 			              + clamp(dot(p, up), -halfSize.y, halfSize.y) * up;
 		}
 
+		function pointLightIntensity( delta : Vec3, size : Float, invRange4 : Float, minDist2 : Float, inverseSquareFalloff : Bool ) : Float {
+			return inverseSquareFalloff ? inverseSquareIntensity(delta, minDist2, invRange4) : legacyLightIntensity(delta, size, invRange4);
+		}
+
 		/*
 			UE4 [Karis12] "Real Shading in Unreal Engine 4"
 			Modified with pointSize
+			Falloff used when inverseSquareFalloff is off.
 		*/
-		function pointLightIntensity( delta : Vec3, size : Float, invRange4 : Float ) : Float {
+		function legacyLightIntensity( delta : Vec3, size : Float, invRange4 : Float ) : Float {
 			var dist = delta.dot(delta);
 			var falloff = saturate(1 - dist*dist * invRange4);
 			if( size > 0 ) {
@@ -47,15 +52,15 @@ class LightEvaluation extends hxsl.Shader {
 			return falloff;
 		}
 
-		function spotLightIntensity( delta : Vec3, lightDir : Vec3, range : Float, invRange4 : Float, angleFallOff : Float, angle : Float ) : Vec2 {
+		function inverseSquareIntensity( delta : Vec3, minDist2 : Float, invRange4 : Float ) : Float {
 			var dist = delta.dot(delta);
 			var falloff = saturate(1 - dist*dist * invRange4);
-			if( range > 0 ) {
-				dist = (dist.sqrt() - range).max(0.);
-				dist *= dist;
-			}
 			falloff *= falloff;
-			falloff *= 1 / (dist + 1);
+			return falloff / max(dist, max(minDist2, 0.0001));
+		}
+
+		function spotLightIntensity( delta : Vec3, lightDir : Vec3, range : Float, invRange4 : Float, angleFallOff : Float, angle : Float, inverseSquareFalloff : Bool ) : Vec2 {
+			var falloff = inverseSquareFalloff ? inverseSquareIntensity(delta, 0., invRange4) : legacyLightIntensity(delta, range, invRange4);
 
 			var theta = dot(delta.normalize(), -lightDir);
 			var epsilon = angleFallOff - angle;
@@ -83,10 +88,11 @@ class LightEvaluation extends hxsl.Shader {
 			return verticalFalloff * horizontalFalloff;
 		}
 
-		function capsuleLightDiffuse( lightPos : Vec3, left : Vec3, halfLength : Float, radius : Float, invRange4 : Float, position : Vec3 ) : Vec4 {
+		function capsuleLightDiffuse( lightPos : Vec3, left : Vec3, halfLength : Float, radius : Float, invRange4 : Float, position : Vec3, inverseSquareFalloff : Bool ) : Vec4 {
 			var spherePos = closestPointLineToPoint(lightPos - halfLength * left, lightPos + halfLength * left, position);
 			var delta = spherePos - position;
-			return vec4(delta.normalize(), pointLightIntensity(delta, radius, invRange4));
+			var minDist2 = radius * radius + 4 * radius * halfLength / PI;
+			return vec4(delta.normalize(), pointLightIntensity(delta, radius, invRange4, minDist2, inverseSquareFalloff));
 		}
 
 		function capsuleLightSpecularDir( lightPos : Vec3, left : Vec3, halfLength : Float, radius : Float, position : Vec3, r : Vec3 ) : Vec3 {
@@ -98,9 +104,10 @@ class LightEvaluation extends hxsl.Shader {
 			return normalize(closestPoint);
 		}
 
-		function rectangleLightDiffuse( center : Vec3, lightDir : Vec3, right : Vec3, up : Vec3, halfSize : Vec2, angles : Vec4, range : Float, invRange4 : Float, position : Vec3 ) : Vec4 {
+		function rectangleLightDiffuse( center : Vec3, lightDir : Vec3, right : Vec3, up : Vec3, halfSize : Vec2, angles : Vec4, range : Float, invRange4 : Float, position : Vec3, inverseSquareFalloff : Bool ) : Vec4 {
 			var delta = closestPointOnRectangle(center, lightDir, right, up, halfSize, position, lightDir) - position;
-			var intensity = rectangleLightIntensity(delta, lightDir, right, up, angles) * pointLightIntensity(delta, range, invRange4);
+			var minDist2 = 4 * halfSize.x * halfSize.y / PI;
+			var intensity = rectangleLightIntensity(delta, lightDir, right, up, angles) * pointLightIntensity(delta, range, invRange4, minDist2, inverseSquareFalloff);
 			return vec4(normalize(delta), intensity);
 		}
 
@@ -123,6 +130,7 @@ class Light extends LightEvaluation {
 
 		@param var lightColor = vec3(0.5, 0.5, 0.5);
 		@param var occlusionFactor = 0.0;
+		@param var inverseSquareFalloff : Bool;
 	};
 }
 
@@ -144,7 +152,7 @@ class SpotLight extends Light {
 		function fragment() {
 			var delta = lightPos - transformedPosition;
 			pbrLightDirection = delta.normalize();
-			var fallOffInfo = spotLightIntensity(delta, spotDir, range, invLightRange4, fallOff, angle);
+			var fallOffInfo = spotLightIntensity(delta, spotDir, range, invLightRange4, fallOff, angle, inverseSquareFalloff);
 			var fallOff = fallOffInfo.x;
 			var fallOffInfoAngle = fallOffInfo.y;
 			pbrLightColor = fallOff * lightColor;
@@ -175,7 +183,7 @@ class PointLight extends Light {
 		function fragment() {
 			var delta = lightPos - transformedPosition;
 			pbrLightDirection = delta.normalize();
-			pbrLightColor = pointLightIntensity(delta, pointSize, invLightRange4) * lightColor;
+			pbrLightColor = pointLightIntensity(delta, pointSize, invLightRange4, pointSize * pointSize, inverseSquareFalloff) * lightColor;
 			pbrOcclusionFactor = occlusionFactor;
 		}
 	};
@@ -222,7 +230,7 @@ class CapsuleLight extends Light {
 
 		var view : Vec3;
 		function fragment() {
-			var light = capsuleLightDiffuse(lightPos, left, halfLength, radius, invRange4, transformedPosition);
+			var light = capsuleLightDiffuse(lightPos, left, halfLength, radius, invRange4, transformedPosition, inverseSquareFalloff);
 			pbrLightDirection = light.xyz;
 			pbrLightColor = light.w * lightColor;
 			pbrSpecularLightDirection = capsuleLightSpecularDir(lightPos, left, halfLength, radius, transformedPosition, reflect(-view, normal));
@@ -250,7 +258,7 @@ class RectangleLight extends Light {
 
 		function fragment() {
 			var angles = vec4(horizontalAngle, horizontalFallOff, verticalAngle, verticalFallOff);
-			var light = rectangleLightDiffuse(lightPos, lightDir, right, up, halfSize, angles, range, invLightRange4, transformedPosition);
+			var light = rectangleLightDiffuse(lightPos, lightDir, right, up, halfSize, angles, range, invLightRange4, transformedPosition, inverseSquareFalloff);
 			pbrLightDirection = light.xyz;
 			pbrLightColor = light.w * lightColor;
 			pbrSpecularLightDirection = rectangleLightSpecularDir(lightPos, lightDir, right, up, halfSize, transformedPosition, reflect(-view, normal));

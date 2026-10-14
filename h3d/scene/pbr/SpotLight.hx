@@ -109,6 +109,11 @@ class SpotLight extends Light {
 		primitive.render(ctx.engine);
 	}
 
+	override function getCandelaPerLumen() : Float {
+		var solidAngle = 2 * Math.PI * (1 - Math.cos(hxd.Math.degToRad(angle / 2.0)));
+		return 1 / hxd.Math.max(solidAngle, 1e-6);
+	}
+
 	override function sync(ctx) {
 		super.sync(ctx);
 
@@ -119,6 +124,7 @@ class SpotLight extends Light {
 		pbr.angle = hxd.Math.cos(hxd.Math.degToRad(angle/2.0));
 		pbr.fallOff = hxd.Math.cos(hxd.Math.degToRad(hxd.Math.min(angle/2.0, fallOff)));
 		pbr.range = range;
+		pbr.inverseSquareFalloff = hasInverseSquareFalloff();
 		pbr.invLightRange4 = 1 / (range * range * range * range);
 		pbr.occlusionFactor = occlusionFactor;
 

@@ -33,7 +33,7 @@ class LightBuffer {
 	// Keep in sync with h3d.shader.pbr.DefaultForward
 	final DIR_LIGHT_STRIDE     = 2;
 	final POINT_LIGHT_STRIDE   = 2;
-	final SPOT_LIGHT_STRIDE    = 3;
+	final SPOT_LIGHT_STRIDE    = 4;
 	final CAPSULE_LIGHT_STRIDE = 3;
 	final RECT_LIGHT_STRIDE    = 6;
 
@@ -379,6 +379,7 @@ class LightBuffer {
 			var pbr = @:privateAccess pl.pbr;
 			fillColor(i, pl.color, pl.getIntensity());
 			lightInfos[i+2] = pbr.pointSize;
+			lightInfos[i+3] = pbr.inverseSquareFalloff ? 1 : 0;
 			fillVector(lightInfos, pbr.lightPos, i+4);
 			lightInfos[i+7] = pbr.invLightRange4;
 		}
@@ -406,6 +407,7 @@ class LightBuffer {
 			lightInfos[i+7] = pbr.invLightRange4;
 			fillVector(lightInfos, pbr.spotDir, i+8);
 			lightInfos[i+11] = pbr.range;
+			lightInfos[i+12] = pbr.inverseSquareFalloff ? 1 : 0;
 		}
 
 		for (li in 0...spotLightsShadow.length) {
@@ -435,6 +437,7 @@ class LightBuffer {
 			fillVector(lightInfos, pbr.lightPos, i+4);
 			lightInfos[i+7] = pbr.invRange4;
 			fillVector(lightInfos, pbr.left, i+8);
+			lightInfos[i+11] = pbr.inverseSquareFalloff ? 1 : 0;
 		}
 
 		for (li in 0...capsuleLightsShadow.length) {
@@ -466,6 +469,7 @@ class LightBuffer {
 			lightInfos[i+19] = pbr.horizontalFallOff;
 			lightInfos[i+20] = pbr.verticalAngle;
 			lightInfos[i+21] = pbr.verticalFallOff;
+			lightInfos[i+22] = pbr.inverseSquareFalloff ? 1 : 0;
 		}
 
 		for (li in 0...rectLightsShadow.length) {

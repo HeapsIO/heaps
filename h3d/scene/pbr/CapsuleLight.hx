@@ -43,7 +43,7 @@ class CapsuleLight extends Light {
 		return v;
 	}
 
-	override function getIntensity() : Float {
+	override function getUnitlessIntensity() : Float {
 		var power = power * 10; // base scale
 		return power * power;
 	}
@@ -70,6 +70,7 @@ class CapsuleLight extends Light {
 		pbr.occlusionFactor = occlusionFactor;
 		pbr.left.load(absPos.front());
 		pbr.invRange4 = 1 / (range * range * range * range);
+		pbr.inverseSquareFalloff = hasInverseSquareFalloff();
 	}
 
 	var s = new h3d.col.Sphere();

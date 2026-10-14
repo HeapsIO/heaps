@@ -170,6 +170,36 @@ class PbrLights extends BenchApp {
 		cascadeShadows.maxDist = 100.0;
 		cascadeShadows.transitionFraction = 0.15;
 
+		var local = localLights(false);
+		addPreset("Dir", true, [dir]);
+		addPreset("Cascade", true, [cascade]);
+		addPreset("Point", true, [local[0]]);
+		addPreset("Spot", true, [local[1]]);
+		addPreset("Capsule", true, [local[2]]);
+		addPreset("Rectangle", true, [local[3]]);
+		addPreset("Mixed", true, [dir, local[0], local[1], local[2], local[3]]);
+		addPreset("Inverse square", true, localLights(true));
+
+		var rnd = new hxd.Rand(SEED + 1);
+		var many : Array<h3d.scene.pbr.Light> = [];
+		for( x in 0...8 ) {
+			for( y in 0...8 ) {
+				var l = new h3d.scene.pbr.PointLight(s3d);
+				l.setPosition(-42 + x * 12, -42 + y * 12, 3);
+				l.range = 12;
+				l.color.set(0.3 + rnd.rand() * 0.7, 0.3 + rnd.rand() * 0.7, 0.3 + rnd.rand() * 0.7);
+				l.power = 2.8;
+				many.push(l);
+			}
+		}
+		addPreset("Many points", false, many);
+		addPreset("Perf 256", false, perfLights(256, 7, 11, SEED + 2), true);
+		addPreset("Perf 1024", false, perfLights(1024, 4, 7, SEED + 3), true);
+	}
+
+	// Point, spot, capsule and rectangle, Unitless with the legacy or the inverse square falloff.
+	// The spot and rectangle had no distance falloff inside their range, inverse square ones need more power
+	function localLights( inverseSquare : Bool ) : Array<h3d.scene.pbr.Light> {
 		var point = new h3d.scene.pbr.PointLight(s3d);
 		point.setPosition(0, 0, 15);
 		point.range = 40;
@@ -181,7 +211,7 @@ class PbrLights extends BenchApp {
 		spot.setDirection(new h3d.Vector(1, 2, -5));
 		spot.range = 70;
 		spot.angle = 70;
-		spot.power = 3.2;
+		spot.power = inverseSquare ? 160 : 3.2;
 		spot.shadows.bias = 0.001;
 
 		var capsule = new h3d.scene.pbr.CapsuleLight(s3d);
@@ -201,32 +231,13 @@ class PbrLights extends BenchApp {
 		rect.horizontalAngle = 120;
 		rect.verticalAngle = 120;
 		rect.range = 50;
-		rect.power = 3.2;
+		rect.power = inverseSquare ? 80 : 3.2;
 		rect.shadows.bias = 0.001;
 
-		addPreset("Dir", true, [dir]);
-		addPreset("Cascade", true, [cascade]);
-		addPreset("Point", true, [point]);
-		addPreset("Spot", true, [spot]);
-		addPreset("Capsule", true, [capsule]);
-		addPreset("Rectangle", true, [rect]);
-		addPreset("Mixed", true, [dir, point, spot, capsule, rect]);
-
-		var rnd = new hxd.Rand(SEED + 1);
-		var many : Array<h3d.scene.pbr.Light> = [];
-		for( x in 0...8 ) {
-			for( y in 0...8 ) {
-				var l = new h3d.scene.pbr.PointLight(s3d);
-				l.setPosition(-42 + x * 12, -42 + y * 12, 3);
-				l.range = 12;
-				l.color.set(0.3 + rnd.rand() * 0.7, 0.3 + rnd.rand() * 0.7, 0.3 + rnd.rand() * 0.7);
-				l.power = 2.8;
-				many.push(l);
-			}
-		}
-		addPreset("Many points", false, many);
-		addPreset("Perf 256", false, perfLights(256, 7, 11, SEED + 2), true);
-		addPreset("Perf 1024", false, perfLights(1024, 4, 7, SEED + 3), true);
+		var lights : Array<h3d.scene.pbr.Light> = [point, spot, capsule, rect];
+		for( l in lights )
+			l.inverseSquareFalloff = inverseSquare;
+		return lights;
 	}
 
 	function perfLights( count : Int, minRange : Float, maxRange : Float, seed : Int ) {

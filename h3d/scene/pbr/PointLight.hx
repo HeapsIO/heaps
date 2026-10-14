@@ -35,7 +35,7 @@ class PointLight extends Light {
 		return v;
 	}
 
-	override function getIntensity() : Float {
+	override function getUnitlessIntensity() : Float {
 		var power = power * 10; // base scale
 		return power * power;
 	}
@@ -54,6 +54,7 @@ class PointLight extends Light {
 		pbr.lightPos.set(absPos.tx, absPos.ty, absPos.tz);
 		pbr.invLightRange4 = 1 / (range * range * range * range);
 		pbr.pointSize = size;
+		pbr.inverseSquareFalloff = hasInverseSquareFalloff();
 		pbr.occlusionFactor = occlusionFactor;
 	}
 

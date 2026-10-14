@@ -36,7 +36,7 @@ class DefaultForward extends hxsl.Shader {
 		// Keep in sync with h3d.scene.pbr.LightBuffer.
 		final DIR_LIGHT_STRIDE   : Int = 2;
 		final POINT_LIGHT_STRIDE : Int = 2;
-		final SPOT_LIGHT_STRIDE  : Int = 3;
+		final SPOT_LIGHT_STRIDE  : Int = 4;
 		final CAPSULE_LIGHT_STRIDE : Int = 3;
 		final RECT_LIGHT_STRIDE    : Int = 6;
 
@@ -235,10 +235,11 @@ class DefaultForward extends hxsl.Shader {
 			var size = lightInfos[i].b;
 			var lightPos = lightInfos[i+1].rgb;
 			var invRange4 = lightInfos[i+1].a;
+			var inverseSquareFalloff = lightInfos[i].a > 0.0;
 			var delta = lightPos - transformedPosition;
 
 			var lightDir = delta.normalize();
-			return directLighting(pointLightIntensity(delta, size, invRange4) * lightColor, lightDir, lightDir);
+			return directLighting(pointLightIntensity(delta, size, invRange4, size * size, inverseSquareFalloff) * lightColor, lightDir, lightDir);
 		}
 
 		function evaluateSpotShadow( index : Int ) : Float {
@@ -268,9 +269,10 @@ class DefaultForward extends hxsl.Shader {
 			var invRange4 = lightInfos[i+1].a;
 			var lightDir = lightInfos[i+2].rgb;
 			var range = lightInfos[i+2].a;
+			var inverseSquareFalloff = lightInfos[i+3].r > 0.0;
 			var delta = lightPos - transformedPosition;
 
-			var fallOffInfo = spotLightIntensity(delta, lightDir, range, invRange4, fallOff, angle);
+			var fallOffInfo = spotLightIntensity(delta, lightDir, range, invRange4, fallOff, angle, inverseSquareFalloff);
 			var fallOff = fallOffInfo.x;
 			var fallOffInfoAngle = fallOffInfo.y;
 
@@ -308,8 +310,9 @@ class DefaultForward extends hxsl.Shader {
 			var lightPos = lightInfos[i+1].rgb;
 			var invRange4 = lightInfos[i+1].a;
 			var left = lightInfos[i+2].rgb;
+			var inverseSquareFalloff = lightInfos[i+2].a > 0.0;
 
-			var light = capsuleLightDiffuse(lightPos, left, halfLength, radius, invRange4, transformedPosition);
+			var light = capsuleLightDiffuse(lightPos, left, halfLength, radius, invRange4, transformedPosition, inverseSquareFalloff);
 			var specularDir = capsuleLightSpecularDir(lightPos, left, halfLength, radius, transformedPosition, reflect(-view, transformedNormal));
 			return directLighting(light.w * lightColor, light.xyz, specularDir);
 		}
@@ -343,8 +346,9 @@ class DefaultForward extends hxsl.Shader {
 			var right = lightInfos[i+3].rgb;
 			var up = lightInfos[i+4].rgb;
 			var angles = vec4(lightInfos[i+3].a, lightInfos[i+4].a, lightInfos[i+5].r, lightInfos[i+5].g);
+			var inverseSquareFalloff = lightInfos[i+5].b > 0.0;
 
-			var light = rectangleLightDiffuse(lightPos, lightDir, right, up, halfSize, angles, range, invRange4, transformedPosition);
+			var light = rectangleLightDiffuse(lightPos, lightDir, right, up, halfSize, angles, range, invRange4, transformedPosition, inverseSquareFalloff);
 			var specularDir = rectangleLightSpecularDir(lightPos, lightDir, right, up, halfSize, transformedPosition, reflect(-view, transformedNormal));
 			return directLighting(light.w * lightColor, light.xyz, specularDir);
 		}

@@ -65,6 +65,10 @@ class RectangleLight extends Light {
 		primitive.render(ctx.engine);
 	}
 
+	override function getCandelaPerLumen() : Float {
+		return 1 / Math.PI;
+	}
+
 	override function sync(ctx) {
 		super.sync(ctx);
 
@@ -85,6 +89,7 @@ class RectangleLight extends Light {
 		pbr.horizontalAngle = hxd.Math.cos(hxd.Math.degToRad(horizontalAngle/2.0));
 		pbr.horizontalFallOff = hxd.Math.cos(hxd.Math.degToRad(hxd.Math.min(horizontalAngle/2.0, fallOff)));
 		pbr.range = range;
+		pbr.inverseSquareFalloff = hasInverseSquareFalloff();
 		pbr.invLightRange4 = 1 / (range * range * range * range);
 		pbr.occlusionFactor = occlusionFactor;
 	}

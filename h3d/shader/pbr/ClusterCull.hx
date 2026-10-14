@@ -15,7 +15,7 @@ class ClusterCull extends hxsl.Shader {
 
 		// Keep in sync with h3d.shader.pbr.DefaultForward.
 		final POINT_LIGHT_STRIDE   : Int = 2;
-		final SPOT_LIGHT_STRIDE    : Int = 3;
+		final SPOT_LIGHT_STRIDE    : Int = 4;
 		final CAPSULE_LIGHT_STRIDE : Int = 3;
 		final RECT_LIGHT_STRIDE    : Int = 6;
 
@@ -244,7 +244,7 @@ class ClusterLightOcclusion extends hxsl.Shader {
 
 		// Keep in sync with h3d.shader.pbr.DefaultForward.
 		final POINT_LIGHT_STRIDE   : Int = 2;
-		final SPOT_LIGHT_STRIDE    : Int = 3;
+		final SPOT_LIGHT_STRIDE    : Int = 4;
 		final CAPSULE_LIGHT_STRIDE : Int = 3;
 		final RECT_LIGHT_STRIDE    : Int = 6;
 
