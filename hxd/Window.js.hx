@@ -199,6 +199,9 @@ class Window {
 
 	public function dispose() {
 		if( inst == this ) inst = null;
+		js.Browser.window.removeEventListener("resize", checkResize);
+		js.Browser.window.removeEventListener("mousemove", onMouseMove);
+		js.Browser.document.removeEventListener("pointerlockchange", onPointerLockChange);
 		if ((js.Browser.window:Dynamic).ResizeObserver != null) {
 			if (observer != null) {
 				observer.disconnect();
