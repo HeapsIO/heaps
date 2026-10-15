@@ -1,10 +1,8 @@
 package hxd.fmt;
 
-class Parser {
-	function new() {
+abstract class Parser<T> {
+	public function new() {
 	}
 
-	public function parse(data : haxe.io.Bytes) : Library {
-		throw "Should be implemented";
-	}
+	public abstract function read( data : haxe.io.Bytes ) : T;
 }

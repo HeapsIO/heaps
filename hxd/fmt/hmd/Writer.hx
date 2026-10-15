@@ -1,70 +1,14 @@
 package hxd.fmt.hmd;
 import hxd.fmt.hmd.Data;
 
-class Writer extends hxd.fmt.Writer {
+class Writer {
 
-	override function write( l : hxd.fmt.Library ) {
-		writeData(toData(l));
+	var out : haxe.io.Output;
+	var version : Int;
+
+	public function new(out) {
+		this.out = out;
 	}
-
-	public function toData( l : hxd.fmt.Library ) : Data {
-		var d = new Data();
-		#if hmd_version
-		d.version = Std.parseInt(#if macro haxe.macro.Context.definedValue("hmd_version") #else haxe.macro.Compiler.getDefine("hmd_version") #end);
-		#else
-		d.version = Data.CURRENT_VERSION;
-		#end
-		d.geometries = [];
-		d.materials = [];
-		d.models = [];
-		d.animations = [];
-		d.shapes = [];
-		d.data = haxe.io.Bytes.alloc(0);
-
-		// Depth first so that parents are always written before their children,
-		// root is model 0 as expected by hxd.fmt.hmd.Library.makeObject
-		function addNode( n : hxd.fmt.Library.Node, parent : Int ) {
-			var m = new Model();
-			m.name = n.name == "" ? null : n.name;
-			m.parent = parent;
-			m.position = makePosition(n);
-			m.geometry = -1;
-			var index = d.models.length;
-			d.models.push(m);
-			for( c in n.children )
-				addNode(c, index);
-		}
-		if( l.root != null )
-			addNode(l.root, -1);
-
-		return d;
-	}
-
-	function makePosition( n : hxd.fmt.Library.Node ) {
-		var p = new Position();
-		var pos = n.position;
-		p.x = pos == null ? 0 : pos.x;
-		p.y = pos == null ? 0 : pos.y;
-		p.z = pos == null ? 0 : pos.z;
-
-		var q = new h3d.Quat();
-		if( n.rotation != null ) {
-			q.load(n.rotation);
-			q.normalize();
-			if( q.w < 0 ) q.negate(); // qw is rebuilt as positive when reading
-		}
-		p.qx = q.x;
-		p.qy = q.y;
-		p.qz = q.z;
-
-		var s = n.scale;
-		p.sx = s == null ? 1 : s.x;
-		p.sy = s == null ? 1 : s.y;
-		p.sz = s == null ? 1 : s.z;
-		return p;
-	}
-
-	// ---------- HMD binary serialization ----------
 
 	function writeProperty( p : Property<Dynamic> ) {
 		out.writeByte(p.getIndex());
@@ -102,12 +46,11 @@ class Writer extends hxd.fmt.Writer {
 			out.writeByte(0xFF);
 			return;
 		}
-		#if js
-		out.writeByte(haxe.io.Bytes.ofString(name).length);
-		#else
-		out.writeByte(name.length);
-		#end
-		out.writeString(name);
+		var bytes = haxe.io.Bytes.ofString(name);
+		if( bytes.length >= 0xFF )
+			throw "Name is too long to be stored in HMD : " + name;
+		out.writeByte(bytes.length);
+		out.write(bytes);
 	}
 
 	inline function writeFloat( f : Float ) {
@@ -228,7 +171,7 @@ class Writer extends hxd.fmt.Writer {
 		}
 	}
 
-	public function writeData( d : Data ) {
+	public function write( d : Data ) {
 		var old = out;
 		var header = new haxe.io.BytesOutput();
 		out = header;

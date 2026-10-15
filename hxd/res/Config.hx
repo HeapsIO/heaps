@@ -17,7 +17,7 @@ class Config {
 	**/
 	public static var extensions = [
 		"jpg,png,jpeg,gif,tga,dds,hdr" => "hxd.res.Image",
-		"fbx,hmd" => "hxd.res.Model",
+		"fbx,hmd,glb,gltf" => "hxd.res.Model",
 		"ttf" => "hxd.res.Font",
 		"fnt" => "hxd.res.BitmapFont",
 		"bdf" => "hxd.res.BDFFont",
@@ -61,6 +61,8 @@ class Config {
 	public static var pairedExtensions = [
 		"fnt" => "png",
 		"fbx" => "png,jpg,jpeg,gif,tga",
+		"glb" => "png,jpg,jpeg,gif,tga",
+		"gltf" => "bin,png,jpg,jpeg,gif,tga",
 		"cdb" => "img",
 		"atlas" => "png",
 		"ogg" => "wav",

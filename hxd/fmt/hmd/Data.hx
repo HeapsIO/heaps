@@ -1,6 +1,6 @@
 package hxd.fmt.hmd;
 
-import hxd.fmt.fbx.HMDOut.CollideParams;
+import hxd.fmt.Library.CollideParams;
 
 typedef GeometryDataFormat = hxd.BufferFormat.InputFormat;
 typedef GeometryFormat = hxd.BufferFormat.BufferInput;

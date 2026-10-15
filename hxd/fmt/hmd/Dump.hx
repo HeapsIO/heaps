@@ -261,10 +261,14 @@ class Dump {
 		var file = Sys.args()[0];
 		if( file == null ) throw "Missing file argument";
 		var bytes;
-		if( file.split(".").pop().toLowerCase() == "fbx" ) {
-			var l = new hxd.fmt.fbx.HMDOut(file);
-			l.loadFile(sys.io.File.getBytes(file));
-			var hmd = l.toHMD(null, h3d.anim.Animation.isAnimation(file.split("\\").join("/").split("/").pop()));
+		var lib : hxd.fmt.Library = switch( file.split(".").pop().toLowerCase() ) {
+			case "fbx": new hxd.fmt.fbx.Library(file);
+			case "glb", "gltf": new hxd.fmt.gltf.Library(file);
+			default: null;
+		}
+		if( lib != null ) {
+			lib.loadFile(sys.io.File.getBytes(file));
+			var hmd = lib.toHMD(null, !h3d.anim.Animation.isAnimation(file.split("\\").join("/").split("/").pop()));
 			var out = new haxe.io.BytesOutput();
 			new Writer(out).write(hmd);
 			bytes = out.getBytes();
@@ -276,4 +280,4 @@ class Dump {
 	}
 	#end
 
-}
+}

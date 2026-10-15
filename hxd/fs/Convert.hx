@@ -156,7 +156,7 @@ class ConvertFBX2HMD extends Convert {
 		return matNames == null ? null : { matNames : matNames };
 	}
 
-	function parseModelProps( modelPropsPath : String, filePath : String, modelCollides : Map<String, Array<hxd.fmt.fbx.HMDOut.CollideParams>> ) : Bool {
+	function parseModelProps( modelPropsPath : String, filePath : String, modelCollides : Map<String, Array<hxd.fmt.Library.CollideParams>> ) : Bool {
 		var foundModelProps = false;
 		var modelProps : Dynamic = getCachedFile(modelPropsPath, bytes -> haxe.Json.parse(bytes.toString()));
 		if( modelProps != null ) {
@@ -210,7 +210,7 @@ class ConvertFBX2HMD extends Convert {
 		var dirPath = srcPath.substring(0, srcPath.lastIndexOf("/"));
 		// Parse model.props to find modelCollides
 		var modelPropsPath = dirPath + "/" + h3d.prim.ModelDatabase.FILE_NAME;
-		var modelCollides : Map<String, Array<hxd.fmt.fbx.HMDOut.CollideParams>> = [];
+		var modelCollides : Map<String, Array<hxd.fmt.Library.CollideParams>> = [];
 		var foundModelProps = parseModelProps(modelPropsPath, filePath, modelCollides);
 		// Parse fbx and material.props to find ignoredMaterials if has any collide config
 		var ignoredMaterials : Array<String> = [];
@@ -220,7 +220,7 @@ class ConvertFBX2HMD extends Convert {
 				matNames = context.matNames;
 			}
 			if( matNames == null ) {
-				fbx = try hxd.fmt.fbx.ParserOld.parse(srcBytes) catch (e:Dynamic) throw Std.string(e) + " in " + srcPath;
+				fbx = try hxd.fmt.fbx.Parser.parse(srcBytes) catch (e:Dynamic) throw Std.string(e) + " in " + srcPath;
 				var matNodes = hxd.fmt.fbx.Data.FbxTools.getAll(fbx, "Objects.Material");
 				matNames = [];
 				for( o in matNodes ) {
@@ -244,86 +244,16 @@ class ConvertFBX2HMD extends Convert {
 
 	override function convert() {
 		if( fbx == null ) {
-			fbx = try hxd.fmt.fbx.ParserOld.parse(srcBytes) catch (e:Dynamic) throw Std.string(e) + " in " + srcPath;
+			fbx = try hxd.fmt.fbx.Parser.parse(srcBytes) catch (e:Dynamic) throw Std.string(e) + " in " + srcPath;
 		}
-		var hmdout = new hxd.fmt.fbx.HMDOut(srcPath);
-		if (params != null) {
-			if (params.normals)
-				hmdout.generateNormals = true;
-			if (params.precise) {
-				hmdout.highPrecision = true;
-				hmdout.fourBonesByVertex = true;
-			}
-			if (params.maxBones != null)
-				hmdout.maxBonesPerSkin = params.maxBones;
-			if (params.tangents != null)
-				hmdout.generateTangents = true;
-			if (params.collide != null) {
-				var collide = params.collide;
-				hmdout.generateCollides = {
-					maxConvexHulls : collide.maxConvexHulls,
-					scale : collide.scale,
-				};
-			}
-			if (params.lowp != null) {
-				var m:haxe.DynamicAccess<String> = params.lowp;
-				hmdout.lowPrecConfig = [];
-				for (k in m.keys()) {
-					var prec : hxd.BufferFormat.Precision = switch (m.get(k)) {
-						case "f16": F16;
-						case "u8": U8;
-						case "s8": S8;
-						case "remove":
-							switch(k) {
-							case "color": hmdout.noColor = true;
-							default: throw "Removal of attribute " + k + " is not supported";
-							}
-							hxd.BufferFormat.Precision.fromInt(-1);
-						case x: throw "Invalid precision '" + x + "' should be u8|s8|f16";
-					}
-					if (prec.toInt() != -1)
-						hmdout.lowPrecConfig.set(k, prec);
-				}
-			}
-			if ( params.optimizeMesh != null )
-				hmdout.optimizeMesh = params.optimizeMesh;
-			if (params.lodsDecimation != null) {
-				var config: Array<Float> = params.lodsDecimation;
-				hmdout.lodsDecimation = [for(lod in config) lod];
-			}
-			if (params.collisionThresholdHeight != null)
-				hmdout.collisionThresholdHeight = params.collisionThresholdHeight;
-			if (params.collisionUseLowLod != null)
-				hmdout.collisionUseLowLod = params.collisionUseLowLod;
-			if (params.noCollision != null)
-				hmdout.noCollision = params.noCollision;
-			if (params.legacyScaleAxisConversion != null)
-				hmdout.legacyScaleAxisConversion = params.legacyScaleAxisConversion;
-			if (params.legacySkinImport != null)
-				hmdout.legacySkinImport = params.legacySkinImport;
-			if (params.maxUVs != null)
-				hmdout.maxUVs = params.maxUVs;
-		}
-		if( localParams != null ) {
-			if( localParams.ignoreCollideMaterials != null ) {
-				hmdout.ignoreCollides = localParams.ignoreCollideMaterials;
-			}
-			if( localParams.modelCollides != null ) {
-				hmdout.modelCollides = localParams.modelCollides;
-			}
-		}
-		hmdout.load(fbx);
+		var lib = new hxd.fmt.fbx.Library(srcPath);
+		lib.setConvertParams(params, localParams);
+		lib.load(fbx);
 		var isAnim = h3d.anim.Animation.isAnimation(originalFilename);
-		var hmd = hmdout.toHMD(null, !isAnim);
+		var hmd = lib.toHMD(null, !isAnim);
 		var out = new haxe.io.BytesOutput();
-		new hxd.fmt.hmd.WriterOld(out).write(hmd);
+		new hxd.fmt.hmd.Writer(out).write(hmd);
 		save(out.getBytes());
-
-		// Temp
-		var l = try new hxd.fmt.fbx.Parser().parse(srcBytes) catch (e:Dynamic) throw Std.string(e) + " in " + srcPath;
-		var out = new haxe.io.BytesOutput();
-		new hxd.fmt.hmd.Writer(out).write(l);
-		// save(out.getBytes());
 	}
 
 	static var fileCache = new Map<String, { time : Float, size : Int, value : Dynamic }>();
@@ -373,10 +303,10 @@ class ConvertFBX2HMD extends Convert {
 }
 
 class ConvertGLTF2HMD extends Convert {
-	var gltf : hxd.fmt.gltf.Data.GltfDocument;
+	var gltf : hxd.fmt.gltf.Data;
 
 	public function new() {
-		super("glb", "hmd");
+		super("glb,gltf", "hmd");
 	}
 
 	override function cleanup() {
@@ -388,13 +318,14 @@ class ConvertGLTF2HMD extends Convert {
 		if (gltf == null)
 			gltf = try hxd.fmt.gltf.Parser.parse(srcBytes) catch (e:Dynamic) throw Std.string(e) + " in " + srcPath;
 
-		// var hmdout = new hxd.fmt.gltf.HMDOut();
-		// hmdout.load(null);
-		// var hmd = hmdout.toHMD();
-
-		// var out = new haxe.io.BytesOutput();
-		// new hxd.fmt.hmd.Writer(out).write(hmd);
-		// save(out.getBytes());
+		var lib = new hxd.fmt.gltf.Library(srcPath);
+		lib.setConvertParams(params, localParams);
+		lib.load(gltf);
+		var isAnim = h3d.anim.Animation.isAnimation(originalFilename);
+		var hmd = lib.toHMD(null, !isAnim);
+		var out = new haxe.io.BytesOutput();
+		new hxd.fmt.hmd.Writer(out).write(hmd);
+		save(out.getBytes());
 	}
 
 	static var _ = Convert.register(new ConvertGLTF2HMD());

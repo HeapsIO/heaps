@@ -3,7 +3,7 @@ using hxd.fmt.fbx.Data;
 
 class Geometry {
 
-	var lib : BaseLibrary;
+	var lib : Library;
 	var root : FbxNode;
 
 	public function new(l, root) {
@@ -273,7 +273,7 @@ class Geometry {
 		return uvs;
 	}
 
-	@:access(hxd.fmt.fbx.BaseLibrary.leftHand)
+	@:access(hxd.fmt.fbx.Library.leftHand)
 	public function getGeomMatrix() {
 		var rot = null, trans = null;
 		for( p in lib.getParent(root, "Model").getAll("Properties70.P") )

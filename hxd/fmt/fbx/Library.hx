@@ -1,6 +1,10 @@
 package hxd.fmt.fbx;
 import haxe.io.Bytes;
 using hxd.fmt.fbx.Data;
+import hxd.fmt.hmd.Data;
+import hxd.fmt.Library.writeFloat;
+import hxd.fmt.Library.writePrec;
+import hxd.fmt.Library.flushPrec;
 import h3d.col.Point;
 
 import haxe.xml.Access;
@@ -93,7 +97,7 @@ class DefaultMatrixes {
 
 }
 
-class BaseLibrary {
+class Library extends hxd.fmt.Library {
 
 	var root : FbxNode;
 	var ids : Map<Int,FbxNode>;
@@ -103,10 +107,8 @@ class BaseLibrary {
 	var leftHand : Bool;
 	var defaultModelMatrixes : Map<Int,DefaultMatrixes>;
 	var uvAnims : Map<String, Array<{ t : Float, u : Float, v : Float }>>;
-	var animationEvents : Array<{ frame : Int, data : String }>;
 	var isMaya : Bool;
-
-	public var fileName : String;
+	var midsSortRemap : Map<Int, Int>;
 
 	/**
 		The FBX version that was decoded
@@ -124,14 +126,9 @@ class BaseLibrary {
 	public var skipObjects : Map<String,Bool>;
 
 	/**
-		Use 4 bones of influence per vertex instead of 3
+		Remove unskinned terminal joints that are not named in a special manner
 	**/
-	public var fourBonesByVertex = false;
-
-	/**
-		If there are too many bones, the model will be split in separate render passes.
-	**/
-	public var maxBonesPerSkin = 256;
+	public var optimizeSkin = true;
 
 	/**
 		Consider unskinned joints to be simple objects
@@ -146,11 +143,6 @@ class BaseLibrary {
 	public var normalizeScaleOrient : Bool = true;
 
 	/**
-		Keep high precision values. Might increase animation data size and compressed size.
-	**/
-	public var highPrecision : Bool = false;
-
-	/**
 		Use the legacy system to convert scale and axis of FBX file
 	**/
 	public var legacyScaleAxisConversion : Bool = false;
@@ -161,7 +153,7 @@ class BaseLibrary {
 	public var legacySkinImport : Bool = false;
 
 	public function new( fileName ) {
-		this.fileName = fileName;
+		super(fileName);
 		root = { name : "Root", props : [], childs : [] };
 		keepJoints = new Map();
 		skipObjects = new Map();
@@ -177,7 +169,17 @@ class BaseLibrary {
 	}
 
 	public function loadFile( data : Bytes ) {
-		load(ParserOld.parse(data));
+		load(Parser.parse(data));
+	}
+
+	override function setConvertParams( params : Dynamic, localParams : Dynamic ) {
+		super.setConvertParams(params, localParams);
+		if( params != null ) {
+			if( params.legacyScaleAxisConversion != null )
+				legacyScaleAxisConversion = params.legacyScaleAxisConversion;
+			if( params.legacySkinImport != null )
+				legacySkinImport = params.legacySkinImport;
+		}
 	}
 
 	public function load( root : FbxNode ) {
@@ -647,7 +649,7 @@ class BaseLibrary {
 			}
 		if( geom == null )
 			throw "Geometry " + name + " not found";
-		return new Geometry(this, geom);
+		return new hxd.fmt.fbx.Geometry(this, geom);
 	}
 
 	public function getParent( node : FbxNode, nodeName : String, ?opt : Bool ) {
@@ -871,13 +873,13 @@ class BaseLibrary {
 			return null;
 		}
 		var m = getModel(modelNames[0]);
-		var geom = new Geometry(this, getChild(m, "Geometry"));
+		var geom = new hxd.fmt.fbx.Geometry(this, getChild(m, "Geometry"));
 		var def = getChild(geom.getRoot(), "Deformer", true);
 		var subDefs = getChilds(def, "Deformer");
 		for( i in 1...modelNames.length ) {
 			var name = modelNames[i];
 			var m2 = getModel(name);
-			var geom2 = new Geometry(this, getChild(m2, "Geometry"));
+			var geom2 = new hxd.fmt.fbx.Geometry(this, getChild(m2, "Geometry"));
 			var vcount = Std.int(geom.getVertices().length / 3);
 
 			skipObjects.set(name, true);
@@ -951,44 +953,6 @@ class BaseLibrary {
 		invConnect.get(nid).remove(pid);
 	}
 
-	function checkData( t : { x : Array<Float>, y :Array<Float>, z:Array<Float> } ) {
-		if( t == null )
-			return true;
-		if( t.x != null ) {
-			var v = t.x[0];
-			for( v2 in t.x )
-				if( v != v2 )
-					return false;
-		}
-		if( t.y != null ) {
-			var v = t.y[0];
-			for( v2 in t.y )
-				if( v != v2 )
-					return false;
-		}
-		if( t.z != null ) {
-			var v = t.z[0];
-			for( v2 in t.z )
-				if( v != v2 )
-					return false;
-		}
-		return true;
-	}
-
-	function roundValues( data : Array<Float>, def : Float, mult : Float = 1. ) {
-		var hasValue = false;
-		var epsi = highPrecision ? 0 : 1e-3;
-		for( i in 0...data.length ) {
-			var v = data[i] * mult;
-			if( Math.abs(v - def) > epsi )
-				hasValue = true;
-			else
-				v = def;
-			data[i] = round(v);
-		}
-		return hasValue;
-	}
-
 	/**
 		Returns an array of names with all animations present in FBX file.
 	**/
@@ -1001,13 +965,13 @@ class BaseLibrary {
 		return names;
 	}
 
-	public function loadAnimation( ?animName : String, ?root : FbxNode, ?lib : BaseLibrary ) : h3d.anim.Animation {
+	public function loadAnimation( ?animName : String, ?root : FbxNode, ?lib : Library ) : h3d.anim.Animation {
 		if( lib != null ) {
 			lib.defaultModelMatrixes = defaultModelMatrixes;
 			return lib.loadAnimation(animName);
 		}
 		if( root != null ) {
-			var l = new BaseLibrary(fileName);
+			var l = new Library(fileName);
 			l.normalizeScaleOrient = normalizeScaleOrient;
 			l.load(root);
 			if( leftHand ) l.leftHandConvert();
@@ -1424,10 +1388,6 @@ class BaseLibrary {
 		return anim;
 	}
 
-	function sortDistinctFloats( a : Float, b : Float ) {
-		return if( a > b ) 1 else -1;
-	}
-
 	function isNullJoint( model : FbxNode ) {
 		if( getParents(model, "Deformer").length > 0 )
 			return false;
@@ -1499,7 +1459,12 @@ class BaseLibrary {
 	}
 
 	function keepJoint( j : h3d.anim.Skin.Joint ) : Bool {
-		return keepJoints.get(j.name);
+		if( !optimizeSkin || keepJoints.get(j.name) )
+			return true;
+		// remove these unskinned terminal bones if they are not named in a special manner
+		if( ~/^Bip00[0-9] /.match(j.name) || ~/^Bone[0-9][0-9][0-9]$/.match(j.name) )
+			return false;
+		return true;
 	}
 
 	function createSkin( hskins : Map<Int,h3d.anim.Skin>, hgeom : Map<Int,{
@@ -1571,11 +1536,6 @@ class BaseLibrary {
 		skin.setJoints(allJoints, rootJoints);
 		skin.initWeights();
 		return skin;
-	}
-
-	function round(v:Float) {
-		if( v != v ) throw '${fileName} : NaN found (could be multiple skin mesh, currently not supported)';
-		return highPrecision ? v : hxd.Math.fround(v * 131072) / 131072;
 	}
 
 	function updateDefaultMatrix( model : FbxNode, d : DefaultMatrixes ) {
@@ -1689,6 +1649,799 @@ class BaseLibrary {
 
 		defaultModelMatrixes.set(id, d);
 		return d;
+	}
+
+
+	override function getColliderModelMatrix( colliderModel : Model, convexHulls : Bool ) {
+		if( !legacySkinImport )
+			return super.getColliderModelMatrix(colliderModel, convexHulls);
+		if( convexHulls )
+			return colliderModel.position.toMatrix();
+		return colliderModel.skin != null && colliderModel.skin.joints.length > 0 ? colliderModel.skin.joints[0].position.toMatrix() : colliderModel.position.toMatrix();
+	}
+
+	function buildTangents( geom : hxd.fmt.fbx.Geometry ) {
+		var verts = geom.getVertices();
+		var normals = geom.getNormals();
+		var uvs = geom.getUVs();
+		var index = geom.getIndexes();
+
+		if ( index.vidx.length > 0 && uvs[0] == null )
+			throw "Need UVs to build tangents" + (fileName != null ? ' in ${fileName}' : '');
+
+		var buffer = [];
+		for( i in 0...index.vidx.length ) {
+			var vidx = index.vidx[i];
+			buffer.push(verts[vidx*3]);
+			buffer.push(verts[vidx*3+1]);
+			buffer.push(verts[vidx*3+2]);
+
+			buffer.push(normals[i*3]);
+			buffer.push(normals[i*3+1]);
+			buffer.push(normals[i*3+2]);
+			var uidx = uvs[0].index[i];
+
+			buffer.push(uvs[0].values[uidx*2]);
+			buffer.push(uvs[0].values[uidx*2+1]);
+		}
+		return computeTangents(buffer, index.vidx.length);
+	}
+
+	function buildGeom( geom : hxd.fmt.fbx.Geometry, skin : h3d.anim.Skin, dataOut : haxe.io.BytesOutput, genTangents : Bool, decimationFactor : Float = 0.0 ) : hxd.fmt.Library.BuiltGeometry {
+		var g = new Geometry();
+
+		var verts = geom.getVertices();
+		var normals = geom.getNormals();
+		var uvs = geom.getUVs();
+		if( maxUVs > 0 && uvs.length > maxUVs )
+			uvs = uvs.slice(0, maxUVs);
+		var colors = noColor ? null : geom.getColors();
+		var mats = geom.getMaterials();
+		var index = geom.getPolygons();
+
+		// remove empty color data
+		if( colors != null ) {
+			var hasData = false;
+			for( v in colors.values )
+				if( v < 0.99 ) {
+					hasData = true;
+					break;
+				}
+			if( !hasData )
+				colors = null;
+		}
+
+		// generate tangents
+		var tangents = genTangents ? buildTangents(geom) : null;
+
+		inline function getPrec(n) {
+			var p = lowPrecConfig == null ? null : lowPrecConfig.get(n);
+			if( p == null ) p = F32;
+			return p;
+		}
+		var ppos = getPrec("position");
+		var pnormal = getPrec("normal");
+		var pcolor = getPrec("color");
+		var puv = getPrec("uv");
+		var pweight = getPrec("weights");
+
+		// build format
+		var format = [];
+		inline function addFormat(name,type,prec) {
+			format.push(new hxd.BufferFormat.BufferInput(name,type,prec));
+		}
+		addFormat("position", DVec3, ppos);
+		if( normals != null )
+			addFormat("normal", DVec3, pnormal);
+		if( tangents != null )
+			addFormat("tangent", DVec3, pnormal);
+		for( i in 0...uvs.length )
+			addFormat("uv"+(i == 0 ? "" : ""+(i+1)), DVec2, puv);
+		if( colors != null )
+			addFormat("color", DVec3, pcolor);
+
+		if( skin != null ) {
+			if(fourBonesByVertex)
+				g.props = [FourBonesByVertex];
+			addFormat("weights", DVec3, pweight);  // Only 3 weights are necessary even in fourBonesByVertex since they sum-up to 1
+			format.push(new GeometryFormat("indexes", DBytes4));
+		}
+
+		if( generateNormals )
+			addFormat("logicNormal", DVec3, pnormal);
+		g.vertexFormat = hxd.BufferFormat.make(format);
+		g.vertexCount = 0;
+
+		// build geometry
+		var gm = geom.getGeomMatrix();
+		var vbuf = new hxd.FloatBuffer();
+		var ibufs = [];
+
+		if( skin != null && skin.isSplit() ) {
+			for( _ in skin.splitJoints )
+				ibufs.push([]);
+		}
+
+		var shapes = geom.getRoot().getAll("Shape");
+		var shapeIndexes = []; // Indexes of vertex used in blendshapes
+		var remappedShapes = [];
+		for ( sIdx => s in shapes ) {
+			shapeIndexes.push(s.get("Indexes").getInts());
+			remappedShapes.push([]);
+			for (i in 0...shapeIndexes[sIdx].length)
+				remappedShapes[remappedShapes.length - 1].push([]);
+		}
+
+		g.bounds = new h3d.col.Bounds();
+		var stride = g.vertexFormat.stride;
+		var tmpBuf = new hxd.impl.TypedArray.Float32Array(stride);
+		var vertexRemap = new Array<Int>();
+		var count = 0, matPos = 0, stri = 0;
+		var lookup = new Map();
+		var tmp = new h3d.col.Point();
+		for( pos in 0...index.length ) {
+			var i = index[pos];
+			count++;
+			if( i >= 0 )
+				continue;
+			index[pos] = -i - 1;
+			var start = pos - count + 1;
+			for( n in 0...count ) {
+				var k = n + start;
+				var vidx = index[k];
+				var p = 0;
+
+				var x = verts[vidx * 3];
+				var y = verts[vidx * 3 + 1];
+				var z = verts[vidx * 3 + 2];
+				if( gm != null ) {
+					tmp.set(x, y, z);
+					tmp.transform(gm);
+					x = tmp.x;
+					y = tmp.y;
+					z = tmp.z;
+				}
+				tmpBuf[p++] = x;
+				tmpBuf[p++] = y;
+				tmpBuf[p++] = z;
+				g.bounds.addPos(x, y, z);
+
+				if( normals != null ) {
+					var nx = normals[k * 3];
+					var ny = normals[k * 3 + 1];
+					var nz = normals[k * 3 + 2];
+					tmpBuf[p++] = nx;
+					tmpBuf[p++] = ny;
+					tmpBuf[p++] = nz;
+				}
+
+				if( tangents != null ) {
+					tmpBuf[p++] = round(tangents[k * 4]);
+					tmpBuf[p++] = round(tangents[k * 4 + 1]);
+					tmpBuf[p++] = round(tangents[k * 4 + 2]);
+					if( tangents[k*4+3] < 0 ) {
+						tmpBuf[p-3] *= 0.5;
+						tmpBuf[p-2] *= 0.5;
+						tmpBuf[p-1] *= 0.5;
+					}
+				}
+
+				for( tuvs in uvs ) {
+					var iuv = tuvs.index[k];
+					tmpBuf[p++] = tuvs.values[iuv * 2];
+					tmpBuf[p++] = 1 - tuvs.values[iuv * 2 + 1];
+				}
+
+				if( colors != null ) {
+					var icol = colors.index[k];
+					tmpBuf[p++] = colors.values[icol * 4];
+					tmpBuf[p++] = colors.values[icol * 4 + 1];
+					tmpBuf[p++] = colors.values[icol * 4 + 2];
+				}
+
+				if( skin != null ) {
+					var k = vidx * skin.bonesPerVertex;
+					var idx = 0;
+					if(!(skin.bonesPerVertex == 3 || skin.bonesPerVertex == 4)) throw "assert";
+					for( i in 0...3 )  // Only 3 weights are necessary even in fourBonesByVertex since they sum-up to 1
+						tmpBuf[p++] = skin.vertexWeights[k + i];
+					for( i in 0...skin.bonesPerVertex )
+						idx = (skin.vertexJoints[k + i] << (8*i)) | idx;
+					tmpBuf[p++] = int32tof(idx);
+				}
+
+				if( generateNormals ) {
+					tmpBuf[p++] = 0;
+					tmpBuf[p++] = 0;
+					tmpBuf[p++] = 0;
+				}
+
+				var total = 0.;
+				for( i in 0...stride )
+					total += tmpBuf[i];
+				var itotal = Std.int((total * 100) % 0x0FFFFFFF);
+
+				// look if the vertex already exists
+				var found : Null<Int> = null;
+				var vids = lookup.get(itotal);
+				if( vids == null ) {
+					vids = [];
+					lookup.set(itotal, vids);
+				}
+				var inBlendShape = false;
+				for ( s in shapeIndexes ) {
+					if ( s.contains(vidx) ) {
+						inBlendShape = true;
+						break;
+					}
+				}
+				if ( !inBlendShape ) { // vertices referenced by blend shapes can't be merged
+					for( vid in vids ) {
+						var same = true;
+						var p = vid * stride;
+						for( i in 0...stride )
+							if( vbuf[p++] != tmpBuf[i] ) {
+								same = false;
+								break;
+							}
+						if( same ) {
+							found = vid;
+							break;
+						}
+					}
+				}
+				if( found == null ) {
+					found = g.vertexCount;
+					g.vertexCount++;
+					for( i in 0...stride )
+						vbuf.push(tmpBuf[i]);
+					vids.push(found);
+				}
+
+				vertexRemap.push(found);
+
+				for ( s in 0...shapeIndexes.length ) {
+					for (idx in 0...shapeIndexes[s].length) {
+						if (shapeIndexes[s][idx] == vidx) {
+							remappedShapes[s][idx].push(found);
+						}
+					}
+				}
+			}
+
+			// by-skin-group index
+			if( skin != null && skin.isSplit() ) {
+				for( n in 0...count - 2 ) {
+					var idx = ibufs[skin.triangleGroups[stri++]];
+					idx.push(vertexRemap[start + n]);
+					idx.push(vertexRemap[start + count - 1]);
+					idx.push(vertexRemap[start + n + 1]);
+				}
+			}
+			// by-material index
+			else {
+				var mid;
+				if( mats == null )
+					mid = 0;
+				else {
+					mid = midsSortRemap != null ? midsSortRemap.get(mats[matPos]) : mats[matPos];
+					if( mats.length > 1 ) matPos++;
+				}
+				var idx = ibufs[mid];
+				if( idx == null ) {
+					idx = [];
+					ibufs[mid] = idx;
+				}
+				for( n in 0...count - 2 ) {
+					idx.push(vertexRemap[start + n]);
+					idx.push(vertexRemap[start + count - 1]);
+					idx.push(vertexRemap[start + n + 1]);
+				}
+			}
+
+			index[pos] = i; // restore
+			count = 0;
+		}
+
+		if( generateNormals )
+			updateNormals(g,vbuf,ibufs);
+
+		if ( optimizeMesh || decimationFactor > 0.0 ) {
+			vbuf = optimizeGeometry(g, vbuf, ibufs, decimationFactor);
+			if( vbuf == null )
+				return null;
+		}
+
+		// write data
+		var colVBuf = writeVertices(g, vbuf);
+		var matMap = writeIndexes(g, ibufs);
+
+		if( skin != null && skin.isSplit() )
+			matMap = null;
+
+		for ( i in 0...shapes.length ) {
+			var remapped = remappedShapes[i];
+			var s = shapes[i];
+			var shape = new BlendShape();
+			shape.name = s.props != null && s.props.length > 0 ? s.props[0].toString() : s.name;
+			shape.geom = -1;
+			var indexes = s.get("Indexes").getFloats();
+			var verts = s.get("Vertices").getFloats();
+			var normals = s.get("Normals").getFloats();
+			var uvs = s.get("UVs", true)?.getFloats();
+			var colors = s.get("Colors", true)?.getFloats();
+			format = [];
+			addFormat("position", DVec3, ppos);
+			if( normals != null )
+				addFormat("normal", DVec3, pnormal);
+			if( tangents != null )
+				addFormat("tangent", DVec3, pnormal);
+			if( uvs != null )
+				addFormat("uv", DVec2, puv);
+			if( colors != null )
+				addFormat("color", DVec3, pcolor);
+			shape.indexCount = remapped.length;
+			shape.vertexCount = indexes.length;
+			shape.vertexFormat = hxd.BufferFormat.make(format);
+			shape.vertexPosition = dataOut.length;
+
+			var vbuf = new hxd.FloatBuffer();
+			for ( i in 0...shape.vertexCount ) {
+				vbuf.push(verts[i * 3]);
+				vbuf.push(verts[i * 3 + 1]);
+				vbuf.push(verts[i * 3 + 2]);
+				if ( normals != null ) {
+					vbuf.push(normals[i * 3]);
+					vbuf.push(normals[i * 3 + 1]);
+					vbuf.push(normals[i * 3 + 2]);
+				}
+				if ( uvs != null ) {
+					vbuf.push(uvs[i * 2]);
+					vbuf.push(uvs[i * 2 + 1]);
+				}
+				if ( colors != null ) {
+					vbuf.push(colors[i * 3]);
+					vbuf.push(colors[i * 3 + 1]);
+					vbuf.push(colors[i * 3 + 1]);
+				}
+			}
+			if( lowPrecConfig == null ) {
+				for( i in 0...vbuf.length )
+					writeFloat(dataOut, vbuf[i]);
+			} else {
+				for( index in 0...Std.int(vbuf.length / stride) ) {
+					var i = index * stride;
+					writePrec(dataOut, vbuf[i++], ppos);
+					writePrec(dataOut, vbuf[i++], ppos);
+					writePrec(dataOut, vbuf[i++], ppos);
+					flushPrec(dataOut, ppos,3);
+					if( normals != null ) {
+						writePrec(dataOut, vbuf[i++], pnormal);
+						writePrec(dataOut, vbuf[i++], pnormal);
+						writePrec(dataOut, vbuf[i++], pnormal);
+						flushPrec(dataOut, pnormal,3);
+					}
+					if( tangents != null ) {
+						writePrec(dataOut, vbuf[i++], pnormal);
+						writePrec(dataOut, vbuf[i++], pnormal);
+						writePrec(dataOut, vbuf[i++], pnormal);
+						flushPrec(dataOut, pnormal,3);
+					}
+					for( k in 0...uvs.length ) {
+						writePrec(dataOut, vbuf[i++], puv);
+						writePrec(dataOut, vbuf[i++], puv);
+						flushPrec(dataOut, puv,2);
+					}
+					if( colors != null ) {
+						writePrec(dataOut, vbuf[i++], pcolor);
+						writePrec(dataOut, vbuf[i++], pcolor);
+						writePrec(dataOut, vbuf[i++], pcolor);
+						flushPrec(dataOut, pcolor,3);
+					}
+					if( i != (index + 1) * stride )
+						throw "assert";
+				}
+			}
+
+			shape.remapPosition = dataOut.length;
+			for ( i in 0...remapped.length ) {
+				for (j in 0...remapped[i].length) {
+					var toWrite = remapped[i][j];
+
+					// We don't support models vertex count > 2^32 - 1 because we use
+					// the 32th bit for a flag to indicate that it is the last index
+					// affected by this offset
+					if (toWrite > Math.pow(2, 32) - 1)
+						throw ("Not supported, too much vertex");
+
+					if (j == remapped[i].length -1)
+						toWrite = toWrite | (1 << 31);
+
+					dataOut.writeInt32(toWrite);
+				}
+			}
+			d.shapes.push(shape);
+		}
+		return { g : g, materials : matMap, vbuf : colVBuf, ibufs : ibufs };
+	}
+
+	function addModels(includeGeometry) {
+
+		var root = buildHierarchy().root;
+		var objects = [], joints = [], skins = [], foundSkin : Array<TmpObject> = null;
+
+		function indexRec( t : TmpObject ) {
+			if (t.isJoint) {
+				joints.push(t);
+			} else {
+				var isSkin = false;
+				if( foundSkin == null ) {
+					for( c in t.childs )
+						if( c.isJoint ) {
+							isSkin = true;
+							break;
+						}
+				} else
+					isSkin = foundSkin.indexOf(t) >= 0;
+				if( isSkin ) {
+					skins.push(t);
+				} else
+					objects.push(t);
+			}
+			for( c in t.childs )
+				indexRec(c);
+		}
+		indexRec(root);
+
+		// create joints
+		for( o in joints ) {
+			if( o.isMesh ) throw "assert";
+			var j = new h3d.anim.Skin.Joint();
+			getDefaultMatrixes(o.model); // store for later usage in animation
+			j.index = o.model.getId();
+			j.name = o.model.getName();
+			o.joint = j;
+			if( o.parent != null ) {
+				j.parent = o.parent.joint;
+				if( o.parent.isJoint ) o.parent.joint.subs.push(j);
+			}
+		}
+
+		// mark skin references
+		foundSkin = [];
+		for( o in skins ) {
+			function loopRec( o : TmpObject ) {
+				for( j in o.childs ) {
+					if( !j.isJoint ) continue;
+					var s = getParent(j.model, "Deformer", true);
+					if( s != null ) return s;
+					s = loopRec(j);
+					if( s != null ) return s;
+				}
+				return null;
+			}
+			var subDef = loopRec(o);
+			// skip skin with no skinned bone
+			if( subDef == null )
+				continue;
+			var def = getParent(subDef, "Deformer");
+			var geoms = getParents(def, "Geometry");
+			if( geoms.length == 0 ) continue;
+			if( geoms.length > 1 ) throw "Single skin applied to multiple geometries not supported";
+			var models = getParents(geoms[0],"Model");
+			if( models.length == 0 ) continue;
+			if( models.length > 1 ) throw "Single skin applied to multiple models not supported";
+			var m = models[0];
+			for( o2 in objects ) {
+				if( o2.model == m ) {
+					if (legacySkinImport) {
+						foundSkin.push(o);
+						o2.skin = o;
+						if( o.model == null ) o.model = m;
+						ignoreMissingObject(m.getId()); // make sure we don't store animation for the model (only skin object has one)
+						// copy parent
+						var p = o.parent;
+						if( p != o2 ) {
+							o2.parent.childs.remove(o2);
+							o2.parent = p;
+							if( p != null ) p.childs.push(o2) else root = o2;
+						}
+						// remove skin from hierarchy
+						if( p != null ) p.childs.remove(o);
+						// move not joint to new parent
+						// (only first level, others will follow their respective joint)
+						for( c in o.childs.copy() ) {
+							if( !c.isJoint ) {
+								o.childs.remove(c);
+								o2.childs.push(c);
+								c.parent = o2;
+							}
+						}
+					}
+					else {
+						for (c in o.childs) {
+							if (c.isJoint) {
+								if (o2.rootJoints == null)
+									o2.rootJoints = [];
+								o2.rootJoints.push(c);
+
+								if (c.model.name.toLowerCase().indexOf("root") < 0)
+									continue;
+
+								var jDef = getDefaultMatrixes(c.model);
+								var modelDef = getDefaultMatrixes(m);
+
+								var newDef = new DefaultMatrixes();
+								newDef.fromMatrix(modelDef.toMatrix(false).multiplied(jDef.toMatrix(false).getInverse()));
+								defaultModelMatrixes.set(m.getId(), newDef);
+							}
+						}
+					}
+
+					break;
+				}
+			}
+		}
+
+		// we need to have ignored skins objects anims first
+		if( !includeGeometry )
+			return;
+
+		objects = [];
+		if( root.childs.length <= 1 && root.model == null ) {
+			root = root.childs[0];
+			root.parent = null;
+		}
+		if( root != null ) indexRec(root); // reorder after we have changed hierarchy
+
+		var hskins = new Map(), tmpGeom = new Map();
+		// prepare things for skinning
+		for( g in this.root.getAll("Objects.Geometry") )
+			tmpGeom.set(g.getId(), { setSkin : function(_) { }, vertexCount : function() return Std.int(new hxd.fmt.fbx.Geometry(this, g).getVertices().length/3) } );
+
+		// Sort LODs to ensure we treat them in order after
+		haxe.ds.ArraySort.sort(objects, (a, b) -> compareLODNames(a.model == null ? null : a.model.getName(), b.model == null ? null : b.model.getName()));
+
+		var hgeom = new Map();
+		var hgeomCol = new Map<Int, hxd.fmt.Library.GeometryCollideData>();
+		var hmat = new Map<Int,Int>();
+		var hlods = new Map<String, Array<Index<Model>>>();
+		var lods0Mids : Map<String, Array<Int>> = new Map();
+		var index = 0;
+		for( o in objects ) {
+
+			o.index = index++;
+
+			var model = new Model();
+			model.name = o.model == null ? null : o.model.getName();
+			model.parent = o.parent == null || o.parent.isJoint ? -1 : o.parent.index;
+			model.follow = o.parent != null && o.parent.isJoint ? o.parent.model.getName() : null;
+			var m : DefaultMatrixes;
+			if (legacySkinImport) {
+				var ref = o.skin == null ? o : o.skin;
+				m = ref.model == null ? new DefaultMatrixes() : getDefaultMatrixes(ref.model);
+			}
+			else {
+				m = o.model == null ? new DefaultMatrixes() : getDefaultMatrixes(o.model);
+			}
+			var p = new Position();
+			p.x = m.trans == null ? 0 : -m.trans.x;
+			p.y = m.trans == null ? 0 : m.trans.y;
+			p.z = m.trans == null ? 0 : m.trans.z;
+			p.sx = m.scale == null ? 1 : m.scale.x;
+			p.sy = m.scale == null ? 1 : m.scale.y;
+			p.sz = m.scale == null ? 1 : m.scale.z;
+
+			if( o.model != null && o.model.getType() == "Camera" ) {
+				var props = getChild(o.model, "NodeAttribute");
+				var fov = 45., ratio = 16 / 9;
+				for( p in props.getAll("Properties70.P") ) {
+					switch( p.props[0].toString() ) {
+					case "FilmAspectRatio":
+						ratio = p.props[4].toFloat();
+					case "FieldOfView":
+						fov = p.props[4].toFloat();
+					default:
+					}
+				}
+				var fovY = 2 * Math.atan( Math.tan(fov * 0.5 * Math.PI / 180) / ratio ) * 180 / Math.PI;
+				if( model.props == null ) model.props = [];
+				model.props.push(CameraFOVY(fovY));
+			}
+
+			var q = m.toQuaternion(true);
+			q.normalize();
+			if( q.w < 0 ) q.negate();
+			p.qx = q.x;
+			p.qy = q.y;
+			p.qz = q.z;
+			model.position = p;
+			model.geometry = -1;
+			d.models.push(model);
+
+			if( !o.isMesh ) continue;
+
+			var mids : Array<Int> = [];
+			var hasNormalMap = false;
+			for( m in getChilds(o.model, "Material") ) {
+				var mid = hmat.get(m.getId());
+				if( mid != null ) {
+					mids.push(mid);
+					var m = d.materials[mid];
+					hasNormalMap = m.normalMap != null;
+					continue;
+				}
+				var mat = new Material();
+				mid = d.materials.length;
+				mids.push(mid);
+				hmat.set(m.getId(), mid);
+				d.materials.push(mat);
+
+				mat.name = m.getName();
+				mat.blendMode = null;
+
+				// if there's a slight amount of opacity on the material
+				// it's usually meant to perform additive blending on 3DSMax
+				for( p in m.getAll("Properties70.P") ) {
+					var pval = p.props[4];
+					switch( p.props[0].toString() ) {
+					case "Opacity":
+						var v = pval.toFloat();
+						if( v < 1 && v > 0.98 && mat.blendMode == null ) mat.blendMode = Add;
+					default:
+					}
+				}
+
+				// get texture
+				var texture = getSpecChild(m, "DiffuseColor");
+				if( texture != null ) {
+					var path = makeTexturePath(texture);
+					if( path != null ) mat.diffuseTexture = path;
+				}
+
+				// get other textures
+				mat.normalMap = makeTexturePath(getSpecChild(m, "NormalMap"));
+				if( mat.normalMap != null )
+					hasNormalMap = true;
+				var spec = getSpecChild(m, "SpecularFactor"); // 3dsMax
+				if( spec == null ) spec = getSpecChild(m, "SpecularColor"); // maya
+				mat.specularTexture = makeTexturePath(spec);
+				if( mat.normalMap != null || mat.specularTexture != null ) {
+					if( mat.props == null ) mat.props = [];
+					mat.props.push(HasExtraTextures);
+				}
+
+				// get alpha map
+				var transp = getSpecChild(m, "TransparentColor");
+				if( transp != null ) {
+					var path = transp.get("FileName").props[0].toString();
+					if( path != "" ) {
+						path = path.toLowerCase();
+						var ext = path.split(".").pop();
+						if( texture != null && path == texture.get("FileName").props[0].toString().toLowerCase() ) {
+							// if that's the same file, we're doing alpha blending
+							if( mat.blendMode == null && ext != "jpg" && ext != "jpeg" ) mat.blendMode = Alpha;
+						} else
+							throw "Alpha texture that is different from diffuse is not supported in HMD";
+					}
+				}
+
+				if( mat.blendMode == null ) mat.blendMode = None;
+			}
+
+			var g = getChild(o.model, "Geometry");
+
+			var skin = null;
+			if (legacySkinImport) {
+				if( o.skin != null ) {
+					var rootJoints = [];
+					for( c in o.skin.childs )
+						if( c.isJoint )
+							rootJoints.push(c.joint);
+					skin = createSkin(hskins, tmpGeom, rootJoints);
+					if( skin.boundJoints.length > maxBonesPerSkin ) {
+						var g = new hxd.fmt.fbx.Geometry(this, g);
+						var idx = g.getIndexes();
+						skin.split(maxBonesPerSkin, [for( i in idx.idx ) idx.vidx[i]], mids.length > 1 ? g.getMaterialByTriangle() : null);
+					}
+					model.skin = makeSkin(skin);
+				}
+			}
+			else {
+				if( o.rootJoints != null ) {
+					skin = createSkin(hskins, tmpGeom, [for (j in o.rootJoints) j.joint]);
+					if( skin.boundJoints.length > maxBonesPerSkin ) {
+						var g = new hxd.fmt.fbx.Geometry(this, g);
+						var idx = g.getIndexes();
+						skin.split(maxBonesPerSkin, [for( i in idx.idx ) idx.vidx[i]], mids.length > 1 ? g.getMaterialByTriangle() : null);
+					}
+					model.skin = makeSkin(skin);
+				}
+			}
+
+			// For each LOD > 0, reorder its materials in the same order that the LOD 0
+			var lodsInfos = getLODInfos(model.name);
+			if (lodsInfos.lodLevel == 0)
+				lods0Mids.set(lodsInfos.modelName, mids);
+			if (lodsInfos.lodLevel != -1) {
+				midsSortRemap = new Map<Int, Int>();
+				for (idx in 0...mids.length) {
+					var lod0Mids = lods0Mids.get(lodsInfos.modelName);
+					for (idx2 in 0...lod0Mids.length) {
+						if (mids[idx] == lod0Mids[idx2]) {
+							mids[idx] = lod0Mids[idx2];
+							midsSortRemap.set(idx, idx2);
+							break;
+						}
+					}
+				}
+			}
+
+			var gdata = hgeom.get(g.getId());
+			if( gdata == null ) {
+				var geomData = new hxd.fmt.fbx.Geometry(this, g);
+
+				var geom = buildGeom(geomData, skin, dataOut, hasNormalMap || generateTangents);
+
+				gdata = { gid : d.geometries.length, materials : geom.materials };
+				var gdataCol = { gid : d.geometries.length, mids : mids, vbuf : geom.vbuf, ibufs : geom.ibufs };
+				d.geometries.push(geom.g);
+				hgeom.set(g.getId(), gdata);
+				hgeomCol.set(gdataCol.gid, gdataCol);
+				for ( s in d.shapes ) {
+					if (s.geom == -1)
+						s.geom = gdata.gid;
+				}
+			}
+			model.geometry = gdata.gid;
+
+			if( mids.length == 0 )
+				mids = [addDefaultMaterial()];
+			if( gdata.materials == null )
+				model.materials = mids;
+			else if (lodsInfos.lodLevel > 0) {
+				var lod0Mids = lods0Mids.get(lodsInfos.modelName);
+				model.materials = [for( id in gdata.materials ) lod0Mids[id]];
+			}
+			else
+				model.materials = [for( id in gdata.materials ) mids[id]];
+
+			if( !registerLOD(model, hlods) && lodsDecimation != null && model.skin == null && !model.isCollider() )
+				addDecimatedLODs(model, mids, hgeomCol, (factor) -> buildGeom(new hxd.fmt.fbx.Geometry(this, g), skin, dataOut, hasNormalMap || generateTangents, factor));
+		}
+
+		removeUselessRoot();
+		buildColliders(hgeomCol);
+	}
+
+	function makeTexturePath( tex : FbxNode ) {
+		if( tex == null )
+			return null;
+		return resolveTexturePath(tex.get("FileName").props[0].toString());
+	}
+
+	public function toHMD( filePath : String, includeGeometry : Bool ) : Data {
+
+		// if we have only animation data, make sure to export all joints positions
+		// because they might be applied to a different model at runtime
+		if( !includeGeometry )
+			optimizeSkin = false;
+
+		leftHandConvert();
+		autoMerge();
+
+		initData(filePath);
+
+		addModels(includeGeometry);
+
+		var names = getAnimationNames();
+		for ( animName in names ) {
+			var anim = loadAnimation(animName);
+			if(anim != null)
+				d.animations.push(makeAnimation(anim));
+		}
+
+		return flushData();
 	}
 
 }
