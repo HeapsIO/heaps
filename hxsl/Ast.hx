@@ -642,6 +642,16 @@ class Tools {
 		}
 	}
 
+	public static function hasReturn( e : TExpr ) {
+		var found = false;
+		function rec( e : TExpr ) {
+			if( found ) return;
+			if( e.e.match(TReturn(_)) ) found = true else iter(e, rec);
+		}
+		rec(e);
+		return found;
+	}
+
 	public static function iter( e : TExpr, f : TExpr -> Void ) {
 		switch( e.e ) {
 		case TParenthesis(e): f(e);

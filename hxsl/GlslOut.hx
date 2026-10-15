@@ -92,6 +92,7 @@ class GlslOut {
 	var allNames : Map<String, Int>;
 	var outIndexes : Map<Int, Int>;
 	var isCompute : Bool;
+	var curHelperArgs : Array<TVar>;
 	var highpUniforms : Bool;
 
 	var isES(get,never) : Bool;
@@ -260,16 +261,30 @@ class GlslOut {
 		}
 	}
 
-	function addValue( e : TExpr, tabs : String ) {
+	function addArgs( decl : Bool ) {
+		if( curHelperArgs == null ) {
+			add(decl ? "(void)" : "()");
+			return;
+		}
+		add("(");
+		var first = true;
+		for( a in curHelperArgs ) {
+			if( first ) first = false else add(", ");
+			if( decl ) addVar(a) else ident(a);
+		}
+		add(")");
+	}
+
+	function addValue( e : TExpr, tabs : String, ?helper : String ) {
 		switch( e.e ) {
 		case TBlock(el):
-			var name = "_val" + (exprIds++);
+			var name = (helper == null ? "" : helper) + "_val" + (exprIds++);
 			var tmp = buf;
 			buf = new StringBuf();
 			addType(e.t);
 			add(" ");
 			add(name);
-			add("(void)");
+			addArgs(true);
 			var el2 = el.copy();
 			var last = el2[el2.length - 1];
 			el2[el2.length - 1] = { e : TReturn(last), t : e.t, p : last.p };
@@ -282,7 +297,7 @@ class GlslOut {
 			exprValues.push(buf.toString());
 			buf = tmp;
 			add(name);
-			add("()");
+			addArgs(false);
 		case TIf(econd, eif, eelse):
 			add("( ");
 			addValue(econd, tabs);
@@ -290,6 +305,8 @@ class GlslOut {
 			addValue(eif, tabs);
 			add(" : ");
 			addValue(eelse, tabs);
+		case TMeta(m, [CString(helper)], e) if( m == Outliner.VALUE ):
+			addValue(e, tabs, helper);
 		case TMeta(_, _, e):
 			addValue(e, tabs);
 		default:
@@ -839,6 +856,48 @@ class GlslOut {
 		}
 	}
 
+	function emitHelper( f : TFunction ) {
+		curHelperArgs = f.args.length == 0 ? null : f.args;
+		addType(f.ret);
+		add(" ");
+		ident(f.ref);
+		add("(");
+		var first = true;
+		for( a in f.args ) {
+			if( first ) first = false else add(", ");
+			addVar(a);
+		}
+		add(") {\n");
+		var expr = f.expr;
+		if( f.ret != TVoid && !Tools.hasReturn(expr) ) {
+			// the last expression of the body is an implicit return
+			switch( expr.e ) {
+			case TBlock(el) if( el.length > 0 ):
+				el = el.copy();
+				var last = el[el.length - 1];
+				el[el.length - 1] = { e : TReturn(last), t : TVoid, p : last.p };
+				expr = { e : TBlock(el), t : TVoid, p : expr.p };
+			case TBlock(_):
+			default:
+				expr = { e : TReturn(expr), t : TVoid, p : expr.p };
+			}
+		}
+		switch( expr.e ) {
+		case TBlock(el):
+			for( e in el ) {
+				add("\t");
+				addExpr(e, "\t");
+				newLine(e);
+			}
+		default:
+			add("\t");
+			addExpr(expr, "\t");
+			newLine(expr);
+		}
+		add("}");
+		curHelperArgs = null;
+	}
+
 	public function run( s : ShaderData ) {
 
 		var foundGlobals = new Map();
@@ -850,8 +909,8 @@ class GlslOut {
 		buf = new StringBuf();
 		exprValues = [];
 
-		if( s.funs.length != 1 ) throw "assert";
-		var f = s.funs[0];
+		var f = s.funs[s.funs.length - 1];
+		if( f == null || f.kind == Helper ) throw "assert";
 		isVertex = f.kind == Vertex;
 		isCompute = f.kind == Main;
 		highpUniforms = isES && f.kind == Fragment && (foundGlobals.exists(FloatBitsToInt) || foundGlobals.exists(FloatBitsToUint));
@@ -869,6 +928,12 @@ class GlslOut {
 			decl('layout(local_size_x = ${computeLayout[0]}, local_size_y = ${computeLayout[1]}, local_size_z = ${computeLayout[2]}) in;');
 
 		var tmp = buf;
+		for( h in s.funs ) {
+			if( h.kind != Helper ) continue;
+			buf = new StringBuf();
+			emitHelper(h);
+			exprValues.push(buf.toString());
+		}
 		buf = new StringBuf();
 		add("void main(void) {\n");
 		switch( f.expr.e ) {
