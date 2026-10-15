@@ -47,7 +47,20 @@ class Texture {
 	public var mipLevels(get, never) : Int;
 	public var anisotropicMaxLevel(get, set) : Int;
 	public var startingMip(get,set) : Int;
+	/**
+		The most detailed mip level allocated on the GPU : mip levels before it are not allocated,
+		and the texture is sampled starting at this level.
+	**/
+	public var residentMip(default,null) : Int = 0;
+	/**
+		For a Streamed texture, the last frame (hxd.Timer.frameCount) in which the texture was visible, see `markVisible`.
+	**/
+	public var visibleFrame(default,null) : Int = -1;
 	var customMipLevels : Int;
+	/**
+		A 1x1 texture is allocated while the texture is loading (see hxd.res.Image)
+	**/
+	var isPlaceholder : Bool;
 
 	/**
 		If this callback is set, the texture can be re-allocated when the 3D context has been lost or when
@@ -73,7 +86,6 @@ class Texture {
 	}
 
 	inline function set_startingMip(v:Int) {
-		if( flags.has(Loading) ) flags.set(AsyncKeepStartingMip);
 		return __startingMip = v;
 	}
 
@@ -199,6 +211,14 @@ class Texture {
 	}
 
 	/**
+		Records that the texture is used by something visible during the current frame.
+		Streamed textures that are not visible lose mip levels when the streaming budget is exceeded (see hxd.res.TextureStream).
+	**/
+	public inline function markVisible() {
+		visibleFrame = hxd.Timer.frameCount;
+	}
+
+	/**
 		Some textures might take some time to load. You can check flags.has(Loading)
 		or add a waitLoad callback which will get called either immediately if the texture is already loaded
 		or when loading is complete.
@@ -236,6 +256,7 @@ class Texture {
 
 	public function resize(width, height) {
 		dispose();
+		residentMip = 0;
 
 		var tw = 1, th = 1;
 		while( tw < width ) tw <<= 1;
@@ -327,7 +348,27 @@ class Texture {
 		}
 	}
 
+	public function setResidentMip( mip : Int ) {
+		if( mip == residentMip )
+			return true;
+		if( mip < 0 || mip >= mipLevels )
+			throw "Invalid resident mip " + mip + " (" + mipLevels + " mip levels)";
+		if( flags.has(Target) || flags.has(Writable) || flags.has(Is3D) || isDepth() )
+			throw "Resident mip is not supported for " + this;
+		if( format.match(S3TC(_)) && mip > 0 && ((width >> mip) & 3 != 0 || (height >> mip) & 3 != 0) )
+			throw "Resident mip " + mip + " of compressed texture " + this + " should be a 4x4 multiple";
+		if( !mem.driver.hasFeature(h3d.impl.Driver.Feature.ResidentMips) )
+			return false;
+		if( t == null ) {
+			residentMip = mip;
+			return true;
+		}
+		return mem.setResidentMip(this, mip);
+	}
+
 	function checkSize(width, height, mip) {
+		if( mip < residentMip )
+			throw "Mip level " + mip + " is not resident (residentMip = " + residentMip + ")";
 		var mw = this.width >> mip; if( mw == 0 ) mw = 1;
 		var mh = this.height >> mip; if( mh == 0 ) mh = 1;
 		if( width != mw || height != mh )

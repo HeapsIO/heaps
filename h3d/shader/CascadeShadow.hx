@@ -25,7 +25,6 @@ class CascadeShadow extends hxsl.Shader {
 		var shadow : Float;
 		var dirShadow : Float;
 
-		final MAX_CASCADE_COUNT : Int = 4;
 		@param var cascadeShadowMaps : Sampler2DArray;
 		@param var cascadeScales : Array<Vec4, MAX_CASCADE_COUNT>;
 		@param var cascadeOffsets : Array<Vec4, MAX_CASCADE_COUNT>;

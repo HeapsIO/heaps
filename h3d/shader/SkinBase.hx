@@ -10,7 +10,6 @@ class SkinBase extends hxsl.Shader {
 
 		@const(1024) var BUFFER_SIZE : Int;  // MAX_SHADER_BONES x3 vec4 per mat3x4
 		@const @param var fourBonesByVertex = false;
-		@const var calcPrevPos : Bool = false;
 
 		@param var bonesMatrixes : Buffer<Vec4, BUFFER_SIZE>;
 		@param var prevBonesMatrixes : Buffer<Vec4, BUFFER_SIZE>;

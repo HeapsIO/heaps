@@ -119,6 +119,11 @@ class GlDriver extends Driver {
 	var curTargetLayer : Int;
 	var curTargetMip : Int;
 
+	var textureCheckEnabled : Bool = false;
+	var maxFragmentTexture : Int;
+	var maxVertexTexture : Int;
+	var maxCombinedTexture : Int;
+
 	var debug : Bool;
 	var glDebug : Bool;
 	var boundTextures : Array<Texture> = [];
@@ -129,6 +134,8 @@ class GlDriver extends Driver {
 	var hasMultiIndirect = false;
 	var maxCompressedTexturesSupport = 0;
 	var hasRGTCSupport = false;
+	var hasDepthClamp = #if js false #else true #end;
+	static inline var DEPTH_CLAMP = #if js 0x864F #else GL.DEPTH_CLAMP #end;
 
 	public static var hasMultiIndirectCount = false;
 
@@ -144,11 +151,6 @@ class GlDriver extends Driver {
 	public static var outOfMemoryCheck = #if js false #else true #end;
 
 	public function new(antiAlias=0) {
-		#if (hlsdl >= version("1.15.0"))
-		if ( computeEnabled )
-			sdl.Sdl.setGLVersion(4, 3);
-		#end
-
 		#if js
 		canvas = @:privateAccess hxd.Window.getInstance().canvas;
 		var options = {alpha:false,stencil:true,antialias:antiAlias>0};
@@ -189,6 +191,15 @@ class GlDriver extends Driver {
 		hasRGTCSupport = true;
 		#end
 
+		try {
+			maxFragmentTexture = gl.getParameter(GL.MAX_TEXTURE_IMAGE_UNITS);
+			maxVertexTexture   = gl.getParameter(GL.MAX_VERTEX_TEXTURE_IMAGE_UNITS);
+			maxCombinedTexture = gl.getParameter(GL.MAX_COMBINED_TEXTURE_IMAGE_UNITS);
+			textureCheckEnabled = true;
+		} catch(e) {
+			textureCheckEnabled = false;
+		}
+
 		var v : String = gl.getParameter(GL.VERSION);
 		var reg = ~/ES ([0-9]+\.[0-9]+)/;
 		if( reg.match(v) )
@@ -210,10 +221,8 @@ class GlDriver extends Driver {
 			shaderVersion = Math.round( Std.parseFloat(reg.matched(0)) * 100 );
 		}
 
-		#if (hlsdl >= version("1.15.0"))
-		if ( computeEnabled )
+		if( h3d.impl.Driver.requestedFeatures.has(ComputeShaders) )
 			shaderVersion = 430;
-		#end
 
 		drawMode = GL.TRIANGLES;
 
@@ -238,16 +247,29 @@ class GlDriver extends Driver {
 		gl.pixelStorei(GL.UNPACK_ALIGNMENT, 1);
 	}
 
-	#if hlsdl
-	static var computeEnabled : Bool = false;
-	public static function enableComputeShaders() {
-		#if (hlsdl >= version("1.15.0"))
-		computeEnabled = true;
+	@:allow(h3d.impl.Driver)
+	static function onFeatureRequested( f : Feature ) : Bool {
+		#if (hlsdl >= version("1.15.0") && hl_ver >= version("1.15.0"))
+		if( f != ComputeShaders )
+			return false;
+		if( @:privateAccess sdl.Window.windows.length > 0 )
+			throw "Driver.requestFeature(ComputeShaders) must be called before the window is created";
+		var major = sdl.Sdl.requiredGLMajor, minor = sdl.Sdl.requiredGLMinor;
+		if( major * 10 + minor >= 43 )
+			return true;
+		sdl.Sdl.setGLVersion(4, 3);
+		var onRetry = sdl.Sdl.onGlContextRetry;
+		sdl.Sdl.onGlContextRetry = function() {
+			sdl.Sdl.onGlContextRetry = onRetry;
+			sdl.Sdl.setGLVersion(major, minor);
+			@:privateAccess h3d.impl.Driver.requestedFeatures.unset(ComputeShaders);
+			return true;
+		};
+		return true;
 		#else
-		throw "enableComputeShaders() requires hlsdl 1.15+";
+		return false;
 		#end
 	}
-	#end
 
 	override function setRenderFlag( r : RenderFlag, value : Int ) {
 		switch( r ) {
@@ -288,12 +310,12 @@ class GlDriver extends Driver {
 	}
 
 	override function getNativeShaderCode( shader : hxsl.RuntimeShader ) {
-		inline function compile(sh) {
-			return makeCompiler().run(sh);
+		inline function compile( sh : hxsl.RuntimeShader.RuntimeShaderData ) {
+			return sh.code ?? makeCompiler().run(sh.data);
 		}
 		if( shader.mode == Compute )
-			return compile(shader.compute.data);
-		return "// vertex:\n" + compile(shader.vertex.data) + "// fragment:\n" + compile(shader.fragment.data);
+			return compile(shader.compute);
+		return "// vertex:\n" + compile(shader.vertex) + "// fragment:\n" + compile(shader.fragment);
 	}
 
 	override public function getDriverName(details:Bool) {
@@ -322,9 +344,6 @@ class GlDriver extends Driver {
 		var s = gl.createShader(type);
 		if( shader.code == null ){
 			shader.code = glout.run(shader.data);
-			#if !heaps_compact_mem
-			shader.data.funs = null;
-			#end
 		}
 		gl.shaderSource(s, shader.code);
 		gl.compileShader(s);
@@ -469,9 +488,48 @@ class GlDriver extends Driver {
 		}
 	}
 
+	function countSamplers( s : hxsl.RuntimeShader.RuntimeShaderData ) {
+		var count = 0;
+		var t = s.textures;
+		while( t != null ) {
+			switch( t.type ) {
+			case TRWTexture(_), TArray(TRWTexture(_), _):
+			case TArray(_, SConst(n)): count += n;
+			default: count++;
+			}
+			t = t.next;
+		}
+		return count;
+	}
+
+	function checkTextureCount( shader : hxsl.RuntimeShader ) {
+		if( shader.mode == Compute || !textureCheckEnabled )
+			return;
+		var vertexCount = countSamplers(shader.vertex);
+		var fragmentCount = shader.fragment == null ? 0 : countSamplers(shader.fragment);
+		var maxVertex = maxVertexTexture;
+		var maxFragment = maxFragmentTexture;
+		#if js
+		// ANGLE/D3D11 translates uniform blocks into StructuredBuffers that share the per-stage texture slots.
+		maxVertex -= shader.vertex.bufferCount;
+		if( shader.fragment != null )
+			maxFragment -= shader.fragment.bufferCount;
+		#end
+		var error = null;
+		if( vertexCount > maxVertex )
+			error = 'Too many vertex textures. Current:$vertexCount Max:$maxVertex';
+		else if( fragmentCount > maxFragment )
+			error = 'Too many fragment textures. Current:$fragmentCount Max:$maxFragment';
+		else if( vertexCount + fragmentCount > maxCombinedTexture )
+			error = 'Too many total textures in vertex and fragment. Current:${vertexCount + fragmentCount} Max:$maxCombinedTexture';
+		if( error != null )
+			throw error + " (" + [for( i in shader.spec.instances ) i.shader.data.name].join(",") + ")";
+	}
+
 	override function selectShader( shader : hxsl.RuntimeShader ) {
 		var p = programs.get(shader.id);
 		if( p == null ) {
+			checkTextureCount(shader);
 			p = new CompiledProgram();
 			var glout = makeCompiler();
 			p.vertex = compileShader(glout,shader.vertex);
@@ -561,6 +619,7 @@ class GlDriver extends Driver {
 				}
 			p.format = hxd.BufferFormat.make(format);
 			programs.set(shader.id, p);
+			shader.releaseData();
 		}
 		if( curShader == p ) return false;
 		setProgram(p);
@@ -657,11 +716,10 @@ class GlDriver extends Driver {
 							t = h3d.mat.Texture.fromColor(color, (color >>> 24) / 255);
 						case TSampler(_, true):
 							t = h3d.mat.TextureArray.defaultArrayTexture();
-	
 						default:
 							if(t == null)
 								t = h3d.mat.Texture.fromColor(0, 1);
-							else 
+							else
 								throw "Disposed texture";
 					}
 				}
@@ -753,7 +811,7 @@ class GlDriver extends Driver {
 					gl.texParameteri(mode, GL.TEXTURE_WRAP_S, w);
 					gl.texParameteri(mode, GL.TEXTURE_WRAP_T, w);
 					gl.texParameteri(mode, GL.TEXTURE_WRAP_R, w);
-					gl.texParameteri(mode, GL.TEXTURE_BASE_LEVEL, startingMip);
+					gl.texParameteri(mode, GL.TEXTURE_BASE_LEVEL, startingMip > t.residentMip ? startingMip - t.residentMip : 0);
 					#if !js
 					gl.texParameterf(mode, GL.TEXTURE_LOD_BIAS, t.lodBias);
 					var hasAnisotropicFiltering = true;
@@ -905,14 +963,12 @@ class GlDriver extends Driver {
 			}
 		}
 
-		#if !js
-		if ( (!useDepthClamp && diff & Pass.depthClamp_mask != 0) ) {
+		if ( hasDepthClamp && !useDepthClamp && diff & Pass.depthClamp_mask != 0 ) {
 			if ( Pass.getDepthClamp(bits) != 0 )
-				gl.enable(GL.DEPTH_CLAMP);
+				gl.enable(DEPTH_CLAMP);
 			else
-				gl.disable(GL.DEPTH_CLAMP);
+				gl.disable(DEPTH_CLAMP);
 		}
-		#end
 
 		curMatBits = bits;
 	}
@@ -1075,7 +1131,9 @@ class GlDriver extends Driver {
 		discardError();
 		var tt = gl.createTexture();
 		var bind = getBindType(t);
-		var tt : Texture = { t : tt, width : t.width, height : t.height, internalFmt : GL.RGBA, pixelFmt : GL.UNSIGNED_BYTE, bits : -1, bind : bind #if multidriver, driver : this #end };
+		var r = t.residentMip;
+		var tt : Texture = { t : tt, width : r == 0 ? t.width : hxd.Math.imax(1, t.width >> r), height : r == 0 ? t.height : hxd.Math.imax(1, t.height >> r), internalFmt : GL.RGBA, pixelFmt : GL.UNSIGNED_BYTE, bits : -1, bind : bind #if multidriver, driver : this #end };
+		var mipCount = t.mipLevels - r;
 		switch( t.format ) {
 		case RGBA:
 			// default
@@ -1136,8 +1194,8 @@ class GlDriver extends Driver {
 			tt.internalFmt = GL.R11F_G11F_B10F;
 			tt.pixelFmt = GL.UNSIGNED_INT_10F_11F_11F_REV;
 		case S3TC(n) if( n <= maxCompressedTexturesSupport ):
-			if( t.width&3 != 0 || t.height&3 != 0 )
-				throw "Compressed texture "+t+" has size "+t.width+"x"+t.height+" - must be a multiple of 4";
+			if( tt.width&3 != 0 || tt.height&3 != 0 )
+				throw "Compressed texture "+t+" has size "+tt.width+"x"+tt.height+" - must be a multiple of 4";
 			switch( n ) {
 			case 1: tt.internalFmt = 0x83F1; // COMPRESSED_RGBA_S3TC_DXT1_EXT
 			case 2:	tt.internalFmt = 0x83F2; // COMPRESSED_RGBA_S3TC_DXT3_EXT
@@ -1174,8 +1232,8 @@ class GlDriver extends Driver {
 		}
 
 		#if (js || (hlsdl >= version("1.12.0")))
-		gl.texParameteri(bind, GL.TEXTURE_BASE_LEVEL, t.startingMip);
-		gl.texParameteri(bind, GL.TEXTURE_MAX_LEVEL, t.mipLevels-1);
+		gl.texParameteri(bind, GL.TEXTURE_BASE_LEVEL, t.startingMip > r ? t.startingMip - r : 0);
+		gl.texParameteri(bind, GL.TEXTURE_MAX_LEVEL, mipCount - 1);
 		#end
 
 		#if js
@@ -1185,14 +1243,14 @@ class GlDriver extends Driver {
 		// Patch RGBA to be RGBA8 because texStorage expect a "Sized Internal Format"
 		var sizedFormat = tt.internalFmt == GL.RGBA ? GL.RGBA8 : tt.internalFmt;
 		if( ( t.flags.has(IsArray) || t.flags.has(Is3D) ) && !t.flags.has(Cube) ) {
-			gl.texStorage3D(bind, t.mipLevels, sizedFormat, tt.width, tt.height, t.layerCount);
+			gl.texStorage3D(bind, mipCount, sizedFormat, tt.width, tt.height, t.layerCount);
 			checkError();
 		} else {
-			gl.texStorage2D(bind, t.mipLevels, sizedFormat, tt.width, tt.height);
+			gl.texStorage2D(bind, mipCount, sizedFormat, tt.width, tt.height);
 			checkError();
 		}
 		#else
-		for(mip in 0...t.mipLevels) {
+		for(mip in 0...mipCount) {
 			var w = hxd.Math.imax(1, tt.width >> mip);
 			var h = hxd.Math.imax(1, tt.height >> mip);
 			var d = hxd.Math.imax(1, t.layerCount >> mip);
@@ -1234,15 +1292,19 @@ class GlDriver extends Driver {
 
 	override function allocDepthBuffer( t : h3d.mat.Texture ) : Texture {
 		var isArray = t.flags.has(IsArray);
-		if( isArray && !hasFeature(DepthTextureArray) )
+		var isCube = t.flags.has(Cube);
+		if( (isArray || isCube) && !hasFeature(DepthTextureArray) )
 			throw "Depth texture arrays require GLES3";
 		var tt = gl.createTexture();
-		var tt : Texture = { t : tt, width : t.width, height : t.height, internalFmt : GL.RGBA, pixelFmt : GL.UNSIGNED_BYTE, bits : -1, bind : isArray ? GL.TEXTURE_2D_ARRAY : GL.TEXTURE_2D #if multidriver, driver : this #end };
+		var tt : Texture = { t : tt, width : t.width, height : t.height, internalFmt : GL.RGBA, pixelFmt : GL.UNSIGNED_BYTE, bits : -1, bind : isCube ? GL.TEXTURE_CUBE_MAP : isArray ? GL.TEXTURE_2D_ARRAY : GL.TEXTURE_2D #if multidriver, driver : this #end };
 		var fmt = GL.DEPTH_COMPONENT;
 		switch( t.format ) {
 		case Depth16:
 			tt.internalFmt = GL.DEPTH_COMPONENT16;
-		case Depth24 #if js if( glES >= 3 ) #end: tt.internalFmt = GL.DEPTH_COMPONENT;
+			tt.pixelFmt = GL.UNSIGNED_SHORT;
+		case Depth24 #if js if( glES >= 3 ) #end:
+			tt.internalFmt = GL.DEPTH_COMPONENT24;
+			tt.pixelFmt = GL.UNSIGNED_INT;
 		case Depth24Stencil8:
 			tt.internalFmt = GL.DEPTH24_STENCIL8;
 			tt.pixelFmt = GL.UNSIGNED_INT_24_8;
@@ -1263,7 +1325,10 @@ class GlDriver extends Driver {
 		gl.texParameteri(tt.bind, GL.TEXTURE_WRAP_S, GL.CLAMP_TO_EDGE);
 		gl.texParameteri(tt.bind, GL.TEXTURE_WRAP_T, GL.CLAMP_TO_EDGE);
 		#end
-		if( isArray )
+		if( isCube ) {
+			for( face in CUBE_FACES )
+				gl.texImage2D(face, 0, tt.internalFmt, tt.width, tt.height, 0, fmt, tt.pixelFmt, null);
+		} else if( isArray )
 			gl.texImage3D(tt.bind, 0, tt.internalFmt, tt.width, tt.height, t.layerCount, 0, fmt, tt.pixelFmt, null);
 		else
 			gl.texImage2D(tt.bind, 0, tt.internalFmt, tt.width, tt.height, 0, fmt, tt.pixelFmt, null);
@@ -1344,6 +1409,36 @@ class GlDriver extends Driver {
 	override function disposeBuffer( b : h3d.Buffer ) {
 		gl.deleteBuffer(b.vbuf);
 	}
+
+	#if (hlsdl >= version("2.0.0"))
+	override function setResidentMip( t : h3d.mat.Texture, mip : Int ) : Bool {
+		if( !hasFeature(ResidentMips) )
+			return false;
+		var prev = t.t;
+		var prevMip = t.residentMip;
+		var wasCleared = t.flags.has(WasCleared);
+		t.residentMip = mip;
+		var tt = allocTexture(t);
+		if( wasCleared ) t.flags.set(WasCleared); // content is kept
+		if( tt == null ) {
+			t.residentMip = prevMip;
+			return false;
+		}
+		// copy the mip levels common to both allocations
+		var first = mip > prevMip ? mip : prevMip;
+		var isCube = t.flags.has(Cube);
+		var depth = isCube ? 6 : t.layerCount; // cube faces are layers for glCopyImageSubData
+		for( m in first...t.mipLevels ) {
+			var w = t.width >> m; if( w < 1 ) w = 1;
+			var h = t.height >> m; if( h < 1 ) h = 1;
+			gl.copyImageSubData(prev.t, prev.bind, m - prevMip, 0, 0, 0, tt.t, tt.bind, m - mip, 0, 0, 0, w, h, depth);
+		}
+		disposeTexture(t);
+		t.t = tt;
+		t.lastFrame = frame;
+		return true;
+	}
+	#end
 
 	override function generateMipMaps( t : h3d.mat.Texture ) {
 		var bind = getBindType(t);
@@ -1438,6 +1533,8 @@ class GlDriver extends Driver {
 			face = GL.TEXTURE_2D_ARRAY
 		else if ( t.flags.has(Is3D) )
 			face = GL.TEXTURE_3D;
+		if( mipLevel < t.residentMip ) throw "Mip level " + mipLevel + " is not resident in " + t;
+		mipLevel -= t.residentMip;
 		var bind = getBindType(t);
 		gl.bindTexture(bind, t.t.t);
 		pixels.convert(t.format);
@@ -1809,6 +1906,8 @@ class GlDriver extends Driver {
 	}
 
 	override function setRenderTarget( tex : h3d.mat.Texture, layer = 0, mipLevel = 0, depthBinding : h3d.Engine.DepthBinding = ReadWrite ) {
+		// check before changing the current state
+		if( tex != null && mipLevel < tex.residentMip ) throw "Mip level " + mipLevel + " is not resident in " + tex;
 		unbindTargets();
 		curTarget = tex;
 		if( tex == null ) {
@@ -1841,10 +1940,11 @@ class GlDriver extends Driver {
 		#end
 		gl.bindFramebuffer(GL.FRAMEBUFFER, commonFB);
 
+		var level = mipLevel - tex.residentMip;
 		if( tex.flags.has(IsArray) || tex.flags.has(Is3D) )
-			gl.framebufferTextureLayer(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0, tex.t.t, mipLevel, layer);
+			gl.framebufferTextureLayer(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0, tex.t.t, level, layer);
 		else
-			gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0, tex.flags.has(Cube) ? CUBE_FACES[layer] : GL.TEXTURE_2D, tex.t.t, mipLevel);
+			gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0, tex.flags.has(Cube) ? CUBE_FACES[layer] : GL.TEXTURE_2D, tex.t.t, level);
 
 		if( tex.depthBuffer != null && depthBinding != NotBound ) {
 			// Depthbuffer and stencilbuffer are combined in one buffer, created with GL.DEPTH_STENCIL
@@ -1925,8 +2025,11 @@ class GlDriver extends Driver {
 
 		var tex = @:privateAccess depthBuffer.t.t;
 		var isArray = depthBuffer.flags.has(IsArray);
+		var isCube = depthBuffer.flags.has(Cube);
 		inline function attach( slot : Int, t ) {
-			if( isArray ) {
+			if( isCube )
+				gl.framebufferTexture2D(GL.FRAMEBUFFER, slot, t == null ? GL.TEXTURE_2D : CUBE_FACES[layer], t, 0);
+			else if( isArray ) {
 				if( t == null )
 					gl.framebufferTexture2D(GL.FRAMEBUFFER, slot, GL.TEXTURE_2D, null, 0);
 				else
@@ -1959,13 +2062,13 @@ class GlDriver extends Driver {
 	}
 
 	override function setDepthClamp( enabled : Bool ) {
-		#if !js
+		if( !hasDepthClamp )
+			return;
 		useDepthClamp = enabled;
 		if ( useDepthClamp )
-			gl.enable(GL.DEPTH_CLAMP);
+			gl.enable(DEPTH_CLAMP);
 		else
-			gl.disable(GL.DEPTH_CLAMP);
-		#end
+			gl.disable(DEPTH_CLAMP);
 	}
 
 	override function setDepthBias( depthBias : Float, slopeScaledBias : Float ) {
@@ -1997,10 +2100,20 @@ class GlDriver extends Driver {
 		return switch(f) {
 		case Bindless:
 			false;
-		case DLSS:
-			false;
+		case ResidentMips:
+			#if (hlsdl >= version("2.0.0")) glES == null && shaderVersion >= 430 #else false #end;
 		case DepthTextureArray:
 			glES >= 3;
+		case DepthClamp:
+			hasDepthClamp;
+		case ComputeShaders:
+			h3d.impl.Driver.requestedFeatures.has(ComputeShaders);
+		case DynamicSamplerIndex:
+			#if js
+			false;
+			#else
+			shaderVersion >= 400;
+			#end
 		default:
 			#if js
 			features.get(f);
@@ -2027,6 +2140,9 @@ class GlDriver extends Driver {
 			gl.getExtension("WEBGL_depth_texture");
 		has16Bits = gl.getExtension("EXT_texture_norm16") != null; // 16 bit textures
 		hasAnisotropicFiltering = gl.getExtension("EXT_texture_filter_anisotropic") != null;
+		#if js
+		hasDepthClamp = gl.getExtension("EXT_depth_clamp") != null;
+		#end
 	}
 	function checkFeature( f : Feature ) {
 		return switch( f ) {

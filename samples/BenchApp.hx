@@ -9,6 +9,7 @@
 		--out dir              captures directory, default captures/<backend>
 		--make-ref             save captures as references in <out>/ref/ instead of comparing
 		--tolerance N          channel difference (0..255) ignored when comparing with references
+		--timing-frames N      after each capture, time N frames on the GPU into <out>/gpu_times.csv (0 = off, the default)
 
 	Minimal bench:
 		class MyBench extends BenchApp {
@@ -27,6 +28,11 @@
 	to write custom scripts with renderFrames / capture / captureAccumulated / call. Steps queued from inside a step
 	run right after it, so scripts read in order.
 	Every step renders the scene once per engine frame, so TAA and velocity history advance like in a real game.
+
+	GPU timing: the whole frame is always timed ("frame"), addGpuTimer(name) adds a timer that the bench wraps around
+	its own work with begin() / end(). With --timing-frames N (or timingFrames set before super.init), each view is
+	timed after its capture: median and min of every timer are printed and saved to <out>/gpu_times.csv. Timings never fail.
+	Interactive mode times every frame, gpuTimesText() gives the current values to display.
 **/
 
 typedef BenchView = {
@@ -51,6 +57,73 @@ typedef BenchDiff = {
 	var mae : Float;
 	// |a - b| * scale
 	var image : hxd.Pixels;
+}
+
+class BenchGpuTimer {
+
+	public var name(default, null) : String;
+	public var active = false;
+	public var samples : Array<Float> = [];
+	public var idle = 0;
+
+	var driver : h3d.impl.Driver;
+	var free : Array<h3d.impl.Driver.Query> = [];
+	var pending : Array<h3d.impl.Driver.Query> = [];
+	var started : h3d.impl.Driver.Query;
+
+	public function new( name : String ) {
+		this.name = name;
+		driver = h3d.Engine.getCurrent().driver;
+	}
+
+	function stamp() {
+		var q = free.length > 0 ? free.pop() : driver.allocQuery(TimeStamp);
+		driver.endQuery(q);
+		return q;
+	}
+
+	public function begin() {
+		if( !active ) return;
+		started = stamp();
+		idle = 0;
+	}
+
+	public function end() {
+		if( started == null ) return;
+		pending.push(started);
+		pending.push(stamp());
+		started = null;
+	}
+
+	public function poll() {
+		idle++;
+		while( pending.length >= 2 && driver.queryResultAvailable(pending[0]) && driver.queryResultAvailable(pending[1]) ) {
+			var start = pending.shift(), end = pending.shift();
+			samples.push((driver.queryResult(end) - driver.queryResult(start)) / 1e6);
+			free.push(start);
+			free.push(end);
+		}
+	}
+
+	public function isComplete() {
+		return pending.length == 0 && started == null;
+	}
+
+	public function median() {
+		if( samples.length == 0 ) return Math.NaN;
+		var s = samples.copy();
+		s.sort(Reflect.compare);
+		var h = s.length >> 1;
+		return s.length & 1 == 1 ? s[h] : (s[h - 1] + s[h]) * 0.5;
+	}
+
+	public function min() {
+		if( samples.length == 0 ) return Math.NaN;
+		var m = samples[0];
+		for( v in samples ) if( v < m ) m = v;
+		return m;
+	}
+
 }
 
 private class BenchStep {
@@ -78,10 +151,8 @@ class BenchApp extends SampleApp {
 	var outDir = "captures/" + BACKEND;
 	var tolerance = 0;
 	var warmupFrames = 4;
-	// comparisons with references that failed
 	var failures = 0;
 
-	// Interactive
 	var useCameraController = true;
 	var controller : h3d.scene.CameraController.OrbitCameraController;
 	var viewFrame = 0;
@@ -93,6 +164,11 @@ class BenchApp extends SampleApp {
 	var metricColumns : Array<String>;
 	var metricRows : Array<String> = [];
 
+	var timingFrames = 0;
+	var gpuTimers : Array<BenchGpuTimer> = [];
+	var frameTimer : BenchGpuTimer;
+	var gpuTimeRows : Array<String> = [];
+
 	override function init() {
 		super.init();
 		#if sys
@@ -102,6 +178,10 @@ class BenchApp extends SampleApp {
 		makeRef = hasArg("--make-ref");
 		outDir = getArg("--out", outDir);
 		tolerance = getIntArg("--tolerance", tolerance);
+		timingFrames = getIntArg("--timing-frames", timingFrames);
+		if( !hasGpuTimestamps() )
+			timingFrames = 0;
+		frameTimer = addGpuTimer("frame");
 	}
 
 	// ---- Command line
@@ -188,6 +268,8 @@ class BenchApp extends SampleApp {
 					onViewStart(v);
 				});
 				runView(v);
+				if( timingFrames > 0 )
+					timeView(v.file);
 				call(() -> onViewEnd(v));
 			}
 			call(finishAuto);
@@ -221,6 +303,7 @@ class BenchApp extends SampleApp {
 
 	function finishAuto() {
 		saveMetrics();
+		saveGpuTimes();
 		report(makeRef ? "References saved" : (failures == 0 ? "Done" : failures + " capture(s) differ from reference"));
 		#if sys
 		Sys.exit(failures == 0 ? 0 : 1);
@@ -228,6 +311,8 @@ class BenchApp extends SampleApp {
 	}
 
 	override function update( dt : Float ) {
+		if( !autoMode )
+			pollGpuTimers();
 		if( autoMode || paused || currentView == null || currentView.animate == null )
 			return;
 		viewFrame = (viewFrame + 1) % currentView.frames;
@@ -288,7 +373,9 @@ class BenchApp extends SampleApp {
 
 	override function render( e : h3d.Engine ) {
 		if( !autoMode ) {
+			frameTimer.begin();
 			super.render(e);
+			frameTimer.end();
 			return;
 		}
 		try {
@@ -329,9 +416,11 @@ class BenchApp extends SampleApp {
 			captureTex = new h3d.mat.Texture(e.width, e.height, [Target]);
 		}
 		captureTex.depthBuffer = h3d.mat.Texture.getDefaultDepth();
+		frameTimer.begin();
 		e.pushTarget(captureTex);
 		s3d.render(e);
 		e.popTarget();
+		frameTimer.end();
 		h3d.pass.Copy.run(captureTex, null);
 		if( !capture )
 			return null;
@@ -458,6 +547,78 @@ class BenchApp extends SampleApp {
 			sys.FileSystem.createDirectory(outDir);
 		sys.io.File.saveContent(outDir + "/metrics.csv", ["view"].concat(metricColumns).join(",") + "\n" + metricRows.join("\n") + "\n");
 		#end
+	}
+
+	// ---- GPU timing
+
+	function hasGpuTimestamps() {
+		return #if dx12 true #elseif js false #else engine.driver.hasFeature(Queries) #end;
+	}
+
+	function addGpuTimer( name : String ) {
+		var t = new BenchGpuTimer(name);
+		t.active = !autoMode && hasGpuTimestamps();
+		gpuTimers.push(t);
+		return t;
+	}
+
+	function timeView( name : String ) {
+		call(function() {
+			for( t in gpuTimers ) {
+				t.samples = [];
+				t.active = true;
+			}
+		});
+		renderFrames(timingFrames);
+		call(() -> for( t in gpuTimers ) t.active = false);
+		var waited = 0;
+		function collect() {
+			var complete = true;
+			for( t in gpuTimers ) {
+				t.poll();
+				if( !t.isComplete() ) complete = false;
+			}
+			if( !complete && waited++ < 30 ) {
+				renderFrames(1);
+				call(collect);
+				return;
+			}
+			addGpuTimes(name);
+		}
+		call(collect);
+	}
+
+	function addGpuTimes( name : String ) {
+		inline function fmt( v : Float ) return Math.isNaN(v) ? "-" : "" + Math.round(v * 1000) / 1000;
+		report("  gpu ms: " + [for( t in gpuTimers ) t.name + " " + fmt(t.median()) + " (min " + fmt(t.min()) + ")"].join(", "));
+		gpuTimeRows.push([name].concat([for( t in gpuTimers ) fmt(t.median()) + "," + fmt(t.min())]).join(","));
+	}
+
+	function saveGpuTimes() {
+		if( gpuTimeRows.length == 0 )
+			return;
+		#if sys
+		if( !sys.FileSystem.exists(outDir) )
+			sys.FileSystem.createDirectory(outDir);
+		var header = ["view"].concat([for( t in gpuTimers ) t.name + "_med," + t.name + "_min"]).join(",");
+		sys.io.File.saveContent(outDir + "/gpu_times.csv", header + "\n" + gpuTimeRows.join("\n") + "\n");
+		#end
+	}
+
+	function pollGpuTimers() {
+		for( t in gpuTimers ) {
+			t.poll();
+			var keep = t.idle > 8 ? 0 : 30;
+			if( t.samples.length > keep )
+				t.samples.splice(0, t.samples.length - keep);
+		}
+	}
+
+	function gpuTimesText() {
+		if( !hasGpuTimestamps() )
+			return "GPU timing not available";
+		inline function fmt( v : Float ) return Math.isNaN(v) ? "-" : Math.round(v * 100) / 100 + " ms";
+		return [for( t in gpuTimers ) t.name + " " + fmt(t.median())].join("  ");
 	}
 
 	// ---- Utilities

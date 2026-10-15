@@ -34,13 +34,14 @@ class Ray {
 		lz = r.lz;
 	}
 
-	function normalize() {
+	inline function normalize() {
 		var l = lx * lx + ly * ly + lz * lz;
-		if( l == 1. ) return;
-		if( l < Math.EPSILON2 ) l = 0 else l = Math.invSqrt(l);
-		lx *= l;
-		ly *= l;
-		lz *= l;
+		if( l != 1. ) {
+			if( l < Math.EPSILON2 ) l = 0 else l = Math.invSqrt(l);
+			lx *= l;
+			ly *= l;
+			lz *= l;
+		}
 	}
 
 	public inline function transform( m : h3d.Matrix ) {

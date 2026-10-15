@@ -479,9 +479,6 @@ class Cache {
 		var flat = new Flatten();
 		var c = new RuntimeShaderData();
 		var data = flat.flatten(s, kind);
-		#if (hl && heaps_compact_mem)
-		data = hl.Api.compact(data, null, 0, null);
-		#end
 		var textures = [];
 		var buffers = [];
 		c.texturesCount = 0;

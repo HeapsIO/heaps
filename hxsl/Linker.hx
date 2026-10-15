@@ -28,7 +28,6 @@ private enum ShaderStage {
 }
 
 private class ShaderInfos {
-	static var UID = 0;
 	public var uid : Int;
 	public var name : String;
 	public var priority : Int;
@@ -50,9 +49,9 @@ private class ShaderInfos {
 	public var marked : haxe.EnumFlags<ShaderStage>;
 	public var added : haxe.EnumFlags<ShaderStage>;
 
-	public function new(n, s) {
+	public function new(n, s, uid) {
 		this.name = n;
-		this.uid = UID++;
+		this.uid = uid;
 		this.stage = s;
 		processed = new Map();
 		usedFunctions = [];
@@ -75,9 +74,9 @@ private class HelperInfos {
 	public var closed : Bool;
 	public var onStack : Bool;
 	public var used : Bool;
-	public function new( v, name ) {
+	public function new( v, name, uid ) {
 		this.v = v;
-		this.infos = new ShaderInfos(name, Undefined);
+		this.infos = new ShaderInfos(name, Undefined, uid);
 	}
 }
 
@@ -96,6 +95,7 @@ class Linker {
 	var helpers : Map<Int,HelperInfos>;
 	var allHelpers : Array<HelperInfos>;
 	var mappingHelpers : Bool;
+	var nextUID = 0;
 
 	var mapExprVarFun : TExpr -> TExpr;
 
@@ -347,7 +347,7 @@ class Linker {
 	}
 
 	function addShader( name : String, stage : ShaderStage, e : TExpr, p : Int, isBatchInit : Bool ) {
-		var s = new ShaderInfos(name, stage);
+		var s = new ShaderInfos(name, stage, nextUID++);
 		curShader = s;
 		s.priority = p;
 		s.body = mapExprVar(e);
@@ -385,7 +385,7 @@ class Linker {
 
 	function addHelper( s : ShaderData, f : TFunction ) {
 		var v = allocVar(f.ref, f.expr.p);
-		var h = new HelperInfos(v, s.name + "." + f.ref.name);
+		var h = new HelperInfos(v, s.name + "." + f.ref.name, nextUID++);
 		h.args = f.args;
 		h.ret = f.ret;
 		for( a in f.args )
@@ -616,11 +616,11 @@ class Linker {
 		#end
 
 		// build dependency tree
-		var ventry = new ShaderInfos("<vertexEntry>", Vertex);
+		var ventry = new ShaderInfos("<vertexEntry>", Vertex, nextUID++);
 		ventry.deps = new Map();
 		if ( outVars.length > 0 )
 			buildDependency(ventry, allocVar(outVars[0],null), false);
-		var fentry = new ShaderInfos("<fragmentEntry>", Fragment);
+		var fentry = new ShaderInfos("<fragmentEntry>", Fragment, nextUID++);
 		fentry.deps = new Map();
 		for( v in outVars )
 			buildDependency(fentry, allocVar(v,null), false);

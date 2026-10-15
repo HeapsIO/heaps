@@ -86,7 +86,7 @@ private class GlobalsCollect {
 class HlslOut {
 
 	static var KWD_LIST = [
-		"s_input", "s_output", "_in", "_out", "in", "out", "mul", "matrix", "vector", "export", "half", "half2", "half3", "half4", "float", "double", "line", "linear", "point", "precise", "centroid",
+		"s_input", "s_output", "_in", "_out", "in", "out", "mul", "matrix", "vector", "export", "half", "half2", "half3", "half4", "float", "double", "line", "linear", "point", "precise", "centroid", "ddx", "ddy",
 		"dx", // x64
 		"sample" // pssl
 	];
@@ -198,7 +198,7 @@ class HlslOut {
 		switch( t ) {
 		case TVoid:
 			add("void");
-		case TInt:
+		case TInt, TEnum(_):
 			add("int");
 		case TBytes(n):
 			add("uint"+n);

@@ -13,7 +13,7 @@ class CapsuleLight extends Light {
 
 	public function new(?parent) {
 		pbr = new h3d.shader.pbr.Light.CapsuleLight();
-		shadows = new h3d.pass.CapsuleShadowMap(this, true);
+		shadows = new h3d.pass.CapsuleShadowMap(this);
 		super(pbr,parent);
 		range = 10;
 	}
@@ -43,7 +43,7 @@ class CapsuleLight extends Light {
 		return v;
 	}
 
-	override function getIntensity() : Float {
+	override function getUnitlessIntensity() : Float {
 		var power = power * 10; // base scale
 		return power * power;
 	}
@@ -70,6 +70,7 @@ class CapsuleLight extends Light {
 		pbr.occlusionFactor = occlusionFactor;
 		pbr.left.load(absPos.front());
 		pbr.invRange4 = 1 / (range * range * range * range);
+		pbr.inverseSquareFalloff = hasInverseSquareFalloff();
 	}
 
 	var s = new h3d.col.Sphere();

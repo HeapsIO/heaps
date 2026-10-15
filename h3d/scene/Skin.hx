@@ -96,10 +96,11 @@ class DynamicJointData extends JointData {
 		super();
 	}
 
-	public function initData() {
+	public function initData( skin : h3d.scene.Skin, j : h3d.anim.Skin.Joint ) {
 		curTargetWorld = currentAbsPos.clone();
-		curTargetLocal = h3d.Matrix.I();
-		prevTargetLocal = h3d.Matrix.I();
+		curTargetLocal = new h3d.Matrix();
+		curTargetLocal.multiply3x4(currentAbsPos, skin.jointsData[j.parent.index].currentAbsPos.getInverse());
+		prevTargetLocal = curTargetLocal.clone();
 		speed = new h3d.Vector();
 		parentQuat = new h3d.Quat();
 		prevParentQuat = new h3d.Quat();
@@ -108,7 +109,7 @@ class DynamicJointData extends JointData {
 	override function sync(skin: h3d.scene.Skin, j: h3d.anim.Skin.Joint, syncDyn : Bool) {
 		super.sync(skin, j, syncDyn);
 		if (curTargetWorld == null)
-			initData();
+			initData(skin, j);
 
 		var jParentData : JointData = Std.downcast(skin.jointsData[j.parent.index], JointData);
 		if (syncDyn) {
@@ -163,7 +164,7 @@ class DynamicJointData extends JointData {
 		speed *= 1.0 - j.damping;
 
 		if (speed.lengthSq() > DynamicJoint.SLEEP_THRESHOLD)
-			nextPos = nextPos + speed * Skin.FIXED_DT;
+			nextPos.load(nextPos + speed * Skin.FIXED_DT);
 
 		if (speed.lengthSq() > DynamicJoint.MAX_THRESHOLD)
 			speed.set(0, 0, 0);
@@ -505,14 +506,12 @@ class Skin extends MultiMaterial {
 
 		if( splitPalette == null ) {
 			skinShader.bonesMatrixes = jointsBuffer;
-			if( hasVelocity )
-				skinShader.prevBonesMatrixes = buffersDirty ? prevJointsBuffer : jointsBuffer;
+			skinShader.prevBonesMatrixes = hasVelocity && buffersDirty ? prevJointsBuffer : jointsBuffer;
 		}
 		else {
 			// shader buffers set in draw() because dynamicParameters
 		}
 
-		skinShader.calcPrevPos = hasVelocity;
 		buffersDirty = false;
 	}
 
@@ -601,8 +600,7 @@ class Skin extends MultiMaterial {
 		} else {
 			var i = ctx.drawPass.index;
 			skinShader.bonesMatrixes = splitBuffers[i];
-			if ( skinShader.calcPrevPos )
-				skinShader.prevBonesMatrixes = prevSplitBuffers[i];
+			skinShader.prevBonesMatrixes = prevSplitBuffers != null && computeVelocity() ? prevSplitBuffers[i] : splitBuffers[i];
 			primitive.selectMaterial(i, getLodIndex());
 			ctx.uploadParams();
 			primitive.render(ctx.engine);

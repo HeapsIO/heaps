@@ -7,6 +7,11 @@ class MacroParser {
 	public function new() {
 	}
 
+	// set by hxsl.Macros at compile time, returns null for runtime parsing (live reload, hide ShaderLoader)
+	public dynamic function resolveEnum( t : ComplexType, pos : Position ) : Null<{ path : String, constructors : Array<String> }> {
+		return null;
+	}
+
 	function error( msg : String, pos : Position ) : Dynamic {
 		return Ast.Error.t(msg,pos);
 	}
@@ -213,6 +218,18 @@ class MacroParser {
 		return null;
 	}
 
+	function parseVarType( t : ComplexType, pos : Position, qualifiers : Array<Ast.VarQualifier> ) : Ast.Type {
+		var en = null;
+		try {
+			return parseType(t, pos);
+		} catch( err : Ast.Error ) {
+			en = resolveEnum(t, pos);
+			if( en == null ) throw err;
+		}
+		qualifiers.push(Enum(en.path, en.constructors));
+		return TInt;
+	}
+
 	public function parseExpr( e : Expr ) : Ast.Expr {
 		var ed : Ast.ExprDef = switch( e.expr ) {
 		case EBlock(el):
@@ -236,12 +253,14 @@ class MacroParser {
 			}
 		case EVars(vl):
 			EVars([for( v in vl ) {
+				var qualifiers : Array<Ast.VarQualifier> = v.isFinal ? [Final] : [];
+				var type = v.type == null ? null : parseVarType(v.type, e.pos, qualifiers);
 				{
 					name : v.name,
 					expr : v.expr == null ? null : parseExpr(v.expr),
-					type : v.type == null ? null : parseType(v.type, e.pos),
+					type : type,
 					kind : null,
-					qualifiers : v.isFinal ? [Final] : [],
+					qualifiers : qualifiers,
 				}
 			}]);
 		case EFunction(FNamed(name,_),f) if( f.expr != null ):

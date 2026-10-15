@@ -210,12 +210,14 @@ class Polygon extends Collider {
 
 	var triPlanes : TriPlane;
 	var oriented : Bool;
+	var convex : Null<Bool>;
 
 	public function new(o = false) {
 		oriented = o;
 	}
 
 	public function addBuffers( vertexes : haxe.ds.Vector<hxd.impl.Float32>, indexes : haxe.ds.Vector<Int>, stride = 3 ) {
+		convex = null;
 		for(i in 0...Std.int(indexes.length / 3)) {
 			var k = i * 3;
 
@@ -237,8 +239,26 @@ class Polygon extends Collider {
 	}
 
 	public function isConvex() {
-		// TODO : check + cache result
-		return true;
+		if( convex == null ) {
+			convex = true;
+			var t = triPlanes;
+			while( t != null && convex ) {
+				var eps = 1e-3 * Math.sqrt(t.nx * t.nx + t.ny * t.ny + t.nz * t.nz);
+				var t2 = triPlanes;
+				inline function behind( x : Float, y : Float, z : Float ) {
+					return t.nx * x + t.ny * y + t.nz * z - t.d <= eps;
+				}
+				while( t2 != null ) {
+					if( !behind(t2.p0x, t2.p0y, t2.p0z) || !behind(t2.p0x + t2.d1x, t2.p0y + t2.d1y, t2.p0z + t2.d1z) || !behind(t2.p0x + t2.d2x, t2.p0y + t2.d2y, t2.p0z + t2.d2z) ) {
+						convex = false;
+						break;
+					}
+					t2 = t2.next;
+				}
+				t = t.next;
+			}
+		}
+		return convex;
 	}
 
 	public function clone() : h3d.col.Polygon {
@@ -248,6 +268,7 @@ class Polygon extends Collider {
 	}
 
 	public function transform( m : h3d.Matrix ) {
+		convex = null;
 		var t = triPlanes;
 		while( t != null ) {
 			t.transform(m);
@@ -279,9 +300,21 @@ class Polygon extends Collider {
 	}
 
 	public function contains( p : Point ) {
-		if( !isConvex() )
-			throw "Not implemented for concave polygon";
 		var t = triPlanes;
+		if( !isConvex() ) {
+			var lx = 0.2672612, ly = 0.5345225, lz = 0.8017837;
+			var count = 0;
+			while( t != null ) {
+				var dr = lx * t.nx + ly * t.ny + lz * t.nz;
+				if( dr != 0 ) {
+					var k = (t.d - (p.x * t.nx + p.y * t.ny + p.z * t.nz)) / dr;
+					if( k > 0 && t.isPointInTriangle(p.x + lx * k, p.y + ly * k, p.z + lz * k) )
+						count++;
+				}
+				t = t.next;
+			}
+			return (count & 1) == 1;
+		}
 		while( t != null ) {
 			if( t.side(p) )
 				return false;

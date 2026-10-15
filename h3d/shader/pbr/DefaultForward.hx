@@ -12,16 +12,18 @@ class DefaultForward extends hxsl.Shader {
 			var inverseViewProj : Mat4;
 		}
 
-		@const(4) var CASCADE_COUNT:Int;
 		@const(2) var MAX_DIR_SHADOW_COUNT:Int;
-		@const(16) var MAX_POINT_SHADOW_COUNT:Int;
-		@const(16) var MAX_SPOT_SHADOW_COUNT:Int;
+		@const(4) var MAX_POINT_SHADOW_COUNT:Int;
+		@const(4) var MAX_SPOT_SHADOW_COUNT:Int;
 		@const(2) var MAX_CAPSULE_SHADOW_COUNT:Int;
 		@const(2) var MAX_RECT_SHADOW_COUNT:Int;
 
 		@global @const var DIFFUSE_ONLY : Bool;
 
 		@const var USE_BINDLESS = false;
+		@const var DYNAMIC_SAMPLER_INDEX = false;
+		@const var CLUSTERED = false;
+		@const var HAS_CASCADE = false;
 
 		@:import h3d.shader.pbr.Light.LightEvaluation;
 		@:import h3d.shader.pbr.BRDF;
@@ -34,13 +36,30 @@ class DefaultForward extends hxsl.Shader {
 		// Keep in sync with h3d.scene.pbr.LightBuffer.
 		final DIR_LIGHT_STRIDE   : Int = 2;
 		final POINT_LIGHT_STRIDE : Int = 2;
-		final SPOT_LIGHT_STRIDE  : Int = 3;
+		final SPOT_LIGHT_STRIDE  : Int = 4;
 		final CAPSULE_LIGHT_STRIDE : Int = 3;
 		final RECT_LIGHT_STRIDE    : Int = 6;
 
 		final DIR_SHADOW_STRIDE  : Int = 5;
 		final SPOT_SHADOW_STRIDE : Int = 6;
 		final CUBE_SHADOW_STRIDE : Int = 2;
+
+		// Keep in sync with h3d.shader.pbr.ClusterCull.
+		final CLUSTER_X : Int = 16;
+		final CLUSTER_Y : Int = 9;
+		final CLUSTER_Z : Int = 24;
+		final CLUSTER_STRIDE : Int = 128;
+
+		final LIGHT_DIR : Int = 0;
+		final LIGHT_POINT : Int = 1;
+		final LIGHT_SPOT : Int = 2;
+		final LIGHT_CAPSULE : Int = 3;
+		final LIGHT_RECT : Int = 4;
+
+		@param var clusterData : StorageBuffer<Int>;
+		@param var clusterZParams : Vec2;
+		var clusterCounts : Int;
+		var clusterStart : Int;
 
 		// Buffer Info
 		@param var dirLightCount     : Int;
@@ -216,10 +235,11 @@ class DefaultForward extends hxsl.Shader {
 			var size = lightInfos[i].b;
 			var lightPos = lightInfos[i+1].rgb;
 			var invRange4 = lightInfos[i+1].a;
+			var inverseSquareFalloff = lightInfos[i].a > 0.0;
 			var delta = lightPos - transformedPosition;
 
 			var lightDir = delta.normalize();
-			return directLighting(pointLightIntensity(delta, size, invRange4) * lightColor, lightDir, lightDir);
+			return directLighting(pointLightIntensity(delta, size, invRange4, size * size, inverseSquareFalloff) * lightColor, lightDir, lightDir);
 		}
 
 		function evaluateSpotShadow( index : Int ) : Float {
@@ -249,9 +269,10 @@ class DefaultForward extends hxsl.Shader {
 			var invRange4 = lightInfos[i+1].a;
 			var lightDir = lightInfos[i+2].rgb;
 			var range = lightInfos[i+2].a;
+			var inverseSquareFalloff = lightInfos[i+3].r > 0.0;
 			var delta = lightPos - transformedPosition;
 
-			var fallOffInfo = spotLightIntensity(delta, lightDir, range, invRange4, fallOff, angle);
+			var fallOffInfo = spotLightIntensity(delta, lightDir, range, invRange4, fallOff, angle, inverseSquareFalloff);
 			var fallOff = fallOffInfo.x;
 			var fallOffInfoAngle = fallOffInfo.y;
 
@@ -289,8 +310,9 @@ class DefaultForward extends hxsl.Shader {
 			var lightPos = lightInfos[i+1].rgb;
 			var invRange4 = lightInfos[i+1].a;
 			var left = lightInfos[i+2].rgb;
+			var inverseSquareFalloff = lightInfos[i+2].a > 0.0;
 
-			var light = capsuleLightDiffuse(lightPos, left, halfLength, radius, invRange4, transformedPosition);
+			var light = capsuleLightDiffuse(lightPos, left, halfLength, radius, invRange4, transformedPosition, inverseSquareFalloff);
 			var specularDir = capsuleLightSpecularDir(lightPos, left, halfLength, radius, transformedPosition, reflect(-view, transformedNormal));
 			return directLighting(light.w * lightColor, light.xyz, specularDir);
 		}
@@ -324,8 +346,9 @@ class DefaultForward extends hxsl.Shader {
 			var right = lightInfos[i+3].rgb;
 			var up = lightInfos[i+4].rgb;
 			var angles = vec4(lightInfos[i+3].a, lightInfos[i+4].a, lightInfos[i+5].r, lightInfos[i+5].g);
+			var inverseSquareFalloff = lightInfos[i+5].b > 0.0;
 
-			var light = rectangleLightDiffuse(lightPos, lightDir, right, up, halfSize, angles, range, invRange4, transformedPosition);
+			var light = rectangleLightDiffuse(lightPos, lightDir, right, up, halfSize, angles, range, invRange4, transformedPosition, inverseSquareFalloff);
 			var specularDir = rectangleLightSpecularDir(lightPos, lightDir, right, up, halfSize, transformedPosition, reflect(-view, transformedNormal));
 			return directLighting(light.w * lightColor, light.xyz, specularDir);
 		}
@@ -357,7 +380,7 @@ class DefaultForward extends hxsl.Shader {
 				var shadowPos0 = transformedPosition * shadowViewProj;
 
 				var shouldContinue = true;
-				@unroll for( c in 0...CASCADE_COUNT ) {
+				@unroll for( c in 0...MAX_CASCADE_COUNT ) {
 					var scale = lightInfos[5 + 2 * c];
 					if( shouldContinue && viewZ <= scale.w ) {
 						shouldContinue = false;
@@ -368,7 +391,7 @@ class DefaultForward extends hxsl.Shader {
 
 						var blendFactor = cascadeBlendFactor(viewZ, scale.w, transitionFraction);
 						if( blendFactor > 0.0 ) {
-							if( c < CASCADE_COUNT - 1 ) {
+							if( c < MAX_CASCADE_COUNT - 1 ) {
 								var nextScale = lightInfos[5 + 2 * (c + 1)];
 								var nextOffset = lightInfos[6 + 2 * (c + 1)];
 								var nextShadowPos = cascadeShadowPos(shadowPos0, nextScale.xyz, nextOffset.xyz);
@@ -384,124 +407,96 @@ class DefaultForward extends hxsl.Shader {
 			return shadow;
 		}
 
+		function clusterIndex() : Int {
+			var p = vec4(transformedPosition, 1.) * camera.viewProj;
+			var ndc = p.xy / p.w;
+			var tile = clamp(floor((ndc * 0.5 + 0.5) * vec2(float(CLUSTER_X), float(CLUSTER_Y))), vec2(0.), vec2(float(CLUSTER_X - 1), float(CLUSTER_Y - 1)));
+			var viewZ = (transformedPosition * camera.view.mat3x4()).z;
+			var slice = clamp(floor(log(max(viewZ, 1e-6)) * clusterZParams.x + clusterZParams.y), 0., float(CLUSTER_Z - 1));
+			return ((int(slice) * CLUSTER_Y + int(tile.y)) * CLUSTER_X + int(tile.x)) * CLUSTER_STRIDE;
+		}
+
+		function evaluateLight( type : Int, index : Int ) : Vec3 {
+			var c = vec3(0);
+			if( type == LIGHT_DIR )
+				c = evaluateDirLight(index);
+			else if( type == LIGHT_POINT )
+				c = evaluatePointLight(index);
+			else if( type == LIGHT_SPOT )
+				c = evaluateSpotLight(index);
+			else if( type == LIGHT_CAPSULE )
+				c = evaluateCapsuleLight(index);
+			else
+				c = evaluateRectLight(index);
+			return c;
+		}
+
+		function evaluateShadowedLight( type : Int, index : Int ) : Vec3 {
+			var c = evaluateLight(type, index);
+			if( dot(c, c) > 1e-6 ) {
+				if( type == LIGHT_DIR )
+					c *= evaluateDirShadow(index);
+				else if( type == LIGHT_POINT )
+					c *= evaluatePointShadow(index);
+				else if( type == LIGHT_SPOT )
+					c *= evaluateSpotShadow(index);
+				else if( type == LIGHT_CAPSULE )
+					c *= evaluateCapsuleShadow(index);
+				else
+					c *= evaluateRectShadow(index);
+			}
+			return c;
+		}
+
+		function accumulateLights( acc : Vec3, type : Int, shadowCount : Int, lightCount : Int, maxShadowCount : Int ) : Vec3 {
+			// Shadowed lights can only be culled with bindless. Per pixel index into a sampler array is not dynamically uniform
+			if( !(CLUSTERED && USE_BINDLESS && type != LIGHT_DIR) ) {
+				if( USE_BINDLESS || DYNAMIC_SAMPLER_INDEX ) {
+					for( l in 0 ... shadowCount )
+						acc += evaluateShadowedLight(type, l);
+				} else {
+					@unroll for( l in 0 ... maxShadowCount )
+						if( l < shadowCount )
+							acc += evaluateShadowedLight(type, l);
+				}
+			}
+			if( CLUSTERED && type != LIGHT_DIR ) {
+				var count = (clusterCounts >> ((type - LIGHT_POINT) * 8)) & 0xFF;
+				for( k in 0 ... count ) {
+					var l = clusterData[clusterStart + k];
+					if( USE_BINDLESS && l < shadowCount )
+						acc += evaluateShadowedLight(type, l);
+					else
+						acc += evaluateLight(type, l);
+				}
+				clusterStart += count;
+			} else {
+				for( l in shadowCount ... shadowCount + lightCount )
+					acc += evaluateLight(type, l);
+			}
+			return acc;
+		}
+
 		function evaluateLighting() : Vec3 {
 
 			var lightAccumulation = vec3(0);
 
 			F0 = mix(pbrSpecularColor, albedoGamma, metalness);
 
-			// Dir Light With Shadow
-			if( USE_BINDLESS ) {
-				for( l in 0 ... dirShadowCount ) {
-					var c = evaluateDirLight(l);
-					if ( dot(c, c) > 1e-6 )
-						c *= evaluateDirShadow(l);
-					lightAccumulation += c;
-				}
-			} else {
-				@unroll for( l in 0 ... MAX_DIR_SHADOW_COUNT ) {
-					if ( l < dirShadowCount ) {
-						var c = evaluateDirLight(l);
-						if ( dot(c, c) > 1e-6 )
-							c *= evaluateDirShadow(l);
-						lightAccumulation += c;
-					}
-				}
+			if( CLUSTERED ) {
+				var cluster = clusterIndex();
+				clusterCounts = clusterData[cluster];
+				clusterStart = cluster + 1;
 			}
-			// Dir Light
-			for( l in dirShadowCount ... dirLightCount + dirShadowCount )
-				lightAccumulation += evaluateDirLight(l);
 
-			// Point Light With Shadow
-			if( USE_BINDLESS ) {
-				for( l in 0 ... pointShadowCount ) {
-					var c = evaluatePointLight(l);
-					if ( dot(c, c) > 1e-6 )
-						c *= evaluatePointShadow(l);
-					lightAccumulation += c;
-				}
-			} else {
-				@unroll for( l in 0 ... MAX_POINT_SHADOW_COUNT ) {
-					if ( l < pointShadowCount ) {
-						var c = evaluatePointLight(l);
-						if ( dot(c, c) > 1e-6 )
-							c *= evaluatePointShadow(l);
-						lightAccumulation += c;
-					}
-				}
-			}
-			// Point Light
-			for( l in pointShadowCount ... pointLightCount + pointShadowCount )
-				lightAccumulation += evaluatePointLight(l);
-
-			// Spot Light With Shadow
-			if( USE_BINDLESS ) {
-				for( l in 0 ... spotShadowCount ) {
-					var c = evaluateSpotLight(l);
-					if ( dot(c, c) > 1e-6 )
-						c *= evaluateSpotShadow(l);
-					lightAccumulation += c;
-				}
-			} else {
-				@unroll for( l in 0 ... MAX_SPOT_SHADOW_COUNT ) {
-					if ( l < spotShadowCount ) {
-						var c = evaluateSpotLight(l);
-						if ( dot(c, c) > 1e-6 )
-							c *= evaluateSpotShadow(l);
-						lightAccumulation += c;
-					}
-				}
-			}
-			// Spot Light
-			for( l in spotShadowCount ... spotLightCount + spotShadowCount )
-				lightAccumulation += evaluateSpotLight(l);
-
-			// Capsule Light With Shadow
-			if( USE_BINDLESS ) {
-				for( l in 0 ... capsuleShadowCount ) {
-					var c = evaluateCapsuleLight(l);
-					if ( dot(c, c) > 1e-6 )
-						c *= evaluateCapsuleShadow(l);
-					lightAccumulation += c;
-				}
-			} else {
-				@unroll for( l in 0 ... MAX_CAPSULE_SHADOW_COUNT ) {
-					if ( l < capsuleShadowCount ) {
-						var c = evaluateCapsuleLight(l);
-						if ( dot(c, c) > 1e-6 )
-							c *= evaluateCapsuleShadow(l);
-						lightAccumulation += c;
-					}
-				}
-			}
-			// Capsule Light
-			for( l in capsuleShadowCount ... capsuleLightCount + capsuleShadowCount )
-				lightAccumulation += evaluateCapsuleLight(l);
-
-			// Rectangle Light With Shadow
-			if( USE_BINDLESS ) {
-				for( l in 0 ... rectShadowCount ) {
-					var c = evaluateRectLight(l);
-					if ( dot(c, c) > 1e-6 )
-						c *= evaluateRectShadow(l);
-					lightAccumulation += c;
-				}
-			} else {
-				@unroll for( l in 0 ... MAX_RECT_SHADOW_COUNT ) {
-					if ( l < rectShadowCount ) {
-						var c = evaluateRectLight(l);
-						if ( dot(c, c) > 1e-6 )
-							c *= evaluateRectShadow(l);
-						lightAccumulation += c;
-					}
-				}
-			}
-			// Rectangle Light
-			for( l in rectShadowCount ... rectLightCount + rectShadowCount )
-				lightAccumulation += evaluateRectLight(l);
+			lightAccumulation = accumulateLights(lightAccumulation, LIGHT_DIR, dirShadowCount, dirLightCount, MAX_DIR_SHADOW_COUNT);
+			lightAccumulation = accumulateLights(lightAccumulation, LIGHT_POINT, pointShadowCount, pointLightCount, MAX_POINT_SHADOW_COUNT);
+			lightAccumulation = accumulateLights(lightAccumulation, LIGHT_SPOT, spotShadowCount, spotLightCount, MAX_SPOT_SHADOW_COUNT);
+			lightAccumulation = accumulateLights(lightAccumulation, LIGHT_CAPSULE, capsuleShadowCount, capsuleLightCount, MAX_CAPSULE_SHADOW_COUNT);
+			lightAccumulation = accumulateLights(lightAccumulation, LIGHT_RECT, rectShadowCount, rectLightCount, MAX_RECT_SHADOW_COUNT);
 
 			// Cascade shadows
-			if ( CASCADE_COUNT > 0 ) {
+			if ( HAS_CASCADE ) {
 				var c = evaluateCascadeLight();
 				if ( dot(c, c) > 1e-6 )
 					c *= evaluateCascadeShadow();
