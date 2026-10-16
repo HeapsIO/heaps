@@ -68,7 +68,7 @@ class SAO extends ScreenShader {
 		}
 
 		function getPosition( uv : Vec2 ) : Vec3 {
-			var depth = depthTexture.get(uv);
+			var depth = depthTexture.getLod(uv, 0.0);
 			var uv2 = uvToScreen(uv);
 			var temp = vec4(uv2, depth, 1) * cameraInverseViewProj;
 			var originWS = temp.xyz / temp.w;
@@ -91,26 +91,31 @@ class SAO extends ScreenShader {
 			var sampleNoise = noiseTexture.get(noiseUv).x;
 			var randomPatternRotationAngle = 2.0 * PI * sampleNoise;
 
-			// change from WS to DepthUV space
-			var radiusSS = 0.0;
-			if ( ORTHO )
-				radiusSS = sampleRadius * invOrthoHeight;
-			else
-				radiusSS = (sampleRadius * fovTan) / (origin * cameraView).z;
-
-			for( i in 0...numSamples )
-				occlusion += sampleAO(vUV, origin, normal, radiusSS, i, randomPatternRotationAngle);
-
-			occlusion = 1.0 - occlusion / float(numSamples);
-			occlusion = pow(occlusion, 1.0 + intensity).saturate();
-
+			var fadeWeight = 1.0;
 			if ( USE_START_FADE || USE_FADE ) {
 				var dist = distance(origin, camera.position);
 				if ( USE_START_FADE )
-					occlusion = mix(1.0, occlusion, saturate((dist - startFadeStart) / (startFadeEnd - startFadeStart)));
+					fadeWeight *= saturate((dist - startFadeStart) / (startFadeEnd - startFadeStart));
 				if ( USE_FADE )
-					occlusion = mix(occlusion, 1.0, saturate((dist - fadeStart) / (fadeEnd - fadeStart)));
+					fadeWeight *= 1.0 - saturate((dist - fadeStart) / (fadeEnd - fadeStart));
 			}
+
+			if ( fadeWeight > 0.0 ) {
+				// change from WS to DepthUV space
+				var radiusSS = 0.0;
+				if ( ORTHO )
+					radiusSS = sampleRadius * invOrthoHeight;
+				else
+					radiusSS = (sampleRadius * fovTan) / (origin * cameraView).z;
+
+				for( i in 0...numSamples )
+					occlusion += sampleAO(vUV, origin, normal, radiusSS, i, randomPatternRotationAngle);
+
+				occlusion = 1.0 - occlusion / float(numSamples);
+				occlusion = pow(occlusion, 1.0 + intensity).saturate();
+				occlusion = mix(1.0, occlusion, fadeWeight);
+			} else
+				occlusion = 1.0;
 
 			output.color = vec4(occlusion.xxx, 1.);
 		}
