@@ -10,6 +10,7 @@ class Eval {
 
 	public var varMap : Map<TVar,TVar>;
 	public var inlineCalls : Bool;
+	public var markInlined : Bool;
 	public var unrollLoops : Bool;
 	public var eliminateConditionals : Bool;
 	var constants : Map<Int,TExprDef>;
@@ -380,7 +381,10 @@ class Eval {
 				default:
 					outExprs.push(e);
 				}
-				TBlock(outExprs);
+				if( markInlined && outExprs.length > 0 )
+					TMeta(Outliner.META, [CString(f.ref.name)], { e : TBlock(outExprs), t : t, p : e.p });
+				else
+					TBlock(outExprs);
 			case TVar(_):
 				TCall(c, args);
 			default:
