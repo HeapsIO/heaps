@@ -83,7 +83,7 @@ class TextureStreamDebug {
 		};
 		for( s in TextureStream.streams ) {
 			var t = s.texture;
-			if( t.t == null ) continue;
+			if( t.t == null || !s.mipStreaming ) continue;
 			st.count++;
 			var bytes = s.getResidentBytes();
 			st.fullBytes += s.getMipPos(s.inf.mipLevels) - s.getMipPos(0);

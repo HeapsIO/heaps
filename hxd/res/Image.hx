@@ -715,8 +715,7 @@ class Image extends Resource {
 	static var ENABLE_AUTO_WATCH = true;
 
 	/**
-		Set to false to load synchronously the textures having the AsyncLoading flag and to disable mip levels streaming.
-		Streamed textures are then reloaded at full resolution on the next streaming update.
+		Set to false to load synchronously the textures having the AsyncLoading flag.
 	**/
 	public static var ASYNC_LOADING = true;
 

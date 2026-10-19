@@ -36,6 +36,7 @@ class TextureStream {
 	var completedTime = 0.;
 	var allocTime = 0.;
 	var registered = false;
+	var canStream = false;
 	var mipPos : Array<Int>;
 
 	public function new( image : Image ) {
@@ -60,7 +61,7 @@ class TextureStream {
 	**/
 	public function loadMips( mip : Int, ?onDone : Void -> Void, priority = 0. ) {
 		if( mipStreaming ) {
-			targetMip = getValidMip(mip);
+			targetMip = isDisabled() ? 0 : getValidMip(mip);
 			if( texture.t != null ) requestMips(targetMip, priority);
 		}
 		if( onDone != null ) texture.waitLoad(onDone);
@@ -71,7 +72,7 @@ class TextureStream {
 		The mip levels up to BASE_SIZE are always kept.
 	**/
 	public function unloadMips( mip : Int ) {
-		if( !mipStreaming ) return;
+		if( !mipStreaming || isDisabled() ) return;
 		mip = getValidMip(mip);
 		if( mip <= targetMip ) return;
 		targetMip = mip;
@@ -115,14 +116,15 @@ class TextureStream {
 	}
 
 	function update() {
-		mipStreaming = Image.ASYNC_LOADING && !image.disableStreaming && inf.dataFormat == Dds && inf.mipLevels > 1 && inf.layerCount == 1 && !inf.flags.has(IsCube)
+		canStream = !image.disableStreaming && inf.dataFormat == Dds && inf.mipLevels > 1 && inf.layerCount == 1 && !inf.flags.has(IsCube)
 			&& h3d.Engine.getCurrent().driver.hasFeature(h3d.impl.Driver.Feature.ResidentMips);
+		mipStreaming = canStream && ENABLED;
 		if( mipStreaming )
 			texture.flags.set(Streamed);
 		else
 			texture.flags.unset(Streamed);
 		mipPos = null;
-		if( mipStreaming && !registered ) {
+		if( canStream && !registered ) {
 			registered = true;
 			streams.push(this);
 			if( updateEvent == null )
@@ -130,19 +132,22 @@ class TextureStream {
 		}
 	}
 
-	/**
-		Reload the texture at full resolution if streaming was disabled since the last update.
-	**/
-	function stopStreaming() {
-		update();
-		if( mipStreaming ) return;
-		targetMip = 0;
-		if( texture.t != null && texture.residentMip > 0 )
-			load(true);
-		else {
+	inline function isDisabled() {
+		return !ENABLED || image.disableStreaming;
+	}
+
+	function stopStreaming( priority : Float ) {
+		var t = texture;
+		if( t.t != null && t.residentMip > 0 ) {
+			targetMip = 0;
+			requestMips(0, priority);
+			return;
+		}
+		if( t.t == null ) {
 			cancelRead();
 			endLoading();
 		}
+		update();
 	}
 
 	/**
@@ -396,6 +401,12 @@ class TextureStream {
 	}
 
 	/**
+		Set to false to disable mip levels streaming : textures are loaded at full resolution.
+		Streamed textures then load their missing mip levels asynchronously, and are streamed again once it is set back to true.
+	**/
+	public static var ENABLED = true;
+
+	/**
 		The mip levels up to this size are always loaded.
 	**/
 	public static var BASE_SIZE = 32;
@@ -550,18 +561,23 @@ class TextureStream {
 		var i = 0;
 		while( i < streams.length ) {
 			var s = streams[i];
-			if( s.mipStreaming && s.image.stream == s && (!Image.ASYNC_LOADING || s.image.disableStreaming) )
-				s.stopStreaming();
-			if( !s.mipStreaming || s.image.stream != s ) {
+			if( s.image.stream == s && s.canStream ) {
+				if( s.mipStreaming ) {
+					if( s.isDisabled() )
+						s.stopStreaming(s.isVisible(frame) ? s.texture.residentMip : 0.);
+				} else if( ENABLED )
+					s.update();
+			}
+			if( s.image.stream != s || !s.canStream ) {
 				s.registered = false;
 				streams.splice(i, 1);
 				continue;
 			}
 			i++;
 			var t = s.texture;
-			if( t.t == null )
+			if( t.t == null || !s.mipStreaming )
 				continue;
-			if( s.isVisible(frame) )
+			if( s.isVisible(frame) && !s.isDisabled() )
 				updateVisible(s);
 			total += s.getResidentBytes();
 		}
@@ -624,7 +640,7 @@ class TextureStream {
 		var cost = 0.;
 		for( s in streams ) {
 			var t = s.texture;
-			if( t.t == null || !s.isVisible(frame) ) continue;
+			if( t.t == null || !s.isVisible(frame) || s.isDisabled() ) continue;
 			var mip = s.getMaxSizeMip();
 			if( t.residentMip > mip )
 				cost += s.getMipPos(t.residentMip) - s.getMipPos(mip);
@@ -639,7 +655,7 @@ class TextureStream {
 		var waiting = 0;
 		for( s in streams ) {
 			var t = s.texture;
-			if( t.t == null || s.isVisible(frame) || t.residentMip >= s.getMinMip() )
+			if( t.t == null || s.isVisible(frame) || s.isDisabled() || t.residentMip >= s.getMinMip() )
 				continue;
 			if( t.visibleFrame < frame - HIDDEN_FRAMES )
 				candidates.push(s);
