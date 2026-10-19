@@ -79,7 +79,7 @@ class Image extends Resource {
 
 	/**
 		Disable the mip levels streaming : the texture is loaded at full resolution.
-		Must be set before the texture is loaded.
+		If set after the texture is loaded, it is reloaded at full resolution on the next streaming update.
 	**/
 	public var disableStreaming = false;
 
@@ -715,7 +715,8 @@ class Image extends Resource {
 	static var ENABLE_AUTO_WATCH = true;
 
 	/**
-		Set to false to load synchronously the textures having the AsyncLoading flag.
+		Set to false to load synchronously the textures having the AsyncLoading flag and to disable mip levels streaming.
+		Streamed textures are then reloaded at full resolution on the next streaming update.
 	**/
 	public static var ASYNC_LOADING = true;
 

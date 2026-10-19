@@ -115,7 +115,7 @@ class TextureStream {
 	}
 
 	function update() {
-		mipStreaming = !image.disableStreaming && inf.dataFormat == Dds && inf.mipLevels > 1 && inf.layerCount == 1 && !inf.flags.has(IsCube)
+		mipStreaming = Image.ASYNC_LOADING && !image.disableStreaming && inf.dataFormat == Dds && inf.mipLevels > 1 && inf.layerCount == 1 && !inf.flags.has(IsCube)
 			&& h3d.Engine.getCurrent().driver.hasFeature(h3d.impl.Driver.Feature.ResidentMips);
 		if( mipStreaming )
 			texture.flags.set(Streamed);
@@ -127,6 +127,21 @@ class TextureStream {
 			streams.push(this);
 			if( updateEvent == null )
 				updateEvent = haxe.MainLoop.add(updateStreaming);
+		}
+	}
+
+	/**
+		Reload the texture at full resolution if streaming was disabled since the last update.
+	**/
+	function stopStreaming() {
+		update();
+		if( mipStreaming ) return;
+		targetMip = 0;
+		if( texture.t != null && texture.residentMip > 0 )
+			load(true);
+		else {
+			cancelRead();
+			endLoading();
 		}
 	}
 
@@ -535,6 +550,8 @@ class TextureStream {
 		var i = 0;
 		while( i < streams.length ) {
 			var s = streams[i];
+			if( s.mipStreaming && s.image.stream == s && (!Image.ASYNC_LOADING || s.image.disableStreaming) )
+				s.stopStreaming();
 			if( !s.mipStreaming || s.image.stream != s ) {
 				s.registered = false;
 				streams.splice(i, 1);
