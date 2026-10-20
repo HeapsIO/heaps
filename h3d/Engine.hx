@@ -450,6 +450,7 @@ class Engine {
 
 	public function dispose() {
 		driver.dispose();
+		driver.removeEngine(this);
 		window.removeResizeEvent(onWindowResize);
 		if ( mem != null )
 			mem.dispose();

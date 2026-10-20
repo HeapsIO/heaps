@@ -644,6 +644,7 @@ class ResourceData {
 	public var res : GpuResource;
 	public var state : ResourceState;
 	public var targetState : ResourceState;
+	public var generation = DX12Driver.generation;
 	public function new() {
 	}
 }
@@ -974,7 +975,7 @@ class DX12Driver extends h3d.impl.Driver {
 	var driver : DriverInstance;
 	var hasDeviceError = false;
 	var window : dx.Window;
-	var onContextLost : Void -> Void;
+	var contextLost = new Map<h3d.Engine, Void -> Void>();
 	var frames : Array<DxFrame>;
 	#if (hldx >= version("2.0.0"))
 	var textureHeap : TextureHeapAllocator;
@@ -1058,6 +1059,7 @@ class DX12Driver extends h3d.impl.Driver {
 	public static var BUFFER_COUNT = #if console 3 #else 2 #end;
 	public static var DEVICE_NAME = null;
 	public static var inst(default, null) : DX12Driver;
+	public static var generation(default, null) = 0;
 	public static var DEBUG = false; // requires dxil.dll when set to true
 	public static var SUPPRESSED_MESSAGE_IDS : Array<Int> = [];
 	public static var ENABLE_PSO_CONFIG_CACHE = false;
@@ -1140,6 +1142,7 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	function reset() {
+		generation++;
 		upscaling.beforeCreateDevice();
 
 		compiledShaders = [];
@@ -1270,7 +1273,7 @@ class DX12Driver extends h3d.impl.Driver {
 			Driver.copyDescriptorsSimple(1, bindlessSamplerHeap.getCpuAddressAt(i), errorTexSampler, SAMPLER);
 
 		if ( h3d.Engine.getCurrent() != null ) {
-			defaultDepth = new h3d.mat.Texture(0,0, DEFAULT_DEPTH_FORMAT);
+			if( defaultDepth == null ) defaultDepth = new h3d.mat.Texture(0,0, DEFAULT_DEPTH_FORMAT);
 			defaultDepth.t = new TextureData();
 			currentDepth = defaultDepth;
 			defaultDepth.t.state = defaultDepth.t.targetState = DEPTH_WRITE;
@@ -1289,6 +1292,8 @@ class DX12Driver extends h3d.impl.Driver {
 
 		compiler = new ShaderCompiler();
 
+		frame = null;
+		currentWidth = currentHeight = 0;
 		resize(window.width, window.height);
 	}
 
@@ -1497,8 +1502,12 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	override function init( onCreate : Bool -> Void, forceSoftware = false ) {
-		onContextLost = onCreate.bind(true);
+		contextLost.set(h3d.Engine.getCurrent(), onCreate.bind(true));
 		haxe.Timer.delay(onCreate.bind(false), 1);
+	}
+
+	override function removeEngine( engine : h3d.Engine ) {
+		contextLost.remove(engine);
 	}
 
 	override function getDriverName(details:Bool) {
@@ -1606,6 +1615,7 @@ class DX12Driver extends h3d.impl.Driver {
 	function getDepthView( depthBuffer : h3d.mat.Texture, readOnly : Bool, layer = 0 ) {
 		if ( depthBuffer == null )
 			depthBuffer = getDefaultDepthBuffer();
+		if( depthBuffer.t == null ) depthBuffer.alloc();
 		var depthView = depthStenciViews.alloc(1);
 		var viewDesc = tmp.dstStencilViewDesc;
 		viewDesc.arraySize = 1;
@@ -2554,7 +2564,7 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	function disposeBufferViews(b:BufferData) {
-		b.disposeViews(cpuSrvHeap);
+		if( b.generation == generation ) b.disposeViews(cpuSrvHeap);
 	}
 
 	override function disposeBuffer(v:Buffer) {
@@ -2785,7 +2795,7 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	function disposeTextureViews(t:TextureData) {
-		t.disposeViews(cpuSrvHeap);
+		if( t.generation == generation ) t.disposeViews(cpuSrvHeap);
 	}
 
 	override function disposeTexture(t:h3d.mat.Texture) {
@@ -3638,13 +3648,19 @@ class DX12Driver extends h3d.impl.Driver {
 		var cache = pipelineBuilder.lookup(currentShader.pipelines, currentShader.inputCount);
 		if( cache.pipeline == null ) {
 			var p = makePipeline(currentShader, pipelineBuilder);
+			if( p == null ) {
+				h3d.Engine.getCurrent().mem.garbage();
+				p = makePipeline(currentShader, pipelineBuilder);
+			}
 			#if dx12_verbose_pso_cache
 			var reason = currentShader.usedPSOConfig ? "cache hit but state missing" : "not in cache";
 			trace('Pipeline cache miss ($reason): $cache [${currentShader.shader.signature}]\n${currentShader.pipelines.diff(cache)}');
 			#end
 			if( p == null ) {
 				trace('Failed to create pipeline for ${currentShader.shader.signature}');
+				#if !js
 				hasDeviceError = true;
+				#end
 				#if heaps_mt_hxsl_cache
 				currentShader.pipelineMutex.release();
 				#end
@@ -3887,7 +3903,9 @@ class DX12Driver extends h3d.impl.Driver {
 			hasDeviceError = false;
 			dispose();
 			reset();
-			onContextLost();
+			var cur = h3d.Engine.getCurrent();
+			for( f in [for( f in contextLost ) f] ) f();
+			cur?.setCurrent();
 		}
 
 	}

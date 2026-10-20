@@ -188,6 +188,9 @@ class Driver {
 	public function dispose() {
 	}
 
+	public function removeEngine( engine : h3d.Engine ) {
+	}
+
 	public function begin( frame : Int ) {
 	}
 
