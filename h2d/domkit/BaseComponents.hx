@@ -1158,7 +1158,7 @@ class FlowComp extends ObjectComp implements domkit.Component.ComponentDecl<h2d.
 		o.layout = v ? Vertical : Horizontal;
 	}
 
-	static function set_horizontal( o : h2d.Flow, v ) {
+	static function set_horizontal( o : h2d.Flow, v : Bool ) {
 		o.layout = Horizontal;  // setting false resets to default
 	}
 
