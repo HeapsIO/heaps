@@ -585,6 +585,10 @@ class Macros {
 
 	static function loadShader( path : String, ?enumTypes ) {
 		var m = Context.follow(Context.getType(path));
+		#if haxe6
+		// :src is added by the shader's build macro
+		Context.buildType(m);
+		#end
 		switch( m ) {
 		case TInst(c, _):
 			var c = c.get();
