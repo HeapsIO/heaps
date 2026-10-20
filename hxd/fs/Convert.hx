@@ -268,6 +268,7 @@ class ConvertFBX2HMD extends Convert {
 				var collide = params.collide;
 				hmdout.generateCollides = {
 					maxConvexHulls : collide.maxConvexHulls,
+					unit : collide.unit,
 					scale : collide.scale,
 				};
 			}
