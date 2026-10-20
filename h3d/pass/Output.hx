@@ -90,8 +90,10 @@ class Output {
 			defaultSort(passes);
 		else
 			sort(passes);
-		var buf = ctx.shaderBuffers, prevShader = null;
+		var buf = ctx.shaderBuffers, prevShader = null, failedShader = null;
 		for( p in passes ) {
+			if( p.shader == failedShader )
+				continue;
 			#if sceneprof h3d.impl.SceneProf.mark(p.obj); #end
 			ctx.globalPreviousModelView = p.obj.prevAbsPos ?? p.obj.absPos;
 			ctx.globalModelView = p.obj.absPos;
@@ -103,6 +105,7 @@ class Output {
 					try {
 						ctx.engine.selectShader(p.shader);
 					} catch(e) {
+						failedShader = p.shader;
 						onShaderError(e.message, p);
 						continue;
 					}
@@ -119,7 +122,15 @@ class Output {
 				ctx.currentObject = null;
 				ctx.engine.uploadInstanceShaderBuffers(buf);
 			}
-			drawObject(p);
+			if( onShaderError != null ) {
+				try {
+					drawObject(p);
+				} catch(e) {
+					onShaderError(e.message, p);
+					continue;
+				}
+			} else
+				drawObject(p);
 		}
 		ctx.engine.driver.endEvent();
 		#if sceneprof h3d.impl.SceneProf.end(); #end
