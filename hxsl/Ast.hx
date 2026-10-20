@@ -547,7 +547,7 @@ class Tools {
 		}
 	}
 
-	public static function toString( t : Type ) {
+	public static function toString( t : Type ) : String {
 		return switch( t ) {
 		case TVec(size, t):
 			var prefix = switch( t ) {
@@ -751,7 +751,7 @@ class Tools {
 
 class Tools2 {
 
-	public static function toString( g : TGlobal ) {
+	public static function toString( g : TGlobal ) : String {
 		var n = g.getName();
 		return n.charAt(0).toLowerCase() + n.substr(1);
 	}
@@ -760,7 +760,7 @@ class Tools2 {
 
 class Tools3 {
 
-	public static function toString( s : ShaderData ) {
+	public static function toString( s : ShaderData ) : String {
 		return Printer.shaderToString(s);
 	}
 
@@ -768,7 +768,7 @@ class Tools3 {
 
 class Tools4 {
 
-	public static function toString( e : TExpr ) {
+	public static function toString( e : TExpr ) : String {
 		return Printer.toString(e);
 	}
 

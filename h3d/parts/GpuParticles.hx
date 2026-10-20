@@ -92,7 +92,7 @@ class GpuPart {
 @:allow(h3d.parts.GpuParticles)
 class GpuPartGroup {
 
-	static var FIELDS = null;
+	static var FIELDS:Null<Array<String>> = null;
 	static function getFields( inst : GpuPartGroup ) {
 		if( FIELDS != null )
 			return FIELDS;
@@ -634,7 +634,7 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 		}
 	}
 
-	function rebuildAll(cam) {
+	function rebuildAll(cam:h3d.Camera) {
 
 		var ebounds = null, calcEmit = null, partCount = 0, partAlloc = this.partAlloc;
 		bounds.empty();

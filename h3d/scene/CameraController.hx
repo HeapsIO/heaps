@@ -179,7 +179,7 @@ abstract class CameraController extends h3d.scene.Object {
 		syncCamera();
 	}
 
-	function fov(delta) {
+	function fov(delta:Float) {
 		targetOffset.w += delta;
 		if( targetOffset.w >= 179 )
 			targetOffset.w = 179;
@@ -201,7 +201,7 @@ abstract class CameraController extends h3d.scene.Object {
 		targetOffset = targetOffset.add(v);
 	}
 
-	function rot(dx, dy) {
+	function rot(dx:Float, dy:Float) {
 		moveX += dx;
 		moveY += dy;
 	}

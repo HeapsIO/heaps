@@ -143,7 +143,7 @@ private class Particle extends h2d.SpriteBatch.BatchElement {
 @:access(h2d.Object)
 class ParticleGroup {
 
-	static var FIELDS = null;
+	static var FIELDS:Null<Array<String>> = null;
 	static function getFields( inst : ParticleGroup ) {
 		if( FIELDS != null )
 			return FIELDS;

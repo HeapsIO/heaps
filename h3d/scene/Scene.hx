@@ -494,7 +494,7 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 		ctx.wasContextLost = true;
 	}
 
-	var tmpPasses = [];
+	var tmpPasses:Array<Renderer.PassObjects> = [];
 	/**
 		Render the scene on screen. Internal usage only.
 	**/
@@ -581,7 +581,7 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 	}
 
 	var prevDB : h3d.mat.Texture;
-	var prevEngine = null;
+	var prevEngine:Null<h3d.Engine> = null;
 	/**
 		Temporarily overrides the output render target. This is useful for picture-in-picture rendering,
 		where the output render target has a different size from the window.

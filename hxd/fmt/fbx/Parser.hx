@@ -84,7 +84,7 @@ class Parser {
 		};
 	}
 
-	function parseNodes() {
+	function parseNodes() : Array<FbxNode> {
 		var nodes = [];
 		while( true ) {
 			switch( peek() ) {

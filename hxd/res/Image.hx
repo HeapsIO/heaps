@@ -611,7 +611,7 @@ class Image extends Resource {
 		return loadedData != null ? loadedData : entry.getBytes();
 	}
 
-	function loadTexture(sync = false) {
+	function loadTexture(sync:Bool = false) {
 		if (getFormat().useLoadBitmap) {
 			// use native decoding
 			tex.flags.set(Loading);

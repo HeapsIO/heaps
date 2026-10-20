@@ -250,7 +250,7 @@ class Environment {
 		return env;
 	}
 
-	static var LUT_PIXELS = null;
+	static var LUT_PIXELS:Null<hxd.Pixels> = null;
 
 	public static function getDefaultLUT() {
 		var engine = h3d.Engine.getCurrent();

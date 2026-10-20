@@ -112,7 +112,7 @@ class Serializer {
 		}
 	}
 
-	static var TVECS = new Map();
+	static var TVECS:Map<Int,Type> = new Map();
 	static var TDIMS = hxsl.Ast.TexDimension.createAll();
 
 	function readType() : Type {
@@ -360,7 +360,7 @@ class Serializer {
 	};
 	static var UNOPS = Unop.createAll();
 	static var TGLOBALS = hxsl.Ast.TGlobal.createAll();
-	static var TSWIZ = new Map();
+	static var TSWIZ:Map<Int,Array<Component>> = new Map();
 	static var REGS = [X,Y,Z,W];
 
 	function readExpr() : TExpr {

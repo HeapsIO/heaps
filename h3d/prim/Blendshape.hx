@@ -184,7 +184,7 @@ class Blendshape {
 	var hmdModel : HMDModel;
 	var shapes : Array<hxd.fmt.hmd.Data.BlendShape>;
 	var inputMapping : Array<Map<String, Int>> = [];
-	var shapesBytes = [];
+	var shapesBytes:Array<{ vertexBytes : haxe.io.Bytes, remapBytes : haxe.io.Bytes }> = [];
 
 	#if (!js || dx12)
 	var offsetsBuffer : hxd.FloatBuffer;

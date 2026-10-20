@@ -1511,7 +1511,7 @@ class GlDriver extends Driver {
 		#end
 	}
 
-	inline function streamData(data, pos:Int, length:Int) {
+	inline function streamData(data:#if hl hl.Bytes #else Dynamic #end, pos:Int, length:Int) {
 		#if hl
 		var needed = streamPos + length;
 		var total = (needed + 7) & ~7; // align on 8 bytes

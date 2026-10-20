@@ -38,7 +38,7 @@ class Checker {
 		globals = initGlobals();
 	}
 
-	static var GLOBALS = null;
+	static var GLOBALS:Null<Map<String,{ t : Type, g : TGlobal }>> = null;
 	static function initGlobals() {
 		var globals = GLOBALS;
 		if( GLOBALS != null ) return GLOBALS;
@@ -1014,7 +1014,7 @@ class Checker {
 		return { e : TConst(CInt(index)), t : TEnum(path), p : pos };
 	}
 
-	function makeVar( v : VarDecl, pos : Position, ?parent : TVar ) {
+	function makeVar( v : VarDecl, pos : Position, ?parent : TVar ) : TVar {
 		var tv : TVar = {
 			id : Tools.allocVarId(),
 			name : v.name,

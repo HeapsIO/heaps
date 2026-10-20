@@ -279,7 +279,7 @@ class Earcut {
 		return n;
 	}
 
-	function earcutLinked(ear:EarNode, pass = 0) {
+	function earcutLinked(ear:EarNode, pass:Int = 0) {
 		if ( ear == null ) return;
 
 		// interlink polygon nodes in z-order

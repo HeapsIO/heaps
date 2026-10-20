@@ -28,7 +28,7 @@ class ModelDatabase {
 	public static var DYN_BONES_CONFIG = "dynamicBones";
 	public static var COLLIDE_CONFIG = "collide";
 
-	public var defaultProps = {
+	public var defaultProps : { lodConfig : Array<Float>, dynamicBones : Null<Array<Dynamic>> } = {
 		lodConfig: [ 0.5, 0.2, 0.01],
 		dynamicBones: null
 	}
