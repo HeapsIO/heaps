@@ -34,7 +34,7 @@ class Output {
 
 	@:access(h3d.scene)
 	function setupShaders( passes : h3d.pass.PassList ) {
-		var lightInit = false;
+		var lightInit = false, failed = false;
 		for( p in passes ) {
 			var shaders = p.pass.getShadersRec();
 			shaders = processShaders(p, shaders);
@@ -45,8 +45,18 @@ class Output {
 				}
 				shaders = ctx.lightSystem.computeLight(p.obj, shaders);
 			}
-			p.shader = output.compileShaders(ctx.globals, shaders, p.pass.batchMode ? Batch : Default);
 			p.shaders = shaders;
+			if( onShaderError != null ) {
+				try {
+					p.shader = output.compileShaders(ctx.globals, shaders, p.pass.batchMode ? Batch : Default);
+				} catch( e ) {
+					p.shader = null;
+					failed = true;
+					onShaderError(e.message, p);
+					continue;
+				}
+			} else
+				p.shader = output.compileShaders(ctx.globals, shaders, p.pass.batchMode ? Batch : Default);
 			var t = p.shader.fragment.textures;
 			if( t == null || t.type.match(TArray(_)) )
 				p.texture = 0;
@@ -55,6 +65,8 @@ class Output {
 				p.texture = t == null ? 0 : t.id;
 			}
 		}
+		if( failed )
+			passes.filter(p -> p.shader != null);
 	}
 
 	inline function log( str : String ) {
