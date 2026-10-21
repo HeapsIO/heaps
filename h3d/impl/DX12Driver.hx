@@ -735,6 +735,7 @@ class BufferData extends ResourceData {
 class TextureData extends ResourceData {
 	public var format : DxgiFormat;
 	public var color : h3d.Vector4;
+	public var lastUseFence : Int64;
 	var clearColorChanges : Int;
 	var cpuViewBits : Int = -1;
 	var cpuViewIndex : Int = -1;
@@ -981,8 +982,10 @@ class DX12Driver extends h3d.impl.Driver {
 	var textureHeap : TextureHeapAllocator;
 	#end
 	var frame : DxFrame;
-	var fence : Fence;
+	var frameFence : Fence;
 	var fenceEvent : WaitEvent;
+	var directFence : Fence;
+	var directFenceValue : Int64 = 0;
 	var directQueue : CommandQueue;
 
 	var renderTargetViews : ScratchHeap;
@@ -995,7 +998,7 @@ class DX12Driver extends h3d.impl.Driver {
 	var indirectCommand : CommandSignature;
 
 	var currentFrame : Int;
-	var fenceValue : Int64 = 0;
+	var frameFenceValue : Int64 = 0;
 	var currentPass : h3d.mat.Pass;
 
 	var currentWidth : Int;
@@ -1206,8 +1209,9 @@ class DX12Driver extends h3d.impl.Driver {
 			f.copyBuffer.setName('CopyBuffer$i');
 			frames.push(f);
 		}
-		fence = new Fence(0, NONE);
+		frameFence = new Fence(0, NONE);
 		fenceEvent = new WaitEvent(false);
+		directFence = new Fence(0, NONE);
 		tmp = new TempObjects();
 
 		copyQueue = new CommandQueue(COPY);
@@ -1413,9 +1417,14 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	function waitGpu() {
-		directQueue.signal(fence, ++fenceValue);
-		fence.setEvent(fenceValue, fenceEvent);
+		directQueue.signal(directFence, ++directFenceValue);
+		directFence.setEvent(directFenceValue, fenceEvent);
 		fenceEvent.wait(-1);
+	}
+
+	inline function markUsed( t : h3d.mat.Texture ) {
+		t.lastFrame = frameCount;
+		if( t.t != null ) t.t.lastUseFence = frameFenceValue + 1;
 	}
 
 	override function resize(width:Int, height:Int)  {
@@ -1661,7 +1670,7 @@ class DX12Driver extends h3d.impl.Driver {
 
 		if( tex != null ) {
 			if( tex.t == null ) tex.alloc();
-			tex.lastFrame = frameCount;
+			markUsed(tex);
 			transition(tex.t, RENDER_TARGET);
 		}
 
@@ -1723,7 +1732,7 @@ class DX12Driver extends h3d.impl.Driver {
 		initViewport(w, h);
 		var depthBuffer = tex == null ? defaultDepth : tex.depthBuffer;
 		if(depthBuffer != null)
-			depthBuffer.lastFrame = frameCount;
+			markUsed(depthBuffer);
 		pipelineBuilder.setRenderTarget(tex, depthEnabled ? depthBuffer : null);
 	}
 
@@ -1759,7 +1768,7 @@ class DX12Driver extends h3d.impl.Driver {
 				t.alloc();
 				if ( hasDeviceError ) return;
 			}
-			t.lastFrame = frameCount;
+			markUsed(t);
 			var view = texViews.offset(renderTargetViews.stride * i);
 			Driver.createRenderTargetView(t.t.res, null, view);
 			tmp.renderTargets[i] = view;
@@ -1781,7 +1790,7 @@ class DX12Driver extends h3d.impl.Driver {
 
 		var depthBuffer = t0 == null ? defaultDepth : t0.depthBuffer;
 		if(depthBuffer != null)
-			depthBuffer.lastFrame = frameCount;
+			markUsed(depthBuffer);
 		pipelineBuilder.setRenderTargets(textures, depthEnabled ? depthBuffer : null);
 		currentDepth = depthBuffer;
 	}
@@ -1790,7 +1799,7 @@ class DX12Driver extends h3d.impl.Driver {
 		var view = getDepthView(depthBuffer, false, layer);
 		depthEnabled = true;
 		frame.commandList.omSetRenderTargets(0, null, true, view);
-		depthBuffer.lastFrame = frameCount;
+		markUsed(depthBuffer);
 		while( currentRenderTargets.length > 0 ) currentRenderTargets.pop();
 
 		initViewport(depthBuffer.width, depthBuffer.height);
@@ -2799,8 +2808,9 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	override function disposeTexture(t:h3d.mat.Texture) {
-		if( t.lastFrame <= (frameCount - BUFFER_COUNT) ) {
+		if( frameFence.getValue() >= t.t.lastUseFence ) {
 			t.t.res.release();
+			t.t.res = null;
 			#if (hldx >= version("2.0.0"))
 			textureHeap?.free(t.t);
 			#end
@@ -2899,7 +2909,7 @@ class DX12Driver extends h3d.impl.Driver {
 		cmd.copyTextureRegion(dst, 0, 0, is3d ? side : 0, src, null);
 
 		t.flags.set(WasCleared);
-		t.lastFrame = frameCount;
+		markUsed(t);
 	}
 
 	override function copyTexture(from:h3d.mat.Texture, to:h3d.mat.Texture):Bool {
@@ -2913,7 +2923,8 @@ class DX12Driver extends h3d.impl.Driver {
 			if( from.t == null ) throw "assert";
 			if( to.t == null ) return false;
 		}
-		from.lastFrame = to.lastFrame = frameCount;
+		markUsed(from);
+		markUsed(to);
 		transition( from.t, COPY_SOURCE);
 		transition( to.t, COPY_DEST);
 		flushTransitions();
@@ -2978,7 +2989,7 @@ class DX12Driver extends h3d.impl.Driver {
 		#end
 		disposeTextureViews(prev);
 		t.t = td;
-		t.lastFrame = frameCount;
+		markUsed(t);
 		return true;
 	}
 
@@ -3212,6 +3223,7 @@ class DX12Driver extends h3d.impl.Driver {
 				var state = shader.kind == Fragment ? PIXEL_SHADER_RESOURCE : NON_PIXEL_SHADER_RESOURCE;
 				for ( i in 0...shader.paramsTexHandleCount ) {
 					var handle = buf.texHandles[i];
+					handle.texture.t.lastUseFence = frameFenceValue + 1;
 					transition(handle.texture.t, state);
 				}
 				for ( i in 0...shader.paramsBufHandleCount ) {
@@ -3247,6 +3259,7 @@ class DX12Driver extends h3d.impl.Driver {
 				var lastIdx = startIdx + shader.globalsTexHandleCount;
 				for ( i in startIdx...lastIdx ) {
 					var handle = buf.texHandles[i];
+					handle.texture.t.lastUseFence = frameFenceValue + 1;
 					transition(handle.texture.t, state);
 				}
 				startIdx = shader.paramsBufHandleCount;
@@ -3307,7 +3320,7 @@ class DX12Driver extends h3d.impl.Driver {
 						regs.lastTextures[i] = buf.tex[i] != null ? buf.tex[i].t : null;
 						regs.lastTexturesBits[i] = buf.tex[i] != null ? buf.tex[i].bits : -1;
 
-						t.lastFrame = frameCount;
+						markUsed(t);
 
 						switch( pt ) {
 						case TRWTexture(dim,arr,chans):
@@ -3485,7 +3498,7 @@ class DX12Driver extends h3d.impl.Driver {
 				if( s != currentShader )
 					throw "Shader change detected.";
 			}
-			t.lastFrame = frameCount;
+			markUsed(t);
 			transition(t.t, PIXEL_SHADER_RESOURCE);
 		}
 	}
@@ -3882,8 +3895,8 @@ class DX12Driver extends h3d.impl.Driver {
 		currentShader = null;
 		Driver.flushMessages();
 		psoConfigCache?.save();
-		frame.fenceValue = ++fenceValue;
-		directQueue.signal(fence, frame.fenceValue);
+		frame.fenceValue = ++frameFenceValue;
+		directQueue.signal(frameFence, frame.fenceValue);
 	}
 
 	override function present() {
@@ -3912,8 +3925,8 @@ class DX12Driver extends h3d.impl.Driver {
 
 	function waitForFrame( index : Int ) {
 		var frame = frames[index];
-		if( fence.getValue() < frame.fenceValue ) {
-			fence.setEvent(frame.fenceValue, fenceEvent);
+		if( frameFence.getValue() < frame.fenceValue ) {
+			frameFence.setEvent(frame.fenceValue, fenceEvent);
 			fenceEvent.wait(-1);
 		}
 	}
@@ -3977,7 +3990,7 @@ class DX12Driver extends h3d.impl.Driver {
 	override function copyBackBuffer( to : h3d.mat.Texture ) : Bool {
 		if( to.t == null )
 			return false;
-		to.lastFrame = frameCount;
+		markUsed(to);
 		transition(frame.backBuffer, COPY_SOURCE);
 		transition(to.t, COPY_DEST);
 		flushTransitions();
