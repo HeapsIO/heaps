@@ -544,10 +544,22 @@ class RenderContext extends h3d.impl.RenderContext {
 			var ry1 = x * fb.x + y * fb.y + fb.z;
 			var rx2 = x2 * fa.x + y2 * fa.y + fa.z;
 			var ry2 = x2 * fb.x + y2 * fb.y + fb.z;
-			x = rx1;
-			y = ry1;
-			w = rx2 - rx1;
-			h = ry2 - ry1;
+			// The filter matrix lands in the filter texture's own pixels (it already
+			// carries the filter's resolution), but measured from the filtered
+			// object's origin, while the texture starts at the (xMin, yMin) it was
+			// pushed with (Object.drawFilters) - which pushTarget folded into
+			// viewX/viewY. Measured from the scene viewport instead, the zone sat
+			// that far off (a blur's boundsExtend, 2px up and left) and scaled
+			// a second time by the viewport.
+			var startX = -(viewX + 1) / viewA;
+			var startY = -(viewY + 1) / viewD;
+			engine.setRenderZone(
+				Std.int(rx1 - startX + 1e-10),
+				Std.int(ry1 - startY + 1e-10),
+				Std.int(rx2 - rx1 + 1e-10),
+				Std.int(ry2 - ry1 + 1e-10)
+			);
+			return;
 		}
 
 		engine.setRenderZone(
