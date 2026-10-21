@@ -37,6 +37,9 @@ class ShaderConst {
 
 class SharedShader {
 	public static var UNROLL_LOOPS = false;
+	// helpers are inlined so that constant args fold and DCE sees each call site, then identical
+	// call sites are turned back into functions by hxsl.Outliner
+	public static var OUTLINE_HELPERS = #if hxsl_no_outline false #else true #end;
 	static var SHADER_RESOLVE : Map<String, SharedShader> = [];
 
 	public var data : ShaderData;
@@ -195,6 +198,7 @@ class SharedShader {
 			}
 		}
 		eval.inlineCalls = true;
+		eval.markInlined = OUTLINE_HELPERS;
 		eval.unrollLoops = UNROLL_LOOPS;
 		var edata = eval.eval(data);
 		edata = compactMem(edata);

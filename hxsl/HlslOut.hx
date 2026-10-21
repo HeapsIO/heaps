@@ -144,8 +144,11 @@ class HlslOut {
 	var allNames : Map<String, Int>;
 	var bindlessSamplersCount : Int;
 	var bindlessSamplers : Map<Int, Int>;
+	var unresolvedBindless : Map<Int, TVar>;
 	var samplers : Map<Int, SamplerRef>;
 	var computeLayout : Array<Int>;
+	var inHelper : Bool;
+	var curHelperArgs : Array<TVar>;
 	public var varNames : Map<Int,String>;
 
 	var varAccess : Map<Int,String>;
@@ -283,16 +286,26 @@ class HlslOut {
 		}
 	}
 
-	function addValue( e : TExpr, tabs : String ) {
+	function addValue( e : TExpr, tabs : String, ?helper : String ) {
 		switch( e.e ) {
 		case TBlock(el):
-			var name = "_val" + (exprIds++);
+			var name = (helper == null ? "" : helper) + "_val" + (exprIds++);
 			var tmp = buf;
 			buf = new StringBuf();
 			addType(e.t);
 			add(" ");
 			add(name);
-			add("(void)");
+			if( curHelperArgs == null )
+				add("(void)");
+			else {
+				add("(");
+				var first = true;
+				for( a in curHelperArgs ) {
+					if( first ) first = false else add(", ");
+					addVar(a);
+				}
+				add(")");
+			}
 			var el2 = el.copy();
 			var last = el2[el2.length - 1];
 			el2[el2.length - 1] = { e : TReturn(last), t : e.t, p : last.p };
@@ -305,7 +318,17 @@ class HlslOut {
 			exprValues.push(buf.toString());
 			buf = tmp;
 			add(name);
-			add("()");
+			if( curHelperArgs == null )
+				add("()");
+			else {
+				add("(");
+				var first = true;
+				for( a in curHelperArgs ) {
+					if( first ) first = false else add(", ");
+					ident(a);
+				}
+				add(")");
+			}
 		case TIf(econd, eif, eelse):
 			add("( ");
 			addValue(econd, tabs);
@@ -313,8 +336,10 @@ class HlslOut {
 			addValue(eif, tabs);
 			add(" : ");
 			addValue(eelse, tabs);
+		case TMeta(m, [CString(helper)], e) if( m == Outliner.VALUE ):
+			addValue(e, tabs, helper);
 		case TMeta(m,args,e):
-			handleMeta(m, args, addValue, e, tabs);
+			handleMeta(m, args, (e, tabs) -> addValue(e, tabs), e, tabs);
 		default:
 			addExpr(e, tabs);
 		}
@@ -481,6 +506,15 @@ class HlslOut {
 		}
 	}
 
+	function bindlessSlot( v : TVar ) {
+		var b = bindlessSamplers.get(v.id);
+		if( b == null ) {
+			b = bindlessSamplersCount++;
+			bindlessSamplers.set(v.id, b);
+		}
+		return b;
+	}
+
 	function resolveSamplerRef( e : TExpr ) : { s : SamplerRef, b : Int } {
 		switch( e.e ) {
 		case TVar(v):
@@ -488,8 +522,10 @@ class HlslOut {
 			if( b != null )
 				return { s : null, b : b };
 			var r = samplers.get(v.id);
-			if( r == null )
-				return null;
+			if( r == null ) {
+				unresolvedBindless.set(v.id, v);
+				return { s : null, b : bindlessSlot(v) };
+			}
 			return { s : { arr : r.arr, offset : r.offset, index : r.index }, b : -1 };
 		case TArray(ea, index):
 			var r = resolveSamplerRef(ea);
@@ -620,9 +656,9 @@ class HlslOut {
 			add(", ");
 			addValue(tex, tabs);
 			add(", ");
-			add('__BindlessSamplers[$bindlessSamplersCount]');
+			add('__BindlessSamplers[${bindlessSlot(v)}]');
 			add(")");
-			bindlessSamplers.set(v.id, bindlessSamplersCount++);
+			unresolvedBindless.remove(v.id);
 		case TCall({ e : TGlobal( g = ResolveBuffer) }, args = [handle, buf = { e : TVar(v)}]):
 			declGlobal(g, args);
 			add("resolveBuffer");
@@ -824,7 +860,7 @@ class HlslOut {
 			add("discard");
 		case TReturn(e):
 			if( e == null ) {
-				if ( isCompute )
+				if ( isCompute || inHelper )
 					add("return");
 				else
 					add("return _out");
@@ -1163,6 +1199,50 @@ class HlslOut {
 		add("}");
 	}
 
+	function emitHelper( f : TFunction ) {
+		inHelper = true;
+		curHelperArgs = f.args.length == 0 ? null : f.args;
+		addType(f.ret);
+		add(" ");
+		ident(f.ref);
+		add("(");
+		var first = true;
+		for( a in f.args ) {
+			if( first ) first = false else add(", ");
+			addVar(a);
+		}
+		add(") {\n");
+		var expr = f.expr;
+		if( f.ret != TVoid && !expr.hasReturn() ) {
+			// the last expression of the body is an implicit return
+			switch( expr.e ) {
+			case TBlock(el) if( el.length > 0 ):
+				el = el.copy();
+				var last = el[el.length - 1];
+				el[el.length - 1] = { e : TReturn(last), t : TVoid, p : last.p };
+				expr = { e : TBlock(el), t : TVoid, p : expr.p };
+			case TBlock(_):
+			default:
+				expr = { e : TReturn(expr), t : TVoid, p : expr.p };
+			}
+		}
+		switch( expr.e ) {
+		case TBlock(el):
+			for( e in el ) {
+				add("\t");
+				addExpr(e, "\t");
+				newLine(e);
+			}
+		default:
+			add("\t");
+			addExpr(expr, "\t");
+			newLine(expr);
+		}
+		add("}");
+		inHelper = false;
+		curHelperArgs = null;
+	}
+
 	function initLocals() {
 		var locals = Lambda.array(locals);
 		locals.sort(function(v1, v2) return Reflect.compare(v1.name, v2.name));
@@ -1186,13 +1266,14 @@ class HlslOut {
 	public function run( s : ShaderData ) {
 		locals = new Map();
 		bindlessSamplers = new Map();
+		unresolvedBindless = new Map();
 		bindlessSamplersCount = 0;
 		decls = [];
 		buf = new StringBuf();
 		exprValues = [];
 
-		if( s.funs.length != 1 ) throw "assert";
-		var f = s.funs[0];
+		var f = s.funs[s.funs.length - 1];
+		if( f == null || f.kind == Helper ) throw "assert";
 		kind = f.kind;
 		varAccess = new Map();
 		samplers = new Map();
@@ -1202,10 +1283,19 @@ class HlslOut {
 		initStatics(s);
 
 		var tmp = buf;
+		for( h in s.funs ) {
+			if( h.kind != Helper ) continue;
+			buf = new StringBuf();
+			emitHelper(h);
+			exprValues.push(buf.toString());
+		}
 		buf = new StringBuf();
 		emitMain(f.expr);
 		exprValues.push(buf.toString());
 		buf = tmp;
+
+		for( v in unresolvedBindless )
+			throw "Cannot resolve sampler for " + v.name;
 
 		initLocals();
 

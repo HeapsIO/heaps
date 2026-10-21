@@ -382,6 +382,24 @@ class Cache {
 			Printer.check(s,[prev[i]]);
 		#end
 
+		if( SharedShader.OUTLINE_HELPERS ) {
+			var prev = sl;
+			sl = new hxsl.Outliner().outline(sl);
+
+			#if shader_debug_dump
+			if( dbg != null ) {
+				dbg.writeString("----- OUTLINE ----\n\n");
+				for( s in sl )
+					dbg.writeString(Printer.shaderToString(s, Debug.VAR_IDS) + "\n\n");
+			}
+			#end
+
+			#if debug
+			for( i => s in sl )
+				Printer.check(s,[prev[i]]);
+			#end
+		}
+
 		var r = buildRuntimeShader(sl, paramVars);
 		r.mode = mode;
 
