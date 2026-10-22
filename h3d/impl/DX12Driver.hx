@@ -251,54 +251,11 @@ class ScratchHeapArray {
 	}
 }
 
-class BufferAllocatorPage {
-	public var capacity(default, null) : Int;
-	public var unusedFrame(default, null) : Int = 0;
-	var offset : Int = 0;
-	var resource : GpuResource;
-	var cpuAddress : hl.Bytes;
-
-	public function new( heap : HeapProperties, flags : haxe.EnumFlags<HeapFlag>, desc : ResourceDesc, state : ResourceState ) {
-		this.capacity = desc.width.low;
-		resource = DX12Driver.allocCheck(() -> Driver.createCommittedResource(heap, flags, desc, state, null));
-		resource.setName("BufferAllocatorPage");
-		cpuAddress = resource.map(0, null);
-	}
-
-	public function tryAlloc( size, alignment = 256, allocation : BufferAllocation ) : Bool {
-		var offsetAligned = offset & ~(alignment - 1);
-		if( offsetAligned != offset ) offsetAligned += alignment;
-		var newOffset = size + offsetAligned;
-		if ( newOffset > capacity )
-			return false;
-		allocation.byteSize = size;
-		allocation.offset = offsetAligned;
-		allocation.cpuAddress = cpuAddress.offset(offsetAligned);
-		allocation.resource = resource;
-		offset = newOffset;
-		return true;
-	}
-
-	public function reset() {
-		if ( offset == 0 )
-			unusedFrame++;
-		else {
-			offset = 0;
-			unusedFrame = 0;
-		}
-	}
-
-	public function dispose() {
-		resource.release();
-		resource = null;
-		cpuAddress = null;
-	}
-}
-
+/**
+	Per-frame allocator in UPLOAD or READBACK committed buffers, see LinearAllocator.
+**/
 class BufferAllocator {
-	inline static var MAX_KEEP_FRAME = 3600;
-	var pages : Array<BufferAllocatorPage>;
-
+	var allocator : LinearAllocator<GpuResource>;
 	var heap : HeapProperties;
 	var desc : ResourceDesc;
 	var flags : haxe.EnumFlags<HeapFlag>;
@@ -310,60 +267,43 @@ class BufferAllocator {
 		this.state = state;
 		desc = new ResourceDesc();
 		desc.dimension = BUFFER;
-		desc.width = size;
 		desc.height = 1;
 		desc.depthOrArraySize = 1;
 		desc.mipLevels = 1;
 		desc.sampleDesc.count = 1;
 		desc.layout = ROW_MAJOR;
 		flags = new haxe.EnumFlags();
-		pages = [new BufferAllocatorPage(heap, flags, desc, state)];
+		allocator = new LinearAllocator(size, createPage, (res) -> res.map(0, null), (res) -> res.release());
+	}
+
+	function createPage( size : Int ) {
+		desc.width = size;
+		var res = DX12Driver.allocCheck(() -> Driver.createCommittedResource(heap, flags, desc, state, null));
+		res.setName("BufferAllocatorPage");
+		return res;
 	}
 
 	public function reset( forceDispose = false ) {
-		for ( p in pages )
-			p.reset();
-
-		var i = 1;
-		while ( i < pages.length ) {
-			var page = pages[i];
-			if ( page.unusedFrame > MAX_KEEP_FRAME || forceDispose ) {
-				page.dispose();
-				pages[i] = pages[pages.length - 1];
-				pages.pop();
-				continue;
-			}
-			i++;
-		}
+		allocator.reset(forceDispose);
 	}
 
 	public function dispose() {
-		for ( p in pages )
-			p.dispose();
+		allocator.dispose();
 	}
 
 	public function alloc( size : Int, alignment = 256, allocation : BufferAllocation ) {
 		var sz = size & ~(alignment - 1);
 		if( sz != size ) sz += alignment;
-
-		for ( p in pages ) {
-			if ( p.tryAlloc(sz, alignment, allocation ) )
-				return allocation;
-		}
-
-		var lastCapacity = pages[pages.length - 1].capacity;
-		desc.width = hxd.Math.imax((lastCapacity >> 1) * 3, sz);
-		var p = new BufferAllocatorPage(heap, flags, desc, state);
-		p.tryAlloc(sz, alignment, allocation);
-		pages.push(p);
+		allocator.alloc(sz, alignment);
+		allocation.resource = allocator.resource;
+		allocation.offset = allocator.offset;
+		allocation.cpuAddress = allocator.ptr;
+		allocation.byteSize = sz;
 		return allocation;
 	}
 
 	public function getSize() {
-		var size : Float = 0;
-		for( p in pages )
-			size += p.capacity;
-		return size;
+		return allocator.getSize();
 	}
 
 }
