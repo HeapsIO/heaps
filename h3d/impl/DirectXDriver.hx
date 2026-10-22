@@ -1,6 +1,6 @@
 package h3d.impl;
 
-#if (hldx && !dx12)
+#if (hldx && !dx12 && !hlvk)
 
 import h3d.impl.Driver;
 import dx.Driver;

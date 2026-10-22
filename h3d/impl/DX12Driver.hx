@@ -1,6 +1,6 @@
 package h3d.impl;
 
-#if (dx12 && (hldx || js))
+#if (dx12 && (hldx || js) && !hlvk)
 
 #if (hldx && hl_ver < version("1.14.0"))
 #error "DX12Driver requires at least -D hl_ver=1.14.0"
@@ -1707,7 +1707,7 @@ class DX12Driver extends h3d.impl.Driver {
 		return null;
 	}
 
-	static final SHADER_ARGS : Array<String>= [#if dx12_shader_debug "-Zi", "-Qembed_debug" #end];
+	static final SHADER_ARGS : Array<String>= [#if shader_debug_info "-Zi", "-Qembed_debug" #end];
 	function compileSource( sh : hxsl.RuntimeShader.RuntimeShaderData, profile, rootStr = "" ) {
 		resolveShaderDataCode(sh, rootStr);
 		var key = profile;

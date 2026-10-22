@@ -35,7 +35,7 @@ class GPUMeshBatch extends MeshBatch {
 	public function new(primitive, ?material, ?parent) {
 		super(primitive, material, parent);
 
-		#if ((js || hldx) && !dx12)
+		#if ((js || hldx) && !dx12 && !hlvk)
 		throw "Not available on this platform";
 		#end
 
@@ -299,7 +299,7 @@ class GPUMeshBatch extends MeshBatch {
 	}
 
 	inline function isCountBufferAllowed() {
-		#if hlsdl
+		#if (hlsdl && !hlvk)
 		return h3d.impl.GlDriver.hasMultiIndirectCount;
 		#else
 		return true;

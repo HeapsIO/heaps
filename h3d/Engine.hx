@@ -105,12 +105,9 @@ class Engine {
 		driver = new h3d.impl.NullDriver();
 		#elseif (js && dx12)
 		driver = h3d.impl.DX12Driver.inst ?? new h3d.impl.DX12Driver();
+		#elseif hlvk
+		driver = new h3d.impl.VulkanDriver();
 		#elseif (js || hlsdl || usegl)
-		#if (hlsdl && heaps_vulkan)
-		if( hxd.Window.USE_VULKAN )
-			driver = new h3d.impl.VulkanDriver();
-		else
-		#end
 		#if js
 		driver = js.Browser.supported ? new h3d.impl.GlDriver(antiAlias) : new h3d.impl.NullDriver();
 		#else

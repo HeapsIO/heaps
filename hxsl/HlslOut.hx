@@ -147,6 +147,8 @@ class HlslOut {
 	var samplers : Map<Int, SamplerRef>;
 	var computeLayout : Array<Int>;
 	public var varNames : Map<Int,String>;
+	public var vulkan = false;
+	public var vulkanPushOffset = -1;
 
 	var varAccess : Map<Int,String>;
 	var isVertex(get,never) : Bool;
@@ -512,6 +514,10 @@ class HlslOut {
 		}
 	}
 
+	function bindlessSamplerName( i : Int ) {
+		return vulkan ? '__BindlessSamplers_$i' : '__BindlessSamplers[$i]';
+	}
+
 	function propagateSampler( v : TVar, from : TExpr ) {
 		var r = resolveSamplerRef(from);
 		if( r == null )
@@ -527,7 +533,7 @@ class HlslOut {
 		if( r == null )
 			throw "Cannot resolve sampler for texture access";
 		if( r.s == null ) {
-			add('__BindlessSamplers[${r.b}]');
+			add(bindlessSamplerName(r.b));
 			return;
 		}
 		var s = r.s;
@@ -612,6 +618,25 @@ class HlslOut {
 			add(", ");
 			addValue(args[2], tabs);
 			add("))");
+		case TCall({ e : TGlobal(ResolveSampler) }, [handle, tex = { e : TVar(v)}]) if( vulkan ):
+			var tstr = getTexType(tex.t);
+			decl('[[vk::binding(0,1)]] $tstr __Bindless$tstr[];');
+			decl("[[vk::binding(1,1)]] SamplerState __BindlessSamplerHeap[];");
+			add("{ uint2 __handle = ");
+			addValue(handle, tabs);
+			add("; ");
+			addValue(tex, tabs);
+			add(' = __Bindless$tstr[NonUniformResourceIndex(__handle.x)]; ');
+			add(bindlessSamplerName(bindlessSamplersCount));
+			add(" = __BindlessSamplerHeap[NonUniformResourceIndex(__handle.y)]; }");
+			bindlessSamplers.set(v.id, bindlessSamplersCount++);
+		case TCall({ e : TGlobal(ResolveBuffer) }, [handle, buf = { e : TVar(_)}]) if( vulkan ):
+			var t = buf.t.match(TBuffer(TInt,_,_)) ? "int" : "float";
+			decl('[[vk::binding(2,1)]] StructuredBuffer<$t> __BindlessBuffer_$t[];');
+			addValue(buf, tabs);
+			add(' = __BindlessBuffer_$t[NonUniformResourceIndex(');
+			addValue(handle, tabs);
+			add(")]");
 		case TCall({ e : TGlobal( g = ResolveSampler) }, args = [handle, tex = { e : TVar(v)}]):
 			declGlobal(g, args);
 			add("resolveSampler");
@@ -620,7 +645,7 @@ class HlslOut {
 			add(", ");
 			addValue(tex, tabs);
 			add(", ");
-			add('__BindlessSamplers[$bindlessSamplersCount]');
+			add(bindlessSamplerName(bindlessSamplersCount));
 			add(")");
 			bindlessSamplers.set(v.id, bindlessSamplersCount++);
 		case TCall({ e : TGlobal( g = ResolveBuffer) }, args = [handle, buf = { e : TVar(v)}]):
@@ -956,8 +981,11 @@ class HlslOut {
 
 	function initVars( s : ShaderData ) {
 		var index = 0;
+		var location = 0;
 		function declVar(prefix:String, v : TVar ) {
 			add("\t");
+			if( vulkan && isVertex && v.kind == Input )
+				add('[[vk::location(${location++})]] ');
 			if ( Tools.hasQualifier(v, Flat) )
 				add("nointerpolation ");
 			addVar(v);
@@ -1032,7 +1060,9 @@ class HlslOut {
 		var textures = [];
 		var buffers = [];
 		var uavs = [];
-		add('cbuffer _params : register(b1) {\n');
+		var push = vulkan && vulkanPushOffset >= 0;
+		var first = true;
+		add(push ? 'struct s_params {\n' : 'cbuffer _params : register(b1) {\n');
 		for( v in s.vars )
 			if( v.kind == Param ) {
 				switch( v.type ) {
@@ -1052,10 +1082,15 @@ class HlslOut {
 					}
 				}
 				add("\t");
+				if( push ) {
+					if( first ) add('[[vk::offset($vulkanPushOffset)]] ');
+					varAccess.set(v.id, "_params.");
+				}
+				first = false;
 				addVar(v);
 				add(";\n");
 			}
-		add("};\n\n");
+		add(push ? "};\n[[vk::push_constant]] s_params _params;\n\n" : "};\n\n");
 
 		var bufRegister = 2;
 		var texRegister = 0;
@@ -1070,6 +1105,7 @@ class HlslOut {
 				addVar(b);
 				add(' : register(t${texRegister++});\n');
 			case TArray(TRWTexture(_), SConst(n)):
+				if( vulkan ) add('[[vk::image_format("unknown")]] ');
 				addVar(b);
 				add(' : register(u${uavRegister});\n');
 				uavRegister += n;
@@ -1172,7 +1208,10 @@ class HlslOut {
 			add(";\n");
 		}
 
-		if ( bindlessSamplersCount > 0 ) {
+		if( vulkan ) {
+			for( i in 0...bindlessSamplersCount )
+				add(STATIC + "SamplerState " + bindlessSamplerName(i) + ";\n");
+		} else if ( bindlessSamplersCount > 0 ) {
 			add(STATIC);
 			add('SamplerState __BindlessSamplers[$bindlessSamplersCount];\n');
 		}

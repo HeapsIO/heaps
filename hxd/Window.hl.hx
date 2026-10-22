@@ -101,9 +101,6 @@ class Window {
 	static var MIN_FRAMERATE = 60; // 30 and 60 are always allowed
 	#if hlsdl
 	static inline var TOUCH_SCALE = #if (hl_ver >= version("1.12.0")) 10000 #else 100 #end;
-	#if heaps_vulkan
-	public static var USE_VULKAN = false;
-	#end
 	#end
 
 	public function new(title:String, width:Int, height:Int, ?flags: { ?fixed:Bool, ?hidden:Bool, ?background:Bool }) {
@@ -119,8 +116,8 @@ class Window {
 		var sdlFlags = 0;
 		if (!fixed) sdlFlags |= sdl.Window.SDL_WINDOW_RESIZABLE;
 		if (!hidden) sdlFlags |= sdl.Window.SDL_WINDOW_SHOWN;
-		#if heaps_vulkan
-		if( USE_VULKAN ) sdlFlags |= sdl.Window.SDL_WINDOW_VULKAN;
+		#if hlvk
+		sdlFlags |= sdl.Window.SDL_WINDOW_VULKAN;
 		#end
 		window = new sdl.Window(title, width, height, sdl.Window.SDL_WINDOWPOS_CENTERED, sdl.Window.SDL_WINDOWPOS_CENTERED, sdlFlags);
 		this.windowWidth = window.width;

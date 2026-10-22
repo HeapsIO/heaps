@@ -14,7 +14,7 @@ class Texture {
 		The default texture color format
 	**/
 	public static var nativeFormat(default,never) : TextureFormat =
-		#if (usesys && !hldx && !hlsdl && !usegl && !macro)
+		#if (usesys && !hlvk && !hldx && !hlsdl && !usegl && !macro)
 			haxe.GraphicsDriver.nativeFormat
 		#else
 			RGBA

@@ -4,7 +4,7 @@ import h3d.mat.Pass;
 import h3d.mat.Stencil;
 import h3d.mat.Data;
 
-#if (js||hlsdl||usegl)
+#if (js||(hlsdl && !hlvk)||usegl)
 
 #if js
 import hxd.impl.TypedArray;
