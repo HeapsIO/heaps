@@ -155,6 +155,18 @@ abstract PipelineCache<T>(Map<Int,#if hl hl.NativeArray #else Array #end<CachedP
 	}
 }
 
+/**
+	Pipeline state that a driver sets at draw time instead of baking it into the pipeline.
+	It is left out of the pipeline key, so passes that only differ by it share a pipeline.
+**/
+enum PipelineDynamicState {
+	Culling;
+	DepthTest;
+	DepthWrite;
+	DepthBias;
+	Stencil;
+}
+
 class DepthProps {
 	public var format : hxd.PixelFormat;
 	public var bias : Single;
@@ -180,6 +192,8 @@ class PipelineBuilder {
 
 	public var needFlush : Bool;
 	var signature = new Bytes(64);
+	var keyMask : Bytes;
+	var key : Bytes;
 	var tmpDepth = new DepthProps();
 	var tmpPass = new h3d.mat.Pass("");
 	var tmpStencil = new h3d.mat.Stencil();
@@ -187,9 +201,31 @@ class PipelineBuilder {
 	var adlerOut = new Bytes(4);
 	#end
 
-	public function new() {
+	public function new( ?dynamicStates : haxe.EnumFlags<PipelineDynamicState> ) {
 		if( PSIGN_SIZE > 64 ) throw "assert";
 		setDepthBias(0, 0);
+		if( dynamicStates != null && dynamicStates.toInt() != 0 )
+			initKeyMask(dynamicStates);
+	}
+
+	function initKeyMask( states : haxe.EnumFlags<PipelineDynamicState> ) {
+		keyMask = new Bytes(64);
+		key = new Bytes(64);
+		for( i in 0...16 )
+			keyMask.setI32(i << 2, -1);
+		var matMask = -1;
+		if( states.has(Culling) ) matMask &= ~h3d.mat.Pass.culling_mask;
+		if( states.has(DepthTest) ) matMask &= ~h3d.mat.Pass.depthTest_mask;
+		if( states.has(DepthWrite) ) matMask &= ~h3d.mat.Pass.depthWrite_mask;
+		keyMask.setI32(PSIGN_MATID, matMask);
+		if( states.has(DepthBias) ) {
+			keyMask.setI32(PSIGN_DEPTH_BIAS, 0);
+			keyMask.setI32(PSIGN_SLOPE_SCALED_DEPTH_BIAS, 0);
+		}
+		if( states.has(Stencil) ) {
+			keyMask.setUI16(PSIGN_STENCIL_MASK, 0);
+			keyMask.setI32(PSIGN_STENCIL_OPS, 0);
+		}
 	}
 
 	static function getRTBits( tex : h3d.mat.Texture ) {
@@ -361,25 +397,34 @@ class PipelineBuilder {
 	}
 	#end
 
-	function hashSign( size : Int ) {
+	function hashSign( sign : Bytes, size : Int ) {
 		#if hl
 		adlerOut.setI32(0, 0);
-		hl.Format.digest(adlerOut, signature, size, 3);
+		hl.Format.digest(adlerOut, sign, size, 3);
 		return adlerOut.getI32(0);
 		#else
 		var tot = 0;
 		for( i in 0...size>>2 )
-			tot = (tot * 31 + signature.getI32(i<<2)) % 0x7FFFFFFF;
+			tot = (tot * 31 + sign.getI32(i<<2)) % 0x7FFFFFFF;
 		for( i in (size & ~3)...size )
-			tot = (tot * 31 + signature.getUI8(i)) % 0x7FFFFFFF;
+			tot = (tot * 31 + sign.getUI8(i)) % 0x7FFFFFFF;
 		return tot;
 		#end
+	}
+
+	function makeKey( size : Int ) {
+		for( i in 0...size >> 2 )
+			key.setI32(i << 2, signature.getI32(i << 2) & keyMask.getI32(i << 2));
+		for( i in (size & ~3)...size )
+			key.setUI8(i, signature.getUI8(i) & keyMask.getUI8(i));
+		return key;
 	}
 
 	public function lookup<T>( cache : PipelineCache<T>, inputs : Int ) : CachedPipeline<T> {
 		needFlush = false;
 		var signatureSize = PSIGN_LAYOUT + (inputs << SHIFT_PER_BUFFER);
-		var hash = hashSign(signatureSize);
+		var signature = keyMask == null ? signature : makeKey(signatureSize);
+		var hash = hashSign(signature, signatureSize);
 		var pipes = cache.get(hash);
 		if( pipes == null ) {
 			pipes = #if hl new hl.NativeArray(1) #else [] #end;
@@ -409,6 +454,175 @@ class PipelineBuilder {
 		cp.size = signatureSize;
 		pipes[insert] = cp;
 		return cp;
+	}
+}
+
+/**
+	Records the pipeline keys used by each shader so that their pipelines can be created as soon
+	as the shader is compiled on the next run, instead of on its first draw.
+**/
+class PipelineConfigCache {
+	static inline var MAX_SIGN_SIZE = 1024;
+	static inline var MAX_PIPELINES_PER_SHADER = 4096;
+	public static var VERSION = 1;
+
+	var file : String;
+	var outputFile : String;
+	var dynamicStates : haxe.EnumFlags<PipelineDynamicState>;
+	var configs : Map<String, Array<haxe.io.Bytes>>;
+	var loadFailed = false;
+	var canSave = true;
+
+	var magic : String;
+	var isDirty = false;
+	#if heaps_mt_hxsl_cache
+	var mutex = new sys.thread.Mutex();
+	#end
+
+	public function new( file : String, ?outputFile : String, ?dynamicStates : haxe.EnumFlags<PipelineDynamicState> ) {
+		this.file = file;
+		this.outputFile = outputFile ?? file;
+		this.dynamicStates = dynamicStates ?? new haxe.EnumFlags();
+		magic = 'PCFG-$VERSION';
+	}
+
+	public function load() {
+		configs = [];
+		loadFailed = false;
+		loadFile(file);
+		if( outputFile != file )
+			loadFile(outputFile);
+	}
+
+	function loadFile( file : String ) {
+		try {
+			if( !sys.FileSystem.exists(file) )
+				return;
+			var cache = new haxe.io.BytesInput(sys.io.File.getBytes(file));
+			if( cache.length < magic.length || cache.readString(magic.length) != magic )
+				return;
+			while( cache.position < cache.length ) {
+				var shaderSignSize = cache.readInt32();
+				if( shaderSignSize <= 0 || shaderSignSize > MAX_SIGN_SIZE )
+					return;
+				var shaderSign = cache.readString(shaderSignSize);
+				var cachedCount = cache.readInt32();
+				if( cachedCount < 0 || cachedCount > MAX_PIPELINES_PER_SHADER )
+					return;
+				var pipelines = configs.get(shaderSign);
+				if( pipelines == null ) {
+					pipelines = [];
+					configs.set(shaderSign, pipelines);
+				}
+				for( i in 0...cachedCount ) {
+					var byteSize = cache.readInt32();
+					if( byteSize <= 0 || byteSize > 64 )
+						return;
+					var bytes = cache.read(byteSize);
+					var found = false;
+					for( p in pipelines )
+						if( p.compare(bytes) == 0 ) {
+							found = true;
+							break;
+						}
+					if( !found )
+						pipelines.push(bytes);
+				}
+			}
+		} catch( e : Dynamic ) {
+			trace("Failed to load pipeline cache, keeping partial contents: " + e);
+			loadFailed = true;
+		}
+	}
+
+	/**
+		Calls `create` once per recorded pipeline key of this shader, with a builder holding that key.
+	**/
+	public function resolveConfig( shader : hxsl.RuntimeShader, inputCount : Int, create : PipelineBuilder -> Void ) {
+		#if heaps_mt_hxsl_cache
+		mutex.acquire();
+		var pipelines = configs.get(shader.signature)?.copy();
+		mutex.release();
+		#else
+		var pipelines = configs.get(shader.signature);
+		#end
+		if( pipelines == null )
+			return;
+		var builder = new PipelineBuilder(dynamicStates);
+		for( sign in pipelines ) @:privateAccess {
+			if( (sign.length - PipelineBuilder.PSIGN_LAYOUT) >> PipelineBuilder.SHIFT_PER_BUFFER != inputCount ) continue;
+			builder.signature.blit(0, sign.getData(), 0, sign.length);
+			create(builder);
+		}
+	}
+
+	public function addConfig<T>( shader : hxsl.RuntimeShader, p : CachedPipeline<T> ) {
+		if( p.size > 64 )
+			throw "assert";
+		#if heaps_mt_hxsl_cache
+		mutex.acquire();
+		addConfigUnsafe(shader, p);
+		mutex.release();
+		#else
+		addConfigUnsafe(shader, p);
+		#end
+	}
+
+	function addConfigUnsafe<T>( shader : hxsl.RuntimeShader, p : CachedPipeline<T> ) {
+		var pipelines = configs.get(shader.signature);
+		if( pipelines == null ) {
+			pipelines = [];
+			configs.set(shader.signature, pipelines);
+		}
+		if( pipelines.length >= MAX_PIPELINES_PER_SHADER )
+			return;
+		var bytes = p.bytes.toBytes(p.size);
+		for( existing in pipelines )
+			if( existing.length == bytes.length && existing.compare(bytes) == 0 )
+				return;
+		pipelines.push(bytes);
+		isDirty = true;
+	}
+
+	public function save() {
+		if( configs == null || !canSave || !isDirty )
+			return;
+		if( loadFailed ) // Do not overwrite cache if loading failed due to IO exception (not corrupted file)
+			return;
+
+		var out = new haxe.io.BytesOutput();
+		out.writeString(magic);
+		#if heaps_mt_hxsl_cache
+		mutex.acquire();
+		#end
+		var signs = [for( s in configs.keys() ) s];
+		signs.sort(Reflect.compare);
+		for( sign in signs ) {
+			var pipelines = configs.get(sign);
+			var signBytes = haxe.io.Bytes.ofString(sign);
+			out.writeInt32(signBytes.length);
+			out.write(signBytes);
+			out.writeInt32(pipelines.length);
+			for( p in pipelines ) {
+				out.writeInt32(p.length);
+				out.write(p);
+			}
+		}
+		#if heaps_mt_hxsl_cache
+		mutex.release();
+		#end
+
+		try {
+			var tmpPath = outputFile + ".tmp";
+			sys.io.File.saveBytes(tmpPath, out.getBytes());
+			if( sys.FileSystem.exists(outputFile) )
+				sys.FileSystem.deleteFile(outputFile);
+			sys.FileSystem.rename(tmpPath, outputFile);
+			isDirty = false;
+		} catch( e : Dynamic ) {
+			trace("Failed to save pipeline cache: " + e);
+			canSave = false;
+		}
 	}
 }
 #end

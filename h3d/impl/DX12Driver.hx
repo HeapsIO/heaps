@@ -19,183 +19,7 @@ import h3d.mat.Stencil;
 
 private typedef Driver = Dx12;
 
-class PSOConfigCache {
-	static inline var MAX_SIGN_SIZE = 1024;
-	static inline var MAX_PIPELINES_PER_SHADER = 4096;
-	public static var VERSION = 1;
-
-	var file : String;
-	var outputFile : String;
-	var configs : Map<String, Array<haxe.io.Bytes>>;
-	var loadFailed = false;
-	var canSave = true;
-
-	var magic : String;
-	var isDirty = false;
-	#if heaps_mt_hxsl_cache
-	var mutex = new sys.thread.Mutex();
-	#end
-
-	public function new(file : String, ?outputFile : String ) {
-		this.file = file;
-		this.outputFile = outputFile ?? file;
-		magic = 'PCFG-$VERSION';
-	}
-
-	public function load() {
-		configs = [];
-		loadFailed = false;
-		loadFile(file);
-		if( outputFile != file )
-			loadFile(outputFile);
-	}
-
-	function loadFile( file : String ) {
-		try {
-			if( !sys.FileSystem.exists(file) )
-				return;
-			var cache = new haxe.io.BytesInput(sys.io.File.getBytes(file));
-			if( cache.length < magic.length || cache.readString(magic.length) != magic )
-				return;
-			while( cache.position < cache.length ) {
-				var shaderSignSize = cache.readInt32();
-				if( shaderSignSize <= 0 || shaderSignSize > MAX_SIGN_SIZE )
-					return;
-				var shaderSign = cache.readString(shaderSignSize);
-				var cachedCount = cache.readInt32();
-				if( cachedCount < 0 || cachedCount > MAX_PIPELINES_PER_SHADER )
-					return;
-				var pipelines = configs.get(shaderSign);
-				if( pipelines == null ) {
-					pipelines = [];
-					configs.set(shaderSign, pipelines);
-				}
-				for( i in 0...cachedCount ) {
-					var byteSize = cache.readInt32();
-					if( byteSize <= 0 || byteSize > 64 )
-						return;
-					var bytes = cache.read(byteSize);
-					var found = false;
-					for( p in pipelines )
-						if( p.compare(bytes) == 0 ) {
-							found = true;
-							break;
-						}
-					if( !found )
-						pipelines.push(bytes);
-				}
-			}
-		} catch( e : Dynamic ) {
-			trace("Failed to load pipeline cache, keeping partial contents: " + e);
-			loadFailed = true;
-		}
-	}
-
-	public function resolveConfig( c : CompiledShader ) {
-		#if heaps_mt_hxsl_cache
-		mutex.acquire();
-		var pipelines = configs.get(c.shader.signature)?.copy();
-		mutex.release();
-		#else
-		var pipelines = configs.get(c.shader.signature);
-		#end
-		if( pipelines == null )
-			return;
-		var builder = new PipelineCache.PipelineBuilder();
-		for( sign in pipelines ) @:privateAccess {
-			builder.signature.blit(0, sign.getData(), 0, sign.length);
-			var inputCount = (sign.length - PipelineCache.PipelineBuilder.PSIGN_LAYOUT) >> PipelineCache.PipelineBuilder.SHIFT_PER_BUFFER;
-			if( inputCount != c.inputCount ) continue;
-			#if heaps_mt_hxsl_cache
-			c.pipelineMutex.acquire();
-			#end
-			var cache = builder.lookup(c.pipelines, inputCount);
-			if( cache.pipeline == null ) {
-				var p = try DX12Driver.makePipeline(c, builder) catch( e : Dynamic ) {
-					trace('Skipping invalid PSO config for ${c.shader.signature}: $e');
-					null;
-				}
-				if( p != null ) {
-					cache.pipeline = p;
-					c.usedPSOConfig = true;
-					hxd.System.timeoutTick();
-				}
-			}
-			#if heaps_mt_hxsl_cache
-			c.pipelineMutex.release();
-			#end
-		}
-	}
-
-	public function addConfig<T>(shader : hxsl.RuntimeShader, p : PipelineCache.CachedPipeline<T>) {
-		if( p.size > 64 )
-			throw "assert";
-		#if heaps_mt_hxsl_cache
-		mutex.acquire();
-		addConfigUnsafe(shader, p);
-		mutex.release();
-		#else
-		addConfigUnsafe(shader, p);
-		#end
-	}
-
-	function addConfigUnsafe<T>(shader : hxsl.RuntimeShader, p : PipelineCache.CachedPipeline<T>) {
-		var pipelines = configs.get(shader.signature);
-		if( pipelines == null ) {
-			pipelines = [];
-			configs.set(shader.signature, pipelines);
-		}
-		if( pipelines.length >= MAX_PIPELINES_PER_SHADER )
-			return;
-		var bytes = p.bytes.toBytes(p.size);
-		for( existing in pipelines )
-			if( existing.length == bytes.length && existing.compare(bytes) == 0 )
-				return;
-		pipelines.push(bytes);
-		isDirty = true;
-	}
-
-	public function save() {
-		if( configs == null || !canSave || !isDirty )
-			return;
-		if( loadFailed ) // Do not overwrite cache if loading failed due to IO exception (not corrupted file)
-			return;
-
-		var out = new haxe.io.BytesOutput();
-		out.writeString(magic);
-		#if heaps_mt_hxsl_cache
-		mutex.acquire();
-		#end
-		var signs = [for( s in configs.keys() ) s];
-		signs.sort(Reflect.compare);
-		for( sign in signs ) {
-			var pipelines = configs.get(sign);
-			var signBytes = haxe.io.Bytes.ofString(sign);
-			out.writeInt32(signBytes.length);
-			out.write(signBytes);
-			out.writeInt32(pipelines.length);
-			for( p in pipelines ) {
-				out.writeInt32(p.length);
-				out.write(p);
-			}
-		}
-		#if heaps_mt_hxsl_cache
-		mutex.release();
-		#end
-
-		try {
-			var tmpPath = outputFile + ".tmp";
-			sys.io.File.saveBytes(tmpPath, out.getBytes());
-			if( sys.FileSystem.exists(outputFile) )
-				sys.FileSystem.deleteFile(outputFile);
-			sys.FileSystem.rename(tmpPath, outputFile);
-			isDirty = false;
-		} catch( e : Dynamic ) {
-			trace("Failed to save pipeline cache: " + e);
-			canSave = false;
-		}
-	}
-}
+typedef PSOConfigCache = PipelineCache.PipelineConfigCache;
 
 class ScratchHeapArray {
 	var heaps : Array<ScratchHeap>;
@@ -2439,7 +2263,26 @@ class DX12Driver extends h3d.impl.Driver {
 		compileMutex.release();
 		#end
 
-		psoConfigCache?.resolveConfig(c);
+		psoConfigCache?.resolveConfig(c.shader, c.inputCount, function(builder) {
+			#if heaps_mt_hxsl_cache
+			c.pipelineMutex.acquire();
+			#end
+			var cache = builder.lookup(c.pipelines, c.inputCount);
+			if( cache.pipeline == null ) {
+				var p = try makePipeline(c, builder) catch( e : Dynamic ) {
+					trace('Skipping invalid PSO config for ${c.shader.signature}: $e');
+					null;
+				}
+				if( p != null ) {
+					cache.pipeline = p;
+					c.usedPSOConfig = true;
+					hxd.System.timeoutTick();
+				}
+			}
+			#if heaps_mt_hxsl_cache
+			c.pipelineMutex.release();
+			#end
+		});
 
 		return c;
 	}
