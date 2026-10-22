@@ -2586,7 +2586,7 @@ class VulkanDriver extends h3d.impl.Driver {
 		var cache = pipelineBuilder.lookup(currentShader.pipelines, currentShader.inputCount);
 		if( cache.pipeline == null ) {
 			var p = makePipeline(currentShader, pipelineBuilder);
-			#if vk_verbose_pso_cache
+			#if pso_cache_verbose
 			trace('Pipeline cache miss: $cache [${currentShader.shader.signature}]\n${currentShader.pipelines.diff(cache)}');
 			#end
 			if( p != null ) {

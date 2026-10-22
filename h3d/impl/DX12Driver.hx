@@ -3448,7 +3448,7 @@ class DX12Driver extends h3d.impl.Driver {
 				h3d.Engine.getCurrent().mem.garbage();
 				p = makePipeline(currentShader, pipelineBuilder);
 			}
-			#if dx12_verbose_pso_cache
+			#if pso_cache_verbose
 			var reason = currentShader.usedPSOConfig ? "cache hit but state missing" : "not in cache";
 			trace('Pipeline cache miss ($reason): $cache [${currentShader.shader.signature}]\n${currentShader.pipelines.diff(cache)}');
 			#end
