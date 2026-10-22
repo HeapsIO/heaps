@@ -17,6 +17,20 @@ private class TargetTmp {
 	}
 }
 
+#if js
+// ObjectMap can't key strings in ES5 : native Map compares strings by value
+private abstract ResCache(js.lib.Map<{},Dynamic>) {
+	public inline function new() this = new js.lib.Map();
+	public inline function get( k : {} ) : Dynamic return this.get(k);
+	public inline function set( k : {}, v : Dynamic ) this.set(k, v);
+	public inline function exists( k : {} ) return this.has(k);
+	public inline function remove( k : {} ) return this.delete(k);
+	public inline function iterator() return this.iterator();
+}
+#else
+private typedef ResCache = Map<{},Dynamic>;
+#end
+
 enum DepthBinding {
 	ReadWrite;
 	ReadOnly;
@@ -67,7 +81,7 @@ class Engine {
 	var textureColorCache = new Map<Int,h3d.mat.Texture>();
 	var inRender = false;
 	public var ready(default,null) = false;
-	@:allow(hxd.res) var resCache = new Map<{},Dynamic>();
+	@:allow(hxd.res) var resCache = new ResCache();
 
 	public static var SOFTWARE_DRIVER = false;
 	public static var ANTIALIASING = 0;
