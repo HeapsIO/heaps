@@ -7,7 +7,7 @@ package hxd.res;
 **/
 class Font extends Resource {
 
-	public function build( size : Int, ?options ) : h2d.Font {
+	public function build( size : Int, ?options : FontBuilder.FontBuildOptions ) : h2d.Font {
 		#if js
 		var name = "R_" + ~/[^A-Za-z0-9_]/g.replace(entry.path, "_");
 		return FontBuilder.getFont(name, size, options);

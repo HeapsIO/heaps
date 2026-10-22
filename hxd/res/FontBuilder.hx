@@ -138,7 +138,7 @@ class FontBuilder {
 
 	#else
 
-	function build() {
+	function build() : h2d.Font {
 		throw "Font building not supported on this platform";
 		return null;
 	}

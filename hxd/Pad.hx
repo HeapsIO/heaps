@@ -22,7 +22,7 @@ private class GameController {
 	public function update() {}
 	public function rumble( strength : Float, time : Float ) {}
 	public static function init() {}
-	public static function detect(_) {}
+	public static function detect( onPad : Pad -> Void ) {}
 }
 #end
 #end
