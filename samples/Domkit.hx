@@ -78,7 +78,7 @@ class ContainerComp extends h2d.Flow implements h2d.domkit.Object {
 class Domkit extends hxd.App {
 
 	var center : h2d.Flow;
-	var style = null;
+	var style : h2d.domkit.Style = null;
 
 	override function init() {
 		center = new h2d.Flow(s2d);
