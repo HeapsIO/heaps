@@ -98,7 +98,9 @@ class CacheFile2Loader {
 		workThread.name = "CacheFile2Loader";
 		event = haxe.MainLoop.add(update);
 		#else
+		cache.preloading = true;
 		threadLoop();
+		cache.preloading = false;
 		if( this.onDone != null )
 			this.onDone();
 		#end
@@ -283,8 +285,9 @@ class CacheFile2 extends Cache {
 
 	var isLoading : Bool = false;
 	var isDirty(default, set) : Bool = false;
-	#if heaps_mt_hxsl_cache
 	var compiledWhileLoading : Bool = false;
+	#if !heaps_mt_hxsl_cache
+	var preloading : Bool = false;
 	#end
 	var runtimesDefault : Array<RuntimeShader> = [];
 	var runtimesBatch : Array<RuntimeShader> = [];
@@ -345,6 +348,9 @@ class CacheFile2 extends Cache {
 			if( sys.thread.Thread.current() == sys.thread.Thread.main() )
 				compiledWhileLoading = true;
 		}
+		#else
+		if( isLoading && !preloading )
+			compiledWhileLoading = true;
 		#end
 		switch( mode ) {
 		case Default: runtimesDefault.push(rt);
@@ -385,10 +391,8 @@ class CacheFile2 extends Cache {
 			CacheFile2.LOAD_TIME = dt;
 			log('${runtimesDefault.length + runtimesBatch.length} shaders loaded in ${hxd.Math.fmt(dt)}s');
 			isLoading = false;
-			#if heaps_mt_hxsl_cache
 			if( compiledWhileLoading )
 				isDirty = true;
-			#end
 		});
 	}
 
