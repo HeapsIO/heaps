@@ -284,7 +284,7 @@ class Build {
 			throw err;
 		}
 		f.close();
-		try sys.FileSystem.deleteFile(outFile) catch( e : Dynamic ) { Sys.println("Failed to delete " + outFile + " : " + e); }
+		try sys.FileSystem.deleteFile(outFile) catch( e : Dynamic ) {}
 		sys.FileSystem.rename(tmpFile, outFile);
 		printSize(pak, infoDepth < 0 ? 1 : infoDepth);
 	}
