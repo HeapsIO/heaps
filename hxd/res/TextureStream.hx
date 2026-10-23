@@ -458,9 +458,13 @@ class TextureStream {
 		Extra free memory in bytes required to raise `maxVisibleSize`, on top of what the raise and the loads in progress need.
 	**/
 	public static var MAX_SIZE_RAISE_MARGIN : Float = 64 << 20;
+	/**
+		Set to true to let visible textures lose mip levels (see `maxVisibleSize`) when releasing hidden ones is not enough to meet the budget.
+	**/
+	public static var REDUCE_VISIBLE = false;
 
 	/**
-		When visible textures alone exceed the budget, the largest size (in pixels) they can load, 0 for no limit.
+		When visible textures alone exceed the budget and REDUCE_VISIBLE is set, the largest size (in pixels) they can load, 0 for no limit.
 		It is halved from the largest visible texture size (a 4K texture becomes 2K) until the budget is met, and doubled back when it fits.
 	**/
 	public static var maxVisibleSize(default, null) = 0;
@@ -514,7 +518,7 @@ class TextureStream {
 	/**
 		Runs once per main loop iteration, between two frames (a haxe.MainLoop event added with the first stream). Visible streamed textures load all their mip levels, up to `maxVisibleSize`.
 		When over budget, the textures not visible for HIDDEN_FRAMES lose one mip level at a time, least recently visible first.
-		If that is not enough, `maxVisibleSize` is halved.
+		If that is not enough and REDUCE_VISIBLE is set, `maxVisibleSize` is halved.
 	**/
 	static function updateStreaming() {
 		var engine = h3d.Engine.getCurrent();
@@ -534,6 +538,7 @@ class TextureStream {
 	static function manageStreams() {
 		var frame = hxd.Timer.frameCount;
 		frameUnloads = 0;
+		if( !REDUCE_VISIBLE ) maxVisibleSize = 0;
 		updateStreams(frame);
 		var excess = computeExcess(frame);
 		excessBytes = excess;
@@ -548,6 +553,8 @@ class TextureStream {
 		if( candidates.length == 0 ) {
 			if( waiting > 0 ) {
 				if( TextureStreamDebug.PROFILING ) status = "over budget, waiting for " + waiting + " recently hidden textures";
+			} else if( !REDUCE_VISIBLE ) {
+				if( TextureStreamDebug.PROFILING ) status = "over budget, visible textures kept (REDUCE_VISIBLE disabled)";
 			} else
 				lowerMaxSize(frame, maxSizeReady);
 			return;
