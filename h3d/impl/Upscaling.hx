@@ -1379,7 +1379,9 @@ class DX12FsrBackend extends UpscalingBackend {
 
 	override function dispose() {
 		if( proxy != null ) {
+			driver.waitGpu();
 			destroyFgContext();
+			Fsr.waitForPresents();
 			Fsr.destroySwapChainContext();
 			var swapChain = driver.swapChain;
 			driver.setSwapChain(null);
