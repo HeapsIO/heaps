@@ -59,7 +59,7 @@ class CascadeShadowMap extends Shadows {
 	}
 
 	override function set_mode(m:Shadows.RenderMode) {
-		cshader.enable = m != None;
+		cshader.enable = m != None && enabled;
 		return mode = m;
 	}
 

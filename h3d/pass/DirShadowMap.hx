@@ -34,7 +34,7 @@ class DirShadowMap extends Shadows {
 	}
 
 	override function set_mode(m:Shadows.RenderMode) {
-		dshader.enable = m != None;
+		dshader.enable = m != None && enabled;
 		return mode = m;
 	}
 

@@ -22,7 +22,7 @@ class ProjectedShadowMap extends Shadows {
 	}
 
 	override function set_mode(m:Shadows.RenderMode) {
-		sshader.enable = m != None;
+		sshader.enable = m != None && enabled;
 		return mode = m;
 	}
 

@@ -22,7 +22,7 @@ class LightSystem extends h3d.scene.LightSystem {
 		var light = Std.downcast(obj, h3d.scene.pbr.Light);
 		if( light != null ) {
 			shaders = ctx.allocShaderList(light.shader, shaders);
-			if( light.shadows.shader != null && light.shadows.mode != None )
+			if( light.shadows.shader != null && light.shadows.enabled && light.shadows.mode != None )
 				shaders = ctx.allocShaderList(light.shadows.shader, shaders);
 			for( s in lightingShaders )
 				shaders = ctx.allocShaderList(s, shaders);
@@ -53,7 +53,7 @@ class LightSystem extends h3d.scene.LightSystem {
 		while( plight != null ) {
 			var light = Std.downcast(plight, h3d.scene.pbr.Light);
 			if( light != null && light.primitive == null ) {
-				var hasShadow = shadows && light.shadows.shader != null && light.shadows.mode != None;
+				var hasShadow = shadows && light.shadows.shader != null && light.shadows.enabled && light.shadows.mode != None;
 				if( hasShadow ) lightPass.addShader(light.shadows.shader);
 				lightPass.addShader(light.shader);
 				for( s in lightingShaders )
