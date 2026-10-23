@@ -829,9 +829,6 @@ class DX12Driver extends h3d.impl.Driver {
 	public static var generation(default, null) = 0;
 	public static var DEBUG = false; // requires dxil.dll when set to true
 	public static var SUPPRESSED_MESSAGE_IDS : Array<Int> = [];
-	public static var ENABLE_PSO_CONFIG_CACHE = false;
-	public static var PSO_CONFIG_CACHE_PATH = "psoconfig.dx12";
-	public static var PSO_CONFIG_CACHE_OUTPUT_PATH = "psoconfig.dx12";
 
 	@:allow(h3d.impl) static function allocCheck<T>( f : Void -> T ) {
 		var ret = f();
@@ -913,12 +910,8 @@ class DX12Driver extends h3d.impl.Driver {
 		upscaling.beforeCreateDevice();
 
 		compiledShaders = [];
-		if( ENABLE_PSO_CONFIG_CACHE ) {
-			psoConfigCache = new PSOConfigCache(PSO_CONFIG_CACHE_PATH, PSO_CONFIG_CACHE_OUTPUT_PATH);
-			psoConfigCache.load();
-		} else {
-			psoConfigCache = null;
-		}
+		psoConfigCache = PSOConfigCache.get();
+		psoConfigCache?.load();
 
 		var flags = new DriverInitFlags();
 		if( DEBUG ) {

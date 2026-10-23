@@ -204,9 +204,6 @@ class VulkanDriver extends h3d.impl.Driver {
 	public static var BINDLESS_SAMPLER_COUNT = 2048;
 	public static var BINDLESS_BUFFER_COUNT = 16384;
 	public static var BINDLESS_RESERVED_DESCRIPTORS = 256;
-	public static var ENABLE_PSO_CONFIG_CACHE = false;
-	public static var PSO_CONFIG_CACHE_PATH = "psoconfig.vk";
-	public static var PSO_CONFIG_CACHE_OUTPUT_PATH = "psoconfig.vk";
 	static inline var QUERY_COUNT = 128;
 	static inline var VK_API_VERSION_1_3 = (1 << 22) | (3 << 12);
 
@@ -503,10 +500,8 @@ class VulkanDriver extends h3d.impl.Driver {
 		initCommandStructs();
 		initPipelineStructs();
 		initBindless();
-		if( ENABLE_PSO_CONFIG_CACHE ) {
-			psoConfigCache = new h3d.impl.PipelineCache.PipelineConfigCache(PSO_CONFIG_CACHE_PATH, PSO_CONFIG_CACHE_OUTPUT_PATH, DYNAMIC_PIPELINE_STATES);
-			psoConfigCache.load();
-		}
+		psoConfigCache = h3d.impl.PipelineCache.PipelineConfigCache.get();
+		psoConfigCache?.load(DYNAMIC_PIPELINE_STATES);
 
 		errorTex = new h3d.mat.Texture(1, 1, [NoAlloc], RGBA);
 		errorTex.t = allocTexture(errorTex);

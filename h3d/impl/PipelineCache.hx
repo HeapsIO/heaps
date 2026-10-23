@@ -479,14 +479,24 @@ class PipelineConfigCache {
 	var mutex = new sys.thread.Mutex();
 	#end
 
-	public function new( file : String, ?outputFile : String, ?dynamicStates : haxe.EnumFlags<PipelineDynamicState> ) {
+	public function new( file : String, ?outputFile : String ) {
 		this.file = file;
 		this.outputFile = outputFile ?? file;
-		this.dynamicStates = dynamicStates ?? new haxe.EnumFlags();
 		magic = 'PCFG-$VERSION';
 	}
 
-	public function load() {
+	static var INST : PipelineConfigCache;
+
+	public static function get() {
+		return INST;
+	}
+
+	public static function set( cache : PipelineConfigCache ) {
+		INST = cache;
+	}
+
+	public function load( ?dynamicStates : haxe.EnumFlags<PipelineDynamicState> ) {
+		this.dynamicStates = dynamicStates ?? new haxe.EnumFlags();
 		configs = [];
 		loadFailed = false;
 		loadFile(file);
