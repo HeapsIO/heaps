@@ -5,6 +5,7 @@ class Writer {
 
 	var o : haxe.io.Output;
 	var align : Int = 0;
+	var zeros : haxe.io.Bytes;
 
 	public function new(o, ?align) {
 		this.o = o;
@@ -35,24 +36,44 @@ class Writer {
 
 	function addPadding( pos : Int ) {
 		var padLen = align - pos % align;
-		for (i in 0...padLen) {
-			o.writeByte(0);
-		}
+		if( zeros == null )
+			zeros = haxe.io.Bytes.alloc(align);
+		o.writeFullBytes(zeros, 0, padLen);
+	}
 
+	public static function getDataSize( sizes : Array<Int>, align : Int ) {
+		var size = 0;
+		for( s in sizes ) {
+			size += s;
+			if (align > 1)
+				size += align - s % align;
+		}
+		return size;
 	}
 
 	public function write( pak : Data, content : haxe.io.Bytes, ?arrayContent : Array<haxe.io.Bytes> ) {
-
 		if( arrayContent != null ) {
-			pak.dataSize = 0;
-			for( b in arrayContent ) {
-				pak.dataSize += b.length;
-				if (align > 1)
-					pak.dataSize += align - b.length % align;
-			}
-		} else
-			pak.dataSize = content.length;
+			writeStream(pak, [for( b in arrayContent ) b.length], i -> arrayContent[i]);
+			return;
+		}
+		pak.dataSize = content.length;
+		writeHeader(pak);
+		o.write(content);
+	}
 
+	public function writeStream( pak : Data, sizes : Array<Int>, getData : Int -> haxe.io.Bytes ) {
+		pak.dataSize = getDataSize(sizes, align);
+		writeHeader(pak);
+		for( i in 0...sizes.length ) {
+			var b = getData(i);
+			if( b.length != sizes[i] )
+				throw "Data size changed while writing the pak : " + b.length + " instead of " + sizes[i];
+			o.write(b);
+			if (align > 1) addPadding(b.length);
+		}
+	}
+
+	public function writeHeader( pak : Data ) {
 		var header = new haxe.io.BytesOutput();
 		new Writer(header).writeFile(pak.root);
 		var header = header.getBytes();
@@ -67,13 +88,6 @@ class Writer {
 		o.write(header);
 		if (align > 1) addPadding(header.length + 16); // Align for end of DATA
 		o.writeString("DATA");
-		if( arrayContent != null ) {
-			for( b in arrayContent ) {
-				o.write(b);
-				if (align > 1) addPadding(b.length);
-			}
-		} else
-			o.write(content);
 	}
 
 }
