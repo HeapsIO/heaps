@@ -286,7 +286,7 @@ class Environment {
 		pass.shader.threshold = threshold;
 		for( i in 0...6 ) {
 			engine.pushTarget(env,i);
-			pass.shader.faceMatrix = getCubeMatrix(i);
+			pass.shader.faceMatrix = h3d.mat.Texture.getCubeFaceMatrix(i);
 			pass.render();
 			engine.popTarget();
 		}
@@ -327,29 +327,6 @@ class Environment {
 		computeIrradiance(diffuse, specular, env);
 	}
 
-	static function getCubeMatrix( face : Int ) {
-		return h3d.Matrix.L(switch( face ) {
-			case 0: [0,0,-1,0,
-					 0,-1,0,0,
-					 1,0,0,0];
-			case 1: [0,0,1,0,
-					 0,-1,0,0,
-					-1,0,0,0];
-			case 2: [1,0,0,0,
-					 0,0,1,0,
-					 0,1,0,0];
-			case 3: [1,0,0,0,
-					 0,0,-1,0,
-					 0,-1,0,0];
-			case 4: [1,0,0,0,
-					 0,-1,0,0,
-					 0,0,1,0];
-			default: [-1,0,0,0,
-					   0,-1,0,0,
-					   0,0,-1,0];
-		});
-	}
-
 	static function computeIrradLut( t : h3d.mat.Texture ) {
 		var screen = new h3d.pass.ScreenFx(new IrradLut());
 		screen.shader.samplesBits = 12;
@@ -379,7 +356,7 @@ class Environment {
 		var engine = h3d.Engine.getCurrent();
 
 		for( i in 0...6 ) {
-			screen.shader.faceMatrix = getCubeMatrix(i);
+			screen.shader.faceMatrix = h3d.mat.Texture.getCubeFaceMatrix(i);
 			engine.pushTarget(diffuse, i);
 			screen.render();
 			engine.popTarget();
@@ -391,7 +368,7 @@ class Environment {
 		specLevels = mipLevels - ignoredSpecLevels;
 
 		for( i in 0...6 ) {
-			screen.shader.faceMatrix = getCubeMatrix(i);
+			screen.shader.faceMatrix = h3d.mat.Texture.getCubeFaceMatrix(i);
 			for( j in 0... mipLevels ) {
 				var size = specular.width >> j;
 				screen.shader.cubeSize = size;

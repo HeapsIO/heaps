@@ -3,13 +3,6 @@ package h3d.pass;
 @ignore("shader")
 class Blur extends ScreenFx<h3d.shader.Blur> {
 
-	var cubeDir = [ h3d.Matrix.L([0,0,-1,0, 0,-1,0,0, 1,0,0,0]),
-					h3d.Matrix.L([0,0,1,0, 0,-1,0,0, -1,0,0,0]),
-	 				h3d.Matrix.L([1,0,0,0, 0,0,1,0, 0,1,0,0]),
-	 				h3d.Matrix.L([1,0,0,0, 0,0,-1,0, 0,-1,0,0]),
-				 	h3d.Matrix.L([1,0,0,0, 0,-1,0,0, 0,0,1,0]),
-				 	h3d.Matrix.L([-1,0,0,0, 0,-1,0,0, 0,0,-1,0]) ];
-
 	/**
 		How far in pixels the blur will go.
 	**/
@@ -155,7 +148,7 @@ class Blur extends ScreenFx<h3d.shader.Blur> {
 		shader.pixel.set(1 / src.width, 0);
 		for(i in 0 ... faceCount){
 			engine.pushTarget(tmp, i);
-			if( isCube ) shader.cubeDir = cubeDir[i];
+			if( isCube ) shader.cubeDir = h3d.mat.Texture.getCubeFaceMatrix(i);
 			render();
 			engine.popTarget();
 		}
@@ -171,7 +164,7 @@ class Blur extends ScreenFx<h3d.shader.Blur> {
 		pass.depth(false, Always);
 		for( i in 0 ... faceCount ){
 			engine.pushTarget(output, isCube ? i : layer);
-			if( isCube ) shader.cubeDir = cubeDir[i];
+			if( isCube ) shader.cubeDir = h3d.mat.Texture.getCubeFaceMatrix(i);
 			render();
 			engine.popTarget();
 		}

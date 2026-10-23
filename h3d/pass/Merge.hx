@@ -35,8 +35,6 @@ class MergeShader extends h3d.shader.ScreenShader {
 
 class Merge extends ScreenFx<MergeShader> {
 
-	var faces = [for( i in 0...6 ) @:privateAccess h3d.scene.pbr.Environment.getCubeMatrix(i)];
-
 	public function new() {
 		super(new MergeShader());
 	}
@@ -60,7 +58,7 @@ class Merge extends ScreenFx<MergeShader> {
 			shader.mipLvl = i;
 			if( isCube ) {
 				for (layer in 0...6) {
-					shader.faceMatrix = faces[layer];
+					shader.faceMatrix = h3d.mat.Texture.getCubeFaceMatrix(layer);
 					e.pushTarget(output, layer, i);
 					render();
 					e.popTarget();

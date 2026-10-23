@@ -14,13 +14,6 @@ private class CubeCopyShader extends h3d.shader.ScreenShader {
 
 class CubeCopy extends ScreenFx<CubeCopyShader> {
 
-	var cubeDir = [ h3d.Matrix.L([0,0,-1,0, 0,-1,0,0, 1,0,0,0]),
-					h3d.Matrix.L([0,0,1,0, 0,-1,0,0, -1,0,0,0]),
-	 				h3d.Matrix.L([1,0,0,0, 0,0,1,0, 0,1,0,0]),
-	 				h3d.Matrix.L([1,0,0,0, 0,0,-1,0, 0,-1,0,0]),
-				 	h3d.Matrix.L([1,0,0,0, 0,-1,0,0, 0,0,1,0]),
-				 	h3d.Matrix.L([-1,0,0,0, 0,-1,0,0, 0,0,-1,0]) ];
-
 	public function new() {
 		super(new CubeCopyShader());
 	}
@@ -30,7 +23,7 @@ class CubeCopy extends ScreenFx<CubeCopyShader> {
 		for(i in 0 ... 6){
 			if( to != null )
 				engine.pushTarget(to, i, mip);
-			shader.mat = cubeDir[i];
+			shader.mat = h3d.mat.Texture.getCubeFaceMatrix(i);
 			pass.setBlendMode(blend == null ? None : blend);
 			render();
 			if( to != null )

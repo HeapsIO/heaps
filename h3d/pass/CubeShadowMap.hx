@@ -15,13 +15,6 @@ class CubeShadowMap extends Shadows {
 	public var faceMask(default, null) : haxe.EnumFlags<CubeFaceFlag>;
 	var linearDepth = new h3d.shader.LinearShadowDepth();
 
-	var cubeDir = [ h3d.Matrix.L([0,0,-1,0, 0,-1,0,0, 1,0,0,0]),
-					h3d.Matrix.L([0,0,1,0, 0,-1,0,0, -1,0,0,0]),
-	 				h3d.Matrix.L([1,0,0,0, 0,0,1,0, 0,1,0,0]),
-	 				h3d.Matrix.L([1,0,0,0, 0,0,-1,0, 0,-1,0,0]),
-				 	h3d.Matrix.L([1,0,0,0, 0,-1,0,0, 0,0,1,0]),
-				 	h3d.Matrix.L([-1,0,0,0, 0,-1,0,0, 0,0,-1,0]) ];
-
 	public function new( light : h3d.scene.Light ) {
 		super(light);
 		lightCamera = new h3d.Camera();
@@ -235,7 +228,7 @@ class CubeShadowMap extends Shadows {
 			if( !faceMask.has(CubeFaceFlag.createByIndex(i)) ) continue;
 			mergePass.shader.texA = dynamicTex;
 			mergePass.shader.texB = staticTexture;
-			mergePass.shader.mat = cubeDir[i];
+			mergePass.shader.mat = h3d.mat.Texture.getCubeFaceMatrix(i);
 			ctx.engine.pushTarget(merge, i);
 			mergePass.render();
 			ctx.engine.popTarget();

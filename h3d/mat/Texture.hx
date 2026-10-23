@@ -523,6 +523,23 @@ class Texture {
 		return t;
 	}
 
+	static var cubeFaceMatrices = [
+		h3d.Matrix.L([0,0,-1,0, 0,-1,0,0, 1,0,0,0]),
+		h3d.Matrix.L([0,0,1,0, 0,-1,0,0, -1,0,0,0]),
+		h3d.Matrix.L([1,0,0,0, 0,0,1,0, 0,1,0,0]),
+		h3d.Matrix.L([1,0,0,0, 0,0,-1,0, 0,-1,0,0]),
+		h3d.Matrix.L([1,0,0,0, 0,-1,0,0, 0,0,1,0]),
+		h3d.Matrix.L([-1,0,0,0, 0,-1,0,0, 0,0,-1,0]),
+	];
+
+	/**
+		Returns the matrix transforming `vec3(uv * 2 - 1, 1)` into the direction of the given cube face.
+		The matrix is shared and must not be modified.
+	**/
+	public static function getCubeFaceMatrix( face : Int ) {
+		return cubeFaceMatrices[face];
+	}
+
 	/**
 		Returns a checker texture of size x size, than can be repeated
 	**/
