@@ -1057,7 +1057,7 @@ class DX12Driver extends h3d.impl.Driver {
 	public static var INITIAL_BUFFER_ALLOCATOR_SIZE = 2 * 1024 * 1024;
 	public static var INITIAL_READBACK_ALLOCATOR_SIZE = 64 * 1024;
 	public static var BUFFER_COUNT = #if console 3 #else 2 #end;
-	public static var DEVICE_NAME = null;
+	public static var DEVICE_NAME : String = null;
 	public static var inst(default, null) : DX12Driver;
 	public static var generation(default, null) = 0;
 	public static var DEBUG = false; // requires dxil.dll when set to true
