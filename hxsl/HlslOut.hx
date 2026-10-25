@@ -320,7 +320,7 @@ class HlslOut {
 		}
 	}
 
-	function handleMeta( m : String, args : Array<Ast.Const>, callb : TExpr -> String -> Void, e : TExpr, tabs : String ) {
+	function handleMeta( m : String, args : Array<Ast.Const>, callb : TExpr -> String -> Void, e, tabs ) {
 		switch( [m, args] ) {
 		default:
 			callb(e,tabs);

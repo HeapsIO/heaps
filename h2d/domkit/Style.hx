@@ -122,7 +122,7 @@ class Style extends domkit.CssStyle {
 		#end
 	}
 
-	public function watchInterpComponents( ?customRebuild : h2d.Object -> Void ) {
+	public function watchInterpComponents( ?customRebuild ) {
 		#if hscript
 		if( customRebuild == null ) customRebuild = defaultInterpRebuild;
 		ON_WATCH_CALLB = function(classes) {

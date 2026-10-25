@@ -49,7 +49,7 @@ class Printer {
 		return buffer.toString();
 	}
 
-	function addVar( v : TVar, defKind : VarKind, tabs : String = "", ?parent : TVar ) {
+	function addVar( v : TVar, defKind : VarKind, tabs = "", ?parent : TVar ) {
 		if( v.qualifiers != null ) {
 			for( q in v.qualifiers )
 				add("@" + (switch( q ) {
@@ -356,7 +356,7 @@ class Printer {
 		}
 	}
 
-	public static function toString( e : TExpr, varId : Bool = false ) : String {
+	public static function toString( e : TExpr, varId = false ) {
 		return new Printer(varId).exprString(e);
 	}
 
