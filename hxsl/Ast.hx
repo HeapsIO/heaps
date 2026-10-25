@@ -547,7 +547,7 @@ class Tools {
 		}
 	}
 
-	public static function toString( t : Type ) {
+	public static function toString( t : Type ) : String {
 		return switch( t ) {
 		case TVec(size, t):
 			var prefix = switch( t ) {
