@@ -108,12 +108,18 @@ class CacheFile2Loader {
 
 	function threadLoop() {
 		var driver = h3d.Engine.getCurrent()?.driver;
+		var linked = 0;
+		var total = rtInfosDefault.length + rtInfosBatch.length + rtInfosCompute.length;
 		function link( sl : ShaderList, mode : RuntimeShader.LinkMode ) {
+			if( CacheFile2.onPreloadProgress != null )
+				CacheFile2.onPreloadProgress(++linked, total);
 			var rts = try cache.link(sl, mode) catch( e ) {
 				Sys.println("[CacheFile2] Failed to link " + [for( s in sl ) @:privateAccess s.shader.data.name].join(":") + ": " + e.toString());
 				return null;
 			}
-			driver?.warmupShader(rts);
+			try driver?.warmupShader(rts) catch( e ) {
+				Sys.println("[CacheFile2] Failed to compile " + [for( s in sl ) @:privateAccess s.shader.data.name].join(":") + ": " + e.toString());
+			}
 			return rts;
 		}
 
@@ -278,6 +284,7 @@ class CacheFile2 extends Cache {
 	static var DEBUG : Bool = false;
 	static var LOAD_TIME : Float = 0.0;
 	public static var VERSION = 1;
+	public static var onPreloadProgress : (linked : Int, total : Int) -> Void;
 
 	var file : String;
 	var outFile : String;
