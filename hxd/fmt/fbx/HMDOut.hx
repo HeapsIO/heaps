@@ -1349,6 +1349,21 @@ class HMDOut extends BaseLibrary {
 			}
 		}
 
+		// Verify that all the LODs have the same vertex format
+		for (m in d.models) {
+			if (m.lods == null || m.geometry < 0)
+				continue;
+			var format = d.geometries[m.geometry].vertexFormat;
+			for (lodIndex in m.lods) {
+				var lod = d.models[lodIndex];
+				var lodFormat = d.geometries[lod.geometry].vertexFormat;
+				if (lodFormat != format) {
+					function inputs(f : hxd.BufferFormat) return [for (i in f.getInputs()) i.name].join(", ");
+					throw '${lod.name} has a different vertex format than ${m.name} : ${inputs(lodFormat)} instead of ${inputs(format)}';
+				}
+			}
+		}
+
 		var rootIndex = -1;
 		for (i => m in d.models) {
 			if (m.parent == -1 && m.geometry == -1 && m.name == null && m.position.isIdentity()) {
