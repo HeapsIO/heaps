@@ -103,6 +103,7 @@ class RuntimeShader {
 	public var signature : String;
 	public var mode : LinkMode;
 	public var spec : { instances : Array<ShaderInstanceDesc>, signature : String };
+	@:allow(h3d.Engine) var failed = false;
 
 	public function new() {
 		#if heaps_mt_hxsl_cache

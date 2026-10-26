@@ -46,17 +46,12 @@ class Output {
 				shaders = ctx.lightSystem.computeLight(p.obj, shaders);
 			}
 			p.shaders = shaders;
-			if( onShaderError != null ) {
-				try {
-					p.shader = output.compileShaders(ctx.globals, shaders, p.pass.batchMode ? Batch : Default);
-				} catch( e ) {
-					p.shader = null;
-					failed = true;
-					onShaderError(e.message, p);
-					continue;
-				}
-			} else
-				p.shader = output.compileShaders(ctx.globals, shaders, p.pass.batchMode ? Batch : Default);
+			ctx.drawPass = p;
+			if( !h3d.impl.RenderError.guard(compileShader(p), Compile(p)) ) {
+				p.shader = null;
+				failed = true;
+				continue;
+			}
 			var t = p.shader.fragment.textures;
 			if( t == null || t.type.match(TArray(_)) )
 				p.texture = 0;
@@ -65,16 +60,49 @@ class Output {
 				p.texture = t == null ? 0 : t.id;
 			}
 		}
+		ctx.drawPass = null;
 		if( failed )
 			passes.filter(p -> p.shader != null);
+	}
+
+	function compileShader( p : h3d.pass.PassObject ) {
+		p.shader = output.compileShaders(ctx.globals, p.shaders, p.pass.batchMode ? Batch : Default);
 	}
 
 	inline function log( str : String ) {
 		ctx.engine.driver.log(str);
 	}
 
-	function drawObject( p : h3d.pass.PassObject ) {
+	@:access(h3d.scene)
+	function setupObject( p : h3d.pass.PassObject ) {
 		ctx.drawPass = p;
+		ctx.globalPreviousModelView = p.obj.prevAbsPos ?? p.obj.absPos;
+		ctx.globalModelView = p.obj.absPos;
+		if( p.shader.hasGlobal(ctx.globalModelViewInverse_id.toInt()) )
+			ctx.globalModelViewInverse = p.obj.getInvPos();
+	}
+
+	function setupShader( shader : hxsl.RuntimeShader ) {
+		ctx.engine.selectShader(shader);
+		if( ctx.engine.shaderFailed )
+			return;
+		var buf = ctx.shaderBuffers;
+		buf.grow(shader);
+		ctx.fillGlobals(buf, shader);
+		ctx.engine.uploadShaderBuffers(buf, Globals);
+	}
+
+	function uploadParams( p : h3d.pass.PassObject ) {
+		if( p.pass.dynamicParameters )
+			return;
+		var buf = ctx.shaderBuffers;
+		ctx.currentObject = p.obj;
+		ctx.fillParams(buf, p.shader, p.shaders);
+		ctx.currentObject = null;
+		ctx.engine.uploadInstanceShaderBuffers(buf);
+	}
+
+	function drawObject( p : h3d.pass.PassObject ) {
 		if( ctx.useReverseDepth ) {
 			p.pass.reverseDepthTest();
 			ctx.engine.selectMaterial(p.pass);
@@ -86,66 +114,44 @@ class Output {
 		@:privateAccess p.obj.draw(ctx);
 	}
 
-	public static var onShaderError : Dynamic -> PassObject -> Void;
+	function beginEvent( name : String ) {
+		ctx.engine.driver.beginEvent(name);
+		#if sceneprof h3d.impl.SceneProf.begin('draw_$name', ctx.frame); #end
+	}
+
+	function endEvent() {
+		ctx.engine.driver.endEvent();
+		#if sceneprof h3d.impl.SceneProf.end(); #end
+	}
 
 	@:access(h3d.scene)
 	public function draw( passes : h3d.pass.PassList, ?sort : h3d.pass.PassList -> Void ) {
 		if( passes.isEmpty() )
 			return;
-		ctx.engine.driver.beginEvent(@:privateAccess passes.current.pass.name);
-		#if sceneprof
-		h3d.impl.SceneProf.begin('draw_${@:privateAccess passes.current.pass.name}', ctx.frame);
-		#end
+		beginEvent(@:privateAccess passes.current.pass.name);
 		ctx.setupTarget();
 		setupShaders(passes);
 		if( sort == null )
 			defaultSort(passes);
 		else
 			sort(passes);
-		var buf = ctx.shaderBuffers, prevShader = null, failedShader = null;
+		var prevShader = null;
 		for( p in passes ) {
-			if( p.shader == failedShader )
-				continue;
 			#if sceneprof h3d.impl.SceneProf.mark(p.obj); #end
-			ctx.globalPreviousModelView = p.obj.prevAbsPos ?? p.obj.absPos;
-			ctx.globalModelView = p.obj.absPos;
-			if( p.shader.hasGlobal(ctx.globalModelViewInverse_id.toInt()) )
-				ctx.globalModelViewInverse = p.obj.getInvPos();
+			setupObject(p);
 			if( prevShader != p.shader ) {
 				prevShader = p.shader;
-				if( onShaderError != null ) {
-					try {
-						ctx.engine.selectShader(p.shader);
-					} catch(e) {
-						failedShader = p.shader;
-						onShaderError(e.message, p);
-						continue;
-					}
-				} else {
-					ctx.engine.selectShader(p.shader);
-				}
-				buf.grow(p.shader);
-				ctx.fillGlobals(buf, p.shader);
-				ctx.engine.uploadShaderBuffers(buf, Globals);
+				setupShader(p.shader);
 			}
-			if( !p.pass.dynamicParameters ) {
-				ctx.currentObject = p.obj;
-				ctx.fillParams(buf, p.shader, p.shaders);
+			if( ctx.engine.shaderFailed )
+				continue;
+			if( !h3d.impl.RenderError.guard(uploadParams(p), Params(p.shader)) ) {
 				ctx.currentObject = null;
-				ctx.engine.uploadInstanceShaderBuffers(buf);
+				continue;
 			}
-			if( onShaderError != null ) {
-				try {
-					drawObject(p);
-				} catch(e) {
-					onShaderError(e.message, p);
-					continue;
-				}
-			} else
-				drawObject(p);
+			h3d.impl.RenderError.guard(drawObject(p), Draw(p));
 		}
-		ctx.engine.driver.endEvent();
-		#if sceneprof h3d.impl.SceneProf.end(); #end
+		endEvent();
 		ctx.nextPass();
 	}
 }
