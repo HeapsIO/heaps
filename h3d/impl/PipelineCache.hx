@@ -472,6 +472,7 @@ class PipelineConfigCache {
 	var configs : Map<String, Array<haxe.io.Bytes>>;
 	var loadFailed = false;
 	var canSave = true;
+	public var allowSave = true;
 
 	var magic : String;
 	var isDirty = false;
@@ -595,7 +596,7 @@ class PipelineConfigCache {
 	}
 
 	public function save() {
-		if( configs == null || !canSave || !isDirty )
+		if( configs == null || !allowSave || !canSave || !isDirty )
 			return;
 		if( loadFailed ) // Do not overwrite cache if loading failed due to IO exception (not corrupted file)
 			return;
