@@ -2053,7 +2053,7 @@ class VulkanDriver extends h3d.impl.Driver {
 		"-spirv", "-fspv-target-env=vulkan1.3", "-fvk-use-dx-layout", "-fvk-stage-io-order=alpha", "-fvk-support-nonzero-base-instance",
 		#if shader_debug_info "-Zi", "-fspv-debug=vulkan-with-source", #end
 	];
-	function compileSource( sh : hxsl.RuntimeShader.RuntimeShaderData ) {
+	function compileSource( rt : hxsl.RuntimeShader, sh : hxsl.RuntimeShader.RuntimeShaderData ) {
 		if( sh.code == null )
 			sh.code = generateHlsl(sh);
 		var profile = switch( sh.kind ) {
@@ -2073,9 +2073,10 @@ class VulkanDriver extends h3d.impl.Driver {
 			key += arg;
 		var bytes = getBinaryPayload(sh.code, key);
 		if( bytes == null ) {
+			var miss = shaderCache != null ? hxsl.ShaderMiss.report(rt) : null;
 			try {
 				#if (hlnx && shader_server)
-				bytes = nx.ShaderClient.compile(sh.code, profile, key, args);
+				bytes = nx.ShaderClient.compile(sh.code, profile, key, args, miss?.toString());
 				#else
 				#if heaps_mt_hxsl_cache
 				var compiler = compilers.value;
@@ -2086,7 +2087,7 @@ class VulkanDriver extends h3d.impl.Driver {
 				bytes = compiler.compile(sh.code, profile, args);
 				#end
 			} catch( e : Dynamic ) {
-				throw "Failed to compile shader:\n" + sh.code + "\n\n" + e;
+				throw "Failed to compile shader:\n" + (miss != null ? miss + "\n" : "") + sh.code + "\n\n" + e;
 			}
 			if( shaderCache != null )
 				shaderCache.saveCompiledShader(sh.code, bytes, key);
@@ -2234,7 +2235,7 @@ class VulkanDriver extends h3d.impl.Driver {
 		if( c != null ) return c;
 		if( shader.hasBindless() && !useBindless )
 			throw "Shader using bindless detected, but Bindless is not available : call h3d.impl.Driver.requestFeature(Bindless) before creating the engine";
-		var code = shader.mode == Compute ? [compileSource(shader.compute)] : [compileSource(shader.vertex), compileSource(shader.fragment)];
+		var code = shader.mode == Compute ? [compileSource(shader, shader.compute)] : [compileSource(shader, shader.vertex), compileSource(shader, shader.fragment)];
 		#if heaps_mt_hxsl_cache
 		compileMutex.acquire();
 		var created = !compiledShaders.exists(shader.id);
