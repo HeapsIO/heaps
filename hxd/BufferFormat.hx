@@ -391,11 +391,20 @@ class BufferFormat {
 	static var ALL_FORMATS = new Map<String,Array<BufferFormat>>();
 
 	public static function fromID( uid : Int ) {
+		#if heaps_mt_hxsl_cache
+		makeMutex.acquire();
+		#end
+		var found = null;
 		for( fl in ALL_FORMATS )
 			for( f in fl )
-				if( f.uid == uid )
-					return f;
-		return null;
+				if( f.uid == uid ) {
+					found = f;
+					break;
+				}
+		#if heaps_mt_hxsl_cache
+		makeMutex.release();
+		#end
+		return found;
 	}
 
 	#if heaps_mt_hxsl_cache
