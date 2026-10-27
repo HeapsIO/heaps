@@ -1152,6 +1152,8 @@ class DX12Driver extends h3d.impl.Driver {
 					tex.t = allocCheck(() -> allocTexture(tex));
 					@:privateAccess tex.t.clearColorChanges = prev.clearColorChanges;
 					frame.toRelease.push(prev.res);
+					disposeTextureViews(prev);
+					markUsed(tex);
 					Driver.createRenderTargetView(tex.t.res, lastRtvDesc, tmp.renderTargets[i]);
 				}
 				tex.flags.set(WasCleared);
