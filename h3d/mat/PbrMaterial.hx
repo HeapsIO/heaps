@@ -97,7 +97,7 @@ class PbrProps {
 	var __ref : String = null;
 	var __refMode : String = null;
 	var name : String = null;
-	var drawOrder : String = null;
+	var drawOrder : Int = 0;
 	var depthPrepass : Bool = false;
 	var flipBackFaceNormal : Bool = false;
 	var ignoreCollide : Bool = false;
@@ -111,6 +111,7 @@ class PbrProps {
 			var v : Dynamic = Reflect.field(o, f);
 			if( v == null ) continue;
 			if( f == "culling" && (v is Bool) ) v = v ? "Back" : "None";
+			if( f == "drawOrder" && (v is String) ) v = Std.parseInt(v) ?? 0;
 			Reflect.setField(this, f, v);
 		}
 		return this;
@@ -371,10 +372,7 @@ class PbrMaterial extends Material {
 
 		var p = passes;
 		while ( p != null ) {
-			if ( props.drawOrder == null )
-				mainPass.layer = 0;
-			else
-				mainPass.layer = Std.parseInt(props.drawOrder);
+			mainPass.layer = props.drawOrder;
 			p = p.nextPass;
 		}
 
@@ -582,8 +580,8 @@ class PbrMaterial extends Material {
 				<dt>Wrap</dt><dd><input type="checkbox" field="textureWrap"/></dd>
 				<dt>Draw Order</dt>
 				<dd>
-					<select field="drawOrder">
-						<option value="" selected disabled hidden>Default</option>
+					<select field="drawOrder" type="int">
+						<option value="0" selected disabled hidden>Default</option>
 						${[for( i in 0...layers.length ) '<option value="${layers[i].value}">${layers[i].name}</option>'].join("")}
 					</select>
 				</dd>
