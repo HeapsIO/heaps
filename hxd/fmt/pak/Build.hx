@@ -7,6 +7,8 @@ class Build {
 
 	var fs : hxd.fs.LocalFileSystem;
 	var out : { entries : Array<BuildFileEntry>, size : Float };
+	var dedupEntries : Map<String, { path : String, pos : Float }>;
+	var dedupSize : Float;
 	var configuration : String;
 	var nextPath : String;
 
@@ -19,6 +21,7 @@ class Build {
 	public var outPrefix : String;
 	public var align : Int = 0;
 	public var pakDiff = false;
+	public var dedup = false;
 	public var checkJPG = false;
 	public var checkOGG = false;
 	public var whitelist = true;
@@ -116,9 +119,20 @@ class Build {
 				Sys.println("\t*** ERROR *** " + path + " has 0 samples");
 			}
 
-			f.dataPosition = pakDiff ? out.entries.length : out.size;
 			f.dataSize = data.length;
 			f.checksum = fastAdler32(data);
+			if( dedup && !pakDiff ) {
+				var key = f.checksum + "_" + f.dataSize;
+				var prev = dedupEntries.get(key);
+				if( prev == null )
+					dedupEntries.set(key, { path : filePath, pos : out.size });
+				else if( sys.io.File.getBytes(prev.path).compare(data) == 0 ) {
+					f.dataPosition = prev.pos;
+					dedupSize += f.dataSize;
+					return f;
+				}
+			}
+			f.dataPosition = pakDiff ? out.entries.length : out.size;
 			out.entries.push({ path : filePath, size : f.dataSize, checksum : f.checksum });
 			out.size += data.length;
 			if (align > 1)
@@ -236,8 +250,12 @@ class Build {
 
 		var pak = new Data();
 		out = { entries : [], size : 0 };
+		dedupEntries = [];
+		dedupSize = 0;
 		pak.version = 0;
 		pak.root = buildRec("");
+		if( dedupSize > 0 )
+			Sys.println("Deduplicated " + Math.round(dedupSize / (1024 * 1024)) + "Mb");
 
 		if( pakDiff ) {
 			var id = 0;
@@ -346,6 +364,8 @@ class Build {
 				b.align = Std.parseInt(args.shift());
 			case "-diff":
 				b.pakDiff = true;
+			case "-dedup":
+				b.dedup = true;
 			case "-res" if( args.length > 0 ):
 				b.resPath = args.shift();
 			case "-out" if( args.length > 0 ):
