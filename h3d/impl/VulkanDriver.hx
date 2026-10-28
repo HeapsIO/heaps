@@ -513,6 +513,7 @@ class VulkanDriver extends h3d.impl.Driver {
 	}
 
 	static inline var VALIDATION_LAYER = "VK_LAYER_KHRONOS_validation";
+	static inline var RENDERDOC_LAYER = "VK_LAYER_RENDERDOC_Capture";
 
 	function createInstance() {
 		if( Vk.getInstanceVersion() < VK_API_VERSION_1_3 )
@@ -534,6 +535,12 @@ class VulkanDriver extends h3d.impl.Driver {
 			else
 				Sys.println("[Vulkan] " + VALIDATION_LAYER + " not found, validation disabled");
 		}
+		#if renderdoc
+		if( Vk.getInstanceLayers().indexOf(RENDERDOC_LAYER) >= 0 )
+			layers.push(RENDERDOC_LAYER);
+		else
+			Sys.println("[Vulkan] " + RENDERDOC_LAYER + " not found, capture disabled");
+		#end
 
 		var app = new ApplicationInfo();
 		var name = @:privateAccess "Heaps".toUtf8();
@@ -550,7 +557,7 @@ class VulkanDriver extends h3d.impl.Driver {
 		var r = Vk.instanceCreate(inf);
 		if( r != SUCCESS )
 			throw "Failed to create Vulkan instance (VkResult " + r + ")";
-		if( layers.length > 0 && debugUtils )
+		if( debugUtils && layers.indexOf(VALIDATION_LAYER) >= 0 )
 			Vk.debugMessengerCreate(DebugMessageSeverity.WARNING | DebugMessageSeverity.ERROR, DebugMessageType.GENERAL | DebugMessageType.VALIDATION | DebugMessageType.PERFORMANCE);
 	}
 
