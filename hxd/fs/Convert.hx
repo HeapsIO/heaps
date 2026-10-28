@@ -535,6 +535,28 @@ class CompressIMG extends Convert {
 		"BC7" => "BC7_UNORM"
 	];
 
+	static inline var DDS_MAGIC = 0x20534444;
+	static inline var DDS_HEADER_SIZE = 128;
+	static inline var DDS_PITCH_POS = 20;
+	static inline var DDS_FOURCC_POS = 84;
+	static inline var D3DFMT_A16B16G16R16F = 113;
+	static inline var D3DFMT_A32B32G32R32F = 116;
+
+	static function isDDSFloat32(b:haxe.io.Bytes) {
+		return b.length > DDS_HEADER_SIZE && b.getInt32(0) == DDS_MAGIC && b.getInt32(DDS_FOURCC_POS) == D3DFMT_A32B32G32R32F;
+	}
+
+	static function ddsFloat32to16(src:haxe.io.Bytes) {
+		var count = (src.length - DDS_HEADER_SIZE) >> 2;
+		var out = haxe.io.Bytes.alloc(DDS_HEADER_SIZE + count * 2);
+		out.blit(0, src, 0, DDS_HEADER_SIZE);
+		out.setInt32(DDS_PITCH_POS, src.getInt32(DDS_PITCH_POS) >> 1);
+		out.setInt32(DDS_FOURCC_POS, D3DFMT_A16B16G16R16F);
+		for (i in 0...count)
+			out.setUInt16(DDS_HEADER_SIZE + i * 2, hxd.BufferFormat.float32to16(src.getFloat(DDS_HEADER_SIZE + i * 4)));
+		return out;
+	}
+
 	function makeImage(path:String) {
 		return @:privateAccess new hxd.res.Image(new hxd.fs.BytesFileSystem.BytesFileEntry(path, sys.io.File.getBytes(path)));
 	}
@@ -586,7 +608,16 @@ class CompressIMG extends Convert {
 			return (info.width & 3) == 0 && (info.height & 3) == 0;
 		}
 
+		if (srcBytes.length == 0) {
+			save(srcBytes);
+			return;
+		}
 		var dstFmt : String = getParam("format");
+		// texconv would regenerate the mips, which hold the prefiltered levels of env maps
+		if (dstFmt == "RGBA16F" && isDDSFloat32(srcBytes)) {
+			save(ddsFloat32to16(srcBytes));
+			return;
+		}
 		var mips = hasParam("mips") && getParam("mips") == true;
 		if (hasParam("size")) {
 			var maxSize = getParam("size");
