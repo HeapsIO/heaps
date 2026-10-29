@@ -578,18 +578,26 @@ class VulkanDriver extends h3d.impl.Driver {
 	function selectPhysicalDevice() {
 		var best = null, bestScore = -1, bestFamily = -1, bestBits = 0;
 		var props = new PhysicalDeviceProperties2();
+		var rejected = [];
 		for( pdev in Vk.getPhysicalDevices() ) {
 			Vk.getPhysicalDeviceProperties2(pdev, props);
 			var p = props.properties;
-			if( p.apiVersion < VK_API_VERSION_1_3 ) continue;
+			var name = p.deviceName.toString();
+			if( p.apiVersion < VK_API_VERSION_1_3 ) {
+				rejected.push(name + " (Vulkan " + (p.apiVersion >>> 22) + "." + ((p.apiVersion >>> 12) & 0x3FF) + ")");
+				continue;
+			}
 			var family = findQueueFamily(pdev);
-			if( family < 0 ) continue;
+			if( family < 0 ) {
+				rejected.push(name + " (no graphics+compute queue presenting to the surface)");
+				continue;
+			}
 			var score = switch( (cast p.deviceType : PhysicalDeviceType) ) {
 			case DISCRETE_GPU: 3;
 			case INTEGRATED_GPU: 2;
 			default: 1;
 			}
-			if( DEVICE_NAME != null && p.deviceName.toString().indexOf(DEVICE_NAME) >= 0 ) score = 10;
+			if( DEVICE_NAME != null && name.indexOf(DEVICE_NAME) >= 0 ) score = 10;
 			if( score > bestScore ) {
 				best = pdev;
 				bestScore = score;
@@ -598,7 +606,7 @@ class VulkanDriver extends h3d.impl.Driver {
 			}
 		}
 		if( best == null )
-			throw "No Vulkan 1.3 device found";
+			throw "No Vulkan 1.3 device found" + (rejected.length > 0 ? ": " + rejected.join(", ") : "");
 		physicalDevice = best;
 		queueFamily = bestFamily;
 		timestampValidBits = bestBits;
