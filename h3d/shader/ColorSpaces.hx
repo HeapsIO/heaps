@@ -21,6 +21,17 @@ class ColorSpaces extends hxsl.Shader {
 		}
 
 		//HSL
+		function rgb2hsl( c : Vec3 ) : Vec3 {
+			var K = vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
+			var p = mix(vec4(c.bg, K.wz), vec4(c.gb, K.xy), step(c.b, c.g));
+			var q = mix(vec4(p.xyw, c.r), vec4(c.r, p.yzx), step(p.x, c.r));
+
+			var d = q.x - min(q.w, q.y);
+			var e = 1.0e-8;
+			var l = q.x - d * 0.5;
+			return vec3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / max(1.0 - abs(2.0 * l - 1.0), e), l);
+		}
+
 		function hsl2rgb( c : Vec3 ) : Vec3 {
 			var rgb = clamp( abs(mod(c.x*6.0+vec3(0.0,4.0,2.0),6.0)-3.0)-1.0, 0.0, 1.0 );
 
