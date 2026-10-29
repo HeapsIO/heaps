@@ -205,7 +205,10 @@ class VulkanDriver extends h3d.impl.Driver {
 	public static var BINDLESS_BUFFER_COUNT = 16384;
 	public static var BINDLESS_RESERVED_DESCRIPTORS = 256;
 	static inline var QUERY_COUNT = 128;
+	static inline var VK_API_VERSION_1_2 = (1 << 22) | (2 << 12);
 	static inline var VK_API_VERSION_1_3 = (1 << 22) | (3 << 12);
+	static var VK_1_3_EXTENSIONS = ["VK_KHR_synchronization2", "VK_KHR_dynamic_rendering", "VK_KHR_copy_commands2", "VK_EXT_extended_dynamic_state", "VK_EXT_extended_dynamic_state2"];
+	static var VK_1_3_OPTIONAL_EXTENSIONS = ["VK_KHR_maintenance4", "VK_EXT_shader_demote_to_helper_invocation", "VK_KHR_shader_non_semantic_info"];
 
 	// binding offsets of HLSL registers, per register class and per shader stage (see dxc -fvk-*-shift)
 	static inline var BIND_B = 0;
@@ -224,6 +227,7 @@ class VulkanDriver extends h3d.impl.Driver {
 	var queueFamily = 0;
 	var timestampValidBits = 0;
 	var enabledDeviceExtensions : Array<String> = [];
+	var shaderArgs : Array<String>;
 	var formatProps = new FormatProperties();
 	var instanceExtensions : Array<String> = [];
 	var deviceExtensions : Array<String> = [];
@@ -516,8 +520,8 @@ class VulkanDriver extends h3d.impl.Driver {
 	static inline var RENDERDOC_LAYER = "VK_LAYER_RENDERDOC_Capture";
 
 	function createInstance() {
-		if( Vk.getInstanceVersion() < VK_API_VERSION_1_3 )
-			throw "Vulkan 1.3 is not available";
+		if( Vk.getInstanceVersion() < VK_API_VERSION_1_2 )
+			throw "Vulkan 1.2 is not available";
 		var available = Vk.getInstanceExtensions();
 		var extensions = #if hlnx ["VK_KHR_surface", "VK_NN_vi_surface"] #elseif hlsdl sdl.Window.vkGetInstanceExtensions() #else ["VK_KHR_surface", "VK_KHR_win32_surface"] #end;
 		if( extensions == null )
@@ -583,9 +587,34 @@ class VulkanDriver extends h3d.impl.Driver {
 			Vk.getPhysicalDeviceProperties2(pdev, props);
 			var p = props.properties;
 			var name = p.deviceName.toString();
-			if( p.apiVersion < VK_API_VERSION_1_3 ) {
-				rejected.push(name + " (Vulkan " + (p.apiVersion >>> 22) + "." + ((p.apiVersion >>> 12) & 0x3FF) + ")");
+			var version = "Vulkan " + (p.apiVersion >>> 22) + "." + ((p.apiVersion >>> 12) & 0x3FF);
+			if( p.apiVersion < VK_API_VERSION_1_2 ) {
+				rejected.push(name + " (" + version + ")");
 				continue;
+			}
+			if( p.apiVersion < VK_API_VERSION_1_3 ) {
+				var available = Vk.getDeviceExtensions(pdev);
+				var missing = [for( e in VK_1_3_EXTENSIONS ) if( available.indexOf(e) < 0 ) e];
+				if( missing.length == 0 ) {
+					var sync2 = new PhysicalDeviceSynchronization2Features();
+					var dynRendering = new PhysicalDeviceDynamicRenderingFeatures();
+					var dynState = new PhysicalDeviceExtendedDynamicStateFeaturesEXT();
+					var dynState2 = new PhysicalDeviceExtendedDynamicState2FeaturesEXT();
+					var sup = new PhysicalDeviceFeatures2();
+					sup.pNext = VkConst.pointer(sync2);
+					sync2.pNext = VkConst.pointer(dynRendering);
+					dynRendering.pNext = VkConst.pointer(dynState);
+					dynState.pNext = VkConst.pointer(dynState2);
+					Vk.getPhysicalDeviceFeatures2(pdev, sup);
+					if( sync2.synchronization2 == 0 ) missing.push("synchronization2");
+					if( dynRendering.dynamicRendering == 0 ) missing.push("dynamicRendering");
+					if( dynState.extendedDynamicState == 0 ) missing.push("extendedDynamicState");
+					if( dynState2.extendedDynamicState2 == 0 ) missing.push("extendedDynamicState2");
+				}
+				if( missing.length > 0 ) {
+					rejected.push(name + " (" + version + " without " + missing.join(", ") + ")");
+					continue;
+				}
 			}
 			var family = findQueueFamily(pdev);
 			if( family < 0 ) {
@@ -606,7 +635,7 @@ class VulkanDriver extends h3d.impl.Driver {
 			}
 		}
 		if( best == null )
-			throw "No Vulkan 1.3 device found" + (rejected.length > 0 ? ": " + rejected.join(", ") : "");
+			throw "No suitable Vulkan device found" +(rejected.length > 0 ? ": " + rejected.join(", ") : "");
 		physicalDevice = best;
 		queueFamily = bestFamily;
 		timestampValidBits = bestBits;
@@ -615,23 +644,57 @@ class VulkanDriver extends h3d.impl.Driver {
 
 	function createDevice() {
 		selectPhysicalDevice();
+		var available = Vk.getDeviceExtensions(physicalDevice);
+		var core13 = deviceProps.properties.apiVersion >= VK_API_VERSION_1_3;
+		shaderArgs = ["-spirv", "-fspv-target-env=" + (core13 ? "vulkan1.3" : "vulkan1.2")].concat(SHADER_ARGS);
+		#if shader_debug_info
+		if( !core13 && available.indexOf("VK_KHR_shader_non_semantic_info") < 0 )
+			shaderArgs.remove("-fspv-debug=vulkan-with-source");
+		#end
 
 		var sup13 = new PhysicalDeviceVulkan13Features();
 		var sup12 = new PhysicalDeviceVulkan12Features();
 		var sup11 = new PhysicalDeviceVulkan11Features();
 		var sup = new PhysicalDeviceFeatures2();
-		sup12.pNext = VkConst.pointer(sup13);
+		var sync2 = new PhysicalDeviceSynchronization2Features();
+		var dynRendering = new PhysicalDeviceDynamicRenderingFeatures();
+		var dynState = new PhysicalDeviceExtendedDynamicStateFeaturesEXT();
+		var dynState2 = new PhysicalDeviceExtendedDynamicState2FeaturesEXT();
+		var maintenance4 = new PhysicalDeviceMaintenance4Features();
+		var demote = new PhysicalDeviceShaderDemoteToHelperInvocationFeatures();
+		var extensions = [];
+		if( core13 )
+			sup12.pNext = VkConst.pointer(sup13);
+		else {
+			for( e in VK_1_3_EXTENSIONS ) extensions.push(e);
+			for( e in VK_1_3_OPTIONAL_EXTENSIONS ) if( available.indexOf(e) >= 0 ) extensions.push(e);
+			sup12.pNext = VkConst.pointer(sync2);
+			sync2.pNext = VkConst.pointer(dynRendering);
+			dynRendering.pNext = VkConst.pointer(dynState);
+			dynState.pNext = VkConst.pointer(dynState2);
+			if( extensions.indexOf("VK_KHR_maintenance4") >= 0 ) {
+				maintenance4.pNext = dynState2.pNext;
+				dynState2.pNext = VkConst.pointer(maintenance4);
+			}
+			if( extensions.indexOf("VK_EXT_shader_demote_to_helper_invocation") >= 0 ) {
+				demote.pNext = dynState2.pNext;
+				dynState2.pNext = VkConst.pointer(demote);
+			}
+		}
 		sup11.pNext = VkConst.pointer(sup12);
 		sup.pNext = VkConst.pointer(sup11);
 		Vk.getPhysicalDeviceFeatures2(physicalDevice, sup);
-		if( sup13.dynamicRendering == 0 || sup13.synchronization2 == 0 )
+		if( !core13 ) {
+			dynState2.extendedDynamicState2LogicOp = 0;
+			dynState2.extendedDynamicState2PatchControlPoints = 0;
+		} else if( sup13.dynamicRendering == 0 || sup13.synchronization2 == 0 )
 			throw "Vulkan device does not support dynamic rendering and synchronization2";
 
 		var f13 = new PhysicalDeviceVulkan13Features();
 		var f12 = new PhysicalDeviceVulkan12Features();
 		var f11 = new PhysicalDeviceVulkan11Features();
 		var f = new PhysicalDeviceFeatures2();
-		f12.pNext = VkConst.pointer(f13);
+		f12.pNext = core13 ? VkConst.pointer(f13) : sup12.pNext;
 		f11.pNext = VkConst.pointer(f12);
 		f.pNext = VkConst.pointer(f11);
 		var c = f.features, s = sup.features;
@@ -672,15 +735,16 @@ class VulkanDriver extends h3d.impl.Driver {
 			f12.descriptorBindingSampledImageUpdateAfterBind = 1;
 			f12.descriptorBindingStorageBufferUpdateAfterBind = 1;
 		}
-		f13.dynamicRendering = 1;
-		f13.synchronization2 = 1;
-		f13.maintenance4 = sup13.maintenance4;
-		f13.shaderDemoteToHelperInvocation = sup13.shaderDemoteToHelperInvocation;
+		if( core13 ) {
+			f13.dynamicRendering = 1;
+			f13.synchronization2 = 1;
+			f13.maintenance4 = sup13.maintenance4;
+			f13.shaderDemoteToHelperInvocation = sup13.shaderDemoteToHelperInvocation;
+		}
 
-		var available = Vk.getDeviceExtensions(physicalDevice);
 		if( available.indexOf("VK_KHR_swapchain") < 0 )
 			throw "Vulkan device does not support VK_KHR_swapchain";
-		var extensions = ["VK_KHR_swapchain"];
+		extensions.push("VK_KHR_swapchain");
 		var memoryBudget = available.indexOf("VK_EXT_memory_budget") >= 0;
 		if( memoryBudget ) extensions.push("VK_EXT_memory_budget");
 		for( e in deviceExtensions )
@@ -705,7 +769,7 @@ class VulkanDriver extends h3d.impl.Driver {
 		if( r != SUCCESS )
 			throw "Failed to create Vulkan device (VkResult " + r + ")";
 		queue = Vk.getDeviceQueue(queueFamily, 0);
-		r = Vk.allocatorCreate(memoryBudget ? AllocatorCreateFlags.EXT_MEMORY_BUDGET : 0, VK_API_VERSION_1_3);
+		r = Vk.allocatorCreate(memoryBudget ? AllocatorCreateFlags.EXT_MEMORY_BUDGET : 0, core13 ? VK_API_VERSION_1_3 : VK_API_VERSION_1_2);
 		if( r != SUCCESS )
 			throw "Failed to create the Vulkan memory allocator (VkResult " + r + ")";
 	}
@@ -2052,20 +2116,8 @@ class VulkanDriver extends h3d.impl.Driver {
 		return vs + "\n\n\n\n" + ps;
 	}
 
-	function getBinaryPayload( code : String, profile : String ) {
-		var bin = code.indexOf("//BIN=");
-		if( bin >= 0 ) {
-			var end = code.indexOf("#", bin);
-			if( end >= 0 )
-				return haxe.crypto.Base64.decode(code.substr(bin + 6, end - bin - 6));
-		}
-		if( shaderCache != null )
-			return shaderCache.resolveShaderBinary(code, profile);
-		return null;
-	}
-
 	static final SHADER_ARGS : Array<String> = [
-		"-spirv", "-fspv-target-env=vulkan1.3", "-fvk-use-dx-layout", "-fvk-stage-io-order=alpha", "-fvk-support-nonzero-base-instance",
+		"-fvk-use-dx-layout", "-fvk-stage-io-order=alpha", "-fvk-support-nonzero-base-instance",
 		#if shader_debug_info "-Zi", "-fspv-debug=vulkan-with-source", #end
 	];
 	function compileSource( rt : hxsl.RuntimeShader, sh : hxsl.RuntimeShader.RuntimeShaderData ) {
@@ -2077,16 +2129,16 @@ class VulkanDriver extends h3d.impl.Driver {
 		default: "cs_6_1";
 		}
 		var base = sh.kind == Fragment ? BIND_FRAGMENT : 0;
-		var args = SHADER_ARGS.concat([
+		var args = shaderArgs.concat([
 			"-fvk-b-shift", "" + (base + BIND_B), "0",
 			"-fvk-t-shift", "" + (base + BIND_T), "0",
 			"-fvk-s-shift", "" + (base + BIND_S), "0",
 			"-fvk-u-shift", "" + (base + BIND_U), "0",
 		]);
 		var key = "vk_" + profile + "_" + base;
-		for( arg in SHADER_ARGS )
+		for( arg in shaderArgs )
 			key += arg;
-		var bytes = getBinaryPayload(sh.code, key);
+		var bytes = shaderCache != null ? shaderCache.resolveShaderBinary(sh.code, key) : null;
 		if( bytes == null ) {
 			var miss = shaderCache != null ? hxsl.ShaderMiss.report(rt) : null;
 			try {
