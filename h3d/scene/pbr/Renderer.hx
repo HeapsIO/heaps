@@ -822,6 +822,10 @@ class Renderer extends h3d.scene.Renderer {
 		return targets;
 	}
 
+	public function hasSceneColor() {
+		return sceneColorCopy;
+	}
+
 	function copySceneColor() {
 		if( !sceneColorCopy ) return;
 		var t = allocTarget("sceneColor", false, 1, textures.hdr.format);
