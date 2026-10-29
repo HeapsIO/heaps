@@ -105,6 +105,7 @@ class Renderer extends h3d.scene.Renderer {
 	public var env : Environment;
 	public var exposure(get,set) : Float;
 	public var enableTransparency = false;
+	public var sceneColorCopy = false;
 	var debugShadowMapIndex = 1;
 
 	#if editor
@@ -671,6 +672,7 @@ class Renderer extends h3d.scene.Renderer {
 		ctx.setGlobal("occlusionMap", { texture : textures.pbr, channel : hxsl.Channel.B });
 		ctx.setGlobal("hdrMap", textures.hdr);
 		ctx.setGlobal("ldrMap", textures.ldr);
+		ctx.setGlobal("sceneColorMap", h3d.mat.Texture.fromColor(0));
 		ctx.setGlobal("velocity", textures.velocity);
 		ctx.setGlobal("translucency", textures.translucency);
 		ctx.setGlobal("global.time", ctx.time);
@@ -820,6 +822,13 @@ class Renderer extends h3d.scene.Renderer {
 		return targets;
 	}
 
+	function copySceneColor() {
+		if( !sceneColorCopy ) return;
+		var t = allocTarget("sceneColor", false, 1, textures.hdr.format);
+		copy(textures.hdr, t);
+		ctx.setGlobal("sceneColorMap", t);
+	}
+
 	override function render() {
 		beginPbr();
 		setTarget(textures.depth);
@@ -852,6 +861,7 @@ class Renderer extends h3d.scene.Renderer {
 		ls.forwardMode = true;
 		setTargets([textures.hdr, getPbrDepth()]);
 		renderPass(colorDepthOutput, get("forward"));
+		copySceneColor();
 		setTarget(textures.hdr);
 		renderPass(defaultPass, get("forwardAlpha"), backToFront);
 		ls.forwardMode = false;
