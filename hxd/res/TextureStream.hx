@@ -41,6 +41,8 @@ class TextureStream {
 
 	public function new( image : Image ) {
 		this.image = image;
+		if( updateEvent == null )
+			updateEvent = haxe.MainLoop.add(updateStreaming);
 		update();
 	}
 
@@ -127,8 +129,6 @@ class TextureStream {
 		if( canStream && !registered ) {
 			registered = true;
 			streams.push(this);
-			if( updateEvent == null )
-				updateEvent = haxe.MainLoop.add(updateStreaming);
 		}
 	}
 
@@ -516,7 +516,7 @@ class TextureStream {
 	}
 
 	/**
-		Runs once per main loop iteration, between two frames (a haxe.MainLoop event added with the first stream). Visible streamed textures load all their mip levels, up to `maxVisibleSize`.
+		Runs once per main loop iteration, between two frames (a haxe.MainLoop event added with the first TextureStream). Visible streamed textures load all their mip levels, up to `maxVisibleSize`.
 		When over budget, the textures not visible for HIDDEN_FRAMES lose one mip level at a time, least recently visible first.
 		If that is not enough and REDUCE_VISIBLE is set, `maxVisibleSize` is halved.
 	**/
