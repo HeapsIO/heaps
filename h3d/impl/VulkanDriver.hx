@@ -2458,7 +2458,8 @@ class VulkanDriver extends h3d.impl.Driver {
 		pass.depthClamp = depthClamp || useDepthClamp;
 		pipelineBuilder.selectMaterial(pass);
 		pass.depthClamp = depthClamp;
-		matPass.loadBits(pass.bits);
+		if( matPass.bits != pass.bits )
+			matPass.loadBits(pass.bits);
 		var st = pass.stencil;
 		matHasStencil = st != null;
 		if( st != null ) matStencil.load(st);
