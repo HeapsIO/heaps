@@ -108,6 +108,7 @@ enum VarQualifier {
 	Flat;
 	NoVar;
 	Enum( path : String, constructors : Array<String> );
+	Category( name : String );
 }
 
 enum Prec {
