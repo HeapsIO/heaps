@@ -235,7 +235,10 @@ class MemoryManager {
 	@:allow(h3d.mat.Texture.dispose)
 	function deleteTexture( t : h3d.mat.Texture ) {
 		if( !textures.remove(t) ) return;
-		driver.disposeTexture(t);
+		if( t.isDepth() )
+			driver.disposeDepthBuffer(t);
+		else
+			driver.disposeTexture(t);
 		texMemory -= memSize(t);
 	}
 
