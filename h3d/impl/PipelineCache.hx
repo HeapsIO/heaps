@@ -199,6 +199,10 @@ class PipelineBuilder {
 	var tmpStencil = new h3d.mat.Stencil();
 	#if hl
 	var adlerOut = new Bytes(4);
+	var lastCache : Dynamic;
+	var lastSize = -1;
+	var lastSignature = new Bytes(64);
+	var lastPipeline : Dynamic;
 	#end
 
 	public function new( ?dynamicStates : haxe.EnumFlags<PipelineDynamicState> ) {
@@ -424,6 +428,21 @@ class PipelineBuilder {
 		needFlush = false;
 		var signatureSize = PSIGN_LAYOUT + (inputs << SHIFT_PER_BUFFER);
 		var signature = keyMask == null ? signature : makeKey(signatureSize);
+		#if hl
+		if( cache == lastCache && signatureSize == lastSize && lastSignature.compare(signature, signatureSize) == 0 )
+			return lastPipeline;
+		var p = findPipeline(cache, signature, signatureSize);
+		lastCache = cache;
+		lastSize = signatureSize;
+		lastSignature.blit(0, signature, 0, signatureSize);
+		lastPipeline = p;
+		return p;
+		#else
+		return findPipeline(cache, signature, signatureSize);
+		#end
+	}
+
+	function findPipeline<T>( cache : PipelineCache<T>, signature : Bytes, signatureSize : Int ) : CachedPipeline<T> {
 		var hash = hashSign(signature, signatureSize);
 		var pipes = cache.get(hash);
 		if( pipes == null ) {
