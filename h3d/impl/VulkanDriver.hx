@@ -1648,7 +1648,7 @@ class VulkanDriver extends h3d.impl.Driver {
 			defaultDepth.preventAutoDispose();
 		} else {
 			disposeTexture(backBuffer);
-			disposeDepthBuffer(defaultDepth);
+			disposeTexture(defaultDepth);
 		}
 		@:privateAccess {
 			backBuffer.width = defaultDepth.width = width;
@@ -3231,13 +3231,6 @@ class VulkanDriver extends h3d.impl.Driver {
 	}
 
 	override function disposeTexture( t : h3d.mat.Texture ) {
-		if( t.t == null ) return;
-		disposeTextureData(t.t);
-		if( useBindless ) releaseTextureHandles(t);
-		t.t = null;
-	}
-
-	override function disposeDepthBuffer( t : h3d.mat.Texture ) {
 		if( t.t == null ) return;
 		disposeTextureData(t.t);
 		if( useBindless ) releaseTextureHandles(t);

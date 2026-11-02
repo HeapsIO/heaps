@@ -300,9 +300,6 @@ class Driver {
 		return null;
 	}
 
-	public function disposeDepthBuffer( b : h3d.mat.Texture ) {
-	}
-
 	public function getDefaultDepthBuffer() : h3d.mat.Texture {
 		return null;
 	}

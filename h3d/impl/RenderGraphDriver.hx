@@ -172,10 +172,6 @@ class RenderGraphDriver extends Driver {
 		d.disposeTexture(t);
 	}
 
-	override function disposeDepthBuffer(t : h3d.mat.Texture ) {
-		d.disposeDepthBuffer(t);
-	}
-
 	override function disposeBuffer( b : h3d.Buffer ) {
 		d.disposeBuffer(b);
 	}

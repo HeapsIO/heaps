@@ -1066,7 +1066,7 @@ class GlDriver extends Driver {
 		gl.viewport(0, 0, width, height);
 
 		@:privateAccess if( defaultDepth != null ) {
-			disposeDepthBuffer(defaultDepth);
+			disposeTexture(defaultDepth);
 			defaultDepth.width = this.bufferWidth;
 			defaultDepth.height = this.bufferHeight;
 			defaultDepth.t = allocDepthBuffer(defaultDepth);
@@ -1335,13 +1335,6 @@ class GlDriver extends Driver {
 
 		restoreBind();
 		return tt;
-	}
-
-	override function disposeDepthBuffer( b : h3d.mat.Texture ) {
-		@:privateAccess if( b.t != null && b.t.t != null ) {
-			gl.deleteTexture(b.t.t);
-			b.t = null;
-		}
 	}
 
 	var defaultDepth : h3d.mat.Texture;

@@ -2615,11 +2615,6 @@ class DX12Driver extends h3d.impl.Driver {
 		t.t = null;
 	}
 
-	override function disposeDepthBuffer(t:h3d.mat.Texture) {
-		disposeResource(t.t);
-		t.t = null;
-	}
-
 	override function uploadTextureBitmap(t:h3d.mat.Texture, bmp:hxd.BitmapData, mipLevel:Int, side:Int) {
 		var pixels = bmp.getPixels();
 		uploadTexturePixels(t, pixels, mipLevel, side);
