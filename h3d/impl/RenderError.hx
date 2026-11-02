@@ -17,7 +17,8 @@ class RenderError {
 
 	/**
 		When set, render errors are reported here instead of throwing, and what failed is skipped.
-		A failed `Shader` stays skipped. The failing pass, if any, is `RenderContext.drawPass`.
+		Errors are reported each frame while they remain : a failed `Shader` stays skipped and is reported each time it is selected.
+		The failing pass, if any, is `RenderContext.drawPass`.
 	**/
 	public static var onRenderError : (error : RenderErrorKind, message : String) -> Void;
 
