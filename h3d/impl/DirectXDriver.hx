@@ -482,6 +482,8 @@ class DirectXDriver extends h3d.impl.Driver {
 		if( tt == null ) return;
 		t.t = null;
 		if( tt.view != null ) tt.view.release();
+		if( tt.depthView != null ) tt.depthView.release();
+		if( tt.readOnlyDepthView != null ) tt.readOnlyDepthView.release();
 		if( tt.res != null ) tt.res.release();
 		if( tt.views != null )
 			for( v in tt.views )
