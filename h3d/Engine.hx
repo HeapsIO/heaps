@@ -152,12 +152,20 @@ class Engine {
 	public function selectShader( shader : hxsl.RuntimeShader ) {
 		if( shader.mode != Compute )
 			flushTarget();
-		shaderFailed = h3d.impl.RenderError.onRenderError != null && shader.failed;
-		if( shaderFailed )
+		var onError = h3d.impl.RenderError.onRenderError;
+		shaderFailed = onError != null && shader.failed != null;
+		if( shaderFailed ) {
+			onError(Shader(shader), shader.failed);
 			return;
+		}
 		var switched = false;
-		if( !h3d.impl.RenderError.guard(switched = driver.selectShader(shader), Shader(shader)) )
-			shaderFailed = shader.failed = true;
+		if( onError == null )
+			switched = driver.selectShader(shader);
+		else try switched = driver.selectShader(shader) catch( e : haxe.Exception ) {
+			shaderFailed = true;
+			shader.failed = e.message;
+			onError(Shader(shader), shader.failed);
+		}
 		if( switched )
 			shaderSwitches++;
 	}
