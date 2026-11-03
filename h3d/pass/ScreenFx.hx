@@ -40,7 +40,7 @@ class ScreenFx<T:h3d.shader.ScreenShader> {
 
 	public function render() {
 		if( primitive == null )
-			primitive = h3d.prim.Plane2D.get();
+			primitive = h3d.prim.FullscreenTriangle.get();
 		shader.flipY = engine.driver.hasFeature(BottomLeftCoords) && engine.getCurrentTarget() != null ? -1 : 1;
 		var shaders = @:privateAccess pass.shaders;
 		var ctx = h3d.impl.RenderContext.get();
