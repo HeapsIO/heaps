@@ -41,6 +41,7 @@ class System {
 
 	// JS
 	static var loopInit = false;
+	static var timerRan = true;
 	static var currentNativeCursor:hxd.Cursor;
 	static var currentCustomCursor:hxd.Cursor.CustomCursor;
 
@@ -67,8 +68,13 @@ class System {
 				window.mozRequestAnimationFrame;
 			if( fpsLimit>0 )
 				js.Browser.window.setTimeout( ()->rqf(browserLoop), 1000/fpsLimit );
+			else if( !timerRan )
+				// input and rendering starve the timers / promises : yield to them before the next frame
+				js.Browser.window.setTimeout( ()->rqf(browserLoop), 0 );
 			else
 				rqf(browserLoop);
+			timerRan = false;
+			js.Browser.window.setTimeout( ()->timerRan = true, 0 );
 		} else {
 			#if (nodejs && hxnodejs)
 			js.node.Timers.setTimeout(browserLoop, 0);
