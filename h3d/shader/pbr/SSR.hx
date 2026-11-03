@@ -36,8 +36,8 @@ class SSRFilter extends h3d.shader.ScreenShader {
 
 		function fragment() {
 			var sum = vec4(0.0);
-			for ( i in 0...7 ) {
-				for ( j in 0...7 ) {
+			@unroll for ( i in 0...7 ) {
+				@unroll for ( j in 0...7 ) {
 					var tc = calculatedUV + invSize * vec2(i - 3, j - 3);
 					var c = ssrColor.getLod(tc, 0.0);
 					sum += weights[i] * weights[j] * c * getWeight(c);
