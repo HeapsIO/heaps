@@ -35,6 +35,7 @@ class SSR implements h3d.impl.RendererFX {
 	public function apply( r : h3d.scene.pbr.Renderer ) {
 		var ctx = r.ctx;
 		r.mark("SSR");
+		ctx.engine.driver.beginEvent("SSR");
 
 		var hdr = r.textures.hdr;
 		var normal = r.textures.normal;
@@ -130,6 +131,7 @@ class SSR implements h3d.impl.RendererFX {
 
 		if ( debugEnabled )
 			h3d.pass.Copy.run(ssrDebug, hdr, Alpha);
+		ctx.engine.driver.endEvent();
 	}
 
 	public function start( r : h3d.scene.Renderer ) {
