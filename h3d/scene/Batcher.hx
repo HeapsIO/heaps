@@ -692,7 +692,7 @@ private class BatchCommandBuilder extends hxsl.Shader {
 		@param var instanceStride : Int;
 		@param var modelViewOffset : Int;
 		@param var instancesInfos : StorageBuffer<Int>; // 1 elements => 0 : flags = subPartID(16 bits) + subMeshID(16 bits)
-		@param var subMeshInfos : StorageBuffer<Vec4>; // 2 elements => 0 : boundingSphere (center, radius), 1 : x : lodStart, y : lodCount
+		@param var subMeshInfos : StorageBuffer<Vec4>; // 2 elements => 0 : xyz : bounds center, w : lodStart, 1 : xyz : bounds half extents (bounding sphere radius = length), w : lodCount
 		@param var lodInfos : StorageBuffer<Float>; // x : screenRatio
 		@param var subPartInfos : StorageBuffer<Int>; // 2 elements => 0 : indexCount, 1 : indexStart
 		@param var countBuffer : RWBuffer<Int>;
@@ -736,10 +736,10 @@ private class BatchCommandBuilder extends hxsl.Shader {
 			}
 		}
 
-		function insideOBB(pos : Vec3, radius : Float, min : Vec3, max : Vec3) : Bool {
-			return (pos.x + radius) > min.x && (pos.x - radius) < max.x &&
-					(pos.y + radius) > min.y && (pos.y - radius) < max.y &&
-					(pos.z + radius) > min.z && (pos.z - radius) < max.z;
+		function insideOBB(pos : Vec3, extents : Vec3, min : Vec3, max : Vec3) : Bool {
+			return (pos.x + extents.x) > min.x && (pos.x - extents.x) < max.x &&
+					(pos.y + extents.y) > min.y && (pos.y - extents.y) < max.y &&
+					(pos.z + extents.z) > min.z && (pos.z - extents.z) < max.z;
 		}
 
 		function emitInstance(instanceID : Int, indexCount : Int, instanceCount : Int, startIndex : Int, startVertex : Int, baseInstance : Int ) {
@@ -783,12 +783,12 @@ private class BatchCommandBuilder extends hxsl.Shader {
 			var subMeshID : Int = flags >> 16;
 
 			var subMeshPos = subMeshID * subMeshInfosStride;
-			var localSphere = subMeshInfos[subMeshPos + 0];
-			var lodInfo = subMeshInfos[subMeshPos + 1];
-			var lodStart : Int = floatBitsToInt(lodInfo.x);
-			var lodCount : Int = floatBitsToInt(lodInfo.y);
+			var bbCenter = subMeshInfos[subMeshPos + 0].xyz;
+			var lodStart : Int = floatBitsToInt(subMeshInfos[subMeshPos + 0].w);
+			var bbHalfExtents = subMeshInfos[subMeshPos + 1].xyz;
+			var lodCount : Int = floatBitsToInt(subMeshInfos[subMeshPos + 1].w);
 
-			var localCenter = vec4(localSphere.xyz, 1.0);
+			var localCenter = vec4(bbCenter, 1.0);
 			var position = vec3(dot(modelView[0], localCenter), dot(modelView[1], localCenter), dot(modelView[2], localCenter));
 
 			if ( IS_RELATIVE ) {
@@ -801,71 +801,76 @@ private class BatchCommandBuilder extends hxsl.Shader {
 				scale *= worldScale;
 			}
 
-			var boundingSphere = localSphere.w * max(scale.x,max(scale.y, scale.z));
+			var boundingSphere = length(bbHalfExtents) * max(scale.x,max(scale.y, scale.z));
+
+			var boxAxes = [
+				vec3(modelView[0].x, modelView[1].x, modelView[2].x) * bbHalfExtents.x,
+				vec3(modelView[0].y, modelView[1].y, modelView[2].y) * bbHalfExtents.y,
+				vec3(modelView[0].z, modelView[1].z, modelView[2].z) * bbHalfExtents.z
+			];
+			if ( IS_RELATIVE ) {
+				@unroll for ( i in 0...3 )
+					boxAxes[i] = boxAxes[i] * worldMatrix.mat3();
+			}
 
 			if ( ENABLE_FRUSTUM_CULLING ) {
 				@unroll for ( i  in 0...6 ) {
 					var plane = frustum[i];
-				 	if ((dot(plane.xyz, position) - plane.w) < -boundingSphere)
+					var extent = abs(dot(plane.xyz, boxAxes[0])) + abs(dot(plane.xyz, boxAxes[1])) + abs(dot(plane.xyz, boxAxes[2]));
+				 	if ((dot(plane.xyz, position) - plane.w) < -extent)
 						return;
 				}
 			}
 
 			if ( ENABLE_DIRLIGHT_OBB_CULLING ) {
 				var objPosLs = position * lightMatrix;
-				if ( !insideOBB(objPosLs, boundingSphere, lightOBBMin, lightOBBMax) )
+				var extentsLs = abs(boxAxes[0] * lightMatrix) + abs(boxAxes[1] * lightMatrix) + abs(boxAxes[2] * lightMatrix);
+				if ( !insideOBB(objPosLs, extentsLs, lightOBBMin, lightOBBMax) )
 					return;
 			}
 
 			if ( ENABLE_HZB_CULLING ) {
 				var posView = vec4(position, 1.0) * camera.view;
-				var depthView = posView.z - boundingSphere;
-				var objDepthMin = (camera.zFar * (depthView - camera.zNear)) / (depthView * (camera.zFar - camera.zNear));
+				var viewAxes = [ boxAxes[0] * camera.view.mat3(), boxAxes[1] * camera.view.mat3(), boxAxes[2] * camera.view.mat3() ];
+				var depthView = posView.z - (abs(viewAxes[0].z) + abs(viewAxes[1].z) + abs(viewAxes[2].z));
+				if ( depthView > camera.zNear ) {
+					var objDepthMin = (camera.zFar * (depthView - camera.zNear)) / (depthView * (camera.zFar - camera.zNear));
 
-				var aabbCornersViewSpace = [
-					posView.xyz + vec3(boundingSphere, boundingSphere, -boundingSphere), // top right
-					posView.xyz + vec3(boundingSphere, -boundingSphere, -boundingSphere), // bottom right
-					posView.xyz + vec3(-boundingSphere, boundingSphere, -boundingSphere), // top left
-					posView.xyz + vec3(-boundingSphere, -boundingSphere, -boundingSphere) // bottom left
-				];
+					var cornerSigns = [
+						vec3(-1, -1, -1), vec3(1, -1, -1), vec3(-1, 1, -1), vec3(1, 1, -1),
+						vec3(-1, -1, 1), vec3(1, -1, 1), vec3(-1, 1, 1), vec3(1, 1, 1)
+					];
+					var uvMin = vec2(1e30);
+					var uvMax = vec2(-1e30);
+					@unroll for ( i in 0...8 ) {
+						var sign = cornerSigns[i];
+						var corner = posView.xyz + viewAxes[0] * sign.x + viewAxes[1] * sign.y + viewAxes[2] * sign.z;
+						var screenPos = vec4(corner, 1.0) * camera.proj;
+						var cornerUV = screenToUv(screenPos.xy / screenPos.w);
+						uvMin = min(uvMin, cornerUV);
+						uvMax = max(uvMax, cornerUV);
+					}
 
-				var offscreen = false;
-				var aabbCornersUVSpace = [ vec2(0), vec2(0), vec2(0), vec2(0) ];
-				var aabbMinMax = [ 1e30, -1e30, 1e30, -1e30 ]; // minX, maxX, minY, maxY
-				@unroll for ( i in 0...4 ) {
-					var cornerViewSpace = aabbCornersViewSpace[i];
-					var cornerScreenPos = vec4(cornerViewSpace, 1.0) * camera.proj;
-					cornerScreenPos.xyz /= cornerScreenPos.w;
-					cornerScreenPos.xy = screenToUv(cornerScreenPos.xy);
-					aabbCornersUVSpace[i] = cornerScreenPos.xy;
+					uvMin = saturate(uvMin);
+					uvMax = saturate(uvMax);
+					var texelSize = (uvMax - uvMin) * hzbSize;
+					var w = max(texelSize.x, texelSize.y);
 
-					aabbMinMax[0] = min(aabbMinMax[0], aabbCornersUVSpace[i].x);
-					aabbMinMax[1] = max(aabbMinMax[1], aabbCornersUVSpace[i].x);
-					aabbMinMax[2] = min(aabbMinMax[2], aabbCornersUVSpace[i].y);
-					aabbMinMax[3] = max(aabbMinMax[3], aabbCornersUVSpace[i].y);
+					var mip = max(0.0, ceil(log2(w))) + 1;
+					mip = clamp(mip, 0.0, log2(max(hzbSize.x, hzbSize.y)));
+					var mipSize = max(vec2(1.0), floor(hzbSize / pow(vec2(2.0), vec2(mip))));
 
-					if ( aabbCornersUVSpace[i].x <= 0.0 || aabbCornersUVSpace[i].x >= 1.0 || aabbCornersUVSpace[i].y <= 0.0 || aabbCornersUVSpace[i].y >= 1.0 )
-						offscreen = true;
+					var aabbCornersUVSpace = [ uvMin, vec2(uvMax.x, uvMin.y), vec2(uvMin.x, uvMax.y), uvMax ];
+					var depth = 0.0;
+					@unroll for ( i in 0...4 ) {
+						var cornerPos = ivec2(clamp(aabbCornersUVSpace[i] * mipSize, vec2(0.0), mipSize - vec2(1.0)));
+						var cornerDepth = hzb.fetchLod(cornerPos, int(mip)).x;
+						depth = max(depth, cornerDepth);
+					}
+
+					if ( objDepthMin > depth )
+						return;
 				}
-
-				var boxWidth = aabbMinMax[1] - aabbMinMax[0];
-				var boxHeight = aabbMinMax[3] - aabbMinMax[2];
-				var texelSize = vec2(boxWidth, boxHeight) * hzbSize;
-				var w = max(texelSize.x, texelSize.y);
-
-				var mip = max(0.0, ceil(log2(w))) + 1;
-				mip = clamp(mip, 0.0, log2(max(hzbSize.x, hzbSize.y)));
-				var mipSize = max(vec2(1.0), floor(hzbSize / pow(vec2(2.0), vec2(mip))));
-
-				var depth = 0.0;
-				@unroll for ( i in 0...4 ) {
-					var cornerPos = ivec2(clamp(aabbCornersUVSpace[i] * mipSize, vec2(0.0), mipSize - vec2(1.0)));
-					var cornerDepth = hzb.fetchLod(cornerPos, int(mip)).x;
-					depth = max(depth, cornerDepth);
-				}
-
-				if ( !offscreen && objDepthMin > depth )
-					return;
 			}
 
 			var toCam = camera.position - position.xyz;
