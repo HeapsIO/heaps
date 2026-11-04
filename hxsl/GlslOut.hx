@@ -626,12 +626,13 @@ class GlslOut {
 			locals.set(v.id, v);
 			switch( it.e ) {
 			case TBinop(OpInterval, e1, e2):
+				var n = varName(v);
 				add("for(");
-				add(v.name+"=");
+				add(n+"=");
 				addValue(e1,tabs);
-				add(";"+v.name+"<");
+				add(";"+n+"<");
 				addValue(e2,tabs);
-				add(";" + v.name+"++) ");
+				add(";" + n+"++) ");
 				addBlock(loop, tabs);
 			default:
 				throw "assert";
