@@ -580,25 +580,25 @@ class Texture {
 	}
 
 	static function allocNoise( t : h3d.mat.Texture, size : Int ) {
-		var b = new hxd.BitmapData(size, size);
+		var p = hxd.Pixels.alloc(size, size, RGBA);
 		for( x in 0...size )
 			for( y in 0...size ) {
 				var n = Std.random(256);
-				b.setPixel(x, y, 0xFF000000 | n | (n << 8) | (n << 16));
+				p.setPixel(x, y, 0xFF000000 | n | (n << 8) | (n << 16));
 			}
-		t.uploadBitmap(b);
-		b.dispose();
+		t.uploadPixels(p);
+		p.dispose();
 	}
 
 	static function allocChecker( t : h3d.mat.Texture, size : Int ) {
-		var b = new hxd.BitmapData(size, size);
-		b.clear(0xFFFFFFFF);
+		var p = hxd.Pixels.alloc(size, size, RGBA);
+		p.clear(0xFFFFFFFF);
 		for( x in 0...size>>1 )
 			for( y in 0...size>>1 ) {
-				b.setPixel(x, y, 0xFF000000);
-				b.setPixel(x+(size>>1), y+(size>>1), 0xFF000000);
+				p.setPixel(x, y, 0xFF000000);
+				p.setPixel(x+(size>>1), y+(size>>1), 0xFF000000);
 			}
-		t.uploadBitmap(b);
-		b.dispose();
+		t.uploadPixels(p);
+		p.dispose();
 	}
 }
