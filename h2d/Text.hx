@@ -352,6 +352,8 @@ class Text extends Drawable {
 		} else {
 			maxWidth -= afterData;
 		}
+		if (maxWidth <= 2)
+			return text;
 		if ( font == null ) font = this.font;
 		var lines = [];
 		var x = leftMargin;
@@ -385,7 +387,7 @@ class Text extends Drawable {
 			x += esize;
 			prevChar = cc;
 			if( lineBreak ) {
-				if( x > maxWidth && lastBreak >= 0 && (!trimTrailingSpaces || !font.charset.isSpace(cc) || startX > maxWidth) ) {
+				if( x > maxWidth && lastBreak >= lastPos && (!trimTrailingSpaces || !font.charset.isSpace(cc) || startX > maxWidth) ) {
 					i = lastBreak;
 					x = lastBreakX;
 					flushLine(i + 1);
