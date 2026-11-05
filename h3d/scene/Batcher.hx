@@ -757,6 +757,16 @@ private class BatchCommandBuilder extends hxsl.Shader {
 			return 2.0 * screenRadius * meshLodScale;
 		}
 
+		function selectHzbMip( uvMin : Vec2, uvMax : Vec2 ) : Float {
+			var texelSize = (uvMax - uvMin) * hzbSize;
+			var mip = max(0.0, ceil(log2(max(texelSize.x, texelSize.y))));
+			var finerMip = max(mip - 1.0, 0.0);
+			var finerMipSize = max(vec2(1.0), floor(hzbSize / pow(vec2(2.0), vec2(finerMip))));
+			var finerTexelSpan = floor(uvMax * finerMipSize) - floor(uvMin * finerMipSize);
+			var selectedMip = finerTexelSpan.x <= 1.0 && finerTexelSpan.y <= 1.0 ? finerMip : mip;
+			return clamp(selectedMip, 0.0, log2(max(hzbSize.x, hzbSize.y)));
+		}
+
 		function main() {
 			setLayout(64, 1, 1);
 			var instanceID = computeVar.workGroup.x * 64 + computeVar.localInvocationIndex;
@@ -853,11 +863,7 @@ private class BatchCommandBuilder extends hxsl.Shader {
 
 					uvMin = saturate(uvMin);
 					uvMax = saturate(uvMax);
-					var texelSize = (uvMax - uvMin) * hzbSize;
-					var w = max(texelSize.x, texelSize.y);
-
-					var mip = max(0.0, ceil(log2(w)));
-					mip = clamp(mip, 0.0, log2(max(hzbSize.x, hzbSize.y)));
+					var mip = selectHzbMip(uvMin, uvMax);
 					var mipSize = max(vec2(1.0), floor(hzbSize / pow(vec2(2.0), vec2(mip))));
 
 					var aabbCornersUVSpace = [ uvMin, vec2(uvMax.x, uvMin.y), vec2(uvMin.x, uvMax.y), uvMax ];
