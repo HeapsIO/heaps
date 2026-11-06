@@ -67,6 +67,14 @@ class BaseMesh extends hxsl.Shader {
 		@param var specularColor : Vec3;
 		@const var IS_STATIC : Bool = false;
 
+		function transformNormal( n : Vec3, m : Mat4 ) : Vec3 {
+			var axisX = vec3(m[0].x, m[1].x, m[2].x);
+			var axisY = vec3(m[0].y, m[1].y, m[2].y);
+			var axisZ = vec3(m[0].z, m[1].z, m[2].z);
+			var s2 = vec3(dot(axisX, axisX), dot(axisY, axisY), dot(axisZ, axisZ));
+			return ((n * (s2.yzx * s2.zxy)) * m.mat3()).normalize();
+		}
+
 		// each __init__ expr is out of order dependency-based
 		function __init__() {
 			relativePosition = input.position;
@@ -86,7 +94,7 @@ class BaseMesh extends hxsl.Shader {
 		}
 
 		function __init__vertex() {
-			transformedNormal = (input.normal * modelView.mat3()).normalize();
+			transformedNormal = transformNormal(input.normal, modelView);
 			worldDist = length(transformedPosition - camera.position) / camera.zFar;
 		}
 
