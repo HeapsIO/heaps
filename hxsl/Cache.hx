@@ -282,7 +282,14 @@ class Cache {
 			close: () -> {}
 		};
 		#else
-		if( shaderId == 0 ) try sys.FileSystem.createDirectory("shaders") catch( e : Dynamic ) {};
+		if( shaderId == 0 ) {
+			try sys.FileSystem.createDirectory("shaders") catch( e : Dynamic ) {};
+			#if !keep_old_shader_dumps
+			for( f in sys.FileSystem.readDirectory("shaders") )
+				if( StringTools.endsWith(f, "_dump.c") )
+					try sys.FileSystem.deleteFile("shaders/" + f) catch( e : Dynamic ) {};
+			#end
+		}
 		var dbg = sys.io.File.write("shaders/"+shaderId+"_dump.c");
 		#end
 		var oldTrace = haxe.Log.trace;
