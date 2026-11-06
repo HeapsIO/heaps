@@ -21,6 +21,9 @@ class CascadeShadowMap extends Shadows {
 	var currentCascadeIndex = 0;
 	var tmpCorners : Array<h3d.Vector> = [for (i in 0...8) new h3d.Vector()];
 	var tmpFrustum = new h3d.col.Frustum();
+	var casterBounds = new h3d.col.Bounds();
+	var cullingView = new h3d.Matrix();
+	var cullingFrame = -1;
 
 	public var cascadeViewProj = new h3d.Matrix();
 	public var params : Array<CascadeParams> = [];
@@ -307,6 +310,59 @@ class CascadeShadowMap extends Shadows {
 		return getCascadeViewProj(currentCascadeIndex);
 	}
 
+	function updateCascades() {
+		var slight = light == null ? ctx.lightSystem.shadowLight : light;
+		var ldir = slight == null ? null : @:privateAccess slight.getShadowDirection();
+		if( ldir == null )
+			lightCamera.target.set(0, 0, -1);
+		else {
+			lightCamera.target.set(ldir.x, ldir.y, ldir.z);
+			lightCamera.target.normalize();
+		}
+		lightCamera.pos.set();
+		lightCamera.orthoBounds.empty();
+		lightCamera.update();
+
+		calcCascadeMatrices();
+
+		for (i in 0...cascade)
+			lightCamera.orthoBounds.add(lightCameras[i].orthoBounds);
+		var zDist = (castingMaxDist > 0.0 ? castingMaxDist : maxDist < 0.0 ? ctx.camera.zFar : maxDist);
+		lightCamera.orthoBounds.zMax += zDist;
+		lightCamera.orthoBounds.zMin -= zDist;
+		lightCamera.update();
+
+		casterBounds.load(lightCamera.orthoBounds);
+		cullingView.load(lightCamera.mcam);
+		cullingFrame = ctx.frame;
+	}
+
+	function getMinCasterSize( i : Int ) {
+		var b = lightCameras[i].orthoBounds;
+		var dimension = Math.max(b.xMax - b.xMin, b.yMax - b.yMin);
+		return ( dimension * hxd.Math.clamp(minPixelSize, 0, size) ) / size;
+	}
+
+	public function prepareCulling( ctx : h3d.scene.RenderContext ) {
+		setContext(ctx);
+		if( cullingFrame != ctx.frame )
+			updateCascades();
+	}
+
+	public function getCullingView() : h3d.Matrix {
+		return cullingView;
+	}
+
+	public function getCasterBounds( i : Int, bounds : h3d.col.Bounds ) : Float {
+		bounds.load(lightCameras[i].orthoBounds);
+		bounds.zMin = casterBounds.zMin;
+		return i == 0 ? 0.0 : getMinCasterSize(i);
+	}
+
+	public function isCascadeView( view : h3d.scene.RenderContext.View ) : Bool {
+		return view.idx > 0 && view.frustum == lightCamera.frustum;
+	}
+
 	public dynamic function customCullPasses(passes : h3d.pass.PassList, frustum : h3d.col.Frustum, i : Int, minSize : Float) {
 		if ( minSize > 0.0 && i > 0 ) {
 			passes.filter(function(p) {
@@ -329,31 +385,12 @@ class CascadeShadowMap extends Shadows {
 			return;
 
 		var prevCtxViewFrustum = ctx.currentView.frustum;
-		var slight = light == null ? ctx.lightSystem.shadowLight : light;
-		var ldir = slight == null ? null : @:privateAccess slight.getShadowDirection();
-		if( ldir == null )
-			lightCamera.target.set(0, 0, -1);
-		else {
-			lightCamera.target.set(ldir.x, ldir.y, ldir.z);
-			lightCamera.target.normalize();
-		}
-		lightCamera.pos.set();
-		lightCamera.orthoBounds.empty();
-		lightCamera.update();
-
-		calcCascadeMatrices();
-
-		for (i in 0...cascade)
-			lightCamera.orthoBounds.add(lightCameras[i].orthoBounds);
-		var zDist = (castingMaxDist > 0.0 ? castingMaxDist : maxDist < 0.0 ? ctx.camera.zFar : maxDist);
-		lightCamera.orthoBounds.zMax += zDist;
-		lightCamera.orthoBounds.zMin -= zDist;
-		lightCamera.update();
+		updateCascades();
 
 		cullPasses(passes, function(col) return col.inFrustum(lightCamera.frustum));
 		var p = passes.save();
 
-		var casterZMin = lightCamera.orthoBounds.zMin;
+		var casterZMin = casterBounds.zMin;
 		var depthFormat : hxd.PixelFormat = highPrecision ? Depth32 : Depth16;
 		var renderToDepthArray = ctx.engine.driver.hasFeature(DepthTextureArray);
 		var arrayFormat : hxd.PixelFormat = renderToDepthArray ? depthFormat : R32F;
@@ -375,8 +412,7 @@ class CascadeShadowMap extends Shadows {
 			ctx.engine.setDepthBias(0, slopeScaledBias);
 
 			var lc = lightCameras[i];
-			var dimension = Math.max(lc.orthoBounds.xMax - lc.orthoBounds.xMin,	lc.orthoBounds.yMax - lc.orthoBounds.yMin);
-			dimension = ( dimension * hxd.Math.clamp(minPixelSize, 0, size) ) / size;
+			var dimension = getMinCasterSize(i);
 			lightCamera.orthoBounds.load(lc.orthoBounds);
 			lightCamera.orthoBounds.zMin = casterZMin;
 			lightCamera.update();
@@ -390,7 +426,7 @@ class CascadeShadowMap extends Shadows {
 		ctx.engine.setDepthBias(0, 0);
 		syncCascadeShader(cascades);
 
-		ctx.currentView.frustum = prevCtxViewFrustum;
+		ctx.setCurrentView(0, prevCtxViewFrustum);
 
 		#if editor
 		drawDebug();

@@ -101,11 +101,10 @@ class BatchGroup {
 	}
 }
 
-@:allow(h3d.scene.Batch)
+@:allow(h3d.scene.Batch, h3d.scene.BatchPass)
 class Batcher extends h3d.scene.Object {
 	public var shadowMaxDistance = -1.0;
 	public var shadowCameraFrustumCulling = false; // Aggressive culling inside Shadow passes, using player camera frustum
-	public var shadowCullingOffset = 100.0;
 	public var hzbCulling = false;
 	public var isRelative : Bool = false;
 	public var batchFlags = new haxe.EnumFlags<BatcherFlags>();
@@ -123,6 +122,46 @@ class Batcher extends h3d.scene.Object {
 
 	var renderer : h3d.scene.Renderer;
 	var globalShaders : Map<String, Array<hxsl.Shader>>;
+
+	static inline var MAX_SHADOW_CASCADES = 4;
+	var cascadeMap : h3d.pass.CascadeShadowMap;
+	var cascadeFrame = -1;
+	var cascadeCount = 0;
+	var cascadeView = new h3d.Matrix();
+	var cascadeMin = [for( i in 0...MAX_SHADOW_CASCADES ) new h3d.Vector4()];
+	var cascadeMax = [for( i in 0...MAX_SHADOW_CASCADES ) new h3d.Vector4()];
+	var cascadeBounds = new h3d.col.Bounds();
+
+	function prepareCascades( ctx : h3d.scene.RenderContext ) : Int {
+		if ( cascadeFrame == ctx.frame )
+			return cascadeCount;
+		cascadeFrame = ctx.frame;
+		cascadeCount = 0;
+		cascadeMap = null;
+		var light = Std.downcast(ctx.lightSystem?.shadowLight, h3d.scene.pbr.Light);
+		if ( light == null || !light.allocated )
+			return 0;
+		var csm = Std.downcast(light.shadows, h3d.pass.CascadeShadowMap);
+		if ( csm == null || !csm.enabled || csm.mode == h3d.pass.Shadows.RenderMode.None || csm.cascade > MAX_SHADOW_CASCADES )
+			return 0;
+		csm.prepareCulling(ctx);
+		cascadeMap = csm;
+		cascadeCount = csm.cascade;
+		cascadeView.load(csm.getCullingView());
+		for ( i in 0...cascadeCount ) {
+			var minSize = csm.getCasterBounds(i, cascadeBounds);
+			cascadeMin[i].set(cascadeBounds.xMin, cascadeBounds.yMin, cascadeBounds.zMin, minSize);
+			cascadeMax[i].set(cascadeBounds.xMax, cascadeBounds.yMax, cascadeBounds.zMax, 0.0);
+		}
+		return cascadeCount;
+	}
+
+	function getShadowSlot( ctx : h3d.scene.RenderContext, cascades : Int ) : Int {
+		var view = ctx.currentView;
+		if ( view.idx > cascades || cascadeMap == null || !cascadeMap.isCascadeView(view) )
+			return 0;
+		return view.idx;
+	}
 
 	public function hasSyncIDs() : Bool {
 		return (syncShader != null && syncShader.hasSyncIDs());
@@ -677,8 +716,8 @@ private class BatchCommandBuilder extends hxsl.Shader {
 	static var SRC = {
 		@const var ENABLE_FRUSTUM_CULLING : Bool;
 		@const var ENABLE_DISTANCE_CLIPPING : Bool;
-		@const var ENABLE_DIRLIGHT_OBB_CULLING : Bool;
 		@const var ENABLE_HZB_CULLING : Bool;
+		@const(4) var CASCADE_COUNT : Int;
 
 		@global var camera : {
 			var position : Vec3;
@@ -710,9 +749,11 @@ private class BatchCommandBuilder extends hxsl.Shader {
 		final subMeshInfosStride : Int = 2;
 		final subPartInfosStride : Int = 2;
 
-		@param var lightMatrix : Mat3;
-		@param var lightOBBMin : Vec3;
-		@param var lightOBBMax : Vec3;
+		final MAX_CASCADES : Int = 4;
+		@param var cascadeView : Mat4;
+		@param var cascadeMin : Array<Vec4, MAX_CASCADES>;
+		@param var cascadeMax : Array<Vec4, MAX_CASCADES>;
+		@param var commandCapacity : Int;
 
 		@param var hzb : Sampler2D;
 		@param var hzbSize : Vec2;
@@ -832,13 +873,6 @@ private class BatchCommandBuilder extends hxsl.Shader {
 				}
 			}
 
-			if ( ENABLE_DIRLIGHT_OBB_CULLING ) {
-				var objPosLs = position * lightMatrix;
-				var extentsLs = abs(boxAxes[0] * lightMatrix) + abs(boxAxes[1] * lightMatrix) + abs(boxAxes[2] * lightMatrix);
-				if ( !insideOBB(objPosLs, extentsLs, lightOBBMin, lightOBBMax) )
-					return;
-			}
-
 			if ( ENABLE_HZB_CULLING ) {
 				var posView = vec4(position, 1.0) * camera.view;
 				var viewAxes = [ boxAxes[0] * camera.view.mat3(), boxAxes[1] * camera.view.mat3(), boxAxes[2] * camera.view.mat3() ];
@@ -897,13 +931,30 @@ private class BatchCommandBuilder extends hxsl.Shader {
 			if ( lodSelected >= lodCount )
 				return;
 
-			if ( ENABLE_STREAMING_FEEDBACK )
-				writeStreamingFeedback(instanceID);
-
 			var subPartID : Int = flags & 0xFFFF;
 			var subPartPos = (subPartID + lodSelected) * subPartInfosStride;
 			var indexCount : Int = subPartInfos[subPartPos + 0];
 			var indexStart : Int = subPartInfos[subPartPos + 1];
+
+			if ( CASCADE_COUNT > 0 ) {
+				var posLs = position * cascadeView.mat3x4();
+				var lightRot = cascadeView.mat3();
+				var extentsLs = abs(boxAxes[0] * lightRot) + abs(boxAxes[1] * lightRot) + abs(boxAxes[2] * lightRot);
+				var dimension = 2.0 * max(extentsLs.x, max(extentsLs.y, extentsLs.z));
+				var inCascade = false;
+				@unroll for ( c in 0...CASCADE_COUNT ) {
+					var cMin = cascadeMin[c];
+					var cMax = cascadeMax[c];
+					if ( dimension >= cMin.w && insideOBB(posLs, extentsLs, cMin.xyz, cMax.xyz) ) {
+						var cascadeID = atomicAdd( countBuffer, c + 1, 1 );
+						emitInstance( (c + 1) * commandCapacity + cascadeID, indexCount, 1, indexStart, 0, instanceID );
+						inCascade = true;
+					}
+				}
+				if ( ENABLE_STREAMING_FEEDBACK && inCascade )
+					writeStreamingFeedback(instanceID);
+			} else if ( ENABLE_STREAMING_FEEDBACK )
+				writeStreamingFeedback(instanceID);
 
 			var id = atomicAdd( countBuffer, 0, 1 );
 			emitInstance( id, indexCount, 1, indexStart, 0, instanceID );
@@ -945,6 +996,9 @@ private class BatchPass {
 
 	var command : h3d.impl.InstanceBuffer;
 	var commandBuffer : h3d.Buffer;
+	var commandCapacity = 0;
+	var commandSlots = 0;
+	var emittedCascades = 0;
 	var countBuffer : h3d.GPUCounter;
 	var builderShader = new BatchCommandBuilder();
 
@@ -1191,18 +1245,24 @@ private class BatchPass {
 			ed.uploadedCount = ed.instanceCount;
 			instanceCursor += ed.instanceCount;
 		}
+	}
 
-		if ( commandBuffer == null || commandBuffer.vertices < totalInstanceCount )  {
-			if ( commandBuffer != null )
-				alloc.disposeBuffer(commandBuffer);
-			commandBuffer = allocBuffer( totalInstanceCount, INDIRECT_DRAW_ARGUMENTS_FMT, UniformReadWrite );
-			if ( command == null )
-				command = new h3d.impl.InstanceBuffer();
-			@:privateAccess command.data = commandBuffer.vbuf;
-		}
-
-		if ( countBuffer == null ) {
-			countBuffer = new GPUCounter();
+	function checkCommandBuffer( slots : Int ) {
+		if ( commandBuffer != null && commandCapacity >= totalInstanceCount && commandSlots >= slots )
+			return;
+		var alloc = hxd.impl.Allocator.get();
+		if ( commandBuffer != null )
+			alloc.disposeBuffer(commandBuffer);
+		var prevSlots = commandSlots;
+		commandCapacity = hxd.Math.imax(commandCapacity, hxd.impl.Allocator.roundPOT(totalInstanceCount));
+		commandSlots = hxd.Math.imax(commandSlots, slots);
+		commandBuffer = alloc.allocBuffer( commandCapacity * commandSlots, INDIRECT_DRAW_ARGUMENTS_FMT, UniformReadWrite );
+		if ( command == null )
+			command = new h3d.impl.InstanceBuffer();
+		@:privateAccess command.data = commandBuffer.vbuf;
+		if ( countBuffer == null || prevSlots != commandSlots ) {
+			countBuffer?.dispose();
+			countBuffer = new GPUCounter(commandSlots);
 			@:privateAccess command.countBuffer = countBuffer.buffer.vbuf;
 		}
 	}
@@ -1218,10 +1278,11 @@ private class BatchPass {
 		ctx.computeDispatch(cast s, hxd.Math.ceil(totalInstanceCount/64.0), false);
 	}
 
-	var tmpUp = new h3d.Vector(0, 1, 0);
-
 	public function emitGPU(ctx : h3d.scene.RenderContext) {
 		uploadInstances();
+		var cascades = isShadowPass ? batcher.prepareCascades(ctx) : 0;
+		checkCommandBuffer(cascades + 1);
+		emittedCascades = cascades;
 		builderShader.instancesData = instancesData;
 		builderShader.instanceStride = batchShader.paramsSize;
 		builderShader.modelViewOffset = modelViewOffset;
@@ -1232,60 +1293,25 @@ private class BatchPass {
 		builderShader.instanceCount = totalInstanceCount;
 		builderShader.commandBuffer = commandBuffer;
 		builderShader.countBuffer = countBuffer.buffer;
+		builderShader.commandCapacity = commandCapacity;
 		builderShader.IS_RELATIVE = batcher.isRelative;
 		builderShader.worldMatrix = batcher.getAbsPos();
 
 		builderShader.frustum = ctx.getCameraFrustumBuffer();
 
-		if ( isShadowPass && !batcher.shadowCameraFrustumCulling ) {
-			if ( batcher.shadowMaxDistance > 0.0 ) {
-				builderShader.maxDistance = batcher.shadowMaxDistance;
-				builderShader.ENABLE_DISTANCE_CLIPPING = true;
-			}
+		builderShader.CASCADE_COUNT = cascades;
+		builderShader.cascadeView = batcher.cascadeView;
+		builderShader.cascadeMin = batcher.cascadeMin;
+		builderShader.cascadeMax = batcher.cascadeMax;
 
-			var ls = ctx.lightSystem;
-			if ( ls != null ) {
-				var sl = ls.shadowLight;
-				if ( sl != null ) {
-					var pbrSl = Std.downcast(sl, h3d.scene.pbr.Light);
-					if ( pbrSl != null ) {
-						#if (haxe_ver >= 5)
-						static var z = new h3d.Vector();
-						#else
-						static var z : h3d.Vector = null;
-						if( z == null ) z = new h3d.Vector();
-						#end
-						pbrSl.getShadowDirection(z);
-						z.normalize();
-						var x = tmpUp.cross(z);
-						x.normalize();
-						var y = z.cross(x);
-						y.normalize();
-
-						#if (haxe_ver >= 5)
-						static var lightMatrix = new h3d.Matrix();
-						#else
-						static var lightMatrix : h3d.Matrix = null;
-						if( lightMatrix == null ) lightMatrix = new h3d.Matrix();
-						#end
-						var m = lightMatrix;
-						m._11 = x.x; m._12 = y.x; m._13 = z.x; m._14 = 0;
-						m._21 = x.y; m._22 = y.y; m._23 = z.y; m._24 = 0;
-						m._31 = x.z; m._32 = y.z; m._33 = z.z; m._34 = 0;
-
-						static var bounds = new h3d.col.Bounds();
-						ctx.camera.frustum.getBounds(lightMatrix, bounds);
-						builderShader.lightMatrix = lightMatrix;
-						builderShader.lightOBBMin.set(bounds.xMin, bounds.yMin, bounds.zMin - batcher.shadowCullingOffset);
-						builderShader.lightOBBMax.set(bounds.xMax, bounds.yMax, bounds.zMax);
-
-						builderShader.ENABLE_DIRLIGHT_OBB_CULLING = true;
-					}
-				}
-			}
+		if ( isShadowPass ) {
+			builderShader.ENABLE_FRUSTUM_CULLING = batcher.shadowCameraFrustumCulling;
+			builderShader.ENABLE_HZB_CULLING = false;
+			builderShader.ENABLE_DISTANCE_CLIPPING = batcher.shadowMaxDistance > 0.0;
+			builderShader.maxDistance = batcher.shadowMaxDistance;
 		} else {
 			builderShader.ENABLE_FRUSTUM_CULLING = true;
-			builderShader.ENABLE_DIRLIGHT_OBB_CULLING = false;
+			builderShader.ENABLE_DISTANCE_CLIPPING = false;
 			if ( batcher.hzbCulling ) {
 				builderShader.ENABLE_HZB_CULLING = true;
 				builderShader.hzb = ctx.hzb;
@@ -1330,7 +1356,12 @@ private class BatchPass {
 			ctx.selectBufferHandles( bufferHandles );
 		var engine = ctx.engine;
 		@:privateAccess engine.driver.selectMultiBuffers(primitive.formats, primitive.buffers);
-		@:privateAccess command.commandCount = totalInstanceCount;
+		var slot = isShadowPass ? batcher.getShadowSlot(ctx, emittedCascades) : 0;
+		@:privateAccess {
+			command.commandCount = totalInstanceCount;
+			command.offset = slot * commandCapacity;
+			command.countOffset = slot;
+		}
 		engine.renderInstanced(primitive.indexes, command);
 	}
 
@@ -1348,6 +1379,9 @@ private class BatchPass {
 			alloc.disposeBuffer(commandBuffer);
 			commandBuffer = null;
 		}
+		commandCapacity = 0;
+		commandSlots = 0;
+		emittedCascades = 0;
 		if( syncIDs != null ) {
 			alloc.disposeBuffer(syncIDs);
 			syncIDs = null;

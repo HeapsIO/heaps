@@ -200,6 +200,7 @@ class RenderContext extends h3d.impl.RenderContext {
 		pixelSize = getCurrentPixelSize();
 		setCamera(scene.camera);
 		numViews = 1;
+		currentView.idx = 0;
 		if( streamingFeedback != null ) streamingFeedback.begin();
 	}
 
