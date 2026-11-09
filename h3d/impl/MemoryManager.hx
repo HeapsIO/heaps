@@ -112,7 +112,7 @@ class MemoryManager {
 		var nquads = ((vertices + 3) >> 2) * 6;
 		if( nquads <= SIZE )
 			return quadIndexes16;
-		if( quadIndexes32 == null || quadIndexes32.count < vertices ) {
+		if( quadIndexes32 == null || quadIndexes32.count < nquads ) {
 			var sz = 1 << 17;
 			while( sz < nquads ) sz <<= 1;
 			var bytes = haxe.io.Bytes.alloc(sz << 2);
