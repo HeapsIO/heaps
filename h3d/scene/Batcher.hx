@@ -717,7 +717,6 @@ private class BatchCommandBuilder extends hxsl.Shader {
 		@const var ENABLE_FRUSTUM_CULLING : Bool;
 		@const var ENABLE_DISTANCE_CLIPPING : Bool;
 		@const var ENABLE_HZB_CULLING : Bool;
-		@const(4) var CASCADE_COUNT : Int;
 
 		@global var camera : {
 			var position : Vec3;
@@ -750,6 +749,7 @@ private class BatchCommandBuilder extends hxsl.Shader {
 		final subPartInfosStride : Int = 2;
 
 		final MAX_CASCADES : Int = 4;
+		@param var cascadeCount : Int;
 		@param var cascadeView : Mat4;
 		@param var cascadeMin : Array<Vec4, MAX_CASCADES>;
 		@param var cascadeMax : Array<Vec4, MAX_CASCADES>;
@@ -936,16 +936,16 @@ private class BatchCommandBuilder extends hxsl.Shader {
 			var indexCount : Int = subPartInfos[subPartPos + 0];
 			var indexStart : Int = subPartInfos[subPartPos + 1];
 
-			if ( CASCADE_COUNT > 0 ) {
+			if ( cascadeCount > 0 ) {
 				var posLs = position * cascadeView.mat3x4();
 				var lightRot = cascadeView.mat3();
 				var extentsLs = abs(boxAxes[0] * lightRot) + abs(boxAxes[1] * lightRot) + abs(boxAxes[2] * lightRot);
 				var dimension = 2.0 * max(extentsLs.x, max(extentsLs.y, extentsLs.z));
 				var inCascade = false;
-				@unroll for ( c in 0...CASCADE_COUNT ) {
+				@unroll for ( c in 0...MAX_CASCADES ) {
 					var cMin = cascadeMin[c];
 					var cMax = cascadeMax[c];
-					if ( dimension >= cMin.w && insideOBB(posLs, extentsLs, cMin.xyz, cMax.xyz) ) {
+					if ( c < cascadeCount && dimension >= cMin.w && insideOBB(posLs, extentsLs, cMin.xyz, cMax.xyz) ) {
 						var cascadeID = atomicAdd( countBuffer, c + 1, 1 );
 						emitInstance( (c + 1) * commandCapacity + cascadeID, indexCount, 1, indexStart, 0, instanceID );
 						inCascade = true;
@@ -1299,7 +1299,7 @@ private class BatchPass {
 
 		builderShader.frustum = ctx.getCameraFrustumBuffer();
 
-		builderShader.CASCADE_COUNT = cascades;
+		builderShader.cascadeCount = cascades;
 		builderShader.cascadeView = batcher.cascadeView;
 		builderShader.cascadeMin = batcher.cascadeMin;
 		builderShader.cascadeMax = batcher.cascadeMax;
