@@ -391,8 +391,8 @@ class DefaultForward extends hxsl.Shader {
 
 						var blendFactor = cascadeBlendFactor(viewZ, scale.w, transitionFraction);
 						if( blendFactor > 0.0 ) {
-							if( c < MAX_CASCADE_COUNT - 1 ) {
-								var nextScale = lightInfos[5 + 2 * (c + 1)];
+							var nextScale = lightInfos[5 + 2 * min(c + 1, MAX_CASCADE_COUNT - 1)];
+							if( c < MAX_CASCADE_COUNT - 1 && nextScale.w > 0.0 ) {
 								var nextOffset = lightInfos[6 + 2 * (c + 1)];
 								var nextShadowPos = cascadeShadowPos(shadowPos0, nextScale.xyz, nextOffset.xyz);
 								var nextShadow = sampleCascadeArray(cascadeShadowMaps, c + 1, nextShadowPos, 0.0, shadowParam, shadowParam, transformedPosition, samplingMode);
