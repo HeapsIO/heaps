@@ -3178,50 +3178,53 @@ class DX12Driver extends h3d.impl.Driver {
 				for( i in 0...shader.bufferCount ) {
 					var b = buf.buffers[i];
 					var cbv = b.vbuf;
-					if ( cbv != null ) {
-						switch( regs.bufferTypes[i] ) {
-						case Uniform:
-							if( cbv.view != null )
-								throw "Buffer was allocated without UniformBuffer flag";
-							transition(cbv, VERTEX_AND_CONSTANT_BUFFER);
-							var cbvAddress = srv.offset(cbvIndex * frame.srvHeap.stride);
-							var cViewIndex = cbv.cViewIndex;
-							if ( cViewIndex == -1 ) {
-								cbv.cViewIndex = cViewIndex = cpuSrvHeap.allocIndex();
-								createCBV(cbv, cpuSrvHeap.getCpuAddressAt(cViewIndex));
-							}
-							Driver.copyDescriptorsSimple(1, cbvAddress, cpuSrvHeap.getCpuAddressAt(cViewIndex), CBV_SRV_UAV);
-							cbvIndex++;
-						case Storage:
-							var state = shader.kind == Fragment ? PIXEL_SHADER_RESOURCE : NON_PIXEL_SHADER_RESOURCE;
-							transition(cbv, state);
-							var srvAddress = srv.offset(storageIndex * frame.srvHeap.stride);
-							var stride = regs.bufferStrides[i];
-							var sViewIndex = cbv.getSRV(stride);
-							if ( sViewIndex == -1 ) {
-								sViewIndex = cpuSrvHeap.allocIndex();
-								createBufferSRV(cbv, stride, cpuSrvHeap.getCpuAddressAt(sViewIndex));
-								cbv.setSRV(stride, sViewIndex);
-							}
-							Driver.copyDescriptorsSimple(1, srvAddress, cpuSrvHeap.getCpuAddressAt(sViewIndex), CBV_SRV_UAV);
-							storageIndex++;
-						case RW:
-							if( !b.flags.has(ReadWriteBuffer) )
-								throw "Buffer was allocated without ReadWriteBuffer flag";
-							transition(cbv, UNORDERED_ACCESS);
-							var uavAddress = srv.offset(uavIndex * frame.srvHeap.stride);
-							var stride = regs.bufferStrides[i];
-							var uViewIndex = cbv.getUAV(stride);
-							if ( uViewIndex == -1 ) {
-								uViewIndex = cpuSrvHeap.allocIndex();
-								createBufferUAV(cbv, stride, cpuSrvHeap.getCpuAddressAt(uViewIndex));
-								cbv.setUAV(stride, uViewIndex);
-							}
-							Driver.copyDescriptorsSimple(1, uavAddress, cpuSrvHeap.getCpuAddressAt(uViewIndex), CBV_SRV_UAV);
-							uavIndex++;
-						default:
-							throw "assert";
+					if( cbv == null ) {
+						var p = shader.buffers;
+						for( _ in 0...i ) p = p.next;
+						throw "Disposed Buffer#" + b.id + " bound to " + p.name;
+					}
+					switch( regs.bufferTypes[i] ) {
+					case Uniform:
+						if( cbv.view != null )
+							throw "Buffer was allocated without UniformBuffer flag";
+						transition(cbv, VERTEX_AND_CONSTANT_BUFFER);
+						var cbvAddress = srv.offset(cbvIndex * frame.srvHeap.stride);
+						var cViewIndex = cbv.cViewIndex;
+						if ( cViewIndex == -1 ) {
+							cbv.cViewIndex = cViewIndex = cpuSrvHeap.allocIndex();
+							createCBV(cbv, cpuSrvHeap.getCpuAddressAt(cViewIndex));
 						}
+						Driver.copyDescriptorsSimple(1, cbvAddress, cpuSrvHeap.getCpuAddressAt(cViewIndex), CBV_SRV_UAV);
+						cbvIndex++;
+					case Storage:
+						var state = shader.kind == Fragment ? PIXEL_SHADER_RESOURCE : NON_PIXEL_SHADER_RESOURCE;
+						transition(cbv, state);
+						var srvAddress = srv.offset(storageIndex * frame.srvHeap.stride);
+						var stride = regs.bufferStrides[i];
+						var sViewIndex = cbv.getSRV(stride);
+						if ( sViewIndex == -1 ) {
+							sViewIndex = cpuSrvHeap.allocIndex();
+							createBufferSRV(cbv, stride, cpuSrvHeap.getCpuAddressAt(sViewIndex));
+							cbv.setSRV(stride, sViewIndex);
+						}
+						Driver.copyDescriptorsSimple(1, srvAddress, cpuSrvHeap.getCpuAddressAt(sViewIndex), CBV_SRV_UAV);
+						storageIndex++;
+					case RW:
+						if( !b.flags.has(ReadWriteBuffer) )
+							throw "Buffer was allocated without ReadWriteBuffer flag";
+						transition(cbv, UNORDERED_ACCESS);
+						var uavAddress = srv.offset(uavIndex * frame.srvHeap.stride);
+						var stride = regs.bufferStrides[i];
+						var uViewIndex = cbv.getUAV(stride);
+						if ( uViewIndex == -1 ) {
+							uViewIndex = cpuSrvHeap.allocIndex();
+							createBufferUAV(cbv, stride, cpuSrvHeap.getCpuAddressAt(uViewIndex));
+							cbv.setUAV(stride, uViewIndex);
+						}
+						Driver.copyDescriptorsSimple(1, uavAddress, cpuSrvHeap.getCpuAddressAt(uViewIndex), CBV_SRV_UAV);
+						uavIndex++;
+					default:
+						throw "assert";
 					}
 				}
 				if( currentShader.isCompute )
