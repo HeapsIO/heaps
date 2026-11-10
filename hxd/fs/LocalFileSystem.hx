@@ -237,17 +237,9 @@ class LocalEntry extends FileEntry {
 		watchHandle = new hl.uv.Fs(hl.uv.Loop.getDefault(), originalFile, function(ev) {
 			switch(ev) {
 				case Change|Rename:
-					if (!sys.FileSystem.exists(originalFile))
-						return;
-					if(getModifTime() != lastChanged) {
-						lastChanged = getModifTime();
-						if(onChangedDelay != null)
-							onChangedDelay.stop();
-						onChangedDelay = haxe.Timer.delay(function() {
-							fs.convert.run(this);
-							onChanged();
-						}, 10);
-					}
+					if(onChangedDelay != null)
+						onChangedDelay.stop();
+					onChangedDelay = haxe.Timer.delay(() -> onFileChanged(onChanged, 0), 10);
 			}
 		});
 
@@ -298,6 +290,29 @@ class LocalEntry extends FileEntry {
 			#end
 		}
 	}
+
+	#if (hl && (hl_ver >= version("1.12.0")) && !usesys)
+	function onFileChanged( onChanged : Void -> Void, errors : Int ) {
+		onChangedDelay = null;
+		if( watchHandle == null || !sys.FileSystem.exists(originalFile) )
+			return;
+		var time = getModifTime();
+		if( time == lastChanged )
+			return;
+		if( fileIsLocked(@:privateAccess Sys.getPath(originalFile)) ) {
+			onChangedDelay = haxe.Timer.delay(() -> onFileChanged(onChanged, errors), 250);
+			return;
+		}
+		try fs.convert.run(this) catch( e : Dynamic ) {
+			if( errors >= 5 )
+				throw e;
+			onChangedDelay = haxe.Timer.delay(() -> onFileChanged(onChanged, errors + 1), 250);
+			return;
+		}
+		lastChanged = time;
+		onChanged();
+	}
+	#end
 
 	#if multidriver
 	override function unwatch(id : Int) {
