@@ -357,12 +357,18 @@ class FileConverter {
 
 		function saveCache() {
 			cacheChanges.push({ file : e.file, item : match });
+			#if macro
+			// A macro has no event loop to run a delayed save, so the cache would never be written
+			// and every compilation would convert every resource again.
+			syncCache(true);
+			#else
 			if( cacheChanges.length >= CACHE_SAVE_MAX_PENDING ) {
 				syncCache(true);
 			} else if( !cacheSaveScheduled ) {
 				cacheSaveScheduled = true;
 				haxe.Timer.delay(() -> syncCache(true), 0);
 			}
+			#end
 		}
 
 		var fullPath = baseDir + e.file;
