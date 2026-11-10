@@ -12,6 +12,8 @@ class BitmapFont extends Resource {
 	/**
 		Registers (or clears, with `null`) a glyph fallback for fonts loaded from the resource at `path`.
 		It is applied to `toFont()` and `toSdfFont()` results on every call, including cached ones.
+		Passing `null` stops future `toFont`/`toSdfFont` returns from carrying a fallback, but glyphs already resolved stay cached in those fonts.
+		The fallback's glyph tiles must outlive the fonts that use them.
 	**/
 	public static function registerFallback( path : String, fb : Null<h2d.Font.FontFallback> ) : Void {
 		if( fb == null ) fallbacks.remove(path) else fallbacks.set(path, fb);

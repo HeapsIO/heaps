@@ -1,3 +1,4 @@
+# hxd.Pixels/BitmapData pull in format.png / format.hl
 -lib format
 -cp tests/font
 -cp .

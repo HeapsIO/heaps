@@ -110,7 +110,8 @@ class FontChar {
 interface FontFallback {
 	/**
 		Returns a glyph for `code` suitable for `font` (matching its size), or `null` if unavailable.
-		The result is cached in `font.glyphs` by the caller.
+		The returned glyph is cached in the font's glyph list and is later scaled/offset together with the baked glyphs by `resizeTo`/`setOffset`.
+		A `null` result is NOT cached by the font, so implementations must remember misses themselves.
 	**/
 	function resolveGlyph( font : Font, code : Int ) : Null<FontChar>;
 }
@@ -266,6 +267,7 @@ class Font {
 
 	/**
 		Returns true if `code` can be drawn with a real glyph: present in the atlas, mapped by `charset`, or resolved by `fallback`.
+		May call `fallback.resolveGlyph` (which can rasterize and allocate atlas space) and caches the result, exactly like `getChar`.
 	**/
 	public function canDraw( code : Int ) : Bool {
 		if( glyphs.get(code) != null ) return true;
@@ -348,6 +350,8 @@ class Font {
 	/**
 		Checks if character is present in glyph list.
 		Compared to `getChar` does not check if it exists through `Font.charset`.
+		Returns true for any glyph in the glyph list, including glyphs a `fallback` already resolved and cached.
+		To ask whether the font can draw a character at all, use `canDraw`.
 		@param code The charcode to look up.
 	**/
 	public function hasChar( code : Int ) : Bool {
