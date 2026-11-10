@@ -1,0 +1,6 @@
+-lib format
+-cp tests/font
+-cp .
+-main FontFallbackTest
+-hl bin/font-test.hl
+--cmd hl bin/font-test.hl

@@ -105,6 +105,17 @@ class FontChar {
 }
 
 /**
+	Supplies glyphs missing from a `Font`, e.g. from system fonts. See `Font.fallback`.
+**/
+interface FontFallback {
+	/**
+		Returns a glyph for `code` suitable for `font` (matching its size), or `null` if unavailable.
+		The result is cached in `font.glyphs` by the caller.
+	**/
+	function resolveGlyph( font : Font, code : Int ) : Null<FontChar>;
+}
+
+/**
 	Channel reading method for `FontType.SignedDistanceField`.
 **/
 enum abstract SDFChannel(Int) from Int to Int {
@@ -184,6 +195,11 @@ class Font {
 		See `FontType.SignedDistanceField` for more details.
 	**/
 	public var type : FontType;
+
+	/**
+		Optional provider of glyphs missing from this font. Consulted after `charset.resolveChar`. Copied by `clone()`.
+	**/
+	public var fallback : Null<FontFallback>;
 	/**
 		Font charset allows to resolve specific char codes that are not directly present in glyph map as well as detect spaces.
 		Defaults to `hxd.Charset.getDefault()`.
@@ -233,10 +249,32 @@ class Font {
 		var c = glyphs.get(code);
 		if( c == null ) {
 			c = charset.resolveChar(code, glyphs);
-			if( c == null )
-				c = code == "\r".code || code == "\n".code ? nullChar : defaultChar;
+			if( c == null ) {
+				if( code == "\r".code || code == "\n".code )
+					c = nullChar;
+				else {
+					if( fallback != null ) {
+						c = fallback.resolveGlyph(this, code);
+						if( c != null ) glyphs.set(code, c);
+					}
+					if( c == null ) c = defaultChar;
+				}
+			}
 		}
 		return c;
+	}
+
+	/**
+		Returns true if `code` can be drawn with a real glyph: present in the atlas, mapped by `charset`, or resolved by `fallback`.
+	**/
+	public function canDraw( code : Int ) : Bool {
+		if( glyphs.get(code) != null ) return true;
+		if( charset.resolveChar(code, glyphs) != null ) return true;
+		if( code == "\r".code || code == "\n".code || fallback == null ) return false;
+		var c = fallback.resolveGlyph(this, code);
+		if( c == null ) return false;
+		glyphs.set(code, c);
+		return true;
 	}
 
 	/**
@@ -270,6 +308,7 @@ class Font {
 		f.type = type;
 		f.offsetX = offsetX;
 		f.offsetY = offsetY;
+		f.fallback = fallback;
 		for( g in glyphs.keys() ) {
 			var c = glyphs.get(g);
 			var c2 = c.clone();
