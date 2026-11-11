@@ -168,9 +168,11 @@ class TextInput extends Text {
 		};
 		interactive.onFocus = function(e) {
 			onFocus(e);
+			var win = hxd.Window.getInstance();
+			// the field's rect first, so the software keyboard / IME starts at this field and not the previous one
+			if( canEdit && !e.cancel ) syncTextInputArea();
 			if ( useSoftwareKeyboard && canEdit )
 				showSoftwareKeyboard(this);
-			var win = hxd.Window.getInstance();
 			if( canEdit && !e.cancel && win != null )
 				win.startTextInput();
 		}
@@ -1129,25 +1131,32 @@ class TextInput extends Text {
 	}
 
 	/**
+		How far (local units, downwards) a subclass that scrolls the drawn text vertically has shifted it up.
+		Used to place the IME candidate window on the line as shown. 0 by default.
+	**/
+	function getTextScrollY() : Float return 0.;
+
+	/**
 		Tells the window where the caret's line is (window pixels), so the IME opens its candidate list there:
 		the field's visible width, one line high, with the caret's x offset inside it. The window only resends a change.
 	**/
 	function syncTextInputArea() {
+		var scrollY = getTextScrollY();
 		var scene = getScene();
 		var win = hxd.Window.getInstance();
 		if( scene == null || win == null || cursorText == null ) return;
 		var iw = getInputWidth();
 		var w = iw >= 0 ? iw : textWidth;
 		var cam = scene.camera;
-		var pt = new h2d.col.Point(0, cursorY);
+		var pt = new h2d.col.Point(0, cursorY - scrollY);
 		localToGlobal(pt);
 		cam.cameraToScreen(pt);
 		var x0 = pt.x, y0 = pt.y;
-		pt.set(w, cursorY + font.lineHeight);
+		pt.set(w, cursorY - scrollY + font.lineHeight);
 		localToGlobal(pt);
 		cam.cameraToScreen(pt);
 		var x1 = pt.x, y1 = pt.y;
-		pt.set(cursorX - scrollX, cursorY);
+		pt.set(cursorX - scrollX, cursorY - scrollY);
 		localToGlobal(pt);
 		cam.cameraToScreen(pt);
 		var aw = Math.round(x1 - x0);

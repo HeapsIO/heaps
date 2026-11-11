@@ -227,8 +227,15 @@ class Window {
 		#end
 	}
 
+	/** Composition offsets from the OS are UTF-16 units on Windows and macOS (NSRange), code points elsewhere. **/
+	static var imeUtf16 : Bool = { var n = Sys.systemName(); n == "Windows" || n == "Mac"; };
+
 	/**
 		Enables text input and IME composition for this window. Call when a text field gets focus.
+
+		Heaps sets SDL_IME_IMPLEMENTED_UI="composition", so the OS draws no composition box (only the candidate
+		list): any app widget that calls startTextInput itself must handle ETextComposition and draw the
+		composition (h2d.TextInput does).
 	**/
 	public function startTextInput() : Void {
 		textInputActive = true;
@@ -590,7 +597,7 @@ class Window {
 			}
 		case TextEditing:
 			var str = e.text != null ? @:privateAccess String.fromUTF8(e.text) : "";
-			var u16 = Sys.systemName() == "Windows";
+			var u16 = imeUtf16;
 			eh = new Event(ETextComposition, mouseX, mouseY);
 			eh.composition = str;
 			eh.compositionCursor = hxd.impl.ImeText.toUtf16Index(str, e.editStart, u16);

@@ -269,6 +269,9 @@ class Window {
 
 	/**
 		Enables text input and IME composition for this window. Call when a text field gets focus.
+
+		Heaps' HL backend sets SDL_IME_IMPLEMENTED_UI="composition", so the OS draws no composition box: any app
+		widget that calls startTextInput itself must handle ETextComposition (h2d.TextInput does).
 	**/
 	public function startTextInput() : Void {
 		textInputActive = true;
