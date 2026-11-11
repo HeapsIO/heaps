@@ -64,6 +64,20 @@ class TextInput extends Text {
 	public static dynamic function hideSoftwareKeyboard(target:TextInput) {}
 	public dynamic function onSoftwareKeyboardEnd(isSubmit: Bool) {}
 
+	/**
+		The text an IME is composing (its pre-edit text), or `""` when none.
+		It is shown at the caret, underlined, but is never part of `text`, never sent to `onChange` and never in the undo history.
+	**/
+	public var composition(default, null) : String = "";
+	/**
+		The IME's cursor inside `composition` (UTF-16 index).
+	**/
+	public var compositionCursor(default, null) : Int = 0;
+	/**
+		Length of the span of `composition` the IME has selected (being converted) from `compositionCursor`, in UTF-16 units; 0 if none.
+	**/
+	public var compositionLength(default, null) : Int = 0;
+
 	var interactive : h2d.Interactive;
 	var cursorText : String;
 	var cursorX : Float;
@@ -79,6 +93,10 @@ class TextInput extends Text {
 	var maxHistorySize = 100;
 	var splitLines : Array<String>;
 	var splitTextSize : Int;
+	var compositionPos = 0;
+	var compositionTile : h2d.Tile;
+	var measuringText = false;
+	var crFrame = -1;
 
 	/**
 		Create a new TextInput instance.
@@ -92,6 +110,7 @@ class TextInput extends Text {
 		interactive = new h2d.Interactive(0, 0);
 		interactive.cursor = TextInput;
 		interactive.onPush = function(e:hxd.Event) {
+			if( isComposing() ) commitComposition();
 			onPush(e);
 			if (!canEdit)
 				return;
@@ -132,19 +151,31 @@ class TextInput extends Text {
 			}
 		};
 		interactive.onKeyDown = function(e:hxd.Event) {
+			// while the IME composes, its editing/navigation keys belong to it
+			if( isComposing() && isImeKey(e) ) return;
 			onKeyDown(e);
 			handleKey(e);
 		};
 		interactive.onTextInput = function(e:hxd.Event) {
+			// a commit replaces the composition
+			if( isComposing() ) endComposition();
 			onTextInput(e);
 			handleKey(e);
+		};
+		interactive.onTextComposition = function(e:hxd.Event) {
+			onTextComposition(e);
+			handleComposition(e);
 		};
 		interactive.onFocus = function(e) {
 			onFocus(e);
 			if ( useSoftwareKeyboard && canEdit )
 				showSoftwareKeyboard(this);
+			var win = hxd.Window.getInstance();
+			if( canEdit && !e.cancel && win != null )
+				win.startTextInput();
 		}
 		interactive.onFocusLost = function(e) {
+			commitComposition();
 			onFocusLost(e);
 			if( !e.cancel ) onBlur();
 		};
@@ -311,8 +342,9 @@ class TextInput extends Text {
 			if( e.kind == EKeyDown )
 				return;
 			if( e.charCode != 0 && canEdit ) {
-				if( !font.hasChar(e.charCode) ) return; // don't allow chars not supported by font
-				inputText(String.fromCharCode(e.charCode));
+				var t = typedChar(e.charCode);
+				if( t == null ) return;
+				inputText(t);
 			}
 		}
 
@@ -348,8 +380,10 @@ class TextInput extends Text {
 		longer represent the position in the exact text but in the wrapped text, including
 		inserted newlines. This function allows to translate the cursor position into the position
 		into the text. Use getCursorPos to convert the text position into a cursor position.
+		While composing, both work on `displayText()`.
 	**/
 	public function getTextPos( cursor : Int ) {
+		var text = displayText();
 		var lines = text.split("\n"); // real newlines
 		var pos = 0;
 		for( line in lines ) {
@@ -368,7 +402,7 @@ class TextInput extends Text {
 		See getTextPos()
 	**/
 	public function getCursorPos( pos : Int ) {
-		var lines = text.split("\n"); // real newlines
+		var lines = displayText().split("\n"); // real newlines
 		var cursor = 0;
 		var spos = 0;
 		for( line in lines ) {
@@ -388,7 +422,7 @@ class TextInput extends Text {
 		First line is 0. See getTextPos() and getCursorPos().
 	**/
 	public function getCursorLine( line : Int ) {
-		var lines = text.split("\n"); // real newlines
+		var lines = displayText().split("\n"); // real newlines
 		var cursor = 0;
 		for( l in lines ) {
 			if( line == 0 ) return cursor;
@@ -579,7 +613,7 @@ class TextInput extends Text {
 	function getSplitLines() {
 		if( splitLines != null && !(needsRebuild || textChanged) )
 			return splitLines;
-		var lines = this.text.split('\n');
+		var lines = displayText().split('\n');
 		splitLines = [];
 		splitTextSize = 0;
 		for(l in lines) {
@@ -679,6 +713,9 @@ class TextInput extends Text {
 	}
 
 	override function initGlyphs(text:String, rebuild = true):Void {
+		// the field's own text is laid out with the composition in it; text measured by calcTextWidth is not
+		if( composition != "" && !measuringText && text == this.text )
+			text = displayText();
 		super.initGlyphs(text, rebuild);
 		if( rebuild ) {
 			splitLines = null;
@@ -686,6 +723,14 @@ class TextInput extends Text {
 			var iw = getInputWidth();
 			if( iw >= 0 && this.calcWidth > iw ) this.calcWidth = iw;
 		}
+	}
+
+	override function calcTextWidth( text : String ) : Float {
+		var old = measuringText;
+		measuringText = true;
+		var w = super.calcTextWidth(text);
+		measuringText = old;
+		return w;
 	}
 
 	function textPos( x : Float, y : Float ) {
@@ -728,6 +773,8 @@ class TextInput extends Text {
 	override function sync(ctx) {
 		syncInteract();
 		super.sync(ctx);
+		if( cursorIndex >= 0 && interactive.hasFocus() )
+			syncTextInputArea();
 	}
 
 	override function draw(ctx:RenderContext) {
@@ -742,9 +789,10 @@ class TextInput extends Text {
 		}
 
 		var lastCursorY = cursorY;
-		if( cursorIndex >= 0 && (text != cursorText || cursorIndex != cursorXIndex) ) {
+		var shownText = displayText();
+		if( cursorIndex >= 0 && (shownText != cursorText || cursorIndex != cursorXIndex) ) {
 			if( cursorIndex > getTextLength() ) cursorIndex = getTextLength();
-			cursorText = text;
+			cursorText = shownText;
 			cursorXIndex = cursorIndex;
 			cursorX = getCursorXOffset();
 			cursorY = getCursorYOffset();
@@ -809,6 +857,8 @@ class TextInput extends Text {
 		}
 
 		super.draw(ctx);
+		if( composition != "" )
+			drawComposition(ctx);
 		absX += scrollX * matA;
 		absY += scrollX * matC;
 
@@ -839,9 +889,15 @@ class TextInput extends Text {
 	}
 
 	function onBlur() {
+		// TextInput.blur() also lands here for a field that is not focused: leave another field's text input alone
+		var hadFocus = interactive.hasFocus();
 		cursorIndex = -1;
 		selectionRange = null;
 		hideSoftwareKeyboard(this);
+		// always stopped, even when focus moves straight to another field: this is what makes the IME drop its copy of the composition
+		var win = hxd.Window.getInstance();
+		if( hadFocus && win != null )
+			win.stopTextInput();
 	}
 
 	function onCursorChange() {
@@ -857,6 +913,210 @@ class TextInput extends Text {
 	**/
 	public function hasFocus() {
 		return interactive.hasFocus();
+	}
+
+	// ---- IME composition ----
+
+	/**
+		Checks if an IME composition is showing in the field. See `composition`.
+	**/
+	public function isComposing() : Bool {
+		return composition != "";
+	}
+
+	/**
+		Returns the text as displayed: `text` with the current `composition` inserted where it started.
+		Same as `text` when not composing.
+	**/
+	public function displayText() : String {
+		if( composition == "" ) return text;
+		var pos = compositionStart();
+		return text.substr(0, pos) + composition + text.substr(pos);
+	}
+
+	/**
+		Inserts the current composition into `text` as if typed (one undo step, `onChange` once) and ends it.
+		Does nothing when not composing. Called when the field loses focus or is clicked while composing.
+		If text input is on, it is restarted so that the IME drops its own copy of the composition and cannot commit it a second time.
+	**/
+	public function commitComposition() : Void {
+		if( composition == "" ) return;
+		var t = typedText(composition);
+		var pos = compositionStart();
+		endComposition();
+		var win = hxd.Window.getInstance();
+		if( win != null && win.textInputActive && interactive.hasFocus() ) {
+			win.stopTextInput();
+			win.startTextInput();
+		}
+		if( t == "" || !canEdit ) return;
+		beforeChange();
+		text = text.substr(0, pos) + t + text.substr(pos);
+		if( cursorIndex >= 0 ) {
+			cursorIndex = getCursorPos(pos + t.length);
+			selectionRange = null;
+		}
+		onChange();
+	}
+
+	/** Where the composition sits in `text` (the caret's text position when it started). **/
+	inline function compositionStart() {
+		return hxd.Math.iclamp(compositionPos, 0, text.length);
+	}
+
+	function handleComposition( e : hxd.Event ) {
+		if( e.cancel || !canEdit || cursorIndex < 0 || !interactive.hasFocus() )
+			return;
+		var s = e.composition == null ? "" : e.composition;
+		if( s == "" ) {
+			// ended or cancelled; an empty one with nothing composing (sent at start and after a commit) changes nothing
+			if( composition != "" ) {
+				endComposition();
+				cursorBlink = 0;
+			}
+			return;
+		}
+		if( composition == "" ) {
+			// starting: it replaces the selection, as typing a character would
+			if( selectionRange != null ) {
+				beforeChange();
+				cutSelection();
+				onChange();
+			}
+			compositionPos = getTextPos(cursorIndex);
+		}
+		composition = s;
+		compositionCursor = hxd.Math.iclamp(e.compositionCursor, 0, s.length);
+		compositionLength = hxd.Math.iclamp(e.compositionLength, 0, s.length - compositionCursor);
+		compositionChanged();
+		cursorIndex = getCursorPos(compositionStart() + compositionCursor);
+		cursorBlink = 0;
+		onCursorChange();
+	}
+
+	/** Clears the composition without inserting it; the caret goes back to where it started. **/
+	function endComposition() {
+		composition = "";
+		compositionCursor = 0;
+		compositionLength = 0;
+		compositionChanged();
+		if( cursorIndex >= 0 ) {
+			cursorIndex = getCursorPos(compositionStart());
+			onCursorChange();
+		}
+	}
+
+	function compositionChanged() {
+		splitLines = null;
+		rebuild();
+	}
+
+	/** The keys an IME uses while composing (Goal 5): the field acts on none of them then. **/
+	function isImeKey( e : hxd.Event ) {
+		return switch( e.keyCode ) {
+		case K.BACKSPACE, K.DELETE, K.LEFT, K.RIGHT, K.UP, K.DOWN, K.HOME, K.END, K.PGUP, K.PGDOWN,
+			K.ENTER, K.NUMPAD_ENTER, K.TAB, K.ESCAPE:
+			true;
+		case K.Z, K.Y, K.X, K.C, K.V, K.A:
+			K.isDown(K.CTRL);
+		default:
+			false;
+		}
+	}
+
+	/**
+		What typing the character `cc` inserts, or null if it is dropped.
+		A single-line field drops control characters; a multi-line one keeps `\n` and turns `\r` (alone or before `\n`) into one `\n`.
+		A lone surrogate is always dropped. A font with a `fallback` accepts any other character from 0x20 on but 0x7F;
+		one without keeps only the characters it already has.
+	**/
+	function typedChar( cc : Int ) : Null<String> {
+		var afterCR = crFrame == hxd.Timer.frameCount;
+		crFrame = -1;
+		if( cc == "\r".code || cc == "\n".code ) {
+			if( !multiline || (cc == "\n".code && afterCR) ) return null;
+			if( cc == "\r".code ) crFrame = hxd.Timer.frameCount;
+			return "\n";
+		}
+		if( cc < 0x20 || cc > 0x10FFFF || (cc >= 0xD800 && cc <= 0xDFFF) ) return null;
+		if( font.fallback == null ) {
+			if( !font.hasChar(cc) ) return null; // don't allow chars not supported by font
+		} else if( cc == 0x7F )
+			return null;
+		return String.fromCharCode(cc);
+	}
+
+	/** `typedChar` over each code point of `s`. **/
+	function typedText( s : String ) : String {
+		var b = new StringBuf();
+		crFrame = -1;
+		for( cc in hxd.impl.ImeText.codePoints(s) ) {
+			var t = typedChar(cc);
+			if( t != null ) b.add(t);
+		}
+		crFrame = -1;
+		return b.toString();
+	}
+
+	/**
+		Tells the window where the caret's line is (window pixels), so the IME opens its candidate list there:
+		the field's visible width, one line high, with the caret's x offset inside it. The window only resends a change.
+	**/
+	function syncTextInputArea() {
+		var scene = getScene();
+		var win = hxd.Window.getInstance();
+		if( scene == null || win == null || cursorText == null ) return;
+		var iw = getInputWidth();
+		var w = iw >= 0 ? iw : textWidth;
+		var cam = scene.camera;
+		var pt = new h2d.col.Point(0, cursorY);
+		localToGlobal(pt);
+		cam.cameraToScreen(pt);
+		var x0 = pt.x, y0 = pt.y;
+		pt.set(w, cursorY + font.lineHeight);
+		localToGlobal(pt);
+		cam.cameraToScreen(pt);
+		var x1 = pt.x, y1 = pt.y;
+		pt.set(cursorX - scrollX, cursorY);
+		localToGlobal(pt);
+		cam.cameraToScreen(pt);
+		var aw = Math.round(x1 - x0);
+		var cursor = hxd.Math.iclamp(Math.round(pt.x - x0), 0, aw);
+		win.setTextInputArea(Math.round(x0), Math.round(y0), aw, Math.round(y1 - y0), cursor);
+	}
+
+	/** Underlines the composition (1 px), and the IME's selected span in it (2 px), on every line it spans. **/
+	function drawComposition( ctx : RenderContext ) {
+		if( compositionTile == null ) compositionTile = h2d.Tile.fromColor(0xFFFFFF);
+		var pos = compositionStart();
+		underline(ctx, pos, pos + composition.length, 1);
+		if( compositionLength > 0 )
+			underline(ctx, pos + compositionCursor, pos + compositionCursor + compositionLength, 2);
+	}
+
+	function underline( ctx : RenderContext, from : Int, to : Int, thickness : Int ) {
+		var start = getCursorPos(from);
+		var end = getCursorPos(to);
+		var lines = getSplitLines();
+		var baseLine = font.baseLine > 0 ? font.baseLine : font.lineHeight - thickness - 1;
+		var t = compositionTile;
+		var lineStart = 0;
+		for( i in 0...lines.length ) {
+			var line = lines[i];
+			var lineEnd = lineStart + line.length - 1; // before the line's \n
+			var a = start > lineStart ? start : lineStart;
+			var b = end < lineEnd ? end : lineEnd;
+			if( b > a ) {
+				var x = calcTextWidth(line.substr(0, a - lineStart));
+				t.dx = x;
+				t.dy = i * font.lineHeight + baseLine + 1;
+				t.width = calcTextWidth(line.substr(0, b - lineStart)) - x;
+				t.height = thickness;
+				emitTile(ctx, t);
+			}
+			lineStart += line.length;
+			if( lineStart >= end ) break;
+		}
 	}
 
 	/**
@@ -917,6 +1177,12 @@ class TextInput extends Text {
 		Delegate of underlying `Interactive.onTextInput`.
 	**/
 	public dynamic function onTextInput(e:hxd.Event) {
+	}
+
+	/**
+		Delegate of underlying `Interactive.onTextComposition`, sent before the field updates its `composition`.
+	**/
+	public dynamic function onTextComposition(e:hxd.Event) {
 	}
 
 	/**
