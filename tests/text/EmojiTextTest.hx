@@ -152,6 +152,25 @@ class EmojiTextTest {
 		eq("cluster miss resolved once", fb.clusterCalls, 2);
 		eq("text-style cluster uses the app font", cf.getCluster("1\u{FE0E}", 0, 2) == cf.getChar("1".code), true);
 
+		// colour glyphs go on their own untinted layer, which follows the text's alpha
+		var ct = new h2d.Text(font);
+		ct.text = "a" + THUMB_TONE + "a";
+		@:privateAccess ct.updateSize();
+		eq("colour glyph not in text glyphs", ct.glyphs.count(), 2);
+		eq("colour glyph on colour layer", ct.colorGlyphs.count(), 1);
+		ct.textColor = 0x000000;
+		ct.color.a = 0.5;
+		ct.syncColorLayer();
+		eq("colour layer follows text alpha, ignores rgb", [ct.colorGlyphs.color.r, ct.colorGlyphs.color.g, ct.colorGlyphs.color.b, ct.colorGlyphs.color.a].join(","), "1,1,1,0.5");
+		eq("colour layer is smooth", ct.colorGlyphs.smooth, true);
+		ct.text = "aa";
+		@:privateAccess ct.updateSize();
+		eq("colour layer cleared on rebuild", ct.colorGlyphs.count(), 0);
+		var ch = new h2d.HtmlText(font);
+		ch.text = "a<font color='#ff0000'>" + THUMB_TONE + "</font>a";
+		@:privateAccess ch.updateSize();
+		eq("html colour glyph on colour layer", ch.colorGlyphs.count(), 1);
+
 		// HtmlText lays emoji out the same way
 		var h = new h2d.HtmlText(font);
 		h.text = "a" + GRIN + VS16 + "a";

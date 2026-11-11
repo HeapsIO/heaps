@@ -133,6 +133,13 @@ class Text extends Drawable {
 	var realMaxWidth:Float = -1;
 
 	var sdfShader : h3d.shader.SignedDistanceField;
+	/**
+		Colour glyphs (`FontChar.isColor`: emoji from the OS emoji font), drawn after `glyphs` with
+		none of the text's shaders and no tint: white, with the text's alpha. Created on first use.
+	**/
+	var colorGlyphs : Null<TileGroup>;
+	/** Turns `colorGlyphs` into the drop shadow colour for the shadow pass (a silhouette). **/
+	var colorShadow : h3d.shader.FixedColor;
 	var colorSegments : Array<Int> = null;
 
 	/**
@@ -270,11 +277,60 @@ class Text extends Drawable {
 			color.setColor(dropShadow.color);
 			color.a = dropShadow.alpha * oldA;
 			glyphs.drawWith(ctx, this);
+			drawColorShadow(ctx, color.a);
 			absX = oldX;
 			absY = oldY;
 			color.set(oldR, oldG, oldB, oldA);
 		}
 		glyphs.drawWith(ctx,this);
+		drawColorLayer(ctx);
+	}
+
+	/** Adds glyph `e` at (`x`, `y`): a colour glyph to the colour layer, any other to `glyphs`. **/
+	function addGlyph( x : Float, y : Float, e : h2d.Font.FontChar ) {
+		if( e.isColor ) {
+			if( colorGlyphs == null ) {
+				colorGlyphs = new TileGroup(null, this);
+				colorGlyphs.visible = false;
+				colorGlyphs.smooth = true;
+			}
+			colorGlyphs.add(x, y, e.t);
+		} else
+			glyphs.add(x, y, e.t);
+	}
+
+	/** Places the colour layer where the text is drawn (the current absolute matrix) with the text's alpha and blend mode, untinted. **/
+	function syncColorLayer() {
+		var c = colorGlyphs;
+		c.absX = absX;
+		c.absY = absY;
+		c.matA = matA;
+		c.matB = matB;
+		c.matC = matC;
+		c.matD = matD;
+		c.blendMode = blendMode;
+		c.color.set(1, 1, 1, color.a);
+	}
+
+	function drawColorLayer( ctx : RenderContext ) {
+		if( colorGlyphs == null || colorGlyphs.count() == 0 ) return;
+		syncColorLayer();
+		colorGlyphs.drawWith(ctx, colorGlyphs);
+	}
+
+	/** The colour layer's drop shadow: its shapes in `dropShadow.color` at `alpha`, drawn at the current (offset) position. **/
+	function drawColorShadow( ctx : RenderContext, alpha : Float ) {
+		if( colorGlyphs == null || colorGlyphs.count() == 0 ) return;
+		if( colorShadow == null ) {
+			colorShadow = new h3d.shader.FixedColor();
+			colorShadow.USE_ALPHA = false;
+		}
+		syncColorLayer();
+		colorGlyphs.color.a = alpha;
+		colorShadow.color.setColor(dropShadow.color);
+		colorGlyphs.addShader(colorShadow);
+		colorGlyphs.drawWith(ctx, colorGlyphs);
+		colorGlyphs.removeShader(colorShadow);
 	}
 
 	function set_text(t : String) {
@@ -460,7 +516,10 @@ class Text extends Drawable {
 	}
 
 	function initGlyphs( text : String, rebuild = true ) : Void {
-		if( rebuild ) glyphs.clear();
+		if( rebuild ) {
+			glyphs.clear();
+			if( colorGlyphs != null ) colorGlyphs.clear();
+		}
 		var x = 0., y = 0., xMax = 0., xMin = 0., yMin = 0., yMax = 0., prevChar = -1, linei = 0;
 		var align = textAlign;
 		var lines = new Array<Float>();
@@ -520,7 +579,7 @@ class Text extends Drawable {
 				var e = font.getCluster(t, start, i);
 				if( e != null ) {
 					var offs = e.getKerningOffset(prevChar);
-					if( rebuild ) glyphs.add(x + offs, y, e.t);
+					if( rebuild ) addGlyph(x + offs, y, e);
 					if( y == 0 && e.t.dy < yMin ) yMin = e.t.dy;
 					var ty = y + e.t.dy + e.t.height;
 					if( ty > yMax ) yMax = ty;
@@ -534,7 +593,7 @@ class Text extends Drawable {
 						if( hxd.Charset.isZeroWidth(c) ) continue;
 						var e = font.getChar(c);
 						var offs = e.getKerningOffset(pc);
-						if( rebuild ) glyphs.add(x + offs, y, e.t);
+						if( rebuild ) addGlyph(x + offs, y, e);
 						if( y == 0 && e.t.dy < yMin ) yMin = e.t.dy;
 						var ty = y + e.t.dy + e.t.height;
 						if( ty > yMax ) yMax = ty;

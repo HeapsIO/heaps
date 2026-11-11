@@ -134,6 +134,7 @@ class HtmlText extends Text {
 			m._44 = dropShadow.alpha;
 			glyphs.drawWith(ctx, this);
 			dropMatrix.enabled = false;
+			drawColorShadow(ctx, dropShadow.alpha * color.a);
 			absX = oldX;
 			absY = oldY;
 		} else {
@@ -141,6 +142,7 @@ class HtmlText extends Text {
 			dropMatrix = null;
 		}
 		glyphs.drawWith(ctx,this);
+		drawColorLayer(ctx);
 	}
 
 	override function getShader< T:hxsl.Shader >( stype : Class<T> ) : T {
@@ -289,6 +291,7 @@ class HtmlText extends Text {
 	override function initGlyphs( text : String, rebuild = true ) {
 		if( rebuild ) {
 			glyphs.clear();
+			if( colorGlyphs != null ) colorGlyphs.clear();
 			for( e in elements ) e.remove();
 			elements = [];
 		}
@@ -884,7 +887,7 @@ class HtmlText extends Text {
 					var fc = font.getCluster(t, i, end);
 					if (fc != null) {
 						xPos += fc.getKerningOffset(prevChar);
-						if( rebuild ) glyphs.add(xPos, yPos + dy, fc.t);
+						if( rebuild ) addGlyph(xPos, yPos + dy, fc);
 						if( yPos == 0 && fc.t.dy+dy < calcYMin ) calcYMin = fc.t.dy + dy;
 						xPos += fc.width + letterSpacing;
 					} else {
@@ -896,7 +899,7 @@ class HtmlText extends Text {
 							if( hxd.Charset.isZeroWidth(c) ) continue;
 							var pf = font.getChar(c);
 							xPos += pf.getKerningOffset(pc);
-							if( rebuild ) glyphs.add(xPos, yPos + dy, pf.t);
+							if( rebuild ) addGlyph(xPos, yPos + dy, pf);
 							if( yPos == 0 && pf.t.dy+dy < calcYMin ) calcYMin = pf.t.dy + dy;
 							xPos += pf.width + letterSpacing;
 							pc = c;
