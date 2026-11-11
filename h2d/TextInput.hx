@@ -436,7 +436,7 @@ class TextInput extends Text {
 		beforeChange();
 		if( selectionRange != null )
 			cutSelection();
-		var pos = getTextPos(cursorIndex);
+		var pos = snapPos(getTextPos(cursorIndex));
 		text = text.substr(0, pos) + t + text.substr(pos);
 		pos += t.length;
 		cursorIndex = getCursorPos(pos);
@@ -450,6 +450,9 @@ class TextInput extends Text {
 		if( pos == end && back != null ) {
 			if( back ) pos-- else end++;
 		}
+		// never cut half of a surrogate pair
+		pos = snapPosBack(pos);
+		end = snapPos(end);
 		text = text.substr(0, pos) + text.substr(end);
 		cursorIndex = getCursorPos(pos);
 		selectionRange = null;
@@ -542,6 +545,7 @@ class TextInput extends Text {
 				cursorIndex = destination.startIndex + cI + 1;
 				if( xOffset - currOffset < newCurrOffset - xOffset )
 					cursorIndex--;
+				cursorIndex = snapCursor(cursorIndex);
 				onCursorChange();
 				return;
 			}
@@ -553,6 +557,7 @@ class TextInput extends Text {
 		// we can't just assume this because the last line typically won't end with a newline.
 		if( destination.line.charAt(destination.line.length-1) == "\n")
 			cursorIndex--;
+		cursorIndex = snapCursor(cursorIndex);
 		onCursorChange();
 	}
 
@@ -766,6 +771,19 @@ class TextInput extends Text {
 		var lo = t.charCodeAt(p);
 		return hi >= 0xD800 && hi <= 0xDBFF && lo >= 0xDC00 && lo <= 0xDFFF;
 	}
+
+	function isPairAt( t : String, p : Int ) : Bool {
+		if( p <= 0 || p >= t.length ) return false;
+		var hi = t.charCodeAt(p - 1);
+		var lo = t.charCodeAt(p);
+		return hi >= 0xD800 && hi <= 0xDBFF && lo >= 0xDC00 && lo <= 0xDFFF;
+	}
+
+	/** A raw text position between the halves of a surrogate pair moves to after the pair. **/
+	function snapPos( p : Int ) : Int return isPairAt(displayText(), p) ? p + 1 : p;
+
+	/** A raw text position between the halves of a surrogate pair moves to before the pair. **/
+	function snapPosBack( p : Int ) : Int return isPairAt(displayText(), p) ? p - 1 : p;
 
 	/** One character forward from the cursor index `i`, stepping over a surrogate pair as one. **/
 	function nextCursor( i : Int ) : Int {

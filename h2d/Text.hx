@@ -360,6 +360,7 @@ class Text extends Drawable {
 		var lastPos = 0;
 		var lastBreak = -1;
 		var lastBreakX = 0.;
+		var pairStartX = 0.;
 
 		inline function flushLine(pos) {
 			lines.push(text.substr(lastPos,pos-lastPos));
@@ -381,6 +382,7 @@ class Text extends Drawable {
 				continue;
 			}
 			var startX = x;
+			if( cc >= 0xD800 && cc <= 0xDBFF ) pairStartX = x;
 			if( lastPos < i ) x += letterSpacing;
 			var e = font.getChar(cc);
 			var esize = e.width + e.getKerningOffset(prevChar);
@@ -405,9 +407,17 @@ class Text extends Drawable {
 						lastBreakX = x;
 					}
 				} else if( wordBreak && x > maxWidth && lastPos < i ) {
-					x = startX;
-					flushLine(i);
-					i--;
+					if( cc >= 0xDC00 && cc <= 0xDFFF && lastPos < i - 1 && StringTools.fastCodeAt(text, i - 1) >= 0xD800 && StringTools.fastCodeAt(text, i - 1) <= 0xDBFF ) {
+						// never break between the two halves of a surrogate pair: the whole pair goes to the next line
+						x = pairStartX;
+						i--;
+						flushLine(i);
+						i--;
+					} else if( !(cc >= 0xDC00 && cc <= 0xDFFF && lastPos == i - 1 && StringTools.fastCodeAt(text, i - 1) >= 0xD800 && StringTools.fastCodeAt(text, i - 1) <= 0xDBFF) ) {
+						x = startX;
+						flushLine(i);
+						i--;
+					}
 				}
 			}
 		}
