@@ -360,7 +360,6 @@ class Text extends Drawable {
 		var lastPos = 0;
 		var lastBreak = -1;
 		var lastBreakX = 0.;
-		var pairStartX = 0.;
 
 		inline function flushLine(pos) {
 			lines.push(text.substr(lastPos,pos-lastPos));
@@ -372,17 +371,24 @@ class Text extends Drawable {
 			leftMargin = 0;
 		}
 
-		var i = -1;
+		// walks code points: a surrogate pair is one character, and joiners / variation selectors
+		// take no space and never start a line
+		var i = 0;
 		var maxLen = text.length;
-		while( ++i < maxLen ) {
-			var cc = StringTools.fastCodeAt(text, i);
+		while( i < maxLen ) {
+			var cc = hxd.Charset.codeAt(text, i);
+			var next = i + hxd.Charset.charLength(text, i, cc);
 			if( cc == '\n'.code ) {
 				flushLine(i);
 				lastPos++;
+				i = next;
+				continue;
+			}
+			if( hxd.Charset.isZeroWidth(cc) ) {
+				i = next;
 				continue;
 			}
 			var startX = x;
-			if( cc >= 0xD800 && cc <= 0xDBFF ) pairStartX = x;
 			if( lastPos < i ) x += letterSpacing;
 			var e = font.getChar(cc);
 			var esize = e.width + e.getKerningOffset(prevChar);
@@ -390,10 +396,10 @@ class Text extends Drawable {
 			prevChar = cc;
 			if( lineBreak ) {
 				if( x > maxWidth && lastBreak >= lastPos && (!trimTrailingSpaces || !font.charset.isSpace(cc) || startX > maxWidth) ) {
-					i = lastBreak;
+					next = lastBreak + 1;
 					x = lastBreakX;
-					flushLine(i + 1);
-				} else if( font.charset.isBreakChar(cc) && (i+1 == maxLen || !font.charset.isComplementChar(StringTools.fastCodeAt(text, i + 1))) ) {
+					flushLine(next);
+				} else if( font.charset.isBreakChar(cc) && (next == maxLen || !font.charset.isComplementChar(hxd.Charset.codeAt(text, next))) ) {
 					if( leftMargin > 0 && x > maxWidth ) {
 						lines.push("");
 						if ( sizes != null ) sizes.push(leftMargin);
@@ -403,23 +409,17 @@ class Text extends Drawable {
 						lastBreak = i - 1;
 						lastBreakX = startX;
 					} else {
-						lastBreak = i;
+						lastBreak = next - 1; // last unit of the break character
 						lastBreakX = x;
 					}
 				} else if( wordBreak && x > maxWidth && lastPos < i ) {
-					if( cc >= 0xDC00 && cc <= 0xDFFF && lastPos < i - 1 && StringTools.fastCodeAt(text, i - 1) >= 0xD800 && StringTools.fastCodeAt(text, i - 1) <= 0xDBFF ) {
-						// never break between the two halves of a surrogate pair: the whole pair goes to the next line
-						x = pairStartX;
-						i--;
-						flushLine(i);
-						i--;
-					} else if( !(cc >= 0xDC00 && cc <= 0xDFFF && lastPos == i - 1 && StringTools.fastCodeAt(text, i - 1) >= 0xD800 && StringTools.fastCodeAt(text, i - 1) <= 0xDBFF) ) {
-						x = startX;
-						flushLine(i);
-						i--;
-					}
+					// the character goes to the next line and is measured again there
+					x = startX;
+					flushLine(i);
+					next = i;
 				}
 			}
+			i = next;
 		}
 		if( x > leftMargin ) flushLine(text.length);
 		return lines.join("\n");
@@ -463,19 +463,24 @@ class Text extends Drawable {
 		var colorsPos = 0;
 		if( colors != null && colors.length == 0 ) colors = null;
 		if( rebuild ) glyphs.setDefaultColor(0xFFFFFF);
-		for( i in 0...t.length ) {
-			var cc = StringTools.fastCodeAt(t, i);
-			var e = font.getChar(cc);
-			var offs = e.getKerningOffset(prevChar);
-			var esize = e.width + offs;
-			// if the next word goes past the max width, change it into a newline
+		var i = 0;
+		while( i < t.length ) {
+			var cc = hxd.Charset.codeAt(t, i);
+			var n = hxd.Charset.charLength(t, i, cc);
 
-			if( rebuild && colors != null && colors[colorsPos] == i ) {
+			if( rebuild && colors != null && colors[colorsPos] >= i && colors[colorsPos] < i + n ) {
 				var c = colors[colorsPos+1];
 				glyphs.setDefaultColor(c,(c>>>24)/255);
 				colorsPos += 2;
 				if( colorsPos >= colors.length ) colors = null;
 			}
+			i += n;
+			// joiners and variation selectors: no glyph, no width
+			if( hxd.Charset.isZeroWidth(cc) ) continue;
+
+			var e = font.getChar(cc);
+			var offs = e.getKerningOffset(prevChar);
+			var esize = e.width + offs;
 
 			if( cc == '\n'.code ) {
 				if( x > xMax ) xMax = x;

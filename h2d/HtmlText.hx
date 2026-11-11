@@ -348,7 +348,7 @@ class HtmlText extends Text {
 			var str = splitNode.node.nodeValue;
 			var info = metrics[metrics.length - 1];
 			var w = info.width;
-			var cc = StringTools.fastCodeAt(str, splitNode.pos);
+			var cc = hxd.Charset.codeAt(str, splitNode.pos);
 			// Restore line metrics to ones before split.
 			// Potential bug: `Text<split> [Image] text<split>text` - third line will use metrics as if image is present in the line.
 			info.width = splitNode.width;
@@ -362,7 +362,8 @@ class HtmlText extends Text {
 				splitNode.node.nodeValue = str.substr(0, splitNode.pos) + "\n" + str.substr(splitNode.pos + 1);
 			} else {
 				w -= (splitNode.width + letterSpacing + char.getKerningOffset(splitNode.prevChar));
-				splitNode.node.nodeValue = str.substr(0, splitNode.pos+1) + "\n" + str.substr(splitNode.pos+1);
+				var after = splitNode.pos + hxd.Charset.charLength(str, splitNode.pos, cc);
+				splitNode.node.nodeValue = str.substr(0, after) + "\n" + str.substr(after);
 			}
 			splitNode.node = null;
 			return w;
@@ -475,12 +476,19 @@ class HtmlText extends Text {
 			var textSplit = [], restPos = 0;
 			var x = leftMargin;
 			var breakChars = 0;
-			for ( i in 0...text.length ) {
-				var cc = StringTools.fastCodeAt(text, i);
+			// walks code points: a surrogate pair is one character; joiners and variation selectors take no space
+			var i = 0;
+			while ( i < text.length ) {
+				var cc = hxd.Charset.codeAt(text, i);
+				var next = i + hxd.Charset.charLength(text, i, cc);
+				if ( hxd.Charset.isZeroWidth(cc) ) {
+					i = next;
+					continue;
+				}
 				var g = font.getChar(cc);
 				var newline = cc == '\n'.code;
 				var esize = g.width + g.getKerningOffset(prevChar);
-				var isComplement = (i < text.length - 1 && font.charset.isComplementChar(StringTools.fastCodeAt(text, i + 1)));
+				var isComplement = (next < text.length && font.charset.isComplementChar(hxd.Charset.codeAt(text, next)));
 				if (lineBreak && font.charset.isBreakChar(cc) && !isComplement) {
 					// Case: Very first word in text makes the line too long hence we want to start it off on a new line.
 					if (x > maxWidth && textSplit.length == 0 && splitNode.node != null) {
@@ -489,34 +497,36 @@ class HtmlText extends Text {
 					}
 
 					var size = x + esize + letterSpacing;
-					var k = i + 1, max = text.length;
+					var k = next, max = text.length;
 					var prevChar = cc;
 					while ( size <= maxWidth && k < max ) {
-						var cc = StringTools.fastCodeAt(text, k++);
+						var cc = hxd.Charset.codeAt(text, k);
+						k += hxd.Charset.charLength(text, k, cc);
 						if ( (font.charset.isSpace(cc) || cc == '\n'.code ) ) break;
+						if ( hxd.Charset.isZeroWidth(cc) ) continue;
 						var e = font.getChar(cc);
 						size += e.width + letterSpacing + e.getKerningOffset(prevChar);
 						prevChar = cc;
 						if ( font.charset.isBreakChar(cc) ) {
 							if ( k >= text.length )
 								break;
-							var nc = StringTools.fastCodeAt(text, k);
+							var nc = hxd.Charset.codeAt(text, k);
 							if ( !font.charset.isComplementChar(nc) ) break;
 						}
 					}
 					// Avoid empty line when last char causes line-break while being CJK
-					if ( size > maxWidth && i != max - 1 ) {
+					if ( size > maxWidth && next != max ) {
 						// Next word will reach maxWidth
 						newline = true;
 						if ( font.charset.isSpace(cc) ) {
 							textSplit.push(text.substr(restPos, i - restPos));
 							g = null;
 						} else {
-							textSplit.push(text.substr(restPos, i + 1 - restPos));
+							textSplit.push(text.substr(restPos, next - restPos));
 							breakChars++;
 						}
 						splitNode.node = null;
-						restPos = i + 1;
+						restPos = next;
 					} else {
 						splitNode.node = e;
 						splitNode.pos = i + breakChars;
@@ -541,6 +551,7 @@ class HtmlText extends Text {
 					prevChar = cc;
 					newLine = false;
 				}
+				i = next;
 			}
 
 			if ( restPos < text.length ) {
@@ -848,8 +859,11 @@ class HtmlText extends Text {
 			newLine = false;
 			var t = e.nodeValue;
 			var dy = metrics[sizePos].baseLine - font.baseLine;
-			for( i in 0...t.length ) {
-				var cc = StringTools.fastCodeAt(t, i);
+			var i = 0;
+			while( i < t.length ) {
+				var cc = hxd.Charset.codeAt(t, i);
+				i += hxd.Charset.charLength(t, i, cc);
+				if( hxd.Charset.isZeroWidth(cc) ) continue;
 				if( cc == "\n".code ) {
 					makeLineBreak();
 					dy = metrics[sizePos].baseLine - font.baseLine;

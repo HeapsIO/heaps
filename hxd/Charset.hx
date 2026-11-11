@@ -147,6 +147,38 @@ class Charset {
 		return complementChars.exists(code);
 	}
 
+	/**
+		The character starting at `i` in `s`: a whole code point where `i` starts a surrogate pair
+		(UTF-16 strings, e.g. HashLink and JS), otherwise the unit at `i` (a lone surrogate stays itself).
+		`charLength` gives how many units it takes.
+	**/
+	public static inline function codeAt( s : String, i : Int ) : Int {
+		var c = StringTools.fastCodeAt(s, i);
+		if( c >= 0xD800 && c <= 0xDBFF && i + 1 < s.length ) {
+			var d = StringTools.fastCodeAt(s, i + 1);
+			if( d >= 0xDC00 && d <= 0xDFFF )
+				c = 0x10000 + ((c - 0xD800) << 10) + (d - 0xDC00);
+		}
+		return c;
+	}
+
+	/** Units taken in `s` at `i` by `code`, the result of `codeAt(s, i)`: 2 for a surrogate pair, else 1. **/
+	public static inline function charLength( s : String, i : Int, code : Int ) : Int {
+		return code > 0xFFFF && StringTools.fastCodeAt(s, i) != code ? 2 : 1;
+	}
+
+	/**
+		True for characters that only modify the one before them and are drawn with no glyph and no
+		width: zero width (non-)joiner, variation selectors (emoji vs. text style) and tag characters
+		(subdivision flags). Without shaping, the characters they join draw side by side.
+	**/
+	public static function isZeroWidth( code : Int ) : Bool {
+		return code == 0x200C || code == 0x200D
+			|| (code >= 0xFE00 && code <= 0xFE0F)
+			|| (code >= 0xE0020 && code <= 0xE007F)
+			|| (code >= 0xE0100 && code <= 0xE01EF);
+	}
+
 	static var inst : Charset;
 	public static function getDefault() {
 		if( inst == null ) inst = new Charset();
