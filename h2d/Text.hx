@@ -371,27 +371,27 @@ class Text extends Drawable {
 			leftMargin = 0;
 		}
 
-		// walks code points: a surrogate pair is one character, and joiners / variation selectors
-		// take no space and never start a line
+		// walks clusters (hxd.Charset.clusterEnd): a surrogate pair or an emoji sequence is one
+		// character that is never split; joiners / variation selectors take no space and never start a line
 		var i = 0;
 		var maxLen = text.length;
 		while( i < maxLen ) {
 			var cc = hxd.Charset.codeAt(text, i);
-			var next = i + hxd.Charset.charLength(text, i, cc);
 			if( cc == '\n'.code ) {
 				flushLine(i);
 				lastPos++;
-				i = next;
+				i++;
 				continue;
 			}
 			if( hxd.Charset.isZeroWidth(cc) ) {
-				i = next;
+				i += hxd.Charset.charLength(text, i, cc);
 				continue;
 			}
+			var next = hxd.Charset.clusterEnd(text, i);
 			var startX = x;
 			if( lastPos < i ) x += letterSpacing;
-			var e = font.getChar(cc);
-			var esize = e.width + e.getKerningOffset(prevChar);
+			var e = font.getCluster(text, i, next);
+			var esize = e != null ? e.width + e.getKerningOffset(prevChar) : partsWidth(font, text, i, next, prevChar);
 			x += esize;
 			prevChar = cc;
 			if( lineBreak ) {
@@ -423,6 +423,31 @@ class Text extends Drawable {
 		}
 		if( x > leftMargin ) flushLine(text.length);
 		return lines.join("\n");
+	}
+
+	/** Advance of the cluster `[i, end)` of `text` after `prevChar`: its joined glyph's, or its parts'. **/
+	function clusterWidth( text : String, i : Int, end : Int, prevChar : Int ) : Float {
+		var e = font.getCluster(text, i, end);
+		return e != null ? e.width + e.getKerningOffset(prevChar) : partsWidth(font, text, i, end, prevChar);
+	}
+
+	/**
+		Width of the cluster `[i, end)` of `text` drawn as parts (`Font.getCluster` gave no glyph for
+		it): its visible code points side by side, letter spacing between them.
+	**/
+	function partsWidth( font : Font, text : String, i : Int, end : Int, prevChar : Int ) : Float {
+		var w = 0., first = true;
+		while( i < end ) {
+			var cc = hxd.Charset.codeAt(text, i);
+			i += hxd.Charset.charLength(text, i, cc);
+			if( hxd.Charset.isZeroWidth(cc) ) continue;
+			var e = font.getChar(cc);
+			if( !first ) w += letterSpacing;
+			w += e.width + e.getKerningOffset(prevChar);
+			prevChar = cc;
+			first = false;
+		}
+		return w;
 	}
 
 	/**
@@ -466,7 +491,8 @@ class Text extends Drawable {
 		var i = 0;
 		while( i < t.length ) {
 			var cc = hxd.Charset.codeAt(t, i);
-			var n = hxd.Charset.charLength(t, i, cc);
+			var zeroWidth = hxd.Charset.isZeroWidth(cc);
+			var n = zeroWidth || cc == '\n'.code ? hxd.Charset.charLength(t, i, cc) : hxd.Charset.clusterEnd(t, i) - i;
 
 			if( rebuild && colors != null && colors[colorsPos] >= i && colors[colorsPos] < i + n ) {
 				var c = colors[colorsPos+1];
@@ -474,13 +500,10 @@ class Text extends Drawable {
 				colorsPos += 2;
 				if( colorsPos >= colors.length ) colors = null;
 			}
+			var start = i;
 			i += n;
 			// joiners and variation selectors: no glyph, no width
-			if( hxd.Charset.isZeroWidth(cc) ) continue;
-
-			var e = font.getChar(cc);
-			var offs = e.getKerningOffset(prevChar);
-			var esize = e.width + offs;
+			if( zeroWidth ) continue;
 
 			if( cc == '\n'.code ) {
 				if( x > xMax ) xMax = x;
@@ -494,12 +517,30 @@ class Text extends Drawable {
 				y += dl;
 				prevChar = -1;
 			} else {
+				var e = font.getCluster(t, start, i);
 				if( e != null ) {
+					var offs = e.getKerningOffset(prevChar);
 					if( rebuild ) glyphs.add(x + offs, y, e.t);
 					if( y == 0 && e.t.dy < yMin ) yMin = e.t.dy;
 					var ty = y + e.t.dy + e.t.height;
 					if( ty > yMax ) yMax = ty;
-					x += esize + letterSpacing;
+					x += e.width + offs + letterSpacing;
+				} else {
+					// a cluster the fallback cannot join: its visible code points side by side
+					var k = start, pc = prevChar;
+					while( k < i ) {
+						var c = hxd.Charset.codeAt(t, k);
+						k += hxd.Charset.charLength(t, k, c);
+						if( hxd.Charset.isZeroWidth(c) ) continue;
+						var e = font.getChar(c);
+						var offs = e.getKerningOffset(pc);
+						if( rebuild ) glyphs.add(x + offs, y, e.t);
+						if( y == 0 && e.t.dy < yMin ) yMin = e.t.dy;
+						var ty = y + e.t.dy + e.t.height;
+						if( ty > yMax ) yMax = ty;
+						x += e.width + offs + letterSpacing;
+						pc = c;
+					}
 				}
 				prevChar = cc;
 			}

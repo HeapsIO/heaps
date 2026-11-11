@@ -362,7 +362,7 @@ class HtmlText extends Text {
 				splitNode.node.nodeValue = str.substr(0, splitNode.pos) + "\n" + str.substr(splitNode.pos + 1);
 			} else {
 				w -= (splitNode.width + letterSpacing + char.getKerningOffset(splitNode.prevChar));
-				var after = splitNode.pos + hxd.Charset.charLength(str, splitNode.pos, cc);
+				var after = hxd.Charset.clusterEnd(str, splitNode.pos);
 				splitNode.node.nodeValue = str.substr(0, after) + "\n" + str.substr(after);
 			}
 			splitNode.node = null;
@@ -476,18 +476,20 @@ class HtmlText extends Text {
 			var textSplit = [], restPos = 0;
 			var x = leftMargin;
 			var breakChars = 0;
-			// walks code points: a surrogate pair is one character; joiners and variation selectors take no space
+			// walks clusters (hxd.Charset.clusterEnd): a surrogate pair or an emoji sequence is one
+			// character that is never split; joiners and variation selectors take no space
 			var i = 0;
 			while ( i < text.length ) {
 				var cc = hxd.Charset.codeAt(text, i);
-				var next = i + hxd.Charset.charLength(text, i, cc);
 				if ( hxd.Charset.isZeroWidth(cc) ) {
-					i = next;
+					i += hxd.Charset.charLength(text, i, cc);
 					continue;
 				}
-				var g = font.getChar(cc);
 				var newline = cc == '\n'.code;
-				var esize = g.width + g.getKerningOffset(prevChar);
+				var next = newline ? i + 1 : hxd.Charset.clusterEnd(text, i);
+				var g = font.getCluster(text, i, next);
+				var esize = g != null ? g.width + g.getKerningOffset(prevChar) : partsWidth(font, text, i, next, prevChar);
+				var advance = true;
 				var isComplement = (next < text.length && font.charset.isComplementChar(hxd.Charset.codeAt(text, next)));
 				if (lineBreak && font.charset.isBreakChar(cc) && !isComplement) {
 					// Case: Very first word in text makes the line too long hence we want to start it off on a new line.
@@ -501,11 +503,15 @@ class HtmlText extends Text {
 					var prevChar = cc;
 					while ( size <= maxWidth && k < max ) {
 						var cc = hxd.Charset.codeAt(text, k);
-						k += hxd.Charset.charLength(text, k, cc);
 						if ( (font.charset.isSpace(cc) || cc == '\n'.code ) ) break;
-						if ( hxd.Charset.isZeroWidth(cc) ) continue;
-						var e = font.getChar(cc);
-						size += e.width + letterSpacing + e.getKerningOffset(prevChar);
+						if ( hxd.Charset.isZeroWidth(cc) ) {
+							k += hxd.Charset.charLength(text, k, cc);
+							continue;
+						}
+						var kEnd = hxd.Charset.clusterEnd(text, k);
+						var e = font.getCluster(text, k, kEnd);
+						size += letterSpacing + (e != null ? e.width + e.getKerningOffset(prevChar) : partsWidth(font, text, k, kEnd, prevChar));
+						k = kEnd;
 						prevChar = cc;
 						if ( font.charset.isBreakChar(cc) ) {
 							if ( k >= text.length )
@@ -520,7 +526,7 @@ class HtmlText extends Text {
 						newline = true;
 						if ( font.charset.isSpace(cc) ) {
 							textSplit.push(text.substr(restPos, i - restPos));
-							g = null;
+							advance = false;
 						} else {
 							textSplit.push(text.substr(restPos, next - restPos));
 							breakChars++;
@@ -538,7 +544,7 @@ class HtmlText extends Text {
 						splitNode.font = font;
 					}
 				}
-				if ( g != null && cc != '\n'.code )
+				if ( advance && cc != '\n'.code )
 					x += esize + letterSpacing;
 				if ( newline ) {
 					metrics.push(makeLineInfo(x, info.height, info.baseLine, info.baseLineOffset));
@@ -862,23 +868,42 @@ class HtmlText extends Text {
 			var i = 0;
 			while( i < t.length ) {
 				var cc = hxd.Charset.codeAt(t, i);
-				i += hxd.Charset.charLength(t, i, cc);
-				if( hxd.Charset.isZeroWidth(cc) ) continue;
+				if( hxd.Charset.isZeroWidth(cc) ) {
+					i += hxd.Charset.charLength(t, i, cc);
+					continue;
+				}
 				if( cc == "\n".code ) {
+					i++;
 					makeLineBreak();
 					dy = metrics[sizePos].baseLine - font.baseLine;
 					prevChar = -1;
 					continue;
 				}
 				else {
-					var fc = font.getChar(cc);
+					var end = hxd.Charset.clusterEnd(t, i);
+					var fc = font.getCluster(t, i, end);
 					if (fc != null) {
 						xPos += fc.getKerningOffset(prevChar);
 						if( rebuild ) glyphs.add(xPos, yPos + dy, fc.t);
 						if( yPos == 0 && fc.t.dy+dy < calcYMin ) calcYMin = fc.t.dy + dy;
 						xPos += fc.width + letterSpacing;
+					} else {
+						// a cluster the fallback cannot join: its visible code points side by side
+						var k = i, pc = prevChar;
+						while( k < end ) {
+							var c = hxd.Charset.codeAt(t, k);
+							k += hxd.Charset.charLength(t, k, c);
+							if( hxd.Charset.isZeroWidth(c) ) continue;
+							var pf = font.getChar(c);
+							xPos += pf.getKerningOffset(pc);
+							if( rebuild ) glyphs.add(xPos, yPos + dy, pf.t);
+							if( yPos == 0 && pf.t.dy+dy < calcYMin ) calcYMin = pf.t.dy + dy;
+							xPos += pf.width + letterSpacing;
+							pc = c;
+						}
 					}
 					prevChar = cc;
+					i = end;
 				}
 			}
 		}

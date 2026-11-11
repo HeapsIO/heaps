@@ -179,6 +179,61 @@ class Charset {
 			|| (code >= 0xE0100 && code <= 0xE01EF);
 	}
 
+	/**
+		The end (exclusive) of the cluster starting at `i` in `s` (`i < s.length`): the text that lays
+		out, wraps and takes the caret as one character. One code point, extended by what modifies it
+		(UTS #51 emoji sequences): variation selectors, emoji modifiers (skin tones), the keycap mark
+		U+20E3, tag characters, ideographic variation selectors, and a ZWJ with the code point after it
+		(a family); a regional indicator pairs with the one after it (a flag). Everything else is a
+		cluster of one code point, so text without these characters lays out as before.
+	**/
+	public static function clusterEnd( s : String, i : Int ) : Int {
+		var len = s.length;
+		var c = codeAt(s, i);
+		var p = i + charLength(s, i, c);
+		var flag = isRegionalIndicator(c);
+		while( p < len ) {
+			var d = codeAt(s, p);
+			var n = charLength(s, p, d);
+			if( (d >= 0xFE00 && d <= 0xFE0F) || (d >= 0x1F3FB && d <= 0x1F3FF) || d == 0x20E3
+				|| (d >= 0xE0020 && d <= 0xE007F) || (d >= 0xE0100 && d <= 0xE01EF) ) {
+				p += n;
+			} else if( d == 0x200D ) {
+				p += n;
+				if( p < len ) {
+					var e = codeAt(s, p);
+					if( e != "\n".code && e != "\r".code ) p += charLength(s, p, e);
+				}
+			} else if( flag && isRegionalIndicator(d) ) {
+				flag = false;
+				p += n;
+			} else
+				break;
+		}
+		return p;
+	}
+
+	/**
+		True when `[start, end)` of `s` holds an emoji sequence marker: U+FE0F (emoji style), the keycap
+		mark, an emoji modifier, ZWJ, a regional indicator or a tag character. Such a cluster is drawn
+		from the OS emoji font as one picture. Not for ideographic or text-style (U+FE0E) selectors.
+	**/
+	public static function isEmojiCluster( s : String, start : Int, end : Int ) : Bool {
+		var i = start;
+		while( i < end ) {
+			var c = codeAt(s, i);
+			if( c == 0xFE0F || c == 0x20E3 || c == 0x200D || (c >= 0x1F3FB && c <= 0x1F3FF)
+				|| isRegionalIndicator(c) || (c >= 0xE0020 && c <= 0xE007F) )
+				return true;
+			i += charLength(s, i, c);
+		}
+		return false;
+	}
+
+	static inline function isRegionalIndicator( c : Int ) {
+		return c >= 0x1F1E6 && c <= 0x1F1FF;
+	}
+
 	static var inst : Charset;
 	public static function getDefault() {
 		if( inst == null ) inst = new Charset();

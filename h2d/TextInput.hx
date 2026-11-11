@@ -528,14 +528,17 @@ class TextInput extends Text {
 		var current = lines[cursorLineIndex];
 		var xOffset = 0.;
 		var prevCC: Null<Int> = null;
-		// both lines are measured a code point at a time, joiners and selectors taking no space
+		// both lines are measured a cluster at a time, joiners and selectors taking no space
 		var cI = 0;
 		while( current.startIndex + cI < cursorIndex && cI < current.line.length ) {
 			var cc = hxd.Charset.codeAt(current.line, cI);
-			cI += hxd.Charset.charLength(current.line, cI, cc);
-			if( hxd.Charset.isZeroWidth(cc) ) continue;
-			var c = font.getChar(cc);
-			xOffset += c.width + c.getKerningOffset(prevCC) + letterSpacing;
+			if( hxd.Charset.isZeroWidth(cc) ) {
+				cI += hxd.Charset.charLength(current.line, cI, cc);
+				continue;
+			}
+			var end = hxd.Charset.clusterEnd(current.line, cI);
+			xOffset += clusterWidth(current.line, cI, end, prevCC == null ? -1 : prevCC) + letterSpacing;
+			cI = end;
 			prevCC = cc;
 		}
 		var destination = lines[destinationIndex];
@@ -545,10 +548,12 @@ class TextInput extends Text {
 		while( cI < destination.line.length ) {
 			var cc = hxd.Charset.codeAt(destination.line, cI);
 			var start = cI;
-			cI += hxd.Charset.charLength(destination.line, cI, cc);
-			if( hxd.Charset.isZeroWidth(cc) ) continue;
-			var c = font.getChar(cc);
-			var newCurrOffset = currOffset + c.width + c.getKerningOffset(prevCC) + letterSpacing;
+			if( hxd.Charset.isZeroWidth(cc) ) {
+				cI += hxd.Charset.charLength(destination.line, cI, cc);
+				continue;
+			}
+			cI = hxd.Charset.clusterEnd(destination.line, cI);
+			var newCurrOffset = currOffset + clusterWidth(destination.line, start, cI, prevCC == null ? -1 : prevCC) + letterSpacing;
 			if( newCurrOffset > xOffset ) {
 				cursorIndex = destination.startIndex + (xOffset - currOffset < newCurrOffset - xOffset ? start : cI);
 				cursorIndex = snapCursor(cursorIndex);
@@ -767,8 +772,9 @@ class TextInput extends Text {
 	}
 
 	/**
-		True if the caret may not stop at the cursor index `i`: between the two halves of a surrogate
-		pair, or just before a joiner / variation selector, which belongs to the character before it.
+		True if the caret may not stop at the cursor index `i`: inside a character, which is a whole
+		cluster (`hxd.Charset.clusterEnd`: a surrogate pair, an emoji sequence) with the joiners and
+		selectors after it, whether it draws as one glyph or as parts.
 	**/
 	function inPair( i : Int ) : Bool {
 		return isPairAt(displayText(), getTextPos(i));
@@ -777,24 +783,38 @@ class TextInput extends Text {
 	/** True if the raw text position `p` in `t` is inside a character (see `inPair`). **/
 	function isPairAt( t : String, p : Int ) : Bool {
 		if( p <= 0 || p >= t.length ) return false;
-		var hi = t.charCodeAt(p - 1);
-		var lo = t.charCodeAt(p);
-		if( hi >= 0xD800 && hi <= 0xDBFF && lo >= 0xDC00 && lo <= 0xDFFF ) return true;
-		return hxd.Charset.isZeroWidth(hxd.Charset.codeAt(t, p));
+		return charStartBefore(t, p) != p;
+	}
+
+	/**
+		The start of the character (see `inPair`) holding the raw position `p` of `t`: characters are
+		found by walking from the start of the line, since a flag's regional indicators pair up from
+		the start of their run.
+	**/
+	static function charStartBefore( t : String, p : Int ) : Int {
+		var q = p;
+		while( q > 0 && StringTools.fastCodeAt(t, q - 1) != "\n".code ) q--;
+		var start = q;
+		while( q < p ) {
+			start = q;
+			q = charEnd(t, q);
+		}
+		return q == p ? p : start;
 	}
 
 	/** A raw text position inside a character (see `inPair`) moves to after it and its selectors. **/
 	function snapPos( p : Int ) : Int {
 		var t = displayText();
-		while( isPairAt(t, p) ) p++;
-		return p;
+		if( p <= 0 || p >= t.length ) return p;
+		var s = charStartBefore(t, p);
+		return s == p ? p : charEnd(t, s);
 	}
 
 	/** A raw text position inside a character (see `inPair`) moves to before it. **/
 	function snapPosBack( p : Int ) : Int {
 		var t = displayText();
-		while( isPairAt(t, p) ) p--;
-		return p;
+		if( p <= 0 || p >= t.length ) return p;
+		return charStartBefore(t, p);
 	}
 
 	/** One character forward from the cursor index `i`, stepping over a surrogate pair and its selectors as one. **/
@@ -824,9 +844,9 @@ class TextInput extends Text {
 		return i > 0 && inPair(i) ? getCursorPos(snapPos(getTextPos(i))) : i;
 	}
 
-	/** The raw position in `s` after the character at `p` and any joiners / selectors following it. **/
+	/** The raw position in `s` after the character (cluster) at `p` and any joiners / selectors following it. **/
 	static function charEnd( s : String, p : Int ) : Int {
-		p += hxd.Charset.charLength(s, p, hxd.Charset.codeAt(s, p));
+		p = hxd.Charset.clusterEnd(s, p);
 		while( p < s.length ) {
 			var c = hxd.Charset.codeAt(s, p);
 			if( !hxd.Charset.isZeroWidth(c) ) break;
