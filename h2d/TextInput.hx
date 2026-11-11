@@ -765,6 +765,20 @@ class TextInput extends Text {
 		interactive.height = ih;
 	}
 
+	override function onRemove() {
+		// leaving the scene drops the focus without a focus-lost event (hxd.SceneEvents.onRemove):
+		// blur first so a composition is committed and text input is stopped
+		if( interactive.hasFocus() ) {
+			interactive.blur();
+			if( interactive.hasFocus() ) {
+				// onFocusLost cancelled the blur, but the field is going anyway
+				commitComposition();
+				onBlur();
+			}
+		}
+		super.onRemove();
+	}
+
 	override function getBoundsRec(relativeTo:Object, out:h2d.col.Bounds, forSize:Bool) {
 		syncInteract();
 		super.getBoundsRec(relativeTo, out, forSize);
