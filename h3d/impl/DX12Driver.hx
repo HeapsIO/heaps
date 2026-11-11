@@ -7,26 +7,13 @@ package h3d.impl;
 #end
 
 import h3d.impl.Driver;
+import h3d.impl.Upscaling;
 import dx.Dx12;
 import haxe.Int64;
 import h3d.mat.Pass;
 import h3d.mat.Stencil;
-import haxe.MainLoop;
-
-#if dlss
-import heaps.dlss.Dlss;
-#end
-#if fsr
-import heaps.fsr.Fsr;
-#end
 
 private typedef Driver = Dx12;
-
-enum abstract UpscalerSelection(String) {
-	var AUTO = "auto";
-	var DLSS = "dlss";
-	var FSR = "fsr";
-}
 
 class PSOConfigCache {
 	static inline var MAX_SIGN_SIZE = 1024;
@@ -54,6 +41,12 @@ class PSOConfigCache {
 	public function load() {
 		configs = [];
 		loadFailed = false;
+		loadFile(file);
+		if( outputFile != file )
+			loadFile(outputFile);
+	}
+
+	function loadFile( file : String ) {
 		try {
 			if( !sys.FileSystem.exists(file) )
 				return;
@@ -68,15 +61,25 @@ class PSOConfigCache {
 				var cachedCount = cache.readInt32();
 				if( cachedCount < 0 || cachedCount > MAX_PIPELINES_PER_SHADER )
 					return;
-				var pipelines = [];
+				var pipelines = configs.get(shaderSign);
+				if( pipelines == null ) {
+					pipelines = [];
+					configs.set(shaderSign, pipelines);
+				}
 				for( i in 0...cachedCount ) {
 					var byteSize = cache.readInt32();
 					if( byteSize <= 0 || byteSize > 64 )
 						return;
 					var bytes = cache.read(byteSize);
-					pipelines.push(bytes);
+					var found = false;
+					for( p in pipelines )
+						if( p.compare(bytes) == 0 ) {
+							found = true;
+							break;
+						}
+					if( !found )
+						pipelines.push(bytes);
 				}
-				configs.set(shaderSign, pipelines);
 			}
 		} catch( e : Dynamic ) {
 			trace("Failed to load pipeline cache, keeping partial contents: " + e);
@@ -206,6 +209,16 @@ class ScratchHeapArray {
 		cursor = 0;
 	}
 
+	public function checkSize( minSize : Int, toRelease : Array<Resource> ) {
+		if( minSize <= size )
+			return;
+		size = minSize;
+		for( h in heaps )
+			toRelease.push(@:privateAccess h.heap);
+		heaps = [];
+		cursor = 0;
+	}
+
 	public function next() {
 		var h = heaps[cursor++];
 		if( h == null ) {
@@ -241,9 +254,9 @@ class BufferAllocatorPage {
 	var resource : GpuResource;
 	var cpuAddress : hl.Bytes;
 
-	public function new( heap : HeapProperties, flags : haxe.EnumFlags<HeapFlag>, desc : ResourceDesc ) {
+	public function new( heap : HeapProperties, flags : haxe.EnumFlags<HeapFlag>, desc : ResourceDesc, state : ResourceState ) {
 		this.capacity = desc.width.low;
-		resource = DX12Driver.allocCheck(() -> Driver.createCommittedResource(heap, flags, desc, GENERIC_READ, null));
+		resource = DX12Driver.allocCheck(() -> Driver.createCommittedResource(heap, flags, desc, state, null));
 		resource.setName("BufferAllocatorPage");
 		cpuAddress = resource.map(0, null);
 	}
@@ -285,10 +298,12 @@ class BufferAllocator {
 	var heap : HeapProperties;
 	var desc : ResourceDesc;
 	var flags : haxe.EnumFlags<HeapFlag>;
+	var state : ResourceState;
 
-	public function new( size : Int ) {
+	public function new( size : Int, heapType : HeapType = UPLOAD, state : ResourceState = GENERIC_READ ) {
 		heap = new HeapProperties();
-		heap.type = UPLOAD;
+		heap.type = heapType;
+		this.state = state;
 		desc = new ResourceDesc();
 		desc.dimension = BUFFER;
 		desc.width = size;
@@ -298,7 +313,7 @@ class BufferAllocator {
 		desc.sampleDesc.count = 1;
 		desc.layout = ROW_MAJOR;
 		flags = new haxe.EnumFlags();
-		pages = [new BufferAllocatorPage(heap, flags, desc)];
+		pages = [new BufferAllocatorPage(heap, flags, desc, state)];
 	}
 
 	public function reset( forceDispose = false ) {
@@ -334,7 +349,7 @@ class BufferAllocator {
 
 		var lastCapacity = pages[pages.length - 1].capacity;
 		desc.width = hxd.Math.imax((lastCapacity >> 1) * 3, sz);
-		var p = new BufferAllocatorPage(heap, flags, desc);
+		var p = new BufferAllocatorPage(heap, flags, desc, state);
 		p.tryAlloc(sz, alignment, allocation);
 		pages.push(p);
 		return allocation;
@@ -361,6 +376,9 @@ class DxFrame {
 	public var copyBufferCursor : Int = 0;
 	public var fenceValue : Int64;
 	public var toRelease : Array<Resource> = [];
+	#if (hldx >= version("2.0.0"))
+	public var placedToFree : Array<TextureData> = [];
+	#end
 	public var texHandlesToRelease : Array<h3d.mat.TextureHandle> = [];
 	public var bufHandlesToRelease : Array<h3d.BufferHandle> = [];
 	public var srvHeap : ScratchHeap;
@@ -373,9 +391,8 @@ class DxFrame {
 	public var queryHeapOffset : Int;
 	public var queryBuffer : GpuResource;
 	public var bufferAllocator : BufferAllocator;
-	#if dlss
-	public var dlssFrameToken : DLSSFrameToken;
-	#end
+	public var readbackAllocator : BufferAllocator;
+	public var readbacks : Array<ReadbackRequest> = [];
 	public function new() {
 	}
 	public function getSize() {
@@ -717,6 +734,11 @@ class TextureData extends ResourceData {
 	var cpuViewBits : Int = -1;
 	var cpuViewIndex : Int = -1;
 	var cpuViewsMap : Map<Int, Int>;
+	#if (hldx >= version("2.0.0"))
+	public var page : TextureHeapPage;
+	public var pagePos : Int;
+	public var pageSize : Int;
+	#end
 
 	inline public function getView(bits: Int) {
 		if( cpuViewBits == bits )
@@ -762,6 +784,167 @@ class TextureData extends ResourceData {
 	}
 }
 
+#if (hldx >= version("2.0.0"))
+class TextureHeapPage {
+	public var heap(default,null) : Heap;
+	public var size(default,null) : Int;
+	public var used(default,null) : Int = 0;
+	// sorted list of [pos,len] free ranges
+	var freeList : Array<Int>;
+
+	public function new( heap, size ) {
+		this.heap = heap;
+		this.size = size;
+		freeList = [0, size];
+	}
+
+	public function alloc( size : Int, align : Int ) {
+		var i = 0;
+		while( i < freeList.length ) {
+			var pos = freeList[i];
+			var len = freeList[i + 1];
+			var apos = (pos + align - 1) & ~(align - 1);
+			var end = apos + size;
+			var rest = pos + len - end;
+			if( rest >= 0 ) {
+				if( apos > pos ) {
+					freeList[i + 1] = apos - pos;
+					if( rest > 0 ) {
+						freeList.insert(i + 2, end);
+						freeList.insert(i + 3, rest);
+					}
+				} else if( rest > 0 ) {
+					freeList[i] = end;
+					freeList[i + 1] = rest;
+				} else
+					freeList.splice(i, 2);
+				used += size;
+				return apos;
+			}
+			i += 2;
+		}
+		return -1;
+	}
+
+	public function free( pos : Int, size : Int ) {
+		used -= size;
+		var i = 0;
+		while( i < freeList.length && freeList[i] < pos )
+			i += 2;
+		freeList.insert(i, pos);
+		freeList.insert(i + 1, size);
+		// merge with next
+		if( i + 2 < freeList.length && pos + size == freeList[i + 2] ) {
+			freeList[i + 1] += freeList[i + 3];
+			freeList.splice(i + 2, 2);
+		}
+		// merge with previous
+		if( i > 0 && freeList[i - 2] + freeList[i - 1] == pos ) {
+			freeList[i - 1] += freeList[i + 1];
+			freeList.splice(i, 2);
+		}
+	}
+}
+
+/**
+	Sub-allocates small sampled textures (not render targets / not writable) as placed resources
+	into heaps, instead of one committed resource per texture (min 64KB each).
+	Only textures accepting the 4KB placement alignment (most detailed mip <= 64KB) are placed,
+	bigger ones keep being committed resources so they can be released / evicted individually.
+**/
+class TextureHeapAllocator {
+
+	static inline var SMALL_ALIGN = 4096;
+	static inline var DEFAULT_ALIGN = 65536;
+
+	public var pageSize(default,null) : Int;
+	public var pages(default,null) : Array<TextureHeapPage> = [];
+	var heapDesc : HeapDesc;
+	var allocInfo : ResourceAllocationInfo;
+
+	public function new( pageSize ) {
+		this.pageSize = pageSize;
+		heapDesc = new HeapDesc();
+		heapDesc.sizeInBytes = pageSize;
+		heapDesc.properties.type = DEFAULT;
+		heapDesc.alignment = DEFAULT_ALIGN;
+		heapDesc.flags.set(DENY_BUFFERS);
+		heapDesc.flags.set(DENY_RT_DS_TEXTURES);
+		heapDesc.flags.set(CREATE_NOT_ZEROED);
+		allocInfo = new ResourceAllocationInfo();
+	}
+
+	/**
+		Returns the allocation size of the texture, or -1 if it should not be placed (too big).
+		Sets desc.alignment accordingly.
+	**/
+	public function getAllocSize( t : h3d.mat.Texture, desc : ResourceDesc ) {
+		// small alignment requires the most detailed mip to fit in 64KB
+		if( hxd.Pixels.calcDataSize(desc.width.low, desc.height, t.format) * t.layerCount > 65536 )
+			return -1;
+		desc.alignment = SMALL_ALIGN;
+		Dx12.getResourceAllocationInfo(desc, allocInfo);
+		if( allocInfo.alignment != SMALL_ALIGN ) {
+			desc.alignment = 0;
+			return -1;
+		}
+		return allocInfo.sizeInBytes.low;
+	}
+
+	public function alloc( td : TextureData, desc : ResourceDesc, size : Int ) : GpuResource {
+		var align = desc.alignment.low;
+		var page = null, pos = -1;
+		for( p in pages ) {
+			if( p.size - p.used < size ) continue;
+			pos = p.alloc(size, align);
+			if( pos >= 0 ) {
+				page = p;
+				break;
+			}
+		}
+		if( page == null ) {
+			var heap = Dx12.createHeap(heapDesc);
+			if( heap == null )
+				return null;
+			heap.setName("TextureHeap#" + pages.length);
+			page = new TextureHeapPage(heap, pageSize);
+			pages.push(page);
+			pos = page.alloc(size, align);
+		}
+		var res = Dx12.createPlacedResource(page.heap, pos, desc, td.state, null);
+		if( res == null ) {
+			freeBlock(page, pos, size);
+			return null;
+		}
+		td.page = page;
+		td.pagePos = pos;
+		td.pageSize = size;
+		return res;
+	}
+
+	public function free( td : TextureData ) {
+		if( td.page == null ) return;
+		freeBlock(td.page, td.pagePos, td.pageSize);
+		td.page = null;
+	}
+
+	function freeBlock( page : TextureHeapPage, pos : Int, size : Int ) {
+		page.free(pos, size);
+		// release empty pages, but keep one to prevent alloc/free churn
+		if( page.used == 0 && pages.length > 1 ) {
+			pages.remove(page);
+			page.heap.release();
+		}
+	}
+
+	public function getStats() {
+		var used = 0.;
+		for( p in pages ) used += p.used;
+		return { pages : pages.length, size : pages.length * (pageSize:Float), used : used };
+	}
+}
+#end
+
 class QueryData {
 	public var heap : Int;
 	public var offset : Int;
@@ -770,17 +953,12 @@ class QueryData {
 	}
 }
 
-class AsyncReadbackRequest {
-	public var b : Buffer;
-	public var startVertex : Int;
-	public var vertexCount : Int;
+class ReadbackRequest {
+	public var cpuAddress : hl.Bytes;
+	public var size : Int;
 	public var buf : haxe.io.Bytes;
 	public var bufPos : Int;
 	public var callback : Void -> Void;
-	public var tmpBufOffset : Int;
-    public var tmpBufSize : Int;
-	public var barrier : ResourceBarrier;
-	public var fenceValue : Int64;
 	public function new() {
 	}
 }
@@ -794,6 +972,9 @@ class DX12Driver extends h3d.impl.Driver {
 	var window : dx.Window;
 	var onContextLost : Void -> Void;
 	var frames : Array<DxFrame>;
+	#if (hldx >= version("2.0.0"))
+	var textureHeap : TextureHeapAllocator;
+	#end
 	var frame : DxFrame;
 	var fence : Fence;
 	var fenceEvent : WaitEvent;
@@ -822,6 +1003,8 @@ class DX12Driver extends h3d.impl.Driver {
 	#if heaps_mt_hxsl_cache
 	var compileMutex  = new sys.thread.Mutex();
 	var shaderBinaryMutex  = new sys.thread.Mutex();
+	var compilingCount = 0;
+	var releaseQueue : Array<hxsl.RuntimeShader> = [];
 	#end
 	var psoConfigCache : PSOConfigCache;
 
@@ -840,6 +1023,7 @@ class DX12Driver extends h3d.impl.Driver {
 	var currentPipelineState : PipelineState;
 	var lastVertexGlobalBind : Int = -1;
 	var lastFragmentGlobalBind : Int = -1;
+	var lastGlobalsShader : CompiledShader;
 	var needUAVBarrier : Bool = false;
 	var useDepthClamp : Bool = false;
 	var useSM6_6 = false;
@@ -851,58 +1035,13 @@ class DX12Driver extends h3d.impl.Driver {
 	var copyFence : Fence;
 	var copyFenceValue : Int64;
 
-	var asyncCopyCommandList : CommandList;
-	var asyncCopyAllocator : CommandAllocator;
-	var asyncCopyEvent : MainEvent;
-	var waitingAsyncCopy : Bool;
-	var asyncReadbackQueue : Array<AsyncReadbackRequest> = [];
-	var currentRequests : Array<AsyncReadbackRequest> = [];
-	var asyncReadbackBuffer : GpuResource;
-	var asyncReadbackBufferSize : Int = 0;
-
-	var computeQueue : CommandQueue;
-	var computeFence : Fence;
-	var computeFenceValue : Int64;
-
-	var asyncComputeCommandList : CommandList;
-	var asyncComputeAllocator : CommandAllocator;
-
-	#if dlss
-	var slReady : Bool;
-	var dlssReady : Bool;
-	var framegenReady : Bool;
-	var pclReady : Bool;
-	var reflexReady : Bool;
-	var reflexState : ReflexStateInfo;
-	var pclFlashRequested : Bool;
-	var dlssgMode : h3d.impl.Driver.FrameGenMode = Off;
-	var dlssgFrames : Int = 1;
-	var dlssgLastStatus : Int = 0;
-	var reflexMode : LowLatencyMode = Off;
-	var dlssConstantsFrame : Int = -1;
-	var slInitResult : Int = -1;
-	var dlssSupportResult : Int = -1;
-	var dlssLastResult : Int = 0;
-	#end
-
-	#if fsr
-	var fsrReady : Bool;
-	var fsrInitResult : Int = -1;
-	var fsrContext : FsrContext;
-	var fsrContextWidth : Int = -1;
-	var fsrContextHeight : Int = -1;
-	var fsrContextFlags : Int = -1;
-	var fsrLastResult : Int = 0;
-	#end
-
-	var upscalingFrame : Int = -1;
-	var upscalingMode : UpscalingMode = Off;
-	var upscalingColorIn : h3d.mat.Texture;
-	var upscalingColorOut : h3d.mat.Texture;
-	var upscalingDepth : h3d.mat.Texture;
-	var upscalingMotionVectors : h3d.mat.Texture;
+	var nativeDevice : Device;
+	var nativeFactory : Factory;
+	var nativeQueue : CommandQueue;
+	var swapChain : SwapChain;
 
 	public static var COPY_BUFFER_SIZE = 256 * 1024 * 1024; // 256 Mo per frame
+	public static var TEXTURE_HEAP_SIZE = 16 * 1024 * 1024;
 	public static var DEFAULT_DEPTH_FORMAT : h3d.mat.Data.TextureFormat = Depth24Stencil8;
 	public static var DEFAULT_DEPTH_VALUE = 1.0;
 	public static var INITIAL_RT_COUNT = 1024;
@@ -911,17 +1050,11 @@ class DX12Driver extends h3d.impl.Driver {
 	public static var INITIAL_BINDLESS_SAMPLER_COUNT = 1024;
 	public static var INITIAL_SAMPLER_COUNT = 1024;
 	public static var INITIAL_BUFFER_ALLOCATOR_SIZE = 2 * 1024 * 1024;
+	public static var INITIAL_READBACK_ALLOCATOR_SIZE = 64 * 1024;
 	public static var BUFFER_COUNT = #if console 3 #else 2 #end;
 	public static var DEVICE_NAME = null;
 	public static var DEBUG = false; // requires dxil.dll when set to true
 	public static var SUPPRESSED_MESSAGE_IDS : Array<Int> = [];
-	public static var ENABLE_UPSCALING = true;
-	public static var UPSCALER : UpscalerSelection = UpscalerSelection.AUTO;
-	public static var FRAME_GEN = true;
-	public static var LOW_LATENCY = true;
-	public static var UPSCALER_DEBUG = false;
-	public static var UPSCALER_DEBUG_VIEW = false;
-	public static var CHECK_SL_DLL_SIGNATURE = true;
 	public static var ENABLE_PSO_CONFIG_CACHE = false;
 	public static var PSO_CONFIG_CACHE_PATH = "psoconfig.dx12";
 	public static var PSO_CONFIG_CACHE_OUTPUT_PATH = "psoconfig.dx12";
@@ -939,7 +1072,12 @@ class DX12Driver extends h3d.impl.Driver {
 
 	public function new() {
 		window = @:privateAccess dx.Window.windows[0];
+		var backends : Array<UpscalingBackend> = [];
+		#if dlss backends.push(new DX12DlssBackend(this)); #end
+		#if fsr backends.push(new DX12FsrBackend(this)); #end
+		upscaling = new Upscaling(this, backends);
 		reset();
+		useSM6_6 = h3d.impl.Driver.requestedFeatures.has(Bindless) && checkSM6_6();
 	}
 
 	override function getMemoryUsage() {
@@ -954,7 +1092,17 @@ class DX12Driver extends h3d.impl.Driver {
 		case Queries, BottomLeftCoords:
 			false;
 		case Bindless:
-			enableBindless();
+			useSM6_6;
+		default:
+			true;
+		};
+	}
+
+	@:allow(h3d.impl.Driver)
+	static function onFeatureRequested( f : Feature ) : Bool {
+		return switch(f) {
+		case Queries, BottomLeftCoords:
+			false;
 		default:
 			true;
 		};
@@ -964,10 +1112,7 @@ class DX12Driver extends h3d.impl.Driver {
 		return true;
 	}
 
-	function enableBindless() {
-		if ( useSM6_6 )
-			return true;
-
+	function checkSM6_6() : Bool {
 		var hasSM6_6 = false;
 		#if (hldx >= version("1.16.0"))
 		var shaderModel = new hl.Bytes(4);
@@ -975,9 +1120,7 @@ class DX12Driver extends h3d.impl.Driver {
 		Driver.checkFeatureSupport(SHADER_MODEL, shaderModel, 4);
 		hasSM6_6 = cast(SHADER_MODEL_6_6, Int) <= shaderModel.getI32(0);
 		#end
-
-		useSM6_6 = hasSM6_6;
-		return useSM6_6;
+		return hasSM6_6;
 	}
 
 	function suppressDebugMessages() {
@@ -993,17 +1136,7 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	function reset() {
-		#if dlss
-		if ( ENABLE_UPSCALING && (UPSCALER == UpscalerSelection.AUTO || UPSCALER == UpscalerSelection.DLSS) ) {
-			var features = new hl.NativeArray<Int>(1 + (FRAME_GEN ? 1 : 0) + (LOW_LATENCY ? 1 : 0));
-			var count = 0;
-			features[count++] = DLSSFeature.DLSS;
-			if ( FRAME_GEN ) features[count++] = DLSSFeature.FRAMEGEN;
-			if ( LOW_LATENCY ) features[count++] = DLSSFeature.REFLEX;
-			slInitResult = Dlss.init(UPSCALER_DEBUG, features, CHECK_SL_DLL_SIGNATURE);
-			slReady = slInitResult == 0;
-		}
-		#end
+		upscaling.beforeCreateDevice();
 
 		compiledShaders = [];
 		if( ENABLE_PSO_CONFIG_CACHE ) {
@@ -1020,42 +1153,19 @@ class DX12Driver extends h3d.impl.Driver {
 		driver = Driver.create(window, flags, DEVICE_NAME);
 		if( DEBUG ) suppressDebugMessages();
 		frames = [];
-
-		#if fsr
-		initFsr();
+		#if (hldx >= version("2.0.0"))
+		textureHeap = TEXTURE_HEAP_SIZE > 0 ? new TextureHeapAllocator(TEXTURE_HEAP_SIZE) : null;
 		#end
 
-		#if dlss
-		if ( slReady ) {
-			var nativeDevice = Driver.getDevice();
-			var proxyDevice = Dlss.upgradeDevice(nativeDevice);
-			Driver.setDevice(proxyDevice);
-			var device = Driver.getDevice();
-			slReady = Dlss.setDevice(device) == 0;
-			if ( slReady ) {
-				var adapter = Driver.getAdapter();
-				dlssSupportResult = Dlss.isFeatureSupported(adapter, DLSSFeature.DLSS);
-				dlssReady = dlssSupportResult == 0;
-				framegenReady = FRAME_GEN && Dlss.isFeatureSupported(adapter, DLSSFeature.FRAMEGEN) == 0;
-				if ( LOW_LATENCY || framegenReady ) {
-					pclReady = Dlss.isFeatureSupported(adapter, DLSSFeature.PCL) == 0 && Dlss.pclInitStats() == 0;
-					reflexReady = Dlss.isFeatureSupported(adapter, DLSSFeature.REFLEX) == 0;
-					if ( reflexState == null ) reflexState = new ReflexStateInfo();
-					reflexReady = reflexReady && setLowLatencyOptions(Off, 0);
-				}
-			}
-		}
-		#end
+		nativeDevice = Driver.getDevice();
+		nativeFactory = Driver.getFactory();
+		swapChain = null;
+		upscaling.afterCreateDevice();
 
-		#if (hldx > version("1.16.0")) directQueue = new CommandQueue(DIRECT); #else Driver.createCommandQueue(); #end
+		#if (hldx > version("1.16.0")) directQueue = new CommandQueue(DIRECT); nativeQueue = directQueue; #else Driver.createCommandQueue(); #end
 
-		#if dlss
-		if ( slReady ) {
-			var nativeFactory = Driver.getFactory();
-			var proxyFactory = Dlss.upgradeFactory(nativeFactory);
-			Driver.setFactory(proxyFactory);
-		}
-		#end
+		upscaling.afterCreateQueue();
+		upscaling.afterCreateSwapChain();
 
 		var flags = new haxe.EnumFlags();
 		var heap = new HeapProperties();
@@ -1083,6 +1193,7 @@ class DX12Driver extends h3d.impl.Driver {
 			if ( f.bufferAllocator != null )
 				f.bufferAllocator.dispose();
 			f.bufferAllocator = new BufferAllocator(INITIAL_BUFFER_ALLOCATOR_SIZE);
+			f.readbackAllocator = new BufferAllocator(INITIAL_READBACK_ALLOCATOR_SIZE, READBACK, COPY_DEST);
 			f.copyBuffer = Driver.createCommittedResource(heap, flags, desc, GENERIC_READ, null);
 			f.copyBuffer.setName('CopyBuffer$i');
 			frames.push(f);
@@ -1094,22 +1205,6 @@ class DX12Driver extends h3d.impl.Driver {
 		copyQueue = new CommandQueue(COPY);
 		copyFence = new Fence(0, NONE);
 		copyFenceValue = 0;
-
-		asyncCopyAllocator = new CommandAllocator(COPY);
-		asyncCopyCommandList = new CommandList(COPY, asyncCopyAllocator, null);
-		asyncCopyCommandList.close();
-		asyncCopyAllocator.reset();
-		asyncCopyCommandList.reset(asyncCopyAllocator, null);
-
-		computeQueue = new CommandQueue(COMPUTE);
-		computeFence = new Fence(0, NONE);
-		computeFenceValue = 0;
-
-		asyncComputeAllocator = new CommandAllocator(COMPUTE);
-		asyncComputeCommandList = new CommandList(COMPUTE, asyncComputeAllocator, null);
-		asyncComputeCommandList.close();
-		asyncComputeAllocator.reset();
-		asyncComputeCommandList.reset(asyncComputeAllocator, null);
 
 		renderTargetViews = new ScratchHeap(RTV, INITIAL_RT_COUNT);
 		depthStenciViews = new ScratchHeap(DSV, INITIAL_RT_COUNT);
@@ -1209,6 +1304,10 @@ class DX12Driver extends h3d.impl.Driver {
 		frame.copyBufferCursor = 0;
 		while( frame.toRelease.length > 0 )
 			frame.toRelease.pop().release();
+		#if (hldx >= version("2.0.0"))
+		while( frame.placedToFree.length > 0 )
+			textureHeap.free(frame.placedToFree.pop());
+		#end
 
 		var errorTexSampler = getCpuSampler(errorTex);
 		var errorTexView = getCpuTexView(errorTex);
@@ -1245,12 +1344,22 @@ class DX12Driver extends h3d.impl.Driver {
 		frame.samplerHeapCache.reset();
 		flushHeaps();
 
-		#if dlss
-		if ( slReady ) {
-			frame.dlssFrameToken = Dlss.getNewFrameToken(frameCount);
-			if ( reflexReady ) Dlss.reflexGetState(reflexState);
+		upscaling.beginFrame();
+
+		resolveReadbacks();
+	}
+
+	function resolveReadbacks() {
+		var readbacks = frame.readbacks;
+		if( readbacks.length > 0 ) {
+			frame.readbacks = [];
+			for( rq in readbacks )
+				if( rq.size > 0 )
+					@:privateAccess rq.buf.b.blit(rq.bufPos, rq.cpuAddress, 0, rq.size);
 		}
-		#end
+		frame.readbackAllocator.reset();
+		for( rq in readbacks )
+			rq.callback();
 	}
 
 	override function clear(?color:Vector4, ?depth:Float, ?stencil:Int) {
@@ -1293,12 +1402,6 @@ class DX12Driver extends h3d.impl.Driver {
 		fenceEvent.wait(-1);
 	}
 
-	function waitCompute() {
-		computeQueue.signal(computeFence, ++computeFenceValue);
-		computeFence.setEvent(computeFenceValue, fenceEvent);
-		fenceEvent.wait(-1);
-	}
-
 	function waitGpu() {
 		#if (hldx > version("1.16.0")) directQueue.signal(fence, ++fenceValue); #else Driver.signal(fence, ++fenceValue); #end
 		fence.setEvent(fenceValue, fenceEvent);
@@ -1313,10 +1416,7 @@ class DX12Driver extends h3d.impl.Driver {
 		if( defaultDepth == null || (currentWidth == width && currentHeight == height) )
 			return;
 
-		#if dlss
-		var prevDlssgMode = dlssgMode;
-		if ( dlssgMode != Off ) setFrameGenMode(Off);
-		#end
+		upscaling.beforeResize();
 
 		currentWidth = rtWidth = width;
 		currentHeight = rtHeight = height;
@@ -1329,9 +1429,7 @@ class DX12Driver extends h3d.impl.Driver {
 		waitCopy();
 		waitGpu();
 
-		#if fsr
-		destroyFsrContext();
-		#end
+		upscaling.releaseResizeResources();
 
 		for( f in frames ) {
 			if( f.backBuffer.res != null ) {
@@ -1377,15 +1475,11 @@ class DX12Driver extends h3d.impl.Driver {
 
 		beginFrame();
 
-		#if dlss
-		if ( prevDlssgMode != Off ) setFrameGenMode(prevDlssgMode, dlssgFrames);
-		#end
+		upscaling.afterResize();
 	}
 
 	override function begin(frame:Int) {
-		#if dlss
-		pclMarker(PCLMarker.RENDER_SUBMIT_START);
-		#end
+		upscaling.begin();
 	}
 
 	override function isDisposed() {
@@ -1394,31 +1488,7 @@ class DX12Driver extends h3d.impl.Driver {
 
 	override function dispose() {
 		psoConfigCache?.save();
-		shutdownUpscaling();
-	}
-
-	override function shutdownUpscaling() {
-		#if fsr
-		if ( fsrReady ) {
-			destroyFsrContext();
-			Fsr.shutdown();
-			fsrReady = false;
-		}
-		#end
-		#if dlss
-		if ( !slReady ) return;
-		if ( dlssgMode != Off ) {
-			setFrameGenMode(Off, 1, true);
-			Dlss.setFeatureLoaded(DLSSFeature.FRAMEGEN, false);
-		}
-		waitGpu();
-		Dlss.shutdown();
-		slReady = false;
-		dlssReady = false;
-		framegenReady = false;
-		pclReady = false;
-		reflexReady = false;
-		#end
+		upscaling.dispose();
 	}
 
 	override function init( onCreate : Bool -> Void, forceSoftware = false ) {
@@ -1772,9 +1842,15 @@ class DX12Driver extends h3d.impl.Driver {
 			captureTexPixels(pixels, tex, layer, mipLevel);
 		}
 
-		if(oldRTs.length > 0){
+		// the command list has been reset : restore the render targets, unless one has been disposed
+		var restore = oldRTs.length > 0;
+		for( rt in oldRTs )
+			if( rt.t == null )
+				restore = false;
+		if( restore )
 			setRenderTargets(oldRTs);
-		}
+		else
+			setRenderTarget(null);
 
 		return pixels;
 	}
@@ -1788,7 +1864,8 @@ class DX12Driver extends h3d.impl.Driver {
 		var src = tmp.srcTextureLocation;
 		src.res = tex.t.res;
 		src.type = SUBRESOURCE_INDEX;
-		src.subResourceIndex = mipLevel + layer * tex.mipLevels;
+		if( mipLevel < tex.residentMip ) throw "Mip level " + mipLevel + " is not resident in " + tex;
+		src.subResourceIndex = (mipLevel - tex.residentMip) + layer * (tex.mipLevels - tex.residentMip);
 		var srcDesc = makeTextureDesc(tex);
 
 		var dst = tmp.dstTextureLocation;
@@ -1815,12 +1892,13 @@ class DX12Driver extends h3d.impl.Driver {
 		waitGpu();
 
 		var output = tmpBuf.map(0, null);
-		var stride = hxd.Pixels.calcStride(pixels.width, tex.format);
+		var rows = tex.format.match(S3TC(_)) ? (pixels.height + 3) >> 2 : pixels.height;
+		var stride = Std.int(hxd.Pixels.calcDataSize(pixels.width, pixels.height, tex.format) / rows);
 		var rowStride = dst.placedFootprint.footprint.rowPitch;
 		if( rowStride == stride )
-			(pixels.bytes:hl.Bytes).blit(pixels.offset, output, 0, stride * pixels.height);
+			(pixels.bytes:hl.Bytes).blit(pixels.offset, output, 0, stride * rows);
 		else {
-			for( i in 0...pixels.height )
+			for( i in 0...rows )
 				(pixels.bytes:hl.Bytes).blit(pixels.offset + i * stride, output, i * rowStride, stride);
 		}
 
@@ -1876,12 +1954,13 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	override function getNativeShaderCode( shader : hxsl.RuntimeShader ) {
-		var out = new hxsl.HlslOut();
-		var vsSource = out.run(shader.vertex.data);
+		inline function compile( sh : hxsl.RuntimeShader.RuntimeShaderData ) {
+			return sh.code ?? new hxsl.HlslOut().run(sh.data);
+		}
+		var vsSource = compile(shader.vertex);
 		if( shader.mode == Compute )
 			return vsSource;
-		var out = new hxsl.HlslOut();
-		var psSource = out.run(shader.fragment.data);
+		var psSource = compile(shader.fragment);
 		return vsSource+"\n\n\n\n"+psSource;
 	}
 
@@ -2215,6 +2294,63 @@ class DX12Driver extends h3d.impl.Driver {
 
 	function compileShader( shader : hxsl.RuntimeShader ) : CompiledShader {
 		#if heaps_mt_hxsl_cache
+		// data is only released once no thread is compiling, as another thread might be compiling the same shader
+		compileMutex.acquire();
+		var sh = compiledShaders.get(shader.id);
+		if( sh != null ) {
+			if( compilingCount == 0 )
+				releaseShaderData(shader, sh);
+			compileMutex.release();
+			return sh;
+		}
+		compilingCount++;
+		compileMutex.release();
+		var c = try doCompileShader(shader) catch( e : haxe.Exception ) {
+			endCompile(null, null);
+			throw e;
+		}
+		endCompile(shader, c);
+		return c;
+		#else
+		var c = doCompileShader(shader);
+		releaseShaderData(shader, c);
+		return c;
+		#end
+	}
+
+	function releaseShaderData( shader : hxsl.RuntimeShader, compiled : CompiledShader ) {
+		copyShaderCode(shader, compiled);
+		shader.releaseData();
+	}
+
+	function copyShaderCode( shader : hxsl.RuntimeShader, compiled : CompiledShader ) {
+		var src = compiled.shader;
+		if( src == shader )
+			return;
+		shader.vertex.code ??= src.vertex.code;
+		if( shader.fragment != null )
+			shader.fragment.code ??= src.fragment.code;
+	}
+
+	#if heaps_mt_hxsl_cache
+	function endCompile( shader : hxsl.RuntimeShader, compiled : CompiledShader ) {
+		compileMutex.acquire();
+		compilingCount--;
+		if( shader != null ) {
+			copyShaderCode(shader, compiled);
+			releaseQueue.push(shader);
+		}
+		if( compilingCount == 0 ) {
+			for( s in releaseQueue )
+				s.releaseData();
+			releaseQueue = [];
+		}
+		compileMutex.release();
+	}
+	#end
+
+	function doCompileShader( shader : hxsl.RuntimeShader ) : CompiledShader {
+		#if heaps_mt_hxsl_cache
 		compileMutex.acquire();
 		#end
 		var sh = compiledShaders.get(shader.id);
@@ -2226,13 +2362,10 @@ class DX12Driver extends h3d.impl.Driver {
 		}
 
 		if ( shader.hasBindless() && !useSM6_6 ) {
-			enableBindless();
-			if ( !useSM6_6 ) {
-				#if heaps_mt_hxsl_cache
-				compileMutex.release();
-				#end
-				throw "Shader using bindless detected, but Shader Model 6.6 is not used. SM6_6 unavailable on this device.";
-			}
+			#if heaps_mt_hxsl_cache
+			compileMutex.release();
+			#end
+			throw "Shader using bindless detected, but Shader Model 6.6 is not used: " + (h3d.impl.Driver.requestedFeatures.has(Bindless) ? "SM6_6 unavailable on this device." : "call h3d.impl.Driver.requestFeature(Bindless) before creating the engine.");
 		}
 		#if heaps_mt_hxsl_cache
 		compileMutex.release();
@@ -2490,104 +2623,22 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	override function readBufferBytesAsync( b : Buffer, startVertex : Int, vertexCount : Int, buf : haxe.io.Bytes, bufPos : Int, callback : Void -> Void ) {
-		var rq = new AsyncReadbackRequest();
-		rq.b = b;
-		rq.startVertex = startVertex;
-		rq.vertexCount = vertexCount;
+		if( hasDeviceError ) return;
+		if( b.vbuf == null ) throw "Reading buffer which was not allocated";
+		var stride = b.format.strideBytes;
+		var rq = new ReadbackRequest();
+		rq.size = vertexCount * stride;
 		rq.buf = buf;
 		rq.bufPos = bufPos;
 		rq.callback = callback;
-		rq.fenceValue = fenceValue + 1;
-		asyncReadbackQueue.push(rq);
-
-		if ( asyncCopyEvent == null ) {
-			asyncCopyEvent = haxe.MainLoop.add(() -> {
-				if ( !waitingAsyncCopy ) {
-					if ( asyncReadbackQueue.length > 0 ) {
-						var curFence = fence.getValue();
-						var totalBatchSize = 0;
-						for ( request in asyncReadbackQueue ) {
-							if ( request.fenceValue <= curFence ) {
-								var stride = request.b.format.strideBytes;
-								request.tmpBufOffset = totalBatchSize;
-								request.tmpBufSize = request.vertexCount * stride;
-								totalBatchSize += request.tmpBufSize;
-							}
-						}
-
-						if ( (asyncReadbackBuffer == null || asyncReadbackBufferSize < totalBatchSize) && totalBatchSize > 0 ) {
-							asyncReadbackBuffer?.release();
-							asyncReadbackBuffer = allocGPU(totalBatchSize, READBACK, COPY_DEST);
-							asyncReadbackBuffer.setName("AsyncReadbackBuffer");
-							asyncReadbackBufferSize = totalBatchSize;
-						}
-
-						for ( request in asyncReadbackQueue ) {
-							if ( request.fenceValue <= curFence ) {
-								var stride = request.b.format.strideBytes;
-
-								request.b.vbuf.targetState = COMMON;
-								var barrier = new ResourceBarrier();
-								barrier.resource = request.b.vbuf.res;
-								@:privateAccess barrier.type = TRANSITION;
-								barrier.stateBefore = request.b.vbuf.state;
-								barrier.stateAfter  = request.b.vbuf.targetState;
-								request.b.vbuf.state = request.b.vbuf.targetState;
-								request.barrier = barrier;
-
-								asyncComputeCommandList.resourceBarrier(barrier);
-								asyncCopyCommandList.copyBufferRegion(asyncReadbackBuffer, request.tmpBufOffset, request.b.vbuf.res, request.startVertex * stride, request.tmpBufSize);
-
-								currentRequests.push(request);
-							}
-						}
-
-						for ( r in currentRequests )
-							asyncReadbackQueue.remove(r);
-
-						if ( currentRequests.length > 0 ) {
-							asyncComputeCommandList.close();
-							computeQueue.executeCommandList(asyncComputeCommandList);
-							computeQueue.signal(computeFence, ++computeFenceValue);
-
-							waitCompute();
-							asyncComputeAllocator.reset();
-							asyncComputeCommandList.reset(asyncComputeAllocator, null);
-
-							asyncCopyCommandList.close();
-							copyQueue.executeCommandList(asyncCopyCommandList);
-							copyQueue.signal(copyFence, ++copyFenceValue);
-
-							waitingAsyncCopy = true;
-						}
-					} else {
-						asyncCopyEvent.stop();
-						asyncCopyEvent = null;
-					}
-				} else {
-					if ( copyFence.getValue() >= copyFenceValue ) {
-						asyncCopyAllocator.reset();
-						asyncCopyCommandList.reset(asyncCopyAllocator, null);
-
-						var mappedPtr = asyncReadbackBuffer?.map(0, null);
-						for ( request in currentRequests ) {
-							@:privateAccess request.buf.b.blit(request.bufPos, mappedPtr, request.tmpBufOffset, request.tmpBufSize);
-							request.callback();
-						}
-
-						asyncReadbackBuffer?.unmap(0, null);
-						currentRequests.resize(0);
-						waitingAsyncCopy = false;
-
-						if ( asyncReadbackQueue.length == 0 ) {
-							asyncReadbackBuffer?.release();
-							asyncReadbackBuffer = null;
-							asyncReadbackBufferSize = 0;
-						}
-					}
-				}
-			});
+		if( rq.size > 0 ) {
+			var alloc = frame.readbackAllocator.alloc(rq.size, 16, tmp.bufferAllocation);
+			rq.cpuAddress = alloc.cpuAddress;
+			transition(b.vbuf, COPY_SOURCE);
+			flushTransitions();
+			frame.commandList.copyBufferRegion(alloc.resource, alloc.offset, b.vbuf.res, startVertex * stride, rq.size);
 		}
+		frame.readbacks.push(rq);
 	}
 
 	// ------------ TEXTURES -------
@@ -2632,10 +2683,11 @@ class DX12Driver extends h3d.impl.Driver {
 	function makeTextureDesc(t:h3d.mat.Texture) {
 		var desc = new ResourceDesc();
 		desc.dimension = t.flags.has(Is3D) ? TEXTURE3D : TEXTURE2D;
-		desc.width = t.width;
-		desc.height = t.height;
+		var r = t.residentMip;
+		desc.width = r == 0 ? t.width : hxd.Math.imax(1, t.width >> r);
+		desc.height = r == 0 ? t.height : hxd.Math.imax(1, t.height >> r);
 		desc.depthOrArraySize = t.layerCount;
-		desc.mipLevels = t.mipLevels;
+		desc.mipLevels = t.mipLevels - r;
 		desc.sampleDesc.count = 1;
 		desc.format = getTextureFormat(t);
 		return desc;
@@ -2643,7 +2695,7 @@ class DX12Driver extends h3d.impl.Driver {
 
 	override function allocTexture(t:h3d.mat.Texture):Texture {
 
-		if( t.format.match(S3TC(_)) && (t.width & 3 != 0 || t.height & 3 != 0) )
+		if( t.format.match(S3TC(_)) && ((t.width >> t.residentMip) & 3 != 0 || (t.height >> t.residentMip) & 3 != 0) )
 			throw t+" is compressed "+t.width+"x"+t.height+" but should be a 4x4 multiple";
 
 		var isRT = t.flags.has(Target);
@@ -2674,6 +2726,12 @@ class DX12Driver extends h3d.impl.Driver {
 			desc.flags.set(ALLOW_UNORDERED_ACCESS);
 
 		td.state = td.targetState = isRT ? RENDER_TARGET : COMMON;
+		#if (hldx >= version("2.0.0"))
+		var placedSize = textureHeap == null || isRT || t.flags.has(Writable) ? -1 : textureHeap.getAllocSize(t, desc);
+		if( placedSize > 0 )
+			td.res = textureHeap.alloc(td, desc, placedSize);
+		else
+		#end
 		td.res = Driver.createCommittedResource(tmp.heap, flags, desc, td.state, clear);
 		if( td.res == null )
 			return null;
@@ -2692,15 +2750,15 @@ class DX12Driver extends h3d.impl.Driver {
 				var srv = getCpuTexView(t);
 				var srvIndex = h.handle.low;
 				Driver.copyDescriptorsSimple(1, bindlessSrvHeap.getCpuAddressAt(srvIndex), srv, CBV_SRV_UAV);
-				Driver.copyDescriptorsSimple(1, frame.srvHeap.getCpuAddressAt(srvIndex), srv, CBV_SRV_UAV);
 				var sampler = getCpuSampler(t);
 				var samplerIndex = h.handle.high;
 				Driver.copyDescriptorsSimple(1, bindlessSamplerHeap.getCpuAddressAt(samplerIndex), sampler, SAMPLER);
-				Driver.copyDescriptorsSimple(1, frame.samplerHeap.getCpuAddressAt(samplerIndex), sampler, SAMPLER);
 			}
 		}
 		t.t = prevTd;
 		t.loadBits(prevBits);
+		if ( handles != null && frame != null )
+			flushHeaps();
 		return td;
 	}
 
@@ -2735,10 +2793,17 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	override function disposeTexture(t:h3d.mat.Texture) {
-		if( t.lastFrame <= (frameCount - BUFFER_COUNT) )
+		if( t.lastFrame <= (frameCount - BUFFER_COUNT) ) {
 			t.t.res.release();
-		else
+			#if (hldx >= version("2.0.0"))
+			textureHeap?.free(t.t);
+			#end
+		} else {
 			disposeResource(t.t);
+			#if (hldx >= version("2.0.0"))
+			if( t.t.page != null ) frame.placedToFree.push(t.t);
+			#end
+		}
 		disposeTextureViews(t.t);
 		var handles = textureHandles.get(t);
 		if ( handles != null ) {
@@ -2766,9 +2831,11 @@ class DX12Driver extends h3d.impl.Driver {
 	override function uploadTexturePixels(t:h3d.mat.Texture, pixels:hxd.Pixels, mipLevel:Int, side:Int) {
 		pixels.convert(t.format);
 		if( mipLevel >= t.mipLevels ) throw "Mip level outside texture range : " + mipLevel + " (max = " + (t.mipLevels - 1) + ")";
+		if( mipLevel < t.residentMip ) throw "Mip level " + mipLevel + " is not resident in " + t;
 
 		var is3d = t.flags.has(Is3D);
-		var subRes = is3d ? mipLevel : mipLevel + side * t.mipLevels;
+		var mip = mipLevel - t.residentMip;
+		var subRes = is3d ? mip : mip + side * (t.mipLevels - t.residentMip);
 		var tmpSize = t.t.res.getRequiredIntermediateSize(subRes, 1).low;
 		if ( is3d )
 			tmpSize = Std.int(tmpSize / t.layerCount );
@@ -2834,7 +2901,7 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	override function copyTexture(from:h3d.mat.Texture, to:h3d.mat.Texture):Bool {
-		if( from.t == null || from.format != to.format || from.width != to.width || from.height != to.height || from.layerCount != to.layerCount || from.mipLevels != to.mipLevels )
+		if( from.t == null || from.format != to.format || from.width != to.width || from.height != to.height || from.layerCount != to.layerCount || from.mipLevels != to.mipLevels || from.residentMip != to.residentMip )
 			return false;
 		if( to.t == null ) {
 			var prev = from.lastFrame;
@@ -2856,7 +2923,8 @@ class DX12Driver extends h3d.impl.Driver {
 		dst.type = SUBRESOURCE_INDEX;
 		src.type = SUBRESOURCE_INDEX;
 		var is3d = to.flags.has(Is3D);
-		var subResCount = is3d ? to.mipLevels : to.layerCount * to.mipLevels;
+		var mipCount = to.mipLevels - to.residentMip;
+		var subResCount = is3d ? mipCount : to.layerCount * mipCount;
 		for ( i in 0...subResCount ) {
 			dst.subResourceIndex = i;
 			src.subResourceIndex = i;
@@ -2869,9 +2937,57 @@ class DX12Driver extends h3d.impl.Driver {
 		return true;
 	}
 
+	override function setResidentMip( t : h3d.mat.Texture, mip : Int ) : Bool {
+		var prev = t.t;
+		var prevMip = t.residentMip;
+		var wasCleared = t.flags.has(WasCleared);
+		t.residentMip = mip;
+		var td = allocTexture(t);
+		if( wasCleared ) t.flags.set(WasCleared); // content is kept
+		if( td == null ) {
+			t.residentMip = prevMip;
+			return false;
+		}
+		// copy the mip levels common to both allocations
+		var levels = t.mipLevels;
+		var first = mip > prevMip ? mip : prevMip;
+		transition(prev, COPY_SOURCE);
+		transition(td, COPY_DEST);
+		flushTransitions();
+		var dst = tmp.dstTextureLocation;
+		var src = tmp.srcTextureLocation;
+		dst.res = td.res;
+		src.res = prev.res;
+		dst.type = SUBRESOURCE_INDEX;
+		src.type = SUBRESOURCE_INDEX;
+		for( layer in 0...t.layerCount )
+			for( m in first...levels ) {
+				src.subResourceIndex = (m - prevMip) + layer * (levels - prevMip);
+				dst.subResourceIndex = (m - mip) + layer * (levels - mip);
+				frame.commandList.copyTextureRegion(dst, 0, 0, 0, src, null);
+			}
+		// back to COMMON so the new mip levels can be uploaded with the copy queue
+		transition(td, COMMON);
+		flushTransitions();
+		// the previous allocation is used by the copy : always release it later
+		disposeResource(prev);
+		#if (hldx >= version("2.0.0"))
+		if( prev.page != null ) frame.placedToFree.push(prev);
+		#end
+		disposeTextureViews(prev);
+		t.t = td;
+		t.lastFrame = frameCount;
+		return true;
+	}
+
 	// ----- PIPELINE UPDATE
 
 	override function uploadShaderBuffers(buffers:h3d.shader.Buffers, which:h3d.shader.Buffers.BufferKind) {
+		if( which == Globals ) {
+			lastGlobalsShader = currentShader;
+			if( currentShader.isCompute )
+				lastFragmentGlobalBind = -1;
+		}
 		uploadBuffers(buffers, buffers.vertex, which, currentShader.shader.vertex, currentShader.vertexRegisters);
 		if( !currentShader.isCompute )
 			uploadBuffers(buffers, buffers.fragment, which, currentShader.shader.fragment, currentShader.fragmentRegisters);
@@ -2921,13 +3037,17 @@ class DX12Driver extends h3d.impl.Driver {
 		return fmt;
 	}
 
+	inline function getViewMip( t : h3d.mat.Texture ) {
+		return t.startingMip > t.residentMip ? t.startingMip - t.residentMip : 0;
+	}
+
 	function fillTexViewDesc( t : h3d.mat.Texture, srvDesc : ShaderResourceViewDesc ) {
 		if(t.slice > 0 ){
 			var desc = unsafeCastTo(srvDesc, Tex2DArraySRV);
 			desc.format = t.t.format;
 			desc.dimension = TEXTURE2DARRAY;
 			desc.shader4ComponentMapping = ShaderComponentMapping.DEFAULT;
-			desc.mostDetailedMip = t.startingMip;
+			desc.mostDetailedMip = getViewMip(t);
 			desc.mipLevels = -1;
 			desc.firstArraySlice = t.slice - 1;
 			desc.arraySize = 1;
@@ -2938,7 +3058,7 @@ class DX12Driver extends h3d.impl.Driver {
 			desc.format = t.isDepth() ? toDepthFormat(t.format) : t.t.format;
 			desc.dimension = TEXTURECUBE;
 			desc.shader4ComponentMapping = ShaderComponentMapping.DEFAULT;
-			desc.mostDetailedMip = t.startingMip;
+			desc.mostDetailedMip = getViewMip(t);
 			desc.mipLevels = -1;
 			desc.resourceMinLODClamp = 0;
 		} else if( t.flags.has(IsArray) ) {
@@ -2946,7 +3066,7 @@ class DX12Driver extends h3d.impl.Driver {
 			desc.format = t.isDepth() ? toDepthFormat(t.format) : t.t.format;
 			desc.dimension = TEXTURE2DARRAY;
 			desc.shader4ComponentMapping = ShaderComponentMapping.DEFAULT;
-			desc.mostDetailedMip = t.startingMip;
+			desc.mostDetailedMip = getViewMip(t);
 			desc.mipLevels = -1;
 			desc.firstArraySlice = 0;
 			desc.arraySize = t.layerCount;
@@ -2957,7 +3077,7 @@ class DX12Driver extends h3d.impl.Driver {
 			desc.format = t.t.format;
 			desc.dimension = TEXTURE3D;
 			desc.shader4ComponentMapping = ShaderComponentMapping.DEFAULT;
-			desc.mostDetailedMip = t.startingMip;
+			desc.mostDetailedMip = getViewMip(t);
 			desc.mipLevels = -1;
 			desc.resourceMinLODClamp = 0;
 		} else {
@@ -2965,7 +3085,7 @@ class DX12Driver extends h3d.impl.Driver {
 			desc.format = t.isDepth() ? toDepthFormat(t.format) : t.t.format;
 			desc.dimension = TEXTURE2D;
 			desc.shader4ComponentMapping = ShaderComponentMapping.DEFAULT;
-			desc.mostDetailedMip = t.startingMip;
+			desc.mostDetailedMip = getViewMip(t);
 			desc.mipLevels = -1;
 			desc.planeSlice = 0;
 			desc.resourceMinLODClamp = 0;
@@ -3664,7 +3784,7 @@ class DX12Driver extends h3d.impl.Driver {
 		}
 		var position = 0;
 		for( i in 0...frame.queryCurrentHeap ) {
-			var count = i < frame.queryCurrentHeap - 1 ? QUERY_COUNT : frame.queryHeapOffset;
+			var count = i < frame.queryCurrentHeap - 1 || frame.queryHeapOffset == 0 ? QUERY_COUNT : frame.queryHeapOffset;
 			frame.commandList.resolveQueryData(frame.queryHeaps[i], TIMESTAMP, 0, count, frame.queryBuffer, position);
 			position += count * 8;
 		}
@@ -3712,7 +3832,9 @@ class DX12Driver extends h3d.impl.Driver {
 		}
 	}
 
-	function flushHeaps(rebind : Bool = false) {
+	function flushHeaps() {
+		frame.srvHeapCache.checkSize(bindlessSrvHeap.size + INITIAL_SRV_COUNT, frame.toRelease);
+		frame.samplerHeapCache.checkSize(hxd.Math.imin(bindlessSamplerHeap.size + INITIAL_SAMPLER_COUNT, 2048), frame.toRelease);
 		frame.srvHeap = frame.srvHeapCache.next();
 		frame.samplerHeap = frame.samplerHeapCache.next();
 		heapCount++;
@@ -3729,7 +3851,16 @@ class DX12Driver extends h3d.impl.Driver {
 		@:privateAccess frame.srvHeap.cursor = bindlessSrvHeap.size;
 		@:privateAccess frame.samplerHeap.cursor = bindlessSamplerHeap.size;
 
-		if ( rebind ) {
+		if ( currentShader != null ) {
+			if ( currentShader.shader.hasBindless() ) {
+				if ( currentShader.isCompute )
+					frame.commandList.setComputeRootSignature(currentShader.rootSignature);
+				else
+					frame.commandList.setGraphicsRootSignature(currentShader.rootSignature);
+				if ( currentPipelineState != null )
+					frame.commandList.setPipelineState(currentPipelineState);
+			}
+
 			inline function rebindGlobal(bindSlot, desc) {
 				if ( bindSlot >= 0 ) {
 					var srv = frame.srvHeap.alloc(1);
@@ -3741,22 +3872,16 @@ class DX12Driver extends h3d.impl.Driver {
 				}
 			}
 
-			rebindGlobal(lastVertexGlobalBind, tmp.vertexGlobalDesc);
-			rebindGlobal(lastFragmentGlobalBind, tmp.fragmentGlobalDesc);
-
-			if ( currentShader.shader.hasBindless() ) {
-				if ( currentShader.isCompute )
-					frame.commandList.setComputeRootSignature(currentShader.rootSignature);
-				else
-					frame.commandList.setGraphicsRootSignature(currentShader.rootSignature);
-				frame.commandList.setPipelineState(currentPipelineState);
+			if ( lastGlobalsShader == currentShader ) {
+				rebindGlobal(lastVertexGlobalBind, tmp.vertexGlobalDesc);
+				rebindGlobal(lastFragmentGlobalBind, tmp.fragmentGlobalDesc);
 			}
 		}
 	}
 
 	override function flushShaderBuffers() {
 		if( frame.srvHeap.available < 128 || frame.samplerHeap.available < 64 )
-			flushHeaps(true);
+			flushHeaps();
 	}
 
 	function flushFrame( onResize : Bool = false ) {
@@ -3777,21 +3902,13 @@ class DX12Driver extends h3d.impl.Driver {
 
 	override function present() {
 
+		upscaling.beforePresent();
 		transition(frame.backBuffer, PRESENT);
 		flushTransitions();
 		flushFrame();
-		#if dlss
-		pclMarker(PCLMarker.RENDER_SUBMIT_END);
-		pclMarker(PCLMarker.PRESENT_START);
-		#end
+		upscaling.beforeQueuePresent();
 		#if (hldx > version("1.16.0")) directQueue.present(window.vsync); #else Driver.present(window.vsync); #end
-		#if dlss
-		pclMarker(PCLMarker.PRESENT_END);
-		if ( dlssgMode == Off )
-			dlssgSettings.framesPresented = 1;
-		else if ( refreshDLSSGState() && dlssgSettings.status != 0 )
-			setFrameGenMode(Off);
-		#end
+		upscaling.afterQueuePresent();
 		waitForFrame(Driver.getCurrentBackBufferIndex());
 		beginFrame();
 
@@ -3869,192 +3986,38 @@ class DX12Driver extends h3d.impl.Driver {
 		return handle;
 	}
 
-	#if dlss
-	inline static function loadDlssVec( vec : DLSSVector, v : h3d.Vector ) {
-		vec.x = cast(v.x, Single);
-		vec.y = cast(v.y, Single);
-		vec.z = cast(v.z, Single);
-	}
-
-	inline static function loadDlssMat( mat : DLSSMatrix, m : h3d.Matrix ) {
-		mat._11 = cast(m._11, Single); mat._12 = cast(m._12, Single); mat._13 = cast(m._13, Single); mat._14 = cast(m._14, Single);
-		mat._21 = cast(m._21, Single); mat._22 = cast(m._22, Single); mat._23 = cast(m._23, Single); mat._24 = cast(m._24, Single);
-		mat._31 = cast(m._31, Single); mat._32 = cast(m._32, Single); mat._33 = cast(m._33, Single); mat._34 = cast(m._34, Single);
-		mat._41 = cast(m._41, Single); mat._42 = cast(m._42, Single); mat._43 = cast(m._43, Single); mat._44 = cast(m._44, Single);
-	}
-
-	static var dlssOptimalSettings = new DLSSOptimalSettings();
-	static var dlssSettings = new UpscalingSettings();
-	static var dlssOptions = new DLSSOptions();
-	static var dlssConstants = new DLSSConstants();
-	static var dlssgOptions = new DLSSGOptions();
-	static var dlssgStateInfo = new DLSSGStateInfo();
-	static var dlssgSettings = new h3d.impl.Driver.FrameGenSettings();
-	static var matCameraViewToClip = new DLSSMatrix();
-	static var matClipToCameraView = new DLSSMatrix();
-	static var matClipToLensClip = new DLSSMatrix();
-	static var matClipToPrevClip = new DLSSMatrix();
-	static var matPrevClipToClip = new DLSSMatrix();
-	static var vecCameraPos = new DLSSVector();
-	static var vecCameraUp = new DLSSVector();
-	static var vecCameraRight = new DLSSVector();
-	static var vecCameraFwd = new DLSSVector();
-	#end
-
-	#if fsr
-	static var fsrParams = new FsrDispatchParams();
-	static var fsrSettings = new UpscalingSettings();
-	static var fsrSettingsMode : UpscalingMode = null;
-	static var fsrSettingsWidth = -1;
-	static var fsrSettingsHeight = -1;
-
-	function initFsr() {
-		if ( !ENABLE_UPSCALING || (UPSCALER != UpscalerSelection.AUTO && UPSCALER != UpscalerSelection.FSR) )
-			return;
-		#if dlss
-		if ( slReady ) {
-			dlssSupportResult = Dlss.isFeatureSupported(Driver.getAdapter(), DLSSFeature.DLSS);
-			if ( dlssSupportResult == 0 )
-				return;
-		}
-		#end
-		fsrInitResult = Fsr.init(Driver.getDevice(), UPSCALER_DEBUG ? FsrDebugLevel.WARNINGS : FsrDebugLevel.ERRORS);
-		fsrReady = fsrInitResult == FsrResult.Ok;
-		if ( !fsrReady ) {
-			trace('FSR unavailable ($fsrInitResult)');
-			return;
-		}
-		#if dlss
-		if ( slReady ) {
-			Dlss.shutdown();
-			slReady = false;
-		}
-		#end
-	}
-
-	function destroyFsrContext() {
-		if ( fsrContext != null ) {
-			waitGpu();
-			Fsr.destroyContext(fsrContext);
-			fsrContext = null;
-		}
-		fsrContextWidth = -1;
-		fsrContextHeight = -1;
-		fsrContextFlags = -1;
-	}
-
-	function getFsrQuality( mode : UpscalingMode ) : FsrQuality {
-		return switch (mode) {
-			case Off, NativeAA: FsrQuality.NATIVE_AA;
-			case Quality: FsrQuality.QUALITY;
-			case Balanced: FsrQuality.BALANCED;
-			case Performance: FsrQuality.PERFORMANCE;
-			case UltraPerformance: FsrQuality.ULTRA_PERFORMANCE;
-		}
-	}
-
-	function getFsrSettings( mode : UpscalingMode, targetWidth : Int, targetHeight : Int ) : UpscalingSettings {
-		if ( mode == fsrSettingsMode && targetWidth == fsrSettingsWidth && targetHeight == fsrSettingsHeight )
-			return fsrSettings;
-		var renderWidth = targetWidth;
-		var renderHeight = targetHeight;
-		var res = Fsr.getRenderResolution(Driver.getDevice(), getFsrQuality(mode), targetWidth, targetHeight, renderWidth, renderHeight);
-		if ( res != FsrResult.Ok ) {
-			trace('FSR render resolution query failed ($res)');
-			renderWidth = targetWidth;
-			renderHeight = targetHeight;
-		}
-		fsrSettings.renderWidth = renderWidth;
-		fsrSettings.renderHeight = renderHeight;
-		fsrSettingsMode = mode;
-		fsrSettingsWidth = targetWidth;
-		fsrSettingsHeight = targetHeight;
-		return fsrSettings;
-	}
-
-	function applyFsr( resources : Map<h3d.impl.Driver.UpscalingTag, h3d.mat.Texture>, params : UpscalingParams ) {
-		var color = resources[ColorIn];
-		var depth = resources[Depth];
-		var motionVectors = resources[MotionVectors];
-		var output = resources[ColorOut];
-		if ( color?.t == null || depth?.t == null || motionVectors?.t == null || output?.t == null )
-			return;
-
-		var flags = 0;
-		if ( params.autoExposure )
-			flags |= FsrCreateFlag.AUTO_EXPOSURE;
-		if ( params.colorBufferHDR )
-			flags |= FsrCreateFlag.HIGH_DYNAMIC_RANGE;
-		else
-			flags |= FsrCreateFlag.NON_LINEAR_COLORSPACE;
-		if ( params.depthInverted )
-			flags |= FsrCreateFlag.DEPTH_INVERTED;
-		if ( params.motionVectorsJittered )
-			flags |= FsrCreateFlag.MOTION_VECTORS_JITTER_CANCELLATION;
-		if ( UPSCALER_DEBUG ) {
-			flags |= FsrCreateFlag.DEBUG_CHECKING;
-			flags |= FsrCreateFlag.DEBUG_VISUALIZATION;
-		}
-
-		if ( output.width != fsrContextWidth || output.height != fsrContextHeight || flags != fsrContextFlags ) {
-			destroyFsrContext();
-			var res = 0;
-			fsrContext = Fsr.createContext(Driver.getDevice(), flags, output.width, output.height, output.width, output.height, res);
-			fsrContextWidth = output.width;
-			fsrContextHeight = output.height;
-			fsrContextFlags = flags;
-			if ( fsrContext == null )
-				trace('FSR context creation failed ($res)');
-			else
-				trace('FSR ${Fsr.getVersion(fsrContext)} context ${output.width}x${output.height}');
-		}
-		if ( fsrContext == null )
-			return;
-
+	override function copyBackBuffer( to : h3d.mat.Texture ) : Bool {
+		if( to.t == null )
+			return false;
+		to.lastFrame = frameCount;
+		transition(frame.backBuffer, COPY_SOURCE);
+		transition(to.t, COPY_DEST);
 		flushTransitions();
+		var dst = tmp.dstTextureLocation;
+		var src = tmp.srcTextureLocation;
+		dst.res = to.t.res;
+		src.res = frame.backBuffer.res;
+		dst.type = SUBRESOURCE_INDEX;
+		src.type = SUBRESOURCE_INDEX;
+		dst.subResourceIndex = 0;
+		src.subResourceIndex = 0;
+		frame.commandList.copyTextureRegion(dst, 0, 0, 0, src, null);
+		to.flags.set(WasCleared);
+		transition(frame.backBuffer, RENDER_TARGET);
+		return true;
+	}
 
-		var p = fsrParams;
-		p.color = color.t.res;
-		p.colorState = color.t.state;
-		p.depth = depth.t.res;
-		p.depthState = depth.t.state;
-		p.motionVectors = motionVectors.t.res;
-		p.motionVectorsState = motionVectors.t.state;
-		p.output = output.t.res;
-		p.outputState = output.t.state;
-		p.jitterOffsetX = params.jitterOffsetX;
-		p.jitterOffsetY = params.jitterOffsetY;
-		p.motionVectorScaleX = params.mvecScaleX * color.width;
-		p.motionVectorScaleY = params.mvecScaleY * color.height;
-		p.renderWidth = color.width;
-		p.renderHeight = color.height;
-		p.upscaleWidth = output.width;
-		p.upscaleHeight = output.height;
-		p.enableSharpening = false;
-		p.sharpness = 0.;
-		p.frameTimeDelta = hxd.Timer.elapsedTime * 1000.;
-		p.preExposure = 1.;
-		p.reset = params.reset;
-		p.cameraNear = params.depthInverted ? params.cameraFar : params.cameraNear;
-		p.cameraFar = params.depthInverted ? params.cameraNear : params.cameraFar;
-		p.cameraFovAngleVertical = hxd.Math.degToRad(params.cameraFOV);
-		p.viewSpaceToMetersFactor = 1.;
-		var dispatchFlags = 0;
-		if ( !params.colorBufferHDR )
-			dispatchFlags |= FsrDispatchFlag.NON_LINEAR_COLOR_SRGB;
-		if ( UPSCALER_DEBUG && UPSCALER_DEBUG_VIEW )
-			dispatchFlags |= FsrDispatchFlag.DRAW_DEBUG_VIEW;
-		p.flags = dispatchFlags;
+	function setSwapChain( sc : SwapChain ) {
+		swapChain = sc;
+		Driver.setSwapChain(sc);
+	}
 
-		beginEvent("FSR");
-		var res = Fsr.dispatch(fsrContext, frame.commandList, p);
-		endEvent();
-		if ( res != fsrLastResult ) {
-			if ( res != FsrResult.Ok )
-				trace('FSR dispatch failed ($res)');
-			fsrLastResult = res;
-		}
+	function beginExternalCommands() : CommandList {
+		flushTransitions();
+		return frame.commandList;
+	}
 
+	function endExternalCommands() {
 		var arr = tmp.descriptors2;
 		arr[0] = @:privateAccess frame.srvHeap.heap;
 		arr[1] = @:privateAccess frame.samplerHeap.heap;
@@ -4062,543 +4025,6 @@ class DX12Driver extends h3d.impl.Driver {
 		heapCount++;
 		currentShader = null;
 		currentPipelineState = null;
-
-		color.lastFrame = frameCount;
-		depth.lastFrame = frameCount;
-		motionVectors.lastFrame = frameCount;
-		output.lastFrame = frameCount;
-	}
-	#end
-
-	override function isUpscalingSupported() : Bool {
-		#if fsr
-		if ( fsrReady ) return true;
-		#end
-		#if dlss
-		return dlssReady;
-		#end
-		return false;
-	}
-
-	override function isFrameGenSupported() : Bool {
-		#if fsr
-		if ( fsrReady ) return false;
-		#end
-		#if dlss
-		return framegenReady;
-		#end
-		return false;
-	}
-
-	override function getUpscalerName() : String {
-		#if fsr
-		if ( fsrReady ) return fsrContext != null ? "FSR " + Fsr.getVersion(fsrContext) : "FSR";
-		#end
-		#if dlss
-		if ( dlssReady ) return "DLSS";
-		#end
-		return null;
-	}
-
-	#if dlss
-	function getDlssMode( mode : UpscalingMode ) : DLSSModeNative {
-		return switch (mode) {
-			case Off: DLSSModeNative.OFF;
-			case NativeAA: DLSSModeNative.DLAA;
-			case Quality: DLSSModeNative.MAXQUALITY;
-			case Balanced: DLSSModeNative.BALANCED;
-			case Performance: DLSSModeNative.MAXPERFORMANCE;
-			case UltraPerformance: DLSSModeNative.ULTRAPERFORMANCE;
-		}
-	}
-
-	function getDlssSettings( mode : UpscalingMode, targetWidth : Int, targetHeight : Int ) : UpscalingSettings {
-		dlssOptions.mode = getDlssMode(mode);
-		dlssOptions.outputWidth = targetWidth;
-		dlssOptions.outputHeight = targetHeight;
-		Dlss.getOptimalSettings(dlssOptions, dlssOptimalSettings);
-		dlssSettings.renderWidth = dlssOptimalSettings.optimalRenderWidth;
-		dlssSettings.renderHeight = dlssOptimalSettings.optimalRenderHeight;
-		return dlssSettings;
-	}
-
-	function applyDlss( resources : Map<h3d.impl.Driver.UpscalingTag, h3d.mat.Texture>, params : UpscalingParams, mode : UpscalingMode ) {
-		dlssOptions.mode = getDlssMode(mode);
-
-		var output = resources[ColorOut];
-		dlssOptions.outputWidth = output.width;
-		dlssOptions.outputHeight = output.height;
-		dlssOptions.colorBufferHDR = params.colorBufferHDR;
-		dlssOptions.preset = mode == NativeAA ? DLSSPreset.PRESET_L : DLSSPreset.PRESET_K;
-
-		Dlss.setOptions(dlssOptions);
-
-		tagDlssResources(resources);
-
-		setDlssConstants(params);
-
-		dlssLastResult = Dlss.evaluateFeature(frame.dlssFrameToken, frame.commandList, DLSSFeature.DLSS);
-
-		var arr = tmp.descriptors2;
-		arr[0] = @:privateAccess frame.srvHeap.heap;
-		arr[1] = @:privateAccess frame.samplerHeap.heap;
-		frame.commandList.setDescriptorHeaps(arr);
-	}
-	#end
-
-	override function getUpscalingSettings( mode : UpscalingMode, targetWidth : Int, targetHeight : Int ) : UpscalingSettings {
-		#if fsr
-		if ( fsrReady ) return getFsrSettings(mode, targetWidth, targetHeight);
-		#end
-		#if dlss
-		if ( dlssReady ) return getDlssSettings(mode, targetWidth, targetHeight);
-		#end
-		return null;
-	}
-
-	override function applyUpscaling( resources : Map<h3d.impl.Driver.UpscalingTag, h3d.mat.Texture>, params : UpscalingParams, mode : UpscalingMode ) {
-		upscalingFrame = frameCount;
-		upscalingMode = mode;
-		upscalingColorIn = resources[ColorIn];
-		upscalingColorOut = resources[ColorOut];
-		upscalingDepth = resources[Depth];
-		upscalingMotionVectors = resources[MotionVectors];
-		#if fsr
-		if ( fsrReady ) {
-			applyFsr(resources, params);
-			return;
-		}
-		#end
-		#if dlss
-		if ( dlssReady ) {
-			applyDlss(resources, params, mode);
-			return;
-		}
-		#end
-	}
-
-	override function setFrameGenResources( resources : Map<h3d.impl.Driver.UpscalingTag, h3d.mat.Texture> ) {
-		tagDlssResources(resources);
-	}
-
-	override function setFrameGenParams( params : UpscalingParams ) {
-		setDlssConstants(params);
-	}
-
-	function tagDlssResources( resources : Map<h3d.impl.Driver.UpscalingTag, h3d.mat.Texture> ) {
-		#if dlss
-		if ( !slReady || frame.dlssFrameToken == null ) return;
-
-		var resCount = 0;
-		for ( t in resources.keys() )
-			resCount++;
-		if ( resCount == 0 ) return;
-
-		var dlssResources = hl.CArray.alloc(DLSSResource, resCount);
-		var idx = 0;
-		for ( type in resources.keys() ) {
-			var t = resources.get(type);
-			var res = dlssResources[idx];
-			res.res = t.t.res;
-			res.width = t.width;
-			res.height = t.height;
-			switch ( type ) {
-				case Depth: res.type = DLSSBufferType.DEPTH;
-				case MotionVectors: res.type = DLSSBufferType.MOTIONVECTORS;
-				case ColorIn: res.type = DLSSBufferType.COLORIN;
-				case ColorOut: res.type = DLSSBufferType.COLOROUT;
-				case HUDLess: res.type = DLSSBufferType.HUDLESSCOLOR;
-				case UIColorAndAlpha: res.type = DLSSBufferType.UICOLORANDALPHA;
-				case UIAlpha: res.type = DLSSBufferType.UIALPHA;
-			}
-			res.state = t.t.state;
-			res.lifecycle = DLSSResourceLifecycle.VALID_UNTIL_PRESENT;
-			t.lastFrame = frameCount;
-			idx++;
-		}
-
-		Dlss.setTagForFrame(frame.dlssFrameToken, dlssResources, resCount, frame.commandList);
-		#end
-	}
-
-	override function clearFrameGenResources() {
-		#if dlss
-		if ( !slReady || frame.dlssFrameToken == null )
-			return;
-		var types = [DLSSBufferType.DEPTH, DLSSBufferType.MOTIONVECTORS, DLSSBufferType.COLORIN, DLSSBufferType.COLOROUT, DLSSBufferType.HUDLESSCOLOR, DLSSBufferType.UICOLORANDALPHA, DLSSBufferType.UIALPHA];
-		var dlssResources = hl.CArray.alloc(DLSSResource, types.length);
-		for ( i => type in types ) {
-			var res = dlssResources[i];
-			res.res = null;
-			res.type = type;
-			res.lifecycle = DLSSResourceLifecycle.VALID_UNTIL_PRESENT;
-		}
-		Dlss.setTagForFrame(frame.dlssFrameToken, dlssResources, types.length, frame.commandList);
-		#end
-	}
-
-	function setDlssConstants( params : UpscalingParams ) {
-		#if dlss
-		if ( !slReady || frame.dlssFrameToken == null || dlssConstantsFrame == frameCount )
-			return;
-		dlssConstantsFrame = frameCount;
-
-		loadDlssMat(matCameraViewToClip, params.cameraViewToClip);
-		loadDlssMat(matClipToCameraView, params.clipToCameraView);
-		loadDlssMat(matClipToPrevClip, params.clipToPrevClip);
-		loadDlssMat(matPrevClipToClip, params.prevClipToClip);
-
-		loadDlssVec(vecCameraPos, params.cameraPos);
-		loadDlssVec(vecCameraUp, params.cameraUp);
-		loadDlssVec(vecCameraRight, params.cameraRight);
-		loadDlssVec(vecCameraFwd, params.cameraFwd);
-
-		dlssConstants.cameraViewToClip = matCameraViewToClip;
-		dlssConstants.clipToCameraView = matClipToCameraView;
-		dlssConstants.clipToLensClip = matClipToLensClip;
-		dlssConstants.clipToPrevClip = matClipToPrevClip;
-		dlssConstants.prevClipToClip = matPrevClipToClip;
-		dlssConstants.jitterOffsetX = params.jitterOffsetX;
-		dlssConstants.jitterOffsetY = params.jitterOffsetY;
-		dlssConstants.mvecScaleX = params.mvecScaleX;
-		dlssConstants.mvecScaleY = params.mvecScaleY;
-		dlssConstants.cameraPinholeOffsetX = 0.0;
-		dlssConstants.cameraPinholeOffsetY = 0.0;
-		dlssConstants.cameraPos = vecCameraPos;
-		dlssConstants.cameraUp = vecCameraUp;
-		dlssConstants.cameraRight = vecCameraRight;
-		dlssConstants.cameraFwd = vecCameraFwd;
-		dlssConstants.cameraNear = params.cameraNear;
-		dlssConstants.cameraFar = params.cameraFar;
-		dlssConstants.cameraFOV = params.cameraFOV;
-		dlssConstants.cameraAspectRatio = params.cameraAspectRatio;
-		dlssConstants.motionVectorsInvalidValue = params.motionVectorsInvalidValue;
-		dlssConstants.depthInverted = params.depthInverted;
-		dlssConstants.cameraMotionIncluded = params.cameraMotionIncluded;
-		dlssConstants.motionVectors3D = false;
-		dlssConstants.reset = params.reset;
-		dlssConstants.orthographicProjection = params.orthographicProjection;
-		dlssConstants.motionVectorsDilated = params.motionVectorsDilated;
-		dlssConstants.motionVectorsJittered = params.motionVectorsJittered;
-		dlssConstants.minRelativeLinearDepthObjectSeparation = 40.0;
-
-		Dlss.setConstants(frame.dlssFrameToken, dlssConstants);
-		#end
-	}
-
-	#if dlss
-	inline function pclMarker( marker : PCLMarker ) {
-		if ( slReady && pclReady && frame.dlssFrameToken != null )
-			Dlss.pclSetMarker(frame.dlssFrameToken, marker);
-	}
-	#end
-
-	override function latencyMarkerSimulationStart() {
-		#if dlss
-		if ( slReady && pclReady && frame.dlssFrameToken != null ) {
-			pclMarker(PCLMarker.SIMULATION_START);
-			Dlss.pclPollPing(frame.dlssFrameToken);
-		}
-		#end
-	}
-
-	override function latencyMarkerSimulationEnd() {
-		#if dlss
-		pclMarker(PCLMarker.SIMULATION_END);
-		if ( pclFlashRequested ) {
-			pclMarker(PCLMarker.TRIGGER_FLASH);
-			pclFlashRequested = false;
-		}
-		#end
-	}
-
-	override function latencyMarkerTriggerFlash() {
-		#if dlss
-		pclFlashRequested = true;
-		#end
-	}
-
-	override function lowLatencySleep() {
-		#if dlss
-		if ( slReady && reflexReady && frame.dlssFrameToken != null )
-			Dlss.reflexSleep(frame.dlssFrameToken);
-		#end
-	}
-
-	override function setLowLatencyOptions( mode : LowLatencyMode, frameLimitUs : Int = 0 ) {
-		#if dlss
-		if ( !slReady || !reflexReady )
-			return false;
-
-		if ( mode == Off && dlssgMode != Off )
-			mode = LowLatencyMode.On;
-
-		var native = switch ( mode ) {
-			case Off: ReflexModeNative.OFF;
-			case On: ReflexModeNative.LOW_LATENCY;
-			case OnWithBoost: ReflexModeNative.LOW_LATENCY_WITH_BOOST;
-		}
-
-		if ( Dlss.reflexSetOptions(native, frameLimitUs, false, PCLHotKey.USE_PING_MESSAGE, 0) != 0 )
-			return false;
-
-		reflexMode = mode;
-		return true;
-		#else
-		return false;
-		#end
-	}
-
-	override function setFrameGenMode( mode : h3d.impl.Driver.FrameGenMode, numFramesToGenerate : Int = 1, releaseResources = false ) : Bool {
-		#if dlss
-		if ( !slReady || !framegenReady )
-			return false;
-
-		if ( mode != Off && reflexMode == Off && !setLowLatencyOptions(LowLatencyMode.On) )
-			return false;
-
-		dlssgOptions.mode = switch ( mode ) {
-			case Off: DLSSGModeNative.OFF;
-			case On: DLSSGModeNative.ON;
-			case Auto: DLSSGModeNative.AUTO;
-			case Dynamic: DLSSGModeNative.DYNAMIC;
-		}
-		dlssgOptions.numFramesToGenerate = numFramesToGenerate;
-		if ( mode != Off )
-			dlssgFrames = numFramesToGenerate;
-
-		dlssgOptions.flags = DLSSGFlag.RETAIN_RESOURCES_WHEN_OFF;
-		if ( Dlss.dlssgSetOptions(dlssgOptions) != 0 )
-			return false;
-
-		dlssgMode = mode;
-		refreshDLSSGState();
-		if ( mode == Off && releaseResources )
-			Dlss.freeResources(DLSSFeature.FRAMEGEN);
-
-		return true;
-		#else
-		return false;
-		#end
-	}
-
-	override function getFrameGenMode() : h3d.impl.Driver.FrameGenMode {
-		#if dlss
-		return dlssgMode;
-		#else
-		return Off;
-		#end
-	}
-
-	#if dlss
-	function refreshDLSSGState() : Bool {
-		if ( !slReady || !framegenReady || Dlss.dlssgGetState(dlssgStateInfo) != 0 )
-			return false;
-
-		dlssgSettings.status = dlssgStateInfo.status;
-		dlssgSettings.minWidthOrHeight = dlssgStateInfo.minWidthOrHeight;
-		dlssgSettings.framesPresented = dlssgStateInfo.numFramesActuallyPresented;
-		dlssgSettings.maxFramesToGenerate = dlssgStateInfo.numFramesToGenerateMax;
-		dlssgSettings.dynamicSupported = dlssgStateInfo.dynamicMFGSupported != 0;
-		dlssgSettings.vsyncSupported = dlssgStateInfo.vsyncSupportAvailable != 0;
-		if ( dlssgSettings.status != 0 )
-			dlssgLastStatus = dlssgSettings.status;
-		return true;
-	}
-	#end
-
-	override function getFrameGenSettings() : h3d.impl.Driver.FrameGenSettings {
-		#if dlss
-		return slReady && framegenReady ? dlssgSettings : null;
-		#else
-		return null;
-		#end
-	}
-
-	override function lowLatencyAvailable() {
-		#if dlss
-		return slReady && reflexReady && reflexState != null && reflexState.lowLatencyAvailable != 0;
-		#else
-		return false;
-		#end
-	}
-
-	override function lowLatencyFlashIndicatorDriverControlled() {
-		#if dlss
-		return slReady && reflexReady && reflexState != null && reflexState.flashIndicatorDriverControlled != 0;
-		#else
-		return false;
-		#end
-	}
-
-	override function debugUpscaling() : String {
-		var buf = new StringBuf();
-		buf.add("=== Upscaling Debug ===\n");
-		if ( !ENABLE_UPSCALING ) {
-			buf.add("Upscaling is disabled (ENABLE_UPSCALING = false)\n");
-			return buf.toString();
-		}
-		var name = getUpscalerName();
-		if ( name == null ) {
-			buf.add('No upscaler available (UPSCALER = $UPSCALER)\n');
-			#if dlss
-			if ( UPSCALER == UpscalerSelection.FSR )
-				buf.add("DLSS: not selected\n");
-			else if ( slInitResult != 0 )
-				buf.add('DLSS: Streamline init failed ($slInitResult)\n');
-			else if ( dlssSupportResult < 0 )
-				buf.add("DLSS: Streamline device setup failed\n");
-			else
-				buf.add('DLSS: not supported on this adapter ($dlssSupportResult)\n');
-			#else
-			buf.add("DLSS: not compiled (-D dlss)\n");
-			#end
-			#if fsr
-			if ( UPSCALER == UpscalerSelection.DLSS )
-				buf.add("FSR: not selected\n");
-			else
-				buf.add('FSR: init failed ($fsrInitResult)\n');
-			#else
-			buf.add("FSR: not compiled (-D fsr)\n");
-			#end
-			return buf.toString();
-		}
-		buf.add('upscaler=$name mode=$upscalingMode\n');
-		var input = upscalingColorIn;
-		var output = upscalingColorOut;
-		if ( upscalingFrame < 0 || input == null || output == null ) {
-			buf.add("Upscaling was never applied\n");
-			return buf.toString();
-		}
-		buf.add('render=${input.width}x${input.height} output=${output.width}x${output.height}\n');
-		var issues = [];
-		var age = frameCount - upscalingFrame;
-		if ( age > 1 )
-			issues.push('not applied for $age frames');
-		function checkInput( t : h3d.mat.Texture, tname : String ) {
-			if ( t == null )
-				issues.push('missing $tname');
-			else if ( t.width != input.width || t.height != input.height )
-				issues.push('$tname is ${t.width}x${t.height}');
-		}
-		checkInput(upscalingDepth, "depth");
-		checkInput(upscalingMotionVectors, "motion vectors");
-		if ( upscalingMode != Off && upscalingMode != NativeAA ) {
-			var optimal = getUpscalingSettings(upscalingMode, output.width, output.height);
-			if ( optimal != null && (optimal.renderWidth != input.width || optimal.renderHeight != input.height) )
-				issues.push('render size differs from optimal ${optimal.renderWidth}x${optimal.renderHeight}');
-		} else if ( input.width != output.width || input.height != output.height )
-			issues.push("render size differs from output size");
-		#if fsr
-		if ( fsrReady ) {
-			if ( fsrContext == null )
-				issues.push("FSR context creation failed");
-			else if ( fsrLastResult != FsrResult.Ok )
-				issues.push('FSR dispatch failed ($fsrLastResult)');
-			if ( UPSCALER_DEBUG )
-				buf.add("FSR debug checker on, warnings go to the log\n");
-		}
-		#end
-		#if dlss
-		var dlssResult : SlResult = cast dlssLastResult;
-		if ( dlssReady && dlssResult == SlResult.WarnOutOfVRAM ) {
-			var mem = getMemoryUsage();
-			issues.push('DLSS out of VRAM warning (${Std.int(mem.allocated / 1048576)} / ${Std.int(mem.total / 1048576)} MB)');
-		} else if ( dlssReady && dlssResult != SlResult.Ok )
-			issues.push('DLSS evaluate failed ($dlssLastResult)');
-		#end
-		if ( issues.length == 0 )
-			buf.add("status=Ok\n");
-		for ( issue in issues )
-			buf.add('status: $issue\n');
-		return buf.toString();
-	}
-
-	override function debugFrameGen() : String {
-		#if dlss
-		var buf = new StringBuf();
-		buf.add("=== DLSS-G Debug ===\n");
-		if ( !slReady ) {
-			buf.add("Streamline is not ready\n");
-			return buf.toString();
-		}
-		if ( !framegenReady ) {
-			buf.add("Frame generation is not supported on this adapter\n");
-			return buf.toString();
-		}
-		buf.add('mode=$dlssgMode framesToGenerate=$dlssgFrames reflexMode=$reflexMode\n');
-		var state = getFrameGenSettings();
-		buf.add('framesPresentedPerFrame=${state.framesPresented}\n');
-		buf.add('minWidthOrHeight=${state.minWidthOrHeight} maxFramesToGenerate=${state.maxFramesToGenerate} ');
-		buf.add('dynamicSupported=${state.dynamicSupported} vsyncSupported=${state.vsyncSupported}\n');
-		var status = state.status == 0 ? dlssgLastStatus : state.status;
-		if ( status == 0 ) {
-			buf.add("status=Ok\n");
-		} else {
-			if ( status & 1 != 0 ) buf.add("status: output resolution too low\n");
-			if ( status & 2 != 0 ) buf.add("status: Reflex not active at runtime\n");
-			if ( status & 4 != 0 ) buf.add("status: HDR format not supported\n");
-			if ( status & 8 != 0 ) buf.add("status: common constants invalid\n");
-			if ( status & 16 != 0 ) buf.add("status: GetCurrentBackBufferIndex not called\n");
-		}
-		if ( currentWidth < state.minWidthOrHeight || currentHeight < state.minWidthOrHeight )
-			buf.add('backbuffer ${currentWidth}x${currentHeight} is below minWidthOrHeight\n');
-		return buf.toString();
-		#end
-		return "DLSS Undefined";
-	}
-
-	override function debugLowLatency() : String {
-		#if dlss
-		var buf = new StringBuf();
-		buf.add("=== Reflex Debug ===\n");
-		if ( !slReady || !reflexReady ) {
-			buf.add("Streamline or Reflex are not ready\n");
-			return buf.toString();
-		}
-		if ( reflexState == null )
-			reflexState = new ReflexStateInfo();
-		Dlss.reflexGetState(reflexState);
-		buf.add('lowLatencyAvailable=${reflexState.lowLatencyAvailable} ');
-		buf.add('latencyReportAvailable=${reflexState.latencyReportAvailable} ');
-		buf.add('flashIndicatorDriverControlled=${reflexState.flashIndicatorDriverControlled} ');
-		buf.add('statsWindowMessage=${reflexState.statsWindowMessage}\n');
-		if ( reflexState.lowLatencyAvailable == 0 ) buf.add("Low latency is not available.\n");
-		if ( reflexState.latencyReportAvailable == 0 ) buf.add("Latency report are not available.\n");
-		var reports = [];
-		for ( i in 0...Dlss.REFLEX_FRAME_REPORT_COUNT ) {
-			var r = new ReflexFrameReport();
-			var res = Dlss.reflexGetFrameReport(i, r);
-			if ( res == 0 && r.frameID > 0 )
-				reports.push(r);
-		}
-		if ( reports.length == 0 ) {
-			buf.add("Empty reports.\n");
-			return buf.toString();
-		}
-		reports.sort((a, b) -> a.frameID < b.frameID ? -1 : (a.frameID > b.frameID ? 1 : 0));
-		var totalPcLatency = 0.;
-		var totalGpuFrameUs = 0.;
-		buf.add('\nframeID   simMs   renderMs   driverMs   osQueueMs   gpuMs   pcLatencyMs   gpuFrameTimeUs\n');
-		for ( r in reports ) {
-			inline function ms(a:Float, b:Float) return (b - a) / 1000.0;
-			var simDur = ms(r.simStartTime, r.simEndTime);
-			var renderDur = ms(r.renderSubmitStartTime, r.renderSubmitEndTime);
-			var drvDur = ms(r.driverStartTime, r.driverEndTime);
-			var osDur = ms(r.osRenderQueueStartTime, r.osRenderQueueEndTime);
-			var gpuDur = ms(r.gpuRenderStartTime, r.gpuRenderEndTime);
-			var pcLatency = ms(r.simStartTime, r.presentEndTime);
-			buf.add('${r.frameID}   ${simDur}   ${renderDur}   ${drvDur}   ${osDur}   ${gpuDur}   ${pcLatency}   ${r.gpuFrameTimeUs}\n');
-			totalPcLatency += pcLatency;
-			totalGpuFrameUs += r.gpuFrameTimeUs;
-			if (r.driverStartTime <= 0 || r.gpuRenderStartTime <= 0 || r.osRenderQueueStartTime <= 0)
-				buf.add("One or more driver/OS/GPU timestamps are 0.\n");
-		}
-		var n = reports.length;
-		buf.add('\nSampled ${n} frames. Avg PC latency: ${totalPcLatency / n} ms. Avg GPU frame time: ${totalGpuFrameUs / n} us.\n');
-		return buf.toString();
-		#end
-		return "DLSS Undefined";
 	}
 
 	#if (hl_ver >= version("1.16.0"))

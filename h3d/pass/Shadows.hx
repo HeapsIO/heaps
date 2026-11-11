@@ -66,6 +66,13 @@ class Shadows extends Output {
 		if( staticTexture != null ) staticTexture.dispose();
 	}
 
+	override function draw( passes : h3d.pass.PassList, ?sort : h3d.pass.PassList -> Void ) {
+		var prev = ctx.visibilityFrustum;
+		if( lightCamera != null ) ctx.visibilityFrustum = lightCamera.frustum;
+		super.draw(passes, sort);
+		ctx.visibilityFrustum = prev;
+	}
+
 	public function getShadowView() {
 		return lightCamera.mcam;
 	}

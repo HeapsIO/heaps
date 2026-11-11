@@ -60,6 +60,7 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 	#if hlphysics
 	var interactiveWorld : physics.collision.PhysicsWorld;
 	var interactiveInfos : Map<Interactive, Array<{ id : Int, follow : Null<h3d.scene.Object>, lastTrans : Matrix }>>;
+	var shapeCache : Map<h3d.col.Collider, physics.collision.shapes.Shape>;
 	var lastSyncFrame = -1;
 	#end
 
@@ -83,6 +84,7 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 		#if hlphysics
 		interactiveWorld = new physics.collision.PhysicsWorld(100);
 		interactiveInfos = new Map();
+		shapeCache = new Map();
 		#end
 	}
 
@@ -216,7 +218,7 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 			var infos = interactiveInfos.get(i);
 			if( infos == null ) {
 				infos = [];
-				for( elt in physics.collision.shapes.Shape.listFromHeaps(i.shape) ) {
+				for( elt in physics.collision.shapes.Shape.listFromHeaps(i.shape, null, shapeCache) ) {
 					var body = new physics.collision.Body(elt.shape);
 					body.setMotionType(Kinematic);
 					body.userData = i;
@@ -421,6 +423,7 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 		if( interactiveWorld != null ) {
 			interactiveWorld.dispose();
 			interactiveWorld = null;
+			shapeCache = null;
 		}
 		#end
 	}

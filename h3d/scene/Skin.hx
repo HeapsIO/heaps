@@ -96,10 +96,11 @@ class DynamicJointData extends JointData {
 		super();
 	}
 
-	public function initData() {
+	public function initData( skin : h3d.scene.Skin, j : h3d.anim.Skin.Joint ) {
 		curTargetWorld = currentAbsPos.clone();
-		curTargetLocal = h3d.Matrix.I();
-		prevTargetLocal = h3d.Matrix.I();
+		curTargetLocal = new h3d.Matrix();
+		curTargetLocal.multiply3x4(currentAbsPos, skin.jointsData[j.parent.index].currentAbsPos.getInverse());
+		prevTargetLocal = curTargetLocal.clone();
 		speed = new h3d.Vector();
 		parentQuat = new h3d.Quat();
 		prevParentQuat = new h3d.Quat();
@@ -108,7 +109,7 @@ class DynamicJointData extends JointData {
 	override function sync(skin: h3d.scene.Skin, j: h3d.anim.Skin.Joint, syncDyn : Bool) {
 		super.sync(skin, j, syncDyn);
 		if (curTargetWorld == null)
-			initData();
+			initData(skin, j);
 
 		var jParentData : JointData = Std.downcast(skin.jointsData[j.parent.index], JointData);
 		if (syncDyn) {

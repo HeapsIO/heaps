@@ -13,6 +13,15 @@ class FileEntry {
 	public function getBytes() : haxe.io.Bytes return null;
 	public function readBytes( out : haxe.io.Bytes, outPos : Int, pos : Int, len : Int ) : Int { throw "readBytes() not implemented"; }
 
+	/**
+		Same as readBytes, but the read is performed in async mode 
+		onDone is called in the calling thread (through its event loop) with the number of bytes read, unless the request is cancelled.
+		The out bytes must not be accessed until then.
+	**/
+	public function readBytesAsync( out : haxe.io.Bytes, outPos : Int, pos : Int, len : Int, onDone : Int -> Void, priority = 0. ) : AsyncRead {
+		return AsyncRead.AsyncReader.read(this, out, outPos, pos, len, onDone, priority);
+	}
+
 
 	#if heaps_mt_loader
 	static var TMP_BYTES(get,set) : haxe.io.Bytes;

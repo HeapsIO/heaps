@@ -153,23 +153,14 @@ class System {
 		}
 	}
 
-	public static function getClipboardText() : String {
-		#if (hide && editor)
-		return nw.Clipboard.get().get(Text);
-		#else
+	public static dynamic function getClipboardText() : String {
 		return CLIPBOARD_TEXT;
-		#end
 	}
 
-	public static function setClipboardText(text:String) : Bool {
-		#if (hide && editor)
-		nw.Clipboard.get().set({ data: text, type: nw.Clipboard.ClipboardType.Text });
-		return true;
-		#else
+	public static dynamic function setClipboardText(text:String) : Bool {
 		js.Browser.navigator.clipboard.writeText(text);
 		CLIPBOARD_TEXT = text;
 		return true;
-		#end
 	}
 
 	public static function getLocale() : String {

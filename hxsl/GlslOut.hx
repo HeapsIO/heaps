@@ -92,6 +92,7 @@ class GlslOut {
 	var allNames : Map<String, Int>;
 	var outIndexes : Map<Int, Int>;
 	var isCompute : Bool;
+	var highpUniforms : Bool;
 
 	var isES(get,never) : Bool;
 	var isES2(get,never) : Bool;
@@ -245,6 +246,7 @@ class GlslOut {
 			var v = v.clone();
 			#end
 			v.type = TArray(t,size);
+			if( highpUniforms ) add("highp ");
 			addVar(v);
 			v.type = TBuffer(t,size,kind);
 			add("; }");
@@ -769,6 +771,8 @@ class GlslOut {
 				var format = "rgba".substr(0, chans);
 				add('layout(${format}32f, binding=${rwTextures}) uniform ');
 				rwTextures += n;
+			case TArray(TVec(4, VFloat), _) if( highpUniforms ):
+				add("uniform highp ");
 			default:
 				add("uniform ");
 			}
@@ -850,6 +854,7 @@ class GlslOut {
 		var f = s.funs[0];
 		isVertex = f.kind == Vertex;
 		isCompute = f.kind == Main;
+		highpUniforms = isES && f.kind == Fragment && (foundGlobals.exists(FloatBitsToInt) || foundGlobals.exists(FloatBitsToUint));
 
 		if( isCompute ) {
 			// no prec

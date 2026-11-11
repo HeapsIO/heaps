@@ -39,6 +39,7 @@ class NullDriver extends Driver {
 	override function selectShader( shader : hxsl.RuntimeShader ) {
 		if( cur == shader ) return false;
 		cur = shader;
+		shader.releaseData();
 		return true;
 	}
 

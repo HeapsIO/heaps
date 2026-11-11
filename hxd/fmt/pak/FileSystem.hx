@@ -139,6 +139,7 @@ class FileSystem implements hxd.fs.FileSystem {
 	#if target.threaded
 	var threadIdentifier : sys.thread.Tls<Null<Int>>;
 	var threadIdCache : Array<Null<Int>>;
+	var threadIdMutex : sys.thread.Mutex;
 	#end
 	var files : Array<{ path : String, inputs : Array<FileInput> }>;
 	public var totalReadBytes = 0;
@@ -153,6 +154,7 @@ class FileSystem implements hxd.fs.FileSystem {
 		files = [];
 		#if target.threaded
 		threadIdCache = [];
+		threadIdMutex = new sys.thread.Mutex();
 		threadIdentifier = new sys.thread.Tls();
 		#end
 		root = new PakEntry(this, null, f, -1);
@@ -204,8 +206,10 @@ class FileSystem implements hxd.fs.FileSystem {
 	#if (target.threaded)
 		var id : Null<Int> = threadIdentifier.value;
 		if( id == null ) {
+			threadIdMutex.acquire();
 			id = threadIdCache.length;
 			threadIdCache.push(id);
+			threadIdMutex.release();
 			threadIdentifier.value = id;
 		}
 		return id;
