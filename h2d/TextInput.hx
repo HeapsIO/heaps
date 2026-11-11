@@ -238,7 +238,7 @@ class TextInput extends Text {
 			onCursorChange();
 		case K.LEFT:
 			if( cursorIndex > 0 ) {
-				cursorIndex--;
+				cursorIndex = prevCursor(cursorIndex);
 				onCursorChange();
 			}
 		case K.RIGHT if (K.isDown(K.CTRL)):
@@ -246,7 +246,7 @@ class TextInput extends Text {
 			onCursorChange();
 		case K.RIGHT:
 			if( cursorIndex < getTextLength() ) {
-				cursorIndex++;
+				cursorIndex = nextCursor(cursorIndex);
 				onCursorChange();
 			}
 		case K.HOME:
@@ -270,7 +270,7 @@ class TextInput extends Text {
 			if( cursorIndex < getTextLength() && canEdit ) {
 				beforeChange();
 				if( selectionRange == null )
-					selectionRange = { start : cursorIndex, length : K.isDown(K.CTRL) ? getWordEnd() - cursorIndex : 1 };
+					selectionRange = { start : cursorIndex, length : K.isDown(K.CTRL) ? getWordEnd() - cursorIndex : nextCursor(cursorIndex) - cursorIndex };
 				cutSelection(false);
 				onChange();
 			}
@@ -278,7 +278,7 @@ class TextInput extends Text {
 			if( cursorIndex > 0 && canEdit ) {
 				beforeChange();
 				if( selectionRange == null ) {
-					var newIndex = K.isDown(K.CTRL) ? getWordStart() : cursorIndex - 1;
+					var newIndex = K.isDown(K.CTRL) ? getWordStart() : prevCursor(cursorIndex);
 					selectionRange = { start : newIndex , length : cursorIndex - newIndex };
 				}
 				cutSelection(true);
@@ -476,7 +476,7 @@ class TextInput extends Text {
 		var ret = getTextPos(cursorIndex);
 		while (ret < max && isWordLimit(ret)) ret++;
 		while (ret < max && !isWordLimit(ret)) ret++;
-		return getCursorPos(ret);
+		return snapCursor(getCursorPos(ret));
 	}
 
 	function getWordStart() {
@@ -486,7 +486,7 @@ class TextInput extends Text {
 		var ret = getTextPos(cursorIndex);
 		while (ret > 0 && isWordLimit(ret-1)) ret--;
 		while (ret > 0 && !isWordLimit(ret-1)) ret--;
-		return getCursorPos(ret);
+		return snapCursor(getCursorPos(ret));
 	}
 
 	function moveCursorVertically(yDiff: Int){
@@ -753,7 +753,45 @@ class TextInput extends Text {
 			pos++;
 			linePos++;
 		}
-		return pos - 1;
+		// the click fell on the second half of a surrogate pair: put the caret after the pair
+		return snapCursor(pos - 1);
+	}
+
+	/** True if the cursor index `i` is between the two halves of a surrogate pair. **/
+	function inPair( i : Int ) : Bool {
+		var t = displayText();
+		var p = getTextPos(i);
+		if( p <= 0 || p >= t.length ) return false;
+		var hi = t.charCodeAt(p - 1);
+		var lo = t.charCodeAt(p);
+		return hi >= 0xD800 && hi <= 0xDBFF && lo >= 0xDC00 && lo <= 0xDFFF;
+	}
+
+	/** One character forward from the cursor index `i`, stepping over a surrogate pair as one. **/
+	function nextCursor( i : Int ) : Int {
+		if( i >= getTextLength() ) return i;
+		var j = i + 1;
+		if( inPair(j) ) {
+			var k = getCursorPos(getTextPos(j) + 1);
+			if( k > i ) j = k;
+		}
+		return j;
+	}
+
+	/** One character back from the cursor index `i`, stepping over a surrogate pair as one. **/
+	function prevCursor( i : Int ) : Int {
+		if( i <= 0 ) return 0;
+		var j = i - 1;
+		if( inPair(j) ) {
+			var k = getCursorPos(getTextPos(j) - 1);
+			if( k < i ) j = k;
+		}
+		return j;
+	}
+
+	/** Moves a cursor index that falls inside a surrogate pair to the end of the pair. **/
+	function snapCursor( i : Int ) : Int {
+		return i > 0 && inPair(i) ? nextCursor(i) : i;
 	}
 
 	function syncInteract() {
