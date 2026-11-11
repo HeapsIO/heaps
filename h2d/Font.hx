@@ -313,7 +313,8 @@ class Font {
 		if( textStyle ) {
 			var c = glyphs.get(code);
 			if( c == null ) c = charset.resolveChar(code, glyphs);
-			if( c != null ) return c;
+			// glyphs also caches fallback glyphs, which are colour for a lone emoji
+			if( c != null && !c.isColor ) return c;
 		}
 		var cf : ClusterFallback = Std.isOfType(fallback, ClusterFallback) ? cast fallback : null;
 		if( cf == null ) return textStyle ? getChar(code) : null;

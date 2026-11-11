@@ -12,7 +12,8 @@ class EmojiFallback implements h2d.Font.FontFallback implements h2d.Font.Cluster
 	public function new() {}
 	public function resolveCluster( font : Font, cluster : String, emoji : Bool ) : Null<FontChar> {
 		clusterCalls++;
-		if( !emoji ) return null;
+		// text style (U+FE0E): the plain outline of the first character
+		if( !emoji ) return StringTools.fastCodeAt(cluster, 0) == 0x263A ? new FontChar(new Tile(null, 0, 0, 18, 18), 20) : null;
 		return switch( cluster ) {
 			case "\u{1F44D}\u{1F3FD}", "\u{1F468}\u{200D}\u{1F469}", "\u{31}\u{FE0F}\u{20E3}", "\u{1F1EC}\u{1F1E7}":
 				var c = new FontChar(new Tile(null, 0, 0, 28, 28), 30);
@@ -23,6 +24,10 @@ class EmojiFallback implements h2d.Font.FontFallback implements h2d.Font.Cluster
 	}
 	public function resolveGlyph( font : Font, code : Int ) : Null<FontChar> {
 		return switch( code ) {
+			case 0x263A: // like SystemFontFallback: colour first for a lone emoji
+				var c = new FontChar(new Tile(null, 0, 0, 18, 18), 20);
+				c.isColor = true;
+				c;
 			case 0x1F600, 0x1F525, 0x1F468, 0x1F469, 0x2764, 0x1F44D, 0x1F3FD: new FontChar(new Tile(null, 0, 0, 18, 18), 20);
 			default: null;
 		}
@@ -156,6 +161,8 @@ class EmojiTextTest {
 		cf.getCluster("\u{1F469}" + ZWJ + GRIN, 0, 5);
 		eq("cluster miss resolved once", fb.clusterCalls, 2);
 		eq("text-style cluster uses the app font", cf.getCluster("1\u{FE0E}", 0, 2) == cf.getChar("1".code), true);
+		eq("bare emoji drawn in colour", cf.getChar(0x263A).isColor, true);
+		eq("text-style cluster not the cached colour glyph", cf.getCluster("\u{263A}\u{FE0E}", 0, 2).isColor, false);
 
 		// colour glyphs go on their own untinted layer, which follows the text's alpha
 		var ct = new h2d.Text(font);
