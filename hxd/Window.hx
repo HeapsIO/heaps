@@ -33,6 +33,14 @@ class Window {
 	public var mouseMode(default, set) : MouseMode = Absolute;
 	public var vsync(get, set) : Bool;
 	public var isFocused(get, never) : Bool;
+	/**
+		Whether text input (and IME composition) is currently enabled for this window. See `startTextInput`.
+	**/
+	public var textInputActive(default, null) : Bool = false;
+	/**
+		Last text input area sent with `setTextInputArea`, in window pixels, or null if none was set.
+	**/
+	public var textInputArea(default, null) : Null<{x:Int, y:Int, w:Int, h:Int, cursor:Int}> = null;
 
 	public var title(get, set) : String;
 	public var displayMode(get, set) : DisplayMode;
@@ -98,6 +106,30 @@ class Window {
 	}
 
 	public function resize( width : Int, height : Int ) : Void {
+	}
+
+	/**
+		Enables text input and IME composition for this window. Call when a text field gets focus.
+	**/
+	public function startTextInput() : Void {
+		textInputActive = true;
+	}
+
+	/**
+		Disables text input and IME composition for this window. Call when a text field loses focus.
+	**/
+	public function stopTextInput() : Void {
+		textInputActive = false;
+	}
+
+	/**
+		Tells the IME where the text caret is so candidate windows can be positioned (window pixels).
+		`cursor` is the x offset of the caret inside the area. Nothing is sent if the values did not change.
+	**/
+	public function setTextInputArea( x : Int, y : Int, w : Int, h : Int, cursor : Int ) : Void {
+		var a = textInputArea;
+		if( a != null && a.x == x && a.y == y && a.w == w && a.h == h && a.cursor == cursor ) return;
+		textInputArea = {x:x, y:y, w:w, h:h, cursor:cursor};
 	}
 
 	/**

@@ -69,6 +69,14 @@ class Window {
 	public var framerate : Null<Int> = null;
 	public var vsync(get, set) : Bool;
 	public var isFocused(get, never) : Bool;
+	/**
+		Whether text input (and IME composition) is currently enabled for this window. See `startTextInput`.
+	**/
+	public var textInputActive(default, null) : Bool = false;
+	/**
+		Last text input area sent with `setTextInputArea`, in window pixels, or null if none was set.
+	**/
+	public var textInputArea(default, null) : Null<{x:Int, y:Int, w:Int, h:Int, cursor:Int}> = null;
 
 	/**
 		Get the preferred scaling ratio for high dpi displays for this window
@@ -122,7 +130,9 @@ class Window {
 		#if heaps_vulkan
 		if( USE_VULKAN ) sdlFlags |= sdl.Window.SDL_WINDOW_VULKAN;
 		#end
+		sdl.Sdl.setHint("SDL_IME_IMPLEMENTED_UI", "composition");
 		window = new sdl.Window(title, width, height, sdl.Window.SDL_WINDOWPOS_CENTERED, sdl.Window.SDL_WINDOWPOS_CENTERED, sdlFlags);
+		window.stopTextInput();
 		this.windowWidth = window.width;
 		this.windowHeight = window.height;
 		#elseif hldx
@@ -214,6 +224,39 @@ class Window {
 	public function setPosition(x: Int, y: Int) {
 		#if (hldx || hlsdl)
 		window.setPosition(x, y);
+		#end
+	}
+
+	/**
+		Enables text input and IME composition for this window. Call when a text field gets focus.
+	**/
+	public function startTextInput() : Void {
+		textInputActive = true;
+		#if hlsdl
+		window.startTextInput();
+		#end
+	}
+
+	/**
+		Disables text input and IME composition for this window. Call when a text field loses focus.
+	**/
+	public function stopTextInput() : Void {
+		textInputActive = false;
+		#if hlsdl
+		window.stopTextInput();
+		#end
+	}
+
+	/**
+		Tells the IME where the text caret is so candidate windows can be positioned (window pixels).
+		`cursor` is the x offset of the caret inside the area. Nothing is sent if the values did not change.
+	**/
+	public function setTextInputArea( x : Int, y : Int, w : Int, h : Int, cursor : Int ) : Void {
+		var a = textInputArea;
+		if( a != null && a.x == x && a.y == y && a.w == w && a.h == h && a.cursor == cursor ) return;
+		textInputArea = {x:x, y:y, w:w, h:h, cursor:cursor};
+		#if hlsdl
+		window.setTextInputArea(x, y, w, h, cursor);
 		#end
 	}
 
@@ -525,16 +568,33 @@ class Window {
 				onEvent(e);
 			}
 		case TextInput:
-			eh = new Event(ETextInput, mouseX, mouseY);
-			var c = e.keyCode & 0xFF;
-			eh.charCode = if( c < 0x7F )
-				c;
-			else if( c < 0xE0 )
-				((c & 0x3F) << 6) | ((e.keyCode >> 8) & 0x7F);
-			else if( c < 0xF0 )
-				((c & 0x1F) << 12) | (((e.keyCode >> 8) & 0x7F) << 6) | ((e.keyCode >> 16) & 0x7F);
-			else
-				((c & 0x0F) << 18) | (((e.keyCode >> 8) & 0x7F) << 12) | (((e.keyCode >> 16) & 0x7F) << 6) | ((e.keyCode >> 24) & 0x7F);
+			if( e.text != null ) {
+				// one event per code point so IME commits of several characters are never truncated
+				var str = @:privateAccess String.fromUTF8(e.text);
+				for( cp in hxd.impl.ImeText.codePoints(str) ) {
+					var ev = new Event(ETextInput, mouseX, mouseY);
+					ev.charCode = cp;
+					event(ev);
+				}
+			} else {
+				eh = new Event(ETextInput, mouseX, mouseY);
+				var c = e.keyCode & 0xFF;
+				eh.charCode = if( c < 0x7F )
+					c;
+				else if( c < 0xE0 )
+					((c & 0x3F) << 6) | ((e.keyCode >> 8) & 0x7F);
+				else if( c < 0xF0 )
+					((c & 0x1F) << 12) | (((e.keyCode >> 8) & 0x7F) << 6) | ((e.keyCode >> 16) & 0x7F);
+				else
+					((c & 0x0F) << 18) | (((e.keyCode >> 8) & 0x7F) << 12) | (((e.keyCode >> 16) & 0x7F) << 6) | ((e.keyCode >> 24) & 0x7F);
+			}
+		case TextEditing:
+			var str = e.text != null ? @:privateAccess String.fromUTF8(e.text) : "";
+			var u16 = Sys.systemName() == "Windows";
+			eh = new Event(ETextComposition, mouseX, mouseY);
+			eh.composition = str;
+			eh.compositionCursor = hxd.impl.ImeText.toUtf16Index(str, e.editStart, u16);
+			eh.compositionLength = hxd.impl.ImeText.toUtf16Length(str, e.editStart, e.editLength, u16);
 		case TouchDown if (hxd.System.getValue(IsTouch)):
 			#if hlsdl
 				e.mouseX = Std.int(windowWidth * e.mouseX / TOUCH_SCALE);
