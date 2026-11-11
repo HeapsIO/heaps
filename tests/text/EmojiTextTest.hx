@@ -127,6 +127,11 @@ class EmojiTextTest {
 		eq("cluster latin", hxd.Charset.clusterEnd("ab", 0), 1);
 		eq("cluster cjk ivs", hxd.Charset.clusterEnd("\u{845B}\u{E0100}x", 0), 3);
 		eq("cluster zwj never joins a newline", hxd.Charset.clusterEnd("a\u{200D}\nb", 0), 2);
+		// A ZWJ joins only an emoji after it (UAX #29 GB11): letters and spaces stay their own clusters.
+		eq("cluster zwj does not join a letter", hxd.Charset.clusterEnd("\u{1F468}\u{200D}a", 0), 3);
+		eq("cluster zwj does not join a space", hxd.Charset.clusterEnd("\u{1F468}\u{200D} b", 0), 3);
+		eq("cluster sinhala zwj conjunct keeps its letters", hxd.Charset.clusterEnd("\u{0DCA}\u{200D}\u{0DBB}", 0), 2);
+		eq("cluster zwj joins a symbol emoji", hxd.Charset.clusterEnd("\u{1F469}\u{200D}\u{2695}\u{FE0F}", 0), 5);
 		eq("emoji cluster keycap", hxd.Charset.isEmojiCluster("1\u{FE0F}\u{20E3}", 0, 3), true);
 		eq("not emoji cluster ivs", hxd.Charset.isEmojiCluster("\u{845B}\u{E0100}", 0, 3), false);
 

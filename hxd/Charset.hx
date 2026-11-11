@@ -183,8 +183,8 @@ class Charset {
 		The end (exclusive) of the cluster starting at `i` in `s` (`i < s.length`): the text that lays
 		out, wraps and takes the caret as one character. One code point, extended by what modifies it
 		(UTS #51 emoji sequences): variation selectors, emoji modifiers (skin tones), the keycap mark
-		U+20E3, tag characters, ideographic variation selectors, and a ZWJ with the code point after it
-		(a family); a regional indicator pairs with the one after it (a flag). Everything else is a
+		U+20E3, tag characters, ideographic variation selectors, and a ZWJ with the emoji after it
+		(a family; a ZWJ before anything else stays on this cluster alone); a regional indicator pairs with the one after it (a flag). Everything else is a
 		cluster of one code point, so text without these characters lays out as before.
 	**/
 	public static function clusterEnd( s : String, i : Int ) : Int {
@@ -202,7 +202,7 @@ class Charset {
 				p += n;
 				if( p < len ) {
 					var e = codeAt(s, p);
-					if( e != "\n".code && e != "\r".code ) p += charLength(s, p, e);
+					if( isPictographic(e) ) p += charLength(s, p, e);
 				}
 			} else if( flag && isRegionalIndicator(d) ) {
 				flag = false;
@@ -211,6 +211,19 @@ class Charset {
 				break;
 		}
 		return p;
+	}
+
+	/**
+		Whether `c` may follow a ZWJ in an emoji sequence: the symbol blocks that hold
+		Extended_Pictographic (arrows, technical, geometric shapes, dingbats, misc symbols, the
+		U+1Fxxx emoji planes, (c) and (R)). A superset of that property with no letters, digits
+		or spaces, so a ZWJ in Indic or Arabic text never joins the letter after it.
+	**/
+	static function isPictographic( c : Int ) : Bool {
+		return c == 0xA9 || c == 0xAE || c == 0x203C || c == 0x2049 || c == 0x2122 || c == 0x2139
+			|| (c >= 0x2190 && c <= 0x21FF) || (c >= 0x2300 && c <= 0x23FF) || c == 0x24C2
+			|| (c >= 0x25A0 && c <= 0x27BF) || c == 0x2934 || c == 0x2935 || (c >= 0x2B00 && c <= 0x2BFF)
+			|| c == 0x3030 || c == 0x303D || c == 0x3297 || c == 0x3299 || (c >= 0x1F000 && c <= 0x1FFFF);
 	}
 
 	/**
