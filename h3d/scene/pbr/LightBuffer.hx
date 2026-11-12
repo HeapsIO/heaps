@@ -78,7 +78,7 @@ class LightBuffer {
 		defaultForwardShader.lightInfos = new h3d.Buffer(BUFFER_MAX_SIZE, hxd.BufferFormat.make([{ name : "uniformData", type : DVec4 }]), [UniformBuffer, Dynamic]);
 	}
 
-	public function setBuffers( s : h3d.shader.pbr.DefaultForward ) {
+	public function setBuffers( s : h3d.shader.pbr.DefaultForward.DefaultForwardBase ) {
 		s.cameraPosition = defaultForwardShader.cameraPosition;
 		s.emissivePower = defaultForwardShader.emissivePower;
 		s.lightInfos = defaultForwardShader.lightInfos;

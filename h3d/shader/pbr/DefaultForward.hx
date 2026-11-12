@@ -1,6 +1,6 @@
 package h3d.shader.pbr;
 
-class DefaultForward extends hxsl.Shader {
+class DefaultForwardBase extends hxsl.Shader {
 
 	static var SRC = {
 		@:extends h3d.shader.ShadowSampling;
@@ -169,11 +169,6 @@ class DefaultForward extends hxsl.Shader {
 				result = direct * lightColor * NdL;
 			}
 			return result;
-		}
-
-		function __init__fragment() {
-			pbrSpecularColor = vec3(0.04);
-			albedoGamma = pixelColor.rgb * pixelColor.rgb; // gamma correct
 		}
 
 		function init() {
@@ -511,6 +506,18 @@ class DefaultForward extends hxsl.Shader {
 			lightAccumulation += emissive * emissivePower * pixelColor.rgb;
 
 			return lightAccumulation;
+		}
+
+	};
+}
+
+class DefaultForward extends DefaultForwardBase {
+
+	static var SRC = {
+
+		function __init__fragment() {
+			pbrSpecularColor = vec3(0.04);
+			albedoGamma = pixelColor.rgb * pixelColor.rgb; // gamma correct
 		}
 
 		function fragment() {
