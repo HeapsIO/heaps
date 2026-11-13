@@ -102,6 +102,33 @@ class BitmapData {
 			src.data.pixels, (srcX + srcY * src.width)<<2, src.width<<2, srcWidth, srcHeight,
 			smooth?1:0
 		);
+		#elseif js
+		var operation = switch( blendMode ) {
+			case None: "copy";
+			case Alpha: "source-over";
+			default: throw "BitmapData.drawScaled blendMode not supported : " + blendMode;
+		};
+		if( x < 0 || y < 0 || width < 0 || height < 0 || srcX < 0 || srcY < 0 || srcWidth < 0 || srcHeight < 0 ||
+			x + width > this.width || y + height > this.height || srcX + srcWidth > src.width || srcY + srcHeight > src.height )
+			throw "Outside bounds";
+		if( width == 0 || height == 0 || srcWidth == 0 || srcHeight == 0 )
+			return;
+		ctx.save();
+		ctx.imageSmoothingEnabled = smooth;
+		ctx.globalCompositeOperation = operation;
+		if( blendMode == None ) {
+			// Copy must only replace the destination, including its transparent pixels.
+			var path = new js.html.Path2D();
+			path.rect(x, y, width, height);
+			ctx.clip(path);
+		}
+		try {
+			ctx.drawImage(src.ctx.canvas, srcX, srcY, srcWidth, srcHeight, x, y, width, height);
+		} catch( e : Dynamic ) {
+			ctx.restore();
+			throw e;
+		}
+		ctx.restore();
 		#else
 		notImplemented();
 		#end
