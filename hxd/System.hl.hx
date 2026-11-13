@@ -251,7 +251,7 @@ class System {
 
 		var but = new hl.UI.Button(f, "Exit");
 		but.onClick = function() {
-			Sys.exit(0);
+			Sys.exit(1);
 		};
 
 		while( hl.UI.loop(true) != Quit )
