@@ -711,6 +711,10 @@ class Window {
 		addKey(1099, K.NUMPAD_DOT);
 
 		// EXTRA
+		// On Apple's keyboards the shortcuts are on Command, where the others have Ctrl: it reads
+		// as Ctrl here, so Cmd+C / V / X / A / Z are what every Ctrl+ check already handles
+		// (the Mac desktop, and a hardware keyboard on iOS - the Simulator passes the Mac's on).
+		var cmdIsCtrl = switch( Sys.systemName() ) { case "Mac", "iOS", "tvOS": true; default: false; };
 		var keys = [
 			//K.BACKSPACE
 			//K.TAB
@@ -721,8 +725,8 @@ class Window {
 			1228 => K.RCTRL,
 			1226 => K.LALT,
 			1230 => K.RALT,
-			1227 => K.LEFT_WINDOW_KEY,
-			1231 => K.RIGHT_WINDOW_KEY,
+			1227 => cmdIsCtrl ? K.LCTRL : K.LEFT_WINDOW_KEY,
+			1231 => cmdIsCtrl ? K.RCTRL : K.RIGHT_WINDOW_KEY,
 			// K.ESCAPE
 			// K.SPACE
 			1075 => K.PGUP,
