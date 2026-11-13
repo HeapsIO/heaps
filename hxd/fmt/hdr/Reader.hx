@@ -44,6 +44,8 @@ class Reader {
 
 			#if hl
 			var data : hl.Bytes = data;
+			#elseif js
+			var data = new js.lib.Float32Array(data.getData());
 			#end
 
 			for( y in 0...height ) {
@@ -72,6 +74,9 @@ class Reader {
 				inline function output( v : Float ) {
 					#if hl
 					data.setF32(pos,v);
+					#elseif js
+					// Pos is in bytes, but Float32Array index 32bits values
+					data[pos >> 2] = v;
 					#else
 					data.setFloat(pos, v);
 					#end
