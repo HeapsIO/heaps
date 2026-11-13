@@ -1,0 +1,7 @@
+# hxd.Pixels/BitmapData pull in format.png / format.hl
+-lib format
+-cp tests/text
+-cp .
+-main EmojiTextTest
+-hl bin/text-test.hl
+--cmd hl bin/text-test.hl

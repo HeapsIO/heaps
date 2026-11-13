@@ -17,6 +17,11 @@ enum EventKind {
 		Used to check if we are still on the interactive if no EMove was triggered this frame.
 	**/
 	ECheck;
+	/**
+		Sent to the focused interactive while an IME composition (pre-edit text) is in progress or has been cleared.
+		See `Event.composition`, `Event.compositionCursor` and `Event.compositionLength`.
+	**/
+	ETextComposition;
 }
 
 class Event {
@@ -38,6 +43,18 @@ class Event {
 	public var keyCode : Int;
 	public var charCode : Int;
 	public var wheelDelta : Float;
+	/**
+		For ETextComposition: the current pre-edit string (empty when the composition ended or was cancelled).
+	**/
+	public var composition : String;
+	/**
+		For ETextComposition: cursor position inside `composition` (UTF-16 index).
+	**/
+	public var compositionCursor : Int;
+	/**
+		For ETextComposition: length of the selected/converting segment starting at `compositionCursor` (UTF-16 units).
+	**/
+	public var compositionLength : Int;
 
 	public function new(k,x=0.,y=0.) {
 		kind = k;
@@ -52,6 +69,7 @@ class Event {
 		case EWheel: ",wheelDelta=" + wheelDelta;
 		case EKeyDown, EKeyUp: ",keyCode=" + keyCode;
 		case ETextInput: ",charCode=" + charCode;
+		case ETextComposition: ",composition=" + composition + ",cursor=" + compositionCursor + ",length=" + compositionLength;
 		}
 	}
 

@@ -49,6 +49,11 @@ class FontChar {
 	**/
 	@:dox(show)
 	var kerning : Null<Kerning>;
+	/**
+		True for a colour glyph (an emoji from a `FontFallback`): its tile holds colours, not a
+		distance field or coverage, and `Text` draws it untinted on a separate layer. Copied by `clone()`.
+	**/
+	public var isColor : Bool = false;
 
 	/**
 		Create a new font character.
@@ -87,6 +92,7 @@ class FontChar {
 	**/
 	public function clone() {
 		var c = new FontChar(t.clone(), width);
+		c.isColor = isColor;
 		// Clone entire kerning tree in case Font got resized.
 		var k = kerning;
 		if ( k != null ) {
@@ -102,6 +108,33 @@ class FontChar {
 		return c;
 	}
 
+}
+
+/**
+	Supplies glyphs missing from a `Font`, e.g. from system fonts. See `Font.fallback`.
+**/
+interface FontFallback {
+	/**
+		Returns a glyph for `code` suitable for `font` (matching its size), or `null` if unavailable.
+		The returned glyph is cached in the font's glyph list and is later scaled/offset together with the baked glyphs by `resizeTo`/`setOffset`.
+		A `null` result is NOT cached by the font, so implementations must remember misses themselves.
+	**/
+	function resolveGlyph( font : Font, code : Int ) : Null<FontChar>;
+}
+
+/**
+	A `FontFallback` that can also draw a whole cluster (`hxd.Charset.clusterEnd`) as one glyph: an
+	emoji sequence (skin tone, ZWJ family, flag, keycap) joined by the OS emoji font. `Font.getCluster`
+	uses it when `Font.fallback` implements it.
+**/
+interface ClusterFallback {
+	/**
+		Returns one glyph for all of `cluster` suitable for `font`, or `null` when it cannot be drawn as
+		one (the text then draws its parts). `emoji` is false for a text-style cluster (ending in
+		U+FE0E): resolve its first code point as a plain, non-colour glyph. The font caches both
+		results and scales/offsets glyphs with `resizeTo`/`setOffset`.
+	**/
+	function resolveCluster( font : Font, cluster : String, emoji : Bool ) : Null<FontChar>;
 }
 
 /**
@@ -184,6 +217,11 @@ class Font {
 		See `FontType.SignedDistanceField` for more details.
 	**/
 	public var type : FontType;
+
+	/**
+		Optional provider of glyphs missing from this font. Consulted after `charset.resolveChar`. Copied by `clone()`.
+	**/
+	public var fallback : Null<FontFallback>;
 	/**
 		Font charset allows to resolve specific char codes that are not directly present in glyph map as well as detect spaces.
 		Defaults to `hxd.Charset.getDefault()`.
@@ -196,6 +234,10 @@ class Font {
 	public var subFonts : Array<Font>;
 
 	var glyphs : Map<Int,FontChar>;
+	/** Clusters `fallback` drew as one glyph (`getCluster`), by their text. **/
+	var clusters : Map<String,FontChar>;
+	/** Clusters `fallback` could not draw as one glyph. **/
+	var clusterMisses : Map<String,Bool>;
 	var nullChar : FontChar;
 	var defaultChar : FontChar;
 	var initSize:Int;
@@ -213,6 +255,8 @@ class Font {
 		this.size = size;
 		this.initSize = size;
 		glyphs = new Map();
+		clusters = new Map();
+		clusterMisses = new Map();
 		defaultChar = nullChar = new FontChar(new Tile(null, 0, 0, 0, 0),0);
 		charset = hxd.Charset.getDefault();
 		if (name != null)
@@ -233,10 +277,67 @@ class Font {
 		var c = glyphs.get(code);
 		if( c == null ) {
 			c = charset.resolveChar(code, glyphs);
-			if( c == null )
-				c = code == "\r".code || code == "\n".code ? nullChar : defaultChar;
+			if( c == null ) {
+				if( code == "\r".code || code == "\n".code )
+					c = nullChar;
+				else {
+					if( fallback != null ) {
+						c = fallback.resolveGlyph(this, code);
+						if( c != null ) glyphs.set(code, c);
+					}
+					if( c == null ) c = defaultChar;
+				}
+			}
 		}
 		return c;
+	}
+
+	/**
+		Returns the glyph that draws the cluster `[start, end)` of `s` (see `hxd.Charset.clusterEnd`) as
+		one character, or `null` to draw its code points one by one ("the parts").
+
+		One code point: `getChar`. An emoji sequence (`hxd.Charset.isEmojiCluster`): always the
+		fallback's joined glyph, even when this font has the first character (a keycap "1️⃣" is not
+		the font's "1"). A text-style cluster (ending in U+FE0E): this font's glyph for its first
+		character, else the fallback's plain one. Any other cluster (ideographic variation selectors):
+		`getChar` of its first character. Fallback results and misses are cached.
+	**/
+	public function getCluster( s : String, start : Int, end : Int ) : Null<FontChar> {
+		var code = hxd.Charset.codeAt(s, start);
+		if( start + hxd.Charset.charLength(s, start, code) >= end )
+			return getChar(code);
+		var emoji = hxd.Charset.isEmojiCluster(s, start, end);
+		var textStyle = !emoji && StringTools.fastCodeAt(s, end - 1) == 0xFE0E;
+		if( !emoji && !textStyle )
+			return getChar(code);
+		if( textStyle ) {
+			var c = glyphs.get(code);
+			if( c == null ) c = charset.resolveChar(code, glyphs);
+			// glyphs also caches fallback glyphs, which are colour for a lone emoji
+			if( c != null && !c.isColor ) return c;
+		}
+		var cf : ClusterFallback = Std.isOfType(fallback, ClusterFallback) ? cast fallback : null;
+		if( cf == null ) return textStyle ? getChar(code) : null;
+		var key = s.substring(start, end);
+		var c = clusters.get(key);
+		if( c != null || clusterMisses.exists(key) ) return c;
+		c = cf.resolveCluster(this, key, emoji);
+		if( c == null ) clusterMisses.set(key, true) else clusters.set(key, c);
+		return c;
+	}
+
+	/**
+		Returns true if `code` can be drawn with a real glyph: present in the atlas, mapped by `charset`, or resolved by `fallback`.
+		May call `fallback.resolveGlyph` (which can rasterize and allocate atlas space) and caches the result, exactly like `getChar`.
+	**/
+	public function canDraw( code : Int ) : Bool {
+		if( glyphs.get(code) != null ) return true;
+		if( charset.resolveChar(code, glyphs) != null ) return true;
+		if( code == "\r".code || code == "\n".code || fallback == null ) return false;
+		var c = fallback.resolveGlyph(this, code);
+		if( c == null ) return false;
+		glyphs.set(code, c);
+		return true;
 	}
 
 	/**
@@ -250,6 +351,10 @@ class Font {
 		var dy = y - offsetY;
 		if( dx == 0 && dy == 0 ) return;
 		for( g in glyphs ) {
+			g.t.dx += dx;
+			g.t.dy += dy;
+		}
+		for( g in clusters ) {
 			g.t.dx += dx;
 			g.t.dy += dy;
 		}
@@ -270,6 +375,7 @@ class Font {
 		f.type = type;
 		f.offsetX = offsetX;
 		f.offsetY = offsetY;
+		f.fallback = fallback;
 		for( g in glyphs.keys() ) {
 			var c = glyphs.get(g);
 			var c2 = c.clone();
@@ -277,6 +383,10 @@ class Font {
 				f.defaultChar = c2;
 			f.glyphs.set(g, c2);
 		}
+		for( k in clusters.keys() )
+			f.clusters.set(k, clusters.get(k).clone());
+		for( k in clusterMisses.keys() )
+			f.clusterMisses.set(k, true);
 		return f;
 	}
 
@@ -290,6 +400,12 @@ class Font {
 	**/
 	public function resizeTo( size : Int ) {
 		var ratio = size / this.size;
+		for( c in clusters ) {
+			c.width *= ratio;
+			c.t.scaleToSize(c.t.width * ratio, c.t.height * ratio);
+			c.t.dx *= ratio;
+			c.t.dy *= ratio;
+		}
 		for( c in glyphs ) {
 			c.width *= ratio;
 			c.t.scaleToSize(c.t.width * ratio, c.t.height * ratio);
@@ -309,6 +425,8 @@ class Font {
 	/**
 		Checks if character is present in glyph list.
 		Compared to `getChar` does not check if it exists through `Font.charset`.
+		Returns true for any glyph in the glyph list, including glyphs a `fallback` already resolved and cached.
+		To ask whether the font can draw a character at all, use `canDraw`.
 		@param code The charcode to look up.
 	**/
 	public function hasChar( code : Int ) : Bool {

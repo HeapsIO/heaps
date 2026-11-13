@@ -197,6 +197,8 @@ class Interactive extends Object implements hxd.SceneEvents.Interactive {
 			onCheck(e);
 		case ETextInput:
 			onTextInput(e);
+		case ETextComposition:
+			onTextComposition(e);
 		}
 	}
 
@@ -290,6 +292,9 @@ class Interactive extends Object implements hxd.SceneEvents.Interactive {
 	}
 
 	public dynamic function onTextInput( e : hxd.Event ) {
+	}
+
+	public dynamic function onTextComposition( e : hxd.Event ) {
 	}
 
 }

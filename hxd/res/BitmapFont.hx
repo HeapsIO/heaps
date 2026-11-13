@@ -7,6 +7,18 @@ class BitmapFont extends Resource {
 	var font : h2d.Font;
 	var sdfFonts:Array<h2d.Font>;
 
+	static var fallbacks : Map<String, h2d.Font.FontFallback> = new Map();
+
+	/**
+		Registers (or clears, with `null`) a glyph fallback for fonts loaded from the resource at `path`.
+		It is applied to `toFont()` and `toSdfFont()` results on every call, including cached ones.
+		Passing `null` stops future `toFont`/`toSdfFont` returns from carrying a fallback, but glyphs already resolved stay cached in those fonts.
+		The fallback's glyph tiles must outlive the fonts that use them.
+	**/
+	public static function registerFallback( path : String, fb : Null<h2d.Font.FontFallback> ) : Void {
+		if( fb == null ) fallbacks.remove(path) else fallbacks.set(path, fb);
+	}
+
 	public function new( entry ) {
 		super(entry);
 		this.loader = hxd.res.Loader.currentInstance;
@@ -21,6 +33,7 @@ class BitmapFont extends Resource {
 		if ( font == null ) {
 			font = hxd.fmt.bfnt.FontParser.parse(entry.getBytes(), entry.path, resolveTile);
 		}
+		font.fallback = fallbacks.get(entry.path);
 		return font;
 	}
 
@@ -42,6 +55,7 @@ class BitmapFont extends Resource {
 			switch ( font.type ) {
 				case SignedDistanceField(fchannel, falphaCutoff, fsmoothing):
 					if (font.size == size && fchannel == channel && falphaCutoff == alphaCutoff && fsmoothing == smoothing ) {
+						font.fallback = fallbacks.get(entry.path);
 						return font;
 					}
 				default:
@@ -51,6 +65,7 @@ class BitmapFont extends Resource {
 		font.type = h2d.Font.FontType.SignedDistanceField(channel, alphaCutoff, smoothing);
 		font.resizeTo(size);
 		sdfFonts.push(font);
+		font.fallback = fallbacks.get(entry.path);
 		return font;
 	}
 
