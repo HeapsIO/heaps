@@ -62,6 +62,9 @@ class Window {
 	var pointerLockTarget : js.html.Element;
 
 	var canvas : js.html.CanvasElement;
+	var customCanvas : Bool;
+	// window of the canvas when the window events were bound
+	var boundWindow : js.html.Window;
 	var element : js.html.EventTarget;
 	var canvasPos : { var width(default, never) : Float; var height(default, never) : Float; var left(default, never) : Float; var top(default, never) : Float; };
 
@@ -92,7 +95,7 @@ class Window {
 	var canLockMouse : Bool = true;
 
 	public function new( ?canvas : js.html.CanvasElement, ?globalEvents ) : Void {
-		var customCanvas = canvas != null;
+		customCanvas = canvas != null;
 		eventTargets = new List();
 		resizeEvents = new List();
 		dropTargets = new List();
@@ -118,18 +121,11 @@ class Window {
 		}
 
 		focused = globalEvents;
-		element = globalEvents ? js.Browser.window : canvas;
+		element = globalEvents ? canvas.ownerDocument.defaultView : canvas;
 		canvasPos = canvas.getBoundingClientRect();
-		// add mousemove on window (track mouse even when outside of component)
-		// unless we're having a custom canvas (prevent leaking the listener)
 		if( customCanvas ) {
 			canvas.addEventListener("mousemove", onMouseMove);
 		}
-
-		else {
-			js.Browser.window.addEventListener("mousemove", onMouseMove);
-		}
-
 
 		element.addEventListener("mousedown", onMouseDown);
 		element.addEventListener("mouseup", onMouseUp);
@@ -146,17 +142,7 @@ class Window {
 		element.addEventListener("pointerdown", onPointerDown);
 		element.addEventListener("pointerup", onPointerUp);
 
-		if ((js.Browser.window:Dynamic).ResizeObserver != null) {
-			// Modern solution for canvas resize monitoring, supported in most browsers, but not Haxe API.
-			observer = js.Syntax.construct("ResizeObserver", function(e) {
-				checkResize();
-			});
-			observer.observe(canvas);
-		}
-
-		js.Browser.window.addEventListener("resize", checkResize);
-
-		js.Browser.document.addEventListener("pointerlockchange", onPointerLockChange);
+		bindWindowEvents();
 
 		canvas.addEventListener("contextmenu", function(e){
 			e.stopPropagation();
@@ -197,17 +183,51 @@ class Window {
 		}
 	}
 
+	function bindWindowEvents() {
+		boundWindow = canvas.ownerDocument.defaultView;
+
+		// add mousemove on window (track mouse even when outside of component)
+		// unless we're having a custom canvas (prevent leaking the listener)
+		if( !customCanvas )
+			boundWindow.addEventListener("mousemove", onMouseMove);
+
+		if ((boundWindow:Dynamic).ResizeObserver != null) {
+			// Modern solution for canvas resize monitoring, supported in most browsers, but not Haxe API.
+			observer = js.Syntax.construct((boundWindow:Dynamic).ResizeObserver, function(e) {
+				checkResize();
+			});
+			observer.observe(canvas);
+		}
+
+		boundWindow.addEventListener("resize", checkResize);
+		boundWindow.document.addEventListener("pointerlockchange", onPointerLockChange);
+	}
+
+	function unbindWindowEvents() {
+		boundWindow.removeEventListener("resize", checkResize);
+		boundWindow.removeEventListener("mousemove", onMouseMove);
+		boundWindow.document.removeEventListener("pointerlockchange", onPointerLockChange);
+		if (observer != null) {
+			observer.disconnect();
+			observer = null;
+		}
+	}
+
+	/**
+		Binds the window events to the current window of the canvas, after it moved to another document.
+	**/
+	function checkCanvasWindow() {
+		var win = canvas.ownerDocument.defaultView;
+		if( win == boundWindow || win == null )
+			return;
+		unbindWindowEvents();
+		bindWindowEvents();
+		checkResize();
+	}
+
 	public function dispose() {
 		if( inst == this ) inst = null;
-		js.Browser.window.removeEventListener("resize", checkResize);
-		js.Browser.window.removeEventListener("mousemove", onMouseMove);
-		js.Browser.document.removeEventListener("pointerlockchange", onPointerLockChange);
-		if ((js.Browser.window:Dynamic).ResizeObserver != null) {
-			if (observer != null) {
-				observer.disconnect();
-				observer = null;
-			}
-		}
+		unbindWindowEvents();
 	}
 
 	public function setIcon(icon: hxd.BitmapData) : Void {
@@ -298,7 +318,7 @@ class Window {
 
 	@:deprecated("Use the displayMode property instead")
 	public function setFullScreen( v : Bool ) : Void {
-		var doc = js.Browser.document;
+		var doc = canvas.ownerDocument;
 		var elt : Dynamic = doc.documentElement;
 		if( (doc.fullscreenElement == elt) == v )
 			return;
@@ -341,7 +361,7 @@ class Window {
 	}
 
 	function getPixelRatio() {
-		return useScreenPixels ? Math.min(js.Browser.window.devicePixelRatio, maxPixelRatio) : 1;
+		return useScreenPixels ? Math.min(boundWindow.devicePixelRatio, maxPixelRatio) : 1;
 	}
 
 	function get_x() : Int {
@@ -592,7 +612,7 @@ class Window {
 	function get_isFocused() : Bool return focused;
 
 	function get_displayMode() : DisplayMode {
-		var doc = js.Browser.document;
+		var doc = canvas.ownerDocument;
 		if ( doc.fullscreenElement != null) {
 			return Borderless;
 		}
@@ -603,7 +623,7 @@ class Window {
 	function set_displayMode( m : DisplayMode ) : DisplayMode {
 		if( !js.Browser.supported )
 			return m;
-		var doc = js.Browser.document;
+		var doc = canvas.ownerDocument;
 		var elt : Dynamic = doc.documentElement;
 		var fullscreen = m != Windowed;
 		if( (doc.fullscreenElement == elt) == fullscreen )
@@ -617,9 +637,9 @@ class Window {
 	}
 
 	function get_title() : String {
-		return js.Browser.document.title;
+		return canvas.ownerDocument.title;
 	}
 	function set_title( t : String ) : String {
-		return js.Browser.document.title = t;
+		return canvas.ownerDocument.title = t;
 	}
 }
