@@ -70,6 +70,7 @@ class Printer {
 				case Flat: "flat";
 				case NoVar: "noVar";
 				case Enum(path, _): "enum(" + path + ")";
+				case Category(n): "category('" + n + "')";
 				}) + " ");
 		}
 		if( v.kind != defKind )
