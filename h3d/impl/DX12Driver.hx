@@ -829,6 +829,7 @@ class DX12Driver extends h3d.impl.Driver {
 	public static var generation(default, null) = 0;
 	public static var DEBUG = false; // requires dxil.dll when set to true
 	public static var DRED = false;
+	public static var GPU_VALIDATION = false; // requires DEBUG
 	public static var SUPPRESSED_MESSAGE_IDS : Array<Int> = [];
 
 	@:allow(h3d.impl) static function allocCheck<T>( f : Void -> T ) {
@@ -922,6 +923,8 @@ class DX12Driver extends h3d.impl.Driver {
 			flags.set(DriverInitFlag.DEBUG);
 		if( DRED )
 			flags.set(DriverInitFlag.DRED);
+		if( GPU_VALIDATION )
+			flags.set(DriverInitFlag.GPU_BASED_VALIDATION);
 		driver = Driver.create(window, flags, DEVICE_NAME);
 		if( DEBUG ) suppressDebugMessages();
 		frames = [];
