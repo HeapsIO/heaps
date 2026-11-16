@@ -37,29 +37,36 @@ class ModelCache {
 		var path = res.entry.path;
 		var m = models.get(path);
 		if( m == null ) {
+			function onChange() {
+				// Clear this anim cache so the anim and it's props are reloaded the next time they are requested
+				var old = models.get(path);
+				if( old != null )
+					for( t in old.textures )
+						t.dispose();
+				models.remove(path);
+				for( k in [for( k in anims.keys() ) k] )
+					if( k == path || StringTools.startsWith(k, path + ":") )
+						anims.remove(k);
+				onModelChanged(res, m.lib);
+			}
 			var props = try {
 				var parts = path.split(".");
 				parts.pop();
 				parts.push("props");
 				var propsRes = hxd.res.Loader.currentInstance.load(parts.join("."));
-				propsRes.watch(() -> {
-					// Clear this anim cache so the anim and it's props are reloaded the next time they are requested
-					var old = models.get(path);
-					if( old != null )
-						for( t in old.textures )
-							t.dispose();
-					models.remove(path);
-					anims.remove(path);
-				});
+				propsRes.watch(onChange);
 				haxe.Json.parse(propsRes.toText());
 			} catch( e : hxd.res.NotFound )
 				null;
 			m = { lib : res.toHmd(), props : props, col : null, textures : new Map(), lastTime : 0. };
 			models.set(path, m);
+			res.watch(onChange);
 		}
 		m.lastTime = haxe.Timer.stamp();
 		return m;
 	}
+
+	public dynamic function onModelChanged( res : hxd.res.Model, prevLib : hxd.fmt.hmd.Library ) { }
 
 	public function loadModel( res : hxd.res.Model ) : h3d.scene.Object {
 		var m = loadLibraryData(res);
@@ -172,6 +179,7 @@ class ModelCache {
 				if( usedPrim )
 					m.lastTime = now;
 				else {
+					m.lib.resource.watch(null);
 					models.remove(m.lib.resource.entry.path);
 					for( t in m.textures )
 						t.dispose();
