@@ -828,6 +828,7 @@ class DX12Driver extends h3d.impl.Driver {
 	public static var inst(default, null) : DX12Driver;
 	public static var generation(default, null) = 0;
 	public static var DEBUG = false; // requires dxil.dll when set to true
+	public static var DRED = false;
 	public static var SUPPRESSED_MESSAGE_IDS : Array<Int> = [];
 
 	@:allow(h3d.impl) static function allocCheck<T>( f : Void -> T ) {
@@ -917,9 +918,10 @@ class DX12Driver extends h3d.impl.Driver {
 		psoConfigCache?.load();
 
 		var flags = new DriverInitFlags();
-		if( DEBUG ) {
+		if( DEBUG )
 			flags.set(DriverInitFlag.DEBUG);
-		}
+		if( DRED )
+			flags.set(DriverInitFlag.DRED);
 		driver = Driver.create(window, flags, DEVICE_NAME);
 		if( DEBUG ) suppressDebugMessages();
 		frames = [];
