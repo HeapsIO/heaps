@@ -36,7 +36,10 @@ class CascadeShadowMap extends Shadows {
 	public var cascade(default, set) = 1;
 	public var highPrecision : Bool = false;
 	public function set_cascade(v) {
+		if ( v == cascade && lightCameras != null )
+			return cascade;
 		cascade = v;
+		cullingFrame = -1;
 		lightCameras = [];
 		for ( i in 0...cascade )
 			lightCameras.push({ view : new h3d.Matrix(), proj : new h3d.Matrix(), viewProj : new h3d.Matrix(), scale : new h3d.Vector4(), offset : new h3d.Vector4(), orthoBounds : new h3d.col.Bounds() });
