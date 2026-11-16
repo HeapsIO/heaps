@@ -885,11 +885,14 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	function checkSM6_6() : Bool {
-		var hasSM6_6 = false;
+		var hasSM6_6 = true;
+		#if (hldx >= version("2.0.0"))
 		var shaderModel = new hl.Bytes(4);
-		shaderModel.setI32(0, HIGHEST_SHADER_MODEL);
-		Driver.checkFeatureSupport(SHADER_MODEL, shaderModel, 4);
+		shaderModel.setI32(0, SHADER_MODEL_6_6);
+		if( !Driver.checkFeatureSupport(SHADER_MODEL, shaderModel, 4) )
+			return false;
 		hasSM6_6 = cast(SHADER_MODEL_6_6, Int) <= shaderModel.getI32(0);
+		#end
 		return hasSM6_6;
 	}
 
