@@ -97,7 +97,7 @@ enum TextureFlags {
 	**/
 	IsNPOT;
 	/**
-		Don't initialy allocate the texture memory.
+		Don't initially allocate the texture memory.
 	**/
 	NoAlloc;
 	/**
