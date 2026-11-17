@@ -18,6 +18,7 @@ enum abstract ResState(Int) to Int {
 	var DEPTH_READ = 8;
 	var PRESENT = 9;
 	var TRANSFER_GENERAL = 10;
+	var DEPTH_READ_STENCIL_WRITE = 11;
 }
 
 class ResourceData {
@@ -1101,7 +1102,7 @@ class VulkanDriver extends h3d.impl.Driver {
 				throw "Shader change detected";
 		}
 		t.lastFrame = frameCount;
-		if( !(t.t.isDepth && t.t.state == DEPTH_READ) )
+		if( !(t.t.isDepth && (t.t.state == DEPTH_READ || t.t.state == DEPTH_READ_STENCIL_WRITE)) )
 			transition(t.t, SHADER_READ);
 	}
 
@@ -1687,6 +1688,7 @@ class VulkanDriver extends h3d.impl.Driver {
 		PipelineStage.EARLY_FRAGMENT_TESTS | PipelineStage.LATE_FRAGMENT_TESTS | PipelineStage.VERTEX_SHADER | PipelineStage.FRAGMENT_SHADER | PipelineStage.COMPUTE_SHADER,
 		PipelineStage.BOTTOM_OF_PIPE,
 		PipelineStage.TRANSFER,
+		PipelineStage.EARLY_FRAGMENT_TESTS | PipelineStage.LATE_FRAGMENT_TESTS | PipelineStage.VERTEX_SHADER | PipelineStage.FRAGMENT_SHADER | PipelineStage.COMPUTE_SHADER,
 	];
 	static var ACCESS : Array<Int> = [
 		Access.NONE,
@@ -1700,6 +1702,7 @@ class VulkanDriver extends h3d.impl.Driver {
 		Access.DEPTH_STENCIL_ATTACHMENT_READ | Access.SHADER_READ,
 		Access.NONE,
 		Access.TRANSFER_READ | Access.TRANSFER_WRITE,
+		Access.DEPTH_STENCIL_ATTACHMENT_READ | Access.DEPTH_STENCIL_ATTACHMENT_WRITE | Access.SHADER_READ,
 	];
 	static var LAYOUTS : Array<Int> = [
 		ImageLayout.UNDEFINED,
@@ -1713,7 +1716,9 @@ class VulkanDriver extends h3d.impl.Driver {
 		ImageLayout.DEPTH_STENCIL_READ_ONLY_OPTIMAL,
 		ImageLayout.PRESENT_SRC,
 		ImageLayout.GENERAL,
+		DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL,
 	];
+	static inline var DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL = 1000117000;
 
 	static inline function layoutOf( td : TextureData, s : ResState ) : ImageLayout {
 		if( s == SHADER_READ && td.isDepth ) return DEPTH_STENCIL_READ_ONLY_OPTIMAL;
@@ -1880,15 +1885,19 @@ class VulkanDriver extends h3d.impl.Driver {
 		setRenderZone(0, 0, -1, -1);
 	}
 
-	function setupDepth( depth : h3d.mat.Texture, readOnly : Bool, layer : Int ) {
+	function setupDepth( depth : h3d.mat.Texture, binding : h3d.Engine.DepthBinding, layer : Int ) {
 		if( depth.t == null ) depth.alloc();
 		depth.lastFrame = frameCount;
-		if( readOnly ) {
-			if( depth.t.state != DEPTH_READ ) transition(depth.t, DEPTH_READ);
-		} else
-			transition(depth.t, DEPTH_WRITE);
+		if( binding == ReadOnlyDepth && !depth.t.hasStencil )
+			binding = ReadOnly;
+		var state = switch( binding ) {
+		case ReadOnly: DEPTH_READ;
+		case ReadOnlyDepth: DEPTH_READ_STENCIL_WRITE;
+		default: DEPTH_WRITE;
+		}
+		transition(depth.t, state);
 		rtDepthView = getDepthView(depth, layer);
-		rtDepthLayout = readOnly ? DEPTH_STENCIL_READ_ONLY_OPTIMAL : DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+		rtDepthLayout = cast LAYOUTS[state];
 		rtHasStencil = depth.t.hasStencil;
 	}
 
@@ -1932,7 +1941,7 @@ class VulkanDriver extends h3d.impl.Driver {
 		if( depthEnabled ) {
 			if( depthBuffer.width != t.width || depthBuffer.height != t.height )
 				throw "Depth size mismatch";
-			setupDepth(depthBuffer, depthBinding == ReadOnly, 0);
+			setupDepth(depthBuffer, depthBinding, 0);
 		}
 
 		while( currentRenderTargets.length > 0 ) currentRenderTargets.pop();
@@ -1967,7 +1976,7 @@ class VulkanDriver extends h3d.impl.Driver {
 		if( depthEnabled ) {
 			if( depthBuffer.width != t0.width || depthBuffer.height != t0.height )
 				throw "Depth size mismatch";
-			setupDepth(depthBuffer, depthBinding == ReadOnly, 0);
+			setupDepth(depthBuffer, depthBinding, 0);
 		}
 		initViewport(t0.width, t0.height);
 		pipelineBuilder.setRenderTargets(textures, depthEnabled ? depthBuffer : null);
@@ -1980,7 +1989,7 @@ class VulkanDriver extends h3d.impl.Driver {
 		while( currentRenderTargets.length > 0 ) currentRenderTargets.pop();
 		rtColorTextures.resize(0);
 		rtColorCount = 0;
-		setupDepth(depthBuffer, false, layer);
+		setupDepth(depthBuffer, ReadWrite, layer);
 		initViewport(depthBuffer.width, depthBuffer.height);
 		pipelineBuilder.setDepth(depthBuffer);
 	}
@@ -2471,6 +2480,7 @@ class VulkanDriver extends h3d.impl.Driver {
 		var pass = matPass;
 		var hasDepth = rtDepthView != null;
 		var writable = hasDepth && rtDepthLayout == DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+		var stencilWritable = writable || (hasDepth && (rtDepthLayout:Int) == DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL);
 		var cull = pass.wireframe ? 0 : CULL[pass.culling.getIndex()];
 		if( cull != curCull ) {
 			curCull = cull;
@@ -2509,10 +2519,10 @@ class VulkanDriver extends h3d.impl.Driver {
 		if( stencilTest == 0 )
 			return;
 		var st = matStencil;
-		var ops = (st.opBits << 1) | (writable ? 0 : 1);
+		var ops = (st.opBits << 1) | (stencilWritable ? 0 : 1);
 		if( ops != curStencilOps ) {
 			curStencilOps = ops;
-			if( writable ) {
+			if( stencilWritable ) {
 				Vk.cmdSetStencilOp(cmd, FRONT, STENCIL_OP[st.frontSTfail.getIndex()], STENCIL_OP[st.frontPass.getIndex()], STENCIL_OP[st.frontDPfail.getIndex()], COMP[st.frontTest.getIndex()]);
 				Vk.cmdSetStencilOp(cmd, BACK, STENCIL_OP[st.backSTfail.getIndex()], STENCIL_OP[st.backPass.getIndex()], STENCIL_OP[st.backDPfail.getIndex()], COMP[st.backTest.getIndex()]);
 			} else {
@@ -2816,10 +2826,11 @@ class VulkanDriver extends h3d.impl.Driver {
 					view = getUAVView(t, dim, arr);
 					layout = GENERAL;
 				default:
-					if( !(t.t.isDepth && t.t.state == DEPTH_READ) )
+					var depthStencilWrite = t.t.isDepth && t.t.state == DEPTH_READ_STENCIL_WRITE;
+					if( !(t.t.isDepth && t.t.state == DEPTH_READ) && !depthStencilWrite )
 						transition(t.t, SHADER_READ);
 					view = getSRV(t, pt.match(TSampler(_, true)));
-					layout = layoutOf(t.t, SHADER_READ);
+					layout = layoutOf(t.t, depthStencilWrite ? DEPTH_READ_STENCIL_WRITE : SHADER_READ);
 					var smp = sh.imageInfos[regs.samplerSlots[i]];
 					var s = getSampler(t);
 					if( smp.sampler != s ) {

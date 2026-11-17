@@ -409,6 +409,7 @@ class ResourceData {
 	public var res : GpuResource;
 	public var state : ResourceState;
 	public var targetState : ResourceState;
+	public var stencilWrite = false;
 	public var generation = DX12Driver.generation;
 	public function new() {
 	}
@@ -1176,7 +1177,7 @@ class DX12Driver extends h3d.impl.Driver {
 				frame.commandList.clearRenderTargetView(tmp.renderTargets[i], clear);
 			}
 			if ( needRebind )
-				frame.commandList.omSetRenderTargets(count, tmp.renderTargets, true, depthEnabled ? getDepthViewFromTexture(currentRenderTargets[0], currentRenderTargets[0].depthBuffer.t.state & DEPTH_WRITE == COMMON ) : null);
+				frame.commandList.omSetRenderTargets(count, tmp.renderTargets, true, depthEnabled ? getDepthViewFromTexture(currentRenderTargets[0], currentDepthBinding(currentRenderTargets[0].depthBuffer.t)) : null);
 			// clear backbuffer
 			if( count == 0 )
 				frame.commandList.clearRenderTargetView(frame.backBufferView, clear);
@@ -1326,6 +1327,10 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	function transition( res : ResourceData, to : ResourceState ) {
+		if( to != COMMON && res.targetState & DEPTH_READ != COMMON && res.targetState & to == to )
+			return;
+		if( res.stencilWrite )
+			setStencilWrite(res, false);
 		if( res.targetState == to )
 			return;
 
@@ -1349,6 +1354,20 @@ class DX12Driver extends h3d.impl.Driver {
 		if (res.state == res.targetState)
 			tmp.resourcesToTransition[tmp.barrierCount++] = res;
 		res.targetState = to;
+	}
+
+	function setStencilWrite( res : ResourceData, b : Bool ) {
+		if( res.stencilWrite == b )
+			return;
+		if( b ) flushTransitions();
+		var sb = tmp.barrier;
+		@:privateAccess sb.type = TRANSITION;
+		sb.resource = res.res;
+		sb.subResource = 1;
+		sb.stateBefore = b ? res.state : DEPTH_WRITE;
+		sb.stateAfter = b ? DEPTH_WRITE : res.state;
+		frame.commandList.resourceBarrier(sb);
+		res.stencilWrite = b;
 	}
 
 	function flushTransitions() {
@@ -1382,7 +1401,11 @@ class DX12Driver extends h3d.impl.Driver {
 			frame.commandList.resourceBarriers(tmp.barriers, totalBarrier);
 	}
 
-	function getDepthViewFromTexture( tex : h3d.mat.Texture, readOnly : Bool ) {
+	function currentDepthBinding( t : ResourceData ) : h3d.Engine.DepthBinding {
+		return t.stencilWrite ? ReadOnlyDepth : t.state & DEPTH_WRITE == COMMON ? ReadOnly : ReadWrite;
+	}
+
+	function getDepthViewFromTexture( tex : h3d.mat.Texture, binding : h3d.Engine.DepthBinding ) {
 		if ( tex != null && tex.depthBuffer == null ) {
 			depthEnabled = false;
 			return null;
@@ -1393,33 +1416,41 @@ class DX12Driver extends h3d.impl.Driver {
 			if( w != tex.width || h != tex.height )
 				throw "Depth size mismatch";
 		}
-		return getDepthView(tex == null ? null : tex.depthBuffer, readOnly);
+		return getDepthView(tex == null ? null : tex.depthBuffer, binding);
 	}
 
-	function getDepthView( depthBuffer : h3d.mat.Texture, readOnly : Bool, layer = 0 ) {
+	function getDepthView( depthBuffer : h3d.mat.Texture, binding : h3d.Engine.DepthBinding, layer = 0 ) {
 		if ( depthBuffer == null )
 			depthBuffer = getDefaultDepthBuffer();
 		if( depthBuffer.t == null ) depthBuffer.alloc();
+		var isArray = depthBuffer.flags.has(IsArray) || depthBuffer.flags.has(Cube);
+		var hasStencil = depthBuffer.format == Depth24Stencil8 || depthBuffer.format == Depth32Stencil8;
+		var stencilWrite = binding == ReadOnlyDepth && hasStencil && !isArray;
+		var readOnly = binding == ReadOnly || (binding == ReadOnlyDepth && !stencilWrite);
 		var depthView = depthStenciViews.alloc(1);
 		var viewDesc = tmp.dstStencilViewDesc;
 		viewDesc.arraySize = 1;
 		viewDesc.mipSlice = 0;
 		viewDesc.firstArraySlice = layer;
 		viewDesc.format = toDxgiDepthFormat(depthBuffer.format);
-		viewDesc.viewDimension = depthBuffer.flags.has(IsArray) || depthBuffer.flags.has(Cube) ? TEXTURE2DARRAY : TEXTURE2D;
-		if ( readOnly ) {
+		viewDesc.viewDimension = isArray ? TEXTURE2DARRAY : TEXTURE2D;
+		viewDesc.flags = new haxe.EnumFlags();
+		if ( readOnly || stencilWrite )
 			viewDesc.flags.set(READ_ONLY_DEPTH);
+		if ( readOnly )
 			viewDesc.flags.set(READ_ONLY_STENCIL);
-		} else {
-			viewDesc.flags = new haxe.EnumFlags();
-		}
 		Driver.createDepthStencilView(depthBuffer.t.res, viewDesc, depthView);
 		var depths = tmp.depthStencils;
 		depths[0] = depthView;
 		depthEnabled = true;
-		var acceptedState = readOnly ? DEPTH_READ | DEPTH_WRITE : DEPTH_WRITE;
-		if ( depthBuffer.t.state & acceptedState == COMMON )
-			transition(depthBuffer.t, readOnly ? DEPTH_READ : DEPTH_WRITE);
+		if( !stencilWrite )
+			setStencilWrite(depthBuffer.t, false);
+		if( readOnly || stencilWrite )
+			transition(depthBuffer.t, DEPTH_READ | ALL_SHADER_RESOURCE);
+		else if ( depthBuffer.t.state & DEPTH_WRITE == COMMON )
+			transition(depthBuffer.t, DEPTH_WRITE);
+		if( stencilWrite )
+			setStencilWrite(depthBuffer.t, true);
 		return depths;
 	}
 
@@ -1495,7 +1526,7 @@ class DX12Driver extends h3d.impl.Driver {
 			flushTransitions();
 			frame.commandList.clearRenderTargetView(tmp.renderTargets[0], clear);
 		}
-		frame.commandList.omSetRenderTargets(1, tmp.renderTargets, true, depthEnabled ? getDepthViewFromTexture(tex, depthBinding == ReadOnly ) : null);
+		frame.commandList.omSetRenderTargets(1, tmp.renderTargets, true, depthEnabled ? getDepthViewFromTexture(tex, depthBinding) : null);
 
 		while( currentRenderTargets.length > 0 ) currentRenderTargets.pop();
 		if( tex != null ) currentRenderTargets.push(tex);
@@ -1560,7 +1591,7 @@ class DX12Driver extends h3d.impl.Driver {
 				frame.commandList.clearRenderTargetView(tmp.renderTargets[i], clear);
 			}
 		}
-		frame.commandList.omSetRenderTargets(textures.length, tmp.renderTargets, true, depthEnabled ? getDepthViewFromTexture(t0, depthBinding == ReadOnly) : null);
+		frame.commandList.omSetRenderTargets(textures.length, tmp.renderTargets, true, depthEnabled ? getDepthViewFromTexture(t0, depthBinding) : null);
 		initViewport(t0.width, t0.height);
 
 		var depthBuffer = t0 == null ? defaultDepth : t0.depthBuffer;
@@ -1571,7 +1602,7 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	override function setDepth(depthBuffer : h3d.mat.Texture, layer = 0) {
-		var view = getDepthView(depthBuffer, false, layer);
+		var view = getDepthView(depthBuffer, ReadWrite, layer);
 		depthEnabled = true;
 		frame.commandList.omSetRenderTargets(0, null, true, view);
 		markUsed(depthBuffer);

@@ -34,6 +34,7 @@ private typedef ResCache = Map<{},Dynamic>;
 enum DepthBinding {
 	ReadWrite;
 	ReadOnly;
+	ReadOnlyDepth;
 	DepthOnly;
 	NotBound;
 }

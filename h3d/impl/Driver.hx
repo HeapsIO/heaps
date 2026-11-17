@@ -37,7 +37,7 @@ typedef Query = h3d.impl.DX12Driver.QueryData;
 typedef DriverImpl = DX12Driver;
 #elseif hldx
 typedef GPUBuffer = dx.Resource;
-typedef Texture = { res : dx.Resource, view : dx.Driver.ShaderResourceView, ?depthView : dx.Driver.DepthStencilView, ?readOnlyDepthView : dx.Driver.DepthStencilView, rt : Array<dx.Driver.RenderTargetView>, ?views : Array<dx.Driver.ShaderResourceView> };
+typedef Texture = { res : dx.Resource, view : dx.Driver.ShaderResourceView, ?depthView : dx.Driver.DepthStencilView, ?readOnlyDepthView : dx.Driver.DepthStencilView, ?writableStencilView : dx.Driver.DepthStencilView, rt : Array<dx.Driver.RenderTargetView>, ?views : Array<dx.Driver.ShaderResourceView> };
 typedef Query = {};
 typedef DriverImpl = Driver;
 #elseif usesys

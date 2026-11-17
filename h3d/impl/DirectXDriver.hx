@@ -204,6 +204,7 @@ class DirectXDriver extends h3d.impl.Driver {
 		if( defaultDepth != null ) {
 			defaultDepth.depthView.release();
 			defaultDepth.readOnlyDepthView.release();
+			if( defaultDepth.writableStencilView != null ) defaultDepth.writableStencilView.release();
 			defaultDepth.view.release();
 			defaultDepth.res.release();
 		}
@@ -227,8 +228,15 @@ class DirectXDriver extends h3d.impl.Driver {
 		depthDesc.bind = DepthStencil | ShaderResource;
 		var depth = Driver.createTexture2d(depthDesc);
 		if( depth == null ) throw "Failed to create depthBuffer";
+		#if (hldx >= version("2.0.0"))
+		var depthView = Driver.createDepthStencilView(depth,D24_UNORM_S8_UINT, None);
+		var readOnlyDepthView = Driver.createDepthStencilView(depth, D24_UNORM_S8_UINT, ReadOnlyDepth | ReadOnlyStencil);
+		var writableStencilView = Driver.createDepthStencilView(depth, D24_UNORM_S8_UINT, ReadOnlyDepth);
+		#else
 		var depthView = Driver.createDepthStencilView(depth,D24_UNORM_S8_UINT, false);
 		var readOnlyDepthView = Driver.createDepthStencilView(depth, D24_UNORM_S8_UINT, true);
+		var writableStencilView = null;
+		#end
 
 		var vdesc = new ShaderResourceViewDesc();
 		vdesc.format = R24_UNORM_X8_TYPELESS;
@@ -238,7 +246,7 @@ class DirectXDriver extends h3d.impl.Driver {
 		vdesc.count = -1;
 		var shaderView = Driver.createShaderResourceView(depth, vdesc);
 
-		defaultDepth = { res : depth, view : shaderView, depthView : depthView, readOnlyDepthView : readOnlyDepthView, rt : null };
+		defaultDepth = { res : depth, view : shaderView, depthView : depthView, readOnlyDepthView : readOnlyDepthView, writableStencilView : writableStencilView, rt : null };
 		@:privateAccess {
 			defaultDepthInst.t = defaultDepth;
 			defaultDepthInst.width = width;
@@ -358,9 +366,16 @@ class DirectXDriver extends h3d.impl.Driver {
 		vdesc.start = 0;
 		vdesc.count = -1;
 		var srv = Driver.createShaderResourceView(depth,vdesc);
+		#if (hldx >= version("2.0.0"))
+		var depthView = Driver.createDepthStencilView(depth,D24_UNORM_S8_UINT, None);
+		var readOnlyDepthView = Driver.createDepthStencilView(depth, D24_UNORM_S8_UINT, ReadOnlyDepth | ReadOnlyStencil);
+		var writableStencilView = Driver.createDepthStencilView(depth, D24_UNORM_S8_UINT, ReadOnlyDepth);
+		#else
 		var depthView = Driver.createDepthStencilView(depth,D24_UNORM_S8_UINT, false);
 		var readOnlyDepthView = Driver.createDepthStencilView(depth, D24_UNORM_S8_UINT, true);
-		return { res : depth, view : srv, depthView : depthView, readOnlyDepthView : readOnlyDepthView, rt : null };
+		var writableStencilView = null;
+		#end
+		return { res : depth, view : srv, depthView : depthView, readOnlyDepthView : readOnlyDepthView, writableStencilView : writableStencilView, rt : null };
 	}
 
 	override function captureRenderBuffer( pixels : hxd.Pixels ) {
@@ -475,6 +490,7 @@ class DirectXDriver extends h3d.impl.Driver {
 		if( tt.view != null ) tt.view.release();
 		if( tt.depthView != null ) tt.depthView.release();
 		if( tt.readOnlyDepthView != null ) tt.readOnlyDepthView.release();
+		if( tt.writableStencilView != null ) tt.writableStencilView.release();
 		if( tt.res != null ) tt.res.release();
 		if( tt.views != null )
 			for( v in tt.views )
@@ -979,6 +995,10 @@ class DirectXDriver extends h3d.impl.Driver {
 				null;
 			case ReadOnly:
 				currentDepth.readOnlyDepthView;
+			case ReadOnlyDepth if( currentDepth.writableStencilView != null ):
+				currentDepth.writableStencilView;
+			case ReadOnlyDepth:
+				currentDepth.readOnlyDepthView;
 			default:
 				currentDepth.depthView;
 			}
@@ -1058,6 +1078,10 @@ class DirectXDriver extends h3d.impl.Driver {
 			case NotBound:
 				null;
 			case ReadOnly:
+				currentDepth.readOnlyDepthView;
+			case ReadOnlyDepth if( currentDepth.writableStencilView != null ):
+				currentDepth.writableStencilView;
+			case ReadOnlyDepth:
 				currentDepth.readOnlyDepthView;
 			default:
 				currentDepth.depthView;
