@@ -146,6 +146,7 @@ class DxFrame {
 	public var toRelease : Array<Resource> = [];
 	#if (hldx >= version("2.0.0"))
 	public var placedToFree : Array<TextureData> = [];
+	public var aftermath : AftermathContext;
 	#end
 	public var texHandlesToRelease : Array<h3d.mat.TextureHandle> = [];
 	public var bufHandlesToRelease : Array<h3d.BufferHandle> = [];
@@ -829,6 +830,9 @@ class DX12Driver extends h3d.impl.Driver {
 	public static var generation(default, null) = 0;
 	public static var DEBUG = false; // requires dxil.dll when set to true
 	public static var DRED = false;
+	#if (hldx >= version("2.0.0"))
+	static var aftermathMarkers = false;
+	#end
 	public static var GPU_VALIDATION = false; // requires DEBUG
 	public static var SUPPRESSED_MESSAGE_IDS : Array<Int> = [];
 
@@ -1073,6 +1077,10 @@ class DX12Driver extends h3d.impl.Driver {
 		frame = frames[currentFrame];
 		frame.allocator.reset();
 		frame.commandList.reset(frame.allocator, null);
+		#if (hldx >= version("2.0.0"))
+		if( aftermathMarkers && frame.aftermath == null )
+			frame.aftermath = AftermathContext.createContext(frame.commandList);
+		#end
 
 		// if too much memory was allocated from last frame, let's dispose immediately
 		var forceDispose = (frame.bufferAllocator.getSize()/(1024*1024)) >= 512;
@@ -3486,11 +3494,19 @@ class DX12Driver extends h3d.impl.Driver {
 		#if heaps_debug_events
 		frame.commandList.pixBeginEvent(0, @:privateAccess name.bytes);
 		#end
+		#if (hldx >= version("2.0.0"))
+		if( frame.aftermath != null )
+			frame.aftermath.beginEvent(@:privateAccess name.bytes);
+		#end
 	}
 
 	override function endEvent() {
 		#if heaps_debug_events
 		frame.commandList.pixEndEvent();
+		#end
+		#if (hldx >= version("2.0.0"))
+		if( frame.aftermath != null )
+			frame.aftermath.endEvent();
 		#end
 	}
 
@@ -3828,6 +3844,9 @@ class DX12Driver extends h3d.impl.Driver {
 			}
 		}
 		Driver.setGpuCrashHandler(wrapper);
+		#if (hldx >= version("2.0.0"))
+		aftermathMarkers = true;
+		#end
 	}
 	#end
 }
