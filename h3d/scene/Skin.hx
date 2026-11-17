@@ -244,6 +244,9 @@ class Skin extends MultiMaterial {
 	var prevSplitBuffers : Array<h3d.Buffer>;
 
 	var forceJointsUpdateOnFrame : Int = -1;
+	var sceneX = 0.;
+	var sceneY = 0.;
+	var sceneZ = 0.;
 	var buffersDirty = true;
 	var jointsFrame : Int = -1;
 	var jointsUpdated : Bool;
@@ -540,6 +543,22 @@ class Skin extends MultiMaterial {
 				syncDyn = true;
 				accumulator -= FIXED_DT;
 			}
+		}
+
+		// dynamic joints are simulated in absolute space : follow the scene when it is moved (eg world rebasing)
+		var scene = getScene();
+		if( scene != null && (scene.x != sceneX || scene.y != sceneY || scene.z != sceneZ) ) {
+			for( jd in jointsData ) {
+				var d = Std.downcast(jd, DynamicJointData);
+				if( d != null && d.curTargetWorld != null ) {
+					d.curTargetWorld._41 += scene.x - sceneX;
+					d.curTargetWorld._42 += scene.y - sceneY;
+					d.curTargetWorld._43 += scene.z - sceneZ;
+				}
+			}
+			sceneX = scene.x;
+			sceneY = scene.y;
+			sceneZ = scene.z;
 		}
 
 		for (j in skinData.allJoints)
