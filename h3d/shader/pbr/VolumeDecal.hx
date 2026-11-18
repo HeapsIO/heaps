@@ -141,6 +141,7 @@ class DecalPBR extends BaseDecal {
 		@const var CENTERED : Bool;
 		@const var USE_ALBEDO : Bool;
 		@const var USE_NORMAL : Bool;
+		@const var SURFACE_NORMAL : Bool = true;
 
 		@param var albedoStrength : Float;
 		@param var normalStrength : Float;
@@ -193,16 +194,20 @@ class DecalPBR extends BaseDecal {
 			}
 
 			var worldNormal = vec3(0);
-			if(USE_NORMAL || USE_NORMAL_FADE)
+			if( USE_NORMAL_FADE || (USE_NORMAL && SURFACE_NORMAL) )
 				worldNormal = getWorldNormal();
 
 			if( USE_NORMAL ) {
-				var worldTangent = cross(worldNormal, vec3(0,1,0));
-				var normal = normalTexture.get(calculatedUV).rgba;
-				var n = worldNormal;
-				var nf = unpackNormal(normal);
-				var tanX = worldTangent.xyz.normalize();
-				var tanY = n.cross(tanX) * -1;
+				var m = modelView.mat3();
+				var n = (vec3(0,0,1) * m).normalize();
+				var tanX = (vec3(1,0,0) * m).normalize();
+				var tanY = (vec3(0,1,0) * m).normalize();
+				if( SURFACE_NORMAL ) {
+					n = worldNormal;
+					tanX = (tanX - n * n.dot(tanX)).normalize();
+					tanY = n.cross(tanX);
+				}
+				var nf = unpackNormal(normalTexture.get(calculatedUV));
 				transformedNormal = (nf.x * tanX + nf.y * tanY + nf.z * n).normalize();
 			}
 
