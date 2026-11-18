@@ -144,7 +144,7 @@ class DxFrame {
 	public var copyBufferCursor : Int = 0;
 	public var fenceValue : Int64;
 	public var toRelease : Array<Resource> = [];
-	#if (hldx >= version("2.0.0"))
+	#if ((hldx >= version("2.0.0")) || (js && dx12))
 	public var placedToFree : Array<TextureData> = [];
 	public var aftermath : AftermathContext;
 	#end
@@ -506,7 +506,7 @@ class TextureData extends ResourceData {
 	var cpuViewBits : Int = -1;
 	var cpuViewIndex : Int = -1;
 	var cpuViewsMap : Map<Int, Int>;
-	#if (hldx >= version("2.0.0"))
+	#if ((hldx >= version("2.0.0")) || (js && dx12))
 	public var page : TextureHeapPage;
 	public var pagePos : Int;
 	public var pageSize : Int;
@@ -556,7 +556,7 @@ class TextureData extends ResourceData {
 	}
 }
 
-#if (hldx >= version("2.0.0"))
+#if ((hldx >= version("2.0.0")) || (js && dx12))
 class TextureHeapPage {
 	public var heap(default,null) : Heap;
 	public var size(default,null) : Int;
@@ -744,7 +744,7 @@ class DX12Driver extends h3d.impl.Driver {
 	var window : dx.Window;
 	var contextLost = new Map<h3d.Engine, Void -> Void>();
 	var frames : Array<DxFrame>;
-	#if (hldx >= version("2.0.0"))
+	#if ((hldx >= version("2.0.0")) || (js && dx12))
 	var textureHeap : TextureHeapAllocator;
 	#end
 	var frame : DxFrame;
@@ -933,7 +933,7 @@ class DX12Driver extends h3d.impl.Driver {
 		driver = Driver.create(window, flags, DEVICE_NAME);
 		if( DEBUG ) suppressDebugMessages();
 		frames = [];
-		#if (hldx >= version("2.0.0"))
+		#if ((hldx >= version("2.0.0")) || (js && dx12))
 		textureHeap = TEXTURE_HEAP_SIZE > 0 ? new TextureHeapAllocator(TEXTURE_HEAP_SIZE) : null;
 		#end
 
@@ -1092,7 +1092,7 @@ class DX12Driver extends h3d.impl.Driver {
 		frame.copyBufferCursor = 0;
 		while( frame.toRelease.length > 0 )
 			frame.toRelease.pop().release();
-		#if (hldx >= version("2.0.0"))
+		#if ((hldx >= version("2.0.0")) || (js && dx12))
 		while( frame.placedToFree.length > 0 )
 			textureHeap.free(frame.placedToFree.pop());
 		#end
@@ -2570,7 +2570,7 @@ class DX12Driver extends h3d.impl.Driver {
 			desc.flags.set(ALLOW_UNORDERED_ACCESS);
 
 		td.state = td.targetState = isRT ? RENDER_TARGET : COMMON;
-		#if (hldx >= version("2.0.0"))
+		#if ((hldx >= version("2.0.0")) || (js && dx12))
 		var placedSize = textureHeap == null || isRT || t.flags.has(Writable) ? -1 : textureHeap.getAllocSize(t, desc);
 		if( placedSize > 0 )
 			td.res = textureHeap.alloc(td, desc, placedSize);
@@ -2640,12 +2640,12 @@ class DX12Driver extends h3d.impl.Driver {
 		if( frameFence.getValue() >= t.t.lastUseFence ) {
 			t.t.res.release();
 			t.t.res = null;
-			#if (hldx >= version("2.0.0"))
+			#if ((hldx >= version("2.0.0")) || (js && dx12))
 			textureHeap?.free(t.t);
 			#end
 		} else {
 			disposeResource(t.t);
-			#if (hldx >= version("2.0.0"))
+			#if ((hldx >= version("2.0.0")) || (js && dx12))
 			if( t.t.page != null ) frame.placedToFree.push(t.t);
 			#end
 		}
@@ -2808,7 +2808,7 @@ class DX12Driver extends h3d.impl.Driver {
 		flushTransitions();
 		// the previous allocation is used by the copy : always release it later
 		disposeResource(prev);
-		#if (hldx >= version("2.0.0"))
+		#if ((hldx >= version("2.0.0")) || (js && dx12))
 		if( prev.page != null ) frame.placedToFree.push(prev);
 		#end
 		disposeTextureViews(prev);
