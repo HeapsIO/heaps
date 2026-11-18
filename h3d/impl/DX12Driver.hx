@@ -146,6 +146,8 @@ class DxFrame {
 	public var toRelease : Array<Resource> = [];
 	#if ((hldx >= version("2.0.0")) || (js && dx12))
 	public var placedToFree : Array<TextureData> = [];
+	#end
+	#if (hldx >= version("2.0.0"))
 	public var aftermath : AftermathContext;
 	#end
 	public var texHandlesToRelease : Array<h3d.mat.TextureHandle> = [];
