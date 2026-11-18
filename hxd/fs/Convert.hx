@@ -646,9 +646,11 @@ class CompressIMG extends Convert {
 				args = ["-m", "1"].concat(args);
 			if (hasParam("alpha") && dstFmt == "BC1")
 				args = ["-at", ""+ Std.parseInt("" + getParam("alpha")) / 256.0].concat(args);
+			if (fix4x4) {
+				var info = getSrc().getInfo();
+				args = args.concat(["-w", "" + ((info.width + 3) & ~3), "-h", "" + ((info.height + 3) & ~3)]);
+			}
 			runTexconv(srcPath, dstPath, args);
-			if (fix4x4)
-				runTexconv(dstPath, dstPath, ["-fixbc4x4"]);
 			return cleanup();
 		}
 		var path = new haxe.io.Path(srcPath);
