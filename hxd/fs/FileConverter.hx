@@ -76,6 +76,14 @@ class FileConverter {
 		return conf;
 	}
 
+	static function sha1( bytes : haxe.io.Bytes ) : String {
+		#if nodejs
+		return js.node.Crypto.createHash("sha1").update(js.node.Buffer.hxFromBytes(bytes)).digest("hex");
+		#else
+		return haxe.crypto.Sha1.make(bytes).toHex();
+		#end
+	}
+
 	public function new(baseDir,configuration) {
 		this.baseDir = baseDir;
 		this.configuration = configuration;
@@ -291,7 +299,7 @@ class FileConverter {
 		if( cmd.paramsStr != null ) {
 			var paramsStr = cmd.paramsStr;
 			if( paramsStr.length > 40 )
-				paramsStr = haxe.crypto.Sha1.make(haxe.io.Bytes.ofString(paramsStr)).toHex();
+				paramsStr = sha1(haxe.io.Bytes.ofString(paramsStr));
 			outFile += "." + paramsStr;
 		}
 		var conv = null;
@@ -392,7 +400,7 @@ class FileConverter {
 			if( sameTimeAndSize )
 				match.hash; // not changed (time stamp)
 			else
-				haxe.crypto.Sha1.make(conv.srcBytes).toHex();
+				sha1(conv.srcBytes);
 		};
 		conv.hash = hash;
 		var localContext : Dynamic = null;
@@ -404,7 +412,7 @@ class FileConverter {
 			throw err;
 		}
 		conv.localParams = localParams;
-		var localParamsHash = localParams == null ? null : haxe.crypto.Sha1.make(haxe.io.Bytes.ofString(formatValue(localParams))).toHex();
+		var localParamsHash = localParams == null ? null : sha1(haxe.io.Bytes.ofString(formatValue(localParams)));
 		localContext = conv.getLocalContext();
 		var localContextJson = localContext == null ? null : haxe.Json.stringify(localContext);
 		if( alreadyGen && match.hash == hash && match.localParamsHash == localParamsHash ) {
