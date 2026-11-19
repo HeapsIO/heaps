@@ -107,6 +107,7 @@ class Renderer extends h3d.scene.Renderer {
 	public var enableTransparency = false;
 	public var sceneColorCopy = false;
 	var debugShadowMapIndex = 1;
+	var froxels : Froxels;
 
 	#if editor
 	var outline = new h3d.pass.ScreenFx(new hide.Renderer.ScreenOutline());
@@ -663,6 +664,20 @@ class Renderer extends h3d.scene.Renderer {
 
 	public function getPbrDepth() {
 		return textures.depth;
+	}
+
+	public function getFroxels() {
+		if( froxels == null )
+			froxels = new Froxels();
+		return froxels;
+	}
+
+	override function dispose() {
+		super.dispose();
+		if( froxels != null ) {
+			froxels.dispose();
+			froxels = null;
+		}
 	}
 
 	function initGlobals() {
