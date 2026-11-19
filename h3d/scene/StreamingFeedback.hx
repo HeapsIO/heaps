@@ -27,7 +27,7 @@ class StreamingFeedback {
 	var maxIndex = 0;
 	var zero : haxe.io.Bytes;
 	var frameId = 0;
-	var trackedFrame : Map<Int, Int> = [];
+	var trackedFrame : Array<Int> = [];
 	var submitSeq = 0;
 	var heldSeq = 0;
 	var held : Array<h3d.mat.Texture> = [];
@@ -99,9 +99,9 @@ class StreamingFeedback {
 				t.markVisible();
 				continue;
 			}
-			if( trackedFrame.get(index) == frameId )
+			if( trackedFrame[index] == frameId )
 				continue;
-			trackedFrame.set(index, frameId);
+			trackedFrame[index] = frameId;
 			s.handles.push(h);
 		}
 	}
