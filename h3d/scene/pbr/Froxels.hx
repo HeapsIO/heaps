@@ -2,10 +2,6 @@ package h3d.scene.pbr;
 
 class Froxels {
 
-	public static inline var SIZE_X = 160;
-	public static inline var SIZE_Y = 90;
-	public static inline var SIZE_Z = 64;
-
 	public var debugMode = 0;
 	public var raymarchBlend = false;
 	public var pointLights = true;
@@ -14,11 +10,14 @@ class Froxels {
 	public var temporalBlend = 0.05;
 	public var near(default, null) = 1.0;
 	public var far(default, null) = 200.0;
+	public var sizeX(default, null) = 160;
+	public var sizeY(default, null) = 90;
+	public var sizeZ(default, null) = 64;
 	public var lightingVolume(default, null) : h3d.mat.Texture3D;
 	public var historyVolume(default, null) : h3d.mat.Texture3D;
 	public var integratedVolume(default, null) : h3d.mat.Texture3D;
 
-	var size = new h3d.Vector(SIZE_X, SIZE_Y, SIZE_Z);
+	var size = new h3d.Vector(160, 90, 64);
 	var store = new h3d.shader.pbr.Froxels.FroxelStore();
 	var lighting = new h3d.shader.pbr.Froxels.FroxelLighting();
 	var integrate = new h3d.shader.pbr.Froxels.FroxelIntegrate();
@@ -33,6 +32,14 @@ class Froxels {
 	public function new() {
 		lightingList = new hxsl.ShaderList(lighting);
 		storeList = new hxsl.ShaderList(store, lightingList);
+	}
+
+	public function setSize( x : Int, y : Int, z : Int ) {
+		if( x < 1 || y < 1 || z < 1 )
+			throw "Invalid froxel size " + x + "x" + y + "x" + z;
+		sizeX = x;
+		sizeY = y;
+		sizeZ = z;
 	}
 
 	static function halton( index : Int, base : Int ) : Float {
@@ -50,16 +57,19 @@ class Froxels {
 		var ctx = @:privateAccess r.ctx;
 		near = Math.max(near, 0.01);
 		far = Math.max(far, near * 2);
+		if( lightingVolume != null && (lightingVolume.width != sizeX || lightingVolume.height != sizeY || lightingVolume.layerCount != sizeZ) )
+			disposeVolumes();
+		size.set(sizeX, sizeY, sizeZ);
 		var historyValid = lightingVolume != null && updateFrame == ctx.frame - 1 && near == this.near && far == this.far;
 		this.near = near;
 		this.far = far;
 
 		if( lightingVolume == null ) {
-			lightingVolume = new h3d.mat.Texture3D(SIZE_X, SIZE_Y, SIZE_Z, [Writable], RGBA16F);
+			lightingVolume = new h3d.mat.Texture3D(sizeX, sizeY, sizeZ, [Writable], RGBA16F);
 			lightingVolume.setName("froxelLighting0");
-			historyVolume = new h3d.mat.Texture3D(SIZE_X, SIZE_Y, SIZE_Z, [Writable], RGBA16F);
+			historyVolume = new h3d.mat.Texture3D(sizeX, sizeY, sizeZ, [Writable], RGBA16F);
 			historyVolume.setName("froxelLighting1");
-			integratedVolume = new h3d.mat.Texture3D(SIZE_X, SIZE_Y, SIZE_Z, [Writable], RGBA16F);
+			integratedVolume = new h3d.mat.Texture3D(sizeX, sizeY, sizeZ, [Writable], RGBA16F);
 			integratedVolume.setName("froxelIntegrated");
 		} else {
 			var tmp = historyVolume;
@@ -93,10 +103,10 @@ class Froxels {
 		mediumList.s = medium;
 		lightingList.next = medium == null ? null : mediumList;
 		ctx.computeList(storeList);
-		ctx.computeDispatch(null, Math.ceil(SIZE_X / 8), Math.ceil(SIZE_Y / 8), SIZE_Z);
+		ctx.computeDispatch(null, Math.ceil(sizeX / 8), Math.ceil(sizeY / 8), sizeZ);
 		integrate.lightingVolume = lightingVolume;
 		integrate.integratedVolume = integratedVolume;
-		ctx.computeDispatch(integrate, Math.ceil(SIZE_X / 8), Math.ceil(SIZE_Y / 8), 1);
+		ctx.computeDispatch(integrate, Math.ceil(sizeX / 8), Math.ceil(sizeY / 8), 1);
 		ctx.setGlobal("froxelIntegratedVolume", integratedVolume);
 		ctx.engine.driver.endEvent();
 	}
@@ -138,24 +148,24 @@ class Froxels {
 	}
 
 	public function sliceDepth( k : Float ) : Float {
-		return k <= 0 ? 0 : near * Math.pow(far / near, k / SIZE_Z);
+		return k <= 0 ? 0 : near * Math.pow(far / near, k / sizeZ);
 	}
 
 	public function getInfos() : String {
 		inline function fmt( v : Float ) return Std.string(Math.round(v * 100) / 100);
-		var lines = ['Froxels ${SIZE_X}x${SIZE_Y}x${SIZE_Z} near ${fmt(near)} far ${fmt(far)}' + (lightingVolume == null ? " (not allocated)" : "")];
+		var lines = ['Froxels ${sizeX}x${sizeY}x${sizeZ} near ${fmt(near)} far ${fmt(far)}' + (lightingVolume == null ? " (not allocated)" : "")];
 		var k = 0;
-		while( k < SIZE_Z ) {
+		while( k < sizeZ ) {
 			var z0 = sliceDepth(k);
 			var z1 = sliceDepth(k + 1);
 			lines.push('slice $k : ${fmt(z0)} - ${fmt(z1)} (${fmt(z1 - z0)})');
 			k += 8;
 		}
-		lines.push('slice ${SIZE_Z - 1} : ${fmt(sliceDepth(SIZE_Z - 1))} - ${fmt(sliceDepth(SIZE_Z))} (${fmt(sliceDepth(SIZE_Z) - sliceDepth(SIZE_Z - 1))})');
+		lines.push('slice ${sizeZ - 1} : ${fmt(sliceDepth(sizeZ - 1))} - ${fmt(sliceDepth(sizeZ))} (${fmt(sliceDepth(sizeZ) - sliceDepth(sizeZ - 1))})');
 		return lines.join("\n");
 	}
 
-	public function dispose() {
+	function disposeVolumes() {
 		if( lightingVolume != null ) {
 			lightingVolume.dispose();
 			lightingVolume = null;
@@ -164,6 +174,10 @@ class Froxels {
 			integratedVolume.dispose();
 			integratedVolume = null;
 		}
+	}
+
+	public function dispose() {
+		disposeVolumes();
 		if( debugPass != null ) {
 			debugPass.dispose();
 			debugPass = null;
