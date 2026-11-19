@@ -106,7 +106,6 @@ class Froxels {
 	}
 
 	public function apply( r : Renderer ) {
-		var ctx = @:privateAccess r.ctx;
 		if( !isActive(r) )
 			return;
 		if( applyPass == null ) {

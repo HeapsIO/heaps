@@ -31,6 +31,7 @@ class CascadeShadowMap extends Shadows {
 	// minimum count of pixels for an object to be drawn in cascade
 	public var minPixelSize : Int = 1;
 	public var firstCascadeSize : Float = 10.0;
+	public var cascadeDistances : Array<Float> = null;
 	public var castingMaxDist : Float = 0.0;
 	public var transitionFraction : Float = 0.15;
 	public var cascade(default, set) = 1;
@@ -80,11 +81,18 @@ class CascadeShadowMap extends Shadows {
 
 	override function needStaticUpdate() { }
 
-	function computeNearFar( i : Int, previousFar : Float ) {
+	public function getCascadeFar( i : Int ) : Float {
+		if( cascadeDistances != null && i < cascadeDistances.length )
+			return cascadeDistances[i];
+		if( i == 0 )
+			return firstCascadeSize;
 		var max = maxDist < 0.0 ? ctx.camera.zFar : maxDist;
-		var step = max - firstCascadeSize;
+		return firstCascadeSize + hxd.Math.pow(i / (cascade - 1), distributionPower) * (max - firstCascadeSize);
+	}
+
+	function computeNearFar( i : Int, previousFar : Float ) {
 		var near = ( i == 0 ) ? 0.0 : previousFar - previousFar * transitionFraction;
-		var far = ( i == 0 ) ? firstCascadeSize : firstCascadeSize + hxd.Math.pow(i / (cascade - 1), distributionPower) * step;
+		var far = getCascadeFar(i);
 
 		// Not related to scale but let's pack it here to save memory
 		lightCameras[i].scale.w = far;
