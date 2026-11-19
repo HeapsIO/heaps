@@ -36,7 +36,7 @@ class CascadeShadowMap extends Shadows {
 	public var cascade(default, set) = 1;
 	public var highPrecision : Bool = false;
 	public function set_cascade(v) {
-		if ( v == cascade && lightCameras != null )
+		if ( v == cascade && lightCameras.length == v )
 			return cascade;
 		cascade = v;
 		cullingFrame = -1;
