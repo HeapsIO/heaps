@@ -10,9 +10,14 @@ class Froxels {
 	public var temporalBlend = 0.05;
 	public var near(default, null) = 1.0;
 	public var far(default, null) = 200.0;
+	public var cellPixelSize = 12;
+	public var minSizeX = 160;
+	public var minSizeY = 90;
+	public var maxSizeX = 320;
+	public var maxSizeY = 180;
+	public var sizeZ = 64;
 	public var sizeX(default, null) = 160;
 	public var sizeY(default, null) = 90;
-	public var sizeZ(default, null) = 64;
 	public var lightingVolume(default, null) : h3d.mat.Texture3D;
 	public var historyVolume(default, null) : h3d.mat.Texture3D;
 	public var integratedVolume(default, null) : h3d.mat.Texture3D;
@@ -34,14 +39,6 @@ class Froxels {
 		storeList = new hxsl.ShaderList(store, lightingList);
 	}
 
-	public function setSize( x : Int, y : Int, z : Int ) {
-		if( x < 1 || y < 1 || z < 1 )
-			throw "Invalid froxel size " + x + "x" + y + "x" + z;
-		sizeX = x;
-		sizeY = y;
-		sizeZ = z;
-	}
-
 	static function halton( index : Int, base : Int ) : Float {
 		var f = 1.0;
 		var r = 0.0;
@@ -57,6 +54,10 @@ class Froxels {
 		var ctx = @:privateAccess r.ctx;
 		near = Math.max(near, 0.01);
 		far = Math.max(far, near * 2);
+		var cell = hxd.Math.imax(cellPixelSize, 1);
+		sizeX = hxd.Math.iclamp(Math.ceil(ctx.renderResolutionWidth / cell), minSizeX, maxSizeX);
+		sizeY = hxd.Math.iclamp(Math.ceil(ctx.renderResolutionHeight / cell), minSizeY, maxSizeY);
+		sizeZ = hxd.Math.imax(sizeZ, 1);
 		if( lightingVolume != null && (lightingVolume.width != sizeX || lightingVolume.height != sizeY || lightingVolume.layerCount != sizeZ) )
 			disposeVolumes();
 		size.set(sizeX, sizeY, sizeZ);
