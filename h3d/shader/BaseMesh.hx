@@ -107,9 +107,7 @@ class BaseMesh extends hxsl.Shader {
 			depth = projectedPosition.z / projectedPosition.w; // in case it's used in vertex : we don't want to interpolate in screen space
 			specPower = specularPower;
 			specColor = specularColor * specularAmount;
-			ndcPosition -= camera.jitterOffsets.xy;
-			previousNdcPosition -= camera.jitterOffsets.zw;
-			pixelVelocity = ( previousNdcPosition - ndcPosition ) * vec2(0.5, -0.5);
+			pixelVelocity = ((previousNdcPosition - camera.jitterOffsets.zw) - (ndcPosition - camera.jitterOffsets.xy)) * vec2(0.5, -0.5);
 		}
 
 		function vertex() {
