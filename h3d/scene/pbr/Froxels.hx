@@ -11,10 +11,6 @@ class Froxels {
 	public var near(default, null) = 1.0;
 	public var far(default, null) = 200.0;
 	public var cellPixelSize = 12;
-	public var minSizeX = 160;
-	public var minSizeY = 90;
-	public var maxSizeX = 320;
-	public var maxSizeY = 180;
 	public var sizeZ = 64;
 	public var sizeX(default, null) = 160;
 	public var sizeY(default, null) = 90;
@@ -55,8 +51,8 @@ class Froxels {
 		near = Math.max(near, 0.01);
 		far = Math.max(far, near * 2);
 		var cell = hxd.Math.imax(cellPixelSize, 1);
-		sizeX = hxd.Math.iclamp(Math.ceil(ctx.renderResolutionWidth / cell), minSizeX, maxSizeX);
-		sizeY = hxd.Math.iclamp(Math.ceil(ctx.renderResolutionHeight / cell), minSizeY, maxSizeY);
+		sizeX = hxd.Math.imax(Math.ceil(ctx.renderResolutionWidth / cell), 1);
+		sizeY = hxd.Math.imax(Math.ceil(ctx.renderResolutionHeight / cell), 1);
 		sizeZ = hxd.Math.imax(sizeZ, 1);
 		if( lightingVolume != null && (lightingVolume.width != sizeX || lightingVolume.height != sizeY || lightingVolume.layerCount != sizeZ) )
 			disposeVolumes();
