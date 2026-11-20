@@ -1245,6 +1245,7 @@ class DX12FsrBackend extends UpscalingBackend {
 
 	public static var FRAME_GEN_ASYNC = false;
 	public static var FRAME_GEN_DEBUG_FLAGS = 0;
+	public static var FRAME_GEN_MIN_SIZE = 64;
 	public static var DEBUG_VIEW = false;
 
 	static inline var FG_STATUS_CONTEXT_FAILED = 1;
@@ -1658,7 +1659,8 @@ class DX12FsrBackend extends UpscalingBackend {
 		if( proxy == null || fgConfiguredFrame == fgFrameId )
 			return;
 
-		var enabled = fgMode != Off && depth?.t != null && motionVectors?.t != null;
+		var enabled = fgMode != Off && depth?.t != null && motionVectors?.t != null
+			&& driver.currentWidth >= FRAME_GEN_MIN_SIZE && driver.currentHeight >= FRAME_GEN_MIN_SIZE;
 		if( enabled ) {
 			var flags = 0;
 			if( p.depthInverted )
