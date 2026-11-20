@@ -114,11 +114,11 @@ class CacheFile2Loader {
 			if( CacheFile2.onPreloadProgress != null )
 				CacheFile2.onPreloadProgress(++linked, total);
 			var rts = try cache.link(sl, mode) catch( e ) {
-				Sys.println("[CacheFile2] Failed to link " + [for( s in sl ) @:privateAccess s.shader.data.name].join(":") + ": " + e.toString());
+				Sys.println("[CacheFile2] Failed to link " + [for( s in sl ) @:privateAccess (s.shader.data.name + "," + s.priority + "," + s.constBits)].join(":"));
 				return null;
 			}
 			try driver?.warmupShader(rts) catch( e ) {
-				Sys.println("[CacheFile2] Failed to compile " + [for( s in sl ) @:privateAccess s.shader.data.name].join(":") + ": " + e.toString());
+				Sys.println("[CacheFile2] Failed to compile " + [for( s in sl ) @:privateAccess (s.shader.data.name + "," + s.priority + "," + s.constBits)].join(":"));
 			}
 			return rts;
 		}
