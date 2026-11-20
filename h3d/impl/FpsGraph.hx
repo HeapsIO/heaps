@@ -142,6 +142,7 @@ class FpsGraph {
 	var pixels : hxd.Pixels;
 	var frame : Int = 0;
 	var scale : Float = 25.;
+	var scaleMs : Float = 1000. / 60.;
 
 	var frameStart : Float = -1.;
 	var cpuEnd : Float = -1.;
@@ -253,19 +254,13 @@ class FpsGraph {
 		var showFrame = isShown(0);
 		var showCpuCurve = showCpu && isShown(1);
 		var showGpuCurve = showGpu && isShown(2);
-		var peak = 0.;
-		var bytes = pixels.bytes;
-		for( i in 0...maxFrameCount ) {
-			var pos = i * STRIDE;
-			if( showFrame ) peak = hxd.Math.max(peak, bytes.getFloat(pos));
-			if( showCpuCurve ) peak = hxd.Math.max(peak, bytes.getFloat(pos + 4));
-			if( showGpuCurve ) peak = hxd.Math.max(peak, bytes.getFloat(pos + 8));
-		}
-		var target = hxd.Math.clamp(peak * 1.15, showFrame ? 25. : 10., maxDtMs);
-		if( target > scale )
-			scale = target;
-		else
-			scale += (target - scale) * 0.04;
+		var ms = scaleMs;
+		if( !showFrame )
+			ms = hxd.Math.max(showCpuCurve ? cpuMs : 0, showGpuCurve ? gpuMs : 0);
+		if( ms * 2.0 > scale && scale * 2.0 <= maxDtMs )
+			scale *= 2.0;
+		else if( ms * 2.0 < scale * 0.45 && scale > 12.5 )
+			scale /= 2.0;
 
 		texture.uploadPixels(pixels);
 		shader.offset = frame % maxFrameCount;
@@ -335,6 +330,8 @@ class FpsGraph {
 		bytes.setFloat(pos + 4, showCpu ? cpu : -1);
 		bytes.setFloat(pos + 8, -1);
 		frame++;
+		// smoothed frame time for the scale, ignoring stutters
+		scaleMs += (hxd.Math.min(ms, scaleMs * 2.0) - scaleMs) * 0.02;
 	}
 
 	function updateStats() {
