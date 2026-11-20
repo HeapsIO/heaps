@@ -130,7 +130,7 @@ class Froxels {
 		applyPass.pass.blendAlphaDst = One;
 		applyPass.shader.RAYMARCH_BLEND = raymarchBlend;
 		@:privateAccess r.mark("FroxelApply");
-		applyPass.shader.depthTexture = r.getPbrDepth();
+		applyPass.shader.depthTexture = @:privateAccess r.textures.albedo.depthBuffer;
 		applyPass.render();
 	}
 
