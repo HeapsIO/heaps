@@ -94,6 +94,12 @@ class Camera {
 	**/
 	public var followRotation : Bool = false;
 
+	/**
+		Round the camera position?
+		Setting to false allows the camera to have a sub-pixel accurate position.
+	**/
+	public var enableCameraRounding : Bool = true;
+
 	var posChanged : Bool;
 
 	var viewX : Float;
@@ -224,8 +230,12 @@ class Camera {
 				matC = scaleY * -sr;
 				matD = scaleY * cr;
 			}
-			absX = Math.round(-(x * matA + y * matC) + (scene.width * anchorX * viewW) + scene.width * viewX);
-			absY = Math.round(-(x * matB + y * matD) + (scene.height * anchorY * viewH) + scene.height * viewY);
+			absX = -(x * matA + y * matC) + (scene.width * anchorX * viewW) + scene.width * viewX;
+			absY = -(x * matB + y * matD) + (scene.height * anchorY * viewH) + scene.height * viewY;
+			if (this.enableCameraRounding) {
+				absX = Math.round(absX);
+				absY = Math.round(absY);
+			}
 			invDet = 1 / (matA * matD - matB * matC);
 			posChanged = false;
 		}
