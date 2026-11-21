@@ -150,7 +150,7 @@ class SceneEvents {
 			fillOver = true;
 		case EPush: cancelFocus = true; checkPush = true;
 		case ERelease: checkPush = true;
-		case EKeyUp, EKeyDown, ETextInput, EWheel:
+		case EKeyUp, EKeyDown, ETextInput, ETextComposition, EWheel:
 			if( currentFocus != null ) {
 				event.relX = event.relY = 0;
 				currentFocus.handleEvent(event);
@@ -328,7 +328,7 @@ class SceneEvents {
 					mouseX = e.relX;
 					mouseY = e.relY;
 					lastTouch = e.touchId;
-				case EKeyUp, EKeyDown, ETextInput, EWheel:
+				case EKeyUp, EKeyDown, ETextInput, ETextComposition, EWheel:
 					if( !checkFocused ) {
 						checkFocused = true;
 						checkFocus();
