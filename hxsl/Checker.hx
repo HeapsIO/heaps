@@ -1078,7 +1078,7 @@ class Checker {
 					case TSampler(_), TArray(TSampler(_), _):
 					default: error("Sampler should be on sampler type or sampler array", pos);
 					}
-				case Ignore, Doc(_):
+				case Ignore, Doc(_), Category(_):
 				case Flat: if( tv.kind != Local ) error("flat only allowed on local", pos);
 				case NoVar: if( tv.kind != Local ) error("noVar only allowed on local", pos);
 				case Enum(path, constructors):

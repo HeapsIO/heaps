@@ -275,7 +275,7 @@ class Splitter {
 								if ( nv.qualifiers == null )
 									nv.qualifiers = [];
 								nv.qualifiers.push(q);
-							case Const(_), Private, Nullable, PerObject, Name(_), Shared, Precision(_), Range(_,_), Ignore, PerInstance(_), Doc(_), Borrow(_), Sampler(_), Enum(_):
+							case Const(_), Private, Nullable, PerObject, Name(_), Shared, Precision(_), Range(_,_), Ignore, PerInstance(_), Doc(_), Borrow(_), Sampler(_), Enum(_), Category(_):
 							}
 						}
 					}
