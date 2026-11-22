@@ -9,6 +9,12 @@ class Timer {
 	/**
 		The FPS on which "tmod" have values are based on.
 		Can be freely configured if your gameplay runs at a different speed.
+
+		Keep in mind this does NOT control the FPS your game runs at, as that is controlled by `hxd.Window.vsync` option.
+		As mentioned above it only affects the `tmod` value.
+		I.e. for a `wantedFPS` of 60, with vsync on and game running at full speed on 60hz monitor, `tmod` would be close to 1,
+		but on 120hz monitor it would be around 0.5.
+
 		Default : 60
 	**/
 	public static var wantedFPS = 60.;
