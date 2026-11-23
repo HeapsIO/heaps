@@ -800,6 +800,11 @@ class DX12Driver extends h3d.impl.Driver {
 	var lastVertexGlobalBind : Int = -1;
 	var lastFragmentGlobalBind : Int = -1;
 	var lastGlobalsShader : CompiledShader;
+	var lastBuffers : h3d.shader.Buffers;
+	var lastBuffersShader : CompiledShader;
+	var paramsHeapCount = -1;
+	var texturesHeapCount = -1;
+	var buffersHeapCount = -1;
 	var needUAVBarrier : Bool = false;
 	var useDepthClamp : Bool = false;
 	var useSM6_6 = false;
@@ -2822,6 +2827,8 @@ class DX12Driver extends h3d.impl.Driver {
 	// ----- PIPELINE UPDATE
 
 	override function uploadShaderBuffers(buffers:h3d.shader.Buffers, which:h3d.shader.Buffers.BufferKind) {
+		lastBuffers = buffers;
+		lastBuffersShader = currentShader;
 		if( which == Globals ) {
 			lastGlobalsShader = currentShader;
 			if( currentShader.isCompute )
@@ -2830,6 +2837,28 @@ class DX12Driver extends h3d.impl.Driver {
 		uploadBuffers(buffers, buffers.vertex, which, currentShader.shader.vertex, currentShader.vertexRegisters);
 		if( !currentShader.isCompute )
 			uploadBuffers(buffers, buffers.fragment, which, currentShader.shader.fragment, currentShader.fragmentRegisters);
+		switch( which ) {
+		case Params: paramsHeapCount = heapCount;
+		case Textures: texturesHeapCount = heapCount;
+		case Buffers: buffersHeapCount = heapCount;
+		default:
+		}
+	}
+
+	// a realloc can flush the descriptor heaps after the tables of the current draw were set : they point to the previous heap
+	inline function rebindStaleTables() {
+		if( (paramsHeapCount != heapCount || texturesHeapCount != heapCount || buffersHeapCount != heapCount) && lastBuffersShader == currentShader && lastBuffers != null )
+			reuploadStaleTables();
+	}
+
+	function reuploadStaleTables() {
+		var count = 0;
+		while( paramsHeapCount != heapCount || texturesHeapCount != heapCount || buffersHeapCount != heapCount ) {
+			if( count++ > 8 ) throw "Descriptor heaps keep flushing during the upload";
+			if( paramsHeapCount != heapCount ) uploadShaderBuffers(lastBuffers, Params);
+			if( texturesHeapCount != heapCount ) uploadShaderBuffers(lastBuffers, Textures);
+			if( buffersHeapCount != heapCount ) uploadShaderBuffers(lastBuffers, Buffers);
+		}
 	}
 
 	function calcCBVSize( dataSize : Int ) {
@@ -3132,13 +3161,17 @@ class DX12Driver extends h3d.impl.Driver {
 							t.alloc();
 							t.realloc();
 							if( hasDeviceError ) return;
-							if( s != currentShader || hc != heapCount ) {
+							if( s != currentShader ) {
 								// realloc triggered a shader change !
 								// we need to reset the original shader and reupload everything
 								currentShader = null;
 								selectShader(s.shader);
 								uploadShaderBuffers(buffers,Globals);
 								uploadShaderBuffers(buffers,Params);
+								uploadShaderBuffers(buffers,Textures);
+								return;
+							}
+							if( hc != heapCount ) {
 								uploadShaderBuffers(buffers,Textures);
 								return;
 							}
@@ -3635,6 +3668,7 @@ class DX12Driver extends h3d.impl.Driver {
 		if ( (tmp.rect.right - tmp.rect.left) <= 0 || (tmp.rect.bottom - tmp.rect.top) <= 0 )
 			return;
 
+		rebindStaleTables();
 		if( !flushPipeline() )
 			return;
 		if( currentIndex != ibuf ) {
@@ -3650,6 +3684,7 @@ class DX12Driver extends h3d.impl.Driver {
 		if ( (tmp.rect.right - tmp.rect.left) <= 0 || (tmp.rect.bottom - tmp.rect.top) <= 0 )
 			return;
 
+		rebindStaleTables();
 		if( !flushPipeline() )
 			return;
 		if( currentIndex != ibuf ) {
@@ -3770,6 +3805,7 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	override function computeDispatch( x : Int = 1, y : Int = 1, z : Int = 1, barrier : Bool = true ) {
+		rebindStaleTables();
 		flushTransitions();
 		frame.commandList.dispatch(x,y,z);
 		if( barrier )
