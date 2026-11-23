@@ -3128,10 +3128,11 @@ class DX12Driver extends h3d.impl.Driver {
 						}
 						if( t != null && t.t == null && t.realloc != null ) {
 							var s = currentShader;
+							var hc = heapCount;
 							t.alloc();
 							t.realloc();
 							if( hasDeviceError ) return;
-							if( s != currentShader ) {
+							if( s != currentShader || hc != heapCount ) {
 								// realloc triggered a shader change !
 								// we need to reset the original shader and reupload everything
 								currentShader = null;
