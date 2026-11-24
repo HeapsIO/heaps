@@ -14,7 +14,6 @@ class Pass {
 	var parentPass : Pass;
 	var parentShaders : hxsl.ShaderList;
 	var selfShaders(default, null) : hxsl.ShaderList;
-	var selfShadersChanged(default, null) : Bool;
 	var selfShadersCache : hxsl.ShaderList;
 	var shaders : hxsl.ShaderList;
 	var nextPass : Pass;
@@ -184,8 +183,16 @@ class Pass {
 			selfShaders = new hxsl.ShaderList(s, shaders);
 			selfShaders.next = selfShadersCache = shaders;
 		} else {
-			selfShadersChanged = true;
-			selfShaders = hxsl.ShaderList.addSort(s, selfShaders);
+			var prev = null, cur = selfShaders;
+			while ( cur != selfShadersCache && cur.s.priority < s.priority ) {
+				prev = cur;
+				cur = cur.next;
+			}
+			if ( prev == null )
+				selfShaders = new hxsl.ShaderList(s, selfShaders);
+			else
+				prev.next = new hxsl.ShaderList(s, cur);
+			@:privateAccess hxsl.ShaderList.checkSize(selfShaders);
 		}
 		return s;
 	}
@@ -340,7 +347,7 @@ class Pass {
 	function selfShadersRec(rebuild : Bool) {
 		if ( selfShaders == null )
 			return shaders;
-		if ( !selfShadersChanged && !rebuild && shaders == selfShadersCache )
+		if ( !rebuild && shaders == selfShadersCache )
 			return selfShaders;
 		var tail = findTail(selfShaders, selfShadersCache);
 		selfShadersCache = shaders;
