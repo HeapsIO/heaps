@@ -97,7 +97,9 @@ class Convert {
 	}
 
 	function save(bytes:haxe.io.Bytes) {
-		hxd.File.saveBytes(dstPath, bytes);
+		var tmp = dstPath + "." + Std.random(0x7FFFFFFF) + ".tmp";
+		hxd.File.saveBytes(tmp, bytes);
+		hxd.File.rename(tmp, dstPath);
 	}
 
 	function command(cmd:String, args:Array<String>) {

@@ -200,6 +200,21 @@ class File {
 		#end
 	}
 
+	public static function rename( path : String, newPath : String ) {
+		#if nodejs
+		sys.FileSystem.rename(path, newPath);
+		#elseif sys
+		try sys.FileSystem.rename(path, newPath) catch( e : Dynamic ) {
+			if( !sys.FileSystem.exists(path) || !sys.FileSystem.exists(newPath) || sys.FileSystem.isDirectory(newPath) )
+				throw e;
+			sys.FileSystem.deleteFile(newPath);
+			sys.FileSystem.rename(path, newPath);
+		}
+		#else
+		throw "Not supported";
+		#end
+	}
+
 	public static function listDirectory( path : String ) {
 		#if (sys || nodejs)
 		return sys.FileSystem.readDirectory(path);
