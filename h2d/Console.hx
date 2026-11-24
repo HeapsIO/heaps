@@ -82,6 +82,8 @@ class Console #if !macro extends h2d.Object #end {
 	var commands : Map < String, { help : String, args : Array<ConsoleArgDesc>, callb : Dynamic } > ;
 	var aliases : Map<String,String>;
 	var logDY : Float = 0;
+	var logH : Float = 0;
+	var logChanged = false;
 	var logs : Array<String>;
 	var logIndex:Int;
 	var curCmd:String;
@@ -587,9 +589,8 @@ class Console #if !macro extends h2d.Object #end {
 	**/
 	public function log( text : String, ?color ) {
 		if( color == null ) color = tf.textColor;
-		var oldH = logTxt.textHeight;
 		logTxt.text = logTxt.text + '<font color="#${StringTools.hex(color&0xFFFFFF,6)}">${StringTools.htmlEscape(text)}</font><br/>';
-		if( logDY != 0 ) logDY += logTxt.textHeight - oldH;
+		logChanged = true;
 		logTxt.alpha = 1;
 		logTxt.visible = true;
 		lastLogTime = haxe.Timer.stamp();
@@ -605,8 +606,12 @@ class Console #if !macro extends h2d.Object #end {
 			bg.tile.scaleToSize(width, height);
 		}
 		var log = logTxt;
+		var h = log.textHeight;
+		if( logChanged && logDY != 0 ) logDY += h - logH;
+		logChanged = false;
+		logH = h;
 		if( log.visible ) {
-			log.y = bg.y - log.textHeight + logDY;
+			log.y = bg.y - h + logDY;
 			var dt = haxe.Timer.stamp() - lastLogTime;
 			if( dt > HIDE_LOG_TIMEOUT && !bg.visible ) {
 				log.alpha -= ctx.elapsedTime * 4;
