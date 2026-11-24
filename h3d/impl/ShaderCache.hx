@@ -15,7 +15,10 @@ class ShaderCache {
 	public var keepSource : Bool;
 	var mode : ShaderCacheMode;
 	var dirty = false;
+	var canSave = true;
 	public var allowSave = true;
+	var newKeys : Array<String>;
+	var rewriteLocal : Bool;
 
 	public static var VERSION_KEY_WORD = "VERSION";
 	public static var VERSION = 1;
@@ -36,21 +39,26 @@ class ShaderCache {
 	public function initEmpty() {
 		data = [];
 		sources = [];
+		newKeys = [];
+		rewriteLocal = true;
 	}
 
 	public function load() {
 		initEmpty();
 		try loadFile(file) catch( e : Dynamic ) {};
-		if( outputFile != file ) try loadFile(outputFile) catch( e : Dynamic ) {};
+		if( outputFile != file ) {
+			var ok = try loadFile(outputFile) catch( e : Dynamic ) false;
+			rewriteLocal = !ok;
+		}
 		if( keepSource ) try loadSources() catch( e : Dynamic ) {};
 	}
 
-	function loadFile( file : String ) {
+	function loadFile( file : String ) : Bool {
 		#if !(sys || nodejs)
 		throw "Cannot load shader cache with this platform";
 		#else
 		if( !sys.FileSystem.exists(file) )
-			return;
+			return false;
 		var cache = new haxe.io.BytesInput(sys.io.File.getBytes(file));
 
 		var curPos = 0;
@@ -61,7 +69,7 @@ class ShaderCache {
 			var version = cache.readInt32();
 			if(version != VERSION) {
 				trace('Shader cache version $version, expected $VERSION, skipping');
-				return;
+				return false;
 			}
 			curPos = cache.position;
 		}
@@ -73,10 +81,11 @@ class ShaderCache {
 		else
 			cache.position = curPos;
 
-		switch( mode ) {
+		var ok = switch( mode ) {
 		case Base64: loadCache(cache);
 		case Binary: loadBinaryCache(cache);
 		}
+		return ok && mode == this.mode;
 		#end
 	}
 
@@ -84,28 +93,30 @@ class ShaderCache {
 	function loadCache(cache : haxe.io.BytesInput) {
 		while( cache.position < cache.length ) {
 			var len = cache.readInt32();
-			if( len < 0 || len > 4<<20 ) break;
+			if( len < 0 || len > 4<<20 ) return false;
 			var key = cache.readString(len);
-			if( key == "" ) break;
+			if( key == "" ) return false;
 			var len = cache.readInt32();
-			if( len < 0 || len > 4<<20 ) break;
+			if( len < 0 || len > 4<<20 ) return false;
 			var str = cache.readString(len);
 			data.set(key,haxe.crypto.Base64.decode(str));
 			cache.readByte(); // newline
 		}
+		return true;
 	}
 
 	function loadBinaryCache(cache : haxe.io.BytesInput) {
 		while( cache.position < cache.length ) {
 			var len = cache.readInt32();
-			if( len < 0 || len > 4<<20 ) break;
+			if( len < 0 || len > 4<<20 ) return false;
 			var key = cache.readString(len);
-			if( key == "" ) break;
+			if( key == "" ) return false;
 			var len = cache.readInt32();
-			if( len < 0 || len > 4<<20 ) break;
+			if( len < 0 || len > 4<<20 ) return false;
 			var buf = cache.read(len);
 			data.set(key, buf);
 		}
+		return true;
 	}
 	#end
 
@@ -160,13 +171,15 @@ class ShaderCache {
 	public function saveCompiledShader( source : String, bytes : haxe.io.Bytes, ?configurationKey = "", ?saveToFile = true ) {
 		var key = configurationKey + haxe.crypto.Md5.encode(source);
 		lock();
-		dirty = true;
 		if( data == null ) load();
 		if( data.get(key) == bytes && (!keepSource || sources.get(key) == source) ) {
 			unlock();
 			return;
 		}
+		dirty = true;
 		data.set(key, bytes);
+		if( outputFile != file )
+			newKeys.push(key);
 		if( keepSource )
 			sources.set(key, source);
 		unlock();
@@ -198,25 +211,50 @@ class ShaderCache {
 
 	public function save() {
 		lock();
-		if( !dirty ) {
+		if( !dirty || !canSave ) {
 			unlock();
 			return;
 		}
 		dirty = false;
 		var out = new haxe.io.BytesOutput();
-		var keys = Lambda.array({ iterator : data.keys });
-		keys.sort(Reflect.compare);
-		out.writeString(VERSION_KEY_WORD);
-		out.writeInt32(VERSION);
-		out.writeString(MODE_KEY_WORD);
-		out.writeInt32(mode);
+		var append = outputFile != file && !rewriteLocal;
+		var keys = newKeys;
+		newKeys = [];
+		rewriteLocal = false;
+		if( !append ) {
+			keys = Lambda.array({ iterator : data.keys });
+			keys.sort(Reflect.compare);
+			out.writeString(VERSION_KEY_WORD);
+			out.writeInt32(VERSION);
+			out.writeString(MODE_KEY_WORD);
+			out.writeInt32(mode);
+		}
 		switch ( mode ) {
 		case Base64: writeCache(keys, out);
 		case Binary: writeBinaryCache(keys, out);
 		}
 		unlock();
+		if( append && keys.length == 0 )
+			return;
 		#if (sys || nodejs)
-		try sys.io.File.saveBytes(outputFile, out.getBytes()) catch( e : Dynamic ) { trace("Something went wrong"); };
+		try {
+			if( append ) {
+				var f = sys.io.File.append(outputFile);
+				try f.write(out.getBytes()) catch( e : Dynamic ) {
+					f.close();
+					throw e;
+				}
+				f.close();
+			} else
+				sys.io.File.saveBytes(outputFile, out.getBytes());
+		} catch( e : Dynamic ) {
+			trace("Error: " + e);
+			if( append ) {
+				dirty = true;
+				rewriteLocal = true;
+			} else
+				canSave = false;
+		};
 		#end
 	}
 
