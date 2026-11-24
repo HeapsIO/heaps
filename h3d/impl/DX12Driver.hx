@@ -2372,7 +2372,8 @@ class DX12Driver extends h3d.impl.Driver {
 		buf.res = allocGPU(bufSize, DEFAULT, COMMON,  m.flags.has(ReadWriteBuffer));
 		if( buf.res == null )
 			return null;
-		@:privateAccess buf.res.setName('Buffer#${m.id}');
+		var pos = @:privateAccess m.allocPos;
+		@:privateAccess buf.res.setName(pos == null ? 'Buffer#${m.id}' : 'Buffer#${m.id} ${pos.position}');
 		if( m.flags.has(UniformBuffer) ) {
 			// no view
 		} else if( m.flags.has(IndexBuffer) ) {
