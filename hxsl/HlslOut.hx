@@ -57,8 +57,10 @@ private class GlobalsCollect {
 	public var globals : Array<TGlobal> = [];
 	public var computeLayout : Array<Int> = [1,1,1];
 	public var gtypes : Map<Int,Type> = [];
+	var collectFun : TExpr -> Void;
 
 	public function new() {
+		collectFun = collect;
 	}
 
 	public function collect( e : TExpr ) {
@@ -76,7 +78,7 @@ private class GlobalsCollect {
 		case TCall({ e : TGlobal(SetLayout) }, [{ e : TConst(CInt(x)) }]):
 			computeLayout = [x,1,1];
 		default:
-			e.iter(collect);
+			e.iter(collectFun);
 		}
 	}
 
