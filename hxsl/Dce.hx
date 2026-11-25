@@ -63,9 +63,17 @@ class Dce {
 	var channelVars : Array<TVar>;
 	var markAsKeep : Bool;
 	var checkBranchesFun : TExpr -> Void;
+	var checkCurFun : TExpr -> Void;
+	var curWriteTo : WriteTo;
+	var curIsAffected : WriteTo;
 
 	public function new() {
 		checkBranchesFun = this.checkBranches; // prevent recreation of instance closure
+		checkCurFun = this.checkCur;
+	}
+
+	function checkCur( e : TExpr ) {
+		check(e, curWriteTo, curIsAffected);
 	}
 
 	public function dce( shaders : Array<ShaderData> ) {
@@ -311,7 +319,12 @@ class Dce {
 				}
 			}
 		default:
-			e.iter(check.bind(_, writeTo, isAffected));
+			var prevWriteTo = curWriteTo, prevIsAffected = curIsAffected;
+			curWriteTo = writeTo;
+			curIsAffected = isAffected;
+			e.iter(checkCurFun);
+			curWriteTo = prevWriteTo;
+			curIsAffected = prevIsAffected;
 		}
 	}
 
