@@ -431,7 +431,11 @@ class FileConverter {
 		onConvert(conv);
 		try executeConvert(conv) catch( err : haxe.Exception ) {
 			conv.cleanup();
+			#if hl
+			hl.Api.rethrow(err);
+			#else
 			throw err;
+			#end
 		}
 		conv.cleanup();
 
