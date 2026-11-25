@@ -415,9 +415,15 @@ class Window {
 		if ( v == Absolute ) {
 			if ( target.ownerDocument.pointerLockElement == target ) target.ownerDocument.exitPointerLock();
 		} else if ( canLockMouse ) {
-			if ( target.ownerDocument.pointerLockElement != target ) target.requestPointerLock();
+			if ( target.ownerDocument.pointerLockElement != target ) requestPointerLock(target);
 		}
 		return mouseMode = v;
+	}
+
+	function requestPointerLock( target : js.html.Element ) {
+		// Chromium returns a Promise that rejects when locking is refused (e.g. relocking too soon after an exit)
+		var p : js.lib.Promise<Dynamic> = (cast target).requestPointerLock();
+		if ( p != null ) p.catchError(e -> if ( e?.name != "NotAllowedError" ) js.Browser.console.warn(e));
 	}
 
 	function get_vsync() : Bool return true;
@@ -443,7 +449,7 @@ class Window {
 		} else {
 			// If we attempted to enter locked mode when browser didn't let us - try to enter locked mode on user click.
 			if ( pointerLockTarget.ownerDocument.pointerLockElement != pointerLockTarget ) {
-				pointerLockTarget.requestPointerLock();
+				requestPointerLock(pointerLockTarget);
 				if (discardMouseCaptureEvent) {
 					// Avoid stray ERelease due to discarded EPush event.
 					discardMouseUp = e.button;
