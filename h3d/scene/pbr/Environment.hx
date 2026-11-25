@@ -339,10 +339,7 @@ class Environment {
 	}
 
 	function getMipLevels() : Int {
-		var mipLevels = 1;
-		while( specular.width > 1 << (mipLevels - 1) )
-			mipLevels++;
-		return mipLevels;
+		return specular.mipLevels;
 	}
 
 	function computeIrradiance(diffuse : h3d.mat.Texture, specular : h3d.mat.Texture, env : h3d.mat.Texture) {
