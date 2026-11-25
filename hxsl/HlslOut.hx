@@ -46,8 +46,14 @@ class Samplers {
 
 }
 
+typedef SamplerSlotTable = {
+	var name : String;
+	var declared : Bool;
+}
+
 typedef SamplerRef = {
 	var arr : Array<Int>;
+	var slotTable : SamplerSlotTable;
 	var offset : Int;
 	var index : TExpr;
 }
@@ -494,7 +500,7 @@ class HlslOut {
 			var r = samplers.get(v.id);
 			if( r == null )
 				return null;
-			return { s : { arr : r.arr, offset : r.offset, index : r.index }, b : -1 };
+			return { s : { arr : r.arr, slotTable : r.slotTable, offset : r.offset, index : r.index }, b : -1 };
 		case TArray(ea, index):
 			var r = resolveSamplerRef(ea);
 			if( r == null || r.s == null )
@@ -543,9 +549,20 @@ class HlslOut {
 		if( arr == null || s.offset < 0 || s.offset >= arr.length )
 			throw "Sampler index " + s.offset + " out of bounds";
 		if( s.index != null ) {
-			add('__Samplers[${arr[s.offset]}+');
-			addValue(s.index, tabs);
-			add(']');
+			if( s.slotTable == null ) {
+				add('__Samplers[${arr[s.offset]}+');
+				addValue(s.index, tabs);
+				add(']');
+			} else {
+				var slotTable = s.slotTable;
+				if( !slotTable.declared ) {
+					slotTable.declared = true;
+					decl('static const uint ${slotTable.name}[${arr.length}] = { ${arr.join(",")} };');
+				}
+				add('__Samplers[${slotTable.name}[${s.offset}+');
+				addValue(s.index, tabs);
+				add(']]');
+			}
 		} else
 			add('__Samplers[${arr[s.offset]}]');
 	}
@@ -1128,7 +1145,14 @@ class HlslOut {
 			case TArray(_,SConst(n)): texRegister += n;
 			default: texRegister++;
 			}
-			samplers.set(v.id, { arr : ctx.make(v, []), offset : 0, index : null });
+			var arr = ctx.make(v, []);
+			var slotTable = null;
+			for( i in 1...arr.length )
+				if( arr[i] != arr[0] + i ) {
+					slotTable = { name : "__SamplerSlots_" + v.name, declared : false };
+					break;
+				}
+			samplers.set(v.id, { arr : arr, slotTable : slotTable, offset : 0, index : null });
 		}
 
 		if( ctx.count > 0 )
