@@ -271,11 +271,11 @@ class Splitter {
 					if( v.qualifiers != null ) {
 						for ( q in v.qualifiers ) {
 							switch (q) {
-							case Final, Flat, NoVar:
+							case Final, Flat, NoVar, Sampler(_):
 								if ( nv.qualifiers == null )
 									nv.qualifiers = [];
 								nv.qualifiers.push(q);
-							case Const(_), Private, Nullable, PerObject, Name(_), Shared, Precision(_), Range(_,_), Ignore, PerInstance(_), Doc(_), Borrow(_), Sampler(_), Enum(_):
+							case Const(_), Private, Nullable, PerObject, Name(_), Shared, Precision(_), Range(_,_), Ignore, PerInstance(_), Doc(_), Borrow(_), Enum(_):
 							}
 						}
 					}
