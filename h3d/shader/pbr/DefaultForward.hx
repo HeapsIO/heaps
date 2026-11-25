@@ -90,9 +90,9 @@ class DefaultForwardBase extends hxsl.Shader {
 		// ShadowMaps
 		@param var cascadeShadowMaps : Sampler2DArray;
 		@param var dirShadowMaps : Array<Sampler2D, MAX_DIR_SHADOW_COUNT>;
-		@param var pointShadowMaps : Array<SamplerCube, MAX_POINT_SHADOW_COUNT>;
+		@param @sampler("cubeShadow") var pointShadowMaps : Array<SamplerCube, MAX_POINT_SHADOW_COUNT>;
 		@param var spotShadowMaps : Array<Sampler2D, MAX_SPOT_SHADOW_COUNT>;
-		@param var capsuleShadowMaps : Array<SamplerCube, MAX_CAPSULE_SHADOW_COUNT>;
+		@param @sampler("cubeShadow") var capsuleShadowMaps : Array<SamplerCube, MAX_CAPSULE_SHADOW_COUNT>;
 		@param var rectShadowMaps : Array<Sampler2D, MAX_RECT_SHADOW_COUNT>;
 
 		var bindlessDirShadow : Sampler2D;
