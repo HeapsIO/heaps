@@ -1256,7 +1256,7 @@ class VulkanDriver extends h3d.impl.Driver {
 		Vk.cmdClearAttachments(cmd, 1, clearAttachments, 1, clearRects);
 	}
 
-	function copyBuffer( src : NativeBuffer, srcOffset : Int, dst : NativeBuffer, dstOffset : Int, size : Int ) {
+	function cmdCopyBuffer( src : NativeBuffer, srcOffset : Int, dst : NativeBuffer, dstOffset : Int, size : Int ) {
 		var c = bufferCopy;
 		c.srcBuffer = src;
 		c.dstBuffer = dst;
@@ -3051,7 +3051,7 @@ class VulkanDriver extends h3d.impl.Driver {
 		a.ptr.blit(0, data, 0, bytesCount);
 		transition(b, COPY_DST);
 		flushForTransfer();
-		copyBuffer(a.resource.handle, a.offset, b.handle, startByte, bytesCount);
+		cmdCopyBuffer(a.resource.handle, a.offset, b.handle, startByte, bytesCount);
 	}
 
 	override function uploadIndexData( i : h3d.Buffer, startIndice : Int, indiceCount : Int, buf : hxd.IndexBuffer, bufPos : Int ) {
@@ -3074,8 +3074,22 @@ class VulkanDriver extends h3d.impl.Driver {
 		var tmp = allocCheck(() -> createVkBuffer(size, BufferUsage.TRANSFER_DST, READBACK));
 		transition(b.vbuf, COPY_SRC);
 		flushForTransfer();
-		copyBuffer(b.vbuf.handle, startVertex * stride, Vk.bufferGetHandle(tmp), 0, size);
+		cmdCopyBuffer(b.vbuf.handle, startVertex * stride, Vk.bufferGetHandle(tmp), 0, size);
 		return tmp;
+	}
+
+	override function copyBuffer( from : h3d.Buffer, to : h3d.Buffer, fromVertex = 0, toVertex = 0, vertexCount = -1 ) {
+		var stride = from.format.strideBytes;
+		if( vertexCount < 0 ) {
+			if( from.vertices * stride != to.vertices * to.format.strideBytes ) return false;
+			vertexCount = from.vertices;
+		}
+		if( hasDeviceError || vertexCount == 0 ) return true;
+		transition(from.vbuf, COPY_SRC);
+		transition(to.vbuf, COPY_DST);
+		flushForTransfer();
+		cmdCopyBuffer(from.vbuf.handle, fromVertex * stride, to.vbuf.handle, toVertex * to.format.strideBytes, vertexCount * stride);
+		return true;
 	}
 
 	override function readBufferBytes( b : h3d.Buffer, startVertex : Int, vertexCount : Int, buf : haxe.io.Bytes, bufPos : Int ) {

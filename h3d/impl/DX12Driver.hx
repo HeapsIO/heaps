@@ -2480,6 +2480,20 @@ class DX12Driver extends h3d.impl.Driver {
 		beginFrame();
 	}
 
+	override function copyBuffer( from : Buffer, to : Buffer, fromVertex = 0, toVertex = 0, vertexCount = -1 ) {
+		var stride = from.format.strideBytes;
+		if( vertexCount < 0 ) {
+			if( from.vertices * stride != to.vertices * to.format.strideBytes ) return false;
+			vertexCount = from.vertices;
+		}
+		if( hasDeviceError || vertexCount == 0 ) return true;
+		transition(from.vbuf, COPY_SOURCE);
+		transition(to.vbuf, COPY_DEST);
+		flushTransitions();
+		frame.commandList.copyBufferRegion(to.vbuf.res, toVertex * to.format.strideBytes, from.vbuf.res, fromVertex * stride, vertexCount * stride);
+		return true;
+	}
+
 	override function readBufferBytesAsync( b : Buffer, startVertex : Int, vertexCount : Int, buf : haxe.io.Bytes, bufPos : Int, callback : Void -> Void ) {
 		if( hasDeviceError ) return;
 		if( b.vbuf == null ) throw "Reading buffer which was not allocated";

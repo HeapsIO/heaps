@@ -220,6 +220,10 @@ class RenderGraphDriver extends Driver {
 		return d.copyTexture(from, to);
 	}
 
+	override function copyBuffer(from, to, fromVertex = 0, toVertex = 0, vertexCount = -1) {
+		return d.copyBuffer(from, to, fromVertex, toVertex, vertexCount);
+	}
+
 	override function setResidentMip(t, mip) {
 		return d.setResidentMip(t, mip);
 	}

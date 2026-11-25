@@ -358,6 +358,14 @@ class Driver {
 	}
 
 	/**
+		GPU copy of `vertexCount` elements of `from`, or of the whole buffer if -1 (buffers of the same size only).
+		Returns false if not supported by the driver or on a size mismatch.
+	**/
+	public function copyBuffer( from : Buffer, to : Buffer, fromVertex = 0, toVertex = 0, vertexCount = -1 ) : Bool {
+		return false;
+	}
+
+	/**
 		Returns true if we could copy the texture, false otherwise (not supported by driver or mismatch in size/format)
 	**/
 	public function copyTexture( from : h3d.mat.Texture, to : h3d.mat.Texture ) {
