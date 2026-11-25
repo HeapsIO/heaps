@@ -271,6 +271,7 @@ class FroxelFog extends hxsl.Shader {
 	public function new( blend = 0 ) {
 		super();
 		BLEND = blend;
+		setPriority(-1000);
 	}
 }
 
