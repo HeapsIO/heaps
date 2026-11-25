@@ -186,6 +186,8 @@ class ShaderRegisters {
 	public var textures : Int;
 	public var samplers : Int;
 	public var texturesCount : Int;
+	public var samplersCount : Int;
+	public var samplersMap : Array<Int>;
 	public var texturesTypes : Array<hxsl.Ast.Type>;
 	public var bufferTypes : Array<hxsl.Ast.BufferKind>;
 	public var bufferStrides : Array<Int>;
@@ -1996,6 +1998,8 @@ class DX12Driver extends h3d.impl.Driver {
 			}
 			if( sh.texturesCount > 0 ) {
 				regs.texturesTypes = [];
+				regs.samplersMap = [];
+				var samplers = new hxsl.HlslOut.Samplers();
 				var uavCount = 0;
 
 				var p = sh.data.vars;
@@ -2004,14 +2008,16 @@ class DX12Driver extends h3d.impl.Driver {
 					case TArray(t = TSampler(_) | TRWTexture(_), SConst(n)):
 						for( i in 0...n )
 							regs.texturesTypes.push(t);
-						if( t.match(TSampler(_)) )
+						if( t.match(TSampler(_)) ) {
 							regs.texturesCount += n;
-						else {
+							samplers.make(v, regs.samplersMap);
+						} else {
 							uavCount += n;
 						}
 					default:
 					}
 				}
+				regs.samplersCount = samplers.count;
 
 				regs.textures = paramsCount;
 				var rangeCount = 0;
@@ -2033,8 +2039,8 @@ class DX12Driver extends h3d.impl.Driver {
 					r.rangeType = SAMPLER;
 					r.baseShaderRegister = regSamplerCount;
 					r.registerSpace = 0;
-					r.numDescriptors = regs.texturesCount;
-					regSamplerCount += regs.texturesCount;
+					r.numDescriptors = regs.samplersCount;
+					regSamplerCount += regs.samplersCount;
 				}
 
 				if ( uavCount > 0 ) {
@@ -3134,7 +3140,7 @@ class DX12Driver extends h3d.impl.Driver {
 				if ( hasTexturesChanged(buf, regs) ) {
 					regs.lastHeapCount = heapCount;
 					regs.srv = frame.srvHeap.alloc(shader.texturesCount);
-					regs.samplersView = frame.samplerHeap.alloc(regs.texturesCount);
+					regs.samplersView = frame.samplerHeap.alloc(regs.samplersCount);
 					if ( regs.lastTextures.length < shader.texturesCount ) {
 						regs.lastTextures.resize(shader.texturesCount);
 						regs.lastTexturesBits.resize(shader.texturesCount);
@@ -3223,7 +3229,7 @@ class DX12Driver extends h3d.impl.Driver {
 								NON_PIXEL_SHADER_RESOURCE;
 							transition(t.t, state);
 							createTexView(t, regs.srv.offset(textureIndex * frame.srvHeap.stride));
-							createSampler(t, regs.samplersView.offset(textureIndex * frame.samplerHeap.stride));
+							createSampler(t, regs.samplersView.offset(regs.samplersMap[textureIndex] * frame.samplerHeap.stride));
 							textureIndex++;
 						}
 					}
