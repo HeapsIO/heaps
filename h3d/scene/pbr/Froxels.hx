@@ -105,6 +105,7 @@ class Froxels {
 		integrate.integratedVolume = integratedVolume;
 		ctx.computeDispatch(integrate, Math.ceil(sizeX / 8), Math.ceil(sizeY / 8), 1);
 		ctx.setGlobal("froxelIntegratedVolume", integratedVolume);
+		ctx.setGlobal("froxels.legacy", raymarchBlend ? 1.0 : 0.0);
 		ctx.engine.driver.endEvent();
 	}
 
@@ -118,13 +119,9 @@ class Froxels {
 		if( applyPass == null ) {
 			applyPass = new h3d.pass.ScreenFx(new h3d.shader.pbr.Froxels.FroxelApply());
 		}
-		if( raymarchBlend )
-			applyPass.pass.blend(SrcAlpha, OneMinusSrcAlpha);
-		else
-			applyPass.pass.blend(One, SrcAlpha);
+		applyPass.pass.blend(One, SrcAlpha);
 		applyPass.pass.blendAlphaSrc = Zero;
 		applyPass.pass.blendAlphaDst = One;
-		applyPass.shader.RAYMARCH_BLEND = raymarchBlend;
 		@:privateAccess r.mark("FroxelApply");
 		applyPass.shader.depthTexture = @:privateAccess r.textures.albedo.depthBuffer;
 		applyPass.render();
@@ -182,6 +179,26 @@ class Froxels {
 		if( applyPass != null ) {
 			applyPass.dispose();
 			applyPass = null;
+		}
+	}
+}
+
+class FroxelFogOutput extends h3d.pass.Output {
+
+	var fogShaders = [for( i in 0...5 ) new h3d.shader.pbr.Froxels.FroxelFog(i)];
+
+	override function processShaders( p : h3d.pass.PassObject, shaders : hxsl.ShaderList ) {
+		shaders = super.processShaders(p, shaders);
+		return ctx.allocShaderList(fogShaders[getBlendIndex(p.pass)], shaders);
+	}
+
+	public static function getBlendIndex( pass : h3d.mat.Pass ) {
+		return switch( [pass.blendSrc, pass.blendDst] ) {
+		case [_, One], [_, OneMinusSrcColor]: 1;
+		case [One, OneMinusSrcAlpha]: 2;
+		case [DstColor, Zero]: 3;
+		case [DstColor, OneMinusSrcAlpha]: 4;
+		default: 0;
 		}
 	}
 }

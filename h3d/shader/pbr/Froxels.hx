@@ -17,6 +17,7 @@ class Froxel extends hxsl.Shader {
 			var size : Vec3;
 			var near : Float;
 			var far : Float;
+			var legacy : Float;
 		};
 		@global var froxelIntegratedVolume : Sampler3D;
 
@@ -45,7 +46,9 @@ class Froxel extends hxsl.Shader {
 			var uv = screenToUv(clipPos.xy / clipPos.w);
 			var halfSlice = 0.5 / froxels.size.z;
 			var fog = froxelIntegratedVolume.get(vec3(uv, max(froxelViewZToSlice(clipPos.w) - halfSlice, halfSlice)));
-			return mix(vec4(0.0, 0.0, 0.0, 1.0), fog, saturate(clipPos.w / froxelSliceToViewZ(2.0 * halfSlice)));
+			fog = mix(vec4(0.0, 0.0, 0.0, 1.0), fog, saturate(clipPos.w / froxelSliceToViewZ(2.0 * halfSlice)));
+			var opacity = 1.0 - fog.a;
+			return vec4(froxels.legacy > 0.5 ? fog.rgb * opacity * opacity : fog.rgb, fog.a);
 		}
 	}
 }
@@ -229,16 +232,45 @@ class FroxelApply extends h3d.shader.ScreenShader {
 
 		@:import h3d.shader.pbr.Froxels.Froxel;
 
-		@const var RAYMARCH_BLEND : Bool;
 		@param var depthTexture : Sampler2D;
 
 		function fragment() {
 			var depthSize = depthTexture.size();
 			var depth = depthTexture.fetch(ivec2(min(calculatedUV * depthSize, depthSize - 1.0))).r;
 			var p = vec4(uvToScreen(calculatedUV), depth, 1.0) * camera.inverseViewProj;
-			var fog = froxelFog(p.xyz / p.w);
-			pixelColor = RAYMARCH_BLEND ? vec4(fog.rgb * (1.0 - fog.a), 1.0 - fog.a) : fog;
+			pixelColor = froxelFog(p.xyz / p.w);
 		}
+	}
+}
+
+class FroxelFog extends hxsl.Shader {
+
+	static var SRC = {
+
+		@:import h3d.shader.pbr.Froxels.Froxel;
+
+		@const(8) var BLEND : Int;
+		var pixelColor : Vec4;
+		var transformedPosition : Vec3;
+
+		function fragment() {
+			var fog = froxelFog(transformedPosition);
+			if( BLEND == 1 )
+				pixelColor.rgb *= fog.a;
+			else if( BLEND == 2 )
+				pixelColor.rgb = pixelColor.rgb * fog.a + fog.rgb * pixelColor.a;
+			else if( BLEND == 3 )
+				pixelColor.rgb = mix(vec3(1.0), pixelColor.rgb, fog.a);
+			else if( BLEND == 4 )
+				pixelColor.rgb = mix(vec3(pixelColor.a), pixelColor.rgb, fog.a);
+			else
+				pixelColor.rgb = pixelColor.rgb * fog.a + fog.rgb;
+		}
+	}
+
+	public function new( blend = 0 ) {
+		super();
+		BLEND = blend;
 	}
 }
 

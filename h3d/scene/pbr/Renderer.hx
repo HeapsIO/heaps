@@ -108,6 +108,7 @@ class Renderer extends h3d.scene.Renderer {
 	public var sceneColorCopy = false;
 	var debugShadowMapIndex = 1;
 	var froxels : Froxels;
+	var froxelFogOutput = new Froxels.FroxelFogOutput("froxelFog");
 
 	#if editor
 	var outline = new h3d.pass.ScreenFx(new hide.Renderer.ScreenOutline());
@@ -178,6 +179,7 @@ class Renderer extends h3d.scene.Renderer {
 		allPasses.push(colorDepthOutput);
 		allPasses.push(colorDepthVelocityOutput);
 		allPasses.push(depthOutput);
+		allPasses.push(froxelFogOutput);
 		allPasses.push(new h3d.pass.Shadows(null));
 		refreshProps();
 	}
@@ -666,6 +668,15 @@ class Renderer extends h3d.scene.Renderer {
 		return textures.depth;
 	}
 
+	function applyFroxels() {
+		if( froxels == null || !froxels.isActive(this) )
+			return false;
+		ctx.engine.pushTarget(textures.hdr, 0, 0, NotBound);
+		froxels.apply(this);
+		ctx.engine.popTarget();
+		return true;
+	}
+
 	public function getFroxels() {
 		if( froxels == null )
 			froxels = new Froxels();
@@ -880,9 +891,14 @@ class Renderer extends h3d.scene.Renderer {
 		ls.forwardMode = true;
 		setTargets([textures.hdr, getPbrDepth()]);
 		renderPass(colorDepthOutput, get("forward"));
+		ls.forwardMode = false;
+		setTarget(textures.hdr);
+		draw("beforeTonemappingDecal");
+		var transparentOutput = applyFroxels() ? froxelFogOutput : defaultPass;
 		copySceneColor();
 		setTarget(textures.hdr);
-		renderPass(defaultPass, get("forwardAlpha"), backToFront);
+		ls.forwardMode = true;
+		renderPass(transparentOutput, get("forwardAlpha"), backToFront);
 		ls.forwardMode = false;
 		end();
 
@@ -895,8 +911,7 @@ class Renderer extends h3d.scene.Renderer {
 		}
 
 		begin(BeforeTonemapping);
-		draw("beforeTonemappingDecal");
-		draw("beforeTonemapping");
+		renderPass(transparentOutput, get("beforeTonemapping"));
 		draw("volumetricOverlay");
 		end();
 
