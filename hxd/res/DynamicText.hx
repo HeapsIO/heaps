@@ -73,7 +73,7 @@ class DynamicText {
 
 	public static var r_attr = ~/::(.+?)::/g;
 
-	static function applyText( path : Array<String>, old : Dynamic, x : Access, ref : Access, onMissing : Array<String> -> String -> String ) {
+	static function applyText( path : Array<String>, old : Dynamic, x : Access, ref : Access, onMissing : Array<String> -> String -> String ) : Dynamic {
 		var str = x == null ? null : x.innerHTML;
 		var missingStr = false;
 		if( str == null ) {

@@ -69,7 +69,7 @@ class Context {
 		}
 	}
 
-	static function resumeContext(_) {
+	static function resumeContext(_:js.html.Event) {
 		if ( suspended ) {
 			if ( ctx != null ) ctx.resume();
 

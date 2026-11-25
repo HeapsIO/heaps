@@ -178,7 +178,7 @@ class LightBuffer {
 		return d1 == d2 ? 0 : (d1 > d2 ? 1 : -1);
 	}
 
-	var tmpLights = [];
+	var tmpLights:Array<Light> = [];
 
 	public function sortLights ( ctx : h3d.scene.RenderContext ) : Array<Light> @:privateAccess {
 		var l = Std.downcast(ctx.lights, Light);

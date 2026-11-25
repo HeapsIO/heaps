@@ -49,7 +49,7 @@ class Printer {
 		return buffer.toString();
 	}
 
-	function addVar( v : TVar, defKind : VarKind, tabs = "", ?parent ) {
+	function addVar( v : TVar, defKind : VarKind, tabs = "", ?parent : TVar ) {
 		if( v.qualifiers != null ) {
 			for( q in v.qualifiers )
 				add("@" + (switch( q ) {

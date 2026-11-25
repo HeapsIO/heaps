@@ -32,7 +32,7 @@ private class SocketInput extends haxe.io.Input {
 
 class Socket {
 
-	static var openedSocks = [];
+	static var openedSocks:Array<Socket> = [];
 	#if hl
 	var s : hl.uv.Stream;
 	#elseif (nodejs && hxnodejs)

@@ -216,7 +216,7 @@ class Geometry {
 		return normals;
 	}
 
-	function processVectors( layer, name, opt = false ) {
+	function processVectors( layer : String, name : String, opt = false ) {
 		var vect = root.get(layer + "." + name, opt);
 		if( vect == null ) return null;
 		var nrm = vect.getFloats();

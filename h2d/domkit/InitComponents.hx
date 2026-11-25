@@ -3,7 +3,7 @@ import h2d.domkit.BaseComponents.CustomParser;
 
 class InitComponents {
 
-	public static function init() {
+	public static function init() : Dynamic {
 		domkit.Macros.registerComponentsPath("h2d.domkit.BaseComponents.$Comp");
 		domkit.Macros.registerComponentsPath("$Comp");
 		if( domkit.Macros.defaultParserPath == null )

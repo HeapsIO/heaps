@@ -92,7 +92,7 @@ class GpuPart {
 @:allow(h3d.parts.GpuParticles)
 class GpuPartGroup {
 
-	static var FIELDS = null;
+	static var FIELDS:Array<String> = null;
 	static function getFields( inst : GpuPartGroup ) {
 		if( FIELDS != null )
 			return FIELDS;
@@ -634,7 +634,7 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 		}
 	}
 
-	function rebuildAll(cam) {
+	function rebuildAll() {
 
 		var ebounds = null, calcEmit = null, partCount = 0, partAlloc = this.partAlloc;
 		bounds.empty();
@@ -938,7 +938,7 @@ class GpuParticles extends h3d.scene.MultiMaterial {
 		for( gid in 0 ... groups.length ) {
 			var primitive = gid < primitives.length ? primitives[gid] : null;
 			if( primitive == null || primitive.buffer == null || primitive.buffer.isDisposed() ) {
-				rebuildAll(camera);
+				rebuildAll();
 				break;
 			}
 		}

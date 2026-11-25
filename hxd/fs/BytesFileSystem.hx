@@ -63,7 +63,7 @@ class BytesFileSystem implements FileSystem {
 	function new() {
 	}
 
-	public function getRoot() {
+	public function getRoot() : FileEntry {
 		throw "Not implemented";
 		return null;
 	}

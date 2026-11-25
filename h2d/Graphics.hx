@@ -393,7 +393,7 @@ class Graphics extends Drawable {
 		content.setTile(tile);
 	}
 
-	static var EARCUT = null;
+	static var EARCUT : hxd.earcut.Earcut = null;
 
 	function flushFill( i0 ) {
 

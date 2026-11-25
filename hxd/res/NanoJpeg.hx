@@ -151,7 +151,7 @@ class NanoJpeg {
 		syntax( size < 0 );
 	}
 
-	inline function syntax( flag ) {
+	inline function syntax( flag : Bool ) {
 		#if debug
 		if( flag ) throw "Invalid JPEG file";
 		#end
