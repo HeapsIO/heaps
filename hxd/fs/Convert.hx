@@ -104,12 +104,10 @@ class Convert {
 
 	function command(cmd:String, args:Array<String>) {
 		#if (sys || nodejs)
-		#if nodejs
-		// no console window for each command on Windows (an Electron app)
-		var code : Null<Int> = js.node.ChildProcess.spawnSync(cmd, args, cast { stdio : "inherit", windowsHide : true }).status;
-		if (code == null) code = -1;
-		#else
-		var code = Sys.command(cmd, args);
+		var code = nativeCommand(cmd, args);
+		#if wine
+		if (code != 0)
+			code = wineCommand(cmd, args);
 		#end
 		if (code != 0)
 			throw "Command '" + cmd + (args.length == 0 ? "" : " " + args.join(" ")) + "' failed with exit code " + code;
@@ -117,6 +115,44 @@ class Convert {
 		throw "Don't know how to run command on this platform";
 		#end
 	}
+
+	function nativeCommand(cmd, args) {
+		#if (sys || nodejs)
+		#if nodejs
+		// no console window for each command on Windows (an Electron app)
+		var code : Null<Int> = js.node.ChildProcess.spawnSync(cmd, args, cast { stdio : "inherit", windowsHide : true }).status;
+		if (code == null) code = -1;
+		#else
+		var code = Sys.command(cmd, args);
+		#end
+		return code;
+		#end
+		return -1;
+	}
+
+	#if wine
+	function wineCommand(cmd, args) {
+		for (i in 0...args.length) {
+			// Prefix path strings with wine mount point. Avoid possible confusion with windows-style options by checking split length
+			if (StringTools.startsWith(args[i], "/") && args[i].split("/").length > 2)
+				args[i] = 'Z:${args[i]}';
+		}
+		var pathEnv = Sys.getEnv("PATH");
+
+		for (p in pathEnv.split(":")) {
+			var path = '$p/$cmd';
+			if (!StringTools.endsWith(cmd, ".exe"))
+				path += ".exe";
+			if (sys.FileSystem.exists(path)) {
+				cmd = path;
+				break;
+			}
+		}
+		args.unshift(cmd);
+		cmd = "wine";
+		return nativeCommand(cmd, args);
+	}
+	#end
 
 	@:persistent static var converts = new Map<String, Array<Convert>>();
 
@@ -563,7 +599,7 @@ class CompressIMG extends Convert {
 		return @:privateAccess new hxd.res.Image(new hxd.fs.BytesFileSystem.BytesFileEntry(path, sys.io.File.getBytes(path)));
 	}
 
-	function runTexconv(srcPath:String, dstPath:String, args:Array<String>, outExt = "dds") {
+	function runTexconv(srcPath:String, dstPath:String, args:Array<String>, outExt = "DDS") {
 		var tmpPath = new haxe.io.Path(dstPath);
 		tmpPath.ext = "tmp." + new haxe.io.Path(srcPath).ext;
 		var input = tmpPath.toString();
