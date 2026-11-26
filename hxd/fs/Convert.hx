@@ -116,7 +116,7 @@ class Convert {
 		#end
 	}
 
-	function nativeCommand(cmd, args) {
+	function nativeCommand(cmd:String, args:Array<String>) {
 		#if (sys || nodejs)
 		#if nodejs
 		// no console window for each command on Windows (an Electron app)
