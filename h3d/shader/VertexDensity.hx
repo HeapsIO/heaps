@@ -7,7 +7,7 @@ class VertexDensity extends hxsl.Shader {
 			var view : Mat4;
 		};
 
-		@param var areaScale : Float = 300;
+		@param var areaScale : Float = 400;
 		var transformedPosition : Vec3;
 		@flat var flatPos : Vec3;
 		var pixelColor : Vec4;
@@ -16,8 +16,7 @@ class VertexDensity extends hxsl.Shader {
 			flatPos =  transformedPosition;
 		}
 
-
-		function ramp0(ft: Float) : Vec3 {
+		function gradient(ft: Float) : Vec3 {
 			var t = clamp(ft, 0.0,1.0);
 			t *= 4.;
 			return clamp(vec3(
@@ -37,11 +36,11 @@ class VertexDensity extends hxsl.Shader {
 			var area = cross(v1 - v0, v2 - v0).length() * 0.5;
 			var density = viewPos.z / (sqrt(area) * areaScale);
 
-			pixelColor.rgb = ramp0(saturate(density));
+			pixelColor.rgb = gradient(saturate(density));
 
 			var minBary = min(barycentrics.x, min(barycentrics.y, barycentrics.z));
 			var wire = smoothstep(0.0, fwidth(minBary) * 1.0, minBary);
-			pixelColor.rgb = mix(pixelColor.rgb, vec3(0), wire * 0.25);
+			pixelColor.rgb = mix(pixelColor.rgb, vec3(0), wire * 0.4);
 		}
 	}
 }
