@@ -131,7 +131,7 @@ class Convert {
 	}
 
 	#if wine
-	function wineCommand(cmd, args) {
+	function wineCommand(cmd:String, args:Array<String>) {
 		for (i in 0...args.length) {
 			// Prefix path strings with wine mount point. Avoid possible confusion with windows-style options by checking split length
 			if (StringTools.startsWith(args[i], "/") && args[i].split("/").length > 2)
