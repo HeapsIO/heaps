@@ -15,9 +15,12 @@ class RangeAllocator {
 		grow(capacity);
 	}
 
+	/**
+		Returns the start of a free range of `size`, or -1 if none is large enough.
+	**/
 	public function alloc( size : Int ) : Int {
 		if( size <= 0 )
-			return -1;
+			throw "Invalid range size " + size;
 		var best = -1;
 		for( i in 0...sizes.length )
 			if( sizes[i] >= size && (best < 0 || sizes[i] < sizes[best]) ) {
