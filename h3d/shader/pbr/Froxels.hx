@@ -18,6 +18,7 @@ class Froxel extends hxsl.Shader {
 			var near : Float;
 			var far : Float;
 			var legacy : Float;
+			var intensity : Float;
 		};
 		@global var froxelIntegratedVolume : Sampler3D;
 
@@ -48,7 +49,8 @@ class Froxel extends hxsl.Shader {
 			var fog = froxelIntegratedVolume.get(vec3(uv, max(froxelViewZToSlice(clipPos.w) - halfSlice, halfSlice)));
 			fog = mix(vec4(0.0, 0.0, 0.0, 1.0), fog, saturate(clipPos.w / froxelSliceToViewZ(2.0 * halfSlice)));
 			var opacity = 1.0 - fog.a;
-			return vec4(froxels.legacy > 0.5 ? fog.rgb * opacity * opacity : fog.rgb, fog.a);
+			var inScatter = froxels.legacy > 0.5 ? fog.rgb * opacity * opacity : fog.rgb;
+			return vec4(inScatter * froxels.intensity, 1.0 - opacity * froxels.intensity);
 		}
 	}
 }

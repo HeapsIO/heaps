@@ -4,6 +4,7 @@ class Froxels {
 
 	public var debugMode = 0;
 	public var raymarchBlend = false;
+	public var intensity = 1.0;
 	public var pointLights = true;
 	public var spotLights = true;
 	public var temporal = true;
@@ -106,6 +107,7 @@ class Froxels {
 		ctx.computeDispatch(integrate, Math.ceil(sizeX / 8), Math.ceil(sizeY / 8), 1);
 		ctx.setGlobal("froxelIntegratedVolume", integratedVolume);
 		ctx.setGlobal("froxels.legacy", raymarchBlend ? 1.0 : 0.0);
+		ctx.setGlobal("froxels.intensity", intensity);
 		ctx.engine.driver.endEvent();
 	}
 
