@@ -1296,8 +1296,10 @@ class DX12Driver extends h3d.impl.Driver {
 	}
 
 	override function init( onCreate : Bool -> Void, forceSoftware = false ) {
-		contextLost.set(h3d.Engine.getCurrent(), onCreate.bind(true));
-		haxe.Timer.delay(onCreate.bind(false), 1);
+		var engine = h3d.Engine.getCurrent();
+		contextLost.set(engine, onCreate.bind(true));
+		// the engine can be disposed before the delay
+		haxe.Timer.delay(() -> if( contextLost.exists(engine) ) onCreate(false), 1);
 	}
 
 	override function removeEngine( engine : h3d.Engine ) {
