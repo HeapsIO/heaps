@@ -132,7 +132,7 @@ class Interactive extends Object implements hxd.SceneEvents.Interactive {
 	function checkBounds( e : hxd.Event ) {
 		return switch( e.kind ) {
 		case EOut, EFocus, EFocusLost, EReleaseOutside: false;
-		case ETextInput, EKeyDown, EKeyUp, EWheel: !hasFocus();
+		case ETextInput, ETextComposition, EKeyDown, EKeyUp, EWheel: !hasFocus();
 		default: true;
 		}
 	}
@@ -215,6 +215,8 @@ class Interactive extends Object implements hxd.SceneEvents.Interactive {
 			onCheck(e);
 		case ETextInput:
 			onTextInput(e);
+		case ETextComposition:
+			onTextComposition(e);
 		}
 	}
 
@@ -434,6 +436,12 @@ class Interactive extends Object implements hxd.SceneEvents.Interactive {
 		Sent when this Interactive is focused and user inputs text. Character added can be accessed through `Event.charCode`.
 	**/
 	public dynamic function onTextInput( e : hxd.Event ) {
+	}
+
+	/**
+		Sent when this Interactive is focused and an IME composition changes. See `Event.composition`, `Event.compositionCursor` and `Event.compositionLength`.
+	**/
+	public dynamic function onTextComposition( e : hxd.Event ) {
 	}
 
 }

@@ -1,0 +1,8 @@
+# Thin SDF strokes at small sizes (automatic smoothing). Opens a real window: needs hlsdl.
+-lib format
+-lib hlsdl
+-cp tests/sdf
+-cp .
+-main SdfThinStrokeTest
+-hl bin/sdf-test.hl
+--cmd hl bin/sdf-test.hl

@@ -1,0 +1,5 @@
+-cp tests/ime
+-cp .
+-main ImeTextTest
+-hl bin/ime-test.hl
+--cmd hl bin/ime-test.hl

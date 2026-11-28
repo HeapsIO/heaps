@@ -133,6 +133,13 @@ class Text extends Drawable {
 	var realMaxWidth:Float = -1;
 
 	var sdfShader : h3d.shader.SignedDistanceField;
+	/**
+		Colour glyphs (`FontChar.isColor`: emoji from the OS emoji font), drawn after `glyphs` with
+		none of the text's shaders and no tint: white, with the text's alpha. Created on first use.
+	**/
+	var colorGlyphs : Null<TileGroup>;
+	/** Turns `colorGlyphs` into the drop shadow colour for the shadow pass (a silhouette). **/
+	var colorShadow : h3d.shader.FixedColor;
 	var colorSegments : Array<Int> = null;
 
 	/**
@@ -270,11 +277,60 @@ class Text extends Drawable {
 			color.setColor(dropShadow.color);
 			color.a = dropShadow.alpha * oldA;
 			glyphs.drawWith(ctx, this);
+			drawColorShadow(ctx, color.a);
 			absX = oldX;
 			absY = oldY;
 			color.set(oldR, oldG, oldB, oldA);
 		}
 		glyphs.drawWith(ctx,this);
+		drawColorLayer(ctx);
+	}
+
+	/** Adds glyph `e` at (`x`, `y`): a colour glyph to the colour layer, any other to `glyphs`. **/
+	function addGlyph( x : Float, y : Float, e : h2d.Font.FontChar ) {
+		if( e.isColor ) {
+			if( colorGlyphs == null ) {
+				colorGlyphs = new TileGroup(null, this);
+				colorGlyphs.visible = false;
+				colorGlyphs.smooth = true;
+			}
+			colorGlyphs.add(x, y, e.t);
+		} else
+			glyphs.add(x, y, e.t);
+	}
+
+	/** Places the colour layer where the text is drawn (the current absolute matrix) with the text's alpha and blend mode, untinted. **/
+	function syncColorLayer() {
+		var c = colorGlyphs;
+		c.absX = absX;
+		c.absY = absY;
+		c.matA = matA;
+		c.matB = matB;
+		c.matC = matC;
+		c.matD = matD;
+		c.blendMode = blendMode;
+		c.color.set(1, 1, 1, color.a);
+	}
+
+	function drawColorLayer( ctx : RenderContext ) {
+		if( colorGlyphs == null || colorGlyphs.count() == 0 ) return;
+		syncColorLayer();
+		colorGlyphs.drawWith(ctx, colorGlyphs);
+	}
+
+	/** The colour layer's drop shadow: its shapes in `dropShadow.color` at `alpha`, drawn at the current (offset) position. **/
+	function drawColorShadow( ctx : RenderContext, alpha : Float ) {
+		if( colorGlyphs == null || colorGlyphs.count() == 0 ) return;
+		if( colorShadow == null ) {
+			colorShadow = new h3d.shader.FixedColor();
+			colorShadow.USE_ALPHA = false;
+		}
+		syncColorLayer();
+		colorGlyphs.color.a = alpha;
+		colorShadow.color.setColor(dropShadow.color);
+		colorGlyphs.addShader(colorShadow);
+		colorGlyphs.drawWith(ctx, colorGlyphs);
+		colorGlyphs.removeShader(colorShadow);
 	}
 
 	function set_text(t : String) {
@@ -352,6 +408,8 @@ class Text extends Drawable {
 		} else {
 			maxWidth -= afterData;
 		}
+		if (maxWidth <= 2)
+			return text;
 		if ( font == null ) font = this.font;
 		var lines = [];
 		var x = leftMargin;
@@ -369,27 +427,35 @@ class Text extends Drawable {
 			leftMargin = 0;
 		}
 
-		var i = -1;
+		// walks clusters (hxd.Charset.clusterEnd): a surrogate pair or an emoji sequence is one
+		// character that is never split; joiners / variation selectors take no space and never start a line
+		var i = 0;
 		var maxLen = text.length;
-		while( ++i < maxLen ) {
-			var cc = StringTools.fastCodeAt(text, i);
+		while( i < maxLen ) {
+			var cc = hxd.Charset.codeAt(text, i);
 			if( cc == '\n'.code ) {
 				flushLine(i);
 				lastPos++;
+				i++;
 				continue;
 			}
+			if( hxd.Charset.isZeroWidth(cc) ) {
+				i += hxd.Charset.charLength(text, i, cc);
+				continue;
+			}
+			var next = hxd.Charset.clusterEnd(text, i);
 			var startX = x;
 			if( lastPos < i ) x += letterSpacing;
-			var e = font.getChar(cc);
-			var esize = e.width + e.getKerningOffset(prevChar);
+			var e = font.getCluster(text, i, next);
+			var esize = e != null ? e.width + e.getKerningOffset(prevChar) : partsWidth(font, text, i, next, prevChar);
 			x += esize;
 			prevChar = cc;
 			if( lineBreak ) {
-				if( x > maxWidth && lastBreak >= 0 && (!trimTrailingSpaces || !font.charset.isSpace(cc) || startX > maxWidth) ) {
-					i = lastBreak;
+				if( x > maxWidth && lastBreak >= lastPos && (!trimTrailingSpaces || !font.charset.isSpace(cc) || startX > maxWidth) ) {
+					next = lastBreak + 1;
 					x = lastBreakX;
-					flushLine(i + 1);
-				} else if( font.charset.isBreakChar(cc) && (i+1 == maxLen || !font.charset.isComplementChar(StringTools.fastCodeAt(text, i + 1))) ) {
+					flushLine(next);
+				} else if( font.charset.isBreakChar(cc) && (next == maxLen || !font.charset.isComplementChar(hxd.Charset.codeAt(text, next))) ) {
 					if( leftMargin > 0 && x > maxWidth ) {
 						lines.push("");
 						if ( sizes != null ) sizes.push(leftMargin);
@@ -399,18 +465,45 @@ class Text extends Drawable {
 						lastBreak = i - 1;
 						lastBreakX = startX;
 					} else {
-						lastBreak = i;
+						lastBreak = next - 1; // last unit of the break character
 						lastBreakX = x;
 					}
 				} else if( wordBreak && x > maxWidth && lastPos < i ) {
+					// the character goes to the next line and is measured again there
 					x = startX;
 					flushLine(i);
-					i--;
+					next = i;
 				}
 			}
+			i = next;
 		}
 		if( x > leftMargin ) flushLine(text.length);
 		return lines.join("\n");
+	}
+
+	/** Advance of the cluster `[i, end)` of `text` after `prevChar`: its joined glyph's, or its parts'. **/
+	function clusterWidth( text : String, i : Int, end : Int, prevChar : Int ) : Float {
+		var e = font.getCluster(text, i, end);
+		return e != null ? e.width + e.getKerningOffset(prevChar) : partsWidth(font, text, i, end, prevChar);
+	}
+
+	/**
+		Width of the cluster `[i, end)` of `text` drawn as parts (`Font.getCluster` gave no glyph for
+		it): its visible code points side by side, letter spacing between them.
+	**/
+	function partsWidth( font : Font, text : String, i : Int, end : Int, prevChar : Int ) : Float {
+		var w = 0., first = true;
+		while( i < end ) {
+			var cc = hxd.Charset.codeAt(text, i);
+			i += hxd.Charset.charLength(text, i, cc);
+			if( hxd.Charset.isZeroWidth(cc) ) continue;
+			var e = font.getChar(cc);
+			if( !first ) w += letterSpacing;
+			w += e.width + e.getKerningOffset(prevChar);
+			prevChar = cc;
+			first = false;
+		}
+		return w;
 	}
 
 	/**
@@ -423,7 +516,10 @@ class Text extends Drawable {
 	}
 
 	function initGlyphs( text : String, rebuild = true ) : Void {
-		if( rebuild ) glyphs.clear();
+		if( rebuild ) {
+			glyphs.clear();
+			if( colorGlyphs != null ) colorGlyphs.clear();
+		}
 		var x = 0., y = 0., xMax = 0., xMin = 0., yMin = 0., yMax = 0., prevChar = -1, linei = 0;
 		var align = textAlign;
 		var lines = new Array<Float>();
@@ -451,19 +547,22 @@ class Text extends Drawable {
 		var colorsPos = 0;
 		if( colors != null && colors.length == 0 ) colors = null;
 		if( rebuild ) glyphs.setDefaultColor(0xFFFFFF);
-		for( i in 0...t.length ) {
-			var cc = StringTools.fastCodeAt(t, i);
-			var e = font.getChar(cc);
-			var offs = e.getKerningOffset(prevChar);
-			var esize = e.width + offs;
-			// if the next word goes past the max width, change it into a newline
+		var i = 0;
+		while( i < t.length ) {
+			var cc = hxd.Charset.codeAt(t, i);
+			var zeroWidth = hxd.Charset.isZeroWidth(cc);
+			var n = zeroWidth || cc == '\n'.code ? hxd.Charset.charLength(t, i, cc) : hxd.Charset.clusterEnd(t, i) - i;
 
-			if( rebuild && colors != null && colors[colorsPos] == i ) {
+			if( rebuild && colors != null && colors[colorsPos] >= i && colors[colorsPos] < i + n ) {
 				var c = colors[colorsPos+1];
 				glyphs.setDefaultColor(c,(c>>>24)/255);
 				colorsPos += 2;
 				if( colorsPos >= colors.length ) colors = null;
 			}
+			var start = i;
+			i += n;
+			// joiners and variation selectors: no glyph, no width
+			if( zeroWidth ) continue;
 
 			if( cc == '\n'.code ) {
 				if( x > xMax ) xMax = x;
@@ -477,12 +576,30 @@ class Text extends Drawable {
 				y += dl;
 				prevChar = -1;
 			} else {
+				var e = font.getCluster(t, start, i);
 				if( e != null ) {
-					if( rebuild ) glyphs.add(x + offs, y, e.t);
+					var offs = e.getKerningOffset(prevChar);
+					if( rebuild ) addGlyph(x + offs, y, e);
 					if( y == 0 && e.t.dy < yMin ) yMin = e.t.dy;
 					var ty = y + e.t.dy + e.t.height;
 					if( ty > yMax ) yMax = ty;
-					x += esize + letterSpacing;
+					x += e.width + offs + letterSpacing;
+				} else {
+					// a cluster the fallback cannot join: its visible code points side by side
+					var k = start, pc = prevChar;
+					while( k < i ) {
+						var c = hxd.Charset.codeAt(t, k);
+						k += hxd.Charset.charLength(t, k, c);
+						if( hxd.Charset.isZeroWidth(c) ) continue;
+						var e = font.getChar(c);
+						var offs = e.getKerningOffset(pc);
+						if( rebuild ) addGlyph(x + offs, y, e);
+						if( y == 0 && e.t.dy < yMin ) yMin = e.t.dy;
+						var ty = y + e.t.dy + e.t.height;
+						if( ty > yMax ) yMax = ty;
+						x += e.width + offs + letterSpacing;
+						pc = c;
+					}
 				}
 				prevChar = cc;
 			}
